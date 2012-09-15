@@ -481,145 +481,155 @@ def NoneValue
 # int:
 def IntValue 
 {   
-   uint8        # type ID (0x01, DAO_INTEGER);
-   int          # integer value;
+	uint8       # type ID (0x01, DAO_INTEGER);
+	int         # integer value;
 }
 
 # float:
 def FloatValue
 {   
-   uint8        # type ID (0x02, DAO_FLOAT);
-   double       # double value;
+	uint8       # type ID (0x02, DAO_FLOAT);
+	double      # double value;
 }
 
 # double:
 def DoubleValue
 {   
-   uint8        # type ID (0x03, DAO_DOUBLE);
-   double       # double value;
+	uint8       # type ID (0x03, DAO_DOUBLE);
+	double      # double value;
 }
 
 # complex:
 def ComplexValue
 {   
-   uint8        # type ID (0x04, DAO_COMPLEX);
-   double       # double value, real part;
-   double       # double value, imaginary part;
+	uint8       # type ID (0x04, DAO_COMPLEX);
+	double      # double value, real part;
+	double      # double value, imaginary part;
 }
 
 # long:
 def LongValue
 {   
-   uint8        # type ID (0x05, DAO_LONG);
-   uint8        # sign, 0 for positive, 1 for negative;
-   int          # number of 256-base digits;
-   uint8[]      # list of digits;
+	uint8       # type ID (0x05, DAO_LONG);
+	uint8       # sign, 0 for positive, 1 for negative;
+	int         # number of 256-base digits;
+	uint8[]     # list of digits;
 }
 
 # string:
 def StringValue
 {   
-   uint8        # type ID (0x06, DAO_STRING);
-   uint8        # char type (0 for WCS, 1 for MBS);
-   Variable number of bytes: list of characters (uint8 or uint32);
+	uint8       # type ID (0x06, DAO_STRING);
+	uint8       # char type (0 for WCS, 1 for MBS);
+	Variable number of bytes: list of characters (uint8 or uint32);
 }
 
 # enum:
 def EnumValue
 {
-   uint8        # type ID (0x07, DAO_ENUM);
-   uint16       # type reference number;
-   uint32       # value;
+	uint8       # type ID (0x07, DAO_ENUM);
+	uint16      # type reference number;
+	uint32      # value;
 }
 
 # array:
 def ArrayValue
 {
-   uint8        # type ID (0x08, DAO_ARRAY);
-   uint8        # numeric type ID (for int, float, double or complex);
-   int          # total number of elements;
-   uint16       # number of dimensions;
-   int[]        # list of dimension sizes (int);
-   (int|float|double|complex)[]  # list of elements;
+	uint8       # type ID (0x08, DAO_ARRAY);
+	uint8       # numeric type ID (for int, float, double or complex);
+	int         # total number of elements;
+	uint16      # number of dimensions;
+	int[]       # list of dimension sizes (int);
+	(int|float|double|complex)[]  # list of elements;
 }
 
 # list:
 def ListValue
 {
-   uint8        # type ID (0x09, DAO_LIST);
-   uint16       # type reference number;
-   int          # number of items;
-   uint32[]     # list of value reference numbers;
+	uint8       # type ID (0x09, DAO_LIST);
+	uint16      # type reference number;
+	int         # number of items;
+	uint32[]    # list of value reference numbers;
 }
 
 # map:
 def MapValue
 {
-   uint8        # type ID (0x0A, DAO_MAP);
-   uint32       # hashing seed;
-   uint16       # type reference number;
-   int          # number of items;
-   uint32[]     # list of value reference numbers;
+	uint8       # type ID (0x0A, DAO_MAP);
+	uint32      # hashing seed;
+	uint16      # type reference number;
+	int         # number of items;
+	uint32[]    # list of value reference numbers;
 }
 
 # tuple:
 def TupleValue
 {
-   uint8        # type ID (0x0B, DAO_ARRAY);
-   uint16       # type reference number;
-   uint32       # number of items;
-   uint32[]     # list of value reference numbers;
+	uint8       # type ID (0x0B, DAO_ARRAY);
+	uint16      # type reference number;
+	uint32      # number of items;
+	uint32[]    # list of value reference numbers;
 }
 
 # Class instance:
 # Complete instance:
 def CompleteClassInstanceValue 
 {
-   uint8        # type ID (0x0C, DAO_OBJECT);
-   uint8        # flag (0x0 for complete);
-   uint16       # declaration reference number for the class;
+	uint8       # type ID (0x0C, DAO_OBJECT);
+	uint8       # flag (0x0 for complete);
+	uint16      # declaration reference number for the class;
 
-   uint16       # number of values;
-   uint16[]     # list of value reference numbers;
+	uint16      # number of values;
+	uint16[]    # list of value reference numbers;
 }
 # Partial instance is an instance embedded in another:
 def PartialClassInstanceValue 
 {
-   uint8        # type ID (0x0C, DAO_OBJECT);
-   uint8        # flag (0x1 for partial);
-   uint16       # declaration reference number for the class;
+	uint8       # type ID (0x0C, DAO_OBJECT);
+	uint8       # flag (0x1 for partial);
+	uint16      # declaration reference number for the class;
 
-   uint16       # value offset;
-   uint16       # value reference number for its host object;
+	uint16      # value offset;
+	uint16      # value reference number for its host object;
 }
 # The default instance for the class:
 def DefaultClassInstanceValue 
 {
-   uint8        # type ID (0x0C, DAO_OBJECT);
-   uint8        # flag (0x2 for default);
-   uint16       # declaration reference number for the class;
+	uint8       # type ID (0x0C, DAO_OBJECT);
+	uint8       # flag (0x2 for default);
+	uint16      # declaration reference number for the class;
 }
 
 # Routine:
 def RoutineValue
 {
-   uint8        # type ID (0x11, DAO_ROUTINE);
-   uint16       # declaration reference number for the routine;
-   uint16       # type reference number for the routine type;
+	uint8       # type ID (0x11, DAO_ROUTINE);
+	uint16      # declaration reference number for the routine;
+	uint16      # type reference number for the routine type;
 }
 
 # Class, ctype, interface and namespace:
 def ClassCtypeInterfaceNamespaceValue
 {
-   uint8        # type ID (DAO_ROUTINE, DAO_CLASS, ...);
-   uint16       # declaration reference number;
+	uint8       # type ID (DAO_ROUTINE, DAO_CLASS, ...);
+	uint16      # declaration reference number;
 }
 
 # Type value:
 def TypeValue
 {
-   uint8        # type ID (DAO_TYPE);
-   uint16       # type reference number for the type;
+	uint8       # type ID (DAO_TYPE);
+	uint16      # type reference number for the type;
+}
+
+
+# Named value:
+def NamedValue
+{
+	uint8       # type ID (DAO_PAR_NAME);
+	uint16      # identifier reference number for the name;
+	uint16      # type reference number for the type;
+	uint32      # value reference number for the value;
 }
 
 # Imported value from loaded module:

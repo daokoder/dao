@@ -2292,17 +2292,17 @@ static int DaoParser_Preprocess( DaoParser *self )
 	int k, right, start = 0;
 	unsigned char tki, tki2;
 
-	/*
-	   printf("routine = %p\n", self->routine );
-	   for(i=0; i<self->tokens->size; i++) printf("%s  ", tokens[i]->string->mbs); printf("\n\n");
-	 */
+#if 0
+	printf("routine = %p\n", self->routine );
+	for(i=0; i<self->tokens->size; i++) printf("%s  ", tokens[i]->string->mbs); printf("\n\n");
+#endif
 
 	while( start >=0 && start < self->tokens->size ){
 		self->curLine = tokens[start]->line;
-		/*
-		   printf( "start = %i\n", start );
-		   printf("At tokPos : %i, %s\n", tokPos[start], tokChr[ start ] );
-		 */
+#if 0
+		printf( "start = %i\n", start );
+		printf("At tokPos : %i, %s\n", tokens[start]->index, tokens[ start ]->string->mbs );
+#endif
 
 		tki = tokens[start]->name;
 		tki2 = start+1 < self->tokens->size ? tokens[start+1]->name : 0;
@@ -2341,7 +2341,6 @@ static int DaoParser_Preprocess( DaoParser *self )
 		}else{
 			start ++;
 		}
-		start ++;
 	}
 #ifdef DAO_WITH_MACRO
 	for(start = self->tokens->size-1; start >=0 && start < self->tokens->size; start--){

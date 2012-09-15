@@ -617,6 +617,8 @@ attribs=FunctionTrait::FUNC_NONE, snamespace='' )
 	}
 }
 
+routine ParseCode( source : string, snamespace='', lang='', fname : string='', inExtFile=0  );
+
 routine UserType::Parse( source='', inExtFile=0 )
 {
 	condType = self;

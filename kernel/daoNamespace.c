@@ -1973,6 +1973,7 @@ DaoNamespace* DaoNamespace_LoadModule( DaoNamespace *self, DString *name )
 	DaoNamespace *mod = DaoNamespace_FindNamespace( self, name );
 	if( mod ) return mod;
 
+	name = DString_Copy( name );
 	loader = DaoNamespace_FindModuleLoader2( self, name );
 	if( loader ){
 		DaoVmSpace_SearchPath( self->vmSpace, name, DAO_FILE_PATH, 1 );
@@ -1989,5 +1990,6 @@ DaoNamespace* DaoNamespace_LoadModule( DaoNamespace *self, DString *name )
 	}else{
 		mod = DaoVmSpace_LoadModule( self->vmSpace, name );
 	}
+	DString_Delete( name );
 	return mod;
 }
