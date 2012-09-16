@@ -179,7 +179,7 @@ enum DaoOpcode
 	DVM_MOVE_CC , /* complex = complex */
 	DVM_MOVE_SS , /* string = string */
 	DVM_MOVE_PP , /* C = A; C and A are of the same non-primitive type, A must not be constant; */
-	DVM_MOVE_XX , /* C = A; C and A are of the same type; */
+	DVM_MOVE_XX , /* C = A; C and A are of the same type, or C is of any type; */
 	DVM_NOT_I ,
 	DVM_NOT_F ,
 	DVM_NOT_D ,

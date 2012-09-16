@@ -2797,8 +2797,23 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			rout = DaoClass_GetOverloadedRoutine( klass, mbs );
 			if( rout && rout->body == NULL ) rout = NULL;
 			if( rout && rout->routHost != klass->objType ) rout = NULL;
-		}else{
-			/* XXX support: seperation of declaration and definition */
+		}else if( self->isInterBody == 0 ){
+			int id = DaoNamespace_FindConst( myNS, tmpRoutine->routName );
+			DaoRoutine *declared = (DaoRoutine*) DaoNamespace_GetConst( myNS, id );
+			DaoType *routype2, *routype = tmpRoutine->routType;
+			if( declared && declared->type != DAO_ROUTINE ) declared = NULL;
+			if( declared && declared->overloads ){
+				for(id=0; id<declared->overloads->routines->size; ++id){
+					DaoRoutine *R = declared->overloads->routines->items.pRoutine[id];
+					if( DaoType_MatchTo( routype, R->routType, NULL ) == DAO_MT_EQ ){
+						rout = R;
+						break;
+					}
+				}
+			}else if( declared ){
+				routype2 = declared->routType;
+				if( DaoType_MatchTo( routype, routype2, NULL ) == DAO_MT_EQ ) rout = declared;
+			}
 		}
 
 		if( rout == NULL ){
@@ -2820,9 +2835,11 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		if( self->isClassBody ){
 			DaoClass_AddOverloadedRoutine( klass, mbs, rout );
 			if( rout->attribs & DAO_ROUT_INITOR ){ /* overloading constructor */
-				DRoutines_Add( klass->classRoutines->overloads, rout );
+				/* DRoutines_Add( klass->classRoutines->overloads, rout ); */
+				DaoClass_AddConst( klass, klass->classRoutine->routName, value, perm );
+			}else{
+				DaoClass_AddConst( klass, rout->routName, value, perm );
 			}
-			DaoClass_AddConst( klass, rout->routName, value, perm );
 		}else if( self->isInterBody ){
 			GC_ShiftRC( self->hostInter->abtype, rout->routHost );
 			parser->hostInter = self->hostInter;
@@ -3113,9 +3130,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 
 	DString_Assign( parser->fileName, self->fileName );
 
-	DaoTokens_Append( parser->tokens, DTOK_LB, tokens[start]->line, "(" );
-	DaoTokens_Append( parser->tokens, DTOK_RB, tokens[start]->line, ")" );
-
 	start ++; /* token after class name. */
 	if( start > to || tokens[start]->name == DTOK_LB ) goto ErrorClassDefinition;
 	if( tokens[start]->name == DTOK_COLON ){
@@ -3182,8 +3196,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 
 	parser->defined = 1;
 	DaoClass_DeriveClassData( klass );
-	DaoParser_ParsePrototype( parser, parser, DKEY_ROUTINE, 0 );
-	DArray_Clear( parser->tokens );
 
 	for(i=begin+1; i<right; i++) DArray_Append( parser->tokens, tokens[i] );
 	DaoTokens_Append( parser->tokens, DTOK_SEMCO, tokens[right-1]->line, ";" );

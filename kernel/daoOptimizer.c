@@ -1807,6 +1807,12 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 		if( node->key.pInt < (int)partypes->size ) continue;
 		types[ node->key.pInt ] = DaoType_DefineTypes( node->value.pType, NS, defs );
 	}
+	if( routine->body->regType->size == self->types->size ){
+		DaoType **types2 = routine->body->regType->items.pType;
+		for(i=0; i<self->types->size; i++){
+			if( types[i] == NULL ) types[i] = types2[i];
+		}
+	}
 	for(i=0; i<self->types->size; i++) GC_IncRC( types[i] );
 	DArray_PushBack( self->typeMaps, defs );
 
@@ -5181,7 +5187,7 @@ TryPushBlockReturnType:
 		case DVM_NOT_I : case DVM_NOT_F : case DVM_NOT_D : 
 		case DVM_MINUS_I : case DVM_MINUS_F : case DVM_MINUS_D : 
 			DaoInferencer_UpdateType( self, opc, at );
-			TT1 = TT3 = DAO_INTEGER + (code - DVM_MOVE_II) % 3;
+			TT1 = TT3 = DAO_INTEGER + (code - DVM_NOT_I) % 3;
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( types[opc], TT3 );
 			break;
@@ -5205,9 +5211,17 @@ TryPushBlockReturnType:
 			break;
 		case DVM_MOVE_PP :
 		case DVM_MOVE_XX :
-			if( code == DVM_MOVE_PP && consts[opc] ) goto InvOper;
-			if( at->tid && (at->tid < DAO_ARRAY || at->tid > DAO_TYPE) ) goto NotMatch;
-			if( DaoInferencer_UpdateType( self, opc, at ) != at ) goto NotMatch;
+			if( code == DVM_MOVE_PP ){
+				if( consts[opc] ) goto InvOper;
+				if( at->tid && (at->tid < DAO_ARRAY || at->tid > DAO_TYPE) ) goto NotMatch;
+				/* if( DaoInferencer_UpdateType( self, opc, at ) != at ) goto NotMatch; */
+				DaoInferencer_UpdateType( self, opc, at );
+				if( DaoType_MatchTo( types[opc], at, NULL ) != DAO_MT_EQ ) goto NotMatch;
+			}else if( types[opc] == NULL || types[opc]->tid != DAO_ANY ){
+				/* if( DaoInferencer_UpdateType( self, opc, at ) != at ) goto NotMatch; */
+				DaoInferencer_UpdateType( self, opc, at );
+				if( DaoType_MatchTo( types[opc], at, NULL ) != DAO_MT_EQ ) goto NotMatch;
+			}
 			if( opb ){
 				GC_ShiftRC( consts[opa], consts[opc] );
 				consts[opc] = consts[opa];

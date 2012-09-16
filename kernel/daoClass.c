@@ -654,7 +654,7 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 				if( perm <= DAO_DATA_PRIVATE ) continue;
 				search = MAP_Find( self->lookupTable, name );
 				if( search == NULL ){ /* To not overide data and routine: */
-					index = LOOKUP_BIND( DAO_OBJECT_VARIABLE, perm, 0, (offset+id) );
+					index = LOOKUP_BIND( DAO_OBJECT_VARIABLE, perm, i, (offset+id) );
 					MAP_Insert( self->lookupTable, name, index );
 				}
 			}

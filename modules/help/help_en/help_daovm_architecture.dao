@@ -323,6 +323,7 @@ Type declaration formats:
 def CoreType 
 {
 	uint8       # type id (DAO_NONE, DAO_INTEGER, ...);
+	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 }
 
@@ -330,6 +331,7 @@ def CoreType
 def EnumType 
 {
 	uint8       # type id (DAO_ENUM);
+	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 	uint8       # sub type, 0 for normal enums, 1 for flags;
 	uint16      # number of symbols;
@@ -343,6 +345,7 @@ def EnumType
 def CollectionOrVariantType
 {
 	uint8       # type id (DAO_ARRAY, DAO_LIST, ...);
+	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 	uint16      # number of item types;
 	uint16[]    # list of item types: type reference numbers;
@@ -352,6 +355,7 @@ def CollectionOrVariantType
 def ValueType
 {
 	uint8       # type id (DAO_VALTYPE);
+	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 	uint32      # value reference number for the value;
 }
@@ -360,6 +364,7 @@ def ValueType
 def NameParamType
 {
 	uint8       # type id (DAO_PAR_NAMED or DAO_PAR_DEFAULT);
+	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 	uint16      # identifier reference number to the parameter name;
 	uint16      # type reference number;
@@ -369,6 +374,7 @@ def NameParamType
 def TypeHolderType
 {
 	uint8       # type id (DAO_THT);
+	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 }
 
@@ -376,6 +382,7 @@ def TypeHolderType
 def RoutineType
 {
 	uint8       # type id (DAO_ROUTINE);
+	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 	uint16      # declaration reference number (for overloaded routine type);
 	uint16      # type reference number to the return type;
@@ -387,6 +394,7 @@ def RoutineType
 def InterfaceType
 {
 	uint8       # type id (DAO_INTERFACE);
+	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 	uint16      # declaration reference number for the interface;
 }
@@ -395,6 +403,7 @@ def InterfaceType
 def ClassType
 {
 	uint8       # type id (DAO_CLASS);
+	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 	uint16      # declaration reference number for the class;
 }
@@ -403,6 +412,7 @@ def ClassType
 def ClassInstanceType
 {
 	uint8       # type id (DAO_OBJECT);
+	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 	uint16      # declaration reference number for the class;
 }
@@ -411,6 +421,7 @@ def ClassInstanceType
 def CtypeType
 {
 	uint8       # type id (DAO_CTYPE);
+	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 	uint16      # declaration reference number for the ctype;
 }
@@ -419,6 +430,7 @@ def CtypeType
 def CdataType
 {
 	uint8       # type id (DAO_CDATA);
+	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 	uint16      # declaration reference number for the ctype;
 }
@@ -427,6 +439,7 @@ def CdataType
 def TypeType
 {
 	uint8       # type id (DAO_TYPE);
+	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 	uint16      # type reference number to the type;
 }
@@ -435,6 +448,7 @@ def TypeType
 def FutureValueType 
 {
 	uint8       # type id (DAO_FUTURE);
+	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 	uint16      # type reference number to the value type;
 }
@@ -606,6 +620,7 @@ def RoutineValue
 	uint8       # type ID (0x11, DAO_ROUTINE);
 	uint16      # declaration reference number for the routine;
 	uint16      # type reference number for the routine type;
+	uint16      # type reference number for the host type;
 }
 
 # Class, ctype, interface and namespace:
@@ -909,6 +924,8 @@ def Routine
 	uint32[]    # list of value reference numbers for the constants;
 	uint16      # number of local variables;
 	uint16[]    # list of type reference numbers for the local variable;
+	uint16      # number of explicit variable types;
+	uint16[]    # list of IDs of local variables with explicit types;
 	uint16      # number of instructions;
 	Instruction[] # list of instructions;
 }
