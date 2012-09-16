@@ -103,9 +103,9 @@ struct DaoByteDecoder
 	DArray   *classes;      /* <DaoClass*> */
 	DArray   *routines;     /* <DaoRoutine*> */
 
-	DArray   *valueTypes;
 	DArray   *array;
 	DString  *string;
+	DMap     *valueTypes;
 	DMap     *map;
 
 	uchar_t  *codes;

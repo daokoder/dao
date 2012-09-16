@@ -1626,7 +1626,9 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	}else if( (tid == DAO_ROUTINE || tid == DAO_CODEBLOCK) && pb && pb->type == DAO_TYPE ){
 		DString_AppendChar( mbs, '<' );
 		DString_AppendMBS( mbs, "=>" );
+		if( attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( mbs, '[' );
 		DString_Append( mbs, ((DaoType*)pb)->name );
+		if( attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( mbs, ']' );
 		DString_AppendChar( mbs, '>' );
 	}else if( tid == DAO_PAR_NAMED ){
 		DString_AppendMBS( mbs, ":" );

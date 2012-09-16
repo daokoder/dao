@@ -914,20 +914,19 @@ def Instruction
 
 def Routine 
 {
-	uint16      # declaration reference number to the routine;
-	uint16      # identifier reference number to the routine name;
-	uint16      # type reference number for the routine type;
-	uint16      # type reference number for the host type;
-	uint16      # attributes;
-	uint16      # line of definition;
-	uint16      # number of local constants;
-	uint32[]    # list of value reference numbers for the constants;
-	uint16      # number of local variables;
-	uint16[]    # list of type reference numbers for the local variable;
-	uint16      # number of explicit variable types;
-	uint16[]    # list of IDs of local variables with explicit types;
-	uint16      # number of instructions;
-	Instruction[] # list of instructions;
+	uint16         # declaration reference number to the routine;
+	uint16         # identifier reference number to the routine name;
+	uint16         # type reference number for the routine type;
+	uint16         # type reference number for the host type;
+	uint16         # attributes;
+	uint16         # line of definition;
+	uint16         # number of local constants;
+	uint32[]       # list of value reference numbers for the constants;
+	uint16         # number of local variables;
+	uint16         # number of local variables with explicit types;
+	uint16[][2]    # list of variable indices with type reference numbers;
+	uint16         # number of instructions;
+	Instruction[]  # list of instructions;
 }
 
 def Routines

@@ -3732,7 +3732,7 @@ void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos )
 	if( self->unitype && pos < self->unitype->nested->size ){
 		DaoType *t = self->unitype->nested->items.pType[pos];
 		if( t->tid == DAO_PAR_NAMED ) t = & t->aux->xType;
-		DaoValue_Move( it, val, t );
+		int i = DaoValue_Move( it, val, t );
 	}else{
 		DaoValue_Copy( it, val );
 	}

@@ -1807,12 +1807,6 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 		if( node->key.pInt < (int)partypes->size ) continue;
 		types[ node->key.pInt ] = DaoType_DefineTypes( node->value.pType, NS, defs );
 	}
-	if( routine->body->regType->size == self->types->size ){
-		DaoType **types2 = routine->body->regType->items.pType;
-		for(i=0; i<self->types->size; i++){
-			if( types[i] == NULL ) types[i] = types2[i];
-		}
-	}
 	for(i=0; i<self->types->size; i++) GC_IncRC( types[i] );
 	DArray_PushBack( self->typeMaps, defs );
 
@@ -4813,14 +4807,17 @@ NotExist_TryAux:
 						DRoutines_Add( orig->specialized, drout );
 						drout->original = orig;
 						if( rout->body && drout->routType->aux->xType.tid == DAO_UDT ){
-							DaoRoutineBody *body = DaoRoutineBody_Copy( drout->body );
-							GC_ShiftRC( body, drout->body );
-							drout->body = body;
-							DMap_Reset( defs3 );
-							DaoType_MatchTo( drout->routType, orig->routType, defs3 );
-							DaoRoutine_MapTypes( drout, defs3 );
-							/* to infer returned type */ 
-							if( DaoRoutine_DoTypeInference( drout, self->silent ) ==0 ) goto InvParam;
+							/* forward declared routine may have an empty routine body: */
+							if( rout->body->vmCodes->size ){
+								DaoRoutineBody *body = DaoRoutineBody_Copy( drout->body );
+								GC_ShiftRC( body, drout->body );
+								drout->body = body;
+								DMap_Reset( defs3 );
+								DaoType_MatchTo( drout->routType, orig->routType, defs3 );
+								DaoRoutine_MapTypes( drout, defs3 );
+								/* to infer returned type */ 
+								if( DaoRoutine_DoTypeInference( drout, self->silent ) ==0 ) goto InvParam;
+							}
 						}
 						rout = drout;
 					}
@@ -4985,6 +4982,7 @@ TryPushBlockReturnType:
 				}
 				if( code == DVM_YIELD && !(routine->routType->attrib & DAO_TYPE_COROUTINE) ){
 					printf( "Cannot yield from normal function!\n" );
+					printf( "%s %p\n", routine->routType->name->mbs, routine->routType );
 					goto InvOper;
 				}
 				if( vmc->b ==0 ){
@@ -5502,7 +5500,10 @@ TryPushBlockReturnType:
 			if( ct->tid != DAO_OBJECT ) goto NotMatch;
 			ct = ct->aux->xClass.instvars->items.pVar[ opb ]->dtype;
 			if( code == DVM_SETF_OV ){
-				if( at != ct && ct->tid != DAO_ANY ) goto NotMatch;
+				if( ct->tid == DAO_ANY ) break;
+				if( DaoType_MatchTo( at, ct, NULL ) != DAO_MT_EQ ) goto NotMatch;
+				/* Same type may be represented by different type objects by different namespaces; */
+				/* if( at != ct && ct->tid != DAO_ANY ) goto NotMatch; */
 				break;
 			}
 			if( at->tid != ct->tid ) goto NotMatch;

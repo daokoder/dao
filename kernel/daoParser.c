@@ -1700,7 +1700,7 @@ static int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end );
 
 static int DaoParser_GetRegister( DaoParser *self, DaoToken *name );
 
-static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int start, int end, DString *fullname )
+static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int start, int end )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoClass *klass = (DaoClass*) tpl;
@@ -1718,7 +1718,6 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 		klass = DaoClass_Instantiate( klass, types );
 		inst = (DaoValue*) klass;
 		if( klass == NULL ) goto FailedInstantiation;
-		if( klass && fullname ) DString_Assign( fullname, klass->objType->name );
 #else
 		goto FailedInstantiation;
 #endif
@@ -1727,7 +1726,6 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 		DaoType *sptype = DaoCdataType_Specialize( ctype->cdtype, types );
 		if( sptype ){
 			inst = sptype->aux;
-			if( fullname ) DString_Assign( fullname, sptype->name );
 			goto DoneInstantiation;
 		}
 		goto FailedInstantiation;
@@ -1751,7 +1749,7 @@ int DaoParser_ParseScopedConstant( DaoParser *self, DaoValue **scope, DaoValue *
 	if( tokens[start]->type == DTOK_LT ){
 		i = DaoTokens_FindRightPair( self->tokens, DTOK_LT, DTOK_GT, start, n );
 		if( i >=0 && ((*value)->type == DAO_CLASS || (*value)->type == DAO_CTYPE) ){
-			DaoValue *p = DaoParse_InstantiateType( self, *value, start+1, i-1, NULL );
+			DaoValue *p = DaoParse_InstantiateType( self, *value, start+1, i-1 );
 			/* Failed instantiation should not raise an error here,
 			 * because this function may be called (directly or indirectly)
 			 * to simply parse a type name as in DaoNS_ParseType(). */
@@ -2771,9 +2769,6 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			DaoParser_Error2( self, DAO_ROUT_REDUNDANT_IMPLEMENTATION, errorStart+1, r1, 0 );
 			goto InvalidDefinition;
 		}
-		k = rout->attribs;
-		DaoRoutine_CopyFields( rout, tmpRoutine, 0, 0 );
-		rout->attribs = k;
 		parser = tmpParser;
 		parser->routine = rout;
 		DaoRoutine_Delete( tmpRoutine );
@@ -2821,7 +2816,6 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			parser = tmpParser;
 			if( STRCMP( rout->routName, "main" ) ==0 ) rout->attribs |= DAO_ROUT_MAIN;
 		}else{
-			DaoRoutine_CopyFields( rout, tmpRoutine, 0, 0 );
 			parser = tmpParser;
 			parser->routine = rout;
 			DaoRoutine_Delete( tmpRoutine );
@@ -4508,7 +4502,7 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 	if( storeType & DAO_DECL_LOCAL ){
 		if( MAP_Find( DArray_Top( self->localVarMap ), name ) == NULL ){
 			int id = self->regCount;
-			MAP_Insert( self->routine->body->localVarType, id, abtp );
+			if( abtp ) MAP_Insert( self->routine->body->localVarType, id, abtp );
 			MAP_Insert( DArray_Top( self->localVarMap ), name, id );
 			DaoParser_PushRegister( self );
 		}
@@ -4555,7 +4549,7 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 			DaoRoutine_AddConstant( routine, dao_none_value );
 		}else{
 			id = self->regCount;
-			MAP_Insert( self->routine->body->localVarType, id, abtp );
+			if( abtp ) MAP_Insert( self->routine->body->localVarType, id, abtp );
 			MAP_Insert( DArray_Top( self->localVarMap ), name, id );
 			DaoParser_PushRegister( self );
 		}
@@ -6401,7 +6395,7 @@ InvalidFunctional:
 			if( value->type != DAO_CLASS && value->type != DAO_CTYPE ) return result;
 			rb = DaoTokens_FindRightPair( self->tokens, DTOK_LT, DTOK_GT, start, end );
 			if( rb < 0 ) return result;
-			dbase = DaoParse_InstantiateType( self, value, start+1, rb-1, NULL );
+			dbase = DaoParse_InstantiateType( self, value, start+1, rb-1 );
 			if( dbase ){
 				DaoInode *prev = result.first ? result.first->prev : NULL;
 				DaoParser_PopBackCode( self );
