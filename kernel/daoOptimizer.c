@@ -5438,7 +5438,12 @@ TryPushBlockReturnType:
 			ct = DaoNamespace_GetType( NS, klass->constants->items.pConst[ opb ]->value );
 			DaoInferencer_UpdateType( self, opc, ct );
 			AssertTypeMatching( ct, types[opc], defs );
-			if( code == DVM_GETF_OC ) break;
+			if( code == DVM_GETF_OC ){
+				value = klass->constants->items.pConst[opb]->value;
+				GC_ShiftRC( value, consts[opc] );
+				consts[opc] = value;
+				break;
+			}
 			if( ct->tid != (DAO_INTEGER + code - DVM_GETF_OCI) ) goto NotMatch;
 			break;
 		case DVM_GETF_OGI : case DVM_GETF_OGF :

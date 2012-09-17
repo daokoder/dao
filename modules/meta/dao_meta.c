@@ -182,13 +182,13 @@ static void META_Var1( DaoProcess *proc, DaoValue *p[], int N )
 		if( lookup ){
 			if( st == DAO_OBJECT_VARIABLE && object ){
 				value = object->objValues[id];
-				vabtp = klass->objDataType->items.pValue[ id ];
+				vabtp = (DaoValue*) klass->instvars->items.pVar[ id ]->dtype;
 			}else if( st == DAO_CLASS_VARIABLE ){
 				DaoVariable *var = klass->variables->items.pVar[id];
 				value = var->value;
 				vabtp = (DaoValue*) var->dtype;
 			}else if( st == DAO_OBJECT_VARIABLE ){
-				vabtp = klass->objDataType->items.pValue[ id ];
+				vabtp = (DaoValue*) klass->instvars->items.pVar[ id ]->dtype;
 			}
 		}else{
 			DaoVariable *var = ns->variables->items.pVar[id];
@@ -266,7 +266,7 @@ static void META_Var2( DaoProcess *proc, DaoValue *p[], int N )
 			type = (DaoValue*) var->dtype;
 		}else if( object && node && LOOKUP_ST( node->value.pInt ) == DAO_OBJECT_VARIABLE ){
 			value = object->objValues + LOOKUP_ID( node->value.pInt );
-			type = klass->objDataType->items.pValue[ LOOKUP_ID( node->value.pInt ) ];
+			type = (DaoValue*) klass->instvars->items.pVar[ LOOKUP_ID( node->value.pInt ) ]->dtype;
 		}else{
 			DaoProcess_RaiseException( proc, DAO_ERROR, "invalid field" );
 			return;

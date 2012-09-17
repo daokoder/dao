@@ -90,6 +90,9 @@ static int TestPath( DaoVmSpace *vms, DString *fname, int type )
 	return Dao_IsDir( fname->mbs );
 }
 
+
+#define DAO_FILE_TYPE_NUM  6
+
 static const char* const daoDllPrefix[] =
 {
 	"", "", "",
@@ -1172,7 +1175,7 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
 		}else{
 			DString_Assign( file, fname );
 		}
-		for(i=0; i<7; i++){
+		for(i=0; i<DAO_FILE_TYPE_NUM; i++){
 			if( i < DAO_MODULE_DLL ){
 				DString_Assign( fn, fname );
 			}else{

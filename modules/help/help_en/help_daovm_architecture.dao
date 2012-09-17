@@ -96,7 +96,7 @@ type uint32     # four byte unsigned integer;
 type int        # four or eight byte integer;
 type double     # IEEE 754 double;
 
-def short_string
+struct short_string
 {
 	uint16      # string length;
 	int8[]      # character array;
@@ -129,7 +129,7 @@ Header
 Dao binary bytecode file begins with a header of 16 bytes consisting 
 of the following parts:
 @[code(dao)]
-def Header 
+struct Header 
 {
 	uint8       # Start of Header (SOH), 0x1;
 	uint8       # 0x44, namely 'D';
@@ -164,7 +164,7 @@ Source
 The source file name (possibly including the path) is stored immediately after
 the header as a @[green]short_string@[green]:
 @[code(dao)]
-def Source
+struct Source
 {
 	short_string  # source name;
 }
@@ -189,39 +189,12 @@ which can be used to declare constants or variables which
 occupy slots in the constant or variable arrays without names.
 
 @[code(dao)]
-def Identifiers
+struct Identifiers
 {
 	uint16          # number of identifiers;
 	short_string[]  # list of identifier strings;
 }
 @[code(dao)]
-Example,
-@[code(dao)]
-00 05           # uint16, number of identifiers;
-
-00 05           # uint16, identifier length;
-"true"        # variable number of bytes;
-
-00 06           # uint16, identifier length;
-"false"       # variable number of bytes;
-
-00 06           # uint16, identifier length;
-"short"       # variable number of bytes;
-
-00 09           # uint16, identifier length;
-"Drawable"    # variable number of bytes;
-
-00 09           # uint16, identifier length;
-"DrawLine"    # variable number of bytes;
-
-00 06           # uint16, identifier length;
-"Klass"       # variable number of bytes;
-
-00 05           # uint16, identifier length;
-"Test"        # variable number of bytes;
-...
-@[code(dao)]
-
 
 
 @[section]
@@ -231,24 +204,14 @@ Modules
 This section lists the modules that are needed for the current codes.
 They will be loaded in order to properly decode the rest of the bytecode file.
 @[code(dao)]
-def Modules
+struct Modules
 {
 	uint16          # number of modules;
-	{
+	struct {
 		uint16      # identifier reference number for the module file name;
 		uint16      # identifier reference number for the module alias;
 	}[]
 }
-@[code(dao)]
-Example,
-@[code(dao)]
-00 02            # uint16, number of loaded modules;
-
-00 01            # uint16, length of the first module name/path;
-00 00            # no alias;
-
-00 02            # uint16, length of the second module name/path;
-00 00            # no alias;
 @[code(dao)]
 
 
@@ -267,7 +230,7 @@ Scope objects listed in this section should be referenced by the 1-base index in
 
 Each declaration entry has the following fields:
 @[code(dao)]
-def Declaration
+struct Declaration
 {
 	uint8       # object type (internal type ID);
 	uint8       # object subtype;
@@ -277,29 +240,13 @@ def Declaration
 	uint16      # declaration reference number for the host object;
 	uint16      # identifier reference number for the field name in the host;
 }
-def Declarations 
+struct Declarations 
 {
 	uint16         # number of declarations;
 	Declaration[]  # list of declarations;
 }
 @[code(dao)]
 
-Example,
-@[code(dao)]
-00 03           # uint16, number of declarations;
-
-0E              # uint8, object type (internal type ID for class);
-00              # uint8, new class to be created;
-00 06           # uint16, identifier reference number for the class name;
-
-0E              # uint8, object type (internal type ID for class);
-00              # uint8, new nested class to be created;
-00 07           # uint16, identifier reference number for the class name;
-
-0F              # uint8, object type (internal type ID for ctype);
-01              # uint8, ctype to be found in loaded modules;
-00 08           # uint16, identifier reference number for the ctype name;
-@[code(dao)]
 
 
 @[section]
@@ -320,7 +267,7 @@ name that will be constructed from the type information.
 Type declaration formats:
 @[code(dao)]
 # Core types: none, integer, float, ..., string:
-def CoreType 
+struct CoreType 
 {
 	uint8       # type id (DAO_NONE, DAO_INTEGER, ...);
 	uint8       # type attributes;
@@ -328,21 +275,21 @@ def CoreType
 }
 
 # Enum type:
-def EnumType 
+struct EnumType 
 {
 	uint8       # type id (DAO_ENUM);
 	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 	uint8       # sub type, 0 for normal enums, 1 for flags;
 	uint16      # number of symbols;
-	{
+	struct {
 		uint16  # identifier reference number to the symbol;
 		uint32  # values associated with the symbol;
 	}[]         # list of symbols;
 }
 
-# Array, List, Map, Tuple, Variant type:
-def CollectionOrVariantType
+# Array, List, Map, Tuple, Type and Future Value type:
+struct ContainerType
 {
 	uint8       # type id (DAO_ARRAY, DAO_LIST, ...);
 	uint8       # type attributes;
@@ -351,8 +298,19 @@ def CollectionOrVariantType
 	uint16[]    # list of item types: type reference numbers;
 }
 
+# Variant type
+struct VariantType
+{
+	uint8       # type id (DAO_ARRAY, DAO_LIST, ...);
+	uint8       # type attributes;
+	uint16      # identifier reference number to the type name;
+	uint16      # type reference number to the type holder, if it has;
+	uint16      # number of item types;
+	uint16[]    # list of item types: type reference numbers;
+}
+
 # Value type:
-def ValueType
+struct ValueType
 {
 	uint8       # type id (DAO_VALTYPE);
 	uint8       # type attributes;
@@ -361,7 +319,7 @@ def ValueType
 }
 
 # Named parameter: name:type or name=type
-def NameParamType
+struct NameParamType
 {
 	uint8       # type id (DAO_PAR_NAMED or DAO_PAR_DEFAULT);
 	uint8       # type attributes;
@@ -371,27 +329,39 @@ def NameParamType
 }
 
 # Type holder type:
-def TypeHolderType
+struct TypeHolderType
 {
 	uint8       # type id (DAO_THT);
 	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 }
 
+# Codeblock type:
+struct CodeBlockType
+{
+	uint8       # type id (DAO_CODEBLOCK);
+	uint8       # type attributes;
+	uint16      # identifier reference number to the type name;
+	uint16      # type reference number to the return type;
+	uint16      # number of item types;
+	uint16[]    # list of item types: type reference numbers;
+}
+
 # Routine types:
-def RoutineType
+struct RoutineType
 {
 	uint8       # type id (DAO_ROUTINE);
 	uint8       # type attributes;
 	uint16      # identifier reference number to the type name;
 	uint16      # declaration reference number (for overloaded routine type);
 	uint16      # type reference number to the return type;
+	uint16      # type reference number for the codeblock type;
 	uint16      # number of item types;
 	uint16[]    # list of item types: type reference numbers;
 }
 
 # Interface type:
-def InterfaceType
+struct InterfaceType
 {
 	uint8       # type id (DAO_INTERFACE);
 	uint8       # type attributes;
@@ -400,7 +370,7 @@ def InterfaceType
 }
 
 # Class type:
-def ClassType
+struct ClassType
 {
 	uint8       # type id (DAO_CLASS);
 	uint8       # type attributes;
@@ -409,7 +379,7 @@ def ClassType
 }
 
 # Class instance type:
-def ClassInstanceType
+struct ClassInstanceType
 {
 	uint8       # type id (DAO_OBJECT);
 	uint8       # type attributes;
@@ -418,7 +388,7 @@ def ClassInstanceType
 }
 
 # Ctype type:
-def CtypeType
+struct CtypeType
 {
 	uint8       # type id (DAO_CTYPE);
 	uint8       # type attributes;
@@ -427,7 +397,7 @@ def CtypeType
 }
 
 # Cdata type:
-def CdataType
+struct CdataType
 {
 	uint8       # type id (DAO_CDATA);
 	uint8       # type attributes;
@@ -435,42 +405,9 @@ def CdataType
 	uint16      # declaration reference number for the ctype;
 }
 
-# Type type:
-def TypeType
-{
-	uint8       # type id (DAO_TYPE);
-	uint8       # type attributes;
-	uint16      # identifier reference number to the type name;
-	uint16      # type reference number to the type;
-}
-
-# Future value type:
-def FutureValueType 
-{
-	uint8       # type id (DAO_FUTURE);
-	uint8       # type attributes;
-	uint16      # identifier reference number to the type name;
-	uint16      # type reference number to the value type;
-}
 @[code(dao)]
 
 
-Example,
-@[code(dao)]
-00 06           # uint16, number of types: 0x6;
-02 00 00        # uint8 + uint16, float type with default name;
-06 00 00        # uint8 + uint16, string type with default name;
-07              # uint8, enum type
-00 02           # uint16, type name;
-00              # uint8, non-flag type: enum<true,false>;
-00 02           # uint16, number of items: 2;
-00 01           # uint16, identifier reference number for "true";
-00 02           # uint16, identifier reference number for "false";
-08              # uint8, array type; array<float>;
-00 03           # uint16, type name;
-00 01           # uint16, number of items: 1;
-00 02           # uint16, type reference number for float;
-@[code(dao)]
 
 
 
@@ -487,34 +424,34 @@ Zero is reserved for a NULL value.
 Value formats:
 @[code(dao)]
 # none:
-def NoneValue
+struct NoneValue
 {
 	uint8       # type ID (0x00, DAO_NONE);
 }
 
 # int:
-def IntValue 
+struct IntValue 
 {   
 	uint8       # type ID (0x01, DAO_INTEGER);
 	int         # integer value;
 }
 
 # float:
-def FloatValue
+struct FloatValue
 {   
 	uint8       # type ID (0x02, DAO_FLOAT);
 	double      # double value;
 }
 
 # double:
-def DoubleValue
+struct DoubleValue
 {   
 	uint8       # type ID (0x03, DAO_DOUBLE);
 	double      # double value;
 }
 
 # complex:
-def ComplexValue
+struct ComplexValue
 {   
 	uint8       # type ID (0x04, DAO_COMPLEX);
 	double      # double value, real part;
@@ -522,7 +459,7 @@ def ComplexValue
 }
 
 # long:
-def LongValue
+struct LongValue
 {   
 	uint8       # type ID (0x05, DAO_LONG);
 	uint8       # sign, 0 for positive, 1 for negative;
@@ -531,15 +468,17 @@ def LongValue
 }
 
 # string:
-def StringValue
+struct StringValue
 {   
 	uint8       # type ID (0x06, DAO_STRING);
-	uint8       # char type (0 for WCS, 1 for MBS);
-	Variable number of bytes: list of characters (uint8 or uint32);
+	uint8       # high 4 bits, char type (0 for WCS, 1 for MBS);
+	            # low 4 bits, char size in bytes (1 for MBS; 1,2,4 for WCS);
+	int         # number of characters;    
+	(int8|uint32)[]  # list of characters;
 }
 
 # enum:
-def EnumValue
+struct EnumValue
 {
 	uint8       # type ID (0x07, DAO_ENUM);
 	uint16      # type reference number;
@@ -547,7 +486,7 @@ def EnumValue
 }
 
 # array:
-def ArrayValue
+struct ArrayValue
 {
 	uint8       # type ID (0x08, DAO_ARRAY);
 	uint8       # numeric type ID (for int, float, double or complex);
@@ -558,7 +497,7 @@ def ArrayValue
 }
 
 # list:
-def ListValue
+struct ListValue
 {
 	uint8       # type ID (0x09, DAO_LIST);
 	uint16      # type reference number;
@@ -567,7 +506,7 @@ def ListValue
 }
 
 # map:
-def MapValue
+struct MapValue
 {
 	uint8       # type ID (0x0A, DAO_MAP);
 	uint32      # hashing seed;
@@ -577,7 +516,7 @@ def MapValue
 }
 
 # tuple:
-def TupleValue
+struct TupleValue
 {
 	uint8       # type ID (0x0B, DAO_ARRAY);
 	uint16      # type reference number;
@@ -587,7 +526,7 @@ def TupleValue
 
 # Class instance:
 # Complete instance:
-def CompleteClassInstanceValue 
+struct CompleteClassInstanceValue 
 {
 	uint8       # type ID (0x0C, DAO_OBJECT);
 	uint8       # flag (0x0 for complete);
@@ -597,7 +536,7 @@ def CompleteClassInstanceValue
 	uint16[]    # list of value reference numbers;
 }
 # Partial instance is an instance embedded in another:
-def PartialClassInstanceValue 
+struct PartialClassInstanceValue 
 {
 	uint8       # type ID (0x0C, DAO_OBJECT);
 	uint8       # flag (0x1 for partial);
@@ -607,7 +546,7 @@ def PartialClassInstanceValue
 	uint16      # value reference number for its host object;
 }
 # The default instance for the class:
-def DefaultClassInstanceValue 
+struct DefaultClassInstanceValue 
 {
 	uint8       # type ID (0x0C, DAO_OBJECT);
 	uint8       # flag (0x2 for default);
@@ -615,23 +554,24 @@ def DefaultClassInstanceValue
 }
 
 # Routine:
-def RoutineValue
+struct RoutineValue
 {
 	uint8       # type ID (0x11, DAO_ROUTINE);
 	uint16      # declaration reference number for the routine;
 	uint16      # type reference number for the routine type;
 	uint16      # type reference number for the host type;
+	uint8       # routine attributes;
 }
 
 # Class, ctype, interface and namespace:
-def ClassCtypeInterfaceNamespaceValue
+struct ClassCtypeInterfaceNamespaceValue
 {
 	uint8       # type ID (DAO_ROUTINE, DAO_CLASS, ...);
 	uint16      # declaration reference number;
 }
 
 # Type value:
-def TypeValue
+struct TypeValue
 {
 	uint8       # type ID (DAO_TYPE);
 	uint16      # type reference number for the type;
@@ -639,7 +579,7 @@ def TypeValue
 
 
 # Named value:
-def NamedValue
+struct NamedValue
 {
 	uint8       # type ID (DAO_PAR_NAME);
 	uint16      # identifier reference number for the name;
@@ -648,43 +588,18 @@ def NamedValue
 }
 
 # Imported value from loaded module:
-def ExternalValue
+struct ExternalValue
 {
 	uint8       # 0xFF;
 	uint32      # lookup index for values from loaded modules;
 }
 
 
-def Values
+struct Values
 {
 	uint32      # number of values;
 	[]          # list of values;
 }
-@[code(dao)]
-
-
-Example,
-@[code(dao)]
-00 00 00 23     # uint32, number of values: 0x23;
-01              # uint8, value type id: integer;
-00 15 23 12     # int, value: 0x152312;
-02              # uint8, value type id: float;
-00 00 00...     # double;
-03              # uint8, value type id: double;
-00 00 00...     # double;
-04              # uint8, value type id: complex;
-00 00 00...     # double;
-00 00 00...     # double;
-05              # uint8, value type id: long;
-00 00 00 30     # int, length: 0x30;
-...             # 0x30 bytes;
-06              # uint8, value type id: string;
-01              # uint8, string type: 0, WCS; 1, MBS;
-00 00 00 30     # int, length: 0x30;
-...             # 0x30 bytes;
-07              # uint8, value type id: enum;
-01 02           # uint16, type reference number for enum<true,false>;
-00 00 00 02     # uint32, value: 0x2;
 @[code(dao)]
 
 
@@ -697,7 +612,7 @@ Global Constants
 Global constants are listed in the order of their declarations in the original
 source file. Each constant is encoded in the following format,
 @[code(dao)]
-def Constant
+struct Constant
 {
 	uint16      # identifier reference number for the constant name;
                 # 0x0000 declares a constant without name;
@@ -707,7 +622,7 @@ def Constant
 	uint32      # value reference number for the constant;
 }
 
-def GlobalConstants
+struct GlobalConstants
 {
 	uint16      # number of global constants;
 	Constant[]  # list of constants;
@@ -715,17 +630,6 @@ def GlobalConstants
 @[code(dao)]
 
 
-Example,
-@[code(dao)]
-00 12           # uint16, number of global constants: 0x12;
-00 10           # uint16, identifier reference number for the constant name;
-00              # uint8, public;
-00 00 00 01     # uint32, value reference number for the constant;
-00 15           # uint16, identifier reference number for the constant name;
-01              # uint8, protected;
-00 00 00 03     # uint32, value reference number for the constant;
-...
-@[code(dao)]
 
 
 @[section]
@@ -735,7 +639,7 @@ Global Variables
 Global variables are listed in the order of their declarations in the original
 source file. Each variable is encoded in the following format,
 @[code(dao)]
-def Variable
+struct Variable
 {
 	uint16      # identifier reference number for the variable name;
 	            # 0x0000 will declare a variable without name;
@@ -749,7 +653,7 @@ def Variable
 	            # 0x00000000 can be used for variables without such value;
 }
 
-def GlobalVariables
+struct GlobalVariables
 {
 	uint16      # number of global variables;
 	Variable[]  # list of variables;
@@ -757,19 +661,6 @@ def GlobalVariables
 @[code(dao)]
 
 
-Example,
-@[code(dao)]
-00 23           # uint16, number of global variables: 0x23;
-00 11           # uint16, identifier reference number for the variable name;
-00              # uint8, public;
-00 03           # uint16, type reference number for the variable;
-00 00 00 02     # uint32, value reference number for the variable;
-00 14           # uint16, identifier reference number for the variable name;
-01              # uint8, protected;
-00 03           # uint16, type reference number for the variable;
-00 00 00 05     # uint32, value reference number for the variable;
-...
-@[code(dao)]
 
 
 
@@ -780,13 +671,13 @@ Global Types
 
 Each global type declaration is encoded in the following format,
 @[code(dao)]
-def Type
+struct Type
 {
 	uint16      # identifier reference number for the type name;
 	uint16      # type reference number for the type;
 }
 
-def GlobalTypes
+struct GlobalTypes
 {
 	uint16      # number of global types;
 	Type[]      # list of types;
@@ -804,7 +695,7 @@ Interfaces
 
 Each interface is declared with the following fields:
 @[code(dao)]
-def Interface 
+struct Interface 
 {
 	uint16      # declaration reference number to the interface;
 	uint16      # number of parent interfaces;
@@ -813,7 +704,7 @@ def Interface
 	uint32[]    # list of value reference numbers to the methods;
 }
 
-def Interfaces 
+struct Interfaces 
 {
 	uint16       # number of interfaces;
 	Interface[]  # list of interfaces;
@@ -821,16 +712,6 @@ def Interfaces
 @[code(dao)]
 
 
-Example,
-@[code(dao)]
-00 01           # uint16: number of interfaces;
-00 09           # uint16: declaration reference number to the interface;
-00 01           # uint16: number of parent interfaces;
-00 08           # uint16: declaration reference number to the parent interface;
-00 02           # uint16: number of abstract methods;
-00 00 00 09     # uint32: value reference number to the abstract method;
-00 00 00 11     # uint32: value reference number to the abstract method;
-@[code(dao)]
 
 
 @[section]
@@ -840,10 +721,12 @@ Classes
 
 Each class is declared in the following format:
 @[code(dao)]
-def Class 
+struct Class 
 {
 	uint16      # declaration reference number to the class;
 	uint16      # declaration reference number to the default constructor;
+	uint16      # class attributes;
+	uint16[]    # list of item types: type reference numbers;
 	uint16      # number of parent classs;
 	uint16[]    # list of declaration reference numbers to the parents;
 	uint16      # number of constants (including methods);
@@ -856,7 +739,7 @@ def Class
 	Type[]      # list of types;
 }
 
-def Classes 
+struct Classes 
 {
 	uint16      # number of classes;
 	Class[]     # list of classes;
@@ -864,34 +747,6 @@ def Classes
 @[code(dao)]
 
 
-Example,
-@[code(dao)]
-00 01           # uint16, number of classes: 0x1;
-00 09           # uint16: declaration reference number to the class;
-00 01           # uint16: number of parent classs;
-00 08           # uint16: declaration reference number to the parent class;
-00 02           # uint16: number of constants;
-00 10           # uint16, identifier reference number for the constant name;
-00              # uint8, public;
-00 00 00 01     # uint32, value reference number for the constant;
-00 15           # uint16, identifier reference number for the constant name;
-01              # uint8, protected;
-00 00 00 03     # uint32, value reference number for the constant;
-00 02           # uint16: number of static variables;
-00 10           # uint16, identifier reference number for the variable name;
-00              # uint8, public;
-00 00 00 01     # uint32, value reference number for the variable;
-00 15           # uint16, identifier reference number for the variable name;
-01              # uint8, protected;
-00 00 00 03     # uint32, value reference number for the variable;
-00 02           # uint16: number of instance variables;
-00 10           # uint16, identifier reference number for the variable name;
-00              # uint8, public;
-00 00 00 01     # uint32, value reference number for the variable;
-00 15           # uint16, identifier reference number for the variable name;
-01              # uint8, protected;
-00 00 00 03     # uint32, value reference number for the variable;
-@[code(dao)]
 
 
 
@@ -902,7 +757,7 @@ Routines
 
 
 @[code(dao)]
-def Instruction 
+struct Instruction 
 {
 	uint16      # opcode;
 	uint16      # oprand a;
@@ -912,7 +767,7 @@ def Instruction
 	uint16      # line;
 }
 
-def Routine 
+struct Routine 
 {
 	uint16         # declaration reference number to the routine;
 	uint16         # identifier reference number to the routine name;
@@ -929,7 +784,7 @@ def Routine
 	Instruction[]  # list of instructions;
 }
 
-def Routines
+struct Routines
 {
 	uint16      # number of routines;
 	Routine[]   # list of routines;
