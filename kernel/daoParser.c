@@ -2931,7 +2931,7 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 		int t = tokens[start]->name;
 		if( (t != DTOK_IDENTIFIER && t < DKEY_ABS) || t > DKEY_TANH ) goto ErrorInterfaceDefinition;
 		interName = tokens[start]->string;
-		inter = DaoInterface_New( interName->mbs );
+		inter = DaoInterface_New( myNS, interName->mbs );
 		if( routine != myNS->mainRoutine ) ns = NULL;
 		value = (DaoValue*) inter;
 		DaoParser_AddToScope( self, scope, interName, value, inter->abtype, storeType, line );

@@ -1273,7 +1273,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	DaoVmSpace_Unlock( self );
 	poppath = ns->path->size;
 
-	if( source->mbs[0] == '\1' ){
+	if( source->mbs[0] == DAO_BC_SIGNATURE[0] ){
 		DaoByteDecoder *decoder = DaoByteDecoder_New( self );
 		int bl = DaoByteDecoder_Decode( decoder, source, ns );
 		DaoByteDecoder_Delete( decoder );

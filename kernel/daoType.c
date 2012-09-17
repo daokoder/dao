@@ -1179,6 +1179,7 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 /* interface implementations */
 void DaoInterface_Delete( DaoInterface *self )
 {
+	GC_DecRC( self->nspace );
 	GC_DecRC( self->abtype );
 	DArray_Delete( self->supers );
 	DMap_Delete( self->methods );
@@ -1190,7 +1191,7 @@ DaoTypeBase interTyper=
 	(FuncPtrDel) DaoInterface_Delete, NULL
 };
 
-DaoInterface* DaoInterface_New( const char *name )
+DaoInterface* DaoInterface_New( DaoNamespace *nspace, const char *name )
 {
 	DaoInterface *self = (DaoInterface*) dao_malloc( sizeof(DaoInterface) );
 	DaoValue_Init( self, DAO_INTERFACE );
@@ -1199,7 +1200,9 @@ DaoInterface* DaoInterface_New( const char *name )
 	self->supers = DArray_New(D_VALUE);
 	self->methods = DHash_New(D_STRING,D_VALUE);
 	self->abtype = DaoType_New( name, DAO_INTERFACE, (DaoValue*)self, NULL );
+	self->nspace = nspace;
 	GC_IncRC( self->abtype );
+	GC_IncRC( self->nspace );
 	return self;
 }
 static int DaoRoutine_IsCompatible( DaoRoutine *self, DaoType *type, DMap *binds )

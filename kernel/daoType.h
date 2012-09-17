@@ -168,14 +168,15 @@ struct DaoInterface
 {
 	DAO_DATA_COMMON;
 
-	DArray  *supers; /* parent interfaces */
-	DMap    *methods; /* DHash<DString*,DaoRoutine*> */
-	DaoType *abtype;
+	DaoNamespace  *nspace;
+	DArray        *supers; /* parent interfaces */
+	DMap          *methods; /* DHash<DString*,DaoRoutine*> */
+	DaoType       *abtype;
 
 	short derived;
 };
 
-DaoInterface* DaoInterface_New( const char *name );
+DaoInterface* DaoInterface_New( DaoNamespace *nspace, const char *name );
 
 int DaoInterface_Bind( DArray *pairs, DArray *fails );
 int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds );

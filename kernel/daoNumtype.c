@@ -3034,7 +3034,7 @@ static DaoFuncItem numarMeths[] =
 };
 
 static int DaoArray_DataTypeSize( DaoArray *self );
-static void DaoArray_ResizeData( DaoArray *self, daoint size, daoint oldSize );
+void DaoArray_ResizeData( DaoArray *self, daoint size, daoint oldSize );
 
 int DaoArray_NumType( DaoArray *self )
 {
@@ -3492,7 +3492,7 @@ DaoArray* DaoArray_Copy( DaoArray *self )
 	memcpy( copy->data.p, self->data.p, self->size * DaoArray_DataTypeSize( self ) );
 	return copy;
 }
-static void DaoArray_ResizeData( DaoArray *self, daoint size, daoint old )
+void DaoArray_ResizeData( DaoArray *self, daoint size, daoint old )
 {
 	daoint item_size = DaoArray_DataTypeSize( self );
 	daoint diff = size - old;
