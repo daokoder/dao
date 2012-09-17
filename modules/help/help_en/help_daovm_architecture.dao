@@ -131,7 +131,7 @@ of the following parts:
 @[code(dao)]
 struct Header 
 {
-	uint8       # Start of Header (SOH), 0x1;
+	uint8       # ESC, 0x1B;
 	uint8       # 0x44, namely 'D';
 	uint8       # 0x61, namely 'a';
 	uint8       # 0x6F, namely 'o';
@@ -146,7 +146,7 @@ struct Header
 @[code(dao)]
 Example,
 @[code(dao)]
-01 44 61 6F 01 02 0D 0A    # 8 bytes, signature for Dao 1.2;
+1B 44 61 6F 01 02 0D 0A    # 8 bytes, signature for Dao 1.2;
 00                         # uint8, format version: zero for official;
 04                         # uint8, size of int: default 4;
 00 00 00 00 00 00          # 6 byte, reserved;

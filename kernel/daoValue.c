@@ -782,7 +782,6 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 		DaoValue_SetType( *D, T );
 		return 1;
 	case DAO_VALTYPE :
-		printf( "here 2: %i %i\n", T->aux->type, S->type );
 		if( DaoValue_Compare( S, T->aux ) !=0 ) return 0;
 		DaoValue_Copy( S, D );
 		return 1;
