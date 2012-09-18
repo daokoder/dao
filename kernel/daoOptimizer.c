@@ -2856,8 +2856,12 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DAO_CODE_UNARY :
 			AssertInitialized( inode->a, 0, last, last );
 			break;
+		case DAO_CODE_GETM :
+			AssertInitialized( inode->a, DTE_ITEM_WRONG_ACCESS, last, last );
+			break;
 		case DAO_CODE_SETM :
 			AssertInitialized( inode->a, DTE_ITEM_WRONG_ACCESS, last, last );
+			AssertInitialized( inode->c, DTE_ITEM_WRONG_ACCESS, first, first );
 			break;
 		case DAO_CODE_GETI :
 			AssertInitialized( inode->a, DTE_ITEM_WRONG_ACCESS, first, first );
