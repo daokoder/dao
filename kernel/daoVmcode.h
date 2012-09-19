@@ -468,7 +468,7 @@ enum DaoCodeType
 	DAO_CODE_UNARY ,    /*  A,C;   */
 	DAO_CODE_BINARY ,   /*  A,B,C; */
 	DAO_CODE_UNARY2 ,   /*  B,C;   */
-	DAO_CODE_MATRIX ,   /*  C,A,A+1,...,A+N-1; where N=(B>>8)&(B&0xff); */
+	DAO_CODE_MATRIX ,   /*  C,A,A+1,...,A+N-1; where N=(B>>8)*(B&0xff); */
 	DAO_CODE_ENUM ,     /*  C,A,A+1,...,A+B-1; */
 	DAO_CODE_ENUM2 ,    /*  C,A,A+1,...,A+B; */
 	DAO_CODE_CALL ,     /*  C,A,A+1,...,A+N; where N=B&0xff*/

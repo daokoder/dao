@@ -772,6 +772,7 @@ struct Routine
 	uint32         # identifier reference number to the routine name;
 	uint32         # type reference number for the routine type;
 	uint32         # type reference number for the host type;
+	uint32         # declaration reference number to the up routine;
 	uint16         # attributes;
 	uint16         # line of definition;
 	uint16         # number of local constants;
