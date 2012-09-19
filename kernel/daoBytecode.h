@@ -65,6 +65,7 @@ struct DaoByteEncoder
 	DArray   *names;        /* <DString*> (not managed); */
 
 	DArray   *objects;      /* <DaoValue*> */
+	DArray   *lines;
 
 	DArray   *hosts;
 	DMap     *handled;

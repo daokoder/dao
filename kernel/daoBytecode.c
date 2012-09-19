@@ -89,6 +89,7 @@ DaoByteEncoder* DaoByteEncoder_New()
 	self->lookups = DArray_New(0);
 	self->names = DArray_New(0);
 	self->objects = DArray_New(0);
+	self->lines = DArray_New(0);
 	self->hosts = DArray_New(0);
 	self->handled = DHash_New(0,0);
 
@@ -130,6 +131,7 @@ void DaoByteEncoder_Delete( DaoByteEncoder *self )
 	DArray_Delete( self->lookups );
 	DArray_Delete( self->names );
 	DArray_Delete( self->objects );
+	DArray_Delete( self->lines );
 	DArray_Delete( self->hosts );
 	DMap_Delete( self->handled );
 
@@ -1058,7 +1060,7 @@ void DaoByteEncoder_EncodeRoutine( DaoByteEncoder *self, DaoRoutine *routine )
 	id = DaoByteEncoder_EncodeIdentifier( self, routine->routName );
 	id2 = DaoByteEncoder_EncodeType( self, routine->routType );
 	id3 = DaoByteEncoder_EncodeType( self, routine->routHost );
-	id4 = DaoByteEncoder_EncodeDeclaration( self, routine->body->upRoutine );
+	id4 = DaoByteEncoder_EncodeDeclaration( self, (DaoValue*)routine->body->upRoutine );
 	DString_AppendUInt( self->routines, id );
 	DString_AppendUInt( self->routines, id2 );
 	DString_AppendUInt( self->routines, id3 );
@@ -1085,6 +1087,27 @@ void DaoByteEncoder_EncodeRoutine( DaoByteEncoder *self, DaoRoutine *routine )
 		DString_AppendUInt( self->routines, id );
 	}
 
+	self->lines->size = 0;
+	for(i=0; i<routine->body->annotCodes->size; ++i){
+		DaoVmCodeX *vmc = routine->body->annotCodes->items.pVmc[i];
+		int count = self->lines->size;
+		int lastline = count ? self->lines->items.pInt[count-2] : -1;
+		int lastcount = count ? self->lines->items.pInt[count-1] : -1;
+		if( vmc->line != lastline || lastcount >= 255 ){
+			DArray_PushBack( self->lines, IntToPointer( vmc->line ) );
+			DArray_PushBack( self->lines, IntToPointer( 1 ) );
+		}else{
+			self->lines->items.pInt[count-1] += 1;
+		}
+	}
+	DString_AppendUInt16( self->routines, self->lines->size/2 );
+	for(i=0; i<self->lines->size; i+=2){
+		int line = self->lines->items.pInt[i];
+		int count = self->lines->items.pInt[i+1];
+		DString_AppendUInt16( self->routines, line );
+		DString_AppendUInt8( self->routines, count );
+	}
+
 #ifdef DEBUG_BC
 	DString_AppendMBS( self->routines, "Codes----\n" );
 #endif
@@ -1096,8 +1119,6 @@ void DaoByteEncoder_EncodeRoutine( DaoByteEncoder *self, DaoRoutine *routine )
 		DString_AppendUInt16( self->routines, vmc->a );
 		DString_AppendUInt16( self->routines, vmc->b );
 		DString_AppendUInt16( self->routines, vmc->c );
-		DString_AppendUInt16( self->routines, vmc->level );
-		DString_AppendUInt16( self->routines, vmc->line );
 	}
 }
 
@@ -2415,7 +2436,9 @@ InvalidInstruction:
 }
 void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 {
-	int i, j, flag, count, num = DaoByteDecoder_DecodeUInt( self );
+	DArray *lines = DArray_New(0);
+	int num = DaoByteDecoder_DecodeUInt( self );
+	int i, j, k, m, flag, count;
 	int id, id2, id3, regCount;
 	for(i=0; i<num; ++i){
 		int routid = DaoByteDecoder_DecodeUInt( self );
@@ -2456,15 +2479,26 @@ void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 			if( self->codes >= self->error ) break;
 			DMap_Insert( routine->body->localVarType, IntToPointer(id), type );
 		}
+		lines->size = 0;
 		count = DaoByteDecoder_DecodeUInt16( self );
 		for(j=0; j<count; ++j){
+			int L = DaoByteDecoder_DecodeUInt16( self );
+			int C = DaoByteDecoder_DecodeUInt8( self );
+			DArray_Append( lines, IntToPointer(L) );
+			DArray_Append( lines, IntToPointer(C) );
+		}
+		count = DaoByteDecoder_DecodeUInt16( self );
+		for(j=0, k=1, m=lines->items.pInt[1];  j<count;  ++j){
 			DaoVmCodeX vmc = {0,0,0,0,0,0,0,0,0};
+			if( j >= m ){
+				m += lines->items.pInt[2*k+1];
+				k += 1;
+			}
 			vmc.code = DaoByteDecoder_DecodeUInt16( self );
 			vmc.a = DaoByteDecoder_DecodeUInt16( self );
 			vmc.b = DaoByteDecoder_DecodeUInt16( self );
 			vmc.c = DaoByteDecoder_DecodeUInt16( self );
-			vmc.level = DaoByteDecoder_DecodeUInt16( self );
-			vmc.line = DaoByteDecoder_DecodeUInt16( self );
+			vmc.line = lines->items.pInt[2*(k-1)];
 			DArray_Append( routine->body->annotCodes, & vmc );
 			DaoVmcArray_PushBack( routine->body->vmCodes, * (DaoVmCode*) & vmc );
 		}
@@ -2473,6 +2507,7 @@ void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 		if( self->codes >= self->error ) break;
 		//DaoRoutine_PrintCode( routine, self->vmspace->stdioStream );
 	}
+	DArray_Delete( lines );
 }
 
 int DaoByteDecoder_Decode( DaoByteDecoder *self, DString *input, DaoNamespace *nspace )

@@ -762,8 +762,6 @@ struct Instruction
 	uint16      # oprand a;
 	uint16      # oprand b;
 	uint16      # oprand c;
-	uint16      # lexical level;
-	uint16      # line;
 }
 
 struct Routine 
@@ -782,6 +780,12 @@ struct Routine
 	struct {       # list of variable indices with type reference numbers;
 		uint16     # variable index;
 		uint32     # type reference number for the variable type;
+	}
+	uint16         # number of line information items;
+	struct {       # duplicated line numbers can be used for lines with
+	               # more than 255 instructions;
+		uint16     # line number;
+		uint8      # number of instructions for the line;
 	}
 	uint16         # number of instructions;
 	Instruction[]  # list of instructions;
