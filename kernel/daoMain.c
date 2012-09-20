@@ -70,21 +70,27 @@ static void DaoSignalHandler( int sig )
 	}
 }
 
+
 /*
-// Adding virtual source files: 
+// Adding virtual modules: 
 // 
-// Create a C source file and define an array named "dao_virtual_files",
-// which may contain pairs of {name,source}s, and must be terminated with 
-// a pair of null strings. Then compile the files with -DDAO_USE_VIRTUAL_FILE
-// and link them together. These virtual source files can be loaded with
-// the standard loading statements.
+// * Create a C source file and define an variable of DaoVModule array;
+// * Name the variable as "dao_virtual_modules";
+// * Terminate the array with { NULL, ... };
+// * Compile files with -DDAO_WITH_STATIC_MODULES;
+// * Link these file together (possibly with the C modules); 
 // 
-//   char *dao_virtual_files[][2] =
-//   {
-//     { "hello.dao", "io.writeln( 'hello world!' )" }
-//     { NULL, NULL } 
-//   };
+// In this way, these virtual modules can be loaded in the normal way.
+// 
+// DaoVModule dao_virtual_modules[] =
+// {
+//     { "hello.dao", 21, "io.writeln( 'hello world!' )", NULL },
+//     { NULL, 0, NULL, NULL } 
+// };
 */
+
+extern DaoVModule dao_virtual_modules[];
+
 
 int main( int argc, char **argv )
 {
@@ -128,15 +134,15 @@ int main( int argc, char **argv )
 		DaoVmSpace_ParseOptions( vmSpace, DString_GetMBS( opts ) );
 	}
 
-#ifdef DAO_USE_VIRTUAL_FILE
+#ifdef DAO_WITH_STATIC_MODULES
 	k = 0;
-	while( dao_virtual_files[k][0] ){
-		DaoVmSpace_AddVirtualFile( vmSpace, dao_virtual_files[k][0], dao_virtual_files[k][1] );
+	while( dao_virtual_modules[k].name ){
+		DaoVmSpace_AddVirtualModule( vmSpace, & dao_virtual_modules[k] );
 		k ++;
 	}
 	if( k ){
 		DString_InsertChar( args, '\1', 0 );
-		DString_InsertMBS( args, dao_virtual_files[0][0], 0, 0, 0 );
+		DString_InsertMBS( args, dao_virtual_modules[0].name, 0, 0, 0 );
 		/* set the path for the virtual files: */
 		DaoVmSpace_SetPath( vmSpace, "/@/" );
 	}

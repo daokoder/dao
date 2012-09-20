@@ -1104,7 +1104,7 @@ int DaoToken_Tokenize( DArray *tokens, const char *src, int replace, int comment
 						hex[i] = src[it++];
 						hex[++i] = 0;
 					}
-					DString_AppendChar( literal, (char) strtol( hex, NULL, 0 ) );
+					DString_AppendChar( literal, (char) strtol( hex+2, NULL, 8 ) );
 					it --;
 					break;
 				case '8' : case '9' :

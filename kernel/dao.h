@@ -165,9 +165,9 @@ enum DaoExecOption
 	DAO_EXEC_INTERUN   = (1<<3), /* -i, --interactive:  run in interactive mode; */
 	DAO_EXEC_LIST_BC   = (1<<4), /* -l, --list-code:    print compiled bytecodes; */
 	DAO_EXEC_JIT       = (1<<5), /* -j, --jit:          enable JIT compiling; */
-	DAO_EXEC_COMP_BC   = (1<<6), /* -c, --compile:      compile to bytecodes;(TODO) */
+	DAO_EXEC_COMP_BC   = (1<<6), /* -c, --compile:      compile to bytecodes; */
+	DAO_EXEC_ARCHIVE   = (1<<7), /* -a, --archive:      build archive file; */
 
-	DAO_EXEC_INCR_COMP = (1<<7), /* incremental compiling; */
 	DAO_EXEC_NO_TC     = (1<<8), /* no typed code; */
 	DAO_EXEC_SAFE      = (1<<9), /* run in safe mode; */
 
@@ -271,6 +271,7 @@ typedef int (*DaoCodeInliner)( DaoNamespace *nspace, DString *mode, DString *sou
 
 typedef struct DaoNumItem   DaoNumItem;
 typedef struct DaoFuncItem  DaoFuncItem;
+typedef struct DaoVModule   DaoVModule;
 
 struct DaoNumItem
 {
@@ -283,6 +284,14 @@ struct DaoFuncItem
 	DaoCFunction  fpter;  /* C function pointer; */
 	const char   *proto;  /* function prototype: name( parlist ) => return_type */
 };
+struct DaoVModule
+{
+	const char       *name;    /* path + file name for the module; */
+	signed int        length;  /* length of the file; */
+	unsigned char    *data;    /* file content; */
+	DaoModuleOnLoad   onload;  /* onload function pointer for C module; */
+};
+
 
 /* Type information structure for creating Dao types for C/C++ types: */
 struct DaoTypeBase
@@ -989,8 +998,7 @@ DAO_DLL DaoUserHandler* DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHand
 DAO_DLL void DaoVmSpace_ReadLine( DaoVmSpace *self, ReadLine fptr );
 DAO_DLL void DaoVmSpace_AddHistory( DaoVmSpace *self, AddHistory fptr );
 
-DAO_DLL void DaoVmSpace_AddVirtualFile( DaoVmSpace *self, const char *f, const char *s );
-DAO_DLL void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, const char *f, DaoModuleOnLoad onload );
+DAO_DLL void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, DaoVModule *module );
 DAO_DLL void DaoVmSpace_SetPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );

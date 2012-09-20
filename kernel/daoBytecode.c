@@ -173,20 +173,20 @@ static void DString_AppendBytes( DString *bytecodes, const uchar_t *bytes, int n
 
 	DString_AppendDataMBS( bytecodes, (char*) bytes, n );
 }
-static void DString_AppendUInt8( DString *bytecodes, int value )
+void DString_AppendUInt8( DString *bytecodes, int value )
 {
 	uchar_t bytes[2];
 	bytes[0] = value & 0xFF;
 	DString_AppendBytes( bytecodes, bytes, 1 );
 }
-static void DString_AppendUInt16( DString *bytecodes, int value )
+void DString_AppendUInt16( DString *bytecodes, int value )
 {
 	uchar_t bytes[2];
 	bytes[0] = (value >> 8) & 0xFF;
 	bytes[1] = value & 0xFF;
 	DString_AppendBytes( bytecodes, bytes, 2 );
 }
-static void DString_AppendUInt32( DString *bytecodes, uint_t value )
+void DString_AppendUInt32( DString *bytecodes, uint_t value )
 {
 	uchar_t bytes[4];
 	bytes[0] = (value >> 24) & 0xFF;
@@ -195,7 +195,7 @@ static void DString_AppendUInt32( DString *bytecodes, uint_t value )
 	bytes[3] = value & 0xFF;
 	DString_AppendBytes( bytecodes, bytes, 4 );
 }
-static void DString_AppendDaoInt( DString *bytecodes, daoint value )
+void DString_AppendDaoInt( DString *bytecodes, daoint value )
 {
 	uchar_t i, bytes[8];
 	uchar_t m = sizeof(daoint);
@@ -1329,7 +1329,10 @@ int DaoByteDecoder_DecodeUInt8( DaoByteDecoder *self )
 int DaoByteDecoder_DecodeUInt16( DaoByteDecoder *self )
 {
 	int value;
-	if( self->codes >= self->end ) return 0;
+	if( (self->codes + 2) > self->end ){
+		self->codes = self->error;
+		return 0;
+	}
 	value = (self->codes[0]<<8) + self->codes[1];
 	self->codes += 2;
 	return value;
@@ -1337,7 +1340,10 @@ int DaoByteDecoder_DecodeUInt16( DaoByteDecoder *self )
 uint_t DaoByteDecoder_DecodeUInt32( DaoByteDecoder *self )
 {
 	uint_t value;
-	if( self->codes >= self->end ) return 0;
+	if( (self->codes + 4) > self->end ){
+		self->codes = self->error;
+		return 0;
+	}
 	value = self->codes[0] << 24;
 	value += self->codes[1] << 16;
 	value += self->codes[2] << 8;
@@ -1349,8 +1355,11 @@ daoint DaoByteDecoder_DecodeDaoInt( DaoByteDecoder *self )
 {
 	daoint value = 0;
 	uchar_t i, m = sizeof(daoint);
-	if( self->codes >= self->end ) return 0;
-	for(i=0; i<m; ++i) value += self->codes[i] << 8*(m-1-i);
+	if( (self->codes + m) > self->end ){
+		self->codes = self->error;
+		return 0;
+	}
+	for(i=0; i<m; ++i) value |= ((daoint)self->codes[i]) << 8*(m-1-i);
 	self->codes += m;
 	return value;
 }
@@ -1370,7 +1379,10 @@ double DaoByteDecoder_DecodeDouble( DaoByteDecoder *self )
 	uint_t negative = first & (1<<31);
 	int i, expon;
 	
-	if( self->codes > self->end ) return 0;
+	if( (self->codes + 8) > self->end ){
+		self->codes = self->error;
+		return 0;
+	}
 	if( first == 0 && second == 0 ) return 0;
 	if( first == (0x7FF<<20) && second == 0 ) return INFINITY;
 	if( first == (0x7FF<<20) && second == 1 ) return NAN;

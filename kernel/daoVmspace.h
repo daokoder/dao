@@ -69,9 +69,11 @@ struct DaoVmSpace
 	DArray  *nameLoading;
 	DArray  *pathLoading;
 	DArray  *pathSearching; /* <DString*> */
+	DArray  *virtualPaths;  /* <DString*> */
 
 	DArray  *preloadModules;
 	DArray  *loadedModules;
+	DArray  *sourceArchive;
 
 	int options;
 	char stopit;

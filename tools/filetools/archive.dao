@@ -1,0 +1,78 @@
+
+routine DaoDecodeUInt16( data : string, i = 0 )
+{
+	return (data[i]<<8) + data[i+1];
+}
+routine DaoDecodeUInt32( data : string, i = 0 )
+{
+	return (data[i]<<24) + (data[i+1]<<16) + (data[i+2]<<8) + data[i+3];
+}
+routine CharToHex( source : string )
+{
+	const digits = '0123456789ABCDEF';
+	hex = '  ';
+	count = 0;
+	for( char in source ){
+		if( count ){
+			hex += ', ';
+			if( count % 10 == 0 ) hex += '\n  ';
+		}
+		hex += '0x';
+		hex += digits[ char>>8 ];
+		hex += digits[ char&0xf ];
+		count += 1;
+	}
+	return hex;
+}
+
+routine ArchiveToCSource( archive : string )
+{
+	onloads = '';
+	sources = '';
+	modules = '';
+
+	size = archive.size();
+	if( size < 8 ) return '';
+
+	pos = 4, 
+	files = DaoDecodeUInt32( archive, pos );
+	pos += 4;
+
+	for(i=0; i<files; ++i){
+		if( (pos + 2) >= size ) break;
+		m = DaoDecodeUInt16( archive, pos );
+		if( (pos + 2 + m + 4) >= size ) break;
+		n = DaoDecodeUInt32( archive, pos + 2 + m );
+
+		name = archive[pos+2 : pos+2+m-1];
+		source = archive[pos+2+m+4 : pos+2+m+4+n-1];
+		if( name.match( '%.(dll|so|dylib)$' ).start >= 0 ){
+			onloads += 'extern int ' + source + '( DaoVmSpace *vms, DaoNamespace *ns );\n';
+			modules += '  { "' + name + '", 0, NULL, ' + source + ' },\n';
+		}else{
+			variable = 'source' + (string)i;
+			sources += 'unsigned char ' + variable + '[] =\n{\n';
+			sources += CharToHex( source ) + '\n};\n';
+			modules += '  { "' + name + '", ';
+			modules += (string)source.size() + ', ' + variable + ', NULL },\n';
+		}
+		pos += 2 + m + 4 + n;
+	}
+	modules = 'DaoVModule dao_virtual_modules[] =\n{\n' + modules;
+	modules += '  { NULL, 0, NULL, NULL }\n};\n';
+	return onloads + sources + modules;
+}
+
+routine main( file : string )
+{
+	archive = io.read( file )
+	if( archive[0:1] != '\33\33' ){
+		io.writeln( 'ERROR: input is not a Dao archive file!' );
+		return;
+	}
+	#archive = archive.map::{ (X+256)%256 }
+	source = ArchiveToCSource( archive )
+	fout = io.open( file + '.c', 'w+' );
+	fout.writeln( source )
+	fout.close()
+}
