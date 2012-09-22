@@ -1701,8 +1701,11 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 		DString_Detach( self->data );
 		DaoProcess_PutReference( proc, p[0] );
 		break;
-	case DVM_FUNCT_MAP : string = DaoProcess_PutValue( proc, p[0] )->xString.data; break;
-	case DVM_FUNCT_SELECT : string = DaoProcess_PutMBString( proc, "" ); break;
+	case DVM_FUNCT_MAP :
+		string = DaoProcess_PutWCString( proc, L"" );
+		DString_Resize( string, self->data->size );
+		break;
+	case DVM_FUNCT_SELECT : string = DaoProcess_PutWCString( proc, L"" ); break;
 	case DVM_FUNCT_INDEX : list = DaoProcess_PutList( proc ); break;
 	case DVM_FUNCT_COUNT : count = DaoProcess_PutInteger( proc, 0 ); break;
 	}
@@ -1711,7 +1714,6 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 		data = DString_Copy( self->data );
 		DString_ToWCS( data );
 	}
-	if( string ) DString_ToWCS( string );
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );

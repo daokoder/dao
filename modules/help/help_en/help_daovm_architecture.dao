@@ -236,7 +236,7 @@ struct Declaration
 	uint8       # object subtype;
 	uint8       # declaration type (0x0 for CREATE; 0x1 for SEARCH; 0x2 for LOADAS);
 	uint32      # identifier reference number for the declaration name;
-	            # declaration reference number for the namespace (for LOADAS);
+	            # or, declaration reference number for the namespace (for LOADAS);
 	uint32      # declaration reference number for the host object;
 	uint32      # identifier reference number for the field name in the host;
 }
@@ -315,7 +315,8 @@ struct ValueType
 	uint8       # type id (DAO_VALTYPE);
 	uint8       # type attributes;
 	uint32      # identifier reference number to the type name;
-	uint32      # value reference number for the value;
+	NoneValue|IntValue|FloatValue|DoubleValue|
+	ComplexValue|LongValue|StringValue|EnumValue   # value of the value type;
 }
 
 # Named parameter: name:type or name=type
@@ -393,7 +394,10 @@ struct CtypeType
 	uint8       # type id (DAO_CTYPE);
 	uint8       # type attributes;
 	uint32      # identifier reference number to the type name;
-	uint32      # declaration reference number for the ctype;
+	uint32      # declaration reference number for the ctype object;
+	            # or, type reference number for the template type;
+	uint16      # number of item types, for specializing;
+	uint32[]    # list of item types: type reference numbers;
 }
 
 # Cdata type:
@@ -402,7 +406,10 @@ struct CdataType
 	uint8       # type id (DAO_CDATA);
 	uint8       # type attributes;
 	uint32      # identifier reference number to the type name;
-	uint32      # declaration reference number for the ctype;
+	uint32      # declaration reference number for the ctype object;
+	            # or, type reference number for the template type;
+	uint16      # number of item types, for specializing;
+	uint32[]    # list of item types: type reference numbers;
 }
 
 @[code(dao)]

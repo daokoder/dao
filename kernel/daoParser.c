@@ -1912,6 +1912,7 @@ int DaoParser_ParseScript( DaoParser *self )
 	ns->mainRoutine = routMain;
 	DaoNamespace_SetConst( ns, DVR_NSC_MAIN, (DaoValue*) routMain );
 	DString_SetMBS( self->routName, "__main__" );
+	DString_SetMBS( routMain->routName, "__main__" );
 	DArray_Append( ns->mainRoutines, routMain );
 	/* the name of routMain will be set in DaoParser_ParseRoutine() */
 

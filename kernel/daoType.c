@@ -1702,10 +1702,13 @@ DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types )
 	DaoType *sptype, *sptype2;
 	DaoTypeKernel *kernel;
 	DTypeSpecTree *sptree;
+	uchar_t tid = self->tid;
 	daoint i, pos;
 
 	assert( self->tid == DAO_CDATA || self->tid == DAO_CTYPE );
-	assert( self->kernel == self->typer->core->kernel );
+
+	self = self->kernel->abtype;
+	if( tid == DAO_CTYPE ) self = self->aux->xCtype.ctype;
 
 	if( (kernel = self->kernel) == NULL ) return NULL;
 	if( (sptree = kernel->sptree) == NULL ) return NULL;

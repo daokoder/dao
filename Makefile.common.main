@@ -67,9 +67,6 @@ static: $(DAO_OBJECTS) kernel/daoMain.o
 	$(DAO_CC) $(DAO_LFLAGS) -o $(DAO_EXE) $(DAO_OBJECTS) kernel/daoMain.o $(DAO_LIBS)
 	$(AR) $(DAO_ARC) $(DAO_OBJECTS)
 
-one: $(DAO_OBJECTS) kernel/daoMainv.o
-	$(DAO_CC) $(DAO_LFLAGS) -o daov $(DAO_OBJECTS) kernel/daoMainv.o $(DAO_LIBS)
-
 
 modules:
 	-cd modules && $(MAKE)

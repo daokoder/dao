@@ -70,9 +70,10 @@ routine main( file : string )
 		io.writeln( 'ERROR: input is not a Dao archive file!' );
 		return;
 	}
-	#archive = archive.map::{ (X+256)%256 }
+	archive = archive.map::{ (X+256)%256 }
 	source = ArchiveToCSource( archive )
 	fout = io.open( file + '.c', 'w+' );
+	fout.writeln( '#include "dao.h"' )
 	fout.writeln( source )
 	fout.close()
 }

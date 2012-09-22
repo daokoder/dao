@@ -2541,8 +2541,14 @@ DString* DaoProcess_PutMBString( DaoProcess *self, const char *mbs )
 {
 	DString str = DString_WrapMBS( mbs );
 	DaoString tmp = {DAO_STRING,0,0,0,0,NULL};
-	DaoValue *res;
+	DaoValue *res, *dest;
 	tmp.data = & str;
+	if( self->activeCode->c >= self->activeRoutine->body->regCount ) return NULL;
+	dest = self->activeValues[ self->activeCode->c ];
+	if( dest && dest->type == DAO_STRING ){
+		DString_Reset( dest->xString.data, 0 );
+		DString_ToMBS( dest->xString.data );
+	}
 	res = DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) & tmp );
 	if( res ==NULL ) return NULL;
 	return res->xString.data;
@@ -2551,8 +2557,14 @@ DString* DaoProcess_PutWCString( DaoProcess *self, const wchar_t *wcs )
 {
 	DString str = DString_WrapWCS( wcs );
 	DaoString tmp = {DAO_STRING,0,0,0,0,NULL};
-	DaoValue *res;
+	DaoValue *res, *dest;
 	tmp.data = & str;
+	if( self->activeCode->c >= self->activeRoutine->body->regCount ) return NULL;
+	dest = self->activeValues[ self->activeCode->c ];
+	if( dest && dest->type == DAO_STRING ){
+		DString_Reset( dest->xString.data, 0 );
+		DString_ToWCS( dest->xString.data );
+	}
 	res = DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) & tmp );
 	if( res ==NULL ) return NULL;
 	return res->xString.data;
