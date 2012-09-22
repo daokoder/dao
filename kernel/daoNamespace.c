@@ -426,7 +426,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	DaoParser *parser = DaoParser_New();
 	DaoValue *scope = NULL, *value = NULL;
 	DTypeSpecTree *sptree = NULL;
-	daoint i, k, n, ret = DAO_DT_UNSCOPED;
+	daoint i, k, n, tid, ret = DAO_DT_UNSCOPED;
 
 	DaoNamespace_InitConstEvalData( self );
 	parser->vmSpace = self->vmSpace;
@@ -439,7 +439,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	DArray_Clear( parser->errors );
 	if( (k = DaoParser_ParseScopedName( parser, & scope, & value, 0, 0 )) <0 ) goto Error;
 	if( k == 0 && n ==0 ) goto Finalize; /* single identifier name; */
-	if( scope && scope->type !=DAO_CTYPE && scope->type !=DAO_CLASS && scope->type !=DAO_NAMESPACE ){
+	if( scope && (tid=scope->type) != DAO_CTYPE && tid != DAO_CLASS && tid != DAO_NAMESPACE ){
 		DaoParser_Error2( parser, DAO_UNDEFINED_SCOPE_NAME, k-2, k-2, 0 );
 		goto Error;
 	}
@@ -475,18 +475,27 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 
 	type->nested = DArray_New(D_VALUE);
 	type2->nested = DArray_New(D_VALUE);
-	DString_Assign( type->name, tokens[k]->string );
-	DString_AppendChar( type->name, '<' );
 	for(i=0; i<types->size; i++){
-		if( i ) DString_AppendChar( type->name, ',' );
-		DString_Append( type->name, types->items.pType[i]->name );
 		DArray_Append( type->nested, types->items.pType[i] );
 		DArray_Append( type2->nested, types->items.pType[i] );
 	}
-	DString_AppendChar( type->name, '>' );
-	DString_Assign( type2->name, type->name );
+	if( isnew ){
+		DString_Assign( type->name, tokens[k]->string );
+		DString_AppendChar( type->name, '<' );
+		for(i=0; i<types->size; i++){
+			if( i ) DString_AppendChar( type->name, ',' );
+			DString_Append( type->name, types->items.pType[i]->name );
+		}
+		DString_AppendChar( type->name, '>' );
+		DString_Assign( type2->name, type->name );
+	}
 
 	/*
+	// Declaration: type name declared in the typer structure;
+	// Current: the current types (namely the paremeter "type" and "type2");
+	// Template: the type that hosts type specialziation data structure;
+	// Alias: the type that can be accessed with the template name;
+	//
 	// CASE 1:
 	// Declaration:                TypeName<>
 	// Current:                    TypeName<>
@@ -509,6 +518,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	// Declaration:                TypeName<ConcreteType,...>
 	// Current:                    TypeName<ConcreteType,...>
 	// Template:                   TypeName<>, must have been declared!
+	// Alias:        TypeName  =>  TypeName<>
 	//
 	// Note: @TypeHolder can be a variant type holder: @TypeHolder<Type1|Type2...>;
 	*/

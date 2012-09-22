@@ -61,7 +61,8 @@ enum DaoDeclarationTypes
 {
 	DAO_DECL_CREATE ,
 	DAO_DECL_SEARCH ,
-	DAO_DECL_LOADAS
+	DAO_DECL_LOADAS ,
+	DAO_DECL_TEMPLATE
 };
 
 
@@ -426,6 +427,7 @@ int DaoByteEncoder_FindDeclaration( DaoByteEncoder *self, DaoValue *object )
 
 int DaoByteEncoder_EncodeDeclaration( DaoByteEncoder *self, DaoValue *object )
 {
+	DaoValue *aux;
 	DaoClass *klass;
 	DaoRoutine *routine;
 	DaoType *type = NULL;
@@ -460,6 +462,13 @@ int DaoByteEncoder_EncodeDeclaration( DaoByteEncoder *self, DaoValue *object )
 	case DAO_CTYPE :
 		type = object->xCtype.ctype;
 		name = type->name;
+		/* See comments in DaoByteEncoder_AddLookupValue(): */
+		aux = object->xCtype.ctype->kernel->abtype->aux;
+		if( aux != object ){
+			DaoByteEncoder_EncodeDeclaration( self, aux );
+		}else if( object->xCtype.ctype->kernel->sptree ){
+			dectype = DAO_DECL_TEMPLATE;
+		}
 		break;
 	case DAO_INTERFACE :
 		type = object->xInterface.abtype;
@@ -512,15 +521,6 @@ int DaoByteEncoder_EncodeSimpleType( DaoByteEncoder *self, DaoType *type )
 	DString_AppendUInt8( self->types, type->tid );
 	DString_AppendUInt8( self->types, type->attrib );
 	DString_AppendUInt( self->types, nameid );
-	DMap_Insert( self->mapTypes, type, IntToPointer( self->mapTypes->size + 1 ) );
-	return self->mapTypes->size;
-}
-int DaoByteEncoder_EncodeAliasType( DaoByteEncoder *self, DaoType *type, int tid )
-{
-	int nameid = DaoByteEncoder_EncodeIdentifier( self, type->name );
-	DString_AppendUInt8( self->types, 0xFF );
-	DString_AppendUInt( self->types, nameid );
-	DString_AppendUInt( self->types, tid );
 	DMap_Insert( self->mapTypes, type, IntToPointer( self->mapTypes->size + 1 ) );
 	return self->mapTypes->size;
 }
@@ -646,9 +646,7 @@ int DaoByteEncoder_EncodeType( DaoByteEncoder *self, DaoType *type )
 		spec = type != type->kernel->abtype;
 		spec &= type != type->kernel->abtype->aux->xCtype.ctype;
 		if( spec && type->nested && type->nested->size ){
-			DaoType *tp = type->kernel->abtype;
-			if( type->tid == DAO_CTYPE ) tp = tp->aux->xCtype.ctype;
-			k = DaoByteEncoder_EncodeType( self, type->kernel->abtype );
+			k = DaoByteEncoder_EncodeDeclaration( self, type->kernel->abtype->aux );
 			for(i=0,n=type->nested->size; i<n; ++i){
 				int id = DaoByteEncoder_EncodeType( self, type->nested->items.pType[i] );
 			}
@@ -679,12 +677,6 @@ int DaoByteEncoder_EncodeType( DaoByteEncoder *self, DaoType *type )
 		break;
 	}
 	return typeid;
-}
-int DaoByteEncoder_EncodeType2( DaoByteEncoder *self, DaoType *type, DString *alias )
-{
-	int typeid = DaoByteEncoder_EncodeType( self, type );
-	if( alias == NULL || DString_EQ( type->name, alias ) ) return typeid;
-	return DaoByteEncoder_EncodeAliasType( self, type, typeid );
 }
 void DaoByteEncoder_EncodeValue2( DaoByteEncoder *self, DaoValue *value )
 {
@@ -1604,6 +1596,9 @@ void DaoByteDecoder_DecodeDeclarations( DaoByteDecoder *self )
 			default :
 				break;
 			}
+			if( dectype == DAO_DECL_TEMPLATE && value->type == DAO_CTYPE ){
+				value = value->xCtype.ctype->kernel->abtype->aux;
+			}
 		}
 		if( self->codes >= self->error ) break;
 		DArray_Append( self->declarations, value );
@@ -1614,6 +1609,8 @@ void DaoArray_ResizeData( DaoArray *self, daoint size, daoint old );
 
 static DaoValue* DaoByteDecoder_DecodeValue( DaoByteDecoder *self )
 {
+	int tid = DaoByteDecoder_DecodeUInt8( self );
+	DaoStream *stream = self->vmspace->errorStream;
 	DaoCtype *ctype;
 	DaoCdata *cdata;
 	DaoClass *klass;
@@ -1638,7 +1635,6 @@ static DaoValue* DaoByteDecoder_DecodeValue( DaoByteDecoder *self )
 	int i, j, flag, count;
 	int id, id2, id3;
 	uint_t hashing;
-	int tid = DaoByteDecoder_DecodeUInt8( self );
 
 	switch( tid ){
 	case DAO_NONE :
@@ -1848,7 +1844,9 @@ static DaoValue* DaoByteDecoder_DecodeValue( DaoByteDecoder *self )
 		}
 		break;
 	default:
-		printf( "value type not supported %i\n", tid );
+		DaoStream_WriteMBS( stream, "Error: unsupported value type id " );
+		DaoStream_WriteInt( stream, tid );
+		DaoStream_WriteMBS( stream, ".\n" );
 		self->codes = self->error;
 		break;
 	}
@@ -1874,52 +1872,21 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 		DString *name2;
 
 		switch( tid ){
-		case DAO_NONE :
-			type = dao_type_none;
-			break;
-		case DAO_INTEGER :
-			type = dao_type_int;
-			break;
-		case DAO_FLOAT :
-			type = dao_type_float;
-			break;
-		case DAO_DOUBLE :
-			type = dao_type_double;
-			break;
-		case DAO_COMPLEX :
-			type = dao_type_complex;
-			break;
-		case DAO_LONG :
-			type = dao_type_long;
-			break;
-		case DAO_STRING :
-			type = dao_type_string;
-			break;
 		case DAO_ENUM :
 			flag = DaoByteDecoder_DecodeUInt8( self );
 			count = DaoByteDecoder_DecodeUInt16( self );
-			DString_SetMBS( self->string, "enum<" );
 			DMap_Reset( self->map );
 			for(j=0; j<count; ++j){
 				int symID = DaoByteDecoder_DecodeUInt( self );
 				int value = DaoByteDecoder_DecodeUInt32( self );
 				DString *sym = DaoByteDecoder_GetIdentifier( self, symID );
 				if( self->codes >= self->error ) break;
-				if( j ) DString_AppendChar( self->string, flag ? ';' : ',' );
-				DString_Append( self->string, sym );
 				DMap_Insert( self->map, sym, IntToPointer( value ) );
-				// XXX: append =value?
 			}
 			if( self->codes >= self->error ) break;
-			DString_AppendChar( self->string, '>' );
-			it = DMap_First( self->map );
-			if( count == 1 && it->value.pInt == 0 ){
-				DString_SetMBS( self->string, "$" );
-				DString_Append( self->string, it->key.pString );
-			}
-			type = DaoNamespace_FindType( self->nspace, self->string );
+			type = DaoNamespace_FindType( self->nspace, name );
 			if( type == NULL ){
-				type = DaoType_New( self->string->mbs, DAO_ENUM, NULL, NULL );
+				type = DaoType_New( name->mbs, DAO_ENUM, NULL, NULL );
 				type->mapNames = self->map;
 				self->map = DMap_New(D_STRING,0);
 				type->flagtype = flag != 0;
@@ -1998,14 +1965,13 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 			types = self->array->items.pType;
 			if( id ){
 				value = DaoByteDecoder_GetDeclaration( self, id );
+				if( value == NULL || value->type != DAO_ROUTINE ) self->codes = self->error;
 				if( self->codes >= self->error ) break;
-				// XXX error:
-				//if( value == NULL || value->type != DAO_ROUTINE ) return;
 				type = value->xRoutine.routType;
 			}else{
 				value = (DaoValue*) DaoByteDecoder_GetType( self, id2 );
 				if( self->codes >= self->error ) break;
-				//if( value == NULL || value->type != DAO_TYPE ) return;
+				if( value == NULL || value->type != DAO_TYPE ) self->codes = self->error;
 				type = DaoNamespace_MakeType( self->nspace, "routine", tid|(attrib<<16), value, types, count );
 				if( id3 ){
 					DString *name = self->string;
@@ -2052,9 +2018,11 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 		case DAO_CDATA :
 			id = DaoByteDecoder_DecodeUInt( self );
 			count = DaoByteDecoder_DecodeUInt16( self );
+			value = DaoByteDecoder_GetDeclaration( self, id );
+			if( self->codes >= self->error ) break;
+			type = value->xCtype.ctype;
+			if( tid == DAO_CDATA ) type = value->xCtype.cdtype;
 			if( count ){
-				type = DaoByteDecoder_GetType( self, id );
-				if( self->codes >= self->error ) break;
 				self->array->size = 0;
 				for(j=0; j<count; ++j){
 					int it = DaoByteDecoder_DecodeUInt( self );
@@ -2062,11 +2030,6 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 					DArray_Append( self->array, tp );
 				}
 				type = DaoCdataType_Specialize( type, self->array );
-			}else{
-				value = DaoByteDecoder_GetDeclaration( self, id );
-				if( self->codes >= self->error ) break;
-				type = value->xCtype.ctype;
-				if( tid == DAO_CDATA ) type = value->xCtype.cdtype;
 			}
 			break;
 		case DAO_ANY :
@@ -2085,8 +2048,16 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 		type->attrib = attrib;
 		DaoType_CheckAttributes( type );
 		DArray_Append( self->types, type );
+		if( DString_EQ( name, type->name ) == 0 ){
+			DaoStream *stream = self->vmspace->errorStream;
+			DaoStream_WriteMBS( stream, "Error: inconsistent type name \"" );
+			DaoStream_WriteString( stream, type->name );
+			DaoStream_WriteMBS( stream, "\" for \"" );
+			DaoStream_WriteString( stream, name );
+			DaoStream_WriteMBS( stream, "\"\n" );
+			self->codes = self->error;
+		}
 		if( self->codes >= self->error ) break;
-		// XXX if name != type->name, alias;
 	}
 }
 void DaoByteDecoder_DecodeValues( DaoByteDecoder *self )

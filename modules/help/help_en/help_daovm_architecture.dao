@@ -234,7 +234,8 @@ struct Declaration
 {
 	uint8       # object type (internal type ID);
 	uint8       # object subtype;
-	uint8       # declaration type (0x0 for CREATE; 0x1 for SEARCH; 0x2 for LOADAS);
+	uint8       # declaration type:
+	            # 0x0 for CREATE; 0x1 for SEARCH; 0x2 for LOADAS; 0x3 for TEMPLATE;
 	uint32      # identifier reference number for the declaration name;
 	            # or, declaration reference number for the namespace (for LOADAS);
 	uint32      # declaration reference number for the host object;
