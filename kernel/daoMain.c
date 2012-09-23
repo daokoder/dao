@@ -122,31 +122,33 @@ int main( int argc, char **argv )
 
 	DaoVmSpace_ParseOptions( vmSpace, DString_GetMBS( opts ) );
 
-	args  = DString_New(1);
-	if( idsrc >= 0 ){
-		for(i=idsrc; i<argc; i++ ){
-			DString_AppendMBS( args, argv[i] );
-			DString_AppendChar( args, '\1' );
-		}
-	}else if( argc==1 ){
-		DString_AppendChar( opts, '\1' );
-		DString_AppendMBS( opts, "-vi" );
-		DaoVmSpace_ParseOptions( vmSpace, DString_GetMBS( opts ) );
-	}
-
 #ifdef DAO_WITH_STATIC_MODULES
 	k = 0;
 	while( dao_virtual_modules[k].name ){
 		DaoVmSpace_AddVirtualModule( vmSpace, & dao_virtual_modules[k] );
 		k ++;
 	}
-	if( k ){
+#endif
+
+	args  = DString_New(1);
+	if( idsrc >= 0 ){
+		for(i=idsrc; i<argc; i++ ){
+			DString_AppendMBS( args, argv[i] );
+			DString_AppendChar( args, '\1' );
+		}
+#ifdef DAO_WITH_STATIC_MODULES
+	}else if( k ){
 		DString_InsertChar( args, '\1', 0 );
 		DString_InsertMBS( args, dao_virtual_modules[0].name, 0, 0, 0 );
 		/* set the path for the virtual files: */
 		DaoVmSpace_SetPath( vmSpace, "/@/" );
-	}
 #endif
+	}else if( argc==1 ){
+		DString_AppendChar( opts, '\1' );
+		DString_AppendMBS( opts, "-vi" );
+		DaoVmSpace_ParseOptions( vmSpace, DString_GetMBS( opts ) );
+	}
+
 
 #ifdef DAO_USE_READLINE
 	DaoVmSpace_ReadLine( vmSpace, DaoReadLine );

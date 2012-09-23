@@ -1,0 +1,6 @@
+# See the "static_example" target in the Makefile for steps to
+# compile and link this example and the sys module into the executable.
+
+load sys;
+
+io.writeln( sys.ctimef() )

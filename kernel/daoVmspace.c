@@ -1078,7 +1078,7 @@ void DaoVmSpace_SaveArchive( DaoVmSpace *self )
 void DaoVmSpace_LoadArchive( DaoVmSpace *self, DString *archive )
 {
 	DString *name;
-	DaoVModule module = { NULL, NULL, 0, NULL };
+	DaoVModule module = { NULL, 0, NULL, NULL };
 	char *data = (char*) archive->mbs;
 	int slen = strlen( DAO_DLL_SUFFIX );
 	int pos = 4, size = archive->size;
@@ -1494,7 +1494,7 @@ static void* DaoGetSymbolAddress( void *handle, const char *name );
 static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath )
 {
 	DNode *node;
-	DString *name;
+	DString *name = NULL;
 	DaoModuleOnLoad funpter = NULL;
 	DaoNamespace *ns = NULL;
 	void *handle = NULL;
@@ -1551,11 +1551,12 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 		}
 	}
 	if( self->options & DAO_EXEC_ARCHIVE ){
+		if( name == NULL ) name = DString_New(1);
 		if( funpter == NULL ) DString_Clear( name );
 		DArray_Append( self->sourceArchive, libpath );
 		DArray_Append( self->sourceArchive, name );
 	}
-	DString_Delete( name );
+	if( name ) DString_Delete( name );
 
 	DaoVmSpace_Lock( self );
 	DArray_PushFront( self->loadedModules, ns );
@@ -2068,26 +2069,26 @@ int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module )
 	void *jitHandle = NULL;
 	if( module ){
 		DString_SetMBS( name, module );
-		jitHandle = DaoLoadLibrary( name->mbs );
+		jitHandle = DaoOpenDLL( name->mbs );
 	}else{
 		DString_SetMBS( name, "libDaoJIT" DAO_DLL_SUFFIX );
 		DaoVmSpace_SearchPath( self, name, DAO_FILE_PATH, 1 );
-		jitHandle = DaoLoadLibrary( name->mbs );
+		jitHandle = DaoOpenDLL( name->mbs );
 		if( jitHandle == NULL ){
 			DString_SetMBS( name, "DaoJIT" DAO_DLL_SUFFIX );
 			DaoVmSpace_SearchPath( self, name, DAO_FILE_PATH, 1 );
-			jitHandle = DaoLoadLibrary( name->mbs );
+			jitHandle = DaoOpenDLL( name->mbs );
 		}
 	}
 	DString_Delete( name );
 	if( jitHandle == NULL ) return 0;
-	init = (DaoJIT_InitFPT) DaoFindSymbol( jitHandle, "DaoJIT_Init" );
+	init = (DaoJIT_InitFPT) DaoGetSymbolAddress( jitHandle, "DaoJIT_Init" );
 	if( init == NULL ) return 0;
 	(*init)( self, & dao_jit );
-	dao_jit.Quit = (DaoJIT_QuitFPT) DaoFindSymbol( jitHandle, "DaoJIT_Quit" );
-	dao_jit.Free = (DaoJIT_FreeFPT) DaoFindSymbol( jitHandle, "DaoJIT_Free" );
-	dao_jit.Compile = (DaoJIT_CompileFPT) DaoFindSymbol( jitHandle, "DaoJIT_Compile" );
-	dao_jit.Execute = (DaoJIT_ExecuteFPT) DaoFindSymbol( jitHandle, "DaoJIT_Execute" );
+	dao_jit.Quit = (DaoJIT_QuitFPT) DaoGetSymbolAddress( jitHandle, "DaoJIT_Quit" );
+	dao_jit.Free = (DaoJIT_FreeFPT) DaoGetSymbolAddress( jitHandle, "DaoJIT_Free" );
+	dao_jit.Compile = (DaoJIT_CompileFPT) DaoGetSymbolAddress( jitHandle, "DaoJIT_Compile" );
+	dao_jit.Execute = (DaoJIT_ExecuteFPT) DaoGetSymbolAddress( jitHandle, "DaoJIT_Execute" );
 	if( dao_jit.Execute == NULL ) dao_jit.Compile = NULL;
 	return dao_jit.Compile != NULL;
 }
@@ -2363,6 +2364,14 @@ DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname )
 	return ns;
 }
 
+#ifdef DAO_WITHOUT_DLL
+
+void DaoGetErrorDLL(){}
+void* DaoOpenDLL( const char *name ){ return NULL; }
+void* DaoGetSymbolAddress( void *handle, const char *name ){ return NULL; }
+
+#else
+
 #ifdef UNIX
 #include<dlfcn.h>
 #elif WIN32
@@ -2407,3 +2416,5 @@ void* DaoGetSymbolAddress( void *handle, const char *name )
 #endif
 	return sym;
 }
+
+#endif

@@ -63,9 +63,6 @@
 #define DAO_DLL_SUFFIX ".dll"
 #define DAO_LIB_DEFAULT "C:\\dao\\dao.dll"
 
-#define DaoLoadLibrary( name ) LoadLibrary( name )
-#define DaoFindSymbol( handle, name ) GetProcAddress( (HMODULE)handle, name )
-
 
 #elif defined(UNIX) /* UNIX */
 
@@ -75,9 +72,6 @@
 #define DAO_DLL_EXPORT
 #define DAO_DLL_IMPORT
 
-#define DaoLoadLibrary( name ) dlopen( name, RTLD_NOW | RTLD_GLOBAL )
-#define DaoFindSymbol( handle, name ) dlsym( handle, name )
-#define DaoCloseLibrary( handle ) dlclose( handle )
 
 #ifdef MAC_OSX
 
@@ -115,7 +109,6 @@
 extern "C"{
 #endif
 
-extern int daoProxyPort;
 
 enum DaoTypes
 {

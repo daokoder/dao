@@ -11,7 +11,8 @@ DAO_CONFIG += -DDAO_WITH_DYNCLASS
 DAO_CONFIG += -DDAO_WITH_DECORATOR
 
 
-#DAO_CONFIG += -DDAO_WITH_STATIC_MODULES
+# Uncomment the following to disable support for loading external C modules:
+# DAO_CONFIG += -DDAO_WITHOUT_DLL
 
 
 DAO_CC      ?= gcc
