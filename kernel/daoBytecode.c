@@ -791,8 +791,8 @@ void DaoByteEncoder_EncodeValue2( DaoByteEncoder *self, DaoValue *value )
 		typeid = DaoByteEncoder_EncodeType( self, value->xMap.unitype );
 		self->valueBytes->size = 0;
 		DString_AppendUInt8( valueBytes, value->type );
-		DString_AppendUInt32( valueBytes, value->xMap.items->hashing );
 		DString_AppendUInt( valueBytes, typeid );
+		DString_AppendUInt32( valueBytes, value->xMap.items->hashing );
 		DString_AppendDaoInt( valueBytes, value->xMap.items->size );
 		DString_Append( valueBytes, string );
 		break;
@@ -1327,6 +1327,7 @@ DaoByteDecoder* DaoByteDecoder_New( DaoVmSpace *vmspace )
 	self->array = DArray_New(0);
 	self->string = DString_New(1);
 	self->map = DMap_New(D_STRING,0);
+	self->intSize = 4;
 	return self;
 }
 void DaoByteDecoder_Delete( DaoByteDecoder *self )
@@ -1380,15 +1381,44 @@ uint_t DaoByteDecoder_DecodeUInt32( DaoByteDecoder *self )
 }
 daoint DaoByteDecoder_DecodeDaoInt( DaoByteDecoder *self )
 {
+	DaoStream *stream = self->vmspace->errorStream;
+	uchar_t i, m = self->intSize;
 	daoint value = 0;
-	uchar_t i, m = sizeof(daoint);
-	if( (self->codes + m) > self->end ){
-		self->codes = self->error;
-		return 0;
+
+	if( (self->codes + m) > self->end ) goto Error;
+	if( self->intSize > sizeof(daoint) ){ /* self->intSize=8, sizeof(daoint)=4 */
+		uchar_t *s = self->codes;
+		daoint B1 = s[0], B2 = s[1], B3 = s[2], B4 = s[3];
+		daoint B5 = s[4], B6 = s[5], B7 = s[6], B8 = s[7];
+
+		self->codes += self->intSize;
+		if( (B1 == 0x7F || B1 == 0xFF) && B2 == 0xFF && B3 == 0xFF && B4 == 0xFF ){
+			if( B5 & 0x80 ) goto TooBigInteger;
+			if( B1 == 0xFF ) B5 |= 0x80;
+		}else if( B1 || B2 || B3 || B4 ){
+			goto TooBigInteger;
+		}
+		return (B5<<24)|(B6<<16)|(B7<<8)|B8;
+	}else if( self->intSize < sizeof(daoint) ){ /* self->intSize=4, sizeof(daoint)=8 */
+		uchar_t *s = self->codes;
+		daoint B1 = s[0], B2 = s[1], B3 = s[2], B4 = s[3];
+
+		self->codes += self->intSize;
+		if( B1 & 0x80 ){
+			daoint leading = (0xFF<<24)|(0xFF<<16)|(0xFF<<8)|0xFF;
+			return (leading<<32)|(0xFF<<24)|((B1&0x7F)<<24)|(B2<<16)|(B3<<8)|B4;
+		}
+		return (B1<<24)|(B2<<16)|(B3<<8)|B4;
 	}
+
 	for(i=0; i<m; ++i) value |= ((daoint)self->codes[i]) << 8*(m-1-i);
 	self->codes += m;
 	return value;
+TooBigInteger:
+	DaoStream_WriteMBS( stream, "Error: too big integer value for the platform!" );
+Error:
+	self->codes = self->error;
+	return 0;
 }
 /*
 // IEEE 754 double-precision binary floating-point format:
@@ -1656,6 +1686,8 @@ static DaoValue* DaoByteDecoder_DecodeValue( DaoByteDecoder *self )
 		cvalue = DaoByteDecoder_DecodeComplex( self );
 		value = (DaoValue*) DaoComplex_New( cvalue );
 		break;
+
+#ifdef DAO_WITH_LONGINT
 	case DAO_LONG :
 		flag = DaoByteDecoder_DecodeUInt8( self );
 		ivalue = DaoByteDecoder_DecodeDaoInt( self );
@@ -1667,6 +1699,8 @@ static DaoValue* DaoByteDecoder_DecodeValue( DaoByteDecoder *self )
 			DLong_PushBack( longValue->value, d );
 		}
 		break;
+#endif
+
 	case DAO_STRING :
 		flag = DaoByteDecoder_DecodeUInt8( self );
 		ivalue = DaoByteDecoder_DecodeDaoInt( self );
@@ -1696,6 +1730,8 @@ static DaoValue* DaoByteDecoder_DecodeValue( DaoByteDecoder *self )
 		if( self->codes >= self->error ) break;
 		value = (DaoValue*) DaoEnum_New( type, id2 );
 		break;
+
+#ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY :
 		flag = DaoByteDecoder_DecodeUInt8( self );
 		ivalue = DaoByteDecoder_DecodeDaoInt( self );
@@ -1719,6 +1755,8 @@ static DaoValue* DaoByteDecoder_DecodeValue( DaoByteDecoder *self )
 			}
 		}
 		break;
+#endif
+
 	case DAO_LIST :
 		id = DaoByteDecoder_DecodeUInt( self );
 		ivalue = DaoByteDecoder_DecodeDaoInt( self );
@@ -1736,8 +1774,8 @@ static DaoValue* DaoByteDecoder_DecodeValue( DaoByteDecoder *self )
 		}
 		break;
 	case DAO_MAP :
-		hashing = DaoByteDecoder_DecodeUInt32( self );
 		id = DaoByteDecoder_DecodeUInt( self );
+		hashing = DaoByteDecoder_DecodeUInt32( self );
 		ivalue = DaoByteDecoder_DecodeDaoInt( self );
 		type = DaoByteDecoder_GetType( self, id );
 		if( self->codes >= self->error ) break;
@@ -2305,9 +2343,13 @@ void DaoByteDecoder_DecodeClasses( DaoByteDecoder *self )
 		}
 		count = DaoByteDecoder_DecodeUInt16( self );
 		for(j=0; j<count; ++j){
-			int name = DaoByteDecoder_DecodeUInt( self );
+			int nameid = DaoByteDecoder_DecodeUInt( self );
 			int typeid = DaoByteDecoder_DecodeUInt( self );
-			/* XXX */
+			DString *name = DaoByteDecoder_GetIdentifier( self, nameid );
+			DaoType *type = DaoByteDecoder_GetType( self, typeid );
+			if( type == NULL ) self->codes = self->error;
+			if( self->codes >= self->error ) break;
+			DaoClass_AddType( klass, name, type );
 		}
 		if( self->codes >= self->error ) break;
 		DaoClass_DeriveObjectData( klass );
@@ -2478,8 +2520,8 @@ void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 {
 	DArray *lines = DArray_New(0);
 	int num = DaoByteDecoder_DecodeUInt( self );
-	int i, j, k, m, flag, count;
-	int id, id2, id3, regCount;
+	int i, j, k, m, flag, count, lineInfoCount;
+	int id, id2, id3;
 	for(i=0; i<num; ++i){
 		int routid = DaoByteDecoder_DecodeUInt( self );
 		int nameid = DaoByteDecoder_DecodeUInt( self );
@@ -2509,8 +2551,7 @@ void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 			if( self->codes >= self->error ) break;
 			DaoRoutine_AddConstant( routine, value );
 		}
-		regCount = DaoByteDecoder_DecodeUInt16( self );
-		routine->body->regCount = regCount;
+		routine->body->regCount = DaoByteDecoder_DecodeUInt16( self );
 		count = DaoByteDecoder_DecodeUInt16( self );
 		for(j=0; j<count; ++j){
 			int id = DaoByteDecoder_DecodeUInt16( self );
@@ -2520,8 +2561,8 @@ void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 			DMap_Insert( routine->body->localVarType, IntToPointer(id), type );
 		}
 		lines->size = 0;
-		count = DaoByteDecoder_DecodeUInt16( self );
-		for(j=0; j<count; ++j){
+		lineInfoCount = DaoByteDecoder_DecodeUInt16( self );
+		for(j=0; j<lineInfoCount; ++j){
 			int L = DaoByteDecoder_DecodeUInt16( self );
 			int C = DaoByteDecoder_DecodeUInt8( self );
 			DArray_Append( lines, IntToPointer(L) );
@@ -2530,7 +2571,7 @@ void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 		count = DaoByteDecoder_DecodeUInt16( self );
 		for(j=0, k=1, m=lines->items.pInt[1];  j<count;  ++j){
 			DaoVmCodeX vmc = {0,0,0,0,0,0,0,0,0};
-			if( j >= m ){
+			if( j >= m && k < lineInfoCount ){
 				m += lines->items.pInt[2*k+1];
 				k += 1;
 			}
@@ -2538,7 +2579,7 @@ void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 			vmc.a = DaoByteDecoder_DecodeUInt16( self );
 			vmc.b = DaoByteDecoder_DecodeUInt16( self );
 			vmc.c = DaoByteDecoder_DecodeUInt16( self );
-			vmc.line = lines->items.pInt[2*(k-1)];
+			vmc.line = k < lineInfoCount ? lines->items.pInt[2*(k-1)] : line;
 			DArray_Append( routine->body->annotCodes, & vmc );
 			DaoVmcArray_PushBack( routine->body->vmCodes, * (DaoVmCode*) & vmc );
 		}
@@ -2555,10 +2596,12 @@ int DaoByteDecoder_Decode( DaoByteDecoder *self, DString *input, DaoNamespace *n
 	if( strncmp( input->mbs, DAO_BC_SIGNATURE, 8 ) != 0 ) return 0;
 	if( input->mbs[8] != 0 ) return 0; /* Not official format; */
 
+	self->intSize = input->mbs[9];
 	self->nspace = nspace;
 	self->codes = (uchar_t*) input->mbs + 16;
 	self->end = (uchar_t*) input->mbs + input->size;
 	self->error = self->end + 1;
+	if( self->intSize != 4 && self->intSize != 8 ) self->codes = self->error;
 	DaoByteDecoder_DecodeShortString( self, self->string );
 
 	DaoByteDecoder_DecodeIdentifiers( self );

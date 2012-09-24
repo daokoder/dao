@@ -109,6 +109,8 @@ struct DaoByteDecoder
 	DMap     *valueTypes;
 	DMap     *map;
 
+	int  intSize;
+
 	uchar_t  *codes;
 	uchar_t  *end;
 	uchar_t  *error;

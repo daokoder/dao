@@ -381,7 +381,7 @@ struct ClassType
 }
 
 # Class instance type:
-struct ClassInstanceType
+struct InstanceType
 {
 	uint8       # type id (DAO_OBJECT);
 	uint8       # type attributes;
@@ -482,7 +482,7 @@ struct StringValue
 	uint8       # high 4 bits, char type (0 for WCS, 1 for MBS);
 	            # low 4 bits, char size in bytes (1 for MBS; 1,2,4 for WCS);
 	int         # number of characters;    
-	(int8|uint32)[]  # list of characters;
+	(int8|uint16|uint32)[]  # list of characters;
 }
 
 # enum:
@@ -501,7 +501,7 @@ struct ArrayValue
 	int         # total number of elements;
 	uint16      # number of dimensions;
 	int[]       # list of dimension sizes (int);
-	(int|float|double|complex)[]  # list of elements;
+	(int|double|struct{double,double})[]  # list of elements;
 }
 
 # list:
@@ -534,7 +534,7 @@ struct TupleValue
 
 # Class instance:
 # Complete instance:
-struct CompleteClassInstanceValue 
+struct CompleteInstanceValue 
 {
 	uint8       # type ID (0x0C, DAO_OBJECT);
 	uint8       # flag (0x0 for complete);
@@ -544,7 +544,7 @@ struct CompleteClassInstanceValue
 	uint32[]    # list of value reference numbers;
 }
 # Partial instance is an instance embedded in another:
-struct PartialClassInstanceValue 
+struct PartialInstanceValue 
 {
 	uint8       # type ID (0x0C, DAO_OBJECT);
 	uint8       # flag (0x1 for partial);
@@ -554,7 +554,7 @@ struct PartialClassInstanceValue
 	uint32      # value reference number for its host object;
 }
 # The default instance for the class:
-struct DefaultClassInstanceValue 
+struct DefaultInstanceValue 
 {
 	uint8       # type ID (0x0C, DAO_OBJECT);
 	uint8       # flag (0x2 for default);
@@ -593,13 +593,6 @@ struct NamedValue
 	uint32      # identifier reference number for the name;
 	uint32      # type reference number for the type;
 	uint32      # value reference number for the value;
-}
-
-# Imported value from loaded module:
-struct ExternalValue
-{
-	uint8       # 0xFF;
-	uint32      # lookup index for values from loaded modules;
 }
 
 
@@ -767,9 +760,9 @@ Routines
 struct Instruction 
 {
 	uint16      # opcode;
-	uint16      # oprand a;
-	uint16      # oprand b;
-	uint16      # oprand c;
+	uint16      # operand a;
+	uint16      # operand b;
+	uint16      # operand c;
 }
 
 struct Routine 

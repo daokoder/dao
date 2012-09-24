@@ -613,6 +613,7 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 			}
 		}
 	}
+	if( self->options & DAO_EXEC_DEBUG ) daoConfig.optimize = 0;
 	DString_Delete( str );
 	DArray_Delete( array );
 	if( daoConfig.jit && dao_jit.Compile == NULL && DaoVmSpace_TryInitJIT( self, NULL ) == 0 ){
