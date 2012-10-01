@@ -558,6 +558,35 @@ int DaoParser_LexCode( DaoParser *self, const char *src, int replace )
 	return 1;
 }
 
+static int DaoParser_CheckTokenType( DaoParser *self, int tok, const char *str )
+{
+	daoint cur = self->curToken;
+	DaoToken **tokens = self->tokens->items.pToken;
+	if( cur < self->tokens->size && tokens[cur]->type == tok ) return 1;
+	DaoTokens_Append( self->errors, DAO_TOKEN_EXPECTING, tokens[cur]->line, str );
+	return 0;
+}
+static int DaoParser_CurrentTokenType( DaoParser *self )
+{
+	if( self->curToken >= self->tokens->size ) return 0;
+	return self->tokens->items.pToken[self->curToken]->type;
+}
+static int DaoParser_CurrentTokenName( DaoParser *self )
+{
+	if( self->curToken >= self->tokens->size ) return 0;
+	return self->tokens->items.pToken[self->curToken]->name;
+}
+static int DaoParser_NextTokenType( DaoParser *self )
+{
+	if( (self->curToken+1) >= self->tokens->size ) return 0;
+	return self->tokens->items.pToken[self->curToken+1]->type;
+}
+static int DaoParser_NextTokenName( DaoParser *self )
+{
+	if( (self->curToken+1) >= self->tokens->size ) return 0;
+	return self->tokens->items.pToken[self->curToken+1]->name;
+}
+
 int DaoParser_FindOpenToken( DaoParser *self, uchar_t tok, int start, int end/*=-1*/, int warn/*=1*/ )
 {
 	int i, n1, n2, n3, n4;
@@ -2059,16 +2088,27 @@ static void DaoParser_SetupSwitch( DaoParser *self, DaoInode *opening )
 		aux = it2;
 	}
 }
-static DaoInode* DaoParser_AddScope( DaoParser *self, int code, DaoInode *closing )
+static void DaoParser_PushLevel( DaoParser *self )
 {
-	DaoInode *node = DaoParser_AddCode( self, code, 0, 0, 0, 0, 0, 0 );
 	self->lexLevel ++;
-	DArray_Append( self->scopeOpenings, node );
-	DArray_Append( self->scopeClosings, closing );
 	DArray_Append( self->localVarMap, self->lvm );
 	DArray_Append( self->localCstMap, self->lvm );
 	DArray_Append( self->localDecMap, self->lvm );
+}
+static void DaoParser_PopLevel( DaoParser *self )
+{
+	self->lexLevel --;
+	DArray_Pop( self->localVarMap );
+	DArray_Pop( self->localCstMap );
+	DArray_Pop( self->localDecMap );
+}
+static DaoInode* DaoParser_AddScope( DaoParser *self, int code, DaoInode *closing )
+{
+	DaoInode *node = DaoParser_AddCode( self, code, 0, 0, 0, 0, 0, 0 );
+	DArray_Append( self->scopeOpenings, node );
+	DArray_Append( self->scopeClosings, closing );
 	node->jumpFalse = closing;
+	DaoParser_PushLevel( self );
 	return node;
 }
 static int DaoParser_AddScope2( DaoParser *self, int at )
@@ -2085,13 +2125,14 @@ static int DaoParser_DelScope( DaoParser *self, DaoInode *node )
 	//DaoParser_PrintCodes( self );
 	DaoInode *opening = (DaoInode*) DArray_Back( self->scopeOpenings );
 	DaoInode *closing = (DaoInode*) DArray_Back( self->scopeClosings );
-	self->lexLevel --;
+	DaoParser_PopLevel( self );
 	if( self->lexLevel < 0 || self->scopeOpenings->size == 0 ){
 		DaoParser_Error3( self, DAO_INVALID_SCOPE_ENDING, self->curToken );
 		return 0;
 	}
 	if( opening->code == DVM_BRANCH && closing->c == DVM_SWITCH ){
 		DaoInode *branch = opening->jumpTrue; /* condition test */
+		DaoParser_PopLevel( self );
 		DaoParser_SetupSwitch( self, opening );
 	}else if( opening->code == DVM_BRANCH ){
 		DaoInode *branch = opening->jumpTrue; /* condition test */
@@ -2115,9 +2156,6 @@ static int DaoParser_DelScope( DaoParser *self, DaoInode *node )
 		self->vmcLast->next = closing;
 		self->vmcLast = closing;
 	}
-	DArray_Pop( self->localVarMap );
-	DArray_Pop( self->localCstMap );
-	DArray_Pop( self->localDecMap );
 	DArray_Pop( self->scopeOpenings );
 	DArray_Pop( self->scopeClosings );
 	return 1;
@@ -3734,11 +3772,13 @@ DecoratorError:
 			DArray_Append( self->switchMaps, switchMap );
 			DMap_Delete( switchMap );
 			start = 1 + rb + DaoParser_AddScope2( self, rb+1 );
+			DaoParser_PushLevel( self );
 			continue;
 		case DKEY_CASE :
 		case DKEY_DEFAULT :
 			opening = closing = NULL;
 			k = self->scopeOpenings->size;
+			DaoParser_PopLevel( self );
 			if( k >= 2 && self->scopeOpenings->items.pInode[k-1]->code == DVM_LBRA ){
 				opening = self->scopeOpenings->items.pInode[k-2];
 				closing = self->scopeClosings->items.pInode[k-2];
@@ -3757,6 +3797,7 @@ DecoratorError:
 				self->curToken = start + 1;
 				if( DaoParser_CheckTokenType( self, DTOK_COLON, ":" ) ==0 ) return 0;
 				DaoParser_AddCode( self, DVM_DEFAULT, 0, 0, 0, start, 0, 0 );
+				DaoParser_PushLevel( self );
 				opening->jumpFalse = self->vmcLast;
 				start += 2;
 				continue;
@@ -3838,10 +3879,13 @@ DecoratorError:
 				if( tokens[self->curToken]->name != DTOK_COMMA ){
 					DaoParser_Error2( self, DAO_CASE_NOT_VALID, start, colon, 1 );
 					return 0;
+				}else if( DaoParser_NextTokenName( self ) == DKEY_CASE ){
+					self->curToken += 1;
 				}
 				last = self->curToken + 1;
 			}
 			DaoParser_AddCode( self, DVM_UNUSED, 0, 0, 0, start,0,0 );
+			DaoParser_PushLevel( self );
 			start = colon + 1;
 			continue;
 		case DKEY_BREAK : case DKEY_SKIP : case DKEY_CONTINUE :
@@ -5523,34 +5567,6 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end, int *cst )
 }
 
 
-static int DaoParser_CheckTokenType( DaoParser *self, int tok, const char *str )
-{
-	daoint cur = self->curToken;
-	DaoToken **tokens = self->tokens->items.pToken;
-	if( cur < self->tokens->size && tokens[cur]->type == tok ) return 1;
-	DaoTokens_Append( self->errors, DAO_TOKEN_EXPECTING, tokens[cur]->line, str );
-	return 0;
-}
-static int DaoParser_CurrentTokenType( DaoParser *self )
-{
-	if( self->curToken >= self->tokens->size ) return 0;
-	return self->tokens->items.pToken[self->curToken]->type;
-}
-static int DaoParser_CurrentTokenName( DaoParser *self )
-{
-	if( self->curToken >= self->tokens->size ) return 0;
-	return self->tokens->items.pToken[self->curToken]->name;
-}
-static int DaoParser_NextTokenType( DaoParser *self )
-{
-	if( (self->curToken+1) >= self->tokens->size ) return 0;
-	return self->tokens->items.pToken[self->curToken+1]->type;
-}
-static int DaoParser_NextTokenName( DaoParser *self )
-{
-	if( (self->curToken+1) >= self->tokens->size ) return 0;
-	return self->tokens->items.pToken[self->curToken+1]->name;
-}
 static int DaoParser_GetOperPrecedence( DaoParser *self )
 {
 	DOper oper;
