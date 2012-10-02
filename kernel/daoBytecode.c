@@ -905,7 +905,7 @@ void DaoByteEncoder_EncodeConstant( DaoByteEncoder *self, DString *name, DaoValu
 	int valueid = DaoByteEncoder_EncodeValue( self, value );
 	self->valueBytes->size = 0;
 	DString_AppendUInt( self->valueBytes, nameid );
-	DString_AppendUInt( self->valueBytes, id );
+	DString_AppendUInt16( self->valueBytes, id );
 	DString_AppendUInt8( self->valueBytes, pm );
 	DString_AppendUInt( self->valueBytes, valueid );
 }
@@ -919,7 +919,7 @@ void DaoByteEncoder_EncodeVariable( DaoByteEncoder *self, DString *name, DaoVari
 	int valueid = DaoByteEncoder_EncodeValue( self, value );
 	self->valueBytes->size = 0;
 	DString_AppendUInt( self->valueBytes, nameid );
-	DString_AppendUInt( self->valueBytes, id );
+	DString_AppendUInt16( self->valueBytes, id );
 	DString_AppendUInt8( self->valueBytes, pm );
 	DString_AppendUInt( self->valueBytes, typeid );
 	DString_AppendUInt( self->valueBytes, valueid );
@@ -2126,7 +2126,7 @@ void DaoByteDecoder_DecodeConstants( DaoByteDecoder *self )
 	int id, id2, id3;
 	for(i=0; i<numconsts; ++i){
 		int nameID = DaoByteDecoder_DecodeUInt( self );
-		int index = DaoByteDecoder_DecodeUInt( self );
+		int index = DaoByteDecoder_DecodeUInt16( self );
 		int perm = DaoByteDecoder_DecodeUInt8( self );
 		int valueID = DaoByteDecoder_DecodeUInt( self );
 		DString *name = DaoByteDecoder_GetIdentifier( self, nameID );
@@ -2169,7 +2169,7 @@ void DaoByteDecoder_DecodeVariables( DaoByteDecoder *self )
 	int id, id2, id3;
 	for(i=0; i<numvars; ++i){
 		int nameID = DaoByteDecoder_DecodeUInt( self );
-		int index = DaoByteDecoder_DecodeUInt( self );
+		int index = DaoByteDecoder_DecodeUInt16( self );
 		int perm = DaoByteDecoder_DecodeUInt8( self );
 		int typeID = DaoByteDecoder_DecodeUInt( self );
 		int valueID = DaoByteDecoder_DecodeUInt( self );
@@ -2268,7 +2268,7 @@ void DaoByteDecoder_DecodeClasses( DaoByteDecoder *self )
 		count = DaoByteDecoder_DecodeUInt16( self );
 		for(j=0; j<count; ++j){
 			int nameID = DaoByteDecoder_DecodeUInt( self );
-			int index = DaoByteDecoder_DecodeUInt( self );
+			int index = DaoByteDecoder_DecodeUInt16( self );
 			int perm = DaoByteDecoder_DecodeUInt8( self );
 			int valueID = DaoByteDecoder_DecodeUInt( self );
 			DString *name = DaoByteDecoder_GetIdentifier( self, nameID );
@@ -2294,7 +2294,7 @@ void DaoByteDecoder_DecodeClasses( DaoByteDecoder *self )
 		count = DaoByteDecoder_DecodeUInt16( self );
 		for(j=0; j<count; ++j){
 			int nameID = DaoByteDecoder_DecodeUInt( self );
-			int index = DaoByteDecoder_DecodeUInt( self );
+			int index = DaoByteDecoder_DecodeUInt16( self );
 			int perm = DaoByteDecoder_DecodeUInt8( self );
 			int typeID = DaoByteDecoder_DecodeUInt( self );
 			int valueID = DaoByteDecoder_DecodeUInt( self );
@@ -2319,7 +2319,7 @@ void DaoByteDecoder_DecodeClasses( DaoByteDecoder *self )
 		count = DaoByteDecoder_DecodeUInt16( self );
 		for(j=0; j<count; ++j){
 			int nameID = DaoByteDecoder_DecodeUInt( self );
-			int index = DaoByteDecoder_DecodeUInt( self );
+			int index = DaoByteDecoder_DecodeUInt16( self );
 			int perm = DaoByteDecoder_DecodeUInt8( self );
 			int typeID = DaoByteDecoder_DecodeUInt( self );
 			int valueID = DaoByteDecoder_DecodeUInt( self );
