@@ -140,7 +140,7 @@ static const int mapAithOpcode[]=
 	DVM_NOT /* DAO_OPER_NOT */
 };
 
-void DaoInode_Print( DaoInode *self );
+void DaoInode_Print( DaoInode *self, int index );
 void DaoInode_Delete( DaoInode *self );
 
 DaoParser* DaoParser_New()
@@ -271,8 +271,7 @@ static void DaoParser_PrintCodes( DaoParser *self )
 	DaoInode *it = self->vmcFirst;
 	int i = 0;
 	while( it ){
-		it->index = i ++;
-		DaoInode_Print( it );
+		DaoInode_Print( it, i++ );
 		it = it->next;
 	}
 }
@@ -3798,7 +3797,7 @@ DecoratorError:
 				if( DaoParser_CheckTokenType( self, DTOK_COLON, ":" ) ==0 ) return 0;
 				DaoParser_AddCode( self, DVM_DEFAULT, 0, 0, 0, start, 0, 0 );
 				DaoParser_PushLevel( self );
-				opening->jumpFalse = self->vmcLast;
+				opening->jumpTrue->jumpFalse = self->vmcLast;
 				start += 2;
 				continue;
 			}

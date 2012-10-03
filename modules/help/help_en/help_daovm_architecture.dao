@@ -517,8 +517,8 @@ struct ListValue
 struct MapValue
 {
 	uint8       # type ID (0x0A, DAO_MAP);
-	uint32      # hashing seed;
 	uint32      # type reference number;
+	uint32      # hashing seed;
 	int         # number of items;
 	uint32[]    # list of value reference numbers;
 }

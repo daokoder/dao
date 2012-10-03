@@ -1660,10 +1660,11 @@ void DaoInode_Delete( DaoInode *self )
 {
 	free( self );
 }
-void DaoInode_Print( DaoInode *self )
+void DaoInode_Print( DaoInode *self, int index )
 {
 	const char *name = DaoVmCode_GetOpcodeName( self->code );
 	static const char *fmt = "%3i: %-8s : %5i, %5i, %5i;  [%3i] [%2i] %9p %9p %9p, %s\n";
+	if( index < 0 ) index = self->index;
 	printf( fmt, self->index, name, self->a, self->b, self->c, self->line, self->level,
 			self, self->jumpTrue, self->jumpFalse, "" );
 }
