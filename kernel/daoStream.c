@@ -977,22 +977,25 @@ int DaoFile_ReadAll( FILE *fin, DString *all, int close )
 }
 void DaoFile_WriteString( FILE* file, DString *str )
 {
-	daoint len = 0;
-	int res;
+	daoint pos = 0;
 	if( str->mbs ){
-		for( ;; ){
-			res = fprintf( file, "%s", str->mbs + len );
-			len += res + 1;
-			if( res < 0 || len > str->size ) break;
-			fprintf( file, "%c", str->mbs[len - 1] );
-		}
+		do {
+			fprintf( file, "%s", str->mbs + pos );
+			pos = DString_FindChar( str, '\0', pos );
+			if( pos != MAXSIZE ){
+				fprintf( file, "%c", 0 );
+				pos += 1;
+			}
+		} while( pos != MAXSIZE );
 	}else{
-		for( ;; ){
-			res = fprintf( file, "%ls", str->wcs + len );
-			len += res + 1;
-			if( res < 0 || len > str->size ) break;
-			fprintf( file, "%lc", str->wcs[len - 1] );
-		}
+		do {
+			fprintf( file, "%ls", str->wcs + pos );
+			pos = DString_FindWChar( str, L'\0', pos );
+			if( pos != MAXSIZE ){
+				fprintf( file, "%lc", 0 );
+				pos += 1;
+			}
+		} while( pos != MAXSIZE );
 	}
 }
 

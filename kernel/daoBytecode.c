@@ -2569,7 +2569,8 @@ void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 			DArray_Append( lines, IntToPointer(C) );
 		}
 		count = DaoByteDecoder_DecodeUInt16( self );
-		for(j=0, k=1, m=lines->items.pInt[1];  j<count;  ++j){
+		m = lines->size > 1 ? lines->items.pInt[1] : 0;
+		for(j=0, k=1;  j<count;  ++j){
 			DaoVmCodeX vmc = {0,0,0,0,0,0,0,0,0};
 			if( j >= m && k < lineInfoCount ){
 				m += lines->items.pInt[2*k+1];
