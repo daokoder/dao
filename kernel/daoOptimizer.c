@@ -236,7 +236,7 @@ void DaoOptimizer_Delete( DaoOptimizer *self )
 	DMap_Delete( self->tmp );
 	dao_free( self );
 }
-void DaoRoutine_FormatCode( DaoRoutine *self, int i, DString *output );
+void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output );
 static int DaoOptimizer_UpdateRDA( DaoOptimizer *self, DaoCnode *first, DaoCnode *second );
 static void DaoOptimizer_Print( DaoOptimizer *self )
 {
@@ -251,7 +251,7 @@ static void DaoOptimizer_Print( DaoOptimizer *self )
 	DaoStream_WriteMBS( stream, daoRoutineCodeHeader );
 	for( j=0,n=routine->body->annotCodes->size; j<n; j++){
 		DaoCnode *node = self->nodes->items.pCnode[j];
-		DaoRoutine_FormatCode( routine, j, annot );
+		DaoRoutine_FormatCode( routine, j, *vmCodes[j], annot );
 		DString_Chop( annot );
 		while( annot->size < 80 ) DString_AppendChar( annot, ' ' );
 		DString_AppendMBS( annot, "| " );
@@ -1635,6 +1635,8 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 	}
 	node->exprid = it->value.pInt;
 
+	if( node->lvalue != 0xffff ) DArray_Append( uses[node->lvalue], node );
+	if( node->lvalue2 != 0xffff ) DArray_Append( uses[node->lvalue2], node );
 	switch( node->type ){
 	case DAO_OP_SINGLE :
 		DArray_Append( uses[node->first], node );

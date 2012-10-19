@@ -106,7 +106,7 @@ static const char* const daoFileSuffix[] =
 };
 enum{
 	DAO_MODULE_NONE,
-	DAO_MODULE_DAO_O,
+	DAO_MODULE_DAC,
 	DAO_MODULE_DAO,
 	DAO_MODULE_DLL,
 	DAO_MODULE_ANY
@@ -833,7 +833,7 @@ DaoNamespace* DaoVmSpace_LoadEx( DaoVmSpace *self, const char *file, int run )
 	SplitByWhiteSpaces( file, args );
 	DString_Assign( path, args->items.pString[0] );
 	switch( DaoVmSpace_CompleteModuleName( self, path ) ){
-	case DAO_MODULE_DAO_O :
+	case DAO_MODULE_DAC :
 	case DAO_MODULE_DAO : ns = DaoVmSpace_LoadDaoModuleExt( self, path, args, run ); break;
 	case DAO_MODULE_DLL : ns = DaoVmSpace_LoadDllModule( self, path ); break;
 	case DAO_MODULE_ANY : ns = DaoVmSpace_LoadDaoModuleExt( self, path, args, run ); break; /* any suffix */
@@ -1244,7 +1244,7 @@ static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
 	size = fname->size;
 	if( size >4 && DString_FindMBS( fname, ".dac", 0 ) == size-4 ){
 		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
-		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DAO_O;
+		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DAC;
 	}else if( size >4 && ( DString_FindMBS( fname, ".dao", 0 ) == size-4
 				|| DString_FindMBS( fname, ".cgi", 0 ) == size-4 ) ){
 		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
@@ -2358,7 +2358,7 @@ DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname )
 	printf( "modtype = %i\n", modtype );
 #endif
 	switch( DaoVmSpace_CompleteModuleName( self, fname ) ){
-	case DAO_MODULE_DAO_O :
+	case DAO_MODULE_DAC :
 	case DAO_MODULE_DAO : ns = DaoVmSpace_LoadDaoModule( self, fname ); break;
 	case DAO_MODULE_DLL : ns = DaoVmSpace_LoadDllModule( self, fname ); break;
 	}
