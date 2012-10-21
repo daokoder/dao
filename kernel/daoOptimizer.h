@@ -85,9 +85,10 @@ struct DaoOptimizer
 	AnalysisInit    init;
 	AnalysisUpdate  update;
 
-	DArray  *nodes; /* all nodes (labels); */
+	DArray  *nodes;  /* all nodes (labels); */
 	DArray  *enodes; /* expression nodes (labels); */
-	DArray  *uses;  /* nodes that use a variable; */
+	DArray  *uses;   /* nodes that use a variable; */
+	DArray  *refers; /* variables: 0, non-reference; 1, reference; */
 
 	DMap    *exprs;   /* all expressions; */
 	DMap    *inits;   /* init nodes; */
@@ -141,6 +142,14 @@ struct DaoInode
 };
 
 DaoInode* DaoInode_New();
+
+void DaoInodes_Clear( DArray *inodes );
+
+void DaoRoutine_CodesToInodes( DaoRoutine *self, DArray *inodes );
+void DaoRoutine_CodesFromInodes( DaoRoutine *self, DArray *inodes );
+void DaoRoutine_SetupSimpleVars( DaoRoutine *self );
+
+
 
 typedef struct DaoInferencer DaoInferencer;
 
