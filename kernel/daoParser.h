@@ -124,6 +124,7 @@ struct DaoParser
 	DArray *decoFuncs;
 	DArray *decoParams;
 	DArray *tempTypes;
+	DArray *routCompilable; /* list of defined routines with bodies */
 
 	/* Proto-values for a proto class: upvalue register ids to class member ids */
 	DMap  *protoValues; /* <int,int> */

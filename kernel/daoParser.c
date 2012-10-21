@@ -191,6 +191,7 @@ DaoParser* DaoParser_New()
 	self->localDecMap = DArray_New(D_MAP);
 	self->switchMaps = DArray_New(D_MAP);
 	self->enumTypes = DArray_New(0);
+	self->routCompilable = DArray_New(0);
 	DArray_Append( self->localVarMap, self->lvm );
 	DArray_Append( self->localCstMap, self->lvm );
 	DArray_Append( self->localDecMap, self->lvm );
@@ -228,6 +229,7 @@ void DaoParser_Delete( DaoParser *self )
 	DArray_Delete( self->vmCodes );
 	DArray_Delete( self->strings );
 	DArray_Delete( self->arrays );
+	DArray_Delete( self->routCompilable );
 	DMap_Delete( self->comments );
 	if( self->argName ) DaoToken_Delete( self->argName );
 	if( self->uplocs ) DArray_Delete( self->uplocs );
@@ -2893,7 +2895,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		if( k == 0 ) goto InvalidDefinition;
 		uplocs = parser->uplocs;
 		parser->outParser = NULL;
-		if( ! DaoParser_ParseRoutine( parser ) ) goto InvalidDefinition;
+		DArray_Append( self->routCompilable, parser );
 		regCall = self->regCount;
 		DaoParser_PushRegister( self );
 		for( i=0; i<uplocs->size; i+=4 ){
@@ -2916,6 +2918,10 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		MAP_Insert( self->protoValues, k, DaoClass_FindConst( klass, rout->routName ) );
 		DaoParser_Delete( parser );
 		return right + 1;
+	}
+	if( self->isClassBody && k ){
+		DArray_Append( self->routCompilable, parser );
+		return right+1;
 	}
 	if( k && self->decoFuncs->size ){ /* with body */
 		if( DaoParser_ParseRoutine( parser ) ==0 ) goto InvalidDefinition;
@@ -3053,6 +3059,26 @@ ErrorInterfaceDefinition:
 		DaoParser_Error( self, DAO_SYMBOL_NEED_INTERFACE, ename );
 	DaoParser_Error2( self, DAO_INVALID_INTERFACE_DEFINITION, errorStart, to, 0 );
 	return -1;
+}
+static int DaoParser_CompileRoutines( DaoParser *self )
+{
+	daoint i;
+	for(i=0; i<self->routCompilable->size; i++){
+		DaoParser* parser = (DaoParser*) self->routCompilable->items.pValue[i];
+		DaoRoutine *rout = parser->routine;
+		if( DaoParser_ParseRoutine( parser ) ==0 ) return 0;
+		if( self->decoFuncs->size ){
+#ifdef DAO_WITH_DECORATOR
+			DaoParser_DecorateRoutine( self, rout );
+#else
+			DaoParser_Error( self, DAO_DISABLED_DECORATOR, NULL );
+			return 0;
+#endif
+		}
+		DaoParser_Delete( parser );
+	}
+	self->routCompilable->size = 0;
+	return 1;
 }
 static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, int storeType )
 {
@@ -3265,6 +3291,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		}
 	}
 	DaoClass_ResetAttributes( klass );
+	if( DaoParser_CompileRoutines( parser ) == 0 ) return -1;
 	if( klass->classRoutines->overloads->routines->size == 0 ){
 		DArray_Clear( parser->tokens );
 		DaoTokens_AppendInitSuper( parser->tokens, klass, line, 0 );
@@ -5485,6 +5512,7 @@ static int DaoParser_ClassExpressionBody( DaoParser *self, int start, int end )
 	}
 	DaoParser_CompleteScope( self, start );
 	DaoClass_DeriveObjectData( klass );
+	if( DaoParser_CompileRoutines( self ) == 0 ) return 0;
 	self->isClassBody -= 1;
 	self->isDynamicClass -= 1;
 	self->hostInter = oldHostInter;

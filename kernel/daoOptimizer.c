@@ -1097,55 +1097,6 @@ static int DaoVmCode_MayCreateReference( int code )
 	}
 	return 0;
 }
-/* Merge left hand registers for the same instructions with the same operands: */
-static void DaoOptimizer_MergeRegister( DaoOptimizer *self, DaoRoutine *routine )
-{
-	DArray *array = DArray_New(0);
-	DaoCnode *node, *node2, **nodes;
-	daoint i, j, M, N = routine->body->annotCodes->size;
-	daoint *regmap;
-
-	DMap_Reset( self->exprs );
-	self->exprs->keytype = D_VMCODE2; /* Compare code and operands only; */
-	self->update = NULL;
-	DaoOptimizer_Init( self, routine );
-	nodes = self->nodes->items.pCnode;
-	do{
-		DaoType **types = routine->body->regType->items.pType;
-		DaoVmCode *vmc, *codes = routine->body->vmCodes->codes;
-#if 0
-		DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream );
-		DaoOptimizer_Print( self );
-#endif
-		M = routine->body->regCount;
-		DArray_Resize( array, M, 0 );
-		regmap = array->items.pInt;
-		for(i=0; i<M; i++) regmap[i] = i;
-
-		for(i=0; i<N; i++){
-			node = nodes[i];
-			if( node->lvalue == 0xffff || node->exprid == 0xffff ) continue;
-			node2 = self->enodes->items.pCnode[ node->exprid ];
-			if( node == node2 || node->lvalue == node2->lvalue ) continue;
-			if( MAP_Find( routine->body->localVarType, node->lvalue ) ) continue;
-			if( MAP_Find( routine->body->localVarType, node2->lvalue ) ) continue;
-			/* Do not merge lvalue of instruction that may produce a reference: */
-			if( DaoVmCode_MayCreateReference( codes[i].code ) ) continue;
-			assert( types[node->lvalue] == types[node2->lvalue] );
-			regmap[ node->lvalue ] = node2->lvalue;
-		}
-		for(i=0; i<N; i++){
-			node = nodes[i];
-			if( node->type != DAO_OP_RANGE && node->type != DAO_OP_RANGE2 ) continue;
-			for(j=node->first; j<=node->second; j++) regmap[j] = j;
-		}
-		DaoOptimizer_UpdateRegister( self, routine, array );
-	} while (M != routine->body->regCount);
-
-	DMap_Reset( self->exprs );
-	self->exprs->keytype = D_VMCODE; /* To compare code, operands and lvalue; */
-	DArray_Delete( array );
-}
 /* Common Subexpression Elimination: */
 static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 {
@@ -1538,7 +1489,6 @@ static void DaoOptimizer_Optimize( DaoOptimizer *self, DaoRoutine *routine )
 		if( k < routine->body->regCount / 2 ) return;
 	}
 
-	DaoOptimizer_MergeRegister( self, routine );
 	DaoOptimizer_CSE( self, routine );
 	DaoOptimizer_DCE( self, routine );
 	DaoOptimizer_ReduceRegister( self, routine );
