@@ -46,6 +46,7 @@ typedef union
 	DaoRoutine  *pRoutine;
 	DaoType     *pType;
 	DaoInode    *pInode;
+	DaoCnode    *pCnode;
 }DNodeData;
 
 struct DNode

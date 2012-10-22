@@ -57,7 +57,6 @@ struct DaoCnode
 	ushort_t  lvalue;     /* variable defined by the instruction; 0xffff for none; */
 	ushort_t  lvalue2;    /* C operand for SETF, SETI, SETDI, SETMI instructions; */
 	ushort_t  exprid;     /* expression id; 0xffff for none; */
-	ushort_t  ones;       /* number of ones in the bit array; */
 
 	DArray   *ins;   /* in nodes in the flow graph; */
 	DArray   *outs;  /* out nodes in the flow graph; */
@@ -66,7 +65,7 @@ struct DaoCnode
 	DArray   *defs; /* definitions for this use node; */
 	DArray   *uses; /* uses for this definition node; */
 
-	DString  *bits; /* bit array for the analysis; */
+	DMap     *set;  /* set for the analysis; */
 };
 
 DAO_DLL void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *code );
@@ -78,8 +77,6 @@ struct DaoOptimizer
 {
 	DaoRoutine *routine;
 
-	int bitCount;
-	int byteCount;
 	int reverseFlow;
 
 	AnalysisInit    init;
@@ -95,9 +92,6 @@ struct DaoOptimizer
 	DMap    *finals;  /* final nodes; */
 
 	DMap    *tmp;
-	DArray  *tmp2;
-	DString *tmp3;
-
 	DArray  *array;
 	DArray  *nodeCache;
 	DArray  *arrayCache;

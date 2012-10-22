@@ -93,6 +93,9 @@
 #endif
 
 
+#define IntToPointer( x ) ((void*)(size_t)x)
+
+
 typedef struct DRoutines     DRoutines;
 
 typedef struct DaoCdataCore  DaoCdataCore;

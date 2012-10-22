@@ -2074,11 +2074,11 @@ int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module )
 	}else{
 		DString_SetMBS( name, "libDaoJIT" DAO_DLL_SUFFIX );
 		DaoVmSpace_SearchPath( self, name, DAO_FILE_PATH, 1 );
-		jitHandle = DaoOpenDLL( name->mbs );
+		if( TestPath( self, name, DAO_FILE_PATH ) ) jitHandle = DaoOpenDLL( name->mbs );
 		if( jitHandle == NULL ){
 			DString_SetMBS( name, "DaoJIT" DAO_DLL_SUFFIX );
 			DaoVmSpace_SearchPath( self, name, DAO_FILE_PATH, 1 );
-			jitHandle = DaoOpenDLL( name->mbs );
+			if( TestPath( self, name, DAO_FILE_PATH ) )  jitHandle = DaoOpenDLL( name->mbs );
 		}
 	}
 	DString_Delete( name );

@@ -36,8 +36,6 @@
 #include "daoGC.h"
 
 
-#define IntToPointer( x ) ((void*)(size_t)x)
-
 
 /* Mainly for reference numbers: */
 #define DString_AppendUInt(a,b)       DString_AppendUInt32(a,b)
