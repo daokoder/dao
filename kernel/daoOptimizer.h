@@ -92,6 +92,7 @@ struct DaoOptimizer
 	DMap    *finals;  /* final nodes; */
 
 	DMap    *tmp;
+	DMap    *tmp2;
 	DArray  *array;
 	DArray  *nodeCache;
 	DArray  *arrayCache;

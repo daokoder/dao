@@ -5812,10 +5812,11 @@ static DaoEnode DaoParser_ParseParenthesis( DaoParser *self )
 	int end = self->tokens->size-1;
 	int rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
 	int comma = DaoParser_FindOpenToken( self, DTOK_COMMA, start+1, end, 0 );
+	int maybeType = tokens[start+1]->type == DTOK_IDENTIFIER;
 	int regC;
 
 	result.prev = self->vmcLast;
-	if( rb > 0 && rb < end && tokens[start+1]->type == DTOK_IDENTIFIER ){
+	if( rb > 0 && rb < end && maybeType && tokens[rb]->line == tokens[rb+1]->line ){
 		int count = self->errors->size;
 		self->curToken = rb + 1;
 		enode = DaoParser_ParsePrimary( self, 0 );
