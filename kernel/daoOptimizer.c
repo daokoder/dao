@@ -1154,7 +1154,7 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 		node->exprid = it->value.pInt;
 	}
 }
-DaoCnode* FindSingleDefNode( DArray *defs, int opc )
+static DaoCnode* FindSingleDefNode( DArray *defs, int opc )
 {
 	DaoCnode *node = NULL;
 	int i, N = defs->size;
@@ -1171,6 +1171,15 @@ DaoCnode* FindSingleDefNode( DArray *defs, int opc )
 	}
 	return node;
 }
+static int DaoCnode_CountDefinitions( DaoCnode *self, int reg )
+{
+	int i, K = 0, N = self->defs->size;
+	for(i=0; i<N; ++i){
+		DaoCnode *node = self->defs->items.pCnode[i];
+		K += node->lvalue == reg;
+	}
+	return K;
+}
 /* Common Subexpression Elimination: */
 static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 {
@@ -1185,7 +1194,7 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 	DaoCnode *node, *node2, **nodes;
 	daoint i, j, k, m, N = annotCodes->size;
 	daoint M = routine->body->regCount;
-	int reg, tid, repeat = 1;
+	int reg, tid;
 
 	DaoOptimizer_LinkDU( self, routine );
 	DaoOptimizer_InitAEA( self, routine );
@@ -1203,39 +1212,47 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 		for(j=node->first; j<=node->second; ++j) regtag->items.pInt[j] = 1;
 	}
 
-	while( repeat ){
-		repeat = 0;
-		for(i=0; i<N; ++i){
-			DaoInode *vmc2, *vmc = inodes->items.pInode[i];
-			DaoVmCode check;
-			node = nodes[i];
-			if( node->lvalue == 0xffff || node->exprid == 0xffff ) continue;
-			if( DaoVmCode_GetOpcodeType( vmc->code ) == DAO_CODE_MOVE ) continue;
-			if( vmc->code <= DVM_SECT ) continue;
+	for(i=0; i<N; ++i){
+		DaoInode *vmc2, *vmc = inodes->items.pInode[i];
+		DaoVmCode check;
+		node = nodes[i];
+		if( node->lvalue == 0xffff || node->exprid == 0xffff ) continue;
+		if( DaoVmCode_GetOpcodeType( vmc->code ) == DAO_CODE_MOVE ) continue;
+		if( vmc->code <= DVM_SECT ) continue;
 
-			//if( vmc->code >= DVM_GETCL_I && vmc->code <= DVM_GETCL_C ) continue; // gameplay
+		//if( vmc->code >= DVM_GETCL_I && vmc->code <= DVM_GETCL_C ) continue; // gameplay
 #if 0
 #endif
 
-			avexprs->size = 0;
-			for(it=DMap_First(node->set); it; it=DMap_Next(node->set,it)){
-				vmc2 = inodes->items.pInode[it->key.pCnode->index];
-				if( regtag->items.pInt[vmc2->c] ) continue;
-				if( vmc->code != vmc2->code || vmc->a != vmc2->a || vmc->b != vmc2->b ) continue;
-				DArray_Append( avexprs, it->key.pCnode );
+		avexprs->size = 0;
+		for(it=DMap_First(node->set); it; it=DMap_Next(node->set,it)){
+			vmc2 = inodes->items.pInode[it->key.pCnode->index];
+			if( regtag->items.pInt[vmc2->c] ) continue;
+			if( vmc->code != vmc2->code || vmc->a != vmc2->a || vmc->b != vmc2->b ) continue;
+			DArray_Append( avexprs, it->key.pCnode );
+		}
+		if( avexprs->size == 0 ) continue;
+
+		if( avexprs->size == 1 ){
+			DaoCnode *cnode = avexprs->items.pCnode[0];
+			/*
+			// Check for each use of node->lvalue, if they have single definition
+			// which is node->lvalue, one can simply update the operands of the
+			// use instructions:
+			 */
+			for(j=0; j<node->uses->size; ++j){
+				DaoCnode *use = node->uses->items.pCnode[j];
+				if( DaoCnode_CountDefinitions( use, node->lvalue ) > 1 ) break;
 			}
-			if( avexprs->size == 0 ) continue;
-			repeat = 1;
-
-			if( avexprs->size == 1 && node->uses->size == 1 ){
-				DaoCnode *cnode = avexprs->items.pCnode[0];
-				DaoCnode *use = node->uses->items.pCnode[0];
-				DaoInode *inode = inodes->items.pInode[use->index];
-				check = DaoVmCode_CheckOperands( (DaoVmCode*) inode );
-				if( check.a && inode->a == vmc->c ) inode->a = cnode->lvalue;
-				if( check.b && inode->b == vmc->c ) inode->b = cnode->lvalue;
-				if( check.c && inode->c == vmc->c ) inode->c = cnode->lvalue;
-
+			if( j == node->uses->size ){
+				for(j=0; j<node->uses->size; ++j){
+					DaoCnode *use = node->uses->items.pCnode[j];
+					DaoInode *inode = inodes->items.pInode[use->index];
+					check = DaoVmCode_CheckOperands( (DaoVmCode*) inode );
+					if( check.a && inode->a == vmc->c ) inode->a = cnode->lvalue;
+					if( check.b && inode->b == vmc->c ) inode->b = cnode->lvalue;
+					if( check.c && inode->c == vmc->c ) inode->c = cnode->lvalue;
+				}
 				vmc->code = DVM_UNUSED;
 				node->type = DAO_OP_NONE;
 				node->lvalue = 0xffff;
@@ -1243,55 +1260,55 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 				node->exprid = 0xffff;
 				continue;
 			}
+		}
 
-			reg = types->size;
-			tid = types->items.pType[vmc->c]->tid;
-			DArray_Append( regtag, IntToPointer(0) );
-			DArray_Append( types, types->items.pVoid[vmc->c] );
-			for(j=0; j<avexprs->size; ++j){
-				DaoCnode *cnode = avexprs->items.pCnode[j];
-				DaoInode *prev = inodes->items.pInode[cnode->index];
-				DaoInode *next = prev->next;
-				DaoInode *inode;
+		reg = types->size;
+		tid = types->items.pType[vmc->c]->tid;
+		DArray_Append( regtag, IntToPointer(0) );
+		DArray_Append( types, types->items.pVoid[vmc->c] );
+		for(j=0; j<avexprs->size; ++j){
+			DaoCnode *cnode = avexprs->items.pCnode[j];
+			DaoInode *prev = inodes->items.pInode[cnode->index];
+			DaoInode *next = prev->next;
+			DaoInode *inode;
 
-				inode = DaoInode_New();
-				inode->level = prev->level;
-				inode->line = prev->line;
-				inode->first = prev->first;
-				inode->middle = prev->middle;
-				inode->last = prev->last;
-				inode->code = DVM_MOVE_XX;
+			inode = DaoInode_New();
+			inode->level = prev->level;
+			inode->line = prev->line;
+			inode->first = prev->first;
+			inode->middle = prev->middle;
+			inode->last = prev->last;
+			inode->code = DVM_MOVE_XX;
 
-				k = types->items.pType[prev->c]->tid;
-				switch( k ){
-				case DAO_INTEGER : inode->code = DVM_MOVE_II; break;
-				case DAO_FLOAT   : inode->code = DVM_MOVE_FF; break;
-				case DAO_DOUBLE  : inode->code = DVM_MOVE_DD; break;
-				case DAO_COMPLEX : inode->code = DVM_MOVE_CC; break;
-				case DAO_STRING  : inode->code = DVM_MOVE_SS; break;
-				}
-				if( k != tid ) tid = 0;
-
-				inode->c = prev->c;
-				prev->c = inode->a = reg;
-
-				prev->next = inode;
-				inode->prev = next;
-				inode->next = next;
-				next->prev = inode;
+			k = types->items.pType[prev->c]->tid;
+			switch( k ){
+			case DAO_INTEGER : inode->code = DVM_MOVE_II; break;
+			case DAO_FLOAT   : inode->code = DVM_MOVE_FF; break;
+			case DAO_DOUBLE  : inode->code = DVM_MOVE_DD; break;
+			case DAO_COMPLEX : inode->code = DVM_MOVE_CC; break;
+			case DAO_STRING  : inode->code = DVM_MOVE_SS; break;
 			}
-			vmc->code = DVM_MOVE;
-			vmc->a = reg;
-			vmc->b = 0;
-			node->type = DAO_OP_SINGLE;
-			node->lvalue2 = 0xffff;
-			switch( tid ){
-			case DAO_INTEGER : vmc->code = DVM_MOVE_II; break;
-			case DAO_FLOAT   : vmc->code = DVM_MOVE_FF; break;
-			case DAO_DOUBLE  : vmc->code = DVM_MOVE_DD; break;
-			case DAO_COMPLEX : vmc->code = DVM_MOVE_CC; break;
-			case DAO_STRING  : vmc->code = DVM_MOVE_SS; break;
-			}
+			if( k != tid ) tid = 0;
+
+			inode->c = prev->c;
+			prev->c = inode->a = reg;
+
+			prev->next = inode;
+			inode->prev = next;
+			inode->next = next;
+			next->prev = inode;
+		}
+		vmc->code = DVM_MOVE;
+		vmc->a = reg;
+		vmc->b = 0;
+		node->type = DAO_OP_SINGLE;
+		node->lvalue2 = 0xffff;
+		switch( tid ){
+		case DAO_INTEGER : vmc->code = DVM_MOVE_II; break;
+		case DAO_FLOAT   : vmc->code = DVM_MOVE_FF; break;
+		case DAO_DOUBLE  : vmc->code = DVM_MOVE_DD; break;
+		case DAO_COMPLEX : vmc->code = DVM_MOVE_CC; break;
+		case DAO_STRING  : vmc->code = DVM_MOVE_SS; break;
 		}
 	}
 	routine->body->regCount = routine->body->regType->size;
