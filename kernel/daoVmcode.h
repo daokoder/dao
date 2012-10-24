@@ -499,6 +499,7 @@ DAO_DLL uchar_t     DaoVmCode_GetOpcodeType( int code );
 DAO_DLL uchar_t     DaoVmCode_GetOpcodeBase( int code );
 DAO_DLL uchar_t     DaoVmCode_GetResultOperand( int code );
 DAO_DLL uchar_t     DaoVmCode_CheckPermutable( int code );
+DAO_DLL DaoVmCode   DaoVmCode_CheckOperands( DaoVmCode *self );
 
 struct DaoVmCodeX
 {

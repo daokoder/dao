@@ -819,10 +819,7 @@ static void DaoOptimizer_InitNodesRDA( DaoOptimizer *self )
 	self->enodes->size = 0;
 	for(i=0; i<N; i++){
 		node = nodes[i];
-		//node->exprid = 0xffff;
 		if( node->lvalue == 0xffff ) continue;
-		//node->exprid = self->enodes->size + M;
-		//DArray_Append( self->enodes, node );
 		DArray_Append( self->uses->items.pArray[node->lvalue], (node->index + RDA_OFFSET) );
 	}
 }
@@ -877,68 +874,6 @@ static void DaoRoutine_UpdateCodes( DaoRoutine *self )
 		DaoVmcArray_Resize( vmCodes, vmCodes->size );
 	}
 }
-static DaoVmCode DaoVmCode_CheckOperands( DaoVmCode *self )
-{
-	DaoVmCode vmc = { 0, 0, 0, 0 };
-	switch( DaoVmCode_GetOpcodeType( self->code ) ){
-	case DAO_CODE_NOP :
-		break;
-	case DAO_CODE_GETC :
-	case DAO_CODE_GETG :
-		vmc.c = 1;
-		break;
-	case DAO_CODE_SETU :
-		vmc.a = 1;
-		if( self->c != 0 ) vmc.b = 1;
-		break;
-	case DAO_CODE_SETG :
-	case DAO_CODE_BRANCH :
-		vmc.a = 1;
-		break;
-	case DAO_CODE_EXPLIST :
-		//XXX if( self->b == 0 && self->a >= M ) break;
-		vmc.a = 1;
-		break;
-	case DAO_CODE_GETF : case DAO_CODE_SETF :
-	case DAO_CODE_MOVE : case DAO_CODE_UNARY :
-		vmc.a = 1;
-		vmc.c = 1;
-		break;
-	case DAO_CODE_GETM :
-	case DAO_CODE_ENUM2 : case DAO_CODE_MATRIX :
-	case DAO_CODE_ROUTINE : case DAO_CODE_CLASS :
-	case DAO_CODE_CALL :
-		vmc.a = 1;
-		vmc.c = 1;
-		break;
-	case DAO_CODE_SETM:
-		vmc.a = 1;
-		vmc.c = 1;
-		break;
-	case DAO_CODE_ENUM : 
-	case DAO_CODE_YIELD :
-		//XXX if( vmc->b || vmc->a < M ) vmc->a = regmap[ vmc->a ];
-		vmc.c = 1;
-		break;
-	case DAO_CODE_SETI : 
-	case DAO_CODE_GETI :
-	case DAO_CODE_BINARY :
-		vmc.a = 1;
-		vmc.b = 1;
-		vmc.c = 1;
-		break;
-	case DAO_CODE_GETU :
-		vmc.c = 1;
-		if( self->a != 0 ) vmc.b = 1;
-		break;
-	case DAO_CODE_UNARY2 :
-		vmc.b = 1;
-		vmc.c = 1;
-		break;
-	default: break;
-	}
-	return vmc;
-}
 static void DaoRoutine_UpdateRegister( DaoRoutine *self, DArray *mapping )
 {
 	DNode *it;
@@ -946,7 +881,7 @@ static void DaoRoutine_UpdateRegister( DaoRoutine *self, DArray *mapping )
 	DMap *localVarType2 = DMap_New(0,0);
 	DMap *localVarType = self->body->localVarType;
 	DaoType **types = self->body->regType->items.pType;
-	DaoVmCode *vmc, *codes = self->body->vmCodes->codes;
+	DaoVmCode check, *vmc, *codes = self->body->vmCodes->codes;
 	DaoVmCode **codes2 = (DaoVmCode**) self->body->annotCodes->items.pVmc;
 	daoint i, N = self->body->annotCodes->size;
 	daoint k, m = 0, M = self->body->regCount;
@@ -974,63 +909,10 @@ static void DaoRoutine_UpdateRegister( DaoRoutine *self, DArray *mapping )
 
 	for(i=0; i<N; i++){
 		vmc = codes2[i];
-		switch( (k = DaoVmCode_GetOpcodeType( vmc->code )) ){
-		case DAO_CODE_NOP :
-			break;
-		case DAO_CODE_GETC :
-		case DAO_CODE_GETG :
-			vmc->c = regmap[ vmc->c ];
-			break;
-		case DAO_CODE_SETU :
-			vmc->a = regmap[ vmc->a ];
-			if( vmc->c != 0 ) vmc->b = regmap[ vmc->b ];
-			break;
-		case DAO_CODE_SETG :
-		case DAO_CODE_BRANCH :
-			vmc->a = regmap[ vmc->a ];
-			break;
-		case DAO_CODE_EXPLIST :
-			if( vmc->b == 0 && vmc->a >= M ) break;
-			vmc->a = regmap[ vmc->a ];
-			break;
-		case DAO_CODE_GETF : case DAO_CODE_SETF :
-		case DAO_CODE_MOVE : case DAO_CODE_UNARY :
-			vmc->a = regmap[ vmc->a ];
-			vmc->c = regmap[ vmc->c ];
-			break;
-		case DAO_CODE_GETM :
-		case DAO_CODE_ENUM2 : case DAO_CODE_MATRIX :
-		case DAO_CODE_ROUTINE : case DAO_CODE_CLASS :
-		case DAO_CODE_CALL :
-			vmc->a = regmap[ vmc->a ];
-			vmc->c = regmap[ vmc->c ];
-			break;
-		case DAO_CODE_SETM:
-			vmc->a = regmap[ vmc->a ];
-			vmc->c = regmap[ vmc->c ];
-			break;
-		case DAO_CODE_ENUM : 
-		case DAO_CODE_YIELD :
-			if( vmc->b || vmc->a < M ) vmc->a = regmap[ vmc->a ];
-			vmc->c = regmap[ vmc->c ];
-			break;
-		case DAO_CODE_SETI : 
-		case DAO_CODE_GETI :
-		case DAO_CODE_BINARY :
-			vmc->a = regmap[ vmc->a ];
-			vmc->b = regmap[ vmc->b ];
-			vmc->c = regmap[ vmc->c ];
-			break;
-		case DAO_CODE_GETU :
-			vmc->c = regmap[ vmc->c ];
-			if( vmc->a != 0 ) vmc->b = regmap[ vmc->b ];
-			break;
-		case DAO_CODE_UNARY2 :
-			vmc->b = regmap[ vmc->b ];
-			vmc->c = regmap[ vmc->c ];
-			break;
-		default: break;
-		}
+		check = DaoVmCode_CheckOperands( vmc );
+		if( check.a ) vmc->a = regmap[ vmc->a ];
+		if( check.b ) vmc->b = regmap[ vmc->b ];
+		if( check.c ) vmc->c = regmap[ vmc->c ];
 		codes[i] = *vmc;
 	}
 }
@@ -1154,23 +1036,6 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 		node->exprid = it->value.pInt;
 	}
 }
-static DaoCnode* FindSingleDefNode( DArray *defs, int opc )
-{
-	DaoCnode *node = NULL;
-	int i, N = defs->size;
-	for(i=0; i<N; ++i){
-		DaoCnode *node2 = defs->items.pCnode[i];
-		if( node2->lvalue == opc ){
-			if( node ){
-				node = NULL;
-				break;
-			}else{
-				node = node2;
-			}
-		}
-	}
-	return node;
-}
 static int DaoCnode_CountDefinitions( DaoCnode *self, int reg )
 {
 	int i, K = 0, N = self->defs->size;
@@ -1187,7 +1052,6 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 	DArray *regtag = DArray_New(0);
 	DArray *inodes = DArray_New(0);
 	DArray *avexprs = DArray_New(0);
-	DArray *worklist = DArray_New(0);
 	DArray *types = routine->body->regType;
 	DArray *annotCodes = routine->body->annotCodes;
 	DaoVmCodeX *vmc, *vmc2, **codes = annotCodes->items.pVmc;
@@ -1199,9 +1063,8 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 	DaoOptimizer_LinkDU( self, routine );
 	DaoOptimizer_InitAEA( self, routine );
 	DaoOptimizer_SolveFlowEquation( self );
-	nodes = self->nodes->items.pCnode;
-
 	DaoRoutine_CodesToInodes( routine, inodes );
+	nodes = self->nodes->items.pCnode;
 
 	/* DaoOptimizer_Print( self ); */
 	DArray_Resize( regtag, M, 0 );
@@ -1316,98 +1179,47 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 	DaoRoutine_CodesFromInodes( routine, inodes );
 	DaoInodes_Clear( inodes );
 
-	DArray_Delete( regtag );
 	DArray_Delete( inodes );
+	DArray_Delete( regtag );
 	DArray_Delete( avexprs );
-	DArray_Delete( worklist );
-	DaoRoutine_UpdateCodes( routine );
 }
 /* Dead Code Elimination: */
 static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 {
-	DArray *array = DArray_New(0);
-	DArray *unused2 = DArray_New(0);
-	DArray *worklist = DArray_New(0);
-	DArray *annotCodes = routine->body->annotCodes;
-	DaoVmCodeX *vmc, **codes = annotCodes->items.pVmc;
+	DArray *inodes = DArray_New(0);
 	DaoCnode *node, *node2, **nodes;
-	daoint i, j, k, m, N = annotCodes->size;
-	daoint *unused, linkdu = 1;
+	daoint N = routine->body->annotCodes->size;
+	daoint i, j, k, m;
 
+	DaoOptimizer_LinkDU( self, routine );
 	DaoOptimizer_DoLVA( self, routine );
+	DaoRoutine_CodesToInodes( routine, inodes );
 
 	nodes = self->nodes->items.pCnode;
-	DArray_Resize( unused2, N, 0 );
-	unused = unused2->items.pInt;
-	while( 1 ){
-		/* DaoOptimizer_Print( self ); */
-		array->size = 0;
-		for(i=0; i<N; i++){
-			node = nodes[i];
-			vmc = codes[i];
-			if( node->lvalue == 0xffff ) continue;
-			if( node->exprid == 0xffff ) continue; /* this instruction may have side effect; */
-			if( DMap_Find( node->set, IntToPointer(node->lvalue) ) ) continue;
-			if( DaoRoutine_IsVolatileParameter( self->routine, node->lvalue ) ) continue;
-			
-			vmc->code = DVM_UNUSED;
-			DArray_PushBack( array, node );
-		}
-		memset( unused, 0, N * sizeof(daoint) );
-		for(i=0; i<N; i++){
-			vmc = codes[i];
-			if( i ) unused[i] = unused[i-1];
-			if( vmc->code == DVM_UNUSED ) unused[i] += 1;
-		}
-		for(i=0; i<N; i++){
-			node = nodes[i];
-			vmc = codes[i];
-			k = unused[i];
-			switch( vmc->code ){
-			case DVM_GOTO : case DVM_CASE : case DVM_SWITCH : 
-			case DVM_TEST : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
-				if( (unused[vmc->b] - k) != abs(vmc->b - i) ) break;
-				/* The codes between this location and the target are all dead: */
-				vmc->code = DVM_UNUSED;
-				DArray_PushBack( array, node );
-				break;
-			}
-		}
-		if( array->size == 0 ) break;
-		if( linkdu ){
-			/* DaoOptimizer_LinkDU() is expensive, do it only after
-			// an initial set of dead codes have been found: */
-			DaoOptimizer_LinkDU( self, routine );
-			DaoOptimizer_DoLVA( self, routine );
-			linkdu = 0;
-		}
-		for(i=0; i<array->size; i++){
-			node = array->items.pCnode[i];
-			node->type = DAO_OP_NONE;
-			node->lvalue = 0xffff;
-			node->lvalue2 = 0xffff;
-			node->exprid = 0xffff;
-			for(j=0; j<node->defs->size; j++){
-				node2 = node->defs->items.pCnode[j];
-				for(k=0; k<node2->uses->size; k++){
-					if( node2->uses->items.pCnode[k] == node ){
-						DArray_Erase( node2->uses, k, 1 );
-						break;
-					}
-				}
-				if( node2->uses->size == 0 && node2->exprid != 0xffff ){
-					/* Eliminate unused and side effect free code: */
-					codes[node2->index]->code = DVM_UNUSED;
-					DArray_PushBack( array, node2 );
-					DMap_Erase( node2->set, IntToPointer(node2->lvalue) );
+	for(i=N-1; i>=0; --i){
+		int used = 0;
+		DaoInode *vmc = inodes->items.pInode[i];
+		node = nodes[i];
+		if( node->lvalue == 0xffff ) continue;
+		if( node->exprid == 0xffff ) continue; /* this instruction may have side effect; */
+		if( DaoRoutine_IsVolatileParameter( self->routine, node->lvalue ) ) continue;
+		if( DMap_Find( node->set, IntToPointer(node->lvalue) ) ){
+			/* Check if the instructions that use node->lvalue are marked as dead: */
+			for(j=0; j<node->uses->size; ++j){
+				node2 = node->uses->items.pCnode[j];
+				if( inodes->items.pInode[node2->index]->code != DVM_UNUSED ){
+					used = 1;
+					break;
 				}
 			}
 		}
+		if( used ) continue;
+		inodes->items.pInode[node->index]->code = DVM_UNUSED;
 	}
-	DArray_Delete( array );
-	DArray_Delete( unused2 );
-	DArray_Delete( worklist );
-	DaoRoutine_UpdateCodes( routine );
+	DaoRoutine_CodesFromInodes( routine, inodes );
+
+	DaoInodes_Clear( inodes );
+	DArray_Delete( inodes );
 }
 /* Simple remapping the used registers to remove the unused ones: */
 static void DaoOptimizer_RemapRegister( DaoOptimizer *self, DaoRoutine *routine )

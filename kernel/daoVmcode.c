@@ -404,6 +404,67 @@ uchar_t DaoVmCode_CheckPermutable( int code )
 	if( code >= 0 && code <= DVM_UNUSED ) return dao_code_infolist[ code ].perm;
 	return 0;
 }
+DaoVmCode DaoVmCode_CheckOperands( DaoVmCode *self )
+{
+	DaoVmCode vmc = { 0, 0, 0, 0 };
+	switch( DaoVmCode_GetOpcodeType( self->code ) ){
+	case DAO_CODE_NOP :
+		break;
+	case DAO_CODE_GETC :
+	case DAO_CODE_GETG :
+		vmc.c = 1;
+		break;
+	case DAO_CODE_SETU :
+		vmc.a = 1;
+		if( self->c != 0 ) vmc.b = 1;
+		break;
+	case DAO_CODE_SETG :
+	case DAO_CODE_BRANCH :
+		vmc.a = 1;
+		break;
+	case DAO_CODE_EXPLIST :
+		if( self->b ) vmc.a = 1;
+		break;
+	case DAO_CODE_GETF : case DAO_CODE_SETF :
+	case DAO_CODE_MOVE : case DAO_CODE_UNARY :
+		vmc.a = 1;
+		vmc.c = 1;
+		break;
+	case DAO_CODE_GETM :
+	case DAO_CODE_ENUM2 : case DAO_CODE_MATRIX :
+	case DAO_CODE_ROUTINE : case DAO_CODE_CLASS :
+	case DAO_CODE_CALL :
+		vmc.a = 1;
+		vmc.c = 1;
+		break;
+	case DAO_CODE_SETM:
+		vmc.a = 1;
+		vmc.c = 1;
+		break;
+	case DAO_CODE_ENUM : 
+	case DAO_CODE_YIELD :
+		if( self->b ) vmc.a = 1;
+		vmc.c = 1;
+		break;
+	case DAO_CODE_SETI : 
+	case DAO_CODE_GETI :
+	case DAO_CODE_BINARY :
+		vmc.a = 1;
+		vmc.b = 1;
+		vmc.c = 1;
+		break;
+	case DAO_CODE_GETU :
+		vmc.c = 1;
+		if( self->a ) vmc.b = 1;
+		break;
+	case DAO_CODE_UNARY2 :
+		vmc.b = 1;
+		vmc.c = 1;
+		break;
+	default: break;
+	}
+	return vmc;
+}
 
 void DaoVmCode_Print( DaoVmCode self, char *buffer )
 {
