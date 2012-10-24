@@ -1049,7 +1049,7 @@ static int DaoCnode_CountDefinitions( DaoCnode *self, int reg )
 static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 {
 	DNode *it;
-	DArray *regtag = DArray_New(0);
+	DArray *regFixed = DArray_New(0);
 	DArray *inodes = DArray_New(0);
 	DArray *avexprs = DArray_New(0);
 	DArray *types = routine->body->regType;
@@ -1057,8 +1057,8 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 	DaoVmCodeX *vmc, *vmc2, **codes = annotCodes->items.pVmc;
 	DaoCnode *node, *node2, **nodes;
 	daoint i, j, k, m, N = annotCodes->size;
-	daoint M = routine->body->regCount;
-	int reg, tid;
+	daoint *fixed, M = routine->body->regCount;
+	int reg, tid, sametype;
 
 	DaoOptimizer_LinkDU( self, routine );
 	DaoOptimizer_InitAEA( self, routine );
@@ -1067,12 +1067,13 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 	nodes = self->nodes->items.pCnode;
 
 	/* DaoOptimizer_Print( self ); */
-	DArray_Resize( regtag, M, 0 );
-	for(i=0; i<M; ++i) regtag->items.pInt[i] = 0;
+	DArray_Resize( regFixed, M, 0 );
+	fixed = regFixed->items.pInt;
+	for(i=0; i<M; ++i) fixed[i] = 0;
 	for(i=0; i<N; ++i){
 		node = nodes[i];
 		if( node->type != DAO_OP_RANGE && node->type != DAO_OP_RANGE2 ) continue;
-		for(j=node->first; j<=node->second; ++j) regtag->items.pInt[j] = 1;
+		for(j=node->first; j<=node->second; ++j) fixed[j] = 1;
 	}
 
 	for(i=0; i<N; ++i){
@@ -1083,21 +1084,19 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 		if( DaoVmCode_GetOpcodeType( vmc->code ) == DAO_CODE_MOVE ) continue;
 		if( vmc->code <= DVM_SECT ) continue;
 
-		//if( vmc->code >= DVM_GETCL_I && vmc->code <= DVM_GETCL_C ) continue; // gameplay
-#if 0
-#endif
-
+		sametype = 1;
 		avexprs->size = 0;
 		for(it=DMap_First(node->set); it; it=DMap_Next(node->set,it)){
-			vmc2 = inodes->items.pInode[it->key.pCnode->index];
-			if( regtag->items.pInt[vmc2->c] ) continue;
+			node2 = it->key.pCnode;
+			vmc2 = inodes->items.pInode[node2->index];
 			if( vmc->code != vmc2->code || vmc->a != vmc2->a || vmc->b != vmc2->b ) continue;
-			DArray_Append( avexprs, it->key.pCnode );
+			if( types->items.pType[vmc->c] != types->items.pType[node2->lvalue] ) sametype = 0;
+			DArray_Append( avexprs, node2 );
 		}
 		if( avexprs->size == 0 ) continue;
 
-		if( avexprs->size == 1 ){
-			DaoCnode *cnode = avexprs->items.pCnode[0];
+		node2 = avexprs->items.pCnode[0];
+		if( avexprs->size == 1 && sametype && fixed[vmc->c] == 0 && fixed[node2->lvalue] == 0 ){
 			/*
 			// Check for each use of node->lvalue, if they have single definition
 			// which is node->lvalue, one can simply update the operands of the
@@ -1112,9 +1111,9 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 					DaoCnode *use = node->uses->items.pCnode[j];
 					DaoInode *inode = inodes->items.pInode[use->index];
 					check = DaoVmCode_CheckOperands( (DaoVmCode*) inode );
-					if( check.a && inode->a == vmc->c ) inode->a = cnode->lvalue;
-					if( check.b && inode->b == vmc->c ) inode->b = cnode->lvalue;
-					if( check.c && inode->c == vmc->c ) inode->c = cnode->lvalue;
+					if( check.a && inode->a == vmc->c ) inode->a = node2->lvalue;
+					if( check.b && inode->b == vmc->c ) inode->b = node2->lvalue;
+					if( check.c && inode->c == vmc->c ) inode->c = node2->lvalue;
 				}
 				vmc->code = DVM_UNUSED;
 				node->type = DAO_OP_NONE;
@@ -1127,7 +1126,7 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 
 		reg = types->size;
 		tid = types->items.pType[vmc->c]->tid;
-		DArray_Append( regtag, IntToPointer(0) );
+		DArray_Append( regFixed, IntToPointer(0) );
 		DArray_Append( types, types->items.pVoid[vmc->c] );
 		for(j=0; j<avexprs->size; ++j){
 			DaoCnode *cnode = avexprs->items.pCnode[j];
@@ -1141,17 +1140,15 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 			inode->first = prev->first;
 			inode->middle = prev->middle;
 			inode->last = prev->last;
-			inode->code = DVM_MOVE_XX;
+			inode->code = DVM_MOVE;
 
-			k = types->items.pType[prev->c]->tid;
-			switch( k ){
+			switch( types->items.pType[prev->c]->tid == tid ? tid : 0 ){
 			case DAO_INTEGER : inode->code = DVM_MOVE_II; break;
 			case DAO_FLOAT   : inode->code = DVM_MOVE_FF; break;
 			case DAO_DOUBLE  : inode->code = DVM_MOVE_DD; break;
 			case DAO_COMPLEX : inode->code = DVM_MOVE_CC; break;
 			case DAO_STRING  : inode->code = DVM_MOVE_SS; break;
 			}
-			if( k != tid ) tid = 0;
 
 			inode->c = prev->c;
 			prev->c = inode->a = reg;
@@ -1161,12 +1158,12 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 			inode->next = next;
 			next->prev = inode;
 		}
-		vmc->code = DVM_MOVE;
+		vmc->code = DVM_MOVE_XX;
 		vmc->a = reg;
 		vmc->b = 0;
 		node->type = DAO_OP_SINGLE;
 		node->lvalue2 = 0xffff;
-		switch( tid ){
+		switch( types->items.pType[vmc->c]->tid ){
 		case DAO_INTEGER : vmc->code = DVM_MOVE_II; break;
 		case DAO_FLOAT   : vmc->code = DVM_MOVE_FF; break;
 		case DAO_DOUBLE  : vmc->code = DVM_MOVE_DD; break;
@@ -1180,7 +1177,7 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 	DaoInodes_Clear( inodes );
 
 	DArray_Delete( inodes );
-	DArray_Delete( regtag );
+	DArray_Delete( regFixed );
 	DArray_Delete( avexprs );
 }
 /* Dead Code Elimination: */
