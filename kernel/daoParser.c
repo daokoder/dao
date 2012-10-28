@@ -668,30 +668,6 @@ static int DaoParser_FindPairToken2( DaoParser *self,  uchar_t l, uchar_t r, int
 	return DaoParser_FindPairToken( self, l, r, m, n );
 }
 
-static void DaoParser_ExtractComments( DaoParser *self, DString *docString, int lnstart, int lnend )
-{
-	DNode *node;
-	daoint j;
-
-	node = MAP_FindLE( self->comments, lnstart );
-	if( node == NULL ) node = DMap_First( self->comments );
-
-	for(; node!=NULL; node = DMap_Next(self->comments, node) ){
-		DString *s = node->value.pString;
-		if( node->key.pInt < lnstart ) continue;
-		if( node->key.pInt > lnend ) break;
-		if( s->mbs[1] == '{' ){
-			DString_AppendDataMBS( docString, s->mbs+2, s->size-4 );
-		}else{
-			DString_AppendMBS( docString, s->mbs+1 );
-		}
-	}
-	j = DString_FindMBS( docString, "%P", 0 );
-	while( j != MAXSIZE ){
-		DString_Replace( docString, self->nameSpace->file, j, 2 );
-		j = DString_FindMBS( docString, "%P", 0 );
-	}
-}
 static void DaoTokens_AppendInitSuper( DArray *self, DaoClass *klass, int line, int flags )
 {
 	DString *info, *sup = DString_New(1);;
@@ -1198,14 +1174,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	}
 	if( tokens[right+1]->name != DTOK_LCB ) return right;
 
-	DString_Clear( self->mbs );
-	DaoParser_ExtractComments( self, self->mbs, tokens[start]->line, tokens[right+1]->line );
-	if( self->mbs->size ){
-		if( routine->body->routHelp == NULL ) routine->body->routHelp = DString_New(1);
-		DString_Assign( routine->body->routHelp, self->mbs );
-	}
 	start = right;
-
 	e2 = start + 1;
 	if( tokens[start+1]->name == DTOK_LCB ){
 		right = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, right, -1 );
@@ -3028,10 +2997,6 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 	right = tokens[start]->name == DTOK_LCB ?
 		DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, -1 ) : -1 ;
 	if( right < 0 ) goto ErrorInterfaceDefinition;
-#if 0
-	//DaoParser_ExtractComments( self, inter->docString,
-	//    rout->defLine, tokens[right]->line );
-#endif
 
 	DaoInterface_DeriveMethods( inter );
 	for(i=start+1; i<right; i++) DArray_Append( parser->tokens, tokens[i] );
@@ -3250,7 +3215,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, -1 ) : -1 ;
 
 	if( right < 0 ) goto ErrorClassDefinition;
-	DaoParser_ExtractComments( self, klass->classHelp, rout->defLine, tokens[right]->line );
 
 	parser->defined = 1;
 	DaoClass_DeriveClassData( klass );

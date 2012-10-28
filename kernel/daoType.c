@@ -443,7 +443,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 {
 	DaoType *it1, *it2;
 	DNode *it, *node = NULL;
-	daoint i, k, n, mt2, mt = DAO_MT_NOT;
+	daoint i, k, n, mt2, mt3, mt = DAO_MT_NOT;
 	if( self == NULL || type == NULL ) return DAO_MT_NOT;
 	if( self == type ) return DAO_MT_EQ;
 	mt = dao_type_matrix[self->tid][type->tid];
@@ -615,12 +615,14 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		return DAO_MT_NOT;
 	case DAO_VARIANT :
 		mt = DAO_MT_EQ;
+		mt3 = DAO_MT_NOT;
 		for(i=0,n=self->nested->size; i<n; i++){
 			it1 = self->nested->items.pType[i];
 			mt2 = DaoType_MatchTo( it1, type, defs );
 			if( mt2 < mt ) mt = mt2;
-			if( mt == 0 ) return DAO_MT_NOT;
+			if( mt2 > mt3 ) mt3 = mt2;
 		}
+		if( mt == 0 ) return mt3 ? DAO_MT_ANYX : DAO_MT_NOT;
 		return mt;
 	default : break;
 	}

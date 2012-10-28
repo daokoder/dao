@@ -106,7 +106,6 @@ DaoClass* DaoClass_New()
 	DaoValue_Init( self, DAO_CLASS );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->className = DString_New(1);
-	self->classHelp = DString_New(1);
 
 	self->lookupTable = DHash_New(D_STRING,0);
 	self->ovldRoutMap = DHash_New(D_STRING,0);
@@ -146,7 +145,6 @@ void DaoClass_Delete( DaoClass *self )
 #endif
 
 	DString_Delete( self->className );
-	DString_Delete( self->classHelp );
 	dao_free( self );
 }
 void DaoClass_AddReference( DaoClass *self, void *reference )

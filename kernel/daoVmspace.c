@@ -654,15 +654,6 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 		const char *file, DArray *args, DArray *argNames, DArray *argValues )
 {
-	DaoList *argv;
-	DaoMap *cmdarg;
-	DaoType *nested[2];
-	DaoValue ival = {DAO_INTEGER};
-	DaoValue sval1 = {DAO_STRING};
-	DaoValue sval2 = {DAO_STRING};
-	DaoValue *nkey = (DaoValue*) & ival;
-	DaoValue *skey = (DaoValue*) & sval1;
-	DaoValue *sval = (DaoValue*) & sval2;
 	DString *str = DString_New(1);
 	DString *key = DString_New(1);
 	DString *val = DString_New(1);
@@ -670,62 +661,18 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 	daoint i, tk, offset = 0;
 	int eq = 0;
 
-	skey->xString.data = key;
-	sval->xString.data = val;
-
-	argv = DaoList_New();
-	cmdarg = DaoMap_New(0);
-	nested[0] = dao_type_any;
-	nested[1] = DaoNamespace_MakeType( ns, "string",DAO_STRING, NULL,NULL,0 );
-	cmdarg->unitype = DaoNamespace_MakeType( ns, "map",DAO_MAP,NULL,nested,2);
-	argv->unitype = DaoNamespace_MakeType( ns, "list",DAO_LIST,NULL,nested+1,1);
-	GC_IncRC( cmdarg->unitype );
-	GC_IncRC( argv->unitype );
-	DString_SetMBS( str, "ARGV" );
-	if( DaoNamespace_AddConst( ns, str, (DaoValue*) argv, DAO_DATA_PUBLIC ) < 0 ){
-		DaoList_Delete( argv );
-		i = DaoNamespace_FindConst( ns, str );
-		argv = (DaoList*) DaoNamespace_GetConst( ns, i );
-		if( argv == NULL || argv->type != DAO_LIST ) return;
-		DaoList_Clear( argv );
-	}
-	if( ns == self->mainNamespace ){
-		DaoVmSpace_Lock( self );
-		DaoNamespace_AddConst( self->nsInternal, str, (DaoValue*) argv, DAO_DATA_PUBLIC );
-		DaoVmSpace_Unlock( self );
-	}
-	DString_SetMBS( str, "CMDARG" );
-	if( DaoNamespace_AddConst( ns, str, (DaoValue*) cmdarg, DAO_DATA_PUBLIC ) < 0 ){
-		DaoMap_Delete( cmdarg );
-		i = DaoNamespace_FindConst( ns, str );
-		cmdarg = (DaoMap*) DaoNamespace_GetConst( ns, i );
-		if( cmdarg == NULL || cmdarg->type != DAO_MAP ) return;
-		DaoMap_Clear( cmdarg );
-	}
-	if( ns == self->mainNamespace ){
-		DaoVmSpace_Lock( self );
-		DaoNamespace_AddConst( self->nsInternal, str, (DaoValue*) cmdarg, DAO_DATA_PUBLIC );
-		DaoVmSpace_Unlock( self );
-	}
-
 	if( array == NULL && file ){
 		array = DArray_New(D_STRING);
 		SplitByWhiteSpaces( file, array );
 		DString_Assign( ns->name, array->items.pString[0] );
 	}
 	DString_Assign( val, array->items.pString[0] );
-	DaoMap_Insert( cmdarg, nkey, sval );
 	DaoVmSpace_MakePath( self, ns->name );
 	DaoNamespace_SetName( ns, ns->name->mbs ); /* to update ns->path and ns->file; */
-	for(i=0; i<array->size; i++){
-		DString_Assign( val, array->items.pString[i] );
-		DaoList_Append( argv, sval );
-	}
 	i = 1;
 	while( i < array->size ){
 		DString *s = array->items.pString[i];
 		i ++;
-		nkey->xInteger.value ++;
 		offset = 0;
 		if( s->mbs[0] == '-' ){
 			offset += 1;
@@ -737,28 +684,17 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 			DString_SubString( s, val, eq+offset+1, s->size-offset-eq );
 			DArray_Append( argNames, key );
 			DArray_Append( argValues, val );
-
-			DaoMap_Insert( cmdarg, skey, sval );
-			DString_SubString( s, key, 0, eq );
-			DaoMap_Insert( cmdarg, skey, sval );
-			DaoMap_Insert( cmdarg, nkey, sval );
 		}else if( tk == DTOK_IDENTIFIER && offset && i < array->size ){
 			DString_SubString( s, key, offset, s->size-offset );
 			DString_Assign( val, array->items.pString[i] );
 			DArray_Append( argNames, key );
 			DArray_Append( argValues, val );
-
-			DaoMap_Insert( cmdarg, skey, sval );
-			DString_Assign( key, s );
-			DaoMap_Insert( cmdarg, skey, sval );
-			DaoMap_Insert( cmdarg, nkey, sval );
 			i += 1;
 		}else{
 			DString_Clear( key );
 			DString_Assign( val, s );
 			DArray_Append( argNames, key );
 			DArray_Append( argValues, s );
-			DaoMap_Insert( cmdarg, nkey, sval );
 		}
 	}
 	if( args == NULL ) DArray_Delete( array );
@@ -766,62 +702,114 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 	DString_Delete( val );
 	DString_Delete( str );
 }
-static void DaoVmSpace_ConvertArguments( DaoNamespace *ns, DArray *argNames, DArray *argValues )
+static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNames, DArray *argValues )
 {
-	DaoValue ival = {DAO_INTEGER};
-	DaoValue sval1 = {DAO_STRING};
-	DaoValue sval2 = {DAO_STRING};
-	DaoValue *nkey = (DaoValue*) & ival;
-	DaoValue *skey = (DaoValue*) & sval1;
-	DaoValue *sval = (DaoValue*) & sval2;
-	DaoRoutine *rout = ns->mainRoutine;
-	DaoType *abtp = rout->routType;
-	DString *str, *key, *val;
-	int i;
-	if( argValues->size == 0 ) return;
-	key = DString_New(1);
-	val = DString_New(1);
-	skey->xString.data = key;
-	sval->xString.data = val;
-	DaoList_Clear( ns->argParams );
-	DString_SetMBS( key, "main" );
-	i = ns ? DaoNamespace_FindConst( ns, key ) : -1;
+	DArray *types;
+	DString *name;
+	DaoRoutine *rout = NULL;
+	int i, j, count = 0;
+
+	types = DArray_New(0);
+	name = DString_New(1);
+
+	DString_SetMBS( name, "main" );
+	i = ns ? DaoNamespace_FindConst( ns, name ) : -1;
 	if( i >=0 ){
-		nkey = DaoNamespace_GetConst( ns, i );
-		if( nkey->type == DAO_ROUTINE ){
-			rout = & nkey->xRoutine;
-			abtp = rout->routType;
-		}
+		DaoValue *value = DaoNamespace_GetConst( ns, i );
+		if( value->type == DAO_ROUTINE ) rout = & value->xRoutine;
 	}
 	if( rout == NULL ){
-		DString_Delete( key );
-		DString_Delete( val );
-		return;
+		DArray_Delete( types );
+		DString_Delete( name );
+		return NULL;
 	}
 	for( i=0; i<argNames->size; i++ ){
+		DaoType *type = dao_type_string;
 		char *chars = argValues->items.pString[i]->mbs;
 		if( chars[0] == '+' || chars[0] == '-' ) chars ++;
-		nkey = sval;
-		DString_Assign( val, argValues->items.pString[i] );
-		if( DaoToken_IsNumber( chars, 0 ) ){
-			DaoValue temp = {0};
-			nkey = DaoParseNumber( chars, (DaoValue*) & temp );
-		}
+		if( DaoToken_IsNumber( chars, 0 ) ) type = dao_type_double;
 		if( argNames->items.pString[i]->size ){
 			DString *S = argNames->items.pString[i];
-			DaoNameValue *nameva = DaoNameValue_New( argNames->items.pString[i], nkey );
-			DaoValue *tp = (DaoValue*) DaoNamespace_GetType( ns, nkey );
-			DaoType *type = DaoNamespace_MakeType( ns, S->mbs, DAO_PAR_NAMED, tp, NULL, 0 );
-			nameva->unitype = type;
-			GC_IncRC( nameva->unitype );
-			DaoList_Append( ns->argParams, (DaoValue*) nameva );
-			nameva->trait |= DAO_VALUE_CONST;
-		}else{
-			DaoList_Append( ns->argParams, nkey );
+			type = DaoNamespace_MakeType( ns, S->mbs, DAO_PAR_NAMED, (DaoValue*)type, NULL, 0 );
+		}
+		DArray_Append( types, type );
+	}
+	return DaoRoutine_ResolveByType( rout, NULL, types->items.pType, types->size, DVM_CALL );
+}
+static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, DArray *argNames, DArray *argValues )
+{
+	DString *str, *val;
+	DaoValue ival = {DAO_INTEGER};
+	DaoValue fval = {DAO_FLOAT};
+	DaoValue dval = {DAO_DOUBLE};
+	DaoValue sval = {DAO_STRING};
+	DaoNamespace *ns = routine->nameSpace;
+	DaoList *argParams = ns->argParams;
+	DaoType *routype = routine->routType;
+	DaoType *type;
+	int i, j;
+
+	val = DString_New(1);
+	sval.xString.data = val;
+	DaoList_Clear( argParams );
+
+	for(i=0; i<argNames->size; ++i) DaoList_Append( argParams, dao_none_value );
+	for(i=0; i<argNames->size; ++i){
+		DString *name = argNames->items.pString[i];
+		DString *value = argValues->items.pString[i];
+		int ito = i;
+		type = routype->nested->items.pType[ito];
+		if( type->tid == DAO_PAR_VALIST ){
+			for(j=i; j<argNames->size; ++j){
+				DaoValue *argv = & sval;
+				name = argNames->items.pString[j];
+				value = argValues->items.pString[j];
+				DString_Assign( val, value );
+				if( name->size ){
+					DaoNameValue *nameva = DaoNameValue_New( name, argv );
+					DaoValue *st = (DaoValue*) dao_type_string;
+					type = DaoNamespace_MakeType( ns, name->mbs, DAO_PAR_NAMED, st, NULL, 0 );
+					nameva->unitype = type;
+					GC_IncRC( nameva->unitype );
+					argv = (DaoValue*) nameva;
+				}
+				DaoList_SetItem( argParams, argv, j );
+			}
+			break;
+		}
+		if( name->size ){
+			DNode *node = DMap_Find( routype->mapNames, name );
+			if( node ) ito = node->value.pInt;
+		}
+		type = (DaoType*) routype->nested->items.pType[ito]->aux;
+		if( argParams->items.items.pValue[ito]->type != DAO_NONE ){
+			DaoStream_WriteMBS( self->errorStream, "duplicated argument" );
+			goto Failed;
+		}
+		switch( type->tid ){
+		case DAO_INTEGER :
+			ival.xInteger.value = strtoll( value->mbs, 0, 0 );
+			DaoList_SetItem( argParams, & ival, ito );
+			break;
+		case DAO_FLOAT :
+			fval.xFloat.value = strtod( value->mbs, 0 );
+			DaoList_SetItem( argParams, & fval, ito );
+			break;
+		case DAO_DOUBLE :
+			dval.xDouble.value = strtod( value->mbs, 0 );
+			DaoList_SetItem( argParams, & dval, ito );
+			break;
+		default :
+			DString_Assign( val, value );
+			DaoList_SetItem( argParams, & sval, ito );
+			break;
 		}
 	}
-	DString_Delete( key );
 	DString_Delete( val );
+	return 1;
+Failed:
+	DString_Delete( val );
+	return 0;
 }
 
 DaoNamespace* DaoVmSpace_LoadEx( DaoVmSpace *self, const char *file, int run )
@@ -1120,7 +1108,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	DaoNamespace *ns = self->mainNamespace;
 	DaoProcess *vmp = self->mainProcess;
 	DaoStream *io = self->errorStream;
-	DaoRoutine *mainRoutine;
+	DaoRoutine *mainRoutine, *expMain = NULL;
 	DaoRoutine *rout = NULL;
 	DaoValue **ps;
 	DString *name;
@@ -1182,7 +1170,15 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 			DaoVmSpace_SaveByteCodes( self, ns );
 		}
 	}
-	if( res ) DaoVmSpace_ConvertArguments( ns, argNames, argValues );
+	if( res ){
+		expMain = DaoVmSpace_FindExplicitMain( ns, argNames, argValues );
+		if( expMain ){
+			DaoVmSpace_ConvertArguments( self, expMain, argNames, argValues );
+		}else{
+			DaoStream_WriteMBS( io, "ERROR: invalid command line arguments.\n" );
+			res = 0;
+		}
+	}
 	DArray_Delete( argNames );
 	DArray_Delete( argValues );
 
@@ -1194,27 +1190,8 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	}
 	if( self->options & DAO_EXEC_COMP_BC ) return 1;
 
-	name = DString_New(1);
 	mainRoutine = ns->mainRoutine;
-	DString_SetMBS( name, "main" );
-	i = DaoNamespace_FindConst( ns, name );
-	DString_Delete( name );
 
-	ps = ns->argParams->items.items.pValue;
-	N = ns->argParams->items.size;
-	if( i >=0 ){
-		DaoValue *value = DaoNamespace_GetConst( ns, i );
-		if( value->type == DAO_ROUTINE ){
-			rout = DaoRoutine_ResolveX( (DaoRoutine*) value, NULL, ps, N, DVM_CALL );
-		}
-		if( rout == NULL && value->type == DAO_ROUTINE ){
-			DaoRoutineBody *body = value->xRoutine.body;
-			DString *routHelp = body ? body->routHelp : NULL;
-			DaoStream_WriteMBS( io, "ERROR: invalid command line arguments.\n" );
-			if( routHelp ) DaoStream_WriteString( io, routHelp );
-			return 0;
-		}
-	}
 	DaoVmSpace_ExeCmdArgs( self );
 	/* always execute default ::main() routine first for initialization: */
 	if( mainRoutine ){
@@ -1222,13 +1199,10 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		DaoProcess_Execute( vmp );
 	}
 	/* check and execute explicitly defined main() routine  */
-	if( rout != NULL ){
-		if( DaoProcess_Call( vmp, rout, NULL, ps, N ) ){
-			DaoStream_WriteMBS( io, "ERROR: invalid command line arguments.\n" );
-			if( rout->body->routHelp ) DaoStream_WriteString( io, rout->body->routHelp );
-			return 0;
-		}
-		DaoProcess_Execute( vmp );
+	ps = ns->argParams->items.items.pValue;
+	N = ns->argParams->items.size;
+	if( expMain != NULL ){
+		if( DaoProcess_Call( vmp, expMain, NULL, ps, N ) ) return 0;
 	}
 	if( (self->options & DAO_EXEC_INTERUN) && self->userHandler == NULL )
 		DaoVmSpace_Interun( self, NULL );
@@ -1335,6 +1309,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	DString *source = NULL;
 	DArray *argNames = NULL, *argValues = NULL;
 	DaoNamespace *ns = NULL, *ns2 = NULL;
+	DaoRoutine *mainRoutine = NULL;
 	DaoParser *parser = NULL;
 	DaoProcess *process;
 	DString name;
@@ -1404,14 +1379,6 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 		if( self->options & DAO_EXEC_COMP_BC ) DaoVmSpace_SaveByteCodes( self, ns );
 	}
 
-	if( args ){
-		DaoVmSpace_ConvertArguments( ns, argNames, argValues );
-		DArray_Delete( argNames );
-		DArray_Delete( argValues );
-		argNames = argValues = NULL;
-	}
-
-
 ExecuteImplicitMain :
 	if( ns->mainRoutine->body->vmCodes->size > 1 ){
 		process = DaoVmSpace_AcquireProcess( self );
@@ -1436,30 +1403,18 @@ ExecuteImplicitMain :
 	}
 
 ExecuteExplicitMain :
-	name = DString_WrapMBS( "main" );
-	m = DaoNamespace_FindConst( ns, & name );
-	if( m >=0 ){
-		DaoValue *value = DaoNamespace_GetConst( ns, m );
-		if( argNames && argValues ){
-			DaoVmSpace_ConvertArguments( ns, argNames, argValues );
-			DArray_Delete( argNames );
-			DArray_Delete( argValues );
-			argNames = argValues = NULL;
-		}
-		if( value && value->type == DAO_ROUTINE ){
-			int ret, N = ns->argParams->items.size;
-			DaoValue **ps = ns->argParams->items.items.pValue;
-			DaoRoutine *rout = & value->xRoutine;
-			DaoStream *io = self->errorStream;
-			process = DaoVmSpace_AcquireProcess( self );
-			ret = DaoProcess_Call( process, rout, NULL, ps, N );
-			if( ret == DAO_ERROR_PARAM ){
-				DaoStream_WriteMBS( io, "ERROR: invalid command line arguments.\n" );
-				if( rout->body->routHelp ) DaoStream_WriteString( io, rout->body->routHelp );
-			}
-			DaoVmSpace_ReleaseProcess( self, process );
-			if( ret ) goto LoadingFailed;
-		}
+
+	if( args ){
+		mainRoutine = DaoVmSpace_FindExplicitMain( ns, argNames, argValues );
+		DaoVmSpace_ConvertArguments( self, mainRoutine, argNames, argValues );
+	}
+	if( mainRoutine != NULL ){
+		int ret, N = ns->argParams->items.size;
+		DaoValue **ps = ns->argParams->items.items.pValue;
+		process = DaoVmSpace_AcquireProcess( self );
+		ret = DaoProcess_Call( process, mainRoutine, NULL, ps, N );
+		DaoVmSpace_ReleaseProcess( self, process );
+		if( ret ) goto LoadingFailed;
 	}
 	DaoVmSpace_PopLoadingNamePath( self, poppath );
 	if( self->loadedModules->size > (nsCount+1) ){

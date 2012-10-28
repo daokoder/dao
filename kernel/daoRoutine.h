@@ -114,8 +114,6 @@ struct DaoRoutineBody
 
 	DArray *simpleVariables;
 
-	DString *routHelp;
-
 	DMap *localVarType; /* <int,DaoType*> local variable types */
 
 	int mode;

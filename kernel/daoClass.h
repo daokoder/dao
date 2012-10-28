@@ -63,7 +63,6 @@ struct DaoClass
 	DaoRoutine  *classRoutines; /* All explicitly defined constructors; GC handled in constants; */
 
 	DString  *className;
-	DString  *classHelp;
 
 	DaoType  *clsType;
 	DaoType  *objType; /* GC handled in constants; */

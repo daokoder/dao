@@ -264,7 +264,6 @@ DaoRoutineBody* DaoRoutineBody_New()
 	self->annotCodes = DArray_New(D_VMCODE);
 	self->localVarType = DMap_New(0,0);
 	self->abstypes = DMap_New(D_STRING,D_VALUE);
-	self->routHelp = DString_New(1);
 	self->simpleVariables = DArray_New(0);
 	self->codeStart = self->codeEnd = 0;
 	self->jitData = NULL;
@@ -279,7 +278,6 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 	DArray_Delete( self->regType );
 	DArray_Delete( self->defLocals );
 	DArray_Delete( self->annotCodes );
-	DString_Delete( self->routHelp );
 	DMap_Delete( self->localVarType );
 	DMap_Delete( self->abstypes );
 	if( self->revised ) GC_DecRC( self->revised );
@@ -302,7 +300,6 @@ void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other )
 	DaoVmcArray_Assign( self->vmCodes, other->vmCodes );
 	DArray_Assign( self->regType, other->regType );
 	DArray_Assign( self->simpleVariables, other->simpleVariables );
-	DString_Assign( self->routHelp, other->routHelp );
 	self->regCount = other->regCount;
 	self->codeStart = other->codeStart;
 	self->codeEnd = other->codeEnd;
