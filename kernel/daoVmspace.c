@@ -713,7 +713,7 @@ static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNam
 	name = DString_New(1);
 
 	DString_SetMBS( name, "main" );
-	i = ns ? DaoNamespace_FindConst( ns, name ) : -1;
+	i = DaoNamespace_FindConst( ns, name );
 	if( i >=0 ){
 		DaoValue *value = DaoNamespace_GetConst( ns, i );
 		if( value->type == DAO_ROUTINE ) rout = & value->xRoutine;
@@ -1171,10 +1171,13 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		}
 	}
 	if( res ){
+		DString name = DString_WrapMBS( "main" );
+		int id = DaoNamespace_FindConst( ns, & name );
+		DaoValue *cst = DaoNamespace_GetConst( ns, id );
 		expMain = DaoVmSpace_FindExplicitMain( ns, argNames, argValues );
 		if( expMain ){
 			DaoVmSpace_ConvertArguments( self, expMain, argNames, argValues );
-		}else{
+		}else if( (cst && cst->type == DAO_ROUTINE) || argValues->size ){
 			DaoStream_WriteMBS( io, "ERROR: invalid command line arguments.\n" );
 			res = 0;
 		}
