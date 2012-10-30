@@ -1823,4 +1823,56 @@ Dao Programming Tips
 @[title]
 
 @[text]
+
+@[section]
+Handling of command line arguments
+@[section]
+
+To handle command line arguments, one must define explicit main functions.
+With explicit main functions, the command line arguments will be parsed 
+automatically according to the function parameters of these functions.
+For example, for a program to accept a number as command line argument,
+one can define the following main function,
+@[code(dao)]
+routine main( arg : double )
+{
+	io.writeln( arg );
+}
+@[code(dao)]
+Then this script can be run in the following ways,
+@[code(dao)]
+shell$ dao script.dao 123
+shell$ dao script.dao arg=123
+shell$ dao script.dao -arg=123
+shell$ dao script.dao -arg 123
+shell$ dao script.dao --arg=123
+shell$ dao script.dao --arg 123
+@[code(dao)]
+As shown in the example, parameter names can appear in the command line arguments.
+In fact, in the command line arguments,
+@[cyan]arg=@[cyan], @[cyan]-arg=@[cyan]
+@[cyan]-arg@[cyan], @[cyan]--arg=@[cyan]
+and @[cyan]--arg=@[cyan]
+are always interpreted as argument names which must match to parameter names
+in main functions.
+
+
+Main functions can be overloaded with different parameter lists.
+The one with parameter names and types compatible with a given command line
+argument list will be executed.
+So user can define difine different main functions to handle different
+command line arguments.
+To allow the script to accept any command line arguments,
+one can define a main function with variadic parameter list,
+for example,
+@[code(dao)]
+routine main( ... as args )
+{
+	io.writeln( args )
+}
+@[code(dao)]
+then all the command line arguments will be passed to this main
+function as a tuple with variable name @[cyan]args@[cyan].
+
+
 @[text]

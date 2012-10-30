@@ -68,6 +68,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "NOT",        DVM_NOT,        DAO_CODE_UNARY,   0 },
 	{ "MINUS",      DVM_MINUS,      DAO_CODE_UNARY,   0 },
 	{ "TILDE",      DVM_TILDE,      DAO_CODE_UNARY,   0 },
+	{ "SIZE",       DVM_SIZE,       DAO_CODE_UNARY,   0 },
 	{ "ADD",        DVM_ADD,        DAO_CODE_BINARY,  0 },
 	{ "SUB",        DVM_SUB,        DAO_CODE_BINARY,  0 },
 	{ "MUL",        DVM_MUL,        DAO_CODE_BINARY,  0 },

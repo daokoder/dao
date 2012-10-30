@@ -61,6 +61,7 @@ enum DaoOpcode
 	DVM_NOT ,  /* C = ! A; not */
 	DVM_MINUS , /* C = - A; unary minus; */
 	DVM_TILDE , /* C = ~ A */
+	DVM_SIZE , /* C = & A; size operation; */
 	DVM_ADD ,  /* C = A + B;  */
 	DVM_SUB ,  /* C = A - B;  */
 	DVM_MUL ,  /* C = A * B;  */
@@ -88,8 +89,8 @@ enum DaoOpcode
 	DVM_HASH , /* hash: C = { A : A+1, ..., A+B-2 : A+B-1 }; if B==0, empty; */
 	DVM_VECTOR , /* vector: C = [ A, A+1, ..., A+B-1 ]; */
 	DVM_MATRIX , /* matrix: C=[A,..,A+c-1;..;A+c*(r-1),..,A+c*r-1]; B=rc;r,c:8-bits each.*/
-	DVM_APLIST , /* arithmetic progression list: C = { A : ... : A+B-1 }, B = 2 or 3; */
-	DVM_APVECTOR , /* arithmetic progression vector: C = [ A : ... : A+B-1 ], B = 2 or 3; */
+	DVM_APLIST , /* arithmetic progression list: C = { A ~ ... ~ A+B-1 }, B = 2 or 3; */
+	DVM_APVECTOR , /* arithmetic progression vector: C = [ A ~ ... ~ A+B-1 ], B = 2 or 3; */
 	DVM_CURRY , /* class_or_routine_name: A{ A+1, ..., A+B } */
 	DVM_MCURRY , /* object.method: A{ A+1, ..., A+B } */
 	DVM_ROUTINE , /* create a function, possibly with closure */
@@ -109,7 +110,7 @@ enum DaoOpcode
 	DVM_CATCH , /* catch exceptions: A,...,A+B-1; if B=0, catch all; if none, goto C; */
 	DVM_DEBUG , /* prompt to debugging mode; */
 	DVM_JITC , /* run Just-In-Time compiled Code A, and skip the next B instructions */
-	DVM_SECT ,   /* code subsection label, parameters: A,A+1,...,A+B-1; C # explicit parameters; */
+	DVM_SECT , /* code subsection label, parameters: A,A+1,...,A+B-1; C # explicit parameters; */
 
 	/* optimized opcodes: */
 	DVM_DATA_I ,

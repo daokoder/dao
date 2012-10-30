@@ -4132,6 +4132,23 @@ NotExist_TryAux:
 				}
 				break;
 			}
+		case DVM_SIZE :
+			{
+				ct = DaoInferencer_UpdateType( self, opc, dao_type_int );
+				if( NoCheckingType( at ) ) continue;
+				AssertTypeMatching( dao_type_int, ct, defs );
+				if( at->tid >= DAO_INTEGER && at->tid <= DAO_COMPLEX ){
+					vmc->code = DVM_DATA_I;
+					vmc->a = DAO_INTEGER;
+					switch( at->tid ){
+					case DAO_INTEGER : vmc->b = sizeof(daoint); break;
+					case DAO_FLOAT   : vmc->b = sizeof(float); break;
+					case DAO_DOUBLE  : vmc->b = sizeof(double); break;
+					case DAO_COMPLEX : vmc->b = sizeof(complex16); break;
+					}
+				}
+				break;
+			}
 		case DVM_BITAND : case DVM_BITOR : case DVM_BITXOR :
 		case DVM_BITLFT : case DVM_BITRIT :
 			{

@@ -5701,7 +5701,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 			DaoParser_AddCode( self, enumcode, enode.reg, enode.count, regC, start, mid, end );
 		}
 	}else if( tilde > lb && comma < 0 ){
-		/* arithmetic progression: [ 1 ++ 2 ++ 10 ]; [ 1 ++ 10 ] */
+		/* arithmetic progression: [ 1 ~ 2 ~ 10 ]; [ 1 ~ 10 ] */
 		if( tp && (enumcode == DVM_LIST && tp->tid != DAO_LIST) ) goto ParsingError;
 		if( tp && (enumcode == DVM_VECTOR && tp->tid != DAO_ARRAY) ) goto ParsingError;
 		enode = DaoParser_ParseExpressionList( self, DTOK_TILDE, NULL, cid );
@@ -6465,6 +6465,7 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 	case DAO_OPER_DECR : code = DVM_SUB; break;
 	case DAO_OPER_SUB : code = DVM_MINUS; break;
 	case DAO_OPER_TILDE : code = DVM_TILDE; break;
+	case DAO_OPER_BIT_AND : code = DVM_SIZE; break;
 	default : ec = DAO_CTW_EXPR_INVALID; goto ErrorParsing;
 	}
 	if( result.konst && (code == DVM_ADD || code == DVM_SUB) ){
@@ -6474,7 +6475,7 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 
 	opa = result.reg;
 	end = self->curToken - 1;
-	if( result.konst && code != DVM_ADD && code != DVM_SUB ){
+	if( result.konst && code != DVM_ADD && code != DVM_SUB && code != DVM_SIZE ){
 		DaoValue *value = DaoParser_GetVariable( self, result.konst );
 		result.reg = DaoParser_MakeArithConst( self, code, value, dao_none_value, & result.konst, back, oldcount );
 		if( result.reg < 0 ){

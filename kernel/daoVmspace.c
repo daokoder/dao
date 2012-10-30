@@ -1409,7 +1409,7 @@ ExecuteExplicitMain :
 
 	if( args ){
 		mainRoutine = DaoVmSpace_FindExplicitMain( ns, argNames, argValues );
-		DaoVmSpace_ConvertArguments( self, mainRoutine, argNames, argValues );
+		if( mainRoutine ) DaoVmSpace_ConvertArguments( self, mainRoutine, argNames, argValues );
 	}
 	if( mainRoutine != NULL ){
 		int ret, N = ns->argParams->items.size;
