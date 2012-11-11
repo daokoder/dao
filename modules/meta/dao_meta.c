@@ -486,25 +486,6 @@ static void META_Trace( DaoProcess *proc, DaoValue *p[], int N )
 	}
 #endif
 }
-static void META_Doc( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *doc = NULL;
-	switch( p[0]->type ){
-	case DAO_CLASS : doc = p[0]->xClass.classHelp; break;
-	case DAO_OBJECT : doc = p[0]->xObject.defClass->classHelp; break;
-	//XXX case DAO_ROUTINE : doc = p[0]->v.routine->routHelp; break;
-	default : break;
-	}
-	if( doc == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "documentation not available" );
-		return;
-	}
-	DaoProcess_PutMBString( proc, doc->mbs );
-	if( N >1 ){
-		DString_Clear( doc );
-		DString_Append( doc, p[1]->xString.data );
-	}
-}
 /* name( class/routine/type )
  * type( any )
  * find( "name" )
@@ -525,7 +506,6 @@ static DaoFuncItem metaMeths[]=
 	{ META_Name,  "name( object ) => string" },
 	{ META_Type,  "type( object ) => any" },
 	{ META_Base,  "base( object ) => list<any>" },
-	{ META_Doc,   "doc( object, newdoc='' ) => string" },
 	{ META_Cst1,  "constant( object, restrict=0 )=>map<string,tuple<value:any,type:any>>" },
 	{ META_Var1,  "variable( object, restrict=0 )=>map<string,tuple<value:any,type:any>>" },
 	{ META_Cst2,  "constant( object, name:string )=>tuple<value:any,type:any>" },

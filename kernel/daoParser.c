@@ -6093,11 +6093,9 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				/* dao_class{ members } enumeration,
 				 * or routine{ parameters } */
 				DaoInode *inode = self->vmcLast;
-				int end = self->tokens->size;
 				int code = DVM_CURRY;
 				int rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
 				if( rb < 0 ) return error;
-				if( (rb+1) <= end && tokens[rb+1]->name == DTOK_ASSN ) return result;
 
 				if( result.last && back->code == DVM_LOAD2 ){ /* X.Y or X->Y */
 					DaoParser_PopRegister( self ); /* opc of GETF will be reallocated; */

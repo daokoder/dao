@@ -2083,16 +2083,12 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 		}
 		type->attrib = attrib;
 		DaoType_CheckAttributes( type );
-		DArray_Append( self->types, type );
 		if( DString_EQ( name, type->name ) == 0 ){
-			DaoStream *stream = self->vmspace->errorStream;
-			DaoStream_WriteMBS( stream, "Error: inconsistent type name \"" );
-			DaoStream_WriteString( stream, type->name );
-			DaoStream_WriteMBS( stream, "\" for \"" );
-			DaoStream_WriteString( stream, name );
-			DaoStream_WriteMBS( stream, "\"\n" );
-			self->codes = self->error;
+			type = DaoType_Copy( type );
+			DString_Assign( type->name, name );
+			DaoNamespace_AddType( self->nspace, name, type );
 		}
+		DArray_Append( self->types, type );
 		if( self->codes >= self->error ) break;
 	}
 }
