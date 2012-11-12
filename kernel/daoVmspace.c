@@ -1022,6 +1022,7 @@ void DaoVmSpace_SaveByteCodes( DaoVmSpace *self, DaoNamespace *ns )
 
 void DString_AppendUInt16( DString *bytecodes, int value );
 void DString_AppendUInt32( DString *bytecodes, int value );
+void Dao_MakePath( DString *base, DString *path );
 
 int DaoDecodeUInt16( const char *data )
 {
@@ -1033,13 +1034,14 @@ int DaoDecodeUInt32( const char *data )
 	const uchar_t *p = (const uchar_t*) data;
 	return (p[0]<<24) + (p[1]<<16) + (p[2]<<8) + p[3];
 }
-void DaoVmSpace_SaveArchive( DaoVmSpace *self )
+static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DArray *argValues )
 {
-	FILE *fout;
+	FILE *fin, *fout;
 	int i, count = 1;
 	int slen = strlen( DAO_DLL_SUFFIX );
 	DaoNamespace *ns = self->mainNamespace;
 	DString *archive = DString_New(1);
+	DString *data = DString_New(1);
 
 	DString_Append( archive, ns->name );
 	if( archive->size > ns->lang->size ) archive->size -= ns->lang->size;
@@ -1047,7 +1049,7 @@ void DaoVmSpace_SaveArchive( DaoVmSpace *self )
 	fout = fopen( archive->mbs, "w+" );
 	archive->size = 0;
 
-	DString_AppendUInt32( archive, self->sourceArchive->size/2 );
+	count = self->sourceArchive->size/2;
 	for(i=0; i<self->sourceArchive->size; i+=2){
 		DString *name = self->sourceArchive->items.pString[i];
 		DString *source = self->sourceArchive->items.pString[i+1];
@@ -1056,12 +1058,36 @@ void DaoVmSpace_SaveArchive( DaoVmSpace *self )
 		DString_AppendUInt32( archive, source->size );
 		DString_Append( archive, source );
 		if( DString_FindMBS( name, DAO_DLL_SUFFIX, 0 ) != name->size - slen ){
+			// TODO:
 		}
+	}
+	for(i=0; i<argValues->size; i+=2){
+		DString *file = argValues->items.pString[i];
+		DString_SetMBS( data, "resources/" );
+		DString_Append( data, file );
+		Dao_MakePath( self->pathWorking, data );
+		fin = fopen( data->mbs, "r" );
+		if( fin == NULL ){
+			DaoStream_WriteMBS( self->errorStream, "WARNING: can not open resource file \"" );
+			DaoStream_WriteMBS( self->errorStream, data->mbs );
+			DaoStream_WriteMBS( self->errorStream, "\".\n" );
+			continue;
+		}
+		count += 1;
+		DaoFile_ReadAll( fin, data, 1 );
+		DString_AppendUInt16( archive, file->size );
+		DString_Append( archive, file );
+		DString_AppendUInt32( archive, data->size );
+		DString_Append( archive, data );
 	}
 
 	fprintf( fout, "\33\33\r\n" );
+	DString_Clear( data );
+	DString_AppendUInt32( data, count );
+	DaoFile_WriteString( fout, data );
 	DaoFile_WriteString( fout, archive );
 	DString_Delete( archive );
+	DString_Delete( data );
 	fclose( fout );
 }
 void DaoVmSpace_LoadArchive( DaoVmSpace *self, DString *archive )
@@ -1170,7 +1196,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 			DaoVmSpace_SaveByteCodes( self, ns );
 		}
 	}
-	if( res ){
+	if( res && !(self->options & DAO_EXEC_ARCHIVE) ){
 		DString name = DString_WrapMBS( "main" );
 		int id = DaoNamespace_FindConst( ns, & name );
 		DaoValue *cst = DaoNamespace_GetConst( ns, id );
@@ -1183,14 +1209,18 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		}
 	}
 	DArray_Delete( argNames );
-	DArray_Delete( argValues );
 
-	if( res == 0 ) return 0;
+	if( res == 0 ){
+		DArray_Delete( argValues );
+		return 0;
+	}
 
 	if( self->options & DAO_EXEC_ARCHIVE ){
-		DaoVmSpace_SaveArchive( self );
+		DaoVmSpace_SaveArchive( self, argValues );
+		DArray_Delete( argValues );
 		return 1;
 	}
+	DArray_Delete( argValues );
 	if( self->options & DAO_EXEC_COMP_BC ) return 1;
 
 	mainRoutine = ns->mainRoutine;
@@ -1616,6 +1646,26 @@ void Dao_MakePath( DString *base, DString *path )
 	DString_ChangeMBS( path, "/ %. /", "/", 0 );
 	DString_Delete( base );
 }
+int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname )
+{
+	DString *path;
+	if( fname->size == 0 || fname->mbs[0] != '@' ) return 0;
+	path = DString_New(1);
+	DString_AppendMBS( path, "/@/" );
+	DString_AppendMBS( path, fname->mbs + 1 );
+	if( TestPath( self, path, DAO_FILE_PATH ) == 0 ){
+		DString_SetMBS( path, "resources/" );
+		DString_AppendMBS( path, fname->mbs + 1 );
+		Dao_MakePath( self->pathWorking, path );
+	}
+	if( TestPath( self, path, DAO_FILE_PATH ) ){
+		DString_Assign( fname, path );
+		DString_Delete( path );
+		return 1;
+	}
+	DString_Delete( path );
+	return 0;
+}
 int DaoVmSpace_SearchPath2( DaoVmSpace *self, DArray *paths, DString *fname, int type )
 {
 	DString *path = DString_New(1);
@@ -1643,6 +1693,8 @@ void DaoVmSpace_SearchPath( DaoVmSpace *self, DString *fname, int type, int chec
 	DString *path;
 
 	DString_ToMBS( fname );
+	if( DaoVmSpace_SearchResource( self, fname ) ) return;
+
 	DString_ChangeMBS( fname, "/ %s* %. %s* /", "/", 0 );
 	DString_ChangeMBS( fname, "[^%./] + / %. %. /", "", 0 );
 	/* erase the last '/' */
@@ -1729,10 +1781,9 @@ void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path )
 	if( pstr->mbs[pstr->size-1] == '/' ) DString_Erase( pstr, pstr->size-1, 1 );
 
 	if( Dao_IsDir( pstr->mbs ) ){
-		tmp = self->pathWorking;
-		self->pathWorking = pstr;
-		if( DString_FindMBS( pstr, "modules/auxlib", 0 ) == (pstr->size-14) ) self->hasAuxlibPath = 1;
-		if( DString_FindMBS( pstr, "modules/syslib", 0 ) == (pstr->size-14) ) self->hasSyslibPath = 1;
+		int len = pstr->size - strlen( "modules/auxlib" );
+		if( DString_FindMBS( pstr, "modules/auxlib", 0 ) == len ) self->hasAuxlibPath = 1;
+		if( DString_FindMBS( pstr, "modules/syslib", 0 ) == len ) self->hasSyslibPath = 1;
 		DArray_PushFront( self->pathSearching, pstr );
 		DString_AppendMBS( pstr, "/addpath.dao" );
 		if( TestFile( self, pstr ) ){
@@ -1741,7 +1792,6 @@ void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path )
 			GC_IncRC( ns );
 			GC_DecRC( ns );
 		}
-		self->pathWorking = tmp;
 	}
 	DString_Delete( pstr );
 	/*
@@ -1771,8 +1821,6 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path )
 	}
 	if( id >= 0 ){
 		DString *pathDao = DString_Copy( pstr );
-		DString *tmp = self->pathWorking;
-		self->pathWorking = pstr;
 		DString_AppendMBS( pathDao, "/delpath.dao" );
 		if( TestFile( self, pathDao ) ){
 			DaoNamespace *ns = DaoVmSpace_LoadDaoModuleExt( self, pathDao, NULL, 0 );
@@ -1789,7 +1837,6 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path )
 		}
 		DArray_Erase( self->pathSearching, id, 1 );
 		DString_Delete( pathDao );
-		self->pathWorking = tmp;
 	}
 	DString_Delete( pstr );
 }

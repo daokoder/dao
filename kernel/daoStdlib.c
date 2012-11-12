@@ -110,19 +110,34 @@ static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 	ns = DaoVmSpace_LoadEx( vms, DString_GetMBS( name ), runim );
 	DaoProcess_PutValue( proc, (DaoValue*) ns );
 	if( ! wasProt ) vms->options &= ~DAO_EXEC_SAFE;
-#if 0
+#warning "================XXX=================="
 	if( ns ){ /* in the case that it is cancelled from console */
 		DArray_PushFront( vms->pathLoading, ns->path );
-		res = DaoProcess_Call( proc, (DaoMethod*)ns->mainRoutine, NULL, NULL, 0 );
+		res = DaoProcess_Call( proc, ns->mainRoutine, NULL, NULL, 0 );
 		if( proc->stopit | vms->stopit )
 			DaoProcess_RaiseException( proc, DAO_ERROR, "loading cancelled" );
 		else if( res == 0 )
 			DaoProcess_RaiseException( proc, DAO_ERROR, "loading failed" );
 		DArray_PopFront( vms->pathLoading );
+	}else{
+		DaoProcess_RaiseException( proc, DAO_ERROR, "loading failed" );
 	}
-#endif
 	DArray_PopFront( vms->pathLoading );
 	if( import && ns ) DaoNamespace_AddParent( proc->activeNamespace, ns );
+}
+static void STD_Resource( DaoProcess *proc, DaoValue *p[], int N )
+{
+	FILE *fin;
+	DString *file = DString_Copy( p[0]->xString.data );
+	if( DaoVmSpace_SearchResource( proc->vmSpace, file ) == 0 ){
+		DaoProcess_RaiseException( proc, DAO_ERROR, "resource file not found" );
+		DString_Delete( file );
+		return;
+	}
+	fin = fopen( file->mbs, "r" );
+	DaoFile_ReadAll( fin, file, 1 );
+	DaoProcess_PutString( proc, file );
+	DString_Delete( file );
 }
 static void STD_Argv( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -606,6 +621,7 @@ DaoFuncItem dao_std_methods[] =
 	{ STD_Compile,   "compile( source :string, replace=0 )" },
 	{ STD_Eval,      "eval( source :string, replace=0, st=io::stdio, safe=0 )" },
 	{ STD_Load,      "load( file :string, import=1, runim=0, safe=0 )=>any" },
+	{ STD_Resource,  "resource( path :string )=>string" },
 	{ STD_Argv,      "argv() => list<any>" },
 	{ STD_About,     "about( ... )=>string" },
 	{ STD_Callable,  "callable( object )=>int" },

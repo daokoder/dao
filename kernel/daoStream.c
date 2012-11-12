@@ -323,6 +323,12 @@ static void DaoIO_Read( DaoProcess *proc, DaoValue *p[], int N )
 }
 
 extern void Dao_MakePath( DString *base, DString *path );
+
+/*
+// Special relative paths:
+// 1. ::path, path relative to the current source code file;
+// 2. :path, path relative to the current working directory;
+*/
 static void DaoIO_MakePath( DaoProcess *proc, DString *path )
 {
 	DString_ToMBS( path );
