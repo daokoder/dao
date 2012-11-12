@@ -76,7 +76,6 @@ static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 	DaoStream *prevStream = proc->stdioStream;
 	DaoStream *redirect = (DaoStream*) p[2];
 	char *source = DaoValue_TryGetMBString( p[0] );
-	daoint *num = DaoProcess_PutInteger( proc, 0 );
 	int safe = p[3]->xInteger.value;
 	int wasProt = 0;
 	if( vms->options & DAO_EXEC_SAFE ) wasProt = 1;
@@ -86,7 +85,8 @@ static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 	}
 
 	if( safe ) vms->options |= DAO_EXEC_SAFE;
-	*num = DaoProcess_Eval( proc, ns, source, p[1]->xInteger.value );
+	DaoProcess_Eval( proc, ns, source, p[1]->xInteger.value );
+	DaoProcess_PutValue( proc, proc->stackValues[0] );
 	if( ! wasProt ) vms->options &= ~DAO_EXEC_SAFE;
 	if( redirect != prevStream ){
 		GC_ShiftRC( prevStream, proc->stdioStream );
@@ -110,14 +110,14 @@ static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 	ns = DaoVmSpace_LoadEx( vms, DString_GetMBS( name ), runim );
 	DaoProcess_PutValue( proc, (DaoValue*) ns );
 	if( ! wasProt ) vms->options &= ~DAO_EXEC_SAFE;
-#warning "================XXX=================="
 	if( ns ){ /* in the case that it is cancelled from console */
 		DArray_PushFront( vms->pathLoading, ns->path );
 		res = DaoProcess_Call( proc, ns->mainRoutine, NULL, NULL, 0 );
-		if( proc->stopit | vms->stopit )
+		if( proc->stopit | vms->stopit ){
 			DaoProcess_RaiseException( proc, DAO_ERROR, "loading cancelled" );
-		else if( res == 0 )
-			DaoProcess_RaiseException( proc, DAO_ERROR, "loading failed" );
+		}else if( res ){
+			DaoProcess_RaiseException( proc, res, "loading failed" );
+		}
 		DArray_PopFront( vms->pathLoading );
 	}else{
 		DaoProcess_RaiseException( proc, DAO_ERROR, "loading failed" );
@@ -125,6 +125,7 @@ static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 	DArray_PopFront( vms->pathLoading );
 	if( import && ns ) DaoNamespace_AddParent( proc->activeNamespace, ns );
 }
+int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname, DString *source );
 static void STD_Resource( DaoProcess *proc, DaoValue *p[], int N )
 {
 	FILE *fin;
@@ -134,8 +135,7 @@ static void STD_Resource( DaoProcess *proc, DaoValue *p[], int N )
 		DString_Delete( file );
 		return;
 	}
-	fin = fopen( file->mbs, "r" );
-	DaoFile_ReadAll( fin, file, 1 );
+	DaoVmSpace_ReadSource( proc->vmSpace, file, file );
 	DaoProcess_PutString( proc, file );
 	DString_Delete( file );
 }
@@ -619,7 +619,7 @@ DaoFuncItem dao_std_methods[] =
 {
 	{ STD_Path,      "path( path :string, action :enum<set,add,remove>=$add )" },
 	{ STD_Compile,   "compile( source :string, replace=0 )" },
-	{ STD_Eval,      "eval( source :string, replace=0, st=io::stdio, safe=0 )" },
+	{ STD_Eval,      "eval( source :string, replace=0, st=io::stdio, safe=0 )=>any" },
 	{ STD_Load,      "load( file :string, import=1, runim=0, safe=0 )=>any" },
 	{ STD_Resource,  "resource( path :string )=>string" },
 	{ STD_Argv,      "argv() => list<any>" },

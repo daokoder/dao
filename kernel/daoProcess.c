@@ -760,7 +760,6 @@ int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *source, int
 	if( DaoProcess_Call( self, rout, NULL, NULL, 0 ) ) return 0;
 	return ns->mainRoutines->size;
 }
-// XXX return value changed!!
 int DaoProcess_Call( DaoProcess *self, DaoRoutine *M, DaoValue *O, DaoValue *P[], int N )
 {
 	int ret = DaoProcess_PushCallable( self, M, O, P, N );

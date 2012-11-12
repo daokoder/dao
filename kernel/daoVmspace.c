@@ -384,6 +384,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->loadedModules = DArray_New(D_VALUE);
 	self->preloadModules = NULL;
 
+	self->stdioStream->subtype = DAO_CDATA_DAO;
 	if( daoConfig.safe ) self->options |= DAO_EXEC_SAFE;
 
 #ifdef DAO_WITH_THREAD
@@ -459,7 +460,7 @@ void DaoVmSpace_Unlock( DaoVmSpace *self )
 	DMutex_Unlock( & self->mutexLoad );
 #endif
 }
-static int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname, DString *source )
+int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname, DString *source )
 {
 	DNode *node = MAP_Find( self->vfiles, fname );
 	/* printf( "reading %s\n", fname->mbs ); */
@@ -1063,8 +1064,7 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DArray *argValues )
 	}
 	for(i=0; i<argValues->size; i+=2){
 		DString *file = argValues->items.pString[i];
-		DString_SetMBS( data, "resources/" );
-		DString_Append( data, file );
+		DString_Assign( data, file );
 		Dao_MakePath( self->pathWorking, data );
 		fin = fopen( data->mbs, "r" );
 		if( fin == NULL ){
@@ -1654,8 +1654,7 @@ int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname )
 	DString_AppendMBS( path, "/@/" );
 	DString_AppendMBS( path, fname->mbs + 1 );
 	if( TestPath( self, path, DAO_FILE_PATH ) == 0 ){
-		DString_SetMBS( path, "resources/" );
-		DString_AppendMBS( path, fname->mbs + 1 );
+		DString_SetMBS( path, fname->mbs + 1 );
 		Dao_MakePath( self->pathWorking, path );
 	}
 	if( TestPath( self, path, DAO_FILE_PATH ) ){
