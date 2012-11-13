@@ -1094,9 +1094,9 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 		}
 		if( avexprs->size == 0 ) continue;
 
+		node2 = avexprs->items.pCnode[0];
 		fixed1 = fixed->items.pInt[vmc->c];
 		fixed2 = fixed->items.pInt[node2->lvalue];
-		node2 = avexprs->items.pCnode[0];
 		if( avexprs->size == 1 && sametype && fixed1 == 0 && fixed2 == 0 ){
 			/*
 			// Check for each use of node->lvalue, if they have single definition
