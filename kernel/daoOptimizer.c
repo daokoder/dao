@@ -3153,6 +3153,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}else{
 				goto WrongContainer;
 			}
+			if( ct == NULL ) goto InvKey;
 			DaoInferencer_UpdateType( self, opc, ct );
 			AssertTypeMatching( ct, types[opc], defs );
 			break;
