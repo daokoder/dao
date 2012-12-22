@@ -277,10 +277,10 @@ int DaoObject_ChildOf( DaoValue *self, DaoValue *obj )
 {
 	int i;
 	if( obj == self ) return 1;
-	if( self->type == DAO_CDATA ){
-		if( obj->type == DAO_CDATA ){
-			DaoCdata *cdata1 = (DaoCdata*) self;
-			DaoCdata *cdata2 = (DaoCdata*) obj;
+	if( self->type == DAO_CDATA || self->type == DAO_CSTRUCT ){
+		if( obj->type == DAO_CDATA || obj->type == DAO_CSTRUCT ){
+			DaoCstruct *cdata1 = (DaoCstruct*) self;
+			DaoCstruct *cdata2 = (DaoCstruct*) obj;
 			if( DaoType_ChildOf( cdata1->ctype, cdata2->ctype ) ) return 1;
 		}
 		return 0;
@@ -292,7 +292,6 @@ int DaoObject_ChildOf( DaoValue *self, DaoValue *obj )
 	}
 	return 0;
 }
-extern int DaoCdata_ChildOf( DaoTypeBase *self, DaoTypeBase *super );
 
 DaoValue* DaoObject_CastToBase( DaoObject *self, DaoType *host )
 {
@@ -304,6 +303,8 @@ DaoValue* DaoObject_CastToBase( DaoObject *self, DaoType *host )
 		if( sup == NULL ) return NULL;
 		if( sup->type == DAO_OBJECT ){
 			if( (sup = DaoObject_CastToBase( & sup->xObject, host ) ) ) return sup;
+		}else if( sup->type == DAO_CSTRUCT && host->tid == DAO_CSTRUCT ){
+			if( DaoType_ChildOf( sup->xCdata.ctype, host ) ) return sup;
 		}else if( sup->type == DAO_CDATA && host->tid == DAO_CDATA ){
 			if( DaoType_ChildOf( sup->xCdata.ctype, host ) ) return sup;
 		}

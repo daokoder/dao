@@ -692,7 +692,8 @@ DaoTypeBase streamTyper =
 DaoStream* DaoStream_New()
 {
 	DaoStream *self = (DaoStream*) dao_calloc( 1, sizeof(DaoStream) );
-	DaoCdata_InitCommon( (DaoCdata*) self, dao_type_stream );
+	DaoCstruct_Init( (DaoCstruct*) self, dao_type_stream );
+	self->type = DAO_CSTRUCT; /* dao_type_stream may still be null in DaoVmSpace_New(); */
 	self->streamString = DString_New(1);
 	self->fname = DString_New(1);
 	self->mode = DAO_IO_READ | DAO_IO_WRITE;
@@ -700,7 +701,7 @@ DaoStream* DaoStream_New()
 }
 void DaoStream_Close( DaoStream *self )
 {
-	DaoCdata_FreeCommon( (DaoCdata*) self );
+	DaoCstruct_Free( (DaoCstruct*) self );
 	if( self->file ){
 		fflush( self->file );
 		if( self->attribs & DAO_IO_PIPE )

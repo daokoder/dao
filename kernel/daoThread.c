@@ -515,7 +515,7 @@ static DaoFuncItem mutexMeths[] =
 };
 static void DaoMutex_Delete( DaoMutex *self )
 {
-	DaoCdata_FreeCommon( (DaoCdata*) self );
+	DaoCstruct_Free( (DaoCstruct*) self );
 	DMutex_Destroy( & self->myMutex );
 	dao_free( self );
 }
@@ -529,7 +529,7 @@ DaoTypeBase mutexTyper =
 DaoMutex* DaoMutex_New()
 {
 	DaoMutex* self = (DaoMutex*) dao_calloc( 1, sizeof(DaoMutex) );
-	DaoCdata_InitCommon( (DaoCdata*) self, dao_type_mutex );
+	DaoCstruct_Init( (DaoCstruct*) self, dao_type_mutex );
 	DMutex_Init( & self->myMutex );
 	return self;
 }
@@ -591,13 +591,13 @@ DaoTypeBase condvTyper =
 DaoCondVar* DaoCondVar_New()
 {
 	DaoCondVar* self = (DaoCondVar*) dao_calloc( 1, sizeof(DaoCondVar) );
-	DaoCdata_InitCommon( (DaoCdata*) self, dao_type_condvar );
+	DaoCstruct_Init( (DaoCstruct*) self, dao_type_condvar );
 	DCondVar_Init( & self->myCondVar );
 	return self;
 }
 void DaoCondVar_Delete( DaoCondVar *self )
 {
-	DaoCdata_FreeCommon( (DaoCdata*) self );
+	DaoCstruct_Free( (DaoCstruct*) self );
 	DCondVar_Destroy( & self->myCondVar );
 	dao_free( self );
 }
@@ -672,13 +672,13 @@ DaoTypeBase semaTyper =
 DaoSema* DaoSema_New( int n )
 {
 	DaoSema* self = (DaoSema*) dao_calloc( 1, sizeof(DaoSema) );
-	DaoCdata_InitCommon( (DaoCdata*) self, dao_type_sema );
+	DaoCstruct_Init( (DaoCstruct*) self, dao_type_sema );
 	DSema_Init( & self->mySema, ( n < 0 )? 0 : n );
 	return self;
 }
 void DaoSema_Delete( DaoSema *self )
 {
-	DaoCdata_FreeCommon( (DaoCdata*) self );
+	DaoCstruct_Free( (DaoCstruct*) self );
 	DSema_Destroy( & self->mySema );
 	dao_free( self );
 }

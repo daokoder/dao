@@ -34,7 +34,7 @@ typedef struct Dao_Buffer Dao_Buffer;
 
 struct Dao_Buffer
 {
-	DAO_CDATA_COMMON;
+	DAO_CSTRUCT_COMMON;
 
 	union {
 		void           *pVoid;

@@ -184,25 +184,37 @@ struct DaoNameValue
 DaoNameValue* DaoNameValue_New( DString *name, DaoValue *value );
 
 
-/* Customized/extended Dao data or opaque C/C++ data: */
+
+
+#define DAO_CSTRUCT_COMMON DAO_DATA_COMMON; DaoType *ctype; DaoObject *object
+
+/* Customized/extended Dao data: */
+struct DaoCstruct
+{
+	DAO_CSTRUCT_COMMON;
+};
+
+DAO_DLL void DaoCstruct_Init( DaoCstruct *self, DaoType *type );
+DAO_DLL void DaoCstruct_Free( DaoCstruct *self );
+
+
+
+/* Opaque C/C++ data: */
 /* DaoCdata sub-types: */
 enum DaoCdataType
 {
 	DAO_CDATA_PTR , /* opaque C/C++ data, not owned by the wrapper */
-	DAO_CDATA_CXX , /* opaque C/C++ data, owned by the wrapper */
-	DAO_CDATA_DAO   /* customized Dao data */
+	DAO_CDATA_CXX   /* opaque C/C++ data, owned by the wrapper */
 };
-
-#define DAO_CDATA_COMMON \
-	DAO_DATA_COMMON; DaoTypeBase *typer; DaoType *ctype; DaoObject *object; void *data
 
 struct DaoCdata
 {
-	DAO_CDATA_COMMON;
+	DAO_CSTRUCT_COMMON;
+
+	void  *data;
 };
 
-DAO_DLL void DaoCdata_InitCommon( DaoCdata *self, DaoType *type );
-DAO_DLL void DaoCdata_FreeCommon( DaoCdata *self );
+
 DAO_DLL void DaoCdata_Delete( DaoCdata *self );
 
 DAO_DLL extern DaoTypeBase defaultCdataTyper;
@@ -212,7 +224,7 @@ DAO_DLL extern DaoCdata dao_default_cdata;
 /* In analog to DaoClass, a DaoCtype is created for each cdata type: */
 struct DaoCtype
 {
-	DAO_CDATA_COMMON;
+	DAO_CSTRUCT_COMMON;
 
 	DaoType *cdtype;
 };
@@ -223,7 +235,7 @@ DAO_DLL void DaoCtype_Delete( DaoCtype *self );
 
 struct DaoException
 {
-	DAO_CDATA_COMMON;
+	DAO_CSTRUCT_COMMON;
 
 	int         fromLine;
 	int         toLine;

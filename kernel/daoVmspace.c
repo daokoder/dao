@@ -199,6 +199,7 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_ARRAY  :  return & baseTyper;
 #endif
 	case DAO_CTYPE   :
+	case DAO_CSTRUCT :
 	case DAO_CDATA   :  return & defaultCdataTyper;
 	case DAO_ROUTINE   :  return & routTyper;
 	case DAO_INTERFACE :  return & interTyper;
@@ -384,7 +385,6 @@ DaoVmSpace* DaoVmSpace_New()
 	self->loadedModules = DArray_New(D_VALUE);
 	self->preloadModules = NULL;
 
-	self->stdioStream->subtype = DAO_CDATA_DAO;
 	if( daoConfig.safe ) self->options |= DAO_EXEC_SAFE;
 
 #ifdef DAO_WITH_THREAD
@@ -2261,8 +2261,7 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_WrapFunctions( ns2, dao_io_methods );
 	DaoNamespace_AddConstValue( ns2, "stdio", (DaoValue*) vms->stdioStream );
 
-	dao_default_cdata.ctype = DaoNamespace_WrapType( vms->nsInternal, & defaultCdataTyper, 0 );
-	dao_default_cdata.ctype->cdatatype = DAO_CDATA_PTR;
+	dao_default_cdata.ctype = DaoNamespace_WrapType( vms->nsInternal, & defaultCdataTyper, 1 );
 	GC_IncRC( dao_default_cdata.ctype );
 
 	DaoException_Setup( vms->nsInternal );

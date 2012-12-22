@@ -205,6 +205,7 @@ static void STD_Callable( DaoProcess *proc, DaoValue *p[], int N )
 			break;
 		}
 	case DAO_CDATA :
+	case DAO_CSTRUCT :
 		{
 			*res = DaoType_FindFunctionMBS( p0->xCdata.ctype, "()" ) != NULL;
 			break;

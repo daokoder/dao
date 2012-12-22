@@ -165,7 +165,7 @@ typedef int DMutex;
 /* Dao threading types: */
 struct DaoMutex
 {
-	DAO_CDATA_COMMON;
+	DAO_CSTRUCT_COMMON;
 
 	DMutex  myMutex;
 };
@@ -178,7 +178,7 @@ DAO_DLL int DaoMutex_TryLock( DaoMutex *self );
 
 struct DaoCondVar
 {
-	DAO_CDATA_COMMON;
+	DAO_CSTRUCT_COMMON;
 
 	DCondVar  myCondVar;
 };
@@ -196,7 +196,7 @@ DAO_DLL void DaoCondVar_BroadCast( DaoCondVar *self );
 
 struct DaoSema
 {
-	DAO_CDATA_COMMON;
+	DAO_CSTRUCT_COMMON;
 
 	DSema  mySema;
 };

@@ -663,6 +663,8 @@ DaoTypeBase enumTyper=
 };
 
 extern DaoTypeBase funcTyper;
+static DaoTypeBase ctypeTyper;
+
 DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
 {
 	if( self == NULL ) return & baseTyper;
@@ -676,7 +678,8 @@ DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
 	case DAO_ENUM    : return & enumTyper;
 	case DAO_STRING  : return & stringTyper;
 	case DAO_CTYPE   :
-	case DAO_CDATA   : return self->xCdata.typer;
+	case DAO_CSTRUCT :
+	case DAO_CDATA   : return self->xCdata.ctype->typer;
 	default : break;
 	}
 	return DaoVmSpace_GetTyper( self->type );
@@ -3848,23 +3851,18 @@ static void DaoCdataBindings_Erase( void *data )
 #endif
 
 /**/
-void DaoCdata_InitCommon( DaoCdata *self, DaoType *type )
+void DaoCstruct_Init( DaoCstruct *self, DaoType *type )
 {
-	DaoValue_Init( self, DAO_CDATA );
-	self->subtype = DAO_CDATA_PTR;
-	self->typer = & defaultCdataTyper;
+	if( type == NULL ) type = dao_default_cdata.ctype;
+	DaoValue_Init( self, type ? type->tid : DAO_CDATA );
 	self->object = NULL;
 	self->ctype = type;
-	if( type == NULL ) self->ctype = dao_default_cdata.ctype;
-	if( self->ctype ){
-		self->typer = self->ctype->typer;
-		self->subtype = self->ctype->cdatatype;
-		GC_IncRC( self->ctype );
-	}
+	if( self->ctype ) GC_IncRC( self->ctype );
+
 }
-void DaoCdata_FreeCommon( DaoCdata *self )
+void DaoCstruct_Free( DaoCstruct *self )
 {
-	if( self->ctype ) GC_DecRC( self->ctype );
+	if( self->ctype && !(self->trait & DAO_VALUE_BROKEN) ) GC_DecRC( self->ctype );
 	if( self->object ) GC_DecRC( self->object );
 	self->object = NULL;
 	self->ctype = NULL;
@@ -3874,7 +3872,7 @@ DaoCdata* DaoCdata_New( DaoType *type, void *data )
 	DaoCdata *self = DaoCdataBindings_Find( type, data );
 	if( self && self->ctype == type && self->data == data ) return self;
 	self = (DaoCdata*)dao_calloc( 1, sizeof(DaoCdata) );
-	DaoCdata_InitCommon( self, type );
+	DaoCstruct_Init( (DaoCstruct*)self, type );
 	self->data = data;
 	if( data ) DaoCdataBindings_Insert( data, self );
 	return self;
@@ -3886,15 +3884,6 @@ DaoCdata* DaoCdata_Wrap( DaoType *type, void *data )
 	self = DaoCdata_New( type, data );
 	self->subtype = DAO_CDATA_PTR;
 	return self;
-}
-DaoCdata* DaoCdata_Cast( DaoCdata *self, DaoType *totype )
-{
-	if( self == NULL ) return NULL;
-	if( self->subtype == DAO_CDATA_DAO ){
-		if( totype == NULL || self->ctype == NULL ) return self;
-		if( DaoType_MatchTo( self->ctype, totype, NULL ) ) return self;
-	}
-	return NULL;
 }
 static void DaoCdata_DeleteData( DaoCdata *self );
 void DaoCdata_Delete( DaoCdata *self )
@@ -3909,16 +3898,16 @@ void DaoCdata_Delete( DaoCdata *self )
 void DaoCdata_DeleteData( DaoCdata *self )
 {
 	void (*fdel)(void*) = (void (*)(void *))DaoCdata_Delete;
-	if( self->subtype != DAO_CDATA_DAO ) DaoCdataBindings_Erase( self->data );
+	DaoCdataBindings_Erase( self->data );
 	if( self->subtype == DAO_CDATA_CXX && self->data != NULL ){
-		if( self->typer->Delete && self->typer->Delete != fdel ){
-			self->typer->Delete( self->data );
+		if( self->ctype->typer->Delete && self->ctype->typer->Delete != fdel ){
+			self->ctype->typer->Delete( self->data );
 		}else{
 			dao_free( self->data );
 		}
 		self->data = NULL;
 	}
-	DaoCdata_FreeCommon( self );
+	DaoCstruct_Free( (DaoCstruct*)self );
 }
 int DaoCdata_IsType( DaoCdata *self, DaoType *type )
 {
@@ -3933,7 +3922,6 @@ void DaoCdata_SetType( DaoCdata *self, DaoType *type )
 	if( type == NULL ) return;
 	GC_ShiftRC( type, self->ctype );
 	self->ctype = type;
-	self->subtype = type->cdatatype;
 }
 void DaoCdata_SetData( DaoCdata *self, void *data )
 {
@@ -3952,10 +3940,6 @@ void** DaoCdata_GetData2( DaoCdata *self )
 DaoObject* DaoCdata_GetObject( DaoCdata *self )
 {
 	return (DaoObject*)self->object;
-}
-DaoTypeBase* DaoCdata_GetTyper(DaoCdata *self )
-{
-	return self->ctype->typer;
 }
 static void* DaoType_CastCxxData( DaoType *self, DaoType *totype, void *data )
 {
@@ -3979,7 +3963,7 @@ void* DaoCdata_CastData( DaoCdata *self, DaoType *totype )
 DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype )
 {
 	DaoCtype *self = (DaoCtype*)dao_calloc( 1, sizeof(DaoCtype) );
-	DaoCdata_InitCommon( (DaoCdata*)self, cttype );
+	DaoCstruct_Init( (DaoCstruct*)self, cttype );
 	GC_IncRC( cdtype );
 	self->cdtype = cdtype;
 	self->type = DAO_CTYPE;
@@ -3987,17 +3971,22 @@ DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype )
 }
 void DaoCtype_Delete( DaoCtype *self )
 {
-	DaoCdata_FreeCommon( (DaoCdata*) self );
+	DaoCstruct_Free( (DaoCstruct*) self );
 	GC_DecRC( self->cdtype );
 	dao_free( self );
 }
 
+static DaoTypeBase ctypeTyper =
+{
+	"ctype", NULL, NULL, NULL, {0}, {0},
+	(FuncPtrDel)DaoCtype_Delete, NULL
+};
 DaoTypeBase defaultCdataTyper =
 {
 	"cdata", NULL, NULL, NULL, {0}, {0},
 	(FuncPtrDel)DaoCdata_Delete, NULL
 };
-DaoCdata dao_default_cdata = {DAO_CDATA,0,DAO_VALUE_CONST,0,1,0,NULL,NULL,NULL,NULL};
+DaoCdata dao_default_cdata = {DAO_CDATA,0,DAO_VALUE_CONST,0,1,0,NULL,NULL,NULL};
 
 
 
@@ -4056,7 +4045,7 @@ DaoType* DaoCdata_WrapType( DaoNamespace *nspace, DaoTypeBase *typer, int opaque
 	GC_IncRC( cdata_type );
 	kernel->nspace = nspace;
 	kernel->abtype = cdata_type;
-	cdata_type->cdatatype = opaque ? DAO_CDATA_CXX : DAO_CDATA_DAO;
+	cdata_type->tid = opaque ? DAO_CDATA : DAO_CSTRUCT;
 	GC_ShiftRC( kernel, ctype_type->kernel );
 	GC_ShiftRC( kernel, cdata_type->kernel );
 	ctype_type->kernel = kernel;
@@ -4072,7 +4061,7 @@ static void DaoException_Init( DaoException *self, DaoType *type );
 DaoException* DaoException_New( DaoType *type )
 {
 	DaoException *self = (DaoException*) dao_malloc( sizeof(DaoException) );
-	DaoCdata_InitCommon( (DaoCdata*)self, type );
+	DaoCstruct_Init( (DaoCstruct*)self, type );
 	self->fromLine = 0;
 	self->toLine = 0;
 	self->routine = NULL;
@@ -4092,7 +4081,7 @@ DaoException* DaoException_New2( DaoType *type, DaoValue *v )
 }
 void DaoException_Delete( DaoException *self )
 {
-	DaoCdata_FreeCommon( (DaoCdata*)self );
+	DaoCstruct_Free( (DaoCstruct*)self );
 	GC_DecRC( self->edata );
 	DString_Delete( self->name );
 	DString_Delete( self->info );

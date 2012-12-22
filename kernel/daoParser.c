@@ -1598,8 +1598,11 @@ WrongType:
 			if( count2 != 1 ) goto InvalidTypeForm;
 			type = types->items.pType[ count ];
 			DArray_Erase( types, count, count2 );
-			if( type && type->tid == DAO_OBJECT ) return type->aux->xClass.clsType;
-			if( type && type->tid == DAO_CDATA ) return type->aux->xCtype.ctype;
+			switch( type ? type->tid : 0 ){
+			case DAO_CDATA :
+			case DAO_CSTRUCT : return type->aux->xCtype.ctype;
+			case DAO_OBJECT : return type->aux->xClass.clsType;
+			}
 			goto InvalidTypeForm;
 		case DKEY_FUTURE :
 			tid = DAO_FUTURE;
@@ -3391,7 +3394,7 @@ static int DaoParser_CheckDefault( DaoParser *self, DaoType *type, int estart )
 {
 	int mt = 0;
 	if( type->value == NULL ) return 0;
-	if( type->value->type == DAO_CTYPE || type->value->type == DAO_CDATA ){
+	if( type->value->type == DAO_CTYPE || type->value->type == DAO_CDATA || type->value->type == DAO_CSTRUCT ){
 		mt = DaoType_MatchTo( type->value->xCdata.ctype, type, NULL );
 	}else if( type->value->type ==0 ){
 		mt = 1;

@@ -526,7 +526,9 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 		DaoType *t2 = param->routine->routHost;
 		if( t1->tid == DAO_CDATA && t2->tid == DAO_CDATA ){
 			bl = DaoType_ChildOf( t1, t2 );
-		}else if( t1->tid == DAO_OBJECT && (t2->tid == DAO_OBJECT || t2->tid == DAO_CDATA) ){
+		}else if( t1->tid == DAO_CSTRUCT && t2->tid == DAO_CSTRUCT ){
+			bl = DaoType_ChildOf( t1, t2 );
+		}else if( t1->tid == DAO_OBJECT && (t2->tid == DAO_OBJECT || t2->tid == DAO_CDATA || t2->tid == DAO_CSTRUCT) ){
 			bl = DaoClass_ChildOf( & t1->aux->xClass, t2->aux );
 		}
 		if( bl ) param->routine = routine;
@@ -914,13 +916,13 @@ void DaoRoutine_UpdateVtable( DaoRoutine *self, DaoRoutine *routine, DMap *vtabl
 	if( self->routHost == NULL || routine->routHost == NULL ) return;
 	if( self->routHost->tid != DAO_OBJECT ) return;
 	if( self->overloads->mtree == NULL || self->overloads->mtree->first == NULL ) return;
-	if( rhost->tid != DAO_OBJECT && rhost->tid != DAO_CDATA ) return;
+	if( rhost->tid != DAO_OBJECT && rhost->tid != DAO_CDATA && rhost->tid == DAO_CSTRUCT ) return;
 	if( ! (routine->routType->attrib & DAO_TYPE_SELF) ) return;
 	klass = & self->routHost->aux->xClass;
 	if( DaoClass_ChildOf( klass, rhost->aux ) ==0 ) return;
 	for(param=self->overloads->mtree->first; param; param=param->next){
 		int tid = param->type->tid;
-		if( tid != DAO_OBJECT && tid != DAO_CDATA ) continue;
+		if( tid != DAO_OBJECT && tid != DAO_CDATA && tid != DAO_CSTRUCT ) continue;
 		if( DaoClass_ChildOf( klass, param->type->aux ) ==0 ) continue;
 		rout = DParamNode_LookupByType2( param, types+1, m-1 );
 		if( rout == NULL ) continue;

@@ -321,6 +321,7 @@ void DaoByteEncoder_AddLookupValue( DaoByteEncoder *self, DaoValue *value, DaoVa
 	case DAO_CLASS :
 	case DAO_CTYPE :
 	case DAO_OBJECT :
+	case DAO_CSTRUCT :
 	case DAO_CDATA :
 	case DAO_ROUTINE :
 		DArray_Append( self->hosts, value );
@@ -640,6 +641,7 @@ int DaoByteEncoder_EncodeType( DaoByteEncoder *self, DaoType *type )
 		DString_AppendUInt( self->types, k );
 		break;
 	case DAO_CDATA :
+	case DAO_CSTRUCT :
 	case DAO_CTYPE :
 		spec = type != type->kernel->abtype;
 		spec &= type != type->kernel->abtype->aux->xCtype.ctype;
@@ -1851,6 +1853,7 @@ static DaoValue* DaoByteDecoder_DecodeValue( DaoByteDecoder *self )
 		value = DaoByteDecoder_GetDeclaration( self, id );
 		break;
 	case DAO_CDATA :
+	case DAO_CSTRUCT :
 		id = DaoByteDecoder_DecodeUInt( self );
 		break;
 	case DAO_TYPE :
@@ -2052,12 +2055,13 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 			break;
 		case DAO_CTYPE :
 		case DAO_CDATA :
+		case DAO_CSTRUCT :
 			id = DaoByteDecoder_DecodeUInt( self );
 			count = DaoByteDecoder_DecodeUInt16( self );
 			value = DaoByteDecoder_GetDeclaration( self, id );
 			if( self->codes >= self->error ) break;
 			type = value->xCtype.ctype;
-			if( tid == DAO_CDATA ) type = value->xCtype.cdtype;
+			if( tid == DAO_CDATA || tid == DAO_CSTRUCT ) type = value->xCtype.cdtype;
 			if( count ){
 				self->array->size = 0;
 				for(j=0; j<count; ++j){

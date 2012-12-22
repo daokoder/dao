@@ -512,7 +512,7 @@ static DaoType *daox_type_buffer = NULL;
 Dao_Buffer* Dao_Buffer_New( size_t size )
 {
 	Dao_Buffer *self = (Dao_Buffer*) dao_malloc( sizeof(Dao_Buffer) );
-	DaoCdata_InitCommon( (DaoCdata*)self, daox_type_buffer );
+	DaoCstruct_Init( (DaoCstruct*)self, daox_type_buffer );
 	self->size = self->bufsize = 0;
 	self->buffer.pVoid = NULL;
 	Dao_Buffer_Resize( self, size );
@@ -535,7 +535,7 @@ void Dao_Buffer_Resize( Dao_Buffer *self, size_t size )
 }
 void Dao_Buffer_Delete( Dao_Buffer *self )
 {
-	DaoCdata_FreeCommon( (DaoCdata*)self );
+	DaoCstruct_Free( (DaoCstruct*)self );
 	if( self->buffer.pVoid ) dao_free( self->buffer.pVoid );
 	dao_free( self );
 }

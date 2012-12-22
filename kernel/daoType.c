@@ -158,7 +158,6 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->tid = tid;
 	self->name = DString_New(1);
-	self->cdatatype = tid == DAO_CDATA ? DAO_CDATA_PTR : 0;
 	self->typer = typer;
 	if( typer->core ){
 		self->kernel = typer->core->kernel;
@@ -354,10 +353,14 @@ void DaoType_Init()
 	dao_type_matrix[DAO_CLASS][DAO_CTYPE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_CLASS][DAO_INTERFACE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_OBJECT][DAO_CDATA] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_OBJECT][DAO_CSTRUCT] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_OBJECT][DAO_OBJECT] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_OBJECT][DAO_INTERFACE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_CTYPE][DAO_CTYPE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_CTYPE][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CSTRUCT][DAO_CTYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CSTRUCT][DAO_CSTRUCT] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CSTRUCT][DAO_INTERFACE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_CDATA][DAO_CTYPE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_CDATA][DAO_CDATA] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_CDATA][DAO_INTERFACE] = DAO_MT_EXACT+1;
@@ -431,7 +434,7 @@ static int DaoValue_MatchToParent( DaoValue *object, DaoType *parent, DMap *defs
 	if( object == NULL || parent == NULL ) return DAO_MT_NOT;
 	if( object->type == DAO_OBJECT ){
 		mt = DaoType_MatchToParent( object->xObject.defClass->objType, parent, defs );
-	}else if( object->type == DAO_CDATA || object->type == DAO_CTYPE ){
+	}else if( object->type == DAO_CSTRUCT || object->type == DAO_CDATA || object->type == DAO_CTYPE ){
 		mt = DaoType_MatchToParent( object->xCdata.ctype, parent, defs );
 	}else if( object->type == DAO_CLASS ){
 		mt = DaoType_MatchToParent( object->xClass.clsType, parent, defs);
@@ -607,6 +610,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		return DaoType_MatchToParent( self, type, defs );
 	case DAO_CTYPE :
 	case DAO_CDATA :
+	case DAO_CSTRUCT :
 		if( self->aux == type->aux ) return DAO_MT_EQ; /* for aliased type; */
 		return DaoType_MatchToParent( self, type, defs );
 	case DAO_VALTYPE :
@@ -832,10 +836,11 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		return DaoValue_MatchToParent( value, self, defs );
 	case DAO_CTYPE :
 	case DAO_CDATA :
+	case DAO_CSTRUCT :
 		tp = value->xCdata.ctype;
 		if( self == tp ) return DAO_MT_EQ;
 		if( self->tid == value->type && self->aux == tp->aux ) return DAO_MT_EQ; /* alias type */
-		if( interface && value->type == DAO_CDATA ) return DaoType_MatchInterface( tp, interface, NULL );
+		if( interface && value->type != DAO_CTYPE ) return DaoType_MatchInterface( tp, interface, NULL );
 		return DaoValue_MatchToParent( value, self, defs );
 	case DAO_TYPE :
 		tp = & value->xType;
@@ -882,7 +887,7 @@ DaoValue* DaoType_CastToParent( DaoValue *object, DaoType *parent )
 	daoint i, n;
 	DaoValue *value;
 	if( object == NULL || parent == NULL ) return NULL;
-	if( object->type == DAO_CDATA || object->type == DAO_CTYPE ){
+	if( object->type == DAO_CSTRUCT || object->type == DAO_CDATA || object->type == DAO_CTYPE ){
 		if( DaoType_MatchToParent( object->xCdata.ctype, parent, NULL ) ) return object;
 	}else if( object->type == DAO_OBJECT ){
 		if( object->xObject.defClass->objType == parent ) return object;
@@ -951,7 +956,6 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	copy->kernel = self->kernel;
 	copy->typer = self->typer;
 	copy->attrib = self->attrib;
-	copy->cdatatype = self->cdatatype;
 	copy->overloads = self->overloads;
 	copy->trait |= DAO_VALUE_DELAYGC;
 	DArray_Append( ns->auxData, copy );
@@ -983,13 +987,15 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 			DString_Append( copy->name, type->name );
 			if( i+1 < (int)self->nested->size ) DString_AppendChar( copy->name, sep );
 		}
-		if( (self->tid == DAO_CTYPE || self->tid == DAO_CDATA) && self->typer->core->kernel->sptree ){
-			DaoType *sptype = self->typer->core->kernel->abtype;
-			if( self->tid == DAO_CTYPE ) sptype = sptype->aux->xCtype.ctype;
-			sptype = DaoCdataType_Specialize( sptype, copy->nested );
-			if( sptype ){
-				DMap_Erase2( defs, copy );
-				return sptype;
+		if( self->tid == DAO_CTYPE || self->tid == DAO_CDATA || self->tid == DAO_CSTRUCT ){
+			if( self->typer->core->kernel->sptree ){
+				DaoType *sptype = self->typer->core->kernel->abtype;
+				if( self->tid == DAO_CTYPE ) sptype = sptype->aux->xCtype.ctype;
+				sptype = DaoCdataType_Specialize( sptype, copy->nested );
+				if( sptype ){
+					DMap_Erase2( defs, copy );
+					return sptype;
+				}
 			}
 		}
 		/* NOT FOR @T<int|string> kind types, see notes below: */
@@ -1123,7 +1129,7 @@ DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 		DaoNamespace_SetupMethods( core->kernel->nspace, self->typer );
 		if( core->kernel->methods == NULL ) return NULL;
 	}
-	if( self->tid == DAO_CDATA || self->tid == DAO_CTYPE ){
+	if( self->tid == DAO_CSTRUCT || self->tid == DAO_CDATA || self->tid == DAO_CTYPE ){
 		/* For non cdata type, core->kernel->abtype could be NULL: */
 		if( self->kernel == core->kernel && self->aux != core->kernel->abtype->aux ){
 			/* Specialize methods for specialized cdata type: */
@@ -1707,7 +1713,7 @@ DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types )
 	uchar_t tid = self->tid;
 	daoint i, pos;
 
-	assert( self->tid == DAO_CDATA || self->tid == DAO_CTYPE );
+	assert( self->tid == DAO_CSTRUCT || self->tid == DAO_CDATA || self->tid == DAO_CTYPE );
 
 	self = self->kernel->abtype;
 	if( tid == DAO_CTYPE ) self = self->aux->xCtype.ctype;
@@ -1724,7 +1730,6 @@ DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types )
 	 * Upon method accessing, a new kernel will be created with specialized methods. */
 	sptype = DaoCdata_NewType( self->typer );
 	sptype2 = sptype->aux->xCdata.ctype;
-	sptype->cdatatype = self->aux->xCtype.cdtype->cdatatype;
 	GC_ShiftRC( self->kernel, sptype->kernel );
 	GC_ShiftRC( self->kernel, sptype2->kernel );
 	sptype->kernel = self->kernel;
@@ -1778,7 +1783,7 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 	if( self == original ) return;
 	if( self->kernel != original->kernel ) return;
 	if( original->kernel == NULL || original->kernel->methods == NULL ) return;
-	assert( self->tid == DAO_CDATA || self->tid == DAO_CTYPE );
+	assert( self->tid == DAO_CSTRUCT || self->tid == DAO_CDATA || self->tid == DAO_CTYPE );
 	if( self->tid == DAO_CTYPE ) self = self->aux->xCtype.cdtype;
 	if( self->bases ){
 		for(i=0; i<self->bases->size; i++){

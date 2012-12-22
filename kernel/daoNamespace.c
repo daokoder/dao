@@ -621,7 +621,7 @@ DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const cha
 	// To create a template-like alias to a template-like cdata type, it is only
 	// necessary to add a specialization entry in the template cdata type.
 	*/
-	if( tp->tid == DAO_CDATA ) tp = tp->aux->xCtype.ctype;
+	if( tp->tid == DAO_CDATA || tp->tid == DAO_CSTRUCT ) tp = tp->aux->xCtype.ctype;
 	tp2 = tp;
 	if( tp->tid && tp->tid < DAO_ARRAY ){
 		tp = DaoType_Copy( tp );
@@ -1469,6 +1469,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		abtp = p->xClass.clsType; break;
 	case DAO_CTYPE :
 	case DAO_CDATA :
+	case DAO_CSTRUCT :
 		abtp = p->xCdata.ctype; break;
 	case DAO_ROUTINE :
 		abtp = p->xRoutine.routType;

@@ -2219,7 +2219,7 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 			rout = node->value.pRoutine;
 		}else if( at->tid == DAO_OBJECT ){
 			rout = DaoClass_FindOperator( & at->aux->xClass, mbs->mbs, hostClass );
-		}else if( at->tid == DAO_CDATA ){
+		}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
 			rout = DaoType_FindFunction( at, mbs );
 		}
 		if( rout ){
@@ -2238,7 +2238,7 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 		rout = node->value.pRoutine;
 	}else if( at->tid == DAO_OBJECT ){
 		rout = DaoClass_FindOperator( & at->aux->xClass, mbs->mbs, hostClass );
-	}else if( at->tid == DAO_CDATA ){
+	}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
 		rout = DaoType_FindFunction( at, mbs );
 	}
 	if( rout == NULL ) return ct;
@@ -2960,7 +2960,8 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				value = consts[opb];
 			}
 			ct = NULL;
-			k = at->tid != DAO_CLASS && at->tid != DAO_OBJECT && at->tid != DAO_CDATA;
+			k = at->tid != DAO_CLASS && at->tid != DAO_OBJECT;
+			k = k && at->tid != DAO_CDATA && at->tid != DAO_CSTRUCT;
 			if( value && value->type == 0 && k && bt->tid == DAO_VALTYPE ){ /* a[] */
 				ct = at;
 			}else if( NoCheckingType( at ) || NoCheckingType( bt ) ){
@@ -3124,7 +3125,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				rout = DaoValue_Check( meth, at, & bt, 1, DVM_CALL, errors );
 				if( rout == NULL ) goto InvIndex;
 				ct = & rout->routType->aux->xType;
-			}else if( at->tid == DAO_CDATA ){
+			}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
 				DString_SetMBS( mbs, "[]" );
 				meth = DaoType_FindFunction( at, mbs );
 				if( meth == NULL ) goto WrongContainer;
@@ -3206,7 +3207,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
 					meth = DaoClass_FindOperator( & at->aux->xClass, "[]", hostClass );
 					if( meth == NULL ) goto WrongContainer;
-				}else if( at->tid == DAO_CDATA ){
+				}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
 					meth = DaoType_FindFunction( at, mbs );
 					if( meth == NULL ) goto WrongContainer;
 				}else if( at->tid == DAO_INTERFACE ){
@@ -3560,6 +3561,7 @@ NotExist_TryAux:
 					if( rout == NULL ) goto InvIndex;
 					break;
 				case DAO_CDATA :
+				case DAO_CSTRUCT :
 					DString_SetMBS( mbs, "[]=" );
 					meth = DaoType_FindFunction( ct, mbs );
 					if( meth == NULL ) goto InvIndex;
@@ -3625,7 +3627,7 @@ NotExist_TryAux:
 				}else if( ct->tid == DAO_CLASS || ct->tid == DAO_OBJECT ){
 					meth = DaoClass_FindOperator( & ct->aux->xClass, "[]=", hostClass );
 					if( meth == NULL ) goto WrongContainer;
-				}else if( ct->tid == DAO_CDATA ){
+				}else if( ct->tid == DAO_CDATA || ct->tid == DAO_CSTRUCT ){
 					meth = DaoType_FindFunction( ct, mbs );
 					if( meth == NULL ) goto WrongContainer;
 				}else if( ct->tid == DAO_INTERFACE ){
@@ -3792,6 +3794,7 @@ NotExist_TryAux:
 						break;
 					}
 				case DAO_CDATA :
+				case DAO_CSTRUCT :
 					{
 						DString_SetMBS( mbs, "." );
 						DString_Append( mbs, str );
@@ -3862,7 +3865,7 @@ NotExist_TryAux:
 
 				if( at->tid == DAO_UDT || at->tid == DAO_ANY ){
 					/* less strict checking */
-				}else if( at != ct && (ct->tid == DAO_OBJECT || ct->tid == DAO_CDATA) ){
+				}else if( at != ct && (ct->tid == DAO_OBJECT || ct->tid == DAO_CDATA || ct->tid == DAO_CSTRUCT) ){
 					if( ct->tid == DAO_OBJECT ){
 						meth = DaoClass_FindOperator( & ct->aux->xClass, "=", hostClass );
 					}else{
@@ -3930,6 +3933,7 @@ NotExist_TryAux:
 					ct = dao_type_udf;
 				}else if( at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
 						|| at->tid == DAO_CDATA || bt->tid == DAO_CDATA
+						|| at->tid == DAO_CSTRUCT || bt->tid == DAO_CSTRUCT
 						|| at->tid == DAO_INTERFACE || bt->tid == DAO_INTERFACE ){
 					ct = DaoCheckBinArith( routine, vmc, at, bt, types[opc], hostClass, mbs );
 					if( ct == NULL ) goto InvOper;
@@ -4031,6 +4035,7 @@ NotExist_TryAux:
 					ct = dao_type_udf;
 				}else if( at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
 						|| at->tid == DAO_CDATA || bt->tid == DAO_CDATA
+						|| at->tid == DAO_CSTRUCT || bt->tid == DAO_CSTRUCT
 						|| at->tid == DAO_INTERFACE || bt->tid == DAO_INTERFACE ){
 					ct = DaoCheckBinArith( routine, vmc, at, bt, types[opc], hostClass, mbs );
 					if( ct == NULL ) ct = dao_type_int;
@@ -4167,6 +4172,7 @@ NotExist_TryAux:
 					ct = dao_type_udf;
 				}else if( at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
 						|| at->tid == DAO_CDATA || bt->tid == DAO_CDATA
+						|| at->tid == DAO_CSTRUCT || bt->tid == DAO_CSTRUCT
 						|| at->tid == DAO_INTERFACE || bt->tid == DAO_INTERFACE ){
 					ct = DaoCheckBinArith( routine, vmc, at, bt, ct, hostClass, mbs );
 					if( ct == NULL ) goto InvOper;
@@ -4661,7 +4667,7 @@ NotExist_TryAux:
 				}else if( at->tid == DAO_OBJECT ){
 					rout = DaoClass_FindOperator( & at->aux->xClass, "()", hostClass );
 					if( rout == NULL ) goto ErrorTyping;
-				}else if( at->tid == DAO_CDATA ){
+				}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
 					rout = DaoType_FindFunctionMBS( at, "()" );
 					if( rout == NULL ) goto ErrorTyping;
 				}else if( at->tid != DAO_ROUTINE ){

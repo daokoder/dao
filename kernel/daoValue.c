@@ -207,7 +207,8 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	case DAO_ENUM    : return DaoEnum_Compare( & left->xEnum, & right->xEnum );
 	case DAO_TUPLE   : return DaoTuple_Compare( & left->xTuple, & right->xTuple );
 	case DAO_LIST    : return DaoList_Compare( & left->xList, & right->xList );
-	case DAO_CTYPE :
+	case DAO_CSTRUCT :
+	case DAO_CTYPE : return left == right ? 0 : -1;
 	case DAO_CDATA : return number_compare( (daoint)left->xCdata.data, (daoint)right->xCdata.data ); 
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY   : return DaoArray_Compare( & left->xArray, & right->xArray );
@@ -696,6 +697,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 		case (DAO_LIST <<8)|DAO_LIST  : ST = S->xList.unitype; break;
 		case (DAO_MAP  <<8)|DAO_MAP   : ST = S->xMap.unitype; break;
 		case (DAO_CDATA<<8)|DAO_CDATA : ST = S->xCdata.ctype; break;
+		case (DAO_CSTRUCT<<8)|DAO_CSTRUCT : ST = S->xCstruct.ctype; break;
 		case (DAO_OBJECT<<8)|DAO_OBJECT : ST = S->xObject.defClass->objType; break;
 		}
 		if( ST == T ){
@@ -705,7 +707,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 			return 1;
 		}
 	}
-	if( (T->tid == DAO_OBJECT || T->tid == DAO_CDATA) && S->type == DAO_OBJECT ){
+	if( (T->tid == DAO_OBJECT || T->tid == DAO_CDATA || T->tid == DAO_CSTRUCT) && S->type == DAO_OBJECT ){
 		if( S->xObject.defClass != & T->aux->xClass ){
 			S = DaoObject_CastToBase( S->xObject.rootObject, T );
 			tm = (S != NULL);
@@ -829,7 +831,7 @@ int DaoValue_Move2( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 	int rc = DaoValue_Move5( S, D, T, defs );
 	if( rc == 0 || T == NULL ) return rc;
 	if( S->type <= DAO_TUPLE || S->type != T->tid ) return rc;
-	if( S->type == DAO_CDATA && S->xCdata.subtype != DAO_CDATA_DAO ){
+	if( S->type == DAO_CDATA ){
 		if( S->xCdata.data == NULL ) rc = 0;
 	}else{
 		if( S == T->value ) rc = 0;
@@ -900,7 +902,7 @@ DaoTuple* DaoValue_CastTuple( DaoValue *self )
 }
 DaoStream* DaoValue_CastStream( DaoValue *self )
 {
-	if( self == NULL || self->type != DAO_CDATA ) return NULL;
+	if( self == NULL || self->type != DAO_CSTRUCT ) return NULL;
 	return (DaoStream*) DaoValue_CastCdata( self, dao_type_stream );
 }
 DaoObject* DaoValue_CastObject( DaoValue *self )
@@ -910,7 +912,7 @@ DaoObject* DaoValue_CastObject( DaoValue *self )
 }
 DaoCdata* DaoValue_CastCdata( DaoValue *self, DaoType *type )
 {
-	if( self == NULL || self->type != DAO_CDATA ) return NULL;
+	if( self == NULL || self->type != DAO_CSTRUCT ) return NULL;
 	if( type == NULL || ! DaoType_ChildOf( self->xCdata.ctype, type ) ) return (DaoCdata*) self;
 	return NULL;
 }

@@ -182,6 +182,10 @@ void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes )
 		GC_ShiftRC( tp2->value, value ); /* default instance of specialized C type; */
 		*self = tp2->value;
 		return;
+	}else if( tp2->tid == DAO_CSTRUCT && value->type == DAO_CSTRUCT ){
+		GC_ShiftRC( tp2->value, value ); /* default instance of specialized C type; */
+		*self = tp2->value;
+		return;
 	}
 	DaoValue_Move( value, self, tp2 );
 }

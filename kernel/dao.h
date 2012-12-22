@@ -125,6 +125,7 @@ enum DaoTypes
 	DAO_MAP   ,
 	DAO_TUPLE ,
 	DAO_OBJECT ,
+	DAO_CSTRUCT ,
 	DAO_CDATA  ,
 	DAO_CLASS  ,
 	DAO_CTYPE  ,
@@ -239,6 +240,7 @@ typedef struct DaoObject       DaoObject;
 typedef struct DaoStream       DaoStream;
 typedef struct DaoCtype        DaoCtype;
 typedef struct DaoCdata        DaoCdata;
+typedef struct DaoCstruct      DaoCstruct;
 typedef struct DaoRegex        DaoRegex;
 typedef struct DaoNamespace    DaoNamespace;
 typedef struct DaoVmSpace      DaoVmSpace;
@@ -809,7 +811,6 @@ DAO_DLL DaoUserStream* DaoStream_SetUserStream( DaoStream *self, DaoUserStream *
 
 DAO_DLL DaoCdata* DaoCdata_New( DaoType *type, void *data );
 DAO_DLL DaoCdata* DaoCdata_Wrap( DaoType *type, void *data );
-DAO_DLL DaoCdata* DaoCdata_Cast( DaoCdata *self, DaoType *totype );
 DAO_DLL int    DaoCdata_IsType( DaoCdata *self, DaoType *type );
 DAO_DLL int    DaoCdata_OwnData( DaoCdata *self );
 DAO_DLL void   DaoCdata_SetType( DaoCdata *self, DaoType *type );
@@ -818,7 +819,6 @@ DAO_DLL void*  DaoCdata_CastData( DaoCdata *self, DaoType *totype );
 DAO_DLL void*  DaoCdata_GetData( DaoCdata *self );
 DAO_DLL void** DaoCdata_GetData2( DaoCdata *self );
 DAO_DLL DaoObject* DaoCdata_GetObject( DaoCdata *self );
-DAO_DLL DaoTypeBase* DaoCdata_GetTyper( DaoCdata *self );
 
 DAO_DLL DaoRegex* DaoRegex_New( DString *pattern );
 DAO_DLL int DaoRegex_Match( DaoRegex *self, DString *src, daoint *start, daoint *end );
@@ -1193,7 +1193,6 @@ void*  DaoCdata_CastData( DaoValue *self, DaoType *totype );
 void*  DaoCdata_GetData( DaoCdata *self );
 void** DaoCdata_GetData2( DaoCdata *self );
 DaoObject* DaoCdata_GetObject( DaoCdata *self );
-DaoTypeBase* DaoCdata_GetTyper( DaoCdata *self );
 
 
 DaoProcess* DaoProcess_New( DaoVmSpace *vms );

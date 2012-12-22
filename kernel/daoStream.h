@@ -47,7 +47,7 @@ enum
 
 struct DaoStream
 {
-	DAO_CDATA_COMMON;
+	DAO_CSTRUCT_COMMON;
 
 	char        attribs;
 	int         mode;

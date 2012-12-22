@@ -98,7 +98,7 @@ static void DaoGC_PrintValueInfo( DaoValue *value )
 {
 	if( value->type == DAO_TYPE ){
 		printf( "type: %s %i %p\t", value->xType.name->mbs, value->xType.tid, value );
-	}else if( value->type == DAO_CDATA ){
+	}else if( value->type == DAO_CDATA || value->type == DAO_CSTRUCT ){
 		printf( "cdata: %s\t", value->xCdata.ctype->name->mbs );
 	}else if( value->type == DAO_CLASS ){
 		printf( "class: %s\t", value->xClass.className->mbs );
@@ -272,15 +272,17 @@ void DaoCGC_Start()
 }
 static void DaoValue_Delete( DaoValue *self )
 {
-	DaoTypeBase *typer = DaoValue_GetTyper( self );
 #ifdef DAO_GC_PROF
 	ObjectProfile[self->type] --;
 #endif
-	if( self->type == DAO_CDATA && self->xCdata.subtype != DAO_CDATA_DAO ){
+	if( self->type == DAO_CDATA ){
 		DaoCdata_Delete( (DaoCdata*) self );
+	}else if( self->type == DAO_CTYPE ){
+		DaoCtype_Delete( (DaoCtype*) self );
 	}else if( self->type == DAO_ROUTBODY ){
 		DaoRoutineBody_Delete( (DaoRoutineBody*) self );
 	}else{
+		DaoTypeBase *typer = DaoValue_GetTyper( self );
 		typer->Delete( self );
 	}
 }
@@ -561,7 +563,11 @@ void DaoGC_PrepareCandidates()
 	printf( "%9i %6i %9i %9i\n", gcWorker.cycle, delay, workList->size, k );
 #endif
 	workList->size = k;
-	for(i=0; i<freeList->size; i++) DaoValue_Delete( freeList->items.pValue[i] );
+	for(i=0; i<freeList->size; i++){
+#warning "delete type..........................."
+		if( freeList->items.pValue[i]->type == DAO_TYPE ) continue;
+		DaoValue_Delete( freeList->items.pValue[i] );
+	}
 	freeList->size = 0;
 }
 
@@ -658,18 +664,19 @@ static int DaoGC_ScanMap( DMap *map, int action, int gckey, int gcvalue )
 }
 static void DaoGC_ScanCdata( DaoCdata *cdata, int action )
 {
+	DaoTypeBase *typer = cdata->ctype ? cdata->ctype->typer : NULL;
 	DArray *cvalues = gcWorker.cdataValues;
 	DArray *carrays = gcWorker.cdataArrays;
 	DArray *cmaps = gcWorker.cdataMaps;
 	daoint i, n;
 
 	if( cdata->type == DAO_CTYPE || cdata->subtype == DAO_CDATA_PTR ) return;
-	if( cdata->typer == NULL || cdata->typer->GetGCFields == NULL ) return;
+	if( typer == NULL || typer->GetGCFields == NULL ) return;
 	cvalues->size = carrays->size = cmaps->size = 0;
-	if( cdata->subtype == DAO_CDATA_DAO ){
-		cdata->typer->GetGCFields( cdata, cvalues, carrays, cmaps, action == DAO_GC_BREAK );
+	if( cdata->type == DAO_CSTRUCT ){
+		typer->GetGCFields( cdata, cvalues, carrays, cmaps, action == DAO_GC_BREAK );
 	}else if( cdata->data ){
-		cdata->typer->GetGCFields( cdata->data, cvalues, carrays, cmaps, action == DAO_GC_BREAK );
+		typer->GetGCFields( cdata->data, cvalues, carrays, cmaps, action == DAO_GC_BREAK );
 	}else{
 		return;
 	}
@@ -1326,12 +1333,12 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			cycRefCountDecrement( (DaoValue*) obj->defClass );
 			break;
 		}
-	case DAO_CDATA : case DAO_CTYPE :
+	case DAO_CSTRUCT : case DAO_CDATA : case DAO_CTYPE :
 		{
 			DaoCdata *cdata = (DaoCdata*) value;
 			cycRefCountDecrement( (DaoValue*) cdata->object );
 			cycRefCountDecrement( (DaoValue*) cdata->ctype );
-			if( value->type == DAO_CDATA ){
+			if( value->type == DAO_CDATA || value->type == DAO_CSTRUCT ){
 				DaoGC_ScanCdata( cdata, DAO_GC_DEC );
 			}else{
 				cycRefCountDecrement( (DaoValue*) value->xCtype.cdtype );
@@ -1535,12 +1542,12 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			cycRefCountIncrement( (DaoValue*) obj->defClass );
 			break;
 		}
-	case DAO_CDATA : case DAO_CTYPE :
+	case DAO_CSTRUCT : case DAO_CDATA : case DAO_CTYPE :
 		{
 			DaoCdata *cdata = (DaoCdata*) value;
 			cycRefCountIncrement( (DaoValue*) cdata->object );
 			cycRefCountIncrement( (DaoValue*) cdata->ctype );
-			if( value->type == DAO_CDATA ){
+			if( value->type == DAO_CDATA || value->type == DAO_CSTRUCT ){
 				DaoGC_ScanCdata( cdata, DAO_GC_INC );
 			}else{
 				cycRefCountIncrement( (DaoValue*) value->xCtype.cdtype );
@@ -1742,17 +1749,20 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			obj->valueCount = obj->baseCount = 0;
 			break;
 		}
-	case DAO_CDATA : case DAO_CTYPE :
+	case DAO_CSTRUCT : case DAO_CDATA : case DAO_CTYPE :
 		{
 			DaoValue *value2 = value;
 			DaoCdata *cdata = (DaoCdata*) value;
+			DaoType *ctype = cdata->ctype;
 			directRefCountDecrement( (DaoValue**) & cdata->object );
 			directRefCountDecrement( (DaoValue**) & cdata->ctype );
-			if( value->type == DAO_CDATA ){
+			if( value->type == DAO_CDATA || value->type == DAO_CSTRUCT ){
 				DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
 			}else{
 				directRefCountDecrement( (DaoValue**) & value->xCtype.cdtype );
 			}
+			cdata->ctype = ctype;
+			cdata->trait |= DAO_VALUE_BROKEN;
 			break;
 		}
 	case DAO_ROUTINE :

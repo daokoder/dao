@@ -263,7 +263,7 @@ const char* const daoExceptionInfo[] =
 const char* const coreTypeNames[] =
 {
 	"none", "int", "float", "double", "complex", "long", "string", 
-	"enum", "array", "list", "map", "tuple", "stream"
+	"enum", "array", "list", "map", "tuple"
 };
 const char *const daoBitBoolArithOpers[] = {
 	"!", "-", "~", "+", "-", "*", "/", "%", "**", "&&", "||", 
