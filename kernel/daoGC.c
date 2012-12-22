@@ -98,7 +98,7 @@ static void DaoGC_PrintValueInfo( DaoValue *value )
 {
 	if( value->type == DAO_TYPE ){
 		printf( "type: %s %i %p\t", value->xType.name->mbs, value->xType.tid, value );
-	}else if( value->type == DAO_CDATA || value->type == DAO_CSTRUCT ){
+	}else if( value->type == DAO_CDATA || value->type == DAO_CSTRUCT || value->type == DAO_CTYPE ){
 		printf( "cdata: %s\t", value->xCdata.ctype->name->mbs );
 	}else if( value->type == DAO_CLASS ){
 		printf( "class: %s\t", value->xClass.className->mbs );
@@ -171,6 +171,7 @@ struct DaoGarbageCollector
 	DArray   *cdataValues;
 	DArray   *cdataArrays;
 	DArray   *cdataMaps;
+	DArray   *temporary;
 	void     *scanning;
 
 	uchar_t   finalizing;
@@ -230,6 +231,7 @@ void DaoGC_Init()
 	gcWorker.cdataValues = DArray_New(0);
 	gcWorker.cdataArrays = DArray_New(0);
 	gcWorker.cdataMaps = DArray_New(0);
+	gcWorker.temporary = DArray_New(0);
 	gcWorker.scanning = NULL;
 
 	gcWorker.delayMask = DAO_VALUE_DELAYGC;
@@ -394,6 +396,7 @@ void DaoGC_Finish()
 	DArray_Delete( gcWorker.cdataValues );
 	DArray_Delete( gcWorker.cdataArrays );
 	DArray_Delete( gcWorker.cdataMaps );
+	DArray_Delete( gcWorker.temporary );
 	gcWorker.idleList = NULL;
 }
 
@@ -514,6 +517,7 @@ void DaoGC_PrepareCandidates()
 	DArray *workList = gcWorker.workList;
 	DArray *freeList = gcWorker.freeList;
 	DArray *delayList = gcWorker.delayList;
+	DArray *types = gcWorker.temporary;
 	uchar_t cycle = (++gcWorker.cycle) % DAO_FULL_GC_SCAN_CYCLE;
 	uchar_t delay = cycle && gcWorker.finalizing == 0 ? DAO_VALUE_DELAYGC : 0;
 	daoint i, k = 0;
@@ -563,12 +567,16 @@ void DaoGC_PrepareCandidates()
 	printf( "%9i %6i %9i %9i\n", gcWorker.cycle, delay, workList->size, k );
 #endif
 	workList->size = k;
+	types->size = 0;
 	for(i=0; i<freeList->size; i++){
-#warning "delete type..........................."
-		if( freeList->items.pValue[i]->type == DAO_TYPE ) continue;
+		if( freeList->items.pValue[i]->type == DAO_TYPE ){
+			DArray_Append( types, freeList->items.pValue[i] ); /* should be freed after cdata; */
+			continue;
+		}
 		DaoValue_Delete( freeList->items.pValue[i] );
 	}
 	freeList->size = 0;
+	for(i=0; i<types->size; ++i) DaoValue_Delete( types->items.pValue[i] );
 }
 
 enum DaoGCActions{ DAO_GC_DEC, DAO_GC_INC, DAO_GC_BREAK };
@@ -1756,13 +1764,13 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			DaoType *ctype = cdata->ctype;
 			directRefCountDecrement( (DaoValue**) & cdata->object );
 			directRefCountDecrement( (DaoValue**) & cdata->ctype );
+			cdata->ctype = ctype;
+			cdata->trait |= DAO_VALUE_BROKEN;
 			if( value->type == DAO_CDATA || value->type == DAO_CSTRUCT ){
 				DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
 			}else{
 				directRefCountDecrement( (DaoValue**) & value->xCtype.cdtype );
 			}
-			cdata->ctype = ctype;
-			cdata->trait |= DAO_VALUE_BROKEN;
 			break;
 		}
 	case DAO_ROUTINE :

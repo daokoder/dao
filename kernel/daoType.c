@@ -1716,12 +1716,12 @@ DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types )
 	assert( self->tid == DAO_CSTRUCT || self->tid == DAO_CDATA || self->tid == DAO_CTYPE );
 
 	self = self->kernel->abtype;
-	if( tid == DAO_CTYPE ) self = self->aux->xCtype.ctype;
+	if( tid == DAO_CTYPE ) self = self->aux->xCtype.cdtype;
 
 	if( (kernel = self->kernel) == NULL ) return NULL;
 	if( (sptree = kernel->sptree) == NULL ) return NULL;
 	if( (sptype = DTypeSpecTree_Get( sptree, types )) ){
-		if( self->tid == DAO_CTYPE ) return sptype->aux->xCdata.ctype;
+		if( tid == DAO_CTYPE ) return sptype->aux->xCdata.ctype;
 		return sptype;
 	}
 	if( DTypeSpecTree_Test( sptree, types ) == 0 ) return NULL;
@@ -1729,12 +1729,18 @@ DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types )
 	/* Specialized cdata type will be initialized with the same kernel as the template type.
 	 * Upon method accessing, a new kernel will be created with specialized methods. */
 	sptype = DaoCdata_NewType( self->typer );
-	sptype2 = sptype->aux->xCdata.ctype;
+	sptype2 = sptype->aux->xCtype.ctype;
 	GC_ShiftRC( self->kernel, sptype->kernel );
 	GC_ShiftRC( self->kernel, sptype2->kernel );
 	sptype->kernel = self->kernel;
 	sptype2->kernel = self->kernel;
 	sptype->nested = DArray_New(D_VALUE);
+	if( self->tid == DAO_CTYPE ){
+		sptype->tid = self->aux->xCtype.cdtype->tid;
+	}else{
+		sptype->tid = self->tid;
+	}
+
 	pos = DString_FindChar( sptype->name, '<', 0 );
 	if( pos != MAXSIZE ) DString_Erase( sptype->name, pos, -1 );
 	DString_AppendChar( sptype->name, '<' );
@@ -1767,7 +1773,7 @@ DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types )
 		}
 		DMap_Delete( defs );
 	}
-	if( self->tid == DAO_CTYPE ) return sptype2;
+	if( tid == DAO_CTYPE ) return sptype2;
 	return sptype;
 }
 
