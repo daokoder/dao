@@ -3,16 +3,37 @@
 DAO_CONFIG =
 DAO_CONFIG += -DDAO_WITH_MACRO
 DAO_CONFIG += -DDAO_WITH_REGEX
-DAO_CONFIG += -DDAO_WITH_THREAD
 DAO_CONFIG += -DDAO_WITH_LONGINT
 DAO_CONFIG += -DDAO_WITH_NUMARRAY
-DAO_CONFIG += -DDAO_WITH_CONCURRENT
 DAO_CONFIG += -DDAO_WITH_DYNCLASS
 DAO_CONFIG += -DDAO_WITH_DECORATOR
 
 
-# Uncomment the following to disable support for loading external C modules:
-# DAO_CONFIG += -DDAO_WITHOUT_DLL
+# Turn on threading if concurrent is on:
+ifeq ($(concurrent),yes)
+  thread=yes
+endif
+
+# Turn off concurrent if threading is off:
+ifeq ($(thread),no)
+  concurrent=no
+endif
+
+# Turn off threading if nodll is on:
+ifeq ($(nodll),yes)
+  DAO_CONFIG += -DDAO_WITHOUT_DLL
+  readline=no
+  concurrent=no
+  thread=no
+endif
+
+ifneq ($(thread),no)
+  DAO_CONFIG += -DDAO_WITH_THREAD
+endif
+
+ifneq ($(concurrent),no)
+  DAO_CONFIG += -DDAO_WITH_CONCURRENT
+endif
 
 
 DAO_CC      ?= gcc

@@ -9,8 +9,18 @@ ifeq ($(readline),yes)
 	LIB_READLINE = -lreadline
 endif
 
-DAO_LFLAGS += -rdynamic
-DAO_LIBS += -ldl -lpthread -lm $(LIB_READLINE)
+ifeq ($(nodll),yes)
+  # Statically linked binary is not supported by Apple for Mac OS X:
+  # http://developer.apple.com/library/mac/#qa/qa1118/_index.html
+  DAO_LFLAGS += -static
+  DAO_LIBS += -lm
+else
+  DAO_LFLAGS += -rdynamic
+  DAO_LIBS += -ldl -lm $(LIB_READLINE)
+  ifneq ($(thread),no)
+    DAO_LIBS += -lpthread
+  endif
+endif
 
 include Makefile.common.main
 

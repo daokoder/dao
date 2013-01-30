@@ -343,7 +343,7 @@ DaoCdata* DaoObject_CastCdata( DaoObject *self, DaoType *type )
 {
 	DaoValue *p = NULL;
 	if( type ) p = DaoObject_CastToBase( self, type );
-	if( p && p->type == DAO_CDATA ) return (DaoCdata*) p;
+	if( p && (p->type == DAO_CDATA || p->type == DAO_CSTRUCT) ) return (DaoCdata*) p;
 	return NULL;
 }
 

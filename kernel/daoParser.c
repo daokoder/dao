@@ -4794,10 +4794,12 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	DaoValue *value;
 	int i = start+1, j, code = 0, cyclic = 0;
 	int perm = self->permission;
-	unsigned char tki = tokens[i]->name;
+	unsigned char tki;
 
 	DString_Clear( self->mbs );
 
+	if( i >= end ) goto ErrorLoad;
+	tki = tokens[i]->name;
 	if( tki == DTOK_MBS || tki == DTOK_WCS ){
 		DString_SubString( tokens[i]->string, self->mbs, 1, tokens[i]->string->size-2 );
 		i ++;
@@ -5616,20 +5618,24 @@ static DaoInode* DaoParser_InsertCode( DaoParser *self, DaoInode *after, int cod
 	if( self->vmcLast->next ) self->vmcLast = node;
 	return node;
 }
-static DaoInode* DaoParser_AddBinaryCode( DaoParser *self, int code, DaoEnode LHS, DaoEnode RHS, int mid )
+static DaoInode* DaoParser_AddBinaryCode( DaoParser *self, int code, DaoEnode *LHS, DaoEnode *RHS, int mid )
 {
-	int opa = LHS.reg;
-	int opb = RHS.reg;
+	int opa = LHS->reg;
+	int opb = RHS->reg;
 	int first = mid - 1;
 	int last = mid + 1;
 	int regc = DaoParser_PushRegister( self );
-	if( LHS.first ) first = LHS.first->first;
-	if( RHS.last ) last = RHS.last->first + RHS.last->last;
+	if( LHS->first ) first = LHS->first->first;
+	if( RHS->last ) last = RHS->last->first + RHS->last->last;
 	if( code < 0 ){
 		code = -code;
 		if( code != DVM_IN ){
-			opa = RHS.reg;
-			opb = LHS.reg;
+			int ca = LHS->konst;
+			int cb = RHS->konst;
+			LHS->konst = cb;
+			RHS->konst = ca;
+			opa = RHS->reg;
+			opb = LHS->reg;
 		}
 	}
 	DaoParser_AddCode( self, code, opa, opb, regc, first, mid, last );
@@ -6618,7 +6624,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			}
 		}else if( oper >= DAO_OPER_ASSN_ADD && oper <= DAO_OPER_ASSN_OR ){
 			if( LHS.konst ) goto InvalidConstModificatioin;
-			result.last = DaoParser_AddBinaryCode( self, mapAithOpcode[oper], LHS, RHS, pos );
+			result.last = DaoParser_AddBinaryCode( self, mapAithOpcode[oper], & LHS, & RHS, pos );
 			result.update = result.last;
 			DaoParser_PopRegister( self ); /* result.last->c */
 			if( code >= DVM_GETVH && code <= DVM_GETMF ){ /* add SETX */
@@ -6659,7 +6665,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			result.reg = LHS.reg;
 			result.last = inode;
 		}else if( oper == DAO_OPER_AND || oper == DAO_OPER_OR ){
-			result.last = DaoParser_AddBinaryCode( self, mapAithOpcode[oper], LHS, RHS, pos );
+			result.last = DaoParser_AddBinaryCode( self, mapAithOpcode[oper], & LHS, & RHS, pos );
 			result.reg = result.last->c;
 			fold = 1;
 			if( LHS.first != LHS.last || RHS.first != RHS.last ){ /* use branching */
@@ -6676,7 +6682,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 				fold = 0;
 			}
 		}else{
-			result.last = DaoParser_AddBinaryCode( self, mapAithOpcode[oper], LHS, RHS, pos );
+			result.last = DaoParser_AddBinaryCode( self, mapAithOpcode[oper], & LHS, & RHS, pos );
 			result.reg = result.last->c;
 			fold = 1;
 		}
