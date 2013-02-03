@@ -1062,7 +1062,7 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DArray *argValues )
 			// TODO:
 		}
 	}
-	for(i=0; i<argValues->size; i+=2){
+	for(i=0; i<argValues->size; ++i){
 		DString *file = argValues->items.pString[i];
 		DString_Assign( data, file );
 		Dao_MakePath( self->pathWorking, data );

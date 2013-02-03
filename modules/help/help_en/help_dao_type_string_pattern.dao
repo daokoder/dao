@@ -53,7 +53,7 @@ but most of the character class names are different.
 
 A character class is used to identify a set of characters.
 @[list]
---@[green]x@[green] : ordinary characters represent themselves, excluding magic characters @[green]^$()%.[]*+-?{}\<\>@[green];
+--@[green]x@[green] : ordinary characters represent themselves, excluding magic characters @[green]^$|()%.[]*+-?{}<>@[green];
 --@[green].@[green] : a dot represents any characters;
 --@[green]%a@[green] : all alphabetic characters;
 --@[green]%s@[green] : all white space characters;

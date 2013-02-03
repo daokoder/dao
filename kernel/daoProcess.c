@@ -2910,6 +2910,12 @@ DaoTuple* DaoProcess_PutTuple( DaoProcess *self, int size )
 	DaoTuple *tuple;
 
 	if( type && type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, DAO_TUPLE );
+	if( type && type->tid == DAO_ANY ){
+		if( self->activeCode->code == DVM_CALL || self->activeCode->code == DVM_MCALL ){
+			DaoRoutine *rout = (DaoRoutine*) self->activeValues[ self->activeCode->a ];
+			if( rout && rout->type == DAO_ROUTINE ) type = (DaoType*) rout->routType->aux;
+		}
+	}
 	if( type == NULL || type->tid != DAO_TUPLE ) return NULL;
 	if( size == 0 ) return DaoProcess_GetTuple( self, type, type->nested->size, 1 );
 	if( type->variadic == 0 && N != type->nested->size ) return NULL;
