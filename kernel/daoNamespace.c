@@ -1615,7 +1615,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	DaoType *any = NULL;
 	DaoType *tp;
 	DNode   *node;
-	DString *mbs = DString_New(1);
+	DString *mbs;
 	DArray  *nstd = NULL;
 	int i, n = strlen( name );
 	int attrib = tid >> 16;
@@ -1627,6 +1627,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	tid = tid & 0xffff;
 	if( tid != DAO_ANY ) any = dao_type_any;
 
+	mbs = DString_New(1);
 	DString_SetMBS( mbs, name );
 	if( tid == DAO_CODEBLOCK ) DString_Clear( mbs );
 	if( N > 0 || tid == DAO_CODEBLOCK ){

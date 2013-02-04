@@ -2767,6 +2767,14 @@ DLong* DaoProcess_PutLong( DaoProcess *self )
 {
 	return DaoProcess_GetLong( self, self->activeCode );
 }
+DaoType* DaoProcess_GetCallReturnType( DaoProcess *self, DaoType *type, DaoVmCode *vmc )
+{
+	if( vmc->code == DVM_CALL || vmc->code == DVM_MCALL ){
+		DaoRoutine *rout = (DaoRoutine*) self->activeValues[ vmc->a ];
+		if( rout && rout->type == DAO_ROUTINE ) type = (DaoType*) rout->routType->aux;
+	}
+	return type;
+}
 DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoType *tp = self->activeTypes[ vmc->c ];
@@ -2776,6 +2784,7 @@ DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc )
 		return & dC->xEnum;
 	}
 	if( tp && tp->tid !=DAO_ENUM && tp->tid != DAO_UDT && tp->tid != DAO_ANY ) return NULL;
+	if( tp && tp->tid == DAO_ANY ) tp = DaoProcess_GetCallReturnType( self, tp, vmc );
 	dC = (DaoValue*) DaoEnum_New( tp, 0 );
 	GC_ShiftRC( dC, self->activeValues[ vmc->c ] );
 	self->activeValues[ vmc->c ] = dC;
@@ -2911,10 +2920,7 @@ DaoTuple* DaoProcess_PutTuple( DaoProcess *self, int size )
 
 	if( type && type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, DAO_TUPLE );
 	if( type && type->tid == DAO_ANY ){
-		if( self->activeCode->code == DVM_CALL || self->activeCode->code == DVM_MCALL ){
-			DaoRoutine *rout = (DaoRoutine*) self->activeValues[ self->activeCode->a ];
-			if( rout && rout->type == DAO_ROUTINE ) type = (DaoType*) rout->routType->aux;
-		}
+		type = DaoProcess_GetCallReturnType( self, type, self->activeCode );
 	}
 	if( type == NULL || type->tid != DAO_TUPLE ) return NULL;
 	if( size == 0 ) return DaoProcess_GetTuple( self, type, type->nested->size, 1 );

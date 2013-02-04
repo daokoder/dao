@@ -1130,7 +1130,6 @@ void DaoVmSpace_LoadArchive( DaoVmSpace *self, DString *archive )
 }
 int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 {
-	DString *sfile = DString_NewMBS( file ? file : "" );
 	DaoNamespace *ns = self->mainNamespace;
 	DaoProcess *vmp = self->mainProcess;
 	DaoStream *io = self->errorStream;
