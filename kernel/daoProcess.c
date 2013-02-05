@@ -2741,10 +2741,24 @@ DaoCdata*  DaoProcess_CopyCdata( DaoProcess *self, void *d, int n, DaoType *t )
 	cdt = DaoProcess_PutCdata( self, d2, t );
 	return cdt;
 }
+DaoType* DaoProcess_GetCallReturnType( DaoProcess *self, DaoVmCode *vmc, int tid )
+{
+	DaoType *type = self->activeTypes[ vmc->c ];
+
+	if( type == NULL ) return NULL;
+	if( type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, tid );
+	if( type == NULL || !(type->tid & DAO_ANY) ) return type;
+
+	if( vmc->code == DVM_CALL || vmc->code == DVM_MCALL ){
+		DaoRoutine *rout = (DaoRoutine*) self->activeValues[ vmc->a ];
+		if( rout && rout->type == DAO_ROUTINE ) type = (DaoType*) rout->routType->aux;
+	}
+	return type;
+}
 DLong* DaoProcess_GetLong( DaoProcess *self, DaoVmCode *vmc )
 {
 #ifdef DAO_WITH_LONGINT
-	DaoType *tp = self->activeTypes[ vmc->c ];
+	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_LONG );
 	DaoValue *dC = self->activeValues[ vmc->c ];
 	if( dC && dC->type == DAO_LONG ){
 		dC->xLong.value->sign = 1;
@@ -2752,7 +2766,7 @@ DLong* DaoProcess_GetLong( DaoProcess *self, DaoVmCode *vmc )
 		dC->xLong.value->size = 0;
 		return dC->xLong.value;
 	}
-	if( tp && tp->tid !=DAO_LONG && tp->tid != DAO_UDT && tp->tid != DAO_ANY ) return NULL;
+	if( tp && tp->tid != DAO_LONG && !(tp->tid & DAO_ANY) ) return NULL;
 	dC = (DaoValue*) DaoLong_New();
 	GC_ShiftRC( dC, self->activeValues[ vmc->c ] );
 	self->activeValues[ vmc->c ] = dC;
@@ -2767,24 +2781,17 @@ DLong* DaoProcess_PutLong( DaoProcess *self )
 {
 	return DaoProcess_GetLong( self, self->activeCode );
 }
-DaoType* DaoProcess_GetCallReturnType( DaoProcess *self, DaoType *type, DaoVmCode *vmc )
-{
-	if( vmc->code == DVM_CALL || vmc->code == DVM_MCALL ){
-		DaoRoutine *rout = (DaoRoutine*) self->activeValues[ vmc->a ];
-		if( rout && rout->type == DAO_ROUTINE ) type = (DaoType*) rout->routType->aux;
-	}
-	return type;
-}
 DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc )
 {
-	DaoType *tp = self->activeTypes[ vmc->c ];
+	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_ENUM );
 	DaoValue *dC = self->activeValues[ vmc->c ];
-	if( dC && dC->type == DAO_ENUM ){
+
+	if( tp->tid & DAO_ANY ) tp = NULL;
+	if( tp && tp->tid != DAO_ENUM ) return NULL;
+	if( dC && dC->type == DAO_ENUM && tp->tid == DAO_ENUM ){
 		if( tp != dC->xEnum.etype ) DaoEnum_SetType( & dC->xEnum, tp );
 		return & dC->xEnum;
 	}
-	if( tp && tp->tid !=DAO_ENUM && tp->tid != DAO_UDT && tp->tid != DAO_ANY ) return NULL;
-	if( tp && tp->tid == DAO_ANY ) tp = DaoProcess_GetCallReturnType( self, tp, vmc );
 	dC = (DaoValue*) DaoEnum_New( tp, 0 );
 	GC_ShiftRC( dC, self->activeValues[ vmc->c ] );
 	self->activeValues[ vmc->c ] = dC;
@@ -2801,7 +2808,7 @@ DaoList* DaoProcess_GetList( DaoProcess *self, DaoVmCode *vmc )
 {
 	/* create a new list in any case. */
 	DaoList *list = (DaoList*)self->activeValues[ vmc->c ];
-	DaoType *tp = self->activeTypes[ vmc->c ];
+	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_LIST );
 	if( list && list->type == DAO_LIST && list->unitype == tp ){
 		DaoVmCode *vmc2 = vmc + 1;
 		if( list->refCount == 1 ){
@@ -2825,7 +2832,7 @@ DaoList* DaoProcess_GetList( DaoProcess *self, DaoVmCode *vmc )
 DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc, unsigned int hashing )
 {
 	DaoMap *map = (DaoMap*) self->activeValues[ vmc->c ];
-	DaoType *tp = self->activeTypes[ vmc->c ];
+	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_MAP );
 
 	if( map && map->type == DAO_MAP && map->unitype == tp ){
 		if( (map->items->hashing == 0) == (hashing == 0) ){
@@ -2855,7 +2862,7 @@ DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc, unsigned int hashi
 DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
 {
 #ifdef DAO_WITH_NUMARRAY
-	DaoType *tp = self->activeTypes[ vmc->c ];
+	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_ARRAY );
 	DaoValue *dC = self->activeValues[ vmc->c ];
 	DaoArray *array = (DaoArray*) dC;
 	int type = DAO_NONE;
@@ -2892,7 +2899,6 @@ DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int in
 	DaoValue *val = self->activeValues[ self->activeCode->c ];
 	DaoTuple *tup = val && val->type == DAO_TUPLE ? & val->xTuple : NULL;
 	
-	if( type && type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, DAO_TUPLE );
 	if( tup && tup->unitype == type && tup->size == size ){
 		DaoVmCode *vmc = self->activeCode + 1;
 		int code = vmc->code;
@@ -2915,13 +2921,9 @@ DaoTuple* DaoProcess_PutTuple( DaoProcess *self, int size )
 	int i, N = abs(size);
 	int M = self->factory->size;
 	DaoValue **values = self->factory->items.pValue;
-	DaoType *type = self->activeTypes[ self->activeCode->c ];
+	DaoType *type = DaoProcess_GetCallReturnType( self, self->activeCode, DAO_TUPLE );
 	DaoTuple *tuple;
 
-	if( type && type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, DAO_TUPLE );
-	if( type && type->tid == DAO_ANY ){
-		type = DaoProcess_GetCallReturnType( self, type, self->activeCode );
-	}
 	if( type == NULL || type->tid != DAO_TUPLE ) return NULL;
 	if( size == 0 ) return DaoProcess_GetTuple( self, type, type->nested->size, 1 );
 	if( type->variadic == 0 && N != type->nested->size ) return NULL;
