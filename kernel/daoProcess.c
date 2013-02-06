@@ -346,7 +346,7 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 	if( routine == frame->routine ) return;
 	GC_ShiftRC( routine, frame->routine );
 	frame->routine = routine;
-	frame->codes = routine->body->vmCodes->codes;
+	frame->codes = routine->body->vmCodes->pod.codes;
 	frame->types = types;
 	for(; id != end; id++){
 		daoint i = *id, tid = types[i]->tid;
@@ -6254,7 +6254,7 @@ void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *sel
 	DaoStream_Delete( ss );
 }
 
-int DaoRoutine_SetVmCodes2( DaoRoutine *self, DaoVmcArray *vmCodes );
+int DaoRoutine_SetVmCodes2( DaoRoutine *self, DPlainArray *vmCodes );
 void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes );
 
 static void DaoProcess_MapTypes( DaoProcess *self, DMap *deftypes )

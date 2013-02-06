@@ -5408,7 +5408,7 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 		it = MAP_Find( upmap, vmc->b );
 		if( it == NULL ) it = MAP_Insert( upmap, vmc->b, k );
 		vmc->b = it->value.pInt;
-		if( i < rout->body->vmCodes->size ) rout->body->vmCodes->codes[i].b = it->value.pInt;
+		if( i < rout->body->vmCodes->size ) rout->body->vmCodes->pod.codes[i].b = it->value.pInt;
 	}
 	DMap_Delete( upmap );
 
@@ -5466,7 +5466,7 @@ static int DaoParser_ClassExpressionBody( DaoParser *self, int start, int end )
 
 	vmcx.line = rout->defLine;
 	DArray_Append( rout->body->annotCodes, & vmcx );
-	DaoVmcArray_PushBack( rout->body->vmCodes, vmc );
+	DPlainArray_PushBack( rout->body->vmCodes, vmc );
 
 	self->protoValues = DMap_New(0,0);
 	self->hostClass = klass;

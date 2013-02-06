@@ -2580,7 +2580,7 @@ void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 			vmc.c = DaoByteDecoder_DecodeUInt16( self );
 			vmc.line = k < lineInfoCount ? lines->items.pInt[2*(k-1)] : line;
 			DArray_Append( routine->body->annotCodes, & vmc );
-			DaoVmcArray_PushBack( routine->body->vmCodes, * (DaoVmCode*) & vmc );
+			DPlainArray_PushBack( routine->body->vmCodes, * (DaoVmCode*) & vmc );
 		}
 		if( self->codes >= self->error ) break;
 		DaoByteDecoder_VerifyRoutine( self, routine );

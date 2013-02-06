@@ -335,7 +335,7 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 		}else if( strcmp( cmd, "g" ) == 0 || strcmp( cmd, "goto" ) == 0 ){
 			if( tokens->size > 1 ){
 				int n = atoi( tokens->items.pString[1]->mbs );
-				int entry = proc->activeCode - proc->activeRoutine->body->vmCodes->codes;
+				int entry = proc->activeCode - proc->activeRoutine->body->vmCodes->pod.codes;
 				if( n < 0 ) n = entry - n;
 				if( n >= routine->body->vmCodes->size ) n = routine->body->vmCodes->size -1;
 				proc->topFrame->entry = n;
@@ -346,7 +346,7 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 			DaoStream_WriteMBS( stream, help );
 		}else if( strcmp( cmd, "l" ) == 0 || strcmp( cmd, "list" ) == 0 ){
 			DString *mbs = DString_New(1);
-			int entry = proc->activeCode - proc->activeRoutine->body->vmCodes->codes;
+			int entry = proc->activeCode - proc->activeRoutine->body->vmCodes->pod.codes;
 			int start = entry - 10;
 			int end = entry;
 			if( tokens->size >1 ){

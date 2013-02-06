@@ -1134,7 +1134,7 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
 
 	entry = proc->topFrame->entry;
-	end = proc->activeRoutine->body->vmCodes->codes + proc->activeCode[nop+1].b;
+	end = proc->activeRoutine->body->vmCodes->pod.codes + proc->activeCode[nop+1].b;
 	clone = DaoVmSpace_AcquireProcess( proc->vmSpace );
 	DaoProcess_PopFrame( proc );
 	DaoProcess_SetActiveFrame( proc, proc->topFrame );

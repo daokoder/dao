@@ -466,59 +466,85 @@ void** DArray_GetBuffer( DArray *self )
 
 
 
-DaoVmcArray* DaoVmcArray_New()
+
+
+DPlainArray* DPlainArray_New( int stride )
 {
-	DaoVmcArray *self = (DaoVmcArray*)dao_malloc( sizeof(DaoVmcArray) );
-	self->buf = self->codes = NULL;
-	self->size = self->bufsize = 0;
-#ifdef DAO_GC_PROF
-	daoCountArray ++;
-#endif
+	DPlainArray *self = (DPlainArray*) dao_calloc( 1, sizeof(DPlainArray) );
+	self->stride = stride;
 	return self;
 }
-void DaoVmcArray_Delete( DaoVmcArray *self )
+
+void DPlainArray_Delete( DPlainArray *self )
 {
-	DaoVmcArray_Clear( self );
+	if( self->pod.data ) dao_free( self->pod.data );
 	dao_free( self );
-#ifdef DAO_GC_PROF
-	daoCountArray --;
-#endif
-}
-void DaoVmcArray_Clear( DaoVmcArray *self )
-{
-	if( self->buf ) dao_free( self->buf );
-	self->buf = self->codes = NULL;
-	self->size = self->bufsize = 0;
-}
-void DaoVmcArray_PushBack( DaoVmcArray *self, DaoVmCode code )
-{
-	daoint from = (daoint)( self->codes - self->buf );
-	if( from + self->size + 1 >= self->bufsize ){
-		self->bufsize += self->bufsize/5 + 5;
-		self->buf = (DaoVmCode*) dao_realloc( self->buf, (self->bufsize+1)*sizeof(DaoVmCode) );
-		self->codes = self->buf + from;
-	}
-	self->codes[ self->size ] = code;
-	self->size++;
-}
-void DaoVmcArray_Resize( DaoVmcArray *self, int size )
-{
-	if( size >= self->bufsize || size < self->bufsize /2 ){
-		if( self->codes > self->buf ){
-			daoint min = size > self->size ? self->size : size;
-			memmove( self->buf, self->codes, min*sizeof(DaoVmCode) );
-		}
-		self->bufsize = size + 1;
-		self->buf = (DaoVmCode*) dao_realloc( self->buf, (self->bufsize+1)*sizeof(DaoVmCode) );
-		self->codes = self->buf;
-	}
-	if( size > self->size )
-		memset( self->codes + self->size, 0, (size - self->size) * sizeof(DaoVmCode) );
-	self->size = size;
-}
-void DaoVmcArray_Assign( DaoVmcArray *left, DaoVmcArray *right )
-{
-	DaoVmcArray_Resize( left, right->size );
-	memcpy( left->codes, right->codes, right->size * sizeof(DaoVmCode) );
 }
 
+void DPlainArray_Clear( DPlainArray *self )
+{
+	if( self->pod.data ) dao_free( self->pod.data );
+	self->pod.data = NULL;
+	self->size = self->capacity = 0;
+}
+void DPlainArray_Resize( DPlainArray *self, int size )
+{
+	if( self->capacity != size ){
+		self->capacity = size;
+		self->pod.data = dao_realloc( self->pod.data, self->capacity*self->stride );
+	}
+	self->size = size;
+}
+
+void DPlainArray_Reserve( DPlainArray *self, int size )
+{
+	if( size <= self->capacity ) return;
+	self->capacity = size;
+	self->pod.data = dao_realloc( self->pod.data, self->capacity*self->stride );
+}
+
+void DPlainArray_ResetSize( DPlainArray *self, int size )
+{
+	if( size <= self->capacity ){
+		self->size = size;
+		return;
+	}
+	DPlainArray_Resize( self, size );
+}
+
+void* DPlainArray_Get( DPlainArray *self, int i )
+{
+	return self->pod.data + i * self->stride;
+}
+
+void DPlainArray_Assign( DPlainArray *left, DPlainArray *right )
+{
+	assert( left->stride == right->stride );
+	DPlainArray_Resize( left, right->size );
+	memcpy( left->pod.data, right->pod.data, right->size * right->stride );
+}
+
+void* DPlainArray_Push( DPlainArray *self )
+{
+	void *data;
+	DPlainArray_Reserve( self, self->size + 1 );
+	self->size += 1;
+	return self->pod.data + (self->size - 1) * self->stride;
+}
+
+void DPlainArray_PushInt( DPlainArray *self, int value )
+{
+	int *item = (int*) DPlainArray_Push( self );
+	*item = value;
+}
+void DPlainArray_PushFloat( DPlainArray *self, float value )
+{
+	float *item = (float*) DPlainArray_Push( self );
+	*item = value;
+}
+
+void DPlainArray_PushBack( DPlainArray *self, DaoVmCode code )
+{
+	DaoVmCode *code2 = (DaoVmCode*) DPlainArray_Push( self );
+	*code2 = code;
+}

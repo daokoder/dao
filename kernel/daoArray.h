@@ -98,19 +98,40 @@ DAO_DLL void* DArray_Back( DArray *self );
 #define DArray_TopInt( self )        (self)->items.pInt[ (self)->size -1 ]
 
 
-struct DaoVmcArray
-{
-	DaoVmCode *codes;
-	DaoVmCode *buf;
-	ushort_t   size;
-	ushort_t   bufsize;
-};
-DAO_DLL DaoVmcArray* DaoVmcArray_New();
-DAO_DLL void DaoVmcArray_Delete( DaoVmcArray *self );
-DAO_DLL void DaoVmcArray_Clear( DaoVmcArray *self );
-DAO_DLL void DaoVmcArray_Resize( DaoVmcArray *self, int size );
-DAO_DLL void DaoVmcArray_PushBack( DaoVmcArray *self, DaoVmCode code );
-DAO_DLL void DaoVmcArray_Assign( DaoVmcArray *left, DaoVmcArray *right );
 
+
+struct DPlainArray
+{
+	union {
+		void       *data;
+		int        *ints;
+		float      *floats;
+
+		DaoToken   *tokens;
+		DaoVmCode  *codes;
+	} pod;
+
+	uint_t  size;
+	uint_t  capacity;
+	uint_t  stride;
+};
+
+DAO_DLL DPlainArray* DPlainArray_New( int stride );
+DAO_DLL void DPlainArray_Delete( DPlainArray *self );
+DAO_DLL void DPlainArray_Clear( DPlainArray *self );
+
+DAO_DLL void DPlainArray_Resize( DPlainArray *self, int size );
+DAO_DLL void DPlainArray_Reserve( DPlainArray *self, int size );
+DAO_DLL void DPlainArray_ResetSize( DPlainArray *self, int size );
+
+DAO_DLL void DPlainArray_Assign( DPlainArray *left, DPlainArray *right );
+
+DAO_DLL void* DPlainArray_Push( DPlainArray *self );
+DAO_DLL void* DPlainArray_Get( DPlainArray *self, int i );
+
+DAO_DLL void DPlainArray_PushInt( DPlainArray *self, int value );
+DAO_DLL void DPlainArray_PushFloat( DPlainArray *self, float value );
+
+DAO_DLL void DPlainArray_PushBack( DPlainArray *self, DaoVmCode code );
 
 #endif

@@ -107,7 +107,8 @@ typedef struct DaoInode      DaoInode;
 
 typedef struct DaoVmCode     DaoVmCode;
 typedef struct DaoVmCodeX    DaoVmCodeX;
-typedef struct DaoVmcArray   DaoVmcArray;
+
+typedef struct DPlainArray   DPlainArray;
 
 typedef struct DaoFuture     DaoFuture;
 typedef struct DaoException  DaoException;
