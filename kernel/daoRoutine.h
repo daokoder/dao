@@ -28,6 +28,7 @@
 #ifndef DAO_ROUTINE_H
 #define DAO_ROUTINE_H
 
+#include"daoLexer.h"
 #include"daoType.h"
 
 
@@ -108,9 +109,9 @@ struct DaoRoutineBody
 	/* VM codes with annotations */
 	DArray *annotCodes; /* <DaoVmCodeX*> */
 
-	/* definition of local constants and variables: */
-	DArray *defLocals; /* <DaoToken*> */
-	DArray *source; /* <DaoToken*> */
+	/* source tokens and definition of local constants and variables: */
+	DaoLexer     *source;
+	DPlainArray  *defLocals; /* <int> */
 
 	DArray *simpleVariables;
 

@@ -340,6 +340,8 @@ int DaoRoutine_SetVmCodes2( DaoRoutine *self, DPlainArray *vmCodes )
 
 void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns )
 {
+#warning "source tokens"
+#if 0
 	DaoToken *tok, token = {0,0,0,0,0,NULL};
 	DArray array = {{NULL},0,0,0,D_TOKEN};
 	DMap *nsTokens = ns->tokens;
@@ -357,6 +359,7 @@ void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns )
 		tok = (DaoToken*) DArray_Back( self->body->source );
 		tok->string = node->key.pString;
 	}
+#endif
 }
 
 static const char *const sep1 = "==========================================\n";

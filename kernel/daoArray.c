@@ -92,21 +92,11 @@ void DArray_Delete( DArray *self )
 	dao_free( self );
 }
 
-typedef struct DaoToken2{ DaoToken token; DString string; } DaoToken2;
 
 DaoToken* DaoToken_Copy( DaoToken *self )
 {
-	DaoToken* copy = NULL;
-	if( self->string ){
-		DaoToken2* copy2 = (DaoToken2*) dao_calloc( 1, sizeof(DaoToken2) );
-		copy = (DaoToken*) copy2;
-		memcpy( copy, self, sizeof(DaoToken) );
-		copy->string = & copy2->string;
-		DString_Assign( copy->string, self->string );
-	}else{
-		copy = (DaoToken*) dao_malloc( sizeof(DaoToken) );
-		memcpy( copy, self, sizeof(DaoToken) );
-	}
+	DaoToken* copy = (DaoToken*) dao_malloc( sizeof(DaoToken) );
+	memcpy( copy, self, sizeof(DaoToken) );
 	return copy;
 }
 static DaoVmCodeX* DaoVmCodeX_Copy( DaoVmCodeX *self )
@@ -543,8 +533,15 @@ void DPlainArray_PushFloat( DPlainArray *self, float value )
 	*item = value;
 }
 
-void DPlainArray_PushBack( DPlainArray *self, DaoVmCode code )
+DaoVmCode* DPlainArray_PushBack( DPlainArray *self, DaoVmCode code )
 {
 	DaoVmCode *code2 = (DaoVmCode*) DPlainArray_Push( self );
 	*code2 = code;
+	return code2;
+}
+DaoToken* DPlainArray_PushToken( DPlainArray *self, DaoToken token )
+{
+	DaoToken *token2 = (DaoToken*) DPlainArray_Push( self );
+	*token2 = token;
+	return token2;
 }

@@ -148,8 +148,8 @@ DaoParser* DaoParser_New()
 	DaoParser *self = (DaoParser*) dao_calloc( 1, sizeof(DaoParser) );
 
 	self->fileName = DString_New(1);
-	self->tokens = DArray_New(D_TOKEN);
-	self->partoks = DArray_New(D_TOKEN);
+	self->tokens = DaoLexer_New();
+	self->partoks = DaoLexer_New();
 	self->comments = DMap_New(0,D_STRING);
 
 	self->vmCodes = DArray_New(D_VMCODE);
@@ -164,11 +164,12 @@ DaoParser* DaoParser_New()
 
 	self->scopeOpenings = DArray_New(0);
 	self->scopeClosings = DArray_New(0);
-	self->errors = DArray_New(D_TOKEN);
-	self->warnings = DArray_New(D_TOKEN);
 	self->decoFuncs = DArray_New(0);
 	self->decoParams = DArray_New(D_VALUE);
 	self->tempTypes = DArray_New(0);
+
+	self->errors = DaoLexer_New();
+	self->warnings = DaoLexer_New();
 
 	self->noneValue = -1;
 	self->integerZero = -1;
@@ -213,8 +214,6 @@ void DaoParser_Delete( DaoParser *self )
 	DArray_Delete( self->tempTypes );
 	DArray_Delete( self->decoFuncs );
 	DArray_Delete( self->decoParams );
-	DArray_Delete( self->tokens );
-	DArray_Delete( self->partoks );
 	DArray_Delete( self->toks );
 	DArray_Delete( self->localVarMap );
 	DArray_Delete( self->localCstMap );
@@ -223,14 +222,17 @@ void DaoParser_Delete( DaoParser *self )
 	DArray_Delete( self->enumTypes );
 	DArray_Delete( self->scopeOpenings );
 	DArray_Delete( self->scopeClosings );
-	DArray_Delete( self->errors );
-	DArray_Delete( self->warnings );
 	DArray_Delete( self->regLines );
 	DArray_Delete( self->vmCodes );
 	DArray_Delete( self->strings );
 	DArray_Delete( self->arrays );
 	DArray_Delete( self->routCompilable );
 	DMap_Delete( self->comments );
+
+	DaoLexer_Delete( self->tokens );
+	DaoLexer_Delete( self->partoks );
+	DaoLexer_Delete( self->errors );
+	DaoLexer_Delete( self->warnings );
 	if( self->argName ) DaoToken_Delete( self->argName );
 	if( self->uplocs ) DArray_Delete( self->uplocs );
 	if( self->outers ) DArray_Delete( self->outers );
@@ -357,29 +359,30 @@ static DaoInode* DaoParser_PushBackCode( DaoParser *self, DaoVmCodeX *vmc )
 void DaoParser_Warn( DaoParser *self, int code, DString *ext )
 {
 	if( ext && ext->size > 100 ) DString_Erase( ext, 100, -1 );
-	DaoTokens_Append( self->warnings, code, self->curLine, ext ? ext->mbs : "" );
+	DaoLexer_AppendToken( self->warnings, code, self->curLine, ext ? ext->mbs : "" );
 }
 void DaoParser_Error( DaoParser *self, int code, DString *ext )
 {
 	if( ext && ext->size > 100 ) DString_Erase( ext, 100, -1 );
-	DaoTokens_Append( self->errors, code, self->curLine, ext ? ext->mbs : "" );
+	DaoLexer_AppendToken( self->errors, code, self->curLine, ext ? ext->mbs : "" );
 }
 void DaoParser_SumTokens( DaoParser *self, DString *sum, int m, int n, int single_line )
 {
-	DaoToken **tokens = self->tokens->items.pToken;
+	DaoToken *tokens = self->tokens->tokens->pod.tokens;
 	DaoToken *tok, *tok0=NULL;
 	int i, line = self->curLine;
 	DString_Clear( sum );
 	if( m < 0 ) m = 0;
-	if( n >= self->tokens->size ) n = self->tokens->size - 1;
-	if( m < n ) line = tokens[m]->line;
+	if( n >= self->tokens->tokens->size ) n = self->tokens->tokens->size - 1;
+	if( m < n ) line = tokens[m].line;
 	for(i=m; i<=n; i++){
-		tok = tokens[i];
+		DString s = DaoLexer_GetTokenString2( self->tokens, i );
+		tok = & tokens[i];
 		if( single_line && (int)tok->line > line ) break;
-		if( tok0 && (tok->line != tok0->line || tok->cpos > (tok0->cpos + tok0->string->size)) )
+		if( tok0 && (tok->line != tok0->line || tok->cpos > (tok0->cpos + tok0->length)) )
 			DString_AppendChar( sum, ' ' );
 		tok0 = tok;
-		DString_Append( sum, tokens[i]->string );
+		DString_Append( sum, & s );
 		if( i<n && sum->size > 30 ){
 			DString_AppendMBS( sum, " ..." );
 			break;
@@ -394,18 +397,16 @@ void DaoParser_Warn2( DaoParser *self, int code, int start, int end )
 /* tokens from m to n as message */
 void DaoParser_Error2( DaoParser *self, int code, int m, int n, int single_line )
 {
-	DaoToken *last;
-	DaoTokens_Append( self->errors, code, self->curLine, "" );
-	last = self->errors->items.pToken[ self->errors->size-1 ];
-	DaoParser_SumTokens( self, last->string, m, n, single_line );
+	DString *mbs = DaoParser_GetString( self );
+	DaoParser_SumTokens( self, mbs, m, n, single_line );
+	DaoLexer_AppendToken( self->errors, code, self->curLine, mbs->mbs );
 }
 /* tokens from m until the end of the line as message */
 void DaoParser_Error3( DaoParser *self, int code, int m )
 {
-	DaoToken *last;
-	DaoTokens_Append( self->errors, code, self->curLine, "" );
-	last = self->errors->items.pToken[ self->errors->size-1 ];
-	DaoParser_SumTokens( self, last->string, m, self->tokens->size-1, 1 );
+	DString *mbs = DaoParser_GetString( self );
+	DaoParser_SumTokens( self, mbs, m, self->tokens->tokens->size-1, 1 );
+	DaoLexer_AppendToken( self->errors, code, self->curLine, mbs->mbs );
 }
 void DaoParser_Suggest( DaoParser *self, const char *suggestion )
 {
@@ -908,6 +909,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	else if( klass ) hostname = klass->className;
 	else if( cdata ) hostname = cdata->name;
 
+#warning "Pop"
 	mbs = DaoParser_GetString( self );
 	pname = DaoParser_GetString( self );
 	nested = DaoParser_GetArray( self );

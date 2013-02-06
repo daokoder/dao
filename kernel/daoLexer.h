@@ -230,6 +230,10 @@ struct DaoToken
 	unsigned short  cpos; /* charactor position in the line */ 
 	unsigned int    line; /* file line position of the token */
 	unsigned int    index; /* index of the token in current routine */
+	unsigned int    offset;
+	unsigned int    length;
+
+#if 0
 	DString        *string; /* token string */
 	/* When DaoToken is used in an array to store the definitions
 	 * of local constants and variables in a routine,
@@ -238,6 +242,7 @@ struct DaoToken
 	 * (3) index field indicates the index of the cst/var value;
 	 * (4) string field stores the name.
 	 */
+#endif
 };
 
 DAO_DLL DaoToken* DaoToken_New();
@@ -247,6 +252,34 @@ DAO_DLL const char* DaoToken_NameToString( unsigned char name );
 DAO_DLL int DaoToken_Check( const char *src, int size, int *length );
 DAO_DLL int DaoToken_IsNumber( const char *src, int size );
 DAO_DLL int DaoToken_IsValidName( const char *src, int size );
+
+
+
+typedef struct DaoLexer DaoLexer;
+
+struct DaoLexer
+{
+	DString      *source;
+	DPlainArray  *tokens;
+};
+
+DaoLexer* DaoLexer_New();
+void DaoLexer_Delete( DaoLexer *self );
+
+DaoToken* DaoLexer_AppendToken( DaoLexer *self, int name, int line, const char *data );
+DaoToken* DaoLexer_Append( DaoLexer *self, DaoToken token, DString *string );
+int DaoLexer_Tokenize( DaoLexer *self, const char *src, int repl, int comment, int space );
+
+DString DaoLexer_GetTokenString( DaoLexer *self, DaoToken token );
+DString DaoLexer_GetTokenString2( DaoLexer *self, int i );
+
+void DaoLexer_AnnotateCode( DaoLexer *self, DaoVmCodeX vmc, DString *annot, int max );
+int DaoLexer_FindOpenToken( DaoLexer *self, uchar_t tok, int start, int end );
+int DaoLexer_FindLeftPair( DaoLexer *self,  uchar_t lw, uchar_t rw, int start, int stop );
+int DaoLexer_FindRightPair( DaoLexer *self,  uchar_t lw, uchar_t rw, int start, int stop );
+void DaoLexer_AddRaiseStatement( DaoLexer *self, const char *type, const char *info, int line );
+
+
 
 DAO_DLL int DaoToken_Tokenize( DArray *tokens, const char *src, int repl, int comment, int space );
 DAO_DLL void DaoToken_Set( DaoToken *self, int type, int name, int index, const char *s );
