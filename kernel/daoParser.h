@@ -45,9 +45,8 @@ struct DaoParser
 
 	int curToken;
 
-	DaoLexer  *tokens;
-	DaoLexer  *partoks;
-	DMap      *comments; /* <int,DString*> */
+	DaoLexer  *codeLexer;
+	DaoLexer  *parLexer;
 
 	/* DArray<DaoVmCodeX*>: need to be store as pointers, because in code generation,
 	 * it may be necessary to modify previously generated codes, for this,
@@ -65,11 +64,6 @@ struct DaoParser
 	DArray  *localDecMap; /* < DMap<DString*,int> > */
 	DArray  *switchMaps;
 	DArray  *enumTypes; /* <DaoType*> */
-
-	/* the line number where a register is first used;
-	 * with respect to the first line in the routine body;
-	 * -1 is used for register for parameters */
-	DArray *regLines; /* <int> : obsolete */
 
 	short levelBase;
 	short lexLevel;

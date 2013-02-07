@@ -992,9 +992,14 @@ DaoLexer* DaoLexer_New()
 }
 void DaoLexer_Delete( DaoLexer *self )
 {
-	DString_Delete( self->source );
 	DPlainArray_Delete( self->tokens );
+	DString_Delete( self->source );
 	dao_free( self );
+}
+void DaoLexer_Reset( DaoLexer *self )
+{
+	DString_Reset( self->source, 0 );
+	DPlainArray_ResetSize( self->tokens, 0 );
 }
 
 DString DaoLexer_GetTokenString( DaoLexer *self, DaoToken token )
@@ -1004,6 +1009,12 @@ DString DaoLexer_GetTokenString( DaoLexer *self, DaoToken token )
 DString DaoLexer_GetTokenString2( DaoLexer *self, int i )
 {
 	return DaoLexer_GetTokenString( self, self->tokens->pod.tokens[i] );
+}
+int DaoLexer_CompareTokenString( DaoLexer *self, DaoToken first, DaoToken second )
+{
+	DString s1 = DaoLexer_GetTokenString( self, first );
+	DString s2 = DaoLexer_GetTokenString( self, second );
+	return DString_Compare( & s1, & s2 );
 }
 
 DaoToken* DaoLexer_AppendToken( DaoLexer *self, int name, int line, const char *data )
@@ -1020,11 +1031,21 @@ DaoToken* DaoLexer_AppendToken( DaoLexer *self, int name, int line, const char *
 }
 DaoToken* DaoLexer_Append( DaoLexer *self, DaoToken tok, DString *string )
 {
+	int i, bufsize = self->source->bufSize;
 	DaoToken *token = DPlainArray_PushToken( self->tokens, tok );
+	if( string == NULL ) string = & tok.string;
 	token->offset = self->source->size + 1;
 	token->length = string->size;
 	DString_AppendChar( self->source, '\0' );
 	DString_Append( self->source, string );
+	token->string.size = token->string.bufSize = string->size;
+	token->string.mbs = self->source->mbs + token->offset;
+	token->string.wcs = NULL;
+	if( bufsize == self->source->bufSize ) return token;
+	for(i=0; i<self->tokens->size; ++i){
+		DaoToken *tok = self->tokens->pod.tokens + i;
+		tok->string.mbs = self->source->mbs + tok->offset;
+	}
 	return token;
 }
 
@@ -1101,8 +1122,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int replace, int comment
 		}
 		DString_Delete( wcs );
 	}
-	DString_Reset( self->source, 0 );
-	DPlainArray_ResetSize( self->tokens, 0 );
+	DaoLexer_Reset( self );
 
 	DArray_PushFront( lexenvs, (void*)(daoint)LEX_ENV_NORMAL );
 	it = 0;

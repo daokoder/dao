@@ -128,12 +128,17 @@ DAO_DLL void DPlainArray_ResetSize( DPlainArray *self, int size );
 DAO_DLL void DPlainArray_Assign( DPlainArray *left, DPlainArray *right );
 
 DAO_DLL void* DPlainArray_Push( DPlainArray *self );
+DAO_DLL void* DPlainArray_Pop( DPlainArray *self );
+DAO_DLL void* DPlainArray_Back( DPlainArray *self );
 DAO_DLL void* DPlainArray_Get( DPlainArray *self, int i );
+
+DAO_DLL void DPlainArray_Erase( DPlainArray *self, int i, int n );
 
 DAO_DLL void DPlainArray_PushInt( DPlainArray *self, int value );
 DAO_DLL void DPlainArray_PushFloat( DPlainArray *self, float value );
 
 DAO_DLL DaoVmCode* DPlainArray_PushBack( DPlainArray *self, DaoVmCode code );
 DAO_DLL DaoToken*  DPlainArray_PushToken( DPlainArray *self, DaoToken token );
+
 
 #endif

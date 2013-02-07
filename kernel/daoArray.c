@@ -521,6 +521,32 @@ void* DPlainArray_Push( DPlainArray *self )
 	self->size += 1;
 	return self->pod.data + (self->size - 1) * self->stride;
 }
+void* DPlainArray_Pop( DPlainArray *self )
+{
+	if( self->capacity > (2*self->size + 1) ) DPlainArray_Reserve( self, self->size + 1 );
+	if( self->size == 0 ) return NULL;
+	self->size -= 1;
+	return self->pod.data + self->size * self->stride;
+}
+void* DPlainArray_Back( DPlainArray *self )
+{
+	if( self->size == 0 ) return NULL;
+	return self->pod.data + (self->size - 1) * self->stride;
+}
+void DPlainArray_Erase( DPlainArray *self, int i, int n )
+{
+	void *src, *dest;
+
+	if( n <= 0 ) return;
+	if( i < 0 || i >= self->size ) return;
+
+	if( (i + n) >= self->size ) n = self->size - i;
+
+	dest = self->pod.data + i*self->stride;
+	src = dest + n*self->stride;
+	memmove( src, dest, (self->size - i - n)*self->stride );
+	self->size -= n;
+}
 
 void DPlainArray_PushInt( DPlainArray *self, int value )
 {

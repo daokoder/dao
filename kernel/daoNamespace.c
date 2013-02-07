@@ -432,11 +432,11 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	parser->vmSpace = self->vmSpace;
 	parser->nameSpace = self;
 	parser->routine = self->constEvalRoutine;
-	if( ! DaoLexer_Tokenize( parser->tokens, name, 0, 0, 0 ) ) goto Error;
-	if( parser->tokens->tokens->size == 0 ) goto Error;
-	tokens = parser->tokens->tokens->pod.tokens;
-	n = parser->tokens->tokens->size - 1;
-	DArray_Clear( parser->errors );
+	if( ! DaoLexer_Tokenize( parser->codeLexer, name, 0, 0, 0 ) ) goto Error;
+	if( parser->codeLexer->tokens->size == 0 ) goto Error;
+	tokens = parser->codeLexer->tokens->pod.tokens;
+	n = parser->codeLexer->tokens->size - 1;
+	DaoLexer_Reset( parser->errors );
 	if( (k = DaoParser_ParseScopedName( parser, & scope, & value, 0, 0 )) <0 ) goto Error;
 	if( k == 0 && n ==0 ) goto Finalize; /* single identifier name; */
 	if( scope && (tid=scope->type) != DAO_CTYPE && tid != DAO_CLASS && tid != DAO_NAMESPACE ){
@@ -445,7 +445,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	}
 	if( k == n ){
 		DaoTypeCore *core;
-		DString name = DaoLexer_GetTokenString2( parser->tokens, k );
+		DString name = tokens[k].string;
 		if( value != NULL ){
 			DaoParser_Error2( parser, DAO_SYMBOL_WAS_DEFINED, k, k, 0 );
 			goto Error;
@@ -469,9 +469,9 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	types = DArray_New(0);
 	defts = DArray_New(0);
 	string = DString_New(1);
-	DArray_Clear( parser->errors );
+	DaoLexer_Reset( parser->errors );
 	DaoParser_ParseTemplateParams( parser, k+2, n, types, defts, NULL );
-	if( parser->errors->size ) goto Error;
+	if( parser->errors->tokens->size ) goto Error;
 
 	type->nested = DArray_New(D_VALUE);
 	type2->nested = DArray_New(D_VALUE);
@@ -480,8 +480,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 		DArray_Append( type2->nested, types->items.pType[i] );
 	}
 	if( isnew ){
-		DString tks = DaoLexer_GetTokenString2( parser->tokens, k );
-		DString_Assign( type->name, & tks );
+		DString_Assign( type->name, & tokens[k].string );
 		DString_AppendChar( type->name, '<' );
 		for(i=0; i<types->size; i++){
 			if( i ) DString_AppendChar( type->name, ',' );
@@ -527,7 +526,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 		DaoTypeKernel *kernel = type->typer->core->kernel;
 		DaoType *alias = type2;
 		DaoType *temp = type2;
-		DString name = DaoLexer_GetTokenString2( parser->tokens, k );
+		DString name = tokens[k].string;
 
 		if( scope == NULL ) scope = (DaoValue*) self;
 
@@ -572,7 +571,7 @@ Finalize:
 	if( defts ) DArray_Delete( defts );
 	return ret;
 Error:
-	DaoParser_Error2( parser, DAO_INVALID_TYPE_FORM, 0, parser->tokens->tokens->size-1, 0 );
+	DaoParser_Error2( parser, DAO_INVALID_TYPE_FORM, 0, parser->codeLexer->tokens->size-1, 0 );
 	DaoParser_PrintError( parser, 0, 0, NULL );
 	DaoParser_Delete( parser );
 	if( string ) DString_Delete( string );
@@ -1799,13 +1798,13 @@ DaoRoutine* DaoNamespace_ParsePrototype( DaoNamespace *self, const char *proto, 
 
 	GC_IncRC( parser->hostCdata );
 	func->routHost = parser->hostCdata;
-	if( ! DaoLexer_Tokenize( defparser->tokens, proto, 0, 0, 0 ) ) goto Error;
-	if( defparser->tokens->tokens->size < 3 ) goto Error;
-	if( (optok = defparser->tokens->tokens->pod.tokens[0].name == DKEY_OPERATOR) == 0 ){
-		if( defparser->tokens->tokens->pod.tokens[0].type == DTOK_IDENTIFIER 
-				&& defparser->tokens->tokens->pod.tokens[1].type == DTOK_LB ) key = 0;
+	if( ! DaoLexer_Tokenize( defparser->codeLexer, proto, 0, 0, 0 ) ) goto Error;
+	if( defparser->codeLexer->tokens->size < 3 ) goto Error;
+	if( (optok = defparser->codeLexer->tokens->pod.tokens[0].name == DKEY_OPERATOR) == 0 ){
+		if( defparser->codeLexer->tokens->pod.tokens[0].type == DTOK_IDENTIFIER 
+				&& defparser->codeLexer->tokens->pod.tokens[1].type == DTOK_LB ) key = 0;
 	}
-	DArray_Clear( defparser->partoks );
+	DaoLexer_Reset( defparser->parLexer );
 
 	parser->routine = (DaoRoutine*) func; /* safe to parse params only */
 	if( DaoParser_ParsePrototype( defparser, parser, key, optok ) < 0 ){
