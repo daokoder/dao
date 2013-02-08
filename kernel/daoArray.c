@@ -489,7 +489,7 @@ void DPlainArray_Resize( DPlainArray *self, int size )
 void DPlainArray_Reserve( DPlainArray *self, int size )
 {
 	if( size <= self->capacity ) return;
-	self->capacity = size;
+	self->capacity = 1.2 * size + 4;
 	self->pod.data = dao_realloc( self->pod.data, self->capacity*self->stride );
 }
 
@@ -537,7 +537,8 @@ void DPlainArray_Erase( DPlainArray *self, int i, int n )
 {
 	void *src, *dest;
 
-	if( n <= 0 ) return;
+	if( n == 0 ) return;
+	if( n < 0 ) n = self->size;
 	if( i < 0 || i >= self->size ) return;
 
 	if( (i + n) >= self->size ) n = self->size - i;

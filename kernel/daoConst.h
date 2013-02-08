@@ -54,6 +54,7 @@ enum DaoRTTI
 	DAO_ROUTBODY ,
 	DAO_TYPEKERNEL ,
 	DAO_CODEBLOCK ,
+	DAO_LEXER ,
 
 	DAO_PAIR ,
 	DAO_PAR_NAMED ,   /* name:type */

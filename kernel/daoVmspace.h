@@ -64,6 +64,9 @@ struct DaoVmSpace
 	DMap    *allProcesses;
 	DArray  *processes;
 
+	DMap    *allParsers;
+	DArray  *parsers;
+
 	DString *mainSource;
 	DString *pathWorking;
 	DArray  *nameLoading;
@@ -87,7 +90,6 @@ struct DaoVmSpace
 
 	/* map full file name (including path and suffix) to module namespace */
 	DMap  *nsModules; /* No GC for this, namespaces should remove themselves from this; */
-	DMap  *allTokens;
 
 	DaoUserHandler *userHandler;
 
@@ -97,6 +99,7 @@ struct DaoVmSpace
 #ifdef DAO_WITH_THREAD
 	DMutex  mutexLoad;
 	DMutex  mutexProc;
+	DMutex  mutexMisc;
 #endif
 };
 
@@ -132,5 +135,8 @@ DAO_DLL void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
 
 DAO_DLL DaoTypeBase* DaoVmSpace_GetTyper( short type );
+
+DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self );
+void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser );
 
 #endif

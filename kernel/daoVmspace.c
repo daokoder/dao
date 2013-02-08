@@ -172,6 +172,7 @@ extern DaoTypeBase macroTyper;
 extern DaoTypeBase regexTyper;
 extern DaoTypeBase vmpTyper;
 extern DaoTypeBase typeKernelTyper;
+extern DaoTypeBase lexerTyper;
 
 static DaoTypeBase vmsTyper=
 {
@@ -210,6 +211,7 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_VMSPACE   :  return & vmsTyper;
 	case DAO_TYPE      :  return & abstypeTyper;
 	case DAO_TYPEKERNEL : return & typeKernelTyper;
+	case DAO_LEXER     : return & lexerTyper;
 #ifdef DAO_WITH_MACRO
 	case DAO_MACRO     :  return & macroTyper;
 #endif
@@ -301,6 +303,37 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 	DMutex_Unlock( & self->mutexProc );
 #endif
 }
+DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )
+{
+	DaoParser *parser = NULL;
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->mutexMisc );
+#endif
+	if( self->parsers->size ){
+		parser = (DaoParser*) DArray_Back( self->parsers );
+		DArray_PopBack( self->parsers );
+	}else{
+		parser = DaoParser_New( self );
+		DMap_Insert( self->allParsers, parser, 0 );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->mutexMisc );
+#endif
+	return parser;
+}
+void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser )
+{
+	DaoParser_Reset( parser );
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->mutexMisc );
+#endif
+	if( DMap_Find( self->allParsers, parser ) ){
+		DArray_PushBack( self->parsers, parser );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->mutexMisc );
+#endif
+}
 DaoUserStream* DaoVmSpace_SetUserStdio( DaoVmSpace *self, DaoUserStream *stream )
 {
 	return DaoStream_SetUserStream( self->stdioStream, stream );
@@ -373,7 +406,6 @@ DaoVmSpace* DaoVmSpace_New()
 	self->vfiles = DHash_New(D_STRING,D_STRING);
 	self->vmodules = DHash_New(D_STRING,0);
 	self->nsModules = DHash_New(D_STRING,0);
-	self->allTokens = DHash_New(D_STRING,0);
 	self->pathWorking = DString_New(1);
 	self->nameLoading = DArray_New(D_STRING);
 	self->pathLoading = DArray_New(D_STRING);
@@ -382,6 +414,8 @@ DaoVmSpace* DaoVmSpace_New()
 	self->sourceArchive = DArray_New(D_STRING);
 	self->processes = DArray_New(0);
 	self->allProcesses = DMap_New(D_VALUE,0);
+	self->parsers = DArray_New(0);
+	self->allParsers = DMap_New(0,0);
 	self->loadedModules = DArray_New(D_VALUE);
 	self->preloadModules = NULL;
 
@@ -390,6 +424,7 @@ DaoVmSpace* DaoVmSpace_New()
 #ifdef DAO_WITH_THREAD
 	DMutex_Init( & self->mutexLoad );
 	DMutex_Init( & self->mutexProc );
+	DMutex_Init( & self->mutexMisc );
 #endif
 
 	self->nsInternal = NULL; /* need to be set for DaoNamespace_New() */
@@ -430,10 +465,11 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DArray_Delete( self->processes );
 	DArray_Delete( self->loadedModules );
 	DArray_Delete( self->sourceArchive );
+	DArray_Delete( self->parsers );
 	DMap_Delete( self->vfiles );
 	DMap_Delete( self->vmodules );
-	DMap_Delete( self->allTokens );
 	DMap_Delete( self->allProcesses );
+	DMap_Delete( self->allParsers );
 	GC_DecRC( self->mainProcess );
 	self->stdioStream = NULL;
 	if( self->preloadModules ) DArray_Delete( self->preloadModules );
@@ -445,6 +481,7 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 #ifdef DAO_WITH_THREAD
 	DMutex_Destroy( & self->mutexLoad );
 	DMutex_Destroy( & self->mutexProc );
+	DMutex_Destroy( & self->mutexMisc );
 #endif
 	dao_free( self );
 }
@@ -848,11 +885,11 @@ DaoNamespace* DaoVmSpace_LinkModule( DaoVmSpace *self, DaoNamespace *ns, const c
 	return modns;
 }
 
-static int CheckCodeCompletion( DString *source, DArray *tokens )
+static int CheckCodeCompletion( DString *source, DaoLexer *lexer )
 {
 	int i, bcount, cbcount, sbcount, tki = 0, completed = 1;
-	DaoToken_Tokenize( tokens, source->mbs, 0, 1, 1 );
-	if( tokens->size ) tki = tokens->items.pToken[tokens->size-1]->type;
+	DaoLexer_Tokenize( lexer, source->mbs, 0, 1, 1 );
+	if( lexer->tokens->size ) tki = lexer->tokens->pod.tokens[lexer->tokens->size-1].type;
 	switch( tki ){
 	case DTOK_LB :
 	case DTOK_LCB :
@@ -864,11 +901,11 @@ static int CheckCodeCompletion( DString *source, DArray *tokens )
 		completed = 0;
 		break;
 	}
-	if( tokens->size && completed ){
+	if( lexer->tokens->size && completed ){
 		bcount = sbcount = cbcount = 0;
-		for(i=0; i<tokens->size; i++){
-			DaoToken *tk = tokens->items.pToken[i];
-			switch( tk->type ){
+		for(i=0; i<lexer->tokens->size; i++){
+			DaoToken tk = lexer->tokens->pod.tokens[i];
+			switch( tk.type ){
 			case DTOK_LB : bcount --; break;
 			case DTOK_RB : bcount ++; break;
 			case DTOK_LCB : cbcount --; break;
@@ -886,7 +923,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 {
 	DaoValue *value;
 	DaoNamespace *ns;
-	DArray *tokens = DArray_New( D_TOKEN );
+	DaoLexer *lexer = DaoLexer_New();
 	DString *input = DString_New(1);
 	const char *varRegex = "^ %s* = %s* %S+";
 	const char *srcRegex = "^ %s* %w+ %. dao .* $";
@@ -911,7 +948,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 				DString_AppendMBS( input, chs );
 				DString_AppendChar( input, '\n' );
 				dao_free( chs );
-				if( CheckCodeCompletion( input, tokens ) ){
+				if( CheckCodeCompletion( input, lexer ) ){
 					DString_Trim( input );
 					if( input->size && self->AddHistory ) self->AddHistory( input->mbs );
 					break;
@@ -925,7 +962,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 			if( ch == EOF ) break;
 			while( ch != EOF ){
 				if( ch == '\n' ){
-					if( CheckCodeCompletion( input, tokens ) ) break;
+					if( CheckCodeCompletion( input, lexer ) ) break;
 					printf("..... ");
 					fflush( stdout );
 				}
@@ -973,7 +1010,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 	}
 	self->mainNamespace->options &= ~DAO_NS_AUTO_GLOBAL;
 	DString_Delete( input );
-	DArray_Delete( tokens );
+	DaoLexer_Delete( lexer );
 }
 
 static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
@@ -1861,31 +1898,31 @@ static void DaoConfigure_FromFile( const char *name )
 	FILE *fin = fopen( name, "r" );
 	DaoToken *tk1, *tk2;
 	DString *mbs;
-	DArray *tokens;
+	DaoLexer *lexer;
 	if( fin == NULL ) return;
 	mbs = DString_New(1);
-	tokens = DArray_New( D_TOKEN );
+	lexer = DaoLexer_New();
 	while( ( ch=getc(fin) ) != EOF ) DString_AppendChar( mbs, ch );
 	fclose( fin );
 	DString_ToLower( mbs );
-	DaoToken_Tokenize( tokens, mbs->mbs, 1, 0, 0 );
+	DaoLexer_Tokenize( lexer, mbs->mbs, 1, 0, 0 );
 	i = 0;
-	while( i < tokens->size ){
-		tk1 = tokens->items.pToken[i];
+	while( i < lexer->tokens->size ){
+		tk1 = & lexer->tokens->pod.tokens[i];
 		/* printf( "%s\n", tk1->string->mbs ); */
 		if( tk1->type == DTOK_IDENTIFIER ){
-			if( i+2 >= tokens->size ) goto InvalidConfig;
-			if( tokens->items.pToken[i+1]->type != DTOK_ASSN ) goto InvalidConfig;
-			tk2 = tokens->items.pToken[i+2];
+			if( i+2 >= lexer->tokens->size ) goto InvalidConfig;
+			if( lexer->tokens->pod.tokens[i+1].type != DTOK_ASSN ) goto InvalidConfig;
+			tk2 = & lexer->tokens->pod.tokens[i+2];
 			isnum = isint = 0;
 			yes = -1;
 			if( tk2->type >= DTOK_DIGITS_HEX && tk2->type <= DTOK_NUMBER_SCI ){
 				isnum = 1;
 				if( tk2->type <= DTOK_NUMBER_HEX ){
 					isint = 1;
-					number = integer = strtol( tk2->string->mbs, NULL, 0 );
+					number = integer = strtol( tk2->string.mbs, NULL, 0 );
 				}else{
-					number = strtod( tk2->string->mbs, NULL );
+					number = strtod( tk2->string.mbs, NULL );
 				}
 			}else if( tk2->type == DTOK_IDENTIFIER ){
 				if( TOKCMP( tk2, "yes" )==0 )  yes = 1;
@@ -1926,13 +1963,13 @@ InvalidConfig :
 		printf( "error: invalid configuration file format at line: %i!\n", tk1->line );
 		break;
 InvalidConfigName :
-		printf( "error: invalid configuration option name: %s!\n", tk1->string->mbs );
+		printf( "error: invalid configuration option name: %s!\n", tk1->string.mbs );
 		break;
 InvalidConfigValue :
-		printf( "error: invalid configuration option value: %s!\n", tk2->string->mbs );
+		printf( "error: invalid configuration option value: %s!\n", tk2->string.mbs );
 		break;
 	}
-	DArray_Delete( tokens );
+	DaoLexer_Delete( lexer );
 	DString_Delete( mbs );
 }
 static void DaoConfigure()

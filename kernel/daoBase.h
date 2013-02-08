@@ -125,7 +125,7 @@ typedef struct DaoParser     DaoParser;
 typedef struct DaoStackFrame    DaoStackFrame;
 
 #define STRCMP( x, y ) strcmp( (x)->mbs, y )
-#define TOKCMP( x, y ) strcmp( (x)->string->mbs, y )
+#define TOKCMP( x, y ) strcmp( (x)->string.mbs, y )
 
 /*
 // Bit structure of the lookup index:

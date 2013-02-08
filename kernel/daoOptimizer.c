@@ -2584,7 +2584,7 @@ static void DaoInferencer_WriteErrorGeneral( DaoInferencer *self, int error )
 	DaoStream_WriteMBS( stream, char50 );
 	DaoStream_WriteMBS( stream, DaoTypingErrorString[error] );
 	DaoStream_WriteMBS( stream, " --- \" " );
-	DaoTokens_AnnotateCode( routine->body->source, *vmc, mbs, 32 );
+	DaoLexer_AnnotateCode( routine->body->source, *vmc, mbs, 32 );
 	DaoStream_WriteString( stream, mbs );
 	if( error == DTE_FIELD_NOT_EXIST ){
 		DaoStream_WriteMBS( stream, " for " );
@@ -2617,7 +2617,7 @@ static void DaoInferencer_WriteErrorSpecific( DaoInferencer *self, int error )
 		vmc2.middle = 0;
 		vmc2.first += annot_first;
 		vmc2.last = annot_last > annot_first ? annot_last - annot_first : 0;
-		DaoTokens_AnnotateCode( routine->body->source, vmc2, mbs, 32 );
+		DaoLexer_AnnotateCode( routine->body->source, vmc2, mbs, 32 );
 	}else if( error == DTE_TYPE_NOT_MATCHING ){
 		DString_SetMBS( mbs, "'" );
 		DString_AppendMBS( mbs, self->type_source ? self->type_source->name->mbs : "none" );
@@ -2629,7 +2629,7 @@ static void DaoInferencer_WriteErrorSpecific( DaoInferencer *self, int error )
 		}
 		DString_AppendChar( mbs, '\'' );
 	}else{
-		DaoTokens_AnnotateCode( routine->body->source, *vmc, mbs, 32 );
+		DaoLexer_AnnotateCode( routine->body->source, *vmc, mbs, 32 );
 	}
 	DaoStream_WriteString( stream, mbs );
 	DaoStream_WriteMBS( stream, " \";\n" );
@@ -2786,7 +2786,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		DMap_Assign( defs, (DMap*)DArray_Back( self->typeMaps ) );
 
 #if 0
-		DaoTokens_AnnotateCode( routine->body->source, *(DaoVmCodeX*)inode, mbs, 24 );
+		DaoLexer_AnnotateCode( routine->body->source, *(DaoVmCodeX*)inode, mbs, 24 );
 		printf( "%4i: ", i );DaoVmCodeX_Print( *(DaoVmCodeX*)inode, mbs->mbs );
 #endif
 
@@ -5551,7 +5551,8 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	DaoInferencer_Init( inferencer, self, silent );
 	retc = DaoInferencer_DoInference( inferencer );
 	DaoInferencer_Delete( inferencer );
-	if( retc ) DaoOptimizer_Optimize( optimizer, self );
+#warning "DaoOptimizer_Optimize"
+	//if( retc ) DaoOptimizer_Optimize( optimizer, self );
 	/* DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->errorStream ); */
 	DaoOptimizer_Delete( optimizer );
 	return retc;

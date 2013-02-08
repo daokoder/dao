@@ -90,7 +90,7 @@ void DaoRoutine_Delete( DaoRoutine *self );
 int  DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value );
 
 int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes );
-void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns );
+void DaoRoutine_SetSource( DaoRoutine *self, DaoLexer *lexer );
 
 void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );
 

@@ -244,6 +244,7 @@ struct DaoToken
 };
 
 DAO_DLL DaoToken* DaoToken_New();
+DAO_DLL DaoToken DaoToken_Init( int type, int name );
 DAO_DLL void DaoToken_Delete( DaoToken *self );
 
 DAO_DLL const char* DaoToken_NameToString( unsigned char name );
@@ -257,6 +258,8 @@ typedef struct DaoLexer DaoLexer;
 
 struct DaoLexer
 {
+	DAO_DATA_COMMON;
+
 	DPlainArray  *tokens;
 	DString      *source;
 };
@@ -266,14 +269,14 @@ void DaoLexer_Delete( DaoLexer *self );
 
 void DaoLexer_Reset( DaoLexer *self );
 
+void DaoLexer_Assign( DaoLexer *self, DaoLexer *other );
+void DaoLexer_AppendTokens( DaoLexer *self, DaoLexer *other );
+
 DaoToken* DaoLexer_AppendToken( DaoLexer *self, int name, int line, const char *data );
 DaoToken* DaoLexer_Append( DaoLexer *self, DaoToken token, DString *string );
+
 int DaoLexer_Tokenize( DaoLexer *self, const char *src, int repl, int comment, int space );
 
-DString DaoLexer_GetTokenString( DaoLexer *self, DaoToken token );
-DString DaoLexer_GetTokenString2( DaoLexer *self, int i );
-
-int DaoLexer_CompareTokenString( DaoLexer *self, DaoToken first, DaoToken second );
 
 void DaoLexer_AnnotateCode( DaoLexer *self, DaoVmCodeX vmc, DString *annot, int max );
 int DaoLexer_FindOpenToken( DaoLexer *self, uchar_t tok, int start, int end );
@@ -281,8 +284,6 @@ int DaoLexer_FindLeftPair( DaoLexer *self,  uchar_t lw, uchar_t rw, int start, i
 int DaoLexer_FindRightPair( DaoLexer *self,  uchar_t lw, uchar_t rw, int start, int stop );
 void DaoLexer_AddRaiseStatement( DaoLexer *self, const char *type, const char *info, int line );
 
-
-int DaoLexer_TokenCount( DaoLexer *self ){ return self->tokens->size; }
 
 
 #endif

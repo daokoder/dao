@@ -831,8 +831,6 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->lang = DString_New(1);
 	self->inputs = DString_New(1);
 	self->loadings = DArray_New(D_STRING);
-	self->sources = DArray_New(D_ARRAY);
-	self->tokens = DHash_New(D_STRING,0);
 	self->constEvalProcess = NULL;
 	self->constEvalRoutine = NULL;
 
@@ -874,15 +872,6 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 void DaoNamespace_Delete( DaoNamespace *self )
 {
 	/* printf( "DaoNamespace_Delete  %s\n", self->name->mbs ); */
-#warning "token"
-#if 0
-	daoint i, j;
-	for(i=0; i<self->sources->size; i++){
-		DArray *array = self->sources->items.pArray[i];
-		for(j=0; j<array->size; j++) array->items.pToken[j]->string = NULL;
-	}
-#endif
-
 	DMap_Delete( self->lookupTable );
 	DArray_Delete( self->constants );
 	DArray_Delete( self->variables );
@@ -905,8 +894,6 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	DString_Delete( self->lang );
 	DString_Delete( self->inputs );
 	DArray_Delete( self->loadings );
-	DArray_Delete( self->sources );
-	DMap_Delete( self->tokens );
 	dao_free( self );
 }
 void DaoNamespace_InitConstEvalData( DaoNamespace *self )

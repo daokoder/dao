@@ -308,14 +308,14 @@ void DString_Reserve( DString *self, daoint size )
 	data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->shared;
 	if( self->mbs ){
 		if( size > self->bufSize || 2*size < self->bufSize ){
-			self->bufSize = size * (size >= self->bufSize ? 1.2 : 1) + 1;
+			self->bufSize = size * (size >= self->bufSize ? 1.2 : 1) + 4;
 			bsize = (self->bufSize + 1)*sizeof(char) + self->shared*sizeof(int);
 			data = (int*)dao_realloc( data, bsize );
 			self->mbs = (char*)(data + self->shared);
 		}
 	}else{
 		if( size > self->bufSize || 2*size < self->bufSize ){
-			self->bufSize = size * (size >= self->bufSize ? 1.2 : 1) + 1;
+			self->bufSize = size * (size >= self->bufSize ? 1.2 : 1) + 4;
 			bsize = (self->bufSize + 1)*sizeof(wchar_t) + self->shared*sizeof(int);
 			data = (int*)dao_realloc( data, bsize );
 			self->wcs = (wchar_t*)(data + self->shared);

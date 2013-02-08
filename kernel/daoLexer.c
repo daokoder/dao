@@ -842,7 +842,18 @@ void DaoInitLexTable()
 
 extern void DString_DeleteData( DString *self );
 
-DaoToken* DaoToken_New() { return (DaoToken*) dao_calloc( 1, sizeof(DaoToken) ); }
+DaoToken* DaoToken_New()
+{
+	return (DaoToken*) dao_calloc( 1, sizeof(DaoToken) );
+}
+DaoToken DaoToken_Init( int type, int name )
+{
+	//DaoToken token = {0};
+	DaoToken token = {0,0,0,0,0,0,0,{0,0,0,0,NULL,NULL}};
+	token.type = type;
+	token.name = name;
+	return token;
+}
 void DaoToken_Delete( DaoToken *self )
 {
 	dao_free( self );
@@ -855,21 +866,6 @@ void DaoToken_Set( DaoToken *self, int type, int name, int index, const char *s 
 	self->index = index;
 	//if( s && self->string ) DString_SetMBS( self->string, s );
 }
-#if 0
-void DaoTokens_Append( DArray *self, int name, int line, const char *data )
-{
-	DaoToken token = { 0, 0, 0, 0, 0, NULL };
-	DaoToken *tok;
-	token.type = token.name = name;
-	token.line = line;
-	if( name > DAO_NOKEY1 ) token.type = DTOK_IDENTIFIER;
-	if( name == DTOK_ID_THTYPE || name == DTOK_ID_SYMBOL ) token.type = DTOK_IDENTIFIER;
-	DArray_Append( self, & token );
-	tok = (DaoToken*) DArray_Top( self );
-	tok->string = DString_New(1);
-	DString_SetMBS( tok->string, data );
-}
-#endif
 
 const char* DaoToken_NameToString( unsigned char name )
 {
@@ -986,6 +982,7 @@ int DaoToken_Check( const char *src, int size, int *length )
 DaoLexer* DaoLexer_New()
 {
 	DaoLexer *self = (DaoLexer*) dao_calloc( 1, sizeof(DaoLexer) );
+	DaoValue_Init( self, DAO_LEXER );
 	self->source = DString_New(1);
 	self->tokens = DPlainArray_New( sizeof(DaoToken) );
 	return self;
@@ -1001,28 +998,34 @@ void DaoLexer_Reset( DaoLexer *self )
 	DString_Reset( self->source, 0 );
 	DPlainArray_ResetSize( self->tokens, 0 );
 }
+void DaoLexer_UpdateTokenStrings( DaoLexer *self )
+{
+	int i;
+	for(i=0; i<self->tokens->size; ++i){
+		DaoToken *tok = self->tokens->pod.tokens + i;
+		tok->string.mbs = self->source->mbs + tok->offset;
+	}
+}
+void DaoLexer_Assign( DaoLexer *self, DaoLexer *other )
+{
+	DPlainArray_Assign( self->tokens, other->tokens );
+	DString_Assign( self->source, other->source );
+	DaoLexer_UpdateTokenStrings( self );
+}
+void DaoLexer_AppendTokens( DaoLexer *self, DaoLexer *other )
+{
+	int i;
+	for(i=0; i<other->tokens->size; ++i){
+		DaoLexer_Append( self, other->tokens->pod.tokens[i], NULL );
+	}
+}
 
-DString DaoLexer_GetTokenString( DaoLexer *self, DaoToken token )
-{
-	return DString_WrapBytes( self->source->mbs + token.offset, token.length );
-}
-DString DaoLexer_GetTokenString2( DaoLexer *self, int i )
-{
-	return DaoLexer_GetTokenString( self, self->tokens->pod.tokens[i] );
-}
-int DaoLexer_CompareTokenString( DaoLexer *self, DaoToken first, DaoToken second )
-{
-	DString s1 = DaoLexer_GetTokenString( self, first );
-	DString s2 = DaoLexer_GetTokenString( self, second );
-	return DString_Compare( & s1, & s2 );
-}
 
 DaoToken* DaoLexer_AppendToken( DaoLexer *self, int name, int line, const char *data )
 {
 	DString string = DString_WrapMBS( data );
-	DaoToken token = { 0, 0, 0, 0, 0, 0, 0 };
+	DaoToken token = DaoToken_Init( name, name );
 
-	token.type = token.name = name;
 	token.line = line;
 	if( name > DAO_NOKEY1 ) token.type = DTOK_IDENTIFIER;
 	if( name == DTOK_ID_THTYPE || name == DTOK_ID_SYMBOL ) token.type = DTOK_IDENTIFIER;
@@ -1041,17 +1044,13 @@ DaoToken* DaoLexer_Append( DaoLexer *self, DaoToken tok, DString *string )
 	token->string.size = token->string.bufSize = string->size;
 	token->string.mbs = self->source->mbs + token->offset;
 	token->string.wcs = NULL;
-	if( bufsize == self->source->bufSize ) return token;
-	for(i=0; i<self->tokens->size; ++i){
-		DaoToken *tok = self->tokens->pod.tokens + i;
-		tok->string.mbs = self->source->mbs + tok->offset;
-	}
+	if( self->source->bufSize != bufsize ) DaoLexer_UpdateTokenStrings( self );
 	return token;
 }
 
 int DaoLexer_Tokenize( DaoLexer *self, const char *src, int replace, int comment, int space )
 {
-	DaoToken lextok;
+	DaoToken lextok = DaoToken_Init(0,0);
 	DString *source = DString_New(1);
 	DString *literal = DString_New(1);
 	DArray *lexenvs = DArray_New(0);
@@ -1493,4 +1492,11 @@ void DaoLexer_AddRaiseStatement( DaoLexer *self, const char *type, const char *i
 	DaoLexer_AppendToken( self, DTOK_RB, line, ")" );
 	DaoLexer_AppendToken( self, DTOK_SEMCO, line, ";" );
 }
+
+
+DaoTypeBase lexerTyper =
+{
+	"lexer", & baseCore, NULL, NULL, {0}, {0},
+	(FuncPtrDel) DaoLexer_Delete, NULL
+};
 
