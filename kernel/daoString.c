@@ -120,7 +120,8 @@ void DString_Init( DString *self, int mbs )
 	int bsize = mbs ? sizeof(char) : sizeof(wchar_t);
 	int *data = (int*) dao_malloc( sizeof(int) + bsize );
 	data[0] = 1;
-	self->shared = 1;
+	self->detached = 1;
+	self->sharing = 1;
 	self->size = 0;
 	self->bufSize = 0;
 	if( mbs ){
@@ -152,13 +153,13 @@ DString* DString_NewWCS( const wchar_t *wcs )
 
 void DString_DeleteData( DString *self )
 {
-	int *data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->shared;
+	int *data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->sharing;
 	if( data == NULL ) return;
-	if( self->shared ){
+	if( self->sharing ){
 #ifdef DAO_WITH_THREAD
 		DMutex_Lock( & mutex_string_sharing );
 #endif
-		if( self->shared ){
+		if( self->sharing ){
 			data[0] -= 1;
 			if( data[0] ==0 ) dao_free( data );
 		}
@@ -168,7 +169,7 @@ void DString_DeleteData( DString *self )
 	}else{
 		dao_free( data );
 	}
-	self->shared = 0;
+	self->sharing = 0;
 	self->mbs = NULL;
 	self->wcs = NULL;
 }
@@ -180,8 +181,8 @@ void DString_Delete( DString *self )
 void DString_Detach( DString *self )
 {
 	daoint size, chsize;
-	int *data2, *data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->shared;
-	if( self->shared ==0 ) return;
+	int *data2, *data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->sharing;
+	if( self->sharing == 0 ) return;
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & mutex_string_sharing );
 #endif
@@ -203,10 +204,10 @@ void DString_Detach( DString *self )
 void DString_SetSharing( DString *self, int sharing )
 {
 	int *data;
-	if( (self->shared == 0) == (sharing == 0) ) return;
+	if( (self->sharing == 0) == (sharing == 0) ) return;
 	DString_Detach( self );
-	data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->shared;
-	self->shared = sharing != 0;
+	data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->sharing;
+	self->sharing = sharing != 0;
 
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & mutex_string_sharing );
@@ -275,7 +276,6 @@ void DString_SetMBS( DString *self, const char *chs )
 	}
 	n = strlen( chs );
 	if( self->mbs ){
-		//DString_Resize( self, n );
 		DString_Reset( self, n );
 		memcpy( self->mbs, chs, n*sizeof(char) );
 	}else{
@@ -304,23 +304,23 @@ void DString_Reserve( DString *self, daoint size )
 {
 	int *data;
 	daoint bsize;
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	//if( size <= self->bufSize && 2*size >= self->bufSize ) return;
 	if( size <= self->bufSize ) return;
-	data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->shared;
+	data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->sharing;
 	if( self->mbs ){
 		if( size > self->bufSize || 2*size < self->bufSize ){
 			self->bufSize = size * (size >= self->bufSize ? 1.2 : 1) + 4;
-			bsize = (self->bufSize + 1)*sizeof(char) + self->shared*sizeof(int);
+			bsize = (self->bufSize + 1)*sizeof(char) + self->sharing*sizeof(int);
 			data = (int*)dao_realloc( data, bsize );
-			self->mbs = (char*)(data + self->shared);
+			self->mbs = (char*)(data + self->sharing);
 		}
 	}else{
 		if( size > self->bufSize || 2*size < self->bufSize ){
 			self->bufSize = size * (size >= self->bufSize ? 1.2 : 1) + 4;
-			bsize = (self->bufSize + 1)*sizeof(wchar_t) + self->shared*sizeof(int);
+			bsize = (self->bufSize + 1)*sizeof(wchar_t) + self->sharing*sizeof(int);
 			data = (int*)dao_realloc( data, bsize );
-			self->wcs = (wchar_t*)(data + self->shared);
+			self->wcs = (wchar_t*)(data + self->sharing);
 		}
 	}
 }
@@ -364,7 +364,7 @@ static void DMBString_AppendWCS( DString *self, const wchar_t *chs, daoint n )
 	wchar_t buffer[101];
 	mbstate_t state;
 	buffer[100] = 0;
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	while( n ){
 		const wchar_t *wcs = buffer;
 		daoint smin, len, m = n;
@@ -409,7 +409,7 @@ static void DWCString_AppendMBS( DString *self, const char *chs, daoint n )
 	char buffer[101];
 	mbstate_t state;
 	buffer[100] = 0;
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	while( n ){
 		const char *mbs = buffer;
 		daoint smin, len = n < 100 ? n : 100;
@@ -455,7 +455,7 @@ void DString_AppendInteger( DString *self, int i )
 void DString_ToWCS( DString *self )
 {
 	DString tmp = *self;
-	int share = self->shared;
+	int share = self->sharing;
 
 	if( self->wcs ) return;
 
@@ -469,7 +469,7 @@ void DString_ToWCS( DString *self )
 void DString_ToMBS( DString *self )
 {
 	DString tmp = *self;
-	int share = self->shared;
+	int share = self->sharing;
 
 	if( self->mbs ) return;
 
@@ -483,7 +483,7 @@ void DString_ToMBS( DString *self )
 void DString_ToLower( DString *self )
 {
 	daoint i;
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( self->mbs ){
 		char *mbs = self->mbs;
 		for(i=0; i<self->size; i++, mbs++) *mbs = tolower( *mbs );
@@ -495,7 +495,7 @@ void DString_ToLower( DString *self )
 void DString_ToUpper( DString *self )
 {
 	daoint i;
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( self->mbs ){
 		char *mbs = self->mbs;
 		for(i=0; i<self->size; i++, mbs++) *mbs = toupper( *mbs );
@@ -512,7 +512,7 @@ daoint DString_Size( DString *self )
 void DString_Reset( DString *self, daoint size )
 {
 	if( size < self->bufSize ){
-		DString_Detach( self );
+		if( self->sharing ) DString_Detach( self );
 		self->size = size;
 		if( self->mbs ){
 			self->mbs[size] = '\0';
@@ -527,24 +527,24 @@ void DString_Resize( DString *self, daoint size )
 {
 	int *data;
 	daoint i, bsize = self->bufSize;
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( size == self->size && size <= bsize && 2*size >= bsize ) return;
-	data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->shared;
+	data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->sharing;
 	if( self->mbs ){
 		if( size > self->bufSize || 2*size < self->bufSize ){
 			self->bufSize = size;
-			bsize = (self->bufSize + 1)*sizeof(char) + self->shared*sizeof(int);
+			bsize = (self->bufSize + 1)*sizeof(char) + self->sharing*sizeof(int);
 			data = (int*)dao_realloc( data, bsize );
-			self->mbs = (char*)(data + self->shared);
+			self->mbs = (char*)(data + self->sharing);
 		}
 		for(i=self->size; i<size; i++) self->mbs[i] = 0;
 		self->mbs[ size ] = 0;
 	}else{
 		if( size > self->bufSize || 2*size < self->bufSize ){
 			self->bufSize = size;
-			bsize = (self->bufSize + 1)*sizeof(wchar_t) + self->shared*sizeof(int);
+			bsize = (self->bufSize + 1)*sizeof(wchar_t) + self->sharing*sizeof(int);
 			data = (int*)dao_realloc( data, bsize );
-			self->wcs = (wchar_t*)(data + self->shared);
+			self->wcs = (wchar_t*)(data + self->sharing);
 		}
 		for(i=self->size; i<size; i++) self->wcs[i] = 0;
 		self->wcs[ size ] = 0;
@@ -553,9 +553,9 @@ void DString_Resize( DString *self, daoint size )
 }
 void DString_Clear( DString *self )
 {
-	int share = self->shared;
+	int share = self->sharing;
 	int mbs = self->mbs != NULL;
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	DString_DeleteData( self );
 	DString_Init( self, mbs );
 	DString_SetSharing( self, share );
@@ -573,18 +573,18 @@ void DString_Erase( DString *self, daoint start, daoint n )
 		return;
 	}
 
-	DString_Detach( self );
-	data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->shared;
+	if( self->sharing ) DString_Detach( self );
+	data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->sharing;
 	if( self->mbs ){
 		for( i=start; i<start+rest; i++ ) self->mbs[i] = self->mbs[i+n];
 		self->mbs[start+rest] = 0;
 		self->size -= n;
 		if( self->size < 0.5*self->bufSize && self->size+5 < self->bufSize ){
 			self->bufSize = (daoint)(0.6 * self->bufSize) + 1;
-			bsize = (self->bufSize+1)*sizeof(char) + self->shared*sizeof(int);
+			bsize = (self->bufSize+1)*sizeof(char) + self->sharing*sizeof(int);
 			data = (int*)dao_realloc( data, bsize );
-			self->mbs = (char*)(data + self->shared);
-			if( self->shared ==0 ) self->bufSize += sizeof(int)/sizeof(char);
+			self->mbs = (char*)(data + self->sharing);
+			if( self->sharing ==0 ) self->bufSize += sizeof(int)/sizeof(char);
 		}
 	}else{
 		for( i=start; i<start+rest; i++ ) self->wcs[i] = self->wcs[i+n];
@@ -592,10 +592,10 @@ void DString_Erase( DString *self, daoint start, daoint n )
 		self->size -= n;
 		if( self->size < 0.5*self->bufSize && self->size + 5 < self->bufSize ){
 			self->bufSize = (daoint)(0.6 * self->bufSize) + 1;
-			bsize = (self->bufSize+1)*sizeof(wchar_t) + self->shared*sizeof(int);
+			bsize = (self->bufSize+1)*sizeof(wchar_t) + self->sharing*sizeof(int);
 			data = (int*)dao_realloc( data, bsize );
-			self->wcs = (wchar_t*)(data + self->shared);
-			if( self->shared ==0 ) self->bufSize += sizeof(int)/sizeof(wchar_t);
+			self->wcs = (wchar_t*)(data + self->sharing);
+			if( self->sharing ==0 ) self->bufSize += sizeof(int)/sizeof(wchar_t);
 		}
 	}
 }
@@ -606,7 +606,7 @@ static void DMBString_Insert( DString *self, const char* chs, daoint at, daoint 
 	if( at > self->size ) at = self->size;
 	if( rm < 0 ) rm = self->size;
 	if( rm + at > self->size ) rm = self->size - at;
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( cp < rm ){
 		for( i=at+cp; i<self->size+cp-rm; i++) self->mbs[i] = self->mbs[i+rm-cp];
 		DString_Reserve( self, self->size + cp - rm );
@@ -624,7 +624,7 @@ static void DWCString_Insert( DString *self, const wchar_t* chs, daoint at, daoi
 	if( chs == NULL ) return;
 	if( at > self->size ) at = self->size;
 	if( rm + at > self->size ) rm = self->size - at;
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( cp < rm ){
 		for( i=at+cp; i<self->size+cp-rm; i++) self->wcs[i] = self->wcs[i+rm-cp];
 		DString_Reserve( self, self->size + cp - rm );
@@ -639,7 +639,7 @@ static void DWCString_Insert( DString *self, const wchar_t* chs, daoint at, daoi
 void DString_Insert( DString *self, DString *chs, daoint at, daoint rm, daoint cp )
 {
 	if( cp ==0 ) cp = chs->size;
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( self->mbs && chs->mbs ){
 		DMBString_Insert( self, chs->mbs, at, rm, cp );
 	}else if( self->wcs && chs->wcs ){
@@ -659,7 +659,7 @@ void DString_Insert( DString *self, DString *chs, daoint at, daoint rm, daoint c
 void DString_InsertMBS( DString *self, const char *chs, daoint at, daoint rm, daoint n )
 {
 	if( n ==0 ) n = strlen( chs );
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( self->mbs ){
 		DMBString_Insert( self, chs, at, rm, n );
 	}else{
@@ -679,7 +679,7 @@ void DString_InsertChar( DString *self, const char ch, daoint at )
 void DString_InsertWCS( DString *self, const wchar_t *chs, daoint at, daoint rm, daoint n )
 {
 	if( n ==0 ) n = wcslen( chs );
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( self->wcs ){
 		DWCString_Insert( self, chs, at, rm, n );
 	}else{
@@ -691,7 +691,7 @@ void DString_InsertWCS( DString *self, const wchar_t *chs, daoint at, daoint rm,
 }
 void DString_Append( DString *self, DString *chs )
 {
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( self->mbs && chs->mbs ){
 		DMBString_Append( self, chs->mbs, chs->size );
 	}else if( self->wcs && chs->wcs ){
@@ -704,7 +704,7 @@ void DString_Append( DString *self, DString *chs )
 }
 void DString_AppendChar( DString *self, const char ch )
 {
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( self->mbs ){
 		DMBString_AppendChar( self, ch );
 	}else{
@@ -717,7 +717,7 @@ void DString_AppendWChar( DString *self, const wchar_t ch )
 		DString_AppendChar( self, (char)ch );
 		return;
 	}
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( self->mbs ){
 		DMBString_AppendWChar( self, ch );
 	}else{
@@ -726,7 +726,7 @@ void DString_AppendWChar( DString *self, const wchar_t ch )
 }
 void DString_AppendDataMBS( DString *self, const char *chs, daoint n )
 {
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( self->mbs ){
 		DMBString_Append( self, chs, n );
 	}else{
@@ -741,7 +741,7 @@ void DString_AppendMBS( DString *self, const char *chs )
 
 void DString_AppendDataWCS( DString *self, const wchar_t *chs,daoint n )
 {
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( self->wcs ){
 		DWCString_Append( self, chs, n );
 	}else{
@@ -780,7 +780,7 @@ void DString_ReplaceMBS( DString *self, const char *chs, daoint start, daoint rm
 {
 	/* Use by DaoParser only, guarantee to be MBS. */
 	if( self->mbs ){
-		DString_Detach( self );
+		if( self->sharing ) DString_Detach( self );
 		DMBString_Insert( self, chs, start, rm, strlen( chs ) );
 	}
 }
@@ -919,7 +919,7 @@ DString* DString_Copy( DString *self )
 /* Real copying, no implicit sharing here. For thread safty. */
 DString* DString_DeepCopy( DString *self )
 {
-	int share = self->shared;
+	int share = self->sharing;
 	DString *copy = DString_New( DString_IsMBS( self ) );
 	DString_SetSharing( copy, share );
 	if( DString_IsMBS( self ) ){
@@ -933,8 +933,8 @@ DString* DString_DeepCopy( DString *self )
 }
 void DString_Assign( DString *self, DString *chs )
 {
-	int *data1 = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->shared;
-	int *data2 = (chs->mbs ? (int*)chs->mbs : (int*)chs->wcs) - chs->shared;
+	int *data1 = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->sharing;
+	int *data2 = (chs->mbs ? (int*)chs->mbs : (int*)chs->wcs) - chs->sharing;
 	int assigned = 0;
 	if( self == chs ) return;
 	if( data1 == data2 ) return;
@@ -943,13 +943,13 @@ void DString_Assign( DString *self, DString *chs )
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & mutex_string_sharing );
 #endif
-	if( self->shared && chs->shared ){
+	if( self->sharing && chs->sharing ){
 		data1[0] -= 1;
 		if( data1[0] ==0 ) dao_free( data1 );
 		*self = *chs;
 		data2[0] += 1;
 		assigned = 1;
-	}else if( data1 == NULL && chs->shared ){
+	}else if( data1 == NULL && chs->sharing ){
 		*self = *chs;
 		data2[0] += 1;
 		assigned = 1;
@@ -1054,7 +1054,7 @@ void DString_Add( DString *self, DString *left, DString *right )
 }
 void DString_Chop( DString *self )
 {
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( self->mbs ){
 		if( self->size > 0 && self->mbs[ self->size-1 ] == EOF  ) self->mbs[ --self->size ] = 0;
 		if( self->size > 0 && self->mbs[ self->size-1 ] == '\n' ) self->mbs[ --self->size ] = 0;
@@ -1068,7 +1068,7 @@ void DString_Chop( DString *self )
 void DString_Trim( DString *self )
 {
 	int i, ch;
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( self->mbs ){
 		while( self->size > 0 ){
 			ch = self->mbs[ self->size-1 ];
@@ -1129,7 +1129,7 @@ void DString_Reverse( DString *self )
 	daoint j;
 	unsigned char ch, *mbs;
 	if( size <= 1 ) return;
-	DString_Detach( self );
+	if( self->sharing ) DString_Detach( self );
 	if( self->wcs ){
 		for(i=0; i<half; i++){
 			wchar_t c = self->wcs[i];

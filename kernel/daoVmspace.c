@@ -1515,7 +1515,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 		DaoByteDecoder_Delete( decoder );
 		if( bl == 0 ) goto LoadingFailed;
 	}else{
-		parser = DaoParser_New();
+		parser = DaoVmSpace_AcquireParser( self );
 		parser->vmSpace = self;
 		parser->nameSpace = ns;
 		DString_Assign( parser->fileName, libpath );
@@ -1523,7 +1523,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 		if( ! DaoParser_ParseScript( parser ) ) goto LoadingFailed;
 		if( ns->mainRoutine == NULL ) goto LoadingFailed;
 		DString_SetMBS( ns->mainRoutine->routName, "::main" );
-		DaoParser_Delete( parser );
+		DaoVmSpace_ReleaseParser( self, parser );
 		if( self->options & DAO_EXEC_COMP_BC ) DaoVmSpace_SaveByteCodes( self, ns );
 	}
 

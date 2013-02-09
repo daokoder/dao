@@ -743,12 +743,12 @@ int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *src, int
 	DaoParser *p;
 	int res;
 
-	p = DaoParser_New();
+	p = DaoVmSpace_AcquireParser( self->vmSpace );
 	p->vmSpace = self->vmSpace;
 	p->nameSpace = ns;
 	DString_Assign( p->fileName, ns->name );
 	res = DaoParser_LexCode( p, src, rpl ) && DaoParser_ParseScript( p );
-	DaoParser_Delete( p );
+	DaoVmSpace_ReleaseParser( self->vmSpace, p );
 	return res;
 }
 int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *source, int rpl )

@@ -39,9 +39,9 @@
 struct DString
 {
 	daoint   size     : CHAR_BIT*sizeof(daoint)-1;
-	size_t   detached : 1; /* TODO */
+	size_t   detached : 1;
 	daoint   bufSize  : CHAR_BIT*sizeof(daoint)-1;
-	size_t   shared   : 1;
+	size_t   sharing  : 1;
 	char    *mbs;
 	wchar_t *wcs;
 };

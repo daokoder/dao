@@ -307,7 +307,6 @@ static DString* DaoParser_GetString( DaoParser *self )
 }
 static DArray* DaoParser_GetArray( DaoParser *self )
 {
-	printf( "%p\n", self->arrays->items.pArray[0] );
 	if( self->usedArray >= self->arrays->size )
 		DArray_Append( self->arrays, self->arrays->items.pArray[0] );
 	self->usedArray += 1;
@@ -2099,7 +2098,7 @@ static int DaoParser_PostParsing( DaoParser *self );
 
 DaoType* DaoParser_ParseTypeName( const char *name, DaoNamespace *ns, DaoClass *cls )
 {
-	DaoParser *parser = DaoParser_New();
+	DaoParser *parser = DaoVmSpace_AcquireParser( ns->vmSpace );
 	DaoLexer *lexer = parser->codeLexer;
 	DaoType *type = NULL;
 	int i = 0;
@@ -2111,10 +2110,10 @@ DaoType* DaoParser_ParseTypeName( const char *name, DaoNamespace *ns, DaoClass *
 	parser->vmSpace = ns->vmSpace;
 	type = DaoParser_ParseType( parser, 0, lexer->tokens->size-1, &i, NULL );
 	if( i < lexer->tokens->size && type ) type = NULL;
-	DaoParser_Delete( parser );
+	DaoVmSpace_ReleaseParser( ns->vmSpace, parser );
 	return type;
 ErrorType:
-	DaoParser_Delete( parser );
+	DaoVmSpace_ReleaseParser( ns->vmSpace, parser );
 	return NULL;
 }
 static void DaoParser_SetupSwitch( DaoParser *self, DaoInode *opening )
@@ -2617,7 +2616,7 @@ static int DaoParser_ParseUseConstructor( DaoParser *self, int start, int to )
 	DString_Assign( signature, tmpRoutine->routName );
 	DString_AppendChar( signature, ':' );
 	DString_Append( signature, tmpRoutine->routType->name );
-	DaoParser_Delete( tmpParser );
+	DaoVmSpace_ReleaseParser( self->vmSpace, tmpParser );
 	DaoRoutine_Delete( tmpRoutine );
 	start = right + 1;
 	if( klass ){
@@ -2775,7 +2774,7 @@ static DaoParser* DaoParser_NewRoutineParser( DaoParser *self, int start, int at
 		rout = DaoRoutine_New( self->nameSpace, NULL, 1 );
 	}
 	rout->defLine = tokens[start].line;
-	parser = DaoParser_New();
+	parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	parser->routine = rout;
 	parser->vmSpace = self->vmSpace;
 	parser->hostType = self->hostType;
@@ -2982,7 +2981,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		/* DVM_ROUTINE rout_proto, upv1, upv2, ..., regFix */
 		DaoParser_AddCode( self, DVM_ROUTINE, regCall, uplocs->size/2, k, start, parser->parEnd, right );
 		MAP_Insert( self->protoValues, k, DaoClass_FindConst( klass, rout->routName ) );
-		DaoParser_Delete( parser );
+		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 		return right + 1;
 	}
 	if( self->isClassBody && k ){
@@ -3006,14 +3005,12 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		}
 		if( DaoParser_ParseRoutine( parser ) == 0 ) goto Failed;
 	}
-	if( parser ) DaoParser_Delete( parser );
+	if( parser ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return right+1;
 InvalidDefinition:
-	if( parser ) DaoParser_Delete( parser );
 	DaoParser_Error3( self, DAO_INVALID_FUNCTION_DEFINITION, errorStart );
-	return -1;
 Failed:
-	if( parser ) DaoParser_Delete( parser );
+	if( parser ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return -1;
 }
 static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to );
@@ -3080,7 +3077,7 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 		}
 	}
 	DaoNamespace_InitConstEvalData( myNS );
-	parser = DaoParser_New();
+	parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	parser->routine = myNS->constEvalRoutine;
 	parser->vmSpace = self->vmSpace;
 	parser->nameSpace = myNS;
@@ -3112,10 +3109,10 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 		DaoParser_StatementError( self, parser, DAO_STATEMENT_IN_INTERFACE );
 		goto ErrorInterfaceDefinition;
 	}
-	DaoParser_Delete( parser );
+	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return right + 1;
 ErrorInterfaceDefinition:
-	if( parser ) DaoParser_Delete( parser );
+	if( parser ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	if( ec ) DaoParser_Error( self, ec, ename );
 	if( ec == DAO_SYMBOL_POSSIBLY_UNDEFINED )
 		DaoParser_Error( self, DAO_SYMBOL_NEED_INTERFACE, ename );
@@ -3137,7 +3134,7 @@ static int DaoParser_CompileRoutines( DaoParser *self )
 			return 0;
 #endif
 		}
-		DaoParser_Delete( parser );
+		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	}
 	self->routCompilable->size = 0;
 	return 1;
@@ -3239,7 +3236,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	GC_ShiftRC( myNS, rout->nameSpace );
 	rout->nameSpace = myNS;
 
-	parser = DaoParser_New();
+	parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	parser->vmSpace = self->vmSpace;
 	parser->routine = rout;
 	parser->isClassBody = 1;
@@ -3358,11 +3355,11 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DaoLexer_AppendInitSuper( parser->codeLexer, klass, line, 0 );
 		DaoParser_ParseRoutine( parser );
 	}
-	DaoParser_Delete( parser );
+	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 
 	return right + 1;
 ErrorClassDefinition:
-	if( parser ) DaoParser_Delete( parser );
+	if( parser ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	if( ec ) DaoParser_Error( self, ec, ename );
 	ec = DAO_INVALID_CLASS_DEFINITION;
 	if( klass ) ec += ((klass->attribs & DAO_CLS_ASYNCHRONOUS) !=0);
@@ -5456,7 +5453,7 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	DMap *upmap;
 	DNode *it;
 
-	parser = DaoParser_New();
+	parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	rout = DaoRoutine_New( myNS, NULL, 1 );
 	sprintf( name, "AnonymousFunction_%p", rout );
 	DString_SetMBS( rout->routName, name );
@@ -5525,10 +5522,10 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	opc = DaoParser_PushRegister( self );
 	/* DVM_ROUTINE rout_proto, upv1, upv2, ..., opc */
 	DaoParser_AddCode( self, DVM_ROUTINE, regCall, uplocs->size/2, opc, start, rb, end );
-	DaoParser_Delete( parser );
+	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return opc;
 ErrorParamParsing:
-	DaoParser_Delete( parser );
+	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	GC_IncRC( rout );
 	GC_DecRC( rout );
 	return -1;
