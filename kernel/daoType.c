@@ -958,6 +958,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	copy->attrib = self->attrib;
 	copy->overloads = self->overloads;
 	copy->trait |= DAO_VALUE_DELAYGC;
+	DString_Reserve( copy->name, 128 );
 	DArray_Append( ns->auxData, copy );
 	DMap_Insert( defs, self, copy );
 	if( self->mapNames ){

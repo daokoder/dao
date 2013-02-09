@@ -53,9 +53,10 @@ struct DaoParser
 	 * it is much easier to use pointers. */
 	DArray  *vmCodes;
 
-	DaoInode *vmcBase;
-	DaoInode *vmcFirst;
-	DaoInode *vmcLast;
+	DaoInode *vmcBase;  /* the node before the ::vmcFirst; */
+	DaoInode *vmcFirst; /* the first instruction node; */
+	DaoInode *vmcLast;  /* the last instruction node; */
+	DaoInode *vmcFree;  /* the first node in the free list; */
 	int vmcCount;
 
 	/* Stack of maps: mapping local variable names to virtual register ids at each level: */
@@ -133,8 +134,11 @@ struct DaoParser
 	DMap      *lvm; /* <DString*,int>, for localVarMap; */
 	DArray    *toks;
 
+	DArray  *typeItems;
 	DArray  *strings;
 	DArray  *arrays;
+	uint_t   usedString;
+	uint_t   usedArray;
 };
 
 DAO_DLL DaoParser* DaoParser_New();

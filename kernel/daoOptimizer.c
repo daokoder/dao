@@ -1446,6 +1446,7 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 
 static void DaoOptimizer_Optimize( DaoOptimizer *self, DaoRoutine *routine )
 {
+	DaoType *type, **types = routine->body->regType->items.pType;
 	DaoVmSpace *vms = routine->nameSpace->vmSpace;
 	daoint i, k, notide = ! (vms->options & DAO_EXEC_IDE);
 
@@ -1453,16 +1454,14 @@ static void DaoOptimizer_Optimize( DaoOptimizer *self, DaoRoutine *routine )
 
 	/* Do not perform optimization if it may take too much memory: */
 	if( (routine->body->vmCodes->size * routine->body->regCount) > 1000000 ) return;
-	if( routine->body->vmCodes->size > 400 && routine->body->regCount > 200 ){
-		DaoType *type, **types = routine->body->regType->items.pType;
-		if( routine->body->simpleVariables->size < routine->body->regCount / 2 ) return;
-		for(i=0,k=0; i<routine->body->simpleVariables->size; i++){
-			type = types[ routine->body->simpleVariables->items.pInt[i] ];
-			k += type ? type->tid >= DAO_INTEGER && type->tid <= DAO_LONG : 0;
-		}
-		/* Optimize only if there are sufficient amount of numeric calculations: */
-		if( k < routine->body->regCount / 2 ) return;
+
+	if( routine->body->simpleVariables->size < routine->body->regCount / 2 ) return;
+	for(i=0,k=0; i<routine->body->simpleVariables->size; i++){
+		type = types[ routine->body->simpleVariables->items.pInt[i] ];
+		k += type ? type->tid >= DAO_INTEGER && type->tid <= DAO_LONG : 0;
 	}
+	/* Optimize only if there are sufficient amount of numeric calculations: */
+	if( k < routine->body->regCount / 2 ) return;
 
 	DaoOptimizer_CSE( self, routine );
 	DaoOptimizer_DCE( self, routine );
@@ -1715,20 +1714,20 @@ DaoInferencer* DaoInferencer_New()
 	self->mbstring = DString_New(1);
 	return self;
 }
-void DaoInferencer_Clear( DaoInferencer *self )
+void DaoInferencer_Reset( DaoInferencer *self )
 {
 	DaoInodes_Clear( self->inodes );
 	DArray_Clear( self->consts );
 	DArray_Clear( self->types );
-	DString_Clear( self->inited );
-	DArray_Clear( self->rettypes );
 	DArray_Clear( self->typeMaps );
-	DArray_Clear( self->errors );
-	DArray_Clear( self->array );
-	DArray_Clear( self->array2 );
-	DMap_Clear( self->defs );
-	DMap_Clear( self->defs2 );
-	DMap_Clear( self->defs3 );
+	DString_Reset( self->inited, 0 );
+	DMap_Reset( self->defs );
+	DMap_Reset( self->defs2 );
+	DMap_Reset( self->defs3 );
+	self->rettypes->size = 0;
+	self->errors->size = 0;
+	self->array->size = 0;
+	self->array2->size = 0;
 	self->error = 0;
 	self->annot_first = 0;
 	self->annot_last = 0;
@@ -1738,7 +1737,7 @@ void DaoInferencer_Clear( DaoInferencer *self )
 }
 void DaoInferencer_Delete( DaoInferencer *self )
 {
-	DaoInferencer_Clear( self );
+	DaoInferencer_Reset( self );
 	DArray_Delete( self->inodes );
 	DArray_Delete( self->consts );
 	DArray_Delete( self->types );
@@ -1764,7 +1763,7 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 	daoint i, n, M = routine->body->regCount;
 	char *inited;
 
-	DaoInferencer_Clear( self );
+	DaoInferencer_Reset( self );
 	self->silent = silent;
 	self->routine = routine;
 	self->tidHost = routine->routHost ? routine->routHost->tid : 0;
@@ -5540,21 +5539,21 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	int retc;
 	DaoInferencer *inferencer;
 	DaoOptimizer *optimizer;
+	DaoVmSpace *vmspace = self->nameSpace->vmSpace;
 
 	if( self->body->vmCodes->size == 0 ) return 1;
 
-	optimizer = DaoOptimizer_New();
+	optimizer = DaoVmSpace_AcquireOptimizer( vmspace );
 	DArray_Resize( self->body->regType, self->body->regCount, NULL );
 	DaoOptimizer_RemoveUnreachableCodes( optimizer, self );
 
-	inferencer = DaoInferencer_New();
+	inferencer = DaoVmSpace_AcquireInferencer( vmspace );
 	DaoInferencer_Init( inferencer, self, silent );
 	retc = DaoInferencer_DoInference( inferencer );
-	DaoInferencer_Delete( inferencer );
-#warning "DaoOptimizer_Optimize"
-	//if( retc ) DaoOptimizer_Optimize( optimizer, self );
+	DaoVmSpace_ReleaseInferencer( vmspace, inferencer );
+	if( retc ) DaoOptimizer_Optimize( optimizer, self );
 	/* DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->errorStream ); */
-	DaoOptimizer_Delete( optimizer );
+	DaoVmSpace_ReleaseOptimizer( vmspace, optimizer );
 	return retc;
 }
 

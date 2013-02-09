@@ -32,6 +32,7 @@
 
 #include"daoType.h"
 #include"daoThread.h"
+#include"daoOptimizer.h"
 
 enum DaoPathType{ DAO_FILE_PATH, DAO_DIR_PATH };
 
@@ -62,10 +63,14 @@ struct DaoVmSpace
 	DaoStream  *errorStream;
 
 	DMap    *allProcesses;
-	DArray  *processes;
-
 	DMap    *allParsers;
+	DMap    *allInferencers;
+	DMap    *allOptimizers;
+
+	DArray  *processes;
 	DArray  *parsers;
+	DArray  *inferencers;
+	DArray  *optimizers;
 
 	DString *mainSource;
 	DString *pathWorking;
@@ -137,6 +142,10 @@ DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
 DAO_DLL DaoTypeBase* DaoVmSpace_GetTyper( short type );
 
 DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self );
+DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self );
+DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self );
 void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser );
+void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *parser );
+void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *parser );
 
 #endif

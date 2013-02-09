@@ -275,7 +275,8 @@ void DString_SetMBS( DString *self, const char *chs )
 	}
 	n = strlen( chs );
 	if( self->mbs ){
-		DString_Resize( self, n );
+		//DString_Resize( self, n );
+		DString_Reset( self, n );
 		memcpy( self->mbs, chs, n*sizeof(char) );
 	}else{
 		DString_Clear(self);
@@ -304,7 +305,8 @@ void DString_Reserve( DString *self, daoint size )
 	int *data;
 	daoint bsize;
 	DString_Detach( self );
-	if( size <= self->bufSize && 2*size >= self->bufSize ) return;
+	//if( size <= self->bufSize && 2*size >= self->bufSize ) return;
+	if( size <= self->bufSize ) return;
 	data = (self->mbs ? (int*)self->mbs : (int*)self->wcs) - self->shared;
 	if( self->mbs ){
 		if( size > self->bufSize || 2*size < self->bufSize ){

@@ -313,13 +313,49 @@ DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )
 		parser = (DaoParser*) DArray_Back( self->parsers );
 		DArray_PopBack( self->parsers );
 	}else{
-		parser = DaoParser_New( self );
+		parser = DaoParser_New();
 		DMap_Insert( self->allParsers, parser, 0 );
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->mutexMisc );
 #endif
 	return parser;
+}
+DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self )
+{
+	DaoInferencer *inferencer = NULL;
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->mutexMisc );
+#endif
+	if( self->inferencers->size ){
+		inferencer = (DaoInferencer*) DArray_Back( self->inferencers );
+		DArray_PopBack( self->inferencers );
+	}else{
+		inferencer = DaoInferencer_New();
+		DMap_Insert( self->allInferencers, inferencer, 0 );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->mutexMisc );
+#endif
+	return inferencer;
+}
+DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self )
+{
+	DaoOptimizer *optimizer = NULL;
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->mutexMisc );
+#endif
+	if( self->optimizers->size ){
+		optimizer = (DaoOptimizer*) DArray_Back( self->optimizers );
+		DArray_PopBack( self->optimizers );
+	}else{
+		optimizer = DaoOptimizer_New();
+		DMap_Insert( self->allOptimizers, optimizer, 0 );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->mutexMisc );
+#endif
+	return optimizer;
 }
 void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser )
 {
@@ -329,6 +365,31 @@ void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser )
 #endif
 	if( DMap_Find( self->allParsers, parser ) ){
 		DArray_PushBack( self->parsers, parser );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->mutexMisc );
+#endif
+}
+void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *inferencer )
+{
+	DaoInferencer_Reset( inferencer );
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->mutexMisc );
+#endif
+	if( DMap_Find( self->allInferencers, inferencer ) ){
+		DArray_PushBack( self->inferencers, inferencer );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->mutexMisc );
+#endif
+}
+void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *optimizer )
+{
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->mutexMisc );
+#endif
+	if( DMap_Find( self->allOptimizers, optimizer ) ){
+		DArray_PushBack( self->optimizers, optimizer );
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->mutexMisc );
@@ -415,7 +476,11 @@ DaoVmSpace* DaoVmSpace_New()
 	self->processes = DArray_New(0);
 	self->allProcesses = DMap_New(D_VALUE,0);
 	self->parsers = DArray_New(0);
+	self->inferencers = DArray_New(0);
+	self->optimizers = DArray_New(0);
 	self->allParsers = DMap_New(0,0);
+	self->allInferencers = DMap_New(0,0);
+	self->allOptimizers = DMap_New(0,0);
 	self->loadedModules = DArray_New(D_VALUE);
 	self->preloadModules = NULL;
 
@@ -452,6 +517,16 @@ DaoVmSpace* DaoVmSpace_New()
 }
 void DaoVmSpace_DeleteData( DaoVmSpace *self )
 {
+	DNode *it;
+	for(it=DMap_First(self->allParsers); it; it=DMap_Next(self->allParsers,it)){
+		DaoParser_Delete( (DaoParser*) it->key.pVoid );
+	}
+	for(it=DMap_First(self->allInferencers); it; it=DMap_Next(self->allInferencers,it)){
+		DaoInferencer_Delete( (DaoInferencer*) it->key.pVoid );
+	}
+	for(it=DMap_First(self->allOptimizers); it; it=DMap_Next(self->allOptimizers,it)){
+		DaoOptimizer_Delete( (DaoOptimizer*) it->key.pVoid );
+	}
 	GC_DecRC( self->nsInternal );
 	GC_DecRC( self->mainNamespace );
 	GC_DecRC( self->stdioStream );
@@ -466,10 +541,14 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DArray_Delete( self->loadedModules );
 	DArray_Delete( self->sourceArchive );
 	DArray_Delete( self->parsers );
+	DArray_Delete( self->inferencers );
+	DArray_Delete( self->optimizers );
 	DMap_Delete( self->vfiles );
 	DMap_Delete( self->vmodules );
 	DMap_Delete( self->allProcesses );
 	DMap_Delete( self->allParsers );
+	DMap_Delete( self->allInferencers );
+	DMap_Delete( self->allOptimizers );
 	GC_DecRC( self->mainProcess );
 	self->stdioStream = NULL;
 	if( self->preloadModules ) DArray_Delete( self->preloadModules );
