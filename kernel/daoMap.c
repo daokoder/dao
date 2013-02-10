@@ -367,8 +367,8 @@ static void DMap_BufferTree( DMap *self, DNode *node )
 }
 static void DMap_DeleteNode( DMap *self, DNode *node )
 {
-	DMap_DeleteItem( node->key.pVoid, self->keytype );
-	DMap_DeleteItem( node->value.pVoid, self->valtype );
+	if( node->key.pVoid ) DMap_DeleteItem( node->key.pVoid, self->keytype );
+	if( node->value.pVoid ) DMap_DeleteItem( node->value.pVoid, self->valtype );
 	dao_free( node );
 }
 static void DMap_DeleteTree( DMap *self, DNode *node )
@@ -772,7 +772,9 @@ DNode* DMap_Insert( DMap *self, void *key, void *value )
 			p->value.pVoid = NULL;
 		}
 		DMap_CopyItem( & p->value.pVoid, value, self->valtype );
-		dao_free( node );
+		node->key.pVoid = NULL;
+		node->value.pVoid = NULL;
+		DMap_BufferNode( self, node );
 	}
 	return p;
 }

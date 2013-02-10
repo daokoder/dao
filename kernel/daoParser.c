@@ -259,10 +259,30 @@ void DaoParser_Delete( DaoParser *self )
 }
 void DaoParser_Reset( DaoParser *self )
 {
+	int i;
+	for(i=0; i<self->lexLevel; ++i){
+		DMap_Reset( self->localVarMap->items.pMap[i] );
+		DMap_Reset( self->localCstMap->items.pMap[i] );
+		DMap_Reset( self->localDecMap->items.pMap[i] );
+	}
+	self->topAsGlobal = 0;
+	self->isClassBody = 0;
+	self->isInterBody = 0;
+	self->isDynamicClass = 0;
+	self->permission = 0;
+	self->isFunctional = 0;
+
+	self->regCount = 0;
 	self->levelBase = 0;
 	self->lexLevel = 0;
 	self->usedString = 0;
 	self->usedArray = 0;
+
+	self->curLine = 0;
+	self->lineCount = 0;
+	self->indent = 0;
+	self->defined = 0;
+	self->parsed = 0;
 
 	DString_Reset( self->routName, 0 );
 	DString_Reset( self->mbs, 0 );
@@ -276,6 +296,16 @@ void DaoParser_Reset( DaoParser *self )
 
 	self->scopeOpenings->size = 0;
 	self->scopeClosings->size = 0;
+
+	self->nameSpace = NULL;
+	self->defParser = NULL;
+	self->routine = NULL;
+	self->hostInter = NULL;
+	self->hostClass = NULL;
+	self->hostCdata = NULL;
+	self->hostType = NULL;
+	self->outParser = NULL;
+	self->returnType = NULL;
 
 	DArray_Clear( self->decoParams );
 	DArray_Clear( self->switchMaps );
@@ -1252,7 +1282,6 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	routine->routType = DaoNamespace_FindType( NS, pname );
 	if( DaoType_MatchTo( type, routine->routType, NULL ) != DAO_MT_EQ ){
 		routine->routType = type;
-		DaoType_MapNames( routine->routType );
 		DaoNamespace_AddType( NS, pname, routine->routType );
 		DString_SetMBS( mbs, "self" );
 		node = MAP_Find( routine->routType->mapNames, mbs );
@@ -1618,7 +1647,7 @@ static DaoType* DaoParser_ParseType2( DaoParser *self, int start, int end, int *
 	int daons = 0, tokname = 0;
 
 #if 0
-	for(i=start; i<=end; i++) printf("%s  ", tokens[i].string->mbs); printf("\n\n");
+	for(i=start; i<=end; i++) printf("%s  ", tokens[i].string.mbs); printf("\n\n");
 #endif
 
 	*newpos = start + 1;

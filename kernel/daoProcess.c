@@ -1887,7 +1887,7 @@ CallEntry:
 			inum = IntegerOperand( vmc->a );
 			if( id <0 ) id += str->size;
 			if( id <0 || id >= str->size ) goto RaiseErrorIndexOutOfRange;
-			DString_Detach( str );
+			DString_Detach( str, str->size );
 			if( str->mbs ){
 				str->mbs[id] = inum;
 			}else{

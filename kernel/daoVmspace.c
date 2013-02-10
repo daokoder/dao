@@ -303,8 +303,14 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 	DMutex_Unlock( & self->mutexProc );
 #endif
 }
+
+
 DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )
 {
+#ifdef SHARE_NO_PARSER
+	return DaoParser_New();
+#endif
+
 	DaoParser *parser = NULL;
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & self->mutexMisc );
@@ -359,6 +365,10 @@ DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self )
 }
 void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser )
 {
+#ifdef SHARE_NO_PARSER
+	DaoParser_Delete( parser ); return;
+#endif
+
 	DaoParser_Reset( parser );
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & self->mutexMisc );

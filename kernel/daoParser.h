@@ -100,7 +100,6 @@ struct DaoParser
 	DaoType      *hostType;
 	DaoParser    *outParser;
 
-	DaoType      *cblockType;
 	DaoType      *returnType;
 
 	DaoToken  *argName;

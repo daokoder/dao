@@ -50,7 +50,7 @@ DAO_DLL DString* DString_New( int mbs );
 DAO_DLL void DString_Init( DString *self, int mbs );
 DAO_DLL void DString_DeleteData( DString *self );
 DAO_DLL void DString_Delete( DString *self );
-DAO_DLL void DString_Detach( DString *self );
+DAO_DLL void DString_Detach( DString *self, int bufsize );
 
 DAO_DLL void DString_SetSharing( DString *self, int sharing );
 

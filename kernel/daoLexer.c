@@ -840,8 +840,6 @@ void DaoInitLexTable()
 	daoArithOper[ DTOK_POW ]    = doper( DAO_OPER_POW,      0, 0, 2 );
 }
 
-extern void DString_DeleteData( DString *self );
-
 DaoToken* DaoToken_New()
 {
 	return (DaoToken*) dao_calloc( 1, sizeof(DaoToken) );

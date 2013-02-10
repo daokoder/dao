@@ -881,7 +881,7 @@ static void DaoString_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	daoint start, end;
 	int idtype;
 	DArray *ids = MakeIndex( proc, pid, size, & start, & end, & idtype );
-	DString_Detach( self );
+	DString_Detach( self, self->size );
 	if( value->type >= DAO_INTEGER && value->type <= DAO_DOUBLE ){
 		daoint i, n, id = value->xInteger.value;
 		if( idtype == IDX_MULTIPLE ){
@@ -1024,7 +1024,7 @@ static void DaoSTR_Chop( DaoProcess *proc, DaoValue *p[], int N )
 	daoint i, k;
 	unsigned char *chs;
 	DString *self = p[0]->xString.data;
-	DString_Detach( self );
+	DString_Detach( self, self->size );
 	DString_Chop( self );
 
 	if( DString_CheckUTF8( self ) && self->mbs && self->size ){
@@ -1395,7 +1395,7 @@ static void DaoSTR_Split( DaoProcess *proc, DaoValue *p[], int N )
 			DString_ToWCS( str );
 			DString_Resize( str, 1 );
 			for(i=0; i<size; i++){
-				DString_Detach( str );
+				DString_Detach( str, str->size );
 				str->wcs[0] = wcs[i];
 				DArray_Append( & list->items, value );
 			}
@@ -1701,7 +1701,7 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 	wchar_t k;
 	switch( funct ){
 	case DVM_FUNCT_APPLY : 
-		DString_Detach( self->data );
+		DString_Detach( self->data, self->data->size );
 		DaoProcess_PutReference( proc, p[0] );
 		break;
 	case DVM_FUNCT_MAP :
