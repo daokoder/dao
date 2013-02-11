@@ -14,16 +14,16 @@ class Integer
 
 	static operator +( A : Integer, B : int ){
 		io.writeln( 'Integer + int' );
-		return Integer{ A.value + B };
+		return Integer( A.value + B );
 	}
 	# no longer supported, now the first operand must be a user type:
 	static operator +( A : int, B : Integer ){
 		io.writeln( 'int + Integer' );
-		return Integer{ A + B.value };
+		return Integer( A + B.value );
 	}
 	static operator +( A : Integer, B : Integer ){
 		io.writeln( 'Integer + Integer' );
-		return Integer{ A.value + B.value };
+		return Integer( A.value + B.value );
 	}
 	static operator +( C : Integer, A : Integer, B : Integer ){
 		io.writeln( 'Integer = Integer + Integer' );
@@ -37,16 +37,16 @@ class Integer
 	}
 	static operator -( A : Integer ){
 		io.writeln( '- Integer' );
-		return Integer{ - A.value };
+		return Integer( - A.value );
 	}
 	static operator -( A : Integer, B : Integer ){
 		io.writeln( 'Integer - Integer' );
-		return Integer{ A.value - B.value };
+		return Integer( A.value - B.value );
 	}
 	static operator >( A : Integer, B : Integer ){
 		io.writeln( 'Integer > Integer' );
 		b = A > B;
-		return Integer{ A.value > B.value };
+		return Integer( A.value > B.value );
 	}
 	static operator !( C : Integer, A : Integer ){
 		io.writeln( 'operator !( C : Integer, A : Integer )' );
@@ -55,7 +55,7 @@ class Integer
 	}
 	static operator !( A : Integer ){
 		io.writeln( 'operator !( A : Integer )' );
-		return Integer{ ! A.value };
+		return Integer( ! A.value );
 	}
 #{
 #}

@@ -304,6 +304,11 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 #endif
 }
 
+#if 0
+#define SHARE_NO_PARSER
+#define SHARE_NO_INFERENCER
+#define SHARE_NO_OPTIMIZER
+#endif
 
 DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )
 {
@@ -329,6 +334,10 @@ DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )
 }
 DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self )
 {
+#ifdef SHARE_NO_INFERENCER
+	return DaoInferencer_New();
+#endif
+
 	DaoInferencer *inferencer = NULL;
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & self->mutexMisc );
@@ -347,6 +356,10 @@ DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self )
 }
 DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self )
 {
+#ifdef SHARE_NO_OPTIMIZER
+	return DaoOptimizer_New();
+#endif
+
 	DaoOptimizer *optimizer = NULL;
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & self->mutexMisc );
@@ -382,6 +395,10 @@ void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser )
 }
 void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *inferencer )
 {
+#ifdef SHARE_NO_INFERENCER
+	DaoInferencer_Delete( inferencer ); return;
+#endif
+
 	DaoInferencer_Reset( inferencer );
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & self->mutexMisc );
@@ -395,6 +412,10 @@ void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *inferencer )
 }
 void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *optimizer )
 {
+#ifdef SHARE_NO_OPTIMIZER
+	DaoOptimizer_Delete( optimizer ); return;
+#endif
+
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & self->mutexMisc );
 #endif

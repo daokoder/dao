@@ -231,8 +231,13 @@ struct DaoToken
 	unsigned int    line; /* file line position of the token */
 	unsigned int    index; /* index of the token in current routine */
 	unsigned int    offset; /* offset in DaoLexer::source; */
-	unsigned int    length; /* length of the token; */
-	DString         string; /* real data in DaoLexer::source; */
+	DString         string;
+	
+	/* DaoToken may be allocated in an array as a part of DaoLexer,
+	// or allocated separately. If it is allocated in an array,
+	// the string data in ::string is allocated in DaoLexer::source;
+	// otherwise, it is allocated separately as well, and should be
+	// freed with DString_DeleteData(). */
 
 	/* When DaoToken is used in an array to store the definitions
 	 * of local constants and variables in a routine,
@@ -251,6 +256,7 @@ DAO_DLL const char* DaoToken_NameToString( unsigned char name );
 DAO_DLL int DaoToken_Check( const char *src, int size, int *length );
 DAO_DLL int DaoToken_IsNumber( const char *src, int size );
 DAO_DLL int DaoToken_IsValidName( const char *src, int size );
+DAO_DLL void DaoToken_Set( DaoToken *self, int type, int name, int index );
 
 
 
@@ -274,9 +280,13 @@ void DaoLexer_AppendTokens( DaoLexer *self, DaoLexer *other );
 
 DaoToken* DaoLexer_AppendToken( DaoLexer *self, int name, int line, const char *data );
 DaoToken* DaoLexer_Append( DaoLexer *self, DaoToken token, DString *string );
+DaoToken* DaoLexer_Append2( DaoLexer *self, DaoToken token, const char *string );
+DaoToken* DaoLexer_CopyToken( DaoLexer *self, DaoToken token );
 
 int DaoLexer_Tokenize( DaoLexer *self, const char *src, int repl, int comment, int space );
 
+void DaoLexer_EraseTokens( DaoLexer *self, int at, int count );
+void DaoLexer_InsertTokens( DaoLexer *self, int at, DaoLexer *lexer );
 
 void DaoLexer_AnnotateCode( DaoLexer *self, DaoVmCodeX vmc, DString *annot, int max );
 int DaoLexer_FindOpenToken( DaoLexer *self, uchar_t tok, int start, int end );

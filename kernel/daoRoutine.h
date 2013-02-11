@@ -109,9 +109,8 @@ struct DaoRoutineBody
 	/* VM codes with annotations */
 	DArray *annotCodes; /* <DaoVmCodeX*> */
 
-	/* source tokens and definition of local constants and variables: */
-	DaoLexer     *source;
-	DPlainArray  *defLocals; /* <int> */
+	DaoLexer  *source;    /* source code tokens; */ 
+	DaoLexer  *defLocals; /* definition tokens of local constants and variables; */
 
 	DArray *simpleVariables;
 

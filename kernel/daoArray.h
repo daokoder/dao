@@ -62,7 +62,6 @@ struct DArray
 		DaoInode     **pInode;
 		DaoCnode     **pCnode;
 		DaoVmCodeX   **pVmc;
-#warning "remove pToken"
 		DaoToken     **pToken;
 
 	} items;
@@ -127,6 +126,7 @@ DAO_DLL void DPlainArray_ResetSize( DPlainArray *self, int size );
 
 DAO_DLL void DPlainArray_Assign( DPlainArray *left, DPlainArray *right );
 
+DAO_DLL void* DPlainArray_Insert( DPlainArray *self, int i, int n );
 DAO_DLL void* DPlainArray_Push( DPlainArray *self );
 DAO_DLL void* DPlainArray_Pop( DPlainArray *self );
 DAO_DLL void* DPlainArray_Back( DPlainArray *self );

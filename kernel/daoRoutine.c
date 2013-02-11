@@ -258,7 +258,7 @@ DaoRoutineBody* DaoRoutineBody_New()
 	DaoValue_Init( self, DAO_ROUTBODY );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->source = NULL;
-	self->defLocals = DPlainArray_New( sizeof(int) );
+	self->defLocals = DaoLexer_New();
 	self->vmCodes = DPlainArray_New( sizeof(DaoVmCode) );
 	self->regType = DArray_New(D_VALUE);
 	self->annotCodes = DArray_New(D_VMCODE);
@@ -274,7 +274,7 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 	if( self->upRoutine ) GC_DecRC( self->upRoutine );
 	if( self->upProcess ) GC_DecRC( self->upProcess );
 	if( self->source ) GC_DecRC( self->source );
-	DPlainArray_Delete( self->defLocals );
+	DaoLexer_Delete( self->defLocals );
 	DPlainArray_Delete( self->vmCodes );
 	DArray_Delete( self->simpleVariables );
 	DArray_Delete( self->regType );
