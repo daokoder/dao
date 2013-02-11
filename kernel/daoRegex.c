@@ -566,10 +566,10 @@ static int InitRegex( DaoRegex *self, DString *ds )
 		self->group = max; /*  restrict capture exporting */
 	}
 	if( fixed ) self->attrib |= PAT_ALL_FIXED;
-	memmove( self->items + self->count, self->wordbuf, self->wordlen + 1 );
+	memmove( self->items + self->count, self->wordbuf, self->wordlen );
 	self->wordbuf = self->items + self->count;
 	self->itemlen = self->count * sizeitm;
-	self->length = sizepat + self->itemlen + self->wordlen + 1;
+	self->length = sizepat + self->itemlen + self->wordlen;
 	self->length = ALIGN( self->length );
 	return self->count;
 }
@@ -991,7 +991,7 @@ static int FindPattern( DaoRegex *self, DaoRgxItem *patts, int npatt,
  * enough large for the compiled pattern data */
 void DaoRegex_Init( DaoRegex *self, DString *src )
 {
-	int n = src->mbs ? src->size : src->size;
+	int n = src->size;
 	int m = DString_BalancedChar( src, '|', 0,0, '%', 0, n, 1 ) + 4; /* (|||) */
 	int size = DaoRegex_CheckSize( src );
 	size = ALIGN( size );
@@ -1000,7 +1000,7 @@ void DaoRegex_Init( DaoRegex *self, DString *src )
 	self->wordbuf = ((char*)self) + sizepat + (n+m) * sizeitm;
 	self->mbs = (src->mbs != NULL);
 	self->itemlen = (n+m) * sizeitm;
-	self->wordlen = n * (src->mbs ? 1 : sizewch);
+	self->wordlen = n * (src->mbs ? 1 : sizewch) + 1;
 	InitRegex( self, src );
 }
 
@@ -1113,7 +1113,7 @@ void DaoRegex_Copy( DaoRegex *self, DaoRegex *src )
 }
 int DaoRegex_CheckSize( DString *src )
 {
-	int n = src->mbs ? src->size : src->size;
+	int n = src->size;
 	int m = DString_BalancedChar( src, '|', 0,0, '%', 0, n, 1 ) + 4; /* (|||) */
 	return sizepat + (n+m) * sizeitm + n * (src->mbs ? 1 : sizewch) + 2;
 }

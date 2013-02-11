@@ -272,6 +272,7 @@ void DaoParser_Reset( DaoParser *self )
 	self->permission = 0;
 	self->isFunctional = 0;
 
+	self->curToken = 0;
 	self->regCount = 0;
 	self->levelBase = 0;
 	self->lexLevel = 0;
@@ -280,9 +281,14 @@ void DaoParser_Reset( DaoParser *self )
 
 	self->curLine = 0;
 	self->lineCount = 0;
-	self->indent = 0;
+	self->indent = 1;
 	self->defined = 0;
 	self->parsed = 0;
+
+	self->noneValue = -1;
+	self->integerZero = -1;
+	self->integerOne = -1;
+	self->imaginaryOne = -1;
 
 	DString_Reset( self->routName, 0 );
 	DString_Reset( self->mbs, 0 );
@@ -2444,8 +2450,8 @@ static int DaoParser_Preprocess( DaoParser *self )
 				return 0;
 			}
 			if( cons ) DaoParser_MakeCodes( self, start, right+1, ns->inputs );
-			DArray_Erase( self->tokens, start, right - start + 1 );
-			tokens = self->tokens->items.pToken;
+			DaoLexer_EraseTokens( self->codeLexer, start, right - start + 1 );
+			tokens = self->codeLexer->tokens->pod.tokens;
 #else
 			DaoStream_WriteMBS( vmSpace->errorStream, "macro is not enabled.\n" );
 			return 0;
@@ -2471,25 +2477,26 @@ static int DaoParser_Preprocess( DaoParser *self )
 	}
 #ifdef DAO_WITH_MACRO
 	for(start = lexer->tokens->size-1; start >=0 && start < lexer->tokens->size; start--){
-		macro = DaoNamespace_FindMacro( ns, ns->lang, tokens[start].string );
+		macro = DaoNamespace_FindMacro( ns, ns->lang, & tokens[start].string );
 		self->curLine = tokens[start].line;
 		if( macro == NULL ) continue;
+		printf( "macro %i %s\n", start, tokens[start].string.mbs );
 #if 0
-		printf( "macro %i %s\n", start, tokens[start].string->mbs );
 #endif
 		for( i=0; i<macro->macroList->size; i++){
 			macro2 = (DaoMacro*) macro->macroList->items.pVoid[i];
 			end = DaoParser_MacroTransform( self, macro2, start, tag );
-#if 0
 			printf( "overloaded: %i, %i\n", i, end );
+#if 0
 #endif
 			if( end <= 0 ) continue;
 
 			tag ++;
 			reapply = NULL;
-			tokens = self->tokens->items.pToken;
+			tokens = self->codeLexer->tokens->pod.tokens;
 			for(k=0; k<macro2->keyListApply->size; k++){
-				/* printf( "%i, %s\n", k, m->keyListApply->items.pString[k]->mbs ); */
+				/* printf( "%i, %s\n", k, macro2->keyListApply->items.pString[k]->mbs ); */
+				printf( "%i, %s\n", k, macro2->keyListApply->items.pString[k]->mbs );
 				reapply = DaoNamespace_FindMacro( ns, ns->lang, macro2->keyListApply->items.pString[k] );
 				if( reapply ) break;
 			}

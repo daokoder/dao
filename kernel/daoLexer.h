@@ -285,8 +285,14 @@ DaoToken* DaoLexer_CopyToken( DaoLexer *self, DaoToken token );
 
 int DaoLexer_Tokenize( DaoLexer *self, const char *src, int repl, int comment, int space );
 
-void DaoLexer_EraseTokens( DaoLexer *self, int at, int count );
+void DaoLexer_InsertToken( DaoLexer *self, int at, DaoToken token );
 void DaoLexer_InsertTokens( DaoLexer *self, int at, DaoLexer *lexer );
+void DaoLexer_AppendTokens( DaoLexer *self, DaoLexer *lexer );
+void DaoLexer_EraseTokens( DaoLexer *self, int at, int count );
+
+void DaoLexer_AppendTokenChar( DaoLexer *self, DaoToken *token, char ch );
+void DaoLexer_AppendTokenString( DaoLexer *self, DaoToken *token, DString *s );
+void DaoLexer_SetTokenMBString( DaoLexer *self, DaoToken *token, const char *s );
 
 void DaoLexer_AnnotateCode( DaoLexer *self, DaoVmCodeX vmc, DString *annot, int max );
 int DaoLexer_FindOpenToken( DaoLexer *self, uchar_t tok, int start, int end );

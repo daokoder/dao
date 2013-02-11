@@ -304,10 +304,10 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 #endif
 }
 
-#if 0
 #define SHARE_NO_PARSER
 #define SHARE_NO_INFERENCER
 #define SHARE_NO_OPTIMIZER
+#if 0
 #endif
 
 DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )

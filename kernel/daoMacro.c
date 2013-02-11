@@ -53,31 +53,31 @@ static void DaoToken_Assign( DaoToken *self, DaoToken *other )
 	self->name = other->name;
 	self->line = other->line;
 	self->cpos = other->cpos;
-	if( self->string == NULL ) self->string = DString_Copy( other->string );
-	DString_Assign( self->string, other->string );
+	DString_Assign( & self->string, & other->string );
 }
 static int DaoToken_EQ( DaoToken *self, DaoToken *other )
 {
 	if( self->name != other->name ) return 0;
-	if( self->name <= DTOK_WCS ) return DString_EQ( self->string, other->string );
+	if( self->name <= DTOK_WCS ) return DString_EQ( & self->string, & other->string );
 	return 1;
 }
 
 static int DaoParser_FindOpenToken2( DaoParser *self, DaoToken *tok, int start, int end/*=-1*/ )
 {
 	int i, n1, n2, n3, n4;
-	DaoToken **tokens = self->tokens->items.pToken;
+	DaoLexer *lexer = self->codeLexer;
+	DaoToken *tokens = lexer->tokens->pod.tokens;
 
 	if( start < 0 ) return -10000;
-	if( end == -1 || end >= (int)self->tokens->size ) end = self->tokens->size-1;
+	if( end == -1 || end >= lexer->tokens->size ) end = lexer->tokens->size-1;
 	n1 = n2 = n3 = n4 = 0;
 	for( i=start; i<=end; i++){
-		if( ! ( n1 | n2 | n3 | n4 ) && DaoToken_EQ( tokens[i], tok ) ){
+		if( ! ( n1 | n2 | n3 | n4 ) && DaoToken_EQ( & tokens[i], tok ) ){
 			return i;
 		}else if( n1 <0 || n2 <0 || n3 <0 || n4 <0 ){
 			break;
 		}else{
-			switch( tokens[i]->name ){
+			switch( tokens[i].name ){
 			case DTOK_LCB : n1 ++; break;
 			case DTOK_RCB : n1 --; break;
 			case DTOK_LB  : n2 ++; break;
@@ -95,14 +95,13 @@ DMacroUnit* DMacroUnit_New()
 	DMacroUnit *self = (DMacroUnit*) dao_malloc( sizeof(DMacroUnit) );
 	self->type = DMACRO_TOK;
 	self->indent = 0;
-	self->stops = DArray_New(D_TOKEN);
+	self->stops = DaoLexer_New();
 	self->marker = DaoToken_New();
-	self->marker->string = DString_New(1);
 	return self;
 }
 void DMacroUnit_Delete( DMacroUnit *self )
 {
-	DArray_Delete( self->stops );
+	DaoLexer_Delete( self->stops );
 	DaoToken_Delete( self->marker );
 	dao_free( self );
 }
@@ -115,8 +114,8 @@ DMacroGroup* DMacroGroup_New()
 	self->cpos = 0;
 	self->indent = 0;
 	self->units = DArray_New(0);
-	self->stops = DArray_New(D_TOKEN);
-	self->variables = DArray_New(D_TOKEN);
+	self->stops = DaoLexer_New();
+	self->variables = DaoLexer_New();
 	self->parent = NULL;
 	return self;
 }
@@ -131,9 +130,9 @@ void DMacroGroup_Delete( DMacroGroup *self )
 			DMacroUnit_Delete( unit );
 		}
 	}
-	DArray_Delete( self->stops );
+	DaoLexer_Delete( self->stops );
+	DaoLexer_Delete( self->variables );
 	DArray_Delete( self->units );
-	DArray_Delete( self->variables );
 	dao_free( self );
 }
 
@@ -174,7 +173,7 @@ void DaoMacro_Delete( DaoMacro *self )
 static int DaoParser_MakeMacroGroup( DaoParser *self,
 		DMacroGroup *group, DMacroGroup *parent, int from, int to )
 {
-	DaoToken **toks = self->tokens->items.pToken;
+	DaoToken *toks = self->codeLexer->tokens->pod.tokens;
 	unsigned char tk;
 	int i, sep, rb, prev;
 	DMacroUnit *unit;
@@ -186,15 +185,15 @@ static int DaoParser_MakeMacroGroup( DaoParser *self,
 
 	i = from;
 	while( i < to ){
-		char *chs = toks[i]->string->mbs;
-		self->curLine = toks[i]->line;
-		tk = toks[i]->name;
+		char *chs = toks[i].string.mbs;
+		self->curLine = toks[i].line;
+		tk = toks[i].name;
 #if 0
 		//printf( "%i %s\n", i, chs );
 #endif
 		if( tk == DTOK_ESC_LB || tk == DTOK_ESC_LSB || tk == DTOK_ESC_LCB ){
 			grp = DMacroGroup_New();
-			grp->cpos = toks[i]->cpos;
+			grp->cpos = toks[i].cpos;
 			grp->parent = parent;
 			DArray_Append( group->units, (void*)grp );
 			switch( tk ){
@@ -212,7 +211,7 @@ static int DaoParser_MakeMacroGroup( DaoParser *self,
 			default :
 				{
 					rb = -1;
-					DaoParser_Error( self, DAO_CTW_INV_MAC_OPEN, toks[i]->string );
+					DaoParser_Error( self, DAO_CTW_INV_MAC_OPEN, & toks[i].string );
 					break;
 				}
 			}
@@ -236,9 +235,9 @@ static int DaoParser_MakeMacroGroup( DaoParser *self,
 				return 0;
 			}
 			i = rb +1;
-			self->curLine = toks[i]->line;
-			if( toks[i]->string->mbs[0] == '\\' ){
-				switch( toks[i]->name ){
+			self->curLine = toks[i].line;
+			if( toks[i].string.mbs[0] == '\\' ){
+				switch( toks[i].name ){
 				case DTOK_ESC_EXCLA : grp->repeat = DMACRO_ZERO; i++; break;
 				case DTOK_ESC_QUES  : grp->repeat = DMACRO_ZERO_OR_ONE; i++; break;
 				case DTOK_ESC_STAR  : grp->repeat = DMACRO_ZERO_OR_MORE; i++; break;
@@ -247,30 +246,30 @@ static int DaoParser_MakeMacroGroup( DaoParser *self,
 				case DTOK_ESC_LB :  case DTOK_ESC_RB :
 				case DTOK_ESC_LCB : case DTOK_ESC_RCB :
 				case DTOK_ESC_LSB : case DTOK_ESC_RSB : break;
-				default : DaoParser_Error( self, DAO_CTW_INV_MAC_REPEAT, toks[i]->string );
+				default : DaoParser_Error( self, DAO_CTW_INV_MAC_REPEAT, & toks[i].string );
 						  return 0;
 				}
 			}
 			continue;
 		}
 
-		self->curLine = toks[i]->line;
+		self->curLine = toks[i].line;
 		unit  = DMacroUnit_New();
-		DaoToken_Assign( unit->marker, toks[i] );
+		DaoToken_Assign( unit->marker, & toks[i] );
 		DArray_Append( group->units, (void*)unit );
 		switch( chs[0] ){
 		case '$' :
-			if( DString_FindMBS( toks[i]->string, "EXP", 0 ) == 1 ){
+			if( DString_FindMBS( & toks[i].string, "EXP", 0 ) == 1 ){
 				unit->type = DMACRO_EXP;
-			}else if( DString_FindMBS( toks[i]->string, "VAR", 0 ) == 1 ){
+			}else if( DString_FindMBS( & toks[i].string, "VAR", 0 ) == 1 ){
 				unit->type = DMACRO_VAR;
-			}else if( DString_FindMBS( toks[i]->string, "ID", 0 ) == 1 ){
+			}else if( DString_FindMBS( & toks[i].string, "ID", 0 ) == 1 ){
 				unit->type = DMACRO_ID;
-			}else if( DString_FindMBS( toks[i]->string, "OP", 0 ) == 1 ){
+			}else if( DString_FindMBS( & toks[i].string, "OP", 0 ) == 1 ){
 				unit->type = DMACRO_OP;
-			}else if( DString_FindMBS( toks[i]->string, "BL", 0 ) == 1 ){
+			}else if( DString_FindMBS( & toks[i].string, "BL", 0 ) == 1 ){
 				unit->type = DMACRO_BL;
-			}else if( DString_FindMBS( toks[i]->string, "IBL", 0 ) == 1 ){
+			}else if( DString_FindMBS( & toks[i].string, "IBL", 0 ) == 1 ){
 				unit->type = DMACRO_IBL;
 			}
 			break;
@@ -313,20 +312,20 @@ static int DaoParser_MakeMacroGroup( DaoParser *self,
 				default : break;
 				}
 				if( unit->marker->type == 0 ){
-					DaoParser_Error( self, DAO_CTW_INV_MAC_SPECTOK, toks[i]->string );
+					DaoParser_Error( self, DAO_CTW_INV_MAC_SPECTOK, & toks[i].string );
 					return 0;
 				}
 				unit->type = DMACRO_BR;
-				DString_SetMBS( unit->marker->string, chs+1 );
-				DString_Erase( unit->marker->string, unit->marker->string->size-1, 1 );
+				DString_SetMBS( & unit->marker->string, chs+1 );
+				DString_Erase( & unit->marker->string, unit->marker->string.size-1, 1 );
 			}
 		default : break;
 		}
-		if( i+1 < to && toks[i+1]->string->mbs[0] == '@' ){
-			char ch = toks[i+1]->string->mbs[1];
+		if( i+1 < to && toks[i+1].string.mbs[0] == '@' ){
+			char ch = toks[i+1].string.mbs[1];
 			if( ch != '@' ){
-				if( toks[i+1]->string->size != 2 || ch < '1' || ch >'9' ){
-					DaoParser_Error( self, DAO_CTW_INV_MAC_INDENT, toks[i+1]->string );
+				if( toks[i+1].string.size != 2 || ch < '1' || ch >'9' ){
+					DaoParser_Error( self, DAO_CTW_INV_MAC_INDENT, & toks[i+1].string );
 					return 0;
 				}
 				unit->indent = ch - '0';
@@ -337,7 +336,7 @@ static int DaoParser_MakeMacroGroup( DaoParser *self,
 	}
 	return 1;
 }
-static void DMacroGroup_AddStop( DMacroGroup *self, DArray *stops )
+static void DMacroGroup_AddStop( DMacroGroup *self, DaoLexer *stops )
 {
 	DMacroGroup *group;
 	daoint i, j;
@@ -348,12 +347,7 @@ static void DMacroGroup_AddStop( DMacroGroup *self, DArray *stops )
 			DMacroGroup_AddStop( group, stops );
 			if( group->repeat >= DMACRO_ZERO_OR_MORE ) break;
 		}else{
-			for(j=0; j<stops->size; j++){
-#if 0
-				//printf( "%s\n", stops->items.pString[j]->mbs );
-#endif
-				DArray_Append( unit->stops, stops->items.pString[j] );
-			}
+			DaoLexer_AppendTokens( unit->stops, stops );
 			break;
 		}
 	}
@@ -362,7 +356,7 @@ static void DMacroGroup_AddStop( DMacroGroup *self, DArray *stops )
  * A stopping token is defined as the content of a macro unit of type DMACRO_TOK.
  * XXX, also define stopping token by DMACRO_BR units?
  */
-static void DMacroGroup_SetStop( DMacroGroup *self, DArray *stops )
+static void DMacroGroup_SetStop( DMacroGroup *self, DaoLexer *stops )
 {
 	DMacroGroup *group;
 	daoint i, j;
@@ -375,27 +369,28 @@ static void DMacroGroup_SetStop( DMacroGroup *self, DArray *stops )
 		if( unit->type == DMACRO_GRP || unit->type == DMACRO_ALT ){
 			group = (DMacroGroup*) unit;
 			/* self->stops as temporary array: */
-			DArray_Assign( self->stops, stops );
+			DaoLexer_Assign( self->stops, stops );
 			/* recursive set stopping tokens for macro groups: */
 			DMacroGroup_SetStop( group, self->stops );
 			/* if the group has to be presented at least once,
 			 * no propagating the stopping tokens to the previous macro units. */
-			if( group->repeat > DMACRO_ZERO_OR_MORE ) DArray_Clear( stops );
+			if( group->repeat > DMACRO_ZERO_OR_MORE ) DaoLexer_Reset( stops );
 			/* add stopping token, why only one ? XXX */
-			if( group->stops->size >0) DArray_PushFront( stops, group->stops->items.pString[0] );
+			if( group->stops->tokens->size >0)
+				DaoLexer_InsertToken( stops, 0, group->stops->tokens->pod.tokens[0] );
 		}else if( unit->type == DMACRO_TOK ){
 			/*
 			   printf( "%s", unit->marker->mbs );
 			 */
-			DArray_Clear( stops );
+			DaoLexer_Reset( stops );
 			/* define a stopping token */
-			DArray_Append( stops, unit->marker );
-			DArray_Append( unit->stops, unit->marker );
+			DaoLexer_Append( stops, *unit->marker, NULL );
+			DaoLexer_Append( unit->stops, *unit->marker, NULL );
 		}else{
 			/*
 			   printf( "%s", unit->marker->mbs );
 			 */
-			for(j=0; j<stops->size; j++) DArray_Append( unit->stops, stops->items.pString[j] );
+			DaoLexer_AppendTokens( unit->stops, stops );
 		}
 		/*
 		   printf( " : %i;  ", unit->stops->size );
@@ -408,7 +403,7 @@ static void DMacroGroup_SetStop( DMacroGroup *self, DArray *stops )
 			DMacroGroup_AddStop( self, first->stops );
 		}
 	}
-	DArray_Assign( self->stops, stops );
+	DaoLexer_Assign( self->stops, stops );
 	/*
 	   printf( "group : %i\n", self->stops->size );
 	 */
@@ -423,10 +418,9 @@ static void DMacroGroup_FindVariables( DMacroGroup *self )
 		if( unit->type == DMACRO_GRP || unit->type == DMACRO_ALT ){
 			group = (DMacroGroup*) unit;
 			DMacroGroup_FindVariables( group );
-			for(j=0; j<group->variables->size; j++)
-				DArray_Append( self->variables, group->variables->items.pVoid[j] );
+			DaoLexer_AppendTokens( self->variables, group->variables );
 		}else if( unit->type >= DMACRO_VAR && unit->type <= DMACRO_IBL ){
-			DArray_Append( self->variables, (void*)unit->marker );
+			DaoLexer_Append( self->variables, *unit->marker, NULL );
 		}
 	}
 	/*
@@ -436,17 +430,17 @@ static void DMacroGroup_FindVariables( DMacroGroup *self )
 }
 int DaoParser_ParseMacro( DaoParser *self, int start )
 {
-	int rb1, rb2, i = start, N = self->tokens->size;
-	DaoToken **toks = self->tokens->items.pToken;
+	int rb1, rb2, i = start, N = self->codeLexer->tokens->size;
+	DaoToken *toks = self->codeLexer->tokens->pod.tokens;
 	DaoMacro *macro;
 	DString *lang = NULL;
-	DArray  *stops;
+	DaoLexer  *stops;
 	DMap  *markers;
 
 	if( start + 5 >= N ) return -1;
-	if( toks[start+1]->type != DTOK_LCB ){
-		lang = toks[start+1]->string;
-		if( toks[start+1]->type != DTOK_IDENTIFIER ){
+	if( toks[start+1].type != DTOK_LCB ){
+		lang = & toks[start+1].string;
+		if( toks[start+1].type != DTOK_IDENTIFIER ){
 			DaoParser_Error( self, DAO_TOKEN_NEED_NAME, lang );
 			return -1;
 		}
@@ -456,12 +450,12 @@ int DaoParser_ParseMacro( DaoParser *self, int start )
 		}
 		start += 1;
 	}
-	if( toks[start+1]->name != DTOK_LCB ) return -1;
+	if( toks[start+1].name != DTOK_LCB ) return -1;
 
-	self->curLine = toks[start]->line;
+	self->curLine = toks[start].line;
 	rb1 = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, -1 );
 	if( rb1 <0 || rb1 +3 >= N ) return -1;
-	if( toks[rb1+1]->name != DKEY_AS || toks[rb1+2]->name != DTOK_LCB ){
+	if( toks[rb1+1].name != DKEY_AS || toks[rb1+2].name != DTOK_LCB ){
 		DaoParser_Error( self, DAO_CTW_INV_MAC_DEFINE, NULL );
 		return -1;
 	}
@@ -469,7 +463,7 @@ int DaoParser_ParseMacro( DaoParser *self, int start )
 	if( rb2 <0 ) return -1;
 
 	/*
-	   for( i=start; i<rb2; i++ ) printf( "%s  ", toks[i]->string->mbs ); printf("\n");
+	   for( i=start; i<rb2; i++ ) printf( "%s  ", toks[i].string.mbs ); printf("\n");
 	 */
 
 	macro = DaoMacro_New();
@@ -481,9 +475,9 @@ int DaoParser_ParseMacro( DaoParser *self, int start )
 	if( macro->macroMatch->units->size >0 ){
 		DMacroUnit *unit = (DMacroUnit*) macro->macroMatch->units->items.pVoid[0];
 		if( unit->type != DMACRO_TOK )
-			DaoParser_Error( self, DAO_CTW_INV_MAC_FIRSTOK, toks[i]->string );
+			DaoParser_Error( self, DAO_CTW_INV_MAC_FIRSTOK, & toks[i].string );
 	}
-	if( toks[rb1+3]->line != toks[rb1+2]->line ) macro->macroApply->cpos = toks[rb1+3]->cpos;
+	if( toks[rb1+3].line != toks[rb1+2].line ) macro->macroApply->cpos = toks[rb1+3].cpos;
 	if( DaoParser_MakeMacroGroup( self, macro->macroApply, macro->macroApply, rb1+3, rb2 ) ==0 ){
 		DaoMacro_Delete( macro );
 		return -1;
@@ -491,36 +485,36 @@ int DaoParser_ParseMacro( DaoParser *self, int start )
 	markers = DMap_New(D_STRING,0);
 
 	for(i=start+2; i<rb1; i++){
-		if( toks[i]->string->mbs[0] == '$' ){
-			if( MAP_Find( markers, toks[i]->string ) != NULL ){
-				self->curLine = toks[i]->line;
-				DaoParser_Error( self, DAO_CTW_REDEF_MAC_MARKER, toks[i]->string );
+		if( toks[i].string.mbs[0] == '$' ){
+			if( MAP_Find( markers, & toks[i].string ) != NULL ){
+				self->curLine = toks[i].line;
+				DaoParser_Error( self, DAO_CTW_REDEF_MAC_MARKER, & toks[i].string );
 				return 0;
 			}
-			MAP_Insert( markers, toks[i]->string, 0 );
+			MAP_Insert( markers, & toks[i].string, 0 );
 		}
 	}
 	DMap_Clear( markers );
 	i = rb1+3;
-	if( DString_EQ( toks[start+2]->string, toks[rb1+3]->string ) ) i ++;
+	if( DString_EQ( & toks[start+2].string, & toks[rb1+3].string ) ) i ++;
 	while( i < rb2 ){
-		char ch = toks[i]->string->mbs[0];
+		char ch = toks[i].string.mbs[0];
 		if( ch != '$' && ch != '\\' && ch != '\'' ){
-			if( MAP_Find( markers, toks[i]->string ) == NULL ){
-				DArray_Append( macro->keyListApply, (void*)toks[i]->string );
-				MAP_Insert( markers, toks[i]->string, 0 );
+			if( MAP_Find( markers, & toks[i].string ) == NULL ){
+				DArray_Append( macro->keyListApply, (void*)& toks[i].string );
+				MAP_Insert( markers, & toks[i].string, 0 );
 			}
 		}
 		i ++;
 	}
 
-	stops = DArray_New(D_TOKEN);
+	stops = DaoLexer_New();
 	DMacroGroup_SetStop( macro->macroMatch, stops );
 	DMacroGroup_FindVariables( macro->macroMatch );
-	DArray_Clear( stops );
+	DaoLexer_Reset( stops );
 	DMacroGroup_SetStop( macro->macroApply, stops );
-	DaoNamespace_AddMacro( self->nameSpace, lang, toks[start+2]->string, macro );
-	DArray_Delete( stops );
+	DaoNamespace_AddMacro( self->nameSpace, lang, & toks[start+2].string, macro );
+	DaoLexer_Delete( stops );
 	DMap_Delete( markers );
 	return rb2;
 }
@@ -531,8 +525,8 @@ struct DMacroNode
 {
 	short       isLeaf;
 	short       level;
+	DaoLexer   *leaves; /* <DaoToken*> */
 	DArray     *nodes; /* <DMacroNode*> */
-	DArray     *leaves; /* <DaoToken*> */
 	DMacroNode *parent;
 	DMacroGroup *group;
 };
@@ -543,15 +537,15 @@ DMacroNode* DMacroNode_New( short leaf, short level )
 	self->isLeaf = leaf;
 	self->level = level;
 	self->nodes = DArray_New(0);
-	self->leaves = DArray_New(D_TOKEN);
+	self->leaves = DaoLexer_New();
 	self->parent = NULL;
 	self->group = NULL;
 	return self;
 }
 void DMacroNode_Delete( DMacroNode *self )
 {
+	DaoLexer_Delete( self->leaves );
 	DArray_Delete( self->nodes );
-	DArray_Delete( self->leaves );
 	dao_free( self );
 }
 
@@ -559,8 +553,8 @@ static void DMacroNode_Print( DMacroNode *self )
 {
 	daoint i;
 	printf( "{ %i lev=%i nodes=%llu: ", self->isLeaf, self->level, (unsigned long long)self->nodes->size );
-	for(i=0; i<self->leaves->size; i++)
-		printf( "%s, ", self->leaves->items.pToken[i]->string->mbs );
+	for(i=0; i<self->leaves->tokens->size; i++)
+		printf( "%s, ", self->leaves->tokens->pod.tokens[i].string.mbs );
 	for(i=0; i<self->nodes->size; i++){
 		printf( "\nnode" DAO_INT_FORMAT "\n", i );
 		DMacroNode_Print( (DMacroNode*)self->nodes->items.pVoid[i] );
@@ -599,7 +593,7 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 	DMacroUnit **units = (DMacroUnit**) group->units->items.pVoid;
 	DMacroUnit  *unit;
 	DMacroGroup *grp;
-	DaoToken **toks = self->tokens->items.pToken;
+	DaoToken *toks = self->codeLexer->tokens->pod.tokens;
 	DNode  *kwnode;
 	DMacroNode *node, *prev;
 	int M, N = group->units->size;
@@ -613,13 +607,14 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 
 	if( group->repeat != DMACRO_AUTO ){
 		level ++;
-		for(j=0,M=group->variables->size; j<M; j++){
-			kwnode = MAP_Find( tokMap, group->variables->items.pToken[j]->string );
+		for(j=0,M=group->variables->tokens->size; j<M; j++){
+			DString *string = & group->variables->tokens->pod.tokens[j].string;
+			kwnode = MAP_Find( tokMap, string );
 			prev = (DMacroNode*)( kwnode ? kwnode->value.pVoid : NULL );
 			node = DMacroNode_New( level==1, level );
 			node->group = group;
 			DArray_Append( all, node );
-			MAP_Insert( tokMap, group->variables->items.pToken[j]->string, node );
+			MAP_Insert( tokMap, string, node );
 			while( prev && prev->group != group->parent ) prev = prev->parent;
 			if( prev ){
 				node->parent = prev;
@@ -637,13 +632,13 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 		if( unit->type < DMACRO_GRP ) printf( "marker: %s\n", unit->marker->string->mbs );
 #endif
 		if( from <0 ) return -100;
-		if( from < end && idt && indent[idt] >=0 && toks[from]->cpos != indent[idt] ) return -22;
-		if( from < end && idt && indent[idt] < 0 ) indent[idt] = toks[from]->cpos;
+		if( from < end && idt && indent[idt] >=0 && toks[from].cpos != indent[idt] ) return -22;
+		if( from < end && idt && indent[idt] < 0 ) indent[idt] = toks[from].cpos;
 		switch( unit->type ){
 		case DMACRO_TOK :
 			if( from >= end ) return -100;
-			if( ! DaoToken_EQ( toks[from], unit->marker ) ) return -23;
-			switch( toks[from]->name ){
+			if( ! DaoToken_EQ( & toks[from], unit->marker ) ) return -23;
+			switch( toks[from].name ){
 			case DTOK_LB :
 				k = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, from, end );
 				break;
@@ -655,7 +650,7 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 				break;
 			default : break;
 			}
-			switch( toks[from]->name ){
+			switch( toks[from].name ){
 			case DTOK_LB :
 			case DTOK_LCB :
 			case DTOK_LSB :
@@ -671,7 +666,7 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 			break;
 		case DMACRO_BR :
 			if( from >= end ) return -100;
-			if( ! DaoToken_EQ( toks[from], unit->marker ) ) return -24;
+			if( ! DaoToken_EQ( & toks[from], unit->marker ) ) return -24;
 			from ++;
 			break;
 		case DMACRO_EXP :
@@ -686,9 +681,9 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 				j = DaoParser_ParseExpression( self, 0 );
 				if( j < 0 ) return -100;
 				j += 1;
-				min = j + unit->stops->size;
-				for(k=0,M=unit->stops->size; k<M; k++){
-					DaoToken *stop = unit->stops->items.pToken[k];
+				min = j + unit->stops->tokens->size;
+				for(k=0,M=unit->stops->tokens->size; k<M; k++){
+					DaoToken *stop = & unit->stops->tokens->pod.tokens[k];
 					m = DaoParser_FindOpenToken2( self, stop, from, end );
 #if 0
 					//printf( "searching: %i %s %i\n", j, stop->mbs, end );
@@ -700,19 +695,19 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 				if( min < j ) j = min;
 				break;
 			case DMACRO_ID :
-				if( toks[from]->type != DTOK_IDENTIFIER ) return -1;
+				if( toks[from].type != DTOK_IDENTIFIER ) return -1;
 				j = from +1;
 				break;
 			case DMACRO_OP :
-				if( toks[from]->name < DTOK_ADD || toks[from]->name > DTOK_DECR )
+				if( toks[from].name < DTOK_ADD || toks[from].name > DTOK_DECR )
 					return -1;
 				j = from +1;
 				break;
 			case DMACRO_BL :
 				j = end;
-				min = j + unit->stops->size;
-				for(k=0,M=unit->stops->size; k<M; k++){
-					DaoToken *stop = unit->stops->items.pToken[k];
+				min = j + unit->stops->tokens->size;
+				for(k=0,M=unit->stops->tokens->size; k<M; k++){
+					DaoToken *stop = & unit->stops->tokens->pod.tokens[k];
 					m = DaoParser_FindOpenToken2( self, stop, from, end );
 					/* printf( "searching: %i %s %i\n", j, stop->mbs, tokPos[j] ); */
 					if( m < min && m >=0 ) min = m;
@@ -722,13 +717,13 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 				j = min;
 				break;
 			case DMACRO_IBL :
-				k = toks[from]->line;
-				m = toks[from]->cpos;
+				k = toks[from].line;
+				m = toks[from].cpos;
 				j = from;
-				while( j > start && (int)toks[j-1]->line == k ) j -= 1;
-				if( j < from ) m = toks[j]->cpos + 1;
+				while( j > start && (int)toks[j-1].line == k ) j -= 1;
+				if( j < from ) m = toks[j].cpos + 1;
 				j = from + 1;
-				while( j < end && toks[j]->cpos >= m ) j += 1;
+				while( j < end && toks[j].cpos >= m ) j += 1;
 				/*
 				   printf( "end = %i, j = %i\n", end, j );
 				 */
@@ -739,16 +734,16 @@ static int DaoParser_MacroMatch( DaoParser *self, int start, int end,
 			 * key1 { key2 ( key3 A , key3 B, ) ; key2 ( key3 C, key3 D, ) ; }
 			 * { level_1: { level_2, isLeaf: { A, B } }, { level_2, isLeaf: { C, D } } }
 			 */
-			kwnode = MAP_Find( tokMap, unit->marker->string );
+			kwnode = MAP_Find( tokMap, & unit->marker->string );
 			prev = (DMacroNode*) kwnode->value.pVoid;
 			while( prev && prev->group != group ) prev = prev->parent;
 			node = DMacroNode_New( 1, level+1 );
 			node->group = group;
 			DArray_Append( all, node );
-			MAP_Insert( tokMap, unit->marker->string, node );
+			MAP_Insert( tokMap, & unit->marker->string, node );
 			node->parent = prev;
 			if( prev ) DArray_Append( prev->nodes, node );
-			for(k=from; k<j; k++) DArray_Append( node->leaves, toks[k] );
+			for(k=from; k<j; k++) DaoLexer_Append( node->leaves, toks[k], NULL );
 
 			/*
 			   DMacroNode_Print( node );
@@ -819,12 +814,12 @@ static DMacroNode* DMacroNode_FindLeaf( DMacroNode *self, DMap *check, int level
 	DMacroNode *node;
 	daoint j;
 	/* for variable not in a group */
-	if( self->level == level+1 && self->leaves->size && used ==NULL ) return self;
+	if( self->level == level+1 && self->leaves->tokens->size && used ==NULL ) return self;
 	for(j=0; j<self->nodes->size; j++){
 		node = (DMacroNode*) self->nodes->items.pVoid[j];
 		if( node->level == level+1 ){ /* leaf is a node inside of a node */
 			used = DMap_Find( check, node );
-			if( node->leaves->size && used == NULL ) return node;
+			if( node->leaves->tokens->size && used == NULL ) return node;
 		}
 		node = DMacroNode_FindLeaf( node, check, level );
 		if( node ) return node;
@@ -836,8 +831,8 @@ static int DMacroNode_LeavesAreEmpty( DMacroNode *self )
 	DMacroNode *node;
 	int empty = 1;
 	daoint j;
-	if( self->leaves->size ) return 0;
-	if( self->nodes->size ==0 && self->leaves->size ==0 ) return 1;
+	if( self->leaves->tokens->size ) return 0;
+	if( self->nodes->size ==0 && self->leaves->tokens->size ==0 ) return 1;
 	for(j=0; j<self->nodes->size; j++){
 		node = (DMacroNode*) self->nodes->items.pVoid[j];
 		if( DMacroNode_LeavesAreEmpty( node ) ==0 ){
@@ -856,7 +851,7 @@ static void DMacroNode_RemoveEmptyLeftBranch( DMacroNode *self, int level )
 		if( node->parent ) DArray_PopFront( node->parent->nodes );
 	}
 }
-static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
+static int DaoParser_MacroApply( DaoParser *self, DaoLexer *lexer,
 		DMacroGroup *group, DMap *tokMap, DMap *used,
 		int level, DString *tag, int pos0, int adjust )
 {
@@ -864,9 +859,9 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
 	DMacroUnit  *unit;
 	DMacroGroup *grp;
 	DMacroNode *node, *node2;
-	DArray *toks = DArray_New(D_TOKEN);
-	DString *mbs = DString_New(1);
-	DaoToken tk = {0,0,0,0,0,NULL};
+	DPlainArray *tokens = lexer->tokens;
+	DaoLexer *toks = DaoLexer_New();
+	DaoToken *tk = DaoToken_New();
 	DaoToken *tt = NULL;
 	DNode  *kwnode = NULL;
 	DMap *check = NULL;
@@ -878,12 +873,11 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
 	int start_wcs = -1;
 	int squote, dquote;
 
-	tk.string = mbs;
 	if( group->repeat != DMACRO_AUTO ) level ++;
 
 	for( i=0; i<N; i++ ){
 		unit = units[i];
-		if( tokens->size >0 ) pos0 = tokens->items.pToken[ tokens->size -1 ]->line;
+		if( tokens->size >0 ) pos0 = tokens->pod.tokens[ tokens->size -1 ].line;
 		self->curLine = pos0;
 		/*
 		   printf( "apply unit %i: %i\n", i, unit->type );
@@ -894,45 +888,45 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
 			dquote = unit->marker->type == DTOK_ESC_DQUO;
 			if( (squote && start_mbs >=0) || (dquote && start_wcs >=0) ){
 				int qstart = squote ? start_mbs : start_wcs;
-				tt = tokens->items.pToken[ qstart ];
+				tt = & tokens->pod.tokens[ qstart ];
 				for(j=qstart+1,M=tokens->size; j<M; j++){
-					DaoToken *jtok = tokens->items.pToken[j];
-					int t = j ? tokens->items.pToken[j-1]->type : 0;
+					DaoToken *jtok = & tokens->pod.tokens[j];
+					int t = j ? tokens->pod.tokens[j-1].type : 0;
 					if( t == DTOK_IDENTIFIER && jtok->type == t )
-						DString_AppendChar( tt->string, ' ' );
-					DString_Append( tt->string, jtok->string );
+						DaoLexer_AppendTokenChar( lexer, tt, ' ' );
+					DaoLexer_AppendTokenString( lexer, tt, & jtok->string );
 				}
 				if( squote ){
-					DString_AppendChar( tt->string, '\'' );
-					DArray_Erase( tokens, start_mbs+1, tokens->size );
+					DaoLexer_AppendTokenChar( lexer, tt, '\'' );
+					DaoLexer_EraseTokens( lexer, start_mbs+1, tokens->size );
 				}else{
-					DString_AppendChar( tt->string, '\"' );
-					DArray_Erase( tokens, start_wcs+1, tokens->size );
+					DaoLexer_AppendTokenChar( lexer, tt, '\"' );
+					DaoLexer_EraseTokens( lexer, start_wcs+1, tokens->size );
 				}
 				start_mbs = -1;
 				break;
 			}else if( squote ){
 				start_mbs = tokens->size;
-				DArray_Append( tokens, unit->marker );
-				tt = tokens->items.pToken[ start_mbs ];
+				DaoLexer_Append( lexer, *unit->marker, NULL );
+				tt = & tokens->pod.tokens[ start_mbs ];
 				tt->type = tt->name = DTOK_MBS;
-				DString_SetMBS( tt->string, "\'" );
+				DaoLexer_SetTokenMBString( lexer, tt, "\'" );
 				break;
 			}else if( dquote ){
 				start_wcs = tokens->size;
-				DArray_Append( tokens, unit->marker );
-				tt = tokens->items.pToken[ start_wcs ];
+				DaoLexer_Append( lexer, *unit->marker, NULL );
+				tt = & tokens->pod.tokens[ start_wcs ];
 				tt->type = tt->name = DTOK_WCS;
-				DString_SetMBS( tt->string, "\"" );
+				DaoLexer_SetTokenMBString( lexer, tt, "\"" );
 				break;
 			}
-			DArray_Append( tokens, unit->marker );
-			tokens->items.pToken[ tokens->size-1 ]->cpos += adjust;
+			DaoLexer_Append( lexer, *unit->marker, NULL );
+			tokens->pod.tokens[ tokens->size-1 ].cpos += adjust;
 			break;
 		case DMACRO_VAR :
-			DaoToken_Assign( & tk, unit->marker );
-			DString_Append( mbs, tag );
-			DArray_Append( tokens, & tk );
+			DaoToken_Assign( tk, unit->marker );
+			DString_Append( & tk->string, tag );
+			DaoLexer_Append( lexer, *tk, NULL );
 			break;
 		case DMACRO_EXP :
 		case DMACRO_ID :
@@ -940,9 +934,9 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
 		case DMACRO_BL :
 		case DMACRO_IBL :
 
-			kwnode = MAP_Find( tokMap, unit->marker->string );
+			kwnode = MAP_Find( tokMap, & unit->marker->string );
 			if( kwnode ==NULL ){
-				DaoParser_Error( self, DAO_CTW_UNDEF_MAC_MARKER, unit->marker->string );
+				DaoParser_Error( self, DAO_CTW_UNDEF_MAC_MARKER, & unit->marker->string );
 				goto Failed;
 			}
 			node = (DMacroNode*) kwnode->value.pVoid;
@@ -967,9 +961,9 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
 				   DMacroNode_Print( node2 );
 				   printf( "\n" );
 				 */
-				DArray_InsertArray( tokens, tokens->size, node2->leaves, 0, -1 );
+				DaoLexer_AppendTokens( lexer, node2->leaves );
 				DMap_Insert( check, node2, NULL );
-				/* DArray_Clear( node2->leaves ); */
+				/* DaoLexer_Reset( node2->leaves ); */
 			}else{
 				DMacroNode_RemoveEmptyLeftBranch( node, level );
 				goto Failed;
@@ -978,7 +972,7 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
 		case DMACRO_GRP :
 		case DMACRO_ALT :
 			grp = (DMacroGroup*) unit;
-			DArray_Clear( toks );
+			DaoLexer_Reset( toks );
 			j = DaoParser_MacroApply( self, toks, grp, tokMap, used, level, tag, pos0, adjust );
 			switch( grp->repeat ){
 			case DMACRO_AUTO :
@@ -987,44 +981,34 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
 				repeated = (j>0);
 				if( j >=0 ){
 					gid = i;
-					DArray_InsertArray( tokens, tokens->size, toks, 0, -1 );
+					DaoLexer_AppendTokens( lexer, toks );
 				}
 				break;
 			case DMACRO_ZERO_OR_ONE :
 				gid = i;
 				repeated = (j>0);
-				if( j >=0 ){
-					DArray_InsertArray( tokens, tokens->size, toks, 0, -1 );
-				}
+				if( j >=0 ) DaoLexer_AppendTokens( lexer, toks );
 				break;
 			case DMACRO_ZERO_OR_MORE :
 				gid = i;
 				repeated = (j>0);
-				if( j >=0 ){
-					DArray_InsertArray( tokens, tokens->size, toks, 0, -1 );
-				}
+				if( j >=0 ) DaoLexer_AppendTokens( lexer, toks );
 				while( j >0 ){
-					DArray_Clear( toks );
+					DaoLexer_Reset( toks );
 					j = DaoParser_MacroApply( self, toks, grp, tokMap, used, level, tag, pos0, adjust );
-					if( j >0 ){
-						DArray_InsertArray( tokens, tokens->size, toks, 0, -1 );
-					}
+					if( j > 0 ) DaoLexer_AppendTokens( lexer, toks );
 				}
 				break;
 			case DMACRO_ONE_OR_MORE :
 				if( j <0 && group->type != DMACRO_ALT ) goto Failed;
 				repeated = (j>0);
-				if( j >=0 ){
-					DArray_InsertArray( tokens, tokens->size, toks, 0, -1 );
-				}
+				if( j >=0 ) DaoLexer_AppendTokens( lexer, toks );
 
 				while( j >0 ){
 					gid = i;
-					DArray_Clear( toks );
+					DaoLexer_Reset( toks );
 					j = DaoParser_MacroApply( self, toks, grp, tokMap, used, level, tag, pos0, adjust );
-					if( j >0 ){
-						DArray_InsertArray( tokens, tokens->size, toks, 0, -1 );
-					}
+					if( j > 0 ) DaoLexer_AppendTokens( lexer, toks );
 				}
 				break;
 			}
@@ -1035,18 +1019,18 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
 	}
 	if( group->repeat != DMACRO_AUTO ) level --;
 	if( group->type == DMACRO_ALT && gid <0 ) goto Failed;
-	DString_Delete( mbs );
-	DArray_Delete( toks );
+	DaoLexer_Delete( toks );
+	DaoToken_Delete( tk );
 	return repeated;
 Failed :
-	DString_Delete( mbs );
-	DArray_Delete( toks );
+	DaoLexer_Delete( toks );
+	DaoToken_Delete( tk );
 	return -1;
 }
 int DaoParser_MacroTransform( DaoParser *self, DaoMacro *macro, int start, int tag )
 {
 	DString *mbs = DString_New(1);
-	DArray *toks = DArray_New(D_TOKEN);
+	DaoLexer *toks = DaoLexer_New();
 	DArray *all = DArray_New(0);
 	DMap *tokMap = DMap_New(D_STRING,0);
 	DMap *used = DMap_New(0,D_MAP);
@@ -1060,9 +1044,9 @@ int DaoParser_MacroTransform( DaoParser *self, DaoMacro *macro, int start, int t
 	DString_SetMBS( mbs, buf );
 	for(i=0; i<10; i++) indent[i] = -1;
 
-	j = DaoParser_MacroMatch( self, start, self->tokens->size, macro->macroMatch, tokMap, lev, all, indent );
-	/*
+	j = DaoParser_MacroMatch( self, start, self->codeLexer->tokens->size, macro->macroMatch, tokMap, lev, all, indent );
 	   printf( "MacroTransform %i\n", j );
+	/*
 	 */
 	if( j <0 ) goto Failed;
 
@@ -1073,36 +1057,38 @@ int DaoParser_MacroTransform( DaoParser *self, DaoMacro *macro, int start, int t
 	}
 
 	lev = 0;
-	p0 = self->tokens->items.pToken[start]->line;
-	adjust = self->tokens->items.pToken[start]->cpos - macro->macroApply->cpos;
+	p0 = self->codeLexer->tokens->pod.tokens[start].line;
+	adjust = self->codeLexer->tokens->pod.tokens[start].cpos - macro->macroApply->cpos;
 	if( DaoParser_MacroApply( self, toks, macro->macroApply, tokMap, used, lev, mbs, p0, adjust ) <0 )
 		goto Failed;
 
 	/*
-	   for(i=0; i<toks->size; i++) printf( "%s  ", toks->items.pToken[i]->string->mbs );
-	   printf( "\n" );
 	 */
-	DArray_Erase( self->tokens, start, j-start );
-	DArray_InsertArray( self->tokens, start, toks, 0, -1 );
+	   for(i=0; i<toks->tokens->size; i++) printf( "%s  ", toks->tokens->pod.tokens[i].string.mbs );
+	   printf( "\n" );
+	DaoLexer_EraseTokens( self->codeLexer, start, j-start );
+	DaoLexer_InsertTokens( self->codeLexer, start, toks );
+	   for(i=0; i<self->codeLexer->tokens->size; i++) printf( "%s  ", self->codeLexer->tokens->pod.tokens[i].string.mbs );
+	   printf( "\n" );
 	/*
 	   for(i=0; i<toks->size; i++){
 	   DArray_Insert( self->tokStr, (void*)toks->items.pString[i], start+i );
 	   DArray_Insert( self->tokPos, (void*)poss->items.pInt[i], start+i );
 	   }
 	 */
-	j = toks->size;
+	j = toks->tokens->size;
 	DString_Delete( mbs );
 	for(i=0; i<all->size; i++) DMacroNode_Delete( (DMacroNode*) all->items.pVoid[i] );
+	DaoLexer_Delete( toks );
 	DArray_Delete( all );
-	DArray_Delete( toks );
 	DMap_Delete( tokMap );
 	DMap_Delete( used );
 	return start + j;
 Failed :
 	DString_Delete( mbs );
 	for(i=0; i<all->size; i++) DMacroNode_Delete( (DMacroNode*) all->items.pVoid[i] );
+	DaoLexer_Delete( toks );
 	DArray_Delete( all );
-	DArray_Delete( toks );
 	DMap_Delete( tokMap );
 	DMap_Delete( used );
 	return -1;
@@ -1112,29 +1098,29 @@ Failed :
 extern DOper daoArithOper[DAO_NOKEY2];
 static int DaoParser_CurrentTokenType( DaoParser *self )
 {
-	if( self->curToken >= self->tokens->size ) return 0;
-	return self->tokens->items.pToken[self->curToken]->type;
+	if( self->curToken >= self->codeLexer->tokens->size ) return 0;
+	return self->codeLexer->tokens->pod.tokens[self->curToken].type;
 }
 static int DaoParser_CurrentTokenName( DaoParser *self )
 {
-	if( self->curToken >= self->tokens->size ) return 0;
-	return self->tokens->items.pToken[self->curToken]->name;
+	if( self->curToken >= self->codeLexer->tokens->size ) return 0;
+	return self->codeLexer->tokens->pod.tokens[self->curToken].name;
 }
 static int DaoParser_NextTokenName( DaoParser *self )
 {
-	if( (self->curToken+1) >= self->tokens->size ) return 0;
-	return self->tokens->items.pToken[self->curToken+1]->name;
+	if( (self->curToken+1) >= self->codeLexer->tokens->size ) return 0;
+	return self->codeLexer->tokens->pod.tokens[self->curToken+1].name;
 }
 static int DaoParser_GetOperPrecedence( DaoParser *self )
 {
 	int tki;
 	DOper oper;
-	DaoToken **tokens = self->tokens->items.pToken;
-	if( self->curToken >= self->tokens->size ) return -1;
-	tki = tokens[self->curToken]->name;
-	if( (self->curToken+1) < self->tokens->size ){
-		DaoToken *t1 = tokens[self->curToken];
-		DaoToken *t2 = tokens[self->curToken+1];
+	DaoToken *tokens = self->codeLexer->tokens->pod.tokens;
+	if( self->curToken >= self->codeLexer->tokens->size ) return -1;
+	tki = tokens[self->curToken].name;
+	if( (self->curToken+1) < self->codeLexer->tokens->size ){
+		DaoToken *t1 = & tokens[self->curToken];
+		DaoToken *t2 = & tokens[self->curToken+1];
 		if( t1->line == t2->line && (t1->cpos+1) == t2->cpos ){
 			/* check for operators: <<, >>, <=, >= */
 			int newtok = 0;
@@ -1161,14 +1147,14 @@ static int DaoParser_ParsePrimary( DaoParser *self, int stop );
 static int DaoParser_ParseExpression( DaoParser *self, int stop );
 static int DaoParser_ParseParenthesis( DaoParser *self )
 {
-	DaoToken **tokens = self->tokens->items.pToken;
+	DaoToken *tokens = self->codeLexer->tokens->pod.tokens;
 	int start = self->curToken;
-	int end = self->tokens->size-1;
+	int end = self->codeLexer->tokens->size-1;
 	int rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
 	int comma = DaoParser_FindOpenToken( self, DTOK_COMMA, start+1, end, 0 );
 	int newpos = -1;
 
-	if( rb > 0 && rb < end && tokens[start+1]->type == DTOK_IDENTIFIER ){
+	if( rb > 0 && rb < end && tokens[start+1].type == DTOK_IDENTIFIER ){
 		self->curToken = rb + 1;
 		newpos = DaoParser_ParsePrimary( self, 0 );
 		if( newpos >= 0 ) return newpos;//XXX
@@ -1187,21 +1173,21 @@ static int DaoParser_ParseParenthesis( DaoParser *self )
 }
 static int DaoParser_ParsePrimary( DaoParser *self, int stop )
 {
-	DaoToken **tokens = self->tokens->items.pToken;
+	DaoToken *tokens = self->codeLexer->tokens->pod.tokens;
 	unsigned char tkn, tki, tki2;
-	int size = self->tokens->size;
+	int size = self->codeLexer->tokens->size;
 	int start = self->curToken;
 	int rb, end = size - 1;
 
 	/*
-	   for(i=start;i<=end;i++) printf("%s  ", tokens[i]->string->mbs);printf("\n");
+	   for(i=start;i<=end;i++) printf("%s  ", tokens[i].string->mbs);printf("\n");
 	 */
 	if( start >= size ) return -1;
-	tkn = tokens[start]->type;
-	tki = tokens[start]->name;
+	tkn = tokens[start].type;
+	tki = tokens[start].name;
 	tki2 = DaoParser_NextTokenName( self );
 	if( tki == DTOK_IDENTIFIER && tki2 == DTOK_FIELD ){
-		DString *field = tokens[start]->string;
+		DString *field = & tokens[start].string;
 		if( DaoToken_IsValidName( field->mbs, field->size ) ==0 ) return -1;
 		self->curToken += 2;
 		return DaoParser_ParseExpression( self, stop );
@@ -1229,7 +1215,7 @@ static int DaoParser_ParsePrimary( DaoParser *self, int stop )
 		if( DaoParser_CurrentTokenName( self ) != DTOK_LB ) return -1;
 		rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, self->curToken, end );
 		if( rb < 0 || (rb+2) > end ) return -1;
-		if( tokens[rb+1]->type != DTOK_LCB ) return -1;
+		if( tokens[rb+1].type != DTOK_LCB ) return -1;
 		rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, rb+1, end );
 		if( rb < 0 ) return -1;
 		start = rb + 1;
@@ -1249,13 +1235,13 @@ static int DaoParser_ParsePrimary( DaoParser *self, int stop )
 	}
 	if( start < 0 ) return -1;
 	self->curToken = start;
-	while( self->curToken < self->tokens->size ){
+	while( self->curToken < self->codeLexer->tokens->size ){
 		start = self->curToken;
 		switch( DaoParser_CurrentTokenName( self ) ){
 		case DTOK_LB :
 			rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
 			if( rb < 0 ) return -1;
-			if( (rb+1) <= end && tokens[rb+1]->name == DKEY__INIT ) rb += 1;
+			if( (rb+1) <= end && tokens[rb+1].name == DKEY__INIT ) rb += 1;
 			self->curToken = rb + 1;
 			break;
 		case DTOK_LCB :
@@ -1289,7 +1275,7 @@ static int DaoParser_ParseUnary( DaoParser *self, int stop )
 }
 static int DaoParser_ParseOperator( DaoParser *self, int LHS, int prec, int stop )
 {
-	DaoToken **tokens = self->tokens->items.pToken;
+	DaoToken *tokens = self->codeLexer->tokens->pod.tokens;
 	int oper, RHS, thisPrec, nextPrec;
 
 	while(1){
@@ -1298,7 +1284,7 @@ static int DaoParser_ParseOperator( DaoParser *self, int LHS, int prec, int stop
 		thisPrec = DaoParser_GetOperPrecedence( self );
 		if(thisPrec < prec) return LHS;
 
-		oper = daoArithOper[ tokens[self->curToken]->name ].oper;
+		oper = daoArithOper[ tokens[self->curToken].name ].oper;
 		self->curToken += 1; /* eat the operator */
 
 		RHS = DaoParser_ParseUnary( self, stop );

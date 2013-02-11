@@ -842,7 +842,9 @@ void DaoInitLexTable()
 
 DaoToken* DaoToken_New()
 {
-	return (DaoToken*) dao_calloc( 1, sizeof(DaoToken) );
+	DaoToken *self = (DaoToken*) dao_calloc( 1, sizeof(DaoToken) );
+	DString_Init( & self->string, 1 );
+	return self;
 }
 DaoToken DaoToken_Init( int type, int name )
 {
@@ -1009,6 +1011,7 @@ void DaoLexer_Assign( DaoLexer *self, DaoLexer *other )
 	DString_Assign( self->source, other->source );
 	DaoLexer_UpdateTokenStrings( self );
 }
+#if 0
 void DaoLexer_AppendTokens( DaoLexer *self, DaoLexer *other )
 {
 	int i;
@@ -1016,6 +1019,7 @@ void DaoLexer_AppendTokens( DaoLexer *self, DaoLexer *other )
 		DaoLexer_Append( self, other->tokens->pod.tokens[i], NULL );
 	}
 }
+#endif
 
 
 DaoToken* DaoLexer_AppendToken( DaoLexer *self, int name, int line, const char *data )
@@ -1349,8 +1353,20 @@ void DaoLexer_EraseTokens( DaoLexer *self, int at, int count )
 	/* DaoToken::string.mbs may not be stored in DaoLexer::source consecutively,
 	// otherwise, something can be done on DaoLexer::source to free some memory. */
 }
+void DaoLexer_InsertToken( DaoLexer *self, int at, DaoToken token )
+{
+	int bufsize = self->source->bufSize;
+	DaoToken *tok = (DaoToken*) DPlainArray_Insert( self->tokens, at, 1 );
+	tok->offset = self->source->size + 1;
+	DString_AppendChar( self->source, '\0' );
+	DString_Append( self->source, & token.string );
+	tok->string.mbs = self->source->mbs + tok->offset;
+	tok->string.wcs = NULL;
+	if( self->source->bufSize != bufsize ) DaoLexer_UpdateTokenStrings( self );
+}
 void DaoLexer_InsertTokens( DaoLexer *self, int at, DaoLexer *lexer )
 {
+	int bufsize = self->source->bufSize;
 	int i, n = lexer->tokens->size;
 	DaoToken *tokens = (DaoToken*) DPlainArray_Insert( self->tokens, at, n );
 	for(i=0; i<n; ++i){
@@ -1358,7 +1374,49 @@ void DaoLexer_InsertTokens( DaoLexer *self, int at, DaoLexer *lexer )
 		tokens[i].offset = self->source->size + 1;
 		DString_AppendChar( self->source, '\0' );
 		DString_Append( self->source, & lexer->tokens->pod.tokens[i].string );
+		tokens[i].string.mbs = self->source->mbs + tokens[i].offset;
+		tokens[i].string.wcs = NULL;
 	}
+	if( self->source->bufSize != bufsize ) DaoLexer_UpdateTokenStrings( self );
+}
+void DaoLexer_AppendTokens( DaoLexer *self, DaoLexer *lexer )
+{
+	DaoLexer_InsertTokens( self, self->tokens->size, lexer );
+}
+void DaoLexer_AppendTokenChar( DaoLexer *self, DaoToken *token, char ch )
+{
+	int bufsize = self->source->bufSize;
+	token->offset = self->source->size + 1;
+	DString_AppendChar( self->source, '\0' );
+	DString_Append( self->source, & token->string );
+	DString_AppendChar( self->source, ch );
+	if( self->source->bufSize != bufsize ) DaoLexer_UpdateTokenStrings( self );
+}
+void DaoLexer_AppendTokenString( DaoLexer *self, DaoToken *token, DString *s )
+{
+	/* token->string is a part of self->source; s could be a part of self->source; */
+	DString *tmp = DString_New(1);
+	int bufsize = self->source->bufSize;
+	token->offset = self->source->size + 1;
+	DString_Append( tmp, & token->string );
+	DString_Append( tmp, s );
+	DString_AppendChar( self->source, '\0' );
+	DString_Append( self->source, tmp );
+	DString_Delete( tmp );
+	if( self->source->bufSize != bufsize ) DaoLexer_UpdateTokenStrings( self );
+}
+void DaoLexer_SetTokenMBString( DaoLexer *self, DaoToken *token, const char *s )
+{
+	int bufsize = self->source->bufSize;
+	int len = strlen( s );
+	if( len <= token->string.size ){
+		DString_SetMBS( & token->string, s );
+		return;
+	}
+	token->offset = self->source->size + 1;
+	DString_AppendChar( self->source, '\0' );
+	DString_AppendDataMBS( self->source, s, len );
+	if( self->source->bufSize != bufsize ) DaoLexer_UpdateTokenStrings( self );
 }
 
 void DaoLexer_AnnotateCode( DaoLexer *self, DaoVmCodeX vmc, DString *annot, int max )

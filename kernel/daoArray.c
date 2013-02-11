@@ -513,11 +513,11 @@ void* DPlainArray_Insert( DPlainArray *self, int i, int n )
 	if( i < 0 || i > self->size ) return NULL;
 
 	DPlainArray_Reserve( self, self->size + n );
-	self->size += n;
 
 	data = self->pod.data + i * self->stride;
-	memmove( data, data + n*self->stride, (self->size - i) *self->stride );
+	memmove( data + n*self->stride, data, (self->size - i) *self->stride );
 
+	self->size += n;
 	return data;
 }
 void* DPlainArray_Push( DPlainArray *self )

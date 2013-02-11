@@ -80,9 +80,6 @@ struct DaoParser
 	int integerOne;
 	int imaginaryOne;
 
-	int cmpOptions;
-	int exeOptions;
-
 	DaoRoutine *routine;
 	DString    *routName;
 
