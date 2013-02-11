@@ -187,7 +187,7 @@ void DString_Detach( DString *self, int bufsize )
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & mutex_string_sharing );
 #endif
-	if( data[0] >1 ){
+	if( data[0] >1 || data == dao_string ){
 		data[0] -= 1;
 		chsize = self->mbs ? sizeof(char) : sizeof(wchar_t);
 		self->bufSize = bufsize + 1;
