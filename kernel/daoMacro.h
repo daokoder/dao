@@ -63,7 +63,7 @@ struct DMacroUnit
 	uchar_t     dummy1;
 	uchar_t     dummy2;
 	uchar_t     indent;
-	DaoLexer   *stops;
+	DArray     *stops;
 	DaoToken   *marker;
 };
 
@@ -75,9 +75,9 @@ struct DMacroGroup
 	uchar_t       repeat;
 	uchar_t       cpos;
 	uchar_t       indent;
-	DaoLexer     *stops;
-	DaoLexer     *variables; /* DArray<DaoToken*> */
+	DArray       *stops;
 	DArray       *units; /* DArray<DMacroUnit*> */
+	DArray       *variables; /* DArray<DaoToken*> */
 	DMacroGroup  *parent;
 };
 

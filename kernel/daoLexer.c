@@ -840,30 +840,51 @@ void DaoInitLexTable()
 	daoArithOper[ DTOK_POW ]    = doper( DAO_OPER_POW,      0, 0, 2 );
 }
 
+typedef struct DaoToken2{ DaoToken token; DString string; } DaoToken2;
+
+extern void DString_DeleteData( DString *self );
+
 DaoToken* DaoToken_New()
 {
 	DaoToken *self = (DaoToken*) dao_calloc( 1, sizeof(DaoToken) );
 	DString_Init( & self->string, 1 );
 	return self;
 }
-DaoToken DaoToken_Init( int type, int name )
-{
-	DaoToken token = {0,0,0,0,0,0,{0,0,0,0,NULL,NULL}};
-	token.type = type;
-	token.name = name;
-	return token;
-}
 void DaoToken_Delete( DaoToken *self )
 {
 	DString_DeleteData( & self->string );
 	dao_free( self );
 }
-void DaoToken_Set( DaoToken *self, int type, int name, int index )
+DaoToken* DaoToken_Copy( DaoToken *self )
+{
+	DaoToken* copy = DaoToken_New();
+	copy->type = self->type;
+	copy->name = self->name;
+	copy->cpos = self->cpos;
+	copy->line = self->line;
+	copy->index = self->index;
+	DString_Assign( & copy->string, & self->string );
+	return copy;
+}
+void DaoToken_Set( DaoToken *self, int type, int name, int index, const char *s )
 {
 	if( name == DTOK_ID_THTYPE || name == DTOK_ID_SYMBOL ) type = DTOK_IDENTIFIER;
 	self->type = type;
 	self->name = name;
 	self->index = index;
+	if( s ) DString_SetMBS( & self->string, s );
+}
+void DaoTokens_Append( DArray *self, int name, int line, const char *data )
+{
+	DaoToken token = { 0, 0, 0, 0, 0 };
+
+	token.type = token.name = name;
+	token.line = line;
+	if( name > DAO_NOKEY1 ) token.type = DTOK_IDENTIFIER;
+	if( name == DTOK_ID_THTYPE || name == DTOK_ID_SYMBOL ) token.type = DTOK_IDENTIFIER;
+	token.string = DString_WrapMBS( data );
+
+	DArray_Append( self, & token );
 }
 
 const char* DaoToken_NameToString( unsigned char name )
@@ -975,101 +996,12 @@ int DaoToken_Check( const char *src, int size, int *length )
 	if( length ) *length = it < size ? it + 1 : size;
 	return type;
 }
-
-
-
-DaoLexer* DaoLexer_New()
+int DaoTokens_Tokenize( DArray *tokens, const char *src, int replace, int comment, int space )
 {
-	DaoLexer *self = (DaoLexer*) dao_calloc( 1, sizeof(DaoLexer) );
-	DaoValue_Init( self, DAO_LEXER );
-	self->source = DString_New(1);
-	self->tokens = DPlainArray_New( sizeof(DaoToken) );
-	return self;
-}
-void DaoLexer_Delete( DaoLexer *self )
-{
-	DPlainArray_Delete( self->tokens );
-	DString_Delete( self->source );
-	dao_free( self );
-}
-void DaoLexer_Reset( DaoLexer *self )
-{
-	DString_Reset( self->source, 0 );
-	DPlainArray_ResetSize( self->tokens, 0 );
-}
-void DaoLexer_UpdateTokenStrings( DaoLexer *self )
-{
-	int i;
-	for(i=0; i<self->tokens->size; ++i){
-		DaoToken *tok = self->tokens->pod.tokens + i;
-		tok->string.mbs = self->source->mbs + tok->offset;
-	}
-}
-void DaoLexer_Assign( DaoLexer *self, DaoLexer *other )
-{
-	DPlainArray_Assign( self->tokens, other->tokens );
-	DString_Assign( self->source, other->source );
-	DaoLexer_UpdateTokenStrings( self );
-}
-#if 0
-void DaoLexer_AppendTokens( DaoLexer *self, DaoLexer *other )
-{
-	int i;
-	for(i=0; i<other->tokens->size; ++i){
-		DaoLexer_Append( self, other->tokens->pod.tokens[i], NULL );
-	}
-}
-#endif
-
-
-DaoToken* DaoLexer_AppendToken( DaoLexer *self, int name, int line, const char *data )
-{
-	DString string = DString_WrapMBS( data );
-	DaoToken token = DaoToken_Init( name, name );
-
-	token.line = line;
-	if( name > DAO_NOKEY1 ) token.type = DTOK_IDENTIFIER;
-	if( name == DTOK_ID_THTYPE || name == DTOK_ID_SYMBOL ) token.type = DTOK_IDENTIFIER;
-
-	return DaoLexer_Append( self, token, & string );
-}
-DaoToken* DaoLexer_Append( DaoLexer *self, DaoToken tok, DString *string )
-{
-	int i, bufsize = self->source->bufSize;
-	DaoToken *token = DPlainArray_PushToken( self->tokens, tok );
-	if( string == NULL ) string = & tok.string;
-	token->offset = self->source->size + 1;
-	DString_AppendChar( self->source, '\0' );
-	DString_Append( self->source, string );
-	token->string.size = token->string.bufSize = string->size;
-	token->string.mbs = self->source->mbs + token->offset;
-	token->string.wcs = NULL;
-	if( self->source->bufSize != bufsize ) DaoLexer_UpdateTokenStrings( self );
-	return token;
-}
-DaoToken* DaoLexer_Append2( DaoLexer *self, DaoToken token, const char *string )
-{
-	if( string ){
-		DString s = DString_WrapMBS( string );
-		return DaoLexer_Append( self, token, & s );
-	}
-	return DaoLexer_Append( self, token, NULL );
-}
-DaoToken* DaoLexer_CopyToken( DaoLexer *self, DaoToken token )
-{
-	DaoToken* copy = (DaoToken*) dao_malloc( sizeof(DaoToken) );
-	memcpy( copy, & token, sizeof(DaoToken) );
-	copy->string.mbs = (char*) dao_malloc( (token.string.size + 1)*sizeof(char) );
-	memcpy( copy->string.mbs, token.string.mbs, (token.string.size + 1)*sizeof(char) );
-	return copy;
-}
-
-int DaoLexer_Tokenize( DaoLexer *self, const char *src, int replace, int comment, int space )
-{
-	DaoToken lextok = DaoToken_Init(0,0);
 	DString *source = DString_New(1);
-	DString *literal = DString_New(1);
 	DArray *lexenvs = DArray_New(0);
+	DaoToken *token = DaoToken_New();
+	DString *literal = & token->string;
 	char ch, *ss, hex[11] = "0x00000000";
 	int srcSize = (int)strlen( src );
 	int old=0, state = TOK_START;
@@ -1137,22 +1069,22 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int replace, int comment
 		}
 		DString_Delete( wcs );
 	}
-	DaoLexer_Reset( self );
+	DArray_Clear( tokens );
 
 	DArray_PushFront( lexenvs, (void*)(daoint)LEX_ENV_NORMAL );
 	it = 0;
-	lextok.cpos = 0;
+	token->cpos = 0;
 	while( it < srcSize ){
 #if 0
 		printf( "tok: %i %i  %i  %c    %s\n", srcSize, it, ch, ch, literal->mbs );
 #endif
-		lextok.type = state;
-		lextok.name = 0;
-		lextok.line = line;
+		token->type = state;
+		token->name = 0;
+		token->line = line;
 		ch = src[it];
 		cpos += ch == '\t' ? daoConfig.tabspace : 1;
 		if( ch == '\n' ) cpos = 0, line ++;
-		if( literal->size == 0 ) lextok.cpos = cpos;
+		if( literal->size == 0 ) token->cpos = cpos;
 		if( state == TOK_STRING_MBS || state == TOK_STRING_WCS ){
 			if( ch == '\\' ){
 				it ++;
@@ -1210,14 +1142,14 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int replace, int comment
 			}else if( ch == '\'' && state == TOK_STRING_MBS ){
 				DString_AppendChar( literal, ch );
 				state = TOK_RESTART;
-				lextok.type = lextok.name = DTOK_MBS;
-				DaoLexer_Append( self, lextok, literal );
+				token->type = token->name = DTOK_MBS;
+				DArray_Append( tokens, token );
 				DString_Clear( literal );
 			}else if( ch == '\"' && state == TOK_STRING_WCS ){
 				DString_AppendChar( literal, ch );
 				state = TOK_RESTART;
-				lextok.type = lextok.name = DTOK_WCS;
-				DaoLexer_Append( self, lextok, literal );
+				token->type = token->name = DTOK_WCS;
+				DArray_Append( tokens, token );
 				DString_Clear( literal );
 			}else{
 				DString_AppendChar( literal, ch );
@@ -1225,15 +1157,15 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int replace, int comment
 		}else if( ch == ']' && state == TOK_VERBATIM ){
 			int len = srcSize - it - 1;
 			DString_AppendChar( literal, ']' );
-			lextok.type = lextok.name = DTOK_VBT_OPEN;
+			token->type = token->name = DTOK_VBT_OPEN;
 			if( (ss = strstr( src + it + 1, literal->mbs )) != NULL ){
 				len = (ss - src) - it - 1 + literal->size;
-				lextok.type = lextok.name = DTOK_VERBATIM;
+				token->type = token->name = DTOK_VERBATIM;
 			}
 			for(i=0; i<len; i++) if( src[it+1+i] == '\n' ) line += 1;
 			DString_AppendDataMBS( literal, src + it + 1, len );
 			state = TOK_RESTART;
-			DaoLexer_Append( self, lextok, literal );
+			DArray_Append( tokens, token );
 			DString_Clear( literal );
 			it += len;
 		}else if( lexenv == LEX_ENV_NORMAL ){
@@ -1249,13 +1181,13 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int replace, int comment
 			}
 			if( state >= TOK_END ){
 				DString_AppendChar( literal, ch );
-				lextok.type = lextok.name = daoTokenMap[ state ];
-				if( lextok.type == DTOK_ID_THTYPE || lextok.type == DTOK_ID_SYMBOL )
-					lextok.type = DTOK_IDENTIFIER;
-				if( space || comment || lextok.type != DTOK_COMMENT ){
-					if( isspace( literal->mbs[0] ) )
-						lextok.type = lextok.name = daoSpaceType[ (int)literal->mbs[0] ];
-					DaoLexer_Append( self, lextok, literal );
+				token->type = token->name = daoTokenMap[ state ];
+				if( token->type == DTOK_ID_THTYPE || token->type == DTOK_ID_SYMBOL )
+					token->type = DTOK_IDENTIFIER;
+				if( space || comment || token->type != DTOK_COMMENT ){
+					if( isspace( token->string.mbs[0] ) )
+						token->type = token->name = daoSpaceType[ (int)token->string.mbs[0] ];
+					DArray_Append( tokens, token );
 				}
 				/* may be a token before the line break; */
 				DString_Clear( literal );
@@ -1263,22 +1195,22 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int replace, int comment
 			}else if( state == TOK_RESTART ){
 				if( literal->size ){
 					if( old == TOK_IDENTIFIER ){
-						lextok.name = dao_key_hash( literal->mbs, literal->size );
-						lextok.type = DTOK_IDENTIFIER;
-						if( lextok.name == 0 ) lextok.name = DTOK_IDENTIFIER;
-						DaoLexer_Append( self, lextok, literal );
+						token->name = dao_key_hash( literal->mbs, literal->size );
+						token->type = DTOK_IDENTIFIER;
+						if( token->name == 0 ) token->name = DTOK_IDENTIFIER;
+						DArray_Append( tokens, token );
 					}else if( old > TOK_RESTART && old != TOK_END ){
-						lextok.type = lextok.name = daoTokenMap[ old ];
-						if( lextok.type == DTOK_ID_THTYPE || lextok.type == DTOK_ID_SYMBOL )
-							lextok.type = DTOK_IDENTIFIER;
-						DaoLexer_Append( self, lextok, literal );
+						token->type = token->name = daoTokenMap[ old ];
+						if( token->type == DTOK_ID_THTYPE || token->type == DTOK_ID_SYMBOL )
+							token->type = DTOK_IDENTIFIER;
+						DArray_Append( tokens, token );
 					}else if( space ){
-						if( isspace( literal->mbs[0] ) )
-							lextok.type = lextok.name = daoSpaceType[ (int)literal->mbs[0] ];
-						DaoLexer_Append( self, lextok, literal );
+						if( isspace( token->string.mbs[0] ) )
+							token->type = token->name = daoSpaceType[ (int)token->string.mbs[0] ];
+						DArray_Append( tokens, token );
 					}
 					DString_Clear( literal );
-					lextok.cpos = cpos;
+					token->cpos = cpos;
 				}
 				DString_AppendChar( literal, ch );
 				if( ch >=0 )
@@ -1305,8 +1237,8 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int replace, int comment
 				DArray_PopFront( lexenvs );
 				lexenv = lexenvs->items.pInt[0];
 				if( lexenv != LEX_ENV_COMMENT ){
-					lextok.type = lextok.name = DTOK_COMMENT;
-					if( comment ) DaoLexer_Append( self, lextok, literal );
+					token->type = token->name = DTOK_COMMENT;
+					if( comment ) DArray_Append( tokens, token );
 					DString_Clear( literal );
 					state = TOK_RESTART;
 				}
@@ -1317,139 +1249,66 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int replace, int comment
 		it ++;
 	}
 	if( literal->size ){
-		lextok.type = lextok.name = daoTokenMap[ state ];
-		if( lexenv == LEX_ENV_COMMENT ) lextok.type = lextok.name = DTOK_CMT_OPEN;
+		token->type = token->name = daoTokenMap[ state ];
+		if( lexenv == LEX_ENV_COMMENT ) token->type = token->name = DTOK_CMT_OPEN;
 		switch( state ){
-		case TOK_STRING_MBS : lextok.type = lextok.name = DTOK_MBS_OPEN; break;
-		case TOK_STRING_WCS : lextok.type = lextok.name = DTOK_WCS_OPEN; break;
+		case TOK_STRING_MBS : token->type = token->name = DTOK_MBS_OPEN; break;
+		case TOK_STRING_WCS : token->type = token->name = DTOK_WCS_OPEN; break;
 		}
-		if( lextok.type == DTOK_IDENTIFIER ){
-			lextok.name = dao_key_hash( literal->mbs, literal->size );
-			if( lextok.name == 0 ) lextok.name = DTOK_IDENTIFIER;
-		}else if( lextok.type == DTOK_ID_THTYPE || lextok.type == DTOK_ID_SYMBOL ){
-			lextok.type = DTOK_IDENTIFIER;
+		if( token->type == DTOK_IDENTIFIER ){
+			token->name = dao_key_hash( literal->mbs, literal->size );
+			if( token->name == 0 ) token->name = DTOK_IDENTIFIER;
+		}else if( token->type == DTOK_ID_THTYPE || token->type == DTOK_ID_SYMBOL ){
+			token->type = DTOK_IDENTIFIER;
 		}
-		if( lextok.type || space ){
-			if( isspace( literal->mbs[0] ) )
-				lextok.type = lextok.name = daoSpaceType[ (int)literal->mbs[0] ];
-			DaoLexer_Append( self, lextok, literal );
+		if( token->type || space ){
+			if( isspace( token->string.mbs[0] ) )
+				token->type = token->name = daoSpaceType[ (int)token->string.mbs[0] ];
+			DArray_Append( tokens, token );
 		}
 	}
 	DArray_Delete( lexenvs );
-	DString_Delete( literal );
 	DString_Delete( source );
 #if 0
-	for(i=0; i<self->tokens->size; i++){
-		DaoToken *tk = & self->tokens->pod.tokens[i];
-		printf( "%4i: %4i %4i, %4i,  %s\n", i, tk->type, tk->name, tk->cpos, tk->string.mbs );
+	for(i=0; i<tokens->size; i++){
+		DaoToken *tk = tokens->items.pToken[i];
+		printf( "%4i: %4i %4i , %4i,  %s\n", i, tk->type, tk->name, tk->cpos, tk->string.mbs );
 	}
 #endif
 	return ret ? line : 0;
 }
 
-void DaoLexer_EraseTokens( DaoLexer *self, int at, int count )
+void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int max )
 {
-	DPlainArray_Erase( self->tokens, at, count );
-	/* DaoToken::string.mbs may not be stored in DaoLexer::source consecutively,
-	// otherwise, something can be done on DaoLexer::source to free some memory. */
-}
-void DaoLexer_InsertToken( DaoLexer *self, int at, DaoToken token )
-{
-	int bufsize = self->source->bufSize;
-	DaoToken *tok = (DaoToken*) DPlainArray_Insert( self->tokens, at, 1 );
-	tok->offset = self->source->size + 1;
-	DString_AppendChar( self->source, '\0' );
-	DString_Append( self->source, & token.string );
-	tok->string.mbs = self->source->mbs + tok->offset;
-	tok->string.wcs = NULL;
-	if( self->source->bufSize != bufsize ) DaoLexer_UpdateTokenStrings( self );
-}
-void DaoLexer_InsertTokens( DaoLexer *self, int at, DaoLexer *lexer )
-{
-	int bufsize = self->source->bufSize;
-	int i, n = lexer->tokens->size;
-	DaoToken *tokens = (DaoToken*) DPlainArray_Insert( self->tokens, at, n );
-	for(i=0; i<n; ++i){
-		tokens[i] = lexer->tokens->pod.tokens[i];
-		tokens[i].offset = self->source->size + 1;
-		DString_AppendChar( self->source, '\0' );
-		DString_Append( self->source, & lexer->tokens->pod.tokens[i].string );
-		tokens[i].string.mbs = self->source->mbs + tokens[i].offset;
-		tokens[i].string.wcs = NULL;
-	}
-	if( self->source->bufSize != bufsize ) DaoLexer_UpdateTokenStrings( self );
-}
-void DaoLexer_AppendTokens( DaoLexer *self, DaoLexer *lexer )
-{
-	DaoLexer_InsertTokens( self, self->tokens->size, lexer );
-}
-void DaoLexer_AppendTokenChar( DaoLexer *self, DaoToken *token, char ch )
-{
-	int bufsize = self->source->bufSize;
-	token->offset = self->source->size + 1;
-	DString_AppendChar( self->source, '\0' );
-	DString_Append( self->source, & token->string );
-	DString_AppendChar( self->source, ch );
-	if( self->source->bufSize != bufsize ) DaoLexer_UpdateTokenStrings( self );
-}
-void DaoLexer_AppendTokenString( DaoLexer *self, DaoToken *token, DString *s )
-{
-	/* token->string is a part of self->source; s could be a part of self->source; */
-	DString *tmp = DString_New(1);
-	int bufsize = self->source->bufSize;
-	token->offset = self->source->size + 1;
-	DString_Append( tmp, & token->string );
-	DString_Append( tmp, s );
-	DString_AppendChar( self->source, '\0' );
-	DString_Append( self->source, tmp );
-	DString_Delete( tmp );
-	if( self->source->bufSize != bufsize ) DaoLexer_UpdateTokenStrings( self );
-}
-void DaoLexer_SetTokenMBString( DaoLexer *self, DaoToken *token, const char *s )
-{
-	int bufsize = self->source->bufSize;
-	int len = strlen( s );
-	if( len <= token->string.size ){
-		DString_SetMBS( & token->string, s );
-		return;
-	}
-	token->offset = self->source->size + 1;
-	DString_AppendChar( self->source, '\0' );
-	DString_AppendDataMBS( self->source, s, len );
-	if( self->source->bufSize != bufsize ) DaoLexer_UpdateTokenStrings( self );
-}
-
-void DaoLexer_AnnotateCode( DaoLexer *self, DaoVmCodeX vmc, DString *annot, int max )
-{
-	DaoToken t1, t2, *tokens;
+	DaoToken *t1, *t2, **tokens;
 	daoint i, k, len, pos, m = max/(vmc.middle + vmc.last + 2);
 	int max2 = max/2;
 	if( m < 5 ) m = 5;
 	DString_Clear( annot );
 	if( self == NULL ) return; /* DaoRoutine::source could be null */
 	if( vmc.middle > vmc.last ) return;
-	tokens = self->tokens->pod.tokens;
+	tokens = self->items.pToken;
 	for(i=0; i<vmc.middle; i++){
 		k = i + vmc.first;
-		if( k >= self->tokens->size ) break;
+		if( k >= self->size ) break;
 		t2 = tokens[k];
 		if( k != (daoint)vmc.first ){
 			t1 = tokens[k-1];
-			pos = t1.cpos + t1.string.size;
-			if( t1.line != t2.line || pos < t2.cpos ) DString_AppendChar( annot, ' ' );
+			pos = t1->cpos + t1->string.size;
+			if( t1->line != t2->line || pos < t2->cpos ) DString_AppendChar( annot, ' ' );
 		}
-		len = t2.string.size;
-		if( t2.type == DTOK_IDENTIFIER ){
+		len = t2->string.size;
+		if( t2->type == DTOK_IDENTIFIER ){
 			if( len > max2 ) len = max2 - 3;
 		}else{
 			if( len > m+3 ) len = m;
 		}
 		if( annot->size + len >= max2 ) len = max2 - annot->size;
-		DString_AppendDataMBS( annot, self->source->mbs + t2.offset, len );
-		if( len != t2.string.size ){
+		DString_AppendDataMBS( annot, t2->string.mbs, len );
+		if( len != t2->string.size ){
 			DString_AppendMBS( annot, "..." );
-			if( t2.type == DTOK_MBS ) DString_AppendChar( annot, '\'' );
-			else if( t2.type == DTOK_WCS ) DString_AppendChar( annot, '\"' );
+			if( t2->type == DTOK_MBS ) DString_AppendChar( annot, '\'' );
+			else if( t2->type == DTOK_WCS ) DString_AppendChar( annot, '\"' );
 			else break;
 		}
 		if( (i+1) < vmc.middle && annot->size >= max2 ){
@@ -1459,25 +1318,25 @@ void DaoLexer_AnnotateCode( DaoLexer *self, DaoVmCodeX vmc, DString *annot, int 
 	}
 	for(i=vmc.middle; i<=vmc.last; i++){
 		k = i + vmc.first;
-		if( k >= self->tokens->size ) break;
+		if( k >= self->size ) break;
 		t2 = tokens[k];
 		if( k != (daoint)vmc.first ){
 			t1 = tokens[k-1];
-			pos = t1.cpos + t1.string.size;
-			if( t1.line != t2.line || pos < t2.cpos ) DString_AppendChar( annot, ' ' );
+			pos = t1->cpos + t1->string.size;
+			if( t1->line != t2->line || pos < t2->cpos ) DString_AppendChar( annot, ' ' );
 		}
-		len = t2.string.size;
-		if( t2.type == DTOK_IDENTIFIER ){
+		len = t2->string.size;
+		if( t2->type == DTOK_IDENTIFIER ){
 			if( len > max2 ) len = max2-3;
 		}else{
 			if( len > m+3 ) len = m;
 		}
 		if( annot->size + len >= max ) len = max - annot->size;
-		DString_AppendDataMBS( annot, self->source->mbs + t2.offset, len );
-		if( len != t2.string.size ){
+		DString_AppendDataMBS( annot, t2->string.mbs, len );
+		if( len != t2->string.size ){
 			DString_AppendMBS( annot, "..." );
-			if( t2.type == DTOK_MBS ) DString_AppendChar( annot, '\'' );
-			else if( t2.type == DTOK_WCS ) DString_AppendChar( annot, '\"' );
+			if( t2->type == DTOK_MBS ) DString_AppendChar( annot, '\'' );
+			else if( t2->type == DTOK_WCS ) DString_AppendChar( annot, '\"' );
 			else break;
 		}
 		if( i < vmc.last && annot->size >= max ){
@@ -1487,17 +1346,17 @@ void DaoLexer_AnnotateCode( DaoLexer *self, DaoVmCodeX vmc, DString *annot, int 
 	}
 	DString_ChangeMBS( annot, "{{\n}}", "\\n", 0 );
 }
-int DaoLexer_FindOpenToken( DaoLexer *self, uchar_t tok, int start, int end )
+int DaoTokens_FindOpenToken( DArray *self, uchar_t tok, int start, int end )
 {
 	int i, n1, n2, n3;
-	DaoToken *tokens = self->tokens->pod.tokens;
+	DaoToken **tokens = self->items.pToken;
 
 	if( start < 0 ) return -1;
-	if( end == -1 || end >= self->tokens->size ) end = self->tokens->size-1;
+	if( end == -1 || end >= self->size ) end = self->size-1;
 
 	n1 = n2 = n3 = 0;
 	for( i=start; i<=end; i++){
-		uchar_t tki = tokens[i].name;
+		uchar_t tki = tokens[i]->name;
 		if( ! ( n1 | n2 | n3 ) && tki == tok ){
 			return i;
 		}else if( n1 <0 || n2 <0 || n3 <0 ){
@@ -1515,19 +1374,19 @@ int DaoLexer_FindOpenToken( DaoLexer *self, uchar_t tok, int start, int end )
 	}
 	return -1;
 }
-int DaoLexer_FindLeftPair( DaoLexer *self,  uchar_t lw, uchar_t rw, int start, int stop )
+int DaoTokens_FindLeftPair( DArray *self,  uchar_t lw, uchar_t rw, int start, int stop )
 {
-	DaoToken *tokens = self->tokens->pod.tokens;
+	DaoToken **tokens = self->items.pToken;
 	int k = 0;
 	int i = start;
 	int found = 0;
 	uchar_t tk;
 
-	if( start >= self->tokens->size ) start = self->tokens->size - 1;
+	if( start >= self->size ) start = self->size - 1;
 	if( stop <0 ) stop = 0;
 
 	while( i >= stop ){
-		tk = tokens[i].name;
+		tk = tokens[i]->name;
 		if( tk == rw ){
 			k++;
 		}else if( tk == lw ){
@@ -1539,22 +1398,22 @@ int DaoLexer_FindLeftPair( DaoLexer *self,  uchar_t lw, uchar_t rw, int start, i
 	}
 	return -1;
 }
-int DaoLexer_FindRightPair( DaoLexer *self,  uchar_t lw, uchar_t rw, int start, int stop )
+int DaoTokens_FindRightPair( DArray *self, uchar_t lw, uchar_t rw, int start, int stop )
 {
-	DaoToken *tokens = self->tokens->pod.tokens;
+	DaoToken **tokens = self->items.pToken;
 	int k = 0;
 	int i = start;
 	int found = 0;
 	uchar_t tk;
 
 	if( start <0 ) return -1;
-	if( stop== -1 ) stop = self->tokens->size-1;
+	if( stop== -1 ) stop = self->size-1;
 
 	while(1){
 		if( i > stop ) break;
-		if( i >= (int) self->tokens->size ) break;
+		if( i >= (int) self->size ) break;
 
-		tk = tokens[i].name;
+		tk = tokens[i]->name;
 		if( tk == lw )
 			k++;
 		else if( tk == rw ){
@@ -1568,22 +1427,15 @@ int DaoLexer_FindRightPair( DaoLexer *self,  uchar_t lw, uchar_t rw, int start, 
 	return -1;
 }
 
-void DaoLexer_AddRaiseStatement( DaoLexer *self, const char *type, const char *info, int line )
+DString* DaoTokens_AddRaiseStatement( DArray *self, const char *type, const char *info, int line )
 {
-	DaoLexer_AppendToken( self, DKEY_RAISE, line, "raise" );
-	DaoLexer_AppendToken( self, DTOK_IDENTIFIER, line, "Exception" );
-	DaoLexer_AppendToken( self, DTOK_COLON2, line, "::" );
-	DaoLexer_AppendToken( self, DTOK_IDENTIFIER, line, type );
-	DaoLexer_AppendToken( self, DTOK_LB, line, "(" );
-	DaoLexer_AppendToken( self, DTOK_MBS, line, info );
-	DaoLexer_AppendToken( self, DTOK_RB, line, ")" );
-	DaoLexer_AppendToken( self, DTOK_SEMCO, line, ";" );
+	DaoTokens_Append( self, DKEY_RAISE, line, "raise" );
+	DaoTokens_Append( self, DTOK_IDENTIFIER, line, "Exception" );
+	DaoTokens_Append( self, DTOK_COLON2, line, "::" );
+	DaoTokens_Append( self, DTOK_IDENTIFIER, line, type );
+	DaoTokens_Append( self, DTOK_LB, line, "(" );
+	DaoTokens_Append( self, DTOK_MBS, line, info );
+	DaoTokens_Append( self, DTOK_RB, line, ")" );
+	DaoTokens_Append( self, DTOK_SEMCO, line, ";" );
+	return & self->items.pToken[ self->size - 3 ]->string;
 }
-
-
-DaoTypeBase lexerTyper =
-{
-	"lexer", & baseCore, NULL, NULL, {0}, {0},
-	(FuncPtrDel) DaoLexer_Delete, NULL
-};
-

@@ -172,7 +172,6 @@ extern DaoTypeBase macroTyper;
 extern DaoTypeBase regexTyper;
 extern DaoTypeBase vmpTyper;
 extern DaoTypeBase typeKernelTyper;
-extern DaoTypeBase lexerTyper;
 
 static DaoTypeBase vmsTyper=
 {
@@ -211,7 +210,6 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_VMSPACE   :  return & vmsTyper;
 	case DAO_TYPE      :  return & abstypeTyper;
 	case DAO_TYPEKERNEL : return & typeKernelTyper;
-	case DAO_LEXER     : return & lexerTyper;
 #ifdef DAO_WITH_MACRO
 	case DAO_MACRO     :  return & macroTyper;
 #endif
@@ -304,10 +302,10 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 #endif
 }
 
+#if 0
 #define SHARE_NO_PARSER
 #define SHARE_NO_INFERENCER
 #define SHARE_NO_OPTIMIZER
-#if 0
 #endif
 
 DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )
@@ -995,11 +993,11 @@ DaoNamespace* DaoVmSpace_LinkModule( DaoVmSpace *self, DaoNamespace *ns, const c
 	return modns;
 }
 
-static int CheckCodeCompletion( DString *source, DaoLexer *lexer )
+static int CheckCodeCompletion( DString *source, DArray *tokens )
 {
 	int i, bcount, cbcount, sbcount, tki = 0, completed = 1;
-	DaoLexer_Tokenize( lexer, source->mbs, 0, 1, 1 );
-	if( lexer->tokens->size ) tki = lexer->tokens->pod.tokens[lexer->tokens->size-1].type;
+	DaoTokens_Tokenize( tokens, source->mbs, 0, 1, 1 );
+	if( tokens->size ) tki = tokens->items.pToken[tokens->size-1]->type;
 	switch( tki ){
 	case DTOK_LB :
 	case DTOK_LCB :
@@ -1011,11 +1009,11 @@ static int CheckCodeCompletion( DString *source, DaoLexer *lexer )
 		completed = 0;
 		break;
 	}
-	if( lexer->tokens->size && completed ){
+	if( tokens->size && completed ){
 		bcount = sbcount = cbcount = 0;
-		for(i=0; i<lexer->tokens->size; i++){
-			DaoToken tk = lexer->tokens->pod.tokens[i];
-			switch( tk.type ){
+		for(i=0; i<tokens->size; i++){
+			DaoToken *tk = tokens->items.pToken[i];
+			switch( tk->type ){
 			case DTOK_LB : bcount --; break;
 			case DTOK_RB : bcount ++; break;
 			case DTOK_LCB : cbcount --; break;
@@ -1033,7 +1031,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 {
 	DaoValue *value;
 	DaoNamespace *ns;
-	DaoLexer *lexer = DaoLexer_New();
+	DArray *tokens = DArray_New(D_TOKEN);
 	DString *input = DString_New(1);
 	const char *varRegex = "^ %s* = %s* %S+";
 	const char *srcRegex = "^ %s* %w+ %. dao .* $";
@@ -1058,7 +1056,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 				DString_AppendMBS( input, chs );
 				DString_AppendChar( input, '\n' );
 				dao_free( chs );
-				if( CheckCodeCompletion( input, lexer ) ){
+				if( CheckCodeCompletion( input, tokens ) ){
 					DString_Trim( input );
 					if( input->size && self->AddHistory ) self->AddHistory( input->mbs );
 					break;
@@ -1072,7 +1070,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 			if( ch == EOF ) break;
 			while( ch != EOF ){
 				if( ch == '\n' ){
-					if( CheckCodeCompletion( input, lexer ) ) break;
+					if( CheckCodeCompletion( input, tokens ) ) break;
 					printf("..... ");
 					fflush( stdout );
 				}
@@ -1120,7 +1118,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 	}
 	self->mainNamespace->options &= ~DAO_NS_AUTO_GLOBAL;
 	DString_Delete( input );
-	DaoLexer_Delete( lexer );
+	DArray_Delete( tokens );
 }
 
 static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
@@ -2007,23 +2005,23 @@ static void DaoConfigure_FromFile( const char *name )
 	int i, ch, isnum, isint, integer=0, yes;
 	FILE *fin = fopen( name, "r" );
 	DaoToken *tk1, *tk2;
+	DArray *tokens;
 	DString *mbs;
-	DaoLexer *lexer;
 	if( fin == NULL ) return;
 	mbs = DString_New(1);
-	lexer = DaoLexer_New();
+	tokens = DArray_New(D_TOKEN);
 	while( ( ch=getc(fin) ) != EOF ) DString_AppendChar( mbs, ch );
 	fclose( fin );
 	DString_ToLower( mbs );
-	DaoLexer_Tokenize( lexer, mbs->mbs, 1, 0, 0 );
+	DaoTokens_Tokenize( tokens, mbs->mbs, 1, 0, 0 );
 	i = 0;
-	while( i < lexer->tokens->size ){
-		tk1 = & lexer->tokens->pod.tokens[i];
+	while( i < tokens->size ){
+		tk1 = tokens->items.pToken[i];
 		/* printf( "%s\n", tk1->string->mbs ); */
 		if( tk1->type == DTOK_IDENTIFIER ){
-			if( i+2 >= lexer->tokens->size ) goto InvalidConfig;
-			if( lexer->tokens->pod.tokens[i+1].type != DTOK_ASSN ) goto InvalidConfig;
-			tk2 = & lexer->tokens->pod.tokens[i+2];
+			if( i+2 >= tokens->size ) goto InvalidConfig;
+			if( tokens->items.pToken[i+1]->type != DTOK_ASSN ) goto InvalidConfig;
+			tk2 = tokens->items.pToken[i+2];
 			isnum = isint = 0;
 			yes = -1;
 			if( tk2->type >= DTOK_DIGITS_HEX && tk2->type <= DTOK_NUMBER_SCI ){
@@ -2079,7 +2077,7 @@ InvalidConfigValue :
 		printf( "error: invalid configuration option value: %s!\n", tk2->string.mbs );
 		break;
 	}
-	DaoLexer_Delete( lexer );
+	DArray_Delete( tokens );
 	DString_Delete( mbs );
 }
 static void DaoConfigure()

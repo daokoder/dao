@@ -28,7 +28,6 @@
 #ifndef DAO_ROUTINE_H
 #define DAO_ROUTINE_H
 
-#include"daoLexer.h"
 #include"daoType.h"
 
 
@@ -90,7 +89,7 @@ void DaoRoutine_Delete( DaoRoutine *self );
 int  DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value );
 
 int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes );
-void DaoRoutine_SetSource( DaoRoutine *self, DaoLexer *lexer );
+void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns );
 
 void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );
 
@@ -109,8 +108,9 @@ struct DaoRoutineBody
 	/* VM codes with annotations */
 	DArray *annotCodes; /* <DaoVmCodeX*> */
 
-	DaoLexer  *source;    /* source code tokens; */ 
-	DaoLexer  *defLocals; /* definition tokens of local constants and variables; */
+	/* definition of local constants and variables: */
+	DArray *defLocals; /* <DaoToken*> */
+	DArray *source; /* <DaoToken*> */
 
 	DArray *simpleVariables;
 

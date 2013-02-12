@@ -110,6 +110,7 @@ static void* DArray_CopyItem( DArray *self, void *item )
 	switch( self->type ){
 	case D_VALUE  : v = DaoValue_SimpleCopy( (DaoValue*) item ); GC_IncRC( v ); return v;
 	case D_VMCODE : return DaoVmCodeX_Copy( (DaoVmCodeX*) item );
+	case D_TOKEN  : return DaoToken_Copy( (DaoToken*) item );
 	case D_STRING : return DString_Copy( (DString*) item );
 	case D_ARRAY  : return DArray_Copy( (DArray*) item );
 	case D_MAP    : return DMap_Copy( (DMap*) item );
@@ -122,6 +123,7 @@ static void DArray_DeleteItem( DArray *self, void *item )
 	switch( self->type ){
 	case D_VALUE  : GC_DecRC( item ); break;
 	case D_VMCODE : DaoVmCodeX_Delete( (DaoVmCodeX*) item ); break;
+	case D_TOKEN  : DaoToken_Delete( (DaoToken*) item ); break;
 	case D_STRING : DString_Delete( (DString*) item ); break;
 	case D_ARRAY  : DArray_Delete( (DArray*) item ); break;
 	case D_MAP    : DMap_Delete( (DMap*) item ); break;
@@ -134,6 +136,7 @@ static void DArray_DeleteItems( DArray *self, daoint M, daoint N )
 	switch( self->type ){
 	case D_VALUE  : for(i=M; i<N; i++) GC_DecRC( self->items.pValue[i] ); break;
 	case D_VMCODE : for(i=M; i<N; i++) DaoVmCodeX_Delete( self->items.pVmc[i] ); break;
+	case D_TOKEN  : for(i=M; i<N; i++) DaoToken_Delete( self->items.pToken[i] ); break;
 	case D_STRING : for(i=M; i<N; i++) DString_Delete( self->items.pString[i] ); break;
 	case D_ARRAY  : for(i=M; i<N; i++) DArray_Delete( self->items.pArray[i] ); break;
 	case D_MAP    : for(i=M; i<N; i++) DMap_Delete( self->items.pMap[i] ); break;
@@ -321,7 +324,7 @@ void DArray_Erase( DArray *self, daoint start, daoint n )
 	}
 	DaoGC_UnlockArray( self, locked );
 }
-void DArray_PushFront( DArray *self, void *val )
+void* DArray_PushFront( DArray *self, void *val )
 {
 	void **buf = self->items.pVoid - self->offset;
 	if( self->offset > 0 ){
@@ -346,6 +349,7 @@ void DArray_PushFront( DArray *self, void *val )
 	}
 	self->size ++;
 	self->offset --;
+	return self->items.pVoid[0];
 }
 void* DArray_PopFront( DArray *self )
 {
@@ -378,7 +382,7 @@ void* DArray_PopFront( DArray *self )
 	if( self->type ) return NULL;
 	return ret;
 }
-void DArray_PushBack( DArray *self, void *val )
+void* DArray_PushBack( DArray *self, void *val )
 {
 	void **buf = self->items.pVoid - self->offset;
 	if( (daoint)(self->offset + self->size + 1) >= self->bufsize ){
@@ -394,6 +398,7 @@ void DArray_PushBack( DArray *self, void *val )
 		self->items.pVoid[ self->size ] = val;
 	}
 	self->size++;
+	return self->items.pVoid[ self->size - 1 ];
 }
 void* DArray_PopBack( DArray *self )
 {
