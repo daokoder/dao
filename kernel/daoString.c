@@ -524,7 +524,7 @@ daoint DString_Size( DString *self )
 
 void DString_Reset( DString *self, daoint size )
 {
-	if( size < self->bufSize ){
+	if( size <= self->bufSize ){
 		if( self->sharing ) DString_Detach( self, self->bufSize );
 		self->size = size;
 		if( self->mbs ){

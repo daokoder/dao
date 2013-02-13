@@ -5605,7 +5605,7 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 		DaoType *ta = DaoNamespace_GetType( self->activeNamespace, A );
 		if( ta && B->xList.unitype && B->xList.unitype->nested->size ){
 			DaoType *tb = B->xList.unitype->nested->items.pType[0];
-			if( tb && DaoType_MatchTo( ta, tb, NULL ) < DAO_MT_SUB	 ) return;
+			if( tb && DaoType_MatchTo( ta, tb, NULL ) == 0 ) return;
 		}
 		for(i=0,n=items->size; i<n; i++){
 			*C = DaoValue_Compare( A, items->items.pValue[i] ) ==0;
