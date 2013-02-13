@@ -432,7 +432,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	parser->vmSpace = self->vmSpace;
 	parser->nameSpace = self;
 	parser->routine = self->constEvalRoutine;
-	if( ! DaoTokens_Tokenize( parser->tokens, name, 0, 0, 0 ) ) goto Error;
+	if( ! DaoTokens_Tokenize( parser->tokens, name, 0, parser->tokbuf ) ) goto Error;
 	if( parser->tokens->size == 0 ) goto Error;
 	tokens = parser->tokens->items.pToken;
 	n = parser->tokens->size - 1;
@@ -1621,6 +1621,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	if( tid != DAO_ANY ) any = dao_type_any;
 
 	mbs = DString_New(1);
+	DString_Reserve( mbs, 128 );
 	DString_SetMBS( mbs, name );
 	if( tid == DAO_CODEBLOCK ) DString_Clear( mbs );
 	if( N > 0 || tid == DAO_CODEBLOCK ){
@@ -1788,13 +1789,12 @@ DaoRoutine* DaoNamespace_ParsePrototype( DaoNamespace *self, const char *proto, 
 
 	GC_IncRC( parser->hostCdata );
 	func->routHost = parser->hostCdata;
-	if( ! DaoTokens_Tokenize( defparser->tokens, proto, 0, 0, 0 ) ) goto Error;
+	if( ! DaoTokens_Tokenize( defparser->tokens, proto, 0, defparser->tokbuf ) ) goto Error;
 	if( defparser->tokens->size < 3 ) goto Error;
 	if( (optok = defparser->tokens->items.pToken[0]->name == DKEY_OPERATOR) == 0 ){
 		if( defparser->tokens->items.pToken[0]->type == DTOK_IDENTIFIER 
 				&& defparser->tokens->items.pToken[1]->type == DTOK_LB ) key = 0;
 	}
-	DArray_Clear( defparser->partoks );
 
 	parser->routine = (DaoRoutine*) func; /* safe to parse params only */
 	if( DaoParser_ParsePrototype( defparser, parser, key, optok ) < 0 ){

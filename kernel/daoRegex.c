@@ -1013,13 +1013,13 @@ int DString_Match( DString *self, DString *patt, daoint *start, daoint *end )
 	if( self->wcs && patt->mbs ) DString_ToWCS( patt );
 	if( self->mbs ){
 		n = patt->size;
-		buf = (char*) dao_malloc( sizepat + 2 * (n+1) * sizeitm + n );
+		buf = (char*) dao_malloc( sizepat + 2 * (n+1) * sizeitm + n + 4 );
 		p = (DaoRegex*) buf;
 		DaoRegex_Init( p, patt );
 		rc = FindPattern( p, 0,0, self->mbs, self->size, start, end, 0 );
 	}else{
 		n = patt->size;
-		buf = (char*) dao_malloc( sizepat + 2 * (n+1) * sizeitm + n * sizewch );
+		buf = (char*) dao_malloc( sizepat + 2 * (n+1) * sizeitm + n * sizewch + 4 );
 		p = (DaoRegex*) buf;
 		DaoRegex_Init( p, patt );
 		rc = FindPattern( p, 0,0, self->wcs, self->size, start, end, 0 );
@@ -1031,7 +1031,7 @@ int DString_MatchMBS( DString *self, const char *pat, daoint *start, daoint *end
 {
 	DString *str = DString_New(1);
 	int rc, n = strlen( pat );
-	char *buf = (char*) dao_malloc( sizepat + 2 * (n+1) * sizeitm + n );
+	char *buf = (char*) dao_malloc( sizepat + 2 * (n+1) * sizeitm + n + 4 );
 	DaoRegex *p = (DaoRegex*) buf;
 	DString_SetMBS( str, pat );
 	if( self->wcs ) DString_ToWCS( str );
@@ -1045,7 +1045,7 @@ int DString_MatchWCS( DString *self, const wchar_t *pat, daoint *start, daoint *
 {
 	DString *str = DString_New(0);
 	int rc, n = wcslen( pat );
-	char *buf = (char*) dao_malloc( sizepat + 2 * (n+1) * sizeitm + n * sizewch );
+	char *buf = (char*) dao_malloc( sizepat + 2 * (n+1) * sizeitm + n * sizewch + 4 );
 	DaoRegex *p = (DaoRegex*) buf;
 	DString_SetWCS( str, pat );
 	if( self->mbs ) DString_ToMBS( str );
@@ -1061,7 +1061,7 @@ int DString_ChangeMBS( DString *self, const char *pat, const char *target, int i
 	DString *str = DString_New(1);
 	DString *tg = DString_New(1);
 	int res, n = strlen( pat );
-	char *buf = (char*) dao_malloc( sizepat + 2 * (n+1) * sizeitm + n );
+	char *buf = (char*) dao_malloc( sizepat + 2 * (n+1) * sizeitm + n + 4 );
 	DaoRegex *p = (DaoRegex*) buf;
 	DString_SetMBS( str, pat );
 	DString_SetMBS( tg, target );
@@ -1081,7 +1081,7 @@ int DString_ChangeWCS( DString *self, const wchar_t *pat, const wchar_t *target,
 	DString *str = DString_New(0);
 	DString *tg = DString_New(0);
 	int rc, n = wcslen( pat );
-	char *buf = (char*) dao_malloc( sizepat + 2 * (n+1) * sizeitm + n * sizewch );
+	char *buf = (char*) dao_malloc( sizepat + 2 * (n+1) * sizeitm + n * sizewch + 4 );
 	DaoRegex *p = (DaoRegex*) buf;
 	DString_SetWCS( str, pat );
 	DString_SetWCS( tg, target );
@@ -1115,7 +1115,7 @@ int DaoRegex_CheckSize( DString *src )
 {
 	int n = src->size;
 	int m = DString_BalancedChar( src, '|', 0,0, '%', 0, n, 1 ) + 4; /* (|||) */
-	return sizepat + (n+m) * sizeitm + n * (src->mbs ? 1 : sizewch) + 2;
+	return sizepat + (n+m) * sizeitm + n * (src->mbs ? 1 : sizewch) + 4;
 }
 int DaoRegex_Match( DaoRegex *self, DString *src, daoint *start, daoint *end )
 {

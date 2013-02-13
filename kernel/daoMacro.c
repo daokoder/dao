@@ -974,7 +974,7 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
 		case DMACRO_GRP :
 		case DMACRO_ALT :
 			grp = (DMacroGroup*) unit;
-			DArray_Clear( toks );
+			DaoTokens_Reset( toks, self->tokbuf );
 			j = DaoParser_MacroApply( self, toks, grp, tokMap, used, level, tag, pos0, adjust );
 			switch( grp->repeat ){
 			case DMACRO_AUTO :
@@ -1000,7 +1000,7 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
 					DArray_InsertArray( tokens, tokens->size, toks, 0, -1 );
 				}
 				while( j >0 ){
-					DArray_Clear( toks );
+					DaoTokens_Reset( toks, self->tokbuf );
 					j = DaoParser_MacroApply( self, toks, grp, tokMap, used, level, tag, pos0, adjust );
 					if( j >0 ){
 						DArray_InsertArray( tokens, tokens->size, toks, 0, -1 );
@@ -1016,7 +1016,7 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
 
 				while( j >0 ){
 					gid = i;
-					DArray_Clear( toks );
+					DaoTokens_Reset( toks, self->tokbuf );
 					j = DaoParser_MacroApply( self, toks, grp, tokMap, used, level, tag, pos0, adjust );
 					if( j >0 ){
 						DArray_InsertArray( tokens, tokens->size, toks, 0, -1 );

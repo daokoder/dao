@@ -46,7 +46,7 @@ struct DaoParser
 	int curToken;
 
 	DArray  *tokens;
-	DArray  *partoks;
+	DArray  *tokbuf;
 
 	/* DArray<DaoVmCodeX*>: need to be store as pointers, because in code generation,
 	 * it may be necessary to modify previously generated codes, for this,

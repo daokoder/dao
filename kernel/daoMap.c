@@ -772,8 +772,6 @@ DNode* DMap_Insert( DMap *self, void *key, void *value )
 			p->value.pVoid = NULL;
 		}
 		DMap_CopyItem( & p->value.pVoid, value, self->valtype );
-		node->key.pVoid = NULL;
-		node->value.pVoid = NULL;
 		DMap_BufferNode( self, node );
 	}
 	return p;

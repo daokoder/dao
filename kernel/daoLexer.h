@@ -223,6 +223,15 @@ typedef struct {
 	unsigned char  binary;
 } DOper;
 
+
+enum DaoLexFlags
+{
+	DAO_LEX_ESCAPE = 1,  /* replace escape characters; */
+	DAO_LEX_COMMENT = 2, /* extract comment tokens; */
+	DAO_LEX_SPACE = 4    /* extract whitespace tokens; */
+};
+
+
 struct DaoToken
 {
 	unsigned char   type; /* token type: take value in DaoTokNames */
@@ -231,6 +240,7 @@ struct DaoToken
 	unsigned int    line; /* file line position of the token */
 	unsigned int    index; /* index of the token in current routine */
 	DString         string; /* token string */
+
 	/* When DaoToken is used in an array to store the definitions
 	 * of local constants and variables in a routine,
 	 * (1) type field indicates if it is a constant=0, or varaible=1;
@@ -251,8 +261,10 @@ DAO_DLL int DaoToken_IsValidName( const char *src, int size );
 
 DAO_DLL void DaoToken_Set( DaoToken *self, int type, int name, int index, const char *s );
 
-DAO_DLL int DaoTokens_Tokenize( DArray *tokens, const char *src, int repl, int comment, int space );
+DAO_DLL void DaoTokens_Reset( DArray *self, DArray *tokbuf );
+DAO_DLL int DaoTokens_Tokenize( DArray *tokens, const char *src, int flags, DArray *tokbuf );
 
+DAO_DLL void DaoTokens_AppendToken( DArray *tokens, DaoToken *token, DArray *tokbuf );
 DAO_DLL void DaoTokens_Append( DArray *self, int name, int line, const char *data );
 
 DAO_DLL void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int max );

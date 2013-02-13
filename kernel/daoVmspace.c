@@ -996,7 +996,7 @@ DaoNamespace* DaoVmSpace_LinkModule( DaoVmSpace *self, DaoNamespace *ns, const c
 static int CheckCodeCompletion( DString *source, DArray *tokens )
 {
 	int i, bcount, cbcount, sbcount, tki = 0, completed = 1;
-	DaoTokens_Tokenize( tokens, source->mbs, 0, 1, 1 );
+	DaoTokens_Tokenize( tokens, source->mbs, DAO_LEX_COMMENT|DAO_LEX_SPACE, NULL );
 	if( tokens->size ) tki = tokens->items.pToken[tokens->size-1]->type;
 	switch( tki ){
 	case DTOK_LB :
@@ -2013,7 +2013,7 @@ static void DaoConfigure_FromFile( const char *name )
 	while( ( ch=getc(fin) ) != EOF ) DString_AppendChar( mbs, ch );
 	fclose( fin );
 	DString_ToLower( mbs );
-	DaoTokens_Tokenize( tokens, mbs->mbs, 1, 0, 0 );
+	DaoTokens_Tokenize( tokens, mbs->mbs, DAO_LEX_ESCAPE, NULL );
 	i = 0;
 	while( i < tokens->size ){
 		tk1 = tokens->items.pToken[i];

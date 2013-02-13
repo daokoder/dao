@@ -410,7 +410,7 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 	if( tokens[start]->name == DTOK_ID_SYMBOL ){
 		DString *mbs = DString_New(1);
 		while( tokens[start]->name == DTOK_ID_SYMBOL ){
-			DString_Append( mbs, tokens[start]->string );
+			DString_Append( mbs, & tokens[start]->string );
 			start += 1;
 		}
 		type = DaoNamespace_MakeType( ns, mbs->mbs, DAO_ENUM, NULL, NULL, 0 );
@@ -453,10 +453,10 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 	}
 	if( type->nested && type->nested->size >0 ) it1 = type->nested->items.pType[0];
 	if( type->nested && type->nested->size >1 ) it2 = type->nested->items.pType[1];
-	str = tokens[start]->string->mbs;
+	str = tokens[start]->string.mbs;
 #if 0
 	printf( "type: %s %s\n", type->name->mbs, str );
-	for(i=start; i<=end; i++) printf( "%s ", tokens[i]->string->mbs ); printf( "\n" );
+	for(i=start; i<=end; i++) printf( "%s ", tokens[i]->string.mbs ); printf( "\n" );
 #endif
 	value = *value2;
 	switch( type->tid ){
@@ -484,7 +484,7 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 			start += 1;
 			if( start + 1 > end ) return start+1;
 		}
-		value->xComplex.value.imag = DaoDecodeDouble( tokens[start+1]->string->mbs );
+		value->xComplex.value.imag = DaoDecodeDouble( tokens[start+1]->string.mbs );
 		if( minus ) value->xComplex.value.imag = - value->xComplex.value.imag;
 		next = start + 2;
 		break;
@@ -500,11 +500,11 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 		}
 		for(i=start; i<=end; i++){
 			if( tokens[i]->name == DTOK_COMMA ) continue;
-			DLong_PushBack( value->xLong.value, DaoDecodeInteger( tokens[i]->string->mbs ) );
+			DLong_PushBack( value->xLong.value, DaoDecodeInteger( tokens[i]->string.mbs ) );
 		}
 		break;
 	case DAO_STRING :
-		n = tokens[start]->string->size - 1;
+		n = tokens[start]->string.size - 1;
 		for(i=1; i<n; i++){
 			char c1 = str[i];
 			char c2 = str[i+1];
@@ -525,7 +525,7 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 		n = 1;
 		for(i=start+1; i<k; i++){
 			if( tokens[i]->name == DTOK_COMMA ) continue;
-			n *= strtol( tokens[i]->string->mbs, 0, 0 );
+			n *= strtol( tokens[i]->string.mbs, 0, 0 );
 		}
 		if( n < 0 ) return next;
 		if( it1 == NULL || it1->tid == 0 || it1->tid > DAO_COMPLEX ) return next;
@@ -533,7 +533,7 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 		dims = DArray_New(0);
 		for(i=start+1; i<k; i++){
 			if( tokens[i]->name == DTOK_COMMA ) continue;
-			j = strtol( tokens[i]->string->mbs, 0, 0 );
+			j = strtol( tokens[i]->string.mbs, 0, 0 );
 			DArray_Append( dims, (size_t) j );
 		}
 		n = dims->size;
@@ -734,12 +734,12 @@ void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin )
 
 		DaoParser_LexCode( parser, line->mbs, 0 );
 		if( tokens->size == 0 ) continue;
-		name = tokens->items.pToken[start]->string;
+		name = & tokens->items.pToken[start]->string;
 		if( name->size == 6 && strcmp( name->mbs, "inputs" ) == 0 ){
 			if( tokens->size < 3 ) continue;
 			DString_Clear( line );
-			n = tokens->items.pToken[start+2]->string->size;
-			mbs = tokens->items.pToken[start+2]->string->mbs;
+			n = tokens->items.pToken[start+2]->string.size;
+			mbs = tokens->items.pToken[start+2]->string.mbs;
 			for(i=0; i<n; i++){
 				char c1 = mbs[i];
 				char c2 = mbs[i+1];
@@ -762,7 +762,7 @@ void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin )
 		case DKEY_VAR   : st = DAO_GLOBAL_VARIABLE; start += 1; break;
 		}
 		if( tokens->items.pToken[start]->name != DTOK_IDENTIFIER ) continue;
-		name = tokens->items.pToken[start]->string;
+		name = & tokens->items.pToken[start]->string;
 		start += 1;
 		if( start + 3 >= tokens->size ) continue;
 		if( tokens->items.pToken[start]->name != DTOK_ASSN ) continue;
