@@ -190,6 +190,7 @@ struct DaoInferencer
 DaoInferencer* DaoInferencer_New();
 void DaoInferencer_Delete( DaoInferencer *self );
 void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent );
+void DaoInferencer_Reset( DaoInferencer *self );
 int DaoInferencer_DoInference( DaoInferencer *self );
 
 #endif

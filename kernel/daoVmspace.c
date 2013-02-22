@@ -1925,8 +1925,10 @@ void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path )
 
 	if( Dao_IsDir( pstr->mbs ) ){
 		int len = pstr->size - strlen( "modules/auxlib" );
-		if( DString_FindMBS( pstr, "modules/auxlib", 0 ) == len ) self->hasAuxlibPath = 1;
-		if( DString_FindMBS( pstr, "modules/syslib", 0 ) == len ) self->hasSyslibPath = 1;
+		if( len >= 0 ){
+			if( DString_FindMBS( pstr, "modules/auxlib", 0 ) == len ) self->hasAuxlibPath = 1;
+			if( DString_FindMBS( pstr, "modules/syslib", 0 ) == len ) self->hasSyslibPath = 1;
+		}
 		DArray_PushFront( self->pathSearching, pstr );
 		DString_AppendMBS( pstr, "/addpath.dao" );
 		if( TestFile( self, pstr ) ){
