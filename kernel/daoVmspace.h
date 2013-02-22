@@ -72,6 +72,8 @@ struct DaoVmSpace
 	DArray  *inferencers;
 	DArray  *optimizers;
 
+	DString *daoBinPath;
+	DString *startPath;
 	DString *mainSource;
 	DString *pathWorking;
 	DArray  *nameLoading;

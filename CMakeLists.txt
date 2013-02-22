@@ -185,8 +185,8 @@ install(TARGETS daoexe daolib daolibs
         PRIVATE_HEADER DESTINATION "include"
         PUBLIC_HEADER  DESTINATION "include"
        )
-install(FILES "${PROJECT_SOURCE_DIR}/addpath.dao" DESTINATION "bin")
-install(FILES "${PROJECT_SOURCE_DIR}/tools/autobind.dao" DESTINATION "bin")
+#autobind.dao is obsolete:
+#install(FILES "${PROJECT_SOURCE_DIR}/tools/autobind.dao" DESTINATION "bin")
 install(FILES "${PROJECT_SOURCE_DIR}/license.txt" DESTINATION "share/doc/dao")
 install(FILES "${PROJECT_SOURCE_DIR}/modules/addpath.dao" DESTINATION ${DAO_MODULES_INSTALL_DIR})
 # TODO: dao.conf? demos?

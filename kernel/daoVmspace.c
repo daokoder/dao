@@ -455,27 +455,32 @@ void DaoVmSpace_Stop( DaoVmSpace *self, int bl )
 	self->stopit = bl;
 }
 
+void Dao_MakePath( DString *base, DString *path );
 static void DaoVmSpace_InitPath( DaoVmSpace *self )
 {
-	char *homedir = getenv( "HOME" );
+	DString *path;
 	char *daodir = getenv( "DAO_DIR" );
-	char pwd[512];
+
 	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
-	getcwd( pwd, 511 );
-	DaoVmSpace_SetPath( self, pwd );
-	DaoVmSpace_AddPath( self, pwd );
-	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
+	DaoVmSpace_SetPath( self, self->startPath->mbs );
+
 	DaoVmSpace_AddPath( self, DAO_DIR );
 	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
-	if( homedir ){
-		DString *home = DString_NewMBS( homedir );
-		if( homedir[home->size-1] != '/' ) DString_AppendChar( home, '/' );
-		DString_AppendMBS( home, "dao" );
-		DaoVmSpace_AddPath( self, home->mbs );
-		DString_Delete( home );
-	}
-	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
+
+	path = DString_New(1);
+	DString_SetMBS( path, "modules" );
+	Dao_MakePath( mainVmSpace->daoBinPath, path );
+	DaoVmSpace_AddPath( self, path->mbs );
+	if( self->hasAuxlibPath && self->hasSyslibPath ) goto Done;
+
+	DString_SetMBS( path, "../lib/dao/modules" );
+	Dao_MakePath( mainVmSpace->daoBinPath, path );
+	DaoVmSpace_AddPath( self, path->mbs );
+	if( self->hasAuxlibPath && self->hasSyslibPath ) goto Done;
+
 	if( daodir ) DaoVmSpace_AddPath( self, daodir );
+Done:
+	DString_Delete( path );
 }
 
 
@@ -492,6 +497,8 @@ DaoVmSpace* DaoVmSpace_New()
 	self->hasAuxlibPath = 0;
 	self->hasSyslibPath = 0;
 	self->userHandler = NULL;
+	self->daoBinPath = DString_New(1);
+	self->startPath = DString_New(1);
 	self->mainSource = DString_New(1);
 	self->vfiles = DHash_New(D_STRING,D_STRING);
 	self->vmodules = DHash_New(D_STRING,0);
@@ -560,6 +567,8 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	GC_DecRC( self->mainNamespace );
 	GC_DecRC( self->stdioStream );
 	GC_DecRC( self->errorStream );
+	DString_Delete( self->daoBinPath );
+	DString_Delete( self->startPath );
 	DString_Delete( self->mainSource );
 	DString_Delete( self->pathWorking );
 	DArray_Delete( self->nameLoading );
@@ -712,9 +721,6 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 				DaoStream_WriteMBS( self->errorStream, token->mbs );
 				DaoStream_WriteMBS( self->errorStream, ";\n" );
 			}
-		}else if( DString_MatchMBS( token, " ^ [%C_]+=.* ", NULL, NULL ) ){
-			token = DString_DeepCopy( token );
-			putenv( token->mbs );
 		}else if( strcmp( token->mbs, "-O0" ) ==0 ){
 			daoConfig.optimize = 0;
 		}else if( strcmp( token->mbs, "-O1" ) ==0 ){
@@ -1168,7 +1174,6 @@ void DaoVmSpace_SaveByteCodes( DaoVmSpace *self, DaoNamespace *ns )
 
 void DString_AppendUInt16( DString *bytecodes, int value );
 void DString_AppendUInt32( DString *bytecodes, int value );
-void Dao_MakePath( DString *base, DString *path );
 
 int DaoDecodeUInt16( const char *data )
 {
@@ -2256,7 +2261,6 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace *ns, *ns2;
 	DaoType *type, *type1, *type2, *type3, *type4;
 	DaoModuleOnLoad fpter;
-	char *daodir = getenv( "DAO_DIR" );
 	void *handle;
 	daoint i, n;
 
@@ -2304,29 +2308,6 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoCGC_Start();
 #endif
 
-	if( daodir == NULL && command ){
-		int absolute = command[0] == '/';
-		int relative = command[0] == '.';
-#ifdef WIN32
-		absolute = isalpha( command[0] ) && command[1] == ':';
-#endif
-		DString_SetMBS( mbs, command );
-		if( relative ){
-			DString *base = DString_New(1);
-			char pwd[512];
-			getcwd( pwd, 511 );
-			DString_SetMBS( base, pwd );
-			Dao_MakePath( base, mbs );
-			DString_Delete( base );
-		}
-		while( (i = mbs->size) && mbs->mbs[i-1] != '/' && mbs->mbs[i-1] != '\\' ) mbs->size --;
-		mbs->mbs[ mbs->size ] = 0;
-		daodir = (char*) dao_malloc( mbs->size + 10 );
-		strncpy( daodir, "DAO_DIR=", 9 );
-		strncat( daodir, mbs->mbs, mbs->size );
-		putenv( daodir );
-	}
-
 	dao_type_udf = DaoType_New( "?", DAO_UDT, NULL, NULL );
 	dao_type_any = DaoType_New( "any", DAO_ANY, NULL, NULL );
 	dao_type_int = DaoType_New( "int", DAO_INTEGER, NULL, NULL );
@@ -2338,6 +2319,24 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoValue*)dao_type_udf, NULL );
 
 	mainVmSpace = vms = DaoVmSpace_New();
+
+	DString_Reserve( mainVmSpace->startPath, 512 );
+	getcwd( mainVmSpace->startPath->mbs, 511 );
+	DString_Reset( mainVmSpace->startPath, strlen( mainVmSpace->startPath->mbs ) );
+
+	if( command ){
+		DString *mbs = mainVmSpace->daoBinPath;
+		int absolute = command[0] == '/';
+		int relative = command[0] == '.';
+#ifdef WIN32
+		absolute = isalpha( command[0] ) && command[1] == ':';
+#endif
+		DString_SetMBS( mbs, command );
+		if( relative ) Dao_MakePath( mainVmSpace->startPath, mbs );
+		while( (i = mbs->size) && mbs->mbs[i-1] != '/' && mbs->mbs[i-1] != '\\' ) mbs->size --;
+		if( (i = mbs->size) && (mbs->mbs[i-1] == '/' || mbs->mbs[i-1] != '\\') ) mbs->size --;
+		mbs->mbs[ mbs->size ] = 0;
+	}
 
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_udf );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_any );
