@@ -2248,6 +2248,32 @@ int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module )
 	if( dao_jit.Execute == NULL ) dao_jit.Compile = NULL;
 	return dao_jit.Compile != NULL;
 }
+static int Dao_GetExecutablePath( const char *command, DString *path )
+{
+#ifdef WIN32
+	char sep = ';';
+#else
+	char sep = ':';
+#endif
+	char *PATH = getenv( "PATH" );
+	DString paths = DString_WrapMBS( PATH );
+	daoint i = 0;
+
+	DString_Reset( path, 0 );
+	if( PATH == NULL ) return 0;
+
+	while( i < paths.size ){
+		daoint j = DString_FindChar( & paths, sep, i );
+		daoint len = (j == MAXSIZE) ? paths.size - i : j - i;
+		DString base = DString_WrapBytes( paths.mbs + i, len );
+		DString_SetMBS( path, command );
+		Dao_MakePath( & base, path );
+		if( Dao_IsFile( path->mbs ) ) return 1;
+		if( j == MAXSIZE ) break;
+		i = j + 1;
+	}
+	return 0;
+}
 
 
 DaoVmSpace* DaoVmSpace_MainVmSpace()
@@ -2332,7 +2358,18 @@ DaoVmSpace* DaoInit( const char *command )
 		absolute = isalpha( command[0] ) && command[1] == ':';
 #endif
 		DString_SetMBS( mbs, command );
-		if( relative ) Dao_MakePath( mainVmSpace->startPath, mbs );
+		if( absolute == 0 ){
+			if( relative ){
+				Dao_MakePath( mainVmSpace->startPath, mbs );
+			}else{
+				Dao_GetExecutablePath( command, mbs );
+			}
+		}
+#ifdef DEBUG
+		if( ! Dao_IsFile( mbs->mbs ) ){
+			printf( "WARNING: the path of the executable cannot be located!" );
+		}
+#endif
 		while( (i = mbs->size) && mbs->mbs[i-1] != '/' && mbs->mbs[i-1] != '\\' ) mbs->size --;
 		if( (i = mbs->size) && (mbs->mbs[i-1] == '/' || mbs->mbs[i-1] != '\\') ) mbs->size --;
 		mbs->mbs[ mbs->size ] = 0;
