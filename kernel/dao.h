@@ -67,7 +67,7 @@
 #elif defined(UNIX) /* UNIX */
 
 #include<dlfcn.h>
-#define DAO_DLL
+#define DAO_DLL extern
 
 #define DAO_DLL_EXPORT
 #define DAO_DLL_IMPORT
@@ -87,7 +87,7 @@
 
 #else /* other system */
 
-#define DAO_DLL
+#define DAO_DLL extern
 #define DAO_DLL_EXPORT
 #define DAO_DLL_IMPORT
 

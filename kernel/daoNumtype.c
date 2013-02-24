@@ -3562,6 +3562,14 @@ daoint DaoArray_UpdateShape( DaoArray *C, DaoArray *A )
 	}
 	return N;
 }
+daoint dao_powi( daoint x, daoint n )
+{
+	daoint res = 1;
+	if( x == 0 || n < 0 ) return 0;
+	if( n == 1 ) return 1;
+	while( n -- ) res *= x;
+	return res;
+}
 int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, DaoProcess *proc )
 {
 	DaoArray *rB = B->original;
@@ -3591,7 +3599,7 @@ int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, D
 			case DVM_MUL : ci = ai * bi; break;
 			case DVM_DIV : ci = ai / bi; break;
 			case DVM_MOD : ci = ai % bi; break;
-			case DVM_POW : ci = powl( ai, bi );break;
+			case DVM_POW : ci = dao_powi( ai, bi );break;
 			default : break;
 			}
 			switch( C->etype ){
@@ -3691,7 +3699,7 @@ int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, D
 			case DVM_MUL : ci = ai * bi; break;
 			case DVM_DIV : ci = ai / bi; break;
 			case DVM_MOD : ci = ai % bi; break;
-			case DVM_POW : ci = powl( ai, bi );break;
+			case DVM_POW : ci = dao_powi( ai, bi );break;
 			default : break;
 			}
 			switch( C->etype ){
@@ -3853,7 +3861,7 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 			case DVM_MUL : res = dA->data.i[a] * dB->data.i[b]; break;
 			case DVM_DIV : res = dA->data.i[a] / dB->data.i[b]; break;
 			case DVM_MOD : res = dA->data.i[a] % dB->data.i[b]; break;
-			case DVM_POW : res = powl( dA->data.i[a], dB->data.i[b] );break;
+			case DVM_POW : res = dao_powi( dA->data.i[a], dB->data.i[b] );break;
 			default : break;
 			}
 			switch( C->etype ){

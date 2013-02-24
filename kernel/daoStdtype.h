@@ -43,7 +43,7 @@ struct DaoNone
 {
 	DAO_DATA_CORE;
 };
-DAO_DLL extern DaoValue *dao_none_value;
+DAO_DLL DaoValue *dao_none_value;
 DAO_DLL DaoNone* DaoNone_New();
 
 struct DaoInteger
@@ -217,8 +217,8 @@ struct DaoCdata
 
 DAO_DLL void DaoCdata_Delete( DaoCdata *self );
 
-DAO_DLL extern DaoTypeBase defaultCdataTyper;
-DAO_DLL extern DaoCdata dao_default_cdata;
+DAO_DLL DaoTypeBase defaultCdataTyper;
+DAO_DLL DaoCdata dao_default_cdata;
 
 
 /* In analog to DaoClass, a DaoCtype is created for each cdata type: */

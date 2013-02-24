@@ -59,7 +59,7 @@ struct DaoStream
 
 	DaoUserStream *redirect;
 };
-DAO_DLL extern DaoType *dao_type_stream;
+DAO_DLL DaoType *dao_type_stream;
 
 DAO_DLL DaoStream* DaoStream_New();
 DAO_DLL void DaoStream_Delete( DaoStream *self );

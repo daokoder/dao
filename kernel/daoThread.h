@@ -169,7 +169,7 @@ struct DaoMutex
 
 	DMutex  myMutex;
 };
-DAO_DLL extern DaoType *dao_type_mutex;
+DAO_DLL DaoType *dao_type_mutex;
 
 DAO_DLL DaoMutex* DaoMutex_New();
 DAO_DLL void DaoMutex_Lock( DaoMutex *self );
@@ -182,7 +182,7 @@ struct DaoCondVar
 
 	DCondVar  myCondVar;
 };
-DAO_DLL extern DaoType *dao_type_condvar;
+DAO_DLL DaoType *dao_type_condvar;
 
 DAO_DLL DaoCondVar* DaoCondVar_New();
 DAO_DLL void DaoCondVar_Delete( DaoCondVar *self );
@@ -200,7 +200,7 @@ struct DaoSema
 
 	DSema  mySema;
 };
-DAO_DLL extern DaoType *dao_type_sema;
+DAO_DLL DaoType *dao_type_sema;
 
 DAO_DLL DaoSema* DaoSema_New( int n );
 DAO_DLL void DaoSema_Delete( DaoSema *self );

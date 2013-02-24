@@ -94,6 +94,14 @@ if(DAO_HAS_READLINE)
     list(APPEND DAO_SYSTEM_LIBS "readline")
 endif(DAO_HAS_READLINE)
 
+# Setup for Minix:
+if( "${CMAKE_SYSTEM_NAME}" STREQUAL "Minix" )
+	set( UNIX 1 )
+	set( DAO_WITH_THREAD 0 )
+	set( DAO_WITH_CONCURRENT 0 )
+	MESSAGE(WARNING "Multithreading disable for Minix")
+endif()
+
 # Enable or disable compile-time language features
 if(DAO_WITH_NUMARRAY)
     add_definitions(-DDAO_WITH_NUMARRAY)
@@ -122,11 +130,17 @@ endif(DAO_WITH_MACRO)
 # System dependent settings
 if(UNIX)
     add_definitions(-DUNIX)
-    list(APPEND DAO_SYSTEM_LIBS "m" "dl")
+	SET( CMAKE_EXE_LINKER_FLAGS "-Wl,-export-dynamic" )
+	SET( CMAKE_SHARED_LINKER_FLAGS "-Wl,-export-dynamic" )
+    list(APPEND DAO_SYSTEM_LIBS "m" )
 
     if(DAO_WITH_THREAD OR DAO_WITH_CONCURRENT)
         list(APPEND DAO_SYSTEM_LIBS "pthread")
     endif(DAO_WITH_THREAD OR DAO_WITH_CONCURRENT)
+
+	if( "${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" )
+    	list(APPEND DAO_SYSTEM_LIBS "dl" )
+	endif()
 elseif(WIN32)
     add_definitions(-DWIN32)
 
@@ -137,6 +151,7 @@ elseif(WIN32)
 endif(UNIX)
 
 IF(APPLE)
+	SET( CMAKE_EXE_LINKER_FLAGS "" )
 	SET( CMAKE_SHARED_LINKER_FLAGS "-undefined dynamic_lookup" )
 	if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 		add_definitions(-DMAC_OSX)
@@ -193,17 +208,28 @@ install(FILES "${PROJECT_SOURCE_DIR}/modules/addpath.dao" DESTINATION ${DAO_MODU
 
 # Now, find all modules and add options for them.
 add_subdirectory("${PROJECT_SOURCE_DIR}/modules/auxlib")
-add_subdirectory("${PROJECT_SOURCE_DIR}/modules/DaoCXX")
-# add_subdirectory("${PROJECT_SOURCE_DIR}/modules/DaoJIT")
-add_subdirectory("${PROJECT_SOURCE_DIR}/modules/graph")
+add_subdirectory("${PROJECT_SOURCE_DIR}/modules/syslib")
 add_subdirectory("${PROJECT_SOURCE_DIR}/modules/math")
 add_subdirectory("${PROJECT_SOURCE_DIR}/modules/meta")
 add_subdirectory("${PROJECT_SOURCE_DIR}/modules/serializer")
-add_subdirectory("${PROJECT_SOURCE_DIR}/modules/net")
-add_subdirectory("${PROJECT_SOURCE_DIR}/modules/os")
-add_subdirectory("${PROJECT_SOURCE_DIR}/modules/stream")
-add_subdirectory("${PROJECT_SOURCE_DIR}/modules/string")
-add_subdirectory("${PROJECT_SOURCE_DIR}/modules/sync")
-add_subdirectory("${PROJECT_SOURCE_DIR}/modules/graphics")
-add_subdirectory("${PROJECT_SOURCE_DIR}/modules/syslib")
-add_subdirectory("${PROJECT_SOURCE_DIR}/modules/web")
+
+
+set( OPTIONAL_MODULES
+		"DaoCXX"
+		"graph"
+		"net"
+		"os"
+		"stream"
+		"string"
+		"sync"
+		"graphics"
+		"web"
+	)
+
+foreach( module ${OPTIONAL_MODULES} )
+	set( module_path "${PROJECT_SOURCE_DIR}/modules/${module}" )
+	if( EXISTS "${module_path}" )
+		add_subdirectory( "${module_path}" )
+	endif()
+endforeach(module)
+
