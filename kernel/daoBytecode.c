@@ -941,30 +941,30 @@ void DaoByteEncoder_GetLookupName( int size, DMap *lookupTable, DArray *lookups,
 	}
 }
 
-void DaoByteEncoder_EncodeInterface( DaoByteEncoder *self, DaoInterface *interface )
+void DaoByteEncoder_EncodeInterface( DaoByteEncoder *self, DaoInterface *interfase )
 {
 	DNode *it;
 	int i, id, count = 0;;
 
-	if( DMap_Find( self->mapInterfaces, interface ) ) return;
+	if( DMap_Find( self->mapInterfaces, interfase ) ) return;
 
-	id = DaoByteEncoder_FindDeclaration( self, (DaoValue*)interface );
+	id = DaoByteEncoder_FindDeclaration( self, (DaoValue*)interfase );
 	if( id == 0 ) return;
 
-	DMap_Insert( self->mapInterfaces, interface, IntToPointer( self->mapInterfaces->size+1 ) );
+	DMap_Insert( self->mapInterfaces, interfase, IntToPointer( self->mapInterfaces->size+1 ) );
 	DString_AppendUInt( self->interfaces, id );
-	DString_AppendUInt16( self->interfaces, interface->supers->size );
-	for(i=0; i<interface->supers->size; ++i){
-		DaoValue *value = interface->supers->items.pValue[i];
+	DString_AppendUInt16( self->interfaces, interfase->supers->size );
+	for(i=0; i<interfase->supers->size; ++i){
+		DaoValue *value = interfase->supers->items.pValue[i];
 		id = DaoByteEncoder_EncodeDeclaration( self, value );
 		DString_AppendUInt( self->interfaces, id );
 	}
-	for(it=DMap_First(interface->methods); it; it=DMap_Next(interface->methods,it)){
+	for(it=DMap_First(interfase->methods); it; it=DMap_Next(interfase->methods,it)){
 		DaoRoutine *routine = it->value.pRoutine;
 		count += routine->overloads ? routine->overloads->routines->size : 1;
 	}
 	DString_AppendUInt16( self->interfaces, count );
-	for(it=DMap_First(interface->methods); it; it=DMap_Next(interface->methods,it)){
+	for(it=DMap_First(interfase->methods); it; it=DMap_Next(interfase->methods,it)){
 		DaoRoutine *routine = it->value.pRoutine;
 		if( routine->overloads ){
 			for(i=0, count=routine->overloads->routines->size; i<count; ++i){

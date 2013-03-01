@@ -150,13 +150,13 @@ elseif(WIN32)
     endif(DAO_WITH_THREAD OR DAO_WITH_CONCURRENT)
 endif(UNIX)
 
-IF(APPLE)
-	SET( CMAKE_EXE_LINKER_FLAGS "" )
-	SET( CMAKE_SHARED_LINKER_FLAGS "-undefined dynamic_lookup" )
+if(APPLE)
+	set( CMAKE_EXE_LINKER_FLAGS "" )
+	set( CMAKE_SHARED_LINKER_FLAGS "-undefined dynamic_lookup" )
 	if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 		add_definitions(-DMAC_OSX)
 	endif()
-ENDIF()
+endif()
 
 include_directories("${PROJECT_SOURCE_DIR}/kernel")
 
@@ -215,6 +215,7 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/modules/serializer")
 
 
 set( OPTIONAL_MODULES
+		"DaoJIT"
 		"DaoCXX"
 		"graph"
 		"net"

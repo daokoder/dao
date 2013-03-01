@@ -1,0 +1,8 @@
+
+load unix;
+
+daomake_platform["DLL-SUFFIX"]      = ".dylib"
+daomake_platform["DLL-FLAG"]        = "-dynamiclib"
+daomake_platform["DLL-NAME"]        = "-install_name lib"
+daomake_platform["DYNAMIC-IMPORT"]  = "-undefined dynamic_lookup"
+daomake_platform["DLL-RPATH"]       = "-Wl,-rpath,. -Wl,-rpath,"

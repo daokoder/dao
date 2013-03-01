@@ -1,0 +1,128 @@
+
+TARGET = daomake$(EXESUFFIX)
+
+DAO_SRC_DIR =../../kernel
+
+INCS = -I$(DAO_SRC_DIR)
+CFLAGS = -O2 $(SYSCFLAGS) -DDAO_WITH_REGEX
+LFLAGS = $(SYSLIBS)
+
+OBJS =objs
+
+
+first: all
+
+$(OBJS)/daoArray.o: $(DAO_SRC_DIR)/daoArray.c 
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoArray.c -o $(OBJS)/daoArray.o
+
+$(OBJS)/daoMap.o: $(DAO_SRC_DIR)/daoMap.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoMap.c -o $(OBJS)/daoMap.o
+
+$(OBJS)/daoType.o: $(DAO_SRC_DIR)/daoType.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoType.c -o $(OBJS)/daoType.o
+
+$(OBJS)/daoValue.o: $(DAO_SRC_DIR)/daoValue.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoValue.c -o $(OBJS)/daoValue.o
+
+$(OBJS)/daoProcess.o: $(DAO_SRC_DIR)/daoProcess.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoProcess.c -o $(OBJS)/daoProcess.o
+
+$(OBJS)/daoRoutine.o: $(DAO_SRC_DIR)/daoRoutine.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoRoutine.c -o $(OBJS)/daoRoutine.o
+
+$(OBJS)/daoGC.o: $(DAO_SRC_DIR)/daoGC.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoGC.c -o $(OBJS)/daoGC.o
+
+$(OBJS)/daoStdtype.o: $(DAO_SRC_DIR)/daoStdtype.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoStdtype.c -o $(OBJS)/daoStdtype.o
+
+$(OBJS)/daoNamespace.o: $(DAO_SRC_DIR)/daoNamespace.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoNamespace.c -o $(OBJS)/daoNamespace.o
+
+$(OBJS)/daoString.o: $(DAO_SRC_DIR)/daoString.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoString.c -o $(OBJS)/daoString.o
+
+$(OBJS)/daoStdlib.o: $(DAO_SRC_DIR)/daoStdlib.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoStdlib.c -o $(OBJS)/daoStdlib.o
+
+$(OBJS)/daoMacro.o: $(DAO_SRC_DIR)/daoMacro.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoMacro.c -o $(OBJS)/daoMacro.o
+
+$(OBJS)/daoLexer.o: $(DAO_SRC_DIR)/daoLexer.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoLexer.c -o $(OBJS)/daoLexer.o
+
+$(OBJS)/daoParser.o: $(DAO_SRC_DIR)/daoParser.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoParser.c -o $(OBJS)/daoParser.o
+
+$(OBJS)/daoBytecode.o: $(DAO_SRC_DIR)/daoBytecode.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoBytecode.c -o $(OBJS)/daoBytecode.o
+
+$(OBJS)/daoOptimizer.o: $(DAO_SRC_DIR)/daoOptimizer.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoOptimizer.c -o $(OBJS)/daoOptimizer.o
+
+$(OBJS)/daoThread.o: $(DAO_SRC_DIR)/daoThread.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoThread.c -o $(OBJS)/daoThread.o
+
+$(OBJS)/daoNumtype.o: $(DAO_SRC_DIR)/daoNumtype.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoNumtype.c -o $(OBJS)/daoNumtype.o
+
+$(OBJS)/daoClass.o: $(DAO_SRC_DIR)/daoClass.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoClass.c -o $(OBJS)/daoClass.o
+
+$(OBJS)/daoConst.o: $(DAO_SRC_DIR)/daoConst.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoConst.c -o $(OBJS)/daoConst.o
+
+$(OBJS)/daoObject.o: $(DAO_SRC_DIR)/daoObject.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoObject.c -o $(OBJS)/daoObject.o
+
+$(OBJS)/daoSched.o: $(DAO_SRC_DIR)/daoSched.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoSched.c -o $(OBJS)/daoSched.o
+
+$(OBJS)/daoStream.o: $(DAO_SRC_DIR)/daoStream.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoStream.c -o $(OBJS)/daoStream.o
+
+$(OBJS)/daoVmcode.o: $(DAO_SRC_DIR)/daoVmcode.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoVmcode.c -o $(OBJS)/daoVmcode.o
+
+$(OBJS)/daoVmspace.o: $(DAO_SRC_DIR)/daoVmspace.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoVmspace.c -o $(OBJS)/daoVmspace.o
+
+$(OBJS)/daoRegex.o: $(DAO_SRC_DIR)/daoRegex.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoRegex.c -o $(OBJS)/daoRegex.o
+
+$(OBJS)/daoMake.o: source/daoMake.c
+	$(CC) -c $(CFLAGS) $(INCS) source/daoMake.c -o $(OBJS)/daoMake.o
+
+
+OBJECTS = $(OBJS)/daoConst.o $(OBJS)/daoVmcode.o \
+		  $(OBJS)/daoString.o $(OBJS)/daoArray.o $(OBJS)/daoMap.o \
+		  $(OBJS)/daoValue.o $(OBJS)/daoStdtype.o $(OBJS)/daoNumtype.o \
+		  $(OBJS)/daoRoutine.o $(OBJS)/daoClass.o $(OBJS)/daoObject.o \
+		  $(OBJS)/daoProcess.o $(OBJS)/daoNamespace.o $(OBJS)/daoVmspace.o \
+		  $(OBJS)/daoLexer.o $(OBJS)/daoParser.o $(OBJS)/daoBytecode.o \
+		  $(OBJS)/daoType.o $(OBJS)/daoOptimizer.o $(OBJS)/daoStdlib.o \
+		  $(OBJS)/daoMacro.o $(OBJS)/daoStream.o $(OBJS)/daoRegex.o \
+		  $(OBJS)/daoGC.o $(OBJS)/daoThread.o $(OBJS)/daoSched.o $(OBJS)/daoMake.o
+
+
+
+all: $(TARGET)
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(OBJECTS) -o $(TARGET) $(LFLAGS)
+
+
+linux:
+	$(MAKE) SYSCFLAGS="-DUNIX -fPIC" SYSLIBS="-lm -ldl"
+
+macosx:
+	$(MAKE) SYSCFLAGS="-DUNIX -DMAC_OSX -fPIC" SYSLIBS=""
+
+freebsd:
+	$(MAKE) SYSCFLAGS="-DUNIX -fPIC" SYSLIBS="-lm"
+
+mingw:
+	$(MAKE) SYSCFLAGS="-DWIN32" SYSLIBS="-lwinmm" EXESUFFIX=".exe"
+
+minix:
+	$(MAKE) SYSCFLAGS="-DUNIX -fPIC" SYSLIBS="-lm"

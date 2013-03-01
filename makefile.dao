@@ -1,0 +1,172 @@
+###########################################################################
+# DaoMake supports exactly the same syntax of Dao.
+#
+#
+##################
+# Compiling Units:
+##################
+#
+# A Compiling Unit can have preprocessor definitions, including paths,
+# linking paths, compiling flags and linking paths etc. attached.
+#
+# Basic constructs:
+# -- Project;
+# -- Objects;
+# -- Executable;
+# -- Shared Library;
+# -- Static Library;
+#
+################
+# Project:
+################
+#
+# Each DaoMake file should contain exactly one Project object, which is the
+# top level object that can be used to manage the building settings and targets.
+# As a Compiling Unit, common compiling and linking settings can be attached it,
+# which allows such settings to be applied to its children Compiling Units
+# automatically.
+# 
+#     dao = DaoMake::Project( "dao" )
+#     
+#     Project( name : string ) => Project
+# 
+# 
+################
+# Objects:
+################
+# 
+# Objects is the most basic type of Compiling Unit, which can be shared by
+# multiple executable and library units. It has to be constructed from header
+# and source files:
+# 
+#     dao_kernel_objects = dao.AddObjects( sources, headers )
+#     
+# AddObjects( self :Project, sources :list<string>, headers :list<string> = {} ) =>Objects
+#     
+# "dao_kernel_objects" will be a child unit of "dao" and inherits
+# the common compiling and linking settings from it.
+# 
+#     dao_kernel_objects.AddHeaders( header_file )
+#     dao_kernel_objects.AddSources( source_file )
+#     
+#     AddHeaders( self :Objects, header :string, ... :string ) =>Objects
+#     AddSources( self :Objects, source :string, ... :string ) =>Objects
+#     
+# 
+################
+# Executable:
+################
+# 
+# An Executable object defines a building target. As a Compiling Unit,
+# it can have its own linking setttings.
+# 
+################
+# Library:
+################
+# 
+# 
+#
+#
+###########################################################################
+
+
+dao = DaoMake::Project( "dao" )
+
+
+dao_kernel_headers =
+{
+	"kernel/dao.h" ,
+	"kernel/daoArray.h" ,
+	"kernel/daoBase.h" ,
+	"kernel/daoClass.h" ,
+	"kernel/daoConst.h" ,
+	"kernel/daoGC.h" ,
+	"kernel/daoLexer.h" ,
+	"kernel/daoMacro.h" ,
+	"kernel/daoMap.h" ,
+	"kernel/daoNamespace.h" ,
+	"kernel/daoNumtype.h" ,
+	"kernel/daoObject.h" ,
+	"kernel/daoParser.h" ,
+	"kernel/daoBytecode.h" ,
+	"kernel/daoOptimizer.h" ,
+	"kernel/daoProcess.h" ,
+	"kernel/daoRegex.h" ,
+	"kernel/daoRoutine.h" ,
+	"kernel/daoSched.h" ,
+	"kernel/daoStdlib.h" ,
+	"kernel/daoStdtype.h" ,
+	"kernel/daoStream.h" ,
+	"kernel/daoString.h" ,
+	"kernel/daoThread.h" ,
+	"kernel/daoType.h" ,
+	"kernel/daoValue.h" ,
+	"kernel/daoVmcode.h" ,
+	"kernel/daoVmspace.h" 
+}
+
+dao_kernel_sources =
+{
+	"kernel/daoArray.c" ,
+	"kernel/daoClass.c" ,
+	"kernel/daoConst.c" ,
+	"kernel/daoGC.c" ,
+	"kernel/daoLexer.c" ,
+	"kernel/daoMacro.c" ,
+	"kernel/daoMap.c" ,
+	"kernel/daoNamespace.c" ,
+	"kernel/daoNumtype.c" ,
+	"kernel/daoObject.c" ,
+	"kernel/daoParser.c" ,
+	"kernel/daoBytecode.c" ,
+	"kernel/daoOptimizer.c" ,
+	"kernel/daoProcess.c" ,
+	"kernel/daoRegex.c" ,
+	"kernel/daoRoutine.c" ,
+	"kernel/daoSched.c" ,
+	"kernel/daoStdlib.c" ,
+	"kernel/daoStdtype.c" ,
+	"kernel/daoStream.c" ,
+	"kernel/daoString.c" ,
+	"kernel/daoThread.c" ,
+	"kernel/daoType.c" ,
+	"kernel/daoValue.c" ,
+	"kernel/daoVmcode.c" ,
+	"kernel/daoVmspace.c" 
+}
+
+
+dao_kernel_objects = dao.AddObjects( dao_kernel_sources, dao_kernel_headers )
+dao_main_object    = dao.AddObjects( { "kernel/daoMain.c" }, dao_kernel_headers );
+
+dao_exe = dao.AddExecutable( "dao", dao_kernel_objects, dao_main_object )
+dao_dll = dao.AddLibrary( "dao", $shared, dao_kernel_objects )
+dao_lib = dao.AddLibrary( "dao", $static, dao_kernel_objects )
+
+dao.EnableDynamicLinking()
+dao.EnableSymbolExporting()
+
+if( dao.IsUnix() ){
+	dao.AddDefinition( "UNIX" )
+	dao.LinkLibrary( "-lm" );
+	dao.LinkLibrary( "-lpthread" );
+	if( dao.IsMacOSX() ) dao.AddDefinition( "MAC_OSX" )
+	if( not dao.IsMinix() ) dao.AddDefinition( "DAO_WITH_THREAD" )
+}else if( dao.IsWin32() ){
+	dao.AddDefinition( "WIN32" )
+}
+
+readline = DaoMake::FindPackage( "ReadLine" )
+if( readline ){
+	dao_exe.AddDefinition( "DAO_USE_READLINE" )
+	dao_exe.UsePackage( readline )
+}
+# FindHeader
+# dao.ConfigureHeader( "readline/readline.h", "DAO_USE_READLINE", 1 )
+
+dao.Install( dao_exe )
+dao.Install( dao_dll )
+dao.Install( dao_lib )
+
+dao.AddProject( "modules/auxlib" )
+dao.AddProject( "modules/syslib" )
