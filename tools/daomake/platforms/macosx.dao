@@ -1,5 +1,6 @@
-
 load unix;
+
+daomake_platform["MACOSX"]      = "1"
 
 daomake_platform["DLL-SUFFIX"]      = ".dylib"
 daomake_platform["DLL-FLAG"]        = "-dynamiclib"

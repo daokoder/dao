@@ -1,2 +1,3 @@
-
 load unix;
+
+daomake_platform["LINUX"]      = "1"

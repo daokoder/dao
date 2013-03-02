@@ -1,0 +1,21 @@
+
+header_hints = { "." }
+
+if( DaoMake::IsUnix() ){
+	header_hints.append( "/usr/include" )
+	header_hints.append( "/usr/local/include" )
+	if( DaoMake::IsMacOSX() ){
+		header_hints.append( "/Library/Frameworks/OpenGL.framework/Headers" )
+		header_hints.append( "/System/Library/Frameworks/OpenGL.framework/Headers" )
+	}
+	header_path = DaoMake::FindFile( "GL/gl.h", header_hints )
+	if( header_path == "" ) return;
+
+	opengl = DaoMake::Project( "OpenGL" )
+	opengl.ExportCompilingFlags( "-I" + header_path )
+	if( DaoMake::IsMacOSX() && header_path.find( "Frameworks" ) >= 0 ){
+		opengl.ExportLinkingFlags( "-framework OpenGL" )
+	}else{
+		opengl.ExportLinkingFlags( "-lGL -lGLU" )
+	}
+}

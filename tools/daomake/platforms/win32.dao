@@ -1,3 +1,5 @@
+daomake_platform["WIN32"]      = "1"
+
 daomake_platform["AR"]        = "ar rcs"
 daomake_platform["COPY"]      = "copy /y"
 daomake_platform["DEL-FILE"]  = "del /f/q"
@@ -9,7 +11,9 @@ daomake_platform["NOTEXIST"]  = "if not exist"
 daomake_platform["HAS-DIR"]   = "if exist"
 daomake_platform["HAS-FILE"]  = "if exist"
 
+daomake_platform["EXE-SUFFIX"]      = ".exe"
 daomake_platform["DLL-SUFFIX"]      = ".dll"
+daomake_platform["LIB-SUFFIX"]      = ".a"
 daomake_platform["DLL-FLAG"]        = "-shared"
 daomake_platform["DLL-NAME"]        = "-Wl,--out-implib,lib"
 daomake_platform["DYNAMIC-EXPORT"]  = ""

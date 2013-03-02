@@ -1,3 +1,5 @@
+daomake_platform["UNIX"]      = "1"
+
 daomake_platform["AR"]        = "ar rcs"
 daomake_platform["MOVE"]      = "mv"
 daomake_platform["COPY"]      = "cp"
@@ -9,7 +11,9 @@ daomake_platform["MKDIR"]     = "mkdir -p"
 daomake_platform["HAS-DIR"]   = "test -d"
 daomake_platform["HAS-FILE"]  = "test -f"
 
+daomake_platform["EXE-SUFFIX"]      = ""
 daomake_platform["DLL-SUFFIX"]      = ".so"
+daomake_platform["LIB-SUFFIX"]      = ".a"
 daomake_platform["DLL-FLAG"]        = "-shared"
 daomake_platform["DLL-NAME"]        = "-Wl,-soname,lib"
 daomake_platform["DYNAMIC-EXPORT"]  = "-Wl,-export-dynamic"

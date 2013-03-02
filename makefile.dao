@@ -70,7 +70,7 @@
 ###########################################################################
 
 
-dao = DaoMake::Project( "dao" )
+dao = DaoMake::Project( "Dao" )
 
 
 dao_kernel_headers =
@@ -146,13 +146,13 @@ dao_lib = dao.AddLibrary( "dao", $static, dao_kernel_objects )
 dao.EnableDynamicLinking()
 dao.EnableSymbolExporting()
 
-if( dao.IsUnix() ){
+if( DaoMake::IsUnix() ){
 	dao.AddDefinition( "UNIX" )
 	dao.LinkLibrary( "-lm" );
 	dao.LinkLibrary( "-lpthread" );
-	if( dao.IsMacOSX() ) dao.AddDefinition( "MAC_OSX" )
-	if( not dao.IsMinix() ) dao.AddDefinition( "DAO_WITH_THREAD" )
-}else if( dao.IsWin32() ){
+	if( DaoMake::IsMacOSX() ) dao.AddDefinition( "MAC_OSX" )
+	if( not DaoMake::IsMinix() ) dao.AddDefinition( "DAO_WITH_THREAD" )
+}else if( DaoMake::IsWin32() ){
 	dao.AddDefinition( "WIN32" )
 }
 
