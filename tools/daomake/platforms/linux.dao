@@ -1,3 +1,5 @@
 load unix;
 
-daomake_platform["LINUX"]      = "1"
+io.writeln( "DaoMake: using Linux settings!" )
+
+DaoMake::Settings["LINUX"]      = "1"

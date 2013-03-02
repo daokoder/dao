@@ -26,7 +26,7 @@
 # which allows such settings to be applied to its children Compiling Units
 # automatically.
 # 
-#     dao = DaoMake::Project( "dao" )
+#     daovm = DaoMake::Project( "Dao" )
 #     
 #     Project( name : string ) => Project
 # 
@@ -39,15 +39,15 @@
 # multiple executable and library units. It has to be constructed from header
 # and source files:
 # 
-#     dao_kernel_objects = dao.AddObjects( sources, headers )
+#     daovm_kernel_objects = daovm.AddObjects( sources, headers )
 #     
 # AddObjects( self :Project, sources :list<string>, headers :list<string> = {} ) =>Objects
 #     
-# "dao_kernel_objects" will be a child unit of "dao" and inherits
+# "daovm_kernel_objects" will be a child unit of "daovm" and inherits
 # the common compiling and linking settings from it.
 # 
-#     dao_kernel_objects.AddHeaders( header_file )
-#     dao_kernel_objects.AddSources( source_file )
+#     daovm_kernel_objects.AddHeaders( header_file )
+#     daovm_kernel_objects.AddSources( source_file )
 #     
 #     AddHeaders( self :Objects, header :string, ... :string ) =>Objects
 #     AddSources( self :Objects, source :string, ... :string ) =>Objects
@@ -70,10 +70,10 @@
 ###########################################################################
 
 
-dao = DaoMake::Project( "Dao" )
+daovm = DaoMake::Project( "Dao" )
 
 
-dao_kernel_headers =
+daovm_kernel_headers =
 {
 	"kernel/dao.h" ,
 	"kernel/daoArray.h" ,
@@ -105,7 +105,7 @@ dao_kernel_headers =
 	"kernel/daoVmspace.h" 
 }
 
-dao_kernel_sources =
+daovm_kernel_sources =
 {
 	"kernel/daoArray.c" ,
 	"kernel/daoClass.c" ,
@@ -136,37 +136,39 @@ dao_kernel_sources =
 }
 
 
-dao_kernel_objects = dao.AddObjects( dao_kernel_sources, dao_kernel_headers )
-dao_main_object    = dao.AddObjects( { "kernel/daoMain.c" }, dao_kernel_headers );
+daovm_kernel_objects = DaoMake::Objects( daovm_kernel_sources, daovm_kernel_headers )
+daovm_main_object    = DaoMake::Objects( { "kernel/daoMain.c" }, daovm_kernel_headers );
 
-dao_exe = dao.AddExecutable( "dao", dao_kernel_objects, dao_main_object )
-dao_dll = dao.AddLibrary( "dao", $shared, dao_kernel_objects )
-dao_lib = dao.AddLibrary( "dao", $static, dao_kernel_objects )
+daovm_exe = daovm.AddExecutable( "dao", daovm_kernel_objects, daovm_main_object )
+daovm_dll = daovm.AddSharedLibrary( "dao", daovm_kernel_objects )
+daovm_lib = daovm.AddStaticLibrary( "dao", daovm_kernel_objects )
 
-dao.EnableDynamicLinking()
-dao.EnableSymbolExporting()
+daovm_exe.EnableDynamicExporting()
+daovm_dll.EnableDynamicExporting()
+daovm_lib.EnableDynamicExporting()
 
 if( DaoMake::IsUnix() ){
-	dao.AddDefinition( "UNIX" )
-	dao.LinkLibrary( "-lm" );
-	dao.LinkLibrary( "-lpthread" );
-	if( DaoMake::IsMacOSX() ) dao.AddDefinition( "MAC_OSX" )
-	if( not DaoMake::IsMinix() ) dao.AddDefinition( "DAO_WITH_THREAD" )
+	daovm.AddDefinition( "UNIX" )
+	daovm.AddCompilingFlag( "-fPIC" );
+	daovm.AddLinkingFlag( "-lm" );
+	daovm.AddLinkingFlag( "-lpthread" );
+	if( DaoMake::IsMacOSX() ) daovm.AddDefinition( "MAC_OSX" )
+	if( not DaoMake::IsMinix() ) daovm.AddDefinition( "DAO_WITH_THREAD" )
 }else if( DaoMake::IsWin32() ){
-	dao.AddDefinition( "WIN32" )
+	daovm.AddDefinition( "WIN32" )
 }
 
+#{
 readline = DaoMake::FindPackage( "ReadLine" )
 if( readline ){
-	dao_exe.AddDefinition( "DAO_USE_READLINE" )
-	dao_exe.UsePackage( readline )
+	daovm_exe.AddDefinition( "DAO_USE_READLINE" )
+	daovm_exe.UsePackage( readline )
 }
-# FindHeader
-# dao.ConfigureHeader( "readline/readline.h", "DAO_USE_READLINE", 1 )
 
-dao.Install( dao_exe )
-dao.Install( dao_dll )
-dao.Install( dao_lib )
+daovm.Install( daovm_exe )
+daovm.Install( daovm_dll )
+daovm.Install( daovm_lib )
 
-dao.AddProject( "modules/auxlib" )
-dao.AddProject( "modules/syslib" )
+daovm.AddProject( "modules/auxlib" )
+daovm.AddProject( "modules/syslib" )
+#}

@@ -2746,7 +2746,7 @@ int DaoList_SetType( DaoList *self, DaoType *type )
 	GC_IncRC( type );
 	return 1;
 }
-int DaoList_Size( DaoList *self )
+daoint DaoList_Size( DaoList *self )
 {
 	return self->items.size;
 }
@@ -3350,7 +3350,7 @@ int DaoMap_SetType( DaoMap *self, DaoType *type )
 	GC_IncRC( type );
 	return 1;
 }
-int DaoMap_Size( DaoMap *self )
+daoint DaoMap_Size( DaoMap *self )
 {
 	return self->items->size;
 }

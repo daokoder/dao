@@ -605,7 +605,7 @@ DAO_DLL DaoEnum* DaoEnum_New( DaoType *type, int value );
 DAO_DLL DaoList* DaoList_New();
 DAO_DLL DaoType* DaoList_GetType( DaoList *self );
 DAO_DLL int DaoList_SetType( DaoList *self, DaoType *type );
-DAO_DLL int DaoList_Size( DaoList *self );
+DAO_DLL daoint DaoList_Size( DaoList *self );
 
 DAO_DLL DaoValue* DaoList_Front( DaoList *self );
 DAO_DLL DaoValue* DaoList_Back( DaoList *self );
@@ -632,7 +632,7 @@ enum DaoHashSeeds{ DAO_HASH_NONE, DAO_HASH_DEFAULT, DAO_HASH_RANDOM };
 DAO_DLL DaoMap* DaoMap_New( unsigned int hashing );
 DAO_DLL DaoType* DaoMap_GetType( DaoMap *self );
 DAO_DLL int DaoMap_SetType( DaoMap *self, DaoType *type );
-DAO_DLL int DaoMap_Size( DaoMap *self );
+DAO_DLL daoint DaoMap_Size( DaoMap *self );
 
 /*
 // The following functions return 0 on success;

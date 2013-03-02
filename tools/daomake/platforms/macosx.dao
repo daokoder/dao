@@ -1,9 +1,11 @@
 load unix;
 
-daomake_platform["MACOSX"]      = "1"
+io.writeln( "DaoMake: using MacOSX settings!" )
 
-daomake_platform["DLL-SUFFIX"]      = ".dylib"
-daomake_platform["DLL-FLAG"]        = "-dynamiclib"
-daomake_platform["DLL-NAME"]        = "-install_name lib"
-daomake_platform["DYNAMIC-IMPORT"]  = "-undefined dynamic_lookup"
-daomake_platform["DLL-RPATH"]       = "-Wl,-rpath,. -Wl,-rpath,"
+DaoMake::Settings["MACOSX"]      = "1"
+
+DaoMake::Settings["DLL-SUFFIX"]      = ".dylib"
+DaoMake::Settings["DLL-FLAG"]        = "-dynamiclib"
+DaoMake::Settings["DLL-NAME"]        = "-install_name lib"
+DaoMake::Settings["DYNAMIC-IMPORT"]  = "-undefined dynamic_lookup"
+DaoMake::Settings["DLL-RPATH"]       = "-Wl,-rpath,. -Wl,-rpath,"

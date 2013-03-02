@@ -2026,7 +2026,7 @@ int DaoParser_FindScopedConstant( DaoParser *self, DaoValue **value, int start )
 		case DAO_CLASS : type = DaoType_FindType( name, NULL, NULL, & (*value)->xClass, NULL ); break;
 		case DAO_CTYPE : type = DaoType_FindType( name, NULL, (*value)->xCdata.ctype, NULL, NULL ); break;
 		}
-		if( type == NULL ) return -1;
+		if( type == NULL ) return end - 2;
 		*value = (DaoValue*) type;
 	}
 	return end;
