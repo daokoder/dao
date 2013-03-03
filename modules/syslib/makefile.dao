@@ -1,0 +1,13 @@
+
+dao_sys = DaoMake::Project( "DaoSys" ) 
+
+daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
+
+if( daovm == none ) return
+
+dao_sys_objects = DaoMake::Objects( { "dao_sys.c" }, { "dao_sys.h" } )
+dao_sys_lib     = dao_sys.AddSharedLibrary( "dao_sys", dao_sys_objects )
+
+dao_sys_lib.UsePackage( daovm )
+dao_sys_lib.EnableDynamicLinking()
+

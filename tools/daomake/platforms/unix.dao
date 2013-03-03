@@ -17,11 +17,20 @@ DaoMake::Settings["HAS-FILE"]  = "test -f"
 DaoMake::Settings["EXE-SUFFIX"]      = ""
 DaoMake::Settings["DLL-SUFFIX"]      = ".so"
 DaoMake::Settings["LIB-SUFFIX"]      = ".a"
+DaoMake::Settings["DLL-PREFIX"]      = "lib"
+DaoMake::Settings["LIB-PREFIX"]      = "lib"
 DaoMake::Settings["DLL-FLAG"]        = "-shared"
 DaoMake::Settings["DLL-NAME"]        = "-Wl,-soname,lib"
 DaoMake::Settings["DYNAMIC-EXPORT"]  = "-Wl,-export-dynamic"
 DaoMake::Settings["DYNAMIC-IMPORT"]  = ""
 DaoMake::Settings["DLL-RPATH"]       = "-Wl,-rpath=. -Wl,-rpath="
+
+DaoMake::Settings["RELEASE-CFLAG"]   = "-O2"
+DaoMake::Settings["RELEASE-LFLAG"]   = ""
+DaoMake::Settings["DEBUG-CFLAG"]     = "-ggdb -O0 -DDEBUG"
+DaoMake::Settings["DEBUG-LFLAG"]     = "-ggdb"
+DaoMake::Settings["PROFILE-CFLAG"]     = "-pg"
+DaoMake::Settings["PROFILE-LFLAG"]     = "-pg"
 
 DaoMake::Includes.append( "/usr/include" );
 DaoMake::Includes.append( "/usr/local/include" );

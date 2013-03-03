@@ -488,6 +488,7 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 		if( minus ) value->xComplex.value.imag = - value->xComplex.value.imag;
 		next = start + 2;
 		break;
+#ifdef DAO_WITH_LONGINT
 	case DAO_LONG :
 		value->xLong.value->base = DaoDecodeInteger( str );
 		start += 1;
@@ -503,6 +504,7 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 			DLong_PushBack( value->xLong.value, DaoDecodeInteger( tokens[i]->string.mbs ) );
 		}
 		break;
+#endif
 	case DAO_STRING :
 		n = tokens[start]->string.size - 1;
 		for(i=1; i<n; i++){

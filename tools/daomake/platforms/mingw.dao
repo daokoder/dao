@@ -1,0 +1,6 @@
+
+load win32;
+
+io.writeln( "DaoMake: using MinGW settings!" )
+
+DaoMake::Settings["MINGW"]      = "1"

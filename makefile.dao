@@ -72,6 +72,12 @@
 
 daovm = DaoMake::Project( "Dao" )
 
+daovm_path = DaoMake::Option( "PATH", "/usr/local" )
+daovm_bin_path = DaoMake::Option( "BIN-PATH", daovm_path + "/bin" )
+daovm_lib_path = DaoMake::Option( "LIB-PATH", daovm_path + "/lib" )
+daovm_mod_path = DaoMake::Option( "LIB-PATH", daovm_path + "/lib/dao/modules" )
+daovm_doc_path = DaoMake::Option( "DOC-PATH", daovm_path + "/shared/dao/doc" )
+
 
 daovm_kernel_headers =
 {
@@ -139,13 +145,19 @@ daovm_kernel_sources =
 daovm_kernel_objects = DaoMake::Objects( daovm_kernel_sources, daovm_kernel_headers )
 daovm_main_object    = DaoMake::Objects( { "kernel/daoMain.c" }, daovm_kernel_headers );
 
-daovm_exe = daovm.AddExecutable( "dao", daovm_kernel_objects, daovm_main_object )
+daovm_exe = daovm.AddExecutable( "dao", daovm_main_object )
 daovm_dll = daovm.AddSharedLibrary( "dao", daovm_kernel_objects )
 daovm_lib = daovm.AddStaticLibrary( "dao", daovm_kernel_objects )
 
+if( DaoMake::Option( "STATIC", $OFF ) == $ON and not DaoMake::IsWin32() ){
+	daovm_exe.AddObjects( daovm_kernel_objects );
+}else{
+	rpath = DaoMake::Settings["DLL-RPATH"] + daovm_lib_path;
+	daovm_exe.AddLinkingFlag( rpath + " -ldao" );
+}
+
 daovm_exe.EnableDynamicExporting()
 daovm_dll.EnableDynamicExporting()
-daovm_lib.EnableDynamicExporting()
 
 if( DaoMake::IsUnix() ){
 	daovm.AddDefinition( "UNIX" )
@@ -165,7 +177,7 @@ if( readline ){
 }
 
 daovm.ExportCompilingFlags( daovm.MakeDefinitions() )
-#daovm.ExportLinkingFlags( "-l" )
+if( DaoMake::IsWin32() ) daovm.ExportLinkingFlags( "-ldao" )
 
 #{
 daovm.Install( daovm_exe )
@@ -175,3 +187,7 @@ daovm.Install( daovm_lib )
 
 daovm.AddProject( "modules/auxlib" )
 daovm.AddProject( "modules/syslib" )
+daovm.AddProject( "modules/help" )
+daovm.AddProject( "modules/math" )
+daovm.AddProject( "modules/meta" )
+daovm.AddProject( "modules/serializer" )

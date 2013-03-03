@@ -1,0 +1,13 @@
+
+dao_serializer = DaoMake::Project( "DaoSerializer" ) 
+
+daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
+
+if( daovm == none ) return
+
+dao_serializer_objects = DaoMake::Objects( { "dao_serializer.c" }, { "dao_serializer.h" } )
+dao_serializer_lib = dao_serializer.AddSharedLibrary( "dao_serializer", dao_serializer_objects )
+
+dao_serializer_lib.UsePackage( daovm )
+dao_serializer_lib.EnableDynamicLinking()
+

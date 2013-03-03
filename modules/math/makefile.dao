@@ -1,0 +1,13 @@
+
+dao_math = DaoMake::Project( "DaoMath" ) 
+
+daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
+
+if( daovm == none ) return
+
+dao_math_objects = DaoMake::Objects( { "dao_math.c" } )
+dao_math_lib     = dao_math.AddSharedLibrary( "dao_math", dao_math_objects )
+
+dao_math_lib.UsePackage( daovm )
+dao_math_lib.EnableDynamicLinking()
+
