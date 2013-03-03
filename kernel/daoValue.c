@@ -913,7 +913,7 @@ DaoObject* DaoValue_CastObject( DaoValue *self )
 DaoCdata* DaoValue_CastCdata( DaoValue *self, DaoType *type )
 {
 	if( self == NULL || self->type != DAO_CSTRUCT ) return NULL;
-	if( type == NULL || ! DaoType_ChildOf( self->xCdata.ctype, type ) ) return (DaoCdata*) self;
+	if( type == NULL || DaoType_ChildOf( self->xCdata.ctype, type ) ) return (DaoCdata*) self;
 	return NULL;
 }
 DaoClass* DaoValue_CastClass( DaoValue *self )

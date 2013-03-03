@@ -1558,6 +1558,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 		if( ns->mainRoutine == NULL ) goto LoadingFailed;
 		DString_SetMBS( ns->mainRoutine->routName, "::main" );
 		DaoVmSpace_ReleaseParser( self, parser );
+		parser = NULL;
 		if( self->options & DAO_EXEC_COMP_BC ) DaoVmSpace_SaveByteCodes( self, ns );
 	}
 
@@ -1618,7 +1619,7 @@ LoadingFailed :
 	if( source ) DString_Delete( source );
 	if( argNames ) DArray_Delete( argNames );
 	if( argValues ) DArray_Delete( argValues );
-	if( parser ) DaoParser_Delete( parser );
+	if( parser ) DaoVmSpace_ReleaseParser( self, parser );
 	return 0;
 }
 DaoNamespace* DaoVmSpace_LoadDaoModule( DaoVmSpace *self, DString *libpath )

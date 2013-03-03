@@ -158,17 +158,20 @@ if( DaoMake::IsUnix() ){
 	daovm.AddDefinition( "WIN32" )
 }
 
-#{
 readline = DaoMake::FindPackage( "ReadLine" )
 if( readline ){
-	daovm_exe.AddDefinition( "DAO_USE_READLINE" )
-	daovm_exe.UsePackage( readline )
+	daovm_main_object.AddDefinition( "DAO_USE_READLINE" )
+	daovm_main_object.UsePackage( readline )
 }
 
+daovm.ExportCompilingFlags( daovm.MakeDefinitions() )
+#daovm.ExportLinkingFlags( "-l" )
+
+#{
 daovm.Install( daovm_exe )
 daovm.Install( daovm_dll )
 daovm.Install( daovm_lib )
+#}
 
 daovm.AddProject( "modules/auxlib" )
 daovm.AddProject( "modules/syslib" )
-#}

@@ -2,8 +2,6 @@
 header_hints = { "." }
 
 if( DaoMake::IsUnix() ){
-	header_hints.append( "/usr/include" )
-	header_hints.append( "/usr/local/include" )
 	if( DaoMake::IsMacOSX() ){
 		header_hints.append( "/Library/Frameworks/OpenGL.framework/Headers" )
 		header_hints.append( "/System/Library/Frameworks/OpenGL.framework/Headers" )

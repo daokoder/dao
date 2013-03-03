@@ -1,0 +1,11 @@
+
+
+if( DaoMake::IsUnix() ){
+	header_path  = DaoMake::FindFile( "readline/readline.h" )
+	header_path2 = DaoMake::FindFile( "readline/history.h" )
+	if( header_path == "" or header_path2 == "" ) return;
+
+	readline = DaoMake::Project( "ReadLine" )
+	readline.ExportCompilingFlags( "-I" + header_path )
+	readline.ExportLinkingFlags( "-lreadline" )
+}

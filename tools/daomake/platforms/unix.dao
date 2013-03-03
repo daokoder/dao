@@ -22,3 +22,6 @@ DaoMake::Settings["DLL-NAME"]        = "-Wl,-soname,lib"
 DaoMake::Settings["DYNAMIC-EXPORT"]  = "-Wl,-export-dynamic"
 DaoMake::Settings["DYNAMIC-IMPORT"]  = ""
 DaoMake::Settings["DLL-RPATH"]       = "-Wl,-rpath=. -Wl,-rpath="
+
+DaoMake::Includes.append( "/usr/include" );
+DaoMake::Includes.append( "/usr/local/include" );
