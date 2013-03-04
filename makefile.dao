@@ -1,82 +1,48 @@
-###########################################################################
-# DaoMake supports exactly the same syntax of Dao.
-#
-#
-##################
-# Compiling Units:
-##################
-#
-# A Compiling Unit can have preprocessor definitions, including paths,
-# linking paths, compiling flags and linking paths etc. attached.
-#
-# Basic constructs:
-# -- Project;
-# -- Objects;
-# -- Executable;
-# -- Shared Library;
-# -- Static Library;
-#
-################
-# Project:
-################
-#
-# Each DaoMake file should contain exactly one Project object, which is the
-# top level object that can be used to manage the building settings and targets.
-# As a Compiling Unit, common compiling and linking settings can be attached it,
-# which allows such settings to be applied to its children Compiling Units
-# automatically.
-# 
-#     daovm = DaoMake::Project( "Dao" )
-#     
-#     Project( name : string ) => Project
-# 
-# 
-################
-# Objects:
-################
-# 
-# Objects is the most basic type of Compiling Unit, which can be shared by
-# multiple executable and library units. It has to be constructed from header
-# and source files:
-# 
-#     daovm_kernel_objects = daovm.AddObjects( sources, headers )
-#     
-# AddObjects( self :Project, sources :list<string>, headers :list<string> = {} ) =>Objects
-#     
-# "daovm_kernel_objects" will be a child unit of "daovm" and inherits
-# the common compiling and linking settings from it.
-# 
-#     daovm_kernel_objects.AddHeaders( header_file )
-#     daovm_kernel_objects.AddSources( source_file )
-#     
-#     AddHeaders( self :Objects, header :string, ... :string ) =>Objects
-#     AddSources( self :Objects, source :string, ... :string ) =>Objects
-#     
-# 
-################
-# Executable:
-################
-# 
-# An Executable object defines a building target. As a Compiling Unit,
-# it can have its own linking setttings.
-# 
-################
-# Library:
-################
-# 
-# 
-#
-#
-###########################################################################
-
 
 daovm = DaoMake::Project( "Dao" )
 
 daovm_path = DaoMake::Option( "PATH", "/usr/local" )
+daovm_path = DaoMake::Option( "PATH", "test-installation" )
 daovm_bin_path = DaoMake::Option( "BIN-PATH", daovm_path + "/bin" )
 daovm_lib_path = DaoMake::Option( "LIB-PATH", daovm_path + "/lib" )
-daovm_mod_path = DaoMake::Option( "LIB-PATH", daovm_path + "/lib/dao/modules" )
-daovm_doc_path = DaoMake::Option( "DOC-PATH", daovm_path + "/shared/dao/doc" )
+daovm_mod_path = DaoMake::Option( "MOD-PATH", daovm_path + "/lib/dao/modules" )
+daovm_doc_path = DaoMake::Option( "DOC-PATH", daovm_path + "/shared/dao" )
+
+daovm.ExportPath( "BIN-PATH", daovm_bin_path );
+daovm.ExportPath( "LIB-PATH", daovm_lib_path );
+daovm.ExportPath( "MOD-PATH", daovm_mod_path );
+daovm.ExportPath( "DOC-PATH", daovm_doc_path );
+
+daovm_help_lang = DaoMake::Option( "HELP-LANG", "en" )
+
+daovm_full_static = DaoMake::Option( "FULL-STATIC", $OFF )
+
+daovm_with_macro      = DaoMake::Option( "MACRO",      $ON )
+daovm_with_regex      = DaoMake::Option( "REGEX",      $ON )
+daovm_with_longint    = DaoMake::Option( "LONGINT",    $ON )
+daovm_with_numarray   = DaoMake::Option( "NUMARRAY",   $ON )
+daovm_with_dynclass   = DaoMake::Option( "DYNCLASS",   $ON )
+daovm_with_decorator  = DaoMake::Option( "DECORATOR",  $ON )
+daovm_with_thread     = DaoMake::Option( "THREAD",     $ON )
+daovm_with_concurrent = DaoMake::Option( "CONCURRENT", $ON )
+
+daovm_with_readline   = DaoMake::Option( "READLINE",   $ON )
+
+if( DaoMake::IsMinix() ) daovm_with_thread = $OFF;
+if( daovm_full_static == $ON ){
+	daovm_with_thread = $OFF;
+	daovm_with_readline = $OFF;
+}
+if( daovm_with_thread == $OFF ) daovm_with_concurrent = $OFF;
+
+if( daovm_with_macro      == $ON ) daovm.AddDefinition( "DAO_WITH_MACRO" )
+if( daovm_with_regex      == $ON ) daovm.AddDefinition( "DAO_WITH_REGEX" )
+if( daovm_with_longint    == $ON ) daovm.AddDefinition( "DAO_WITH_LONGINT" )
+if( daovm_with_numarray   == $ON ) daovm.AddDefinition( "DAO_WITH_NUMARRAY" )
+if( daovm_with_dynclass   == $ON ) daovm.AddDefinition( "DAO_WITH_DYNCLASS" )
+if( daovm_with_decorator  == $ON ) daovm.AddDefinition( "DAO_WITH_DECORATOR" )
+if( daovm_with_thread     == $ON ) daovm.AddDefinition( "DAO_WITH_THREAD" )
+if( daovm_with_concurrent == $ON ) daovm.AddDefinition( "DAO_WITH_CONCURRENT" )
 
 
 daovm_kernel_headers =
@@ -145,15 +111,16 @@ daovm_kernel_sources =
 daovm_kernel_objects = DaoMake::Objects( daovm_kernel_sources, daovm_kernel_headers )
 daovm_main_object    = DaoMake::Objects( { "kernel/daoMain.c" }, daovm_kernel_headers );
 
-daovm_exe = daovm.AddExecutable( "dao", daovm_main_object )
 daovm_dll = daovm.AddSharedLibrary( "dao", daovm_kernel_objects )
 daovm_lib = daovm.AddStaticLibrary( "dao", daovm_kernel_objects )
+daovm_exe = daovm.AddExecutable( "dao", daovm_main_object )
 
 if( DaoMake::Option( "STATIC", $OFF ) == $ON and not DaoMake::IsWin32() ){
 	daovm_exe.AddObjects( daovm_kernel_objects );
 }else{
 	rpath = DaoMake::Settings["DLL-RPATH"] + daovm_lib_path;
-	daovm_exe.AddLinkingFlag( rpath + " -ldao" );
+	daovm_exe.AddLinkingFlag( rpath + " -L. -ldao" );
+	daovm_exe.AddDependency( daovm_dll );
 }
 
 daovm_exe.EnableDynamicExporting()
@@ -161,33 +128,54 @@ daovm_dll.EnableDynamicExporting()
 
 if( DaoMake::IsUnix() ){
 	daovm.AddDefinition( "UNIX" )
-	daovm.AddCompilingFlag( "-fPIC" );
-	daovm.AddLinkingFlag( "-lm" );
-	daovm.AddLinkingFlag( "-lpthread" );
 	if( DaoMake::IsMacOSX() ) daovm.AddDefinition( "MAC_OSX" )
-	if( not DaoMake::IsMinix() ) daovm.AddDefinition( "DAO_WITH_THREAD" )
+	daovm.AddCompilingFlag( "-fPIC" )
+	daovm.AddLinkingFlag( "-lm" )
+	if( daovm_with_thread == $ON ) daovm.AddLinkingFlag( "-lpthread" )
 }else if( DaoMake::IsWin32() ){
 	daovm.AddDefinition( "WIN32" )
 }
 
-readline = DaoMake::FindPackage( "ReadLine" )
-if( readline ){
-	daovm_main_object.AddDefinition( "DAO_USE_READLINE" )
-	daovm_main_object.UsePackage( readline )
+if( daovm_with_readline == $ON ){
+	readline = DaoMake::FindPackage( "ReadLine" )
+	if( readline ){
+		daovm_main_object.AddDefinition( "DAO_USE_READLINE" )
+		daovm_main_object.UsePackage( readline )
+	}
 }
 
 daovm.ExportCompilingFlags( daovm.MakeDefinitions() )
 if( DaoMake::IsWin32() ) daovm.ExportLinkingFlags( "-ldao" )
 
-#{
-daovm.Install( daovm_exe )
-daovm.Install( daovm_dll )
-daovm.Install( daovm_lib )
-#}
 
-daovm.AddProject( "modules/auxlib" )
-daovm.AddProject( "modules/syslib" )
-daovm.AddProject( "modules/help" )
-daovm.AddProject( "modules/math" )
-daovm.AddProject( "modules/meta" )
-daovm.AddProject( "modules/serializer" )
+
+auxlib = daovm.AddDirectory( "auxlib", "modules/auxlib" )
+syslib = daovm.AddDirectory( "syslib", "modules/syslib" )
+help = daovm.AddDirectory( "help", "modules/help" )
+math = daovm.AddDirectory( "math", "modules/math" )
+meta = daovm.AddDirectory( "meta", "modules/meta" )
+serializer = daovm.AddDirectory( "serializer", "modules/serializer" )
+
+auxlib.AddDependency( daovm_dll )
+syslib.AddDependency( daovm_dll )
+help.AddDependency( daovm_dll )
+math.AddDependency( daovm_dll )
+meta.AddDependency( daovm_dll )
+serializer.AddDependency( daovm_dll )
+
+daovm.AddVariable( "HAS_DIR", DaoMake::Settings["HAS-DIR"] );
+daovm.AddVariable( "MKDIR", DaoMake::Settings["MKDIR"] );
+daovm.AddVariable( "HELP_LANG", daovm_help_lang );
+
+daovm_doc = daovm.AddCommand( "doc", "@$(HAS_DIR) doc/html || $(MKDIR) doc/html" );
+daovm_doc.AddCommand( "@$(HAS_DIR) doc/html/$(HELP_LANG) || $(MKDIR) doc/html/$(HELP_LANG)" );
+daovm_doc.AddCommand( "DAO_HELP_LANG=$(HELP_LANG) ./dao -e \"load help; help.export('','doc/html/$(HELP_LANG)')\"" );
+
+daovm_doc.AddDependency( help );
+
+
+daovm.Install( daovm_exe, daovm_bin_path )
+daovm.Install( daovm_dll, daovm_lib_path )
+daovm.Install( daovm_lib, daovm_lib_path )
+daovm.Install( daovm_doc, daovm_doc_path )
+

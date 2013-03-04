@@ -11,3 +11,5 @@ dao_serializer_lib = dao_serializer.AddSharedLibrary( "dao_serializer", dao_seri
 dao_serializer_lib.UsePackage( daovm )
 dao_serializer_lib.EnableDynamicLinking()
 
+
+dao_serializer.Install( dao_serializer_lib, daovm.GetPath( "MOD-PATH" ) );

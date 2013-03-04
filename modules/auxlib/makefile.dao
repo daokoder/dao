@@ -11,3 +11,5 @@ dao_aux_lib     = dao_aux.AddSharedLibrary( "dao_aux", dao_aux_objects )
 dao_aux_lib.UsePackage( daovm )
 dao_aux_lib.EnableDynamicLinking()
 
+
+dao_aux.Install( dao_aux_lib, daovm.GetPath( "MOD-PATH" ) );

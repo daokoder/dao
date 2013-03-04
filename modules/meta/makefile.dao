@@ -11,3 +11,5 @@ dao_meta_lib     = dao_meta.AddSharedLibrary( "dao_meta", dao_meta_objects )
 dao_meta_lib.UsePackage( daovm )
 dao_meta_lib.EnableDynamicLinking()
 
+
+dao_meta.Install( dao_meta_lib, daovm.GetPath( "MOD-PATH" ) );

@@ -11,3 +11,5 @@ dao_math_lib     = dao_math.AddSharedLibrary( "dao_math", dao_math_objects )
 dao_math_lib.UsePackage( daovm )
 dao_math_lib.EnableDynamicLinking()
 
+
+dao_math.Install( dao_math_lib, daovm.GetPath( "MOD-PATH" ) );
