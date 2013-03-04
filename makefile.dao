@@ -115,6 +115,8 @@ daovm_dll = daovm.AddSharedLibrary( "dao", daovm_kernel_objects )
 daovm_lib = daovm.AddStaticLibrary( "dao", daovm_kernel_objects )
 daovm_exe = daovm.AddExecutable( "dao", daovm_main_object )
 
+daovm.ExportStaticLibrary( daovm_lib );
+
 if( DaoMake::Option( "STATIC", $OFF ) == $ON and not DaoMake::IsWin32() ){
 	daovm_exe.AddObjects( daovm_kernel_objects );
 }else{
@@ -156,12 +158,17 @@ math = daovm.AddDirectory( "math", "modules/math" )
 meta = daovm.AddDirectory( "meta", "modules/meta" )
 serializer = daovm.AddDirectory( "serializer", "modules/serializer" )
 
+daomake = daovm.AddDirectory( "daomake", "tools/daomake" )
+
 auxlib.AddDependency( daovm_dll )
 syslib.AddDependency( daovm_dll )
 help.AddDependency( daovm_dll )
 math.AddDependency( daovm_dll )
 meta.AddDependency( daovm_dll )
 serializer.AddDependency( daovm_dll )
+
+daomake.AddDependency( daovm_lib )
+
 
 daovm.AddVariable( "HAS_DIR", DaoMake::Settings["HAS-DIR"] );
 daovm.AddVariable( "MKDIR", DaoMake::Settings["MKDIR"] );

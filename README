@@ -5,3 +5,25 @@ Dao is a lightweight and optionally typed programming language
 with many interesting features. It includes features that can
 make concurrent programming much simpler. It has well designed
 interfaces for easy embedding and extending.
+
+The virtual machine and standard modules and tools of Dao are
+released under the Simplified BSD License.
+
+
+
+The recommended way to compile Dao is to run the following from
+the shell:
+
+$ make -f daomake.make PLATFORM
+
+where PLATFORM can be one of the followings:
+
+* linux
+* macosx
+* freebsd
+* mingw
+* minix
+
+Then run the following to install:
+
+$ make -f Makefile.daomake install
