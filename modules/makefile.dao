@@ -1,0 +1,8 @@
+
+modules = DaoMake::Project( "DaoModules" );
+
+daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
+
+if( daovm == none ) return
+
+modules.Install( "addpath.dao", daovm.GetPath( "MOD-PATH" ) )
