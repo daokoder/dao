@@ -232,6 +232,7 @@ if( daovm_with_readline == $ON ){
 # Export compiling and linking flags that can be used by others
 # by calling UsePackage().
 #
+daovm.ExportCompilingFlags( "-I" + DaoMake::SourcePath() + "/kernel" )
 daovm.ExportCompilingFlags( daovm.MakeDefinitions() )
 if( DaoMake::IsWin32() ) daovm.ExportLinkingFlags( "-ldao" )
 
