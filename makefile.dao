@@ -32,8 +32,6 @@ daovm.ExportPath( "MOD-PATH", daovm_mod_path );
 daovm.ExportPath( "DOC-PATH", daovm_doc_path );
 
 
-daovm_help_lang = DaoMake::Option( "HELP-LANG", "en" )
-
 daovm_full_static = DaoMake::Option( "FULL-STATIC", $OFF )
 
 
@@ -160,18 +158,26 @@ daovm_lib = daovm.AddStaticLibrary( "dao", daovm_kernel_objects )
 daovm_exe = daovm.AddExecutable( "dao", daovm_main_object )
 
 
+daovm_partial_static = DaoMake::Option( "STATIC", $OFF );
+if( DaoMake::Option( "STATIC", $ON ) == $ON && DaoMake::Option( "STATIC", $OFF ) == $OFF ){
+	# Option "STATIC" is not set from command line:
+	if( DaoMake::IsUnix() ) daovm_partial_static = $ON;
+}
+
 #
 # Do not build statically linked executable on Windows, because the modules
 # must link against dao.dll, so the executable should also link against it.
 #
-if( DaoMake::Option( "STATIC", $OFF ) == $ON and not DaoMake::IsWin32() ){
+if( DaoMake::IsWin32() ) daovm_partial_static = $OFF;
+
+if( daovm_partial_static == $ON ){
 	daovm_exe.AddObjects( daovm_kernel_objects );
 }else{
-    #
-    # Linking against the Dao shared library, the "-rpath" should be
-    # passed to the linker, so that the shared library can be located
-    # properly with or without installation.
-    #
+	#
+	# Linking against the Dao shared library, the "-rpath" should be
+	# passed to the linker, so that the shared library can be located
+	# properly with or without installation.
+	#
 	rpath = DaoMake::Settings["DLL-RPATH"] + daovm_lib_path;
 	daovm_exe.AddLinkingFlag( rpath + " -L. -ldao" );
 	daovm_exe.AddDependency( daovm_dll );
@@ -198,31 +204,31 @@ if( DaoMake::IsUnix() ){
 
 
 if( daovm_with_readline == $ON ){
-    #
-    # DaoMake::FindPackage( "NAME" ) will search and load "FindNAME.dao",
-    # and then search for a project object named "NAME". This project
-    # object will be returned if found. Otherwise, a default project
-    # will be returned (which will not pass the conditional test).
-    #
-    # DaoMake::FindPackage( "NAME" ) will search "FindNAME.dao" in
-    # the following subdirectories:
-    # 1. "packages", relative to the daomake execution directory;
-    # 2. "packages", relative to the daomake executable directory;
-    # 3. Unix only: "../shared/daomake/packages", relative to the 
-    #    daomake executable directory;
-    #
+	#
+	# DaoMake::FindPackage( "NAME" ) will search and load "FindNAME.dao",
+	# and then search for a project object named "NAME". This project
+	# object will be returned if found. Otherwise, a default project
+	# will be returned (which will not pass the conditional test).
+	#
+	# DaoMake::FindPackage( "NAME" ) will search "FindNAME.dao" in
+	# the following subdirectories:
+	# 1. "packages", relative to the daomake execution directory;
+	# 2. "packages", relative to the daomake executable directory;
+	# 3. Unix only: "../shared/daomake/packages", relative to the 
+	#    daomake executable directory;
+	#
 	readline = DaoMake::FindPackage( "ReadLine" )
 	if( readline ){
-        #
-        # The definition passed only to the compiling flags for compiling
-        # "daovm_main_object".
-        #
+		#
+		# The definition passed only to the compiling flags for compiling
+		# "daovm_main_object".
+		#
 		daovm_main_object.AddDefinition( "DAO_USE_READLINE" )
-        #
-        # The "ReadLine" should have exported some compiling flags and
-        # linking flags that will be added to "daovm_main_object" by
-        # calling UsePackage().
-        #
+		#
+		# The "ReadLine" should have exported some compiling flags and
+		# linking flags that will be added to "daovm_main_object" by
+		# calling UsePackage().
+		#
 		daovm_main_object.UsePackage( readline )
 	}
 }
@@ -271,22 +277,9 @@ daomake.AddDependency( daovm_lib )
 modules.AddDependency( daovm_lib )
 
 
-# Add variables that will be included in the generated Makefile.
-daovm.AddVariable( "HAS_DIR", DaoMake::Settings["HAS-DIR"] );
-daovm.AddVariable( "MKDIR", DaoMake::Settings["MKDIR"] );
-daovm.AddVariable( "HELP_LANG", daovm_help_lang );
-
-# Add shell commands as a target:
-daovm_doc = daovm.AddCommand( "doc", "@$(HAS_DIR) doc/html || $(MKDIR) doc/html" );
-daovm_doc.AddCommand( "@$(HAS_DIR) doc/html/$(HELP_LANG) || $(MKDIR) doc/html/$(HELP_LANG)" );
-daovm_doc.AddCommand( "DAO_HELP_LANG=$(HELP_LANG) ./dao -e \"load help; help.export('','doc/html/$(HELP_LANG)')\"" );
-
-daovm_doc.AddDependency( help );
-
 
 # Setup installations:
 daovm.Install( daovm_exe, daovm_bin_path )
 daovm.Install( daovm_dll, daovm_lib_path )
 daovm.Install( daovm_lib, daovm_lib_path )
-daovm.Install( daovm_doc, daovm_doc_path )
 
