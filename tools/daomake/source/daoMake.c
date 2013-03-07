@@ -161,6 +161,8 @@ struct DaoMakeProject
 	DString  *mbs;
 	DArray   *strings;
 	uint_t    usedStrings;
+
+	DMap     *mapStringInt;
 };
 
 
@@ -179,7 +181,7 @@ static DaoType *daomake_type_objects = NULL;
 static DaoType *daomake_type_target  = NULL;
 static DaoType *daomake_type_project = NULL;
 
-static char *daomake_makefile_suffix = ".daomake";
+static char *daomake_makefile_suffix = "";
 static int daomake_build_mode = DAOMAKE_RELEASE;
 static int daomake_reset_cache = 0;
 
@@ -278,6 +280,8 @@ DaoMakeProject* DaoMakeProject_New()
 	self->strings = DArray_New(D_STRING);
 	self->usedStrings = 0;
 	DArray_Append( self->strings, self->mbs );
+
+	self->mapStringInt = DMap_New(D_STRING,0);
 	return self;
 }
 void DaoMakeProject_Delete( DaoMakeProject *self )
@@ -306,6 +310,7 @@ void DaoMakeProject_Delete( DaoMakeProject *self )
 
 	DString_Delete( self->mbs );
 	DArray_Delete( self->strings );
+	DMap_Delete( self->mapStringInt );
 	dao_free( self );
 }
 
@@ -708,6 +713,12 @@ DString* DaoMakeProject_GetLanguageCompiler( DString *file )
 	if( ext == NULL ) return NULL;
 	return DaoValue_TryGetString( DaoMap_GetValueMBS( daomake_compilers, ext ) );
 }
+DString* DaoMakeProject_GetLanguageLinker( DString *file )
+{
+	const char *ext = DaoMakeProject_GetFileExtension( file );
+	if( ext == NULL ) return NULL;
+	return DaoValue_TryGetString( DaoMap_GetValueMBS( daomake_linkers, ext ) );
+}
 
 /* Return object file name: */
 DString* DaoMakeProject_MakeObjectRule( DaoMakeProject *self, DaoMakeTarget *target, DaoMakeObjects *objects, DString *source )
@@ -827,9 +838,10 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 	DString *signature = DaoMakeProject_GetBufferString( self );
 	DString *rule = DaoMakeProject_GetBufferString( self );
 	DString *objs = DaoMakeProject_GetBufferString( self );
+	DString *linker = DaoMakeProject_GetBufferString( self );
 	DString *lflagMacro, *mode;
-	DNode *it;
-	daoint i;
+	DNode *it, *lk = NULL;
+	daoint i, j, objCount = 0;
 
 	DaoMakeTarget_MakeName( target, tname );
 	DaoMakeProject_MakeDependency( self, target, deps );
@@ -872,9 +884,28 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 	DString_Append( lflags, lflag );
 
 	DString_Reset( objs, 0 );
+	DMap_Reset( self->mapStringInt );
 	for(i=0; i<target->objects->size; ++i){
 		DaoMakeObjects *objects = (DaoMakeObjects*) target->objects->items.pVoid[i];
 		DString *objmacro = DaoMakeProject_MakeObjectsMacro( self, target, objects );
+
+		objCount += objects->sources->size;
+		/* Find common linkers: */
+		for(j=0; j<objects->sources->size; ++j){
+			DString *source = objects->sources->items.pString[j];
+			DString *linkers = DaoMakeProject_GetLanguageLinker( source );
+			daoint pos, start = 0;
+			pos = DString_FindChar( linkers, ';', start );
+			while( start < linkers->size ){
+				if( pos == MAXSIZE ) pos = linkers->size;
+				DString_SubString( linkers, linker, start, pos - start );
+				it = DMap_Find( self->mapStringInt, linker );
+				if( it == NULL ) it = DMap_Insert( self->mapStringInt, linker, 0 );
+				it->value.pInt += 1;
+				start = pos + 1;
+				pos = DString_FindChar( linkers, ';', start );
+			}
+		}
 
 		DaoMakeUnit_MakeLinkingFlags( & objects->base, lflag );
 		DString_AppendGap( lflags );
@@ -895,6 +926,9 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 		DString_AppendGap( rule );
 		DString_Append( rule, objs );
 	}else{
+		for(it=lk=DMap_First(self->mapStringInt); it; it=DMap_Next(self->mapStringInt,it)){
+			if( it->value.pInt > lk->value.pInt ) lk = it;
+		}
 		if( target->ttype == DAOMAKE_EXECUTABLE ){
 		}else if( target->ttype == DAOMAKE_SHAREDLIB ){
 			DString *flag = DaoMake_GetSettingValue( "DLL-FLAG" );
@@ -918,7 +952,13 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 			}
 		}
 		lflagMacro = DaoMakeProject_MakeLFlagsMacro( self, lflags );
-		DString_AppendMBS( rule, "\n\t$(CC) " ); // TODO: C++
+		DString_AppendMBS( rule, "\n\t$(" );
+		if( lk && lk->value.pInt == objCount ){
+			DString_Append( rule, lk->key.pString );
+		}else{
+			DString_AppendMBS( rule, "CC" );
+		}
+		DString_AppendMBS( rule, ") " );
 
 		DString_Append( rule, objs );
 
@@ -1056,12 +1096,18 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 			DString *ruleName = DaoMakeProject_MakeTargetRule( self, target );
 			DString_AppendGap( makefile );
 			DString_Append( makefile, ruleName );
-			DString_AppendGap( phony );
-			DString_Append( phony, ruleName );
+			if( target->ttype >= DAOMAKE_COMMAND ){
+				DString_AppendGap( phony );
+				DString_Append( phony, ruleName );
+			}
 		}
-		DString_AppendMBS( makefile, "\n\n.PHONY: " );
-		DString_Append( makefile, phony );
-		DString_AppendChar( makefile, '\n' );
+		DString_AppendMBS( makefile, "\n\n" );
+		if( phony->size ){
+			DString_AppendMBS( makefile, ".PHONY: " );
+			DString_Append( makefile, phony );
+			DString_AppendChar( makefile, '\n' );
+		}
+		self->usedStrings -= 1;
 	}
 
 	for(i=0; i<self->variables->size; i+=2){
@@ -1566,12 +1612,25 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue *project = DaoMap_GetValue( daomake_projects, p[0] );
 	DString *name = DaoValue_TryGetString( p[0] );
 	DString *cache = DString_Copy( proc->activeNamespace->path );
+	DString *original = DString_New(1);
 	daoint i, reset = daomake_reset_cache;
+	size_t otime, ctime;
 	FILE *fout = NULL;
+
+	DString_SetMBS( original, "packages/Find" );
+	DString_Append( original, name);
+	DString_AppendMBS( original, ".dao" );
 
 	DString_AppendMBS( cache, "/CacheFind" );
 	DString_Append( cache, name);
 	DString_AppendMBS( cache, ".dao" );
+
+	if( DaoVmSpace_CompleteModuleName( vmSpace, cache ) == DAO_MODULE_NONE ) reset = 1;
+	DaoVmSpace_CompleteModuleName( vmSpace, original );
+	otime = FileChangedTime( original->mbs );
+	ctime = FileChangedTime( cache->mbs );
+	if( otime > ctime ) reset = 1;
+
 	if( project == NULL && reset == 0 ){
 		if( DaoVmSpace_Load( vmSpace, cache->mbs ) ){
 			project = DaoMap_GetValue( daomake_projects, p[0] );
@@ -1582,16 +1641,13 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 				project = daomake_type_project->value;
 			}
 			DaoProcess_PutValue( proc, project );
+			DString_Delete( original );
 			DString_Delete( cache );
 			return;
 		}
 	}
 	if( project == NULL ){
-		DString *name2 = DString_New(1);
-		DString_SetMBS( name2, "packages/Find" );
-		DString_Append( name2, name);
-		DString_AppendMBS( name2, ".dao" );
-		if( DaoVmSpace_Load( vmSpace, name2->mbs ) )fout = fopen( cache->mbs, "w+" );
+		if( DaoVmSpace_Load( vmSpace, original->mbs ) )fout = fopen( cache->mbs, "w+" );
 	}
 	project = DaoMap_GetValue( daomake_projects, p[0] );
 	if( project == NULL ){
@@ -1617,6 +1673,7 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	if( fout ) fclose( fout );
 	DaoProcess_PutValue( proc, project );
+	DString_Delete( original );
 	DString_Delete( cache );
 }
 static void DAOMAKE_FindFile( DaoProcess *proc, DaoValue *p[], int N )
@@ -1745,10 +1802,14 @@ static const char *const daomake_doc_options =
 "DaoMake Options: \n\
     --platform    platform name for which to generate makefiles;\n\
     --mode        building mode (release, debug or profile);\n\
-    --suffix      makefile suffix (default .daomake);\n\
+    --suffix      makefile suffix (default none);\n\
     --reset       reset package searching caches;\n\
     --help        print this help information;\n\
 ";
+
+const char *const daomake_error_makefile_existing = 
+"Error: existing Makefile was not generated by DaoMake:\n  %s\n"
+"Please use a (different) Makefile extension with the \"--suffix\" option.\n\n";
 
 static const char *const daomake_lang_compilers[] =
 {
@@ -1934,13 +1995,23 @@ ErrorInvalidArgValue:
 	source = DString_New(1);
 	for(it=DaoMap_First(daomake_projects); it; it=DaoMap_Next(daomake_projects,it)){
 		DaoMakeProject *project = (DaoMakeProject*) it->value.pVoid;
-		FILE *fout;
+		FILE *fin, *fout;
 		if( (project->targets->size + project->installs->size) == 0 ) continue;
 		DString_Reset( name, 0 );
 		DString_Append( name, project->sourcePath );
 		DString_AppendMBS( name, "/Makefile" );
 		DString_AppendMBS( name, daomake_makefile_suffix );
+		fin = fopen( name->mbs, "r" );
+		if( fin ){
+			DaoFile_ReadAll( fin, source, 1 );
+			if( DString_FindMBS( source, "# DaoMake generated Makefile", 0 ) != 0 ){
+				fprintf( stderr, daomake_error_makefile_existing, name->mbs );
+				return 1;
+			}
+		}
 		fout = fopen( name->mbs, "w+" );
+		fprintf( fout, "# DaoMake generated Makefile: DO NOT EDIT!\n" );
+		fprintf( fout, "# Targeting platform %s.\n\n", platform ? platform : "none" );
 		DaoMakeProject_MakeFile( project, source );
 		DaoFile_WriteString( fout, source );
 		fclose( fout );

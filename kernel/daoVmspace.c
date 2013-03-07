@@ -104,13 +104,6 @@ static const char* const daoFileSuffix[] =
 	DAO_DLL_SUFFIX, DAO_DLL_SUFFIX, DAO_DLL_SUFFIX
 	/* duplicated for automatically adding "dao/libdao_/lib" prefix; */
 };
-enum{
-	DAO_MODULE_NONE,
-	DAO_MODULE_DAC,
-	DAO_MODULE_DAO,
-	DAO_MODULE_DLL,
-	DAO_MODULE_ANY
-};
 
 #ifndef CHANGESET_ID
 #define CHANGESET_ID "Undefined"
@@ -799,7 +792,6 @@ static DaoValue* DaoParseNumber( const char *s, DaoValue *value )
 }
 
 static void DaoVmSpace_MakePath( DaoVmSpace *self, DString *path );
-static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname );
 static DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *p, DArray *a, int run );
 static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath );
 
@@ -1391,7 +1383,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 
 	return 1;
 }
-static int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
+int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
 {
 	int i, modtype = DAO_MODULE_NONE;
 	daoint slen = strlen( DAO_DLL_SUFFIX );

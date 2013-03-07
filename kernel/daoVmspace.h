@@ -34,7 +34,20 @@
 #include"daoThread.h"
 #include"daoOptimizer.h"
 
-enum DaoPathType{ DAO_FILE_PATH, DAO_DIR_PATH };
+enum DaoPathType
+{
+	DAO_FILE_PATH,
+	DAO_DIR_PATH
+};
+
+enum DaoModuleTypes
+{
+	DAO_MODULE_NONE,
+	DAO_MODULE_DAC,
+	DAO_MODULE_DAO,
+	DAO_MODULE_DLL,
+	DAO_MODULE_ANY
+};
 
 extern const char *const dao_copy_notice;
 
@@ -136,6 +149,7 @@ DAO_DLL DaoNamespace* DaoVmSpace_FindNamespace( DaoVmSpace *self, DString *name 
 DAO_DLL int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname );
 
 DAO_DLL void DaoVmSpace_SearchPath( DaoVmSpace *self, DString *fname, int type, int check );
+DAO_DLL int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname );
 
 DAO_DLL void DaoVmSpace_SetPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path );
