@@ -701,7 +701,6 @@ DaoStream* DaoStream_New()
 }
 void DaoStream_Close( DaoStream *self )
 {
-	DaoCstruct_Free( (DaoCstruct*) self );
 	if( self->file ){
 		fflush( self->file );
 		if( self->attribs & DAO_IO_PIPE )
@@ -717,6 +716,7 @@ void DaoStream_Delete( DaoStream *self )
 	DaoStream_Close( self );
 	DString_Delete( self->fname );
 	DString_Delete( self->streamString );
+	DaoCstruct_Free( (DaoCstruct*) self );
 	dao_free( self );
 }
 DaoUserStream* DaoStream_SetUserStream( DaoStream *self, DaoUserStream *us )

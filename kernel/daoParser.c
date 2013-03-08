@@ -6559,6 +6559,7 @@ static void DaoParser_TryAddSetCodes( DaoParser *self )
 	if( inode->code < DVM_SETVH || inode->code > DVM_SETMF ) return;
 	while( inode->extra && inode->c == opc ){
 		inode = inode->extra;
+		if( inode->code < DVM_GETVH || inode->code > DVM_GETMF ) continue;
 		setx = DaoParser_PushBackCode( self, (DaoVmCodeX*)inode );
 		setx->code += DVM_SETVH - DVM_GETVH;
 		setx->c = inode->a;

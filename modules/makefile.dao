@@ -8,3 +8,5 @@ if( daovm == none ) return
 modules.Install( "addpath.dao", daovm.GetPath( "MOD-PATH" ) )
 
 if( DaoMake::IsDir( "DaoJIT" ) ) modules.AddDirectory( "DaoJIT", "DaoJIT" );
+
+if( DaoMake::IsDir( "string" ) ) modules.AddDirectory( "string", "string" );

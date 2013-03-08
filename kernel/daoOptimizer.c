@@ -2731,7 +2731,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	DaoType **typeVH[DAO_MAX_SECTDEPTH+1] = { NULL };
 	DArray  *rettypes = self->rettypes;
 	DArray  *routConsts = & routine->routConsts->items;
-	DArray  *typeVO[2] = { NULL, NULL };
 	daoint i, n, N = routine->body->annotCodes->size;
 	daoint j, k, m, K, M = routine->body->regCount;
 	char codetype, *inited = self->inited->mbs;
@@ -2745,7 +2744,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 
 	catype = DaoNamespace_MakeType( NS, "array", DAO_ARRAY, NULL, & dao_type_complex, 1 );
 
-	if( hostClass ) typeVO[0] = hostClass->instvars;
 	if( body->upRoutine ){
 		for(i=0,n=body->upRoutine->body->annotCodes->size; i<n; i++){
 			vmc = body->upRoutine->body->annotCodes->items.pVmc[i];
@@ -2891,7 +2889,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			at = 0;
 			switch( code ){
 			case DVM_GETVH : at = typeVH[opa][opb]; break;
-			case DVM_GETVO : at = typeVO[opa]->items.pVar[opb]->dtype; break;
+			case DVM_GETVO : at = hostClass->instvars->items.pVar[opb]->dtype; break;
 			case DVM_GETVK : at = hostClass->variables->items.pVar[opb]->dtype; break;
 			case DVM_GETVG : at = NS->variables->items.pVar[opb]->dtype; break;
 			}
@@ -2914,7 +2912,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			type2 = NULL;
 			switch( code ){
 			case DVM_SETVH : type2 = typeVH[opc] + opb; break;
-			case DVM_SETVO : type2 = & typeVO[opc]->items.pVar[opb]->dtype; break;
+			case DVM_SETVO : type2 = & hostClass->instvars->items.pVar[opb]->dtype; break;
 			case DVM_SETVK : type2 = & hostClass->variables->items.pVar[opb]->dtype; break;
 			case DVM_SETVG : type2 = & NS->variables->items.pVar[opb]->dtype; break;
 			}
@@ -5090,7 +5088,7 @@ TryPushBlockReturnType:
 			break;
 		case DVM_GETVO_I : case DVM_GETVO_F : case DVM_GETVO_D : case DVM_GETVO_C :
 			TT1 = DAO_INTEGER + (code - DVM_GETVO_I);
-			at = typeVO[opa]->items.pVar[opb]->dtype;
+			at = hostClass->instvars->items.pVar[opb]->dtype;
 			ct = DaoInferencer_UpdateType( self, opc, self->basicTypes[TT1] );
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( ct, TT1 );
@@ -5122,7 +5120,7 @@ TryPushBlockReturnType:
 			break;
 		case DVM_SETVO_II : case DVM_SETVO_FF : case DVM_SETVO_DD : case DVM_SETVO_CC :
 			if( self->tidHost != DAO_OBJECT ) goto ErrorTyping;
-			tp = & typeVO[opc]->items.pVar[opb]->dtype;
+			tp = & hostClass->instvars->items.pVar[opb]->dtype;
 			if( *tp == NULL || (*tp)->tid == DAO_UDT ){
 				GC_ShiftRC( types[opa], *tp );
 				*tp = types[opa];

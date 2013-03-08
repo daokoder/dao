@@ -1270,7 +1270,7 @@ int DaoTokens_Tokenize( DArray *tokens, const char *src, int flags, DArray *tokb
 			}else if( ch == '}' && state == TOK_OP_SHARP ){
 				state = TOK_COMT_CLOSE;
 				DPlainArray_Pop( lexenvs );
-				lexenv = lexenvs->pod.ints[0];
+				lexenv = lexenvs->pod.ints[lexenvs->size-1];
 				if( lexenv != LEX_ENV_COMMENT ){
 					token->type = token->name = DTOK_COMMENT;
 					if( comment ) DaoTokens_AppendToken( tokens, token, tokbuf );

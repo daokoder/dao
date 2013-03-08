@@ -40,7 +40,7 @@ static void AUX_Tokenize( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *source = p[0]->xString.data;
 	DaoList *list = DaoProcess_PutList( proc );
-	DArray *tokens = DArray_New(D_ARRAY);
+	DArray *tokens = DArray_New(D_TOKEN);
 	int i, rc = 0;
 	DString_ToMBS( source );
 	rc = DaoTokens_Tokenize( tokens, source->mbs, DAO_LEX_COMMENT|DAO_LEX_SPACE, NULL );
