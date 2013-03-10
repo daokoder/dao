@@ -874,10 +874,10 @@ static void DaoMT_RunListFunctional( void *p )
 		}else if( self->funct == DVM_FUNCT_APPLY ){
 			self->status |= DaoList_SetItem( list, res, i );
 		}else if( self->funct == DVM_FUNCT_FIND ){
-			if( *self->index < i ) break;
+			if( *self->index >= 0 && *self->index < i ) break;
 			if( res->xInteger.value ){
 				DMutex_Lock( self->mutex );
-				if( i < *self->index ) *self->index = i;
+				if( *self->index < 0 || i < *self->index ) *self->index = i;
 				DMutex_Unlock( self->mutex );
 				break;
 			}

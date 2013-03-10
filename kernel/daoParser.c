@@ -6105,7 +6105,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				DaoParser_Error( self, DAO_CTW_INV_CONST_EXPR, NULL );
 				return error;
 			}
-			cst = LOOKUP_BIND_LC( DaoRoutine_AddConstant( self->routine, value ));
+			result.konst = LOOKUP_BIND_LC( DaoRoutine_AddConstant( self->routine, value ));
 			regLast = DaoParser_GetNormRegister( self, cst, start, 0, rb );
 		}else{
 			regLast = DaoParser_PushRegister( self );
