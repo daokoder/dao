@@ -432,7 +432,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	parser->vmSpace = self->vmSpace;
 	parser->nameSpace = self;
 	parser->routine = self->constEvalRoutine;
-	if( ! DaoTokens_Tokenize( parser->tokens, name, 0, parser->tokbuf ) ) goto Error;
+	if( ! DaoLexer_Tokenize( parser->lexer, name, 0 ) ) goto Error;
 	if( parser->tokens->size == 0 ) goto Error;
 	tokens = parser->tokens->items.pToken;
 	n = parser->tokens->size - 1;
@@ -1789,7 +1789,7 @@ DaoRoutine* DaoNamespace_ParsePrototype( DaoNamespace *self, const char *proto, 
 
 	GC_IncRC( parser->hostCdata );
 	func->routHost = parser->hostCdata;
-	if( ! DaoTokens_Tokenize( defparser->tokens, proto, 0, defparser->tokbuf ) ) goto Error;
+	if( ! DaoLexer_Tokenize( defparser->lexer, proto, 0 ) ) goto Error;
 	if( defparser->tokens->size < 3 ) goto Error;
 	if( (optok = defparser->tokens->items.pToken[0]->name == DKEY_OPERATOR) == 0 ){
 		if( defparser->tokens->items.pToken[0]->type == DTOK_IDENTIFIER 

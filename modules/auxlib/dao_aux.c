@@ -40,10 +40,11 @@ static void AUX_Tokenize( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *source = p[0]->xString.data;
 	DaoList *list = DaoProcess_PutList( proc );
-	DArray *tokens = DArray_New(D_TOKEN);
+	DaoLexer *lexer = DaoLexer_New();
+	DArray *tokens = lexer->tokens;
 	int i, rc = 0;
 	DString_ToMBS( source );
-	rc = DaoTokens_Tokenize( tokens, source->mbs, DAO_LEX_COMMENT|DAO_LEX_SPACE, NULL );
+	rc = DaoLexer_Tokenize( lexer, source->mbs, DAO_LEX_COMMENT|DAO_LEX_SPACE );
 	if( rc ){
 		DaoString *str = DaoString_New(1);
 		for(i=0; i<tokens->size; i++){
@@ -52,7 +53,7 @@ static void AUX_Tokenize( DaoProcess *proc, DaoValue *p[], int N )
 		}
 		DaoString_Delete( str );
 	}
-	DArray_Delete( tokens );
+	DaoLexer_Delete( lexer );
 }
 static void AUX_Log( DaoProcess *proc, DaoValue *p[], int N )
 {

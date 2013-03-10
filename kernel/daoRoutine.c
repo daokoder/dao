@@ -358,7 +358,7 @@ void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *ou
 	DString_Clear( output );
 	name = DaoVmCode_GetOpcodeName( vmc.code );
 	sprintf( buffer1, "%5i :  ", i);
-	if( self->body->source ) DaoTokens_AnnotateCode( self->body->source, vmc, output, 24 );
+	if( self->body->source ) DaoLexer_AnnotateCode( self->body->source, vmc, output, 24 );
 	sprintf( buffer2, fmt, name, vmc.a, vmc.b, vmc.c, vmc.line, output->mbs );
 	DString_SetMBS( output, buffer1 );
 	DString_AppendMBS( output, buffer2 );

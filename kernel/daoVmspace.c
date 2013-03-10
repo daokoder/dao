@@ -991,10 +991,11 @@ DaoNamespace* DaoVmSpace_LinkModule( DaoVmSpace *self, DaoNamespace *ns, const c
 	return modns;
 }
 
-static int CheckCodeCompletion( DString *source, DArray *tokens )
+static int CheckCodeCompletion( DString *source, DaoLexer *lexer )
 {
+	DArray *tokens = lexer->tokens;
 	int i, bcount, cbcount, sbcount, tki = 0, completed = 1;
-	DaoTokens_Tokenize( tokens, source->mbs, DAO_LEX_COMMENT|DAO_LEX_SPACE, NULL );
+	DaoLexer_Tokenize( lexer, source->mbs, DAO_LEX_COMMENT|DAO_LEX_SPACE );
 	if( tokens->size ) tki = tokens->items.pToken[tokens->size-1]->type;
 	switch( tki ){
 	case DTOK_LB :
@@ -1029,7 +1030,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 {
 	DaoValue *value;
 	DaoNamespace *ns;
-	DArray *tokens = DArray_New(D_TOKEN);
+	DaoLexer *lexer = DaoLexer_New();
 	DString *input = DString_New(1);
 	const char *varRegex = "^ %s* = %s* %S+";
 	const char *srcRegex = "^ %s* %w+ %. dao .* $";
@@ -1054,7 +1055,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 				DString_AppendMBS( input, chs );
 				DString_AppendChar( input, '\n' );
 				dao_free( chs );
-				if( CheckCodeCompletion( input, tokens ) ){
+				if( CheckCodeCompletion( input, lexer ) ){
 					DString_Trim( input );
 					if( input->size && self->AddHistory ) self->AddHistory( input->mbs );
 					break;
@@ -1068,7 +1069,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 			if( ch == EOF ) break;
 			while( ch != EOF ){
 				if( ch == '\n' ){
-					if( CheckCodeCompletion( input, tokens ) ) break;
+					if( CheckCodeCompletion( input, lexer ) ) break;
 					printf("..... ");
 					fflush( stdout );
 				}
@@ -1116,7 +1117,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 	}
 	self->mainNamespace->options &= ~DAO_NS_AUTO_GLOBAL;
 	DString_Delete( input );
-	DArray_Delete( tokens );
+	DaoLexer_Delete( lexer );
 }
 
 static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
@@ -2005,15 +2006,17 @@ static void DaoConfigure_FromFile( const char *name )
 	int i, ch, isnum, isint, integer=0, yes;
 	FILE *fin = fopen( name, "r" );
 	DaoToken *tk1, *tk2;
+	DaoLexer *lexer;
 	DArray *tokens;
 	DString *mbs;
 	if( fin == NULL ) return;
 	mbs = DString_New(1);
-	tokens = DArray_New(D_TOKEN);
+	lexer = DaoLexer_New();
+	tokens = lexer->tokens;
 	while( ( ch=getc(fin) ) != EOF ) DString_AppendChar( mbs, ch );
 	fclose( fin );
 	DString_ToLower( mbs );
-	DaoTokens_Tokenize( tokens, mbs->mbs, DAO_LEX_ESCAPE, NULL );
+	DaoLexer_Tokenize( lexer, mbs->mbs, DAO_LEX_ESCAPE );
 	i = 0;
 	while( i < tokens->size ){
 		tk1 = tokens->items.pToken[i];

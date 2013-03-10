@@ -518,7 +518,7 @@ static DIntStringPair daox_help_cxx_keywords[] =
 };
 
 
-int DaoxHelp_TokenizeCodes( DaoxLexInfo *info, DArray *tokens, const char *source )
+int DaoxHelp_TokenizeCodes( DaoxLexInfo *info, DaoLexer *lexer, const char *source )
 {
 	DaoToken *one = DaoToken_New();
 	DString ds = DString_WrapMBS( source );
@@ -532,7 +532,7 @@ int DaoxHelp_TokenizeCodes( DaoxLexInfo *info, DArray *tokens, const char *sourc
 	int i, j, k = 0, n = ds.size;
 	int cmtype = 0;
 
-	DaoTokens_Reset( tokens, NULL );
+	DaoLexer_Reset( lexer );
 
 	while( n ){
 		//printf( "%5i:  %s\n\n\n\n", n, src );
@@ -581,7 +581,7 @@ int DaoxHelp_TokenizeCodes( DaoxLexInfo *info, DArray *tokens, const char *sourc
 			}
 		}
 		if( cmtype ){
-			DArray_Append( tokens, one );
+			DaoLexer_AppendToken( lexer, one );
 			if( one->type == DTOK_CMT_OPEN ) return cmtype - 2;
 			continue;
 		}
@@ -591,15 +591,15 @@ int DaoxHelp_TokenizeCodes( DaoxLexInfo *info, DArray *tokens, const char *sourc
 			if( n >1 && src[1] == '{' && ! info->daoBlockComment ){
 				src += 2;
 				n -= 2;
-				DArray_Append( tokens, one );
+				DaoLexer_AppendToken( lexer, one );
 				one->type = DTOK_LCB;
 				DString_SetMBS( & one->string, "{" );
-				DArray_Append( tokens, one );
+				DaoLexer_AppendToken( lexer, one );
 				continue;
 			}else if( ! info->daoLineComment ){
 				src ++;
 				n --;
-				DArray_Append( tokens, one );
+				DaoLexer_AppendToken( lexer, one );
 				continue;
 			}
 			DString_Reset( & one->string, 0 );
@@ -607,21 +607,21 @@ int DaoxHelp_TokenizeCodes( DaoxLexInfo *info, DArray *tokens, const char *sourc
 		if( *src == '\'' && ! info->singleQuotation ){
 			one->type = DTOK_MBS_OPEN;
 			DString_AppendChar( & one->string, *src );
-			DArray_Append( tokens, one );
+			DaoLexer_AppendToken( lexer, one );
 			src += 1;
 			n -= 1;
 			continue;
 		}else if( *src == '\"' && ! info->doubleQuotation ){
 			one->type = DTOK_WCS_OPEN;
 			DString_AppendChar( & one->string, *src );
-			DArray_Append( tokens, one );
+			DaoLexer_AppendToken( lexer, one );
 			src += 1;
 			n -= 1;
 			continue;
 		}
 		one->type = one->name = DaoToken_Check( src, n, & k );
 		DString_SetDataMBS( & one->string, src, k );
-		DArray_Append( tokens, one );
+		DaoLexer_AppendToken( lexer, one );
 		//printf( "n = %3i,  %3i,  %3i ======= %s\n", n, k, one->type, mbs->mbs );
 		if( n < k ){
 			printf( "n = %i,  %i,  %i=======%s\n", n, k, one->type, src );
@@ -636,7 +636,8 @@ int DaoxHelp_TokenizeCodes( DaoxLexInfo *info, DArray *tokens, const char *sourc
 static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang, int offset, int width )
 {
 	DString *string = DString_New(1);
-	DArray *tokens = DArray_New(D_TOKEN);
+	DaoLexer *lexer = DaoLexer_New();
+	DArray *tokens = lexer->tokens;
 	const char *bgcolor = "yellow"; 
 	daoint i, j, pos, last, color, fgcolor;
 	int line = 1, printedline = 0;
@@ -660,14 +661,14 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 	}
 
 	if( lang && strcmp( lang->mbs, "cxx" ) == 0 ){
-		DaoxHelp_TokenizeCodes( & daox_help_cxx_lexinfo, tokens, code->mbs );
+		DaoxHelp_TokenizeCodes( & daox_help_cxx_lexinfo, lexer, code->mbs );
 		for(i=0; i<tokens->size; i++){
 			DaoToken *tok = tokens->items.pToken[i];
 			DNode *it = DMap_Find( daox_helper->cxxKeywords, & tok->string );
 			if( it ) tok->name = it->value.pInt;
 		}
 	}else{
-		DaoTokens_Tokenize( tokens, code->mbs, DAO_LEX_COMMENT|DAO_LEX_SPACE, NULL );
+		DaoLexer_Tokenize( lexer, code->mbs, DAO_LEX_COMMENT|DAO_LEX_SPACE );
 		if( lang && strcmp( lang->mbs, "syntax" ) == 0 ){
 			for(i=0; i<tokens->size; i++){
 				DaoToken *tok = tokens->items.pToken[i];
@@ -816,7 +817,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		DaoxStream_SetColor( self, NULL, NULL );
 		DaoxStream_WriteNewLine( self, "" );
 	}
-	DArray_Delete( tokens );
+	DaoLexer_Delete( lexer );
 	DString_Delete( string );
 }
 

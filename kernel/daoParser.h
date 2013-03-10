@@ -45,8 +45,8 @@ struct DaoParser
 
 	int curToken;
 
-	DArray  *tokens;
-	DArray  *tokbuf;
+	DaoLexer  *lexer;
+	DArray    *tokens; /* lexer->tokens; */
 
 	/* DArray<DaoVmCodeX*>: need to be store as pointers, because in code generation,
 	 * it may be necessary to modify previously generated codes, for this,
@@ -115,8 +115,10 @@ struct DaoParser
 	DArray *tempTypes;
 	DArray *routCompilable; /* list of defined routines with bodies */
 
-	DArray *errors;
-	DArray *warnings;
+	DaoLexer  *elexer;
+	DaoLexer  *wlexer;
+	DArray    *errors;
+	DArray    *warnings;
 
 	/* Proto-values for a proto class: upvalue register ids to class member ids */
 	DMap  *protoValues; /* <int,int> */

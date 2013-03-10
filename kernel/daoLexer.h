@@ -261,17 +261,30 @@ DAO_DLL int DaoToken_IsValidName( const char *src, int size );
 
 DAO_DLL void DaoToken_Set( DaoToken *self, int type, int name, int index, const char *s );
 
-DAO_DLL void DaoTokens_Reset( DArray *self, DArray *tokbuf );
-DAO_DLL int DaoTokens_Tokenize( DArray *tokens, const char *src, int flags, DArray *tokbuf );
 
-DAO_DLL void DaoTokens_AppendToken( DArray *tokens, DaoToken *token, DArray *tokbuf );
-DAO_DLL void DaoTokens_Append( DArray *self, int name, int line, const char *data );
 
-DAO_DLL void DaoTokens_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int max );
-DAO_DLL int DaoTokens_FindOpenToken( DArray *self, uchar_t tok, int start, int end );
-DAO_DLL int DaoTokens_FindLeftPair( DArray *self,  uchar_t lw, uchar_t rw, int start, int stop );
-DAO_DLL int DaoTokens_FindRightPair( DArray *self,  uchar_t lw, uchar_t rw, int start, int stop );
+typedef struct DaoLexer  DaoLexer;
 
-DString* DaoTokens_AddRaiseStatement( DArray *self, const char *type, const char *info, int line );
+struct DaoLexer
+{
+	DArray  *tokens;
+	DArray  *tokbuf;
+};
+DAO_DLL DaoLexer* DaoLexer_New();
+DAO_DLL void DaoLexer_Delete( DaoLexer *self );
+
+DAO_DLL void DaoLexer_Reset( DaoLexer *self );
+DAO_DLL int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags );
+
+DAO_DLL void DaoLexer_AppendToken( DaoLexer *self, DaoToken *token );
+DAO_DLL void DaoLexer_Append( DaoLexer *self, int name, int line, const char *data );
+
+DAO_DLL int DaoLexer_FindOpenToken( DaoLexer *self, uchar_t tok, int start, int end );
+DAO_DLL int DaoLexer_FindLeftPair( DaoLexer *self,  uchar_t lw, uchar_t rw, int start, int stop );
+DAO_DLL int DaoLexer_FindRightPair( DaoLexer *self,  uchar_t lw, uchar_t rw, int start, int stop );
+
+DString* DaoLexer_AddRaiseStatement( DaoLexer *self, const char *type, const char *info, int line );
+
+DAO_DLL void DaoLexer_AnnotateCode( DArray *tokens, DaoVmCodeX vmc, DString *annot, int max );
 
 #endif
