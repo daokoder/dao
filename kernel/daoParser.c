@@ -2477,14 +2477,14 @@ static int DaoParser_Preprocess( DaoParser *self )
 		macro = DaoNamespace_FindMacro( ns, ns->lang, & tokens[start]->string );
 		self->curLine = tokens[start]->line;
 		if( macro == NULL ) continue;
-		printf( "macro %i %s\n", start, tokens[start]->string.mbs );
 #if 0
+		printf( "macro %i %s\n", start, tokens[start]->string.mbs );
 #endif
 		for( i=0; i<macro->macroList->size; i++){
 			macro2 = (DaoMacro*) macro->macroList->items.pVoid[i];
 			end = DaoParser_MacroTransform( self, macro2, start, tag );
-			printf( "overloaded: %i, %i\n", i, end );
 #if 0
+			printf( "overloaded: %i, %i\n", i, end );
 #endif
 			if( end <= 0 ) continue;
 
@@ -2493,7 +2493,6 @@ static int DaoParser_Preprocess( DaoParser *self )
 			tokens = self->tokens->items.pToken;
 			for(k=0; k<macro2->keyListApply->size; k++){
 				/* printf( "%i, %s\n", k, macro2->keyListApply->items.pString[k]->mbs ); */
-				printf( "%i, %s\n", k, macro2->keyListApply->items.pString[k]->mbs );
 				reapply = DaoNamespace_FindMacro( ns, ns->lang, macro2->keyListApply->items.pString[k] );
 				if( reapply ) break;
 			}
