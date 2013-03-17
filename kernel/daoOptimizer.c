@@ -1781,7 +1781,10 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 	for(i=0,n=partypes->size; i<n; i++){
 		inited[i] = 1;
 		types[i] = partypes->items.pType[i];
-		if( types[i] && types[i]->tid == DAO_PAR_VALIST ) types[i] = NULL;
+		if( types[i] && types[i]->tid == DAO_PAR_VALIST ){
+			DaoType *vltype = (DaoType*) types[i]->aux;
+			while( i < DAO_MAX_PARAM ) types[i++] = vltype;
+		}
 		type = types[i];
 		if( type ) types[i] = & type->aux->xType; /* name:type, name=type */
 		node = MAP_Find( routine->body->localVarType, i );
@@ -1872,7 +1875,11 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 		ito = ifrom + selfChecked;
 		if( ito >= ndef ) goto FinishError;
 		if( partypes[ito]->tid == DAO_PAR_VALIST ){
-			for(; ifrom<npar; ifrom++, ito++) parpass[ito] = 1;
+			DaoType *vlt = (DaoType*) partypes[ito]->aux;
+			for(; ifrom<npar; ifrom++, ito++){
+				parpass[ito] = 1;
+				if( vlt && DaoType_MatchTo( tp, vlt, defs ) == 0 ) goto FinishError;
+			}
 			break;
 		}
 		if( tp == NULL ) goto FinishError;
@@ -2021,7 +2028,11 @@ void DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype, DaoType *ts
 	for(ifrom=0; ifrom<npar; ifrom++){
 		ito = ifrom + selfChecked;
 		if( ito >= (int)self->routType->nested->size ) break;
-		if( ito < ndef && parType[ito]->tid == DAO_PAR_VALIST ) break;
+		if( ito < ndef && parType[ito]->tid == DAO_PAR_VALIST ){
+			DaoType *vlt = (DaoType*) parType[ito]->aux;
+			while( ifrom < npar ) DaoType_MatchTo( tps[ifrom++], vlt, defs );
+			break;
+		}
 		tp = tps[ifrom];
 		if( tp == NULL ) break;
 		if( tp->tid == DAO_PAR_NAMED ){
@@ -2099,7 +2110,11 @@ void DaoRoutine_PassParamTypes2( DaoRoutine *self, DaoType *selftype,
 	for(ifrom=0; ifrom<npar; ifrom++){
 		ito = ifrom + selfChecked;
 		if( ito >= (int)self->routType->nested->size ) break;
-		if( ito < ndef && parType[ito]->tid == DAO_PAR_VALIST ) break;
+		if( ito < ndef && parType[ito]->tid == DAO_PAR_VALIST ){
+			DaoType *vlt = (DaoType*) parType[ito]->aux;
+			while( ifrom < npar ) DaoType_MatchTo( tps[ifrom++], vlt, defs );
+			break;
+		}
 		tp = tps[ifrom];
 		if( tp == NULL ) break;
 		if( tp->tid == DAO_PAR_NAMED ){
@@ -2275,6 +2290,14 @@ static DString* AppendError( DArray *errors, DaoRoutine *rout, size_t type )
 	DString_AppendMBS( s, " --- \" " );
 	return s;
 }
+static void DString_AppendTypeError( DString *self, DaoType *from, DaoType *to )
+{
+	DString_AppendChar( self, '\'' );
+	DString_Append( self, from->name );
+	DString_AppendMBS( self, "\' for \'" );
+	DString_Append( self, to->name );
+	DString_AppendMBS( self, "\' \";\n" );
+}
 void DaoRoutine_CheckError( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int code, DArray *errors )
 {
 	DNode *node;
@@ -2329,7 +2352,17 @@ void DaoRoutine_CheckError( DaoRoutine *self, DaoType *selftype, DaoType *ts[], 
 		DaoType *tp = ts[ifrom];
 		ito = ifrom + selfChecked;
 		if( ito < ndef && partypes[ito]->tid == DAO_PAR_VALIST ){
-			for(; ifrom<npar; ifrom++) parpass[ifrom+selfChecked] = 1;
+			DaoType *vlt = (DaoType*) partypes[ito]->aux;
+			for(; ifrom<npar; ifrom++){
+				tp = ts[ifrom];
+				parpass[ifrom+selfChecked] = vlt ? DaoType_MatchTo( tp, vlt, defs ) : 1;
+				if( parpass[ifrom+selfChecked] == 0 ){
+					DString *s = AppendError( errors, self, DTE_PARAM_WRONG_TYPE );
+					abtp = DaoType_DefineTypes( vlt, self->nameSpace, defs );
+					DString_AppendTypeError( s, tp, abtp );
+					goto FinishError;
+				}
+			}
 			break;
 		}
 		if( tp == NULL ){
@@ -2378,11 +2411,7 @@ void DaoRoutine_CheckError( DaoRoutine *self, DaoType *selftype, DaoType *ts[], 
 			tp = ts[ifrom];
 			abtp = routType->nested->items.pType[ito];
 			abtp = DaoType_DefineTypes( abtp, self->nameSpace, defs );
-			DString_AppendChar( s, '\'' );
-			DString_Append( s, tp->name );
-			DString_AppendMBS( s, "\' for \'" );
-			DString_Append( s, abtp->name );
-			DString_AppendMBS( s, "\' \";\n" );
+			DString_AppendTypeError( s, tp, abtp );
 			goto FinishError;
 		}
 	}
@@ -3090,8 +3119,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					if( value->type > DAO_DOUBLE ) goto InvIndex;
 					k = DaoValue_GetInteger( value );
 					if( k < 0 ) goto InvIndex; /* No support for negative index; */
-					if( at->variadic && k >= at->nested->size ){
-						ct = dao_type_any;
+					if( at->variadic && k >= (at->nested->size - 1) ){
+						type = (DaoType*) at->nested->items.pType[at->nested->size-1]->aux;
+						ct = type ? type : dao_type_any;
 					}else{
 						if( k >= at->nested->size ) goto InvIndex;
 						ct = at->nested->items.pType[ k ];
@@ -3510,8 +3540,14 @@ NotExist_TryAux:
 					if( value && value->type ){
 						if( value->type > DAO_DOUBLE ) goto InvIndex;
 						k = DaoValue_GetInteger( value );
-						if( k <0 || k >= (int)ct->nested->size ) goto InvIndex;
-						ct = ct->nested->items.pType[ k ];
+						if( k < 0 ) goto InvIndex;
+						if( ct->variadic == 0 && k >= (int)ct->nested->size ) goto InvIndex;
+						if( ct->variadic && k >= (ct->nested->size - 1) ){
+							ct = ct->nested->items.pType[ ct->nested->size - 1 ];
+							ct = ct->aux ? (DaoType*) ct->aux : dao_type_any;
+						}else{
+							ct = ct->nested->items.pType[ k ];
+						}
 						if( ct->tid == DAO_PAR_NAMED ) ct = & ct->aux->xType;
 						AssertTypeMatching( at, ct, defs );
 						if( typed_code && k <= 0xffff ){

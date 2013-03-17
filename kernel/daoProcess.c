@@ -527,9 +527,10 @@ static DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine,
 		DaoValue *val = p[ifrom];
 		ito = ifrom + selfChecked;
 		if( ito < ndef && types[ito]->tid == DAO_PAR_VALIST ){
+			tp = types[ito]->aux ? (DaoType*) types[ito]->aux : dao_type_any;
 			for(; ifrom<npar; ifrom++){
 				ito = ifrom + selfChecked;
-				DaoValue_Move2( p[ifrom], & dest[ito], NULL, NULL );
+				if( DaoValue_Move2( p[ifrom], & dest[ito], tp, defs ) == 0 ) goto ReturnZero;
 				passed |= (size_t)1<<ito;
 			}
 			break;
@@ -2951,7 +2952,7 @@ DaoType* DaoProcess_GetReturnType( DaoProcess *self )
 
 void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], int N )
 {
-	DaoType **types, *tp, *ct = tuple->unitype;
+	DaoType **types, *tp, *vlt = NULL, *ct = tuple->unitype;
 	int i, M;
 	if( ct == NULL ) return;
 	if( ct->nested == NULL || ct->nested->size > N ){
@@ -2959,7 +2960,8 @@ void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], i
 		return;
 	}
 	types = ct->nested->items.pType;
-	M = ct->nested->size;
+	M = ct->nested->size - (ct->variadic != 0);
+	if( ct->variadic ) vlt = (DaoType*) types[M]->aux;
 	for(i=0; i<N; i++){
 		DaoValue *val = its[i];
 		if( val->type == DAO_PAR_NAMED ){
@@ -2971,7 +2973,7 @@ void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], i
 			}
 			val = nameva->value;
 		}
-		tp = i < M ? types[i] : NULL;
+		tp = i < M ? types[i] : vlt;
 		if( tp && tp->tid == DAO_PAR_NAMED ) tp = & tp->aux->xType;
 		if( DaoValue_Move( val, tuple->items + i, tp ) == 0 ){
 			DaoProcess_RaiseException( self, DAO_ERROR, "invalid tuple enumeration" );

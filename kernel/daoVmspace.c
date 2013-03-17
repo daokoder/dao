@@ -880,12 +880,34 @@ static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNam
 	}
 	return DaoRoutine_ResolveByType( rout, NULL, types->items.pType, types->size, DVM_CALL );
 }
-static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, DArray *argNames, DArray *argValues )
+static void DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *value, DaoValue *sval )
 {
-	DString *str, *val;
 	DaoValue ival = {DAO_INTEGER};
 	DaoValue fval = {DAO_FLOAT};
 	DaoValue dval = {DAO_DOUBLE};
+
+	switch( type->tid ){
+	case DAO_INTEGER :
+		ival.xInteger.value = strtoll( value->mbs, 0, 0 );
+		DaoList_SetItem( self, & ival, i );
+		break;
+	case DAO_FLOAT :
+		fval.xFloat.value = strtod( value->mbs, 0 );
+		DaoList_SetItem( self, & fval, i );
+		break;
+	case DAO_DOUBLE :
+		dval.xDouble.value = strtod( value->mbs, 0 );
+		DaoList_SetItem( self, & dval, i );
+		break;
+	default :
+		DString_Assign( sval->xString.data, value );
+		DaoList_SetItem( self, sval, i );
+		break;
+	}
+}
+static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, DArray *argNames, DArray *argValues )
+{
+	DString *str, *val;
 	DaoValue sval = {DAO_STRING};
 	DaoNamespace *ns = routine->nameSpace;
 	DaoList *argParams = ns->argParams;
@@ -909,6 +931,10 @@ static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, D
 				name = argNames->items.pString[j];
 				value = argValues->items.pString[j];
 				DString_Assign( val, value );
+				if( type->aux ){
+					DaoList_SetArgument( argParams, j, (DaoType*) type->aux, value, & sval );
+					continue;
+				}
 				if( name->size ){
 					DaoNameValue *nameva = DaoNameValue_New( name, argv );
 					DaoValue *st = (DaoValue*) dao_type_string;
@@ -930,24 +956,7 @@ static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, D
 			DaoStream_WriteMBS( self->errorStream, "duplicated argument" );
 			goto Failed;
 		}
-		switch( type->tid ){
-		case DAO_INTEGER :
-			ival.xInteger.value = strtoll( value->mbs, 0, 0 );
-			DaoList_SetItem( argParams, & ival, ito );
-			break;
-		case DAO_FLOAT :
-			fval.xFloat.value = strtod( value->mbs, 0 );
-			DaoList_SetItem( argParams, & fval, ito );
-			break;
-		case DAO_DOUBLE :
-			dval.xDouble.value = strtod( value->mbs, 0 );
-			DaoList_SetItem( argParams, & dval, ito );
-			break;
-		default :
-			DString_Assign( val, value );
-			DaoList_SetItem( argParams, & sval, ito );
-			break;
-		}
+		DaoList_SetArgument( argParams, ito, type, value, & sval );
 	}
 	DString_Delete( val );
 	return 1;
@@ -2398,9 +2407,7 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_list_any = DaoParser_ParseTypeName( "list<any>", ns, NULL );
 	dao_map_any = DaoParser_ParseTypeName( "map<any,any>", ns, NULL );
 	dao_map_meta = DaoParser_ParseTypeName( "map<string,any>", ns, NULL );
-
-	dao_type_tuple = DaoNamespace_MakeType( ns, "tuple<...>", DAO_TUPLE, NULL, NULL, 0 );
-	dao_type_tuple->variadic = 1;
+	dao_type_tuple = DaoParser_ParseTypeName( "tuple<...>", ns, NULL );
 
 	dao_array_types[DAO_NONE] = dao_array_any;
 	dao_array_types[DAO_INTEGER] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_int, 1 );

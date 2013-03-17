@@ -594,7 +594,11 @@ int DaoByteEncoder_EncodeType( DaoByteEncoder *self, DaoType *type )
 		DString_AppendUInt( self->types, tpid );
 		break;
 	case DAO_PAR_VALIST :
+		tpid = type->aux ? DaoByteEncoder_EncodeType( self, (DaoType*) type->aux ) : 0;
+		if( (typeid = DaoByteEncoder_FindType( self, type )) ) break;
 		typeid = DaoByteEncoder_EncodeSimpleType( self, type );
+		DString_AppendUInt( self->types, 0 );
+		DString_AppendUInt( self->types, tpid );
 		break;
 	case DAO_CODEBLOCK :
 		tpid = DaoByteEncoder_EncodeType( self, (DaoType*) type->aux );
@@ -1974,7 +1978,11 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 			type = DaoNamespace_MakeType( self->nspace, name2->mbs, tid, value, NULL, 0 );
 			break;
 		case DAO_PAR_VALIST :
-			type = DaoNamespace_MakeType( self->nspace, "...", DAO_PAR_VALIST, 0,0,0 );
+			id = DaoByteDecoder_DecodeUInt( self );
+			id2 = DaoByteDecoder_DecodeUInt( self );
+			value = (DaoValue*) DaoByteDecoder_GetType( self, id2 );
+			if( self->codes >= self->error ) break;
+			type = DaoNamespace_MakeType( self->nspace, "...", DAO_PAR_VALIST, value, NULL, 0 );
 			break;
 		case DAO_CODEBLOCK :
 			id = DaoByteDecoder_DecodeUInt( self );

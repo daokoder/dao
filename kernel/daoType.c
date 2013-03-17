@@ -143,10 +143,7 @@ void DaoType_CheckAttributes( DaoType *self )
 		self->simtype = count == self->nested->size;
 		if( (self->tid == DAO_TUPLE || self->tid == DAO_ROUTINE) && self->nested->size ){
 			DaoType *it = self->nested->items.pType[self->nested->size - 1];
-			if( it->tid == DAO_PAR_VALIST ){
-				self->variadic = 1;
-				if( self->tid == DAO_TUPLE ) DArray_Erase( self->nested, self->nested->size-1, 1 );
-			}
+			if( it->tid == DAO_PAR_VALIST ) self->variadic = 1;
 		}
 	}
 }
@@ -548,9 +545,18 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	case DAO_TUPLE :
 		if( self->nested->size < type->nested->size ) return DAO_MT_NOT;
 		if( self->nested->size > type->nested->size && type->variadic == 0 ) return DAO_MT_NOT;
-		for(i=0,n=type->nested->size; i<n; i++){
+		for(i=0,n=type->nested->size-(type->variadic!=0); i<n; i++){
 			it1 = self->nested->items.pType[i];
 			it2 = type->nested->items.pType[i];
+			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
+			/* printf( "%i %s %s\n", k, it1->name->mbs, it2->name->mbs ); */
+			if( k == DAO_MT_NOT ) return k;
+			if( k < mt ) mt = k;
+		}
+		it2 = type->nested->items.pType[type->nested->size-1];
+		if( it2->tid == DAO_PAR_VALIST ) it2 = (DaoType*) it2->aux;
+		for(i=type->nested->size-(type->variadic!=0),n=self->nested->size; i<n; ++i){
+			it1 = self->nested->items.pType[i];
 			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
 			/* printf( "%i %s %s\n", k, it1->name->mbs, it2->name->mbs ); */
 			if( k == DAO_MT_NOT ) return k;
@@ -778,13 +784,22 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( value->xTuple.size < self->nested->size ) return DAO_MT_NOT;
 		if( value->xTuple.size > self->nested->size && self->variadic ==0 ) return DAO_MT_NOT;
 
-		for(i=0,n=self->nested->size; i<n; i++){
+		for(i=0,n=self->nested->size-(self->variadic!=0); i<n; i++){
 			tp = self->nested->items.pType[i];
 			if( tp->tid == DAO_PAR_NAMED ) tp = & tp->aux->xType;
 
 			/* for C functions that returns a tuple:
 			 * the tuple may be assigned to a context value before
 			 * its values are set properly! */
+			if( value->xTuple.items[i] == NULL ) continue;
+			if( tp->tid == DAO_UDT || tp->tid == DAO_ANY || tp->tid == DAO_THT ) continue;
+
+			mt = DaoType_MatchValue( tp, value->xTuple.items[i], defs );
+			if( mt < DAO_MT_SIM ) return 0;
+		}
+		tp = self->nested->items.pType[self->nested->size-1];
+		if( tp->tid == DAO_PAR_VALIST ) tp = (DaoType*) tp->aux;
+		for(i=self->nested->size-(self->variadic!=0),n=value->xTuple.size; i<n; ++i){
 			if( value->xTuple.items[i] == NULL ) continue;
 			if( tp->tid == DAO_UDT || tp->tid == DAO_ANY || tp->tid == DAO_THT ) continue;
 

@@ -1129,8 +1129,13 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 		if( tki == DTOK_DOTS ){
 			routine->parCount = DAO_MAX_PARAM;
 			module->regCount = DAO_MAX_PARAM;
-			type = DaoNamespace_MakeType( NS, "...", DAO_PAR_VALIST, 0,0,0 );
 			i += 1;
+			if( tokens[i]->name == DTOK_COLON ){
+				if( i+1 >= right || tokens[i+1]->type != DTOK_IDENTIFIER ) goto ErrorNeedType;
+				type = DaoParser_ParseType( self, i+1, right-1, &i, NULL );
+				if( type == NULL ) goto ErrorParamParsing;
+			}
+			type = DaoNamespace_MakeType( NS, "...", DAO_PAR_VALIST, (DaoValue*)type, NULL, 0 );
 		}else if( tki == DTOK_ID_THTYPE ){
 			type = DaoParser_ParseType( self, i, right-1, &i, NULL );
 			if( type == NULL ) goto ErrorInvalidParam;
@@ -1208,6 +1213,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 		if( i >= right ) break;
 		if( tokens[i]->name == DKEY_AS ){
 			if( (i+1) >= right || tokens[i+1]->type != DTOK_IDENTIFIER ) goto ErrorParamParsing;
+			if( module->argName ) goto ErrorParamParsing; // TODO: error, duplicate "as";
 			module->argName = DaoToken_Copy( tokens[i+1] );
 			i += 2;
 			if( i < right ) goto ErrorParamParsing;
@@ -1444,12 +1450,12 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 		type = DaoNamespace_MakeType( ns, name->mbs, i, pbasic, 0,0 );
 	}else if( token->name == DKEY_NONE ){
 		type = DaoNamespace_MakeValueType( ns, dao_none_value );
+	}else if( token->name == DTOK_ID_SYMBOL ){
+		type = DaoParser_ParseValueType( self, start );
 	}else if( token->name == DTOK_ID_THTYPE ){
 		type = DaoNamespace_MakeType( ns, name->mbs, DAO_THT, 0,0,0 );
 	}else if( token->name == DTOK_QUERY ){
 		type = dao_type_udf;
-	}else if( token->name == DTOK_DOTS ){
-		type = DaoNamespace_MakeType( ns, "...", DAO_PAR_VALIST, 0,0,0 );
 	}else{
 		/* scoped type or user defined template class */
 		type = DaoParser_ParseUserType( self, start, end, newpos );
@@ -1465,20 +1471,22 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *
 {
 	DaoNamespace *ns = self->nameSpace;
 	DaoToken **tokens = self->tokens->items.pToken;
-	DaoType *type = NULL;
-	DString *name;
-	int tid, t, i = start;
+	int i = start;
 	while( i <= end ){
-		tid = DAO_NONE;
-		name = NULL;
-		t = (i+1 <= end) ? tokens[i+1]->type : 0;
+		DaoType *type = NULL;
+		DString *name = NULL;
+		int tid = DAO_NONE;
+		int t = (i+1 <= end) ? tokens[i+1]->type : 0;
+
 		if( i == start && tokens[i]->type == DTOK_FIELD ) goto ReturnType;
 		if( tokens[i]->type >= DTOK_ID_SYMBOL && tokens[i]->type <= DTOK_WCS ){
 			type = DaoParser_ParseValueType( self, i );
 			i += 1;
 		}else if( tokens[i]->type == DTOK_DOTS ){
-			type = DaoNamespace_MakeType( ns, "...", DAO_PAR_VALIST, 0,0,0 );
 			i += 1;
+			if( tokens[i]->type == DTOK_COLON )
+				type = DaoParser_ParseType( self, i+1, end, & i, types );
+			type = DaoNamespace_MakeType( ns, "...", DAO_PAR_VALIST, (DaoValue*) type, NULL, 0 );
 		}else{
 			if( tokens[i]->type != DTOK_IDENTIFIER ) goto InvalidTypeForm;
 			if( t == DTOK_COLON || t == DTOK_ASSN ){
@@ -1487,12 +1495,7 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *
 				if( i + 2 > end ) goto InvalidTypeForm;
 				i = i + 2;
 			}
-			if( tokens[i]->type >= DTOK_ID_SYMBOL && tokens[i]->type <= DTOK_WCS ){
-				type = DaoParser_ParseValueType( self, i );
-				i += 1;
-			}else{
-				type = DaoParser_ParseType( self, i, end, & i, types );
-			}
+			type = DaoParser_ParseType( self, i, end, & i, types );
 		}
 		if( type == NULL ) return NULL;
 		if( name ) type = DaoNamespace_MakeType( ns, name->mbs, tid, (DaoValue*)type, NULL,0 );
@@ -1653,7 +1656,7 @@ static DaoType* DaoParser_ParseType2( DaoParser *self, int start, int end, int *
 #endif
 
 	*newpos = start + 1;
-	if( start == end || t == DTOK_QUERY || t == DTOK_DOTS || (t == DTOK_ID_THTYPE ) ){
+	if( start == end || t == DTOK_QUERY || t == DTOK_ID_THTYPE ){
 		DaoValue *initype = NULL;
 		DaoType *vartype = NULL;
 		type = DaoParser_ParsePlainType( self, start, end, newpos );
@@ -3510,14 +3513,16 @@ ErrorEnumDefinition:
 static int DaoParser_GetNormRegister( DaoParser *self, int reg, int first, int mid, int last );
 static int DaoParser_CheckDefault( DaoParser *self, DaoType *type, int estart )
 {
+	DaoValue *value = type->value;
 	int mt = 0;
-	if( type->value == NULL ) return 0;
-	if( type->value->type == DAO_CTYPE || type->value->type == DAO_CDATA || type->value->type == DAO_CSTRUCT ){
-		mt = DaoType_MatchTo( type->value->xCdata.ctype, type, NULL );
-	}else if( type->value->type ==0 ){
-		mt = 1;
-	}else{
-		mt = DaoType_MatchValue( type, type->value, NULL );
+	if( value ){
+		if( value->type == DAO_CTYPE || value->type == DAO_CDATA || value->type == DAO_CSTRUCT ){
+			mt = DaoType_MatchTo( value->xCdata.ctype, type, NULL );
+		}else if( value->type == 0 ){
+			mt = 1;
+		}else{
+			mt = DaoType_MatchValue( type, value, NULL );
+		}
 	}
 	if( mt == 0 ) DaoParser_Error3( self, DAO_TYPE_NO_DEFAULT, estart );
 	return mt;
