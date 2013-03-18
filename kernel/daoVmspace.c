@@ -288,6 +288,7 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 #endif
 		if( proc->factory ) DArray_Clear( proc->factory );
 		DaoProcess_PopFrames( proc, proc->firstFrame );
+		DArray_Clear( proc->exceptions );
 		DArray_PushBack( self->processes, proc );
 	}
 #ifdef DAO_WITH_THREAD
@@ -447,6 +448,12 @@ void DaoVmSpace_Stop( DaoVmSpace *self, int bl )
 {
 	self->stopit = bl;
 }
+static int dao_default_test_inliner( DaoNamespace *NS, DString *mode, DString *vb, DString *out )
+{
+	DString_Reset( out, 0 );
+	DString_AppendChar( out, ' ' );
+	return 0;
+}
 
 void Dao_MakePath( DString *base, DString *path );
 static void DaoVmSpace_InitPath( DaoVmSpace *self )
@@ -527,6 +534,8 @@ DaoVmSpace* DaoVmSpace_New()
 	self->nsInternal->refCount += 1;
 	DMap_Insert( self->nsModules, self->nsInternal->name, self->nsInternal );
 	DArray_PushFront( self->loadedModules, self->nsInternal );
+
+	DaoNamespace_AddCodeInliner( self->nsInternal, "test", dao_default_test_inliner );
 
 	self->mainNamespace = DaoNamespace_New( self, "MainNamespace" );
 	self->mainNamespace->vmSpace = self;

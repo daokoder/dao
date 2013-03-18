@@ -1,0 +1,8 @@
+
+@[test(code_01)]
+io.writeln( 0xff )
+@[test(code_01)]
+
+@[test(output_01)]
+255
+@[test(output_01)]

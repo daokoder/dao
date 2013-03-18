@@ -1,0 +1,7 @@
+
+daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
+
+if( daovm == none ) return
+
+daovm.AddTest( "numbers.dao" )
+daovm.AddTest( "strings.dao" )

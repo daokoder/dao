@@ -1,0 +1,14 @@
+
+daotest = DaoMake::Project( "DaoTest" ) 
+
+daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
+
+if( daovm == none ) return
+
+daotest_objects = DaoMake::Objects( { "source/daoTest.c" } )
+daotest_exe     = daotest.AddExecutable( "daotest", daotest_objects )
+
+daotest_exe.UseStaticPackage( daovm, "dao" )
+
+
+daotest.Install( daotest_exe, daovm.GetPath( "BIN-PATH" ) );
