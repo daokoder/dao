@@ -2282,7 +2282,7 @@ static DaoType* DaoCheckBinArith( DaoRoutine *self, DaoVmCodeX *vmc,
 	}
 	return rt;
 }
-static DString* AppendError( DArray *errors, DaoRoutine *rout, size_t type )
+static DString* AppendError( DArray *errors, DaoValue *rout, size_t type )
 {
 	DString *s = DString_New(1);
 	DArray_Append( errors, rout );
@@ -2299,12 +2299,12 @@ static void DString_AppendTypeError( DString *self, DaoType *from, DaoType *to )
 	DString_Append( self, to->name );
 	DString_AppendMBS( self, "\' \";\n" );
 }
-void DaoRoutine_CheckError( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int code, DArray *errors )
+void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routType, DaoType *selftype, DaoType *ts[], int np, int code, DArray *errors )
 {
 	DNode *node;
 	DMap *defs = DHash_New(0,0);
-	DaoType *routType = self->routType;
 	DaoType *abtp, **partypes = routType->nested->items.pType;
+	DaoValue *routobj = rout ? (DaoValue*)rout : (DaoValue*)routType;
 	int npar = np, size = routType->nested->size;
 	int i, j, ndef = 0;
 	int ifrom, ito;
@@ -2343,7 +2343,7 @@ void DaoRoutine_CheckError( DaoRoutine *self, DaoType *selftype, DaoType *ts[], 
 	}
 	if( npar == ndef && ndef == 0 ) goto FinishOK;
 	if( npar > ndef && (size == 0 || partypes[size-1]->tid != DAO_PAR_VALIST ) ){
-		DString *s = AppendError( errors, self, DTE_PARAM_WRONG_NUMBER );
+		DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_NUMBER );
 		DString_AppendMBS( s, "too many parameters \";\n" );
 		goto FinishError;
 	}
@@ -2358,8 +2358,8 @@ void DaoRoutine_CheckError( DaoRoutine *self, DaoType *selftype, DaoType *ts[], 
 				tp = ts[ifrom];
 				parpass[ifrom+selfChecked] = vlt ? DaoType_MatchTo( tp, vlt, defs ) : 1;
 				if( parpass[ifrom+selfChecked] == 0 ){
-					DString *s = AppendError( errors, self, DTE_PARAM_WRONG_TYPE );
-					abtp = DaoType_DefineTypes( vlt, self->nameSpace, defs );
+					DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );
+					abtp = DaoType_DefineTypes( vlt, ns, defs );
 					DString_AppendTypeError( s, tp, abtp );
 					goto FinishError;
 				}
@@ -2367,14 +2367,14 @@ void DaoRoutine_CheckError( DaoRoutine *self, DaoType *selftype, DaoType *ts[], 
 			break;
 		}
 		if( tp == NULL ){
-			DString *s = AppendError( errors, self, DTE_PARAM_WRONG_TYPE );
+			DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );
 			DString_AppendMBS( s, "unknown parameter type \";\n" );
 			goto FinishError;
 		}
 		if( tp->tid == DAO_PAR_NAMED ){
 			node = DMap_Find( routType->mapNames, tp->fname );
 			if( node == NULL ){
-				DString *s = AppendError( errors, self, DTE_PARAM_WRONG_NAME );
+				DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_NAME );
 				DString_Append( s, tp->fname );
 				DString_AppendMBS( s, " \";\n" );
 				goto FinishError;
@@ -2383,11 +2383,11 @@ void DaoRoutine_CheckError( DaoRoutine *self, DaoType *selftype, DaoType *ts[], 
 			tp = & tp->aux->xType;
 		}
 		if( tp ==NULL ){
-			DString *s = AppendError( errors, self, DTE_PARAM_WRONG_TYPE );
+			DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );
 			DString_AppendMBS( s, "unknown parameter type \";\n" );
 			goto FinishError;
 		}else if( ito >= ndef ){
-			DString *s = AppendError( errors, self, DTE_PARAM_WRONG_NUMBER );
+			DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_NUMBER );
 			DString_AppendMBS( s, "too many parameters \";\n" );
 			goto FinishError;
 		}
@@ -2408,10 +2408,10 @@ void DaoRoutine_CheckError( DaoRoutine *self, DaoType *selftype, DaoType *ts[], 
 				parpass[ito] = DAO_MT_NEGLECT;
 		}
 		if( parpass[ito] == 0 ){
-			DString *s = AppendError( errors, self, DTE_PARAM_WRONG_TYPE );
+			DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );
 			tp = ts[ifrom];
 			abtp = routType->nested->items.pType[ito];
-			abtp = DaoType_DefineTypes( abtp, self->nameSpace, defs );
+			abtp = DaoType_DefineTypes( abtp, ns, defs );
 			DString_AppendTypeError( s, tp, abtp );
 			goto FinishError;
 		}
@@ -2421,7 +2421,7 @@ void DaoRoutine_CheckError( DaoRoutine *self, DaoType *selftype, DaoType *ts[], 
 		if( i == DAO_PAR_VALIST ) break;
 		if( parpass[ito] ) continue;
 		if( i != DAO_PAR_DEFAULT ){
-			DString *s = AppendError( errors, self, DTE_PARAM_WRONG_NUMBER );
+			DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_NUMBER );
 			DString_AppendMBS( s, "too few parameters \";\n" );
 			goto FinishError;
 		}
@@ -2441,7 +2441,7 @@ DaoRoutine* DaoValue_Check( DaoRoutine *self, DaoType *selftype, DaoType *ts[], 
 	DaoRoutine *rout = DaoRoutine_ResolveByType( self, selftype, ts, np, code );
 	if( rout ) return rout;
 	if( self->overloads == NULL ){
-		DaoRoutine_CheckError( self, selftype, ts, np, code, errors );
+		DaoRoutine_CheckError( self->nameSpace, self, self->routType, selftype, ts, np, code, errors );
 		return NULL;
 	}
 	for(i=0,n=self->overloads->routines->size; i<n; i++){
@@ -2450,7 +2450,7 @@ DaoRoutine* DaoValue_Check( DaoRoutine *self, DaoType *selftype, DaoType *ts[], 
 		   printf( "=====================================\n" );
 		   printf("ovld %i, %p %s : %s\n", i, rout, self->routName->mbs, rout->routType->name->mbs);
 		 */
-		DaoRoutine_CheckError( rout, selftype, ts, np, code, errors );
+		DaoRoutine_CheckError( rout->nameSpace, rout, rout->routType, selftype, ts, np, code, errors );
 	}
 	return NULL;
 }
@@ -2460,35 +2460,46 @@ void DaoPrintCallError( DArray *errors, DaoStream *stream )
 	DString *mbs = DString_New(1);
 	int i, k, n;
 	for(i=0,n=errors->size; i<n; i+=2){
-		DaoRoutine *rout = errors->items.pRoutine[i];
+		DaoType *routType = errors->items.pType[i];
+		DaoRoutine *rout = NULL;
+		if( routType->type == DAO_ROUTINE ){
+			rout = errors->items.pRoutine[i];
+			routType = rout->routType;
+		}
 		DaoStream_WriteMBS( stream, "  ** " );
 		DaoStream_WriteString( stream, errors->items.pString[i+1] );
 		DaoStream_WriteMBS( stream, "     Assuming  : " );
-		if( DaoToken_IsValidName( rout->routName->mbs, rout->routName->size ) ){
-			DaoStream_WriteMBS( stream, "routine " );
+		if( rout ){
+			if( DaoToken_IsValidName( rout->routName->mbs, rout->routName->size ) ){
+				DaoStream_WriteMBS( stream, "routine " );
+			}else{
+				DaoStream_WriteMBS( stream, "operator " );
+			}
+			k = DString_RFindMBS( routType->name, "=>", routType->name->size );
+			DString_Assign( mbs, rout->routName );
+			DString_AppendChar( mbs, '(' );
+			DString_AppendDataMBS( mbs, routType->name->mbs + 8, k-9 );
+			DString_AppendChar( mbs, ')' );
+			if( routType->aux && routType->aux->type == DAO_TYPE ){
+				DString_AppendMBS( mbs, "=>" );
+				DString_Append( mbs, routType->aux->xType.name );
+			}
 		}else{
-			DaoStream_WriteMBS( stream, "operator " );
-		}
-		k = DString_RFindMBS( rout->routType->name, "=>", rout->routType->name->size );
-		DString_Assign( mbs, rout->routName );
-		DString_AppendChar( mbs, '(' );
-		DString_AppendDataMBS( mbs, rout->routType->name->mbs + 8, k-9 );
-		DString_AppendChar( mbs, ')' );
-		if( rout->routType->aux && rout->routType->aux->type == DAO_TYPE ){
-			DString_AppendMBS( mbs, "=>" );
-			DString_Append( mbs, rout->routType->aux->xType.name );
+			DaoStream_WriteString( stream, routType->name );
 		}
 		DString_AppendMBS( mbs, ";\n" );
 		DaoStream_WriteString( stream, mbs );
-		DaoStream_WriteMBS( stream, "     Reference : " );
-		if( rout->body ){
-			DaoStream_WriteMBS( stream, "line " );
-			DaoStream_WriteInt( stream, rout->defLine );
-			DaoStream_WriteMBS( stream, ", " );
+		if( rout ){
+			DaoStream_WriteMBS( stream, "     Reference : " );
+			if( rout->body ){
+				DaoStream_WriteMBS( stream, "line " );
+				DaoStream_WriteInt( stream, rout->defLine );
+				DaoStream_WriteMBS( stream, ", " );
+			}
+			DaoStream_WriteMBS( stream, "file \"" );
+			DaoStream_WriteString( stream, rout->nameSpace->name );
+			DaoStream_WriteMBS( stream, "\";\n" );
 		}
-		DaoStream_WriteMBS( stream, "file \"" );
-		DaoStream_WriteString( stream, rout->nameSpace->name );
-		DaoStream_WriteMBS( stream, "\";\n" );
 		DString_Delete( errors->items.pString[i+1] );
 	}
 	DString_Delete( mbs );
@@ -2667,6 +2678,10 @@ static void DaoInferencer_WriteErrorSpecific( DaoInferencer *self, int error )
 static int DaoInferencer_Error( DaoInferencer *self, int error )
 {
 	DaoInferencer_WriteErrorHeader( self );
+	if( self->errors->size ){
+		DaoPrintCallError( self->errors, self->routine->nameSpace->vmSpace->errorStream );
+		return 0;
+	}
 	DaoInferencer_WriteErrorGeneral( self, error );
 	return 0;
 }
@@ -4716,6 +4731,7 @@ NotExist_TryAux:
 					ctchecked = 1;
 				}else if( rout == NULL ){
 					if( DaoRoutine_CheckType( at, NS, bt, tp, j, code, 0 ) ==0 ){
+						DaoRoutine_CheckError( NS, NULL, at, bt, tp, j, code, errors );
 						goto ErrorTyping;
 					}
 					if( at->name->mbs[0] == '@' ){

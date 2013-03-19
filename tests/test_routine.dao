@@ -1,7 +1,51 @@
 
+routine TestFunction( a : string, b = 123 )
+{
+	io.writeln( a, b )
+}
+
+
 routine TestVariadicFunction( a : string, ... : int )
 {
 }
+
+
+########################
+## Static Checking
+########################
+
+# Test default parameter:
+@[test(code_01)]
+	TestFunction( 'abc' )
+@[test(code_01)]
+@[test(code_01)]
+	abc %s 123
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestFunction( 'abc', 456.5 )  # implicit conversion;
+@[test(code_01)]
+@[test(code_01)]
+	abc %s 456
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestFunction()
+@[test(code_01)]
+@[test(code_01)]
+	{{At line}} .* {{too few parameters}}
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestFunction( 'abc', 123, 456 )
+@[test(code_01)]
+@[test(code_01)]
+	{{At line}} .* {{too many parameters}}
+@[test(code_01)]
+
 
 
 @[test(code_01)]
@@ -22,7 +66,7 @@ routine TestVariadicFunction( a : string, ... : int )
 	TestVariadicFunction( 123 )  # wrong first parameter;
 @[test(code_01)]
 @[test(code_01)]
-	Types %s not %s matching
+	{{At line}} .* {{Invalid parameter type}}
 @[test(code_01)]
 
 
@@ -30,5 +74,150 @@ routine TestVariadicFunction( a : string, ... : int )
 	TestVariadicFunction( 'abc', 'abc' )  # wrong second parameter;
 @[test(code_01)]
 @[test(code_01)]
-	Types %s not %s matching
+	{{At line}} .* {{Invalid parameter type}}
 @[test(code_01)]
+
+
+
+##########################
+## Static Checking
+## With function type only
+##########################
+
+global TestFunction2 = TestFunction
+global TestVariadicFunction2 = TestVariadicFunction
+
+# Test default parameter:
+@[test(code_01)]
+	TestFunction2( 'abc' )
+@[test(code_01)]
+@[test(code_01)]
+	abc %s 123
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestFunction2( 'abc', 456.5 )  # implicit conversion;
+@[test(code_01)]
+@[test(code_01)]
+	abc %s 456
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestFunction2()
+@[test(code_01)]
+@[test(code_01)]
+	{{At line}} .* {{too few parameters}}
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestFunction2( 'abc', 123, 456 )
+@[test(code_01)]
+@[test(code_01)]
+	{{At line}} .* {{too many parameters}}
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+	TestVariadicFunction2( 'abc' )  # right parameter;
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestVariadicFunction2( 'abc', 123 )  # right parameter;
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestVariadicFunction2( 123 )  # wrong first parameter;
+@[test(code_01)]
+@[test(code_01)]
+	{{At line}} .* {{Invalid parameter type}}
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestVariadicFunction2( 'abc', 'abc' )  # wrong second parameter;
+@[test(code_01)]
+@[test(code_01)]
+	{{At line}} .* {{Invalid parameter type}}
+@[test(code_01)]
+
+
+##########################
+## Dynamic Checking
+##########################
+
+global TestFunction3 : any = TestFunction
+global TestVariadicFunction3 : any = TestVariadicFunction
+
+# Test default parameter:
+@[test(code_01)]
+	TestFunction3( 'abc' )
+@[test(code_01)]
+@[test(code_01)]
+	abc %s 123
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestFunction3( 'abc', 456.5 )  # implicit conversion;
+@[test(code_01)]
+@[test(code_01)]
+	abc %s 456
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestFunction3()
+@[test(code_01)]
+@[test(code_01)]
+	{{Exception.Error.Param}} .* {{too few parameters}}
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestFunction3( 'abc', 123, 456 )
+@[test(code_01)]
+@[test(code_01)]
+	{{Exception.Error.Param}} .* {{too many parameters}}
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+	TestVariadicFunction3( 'abc' )  # right parameter;
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestVariadicFunction3( 'abc', 123 )  # right parameter;
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestVariadicFunction3( 123 )  # wrong first parameter;
+@[test(code_01)]
+@[test(code_01)]
+	{{Exception.Error.Param}} .* {{Invalid parameter type}}
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestVariadicFunction3( 'abc', 'abc' )  # wrong second parameter;
+@[test(code_01)]
+@[test(code_01)]
+	{{Exception.Error.Param}} .* {{Invalid parameter type}}
+@[test(code_01)]
+
