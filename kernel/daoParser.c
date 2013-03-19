@@ -267,6 +267,7 @@ void DaoParser_Reset( DaoParser *self )
 		DMap_Reset( self->localCstMap->items.pMap[i] );
 		DMap_Reset( self->localDecMap->items.pMap[i] );
 	}
+	self->autoReturn = 0;
 	self->topAsGlobal = 0;
 	self->isClassBody = 0;
 	self->isInterBody = 0;
@@ -4478,10 +4479,13 @@ static int DaoParser_SetupBranching( DaoParser *self )
 		DaoVmSpace *vms = self->vmSpace;
 		DaoNamespace *ns = self->nameSpace;
 		int first = self->vmcLast->first + self->vmcLast->middle + self->vmcLast->last + 1;
-		int print = (vms->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
-		int ismain = self->routine->attribs & DAO_ROUT_MAIN;
-		int autoret = ismain && (print || vms->evalCmdline);
-		int opa = 0;
+		int opa = 0, autoret = self->autoReturn;
+
+		if( autoret == 0 ){
+			int print = (vms->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
+			int ismain = self->routine->attribs & DAO_ROUT_MAIN;
+			autoret = ismain && (print || vms->evalCmdline);
+		}
 		if( autoret ){
 			opa = DaoParser_GetLastValue( self, self->vmcLast, self->vmcFirst );
 			if( opa < 0 ){

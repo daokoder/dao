@@ -1471,7 +1471,7 @@ char DLong_FromString( DLong *self, DString *s )
 		if( (pl+1) < n && ! isdigit( mbs[pl+1] ) ) return 'L';
 		if( (pl+2) < n && ! isdigit( mbs[pl+2] ) ) return 'L';
 		if( (pl+1) < n ) self->base = base = strtol( mbs+pl+1, NULL, 0 );
-		if( base > 16 ) return 'L';
+		if( base <= 1 || base > 16 ) return 'L';
 		n = pl;
 	}
 	if( n && mbs[0] == '-' ){

@@ -1,0 +1,34 @@
+
+routine TestVariadicFunction( a : string, ... : int )
+{
+}
+
+
+@[test(code_01)]
+	TestVariadicFunction( 'abc' )  # right parameter;
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestVariadicFunction( 'abc', 123 )  # right parameter;
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestVariadicFunction( 123 )  # wrong first parameter;
+@[test(code_01)]
+@[test(code_01)]
+	Types %s not %s matching
+@[test(code_01)]
+
+
+@[test(code_01)]
+	TestVariadicFunction( 'abc', 'abc' )  # wrong second parameter;
+@[test(code_01)]
+@[test(code_01)]
+	Types %s not %s matching
+@[test(code_01)]

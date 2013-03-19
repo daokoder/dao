@@ -217,7 +217,8 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 	if( mbs==0 && src->mbs ) DString_ToWCS( src );
 	DString_Trim( src );
 	if( src->size ==0 ){
-		DaoProcess_RaiseException( self, DAO_ERROR, "pattern with empty string" );
+		if( self->activeRoutine )
+			DaoProcess_RaiseException( self, DAO_ERROR, "pattern with empty string" );
 		return NULL;
 	}
 	if( src->mbs ){
@@ -237,7 +238,7 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 		it = pat->items + i;
 		if( it->type ==0 ){
 			sprintf( buf, "incorrect pattern, at char %i.", it->length );
-			DaoProcess_RaiseException( self, DAO_ERROR, buf );
+			if( self->activeRoutine ) DaoProcess_RaiseException( self, DAO_ERROR, buf );
 			return NULL;
 		}
 	}
@@ -741,22 +742,27 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 }
 int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *src, int rpl )
 {
-	DaoParser *p;
+	DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	int res;
 
-	p = DaoVmSpace_AcquireParser( self->vmSpace );
-	p->vmSpace = self->vmSpace;
-	p->nameSpace = ns;
-	DString_Assign( p->fileName, ns->name );
-	res = DaoParser_LexCode( p, src, rpl ) && DaoParser_ParseScript( p );
-	DaoVmSpace_ReleaseParser( self->vmSpace, p );
+	parser->nameSpace = ns;
+	DString_Assign( parser->fileName, ns->name );
+	res = DaoParser_LexCode( parser, src, rpl ) && DaoParser_ParseScript( parser );
+	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return res;
 }
 int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *source, int rpl )
 {
+	DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	DaoRoutine *rout;
-	DString_SetMBS( ns->name, "code string" );
-	if( DaoProcess_Compile( self, ns, source, rpl ) ==0 ) return 0;
+	int res;
+
+	parser->autoReturn = 1;
+	parser->nameSpace = ns;
+	DString_SetMBS( parser->fileName, "code string" );
+	res = DaoParser_LexCode( parser, source, rpl ) && DaoParser_ParseScript( parser );
+	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+	if( res == 0 ) return 0;
 	rout = ns->mainRoutines->items.pRoutine[ ns->mainRoutines->size-1 ];
 	if( DaoProcess_Call( self, rout, NULL, NULL, 0 ) ) return 0;
 	return ns->mainRoutines->size;
@@ -6677,12 +6683,15 @@ int DaoProcess_DoCheckExcept( DaoProcess *self, DaoVmCode *vmc )
 }
 static void DaoInitException( DaoException *except, DaoProcess *proc, DaoVmCode *vmc, int fe, const char *value )
 {
+	DaoVmCodeX **annotCodes;
 	DaoRoutine *rout = proc->activeRoutine;
 	DaoType *efloat = DaoException_GetType( DAO_ERROR_FLOAT );
-	DaoVmCodeX **annotCodes = rout->body->annotCodes->items.pVmc;
 	DaoStackFrame *frame = proc->topFrame->prev;
-	int line, line2;
 	int id = (int) (vmc - proc->topFrame->active->codes);
+	int line, line2;
+
+	if( rout == NULL ) return;
+	annotCodes = rout->body->annotCodes->items.pVmc;
 	
 	line = line2 = rout->defLine;
 	if( vmc && rout->body->vmCodes->size ) line = annotCodes[id]->line;
@@ -6823,6 +6832,7 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 	DaoException *except;
 	if( type <= 1 ) return;
 	if( type >= ENDOF_BASIC_EXCEPT ) type = DAO_ERROR;
+	if( self->activeRoutine == NULL ) return; // TODO: Error infor;
 	
 	etype = DaoException_GetType( type );
 	if( DaoType_ChildOf( etype, warning ) ){

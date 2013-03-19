@@ -144,7 +144,7 @@ precision floating point numbers.
 
 @[subsection]Definition@[subsection]
 @[code(syntax)]
-Complex ::= [ DecInteger ['.' DecInteger] ] '$'
+Complex ::= Float '$'
 @[code(syntax)]
 
 @[green]complex@[green] has two fields @[green]real@[green] and @[green]imag@[green],

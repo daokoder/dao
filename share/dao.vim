@@ -131,7 +131,7 @@ hi link vbt String
 let b:current_syntax = ''
 unlet b:current_syntax
 syntax include @Code syntax/dao.vim
-syntax region  vbtCode  matchgroup=vbt start="\z(@@\?\[\s*code\(\|[ .-:=()][0-9a-zA-Z_ .-:=()]*\)\]\)" end="\z1" contains=@Code
+syntax region  vbtCode  matchgroup=vbt start="\z(@@\?\[\s*\(code\|test\)\(\|[ .-:=()][0-9a-zA-Z_ .-:=()]*\)\]\)" end="\z1" contains=@Code
 hi link vbt String
 
 let b:current_syntax = ''

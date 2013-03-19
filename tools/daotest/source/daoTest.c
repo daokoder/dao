@@ -83,8 +83,18 @@ static int dao_test_inliner( DaoNamespace *NS, DString *mode, DString *VT, DStri
 
 
 
-static const char *const daotest_stat = "Tests for project: %s, %i passes, %i fails;\n";
 
+static int passes = 0, mpasses = 0;
+static int fails = 0, mfails = 0;
+static int passes2 = 0, mpasses2 = 0;
+static int fails2 = 0, mfails2 = 0;
+
+void PrintTestSummary( const char *project )
+{
+	if( passes == passes2 && fails == fails2 ) return;
+	printf( "%-20s :    files,%3i passed,%3i failed;    units,%4i passed,%4i failed;\n",
+			project, mpasses - mpasses2, mfails - mfails2, passes - passes2, fails - fails2 );
+}
 
 int main( int argc, char **argv )
 {
@@ -95,9 +105,6 @@ int main( int argc, char **argv )
 	char project[512] = {0};
 	char project2[512] = {0};
 	char *testfile, *cur, *end;
-	int passes = 0, mpasses = 0;
-	int fails = 0, mfails = 0;
-	int pass = 0, fail = 0;
 	int i, k, len;
 	FILE *fin;
 
@@ -134,17 +141,21 @@ int main( int argc, char **argv )
 			continue;
 		}
 		if( head ){
-			strncpy( project2, cur, head - cur );
+			strncpy( project, cur, head - cur );
+			project[head - cur] = '\0';
 			if( strcmp( project, project2 ) != 0 ) changed = 1;
 			cur = head + 3;
 		}else{
 			changed = 1;
 		}
 		if( changed ){
-			if( pass + fail ) printf( daotest_stat, project, pass, fail );
-			pass = fail = 0;
+			PrintTestSummary( project2 );
+			passes2 = passes;
+			mpasses2 = mpasses;
+			fails2 = fails;
+			mfails2 = mfails;
 		}
-		strcpy( project, project2 );
+		strcpy( project2, project );
 
 		vmSpace = DaoInit( argv[0] );
 
@@ -158,8 +169,10 @@ int main( int argc, char **argv )
 			mfails += 1;
 			fails += 1;
 		}else{
+			int pass = 0, fail = 0;
 			DaoProcess *proc = DaoVmSpace_AcquireProcess( vmSpace );
 			DString *output = DString_New(1);
+			DString *output2 = DString_New(1);
 			DaoRegex *regex;
 			stream->StdioWrite = DaoTestStream_Write;
 			stream->output = output;
@@ -171,34 +184,51 @@ int main( int argc, char **argv )
 				DaoNamespace *ns2 = DaoNamespace_New( vmSpace, "test" );
 				int failed = fail;
 
+				stream->output = output;
 				DString_Reset( output, 0 );
 				DaoNamespace_AddParent( ns2, ns );
 				DaoProcess_Eval( proc, ns2, codes->mbs, 1 );
 				DString_Trim( output );
 				DString_Trim( result );
-				if( DString_EQ( output, result ) ){
+				if( output->size == 0 && result->size != 0 ){
+					/* If there is no output, check the lasted evaluated value: */
+					DaoProcess *proc2 = DaoVmSpace_AcquireProcess( vmSpace );
+					DaoNamespace *ns3 = DaoNamespace_New( vmSpace, "result" );
+					int cmp;
+					stream->output = output2;
+					DString_Reset( output2, 0 );
+					DaoNamespace_AddParent( ns3, ns );
+					DaoProcess_Eval( proc2, ns3, result->mbs, 1 );
+					cmp = DaoValue_Compare( proc->stackValues[0], proc2->stackValues[0] );
+					DaoVmSpace_ReleaseProcess( vmSpace, proc2 );
+					DaoGC_TryDelete( (DaoValue*) ns3 );
+					pass += cmp == 0;
+					fail += cmp != 0;
+				}else if( DString_EQ( output, result ) ){
+					/* Check if the output is the same as expected: */
 					pass += 1;
 				}else if( (regex = DaoProcess_MakeRegex( proc, result, 1 )) ){
+					/* Check if the result is a string pattern and if the output matches it: */
 					daoint start = 0;
 					daoint end = output->size;
-					if( DaoRegex_Match( regex, output, & start, & end ) ){
-						pass += 1;
-					}else{
-						fail += 1;
-					}
+					int match = DaoRegex_Match( regex, output, & start, & end );
+					pass += match != 0;
+					fail += match == 0;
 				}else{
 					fail += 1;
 				}
 				if( fail > failed ){
 					if( output->size > 500 ) DString_Reset( output, 500 );
-					fprintf( stderr, "FAILED: %s (%s) ", cur, id->mbs );
+					fprintf( stderr, "\nFAILED: %s (%s) ", cur, id->mbs );
 					fprintf( stderr, "with the following output:\n%s\n", output->mbs );
 				}
 				DaoGC_TryDelete( (DaoValue*) ns2 );
 			}
 			DaoVmSpace_ReleaseProcess( vmSpace, proc );
 			DString_Delete( output );
+			DString_Delete( output2 );
 			passes += pass;
+			fails += fail;
 			mpasses += fail == 0;
 			mfails += fail != 0;
 		}
@@ -210,7 +240,11 @@ int main( int argc, char **argv )
 		cur = next + 1;
 		continue;
 	}
-	if( pass + fail ) printf( daotest_stat, project, pass, fail );
+	PrintTestSummary( project2 );
+
+	printf( "----------\n" );
+	printf( "All Tests:    files, %3i passed, %3i failed;    units, %3i passed, %3i failed;\n",
+			mpasses, mfails, passes, fails );
 
 	return fails;
 }

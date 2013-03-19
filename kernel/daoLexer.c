@@ -619,6 +619,8 @@ void DaoInitLexTable()
 	if( daoLexTable[0][0] <= TOK_ERROR ) return;
 	memset( daoLexTable, TOK_RESTART, 128 * TOK_ERROR * sizeof(char) );
 	memset( daoSpaceType, DTOK_NONE, 128 * sizeof(char) );
+	memset( daoLexTable[TOK_NUMBER_SCI_E], TOK_ERROR, 128 * sizeof(char) );
+	memset( daoLexTable[TOK_NUMBER_SCI_ES], TOK_ERROR, 128 * sizeof(char) );
 	daoSpaceType[ (unsigned) ' ' ] = DTOK_BLANK;
 	daoSpaceType[ (unsigned) '\t' ] = DTOK_TAB;
 	daoSpaceType[ (unsigned) '\n' ] = DTOK_NEWLN;
@@ -662,10 +664,25 @@ void DaoInitLexTable()
 			daoLexTable[ TOK_OP_AT ][ j ] = TOK_ID_INITYPE; /* @T */
 			daoLexTable[ TOK_OP_IMG ][ j ] = TOK_ID_SYMBOL; /* $S */
 			daoLexTable[ TOK_VERBATIM ][j] = TOK_VERBATIM;
+
+			daoLexTable[ TOK_DIGITS_DEC ][ j ] = TOK_ERROR;
+			daoLexTable[ TOK_DIGITS_HEX ][ j ] = TOK_ERROR;
+			daoLexTable[ TOK_DIGITS_0 ][ j ] = TOK_ERROR;
+			daoLexTable[ TOK_DOT_DIGITS ][ j ] = TOK_ERROR;
+			daoLexTable[ TOK_DIGITS_DOT ][ j ] = TOK_ERROR;
+			daoLexTable[ TOK_NUMBER_DEC ][ j ] = TOK_ERROR;
+			daoLexTable[ TOK_NUMBER_SCI_E ][ j ] = TOK_ERROR;
+			daoLexTable[ TOK_NUMBER_SCI_ES ][ j ] = TOK_ERROR;
+			daoLexTable[ TOK_NUMBER_SCI ][ j ] = TOK_ERROR;
 			if( isxdigit( j ) ){
 				daoLexTable[ TOK_DIGITS_0X ][ j ] = TOK_NUMBER_HEX;
 				daoLexTable[ TOK_NUMBER_HEX ][ j ] = TOK_NUMBER_HEX;
+			}else{
+				daoLexTable[ TOK_DIGITS_0X ][ j ] = TOK_ERROR;
+				daoLexTable[ TOK_NUMBER_HEX ][ j ] = TOK_ERROR;
 			}
+		}else{
+			daoLexTable[ TOK_DIGITS_0X ][ j ] = TOK_ERROR;
 		}
 	}
 	daoLexTable[ TOK_START ][ (unsigned) '(' ] = TOK_END_LB;
@@ -701,6 +718,7 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) '$' ] = TOK_NUMBER_IMG;
 	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) '$' ] = TOK_NUMBER_IMG;
 	daoLexTable[ TOK_NUMBER_DEC ][ (unsigned) '$' ] = TOK_NUMBER_IMG;
+	daoLexTable[ TOK_NUMBER_SCI ][ (unsigned) '$' ] = TOK_NUMBER_IMG;
 	daoLexTable[ TOK_IDENTIFIER ][ (unsigned) '.' ] = TOK_RESTART;
 	daoLexTable[ TOK_ID_INITYPE ][ (unsigned) '.' ] = TOK_RESTART;
 	daoLexTable[ TOK_ID_SYMBOL ][ (unsigned) '.' ] = TOK_RESTART;

@@ -265,7 +265,6 @@ serializer = daovm.AddDirectory( "serializer", "modules/serializer" )
 daomake = daovm.AddDirectory( "daomake", "tools/daomake" )
 daotest = daovm.AddDirectory( "daotest", "tools/daotest" )
 modules = daovm.AddDirectory( "modules", "modules" )
-tests = daovm.AddDirectory( "tests", "tests" )
 
 # Add dependencies:
 auxlib.AddDependency( daovm_dll )
@@ -279,8 +278,12 @@ daomake.AddDependency( daovm_lib )
 modules.AddDependency( daovm_lib )
 modules.AddDependency( daovm_exe )
 
-tests.AddDependency( modules )
-tests.AddDependency( daotest )
+
+if( DaoMake::BuildMode() == $debug ){
+	tests = daovm.AddDirectory( "tests", "tests" )
+	tests.AddDependency( modules )
+	tests.AddDependency( daotest )
+}
 
 
 # Setup installations:

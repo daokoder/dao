@@ -1784,6 +1784,7 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 		if( types[i] && types[i]->tid == DAO_PAR_VALIST ){
 			DaoType *vltype = (DaoType*) types[i]->aux;
 			while( i < DAO_MAX_PARAM ) types[i++] = vltype;
+			break;
 		}
 		type = types[i];
 		if( type ) types[i] = & type->aux->xType; /* name:type, name=type */

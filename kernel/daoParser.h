@@ -85,6 +85,7 @@ struct DaoParser
 
 	/* if 1, variables not nested in any scope are declared as global */
 	char topAsGlobal;
+	char autoReturn;
 	char isClassBody;
 	char isInterBody;
 	char isDynamicClass;

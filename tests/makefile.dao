@@ -3,5 +3,14 @@ daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
-daovm.AddTest( "numbers.dao" )
-daovm.AddTest( "strings.dao" )
+daovm.AddTest( "Example", "examples.dao" )
+
+daovm.AddTest( "Lexer",  "test_lexer.dao" )
+daovm.AddTest( "Parser", "test_parser.dao" )
+
+daovm.AddTest( "Numbers", "test_numbers.dao" )
+daovm.AddTest( "Strings", "test_strings.dao" )
+
+daovm.AddTest( "Routine", "test_routine.dao" )
+
+daovm.AddTest( "Misc", "test_misc.dao" )

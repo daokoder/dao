@@ -304,11 +304,14 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 
 DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )
 {
+	DaoParser *parser = NULL;
+
 #ifdef SHARE_NO_PARSER
-	return DaoParser_New();
+	parser = DaoParser_New();
+	parser->vmSpace = self;
+	return parser;
 #endif
 
-	DaoParser *parser = NULL;
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & self->mutexMisc );
 #endif
@@ -317,6 +320,7 @@ DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )
 		DArray_PopBack( self->parsers );
 	}else{
 		parser = DaoParser_New();
+		parser->vmSpace = self;
 		DMap_Insert( self->allParsers, parser, 0 );
 	}
 #ifdef DAO_WITH_THREAD
@@ -326,11 +330,12 @@ DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )
 }
 DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self )
 {
+	DaoInferencer *inferencer = NULL;
+
 #ifdef SHARE_NO_INFERENCER
 	return DaoInferencer_New();
 #endif
 
-	DaoInferencer *inferencer = NULL;
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & self->mutexMisc );
 #endif
@@ -348,11 +353,12 @@ DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self )
 }
 DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self )
 {
+	DaoOptimizer *optimizer = NULL;
+
 #ifdef SHARE_NO_OPTIMIZER
 	return DaoOptimizer_New();
 #endif
 
-	DaoOptimizer *optimizer = NULL;
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & self->mutexMisc );
 #endif
@@ -2520,6 +2526,7 @@ void DaoQuit()
 	DMap_Delete( dao_meta_tables );
 	dao_cdata_bindings = NULL;
 	dao_meta_tables = NULL;
+	dao_type_stream = NULL;
 	mainVmSpace = NULL;
 	mainProcess = NULL; 
 	if( dao_jit.Quit ){
