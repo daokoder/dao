@@ -1,16 +1,18 @@
 
+daotests = DaoMake::Project( "DaoTests" ) 
+
 daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
-daovm.AddTest( "Example", "examples.dao" )
+daotests.AddTest( "Example", "examples.dao" )
 
-daovm.AddTest( "Lexer",  "test_lexer.dao" )
-daovm.AddTest( "Parser", "test_parser.dao" )
+daotests.AddTest( "Lexer",  "test_lexer.dao" )
+daotests.AddTest( "Parser", "test_parser.dao" )
 
-daovm.AddTest( "Numbers", "test_numbers.dao" )
-daovm.AddTest( "Strings", "test_strings.dao" )
+daotests.AddTest( "Numbers", "test_numbers.dao" )
+daotests.AddTest( "Strings", "test_strings.dao" )
 
-daovm.AddTest( "Routine", "test_routine.dao" )
+daotests.AddTest( "Routine", "test_routine.dao" )
 
-daovm.AddTest( "Misc", "test_misc.dao" )
+daotests.AddTest( "Misc", "test_misc.dao" )

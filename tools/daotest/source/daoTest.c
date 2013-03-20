@@ -84,79 +84,28 @@ static int dao_test_inliner( DaoNamespace *NS, DString *mode, DString *VT, DStri
 
 
 
-static int passes = 0, mpasses = 0;
-static int fails = 0, mfails = 0;
-static int passes2 = 0, mpasses2 = 0;
-static int fails2 = 0, mfails2 = 0;
-
-void PrintTestSummary( const char *project )
-{
-	if( passes == passes2 && fails == fails2 ) return;
-	printf( "%-20s :    files,%3i passed,%3i failed;    units,%4i passed,%4i failed;\n",
-			project, mpasses - mpasses2, mfails - mfails2, passes - passes2, fails - fails2 );
-}
-
 int main( int argc, char **argv )
 {
 	DaoTestStream stream0 = {NULL,NULL,NULL,NULL,NULL,NULL};
 	DaoTestStream *stream = & stream0;
 	DaoNamespace *ns;
 	DString *string;
-	char project[512] = {0};
-	char project2[512] = {0};
-	char *testfile, *cur, *end;
-	int i, k, len;
-	FILE *fin;
+	FILE *fin, *logfile = NULL;
+	int passes = 0, mpasses = 0;
+	int fails = 0, mfails = 0;
+	int i, j, inputs = argc;
 
 	if( argc <= 1 ) return 0;
 
-	vmSpace = DaoInit( argv[0] );
-
-	string = DString_New(1);
-	fin = fopen( argv[1], "r" );
-	if( fin ) DaoFile_ReadAll( fin, string, 1 );
-	if( string->size == 0 ){
-		DString_Delete( string );
-		DaoQuit();
-		return 0;
+	for(i=1; i<argc; ++i){
+		if( strcmp( argv[i], "--log" ) == 0 ){
+			if( (i + 1) < argc ) logfile = fopen( argv[i+1], "w+" );
+			inputs = i - 1;
+			break;
+		}
 	}
-	len = string->size;
-	testfile = (char*) dao_malloc( len + 1 );
-	memmove( testfile, string->mbs, len + 1 );
-	DString_Delete( string );
-	DaoQuit();
 
-
-	cur = testfile;
-	end = testfile + len;
-	while( cur < end ){
-		char *next = strchr( cur, '\n' );
-		char *head = strstr( cur, ":: " );
-		char *proj = cur;
-		int changed = 0;
-		if( next ) *next = '\0';
-		if( *cur == '#' ){
-			if( next == NULL ) break;
-			cur = next + 1;
-			continue;
-		}
-		if( head ){
-			strncpy( project, cur, head - cur );
-			project[head - cur] = '\0';
-			if( strcmp( project, project2 ) != 0 ) changed = 1;
-			cur = head + 3;
-		}else{
-			changed = 1;
-		}
-		if( changed ){
-			PrintTestSummary( project2 );
-			passes2 = passes;
-			mpasses2 = mpasses;
-			fails2 = fails;
-			mfails2 = mfails;
-		}
-		strcpy( project2, project );
-
+	for(i=1; i<=inputs; ++i){
 		vmSpace = DaoInit( argv[0] );
 
 		ns = DaoVmSpace_GetNamespace( vmSpace, "dao" );
@@ -164,7 +113,7 @@ int main( int argc, char **argv )
 
 		string = DString_New(1);
 		dao_tests = DArray_New(D_STRING);
-		ns = DaoVmSpace_Load( vmSpace, cur );
+		ns = DaoVmSpace_Load( vmSpace, argv[i] );
 		if( ns == NULL ){
 			mfails += 1;
 			fails += 1;
@@ -177,10 +126,10 @@ int main( int argc, char **argv )
 			stream->StdioWrite = DaoTestStream_Write;
 			stream->output = output;
 			DaoVmSpace_SetUserStdio( vmSpace, (DaoUserStream*) stream );
-			for(i=0; i<dao_tests->size; i+=3){
-				DString *id = dao_tests->items.pString[i];
-				DString *codes = dao_tests->items.pString[i+1];
-				DString *result = dao_tests->items.pString[i+2];
+			for(j=0; j<dao_tests->size; j+=3){
+				DString *id = dao_tests->items.pString[j];
+				DString *codes = dao_tests->items.pString[j+1];
+				DString *result = dao_tests->items.pString[j+2];
 				DaoNamespace *ns2 = DaoNamespace_New( vmSpace, "test" );
 				int failed = fail;
 
@@ -218,9 +167,11 @@ int main( int argc, char **argv )
 					fail += 1;
 				}
 				if( fail > failed ){
+					FILE *log = logfile ? logfile : stderr;
 					if( output->size > 500 ) DString_Reset( output, 500 );
-					fprintf( stderr, "\nFAILED: %s (%s) ", cur, id->mbs );
-					fprintf( stderr, "with the following output:\n%s\n", output->mbs );
+					fprintf( log, "\nFAILED: %s (%s) ", argv[i], id->mbs );
+					fprintf( log, "with the following output:\n%s\n", output->mbs );
+					fflush( log );
 				}
 				DaoGC_TryDelete( (DaoValue*) ns2 );
 			}
@@ -235,16 +186,16 @@ int main( int argc, char **argv )
 		DString_Delete( string );
 		DArray_Delete( dao_tests );
 		DaoQuit();
-
-		if( next == NULL ) break;
-		cur = next + 1;
-		continue;
 	}
-	PrintTestSummary( project2 );
 
-	printf( "----------\n" );
-	printf( "All Tests:    files, %3i passed, %3i failed;    units, %3i passed, %3i failed;\n",
+	printf( "Test summary:\nfiles: %4i passed, %4i failed;\nunits: %4i passed, %4i failed;\n",
 			mpasses, mfails, passes, fails );
 
+	if( logfile ){
+		fprintf( logfile,
+				"Summary: files, %i passed, %i failed; units: %i passed, %i failed;\n",
+				mpasses, mfails, passes, fails );
+		fclose( logfile );
+	}
 	return fails;
 }

@@ -280,6 +280,7 @@ modules.AddDependency( daovm_exe )
 
 
 if( DaoMake::BuildMode() == $debug ){
+	DaoMake::SetTestTool( "tools/daotest/daotest" )
 	tests = daovm.AddDirectory( "tests", "tests" )
 	tests.AddDependency( modules )
 	tests.AddDependency( daotest )
