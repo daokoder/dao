@@ -1890,7 +1890,7 @@ static int dao_string_delete( DString *string, int retc )
 	if( string ) DString_Delete( string );
 	return retc;
 }
-static int dao_help_name( DaoNamespace *NS, DString *mode, DString *verbatim, DString *out )
+static int dao_help_name( DaoNamespace *NS, DString *mode, DString *verbatim, DString *out, int line )
 {
 	DString *name = dao_verbatim_content( verbatim );
 	DaoxHelp *help;
@@ -1907,7 +1907,7 @@ static int dao_help_name( DaoNamespace *NS, DString *mode, DString *verbatim, DS
 	help->current = (DaoxHelpEntry*) it->value.pVoid;
 	return dao_string_delete( name, 0 );
 }
-static int dao_help_title( DaoNamespace *NS, DString *mode, DString *verbatim, DString *out )
+static int dao_help_title( DaoNamespace *NS, DString *mode, DString *verbatim, DString *out, int line )
 {
 	DString *title = dao_verbatim_content( verbatim );
 	DaoxHelp *help = DaoxHelper_Get( daox_helper, NS, NULL );
@@ -1918,7 +1918,7 @@ static int dao_help_title( DaoNamespace *NS, DString *mode, DString *verbatim, D
 	DString_Assign( help->current->title, title );
 	return dao_string_delete( title, 0 );
 }
-static int dao_help_text( DaoNamespace *NS, DString *mode, DString *verbatim, DString *out )
+static int dao_help_text( DaoNamespace *NS, DString *mode, DString *verbatim, DString *out, int line )
 {
 	DString *text = dao_verbatim_content( verbatim );
 	DaoxHelp *help = DaoxHelper_Get( daox_helper, NS, NULL );
@@ -1928,7 +1928,7 @@ static int dao_help_text( DaoNamespace *NS, DString *mode, DString *verbatim, DS
 	DaoxHelpEntry_AppendText( help->current, NS, text );
 	return dao_string_delete( text, 0 );
 }
-static int dao_help_code( DaoNamespace *NS, DString *mode, DString *verbatim, DString *out )
+static int dao_help_code( DaoNamespace *NS, DString *mode, DString *verbatim, DString *out, int line )
 {
 	DString *code = dao_verbatim_code( verbatim );
 	DaoxHelp *help = DaoxHelper_Get( daox_helper, NS, NULL );
@@ -1937,7 +1937,7 @@ static int dao_help_code( DaoNamespace *NS, DString *mode, DString *verbatim, DS
 	DaoxHelpEntry_AppendCode( help->current, NS, code, NULL );
 	return dao_string_delete( code, 0 );
 }
-static int dao_help_author( DaoNamespace *NS, DString *mode, DString *verbatim, DString *out )
+static int dao_help_author( DaoNamespace *NS, DString *mode, DString *verbatim, DString *out, int line )
 {
 	DString *code = dao_verbatim_content( verbatim );
 	DaoxHelp *help = DaoxHelper_Get( daox_helper, NS, NULL );
@@ -1947,7 +1947,7 @@ static int dao_help_author( DaoNamespace *NS, DString *mode, DString *verbatim, 
 	DString_Assign( help->current->author, code );
 	return dao_string_delete( code, 0 );
 }
-static int dao_help_license( DaoNamespace *NS, DString *mode, DString *verbatim, DString *out )
+static int dao_help_license( DaoNamespace *NS, DString *mode, DString *verbatim, DString *out, int line )
 {
 	DString *code = dao_verbatim_content( verbatim );
 	DaoxHelp *help = DaoxHelper_Get( daox_helper, NS, NULL );

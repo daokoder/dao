@@ -92,6 +92,13 @@ int DaoArray_Compare( DaoArray *x, DaoArray *y );
 
 /* Invalid comparison returns either -100 or 100: */
 
+int DaoComplex_Compare( DaoComplex *left, DaoComplex *right )
+{
+	int eq = left->value.real == right->value.real && left->value.imag == right->value.imag;
+	if( eq ) return 0;
+	return left < right ? -100 : 100;
+}
+
 int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
 {
 	DaoEnum E;
@@ -200,6 +207,7 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	case DAO_INTEGER : return number_compare( left->xInteger.value, right->xInteger.value );
 	case DAO_FLOAT   : return number_compare( left->xFloat.value, right->xFloat.value );
 	case DAO_DOUBLE  : return number_compare( left->xDouble.value, right->xDouble.value );
+	case DAO_COMPLEX : return DaoComplex_Compare( & left->xComplex, & right->xComplex );
 #ifdef DAO_WITH_LONGINT
 	case DAO_LONG    : return DLong_Compare( left->xLong.value, right->xLong.value );
 #endif

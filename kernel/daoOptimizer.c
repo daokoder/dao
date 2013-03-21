@@ -2769,6 +2769,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	DaoValue *value, **pp, **consts = self->consts->items.pValue;
 	DaoInode *inode, *inode2, **inodes = self->inodes->items.pInode;
 	DaoRoutine *rout, *rout2, *meth, *routine = self->routine;
+	DaoStream  *stream = routine->nameSpace->vmSpace->errorStream;
 	DaoClass *klass, *hostClass = self->hostClass;
 	DaoNamespace *NS = routine->nameSpace;
 	DaoRoutineBody *body = routine->body;
@@ -5014,8 +5015,7 @@ TryPushBlockReturnType:
 					break;
 				}
 				if( code == DVM_YIELD && !(routine->routType->attrib & DAO_TYPE_COROUTINE) ){
-					printf( "Cannot yield from normal function!\n" );
-					printf( "%s %p\n", routine->routType->name->mbs, routine->routType );
+					DaoStream_WriteMBS( stream, "Cannot yield from normal function!\n" );
 					goto InvOper;
 				}
 				if( vmc->b ==0 ){

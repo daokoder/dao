@@ -1,0 +1,116 @@
+
+class AA
+{
+	const  cst = 123;
+	var    obj = 456;
+	var    obj2 = 789;
+
+	routine AA( i = 0 ){ io.writeln( 'AA::AA( i = 0 )' ); }
+
+	routine Meth(){ io.writeln( 'AA::Meth()' ); return 123; }
+	routine Meth( a ){ io.writeln( 'AA::Meth(a)' ); return 123; }
+
+	virtual routine Virt(){ io.writeln( 'AA::Virt()' ) }
+	routine CallVirt(){ Virt() }
+}
+
+class BB
+{
+	const  cst = 'abc';
+	var    obj = 'abc';
+	var    obj2 = 'abc';
+
+	routine BB( i = 0 ){ io.writeln( 'BB::BB( i = 0 )' ); }
+
+	routine Meth(){ io.writeln( 'BB::Meth()' ); return 'abc'; }
+	routine Virt(){ io.writeln( 'BB::Virt()' ) }
+}
+
+class CC : AA, BB
+{
+	var    obj2 = 0$;
+
+	use routine BB( i = 0 );
+
+	routine Virt(){ io.writeln( 'CC::Virt()', self ) }
+}
+
+global c;
+
+
+@[test(code_01)]
+c = CC();
+@[test(code_01)]
+@[test(code_01)]
+BB::BB( i = 0 )
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+c.cst
+@[test(code_01)]
+@[test(code_01)]
+123
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+c.obj
+@[test(code_01)]
+@[test(code_01)]
+456
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+return c.obj2
+@[test(code_01)]
+@[test(code_01)]
+return 0$
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+c.Meth()
+@[test(code_01)]
+@[test(code_01)]
+AA::Meth()
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+c.Meth(1)
+@[test(code_01)]
+@[test(code_01)]
+AA::Meth(a)
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+c.CallVirt();
+@[test(code_01)]
+@[test(code_01)]
+CC::Virt()
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class DD : AA, BB
+{
+	use routine BB( i = 0 );
+	use routine AA( i = 0 ); # this raises error, due to duplicated signature.
+}
+@[test(code_01)]
+@[test(code_01)]
+{{WARNING}} .* {{At line}} .* {{Method signature was used}}
+@[test(code_01)]

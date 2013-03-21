@@ -454,7 +454,7 @@ void DaoVmSpace_Stop( DaoVmSpace *self, int bl )
 {
 	self->stopit = bl;
 }
-static int dao_default_test_inliner( DaoNamespace *NS, DString *mode, DString *vb, DString *out )
+static int dao_default_test_inliner( DaoNamespace *NS, DString *mode, DString *vb, DString *out, int line )
 {
 	DString_Reset( out, 0 );
 	DString_AppendChar( out, ' ' );

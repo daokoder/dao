@@ -13,6 +13,10 @@ daotests.AddTest( "Parser", "test_parser.dao" )
 daotests.AddTest( "Numbers", "test_numbers.dao" )
 daotests.AddTest( "Strings", "test_strings.dao" )
 
-daotests.AddTest( "Routine", "test_routine.dao" )
+test_routine = daotests.AddTest( "Routine", "test_routine.dao" )
+test_routine.AddTest( "test_coroutine.dao" )
+test_routine.AddTest( "test_anonymous_routine.dao" )
+
+test_class = daotests.AddTest( "Class", "test_class_inheritance.dao" )
 
 daotests.AddTest( "Misc", "test_misc.dao" )

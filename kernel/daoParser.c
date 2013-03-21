@@ -2394,7 +2394,7 @@ static int DaoParser_HandleVerbatim( DaoParser *self, int start )
 			return start;
 		}
 		DString_Clear( self->mbs );
-		if( (*inliner)( ns, self->mbs2, verbatim, self->mbs ) ){
+		if( (*inliner)( ns, self->mbs2, verbatim, self->mbs, line ) ){
 			printf( "code inlining failed: %s!\n", self->mbs->mbs );
 			return -1;
 		}
@@ -5487,8 +5487,6 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 
 	parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	rout = DaoRoutine_New( myNS, NULL, 1 );
-	sprintf( name, "AnonymousFunction_%p", rout );
-	DString_SetMBS( rout->routName, name );
 	parser->routine = rout;
 	parser->levelBase = self->levelBase + self->lexLevel + 1;
 	parser->nameSpace = self->nameSpace;
@@ -5503,6 +5501,10 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	DArray_Append( myNS->definedRoutines, rout );
 
 	rb = DaoParser_ParsePrototype( self, parser, DKEY_ROUTINE, start );
+
+	/* Routine name may have been changed by DaoParser_ParsePrototype() */
+	sprintf( name, "AnonymousFunction_%p", rout );
+	DString_SetMBS( rout->routName, name );
 	if( rb < 0 || tokens[rb]->name != DTOK_RCB ){
 		DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, NULL );
 		goto ErrorParamParsing;
@@ -5514,6 +5516,7 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	}
 	if( ! DaoParser_ParseRoutine( parser ) ){
 		DString_SetMBS( mbs, "invalid anonymous function" );
+		DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, mbs );
 		goto ErrorParamParsing;
 	}
 	/* Setup and update upvalue accessing */
@@ -5555,6 +5558,7 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	/* DVM_ROUTINE rout_proto, upv1, upv2, ..., opc */
 	DaoParser_AddCode( self, DVM_ROUTINE, regCall, uplocs->size/2, opc, start, rb, end );
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+	printf( "here\n" );
 	return opc;
 ErrorParamParsing:
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );

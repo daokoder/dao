@@ -78,6 +78,8 @@ enum DaoMakeTargetTypes
 	DAOMAKE_DIRECTORY
 };
 
+const char *const daomake_test_sumfile = "daotest_result_summary.txt";
+
 const char *const daomake_mode_keys[] =
 {
 	"RELEASE-CFLAG" ,
@@ -140,6 +142,7 @@ struct DaoMakeTarget
 	DArray   *tests;
 	DArray   *commands;
 	DArray   *depends;
+	DString  *testMacro;
 	uchar_t   ttype;
 	uchar_t   dynamicLinking;
 	uchar_t   dynamicExporting;
@@ -164,6 +167,11 @@ struct DaoMakeProject
 	DMap     *exportPaths;
 	DMap     *exportStaticLibs;
 
+	/*
+	// In the following maps:
+	// the keys are the macro names or the target names;
+	// the values are the entire macro or rule;
+	*/
 	DMap     *headerMacros;   /* HEADERS = header1.h header2.h; */
 	DMap     *cflagsMacros;   /* CFLAGS = ...; */
 	DMap     *lflagsMacros;   /* LFLAGS = ...; */
@@ -209,6 +217,7 @@ static char *daomake_makefile_suffix = "";
 static int daomake_build_mode = DAOMAKE_RELEASE;
 static int daomake_out_of_source = 0;
 static int daomake_reset_cache = 0;
+static int daomake_test_count = 0;
 
 
 
@@ -262,6 +271,7 @@ DaoMakeTarget* DaoMakeTarget_New()
 	self->tests   = DArray_New(D_STRING);
 	self->commands = DArray_New(D_STRING);
 	self->depends = DArray_New(D_VALUE);
+	self->testMacro = DString_New(1);
 	self->ttype = DAOMAKE_EXECUTABLE;
 	self->dynamicLinking = 0;
 	self->dynamicExporting = 0;
@@ -275,6 +285,7 @@ void DaoMakeTarget_Delete( DaoMakeTarget *self )
 	DArray_Delete( self->tests );
 	DArray_Delete( self->commands );
 	DArray_Delete( self->depends );
+	DString_Delete( self->testMacro );
 	dao_free( self );
 }
 DaoMakeProject* DaoMakeProject_New()
@@ -575,9 +586,13 @@ void DaoMake_MakePath( DString *base, DString *path )
 #endif
 	Dao_MakePath( base, path );
 }
-void DaoMakeProject_MakePath( DaoMakeProject *self, DString *path )
+void DaoMakeProject_MakeSourcePath( DaoMakeProject *self, DString *path )
 {
 	DaoMake_MakePath( self->sourcePath, path );
+}
+void DaoMakeProject_MakeBinaryPath( DaoMakeProject *self, DString *path )
+{
+	DaoMake_MakePath( vmSpace->startPath, path );
 }
 
 
@@ -720,7 +735,7 @@ DString* DaoMakeProject_MakeHeaderMacro( DaoMakeProject *self, DaoMakeObjects *o
 		DString_AppendGap( files );
 		DString_Reset( file, 0 );
 		DString_Append( file, objects->headers->items.pString[i] );
-		DaoMakeProject_MakePath( self, file );
+		DaoMakeProject_MakeSourcePath( self, file );
 		DString_Append( files, file );
 	}
 	md5 = DaoMakeProject_SubMD5( self, files );
@@ -811,7 +826,7 @@ DString* DaoMakeProject_MakeObjectRule( DaoMakeProject *self, DaoMakeTarget *tar
 
 	DString_Reset( cflags, 0 );
 	DString_Append( source2, source );
-	DaoMakeProject_MakePath( self, source2 );
+	DaoMakeProject_MakeSourcePath( self, source2 );
 
 	mode = DaoMake_GetSettingValue( daomake_mode_keys[ 2*daomake_build_mode ] );
 	if( mode ) DString_Append( cflags, mode );
@@ -951,7 +966,7 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 			if( target->ttype == DAOMAKE_DIRECTORY ){
 				DString_Reset( dir, 0 );
 				DString_Append( dir, cmd );
-				DaoMakeProject_MakePath( self, dir );
+				DaoMakeProject_MakeSourcePath( self, dir );
 				if( DMap_Find( daomake_makefile_paths, dir ) == NULL ) continue;
 			}
 			DString_AppendChar( rule, '\t' );
@@ -988,19 +1003,25 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 
 			DString_Reset( rule, 0 );
 			DString_Append( rule, test );
-			if( daomake_out_of_source ) DaoMakeProject_MakePath( self, rule );
+			if( daomake_out_of_source ) DaoMakeProject_MakeSourcePath( self, rule );
 
 			it = DMap_Insert( self->testRules, signature, signature );
 			DString_AppendMBS( it->value.pString, ": " );
 			DString_Append( it->value.pString, rule );
-			DString_AppendMBS( it->value.pString, "\n\t$(DAOTEST) " );
+			DString_AppendMBS( it->value.pString, "\n\t-$(DAOTEST) " );
 			DString_Append( it->value.pString, rule );
 			DString_AppendGap( it->value.pString );
 			DString_Append( it->value.pString, daomake_test_tool_option );
 			DString_AppendGap( it->value.pString );
 			DString_Append( it->value.pString, signature );
 		}
-		macro = DaoMakeProject_MakeSimpleMacro( self, self->testsMacros, objs, "TESTS" );
+		DString_Reset( lflag, 0 );
+		DString_Append( lflag, target->name );
+		DString_ToUpper( lflag );
+		macro = DaoMakeProject_MakeSimpleMacro( self, self->testsMacros, objs, lflag->mbs );
+
+		DString_Reset( target->testMacro, 0 );
+		DString_Append( target->testMacro, macro );
 
 		DString_Reset( rule, 0 );
 		DString_Append( rule, target->name );
@@ -1191,11 +1212,11 @@ void DaoMakeProject_MakeDirectoryMake( DaoMakeProject *self, DString *makefile, 
 			DString *subdir = target->commands->items.pString[j];
 			DString_Reset( dir, 0 );
 			DString_Append( dir, subdir );
-			DaoMakeProject_MakePath( self, dir );
+			DaoMakeProject_MakeSourcePath( self, dir );
 			if( DMap_Find( daomake_makefile_paths, dir ) == NULL ) continue;
 			DString_AppendMBS( makefile, "\tcd " );
 			DString_Append( makefile, subdir );
-			DString_AppendMBS( makefile, " && make -f Makefile" );
+			DString_AppendMBS( makefile, " && $(MAKE) -f Makefile" );
 			DString_AppendMBS( makefile, daomake_makefile_suffix );
 			DString_AppendChar( makefile, ' ' );
 			DString_AppendMBS( makefile, mktarget );
@@ -1224,12 +1245,17 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 
 	if( self->targets->size ){
 		DString *phony = DaoMakeProject_GetBufferString( self );
+		DString *test = DaoMakeProject_GetBufferString( self );
+		DString *testsum = DaoMakeProject_GetBufferString( self );
 		DString_AppendMBS( makefile, "all:" );
 		for(i=0; i<self->targets->size; ++i){
 			DaoMakeTarget *target = (DaoMakeTarget*) self->targets->items.pVoid[i];
-			DString *ruleName;
-			if( target->ttype == DAOMAKE_TESTING && ismain == 0 ) continue;
-			ruleName = DaoMakeProject_MakeTargetRule( self, target );
+			DString *ruleName = DaoMakeProject_MakeTargetRule( self, target );
+			if( target->ttype == DAOMAKE_TESTING ){
+				DString_AppendGap( test );
+				DString_Append( test, ruleName );
+				continue;
+			}
 			DString_AppendGap( makefile );
 			DString_Append( makefile, ruleName );
 			if( target->ttype >= DAOMAKE_COMMAND ){
@@ -1237,25 +1263,16 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 				DString_Append( phony, ruleName );
 			}
 		}
-		if( ismain && self->testsMacros->size ){
+		if( ismain && daomake_test_count ){
 			DString_AppendGap( makefile );
-			DString_AppendMBS( makefile, "test" );
+			DString_AppendMBS( makefile, "test testsum" );
 		}
 		DString_AppendMBS( makefile, "\n\n" );
 
 		DString_AppendMBS( makefile, "test:" );
-		for(i=0; i<self->targets->size; ++i){
-			DaoMakeTarget *target = (DaoMakeTarget*) self->targets->items.pVoid[i];
-			DString *ruleName;
-			if( target->ttype != DAOMAKE_TESTING || ismain != 0 ) continue;
-			ruleName = DaoMakeProject_MakeTargetRule( self, target );
-			DString_AppendGap( makefile );
-			DString_Append( makefile, ruleName );
-			if( target->ttype >= DAOMAKE_COMMAND ){
-				DString_AppendGap( phony );
-				DString_Append( phony, ruleName );
-			}
-		}
+		DString_AppendGap( makefile );
+		DString_Append( makefile, test );
+
 		DString_AppendGap( makefile );
 		DString_AppendMBS( makefile, "subtest\n\n" );
 		if( phony->size ){
@@ -1263,8 +1280,12 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 			DString_Append( makefile, phony );
 			DString_AppendChar( makefile, '\n' );
 		}
-		self->usedStrings -= 1;
+		self->usedStrings -= 3;
 	}
+
+	DString_AppendMBS( makefile, "\nDAOMAKE = " );
+	DString_Append( makefile, vmSpace->daoBinPath );
+	DString_AppendMBS( makefile, "/daomake\n\n" );
 
 	for(i=0; i<self->variables->size; i+=2){
 		DString_Append( makefile, self->variables->items.pString[i] );
@@ -1330,6 +1351,40 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 	DString_AppendChar( makefile, '\n' );
 	DString_AppendMBS( makefile, ".PHONY: subtest\n\n" );
 
+	DString_AppendMBS( makefile, "TESTSUM =" );
+	DString_Append( makefile, vmSpace->startPath );
+	DString_AppendMBS( makefile, "/" );
+	DString_AppendMBS( makefile, daomake_test_sumfile );
+	DString_AppendMBS( makefile, "\n\n" );
+
+	DString_AppendMBS( makefile, "testsum:\n" );
+	if( ismain ){
+		DString *check = DaoMake_GetSettingValue( "HAS-FILE" );
+		DString *del = DaoMake_GetSettingValue( "DEL-FILE" );
+		DString_AppendMBS( makefile, "\t@$(DAOMAKE) echo \"Summarizing test results ...\"\n" );
+		if( check && del ){
+			DString_AppendMBS( makefile, "\t-@" );
+			DString_Append( makefile, check );
+			DString_AppendMBS( makefile, " $(TESTSUM) && " );
+			DString_Append( makefile, del );
+			DString_AppendMBS( makefile, " $(TESTSUM)\n" );
+		}
+	}
+	for(i=0; i<self->targets->size; ++i){
+		DaoMakeTarget *target = (DaoMakeTarget*) self->targets->items.pVoid[i];
+		if( target->ttype != DAOMAKE_TESTING ) continue;
+
+		DString_AppendMBS( makefile, "\t@$(DAOTEST) --sum $(" );
+		DString_Append( makefile, target->testMacro );
+		DString_AppendMBS( makefile, ") --log $(TESTSUM) --group " );
+		DString_Append( makefile, target->name );
+		DString_AppendMBS( makefile, "\n" );
+	}
+	DaoMakeProject_MakeDirectoryMake( self, makefile, "testsum" );
+	if( ismain ) DString_AppendMBS( makefile, "\t@$(DAOMAKE) cat $(TESTSUM)\n" );
+	DString_AppendChar( makefile, '\n' );
+	DString_AppendMBS( makefile, ".PHONY: subtest\n\n" );
+
 	if( self->installs->size ){
 		DString *tname = DaoMakeProject_GetBufferString( self );
 		DString *install = DaoMakeProject_GetBufferString( self );
@@ -1339,10 +1394,10 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 			DString *file = DaoValue_TryGetString( self->installs->items.pValue[i] );
 			DaoMakeTarget *target = (DaoMakeTarget*) self->installs->items.pVoid[i];
 			DString *path = DaoValue_TryGetString( self->installs->items.pValue[i+1] );
-			DaoMakeProject_MakePath( self, path );
+			DaoMakeProject_MakeSourcePath( self, path );
 			if( file ){
 				DString_Assign( tname, file );
-				DaoMakeProject_MakePath( self, tname );
+				DaoMakeProject_MakeSourcePath( self, tname );
 			}else{
 				DaoMakeTarget_MakeName( target, tname );
 			}
@@ -1569,6 +1624,16 @@ static void TARGET_AddCommand( DaoProcess *proc, DaoValue *p[], int N )
 		DArray_Append( self->commands, cmd );
 	}
 }
+static void TARGET_AddTest( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
+	int i;
+	for(i=1; i<N; ++i){
+		DString *test = DaoValue_TryGetString( p[i] );
+		if( test == NULL ) continue;
+		DArray_Append( self->tests, test );
+	}
+}
 static void TARGET_AddDepends( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
@@ -1593,6 +1658,7 @@ static DaoFuncItem DaoMakeTargetMeths[]=
 {
 	{ TARGET_AddObjects,  "AddObjects( self : Target, objects : Objects, ... : Objects )" },
 	{ TARGET_AddCommand,  "AddCommand( self : Target, command : string, ... : string )" },
+	{ TARGET_AddTest,     "AddTest( self : Target, test : string, ... : string )" },
 	{ TARGET_AddDepends,  "AddDependency( self : Target, target : Target, ... : Target )" },
 	{ TARGET_EnableDynamicExporting,  "EnableDynamicExporting( self : Target )" },
 	{ TARGET_EnableDynamicLinking,    "EnableDynamicLinking( self : Target )" },
@@ -1662,6 +1728,7 @@ static void PROJECT_AddTest( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMakeProject *self = (DaoMakeProject*) p[0];
 	DaoMakeTarget *target = DaoMakeTarget_New();
 	int i;
+	daomake_test_count += (N-2);
 	target->ttype = DAOMAKE_TESTING;
 	DString_Assign( target->name, DaoValue_TryGetString( p[1] ) );
 	for(i=2; i<N; ++i) DArray_Append( target->tests, DaoValue_TryGetString( p[i] ) );
@@ -1736,7 +1803,7 @@ static void PROJECT_ExportPath( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMakeProject *self = (DaoMakeProject*) p[0];
 	DString *name = DaoValue_TryGetString( p[1] );
 	DString *path = DaoValue_TryGetString( p[2] );
-	DaoMakeProject_MakePath( self, path );
+	DaoMakeProject_MakeBinaryPath( self, path );
 	DMap_Insert( self->exportPaths, name, path );
 }
 static void PROJECT_ExportLib( DaoProcess *proc, DaoValue *p[], int N )
@@ -1745,7 +1812,7 @@ static void PROJECT_ExportLib( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMakeTarget *target = (DaoMakeTarget*) p[1];
 	DString *path = DaoMakeProject_GetBufferString( self );
 	DaoMakeTarget_MakeName( target, path );
-	DaoMakeProject_MakePath( self, path );
+	DaoMakeProject_MakeBinaryPath( self, path );
 	DMap_Insert( self->exportStaticLibs, target->name, path );
 	self->usedStrings -= 1;
 }
@@ -1772,7 +1839,7 @@ static DaoFuncItem DaoMakeProjectMeths[]=
 	{ PROJECT_AddEXE,  "AddExecutable( self : Project, name : string, objs : Objects, ... : Objects ) =>Target" },
 	{ PROJECT_AddDLL,  "AddSharedLibrary( self : Project, name : string, objs : Objects, ... : Objects ) =>Target" },
 	{ PROJECT_AddARC,  "AddStaticLibrary( self : Project, name : string, objs : Objects, ... : Objects ) =>Target" },
-	{ PROJECT_AddTest, "AddTest( self : Project, name : string, test : string, ... : string ) => Target" },
+	{ PROJECT_AddTest, "AddTest( self : Project, group : string, test : string, ... : string ) => Target" },
 	{ PROJECT_AddCMD,  "AddCommand( self : Project, name : string, command : string, ... : string ) => Target" },
 
 	{ PROJECT_AddDIR,  "AddDirectory( self : Project, name : string, path : string, ... : string ) => Target" },
@@ -1931,7 +1998,7 @@ static void DAOMAKE_SourcePath( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DAOMAKE_BinaryPath( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoProcess_PutString( proc, vmSpace->daoBinPath );
+	DaoProcess_PutString( proc, vmSpace->startPath );
 }
 static void DAOMAKE_BuildMode( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2084,6 +2151,23 @@ int main( int argc, char **argv )
 	DString *source;
 	DString *name;
 	DNode *it;
+
+	if( strcmp( argv[1], "cat" ) == 0 ){
+		for(i=2; i<argc; i++){
+			fin = fopen( argv[i], "rb" );
+			if( fin == NULL ) continue;
+			DaoFile_ReadAll( fin, makefile, 1 );
+			printf( "%s\n", makefile->mbs );
+		}
+		return 0;
+	}else if( strcmp( argv[1], "echo" ) == 0 ){
+		for(i=2; i<argc; i++){
+			if( i > 2 ) printf( "\n" );
+			printf( "%s", argv[i] );
+		}
+		printf( "\n" );
+		return 0;
+	}
 
 	vmSpace = DaoInit( argv[0] );
 

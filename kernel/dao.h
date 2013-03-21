@@ -262,7 +262,7 @@ typedef void  (*DaoCFunction) ( DaoProcess *process, DaoValue *params[], int npa
 
 typedef int (*DaoModuleOnLoad)( DaoVmSpace *vmspace, DaoNamespace *nspace );
 typedef int (*DaoModuleLoader)( DaoNamespace *nspace, DString *filename, DString *emsg );
-typedef int (*DaoCodeInliner)( DaoNamespace *nspace, DString *mode, DString *source, DString *out );
+typedef int (*DaoCodeInliner)( DaoNamespace *nspace, DString *mode, DString *source, DString *out, int line );
 
 typedef struct DaoNumItem   DaoNumItem;
 typedef struct DaoFuncItem  DaoFuncItem;

@@ -14,7 +14,6 @@ daovm = DaoMake::Project( "Dao" )
 # Options to set installation paths.
 #
 daovm_path = DaoMake::Option( "PATH", "/usr/local" )
-daovm_path = DaoMake::Option( "PATH", "test-installation" )
 daovm_bin_path = DaoMake::Option( "BIN-PATH", daovm_path + "/bin" )
 daovm_lib_path = DaoMake::Option( "LIB-PATH", daovm_path + "/lib" )
 daovm_mod_path = DaoMake::Option( "MOD-PATH", daovm_path + "/lib/dao/modules" )
@@ -280,7 +279,7 @@ modules.AddDependency( daovm_exe )
 
 
 if( DaoMake::BuildMode() == $debug ){
-	DaoMake::SetTestTool( "tools/daotest/daotest" )
+	DaoMake::SetTestTool( DaoMake::BinaryPath() + "/tools/daotest/daotest" )
 	tests = daovm.AddDirectory( "tests", "tests" )
 	tests.AddDependency( modules )
 	tests.AddDependency( daotest )
