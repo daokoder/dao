@@ -10,3 +10,17 @@ modules.Install( "addpath.dao", daovm.GetPath( "MOD-PATH" ) )
 if( DaoMake::IsDir( "DaoJIT" ) ) modules.AddDirectory( "DaoJIT", "DaoJIT" );
 
 if( DaoMake::IsDir( "string" ) ) modules.AddDirectory( "string", "string" );
+
+if( DaoMake::IsDir( "graph" ) ) modules.AddDirectory( "graph", "graph" );
+
+if( DaoMake::IsDir( "net" ) ) modules.AddDirectory( "net", "net" );
+
+if( DaoMake::IsDir( "os" ) ) modules.AddDirectory( "os", "os" );
+
+if( DaoMake::IsDir( "stream" ) ) modules.AddDirectory( "stream", "stream" );
+
+if( DaoMake::IsDir( "sync" ) ) modules.AddDirectory( "sync", "sync" );
+
+if( DaoMake::IsDir( "web" ) ) modules.AddDirectory( "web", "web" );
+
+if( DaoMake::IsDir( "graphics" ) ) modules.AddDirectory( "graphics", "graphics" );

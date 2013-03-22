@@ -10,6 +10,7 @@ dao_sys_lib     = dao_sys.AddSharedLibrary( "dao_sys", dao_sys_objects )
 
 dao_sys_lib.UsePackage( daovm )
 dao_sys_lib.EnableDynamicLinking()
+dao_sys.ExportCompilingFlags( "-I" + DaoMake::SourcePath() )
 
 
-dao_sys.Install( dao_sys_lib, daovm.GetPath( "MOD-PATH" ) );
+dao_sys.Install( daovm.GetPath( "MOD-PATH" ), dao_sys_lib );

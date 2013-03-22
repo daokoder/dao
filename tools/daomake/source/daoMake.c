@@ -143,6 +143,7 @@ struct DaoMakeTarget
 	DArray   *commands;
 	DArray   *depends;
 	DString  *testMacro;
+	DString  *install;
 	uchar_t   ttype;
 	uchar_t   dynamicLinking;
 	uchar_t   dynamicExporting;
@@ -272,6 +273,7 @@ DaoMakeTarget* DaoMakeTarget_New()
 	self->commands = DArray_New(D_STRING);
 	self->depends = DArray_New(D_VALUE);
 	self->testMacro = DString_New(1);
+	self->install = DString_New(1);
 	self->ttype = DAOMAKE_EXECUTABLE;
 	self->dynamicLinking = 0;
 	self->dynamicExporting = 0;
@@ -286,6 +288,7 @@ void DaoMakeTarget_Delete( DaoMakeTarget *self )
 	DArray_Delete( self->commands );
 	DArray_Delete( self->depends );
 	DString_Delete( self->testMacro );
+	DString_Delete( self->install );
 	dao_free( self );
 }
 DaoMakeProject* DaoMakeProject_New()
@@ -524,13 +527,6 @@ DString* DaoMake_GetSettingValue( const char *key )
 	if( value == NULL ) return NULL;
 	return DaoValue_TryGetString( value );
 }
-int DaoMake_CheckFile( const char *file )
-{
-	FILE *fin = fopen( file, "r" );
-	int res = fin != NULL;
-	fclose( fin );
-	return res;
-}
 void DaoMake_MakeDir( const char *dir )
 {
 	mkdir( dir, 0777 );
@@ -547,7 +543,7 @@ DString* DaoMake_FindFile( DString *file, DaoList *hints )
 		DString_Append( fname, path );
 		if( fname->mbs[fname->size-1] != '/' ) DString_AppendChar( fname, '/' );
 		DString_Append( fname, file );
-		if( DaoMake_CheckFile( fname->mbs ) ){
+		if( Dao_IsFile( fname->mbs ) ){
 			res = path;
 			break;
 		}
@@ -1654,6 +1650,14 @@ static void TARGET_EnableDynamicLinking( DaoProcess *proc, DaoValue *p[], int N 
 	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
 	self->dynamicLinking = 1;
 }
+static void TARGET_Install( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoNamespace *ns = proc->activeNamespace;
+	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
+	DString *dest = p[1]->xString.data;
+	DString_Assign( self->install, dest );
+	DaoMake_MakePath( ns->path, self->install );
+}
 static DaoFuncItem DaoMakeTargetMeths[]=
 {
 	{ TARGET_AddObjects,  "AddObjects( self : Target, objects : Objects, ... : Objects )" },
@@ -1662,6 +1666,7 @@ static DaoFuncItem DaoMakeTargetMeths[]=
 	{ TARGET_AddDepends,  "AddDependency( self : Target, target : Target, ... : Target )" },
 	{ TARGET_EnableDynamicExporting,  "EnableDynamicExporting( self : Target )" },
 	{ TARGET_EnableDynamicLinking,    "EnableDynamicLinking( self : Target )" },
+	{ TARGET_Install,  "Install( self : Target, dest : string )" },
 	{ NULL, NULL }
 };
 static void TARGET_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *maps, int rm )
@@ -1779,14 +1784,41 @@ static void PROJECT_AddVAR( DaoProcess *proc, DaoValue *p[], int N )
 	DArray_Append( self->variables, name );
 	DArray_Append( self->variables, value );
 }
-static void PROJECT_Install( DaoProcess *proc, DaoValue *p[], int N )
+static void PROJECT_InstallTarget( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoNamespace *ns = proc->activeNamespace;
+	DaoMakeProject *self = (DaoMakeProject*) p[0];
+	DString *dest = DaoValue_TryGetString( p[1] );
+	int i;
+	DaoMake_MakePath( ns->path, dest );
+	for(i=2; i<N; ++i){
+		DaoMakeTarget *target = (DaoMakeTarget*) p[i];
+		DArray_Append( self->installs, p[i] );
+		DArray_Append( self->installs, p[1] );
+		if( target->ttype <= DAOMAKE_STATICLIB ) DString_Assign( target->install, dest );
+	}
+}
+static void PROJECT_InstallFile( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoNamespace *ns = proc->activeNamespace;
+	DaoMakeProject *self = (DaoMakeProject*) p[0];
+	DString *dest = DaoValue_TryGetString( p[1] );
+	int i;
+	DaoMake_MakePath( ns->path, dest );
+	for(i=2; i<N; ++i){
+		DString *file = DaoValue_TryGetString( p[i] );
+		DaoMake_MakePath( ns->path, file );
+		DArray_Append( self->installs, p[i] );
+		DArray_Append( self->installs, p[1] );
+	}
+}
+static void PROJECT_InstallHeaders( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeProject *self = (DaoMakeProject*) p[0];
 	DaoNamespace *ns = proc->activeNamespace;
-	if( DString_EQ( self->sourcePath, ns->path ) == 0 )
-		DaoMake_MakePath( ns->path, p[1]->xString.data );
-	DArray_Append( self->installs, p[1] );
-	DArray_Append( self->installs, p[2] );
+	DaoMake_MakePath( ns->path, p[1]->xString.data );
+	//DArray_Append( self->installs, p[1] );
+	//DArray_Append( self->installs, p[2] );
 }
 static void PROJECT_ExportCFlags( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1846,7 +1878,9 @@ static DaoFuncItem DaoMakeProjectMeths[]=
 
 	{ PROJECT_AddVAR,   "AddVariable( self : Project, name : string, value : string )" },
 
-	{ PROJECT_Install,       "Install( self : Project, target : Target|string, dest : string )" },
+	{ PROJECT_InstallTarget,  "Install( self : Project, dest : string, target : Target, ... : Target )" },
+	{ PROJECT_InstallFile,    "Install( self : Project, dest : string, file : string, ... : string )" },
+	{ PROJECT_InstallHeaders, "Install( self : Project, dest : string, headers : list<string> )" },
 
 	{ PROJECT_ExportCFlags,  "ExportCompilingFlags( self : Project, flags : string )" },
 	{ PROJECT_ExportLFlags,  "ExportLinkingFlags( self : Project, flags : string )" },
@@ -1880,9 +1914,14 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 	DString *name = DaoValue_TryGetString( p[0] );
 	DString *cache = DString_Copy( proc->activeNamespace->path );
 	DString *original = DString_New(1);
+	DString *message = DString_New(1);
 	daoint i, reset = daomake_reset_cache;
 	size_t otime, ctime;
 	FILE *fout = NULL;
+
+	DString_AppendMBS( message, "Package \"" );
+	DString_Append( message, name );
+	DString_AppendMBS( message, "\" not found!" );
 
 	DString_SetMBS( original, "packages/Find" );
 	DString_Append( original, name);
@@ -1904,12 +1943,13 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 			project = DaoMap_GetValue( daomake_projects, p[0] );
 			if( project == NULL ){
 				if( p[1]->xEnum.value ){
-					DaoProcess_RaiseException( proc, DAO_ERROR, "Package not found!" );
+					DaoProcess_RaiseException( proc, DAO_ERROR, message->mbs );
 				}
 				project = daomake_type_project->value;
 			}
 			DaoProcess_PutValue( proc, project );
 			DString_Delete( original );
+			DString_Delete( message );
 			DString_Delete( cache );
 			return;
 		}
@@ -1920,7 +1960,7 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 	project = DaoMap_GetValue( daomake_projects, p[0] );
 	if( project == NULL ){
 		if( p[1]->xEnum.value ){
-			DaoProcess_RaiseException( proc, DAO_ERROR, "Package not found!" );
+			DaoProcess_RaiseException( proc, DAO_ERROR, message->mbs );
 		}
 		project = daomake_type_project->value;
 	}else{
@@ -1942,6 +1982,7 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 	if( fout ) fclose( fout );
 	DaoProcess_PutValue( proc, project );
 	DString_Delete( original );
+	DString_Delete( message );
 	DString_Delete( cache );
 }
 static void DAOMAKE_FindFile( DaoProcess *proc, DaoValue *p[], int N )
@@ -2152,6 +2193,7 @@ int main( int argc, char **argv )
 	DString *name;
 	DNode *it;
 
+	/* Utility subcommands: */
 	if( strcmp( argv[1], "cat" ) == 0 ){
 		for(i=2; i<argc; i++){
 			fin = fopen( argv[i], "rb" );
@@ -2166,6 +2208,25 @@ int main( int argc, char **argv )
 			printf( "%s", argv[i] );
 		}
 		printf( "\n" );
+		return 0;
+	}else if( strcmp( argv[1], "isfile" ) == 0 ){
+		return Dao_IsFile( argv[2] ) == 0;
+	}else if( strcmp( argv[1], "isdir" ) == 0 ){
+		return Dao_IsDir( argv[2] ) == 0;
+	}else if( strcmp( argv[1], "mkdir" ) == 0 ){
+		return mkdir( argv[2], 0777 );
+	}else if( strcmp( argv[1], "copy" ) == 0 ){
+		if( argc < 4 ) return 1;
+		fin = fopen( argv[2], "rb" );
+		fout = fopen( argv[3], "w+b" );
+		if( fin == NULL || fout == NULL ){
+			if( fin ) fclose( fin );
+			if( fout ) fclose( fout );
+			return 1;
+		}
+		DaoFile_ReadAll( fin, makefile, 1 );
+		DaoFile_WriteString( fout, makefile );
+		fclose( fout );
 		return 0;
 	}
 

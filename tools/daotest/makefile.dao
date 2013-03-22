@@ -11,4 +11,4 @@ daotest_exe     = daotest.AddExecutable( "daotest", daotest_objects )
 daotest_exe.UseStaticPackage( daovm, "dao" )
 
 
-daotest.Install( daotest_exe, daovm.GetPath( "BIN-PATH" ) );
+daotest.Install( daovm.GetPath( "BIN-PATH" ), daotest_exe );

@@ -26,5 +26,5 @@ daovm_doc.AddCommand( "DAO_HELP_LANG=$(HELP_LANG) ../../dao -e \"load help; help
 
 daovm_doc.AddDependency( dao_help_lib );
 
-dao_help.Install( dao_help_lib, daovm.GetPath( "MOD-PATH" ) );
-dao_help.Install( daovm_doc, daovm.GetPath( "DOC-PATH" ) + "/html" )
+dao_help.Install( daovm.GetPath( "MOD-PATH" ), dao_help_lib );
+dao_help.Install( daovm.GetPath( "DOC-PATH" ) + "/html", daovm_doc )

@@ -113,16 +113,16 @@ $(TARGET): $(OBJECTS)
 
 
 linux:
-	$(MAKE) DEBUG=$(DEBUG) SYSCFLAGS="-DUNIX -fPIC" SYSLIBS="-lm -ldl"
+	$(MAKE) -f Makefile.bootstrap DEBUG=$(DEBUG) SYSCFLAGS="-DUNIX -fPIC" SYSLIBS="-lm -ldl"
 
 macosx:
-	$(MAKE) DEBUG=$(DEBUG) SYSCFLAGS="-DUNIX -DMAC_OSX -fPIC" SYSLIBS=""
+	$(MAKE) -f Makefile.bootstrap DEBUG=$(DEBUG) SYSCFLAGS="-DUNIX -DMAC_OSX -fPIC" SYSLIBS=""
 
 freebsd:
-	$(MAKE) DEBUG=$(DEBUG) SYSCFLAGS="-DUNIX -fPIC" SYSLIBS="-lm"
+	$(MAKE) -f Makefile.bootstrap DEBUG=$(DEBUG) SYSCFLAGS="-DUNIX -fPIC" SYSLIBS="-lm"
 
 mingw:
-	$(MAKE) DEBUG=$(DEBUG) SYSCFLAGS="-DWIN32" SYSLIBS="-lwinmm" EXESUFFIX=".exe"
+	$(MAKE) -f Makefile.bootstrap DEBUG=$(DEBUG) SYSCFLAGS="-DWIN32" SYSLIBS="-lwinmm" EXESUFFIX=".exe"
 
 minix:
-	$(MAKE) DEBUG=$(DEBUG) SYSCFLAGS="-DUNIX -fPIC" SYSLIBS="-lm"
+	$(MAKE) -f Makefile.bootstrap DEBUG=$(DEBUG) SYSCFLAGS="-DUNIX -fPIC" SYSLIBS="-lm"

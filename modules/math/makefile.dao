@@ -12,4 +12,4 @@ dao_math_lib.UsePackage( daovm )
 dao_math_lib.EnableDynamicLinking()
 
 
-dao_math.Install( dao_math_lib, daovm.GetPath( "MOD-PATH" ) );
+dao_math.Install( daovm.GetPath( "MOD-PATH" ), dao_math_lib );

@@ -1,0 +1,14 @@
+
+daomake = DaoMake::Project( "DaoMake" ) 
+
+daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
+
+if( daovm == none ) return
+
+daomake_objects = DaoMake::Objects( { "source/daoMake.c" } )
+daomake_exe     = daomake.AddExecutable( "daomake", daomake_objects )
+
+daomake_exe.UseStaticPackage( daovm, "dao" )
+
+
+daomake.Install( daovm.GetPath( "BIN-PATH" ), daomake_exe );

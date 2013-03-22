@@ -10,11 +10,12 @@ The virtual machine and standard modules and tools of Dao are
 released under the Simplified BSD License.
 
 
+================================================================
 
 The recommended way to compile Dao is to run the following from
 the shell:
 
-$ make -f daomake.make PLATFORM
+$ make PLATFORM
 
 where PLATFORM can be one of the followings:
 
@@ -26,4 +27,4 @@ where PLATFORM can be one of the followings:
 
 Then run the following to install:
 
-$ make -f Makefile.daomake install
+$ make install

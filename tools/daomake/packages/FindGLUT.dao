@@ -1,0 +1,23 @@
+
+header_hints = { "." }
+
+
+if( DaoMake::IsUnix() ){
+	header_path = "";
+	if( DaoMake::IsMacOSX() ){
+		header_hints.append( "/Library/Frameworks/GLUT.framework/Headers" )
+		header_hints.append( "/System/Library/Frameworks/GLUT.framework/Headers" )
+		header_path = DaoMake::FindFile( "glut.h", header_hints )
+	}else{
+		header_path = DaoMake::FindFile( "GLUT/glut.h", header_hints )
+	}
+	if( header_path == "" ) return;
+
+	opengl = DaoMake::Project( "GLUT" )
+	opengl.ExportCompilingFlags( "-I" + header_path )
+	if( DaoMake::IsMacOSX() && header_path.find( "Frameworks" ) >= 0 ){
+		opengl.ExportLinkingFlags( "-framework GLUT" )
+	}else{
+		opengl.ExportLinkingFlags( "-lGL -lGLU" )
+	}
+}

@@ -12,4 +12,4 @@ dao_meta_lib.UsePackage( daovm )
 dao_meta_lib.EnableDynamicLinking()
 
 
-dao_meta.Install( dao_meta_lib, daovm.GetPath( "MOD-PATH" ) );
+dao_meta.Install( daovm.GetPath( "MOD-PATH" ), dao_meta_lib );
