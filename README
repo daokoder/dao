@@ -15,7 +15,7 @@ released under the Simplified BSD License.
 The recommended way to compile Dao is to run the following from
 the shell:
 
-$ make PLATFORM
+$ make -f Makefile.daomake PLATFORM
 
 where PLATFORM can be one of the followings:
 

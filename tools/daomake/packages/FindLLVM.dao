@@ -1,6 +1,4 @@
 
-io.writeln( "here\n" )
-
 if( DaoMake::IsUnix() ){
 	cflags = DaoMake::Shell( "llvm-config --cppflags" )
 	lflags = DaoMake::Shell( "llvm-config --ldflags" )
