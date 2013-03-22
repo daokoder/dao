@@ -194,6 +194,7 @@ daovm_dll.EnableDynamicExporting()
 if( DaoMake::IsUnix() ){
 	daovm.AddDefinition( "UNIX" )
 	if( DaoMake::IsMacOSX() ) daovm.AddDefinition( "MAC_OSX" )
+	if( DaoMake::IsLinux() ) daovm.AddLinkingFlag( "-ldl" )
 	daovm.AddCompilingFlag( "-fPIC" )
 	daovm.AddLinkingFlag( "-lm" )
 	if( daovm_with_thread == $ON ) daovm.AddLinkingFlag( "-lpthread" )
@@ -241,6 +242,11 @@ if( daovm_with_readline == $ON ){
 daovm.ExportCompilingFlags( "-I" + DaoMake::SourcePath() + "/kernel" )
 daovm.ExportCompilingFlags( daovm.MakeDefinitions() )
 if( DaoMake::IsWin32() ) daovm.ExportLinkingFlags( "-ldao" )
+if( DaoMake::IsUnix() ){
+	daovm.ExportLinkingFlags( "-lm" );
+	if( DaoMake::IsLinux() ) daovm.ExportLinkingFlags( "-ldl" )
+	if( daovm_with_thread == $ON ) daovm.ExportLinkingFlags( "-lpthread" )
+}
 
 #
 # Export the static library target so that targets of other projects

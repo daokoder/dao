@@ -641,6 +641,15 @@ void DaoMakeProject_ExportCompilingFlags( DaoMakeProject *self, DString *cflags 
 		DString_Append( cflags, flag );
 	}
 }
+void DaoMakeProject_ExportLinkingFlags( DaoMakeProject *self, DString *lflags )
+{
+	daoint j;
+	for(j=0; j<self->linkingFlags->size; ++j){
+		DString *flag = self->linkingFlags->items.pString[j];
+		DString_AppendGap( lflags );
+		DString_Append( lflags, flag );
+	}
+}
 void DaoMakeUnit_MakeCompilingFlags( DaoMakeUnit *self, DString *cflags )
 {
 	daoint i, j;
@@ -685,6 +694,7 @@ void DaoMakeUnit_MakeLinkingFlags( DaoMakeUnit *self, DString *lflags )
 			DString_AppendGap( lflags );
 			DString_Append( lflags, it->value.pString );
 		}
+		DaoMakeProject_ExportLinkingFlags( project, lflags );
 	}
 }
 
@@ -2075,6 +2085,10 @@ static void DAOMAKE_IsMacOSX( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DAOMAKE_IsPlatform( proc, "MACOSX" );
 }
+static void DAOMAKE_IsBSD( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DAOMAKE_IsPlatform( proc, "BSD" );
+}
 static void DAOMAKE_IsFreeBSD( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DAOMAKE_IsPlatform( proc, "FREEBSD" );
@@ -2116,6 +2130,7 @@ static DaoFuncItem DaoMakeMeths[] =
 	{ DAOMAKE_IsUnix,      "IsUnix() => int" },
 	{ DAOMAKE_IsLinux,     "IsLinux() => int" },
 	{ DAOMAKE_IsMacOSX,    "IsMacOSX() => int" },
+	{ DAOMAKE_IsBSD,       "IsBSD() => int" },
 	{ DAOMAKE_IsFreeBSD,   "IsFreeBSD() => int" },
 	{ DAOMAKE_IsMinix,     "IsMinix() => int" },
 
