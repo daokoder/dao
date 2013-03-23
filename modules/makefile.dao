@@ -5,7 +5,7 @@ daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
-modules.Install( "addpath.dao", daovm.GetPath( "MOD-PATH" ) )
+modules.Install( daovm.GetPath( "MOD-PATH" ), "addpath.dao" )
 
 if( DaoMake::IsDir( "DaoJIT" ) ) modules.AddDirectory( "DaoJIT", "DaoJIT" );
 

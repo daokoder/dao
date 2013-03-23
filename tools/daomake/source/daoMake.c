@@ -157,6 +157,7 @@ struct DaoMakeProject
 	DString  *sourceName;
 	DString  *sourcePath;
 	DString  *projectName;
+	uchar_t   generateFinder;
 
 	DArray   *targets;
 	DArray   *variables;
@@ -1145,7 +1146,7 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 	return self->targetRules->items.pString[self->targetRules->size-2];
 }
 
-void DaoMakeProject_MakeInstallPath( DaoMakeProject *self, DString *path, DString *install, DString *uninstall )
+void DaoMakeProject_MakeInstallPath( DaoMakeProject *self, DString *path, DString *install, DString *uninstall, DMap *mapPaths )
 {
 	DString *mkdir = DaoMake_GetSettingValue( "MKDIR" );
 	DString *del = DaoMake_GetSettingValue( "DEL-FILE" );
@@ -1153,6 +1154,8 @@ void DaoMakeProject_MakeInstallPath( DaoMakeProject *self, DString *path, DStrin
 
 	if( mkdir == NULL || del == NULL ) return;
 	if( Dao_IsDir( path->mbs ) ) return;
+	if( DMap_Find( mapPaths, path ) ) return;
+	DMap_Insert( mapPaths, path, 0 );
 
 	sub = DaoMakeProject_GetBufferString( self );
 	DString_Reset( sub, 0 );
@@ -1164,7 +1167,7 @@ void DaoMakeProject_MakeInstallPath( DaoMakeProject *self, DString *path, DStrin
 	sub->mbs[sub->size] = '\0';
 
 	if( sub->size && Dao_IsDir( sub->mbs ) == 0 ){
-		DaoMakeProject_MakeInstallPath( self, sub, install, uninstall );
+		DaoMakeProject_MakeInstallPath( self, sub, install, uninstall, mapPaths );
 	}
 	DString_AppendChar( install, '\t' );
 	DString_Append( install, mkdir );
@@ -1230,6 +1233,46 @@ void DaoMakeProject_MakeDirectoryMake( DaoMakeProject *self, DString *makefile, 
 		}
 	}
 	self->usedStrings -= 1;
+}
+void DaoMakeProject_MakeInstallation( DaoMakeProject *self, DString *makefile )
+{
+	DString *tname = DaoMakeProject_GetBufferString( self );
+	DString *install = DaoMakeProject_GetBufferString( self );
+	DString *uninstall = DaoMakeProject_GetBufferString( self );
+	DString *file = DaoMakeProject_GetBufferString( self );
+	DMap *mapPaths = DMap_New(D_STRING,0);
+	daoint i;
+
+	for(i=0; i<self->installs->size; i+=2){
+		DString *file = DaoValue_TryGetString( self->installs->items.pValue[i] );
+		DaoMakeTarget *target = (DaoMakeTarget*) self->installs->items.pVoid[i];
+		DString *path = DaoValue_TryGetString( self->installs->items.pValue[i+1] );
+		DaoMakeProject_MakeSourcePath( self, path );
+		if( file ){
+			DString_Assign( tname, file );
+			DaoMakeProject_MakeSourcePath( self, tname );
+		}else{
+			DaoMakeTarget_MakeName( target, tname );
+		}
+		if( Dao_IsDir( path->mbs ) == 0 ){
+			DaoMakeProject_MakeInstallPath( self, path, install, uninstall, mapPaths );
+		}else{
+			DaoMakeProject_MakeRemove( self, tname, path, uninstall );
+		}
+		DaoMakeProject_MakeCopy( self, tname, path, install );
+	}
+	DMap_Delete( mapPaths );
+	self->usedStrings -= 4;
+	DaoMakeProject_MakeDirectoryMake( self, install, "install" );
+	DaoMakeProject_MakeDirectoryMake( self, uninstall, "uninstall" );
+	DString_AppendMBS( makefile, "install:\n" );
+	DString_Append( makefile, install );
+	DString_AppendMBS( makefile, "\n\n" );
+
+	DString_AppendMBS( makefile, "uninstall:\n" );
+	DString_Append( makefile, uninstall );
+	DString_AppendMBS( makefile, "\n\n" );
+	DString_AppendMBS( makefile, ".PHONY: install uninstall\n\n" );
 }
 void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 {
@@ -1391,41 +1434,7 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 	DString_AppendChar( makefile, '\n' );
 	DString_AppendMBS( makefile, ".PHONY: subtest\n\n" );
 
-	if( self->installs->size ){
-		DString *tname = DaoMakeProject_GetBufferString( self );
-		DString *install = DaoMakeProject_GetBufferString( self );
-		DString *uninstall = DaoMakeProject_GetBufferString( self );
-		DString *file = DaoMakeProject_GetBufferString( self );
-		for(i=0; i<self->installs->size; i+=2){
-			DString *file = DaoValue_TryGetString( self->installs->items.pValue[i] );
-			DaoMakeTarget *target = (DaoMakeTarget*) self->installs->items.pVoid[i];
-			DString *path = DaoValue_TryGetString( self->installs->items.pValue[i+1] );
-			DaoMakeProject_MakeSourcePath( self, path );
-			if( file ){
-				DString_Assign( tname, file );
-				DaoMakeProject_MakeSourcePath( self, tname );
-			}else{
-				DaoMakeTarget_MakeName( target, tname );
-			}
-			if( Dao_IsDir( path->mbs ) == 0 ){
-				DaoMakeProject_MakeInstallPath( self, path, install, uninstall );
-			}else{
-				DaoMakeProject_MakeRemove( self, tname, path, uninstall );
-			}
-			DaoMakeProject_MakeCopy( self, tname, path, install );
-		}
-		self->usedStrings -= 4;
-		DaoMakeProject_MakeDirectoryMake( self, install, "install" );
-		DaoMakeProject_MakeDirectoryMake( self, uninstall, "uninstall" );
-		DString_AppendMBS( makefile, "install:\n" );
-		DString_Append( makefile, install );
-		DString_AppendMBS( makefile, "\n\n" );
-
-		DString_AppendMBS( makefile, "uninstall:\n" );
-		DString_Append( makefile, uninstall );
-		DString_AppendMBS( makefile, "\n\n" );
-		DString_AppendMBS( makefile, ".PHONY: install uninstall\n\n" );
-	}
+	DaoMakeProject_MakeInstallation( self, makefile );
 
 	DString_AppendMBS( makefile, "clean:\n\t" );
 	if( self->objectsMacros->size + self->testsMacros->size ){
@@ -1450,6 +1459,100 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 
 	/* Regenerate if there was MD5 signature conflict: */
 	if( self->signature != sig ) DaoMakeProject_MakeFile( self, makefile );
+}
+
+void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output )
+{
+	DString *incdir = DaoMakeProject_GetBufferString( self );
+	DString *lnkdir = DaoMakeProject_GetBufferString( self );
+	DString *cflags = DaoMakeProject_GetBufferString( self );
+	DString *lflags = DaoMakeProject_GetBufferString( self );
+	DaoValue **installs = self->installs->items.pValue;
+	DMap *incdirs = DMap_New(D_STRING,0);
+	DMap *lnkdirs = DMap_New(D_STRING,0);
+	DString *md5 = self->mbs;
+	daoint i, count = 0;
+
+	DString_Reset( output, 0 );
+	DString_AppendMBS( output, "project = DaoMake::Project( \"" );
+	DString_Append( output, self->projectName );
+	DString_AppendMBS( output, "\" )\n" );
+
+	DaoMakeUnit_MakeDefinitions( & self->base, cflags );
+	DaoMakeProject_ExportLinkingFlags( self, lflags );
+
+	for(i=0; i<self->installs->size; i+=2){
+		DString *dest = DaoValue_TryGetString( installs[i+1] );
+		DString *file = DaoValue_TryGetString( installs[i] );
+		DaoMakeTarget *target = (DaoMakeTarget*) DaoValue_CastCdata( installs[i], daomake_type_target );
+		DaoMakeProject_MakeSourcePath( self, dest );
+		if( target ){
+			int ttype = target->ttype;
+			if( ttype != DAOMAKE_SHAREDLIB && ttype != DAOMAKE_STATICLIB ) continue;
+			count += 1;
+			if( DMap_Find( lnkdirs, dest ) ){
+				DString_AppendGap( lnkdir );
+				DString_AppendMBS( lnkdir, "-l" );
+				DString_Append( lnkdir, target->name );
+				continue;
+			}
+			DMap_Insert( lnkdirs, dest, 0 );
+			DString_AppendGap( lnkdir );
+			DString_AppendMBS( lnkdir, "-L" );
+			DString_Append( lnkdir, dest );
+			DString_AppendGap( lnkdir );
+			DString_AppendMBS( lnkdir, "-l" );
+			DString_Append( lnkdir, target->name );
+		}else if( DString_MatchMBS( file, " %. (h | hpp | hxx) $", NULL, NULL ) ){
+			if( DMap_Find( incdirs, dest ) ) continue;
+			DMap_Insert( incdirs, dest, 0 );
+			DString_AppendGap( incdir );
+			DString_AppendMBS( incdir, "-I" );
+			DString_Append( incdir, dest );
+		}
+	}
+	if( count == 0 ){
+		DString_Reset( output, 0 );
+		return;
+	}
+	if( incdir->size ){
+		DString_AppendGap( cflags );
+		DString_Append( cflags, incdir );
+	}
+
+	if( lnkdir->size ){
+		DString_AppendGap( lflags );
+		DString_Append( lflags, lnkdir );
+	}
+
+	DString_MD5( cflags, md5 );
+	DString_Reset( md5, 12 );
+	DString_ToUpper( md5 );
+	DString_AppendMBS( output, "cflags = @[" );
+	DString_Append( output, md5 );
+	DString_AppendMBS( output, "]" );
+	DString_Append( output, cflags );
+	DString_AppendMBS( output, "@[" );
+	DString_Append( output, md5 );
+	DString_AppendMBS( output, "]\n" );
+
+	DString_MD5( lflags, md5 );
+	DString_Reset( md5, 12 );
+	DString_ToUpper( md5 );
+	DString_AppendMBS( output, "lflags = @[" );
+	DString_Append( output, md5 );
+	DString_AppendMBS( output, "]" );
+	DString_Append( output, lflags );
+	DString_AppendMBS( output, "@[" );
+	DString_Append( output, md5 );
+	DString_AppendMBS( output, "]\n" );
+
+	DString_AppendMBS( output, "project.ExportCompilingFlags( cflags )\n" );
+	DString_AppendMBS( output, "project.ExportLinkingFlags( lflags )\n" );
+
+	DMap_Delete( incdirs );
+	DMap_Delete( lnkdirs );
+	self->usedStrings -= 4;
 }
 
 
@@ -1822,13 +1925,18 @@ static void PROJECT_InstallFile( DaoProcess *proc, DaoValue *p[], int N )
 		DArray_Append( self->installs, p[1] );
 	}
 }
-static void PROJECT_InstallHeaders( DaoProcess *proc, DaoValue *p[], int N )
+static void PROJECT_InstallFiles( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoMakeProject *self = (DaoMakeProject*) p[0];
 	DaoNamespace *ns = proc->activeNamespace;
+	DaoMakeProject *self = (DaoMakeProject*) p[0];
+	DaoList *list = (DaoList*) p[2];
+	int i, size = DaoList_Size( list );
 	DaoMake_MakePath( ns->path, p[1]->xString.data );
-	//DArray_Append( self->installs, p[1] );
-	//DArray_Append( self->installs, p[2] );
+	for(i=0; i<size; ++i){
+		DaoValue *it = DaoList_GetItem( list, i );
+		DArray_Append( self->installs, it );
+		DArray_Append( self->installs, p[1] );
+	}
 }
 static void PROJECT_ExportCFlags( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1874,6 +1982,11 @@ static void PROJECT_GetLib( DaoProcess *proc, DaoValue *p[], int N )
 	DNode *it = DMap_Find( self->exportStaticLibs, name );
 	if( it ) DString_Assign( res, it->value.pString );
 }
+static void PROJECT_GenerateFinder( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeProject *self = (DaoMakeProject*) p[0];
+	self->generateFinder = p[1]->xEnum.value;
+}
 static DaoFuncItem DaoMakeProjectMeths[]=
 {
 	{ PROJECT_New,     "Project( name : string ) => Project" },
@@ -1890,13 +2003,14 @@ static DaoFuncItem DaoMakeProjectMeths[]=
 
 	{ PROJECT_InstallTarget,  "Install( self : Project, dest : string, target : Target, ... : Target )" },
 	{ PROJECT_InstallFile,    "Install( self : Project, dest : string, file : string, ... : string )" },
-	{ PROJECT_InstallHeaders, "Install( self : Project, dest : string, headers : list<string> )" },
+	{ PROJECT_InstallFiles,   "Install( self : Project, dest : string, headers : list<string> )" },
 
 	{ PROJECT_ExportCFlags,  "ExportCompilingFlags( self : Project, flags : string )" },
 	{ PROJECT_ExportLFlags,  "ExportLinkingFlags( self : Project, flags : string )" },
 	{ PROJECT_ExportPath,    "ExportPath( self : Project, name : string, path : string )" },
 	{ PROJECT_ExportLib,     "ExportStaticLibrary( self : Project, lib : Target )" },
 	{ PROJECT_GetPath,       "GetPath( self : Project, name : string ) => string" },
+	{ PROJECT_GenerateFinder,   "GenerateFinder( self : Project, bl : enum<FALSE,TRUE> = $TRUE )" },
 	/*{ PROJECT_GetLib,  "GetStaticLibrary( self : Project, name : string ) => string" },*/
 	{ NULL, NULL }
 };
@@ -2120,7 +2234,7 @@ static DaoFuncItem DaoMakeMeths[] =
 	{ DAOMAKE_SourcePath,  "SourcePath() => string" },
 	{ DAOMAKE_BinaryPath,  "BinaryPath() => string" },
 
-	{ DAOMAKE_BuildMode,   "BuildMode() => enum<release,debug,profile>" },
+	{ DAOMAKE_BuildMode,   "BuildMode() => enum<RELEASE,DEBUG,PROFILE>" },
 
 	{ DAOMAKE_SetTestTool, "SetTestTool( test : string, log_option = '--log' )" },
 
@@ -2418,6 +2532,22 @@ ErrorInvalidArgValue:
 		fprintf( fout, "# Generated by DaoMake: DO NOT EDIT!\n" );
 		fprintf( fout, "# Targeting platform %s.\n\n", platform ? platform : "none" );
 		DaoMakeProject_MakeFile( project, source );
+		DaoFile_WriteString( fout, source );
+		fclose( fout );
+
+		if( project->generateFinder == 0 ) continue;
+		DaoMakeProject_MakeFindPackage( project, source );
+		if( source->size == 0 ) continue;
+
+		DString_Reset( name, 0 );
+		DString_Append( name, project->sourcePath );
+		DString_AppendMBS( name, "/Find" );
+		DString_Append( name, project->projectName );
+		DString_AppendMBS( name, ".dao" );
+		DaoMake_MakeOutOfSourcePath( name );
+
+		fout = fopen( name->mbs, "w+" );
+		fprintf( fout, "# Generated by DaoMake: DO NOT EDIT!\n" );
 		DaoFile_WriteString( fout, source );
 		fclose( fout );
 	}

@@ -202,7 +202,7 @@ static DaoxStream* DaoxStream_New( DaoStream *stream, DaoProcess *proc )
 	DaoxStream *self = (DaoxStream*) calloc( 1, sizeof(DaoxStream) );
 	int screen = DAOX_TEXT_WIDTH;
 
-#ifdef UNIX
+#if defined(UNIX) && !defined(MINIX)
 	struct winsize ws;
 	ioctl( STDOUT_FILENO, TIOCGWINSZ, &ws );
 	if( ws.ws_col <= DAOX_TEXT_WIDTH ) screen = ws.ws_col - 1;
@@ -381,7 +381,11 @@ static void DaoxStream_PrintLineNumber( DaoxStream *self, int line, int offset )
 	char sline[20];
 	sprintf( sline, "%4i ", line );
 	for(i=0; i<offset; i++) DaoxStream_WriteChar( self, ' ' );
-	DaoxStream_SetColor( self, "white", "black" );
+	if( self->fmtHTML ){
+		DaoxStream_SetColor( self, "white", "black" );
+	}else{
+		DaoxStream_SetColor( self, "black", "yellow" );
+	}
 	DaoxStream_WriteMBS( self, sline );
 	DaoxStream_SetColor( self, NULL, NULL );
 	DaoxStream_WriteChar( self, ' ' );
@@ -652,7 +656,11 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 	if( println ){
 		bgcolor = NULL;
 		for(i=0; i<offset; i++) DaoxStream_WriteChar( self, ' ' );
-		DaoxStream_SetColor( self, "white", "black" );
+		if( self->fmtHTML ){
+			DaoxStream_SetColor( self, "white", "black" );
+		}else{
+			DaoxStream_SetColor( self, "black", "yellow" );
+		}
 		DaoxStream_WriteMBS( self, "     " );
 		DaoxStream_SetColor( self, NULL, NULL );
 		DaoxStream_WriteNewLine( self, "" );
@@ -812,7 +820,11 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 	if( println ){
 		DaoxStream_WriteNewLine( self, "" );
 		for(i=0; i<offset; i++) DaoxStream_WriteChar( self, ' ' );
-		DaoxStream_SetColor( self, "white", "black" );
+		if( self->fmtHTML ){
+			DaoxStream_SetColor( self, "white", "black" );
+		}else{
+			DaoxStream_SetColor( self, "black", "yellow" );
+		}
 		DaoxStream_WriteMBS( self, "     " );
 		DaoxStream_SetColor( self, NULL, NULL );
 		DaoxStream_WriteNewLine( self, "" );
@@ -1231,9 +1243,8 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 	memset( line->mbs, ' ', line->size*sizeof(char) );
 	for(i=0; i<offsets->size; i++) line->mbs[ offsets->items.pInt[i] ] = '|';
 	if( root == 0 ) DString_AppendMBS( line, "|--" );
-	DaoxStream_SetColor( stream, dao_colors[DAOX_BLACK], NULL );
-	DaoxStream_WriteString( stream, line );
 	DaoxStream_SetColor( stream, NULL, NULL );
+	DaoxStream_WriteString( stream, line );
 
 	count = line->size;
 	DString_AppendMBS( line, self->name->mbs + self->name->size - len );
@@ -1245,9 +1256,8 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 	for(i=len; i<(width+2); i++) DString_AppendChar( line, '-' );
 	DString_AppendChar( line, '|' );
 	DString_AppendMBS( line, " " );
-	DaoxStream_SetColor( stream, dao_colors[DAOX_BLACK], NULL );
-	DaoxStream_WriteMBS( stream, line->mbs + count );
 	DaoxStream_SetColor( stream, NULL, NULL );
+	DaoxStream_WriteMBS( stream, line->mbs + count );
 
 	count = line->size;
 	if( self->title ){
@@ -1256,9 +1266,8 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 		DaoxStream_SetColor( stream, NULL, NULL );
 
 		if( hlerror ){
-			DaoxStream_SetColor( stream, dao_colors[DAOX_BLACK], NULL );
-			DaoxStream_WriteMBS( stream, ": " );
 			DaoxStream_SetColor( stream, NULL, NULL );
+			DaoxStream_WriteMBS( stream, ": " );
 			DaoxStream_SetColor( stream, dao_colors[DAOX_RED], NULL );
 			DaoxStream_WriteMBS( stream, "failed tests: " );
 			DaoxStream_WriteInteger( stream, self->failedTests );
@@ -1267,7 +1276,7 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 			DString *title = DString_Copy( self->title );
 			DString *chunk = DString_New(0);
 			int TW = screen - count;
-			DaoxStream_SetColor( stream, dao_colors[DAOX_BLACK], NULL );
+			DaoxStream_SetColor( stream, NULL, NULL );
 			DaoxStream_WriteMBS( stream, ": " );
 			DString_ToWCS( title );
 			if( (title->size + self->name->size + 2) < TW ){

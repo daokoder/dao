@@ -7,6 +7,7 @@ if( daovm == none ) return
 
 dao_help_objects = DaoMake::Objects( { "dao_help.c" } )
 dao_help_lib     = dao_help.AddSharedLibrary( "dao_help", dao_help_objects )
+if( DaoMake::IsMinix() ) daovm.AddDefinition( "MINIX" )
 
 dao_help_lib.UsePackage( daovm )
 dao_help_lib.EnableDynamicLinking()

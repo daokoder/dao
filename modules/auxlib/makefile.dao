@@ -13,4 +13,6 @@ dao_aux_lib.EnableDynamicLinking()
 dao_aux.ExportCompilingFlags( "-I" + DaoMake::SourcePath() )
 
 
+dao_aux.GenerateFinder( $TRUE );
 dao_aux.Install( daovm.GetPath( "MOD-PATH" ), dao_aux_lib );
+dao_aux.Install( daovm.GetPath( "ROOT-PATH" ) + "/shared/daomake/packages/", "FindDaoAux.dao" );

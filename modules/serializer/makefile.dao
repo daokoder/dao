@@ -13,4 +13,6 @@ dao_serializer_lib.EnableDynamicLinking()
 dao_serializer.ExportCompilingFlags( "-I" + DaoMake::SourcePath() )
 
 
+dao_serializer.GenerateFinder( $TRUE );
 dao_serializer.Install( daovm.GetPath( "MOD-PATH" ), dao_serializer_lib );
+dao_serializer.Install( daovm.GetPath( "ROOT-PATH" ) + "/shared/daomake/packages/", "FindDaoSerializer.dao" );

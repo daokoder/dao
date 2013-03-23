@@ -13,4 +13,6 @@ dao_sys_lib.EnableDynamicLinking()
 dao_sys.ExportCompilingFlags( "-I" + DaoMake::SourcePath() )
 
 
+dao_sys.GenerateFinder( $TRUE );
 dao_sys.Install( daovm.GetPath( "MOD-PATH" ), dao_sys_lib );
+dao_sys.Install( daovm.GetPath( "ROOT-PATH" ) + "/shared/daomake/packages/", "FindDaoSys.dao" );

@@ -12,3 +12,5 @@ daomake_exe.UseStaticPackage( daovm, "dao" )
 
 
 daomake.Install( daovm.GetPath( "BIN-PATH" ), daomake_exe );
+daomake.Install( daovm.GetPath( "ROOT-PATH" ) + "/shared/daomake", "platforms" );
+daomake.Install( daovm.GetPath( "ROOT-PATH" ) + "/shared/daomake", "packages" );

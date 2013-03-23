@@ -5,7 +5,6 @@
 #
 daovm = DaoMake::Project( "Dao" )
 
-
 #
 # Create options that can be modified from command line arguments
 # by specifying command line option "--option-NAME VALUE", where
@@ -13,12 +12,12 @@ daovm = DaoMake::Project( "Dao" )
 #
 # Options to set installation paths.
 #
-daovm_path = DaoMake::Option( "PATH", "/usr/local" )
-daovm_bin_path = DaoMake::Option( "BIN-PATH", daovm_path + "/bin" )
-daovm_lib_path = DaoMake::Option( "LIB-PATH", daovm_path + "/lib" )
-daovm_inc_path = DaoMake::Option( "INC-PATH", daovm_path + "/include/dao" )
-daovm_mod_path = DaoMake::Option( "MOD-PATH", daovm_path + "/lib/dao/modules" )
-daovm_doc_path = DaoMake::Option( "DOC-PATH", daovm_path + "/shared/dao" )
+daovm_root_path = DaoMake::Option( "ROOT-PATH", "/usr/local" )
+daovm_bin_path = DaoMake::Option( "BIN-PATH", daovm_root_path + "/bin" )
+daovm_lib_path = DaoMake::Option( "LIB-PATH", daovm_root_path + "/lib" )
+daovm_inc_path = DaoMake::Option( "INC-PATH", daovm_root_path + "/include/dao" )
+daovm_mod_path = DaoMake::Option( "MOD-PATH", daovm_root_path + "/lib/dao/modules" )
+daovm_doc_path = DaoMake::Option( "DOC-PATH", daovm_root_path + "/shared/dao" )
 
 
 #
@@ -26,6 +25,7 @@ daovm_doc_path = DaoMake::Option( "DOC-PATH", daovm_path + "/shared/dao" )
 #   daovm = DaoMake::FindPackage( "Dao" )
 #   path = daovm.GetPath( "PATH-NAME" )
 #
+daovm.ExportPath( "ROOT-PATH", daovm_root_path );
 daovm.ExportPath( "BIN-PATH", daovm_bin_path );
 daovm.ExportPath( "LIB-PATH", daovm_lib_path );
 daovm.ExportPath( "MOD-PATH", daovm_mod_path );
@@ -285,16 +285,18 @@ modules.AddDependency( daovm_lib )
 modules.AddDependency( daovm_exe )
 
 
-if( DaoMake::BuildMode() == $debug ){
+if( DaoMake::BuildMode() == $DEBUG ){
 	DaoMake::SetTestTool( DaoMake::BinaryPath() + "/tools/daotest/daotest" )
 	tests = daovm.AddDirectory( "tests", "tests" )
 	tests.AddDependency( modules )
 	tests.AddDependency( daotest )
 }
 
+daovm.GenerateFinder( $TRUE );
 
 # Setup installations:
 daovm.Install( daovm_bin_path, daovm_exe )
 daovm.Install( daovm_lib_path, daovm_dll, daovm_lib )
 daovm.Install( daovm_inc_path, daovm_kernel_headers )
+daovm.Install( daovm.GetPath( "ROOT-PATH" ) + "/shared/daomake/packages/", "FindDao.dao" );
 
