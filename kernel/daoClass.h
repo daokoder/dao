@@ -57,7 +57,7 @@ struct DaoClass
 	DMap  *ovldRoutMap; /* <DString*,DaoRoutine*> */
 
 	/* Map virtual methods of parent classes to its reimplementation in this class: */
-	DMap  *vtable; /* <DRoutine*,DRoutine*> */
+	DMap  *vtable; /* <DaoRoutine*,DaoRoutine*> */
 
 	DaoRoutine  *classRoutine; /* Default class constructor. */
 	DaoRoutine  *classRoutines; /* All explicitly defined constructors; GC handled in constants; */

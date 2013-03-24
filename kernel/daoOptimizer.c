@@ -2556,7 +2556,6 @@ static void DaoInferencer_InsertMove2( DaoInferencer *self, DaoInode *inode, Dao
 }
 static void DaoInferencer_Finalize( DaoInferencer *self )
 {
-	int i, n;
 	DaoRoutineBody *body = self->routine->body;
 
 	DaoRoutine_CodesFromInodes( self->routine, self->inodes );

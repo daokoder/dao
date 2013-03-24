@@ -1205,8 +1205,13 @@ void DaoMakeProject_MakeRemove( DaoMakeProject *self, DString *file, DString *pa
 	DString_AppendChar( output, ' ' );
 	DString_Append( output, path );
 	if( file ){
-		if( path->size && path->mbs[path->size] != '/' ) DString_AppendChar( output, '/' );
-		DString_Append( output, file );
+		daoint pos;
+		char *file2;
+		DString_ToMBS( file );
+		pos = DString_RFindChar( file, '/', -1 );
+		file2 = pos == MAXSIZE ? file->mbs : file->mbs + pos + 1;
+		if( path->size && path->mbs[path->size-1] != '/' ) DString_AppendChar( output, '/' );
+		DString_AppendMBS( output, file2 );
 	}
 	DString_AppendChar( output, '\n' );
 }
@@ -1312,18 +1317,21 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 				DString_Append( phony, ruleName );
 			}
 		}
-		if( ismain && daomake_test_count ){
+		if( ismain && daomake_test_count && daomake_build_mode ){
 			DString_AppendGap( makefile );
 			DString_AppendMBS( makefile, "test testsum" );
 		}
 		DString_AppendMBS( makefile, "\n\n" );
 
+		DString_AppendMBS( makefile, ".PHONY: test\n" );
 		DString_AppendMBS( makefile, "test:" );
 		DString_AppendGap( makefile );
 		DString_Append( makefile, test );
 
 		DString_AppendGap( makefile );
-		DString_AppendMBS( makefile, "subtest\n\n" );
+		DString_AppendMBS( makefile, "subtest" );
+		DString_AppendGap( makefile );
+		DString_AppendMBS( makefile, "testsum\n\n" );
 		if( phony->size ){
 			DString_AppendMBS( makefile, ".PHONY: " );
 			DString_Append( makefile, phony );
@@ -1432,7 +1440,7 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 	DaoMakeProject_MakeDirectoryMake( self, makefile, "testsum" );
 	if( ismain ) DString_AppendMBS( makefile, "\t@$(DAOMAKE) cat $(TESTSUM)\n" );
 	DString_AppendChar( makefile, '\n' );
-	DString_AppendMBS( makefile, ".PHONY: subtest\n\n" );
+	DString_AppendMBS( makefile, ".PHONY: testsum\n\n" );
 
 	DaoMakeProject_MakeInstallation( self, makefile );
 

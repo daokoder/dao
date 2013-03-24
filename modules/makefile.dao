@@ -9,6 +9,8 @@ modules.Install( daovm.GetPath( "MOD-PATH" ), "addpath.dao" )
 
 if( DaoMake::IsDir( "DaoJIT" ) ) modules.AddDirectory( "DaoJIT", "DaoJIT" );
 
+if( DaoMake::IsDir( "DaoCXX" ) ) modules.AddDirectory( "DaoCXX", "DaoCXX" );
+
 if( DaoMake::IsDir( "string" ) ) modules.AddDirectory( "string", "string" );
 
 if( DaoMake::IsDir( "graph" ) ) modules.AddDirectory( "graph", "graph" );

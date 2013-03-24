@@ -3,6 +3,7 @@ PLATS = linux macosx freebsd mingw minix
 
 MODE ?= release
 ROOT-PATH ?= /usr/local
+SUFFIX ?=
 
 $(PLATS) :
 	cd tools/daomake && $(MAKE) -f Makefile.bootstrap $@

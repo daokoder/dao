@@ -19,4 +19,6 @@ test_routine.AddTest( "test_anonymous_routine.dao" )
 
 test_class = daotests.AddTest( "Class", "test_class_inheritance.dao" )
 
+test_interface = daotests.AddTest( "Interface", "test_interface.dao" )
+
 daotests.AddTest( "Misc", "test_misc.dao" )

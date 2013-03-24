@@ -2314,6 +2314,7 @@ static int DaoParser_HandleVerbatim( DaoParser *self, int start )
 	daoint pstart = 0, pend = verbatim->size-1, wcs = verbatim->mbs[1] == '@';
 	const char *pat = "^ @{1,2} %[ %s* %w+ %s* ( %( %s* (|%w+) %s* %) | %])";
 
+	self->curLine = line;
 	if( verbatim->mbs[2+wcs] == '+' ){ /* string interuptions */
 		DString *body = self->mbs;
 		DString *delim = self->mbs2;
@@ -2395,7 +2396,8 @@ static int DaoParser_HandleVerbatim( DaoParser *self, int start )
 		}
 		DString_Clear( self->mbs );
 		if( (*inliner)( ns, self->mbs2, verbatim, self->mbs, line ) ){
-			printf( "code inlining failed: %s!\n", self->mbs->mbs );
+			DString_InsertMBS( self->mbs, "code inlining failed: ", 0, 0, 0 );
+			DaoParser_Error( self, DAO_CTW_INTERNAL, self->mbs );
 			return -1;
 		}
 		DArray_Erase( self->tokens, start, 1 );
@@ -3091,15 +3093,14 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 		/* interface AB : NS::BB, CC{ } */
 		unsigned char sep = DTOK_COLON;
 		while( tokens[start]->name == sep ){
+			ename = & tokens[start+1]->string;
 			start = DaoParser_FindScopedConstant( self, & value, start+1 );
-			if( start < 0 ) goto ErrorInterfaceDefinition;
+			if( start < 0 ) goto ErrorInterfaceBase;
 			ename = & tokens[start]->string;
 			start ++;
 			if( value == NULL || value->type != DAO_INTERFACE ){
 				ec = DAO_SYMBOL_NEED_INTERFACE;
-				if( value == NULL || value->type == 0 || value->type == DAO_STRING )
-					ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
-				goto ErrorInterfaceDefinition;
+				goto ErrorInterfaceBase;
 			}
 			/* Add a reference to its super interfaces: */
 			DArray_Append( inter->supers, value );
@@ -3141,11 +3142,11 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 	}
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return right + 1;
+ErrorInterfaceBase:
+	DaoParser_Error( self, DAO_SYMBOL_NEED_INTERFACE, ename );
 ErrorInterfaceDefinition:
 	if( parser ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	if( ec ) DaoParser_Error( self, ec, ename );
-	if( ec == DAO_SYMBOL_POSSIBLY_UNDEFINED )
-		DaoParser_Error( self, DAO_SYMBOL_NEED_INTERFACE, ename );
 	DaoParser_Error2( self, DAO_INVALID_INTERFACE_DEFINITION, errorStart, to, 0 );
 	return -1;
 }

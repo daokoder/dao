@@ -846,7 +846,11 @@ DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *obj, DaoValue *p[],
 		}
 		if( klass && klass != (DaoClass*)rout->routHost->aux && klass->vtable ){
 			DNode *node = MAP_Find( klass->vtable, rout );
-			if( node && node->value.pVoid ) rout = (DaoRoutine*) node->value.pVoid;
+			if( node && node->value.pRoutine ){
+				DaoType *t1 = (DaoType*) rout->routType->aux;
+				DaoType *t2 = (DaoType*) node->value.pRoutine->routType->aux;
+				if( t1->tid == 0 || t1 == t2 ) rout = node->value.pRoutine;
+			}
 		}
 	}
 	if( rout->specialized ){
@@ -935,7 +939,10 @@ void DaoRoutine_UpdateVtable( DaoRoutine *self, DaoRoutine *routine, DMap *vtabl
 		rout = DParamNode_LookupByType2( param, types+1, m-1 );
 		if( rout == NULL ) continue;
 		retype2 = & rout->routType->aux->xType;
-		if( retype->tid && retype != retype2 ) continue;
+		/*
+		// DO NOT CHECK RETURN TYPE HERE! It may have not been inferred yet.
+		// if( retype->tid && retype != retype2 ) continue;
+		*/
 		if( ! (rout->attribs & DAO_ROUT_VIRTUAL) ) continue;
 		node = MAP_Find( vtable, rout );
 		if( node ) node->value.pRoutine = routine;
