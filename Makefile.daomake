@@ -1,5 +1,5 @@
 
-PLATS = linux macosx freebsd mingw minix beos haiku
+PLATS = linux macosx freebsd mingw minix haiku
 
 MODE ?= release
 ROOT ?= /usr/local

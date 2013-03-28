@@ -24,6 +24,7 @@ where PLATFORM can be one of the followings:
 * freebsd
 * mingw
 * minix
+* haiku
 
 Then run the following to install:
 

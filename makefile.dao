@@ -49,7 +49,7 @@ daovm_with_concurrent = DaoMake::Option( "CONCURRENT", $ON )
 
 daovm_with_readline   = DaoMake::Option( "READLINE",   $ON )
 
-if( DaoMake::IsMinix() or DaoMake::IsBeOS() ) daovm_with_thread = $OFF;
+if( DaoMake::IsMinix() ) daovm_with_thread = $OFF;
 if( daovm_full_static == $ON ){
 	daovm_with_thread = $OFF;
 	daovm_with_readline = $OFF;
@@ -202,8 +202,11 @@ if( DaoMake::IsUnix() ){
 }else if( DaoMake::IsWin32() ){
 	daovm.AddDefinition( "WIN32" )
 	if( DaoMake::IsMinGW() ) daovm.AddLinkingFlag( "-lwinmm" )
-}else if( DaoMake::IsBeOS() ){
+}else if( DaoMake::IsHaiku() ){
 	daovm.AddDefinition( "UNIX" )
+	# Note:
+	# pthread is automatically linked as part of:
+	# /Haiku/develop/lib/x86/libroot.so.
 }
 
 
