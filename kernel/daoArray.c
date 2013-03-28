@@ -570,7 +570,7 @@ void DPlainArray_PushFloat( DPlainArray *self, float value )
 	*item = value;
 }
 
-DaoVmCode* DPlainArray_PushBack( DPlainArray *self, DaoVmCode code )
+DaoVmCode* DPlainArray_PushCode( DPlainArray *self, DaoVmCode code )
 {
 	DaoVmCode *code2 = (DaoVmCode*) DPlainArray_Push( self );
 	*code2 = code;

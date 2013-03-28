@@ -1676,7 +1676,7 @@ void DaoRoutine_CodesFromInodes( DaoRoutine *self, DArray *inodes )
 		default : break;
 		}
 		if( it->code >= DVM_UNUSED ) continue;
-		DPlainArray_PushBack( body->vmCodes, *(DaoVmCode*) it );
+		DPlainArray_PushCode( body->vmCodes, *(DaoVmCode*) it );
 		DArray_PushBack( body->annotCodes, (DaoVmCodeX*) it );
 	}
 }
@@ -2640,6 +2640,7 @@ static void DaoInferencer_WriteErrorSpecific( DaoInferencer *self, int error )
 	DaoRoutine *routine = self->routine;
 	DaoStream  *stream = routine->nameSpace->vmSpace->errorStream;
 	DaoVmCodeX *vmc = self->inodes->items.pVmc[self->currentIndex];
+	DaoVmCodeX vmc2 = *vmc;
 	DString *mbs;
 
 	if( error == 0 ) return;
@@ -2648,7 +2649,6 @@ static void DaoInferencer_WriteErrorSpecific( DaoInferencer *self, int error )
 	if( self->silent ) return;
 
 	mbs = DString_New(1);
-	DaoVmCodeX vmc2 = *vmc;
 	DaoStream_WriteMBS( stream, char50 );
 	DaoStream_WriteMBS( stream, DaoTypingErrorString[error] );
 	DaoStream_WriteMBS( stream, " --- \" " );
@@ -2763,7 +2763,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	DArray *errors = self->errors;
 	DString *str, *mbs = self->mbstring;
 	DaoVmCodeX *vmc, *vmc2;
-	DaoType *at, *bt, *ct, *tt, *catype, *ts[DAO_ARRAY+DAO_MAX_PARAM];;
+	DaoType *at, *bt, *ct, *tt, *catype, *ts[DAO_ARRAY+DAO_MAX_PARAM];
 	DaoType *type, **tp, **type2, **types = self->types->items.pType;
 	DaoValue *value, **pp, **consts = self->consts->items.pValue;
 	DaoInode *inode, *inode2, **inodes = self->inodes->items.pInode;
@@ -3203,7 +3203,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			break;
 		case DVM_GETMI :
 			{
-				value = consts[opa] ? dao_none_value : NULL;;
+				value = consts[opa] ? dao_none_value : NULL;
 				ct = at;
 				meth = NULL;
 				DString_SetMBS( mbs, "[]" );
@@ -3274,7 +3274,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DVM_GETF :
 			{
 				int ak = 0;
-				value = consts[opa] ? dao_none_value : NULL;;
+				value = consts[opa] ? dao_none_value : NULL;
 				ct = NULL;
 				value = routConsts->items.pValue[opb];
 				if( value == NULL || value->type != DAO_STRING ) goto NotMatch;
@@ -3702,7 +3702,7 @@ NotExist_TryAux:
 				if( value == NULL || value->type != DAO_STRING ) goto NotMatch;
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
-				value = consts[opa] ? dao_none_value : NULL;;
+				value = consts[opa] ? dao_none_value : NULL;
 				break;
 			}
 		case DVM_SETF :

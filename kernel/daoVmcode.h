@@ -502,6 +502,9 @@ DAO_DLL uchar_t     DaoVmCode_GetResultOperand( int code );
 DAO_DLL uchar_t     DaoVmCode_CheckPermutable( int code );
 DAO_DLL DaoVmCode   DaoVmCode_CheckOperands( DaoVmCode *self );
 
+DAO_DLL DaoVmCode*  DPlainArray_PushCode( DPlainArray *self, DaoVmCode code );
+
+
 struct DaoVmCodeX
 {
 	unsigned short  code; /* opcode */

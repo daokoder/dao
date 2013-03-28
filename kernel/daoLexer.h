@@ -287,4 +287,6 @@ DString* DaoLexer_AddRaiseStatement( DaoLexer *self, const char *type, const cha
 
 DAO_DLL void DaoLexer_AnnotateCode( DArray *tokens, DaoVmCodeX vmc, DString *annot, int max );
 
+DAO_DLL DaoToken*  DPlainArray_PushToken( DPlainArray *self, DaoToken token );
+
 #endif

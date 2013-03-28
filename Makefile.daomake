@@ -1,12 +1,13 @@
 
-PLATS = linux macosx freebsd mingw minix
+PLATS = linux macosx freebsd mingw minix beos haiku
 
 MODE ?= release
-ROOT-PATH ?= /usr/local
+ROOT ?= /usr/local
+SRCDIR ?= .
 SUFFIX ?=
 
 $(PLATS) :
-	cd tools/daomake && $(MAKE) -f Makefile.bootstrap $@
-	./tools/daomake/daomake --mode $(MODE) --platform $@ --option-ROOT-PATH $(ROOT-PATH)
+	cd $(SRCDIR)/tools/daomake && $(MAKE) -f Makefile.bootstrap $@
+	$(SRCDIR)/tools/daomake/daomake --mode $(MODE) --platform $@ --option-ROOT-PATH $(ROOT) $(SRCDIR)
 	$(MAKE) -f Makefile$(SUFFIX)
 

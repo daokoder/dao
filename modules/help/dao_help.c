@@ -527,8 +527,8 @@ int DaoxHelp_TokenizeCodes( DaoxLexInfo *info, DaoLexer *lexer, const char *sour
 	DaoToken *one = DaoToken_New();
 	DString ds = DString_WrapMBS( source );
 	const char *src = source;
-	int NL1 = info->lineComment1 ? strlen( info->lineComment1 ) : 0;
-	int NL2 = info->lineComment2 ? strlen( info->lineComment2 ) : 0;
+	int NLL1 = info->lineComment1 ? strlen( info->lineComment1 ) : 0;/* NL1, macro on Haiku */
+	int NLL2 = info->lineComment2 ? strlen( info->lineComment2 ) : 0;
 	int NBO1 = info->openComment1 ? strlen( info->openComment1 ) : 0;
 	int NBO2 = info->openComment2 ? strlen( info->openComment2 ) : 0;
 	int NBC1 = info->closeComment1 ? strlen( info->closeComment1 ) : 0;
@@ -550,8 +550,8 @@ int DaoxHelp_TokenizeCodes( DaoxLexInfo *info, DaoLexer *lexer, const char *sour
 		one->type = one->name = DTOK_COMMENT;
 		DString_Reset( & one->string, 0 );
 		cmtype = 0;
-		if( NL1 && strncmp( src, info->lineComment1, NL1 ) ==0 ) cmtype = 1;
-		if( NL2 && strncmp( src, info->lineComment2, NL2 ) ==0 ) cmtype = 2;
+		if( NLL1 && strncmp( src, info->lineComment1, NLL1 ) ==0 ) cmtype = 1;
+		if( NLL2 && strncmp( src, info->lineComment2, NLL2 ) ==0 ) cmtype = 2;
 		if( NBO1 && strncmp( src, info->openComment1, NBO1 ) ==0 ) cmtype = 3;
 		if( NBO2 && strncmp( src, info->openComment2, NBO2 ) ==0 ) cmtype = 4;
 		if( cmtype ==1 || cmtype ==2 ){
@@ -1799,9 +1799,10 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 	}
 	DString_AppendMBS( stream->output, "\n</pre>\n" );
 	fout = fopen( fname->mbs, "w+" );
+	if( fout == NULL ) fout = stdout;
 	fprintf( fout, "<!DOCTYPE html><html><head>\n<title>Dao Help: %s</title>\n", title );
 	fprintf( fout, "<meta charset=\"utf-8\"/></head><body>%s", stream->output->mbs );
-	fclose( fout );
+	if( fout != stdout ) fclose( fout );
 
 	for(i=0; i<self->nested2->size; i++){
 		DaoxHelpEntry *entry = (DaoxHelpEntry*) self->nested2->items.pVoid[i];
@@ -1813,8 +1814,9 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 		DaoxHelpEntry_PrintTree( self, stream, NULL, 0, self->name->size, 1,1,1,1 );
 	}
 	fout = fopen( fname->mbs, "a+" );
+	if( fout == NULL ) fout = stdout;
 	fprintf( fout, "\n<pre style=\"font-weight:500\">\n%s</pre></body></html>", stream->output->mbs );
-	fclose( fout );
+	if( fout != stdout ) fclose( fout );
 }
 static void HELP_Export( DaoProcess *proc, DaoValue *p[], int N )
 {

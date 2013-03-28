@@ -2601,10 +2601,11 @@ void DaoGetErrorDLL()
 
 void* DaoOpenDLL( const char *name )
 {
+	void *handle = NULL;
 #ifdef UNIX
-	void *handle = dlopen( name, RTLD_NOW | RTLD_GLOBAL );
+	handle = dlopen( name, RTLD_NOW | RTLD_GLOBAL );
 #elif WIN32
-	void *handle = LoadLibrary( name );
+	handle = LoadLibrary( name );
 #endif
 	if( !handle ){
 		DaoGetErrorDLL();
@@ -2614,10 +2615,11 @@ void* DaoOpenDLL( const char *name )
 }
 void* DaoGetSymbolAddress( void *handle, const char *name )
 {
+	void *sym = NULL;
 #ifdef UNIX
-	void *sym = dlsym( handle, name );
+	sym = dlsym( handle, name );
 #elif WIN32
-	void *sym = (void*)GetProcAddress( (HMODULE)handle, name );
+	sym = (void*)GetProcAddress( (HMODULE)handle, name );
 #endif
 	return sym;
 }

@@ -1088,8 +1088,21 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 	}
 	DString_Append( rule, objs );
 	if( target->ttype == DAOMAKE_STATICLIB ){
+		DString *check = DaoMake_GetSettingValue( "HAS-FILE" );
+		DString *del = DaoMake_GetSettingValue( "DEL-FILE" );
 		DString *arc = DaoMake_GetSettingValue( "AR" );
 		DString_AppendMBS( rule, "\n\t" );
+		if( del ){
+			DString_AppendMBS( rule, "-@" );
+			DString_Append( rule, check );
+			DString_AppendMBS( rule, " " );
+			DString_Append( rule, tname );
+			DString_AppendMBS( rule, " && " );
+			DString_Append( rule, del );
+			DString_AppendGap( rule );
+			DString_Append( rule, tname );
+			DString_AppendMBS( rule, "\n\t" );
+		}
 		if( arc ) DString_Append( rule, arc );
 		DString_AppendGap( rule );
 		DString_Append( rule, tname );
@@ -1297,7 +1310,7 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 	DString_Reset( makefile, 0 );
 	if( (self->targets->size + self->installs->size) == 0 ) return;
 
-	if( self->targets->size ){
+	if( 1 ){
 		DString *phony = DaoMakeProject_GetBufferString( self );
 		DString *test = DaoMakeProject_GetBufferString( self );
 		DString *testsum = DaoMakeProject_GetBufferString( self );
@@ -2219,6 +2232,14 @@ static void DAOMAKE_IsMinix( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DAOMAKE_IsPlatform( proc, "MINIX" );
 }
+static void DAOMAKE_IsBeOS( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DAOMAKE_IsPlatform( proc, "BEOS" );
+}
+static void DAOMAKE_IsHaiku( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DAOMAKE_IsPlatform( proc, "HAIKU" );
+}
 
 static void DAOMAKE_IsWin32( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2255,6 +2276,8 @@ static DaoFuncItem DaoMakeMeths[] =
 	{ DAOMAKE_IsBSD,       "IsBSD() => int" },
 	{ DAOMAKE_IsFreeBSD,   "IsFreeBSD() => int" },
 	{ DAOMAKE_IsMinix,     "IsMinix() => int" },
+	{ DAOMAKE_IsBeOS,      "IsBeOS() => int" },
+	{ DAOMAKE_IsHaiku,     "IsHaiku() => int" },
 
 	{ DAOMAKE_IsWin32,     "IsWin32() => int" },
 	{ DAOMAKE_IsMinGW,     "IsMinGW() => int" },

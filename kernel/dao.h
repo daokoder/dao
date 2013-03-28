@@ -91,6 +91,9 @@
 #define DAO_DLL_EXPORT
 #define DAO_DLL_IMPORT
 
+#define DAO_DLL_SUFFIX ".unkown"
+#define DAO_LIB_DEFAULT ""
+
 #endif /* WIN32 */
 
 

@@ -816,8 +816,8 @@ static int DaoParser_FindPairToken2( DaoParser *self,  uchar_t l, uchar_t r, int
 
 static void DaoLexer_AppendInitSuper( DaoLexer *self, DaoClass *klass, int line, int flags )
 {
-	DString *sup = DString_New(1);;
-	DString *info = DString_New(1);;
+	DString *sup = DString_New(1);
+	DString *info = DString_New(1);
 	int i;
 	for(i=0; i<klass->superClass->size; i++){
 		DaoCdata *cdata = (DaoCdata*) klass->superClass->items.pValue[i];
@@ -5379,6 +5379,8 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 
 	/*printf("DaoParser_ParseAtomicExpression()\n"); */
 
+	memset( & buffer, 0, sizeof(DaoValue) );
+
 	*cst = 0;
 	varReg = DaoParser_GetRegister( self, tokens[start] );
 	tki = tokens[start]->name;
@@ -5594,7 +5596,7 @@ static int DaoParser_ClassExpressionBody( DaoParser *self, int start, int end )
 
 	vmcx.line = rout->defLine;
 	DArray_Append( rout->body->annotCodes, & vmcx );
-	DPlainArray_PushBack( rout->body->vmCodes, vmc );
+	DPlainArray_PushCode( rout->body->vmCodes, vmc );
 
 	self->protoValues = DMap_New(0,0);
 	self->hostClass = klass;

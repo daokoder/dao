@@ -137,8 +137,6 @@ DAO_DLL void DPlainArray_Erase( DPlainArray *self, int i, int n );
 DAO_DLL void DPlainArray_PushInt( DPlainArray *self, int value );
 DAO_DLL void DPlainArray_PushFloat( DPlainArray *self, float value );
 
-DAO_DLL DaoVmCode* DPlainArray_PushBack( DPlainArray *self, DaoVmCode code );
-DAO_DLL DaoToken*  DPlainArray_PushToken( DPlainArray *self, DaoToken token );
 
 
 #endif

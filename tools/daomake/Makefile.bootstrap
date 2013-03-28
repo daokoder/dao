@@ -126,3 +126,6 @@ mingw:
 
 minix:
 	$(MAKE) -f Makefile.bootstrap DEBUG=$(DEBUG) SYSCFLAGS="-DUNIX -fPIC" SYSLIBS="-lm"
+
+beos haiku:
+	$(MAKE) -f Makefile.bootstrap DEBUG=$(DEBUG) SYSCFLAGS="-DUNIX -fPIC" SYSLIBS=""

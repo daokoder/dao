@@ -49,7 +49,7 @@ daovm_with_concurrent = DaoMake::Option( "CONCURRENT", $ON )
 
 daovm_with_readline   = DaoMake::Option( "READLINE",   $ON )
 
-if( DaoMake::IsMinix() ) daovm_with_thread = $OFF;
+if( DaoMake::IsMinix() or DaoMake::IsBeOS() ) daovm_with_thread = $OFF;
 if( daovm_full_static == $ON ){
 	daovm_with_thread = $OFF;
 	daovm_with_readline = $OFF;
@@ -179,6 +179,7 @@ if( daovm_partial_static == $ON ){
 	# properly with or without installation.
 	#
 	rpath = DaoMake::Settings["DLL-RPATH"] + daovm_lib_path;
+	rpath = " " + DaoMake::Settings["DLL-RPATH"] + DaoMake::BinaryPath();
 	daovm_exe.AddLinkingFlag( rpath + " -L. -ldao" );
 	daovm_exe.AddDependency( daovm_dll );
 }
@@ -201,6 +202,8 @@ if( DaoMake::IsUnix() ){
 }else if( DaoMake::IsWin32() ){
 	daovm.AddDefinition( "WIN32" )
 	if( DaoMake::IsMinGW() ) daovm.AddLinkingFlag( "-lwinmm" )
+}else if( DaoMake::IsBeOS() ){
+	daovm.AddDefinition( "UNIX" )
 }
 
 

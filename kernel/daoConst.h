@@ -38,6 +38,8 @@
 #define DAO_DIR "/usr/local/dao"
 #elif WIN32
 #define DAO_DIR "C:\\dao"
+#else
+#define DAO_DIR ""
 #endif
 #endif
 

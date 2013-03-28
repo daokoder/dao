@@ -165,6 +165,7 @@ void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumItem *items )
 	DaoValue buf = {0};
 	DaoValue *value = (DaoValue*) & buf;
 	int i = 0;
+	memset( value, 0, sizeof(DaoValue) );
 	while( items[i].name != NULL ){
 		DString name = DString_WrapMBS( items[i].name );
 		switch( items[i].type ){
@@ -226,6 +227,7 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 		DaoValue *value = (DaoValue*) & buf;
 		DaoType *abtype = typer->core->kernel->abtype;
 
+		memset( value, 0, sizeof(DaoValue) );
 		values = DHash_New( D_STRING, D_VALUE );
 		if( abtype && abtype->value ) DMap_Insert( values, & defname, abtype->value );
 		for(i=0; i<valCount; i++){

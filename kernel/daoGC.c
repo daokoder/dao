@@ -42,8 +42,8 @@
 
 #if defined(DEBUG) && defined(UNIX)
 #if 0
-#endif
 #define DEBUG_TRACE
+#endif
 #endif
 
 #ifdef DEBUG_TRACE
@@ -90,7 +90,7 @@ static void DaoGC_PrintProfile( DArray *idleList, DArray *workList )
 	}
 }
 #else
-#define DaoGC_PrintProfile(x,y) (1==1)
+#define DaoGC_PrintProfile(x,y)
 #endif
 
 #if DEBUG
@@ -108,7 +108,7 @@ static void DaoGC_PrintValueInfo( DaoValue *value )
 	printf( "%p %i %i\n", value, value->xGC.refCount, value->xGC.cycRefCount );
 }
 #else
-#define DaoGC_PrintValueInfo( value )  (value == value)
+#define DaoGC_PrintValueInfo( value )
 #endif
 
 static int DaoGC_DecRC2( DaoValue *p );

@@ -3175,6 +3175,7 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 		DaoValue *C = (DaoValue*) & temp;
 		DaoArray *na = & A->xArray;
 		id = DaoValue_GetInteger( B );
+		memset( C, 0, sizeof(DaoValue) );
 		if( na->original && DaoArray_Sliced( na ) == 0 ){
 			DaoProcess_RaiseException( self, DAO_ERROR_INDEX, "slicing" );
 			return;
@@ -3466,6 +3467,7 @@ int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 	DaoType *type = self->activeTypes[vmc->c];
 	int func = vmc->a;
 	self->activeCode = vmc;
+	memset( value, 0, sizeof(DaoValue) );
 	if( A->type == DAO_COMPLEX ){
 		complex16 par = A->xComplex.value;
 		complex16 cres = {0.0,0.0};
@@ -4975,6 +4977,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		DaoValue temp = {0};
 		int type = A->type > B->type ? A->type : B->type;
 		double va, vb, res = 0;
+		memset( & temp, 0, sizeof(DaoValue) );
 		switch( vmc->code ){
 			case DVM_MOD:
 				va = DaoValue_GetDouble( A );
