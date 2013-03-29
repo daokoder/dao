@@ -204,6 +204,8 @@ static DaoList *daomake_includes = NULL;
 static DMap *daomake_boolean_options = NULL;
 static DMap *daomake_string_options = NULL;
 
+static DMap *daomake_cmdline_defines = NULL;
+
 static DMap *daomake_makefile_paths = NULL;
 
 static DaoType *daomake_type_unit = NULL;
@@ -595,23 +597,27 @@ void DaoMakeProject_MakeBinaryPath( DaoMakeProject *self, DString *path )
 
 
 
+static void DString_AppendDefinition( DString *defs, DString *key, DString *value )
+{
+	DString_AppendGap( defs );
+	DString_AppendMBS( defs, "-D" );
+	DString_Append( defs, key );
+	if( value->size ){
+		DString_AppendChar( defs, '=' );
+		DString_Append( defs, value );
+	}
+}
 void DaoMakeUnit_MakeDefinitions( DaoMakeUnit *self, DString *defs )
 {
+	DNode *it;
 	daoint i;
 	for(i=0; i<self->definitions->size; i+=2){
 		DString *definition = self->definitions->items.pString[i];
 		DString *value = self->definitions->items.pString[i+1];
-		DString_AppendGap( defs );
-		DString_AppendMBS( defs, "-D" );
-		DString_Append( defs, definition );
-		if( value->size ){
-			wchar_t ch = value->wcs ? value->wcs[0] : value->mbs[0];
-			int nonumber = iswdigit( ch ) == 0;
-			DString_AppendChar( defs, '=' );
-			if( nonumber ) DString_AppendMBS( defs, "\\\"" );
-			DString_Append( defs, value );
-			if( nonumber ) DString_AppendMBS( defs, "\\\"" );
-		}
+		DString_AppendDefinition( defs, definition, value );
+	}
+	for(it=DMap_First(daomake_cmdline_defines); it; it=DMap_Next(daomake_cmdline_defines,it)){
+		DString_AppendDefinition( defs, it->key.pString, it->value.pString );
 	}
 }
 void DaoMakeUnit_MakeIncludePaths( DaoMakeUnit *self, DString *cflags )
@@ -2395,6 +2401,7 @@ int main( int argc, char **argv )
 	daomake_makefile_paths = DMap_New(D_STRING,0);
 	daomake_boolean_options = DMap_New(D_STRING,0);
 	daomake_string_options = DMap_New(D_STRING,D_STRING);
+	daomake_cmdline_defines = DMap_New(D_STRING,0);
 	DString_SetMBS( makefile, "makefile.dao" );
 	for(i=1; i<argc; i++){
 		char *arg = argv[i];
@@ -2434,6 +2441,13 @@ int main( int argc, char **argv )
 				bl = 1;
 			}
 			if( bl >= 0 ) DMap_Insert( daomake_boolean_options, & key, (void*)bl );
+		}else if( strstr( arg, "--define-" ) == arg ){
+			DString key = DString_WrapMBS( arg + 9 );
+			DString value;
+			daoint bl = -1;
+			if( (i + 1) == argc ) goto ErrorMissingArgValue;
+			value = DString_WrapMBS( argv[++i] );
+			DMap_Insert( daomake_cmdline_defines, & key, & value );
 		}else if( strcmp( arg, "--suffix" ) == 0 ){
 			if( (i + 1) == argc ) goto ErrorMissingArgValue;
 			daomake_makefile_suffix = argv[++i];

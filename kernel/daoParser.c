@@ -5561,7 +5561,6 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	/* DVM_ROUTINE rout_proto, upv1, upv2, ..., opc */
 	DaoParser_AddCode( self, DVM_ROUTINE, regCall, uplocs->size/2, opc, start, rb, end );
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
-	printf( "here\n" );
 	return opc;
 ErrorParamParsing:
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );

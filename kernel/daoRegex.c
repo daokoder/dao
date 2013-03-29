@@ -37,6 +37,30 @@
 #define ALIGN_MASK  (ALIGN_LEN-1)
 #define ALIGN( x )  ((x+ALIGN_MASK) & ~ALIGN_MASK)
 
+
+#ifdef WITHOUT_WCTYPE_H
+#define iswalnum(c) isalnum(c)
+#define iswalpha(c) isalpha(c)
+#define iswascii(c) isascii(c)
+#define iswblank(c) isblank(c)
+#define iswcntrl(c) iscntrl(c)
+#define iswdigit(c) isdigit(c)
+#define iswgraph(c) isgraph(c)
+#define iswhexnumber(c) ishexnumber(c)
+#define iswideogram(c) isideogram(c)
+#define iswlower(c) islower(c)
+#define iswnumber(c) isnumber(c)
+#define iswphonogram(c) isphonogram(c)
+#define iswprint(c) isprint(c)
+#define iswpunct(c) ispunct(c)
+#define iswrune(c) isrune(c)
+#define iswspace(c) isspace(c)
+#define iswspecial(c) isspecial(c)
+#define iswupper(c) isupper(c)
+#define iswxdigit(c) isxdigit(c)
+#endif
+
+
 /* Regex Matching */
 enum {
 	PAT_NONE ,
@@ -188,7 +212,7 @@ static int SetRepeat( short *omin, short *omax, void *src, DString *ds,
 	wchar_t *wcs = (wchar_t*) src;
 	wchar_t chi, chi2=0;
 	daoint pos, pos2;
-	int j, k, start = i; 
+	int j, k, start = i;
 	j = SkipSpace( src, i, end, bl );
 	i += j;
 	offset += j;

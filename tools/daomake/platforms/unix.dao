@@ -32,5 +32,5 @@ DaoMake::Settings["DEBUG-LFLAG"]     = "-ggdb"
 DaoMake::Settings["PROFILE-CFLAG"]     = "-pg"
 DaoMake::Settings["PROFILE-LFLAG"]     = "-pg"
 
-DaoMake::Includes.append( "/usr/include" );
 DaoMake::Includes.append( "/usr/local/include" );
+DaoMake::Includes.append( "/usr/include" );

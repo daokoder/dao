@@ -30,63 +30,10 @@
 
 #include"dao.h"
 
-#if defined (__GNUC__)
-
-#if NO_FENV
-
-#define dao_fe_clear()  0
-#define dao_fe_status()  0
-
-#else
-
-#include"fenv.h"
-#define dao_fe_clear()  feclearexcept( FE_ALL_EXCEPT )
-#define dao_fe_status()  fetestexcept( FE_ALL_EXCEPT )
-
-#endif
-
-#ifdef FE_DIVBYZERO
-#define dao_fe_divbyzero()  fetestexcept( FE_DIVBYZERO )
-#else
-#define dao_fe_divbyzero()  0
-#endif
-
-#ifdef FE_UNDERFLOW
-#define dao_fe_underflow()  fetestexcept( FE_UNDERFLOW )
-#else
-#define dao_fe_underflow()  0
-#endif
-
-#ifdef FE_OVERFLOW
-#define dao_fe_overflow()  fetestexcept( FE_OVERFLOW )
-#else
-#define dao_fe_overflow()  0
-#endif
-
-#ifdef FE_INVALID
-#define dao_fe_invalid()  fetestexcept( FE_INVALID )
-#else
-#define dao_fe_invalid()  0
-#endif
-
-
-#elif defined (_MSC_VER)
-
-#include"float.h"
-
-#define dao_fe_clear()  _clearfp()
-#define dao_fe_status()  _status87()
-#define dao_fe_divbyzero()  (_status87() & _SW_ZERODIVIDE)
-#define dao_fe_underflow()  (_status87() & _SW_UNDERFLOW)
-#define dao_fe_overflow()  (_status87() & _SW_OVERFLOW)
-#define dao_fe_invalid()  (_status87() & _SW_INVALID)
-
-#define strtoll _strtoi64
-#define wcstoll _wcstoi64
-
-#endif
 
 #if defined (WIN32) && !defined (__GNUC__)
+#define strtoll _strtoi64
+#define wcstoll _wcstoi64
 #define snprintf _snprintf
 #define popen _popen
 #define pclose _pclose

@@ -25,16 +25,11 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include"stdio.h"
-#include"string.h"
-#include"math.h"
-
-#ifndef NO_FENV
-#include"fenv.h"
-#endif
-
+#include<stdio.h>
+#include<string.h>
 #include<assert.h>
 #include<ctype.h>
+#include<math.h>
 
 #include"daoProcess.h"
 #include"daoGC.h"
@@ -841,7 +836,6 @@ static daoint DaoArray_ComputeIndex( DaoArray *self, DaoValue *ivalues[], int co
 
 #define ArrayArrayValue( array, up, id ) array->items.pArray[ up ]->items.pValue[ id ]
 
-static int DaoProcess_CheckFE( DaoProcess *self );
 static int DaoProcess_Move( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t );
 static void DaoProcess_AdjustCodes( DaoProcess *self, int options );
 
@@ -1085,8 +1079,6 @@ CallEntry:
 	}
 #endif
 
-	//XXX dao_fe_clear();
-	//topCtx->idClearFE = self->topFrame->entry;
 
 #if 0
 	if( ROUT_HOST_TID( routine ) == DAO_OBJECT )
@@ -1476,7 +1468,6 @@ CallEntry:
 			DaoProcess_MakeClass( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( TRY ) OPCASE( RAISE ) OPCASE( CATCH ){
-			DaoProcess_CheckFE( self );
 			exceptCount = self->exceptions->size;
 			self->activeCode = vmc;
 			size = (daoint)(vmc - vmcBase);
@@ -1520,7 +1511,6 @@ CallEntry:
 		}OPNEXT() OPCASE( RETURN ){
 			self->activeCode = vmc;
 			DaoProcess_DoReturn( self, vmc );
-			//XXX DaoProcess_CheckFE( self );
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
 			goto FinishCall;
 		}OPNEXT() OPCASE( YIELD ){
@@ -2333,7 +2323,6 @@ RaiseErrorSlicing:
 			goto CheckException;
 RaiseErrorDivByZero:
 			self->activeCode = vmc;
-			//XXX topCtx->idClearFE = vmc - vmcBase;
 			DaoProcess_RaiseException( self, DAO_ERROR_FLOAT_DIVBYZERO, "" );
 			goto CheckException;
 RaiseErrorInvalidOperation:
@@ -3406,7 +3395,6 @@ void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 	daoint i, n, returning = topFrame->returning;
 
 	self->activeCode = vmc;
-	//XXX if( DaoProcess_CheckFE( self ) ) return;
 
 	if( vmc->code == DVM_RETURN &&  returning != (ushort_t)-1 ){
 		DaoStackFrame *lastframe = topFrame->prev;
@@ -3825,7 +3813,6 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 	status = self->status;
 	DaoProcess_PopFrame( self );
 
-	//XXX if( DaoProcess_CheckFE( self ) ) return;
 	if( status == DAO_VMPROC_SUSPENDED ) self->status = status;
 }
 static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
@@ -4931,7 +4918,6 @@ TryAgain:
 static void DaoProcess_LongDiv ( DaoProcess *self, DLong *z, DLong *x, DLong *y, DLong *r )
 {
 	if( x->size ==0 || (x->size ==1 && x->data[0] ==0) ){
-		//XXX self->idClearFE = self->activeCode - self->topFrame->codes;
 		DaoProcess_RaiseException( self, DAO_ERROR_FLOAT_DIVBYZERO, "" );
 		return;
 	}
@@ -4946,7 +4932,6 @@ static int DaoProcess_CheckLong2Integer( DaoProcess *self, DLong *x )
 	if( (x->data[ x->size - 1 ] >> d) > 0 ) goto RaiseInexact;
 	return 1;
 RaiseInexact:
-	//XXX self->idClearFE = self->activeCode - self->topFrame->codes;
 	DaoProcess_RaiseException( self, DAO_ERROR_VALUE,
 							  "long integer value is too big for the operation" );
 	return 0;
@@ -4971,7 +4956,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		}
 		return;
 	}
-	
+
 	if( A->type >= DAO_INTEGER && A->type <= DAO_DOUBLE && B->type >= DAO_INTEGER && B->type <= DAO_DOUBLE ){
 		DaoValue *val;
 		DaoValue temp = {0};
@@ -4983,7 +4968,6 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 				va = DaoValue_GetDouble( A );
 				vb = DaoValue_GetDouble( B );
 				if( vb ==0 ){
-					//XXX self->idClearFE = self->activeCode - self->topFrame->codes;
 					DaoProcess_RaiseException( self, DAO_ERROR_FLOAT_DIVBYZERO, "" );
 				}
 				res = va - vb * (daoint)(va/vb);
@@ -6219,31 +6203,6 @@ Rebind :
 FailConversion :
 	return NULL;
 }
-int DaoProcess_CheckFE( DaoProcess *self )
-{
-	int res = 0;
-	if( dao_fe_status() ==0 ) return 0;
-	if( dao_fe_divbyzero() ){
-		DaoProcess_RaiseException( self, DAO_ERROR_FLOAT_DIVBYZERO, "" );
-		res = 1;
-	}else if( dao_fe_underflow() ){
-		DaoProcess_RaiseException( self, DAO_ERROR_FLOAT_UNDERFLOW, "" );
-		res = 1;
-	}else if( dao_fe_overflow() ){
-		DaoProcess_RaiseException( self, DAO_ERROR_FLOAT_OVERFLOW, "" );
-		res = 1;
-#if 0
-	}else if( dao_fe_invalid() ){
-		/* disabled, because some extending modules may easily produce
-		 harmless float point errors */
-		DaoProcess_RaiseException( self, DAO_ERROR_FLOAT, "" );
-		res = 1;
-#endif
-	}
-	//XXX self->idClearFE = self->activeCode - self->topFrame->codes;
-	dao_fe_clear();
-	return res;
-}
 
 DaoRoutine* DaoValue_Check( DaoRoutine *self, DaoType *selftp, DaoType *ts[], int np, int code, DArray *es );
 void DaoPrintCallError( DArray *errors, DaoStream *stdio );
@@ -6670,7 +6629,6 @@ int DaoProcess_DoCheckExcept( DaoProcess *self, DaoVmCode *vmc )
 
 	DaoList_Clear( list );
 	self->activeCode = vmc;
-	if( DaoProcess_CheckFE( self ) ) return 1;
 	if( self->exceptions->size > 0 ) return 1;
 	if( vmc->c > 0 ){
 		/* add exception scope for: try{ ... } */
@@ -6684,7 +6642,7 @@ int DaoProcess_DoCheckExcept( DaoProcess *self, DaoVmCode *vmc )
 	}
 	return 0;
 }
-static void DaoInitException( DaoException *except, DaoProcess *proc, DaoVmCode *vmc, int fe, const char *value )
+static void DaoInitException( DaoException *except, DaoProcess *proc, DaoVmCode *vmc, const char *value )
 {
 	DaoVmCodeX **annotCodes;
 	DaoRoutine *rout = proc->activeRoutine;
@@ -6695,14 +6653,12 @@ static void DaoInitException( DaoException *except, DaoProcess *proc, DaoVmCode 
 
 	if( rout == NULL ) return;
 	annotCodes = rout->body->annotCodes->items.pVmc;
-	
+
 	line = line2 = rout->defLine;
 	if( vmc && rout->body->vmCodes->size ) line = annotCodes[id]->line;
 	line2 = line;
 	except->routine = rout;
 	except->toLine = line;
-	if( DaoType_ChildOf( except->ctype, efloat ) && fe >=0 )
-		line2 = (vmc && rout->body->vmCodes->size) ? annotCodes[ fe ]->line : rout->defLine;
 	except->fromLine = line2;
 	if( value && value[0] != 0 ){
 		DaoValue *s = (DaoValue*) DaoString_New(1);
@@ -6748,7 +6704,7 @@ void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
 				if( DaoType_ChildOf( val->xCdata.ctype, except ) ) cdata = (DaoException*)val;
 			}
 			if( cdata == NULL ) goto InvalidException;
-			DaoInitException( (DaoException*)cdata, self, vmc, 0/*self->idClearFE*/, NULL );
+			DaoInitException( (DaoException*)cdata, self, vmc, NULL );
 			if( DaoType_ChildOf( cdata->ctype, warning ) ){
 				DaoPrintException( cdata, stream );
 			}else{
@@ -6783,7 +6739,6 @@ int DaoProcess_DoRescueExcept( DaoProcess *self, DaoVmCode *vmc )
 	int M = self->exceptions->size;
 	DaoList_Clear( list );
 	self->activeCode = vmc;
-	if( DaoProcess_CheckFE( self ) ) M = self->exceptions->size;
 	if( N ==0 && M >0 ){ /* rescue without exception list */
 		DArray_Swap( self->exceptions, & list->items );
 		return 1;
@@ -6841,13 +6796,13 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 	if( DaoType_ChildOf( etype, warning ) ){
 		/* XXX support warning suppression */
 		except = DaoException_New( etype );
-		DaoInitException( except, self, self->activeCode, 0/*self->idClearFE*/, value );
+		DaoInitException( except, self, self->activeCode, value );
 		DaoPrintException( except, stream );
 		DaoException_Delete( except );
 		return;
 	}
 	except = DaoException_New( etype );
-	DaoInitException( except, self, self->activeCode, 0/*self->idClearFE*/, value );
+	DaoInitException( except, self, self->activeCode, value );
 	DArray_Append( self->exceptions, (DaoValue*) except );
 	if( (self->vmSpace->options & DAO_EXEC_DEBUG) ){
 		if( self->stopit ==0 && self->vmSpace->stopit ==0 ){
@@ -6983,8 +6938,6 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 	DaoVmCodeX vmcx = {0,0,0,0,0,0,0,0,0};
 	DaoVmCode *vmc = self->activeCode;
 
-	dao_fe_clear();
-	//self->idClearFE = -1;
 	self->activeValues = self->stackValues;
 	if( self->activeTypes == NULL ) self->activeTypes = types;
 	if( self->activeRoutine->body->annotCodes->size == 0 )
@@ -7052,7 +7005,6 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 	}
 	self->activeCode = NULL;
 	self->activeTypes = NULL;
-	DaoProcess_CheckFE( self );
 	if( self->exceptions->size >0 ){
 		DaoProcess_PrintException( self, 1 );
 		return NULL;
