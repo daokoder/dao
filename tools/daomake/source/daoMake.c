@@ -73,6 +73,7 @@ enum DaoMakeTargetTypes
 	DAOMAKE_EXECUTABLE ,
 	DAOMAKE_SHAREDLIB ,
 	DAOMAKE_STATICLIB ,
+	DAOMAKE_JAVASCRIPT ,
 	DAOMAKE_TESTING ,
 	DAOMAKE_COMMAND ,
 	DAOMAKE_DIRECTORY
@@ -616,6 +617,7 @@ void DaoMakeUnit_MakeDefinitions( DaoMakeUnit *self, DString *defs )
 		DString *value = self->definitions->items.pString[i+1];
 		DString_AppendDefinition( defs, definition, value );
 	}
+	if( self->ctype != daomake_type_objects ) return;
 	for(it=DMap_First(daomake_cmdline_defines); it; it=DMap_Next(daomake_cmdline_defines,it)){
 		DString_AppendDefinition( defs, it->key.pString, it->value.pString );
 	}
@@ -869,6 +871,7 @@ DString* DaoMakeProject_MakeObjectRule( DaoMakeProject *self, DaoMakeTarget *tar
 	if( pos != MAXSIZE ) DString_Erase( signature, 0, pos + 1 );
 	DString_AppendChar( signature, '.' );
 	DString_Append( signature, md5 );
+	if( target->ttype == DAOMAKE_JAVASCRIPT ) DString_AppendMBS( signature, ".ll" );
 	DString_AppendMBS( signature, ".o" );
 
 	it = DMap_Find( self->objectRules, signature );
@@ -883,6 +886,7 @@ DString* DaoMakeProject_MakeObjectRule( DaoMakeProject *self, DaoMakeTarget *tar
 	DString_AppendMBS( it->value.pString, " $(" );
 	DString_Append( it->value.pString, DaoMakeProject_MakeHeaderMacro( self, objects ) );
 	DString_AppendMBS( it->value.pString, ")\n\t$(" );
+	if( target->ttype == DAOMAKE_JAVASCRIPT ) DString_AppendMBS( it->value.pString, "EM" );
 	if( compiler ){
 		DString_Append( it->value.pString, compiler );
 	}else{
@@ -926,6 +930,7 @@ void DaoMakeTarget_MakeName( DaoMakeTarget *self, DString *name )
 	if( prefix ) DString_Append( name, prefix );
 	DString_Append( name, self->name );
 	if( suffix ) DString_Append( name, suffix );
+	if( self->ttype == DAOMAKE_JAVASCRIPT ) DString_AppendMBS( name, ".js" );
 }
 void DaoMakeProject_MakeDependency( DaoMakeProject *self, DaoMakeTarget *target, DString *deps )
 {
@@ -1142,6 +1147,7 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 		}
 		macro = DaoMakeProject_MakeLFlagsMacro( self, lflags );
 		DString_AppendMBS( rule, "\n\t$(" );
+		if( target->ttype == DAOMAKE_JAVASCRIPT ) DString_AppendMBS( rule, "EM" );
 		if( lk && lk->value.pInt == objCount ){
 			DString_Append( rule, lk->key.pString );
 		}else{
@@ -1868,6 +1874,10 @@ static void PROJECT_AddARC( DaoProcess *proc, DaoValue *p[], int N )
 	if( arc == NULL ) DaoProcess_RaiseException( proc, DAO_ERROR, "The platform does not support static library!" );
 	PROJECT_AddTarget( proc, p, N, DAOMAKE_STATICLIB );
 }
+static void PROJECT_AddJS( DaoProcess *proc, DaoValue *p[], int N )
+{
+	PROJECT_AddTarget( proc, p, N, DAOMAKE_JAVASCRIPT );
+}
 static void PROJECT_AddTest( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeProject *self = (DaoMakeProject*) p[0];
@@ -2021,6 +2031,7 @@ static DaoFuncItem DaoMakeProjectMeths[]=
 	{ PROJECT_AddEXE,  "AddExecutable( self : Project, name : string, objs : Objects, ... : Objects ) =>Target" },
 	{ PROJECT_AddDLL,  "AddSharedLibrary( self : Project, name : string, objs : Objects, ... : Objects ) =>Target" },
 	{ PROJECT_AddARC,  "AddStaticLibrary( self : Project, name : string, objs : Objects, ... : Objects ) =>Target" },
+	{ PROJECT_AddJS,   "AddJavaScriptLibrary( self : Project, name : string, objs : Objects, ... : Objects ) =>Target" },
 	{ PROJECT_AddTest, "AddTest( self : Project, group : string, test : string, ... : string ) => Target" },
 	{ PROJECT_AddCMD,  "AddCommand( self : Project, name : string, command : string, ... : string ) => Target" },
 

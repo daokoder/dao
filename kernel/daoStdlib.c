@@ -63,7 +63,7 @@ static void STD_Compile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	char *source = DaoValue_TryGetMBString( p[0] );
 	DaoNamespace *ns = proc->activeNamespace;
-	if( DaoProcess_Compile( proc, ns, source, p[1]->xInteger.value ) ==0 ){
+	if( DaoProcess_Compile( proc, ns, source ) ==0 ){
 		DaoProcess_PutValue( proc, dao_none_value );
 		return;
 	}
@@ -74,9 +74,9 @@ static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 	DaoVmSpace *vms = proc->vmSpace;
 	DaoNamespace *ns = proc->activeNamespace;
 	DaoStream *prevStream = proc->stdioStream;
-	DaoStream *redirect = (DaoStream*) p[2];
+	DaoStream *redirect = (DaoStream*) p[1];
 	char *source = DaoValue_TryGetMBString( p[0] );
-	int safe = p[3]->xInteger.value;
+	int safe = p[2]->xInteger.value;
 	int wasProt = 0;
 	if( vms->options & DAO_EXEC_SAFE ) wasProt = 1;
 	if( redirect != prevStream ){
@@ -85,7 +85,7 @@ static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 	}
 
 	if( safe ) vms->options |= DAO_EXEC_SAFE;
-	DaoProcess_Eval( proc, ns, source, p[1]->xInteger.value );
+	DaoProcess_Eval( proc, ns, source );
 	DaoProcess_PutValue( proc, proc->stackValues[0] );
 	if( ! wasProt ) vms->options &= ~DAO_EXEC_SAFE;
 	if( redirect != prevStream ){
@@ -619,8 +619,8 @@ static void STD_Map( DaoProcess *proc, DaoValue *p[], int N )
 DaoFuncItem dao_std_methods[] =
 {
 	{ STD_Path,      "path( path :string, action :enum<set,add,remove>=$add )" },
-	{ STD_Compile,   "compile( source :string, replace=0 )" },
-	{ STD_Eval,      "eval( source :string, replace=0, st=io::stdio, safe=0 )=>any" },
+	{ STD_Compile,   "compile( source :string )" },
+	{ STD_Eval,      "eval( source :string, st=io::stdio, safe=0 )=>any" },
 	{ STD_Load,      "load( file :string, import=1, runim=0, safe=0 )=>any" },
 	{ STD_Resource,  "resource( path :string )=>string" },
 	{ STD_Argv,      "argv() => list<any>" },

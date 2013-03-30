@@ -12,6 +12,8 @@ if( DaoMake::IsMinix() ) daovm.AddDefinition( "MINIX" )
 dao_help_lib.UsePackage( daovm )
 dao_help_lib.EnableDynamicLinking()
 
+dao_help.Install( daovm.GetPath( "MOD-PATH" ), dao_help_lib );
+
 
 dao_help_lang = DaoMake::Option( "HELP-LANG", "en" )
 
@@ -27,5 +29,4 @@ daovm_doc.AddCommand( "DAO_HELP_LANG=$(HELP_LANG) ../../dao -e \"load help; help
 
 daovm_doc.AddDependency( dao_help_lib );
 
-dao_help.Install( daovm.GetPath( "MOD-PATH" ), dao_help_lib );
 dao_help.Install( daovm.GetPath( "DOC-PATH" ) + "/html", daovm_doc )

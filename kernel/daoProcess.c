@@ -735,18 +735,18 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 	DaoProcess_SetActiveFrame( self, frame );
 	return frame;
 }
-int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *src, int rpl )
+int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *src )
 {
 	DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	int res;
 
 	parser->nameSpace = ns;
 	DString_Assign( parser->fileName, ns->name );
-	res = DaoParser_LexCode( parser, src, rpl ) && DaoParser_ParseScript( parser );
+	res = DaoParser_LexCode( parser, src, 1 ) && DaoParser_ParseScript( parser );
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return res;
 }
-int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *source, int rpl )
+int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *source )
 {
 	DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	DaoRoutine *rout;
@@ -755,7 +755,7 @@ int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *source, int
 	parser->autoReturn = 1;
 	parser->nameSpace = ns;
 	DString_SetMBS( parser->fileName, "code string" );
-	res = DaoParser_LexCode( parser, source, rpl ) && DaoParser_ParseScript( parser );
+	res = DaoParser_LexCode( parser, source, 1 ) && DaoParser_ParseScript( parser );
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	if( res == 0 ) return 0;
 	rout = ns->mainRoutines->items.pRoutine[ ns->mainRoutines->size-1 ];

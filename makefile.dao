@@ -157,6 +157,16 @@ daovm_lib = daovm.AddStaticLibrary( "dao", daovm_kernel_objects )
 #
 daovm_exe = daovm.AddExecutable( "dao", daovm_main_object )
 
+#
+# Add an executable target:
+#
+ems_export = @[]-s EXPORTED_FUNCTIONS="['_DaoInit','_DaoVmSpace_Eval','_DaoQuit']"@[]
+daovm_js = daovm.AddJavaScriptLibrary( "dao", daovm_kernel_objects )
+daovm_js.AddDefinition( "DAO_MBSTRING_ONLY" )
+daovm_js.AddDefinition( "WITHOUT_WCTYPE_H" )
+daovm_js.AddLinkingFlag( ems_export )
+daovm_js.AddLinkingFlag( "-O2 --closure 1" )
+
 
 daovm_partial_static = DaoMake::Option( "STATIC", $OFF );
 if( DaoMake::Option( "STATIC", $ON ) == $ON && DaoMake::Option( "STATIC", $OFF ) == $OFF ){
@@ -192,12 +202,13 @@ daovm_exe.EnableDynamicExporting()
 daovm_dll.EnableDynamicExporting()
 
 
+
 if( DaoMake::IsUnix() ){
 	daovm.AddDefinition( "UNIX" )
 	if( DaoMake::IsMacOSX() ) daovm.AddDefinition( "MAC_OSX" )
-	if( DaoMake::IsLinux() ) daovm.AddLinkingFlag( "-ldl" )
 	daovm.AddCompilingFlag( "-fPIC" )
 	daovm.AddLinkingFlag( "-lm" )
+	if( DaoMake::IsLinux() ) daovm.AddLinkingFlag( "-ldl" )
 	if( daovm_with_thread == $ON ) daovm.AddLinkingFlag( "-lpthread" )
 }else if( DaoMake::IsWin32() ){
 	daovm.AddDefinition( "WIN32" )
@@ -208,6 +219,7 @@ if( DaoMake::IsUnix() ){
 	# pthread is automatically linked as part of:
 	# /Haiku/develop/lib/x86/libroot.so.
 }
+
 
 
 if( daovm_with_readline == $ON ){

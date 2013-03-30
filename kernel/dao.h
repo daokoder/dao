@@ -850,8 +850,8 @@ DAO_DLL int  DaoSema_GetValue( DaoSema *self );
 
 
 DAO_DLL DaoProcess* DaoProcess_New( DaoVmSpace *vms );
-DAO_DLL int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *src, int rpl );
-DAO_DLL int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *src, int rpl );
+DAO_DLL int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *src );
+DAO_DLL int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *src );
 DAO_DLL int DaoProcess_Call( DaoProcess *s, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
 DAO_DLL void DaoProcess_Stop( DaoProcess *self );
 DAO_DLL void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream );
@@ -979,6 +979,7 @@ DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options );
 DAO_DLL void DaoVmSpace_SetOptions( DaoVmSpace *self, int options );
 DAO_DLL int  DaoVmSpace_GetOptions( DaoVmSpace *self );
 
+DAO_DLL int DaoVmSpace_Eval( DaoVmSpace *self, const char *src );
 DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file );
 DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, const char *file );
 DAO_DLL DaoNamespace* DaoVmSpace_LinkModule( DaoVmSpace *self, DaoNamespace *ns, const char *mod );

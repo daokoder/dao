@@ -781,7 +781,7 @@ int DaoNamespace_Load( DaoNamespace *self, const char *fname )
 	}
 	src = DString_New(1);
 	DaoFile_ReadAll( fin, src, 1 );
-	ret = DaoProcess_Eval( self->vmSpace->mainProcess, self, src->mbs, 1 );
+	ret = DaoProcess_Eval( self->vmSpace->mainProcess, self, src->mbs );
 	DString_Delete( src );
 	return ret;
 }

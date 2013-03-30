@@ -1116,7 +1116,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 				(*callback)( input->mbs );
 				continue;
 			}
-			DaoProcess_Eval( self->mainProcess, self->mainNamespace, input->mbs, 1 );
+			DaoProcess_Eval( self->mainProcess, self->mainNamespace, input->mbs );
 		}else if( DString_MatchMBS( input, varRegex, NULL, NULL ) ){
 			DString_ChangeMBS( input, "^ %s* = %s*", "", 0 );
 			DString_InsertMBS( input, "return ", 0, 0, 0 );
@@ -1124,13 +1124,13 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 				(*callback)( input->mbs );
 				continue;
 			}
-			DaoProcess_Eval( self->mainProcess, self->mainNamespace, input->mbs, 1 );
+			DaoProcess_Eval( self->mainProcess, self->mainNamespace, input->mbs );
 		}else{
 			if( callback ){
 				(*callback)( input->mbs );
 				continue;
 			}
-			DaoProcess_Eval( self->mainProcess, self->mainNamespace, input->mbs, 1 );
+			DaoProcess_Eval( self->mainProcess, self->mainNamespace, input->mbs );
 		}
 #ifdef DAO_WITH_CONCURRENT
 		DaoCallServer_Join();
@@ -1295,6 +1295,15 @@ void DaoVmSpace_LoadArchive( DaoVmSpace *self, DString *archive )
 	}
 	DString_Delete( name );
 }
+int DaoVmSpace_Eval( DaoVmSpace *self, const char *src )
+{
+	DaoProcess *process = DaoVmSpace_AcquireProcess( self );
+	DaoNamespace *ns = DaoNamespace_New( self, "?" );
+	int retc = DaoProcess_Eval( process, ns, src );
+	DaoVmSpace_ReleaseProcess( self, process );
+	DaoGC_TryDelete( (DaoValue*) ns );
+	return retc;
+}
 int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 {
 	DaoNamespace *ns = self->mainNamespace;
@@ -1316,7 +1325,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		if( self->evalCmdline ){
 			DaoRoutine *rout;
 			DString_SetMBS( self->mainNamespace->name, "command line codes" );
-			if( DaoProcess_Compile( vmp, ns, self->mainSource->mbs, 1 ) ==0 ) return 0;
+			if( DaoProcess_Compile( vmp, ns, self->mainSource->mbs ) ==0 ) return 0;
 			DaoVmSpace_ExeCmdArgs( self );
 			rout = ns->mainRoutines->items.pRoutine[ ns->mainRoutines->size-1 ];
 			if( DaoProcess_Call( vmp, rout, NULL, NULL, 0 ) ) return 0;
@@ -1357,7 +1366,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		res = DaoByteDecoder_Decode( decoder, self->mainSource, ns );
 		DaoByteDecoder_Delete( decoder );
 	}else{
-		res = res && DaoProcess_Compile( vmp, ns, self->mainSource->mbs, 1 );
+		res = res && DaoProcess_Compile( vmp, ns, self->mainSource->mbs );
 		if( res && (self->options & DAO_EXEC_COMP_BC) ){
 			DaoVmSpace_SaveByteCodes( self, ns );
 		}
@@ -2129,6 +2138,10 @@ static void DaoConfigure()
 	}
 	DaoConfigure_FromFile( "./dao.conf" );
 	DString_Delete( mbs );
+#ifdef DAO_MBSTRING_ONLY
+	daoConfig.mbs = 1;
+	daoConfig.wcs = 0;
+#endif
 }
 
 #ifdef DEBUG

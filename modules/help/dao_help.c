@@ -908,7 +908,7 @@ static int DaoxStream_DoTest( DaoxStream *self, DString *code )
 	prevStdout = DaoVmSpace_SetUserStdio( vmspace, (DaoUserStream*) & stdoutStream );
 	prevStderr = DaoVmSpace_SetUserStdError( vmspace, (DaoUserStream*) & stderrStream  );
 
-	DaoProcess_Eval( self->process, nspace, code->mbs, 1 );
+	DaoProcess_Eval( self->process, nspace, code->mbs );
 
 	DaoVmSpace_SetUserStdio( vmspace, prevStdout );
 	DaoVmSpace_SetUserStdError( vmspace, prevStderr  );
@@ -1119,7 +1119,7 @@ static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoxStream *stream, DaoPro
 		if( proc && (self->lang == NULL || strcmp( self->lang->mbs, "dao" ) == 0) ){
 			DaoxStream_WriteMBS( stream, "\n" );
 			DaoxStream_SetColor( stream, NULL, dao_colors[DAOX_YELLOW] );
-			DaoProcess_Eval( proc, self->entry->help->nspace, self->text->mbs, 1 );
+			DaoProcess_Eval( proc, self->entry->help->nspace, self->text->mbs );
 			DaoxStream_SetColor( stream, NULL, NULL );
 		}
 	}
@@ -1225,7 +1225,7 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 	int color, count = 0;
 	int screen = DAOX_TREE_WIDTH;
 
-#ifdef UNIX
+#if defined(UNIX) && !defined(MINIX)
 	struct winsize ws;
 	ioctl( STDOUT_FILENO, TIOCGWINSZ, &ws );
 	screen = ws.ws_col - 1;
