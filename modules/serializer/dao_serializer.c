@@ -750,7 +750,7 @@ void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin )
 				i += 1;
 			}
 			/* printf( "%s\n", line->mbs ); */
-			DaoProcess_Eval( proc, self, line->mbs, 0 );
+			DaoProcess_Eval( proc, self, line->mbs );
 			continue;
 		}
 		switch( tokens->items.pToken[start]->name ){

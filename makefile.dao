@@ -49,7 +49,9 @@ daovm_with_concurrent = DaoMake::Option( "CONCURRENT", $ON )
 
 daovm_with_readline   = DaoMake::Option( "READLINE",   $ON )
 
-if( DaoMake::IsMinix() ) daovm_with_thread = $OFF;
+daovm_make_javascript   = DaoMake::Option( "JAVASCRIPT", $OFF )
+
+if( DaoMake::IsMinix() or daovm_make_javascript == $ON ) daovm_with_thread = $OFF;
 if( daovm_full_static == $ON ){
 	daovm_with_thread = $OFF;
 	daovm_with_readline = $OFF;
@@ -160,12 +162,15 @@ daovm_exe = daovm.AddExecutable( "dao", daovm_main_object )
 #
 # Add an executable target:
 #
-ems_export = @[]-s EXPORTED_FUNCTIONS="['_DaoInit','_DaoVmSpace_Eval','_DaoQuit']"@[]
-daovm_js = daovm.AddJavaScriptLibrary( "dao", daovm_kernel_objects )
-daovm_js.AddDefinition( "DAO_MBSTRING_ONLY" )
-daovm_js.AddDefinition( "WITHOUT_WCTYPE_H" )
-daovm_js.AddLinkingFlag( ems_export )
-daovm_js.AddLinkingFlag( "-O2 --closure 1" )
+if( daovm_make_javascript == $ON ){
+	ems_export = @[]-s EXPORTED_FUNCTIONS="['_DaoInit','_DaoVmSpace_Eval','_DaoQuit']"@[]
+	daovm_js = daovm.AddJavaScriptLibrary( "dao", daovm_kernel_objects )
+	daovm_js.AddDefinition( "DAO_MBSTRING_ONLY" )
+	daovm_js.AddDefinition( "WITHOUT_WCTYPE_H" )
+	daovm_js.AddDefinition( "WITHOUT_DIRECT_THREADING" )
+	daovm_js.AddLinkingFlag( ems_export )
+	daovm_js.AddLinkingFlag( "-O2 --closure 1" )
+}
 
 
 daovm_partial_static = DaoMake::Option( "STATIC", $OFF );

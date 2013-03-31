@@ -5,11 +5,12 @@ MODE ?= release
 ROOT ?= /usr/local
 SRCDIR ?= .
 SUFFIX ?=
+JAVASCRIPT ?= OFF
 
 #export EMCC="python /Users/min/SoftwareDevs/emscripten/emcc"
 
 $(PLATS) :
 	cd $(SRCDIR)/tools/daomake && $(MAKE) -f Makefile.bootstrap $@
-	$(SRCDIR)/tools/daomake/daomake --mode $(MODE) --platform $@ --option-ROOT-PATH $(ROOT) $(SRCDIR)
+	$(SRCDIR)/tools/daomake/daomake --mode $(MODE) --platform $@ --option-ROOT-PATH $(ROOT) --option-JAVASCRIPT $(JAVASCRIPT) $(SRCDIR)
 	$(MAKE) -f Makefile$(SUFFIX)
 

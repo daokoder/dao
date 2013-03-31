@@ -35,8 +35,8 @@ routine main( n = 200 )
 	if( width > n ) width = n;
 	digits = pi_digits::();
 	for(i = 0 : width : n-1 ){
-		#s = string( width )->{ (string)digits() };
-		s = ''; for( j = 1 : width ) s += (string)digits();
+		#s = ''; for( j = 1 : width ) s += (string)digits();
+		s = std.string( width )::{ digits() + '0'[0] }
 		io.writef( '%s\t:%d\n', s, i+width );
 	}
 }
