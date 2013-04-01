@@ -218,7 +218,7 @@ int main( int argc, char **argv )
 				stream->output = output;
 				DString_Reset( output, 0 );
 				DaoNamespace_AddParent( ns2, ns );
-				DaoProcess_Eval( proc, ns2, codes->mbs, 1 );
+				DaoProcess_Eval( proc, ns2, codes->mbs );
 				DString_Trim( output );
 				DString_Trim( result );
 				if( output->size == 0 && result->size != 0 ){
@@ -229,7 +229,7 @@ int main( int argc, char **argv )
 					stream->output = output2;
 					DString_Reset( output2, 0 );
 					DaoNamespace_AddParent( ns3, ns );
-					DaoProcess_Eval( proc2, ns3, result->mbs, 1 );
+					DaoProcess_Eval( proc2, ns3, result->mbs );
 					cmp = DaoValue_Compare( proc->stackValues[0], proc2->stackValues[0] );
 					DaoVmSpace_ReleaseProcess( vmSpace, proc2 );
 					DaoGC_TryDelete( (DaoValue*) ns3 );

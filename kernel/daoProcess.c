@@ -161,8 +161,7 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->factory = DArray_New(D_VALUE);
 
 	self->mbstring = DString_New(1);
-	self->mbsRegex = NULL;
-	self->wcsRegex = NULL;
+	self->regexCaches = NULL;
 	self->pauseType = 0;
 	return self;
 }
@@ -172,15 +171,10 @@ void DaoProcess_Delete( DaoProcess *self )
 	DaoStackFrame *frame = self->firstFrame;
 	DNode *n;
 	daoint i;
-	if( self->mbsRegex ){
-		n = DMap_First( self->mbsRegex );
-		for( ; n !=NULL; n = DMap_Next(self->mbsRegex, n) ) dao_free( n->value.pVoid );
-		DMap_Delete( self->mbsRegex );
-	}
-	if( self->wcsRegex ){
-		n = DMap_First( self->wcsRegex );
-		for( ; n !=NULL; n = DMap_Next(self->wcsRegex, n) ) dao_free( n->value.pVoid );
-		DMap_Delete( self->wcsRegex );
+	if( self->regexCaches ){
+		n = DMap_First( self->regexCaches );
+		for( ; n !=NULL; n = DMap_Next(self->regexCaches, n) ) dao_free( n->value.pVoid );
+		DMap_Delete( self->regexCaches );
 	}
 	while( frame ){
 		DaoStackFrame *p = frame;
@@ -216,19 +210,12 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 			DaoProcess_RaiseException( self, DAO_ERROR, "pattern with empty string" );
 		return NULL;
 	}
-	if( src->mbs ){
-		if( self->mbsRegex == NULL ) self->mbsRegex = DHash_New(D_STRING,0);
-		node = DMap_Find( self->mbsRegex, src );
-		if( node ) return (DaoRegex*) node->value.pVoid;
-		pat = DaoRegex_New( src );
-		DMap_Insert( self->mbsRegex, src, pat );
-	}else{
-		if( self->wcsRegex == NULL ) self->wcsRegex = DHash_New(D_STRING,0);
-		node = DMap_Find( self->wcsRegex, src );
-		if( node ) return (DaoRegex*) node->value.pVoid;
-		pat = DaoRegex_New( src );
-		DMap_Insert( self->wcsRegex, src, pat );
-	}
+	if( self->regexCaches == NULL ) self->regexCaches = DHash_New(D_STRING,0);
+	node = DMap_Find( self->regexCaches, src );
+	if( node ) return (DaoRegex*) node->value.pVoid;
+	pat = DaoRegex_New( src );
+	DMap_Insert( self->regexCaches, src, pat );
+
 	for( i=0; i<pat->count; i++ ){
 		it = pat->items + i;
 		if( it->type ==0 ){
@@ -4942,13 +4929,13 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *A = self->activeValues[ vmc->a ];
 	DaoValue *B = self->activeValues[ vmc->b ];
 	DaoValue *C = self->activeValues[ vmc->c ];
-	
+
 	self->activeCode = vmc;
 	if( A == NULL || B == NULL ){
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on none object" );
 		return;
 	}
-	
+
 	if( A->type == DAO_OBJECT || A->type == DAO_CDATA || A->type == DAO_CSTRUCT ){
 		self->activeCode = vmc;
 		if( DaoProcess_TryUserArith( self, A, B, C ) == 0 ){

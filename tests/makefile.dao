@@ -5,6 +5,11 @@ daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
+chartype_objs = DaoMake::Objects( { 'dao_CharType.c' } )
+chartype_lib = daotests.AddSharedLibrary( 'CharType', chartype_objs )
+chartype_lib.UsePackage( daovm )
+chartype_lib.EnableDynamicLinking()
+
 daotests.AddTest( "Example", "examples.dao" )
 
 daotests.AddTest( "Lexer",  "test_lexer.dao" )
@@ -23,5 +28,8 @@ test_routine.AddTest( "test_anonymous_routine.dao" )
 test_class = daotests.AddTest( "Class", "test_class_inheritance.dao" )
 
 test_interface = daotests.AddTest( "Interface", "test_interface.dao" )
+
+test_regex = daotests.AddTest( "Regex", "test_regex_char_class.dao" )
+test_regex.AddDependency( chartype_lib )
 
 daotests.AddTest( "Misc", "test_misc.dao" )

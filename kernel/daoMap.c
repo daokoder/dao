@@ -656,16 +656,43 @@ static daoint DaoVmCode_Compare2( DaoVmCode *k1, DaoVmCode *k2 )
 }
 static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
 {
+	daoint cmp = 0;
 	switch( self->keytype ){
-	case D_STRING : return DString_Compare( (DString*) k1, (DString*) k2 );
-	case D_VALUE  : return DaoValue_Compare( (DaoValue*) k1, (DaoValue*) k2 );
-	case D_ARRAY  : return DArray_Compare( (DArray*) k1, (DArray*) k2 );
-	case D_VOID2  : return DVoid2_Compare( (void**) k1, (void**) k2 );
-	case D_VMCODE : return DaoVmCode_Compare( (DaoVmCode*) k1, (DaoVmCode*) k2 );
-	case D_VMCODE2 : return DaoVmCode_Compare2( (DaoVmCode*) k1, (DaoVmCode*) k2 );
-	default : return (daoint)k1 - (daoint)k2;
+	case D_STRING : cmp = DString_Compare( (DString*) k1, (DString*) k2 );        break;
+	case D_VALUE  : cmp = DaoValue_Compare( (DaoValue*) k1, (DaoValue*) k2 );     break;
+	case D_ARRAY  : cmp = DArray_Compare( (DArray*) k1, (DArray*) k2 );           break;
+	case D_VOID2  : cmp = DVoid2_Compare( (void**) k1, (void**) k2 );             break;
+	case D_VMCODE : cmp = DaoVmCode_Compare( (DaoVmCode*) k1, (DaoVmCode*) k2 );  break;
+	case D_VMCODE2: cmp = DaoVmCode_Compare2( (DaoVmCode*) k1, (DaoVmCode*) k2 ); break;
+	default : cmp = (daoint)k1 - (daoint)k2; break;
 	}
-	return 0;
+	/*
+	// Note:
+	// A MBS string and WCS string of the same content may be hashed into
+	// different values, so there is no guarantee that they will be considered
+	// equivalent when they are used as keys in hash maps.
+	//
+	// Because of this, it should always better to consider MBS keys are different
+	// from WCS keys in HASH maps, to avoid the pitfalls that some keys are considered
+	// equivalent between MBS and WCS, while others are not.
+	*/
+	if( self->hashing && cmp == 0 ){
+		DString *s1 = NULL;
+		DString *s2 = NULL;
+		if( self->keytype == D_STRING ){
+			s1 = (DString*) k1;
+			s2 = (DString*) k2;
+		}else if( self->keytype == D_VALUE ){
+			DaoValue *skv1 = (DaoValue*) k1;
+			DaoValue *skv2 = (DaoValue*) k2;
+			if( skv1->type == DAO_STRING ){
+				s1 = skv1->xString.data;
+				s2 = skv2->xString.data;
+			}
+		}
+		if( s1 != NULL && (s1->mbs == NULL) != (s2->mbs == NULL) ) cmp = s1->mbs ? 1 : -1;
+	}
+	return cmp;
 }
 
 static DNode* DMap_FindChild( DMap *self, DNode *root, void *key, KeySearchType type )

@@ -1026,7 +1026,7 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 			it = DMap_Insert( self->testRules, signature, signature );
 			DString_AppendMBS( it->value.pString, ": " );
 			DString_Append( it->value.pString, rule );
-			DString_AppendMBS( it->value.pString, "\n\t-$(DAOTEST) " );
+			DString_AppendMBS( it->value.pString, " $(DAOTEST)\n\t-$(DAOTEST) " );
 			DString_Append( it->value.pString, rule );
 			DString_AppendGap( it->value.pString );
 			DString_Append( it->value.pString, daomake_test_tool_option );
@@ -1349,7 +1349,7 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 		DString_AppendMBS( makefile, "\n\n" );
 
 		DString_AppendMBS( makefile, ".PHONY: test\n" );
-		DString_AppendMBS( makefile, "test:" );
+		DString_AppendMBS( makefile, "test: all" );
 		DString_AppendGap( makefile );
 		DString_Append( makefile, test );
 

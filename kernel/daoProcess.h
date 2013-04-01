@@ -72,14 +72,14 @@ struct DaoStackFrame
    1. The call/stack frames are organized into a linked list structure;
 
    2. The first frame is auxialiary frame that contains one stack value,
-   which will be used to hold the returned value of the process (when the 
-   DVM_RETURN instruction is executed while the_current_frame->returning==-1); 
+   which will be used to hold the returned value of the process (when the
+   DVM_RETURN instruction is executed while the_current_frame->returning==-1);
 
    3. The stack values are stored in a dynamic array which can grow when
    a new frame is pushed into the stack;
 
    4. When the value stack grows, it must have extra space that can hold
-   the maximum number of parameters (namely, @stackSize > @stackTop + DAO_MAX_PARAM); 
+   the maximum number of parameters (namely, @stackSize > @stackTop + DAO_MAX_PARAM);
 
    5. When a Dao function or C function is called, the parameters must be
    passed to the stack values starting from @stackTop, then a new frame can
@@ -130,8 +130,7 @@ struct DaoProcess
 #endif
 
 	DString        *mbstring;
-	DMap           *mbsRegex; /* <DString*,DString*> */
-	DMap           *wcsRegex; /* <DString*,DString*> */
+	DMap           *regexCaches; /* DHash<DString*,DString*> */
 };
 
 /* Create a new virtual machine process */
