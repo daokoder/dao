@@ -264,7 +264,10 @@ if( daovm_with_readline == $ON ){
 #
 daovm.ExportCompilingFlags( "-I" + DaoMake::SourcePath() + "/kernel" )
 daovm.ExportCompilingFlags( daovm.MakeDefinitions() )
-if( DaoMake::IsWin32() ) daovm.ExportLinkingFlags( "-ldao" )
+if( DaoMake::IsWin32() ){
+	daovm.ExportLinkingFlags( "-L" + DaoMake::BinaryPath() +  " -ldao" )
+	daovm.ExportLinkingFlags( "-lwinmm" );
+}
 if( DaoMake::IsUnix() ){
 	daovm.ExportLinkingFlags( "-lm" );
 	if( DaoMake::IsLinux() ) daovm.ExportLinkingFlags( "-ldl" )

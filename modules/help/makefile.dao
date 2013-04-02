@@ -18,13 +18,11 @@ dao_help.Install( daovm.GetPath( "MOD-PATH" ), dao_help_lib );
 dao_help_lang = DaoMake::Option( "HELP-LANG", "en" )
 
 # Add variables that will be included in the generated Makefile.
-dao_help.AddVariable( "HAS_DIR", DaoMake::Settings["HAS-DIR"] );
-dao_help.AddVariable( "MKDIR", DaoMake::Settings["MKDIR"] );
 dao_help.AddVariable( "HELP_LANG", dao_help_lang );
 
 # Add shell commands as a target:
-daovm_doc = dao_help.AddCommand( "html", "@$(HAS_DIR) html || $(MKDIR) html" );
-daovm_doc.AddCommand( "@$(HAS_DIR) html/$(HELP_LANG) || $(MKDIR) html/$(HELP_LANG)" );
+daovm_doc = dao_help.AddCommand( "html", "@$(DAOMAKE) mkdir2 ../../doc/html" );
+daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ../../doc/html/$(HELP_LANG)" );
 daovm_doc.AddCommand( "DAO_HELP_LANG=$(HELP_LANG) ../../dao -e \"load help; help.export('','../../doc/html/$(HELP_LANG)')\"" );
 
 daovm_doc.AddDependency( dao_help_lib );

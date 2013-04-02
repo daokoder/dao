@@ -2301,6 +2301,9 @@ static int Dao_GetExecutablePath( const char *command, DString *path )
 		DString base = DString_WrapBytes( paths.mbs + i, len );
 		DString_SetMBS( path, command );
 		Dao_MakePath( & base, path );
+#ifdef WIN32
+		DString_ChangeMBS( path, "\\", "/", 0 );
+#endif
 		if( Dao_IsFile( path->mbs ) ) return 1;
 		if( j == MAXSIZE ) break;
 		i = j + 1;
@@ -2382,15 +2385,19 @@ DaoVmSpace* DaoInit( const char *command )
 	DString_Reserve( mainVmSpace->startPath, 512 );
 	getcwd( mainVmSpace->startPath->mbs, 511 );
 	DString_Reset( mainVmSpace->startPath, strlen( mainVmSpace->startPath->mbs ) );
+#ifdef WIN32
+	DString_ChangeMBS( mainVmSpace->startPath, "\\", "/", 0 );
+#endif
 
 	if( command ){
 		DString *mbs = mainVmSpace->daoBinPath;
 		int absolute = command[0] == '/';
 		int relative = command[0] == '.';
+		DString_SetMBS( mbs, command );
 #ifdef WIN32
 		absolute = isalpha( command[0] ) && command[1] == ':';
+		DString_ChangeMBS( mbs, "\\", "/", 0 );
 #endif
-		DString_SetMBS( mbs, command );
 		if( absolute == 0 ){
 			if( relative ){
 				Dao_MakePath( mainVmSpace->startPath, mbs );
@@ -2404,7 +2411,7 @@ DaoVmSpace* DaoInit( const char *command )
 		}
 #endif
 		while( (i = mbs->size) && mbs->mbs[i-1] != '/' && mbs->mbs[i-1] != '\\' ) mbs->size --;
-		if( (i = mbs->size) && (mbs->mbs[i-1] == '/' || mbs->mbs[i-1] != '\\') ) mbs->size --;
+		if( (i = mbs->size) && (mbs->mbs[i-1] == '/' || mbs->mbs[i-1] == '\\') ) mbs->size --;
 		mbs->mbs[ mbs->size ] = 0;
 	}
 

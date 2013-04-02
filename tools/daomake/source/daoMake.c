@@ -49,6 +49,7 @@
 
 #ifdef UNIX
 #include<sys/stat.h>
+#include<dirent.h>
 #endif
 
 
@@ -97,6 +98,8 @@ const char *const daomake_prefix_keys[] =
 	"DLL-PREFIX" ,
 	"LIB-PREFIX" ,
 	"" ,
+	"" ,
+	"" ,
 	""
 };
 
@@ -105,6 +108,8 @@ const char *const daomake_suffix_keys[] =
 	"EXE-SUFFIX" ,
 	"DLL-SUFFIX" ,
 	"LIB-SUFFIX" ,
+	"" ,
+	"" ,
 	"" ,
 	""
 };
@@ -531,9 +536,13 @@ DString* DaoMake_GetSettingValue( const char *key )
 	if( value == NULL ) return NULL;
 	return DaoValue_TryGetString( value );
 }
-void DaoMake_MakeDir( const char *dir )
+int DaoMake_MakeDir( const char *dir )
 {
-	mkdir( dir, 0777 );
+#ifdef WIN32
+	return mkdir( dir );
+#else
+	return mkdir( dir, 0777 );
+#endif
 }
 DString* DaoMake_FindFile( DString *file, DaoList *hints )
 {
@@ -2264,7 +2273,7 @@ static void DAOMAKE_IsWin32( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DAOMAKE_IsMinGW( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DAOMAKE_IsPlatform( proc, "MINGW32" );
+	DAOMAKE_IsPlatform( proc, "MINGW" );
 }
 
 static DaoFuncItem DaoMakeMeths[] =
@@ -2371,40 +2380,48 @@ int main( int argc, char **argv )
 	DNode *it;
 
 	/* Utility subcommands: */
-	if( strcmp( argv[1], "cat" ) == 0 ){
-		for(i=2; i<argc; i++){
-			fin = fopen( argv[i], "rb" );
-			if( fin == NULL ) continue;
+	if( argc > 1 ){
+		if( strcmp( argv[1], "cat" ) == 0 ){
+			for(i=2; i<argc; i++){
+				fin = fopen( argv[i], "rb" );
+				if( fin == NULL ) continue;
+				DaoFile_ReadAll( fin, makefile, 1 );
+				printf( "%s\n", makefile->mbs );
+			}
+			return 0;
+		}else if( strcmp( argv[1], "echo" ) == 0 ){
+			for(i=2; i<argc; i++){
+				if( i > 2 ) printf( "\n" );
+				printf( "%s", argv[i] );
+			}
+			printf( "\n" );
+			return 0;
+		}else if( strcmp( argv[1], "isfile" ) == 0 ){
+			if( argc == 2 ) return 1;
+			return Dao_IsFile( argv[2] ) == 0;
+		}else if( strcmp( argv[1], "isdir" ) == 0 ){
+			if( argc == 2 ) return 1;
+			return Dao_IsDir( argv[2] ) == 0;
+		}else if( strcmp( argv[1], "mkdir" ) == 0 ){
+			return DaoMake_MakeDir( argv[2] );
+		}else if( strcmp( argv[1], "mkdir2" ) == 0 ){
+			if( Dao_IsFile( argv[2] ) ) return 1;
+			if( Dao_IsDir( argv[2] ) ) return 0;
+			return DaoMake_MakeDir( argv[2] );
+		}else if( strcmp( argv[1], "copy" ) == 0 ){
+			if( argc < 4 ) return 1;
+			fin = fopen( argv[2], "rb" );
+			fout = fopen( argv[3], "w+b" );
+			if( fin == NULL || fout == NULL ){
+				if( fin ) fclose( fin );
+				if( fout ) fclose( fout );
+				return 1;
+			}
 			DaoFile_ReadAll( fin, makefile, 1 );
-			printf( "%s\n", makefile->mbs );
+			DaoFile_WriteString( fout, makefile );
+			fclose( fout );
+			return 0;
 		}
-		return 0;
-	}else if( strcmp( argv[1], "echo" ) == 0 ){
-		for(i=2; i<argc; i++){
-			if( i > 2 ) printf( "\n" );
-			printf( "%s", argv[i] );
-		}
-		printf( "\n" );
-		return 0;
-	}else if( strcmp( argv[1], "isfile" ) == 0 ){
-		return Dao_IsFile( argv[2] ) == 0;
-	}else if( strcmp( argv[1], "isdir" ) == 0 ){
-		return Dao_IsDir( argv[2] ) == 0;
-	}else if( strcmp( argv[1], "mkdir" ) == 0 ){
-		return mkdir( argv[2], 0777 );
-	}else if( strcmp( argv[1], "copy" ) == 0 ){
-		if( argc < 4 ) return 1;
-		fin = fopen( argv[2], "rb" );
-		fout = fopen( argv[3], "w+b" );
-		if( fin == NULL || fout == NULL ){
-			if( fin ) fclose( fin );
-			if( fout ) fclose( fout );
-			return 1;
-		}
-		DaoFile_ReadAll( fin, makefile, 1 );
-		DaoFile_WriteString( fout, makefile );
-		fclose( fout );
-		return 0;
 	}
 
 	vmSpace = DaoInit( argv[0] );

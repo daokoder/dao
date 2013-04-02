@@ -667,7 +667,7 @@ int DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs )
 }
 int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 {
-	DaoInterface *interface;
+	DaoInterface *dinterface;
 	DaoType *tp;
 	DaoEnum *other;
 	DNode *node;
@@ -711,17 +711,17 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		return DAO_MT_NOT;
 	case DAO_ANY : return DAO_MT_ANY;
 	}
-	interface = self->tid == DAO_INTERFACE ? (DaoInterface*) self->aux : NULL;
+	dinterface = self->tid == DAO_INTERFACE ? (DaoInterface*) self->aux : NULL;
 	switch( value->type ){
 	case DAO_LONG :
-		if( interface ) return DaoType_MatchInterface( dao_type_long, interface, NULL );
+		if( dinterface ) return DaoType_MatchInterface( dao_type_long, dinterface, NULL );
 		break;
 	case DAO_STRING :
-		if( interface ) return DaoType_MatchInterface( dao_type_string, interface, NULL );
+		if( dinterface ) return DaoType_MatchInterface( dao_type_string, dinterface, NULL );
 		break;
 	case DAO_ENUM :
 		if( self == value->xEnum.etype ) return DAO_MT_EQ;
-		if( interface ) return DaoType_MatchInterface( value->xEnum.etype, interface, NULL );
+		if( dinterface ) return DaoType_MatchInterface( value->xEnum.etype, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		other = & value->xEnum;
 		names = other->etype->mapNames;
@@ -752,7 +752,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case DAO_LIST :
 		tp = value->xList.unitype;
 		if( tp == self ) return DAO_MT_EQ;
-		if( interface ) return DaoType_MatchInterface( tp, interface, NULL );
+		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( value->xList.items.size == 0 ) return DAO_MT_ANY;
 		if( self->nested && self->nested->size ) it1 = self->nested->items.pType[0]->tid;
@@ -764,7 +764,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case DAO_MAP :
 		tp = value->xMap.unitype;
 		if( tp == self ) return DAO_MT_EQ;
-		if( interface ) return DaoType_MatchInterface( tp, interface, NULL );
+		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( value->xMap.items->size == 0 ) return DAO_MT_ANY;
 		if( self->nested && self->nested->size ) it1 = self->nested->items.pType[0]->tid;
@@ -779,7 +779,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case DAO_TUPLE :
 		tp = value->xTuple.unitype;
 		if( tp == self ) return DAO_MT_EQ;
-		if( interface ) return DaoType_MatchInterface( tp, interface, NULL );
+		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( value->xTuple.size < self->nested->size ) return DAO_MT_NOT;
 		if( value->xTuple.size > self->nested->size && self->variadic ==0 ) return DAO_MT_NOT;
@@ -847,7 +847,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		return DaoValue_MatchToParent( value, self, defs );
 	case DAO_OBJECT :
 		if( self->aux == (DaoValue*) value->xObject.defClass ) return DAO_MT_EQ;
-		if( interface ) return DaoType_MatchInterface( value->xObject.defClass->objType, interface, NULL );
+		if( dinterface ) return DaoType_MatchInterface( value->xObject.defClass->objType, dinterface, NULL );
 		return DaoValue_MatchToParent( value, self, defs );
 	case DAO_CTYPE :
 	case DAO_CDATA :
@@ -855,7 +855,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		tp = value->xCdata.ctype;
 		if( self == tp ) return DAO_MT_EQ;
 		if( self->tid == value->type && self->aux == tp->aux ) return DAO_MT_EQ; /* alias type */
-		if( interface && value->type != DAO_CTYPE ) return DaoType_MatchInterface( tp, interface, NULL );
+		if( dinterface && value->type != DAO_CTYPE ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		return DaoValue_MatchToParent( value, self, defs );
 	case DAO_TYPE :
 		tp = & value->xType;
@@ -865,7 +865,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case DAO_FUTURE :
 		tp = ((DaoFuture*)value)->unitype;
 		if( tp == self ) return DAO_MT_EQ;
-		if( interface ) return DaoType_MatchInterface( tp, interface, NULL );
+		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( self->nested && self->nested->size ) it1 = self->nested->items.pType[0]->tid;
 		if( it1 == DAO_UDT ) return DAO_MT_UDF;
