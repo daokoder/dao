@@ -49,7 +49,7 @@ daovm_with_concurrent = DaoMake::Option( "CONCURRENT", $ON )
 
 daovm_with_readline   = DaoMake::Option( "READLINE",   $ON )
 
-daovm_make_javascript   = DaoMake::Option( "JAVASCRIPT", $OFF )
+daovm_make_javascript = DaoMake::Option( "JAVASCRIPT", $OFF )
 
 if( DaoMake::IsMinix() or daovm_make_javascript == $ON ) daovm_with_thread = $OFF;
 if( daovm_full_static == $ON ){
@@ -181,6 +181,8 @@ daovm_partial_static = DaoMake::Option( "STATIC", $OFF );
 #
 if( DaoMake::IsWin32() ) daovm_partial_static = $OFF;
 
+rpath = DaoMake::MakeRpath( ".", daovm_lib_path, DaoMake::BinaryPath() )
+
 if( daovm_partial_static == $ON ){
 	daovm_exe.AddObjects( daovm_kernel_objects );
 }else{
@@ -189,8 +191,6 @@ if( daovm_partial_static == $ON ){
 	# passed to the linker, so that the shared library can be located
 	# properly with or without installation.
 	#
-	rpath = DaoMake::Settings["DLL-RPATH"] + daovm_lib_path;
-	rpath = " " + DaoMake::Settings["DLL-RPATH"] + DaoMake::BinaryPath();
 	daovm_exe.AddLinkingFlag( rpath + " -L. -ldao" );
 	daovm_exe.AddDependency( daovm_dll );
 }
@@ -258,11 +258,9 @@ if( daovm_with_readline == $ON ){
 # Export compiling and linking flags that can be used by others
 # by calling UsePackage().
 #
-daovm.ExportCompilingFlags( "-I" + DaoMake::SourcePath() + "/kernel" )
+daovm.ExportCompilingFlags( "-fPIC -I" + DaoMake::SourcePath() + "/kernel" )
 daovm.ExportCompilingFlags( daovm.MakeDefinitions() )
 if( daovm_partial_static == $OFF ){
-	rpath = DaoMake::Settings["DLL-RPATH"] + daovm_lib_path;
-	rpath = " " + DaoMake::Settings["DLL-RPATH"] + DaoMake::BinaryPath();
 	daovm.ExportLinkingFlags( rpath + " -L" + DaoMake::BinaryPath() +  " -ldao" )
 }
 if( DaoMake::IsWin32() ){

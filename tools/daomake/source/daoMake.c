@@ -151,6 +151,7 @@ struct DaoMakeTarget
 	DArray   *commands;
 	DArray   *depends;
 	DString  *testMacro;
+	DString  *path;
 	DString  *install;
 	uchar_t   ttype;
 	uchar_t   dynamicLinking;
@@ -284,6 +285,7 @@ DaoMakeTarget* DaoMakeTarget_New()
 	self->commands = DArray_New(D_STRING);
 	self->depends = DArray_New(D_VALUE);
 	self->testMacro = DString_New(1);
+	self->path = DString_New(1);
 	self->install = DString_New(1);
 	self->ttype = DAOMAKE_EXECUTABLE;
 	self->dynamicLinking = 0;
@@ -299,6 +301,7 @@ void DaoMakeTarget_Delete( DaoMakeTarget *self )
 	DArray_Delete( self->commands );
 	DArray_Delete( self->depends );
 	DString_Delete( self->testMacro );
+	DString_Delete( self->path );
 	DString_Delete( self->install );
 	dao_free( self );
 }
@@ -1110,21 +1113,12 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 	}
 	DString_Append( rule, objs );
 	if( target->ttype == DAOMAKE_STATICLIB ){
-		DString *check = DaoMake_GetSettingValue( "HAS-FILE" );
-		DString *del = DaoMake_GetSettingValue( "DEL-FILE" );
 		DString *arc = DaoMake_GetSettingValue( "AR" );
 		DString_AppendMBS( rule, "\n\t" );
-		if( del ){
-			DString_AppendMBS( rule, "-@" );
-			DString_Append( rule, check );
-			DString_AppendMBS( rule, " " );
-			DString_Append( rule, tname );
-			DString_AppendMBS( rule, " && " );
-			DString_Append( rule, del );
-			DString_AppendGap( rule );
-			DString_Append( rule, tname );
-			DString_AppendMBS( rule, "\n\t" );
-		}
+		DString_AppendMBS( rule, "-@$(DAOMAKE) remove " );
+		DString_Append( rule, tname );
+		DString_AppendMBS( rule, "\n\t" );
+
 		if( arc ) DString_Append( rule, arc );
 		DString_AppendGap( rule );
 		DString_Append( rule, tname );
@@ -1370,10 +1364,13 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 		DString_AppendGap( makefile );
 		DString_Append( makefile, test );
 
-		DString_AppendGap( makefile );
-		DString_AppendMBS( makefile, "subtest" );
-		DString_AppendGap( makefile );
-		DString_AppendMBS( makefile, "testsum\n\n" );
+		if( ismain && daomake_test_count && daomake_build_mode == 0 ){
+			DString_AppendGap( makefile );
+			DString_AppendMBS( makefile, "subtest" );
+			DString_AppendGap( makefile );
+			DString_AppendMBS( makefile, "testsum" );
+		}
+		DString_AppendMBS( makefile, "\n\n" );
 		if( phony->size ){
 			DString_AppendMBS( makefile, ".PHONY: " );
 			DString_Append( makefile, phony );
@@ -1647,6 +1644,18 @@ static void UNIT_AddLinkingFlag( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
 	DArray_ImportStringParameters( self->linkingFlags, p+1, N-1 );
 }
+static void UNIT_AddRpath( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
+	DString *rpath = DaoMake_GetSettingValue( "DLL-RPATH" );
+	int i;
+	for(i=1; i<N; ++i){
+		DString *flag, *path = DaoValue_TryGetString( p[i] );
+		if( path == NULL ) continue;
+		flag = (DString*) DArray_PushBack( self->linkingFlags, rpath );
+		DString_Append( flag, path );
+	}
+}
 static void UNIT_UsePackage( DaoProcess *proc, DaoValue *p[], int N )
 {
 	int i;
@@ -1701,6 +1710,7 @@ static DaoFuncItem DaoMakeUnitMeths[]=
 	{ UNIT_AddLinkingPath,    "AddLinkingPath( self : Unit, path : string, ... : string )" },
 	{ UNIT_AddCompilingFlag,  "AddCompilingFlag( self : Unit, flag : string, ... : string )" },
 	{ UNIT_AddLinkingFlag,    "AddLinkingFlag( self : Unit, flag : string, ... : string )" },
+	{ UNIT_AddRpath,          "AddRpath( self : Unit, flag : string, ... : string )" },
 	{ UNIT_UsePackage,        "UsePackage( self : Unit, pkg : Project, ... : Project )" },
 	{ UNIT_UseStaticPackage,  "UseStaticPackage( self : Unit, pkg : Project, name : string, ... : string )" },
 
@@ -1806,6 +1816,12 @@ static void TARGET_EnableDynamicLinking( DaoProcess *proc, DaoValue *p[], int N 
 	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
 	self->dynamicLinking = 1;
 }
+static void TARGET_SetPath( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
+	DString *dest = p[1]->xString.data;
+	DString_Assign( self->path, dest );
+}
 static void TARGET_Install( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoNamespace *ns = proc->activeNamespace;
@@ -1822,6 +1838,7 @@ static DaoFuncItem DaoMakeTargetMeths[]=
 	{ TARGET_AddDepends,  "AddDependency( self : Target, target : Target, ... : Target )" },
 	{ TARGET_EnableDynamicExporting,  "EnableDynamicExporting( self : Target )" },
 	{ TARGET_EnableDynamicLinking,    "EnableDynamicLinking( self : Target )" },
+	{ TARGET_SetPath,  "SetTargetPath( self : Target, path : string )" },
 	{ TARGET_Install,  "Install( self : Target, dest : string )" },
 	{ NULL, NULL }
 };
@@ -1985,6 +2002,19 @@ static void PROJECT_InstallFiles( DaoProcess *proc, DaoValue *p[], int N )
 		DArray_Append( self->installs, p[1] );
 	}
 }
+static void PROJECT_SourcePath( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeProject *self = (DaoMakeProject*) p[0];
+	DaoProcess_PutString( proc, self->sourcePath );
+}
+static void PROJECT_BinaryPath( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeProject *self = (DaoMakeProject*) p[0];
+	DString *path = DaoProcess_PutString( proc, self->sourcePath );
+	DString *binpath = vmSpace->startPath;
+	if( daomake_out_of_source == 0 ) return;
+	DString_Insert( path, binpath, 0, daomake_main_source_path->size, binpath->size );
+}
 static void PROJECT_ExportCFlags( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeProject *self = (DaoMakeProject*) p[0];
@@ -2052,6 +2082,9 @@ static DaoFuncItem DaoMakeProjectMeths[]=
 	{ PROJECT_InstallTarget,  "Install( self : Project, dest : string, target : Target, ... : Target )" },
 	{ PROJECT_InstallFile,    "Install( self : Project, dest : string, file : string, ... : string )" },
 	{ PROJECT_InstallFiles,   "Install( self : Project, dest : string, headers : list<string> )" },
+
+	{ PROJECT_SourcePath,  "SourcePath( self : Project ) => string" },
+	{ PROJECT_BinaryPath,  "BinaryPath( self : Project ) => string" },
 
 	{ PROJECT_ExportCFlags,  "ExportCompilingFlags( self : Project, flags : string )" },
 	{ PROJECT_ExportLFlags,  "ExportLinkingFlags( self : Project, flags : string )" },
@@ -2213,6 +2246,19 @@ static void DAOMAKE_BinaryPath( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutString( proc, vmSpace->startPath );
 }
+static void DAOMAKE_MakeRpath( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *flag = DaoProcess_PutMBString( proc, "" );
+	DString *rpath = DaoMake_GetSettingValue( "DLL-RPATH" );
+	int i;
+	for(i=0; i<N; ++i){
+		DString *path = DaoValue_TryGetString( p[i] );
+		if( path == NULL ) continue;
+		DString_AppendGap( flag );
+		DString_Append( flag, rpath );
+		DString_Append( flag, path );
+	}
+}
 static void DAOMAKE_BuildMode( DaoProcess *proc, DaoValue *p[], int N )
 {
 	static const char *const build_modes[] = { "release", "debug", "profile" };
@@ -2289,6 +2335,8 @@ static DaoFuncItem DaoMakeMeths[] =
 
 	{ DAOMAKE_SourcePath,  "SourcePath() => string" },
 	{ DAOMAKE_BinaryPath,  "BinaryPath() => string" },
+
+	{ DAOMAKE_MakeRpath,   "MakeRpath( path : string, ... : string ) => string" },
 
 	{ DAOMAKE_BuildMode,   "BuildMode() => enum<RELEASE,DEBUG,PROFILE>" },
 

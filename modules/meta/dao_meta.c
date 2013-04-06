@@ -393,7 +393,7 @@ static void META_Param( DaoProcess *proc, DaoValue *p[], int N )
 	DNode *node;
 	DaoString str = {DAO_STRING,0,0,0,0,NULL};
 	DaoInteger num = {DAO_INTEGER,0,0,0,0,1};
-	int i;
+	int i, i3 = 3;
 	str.data = mbs;
 	for(i=0; i<routine->parCount; i++){
 		if( i >= routype->nested->size ) break;
@@ -405,7 +405,7 @@ static void META_Param( DaoProcess *proc, DaoValue *p[], int N )
 		DaoValue_Copy( (DaoValue*) & str, & tuple->items[0] );
 		DaoValue_Copy( (DaoValue*) nested[i], & tuple->items[1] );
 		DaoValue_Copy( (DaoValue*) & num, & tuple->items[2] );
-		DaoValue_Copy( routine->routConsts->items.items.pValue[i], & tuple->items[3] );
+		DaoValue_Copy( routine->routConsts->items.items.pValue[i], & tuple->items[i3] );
 		DaoList_Append( list, (DaoValue*) tuple );
 	}
 	DString_Delete( mbs );

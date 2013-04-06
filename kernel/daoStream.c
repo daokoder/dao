@@ -1006,7 +1006,7 @@ void DaoFile_WriteString( FILE* file, DString *str )
 	}
 }
 
-size_t FileChangedTime( const char *file )
+DAO_DLL size_t FileChangedTime( const char *file )
 {
 	struct stat st;
 	if( stat( file, &st ) ==0 ) return (size_t) st.st_mtime;

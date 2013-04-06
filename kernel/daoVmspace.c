@@ -461,7 +461,8 @@ static int dao_default_test_inliner( DaoNamespace *NS, DString *mode, DString *v
 	return 0;
 }
 
-void Dao_MakePath( DString *base, DString *path );
+DAO_DLL void Dao_MakePath( DString *base, DString *path );
+
 static void DaoVmSpace_InitPath( DaoVmSpace *self )
 {
 	DString *path;

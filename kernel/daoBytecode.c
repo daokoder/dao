@@ -1410,7 +1410,8 @@ daoint DaoByteDecoder_DecodeDaoInt( DaoByteDecoder *self )
 		self->codes += self->intSize;
 		if( B1 & 0x80 ){
 			daoint leading = (0xFF<<24)|(0xFF<<16)|(0xFF<<8)|0xFF;
-			return (leading<<32)|(0xFF<<24)|((B1&0x7F)<<24)|(B2<<16)|(B3<<8)|B4;
+			daoint shift = 32; /* just to avoid a warning on 32 bit systems; */
+			return (leading<<shift)|(0xFF<<24)|((B1&0x7F)<<24)|(B2<<16)|(B3<<8)|B4;
 		}
 		return (B1<<24)|(B2<<16)|(B3<<8)|B4;
 	}

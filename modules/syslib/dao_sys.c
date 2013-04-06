@@ -42,6 +42,7 @@
 
 #include"daoString.h"
 #include"daoValue.h"
+#include"daoThread.h"
 #include"dao_sys.h"
 
 

@@ -14,3 +14,7 @@ daotest_exe.EnableDynamicExporting()
 
 
 daotest.Install( daovm.GetPath( "BIN-PATH" ), daotest_exe );
+
+if( DaoMake::IsWin32() ){
+	daotest.AddCommand( "copylib", "$(DAOMAKE) copy ../../dao.dll dao.dll" )
+}
