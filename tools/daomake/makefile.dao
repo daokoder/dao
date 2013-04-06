@@ -8,7 +8,8 @@ if( daovm == none ) return
 daomake_objects = DaoMake::Objects( { "source/daoMake.c" } )
 daomake_exe     = daomake.AddExecutable( "daomake", daomake_objects )
 
-daomake_exe.UseStaticPackage( daovm, "dao" )
+daomake_exe.UsePackage( daovm )
+daomake_exe.EnableDynamicExporting()
 
 
 daomake.Install( daovm.GetPath( "BIN-PATH" ), daomake_exe );

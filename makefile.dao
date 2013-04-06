@@ -174,10 +174,6 @@ if( daovm_make_javascript == $ON ){
 
 
 daovm_partial_static = DaoMake::Option( "STATIC", $OFF );
-if( DaoMake::Option( "STATIC", $ON ) == $ON && DaoMake::Option( "STATIC", $OFF ) == $OFF ){
-	# Option "STATIC" is not set from command line:
-	if( DaoMake::IsUnix() ) daovm_partial_static = $ON;
-}
 
 #
 # Do not build statically linked executable on Windows, because the modules
@@ -264,8 +260,12 @@ if( daovm_with_readline == $ON ){
 #
 daovm.ExportCompilingFlags( "-I" + DaoMake::SourcePath() + "/kernel" )
 daovm.ExportCompilingFlags( daovm.MakeDefinitions() )
+if( daovm_partial_static == $OFF ){
+	rpath = DaoMake::Settings["DLL-RPATH"] + daovm_lib_path;
+	rpath = " " + DaoMake::Settings["DLL-RPATH"] + DaoMake::BinaryPath();
+	daovm.ExportLinkingFlags( rpath + " -L" + DaoMake::BinaryPath() +  " -ldao" )
+}
 if( DaoMake::IsWin32() ){
-	daovm.ExportLinkingFlags( "-L" + DaoMake::BinaryPath() +  " -ldao" )
 	daovm.ExportLinkingFlags( "-lwinmm" );
 }
 if( DaoMake::IsUnix() ){

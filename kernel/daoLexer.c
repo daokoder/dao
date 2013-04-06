@@ -1340,8 +1340,8 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 	DPlainArray_Delete( lexenvs );
 	DString_Delete( source );
 #if 0
-	for(i=0; i<self->size; i++){
-		DaoToken *tk = self->items.pToken[i];
+	for(i=0; i<self->tokens->size; i++){
+		DaoToken *tk = self->tokens->items.pToken[i];
 		printf( "%4i: %4i %4i , %4i,  %s\n", i, tk->type, tk->name, tk->cpos, tk->string.mbs );
 	}
 #endif

@@ -8,7 +8,9 @@ if( daovm == none ) return
 daotest_objects = DaoMake::Objects( { "source/daoTest.c" } )
 daotest_exe     = daotest.AddExecutable( "daotest", daotest_objects )
 
-daotest_exe.UseStaticPackage( daovm, "dao" )
+
+daotest_exe.UsePackage( daovm )
+daotest_exe.EnableDynamicExporting()
 
 
 daotest.Install( daovm.GetPath( "BIN-PATH" ), daotest_exe );

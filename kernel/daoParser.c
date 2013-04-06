@@ -697,8 +697,8 @@ int DaoParser_LexCode( DaoParser *self, const char *src, int replace )
 		DPlainArray_Delete( lines );
 	}
 #if 0
-	for(i=0; i<lexer->tokens->size; i++){
-		DaoToken *tk = & lexer->tokens->items.pToken[i];
+	for(i=0; i<self->tokens->size; i++){
+		DaoToken *tk = self->tokens->items.pToken[i];
 		printf( "%4i: %4i %4i, %4i,  %s\n", i, tk->type, tk->name, tk->cpos, tk->string.mbs );
 	}
 #endif

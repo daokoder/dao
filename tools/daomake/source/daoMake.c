@@ -43,12 +43,14 @@
 #include"io.h"
 #ifdef _MSC_VER
 #define mkdir _mkdir
+#define rmdir _rmdir
 #endif
 
 #endif
 
 #ifdef UNIX
 #include<sys/stat.h>
+#include<unistd.h>
 #include<dirent.h>
 #endif
 
@@ -1135,9 +1137,15 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 		if( target->ttype == DAOMAKE_EXECUTABLE ){
 		}else if( target->ttype == DAOMAKE_SHAREDLIB ){
 			DString *flag = DaoMake_GetSettingValue( "DLL-FLAG" );
+			DString *flag2 = DaoMake_GetSettingValue( "DLL-NAME" );
 			if( flag ){
 				DString_AppendGap( lflags );
 				DString_Append( lflags, flag );
+			}
+			if( flag2 ){
+				DString_AppendGap( lflags );
+				DString_Append( lflags, flag2 );
+				DString_Append( lflags, tname );
 			}
 		}
 		if( target->dynamicExporting ){
@@ -1450,16 +1458,9 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 
 	DString_AppendMBS( makefile, "testsum:\n" );
 	if( ismain ){
-		DString *check = DaoMake_GetSettingValue( "HAS-FILE" );
-		DString *del = DaoMake_GetSettingValue( "DEL-FILE" );
 		DString_AppendMBS( makefile, "\t@$(DAOMAKE) echo \"Summarizing test results ...\"\n" );
-		if( check && del ){
-			DString_AppendMBS( makefile, "\t-@" );
-			DString_Append( makefile, check );
-			DString_AppendMBS( makefile, " $(TESTSUM) && " );
-			DString_Append( makefile, del );
-			DString_AppendMBS( makefile, " $(TESTSUM)\n" );
-		}
+		DString_AppendMBS( makefile, "\t-@$(DAOMAKE) remove " );
+		DString_AppendMBS( makefile, " $(TESTSUM)\n" );
 	}
 	for(i=0; i<self->targets->size; ++i){
 		DaoMakeTarget *target = (DaoMakeTarget*) self->targets->items.pVoid[i];
@@ -2379,6 +2380,8 @@ int main( int argc, char **argv )
 	DString *name;
 	DNode *it;
 
+	vmSpace = DaoInit( argv[0] );
+
 	/* Utility subcommands: */
 	if( argc > 1 ){
 		if( strcmp( argv[1], "cat" ) == 0 ){
@@ -2408,6 +2411,10 @@ int main( int argc, char **argv )
 			if( Dao_IsFile( argv[2] ) ) return 1;
 			if( Dao_IsDir( argv[2] ) ) return 0;
 			return DaoMake_MakeDir( argv[2] );
+		}else if( strcmp( argv[1], "remove" ) == 0 ){
+			if( Dao_IsFile( argv[2] ) ) return unlink( argv[2] );
+			if( Dao_IsDir( argv[2] ) ) return rmdir( argv[2] );
+			return 1;
 		}else if( strcmp( argv[1], "copy" ) == 0 ){
 			if( argc < 4 ) return 1;
 			fin = fopen( argv[2], "rb" );
@@ -2423,8 +2430,6 @@ int main( int argc, char **argv )
 			return 0;
 		}
 	}
-
-	vmSpace = DaoInit( argv[0] );
 
 	daomake_makefile_paths = DMap_New(D_STRING,0);
 	daomake_boolean_options = DMap_New(D_STRING,0);

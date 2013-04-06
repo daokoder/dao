@@ -186,7 +186,7 @@ int main( int argc, char **argv )
 		return 0;
 	}
 
-	logfile = fopen( argv[logopt+1], "w+b" );
+	if( (logopt+1) < argc ) logfile = fopen( argv[logopt+1], "w+b" );
 	for(i=1; i<logopt; ++i){
 		vmSpace = DaoInit( argv[0] );
 
