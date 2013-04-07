@@ -22,7 +22,7 @@ DaoMake::Settings["LIB-PREFIX"]      = "lib"
 DaoMake::Settings["DLL-FLAG"]        = "-shared"
 DaoMake::Settings["DLL-NAME"]        = "-Wl,-soname,"
 DaoMake::Settings["DYNAMIC-EXPORT"]  = "-Wl,-export-dynamic"
-DaoMake::Settings["DYNAMIC-IMPORT"]  = ""
+DaoMake::Settings["DYNAMIC-IMPORT"]  = "-rdynamic"
 DaoMake::Settings["DLL-RPATH"]       = "-Wl,-rpath="
 
 DaoMake::Settings["RELEASE-CFLAG"]   = "-O2"

@@ -5,17 +5,18 @@ daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
-if( DaoMake::IsWin32() ){
-	daomake.AddCommand( "copylib", "$(DAOMAKE) copy ../../dao.dll dao.dll" )
-}
-
 daomake_objects = DaoMake::Objects( { "source/daoMake.c" } )
 daomake_exe     = daomake.AddExecutable( "daomake", daomake_objects )
 
 daomake_exe.UsePackage( daovm )
+daomake_exe.EnableDynamicLinking()
 daomake_exe.EnableDynamicExporting()
 
 daomake.Install( daovm.GetPath( "BIN-PATH" ), daomake_exe );
 daomake.Install( daovm.GetPath( "ROOT-PATH" ) + "/shared/daomake", "platforms" );
 daomake.Install( daovm.GetPath( "ROOT-PATH" ) + "/shared/daomake", "packages" );
 
+
+if( DaoMake::IsWin32() ){
+	daomake.AddCommand( "copylib", "$(DAOMAKE) copy ../../dao.dll dao.dll" )
+}

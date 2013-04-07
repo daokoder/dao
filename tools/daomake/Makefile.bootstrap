@@ -111,6 +111,10 @@ all: $(TARGET)
 $(TARGET): $(OBJECTS)
 	$(CC) $(OBJECTS) -o $(TARGET) $(LFLAGS)
 
+clean:
+	./daomake remove $(OBJECTS)
+
+
 
 linux:
 	$(MAKE) -f Makefile.bootstrap DEBUG=$(DEBUG) SYSCFLAGS="-DUNIX -fPIC" SYSLIBS="-lm -ldl"

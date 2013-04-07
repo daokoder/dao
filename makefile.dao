@@ -181,7 +181,7 @@ daovm_partial_static = DaoMake::Option( "STATIC", $OFF );
 #
 if( DaoMake::IsWin32() ) daovm_partial_static = $OFF;
 
-rpath = DaoMake::MakeRpath( ".", daovm_lib_path, DaoMake::BinaryPath() )
+rpath = DaoMake::MakeRpath( ".", DaoMake::BinaryPath(), daovm_lib_path )
 
 if( daovm_partial_static == $ON ){
 	daovm_exe.AddObjects( daovm_kernel_objects );

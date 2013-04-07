@@ -1318,7 +1318,6 @@ void DaoMakeProject_MakeInstallation( DaoMakeProject *self, DString *makefile )
 void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 {
 	DNode *it;
-	DString *del = DaoMake_GetSettingValue( "DEL-FILE" );
 	daoint ismain = DString_EQ( self->sourcePath, daomake_main_source_path );
 	daoint i, j, sig = self->signature;
 
@@ -1334,10 +1333,10 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 	if( (self->targets->size + self->installs->size) == 0 ) return;
 
 	if( 1 ){
+		DString *all = DaoMakeProject_GetBufferString( self );
 		DString *phony = DaoMakeProject_GetBufferString( self );
 		DString *test = DaoMakeProject_GetBufferString( self );
 		DString *testsum = DaoMakeProject_GetBufferString( self );
-		DString_AppendMBS( makefile, "all:" );
 		for(i=0; i<self->targets->size; ++i){
 			DaoMakeTarget *target = (DaoMakeTarget*) self->targets->items.pVoid[i];
 			DString *ruleName = DaoMakeProject_MakeTargetRule( self, target );
@@ -1346,28 +1345,31 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 				DString_Append( test, ruleName );
 				continue;
 			}
-			DString_AppendGap( makefile );
-			DString_Append( makefile, ruleName );
+			DString_AppendGap( all );
+			DString_Append( all, ruleName );
 			if( target->ttype >= DAOMAKE_COMMAND ){
 				DString_AppendGap( phony );
 				DString_Append( phony, ruleName );
 			}
 		}
+		DString_AppendMBS( makefile, "all: " );
+		DString_Append( makefile, all );
 		if( ismain && daomake_test_count && daomake_build_mode ){
 			DString_AppendGap( makefile );
-			DString_AppendMBS( makefile, "test testsum" );
+			DString_AppendMBS( makefile, "test" );
 		}
 		DString_AppendMBS( makefile, "\n\n" );
 
 		DString_AppendMBS( makefile, ".PHONY: test\n" );
-		DString_AppendMBS( makefile, "test: all" );
+		DString_AppendMBS( makefile, "test: " );
+		DString_Append( makefile, all );
 		DString_AppendGap( makefile );
 		DString_Append( makefile, test );
 
-		if( ismain && daomake_test_count && daomake_build_mode == 0 ){
-			DString_AppendGap( makefile );
-			DString_AppendMBS( makefile, "subtest" );
-			DString_AppendGap( makefile );
+		DString_AppendGap( makefile );
+		DString_AppendMBS( makefile, "subtest" );
+		DString_AppendGap( makefile );
+		if( ismain && daomake_test_count ){
 			DString_AppendMBS( makefile, "testsum" );
 		}
 		DString_AppendMBS( makefile, "\n\n" );
@@ -1376,7 +1378,7 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 			DString_Append( makefile, phony );
 			DString_AppendChar( makefile, '\n' );
 		}
-		self->usedStrings -= 3;
+		self->usedStrings -= 4;
 	}
 
 	DString_AppendMBS( makefile, "\nDAOMAKE = " );
@@ -1478,7 +1480,7 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 
 	DString_AppendMBS( makefile, "clean:\n\t" );
 	if( self->objectsMacros->size + self->testsMacros->size ){
-		if( del ) DString_Append( makefile, del );
+		DString_AppendMBS( makefile, "$(DAOMAKE) remove" );
 		for(it=DMap_First(self->objectsMacros); it; it=DMap_Next(self->objectsMacros,it)){
 			DString_AppendGap( makefile );
 			DString_AppendMBS( makefile, "$(" );
@@ -2460,13 +2462,21 @@ int main( int argc, char **argv )
 			if( Dao_IsDir( argv[2] ) ) return 0;
 			return DaoMake_MakeDir( argv[2] );
 		}else if( strcmp( argv[1], "remove" ) == 0 ){
-			if( Dao_IsFile( argv[2] ) ) return unlink( argv[2] );
-			if( Dao_IsDir( argv[2] ) ) return rmdir( argv[2] );
-			return 1;
+			int rec = 0;
+			for(i=2; i<argc; i++){
+				char *path = argv[i];
+				if( Dao_IsFile( path ) ){
+					rec |= unlink( path );
+				}else if( Dao_IsDir( path ) ){
+					rec |= rmdir( path );
+				}
+			}
+			return rec;
 		}else if( strcmp( argv[1], "copy" ) == 0 ){
 			if( argc < 4 ) return 1;
-			fin = fopen( argv[2], "rb" );
 			fout = fopen( argv[3], "w+b" );
+			if( fout == NULL ) return 0;
+			fin = fopen( argv[2], "rb" );
 			if( fin == NULL || fout == NULL ){
 				if( fin ) fclose( fin );
 				if( fout ) fclose( fout );

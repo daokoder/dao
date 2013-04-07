@@ -10,6 +10,7 @@ daotest_exe     = daotest.AddExecutable( "daotest", daotest_objects )
 
 
 daotest_exe.UsePackage( daovm )
+daotest_exe.EnableDynamicLinking()
 daotest_exe.EnableDynamicExporting()
 
 
