@@ -1,0 +1,40 @@
+
+I1 = 123
+I2 = 0x123a
+I3 :int = 789
+
+io.writeln( I1, I2, I3 )
+
+
+F1 = .12
+F2 = 12.
+F3 = 12.5
+F4 = 2e-3
+
+io.writeln( F1, F2, F3, F4 )
+
+
+D1 = .12D
+D2 = 12.D
+D3 = 12.5D
+D4 = 123D
+D5 = 2E-3
+
+io.writeln( D1, D2, D3, D4, D5 )
+
+
+C1 = $
+C2 = 123$
+C3 = 12.3$
+C4 = C3.real;
+C5 = C3.imag;
+
+io.writeln( C1, C2, C3, C4, C5 )
+
+
+L1 = 123L
+L2 = 0xa2fe3L
+L3 = 100111001L2
+L4 = 0xa2fe3L8
+
+io.writeln( L1, L2, L3, L4 )
