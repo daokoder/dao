@@ -13,7 +13,7 @@ daotest_exe.UsePackage( daovm )
 daotest_exe.EnableDynamicLinking()
 daotest_exe.EnableDynamicExporting()
 
-daotest.AddCommand( "copylib", "$(DAOMAKE) copy " + daotest_exe.Name() + " ../../" )
+daotest.AddCommand( "copylib", "$(DAOMAKE) copy -u " + daotest_exe.Name() + " ../../" )
 
 daotest.Install( daovm.GetPath( "BIN-PATH" ), daotest_exe );
 

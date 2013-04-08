@@ -3,17 +3,7 @@ io.writeln( "DaoMake: using Win32 settings!" )
 
 DaoMake::Settings["WIN32"]      = "1"
 
-DaoMake::Settings["AR"]        = "ar rcs"
-DaoMake::Settings["COPY"]      = "copy /y"
-DaoMake::Settings["COPY-DIR"]  = "copy /y"
-DaoMake::Settings["DEL-FILE"]  = "del /f/q"
-DaoMake::Settings["DEL-DIR"]   = "rmdir /s/q"
-DaoMake::Settings["MKDIR"]     = "mkdir"
-DaoMake::Settings["MOVE"]      = "move /y"
-DaoMake::Settings["EXIST"]     = "if exist"
-DaoMake::Settings["NOTEXIST"]  = "if not exist"
-DaoMake::Settings["HAS-DIR"]   = "if exist"
-DaoMake::Settings["HAS-FILE"]  = "if exist"
+DaoMake::Settings["AR"]         = "ar rcs"
 
 DaoMake::Settings["EXE-SUFFIX"]      = ".exe"
 DaoMake::Settings["DLL-SUFFIX"]      = ".dll"

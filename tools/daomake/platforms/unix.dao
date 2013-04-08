@@ -4,15 +4,6 @@ io.writeln( "DaoMake: using Unix settings!" )
 DaoMake::Settings["UNIX"]      = "1"
 
 DaoMake::Settings["AR"]        = "ar rcs"
-DaoMake::Settings["MOVE"]      = "mv"
-DaoMake::Settings["COPY"]      = "cp"
-DaoMake::Settings["COPY-FILE"] = "cp -f"
-DaoMake::Settings["COPY-DIR"]  = "cp -r"
-DaoMake::Settings["DEL-FILE"]  = "rm -fR"
-DaoMake::Settings["SYMLINK"]   = "ln -sf"
-DaoMake::Settings["MKDIR"]     = "mkdir -p"
-DaoMake::Settings["HAS-DIR"]   = "test -d"
-DaoMake::Settings["HAS-FILE"]  = "test -f"
 
 DaoMake::Settings["EXE-SUFFIX"]      = ""
 DaoMake::Settings["DLL-SUFFIX"]      = ".so"

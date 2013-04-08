@@ -2520,7 +2520,7 @@ int DaoMake_Remove( int argc, char *argv[] )
 	}
 	return rec;
 }
-int DaoMake_CopyFile( const char *from, const char *to )
+int DaoMake_CopyFile( const char *from, const char *to, int update )
 {
 	FILE *fin, *fout;
 	struct stat info;
@@ -2539,6 +2539,10 @@ int DaoMake_CopyFile( const char *from, const char *to )
 			DString_AppendMBS( dest, sep + 1 );
 		}
 	}
+	if( update && FileChangedTime( from ) <= FileChangedTime( dest->mbs ) ){
+		DString_Delete( dest );
+		return 0;
+	}
 	fin = fopen( from, "rb" );
 	fout = fopen( dest->mbs, "w+b" );
 	if( fin == NULL || fout == NULL ){
@@ -2554,14 +2558,14 @@ int DaoMake_CopyFile( const char *from, const char *to )
 	DString_Delete( dest );
 	return 0;
 }
-int DaoMake_CopyDirectory( const char *from, const char *to );
-int DaoMake_CopyPathFile( const char *from, const char *to )
+int DaoMake_CopyDirectory( const char *from, const char *to, int update );
+int DaoMake_CopyPathFile( const char *from, const char *to, int update )
 {
-	if( DaoMake_IsDir( from ) )  return DaoMake_CopyDirectory( from, to );
-	if( DaoMake_IsFile( from ) ) return DaoMake_CopyFile( from, to );
+	if( DaoMake_IsDir( from ) )  return DaoMake_CopyDirectory( from, to, update );
+	if( DaoMake_IsFile( from ) ) return DaoMake_CopyFile( from, to, update );
 	return 1;
 }
-int DaoMake_CopyDirectory( const char *from, const char *to )
+int DaoMake_CopyDirectory( const char *from, const char *to, int update )
 {
 	DString *src, *dest;
 	char *dirname;
@@ -2601,7 +2605,7 @@ int DaoMake_CopyDirectory( const char *from, const char *to )
 				DString_AppendMBS( src, from );
 				if( src->mbs[src->size-1] != '/' ) DString_AppendChar( src, '/' );
 				DString_AppendMBS( src, finfo.name );
-				DaoMake_CopyPathFile( src->mbs, dest->mbs );
+				DaoMake_CopyPathFile( src->mbs, dest->mbs, update );
 			}
 		} while( !_findnext( handle, &finfo ) );
 		_findclose( handle );
@@ -2616,7 +2620,7 @@ int DaoMake_CopyDirectory( const char *from, const char *to )
 				DString_AppendMBS( src, from );
 				if( src->mbs[src->size-1] != '/' ) DString_AppendChar( src, '/' );
 				DString_AppendMBS( src, finfo->d_name );
-				DaoMake_CopyPathFile( src->mbs, dest->mbs );
+				DaoMake_CopyPathFile( src->mbs, dest->mbs, update );
 			}
 		}
 		closedir( handle );
@@ -2628,11 +2632,17 @@ int DaoMake_CopyDirectory( const char *from, const char *to )
 }
 int DaoMake_Copy( int argc, char *argv[] )
 {
-	int i;
+	int i, update = 0;
+	if( argc == 0 ) return 1;
+	if( strcmp( argv[0], "-u" ) == 0 ){
+		update = 1;
+		argc -= 1;
+		argv += 1;
+	}
 	if( argc < 2 ) return 1;
 	if( argc > 2 && DaoMake_IsFile( argv[argc-1] ) ) return 1;
 	for(i=0; (i+1)<argc; ++i){
-		if( DaoMake_CopyPathFile( argv[i], argv[argc-1] ) ) return 1;
+		if( DaoMake_CopyPathFile( argv[i], argv[argc-1], update ) ) return 1;
 	}
 	return 0;
 }

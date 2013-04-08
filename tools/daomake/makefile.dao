@@ -12,7 +12,7 @@ daomake_exe.UsePackage( daovm )
 daomake_exe.EnableDynamicLinking()
 daomake_exe.EnableDynamicExporting()
 
-daomake.AddCommand( "copylib", "$(DAOMAKE) copy " + daomake_exe.Name() + " ../../" )
+daomake.AddCommand( "copylib", "$(DAOMAKE) copy -u " + daomake_exe.Name() + " ../../" )
 
 daomake.Install( daovm.GetPath( "BIN-PATH" ), daomake_exe );
 daomake.Install( daovm.GetPath( "ROOT-PATH" ) + "/shared/daomake", "platforms" );
