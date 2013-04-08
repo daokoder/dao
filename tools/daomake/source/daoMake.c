@@ -30,6 +30,8 @@
 #include<string.h>
 #include<stdint.h>
 #include<math.h>
+#include<errno.h>
+
 #include"dao.h"
 #include"daoValue.h"
 #include"daoStdtype.h"
@@ -42,8 +44,10 @@
 
 #include"io.h"
 #ifdef _MSC_VER
+#define getcwd _getcwd
 #define mkdir _mkdir
 #define rmdir _rmdir
+#define chmod _chmod
 #endif
 
 #endif
@@ -222,6 +226,7 @@ static DaoType *daomake_type_objects = NULL;
 static DaoType *daomake_type_target  = NULL;
 static DaoType *daomake_type_project = NULL;
 
+static DString *daomake_current_path = NULL;
 static DString *daomake_main_source_path = NULL;
 static DString *daomake_test_tool = NULL;
 static DString *daomake_test_tool_option = NULL;
@@ -541,6 +546,26 @@ DString* DaoMake_GetSettingValue( const char *key )
 	if( value == NULL ) return NULL;
 	return DaoValue_TryGetString( value );
 }
+int DaoMake_IsFile( const char *path )
+{
+#ifdef WIN32
+	int att = GetFileAttributes( path );
+	if( att == -1 ) return 0;
+	return !(att & FILE_ATTRIBUTE_DIRECTORY);
+#else
+	return Dao_IsFile( path ); /* Does not work for ".." in msys environment; */
+#endif
+}
+int DaoMake_IsDir( const char *path )
+{
+#ifdef WIN32
+	int att = GetFileAttributes( path );
+	if( att == -1 ) return 0;
+	return att & FILE_ATTRIBUTE_DIRECTORY;
+#else
+	return Dao_IsDir( path ); /* Does not work for ".." in msys environment; */
+#endif
+}
 int DaoMake_MakeDir( const char *dir )
 {
 #ifdef WIN32
@@ -561,7 +586,7 @@ DString* DaoMake_FindFile( DString *file, DaoList *hints )
 		DString_Append( fname, path );
 		if( fname->mbs[fname->size-1] != '/' ) DString_AppendChar( fname, '/' );
 		DString_Append( fname, file );
-		if( Dao_IsFile( fname->mbs ) ){
+		if( DaoMake_IsFile( fname->mbs ) ){
 			res = path;
 			break;
 		}
@@ -581,7 +606,7 @@ void DaoMake_MakeOutOfSourcePath( DString *path )
 		while( k < path->size && path->mbs[k] != '/' ) k += 1;
 		if( k == path->size ) break;
 		path->mbs[k] = '\0';
-		if( Dao_IsDir( path->mbs ) == 0 && Dao_IsFile( path->mbs ) == 0 ){
+		if( DaoMake_IsDir( path->mbs ) == 0 && DaoMake_IsFile( path->mbs ) == 0 ){
 			DaoMake_MakeDir( path->mbs );
 		}
 		path->mbs[k] = '/';
@@ -1184,12 +1209,9 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 
 void DaoMakeProject_MakeInstallPath( DaoMakeProject *self, DString *path, DString *install, DString *uninstall, DMap *mapPaths )
 {
-	DString *mkdir = DaoMake_GetSettingValue( "MKDIR" );
-	DString *del = DaoMake_GetSettingValue( "DEL-FILE" );
 	DString *sub;
 
-	if( mkdir == NULL || del == NULL ) return;
-	if( Dao_IsDir( path->mbs ) ) return;
+	if( DaoMake_IsDir( path->mbs ) ) return;
 	if( DMap_Find( mapPaths, path ) ) return;
 	DMap_Insert( mapPaths, path, 0 );
 
@@ -1202,18 +1224,14 @@ void DaoMakeProject_MakeInstallPath( DaoMakeProject *self, DString *path, DStrin
 	if( sub->size && sub->mbs[sub->size-1] == '/' ) sub->size --;
 	sub->mbs[sub->size] = '\0';
 
-	if( sub->size && Dao_IsDir( sub->mbs ) == 0 ){
+	if( sub->size && DaoMake_IsDir( sub->mbs ) == 0 ){
 		DaoMakeProject_MakeInstallPath( self, sub, install, uninstall, mapPaths );
 	}
-	DString_AppendChar( install, '\t' );
-	DString_Append( install, mkdir );
-	DString_AppendChar( install, ' ' );
+	DString_AppendMBS( install, "\t$(DAOMAKE) mkdir2 " );
 	DString_Append( install, path );
 	DString_AppendChar( install, '\n' );
 
-	DString_AppendChar( uninstall, '\t' );
-	DString_Append( uninstall, del );
-	DString_AppendChar( uninstall, ' ' );
+	DString_AppendMBS( uninstall, "\t$(DAOMAKE) remove " );
 	DString_Append( uninstall, path );
 	DString_AppendChar( uninstall, '\n' );
 
@@ -1221,11 +1239,7 @@ void DaoMakeProject_MakeInstallPath( DaoMakeProject *self, DString *path, DStrin
 }
 void DaoMakeProject_MakeCopy( DaoMakeProject *self, DString *src, DString *dest, DString *output )
 {
-	DString *copydir = DaoMake_GetSettingValue( "COPY-DIR" );
-	if( copydir == NULL ) return;
-	DString_AppendChar( output, '\t' );
-	DString_Append( output, copydir );
-	DString_AppendChar( output, ' ' );
+	DString_AppendMBS( output, "\t$(DAOMAKE) copy " );
 	DString_Append( output, src );
 	DString_AppendChar( output, ' ' );
 	DString_Append( output, dest );
@@ -1233,12 +1247,8 @@ void DaoMakeProject_MakeCopy( DaoMakeProject *self, DString *src, DString *dest,
 }
 void DaoMakeProject_MakeRemove( DaoMakeProject *self, DString *file, DString *path, DString *output )
 {
-	DString *del = DaoMake_GetSettingValue( "DEL-FILE" );
-	if( del == NULL ) return;
 	DString_ToMBS( path );
-	DString_AppendChar( output, '\t' );
-	DString_Append( output, del );
-	DString_AppendChar( output, ' ' );
+	DString_AppendMBS( output, "\t$(DAOMAKE) remove " );
 	DString_Append( output, path );
 	if( file ){
 		daoint pos;
@@ -1295,7 +1305,7 @@ void DaoMakeProject_MakeInstallation( DaoMakeProject *self, DString *makefile )
 		}else{
 			DaoMakeTarget_MakeName( target, tname );
 		}
-		if( Dao_IsDir( path->mbs ) == 0 ){
+		if( DaoMake_IsDir( path->mbs ) == 0 ){
 			DaoMakeProject_MakeInstallPath( self, path, install, uninstall, mapPaths );
 		}else{
 			DaoMakeProject_MakeRemove( self, tname, path, uninstall );
@@ -1772,6 +1782,12 @@ DaoTypeBase DaoMakeObjects_Typer =
 
 
 
+static void TARGET_Name( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
+	DString *res = DaoProcess_PutMBString( proc, "" );
+	DaoMakeTarget_MakeName( self, res );
+}
 static void TARGET_AddObjects( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
@@ -1834,6 +1850,7 @@ static void TARGET_Install( DaoProcess *proc, DaoValue *p[], int N )
 }
 static DaoFuncItem DaoMakeTargetMeths[]=
 {
+	{ TARGET_Name,  "Name( self : Target ) => string" },
 	{ TARGET_AddObjects,  "AddObjects( self : Target, objects : Objects, ... : Objects )" },
 	{ TARGET_AddCommand,  "AddCommand( self : Target, command : string, ... : string )" },
 	{ TARGET_AddTest,     "AddTest( self : Target, test : string, ... : string )" },
@@ -2222,14 +2239,14 @@ static void DAOMAKE_IsFile( DaoProcess *proc, DaoValue *p[], int N )
 	DString *path = DaoValue_TryGetString( p[0] );
 	DString_ToMBS( path );
 	DaoMake_MakePath( proc->activeNamespace->path, path );
-	DaoProcess_PutInteger( proc, Dao_IsFile( path->mbs ) );
+	DaoProcess_PutInteger( proc, DaoMake_IsFile( path->mbs ) );
 }
 static void DAOMAKE_IsDir( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *path = DaoValue_TryGetString( p[0] );
 	DString_ToMBS( path );
 	DaoMake_MakePath( proc->activeNamespace->path, path );
-	DaoProcess_PutInteger( proc, Dao_IsDir( path->mbs ) );
+	DaoProcess_PutInteger( proc, DaoMake_IsDir( path->mbs ) );
 }
 static void DAOMAKE_Shell( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2417,7 +2434,210 @@ static void DaoMap_AddKeyValues( DaoMap *self, const char *const keyvalues[] )
 	}
 }
 
-int main( int argc, char **argv )
+
+
+int DaoMake_RemoveFile( const char *path )
+{
+	return remove( path );
+}
+int DaoMake_RemoveDirectory( const char *path );
+int DaoMake_RemovePath( const char *from )
+{
+	if( DaoMake_IsFile( from ) ){
+		return DaoMake_RemoveFile( from );
+	}else if( DaoMake_IsDir( from ) ){
+		return DaoMake_RemoveDirectory( from );
+	}
+	return 1;
+}
+int DaoMake_RemoveDirectory( const char *path )
+{
+	DString *src;
+	char *dirname;
+	int rc = 0;
+#ifdef WIN32
+	intptr_t handle;
+	struct _finddata_t finfo;
+#else
+	DIR *handle;
+	struct dirent *finfo;
+#endif
+
+	if( DaoMake_IsFile( path ) ) return 1;
+
+	src = DString_New(1);
+
+#ifdef WIN32
+	DString_AppendMBS( src, path );
+	if( src->size && src->mbs[src->size-1] == '/' || src->mbs[src->size-1] == '\\' ){
+		DString_AppendMBS( src, "*" );
+	}else{
+		DString_AppendMBS( src, "/*" );
+	}
+	handle = _findfirst( src->mbs, & finfo );
+	if( handle != -1 ){
+		do {
+			if( strcmp( finfo.name, "." ) && strcmp( finfo.name, ".." ) ){
+				DString_Reset( src, 0 );
+				DString_AppendMBS( src, path );
+				if( src->mbs[src->size-1] != '/' ) DString_AppendChar( src, '/' );
+				DString_AppendMBS( src, finfo.name );
+				DaoMake_RemovePath( src->mbs );
+			}
+		} while( !_findnext( handle, &finfo ) );
+		_findclose( handle );
+	}else rc = errno;
+#else
+	/* Using POSIX opendir/readdir otherwise */
+	handle = opendir( path );
+	if( handle ){
+		while( ( finfo = readdir( handle ) ) ){
+			if( strcmp( finfo->d_name, "." ) && strcmp( finfo->d_name, ".." ) ){
+				DString_Reset( src, 0 );
+				DString_AppendMBS( src, path );
+				if( src->mbs[src->size-1] != '/' ) DString_AppendChar( src, '/' );
+				DString_AppendMBS( src, finfo->d_name );
+				DaoMake_RemovePath( src->mbs );
+			}
+		}
+		closedir( handle );
+	}else rc = errno;
+#endif
+	DString_Delete( src );
+	rc |= rmdir( path );
+	return rc;
+}
+int DaoMake_Remove( int argc, char *argv[] )
+{
+	int i, rec = 0;
+	for(i=0; i<argc; i++){
+		char *path = argv[i];
+		if( DaoMake_IsFile( path ) ){
+			rec |= DaoMake_RemoveFile( path );
+		}else if( DaoMake_IsDir( path ) ){
+			rec |= DaoMake_RemoveDirectory( path );
+		}
+	}
+	return rec;
+}
+int DaoMake_CopyFile( const char *from, const char *to )
+{
+	FILE *fin, *fout;
+	struct stat info;
+	DString *dest;
+
+	if( DaoMake_IsFile( from ) == 0 ) return 1;
+
+	dest = DString_New(1);
+	DString_SetMBS( dest, to );
+	if( DaoMake_IsDir( dest->mbs ) ){
+		char *sep = strrchr( from, '/' );
+		if( dest->mbs[dest->size-1] != '/' ) DString_AppendChar( dest, '/' );
+		if( sep == NULL ){
+			DString_AppendMBS( dest, from );
+		}else{
+			DString_AppendMBS( dest, sep + 1 );
+		}
+	}
+	fin = fopen( from, "rb" );
+	fout = fopen( dest->mbs, "w+b" );
+	if( fin == NULL || fout == NULL ){
+		if( fin ) fclose( fin );
+		if( fout ) fclose( fout );
+		DString_Delete( dest );
+		return 1;
+	}
+	if( stat( from, & info ) == 0 ) chmod( dest->mbs, info.st_mode );
+	DaoFile_ReadAll( fin, dest, 1 );
+	DaoFile_WriteString( fout, dest );
+	fclose( fout );
+	DString_Delete( dest );
+	return 0;
+}
+int DaoMake_CopyDirectory( const char *from, const char *to );
+int DaoMake_CopyPathFile( const char *from, const char *to )
+{
+	if( DaoMake_IsDir( from ) )  return DaoMake_CopyDirectory( from, to );
+	if( DaoMake_IsFile( from ) ) return DaoMake_CopyFile( from, to );
+	return 1;
+}
+int DaoMake_CopyDirectory( const char *from, const char *to )
+{
+	DString *src, *dest;
+	char *dirname;
+	int rc = 0;
+#ifdef WIN32
+	intptr_t handle;
+	struct _finddata_t finfo;
+#else
+	DIR *handle;
+	struct dirent *finfo;
+#endif
+
+	if( DaoMake_IsFile( from ) || DaoMake_IsFile( to ) ) return 1;
+
+	src = DString_New(1);
+	dest = DString_New(1);
+	DString_SetMBS( dest, to );
+	if( dest->mbs[dest->size-1] != '/' ) DString_AppendChar( dest, '/' );
+	if( (dirname = strrchr( from, '/' )) ){
+		DString_AppendMBS( dest, dirname + 1 );
+	}else{
+		DString_AppendMBS( dest, from );
+	}
+	if( DaoMake_IsFile( dest->mbs ) ){
+		DString_Delete( src );
+		DString_Delete( dest );
+		return 1;
+	}
+	if( DaoMake_IsDir( dest->mbs ) == 0 ) DaoMake_MakeDir( dest->mbs );
+
+#ifdef WIN32
+	handle = _findfirst( from, & finfo );
+	if( handle != -1 ){
+		do {
+			if( strcmp( finfo.name, "." ) && strcmp( finfo.name, ".." ) ){
+				DString_Reset( src, 0 );
+				DString_AppendMBS( src, from );
+				if( src->mbs[src->size-1] != '/' ) DString_AppendChar( src, '/' );
+				DString_AppendMBS( src, finfo.name );
+				DaoMake_CopyPathFile( src->mbs, dest->mbs );
+			}
+		} while( !_findnext( handle, &finfo ) );
+		_findclose( handle );
+	}else rc = errno;
+#else
+	/* Using POSIX opendir/readdir otherwise */
+	handle = opendir( from );
+	if( handle ){
+		while( ( finfo = readdir( handle ) ) ){
+			if( strcmp( finfo->d_name, "." ) && strcmp( finfo->d_name, ".." ) ){
+				DString_Reset( src, 0 );
+				DString_AppendMBS( src, from );
+				if( src->mbs[src->size-1] != '/' ) DString_AppendChar( src, '/' );
+				DString_AppendMBS( src, finfo->d_name );
+				DaoMake_CopyPathFile( src->mbs, dest->mbs );
+			}
+		}
+		closedir( handle );
+	}else rc = errno;
+#endif
+	DString_Delete( src );
+	DString_Delete( dest );
+	return rc;
+}
+int DaoMake_Copy( int argc, char *argv[] )
+{
+	int i;
+	if( argc < 2 ) return 1;
+	if( argc > 2 && DaoMake_IsFile( argv[argc-1] ) ) return 1;
+	for(i=0; (i+1)<argc; ++i){
+		if( DaoMake_CopyPathFile( argv[i], argv[argc-1] ) ) return 1;
+	}
+	return 0;
+}
+
+int main( int argc, char *argv[] )
 {
 	int i, k, m;
 	char *platform = NULL;
@@ -2431,6 +2651,10 @@ int main( int argc, char **argv )
 	DNode *it;
 
 	vmSpace = DaoInit( argv[0] );
+	daomake_current_path = DString_New(1);
+	DString_Reset( daomake_current_path, 1024 );
+	getcwd( daomake_current_path->mbs, 1024 );
+	DString_Reset( daomake_current_path, strlen( daomake_current_path->mbs ) );
 
 	/* Utility subcommands: */
 	if( argc > 1 ){
@@ -2451,41 +2675,20 @@ int main( int argc, char **argv )
 			return 0;
 		}else if( strcmp( argv[1], "isfile" ) == 0 ){
 			if( argc == 2 ) return 1;
-			return Dao_IsFile( argv[2] ) == 0;
+			return DaoMake_IsFile( argv[2] ) == 0;
 		}else if( strcmp( argv[1], "isdir" ) == 0 ){
 			if( argc == 2 ) return 1;
-			return Dao_IsDir( argv[2] ) == 0;
+			return DaoMake_IsDir( argv[2] ) == 0;
 		}else if( strcmp( argv[1], "mkdir" ) == 0 ){
 			return DaoMake_MakeDir( argv[2] );
 		}else if( strcmp( argv[1], "mkdir2" ) == 0 ){
-			if( Dao_IsFile( argv[2] ) ) return 1;
-			if( Dao_IsDir( argv[2] ) ) return 0;
+			if( DaoMake_IsFile( argv[2] ) ) return 1;
+			if( DaoMake_IsDir( argv[2] ) ) return 0;
 			return DaoMake_MakeDir( argv[2] );
 		}else if( strcmp( argv[1], "remove" ) == 0 ){
-			int rec = 0;
-			for(i=2; i<argc; i++){
-				char *path = argv[i];
-				if( Dao_IsFile( path ) ){
-					rec |= unlink( path );
-				}else if( Dao_IsDir( path ) ){
-					rec |= rmdir( path );
-				}
-			}
-			return rec;
+			return DaoMake_Remove( argc - 2, argv + 2 );
 		}else if( strcmp( argv[1], "copy" ) == 0 ){
-			if( argc < 4 ) return 1;
-			fout = fopen( argv[3], "w+b" );
-			if( fout == NULL ) return 0;
-			fin = fopen( argv[2], "rb" );
-			if( fin == NULL || fout == NULL ){
-				if( fin ) fclose( fin );
-				if( fout ) fclose( fout );
-				return 1;
-			}
-			DaoFile_ReadAll( fin, makefile, 1 );
-			DaoFile_WriteString( fout, makefile );
-			fclose( fout );
-			return 0;
+			return DaoMake_Copy( argc - 2, argv + 2 );
 		}
 	}
 
@@ -2551,7 +2754,7 @@ int main( int argc, char **argv )
 			return 1;
 		}else if( (i + 1) == argc ){
 			DString_SetMBS( makefile, argv[i] );
-			if( Dao_IsDir( makefile->mbs ) ){
+			if( DaoMake_IsDir( makefile->mbs ) ){
 				DString *file = DString_New(1);
 				const char *names[] = { "makefile", "Makefile", "make", "Make" };
 				if( makefile->size && makefile->mbs[makefile->size-1] != '/' )
@@ -2561,7 +2764,7 @@ int main( int argc, char **argv )
 					DString_Append( file, makefile );
 					DString_AppendMBS( file, names[k] );
 					DString_AppendMBS( file, ".dao" );
-					if( Dao_IsFile( file->mbs ) ){
+					if( DaoMake_IsFile( file->mbs ) ){
 						DString_Assign( makefile, file );
 						break;
 					}
@@ -2606,6 +2809,9 @@ ErrorInvalidArgValue:
 
 	name = DString_New(1);
 	DaoVmSpace_AddPath( vmSpace, vmSpace->daoBinPath->mbs );
+	DString_SetMBS( name, ".." );
+	Dao_MakePath( vmSpace->daoBinPath, name );
+	DaoVmSpace_AddPath( vmSpace, name->mbs );
 #ifdef UNIX
 	DString_SetMBS( name, "../shared/daomake" );
 	Dao_MakePath( vmSpace->daoBinPath, name );

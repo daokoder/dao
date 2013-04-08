@@ -11,7 +11,7 @@ RESET ?=
 #export EMCC="python /Users/min/SoftwareDevs/emscripten/emcc"
 
 $(PLATS) :
-	cd $(SRCDIR)/tools/daomake && $(MAKE) -f Makefile.bootstrap $@
-	$(SRCDIR)/tools/daomake/daomake --mode $(MODE) --platform $@ --option-ROOT-PATH $(ROOT) --option-JAVASCRIPT $(JAVASCRIPT) $(RESET) $(SRCDIR)
+	cd $(SRCDIR)/tools/daomake/bootstrap && $(MAKE) $@
+	$(SRCDIR)/tools/daomake/bootstrap/daomake --mode $(MODE) --platform $@ --option-ROOT-PATH $(ROOT) --option-JAVASCRIPT $(JAVASCRIPT) $(RESET) $(SRCDIR)
 	$(MAKE) -f Makefile$(SUFFIX)
 

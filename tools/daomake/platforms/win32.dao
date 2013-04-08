@@ -5,6 +5,7 @@ DaoMake::Settings["WIN32"]      = "1"
 
 DaoMake::Settings["AR"]        = "ar rcs"
 DaoMake::Settings["COPY"]      = "copy /y"
+DaoMake::Settings["COPY-DIR"]  = "copy /y"
 DaoMake::Settings["DEL-FILE"]  = "del /f/q"
 DaoMake::Settings["DEL-DIR"]   = "rmdir /s/q"
 DaoMake::Settings["MKDIR"]     = "mkdir"

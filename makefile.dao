@@ -258,7 +258,7 @@ if( daovm_with_readline == $ON ){
 # Export compiling and linking flags that can be used by others
 # by calling UsePackage().
 #
-daovm.ExportCompilingFlags( "-fPIC -I" + DaoMake::SourcePath() + "/kernel" )
+daovm.ExportCompilingFlags( "-I" + DaoMake::SourcePath() + "/kernel" )
 daovm.ExportCompilingFlags( daovm.MakeDefinitions() )
 if( daovm_partial_static == $OFF ){
 	daovm.ExportLinkingFlags( rpath + " -L" + DaoMake::BinaryPath() +  " -ldao" )
@@ -267,6 +267,7 @@ if( DaoMake::IsWin32() ){
 	daovm.ExportLinkingFlags( "-lwinmm" );
 }
 if( DaoMake::IsUnix() ){
+	daovm.ExportCompilingFlags( "-fPIC" )
 	daovm.ExportLinkingFlags( "-lm" );
 	if( DaoMake::IsLinux() ) daovm.ExportLinkingFlags( "-ldl" )
 	if( daovm_with_thread == $ON ) daovm.ExportLinkingFlags( "-lpthread" )
@@ -312,7 +313,7 @@ modules.AddDependency( daovm_lib )
 modules.AddDependency( daovm_exe )
 
 
-DaoMake::SetTestTool( DaoMake::BinaryPath() + "/tools/daotest/daotest" )
+DaoMake::SetTestTool( DaoMake::BinaryPath() + "/daotest" )
 tests = daovm.AddDirectory( "tests", "tests" )
 tests.AddDependency( modules )
 tests.AddDependency( daotest )

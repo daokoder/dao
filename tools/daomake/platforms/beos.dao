@@ -1,0 +1,34 @@
+
+io.writeln( "DaoMake: using BeOS settings!" )
+
+DaoMake::Settings["BEOS"]      = "1"
+
+DaoMake::Settings["AR"]        = "ar rcs"
+DaoMake::Settings["MOVE"]      = "mv"
+DaoMake::Settings["COPY"]      = "cp"
+DaoMake::Settings["COPY-FILE"] = "cp -f"
+DaoMake::Settings["COPY-DIR"]  = "cp -r"
+DaoMake::Settings["DEL-FILE"]  = "rm -fR"
+DaoMake::Settings["SYMLINK"]   = "ln -sf"
+DaoMake::Settings["MKDIR"]     = "mkdir -p"
+DaoMake::Settings["HAS-DIR"]   = "test -d"
+DaoMake::Settings["HAS-FILE"]  = "test -f"
+
+DaoMake::Settings["EXE-SUFFIX"]      = ""
+DaoMake::Settings["DLL-SUFFIX"]      = ".so"
+DaoMake::Settings["LIB-SUFFIX"]      = ".a"
+DaoMake::Settings["DLL-PREFIX"]      = "lib"
+DaoMake::Settings["LIB-PREFIX"]      = "lib"
+DaoMake::Settings["DLL-FLAG"]        = "-shared"
+DaoMake::Settings["DLL-NAME"]        = "-Wl,-soname,"
+DaoMake::Settings["DYNAMIC-EXPORT"]  = "-Wl,-export-dynamic"
+DaoMake::Settings["DYNAMIC-IMPORT"]  = ""
+DaoMake::Settings["DLL-RPATH"]       = "-Wl,-rpath="
+
+DaoMake::Settings["RELEASE-CFLAG"]   = "-O2"
+DaoMake::Settings["RELEASE-LFLAG"]   = ""
+DaoMake::Settings["DEBUG-CFLAG"]     = "-ggdb -O0 -DDEBUG"
+DaoMake::Settings["DEBUG-LFLAG"]     = "-ggdb"
+DaoMake::Settings["PROFILE-CFLAG"]     = "-pg"
+DaoMake::Settings["PROFILE-LFLAG"]     = "-pg"
+
