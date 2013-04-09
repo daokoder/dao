@@ -2897,6 +2897,7 @@ static void DaoMap_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, 
 	DaoStream_WriteMBS( stream, " }" );
 	if( cycData ) MAP_Erase( cycData, self );
 }
+static void DaoMap_GetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N );
 static void DaoMap_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 {
 	DaoMap *self = & self0->xMap;
@@ -2910,6 +2911,8 @@ static void DaoMap_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 		node = DMap_Next( self->items, node );
 		iter->items[0]->xInteger.value = node != NULL;
 		iter->items[1]->xCdata.data = node;
+	}else if( pid->type == DAO_TUPLE && pid->xTuple.size == 2 ){
+		DaoMap_GetItem2( self0, proc, pid->xTuple.items, 2 );
 	}else{
 		DNode *node = MAP_Find( self->items, pid );
 		if( node ==NULL ){
@@ -2924,9 +2927,9 @@ static void DaoMap_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, D
 {
 	DaoMap *self = & self0->xMap;
 	int c = DaoMap_Insert( self, pid, value );
-	if( c ==1 ){
+	if( c == 1 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_TYPE, "key not matching" );
-	}else if( c ==2 ){
+	}else if( c == 2 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_TYPE, "value not matching" );
 	}
 }
@@ -3736,7 +3739,7 @@ void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos )
 	val = self->items + pos;
 	if( self->unitype && pos < self->unitype->nested->size ){
 		DaoType *t = self->unitype->nested->items.pType[pos];
-		if( t->tid == DAO_PAR_NAMED ) t = & t->aux->xType;
+		if( t->tid == DAO_PAR_NAMED || t->tid == DAO_PAR_VALIST ) t = & t->aux->xType;
 		DaoValue_Move( it, val, t );
 	}else{
 		DaoValue_Copy( it, val );

@@ -3015,7 +3015,7 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 	DaoType *tp, *ct = self->activeTypes[ vmc->c ];
 	int argstuple = vmc->a == 0 && vmc->b == self->activeRoutine->parCount;
 	int i, count = argstuple ? self->topFrame->parCount : vmc->b;
-	
+
 	self->activeCode = vmc;
 	tuple = DaoProcess_GetTuple( self, ct && ct->variadic == 0 ? ct : NULL, count, 0 );
 	if( ct == NULL ){

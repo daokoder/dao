@@ -1,0 +1,44 @@
+mbs = 'hello'
+wcs = "道语言"
+mbs2 = 'It\'s green'
+wcs2 = "\u9053\u8bed\u8a00" # the same as wcs;
+
+# verbatim strings:
+mbs = @[] some text @[]
+wcs = @@[] some text @@[]
+
+# C++ codes in MBS:
+cpp =
+@[cpp x]
+class AA
+{
+	int index;
+};
+struct BB{};
+@[cpp x]
+
+
+# Lua codes in MBS:
+lua =
+@[lua]
+local a = 1;
+function Test()
+	io.write( 'Hello' )
+end
+@[lua]
+
+# HTML codes in WCS:
+html =
+@@[html:123456]
+<body>
+<span name="test"></span>
+</body>
+@@[html:123456]
+
+io.writeln( mbs );
+io.writeln( wcs );
+io.writeln( mbs2 );
+io.writeln( wcs2 );
+io.writeln( cpp );
+io.writeln( lua );
+io.writeln( html );

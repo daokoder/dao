@@ -1,0 +1,62 @@
+
+# Here is a simple class:
+class ClassOne
+{
+	var index = 0;  # instance variable with default value;
+	var name  : string
+	var words : list<string> = {}
+
+	routine ClassOne( name :string, index = 0 ){
+		self.name = name;
+		self.index = index;
+	}
+}
+# Create a class instance:
+object = ClassOne( 'abc' )
+
+
+class Point3D
+{
+	var x = 0D;
+	var y = 0D;
+	var z = 0D;
+}
+# Create instance enumerating the members of the class,
+point = Point3D{ 1, 2, 3 };
+
+
+# The names of instance variables may also be specified in enumeration,
+point = Point3D{
+	y => 2,
+	x => 1,
+	z => 3,
+};
+
+
+class Klass
+{
+	const aClassConst = "KlassConst";
+	static aClassStatic = 123;
+}
+
+
+class MyNumber
+{
+	private
+   
+	var value = 0;
+
+	public
+
+	routine MyNumber( v = 0 ){
+		value = v;
+	}
+
+	operator .value=( v ){ value = v }  # setter;
+	operator .value(){ return value }   # getter;
+}
+
+num = MyNumber( 123 )
+num.value = 456
+io.writeln( num.value )
+

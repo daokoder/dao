@@ -160,6 +160,7 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 		self->kernel = typer->core->kernel;
 		GC_IncRC( self->kernel );
 	}
+	if( extra == NULL && tid == DAO_PAR_VALIST ) extra = (DaoValue*) dao_type_any;
 	if( extra ){
 		self->aux = extra;
 		GC_IncRC( extra );
@@ -374,8 +375,8 @@ static int DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *bin
 	int p2 = type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_DEFAULT;
 	int m = 0;
 	if( p1 && p2 && ! DString_EQ( self->fname, type->fname ) ) return DAO_MT_NOT;
-	if( p1 ) ext1 = & self->aux->xType;
-	if( p2 ) ext2 = & type->aux->xType;
+	if( p1 || self->tid == DAO_PAR_VALIST ) ext1 = & self->aux->xType;
+	if( p2 || type->tid == DAO_PAR_VALIST ) ext2 = & type->aux->xType;
 
 	m = DaoType_Match( ext1, ext2, defs, binds );
 	/*
@@ -543,8 +544,10 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		}
 		break;
 	case DAO_TUPLE :
+		/* Source tuple type must contain at least as many item as the target tuple: */
 		if( self->nested->size < type->nested->size ) return DAO_MT_NOT;
 		if( self->nested->size > type->nested->size && type->variadic == 0 ) return DAO_MT_NOT;
+		/* Compare non-variadic part of the tuple: */
 		for(i=0,n=type->nested->size-(type->variadic!=0); i<n; i++){
 			it1 = self->nested->items.pType[i];
 			it2 = type->nested->items.pType[i];
@@ -553,9 +556,9 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			if( k == DAO_MT_NOT ) return k;
 			if( k < mt ) mt = k;
 		}
+		/* Compare variadic part of the tuple: */
 		it2 = type->nested->items.pType[type->nested->size-1];
-		if( it2->tid == DAO_PAR_VALIST ) it2 = (DaoType*) it2->aux;
-		for(i=type->nested->size-(type->variadic!=0),n=self->nested->size; i<n; ++i){
+		for(i=type->nested->size-(type->variadic!=0),n=self->nested->size-(self->variadic!=0); i<n; ++i){
 			it1 = self->nested->items.pType[i];
 			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
 			/* printf( "%i %s %s\n", k, it1->name->mbs, it2->name->mbs ); */

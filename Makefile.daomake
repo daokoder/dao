@@ -2,9 +2,10 @@
 PLATS = linux macosx freebsd mingw minix haiku
 
 MODE ?= release
-ROOT ?= /usr/local
+INSTALL ?= /usr/local
 SRCDIR ?= .
 SUFFIX ?=
+STATIC ?= OFF
 JAVASCRIPT ?= OFF
 RESET ?=
 
@@ -12,6 +13,6 @@ RESET ?=
 
 $(PLATS) :
 	cd $(SRCDIR)/tools/daomake/bootstrap && $(MAKE) $@
-	$(SRCDIR)/tools/daomake/bootstrap/daomake --mode $(MODE) --platform $@ --option-ROOT-PATH $(ROOT) --option-JAVASCRIPT $(JAVASCRIPT) $(RESET) $(SRCDIR)
+	$(SRCDIR)/tools/daomake/bootstrap/daomake --mode $(MODE) --platform $@ --option-INSTALL-PATH $(INSTALL) --option-STATIC $(STATIC) --option-JAVASCRIPT $(JAVASCRIPT) $(RESET) $(SRCDIR)
 	$(MAKE) -f Makefile$(SUFFIX)
 
