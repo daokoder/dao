@@ -1089,7 +1089,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 			break;
 		}
 	}
-	if( unicoded ){
+	if( unicoded && daoConfig.mbs == 0 ){
 		DString *wcs = DString_New(0);
 		/* http://www.cl.cam.ac.uk/~mgk25/ucs/quotes.html */
 		wchar_t quotes[] = {

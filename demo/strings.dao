@@ -1,11 +1,9 @@
 mbs = 'hello'
 wcs = "道语言"
-mbs2 = 'It\'s green'
-wcs2 = "\u9053\u8bed\u8a00" # the same as wcs;
 
 # verbatim strings:
-mbs = @[] some text @[]
-wcs = @@[] some text @@[]
+mbs2 = @[] some text @[]
+wcs2 = @@[] some text @@[]
 
 # C++ codes in MBS:
 cpp =
