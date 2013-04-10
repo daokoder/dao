@@ -1,0 +1,7 @@
+# This is a simple demo:
+io.write( "Hello Dao!" #{ comment inside codes #} );
+
+#{
+Here are multi-lines comments.
+Here are multi-lines comments.
+#}
