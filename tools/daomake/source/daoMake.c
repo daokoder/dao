@@ -126,6 +126,8 @@ struct DaoMakeUnit
 {
 	DAO_CSTRUCT_COMMON;
 
+	DaoMakeProject *project;
+
 	DArray  *definitions;
 	DArray  *includePaths;
 	DArray  *linkingPaths;
@@ -181,6 +183,9 @@ struct DaoMakeProject
 	DArray   *linkingFlags;
 	DMap     *exportPaths;
 	DMap     *exportStaticLibs;
+	DMap     *exportCFlags;
+	DMap     *exportLFlags;
+	DMap     *exportStatic;
 
 	/*
 	// In the following maps:
@@ -226,6 +231,7 @@ static DaoType *daomake_type_objects = NULL;
 static DaoType *daomake_type_target  = NULL;
 static DaoType *daomake_type_project = NULL;
 
+static DString *daomake_platform = NULL;
 static DString *daomake_current_path = NULL;
 static DString *daomake_main_source_path = NULL;
 static DString *daomake_test_tool = NULL;
@@ -243,6 +249,7 @@ static int daomake_test_count = 0;
 void DaoMakeUnit_Init( DaoMakeUnit *self, DaoType *type )
 {
 	DaoCstruct_Init( (DaoCstruct*)self, type );
+	self->project = NULL;
 	self->definitions = DArray_New(D_STRING);
 	self->includePaths = DArray_New(D_STRING);
 	self->linkingPaths = DArray_New(D_STRING);
@@ -293,8 +300,8 @@ DaoMakeTarget* DaoMakeTarget_New()
 	self->path = DString_New(1);
 	self->install = DString_New(1);
 	self->ttype = DAOMAKE_EXECUTABLE;
-	self->dynamicLinking = 0;
-	self->dynamicExporting = 0;
+	self->dynamicLinking = 1;
+	self->dynamicExporting = 1;
 	return self;
 }
 void DaoMakeTarget_Delete( DaoMakeTarget *self )
@@ -327,6 +334,9 @@ DaoMakeProject* DaoMakeProject_New()
 	self->linkingFlags = DArray_New(D_STRING);
 	self->exportPaths = DMap_New(D_STRING,D_STRING);
 	self->exportStaticLibs = DMap_New(D_STRING,D_STRING);
+	self->exportCFlags = DMap_New(D_STRING,D_STRING);
+	self->exportLFlags = DMap_New(D_STRING,D_STRING);
+	self->exportStatic = DMap_New(D_STRING,D_STRING);
 
 	self->headerMacros = DMap_New(D_STRING,D_STRING);
 	self->cflagsMacros = DMap_New(D_STRING,D_STRING);
@@ -363,6 +373,9 @@ void DaoMakeProject_Delete( DaoMakeProject *self )
 	DArray_Delete( self->linkingFlags );
 	DMap_Delete( self->exportPaths );
 	DMap_Delete( self->exportStaticLibs );
+	DMap_Delete( self->exportCFlags );
+	DMap_Delete( self->exportLFlags );
+	DMap_Delete( self->exportStatic );
 
 	DMap_Delete( self->headerMacros );
 	DMap_Delete( self->cflagsMacros );
@@ -676,7 +689,8 @@ void DaoMakeUnit_MakeLinkingPaths( DaoMakeUnit *self, DString *lflags )
 	daoint i;
 	for(i=0; i<self->linkingPaths->size; ++i){
 		DString *path = self->linkingPaths->items.pString[i];
-		DString_AppendMBS( lflags, " -L" );
+		DString_AppendGap( lflags );
+		DString_AppendMBS( lflags, "-L" );
 		DString_Append( lflags, path );
 	}
 }
@@ -701,7 +715,7 @@ void DaoMakeProject_ExportLinkingFlags( DaoMakeProject *self, DString *lflags )
 void DaoMakeUnit_MakeCompilingFlags( DaoMakeUnit *self, DString *cflags )
 {
 	daoint i, j;
-	DString_Reset( cflags, 0 );
+	DString_AppendGap( cflags );
 	for(i=0; i<self->compilingFlags->size; ++i){
 		DString_AppendGap( cflags );
 		DString_Append( cflags, self->compilingFlags->items.pString[i] );
@@ -720,7 +734,7 @@ void DaoMakeUnit_MakeCompilingFlags( DaoMakeUnit *self, DString *cflags )
 void DaoMakeUnit_MakeLinkingFlags( DaoMakeUnit *self, DString *lflags )
 {
 	daoint i, j;
-	DString_Reset( lflags, 0 );
+	DString_AppendGap( lflags );
 	DaoMakeUnit_MakeLinkingPaths( self, lflags );
 	for(i=0; i<self->linkingFlags->size; ++i){
 		DString_AppendGap( lflags );
@@ -743,6 +757,28 @@ void DaoMakeUnit_MakeLinkingFlags( DaoMakeUnit *self, DString *lflags )
 			DString_Append( lflags, it->value.pString );
 		}
 		DaoMakeProject_ExportLinkingFlags( project, lflags );
+	}
+}
+
+static void DaoMakeTarget_MakeCompilingFlags( DaoMakeTarget *self, DaoMakeProject *pro, DString *flags )
+{
+	daoint i;
+	DaoMakeUnit_MakeCompilingFlags( & pro->base, flags );
+	DaoMakeUnit_MakeCompilingFlags( & self->base, flags );
+	for(i=0; i<self->objects->size; ++i){
+		DaoMakeObjects *objects = (DaoMakeObjects*) self->objects->items.pVoid[i];
+		DaoMakeUnit_MakeCompilingFlags( & objects->base, flags );
+	}
+}
+
+static void DaoMakeTarget_MakeLinkingFlags( DaoMakeTarget *self, DaoMakeProject *pro, DString *flags )
+{
+	daoint i;
+	DaoMakeUnit_MakeLinkingFlags( & pro->base, flags );
+	DaoMakeUnit_MakeLinkingFlags( & self->base, flags );
+	for(i=0; i<self->objects->size; ++i){
+		DaoMakeObjects *objects = (DaoMakeObjects*) self->objects->items.pVoid[i];
+		DaoMakeUnit_MakeLinkingFlags( & objects->base, flags );
 	}
 }
 
@@ -885,17 +921,9 @@ DString* DaoMakeProject_MakeObjectRule( DaoMakeProject *self, DaoMakeTarget *tar
 	mode = DaoMake_GetSettingValue( daomake_mode_keys[ 2*daomake_build_mode ] );
 	if( mode ) DString_Append( cflags, mode );
 
-	DaoMakeUnit_MakeCompilingFlags( & self->base, cflag );
-	DString_AppendGap( cflags );
-	DString_Append( cflags, cflag );
-
-	DaoMakeUnit_MakeCompilingFlags( & target->base, cflag );
-	DString_AppendGap( cflags );
-	DString_Append( cflags, cflag );
-
-	DaoMakeUnit_MakeCompilingFlags( & objects->base, cflag );
-	DString_AppendGap( cflags );
-	DString_Append( cflags, cflag );
+	DaoMakeUnit_MakeCompilingFlags( & self->base, cflags );
+	DaoMakeUnit_MakeCompilingFlags( & target->base, cflags );
+	DaoMakeUnit_MakeCompilingFlags( & objects->base, cflags );
 
 	DString_Assign( signature, cflags );
 	DString_AppendGap( signature );
@@ -1095,13 +1123,8 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 	mode = DaoMake_GetSettingValue( daomake_mode_keys[ 2*daomake_build_mode+1 ] );
 	if( mode ) DString_Append( lflags, mode );
 
-	DaoMakeUnit_MakeLinkingFlags( & self->base, lflag );
-	DString_AppendGap( lflags );
-	DString_Append( lflags, lflag );
-
-	DaoMakeUnit_MakeLinkingFlags( & target->base, lflag );
-	DString_AppendGap( lflags );
-	DString_Append( lflags, lflag );
+	DaoMakeUnit_MakeLinkingFlags( & self->base, lflags );
+	DaoMakeUnit_MakeLinkingFlags( & target->base, lflags );
 
 	DString_Reset( objs, 0 );
 	DMap_Reset( self->mapStringInt );
@@ -1127,9 +1150,7 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 			}
 		}
 
-		DaoMakeUnit_MakeLinkingFlags( & objects->base, lflag );
-		DString_AppendGap( lflags );
-		DString_Append( lflags, lflag );
+		DaoMakeUnit_MakeLinkingFlags( & objects->base, lflags );
 
 		DString_AppendGap( objs );
 		DString_AppendMBS( objs, "$(" );
@@ -1513,98 +1534,184 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 	if( self->signature != sig ) DaoMakeProject_MakeFile( self, makefile );
 }
 
+static void DaoMakeTarget_MakeExport( DaoMakeTarget *self, DString *cflags, DString *lflags, DString *stlibs, DMap *incdirs, DMap *lnkdirs )
+{
+	DaoMakeProject *project = self->base.project;
+	DaoValue **installs = project->installs->items.pValue;
+	DString *path = DaoMakeProject_GetBufferString( project );
+	DString *key = DaoMakeProject_GetBufferString( project );
+	DMap *headers = DMap_New(D_STRING,0);
+	DNode *it;
+	daoint i, j;
+	for(i=0; i<self->objects->size; ++i){
+		DaoMakeObjects *objs = (DaoMakeObjects*) DArray_Item( self->objects, i );
+		for(j=0; j<objs->headers->size; ++j){
+			DMap_Insert( headers, DArray_String( objs->headers, j ), 0 );
+		}
+	}
+	for(i=0; i<project->installs->size; i+=2){
+		DString *dest = DaoValue_TryGetString( installs[i+1] );
+		DString *file = DaoValue_TryGetString( installs[i] );
+		if( file == NULL ) continue;
+		/*
+		// "dest" is added to "-I" compiling flags, only if:
+		// 1. "file" is a header file to be installed to "dest"; Or,
+		// 2. "file" is a directory, which contains one of the used header files;
+		*/
+		if( DMap_Find( headers, file ) == NULL ){
+			DString_ToMBS( file );
+			if( DaoMake_IsDir( file->mbs ) == 0 ) continue;
+			/* Check if the directory contains one of the header files: */
+			for(it=DMap_First(headers); it; it=DMap_Next(headers,it)){
+				if( DString_Find( it->key.pString, file, 0 ) == 0 ) break;
+			}
+			if( it== NULL ) continue;
+		}
+		DString_Reset( key, 0 );
+		DString_Reset( path, 0 );
+		DString_Append( path, dest );
+		DaoMakeProject_MakeSourcePath( project, path );
+		DString_Append( key, self->name );
+		DString_AppendMBS( key, "::::" );
+		DString_Append( key, path );
+		if( DMap_Find( incdirs, key ) ) continue;
+		DMap_Insert( incdirs, key, 0 );
+		DString_AppendGap( cflags );
+		DString_AppendMBS( cflags, "-I" );
+		DString_Append( cflags, path );
+	}
+	DString_Reset( key, 0 );
+	DString_Append( key, self->name );
+	DString_AppendMBS( key, "::::" );
+	DString_Append( key, self->install );
+	if( DMap_Find( lnkdirs, key ) == NULL ){
+		DMap_Insert( lnkdirs, key, 0 );
+		DString_AppendGap( lflags );
+		DString_AppendMBS( lflags, "-L" );
+		DString_Append( lflags, self->install );
+	}
+	project->usedStrings -= 2;
+}
+void DString_AppendVerbatim( DString *self, DString *text, DString *md5 )
+{
+	DString_MD5( text, md5 );
+	DString_Reset( md5, 12 );
+	DString_ToUpper( md5 );
+	DString_AppendMBS( self, "@[" );
+	DString_Append( self, md5 );
+	DString_AppendMBS( self, "]" );
+	DString_Append( self, text );
+	DString_AppendMBS( self, "@[" );
+	DString_Append( self, md5 );
+	DString_AppendMBS( self, "]\n" );
+}
 void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output )
 {
+	DNode *it, *itCFlags, *itLFlags, *itStlibs;
 	DString *incdir = DaoMakeProject_GetBufferString( self );
 	DString *lnkdir = DaoMakeProject_GetBufferString( self );
 	DString *cflags = DaoMakeProject_GetBufferString( self );
 	DString *lflags = DaoMakeProject_GetBufferString( self );
+	DString *stlibs = DaoMakeProject_GetBufferString( self );
+	DString *proCFlags = DaoMakeProject_GetBufferString( self );
+	DString *proLFlags = DaoMakeProject_GetBufferString( self );
 	DaoValue **installs = self->installs->items.pValue;
+	DMap *mapCFlags = DMap_New(D_STRING,D_STRING);
+	DMap *mapLFlags = DMap_New(D_STRING,D_STRING);
+	DMap *mapStlibs = DMap_New(D_STRING,D_STRING);
 	DMap *incdirs = DMap_New(D_STRING,0);
 	DMap *lnkdirs = DMap_New(D_STRING,0);
 	DString *md5 = self->mbs;
-	daoint i, count = 0;
+	daoint i;
 
 	DString_Reset( output, 0 );
 	DString_AppendMBS( output, "project = DaoMake::Project( \"" );
 	DString_Append( output, self->projectName );
 	DString_AppendMBS( output, "\" )\n" );
 
-	DaoMakeUnit_MakeDefinitions( & self->base, cflags );
-	DaoMakeProject_ExportLinkingFlags( self, lflags );
+	DaoMakeUnit_MakeDefinitions( & self->base, proCFlags );
+	DaoMakeUnit_MakeLinkingFlags( & self->base, proLFlags );
 
 	for(i=0; i<self->installs->size; i+=2){
 		DString *dest = DaoValue_TryGetString( installs[i+1] );
 		DString *file = DaoValue_TryGetString( installs[i] );
-		DaoMakeTarget *target = (DaoMakeTarget*) DaoValue_CastCdata( installs[i], daomake_type_target );
-		DaoMakeProject_MakeSourcePath( self, dest );
-		if( target ){
-			int ttype = target->ttype;
-			if( ttype != DAOMAKE_SHAREDLIB && ttype != DAOMAKE_STATICLIB ) continue;
-			count += 1;
-			if( DMap_Find( lnkdirs, dest ) ){
-				DString_AppendGap( lnkdir );
-				DString_AppendMBS( lnkdir, "-l" );
-				DString_Append( lnkdir, target->name );
-				continue;
-			}
-			DMap_Insert( lnkdirs, dest, 0 );
-			DString_AppendGap( lnkdir );
-			DString_AppendMBS( lnkdir, "-L" );
-			DString_Append( lnkdir, dest );
-			DString_AppendGap( lnkdir );
-			DString_AppendMBS( lnkdir, "-l" );
-			DString_Append( lnkdir, target->name );
-		}else if( DString_MatchMBS( file, " %. (h | hpp | hxx) $", NULL, NULL ) ){
-			if( DMap_Find( incdirs, dest ) ) continue;
-			DMap_Insert( incdirs, dest, 0 );
-			DString_AppendGap( incdir );
-			DString_AppendMBS( incdir, "-I" );
-			DString_Append( incdir, dest );
+		DaoMakeTarget *tar = (DaoMakeTarget*) DaoValue_CastCdata( installs[i], daomake_type_target );
+		if( tar == NULL ) continue;
+		if( tar->ttype != DAOMAKE_SHAREDLIB && tar->ttype != DAOMAKE_STATICLIB ) continue;
+		if( tar->install->size == 0 ) continue;
+
+		DString_Reset( cflags, 0 );
+		DString_Reset( lflags, 0 );
+		DString_Reset( stlibs, 0 );
+		DaoMakeTarget_MakeExport( tar, cflags, lflags, stlibs, incdirs, lnkdirs );
+
+		if( DMap_Find( mapCFlags, tar->name ) == NULL ){
+			DString_Reset( md5, 0 );
+			DMap_Insert( mapCFlags, tar->name, proCFlags );
+			DMap_Insert( mapLFlags, tar->name, proLFlags );
+			DMap_Insert( mapStlibs, tar->name, md5 );
+		}
+		itCFlags = DMap_Find( mapCFlags, tar->name );
+		itLFlags = DMap_Find( mapLFlags, tar->name );
+		itStlibs = DMap_Find( mapStlibs, tar->name );
+
+		if( cflags->size ){
+			DString_AppendGap( itCFlags->value.pString );
+			DString_Append( itCFlags->value.pString, cflags );
+		}
+
+		if( lflags->size ){
+			DString_AppendGap( itLFlags->value.pString );
+			DString_Append( itLFlags->value.pString, lflags );
+		}
+
+		if( stlibs->size ){
+			DString_AppendGap( itStlibs->value.pString );
+			DString_Append( itStlibs->value.pString, stlibs );
 		}
 	}
-	if( count == 0 ){
-		DString_Reset( output, 0 );
-		return;
+	itCFlags = DMap_First( mapCFlags );
+	itLFlags = DMap_First( mapLFlags );
+	itStlibs = DMap_First( mapStlibs );
+	for(; itCFlags; ){
+		DString_AppendMBS( output, "cflags_" );
+		DString_Append( output, itCFlags->key.pString );
+		DString_AppendMBS( output, " = " );
+		DString_AppendVerbatim( output, itCFlags->value.pString, md5 );
+
+		DString_AppendMBS( output, "lflags_" );
+		DString_Append( output, itLFlags->key.pString );
+		DString_AppendMBS( output, " = " );
+		DString_AppendVerbatim( output, itLFlags->value.pString, md5 );
+
+		DString_AppendMBS( output, "stlibs_" );
+		DString_Append( output, itStlibs->key.pString );
+		DString_AppendMBS( output, " = " );
+		DString_AppendVerbatim( output, itStlibs->value.pString, md5 );
+
+		DString_AppendMBS( output, "project.ExportLibrary( \"" );
+		DString_Append( output, itCFlags->key.pString );
+		DString_AppendMBS( output, "\", cflags_" );
+		DString_Append( output, itCFlags->key.pString );
+		DString_AppendMBS( output, ", lflags_" );
+		DString_Append( output, itCFlags->key.pString );
+		DString_AppendMBS( output, ", stlibs_" );
+		DString_Append( output, itCFlags->key.pString );
+		DString_AppendMBS( output, " )" );
+
+		itCFlags = DMap_Next( mapCFlags, itCFlags );
+		itLFlags = DMap_Next( mapLFlags, itLFlags );
+		itStlibs = DMap_Next( mapStlibs, itStlibs );
 	}
-	if( incdir->size ){
-		DString_AppendGap( cflags );
-		DString_Append( cflags, incdir );
-	}
 
-	if( lnkdir->size ){
-		DString_AppendGap( lflags );
-		DString_Append( lflags, lnkdir );
-	}
-
-	DString_MD5( cflags, md5 );
-	DString_Reset( md5, 12 );
-	DString_ToUpper( md5 );
-	DString_AppendMBS( output, "cflags = @[" );
-	DString_Append( output, md5 );
-	DString_AppendMBS( output, "]" );
-	DString_Append( output, cflags );
-	DString_AppendMBS( output, "@[" );
-	DString_Append( output, md5 );
-	DString_AppendMBS( output, "]\n" );
-
-	DString_MD5( lflags, md5 );
-	DString_Reset( md5, 12 );
-	DString_ToUpper( md5 );
-	DString_AppendMBS( output, "lflags = @[" );
-	DString_Append( output, md5 );
-	DString_AppendMBS( output, "]" );
-	DString_Append( output, lflags );
-	DString_AppendMBS( output, "@[" );
-	DString_Append( output, md5 );
-	DString_AppendMBS( output, "]\n" );
-
-	DString_AppendMBS( output, "project.ExportCompilingFlags( cflags )\n" );
-	DString_AppendMBS( output, "project.ExportLinkingFlags( lflags )\n" );
+	if( mapCFlags->size == 0 ) DString_Reset( output, 0 );
 
 	DMap_Delete( incdirs );
 	DMap_Delete( lnkdirs );
-	self->usedStrings -= 4;
+	DMap_Delete( mapCFlags );
+	DMap_Delete( mapLFlags );
+	DMap_Delete( mapStlibs );
+	self->usedStrings -= 7;
 }
 
 
@@ -1619,6 +1726,19 @@ static void DArray_ImportStringList( DArray *self, DaoList *list )
 		DArray_Append( self, DaoValue_TryGetString( value ) );
 	}
 }
+
+
+static void DaoMakeUnit_ImportPaths( DaoMakeUnit *self, DArray *paths, DaoValue *p[], int N )
+{
+	int i;
+	for(i=0; i<N; ++i){
+		DString *path = DaoValue_TryGetString( p[i] );
+		if( path == NULL ) continue;
+		path = (DString*) DArray_Append( paths, path );
+		if( self->project ) DaoMakeProject_MakeSourcePath( self->project, path );
+	}
+}
+
 static void DArray_ImportStringParameters( DArray *self, DaoValue *p[], int N )
 {
 	int i;
@@ -1639,12 +1759,12 @@ static void UNIT_AddDefinition( DaoProcess *proc, DaoValue *p[], int N )
 static void UNIT_AddIncludePath( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
-	DArray_ImportStringParameters( self->includePaths, p+1, N-1 );
+	DaoMakeUnit_ImportPaths( self, self->includePaths, p+1, N-1 );
 }
 static void UNIT_AddLinkingPath( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
-	DArray_ImportStringParameters( self->linkingPaths, p+1, N-1 );
+	DaoMakeUnit_ImportPaths( self, self->linkingPaths, p+1, N-1 );
 }
 static void UNIT_AddCompilingFlag( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1683,6 +1803,91 @@ static void UNIT_UseStaticPackage( DaoProcess *proc, DaoValue *p[], int N )
 		if( name == NULL ) continue;
 		DArray_Append( self->usingPackages2, p[1] );
 		DArray_Append( self->staticLibNames, name );
+	}
+}
+static void DaoMakeUnit_UseLibrary( DaoMakeUnit * self, DaoMakeProject *pro, DString *name, int ttype )
+{
+	DString *flags = DaoMakeProject_GetBufferString( pro );
+	DString *rpath = DaoMake_GetSettingValue( "DLL-RPATH" );
+	DString *flag;
+	DNode *it;
+	daoint i;
+
+	for(i=0; i<pro->targets->size; ++i){
+		DaoMakeTarget *tar = (DaoMakeTarget*) pro->targets->items.pVoid[i];
+		if( tar->ttype != ttype ) continue;
+		if( DString_EQ( tar->name, name ) == 0 ) continue;
+		DString_Reset( flags, 0 );
+		DaoMakeTarget_MakeCompilingFlags( tar, pro, flags );
+		DArray_Append( self->compilingFlags, flags );
+		DString_Reset( flags, 0 );
+		DaoMakeTarget_MakeLinkingFlags( tar, pro, flags );
+		DArray_Append( self->linkingFlags, flags );
+
+		if( tar->install->size ){
+			flag = (DString*) DArray_PushBack( self->linkingFlags, rpath );
+			DString_Append( flag, tar->install );
+		}
+		break;
+	}
+	pro->usedStrings -= 1;
+
+	it = DMap_Find( pro->exportCFlags, name );
+	if( it ) DArray_Append( self->compilingFlags, it->value.pString );
+
+	it = DMap_Find( pro->exportLFlags, name );
+	if( it ) DArray_Append( self->linkingFlags, it->value.pString );
+}
+static void UNIT_UseSharedLib( DaoProcess *proc, DaoValue *p[], int N )
+{
+	int i;
+	DNode *it;
+	DString *flag;
+	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
+	DaoMakeProject *pro = (DaoMakeProject*) p[1];
+	DString *rpath = DaoMake_GetSettingValue( "DLL-RPATH" );
+	DString *path = DaoMakeProject_GetBufferString( pro );
+	DString *binpath = vmSpace->startPath;
+
+	flag = (DString*) DArray_PushBack( self->linkingFlags, rpath );
+	DString_Append( path, pro->sourcePath );
+	if( daomake_out_of_source ){
+		DString_Insert( path, binpath, 0, daomake_main_source_path->size, binpath->size );
+	}
+	DString_Append( flag, path );
+
+	for(i=2; i<N; ++i){
+		DString *name = DaoValue_TryGetString( p[i] );
+		if( name == NULL ) continue;
+
+		DaoMakeUnit_UseLibrary( self, pro, name, DAOMAKE_SHAREDLIB );
+
+		DString_Reset( path, 0 );
+		DString_AppendMBS( path, "-l" );
+		DString_Append( path, name );
+		flag = (DString*) DArray_PushBack( self->linkingFlags, path );
+	}
+	pro->usedStrings -= 1;
+}
+static void UNIT_UseStaticLib( DaoProcess *proc, DaoValue *p[], int N )
+{
+	int i;
+	DNode *it;
+	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
+	DaoMakeProject *pro = (DaoMakeProject*) p[1];
+	for(i=2; i<N; ++i){
+		DString *name = DaoValue_TryGetString( p[i] );
+		if( name == NULL ) continue;
+
+		DaoMakeUnit_UseLibrary( self, pro, name, DAOMAKE_STATICLIB );
+
+		it = DMap_Find( pro->exportStatic, name );
+		if( it && it->value.pString->size ){
+			DArray_Append( self->linkingFlags, it->value.pString );
+		}else{
+			name = (DString*) DArray_PushBack( self->linkingFlags, name );
+			DString_InsertMBS( name, "-l", 0, 0, 0 );
+		}
 	}
 }
 static void UNIT_MakeDefinitions( DaoProcess *proc, DaoValue *p[], int N )
@@ -1726,6 +1931,9 @@ static DaoFuncItem DaoMakeUnitMeths[]=
 	{ UNIT_UsePackage,        "UsePackage( self : Unit, pkg : Project, ... : Project )" },
 	{ UNIT_UseStaticPackage,  "UseStaticPackage( self : Unit, pkg : Project, name : string, ... : string )" },
 
+	{ UNIT_UseSharedLib,  "UseSharedLibrary( self : Unit, pro : Project, lib : string, ... : string )" },
+	{ UNIT_UseStaticLib,  "UseStaticLibrary( self : Unit, pro : Project, lib : string, ... : string )" },
+
 	{ UNIT_MakeDefinitions,     "MakeDefinitions( self : Unit ) => string" },
 	{ UNIT_MakeIncludePaths,    "MakeIncludePaths( self : Unit ) => string" },
 	{ UNIT_MakeLinkingPaths,    "MakeLinkingPaths( self : Unit ) => string" },
@@ -1747,14 +1955,6 @@ DaoTypeBase DaoMakeUnit_Typer =
 
 
 
-static void OBJECTS_New( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoMakeObjects *self = DaoMakeObjects_New();
-
-	DArray_ImportStringList( self->sources, (DaoList*) p[0] );
-	DArray_ImportStringList( self->headers, (DaoList*) p[1] );
-	DaoProcess_PutValue( proc, (DaoValue*) self );
-}
 static void OBJECTS_AddHeaders( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeObjects *self = (DaoMakeObjects*) p[0];
@@ -1767,7 +1967,6 @@ static void OBJECTS_AddSources( DaoProcess *proc, DaoValue *p[], int N )
 }
 static DaoFuncItem DaoMakeObjectsMeths[]=
 {
-	{ OBJECTS_New,   "Objects( sources : list<string>, headers : list<string> = {} ) => Objects" },
 	{ OBJECTS_AddHeaders,  "AddHeaders( file : string, ... : string )" },
 	{ OBJECTS_AddSources,  "AddSources( file : string, ... : string )" },
 	{ NULL, NULL }
@@ -1827,12 +2026,12 @@ static void TARGET_AddDepends( DaoProcess *proc, DaoValue *p[], int N )
 static void TARGET_EnableDynamicExporting( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
-	self->dynamicExporting = 1;
+	self->dynamicExporting = p[1]->xEnum.value;
 }
 static void TARGET_EnableDynamicLinking( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
-	self->dynamicLinking = 1;
+	self->dynamicLinking = p[1]->xEnum.value;
 }
 static void TARGET_SetPath( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1855,8 +2054,8 @@ static DaoFuncItem DaoMakeTargetMeths[]=
 	{ TARGET_AddCommand,  "AddCommand( self : Target, command : string, ... : string )" },
 	{ TARGET_AddTest,     "AddTest( self : Target, test : string, ... : string )" },
 	{ TARGET_AddDepends,  "AddDependency( self : Target, target : Target, ... : Target )" },
-	{ TARGET_EnableDynamicExporting,  "EnableDynamicExporting( self : Target )" },
-	{ TARGET_EnableDynamicLinking,    "EnableDynamicLinking( self : Target )" },
+	{ TARGET_EnableDynamicExporting,  "EnableDynamicExporting( self : Target, bl :enum<FALSE,TRUE> = $TRUE )" },
+	{ TARGET_EnableDynamicLinking,    "EnableDynamicLinking( self : Target, bl :enum<FALSE,TRUE> = $TRUE )" },
 	{ TARGET_SetPath,  "SetTargetPath( self : Target, path : string )" },
 	{ TARGET_Install,  "Install( self : Target, dest : string )" },
 	{ NULL, NULL }
@@ -1886,14 +2085,26 @@ static void PROJECT_New( DaoProcess *proc, DaoValue *p[], int N )
 	DaoNamespace *ns = proc->activeNamespace;
 	DaoMakeProject *self = DaoMakeProject_New();
 
+	self->base.project = self;
 	DaoProcess_PutValue( proc, (DaoValue*) self );
 	DString_Assign( self->sourceName, ns->file );
 	DString_Assign( self->sourcePath, ns->path );
 	DString_Assign( self->projectName, name );
-	if( name->mbs )
+	if( name->mbs ){
 		DaoMap_InsertMBS( daomake_projects, name->mbs, (DaoValue*) self );
-	else
+	}else{
 		DaoMap_InsertWCS( daomake_projects, name->wcs, (DaoValue*) self );
+	}
+}
+static void PROJECT_AddOBJ( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeProject *self = (DaoMakeProject*) p[0];
+	DaoMakeObjects *objs = DaoMakeObjects_New();
+
+	objs->base.project = self;
+	DArray_ImportStringList( objs->sources, (DaoList*) p[1] );
+	DArray_ImportStringList( objs->headers, (DaoList*) p[2] );
+	DaoProcess_PutValue( proc, (DaoValue*) objs );
 }
 static void PROJECT_AddTarget( DaoProcess *proc, DaoValue *p[], int N, int ttype )
 {
@@ -1901,6 +2112,7 @@ static void PROJECT_AddTarget( DaoProcess *proc, DaoValue *p[], int N, int ttype
 	DaoMakeTarget *target = DaoMakeTarget_New();
 	int i;
 	target->ttype = ttype;
+	target->base.project = self;
 	DString_Assign( target->name, DaoValue_TryGetString( p[1] ) );
 	for(i=2; i<N; ++i) DArray_Append( target->objects, p[i] );
 	DaoProcess_PutValue( proc, (DaoValue*) target );
@@ -1931,6 +2143,7 @@ static void PROJECT_AddTest( DaoProcess *proc, DaoValue *p[], int N )
 	int i;
 	daomake_test_count += (N-2);
 	target->ttype = DAOMAKE_TESTING;
+	target->base.project = self;
 	DString_Assign( target->name, DaoValue_TryGetString( p[1] ) );
 	for(i=2; i<N; ++i) DArray_Append( target->tests, DaoValue_TryGetString( p[i] ) );
 	DaoProcess_PutValue( proc, (DaoValue*) target );
@@ -1943,6 +2156,7 @@ static void PROJECT_AddCMD( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMakeTarget *target = DaoMakeTarget_New();
 	int i;
 	target->ttype = DAOMAKE_COMMAND;
+	target->base.project = self;
 	DString_Assign( target->name, name );
 	for(i=2; i<N; ++i){
 		DString *cmd = DaoValue_TryGetString( p[i] );
@@ -1959,6 +2173,7 @@ static void PROJECT_AddDIR( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMakeTarget *target = DaoMakeTarget_New();
 	int i;
 	target->ttype = DAOMAKE_DIRECTORY;
+	target->base.project = self;
 	DString_Assign( target->name, name );
 	for(i=2; i<N; ++i){
 		DString *path = DaoValue_TryGetString( p[i] );
@@ -2034,6 +2249,17 @@ static void PROJECT_BinaryPath( DaoProcess *proc, DaoValue *p[], int N )
 	if( daomake_out_of_source == 0 ) return;
 	DString_Insert( path, binpath, 0, daomake_main_source_path->size, binpath->size );
 }
+static void PROJECT_ExportLibrary( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeProject *self = (DaoMakeProject*) p[0];
+	DString *lib = DaoValue_TryGetString( p[1] );
+	DString *cflag = DaoValue_TryGetString( p[2] );
+	DString *lflag = DaoValue_TryGetString( p[3] );
+	DString *file = DaoValue_TryGetString( p[4] );
+	DMap_Insert( self->exportCFlags, lib, cflag );
+	DMap_Insert( self->exportLFlags, lib, lflag );
+	DMap_Insert( self->exportStatic, lib, file );
+}
 static void PROJECT_ExportCFlags( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeProject *self = (DaoMakeProject*) p[0];
@@ -2087,6 +2313,7 @@ static DaoFuncItem DaoMakeProjectMeths[]=
 {
 	{ PROJECT_New,     "Project( name : string ) => Project" },
 
+	{ PROJECT_AddOBJ,  "AddObjects( self : Project, sources : list<string>, headers : list<string> = {} ) => Objects" },
 	{ PROJECT_AddEXE,  "AddExecutable( self : Project, name : string, objs : Objects, ... : Objects ) =>Target" },
 	{ PROJECT_AddDLL,  "AddSharedLibrary( self : Project, name : string, objs : Objects, ... : Objects ) =>Target" },
 	{ PROJECT_AddARC,  "AddStaticLibrary( self : Project, name : string, objs : Objects, ... : Objects ) =>Target" },
@@ -2104,6 +2331,8 @@ static DaoFuncItem DaoMakeProjectMeths[]=
 
 	{ PROJECT_SourcePath,  "SourcePath( self : Project ) => string" },
 	{ PROJECT_BinaryPath,  "BinaryPath( self : Project ) => string" },
+
+	{ PROJECT_ExportLibrary,  "ExportLibrary( self : Project, name : string, cflag : string, lflag : string, stlib = '' )" },
 
 	{ PROJECT_ExportCFlags,  "ExportCompilingFlags( self : Project, flags : string )" },
 	{ PROJECT_ExportLFlags,  "ExportLinkingFlags( self : Project, flags : string )" },
@@ -2280,7 +2509,7 @@ static void DAOMAKE_MakeRpath( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DAOMAKE_BuildMode( DaoProcess *proc, DaoValue *p[], int N )
 {
-	static const char *const build_modes[] = { "release", "debug", "profile" };
+	static const char *const build_modes[] = { "RELEASE", "DEBUG", "PROFILE" };
 	DaoProcess_PutEnum( proc, build_modes[ daomake_build_mode ] );
 }
 static void DAOMAKE_SetTestTool( DaoProcess *proc, DaoValue *p[], int N )
@@ -2293,6 +2522,10 @@ static void DAOMAKE_SetTestTool( DaoProcess *proc, DaoValue *p[], int N )
 	DString_Reset( daomake_test_tool_option, 0 );
 	DString_Append( daomake_test_tool, tool );
 	DString_Append( daomake_test_tool_option, option );
+}
+static void DAOMAKE_Platform( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoProcess_PutString( proc, daomake_platform );
 }
 static void DAOMAKE_IsPlatform( DaoProcess *proc, const char *name )
 {
@@ -2364,6 +2597,7 @@ static DaoFuncItem DaoMakeMeths[] =
 	{ DAOMAKE_IsFile,      "IsFile( path : string ) => int" },
 	{ DAOMAKE_IsDir,       "IsDir( path : string ) => int" },
 
+	{ DAOMAKE_Platform,    "Platform() => string" },
 	{ DAOMAKE_IsUnix,      "IsUnix() => int" },
 	{ DAOMAKE_IsLinux,     "IsLinux() => int" },
 	{ DAOMAKE_IsMacOSX,    "IsMacOSX() => int" },
@@ -2792,6 +3026,7 @@ ErrorInvalidArgValue:
 	}
 
 	/* Use no hashing: the same string will be hashed differently in MBS and WCS! */
+	daomake_platform = DString_New(1);
 	daomake_projects = DaoMap_New(0);
 	daomake_settings = DaoMap_New(0);
 	daomake_compilers = DaoMap_New(0);
@@ -2829,6 +3064,7 @@ ErrorInvalidArgValue:
 #endif
 	if( platform ){
 		DaoNamespace *pns;
+		DString_SetMBS( daomake_platform, platform );
 		DString_SetMBS( name, "platforms/" );
 		DString_AppendMBS( name, platform );
 		DString_AppendMBS( name, ".dao" );

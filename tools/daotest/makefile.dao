@@ -1,19 +1,16 @@
 
-daotest = DaoMake::Project( "DaoTest" ) 
+project = DaoMake::Project( "DaoTest" ) 
 
 daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
-daotest_objects = DaoMake::Objects( { "source/daoTest.c" } )
-daotest_exe     = daotest.AddExecutable( "daotest", daotest_objects )
+project_objs = project.AddObjects( { "source/daoTest.c" } )
+project_exe  = project.AddExecutable( "daotest", project_objs )
 
+project_exe.UseSharedLibrary( daovm, "dao" )
 
-daotest_exe.UsePackage( daovm )
-daotest_exe.EnableDynamicLinking()
-daotest_exe.EnableDynamicExporting()
+project.AddCommand( "copylib", "$(DAOMAKE) copy -u " + project_exe.Name() + " ../../" )
 
-daotest.AddCommand( "copylib", "$(DAOMAKE) copy -u " + daotest_exe.Name() + " ../../" )
-
-daotest.Install( daovm.GetPath( "BIN-PATH" ), daotest_exe );
+project.Install( daovm.GetPath( "BIN-PATH" ), project_exe );
 

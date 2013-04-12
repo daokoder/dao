@@ -5804,7 +5804,9 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 #endif
 
 	self->curToken = lb;
-	if( etype == DKEY_TUPLE || btype == DTOK_LB ){
+	if( (etype == DKEY_LIST || btype == DTOK_LCB) && semi >= 0 ){
+		regC = -1;
+	}else if( etype == DKEY_TUPLE || btype == DTOK_LB ){
 		/* ( a, b ) */
 		if( tp && tp->tid != DAO_TUPLE ) goto ParsingError;
 		enode = DaoParser_ParseExpressionList( self, DTOK_COMMA, NULL, cid );

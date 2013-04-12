@@ -1,18 +1,18 @@
 
-dao_sys = DaoMake::Project( "DaoSys" ) 
+project = DaoMake::Project( "DaoSys" ) 
 
 daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
-dao_sys_objects = DaoMake::Objects( { "dao_sys.c" }, { "dao_sys.h" } )
-dao_sys_lib     = dao_sys.AddSharedLibrary( "dao_sys", dao_sys_objects )
+project.UseSharedLibrary( daovm, "dao" )
 
-dao_sys_lib.UsePackage( daovm )
-dao_sys_lib.EnableDynamicLinking()
-dao_sys.ExportCompilingFlags( "-I" + DaoMake::SourcePath() )
+project_objs = project.AddObjects( { "dao_sys.c" }, { "dao_sys.h" } )
+project_dll  = project.AddSharedLibrary( "dao_sys", project_objs )
+project_lib  = project.AddStaticLibrary( "dao_sys", project_objs )
 
 
-dao_sys.GenerateFinder( $TRUE );
-dao_sys.Install( daovm.GetPath( "MOD-PATH" ), dao_sys_lib );
-dao_sys.Install( daovm.GetPath( "ROOT-PATH" ) + "/shared/daomake/packages/", "FindDaoSys.dao" );
+project.GenerateFinder( $TRUE );
+project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );
+project.Install( daovm.GetPath( "MOD-PATH" ), project_lib );
+project.Install( daovm.GetPath( "ROOT-PATH" ) + "/shared/daomake/packages/", "FindDaoSys.dao" );

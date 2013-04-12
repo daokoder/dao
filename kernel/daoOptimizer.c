@@ -4325,8 +4325,10 @@ NotExist_TryAux:
 							}
 							if( at->tid < types[opa+j]->tid ) at = types[opa+j];
 						}
-						if( code == DVM_VECTOR && at )
+						if( code == DVM_VECTOR && at ){
+							if( at->tid == DAO_ARRAY ) at = at->nested->items.pType[0];
 							if( at->tid == DAO_NONE || at->tid > DAO_COMPLEX ) at = dao_type_float;
+						}
 					}
 				}else{
 					int num = types[opa]->tid;

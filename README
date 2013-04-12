@@ -29,3 +29,18 @@ where PLATFORM can be one of the followings:
 Then run the following to install:
 
 $ make install
+
+================================================================
+Customized building:
+
+Build mode (release, debug or profile) and installation directory
+can be set by:
+
+$ make -f Makefile.daomake PLATFORM MODE=debug INSTALL=directory
+
+Out of source building can be done by executing the following
+from the build directory:
+
+$ make -f DAO-DIR/Makefile.daomake PLATFORM SRCDIR=DAO-DIR
+
+Please read Makefile.daomake for more options.

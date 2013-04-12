@@ -424,6 +424,14 @@ void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *optimizer )
 	DMutex_Unlock( & self->mutexMisc );
 #endif
 }
+DaoStream* DaoVmSpace_StdioStream( DaoVmSpace *self )
+{
+	return self->stdioStream;
+}
+DaoStream* DaoVmSpace_ErrorStream( DaoVmSpace *self )
+{
+	return self->errorStream;
+}
 DaoUserStream* DaoVmSpace_SetUserStdio( DaoVmSpace *self, DaoUserStream *stream )
 {
 	return DaoStream_SetUserStream( self->stdioStream, stream );
@@ -1820,7 +1828,7 @@ void Dao_MakePath( DString *base, DString *path )
 	}else if( base->size && path->size == 0 ){
 		DString_Assign( path, base );
 	}
-	DString_ChangeMBS( path, "/ %. /", "/", 0 );
+	DString_ChangeMBS( path, "/ %. (/|$)", "/", 0 );
 	DString_Delete( base );
 }
 int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname )

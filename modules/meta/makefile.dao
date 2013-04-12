@@ -1,15 +1,17 @@
 
-dao_meta = DaoMake::Project( "DaoMeta" ) 
+project = DaoMake::Project( "DaoMeta" ) 
 
 daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
-dao_meta_objects = DaoMake::Objects( { "dao_meta.c" } )
-dao_meta_lib     = dao_meta.AddSharedLibrary( "dao_meta", dao_meta_objects )
+project.UseSharedLibrary( daovm, "dao" )
 
-dao_meta_lib.UsePackage( daovm )
-dao_meta_lib.EnableDynamicLinking()
+project_objs = project.AddObjects( { "dao_meta.c" } )
+project_dll  = project.AddSharedLibrary( "dao_meta", project_objs )
+project_lib  = project.AddStaticLibrary( "dao_meta", project_objs )
 
 
-dao_meta.Install( daovm.GetPath( "MOD-PATH" ), dao_meta_lib );
+project.GenerateFinder( $TRUE );
+project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );
+project.Install( daovm.GetPath( "MOD-PATH" ), project_lib );

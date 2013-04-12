@@ -30,9 +30,10 @@ routine ArchiveToCSource( archive : string )
 	onloads = '';
 	sources = '';
 	modules = '';
+	finders = '';
 
 	size = archive.size();
-	if( size < 8 ) return '';
+	if( size < 8 ) return '', '';
 
 	pos = 4, 
 	files = DaoDecodeUInt32( archive, pos );
@@ -49,6 +50,11 @@ routine ArchiveToCSource( archive : string )
 		if( name.match( '%.(dll|so|dylib)$' ).start >= 0 ){
 			onloads += 'extern int ' + source + '( DaoVmSpace *vms, DaoNamespace *ns );\n';
 			modules += '  { "' + name + '", 0, NULL, ' + source + ' },\n';
+
+			name.change( 'lib [^/\\]* %.(dll|so|dylib)$', '' )
+			finder = source.change( '_OnLoad$', '' );
+			if( finders.size() ) finders += ' ';
+			finders += name + 'Find' + source + '.dao';
 		}else{
 			variable = 'source' + (string)i;
 			sources += 'unsigned char ' + variable + '[] =\n{\n';
@@ -60,7 +66,7 @@ routine ArchiveToCSource( archive : string )
 	}
 	modules = 'DaoVModule dao_virtual_modules[] =\n{\n' + modules;
 	modules += '  { NULL, 0, NULL, NULL }\n};\n';
-	return onloads + sources + modules;
+	return onloads + sources + modules, finders;
 }
 
 routine main( file : string )
@@ -71,9 +77,12 @@ routine main( file : string )
 		return;
 	}
 	archive = archive.map::{ (X+256)%256 }
-	source = ArchiveToCSource( archive )
+	(source, finders) = ArchiveToCSource( archive )
 	fout = io.open( file + '.c', 'w+' );
+	fout2 = io.open( file + '.finders', 'w+' );
 	fout.writeln( '#include "dao.h"' )
 	fout.writeln( source )
+	fout2.writeln( finders )
 	fout.close()
+	fout2.close()
 }

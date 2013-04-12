@@ -989,6 +989,9 @@ DAO_DLL DaoProcess* DaoVmSpace_MainProcess( DaoVmSpace *self );
 DAO_DLL DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self );
 DAO_DLL void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc );
 
+DAO_DLL DaoStream* DaoVmSpace_StdioStream( DaoVmSpace *self );
+DAO_DLL DaoStream* DaoVmSpace_ErrorStream( DaoVmSpace *self );
+
 DAO_DLL DaoUserStream* DaoVmSpace_SetUserStdio( DaoVmSpace *self, DaoUserStream *stream );
 DAO_DLL DaoUserStream* DaoVmSpace_SetUserStdError( DaoVmSpace *self, DaoUserStream *stream );
 DAO_DLL DaoUserHandler* DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler );

@@ -1,10 +1,15 @@
 
+###########################################################################
 #
 # Create a project named "Dao", which can be accessed by other
 # DaoMake files using DaoMake::FindPackage( "Dao" ).
 #
+###########################################################################
+
 daovm = DaoMake::Project( "Dao" )
 
+
+###########################################################################
 #
 # Create options that can be modified from command line arguments
 # by specifying command line option "--option-NAME VALUE", where
@@ -12,6 +17,8 @@ daovm = DaoMake::Project( "Dao" )
 #
 # Options to set installation paths.
 #
+###########################################################################
+
 daovm_root_path = DaoMake::Option( "INSTALL-PATH", "/usr/local" )
 daovm_bin_path = DaoMake::Option( "BIN-PATH", daovm_root_path + "/bin" )
 daovm_lib_path = DaoMake::Option( "LIB-PATH", daovm_root_path + "/lib" )
@@ -32,12 +39,13 @@ daovm.ExportPath( "MOD-PATH", daovm_mod_path );
 daovm.ExportPath( "DOC-PATH", daovm_doc_path );
 
 
-daovm_full_static = DaoMake::Option( "FULL-STATIC", $OFF )
 
-
+###########################################################################
 #
 # Options to enable/disable language features:
 #
+###########################################################################
+
 daovm_with_macro      = DaoMake::Option( "MACRO",      $ON )
 daovm_with_regex      = DaoMake::Option( "REGEX",      $ON )
 daovm_with_longint    = DaoMake::Option( "LONGINT",    $ON )
@@ -51,6 +59,11 @@ daovm_with_readline   = DaoMake::Option( "READLINE",   $ON )
 
 daovm_make_javascript = DaoMake::Option( "JAVASCRIPT", $OFF )
 
+daovm_bundle_program = DaoMake::Option( "BUNDLE-SCRIPT", "" )
+daovm_bundle_resources = DaoMake::Option( "BUNDLE-RESOURCES", "" )
+
+daovm_full_static = DaoMake::Option( "FULL-STATIC", $OFF )
+
 if( DaoMake::IsMinix() or daovm_make_javascript == $ON ) daovm_with_thread = $OFF;
 if( daovm_full_static == $ON ){
 	daovm_with_thread = $OFF;
@@ -59,10 +72,13 @@ if( daovm_full_static == $ON ){
 if( daovm_with_thread == $OFF ) daovm_with_concurrent = $OFF;
 
 
+###########################################################################
 #
 # project.AddDefinition( "DEFINITION_NAME" ) will add "-DDEFINITION_NAME"
 # to the compiling flags of all its targets.
 #
+###########################################################################
+
 if( daovm_with_macro      == $ON ) daovm.AddDefinition( "DAO_WITH_MACRO" )
 if( daovm_with_regex      == $ON ) daovm.AddDefinition( "DAO_WITH_REGEX" )
 if( daovm_with_longint    == $ON ) daovm.AddDefinition( "DAO_WITH_LONGINT" )
@@ -72,6 +88,12 @@ if( daovm_with_decorator  == $ON ) daovm.AddDefinition( "DAO_WITH_DECORATOR" )
 if( daovm_with_thread     == $ON ) daovm.AddDefinition( "DAO_WITH_THREAD" )
 if( daovm_with_concurrent == $ON ) daovm.AddDefinition( "DAO_WITH_CONCURRENT" )
 
+
+###########################################################################
+#
+# Header and source file lists:
+#
+###########################################################################
 
 daovm_kernel_headers =
 {
@@ -135,14 +157,23 @@ daovm_kernel_sources =
 	"kernel/daoVmspace.c" 
 }
 
+
+
+###########################################################################
 #
-# DaoMake::Objects( source_file_list, header_file_list ) will create an object
+# daovm.AddObjects( source_file_list, header_file_list ) will create an object
 # set that includes the objects compiled from the "source_file_list":
 #
-daovm_kernel_objects = DaoMake::Objects( daovm_kernel_sources, daovm_kernel_headers )
-daovm_main_object    = DaoMake::Objects( { "kernel/daoMain.c" }, daovm_kernel_headers );
+###########################################################################
+daovm_kernel_objects = daovm.AddObjects( daovm_kernel_sources, daovm_kernel_headers )
+daovm_main_object    = daovm.AddObjects( { "kernel/daoMain.c" }, daovm_kernel_headers );
 
 
+###########################################################################
+#
+# Add standard targets:
+#
+###########################################################################
 #
 # Add a shared library target named "dao" to the project.
 # This target will be built from the object set "daovm_kernel_objects".
@@ -159,18 +190,21 @@ daovm_lib = daovm.AddStaticLibrary( "dao", daovm_kernel_objects )
 #
 daovm_exe = daovm.AddExecutable( "dao", daovm_main_object )
 
+daovm.AddIncludePath( "kernel" )
+daovm.AddLinkingPath( "." )
+
+
+###########################################################################
 #
-# Add an executable target:
+# Setup installation destinations before the library targets are used,
+# so that some linking flags can be generated properly:
 #
-if( daovm_make_javascript == $ON ){
-	ems_export = @[]-s EXPORTED_FUNCTIONS="['_DaoInit','_DaoVmSpace_Eval','_DaoQuit']"@[]
-	daovm_js = daovm.AddJavaScriptLibrary( "dao", daovm_kernel_objects )
-	daovm_js.AddDefinition( "DAO_MBSTRING_ONLY" )
-	daovm_js.AddDefinition( "WITHOUT_WCTYPE_H" )
-	daovm_js.AddDefinition( "WITHOUT_DIRECT_THREADING" )
-	daovm_js.AddLinkingFlag( ems_export )
-	daovm_js.AddLinkingFlag( "-O2 --closure 1" )
-}
+###########################################################################
+daovm.Install( daovm_bin_path, daovm_exe )
+daovm.Install( daovm_lib_path, daovm_dll, daovm_lib )
+daovm.Install( daovm_inc_path, daovm_kernel_headers )
+daovm.Install( daovm.GetPath( "INSTALL-PATH" ) + "/shared/daomake/packages/", "FindDao.dao" );
+
 
 
 daovm_partial_static = DaoMake::Option( "STATIC", $OFF );
@@ -181,28 +215,21 @@ daovm_partial_static = DaoMake::Option( "STATIC", $OFF );
 #
 if( DaoMake::IsWin32() ) daovm_partial_static = $OFF;
 
-rpath = DaoMake::MakeRpath( ".", DaoMake::BinaryPath(), daovm_lib_path )
 
 if( daovm_partial_static == $ON ){
 	daovm_exe.AddObjects( daovm_kernel_objects );
 }else{
-	#
-	# Linking against the Dao shared library, the "-rpath" should be
-	# passed to the linker, so that the shared library can be located
-	# properly with or without installation.
-	#
-	daovm_exe.AddLinkingFlag( rpath + " -L. -ldao" );
-	daovm_exe.AddDependency( daovm_dll );
+	daovm_exe.UseSharedLibrary( daovm, "dao" )
+	daovm_exe.AddDependency( daovm_dll )
 }
 
-#
-# On non-windows systems, Dao modules need not link to the Dao shared library,
-# if the executable and shared library is linked with dynamic symbol exporting.
-#
-daovm_exe.EnableDynamicExporting()
-daovm_dll.EnableDynamicExporting()
 
 
+###########################################################################
+#
+# Add platform specific flags:
+#
+###########################################################################
 
 if( DaoMake::IsUnix() ){
 	daovm.AddDefinition( "UNIX" )
@@ -254,38 +281,12 @@ if( daovm_with_readline == $ON ){
 }
 
 
-#
-# Export compiling and linking flags that can be used by others
-# by calling UsePackage().
-#
-daovm.ExportCompilingFlags( "-I" + DaoMake::SourcePath() + "/kernel" )
-daovm.ExportCompilingFlags( daovm.MakeDefinitions() )
-if( daovm_partial_static == $OFF ){
-	daovm.ExportLinkingFlags( rpath + " -L" + DaoMake::BinaryPath() +  " -ldao" )
-}
-if( DaoMake::IsWin32() ){
-	daovm.ExportLinkingFlags( "-lwinmm" );
-}
-if( DaoMake::IsUnix() ){
-	daovm.ExportCompilingFlags( "-fPIC" )
-	daovm.ExportLinkingFlags( "-lm" );
-	if( DaoMake::IsLinux() ) daovm.ExportLinkingFlags( "-ldl" )
-	if( daovm_with_thread == $ON ) daovm.ExportLinkingFlags( "-lpthread" )
-}
-
-#
-# Export the static library target so that targets of other projects
-# can link against this static library, for example by:
-#   daovm = DaoMake::FindPackage( "Dao" )
-#   daomake_exe.UseStaticPackage( daovm, "dao" );
-#
-daovm.ExportStaticLibrary( daovm_lib );
-
-
-
+###########################################################################
 #
 # Add sub projects as additional targets:
 #
+###########################################################################
+
 auxlib = daovm.AddDirectory( "auxlib", "modules/auxlib" )
 syslib = daovm.AddDirectory( "syslib", "modules/syslib" )
 help = daovm.AddDirectory( "help", "modules/help" )
@@ -313,6 +314,12 @@ modules.AddDependency( daovm_lib )
 modules.AddDependency( daovm_exe )
 
 
+if( daovm_bundle_program.size() ){
+	bundle = daovm.AddDirectory( "bundle", "tools/bundler" )
+	bundle.AddDependency( modules )
+}
+
+
 DaoMake::SetTestTool( DaoMake::BinaryPath() + "/daotest" )
 tests = daovm.AddDirectory( "tests", "tests" )
 tests.AddDependency( modules )
@@ -321,9 +328,24 @@ tests.AddDependency( daotest )
 
 daovm.GenerateFinder( $TRUE );
 
-# Setup installations:
-daovm.Install( daovm_bin_path, daovm_exe )
-daovm.Install( daovm_lib_path, daovm_dll, daovm_lib )
-daovm.Install( daovm_inc_path, daovm_kernel_headers )
-daovm.Install( daovm.GetPath( "INSTALL-PATH" ) + "/shared/daomake/packages/", "FindDao.dao" );
 
+
+###########################################################################
+#
+# Add an javascript target:
+#
+###########################################################################
+if( daovm_make_javascript == $ON ){
+	ems_export  = @[]"['_DaoInit','_DaoQuit',@[]
+	ems_export += @[]'_DaoVmSpace_Eval','_DaoVmSpace_StdioStream',@[]
+	ems_export += @[]'_DaoStream_WriteMBS']"@[]
+	daovm_js_main = daovm.AddObjects( { "kernel/daoMain.c" }, daovm_kernel_headers );
+	daovm_js = daovm.AddJavaScriptLibrary( "dao", daovm_kernel_objects, daovm_js_main )
+	daovm_js.AddDefinition( "DAO_WITHOUT_DLL" )
+	daovm_js.AddDefinition( "DAO_MBSTRING_ONLY" )
+	daovm_js.AddDefinition( "WITHOUT_WCTYPE_H" )
+	daovm_js.AddDefinition( "WITHOUT_DIRECT_THREADING" )
+	daovm_js.AddLinkingFlag( "-s EXPORTED_FUNCTIONS=" + ems_export )
+	#daovm_js.AddLinkingFlag( "-s ASM_JS=1" )
+	daovm_js.AddLinkingFlag( "-O2 --closure 1" )
+}

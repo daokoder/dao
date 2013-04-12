@@ -1,20 +1,18 @@
 
-daomake = DaoMake::Project( "DaoMake" ) 
+project = DaoMake::Project( "DaoMake" ) 
 
 daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
-daomake_objects = DaoMake::Objects( { "source/daoMake.c" } )
-daomake_exe     = daomake.AddExecutable( "daomake", daomake_objects )
+project_objs = project.AddObjects( { "source/daoMake.c" } )
+project_exe  = project.AddExecutable( "daomake", project_objs )
 
-daomake_exe.UsePackage( daovm )
-daomake_exe.EnableDynamicLinking()
-daomake_exe.EnableDynamicExporting()
+project_exe.UseSharedLibrary( daovm, "dao" )
 
-daomake.AddCommand( "copylib", "$(DAOMAKE) copy -u " + daomake_exe.Name() + " ../../" )
+project.AddCommand( "copylib", "$(DAOMAKE) copy -u " + project_exe.Name() + " ../../" )
 
-daomake.Install( daovm.GetPath( "BIN-PATH" ), daomake_exe );
-daomake.Install( daovm.GetPath( "ROOT-PATH" ) + "/shared/daomake", "platforms" );
-daomake.Install( daovm.GetPath( "ROOT-PATH" ) + "/shared/daomake", "packages" );
+project.Install( daovm.GetPath( "BIN-PATH" ), project_exe );
+project.Install( daovm.GetPath( "ROOT-PATH" ) + "/shared/daomake", "platforms" );
+project.Install( daovm.GetPath( "ROOT-PATH" ) + "/shared/daomake", "packages" );
 

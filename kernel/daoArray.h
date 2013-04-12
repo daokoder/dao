@@ -96,6 +96,8 @@ DAO_DLL void* DArray_Back( DArray *self );
 #define DArray_Pop( self )           DArray_PopBack( self )
 #define DArray_Top( self )           DArray_Back( self )
 #define DArray_TopInt( self )        (self)->items.pInt[ (self)->size -1 ]
+#define DArray_Item( self, i )       (self)->items.pVoid[i]
+#define DArray_String( self, i )     (self)->items.pString[i]
 
 
 

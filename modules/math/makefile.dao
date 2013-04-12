@@ -1,15 +1,17 @@
 
-dao_math = DaoMake::Project( "DaoMath" ) 
+project = DaoMake::Project( "DaoMath" ) 
 
 daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
-dao_math_objects = DaoMake::Objects( { "dao_math.c" } )
-dao_math_lib     = dao_math.AddSharedLibrary( "dao_math", dao_math_objects )
+project.UseSharedLibrary( daovm, "dao" )
 
-dao_math_lib.UsePackage( daovm )
-dao_math_lib.EnableDynamicLinking()
+project_objs = project.AddObjects( { "dao_math.c" } )
+project_dll  = project.AddSharedLibrary( "dao_math", project_objs )
+project_lib  = project.AddStaticLibrary( "dao_math", project_objs )
 
 
-dao_math.Install( daovm.GetPath( "MOD-PATH" ), dao_math_lib );
+project.GenerateFinder( $TRUE );
+project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );
+project.Install( daovm.GetPath( "MOD-PATH" ), project_lib );
