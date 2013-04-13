@@ -6,9 +6,5 @@ if( DaoMake::IsUnix() ){
 	if( libs == "" ) return;
 
 	llvm = DaoMake::Project( "LLVM" )
-	llvm.ExportCompilingFlags( cflags.chop() )
-	llvm.ExportLinkingFlags( libs.chop() )
-	llvm.ExportLinkingFlags( lflags.chop() )
-
-	io.writeln( llvm )
+	llvm.ExportLibrary( "", cflags.chop(), libs.chop() + " " + lflags.chop() )
 }

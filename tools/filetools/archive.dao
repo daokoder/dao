@@ -52,9 +52,8 @@ routine ArchiveToCSource( archive : string )
 			modules += '  { "' + name + '", 0, NULL, ' + source + ' },\n';
 
 			name.change( 'lib [^/\\]* %.(dll|so|dylib)$', '' )
-			finder = source.change( '_OnLoad$', '' );
-			if( finders.size() ) finders += ' ';
-			finders += name + 'Find' + source + '.dao';
+			source.change( '_OnLoad$', '' );
+			finders += source + '\t' + name + 'Find' + source + '.dao\n';
 		}else{
 			variable = 'source' + (string)i;
 			sources += 'unsigned char ' + variable + '[] =\n{\n';

@@ -1286,3 +1286,13 @@ DString DString_WrapWCS( const wchar_t *wcs )
 	return str;
 }
 
+void DString_AppendPathSep( DString *self )
+{
+	if( self->mbs ){
+		char last = self->size ? self->mbs[self->size-1] : 0;
+		if( last != '/' && last != '\\' ) DString_AppendChar( self, '/' );
+	}else{
+		wchar_t last = self->size ? self->wcs[self->size-1] : 0;
+		if( last != L'/' && last != L'\\' ) DString_AppendWChar( self, L'/' );
+	}
+}

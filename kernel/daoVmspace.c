@@ -2398,6 +2398,7 @@ DaoVmSpace* DaoInit( const char *command )
 	DString_ChangeMBS( mainVmSpace->startPath, "\\", "/", 0 );
 #endif
 
+	DString_AppendPathSep( mainVmSpace->startPath );
 	if( command ){
 		DString *mbs = mainVmSpace->daoBinPath;
 		int absolute = command[0] == '/';
@@ -2420,7 +2421,6 @@ DaoVmSpace* DaoInit( const char *command )
 		}
 #endif
 		while( (i = mbs->size) && mbs->mbs[i-1] != '/' && mbs->mbs[i-1] != '\\' ) mbs->size --;
-		if( (i = mbs->size) && (mbs->mbs[i-1] == '/' || mbs->mbs[i-1] == '\\') ) mbs->size --;
 		mbs->mbs[ mbs->size ] = 0;
 	}
 

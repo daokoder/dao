@@ -1,0 +1,38 @@
+
+# Building system for single executable deployment:
+#
+# Given example.dao, the following will compile it into bytecodes,
+# and bundle the bytecodes with Dao runtime and loaded modules 
+# into a single executable:
+#
+# make -f Makefile.daomake macosx OPTIONS="--option-BUNDLE-SCRIPT example"
+
+daovm_bundle = DaoMake::Option( "BUNDLE", "" )
+
+if( daovm_bundle == "" ) return;
+
+bundler = DaoMake::Project( "DaoBundler" )
+
+bundle_main   = bundler.AddObjects( { "kernel/daoMain.c" } )
+bundle_script = bundler.AddObjects( { daovm_bundle + ".dar.c" } )
+
+bundle_main.AddDefinition( 'DAO_WITH_STATIC_MODULES' )
+
+bundle = bundler.AddExecutable( daovm_bundle, bundle_main, bundle_script )
+
+std.load( "FindDao.dao" )
+
+daovm = DaoMake::FindPackage( "Dao" )
+if( daovm ) bundle.UseStaticLibrary( daovm, "dao" )
+
+finders = io.read( daovm_bundle + ".dar.finders" )
+
+bundle_finders = finders.split( '\n' )
+
+for( finder in bundle_finders ){
+	fields = finder.capture( '^ ([^%t]+) %t ([^%t]+) $' )
+	if( fields.size() < 3 ) skip;
+	if( DaoMake::IsFile( fields[2] ) ) std.load( fields[2] )
+	pro = DaoMake::FindPackage( fields[1] )
+	if( pro ) bundle.UseStaticLibrary( pro )
+}

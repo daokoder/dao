@@ -6,6 +6,5 @@ if( DaoMake::IsUnix() ){
 	if( header_path == "" or header_path2 == "" ) return;
 
 	readline = DaoMake::Project( "ReadLine" )
-	readline.ExportCompilingFlags( "-I" + header_path )
-	readline.ExportLinkingFlags( "-lreadline" )
+	readline.ExportLibrary( "readline", "-I" + header_path, "-lreadline" )
 }

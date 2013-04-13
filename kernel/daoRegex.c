@@ -292,7 +292,7 @@ static int MakeRegex( DaoRegex *self, DString *ds, void *spatt,
 			if( i+1 < end ) chi = bl ? mbs[i+1] : wcs[i+1];
 			switch( chi ){
 			case 's': case 'S': case 'k': case 'K': case 'p': case 'P':
-			case 'c': case 'C': case 'a': case 'A': case 'w': case 'W': 
+			case 'c': case 'C': case 'a': case 'A': case 'w': case 'W':
 			case 'd': case 'D': case 'x': case 'X':
 				type = chi;
 				break;
@@ -359,7 +359,7 @@ static int MakeRegex( DaoRegex *self, DString *ds, void *spatt,
 					}
 				}
 				break;
-			default : 
+			default :
 				type = (i+1 < end) ? PAT_WORD : PAT_NONE;
 				SetWord( self, & word, i, chi );
 				break;
@@ -657,13 +657,15 @@ static int MatchSet( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 			i ++;
 			switch( chi2 ){
 			case 's': case 'S': case 'k': case 'K': case 'p': case 'P':
-			case 'c': case 'C': case 'a': case 'A': case 'w': case 'W': 
-			case 'd': case 'D': case 'x': case 'X': 
+			case 'c': case 'C': case 'a': case 'A': case 'w': case 'W':
+			case 'd': case 'D': case 'x': case 'X':
 				patt->type = chi2;
 				matched = (MatchOne( self, patt, pos ) !=0);
 				patt->type = PAT_SET;
 				break;
-			default : matched = (chi2 == ch); break;
+			case 't' : matched = (ch == L'\t'); break;
+			case 'n' : matched = (ch == L'\n'); break;
+			default  : matched = (ch == chi2); break;
 			}
 		}else if( iswalnum( chi ) && chi2 == '-' && iswalnum( chi3 ) ){
 			i += 2;

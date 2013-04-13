@@ -923,7 +923,7 @@ void DaoNamespace_SetName( DaoNamespace *self, const char *name )
 	i = DString_RFindChar( self->name, '/', -1 );
 	if( i != MAXSIZE ){
 		DString_SetMBS( self->file, name + i + 1 );
-		DString_SetDataMBS( self->path, name, i );
+		DString_SetDataMBS( self->path, name, i + 1 );
 		i = DString_RFindChar( self->name, '.', -1 );
 		if( i != MAXSIZE ) DString_SetMBS( self->lang, self->name->mbs + i + 1 );
 	}else{

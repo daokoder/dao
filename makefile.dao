@@ -59,7 +59,7 @@ daovm_with_readline   = DaoMake::Option( "READLINE",   $ON )
 
 daovm_make_javascript = DaoMake::Option( "JAVASCRIPT", $OFF )
 
-daovm_bundle_program = DaoMake::Option( "BUNDLE-SCRIPT", "" )
+daovm_bundle_program   = DaoMake::Option( "BUNDLE-SCRIPT", "" )
 daovm_bundle_resources = DaoMake::Option( "BUNDLE-RESOURCES", "" )
 
 daovm_full_static = DaoMake::Option( "FULL-STATIC", $OFF )
@@ -203,7 +203,7 @@ daovm.AddLinkingPath( "." )
 daovm.Install( daovm_bin_path, daovm_exe )
 daovm.Install( daovm_lib_path, daovm_dll, daovm_lib )
 daovm.Install( daovm_inc_path, daovm_kernel_headers )
-daovm.Install( daovm.GetPath( "INSTALL-PATH" ) + "/shared/daomake/packages/", "FindDao.dao" );
+daovm.Install( daovm.GetPath( "INSTALL-PATH" ) + "shared/daomake/packages/", "FindDao.dao" );
 
 
 
@@ -276,7 +276,7 @@ if( daovm_with_readline == $ON ){
 		# linking flags that will be added to "daovm_main_object" by
 		# calling UsePackage().
 		#
-		daovm_main_object.UsePackage( readline )
+		daovm_main_object.UseSharedLibrary( readline, "readline" )
 	}
 }
 
@@ -314,11 +314,6 @@ modules.AddDependency( daovm_lib )
 modules.AddDependency( daovm_exe )
 
 
-if( daovm_bundle_program.size() ){
-	bundle = daovm.AddDirectory( "bundle", "tools/bundler" )
-	bundle.AddDependency( modules )
-}
-
 
 DaoMake::SetTestTool( DaoMake::BinaryPath() + "/daotest" )
 tests = daovm.AddDirectory( "tests", "tests" )
@@ -328,6 +323,25 @@ tests.AddDependency( daotest )
 
 daovm.GenerateFinder( $TRUE );
 
+
+###########################################################################
+#
+# Single executable deployment:
+#
+###########################################################################
+
+if( daovm_bundle_program.size() ){
+	darc = daovm_bundle_program + '.dar.c'
+	daomake_args  = '--platform ' + DaoMake::Platform();
+	daomake_args += ' --option-BUNDLE ' + daovm_bundle_program
+	daomake_args += ' --suffix .bundle bundle.dao'
+
+	archive = daovm.AddCommand( darc, './dao -c ' + daovm_bundle_program + '.dao' )
+	archive.AddCommand( './dao -a ' + daovm_bundle_program + '.dac' + daovm_bundle_resources )
+	archive.AddCommand( './dao tools/filetools/archive.dao ' + daovm_bundle_program + '.dar' )
+	archive.AddCommand( '$(DAOMAKE) ' + daomake_args )
+	archive.AddCommand( '$(MAKE) -f Makefile.bundle' )
+}
 
 
 ###########################################################################

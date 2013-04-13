@@ -128,4 +128,8 @@ DAO_DLL DString DString_WrapBytes( const char *mbs, int n );
 DAO_DLL DString DString_WrapMBS( const char *mbs );
 DAO_DLL DString DString_WrapWCS( const wchar_t *wcs );
 
+
+DAO_DLL void DString_AppendPathSep( DString *self );
+
+
 #endif

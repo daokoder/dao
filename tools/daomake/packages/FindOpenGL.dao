@@ -14,10 +14,12 @@ if( DaoMake::IsUnix() ){
 	if( header_path == "" ) return;
 
 	opengl = DaoMake::Project( "OpenGL" )
-	opengl.ExportCompilingFlags( "-I" + header_path )
+	cflags = "-I" + header_path
+	lflags = "";
 	if( DaoMake::IsMacOSX() && header_path.find( "Frameworks" ) >= 0 ){
-		opengl.ExportLinkingFlags( "-framework OpenGL" )
+		lflags = "-framework OpenGL"
 	}else{
-		opengl.ExportLinkingFlags( "-lGL -lGLU" )
+		lflags = "-lGL -lGLU"
 	}
+	opengl.ExportLibrary( "OpenGL", cflags, lflags )
 }
