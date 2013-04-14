@@ -6043,7 +6043,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 	}else if( tki >= DKEY_ARRAY && tki <= DKEY_LIST && tki2 == DTOK_LCB ){
 		int rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
 		if( rb < 0 ) return result;
-		result = DaoParser_ParseEnumeration( self, tki, 0, start+2, rb-1 );
+		result = DaoParser_ParseEnumeration( self, tki, DTOK_LCB, start+2, rb-1 );
 		start = rb + 1;
 	}else if( tki == DTOK_LCB ){
 		int rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
