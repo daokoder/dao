@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -49,7 +49,7 @@
 
 
 /* Need separated mutexes for values and methods setup.
- * Otherwise, a mutex deadlock may occur if values setup 
+ * Otherwise, a mutex deadlock may occur if values setup
  * is triggered by methods setup. */
 DMutex mutex_values_setup;
 DMutex mutex_methods_setup;
@@ -619,7 +619,7 @@ DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const cha
 	// types. If it is a template-like type, copying the type and using new template
 	// parameter types may cause problems in type matching, or function specialization
 	// if the function tries to specialize based on the types of template parameters.
-	// 
+	//
 	// To create a template-like alias to a template-like cdata type, it is only
 	// necessary to add a specialization entry in the template cdata type.
 	*/
@@ -845,7 +845,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DaoNamespace_SetName( self, nsname );
 	DaoNamespace_AddConst( self, self->name, (DaoValue*) self, DAO_DATA_PUBLIC );
 
-	DString_SetMBS( name, "none" ); 
+	DString_SetMBS( name, "none" );
 	DaoNamespace_AddConst( self, name, dao_none_value, DAO_DATA_PUBLIC );
 
 	DArray_Append( self->constants, DaoConstant_New( dao_none_value ) ); /* reserved for main */
@@ -1434,14 +1434,14 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		}
 		break;
 	case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
-	case DAO_COMPLEX : case DAO_LONG : case DAO_STRING : 
+	case DAO_COMPLEX : case DAO_LONG : case DAO_STRING :
 		abtp = simpleTypes[ p->type ];
 		if( abtp ) break;
 		abtp = DaoNamespace_MakeType( self, coreTypeNames[p->type], p->type, NULL, NULL, 0 );
 		simpleTypes[ p->type ] = abtp;
 		GC_IncRC( abtp );
 		break;
-	case DAO_ENUM : 
+	case DAO_ENUM :
 		abtp = p->xEnum.etype;
 		if( abtp ) break;
 		abtp = simpleTypes[ p->type ];
@@ -1498,7 +1498,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 				itp = dao_type_any;
 				DString_AppendMBS( mbs, "<any>" );
 				DArray_Append( nested, itp );
-			}  
+			}
 		}else if( p->type == DAO_MAP ){
 			nested = DArray_New(0);
 			if( map->items->size ==0 ){
@@ -1603,7 +1603,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 	if( nested ) DArray_Delete( nested );
 	return abtp;
 }
-DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name, 
+DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		uint_t tid, DaoValue *pb, DaoType *nest[], int N )
 {
 	DaoClass *klass;
@@ -1799,7 +1799,7 @@ DaoRoutine* DaoNamespace_ParsePrototype( DaoNamespace *self, const char *proto, 
 	if( ! DaoLexer_Tokenize( defparser->lexer, proto, 0 ) ) goto Error;
 	if( defparser->tokens->size < 3 ) goto Error;
 	if( (optok = defparser->tokens->items.pToken[0]->name == DKEY_OPERATOR) == 0 ){
-		if( defparser->tokens->items.pToken[0]->type == DTOK_IDENTIFIER 
+		if( defparser->tokens->items.pToken[0]->type == DTOK_IDENTIFIER
 				&& defparser->tokens->items.pToken[1]->type == DTOK_LB ) key = 0;
 	}
 

@@ -27,3 +27,5 @@ if( DaoMake::IsDir( "sync" ) ) modules.AddDirectory( "sync", "sync" );
 if( DaoMake::IsDir( "web" ) ) modules.AddDirectory( "web", "web" );
 
 if( DaoMake::IsDir( "graphics" ) ) modules.AddDirectory( "graphics", "graphics" );
+
+if( DaoMake::IsDir( "DaoGraphics" ) ) modules.AddDirectory( "Graphics", "DaoGraphics" );

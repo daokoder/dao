@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -51,7 +51,7 @@ enum DaoRoutineSubTypes
 {
 	DAO_ROUTINE_NORMAL ,
 	DAO_ROUTINE_ABSTRACT ,
-	DAO_ROUTINE_OVERLOADED 
+	DAO_ROUTINE_OVERLOADED
 };
 
 
@@ -204,7 +204,7 @@ void DString_AppendDaoInt( DString *bytecodes, daoint value )
 /*
 // IEEE 754 double-precision binary floating-point format:
 //   sign(1)--exponent(11)------------fraction(52)---------------------
-//   S EEEEEEEEEEE FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF  
+//   S EEEEEEEEEEE FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 //   63         52                                                    0
 //
 //   value = (-1)^S  *  ( 1 + \sigma_0^51 (b_i * 2^{-(52-i)}) )  *  2^{E-1023}
@@ -560,7 +560,7 @@ int DaoByteEncoder_EncodeType( DaoByteEncoder *self, DaoType *type )
 		break;
 	case DAO_ARRAY : case DAO_LIST : case DAO_MAP :
 	case DAO_TUPLE : case DAO_TYPE : case DAO_FUTURE :
-	case DAO_VARIANT : 
+	case DAO_VARIANT :
 		if( type->tid == DAO_VARIANT && type->aux ){
 			DaoByteEncoder_EncodeType( self, (DaoType*) type->aux );
 		}
@@ -1428,7 +1428,7 @@ Error:
 /*
 // IEEE 754 double-precision binary floating-point format:
 //   sign(1)--exponent(11)------------fraction(52)---------------------
-//   S EEEEEEEEEEE FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF  
+//   S EEEEEEEEEEE FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 //   63         52                                                    0
 //
 //   value = (-1)^S  *  ( 1 + \sigma_0^51 (b_i * 2^{-(52-i)}) )  *  2^{E-1023}
@@ -1440,7 +1440,7 @@ double DaoByteDecoder_DecodeDouble( DaoByteDecoder *self )
 	uint_t second = DaoByteDecoder_DecodeUInt32( self );
 	uint_t negative = first & (1<<31);
 	int i, expon;
-	
+
 	if( (self->codes + 8) > self->end ){
 		self->codes = self->error;
 		return 0;
@@ -2028,7 +2028,7 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 
 					if( self->codes >= self->error ) break;
 					DString_Assign( name, type->name );
-					DString_Append( name, cbtype->name ); 
+					DString_Append( name, cbtype->name );
 					type = DaoType_New( name->mbs, DAO_ROUTINE, type->aux, type->nested );
 					type->attrib = attrib;
 					type->cbtype = cbtype;
@@ -2084,7 +2084,7 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 		case DAO_ANY :
 			type = DaoNamespace_MakeType( self->nspace, "any", tid, NULL, NULL, 0 );
 			break;
-		case DAO_THT : 
+		case DAO_THT :
 			type = DaoNamespace_MakeType( self->nspace, name->mbs, tid, NULL, NULL, 0 );
 			break;
 		case DAO_NAMESPACE :

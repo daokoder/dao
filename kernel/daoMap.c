@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -125,21 +125,21 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max, u
 	switch( self->type ){
 	case DAO_INTEGER :
 		data = & self->xInteger.value;  len = sizeof(daoint);  break;
-	case DAO_FLOAT   : 
+	case DAO_FLOAT   :
 		data = & self->xFloat.value;  len = sizeof(float);  break;
-	case DAO_DOUBLE  : 
+	case DAO_DOUBLE  :
 		data = & self->xDouble.value;  len = sizeof(double);  break;
-	case DAO_COMPLEX : 
+	case DAO_COMPLEX :
 		data = & self->xComplex.value;  len = sizeof(complex16);  break;
-	case DAO_LONG : 
+	case DAO_LONG :
 		data = self->xLong.value->data;
 		len = self->xLong.value->size*sizeof(short);
 		break;
-	case DAO_ENUM  : 
+	case DAO_ENUM  :
 		data = self->xEnum.etype->name->mbs; /* XXX */
 		len = self->xEnum.etype->name->size;
 		break;
-	case DAO_STRING  : 
+	case DAO_STRING  :
 		if( self->xString.data->mbs ){
 			data = self->xString.data->mbs;
 			len = self->xString.data->size;
@@ -221,7 +221,7 @@ static int DHash_HashIndex( DMap *self, void *key )
 	case D_VMCODE2 :
 		id = MurmurHash2( key, 3*sizeof(unsigned short), self->hashing ) % T;
 		break;
-	default : 
+	default :
 		id = MurmurHash2( & key, sizeof(void*), self->hashing ) % T;
 		break;
 	}
@@ -879,11 +879,11 @@ unsigned int MurmurHash2 ( const void * key, int len, unsigned int seed )
 	while(len >= 4) {
 		unsigned int k = *(unsigned int *)data;
 
-		k *= m; 
-		k ^= k >> r; 
-		k *= m; 
+		k *= m;
+		k ^= k >> r;
+		k *= m;
 
-		h *= m; 
+		h *= m;
 		h ^= k;
 
 		data += 4;

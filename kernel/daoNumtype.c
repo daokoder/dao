@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -81,7 +81,7 @@ static DaoTypeCore comCore =
 	DaoComplex_Copy,
 };
 
-DaoTypeBase comTyper = 
+DaoTypeBase comTyper =
 {
 	"complex", & comCore, NULL, NULL, {0}, {0}, NULL, NULL
 };
@@ -494,7 +494,7 @@ static void LongAdd2( DLong *z, DLong *x, DLong *y, int base )
 	dz = z->data;
 	for(i=0; i<nx; i++){
 		sum += dx[i] + dy[i];
-		dz[i] = sum % base; 
+		dz[i] = sum % base;
 		sum = sum / base;
 	}
 	for(i=nx; i<ny; i++){
@@ -527,7 +527,7 @@ static void DLong_UAdd( DLong *z, DLong *x, DLong *y )
 	dz = z->data;
 	for(i=0; i<nx; i++){
 		sum += dx[i] + dy[i];
-		dz[i] = sum & LONG_MASK; 
+		dz[i] = sum & LONG_MASK;
 		sum = sum >> LONG_BITS;
 	}
 	for(i=nx; i<ny; i++){
@@ -837,7 +837,7 @@ void DLong_UMulFFT( DLong *z, DLong *x, DLong *y )
 	daoint ny = y->size;
 	daoint max = nx > ny ? nx : ny;
 	daoint i, nc = 1;
-	daoint c = 0; 
+	daoint c = 0;
 	int mc = 0;
 	while( (nc>>1) < max ) nc <<= 1, mc ++;
 	/* printf( "nc = %i, mc = %i, max = %i\n", nc, mc, max ); */
@@ -2823,7 +2823,7 @@ static void Swap( DaoArray *array, daoint *slice, daoint *index, daoint i, daoin
 	default : break;
 	}
 }
-static void QuickSort2( DaoArray *array, daoint *slice, 
+static void QuickSort2( DaoArray *array, daoint *slice,
 		daoint *index, daoint first, daoint last, daoint part, int asc )
 {
 	daoint lower = first+1, upper = last;
@@ -3070,7 +3070,7 @@ int DaoArray_HasShape( DaoArray *self, daoint *dims, int D )
 	int i;
 	if( D != self->ndim ) return 0;
 	for(i=0; i<self->ndim; i++)
-		if( dims[i] != self->dims[0] ) 
+		if( dims[i] != self->dims[0] )
 			return 0;
 	return 1;
 }
@@ -3316,7 +3316,7 @@ void DaoArray_SetBuffer( DaoArray *self, void *buffer, daoint size )
 	self->size = size;
 }
 
-DaoTypeBase numarTyper = 
+DaoTypeBase numarTyper =
 {
 	"array", & numarrCore, NULL, (DaoFuncItem*) numarMeths, {0}, {0},
 	(FuncPtrDel) DaoArray_Delete, NULL
@@ -3359,7 +3359,7 @@ daoint DaoArray_IndexFromSlice( DaoArray *self, DArray *slices, daoint sid )
 /* sid: plain index in the slicesd array */
 {
 	daoint *dimAccum = self->dims + self->ndim;
-	daoint j, index = 0; 
+	daoint j, index = 0;
 	for( j=(int)slices->size; j>0; j-- ){
 		DArray *sub = slices->items.pArray[j-1];
 		daoint *ids = sub->items.pInt; /* { type, count, ... } */

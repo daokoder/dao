@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -118,52 +118,52 @@ enum DaoOpcode
 	DVM_DATA_D ,
 	DVM_DATA_C ,
 
-	DVM_GETCL_I , 
-	DVM_GETCL_F , 
-	DVM_GETCL_D , 
-	DVM_GETCL_C , 
-	DVM_GETCK_I , 
-	DVM_GETCK_F , 
-	DVM_GETCK_D , 
-	DVM_GETCK_C , 
-	DVM_GETCG_I , 
-	DVM_GETCG_F , 
-	DVM_GETCG_D , 
-	DVM_GETCG_C , 
+	DVM_GETCL_I ,
+	DVM_GETCL_F ,
+	DVM_GETCL_D ,
+	DVM_GETCL_C ,
+	DVM_GETCK_I ,
+	DVM_GETCK_F ,
+	DVM_GETCK_D ,
+	DVM_GETCK_C ,
+	DVM_GETCG_I ,
+	DVM_GETCG_F ,
+	DVM_GETCG_D ,
+	DVM_GETCG_C ,
 
-	DVM_GETVH_I , 
-	DVM_GETVH_F , 
-	DVM_GETVH_D , 
-	DVM_GETVH_C , 
-	DVM_GETVO_I , 
-	DVM_GETVO_F , 
-	DVM_GETVO_D , 
-	DVM_GETVO_C , 
-	DVM_GETVK_I , 
-	DVM_GETVK_F , 
-	DVM_GETVK_D , 
-	DVM_GETVK_C , 
-	DVM_GETVG_I , 
-	DVM_GETVG_F , 
-	DVM_GETVG_D , 
-	DVM_GETVG_C , 
+	DVM_GETVH_I ,
+	DVM_GETVH_F ,
+	DVM_GETVH_D ,
+	DVM_GETVH_C ,
+	DVM_GETVO_I ,
+	DVM_GETVO_F ,
+	DVM_GETVO_D ,
+	DVM_GETVO_C ,
+	DVM_GETVK_I ,
+	DVM_GETVK_F ,
+	DVM_GETVK_D ,
+	DVM_GETVK_C ,
+	DVM_GETVG_I ,
+	DVM_GETVG_F ,
+	DVM_GETVG_D ,
+	DVM_GETVG_C ,
 
-	DVM_SETVH_II , 
-	DVM_SETVH_FF , 
-	DVM_SETVH_DD , 
-	DVM_SETVH_CC , 
-	DVM_SETVO_II , 
-	DVM_SETVO_FF , 
-	DVM_SETVO_DD , 
-	DVM_SETVO_CC , 
-	DVM_SETVK_II , 
-	DVM_SETVK_FF , 
-	DVM_SETVK_DD , 
-	DVM_SETVK_CC , 
-	DVM_SETVG_II , 
-	DVM_SETVG_FF , 
-	DVM_SETVG_DD , 
-	DVM_SETVG_CC , 
+	DVM_SETVH_II ,
+	DVM_SETVH_FF ,
+	DVM_SETVH_DD ,
+	DVM_SETVH_CC ,
+	DVM_SETVO_II ,
+	DVM_SETVO_FF ,
+	DVM_SETVO_DD ,
+	DVM_SETVO_CC ,
+	DVM_SETVK_II ,
+	DVM_SETVK_FF ,
+	DVM_SETVK_DD ,
+	DVM_SETVK_CC ,
+	DVM_SETVG_II ,
+	DVM_SETVG_FF ,
+	DVM_SETVG_DD ,
+	DVM_SETVG_CC ,
 
 	DVM_MOVE_II , /* integer = integer */
 	DVM_MOVE_IF , /* integer = float */
@@ -247,7 +247,7 @@ enum DaoOpcode
 	DVM_NE_ICC ,
 
 	/* string */
-	DVM_ADD_SSS , 
+	DVM_ADD_SSS ,
 	DVM_LT_ISS ,
 	DVM_LE_ISS ,
 	DVM_EQ_ISS ,
@@ -364,9 +364,9 @@ enum DaoOpcode
 
 	DVM_CHECK_ST , /* check against simple types: int, float, double, complex, long, string; */
 
-	/* increase a count, and perform the normal goto operation 
+	/* increase a count, and perform the normal goto operation
 	 * if the count does not exceed a safe bound. */
-	DVM_SAFE_GOTO, 
+	DVM_SAFE_GOTO,
 
 	DVM_NULL
 };
@@ -386,13 +386,13 @@ typedef enum DaoOpcode DaoOpcode;
 //
 // A non-zero value of ::a or ::c indicates the up-value
 // TODO
-// 
+//
 // DVM_ROUTINE
 // TODO
 */
 
 /* Extra vmcode type for compiling:
- * They are used to setup proper indexing, branching or jumping. After this, 
+ * They are used to setup proper indexing, branching or jumping. After this,
  * they will be removed or replaced with proper instructions from DaoOpcode.
  */
 enum DaoOpcodeExtra

@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -191,7 +191,7 @@ int DThread_Start( DThread *self, DThreadTask task, void *arg )
 	self->taskArg = arg;
 	pthread_attr_init(&tattr);
 	pthread_attr_setstacksize(&tattr, 0xffff);
-	return ( 0 == pthread_create( & self->myThread, &tattr, 
+	return ( 0 == pthread_create( & self->myThread, &tattr,
 				(DThreadCast) &DThread_Wrapper, (void*)self ) );
 }
 void DThread_Join( DThread *self )
@@ -270,7 +270,7 @@ void DCondVar_Init( DCondVar *self )
 void DCondVar_Destroy( DCondVar *self )
 {
 	DArray_Delete( self->thdWaiting );
-	DMutex_Destroy( & self->thdMutex );  
+	DMutex_Destroy( & self->thdMutex );
 	CloseHandle( self->myCondVar );
 }
 
@@ -447,7 +447,7 @@ void DaoInitThreadSys()
 	thdSpecKey = (dao_thdspec_t)TlsAlloc();
 	DThread_Init( mainThread );
 
-	mainThread->thdSpecData = (DThreadData*)GlobalAlloc( GPTR, sizeof(DThreadData) );  
+	mainThread->thdSpecData = (DThreadData*)GlobalAlloc( GPTR, sizeof(DThreadData) );
 	mainThread->thdSpecData->thdObject = mainThread;
 	mainThread->thdSpecData->state = 0;
 
@@ -560,7 +560,7 @@ static void DaoCondV_Lib_TimedWait( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoCondVar *self = (DaoCondVar*) par[0];
 	DaoMutex *mutex = (DaoMutex*) par[1];
-	DaoProcess_PutInteger( proc, 
+	DaoProcess_PutInteger( proc,
 			DCondVar_TimedWait( & self->myCondVar, & mutex->myMutex, par[2]->xFloat.value ) );
 }
 static void DaoCondV_Lib_Signal( DaoProcess *proc, DaoValue *par[], int N )

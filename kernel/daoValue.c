@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -217,7 +217,7 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	case DAO_LIST    : return DaoList_Compare( & left->xList, & right->xList );
 	case DAO_CSTRUCT :
 	case DAO_CTYPE : return left == right ? 0 : -1;
-	case DAO_CDATA : return number_compare( (daoint)left->xCdata.data, (daoint)right->xCdata.data ); 
+	case DAO_CDATA : return number_compare( (daoint)left->xCdata.data, (daoint)right->xCdata.data );
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY   : return DaoArray_Compare( & left->xArray, & right->xArray );
 #endif
@@ -380,7 +380,7 @@ DLong* DaoValue_GetLong( DaoValue *self, DLong *lng )
 #ifdef DAO_WITH_LONGINT
 	switch( self->type ){
 	case DAO_INTEGER : DLong_FromInteger( lng, DaoValue_GetInteger( self ) ); break;
-	case DAO_FLOAT   : 
+	case DAO_FLOAT   :
 	case DAO_DOUBLE  : DLong_FromDouble( lng, DaoValue_GetDouble( self ) ); break;
 	case DAO_COMPLEX : DLong_FromDouble( lng, self->xComplex.value.real ); break;
 	case DAO_LONG    : DLong_Move( lng, self->xLong.value ); break;
@@ -572,7 +572,7 @@ void DaoValue_Copy( DaoValue *src, DaoValue **dest )
 		return;
 	}
 	switch( src->type ){
-	case DAO_ENUM    : 
+	case DAO_ENUM    :
 		DaoEnum_SetType( & dest2->xEnum, src->xEnum.etype );
 		DaoEnum_SetValue( & dest2->xEnum, & src->xEnum, NULL );
 		break;

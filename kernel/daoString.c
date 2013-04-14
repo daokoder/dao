@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -114,7 +114,7 @@ static daoint DWCString_RFind( DString *self, daoint S, const wchar_t* chs, daoi
 	return MAXSIZE;
 }
 
-//static 
+//static
 int dao_string[4] = {1,0,0,0};
 
 /**/
@@ -399,7 +399,7 @@ static void DMBString_AppendWCS( DString *self, const wchar_t *chs, daoint n )
 			DString_Reserve( self, self->size + m );
 		}
 		/* under windows using MinGW, passing null output buffer,
-		 * will NOT cause the function to perform conversion and 
+		 * will NOT cause the function to perform conversion and
 		 * return the required buffer size. */
 		memset( & state, 0, sizeof(state) );
 		smin = wcsrtombs( self->mbs + self->size, & wcs, len * MAX_CHAR_PER_WCHAR, & state );
@@ -442,7 +442,7 @@ static void DWCString_AppendMBS( DString *self, const char *chs, daoint n )
 			DString_Reserve( self, self->size + len + n );
 		}
 		/* under windows using MinGW, passing null output buffer,
-		 * will NOT cause the function to perform conversion and 
+		 * will NOT cause the function to perform conversion and
 		 * return the required buffer size. */
 		memset( & state, 0, sizeof (state) );
 		smin = mbsrtowcs( self->wcs + self->size, (const char**)&mbs, len, & state );
@@ -1194,7 +1194,7 @@ void DString_Reverse( DString *self )
 	DString_Delete( front );
 	DString_Delete( back );
 }
-daoint DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0, 
+daoint DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0,
 		uint_t esc0, daoint start, daoint end, int countonly )
 {
 	daoint size = self->size;

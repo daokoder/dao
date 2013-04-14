@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -37,17 +37,17 @@ struct DaoVmCodeInfo
 	unsigned char   perm; /* Used only by parser for compiling expression lists: */
 };
 
-static DaoVmCodeInfo dao_code_infolist[] = 
+static DaoVmCodeInfo dao_code_infolist[] =
 {
 	{ "NOP",        DVM_NOP,        DAO_CODE_NOP,     1 },
-	{ "DATA",       DVM_DATA,       DAO_CODE_GETC,    1 }, 
+	{ "DATA",       DVM_DATA,       DAO_CODE_GETC,    1 },
 	{ "GETCL",      DVM_GETCL,      DAO_CODE_GETC,    1 },
 	{ "GETCK",      DVM_GETCK,      DAO_CODE_GETC,    1 },
-	{ "GETCG",      DVM_GETCG,      DAO_CODE_GETC,    1 }, 
+	{ "GETCG",      DVM_GETCG,      DAO_CODE_GETC,    1 },
 	{ "GETVH",      DVM_GETVH,      DAO_CODE_GETU,    1 },
 	{ "GETVO",      DVM_GETVO,      DAO_CODE_GETG,    1 },
 	{ "GETVK",      DVM_GETVK,      DAO_CODE_GETG,    1 },
-	{ "GETVG",      DVM_GETVG,      DAO_CODE_GETG,    1 }, 
+	{ "GETVG",      DVM_GETVG,      DAO_CODE_GETG,    1 },
 	{ "GETI",       DVM_GETI,       DAO_CODE_GETI,    0 },
 	{ "GETDI",      DVM_GETDI,      DAO_CODE_GETF,    0 },
 	{ "GETMI",      DVM_GETMI,      DAO_CODE_GETM,    0 },
@@ -56,7 +56,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "SETVH",      DVM_SETVH,      DAO_CODE_SETU,    1 },
 	{ "SETVO",      DVM_SETVO,      DAO_CODE_SETG,    1 },
 	{ "SETVK",      DVM_SETVK,      DAO_CODE_SETG,    1 },
-	{ "SETVG",      DVM_SETVG,      DAO_CODE_SETG,    1 }, 
+	{ "SETVG",      DVM_SETVG,      DAO_CODE_SETG,    1 },
 	{ "SETI",       DVM_SETI,       DAO_CODE_SETI,    0 },
 	{ "SETDI",      DVM_SETDI,      DAO_CODE_SETF,    0 },
 	{ "SETMI",      DVM_SETMI,      DAO_CODE_SETM,    0 },
@@ -106,10 +106,10 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "SWITCH",     DVM_SWITCH,     DAO_CODE_BRANCH,  0 },
 	{ "CASE",       DVM_CASE,       DAO_CODE_JUMP,    0 },
 	{ "ITER",       DVM_ITER,       DAO_CODE_MOVE,    0 },
-	{ "TEST",       DVM_TEST,       DAO_CODE_BRANCH,  0 }, 
+	{ "TEST",       DVM_TEST,       DAO_CODE_BRANCH,  0 },
 	{ "MATH",       DVM_MATH,       DAO_CODE_UNARY2,  1 },
 	{ "CALL",       DVM_CALL,       DAO_CODE_CALL,    0 },
-	{ "MCALL",      DVM_MCALL,      DAO_CODE_CALL,    0 }, 
+	{ "MCALL",      DVM_MCALL,      DAO_CODE_CALL,    0 },
 	{ "RETURN",     DVM_RETURN,     DAO_CODE_EXPLIST, 0 },
 	{ "YIELD",      DVM_YIELD,      DAO_CODE_YIELD,   0 },
 	{ "TRY",        DVM_TRY,        DAO_CODE_NOP,     0 },
@@ -120,36 +120,36 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "SECT",       DVM_SECT,       DAO_CODE_EXPLIST, 0 },
 	{ "DATA_I",     DVM_DATA_I,     DAO_CODE_GETC,    0 },
 	{ "DATA_F",     DVM_DATA_F,     DAO_CODE_GETC,    0 },
-	{ "DATA_D",     DVM_DATA_D,     DAO_CODE_GETC,    0 }, 
-	{ "DATA_C",     DVM_DATA_C,     DAO_CODE_GETC,    0 }, 
+	{ "DATA_D",     DVM_DATA_D,     DAO_CODE_GETC,    0 },
+	{ "DATA_C",     DVM_DATA_C,     DAO_CODE_GETC,    0 },
 	{ "GETCL_I",    DVM_GETCL_I,    DAO_CODE_GETC,    0 },
 	{ "GETCL_F",    DVM_GETCL_F,    DAO_CODE_GETC,    0 },
-	{ "GETCL_D",    DVM_GETCL_D,    DAO_CODE_GETC,    0 }, 
-	{ "GETCL_C",    DVM_GETCL_C,    DAO_CODE_GETC,    0 }, 
+	{ "GETCL_D",    DVM_GETCL_D,    DAO_CODE_GETC,    0 },
+	{ "GETCL_C",    DVM_GETCL_C,    DAO_CODE_GETC,    0 },
 	{ "GETCK_I",    DVM_GETCK_I,    DAO_CODE_GETC,    0 },
 	{ "GETCK_F",    DVM_GETCK_F,    DAO_CODE_GETC,    0 },
-	{ "GETCK_D",    DVM_GETCK_D,    DAO_CODE_GETC,    0 }, 
-	{ "GETCK_C",    DVM_GETCK_C,    DAO_CODE_GETC,    0 }, 
+	{ "GETCK_D",    DVM_GETCK_D,    DAO_CODE_GETC,    0 },
+	{ "GETCK_C",    DVM_GETCK_C,    DAO_CODE_GETC,    0 },
 	{ "GETCG_I",    DVM_GETCG_I,    DAO_CODE_GETC,    0 },
 	{ "GETCG_F",    DVM_GETCG_F,    DAO_CODE_GETC,    0 },
-	{ "GETCG_D",    DVM_GETCG_D,    DAO_CODE_GETC,    0 }, 
-	{ "GETCG_C",    DVM_GETCG_C,    DAO_CODE_GETC,    0 }, 
+	{ "GETCG_D",    DVM_GETCG_D,    DAO_CODE_GETC,    0 },
+	{ "GETCG_C",    DVM_GETCG_C,    DAO_CODE_GETC,    0 },
 	{ "GETVH_I",    DVM_GETVH_I,    DAO_CODE_GETU,    0 },
 	{ "GETVH_F",    DVM_GETVH_F,    DAO_CODE_GETU,    0 },
-	{ "GETVH_D",    DVM_GETVH_D,    DAO_CODE_GETU,    0 }, 
-	{ "GETVH_C",    DVM_GETVH_C,    DAO_CODE_GETU,    0 }, 
+	{ "GETVH_D",    DVM_GETVH_D,    DAO_CODE_GETU,    0 },
+	{ "GETVH_C",    DVM_GETVH_C,    DAO_CODE_GETU,    0 },
 	{ "GETVO_I",    DVM_GETVO_I,    DAO_CODE_GETG,    0 },
 	{ "GETVO_F",    DVM_GETVO_F,    DAO_CODE_GETG,    0 },
-	{ "GETVO_D",    DVM_GETVO_D,    DAO_CODE_GETG,    0 }, 
-	{ "GETVO_C",    DVM_GETVO_C,    DAO_CODE_GETG,    0 }, 
+	{ "GETVO_D",    DVM_GETVO_D,    DAO_CODE_GETG,    0 },
+	{ "GETVO_C",    DVM_GETVO_C,    DAO_CODE_GETG,    0 },
 	{ "GETVK_I",    DVM_GETVK_I,    DAO_CODE_GETG,    0 },
 	{ "GETVK_F",    DVM_GETVK_F,    DAO_CODE_GETG,    0 },
-	{ "GETVK_D",    DVM_GETVK_D,    DAO_CODE_GETG,    0 }, 
-	{ "GETVK_C",    DVM_GETVK_C,    DAO_CODE_GETG,    0 }, 
+	{ "GETVK_D",    DVM_GETVK_D,    DAO_CODE_GETG,    0 },
+	{ "GETVK_C",    DVM_GETVK_C,    DAO_CODE_GETG,    0 },
 	{ "GETVG_I",    DVM_GETVG_I,    DAO_CODE_GETG,    0 },
 	{ "GETVG_F",    DVM_GETVG_F,    DAO_CODE_GETG,    0 },
-	{ "GETVG_D",    DVM_GETVG_D,    DAO_CODE_GETG,    0 }, 
-	{ "GETVG_C",    DVM_GETVG_C,    DAO_CODE_GETG,    0 }, 
+	{ "GETVG_D",    DVM_GETVG_D,    DAO_CODE_GETG,    0 },
+	{ "GETVG_C",    DVM_GETVG_C,    DAO_CODE_GETG,    0 },
 	{ "SETVH_II",   DVM_SETVH_II,   DAO_CODE_SETG,    0 },
 	{ "SETVH_FF",   DVM_SETVH_FF,   DAO_CODE_SETG,    0 },
 	{ "SETVH_DD",   DVM_SETVH_DD,   DAO_CODE_SETG,    0 },
@@ -184,7 +184,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "MOVE_XX",    DVM_MOVE_XX,    DAO_CODE_MOVE,    0 },
 	{ "NOT_I",      DVM_NOT_I,      DAO_CODE_UNARY,   0 },
 	{ "NOT_F",      DVM_NOT_F,      DAO_CODE_UNARY,   0 },
-	{ "NOT_D",      DVM_NOT_D,      DAO_CODE_UNARY,   0 }, 
+	{ "NOT_D",      DVM_NOT_D,      DAO_CODE_UNARY,   0 },
 	{ "MINUS_I",    DVM_MINUS_I,    DAO_CODE_UNARY,   0 },
 	{ "MINUS_F",    DVM_MINUS_F,    DAO_CODE_UNARY,   0 },
 	{ "MINUS_D",    DVM_MINUS_D,    DAO_CODE_UNARY,   0 },
@@ -202,12 +202,12 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "LT_III",     DVM_LT_III,     DAO_CODE_BINARY,  0 },
 	{ "LE_III",     DVM_LE_III,     DAO_CODE_BINARY,  0 },
 	{ "EQ_III",     DVM_EQ_III,     DAO_CODE_BINARY,  0 },
-	{ "NE_III",     DVM_NE_III,     DAO_CODE_BINARY,  0 }, 
+	{ "NE_III",     DVM_NE_III,     DAO_CODE_BINARY,  0 },
 	{ "BITAND_III", DVM_BITAND_III, DAO_CODE_BINARY,  0 },
 	{ "BITOR_III",  DVM_BITOR_III,  DAO_CODE_BINARY,  0 },
 	{ "BITXOR_III", DVM_BITXOR_III, DAO_CODE_BINARY,  0 },
 	{ "BITLFT_III", DVM_BITLFT_III, DAO_CODE_BINARY,  0 },
-	{ "BITRIT_III", DVM_BITRIT_III, DAO_CODE_BINARY,  0 }, 
+	{ "BITRIT_III", DVM_BITRIT_III, DAO_CODE_BINARY,  0 },
 	{ "ADD_FFF",    DVM_ADD_FFF,    DAO_CODE_BINARY,  0 },
 	{ "SUB_FFF",    DVM_SUB_FFF,    DAO_CODE_BINARY,  0 },
 	{ "MUL_FFF",    DVM_MUL_FFF,    DAO_CODE_BINARY,  0 },
@@ -219,7 +219,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "LT_IFF",     DVM_LT_IFF,     DAO_CODE_BINARY,  0 },
 	{ "LE_IFF",     DVM_LE_IFF,     DAO_CODE_BINARY,  0 },
 	{ "EQ_IFF",     DVM_EQ_IFF,     DAO_CODE_BINARY,  0 },
-	{ "NE_IFF",     DVM_NE_IFF,     DAO_CODE_BINARY,  0 }, 
+	{ "NE_IFF",     DVM_NE_IFF,     DAO_CODE_BINARY,  0 },
 	{ "ADD_DDD",    DVM_ADD_DDD,    DAO_CODE_BINARY,  0 },
 	{ "SUB_DDD",    DVM_SUB_DDD,    DAO_CODE_BINARY,  0 },
 	{ "MUL_DDD",    DVM_MUL_DDD,    DAO_CODE_BINARY,  0 },
@@ -231,11 +231,11 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "LT_IDD",     DVM_LT_IDD,     DAO_CODE_BINARY,  0 },
 	{ "LE_IDD",     DVM_LE_IDD,     DAO_CODE_BINARY,  0 },
 	{ "EQ_IDD",     DVM_EQ_IDD,     DAO_CODE_BINARY,  0 },
-	{ "NE_IDD",     DVM_NE_IDD,     DAO_CODE_BINARY,  0 }, 
+	{ "NE_IDD",     DVM_NE_IDD,     DAO_CODE_BINARY,  0 },
 	{ "ADD_CCC",    DVM_ADD_CCC,    DAO_CODE_BINARY,  0 },
 	{ "SUB_CCC",    DVM_SUB_CCC,    DAO_CODE_BINARY,  0 },
 	{ "MUL_CCC",    DVM_MUL_CCC,    DAO_CODE_BINARY,  0 },
-	{ "DIV_CCC",    DVM_DIV_CCC,    DAO_CODE_BINARY,  0 }, 
+	{ "DIV_CCC",    DVM_DIV_CCC,    DAO_CODE_BINARY,  0 },
 	{ "EQ_ICC",     DVM_EQ_ICC,     DAO_CODE_BINARY,  0 },
 	{ "NE_ICC",     DVM_NE_ICC,     DAO_CODE_BINARY,  0 },
 	{ "ADD_SSS",    DVM_ADD_SSS,    DAO_CODE_BINARY,  0 },
@@ -266,7 +266,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "SETI_ADID",  DVM_SETI_ADID,  DAO_CODE_SETI,    0 },
 	{ "SETI_ACIC",  DVM_SETI_ACIC,  DAO_CODE_SETI,    0 },
 	{ "GETI_TI",    DVM_GETI_TI,    DAO_CODE_GETI,    0 },
-	{ "SETI_TI",    DVM_SETI_TI,    DAO_CODE_SETI,    0 }, 
+	{ "SETI_TI",    DVM_SETI_TI,    DAO_CODE_SETI,    0 },
 	{ "GETF_TI",    DVM_GETF_TI,    DAO_CODE_GETF,    0 },
 	{ "GETF_TF",    DVM_GETF_TF,    DAO_CODE_GETF,    0 },
 	{ "GETF_TD",    DVM_GETF_TD,    DAO_CODE_GETF,    0 },
@@ -293,7 +293,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "GETF_KG",    DVM_GETF_KG,    DAO_CODE_GETF,    0 },
 	{ "GETF_OC",    DVM_GETF_OC,    DAO_CODE_GETF,    0 },
 	{ "GETF_OG",    DVM_GETF_OG,    DAO_CODE_GETF,    0 },
-	{ "GETF_OV",    DVM_GETF_OV,    DAO_CODE_GETF,    0 }, 
+	{ "GETF_OV",    DVM_GETF_OV,    DAO_CODE_GETF,    0 },
 	{ "SETF_KG",    DVM_SETF_KG,    DAO_CODE_SETF,    0 },
 	{ "SETF_OG",    DVM_SETF_OG,    DAO_CODE_SETF,    0 },
 	{ "SETF_OV",    DVM_SETF_OV,    DAO_CODE_SETF,    0 },
@@ -319,12 +319,12 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "GETF_OVC",   DVM_GETF_OVC,   DAO_CODE_GETF,    0 },
 	{ "SETF_KGII",  DVM_SETF_KGII,  DAO_CODE_SETF,    0 },
 	{ "SETF_KGFF",  DVM_SETF_KGFF,  DAO_CODE_SETF,    0 },
-	{ "SETF_KGDD",  DVM_SETF_KGDD,  DAO_CODE_SETF,    0 }, 
-	{ "SETF_KGCC",  DVM_SETF_KGCC,  DAO_CODE_SETF,    0 }, 
+	{ "SETF_KGDD",  DVM_SETF_KGDD,  DAO_CODE_SETF,    0 },
+	{ "SETF_KGCC",  DVM_SETF_KGCC,  DAO_CODE_SETF,    0 },
 	{ "SETF_OGII",  DVM_SETF_OGII,  DAO_CODE_SETF,    0 },
 	{ "SETF_OGFF",  DVM_SETF_OGFF,  DAO_CODE_SETF,    0 },
-	{ "SETF_OGDD",  DVM_SETF_OGDD,  DAO_CODE_SETF,    0 }, 
-	{ "SETF_OGCC",  DVM_SETF_OGCC,  DAO_CODE_SETF,    0 }, 
+	{ "SETF_OGDD",  DVM_SETF_OGDD,  DAO_CODE_SETF,    0 },
+	{ "SETF_OGCC",  DVM_SETF_OGCC,  DAO_CODE_SETF,    0 },
 	{ "SETF_OVII",  DVM_SETF_OVII,  DAO_CODE_SETF,    0 },
 	{ "SETF_OVFF",  DVM_SETF_OVFF,  DAO_CODE_SETF,    0 },
 	{ "SETF_OVDD",  DVM_SETF_OVDD,  DAO_CODE_SETF,    0 },
@@ -351,7 +351,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "unused",     DVM_UNUSED,     DAO_CODE_NOP, 0 }
 };
 
-static uchar_t dao_vmcode_result_operand[] = 
+static uchar_t dao_vmcode_result_operand[] =
 {
 	DAO_OPERAND_N ,
 	DAO_OPERAND_C ,
@@ -442,12 +442,12 @@ DaoVmCode DaoVmCode_CheckOperands( DaoVmCode *self )
 		vmc.a = 1;
 		vmc.c = 1;
 		break;
-	case DAO_CODE_ENUM : 
+	case DAO_CODE_ENUM :
 	case DAO_CODE_YIELD :
 		if( self->b ) vmc.a = 1;
 		vmc.c = 1;
 		break;
-	case DAO_CODE_SETI : 
+	case DAO_CODE_SETI :
 	case DAO_CODE_GETI :
 	case DAO_CODE_BINARY :
 		vmc.a = 1;

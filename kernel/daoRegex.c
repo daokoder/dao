@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -85,8 +85,8 @@ enum DaoRegexConfig
 };
 enum { PAT_ALL_FIXED = 1 };
 
-const char *names[] = 
-{ "None", "Begin", "Stop", "Start", "End", "Split", "Join", 
+const char *names[] =
+{ "None", "Begin", "Stop", "Start", "End", "Split", "Join",
 	"BackRef", "PatPair", "Pair", "Word", "Set", "Any" };
 
 static void PrintRegex( DaoRegex *self, DaoRgxItem *pat )
@@ -105,7 +105,7 @@ static void PrintRegex( DaoRegex *self, DaoRgxItem *pat )
 	j = pat->word;
 	i = pat->length;
 	if( pat->type <= PAT_ANY ) type = names[ pat->type ];
-	printf( "%6s  %3i,  %2i %2i,  %2i %2i,  %2i %1i,  %2i %2i, %s\n", type, pat->type, 
+	printf( "%6s  %3i,  %2i %2i,  %2i %2i,  %2i %1i,  %2i %2i, %s\n", type, pat->type,
 			pat->min, pat->max, pat->next, pat->jump, pat->gid, pat->config, j, i, value );
 }
 
@@ -256,7 +256,7 @@ static int SetRepeat( short *omin, short *omax, void *src, DString *ds,
 	}
 	return offset;
 }
-static int MakeRegex( DaoRegex *self, DString *ds, void *spatt, 
+static int MakeRegex( DaoRegex *self, DString *ds, void *spatt,
 		int start, int end, int grouping )
 {
 	DaoRgxItem *patt, *patt2, *split=NULL, *patts = self->items;
@@ -475,7 +475,7 @@ static int MakeRegex( DaoRegex *self, DString *ds, void *spatt,
 		}else{
 			type = PAT_NONE;
 			switch( chi ){
-			case ']': case ')': case '{': case '}': case '|': 
+			case ']': case ')': case '{': case '}': case '|':
 			case '-': case '?': case '*': case '+': break;
 			default : type = PAT_WORD; break;
 			}
@@ -727,7 +727,7 @@ static int MatchBackRef( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 	patt->offset = gp2 - gp1;
 	return 1;
 }
-static int FindPattern( DaoRegex *self, DaoRgxItem *patts, int npatt, 
+static int FindPattern( DaoRegex *self, DaoRgxItem *patts, int npatt,
 		void *src, daoint size, daoint *start, daoint *end, int fixed );
 
 static int MatchPair( DaoRegex *self, DaoRgxItem *patt, daoint pos )
@@ -773,7 +773,7 @@ static int MatchPair( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 	patt->offset = i + 1;
 	return 1;
 }
-static int CountRegex( DaoRegex *self, DaoRgxItem *patts, int npatt, 
+static int CountRegex( DaoRegex *self, DaoRgxItem *patts, int npatt,
 		void *src, daoint size, daoint start, daoint end )
 {
 	daoint count = 0, m1 = start, m2 = end;
@@ -913,7 +913,7 @@ static int MatchExpand( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 	return 0;
 }
 
-static int FindPattern( DaoRegex *self, DaoRgxItem *patts, int npatt, 
+static int FindPattern( DaoRegex *self, DaoRgxItem *patts, int npatt,
 		void *src, daoint size, daoint *start, daoint *end, int fixed )
 {
 	DaoRgxItem *patt, *patt2;
@@ -950,7 +950,7 @@ static int FindPattern( DaoRegex *self, DaoRgxItem *patts, int npatt,
 			bl = MatchMin( self, patt, pos );
 		}
 #if 0
-		printf( "%4i  %2i, pos = %2i, o = %i,  ch = %c, e = %i, bl = %i, ", 
+		printf( "%4i  %2i, pos = %2i, o = %i,  ch = %c, e = %i, bl = %i, ",
 				to, patts->pos, pos, patt->offset, ((char*)src)[pos], expand, bl );
 		PrintRegex( self, patt );
 #endif
@@ -1223,7 +1223,7 @@ static void Dao_ParseTarget( DString *target, DArray *parts, DaoValue *sval )
 	}
 	DArray_PushBack( parts, sval );
 }
-int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target, 
+int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target,
 		int index, daoint *start2, daoint *end2 )
 {
 	daoint start = start2 ? (daoint) *start2 : 0;
@@ -1280,7 +1280,7 @@ int DaoRegex_Change( DaoRegex *self, DString *source, DString *target, int index
 	return DaoRegex_ChangeExt( self, source, target, index, NULL, NULL );
 }
 #ifdef DAO_WITH_REGEX
-int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target, 
+int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target,
 		int index, int count, DArray *packs )
 {
 	daoint start = 0, end = 0;

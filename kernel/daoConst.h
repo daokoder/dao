@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -169,7 +169,7 @@ enum DaoVmProcPauseType
 	DAO_VMP_NOPAUSE ,
 	DAO_VMP_ASYNC ,  /* by join mode of asynchronous call */
 	DAO_VMP_YIELD ,  /* by coroutine */
-	DAO_VMP_NATIVE_SUSPENSION 
+	DAO_VMP_NATIVE_SUSPENSION
 };
 
 enum DaoDataPermission
@@ -205,7 +205,7 @@ enum DaoGlobalConstOffset
 };
 enum DaoGlobalVarOffset
 {
-	DVR_NSV_EXCEPTIONS 
+	DVR_NSV_EXCEPTIONS
 };
 
 enum DaoArithOperType{
@@ -397,8 +397,8 @@ enum DaoCtInfoId
 	DAO_CTW_PATH_INVALID ,
 	DAO_CTW_LOAD_INVALID_VAR ,
 	DAO_CTW_LOAD_INVA_MOD_NAME ,
-	DAO_CTW_LOAD_FAILED , 
-	DAO_CTW_LOAD_CANCELLED , 
+	DAO_CTW_LOAD_FAILED ,
+	DAO_CTW_LOAD_CANCELLED ,
 	DAO_CTW_LOAD_VAR_NOT_FOUND ,
 	DAO_CTW_LOAD_REDUNDANT ,
 	DAO_CTW_CST_INIT_NOT_CST ,
@@ -414,7 +414,7 @@ enum DaoCtInfoId
 	DAO_CTW_INVA_EMBED ,
 	DAO_CTW_INVA_SYNTAX ,
 	DAO_CTW_ASSN_UNMATCH ,
-	DAO_CTW_VAR_REDEF , 
+	DAO_CTW_VAR_REDEF ,
 	DAO_CTW_INV_MAC_DEFINE ,
 	DAO_CTW_INV_MAC_FIRSTOK ,
 	DAO_CTW_INV_MAC_OPEN ,
@@ -433,7 +433,7 @@ enum DaoCtInfoId
 	DAO_CTW_FAIL_BINDING ,
 	DAO_CTW_FEATURE_DISABLED ,
 	DAO_CTW_OBSOLETE_SYNTAX ,
-	DAO_CTW_END 
+	DAO_CTW_END
 };
 
 extern const char* getCtInfo( int tp );

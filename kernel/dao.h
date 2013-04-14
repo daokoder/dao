@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -333,7 +333,7 @@ struct DaoTypeBase
 	void  (*Delete)( void *self );
 
 	/*
-	// Get garbage collectable fields (Dao data types with refCount by the type): 
+	// Get garbage collectable fields (Dao data types with refCount by the type):
 	// Dao data types should be pushed into "values";
 	// DArray holding Dao data types should be pushed into "arrays";
 	// DMap holding Dao data types should be pushed into "maps";
@@ -383,7 +383,7 @@ typedef int   (*AddHistory)( const char *cmd );
 DAO_DLL DaoVmSpace* DaoInit( const char *command );
 
 /*
-// DaoQuit() should be called to finalize the library. It will wait 
+// DaoQuit() should be called to finalize the library. It will wait
 // for unfinished computation, and do some cleanup, then quit.
 */
 DAO_DLL void DaoQuit();
@@ -396,7 +396,7 @@ DAO_DLL void DaoQuit();
 DAO_DLL int DaoValue_Type( DaoValue *self );
 
 /*
-// The following functions will check the type of the DaoValue and 
+// The following functions will check the type of the DaoValue and
 // cast it to the requested type on success. Otherwise return NULL;
 */
 DAO_DLL DaoInteger*   DaoValue_CastInteger( DaoValue *self );
@@ -421,7 +421,7 @@ DAO_DLL DaoNamespace* DaoValue_CastNamespace( DaoValue *self );
 DAO_DLL DaoType*      DaoValue_CastType( DaoValue *self );
 
 /*
-// The following functions will check the type of the DaoValue and 
+// The following functions will check the type of the DaoValue and
 // return the requested data on success. Otherwise return zero or NULL;
 */
 DAO_DLL daoint    DaoValue_TryGetInteger( DaoValue *self );
@@ -639,7 +639,7 @@ DAO_DLL daoint DaoMap_Size( DaoMap *self );
 
 /*
 // The following functions return 0 on success;
-// Return 1 if key not matching, and 2 if value not matching: 
+// Return 1 if key not matching, and 2 if value not matching:
 */
 DAO_DLL int  DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value );
 DAO_DLL int  DaoMap_InsertMBS( DaoMap *self, const char *key, DaoValue *value );
@@ -672,14 +672,14 @@ DAO_DLL DaoValue* DaoTuple_GetItem( DaoTuple *self, int pos );
 
 /*
 // DaoArray_New() creates a numeric array with specified numeric type,
-// which must be one of DAO_INTEGER, DAO_FLOAT, DAO_DOUBLE or DAO_COMPLEX. 
+// which must be one of DAO_INTEGER, DAO_FLOAT, DAO_DOUBLE or DAO_COMPLEX.
 */
 DAO_DLL DaoArray* DaoArray_New( int numtype );
 DAO_DLL int  DaoArray_NumType( DaoArray *self );
 DAO_DLL void DaoArray_SetNumType( DaoArray *self, short numtype );
 
 /*
-// DaoArray_Size() gets the total number of elements in the array; 
+// DaoArray_Size() gets the total number of elements in the array;
 // DaoArray_DimCount() gets the number of dimensions (2 for vector and matrix);
 // DaoArray_SizeOfDim() gets the size of the given dimension;
 */
@@ -688,7 +688,7 @@ DAO_DLL int  DaoArray_DimCount( DaoArray *self );
 DAO_DLL int  DaoArray_SizeOfDim( DaoArray *self, int d );
 
 /*
-// DaoArray_GetShape() gets the shape as an array of sizes for each dimension; 
+// DaoArray_GetShape() gets the shape as an array of sizes for each dimension;
 // DaoArray_HasShape() checks the array if it has the specified shape;
 // DaoArray_Reshape() changes the array to specified shaped;
 */
@@ -705,8 +705,8 @@ DAO_DLL void DaoArray_ResizeArray( DaoArray *self, daoint *dims, int D );
 
 /*
 // DaoArray_GetFlatIndex() computes the raw/flat index from multiple indexes.
-// "indexes" is expected to contain the same number of indexes 
-// as the array's number of dimensions. 
+// "indexes" is expected to contain the same number of indexes
+// as the array's number of dimensions.
 */
 DAO_DLL int DaoArray_GetFlatIndex( DaoArray *self, daoint *indexes );
 
@@ -731,15 +731,15 @@ DAO_DLL unsigned int* DaoArray_ToUInt( DaoArray *self );
 // The following functions DaoArray_FromXyz() re-interprets the internal data
 // buffer as of "Xyz" type, and convert them to the numeric type of the array.
 */
-DAO_DLL void DaoArray_FromInteger( DaoArray *self ); 
-DAO_DLL void DaoArray_FromFloat( DaoArray *self ); 
-DAO_DLL void DaoArray_FromDouble( DaoArray *self ); 
-DAO_DLL void DaoArray_FromSByte( DaoArray *self ); 
-DAO_DLL void DaoArray_FromUByte( DaoArray *self ); 
-DAO_DLL void DaoArray_FromSShort( DaoArray *self ); 
-DAO_DLL void DaoArray_FromUShort( DaoArray *self ); 
-DAO_DLL void DaoArray_FromUInt( DaoArray *self ); 
-DAO_DLL void DaoArray_FromSInt( DaoArray *self ); 
+DAO_DLL void DaoArray_FromInteger( DaoArray *self );
+DAO_DLL void DaoArray_FromFloat( DaoArray *self );
+DAO_DLL void DaoArray_FromDouble( DaoArray *self );
+DAO_DLL void DaoArray_FromSByte( DaoArray *self );
+DAO_DLL void DaoArray_FromUByte( DaoArray *self );
+DAO_DLL void DaoArray_FromSShort( DaoArray *self );
+DAO_DLL void DaoArray_FromUShort( DaoArray *self );
+DAO_DLL void DaoArray_FromUInt( DaoArray *self );
+DAO_DLL void DaoArray_FromSInt( DaoArray *self );
 
 DAO_DLL void DaoArray_SetVectorI( DaoArray *self, daoint* vec, daoint N );
 DAO_DLL void DaoArray_SetVectorF( DaoArray *self, float* vec, daoint N );
@@ -1088,15 +1088,15 @@ DAO_DLL DaoArray* DaoProcess_NewArray( DaoProcess *self, int type );
 // the owner of the C array. A typical scenario of using array in this way is to call
 // a Dao function from C, and pass a C array to the Dao function.
 */
-DAO_DLL DaoArray* DaoProcess_NewVectorSB( DaoProcess *self, signed   char *s, daoint n ); 
-DAO_DLL DaoArray* DaoProcess_NewVectorUB( DaoProcess *self, unsigned char *s, daoint n ); 
-DAO_DLL DaoArray* DaoProcess_NewVectorSS( DaoProcess *self, signed   short *s, daoint n ); 
-DAO_DLL DaoArray* DaoProcess_NewVectorUS( DaoProcess *self, unsigned short *s, daoint n ); 
-DAO_DLL DaoArray* DaoProcess_NewVectorSI( DaoProcess *self, signed   int *s, daoint n ); 
-DAO_DLL DaoArray* DaoProcess_NewVectorUI( DaoProcess *self, unsigned int *s, daoint n ); 
-DAO_DLL DaoArray* DaoProcess_NewVectorI( DaoProcess *self, daoint *s, daoint n ); 
-DAO_DLL DaoArray* DaoProcess_NewVectorF( DaoProcess *self, float  *s, daoint n ); 
-DAO_DLL DaoArray* DaoProcess_NewVectorD( DaoProcess *self, double *s, daoint n ); 
+DAO_DLL DaoArray* DaoProcess_NewVectorSB( DaoProcess *self, signed   char *s, daoint n );
+DAO_DLL DaoArray* DaoProcess_NewVectorUB( DaoProcess *self, unsigned char *s, daoint n );
+DAO_DLL DaoArray* DaoProcess_NewVectorSS( DaoProcess *self, signed   short *s, daoint n );
+DAO_DLL DaoArray* DaoProcess_NewVectorUS( DaoProcess *self, unsigned short *s, daoint n );
+DAO_DLL DaoArray* DaoProcess_NewVectorSI( DaoProcess *self, signed   int *s, daoint n );
+DAO_DLL DaoArray* DaoProcess_NewVectorUI( DaoProcess *self, unsigned int *s, daoint n );
+DAO_DLL DaoArray* DaoProcess_NewVectorI( DaoProcess *self, daoint *s, daoint n );
+DAO_DLL DaoArray* DaoProcess_NewVectorF( DaoProcess *self, float  *s, daoint n );
+DAO_DLL DaoArray* DaoProcess_NewVectorD( DaoProcess *self, double *s, daoint n );
 
 /*
 // DaoProcess_NewMatrixSB() creates an integer matrix from a [n x m] matrix of signed byte;
@@ -1154,123 +1154,3 @@ DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns );
 
 #endif
 
-/*
- Reshape to a array with specified shape:
- * return 0 if the array contains different number of elements
- * from the expected number of element in the target shape;
- * otherwise, reshaping is done and return 1. 
-int DaoArray_Reshape( DaoArray *self, size_t *dims, int D );
-
-
- Set data from vector or matrix: 
-void  DaoArray_SetMatrixD( DaoArray *self, double **mat, size_t row, size_t col );
-void  DaoArray_SetVectorUB( DaoArray *self, unsigned char* vec, size_t N );
-void  DaoArray_SetVectorUS( DaoArray *self, unsigned short* vec, size_t N );
-void  DaoArray_SetVectorUI( DaoArray *self, unsigned int* vec, size_t N );
-
-void* DaoArray_GetBuffer( DaoArray *self );
-void DaoArray_SetBuffer( DaoArray *self, void *buffer, size_t size );
-
- Check if "self" is a function or overloaded functions that can be called as:
- *     func( p[0], ..., p[n] )
- * Or,
- *     o->func( p[0], ..., p[n] )
- * If yes, return the best matched function; otherwise return NULL. 
-DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *o, DaoValue *p[], int n );
-
- return a null value, or a value of DaoRoutine: 
-DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name );
-DaoValue DaoObject_GetField( DaoObject *self, const char *name );
-DaoCdata* DaoObject_CastCdata( DaoObject *self, DaoType *type );
-
-DaoStream* DaoStream_New();
-void DaoStream_SetFile( DaoStream *self, FILE *fd );
-FILE* DaoStream_GetFile( DaoStream *self );
-
- data will be deleted with the new DaoCdata 
-DaoCdata* DaoCdata_New( DaoType *type, void *data );
- data will not be deleted with the new DaoCdata 
-DaoCdata* DaoCdata_Wrap( DaoType *type, void *data );
-int    DaoCdata_IsType( DaoCdata *self, DaoType *typer );
- return 1 if the data will be deleted with the DaoCdata, otherwise 0 
-int    DaoCdata_OwnData( DaoCdata *self );
- tell daovm that self->data has external reference 
-void   DaoCdata_SetData( DaoCdata *self, void *data );
-void*  DaoCdata_CastData( DaoValue *self, DaoType *totype );
-void*  DaoCdata_GetData( DaoCdata *self );
-void** DaoCdata_GetData2( DaoCdata *self );
-DaoObject* DaoCdata_GetObject( DaoCdata *self );
-
-
-DaoProcess* DaoProcess_New( DaoVmSpace *vms );
-
- Compile source codes in "src", with substitution of escape chars in strings, if rpl != 0 
-int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
- Evaluate source codes in "src", with substitution of escape chars in strings, if rpl != 0 
-int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, DString *src, int rpl );
-
- f: function to be called, one of DaoRoutree, DaoRoutine: 
- Try to call "f" as:
- *     f( p[0], ..., p[n] )
- * Or,
- *     o->f( p[0], ..., p[n] )
- * Return 0 if successful, otherwise return DAO_ERROR, DAO_ERROR_PARAM etc. 
-int DaoProcess_Call( DaoProcess *s, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
-void  DaoProcess_Stop( DaoProcess *self );
-DaoValue DaoProcess_GetReturned( DaoProcess *self );
-DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt, int mbs );
-
-
-DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *name );
- get namespace with the name, create if not exits: 
-DaoNamespace* DaoNamespace_GetNamespace( DaoNamespace *self, const char *name );
-int  DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent );
-void DaoNamespace_AddConstNumbers( DaoNamespace *self0, DaoNumItem *items );
-void DaoNamespace_AddConstValue( DaoNamespace *self, const char *s, DaoValue v );
-void DaoNamespace_AddConstData( DaoNamespace *self, const char *name, DaoBase *data );
-void DaoNamespace_AddData( DaoNamespace *self, const char *name, DaoBase *data, const char *type);
-void DaoNamespace_AddValue( DaoNamespace *self, const char *name, DaoValue data, const char *type);
-DaoValue DaoNamespace_FindData( DaoNamespace *self, const char *name );
-
- equivalent to: typedef old type; in scripts 
- return NULL if failed 
-DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const char *type );
- wrap c type, return NULL if failed 
-DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque );
- wrap c function, return NULL if failed 
-DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fp, const char *proto );
-
-   parameters alias[] is an array of type name aliases,
-   used as typedefs like: typedef alias[2*i] alias[2*i+1];
-   the last item in alias[] should also be NULL.
-   return the number of failed typedefs.
- 
-int DaoNamespace_TypeDefines( DaoNamespace *self, const char *alias[] );
- wrap c types, the last item in typer[] should be NULL;
-   types that are cross-used in parameter lists
-   (e.g. type A appears in the parameter list of B's methods,
-   and type B appears in the parameter list of A's methods),
-   should be wrapped using this function.
-   return the number of failed wrapping.
- 
-int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typer[] );
- wrap c functions, return the number of failed wrapping. 
-int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items );
- load the scripts in "file" to the namespace 
-int DaoNamespace_Load( DaoNamespace *self, const char *file );
-int DaoNamespace_GetOptions( DaoNamespace *self );
-void DaoNamespace_SetOptions( DaoNamespace *self, int options );
-
-DaoVmSpace* DaoVmSpace_New();
-
-int DaoVmSpace_RunMain( DaoVmSpace *self, DString *file );
-DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, DString *file );
-DaoNamespace* DaoVmSpace_GetNamespace( DaoVmSpace *self, const char *name );
-DaoNamespace* DaoVmSpace_MainNamespace( DaoVmSpace *self );
-DaoProcess* DaoVmSpace_MainProcess( DaoVmSpace *self );
- get a process object from a pool 
-DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self );
- return a process object from a pool 
-void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc );
-
-*/

@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -325,9 +325,9 @@ static int DaoGC_DecRC2( DaoValue *p )
 		case DAO_INTEGER :
 		case DAO_FLOAT :
 		case DAO_DOUBLE :
-		case DAO_COMPLEX : 
-		case DAO_LONG : 
-		case DAO_STRING : 
+		case DAO_COMPLEX :
+		case DAO_LONG :
+		case DAO_STRING :
 #if 1
 			if( gcWorker.concurrent ){
 				DArray_Append( gcWorker.idleList2, p );
@@ -1777,10 +1777,10 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		{
 			DaoRoutine *rout = (DaoRoutine*)value;
 			directRefCountDecrement( (DaoValue**) & rout->nameSpace );
-			/* may become NULL, if it has already become garbage 
+			/* may become NULL, if it has already become garbage
 			 * in the last cycle */
 			directRefCountDecrement( (DaoValue**) & rout->routType );
-			/* may become NULL, if it has already become garbage 
+			/* may become NULL, if it has already become garbage
 			 * in the last cycle */
 			directRefCountDecrement( (DaoValue**) & rout->routHost );
 			directRefCountDecrement( (DaoValue**) & rout->original );

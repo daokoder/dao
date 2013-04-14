@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -72,20 +72,20 @@ static void DaoSignalHandler( int sig )
 
 
 /*
-// Adding virtual modules: 
-// 
+// Adding virtual modules:
+//
 // * Create a C source file and define an variable of DaoVModule array;
 // * Name the variable as "dao_virtual_modules";
 // * Terminate the array with { NULL, ... };
 // * Compile files with -DDAO_WITH_STATIC_MODULES;
-// * Link these file together (possibly with the C modules); 
-// 
+// * Link these file together (possibly with the C modules);
+//
 // In this way, these virtual modules can be loaded in the normal way.
-// 
+//
 // DaoVModule dao_virtual_modules[] =
 // {
 //     { "hello.dao", 21, "io.writeln( 'hello world!' )", NULL },
-//     { NULL, 0, NULL, NULL } 
+//     { NULL, 0, NULL, NULL }
 // };
 */
 

@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -39,7 +39,7 @@
 #include"daoValue.h"
 
 void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int code );
-int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc, 
+int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc,
 		DString *name, DaoValue *P[], int N, int ignore_return, int execute )
 {
 	DaoValue *V = NULL;
@@ -162,7 +162,7 @@ static DaoValue* DaoObject_Copy(  DaoValue *value, DaoProcess *proc, DMap *cycDa
 	return (DaoValue*) pnew;
 }
 
-static DaoTypeCore objCore = 
+static DaoTypeCore objCore =
 {
 	NULL,
 	DaoObject_Core_GetField,
@@ -247,7 +247,7 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 	for(i=1; i<klass->instvars->size; i++){
 		DaoVariable *var = klass->instvars->items.pVar[i];
 		DaoValue **value = self->objValues + i;
-		/* for data type such as list/map/array, 
+		/* for data type such as list/map/array,
 		 * its .unitype may need to be set properaly */
 		if( var->value ){
 			DaoValue_Move( var->value, value, var->dtype );

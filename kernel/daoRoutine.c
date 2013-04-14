@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -485,7 +485,7 @@ static DParamNode* DParamNode_Add( DParamNode *self, DaoRoutine *routine, int pi
 static void DParamNode_ExportRoutine( DParamNode *self, DArray *routines )
 {
 	DParamNode *it;
-	if( self->routine ) DArray_PushFront( routines, self->routine ); 
+	if( self->routine ) DArray_PushFront( routines, self->routine );
 	for(it=self->first; it; it=it->next) DParamNode_ExportRoutine( it, routines );
 }
 DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
@@ -505,8 +505,8 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 		if( self->tree == NULL ) self->tree = DParamNode_New();
 		param = DParamNode_Add( self->tree, routine, 0 );
 	}
-	/* Runtime routine specialization based on parameter types may create 
-	 * two specializations with identical parameter signature, so one of 
+	/* Runtime routine specialization based on parameter types may create
+	 * two specializations with identical parameter signature, so one of
 	 * the specialized routine will not be successully added to the tree.
 	 * To avoid memory leaking, the one not added to the tree should also
 	 * be appended to "array", so that it can be properly garbage collected. */

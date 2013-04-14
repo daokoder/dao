@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -1668,10 +1668,10 @@ static DaoType* DaoParser_ParseType2( DaoParser *self, int start, int end, int *
 			vartype = DaoParser_ParseType( self, start + 2, gt, newpos, types );
 			if( vartype == NULL || *newpos != gt ) goto WrongType;
 			if( vartype->tid == DAO_VARIANT ){
-				type = DaoNamespace_MakeType( ns, type->name->mbs, DAO_VARIANT, initype, 
+				type = DaoNamespace_MakeType( ns, type->name->mbs, DAO_VARIANT, initype,
 						vartype->nested->items.pType, vartype->nested->size );
 			}else{
-				type = DaoNamespace_MakeType( ns, type->name->mbs, DAO_VARIANT, initype, 
+				type = DaoNamespace_MakeType( ns, type->name->mbs, DAO_VARIANT, initype,
 						&vartype, 1 );
 			}
 			*newpos = gt + 1;
@@ -2776,7 +2776,7 @@ InvalidAliasing:
 DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoValue *p[], int n, int i );
 static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 {
-	DaoValue *params[DAO_MAX_PARAM+1]; 
+	DaoValue *params[DAO_MAX_PARAM+1];
 	int i, j, n, count = self->decoFuncs->size;
 
 	params[0] = (DaoValue*) rout;
@@ -3670,7 +3670,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		}
 		tki = tokens[start]->name;
 		tki2 = start+1 <= to ? tokens[start+1]->name : 0;
-		if( needName && (ptok->type != DTOK_IDENTIFIER || (tki != DKEY_ENUM 
+		if( needName && (ptok->type != DTOK_IDENTIFIER || (tki != DKEY_ENUM
 						&& tki > DAO_NOKEY1 && tki < DKEY_ABS )) ){
 			if( tki < DKEY_SUB || tki > DKEY_OPERATOR || storeType2 != DAO_DECL_STATIC ){
 				DaoParser_Error( self, DAO_TOKEN_NEED_NAME, & tokens[start]->string );
@@ -3816,7 +3816,7 @@ DecoratorError:
 		case DKEY_IF :
 			/* Add an auxiliary scope to simplify the handling of branchings.
 			 * Such scoping is marked by an opening inode and a closing inode.
-			 * The closing inode will be moved to the place where the scope is closed. 
+			 * The closing inode will be moved to the place where the scope is closed.
 			 *
 			 * opening->jumpTrue shall point to the start of the condition expression.
 			 * opening->jumpFalse = closing.
@@ -4040,7 +4040,7 @@ DecoratorError:
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			start += 1;
 			continue;
-		case DKEY_CATCH : 
+		case DKEY_CATCH :
 			opening = (DaoInode*) DArray_Back( self->scopeOpenings );
 			closing = (DaoInode*) DArray_Back( self->scopeClosings );
 			/* If not following "try" or "catch", abort with error: */
@@ -6140,7 +6140,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		result.first = last->next;
 		result.last = result.update = self->vmcLast;
 		start += 1;
-	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_DOLLAR || tki == DTOK_COLON 
+	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_DOLLAR || tki == DTOK_COLON
 			|| (tki >= DKEY_ANY && tki <= DKEY_FUTURE ) || tki >= DKEY_ABS || tki == DKEY_SELF ){
 		regLast = DaoParser_ParseAtomicExpression( self, start, & cst );
 		if( last != self->vmcLast ) result.first = result.last = result.update = self->vmcLast;
@@ -6666,7 +6666,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 	if( LHS.first ) postart = LHS.first->first;
 	result.prev = LHS.prev;
 	while(1){
-		int pos = self->curToken, fold = 0; 
+		int pos = self->curToken, fold = 0;
 		int thisPrec, nextPrec, curtok = DaoParser_CurrentTokenName( self );
 		if( curtok == stop ) return LHS;
 		thisPrec = DaoParser_GetOperPrecedence( self );

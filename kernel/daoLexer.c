@@ -2,18 +2,18 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -368,13 +368,13 @@ static DIntStringPair wordlist[] =
 	{DKEY_SINH,"sinh"}
 };
 
-enum 
-{ 
-	LEX_ENV_NORMAL , 
-	LEX_ENV_COMMENT 
+enum
+{
+	LEX_ENV_NORMAL ,
+	LEX_ENV_COMMENT
 };
 
-enum 
+enum
 {
 	TOK_RESTART , /* emit token, and change to states[TOKEN_START][ char ] */
 	TOK_START ,
@@ -432,7 +432,7 @@ enum
 	TOK_END_MBS ,
 	TOK_END_WCS ,
 	TOK_END_LB ,  /* () */
-	TOK_END_RB , 
+	TOK_END_RB ,
 	TOK_END_LCB ,  /* {} */
 	TOK_END_RCB ,
 	TOK_END_LSB ,  /* [] */
@@ -542,7 +542,7 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_MBS ,
 	DTOK_WCS ,
 	DTOK_LB ,  /* () */
-	DTOK_RB , 
+	DTOK_RB ,
 	DTOK_LCB ,  /* {} */
 	DTOK_RCB ,
 	DTOK_LSB ,  /* [] */
@@ -727,8 +727,8 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_OP_SHARP ][ (unsigned) '{' ] = TOK_COMT_OPEN;
 	daoLexTable[ TOK_OP_SHARP ][ (unsigned) '}' ] = TOK_COMT_CLOSE;
 	daoLexTable[ TOK_START ][ (unsigned) '\\' ] = TOK_OP_ESC;
-	daoLexTable[ TOK_START ][ (unsigned) '@' ] = TOK_OP_AT; 
-	daoLexTable[ TOK_OP_AT ][ (unsigned) '@' ] = TOK_OP_AT2; 
+	daoLexTable[ TOK_START ][ (unsigned) '@' ] = TOK_OP_AT;
+	daoLexTable[ TOK_OP_AT ][ (unsigned) '@' ] = TOK_OP_AT2;
 	daoLexTable[ TOK_OP_AT ][ (unsigned) '[' ] = TOK_VERBATIM;
 	daoLexTable[ TOK_OP_AT2 ][ (unsigned) '[' ] = TOK_VERBATIM;
 	daoLexTable[ TOK_VERBATIM ][ (unsigned) ' ' ] = TOK_VERBATIM;
@@ -768,7 +768,7 @@ void DaoInitLexTable()
 
 	daoLexTable[ TOK_START ][ (unsigned) '+' ] = TOK_OP_ADD;
 	daoLexTable[ TOK_OP_ADD ][ (unsigned) '+' ] = TOK_END_INCR; /* ++ */
-	daoLexTable[ TOK_START ][ (unsigned) '-' ] = TOK_OP_SUB; 
+	daoLexTable[ TOK_START ][ (unsigned) '-' ] = TOK_OP_SUB;
 	daoLexTable[ TOK_OP_SUB ][ (unsigned) '-' ] = TOK_END_DECR; /* -- */
 	daoLexTable[ TOK_START ][ (unsigned) '*' ] = TOK_OP_MUL;
 	daoLexTable[ TOK_OP_MUL ][ (unsigned) '*' ] = TOK_END_POW; /* ** */
@@ -974,7 +974,7 @@ int DaoToken_Check( const char *src, int size, int *length )
 			}else if( state <= TOK_START ){
 				state = TOK_RESTART;
 			}else if( state != TOK_IDENTIFIER && state != TOK_STRING_MBS
-					&& state != TOK_STRING_WCS 
+					&& state != TOK_STRING_WCS
 					&& state != TOK_COMT_LINE && state != TOK_COMT_OPEN ){
 				state = TOK_RESTART;
 			}
@@ -1082,7 +1082,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 	int cpos = 0;
 	int ret = 1;
 	int it = 0;
-	int i, m = 4; 
+	int i, m = 4;
 
 	DString_SetSharing( literal, 0 );
 	for(it=0; it<srcSize; it++){
@@ -1175,7 +1175,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 				}
 				if( src[it] == '\n' ) cpos = 0, line ++;
 				switch( src[it] ){
-				case '0' : case '1' : case '2' : case '3' : 
+				case '0' : case '1' : case '2' : case '3' :
 				case '4' : case '5' : case '6' : case '7' : /* \ooo */
 					i = 2;
 					while( i < 5 && it < srcSize && src[it] >= '0' && src[it] < '8' ){
@@ -1246,7 +1246,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 			}else if( state <= TOK_START ){
 				state = TOK_RESTART;
 			}else if( state != TOK_IDENTIFIER && state != TOK_STRING_MBS
-					&& state != TOK_STRING_WCS 
+					&& state != TOK_STRING_WCS
 					&& state != TOK_COMT_LINE && state != TOK_COMT_OPEN ){
 				state = TOK_RESTART;
 			}
