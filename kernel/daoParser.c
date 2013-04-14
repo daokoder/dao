@@ -5803,9 +5803,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 #endif
 
 	self->curToken = lb;
-	if( (etype == DKEY_LIST || btype == DTOK_LCB) && semi >= 0 ){
-		regC = -1;
-	}else if( etype == DKEY_TUPLE || btype == DTOK_LB ){
+	if( etype == DKEY_TUPLE || btype == DTOK_LB ){
 		/* ( a, b ) */
 		if( tp && tp->tid != DAO_TUPLE ) goto ParsingError;
 		enode = DaoParser_ParseExpressionList( self, DTOK_COMMA, NULL, cid );
@@ -5813,9 +5811,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 		regC = DaoParser_PushRegister( self );
 		enumcode = DVM_TUPLE;
 		DaoParser_AddCode( self, DVM_TUPLE, enode.reg, enode.count, regC, start, mid, end );
-	}else if( btype != DTOK_LCB && (pto >= 0 || appxto >= 0) ){
-		regC = -1;
-	}else if( (etype ==0 && (pto >= 0 || appxto >= 0) ) || etype == DKEY_MAP ){
+	}else if( etype == DKEY_MAP || (etype == 0 && btype == DTOK_LCB && (pto >= 0 || appxto >= 0) ) ){
 		/* { a=>1, b=>[] }; {=>}; */
 		/* { a: 1, b: [] }; {:}; */
 		if( tp && tp->tid != DAO_MAP ) goto ParsingError;
@@ -5867,7 +5863,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 		isempty = lb > rb;
 		regC = DaoParser_PushRegister( self );
 		DaoParser_AddCode( self, enumcode, enode.reg, enode.count, regC, start, mid, end );
-	}else if( etype == 0 || etype == DKEY_ARRAY ){
+	}else if( etype == DKEY_ARRAY || (etype == 0 && btype == DTOK_LSB) ){
 		/* [1,2; 3,4] */
 		int row = 0, col = 0;
 		if( tp && (enumcode == DVM_VECTOR && tp->tid != DAO_ARRAY) ) goto ParsingError;
