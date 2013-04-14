@@ -450,6 +450,7 @@ enum
 	TOK_END_TISA , /* ?<, Type IS A */
 	TOK_END_LSHIFT ,  /* << */
 	TOK_END_RSHIFT , /* >> */
+	TOK_END_APPXTO , /* ~> */
 	TOK_END_ARROW ,  /* -> */
 	TOK_END_FIELD ,  /* => */
 	TOK_END_COLON2 , /* :: */
@@ -559,10 +560,11 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_TISA , /* ?<, Type IS A */
 	DTOK_LSHIFT ,  /* << */
 	DTOK_RSHIFT , /* >> */
-	DTOK_ARROW ,  /* -> */
-	DTOK_FIELD ,  /* => */
-	DTOK_COLON2 , /* :: */
-	DTOK_CASSN ,  /* := */
+	DTOK_APPXTO ,  /* ~> */
+	DTOK_ARROW ,   /* -> */
+	DTOK_FIELD ,   /* => */
+	DTOK_COLON2 ,  /* :: */
+	DTOK_CASSN ,   /* := */
 	DTOK_ADDASN ,  /* += */
 	DTOK_SUBASN ,  /* -= */
 	DTOK_MULASN ,  /* *= */
@@ -750,6 +752,7 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_OP_QUEST ][ (unsigned) '?' ] = TOK_END_ASSERT; /* ?? */
 	daoLexTable[ TOK_OP_QUEST ][ (unsigned) '=' ] = TOK_END_TEQ; /* ?= */
 	daoLexTable[ TOK_OP_QUEST ][ (unsigned) '<' ] = TOK_END_TISA; /* ?< */
+	daoLexTable[ TOK_OP_TILDE ][ (unsigned) '>' ] = TOK_END_APPXTO; /* ~> */
 	daoLexTable[ TOK_OP_SUB ][ (unsigned) '>' ] = TOK_END_ARROW; /* -> */
 	daoLexTable[ TOK_OP_EQ ][ (unsigned) '>' ] = TOK_END_FIELD; /* => */
 	daoLexTable[ TOK_START ][ (unsigned) '<' ] = TOK_OP_LT;
@@ -818,10 +821,9 @@ void DaoInitLexTable()
 	daoArithOper[ DTOK_SUB ]    = doper( DAO_OPER_SUB,      1, 0, 5 );
 	daoArithOper[ DTOK_NOT ]    = doper( DAO_OPER_NOT,      1, 0, 0 );
 	daoArithOper[ DKEY_NOT ]    = doper( DAO_OPER_NOT,      1, 0, 0 );
-	daoArithOper[ DTOK_TILDE ]  = doper( DAO_OPER_TILDE,    1, 0, 0 );
+	daoArithOper[ DTOK_TILDE ]  = doper( DAO_OPER_TILDE,    1, 0, 10 );
 	daoArithOper[ DTOK_AMAND ]  = doper( DAO_OPER_BIT_AND,  1, 0, 1 );
 	daoArithOper[ DTOK_ASSERT ] = doper( DAO_OPER_ASSERT,   0, 0, 9 );
-	daoArithOper[ DTOK_FIELD ]  = doper( DAO_OPER_FIELD,    0, 0, 11 );
 	daoArithOper[ DTOK_ASSN ]   = doper( DAO_OPER_ASSN,     0, 0, 12 );
 	daoArithOper[ DTOK_CASSN ]  = doper( DAO_OPER_ASSN,     0, 0, 12 );
 	daoArithOper[ DTOK_ADDASN ] = doper( DAO_OPER_ASSN_ADD, 0, 0, 11 );

@@ -4300,12 +4300,12 @@ void DaoProcess_DoAPList(  DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoList *list = DaoProcess_GetList( self, vmc );
 	DaoValue **items, **regValues = self->activeValues;
-	DaoValue *countValue = regValues[vmc->a];
-	DaoValue *initValue = regValues[vmc->a+1];
-	DaoValue *stepValue = vmc->b == 3 ? regValues[vmc->a+2] : NULL;
+	DaoValue *countValue = regValues[vmc->a + 1 + (vmc->b == 3)];
+	DaoValue *initValue = regValues[vmc->a];
+	DaoValue *stepValue = vmc->b == 3 ? regValues[vmc->a+1] : NULL;
 	daoint i, num = DaoValue_GetInteger( countValue );
 	double step = stepValue ? DaoValue_GetDouble( stepValue ) : 0.0;
-	
+
 	self->activeCode = vmc;
 	if( countValue->type < DAO_INTEGER || countValue->type > DAO_DOUBLE ){
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "need number" );
@@ -4413,13 +4413,13 @@ void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc )
 #ifdef DAO_WITH_NUMARRAY
 	DaoArray *array = NULL;
 	DaoValue **regValues = self->activeValues;
-	DaoValue *countValue = regValues[vmc->a];
-	DaoValue *initValue = regValues[vmc->a+1];
-	DaoValue *stepValue = vmc->b == 3 ? regValues[vmc->a+2] : NULL;
+	DaoValue *countValue = regValues[vmc->a + 1 + (vmc->b == 3)];
+	DaoValue *initValue = regValues[vmc->a];
+	DaoValue *stepValue = vmc->b == 3 ? regValues[vmc->a+1] : NULL;
 	double step = stepValue ? DaoValue_GetDouble( stepValue ) : 0.0;
 	daoint num = DaoValue_GetInteger( countValue );
 	daoint i, j, k, m, N, S, transvec = 0; /* transposed vector */
-	
+
 	self->activeCode = vmc;
 	if( countValue->type < DAO_INTEGER || countValue->type > DAO_DOUBLE ){
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "need number" );
@@ -4523,7 +4523,7 @@ void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc )
 		}
 		return;
 	}
-	
+
 	switch( array->etype ){
 		case DAO_INTEGER :
 		{

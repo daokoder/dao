@@ -37,9 +37,9 @@ function AtAv(n :int, x :array<double>, y :array<double>, t :array<double>)
 
 function main( n = 100 )
 {
-	u = [ n ~ 1D ];
-	v = [ n ~ 1D ];
-	t = [ n ~ 1D ];
+	u = [ 1D : n ];
+	v = [ 1D : n ];
+	t = [ 1D : n ];
 
 	for( i = 1 : 10 ){
 		AtAv(n, u, v, t);

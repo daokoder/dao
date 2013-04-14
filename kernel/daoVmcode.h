@@ -86,7 +86,7 @@ enum DaoOpcode
 	DVM_TUPLE , /* tuple: C = ( A, A+1, ..., A+B-1 ); B>=2, items can be: name=>value */
 	DVM_LIST , /* list: C = { A, A+1, ..., A+B-1 }; */
 	DVM_MAP , /* map: C = { A => A+1, ..., A+B-2 => A+B-1 }; if B==0, empty; */
-	DVM_HASH , /* hash: C = { A : A+1, ..., A+B-2 : A+B-1 }; if B==0, empty; */
+	DVM_HASH , /* hash: C = { A ~> A+1, ..., A+B-2 ~> A+B-1 }; if B==0, empty; */
 	DVM_VECTOR , /* vector: C = [ A, A+1, ..., A+B-1 ]; */
 	DVM_MATRIX , /* matrix: C=[A,..,A+c-1;..;A+c*(r-1),..,A+c*r-1]; B=rc;r,c:8-bits each.*/
 	DVM_APLIST , /* arithmetic progression list: C = { A ~ ... ~ A+B-1 }, B = 2 or 3; */

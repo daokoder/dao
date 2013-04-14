@@ -1106,53 +1106,11 @@ Failed :
 
 /* parsing without code generation: */
 extern DOper daoArithOper[DAO_NOKEY2];
-static int DaoParser_CurrentTokenType( DaoParser *self )
-{
-	if( self->curToken >= self->tokens->size ) return 0;
-	return self->tokens->items.pToken[self->curToken]->type;
-}
-static int DaoParser_CurrentTokenName( DaoParser *self )
-{
-	if( self->curToken >= self->tokens->size ) return 0;
-	return self->tokens->items.pToken[self->curToken]->name;
-}
-static int DaoParser_NextTokenName( DaoParser *self )
-{
-	if( (self->curToken+1) >= self->tokens->size ) return 0;
-	return self->tokens->items.pToken[self->curToken+1]->name;
-}
-static int DaoParser_GetOperPrecedence( DaoParser *self )
-{
-	int tki;
-	DOper oper;
-	DaoToken **tokens = self->tokens->items.pToken;
-	if( self->curToken >= self->tokens->size ) return -1;
-	tki = tokens[self->curToken]->name;
-	if( (self->curToken+1) < self->tokens->size ){
-		DaoToken *t1 = tokens[self->curToken];
-		DaoToken *t2 = tokens[self->curToken+1];
-		if( t1->line == t2->line && (t1->cpos+1) == t2->cpos ){
-			/* check for operators: <<, >>, <=, >= */
-			int newtok = 0;
-			switch( ((int)t1->type<<8)|t2->type ){
-			case (DTOK_LT<<8)|DTOK_LT : newtok = DTOK_LSHIFT; break;
-			case (DTOK_GT<<8)|DTOK_GT : newtok = DTOK_RSHIFT; break;
-			case (DTOK_LT<<8)|DTOK_ASSN : newtok = DTOK_LE; break;
-			case (DTOK_GT<<8)|DTOK_ASSN : newtok = DTOK_GE; break;
-			}
-			if( newtok ){
-				self->curToken += 1;
-				tki = newtok;
-			}
-		}else if( t1->name == DKEY_NOT && t2->name == DKEY_IN ){
-			self->curToken += 1;
-			tki = DTOK_NOTIN;
-		}
-	}
-	oper = daoArithOper[tki];
-	if( oper.oper == 0 ) return -1;
-	return 10*(20 - oper.binary);
-}
+int DaoParser_CurrentTokenType( DaoParser *self );
+int DaoParser_CurrentTokenName( DaoParser *self );
+int DaoParser_NextTokenName( DaoParser *self );
+int DaoParser_GetOperPrecedence( DaoParser *self );
+
 static int DaoParser_ParsePrimary( DaoParser *self, int stop );
 static int DaoParser_ParseExpression( DaoParser *self, int stop );
 static int DaoParser_ParseParenthesis( DaoParser *self )

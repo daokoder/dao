@@ -984,7 +984,7 @@ routine main( command : string, input : string, output = '' )
 		encode = coder.Encode();
 		#encode = encode.map::{ X-128 }
 		s = io.open( output, 'w+' )
-		for( ch in encode ) s.writef( '%c', ch < 128 ? ch : 127 - ch )
+		for( ch in encode ) s.writef( '%c', ch < 128 ? ch ~ 127 - ch )
 		#s.write( encode )
 		s.close()
 	}

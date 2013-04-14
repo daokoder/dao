@@ -63,10 +63,11 @@ struct DaoEnode
 	DaoInode *last; /* the last instruction node for the expression */
 	DaoInode *update; /* the last instruction that updates the value of "reg" */
 };
-static int DaoParser_CurrentTokenType( DaoParser *self );
-static int DaoParser_CurrentTokenName( DaoParser *self );
-static int DaoParser_NextTokenType( DaoParser *self );
-static int DaoParser_NextTokenName( DaoParser *self );
+int DaoParser_GetOperPrecedence( DaoParser *self );
+int DaoParser_CurrentTokenType( DaoParser *self );
+int DaoParser_CurrentTokenName( DaoParser *self );
+int DaoParser_NextTokenType( DaoParser *self );
+int DaoParser_NextTokenName( DaoParser *self );
 static int DaoParser_CheckTokenType( DaoParser *self, int tok, const char *str );
 static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop );
 static DaoEnode DaoParser_ParseExpression( DaoParser *self, int stop );
@@ -92,8 +93,6 @@ extern DIntStringPair dao_keywords[];
 static const int mapAithOpcode[]=
 {
 	200, 200, 200, /* padding for regex opers */
-
-	DVM_NAMEVA, /* => */
 
 	DVM_MOVE , /* DAO_OPER_ASSN */
 	DVM_ADD , /* DAO_OPER_ASSN_ADD */
@@ -713,22 +712,22 @@ static int DaoParser_CheckTokenType( DaoParser *self, int tok, const char *str )
 	DaoParser_Error4( self, DAO_TOKEN_EXPECTING, tokens[cur]->line, str );
 	return 0;
 }
-static int DaoParser_CurrentTokenType( DaoParser *self )
+int DaoParser_CurrentTokenType( DaoParser *self )
 {
 	if( self->curToken >= self->tokens->size ) return 0;
 	return self->tokens->items.pToken[self->curToken]->type;
 }
-static int DaoParser_CurrentTokenName( DaoParser *self )
+int DaoParser_CurrentTokenName( DaoParser *self )
 {
 	if( self->curToken >= self->tokens->size ) return 0;
 	return self->tokens->items.pToken[self->curToken]->name;
 }
-static int DaoParser_NextTokenType( DaoParser *self )
+int DaoParser_NextTokenType( DaoParser *self )
 {
 	if( (self->curToken+1) >= self->tokens->size ) return 0;
 	return self->tokens->items.pToken[self->curToken+1]->type;
 }
-static int DaoParser_NextTokenName( DaoParser *self )
+int DaoParser_NextTokenName( DaoParser *self )
 {
 	if( (self->curToken+1) >= self->tokens->size ) return 0;
 	return self->tokens->items.pToken[self->curToken+1]->name;
@@ -5692,7 +5691,7 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end, int *cst )
 }
 
 
-static int DaoParser_GetOperPrecedence( DaoParser *self )
+int DaoParser_GetOperPrecedence( DaoParser *self )
 {
 	DOper oper;
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -5785,8 +5784,8 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 	int regcount = self->regCount;
 	int enumcode = DVM_LIST;
 	int pto = DaoParser_FindOpenToken( self, DTOK_FIELD, lb, rb, 0 );
+	int appxto = DaoParser_FindOpenToken( self, DTOK_APPXTO, lb, rb, 0 );
 	int colon = DaoParser_FindOpenToken( self, DTOK_COLON, lb, rb, 0 );
-	int tilde = DaoParser_FindOpenToken( self, DTOK_TILDE, lb, rb, 0 );
 	int semi = DaoParser_FindOpenToken( self, DTOK_SEMCO, lb, rb, 0 );
 	int comma = DaoParser_FindOpenToken( self, DTOK_COMMA, lb, rb, 0 );
 	int isempty = 0, step = 0;
@@ -5814,13 +5813,15 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 		regC = DaoParser_PushRegister( self );
 		enumcode = DVM_TUPLE;
 		DaoParser_AddCode( self, DVM_TUPLE, enode.reg, enode.count, regC, start, mid, end );
-	}else if( (etype ==0 && (pto >= 0 || (colon >= 0 && btype == DTOK_LCB)) ) || etype == DKEY_MAP ){
+	}else if( btype != DTOK_LCB && (pto >= 0 || appxto >= 0) ){
+		regC = -1;
+	}else if( (etype ==0 && (pto >= 0 || appxto >= 0) ) || etype == DKEY_MAP ){
 		/* { a=>1, b=>[] }; {=>}; */
 		/* { a: 1, b: [] }; {:}; */
 		if( tp && tp->tid != DAO_MAP ) goto ParsingError;
 		enumcode = pto >= 0 ? DVM_MAP : DVM_HASH;
+		if( etype == DKEY_MAP && appxto < 0 ) enumcode = DVM_MAP;
 		isempty = lb >= rb;
-		if( etype == DKEY_MAP && colon <0 ) enumcode = DVM_MAP;
 		if( lb >= rb ){
 			if( self->needConst ){
 				DaoMap *hm = DaoMap_New(colon>=0);
@@ -5835,18 +5836,18 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 				DaoParser_AddCode( self, enumcode, regC, 0, regC, start, mid, end );
 			}
 		}else{
-			int sep = pto >= 0 ? DTOK_FIELD : DTOK_COLON;
+			int sep = pto >= 0 ? DTOK_FIELD : DTOK_APPXTO;
 			step = 2;
 			enode = DaoParser_ParseExpressionLists( self, sep, DTOK_COMMA, & step, cid );
 			if( enode.reg < 0 || self->curToken != end ) goto ParsingError;
 			regC = DaoParser_PushRegister( self );
 			DaoParser_AddCode( self, enumcode, enode.reg, enode.count, regC, start, mid, end );
 		}
-	}else if( tilde > lb && comma < 0 ){
-		/* arithmetic progression: [ 1 ~ 2 ~ 10 ]; [ 1 ~ 10 ] */
+	}else if( colon > lb && comma < 0 && semi < 0 ){
+		/* arithmetic progression: [ 1 : 2 : 10 ]; [ 1 : 10 ] */
 		if( tp && (enumcode == DVM_LIST && tp->tid != DAO_LIST) ) goto ParsingError;
 		if( tp && (enumcode == DVM_VECTOR && tp->tid != DAO_ARRAY) ) goto ParsingError;
-		enode = DaoParser_ParseExpressionList( self, DTOK_TILDE, NULL, cid );
+		enode = DaoParser_ParseExpressionList( self, DTOK_COLON, NULL, cid );
 		if( enode.reg < 0 || self->curToken != end ) goto ParsingError;
 		isempty = lb > rb;
 		if( enode.reg < 0 || enode.count < 2 || enode.count > 3 ){
@@ -6696,15 +6697,15 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			RHS = DaoParser_NoneValue( self );
 		}
 		result.update = NULL;
-		if( oper == DAO_OPER_IF ){ /* conditional operation:  c ? e1 : e2 */
+		if( oper == DAO_OPER_IF ){ /* conditional operation:  c ? e1 ~ e2 */
 			DaoEnode RHS1, RHS2;
-			int prec2 = 10*(20 - daoArithOper[DTOK_COLON].binary);
-			RHS1 = DaoParser_ParseOperator(self, RHS, prec2 + 1, DTOK_COLON, 1 );
+			int prec2 = 10*(20 - daoArithOper[DTOK_TILDE].binary);
+			RHS1 = DaoParser_ParseOperator(self, RHS, prec2 + 1, DTOK_TILDE, 1 );
 			if( RHS1.reg < 0 ) return RHS1;
 			self->curToken += 1;
-			RHS2 = DaoParser_ParseUnary( self, DTOK_COLON );
+			RHS2 = DaoParser_ParseUnary( self, DTOK_TILDE );
 			if( RHS2.reg < 0 ) return RHS2;
-			RHS2 = DaoParser_ParseOperator(self, RHS2, prec2 + 1, DTOK_COLON, 1 );
+			RHS2 = DaoParser_ParseOperator(self, RHS2, prec2 + 1, DTOK_TILDE, 1 );
 			if( RHS2.reg < 0 ) return RHS2;
 
 			result.reg = DaoParser_PushRegister( self );

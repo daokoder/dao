@@ -22,19 +22,19 @@ class DaoCxxType
 }
 class DaoCxxEnum : DaoCxxType
 {
-	var en_names : map<string,int> = {:};
+	var en_names : map<string,int> = {~>};
 }
 class DaoCxxClass : DaoCxxType
 {
-	var cls_enums : map<string,DaoCxxEnum> = {:};
+	var cls_enums : map<string,DaoCxxEnum> = {~>};
 	var cls_fields : list<DaoCxxVariable> = {};
 	var cls_methods : list<DaoCxxFunction> = {};
 }
 class DaoCxxNamespace : DaoCxxType
 {
-	var ns_enums : map<string,DaoCxxEnum> = {:};
-	var ns_classes : map<string,DaoCxxClass> = {:};
-	var ns_namespaces : map<string,DaoCxxNamespace> = {:};
+	var ns_enums : map<string,DaoCxxEnum> = {~>};
+	var ns_classes : map<string,DaoCxxClass> = {~>};
+	var ns_namespaces : map<string,DaoCxxNamespace> = {~>};
 }
 
 routine BernsteinHash( key : string )
@@ -628,7 +628,7 @@ routine UserType::Parse( source='', inExtFile=0 )
 	isDefined = 1;
 	psources = { '', '', '', '', '', '' };
 	parts = source.extract( '(private|protected|public|Q_SIGNALS)%s*(Q_SLOTS|)%s*:', $both );
-	perm = isStruct==0 ? 0 : 2;
+	perm = isStruct==0 ? 0 ~ 2;
 	for( part in parts ){
 		if( part.pfind( ' ^ private %s* : $' ) ){
 			perm = 0;
@@ -711,19 +711,19 @@ routine UserType::Parse( source='', inExtFile=0 )
 		psources[i] = src;
 	}
 	for( i = 0 : 5 ){ # protected methods, public fields and methods
-		funclist = i ==0 ? privameths : methods;
+		funclist = i ==0 ? privameths ~ methods;
 		src = psources[i];
 		if( isCppClass ){
 			src.change( pat_callback, '' );
 			parts = src.extract( pat_constru );
 			for( part in parts ){
 				tks = part.capture( pat_constru );
-				attribs = i==1 ? FunctionTrait.FUNC_PROTECTED : FunctionTrait.FUNC_NONE;
+				attribs = i==1 ? FunctionTrait.FUNC_PROTECTED ~ FunctionTrait.FUNC_NONE;
 				ParseFunction( funclist, tks[1] + ';', name, input_file, attribs );
 			}
 			src.change( pat_constru, '' );
 		}
-		pat = isCppClass or isCallback ? pat_funct : pat_callback;
+		pat = isCppClass or isCallback ? pat_funct ~ pat_callback;
 		# take only virtual function if it is protected:
 		parts = src.extract( pat );
 		if( parts.size() ){
@@ -744,8 +744,8 @@ routine UserType::Parse( source='', inExtFile=0 )
 				skip; # XXX
 			}
 			tks = part.capture( pat );
-			#attribs = (i==1||i==3||i==5) ? FUNC_PROTECTED : 0;
-			attribs = (i==1||i==3) ? FunctionTrait.FUNC_PROTECTED : FunctionTrait.FUNC_NONE;
+			#attribs = (i==1||i==3||i==5) ? FUNC_PROTECTED ~ 0;
+			attribs = (i==1||i==3) ? FunctionTrait.FUNC_PROTECTED ~ FunctionTrait.FUNC_NONE;
 			if( i==5 ) attribs = $FUNC_PRIVATE;
 			if( not isCppClass and not isCallback ){
 				if( tks[4] ) skip; # struct x{ void (*func[10])(int i); }
@@ -778,7 +778,7 @@ routine UserType::Parse( source='', inExtFile=0 )
 			ParseFunction( funclist, name+'* '+ name + tks[1] +';', name, input_file );
 		}
 		src.change( pat, '' );
-		pat = isCppClass or isCallback ? pat_funct : pat_callback;
+		pat = isCppClass or isCallback ? pat_funct ~ pat_callback;
 		src.change( pat, '' );
 		if( isCppClass ){
 			for( meth in methods ){
@@ -1675,7 +1675,7 @@ routine Variable::Parse( fname = '' )
 	if( source.size() ==0 ) return;
 	tks = source.capture( pat_type );
 	name = tks[5];
-	#if( name.size() ==0 ) name = '_cp' + (index >=0) ? ((string) index) : '_ret';
+	#if( name.size() ==0 ) name = '_cp' + (index >=0) ? ((string) index) ~ '_ret';
 	if( name.size() ==0 ){
 		if( index >= 0 )
 		name = '_cp' + (string) index;
@@ -1806,8 +1806,8 @@ routine Variable::Generate( cxx_no_self =0 )
 	sindex = (string) index;
 	kvmap = { 'type'=>type_trans, 'type2'=>typename, 'name'=>name, 'refer'=>name,
 	'index'=>sindex, 'default'=>vdefault, 'namespace'=>'', 'namespace2'=>'' };
-	kvmap[ 'size' ] = sqsizes.size() ? sqsizes[0] : '0';
-	kvmap[ 'size2' ] = sqsizes.size() >1 ? sqsizes[1] : '0';
+	kvmap[ 'size' ] = sqsizes.size() ? sqsizes[0] ~ '0';
+	kvmap[ 'size2' ] = sqsizes.size() >1 ? sqsizes[1] ~ '0';
 	if( kvmap[ 'size' ][0:0] == '.' )
 	kvmap[ 'size' ] = 'self->' + kvmap[ 'size' ][1:];
 	if( kvmap[ 'size2' ][0:0] == '.' )
@@ -2019,8 +2019,8 @@ routine Variable::Generate( cxx_no_self =0 )
 			tpl_parset = parset_ints;
 			tpl_getres = getres_ints;
 			tpl_setter = setter_ints;
-			tpl_get_item = name == 'this' ? getitem_int2 : getitem_int;
-			tpl_set_item = name == 'this' ? setitem_int2 : setitem_int;
+			tpl_get_item = name == 'this' ? getitem_int2 ~ getitem_int;
+			tpl_set_item = name == 'this' ? setitem_int2 ~ setitem_int;
 			switch( typeid ){
 				case $CT_CHAR, $CT_SCHAR : 
 				tpl_dao2cxx = dao2cxx_bytes;
@@ -2073,8 +2073,8 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_floats;
 				tpl_getres = getres_floats;
 				tpl_setter = setter_floats;
-				tpl_get_item = name == 'this' ? getitem_float2 : getitem_float;
-				tpl_set_item = name == 'this' ? setitem_float2 : setitem_float;
+				tpl_get_item = name == 'this' ? getitem_float2 ~ getitem_float;
+				tpl_set_item = name == 'this' ? setitem_float2 ~ setitem_float;
 				case $CT_DOUBLE :
 				daotype = 'array<double>';
 				dao_itemtype = 'double';
@@ -2085,8 +2085,8 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_doubles;
 				tpl_getres = getres_doubles;
 				tpl_setter = setter_doubles;
-				tpl_get_item = name == 'this' ? getitem_double2 : getitem_double;
-				tpl_set_item = name == 'this' ? setitem_double2 : setitem_double;
+				tpl_get_item = name == 'this' ? getitem_double2 ~ getitem_double;
+				tpl_set_item = name == 'this' ? setitem_double2 ~ setitem_double;
 				case $CT_COMPLEX8 :
 				daotype = 'array<complex>';
 				tpl_daopar = daopar_complexs;
@@ -2190,7 +2190,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				case $CT_CHAR, $CT_SCHAR, $CT_UCHAR : 
 				daotype = 'string';
 				tpl_daopar = daopar_string;
-				tpl_dao2cxx = isconst ? dao2cxx_mbs_cst : dao2cxx_mbs2;
+				tpl_dao2cxx = isconst ? dao2cxx_mbs_cst ~ dao2cxx_mbs2;
 				tpl_cxx2dao = cxx2dao_mbs;
 				tpl_procput = ctxput_mbs;
 				tpl_parset = parset_mbs2;
@@ -2199,7 +2199,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				case $CT_WCHAR :
 				daotype = 'string';
 				tpl_daopar = daopar_string;
-				tpl_dao2cxx = isconst ? dao2cxx_wcs_cst : dao2cxx_wcs2;
+				tpl_dao2cxx = isconst ? dao2cxx_wcs_cst ~ dao2cxx_wcs2;
 				tpl_cxx2dao = cxx2dao_wcs;
 				tpl_procput = ctxput_wcs;
 				tpl_parset = parset_wcs2;
@@ -3026,7 +3026,7 @@ routine Function::Generate()
 	if( $FUNC_CPP in attribs ){
 		kvmap3[ 'count' ] = (string)(parlist.size() - cxx_no_self);
 		kvmap3[ 'parlist' ] = cxxProtoParamVirt;
-		kvmap3[ 'comma' ] = cxxProtoParamVirt ? ',' : '';
+		kvmap3[ 'comma' ] = cxxProtoParamVirt ? ',' ~ '';
 		cxxWrapperVirt = cxx_virt_class.expand( kvmap3 );
 	}else{
 		cxxWrapperVirtProto = cxx_virt_proto.expand( kvmap3 );
@@ -3086,7 +3086,7 @@ routine Function::Generate()
 	}
 	if( $FUNC_CPP in attribs ){
 		kvmap3[ 'return' ] = 'return';
-		kvmap3[ 'comma' ] = cxxCallParamV ? ',' : '';
+		kvmap3[ 'comma' ] = cxxCallParamV ? ',' ~ '';
 		if( retype.typename == 'void' && retype.refer == '' ) kvmap3[ 'return' ] = '';
 		kvmap3[ 'parlist' ] = cxxProtoParam;
 		if( $FUNC_PURE_VIRTUAL in attribs ){
@@ -4026,7 +4026,7 @@ routine UserType::GenerateType()
 			#}
 			kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
 			'parlist'=>meth.cxxProtoParamVirt, 'extra'=>'' };
-			kvmap[ 'comma' ] = meth.cxxProtoParamVirt ? ',' : '';
+			kvmap[ 'comma' ] = meth.cxxProtoParamVirt ? ',' ~ '';
 			if( $FUNC_CONST in meth.attribs) kvmap['extra'] = 'const';
 			kvirtuals += tpl_meth_decl.expand( kvmap );
 			if( $FUNC_VIRTUAL in meth.attribs ){
@@ -4047,7 +4047,7 @@ routine UserType::GenerateType()
 		for( pvirt in restPureVirts ){
 			#kvm[ 'cxxname' ] = pvirt.cxxName;
 			#kvm[ 'parcall' ] = pvirt.cxxCallParamV;
-			#cd = pvirt.retype.typeid == CT_VOID ? '{}\n' : tmp.expand( kvm );
+			#cd = pvirt.retype.typeid == CT_VOID ? '{}\n' ~ tmp.expand( kvm );
 			# 2010-01-19, 03:04
 			kmethods += '\t' + pvirt[1] + '{ /*XXX 2*/ }\n';
 		}
@@ -4067,7 +4067,7 @@ routine UserType::GenerateType()
 				kvmap = { 'name'=>meth.cxxName, 'retype'=>meth.retype.cxxtype,
 				'parlist'=>meth.cxxProtoParamDecl, 'extra'=>'' };
 				if( $FUNC_CONST in meth.attribs ) kvmap['extra'] = 'const';
-				rc = meth.retype.typeid == $CT_VOID ? '' : 'return ';
+				rc = meth.retype.typeid == $CT_VOID ? '' ~ 'return ';
 				kvm[ 'cxxname' ] = meth.cxxName;
 				kvm[ 'parcall' ] = meth.cxxCallParamV;
 				kvm[ 'return' ] = rc;
@@ -4229,7 +4229,7 @@ routine UserType::Generate()
 	meth_codes = '';
 	dao_meths = '';
 	tpl_gs = cxx_gs_user;
-	ns = snamespace ? snamespace + '::' : '';
+	ns = snamespace ? snamespace + '::' ~ '';
 	kvmap = { 'type'=>name, 'name'=>'', 'namespace'=>ns, 'type2'=>name2 };
 	for( field in fields ){
 		field.Generate();
@@ -4436,13 +4436,13 @@ routine WriteUserTypeCode( utp : UserType, del_tests : map<UserType,string> )
 	parents = '';
 	casts = '';
 	cast_funcs = '';
-	child = utp.snamespace ? utp.snamespace + '::' + utp.name : utp.name;
+	child = utp.snamespace ? utp.snamespace + '::' + utp.name ~ utp.name;
 	kvmap0 = { 'type'=>utp.name, 'child'=>child, 'parent'=>'', 'parent2'=>'' };
 	for( sup in utp.supers ){
 		parents += 'dao_' + sup.name + '_Typer, ';
 		casts += 'dao_cast_' + utp.name + '_to_' + sup.name + ',';
-		kvmap0[ 'parent' ] = sup.snamespace ? sup.snamespace + '::' + sup.fullname : sup.fullname;
-		kvmap0[ 'parent2' ] = sup.snamespace ? sup.snamespace + '::' + sup.name2 : sup.name2;
+		kvmap0[ 'parent' ] = sup.snamespace ? sup.snamespace + '::' + sup.fullname ~ sup.fullname;
+		kvmap0[ 'parent2' ] = sup.snamespace ? sup.snamespace + '::' + sup.name2 ~ sup.name2;
 		cast_funcs += cast_to_parent.expand( kvmap0 );
 	}
 	kvmap = { 'type'=>utp.name, 'type2'=>utp.name2, 'decls'=>utp.meth_decls, 
@@ -4498,9 +4498,9 @@ routine SortFiles( files : list<string>, dir='', subdir='', mod='' )
 {
 	subdirs = subdir.split( ',' );
 
-	depends = { '' : {'' : 1} };
+	depends = { '' ~> {'' ~> 1} };
 	for( file in files ){
-		depends[ file ] = {:};
+		depends[ file ] = {~>};
 
 		file2 = file;
 		source = io.read( file, 1 );
@@ -4532,13 +4532,13 @@ routine SortFiles( files : list<string>, dir='', subdir='', mod='' )
 		return x < y;
 	}
 	sort( files )->{
-		( depends.has( x ) and depends[x].has(y) ) ? 0 :
-		( ( depends.has( y ) and depends[y].has(x) ) ? 1 : 0 )
+		( depends.has( x ) and depends[x].has(y) ) ? 0 ~
+		( ( depends.has( y ) and depends[y].has(x) ) ? 1 ~ 0 )
 	}
 #}
 	debug = 0;
 	sorted : list<string> = {};
-	inserted = { '' : 1 }
+	inserted = { '' ~> 1 }
 	while( inserted.size() < depends.size() ){
 		last = sorted.size();
 		for( file in files ){
@@ -4617,7 +4617,7 @@ onload='DaoOnLoad' )
 		io.writeln( 'no input, quit...' );
 		return;
 	}
-	main_fname = wrap_name ? wrap_name : files[0];
+	main_fname = wrap_name ? wrap_name ~ files[0];
 	main_fname.change( '%..*$', '' );
 	log_file = io.open( main_fname + '.log', 'w' );
 	
@@ -4732,7 +4732,7 @@ onload='DaoOnLoad' )
 			ns_funcs[ func.snamespace ].append( func );
 		}
 	}
-	delete_tests : map<UserType,string> = {:};
+	delete_tests : map<UserType,string> = {~>};
 	parts = del_tests.split( ';' );
 	for( part in parts ){
 		p = part.split( '@' );
@@ -4758,7 +4758,7 @@ onload='DaoOnLoad' )
 	fout_header.write( '#include<string.h>\n' );
 	fout_header.write( '#include<dao.h>\n' );
 	if( lib_name == LibType.LIB_QT ) fout_header.write( '#include<QVector>\n#include<QList>\n' );
-	for( file in file_names ; idx in [file_names.size() ~ 0]){
+	for( file in file_names ; idx in [0 : file_names.size()]){
 		if( not extfiles.has( files[idx] ) ){
 			if( dir_input ){
 				fout_header.write( '#include<' + dir_inc + files[idx] + '>\n' );

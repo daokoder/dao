@@ -18,7 +18,7 @@ which can contain any data type. Internally it is implemented as a dynamic array
 ListEnumeration ::= [ 'list' ] '{' ExpressionList '}'
 
 # Items of Arithmetic Progression sequence: count ~ start [ ~ step ]
-ListByArithProg ::= [ 'list' ] '{' Expression '~' Expression [ '~' Expression ] '}'
+ListByArithProg ::= [ 'list' ] '{' Expression ':' [ Expression ':' ] Expression '}'
 
 List ::= ListEnumeration | ListByArithProg
 @[code(syntax)]
@@ -32,8 +32,8 @@ will be used as its type.
 @[code]
 list1 = { 1, 2, 3 }    # list<int>
 list2 = { 1.0, 2, 3 }  # list<float>
-list3 = { 5 ~ 1 }      # list<int>
-list4 = list{ 5 ~ 1 ~ 2 }  # list<int>
+list3 = { 1 : 5 }      # list<int>
+list4 = list{ 1 : 2 : 5 }  # list<int>
 @[code]
 
 @[text]

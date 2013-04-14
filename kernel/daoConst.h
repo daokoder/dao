@@ -214,12 +214,6 @@ enum DaoArithOperType{
 	DAO_OPER_REGEX_NE  =1,
 	DAO_OPER_REGEX_ALL =2,
 
-	/* DAO_COMMA ,
-	 * Do not allow comma as statement seperator, 
-	 * because of numarray subindexing
-	 */
-	DAO_OPER_FIELD ,
-
 	DAO_OPER_ASSN ,
 	DAO_OPER_ASSN_ADD ,
 	DAO_OPER_ASSN_SUB ,

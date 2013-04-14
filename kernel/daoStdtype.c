@@ -2870,7 +2870,7 @@ void DaoList_Erase( DaoList *self, daoint pos )
 static void DaoMap_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
 	DaoMap *self = & self0->xMap;
-	const char *kvsym = self->items->hashing ? " : " : " => ";
+	const char *kvsym = self->items->hashing ? " ~> " : " => ";
 	const daoint size = self->items->size;
 	daoint i = 0;
 

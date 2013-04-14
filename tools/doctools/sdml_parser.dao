@@ -165,9 +165,9 @@ routine SdmlParser::Parse( src : string )
 	size = tokens.size();
 	if( size ==0 ) return output;
 	if( makeheader ){
-		tok0 = size > 0 ? tokens[0] : '';
-		tok1 = size > 1 ? tokens[1] : '';
-		tok2 = size > 2 ? tokens[2] : '';
+		tok0 = size > 0 ? tokens[0] ~ '';
+		tok1 = size > 1 ? tokens[1] ~ '';
+		tok2 = size > 2 ? tokens[2] ~ '';
 		tag0 = tok0.capture( '^ %< %s* (title|article|report|book) %s* %> $' );
 		tag1 = tok1.capture( '^ %< %s* / %s* (title|article|report|book) %s* %> $' );
 		tag2 = tok2.capture( '^ %< %s* / %s* (title|article|report|book) %s* %> $' );
@@ -416,7 +416,7 @@ routine SdmlParser::ParseBlock( sect : TextSection, start : int, end : int, top=
 					lname = tk[:eq-1];
 					lhref = tk[eq+1:];
 					tks2 = lhref.split( "::" );
-					code = MakeLink( lname, lhref, tks2.size()>1 ? tks2[1] : '' );
+					code = MakeLink( lname, lhref, tks2.size()>1 ? tks2[1] ~ '' );
 					plain += lname;
 				}else{
 					code += MakeLink( tk );

@@ -4331,15 +4331,15 @@ NotExist_TryAux:
 						}
 					}
 				}else{
-					int num = types[opa]->tid;
-					int init = types[opa+1]->tid;
-					at = types[opa+1];
+					int num = types[opa+1+(opb==3)]->tid;
+					int init = types[opa]->tid;
+					at = types[opa];
 					if( num == 0 || (num > DAO_DOUBLE && (num & DAO_ANY) == 0) ) goto ErrorTyping;
-					if( opb == 3 && (init & DAO_ANY) == 0 && (types[opa+2]->tid & DAO_ANY) == 0 ){
-						int step = types[opa+2]->tid;
+					if( opb == 3 && (init & DAO_ANY) == 0 && (types[opa+1]->tid & DAO_ANY) == 0 ){
+						int step = types[opa+1]->tid;
 						if( step == 0 ) goto ErrorTyping;
-						if( types[opa+1]->realnum ){
-							if( types[opa+2]->realnum == 0 ) goto ErrorTyping;
+						if( types[opa]->realnum ){
+							if( types[opa+1]->realnum == 0 ) goto ErrorTyping;
 						}else if( init == DAO_COMPLEX ){
 							if( step > DAO_COMPLEX ) goto ErrorTyping;
 						}else if( init == DAO_STRING ){
