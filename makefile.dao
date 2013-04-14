@@ -191,7 +191,6 @@ daovm_lib = daovm.AddStaticLibrary( "dao", daovm_kernel_objects )
 daovm_exe = daovm.AddExecutable( "dao", daovm_main_object )
 
 daovm.AddIncludePath( "kernel" )
-daovm.AddLinkingPath( "." )
 
 
 ###########################################################################

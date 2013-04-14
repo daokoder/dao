@@ -15,11 +15,11 @@ if( DaoMake::IsUnix() ){
 
 	opengl = DaoMake::Project( "GLUT" )
 	cflags = "-I" + header_path
-	lflags = "";
+	shlibs = "";
 	if( DaoMake::IsMacOSX() && header_path.find( "Frameworks" ) >= 0 ){
-		lflags = "-framework GLUT"
+		shlibs = "-framework GLUT"
 	}else{
-		lflags = "-lGL -lGLU"
+		shlibs = "-lGL -lGLU"
 	}
-	opengl.ExportLibrary( "GLUT", cflags, lflags )
+	opengl.ExportLibrary( "GLUT", cflags, "", shlibs )
 }

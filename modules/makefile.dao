@@ -7,8 +7,6 @@ if( daovm == none ) return
 
 modules.Install( daovm.GetPath( "MOD-PATH" ), "addpath.dao" )
 
-io.writeln( "!!!!!!!!!!!MODULES DISABLED!!!!!!!!!!!!" );
-return;
 
 if( DaoMake::IsDir( "DaoJIT" ) ) modules.AddDirectory( "DaoJIT", "DaoJIT" );
 

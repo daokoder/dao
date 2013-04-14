@@ -6,6 +6,7 @@ daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 if( daovm == none ) return
 
 project.UseSharedLibrary( daovm, "dao" )
+project.AddIncludePath( "." )
 
 project_objs = project.AddObjects( { "dao_sys.c" }, { "dao_sys.h" } )
 project_dll  = project.AddSharedLibrary( "dao_sys", project_objs )
