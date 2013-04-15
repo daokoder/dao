@@ -717,13 +717,12 @@ void DaoMakeUnit_MakeLinkingPathsEx( DaoMakeUnit *self, DString *lflags, DString
 	for(i=0; i<self->linkingPaths->size; ++i){
 		DString_Assign( path, self->linkingPaths->items.pString[i] );
 		DaoMakeProject_MakeBinaryPath( self->project, path );
+		DString_AppendGap( lflags );
+		DString_Append( lflags, rpath );
+		DString_Append( lflags, path );
 		if( refpath ) DaoMakeProject_MakeRelativePath( refpath, path );
 		DString_AppendGap( lflags );
 		DString_AppendMBS( lflags, "-L" );
-		DString_Append( lflags, path );
-
-		DString_AppendGap( lflags );
-		DString_Append( lflags, rpath );
 		DString_Append( lflags, path );
 	}
 	DString_Delete( path );
@@ -1439,13 +1438,13 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 
 	for(it=DMap_First(self->cflagsMacros); it; it=DMap_Next(self->cflagsMacros,it)){
 		DString_Append( makefile, it->value.pString );
-		DString_AppendChar( makefile, '\n' );
+		DString_AppendMBS( makefile, "\n\n" );
 	}
 	DString_AppendChar( makefile, '\n' );
 
 	for(it=DMap_First(self->lflagsMacros); it; it=DMap_Next(self->lflagsMacros,it)){
 		DString_Append( makefile, it->value.pString );
-		DString_AppendChar( makefile, '\n' );
+		DString_AppendMBS( makefile, "\n\n" );
 	}
 	DString_AppendChar( makefile, '\n' );
 

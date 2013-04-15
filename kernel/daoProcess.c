@@ -5604,6 +5604,13 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 		int c1 = DaoValue_Compare( B->xTuple.items[0], A );
 		int c2 = DaoValue_Compare( A, B->xTuple.items[1] );
 		*C = c1 <=0 && c2 <= 0;
+	}else if( B->type == DAO_TUPLE ){
+		for(i=0; i<B->xTuple.size; ++i){
+			if( DaoValue_Compare( A, B->xTuple.items[i] ) == 0 ){
+				*C = 1;
+				break;
+			}
+		}
 	}else{
 		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "" );
 	}

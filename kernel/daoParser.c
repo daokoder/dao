@@ -6598,9 +6598,9 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 	case DAO_OPER_NOT : code = DVM_NOT; break;
 	case DAO_OPER_INCR : code = DVM_ADD; break;
 	case DAO_OPER_DECR : code = DVM_SUB; break;
-	case DAO_OPER_SUB : code = DVM_MINUS; break;
+	case DAO_OPER_SUB  : code = DVM_MINUS; break;
 	case DAO_OPER_TILDE : code = DVM_TILDE; break;
-	case DAO_OPER_BIT_AND : code = DVM_SIZE; break;
+	case DAO_OPER_MOD   : code = DVM_SIZE; break;
 	default : ec = DAO_CTW_EXPR_INVALID; goto ErrorParsing;
 	}
 	if( result.konst && (code == DVM_ADD || code == DVM_SUB) ){
