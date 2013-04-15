@@ -3670,9 +3670,9 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 	}
 NormalCasting:
 	va = DaoTypeCast( self, ct, va, vc );
+	if( va && va->type ) DaoValue_Copy( va, vc2 );
 	DaoProcess_PopValues( self, self->factory->size - top );
 	if( va == NULL || va->type == 0 ) goto FailConversion;
-	DaoValue_Copy( va, vc2 );
 	return;
 FastCasting:
 	GC_ShiftRC( va, vc );
@@ -5955,7 +5955,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 	if( ct == NULL ) goto FailConversion;
 	if( ct->tid == DAO_ANY ) goto Rebind;
 	if( dA->type == ct->tid && ct->tid >= DAO_INTEGER && ct->tid < DAO_ARRAY ) goto Rebind;
-	if( ct->tid > DAO_NONE && ct->tid <= DAO_LONG && (dC == NULL || dC->type != ct->tid) ){
+	if( ct->tid > DAO_NONE && ct->tid <= DAO_STRING && (dC == NULL || dC->type != ct->tid) ){
 		dC = DaoValue_SimpleCopy( ct->value );
 		DaoProcess_CacheValue( proc, dC );
 	}
@@ -6120,6 +6120,16 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			data = list->items.items.pValue;
 			data2 = list2->items.items.pValue;
 			for(i=0,n=list2->items.size; i<n; i++ ){
+				V = DaoTypeCast( proc, tp, data2[i], V );
+				if( V == NULL || V->type ==0 ) goto FailConversion;
+				DaoValue_Copy( V, data + i );
+			}
+		}else if( dA->type == DAO_TUPLE ){
+			tuple2 = (DaoTuple*) dA;
+			DArray_Resize( & list->items, tuple2->size, NULL );
+			data = list->items.items.pValue;
+			data2 = tuple2->items;
+			for(i=0,n=tuple2->size; i<n; i++ ){
 				V = DaoTypeCast( proc, tp, data2[i], V );
 				if( V == NULL || V->type ==0 ) goto FailConversion;
 				DaoValue_Copy( V, data + i );
