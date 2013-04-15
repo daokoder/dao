@@ -1655,16 +1655,6 @@ static void DaoSTR_Mpack( DaoProcess *proc, DaoValue *p[], int N )
 	}
 }
 #endif
-static void DaoSTR_Iter( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *self = p[0]->xString.data;
-	DaoTuple *tuple = & p[1]->xTuple;
-	DaoInteger *iter = DaoInteger_New( 0 );
-	DaoValue **data = tuple->items;
-	data[0]->xInteger.value = self->size >0;
-	DaoValue_Copy( (DaoValue*) iter, & data[1] );
-	dao_free( iter );
-}
 
 static void DaoSTR_Type( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1830,7 +1820,6 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Tolower, "tolower( self :string ) =>string" },
 	{ DaoSTR_Toupper, "toupper( self :string ) =>string" },
 	{ DaoSTR_Reverse, "reverse( self :string ) =>string" },
-	{ DaoSTR_Iter, "__for_iterator__( self :string, iter : for_iterator )" },
 
 	{ DaoSTR_Iterate,   "iterate( self :string )[char :int, index :int]" },
 	{ DaoSTR_Count,  "count( self :string )[char :int, index :int =>int]=>int" },
@@ -2426,16 +2415,6 @@ static void DaoLIST_Sort( DaoProcess *proc, DaoValue *p[], int npar )
 	for(i=0; i<N; i++) items[i] = data[i].value;
 	dao_free( data );
 }
-static void DaoLIST_Iter( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoList *self = & p[0]->xList;
-	DaoTuple *tuple = & p[1]->xTuple;
-	DaoInteger *iter = DaoInteger_New( 0 );
-	DaoValue **data = tuple->items;
-	data[0]->xInteger.value = self->items.size >0;
-	DaoValue_Copy( (DaoValue*) iter, & data[1] );
-	dao_free( iter );
-}
 static void DaoLIST_Join( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoList *self = & p[0]->xList;
@@ -2716,7 +2695,6 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Top,      "back( self :list<@T> )=>@T" },
 	{ DaoLIST_Rank,     "rank( self :list<any>, order :enum<ascend, descend>=$ascend, k=0 )=>list<int>" },
 	{ DaoLIST_Reverse,  "reverse( self :list<@T> )=>list<@T>" },
-	{ DaoLIST_Iter,     "__for_iterator__( self :list<any>, iter : for_iterator )" },
 
 	{ DaoLIST_Erase,    "erase( self :list<@T>, start=0, n=1 )" },
 	{ DaoLIST_Erase2,   "erase( self :list<@T>, mode :enum<all,first,last> )[item:@T,index:int=>int]=>int" },
@@ -3190,21 +3168,6 @@ static void DaoMAP_Size( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMap *self = & p[0]->xMap;
 	DaoProcess_PutInteger( proc, self->items->size );
 }
-static void DaoMAP_Iter( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoMap *self = & p[0]->xMap;
-	DaoTuple *tuple = & p[1]->xTuple;
-	DaoValue **data = tuple->items;
-	DNode *node = DMap_First( self->items );
-	data[0]->xInteger.value = self->items->size >0;
-	if( data[1]->type != DAO_CDATA || data[1]->xCdata.ctype != dao_default_cdata.ctype ){
-		DaoCdata *it = DaoCdata_New( dao_default_cdata.ctype, node );
-		GC_ShiftRC( it, data[1] );
-		data[1] = (DaoValue*) it;
-	}else{
-		data[1]->xCdata.data = node;
-	}
-}
 static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct )
 {
 	daoint *count = NULL;
@@ -3329,7 +3292,6 @@ static DaoFuncItem mapMeths[] =
 	{ DaoMAP_Value,  "values( self :map<@K,@V>, from :@K, to :@K )=>list<@V>" },
 	{ DaoMAP_Has,    "has( self :map<@K,any>, key :@K )=>int" },
 	{ DaoMAP_Size,   "size( self :map<any,any> )=>int" },
-	{ DaoMAP_Iter,   "__for_iterator__( self :map<any,any>, iter : for_iterator )" },
 
 	{ DaoMAP_Iterate,   "iterate( self :map<@K,@V> )[key :@K, value :@V]" },
 	{ DaoMAP_Count,  "count( self :map<@K,@V> )[key :@K, value :@V =>int] =>int" },
@@ -3544,6 +3506,17 @@ static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 		int id = DaoValue_GetInteger( pid );
 		if( id >=0 && id < self->size ){
 			DaoProcess_PutReference( proc, self->items[id] );
+			ec = 0;
+		}else{
+			ec = DAO_ERROR_INDEX_OUTOFRANGE;
+		}
+	}else if( pid->type == DAO_TUPLE && pid->xTuple.unitype == dao_type_for_iterator ){
+		int id = DaoValue_GetInteger( pid->xTuple.items[1] );
+		if( id >=0 && id < self->size ){
+			DaoValue **data = pid->xTuple.items;
+			DaoProcess_PutReference( proc, self->items[id] );
+			data[1]->xInteger.value += 1;
+			data[0]->xInteger.value = data[1]->xInteger.value < self->size;
 			ec = 0;
 		}else{
 			ec = DAO_ERROR_INDEX_OUTOFRANGE;

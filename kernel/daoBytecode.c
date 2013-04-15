@@ -2388,7 +2388,7 @@ static void DaoByteDecoder_VerifyRoutine( DaoByteDecoder *self, DaoRoutine *rout
 		printf( "%3i: %s", i, buf );
 #endif
 
-		T = DaoVmCode_GetOpcodeType( vmc->code );
+		T = DaoVmCode_GetOpcodeType( vmc );
 		switch( T ){
 		case DAO_CODE_GETU :
 			if( vmc->c >= regCount ) goto InvalidInstruction;

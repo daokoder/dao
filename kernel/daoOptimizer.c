@@ -70,7 +70,7 @@ static void DaoCnode_Clear( DaoCnode *self )
 }
 void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *vmc )
 {
-	uchar_t type = DaoVmCode_GetOpcodeType( vmc->code );
+	uchar_t type = DaoVmCode_GetOpcodeType( vmc );
 	int i, k, m;
 
 	self->type = DAO_OP_NONE;
@@ -744,7 +744,7 @@ static void DaoOptimizer_InitKills( DaoOptimizer *self )
 		if( lvalue != 0xffff ) DaoOptimizer_AddKill( self, kills, lvalue );
 
 		/* Check if the operation may modify its arguments or operands: */
-		code = DaoVmCode_GetOpcodeType( vmc->code );
+		code = DaoVmCode_GetOpcodeType( (DaoVmCode*) vmc );
 		switch( code ){
 		case DAO_CODE_CALL :
 		case DAO_CODE_YIELD :
@@ -944,7 +944,7 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 	for(i=0; i<N; i++){
 		vmc = codes[i];
 		node = nodes[i];
-		switch( (k = DaoVmCode_GetOpcodeType( vmc->code )) ){
+		switch( (k = DaoVmCode_GetOpcodeType( vmc )) ){
 		case DAO_CODE_NOP :
 			break;
 		case DAO_CODE_GETC :
@@ -1080,7 +1080,7 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 		DaoVmCode check;
 		node = nodes[i];
 		if( node->lvalue == 0xffff || node->exprid == 0xffff ) continue;
-		if( DaoVmCode_GetOpcodeType( vmc->code ) == DAO_CODE_MOVE ) continue;
+		if( DaoVmCode_GetOpcodeType( (DaoVmCode*) vmc ) == DAO_CODE_MOVE ) continue;
 		if( vmc->code <= DVM_SECT ) continue;
 
 		sametype = 1;
@@ -1485,7 +1485,7 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 	DaoRoutine *routine = self->routine;
 	DaoType **types = routine->body->regType->items.pType;
 	DMap *localVarType = routine->body->localVarType;
-	uchar_t type = DaoVmCode_GetOpcodeType( vmc->code );
+	uchar_t type = DaoVmCode_GetOpcodeType( vmc );
 	int i, k, m, at, bt, ct, code = vmc->code;
 
 	DaoCnode_InitOperands( node, vmc );
@@ -2832,7 +2832,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		printf( "%4i: ", i );DaoVmCodeX_Print( *(DaoVmCodeX*)inode, mbs->mbs );
 #endif
 
-		K = DaoVmCode_GetOpcodeType( inode->code );
+		K = DaoVmCode_GetOpcodeType( (DaoVmCode*) inode );
 		/* No need to check for operands in expression list,
 		// they must have been checked by other instructions. */
 		switch( K ){
@@ -3116,10 +3116,11 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					if( k != DAO_INTEGER && k != DAO_ANY && k != DAO_UDT ) goto NotMatch;
 				}
 			}else if( at->tid == DAO_TUPLE ){
+				DaoTuple *tupidx = DaoValue_CastTuple( value );
 				ct = dao_type_udf;
 				/* tuple slicing with constant index range, will produce a tuple with type
 				// determined from the index range. For variable range, it produces tuple<...>. */
-				if( value && value->type == DAO_TUPLE && value->xTuple.subtype == DAO_PAIR ){
+				if( tupidx && tupidx->subtype == DAO_PAIR ){
 					DaoValue *first = value->xTuple.items[0];
 					DaoValue *second = value->xTuple.items[1];
 					daoint start = DaoValue_GetInteger( first );
@@ -3162,6 +3163,20 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 								/* for skipping type checking */
 								vmc->code = DVM_GETF_TX;
 							}
+						}
+					}
+				}else if( bt == dao_type_for_iterator ){
+					int j;
+					if( at->nested->size == 0 ) goto InvIndex;
+					ct = at->nested->items.pType[0];
+					for(j=1; j<at->nested->size; ++j){
+						DaoType *it = at->nested->items.pType[j];
+						if( it->tid >= DAO_PAR_NAMED && it->tid <= DAO_PAR_VALIST ){
+							it = (DaoType*) it->aux;
+						}
+						if( DaoType_MatchTo( it, ct, defs ) < DAO_MT_EQ ){
+							ct = dao_type_any;
+							break;
 						}
 					}
 				}else if( bt->realnum ){
@@ -4549,8 +4564,14 @@ NotExist_TryAux:
 			break;
 		case DVM_ITER :
 			{
-				int j;
-				DString_SetMBS( mbs, "__for_iterator__" );
+				int j, skip = 0;
+				if( vmc->b ){
+					for(j=0; j<vmc->b; ++j){
+						AssertTypeMatching( types[opa+j], dao_type_for_iterator, defs );
+					}
+					DaoInferencer_UpdateType( self, opc, dao_type_int );
+					break;
+				}
 				ts[0] = dao_type_for_iterator;
 				meth = NULL;
 				self->type_source = at;
@@ -4558,7 +4579,15 @@ NotExist_TryAux:
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
 				if( NoCheckingType( at ) ) break;
+				DString_SetMBS( mbs, "__for_iterator__" );
 				switch( at->tid ){
+				case DAO_STRING :
+				case DAO_ARRAY :
+				case DAO_LIST :
+				case DAO_MAP :
+				case DAO_TUPLE :
+					skip = 1;
+					break;
 				case DAO_CLASS :
 				case DAO_OBJECT :
 					klass = & at->aux->xClass;
@@ -4581,6 +4610,7 @@ NotExist_TryAux:
 					if( at->typer ) meth = DaoType_FindFunction( at, mbs );
 					break;
 				}
+				if( skip ) break;
 				if( meth == NULL ) goto NotMatch;
 				rout = DaoValue_Check( meth, at, ts, 1, DVM_CALL, errors );
 				if( rout == NULL ) goto NotMatch;
@@ -5747,7 +5777,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	vmc->c = decorator->parCount;
 	for(i=0,m=annotCodes->size; i<m; i++){
 		vmc = annotCodes->items.pVmc[i];
-		k = DaoVmCode_GetOpcodeType( vmc->code );
+		k = DaoVmCode_GetOpcodeType( (DaoVmCode*) vmc );
 		if( k == DAO_CODE_BRANCH || k == DAO_CODE_JUMP ) vmc->b += added->size;
 	}
 	DArray_InsertArray( annotCodes, 0, added, 0, added->size );

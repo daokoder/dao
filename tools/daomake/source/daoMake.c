@@ -1079,6 +1079,8 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 			DString *md5, *test = target->tests->items.pString[i];
 			md5 = DaoMakeProject_SubMD5( self, test );
 			DString_Reset( signature, 0 );
+			DString_AppendMBS( signature, daomake_objects_dir );
+			DString_AppendPathSep( signature);
 			DString_Append( signature, test );
 			DString_AppendChar( signature, '.' );
 			DString_Append( signature, md5 );

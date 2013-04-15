@@ -4461,9 +4461,9 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 static int DaoParser_GetLastValue( DaoParser *self, DaoInode *it, DaoInode *back )
 {
 	int id = -1;
-	while( it != back && DaoVmCode_GetResultOperand( it->code ) == DAO_OPERAND_N ) it = it->prev;
+	while( it != back && DaoVmCode_GetResultOperand( (DaoVmCode*) it ) == DAO_OPERAND_N ) it = it->prev;
 	if( it == back ) return -1;
-	switch( DaoVmCode_GetResultOperand( it->code ) ){
+	switch( DaoVmCode_GetResultOperand( (DaoVmCode*) it ) ){
 	case DAO_OPERAND_N : break;
 	case DAO_OPERAND_A : id = it->a; break;
 	case DAO_OPERAND_B : id = it->b; break;
@@ -5034,8 +5034,8 @@ int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
 
 	DaoParser_AddScope( self, DVM_UNUSED, NULL );
 	if( in >= 0 ){
-		int k, L, elem, semic, regItemt, reg, first;
 		DArray *tuples; /* list of (list/iterable, iterator, item, first, last) */
+		int k, L, elem, semic, regItemt, reg, first, firstIter;
 		daoint *t;
 
 		elem = start + 2;
@@ -5065,11 +5065,9 @@ int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
 				goto CleanUp;
 			}
 			DArray_Append( tuples, reg1 ); /* list */
-			DArray_Append( tuples, self->regCount ); /* iterator */
 			DArray_Append( tuples, reg ); /* item */
 			DArray_Append( tuples, elem ); /* first token */
 			DArray_Append( tuples, semic-1 ); /* last token */
-			DaoParser_PushRegister( self );
 
 			elem = semic + 1;
 			semic = DaoParser_FindOpenToken( self, DTOK_SEMCO, elem, rb, 0 );
@@ -5078,29 +5076,28 @@ int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
 		}
 		L = tokens[rb]->line;
 		fromCode = self->vmcCount;
-		for(k=0, t=tuples->items.pInt; k<tuples->size; k+=5, t+=5){
-			daoint first = t[3], last = t[4];
-			DaoParser_AddCode( self, DVM_ITER, t[0], 0, t[1], first, first+1,last );
+		firstIter = self->regCount;
+		for(k=0, t=tuples->items.pInt; k<tuples->size; k+=4, t+=4){
+			daoint first = t[2], last = t[3];
+			DaoParser_AddCode( self, DVM_ITER, t[0], 0, self->regCount, first, first+1,last );
+			DaoParser_PushRegister( self );
 		}
 		/* see the comments for parsing if-else: */
 		closing = DaoParser_AddCode( self, DVM_LABEL, 0, 1, 0, start, 0,0 );
 		opening = DaoParser_AddScope( self, DVM_LOOP, closing );
-		/* When all items have been looped,
-		 * set the value of the data at regItemt in a way so that TEST on it will fail.
-		 */
-		regItemt = tuples->items.pInt[1]; /* the first iterator for testing */
+
 		reg = DaoParser_PushRegister( self );
-		DaoParser_AddCode( self, DVM_GETDI, regItemt, 0, reg, start, in, rb );
+		DaoParser_AddCode( self, DVM_ITER, firstIter, tuples->size/4, reg, start, in, rb );
 		DaoParser_AddCode( self, DVM_TEST, reg, fromCode, 0, start, in, rb );
 		opening->jumpTrue = self->vmcLast;
 		self->vmcLast->jumpFalse = closing;
 		reg = DaoParser_PushRegister( self );
 		DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, 0, reg, start, in, rb );
-		for(k=0, t=tuples->items.pInt; k<tuples->size; k+=5, t+=5){
-			daoint first = t[3], last = t[4];
-			DaoParser_AddCode( self, DVM_SETDI, reg, 0, t[1], start, in, rb );
-			DaoParser_AddCode( self, DVM_GETI, t[0], t[1], self->regCount, first, first+1, last );
-			DaoParser_AddCode( self, DVM_MOVE, self->regCount, 0, t[2], first, 0, first );
+		for(k=0, t=tuples->items.pInt; k<tuples->size; k+=4, t+=4){
+			daoint first = t[2], last = t[3];
+			daoint iter = firstIter + (k/4);
+			DaoParser_AddCode( self, DVM_GETI, t[0], iter, self->regCount, first, first+1, last );
+			DaoParser_AddCode( self, DVM_MOVE, self->regCount, 0, t[1], first, 0, first );
 			DaoParser_PushRegister( self );
 		}
 

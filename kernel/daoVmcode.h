@@ -98,7 +98,7 @@ enum DaoOpcode
 	DVM_GOTO , /* go to B; */
 	DVM_SWITCH , /* A: variable, B: location of default codes, C: number of cases */
 	DVM_CASE , /* A: constant of the case, B: location of the case codes, C: case mode */
-	DVM_ITER , /* create or reset an iterator at C for A; */
+	DVM_ITER , /* create an iterator at C for A if B==0, otherwise test an array of iterators; */
 	DVM_TEST , /* if A, go to the next one; else, goto B-th instruction; */
 	DVM_MATH , /* C = A( B ); A: sin,cos,...; B: double,complex */
 	DVM_CALL , /* call C = A( A+1, A+2, ..., A+B ); If B==0, no parameters; */
@@ -496,10 +496,10 @@ struct DaoVmCode
 };
 
 DAO_DLL const char* DaoVmCode_GetOpcodeName( int code );
-DAO_DLL uchar_t     DaoVmCode_GetOpcodeType( int code );
 DAO_DLL uchar_t     DaoVmCode_GetOpcodeBase( int code );
-DAO_DLL uchar_t     DaoVmCode_GetResultOperand( int code );
 DAO_DLL uchar_t     DaoVmCode_CheckPermutable( int code );
+DAO_DLL uchar_t     DaoVmCode_GetOpcodeType( DaoVmCode *self );
+DAO_DLL uchar_t     DaoVmCode_GetResultOperand( DaoVmCode *self );
 DAO_DLL DaoVmCode   DaoVmCode_CheckOperands( DaoVmCode *self );
 
 DAO_DLL DaoVmCode*  DPlainArray_PushCode( DPlainArray *self, DaoVmCode code );

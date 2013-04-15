@@ -2942,16 +2942,6 @@ static void DaoARRAY_FFT( DaoProcess *proc, DaoValue *par[], int npar )
 	if( abs(inv) != 1 ) return;
 	dao_fft16( (complex16*) self->data.c, m, inv );
 }
-static void DaoARRAY_Iter( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoArray *self = & p[0]->xArray;
-	DaoTuple *tuple = & p[1]->xTuple;
-	DaoInteger *iter = DaoInteger_New( 0 );
-	DaoValue **data = tuple->items;
-	data[0]->xInteger.value = DaoArray_SliceSize( self ) >0;
-	DaoValue_Copy( (DaoValue*) iter, & data[1] );
-	dao_free( iter );
-}
 static void DaoARRAY_Reverse( DaoProcess *proc, DaoValue *p[], int npar )
 {
 	DaoArray *self = & p[0]->xArray;
@@ -3020,7 +3010,6 @@ static DaoFuncItem numarMeths[] =
 	{ DaoARRAY_sort,  "sort( self :array<@T>, order :enum<ascend,descend>=$ascend, k=0 )=>array<@T>" },
 
 	{ DaoARRAY_FFT,    "fft( self :array<complex>, direction :enum<forward, backward> )" },
-	{ DaoARRAY_Iter,   "__for_iterator__( self :array<any>, iter : for_iterator )" },
 
 	{ DaoARRAY_Map,    "map( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>@T2]=>array<@T2>" },
 	{ DaoARRAY_Reduce, "reduce( self :array<@T> )[item:@T,res:@T,I:int,J:int,K:int,L:int,M:int=>@T]=>@T" },

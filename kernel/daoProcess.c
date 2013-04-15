@@ -2973,7 +2973,7 @@ void DaoProcess_BindNameValue( DaoProcess *self, DaoVmCode *vmc )
 	if( type && dC && dC->type == DAO_PAR_NAMED && dC->xNameValue.unitype == type ){
 		DaoNameValue *NV = (DaoNameValue*) dC;
 		DaoVmCode *vmc2 = vmc + 1;
-		uchar_t codetype = DaoVmCode_GetOpcodeType( vmc2->code );
+		uchar_t codetype = DaoVmCode_GetOpcodeType( vmc2 );
 		if( NV->refCount == 1 ){
 			nameva = NV;
 		}else if( NV->refCount == 2 && codetype == DAO_CODE_MOVE && vmc2->a != vmc2->c ){
@@ -4120,14 +4120,16 @@ static void DString_Format( DString *self, int width, int head )
 		n = i - head - 1;
 	}
 }
+daoint DaoArray_SliceSize( DaoArray *self );
 int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc,
-						   DString *name, DaoValue *P[], int N, int ignore_return, int execute );
-void DaoProcess_DoIter( DaoProcess *self, DaoVmCode *vmc )
+		DString *name, DaoValue *P[], int N, int ignore_return, int execute );
+static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 {
 	DString *name = self->mbstring;
 	DaoValue *va = self->activeValues[ vmc->a ];
 	DaoValue *vc = self->activeValues[ vmc->c ];
 	DaoType *type = DaoNamespace_GetType( self->activeNamespace, va );
+	DaoInteger *index;
 	DaoTuple *iter;
 	int rc = 1;
 
@@ -4141,14 +4143,60 @@ void DaoProcess_DoIter( DaoProcess *self, DaoVmCode *vmc )
 	iter->items[0]->xInteger.value = 0;
 	DaoTuple_SetItem( iter, dao_none_value, 1 );
 
-	DString_SetMBS( name, "__for_iterator__" );
-	if( va->type == DAO_OBJECT ){
-		rc = DaoObject_InvokeMethod( & va->xObject, NULL, self, name, & vc, 1, 1, 0 );
+	index = DaoInteger_New(0);
+	if( va->type == DAO_STRING ){
+		iter->items[0]->xInteger.value = va->xString.data->size >0;
+		DaoValue_Copy( (DaoValue*) index, iter->items + 1 );
+#ifdef DAO_WITH_NUMARRAY
+	}else if( va->type == DAO_ARRAY ){
+		iter->items[0]->xInteger.value = DaoArray_SliceSize( (DaoArray*) va ) >0;
+		DaoValue_Copy( (DaoValue*) index, iter->items + 1 );
+#endif
+	}else if( va->type == DAO_LIST ){
+		iter->items[0]->xInteger.value = va->xList.items.size >0;
+		DaoValue_Copy( (DaoValue*) index, iter->items + 1 );
+	}else if( va->type == DAO_MAP ){
+		DNode *node = DMap_First( va->xMap.items );
+		DaoValue **data = iter->items;
+		data[0]->xInteger.value = va->xMap.items->size >0;
+		if( data[1]->type != DAO_CDATA || data[1]->xCdata.ctype != dao_default_cdata.ctype ){
+			DaoCdata *it = DaoCdata_New( dao_default_cdata.ctype, node );
+			GC_ShiftRC( it, data[1] );
+			data[1] = (DaoValue*) it;
+		}else{
+			data[1]->xCdata.data = node;
+		}
+	}else if( va->type == DAO_TUPLE ){
+		iter->items[0]->xInteger.value = va->xTuple.size >0;
+		DaoValue_Copy( (DaoValue*) index, iter->items + 1 );
 	}else{
-		DaoRoutine *meth = DaoType_FindFunction( type, name );
-		if( meth ) rc = DaoProcess_Call( self, meth, va, &vc, 1 );
+		DString_SetMBS( name, "__for_iterator__" );
+		if( va->type == DAO_OBJECT ){
+			rc = DaoObject_InvokeMethod( & va->xObject, NULL, self, name, & vc, 1, 1, 0 );
+		}else{
+			DaoRoutine *meth = DaoType_FindFunction( type, name );
+			if( meth ) rc = DaoProcess_Call( self, meth, va, &vc, 1 );
+		}
+		if( rc ) DaoProcess_RaiseException( self, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
 	}
-	if( rc ) DaoProcess_RaiseException( self, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
+	dao_free( index );
+}
+static void DaoProcess_TestIter( DaoProcess *self, DaoVmCode *vmc )
+{
+	int i, res = 1;
+	for(i=0; i<vmc->b; ++i){
+		DaoTuple *iter = (DaoTuple*) self->activeValues[vmc->a+i];
+		res &= iter->items[0]->xInteger.value != 0;
+	}
+	self->activeValues[vmc->c]->xInteger.value = res;
+}
+void DaoProcess_DoIter( DaoProcess *self, DaoVmCode *vmc )
+{
+	if( vmc->b ){
+		DaoProcess_TestIter( self, vmc );
+	}else{
+		DaoProcess_InitIter( self, vmc );
+	}
 }
 
 

@@ -386,29 +386,31 @@ const char* DaoVmCode_GetOpcodeName( int code )
 	if( code >= 0 && code <= DVM_UNUSED ) return dao_code_infolist[ code ].name;
 	return "???";
 }
-uchar_t DaoVmCode_GetOpcodeType( int code )
-{
-	if( code >= 0 && code <= DVM_UNUSED ) return dao_code_infolist[ code ].type;
-	return DAO_CODE_NOP;
-}
 uchar_t DaoVmCode_GetOpcodeBase( int code )
 {
 	if( code >= 0 && code <= DVM_UNUSED ) return dao_code_infolist[ code ].base;
 	return DVM_NOP;
-}
-uchar_t DaoVmCode_GetResultOperand( int code )
-{
-	return dao_vmcode_result_operand[ DaoVmCode_GetOpcodeType( code ) ];
 }
 uchar_t DaoVmCode_CheckPermutable( int code )
 {
 	if( code >= 0 && code <= DVM_UNUSED ) return dao_code_infolist[ code ].perm;
 	return 0;
 }
+uchar_t DaoVmCode_GetOpcodeType( DaoVmCode *self )
+{
+	int code = self->code;
+	//if( code == DVM_ITER && self->b ) return DAO_CODE_ENUM;
+	if( code >= 0 && code <= DVM_UNUSED ) return dao_code_infolist[ code ].type;
+	return DAO_CODE_NOP;
+}
+uchar_t DaoVmCode_GetResultOperand( DaoVmCode *self )
+{
+	return dao_vmcode_result_operand[ DaoVmCode_GetOpcodeType( self ) ];
+}
 DaoVmCode DaoVmCode_CheckOperands( DaoVmCode *self )
 {
 	DaoVmCode vmc = { 0, 0, 0, 0 };
-	switch( DaoVmCode_GetOpcodeType( self->code ) ){
+	switch( DaoVmCode_GetOpcodeType( self ) ){
 	case DAO_CODE_NOP :
 		break;
 	case DAO_CODE_GETC :
