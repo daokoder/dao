@@ -35,7 +35,7 @@
 
 #define IO_BUF_SIZE  512
 
-enum
+enum DaoStreamModes
 {
 	DAO_IO_FILE = 1 ,
 	DAO_IO_PIPE = 2 ,
@@ -50,8 +50,7 @@ struct DaoStream
 	DAO_CSTRUCT_COMMON;
 
 	char        attribs;
-	int         mode;
-	int         useQuote;
+	char        mode;
 	char       *format;
 	FILE       *file;
 	DString    *streamString;

@@ -1115,6 +1115,39 @@ daoint DString_CheckUTF8( DString *self )
 	if( valid >= 0.95 * total ) return total;
 	return 0;
 }
+void DString_ChopUtf8( DString *self )
+{
+	daoint i, k;
+	unsigned char *chs;
+
+	DString_Detach( self, self->size );
+	DString_Chop( self );
+
+	if( DString_CheckUTF8( self ) && self->mbs && self->size ){
+		chs = (unsigned char*) self->mbs;
+		i = self->size - 1;
+		k = utf8_markers[ chs[i] ];
+		if( k ==1 ){
+			while( i && utf8_markers[ chs[i] ] ==1 ) i --;
+			k = utf8_markers[ chs[i] ];
+			if( k == 0 ){
+				chs[k+1] = 0;
+				self->size = k+1;
+			}else if( (self->size - i) != k ){
+				if( (self->size - i) < k ){
+					chs[i] = 0;
+					self->size = i;
+				}else{
+					chs[i+k] = 0;
+					self->size = i + k;
+				}
+			}
+		}else if( k !=0 ){
+			chs[i] = 0;
+			self->size --;
+		}
+	}
+}
 void DString_Reverse( DString *self )
 {
 	DString *front, *back;
@@ -1193,6 +1226,52 @@ void DString_Reverse( DString *self )
 	if( back->size && gi ) strncpy( self->mbs + i - gi, back->mbs, back->size );
 	DString_Delete( front );
 	DString_Delete( back );
+}
+daoint DString_FindReplace( DString *self, DString *str1, DString *str2, daoint index )
+{
+	daoint pos, from = 0, count = 0;
+	if( self->mbs ){
+		DString_ToMBS( str1 );
+		DString_ToMBS( str2 );
+	}else{
+		DString_ToWCS( str1 );
+		DString_ToWCS( str2 );
+	}
+	if( index == 0 ){
+		pos = DString_Find( self, str1, from );
+		while( pos != MAXSIZE ){
+			count ++;
+			DString_Insert( self, str2, pos, DString_Size( str1 ), 0 );
+			from = pos + DString_Size( str2 );
+			pos = DString_Find( self, str1, from );
+		}
+	}else if( index > 0){
+		pos = DString_Find( self, str1, from );
+		while( pos != MAXSIZE ){
+			count ++;
+			if( count == index ){
+				DString_Insert( self, str2, pos, DString_Size( str1 ), 0 );
+				break;
+			}
+			from = pos + DString_Size( str1 );
+			pos = DString_Find( self, str1, from );
+		}
+		count = 1;
+	}else{
+		from = MAXSIZE;
+		pos = DString_RFind( self, str1, from );
+		while( pos != MAXSIZE ){
+			count --;
+			if( count == index ){
+				DString_Insert( self, str2, pos-DString_Size( str1 )+1, DString_Size( str1 ), 0 );
+				break;
+			}
+			from = pos - DString_Size( str1 );
+			pos = DString_RFind( self, str1, from );
+		}
+		count = 1;
+	}
+	return count;
 }
 daoint DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0,
 		uint_t esc0, daoint start, daoint end, int countonly )

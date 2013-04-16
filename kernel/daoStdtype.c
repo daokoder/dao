@@ -819,9 +819,7 @@ DaoTypeBase numberTyper=
 /**/
 static void DaoString_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
-	if( stream->useQuote ) DaoStream_WriteChar( stream, '\"' );
 	DaoStream_WriteString( stream, self->xString.data );
-	if( stream->useQuote ) DaoStream_WriteChar( stream, '\"' );
 }
 static void DaoString_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 {
@@ -1021,36 +1019,8 @@ static void DaoSTR_Erase( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoSTR_Chop( DaoProcess *proc, DaoValue *p[], int N )
 {
-	daoint i, k;
-	unsigned char *chs;
 	DString *self = p[0]->xString.data;
-	DString_Detach( self, self->size );
-	DString_Chop( self );
-
-	if( DString_CheckUTF8( self ) && self->mbs && self->size ){
-		chs = (unsigned char*) self->mbs;
-		i = self->size - 1;
-		k = utf8_markers[ chs[i] ];
-		if( k ==1 ){
-			while( i && utf8_markers[ chs[i] ] ==1 ) i --;
-			k = utf8_markers[ chs[i] ];
-			if( k == 0 ){
-				chs[k+1] = 0;
-				self->size = k+1;
-			}else if( (self->size - i) != k ){
-				if( (self->size - i) < k ){
-					chs[i] = 0;
-					self->size = i;
-				}else{
-					chs[i+k] = 0;
-					self->size = i + k;
-				}
-			}
-		}else if( k !=0 ){
-			chs[i] = 0;
-			self->size --;
-		}
-	}
+	DString_ChopUtf8( self );
 	DaoProcess_PutReference( proc, p[0] );
 }
 static void DaoSTR_Trim( DaoProcess *proc, DaoValue *p[], int N )
@@ -1077,48 +1047,7 @@ static void DaoSTR_Replace( DaoProcess *proc, DaoValue *p[], int N )
 	DString *str1 = p[1]->xString.data;
 	DString *str2 = p[2]->xString.data;
 	daoint index = p[3]->xInteger.value;
-	daoint pos, from = 0, count = 0;
-	if( self->mbs ){
-		DString_ToMBS( str1 );
-		DString_ToMBS( str2 );
-	}else{
-		DString_ToWCS( str1 );
-		DString_ToWCS( str2 );
-	}
-	if( index == 0 ){
-		pos = DString_Find( self, str1, from );
-		while( pos != MAXSIZE ){
-			count ++;
-			DString_Insert( self, str2, pos, DString_Size( str1 ), 0 );
-			from = pos + DString_Size( str2 );
-			pos = DString_Find( self, str1, from );
-		}
-	}else if( index > 0){
-		pos = DString_Find( self, str1, from );
-		while( pos != MAXSIZE ){
-			count ++;
-			if( count == index ){
-				DString_Insert( self, str2, pos, DString_Size( str1 ), 0 );
-				break;
-			}
-			from = pos + DString_Size( str1 );
-			pos = DString_Find( self, str1, from );
-		}
-		count = 1;
-	}else{
-		from = MAXSIZE;
-		pos = DString_RFind( self, str1, from );
-		while( pos != MAXSIZE ){
-			count --;
-			if( count == index ){
-				DString_Insert( self, str2, pos-DString_Size( str1 )+1, DString_Size( str1 ), 0 );
-				break;
-			}
-			from = pos - DString_Size( str1 );
-			pos = DString_RFind( self, str1, from );
-		}
-		count = 1;
-	}
+	daoint count = DString_FindReplace( self, str1, str2, index );
 	DaoProcess_PutInteger( proc, count );
 }
 static void DaoSTR_Replace2( DaoProcess *proc, DaoValue *p[], int N )
@@ -1836,43 +1765,38 @@ DaoTypeBase stringTyper=
 	(FuncPtrDel) DaoString_Delete, NULL
 };
 
-/* also used for printing tuples */
-static void DaoListCore_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
+static void Dao_Print( DaoValue *self, DaoValue **items, daoint size, char lb, char rb, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
-	DaoList *self = & self0->xList;
-	DaoValue **data = NULL;
 	DNode *node = NULL;
-	daoint i, size = 0;
-	const char *lb = "{ ";
-	const char *rb = " }";
-	if( self->type == DAO_TUPLE ){
-		data = self0->xTuple.items;
-		size = self0->xTuple.size;
-		lb = "( ";
-		rb = " )";
-	}else{
-		data = self->items.items.pValue;
-		size = self->items.size;
-	}
+	daoint i;
 
 	if( cycData ) node = MAP_Find( cycData, self );
 	if( node ){
-		DaoStream_WriteMBS( stream, lb );
+		DaoStream_WriteChar( stream, lb );
 		DaoStream_WriteMBS( stream, "..." );
-		DaoStream_WriteMBS( stream, rb );
+		DaoStream_WriteChar( stream, rb );
 		return;
 	}
 	if( cycData ) MAP_Insert( cycData, self, self );
-	DaoStream_WriteMBS( stream, lb );
 
+	DaoStream_WriteChar( stream, lb );
+	DaoStream_WriteChar( stream, ' ' );
 	for( i=0; i<size; i++ ){
-		stream->useQuote = 1;
-		DaoValue_Print( data[i], proc, stream, cycData );
-		stream->useQuote = 0;
+		if( items[i] && items[i]->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
+		DaoValue_Print( items[i], proc, stream, cycData );
+		if( items[i] && items[i]->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
 		if( i != size-1 ) DaoStream_WriteMBS( stream, ", " );
 	}
-	DaoStream_WriteMBS( stream, rb );
+	DaoStream_WriteChar( stream, ' ' );
+	DaoStream_WriteChar( stream, rb );
 	if( cycData ) MAP_Erase( cycData, self );
+}
+static void DaoListCore_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
+{
+	DaoList *self = (DaoList*) self0;
+	DaoValue **data = self->items.items.pValue;
+	daoint size = self->items.size;
+	Dao_Print( self0, data, size, '{', '}', proc, stream, cycData );
 }
 static void DaoListCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 {
@@ -2863,11 +2787,13 @@ static void DaoMap_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, 
 
 	node = DMap_First( self->items );
 	for( ; node!=NULL; node=DMap_Next(self->items,node) ){
-		stream->useQuote = 1;
+		if( node->key.pValue->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
 		DaoValue_Print( node->key.pValue, proc, stream, cycData );
+		if( node->key.pValue->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
 		DaoStream_WriteMBS( stream, kvsym );
+		if( node->value.pValue->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
 		DaoValue_Print( node->value.pValue, proc, stream, cycData );
-		stream->useQuote = 0;
+		if( node->value.pValue->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
 		if( i+1<size ) DaoStream_WriteMBS( stream, ", " );
 		i++;
 	}
@@ -3582,6 +3508,11 @@ static void DaoTupleCore_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *id
 	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
 	}
 }
+static void DaoTupleCore_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
+{
+	DaoTuple *self = (DaoTuple*) self0;
+	Dao_Print( self0, self->items, self->size, '(', ')', proc, stream, cycData );
+}
 static DaoValue* DaoTupleCore_Copy( DaoValue *self0, DaoProcess *proc, DMap *cycData )
 {
 	DaoTuple *copy, *self = & self0->xTuple;
@@ -3607,7 +3538,7 @@ static DaoTypeCore tupleCore=
 	DaoTupleCore_SetField,
 	DaoTupleCore_GetItem,
 	DaoTupleCore_SetItem,
-	DaoListCore_Print,
+	DaoTupleCore_Print,
 	DaoTupleCore_Copy,
 };
 DaoTypeBase tupleTyper=
@@ -3746,7 +3677,9 @@ static void DaoNameValue_Print( DaoValue *self0, DaoProcess *proc, DaoStream *st
 	DaoNameValue *self = & self0->xNameValue;
 	DaoStream_WriteString( stream, self->name );
 	DaoStream_WriteMBS( stream, "=>" );
+	if( self->value && self->value->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
 	DaoValue_Print( self->value, proc, stream, cycData );
+	if( self->value && self->value->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
 }
 static DaoTypeCore namevaCore=
 {

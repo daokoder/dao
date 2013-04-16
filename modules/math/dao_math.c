@@ -28,6 +28,7 @@
 #include<stdlib.h>
 #include<math.h>
 #include"daoValue.h"
+#include"daoNumtype.h"
 
 #ifdef _MSC_VER
 #define hypot _hypot
@@ -281,6 +282,65 @@ static void MATH_min( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutDouble( proc, fmin( p[0]->xDouble.value, p[1]->xDouble.value ) );
 }
 
+
+
+/* z = x * x + r */
+/* binary searching */
+void DLong_Sqrt( DLong *z, DLong *x, DLong *r )
+{
+	int k, b1, b2;
+	int i = 0;
+	DLong *max = DLong_New();
+	DLong *min = DLong_New();
+	DLong_Resize( x, z->size + 1 );
+	DLong_Resize( r, z->size + 2 );
+	DLong_Copy( max, z );
+	min->size = 0;
+	while(1){
+		i ++;
+		b1 = DLong_NormCount( min );
+		b2 = DLong_NormCount( max );
+		/* printf( "%i  %i\n", b1, b2 ); */
+		DLong_UAdd( x, min, max );
+		if( b2 > b1 + 1 ){
+			DLong_ShiftRight( x, (b2-b1)>>1 );
+		}else{
+			DLong_ShiftRight( x, 1 );
+		}
+		/* DLong_Print( x, NULL ); */
+		DLong_Mul( r, x, x );
+		k = DLong_UCompare( r, z );
+		if( k ==0 ){
+			DLong_Clear(r);
+			return;
+		}else if( k >0 ){
+			DLong_Move( max, x );
+		}else{
+			if( DLong_UCompare( x, min ) ==0 ) break;
+			DLong_Move( min, x );
+		}
+	}
+	/* printf( "iterations: %i\n", i ); */
+	DLong_Move( x, min );
+	x->sign = 1;
+	DLong_UMul( max, x, x );
+	DLong_Sub( r, z, max );
+	DLong_Delete( min );
+	DLong_Delete( max );
+}
+static void LONG_Sqrt( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DLong *z = p[0]->xLong.value;
+	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
+	DaoValue **items = tuple->items;
+	if( z->sign <0 ){
+		DaoProcess_RaiseException( proc, DAO_ERROR, "need positive long integer" );
+		return;
+	}
+	DLong_Sqrt( z, items[0]->xLong.value, items[1]->xLong.value );
+}
+
+
 static DaoFuncItem mathMeths[]=
 {
 #if 0
@@ -337,6 +397,8 @@ static DaoFuncItem mathMeths[]=
 	{ MATH_pow_rc,    "pow( p1 :double, p2 :complex )=>complex" },
 	{ MATH_pow_cr,    "pow( p1 :complex, p2 :double )=>complex" },
 	{ MATH_pow_cc,    "pow( p1 :complex, p2 :complex )=>complex" },
+
+	{ LONG_Sqrt, "sqrt( self : long ) => tuple<long,long>" },
 
 	{ NULL, NULL }
 };

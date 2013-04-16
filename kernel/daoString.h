@@ -93,6 +93,7 @@ DAO_DLL void DString_SetDataMBS( DString *self, const char *bytes, daoint count 
 DAO_DLL void DString_SetDataWCS( DString *self, const wchar_t *data, daoint count );
 DAO_DLL void DString_AppendInteger( DString *self, int i );
 
+DAO_DLL daoint DString_FindReplace( DString *self, DString *s1, DString *s2, daoint index );
 DAO_DLL void DString_Replace( DString *self, DString *chs, daoint start, daoint rm );
 DAO_DLL void DString_ReplaceMBS( DString *self, const char *chs, daoint start, daoint rm );
 DAO_DLL void DString_SubString( DString *self, DString *sub, daoint from, daoint n );
@@ -118,8 +119,9 @@ DAO_DLL int  DString_Compare( DString *left, DString *right );
 DAO_DLL int  DString_EQ( DString *left, DString *right );
 
 DAO_DLL void DString_Add( DString *self, DString *left, DString *right );
-DAO_DLL void DString_Chop( DString *self );
 DAO_DLL void DString_Trim( DString *self );
+DAO_DLL void DString_Chop( DString *self );
+DAO_DLL void DString_ChopUtf8( DString *self );
 
 DAO_DLL daoint DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0,
 		uint_t esc0, daoint start, daoint end, int countonly );

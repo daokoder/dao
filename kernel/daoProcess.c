@@ -827,7 +827,7 @@ static int DaoProcess_Move( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType
 static void DaoProcess_AdjustCodes( DaoProcess *self, int options );
 
 #ifndef WITHOUT_DIRECT_THREADING
-#if defined( __GNUC__ ) && !defined( __STRICT_ANSI__ )
+#if !defined( __GNUC__ ) || defined( __STRICT_ANSI__ )
 #define WITHOUT_DIRECT_THREADING
 #endif
 #endif
@@ -876,7 +876,7 @@ int DaoProcess_Execute( DaoProcess *self )
 	complex16 acom, bcom;
 	DaoStackFrame *base;
 
-#ifdef WITHOUT_DIRECT_THREADING
+#ifndef WITHOUT_DIRECT_THREADING
 	static void *labels[] = {
 		&& LAB_NOP ,
 		&& LAB_DATA ,
@@ -1002,7 +1002,7 @@ int DaoProcess_Execute( DaoProcess *self )
 	};
 #endif
 
-#ifdef WITHOUT_DIRECT_THREADING
+#ifndef WITHOUT_DIRECT_THREADING
 
 #define OPBEGIN() goto *labels[ vmc->code ];
 #define OPCASE( name ) LAB_##name :

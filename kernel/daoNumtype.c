@@ -462,7 +462,7 @@ void DLong_Move( DLong *z, DLong *x )
 	DMutex_Unlock( & mutex_long_sharing );
 #endif
 }
-static void DLong_Copy( DLong *z, DLong *x )
+void DLong_Copy( DLong *z, DLong *x )
 {
 	daoint nx = x->size;
 	daoint nz = z->size;
@@ -508,7 +508,7 @@ static void LongAdd2( DLong *z, DLong *x, DLong *y, int base )
 		sum = sum / base;
 	}
 }
-static void DLong_UAdd( DLong *z, DLong *x, DLong *y )
+void DLong_UAdd( DLong *z, DLong *x, DLong *y )
 {
 	uchar_t *dx, *dy, *dz;
 	daoint nx = x->size;
@@ -921,7 +921,7 @@ void DLong_Mul( DLong *z, DLong *x, DLong *y )
 	/* DLong_UMulK( z, x, y, NULL, 0 ); */
 	z->sign = x->sign * y->sign;
 }
-static daoint DLong_NormCount( DLong *self )
+daoint DLong_NormCount( DLong *self )
 {
 	int i, d;
 	while( self->size && self->data[ self->size-1 ] ==0 ) self->size --;
@@ -1084,50 +1084,6 @@ void DLong_Pow( DLong *z, DLong *x, daoint n )
 		DLong_Mul( z, z, tmp );
 		DLong_Delete( tmp );
 	}
-}
-/* z = x * x + r */
-/* binary searching */
-void DLong_Sqrt( DLong *z, DLong *x, DLong *r )
-{
-	int k, b1, b2;
-	int i = 0;
-	DLong *max = DLong_New();
-	DLong *min = DLong_New();
-	DLong_Resize( x, z->size + 1 );
-	DLong_Resize( r, z->size + 2 );
-	DLong_Copy( max, z );
-	min->size = 0;
-	while(1){
-		i ++;
-		b1 = DLong_NormCount( min );
-		b2 = DLong_NormCount( max );
-		/* printf( "%i  %i\n", b1, b2 ); */
-		DLong_UAdd( x, min, max );
-		if( b2 > b1 + 1 ){
-			DLong_ShiftRight( x, (b2-b1)>>1 );
-		}else{
-			DLong_ShiftRight( x, 1 );
-		}
-		/* DLong_Print( x, NULL ); */
-		DLong_Mul( r, x, x );
-		k = DLong_UCompare( r, z );
-		if( k ==0 ){
-			DLong_Clear(r);
-			return;
-		}else if( k >0 ){
-			DLong_Move( max, x );
-		}else{
-			if( DLong_UCompare( x, min ) ==0 ) break;
-			DLong_Move( min, x );
-		}
-	}
-	/* printf( "iterations: %i\n", i ); */
-	DLong_Move( x, min );
-	x->sign = 1;
-	DLong_UMul( max, x, x );
-	DLong_Sub( r, z, max );
-	DLong_Delete( min );
-	DLong_Delete( max );
 }
 static void LongMulInt( DLong *z, DLong *x, int y, int base )
 {
@@ -1521,26 +1477,17 @@ static void DaoLong_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 	daoint n = self->size;
 	int w = base_bits[self->base];
 	int digit = 0;
-	if( self->base == 0 ){
-		if( id <0 || id >= n*LONG_BITS ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "out of range" );
-			return;
-		}
-		digit = (self->data[id/LONG_BITS] & (1<<(id%LONG_BITS)))>>(id%LONG_BITS);
-		DaoProcess_PutInteger( proc, digit );
-		return;
-	}
 	if( w == 0 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "need power 2 radix" );
 		return;
 	}
-	if( id <0 || (w && id*w >= n*LONG_BITS) || (w == 0 && id >= n) ){
+	if( id <0 || id*w >= n*LONG_BITS ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "out of range" );
 		return;
 	}
 	if( self->base == 2 ){
 		digit = (self->data[id/LONG_BITS] & (1<<(id%LONG_BITS)))>>(id%LONG_BITS);
-	}else if( w ){
+	}else{
 		int m = id*w / LONG_BITS;
 		if( ((id+1)*w <= (m+1)*LONG_BITS) || m+1 >= n ){
 			int digit2 = self->data[m] >> (id*w - m*LONG_BITS);
@@ -1551,8 +1498,6 @@ static void DaoLong_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 			int d = (self->data[m+1]<<LONG_BITS) | self->data[m];
 			digit = (d>>(id*w - m*LONG_BITS)) & base_masks[self->base];
 		}
-	}else{
-		digit = self->data[id];
 	}
 	DaoProcess_PutInteger( proc, digit );
 }
@@ -1564,23 +1509,11 @@ static void DaoLong_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, 
 	daoint i, n = self->size;
 	int w = base_bits[self->base];
 	DLong_Detach( self );
-	if( self->base == 2 ){
-		if( pid->type == 0 ){
-			uchar_t bits = digit ? LONG_BASE-1 : 0;
-			for(i=0; i<self->size; i++) self->data[i] = bits;
-		}else{
-			if( digit )
-				self->data[id/LONG_BITS] |= (1<<(id%LONG_BITS));
-			else
-				self->data[id/LONG_BITS] &= ~(1<<(id%LONG_BITS));
-		}
-		return;
-	}
 	if( w == 0 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "need power 2 radix" );
 		return;
 	}
-	if( id <0 || (w && id*w >= n*LONG_BITS) || (w == 0 && id >= n) ){
+	if( pid->type && (id <0 || id*w >= n*LONG_BITS) ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "out of range" );
 		return;
 	}else if( digit <0 || digit >= self->base ){
@@ -1593,11 +1526,12 @@ static void DaoLong_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, 
 		for(i=0; i<self->size; i++) self->data[i] = bits;
 	}else{
 		if( self->base == 2 ){
-			if( digit )
+			if( digit ){
 				self->data[id/LONG_BITS] |= (1<<(id%LONG_BITS));
-			else
+			}else{
 				self->data[id/LONG_BITS] &= ~(1<<(id%LONG_BITS));
-		}else if( w ){
+			}
+		}else{
 			int m = id*w / LONG_BITS;
 			int shift = id*w - m*LONG_BITS;
 			if( ((id+1)*w <= (m+1)*LONG_BITS) || m+1 >= n ){
@@ -1613,8 +1547,6 @@ static void DaoLong_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, 
 				self->data[m] = d & LONG_MASK;
 				self->data[m+1] = d >> LONG_BITS;
 			}
-		}else{
-			self->data[id] = digit;
 		}
 	}
 }
@@ -1644,38 +1576,9 @@ static DaoTypeCore longCore=
 	DaoValue_Print,
 	DaoValue_NoCopy,
 };
-static void DaoLong_Size( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DLong *self = p[0]->xLong.value;
-	daoint size = self->size;
-	if( self->base ==2 ){
-		DaoProcess_PutInteger( proc, size*LONG_BITS );
-		return;
-	}
-	while( size && self->data[size-1] ==0 ) size --;
-	assert( self->size == size );
-	DaoProcess_PutInteger( proc, size );
-}
-static void DaoLong_Sqrt( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DLong *z = p[0]->xLong.value;
-	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
-	DaoValue **items = tuple->items;
-	if( z->sign <0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "need positive long integer" );
-		return;
-	}
-	DLong_Sqrt( z, items[0]->xLong.value, items[1]->xLong.value );
-}
-static DaoFuncItem longMeths[] =
-{
-	{ DaoLong_Size, "size( self : long ) => int" } ,
-	{ DaoLong_Sqrt, "sqrt( self : long ) => tuple<long,long>" } ,
-	{ NULL, NULL }
-};
 DaoTypeBase longTyper =
 {
-	"long", & longCore, NULL, (DaoFuncItem*) longMeths, {0}, {0}, NULL, NULL
+	"long", & longCore, NULL, NULL, {0}, {0}, NULL, NULL
 };
 #else
 DaoTypeBase longTyper = { "long", & baseCore, NULL, NULL, {0}, {0}, NULL, NULL };

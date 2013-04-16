@@ -113,6 +113,7 @@ DAO_DLL void DLong_Detach( DLong *self );
 DAO_DLL void DLong_Clear( DLong *self );
 
 #ifdef DAO_WITH_LONGINT
+DAO_DLL void DLong_Copy( DLong *z, DLong *x );
 DAO_DLL void DLong_Resize( DLong *self, daoint size );
 DAO_DLL void DLong_PushBack( DLong *self, uchar_t it );
 DAO_DLL void DLong_PushFront( DLong *self, uchar_t it );
@@ -141,6 +142,11 @@ DAO_DLL double DLong_ToDouble( DLong *self );
 DAO_DLL int DLong_CompareToZero( DLong *self );
 DAO_DLL int DLong_CompareToInteger( DLong *self, daoint x );
 DAO_DLL int DLong_CompareToDouble( DLong *self, double x );
+
+DAO_DLL void DLong_UAdd( DLong *z, DLong *x, DLong *y );
+DAO_DLL void DLong_UMul( DLong *z, DLong *x, DLong *y );
+DAO_DLL int DLong_UCompare( DLong *x, DLong *y );
+DAO_DLL daoint DLong_NormCount( DLong *self );
 #define DLong_Append  DLong_PushBack
 #endif
 
