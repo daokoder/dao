@@ -213,13 +213,6 @@ static void STD_Callable( DaoProcess *proc, DaoValue *p[], int N )
 	default : break;
 	}
 }
-static void STD_Copy( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DMap *cycData = DMap_New(0,0);
-	DaoTypeBase *typer = DaoValue_GetTyper( p[0] );
-	DaoProcess_PutValue( proc, typer->core->Copy( p[0], proc, cycData ) );
-	DMap_Delete( cycData );
-}
 
 extern void SplitByWhiteSpaces( const char *str, DArray *tokens );
 
@@ -626,7 +619,6 @@ DaoFuncItem dao_std_methods[] =
 	{ STD_Argv,      "argv() => list<any>" },
 	{ STD_About,     "about( ... )=>string" },
 	{ STD_Callable,  "callable( object )=>int" },
-	{ STD_Copy,      "copy( object : @OBJECT ) =>@OBJECT" },
 	{ STD_Debug,     "debug( ... )" },
 	{ STD_Warn,      "warn( info :string )" },
 	{ STD_Error,     "error( info :string )" },

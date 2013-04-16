@@ -66,10 +66,6 @@ static void DaoComplex_Print( DaoValue *self, DaoProcess *proc, DaoStream *strea
 	DaoStream_WriteFloat( stream, p.imag );
 	DaoStream_WriteMBS( stream, "$" );
 }
-static DaoValue* DaoComplex_Copy( DaoValue *self, DaoProcess *proc, DMap *cycData )
-{
-	return self;
-}
 static DaoTypeCore comCore =
 {
 	NULL,
@@ -77,8 +73,7 @@ static DaoTypeCore comCore =
 	DaoComplex_SetField,
 	DaoValue_GetItem,
 	DaoValue_SetItem,
-	DaoComplex_Print,
-	DaoComplex_Copy,
+	DaoComplex_Print
 };
 
 DaoTypeBase comTyper =
@@ -1573,8 +1568,7 @@ static DaoTypeCore longCore=
 	DaoValue_SetField,
 	DaoLong_GetItem,
 	DaoLong_SetItem,
-	DaoValue_Print,
-	DaoValue_NoCopy,
+	DaoValue_Print
 };
 DaoTypeBase longTyper =
 {
@@ -2324,10 +2318,6 @@ static void DaoArray_Print( DaoValue *value, DaoProcess *proc, DaoStream *stream
 		DArray_Delete( tmpArray );
 	}
 }
-static DaoValue* DaoNA_Copy( DaoValue *value, DaoProcess *proc, DMap *cycData )
-{
-	return (DaoValue*) DaoArray_Copy( & value->xArray );
-}
 
 static DaoTypeCore numarrCore =
 {
@@ -2336,8 +2326,7 @@ static DaoTypeCore numarrCore =
 	DaoValue_SetField,
 	DaoArray_GetItem,
 	DaoArray_SetItem,
-	DaoArray_Print,
-	DaoNA_Copy,
+	DaoArray_Print
 };
 static void DaoARRAY_Dim( DaoProcess *proc, DaoValue *par[], int N )
 {

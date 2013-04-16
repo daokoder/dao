@@ -248,13 +248,6 @@ enum{
 	IDX_OUTOFRANGE
 };
 
-static DaoValue* DaoValue_MakeCopy( DaoValue *self, DaoProcess *proc, DMap *cycData )
-{
-	DaoTypeBase *typer;
-	if( self->type <= DAO_COMPLEX ) return self;
-	typer = DaoValue_GetTyper( self );
-	return typer->core->Copy( self, proc, cycData );
-}
 
 static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *start, daoint *end, int *idtype )
 {
@@ -362,10 +355,6 @@ static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *s
 }
 
 
-DaoValue* DaoValue_NoCopy( DaoValue *self, DaoProcess *proc, DMap *cycData )
-{
-	return self;
-}
 
 DaoTypeCore baseCore =
 {
@@ -374,8 +363,7 @@ DaoTypeCore baseCore =
 	DaoValue_SetField,
 	DaoValue_GetItem,
 	DaoValue_SetItem,
-	DaoValue_Print,
-	DaoValue_NoCopy,
+	DaoValue_Print
 };
 DaoTypeBase baseTyper =
 {
@@ -807,8 +795,7 @@ static DaoTypeCore numberCore=
 	DaoValue_SetField,
 	DaoNumber_GetItem,
 	DaoNumber_SetItem,
-	DaoNumber_Print,
-	DaoValue_NoCopy,
+	DaoNumber_Print
 };
 
 DaoTypeBase numberTyper=
@@ -956,8 +943,7 @@ static DaoTypeCore stringCore=
 	DaoValue_SetField,
 	DaoString_GetItem,
 	DaoString_SetItem,
-	DaoString_Print,
-	DaoValue_NoCopy,
+	DaoString_Print
 };
 
 static void DaoSTR_Size( DaoProcess *proc, DaoValue *p[], int N )
@@ -1907,47 +1893,6 @@ static void DaoListCore_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids
 	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
 	}
 }
-void DaoCopyValues( DaoValue **copy, DaoValue **data, int N, DaoProcess *proc, DMap *cycData )
-{
-	int i;
-	for(i=0; i<N; i++){
-		if( data[i]->type <= DAO_ENUM ){
-			DaoValue_Move( data[i], copy+i, NULL );
-		}else{
-			DaoValue *src = data[i];
-			if( cycData ){
-				/* deep copy */
-				DaoTypeBase *typer = DaoValue_GetTyper( data[i] );
-				src = typer->core->Copy( data[i], proc, cycData );
-			}
-			GC_ShiftRC( src, copy[i] );
-			copy[i] = src;
-		}
-	}
-}
-static DaoValue* DaoListCore_Copy( DaoValue *self0, DaoProcess *proc, DMap *cycData )
-{
-	DaoList *copy, *self = & self0->xList;
-	DaoValue **data = self->items.items.pValue;
-
-	if( cycData ){
-		DNode *node = MAP_Find( cycData, self );
-		if( node ) return node->value.pValue;
-	}
-
-	copy = DaoList_New();
-	copy->unitype = self->unitype;
-	GC_IncRC( copy->unitype );
-	if( cycData ) MAP_Insert( cycData, self, copy );
-
-	DArray_Resize( & copy->items, self->items.size, NULL );
-	DaoCopyValues( copy->items.items.pValue, data, self->items.size, proc, cycData );
-	return (DaoValue*) copy;
-}
-DaoList* DaoList_Copy( DaoList *self, DMap *cycData )
-{
-	return (DaoList*) DaoListCore_Copy( (DaoValue*)self, NULL, cycData );
-}
 static DaoTypeCore listCore=
 {
 	NULL,
@@ -1955,8 +1900,7 @@ static DaoTypeCore listCore=
 	DaoValue_SetField,
 	DaoListCore_GetItem,
 	DaoListCore_SetItem,
-	DaoListCore_Print,
-	DaoListCore_Copy,
+	DaoListCore_Print
 };
 
 static daoint DaoList_MakeIndex( DaoList *self, daoint index, int one_past_last )
@@ -2767,6 +2711,18 @@ void DaoList_Erase( DaoList *self, daoint pos )
 	if( pos >= self->items.size ) return;
 	DArray_Erase( & self->items, pos, 1 );
 }
+DaoList* DaoList_Copy( DaoList *self, DaoType *type )
+{
+	daoint i;
+	DaoList *copy = DaoList_New();
+	/* no detailed checking of type matching, must be ensured by caller */
+	copy->unitype = (type && type->tid == DAO_LIST) ? type : self->unitype;
+	GC_IncRC( copy->unitype );
+	DArray_Resize( & copy->items, self->items.size, NULL );
+	for(i=0; i<self->items.size; i++)
+		DaoList_SetItem( copy, self->items.items.pValue[i], i );
+	return copy;
+}
 
 /**/
 static void DaoMap_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
@@ -2897,37 +2853,6 @@ static void DaoMap_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], i
 	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
 	}
 }
-static DaoValue* DaoMap_Copy( DaoValue *self0, DaoProcess *proc, DMap *cycData )
-{
-	DaoMap *copy, *self = & self0->xMap;
-	DNode *node;
-
-	if( cycData ){
-		DNode *node = MAP_Find( cycData, self );
-		if( node ) return node->value.pValue;
-	}
-
-	copy = DaoMap_New( self->items->hashing );
-	copy->unitype = self->unitype;
-	GC_IncRC( copy->unitype );
-
-	node = DMap_First( self->items );
-	if( cycData ){
-		MAP_Insert( cycData, self, copy );
-		for( ; node!=NULL; node = DMap_Next(self->items, node) ){
-			DaoValue *key = DaoValue_MakeCopy( node->key.pValue, proc, cycData );
-			DaoValue *value = DaoValue_MakeCopy( node->value.pValue, proc, cycData );
-			MAP_Insert( copy->items, & key, & value );
-			GC_IncRC( key ); GC_IncRC( value );
-			GC_DecRC( key ); GC_DecRC( value );
-		}
-	}else{
-		for( ; node!=NULL; node = DMap_Next(self->items, node) ){
-			MAP_Insert( copy->items, node->key.pValue, node->value.pValue );
-		}
-	}
-	return (DaoValue*) copy;
-}
 static DaoTypeCore mapCore =
 {
 	NULL,
@@ -2935,8 +2860,7 @@ static DaoTypeCore mapCore =
 	DaoValue_SetField,
 	DaoMap_GetItem,
 	DaoMap_SetItem,
-	DaoMap_Print,
-	DaoMap_Copy,
+	DaoMap_Print
 };
 
 static void DaoMAP_Clear( DaoProcess *proc, DaoValue *p[], int N )
@@ -3334,6 +3258,16 @@ void DaoMap_Reset( DaoMap *self )
 {
 	DMap_Reset( self->items );
 }
+DaoMap* DaoMap_Copy( DaoMap *self, DaoType *type )
+{
+	DaoMap *copy = DaoMap_New( self->items->hashing );
+	DNode *node = DMap_First( self->items );
+	copy->unitype = (type && type->tid == DAO_MAP) ? type : self->unitype;
+	GC_IncRC( copy->unitype );
+	for( ; node !=NULL; node = DMap_Next(self->items, node ))
+		DaoMap_Insert( copy, node->key.pValue, node->value.pValue );
+	return copy;
+}
 int DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value )
 {
 	DaoType *tp = self->unitype;
@@ -3513,24 +3447,6 @@ static void DaoTupleCore_Print( DaoValue *self0, DaoProcess *proc, DaoStream *st
 	DaoTuple *self = (DaoTuple*) self0;
 	Dao_Print( self0, self->items, self->size, '(', ')', proc, stream, cycData );
 }
-static DaoValue* DaoTupleCore_Copy( DaoValue *self0, DaoProcess *proc, DMap *cycData )
-{
-	DaoTuple *copy, *self = & self0->xTuple;
-	DaoValue **data = self->items;
-
-	if( cycData ){
-		DNode *node = MAP_Find( cycData, self );
-		if( node ) return node->value.pValue;
-	}
-
-	copy = DaoTuple_New( self->size );
-	copy->unitype = self->unitype;
-	GC_IncRC( copy->unitype );
-	if( cycData ) MAP_Insert( cycData, self, copy );
-
-	DaoCopyValues( copy->items, data, self->size, proc, cycData );
-	return (DaoValue*) copy;
-}
 static DaoTypeCore tupleCore=
 {
 	NULL,
@@ -3538,8 +3454,7 @@ static DaoTypeCore tupleCore=
 	DaoTupleCore_SetField,
 	DaoTupleCore_GetItem,
 	DaoTupleCore_SetItem,
-	DaoTupleCore_Print,
-	DaoTupleCore_Copy,
+	DaoTupleCore_Print
 };
 DaoTypeBase tupleTyper=
 {
@@ -3604,6 +3519,16 @@ DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 	return self;
 }
 #endif
+DaoTuple* DaoTuple_Copy( DaoTuple *self, DaoType *type )
+{
+	int i, n;
+	DaoTuple *copy = DaoTuple_New( self->size );
+	copy->subtype = self->subtype;
+	copy->unitype = (type && type->tid == DAO_TUPLE) ? type : self->unitype;
+	GC_IncRC( copy->unitype );
+	for(i=0,n=self->size; i<n; i++) DaoTuple_SetItem( copy, self->items[i], i );
+	return copy;
+}
 void DaoTuple_Delete( DaoTuple *self )
 {
 	int i;
@@ -3664,14 +3589,6 @@ void DaoNameValue_Delete( DaoNameValue *self )
 	GC_DecRC( self->unitype );
 	dao_free( self );
 }
-static DaoValue* DaoNameValue_Copy( DaoValue *self0, DaoProcess *proc, DMap *cycData )
-{
-	DaoNameValue *self = & self0->xNameValue;
-	DaoNameValue *copy = DaoNameValue_New( self->name, self->value );
-	copy->unitype = self->unitype;
-	GC_IncRC( self->unitype );
-	return (DaoValue*) copy;
-}
 static void DaoNameValue_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
 	DaoNameValue *self = & self0->xNameValue;
@@ -3688,8 +3605,7 @@ static DaoTypeCore namevaCore=
 	DaoValue_SetField,
 	DaoValue_GetItem,
 	DaoValue_SetItem,
-	DaoNameValue_Print,
-	DaoNameValue_Copy
+	DaoNameValue_Print
 };
 DaoTypeBase namevaTyper =
 {

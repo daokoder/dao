@@ -131,7 +131,7 @@ DAO_DLL void DaoList_Erase( DaoList *self, daoint id );
 DAO_DLL int DaoList_SetItem( DaoList *self, DaoValue *it, daoint id );
 DAO_DLL int DaoList_Append( DaoList *self, DaoValue *it );
 
-DAO_DLL DaoList* DaoList_Copy( DaoList *self, DMap *cycdata );
+DAO_DLL DaoList* DaoList_Copy( DaoList *self, DaoType *type );
 
 struct DaoMap
 {
@@ -145,6 +145,7 @@ DAO_DLL DaoMap* DaoMap_New( unsigned int hashing );
 DAO_DLL void DaoMap_Delete( DaoMap *self );
 DAO_DLL void DaoMap_Clear( DaoMap *self );
 DAO_DLL void DaoMap_Reset( DaoMap *self );
+DAO_DLL DaoMap* DaoMap_Copy( DaoMap *self, DaoType *type );
 
 DAO_DLL int DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value );
 DAO_DLL void DaoMap_Erase( DaoMap *self, DaoValue *key );
@@ -166,6 +167,7 @@ struct DaoTuple
 };
 
 DAO_DLL DaoTuple* DaoTuple_Create( DaoType *type, int size, int init );
+DAO_DLL DaoTuple* DaoTuple_Copy( DaoTuple *self, DaoType *type );
 DAO_DLL void DaoTuple_Delete( DaoTuple *self );
 DAO_DLL void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
 DAO_DLL int DaoTuple_GetIndex( DaoTuple *self, DString *name );

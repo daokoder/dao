@@ -130,37 +130,6 @@ static void DaoObject_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[
 	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, ps, N+1,1,0 );
 	if( rc ) DaoProcess_RaiseException( proc, rc, DString_GetMBS( proc->mbstring ) );
 }
-extern void DaoCopyValues( DaoValue **copy, DaoValue **data, int N, DaoProcess *proc, DMap *cycData );
-void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoProcess *proc, DMap *cycData )
-{
-	/* TODO: support by something like C++ copy constructor? */
-#if 0
-	DaoObject **selfSups = NULL;
-	DaoObject **fromSups = NULL;
-	DaoValue **selfValues = self->objValues;
-	DaoValue **fromValues = from->objValues;
-	int i, selfSize = self->defClass->objDataDefault->size;
-	DaoCopyValues( selfValues + 1, fromValues + 1, selfSize-1, proc, cycData );
-	/*  XXX super might be Cdata: */
-	selfSups = (DaoObject **)self->parents;
-	fromSups = (DaoObject **)from->parents;
-	for( i=0; i<from->baseCount; i++ )
-		DaoObject_CopyData( (DaoObject*) selfSups[i], (DaoObject*) fromSups[i], proc, cycData );
-#endif
-}
-static DaoValue* DaoObject_Copy(  DaoValue *value, DaoProcess *proc, DMap *cycData )
-{
-	DaoObject *pnew, *self = & value->xObject;
-	DNode *node = DMap_Find( cycData, self );
-	if( node ) return node->value.pValue;
-	if( self->trait & DAO_VALUE_NOCOPY ) return value;
-
-	pnew = DaoObject_New( self->defClass );
-	DMap_Insert( cycData, self, pnew );
-	DaoObject_CopyData( pnew, self, proc, cycData );
-
-	return (DaoValue*) pnew;
-}
 
 static DaoTypeCore objCore =
 {
@@ -169,8 +138,7 @@ static DaoTypeCore objCore =
 	DaoObject_Core_SetField,
 	DaoObject_GetItem,
 	DaoObject_SetItem,
-	DaoObject_Print,
-	DaoObject_Copy
+	DaoObject_Print
 };
 
 DaoTypeBase objTyper=

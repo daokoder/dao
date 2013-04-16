@@ -219,7 +219,6 @@ struct DaoTypeCore
 	void (*GetItem) ( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N );
 	void (*SetItem) ( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value );
 	void (*Print)( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData );
-	DaoValue* (*Copy)(  DaoValue *self, DaoProcess *proc, DMap *cycData );
 };
 extern DaoTypeCore  baseCore;
 

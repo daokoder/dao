@@ -452,7 +452,20 @@ void DaoValue_Clear( DaoValue **self )
 	GC_DecRC( value );
 }
 
-void DaoObject_CopyData( DaoObject *self, DaoObject *from, DaoProcess *ctx, DMap *cyc );
+
+#ifdef DAO_WITH_NUMARRAY
+static DaoArray* DaoArray_CopyX( DaoArray *self, DaoType *tp )
+{
+	DaoArray *copy = DaoArray_New( self->etype );
+	if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
+		int nt = tp->nested->items.pType[0]->tid;
+		if( nt >= DAO_INTEGER && nt <= DAO_COMPLEX ) copy->etype = nt;
+	}
+	DaoArray_ResizeArray( copy, self->dims, self->ndim );
+	DaoArray_CopyArray( copy, self );
+	return copy;
+}
+#endif
 
 DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 {
@@ -487,62 +500,13 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 	}
 	if( (self->xBase.trait & DAO_VALUE_CONST) == 0 ) return self;
 	switch( self->type ){
-	case DAO_LIST :
-		{
-			DaoList *list = (DaoList*) self;
-			DaoList *copy = DaoList_New();
-			/* no detailed checking of type matching, must be ensured by caller */
-			copy->unitype = (tp && tp->tid == DAO_LIST) ? tp : list->unitype;
-			GC_IncRC( copy->unitype );
-			DArray_Resize( & copy->items, list->items.size, NULL );
-			for(i=0; i<list->items.size; i++)
-				DaoList_SetItem( copy, list->items.items.pValue[i], i );
-			return (DaoValue*)copy;
-		}
-	case DAO_MAP :
-		{
-			DaoMap *map = (DaoMap*) self;
-			DaoMap *copy = DaoMap_New( map->items->hashing );
-			DNode *node = DMap_First( map->items );
-			copy->unitype = (tp && tp->tid == DAO_MAP) ? tp : map->unitype;
-			GC_IncRC( copy->unitype );
-			for( ; node !=NULL; node = DMap_Next(map->items, node ))
-				DaoMap_Insert( copy, node->key.pValue, node->value.pValue );
-			return (DaoValue*)copy;
-		}
-	case DAO_TUPLE :
-		{
-			DaoTuple *tuple = (DaoTuple*) self;
-			DaoTuple *copy = DaoTuple_New( tuple->size );
-			copy->subtype = tuple->subtype;
-			copy->unitype = (tp && tp->tid == DAO_TUPLE) ? tp : tuple->unitype;
-			GC_IncRC( copy->unitype );
-			for(i=0,n=tuple->size; i<n; i++) DaoTuple_SetItem( copy, tuple->items[i], i );
-			return (DaoValue*) copy;
-		}
+	case DAO_LIST  : return (DaoValue*) DaoList_Copy( (DaoList*) self, tp );
+	case DAO_MAP   : return (DaoValue*) DaoMap_Copy( (DaoMap*) self, tp );
+	case DAO_TUPLE : return (DaoValue*) DaoTuple_Copy( (DaoTuple*) self, tp );
 #ifdef DAO_WITH_NUMARRAY
-	case DAO_ARRAY :
-		{
-			DaoArray *array = (DaoArray*) self;
-			DaoArray *copy = DaoArray_New( array->etype );
-			if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
-				int nt = tp->nested->items.pType[0]->tid;
-				if( nt >= DAO_INTEGER && nt <= DAO_COMPLEX ) copy->etype = nt;
-			}
-			DaoArray_ResizeArray( copy, array->dims, array->ndim );
-			DaoArray_CopyArray( copy, array );
-			return (DaoValue*) copy;
-		}
+	case DAO_ARRAY : return (DaoValue*) DaoArray_CopyX( (DaoArray*) self, tp );
 #endif
 	default : break;
-	}
-	if( self->type == DAO_OBJECT ){
-		DaoObject *s = (DaoObject*) self;
-		DaoObject *t = DaoObject_New( s->defClass );
-		DMap *cyc = DHash_New(0,0);
-		DaoObject_CopyData( t, s, NULL, cyc );
-		DMap_Delete( cyc );
-		return (DaoValue*) t;
 	}
 	return self;
 }

@@ -749,8 +749,7 @@ static DaoTypeCore futureCore =
 	DaoValue_SafeSetField,
 	DaoValue_GetItem,
 	DaoValue_SetItem,
-	DaoValue_Print,
-	DaoValue_NoCopy,
+	DaoValue_Print
 };
 DaoTypeBase futureTyper =
 {

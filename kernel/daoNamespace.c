@@ -123,8 +123,7 @@ static DaoTypeCore nsCore =
 	DNS_SetField,
 	DNS_GetItem,
 	DNS_SetItem,
-	DaoValue_Print,
-	DaoValue_NoCopy, /* do not copy namespace */
+	DaoValue_Print
 };
 
 DaoNamespace* DaoNamespace_GetNamespace( DaoNamespace *self, const char *name )

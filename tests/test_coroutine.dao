@@ -27,7 +27,7 @@ io.writeln( 'Main: ', co() );
 @[test(code_01)]
 Bar(): 100 AA
 Foo(): 101
-Main:  ( 202, by Foo() )
+Main:  ( 202, "by Foo()" )
 @[test(code_01)]
 
 
@@ -39,7 +39,7 @@ io.writeln( 'Main: ', co( 200, 'XX' ) );
 @[test(code_01)]
 @[test(code_01)]
 Bar(): 200 XX
-Main:  ( 200, AA )
+Main:  ( 200, "AA" )
 @[test(code_01)]
 
 
@@ -51,7 +51,7 @@ io.writeln( 'Main: ', co( 300, 'YY' ) );
 @[test(code_01)]
 @[test(code_01)]
 Bar(): 300 YY
-Main:  ( 100, ended )
+Main:  ( 100, "ended" )
 @[test(code_01)]
 
 

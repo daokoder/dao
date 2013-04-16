@@ -78,10 +78,6 @@ static void DaoClass_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[]
 static void DaoClass_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
 {
 }
-static DaoValue* DaoClass_Copy(  DaoValue *self, DaoProcess *proc, DMap *cycData )
-{
-	return self;
-}
 
 static DaoTypeCore classCore=
 {
@@ -90,8 +86,7 @@ static DaoTypeCore classCore=
 	DaoClass_SetField,
 	DaoClass_GetItem,
 	DaoClass_SetItem,
-	DaoValue_Print,
-	DaoClass_Copy
+	DaoValue_Print
 };
 
 DaoTypeBase classTyper =

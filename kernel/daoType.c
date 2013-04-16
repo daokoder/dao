@@ -103,8 +103,7 @@ static DaoTypeCore typeCore=
 	DaoValue_SetField,
 	DaoType_GetItem,
 	DaoValue_SetItem,
-	DaoValue_Print,
-	DaoValue_NoCopy
+	DaoValue_Print
 };
 DaoTypeBase abstypeTyper=
 {
@@ -1573,7 +1572,6 @@ DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer )
 		self->core->GetItem = DaoCdata_GetItem;
 		self->core->SetItem = DaoCdata_SetItem;
 		self->core->Print = DaoCdata_Print;
-		self->core->Copy = DaoValue_NoCopy;
 	}
 	if( self->core->kernel == NULL ) self->core->kernel = self;
 	return self;
