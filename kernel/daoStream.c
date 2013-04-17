@@ -1033,6 +1033,11 @@ int Dao_IsDir( const char *file )
 #endif
 }
 
+
+
+
+#ifndef DAO_WITHOUT_COLORPRINT
+
 #ifdef WIN32
 
 #include<windows.h>
@@ -1145,3 +1150,9 @@ void DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcol
 	if( self->redirect == NULL || self->redirect->SetColor == NULL ) return;
 	self->redirect->SetColor( self->redirect, fgcolor, bgcolor );
 }
+
+#else
+
+void DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor ){}
+
+#endif

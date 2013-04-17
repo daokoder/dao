@@ -2769,7 +2769,7 @@ DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc )
 	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_ENUM );
 	DaoValue *dC = self->activeValues[ vmc->c ];
 
-	if( tp->tid & DAO_ANY ) tp = NULL;
+	if( tp && (tp->tid & DAO_ANY) ) tp = NULL;
 	if( tp && tp->tid != DAO_ENUM ) return NULL;
 	if( dC && dC->type == DAO_ENUM && tp->tid == DAO_ENUM ){
 		if( tp != dC->xEnum.etype ) DaoEnum_SetType( & dC->xEnum, tp );

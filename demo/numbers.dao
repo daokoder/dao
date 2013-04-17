@@ -6,6 +6,7 @@ I2 = 0x123a
 I3 :int = 789
 
 io.writeln( I1, I2, I3 )
+io.writeln( 'size of int:', %I1 )
 io.writeln( std.about(I1), '\n' )
 
 
@@ -17,6 +18,7 @@ F3 = 12.5
 F4 = 2e-3  # Scientific notation with LOWER case 'e';
 
 io.writeln( F1, F2, F3, F4 )
+io.writeln( 'size of float:', %F1 )
 io.writeln( std.about(F1), '\n' )
 
 
@@ -29,6 +31,7 @@ D4 = 123D
 D5 = 2E-3  # Scientific notation with UPPER case 'E';
 
 io.writeln( D1, D2, D3, D4, D5 )
+io.writeln( 'size of double:', %D1 )
 io.writeln( std.about(D1), '\n' )
 
 
@@ -41,6 +44,7 @@ C4 = C3.real;
 C5 = C3.imag;
 
 io.writeln( C1, C2, C3, C4, C5 )
+io.writeln( 'size of complex:', %C1 )
 io.writeln( std.about(C1), '\n' )
 
 
@@ -52,4 +56,5 @@ L3 = 100111001L2  # base-2:  due to the L2 suffix;
 L4 = 0xa2fe3L8    # base-8:  due to the L8 suffix;
 
 io.writeln( L1, L2, L3, L4 )
+io.writeln( 'number of digits (base 256):', %L4 )
 io.writeln( std.about(L1), '\n' )

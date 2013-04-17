@@ -10,6 +10,7 @@ io.writeln( std.about( hash1 ) )
 
 io.writeln( map1 )
 io.writeln( hash1 )
+io.writeln( 'number of key/value pairs:', %hash1 )
 
 io.writeln( map1['BB'] )   # get value by key;
 io.writeln( hash1['CC'] )  # get value by key;
