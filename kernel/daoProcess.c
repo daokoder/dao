@@ -2787,11 +2787,10 @@ DaoEnum* DaoProcess_PutEnum( DaoProcess *self, const char *symbols )
 	return denum;
 }
 /**/
-DaoList* DaoProcess_GetList( DaoProcess *self, DaoVmCode *vmc )
+DaoList* DaoProcess_GetListByType( DaoProcess *self, DaoVmCode *vmc, DaoType *tp )
 {
 	/* create a new list in any case. */
 	DaoList *list = (DaoList*)self->activeValues[ vmc->c ];
-	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_LIST );
 	if( list && list->type == DAO_LIST && list->unitype == tp ){
 		DaoVmCode *vmc2 = vmc + 1;
 		if( list->refCount == 1 ){
@@ -2811,6 +2810,11 @@ DaoList* DaoProcess_GetList( DaoProcess *self, DaoVmCode *vmc )
 	list->unitype = tp;
 	DaoValue_Move( (DaoValue*) list, self->activeValues + vmc->c, tp );
 	return list;
+}
+DaoList* DaoProcess_GetList( DaoProcess *self, DaoVmCode *vmc )
+{
+	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_LIST );
+	return DaoProcess_GetListByType( self, vmc, tp );
 }
 DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc, unsigned int hashing )
 {
@@ -2842,10 +2846,9 @@ DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc, unsigned int hashi
 	return map;
 }
 
-DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
+DaoArray* DaoProcess_GetArrayByType( DaoProcess *self, DaoVmCode *vmc, DaoType *tp )
 {
 #ifdef DAO_WITH_NUMARRAY
-	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_ARRAY );
 	DaoValue *dC = self->activeValues[ vmc->c ];
 	DaoArray *array = (DaoArray*) dC;
 	int type = DAO_NONE;
@@ -2876,6 +2879,11 @@ DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
 	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_NUMARRAY ) );
 	return NULL;
 #endif
+}
+DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
+{
+	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_ARRAY );
+	return DaoProcess_GetArrayByType( self, vmc, tp );
 }
 DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int init )
 {
@@ -4218,20 +4226,17 @@ void DaoProcess_DoList(  DaoProcess *self, DaoVmCode *vmc )
 	}
 	for( i=0; i<bval; i++){
 		if( DaoList_SetItem( list, regValues[opA+i], i ) ){
-			printf( "%s %i\n", list->unitype->name->mbs, i );
 			DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid items" );
 			return;
 		}
 	}
 }
+static void DaoProcess_SetVectorValues( DaoProcess *self, DaoArray *a, DaoValue *v[], int N );
 void DaoProcess_DoVector( DaoProcess *self, DaoVmCode *vmc )
 {
 #ifdef DAO_WITH_NUMARRAY
 	const ushort_t opA = vmc->a;
 	const ushort_t count = vmc->b;
-	daoint *dims = NULL;
-	daoint i, j, k = 0;
-	int m, ndim = 0;
 	DaoArray *array = DaoProcess_GetArray( self, vmc );
 
 	if( count && array->etype == DAO_NONE ){
@@ -4247,8 +4252,21 @@ void DaoProcess_DoVector( DaoProcess *self, DaoVmCode *vmc )
 	}else if( array->etype == DAO_NONE ){
 		array->etype = DAO_FLOAT;
 	}
-	for( j=0; j<count; j++){
-		DaoValue *p = self->activeValues[ opA + j ];
+	DaoProcess_SetVectorValues( self, array, self->activeValues + opA, count );
+#else
+	self->activeCode = vmc;
+	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_NUMARRAY ) );
+#endif
+}
+void DaoProcess_SetVectorValues( DaoProcess *self, DaoArray *array, DaoValue *values[], int N )
+{
+	daoint *dims = NULL;
+	daoint i, j, k = 0;
+	int m, ndim = 0;
+
+#ifdef DAO_WITH_NUMARRAY
+	for( j=0; j<N; j++){
+		DaoValue *p = values[j];
 		if( p == NULL || p->type == DAO_NONE ) goto InvalidItem;
 		if( p->type > DAO_COMPLEX && p->type != DAO_ARRAY ) goto InvalidItem;
 		if( p->type == DAO_ARRAY ){
@@ -4271,17 +4289,17 @@ InvalidItem:
 	}
 	if( dims ){
 		DaoArray_SetDimCount( array, ndim + 1 );
-		array->dims[0] = count;
+		array->dims[0] = N;
 		memmove( array->dims + 1, dims, ndim*sizeof(daoint) );
 		DaoArray_ResizeArray( array, array->dims, ndim + 1 );
 	}else{
-		DaoArray_ResizeVector( array, count );
+		DaoArray_ResizeVector( array, N );
 	}
 	k = 0;
 	if( array->etype == DAO_INTEGER ){
 		daoint *vals = array->data.i;
-		for( j=0; j<count; j++ ){
-			DaoValue *p = self->activeValues[ opA + j ];
+		for( j=0; j<N; j++ ){
+			DaoValue *p = values[j];
 			if( p && p->type == DAO_ARRAY ){
 				DaoArray *array2 = & p->xArray;
 				for(i=0; i<array2->size; i++){
@@ -4295,8 +4313,8 @@ InvalidItem:
 		}
 	}else if( array->etype == DAO_FLOAT ){
 		float *vals = array->data.f;
-		for( j=0; j<count; j++ ){
-			DaoValue *p = self->activeValues[ opA + j ];
+		for( j=0; j<N; j++ ){
+			DaoValue *p = values[j];
 			if( p && p->type == DAO_ARRAY ){
 				DaoArray *array2 = & p->xArray;
 				for(i=0; i<array2->size; i++){
@@ -4310,8 +4328,8 @@ InvalidItem:
 		}
 	}else if( array->etype == DAO_DOUBLE ){
 		double *vals = array->data.d;
-		for( j=0; j<count; j++ ){
-			DaoValue *p = self->activeValues[ opA + j ];
+		for( j=0; j<N; j++ ){
+			DaoValue *p = values[j];
 			if( p && p->type == DAO_ARRAY ){
 				DaoArray *array2 = & p->xArray;
 				for(i=0; i<array2->size; i++){
@@ -4325,8 +4343,8 @@ InvalidItem:
 		}
 	}else{
 		complex16 *vals = array->data.c;
-		for( j=0; j<count; j++ ){
-			DaoValue *p = self->activeValues[ opA + j ];
+		for( j=0; j<N; j++ ){
+			DaoValue *p = values[j];
 			if( p && p->type == DAO_ARRAY ){
 				DaoArray *array2 = & p->xArray;
 				for(i=0; i<array2->size; i++){
@@ -4339,9 +4357,6 @@ InvalidItem:
 			}
 		}
 	}
-#else
-	self->activeCode = vmc;
-	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_NUMARRAY ) );
 #endif
 }
 void DaoProcess_DoAPList(  DaoProcess *self, DaoVmCode *vmc )
@@ -4701,6 +4716,7 @@ void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc )
 }
 
 DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *T, DArray *RS, DArray *TS, int C, int *W, int *M );
+
 void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 {
 	int i, k;
@@ -4803,14 +4819,87 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 		}
 	case DAO_TYPE :
 		{
-			DaoTuple *tuple;
 			DaoType *type = (DaoType*) p;
-			if( type->tid != DAO_TUPLE ){
+			DaoType *retype = DaoProcess_GetCallReturnType( self, vmc, type->tid );
+			complex16 c = {0.0,0.0};
+			complex16 *cplx;
+			DLong  *lng;
+			DString *str;
+			DaoArray *vec;
+			DaoList *list;
+			DaoTuple *tuple;
+			if( retype != type && DaoType_MatchTo( type, retype, NULL ) == 0 ){
 				DaoProcess_RaiseException( self, DAO_ERROR, "invalid enumeration" );
 				break;
 			}
-			tuple = DaoProcess_GetTuple( self, type, opb, 0 );
-			DaoProcess_MakeTuple( self, tuple, values, opb );
+			switch( type->tid ){
+			case DAO_COMPLEX :
+			case DAO_LONG :
+			case DAO_STRING :
+				for(i=0; i<opb; ++i){
+					int tid = values[i]->type;
+					if( tid == 0 || tid > DAO_DOUBLE ){
+						DaoProcess_RaiseException( self, DAO_ERROR, "need numbers in enumeration" );
+						return;
+					}
+				}
+				break;
+			}
+			switch( type->tid ){
+			case DAO_COMPLEX :
+				cplx = DaoProcess_PutComplex( self, c );
+				if( opb > 0 ) cplx->real = DaoValue_GetDouble( values[0] );
+				if( opb > 1 ) cplx->imag = DaoValue_GetDouble( values[1] );
+				break;
+#ifdef DAO_WITH_LONGINT
+			case DAO_LONG :
+				lng = DaoProcess_PutLong( self );
+				for(i=0; i<opb; ++i){
+					daoint digit = DaoValue_GetInteger( values[i] );
+					if( digit < 0 || digit > 255 ){
+						DaoProcess_RaiseException( self, DAO_ERROR, "invalid digit" );
+						return;
+					}
+					DLong_PushFront( lng, digit );
+				}
+				break;
+#endif
+			case DAO_STRING :
+				str = DaoProcess_PutWCString( self, L"" );
+				DString_Resize( str, opb );
+				for(i=0; i<opb; ++i){
+					daoint ch = DaoValue_GetInteger( values[i] );
+					if( ch < 0 ){
+						DaoProcess_RaiseException( self, DAO_ERROR, "invalid character" );
+						return;
+					}
+					str->wcs[i] = ch;
+				}
+				break;
+#ifdef DAO_WITH_NUMARRAY
+			case DAO_ARRAY :
+				vec = DaoProcess_GetArrayByType( self, vmc, type );
+				DaoProcess_SetVectorValues( self, vec, values, opb );
+				break;
+#endif
+			case DAO_LIST :
+				list = DaoProcess_GetListByType( self, vmc, type );
+				DArray_Resize( & list->items, opb, NULL );
+				for(i=0; i<opb; ++i){
+					if( DaoList_SetItem( list, values[i], i ) ){
+						DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid items" );
+						return;
+					}
+				}
+				break;
+			case DAO_TUPLE :
+				tuple = DaoProcess_GetTuple( self, type, opb, 0 );
+				DaoProcess_MakeTuple( self, tuple, values, opb );
+				break;
+			default :
+				DaoProcess_RaiseException( self, DAO_ERROR, "invalid enumeration" );
+				break;
+			}
 			break;
 		}
 	default :

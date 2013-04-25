@@ -403,6 +403,7 @@ static void DaoParser_PrintCodes( DaoParser *self )
 void DaoParser_CacheNode( DaoParser *self, DaoInode *node )
 {
 	node->prev = NULL;
+	node->extra = NULL;
 	node->next = self->vmcFree;
 	self->vmcFree = node;
 }

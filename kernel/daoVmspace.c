@@ -2424,18 +2424,18 @@ DaoVmSpace* DaoInit( const char *command )
 		mbs->mbs[ mbs->size ] = 0;
 	}
 
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_udf );
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_any );
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_int );
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_float );
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_double );
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_complex );
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_long );
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_string );
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_routine );
-
 	vms->safeTag = 0;
 	ns = vms->nsInternal;
+
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_udf );
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_routine );
+	DaoNamespace_AddTypeConstant( ns, dao_type_any->name, dao_type_any );
+	DaoNamespace_AddTypeConstant( ns, dao_type_int->name, dao_type_int );
+	DaoNamespace_AddTypeConstant( ns, dao_type_float->name, dao_type_float );
+	DaoNamespace_AddTypeConstant( ns, dao_type_double->name, dao_type_double );
+	DaoNamespace_AddTypeConstant( ns, dao_type_complex->name, dao_type_complex );
+	DaoNamespace_AddTypeConstant( ns, dao_type_long->name, dao_type_long );
+	DaoNamespace_AddTypeConstant( ns, dao_type_string->name, dao_type_string );
 
 	dao_type_none = DaoNamespace_MakeValueType( ns, dao_none_value );
 	dao_type_for_iterator = DaoParser_ParseTypeName( "tuple<valid:int,iterator:any>", ns, NULL );

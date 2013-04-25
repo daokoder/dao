@@ -29,3 +29,5 @@ if( DaoMake::IsDir( "web" ) ) modules.AddDirectory( "web", "web" );
 if( DaoMake::IsDir( "graphics" ) ) modules.AddDirectory( "graphics", "graphics" );
 
 if( DaoMake::IsDir( "DaoGraphics" ) ) modules.AddDirectory( "Graphics", "DaoGraphics" );
+
+if( DaoMake::IsDir( "DaoSDL" ) ) modules.AddDirectory( "SDL", "DaoSDL" );

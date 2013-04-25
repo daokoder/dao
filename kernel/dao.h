@@ -882,6 +882,7 @@ DAO_DLL daoint*    DaoProcess_PutInteger( DaoProcess *self, daoint value );
 DAO_DLL float*     DaoProcess_PutFloat( DaoProcess *self, float value );
 DAO_DLL double*    DaoProcess_PutDouble( DaoProcess *self, double value );
 DAO_DLL complex16* DaoProcess_PutComplex( DaoProcess *self, complex16 value );
+DAO_DLL DLong*     DaoProcess_PutLong( DaoProcess *self );
 DAO_DLL DString*   DaoProcess_PutMBString( DaoProcess *self, const char *mbs );
 DAO_DLL DString*   DaoProcess_PutWCString( DaoProcess *self, const wchar_t *wcs );
 DAO_DLL DString*   DaoProcess_PutString( DaoProcess *self, DString *str );

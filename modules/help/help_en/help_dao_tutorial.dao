@@ -503,10 +503,10 @@ with colon @[green]:@[green] will create hash maps.
 Map and hash map can be used in identical ways.
 @[code]
 amap = { 'abc' => 123, 'def' => 456 }
-ahash = { 'abc' : 123, 'def' : 456 }
+ahash = { 'abc' ~> 123, 'def' ~> 456 }
 
 amap = map{ 'abc' => 123, 'def' => 456 }
-ahash = map{ 'abc' : 123, 'def' : 456 }
+ahash = map{ 'abc' ~> 123, 'def' ~> 456 }
 @[code]
 
 Sub-scripting and slicing are also supported for map to access value(s)
