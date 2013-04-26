@@ -149,6 +149,7 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->vmSpace = vms;
 	self->status = DAO_VMPROC_SUSPENDED;
 	self->exceptions = DArray_New(D_VALUE);
+	self->defers = DArray_New(0);
 
 	self->firstFrame = self->topFrame = DaoStackFrame_New();
 	self->firstFrame->active = self->firstFrame;
@@ -188,6 +189,7 @@ void DaoProcess_Delete( DaoProcess *self )
 
 	DString_Delete( self->mbstring );
 	DArray_Delete( self->exceptions );
+	DArray_Delete( self->defers );
 	if( self->abtype ) GC_DecRC( self->abtype );
 	if( self->future ) GC_DecRC( self->future );
 	if( self->factory ) DArray_Delete( self->factory );
@@ -881,9 +883,9 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_NOP ,
 		&& LAB_DATA ,
 		&& LAB_GETCL , && LAB_GETCK , && LAB_GETCG ,
-		&& LAB_GETVH , && LAB_GETVO , && LAB_GETVK , && LAB_GETVG ,
+		&& LAB_GETVH , && LAB_GETVS , && LAB_GETVO , && LAB_GETVK , && LAB_GETVG ,
 		&& LAB_GETI  , && LAB_GETDI , && LAB_GETMI , && LAB_GETF  , && LAB_GETMF ,
-		&& LAB_SETVH , && LAB_SETVO , && LAB_SETVK , && LAB_SETVG ,
+		&& LAB_SETVH , && LAB_SETVS , && LAB_SETVO , && LAB_SETVK , && LAB_SETVG ,
 		&& LAB_SETI  , && LAB_SETDI , && LAB_SETMI , && LAB_SETF  , && LAB_SETMF ,
 		&& LAB_LOAD  , && LAB_CAST , && LAB_MOVE ,
 		&& LAB_NOT , && LAB_MINUS , && LAB_TILDE , && LAB_SIZE ,
@@ -919,10 +921,12 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_GETCK_I , && LAB_GETCK_F , && LAB_GETCK_D , && LAB_GETCK_C ,
 		&& LAB_GETCG_I , && LAB_GETCG_F , && LAB_GETCG_D , && LAB_GETCG_C ,
 		&& LAB_GETVH_I , && LAB_GETVH_F , && LAB_GETVH_D , && LAB_GETVH_C ,
+		&& LAB_GETVS_I , && LAB_GETVS_F , && LAB_GETVS_D , && LAB_GETVS_C ,
 		&& LAB_GETVO_I , && LAB_GETVO_F , && LAB_GETVO_D , && LAB_GETVO_C ,
 		&& LAB_GETVK_I , && LAB_GETVK_F , && LAB_GETVK_D , && LAB_GETVK_C ,
 		&& LAB_GETVG_I , && LAB_GETVG_F , && LAB_GETVG_D , && LAB_GETVG_C ,
 		&& LAB_SETVH_II , && LAB_SETVH_FF , && LAB_SETVH_DD , && LAB_SETVH_CC ,
+		&& LAB_SETVS_II , && LAB_SETVS_FF , && LAB_SETVS_DD , && LAB_SETVS_CC ,
 		&& LAB_SETVO_II , && LAB_SETVO_FF , && LAB_SETVO_DD , && LAB_SETVO_CC ,
 		&& LAB_SETVK_II , && LAB_SETVK_FF , && LAB_SETVK_DD , && LAB_SETVK_CC ,
 		&& LAB_SETVG_II , && LAB_SETVG_FF , && LAB_SETVG_DD , && LAB_SETVG_CC ,
@@ -1234,6 +1238,7 @@ CallEntry:
 		}OPNEXT() OPCASE( GETVH ){
 			GC_ShiftRC( dataVH[ vmc->a ]->activeValues[ vmc->b ], locVars[ vmc->c ] );
 			locVars[ vmc->c ] = dataVH[ vmc->a ]->activeValues[ vmc->b ];
+		}OPNEXT() OPCASE( GETVS ){
 		}OPNEXT() OPCASE( GETVO ){
 			GC_ShiftRC( dataVO[ vmc->b ], locVars[ vmc->c ] );
 			locVars[ vmc->c ] = dataVO[ vmc->b ];
@@ -1258,6 +1263,7 @@ CallEntry:
 			abtp = dataVH[ vmc->c ]->activeTypes[ vmc->b ];
 			if( DaoProcess_Move( self, locVars[vmc->a], dataVH[ vmc->c ]->activeValues + vmc->b, abtp ) ==0 )
 				goto CheckException;
+		}OPNEXT() OPCASE( SETVS ){
 		}OPNEXT() OPCASE( SETVO ){
 			abtp = typeVO->items.pVar[ vmc->b ]->dtype;
 			if( DaoProcess_Move( self, locVars[vmc->a], dataVO + vmc->b, abtp ) ==0 )
@@ -1586,6 +1592,10 @@ CallEntry:
 			locVars[ vmc->c ]->xDouble.value = dataVH[vmc->a]->activeValues[vmc->b]->xDouble.value;
 		}OPNEXT() OPCASE( GETVH_C ){
 			locVars[ vmc->c ]->xComplex.value = dataVH[vmc->a]->activeValues[vmc->b]->xComplex.value;
+		}OPNEXT() OPCASE( GETVS_I ){
+		}OPNEXT() OPCASE( GETVS_F ){
+		}OPNEXT() OPCASE( GETVS_D ){
+		}OPNEXT() OPCASE( GETVS_C ){
 		}OPNEXT() OPCASE( GETVO_I ){
 			locVars[ vmc->c ]->xInteger.value = dataVO[ vmc->b ]->xInteger.value;
 		}OPNEXT() OPCASE( GETVO_F ){
@@ -1618,6 +1628,10 @@ CallEntry:
 			dataVH[ vmc->c ]->activeValues[ vmc->b ]->xDouble.value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVH_CC ){
 			dataVH[ vmc->c ]->activeValues[ vmc->b ]->xComplex.value = ComplexOperand( vmc->a );
+		}OPNEXT() OPCASE( SETVS_II ){
+		}OPNEXT() OPCASE( SETVS_FF ){
+		}OPNEXT() OPCASE( SETVS_DD ){
+		}OPNEXT() OPCASE( SETVS_CC ){
 		}OPNEXT() OPCASE( SETVO_II ){
 			dataVO[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVO_FF ){
@@ -4850,6 +4864,7 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 				cplx = DaoProcess_PutComplex( self, c );
 				if( opb > 0 ) cplx->real = DaoValue_GetDouble( values[0] );
 				if( opb > 1 ) cplx->imag = DaoValue_GetDouble( values[1] );
+				if( opb > 2 ) DaoProcess_RaiseException( self, DAO_WARNING, "too many values" );
 				break;
 #ifdef DAO_WITH_LONGINT
 			case DAO_LONG :
@@ -7068,10 +7083,6 @@ void DaoProcess_PrintException( DaoProcess *self, int clear )
 	if( clear ) DArray_Clear( self->exceptions );
 }
 
-void DaoProcess_Print( DaoProcess *self, const char *chs )
-{
-	DaoStream_WriteMBS( self->vmSpace->stdioStream, chs );
-}
 
 DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 {

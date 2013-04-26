@@ -418,6 +418,15 @@ static void STD_Version( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutMBString( proc, DAO_VERSION );
 }
 
+
+static void STD_Defer( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+
+	if( sect == NULL ) return; // TODO exception
+
+	DArray_Append( proc->defers, (void*)(size_t) (sect - proc->topFrame->codes) );
+}
 static void STD_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
@@ -612,6 +621,7 @@ DaoFuncItem dao_std_methods[] =
 	{ STD_SubType,   "subtype( obj1, obj2 )=>int" },
 	{ STD_Version,   "version()=>string" },
 
+	{ STD_Defer,    "defer()[]" },
 	{ STD_Iterate,  "iterate( times :int )[index:int]" },
 	{ STD_String,   "string( size :int, type :enum<mbs,wcs>=$mbs )[index:int =>int] =>string" },
 	{ STD_Array,    "array( D1 :int, D2 =0, D3 =0 )[I:int, J:int, K:int =>@V<@T<int|float|double|complex>|array<@T>>] =>array<@T>" },

@@ -37,7 +37,8 @@ enum DaoOpcode
 	DVM_GETCL , /* get local const: C = A::B; */
 	DVM_GETCK , /* get class const: C = A::B; current class, A=0; parent class: A>=1; */
 	DVM_GETCG , /* get global const: C = A::B; current namespace, A=0; loaded: A>=1; */
-	DVM_GETVH , /* get up/host variable in closure or code section: C = A::B; A, outer level; */
+	DVM_GETVH , /* get host variable from code section: C = A::B; A, outer level; */
+	DVM_GETVS , /* get static variable or captured up variable from closure; */
 	DVM_GETVO , /* get instance object variables: C = A::B; A=0; */
 	DVM_GETVK , /* get class global variables: C = A::B; A: the same as GETCK; */
 	DVM_GETVG , /* get global variables: C = A::B; A: the same as GETCG; */
@@ -47,6 +48,7 @@ enum DaoOpcode
 	DVM_GETF ,  /* GET Field : C = A.B */
 	DVM_GETMF , /* GET Meta Field: C = A->B */
 	DVM_SETVH , /* set host variable in code section: C::B = A; C, outer level; */
+	DVM_SETVS , /* set static variable or captured up variable from closure; */
 	DVM_SETVO , /* set object variables: C::B = A, C the same as A in DVM_GETVO */
 	DVM_SETVK , /* set class variables: C::B = A, C the same as A in DVM_GETVK */
 	DVM_SETVG , /* set global variables: C::B = A, C the same as A in DVM_GETVG */
@@ -135,6 +137,10 @@ enum DaoOpcode
 	DVM_GETVH_F ,
 	DVM_GETVH_D ,
 	DVM_GETVH_C ,
+	DVM_GETVS_I ,
+	DVM_GETVS_F ,
+	DVM_GETVS_D ,
+	DVM_GETVS_C ,
 	DVM_GETVO_I ,
 	DVM_GETVO_F ,
 	DVM_GETVO_D ,
@@ -152,6 +158,10 @@ enum DaoOpcode
 	DVM_SETVH_FF ,
 	DVM_SETVH_DD ,
 	DVM_SETVH_CC ,
+	DVM_SETVS_II ,
+	DVM_SETVS_FF ,
+	DVM_SETVS_DD ,
+	DVM_SETVS_CC ,
 	DVM_SETVO_II ,
 	DVM_SETVO_FF ,
 	DVM_SETVO_DD ,
@@ -454,7 +464,7 @@ enum DaoFunctMeth
 enum DaoCodeType
 {
 	DAO_CODE_NOP ,      /*  Local variable operands: None; */
-	DAO_CODE_GETC ,     /*  C;     */
+	DAO_CODE_GETC ,     /*  C; local variable operand; */
 	DAO_CODE_GETG ,     /*  C;     */
 	DAO_CODE_GETU ,     /*  B,C;   */
 	DAO_CODE_GETF ,     /*  A,C;   */

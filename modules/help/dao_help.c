@@ -2,7 +2,7 @@
 // Dao Standard Modules
 // http://www.daovm.net
 //
-// Copyright (c) 2012, Limin Fu
+// Copyright (c) 2012,2013, Limin Fu
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without modification,
@@ -1490,6 +1490,14 @@ static DaoxHelpEntry* DaoxHelper_GetEntry( DaoxHelper *self, DaoxHelp *help, Dao
 }
 
 
+static void DaoProcess_Print( DaoProcess *self, const char *chs )
+{
+	if( self->stdioStream ){
+		DaoStream_WriteMBS( self->stdioStream, chs );
+		return;
+	}
+	DaoStream_WriteMBS( self->vmSpace->stdioStream, chs );
+}
 
 static void PrintMethod( DaoProcess *proc, DaoRoutine *meth )
 {

@@ -190,15 +190,11 @@ DaoParser* DaoParser_New()
 	self->lvm = DMap_New(D_STRING,0);
 	self->arrays = DArray_New(D_ARRAY);
 	self->strings = DArray_New(D_STRING);
-	self->localVarMap = DArray_New(D_MAP);
-	self->localCstMap = DArray_New(D_MAP);
-	self->localDecMap = DArray_New(D_MAP);
+	self->localDataMaps = DArray_New(D_MAP);
 	self->switchMaps = DArray_New(D_MAP);
 	self->enumTypes = DArray_New(0);
 	self->routCompilable = DArray_New(0);
-	DArray_Append( self->localVarMap, self->lvm );
-	DArray_Append( self->localCstMap, self->lvm );
-	DArray_Append( self->localDecMap, self->lvm );
+	DArray_Append( self->localDataMaps, self->lvm );
 	DArray_Append( self->strings, self->mbs );
 	DArray_Append( self->arrays, self->toks );
 
@@ -224,9 +220,7 @@ void DaoParser_Delete( DaoParser *self )
 	DArray_Delete( self->decoFuncs );
 	DArray_Delete( self->decoParams );
 	DArray_Delete( self->toks );
-	DArray_Delete( self->localVarMap );
-	DArray_Delete( self->localCstMap );
-	DArray_Delete( self->localDecMap );
+	DArray_Delete( self->localDataMaps );
 	DArray_Delete( self->switchMaps );
 	DArray_Delete( self->enumTypes );
 	DArray_Delete( self->scopeOpenings );
@@ -261,11 +255,7 @@ void DaoParser_Delete( DaoParser *self )
 void DaoParser_Reset( DaoParser *self )
 {
 	int i;
-	for(i=0; i<=self->lexLevel; ++i){
-		DMap_Reset( self->localVarMap->items.pMap[i] );
-		DMap_Reset( self->localCstMap->items.pMap[i] );
-		DMap_Reset( self->localDecMap->items.pMap[i] );
-	}
+	for(i=0; i<=self->lexLevel; ++i) DMap_Reset( self->localDataMaps->items.pMap[i] );
 	self->autoReturn = 0;
 	self->topAsGlobal = 0;
 	self->isClassBody = 0;
@@ -356,30 +346,18 @@ static DArray* DaoParser_GetArray( DaoParser *self )
 static void DaoParser_PushLevel( DaoParser *self )
 {
 	self->lexLevel ++;
-	if( self->lexLevel >= self->localVarMap->size ){
-		DArray_Append( self->localVarMap, self->lvm );
-		DArray_Append( self->localCstMap, self->lvm );
-		DArray_Append( self->localDecMap, self->lvm );
+	if( self->lexLevel >= self->localDataMaps->size ){
+		DArray_Append( self->localDataMaps, self->lvm );
 	}
 }
 static void DaoParser_PopLevel( DaoParser *self )
 {
-	DMap_Reset( self->localVarMap->items.pMap[ self->lexLevel ] );
-	DMap_Reset( self->localCstMap->items.pMap[ self->lexLevel ] );
-	DMap_Reset( self->localDecMap->items.pMap[ self->lexLevel ] );
+	DMap_Reset( self->localDataMaps->items.pMap[ self->lexLevel ] );
 	self->lexLevel --;
 }
-DMap* DaoParser_GetCurrentVarMap( DaoParser *self )
+DMap* DaoParser_GetCurrentDataMap( DaoParser *self )
 {
-	return self->localVarMap->items.pMap[ self->lexLevel ];
-}
-DMap* DaoParser_GetCurrentCstMap( DaoParser *self )
-{
-	return self->localCstMap->items.pMap[ self->lexLevel ];
-}
-DMap* DaoParser_GetCurrentDecMap( DaoParser *self )
-{
-	return self->localDecMap->items.pMap[ self->lexLevel ];
+	return self->localDataMaps->items.pMap[ self->lexLevel ];
 }
 static int DaoParser_GetOuterLevel( DaoParser *self, int reg )
 {
@@ -1088,7 +1066,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 			MAP_Insert( routine->body->localVarType, module->regCount, type );
 		}
 		DString_SetMBS( mbs, "self" );
-		MAP_Insert( DaoParser_GetCurrentVarMap( module ), mbs, module->regCount );
+		MAP_Insert( DaoParser_GetCurrentDataMap( module ), mbs, module->regCount );
 		DaoParser_PushRegister( module );
 		routine->parCount ++;
 		selfpar = 1;
@@ -1117,7 +1095,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 				tk = DArray_Append( routine->body->defLocals, tokens[i] );
 				DaoToken_Set( tk, 1, 0, routine->parCount, NULL );
 			}
-			MAP_Insert( DaoParser_GetCurrentVarMap( module ), tks, module->regCount );
+			MAP_Insert( DaoParser_GetCurrentDataMap( module ), tks, module->regCount );
 			DaoParser_PushRegister( module );
 			routine->parCount ++;
 		}
@@ -1957,10 +1935,10 @@ int DaoParser_ParseScopedName( DaoParser *self, DaoValue **scope, DaoValue **val
 		if( i < 0 ) return start;
 		*value = DaoClass_GetConst( self->hostClass, i );
 	}else if( local && (self->levelBase + self->lexLevel) != 0 ){
-		DMap *lmap = self->localCstMap->items.pMap[self->lexLevel];
+		DMap *lmap = DaoParser_GetCurrentDataMap( self );
 		DNode *node = MAP_Find( lmap, & tokens[start]->string );
 		/* No need to set scope, DaoParser_AddToScope() will properly handle this: */
-		if( node == NULL ) return start;
+		if( node == NULL || LOOKUP_ISCST( node->value.pInt ) == 0 ) return start;
 		*value = self->routine->routConsts->items.items.pValue[node->value.pInt];
 	}else{
 		i = DaoParser_GetRegister( self, tokens[start] );
@@ -1971,7 +1949,7 @@ int DaoParser_ParseScopedName( DaoParser *self, DaoValue **scope, DaoValue **val
 			if( ns == NULL ) goto HandleName;
 			*value = (DaoValue*) ns;
 		}else{
-			if( (LOOKUP_ST(i) & 1) == 0 ) goto ErrorWasDefined;
+			if( LOOKUP_ISCST(i) == 0 ) goto ErrorWasDefined;
 			*value = DaoParser_GetVariable( self, i );
 		}
 	}
@@ -2514,7 +2492,7 @@ static void DaoParser_AddToScope( DaoParser *self, DaoValue *scope,
 {
 	DaoNamespace *myNS = self->nameSpace;
 	DaoRoutine *routine = self->routine;
-	int perm = self->permission;
+	int id, perm = self->permission;
 	if( scope && scope->type == DAO_CLASS ){
 		DaoClass_AddType( & scope->xClass, name, abtype );
 		DaoClass_AddConst( & scope->xClass, name, value, perm );
@@ -2529,9 +2507,9 @@ static void DaoParser_AddToScope( DaoParser *self, DaoValue *scope,
 			DaoClass_AddType( self->hostClass, name, abtype );
 			DaoClass_AddConst( self->hostClass, name, value, perm );
 		}
+		id = routine->routConsts->items.size;
 		MAP_Insert( routine->body->abstypes, name, abtype );
-		MAP_Insert( DaoParser_GetCurrentCstMap( self ), name, routine->routConsts->items.size );
-		MAP_Insert( DaoParser_GetCurrentDecMap( self ), name, 0 );
+		MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, LOOKUP_BIND_LC( id ) );
 		DaoRoutine_AddConstant( routine, value );
 	}
 }
@@ -2596,7 +2574,7 @@ static int DaoParser_AddConstant( DaoParser *self, DString *name, DaoValue *valu
 		DaoNamespace_AddConst( myNS, name, value, perm );
 	}else{
 		daoint id = routine->routConsts->items.size;
-		MAP_Insert( DaoParser_GetCurrentCstMap( self ), name, id );
+		MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, LOOKUP_BIND_LC(id) );
 		DaoRoutine_AddConstant( routine, value );
 	}
 	/* TODO was defined warning: */
@@ -4270,7 +4248,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 		int errors = self->errors->size;
 		for(k=nameStart; k<self->toks->size; k++){
 			DString *name = & self->toks->items.pToken[k]->string;
-			DNode *node = MAP_Find( DaoParser_GetCurrentDecMap( self ), name );
+			DNode *node = MAP_Find( DaoParser_GetCurrentDataMap( self ), name );
 			if( node ) DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, name );
 		}
 		if( self->errors->size > errors ) return -1;
@@ -4664,12 +4642,11 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 		return;
 	}
 
-	MAP_Insert( DaoParser_GetCurrentDecMap( self ), name, 0 );
 	if( storeType & DAO_DECL_LOCAL ){
-		if( MAP_Find( DaoParser_GetCurrentVarMap( self ), name ) == NULL ){
+		if( MAP_Find( DaoParser_GetCurrentDataMap( self ), name ) == NULL ){
 			int id = self->regCount;
 			if( abtp ) MAP_Insert( self->routine->body->localVarType, id, abtp );
-			MAP_Insert( DaoParser_GetCurrentVarMap( self ), name, id );
+			MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, id );
 			DaoParser_PushRegister( self );
 		}
 	}else if( storeType & DAO_DECL_MEMBER ){
@@ -4710,12 +4687,12 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 		int id = 0;
 		if( storeType & DAO_DECL_CONST ){
 			id = routine->routConsts->items.size;
-			MAP_Insert( DaoParser_GetCurrentCstMap( self ), name, id );
+			MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, LOOKUP_BIND_LC(id) );
 			DaoRoutine_AddConstant( routine, dao_none_value );
 		}else{
 			id = self->regCount;
 			if( abtp ) MAP_Insert( self->routine->body->localVarType, id, abtp );
-			MAP_Insert( DaoParser_GetCurrentVarMap( self ), name, id );
+			MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, id );
 			DaoParser_PushRegister( self );
 		}
 		tok = DArray_Append( routine->body->defLocals, tok );
@@ -4735,7 +4712,7 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 		DaoValue *it = DaoType_FindValueOnly( self->hostCdata, name );
 		if( it ){
 			i = routine->routConsts->items.size;
-			MAP_Insert( DaoParser_GetCurrentCstMap( self ), name, i );
+			MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, LOOKUP_BIND_LC(i) );
 			DaoRoutine_AddConstant( routine, it );
 			return LOOKUP_BIND_LC( i );
 		}
@@ -4749,15 +4726,10 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 		}
 	}
 
-	/* Look for local variable: */
+	/* Look for local data: */
 	for( i=self->lexLevel; i>=0; i-- ){
-		node = MAP_Find( self->localVarMap->items.pMap[i], name );
+		node = MAP_Find( self->localDataMaps->items.pMap[i], name );
 		if( node ) return node->value.pInt;
-	}
-	/* Look for local constant: */
-	for( i=self->lexLevel; i>=0; i-- ){
-		node = MAP_Find( self->localCstMap->items.pMap[i], name );
-		if( node ) return LOOKUP_BIND_LC( node->value.pInt );
 	}
 
 	/* Look for variable in class: */
@@ -6361,7 +6333,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					sect = DaoParser_AddCode( self, DVM_SECT, self->regCount, 0, 0, start+1, 0, 0 );
 					label = jump->jumpTrue = DaoParser_AddCode( self, DVM_LABEL, 0,0,0,rb,0,0 );
 					DaoParser_AddScope( self, DVM_LBRA, NULL );
-					varFunctional = DaoParser_GetCurrentVarMap( self );
+					varFunctional = DaoParser_GetCurrentDataMap( self );
 					start += 2;
 					regCount = self->regCount;
 					if( tokens[start]->name == DTOK_LSB ){

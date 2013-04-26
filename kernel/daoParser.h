@@ -60,17 +60,15 @@ struct DaoParser
 	int vmcCount;
 
 	/* Stack of maps: mapping local variable names to virtual register ids at each level: */
-	DArray  *localVarMap; /* < DMap<DString*,int> > */
-	DArray  *localCstMap; /* < DMap<DString*,int> > */
-	DArray  *localDecMap; /* < DMap<DString*,int> > */
+	DArray  *localDataMaps; /* DArray<DMap<DString*,int>*> */
 	DArray  *switchMaps;
-	DArray  *enumTypes; /* <DaoType*> */
+	DArray  *enumTypes; /* DArray<DaoType*> */
 
 	short levelBase;
 	short lexLevel;
 	short needConst;
 
-	DMap  *allConsts; /* <DString*,int>: implicit and explict constants; */
+	DMap  *allConsts; /* DMap<DString*,int>: implicit and explict local constants; */
 
 	int    regCount;
 	DMap  *initTypes; /* type holders @T from parameters and the up routine */

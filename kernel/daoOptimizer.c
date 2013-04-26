@@ -2928,12 +2928,14 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}
 			break;
 		case DVM_GETVH :
+		case DVM_GETVS :
 		case DVM_GETVO :
 		case DVM_GETVK :
 		case DVM_GETVG :
 			at = 0;
 			switch( code ){
 			case DVM_GETVH : at = typeVH[opa][opb]; break;
+			case DVM_GETVS : break;
 			case DVM_GETVO : at = hostClass->instvars->items.pVar[opb]->dtype; break;
 			case DVM_GETVK : at = hostClass->variables->items.pVar[opb]->dtype; break;
 			case DVM_GETVG : at = NS->variables->items.pVar[opb]->dtype; break;
@@ -2951,12 +2953,14 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}
 			break;
 		case DVM_SETVH :
+		case DVM_SETVS :
 		case DVM_SETVO :
 		case DVM_SETVK :
 		case DVM_SETVG :
 			type2 = NULL;
 			switch( code ){
 			case DVM_SETVH : type2 = typeVH[opc] + opb; break;
+			case DVM_SETVS : break;
 			case DVM_SETVO : type2 = & hostClass->instvars->items.pVar[opb]->dtype; break;
 			case DVM_SETVK : type2 = & hostClass->variables->items.pVar[opb]->dtype; break;
 			case DVM_SETVG : type2 = & NS->variables->items.pVar[opb]->dtype; break;
@@ -5181,6 +5185,8 @@ TryPushBlockReturnType:
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( ct, TT1 );
 			break;
+		case DVM_GETVS_I : case DVM_GETVS_F : case DVM_GETVS_D : case DVM_GETVS_C :
+			break;
 		case DVM_GETVO_I : case DVM_GETVO_F : case DVM_GETVO_D : case DVM_GETVO_C :
 			TT1 = DAO_INTEGER + (code - DVM_GETVO_I);
 			at = hostClass->instvars->items.pVar[opb]->dtype;
@@ -5212,6 +5218,8 @@ TryPushBlockReturnType:
 			AssertTypeMatching( types[opa], *tp, defs );
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( tp[0], TT1 );
+			break;
+		case DVM_SETVS_II : case DVM_SETVS_FF : case DVM_SETVS_DD : case DVM_SETVS_CC :
 			break;
 		case DVM_SETVO_II : case DVM_SETVO_FF : case DVM_SETVO_DD : case DVM_SETVO_CC :
 			if( self->tidHost != DAO_OBJECT ) goto ErrorTyping;

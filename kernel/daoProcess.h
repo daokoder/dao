@@ -120,6 +120,7 @@ struct DaoProcess
 	DaoFuture      *future;
 	DaoStream      *stdioStream;
 
+	DArray         *defers;
 	DArray         *exceptions;
 	DArray         *factory;
 
@@ -166,7 +167,6 @@ DAO_DLL void DaoProcess_Suspend( DaoProcess *self, int type );
 DAO_DLL int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer );
 DAO_DLL DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value );
 
-DAO_DLL void DaoProcess_Print( DaoProcess *self, const char *chs );
 DAO_DLL void DaoProcess_PrintException( DaoProcess *self, int clear );
 
 DAO_DLL DaoValue* DaoProcess_MakeConst( DaoProcess *self );

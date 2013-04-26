@@ -121,13 +121,14 @@ enum DaoVarDeclaration
 };
 enum DaoVarStorage
 {
-	DAO_LOCAL_VARIABLE = 0,
-	DAO_LOCAL_CONSTANT = 1, /* lowest bit set to 1 for constant */
-	DAO_OBJECT_VARIABLE = 2,
-	DAO_CLASS_VARIABLE = 4,
-	DAO_CLASS_CONSTANT = 5, /* lowest bit set to 1 for constant */
-	DAO_GLOBAL_VARIABLE = 6,
-	DAO_GLOBAL_CONSTANT = 7  /* lowest bit set to 1 for constant */
+	DAO_LOCAL_VARIABLE  = 0,
+	DAO_LOCAL_CONSTANT  = 1, /* lowest bit set to 1 for constant */
+	DAO_STATIC_VARIABLE = 2,
+	DAO_OBJECT_VARIABLE = 4,
+	DAO_CLASS_VARIABLE  = 6,
+	DAO_CLASS_CONSTANT  = 7, /* lowest bit set to 1 for constant */
+	DAO_GLOBAL_VARIABLE = 8,
+	DAO_GLOBAL_CONSTANT = 9  /* lowest bit set to 1 for constant */
 };
 
 enum DaoValueTrait
