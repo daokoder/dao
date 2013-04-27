@@ -1,0 +1,17 @@
+
+routine Test()
+{
+	mat = [ 1 : 1000 ];
+
+	defer {
+		mat.resize( [0] )
+		io.writeln( 'deferred 1', mat.size() )
+	}
+
+	for( i = 2 : 5 ) defer { io.writeln( 'deferred', i ) }
+
+	io.writeln( 'returning' );
+	return 123
+}
+
+io.writeln( Test() )

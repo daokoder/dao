@@ -8,7 +8,6 @@
 
 daovm = DaoMake::Project( "Dao" )
 
-
 ###########################################################################
 #
 # Create options that can be modified from command line arguments
@@ -360,5 +359,5 @@ if( daovm_make_javascript == $ON ){
 	daovm_js.AddDefinition( "WITHOUT_DIRECT_THREADING" )
 	daovm_js.AddLinkingFlag( "-s EXPORTED_FUNCTIONS=" + ems_export )
 	#daovm_js.AddLinkingFlag( "-s ASM_JS=1" )
-	daovm_js.AddLinkingFlag( "-O2 --closure 1" )
+	if( DaoMake::BuildMode() == $RELEASE ) daovm_js.AddLinkingFlag( "-O2 --closure 1" )
 }

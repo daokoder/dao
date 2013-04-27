@@ -37,7 +37,7 @@ syn keyword daoRepeat		while for do until
 syn keyword daoStructure	interface class routine sub function operator syntax as type int float double complex long string enum tuple array list map any
 
 " other keywords
-syn keyword daoStatement	bind to return skip break global static const use load public protected private case default try catch retry raise import virtual
+syn keyword daoStatement	defer return skip break global static const use load public protected private case default try catch retry raise virtual
 syn keyword daoConstant		var none self
 
 " syn match   daoPreProc	  "^\s*$\%(debug\|nodebug\|if\|ifnot\|end\|else\|endinput\)\>"

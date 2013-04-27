@@ -40,20 +40,22 @@
 #define DVM_FRAME_SECT  (1<<6)
 #define DVM_FRAME_KEEP  (1<<7)
 
-#define DVM_MAX_TRY_DEPTH 8
+#define DVM_MAX_TRY_DEPTH 4
 
 struct DaoStackFrame
 {
-	ushort_t    entry;     /* entry code id */
-	ushort_t    state;     /* frame state */
-	ushort_t    returning; /* return register id */
-	ushort_t    depth;     /* depth of exception scopes */
-	ushort_t    ranges[DVM_MAX_TRY_DEPTH][2]; /* ranges of exception scopes */
+	ushort_t    entry;     /* entry code id; */
+	ushort_t    state;     /* frame state; */
+	ushort_t    returning; /* return register id; */
+	ushort_t    depth;     /* depth of exception scopes; */
+	ushort_t    ranges[DVM_MAX_TRY_DEPTH][2]; /* ranges of exception scopes; */
 
-	ushort_t      parCount; /* the actual number of parameters passed in */
-	ushort_t      varCount; /* the number of local variables allocated on the stack */
-	daoint        stackBase; /* the offset on the stack for the local variables */
-	DaoVmCode    *codes; /* = routine->vmCodes->codes */
+	ushort_t      parCount; /* the actual number of parameters passed in; */
+	ushort_t      varCount; /* the number of local variables allocated on the stack; */
+	daoint        stackBase; /* the offset on the stack for the local variables; */
+	daoint        deferBase; /* the offset on the DaoProcess::defers list; */
+
+	DaoVmCode    *codes; /* = routine->vmCodes->codes; */
 	DaoType     **types;
 	DaoType      *retype;
 	DaoRoutine   *routine;
@@ -61,7 +63,7 @@ struct DaoStackFrame
 	DaoProcess   *outer;
 
 	DaoStackFrame  *active;
-	DaoStackFrame  *sect; /* original frame of a code section frame */
+	DaoStackFrame  *sect; /* original frame of a code section frame; */
 	DaoStackFrame  *prev;
 	DaoStackFrame  *next;
 };

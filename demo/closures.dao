@@ -1,0 +1,28 @@
+
+closures = {};
+
+for( i = 1 : 5 ){
+	ls = { i };
+	closure = routine(){
+		io.writeln( ls, i )
+	}
+	closures.append( closure )
+}
+
+for( closure in closures ) closure()
+
+routine Test()
+{
+	abc = 'abc'
+	rout = routine(){
+		io.writeln( 'outer closure', abc )
+		rout = routine(){
+			io.writeln( 'inner closure', abc )
+		}
+		return rout;
+	}
+	return rout()
+}
+
+rout = Test()
+rout()

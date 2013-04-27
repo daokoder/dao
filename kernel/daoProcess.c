@@ -1046,6 +1046,8 @@ int DaoProcess_Execute( DaoProcess *self )
 
 CallEntry:
 
+	self->topFrame->deferBase = self->defers->size;
+
 	/*
 	   printf( "stack size = %s %i %i\n", getenv("PROC_NAME"), self->stackContext->size, base );
 	 */
@@ -1079,9 +1081,6 @@ CallEntry:
 	//printf("entry code = %i\n", DArrayS4_Top( self->stackStates )[S4_ENTRY] );
 	printf("number of instruction: %i\n", routine->body->vmCodes->size );
 	if( routine->routType ) printf("routine type = %s\n", routine->routType->name->mbs);
-	printf( "vmSpace = %p; nameSpace = %p\n", self->vmSpace, topCtx->nameSpace );
-	printf("routine = %p; context = %p\n", routine, topCtx );
-	printf( "self object = %p\n", topCtx->object );
 #endif
 
 	if( self->stopit | vmSpace->stopit ) goto FinishProc;
@@ -1103,16 +1102,6 @@ CallEntry:
 		goto FinishCall;
 	}
 
-#if 0
-	printf("==================VM==============================\n");
-	printf("entry code = %i\n", DArrayS4_Top( self->stackStates )[S4_ENTRY] );
-	printf("number of register: %i\n", topCtx->regArray->size );
-	printf("number of register: %i\n", routine->body->regCount );
-	printf("number of instruction: %i\n", routine->body->vmCodes->size );
-	printf( "VM process: %p\n", self );
-	printf("==================================================\n");
-	DaoRoutine_PrintCode( routine, self->vmSpace->stdioStream );
-#endif
 
 	vmc = vmcBase + id;
 	self->stopit = 0;
@@ -1507,6 +1496,17 @@ CallEntry:
 				 */
 		}OPNEXT() OPCASE( RETURN ){
 			self->activeCode = vmc;
+			if( self->defers->size > self->topFrame->deferBase ){
+				self->topFrame->entry = (int)(vmc - self->topFrame->codes);
+				self->activeCode = NULL;
+				for(i=self->topFrame->deferBase; i<self->defers->size; ++i){
+					DaoRoutine *closure = self->defers->items.pRoutine[i];
+					DaoProcess_PushRoutine( self, closure, NULL );
+					self->topFrame->returning = -1;
+				}
+				DArray_Erase( self->defers, self->topFrame->deferBase, -1 );
+				goto CallEntry;
+			}
 			DaoProcess_DoReturn( self, vmc );
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
 			goto FinishCall;
@@ -6470,6 +6470,8 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	if( proto->body->svariables->size == 0 && proto->routHost == NULL && vmc->b == 0 ){
 		/* proto->routHost is not NULL for methods of runtime class. */
 		DaoProcess_SetValue( self, vmc->c, (DaoValue*) proto );
+		if( DString_FindMBS( proto->routName, DAO_DEFER_BLOCK, 0 ) == 0 )
+			DArray_Append( self->defers, proto );
 		return;
 	}
 
@@ -6507,6 +6509,8 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	if( DaoRoutine_SetVmCodes2( closure, proto->body->vmCodes ) ==0 ){
 		DaoProcess_RaiseException( self, DAO_ERROR, "function creation failed" );
 	}
+	if( DString_FindMBS( proto->routName, DAO_DEFER_BLOCK, 0 ) == 0 )
+		DArray_Append( self->defers, closure );
 #if 0
 	DaoRoutine_PrintCode( proto, self->vmSpace->stdioStream );
 	DaoRoutine_PrintCode( closure, self->vmSpace->stdioStream );

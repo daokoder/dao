@@ -34,6 +34,6 @@ rout( 1, "XXX" );
 @[test(code_01)]
 lambda  ABC_abc
 lambda  XXX
-lambda  ABC
+lambda  ABCABC
 lambda  123
 @[test(code_01)]

@@ -43,6 +43,8 @@
 #endif
 #endif
 
+#define DAO_DEFER_BLOCK  "DeferredBlock_"
+
 #include"dao.h"
 #include"daoBase.h"
 
