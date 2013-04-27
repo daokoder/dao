@@ -1074,7 +1074,7 @@ void DaoByteEncoder_EncodeRoutine( DaoByteEncoder *self, DaoRoutine *routine )
 	DNode *it;
 	DMap *abstypes;
 	DaoType *type;
-	int i, id, id2, id3, id4;
+	int i, id, id2, id3;
 
 	if( routine->body == NULL ) return;
 	if( DMap_Find( self->mapRoutines, routine ) ) return;
@@ -1093,11 +1093,9 @@ void DaoByteEncoder_EncodeRoutine( DaoByteEncoder *self, DaoRoutine *routine )
 	id = DaoByteEncoder_EncodeIdentifier( self, routine->routName );
 	id2 = DaoByteEncoder_EncodeType( self, routine->routType );
 	id3 = DaoByteEncoder_EncodeType( self, routine->routHost );
-	id4 = DaoByteEncoder_EncodeDeclaration( self, (DaoValue*)routine->body->upRoutine );
 	DString_AppendUInt( self->routines, id );
 	DString_AppendUInt( self->routines, id2 );
 	DString_AppendUInt( self->routines, id3 );
-	DString_AppendUInt( self->routines, id4 );
 	DString_AppendUInt16( self->routines, routine->attribs );
 	DString_AppendUInt16( self->routines, routine->defLine );
 
@@ -2398,10 +2396,6 @@ static void DaoByteDecoder_VerifyRoutine( DaoByteDecoder *self, DaoRoutine *rout
 				if( vmc->a >= outers->size ) goto InvalidInstruction;
 				if( vmc->b >= regCount ) goto InvalidInstruction;
 				if( DMap_Find( map, IntToPointer(vmc->b) ) == NULL ) goto InvalidInstruction;
-			}else if( routine->body->upRoutine == NULL ){
-				goto InvalidInstruction;
-			}else if( vmc->b >= routine->body->upRoutine->body->regCount ){
-				goto InvalidInstruction;
 			}
 			break;
 		case DAO_CODE_SETU :
@@ -2411,19 +2405,27 @@ static void DaoByteDecoder_VerifyRoutine( DaoByteDecoder *self, DaoRoutine *rout
 				if( vmc->c >= outers->size ) goto InvalidInstruction;
 				if( vmc->b >= regCount ) goto InvalidInstruction;
 				if( DMap_Find( map, IntToPointer(vmc->b) ) == NULL ) goto InvalidInstruction;
-			}else if( routine->body->upRoutine == NULL ){
-				goto InvalidInstruction;
-			}else if( vmc->b >= routine->body->upRoutine->body->regCount ){
-				goto InvalidInstruction;
 			}
 			break;
 		case DAO_CODE_GETC :
 		case DAO_CODE_GETG :
 			if( vmc->c >= regCount ) goto InvalidInstruction;
+			switch( vmc->code ){
+			case DVM_GETVS :
+			case DVM_GETVS_I : case DVM_GETVS_F :
+			case DVM_GETVS_D : case DVM_GETVS_C :
+				if( vmc->b >= routine->body->svariables->size ) goto InvalidInstruction;
+			}
 			DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			break;
 		case DAO_CODE_SETG :
 			if( vmc->a >= regCount ) goto InvalidInstruction;
+			switch( vmc->code ){
+			case DVM_SETVS :
+			case DVM_SETVS_II : case DVM_SETVS_FF :
+			case DVM_SETVS_DD : case DVM_SETVS_CC :
+				if( vmc->b >= routine->body->svariables->size ) goto InvalidInstruction;
+			}
 			break;
 		case DAO_CODE_GETF :
 		case DAO_CODE_SETF :
@@ -2534,12 +2536,10 @@ void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 		int nameid = DaoByteDecoder_DecodeUInt( self );
 		int typeid = DaoByteDecoder_DecodeUInt( self );
 		int hostid = DaoByteDecoder_DecodeUInt( self );
-		int uproutid = DaoByteDecoder_DecodeUInt( self );
 		int attribs = DaoByteDecoder_DecodeUInt16( self );
 		int line = DaoByteDecoder_DecodeUInt16( self );
 		int count = DaoByteDecoder_DecodeUInt16( self );
 		DaoRoutine *routine = (DaoRoutine*) DaoByteDecoder_GetDeclaration( self, routid );
-		DaoRoutine *uprout = (DaoRoutine*) DaoByteDecoder_GetDeclaration( self, uproutid );
 		DaoType *routype = DaoByteDecoder_GetType( self, typeid );
 		DaoType *hostype = DaoByteDecoder_GetType( self, hostid );
 
@@ -2547,9 +2547,6 @@ void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 		if( hostype != routine->routHost ) self->codes = self->error;
 		if( attribs != routine->attribs ) self->codes = self->error;
 		if( self->codes >= self->error ) break;
-
-		GC_ShiftRC( uprout, routine->body->upRoutine );
-		routine->body->upRoutine = uprout;
 
 		routine->defLine = line;
 		for(j=0; j<count; ++j){

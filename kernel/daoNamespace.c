@@ -1733,7 +1733,7 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 			ch = tp->name->mbs[tp->fname->size];
 			tp2 = & tp->aux->xType;
 		}
-		if( tp2 && tp2->tid == DAO_UDT ){
+		if( tp2 && (tp2->tid == DAO_UDT || tp2->tid == DAO_THT) ){
 			if( vals && vals[i] ){
 				tp2 = DaoNamespace_GetType( self, vals[i] );
 			}else if( types && types[i] ){
@@ -1742,12 +1742,7 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 		}
 		/* XXX typing DString_AppendMBS( abtp->name, tp ? tp->name->mbs : "..." ); */
 		if( tp2 != tp && tp2 != & tp->aux->xType ){
-			fname = tp->fname;
-			tp = DaoType_New( fname->mbs, tp->tid, (DaoValue*) tp2, NULL );
-			DString_AppendChar( tp->name, ch );
-			DString_Append( tp->name, tp2->name );
-			if( tp->fname ) DString_Assign( tp->fname, fname );
-			else tp->fname = DString_Copy( fname );
+			tp = DaoType_New( tp->fname->mbs, tp->tid, (DaoValue*) tp2, NULL );
 		}
 		DString_Append( abtp->name, tp->name );
 		DArray_Append( abtp->nested, tp );

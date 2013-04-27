@@ -2762,6 +2762,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	DMap *defs3 = self->defs3;
 	DArray *errors = self->errors;
 	DString *str, *mbs = self->mbstring;
+	DaoRoutine *closure;
 	DaoVmCodeX *vmc, *vmc2;
 	DaoType *at, *bt, *ct, *tt, *catype, *ts[DAO_ARRAY+DAO_MAX_PARAM];
 	DaoType *type, **tp, **type2, **types = self->types->items.pType;
@@ -2789,23 +2790,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 
 	catype = DaoNamespace_MakeType( NS, "array", DAO_ARRAY, NULL, & dao_type_complex, 1 );
 
-	if( body->upRoutine ){
-		for(i=0,n=body->upRoutine->body->annotCodes->size; i<n; i++){
-			vmc = body->upRoutine->body->annotCodes->items.pVmc[i];
-			if( i == 0 || vmc->code != DVM_ROUTINE ) continue;
-			vmc2 = body->upRoutine->body->annotCodes->items.pVmc[i-1];
-			if( vmc2->code != DVM_GETCL ) continue;
-			rout = body->upRoutine->routConsts->items.items.pRoutine[ vmc2->b ];
-			if( rout->type != DAO_ROUTINE ) continue;
-			if( ! DString_EQ( rout->routName, routine->routName ) ) continue;
-			typeVH[0] = body->upRoutine->body->regType->items.pType + vmc->a + 1;
-			break;
-		}
-		if( typeVH[0] == NULL ){
-			printf( "ERROR: invalid up-function for the closure proto-function\n" );
-			return 0; /* XXX error message; */
-		}
-	}
 	for(i=1; i<=DAO_MAX_SECTDEPTH; i++) typeVH[i] = types;
 
 	DArray_Append( rettypes, 0 );
@@ -2935,7 +2919,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			at = 0;
 			switch( code ){
 			case DVM_GETVH : at = typeVH[opa][opb]; break;
-			case DVM_GETVS : break;
+			case DVM_GETVS : at = body->svariables->items.pVar[opb]->dtype; break;
 			case DVM_GETVO : at = hostClass->instvars->items.pVar[opb]->dtype; break;
 			case DVM_GETVK : at = hostClass->variables->items.pVar[opb]->dtype; break;
 			case DVM_GETVG : at = NS->variables->items.pVar[opb]->dtype; break;
@@ -2960,7 +2944,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			type2 = NULL;
 			switch( code ){
 			case DVM_SETVH : type2 = typeVH[opc] + opb; break;
-			case DVM_SETVS : break;
+			case DVM_SETVS : type2 = & body->svariables->items.pVar[opb]->dtype; break;
 			case DVM_SETVO : type2 = & hostClass->instvars->items.pVar[opb]->dtype; break;
 			case DVM_SETVK : type2 = & hostClass->variables->items.pVar[opb]->dtype; break;
 			case DVM_SETVG : type2 = & NS->variables->items.pVar[opb]->dtype; break;
@@ -4967,29 +4951,35 @@ TryPushBlockReturnType:
 				break;
 			}
 		case DVM_ROUTINE :
-			{
-				if( types[opa]->tid != DAO_ROUTINE ) goto ErrorTyping;
-				if( types[opc] && types[opc]->tid == DAO_ANY ) continue;
-				/* close on types */
-				at = types[opa];
-				self->array->size = 0;
-#if 0
-				XXX typing
-					DArray_Resize( tparray, at->parCount, 0 );
-				for(j=0; j<vmc->b; j+=2){
-					int loc = consts[vmc->a+j+2].v.i;
-					if( loc >= at->parCount ) break;
-					tparray->items.pType[loc] = types[opa+j+1];
-				}
-#endif
-				at = DaoNamespace_MakeRoutType( NS, at, NULL, self->array->items.pType, NULL );
+			if( types[opa]->tid != DAO_ROUTINE ) goto ErrorTyping;
+			if( types[opc] && types[opc]->tid == DAO_ANY ) continue;
+			/* close on types */
+			at = types[opa];
+			closure = (DaoRoutine*) consts[opa];
 
-				DaoInferencer_UpdateType( self, opc, at );
-				AssertTypeMatching( at, types[opc], defs );
-				GC_ShiftRC( consts[opa], consts[opc] );
-				consts[opc] = consts[opa];
-				break;
+			self->array->size = 0;
+			DArray_Resize( self->array, closure->parCount, 0 );
+			K = vmc->b - closure->body->svariables->size;
+			for(j=0,k=0; j<closure->parCount; j+=1){
+				DaoType *partype = closure->routType->nested->items.pType[j];
+				self->array->items.pType[j] = partype;
+				if( partype->tid != DAO_PAR_DEFAULT ) continue;
+				if( closure->routConsts->items.items.pValue[j] != NULL ) continue;
+				if( k >= K ) goto ErrorTyping;
+				self->array->items.pType[j] = types[opa+1+k];
+				k += 1;
 			}
+			for(j=0; j<closure->body->svariables->size; ++j){
+				DaoType *uptype = types[opa+1+k+j];
+				GC_ShiftRC( uptype, closure->body->svariables->items.pVar[j]->dtype );
+				closure->body->svariables->items.pVar[j]->dtype = uptype;
+			}
+			at = DaoNamespace_MakeRoutType( NS, at, NULL, self->array->items.pType, NULL );
+
+			DaoInferencer_UpdateType( self, opc, at );
+			AssertTypeMatching( at, types[opc], defs );
+			break;
+
 		case DVM_CLASS :
 			if( at->tid != DAO_TUPLE ) goto InvParam;
 			if( at->nested->size ){
@@ -5186,6 +5176,11 @@ TryPushBlockReturnType:
 			AssertTypeIdMatching( ct, TT1 );
 			break;
 		case DVM_GETVS_I : case DVM_GETVS_F : case DVM_GETVS_D : case DVM_GETVS_C :
+			TT1 = DAO_INTEGER + (code - DVM_GETVS_I);
+			at = body->svariables->items.pVar[opb]->dtype;
+			ct = DaoInferencer_UpdateType( self, opc, self->basicTypes[TT1] );
+			AssertTypeIdMatching( at, TT1 );
+			AssertTypeIdMatching( ct, TT1 );
 			break;
 		case DVM_GETVO_I : case DVM_GETVO_F : case DVM_GETVO_D : case DVM_GETVO_C :
 			TT1 = DAO_INTEGER + (code - DVM_GETVO_I);
@@ -5220,6 +5215,15 @@ TryPushBlockReturnType:
 			AssertTypeIdMatching( tp[0], TT1 );
 			break;
 		case DVM_SETVS_II : case DVM_SETVS_FF : case DVM_SETVS_DD : case DVM_SETVS_CC :
+			tp = & body->svariables->items.pVar[opb]->dtype;
+			if( *tp == NULL || (*tp)->tid == DAO_UDT ){
+				GC_ShiftRC( types[opa], *tp );
+				*tp = types[opa];
+			}
+			TT1 = DAO_INTEGER + (code - DVM_SETVS_II);
+			AssertTypeMatching( types[opa], *tp, defs );
+			AssertTypeIdMatching( at, TT1 );
+			AssertTypeIdMatching( tp[0], TT1 );
 			break;
 		case DVM_SETVO_II : case DVM_SETVO_FF : case DVM_SETVO_DD : case DVM_SETVO_CC :
 			if( self->tidHost != DAO_OBJECT ) goto ErrorTyping;

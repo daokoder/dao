@@ -103,7 +103,8 @@ struct DaoRoutineBody
 	DPlainArray *vmCodes;
 
 	/* data type for local registers: */
-	DArray *regType; /* <DaoType*> */
+	DArray *regType;    /* DArray<DaoType*> */
+	DArray *svariables; /* DArray<DaoVariable*> XXX GC */
 
 	/* VM codes with annotations */
 	DArray *annotCodes; /* <DaoVmCodeX*> */
@@ -124,8 +125,6 @@ struct DaoRoutineBody
 
 	DMap *abstypes;
 
-	DaoRoutine  *upRoutine;
-	DaoProcess  *upProcess;
 	DaoRoutine  *revised; /* to support edit & continue */
 
 	void *jitData;

@@ -853,6 +853,7 @@ int DaoProcess_Execute( DaoProcess *self )
 	DArray   *typeVO = NULL;
 	DaoProcess *dataVH[DAO_MAX_SECTDEPTH+1] = {0};
 	DaoVariable *variable = NULL;
+	DaoVariable **svariables = NULL;
 	DaoValue  **dataVO = NULL;
 	DaoValue **dataCL = NULL;
 	DaoValue *value, *vA, *vB, *vC = NULL;
@@ -1170,6 +1171,7 @@ CallEntry:
 	locVars = self->activeValues;
 	locTypes = self->activeTypes;
 	dataCL = routine->routConsts->items.items.pValue;
+	svariables = routine->body->svariables->items.pVar;
 	if( routine->body->jitData ){
 		jitCallData.localValues = locVars;
 		jitCallData.localConsts = routine->routConsts->items.items.pValue;
@@ -1187,7 +1189,6 @@ CallEntry:
 			jitCallData.objectValues = dataVO;
 		}
 	}
-	dataVH[0] = routine->body->upProcess;
 	if( topFrame->outer ){
 		DaoStackFrame *frame = topFrame;
 		for(i=1; (i<=DAO_MAX_SECTDEPTH) && frame->outer; i++){
@@ -1239,6 +1240,9 @@ CallEntry:
 			GC_ShiftRC( dataVH[ vmc->a ]->activeValues[ vmc->b ], locVars[ vmc->c ] );
 			locVars[ vmc->c ] = dataVH[ vmc->a ]->activeValues[ vmc->b ];
 		}OPNEXT() OPCASE( GETVS ){
+			value = svariables[ vmc->b ]->value;
+			GC_ShiftRC( value, locVars[ vmc->c ] );
+			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETVO ){
 			GC_ShiftRC( dataVO[ vmc->b ], locVars[ vmc->c ] );
 			locVars[ vmc->c ] = dataVO[ vmc->b ];
@@ -1593,9 +1597,13 @@ CallEntry:
 		}OPNEXT() OPCASE( GETVH_C ){
 			locVars[ vmc->c ]->xComplex.value = dataVH[vmc->a]->activeValues[vmc->b]->xComplex.value;
 		}OPNEXT() OPCASE( GETVS_I ){
+			locVars[ vmc->c ]->xInteger.value = svariables[ vmc->b ]->value->xInteger.value;
 		}OPNEXT() OPCASE( GETVS_F ){
+			locVars[ vmc->c ]->xFloat.value = svariables[ vmc->b ]->value->xFloat.value;
 		}OPNEXT() OPCASE( GETVS_D ){
+			locVars[ vmc->c ]->xDouble.value = svariables[ vmc->b ]->value->xDouble.value;
 		}OPNEXT() OPCASE( GETVS_C ){
+			locVars[ vmc->c ]->xComplex.value = svariables[ vmc->b ]->value->xComplex.value;
 		}OPNEXT() OPCASE( GETVO_I ){
 			locVars[ vmc->c ]->xInteger.value = dataVO[ vmc->b ]->xInteger.value;
 		}OPNEXT() OPCASE( GETVO_F ){
@@ -1629,9 +1637,13 @@ CallEntry:
 		}OPNEXT() OPCASE( SETVH_CC ){
 			dataVH[ vmc->c ]->activeValues[ vmc->b ]->xComplex.value = ComplexOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVS_II ){
+			svariables[ vmc->b ]->value->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVS_FF ){
+			svariables[ vmc->b ]->value->xFloat.value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVS_DD ){
+			svariables[ vmc->b ]->value->xDouble.value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVS_CC ){
+			svariables[ vmc->b ]->value->xComplex.value = ComplexOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVO_II ){
 			dataVO[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETVO_FF ){
@@ -6444,49 +6456,39 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoType *tp;
 	DaoValue **pp2;
-	DaoValue **pp = self->activeValues + vmc->a;
-	DaoRoutine *proto = & pp[0]->xRoutine;
+	DaoValue **pp = self->activeValues + vmc->a + 1;
+	DaoRoutine *proto = (DaoRoutine*) self->activeValues[vmc->a];
 	DaoRoutine *closure;
 	DMap *deftypes;
-	int i;
+	int i, j, k, K;
 	if( proto->body->vmCodes->size ==0 && proto->body->annotCodes->size ){
 		if( DaoRoutine_SetVmCodes( proto, proto->body->annotCodes ) ==0 ){
 			DaoProcess_RaiseException( self, DAO_ERROR, "invalid closure" );
 			return;
 		}
 	}
-	if( proto->body->upRoutine == NULL && proto->routHost == NULL && vmc->b == 0 ){
+	if( proto->body->svariables->size == 0 && proto->routHost == NULL && vmc->b == 0 ){
 		/* proto->routHost is not NULL for methods of runtime class. */
 		DaoProcess_SetValue( self, vmc->c, (DaoValue*) proto );
 		return;
 	}
 
 	closure = DaoRoutine_Copy( proto, 1, 1 );
-	if( proto->body->upRoutine ){
-		DMap *map = DHash_New(0,0);
-		DaoProcess *proc = DaoProcess_New( self->vmSpace );
-		GC_ShiftRC( self->activeRoutine, closure->body->upRoutine );
-		closure->body->upRoutine = self->activeRoutine;
-		closure->body->upProcess = proc;
-		GC_IncRC( proc );
-		DaoProcess_PushRoutine( proc, self->activeRoutine, self->activeObject );
-		DaoProcess_SetActiveFrame( proc, proc->topFrame );
-		for(i=0; i<self->activeRoutine->body->regCount; i++){
-			DaoValue *value = self->activeValues[i];
-			DNode *node = DMap_Find( map, value );
-			if( node == NULL ) node = DMap_Insert( map, value, DaoValue_SimpleCopy( value ) );
-			GC_ShiftRC( node->value.pValue, proc->activeValues[i] );
-			proc->activeValues[i] = node->value.pValue;
-		}
-		DMap_Delete( map );
-		proc->activeValues = proc->activeValues + vmc->a + 1;
-		proc->activeTypes = proc->activeTypes + vmc->a + 1;
-	}
 	pp2 = closure->routConsts->items.items.pValue;
-	for(i=0; i<vmc->b; i+=2){
-		if( pp[i+2]->xInteger.value >= closure->parCount ) break;
-		DaoValue_Copy( pp[i+1], pp2 + pp[i+2]->xInteger.value );
+
+	K = vmc->b - closure->body->svariables->size;
+	for(j=0,k=0; j<closure->parCount; j+=1){
+		DaoType *partype = closure->routType->nested->items.pType[j];
+		if( partype->tid != DAO_PAR_DEFAULT ) continue;
+		if( closure->routConsts->items.items.pValue[j] != NULL ) continue;
+		if( k >= K ) break;
+		DaoValue_Copy( pp[k], pp2 + j );
+		k += 1;
 	}
+	for(j=0; j<closure->body->svariables->size; ++j){
+		DaoVariable_Set( closure->body->svariables->items.pVar[j], pp[k+j], NULL );
+	}
+
 	tp = DaoNamespace_MakeRoutType( self->activeNamespace, closure->routType, pp2, NULL, NULL );
 	GC_ShiftRC( tp, closure->routType );
 	closure->routType = tp;
@@ -6505,11 +6507,11 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	if( DaoRoutine_SetVmCodes2( closure, proto->body->vmCodes ) ==0 ){
 		DaoProcess_RaiseException( self, DAO_ERROR, "function creation failed" );
 	}
-	/*
-	 DaoRoutine_PrintCode( proto, self->vmSpace->stdioStream );
-	 DaoRoutine_PrintCode( closure, self->vmSpace->stdioStream );
-	 printf( "%s\n", closure->routType->name->mbs );
-	 */
+#if 0
+	DaoRoutine_PrintCode( proto, self->vmSpace->stdioStream );
+	DaoRoutine_PrintCode( closure, self->vmSpace->stdioStream );
+	printf( "%s\n", closure->routType->name->mbs );
+#endif
 }
 
 

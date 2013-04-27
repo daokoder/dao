@@ -265,6 +265,7 @@ DaoRoutineBody* DaoRoutineBody_New()
 	self->source = NULL;
 	self->vmCodes = DPlainArray_New( sizeof(DaoVmCode) );
 	self->regType = DArray_New(D_VALUE);
+	self->svariables = DArray_New(D_VALUE);
 	self->defLocals = DArray_New(D_TOKEN);
 	self->annotCodes = DArray_New(D_VMCODE);
 	self->localVarType = DMap_New(0,0);
@@ -276,11 +277,10 @@ DaoRoutineBody* DaoRoutineBody_New()
 }
 void DaoRoutineBody_Delete( DaoRoutineBody *self )
 {
-	if( self->upRoutine ) GC_DecRC( self->upRoutine );
-	if( self->upProcess ) GC_DecRC( self->upProcess );
 	DPlainArray_Delete( self->vmCodes );
 	DArray_Delete( self->simpleVariables );
 	DArray_Delete( self->regType );
+	DArray_Delete( self->svariables );
 	DArray_Delete( self->defLocals );
 	DArray_Delete( self->annotCodes );
 	DMap_Delete( self->localVarType );
@@ -308,10 +308,11 @@ void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other )
 	self->regCount = other->regCount;
 	self->codeStart = other->codeStart;
 	self->codeEnd = other->codeEnd;
-	GC_ShiftRC( other->upRoutine, self->upRoutine );
-	GC_ShiftRC( other->upProcess, self->upProcess );
-	self->upRoutine = other->upRoutine;
-	self->upProcess = other->upProcess;
+	DArray_Clear( self->svariables );
+	for(i=0; i<other->svariables->size; ++i){
+		DaoVariable *var = other->svariables->items.pVar[i];
+		DArray_Append( self->svariables, DaoVariable_New( var->value, var->dtype ) );
+	}
 }
 DaoRoutineBody* DaoRoutineBody_Copy( DaoRoutineBody *self )
 {
@@ -329,7 +330,6 @@ int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes )
 	if( body == NULL ) return 0;
 	if( vmCodes == NULL || vmCodes->type != D_VMCODE ) return 0;
 	DArray_Swap( body->annotCodes, vmCodes );
-	if( body->upRoutine && body->upRoutine->body->regType->size ==0 ) return 1;
 	vmCodes = body->annotCodes;
 	DPlainArray_Resize( body->vmCodes, vmCodes->size );
 	for(i=0,n=vmCodes->size; i<n; i++){
