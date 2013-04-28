@@ -33,15 +33,6 @@
 
 #define DAO_MAX_SECTDEPTH  8
 
-#ifndef DAO_DIR
-#ifdef UNIX
-#define DAO_DIR "/usr/local/dao"
-#elif WIN32
-#define DAO_DIR "C:\\dao"
-#else
-#define DAO_DIR ""
-#endif
-#endif
 
 #include"dao.h"
 #include"daoBase.h"

@@ -29,15 +29,7 @@
 #define DAO_BASE_H
 
 #include"dao.h"
-
-
-#if defined (WIN32) && !defined (__GNUC__)
-#define strtoll _strtoi64
-#define wcstoll _wcstoi64
-#define snprintf _snprintf
-#define popen _popen
-#define pclose _pclose
-#endif
+#include"daoPlatforms.h"
 
 
 #define IntToPointer( x ) ((void*)(size_t)x)

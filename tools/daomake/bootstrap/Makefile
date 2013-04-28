@@ -61,6 +61,9 @@ daoOptimizer.o: $(DAO_SRC_DIR)/daoOptimizer.c
 daoThread.o: $(DAO_SRC_DIR)/daoThread.c
 	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoThread.c -o daoThread.o
 
+daoPlatforms.o: $(DAO_SRC_DIR)/daoPlatforms.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoPlatforms.c -o daoPlatforms.o
+
 daoNumtype.o: $(DAO_SRC_DIR)/daoNumtype.c
 	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoNumtype.c -o daoNumtype.o
 
@@ -100,7 +103,7 @@ OBJECTS = daoConst.o daoVmcode.o \
 		  daoLexer.o daoParser.o daoBytecode.o \
 		  daoType.o daoOptimizer.o daoStdlib.o \
 		  daoMacro.o daoStream.o daoRegex.o \
-		  daoGC.o daoThread.o daoSched.o daoMake.o
+		  daoGC.o daoThread.o daoSched.o daoPlatforms.o daoMake.o
 
 
 

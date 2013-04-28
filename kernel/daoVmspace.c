@@ -29,12 +29,6 @@
 #include"ctype.h"
 #include"locale.h"
 
-#ifdef _MSC_VER
-#include "direct.h"
-#define getcwd _getcwd
-#else
-#include"unistd.h"
-#endif
 
 #include"daoNamespace.h"
 #include"daoVmspace.h"
@@ -76,7 +70,6 @@ DaoConfig daoConfig =
 DaoVmSpace *mainVmSpace = NULL;
 DaoProcess *mainProcess = NULL;
 
-extern size_t FileChangedTime( const char *file );
 
 static int TestFile( DaoVmSpace *vms, DString *fname )
 {
@@ -1356,7 +1349,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		MAP_Insert( self->nsModules, ns->name, ns );
 	}
 
-	tm = FileChangedTime( ns->name->mbs );
+	tm = Dao_FileChangedTime( ns->name->mbs );
 	ns->time = tm;
 
 	/* self->fileName may has been changed */
@@ -1441,23 +1434,6 @@ int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname )
 		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
 		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DAO;
 	}else if( size > slen && DString_FindMBS( fname, DAO_DLL_SUFFIX, 0 ) == size - slen ){
-		modtype = DAO_MODULE_DLL;
-#ifdef UNIX
-		if( DString_FindMBS( fname, ".dll", 0 ) == size-4 )
-			DString_Erase( fname, size-4, 4 );
-#ifdef MAC_OSX
-		if( DString_FindMBS( fname, ".dylib", 0 ) != size-6 )
-			DString_AppendMBS( fname, ".dylib" );
-#else
-		if( DString_FindMBS( fname, ".so", 0 ) != size-3 )
-			DString_AppendMBS( fname, ".so" );
-#endif
-#elif WIN32
-		if( DString_FindMBS( fname, ".so", 0 ) == size-3 )
-			DString_Erase( fname, size-3, 3 );
-		if( DString_FindMBS( fname, ".dll", 0 ) != size-4 )
-			DString_AppendMBS( fname, ".dll" );
-#endif
 		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
 		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DLL;
 	}else{
@@ -1547,7 +1523,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 
 	ns = ns2 = DaoVmSpace_FindNamespace( self, libpath );
 
-	tm = FileChangedTime( libpath->mbs );
+	tm = Dao_FileChangedTime( libpath->mbs );
 	/* printf( "time = %lli,  %s  %p\n", tm, libpath->mbs, node ); */
 	if( ns && ns->time >= tm ){
 		if( args ) DaoVmSpace_ParseArguments( self, ns, NULL, args, argNames, argValues );
@@ -1662,9 +1638,6 @@ DaoNamespace* DaoVmSpace_LoadDaoModule( DaoVmSpace *self, DString *libpath )
 	return DaoVmSpace_LoadDaoModuleExt( self, libpath, NULL, 0 );
 }
 
-static void* DaoOpenDLL( const char *name );
-static void* DaoGetSymbolAddress( void *handle, const char *name );
-
 static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath )
 {
 	DNode *node;
@@ -1687,7 +1660,7 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 		funpter = (DaoModuleOnLoad) node->value.pVoid;
 		ns = DaoNamespace_New( self, libpath->mbs );
 	}else{
-		handle = DaoOpenDLL( libpath->mbs );
+		handle = Dao_OpenDLL( libpath->mbs );
 		if( ! handle ){
 			DaoStream_WriteMBS( self->errorStream, "ERROR: unable to open the library file \"" );
 			DaoStream_WriteMBS( self->errorStream, libpath->mbs );
@@ -1698,7 +1671,7 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 		DString_SetMBS( name, "DaoOnLoad" );
 		ns = DaoNamespace_New( self, libpath->mbs );
 		ns->libHandle = handle;
-		funpter = (DaoModuleOnLoad) DaoGetSymbolAddress( handle, "DaoOnLoad" );
+		funpter = (DaoModuleOnLoad) Dao_GetSymbolAddress( handle, "DaoOnLoad" );
 		if( funpter == NULL ){
 			const char *prefixes[4] = { "dao_", "dao", "libdao_", "libdao" };
 			int size = strlen( DAO_DLL_SUFFIX );
@@ -1709,18 +1682,18 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 			}
 			DString_InsertMBS( name, "Dao", 0, 0, 3 );
 			DString_AppendMBS( name, "_OnLoad" );
-			funpter = (DaoModuleOnLoad) DaoGetSymbolAddress( handle, name->mbs );
+			funpter = (DaoModuleOnLoad) Dao_GetSymbolAddress( handle, name->mbs );
 			if( funpter == NULL ){
 				for(i=3; i<name->size-7; i++) name->mbs[i] = tolower( name->mbs[i] );
-				funpter = (DaoModuleOnLoad) DaoGetSymbolAddress( handle, name->mbs );
+				funpter = (DaoModuleOnLoad) Dao_GetSymbolAddress( handle, name->mbs );
 			}
 			if( funpter == NULL ){
 				name->mbs[3] = toupper( name->mbs[3] );
-				funpter = (DaoModuleOnLoad) DaoGetSymbolAddress( handle, name->mbs );
+				funpter = (DaoModuleOnLoad) Dao_GetSymbolAddress( handle, name->mbs );
 			}
 			if( funpter == NULL ){
 				for(i=3; i<name->size-7; i++) name->mbs[i] = toupper( name->mbs[i] );
-				funpter = (DaoModuleOnLoad) DaoGetSymbolAddress( handle, name->mbs );
+				funpter = (DaoModuleOnLoad) Dao_GetSymbolAddress( handle, name->mbs );
 			}
 		}
 	}
@@ -1802,10 +1775,8 @@ void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, DaoVModule *module )
 void Dao_MakePath( DString *base, DString *path )
 {
 	base = DString_Copy( base );
-#ifdef WIN32
-	DString_ChangeMBS( base, "\\", "/", 0 );
-	DString_ChangeMBS( path, "\\", "/", 0 );
-#endif
+	Dao_NormalizePathSep( base );
+	Dao_NormalizePathSep( path );
 	while( DString_MatchMBS( path, " ^ %.%. / ", NULL, NULL ) ){
 		if( DString_MatchMBS( base, " [^/] + ( / | ) $ ", NULL, NULL ) ){
 			DString_ChangeMBS( path, " ^ %.%. / ", "", 1 );
@@ -2122,7 +2093,7 @@ InvalidConfigValue :
 		printf( "error: invalid configuration option value: %s!\n", tk2->string.mbs );
 		break;
 	}
-	DArray_Delete( tokens );
+	DaoLexer_Delete( lexer );
 	DString_Delete( mbs );
 }
 static void DaoConfigure()
@@ -2310,36 +2281,31 @@ int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module )
 	void *jitHandle = NULL;
 	if( module ){
 		DString_SetMBS( name, module );
-		jitHandle = DaoOpenDLL( name->mbs );
+		jitHandle = Dao_OpenDLL( name->mbs );
 	}else{
 		DString_SetMBS( name, "libDaoJIT" DAO_DLL_SUFFIX );
 		DaoVmSpace_SearchPath( self, name, DAO_FILE_PATH, 1 );
-		if( TestPath( self, name, DAO_FILE_PATH ) ) jitHandle = DaoOpenDLL( name->mbs );
+		if( TestPath( self, name, DAO_FILE_PATH ) ) jitHandle = Dao_OpenDLL( name->mbs );
 		if( jitHandle == NULL ){
 			DString_SetMBS( name, "DaoJIT" DAO_DLL_SUFFIX );
 			DaoVmSpace_SearchPath( self, name, DAO_FILE_PATH, 1 );
-			if( TestPath( self, name, DAO_FILE_PATH ) )  jitHandle = DaoOpenDLL( name->mbs );
+			if( TestPath( self, name, DAO_FILE_PATH ) )  jitHandle = Dao_OpenDLL( name->mbs );
 		}
 	}
 	DString_Delete( name );
 	if( jitHandle == NULL ) return 0;
-	init = (DaoJIT_InitFPT) DaoGetSymbolAddress( jitHandle, "DaoJIT_Init" );
+	init = (DaoJIT_InitFPT) Dao_GetSymbolAddress( jitHandle, "DaoJIT_Init" );
 	if( init == NULL ) return 0;
 	(*init)( self, & dao_jit );
-	dao_jit.Quit = (DaoJIT_QuitFPT) DaoGetSymbolAddress( jitHandle, "DaoJIT_Quit" );
-	dao_jit.Free = (DaoJIT_FreeFPT) DaoGetSymbolAddress( jitHandle, "DaoJIT_Free" );
-	dao_jit.Compile = (DaoJIT_CompileFPT) DaoGetSymbolAddress( jitHandle, "DaoJIT_Compile" );
-	dao_jit.Execute = (DaoJIT_ExecuteFPT) DaoGetSymbolAddress( jitHandle, "DaoJIT_Execute" );
+	dao_jit.Quit = (DaoJIT_QuitFPT) Dao_GetSymbolAddress( jitHandle, "DaoJIT_Quit" );
+	dao_jit.Free = (DaoJIT_FreeFPT) Dao_GetSymbolAddress( jitHandle, "DaoJIT_Free" );
+	dao_jit.Compile = (DaoJIT_CompileFPT) Dao_GetSymbolAddress( jitHandle, "DaoJIT_Compile" );
+	dao_jit.Execute = (DaoJIT_ExecuteFPT) Dao_GetSymbolAddress( jitHandle, "DaoJIT_Execute" );
 	if( dao_jit.Execute == NULL ) dao_jit.Compile = NULL;
 	return dao_jit.Compile != NULL;
 }
 static int Dao_GetExecutablePath( const char *command, DString *path )
 {
-#ifdef WIN32
-	char sep = ';';
-#else
-	char sep = ':';
-#endif
 	char *PATH = getenv( "PATH" );
 	DString paths = DString_WrapMBS( PATH );
 	daoint i = 0;
@@ -2348,14 +2314,12 @@ static int Dao_GetExecutablePath( const char *command, DString *path )
 	if( PATH == NULL ) return 0;
 
 	while( i < paths.size ){
-		daoint j = DString_FindChar( & paths, sep, i );
+		daoint j = DString_FindChar( & paths, DAO_ENV_PATH_SEP, i );
 		daoint len = (j == MAXSIZE) ? paths.size - i : j - i;
 		DString base = DString_WrapBytes( paths.mbs + i, len );
 		DString_SetMBS( path, command );
 		Dao_MakePath( & base, path );
-#ifdef WIN32
-		DString_ChangeMBS( path, "\\", "/", 0 );
-#endif
+		Dao_NormalizePathSep( path );
 		if( Dao_IsFile( path->mbs ) ) return 1;
 		if( j == MAXSIZE ) break;
 		i = j + 1;
@@ -2437,9 +2401,7 @@ DaoVmSpace* DaoInit( const char *command )
 	DString_Reserve( mainVmSpace->startPath, 512 );
 	getcwd( mainVmSpace->startPath->mbs, 511 );
 	DString_Reset( mainVmSpace->startPath, strlen( mainVmSpace->startPath->mbs ) );
-#ifdef WIN32
-	DString_ChangeMBS( mainVmSpace->startPath, "\\", "/", 0 );
-#endif
+	Dao_NormalizePathSep( mainVmSpace->startPath );
 
 	DString_AppendPathSep( mainVmSpace->startPath );
 	if( command ){
@@ -2447,9 +2409,9 @@ DaoVmSpace* DaoInit( const char *command )
 		int absolute = command[0] == '/';
 		int relative = command[0] == '.';
 		DString_SetMBS( mbs, command );
+		Dao_NormalizePathSep( mbs );
 #ifdef WIN32
 		absolute = isalpha( command[0] ) && command[1] == ':';
-		DString_ChangeMBS( mbs, "\\", "/", 0 );
 #endif
 		if( absolute == 0 ){
 			if( relative ){
@@ -2643,59 +2605,3 @@ DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname )
 	return ns;
 }
 
-#ifdef DAO_WITHOUT_DLL
-
-void DaoGetErrorDLL(){}
-void* DaoOpenDLL( const char *name ){ return NULL; }
-void* DaoGetSymbolAddress( void *handle, const char *name ){ return NULL; }
-
-#else
-
-#ifdef UNIX
-#include<dlfcn.h>
-#elif WIN32
-#include<windows.h>
-#endif
-
-void DaoGetErrorDLL()
-{
-#ifdef UNIX
-	printf( "%s\n", dlerror() );
-#elif WIN32
-	DWORD error = GetLastError();
-	LPSTR message;
-	FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-			NULL, error, LANG_NEUTRAL, (LPTSTR)&message, 0, NULL );
-	if( message ){
-		printf( "%s\n", message );
-		LocalFree( message );
-	}
-#endif
-}
-
-void* DaoOpenDLL( const char *name )
-{
-	void *handle = NULL;
-#ifdef UNIX
-	handle = dlopen( name, RTLD_NOW | RTLD_GLOBAL );
-#elif WIN32
-	handle = LoadLibrary( name );
-#endif
-	if( !handle ){
-		DaoGetErrorDLL();
-		return 0;
-	}
-	return handle;
-}
-void* DaoGetSymbolAddress( void *handle, const char *name )
-{
-	void *sym = NULL;
-#ifdef UNIX
-	sym = dlsym( handle, name );
-#elif WIN32
-	sym = (void*)GetProcAddress( (HMODULE)handle, name );
-#endif
-	return sym;
-}
-
-#endif

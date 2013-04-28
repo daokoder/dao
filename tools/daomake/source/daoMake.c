@@ -2564,7 +2564,6 @@ DaoTypeBase DaoMakeProject_Typer =
 
 
 
-extern size_t FileChangedTime( const char *file );
 
 static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2593,8 +2592,8 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 
 	if( DaoVmSpace_CompleteModuleName( vmSpace, cache ) == DAO_MODULE_NONE ) reset = 1;
 	DaoVmSpace_CompleteModuleName( vmSpace, original );
-	otime = FileChangedTime( original->mbs );
-	ctime = FileChangedTime( cache->mbs );
+	otime = Dao_FileChangedTime( original->mbs );
+	ctime = Dao_FileChangedTime( cache->mbs );
 	if( otime > ctime ) reset = 1;
 
 	if( project == NULL && reset == 0 ){
@@ -2968,7 +2967,7 @@ int DaoMake_CopyFile( const char *from, const char *to, int update )
 			DString_AppendMBS( dest, sep + 1 );
 		}
 	}
-	if( update && FileChangedTime( from ) <= FileChangedTime( dest->mbs ) ){
+	if( update && Dao_FileChangedTime( from ) <= Dao_FileChangedTime( dest->mbs ) ){
 		DString_Delete( dest );
 		return 0;
 	}

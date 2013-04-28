@@ -2906,7 +2906,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		tmpParser = DaoParser_NewRoutineParser( self, start, virt | stat );
 		tmpRoutine = tmpParser->routine;
 		if( self->isClassBody && self->isDynamicClass ){
-			tmpParser->uplocs = DArray_New(0);
+			if( tmpParser->uplocs == NULL ) tmpParser->uplocs = DArray_New(0);
 			tmpParser->outParser = self;
 		}
 		right = DaoParser_ParsePrototype( self, tmpParser, tki, start );
@@ -5516,7 +5516,8 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	parser->nameSpace = self->nameSpace;
 	parser->vmSpace = self->vmSpace;
 	parser->outParser = self;
-	parser->uplocs = uplocs = DArray_New(0);
+	if( parser->uplocs == NULL ) parser->uplocs = DArray_New(0);
+	uplocs = parser->uplocs;
 	DString_Assign( parser->fileName, self->fileName );
 	if( self->hostClass ){
 		GC_ShiftRC( self->hostClass->objType, rout->routHost );

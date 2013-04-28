@@ -29,10 +29,6 @@
 #include"string.h"
 #include"locale.h"
 
-#ifdef UNIX
-#include<unistd.h>
-#include<sys/time.h>
-#endif
 
 #include"daoStdlib.h"
 #include"daoProcess.h"

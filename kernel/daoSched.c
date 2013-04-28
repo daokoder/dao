@@ -176,16 +176,6 @@ static void DaoCallServer_TryAddThread( DThreadTask func, void *param, int todo 
 	if( todo == 0 ) return;
 	if( total < max || todo > pow( total + max + 10, 5 ) ) DaoCallServer_AddThread( NULL, NULL );
 }
-static double DaoGetCurrentTime()
-{
-#ifdef WIN32
-	return timeGetTime();
-#else
-	struct timeval tv;
-	gettimeofday( & tv, NULL);
-	return tv.tv_sec + (double)tv.tv_usec * 1.0E-9;
-#endif
-}
 static void DaoCallServer_Timer( void *p )
 {
 	DaoCallServer *server = daoCallServer;
@@ -202,7 +192,7 @@ static void DaoCallServer_Timer( void *p )
 		if( server->waitings->size ){
 			DNode *node = DMap_First( server->waitings );
 			time = node->key.pValue->xTuple.items[0]->xDouble.value;
-			time -= DaoGetCurrentTime();
+			time -= Dao_GetCurrentTime();
 			/* wait the right amount of time for the closest arriving timeout: */
 			if( time > 0 ) DCondVar_TimedWait( & server->condv2, & server->mutex, time );
 		}else if( server->timeouts->size ){
@@ -219,7 +209,7 @@ static void DaoCallServer_Timer( void *p )
 		DMutex_Lock( & server->mutex );
 		if( server->waitings->size ){ /* a new wait timed out: */
 			DNode *node = DMap_First( server->waitings );
-			time = DaoGetCurrentTime();
+			time = Dao_GetCurrentTime();
 			if( node->key.pValue->xTuple.items[0]->xDouble.value < time ){
 				DArray_Append( server->timeouts, node->value.pVoid );
 				DMap_EraseNode( server->waitings, node );
@@ -349,7 +339,7 @@ void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout, sh
 
 	DMutex_Lock( & server->mutex );
 	if( timeout >0 ){
-		server->tuple->items[0]->xDouble.value = timeout + DaoGetCurrentTime();
+		server->tuple->items[0]->xDouble.value = timeout + Dao_GetCurrentTime();
 		server->tuple->items[1]->xDouble.value += 1;
 		DMap_Insert( server->waitings, server->tuple, future );
 		DMap_Insert( server->pending, future, NULL );

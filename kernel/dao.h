@@ -34,12 +34,14 @@
 #include<stdlib.h>
 #include<stddef.h>
 
+
 #define DAO_VERSION "1.2"
-#define DAO_H_VERSION 20120112
+
 
 #if (defined DAO_WITH_CONCURRENT && !defined DAO_WITH_THREAD)
 #define DAO_WITH_THREAD
 #endif
+
 
 #if defined(MAC_OSX) && ! defined(UNIX)
 #define UNIX
@@ -53,46 +55,15 @@
 #undef UNICODE
 #endif /* UNICODE */
 
-#include<windows.h>
-
-#define DAO_DLL __declspec(dllexport)
-
+#define DAO_DLL        __declspec(dllexport)
 #define DAO_DLL_EXPORT __declspec(dllexport)
 #define DAO_DLL_IMPORT __declspec(dllimport)
-
-#define DAO_DLL_SUFFIX ".dll"
-#define DAO_LIB_DEFAULT "C:\\dao\\dao.dll"
-
-
-#elif defined(UNIX) /* UNIX */
-
-#include<dlfcn.h>
-#define DAO_DLL extern
-
-#define DAO_DLL_EXPORT
-#define DAO_DLL_IMPORT
-
-
-#ifdef MAC_OSX
-
-#define DAO_DLL_SUFFIX ".dylib"
-#define DAO_LIB_DEFAULT "/usr/local/dao/dao.dylib"
-
-#else /* UNIX */
-
-#define DAO_DLL_SUFFIX ".so"
-#define DAO_LIB_DEFAULT "/usr/local/dao/dao.so"
-
-#endif /* MAC_OSX */
 
 #else /* other system */
 
 #define DAO_DLL extern
 #define DAO_DLL_EXPORT
 #define DAO_DLL_IMPORT
-
-#define DAO_DLL_SUFFIX ".unkown"
-#define DAO_LIB_DEFAULT ""
 
 #endif /* WIN32 */
 
@@ -106,7 +77,8 @@
 #endif /* DAO_INT_FORMAT */
 
 
-#define DAO_MAX_CDATA_SUPER 10
+#define DAO_MAX_CDATA_SUPER 8
+
 
 #ifdef __cplusplus
 extern "C"{
