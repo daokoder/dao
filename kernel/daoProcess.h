@@ -54,6 +54,7 @@ struct DaoStackFrame
 	ushort_t      varCount; /* the number of local variables allocated on the stack; */
 	daoint        stackBase; /* the offset on the stack for the local variables; */
 	daoint        deferBase; /* the offset on the DaoProcess::defers list; */
+	daoint        exceptBase; /* the offset on the DaoProcess::exceptions list; */
 
 	DaoVmCode    *codes; /* = routine->vmCodes->codes; */
 	DaoType     **types;

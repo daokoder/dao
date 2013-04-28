@@ -2203,17 +2203,39 @@ static void dao_FakeList_SetItem( DaoProcess *_proc, DaoValue *_p[], int _n )
 
 
 
+static void DaoBuiltIn_Warn( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoType *type = DaoException_GetType( DAO_WARNING );
+	DaoException *self = (DaoException*)DaoException_New( type );
+	DaoStream *stream = proc->stdioStream ? proc->stdioStream : proc->vmSpace->stdioStream;
+	DString_Assign( self->info, p[0]->xString.data );
+	DaoException_Init( self, proc, NULL );
+	DaoException_Print( self, stream );
+	DaoException_Delete( self );
+}
 static void DaoBuiltIn_Panic( DaoProcess *proc, DaoValue *p[], int n )
 {
+	DaoType *type = DaoException_GetType( DAO_ERROR );
+	DaoException *self = (DaoException*)DaoException_New2( type, p[0] );
+	DaoException_Init( self, proc, NULL );
+	DArray_Append( proc->exceptions, self );
 }
 static void DaoBuiltIn_Recover( DaoProcess *proc, DaoValue *p[], int n )
 {
+	DaoList *list = DaoProcess_PutList( proc );
+	DaoStackFrame *frame = proc->topFrame->prev; /* caller frame */
+	if( frame == NULL || frame->prev == NULL || frame->prev == proc->firstFrame ) return;
+	while( proc->exceptions->size > frame->prev->exceptBase ){
+		DaoList_Append( list, DArray_Back( proc->exceptions ) );
+		DArray_PopBack( proc->exceptions );
+	}
 }
 
 DaoFuncItem dao_builtin_methods[] =
 {
+	{ DaoBuiltIn_Warn,     "warn( message : string )" },
 	{ DaoBuiltIn_Panic,    "panic( value : any )" },
-	{ DaoBuiltIn_Recover,  "recover( )=>any" },
+	{ DaoBuiltIn_Recover,  "recover( )=>list<any>" },
 	{ NULL, NULL }
 };
 
@@ -2529,6 +2551,8 @@ DaoVmSpace* DaoInit( const char *command )
 	ns2 = DaoVmSpace_GetNamespace( vms, "std" );
 	DaoNamespace_AddConstValue( ns, "std", (DaoValue*) ns2 );
 	DaoNamespace_WrapFunctions( ns2, dao_std_methods );
+
+	DaoNamespace_WrapFunctions( ns, dao_builtin_methods );
 
 	DaoNamespace_AddParent( vms->mainNamespace, vms->nsInternal );
 

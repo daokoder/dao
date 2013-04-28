@@ -100,7 +100,6 @@ static void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc );
 /* return TRUE, if some exceptions can be rescued */
 static int DaoProcess_DoRescueExcept( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, const char *op );
-static void DaoPrintException( DaoException *except, DaoStream *stream );
 
 static void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc );
@@ -1068,25 +1067,23 @@ int DaoProcess_Execute( DaoProcess *self )
 
 CallEntry:
 
-	self->topFrame->deferBase = self->defers->size;
+	topFrame = self->topFrame;
+	topFrame->deferBase = self->defers->size;
+	topFrame->exceptBase = self->exceptions->size;
+	routine = topFrame->routine;
 
-	/*
-	   printf( "stack size = %s %i %i\n", getenv("PROC_NAME"), self->stackContext->size, base );
-	 */
-	if( self->topFrame == base->prev ){
+	if( topFrame == base->prev ){
 		self->status = DAO_VMPROC_FINISHED;
 		if( self->exceptions->size > 0 ) goto FinishProc;
 		/*if( eventHandler ) eventHandler->mainRoutineExit(); */
 		goto ReturnTrue;
 	}
-	topFrame = self->topFrame;
-	if( topFrame->routine && topFrame->routine->pFunc ){
+	if( routine && routine->pFunc ){
 		DaoValue **p = self->stackValues + topFrame->stackBase;
 		DaoProcess_CallFunction( self, topFrame->routine, p, topFrame->parCount );
 		DaoProcess_PopFrame( self );
 		goto CallEntry;
 	}
-	routine = topFrame->routine;
 #if 0
 	if( (vmSpace->options & DAO_EXEC_SAFE) && self->topFrame->index >= 100 ){
 		DaoProcess_RaiseException( self, DAO_ERROR,
@@ -4171,33 +4168,6 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 	}
 }
 
-static void DaoType_WriteMainName( DaoType *self, DaoStream *stream )
-{
-	DString *name = self->name;
-	daoint i, n = DString_FindChar( name, '<', 0 );
-	if( n == MAXSIZE ) n = name->size;
-	for(i=0; i<n; i++) DaoStream_WriteChar( stream, name->mbs[i] );
-}
-static void DString_Format( DString *self, int width, int head )
-{
-	daoint i, j, n, k = width - head;
-	char buffer[32];
-	if( head >= 30 ) head = 30;
-	if( width <= head ) return;
-	memset( buffer, ' ', head+1 );
-	buffer[0] = '\n';
-	buffer[head+1] = '\0';
-	DString_ToMBS( self );
-	n = self->size - head;
-	if( self->size <= width ) return;
-	while( n > k ){
-		i = k * (n / k) + head;
-		j = 0;
-		while( (i+j) < self->size && isspace( self->mbs[i+j] ) ) j += 1;
-		DString_InsertMBS( self, buffer, i, j, head+1 );
-		n = i - head - 1;
-	}
-}
 daoint DaoArray_SliceSize( DaoArray *self );
 int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc,
 		DString *name, DaoValue *P[], int N, int ignore_return, int execute );
@@ -6847,41 +6817,6 @@ int DaoProcess_DoCheckExcept( DaoProcess *self, DaoVmCode *vmc )
 	}
 	return 0;
 }
-static void DaoInitException( DaoException *except, DaoProcess *proc, DaoVmCode *vmc, const char *value )
-{
-	DaoVmCodeX **annotCodes;
-	DaoRoutine *rout = proc->activeRoutine;
-	DaoType *efloat = DaoException_GetType( DAO_ERROR_FLOAT );
-	DaoStackFrame *frame = proc->topFrame->prev;
-	int id = (int) (vmc - proc->topFrame->active->codes);
-	int line, line2;
-
-	if( rout == NULL ) return;
-	annotCodes = rout->body->annotCodes->items.pVmc;
-
-	line = line2 = rout->defLine;
-	if( vmc && rout->body->vmCodes->size ) line = annotCodes[id]->line;
-	line2 = line;
-	except->routine = rout;
-	except->toLine = line;
-	except->fromLine = line2;
-	if( value && value[0] != 0 ){
-		DaoValue *s = (DaoValue*) DaoString_New(1);
-		DString_SetMBS( s->xString.data, value );
-		GC_ShiftRC( s, except->edata );
-		except->edata = s;
-	}
-	DArray_Clear( except->callers );
-	DArray_Clear( except->lines );
-	while( frame && frame->routine ){
-		DaoRoutineBody *body = frame->routine->body;
-		if( except->callers->size >= 5 ) break;
-		line = body ? body->annotCodes->items.pVmc[ frame->entry - 1 ]->line : 0;
-		DArray_Append( except->callers, frame->routine );
-		DArray_Append( except->lines, (daoint) line );
-		frame = frame->prev;
-	}
-}
 extern void STD_Debug( DaoProcess *proc, DaoValue *p[], int N );
 void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
 {
@@ -6899,6 +6834,7 @@ void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
 		N = list->items.size;
 		excepts = list->items.items.pValue;
 	}
+	self->activeCode = vmc;
 	for(i=0; i<N; i++){
 		val = excepts[i];
 		if( val->type == DAO_OBJECT || val->type == DAO_CDATA || val->type == DAO_CSTRUCT ){
@@ -6909,9 +6845,9 @@ void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
 				if( DaoType_ChildOf( val->xCdata.ctype, except ) ) cdata = (DaoException*)val;
 			}
 			if( cdata == NULL ) goto InvalidException;
-			DaoInitException( (DaoException*)cdata, self, vmc, NULL );
+			DaoException_Init( (DaoException*)cdata, self, NULL );
 			if( DaoType_ChildOf( cdata->ctype, warning ) ){
-				DaoPrintException( cdata, stream );
+				DaoException_Print( cdata, stream );
 			}else{
 				DArray_Append( self->exceptions, val );
 			}
@@ -7001,13 +6937,13 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 	if( DaoType_ChildOf( etype, warning ) ){
 		/* XXX support warning suppression */
 		except = DaoException_New( etype );
-		DaoInitException( except, self, self->activeCode, value );
-		DaoPrintException( except, stream );
+		DaoException_Init( except, self, value );
+		DaoException_Print( except, stream );
 		DaoException_Delete( except );
 		return;
 	}
 	except = DaoException_New( etype );
-	DaoInitException( except, self, self->activeCode, value );
+	DaoException_Init( except, self, value );
 	DArray_Append( self->exceptions, (DaoValue*) except );
 	if( (self->vmSpace->options & DAO_EXEC_DEBUG) ){
 		if( self->stopit ==0 && self->vmSpace->stopit ==0 ){
@@ -7030,89 +6966,6 @@ void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, co
 	DString_Delete( details );
 }
 
-void DaoPrintException( DaoException *ex, DaoStream *stream )
-{
-	int i, h, w = 100, n = ex->callers->size;
-	DaoStream *ss = DaoStream_New();
-	DString *sstring = ss->streamString;
-	ss->attribs |= DAO_IO_STRING;
-
-	DaoStream_WriteMBS( ss, "[[" );
-	DaoStream_WriteString( ss, ex->name );
-	DaoStream_WriteMBS( ss, "]] --- " );
-	h = sstring->size;
-	if( h > 40 ) h = 40;
-	DaoStream_WriteString( ss, ex->info );
-	DaoStream_WriteMBS( ss, ":" );
-	DaoStream_WriteNewLine( ss );
-	DString_Format( sstring, w, h );
-	DaoStream_WriteString( stream, sstring );
-	DString_Clear( sstring );
-
-	if( ex->edata && ex->edata->type == DAO_STRING ){
-		DaoStream_WriteString( ss, ex->edata->xString.data );
-		if( DString_RFindChar( sstring, '\n', -1 ) != sstring->size-1 )
-			DaoStream_WriteNewLine( ss );
-		DaoStream_WriteString( stream, sstring );
-		DString_Clear( sstring );
-		DaoStream_WriteMBS( ss, "--\n" );
-	}
-
-	DaoStream_WriteMBS( ss, "Raised by:  " );
-	if( ex->routine->attribs & DAO_ROUT_PARSELF ){
-		DaoType *type = ex->routine->routType->nested->items.pType[0];
-		DaoType_WriteMainName( & type->aux->xType, ss );
-		DaoStream_WriteMBS( ss, "." );
-	}else if( ex->routine->routHost ){
-		DaoType_WriteMainName( ex->routine->routHost, ss );
-		DaoStream_WriteMBS( ss, "." );
-	}
-	DaoStream_WriteString( ss, ex->routine->routName );
-	DaoStream_WriteMBS( ss, "(), " );
-
-	if( ex->routine->type == DAO_ROUTINE ){
-		DaoStream_WriteMBS( ss, "at line " );
-		DaoStream_WriteInt( ss, ex->fromLine );
-		if( ex->fromLine != ex->toLine ){
-			DaoStream_WriteMBS( ss, "-" );
-			DaoStream_WriteInt( ss, ex->toLine );
-		}
-		DaoStream_WriteMBS( ss, " in file \"" );
-		DaoStream_WriteString( ss, ex->routine->nameSpace->name );
-		DaoStream_WriteMBS( ss, "\";\n" );
-	}else{
-		DaoStream_WriteMBS( ss, "from namespace \"" );
-		DaoStream_WriteString( ss, ex->routine->nameSpace->name );
-		DaoStream_WriteMBS( ss, "\";\n" );
-	}
-	DString_Format( sstring, w, 12 );
-	DaoStream_WriteString( stream, sstring );
-	DString_Clear( sstring );
-
-	for(i=0; i<n; i++){
-		DaoRoutine *rout = ex->callers->items.pRoutine[i];
-		DaoStream_WriteMBS( ss, "Called by:  " );
-		if( rout->attribs & DAO_ROUT_PARSELF ){
-			DaoType *type = rout->routType->nested->items.pType[0];
-			DaoType_WriteMainName( & type->aux->xType, ss );
-			DaoStream_WriteMBS( ss, "." );
-		}else if( rout->routHost ){
-			DaoType_WriteMainName( rout->routHost, ss );
-			DaoStream_WriteMBS( ss, "." );
-		}
-		DaoStream_WriteString( ss, rout->routName );
-		DaoStream_WriteMBS( ss, "(), " );
-		DaoStream_WriteMBS( ss, "at line " );
-		DaoStream_WriteInt( ss, ex->lines->items.pInt[i] );
-		DaoStream_WriteMBS( ss, " in file \"" );
-		DaoStream_WriteString( ss, rout->nameSpace->name );
-		DaoStream_WriteMBS( ss, "\";\n" );
-		DString_Format( sstring, w, 12 );
-		DaoStream_WriteString( stream, sstring );
-		DString_Clear( sstring );
-	}
-	DaoStream_Delete( ss );
-}
 void DaoProcess_PrintException( DaoProcess *self, int clear )
 {
 	DaoType *extype = dao_Exception_Typer.core->kernel->abtype;
@@ -7127,7 +6980,7 @@ void DaoProcess_PrintException( DaoProcess *self, int clear )
 			except = (DaoException*)DaoObject_CastToBase( & excobjs[i]->xObject, extype );
 		}
 		if( except == NULL ) continue;
-		DaoPrintException( except, stream );
+		DaoException_Print( except, stream );
 	}
 	if( clear ) DArray_Clear( self->exceptions );
 }

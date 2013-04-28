@@ -254,6 +254,8 @@ DaoException* DaoException_New( DaoType *type );
 DaoException* DaoException_New2( DaoType *type, DaoValue *v );
 void DaoException_Delete( DaoException *self );
 void DaoException_Setup( DaoNamespace *ns );
+void DaoException_Init( DaoException *self, DaoProcess *proc, const char *value );
+void DaoException_Print( DaoException *self, DaoStream *stream );
 
 DaoType* DaoException_GetType( int type );
 
