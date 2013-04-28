@@ -107,9 +107,6 @@ enum DaoOpcode
 	DVM_MCALL , /* method call: x.y(...), pass x as the first parameter */
 	DVM_RETURN , /* return A,A+1,..,A+B-1; B==0: no returns; C==1: return from functional */
 	DVM_YIELD , /* yield A, A+1,.., A+B-1; return data at C when resumed; */
-	DVM_TRY , /* check exception, push exception scope, and then try the block; */
-	DVM_RAISE , /* raise exceptions: A,...,A+B-1; if B=0, re-raise catched exceptions; */
-	DVM_CATCH , /* catch exceptions: A,...,A+B-1; if B=0, catch all; if none, goto C; */
 	DVM_DEBUG , /* prompt to debugging mode; */
 	DVM_JITC , /* run Just-In-Time compiled Code A, and skip the next B instructions */
 	DVM_SECT , /* code subsection label, parameters: A,A+1,...,A+B-1; C # explicit parameters; */

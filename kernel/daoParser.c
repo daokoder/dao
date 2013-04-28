@@ -2232,9 +2232,6 @@ static int DaoParser_DelScope( DaoParser *self, DaoInode *node )
 		node = DaoParser_AddCode( self, DVM_GOTO, 0, 0, 0, 0, 0, 0 );
 		branch->jumpFalse = closing;
 		node->jumpTrue = opening;
-	}else if( opening->code == DVM_TRY ){
-		DaoInode *branch = opening->jumpTrue;
-		if( branch->code == DVM_CATCH ) branch->jumpFalse = closing; /* catch */
 	}else if( opening->code == DVM_LBRA ){
 		node = DaoParser_AddCode( self, DVM_RBRA, 0, 0, 0, 0, 0, 0 );
 	}
@@ -4011,67 +4008,6 @@ DecoratorError:
 			start = self->curToken;
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			continue;
-		case DKEY_TRY :
-			closing = DaoParser_AddCode( self, DVM_LABEL, DKEY_CATCH, 0, DVM_TRY, start, 0,0 );
-			opening = DaoParser_AddScope( self, DVM_TRY, closing );
-			DaoParser_AddCode( self, DVM_NOP, 0,0,0, start,0,0 );
-			opening->jumpTrue = self->vmcLast;
-			start += 1 + DaoParser_AddScope2( self, start+1 );
-			continue;
-		case DKEY_RETRY :
-			opening = closing = NULL;
-			for(i=(int)self->scopeOpenings->size-1; i>=0; i--){
-				opening = self->scopeOpenings->items.pInode[i];
-				closing = self->scopeClosings->items.pInode[i];
-				if( closing && closing->c == DVM_TRY ) break;
-				opening = closing = NULL;
-			}
-			if( opening == NULL ){
-				DaoParser_Error3( self, DAO_STATEMENT_OUT_OF_CONTEXT, start );
-				return 0;
-			}
-			DaoParser_AddCode( self, DVM_GOTO, 0, 0, 0, start,0,0 );
-			self->vmcLast->jumpTrue = opening;
-			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
-			start += 1;
-			continue;
-		case DKEY_CATCH :
-			opening = (DaoInode*) DArray_Back( self->scopeOpenings );
-			closing = (DaoInode*) DArray_Back( self->scopeClosings );
-			/* If not following "try" or "catch", abort with error: */
-			if( closing == NULL || closing->a != DKEY_CATCH ){
-				DaoParser_Error3( self, DAO_STATEMENT_OUT_OF_CONTEXT, start );
-				return 0;
-			}
-			inode = DaoParser_AddCode( self, DVM_GOTO, 0, 0, 0, 0, 0, 0 );
-			inode->jumpTrue = closing; /* jump out of the catch block */
-			inode = DaoParser_AddCode( self, DVM_NOP, 0, 0, 0, 0, 0, 0 );
-			opening->jumpTrue->jumpFalse = inode; /* previous catch jump here */
-			opening->jumpTrue = inode; /* reset */
-
-			if( DaoParser_CompleteScope( self, start-1 ) == 0 ) return 0;
-			if( tokens[start+1]->name == DTOK_LB ){
-				/* catch( ... ) */
-				self->curToken = start+ 2;
-				enode = DaoParser_ParseExpressionList( self, DTOK_COMMA, NULL, NULL );
-				if( enode.reg < 0 || DaoParser_CheckTokenType( self, DTOK_RB, ")" ) == 0 ) return 0;
-				rb = self->curToken;
-
-				DaoParser_AddCode( self, DVM_CATCH, enode.reg, enode.count, 0, start, 0, rb );
-				opening->jumpTrue = self->vmcLast; /* update the catch test */
-				start = 1 + rb + DaoParser_AddScope2( self, rb+1 );
-			}else if( tokens[start+1]->name == DTOK_LCB ){
-				/* catch */
-				closing->a = 0; /* the try block is done */
-				DaoParser_AddCode( self, DVM_CATCH, 0, 0, 0, start, 0, 0 );
-				opening->jumpTrue = self->vmcLast; /* update the condition test */
-				start += 1 + DaoParser_AddScope2( self, start+1 );
-			}else{
-				DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
-				return 0;
-			}
-			continue;
-		case DKEY_RAISE :
 		case DKEY_RETURN :
 			start += 1;
 			reg = N = end = 0;
@@ -4086,9 +4022,7 @@ DecoratorError:
 					start = end;
 				}
 			}
-			if( tki == DKEY_RAISE ){
-				DaoParser_AddCode( self, DVM_RAISE, reg, N, 0, start, 0, end );
-			}else if( self->isFunctional && N > 1 ){
+			if( self->isFunctional && N > 1 ){
 				int tup = DaoParser_PushRegister( self );
 				DaoParser_AddCode( self, DVM_TUPLE, reg, N, tup, start, 0, end );
 				DaoParser_AddCode( self, DVM_RETURN, tup, 1, 0, start, 0, end );
@@ -4575,8 +4509,6 @@ static int DaoParser_SetupBranching( DaoParser *self )
 		case DVM_GOTO : it->b = it->jumpTrue->index; break;
 		case DVM_SWITCH : it->b = it->jumpFalse->index; break;
 		case DVM_CASE  : it->b = it->jumpTrue->index; break;
-		case DVM_TRY   : it->a = it->b = 0; break;
-		case DVM_CATCH : it->c = it->jumpFalse->index; break;
 		default : break;
 		}
 		if( it->code != DVM_UNUSED ) DArray_Append( self->vmCodes, (DaoVmCodeX*) it );
@@ -6809,21 +6741,6 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 				result.last->c = result.last->a;
 				result.reg = result.last->a;
 			}
-		}else if( oper == DAO_OPER_ASSERT ){ /* assertation with failed value: e1 ?? e2 */
-			inode = DaoParser_InsertCode( self, LHS.prev, DVM_TRY, 0,0,0, postart );
-			if( LHS.last == NULL ){
-				int tmp = DaoParser_PushRegister( self );
-				inode = DaoParser_InsertCode( self, inode, DVM_MOVE, LHS.reg, 1, tmp, postart );
-				LHS.last = inode;
-				LHS.reg = tmp;
-			}
-			result.reg = DaoParser_PushRegister( self );
-			test = DaoParser_InsertCode( self, LHS.last, DVM_CATCH, 0, 0, 0, postart );
-			result.update = DaoParser_AddCode( self, DVM_MOVE, RHS.reg,0,LHS.reg,postart,0,posend );
-			inode = DaoParser_AddCode( self, DVM_UNUSED, 0,0,0,0,0,0 );
-			test->jumpFalse = inode;
-			result.reg = LHS.reg;
-			result.last = inode;
 		}else if( oper == DAO_OPER_AND || oper == DAO_OPER_OR ){
 			result.last = DaoParser_AddBinaryCode( self, mapAithOpcode[oper], & LHS, & RHS, pos );
 			result.reg = result.last->c;

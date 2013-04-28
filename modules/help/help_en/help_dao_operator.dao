@@ -176,20 +176,6 @@ Type Operators
 | ?<  | is type of | value ?< type    |
 </table>
 
-@[subsection]Assertion Operator@[subsection]
-
-Operator <bf>??</bf> can be used to assert if the last
-operation is executed successfully,
-and return 1 on success, and 0 otherwise.
-In the case that the last operation can produce a value,
-this operator can also be used to specify an alternative 
-value if that operation failed.
-
-@[code]
-a = alist[i] ??   # check if item accessing by index is successful;
-b = amap[key] ??  # check if a map has a particular key;
-val = amap[key] ?? another  # if amap has the key, assign its value, otherwise assign another;
-@[code]
 
 @[subsection]Multiple Assignment:@[subsection]
 

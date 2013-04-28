@@ -934,7 +934,6 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_MATH ,
 		&& LAB_CALL , && LAB_MCALL ,
 		&& LAB_RETURN , && LAB_YIELD ,
-		&& LAB_TRY , && LAB_RAISE , && LAB_CATCH ,
 		&& LAB_DEBUG ,
 		&& LAB_JITC ,
 		&& LAB_SECT ,
@@ -1098,7 +1097,6 @@ CallEntry:
 	if( ROUT_HOST_TID( routine ) == DAO_OBJECT )
 		printf("class name = %s\n", routine->routHost->aux->xClass.className->mbs);
 	printf("routine name = %s\n", routine->routName->mbs);
-	//printf("entry code = %i\n", DArrayS4_Top( self->stackStates )[S4_ENTRY] );
 	printf("number of instruction: %i\n", routine->body->vmCodes->size );
 	if( routine->routType ) printf("routine type = %s\n", routine->routType->name->mbs);
 #endif
@@ -1479,36 +1477,6 @@ CallEntry:
 			self->activeCode = vmc;
 			DaoProcess_MakeClass( self, vmc );
 			goto CheckException;
-		}OPNEXT() OPCASE( TRY ) OPCASE( RAISE ) OPCASE( CATCH ){
-			exceptCount = self->exceptions->size;
-			self->activeCode = vmc;
-			size = (daoint)(vmc - vmcBase);
-			range = topFrame->ranges[ topFrame->depth-1 ];
-			if( vmc->b == 0 ){ /* check exception: */
-				int exceptFrom = range[0];
-				/* remove a pair of exception scope, when it becomes invalid: */
-				if( size <= exceptFrom && topFrame->depth >0 ) topFrame->depth --;
-				if( DaoProcess_DoCheckExcept( self, vmc ) ){
-					/* exception has happened before, jump to the proper handling point: */
-					if( topFrame->depth ==0 ) goto FinishCall;
-					vmc = vmcBase + range[1];
-					topFrame->depth --;
-					OPJUMP()
-				}
-			}else if( vmc->c == 0 ){
-				self->activeCode = vmc;
-				DaoProcess_DoRaiseExcept( self, vmc );
-				goto CheckException;
-			}else{
-				retCode = DaoProcess_DoRescueExcept( self, vmc );
-				exceptCount = self->exceptions->size;
-				/* remove a pair of exception scope, when it becomes invalid: */
-				if( topFrame->depth >0 && size >= range[1] ) topFrame->depth --;
-				if( retCode == 0 ){
-					vmc = vmcBase + vmc->c;
-					OPJUMP()
-				}
-			}
 		}OPNEXT() OPCASE( JITC ){
 			jitCallData.localValues = locVars;
 			jitCallData.globalValues = here->variables->items.pVar;
@@ -6795,135 +6763,8 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 }
 #endif
 
+void STD_Debug( DaoProcess *proc, DaoValue *p[], int N );
 
-int DaoProcess_DoCheckExcept( DaoProcess *self, DaoVmCode *vmc )
-{
-	DaoStackFrame *topFrame = self->topFrame;
-	DaoList *list = & self->activeNamespace->variables->items.pVar[DVR_NSV_EXCEPTIONS]->value->xList;
-	ushort_t *range = topFrame->ranges[ topFrame->depth-1 ];
-	daoint size = (daoint)(vmc - topFrame->codes);
-
-	DaoList_Clear( list );
-	self->activeCode = vmc;
-	if( self->exceptions->size > 0 ) return 1;
-	if( vmc->c > 0 ){
-		/* add exception scope for: try{ ... } */
-		if( topFrame->depth < DVM_MAX_TRY_DEPTH )
-			DaoStackFrame_PushRange( topFrame, size, vmc->c );
-		else
-			printf( "too many nested try{} statements\n" );
-	}else if( topFrame->depth >0 && size >= range[1] ){
-		/* remove a pair of exception scope, when it becomes invalid: */
-		topFrame->depth --;
-	}
-	return 0;
-}
-extern void STD_Debug( DaoProcess *proc, DaoValue *p[], int N );
-void DaoProcess_DoRaiseExcept( DaoProcess *self, DaoVmCode *vmc )
-{
-	DaoStream *stream = self->vmSpace->errorStream;
-	DaoException *cdata = NULL;
-	DaoType *except = DaoException_GetType( DAO_EXCEPTION );
-	DaoType *warning = DaoException_GetType( DAO_WARNING );
-	DaoList *list = & self->activeNamespace->variables->items.pVar[DVR_NSV_EXCEPTIONS]->value->xList;
-	DaoValue **excepts = self->activeValues + vmc->a;
-	DaoValue *val;
-	ushort_t i, line = 0, line2 = 0;
-	ushort_t N = vmc->b;
-	line2 = line;
-	if( N == 0 && list->items.size >0 ){
-		N = list->items.size;
-		excepts = list->items.items.pValue;
-	}
-	self->activeCode = vmc;
-	for(i=0; i<N; i++){
-		val = excepts[i];
-		if( val->type == DAO_OBJECT || val->type == DAO_CDATA || val->type == DAO_CSTRUCT ){
-			cdata = NULL;
-			if( val->type == DAO_OBJECT ){
-				cdata = (DaoException*) DaoObject_CastToBase( & val->xObject, except );
-			}else{
-				if( DaoType_ChildOf( val->xCdata.ctype, except ) ) cdata = (DaoException*)val;
-			}
-			if( cdata == NULL ) goto InvalidException;
-			DaoException_Init( (DaoException*)cdata, self, NULL );
-			if( DaoType_ChildOf( cdata->ctype, warning ) ){
-				DaoException_Print( cdata, stream );
-			}else{
-				DArray_Append( self->exceptions, val );
-			}
-		}else{
-			goto InvalidException;
-		}
-		continue;
-	InvalidException:
-		DaoProcess_RaiseException( self, DAO_ERROR, "invalid exception object" );
-		break;
-	}
-	DaoList_Clear( list );
-	if( self->vmSpace->options & DAO_EXEC_DEBUG ){
-		DaoProcess_PrintException( self, 0 );
-		STD_Debug( self, NULL, 0 );
-	}
-}
-int DaoProcess_DoRescueExcept( DaoProcess *self, DaoVmCode *vmc )
-{
-	DaoList *list = & self->activeNamespace->variables->items.pVar[DVR_NSV_EXCEPTIONS]->value->xList;
-	DaoType *ext = DaoException_GetType( DAO_EXCEPTION );
-	DaoType *any = DaoException_GetType( DAO_EXCEPTION_ANY );
-	DaoType *none = DaoException_GetType( DAO_EXCEPTION_NONE );
-	DaoValue **excepts = self->activeValues + vmc->a;
-	DaoValue *val, *val2;
-	DaoCdata *cdata;
-	ushort_t i, j;
-	ushort_t N = vmc->b;
-	int canRescue = 0;
-	int M = self->exceptions->size;
-	DaoList_Clear( list );
-	self->activeCode = vmc;
-	if( N ==0 && M >0 ){ /* rescue without exception list */
-		DArray_Swap( self->exceptions, & list->items );
-		return 1;
-	}
-	for(i=0; i<N; i++){
-		val = excepts[i];
-		if( val->type == DAO_CLASS || val->type == DAO_CTYPE ){
-			cdata = & val->xCdata;
-			if( val->type == DAO_CLASS ){
-				cdata = (DaoCdata*) DaoClass_CastToBase( & val->xClass, ext );
-			}
-			if( cdata && DaoType_ChildOf( cdata->ctype, any ) ){
-				DArray_Swap( self->exceptions, & list->items );
-				return 1;
-			}else if( cdata && DaoType_ChildOf( cdata->ctype, none ) && M ==0 ){
-				return 1;
-			}else if( cdata ){
-				for(j=0; j<self->exceptions->size; j++){
-					val2 = self->exceptions->items.pValue[j];
-					if( val->type == DAO_CLASS && val2->type == DAO_OBJECT ){
-						if( DaoClass_ChildOf( val2->xObject.defClass, val ) ){
-							canRescue = 1;
-							DArray_Append( & list->items, val2 );
-							DArray_Erase( self->exceptions, j, 1 );
-						}
-					}else if( val->type == DAO_CTYPE ){
-						DaoCdata *cdata2 = & val2->xCdata;
-						if( val2->type == DAO_CLASS ){
-							cdata2 = (DaoCdata*) DaoType_CastToParent( val2, ext );
-						}
-						if( DaoType_ChildOf( cdata2->ctype, cdata->ctype ) ){
-							canRescue = 1;
-							DArray_Append( & list->items, val2 );
-							DArray_Erase( self->exceptions, j, 1 );
-						}
-					}
-				}
-			}else{
-			}
-		}
-	}
-	return canRescue;
-}
 void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 {
 	DaoType *etype;

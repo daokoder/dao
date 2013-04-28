@@ -586,10 +586,6 @@ static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 				DArray_Append( nodes[i+j]->ins, node );
 			}
 			break;
-		case DVM_CATCH :
-			DArray_Append( node->outs, nodes[vmc->c] );
-			DArray_Append( nodes[vmc->c]->ins, node );
-			break;
 		case DVM_SECT :
 			/*
 			// Expressions outside should NOT be available inside code sections.
@@ -845,9 +841,6 @@ static void DaoRoutine_UpdateCodes( DaoRoutine *self )
 		case DVM_GOTO : case DVM_CASE : case DVM_SWITCH :
 		case DVM_TEST : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
 			vmc->b = ids[ vmc->b ];
-			break;
-		case DVM_CATCH :
-			vmc->c = ids[ vmc->c ];
 			break;
 		default : break;
 		}
@@ -1643,9 +1636,6 @@ void DaoRoutine_CodesToInodes( DaoRoutine *self, DArray *inodes )
 		case DVM_TEST : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
 			inode->jumpFalse = inodes->items.pInode[vmc->b];
 			break;
-		case DVM_CATCH :
-			inode->jumpFalse = inodes->items.pInode[vmc->c];
-			break;
 		default : break;
 		}
 	}
@@ -1669,9 +1659,6 @@ void DaoRoutine_CodesFromInodes( DaoRoutine *self, DArray *inodes )
 		case DVM_GOTO : case DVM_CASE : case DVM_SWITCH :
 		case DVM_TEST : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
 			it->b = it->jumpFalse->index;
-			break;
-		case DVM_CATCH :
-			it->c = it->jumpFalse->index;
 			break;
 		default : break;
 		}

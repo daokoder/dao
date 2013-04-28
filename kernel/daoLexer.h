@@ -72,7 +72,6 @@ enum DaoTokNames
 	DTOK_DIV , /* / */
 	DTOK_MOD , /* % */
 	DTOK_QUERY , /* ? */
-	DTOK_ASSERT , /* ?? */
 	DTOK_AMAND , /* & */
 	DTOK_PIPE , /* | */
 	DTOK_XOR , /* ^ */
@@ -181,10 +180,6 @@ enum DaoKeyNames
 	DKEY_PROTECTED ,
 	DKEY_PUBLIC ,
 	DKEY_VIRTUAL ,
-	DKEY_TRY ,
-	DKEY_RETRY ,
-	DKEY_CATCH ,
-	DKEY_RAISE ,
 	/* Built-in math functions; not real keywords, handle as keywords for convenience: */
 	DKEY_RAND ,
 	DKEY_CEIL ,

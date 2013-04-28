@@ -37,7 +37,7 @@ void Dao_NormalizePathSep( DString *path )
 #endif
 }
 
-double DaoGetCurrentTime()
+double Dao_GetCurrentTime()
 {
 #ifdef WIN32
 	return timeGetTime();

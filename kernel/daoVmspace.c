@@ -2186,6 +2186,7 @@ static void DaoBuiltIn_Warn( DaoProcess *proc, DaoValue *p[], int n )
 }
 static void DaoBuiltIn_Panic( DaoProcess *proc, DaoValue *p[], int n )
 {
+	/* TODO: Exception object as parameter: */
 	DaoType *type = DaoException_GetType( DAO_ERROR );
 	DaoException *self = (DaoException*)DaoException_New2( type, p[0] );
 	DaoException_Init( self, proc, NULL );
