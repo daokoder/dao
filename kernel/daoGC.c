@@ -1370,6 +1370,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 		{
 			DaoRoutineBody *rout = (DaoRoutineBody*)value;
 			count += rout->regType->size + rout->abstypes->size;
+			count += rout->svariables->size;
 			cycRefCountDecrements( rout->regType );
 			cycRefCountDecrements( rout->svariables );
 			DaoGC_ScanMap( rout->abstypes, DAO_GC_DEC, 0, 1 );
@@ -1578,6 +1579,8 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 		{
 			DaoRoutineBody *rout = (DaoRoutineBody*)value;
 			count += rout->abstypes->size;
+			count += rout->regType->size;
+			count += rout->svariables->size;
 			cycRefCountIncrements( rout->regType );
 			cycRefCountIncrements( rout->svariables );
 			DaoGC_ScanMap( rout->abstypes, DAO_GC_INC, 0, 1 );
@@ -1792,6 +1795,8 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		{
 			DaoRoutineBody *rout = (DaoRoutineBody*)value;
 			count += rout->abstypes->size;
+			count += rout->regType->size;
+			count += rout->svariables->size;
 			directRefCountDecrements( rout->regType );
 			directRefCountDecrements( rout->svariables );
 			DaoGC_ScanMap( rout->abstypes, DAO_GC_BREAK, 0, 1 );

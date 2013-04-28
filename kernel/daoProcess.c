@@ -106,7 +106,7 @@ static void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc );
 
 static DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc );
+static DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc );
 static int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A );
 
 int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, DaoProcess *ctx );
@@ -801,6 +801,28 @@ void DaoProcess_ReleaseCV( DaoProcess *self )
 	self->condv = NULL;
 #endif
 }
+static void DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
+{
+	DaoVariable *variable = NULL;
+	daoint i;
+	self->activeCode = NULL;
+	if( result == NULL ) result = dao_none_value;
+	for(i=self->topFrame->deferBase; i<self->defers->size; ++i){
+		DaoRoutine *closure = self->defers->items.pRoutine[i];
+		DaoProcess_PushRoutine( self, closure, NULL );
+		self->topFrame->returning = -1;
+		if( closure->attribs & DAO_ROUT_PASSRET ){
+			DaoVariable *var = closure->body->svariables->items.pVar[0];
+			if( variable ){
+				GC_ShiftRC( variable, var );
+				closure->body->svariables->items.pVar[0] = variable;
+			}else{
+				variable = var;
+				DaoValue_Move( result, & var->value, var->dtype );
+			}
+		}
+	}
+}
 
 static daoint DaoArray_ComputeIndex( DaoArray *self, DaoValue *ivalues[], int count )
 {
@@ -1130,8 +1152,11 @@ CallEntry:
 	}
 
 	exceptCount = self->exceptions->size;
-	/* Check if an exception has been raisen by a function call: */
-	if( self->exceptions->size ){ /* yes */
+	/*
+	// Check if an exception has been raisen by a function call;
+	// But deferred block (closure) should not be affected.
+	*/
+	if( self->exceptions->size && !(routine->attribs & DAO_ROUT_DEFERRED) ){ /* yes */
 		if( topFrame->depth == 0 ) goto FinishCall; /* should never happen */
 		/* jump to the proper catch instruction to handle the exception,
 		 * or jump to the last RETURN instruction to defer the handling to
@@ -1257,6 +1282,9 @@ CallEntry:
 			if( DaoProcess_Move( self, locVars[vmc->a], dataVH[ vmc->c ]->activeValues + vmc->b, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVS ){
+			variable = svariables[ vmc->b ];
+			if( DaoProcess_Move( self, locVars[vmc->a], & variable->value, variable->dtype ) ==0 )
+				goto CheckException;
 		}OPNEXT() OPCASE( SETVO ){
 			abtp = typeVO->items.pVar[ vmc->b ]->dtype;
 			if( DaoProcess_Move( self, locVars[vmc->a], dataVO + vmc->b, abtp ) ==0 )
@@ -1496,18 +1524,12 @@ CallEntry:
 				 */
 		}OPNEXT() OPCASE( RETURN ){
 			self->activeCode = vmc;
+			value = DaoProcess_DoReturn( self, vmc );
 			if( self->defers->size > self->topFrame->deferBase ){
-				self->topFrame->entry = (int)(vmc - self->topFrame->codes);
-				self->activeCode = NULL;
-				for(i=self->topFrame->deferBase; i<self->defers->size; ++i){
-					DaoRoutine *closure = self->defers->items.pRoutine[i];
-					DaoProcess_PushRoutine( self, closure, NULL );
-					self->topFrame->returning = -1;
-				}
-				DArray_Erase( self->defers, self->topFrame->deferBase, -1 );
+				self->topFrame->entry = (int)(vmc - self->topFrame->codes) + 1;
+				DaoProcess_PushDefers( self, value );
 				goto CallEntry;
 			}
-			DaoProcess_DoReturn( self, vmc );
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
 			goto FinishCall;
 		}OPNEXT() OPCASE( YIELD ){
@@ -2361,7 +2383,11 @@ CheckException:
 			//XXX if( invokehost ) handler->InvokeHost( handler, topCtx );
 			if( self->exceptions->size > exceptCount ){
 				size = (daoint)( vmc - vmcBase );
-				if( topFrame->depth == 0 ) goto FinishCall;
+				if( topFrame->depth == 0 ){
+					self->topFrame->entry = routine->body->vmCodes->size;
+					DaoProcess_PushDefers( self, NULL );
+					goto FinishCall;
+				}
 				range = topFrame->ranges[ topFrame->depth-1 ];
 				if( topFrame->depth >0 && size >= range[1] ) topFrame->depth --;
 				topFrame->depth --;
@@ -2381,6 +2407,23 @@ CheckException:
 	}OPEND()
 
 FinishCall:
+
+	if( (routine->attribs & DAO_ROUT_PASSRET) ){ /* Update the modified return: */
+		if( self->topFrame->prev->deferBase < self->topFrame->deferBase ){
+			/* This deferred closure was created by its caller: */
+			DaoType *type = self->abtype ? (DaoType*)self->abtype->aux : NULL;
+			DaoValue **dest = self->stackValues;
+			daoint returning = self->topFrame->prev->returning;
+
+			if( returning != (ushort_t)-1 ){
+				DaoStackFrame *lastframe = self->topFrame->prev->prev;
+				type = lastframe->routine->body->regType->items.pType[ returning ];
+				dest = self->stackValues + lastframe->stackBase + returning;
+			}
+			DaoValue_Move( routine->body->svariables->items.pVar[0]->value, dest, type );
+		}
+		DArray_PopBack( self->defers );
+	}
 
 	if( self->topFrame->state & DVM_FRAME_KEEP ){
 		self->status = DAO_VMPROC_FINISHED;
@@ -3406,7 +3449,7 @@ void DaoProcess_DoSetMetaField( DaoProcess *self, DaoVmCode *vmc )
 	}
 }
 
-void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
+DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoStackFrame *topFrame = self->topFrame;
 	DaoType *type = self->abtype ? (DaoType*)self->abtype->aux : NULL;
@@ -3417,7 +3460,7 @@ void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 
 	self->activeCode = vmc;
 
-	if( vmc->code == DVM_RETURN &&  returning != (ushort_t)-1 ){
+	if( vmc->code == DVM_RETURN && returning != (ushort_t)-1 ){
 		DaoStackFrame *lastframe = topFrame->prev;
 #ifdef DEBUG
 		assert( lastframe && lastframe->routine );
@@ -3463,10 +3506,11 @@ void DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		if( retnull || self->vmSpace->evalCmdline || (opt1 && opt2) ) retValue = dao_none_value;
 	}
 	if( DaoValue_Move( retValue, dest, type ) ==0 ) goto InvalidReturn;
-	return;
+	return retValue;
 InvalidReturn:
 	/* printf( "retValue = %p %i %p %s\n", retValue, retValue->type, type, type->name->mbs ); */
 	DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid returned value" );
+	return NULL;
 }
 int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 {
@@ -6460,7 +6504,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	DaoRoutine *proto = (DaoRoutine*) self->activeValues[vmc->a];
 	DaoRoutine *closure;
 	DMap *deftypes;
-	int i, j, k, K;
+	int i, j, k, m, K;
 	if( proto->body->vmCodes->size ==0 && proto->body->annotCodes->size ){
 		if( DaoRoutine_SetVmCodes( proto, proto->body->annotCodes ) ==0 ){
 			DaoProcess_RaiseException( self, DAO_ERROR, "invalid closure" );
@@ -6470,8 +6514,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	if( proto->body->svariables->size == 0 && proto->routHost == NULL && vmc->b == 0 ){
 		/* proto->routHost is not NULL for methods of runtime class. */
 		DaoProcess_SetValue( self, vmc->c, (DaoValue*) proto );
-		if( DString_FindMBS( proto->routName, DAO_DEFER_BLOCK, 0 ) == 0 )
-			DArray_Append( self->defers, proto );
+		if( proto->attribs & DAO_ROUT_DEFERRED ) DArray_Append( self->defers, proto );
 		return;
 	}
 
@@ -6487,8 +6530,9 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 		DaoValue_Copy( pp[k], pp2 + j );
 		k += 1;
 	}
-	for(j=0; j<closure->body->svariables->size; ++j){
-		DaoVariable_Set( closure->body->svariables->items.pVar[j], pp[k+j], NULL );
+	m = (proto->attribs & DAO_ROUT_PASSRET) != 0;
+	for(j=m; j<closure->body->svariables->size; ++j){
+		DaoVariable_Set( closure->body->svariables->items.pVar[j], pp[k+j-m], NULL );
 	}
 
 	tp = DaoNamespace_MakeRoutType( self->activeNamespace, closure->routType, pp2, NULL, NULL );
@@ -6509,8 +6553,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	if( DaoRoutine_SetVmCodes2( closure, proto->body->vmCodes ) ==0 ){
 		DaoProcess_RaiseException( self, DAO_ERROR, "function creation failed" );
 	}
-	if( DString_FindMBS( proto->routName, DAO_DEFER_BLOCK, 0 ) == 0 )
-		DArray_Append( self->defers, closure );
+	if( proto->attribs & DAO_ROUT_DEFERRED ) DArray_Append( self->defers, closure );
 #if 0
 	DaoRoutine_PrintCode( proto, self->vmSpace->stdioStream );
 	DaoRoutine_PrintCode( closure, self->vmSpace->stdioStream );

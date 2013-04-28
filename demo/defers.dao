@@ -3,9 +3,15 @@ routine Test()
 {
 	mat = [ 1 : 1000 ];
 
-	defer {
+	# defer (name) {} will pass the returning value of Test()
+	# to the deferred codes, and so that it can be updated:
+	defer (result) {
+		io.writeln( 'deferred 1' )
 		mat.resize( [0] )
-		io.writeln( 'deferred 1', mat.size() )
+		result += 456
+	}
+	defer (result) {
+		result += 10000
 	}
 
 	for( i = 2 : 5 ) defer { io.writeln( 'deferred', i ) }

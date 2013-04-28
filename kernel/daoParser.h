@@ -97,8 +97,7 @@ struct DaoParser
 	DaoParser    *outParser;
 
 	DaoType      *returnType;
-
-	DaoToken  *argName;
+	DaoToken     *argName;
 
 	int curLine;
 	int lineCount;

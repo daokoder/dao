@@ -2153,6 +2153,8 @@ static void DaoConfigure()
 #endif
 }
 
+
+
 #ifdef DEBUG
 static void dao_FakeList_FakeList( DaoProcess *_proc, DaoValue *_p[], int _n );
 static void dao_FakeList_Size( DaoProcess *_proc, DaoValue *_p[], int _n );
@@ -2198,6 +2200,24 @@ static void dao_FakeList_SetItem( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
 }
 #endif
+
+
+
+static void DaoBuiltIn_Panic( DaoProcess *proc, DaoValue *p[], int n )
+{
+}
+static void DaoBuiltIn_Recover( DaoProcess *proc, DaoValue *p[], int n )
+{
+}
+
+DaoFuncItem dao_builtin_methods[] =
+{
+	{ DaoBuiltIn_Panic,    "panic( value : any )" },
+	{ DaoBuiltIn_Recover,  "recover( )=>any" },
+	{ NULL, NULL }
+};
+
+
 
 extern void DaoType_Init();
 

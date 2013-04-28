@@ -75,13 +75,13 @@ void DaoConstant_Set( DaoConstant *self, DaoValue *value )
 {
 	DaoValue_Copy( value, & self->value );
 }
-void DaoVariable_Set( DaoVariable *self, DaoValue *value, DaoType *type )
+int DaoVariable_Set( DaoVariable *self, DaoValue *value, DaoType *type )
 {
 	if( type ){
 		GC_ShiftRC( type, self->dtype );
 		self->dtype = type;
 	}
-	DaoValue_Move( value, & self->value, self->dtype );
+	return DaoValue_Move( value, & self->value, self->dtype );
 }
 
 #ifdef DAO_WITH_NUMARRAY

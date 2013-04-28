@@ -3998,6 +3998,7 @@ DecoratorError:
 			continue;
 		case DKEY_DEFER :
 			reg = DaoParser_ExpClosure( self, start );
+			if( reg < 0 ) return 0;
 			start = self->curToken;
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			continue;
@@ -5487,7 +5488,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 static int DaoParser_ExpClosure( DaoParser *self, int start )
 {
 	char name[100];
-	daoint rb, regCall, opc;
+	daoint regCall, opc, rb = 0;
 	daoint i, k, n, end = self->tokens->size-1;
 	daoint tokPos = self->tokens->items.pToken[ start ]->line;
 	DString *mbs = DaoParser_GetString( self );
@@ -5514,29 +5515,40 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	}
 	DArray_Append( myNS->definedRoutines, rout );
 
-	if( tokens[start+1]->name == DTOK_LB ){
-		rb = DaoParser_ParsePrototype( self, parser, DKEY_ROUTINE, start );
-	}else if( tokens[start+1]->name == DTOK_LCB ){
-		rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, -1 );
+	if( tokens[start]->name == DKEY_DEFER ){
+		int offset = start + 1;
+		rout->attribs |= DAO_ROUT_DEFERRED;
+		if( tokens[offset]->name == DTOK_LB ){
+			offset += 1;
+			if( tokens[offset]->name == DTOK_IDENTIFIER ){
+				DString *name = & tokens[offset]->string;
+				int i = LOOKUP_BIND( DAO_STATIC_VARIABLE, 0, 0, 0 );
+				MAP_Insert( DaoParser_GetCurrentDataMap( parser ), name, i );
+				DArray_Append( rout->body->svariables, DaoVariable_New(NULL,NULL) );
+				rout->attribs |= DAO_ROUT_PASSRET;
+				offset += 1;
+			}
+			if( tokens[offset]->name != DTOK_RB ) goto ErrorParsing;
+			offset += 1;
+		}
+		rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, offset, -1 );
 		if( rb < 0 ) goto ErrorParsing;
 
 		GC_ShiftRC( dao_routine, rout->routType );
 		rout->routType = dao_routine;
-		rout->body->codeStart = tokens[start+1]->line;
+		rout->body->codeStart = tokens[offset]->line;
 		rout->body->codeEnd = tokens[rb]->line;
-		for(i=start+2; i<rb; ++i) DaoLexer_AppendToken( parser->lexer, tokens[i] );
+		for(i=offset+1; i<rb; ++i) DaoLexer_AppendToken( parser->lexer, tokens[i] );
 		DaoLexer_Append( parser->lexer, DTOK_SEMCO, tokens[rb]->line, ";" );
 		parser->defined = 1;
+	}else if( tokens[start+1]->name == DTOK_LB ){
+		rb = DaoParser_ParsePrototype( self, parser, DKEY_ROUTINE, start );
 	}else{
 		goto ErrorParsing;
 	}
 
 	/* Routine name may have been changed by DaoParser_ParsePrototype() */
-	if( tokens[start]->name == DKEY_DEFER ){
-		sprintf( name, DAO_DEFER_BLOCK "%p", rout );
-	}else{
-		sprintf( name, "AnonymousFunction_%p", rout );
-	}
+	sprintf( name, "AnonymousFunction_%p", rout );
 	DString_SetMBS( rout->routName, name );
 	if( rb < 0 || tokens[rb]->name != DTOK_RCB ){
 		DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, NULL );
@@ -5547,11 +5559,7 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 		tok->type = tok->name = DTOK_SEMCO;
 		DString_SetMBS( & tok->string, ";" );
 	}
-	if( ! DaoParser_ParseRoutine( parser ) ){
-		DString_SetMBS( mbs, "invalid anonymous function" );
-		DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, mbs );
-		goto ErrorParsing;
-	}
+	if( ! DaoParser_ParseRoutine( parser ) ) goto ErrorParsing;
 
 	regCall = self->regCount;
 	DaoParser_PushRegister( self );
@@ -5574,6 +5582,8 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return opc;
 ErrorParsing:
+	DString_SetMBS( mbs, "invalid anonymous function" );
+	DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, mbs );
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	GC_IncRC( rout );
 	GC_DecRC( rout );

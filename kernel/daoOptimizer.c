@@ -4969,8 +4969,14 @@ TryPushBlockReturnType:
 				self->array->items.pType[j] = types[opa+1+k];
 				k += 1;
 			}
-			for(j=0; j<closure->body->svariables->size; ++j){
-				DaoType *uptype = types[opa+1+k+j];
+			m = (closure->attribs & DAO_ROUT_PASSRET) != 0;
+			if( m ){
+				DaoType *retype = (DaoType*) routine->routType->aux;
+				GC_ShiftRC( retype, closure->body->svariables->items.pVar[0]->dtype );
+				closure->body->svariables->items.pVar[0]->dtype = retype;
+			}
+			for(j=m; j<closure->body->svariables->size; ++j){
+				DaoType *uptype = types[opa+1+k+j-m];
 				GC_ShiftRC( uptype, closure->body->svariables->items.pVar[j]->dtype );
 				closure->body->svariables->items.pVar[j]->dtype = uptype;
 			}

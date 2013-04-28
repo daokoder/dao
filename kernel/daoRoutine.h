@@ -64,8 +64,8 @@ struct DaoRoutine
 {
 	DAO_DATA_COMMON;
 
-	uchar_t          attribs;
-	uchar_t          parCount; /* number of parameters that can be accepted; */
+	ushort_t         attribs;
+	ushort_t         parCount; /* number of parameters that can be accepted; */
 	ushort_t         defLine;  /* definition line number in the source file; */
 	DString         *routName; /* routine name; */
 	DaoType         *routType; /* routine type; */
@@ -104,18 +104,18 @@ struct DaoRoutineBody
 
 	/* data type for local registers: */
 	DArray *regType;    /* DArray<DaoType*> */
-	DArray *svariables; /* DArray<DaoVariable*> XXX GC */
+	DArray *svariables; /* DArray<DaoVariable*> */
 
 	/* VM codes with annotations */
-	DArray *annotCodes; /* <DaoVmCodeX*> */
+	DArray *annotCodes; /* DArray<DaoVmCodeX*> */
 
 	/* definition of local constants and variables: */
-	DArray *defLocals; /* <DaoToken*> */
-	DArray *source; /* <DaoToken*> */
+	DArray *defLocals; /* DArray<DaoToken*> */
+	DArray *source; /* DArray<DaoToken*> */
 
 	DArray *simpleVariables;
 
-	DMap *localVarType; /* <int,DaoType*> local variable types */
+	DMap *localVarType; /* DMap<int,DaoType*> local variable types */
 
 	int mode;
 
