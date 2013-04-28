@@ -970,11 +970,27 @@ static DaoType* DaoType_MakeIndexedHolder( DaoNamespace *ns, int index )
 }
 DaoToken* DaoToken_Copy( DaoToken *self );
 
+static int DaoParser_ExtractRoutineBody( DaoParser *self, DaoParser *parser, int left )
+{
+	DaoRoutine *routine = self->routine;
+	DaoToken **tokens = self->tokens->items.pToken;
+	int i, right = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, left, -1 );
+	if( right < 0 ) return -1;
+
+	DArray_Append( routine->nameSpace->definedRoutines, routine );
+	routine->body->codeStart = tokens[left]->line;
+	routine->body->codeEnd = tokens[right]->line;
+	for(i=left+1; i<right; ++i) DaoLexer_AppendToken( parser->lexer, tokens[i] );
+	DaoLexer_Append( parser->lexer, DTOK_SEMCO, routine->body->codeEnd, ";" );
+	parser->defined = 1;
+	return right;
+}
+
 int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int start )
 {
 	DNode *node;
-	DaoToken *tk, *tok;
 	DaoToken **tokens = self->tokens->items.pToken;
+	DaoToken *tk, *tok, *nameTok = tokens[start];
 	DaoNamespace *NS = self->nameSpace;
 	DaoInterface *inter = module->hostInter;
 	DaoRoutine *routine = module->routine;
@@ -995,7 +1011,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	int isconstru = klass != NULL;
 	int iscoroutine = 0;
 
-	DString_Assign( routine->routName, & tokens[start]->string );
+	DString_Assign( routine->routName, & nameTok->string );
 	DString_Assign( module->routName, routine->routName  );
 	DString_Assign( module->fileName, self->fileName );
 	GC_ShiftRC( self->nameSpace, routine->nameSpace );
@@ -1041,7 +1057,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	nested = DaoParser_GetArray( self );
 	DString_Reserve( mbs, 128 );
 	DString_Reserve( pname, 128 );
-	if( routine->routName->mbs[0] == '@' ) DString_AppendChar( pname, '@' );
+	if( nameTok->type == DTOK_ID_THTYPE ) DString_AppendChar( pname, '@' );
 	DString_AppendMBS( pname, "routine<" );
 	routine->parCount = 0;
 	if( tokens[start+1]->name == DKEY_SELF ){
@@ -1309,15 +1325,8 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	start = right;
 	e2 = start + 1;
 	if( tokens[start+1]->name == DTOK_LCB ){
-		right = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, right, -1 );
-		if(right<0) goto ErrorRoutine;
-
-		DArray_Append( routine->nameSpace->definedRoutines, routine );
-		routine->body->codeStart = tokens[start+1]->line;
-		routine->body->codeEnd = tokens[right]->line;
-		for(i=start+2; i<right; ++i) DaoLexer_AppendToken( module->lexer, tokens[i] );
-		DaoLexer_Append( module->lexer, DTOK_SEMCO, line, ";" );
-		module->defined = 1;
+		right = DaoParser_ExtractRoutineBody( self, module, right+1 );
+		if( right < 0 ) goto ErrorRoutine;
 	}
 	return right;
 ErrorUnsupportedOperator: ec = DAO_ROUT_INVALID_OPERATOR; goto ErrorRoutine;
@@ -5531,18 +5540,17 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 			if( tokens[offset]->name != DTOK_RB ) goto ErrorParsing;
 			offset += 1;
 		}
-		rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, offset, -1 );
-		if( rb < 0 ) goto ErrorParsing;
-
 		GC_ShiftRC( dao_routine, rout->routType );
 		rout->routType = dao_routine;
-		rout->body->codeStart = tokens[offset]->line;
-		rout->body->codeEnd = tokens[rb]->line;
-		for(i=offset+1; i<rb; ++i) DaoLexer_AppendToken( parser->lexer, tokens[i] );
-		DaoLexer_Append( parser->lexer, DTOK_SEMCO, tokens[rb]->line, ";" );
-		parser->defined = 1;
+		rb = DaoParser_ExtractRoutineBody( self, parser, offset );
+		if( rb < 0 ) goto ErrorParsing;
 	}else if( tokens[start+1]->name == DTOK_LB ){
 		rb = DaoParser_ParsePrototype( self, parser, DKEY_ROUTINE, start );
+	}else if( tokens[start+1]->name == DTOK_LCB ){
+		GC_ShiftRC( dao_routine, rout->routType );
+		rout->routType = dao_routine;
+		rb = DaoParser_ExtractRoutineBody( self, parser, start+1 );
+		if( rb < 0 ) goto ErrorParsing;
 	}else{
 		goto ErrorParsing;
 	}

@@ -810,6 +810,7 @@ static void DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
 		DaoRoutine *closure = self->defers->items.pRoutine[i];
 		DaoProcess_PushRoutine( self, closure, NULL );
 		self->topFrame->returning = -1;
+		self->topFrame->exceptBase = self->exceptions->size;
 		if( closure->attribs & DAO_ROUT_PASSRET ){
 			DaoVariable *var = closure->body->svariables->items.pVar[0];
 			if( variable ){

@@ -1,0 +1,26 @@
+
+routine Test()
+{
+	defer { io.writeln( 'first defer:', recover() ) }
+	defer { io.writeln( 'second defer:', recover() ) }
+	io.writeln( 'Test(): before panic;' )
+	panic( 123 )
+	io.writeln( 'Test(): after panic;' )
+}
+
+Test()
+
+routine Test2()
+{
+	rout = routine(){
+		defer { io.writeln( 'recovering:', recover() ) }
+		io.writeln( 'closure: before panic;' )
+		panic(456)
+		io.writeln( 'closure: after panic;' )
+	}
+	io.writeln( 'Test2(): before panic;' )
+	rout()
+	io.writeln( 'Test2(): after panic;' )
+}
+
+Test2()

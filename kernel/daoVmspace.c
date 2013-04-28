@@ -2225,6 +2225,7 @@ static void DaoBuiltIn_Recover( DaoProcess *proc, DaoValue *p[], int n )
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoStackFrame *frame = proc->topFrame->prev; /* caller frame */
 	if( frame == NULL || frame->prev == NULL || frame->prev == proc->firstFrame ) return;
+	/* recover() will return a list of exceptions only in the first defer codes: */
 	while( proc->exceptions->size > frame->prev->exceptBase ){
 		DaoList_Append( list, DArray_Back( proc->exceptions ) );
 		DArray_PopBack( proc->exceptions );
