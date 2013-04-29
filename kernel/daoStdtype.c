@@ -4347,9 +4347,12 @@ void DaoException_Init( DaoException *self, DaoProcess *proc, const char *value 
 	while( frame && frame->routine ){
 		DaoRoutineBody *body = frame->routine->body;
 		if( self->callers->size >= 5 ) break;
-		line = body ? body->annotCodes->items.pVmc[ frame->entry - 1 ]->line : 0;
-		DArray_Append( self->callers, frame->routine );
-		DArray_Append( self->lines, (daoint) line );
+		if( frame->entry ){
+			/* deferred anonymous function may have been pushed but not executed: */
+			line = body ? body->annotCodes->items.pVmc[ frame->entry - 1 ]->line : 0;
+			DArray_Append( self->callers, frame->routine );
+			DArray_Append( self->lines, (daoint) line );
+		}
 		frame = frame->prev;
 	}
 }

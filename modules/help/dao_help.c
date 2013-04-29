@@ -777,7 +777,6 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		case DKEY_WHILE : case DKEY_DO :
 		case DKEY_FOR : case DKEY_IN :
 		case DKEY_SKIP : case DKEY_BREAK : case DKEY_CONTINUE :
-		case DKEY_TRY : case DKEY_RETRY : case DKEY_RAISE : case DKEY_CATCH :
 		case DKEY_RETURN : case DKEY_YIELD :
 		case DKEY_SWITCH : case DKEY_CASE : case DKEY_DEFAULT :
 			fgcolor = DAOX_MAGENTA;

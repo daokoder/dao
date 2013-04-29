@@ -24,3 +24,23 @@ routine Test2()
 }
 
 Test2()
+
+
+
+class MyError : Exception::Error
+{
+	routine serialize(){ return ('MyError', self) }
+}
+
+routine Test3()
+{
+	defer {
+		io.writeln( 'recovering from', recover( MyError ) )
+	}
+
+	io.writeln( 'Test3(): before panic;' )
+	panic( MyError() );
+	io.writeln( 'Test3(): after panic;' )
+}
+
+Test3()

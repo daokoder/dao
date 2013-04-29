@@ -1519,20 +1519,29 @@ static void DaoCdata_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[],
 static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
 	int ec;
+	char buf[50];
 	DaoRoutine *meth;
 	DaoCdata *self = & self0->xCdata;
+
+	sprintf( buf, "[%p]", self );
+
 	if( self0 == self->ctype->value ){
 		DaoStream_WriteString( stream, self->ctype->name );
 		DaoStream_WriteMBS( stream, "[default]" );
 		return;
 	}
+	if( cycData != NULL && DMap_Find( cycData, self ) != NULL ){
+		DaoStream_WriteString( stream, self->ctype->name );
+		DaoStream_WriteMBS( stream, buf );
+		return;
+	}
+	if( cycData ) MAP_Insert( cycData, self, self );
+
 	DaoValue_Clear( & proc->stackValues[0] );
 	meth = DaoType_FindFunctionMBS( self->ctype, "serialize" );
 	if( meth && DaoProcess_Call( proc, meth, NULL, &self0, 1 ) == 0 ){
 		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
 	}else{
-		char buf[50];
-		sprintf( buf, "[%p]", self );
 		DaoStream_WriteString( stream, self->ctype->name );
 		DaoStream_WriteMBS( stream, buf );
 	}

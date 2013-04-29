@@ -121,13 +121,6 @@ static DaoStackFrame* DaoStackFrame_New()
 	return self;
 }
 #define DaoStackFrame_Delete( p ) dao_free( p )
-static void DaoStackFrame_PushRange( DaoStackFrame *self, ushort_t from, ushort_t to )
-{
-	assert( self->depth < DVM_MAX_TRY_DEPTH );
-	self->ranges[ self->depth ][0] = from;
-	self->ranges[ self->depth ][1] = to;
-	self->depth ++;
-}
 
 DaoTypeBase vmpTyper =
 {
@@ -309,7 +302,6 @@ void DaoProcess_PopFrame( DaoProcess *self )
 		return;
 	}
 	self->status = DAO_VMPROC_RUNNING;
-	self->topFrame->depth = 0;
 	self->stackTop = self->topFrame->stackBase;
 	self->topFrame = self->topFrame->prev;
 	if( self->topFrame ) DaoProcess_SetActiveFrame( self, self->topFrame->active );
@@ -706,7 +698,6 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 	next = DaoProcess_PushFrame( self, 0 );
 	next->entry = frame->entry + 2;
 	next->state = DVM_FRAME_SECT | DVM_FRAME_KEEP;
-	next->depth = 0;
 
 	GC_ShiftRC( frame->object, next->object );
 	GC_ShiftRC( frame->routine, next->routine );
@@ -1068,8 +1059,6 @@ int DaoProcess_Execute( DaoProcess *self )
 CallEntry:
 
 	topFrame = self->topFrame;
-	topFrame->deferBase = self->defers->size;
-	topFrame->exceptBase = self->exceptions->size;
 	routine = topFrame->routine;
 
 	if( topFrame == base->prev ){
@@ -1130,9 +1119,9 @@ CallEntry:
 	self->activeTypes = routine->body->regType->items.pType;
 	self->activeNamespace = routine->nameSpace;
 
-	/* range ( 0, routine->body->vmCodes->size-1 ) */
 	if( id == 0 ){
-		DaoStackFrame_PushRange( topFrame, 0, (routine->body->vmCodes->size-1) );
+		topFrame->deferBase = self->defers->size;
+		topFrame->exceptBase = self->exceptions->size;
 		if( (routine->attribs & (DAO_ROUT_PRIVATE|DAO_ROUT_PROTECTED)) && topFrame->prev ){
 			uchar_t priv = routine->attribs & DAO_ROUT_PRIVATE;
 			if( routine->routHost ){
@@ -1148,18 +1137,8 @@ CallEntry:
 	}
 
 	exceptCount = self->exceptions->size;
-	/*
-	// Check if an exception has been raisen by a function call;
-	// But deferred block (closure) should not be affected.
-	*/
-	if( self->exceptions->size && !(routine->attribs & DAO_ROUT_DEFERRED) ){ /* yes */
-		if( topFrame->depth == 0 ) goto FinishCall; /* should never happen */
-		/* jump to the proper catch instruction to handle the exception,
-		 * or jump to the last RETURN instruction to defer the handling to
-		 * its caller. */
-		topFrame->depth --;
-		vmc = vmcBase + topFrame->ranges[ topFrame->depth ][1];
-	}
+	if( self->exceptions->size > topFrame->exceptBase ) goto FinishCall;
+
 	if( self->status == DAO_VMPROC_SUSPENDED &&
 			(vmc->code == DVM_CALL || vmc->code == DVM_MCALL || vmc->code == DVM_YIELD) ){
 		if( self->pauseType == DAO_VMP_ASYNC && self->future->precondition ){
@@ -2348,18 +2327,12 @@ CheckException:
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
 			//XXX if( invokehost ) handler->InvokeHost( handler, topCtx );
 			if( self->exceptions->size > exceptCount ){
-				size = (daoint)( vmc - vmcBase );
-				if( topFrame->depth == 0 ){
+				if( self->defers->size > self->topFrame->deferBase ){
 					self->topFrame->entry = routine->body->vmCodes->size;
 					DaoProcess_PushDefers( self, NULL );
-					goto FinishCall;
+					goto CallEntry;
 				}
-				range = topFrame->ranges[ topFrame->depth-1 ];
-				if( topFrame->depth >0 && size >= range[1] ) topFrame->depth --;
-				topFrame->depth --;
-				vmc = vmcBase + topFrame->ranges[ topFrame->depth ][1];
-				exceptCount = self->exceptions->size;
-				OPJUMP();
+				goto FinishCall;
 			}else if( self->status == DAO_VMPROC_STACKED ){
 				goto CallEntry;
 			}else if( self->status == DAO_VMPROC_SUSPENDED ){
@@ -2388,8 +2361,8 @@ FinishCall:
 			}
 			DaoValue_Move( routine->body->svariables->items.pVar[0]->value, dest, type );
 		}
-		DArray_PopBack( self->defers );
 	}
+	if( routine->attribs & DAO_ROUT_DEFERRED ) DArray_PopBack( self->defers );
 
 	if( self->topFrame->state & DVM_FRAME_KEEP ){
 		self->status = DAO_VMPROC_FINISHED;
@@ -3791,8 +3764,8 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 			return;
 		}
 	}
-	/* no tail call inside try{} */
-	if( (vmc->b & DAO_CALL_TAIL) && self->topFrame->depth <=1 ){
+	/* no tail call optimization when there is deferred code blocks: */
+	if( (vmc->b & DAO_CALL_TAIL) && self->defers->size > self->topFrame->deferBase ){
 		int async = rout->routHost && rout->routHost->tid == DAO_OBJECT;
 		if( async ) async = rout->routHost->aux->xClass.attribs & DAO_CLS_ASYNCHRONOUS;
 		/* No tail call optimization for possible asynchronous calls: */

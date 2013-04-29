@@ -58,20 +58,27 @@ InvalidParam:
 static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
 	int ec;
+	char buf[50];
 	DaoObject *self = & self0->xObject;
+	sprintf( buf, "[%p]", self );
 	if( self0 == self->defClass->objType->value ){
 		DaoStream_WriteString( stream, self->defClass->className );
 		DaoStream_WriteMBS( stream, "[default]" );
 		return;
 	}
+	if( cycData != NULL && DMap_Find( cycData, self ) != NULL ){
+		DaoStream_WriteString( stream, self->defClass->className );
+		DaoStream_WriteMBS( stream, buf );
+		return;
+	}
+	if( cycData ) MAP_Insert( cycData, self, self );
+
 	DString_SetMBS( proc->mbstring, "serialize" );
 	DaoValue_Clear( & proc->stackValues[0] );
 	ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, NULL,0,1,1 );
 	if( ec && ec != DAO_ERROR_FIELD_NOTEXIST ){
 		DaoProcess_RaiseException( proc, ec, DString_GetMBS( proc->mbstring ) );
 	}else if( ec == DAO_ERROR_FIELD_NOTEXIST || proc->stackValues[0] == NULL ){
-		char buf[50];
-		sprintf( buf, "[%p]", self );
 		DaoStream_WriteString( stream, self->defClass->className );
 		DaoStream_WriteMBS( stream, buf );
 	}else{

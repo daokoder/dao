@@ -25,9 +25,10 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include"string.h"
-#include"ctype.h"
-#include"locale.h"
+#include<string.h>
+#include<ctype.h>
+#include<locale.h>
+#include<assert.h>
 
 
 #include"daoNamespace.h"
@@ -2186,11 +2187,15 @@ static void DaoBuiltIn_Warn( DaoProcess *proc, DaoValue *p[], int n )
 }
 static void DaoBuiltIn_Panic( DaoProcess *proc, DaoValue *p[], int n )
 {
-	/* TODO: Exception object as parameter: */
 	DaoType *type = DaoException_GetType( DAO_ERROR );
-	DaoException *self = (DaoException*)DaoException_New2( type, p[0] );
+	DaoException *self = (DaoException*) DaoValue_CastCdata( p[0], type );
+	DaoObject *object = DaoValue_CastObject( p[0] );
+	if( self == NULL && object != NULL ){
+		self = (DaoException*) DaoObject_CastCdata( object, type );
+	}
+	if( self == NULL ) self = (DaoException*)DaoException_New2( type, p[0] );
 	DaoException_Init( self, proc, NULL );
-	DArray_Append( proc->exceptions, self );
+	DArray_Append( proc->exceptions, object ? (void*)object : (void*)self );
 }
 static void DaoBuiltIn_Recover( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -2203,12 +2208,36 @@ static void DaoBuiltIn_Recover( DaoProcess *proc, DaoValue *p[], int n )
 		DArray_PopBack( proc->exceptions );
 	}
 }
+static void DaoBuiltIn_Recover2( DaoProcess *proc, DaoValue *p[], int n )
+{
+	daoint i;
+	DaoValue *ret = NULL;
+	DaoValue *type = p[0];
+	DaoStackFrame *frame = proc->topFrame->prev; /* caller frame */
+
+	if( frame == NULL || frame->prev == NULL || frame->prev == proc->firstFrame ) return;
+	for(i=proc->exceptions->size-1; i>=frame->prev->exceptBase; --i){
+		DaoValue *value = proc->exceptions->items.pValue[i];
+		DaoObject *object = DaoValue_CastObject( value );
+		if( object ){
+			if( DaoClass_ChildOf( object->defClass, type ) ) ret = value;
+		}else if( type->type == DAO_CTYPE ){
+			if( DaoValue_CastCdata( value, type->xCtype.cdtype ) != NULL ) ret = value;
+		}
+		if( ret ){
+			DArray_Erase( proc->exceptions, i, 1 );
+			break;
+		}
+	}
+	DaoProcess_PutValue( proc, ret ? ret : dao_none_value );
+}
 
 DaoFuncItem dao_builtin_methods[] =
 {
-	{ DaoBuiltIn_Warn,     "warn( message : string )" },
-	{ DaoBuiltIn_Panic,    "panic( value : any )" },
-	{ DaoBuiltIn_Recover,  "recover( )=>list<any>" },
+	{ DaoBuiltIn_Warn,      "warn( message : string )" },
+	{ DaoBuiltIn_Panic,     "panic( value : any )" },
+	{ DaoBuiltIn_Recover,   "recover( ) => list<any>" },
+	{ DaoBuiltIn_Recover2,  "recover( eclass : class<Exception> ) => any" },
 	{ NULL, NULL }
 };
 
