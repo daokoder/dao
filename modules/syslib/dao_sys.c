@@ -521,7 +521,7 @@ Dao_Buffer* Dao_Buffer_New( size_t size )
 }
 Dao_Buffer* Dao_Buffer_CastFromValue( DaoValue *value )
 {
-	return (Dao_Buffer*) DaoValue_CastCdata( value, daox_type_buffer );
+	return (Dao_Buffer*) DaoValue_CastCstruct( value, daox_type_buffer );
 }
 void Dao_Buffer_Resize( Dao_Buffer *self, size_t size )
 {

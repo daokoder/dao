@@ -508,7 +508,7 @@ static int DaoVmCode_MayCreateReference( int code )
 	case DVM_GETF_KC : case DVM_GETF_KG :
 	case DVM_GETF_OC : case DVM_GETF_OG : case DVM_GETF_OV :
 		return 1;
-	default : return code < DVM_SECT;
+	default : return code < DVM_DEBUG;
 	}
 	return 0;
 }
@@ -599,10 +599,6 @@ static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 			DMap_Insert( self->inits, node, NULL );
 			break;
 		case DVM_RETURN : DMap_Insert( self->finals, node, NULL ); break;
-		/*
-		// case DVM_SECT : DMap_Insert( self->inits, node, NULL ); break;
-		// not for DVM_SECT:  GETVH etc. need to be linked with the outer codes ???
-		*/
 		default : break;
 		}
 	}
@@ -1074,7 +1070,7 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 		node = nodes[i];
 		if( node->lvalue == 0xffff || node->exprid == 0xffff ) continue;
 		if( DaoVmCode_GetOpcodeType( (DaoVmCode*) vmc ) == DAO_CODE_MOVE ) continue;
-		if( vmc->code <= DVM_SECT ) continue;
+		if( vmc->code <= DVM_DEBUG ) continue;
 
 		sametype = 1;
 		avexprs->size = 0;
@@ -2779,7 +2775,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 
 	for(i=1; i<=DAO_MAX_SECTDEPTH; i++) typeVH[i] = types;
 
-	DArray_Append( rettypes, 0 );
+	DArray_Append( rettypes, NULL );
 	DArray_Append( rettypes, routine->routType->aux );
 	DArray_Append( rettypes, routine->routType->aux );
 	for(i=0; i<N; i++){
@@ -2845,6 +2841,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			AssertInitialized( inode->a, DTE_ITEM_WRONG_ACCESS, last, last );
 			break;
 		}
+		/* XXX addition initialization checks for DAO_CODE_EXPLIST etc. */
 		if( K && K < DAO_CODE_EXPLIST && K != DAO_CODE_SETG && K != DAO_CODE_SETU ){
 			if( K != DAO_CODE_SETM ) inited[inode->c] = 1;
 			if( consts[inode->c] && K == DAO_CODE_SETF ){
@@ -4922,7 +4919,7 @@ TryPushBlockReturnType:
 						DaoInferencer_UpdateType( self, k, tt );
 					}
 					tt = DaoType_DefineTypes( (DaoType*)cbtype->aux, NS, defs2 );
-					DArray_Append( rettypes, opc ); /* type at "opc" to be redefined; */
+					DArray_Append( rettypes, inode ); /* type at "opc" to be redefined; */
 					DArray_Append( rettypes, tt );
 					DArray_Append( rettypes, tt );
 					DArray_PushBack( self->typeMaps, defs2 );
@@ -4930,7 +4927,7 @@ TryPushBlockReturnType:
 					if( NoCheckingType( types[opc] ) == 0 ){
 						printf( "Unused code section at line %i!\n", vmc->line );
 					}
-					DArray_Append( rettypes, opc );
+					DArray_Append( rettypes, inode );
 					DArray_Append( rettypes, NULL );
 					DArray_Append( rettypes, NULL );
 					DArray_PushBack( self->typeMaps, defs2 );
@@ -4998,12 +4995,13 @@ TryPushBlockReturnType:
 		case DVM_RETURN :
 		case DVM_YIELD :
 			{
-				int redef = 0, popped = 0;
+				int popped = 0;
+				DaoInode *redef;
 				DaoType *ct2;
 				assert( rettypes->size >= 3 );
 				ct = rettypes->items.pType[ rettypes->size - 1 ];
 				ct2 = rettypes->items.pType[ rettypes->size - 2 ];
-				redef = rettypes->items.pInt[ rettypes->size - 3 ];
+				redef = rettypes->items.pInode[ rettypes->size - 3 ];
 				DMap_Reset( defs2 );
 				DMap_Assign( defs2, defs );
 				if( (i+1) < (int)body->annotCodes->size ){
@@ -5079,9 +5077,9 @@ TryPushBlockReturnType:
 								routine->routType = tt;
 							}else{
 								ct = DaoType_DefineTypes( ct, NS, defs2 );
-								if( ct ){
-									tt = DaoType_DefineTypes( types[redef], NS, defs2 );
-									DaoInferencer_UpdateType( self, redef, tt );
+								if( ct != NULL && redef != NULL ){
+									tt = DaoType_DefineTypes( types[redef->c], NS, defs2 );
+									DaoInferencer_UpdateType( self, redef->c, tt );
 								}
 								if( popped == 0 ) rettypes->items.pType[ rettypes->size - 1 ] = ct;
 							}
@@ -5104,12 +5102,15 @@ TryPushBlockReturnType:
 							rettypes->items.pType[ rettypes->size - 1 ] = (DaoType*)tt->aux;
 						}else{
 							ct = DaoType_DefineTypes( ct, NS, defs2 );
-							if( ct ){
-								tt = DaoType_DefineTypes( types[redef], NS, defs2 );
-								DaoInferencer_UpdateType( self, redef, tt );
+							if( ct != NULL && redef != NULL ){
+								tt = DaoType_DefineTypes( types[redef->c], NS, defs2 );
+								DaoInferencer_UpdateType( self, redef->c, tt );
 							}
 							if( popped == 0 ) rettypes->items.pType[ rettypes->size - 1 ] = ct;
 						}
+					}
+					if( redef != NULL && redef->code == DVM_EVAL ){
+						DaoInferencer_UpdateType( self, redef->c, at );
 					}
 				}
 				if( code == DVM_YIELD ){
@@ -5130,7 +5131,15 @@ TryPushBlockReturnType:
 				}
 				break;
 			}
+		case DVM_EVAL :
+			if( vmc->b == 0 ) at = NULL;
+			DArray_Append( rettypes, inode );
+			DArray_Append( rettypes, at );
+			DArray_Append( rettypes, at );
+			break;
+
 #define USE_TYPED_OPCODE 1
+
 #if USE_TYPED_OPCODE
 		case DVM_DATA_I : case DVM_DATA_F : case DVM_DATA_D : case DVM_DATA_C :
 			TT1 = DAO_INTEGER + (code - DVM_DATA_I);

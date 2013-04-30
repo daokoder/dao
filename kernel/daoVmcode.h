@@ -33,7 +33,7 @@
 enum DaoOpcode
 {
 	DVM_NOP = 0, /* no operation, the VM assumes maximum one NOP between two effective codes; */
-	DVM_DATA , /* create primitive data: A: type<=DAO_COMPLEX, B: value, C: register; */
+	DVM_DATA ,  /* create primitive data: A: type<=DAO_COMPLEX, B: value, C: register; */
 	DVM_GETCL , /* get local const: C = A::B; */
 	DVM_GETCK , /* get class const: C = A::B; current class, A=0; parent class: A>=1; */
 	DVM_GETCG , /* get global const: C = A::B; current namespace, A=0; loaded: A>=1; */
@@ -57,7 +57,7 @@ enum DaoOpcode
 	DVM_SETMI , /* SET Item(s) : C[C+1, ..., C+B] = A;  */
 	DVM_SETF ,  /* SET Field : C.B = A */
 	DVM_SETMF , /* SET Meta Field : C->B = A */
-	DVM_LOAD , /* put local value A as reference at C, if B>0, assert type (routConsts[B-1]) first; */
+	DVM_LOAD , /* put local value A as reference at C; */
 	DVM_CAST , /* convert A to C if they have different types; */
 	DVM_MOVE , /* C = A; if B==0, XXX it is compile from assignment, for typing system only */
 	DVM_NOT ,  /* C = ! A; not */
@@ -79,37 +79,38 @@ enum DaoOpcode
 	DVM_IN ,   /* C = A in B; */
 	DVM_BITAND , /* C = A & B */
 	DVM_BITOR ,  /* C = A | B */
-	DVM_BITXOR ,  /* C = A ^ B */
+	DVM_BITXOR , /* C = A ^ B */
 	DVM_BITLFT , /* C = A << B */
 	DVM_BITRIT , /* C = A >> B */
-	DVM_CHECK , /* check type: C = A ?= B; C = A ?< B, where A is data, B is data or type */
+	DVM_CHECK ,  /* check type: C = A ?= B; C = A ?< B, where A is data, B is data or type */
 	DVM_NAMEVA , /* C = A => B: name A, local constant, value B, local register */
-	DVM_PAIR , /* C = A : B; create a pair of index, as a tuple; */
-	DVM_TUPLE , /* tuple: C = ( A, A+1, ..., A+B-1 ); B>=2, items can be: name=>value */
-	DVM_LIST , /* list: C = { A, A+1, ..., A+B-1 }; */
-	DVM_MAP , /* map: C = { A => A+1, ..., A+B-2 => A+B-1 }; if B==0, empty; */
-	DVM_HASH , /* hash: C = { A ~> A+1, ..., A+B-2 ~> A+B-1 }; if B==0, empty; */
+	DVM_PAIR ,   /* C = A : B; create a pair of index, as a tuple; */
+	DVM_TUPLE ,  /* tuple: C = ( A, A+1, ..., A+B-1 ); B>=2, items can be: name=>value */
+	DVM_LIST ,   /* list: C = { A, A+1, ..., A+B-1 }; */
+	DVM_MAP ,    /* map: C = { A => A+1, ..., A+B-2 => A+B-1 }; if B==0, empty; */
+	DVM_HASH ,   /* hash: C = { A ~> A+1, ..., A+B-2 ~> A+B-1 }; if B==0, empty; */
 	DVM_VECTOR , /* vector: C = [ A, A+1, ..., A+B-1 ]; */
 	DVM_MATRIX , /* matrix: C=[A,..,A+c-1;..;A+c*(r-1),..,A+c*r-1]; B=rc;r,c:8-bits each.*/
-	DVM_APLIST , /* arithmetic progression list: C = { A ~ ... ~ A+B-1 }, B = 2 or 3; */
-	DVM_APVECTOR , /* arithmetic progression vector: C = [ A ~ ... ~ A+B-1 ], B = 2 or 3; */
-	DVM_CURRY , /* class_or_routine_name: A{ A+1, ..., A+B } */
-	DVM_MCURRY , /* object.method: A{ A+1, ..., A+B } */
-	DVM_ROUTINE , /* create a function, possibly with closure */
-	DVM_CLASS , /* C = class(){}, A,A+1,..A+B: A, tuple, A+1, proto class, A+2,.. proto values */
-	DVM_GOTO , /* go to B; */
+	DVM_APLIST , /* arithmetic progression list: C = { A : ... : A+B-1 }, B = 2 or 3; */
+	DVM_APVECTOR , /* arithmetic progression vector: C = [ A : ... : A+B-1 ], B = 2 or 3; */
+	DVM_CURRY ,    /* class_or_routine_name: A{ A+1, ..., A+B } */
+	DVM_MCURRY ,   /* object.method: A{ A+1, ..., A+B } */
+	DVM_ROUTINE ,  /* create a function, possibly with closure */
+	DVM_CLASS ,  /* C = class{}, A,A+1,..A+B: A, tuple, A+1, proto class, A+2,.. proto values */
+	DVM_GOTO ,   /* go to B; */
 	DVM_SWITCH , /* A: variable, B: location of default codes, C: number of cases */
-	DVM_CASE , /* A: constant of the case, B: location of the case codes, C: case mode */
-	DVM_ITER , /* create an iterator at C for A if B==0, otherwise test an array of iterators; */
-	DVM_TEST , /* if A, go to the next one; else, goto B-th instruction; */
-	DVM_MATH , /* C = A( B ); A: sin,cos,...; B: double,complex */
-	DVM_CALL , /* call C = A( A+1, A+2, ..., A+B ); If B==0, no parameters; */
-	DVM_MCALL , /* method call: x.y(...), pass x as the first parameter */
-	DVM_RETURN , /* return A,A+1,..,A+B-1; B==0: no returns; C==1: return from functional */
+	DVM_CASE ,   /* A: constant of the case, B: location of the case codes, C: case mode */
+	DVM_ITER ,   /* create an iterator at C for A if B==0, else test an array of iterators; */
+	DVM_TEST ,   /* if A, go to the next one; else, goto B-th instruction; */
+	DVM_MATH ,   /* C = A( B ); A: sin,cos,...; B: double,complex */
+	DVM_CALL ,   /* function call: C = A( A+1, A+2, ..., A+B ); If B==0, no parameters; */
+	DVM_MCALL ,  /* method call: x.y(...), pass x as the first parameter; */
+	DVM_RETURN , /* return A,A+1,..,A+B-1; B==0: no returns; C==1: return from functional; */
 	DVM_YIELD , /* yield A, A+1,.., A+B-1; return data at C when resumed; */
+	DVM_EVAL ,  /* evaluate a code section: C=@@(A){}, if B==1, otherwise, C=@@{}; */
+	DVM_SECT ,  /* code section label, parameters: A,A+1,...,A+B-1; C #explicit parameters; */
+	DVM_JITC ,  /* run Just-In-Time compiled Code A, and skip the next B instructions; */
 	DVM_DEBUG , /* prompt to debugging mode; */
-	DVM_JITC , /* run Just-In-Time compiled Code A, and skip the next B instructions */
-	DVM_SECT , /* code subsection label, parameters: A,A+1,...,A+B-1; C # explicit parameters; */
 
 	/* optimized opcodes: */
 	DVM_DATA_I ,

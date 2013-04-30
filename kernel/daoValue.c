@@ -875,17 +875,25 @@ DaoTuple* DaoValue_CastTuple( DaoValue *self )
 DaoStream* DaoValue_CastStream( DaoValue *self )
 {
 	if( self == NULL || self->type != DAO_CSTRUCT ) return NULL;
-	return (DaoStream*) DaoValue_CastCdata( self, dao_type_stream );
+	return (DaoStream*) DaoValue_CastCstruct( self, dao_type_stream );
 }
 DaoObject* DaoValue_CastObject( DaoValue *self )
 {
 	if( self == NULL || self->type != DAO_OBJECT ) return NULL;
 	return (DaoObject*) self;
 }
+DaoCstruct* DaoValue_CastCstruct( DaoValue *self, DaoType *type )
+{
+	if( self == NULL || type == NULL ) return (DaoCstruct*) self;
+	if( self->type != DAO_CSTRUCT && self->type != DAO_CDATA ) return NULL;
+	if( DaoType_ChildOf( self->xCstruct.ctype, type ) ) return (DaoCstruct*) self;
+	return NULL;
+}
 DaoCdata* DaoValue_CastCdata( DaoValue *self, DaoType *type )
 {
-	if( self == NULL || self->type != DAO_CSTRUCT ) return NULL;
-	if( type == NULL || DaoType_ChildOf( self->xCdata.ctype, type ) ) return (DaoCdata*) self;
+	if( self == NULL || type == NULL ) return (DaoCdata*) self;
+	if( self->type != DAO_CDATA ) return NULL;
+	if( DaoType_ChildOf( self->xCdata.ctype, type ) ) return (DaoCdata*) self;
 	return NULL;
 }
 DaoClass* DaoValue_CastClass( DaoValue *self )

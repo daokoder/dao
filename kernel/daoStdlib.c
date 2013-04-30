@@ -265,7 +265,7 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 	int i;
 	if( ! (proc->vmSpace->options & DAO_EXEC_DEBUG ) ) return;
 	input = DString_New(1);
-	if( N > 0 && DaoValue_CastCdata( p[0], dao_type_stream ) ){
+	if( N > 0 && DaoValue_CastCstruct( p[0], dao_type_stream ) ){
 		stream = (DaoStream*)p[0];
 		p ++;
 		N --;

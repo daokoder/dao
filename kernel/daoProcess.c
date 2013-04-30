@@ -658,6 +658,12 @@ static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 	DaoType *cbtype = NULL;
 	DaoVmCode *codes;
 	int nop = 0;
+	if( self->activeCode->code == DVM_EVAL ){
+		codes = self->activeCode + 1;
+		nop = codes[1].code == DVM_NOP;
+		if( codes[nop].code == DVM_GOTO && codes[nop+1].code == DVM_SECT ) return frame;
+		return NULL;
+	}
 	if( frame->routine ) cbtype = frame->routine->routType->cbtype;
 	if( cbtype == NULL ) return NULL;
 	if( frame->sect ){
@@ -796,7 +802,6 @@ static void DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
 	DaoVariable *variable = NULL;
 	daoint i;
 	self->activeCode = NULL;
-	if( result == NULL ) result = dao_none_value;
 	for(i=self->topFrame->deferBase; i<self->defers->size; ++i){
 		DaoRoutine *closure = self->defers->items.pRoutine[i];
 		DaoProcess_PushRoutine( self, closure, NULL );
@@ -809,6 +814,8 @@ static void DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
 				closure->body->svariables->items.pVar[0] = variable;
 			}else{
 				variable = var;
+				if( result == NULL && var->dtype ) result = var->dtype->value;
+				if( result == NULL ) result = dao_none_value;
 				DaoValue_Move( result, & var->value, var->dtype );
 			}
 		}
@@ -925,9 +932,9 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_MATH ,
 		&& LAB_CALL , && LAB_MCALL ,
 		&& LAB_RETURN , && LAB_YIELD ,
-		&& LAB_DEBUG ,
+		&& LAB_EVAL , && LAB_SECT ,
 		&& LAB_JITC ,
-		&& LAB_SECT ,
+		&& LAB_DEBUG ,
 
 		&& LAB_DATA_I , && LAB_DATA_F , && LAB_DATA_D , && LAB_DATA_C ,
 		&& LAB_GETCL_I , && LAB_GETCL_F , && LAB_GETCL_D , && LAB_GETCL_C ,
@@ -1119,7 +1126,7 @@ CallEntry:
 	self->activeTypes = routine->body->regType->items.pType;
 	self->activeNamespace = routine->nameSpace;
 
-	if( id == 0 ){
+	if( id == 0 && !(topFrame->state & DVM_FRAME_RUNNING) ){
 		topFrame->deferBase = self->defers->size;
 		topFrame->exceptBase = self->exceptions->size;
 		if( (routine->attribs & (DAO_ROUT_PRIVATE|DAO_ROUT_PROTECTED)) && topFrame->prev ){
@@ -1134,6 +1141,16 @@ CallEntry:
 				goto CallNotPermitted;
 			}
 		}
+	}
+	if( vmc->code == DVM_EVAL && (topFrame->state & DVM_FRAME_RUNNING) ){
+		if( self->exceptions->size > topFrame->exceptBase ){
+			if( vmc->b == 0 ) goto FinishCall;
+			DArray_Erase( self->exceptions, topFrame->exceptBase, -1 );
+			if( DaoProcess_SetValue( self, vmc->c, locVars[vmc->a] ) == 0 ){
+				DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid default value" );
+			}
+		}
+		vmc += 1;
 	}
 
 	exceptCount = self->exceptions->size;
@@ -1152,6 +1169,7 @@ CallEntry:
 		}
 		vmc ++;
 	}
+	topFrame->state |= DVM_FRAME_RUNNING;
 	self->status = DAO_VMPROC_RUNNING;
 	self->pauseType = DAO_VMP_NOPAUSE;
 	host = NULL;
@@ -1512,6 +1530,15 @@ CallEntry:
 				if( handler && handler->StdlibDebug ) handler->StdlibDebug( handler, self );
 				goto CheckException;
 			}
+		}OPNEXT() OPCASE( EVAL ){
+			self->activeCode = vmc;
+			if( DaoProcess_PushSectionFrame( self ) == NULL ){
+				printf( "No code section is found\n" ); //XXX
+				goto FinishProc;
+			}
+			topFrame->entry = vmc - topFrame->codes;
+			self->topFrame->state = DVM_FRAME_SECT;
+			goto CallEntry;
 		}OPNEXT() OPCASE( SECT ){
 			goto ReturnFalse;
 		}OPNEXT() OPCASE( DATA_I ){
@@ -2365,6 +2392,7 @@ FinishCall:
 	if( routine->attribs & DAO_ROUT_DEFERRED ) DArray_PopBack( self->defers );
 
 	if( self->topFrame->state & DVM_FRAME_KEEP ){
+		topFrame->state &= ~DVM_FRAME_RUNNING;
 		self->status = DAO_VMPROC_FINISHED;
 		if( self->exceptions->size > exceptCount ){
 			self->status = DAO_VMPROC_ABORTED;
@@ -3765,7 +3793,7 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 		}
 	}
 	/* no tail call optimization when there is deferred code blocks: */
-	if( (vmc->b & DAO_CALL_TAIL) && self->defers->size > self->topFrame->deferBase ){
+	if( (vmc->b & DAO_CALL_TAIL) && self->defers->size == self->topFrame->deferBase ){
 		int async = rout->routHost && rout->routHost->tid == DAO_OBJECT;
 		if( async ) async = rout->routHost->aux->xClass.attribs & DAO_CLS_ASYNCHRONOUS;
 		/* No tail call optimization for possible asynchronous calls: */

@@ -2188,7 +2188,7 @@ static void DaoBuiltIn_Warn( DaoProcess *proc, DaoValue *p[], int n )
 static void DaoBuiltIn_Panic( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoType *type = DaoException_GetType( DAO_ERROR );
-	DaoException *self = (DaoException*) DaoValue_CastCdata( p[0], type );
+	DaoException *self = (DaoException*) DaoValue_CastCstruct( p[0], type );
 	DaoObject *object = DaoValue_CastObject( p[0] );
 	if( self == NULL && object != NULL ){
 		self = (DaoException*) DaoObject_CastCdata( object, type );
@@ -2222,7 +2222,7 @@ static void DaoBuiltIn_Recover2( DaoProcess *proc, DaoValue *p[], int n )
 		if( object ){
 			if( DaoClass_ChildOf( object->defClass, type ) ) ret = value;
 		}else if( type->type == DAO_CTYPE ){
-			if( DaoValue_CastCdata( value, type->xCtype.cdtype ) != NULL ) ret = value;
+			if( DaoValue_CastCstruct( value, type->xCtype.cdtype ) != NULL ) ret = value;
 		}
 		if( ret ){
 			DArray_Erase( proc->exceptions, i, 1 );

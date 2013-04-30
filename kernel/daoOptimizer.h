@@ -173,6 +173,7 @@ struct DaoInferencer
 	DMap        *defs;
 	DMap        *defs2;
 	DMap        *defs3;
+	DMap        *rettypes2;
 	DString     *mbstring;
 
 	DaoType     *type_source;
