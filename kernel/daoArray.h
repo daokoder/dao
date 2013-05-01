@@ -102,42 +102,45 @@ DAO_DLL void* DArray_Back( DArray *self );
 
 
 
-struct DPlainArray
+struct DVector
 {
 	union {
-		void       *data;
+		void       *base;
 		int        *ints;
+		daoint     *daoints;
 		float      *floats;
-
+		double     *doubles;
+		complex16  *complexes;
+		DString    *strings;
 		DaoToken   *tokens;
 		DaoVmCode  *codes;
-	} pod;
+	} data;
 
 	uint_t  size;
 	uint_t  capacity;
 	uint_t  stride;
 };
 
-DAO_DLL DPlainArray* DPlainArray_New( int stride );
-DAO_DLL void DPlainArray_Delete( DPlainArray *self );
-DAO_DLL void DPlainArray_Clear( DPlainArray *self );
+DAO_DLL DVector* DVector_New( int stride );
+DAO_DLL void DVector_Delete( DVector *self );
+DAO_DLL void DVector_Clear( DVector *self );
 
-DAO_DLL void DPlainArray_Resize( DPlainArray *self, int size );
-DAO_DLL void DPlainArray_Reserve( DPlainArray *self, int size );
-DAO_DLL void DPlainArray_ResetSize( DPlainArray *self, int size );
+DAO_DLL void DVector_Resize( DVector *self, int size );
+DAO_DLL void DVector_Reserve( DVector *self, int size );
+DAO_DLL void DVector_ResetSize( DVector *self, int size );
 
-DAO_DLL void DPlainArray_Assign( DPlainArray *left, DPlainArray *right );
+DAO_DLL void DVector_Assign( DVector *left, DVector *right );
 
-DAO_DLL void* DPlainArray_Insert( DPlainArray *self, int i, int n );
-DAO_DLL void* DPlainArray_Push( DPlainArray *self );
-DAO_DLL void* DPlainArray_Pop( DPlainArray *self );
-DAO_DLL void* DPlainArray_Back( DPlainArray *self );
-DAO_DLL void* DPlainArray_Get( DPlainArray *self, int i );
+DAO_DLL void* DVector_Insert( DVector *self, int i, int n );
+DAO_DLL void* DVector_Push( DVector *self );
+DAO_DLL void* DVector_Pop( DVector *self );
+DAO_DLL void* DVector_Back( DVector *self );
+DAO_DLL void* DVector_Get( DVector *self, int i );
 
-DAO_DLL void DPlainArray_Erase( DPlainArray *self, int i, int n );
+DAO_DLL void DVector_Erase( DVector *self, int i, int n );
 
-DAO_DLL void DPlainArray_PushInt( DPlainArray *self, int value );
-DAO_DLL void DPlainArray_PushFloat( DPlainArray *self, float value );
+DAO_DLL void DVector_PushInt( DVector *self, int value );
+DAO_DLL void DVector_PushFloat( DVector *self, float value );
 
 
 

@@ -616,7 +616,7 @@ static void DaoParser_StatementError( DaoParser *self, DaoParser *parser, int co
 #define MAX_INDENT_STEP 16
 int DaoParser_LexCode( DaoParser *self, const char *src, int replace )
 {
-	DPlainArray *indstack = NULL, *indents = NULL, *lines = NULL;
+	DVector *indstack = NULL, *indents = NULL, *lines = NULL;
 	DString *mbs = self->mbs;
 	DaoToken *t, *t2;
 	int counts[MAX_INDENT_STEP];
@@ -626,29 +626,29 @@ int DaoParser_LexCode( DaoParser *self, const char *src, int replace )
 	self->lineCount = DaoLexer_Tokenize( self->lexer, src, flags );
 	if( self->lineCount ==0 ) return 0;
 	if( daoConfig.chindent ){
-		indents = DPlainArray_New( sizeof(int) );
-		lines = DPlainArray_New( sizeof(int) );
-		indstack = DPlainArray_New( sizeof(int) );
-		DPlainArray_PushInt( indstack, 1 );
-		DPlainArray_PushInt( indstack, 1 );
+		indents = DVector_New( sizeof(int) );
+		lines = DVector_New( sizeof(int) );
+		indstack = DVector_New( sizeof(int) );
+		DVector_PushInt( indstack, 1 );
+		DVector_PushInt( indstack, 1 );
 	}
 	memset( counts, 0, MAX_INDENT_STEP*sizeof(int) );
 	for(i=0; i<self->tokens->size; i++ ){
 		t = self->tokens->items.pToken[i];
 		if( daoConfig.chindent && t->name != DTOK_COMMENT ){
 			if( i ==0 || t->line != self->tokens->items.pToken[i-1]->line ){
-				while( indstack->size && t->cpos < indstack->pod.ints[indstack->size-1] ){
+				while( indstack->size && t->cpos < indstack->data.ints[indstack->size-1] ){
 					indstack->size -= 1;
 				}
-				if( indstack->size && t->cpos > indstack->pod.ints[indstack->size-1] ){
-					DPlainArray_PushInt( indstack, t->cpos );
+				if( indstack->size && t->cpos > indstack->data.ints[indstack->size-1] ){
+					DVector_PushInt( indstack, t->cpos );
 				}
-				k = t->cpos - indstack->pod.ints[ indstack->size - 2 ];
+				k = t->cpos - indstack->data.ints[ indstack->size - 2 ];
 				if( k >= 16 ) k = 16;
 				if( k >0 ) counts[k-1] += 1;
 				if( k >0 ){
-					DPlainArray_PushInt( indents, k );
-					DPlainArray_PushInt( lines, t->line );
+					DVector_PushInt( indents, k );
+					DVector_PushInt( lines, t->line );
 				}
 			}
 		}
@@ -678,14 +678,14 @@ int DaoParser_LexCode( DaoParser *self, const char *src, int replace )
 			}
 		}
 		for(i=0; i<indents->size; i++){
-			if( indents->pod.ints[i] % self->indent ){
+			if( indents->data.ints[i] % self->indent ){
 				printf( "Warning: improper indentation of %i spaces at line: %i.\n",
-						indents->pod.ints[i], lines->pod.ints[i] );
+						indents->data.ints[i], lines->data.ints[i] );
 			}
 		}
-		DPlainArray_Delete( indstack );
-		DPlainArray_Delete( indents );
-		DPlainArray_Delete( lines );
+		DVector_Delete( indstack );
+		DVector_Delete( indents );
+		DVector_Delete( lines );
 	}
 #if 0
 	for(i=0; i<self->tokens->size; i++){
@@ -5576,7 +5576,7 @@ static int DaoParser_ClassExpressionBody( DaoParser *self, int start, int end )
 
 	vmcx.line = rout->defLine;
 	DArray_Append( rout->body->annotCodes, & vmcx );
-	DPlainArray_PushCode( rout->body->vmCodes, vmc );
+	DVector_PushCode( rout->body->vmCodes, vmc );
 
 	self->protoValues = DMap_New(0,0);
 	self->hostClass = klass;

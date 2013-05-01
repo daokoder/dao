@@ -323,7 +323,7 @@ static void DaoOptimizer_AEA( DaoOptimizer *self, DaoCnode *node, DMap *out )
 }
 static int DaoOptimizer_UpdateAEA( DaoOptimizer *self, DaoCnode *first, DaoCnode *second )
 {
-	DaoVmCode *codes = self->routine->body->vmCodes->pod.codes;
+	DaoVmCode *codes = self->routine->body->vmCodes->data.codes;
 	DNode *it, *it2;
 
 	DaoOptimizer_AEA( self, first, self->tmp );
@@ -691,7 +691,7 @@ void DaoOptimizer_LinkDU( DaoOptimizer *self, DaoRoutine *routine )
 	for(i=0; i<N; i++){
 		node = nodes[i];
 		printf( "%03i: ", i );
-		DaoVmCode_Print( routine->body->vmCodes->pod.codes[i], NULL );
+		DaoVmCode_Print( routine->body->vmCodes->data.codes[i], NULL );
 		for(j=0; j<node->defs->size; j++) printf( "%3i ", node->defs->items.pCnode[j]->index );
 		printf("\n");
 		for(j=0; j<node->uses->size; j++) printf( "%3i ", node->uses->items.pCnode[j]->index );
@@ -819,13 +819,13 @@ static void DaoOptimizer_InitNodesRDA( DaoOptimizer *self )
 static void DaoRoutine_UpdateCodes( DaoRoutine *self )
 {
 	DArray *annotCodes = self->body->annotCodes;
-	DPlainArray *vmCodes = self->body->vmCodes;
+	DVector *vmCodes = self->body->vmCodes;
 	DaoVmCodeX *vmc, **vmcs = annotCodes->items.pVmc;
 	int i, C, K, N = annotCodes->size;
 	int *ids;
 
-	if( vmCodes->size < N ) DPlainArray_Resize( vmCodes, N );
-	ids = (int*)vmCodes->pod.codes; /* as temporary buffer; */
+	if( vmCodes->size < N ) DVector_Resize( vmCodes, N );
+	ids = (int*)vmCodes->data.codes; /* as temporary buffer; */
 	for(i=0,K=0; i<N; i++){
 		ids[i] = K;
 		K += vmcs[i]->code < DVM_UNUSED;
@@ -848,7 +848,7 @@ static void DaoRoutine_UpdateCodes( DaoRoutine *self )
 	N = 0;
 	for(i=0; i<K; i++){
 		vmc = vmcs[i];
-		vmCodes->pod.codes[i] = *(DaoVmCode*)vmc;
+		vmCodes->data.codes[i] = *(DaoVmCode*)vmc;
 		C = vmc->code;
 		if( C == DVM_GOTO || C == DVM_TEST || (C >= DVM_TEST_I && C <= DVM_TEST_D) ){
 			if( vmc->b == (i+1) ){
@@ -860,7 +860,7 @@ static void DaoRoutine_UpdateCodes( DaoRoutine *self )
 	if( N ) DaoRoutine_UpdateCodes( self );
 	if( annotCodes->size < 0.8 * annotCodes->bufsize ){
 		DArray_Resize( annotCodes, annotCodes->size, NULL );
-		DPlainArray_Resize( vmCodes, vmCodes->size );
+		DVector_Resize( vmCodes, vmCodes->size );
 	}
 }
 static void DaoRoutine_UpdateRegister( DaoRoutine *self, DArray *mapping )
@@ -870,7 +870,7 @@ static void DaoRoutine_UpdateRegister( DaoRoutine *self, DArray *mapping )
 	DMap *localVarType2 = DMap_New(0,0);
 	DMap *localVarType = self->body->localVarType;
 	DaoType **types = self->body->regType->items.pType;
-	DaoVmCode check, *vmc, *codes = self->body->vmCodes->pod.codes;
+	DaoVmCode check, *vmc, *codes = self->body->vmCodes->data.codes;
 	DaoVmCode **codes2 = (DaoVmCode**) self->body->annotCodes->items.pVmc;
 	daoint i, N = self->body->annotCodes->size;
 	daoint k, m = 0, M = self->body->regCount;
@@ -1647,7 +1647,7 @@ void DaoRoutine_CodesFromInodes( DaoRoutine *self, DArray *inodes )
 		count += it->code != DVM_UNUSED;
 		while( it->jumpFalse && it->jumpFalse->extra ) it->jumpFalse = it->jumpFalse->extra;
 	}
-	DPlainArray_Clear( body->vmCodes );
+	DVector_Clear( body->vmCodes );
 	DArray_Clear( body->annotCodes );
 	for(it=first,count=0; it; it=it->next){
 		/* DaoInode_Print( it ); */
@@ -1659,7 +1659,7 @@ void DaoRoutine_CodesFromInodes( DaoRoutine *self, DArray *inodes )
 		default : break;
 		}
 		if( it->code >= DVM_UNUSED ) continue;
-		DPlainArray_PushCode( body->vmCodes, *(DaoVmCode*) it );
+		DVector_PushCode( body->vmCodes, *(DaoVmCode*) it );
 		DArray_PushBack( body->annotCodes, (DaoVmCodeX*) it );
 	}
 }
@@ -5796,10 +5796,10 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		if( k == DAO_CODE_BRANCH || k == DAO_CODE_JUMP ) vmc->b += added->size;
 	}
 	DArray_InsertArray( annotCodes, 0, added, 0, added->size );
-	DPlainArray_Resize( newfn->body->vmCodes, annotCodes->size );
+	DVector_Resize( newfn->body->vmCodes, annotCodes->size );
 	for(i=0,m=annotCodes->size; i<m; i++){
 		vmc = annotCodes->items.pVmc[i];
-		newfn->body->vmCodes->pod.codes[i] = *(DaoVmCode*) vmc;
+		newfn->body->vmCodes->data.codes[i] = *(DaoVmCode*) vmc;
 	}
 
 	GC_ShiftRC( oldfn->routType, newfn->routType );

@@ -510,7 +510,7 @@ DAO_DLL uchar_t     DaoVmCode_GetOpcodeType( DaoVmCode *self );
 DAO_DLL uchar_t     DaoVmCode_GetResultOperand( DaoVmCode *self );
 DAO_DLL DaoVmCode   DaoVmCode_CheckOperands( DaoVmCode *self );
 
-DAO_DLL DaoVmCode*  DPlainArray_PushCode( DPlainArray *self, DaoVmCode code );
+DAO_DLL DaoVmCode*  DVector_PushCode( DVector *self, DaoVmCode code );
 
 
 struct DaoVmCodeX

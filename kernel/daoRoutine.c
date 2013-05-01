@@ -263,7 +263,7 @@ DaoRoutineBody* DaoRoutineBody_New()
 	DaoValue_Init( self, DAO_ROUTBODY );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->source = NULL;
-	self->vmCodes = DPlainArray_New( sizeof(DaoVmCode) );
+	self->vmCodes = DVector_New( sizeof(DaoVmCode) );
 	self->regType = DArray_New(D_VALUE);
 	self->svariables = DArray_New(D_VALUE);
 	self->defLocals = DArray_New(D_TOKEN);
@@ -277,7 +277,7 @@ DaoRoutineBody* DaoRoutineBody_New()
 }
 void DaoRoutineBody_Delete( DaoRoutineBody *self )
 {
-	DPlainArray_Delete( self->vmCodes );
+	DVector_Delete( self->vmCodes );
 	DArray_Delete( self->simpleVariables );
 	DArray_Delete( self->regType );
 	DArray_Delete( self->svariables );
@@ -302,7 +302,7 @@ void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other )
 	self->source = other->source;
 	self->annotCodes = DArray_Copy( other->annotCodes );
 	self->localVarType = DMap_Copy( other->localVarType );
-	DPlainArray_Assign( self->vmCodes, other->vmCodes );
+	DVector_Assign( self->vmCodes, other->vmCodes );
 	DArray_Assign( self->regType, other->regType );
 	DArray_Assign( self->simpleVariables, other->simpleVariables );
 	self->regCount = other->regCount;
@@ -331,15 +331,15 @@ int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes )
 	if( vmCodes == NULL || vmCodes->type != D_VMCODE ) return 0;
 	DArray_Swap( body->annotCodes, vmCodes );
 	vmCodes = body->annotCodes;
-	DPlainArray_Resize( body->vmCodes, vmCodes->size );
+	DVector_Resize( body->vmCodes, vmCodes->size );
 	for(i=0,n=vmCodes->size; i<n; i++){
-		body->vmCodes->pod.codes[i] = *(DaoVmCode*) vmCodes->items.pVmc[i];
+		body->vmCodes->data.codes[i] = *(DaoVmCode*) vmCodes->items.pVmc[i];
 	}
 	return DaoRoutine_DoTypeInference( self, 0 );
 }
-int DaoRoutine_SetVmCodes2( DaoRoutine *self, DPlainArray *vmCodes )
+int DaoRoutine_SetVmCodes2( DaoRoutine *self, DVector *vmCodes )
 {
-	DPlainArray_Assign( self->body->vmCodes, vmCodes );
+	DVector_Assign( self->body->vmCodes, vmCodes );
 	return DaoRoutine_DoTypeInference( self, 0 );
 }
 
@@ -395,7 +395,7 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 	annot = DString_New(1);
 	vmCodes = self->body->annotCodes->items.pVmc;
 	for(j=0,n=self->body->annotCodes->size; j<n; j++){
-		DaoVmCode vmc = self->body->vmCodes->pod.codes[j];
+		DaoVmCode vmc = self->body->vmCodes->data.codes[j];
 		if( vmc.code == DVM_JITC ){
 			DaoVmCodeX vmcx = *vmCodes[j];
 			memcpy( &vmcx, &vmc, sizeof(DaoVmCode) );

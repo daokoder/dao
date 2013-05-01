@@ -1064,7 +1064,7 @@ void DaoLexer_Append( DaoLexer *self, int name, int line, const char *data )
 int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 {
 	DString *source = DString_New(1);
-	DPlainArray *lexenvs = DPlainArray_New( sizeof(int) );
+	DVector *lexenvs = DVector_New( sizeof(int) );
 	DaoToken *token = DaoToken_New();
 	DString *literal = & token->string;
 	char ch, *ss, hex[11] = "0x00000000";
@@ -1139,7 +1139,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 	}
 	DaoLexer_Reset( self );
 
-	DPlainArray_PushInt( lexenvs, LEX_ENV_NORMAL );
+	DVector_PushInt( lexenvs, LEX_ENV_NORMAL );
 	it = 0;
 	token->cpos = 0;
 	while( it < srcSize ){
@@ -1289,7 +1289,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 			}else if( state == TOK_COMT_OPEN ){
 				DString_AppendChar( literal, ch );
 				lexenv = LEX_ENV_COMMENT;
-				DPlainArray_PushInt( lexenvs, LEX_ENV_COMMENT );
+				DVector_PushInt( lexenvs, LEX_ENV_COMMENT );
 			}else{
 				DString_AppendChar( literal, ch );
 			}
@@ -1299,11 +1299,11 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 				state = TOK_OP_SHARP;
 			}else if( ch == '{' && state == TOK_OP_SHARP ){
 				state = TOK_COMT_OPEN;
-				DPlainArray_PushInt( lexenvs, LEX_ENV_COMMENT );
+				DVector_PushInt( lexenvs, LEX_ENV_COMMENT );
 			}else if( ch == '}' && state == TOK_OP_SHARP ){
 				state = TOK_COMT_CLOSE;
-				DPlainArray_Pop( lexenvs );
-				lexenv = lexenvs->pod.ints[lexenvs->size-1];
+				DVector_Pop( lexenvs );
+				lexenv = lexenvs->data.ints[lexenvs->size-1];
 				if( lexenv != LEX_ENV_COMMENT ){
 					token->type = token->name = DTOK_COMMENT;
 					if( comment ) DaoLexer_AppendToken( self, token );
@@ -1336,7 +1336,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 		}
 	}
 	DaoToken_Delete( token );
-	DPlainArray_Delete( lexenvs );
+	DVector_Delete( lexenvs );
 	DString_Delete( source );
 #if 0
 	for(i=0; i<self->tokens->size; i++){

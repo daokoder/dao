@@ -100,7 +100,7 @@ struct DaoRoutineBody
 	DAO_DATA_COMMON;
 
 	/* virtual machine codes: */
-	DPlainArray *vmCodes;
+	DVector *vmCodes;
 
 	/* data type for local registers: */
 	DArray *regType;    /* DArray<DaoType*> */

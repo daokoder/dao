@@ -454,96 +454,96 @@ void** DArray_GetBuffer( DArray *self )
 
 
 
-DPlainArray* DPlainArray_New( int stride )
+DVector* DVector_New( int stride )
 {
-	DPlainArray *self = (DPlainArray*) dao_calloc( 1, sizeof(DPlainArray) );
+	DVector *self = (DVector*) dao_calloc( 1, sizeof(DVector) );
 	self->stride = stride;
 	return self;
 }
 
-void DPlainArray_Delete( DPlainArray *self )
+void DVector_Delete( DVector *self )
 {
-	if( self->pod.data ) dao_free( self->pod.data );
+	if( self->data.base ) dao_free( self->data.base );
 	dao_free( self );
 }
 
-void DPlainArray_Clear( DPlainArray *self )
+void DVector_Clear( DVector *self )
 {
-	if( self->pod.data ) dao_free( self->pod.data );
-	self->pod.data = NULL;
+	if( self->data.base ) dao_free( self->data.base );
+	self->data.base = NULL;
 	self->size = self->capacity = 0;
 }
-void DPlainArray_Resize( DPlainArray *self, int size )
+void DVector_Resize( DVector *self, int size )
 {
 	if( self->capacity != size ){
 		self->capacity = size;
-		self->pod.data = dao_realloc( self->pod.data, self->capacity*self->stride );
+		self->data.base = dao_realloc( self->data.base, self->capacity*self->stride );
 	}
 	self->size = size;
 }
 
-void DPlainArray_Reserve( DPlainArray *self, int size )
+void DVector_Reserve( DVector *self, int size )
 {
 	if( size <= self->capacity ) return;
 	self->capacity = 1.2 * size + 4;
-	self->pod.data = dao_realloc( self->pod.data, self->capacity*self->stride );
+	self->data.base = dao_realloc( self->data.base, self->capacity*self->stride );
 }
 
-void DPlainArray_ResetSize( DPlainArray *self, int size )
+void DVector_ResetSize( DVector *self, int size )
 {
 	if( size <= self->capacity ){
 		self->size = size;
 		return;
 	}
-	DPlainArray_Resize( self, size );
+	DVector_Resize( self, size );
 }
 
-void* DPlainArray_Get( DPlainArray *self, int i )
+void* DVector_Get( DVector *self, int i )
 {
-	return self->pod.data + i * self->stride;
+	return self->data.base + i * self->stride;
 }
 
-void DPlainArray_Assign( DPlainArray *left, DPlainArray *right )
+void DVector_Assign( DVector *left, DVector *right )
 {
 	assert( left->stride == right->stride );
-	DPlainArray_Resize( left, right->size );
-	memcpy( left->pod.data, right->pod.data, right->size * right->stride );
+	DVector_Resize( left, right->size );
+	memcpy( left->data.base, right->data.base, right->size * right->stride );
 }
 
-void* DPlainArray_Insert( DPlainArray *self, int i, int n )
+void* DVector_Insert( DVector *self, int i, int n )
 {
 	void *data;
 
 	if( i < 0 ) i += self->size;
 	if( i < 0 || i > self->size ) return NULL;
 
-	DPlainArray_Reserve( self, self->size + n );
+	DVector_Reserve( self, self->size + n );
 
-	data = self->pod.data + i * self->stride;
+	data = self->data.base + i * self->stride;
 	memmove( data + n*self->stride, data, (self->size - i) *self->stride );
 
 	self->size += n;
 	return data;
 }
-void* DPlainArray_Push( DPlainArray *self )
+void* DVector_Push( DVector *self )
 {
-	DPlainArray_Reserve( self, self->size + 1 );
+	DVector_Reserve( self, self->size + 1 );
 	self->size += 1;
-	return self->pod.data + (self->size - 1) * self->stride;
+	return self->data.base + (self->size - 1) * self->stride;
 }
-void* DPlainArray_Pop( DPlainArray *self )
+void* DVector_Pop( DVector *self )
 {
-	if( self->capacity > (2*self->size + 1) ) DPlainArray_Reserve( self, self->size + 1 );
+	if( self->capacity > (2*self->size + 1) ) DVector_Reserve( self, self->size + 1 );
 	if( self->size == 0 ) return NULL;
 	self->size -= 1;
-	return self->pod.data + self->size * self->stride;
+	return self->data.base + self->size * self->stride;
 }
-void* DPlainArray_Back( DPlainArray *self )
+void* DVector_Back( DVector *self )
 {
 	if( self->size == 0 ) return NULL;
-	return self->pod.data + (self->size - 1) * self->stride;
+	return self->data.base + (self->size - 1) * self->stride;
 }
-void DPlainArray_Erase( DPlainArray *self, int i, int n )
+void DVector_Erase( DVector *self, int i, int n )
 {
 	void *src, *dest;
 
@@ -553,32 +553,32 @@ void DPlainArray_Erase( DPlainArray *self, int i, int n )
 
 	if( (i + n) >= self->size ) n = self->size - i;
 
-	dest = self->pod.data + i*self->stride;
+	dest = self->data.base + i*self->stride;
 	src = dest + n*self->stride;
 	memmove( dest, src, (self->size - i - n)*self->stride );
 	self->size -= n;
 }
 
-void DPlainArray_PushInt( DPlainArray *self, int value )
+void DVector_PushInt( DVector *self, int value )
 {
-	int *item = (int*) DPlainArray_Push( self );
+	int *item = (int*) DVector_Push( self );
 	*item = value;
 }
-void DPlainArray_PushFloat( DPlainArray *self, float value )
+void DVector_PushFloat( DVector *self, float value )
 {
-	float *item = (float*) DPlainArray_Push( self );
+	float *item = (float*) DVector_Push( self );
 	*item = value;
 }
 
-DaoVmCode* DPlainArray_PushCode( DPlainArray *self, DaoVmCode code )
+DaoVmCode* DVector_PushCode( DVector *self, DaoVmCode code )
 {
-	DaoVmCode *code2 = (DaoVmCode*) DPlainArray_Push( self );
+	DaoVmCode *code2 = (DaoVmCode*) DVector_Push( self );
 	*code2 = code;
 	return code2;
 }
-DaoToken* DPlainArray_PushToken( DPlainArray *self, DaoToken token )
+DaoToken* DVector_PushToken( DVector *self, DaoToken token )
 {
-	DaoToken *token2 = (DaoToken*) DPlainArray_Push( self );
+	DaoToken *token2 = (DaoToken*) DVector_Push( self );
 	*token2 = token;
 	return token2;
 }

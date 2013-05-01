@@ -47,7 +47,7 @@ typedef struct DaoInode      DaoInode;
 typedef struct DaoVmCode     DaoVmCode;
 typedef struct DaoVmCodeX    DaoVmCodeX;
 
-typedef struct DPlainArray   DPlainArray;
+typedef struct DVector   DVector;
 
 typedef struct DaoFuture     DaoFuture;
 typedef struct DaoException  DaoException;
