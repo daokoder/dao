@@ -4755,15 +4755,23 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 		// namely local data of the outer scope preceeds the global data;
 		*/
 		if( i >=0 && (loc < 0 || st <= DAO_STATIC_VARIABLE) ){
-			int tokpos = nametok->index;
-			i = DaoParser_GetNormRegister( self->outParser, i, tokpos, 0, tokpos );
-			DArray_Append( self->uplocs, i );
-			DArray_Append( self->uplocs, routine->body->svariables->size );
-			DArray_Append( self->uplocs, tokpos );
-			DArray_Append( self->uplocs, tokpos );
-			i = LOOKUP_BIND( DAO_STATIC_VARIABLE, 0, 0, routine->body->svariables->size );
-			MAP_Insert( DaoParser_GetCurrentDataMap( self ), & nametok->string, i );
-			DArray_Append( routine->body->svariables, DaoVariable_New(NULL,NULL) );
+			if( st == DAO_LOCAL_CONSTANT ){
+				int id = LOOKUP_ID( i );
+				DaoValue *cst = self->outParser->routine->routConsts->items.items.pValue[id];
+				i = LOOKUP_BIND_LC( routine->routConsts->items.size );
+				MAP_Insert( DaoParser_GetCurrentDataMap( self ), & nametok->string, i );
+				DaoRoutine_AddConstant( routine, cst );
+			}else{
+				int tokpos = nametok->index;
+				i = DaoParser_GetNormRegister( self->outParser, i, tokpos, 0, tokpos );
+				DArray_Append( self->uplocs, i );
+				DArray_Append( self->uplocs, routine->body->svariables->size );
+				DArray_Append( self->uplocs, tokpos );
+				DArray_Append( self->uplocs, tokpos );
+				i = LOOKUP_BIND( DAO_STATIC_VARIABLE, 0, 0, routine->body->svariables->size );
+				MAP_Insert( DaoParser_GetCurrentDataMap( self ), & nametok->string, i );
+				DArray_Append( routine->body->svariables, DaoVariable_New(NULL,NULL) );
+			}
 			return i;
 		}
 	}

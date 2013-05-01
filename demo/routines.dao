@@ -1,11 +1,9 @@
 
 #{
-
-The following is a simple function that can take 3 parameters,
-where the first can be of any type, the second can only be a
-string, and the last can only be an optional integer with default
-value 123.
-
+# The following is a simple function that can take 3 parameters,
+# where the first can be of any type, the second can only be a
+# string, and the last can only be an optional integer with default
+# value 123.
 #}
 routine FunctionA( obj, name : string, index = 123 )
 {
@@ -19,11 +17,9 @@ FunctionA( index => 789, obj => {}, name => 'ghi' )
 
 
 #{
-
-If "..." is used as the last parameter in a function definition,
-this function can table a variable number of parameters (up to 30).
-(Such function is called variadic function).
-
+# If "..." is used as the last parameter in a function definition,
+# this function can table a variable number of parameters (up to 30).
+# (Such function is called variadic function).
 #}
 routine FunctionB( name : string, ... )
 {
@@ -33,12 +29,10 @@ FunctionB( 'abc' )
 
 
 #{
-
-To access the variadic part of the parameters inside a variadic
-function, one has to define an alias for all the parameters using
-the "as" keyword. So here, the "all" variable will be a tuple that
-contains all the parameters passed to this function.
-
+# To access the variadic part of the parameters inside a variadic
+# function, one has to define an alias for all the parameters using
+# the "as" keyword. So here, the "all" variable will be a tuple that
+# contains all the parameters passed to this function.
 #}
 routine FunctionC( name : string, ... as all )
 {
@@ -48,10 +42,8 @@ FunctionC( 'abc', 123, [1,2] )
 
 
 #{
-
-The variadic parameter "..." can also have an explicit type,
-to ensure it only accepts parameters of that type.
-
+# The variadic parameter "..." can also have an explicit type,
+# to ensure it only accepts parameters of that type.
 #}
 routine FunctionD( name : string, ... :int as all )
 {

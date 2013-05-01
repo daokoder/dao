@@ -1,4 +1,17 @@
 
+# The handling of panics is very much like the handling of panics
+# in the Go programming language.
+#
+# In Dao, a panic or exception can be raised by the built-in function
+# panic() which can take any value as parameter.
+#
+# To handle panics, one may need to combine deferred blocks and the
+# built-in function recover(), which may return a list of exceptions.
+# When recover() is called in multiple deferred blocks, only the call
+# to recover() in the lastly executed deferred block will return the
+# exceptions. An exception type can be passed to recover() to request
+# a specific type of exception.
+
 routine Test()
 {
 	defer { io.writeln( 'first defer:', recover() ) }
@@ -26,7 +39,7 @@ routine Test2()
 Test2()
 
 
-
+# Example to handle user defined exception type:
 class MyError : Exception::Error
 {
 	routine serialize(){ return ('MyError', self) }
@@ -44,3 +57,32 @@ routine Test3()
 }
 
 Test3()
+
+
+# To simplify the handling of panics, Dao support a special type
+# of code blocks that are executed in new stack frames. Such blocks
+# can be defined in the following ways:
+#     @@ { block }
+#     @@ ( value ) { block }
+# which are expressions that may return values. In the second case,
+# if the "block" raises an exception, the default "value" is returned
+# instead, and the exception is suppressed.
+
+fout = io::stdio
+
+@@ {
+	defer { recover() }
+	fout = io.open( "NonExistentFile.txt", 'r+' )
+}
+
+if( fout != io::stdio ) defer{ fout.close() }
+
+fout.writeln( 'hello' )
+
+
+# A simpler way to write the above codes:
+fout = @@( io::stdio ){ io.open( "NonExistentFile.txt", 'r+' ) }
+
+if( fout != io::stdio ) defer{ fout.close() }
+
+fout.writeln( 'hello' )

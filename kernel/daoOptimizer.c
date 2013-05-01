@@ -5136,6 +5136,7 @@ TryPushBlockReturnType:
 			DArray_Append( rettypes, inode );
 			DArray_Append( rettypes, at );
 			DArray_Append( rettypes, at );
+			DArray_PushBack( self->typeMaps, defs2 );
 			break;
 
 #define USE_TYPED_OPCODE 1

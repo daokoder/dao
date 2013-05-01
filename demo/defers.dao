@@ -1,4 +1,22 @@
 
+# To ensure a piece of codes to be executed when a function exits
+# normally or exists due to exceptions, they can be placed inside
+# a deferred block: defer { block }.
+#
+# A deferred block can access outer scope constants and varaibles
+# in the same way as closures. These outer scope variables are
+# captured at the time the deferred block is reached in the normal
+# execution.
+#
+# When a function exits, all the deferred blocks that have been
+# reached in the normal execution will be executed in the reverse
+# order of being reached.
+#
+# Any deferred block can modify the value returned by the function.
+# In order to do this, one must designate a variable name for the
+# returned value, by placing the name inside a pair brackets after
+# the "defer" keyword, for example: defer (ret) { ret += 1 }.
+
 routine Test()
 {
 	mat = [ 1 : 1000 ];
