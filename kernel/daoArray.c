@@ -473,7 +473,7 @@ void DVector_Clear( DVector *self )
 	self->data.base = NULL;
 	self->size = self->capacity = 0;
 }
-void DVector_Resize( DVector *self, int size )
+void DVector_Resize( DVector *self, daoint size )
 {
 	if( self->capacity != size ){
 		self->capacity = size;
@@ -482,14 +482,14 @@ void DVector_Resize( DVector *self, int size )
 	self->size = size;
 }
 
-void DVector_Reserve( DVector *self, int size )
+void DVector_Reserve( DVector *self, daoint size )
 {
 	if( size <= self->capacity ) return;
 	self->capacity = 1.2 * size + 4;
 	self->data.base = dao_realloc( self->data.base, self->capacity*self->stride );
 }
 
-void DVector_ResetSize( DVector *self, int size )
+void DVector_Reset( DVector *self, daoint size )
 {
 	if( size <= self->capacity ){
 		self->size = size;
@@ -498,7 +498,7 @@ void DVector_ResetSize( DVector *self, int size )
 	DVector_Resize( self, size );
 }
 
-void* DVector_Get( DVector *self, int i )
+void* DVector_Get( DVector *self, daoint i )
 {
 	return self->data.base + i * self->stride;
 }
@@ -510,7 +510,7 @@ void DVector_Assign( DVector *left, DVector *right )
 	memcpy( left->data.base, right->data.base, right->size * right->stride );
 }
 
-void* DVector_Insert( DVector *self, int i, int n )
+void* DVector_Insert( DVector *self, daoint i, daoint n )
 {
 	void *data;
 
@@ -543,7 +543,7 @@ void* DVector_Back( DVector *self )
 	if( self->size == 0 ) return NULL;
 	return self->data.base + (self->size - 1) * self->stride;
 }
-void DVector_Erase( DVector *self, int i, int n )
+void DVector_Erase( DVector *self, daoint i, daoint n )
 {
 	void *src, *dest;
 

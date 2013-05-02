@@ -114,30 +114,32 @@ struct DVector
 		DString    *strings;
 		DaoToken   *tokens;
 		DaoVmCode  *codes;
+		DaoValue  **values;
 	} data;
 
-	uint_t  size;
-	uint_t  capacity;
-	uint_t  stride;
+	daoint  size;
+	daoint  capacity;
+	short   stride;
+	short   type;
 };
 
 DAO_DLL DVector* DVector_New( int stride );
 DAO_DLL void DVector_Delete( DVector *self );
 DAO_DLL void DVector_Clear( DVector *self );
 
-DAO_DLL void DVector_Resize( DVector *self, int size );
-DAO_DLL void DVector_Reserve( DVector *self, int size );
-DAO_DLL void DVector_ResetSize( DVector *self, int size );
+DAO_DLL void DVector_Resize( DVector *self, daoint size );
+DAO_DLL void DVector_Reserve( DVector *self, daoint size );
+DAO_DLL void DVector_Reset( DVector *self, daoint size );
 
 DAO_DLL void DVector_Assign( DVector *left, DVector *right );
 
-DAO_DLL void* DVector_Insert( DVector *self, int i, int n );
+DAO_DLL void* DVector_Insert( DVector *self, daoint i, daoint n );
 DAO_DLL void* DVector_Push( DVector *self );
 DAO_DLL void* DVector_Pop( DVector *self );
 DAO_DLL void* DVector_Back( DVector *self );
-DAO_DLL void* DVector_Get( DVector *self, int i );
+DAO_DLL void* DVector_Get( DVector *self, daoint i );
 
-DAO_DLL void DVector_Erase( DVector *self, int i, int n );
+DAO_DLL void DVector_Erase( DVector *self, daoint i, daoint n );
 
 DAO_DLL void DVector_PushInt( DVector *self, int value );
 DAO_DLL void DVector_PushFloat( DVector *self, float value );
