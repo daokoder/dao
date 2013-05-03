@@ -212,6 +212,81 @@ int DaoxDataFrame_FromMatrix( DaoxDataFrame *self, DaoArray *matrix )
 	}
 	return 1;
 }
+void DaoxDataFrame_UseLabels( DaoxDataFrame *self, int rowGroup, int colGroup )
+{
+	if( rowGroup >= self->rowLabels->size ) rowGroup = self->rowLabels->size - 1;
+	if( colGroup >= self->colLabels->size ) colGroup = self->colLabels->size - 1;
+	if( rowGroup < 0 ) rowGroup = 0;
+	if( colGroup < 0 ) colGroup = 0;
+	self->rowGroup = rowGroup;
+	self->colGroup = colGroup;
+}
+void DaoxDataFrame_AddLabelGroup( DaoxDataFrame *self, int row )
+{
+	DMap *labmap = DHash_New(D_STRING,0);
+	DArray *labels = row ? self->rowLabels : self->colLabels;
+	if( row ){
+		self->rowGroup = labels->size;
+	}else{
+		self->colGroup = labels->size;
+	}
+	DArray_Append( labels, labmap );
+	DMap_Delete( labmap );
+}
+void DaoxDataFrame_AddLabel( DaoxDataFrame *self, int row, const char *lab, daoint idx )
+{
+	DString slab = DString_WrapMBS( lab );
+	DMap *labmap = NULL;
+	if( idx < 0 ) return;
+	if( row && self->rowGroup < self->rowLabels->size ){
+		if( idx >= self->rowCount ) return;
+		labmap = self->rowLabels->items.pMap[self->rowGroup];
+	}else if( self->colGroup < self->colLabels->size ){
+		if( idx >= self->dataColumns->size ) return;
+		labmap = self->colLabels->items.pMap[self->colGroup];
+	}
+	if( labmap != NULL ) DMap_Insert( labmap, & slab, (void*)(size_t) idx );
+}
+daoint DaoxDataFrame_GetIndex( DaoxDataFrame *self, int row, const char *label )
+{
+	DString slab = DString_WrapMBS( label );
+	DMap *labmap = NULL;
+	DNode *it;
+	if( row && self->rowGroup < self->rowLabels->size ){
+		labmap = self->rowLabels->items.pMap[self->rowGroup];
+	}else if( self->colGroup < self->colLabels->size ){
+		labmap = self->colLabels->items.pMap[self->colGroup];
+	}
+	it = labmap == NULL ? NULL : DMap_Find( labmap, & slab );
+	if( it ) return it->value.pInt;
+	return -1;
+}
+void DaoxDataFrame_AddLabels( DaoxDataFrame *self, int row, DMap *labels )
+{
+	DString *lab;
+	DNode *it;
+	if( labels->keytype != D_STRING && labels->keytype != D_VALUE ) return;
+	if( labels->valtype != 0 && labels->valtype != D_VALUE ) return;
+	lab = DString_New(1);
+	DaoxDataFrame_AddLabelGroup( self, row );
+	for(it=DMap_First(labels); it; it=DMap_Next(labels,it)){
+		DString *lab2 = it->key.pString;
+		daoint idx = it->value.pInt;
+		if( labels->keytype == D_VALUE ){
+			if( it->key.pValue->type != DAO_STRING ) continue;
+			lab2 = it->key.pValue->xString.data;
+		}
+		if( labels->valtype == D_VALUE ){
+			if( it->value.pValue->type != DAO_INTEGER ) continue;
+			idx = it->value.pValue->xInteger.value;
+		}
+		if( idx < 0 ) continue;
+		DString_Reset( lab, 0 );
+		DString_Append( lab, lab2 );
+		DaoxDataFrame_AddLabel( self, row, lab->mbs, idx );
+	}
+	DString_Delete( lab );
+}
 
 void DaoxDataFrame_Encode( DaoxDataFrame *self, DString *output )
 {
@@ -233,15 +308,45 @@ static void FRAME_NewMatrix( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutValue( proc, (DaoValue*) self );
 	DaoxDataFrame_FromMatrix( self, (DaoArray*) p[0] );
 }
+static void FRAME_FromMatrix( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
+	DaoxDataFrame_FromMatrix( self, (DaoArray*) p[1] );
+}
 static void FRAME_Size( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
 	DaoProcess_PutInteger( proc, self->rowCount * self->dataColumns->size );
 }
-static void FRAME_FromMatrix( DaoProcess *proc, DaoValue *p[], int N )
+static void FRAME_UseLabels( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
-	DaoxDataFrame_FromMatrix( self, (DaoArray*) p[1] );
+	int rowGroup = p[1]->xInteger.value;
+	int colGroup = p[2]->xInteger.value;
+	DaoxDataFrame_UseLabels( self, rowGroup, colGroup );
+}
+static void FRAME_AddLabels( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
+	DaoxDataFrame_AddLabels( self, p[1]->xEnum.value == 0, p[2]->xMap.items );
+}
+static void FRAME_AddLabel( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
+	DString *lab = DaoValue_TryGetString( p[2] );
+	daoint row = p[1]->xEnum.value == 0;
+	daoint idx = p[3]->xInteger.value;
+	DString_ToMBS( lab );
+	DaoxDataFrame_AddLabel( self, row, lab->mbs, idx );
+}
+static void FRAME_GetIndex( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
+	DString *lab = DaoValue_TryGetString( p[2] );
+	daoint idx, row = p[1]->xEnum.value == 0;
+	DString_ToMBS( lab );
+	idx = DaoxDataFrame_GetIndex( self, row, lab->mbs );
+	DaoProcess_PutInteger( proc, idx );
 }
 
 static void FRAME_ScanCells( DaoProcess *proc, DaoValue *p[], int npar )
@@ -281,7 +386,7 @@ static void FRAME_ScanCells( DaoProcess *proc, DaoValue *p[], int npar )
 }
 
 #if 0
-DataFrame.UseLabelGroups(int,int)
+DataFrame.UseLabels(int,int)
 
 operator[](row:int, col:string)
 operator[](row:string, col:string)
@@ -303,8 +408,14 @@ static DaoFuncItem dataframeMeths[]=
 {
 	{ FRAME_New,         "DataFrame()=>DataFrame" },
 	{ FRAME_NewMatrix,   "DataFrame( mat : array )=>DataFrame" },
-	{ FRAME_Size,        "Size( self :DataFrame )=>int" },
+
 	{ FRAME_FromMatrix,  "FromMatrix( self :DataFrame, mat : array )" },
+
+	{ FRAME_Size,        "Size( self :DataFrame )=>int" },
+	{ FRAME_UseLabels,   "UseLabels( self :DataFrame, row :int, col :int )" },
+	{ FRAME_AddLabels,   "AddLabels( self :DataFrame, which :enum<row,column>, labels :map<string,int> )" },
+	{ FRAME_AddLabel,    "AddLabel( self :DataFrame, which :enum<row,column>, label :string, idx :int )" },
+	{ FRAME_GetIndex,    "GetIndex( self :DataFrame, which :enum<row,column>, label :string ) => int" },
 
 	{ FRAME_ScanCells,  "ScanCells( self :DataFrame )[cell:@T,row:int,column:int]" },
 	{ NULL, NULL },

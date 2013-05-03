@@ -74,6 +74,11 @@ DAO_DLL void DaoxDataFrame_Reset( DaoxDataFrame *self );
 
 DAO_DLL int DaoxDataFrame_FromMatrix( DaoxDataFrame *self, DaoArray *matrix );
 
+DAO_DLL void DaoxDataFrame_UseLabels( DaoxDataFrame *self, int rowGroup, int colGroup );
+DAO_DLL void DaoxDataFrame_AddLabels( DaoxDataFrame *self, int row, DMap *labels );
+DAO_DLL void DaoxDataFrame_AddLabel( DaoxDataFrame *self, int row, const char *lab, daoint i );
+DAO_DLL daoint DaoxDataFrame_GetIndex( DaoxDataFrame *self, int row, const char *label );
+
 DAO_DLL void DaoxDataFrame_Encode( DaoxDataFrame *self, DString *output );
 DAO_DLL void DaoxDataFrame_Decode( DaoxDataFrame *self, DString *input );
 
