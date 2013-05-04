@@ -2458,7 +2458,7 @@ DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 	}else if( vmc[1].c == DAO_CASE_UNORDERED ){
 		for(id=1; id<=vmc->c; id++){
 			mid = vmc + id;
-			if( DaoValue_Compare( opa, cst[ mid->a ] ) ==0 ){
+			if( DaoValue_Compare2( opa, cst[ mid->a ] ) ==0 ){
 				return self->topFrame->codes + mid->b;
 			}
 		}
@@ -2468,7 +2468,7 @@ DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 	while( first <= last ){
 		id = ( first + last ) / 2;
 		mid = vmc + id;
-		cmp = DaoValue_Compare( opa, cst[ mid->a ] );
+		cmp = DaoValue_Compare2( opa, cst[ mid->a ] );
 		if( cmp ==0 ){
 			if( cst[mid->a]->type== DAO_TUPLE && cst[mid->a]->xTuple.subtype == DAO_PAIR ){
 				while( id > first && DaoValue_Compare( opa, cst[ vmc[id-1].a ] ) ==0 ) id --;

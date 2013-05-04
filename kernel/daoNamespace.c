@@ -393,18 +393,20 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer );
 static void DaoValue_AddType( DaoValue *self, DString *name, DaoType *type )
 {
 	DaoType *type2 = type;
+	DaoValue *cst = (DaoValue*) type;
 	DaoTypeCore *core;
 	if( type->tid == DAO_CTYPE ) type2 = type->aux->xCtype.cdtype;
+	if( type->tid >= DAO_OBJECT && type->tid <= DAO_INTERFACE ) cst = type->aux;
 	switch( self->type ){
 	case DAO_CTYPE :
 		core = self->xCdata.ctype->kernel->core;
 		DaoNamespace_SetupValues( core->kernel->nspace, self->xCdata.ctype->kernel->typer );
 		if( core->kernel->values == NULL ) core->kernel->values = DHash_New( D_STRING, D_VALUE );
-		DMap_Insert( core->kernel->values, name, type->aux );
+		DMap_Insert( core->kernel->values, name, cst );
 		break;
 	case DAO_CLASS :
 		DaoClass_AddType( & self->xClass, name, type2 );
-		DaoClass_AddConst( & self->xClass, name, type->aux, DAO_DATA_PUBLIC );
+		DaoClass_AddConst( & self->xClass, name, cst, DAO_DATA_PUBLIC );
 		break;
 	case DAO_NAMESPACE :
 		if( type->typer->core && type->typer->core->kernel ){

@@ -469,7 +469,7 @@ DVector* DVector_Copy( DVector *self )
 	copy->type = self->type;
 	DVector_Resize( copy, self->size );
 	memcpy( copy->data.base, self->data.base, self->size * self->stride );
-	return self;
+	return copy;
 }
 
 void DVector_Delete( DVector *self )

@@ -1820,8 +1820,8 @@ static int DaoArray_MakeSlice( DaoArray *self, DaoProcess *proc, DaoValue *idx[]
 {
 	DVector *tmp = DVector_New( sizeof(daoint) );
 	daoint *dims = self->dims;
-	int i, D = self->ndim;
-	int S = D != 0;
+	daoint i, D = self->ndim;
+	daoint S = D != 0;
 	/* slices: DArray<DVector<int> > */
 	DArray_Clear( slices );
 	DVector_Resize( tmp, 3 );

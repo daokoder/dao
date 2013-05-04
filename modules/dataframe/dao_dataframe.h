@@ -55,6 +55,8 @@ DAO_DLL void DaoxDataColumn_Delete( DaoxDataColumn *self );
 DAO_DLL void DaoxDataColumn_Reset( DaoxDataColumn *self, daoint size );
 
 DAO_DLL void DaoxDataColumn_SetType( DaoxDataColumn *self, DaoType *type );
+DAO_DLL void DaoxDataColumn_SetCell( DaoxDataColumn *self, daoint i, DaoValue *value );
+DAO_DLL DaoValue* DaoxDataColumn_GetCell( DaoxDataColumn *self, daoint i, DaoValue *value );
 
 
 
@@ -67,6 +69,9 @@ struct DaoxDataFrame
 	DArray  *labels[3];  // DArray<DMap<DString*>*>
 	DArray  *columns;    // DArray<DaoxDataColumn*>
 	DArray  *caches;     // DArray<DaoxDataColumn*>
+
+	DaoxDataFrame  *original;  // the original dataframe;
+	DArray         *slices;    // DArray<DVector<daoint>*>
 };
 
 DAO_DLL DaoType *daox_type_dataframe;
@@ -83,6 +88,8 @@ DAO_DLL void DaoxDataFrame_UseLabels( DaoxDataFrame *self, int dim, int group );
 DAO_DLL void DaoxDataFrame_AddLabels( DaoxDataFrame *self, int dim, DMap *labels );
 DAO_DLL void DaoxDataFrame_AddLabel( DaoxDataFrame *self, int dim, const char *lab, daoint i );
 DAO_DLL daoint DaoxDataFrame_GetIndex( DaoxDataFrame *self, int dim, const char *label );
+
+DAO_DLL void DaoxDataFrame_Sliced( DaoxDataFrame *self );
 
 DAO_DLL void DaoxDataFrame_Encode( DaoxDataFrame *self, DString *output );
 DAO_DLL void DaoxDataFrame_Decode( DaoxDataFrame *self, DString *input );

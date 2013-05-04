@@ -25,12 +25,16 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <stdlib.h>
+#include <string.h>
 #include "dao_dataframe.h"
 #include "daoProcess.h"
 #include "daoNumtype.h"
 #include "daoValue.h"
 #include "daoType.h"
 #include "daoGC.h"
+
+enum { SLICE_RANGE, SLICE_ENUM };
 
 
 DaoType *daox_type_dataframe;
@@ -118,16 +122,30 @@ void DaoxDataColumn_SetType( DaoxDataColumn *self, DaoType *type )
 	self->cells->stride = datasize;
 	self->cells->type = datatype;
 }
-DaoValue* DaoxDataColumn_GetCell( DaoxDataColumn *self, daoint row, DaoValue *value )
+void DaoxDataColumn_SetCell( DaoxDataColumn *self, daoint i, DaoValue *value )
+{
+	switch( self->type->tid ){
+	default :
+		GC_ShiftRC( value, self->cells->data.values[i] );
+		self->cells->data.values[i] = value;
+		break;
+	case DAO_INTEGER : self->cells->data.daoints[i]   = DaoValue_GetInteger( value ); break;
+	case DAO_FLOAT   : self->cells->data.floats[i]    = DaoValue_GetFloat( value );  break;
+	case DAO_DOUBLE  : self->cells->data.doubles[i]   = DaoValue_GetDouble( value ); break;
+	case DAO_COMPLEX : self->cells->data.complexes[i] = DaoValue_GetComplex( value ) ; break;
+	case DAO_STRING  : DaoValue_GetString( value, & self->cells->data.strings[i] ); break;
+	}
+}
+DaoValue* DaoxDataColumn_GetCell( DaoxDataColumn *self, daoint i, DaoValue *value )
 {
 	value->xNone.type = self->type->tid;
 	switch( self->type->tid ){
-	case DAO_INTEGER : value->xInteger.value = self->cells->data.daoints[row]; break;
-	case DAO_FLOAT   : value->xFloat.value   = self->cells->data.floats[row];  break;
-	case DAO_DOUBLE  : value->xDouble.value  = self->cells->data.doubles[row]; break;
-	case DAO_COMPLEX : value->xComplex.value = self->cells->data.complexes[row]; break;
-	case DAO_STRING  : value->xString.data   = & self->cells->data.strings[row]; break;
-	default : value = self->cells->data.values[row]; break;
+	case DAO_INTEGER : value->xInteger.value = self->cells->data.daoints[i]; break;
+	case DAO_FLOAT   : value->xFloat.value   = self->cells->data.floats[i];  break;
+	case DAO_DOUBLE  : value->xDouble.value  = self->cells->data.doubles[i]; break;
+	case DAO_COMPLEX : value->xComplex.value = self->cells->data.complexes[i]; break;
+	case DAO_STRING  : value->xString.data   = & self->cells->data.strings[i]; break;
+	default : value = self->cells->data.values[i]; break;
 	}
 	return value;
 }
@@ -145,14 +163,18 @@ DaoxDataFrame* DaoxDataFrame_New()
 	}
 	self->columns = DArray_New(0);
 	self->caches = DArray_New(0);
+	self->original = NULL;
+	self->slices = NULL;
 	return self;
 }
 void DaoxDataFrame_Delete( DaoxDataFrame *self )
 {
 	int i;
 	for(i=0; i<3; ++i) DArray_Delete( self->labels[i] );
+	if( self->slices ) DArray_Delete( self->slices );
 	DArray_Delete( self->columns );
 	DArray_Delete( self->caches );
+	GC_DecRC( self->original );
 	dao_free( self );
 }
 
@@ -176,6 +198,8 @@ void DaoxDataFrame_Reset( DaoxDataFrame *self )
 		self->groups[i] = 0;
 		DArray_Clear( self->labels[i] );
 	}
+	GC_DecRC( self->original );
+	self->original = NULL;
 	DArray_Clear( self->columns );
 }
 DaoxDataColumn* DaoxDataFrame_MakeColumn( DaoxDataFrame *self, DaoType *type )
@@ -303,12 +327,196 @@ void DaoxDataFrame_AddLabels( DaoxDataFrame *self, int dim, DMap *labels )
 	}
 	DString_Delete( lab );
 }
+static void DaoxDataFrame_PrepareSlices( DaoxDataFrame *self )
+{
+	if( self->slices != NULL ) return;
+	self->slices = DArray_New(D_VECTOR);
+}
+static void DaoxDataFrame_SliceFrom( DaoxDataFrame *self, DaoxDataFrame *orig, DArray *slices )
+{
+}
+void DaoxDataFrame_Sliced( DaoxDataFrame *self )
+{
+}
 
 void DaoxDataFrame_Encode( DaoxDataFrame *self, DString *output )
 {
 }
 void DaoxDataFrame_Decode( DaoxDataFrame *self, DString *input )
 {
+}
+
+
+
+
+static int SliceRange( DVector *slice, daoint N, daoint first, daoint last )
+{
+	DVector_Resize( slice, 3 );
+	slice->data.daoints[0] = SLICE_RANGE;
+	slice->data.daoints[1] = 0;
+	slice->data.daoints[2] = 0;
+	if( first <0 ) first += N;
+	if( last <0 ) last += N;
+	if( first <0 || first >= N || last <0 || last >= N ) return 0;
+	slice->data.daoints[2] = first;
+	if( first <= last ) slice->data.daoints[1] = last - first + 1;
+	return 1;
+}
+static int SliceRange2( DVector *slice, daoint N, daoint first, daoint count )
+{
+	DVector_Resize( slice, 3 );
+	slice->data.daoints[0] = SLICE_RANGE;
+	slice->data.daoints[1] = 0;
+	slice->data.daoints[2] = 0;
+	if( first <0 ) first += N;
+	if( first <0 || first >= N ) return 0;
+	slice->data.daoints[2] = first;
+	if( first + count > N ) return 0;
+	slice->data.daoints[1] = count;
+	return 1;
+}
+static void MakeSlice( DaoProcess *proc, DaoValue *pid, daoint N, DVector *slice )
+{
+	daoint j, id, from, to, rc = 1;
+	if( pid == NULL || pid->type == 0 ){
+		SliceRange2( slice, N, 0, N );
+		return;
+	}
+	switch( pid->type ){
+	case DAO_INTEGER :
+	case DAO_FLOAT :
+	case DAO_DOUBLE :
+		{
+			id = DaoValue_GetInteger( pid );
+			rc = SliceRange2( slice, N, id, 1 );
+			break;
+		}
+	case DAO_STRING :
+		{
+			break;
+		}
+	case DAO_TUPLE :
+		{
+			DaoValue **data = pid->xTuple.items;
+			DVector_Clear( slice );
+			if( data[0]->type == DAO_INTEGER && data[1]->type == DAO_INTEGER ){
+				from = data[0]->xInteger.value;
+				to   = data[1]->xInteger.value;
+				rc = SliceRange( slice, N, from, to );
+			}else if( data[0]->type == DAO_NONE && data[1]->type == DAO_NONE ){
+				rc = SliceRange2( slice, N, 0, N );
+			}else if( data[0]->type <= DAO_DOUBLE && data[1]->type == DAO_NONE ){
+				from = DaoValue_GetInteger( data[0] );
+				rc = SliceRange( slice, N, from, -1 );
+			}else if( data[0]->type == DAO_NONE && data[1]->type <= DAO_DOUBLE ){
+				to = DaoValue_GetInteger( data[1] );
+				rc = SliceRange( slice, N, 0, to );
+			}else if( data[0]->type == DAO_STRING && data[1]->type == DAO_STRING ){
+			}else if( data[0]->type == DAO_STRING && data[1]->type == DAO_NONE ){
+			}else if( data[0]->type == DAO_NONE && data[1]->type == DAO_STRING ){
+			}else{
+				DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "need number" );
+			}
+			break;
+		}
+	case DAO_LIST :
+		{
+			DaoList *list = & pid->xList;
+			DaoValue **v = list->items.items.pValue;
+			DVector_Resize( slice, list->items.size + 2 );
+			slice->data.daoints[0] = SLICE_ENUM;
+			slice->data.daoints[1] = list->items.size;
+			for( j=0; j<list->items.size; j++){
+				if( v[j]->type < DAO_INTEGER || v[j]->type > DAO_DOUBLE )
+					DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "need number" );
+				id = DaoValue_GetInteger( v[j] );
+				if( id <0 ) id += N;
+				if( id <0 || id >= N ){
+					rc = id = 0;
+					break;
+				}
+				slice->data.daoints[j+2] = id;
+			}
+			break;
+		}
+	case DAO_ARRAY :
+		{
+			DaoArray *na = & pid->xArray;
+			daoint *p;
+
+			if( na->etype == DAO_COMPLEX ){
+				DaoProcess_RaiseException( proc, DAO_ERROR_INDEX,
+						"complex array can not be used as index" );
+				break;
+			}
+			DVector_Resize( slice, na->size + 2 );
+			slice->data.daoints[0] = SLICE_ENUM;
+			slice->data.daoints[1] = na->size;
+			p = slice->data.daoints + 2;
+			for( j=0; j<na->size; j++){
+				id = DaoArray_GetInteger( na, j );
+				if( id <0 ) id += N;
+				if( id <0 || id >= N ){
+					rc = id = 0;
+					break;
+				}
+				p[j] = id;
+			}
+			break;
+		}
+	default: break;
+	}
+	if( slice->size < 2 ) SliceRange2( slice, N, 0, N );
+	if( rc == 0 ) DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, "" );
+}
+static int DaoDataFrame_MakeSlice( DaoxDataFrame *self, DaoProcess *proc, DaoValue *idx[], int N, DArray *slices )
+{
+	DVector *tmp = DVector_New( sizeof(daoint) );
+	daoint *dims = self->dims;
+	daoint i, D = 3, S = 1;
+
+	/* slices: DArray<DVector<int> > */
+	DArray_Clear( slices );
+	DVector_Resize( tmp, 3 );
+	tmp->data.daoints[0] = SLICE_RANGE;
+	tmp->data.daoints[2] = 0;
+	for(i=0; i<D; ++i){
+		tmp->data.daoints[1] = dims[i];
+		DArray_Append( slices, tmp );
+	}
+	DVector_Delete( tmp );
+	if( N > D ){
+		DaoProcess_RaiseException( proc, DAO_WARNING, "too many indices" );
+		N = D;
+	}
+	for(i=0; i<N; ++i) MakeSlice( proc, idx[i], (int)dims[i], slices->items.pVector[i] );
+	for(i=0; i<D; ++i) S *= slices->items.pVector[i]->data.daoints[1];
+	return S;
+}
+
+
+
+
+DaoxDataFrame* DaoProcess_MakeReturnDataFrame( DaoProcess *self )
+{
+	DaoVmCode *vmc = self->activeCode;
+	DaoValue *dC = self->activeValues[ vmc->c ];
+	DaoxDataFrame *df = (DaoxDataFrame*) DaoValue_CastCstruct( dC, daox_type_dataframe );
+	if( df != NULL ){
+		DaoVmCode *vmc2 = vmc + 1;
+		int reuse = 0;
+		if( df->refCount == 1 ) reuse = 1;
+		if( df->refCount == 2 && (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) && vmc2->a != vmc2->c ){
+			if( self->activeValues[vmc2->c] == (DaoValue*) df ) reuse = 1;
+		}
+		if( reuse ){
+			DaoxDataFrame_Reset( df );
+			return df;
+		}
+	}
+	df = DaoxDataFrame_New();
+	DaoValue_Copy( (DaoValue*) df, & self->activeValues[ vmc->c ] );
+	return df;
 }
 
 
@@ -363,6 +571,73 @@ static void FRAME_GetIndex( DaoProcess *proc, DaoValue *p[], int N )
 	DString_ToMBS( lab );
 	idx = DaoxDataFrame_GetIndex( self, dim, lab->mbs );
 	DaoProcess_PutInteger( proc, idx );
+}
+static int DaoxDF_IsSingleIndex( DaoValue *value )
+{
+	if( value->type >= DAO_INTEGER && value->type <= DAO_DOUBLE ) return 1;
+	if( value->type == DAO_STRING ) return 1;
+	return 0;
+}
+static daoint DaoxDF_MakeIndex( DaoxDataFrame *self, int dim, DaoValue *value, DaoProcess *p )
+{
+	daoint idx = -1;
+	if( value->type >= DAO_INTEGER && value->type <= DAO_DOUBLE ){
+		idx = DaoValue_GetInteger( value );
+	}else if( value->type == DAO_STRING ){
+		DString_ToMBS( value->xString.data );
+		idx = DaoxDataFrame_GetIndex( self, dim, value->xString.data->mbs );
+	}else if( value->type == DAO_NONE && self->dims[2] == 1 ){
+		idx = 0;
+	}
+	if( idx < 0 || idx >= self->dims[dim] ){
+		DaoProcess_RaiseException( p, DAO_ERROR_INDEX_OUTOFRANGE, "" );
+		return -1;
+	}
+	return idx;
+}
+static void FRAME_GETMI( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoxDataFrame *df, *self = (DaoxDataFrame*) p[0];
+	int singleIndex1 = DaoxDF_IsSingleIndex( p[1] );
+	int singleIndex2 = DaoxDF_IsSingleIndex( p[2] );
+	int singleIndex3 = DaoxDF_IsSingleIndex( p[3] );
+
+	if( singleIndex1 && singleIndex2 && (singleIndex3 || self->dims[2] == 1) ){
+		daoint i = DaoxDF_MakeIndex( self, DAOX_DF_ROW, p[1], proc );
+		daoint j = DaoxDF_MakeIndex( self, DAOX_DF_COL, p[2], proc );
+		daoint k = DaoxDF_MakeIndex( self, DAOX_DF_DEP, p[3], proc );
+		daoint ik = k * self->dims[0] + i;
+		DaoValue value = {0};
+		if( i < 0 || j < 0 || k < 0 ) return;
+		memset( & value, 0, sizeof(DaoValue) );
+		DaoxDataColumn_GetCell( (DaoxDataColumn*) self->columns->items.pVoid[j], ik, & value );
+		DaoProcess_PutValue( proc, & value );
+	}else{
+		df = DaoProcess_MakeReturnDataFrame( proc );
+		DaoxDataFrame_PrepareSlices( df );
+		DaoDataFrame_MakeSlice( self, proc, p+1, N-1, df->slices );
+		DaoProcess_PutValue( proc, (DaoValue*) df );
+	}
+}
+static void FRAME_SETMI( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoxDataFrame *df, *self = (DaoxDataFrame*) p[0];
+	DaoValue *value = p[1];
+	int singleIndex1 = DaoxDF_IsSingleIndex( p[2] );
+	int singleIndex2 = DaoxDF_IsSingleIndex( p[3] );
+	int singleIndex3 = DaoxDF_IsSingleIndex( p[4] );
+
+	if( singleIndex1 && singleIndex2 && (singleIndex3 || self->dims[2] == 1) ){
+		daoint i = DaoxDF_MakeIndex( self, DAOX_DF_ROW, p[2], proc );
+		daoint j = DaoxDF_MakeIndex( self, DAOX_DF_COL, p[3], proc );
+		daoint k = DaoxDF_MakeIndex( self, DAOX_DF_DEP, p[4], proc );
+		daoint ik = k * self->dims[0] + i;
+		if( i < 0 || j < 0 || k < 0 ) return;
+		DaoxDataColumn_SetCell( (DaoxDataColumn*) self->columns->items.pVoid[j], ik, value );
+	}else{
+		DaoxDataFrame_PrepareSlices( self );
+		DaoDataFrame_MakeSlice( self, proc, p+1, N-1, self->slices );
+	}
 }
 
 static void FRAME_ScanCells( DaoProcess *proc, DaoValue *p[], int npar )
@@ -434,15 +709,16 @@ static DaoFuncItem dataframeMeths[]=
 
 	{ FRAME_FromMatrix,  "FromMatrix( self :DataFrame, mat : array )" },
 
-	{ FRAME_Size,        "Size( self :DataFrame )=>int" },
-	{ FRAME_UseLabels,
-		"UseLabels( self :DataFrame, dim :enum<row,column,depth>, group :int )" },
-	{ FRAME_AddLabels,
-		"AddLabels( self :DataFrame, dim :enum<row,column,depth>, labels :map<string,int> )" },
-	{ FRAME_AddLabel,
-		"AddLabel( self :DataFrame, dim :enum<row,column,depth>, label :string, index :int )" },
-	{ FRAME_GetIndex,
-		"GetIndex( self :DataFrame, dim :enum<row,column,depth>, label :string ) => int" },
+	{ FRAME_Size,      "Size( self :DataFrame )=>int" },
+	{ FRAME_UseLabels, "UseLabels( self :DataFrame, dim :DimType, group :int )" },
+	{ FRAME_AddLabels, "AddLabels( self :DataFrame, dim :DimType, labels :map<string,int> )" },
+	{ FRAME_AddLabel,  "AddLabel( self :DataFrame, dim :DimType, label :string, index :int )" },
+	{ FRAME_GetIndex,  "GetIndex( self :DataFrame, dim :DimType, label :string ) => int" },
+
+	{ FRAME_GETMI,
+		"[]( self :DataFrame, i :IndexType, j :IndexType =none, k :IndexType =none ) => any" },
+	{ FRAME_SETMI,
+		"[]=( self :DataFrame, value :any, i :IndexType, j :IndexType =none, k :IndexType =none )" },
 
 	{ FRAME_ScanCells,  "ScanCells( self :DataFrame )[cell:@T,row:int,column:int,depth:int]" },
 	{ NULL, NULL },
@@ -458,5 +734,7 @@ DaoTypeBase dataframeTyper =
 DAO_DLL int DaoDataframe_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	daox_type_dataframe = DaoNamespace_WrapType( ns, & dataframeTyper, 0 );
+	DaoNamespace_TypeDefine( ns, "enum<row,column,depth>", "DataFrame::DimType" );
+	DaoNamespace_TypeDefine( ns, "none|int|string|tuple<none,none>|tuple<int,int>|tuple<string,string>|tuple<int|string,none>|tuple<none,int|string>", "DataFrame::IndexType" );
 	return 0;
 }

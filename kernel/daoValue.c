@@ -189,13 +189,6 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	if( left == NULL || right == NULL ) return left < right ? -100 : 100;
 	if( left->type != right->type ){
 		res = left->type < right->type ? -100 : 100;
-		if( right->type == DAO_TUPLE && right->xTuple.size == 2 ){
-			res = DaoValue_Compare( left, right->xTuple.items[0] );
-			if( res <= 0 ) return res;
-			res = DaoValue_Compare( left, right->xTuple.items[1] );
-			if( res >= 0 ) return res;
-			return 0;
-		}
 		if( left->type < DAO_INTEGER || left->type > DAO_DOUBLE ) return res;
 		if( right->type < DAO_INTEGER || right->type > DAO_DOUBLE ) return res;
 		L = DaoValue_GetDouble( left );
@@ -223,6 +216,29 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 #endif
 	}
 	return left < right ? -100 : 100; /* needed for map */
+}
+int DaoValue_Compare2( DaoValue *left, DaoValue *right )
+{
+	double L, R;
+	int res = 0;
+	if( left == right ) return 0;
+	if( left == NULL || right == NULL ) return left < right ? -100 : 100;
+	if( left->type != right->type ){
+		res = left->type < right->type ? -100 : 100;
+		if( right->type == DAO_TUPLE && right->xTuple.size == 2 ){
+			res = DaoValue_Compare( left, right->xTuple.items[0] );
+			if( res <= 0 ) return res;
+			res = DaoValue_Compare( left, right->xTuple.items[1] );
+			if( res >= 0 ) return res;
+			return 0;
+		}
+		if( left->type < DAO_INTEGER || left->type > DAO_DOUBLE ) return res;
+		if( right->type < DAO_INTEGER || right->type > DAO_DOUBLE ) return res;
+		L = DaoValue_GetDouble( left );
+		R = DaoValue_GetDouble( right );
+		return L == R ? 0 : (L < R ? -1 : 1);
+	}
+	return DaoValue_Compare( left, right );
 }
 int DaoValue_IsZero( DaoValue *self )
 {
