@@ -73,7 +73,7 @@ enum DaoBasicStruct
 	D_VMCODE2 , /* for DMap, compare code and operands only; */
 	D_TOKEN ,   /* for DArray only; */
 	D_STRING ,
-	D_VARRAY ,
+	D_VECTOR ,
 	D_ARRAY ,
 	D_MAP ,
 	D_VOID2 /* a pair of pointer; */

@@ -112,6 +112,7 @@ static void* DArray_CopyItem( DArray *self, void *item )
 	case D_VMCODE : return DaoVmCodeX_Copy( (DaoVmCodeX*) item );
 	case D_TOKEN  : return DaoToken_Copy( (DaoToken*) item );
 	case D_STRING : return DString_Copy( (DString*) item );
+	case D_VECTOR : return DVector_Copy( (DVector*) item );
 	case D_ARRAY  : return DArray_Copy( (DArray*) item );
 	case D_MAP    : return DMap_Copy( (DMap*) item );
 	default : break;
@@ -125,6 +126,7 @@ static void DArray_DeleteItem( DArray *self, void *item )
 	case D_VMCODE : DaoVmCodeX_Delete( (DaoVmCodeX*) item ); break;
 	case D_TOKEN  : DaoToken_Delete( (DaoToken*) item ); break;
 	case D_STRING : DString_Delete( (DString*) item ); break;
+	case D_VECTOR : DVector_Delete( (DVector*) item ); break;
 	case D_ARRAY  : DArray_Delete( (DArray*) item ); break;
 	case D_MAP    : DMap_Delete( (DMap*) item ); break;
 	default : break;
@@ -138,6 +140,7 @@ static void DArray_DeleteItems( DArray *self, daoint M, daoint N )
 	case D_VMCODE : for(i=M; i<N; i++) DaoVmCodeX_Delete( self->items.pVmc[i] ); break;
 	case D_TOKEN  : for(i=M; i<N; i++) DaoToken_Delete( self->items.pToken[i] ); break;
 	case D_STRING : for(i=M; i<N; i++) DString_Delete( self->items.pString[i] ); break;
+	case D_VECTOR : for(i=M; i<N; i++) DVector_Delete( self->items.pVector[i] ); break;
 	case D_ARRAY  : for(i=M; i<N; i++) DArray_Delete( self->items.pArray[i] ); break;
 	case D_MAP    : for(i=M; i<N; i++) DMap_Delete( self->items.pMap[i] ); break;
 	default : break;
@@ -458,6 +461,14 @@ DVector* DVector_New( int stride )
 {
 	DVector *self = (DVector*) dao_calloc( 1, sizeof(DVector) );
 	self->stride = stride;
+	return self;
+}
+DVector* DVector_Copy( DVector *self )
+{
+	DVector *copy = DVector_New( self->stride );
+	copy->type = self->type;
+	DVector_Resize( copy, self->size );
+	memcpy( copy->data.base, self->data.base, self->size * self->stride );
 	return self;
 }
 

@@ -816,6 +816,84 @@ for( i=0; i<5; ++i ){
 
 
 
+@[subsection]
+Deferred Block
+@[subsection]
+
+Deferred block is a block that will not be executed immediately
+when the normal execution reaches it, instead, its execution
+will be deferred until the exit of the function after the function
+is completed or has encounted an exception.
+Such blocks are marked with the @[green]defer@[green] keyword,
+and placed inside of a pair of curly brackets:
+@[code]
+defer { block }
+@[code]
+
+This is very useful for freeing resources allocated in functions
+that have multiple exits.
+For example, one can defer a block to close a file handle
+immediately after the file handle is opened:
+@[code]
+routine Test( id )
+{
+	fout = io.writeln( 'output.txt', 'w+' )
+	defer { fout.close() }
+
+	fout.writeln( 'abc' )
+	if( id == 0 ){
+		fout.writeln( '123' )
+		return
+	}
+	io.writeln( 'def' )
+}
+@[code]
+
+
+As shown in the above example, a deferred block can access
+outer scope constants and varaibles in the same way as closures.
+These outer scope variables are captured at the time 
+the deferred block is reached in the normal execution.
+@[code]
+routine Test()
+{
+	for( i = 1 : 3 ) defer { io.writeln( 'deferred', i ) }
+}
+Test()
+@[code]
+This will print:
+@[code]
+deferred 3
+deferred 2
+deferred 1
+@[code]
+
+
+When a function exits, all the deferred blocks that have been
+reached in the normal execution will be executed in the reverse
+order of being reached.
+
+
+Any deferred block can modify the value returned by the function.
+In order to do this, one must designate a variable name for the
+returned value, by placing the name inside a pair brackets after
+the @[green]defer@[green] keyword:
+@[code]
+defer (ret) { ret += 1 }
+@[code]
+For example,
+@[code]
+routine Test()
+{
+	defer ( result ) {
+		result *= 2  # double the returning value
+	}
+	return 1000;
+}
+io.writeln( Test() )
+@[code]
+This will print out 2000.
+
 
 @[text]
 
@@ -1614,6 +1692,136 @@ PrintSize2( {} );
 
 
 
+
+
+
+
+
+
+################################################################################
+################################################################################
+######## Exception/Panic Handling
+################################################################################
+################################################################################
+
+@[name]
+dao.tutorial.exception
+@[name]
+
+@[title]
+Exception Handling
+@[title]
+
+
+@[text]
+
+
+The handling of exceptions in Dao is very much like
+the handling of panics in the Go programming language.
+The basic idea is to implement exception handling codes in a function
+as deferred code block (see the @[green]Deferred Block@[green] subsection
+in @[node]dao.tutorial.controls@[node] for more information about this),
+which will be automatically executed when the function exists.
+
+
+In the deferred block, the built-in function @[green]recover()@[green] can be used
+to recover a list of exceptions, and handle them properly.
+Then the execution of the caller of function which defines the
+deferred blok will be resumed normally.
+@[code(dao)]
+
+routine Test()
+{
+	defer { io.writeln( 'recovering:', recover() ) }
+	io.writeln( 'Test(): before panic;' )
+	panic( 123 )
+	io.writeln( 'Test(): after panic;' )
+}
+
+io.writeln( 'Before Test();' )
+Test()
+io.writeln( 'After Test();' )
+@[code(dao)]
+In this example, the built-in function @[green]panic()@[green]
+is used to raise an exception. This function can take any value as a parameter.
+If the parameter is an exception object, this exception will be raised;
+otherwise, an generic exception object will be created to hold the parameter value,
+and then the created exception object will be raised.
+
+
+Each function can define multiple deferred blocks, but only the call
+to @[green]recover()@[green] in the lastly executed deferred block
+will return the exceptions.
+
+
+An exception type can be passed to @[green]recover()@[green]
+to request a specific type of exception.
+@[code(dao)]
+# Example to handle user defined exception type:
+class MyError : Exception::Error
+{
+	routine serialize(){ return ('MyError', self) }
+}
+
+routine Test()
+{
+	defer {
+		io.writeln( 'recovering from', recover( MyError ) )
+	}
+
+	io.writeln( 'Test(): before panic;' )
+	panic( MyError() );
+	io.writeln( 'Test(): after panic;' )
+}
+Test()
+@[code(dao)]
+
+
+As mentioned above, the normal execution will be resumed by
+the caller of the function handles the exceptions by deferred blocks.
+In order to resume normal execution right after the handling of exceptions,
+a special type of code blocks can be used to "host" the deferred blocks,
+@[code(dao)]
+@@ { block }
+@@ ( value ) { block }
+@[code(dao)]
+These kind of blocks are executed in new stack frames,
+and when these blocks are finished and the frames are removed from the stack,
+deferred blocks encounted in these blocks will be automatically execuated
+in the same way as the deferred blocks defined in normal functions.
+If the exceptions are recovered in these deferred blocks,
+the normal execution will be resumed right after these 
+@[green]@@{}@[green] blocks,
+@[code(dao)]
+fout = io::stdio
+
+@@ {
+	defer { recover() }
+	fout = io.open( "NonExistentFile.txt", 'r+' )
+}
+
+if( fout != io::stdio ) defer{ fout.close() }
+
+fout.writeln( 'hello' )
+@[code(dao)]
+
+Such @[green]@@{}@[green] blocks actually expressions that may return values.
+The only difference between @[green]@@{block}@[green] and 
+@[green]@@(value){block}@[green] is that,
+in the second case, if the "block" raises an exception,
+the default "value" is returned instead, 
+and the exception is suppressed.
+This can make codes such as shown in the above example much simpler,
+@[code(dao)]
+fout = @@( io::stdio ){ io.open( "NonExistentFile.txt", 'r+' ) }
+if( fout != io::stdio ) defer{ fout.close() }
+fout.writeln( 'hello' )
+@[code(dao)]
+
+
+
+
+@[text]
 
 
 

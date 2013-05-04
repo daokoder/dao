@@ -57,6 +57,7 @@ struct DArray
 		DaoNamespace **pNS;
 
 		DString      **pString;
+		DVector      **pVector;
 		DArray       **pArray;
 		DMap         **pMap;
 		DaoInode     **pInode;
@@ -124,6 +125,7 @@ struct DVector
 };
 
 DAO_DLL DVector* DVector_New( int stride );
+DAO_DLL DVector* DVector_Copy( DVector *self );
 DAO_DLL void DVector_Delete( DVector *self );
 DAO_DLL void DVector_Clear( DVector *self );
 

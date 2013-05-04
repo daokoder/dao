@@ -34,6 +34,13 @@
 typedef struct DaoxDataColumn  DaoxDataColumn;
 typedef struct DaoxDataFrame   DaoxDataFrame;
 
+enum DaoxDataFrameDims
+{
+	DAOX_DF_ROW ,
+	DAOX_DF_COL ,
+	DAOX_DF_DEP 
+};
+
 
 
 struct DaoxDataColumn
@@ -55,13 +62,11 @@ struct DaoxDataFrame
 {
 	DAO_CSTRUCT_COMMON;
 
-	daoint   rowCount;     // number of rows;
-	uint_t   rowGroup;     // active row group;
-	uint_t   colGroup;     // active column group;
-	DArray  *rowLabels;    // DArray<DMap<DString*>*>
-	DArray  *colLabels;    // DArray<DMap<DString*>*>
-	DArray  *dataColumns;  // DArray<DaoxDataColumn*>
-	DArray  *cacheColumns; // DArray<DaoxDataColumn*>
+	daoint   dims[3];    // number of rows;
+	uint_t   groups[3];  // active label group for each dim;
+	DArray  *labels[3];  // DArray<DMap<DString*>*>
+	DArray  *columns;    // DArray<DaoxDataColumn*>
+	DArray  *caches;     // DArray<DaoxDataColumn*>
 };
 
 DAO_DLL DaoType *daox_type_dataframe;
@@ -74,10 +79,10 @@ DAO_DLL void DaoxDataFrame_Reset( DaoxDataFrame *self );
 
 DAO_DLL int DaoxDataFrame_FromMatrix( DaoxDataFrame *self, DaoArray *matrix );
 
-DAO_DLL void DaoxDataFrame_UseLabels( DaoxDataFrame *self, int rowGroup, int colGroup );
-DAO_DLL void DaoxDataFrame_AddLabels( DaoxDataFrame *self, int row, DMap *labels );
-DAO_DLL void DaoxDataFrame_AddLabel( DaoxDataFrame *self, int row, const char *lab, daoint i );
-DAO_DLL daoint DaoxDataFrame_GetIndex( DaoxDataFrame *self, int row, const char *label );
+DAO_DLL void DaoxDataFrame_UseLabels( DaoxDataFrame *self, int dim, int group );
+DAO_DLL void DaoxDataFrame_AddLabels( DaoxDataFrame *self, int dim, DMap *labels );
+DAO_DLL void DaoxDataFrame_AddLabel( DaoxDataFrame *self, int dim, const char *lab, daoint i );
+DAO_DLL daoint DaoxDataFrame_GetIndex( DaoxDataFrame *self, int dim, const char *label );
 
 DAO_DLL void DaoxDataFrame_Encode( DaoxDataFrame *self, DString *output );
 DAO_DLL void DaoxDataFrame_Decode( DaoxDataFrame *self, DString *input );

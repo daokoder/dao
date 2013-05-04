@@ -677,7 +677,15 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		}
 	}else{
 		DaoLexer_Tokenize( lexer, code->mbs, DAO_LEX_COMMENT|DAO_LEX_SPACE );
-		if( lang && strcmp( lang->mbs, "syntax" ) == 0 ){
+		if( lang && strcmp( lang->mbs, "dao" ) == 0 ){
+			for(i=0; i<tokens->size; i++){
+				DaoToken *tok = tokens->items.pToken[i];
+				const char *ts = tok->string.mbs;
+				if( tok->type != DTOK_IDENTIFIER ) continue;
+				if( strcmp( ts, "panic" ) == 0 )   tok->name = DKEY_RAND;
+				if( strcmp( ts, "recover" ) == 0 ) tok->name = DKEY_RAND;
+			}
+		}else if( lang && strcmp( lang->mbs, "syntax" ) == 0 ){
 			for(i=0; i<tokens->size; i++){
 				DaoToken *tok = tokens->items.pToken[i];
 				switch( tok->type ){
@@ -763,6 +771,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 				fgcolor = -100;
 			}
 			break;
+		case DTOK_AT2 :
 		case DKEY_USE : case DKEY_LOAD :
 		case DKEY_AS : 
 		case DKEY_AND : case DKEY_OR : case DKEY_NOT :
@@ -779,6 +788,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		case DKEY_SKIP : case DKEY_BREAK : case DKEY_CONTINUE :
 		case DKEY_RETURN : case DKEY_YIELD :
 		case DKEY_SWITCH : case DKEY_CASE : case DKEY_DEFAULT :
+		case DKEY_DEFER :
 			fgcolor = DAOX_MAGENTA;
 			break;
 		case DKEY_TYPE :
@@ -795,6 +805,15 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		case DTOK_ID_THTYPE :
 		case DTOK_ID_SYMBOL :
 			fgcolor = DAOX_GREEN;
+			break;
+		case DKEY_RAND : case DKEY_CEIL : case DKEY_FLOOR :
+		case DKEY_ABS  : case DKEY_ARG  : case DKEY_IMAG :
+		case DKEY_NORM : case DKEY_REAL : case DKEY_ACOS :
+		case DKEY_ASIN : case DKEY_ATAN : case DKEY_COS :
+		case DKEY_COSH : case DKEY_EXP : case DKEY_LOG :
+		case DKEY_SIN : case DKEY_SINH : case DKEY_SQRT :
+		case DKEY_TAN : case DKEY_TANH :
+			fgcolor = DAOX_YELLOW;
 			break;
 		default: break;
 		}
