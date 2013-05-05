@@ -752,7 +752,7 @@ void DaoStream_WriteFormatedInt( DaoStream *self, daoint val, const char *format
 void DaoStream_WriteInt( DaoStream *self, daoint val )
 {
 	const char *format = self->format;
-	if( format == NULL ) format = "%" + DAO_INT_FORMAT;
+	if( format == NULL ) format = "%" DAO_INT_FORMAT;
 	DaoStream_WriteFormatedInt( self, val, format );
 }
 void DaoStream_WriteFloat( DaoStream *self, double val )

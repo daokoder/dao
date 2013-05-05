@@ -101,12 +101,12 @@ void DaoxDataColumn_Delete( DaoxDataColumn *self )
 }
 void DaoxDataColumn_Reset( DaoxDataColumn *self, daoint size )
 {
-	daoint i;
+	daoint i, datatype = DaoType_GetDataType( self->type );
 	if( size < self->cells->size ){
 		for(i=size; i<self->cells->size; ++i){
-			if( self->cells->type == DAO_STRING ){
+			if( datatype == DAO_STRING ){
 				DString_Clear( self->cells->data.strings + i );
-			}else if( self->cells->type == 0 ){
+			}else if( datatype == 0 ){
 				GC_DecRC( self->cells->data.values[i] );
 			}
 		}
@@ -114,9 +114,10 @@ void DaoxDataColumn_Reset( DaoxDataColumn *self, daoint size )
 	}else if( size > self->cells->size ){
 		DVector_Reserve( self->cells, size );
 		for(i=self->cells->size; i<size; ++i){
-			if( self->cells->type == DAO_STRING ){
+			if( datatype == DAO_STRING ){
 				DString_Init( self->cells->data.strings + i, 0 );
-			}else if( self->cells->type == 0 ){
+				DString *s = & self->cells->data.strings[i];
+			}else if( datatype == 0 ){
 				self->cells->data.values[i]  = NULL;
 			}
 		}
@@ -140,6 +141,21 @@ void DaoxDataColumn_SetType( DaoxDataColumn *self, DaoType *type )
 }
 void DaoxDataColumn_SetCell( DaoxDataColumn *self, daoint i, DaoValue *value )
 {
+	if( value == NULL ){
+		complex16 zero = {0.0,0.0};
+		switch( self->type->tid ){
+		default :
+			GC_DecRC( self->cells->data.values[i] );
+			self->cells->data.values[i] = value;
+			break;
+		case DAO_INTEGER : self->cells->data.daoints[i]   = 0; break;
+		case DAO_FLOAT   : self->cells->data.floats[i]    = 0.0; break;
+		case DAO_DOUBLE  : self->cells->data.doubles[i]   = 0.0; break;
+		case DAO_COMPLEX : self->cells->data.complexes[i] = zero; break;
+		case DAO_STRING  : DString_Reset( & self->cells->data.strings[i], 0 ); break;
+		}
+		return;
+	}
 	switch( self->type->tid ){
 	default :
 		GC_ShiftRC( value, self->cells->data.values[i] );
@@ -148,7 +164,7 @@ void DaoxDataColumn_SetCell( DaoxDataColumn *self, daoint i, DaoValue *value )
 	case DAO_INTEGER : self->cells->data.daoints[i]   = DaoValue_GetInteger( value ); break;
 	case DAO_FLOAT   : self->cells->data.floats[i]    = DaoValue_GetFloat( value );  break;
 	case DAO_DOUBLE  : self->cells->data.doubles[i]   = DaoValue_GetDouble( value ); break;
-	case DAO_COMPLEX : self->cells->data.complexes[i] = DaoValue_GetComplex( value ) ; break;
+	case DAO_COMPLEX : self->cells->data.complexes[i] = DaoValue_GetComplex( value ); break;
 	case DAO_STRING  : DaoValue_GetString( value, & self->cells->data.strings[i] ); break;
 	}
 }
@@ -739,6 +755,70 @@ static void FRAME_GetIndex( DaoProcess *proc, DaoValue *p[], int N )
 	idx = DaoxDataFrame_GetIndex( self, dim, lab->mbs );
 	DaoProcess_PutInteger( proc, idx );
 }
+static void FRAME_AddArray( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoValue value = {0};
+	DaoxDataColumn *col;
+	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
+	DaoArray *array = (DaoArray*) p[1];
+	DString *lab = DaoValue_TryGetString( p[2] );
+	DaoType *etype = dao_array_types[array->etype];
+	daoint i, M = self->dims[0] * self->dims[2];
+
+	etype = etype->nested->items.pType[0];
+
+	DaoxDataFrame_Sliced( self );
+	col = DaoxDataFrame_MakeColumn( self, etype );
+	DArray_Append( self->columns, col );
+	DaoxDataColumn_Reset( col, M );
+	self->dims[1] += 1;
+
+	if( lab->size ){
+		DString_ToMBS( lab );
+		DaoxDataFrame_AddLabel( self, DAOX_DF_COL, lab->mbs, self->dims[1]-1 );
+	}
+
+	if( M > array->size ) M = array->size;
+	for(i=0; i<M; ++i){
+		DaoArray_GetValue( array, i, & value );
+		DaoxDataColumn_SetCell( col, i, & value );
+	}
+	M = self->dims[0] * self->dims[2];
+	for(i=array->size; i<M; ++i) DaoxDataColumn_SetCell( col, i, NULL );
+}
+static void FRAME_AddList( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoxDataColumn *col;
+	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
+	DaoList *list = (DaoList*) p[1];
+	DString *lab = DaoValue_TryGetString( p[2] );
+	DaoType *etype = dao_type_any;
+	daoint i, M = self->dims[0] * self->dims[2];
+
+	if( list->unitype && list->unitype->nested->size ){
+		DaoType *tp = list->unitype->nested->items.pType[0];
+		if( tp != NULL && !(tp->tid & DAO_ANY) ) etype = tp;
+	}
+
+	DaoxDataFrame_Sliced( self );
+	col = DaoxDataFrame_MakeColumn( self, etype );
+	DArray_Append( self->columns, col );
+	DaoxDataColumn_Reset( col, M );
+	self->dims[1] += 1;
+
+	if( lab->size ){
+		DString_ToMBS( lab );
+		DaoxDataFrame_AddLabel( self, DAOX_DF_COL, lab->mbs, self->dims[1]-1 );
+	}
+
+	if( M > list->items.size ) M = list->items.size;
+	for(i=0; i<M; ++i) DaoxDataColumn_SetCell( col, i, list->items.items.pValue[i] );
+	M = self->dims[0] * self->dims[2];
+	for(i=list->items.size; i<M; ++i) DaoxDataColumn_SetCell( col, i, NULL );
+}
+
+
+
 static int DaoxDF_IsSingleIndex( DaoValue *value )
 {
 	if( value->type >= DAO_INTEGER && value->type <= DAO_DOUBLE ) return 1;
@@ -818,23 +898,34 @@ static void FRAME_SETMI( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	}
 }
+static void CheckPrintWidth( double value, int *max, int *min, int *dec )
+{
+	int w1 = fabs(value) < 1E-256 ? 1 : log10( fabs(value) + 1E-32 ) + (value < 0);
+	int w2 = 1;
+	while( fabs( value*pow(10,w2) - (daoint)(value*pow(10,w2)) ) > 1E-4 ) w2 += 1;
+	if( w1 > *max ) *max = w1;
+	if( w1 < *min ) *min = w1;
+	if( w2 > *dec ) *dec = w2;
+}
 static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
 	DaoxDataFrame *original = self->original;
 	DaoStream *stream = proc->stdioStream;
-	DaoValue value, *nulls[3] = {NULL,NULL,NULL};
+	DaoValue valueBuffer, *nulls[3] = {NULL,NULL,NULL};
 	DVector *rlabwidth = DVector_New( sizeof(int) );
 	DVector *clabwidth = DVector_New( sizeof(int) );
 	DVector *decimals = DVector_New( sizeof(int) );
+	DVector *scifmts = DVector_New( sizeof(int) );
+	DVector *aligns = DVector_New( sizeof(int) );
 	DString *label = DString_New(1);
-	daoint d, g, i, j, k, s, N, M, K, J = 1, max = 20;
+	daoint d, g, i, j, k, s, N, M, K, J = 1, maxwidth = 24;
 	char idfmt[16];
 	char fmt[16];
 	char buf[64];
 	int idwidth;
 
-	memset( &value, 0, sizeof(DaoValue) );
+	memset( &valueBuffer, 0, sizeof(DaoValue) );
 	if( stream == NULL ) stream = proc->vmSpace->stdioStream;
 	if( self->original == NULL ){
 		DaoxDataFrame_PrepareSlices( self );
@@ -863,42 +954,82 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 			daoint ii = DaoSlice_GetIndex( self->slices->items.pVector[0], i );
 			DaoxDataFrame_GetLabel( original, DAOX_DF_ROW, g, ii, label );
 			if( label->size > width ) width = label->size;
-			if( width > max ) break;
+			if( width > maxwidth ) break;
 		}
 		width += 1;
-		if( width > max ) width = max;
+		if( width > maxwidth ) width = maxwidth;
 		DVector_PushInt( rlabwidth, width );
 	}
 	for(j=0; j<M; ++j){
-		double sum = 0.0;
+		int w, datatype, max = 0, min = 0, dec = 0;
 		daoint width, jj = DaoSlice_GetIndex( self->slices->items.pVector[2], j );
 		DaoxDataColumn *col = (DaoxDataColumn*) original->columns->items.pVoid[jj];
+		DVector *cells = col->cells;
+
+		datatype = DaoType_GetDataType( col->type );
 		width = DaoxDataColumn_GetPrintWidth( col, 16 );
+		for(i=0; i<N && i<1000; ++i){
+			daoint v, ii = DaoSlice_GetIndex( self->slices->items.pVector[0], i );
+			complex16 com;
+			switch( datatype ){
+			case DAO_INTEGER :
+				v = cells->data.daoints[ii];
+				w = log10( fabs(v) + 1E-32 ) + (v < 0);
+				if( w > max ) max = w;
+				break;
+			case DAO_FLOAT   :
+				CheckPrintWidth( cells->data.floats[ii], & max, & min, & dec );
+				break;
+			case DAO_DOUBLE  :
+				CheckPrintWidth( cells->data.doubles[ii], & max, & min, & dec );
+				break;
+			case DAO_COMPLEX :
+				com = cells->data.complexes[ii];
+				CheckPrintWidth( com.real, & max, & min, & dec );
+				CheckPrintWidth( com.imag, & max, & min, & dec );
+				break;
+			case DAO_STRING :
+				if( cells->data.strings[i].size > max ) max = cells->data.strings[i].size;
+				break;
+			default :
+				break;
+			}
+		}
+		if( col->type->tid == DAO_COMPLEX ){
+			max *= 2;
+			min *= 2;
+		}
+		if( datatype == 0 ){
+			width = maxwidth;
+			DVector_PushInt( aligns, 1 );
+			DVector_PushInt( scifmts, 0 );
+			DVector_PushInt( decimals, 0 );
+		}else if( datatype == DAO_STRING ){
+			width = max;
+			DVector_PushInt( aligns, 1 );
+			DVector_PushInt( scifmts, 0 );
+			DVector_PushInt( decimals, 0 );
+		}else if( max >= 16 || min <= -16 ){
+			width = 16;
+			DVector_PushInt( aligns, 0 );
+			DVector_PushInt( scifmts, 1 );
+			DVector_PushInt( decimals, dec );
+		}else{
+			width = max + dec + 2;
+			if( col->type->tid == DAO_COMPLEX ) width += dec + 7;
+			DVector_PushInt( aligns, 0 );
+			DVector_PushInt( scifmts, 0 );
+			DVector_PushInt( decimals, dec );
+		}
+
 		for(g=0; g<original->labels[DAOX_DF_COL]->size; ++g){
 			DaoxDataFrame_GetLabel( original, DAOX_DF_COL, g, jj, label );
 			if( label->size > width ) width = label->size;
-			if( width > max ) break;
+			if( width > maxwidth ) break;
 		}
 		width += 1;
-		if( width > max ) width = max;
+		if( width > maxwidth ) width = maxwidth;
 		DVector_PushInt( clabwidth, width );
-		for(i=0; i<N; ++i){
-			daoint ii = DaoSlice_GetIndex( self->slices->items.pVector[0], i );
-			complex16 com;
-			switch( col->type->tid ){
-			case DAO_COMPLEX :
-				com = col->cells->data.complexes[ii];
-				sum += 0.5 * (fabs(com.real) + fabs(com.imag));
-				break;
-			case DAO_FLOAT   : sum += fabs(col->cells->data.floats[ii]); break;
-			case DAO_DOUBLE  : sum += fabs(col->cells->data.doubles[ii]); break;
-			}
-		}
-		sum /= N + 1e-6;
-		width = (daoint) sum;
-		sum -= width;
-		width = 1 + log10( width + 1 );
-		DVector_PushInt( decimals, width );
 	}
 
 	for(k=0; k<K; ++k){
@@ -935,7 +1066,12 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 				for(s=j; s<J; ++s){
 					daoint jj = DaoSlice_GetIndex( self->slices->items.pVector[1], s );
 					int width = clabwidth->data.ints[s];
-					sprintf( fmt, "%%%is", width-1 );
+					int align = aligns->data.ints[s];
+					if( align ){
+						sprintf( fmt, "%%-%is", width-1 );
+					}else{
+						sprintf( fmt, "%%%is", width-1 );
+					}
 					DaoxDataFrame_GetLabel( original, DAOX_DF_COL, g, jj, label );
 					if( label->size > width ) DString_Reset( label, width );
 					snprintf( buf, width, fmt, label->mbs );
@@ -943,7 +1079,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 					DaoStream_WriteMBS( stream, buf );
 				}
 			}
-			if( J < M ) DaoStream_WriteMBS( stream, "\\" );
+			if( J < M ) DaoStream_WriteMBS( stream, " \\" );
 			DaoStream_WriteMBS( stream, "\n" );
 			for(i=0; i<N; ++i){
 				daoint ii = DaoSlice_GetIndex( self->slices->items.pVector[0], i );
@@ -954,21 +1090,48 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 					DaoxDataFrame_GetLabel( original, DAOX_DF_ROW, g, ii, label );
 					if( label->size > width ) DString_Reset( label, width );
 					if( g ) DaoStream_WriteMBS( stream, "," );
-					sprintf( fmt, " %%-%is", width-1 );
+					sprintf( fmt, "%%-%is", width-1 );
 					snprintf( buf, width, fmt, label->mbs );
 					DaoStream_WriteMBS( stream, buf );
 				}
 				DaoStream_WriteMBS( stream, ": " );
 				for(s=j; s<J; ++s){
+					int scifmt = scifmts->data.ints[s];
+					int dec = decimals->data.ints[s];
 					int width = clabwidth->data.ints[s];
 					daoint jj = DaoSlice_GetIndex( self->slices->items.pVector[2], s );
 					DaoxDataColumn *col = (DaoxDataColumn*) original->columns->items.pVoid[jj];
-					DaoxDataColumn_GetCell( col, i, & value );
-					DaoValue_GetString( & value, label );
-					if( label->size > width ) DString_Reset( label, width );
+					DaoValue *value = DaoxDataColumn_GetCell( col, i, & valueBuffer );
+
 					DaoStream_WriteMBS( stream, " " );
-					sprintf( fmt, "%%%is", width-1 );
-					snprintf( buf, width, fmt, label->mbs );
+					if( value == NULL ){
+						sprintf( fmt, "%%-%is", width-1 );
+						snprintf( buf, width, fmt, " " );
+					}else if( value->type == DAO_FLOAT || value->type == DAO_DOUBLE ){
+						double f = DaoValue_GetDouble( value );
+						if( scifmt ){
+							sprintf( fmt, "%%%iE", width-1 );
+						}else{
+							sprintf( fmt, "%%%i.%if", width-1, dec );
+						}
+						snprintf( buf, width, fmt, f );
+					}else if( value->type == DAO_COMPLEX ){
+						complex16 com = value->xComplex.value;
+						char s = com.imag>=0 ? '+' : '-';
+						int w = width/2-2;
+						int d = dec;
+						if( scifmt ){
+							sprintf( fmt, "(%%%i.3E,%%%i.3E)", w, w );
+						}else{
+							sprintf( fmt, "(%%%i.%if,%%%i.%if)", w, d, w, d );
+						}
+						snprintf( buf, width, fmt, com.real, com.imag );
+					}else{
+						DaoValue_GetString( value, label );
+						if( label->size > width ) DString_Reset( label, width );
+						sprintf( fmt, "%%-%is", width-1 );
+						snprintf( buf, width, fmt, label->mbs );
+					}
 					DaoStream_WriteMBS( stream, buf );
 				}
 				DaoStream_WriteMBS( stream, "\n" );
@@ -976,6 +1139,8 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 			DaoStream_WriteMBS( stream, "\n" );
 		}
 	}
+	DVector_Delete( aligns );
+	DVector_Delete( scifmts );
 	DVector_Delete( decimals );
 	DVector_Delete( rlabwidth );
 	DVector_Delete( clabwidth );
@@ -1056,6 +1221,9 @@ static DaoFuncItem dataframeMeths[]=
 	{ FRAME_AddLabels, "AddLabels( self :DataFrame, dim :DimType, labels :map<string,int> )" },
 	{ FRAME_AddLabel,  "AddLabel( self :DataFrame, dim :DimType, label :string, index :int )" },
 	{ FRAME_GetIndex,  "GetIndex( self :DataFrame, dim :DimType, label :string ) => int" },
+
+	{ FRAME_AddArray,  "AddColumn( self :DataFrame, data :array<any>, label :string ='' )" },
+	{ FRAME_AddList,   "AddColumn( self :DataFrame, data :list<any>, label :string ='' )" },
 
 	{ FRAME_GETMI,
 		"[]( self :DataFrame, i :IndexType, j :IndexType =none, k :IndexType =none ) => any" },

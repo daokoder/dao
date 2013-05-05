@@ -126,7 +126,9 @@ void DString_Init( DString *self, int mbs )
 	self->bufSize = 0;
 	if( mbs ){
 		self->mbs = (char*)(dao_string + 1);
+		self->wcs = NULL;
 	}else{
+		self->mbs = NULL;
 		self->wcs = (wchar_t*)(dao_string + 1);
 	}
 }

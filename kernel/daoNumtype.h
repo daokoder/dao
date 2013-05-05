@@ -196,6 +196,7 @@ DAO_DLL daoint DaoArray_GetInteger( DaoArray *na, daoint i );
 DAO_DLL float  DaoArray_GetFloat( DaoArray *na, daoint i );
 DAO_DLL double DaoArray_GetDouble( DaoArray *na, daoint i );
 DAO_DLL complex16 DaoArray_GetComplex( DaoArray *na, daoint i );
+DAO_DLL DaoValue* DaoArray_GetValue( DaoArray *self, daoint i, DaoValue *res );
 
 #endif
 

@@ -4574,7 +4574,9 @@ void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc )
 			int istep = stepValue && stepValue->type == DAO_INTEGER;
 			daoint intstep = istep ? stepValue->xInteger.value : 0;
 			complex16 cstep = { 0.0, 0.0 };
-			if( stepValue && stepValue->type == DAO_COMPLEX ) cstep = stepValue->xComplex.value;
+			if( stepValue && stepValue->type >= DAO_NONE && stepValue->type <= DAO_COMPLEX ){
+				cstep = DaoValue_GetComplex( stepValue );
+			}
 			for(i=0, m = 0, j=0, k = 0; i<N; i++, m=i, j=i%S, k=i/S){
 				if( transvec ) m = j * num + k;
 				switch( a0->etype ){
