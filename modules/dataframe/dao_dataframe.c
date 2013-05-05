@@ -900,9 +900,19 @@ static void FRAME_SETMI( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void CheckPrintWidth( double value, int *max, int *min, int *dec )
 {
-	int w1 = fabs(value) < 1E-256 ? 1 : log10( fabs(value) + 1E-32 ) + (value < 0);
-	int w2 = 1;
-	while( fabs( value*pow(10,w2) - (daoint)(value*pow(10,w2)) ) > 1E-4 ) w2 += 1;
+	char *p, *p1, *p2, buf[128];
+	int w1 = fabs(value) < 1E-256 ? 1 : 1+log10( fabs(value) + 1E-32 ) + (value < 0);
+	int w2 = 3;
+	value = fabs(value);
+	value -= (daoint)value;
+	sprintf( buf, "%-64.63f", value );
+	p1 = strstr( buf, "0000" );
+	p2 = strstr( buf, "9999" );
+	p = p1 ? p1 : buf + 3;
+	if( p2 && p2 < p1 ) p1 = p2;
+	if( p1 && (p1 - buf) > w2 ) w2 = p1 - buf;
+	w2 -= 2;
+
 	if( w1 > *max ) *max = w1;
 	if( w1 < *min ) *min = w1;
 	if( w2 > *dec ) *dec = w2;
@@ -912,6 +922,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
 	DaoxDataFrame *original = self->original;
 	DaoStream *stream = proc->stdioStream;
+	DaoStream *sstream = DaoStream_New();
 	DaoValue valueBuffer, *nulls[3] = {NULL,NULL,NULL};
 	DVector *rlabwidth = DVector_New( sizeof(int) );
 	DVector *clabwidth = DVector_New( sizeof(int) );
@@ -919,12 +930,13 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 	DVector *scifmts = DVector_New( sizeof(int) );
 	DVector *aligns = DVector_New( sizeof(int) );
 	DString *label = DString_New(1);
-	daoint d, g, i, j, k, s, N, M, K, J = 1, maxwidth = 24;
+	daoint d, g, i, j, k, s, N, M, K, J = 1;
+	int idwidth, maxwidth = 16, maxdec = 3;
 	char idfmt[16];
 	char fmt[16];
-	char buf[64];
-	int idwidth;
+	char buf[512];
 
+	sstream->attribs |= DAO_IO_STRING;
 	memset( &valueBuffer, 0, sizeof(DaoValue) );
 	if( stream == NULL ) stream = proc->vmSpace->stdioStream;
 	if( self->original == NULL ){
@@ -947,6 +959,17 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 
 	idwidth = 2 + (int)log10(N+1);
 	sprintf( idfmt, "%%%i%s:", idwidth-1, DAO_INT_FORMAT );
+
+	if( M == 1 ){
+		maxwidth = 64;
+		maxdec = 24;
+	}else if( M == 2 ){
+		maxwidth = 40;
+		maxdec = 12;
+	}else if( M <= 4 ){
+		maxwidth = 24;
+		maxdec = 6;
+	}
 
 	for(g=0; g<original->labels[DAOX_DF_ROW]->size; ++g){
 		int width = 0;
@@ -995,6 +1018,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 				break;
 			}
 		}
+		if( dec > maxdec ) dec = maxdec;
 		if( col->type->tid == DAO_COMPLEX ){
 			max *= 2;
 			min *= 2;
@@ -1009,7 +1033,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 			DVector_PushInt( aligns, 1 );
 			DVector_PushInt( scifmts, 0 );
 			DVector_PushInt( decimals, 0 );
-		}else if( max >= 16 || min <= -16 ){
+		}else if( max >= maxwidth || min <= -dec ){
 			width = 16;
 			DVector_PushInt( aligns, 0 );
 			DVector_PushInt( scifmts, 1 );
@@ -1054,9 +1078,10 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 			width2 = width;
 			for(J=j; J<M; ++J){
 				daoint jj = DaoSlice_GetIndex( self->slices->items.pVector[1], J );
-				width2 += clabwidth->data.ints[J];
+				width2 += clabwidth->data.ints[J] + 2;
 				if( width2 > 80 ) break;
 			}
+			if( J == j ) J += 1;
 
 			for(g=0; g<original->labels[DAOX_DF_COL]->size; ++g){
 				if( g ) DaoStream_WriteMBS( stream, "\n" );
@@ -1075,7 +1100,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 					DaoxDataFrame_GetLabel( original, DAOX_DF_COL, g, jj, label );
 					if( label->size > width ) DString_Reset( label, width );
 					snprintf( buf, width, fmt, label->mbs );
-					DaoStream_WriteMBS( stream, " " );
+					DaoStream_WriteMBS( stream, "  " );
 					DaoStream_WriteMBS( stream, buf );
 				}
 			}
@@ -1103,10 +1128,13 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 					DaoxDataColumn *col = (DaoxDataColumn*) original->columns->items.pVoid[jj];
 					DaoValue *value = DaoxDataColumn_GetCell( col, i, & valueBuffer );
 
-					DaoStream_WriteMBS( stream, " " );
+					DaoStream_WriteMBS( stream, "  " );
 					if( value == NULL ){
 						sprintf( fmt, "%%-%is", width-1 );
 						snprintf( buf, width, fmt, " " );
+					}else if( value->type == DAO_INTEGER ){
+						sprintf( fmt, "%%%i%s", width-1, DAO_INT_FORMAT );
+						snprintf( buf, width, fmt, value->xInteger.value );
 					}else if( value->type == DAO_FLOAT || value->type == DAO_DOUBLE ){
 						double f = DaoValue_GetDouble( value );
 						if( scifmt ){
@@ -1127,8 +1155,13 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 						}
 						snprintf( buf, width, fmt, com.real, com.imag );
 					}else{
-						DaoValue_GetString( value, label );
+						DString_Reset( sstream->streamString, 0 );
+						DaoValue_Print( value, proc, sstream, NULL );
+						DString_Reset( label, 0 );
+						DString_Append( label, sstream->streamString );
 						if( label->size > width ) DString_Reset( label, width );
+						DString_ChangeMBS( label, "%t", "\\t", 0 );
+						DString_ChangeMBS( label, "%n", "\\n", 0 );
 						sprintf( fmt, "%%-%is", width-1 );
 						snprintf( buf, width, fmt, label->mbs );
 					}
@@ -1139,6 +1172,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 			DaoStream_WriteMBS( stream, "\n" );
 		}
 	}
+	DaoStream_Delete( sstream );
 	DVector_Delete( aligns );
 	DVector_Delete( scifmts );
 	DVector_Delete( decimals );
