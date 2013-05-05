@@ -87,6 +87,7 @@ DAO_DLL int DaoxDataFrame_FromMatrix( DaoxDataFrame *self, DaoArray *matrix );
 DAO_DLL void DaoxDataFrame_UseLabels( DaoxDataFrame *self, int dim, int group );
 DAO_DLL void DaoxDataFrame_AddLabels( DaoxDataFrame *self, int dim, DMap *labels );
 DAO_DLL void DaoxDataFrame_AddLabel( DaoxDataFrame *self, int dim, const char *lab, daoint i );
+DAO_DLL void DaoxDataFrame_GetLabel( DaoxDataFrame *self, int d, int g, daoint i, DString *s );
 DAO_DLL daoint DaoxDataFrame_GetIndex( DaoxDataFrame *self, int dim, const char *label );
 
 DAO_DLL void DaoxDataFrame_Sliced( DaoxDataFrame *self );

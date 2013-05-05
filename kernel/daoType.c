@@ -1537,6 +1537,9 @@ static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream
 	}
 	if( cycData ) MAP_Insert( cycData, self, self );
 
+	meth = DaoType_FindFunctionMBS( self->ctype, "__PRINT__" );
+	if( meth && DaoProcess_Call( proc, meth, NULL, &self0, 1 ) == 0 ) return
+
 	DaoValue_Clear( & proc->stackValues[0] );
 	meth = DaoType_FindFunctionMBS( self->ctype, "serialize" );
 	if( meth && DaoProcess_Call( proc, meth, NULL, &self0, 1 ) == 0 ){

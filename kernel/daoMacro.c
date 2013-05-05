@@ -560,7 +560,7 @@ static void DMacroNode_Print( DMacroNode *self )
 	for(i=0; i<self->leaves->size; i++)
 		printf( "%s, ", self->leaves->items.pToken[i]->string.mbs );
 	for(i=0; i<self->nodes->size; i++){
-		printf( "\nnode" DAO_INT_FORMAT "\n", i );
+		printf( "\nnode%" DAO_INT_FORMAT "\n", i );
 		DMacroNode_Print( (DMacroNode*)self->nodes->items.pVoid[i] );
 	}
 	printf( " }" );

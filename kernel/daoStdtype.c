@@ -954,7 +954,7 @@ static daoint DaoSTR_CheckParam( DaoProcess *proc, daoint i )
 {
 	if( i < 0 ){
 		char buffer[100];
-		sprintf( buffer, "invalid parameter with value " DAO_INT_FORMAT "\n", i );
+		sprintf( buffer, "invalid parameter with value %" DAO_INT_FORMAT "\n", i );
 		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, buffer );
 	}
 	return i;
@@ -965,7 +965,7 @@ static daoint DaoSTR_CheckIndex( DString *self, DaoProcess *proc, daoint index, 
 	if( id < 0 ) id = self->size + id;
 	if( id < 0 || id > (self->size - 1 + one_past_last) ){
 		char buffer[100];
-		sprintf( buffer, "index out of range with value " DAO_INT_FORMAT "\n", index );
+		sprintf( buffer, "index out of range with value %" DAO_INT_FORMAT "\n", index );
 		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, buffer );
 		return -1;
 	}
@@ -1916,7 +1916,7 @@ static void DaoLIST_Insert( DaoProcess *proc, DaoValue *p[], int N )
 	daoint pos = DaoList_MakeIndex( self, p[2]->xInteger.value, 1 );
 	if( pos == -1 ){
 		char buffer[100];
-		sprintf( buffer, "with value " DAO_INT_FORMAT "\n", p[2]->xInteger.value );
+		sprintf( buffer, "with value %" DAO_INT_FORMAT "\n", p[2]->xInteger.value );
 		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, buffer );
 		return;
 	}

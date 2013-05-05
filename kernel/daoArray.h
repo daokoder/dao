@@ -107,6 +107,7 @@ struct DVector
 {
 	union {
 		void       *base;
+		char       *bytes;
 		int        *ints;
 		daoint     *daoints;
 		float      *floats;

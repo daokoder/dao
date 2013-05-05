@@ -211,7 +211,7 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 			}
 			self->format = fmt2->mbs;
 			if( F == 'c' || F == 'd' || F == 'i' || F == 'o' || F == 'x' || F == 'X' ){
-				if( sizeof(daoint) != 4 ) DString_InsertChar( fmt2, DAO_INT_FORMAT[1], fmt2->size-1 );
+				if( sizeof(daoint) != 4 ) DString_InsertChar( fmt2, DAO_INT_FORMAT[0], fmt2->size-1 );
 				self->format = fmt2->mbs;
 				if( value->type == DAO_INTEGER ){
 					DaoStream_WriteInt( self, value->xInteger.value );
@@ -752,7 +752,7 @@ void DaoStream_WriteFormatedInt( DaoStream *self, daoint val, const char *format
 void DaoStream_WriteInt( DaoStream *self, daoint val )
 {
 	const char *format = self->format;
-	if( format == NULL ) format = DAO_INT_FORMAT;
+	if( format == NULL ) format = "%" + DAO_INT_FORMAT;
 	DaoStream_WriteFormatedInt( self, val, format );
 }
 void DaoStream_WriteFloat( DaoStream *self, double val )

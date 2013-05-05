@@ -411,7 +411,7 @@ DString* DaoValue_GetString( DaoValue *self, DString *str )
 	char chs[100] = {0};
 	DString_Clear( str );
 	switch( self->type ){
-	case DAO_INTEGER : sprintf( chs, DAO_INT_FORMAT, self->xInteger.value ); break;
+	case DAO_INTEGER : sprintf( chs, "%" DAO_INT_FORMAT, self->xInteger.value ); break;
 	case DAO_FLOAT   : sprintf( chs, "%g", self->xFloat.value ); break;
 	case DAO_DOUBLE  : sprintf( chs, "%g", self->xDouble.value ); break;
 	case DAO_COMPLEX : sprintf( chs, (self->xComplex.value.imag < 0) ? "%g%g$" : "%g+%g$", self->xComplex.value.real, self->xComplex.value.imag ); break;

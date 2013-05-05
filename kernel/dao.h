@@ -70,9 +70,9 @@
 
 #ifndef DAO_INT_FORMAT
 #ifdef WIN32
-#define DAO_INT_FORMAT  "%Ii"
+#define DAO_INT_FORMAT  "Ii"
 #else
-#define DAO_INT_FORMAT  "%ti"
+#define DAO_INT_FORMAT  "ti"
 #endif /* WIN32 */
 #endif /* DAO_INT_FORMAT */
 
@@ -179,10 +179,10 @@ enum DaoExceptionType
 
 /* define an integer type with size equal to the size of pointers
  * under both 32-bits and 64-bits systems. */
-typedef ptrdiff_t      daoint;
-typedef unsigned char  uchar_t;
-typedef unsigned short ushort_t;
-typedef unsigned int   uint_t;
+typedef ptrdiff_t       daoint;
+typedef unsigned char   uchar_t;
+typedef unsigned short  ushort_t;
+typedef unsigned int    uint_t;
 
 typedef struct DString     DString;
 typedef struct DArray      DArray;
