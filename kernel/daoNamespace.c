@@ -322,6 +322,10 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 
 		for( i=0; i<size; i++ ){
 			const char *proto = typer->funcItems[i].proto;
+			if( strcmp( proto, "__SLICED__" ) == 0 ){
+				typer->core->kernel->Sliced = (FuncPtrSliced) typer->funcItems[i].fpter;
+				continue;
+			}
 			cur = DaoNamespace_ParsePrototype( self, proto, parser );
 			if( cur == NULL ){
 				printf( "  In function: %s::%s\n", typer->name, proto );

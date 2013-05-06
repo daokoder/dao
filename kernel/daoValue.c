@@ -495,6 +495,11 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 		return self;
 	}
 #endif
+	if( self->type == DAO_CSTRUCT || self->type == DAO_CDATA ){
+		FuncPtrSliced sliced = self->xCstruct.ctype->kernel->Sliced;
+		if( sliced ) (*sliced)( self );
+		return self;
+	}
 	if( self->xBase.trait & DAO_VALUE_NOCOPY ) return self;
 	if( tp && tp->tid >= DAO_INTEGER && tp->tid <= DAO_DOUBLE ){
 		double value = DaoValue_GetDouble( self );

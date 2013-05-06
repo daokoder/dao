@@ -1836,13 +1836,13 @@ static int DaoArray_MakeSlice( DaoArray *self, DaoProcess *proc, DaoValue *idx[]
 		if( D ==2 && ( dims[0] ==1 || dims[1] ==1 ) ){
 			/* For vectors: */
 			int k = dims[0] == 1;
-			MakeSlice( proc, idx[0], (int)dims[k], slices->items.pVector[k] );
+			MakeSlice( proc, idx[0], dims[k], slices->items.pVector[k] );
 		}else{
-			MakeSlice( proc, idx[0], (int)dims[0], slices->items.pVector[0] );
+			MakeSlice( proc, idx[0], dims[0], slices->items.pVector[0] );
 		}
 	}else{
 		const int n = N > D ? D : N;
-		for( i=0; i<n; i++ ) MakeSlice( proc, idx[i], (int)dims[i], slices->items.pVector[i] );
+		for( i=0; i<n; i++ ) MakeSlice( proc, idx[i], dims[i], slices->items.pVector[i] );
 	}
 	for(i=0; i<D; i ++) S *= slices->items.pVector[i]->data.daoints[1];
 	return S;
@@ -2030,7 +2030,7 @@ static void DaoArray_GetItem1( DaoValue *value, DaoProcess *proc, DaoValue *pid 
 	DaoArray_SetNumType( na, self->etype );
 	GC_ShiftRC( self, na->original );
 	na->original = self;
-	if( na->slices == NULL ) na->slices = DArray_New(D_ARRAY);
+	if( na->slices == NULL ) na->slices = DArray_New(D_VECTOR);
 	DaoArray_MakeSlice( self, proc, & pid, 1, na->slices );
 }
 int DaoArray_CopyArray( DaoArray *self, DaoArray *other )
@@ -2141,7 +2141,7 @@ void DaoArray_SetItem1( DaoValue *va, DaoProcess *proc, DaoValue *pid, DaoValue 
 		DaoArray_SetValue( self, id, value );
 		return;
 	}
-	if( self->slices == NULL ) self->slices = DArray_New(D_ARRAY);
+	if( self->slices == NULL ) self->slices = DArray_New(D_VECTOR);
 	DaoArray_MakeSlice( self, proc, & pid, 1, self->slices );
 	self->original = self;
 	if( value->type == DAO_ARRAY ){
@@ -2204,7 +2204,7 @@ static void DaoArray_GetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[]
 	DaoArray_SetNumType( na, self->etype );
 	GC_ShiftRC( self, na->original );
 	na->original = self;
-	if( na->slices == NULL ) na->slices = DArray_New(D_ARRAY);
+	if( na->slices == NULL ) na->slices = DArray_New(D_VECTOR);
 	DaoArray_MakeSlice( self, proc, ids, N, na->slices );
 }
 static void DaoArray_SetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
@@ -2243,7 +2243,7 @@ static void DaoArray_SetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[]
 			return;
 		}
 	}
-	if( self->slices == NULL ) self->slices = DArray_New(D_ARRAY);
+	if( self->slices == NULL ) self->slices = DArray_New(D_VECTOR);
 	DaoArray_MakeSlice( self, proc, ids, N, self->slices );
 	self->original = self;
 	if( value->type == DAO_ARRAY ){

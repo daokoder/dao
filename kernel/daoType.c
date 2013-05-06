@@ -1575,6 +1575,7 @@ DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer )
 	DaoTypeKernel *self = (DaoTypeKernel*) dao_calloc( 1, sizeof(DaoTypeKernel) + extra );
 	DaoValue_Init( self, DAO_TYPEKERNEL );
 	self->trait |= DAO_VALUE_DELAYGC;
+	self->Sliced = NULL;
 	if( typer ) self->typer = typer;
 	if( typer && typer->core ) self->core = typer->core;
 	if( self->core == NULL ){

@@ -187,6 +187,9 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds );
 
 
 
+typedef void (*FuncPtrSliced)( DaoValue *self );
+
+
 /* Structure DaoTypeKernel will contain generated wrapping data for the type.
  * It is GC collectable, so that it will be automatically deleted once it is
  * no longer used, which make it possible to unload external modules automatically.
@@ -203,6 +206,8 @@ struct DaoTypeKernel
 	DaoNamespace  *nspace;
 	DaoTypeCore   *core;
 	DaoTypeBase   *typer;
+
+	void (*Sliced)( DaoValue *self );
 };
 DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer );
 
@@ -216,8 +221,8 @@ struct DaoTypeCore
 
 	void (*GetField)( DaoValue *self, DaoProcess *proc, DString *name );
 	void (*SetField)( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value );
-	void (*GetItem) ( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N );
-	void (*SetItem) ( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value );
+	void (*GetItem)( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N );
+	void (*SetItem)( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *val );
 	void (*Print)( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData );
 };
 extern DaoTypeCore  baseCore;
