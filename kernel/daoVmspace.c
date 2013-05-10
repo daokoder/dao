@@ -154,6 +154,7 @@ extern DaoTypeBase  futureTyper;
 extern DaoTypeBase mutexTyper;
 extern DaoTypeBase condvTyper;
 extern DaoTypeBase semaTyper;
+extern DaoTypeBase channelTyper;
 
 extern DaoTypeBase macroTyper;
 extern DaoTypeBase regexTyper;
@@ -199,9 +200,6 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_TYPEKERNEL : return & typeKernelTyper;
 #ifdef DAO_WITH_MACRO
 	case DAO_MACRO     :  return & macroTyper;
-#endif
-#ifdef DAO_WITH_CONCURRENT
-	case DAO_FUTURE    :  return & futureTyper;
 #endif
 	default : break;
 	}
@@ -2134,11 +2132,12 @@ static void dao_FakeList_GetItem( DaoProcess *_proc, DaoValue *_p[], int _n );
 static void dao_FakeList_SetItem( DaoProcess *_proc, DaoValue *_p[], int _n );
 
 #define FakeListName "FakeList<@T<short|int|float>=int,@S=int>"
+#define FakeListName2 "FakeList<@T<short|int|float>,@S>"
 
 static DaoFuncItem dao_FakeList_Meths[] =
 {
 	/* the names of allocators must be identical to the typer name: */
-	{ dao_FakeList_FakeList, FakeListName "( size=0 )" },
+	{ dao_FakeList_FakeList, FakeListName2 "( size=0 )" },
 	{ dao_FakeList_Size, "size( self :FakeList )=>int" },
 	{ dao_FakeList_GetItem, "[]( self :FakeList<@T<short|int|float>>, index :int )=>int" },
 	{ dao_FakeList_SetItem, "[]=( self :FakeList<@T<short|int|float>>, value :int, index :int )=>int" },
@@ -2154,7 +2153,6 @@ static void dao_FakeList_FakeList( DaoProcess *_proc, DaoValue *_p[], int _n )
   int size = _p[0]->xInteger.value;
   DaoType *retype = DaoProcess_GetReturnType( _proc );
   DaoCdata *cdata = DaoCdata_New( FakeList_Typer.core->kernel->abtype, (void*)(daoint)size );
-  printf( "retype = %s\n", retype->name->mbs );
   GC_ShiftRC( retype, cdata->ctype );
   cdata->ctype = retype;
   DaoProcess_PutValue( _proc, (DaoValue*)cdata );
@@ -2278,9 +2276,11 @@ const char *method_typename =
 
 
 #ifdef DAO_WITH_THREAD
-DaoType *dao_type_mutex = NULL;
+DaoType *dao_type_mutex   = NULL;
 DaoType *dao_type_condvar = NULL;
-DaoType *dao_type_sema = NULL;
+DaoType *dao_type_sema    = NULL;
+DaoType *dao_type_channel = NULL;
+DaoType *dao_type_future  = NULL;
 
 extern DMutex mutex_long_sharing;
 extern DMutex mutex_string_sharing;
@@ -2533,10 +2533,11 @@ DaoVmSpace* DaoInit( const char *command )
 #ifdef DAO_WITH_CONCURRENT
 	ns2 = DaoVmSpace_GetNamespace( vms, "mt" );
 	DaoNamespace_AddConstValue( ns, "mt", (DaoValue*) ns2 );
-	dao_type_mutex = DaoNamespace_WrapType( ns2, & mutexTyper, 0 );
+	dao_type_mutex   = DaoNamespace_WrapType( ns2, & mutexTyper, 0 );
 	dao_type_condvar = DaoNamespace_WrapType( ns2, & condvTyper, 0 );
-	dao_type_sema = DaoNamespace_WrapType( ns2, & semaTyper, 0 );
-	DaoNamespace_SetupType( ns2, & futureTyper );
+	dao_type_sema    = DaoNamespace_WrapType( ns2, & semaTyper, 0 );
+	dao_type_channel = DaoNamespace_WrapType( ns2, & channelTyper, 0 );
+	dao_type_future  = DaoNamespace_WrapType( ns2, & futureTyper, 0 );
 	DaoNamespace_WrapFunctions( ns2, dao_mt_methods );
 #endif
 	DaoNamespace_SetupType( vms->nsInternal, & vmpTyper );

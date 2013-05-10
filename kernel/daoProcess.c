@@ -1074,7 +1074,7 @@ CallEntry:
 		/*if( eventHandler ) eventHandler->mainRoutineExit(); */
 		goto ReturnTrue;
 	}
-	if( routine && routine->pFunc ){
+	if( routine->pFunc ){
 		DaoValue **p = self->stackValues + topFrame->stackBase;
 		DaoProcess_CallFunction( self, topFrame->routine, p, topFrame->parCount );
 		DaoProcess_PopFrame( self );
@@ -2966,13 +2966,13 @@ DaoType* DaoProcess_GetReturnType( DaoProcess *self )
 {
 	DaoStackFrame *frame = self->topFrame;
 	DaoType *type = self->activeTypes[ self->activeCode->c ]; /* could be specialized; */
-	if( frame->retype ) return self->topFrame->retype;
+	if( frame->retype ) return frame->retype;
 	if( type == NULL || (type->attrib & DAO_TYPE_UNDEF) ){
 		if( frame->routine ) type = (DaoType*) frame->routine->routType->aux;
 	}
 	if( type == NULL ) type = self->activeTypes[ self->activeCode->c ];
-	GC_ShiftRC( type, self->topFrame->retype );
-	self->topFrame->retype = type;
+	GC_ShiftRC( type, frame->retype );
+	frame->retype = type;
 	return type;
 }
 
@@ -3737,10 +3737,10 @@ static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 		if( prev->object == NULL || frame->object->rootObject != prev->object->rootObject ){
 			DaoNamespace *ns = self->activeNamespace;
 			DaoFuture *future = DaoCallServer_AddCall( self );
-			DaoType *retype = & frame->routine->routType->aux->xType;
-			DaoType *type = DaoNamespace_MakeType( ns, "future", DAO_FUTURE, NULL, &retype,1 );
-			GC_ShiftRC( type, future->unitype );
-			future->unitype = type;
+			DaoType *type = & frame->routine->routType->aux->xType;
+			type = DaoCdataType_Specialize( dao_type_future, & type, type != NULL );
+			GC_ShiftRC( type, future->ctype );
+			future->ctype = type;
 			DaoProcess_PopFrame( self );
 			DaoProcess_PutValue( self, (DaoValue*) future );
 			GC_DecRC( future ); /* It was increased by DaoCallServer_AddCall(); */

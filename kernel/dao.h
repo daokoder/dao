@@ -223,6 +223,7 @@ typedef struct DaoProcess      DaoProcess;
 typedef struct DaoMutex        DaoMutex;
 typedef struct DaoCondVar      DaoCondVar;
 typedef struct DaoSema         DaoSema;
+typedef struct DaoChannel      DaoChannel;
 typedef struct DaoType         DaoType;
 
 /* Complex type: */

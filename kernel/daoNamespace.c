@@ -551,15 +551,16 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 		}
 
 		/* CASE 2: */
-		if( defts->size && defts->items.pType[0] ) alias = DaoCdataType_Specialize( type, defts );
+		if( defts->size && defts->items.pType[0] )
+			alias = DaoCdataType_Specialize( type, defts->items.pType, defts->size );
 		DaoValue_AddType( scope, name, alias );
 
 	}else{
 		sptree = value->xCdata.ctype->kernel->sptree;
 		if( sptree == NULL ) goto Error;
 		if( sptree->holders->size && types->size )
-			if( DTypeSpecTree_Test( sptree, types ) == 0 ) goto Error;
-		DTypeSpecTree_Add( sptree, types, type2 );
+			if( DTypeSpecTree_Test( sptree, types->items.pType, types->size ) == 0 ) goto Error;
+		DTypeSpecTree_Add( sptree, types->items.pType, types->size, type2 );
 	}
 
 
@@ -1478,8 +1479,6 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		abtp = nameva->unitype; break;
 	case DAO_TUPLE :
 		abtp = tuple->unitype; break;
-	case DAO_FUTURE :
-		abtp = ((DaoFuture*)p)->unitype; break;
 	case DAO_PROCESS :
 		abtp = vmp->abtype; break;
 	case DAO_INTERFACE :

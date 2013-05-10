@@ -254,13 +254,13 @@ static void DaoCallServer_SetSorting( DaoFuture *future )
 	DaoCallServer *server = daoCallServer;
 	DaoFuture *fut = server->last;
 	assert( future->sorting == NULL );
-	if( future->object == NULL ) return;
+	if( future->actor == NULL ) return;
 	while( fut ){
-		if( fut->object == NULL ){
+		if( fut->actor == NULL ){
 			fut = fut->prev;
 			continue;
 		}
-		if( future->object->rootObject == fut->object->rootObject ){
+		if( future->actor->rootObject == fut->actor->rootObject ){
 			GC_IncRC( fut );
 			future->sorting = fut;
 			break;
@@ -296,17 +296,17 @@ static void DaoCallServer_Add( DaoFuture *future )
 }
 DaoFuture* DaoCallServer_AddCall( DaoProcess *call )
 {
-	DaoFuture *future = DaoFuture_New();
+	DaoFuture *future = DaoFuture_New( NULL );
 	DaoValue **params = call->stackValues + call->topFrame->stackBase;
 	int i, count = call->topFrame->parCount;
 
-	for(i=0; i<count; i++) DaoValue_Copy( params[i], & future->params[i] );
-	future->parCount = count;
+	DArray_Clear( future->params );
+	for(i=0; i<count; i++) DArray_Append( future->params, params[i] );
 	future->state = DAO_CALL_QUEUED;
-	future->object = call->topFrame->object;
+	future->actor = call->topFrame->object;
 	future->routine = call->topFrame->routine;
 	GC_IncRC( future->routine );
-	GC_IncRC( future->object );
+	GC_IncRC( future->actor );
 	/*
 	// Need to increase the reference count of this future, because this
 	// may get executed and finished immediately. Without increasing its
@@ -326,7 +326,7 @@ void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout, sh
 
 	/* joining the process with the future value's own process */
 	if( wait->future == NULL ){
-		wait->future = DaoFuture_New();
+		wait->future = DaoFuture_New( NULL );
 		wait->future->process = wait;
 		GC_IncRC( wait->future );
 		GC_IncRC( wait );
@@ -376,11 +376,11 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 
 	for(i=0; i<timeouts->size; i++){
 		future = (DaoFuture*) timeouts->items.pVoid[i];
-		if( future->object && DMap_Find( active, future->object->rootObject ) ) continue;
+		if( future->actor && DMap_Find( active, future->actor->rootObject ) ) continue;
 		if( future->process && DMap_Find( active, future->process ) ) continue;
 		DArray_Erase( timeouts, i, 1 );
 		DMap_Erase( pending, future );
-		if( future->object ) DMap_Insert( active, future->object->rootObject, NULL );
+		if( future->actor ) DMap_Insert( active, future->actor->rootObject, NULL );
 		if( future->process ) DMap_Insert( active, future->process, NULL );
 		return future;
 	}
@@ -401,13 +401,13 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 		future = (DaoFuture*) futures->items.pVoid[i];
 		if( future->precondition && future->precondition->state != DAO_CALL_FINISHED ) continue;
 		if( future->sorting && future->sorting->state != DAO_CALL_FINISHED ) continue;
-		if( future->object && DMap_Find( active, future->object->rootObject ) ) continue;
+		if( future->actor && DMap_Find( active, future->actor->rootObject ) ) continue;
 		if( future->process && DMap_Find( active, future->process ) ) continue;
 		DArray_Erase( futures, i, 1 );
 		DMap_Erase( pending, future );
 		GC_DecRC( future->sorting );
 		future->sorting = NULL;
-		if( future->object ) DMap_Insert( active, future->object->rootObject, NULL );
+		if( future->actor ) DMap_Insert( active, future->actor->rootObject, NULL );
 		if( future->process ) DMap_Insert( active, future->process, NULL );
 		return future;
 	}
@@ -461,7 +461,6 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		if( future == NULL ) continue;
 
 		if( future->state == DAO_CALL_QUEUED ){
-			int n = future->parCount;
 			if( future->process == NULL ){
 				proc2 = DaoVmSpace_AcquireProcess( server->vmspace );
 				DMutex_Lock( & server->mutex );
@@ -473,11 +472,11 @@ static void DaoCallThread_Run( DaoCallThread *self )
 				GC_IncRC( future->process );
 			}
 			proc = future->process;
-			for(i=0; i<n; i++) DaoValue_Copy( future->params[i], & proc->paramValues[i] );
-			proc->parCount = n;
-			future->parCount = 0;
-			DaoValue_ClearAll( future->params, n );
-			DaoProcess_PushRoutine( proc, future->routine, future->object );
+			for(i=0; i<future->params->size; i++)
+				DaoValue_Copy( future->params->items.pValue[i], & proc->paramValues[i] );
+			proc->parCount = future->params->size;
+			DArray_Clear( future->params );
+			DaoProcess_PushRoutine( proc, future->routine, future->actor );
 			future->state = DAO_CALL_RUNNING;
 			DaoProcess_InterceptReturnValue( proc );
 			DaoProcess_Execute( proc );
@@ -494,9 +493,9 @@ static void DaoCallThread_Run( DaoCallThread *self )
 			}
 			proc = future->process;
 		}
-		if( future->object ){
+		if( future->actor ){
 			DMutex_Lock( & server->mutex );
-			DMap_Erase( server->active, future->object->rootObject );
+			DMap_Erase( server->active, future->actor->rootObject );
 			DMutex_Unlock( & server->mutex );
 		}
 		if( proc == NULL ){

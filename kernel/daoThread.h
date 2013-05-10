@@ -211,7 +211,9 @@ DAO_DLL void DaoSema_Post( DaoSema *self );
 DAO_DLL void DaoSema_SetValue( DaoSema *self, int n );
 DAO_DLL int  DaoSema_GetValue( DaoSema *self );
 
-DAO_DLL DaoFuture* DaoFuture_New();
+DAO_DLL DaoType *dao_type_channel;
+DAO_DLL DaoType *dao_type_future;
+DAO_DLL DaoFuture* DaoFuture_New( DaoType *vatype );
 DAO_DLL void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future );
 
 #endif /* DAO_WITH_CONCURRENT */
@@ -219,17 +221,27 @@ DAO_DLL void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )
 enum{ DAO_CALL_QUEUED, DAO_CALL_RUNNING, DAO_CALL_PAUSED, DAO_CALL_FINISHED };
 enum{ DAO_FUTURE_VALUE, DAO_FUTURE_WAIT };
 
+
+
+struct DaoChannel
+{
+	DAO_CSTRUCT_COMMON;
+
+	DaoType     *mtype;
+	DArray      *messages;
+};
+
+
+
 struct DaoFuture
 {
-	DAO_DATA_COMMON;
+	DAO_CSTRUCT_COMMON;
 
 	uchar_t      state;
 	uchar_t      state2;
-	short        parCount;
-	DaoType     *unitype;
+	DArray      *params;
 	DaoValue    *value;
-	DaoValue    *params[DAO_MAX_PARAM];
-	DaoObject   *object;
+	DaoObject   *actor;
 	DaoRoutine  *routine;
 	DaoProcess  *process;
 	DaoFuture   *precondition; /* the future value on which this one waits; */

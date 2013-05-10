@@ -702,6 +702,65 @@ int  DaoSema_GetValue( DaoSema *self )
 }
 
 
+
+
+
+
+static void DaoChannel_Lib_Value( DaoProcess *proc, DaoValue *par[], int N )
+{
+#if 0
+	DaoChannel *self = (DaoChannel*) par[0];
+	if( self->state == DAO_CALL_FINISHED ){
+		DaoProcess_PutValue( proc, self->value );
+		return;
+	}
+	proc->status = DAO_VMPROC_SUSPENDED;
+	proc->pauseType = DAO_VMP_ASYNC;
+	DaoCallServer_AddWait( proc, self, -1, DAO_FUTURE_VALUE );
+#endif
+}
+static void DaoChannel_Lib_Wait( DaoProcess *proc, DaoValue *par[], int N )
+{
+#if 0
+	DaoChannel *self = (DaoChannel*) par[0];
+	float timeout = par[1]->xFloat.value;
+	DaoProcess_PutInteger( proc, self->state == DAO_CALL_FINISHED );
+	if( self->state == DAO_CALL_FINISHED || timeout == 0 ) return;
+	proc->status = DAO_VMPROC_SUSPENDED;
+	proc->pauseType = DAO_VMP_ASYNC;
+	DaoCallServer_AddWait( proc, self, timeout, DAO_FUTURE_WAIT );
+#endif
+}
+static DaoFuncItem channelMeths[] =
+{
+	{ DaoChannel_Lib_Value,   "value( self : channel<@V> )=>@V" },
+	{ DaoChannel_Lib_Wait,    "wait( self : channel<@V>, timeout : float = -1 )=>int" },
+	{ NULL, NULL }
+};
+static void DaoChannel_Delete( DaoChannel *self )
+{
+#if 0
+	GC_DecRC( self->value );
+#endif
+	dao_free( self );
+}
+
+DaoTypeBase channelTyper =
+{
+	"channel", NULL, NULL, (DaoFuncItem*) channelMeths, {0}, {0},
+	(FuncPtrDel) DaoChannel_Delete, NULL
+};
+
+DaoChannel* DaoChannel_New()
+{
+	DaoChannel *self = (DaoChannel*)dao_calloc(1,sizeof(DaoChannel));
+	DaoValue_Init( self, DAO_NONE );
+	return self;
+}
+
+
+
+
 static void DaoFuture_Lib_Value( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoFuture *self = (DaoFuture*) par[0];
@@ -732,39 +791,51 @@ static DaoFuncItem futureMeths[] =
 static void DaoFuture_Delete( DaoFuture *self )
 {
 	GC_DecRC( self->value );
-	GC_DecRC( self->unitype );
-	GC_DecRC( self->object );
+	GC_DecRC( self->actor );
 	GC_DecRC( self->routine );
 	GC_DecRC( self->process );
 	GC_DecRC( self->precondition );
 	GC_DecRC( self->sorting );
-	DaoValue_ClearAll( self->params, self->parCount );
+	DArray_Delete( self->params );
 	dao_free( self );
 }
-
-static DaoTypeCore futureCore =
+static void DaoFuture_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *maps, int remove )
 {
-	NULL,
-	DaoValue_SafeGetField,
-	DaoValue_SafeSetField,
-	DaoValue_GetItem,
-	DaoValue_SetItem,
-	DaoValue_Print
-};
+	daoint i, n;
+	DaoFuture *self = (DaoFuture*) p;
+	DArray_Append( arrays, self->params );
+	if( self->value ) DArray_Append( values, self->value );
+	if( self->actor ) DArray_Append( values, self->actor );
+	if( self->routine ) DArray_Append( values, self->routine );
+	if( self->process ) DArray_Append( values, self->process );
+	if( self->precondition ) DArray_Append( values, self->precondition );
+	if( self->sorting ) DArray_Append( values, self->sorting );
+	if( remove ){
+		self->value = NULL;
+		self->actor = NULL;
+		self->routine = NULL;
+		self->process = NULL;
+		self->precondition = NULL;
+		self->sorting = NULL;
+	}
+}
+
 DaoTypeBase futureTyper =
 {
-	"future", & futureCore, NULL, (DaoFuncItem*) futureMeths, {0}, {0},
-	(FuncPtrDel) DaoFuture_Delete, NULL
+	"future<@V=none>", NULL, NULL, (DaoFuncItem*) futureMeths, {0}, {0},
+	(FuncPtrDel) DaoFuture_Delete, DaoFuture_GetGCFields
 };
 
-DaoFuture* DaoFuture_New()
+DaoFuture* DaoFuture_New( DaoType *vatype )
 {
 	DaoFuture *self = (DaoFuture*)dao_calloc(1,sizeof(DaoFuture));
-	DaoValue_Init( self, DAO_FUTURE );
+	DaoType *type = DaoCdataType_Specialize( dao_type_future, & vatype, vatype != NULL );
+	DaoCstruct_Init( (DaoCstruct*) self, type );
 	GC_IncRC( dao_none_value );
 	self->state = DAO_CALL_QUEUED;
 	self->state2 = DAO_FUTURE_VALUE;
 	self->value = dao_none_value;
+	self->params = DArray_New(D_VALUE);
 	return self;
 }
 
@@ -796,7 +867,7 @@ void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )
 {
 	DaoType *type;
 	if( future == NULL ) return;
-	type = future->unitype;
+	type = future->ctype;
 	type = type && type->nested->size ? type->nested->items.pType[0] : NULL;
 	switch( self->status ){
 	case DAO_VMPROC_FINISHED :
@@ -1122,13 +1193,10 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 	DaoProcess *clone;
 	DaoVmCode *vmc, *end;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
-	DaoFuture *future = DaoFuture_New();
-	DaoType *type = proc->activeTypes[proc->activeCode->c]->nested->items.pType[0];
+	DaoType *type = DaoProcess_GetReturnType( proc );
+	DaoFuture *future = DaoFuture_New( type->nested->items.pType[0] );
 	int entry, nop = proc->activeCode[1].code == DVM_NOP;
 
-	type = DaoNamespace_MakeType( proc->activeNamespace, "future", DAO_FUTURE, NULL, &type, 1 );
-	GC_ShiftRC( type, future->unitype );
-	future->unitype = type;
 	DaoProcess_PutValue( proc, (DaoValue*) future );
 	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
 

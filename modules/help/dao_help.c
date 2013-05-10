@@ -776,7 +776,11 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		case DKEY_AS : 
 		case DKEY_AND : case DKEY_OR : case DKEY_NOT :
 		case DKEY_VIRTUAL :
-			fgcolor = DAOX_CYAN;
+			if( self->fmtHTML ){
+				fgcolor = DAOX_GREEN;
+			}else{
+				fgcolor = DAOX_CYAN;
+			}
 			break;
 		case DKEY_VAR : case DKEY_CONST : case DKEY_STATIC : case DKEY_GLOBAL :
 		case DKEY_PRIVATE : case DKEY_PROTECTED : case DKEY_PUBLIC :
@@ -813,7 +817,11 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		case DKEY_COSH : case DKEY_EXP : case DKEY_LOG :
 		case DKEY_SIN : case DKEY_SINH : case DKEY_SQRT :
 		case DKEY_TAN : case DKEY_TANH :
-			fgcolor = DAOX_YELLOW;
+			if( self->fmtHTML ){
+				fgcolor = DAOX_MAGENTA;
+			}else{
+				fgcolor = DAOX_YELLOW;
+			}
 			break;
 		default: break;
 		}

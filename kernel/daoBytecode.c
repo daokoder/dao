@@ -559,8 +559,7 @@ int DaoByteEncoder_EncodeType( DaoByteEncoder *self, DaoType *type )
 		}
 		break;
 	case DAO_ARRAY : case DAO_LIST : case DAO_MAP :
-	case DAO_TUPLE : case DAO_TYPE : case DAO_FUTURE :
-	case DAO_VARIANT :
+	case DAO_TUPLE : case DAO_TYPE : case DAO_VARIANT :
 		if( type->tid == DAO_VARIANT && type->aux ){
 			DaoByteEncoder_EncodeType( self, (DaoType*) type->aux );
 		}
@@ -1863,9 +1862,6 @@ static DaoValue* DaoByteDecoder_DecodeValue( DaoByteDecoder *self )
 		id = DaoByteDecoder_DecodeUInt( self );
 		value = (DaoValue*) DaoByteDecoder_GetType( self, id );
 		break;
-	case DAO_FUTURE :
-		id = DaoByteDecoder_DecodeUInt( self );
-		break;
 	case DAO_NAMESPACE : // XXX
 		id = DaoByteDecoder_DecodeUInt( self );
 		value = id ? DaoByteDecoder_GetDeclaration( self, id ) : (DaoValue*)self->nspace;
@@ -1935,8 +1931,7 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 			}
 			break;
 		case DAO_ARRAY : case DAO_LIST : case DAO_MAP :
-		case DAO_TUPLE : case DAO_TYPE : case DAO_FUTURE :
-		case DAO_VARIANT :
+		case DAO_TUPLE : case DAO_TYPE : case DAO_VARIANT :
 			if( tid == DAO_VARIANT ){
 				id = DaoByteDecoder_DecodeUInt( self );
 				aux = (DaoValue*) DaoByteDecoder_GetType( self, id );
@@ -1956,7 +1951,6 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 			case DAO_MAP     : tname = "map"; break;
 			case DAO_TUPLE   : tname = "tuple"; break;
 			case DAO_TYPE    : tname = "type"; break;
-			case DAO_FUTURE  : tname = "future"; break;
 			case DAO_VARIANT : tname = aux ? aux->xType.name->mbs : ""; break;
 			}
 			type = DaoNamespace_MakeType( self->nspace, tname, tid, aux, types, count );
@@ -2076,7 +2070,7 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 					DaoType *tp = DaoByteDecoder_GetType( self, it );
 					DArray_Append( self->array, tp );
 				}
-				type = DaoCdataType_Specialize( type, self->array );
+				type = DaoCdataType_Specialize( type, self->array->items.pType, self->array->size );
 			}
 			break;
 		case DAO_ANY :

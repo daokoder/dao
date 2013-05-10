@@ -4891,7 +4891,7 @@ NotExist_TryAux:
 #ifdef DAO_WITH_CONCURRENT
 				if( code == DVM_MCALL && tp[0]->tid == DAO_OBJECT
 						&& (tp[0]->aux->xClass.attribs & DAO_CLS_ASYNCHRONOUS) ){
-					ct = DaoNamespace_MakeType( NS, "future", DAO_FUTURE, NULL, &ct, 1 );
+					ct = DaoCdataType_Specialize( dao_type_future, & ct, ct != NULL );
 				}
 #endif
 				if( types[opc] && types[opc]->tid == DAO_ANY ) goto TryPushBlockReturnType;

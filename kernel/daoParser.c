@@ -1754,10 +1754,6 @@ WrongType:
 			case DAO_OBJECT : return type->aux->xClass.clsType;
 			}
 			goto InvalidTypeForm;
-		case DKEY_FUTURE :
-			tid = DAO_FUTURE;
-			if( count2 != 1 ) goto InvalidTypeForm;
-			break;
 		default : break;
 		}
 		tks = & tokens[start]->string;
@@ -1872,7 +1868,7 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 #endif
 	}
 	if( tpl->type == DAO_CTYPE ){
-		DaoType *sptype = DaoCdataType_Specialize( ctype->cdtype, types );
+		DaoType *sptype = DaoCdataType_Specialize( ctype->cdtype, types->items.pType, types->size );
 		if( sptype ){
 			inst = sptype->aux;
 			goto DoneInstantiation;
@@ -6177,7 +6173,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		result.last = result.update = self->vmcLast;
 		start += 1;
 	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_DOLLAR || tki == DTOK_COLON
-			|| (tki >= DKEY_ANY && tki <= DKEY_FUTURE ) || tki >= DKEY_ABS || tki == DKEY_SELF ){
+			|| (tki >= DKEY_ANY && tki <= DKEY_CDATA ) || tki >= DKEY_ABS || tki == DKEY_SELF ){
 		regLast = DaoParser_ParseAtomicExpression( self, start, & cst );
 		if( last != self->vmcLast ) result.first = result.last = result.update = self->vmcLast;
 		result.reg = regLast;

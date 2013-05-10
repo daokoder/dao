@@ -274,11 +274,11 @@ struct DTypeSpecTree
 DTypeSpecTree* DTypeSpecTree_New();
 void DTypeSpecTree_Delete( DTypeSpecTree *self );
 
-int DTypeSpecTree_Test( DTypeSpecTree *self, DArray *types );
-void DTypeSpecTree_Add( DTypeSpecTree *self, DArray *types, DaoType *sptype );
-DaoType* DTypeSpecTree_Get( DTypeSpecTree *self, DArray *types );
+int DTypeSpecTree_Test( DTypeSpecTree *self, DaoType *types[], int count );
+void DTypeSpecTree_Add( DTypeSpecTree *self, DaoType *types[], int count, DaoType *sptype );
+DaoType* DTypeSpecTree_Get( DTypeSpecTree *self, DaoType *types[], int count );
 
-DAO_DLL DaoType* DaoCdataType_Specialize( DaoType *self, DArray *types );
+DAO_DLL DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int count );
 DAO_DLL void DaoCdataType_SpecializeMethods( DaoType *self );
 
 
