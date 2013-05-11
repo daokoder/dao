@@ -3735,15 +3735,7 @@ static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 	if( vmc->code != DVM_MCALL ) return 0;
 	if( frame->object && (frame->object->defClass->attribs & DAO_CLS_ASYNCHRONOUS) ){
 		if( prev->object == NULL || frame->object->rootObject != prev->object->rootObject ){
-			DaoNamespace *ns = self->activeNamespace;
-			DaoFuture *future = DaoCallServer_AddCall( self );
-			DaoType *type = & frame->routine->routType->aux->xType;
-			type = DaoCdataType_Specialize( dao_type_future, & type, type != NULL );
-			GC_ShiftRC( type, future->ctype );
-			future->ctype = type;
-			DaoProcess_PopFrame( self );
-			DaoProcess_PutValue( self, (DaoValue*) future );
-			GC_DecRC( future ); /* It was increased by DaoCallServer_AddCall(); */
+			DaoCallServer_AddCall( self );
 			self->status = DAO_VMPROC_RUNNING;
 			return 1;
 		}

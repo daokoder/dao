@@ -94,9 +94,11 @@ int DaoArray_Compare( DaoArray *x, DaoArray *y );
 
 int DaoComplex_Compare( DaoComplex *left, DaoComplex *right )
 {
-	int eq = left->value.real == right->value.real && left->value.imag == right->value.imag;
-	if( eq ) return 0;
-	return left < right ? -100 : 100;
+	if( left->value.real < right->value.real ) return -100;
+	if( left->value.real > right->value.real ) return  100;
+	if( left->value.imag < right->value.imag ) return -100;
+	if( left->value.imag > right->value.imag ) return  100;
+	return 0;
 }
 
 int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )

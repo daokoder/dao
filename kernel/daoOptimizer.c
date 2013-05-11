@@ -31,6 +31,7 @@
 #include<assert.h>
 
 #include"daoGC.h"
+#include"daoSched.h"
 #include"daoLexer.h"
 #include"daoValue.h"
 #include"daoRoutine.h"

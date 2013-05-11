@@ -39,8 +39,179 @@
 #include"daoVmspace.h"
 #include"daoProcess.h"
 #include"daoGC.h"
+#include"daoSched.h"
 
 #ifdef DAO_WITH_CONCURRENT
+
+
+DaoTaskEvent* DaoTaskEvent_New()
+{
+	DaoTaskEvent *self = (DaoTaskEvent*) dao_calloc( 1, sizeof(DaoTaskEvent) );
+	return self;
+}
+void DaoTaskEvent_Reset( DaoTaskEvent *self )
+{
+	self->type = 0;
+	self->state = 0;
+	GC_DecRC( self->future );
+	GC_DecRC( self->channel );
+	GC_DecRC( self->value );
+	self->future = NULL;
+	self->channel = NULL;
+	self->value = NULL;
+	self->prev = NULL;
+	self->next = NULL;
+}
+void DaoTaskEvent_Delete( DaoTaskEvent *self )
+{
+	DaoTaskEvent_Reset( self );
+	dao_free( self );
+}
+
+
+
+
+static void CHANNEL_New( DaoProcess *proc, DaoValue *par[], int N )
+{
+	DaoType *retype = DaoProcess_GetReturnType( proc );
+	DaoChannel *self = DaoChannel_New( retype, 0 );
+	DaoProcess_PutValue( proc, (DaoValue*) self );
+}
+static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
+{
+	DaoChannel *self = (DaoChannel*) par[0];
+#if 0
+	if( self->state == DAO_CALL_FINISHED ){
+		DaoProcess_PutValue( proc, self->value );
+		return;
+	}
+	proc->status = DAO_VMPROC_SUSPENDED;
+	proc->pauseType = DAO_VMP_ASYNC;
+	DaoCallServer_AddWait( proc, self, -1, DAO_FUTURE_VALUE );
+#endif
+}
+static void CHANNEL_Receive( DaoProcess *proc, DaoValue *par[], int N )
+{
+#if 0
+	DaoChannel *self = (DaoChannel*) par[0];
+	float timeout = par[1]->xFloat.value;
+	DaoProcess_PutInteger( proc, self->state == DAO_CALL_FINISHED );
+	if( self->state == DAO_CALL_FINISHED || timeout == 0 ) return;
+	proc->status = DAO_VMPROC_SUSPENDED;
+	proc->pauseType = DAO_VMP_ASYNC;
+	DaoCallServer_AddWait( proc, self, timeout, DAO_FUTURE_WAIT );
+#endif
+}
+static DaoFuncItem channelMeths[] =
+{
+	{ CHANNEL_New,      "channel<@V>()" },
+	{ CHANNEL_Send,     "send( self :channel<@V>, data :@V, timeout :float = 0 )" },
+	{ CHANNEL_Receive,  "receive( self :channel<@V>, timeout :float = -1 ) => @V" },
+	{ NULL, NULL }
+};
+static void DaoChannel_Delete( DaoChannel *self )
+{
+#if 0
+	GC_DecRC( self->value );
+#endif
+	dao_free( self );
+}
+
+DaoTypeBase channelTyper =
+{
+	"channel<@V=none>", NULL, NULL, (DaoFuncItem*) channelMeths, {0}, {0},
+	(FuncPtrDel) DaoChannel_Delete, NULL
+};
+
+DaoChannel* DaoChannel_New( DaoType *type, int dtype )
+{
+	DaoChannel *self = (DaoChannel*)dao_calloc(1,sizeof(DaoChannel));
+	if( dtype ) type = DaoCdataType_Specialize( dao_type_channel, & type, type != NULL );
+	DaoCstruct_Init( (DaoCstruct*) self, type );
+	return self;
+}
+
+
+
+
+static void FUTURE_Value( DaoProcess *proc, DaoValue *par[], int N )
+{
+	DaoFuture *self = (DaoFuture*) par[0];
+	if( self->state == DAO_CALL_FINISHED ){
+		DaoProcess_PutValue( proc, self->value );
+		return;
+	}
+	proc->status = DAO_VMPROC_SUSPENDED;
+	proc->pauseType = DAO_VMP_ASYNC;
+	DaoCallServer_AddWait( proc, self, -1, DAO_FUTURE_VALUE );
+}
+static void FUTURE_Wait( DaoProcess *proc, DaoValue *par[], int N )
+{
+	DaoFuture *self = (DaoFuture*) par[0];
+	float timeout = par[1]->xFloat.value;
+	DaoProcess_PutInteger( proc, self->state == DAO_CALL_FINISHED );
+	if( self->state == DAO_CALL_FINISHED || timeout == 0 ) return;
+	proc->status = DAO_VMPROC_SUSPENDED;
+	proc->pauseType = DAO_VMP_ASYNC;
+	DaoCallServer_AddWait( proc, self, timeout, DAO_FUTURE_WAIT );
+}
+static DaoFuncItem futureMeths[] =
+{
+	{ FUTURE_Value,   "value( self : future<@V> )=>@V" },
+	{ FUTURE_Wait,    "wait( self : future<@V>, timeout : float = -1 )=>int" },
+	{ NULL, NULL }
+};
+static void DaoFuture_Delete( DaoFuture *self )
+{
+	GC_DecRC( self->value );
+	GC_DecRC( self->actor );
+	GC_DecRC( self->routine );
+	GC_DecRC( self->process );
+	GC_DecRC( self->precondition );
+	DArray_Delete( self->params );
+	dao_free( self );
+}
+static void DaoFuture_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *maps, int remove )
+{
+	daoint i, n;
+	DaoFuture *self = (DaoFuture*) p;
+	DArray_Append( arrays, self->params );
+	if( self->value ) DArray_Append( values, self->value );
+	if( self->actor ) DArray_Append( values, self->actor );
+	if( self->routine ) DArray_Append( values, self->routine );
+	if( self->process ) DArray_Append( values, self->process );
+	if( self->precondition ) DArray_Append( values, self->precondition );
+	if( remove ){
+		self->value = NULL;
+		self->actor = NULL;
+		self->routine = NULL;
+		self->process = NULL;
+		self->precondition = NULL;
+	}
+}
+
+DaoTypeBase futureTyper =
+{
+	"future<@V=none>", NULL, NULL, (DaoFuncItem*) futureMeths, {0}, {0},
+	(FuncPtrDel) DaoFuture_Delete, DaoFuture_GetGCFields
+};
+
+DaoFuture* DaoFuture_New( DaoType *type, int vatype )
+{
+	DaoFuture *self = (DaoFuture*)dao_calloc(1,sizeof(DaoFuture));
+	if( vatype ) type = DaoCdataType_Specialize( dao_type_future, & type, type != NULL );
+	DaoCstruct_Init( (DaoCstruct*) self, type );
+	GC_IncRC( dao_none_value );
+	self->state = DAO_CALL_QUEUED;
+	self->state2 = DAO_FUTURE_VALUE;
+	self->value = dao_none_value;
+	self->params = DArray_New(D_VALUE);
+	return self;
+}
+
+
+
+
 
 typedef struct DaoCallThread   DaoCallThread;
 typedef struct DaoCallServer   DaoCallServer;
@@ -75,16 +246,15 @@ struct DaoCallServer
 
 	DArray  *functions; /* list of DThreadTask function pointers */
 	DArray  *parameters; /* list of void* */
-	DArray  *futures; /* list of DaoFuture* */
-	DArray  *timeouts; /* list of timeout waitings */
-	DMap    *waitings; /* timed waiting: <DaoDouble,DaoFuture*> */
+	DArray  *events;   /* list of DaoTaskEvent* */
+	DMap    *waitings; /* timed waiting: <DaoComplex,DaoTaskEvent*> */
 	DMap    *active; /* map of DaoObject* or DaoProcess* keys */
-	DMap    *pending; /* map of pointers from ::parameters and ::futures */
-	DMap    *allFutures; /* pending and active future values; */
+	DMap    *pending; /* map of pointers from ::parameters and ::events */
 
-	DaoFuture  *last;
+	DaoTaskEvent  *last;
+	DaoTaskEvent  *caches;
 
-	DaoTuple    *tuple;
+	DaoComplex   timestamp;  /* (time,index); */
 	DaoVmSpace  *vmspace;
 };
 static DaoCallServer *daoCallServer = NULL;
@@ -106,6 +276,7 @@ static void DaoCallThread_Delete( DaoCallThread *self )
 }
 static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 {
+	DaoComplex com = {DAO_COMPLEX,0,0,0,1,{0.0,0.0}};
 	DaoCallServer *self = (DaoCallServer*)dao_malloc( sizeof(DaoCallServer) );
 	DMutex_Init( & self->mutex );
 	DCondVar_Init( & self->condv );
@@ -119,37 +290,33 @@ static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 	self->threads = DArray_New(0);
 	self->functions = DArray_New(0);
 	self->parameters = DArray_New(0);
-	self->futures = DArray_New(0);
-	self->timeouts = DArray_New(0);
+	self->events = DArray_New(0);
 	self->waitings = DMap_New(D_VALUE,0);
 	self->pending = DHash_New(0,0);
 	self->active = DHash_New(0,0);
-	self->allFutures = DHash_New(0,0);
 	self->last = NULL;
+	self->caches = NULL;
 	self->vmspace = vms;
-	self->tuple = DaoTuple_New(2);
-	self->tuple->items[0] = (DaoValue*) DaoDouble_New(0);
-	self->tuple->items[1] = (DaoValue*) DaoDouble_New(0);
-	DaoValue_MarkConst( (DaoValue*) self->tuple );
-	GC_IncRC( self->tuple->items[0] );
-	GC_IncRC( self->tuple->items[1] );
-	GC_IncRC( self->tuple );
+	self->timestamp = com;
 	return self;
 }
 static void DaoCallServer_Delete( DaoCallServer *self )
 {
+	DaoTaskEvent *event = self->caches;
 	size_t i, n = self->threads->size;
 	for(i=0; i<n; i++) DaoCallThread_Delete( (DaoCallThread*)self->threads->items.pVoid[i] );
-	GC_DecRC( self->tuple );
+	while( event ){
+		DaoTaskEvent *e = event;
+		event = event->next;
+		DaoTaskEvent_Delete( e );
+	}
 	DArray_Delete( self->threads );
 	DArray_Delete( self->functions );
 	DArray_Delete( self->parameters );
-	DArray_Delete( self->futures );
-	DArray_Delete( self->timeouts );
+	DArray_Delete( self->events );
 	DMap_Delete( self->waitings );
 	DMap_Delete( self->pending );
 	DMap_Delete( self->active );
-	DMap_Delete( self->allFutures );
 	DMutex_Destroy( & self->mutex );
 	DCondVar_Destroy( & self->condv );
 	DCondVar_Destroy( & self->condv2 );
@@ -158,6 +325,32 @@ static void DaoCallServer_Delete( DaoCallServer *self )
 }
 static void DaoCallServer_Init( DaoVmSpace *vms );
 
+static DaoTaskEvent* DaoCallServer_MakeEvent()
+{
+	DaoTaskEvent *event;
+	DaoCallServer *server;
+	if( daoCallServer == NULL ) DaoCallServer_Init( mainVmSpace );
+	server = daoCallServer;
+	DMutex_Lock( & server->mutex );
+	if( server->caches ){
+		event = server->caches;
+		server->caches = event->next;
+		event->next = NULL;
+		if( server->caches ) server->caches->prev = NULL;
+	}else{
+		event = DaoTaskEvent_New();
+	}
+	DMutex_Unlock( & server->mutex );
+	return event;
+}
+/* Lock daoCallServer::mutex before calling this function: */
+static void DaoCallServer_CacheEvent( DaoTaskEvent *event )
+{
+	DaoCallServer *server = daoCallServer;
+	DaoTaskEvent_Reset( event );
+	event->next = server->caches;
+	server->caches = event;
+}
 static void DaoCallServer_AddThread( DThreadTask func, void *param )
 {
 	DaoCallThread *calth;
@@ -185,33 +378,26 @@ static void DaoCallServer_Timer( void *p )
 	server->timing = 1;
 	while( server->finishing == 0 || server->stopped != server->total ){
 		DMutex_Lock( & server->mutex );
-		while( server->waitings->size == 0 && server->timeouts->size == 0 ){
+		while( server->waitings->size == 0 ){
 			if( server->finishing && server->stopped == server->total ) break;
 			DCondVar_TimedWait( & server->condv2, & server->mutex, 0.01 );
 		}
 		if( server->waitings->size ){
 			DNode *node = DMap_First( server->waitings );
-			time = node->key.pValue->xTuple.items[0]->xDouble.value;
+			time = node->key.pValue->xComplex.value.real;
 			time -= Dao_GetCurrentTime();
 			/* wait the right amount of time for the closest arriving timeout: */
 			if( time > 0 ) DCondVar_TimedWait( & server->condv2, & server->mutex, time );
-		}else if( server->timeouts->size ){
-			/* there is at least one pending timeout to be handled,
-			 * wait for some time before creating a new thread to handle it: */
-			DCondVar_TimedWait( & server->condv2, & server->mutex, 0.1 );
 		}
 		DMutex_Unlock( & server->mutex );
 		if( server->finishing && server->stopped == server->total ) break;
-
-		/* create new thread for unhandled timeout: */
-		if( server->timeouts->size ) DaoCallServer_AddThread( NULL, NULL );
 
 		DMutex_Lock( & server->mutex );
 		if( server->waitings->size ){ /* a new wait timed out: */
 			DNode *node = DMap_First( server->waitings );
 			time = Dao_GetCurrentTime();
-			if( node->key.pValue->xTuple.items[0]->xDouble.value < time ){
-				DArray_Append( server->timeouts, node->value.pVoid );
+			if( node->key.pValue->xComplex.value.real < time ){
+				DArray_Append( server->events, node->value.pVoid );
 				DMap_EraseNode( server->waitings, node );
 			}
 		}
@@ -248,55 +434,29 @@ void DaoCallServer_AddTask( DThreadTask func, void *param, int now )
 		DaoCallServer_AddThread( func, param );
 	}
 }
-static void DaoCallServer_SetSorting( DaoFuture *future )
-{
-	daoint i;
-	DaoCallServer *server = daoCallServer;
-	DaoFuture *fut = server->last;
-	assert( future->sorting == NULL );
-	if( future->actor == NULL ) return;
-	while( fut ){
-		if( fut->actor == NULL ){
-			fut = fut->prev;
-			continue;
-		}
-		if( future->actor->rootObject == fut->actor->rootObject ){
-			GC_IncRC( fut );
-			future->sorting = fut;
-			break;
-		}
-		fut = fut->prev;
-	}
-}
-static void DaoCallServer_AddFuture( DaoFuture *future )
+static void DaoCallServer_AddEvent( DaoTaskEvent *event )
 {
 	DaoCallServer *server = daoCallServer;
-	if( DMap_Find( server->allFutures, future ) == NULL ){
-		DMap_Insert( server->allFutures, future, NULL );
-		if( server->last ) server->last->next = future;
-		future->prev = server->last;
-		future->next = NULL;
-		server->last = future;
-	}
-	DArray_Append( server->futures, future );
-	DMap_Insert( server->pending, future, NULL );
-	GC_IncRC( future );
+	DArray_Append( server->events, event );
+	DMap_Insert( server->pending, event, NULL );
 }
-static void DaoCallServer_Add( DaoFuture *future )
+static void DaoCallServer_Add( DaoTaskEvent *event )
 {
 	DaoCallServer *server;
 	if( daoCallServer == NULL ) DaoCallServer_Init( mainVmSpace );
 	server = daoCallServer;
 	DMutex_Lock( & server->mutex );
-	DaoCallServer_SetSorting( future );
-	DaoCallServer_AddFuture( future );
+	DaoCallServer_AddEvent( event );
 	DCondVar_Signal( & server->condv );
 	DMutex_Unlock( & server->mutex );
 	DaoCallServer_TryAddThread( NULL, NULL, server->pending->size );
 }
-DaoFuture* DaoCallServer_AddCall( DaoProcess *call )
+void DaoCallServer_AddCall( DaoProcess *call )
 {
-	DaoFuture *future = DaoFuture_New( NULL );
+	DaoStackFrame *frame = call->topFrame;
+	DaoTaskEvent *event = DaoCallServer_MakeEvent();
+	DaoType *type = (DaoType*) frame->routine->routType->aux;
+	DaoFuture *future = DaoFuture_New( type, 1 );
 	DaoValue **params = call->stackValues + call->topFrame->stackBase;
 	int i, count = call->topFrame->parCount;
 
@@ -307,26 +467,26 @@ DaoFuture* DaoCallServer_AddCall( DaoProcess *call )
 	future->routine = call->topFrame->routine;
 	GC_IncRC( future->routine );
 	GC_IncRC( future->actor );
-	/*
-	// Need to increase the reference count of this future, because this
-	// may get executed and finished immediately. Without increasing its
-	// reference count aforehand, it will be increased and then decreased
-	// back to ZERO, resulting in its deletion or lost of its ::value by GC!
-	*/
+	event->type = DAO_EVENT_START_TASKLET;
+	event->state = DAO_CALL_QUEUED;
 	GC_IncRC( future );
-	DaoCallServer_Add( future );
-	return future;
+	event->future = future;
+
+	DaoProcess_PopFrame( call );
+	DaoProcess_PutValue( call, (DaoValue*) future );
+
+	DaoCallServer_Add( event );
 }
 void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout, short state )
 {
 	DaoFuture *future;
+	DaoTaskEvent *event;
 	DaoCallServer *server;
 	if( daoCallServer == NULL ) DaoCallServer_Init( mainVmSpace );
 	server = daoCallServer;
 
-	/* joining the process with the future value's own process */
 	if( wait->future == NULL ){
-		wait->future = DaoFuture_New( NULL );
+		wait->future = DaoFuture_New( NULL, 1 );
 		wait->future->process = wait;
 		GC_IncRC( wait->future );
 		GC_IncRC( wait );
@@ -337,16 +497,21 @@ void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout, sh
 	future->state = DAO_CALL_PAUSED;
 	future->state2 = state;
 
+	event = DaoCallServer_MakeEvent();
+	event->type = DAO_EVENT_WAIT_TASKLET;
+	event->state = DAO_CALL_PAUSED;
+	GC_IncRC( future );
+	event->future = future;
+
 	DMutex_Lock( & server->mutex );
 	if( timeout >0 ){
-		server->tuple->items[0]->xDouble.value = timeout + Dao_GetCurrentTime();
-		server->tuple->items[1]->xDouble.value += 1;
-		DMap_Insert( server->waitings, server->tuple, future );
-		DMap_Insert( server->pending, future, NULL );
-		GC_IncRC( future );
+		server->timestamp.value.real = timeout + Dao_GetCurrentTime();
+		server->timestamp.value.imag += 1;
+		DMap_Insert( server->waitings, & server->timestamp, event );
+		DMap_Insert( server->pending, event, NULL );
 		DCondVar_Signal( & server->condv2 );
 	}else{
-		DaoCallServer_AddFuture( future );
+		DaoCallServer_AddEvent( event );
 		DCondVar_Signal( & server->condv );
 	}
 	if( wait->condv ){
@@ -368,47 +533,23 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 {
 	DaoCallServer *server = daoCallServer;
 	DaoFuture *first, *future, *precond;
-	DArray *timeouts = server->timeouts;
-	DArray *futures = server->futures;
+	DArray *events = server->events;
 	DMap *pending = server->pending;
 	DMap *active = server->active;
 	daoint i;
 
-	for(i=0; i<timeouts->size; i++){
-		future = (DaoFuture*) timeouts->items.pVoid[i];
-		if( future->actor && DMap_Find( active, future->actor->rootObject ) ) continue;
-		if( future->process && DMap_Find( active, future->process ) ) continue;
-		DArray_Erase( timeouts, i, 1 );
-		DMap_Erase( pending, future );
-		if( future->actor ) DMap_Insert( active, future->actor->rootObject, NULL );
-		if( future->process ) DMap_Insert( active, future->process, NULL );
-		return future;
-	}
-	if( futures->size == 0 ) return NULL;
-#if 0
-	future = (DaoFuture*) futures->items.pVoid[0];
-	precond = future->precondition;
-	first = future;
-	while( precond && precond->state != DAO_CALL_FINISHED ){
-		DArray_PopFront( futures );
-		DArray_PushBack( futures, future );
-		future = (DaoFuture*) futures->items.pVoid[0];
-		precond = future->precondition;
-		if( future == first ) break;
-	}
-#endif
-	for(i=0; i<futures->size; i++){
-		future = (DaoFuture*) futures->items.pVoid[i];
+	for(i=0; i<events->size; i++){
+		DaoTaskEvent *event = (DaoTaskEvent*) events->items.pVoid[i];
+		DaoFuture *future = event->future;
 		if( future->precondition && future->precondition->state != DAO_CALL_FINISHED ) continue;
-		if( future->sorting && future->sorting->state != DAO_CALL_FINISHED ) continue;
 		if( future->actor && DMap_Find( active, future->actor->rootObject ) ) continue;
 		if( future->process && DMap_Find( active, future->process ) ) continue;
-		DArray_Erase( futures, i, 1 );
-		DMap_Erase( pending, future );
-		GC_DecRC( future->sorting );
-		future->sorting = NULL;
+		DArray_Erase( events, i, 1 );
+		DMap_Erase( pending, event );
 		if( future->actor ) DMap_Insert( active, future->actor->rootObject, NULL );
 		if( future->process ) DMap_Insert( active, future->process, NULL );
+		GC_IncRC( future );
+		DaoCallServer_CacheEvent( event );
 		return future;
 	}
 	return NULL;
@@ -511,24 +652,14 @@ static void DaoCallThread_Run( DaoCallThread *self )
 			DNode *node;
 			array->size = 0;
 			DMutex_Lock( & server->mutex );
-			node = DMap_Find( server->allFutures, future );
-			if( node ){
-				if( future == server->last ){
-					server->last = future->prev;
-					future->prev = NULL;
-					if( server->last ) server->last->next = NULL;
-				}else{
-					if( future->prev ) future->prev->next = future->next;
-					future->next->prev = future->prev;
-					future->prev = future->next = NULL;
-				}
-				DMap_EraseNode( server->allFutures, node );
-			}
 			for(node=DMap_First(server->waitings); node; node=DMap_Next(server->waitings,node)){
-				DaoFuture *fut = (DaoFuture*) node->value.pValue;
-				if( fut->precondition == future ){ /* remove from timed waiting list: */
-					DArray_Append( server->timeouts, fut );
-					DArray_Append( array, node->key.pVoid );
+				DaoTaskEvent *event = (DaoTaskEvent*) node->value.pValue;
+				if( event->type == DAO_EVENT_WAIT_TASKLET ){
+					/* remove from timed waiting list: */
+					if( event->future->precondition == future ){
+						DArray_Append( server->events, event );
+						DArray_Append( array, node->key.pVoid );
+					}
 				}
 			}
 			for(i=0; i<array->size; i++) DMap_Erase( server->waitings, array->items.pVoid[i] );
