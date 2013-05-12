@@ -1159,7 +1159,7 @@ CallEntry:
 	if( self->status == DAO_VMPROC_SUSPENDED &&
 			(vmc->code == DVM_CALL || vmc->code == DVM_MCALL || vmc->code == DVM_YIELD) ){
 		if( self->pauseType == DAO_VMP_ASYNC ){
-			DaoFuture *precond = self->future->precondition;
+			DaoFuture *precond = self->future->precond;
 			if( precond ){
 				int finished = precond->state == DAO_CALL_FINISHED;
 				if( self->future->restype == DAO_FUTRES_VALUE ){

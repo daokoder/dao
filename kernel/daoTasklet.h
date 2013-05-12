@@ -25,8 +25,8 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef DAO_SCHED_H
-#define DAO_SCHED_H
+#ifndef DAO_TASKLET_H
+#define DAO_TASKLET_H
 
 #include"daoVmspace.h"
 
@@ -34,13 +34,15 @@
 
 enum DaoTaskEventType
 {
-	DAO_EVENT_NONE ,
-	DAO_EVENT_START_TASKLET  ,  /* Start new tasklet; */
+	DAO_EVENT_RESUME_TASKLET ,  /* Resume the tasklet; */
 	DAO_EVENT_WAIT_TASKLET   ,  /* Wait for another tasklet; */
 	DAO_EVENT_WAIT_RECEIVING ,  /* Wait for receiving from a channel; */
 	DAO_EVENT_WAIT_SENDING   ,  /* Wait after sending to a channel; */
-	DAO_EVENT_QUEUE_MESSAGE  ,  /* Queue message for processing; */
-	DAO_EVENT_HANDLE_MESSAGE
+};
+enum DaoTaskEventState
+{
+	DAO_EVENT_WAIT ,
+	DAO_EVENT_RESUME
 };
 
 enum DaoTaskStatus
@@ -66,16 +68,14 @@ typedef struct DaoTaskEvent  DaoTaskEvent;
 // A task event can be generated in different situation:
 // 1. Starting of a new tasklet by calling mt.start::{} or asynchronous methods:
 //    DaoTaskEvent {
-//        type = DAO_EVENT_START_TASKLET;
-//        state = DAO_CALL_PAUSED;
+//        type = DAO_EVENT_RESUME_TASKLET;
 //        future = future value for the new tasklet;
 //        channel = NULL;
 //        value = NULL;
 //    };
 // 2. Waiting for a tasklet (future value):
 //    DaoTaskEvent {
-//        type = DAO_EVENT_WAIT_TASKLET;
-//        state = DAO_CALL_PAUSED;
+//        type = DAO_EVENT_WAIT_TASKLET/DAO_EVENT_RESUME_TASKLET;
 //        future = future value for the waiting tasklet;
 //        channel = NULL;
 //        value = NULL;
@@ -83,7 +83,6 @@ typedef struct DaoTaskEvent  DaoTaskEvent;
 // 3. Waiting to Receive message from a channel:
 //    DaoTaskEvent {
 //        type = DAO_EVENT_WAIT_RECEIVING;
-//        state = DAO_CALL_PAUSED;
 //        future = future value for the waiting tasklet;
 //        channel = channel for receiving;
 //        value = NULL;
@@ -91,27 +90,11 @@ typedef struct DaoTaskEvent  DaoTaskEvent;
 // 4. Waiting after sending message to a channel:
 //    DaoTaskEvent {
 //        type = DAO_EVENT_WAIT_SENDING;
-//        state = DAO_CALL_PAUSED;
 //        future = future value for the sending tasklet;
 //        channel = channel for sending;
 //        value = NULL;
 //    };
-// 5. Queuing message sent to a channel:
-//    DaoTaskEvent {
-//        type = DAO_EVENT_QUEUE_MESSAGE;
-//        state = DAO_CALL_PAUSED;
-//        future = future value for the sending tasklet;
-//        channel = channel for sending;
-//        value = data for sending;
-//    };
 //
-// Note for channel:
-// -- Messages sent to a channel are also queued in both in the channel
-//    buffer and the event list as event of type DAO_EVENT_QUEUE_MESSAGE.
-// -- When an event of type DAO_EVENT_WAIT_RECEIVING is processed,
-//    the channel buffer is checked, and the first event/message will
-//    be taken and updated to an event of type DAO_EVENT_HANDLE_MESSAGE,
-//    with the sender being changed to receiver.
 */
 struct DaoTaskEvent
 {
@@ -144,7 +127,7 @@ struct DaoChannel
 	DAO_CSTRUCT_COMMON;
 
 	daoint       cap;     /* capacity limit of the channel; */
-	DArray      *buffer;  /* DArray<DaoTaskEvent*>; */
+	DArray      *buffer;  /* DArray<DaoValue*>; */
 };
 
 
@@ -164,7 +147,7 @@ struct DaoFuture
 	DaoValue    *message;
 	DaoObject   *actor;
 	DaoProcess  *process;
-	DaoFuture   *precondition; /* the future value on which this one waits; */
+	DaoFuture   *precond; /* the future value on which this one waits; */
 };
 
 
