@@ -37,7 +37,7 @@
 #include"daoObject.h"
 #include"daoClass.h"
 #include"daoValue.h"
-#include"daoSched.h"
+#include"daoTasklet.h"
 
 #ifdef DAO_WITH_THREAD
 /* Basic threading interfaces */

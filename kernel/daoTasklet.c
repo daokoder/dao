@@ -39,7 +39,7 @@
 #include"daoVmspace.h"
 #include"daoProcess.h"
 #include"daoGC.h"
-#include"daoSched.h"
+#include"daoTasklet.h"
 
 #ifdef DAO_WITH_CONCURRENT
 

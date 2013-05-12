@@ -76,8 +76,8 @@ daoConst.o: $(DAO_SRC_DIR)/daoConst.c
 daoObject.o: $(DAO_SRC_DIR)/daoObject.c
 	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoObject.c -o daoObject.o
 
-daoSched.o: $(DAO_SRC_DIR)/daoSched.c
-	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoSched.c -o daoSched.o
+daoTasklet.o: $(DAO_SRC_DIR)/daoTasklet.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoTasklet.c -o daoTasklet.o
 
 daoStream.o: $(DAO_SRC_DIR)/daoStream.c
 	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoStream.c -o daoStream.o
@@ -103,7 +103,7 @@ OBJECTS = daoConst.o daoVmcode.o \
 		  daoLexer.o daoParser.o daoBytecode.o \
 		  daoType.o daoOptimizer.o daoStdlib.o \
 		  daoMacro.o daoStream.o daoRegex.o \
-		  daoGC.o daoThread.o daoSched.o daoPlatforms.o daoMake.o
+		  daoGC.o daoThread.o daoTasklet.o daoPlatforms.o daoMake.o
 
 
 
