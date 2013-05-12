@@ -34,15 +34,28 @@
 
 enum DaoTaskEventType
 {
+	DAO_EVENT_NONE ,
 	DAO_EVENT_START_TASKLET  ,  /* Start new tasklet; */
 	DAO_EVENT_WAIT_TASKLET   ,  /* Wait for another tasklet; */
 	DAO_EVENT_WAIT_RECEIVING ,  /* Wait for receiving from a channel; */
 	DAO_EVENT_WAIT_SENDING   ,  /* Wait after sending to a channel; */
 	DAO_EVENT_QUEUE_MESSAGE  ,  /* Queue message for processing; */
+	DAO_EVENT_HANDLE_MESSAGE
 };
 
-enum{ DAO_CALL_QUEUED, DAO_CALL_RUNNING, DAO_CALL_PAUSED, DAO_CALL_FINISHED };
-enum{ DAO_FUTURE_VALUE, DAO_FUTURE_WAIT };
+enum DaoTaskStatus
+{
+	DAO_CALL_RUNNING ,
+	DAO_CALL_PAUSED ,
+	DAO_CALL_FINISHED
+};
+
+enum DaoFutureResultType
+{
+	DAO_FUTRES_NONE ,
+	DAO_FUTRES_STATUS ,
+	DAO_FUTRES_VALUE
+};
 
 
 typedef struct DaoTaskEvent  DaoTaskEvent;
@@ -54,7 +67,7 @@ typedef struct DaoTaskEvent  DaoTaskEvent;
 // 1. Starting of a new tasklet by calling mt.start::{} or asynchronous methods:
 //    DaoTaskEvent {
 //        type = DAO_EVENT_START_TASKLET;
-//        state = DAO_CALL_QUEUED;
+//        state = DAO_CALL_PAUSED;
 //        future = future value for the new tasklet;
 //        channel = NULL;
 //        value = NULL;
@@ -86,11 +99,19 @@ typedef struct DaoTaskEvent  DaoTaskEvent;
 // 5. Queuing message sent to a channel:
 //    DaoTaskEvent {
 //        type = DAO_EVENT_QUEUE_MESSAGE;
-//        state = DAO_CALL_QUEUED;
+//        state = DAO_CALL_PAUSED;
 //        future = future value for the sending tasklet;
 //        channel = channel for sending;
 //        value = data for sending;
 //    };
+//
+// Note for channel:
+// -- Messages sent to a channel are also queued in both in the channel
+//    buffer and the event list as event of type DAO_EVENT_QUEUE_MESSAGE.
+// -- When an event of type DAO_EVENT_WAIT_RECEIVING is processed,
+//    the channel buffer is checked, and the first event/message will
+//    be taken and updated to an event of type DAO_EVENT_HANDLE_MESSAGE,
+//    with the sender being changed to receiver.
 */
 struct DaoTaskEvent
 {
@@ -99,9 +120,6 @@ struct DaoTaskEvent
 	DaoFuture     *future;
 	DaoChannel    *channel;
 	DaoValue      *value;
-
-	DaoTaskEvent  *prev;
-	DaoTaskEvent  *next;
 };
 
 
@@ -141,16 +159,12 @@ struct DaoFuture
 	DAO_CSTRUCT_COMMON;
 
 	uchar_t      state;
-	uchar_t      state2;
-	DArray      *params;
+	uchar_t      restype;
 	DaoValue    *value;
+	DaoValue    *message;
 	DaoObject   *actor;
-	DaoRoutine  *routine;
 	DaoProcess  *process;
 	DaoFuture   *precondition; /* the future value on which this one waits; */
-
-	DaoFuture   *prev;
-	DaoFuture   *next;
 };
 
 
@@ -166,7 +180,7 @@ DAO_DLL void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )
 DAO_DLL void DaoCallServer_Join();
 DAO_DLL void DaoCallServer_Stop();
 DAO_DLL void DaoCallServer_AddTask( DThreadTask func, void *param, int now );
-DAO_DLL void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *future, double timeout, short state );
+DAO_DLL void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *future, double timeout, int restype );
 DAO_DLL void DaoCallServer_AddCall( DaoProcess *call );
 #endif
 

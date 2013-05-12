@@ -1158,13 +1158,18 @@ CallEntry:
 
 	if( self->status == DAO_VMPROC_SUSPENDED &&
 			(vmc->code == DVM_CALL || vmc->code == DVM_MCALL || vmc->code == DVM_YIELD) ){
-		if( self->pauseType == DAO_VMP_ASYNC && self->future->precondition ){
-			int finished = self->future->precondition->state == DAO_CALL_FINISHED;
-			if( self->future->state2 == DAO_FUTURE_VALUE ){
-				DaoValue *res = finished ? self->future->precondition->value : dao_none_value;
-				DaoProcess_PutValue( self, res );
-			}else{
-				DaoProcess_PutInteger( self, finished );
+		if( self->pauseType == DAO_VMP_ASYNC ){
+			DaoFuture *precond = self->future->precondition;
+			if( precond ){
+				int finished = precond->state == DAO_CALL_FINISHED;
+				if( self->future->restype == DAO_FUTRES_VALUE ){
+					DaoValue *res = finished ? precond->value : dao_none_value;
+					DaoProcess_PutValue( self, res );
+				}else if( self->future->restype == DAO_FUTRES_STATUS ){
+					DaoProcess_PutInteger( self, finished );
+				}
+			}else if( self->future->message ){
+				DaoProcess_PutValue( self, self->future->message );
 			}
 		}
 		vmc ++;
