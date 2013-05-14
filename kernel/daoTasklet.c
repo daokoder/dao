@@ -636,6 +636,67 @@ void DaoCallServer_Stop()
 
 
 
+
+static int DaoType_CheckPrimitiveType( DaoType *self )
+{
+	daoint i;
+
+	if( self == NULL ) return 0;
+	if( self->tid >= DAO_INTEGER && self->tid <= DAO_ARRAY ) return 1;
+	if( self->tid < DAO_LIST || self->tid > DAO_TUPLE ) return 0;
+
+	if( self->tid != DAO_TUPLE && (self->nested == NULL || self->nested->size == 0) ) return 0;
+	for(i=0; i<self->nested->size; ++i){
+		DaoType *type = self->nested->items.pType[i];
+		if( type == NULL ) return 0;
+		if( type->tid == DAO_PAR_NAMED ) type = (DaoType*) type->aux;
+		if( DaoType_CheckPrimitiveType( type ) == 0 ) return 0;
+	}
+	return 1;
+}
+static DaoValue* DaoValue_DeepCopy( DaoValue *self )
+{
+	DNode *it;
+	daoint i;
+	if( self == NULL ) return NULL;
+	if( self->type <= DAO_ENUM ) return self; /* simple types will be copied at use; */
+	if( self->type == DAO_ARRAY ) return (DaoValue*) DaoArray_Copy( (DaoArray*) self );
+	if( self->type == DAO_LIST ){
+		DaoList *list = (DaoList*) self;
+		DaoList *copy = DaoList_New();
+		GC_ShiftRC( list->unitype, copy->unitype );
+		copy->unitype = list->unitype;
+		for(i=0; i<list->items.size; ++i){
+			DaoValue *value = DaoValue_DeepCopy( list->items.items.pValue[i] );
+			DaoList_Append( copy, value );
+		}
+		return (DaoValue*) copy;
+	}else if( self->type == DAO_MAP ){
+		DaoMap *map = (DaoMap*) self;
+		DaoMap *copy = DaoMap_New( map->items->hashing );
+		GC_ShiftRC( map->unitype, copy->unitype );
+		copy->unitype = map->unitype;
+		for(it=DMap_First(map->items); it; it=DMap_Next(map->items,it)){
+			DaoValue *key = DaoValue_DeepCopy( it->key.pValue );
+			DaoValue *value = DaoValue_DeepCopy( it->value.pValue );
+			DaoMap_Insert( copy, key, value );
+		}
+		return (DaoValue*) copy;
+	}else if( self->type == DAO_TUPLE ){
+		DaoTuple *tuple = (DaoTuple*) self;
+		DaoTuple *copy = DaoTuple_New( tuple->size );
+		GC_ShiftRC( tuple->unitype, copy->unitype );
+		copy->unitype = tuple->unitype;
+		for(i=0; i<tuple->size; ++i){
+			DaoValue *value = DaoValue_DeepCopy( tuple->items[i] );
+			DaoTuple_SetItem( copy, value, i );
+		}
+		return (DaoValue*) copy;
+	}
+	return NULL;
+}
+
+
 static void CHANNEL_New( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoType *retype = DaoProcess_GetReturnType( proc );
@@ -643,7 +704,15 @@ static void CHANNEL_New( DaoProcess *proc, DaoValue *par[], int N )
 	self->cap = par[0]->xInteger.value;
 	if( self->cap <= 0 ){
 		self->cap = 1;
-		DaoProcess_RaiseException( proc, DAO_ERROR, "channel capacity must be greater than 0" );
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "channel capacity must be greater than 0" );
+	}
+	if( DaoType_CheckPrimitiveType( retype->nested->items.pType[0] ) == 0 ){
+		DString *s = DString_New(1);
+		DString_AppendMBS( s, "data type " );
+		DString_Append( s, retype->nested->items.pType[0]->name );
+		DString_AppendMBS( s, " is not supported for channel" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, s->mbs );
+		DString_Delete( s );
 	}
 	DaoProcess_PutValue( proc, (DaoValue*) self );
 	if( daoCallServer == NULL ) DaoCallServer_Init( mainVmSpace );
@@ -652,11 +721,17 @@ static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoFuture *future = DaoProcess_GetInitFuture( proc );
 	DaoChannel *self = (DaoChannel*) par[0];
+	DaoValue *data = DaoValue_DeepCopy( par[1] );
 	float timeout = par[2]->xFloat.value;
+
+	if( data == NULL ){
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid data for the channel" );
+		return;
+	}
 
 	//printf( "CHANNEL_Send: %p\n", event );
 	DMutex_Lock( & daoCallServer->mutex );
-	DArray_Append( self->buffer, par[1] );
+	DArray_Append( self->buffer, data );
 	DCondVar_Signal( & daoCallServer->condv );
 	DMutex_Unlock( & daoCallServer->mutex );
 	DaoCallServer_UpdateTimedWaits( NULL, self );
