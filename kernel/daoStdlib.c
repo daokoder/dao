@@ -74,16 +74,16 @@ static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 	char *source = DaoValue_TryGetMBString( p[0] );
 	int safe = p[2]->xInteger.value;
 	int wasProt = 0;
-	if( vms->options & DAO_EXEC_SAFE ) wasProt = 1;
+	if( vms->options & DAO_OPTION_SAFE ) wasProt = 1;
 	if( redirect != prevStream ){
 		GC_ShiftRC( redirect, proc->stdioStream );
 		proc->stdioStream = redirect;
 	}
 
-	if( safe ) vms->options |= DAO_EXEC_SAFE;
+	if( safe ) vms->options |= DAO_OPTION_SAFE;
 	DaoProcess_Eval( proc, ns, source );
 	DaoProcess_PutValue( proc, proc->stackValues[0] );
-	if( ! wasProt ) vms->options &= ~DAO_EXEC_SAFE;
+	if( ! wasProt ) vms->options &= ~DAO_OPTION_SAFE;
 	if( redirect != prevStream ){
 		GC_ShiftRC( prevStream, proc->stdioStream );
 		proc->stdioStream = prevStream;
@@ -100,12 +100,12 @@ static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 	DaoVmSpace *vms = proc->vmSpace;
 	DaoNamespace *ns;
 	DString_ToMBS( name );
-	if( safe ) vms->options |= DAO_EXEC_SAFE;
-	if( vms->options & DAO_EXEC_SAFE ) wasProt = 1;
+	if( safe ) vms->options |= DAO_OPTION_SAFE;
+	if( vms->options & DAO_OPTION_SAFE ) wasProt = 1;
 	DArray_PushFront( vms->pathLoading, proc->activeNamespace->path );
 	ns = DaoVmSpace_LoadEx( vms, DString_GetMBS( name ), runim );
 	DaoProcess_PutValue( proc, (DaoValue*) ns );
-	if( ! wasProt ) vms->options &= ~DAO_EXEC_SAFE;
+	if( ! wasProt ) vms->options &= ~DAO_OPTION_SAFE;
 	if( ns ){ /* in the case that it is cancelled from console */
 		DArray_PushFront( vms->pathLoading, ns->path );
 		res = DaoProcess_Call( proc, ns->mainRoutine, NULL, NULL, 0 );
@@ -263,7 +263,7 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 	DMap   *cycData;
 	char *chs, *cmd;
 	int i;
-	if( ! (proc->vmSpace->options & DAO_EXEC_DEBUG ) ) return;
+	if( ! (proc->vmSpace->options & DAO_OPTION_DEBUG ) ) return;
 	input = DString_New(1);
 	if( N > 0 && DaoValue_CastCstruct( p[0], dao_type_stream ) ){
 		stream = (DaoStream*)p[0];
@@ -304,7 +304,7 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 		if( strcmp( cmd, "q" ) == 0 || strcmp( cmd, "quit" ) == 0 ){
 			break;
 		}else if( strcmp( cmd, "k" ) == 0 || strcmp( cmd, "kill" ) == 0 ){
-			proc->status = DAO_VMPROC_ABORTED;
+			proc->status = DAO_PROCESS_ABORTED;
 			break;
 		}else if( strcmp( cmd, "a" ) == 0 || strcmp( cmd, "about" ) == 0 ){
 			if( tokens->size > 1 ){
@@ -328,7 +328,7 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 				if( n < 0 ) n = entry - n;
 				if( n >= routine->body->vmCodes->size ) n = routine->body->vmCodes->size -1;
 				proc->topFrame->entry = n;
-				proc->status = DAO_VMPROC_STACKED;
+				proc->status = DAO_PROCESS_STACKED;
 				return;
 			}
 		}else if( strcmp( cmd, "h" ) == 0 || strcmp( cmd, "help" ) == 0 ){
@@ -384,7 +384,7 @@ static void STD_Error( DaoProcess *proc, DaoValue *p[], int N )
 static void STD_Gcmax( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutInteger( proc, DaoGC_Max( -1 ) );
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
 		if( N == 1 ) DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
@@ -393,7 +393,7 @@ static void STD_Gcmax( DaoProcess *proc, DaoValue *p[], int N )
 static void STD_Gcmin( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutInteger( proc, DaoGC_Min( -1 ) );
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
 		if( N == 1 ) DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
@@ -431,7 +431,7 @@ static void STD_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
 		proc->topFrame->entry = entry;
 		DaoProcess_Execute( proc );
-		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
 	}
 	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
@@ -454,7 +454,7 @@ static void STD_String( DaoProcess *proc, DaoValue *p[], int N )
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
 		proc->topFrame->entry = entry;
 		DaoProcess_Execute( proc );
-		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
 		DString_AppendWChar( string, proc->stackValues[0]->xInteger.value );
 	}
 	DaoProcess_ReleaseCV( proc );
@@ -491,7 +491,7 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
 		proc->topFrame->entry = entry;
 		DaoProcess_Execute( proc );
-		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
 		res = proc->stackValues[0];
 		if( i == 0 ){
 			int D = N;
@@ -558,7 +558,7 @@ static void STD_List( DaoProcess *proc, DaoValue *p[], int N )
 		if( sect->b >1 && N ==2 ) DaoProcess_SetValue( proc, sect->a+1, res );
 		proc->topFrame->entry = entry;
 		DaoProcess_Execute( proc );
-		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
 		res = proc->stackValues[0];
 		DaoList_Append( list, res );
 	}
@@ -582,7 +582,7 @@ static void STD_Map( DaoProcess *proc, DaoValue *p[], int N )
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
 		proc->topFrame->entry = entry;
 		DaoProcess_Execute( proc );
-		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
 		res = proc->stackValues[0];
 		if( res->type == DAO_TUPLE && res->xTuple.size == 2 )
 			DaoMap_Insert( map, res->xTuple.items[0], res->xTuple.items[1] );

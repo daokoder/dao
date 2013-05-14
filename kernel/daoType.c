@@ -1387,7 +1387,7 @@ static void DaoCdata_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 {
 	DaoType *type = self->xCdata.ctype;
 	DaoValue *p = DaoType_FindValue( type, name );
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
@@ -1415,7 +1415,7 @@ static void DaoCdata_SetField( DaoValue *self, DaoProcess *proc, DString *name, 
 	DString_SetMBS( proc->mbstring, "." );
 	DString_Append( proc->mbstring, name );
 	DString_AppendMBS( proc->mbstring, "=" );
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
@@ -1432,7 +1432,7 @@ static void DaoCdata_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid 
 	DaoType *type = self->ctype;
 	DaoRoutine *func = NULL;
 
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
@@ -1450,7 +1450,7 @@ static void DaoCdata_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid,
 	DaoValue *p[2];
 
 	DString_SetMBS( proc->mbstring, "[]=" );
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
@@ -1467,7 +1467,7 @@ static void DaoCdata_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[],
 {
 	DaoType *type = self->xCdata.ctype;
 	DaoRoutine *func = NULL;
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
@@ -1487,7 +1487,7 @@ static void DaoCdata_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[],
 	DaoType *type = self->xCdata.ctype;
 	DaoRoutine *func = NULL;
 	DaoValue *p[ DAO_MAX_PARAM ];
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}

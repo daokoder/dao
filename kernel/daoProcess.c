@@ -139,7 +139,7 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	DaoValue_Init( self, DAO_PROCESS );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->vmSpace = vms;
-	self->status = DAO_VMPROC_SUSPENDED;
+	self->status = DAO_PROCESS_SUSPENDED;
 	self->exceptions = DArray_New(D_VALUE);
 	self->defers = DArray_New(0);
 
@@ -301,7 +301,7 @@ void DaoProcess_PopFrame( DaoProcess *self )
 		self->topFrame = self->topFrame->prev;
 		return;
 	}
-	self->status = DAO_VMPROC_RUNNING;
+	self->status = DAO_PROCESS_RUNNING;
 	self->stackTop = self->topFrame->stackBase;
 	self->topFrame = self->topFrame->prev;
 	if( self->topFrame ) DaoProcess_SetActiveFrame( self, self->topFrame->active );
@@ -374,7 +374,7 @@ void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *o
 
 	DaoProcess_InitTopFrame( self, routine, object );
 	frame->active = frame;
-	self->status = DAO_VMPROC_STACKED;
+	self->status = DAO_PROCESS_STACKED;
 	DaoProcess_CopyStackParams( self );
 	if( need_self && routHost && routHost->tid == DAO_OBJECT ){
 		DaoValue *firstParam = self->paramValues[0];
@@ -391,7 +391,7 @@ void DaoProcess_PushFunction( DaoProcess *self, DaoRoutine *routine )
 	frame->active = frame->prev->active;
 	GC_ShiftRC( routine, frame->routine );
 	frame->routine = routine;
-	self->status = DAO_VMPROC_STACKED;
+	self->status = DAO_PROCESS_STACKED;
 	DaoProcess_CopyStackParams( self );
 }
 static int DaoRoutine_PassDefault( DaoRoutine *routine, DaoValue *dest[], int passed, DMap *defs )
@@ -624,7 +624,7 @@ int DaoProcess_Resume( DaoProcess *self, DaoValue *par[], int N, DaoProcess *ret
 	DaoType *tp;
 	DaoVmCode *vmc;
 	DaoTuple *tuple;
-	if( self->status != DAO_VMPROC_SUSPENDED ) return 0;
+	if( self->status != DAO_PROCESS_SUSPENDED ) return 0;
 	if( self->activeCode && self->activeCode->code == DVM_YIELD ){
 		tp = self->activeTypes[ self->activeCode->c ];
 		if( N == 1 ){
@@ -1061,7 +1061,7 @@ int DaoProcess_Execute( DaoProcess *self )
 	if( self->topFrame == self->firstFrame ) goto ReturnFalse;
 	rollback = self->topFrame->prev;
 	base = self->topFrame;
-	if( self->status == DAO_VMPROC_SUSPENDED ) base = self->firstFrame->next;
+	if( self->status == DAO_PROCESS_SUSPENDED ) base = self->firstFrame->next;
 
 CallEntry:
 
@@ -1069,7 +1069,7 @@ CallEntry:
 	routine = topFrame->routine;
 
 	if( topFrame == base->prev ){
-		self->status = DAO_VMPROC_FINISHED;
+		self->status = DAO_PROCESS_FINISHED;
 		if( self->exceptions->size > 0 ) goto FinishProc;
 		/*if( eventHandler ) eventHandler->mainRoutineExit(); */
 		goto ReturnTrue;
@@ -1081,7 +1081,7 @@ CallEntry:
 		goto CallEntry;
 	}
 #if 0
-	if( (vmSpace->options & DAO_EXEC_SAFE) && self->topFrame->index >= 100 ){
+	if( (vmSpace->options & DAO_OPTION_SAFE) && self->topFrame->index >= 100 ){
 		DaoProcess_RaiseException( self, DAO_ERROR,
 				"too deep recursion for safe running mode." );
 		goto FinishProc;
@@ -1100,7 +1100,7 @@ CallEntry:
 	if( self->stopit | vmSpace->stopit ) goto FinishProc;
 	//XXX if( invokehost ) handler->InvokeHost( handler, topCtx );
 
-	if( (vmSpace->options & DAO_EXEC_DEBUG) | (routine->body->mode & DAO_EXEC_DEBUG) )
+	if( (vmSpace->options & DAO_OPTION_DEBUG) | (routine->body->mode & DAO_OPTION_DEBUG) )
 		DaoProcess_AdjustCodes( self, vmSpace->options );
 
 	vmcBase = topFrame->codes;
@@ -1156,27 +1156,39 @@ CallEntry:
 	exceptCount = self->exceptions->size;
 	if( self->exceptions->size > topFrame->exceptBase ) goto FinishCall;
 
-	if( self->status == DAO_VMPROC_SUSPENDED &&
+	if( self->status == DAO_PROCESS_SUSPENDED &&
 			(vmc->code == DVM_CALL || vmc->code == DVM_MCALL || vmc->code == DVM_YIELD) ){
-		if( self->pauseType == DAO_VMP_ASYNC ){
-			DaoFuture *precond = self->future->precond;
-			if( precond ){
-				int finished = precond->state == DAO_CALL_FINISHED;
-				if( self->future->restype == DAO_FUTRES_VALUE ){
-					DaoValue *res = finished ? precond->value : dao_none_value;
-					DaoProcess_PutValue( self, res );
-				}else if( self->future->restype == DAO_FUTRES_STATUS ){
-					DaoProcess_PutInteger( self, finished );
-				}
-			}else if( self->future->message ){
-				DaoProcess_PutValue( self, self->future->message );
-			}
+		DaoChannel *channel;
+		DaoFuture *precond;
+		DaoValue *value;
+		int finished;
+		switch( self->pauseType ){
+		case DAO_PAUSE_NONE :
+			break;
+		case DAO_PAUSE_FUTURE_VALUE :
+			precond = self->future->precond;
+			finished = precond->state == DAO_CALL_FINISHED;
+			DaoProcess_PutValue( self, finished ? precond->value : dao_none_value );
+			break;
+		case DAO_PAUSE_FUTURE_WAIT :
+			precond = self->future->precond;
+			finished = precond->state == DAO_CALL_FINISHED;
+			DaoProcess_PutInteger( self, finished );
+			break;
+		case DAO_PAUSE_CHANNEL_SEND :
+			DaoProcess_PutInteger( self, self->future->timeout );
+			break;
+		case DAO_PAUSE_CHANNEL_RECEIVE :
+			value = self->future->message;
+			DaoProcess_PutValue( self, value ? value : dao_none_value );
+			break;
+		default: break;
 		}
 		vmc ++;
 	}
 	topFrame->state |= DVM_FRAME_RUNNING;
-	self->status = DAO_VMPROC_RUNNING;
-	self->pauseType = DAO_VMP_NOPAUSE;
+	self->status = DAO_PROCESS_RUNNING;
+	self->pauseType = DAO_PAUSE_NONE;
 	host = NULL;
 	here = routine->nameSpace;
 	othis = topFrame->object;
@@ -1517,7 +1529,7 @@ CallEntry:
 						DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "invalid yield" );
 					}
 				}
-				self->status = DAO_VMPROC_STACKED;
+				self->status = DAO_PROCESS_STACKED;
 				goto CheckException;
 			}
 			if( self->abtype == NULL ){
@@ -1525,12 +1537,12 @@ CallEntry:
 				goto CheckException;
 			}
 			DaoProcess_DoReturn( self, vmc );
-			self->status = DAO_VMPROC_SUSPENDED;
-			self->pauseType = DAO_VMP_YIELD;
+			self->status = DAO_PROCESS_SUSPENDED;
+			self->pauseType = DAO_PAUSE_COROUTINE_YIELD;
 			goto CheckException;
 		}OPCASE( DEBUG ){
 			if( self->stopit | vmSpace->stopit ) goto FinishProc;
-			if( (vmSpace->options & DAO_EXEC_DEBUG ) ){
+			if( (vmSpace->options & DAO_OPTION_DEBUG ) ){
 				self->activeCode = vmc;
 				if( handler && handler->StdlibDebug ) handler->StdlibDebug( handler, self );
 				goto CheckException;
@@ -2241,7 +2253,7 @@ CallEntry:
 			locVars[vmc->c]->xInteger.value = vA && vA->type == locVars[vmc->b]->xType.tid;
 		}OPNEXT()
 		OPCASE( SAFE_GOTO ){
-			if( ( self->vmSpace->options & DAO_EXEC_SAFE ) ){
+			if( ( self->vmSpace->options & DAO_OPTION_SAFE ) ){
 				gotoCount ++;
 				if( gotoCount > 1E6 ){
 					self->activeCode = vmc;
@@ -2365,12 +2377,12 @@ CheckException:
 					goto CallEntry;
 				}
 				goto FinishCall;
-			}else if( self->status == DAO_VMPROC_STACKED ){
+			}else if( self->status == DAO_PROCESS_STACKED ){
 				goto CallEntry;
-			}else if( self->status == DAO_VMPROC_SUSPENDED ){
+			}else if( self->status == DAO_PROCESS_SUSPENDED ){
 				self->topFrame->entry = (short)(vmc - vmcBase);
 				goto ReturnFalse;
-			}else if( self->status == DAO_VMPROC_ABORTED ){
+			}else if( self->status == DAO_PROCESS_ABORTED ){
 				goto FinishProc;
 			}
 			OPNEXT()
@@ -2397,10 +2409,10 @@ FinishCall:
 	if( routine->attribs & DAO_ROUT_DEFERRED ) DArray_PopBack( self->defers );
 
 	if( self->topFrame->state & DVM_FRAME_KEEP ){
-		topFrame->state &= ~DVM_FRAME_RUNNING;
-		self->status = DAO_VMPROC_FINISHED;
+		self->topFrame->state &= ~DVM_FRAME_RUNNING;
+		self->status = DAO_PROCESS_FINISHED;
 		if( self->exceptions->size > exceptCount ){
-			self->status = DAO_VMPROC_ABORTED;
+			self->status = DAO_PROCESS_ABORTED;
 			goto ReturnFalse;
 		}
 		goto ReturnTrue;
@@ -2417,14 +2429,14 @@ FinishProc:
 
 	if( self->exceptions->size ) DaoProcess_PrintException( self, 1 );
 	DaoProcess_PopFrames( self, rollback );
-	self->status = DAO_VMPROC_ABORTED;
+	self->status = DAO_PROCESS_ABORTED;
 	/*if( eventHandler ) eventHandler->mainRoutineExit(); */
 ReturnFalse :
 	DaoGC_TryInvoke();
 	return 0;
 ReturnTrue :
 	if( self->topFrame == self->firstFrame && self->topFrame->next && self->topFrame->next->routine ){
-		print = (vmSpace->options & DAO_EXEC_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
+		print = (vmSpace->options & DAO_OPTION_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
 		if( (print || vmSpace->evalCmdline) && self->stackValues[0] && self == vmSpace->mainProcess ){
 			/* Need one extra frame to ensure this part is not executed again,
 			// in case that DaoValue_Print() will invoke some methods: */
@@ -3472,7 +3484,7 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		type = NULL;
 	}
 	if( retValue == NULL ){
-		int opt1 = self->vmSpace->options & DAO_EXEC_INTERUN;
+		int opt1 = self->vmSpace->options & DAO_OPTION_INTERUN;
 		int opt2 = self->activeNamespace->options & DAO_NS_AUTO_GLOBAL;
 		int retnull = type == NULL || type->tid == DAO_UDT;
 		if( retnull || self->vmSpace->evalCmdline || (opt1 && opt2) ) retValue = dao_none_value;
@@ -3741,7 +3753,7 @@ static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 	if( frame->object && (frame->object->defClass->attribs & DAO_CLS_ASYNCHRONOUS) ){
 		if( prev->object == NULL || frame->object->rootObject != prev->object->rootObject ){
 			DaoCallServer_AddCall( self );
-			self->status = DAO_VMPROC_RUNNING;
+			self->status = DAO_PROCESS_RUNNING;
 			return 1;
 		}
 	}
@@ -3818,7 +3830,7 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoProcess_ShowCallError( self, rout, selfpar, P, N, code );
 		return;
 	}
-	if( (vmspace->options & DAO_EXEC_SAFE) && func->nameSpace != vmspace->nsInternal ){
+	if( (vmspace->options & DAO_OPTION_SAFE) && func->nameSpace != vmspace->nsInternal ){
 		/* normally this condition will not be satisfied.
 		 * it is possible only if the safe mode is set in C codes
 		 * by embedding or extending. */
@@ -3842,7 +3854,7 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 	status = self->status;
 	DaoProcess_PopFrame( self );
 
-	if( status == DAO_VMPROC_SUSPENDED ) self->status = status;
+	if( status == DAO_PROCESS_SUSPENDED ) self->status = status;
 }
 static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoClass *klass, DaoValue *selfpar, DaoValue *params[], int npar )
@@ -4012,12 +4024,12 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar );
 	}else if( caller->type == DAO_PROCESS && caller->xProcess.abtype ){
 		DaoProcess *vmProc = & caller->xProcess;
-		if( vmProc->status == DAO_VMPROC_FINISHED ){
+		if( vmProc->status == DAO_PROCESS_FINISHED ){
 			DaoProcess_RaiseException( self, DAO_WARNING, "coroutine execution is finished." );
 			return;
 		}
 		DaoProcess_Resume( vmProc, params, npar, self );
-		if( vmProc->status == DAO_VMPROC_ABORTED )
+		if( vmProc->status == DAO_PROCESS_ABORTED )
 			DaoProcess_RaiseException( self, DAO_ERROR, "coroutine execution is aborted." );
 	}else{
 		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "object not callable" );
@@ -4100,7 +4112,7 @@ static DaoProcess* DaoProcess_Create( DaoProcess *self, DaoValue *par[], int N )
 		vmProc->activeValues[i] = self->paramValues[i];
 		GC_IncRC( vmProc->activeValues[i] );
 	}
-	vmProc->status = DAO_VMPROC_SUSPENDED;
+	vmProc->status = DAO_PROCESS_SUSPENDED;
 	return vmProc;
 }
 void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
@@ -4385,7 +4397,7 @@ void DaoProcess_DoAPList(  DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "need a number or string as first value" );
 		return;
 	}
-	if( ( self->vmSpace->options & DAO_EXEC_SAFE ) && num > 1000 ){
+	if( ( self->vmSpace->options & DAO_OPTION_SAFE ) && num > 1000 ){
 		DaoProcess_RaiseException( self, DAO_ERROR, "not permitted" );
 		return;
 	}
@@ -4495,7 +4507,7 @@ void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "need number" );
 		return;
 	}
-	if( ( self->vmSpace->options & DAO_EXEC_SAFE ) && num > 1000 ){
+	if( ( self->vmSpace->options & DAO_OPTION_SAFE ) && num > 1000 ){
 		DaoProcess_RaiseException( self, DAO_ERROR, "not permitted" );
 		return;
 	}
@@ -4636,7 +4648,7 @@ void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc )
 		}
 		default: break;
 	}
-	if( ( self->vmSpace->options & DAO_EXEC_SAFE ) && array->size > 5000 ){
+	if( ( self->vmSpace->options & DAO_OPTION_SAFE ) && array->size > 5000 ){
 		DaoProcess_RaiseException( self, DAO_ERROR, "not permitted" );
 		return;
 	}
@@ -6787,7 +6799,7 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 	except = DaoException_New( etype );
 	DaoException_Init( except, self, value );
 	DArray_Append( self->exceptions, (DaoValue*) except );
-	if( (self->vmSpace->options & DAO_EXEC_DEBUG) ){
+	if( (self->vmSpace->options & DAO_OPTION_DEBUG) ){
 		if( self->stopit ==0 && self->vmSpace->stopit ==0 ){
 			DaoProcess_Trace( self, 10 );
 			DaoProcess_PrintException( self, 0 );
@@ -6918,19 +6930,19 @@ static void DaoProcess_AdjustCodes( DaoProcess *self, int options )
 	DaoVmCode *c = self->topFrame->codes;
 	int i, n = routine->body->vmCodes->size;
 	int mode = routine->body->mode;
-	if( options & DAO_EXEC_DEBUG ){
-		routine->body->mode |= DAO_EXEC_DEBUG;
+	if( options & DAO_OPTION_DEBUG ){
+		routine->body->mode |= DAO_OPTION_DEBUG;
 		if( handler && handler->BreakPoints ) handler->BreakPoints( handler, routine );
-	}else if( mode & DAO_EXEC_DEBUG ){
-		routine->body->mode &= ~DAO_EXEC_DEBUG;
+	}else if( mode & DAO_OPTION_DEBUG ){
+		routine->body->mode &= ~DAO_OPTION_DEBUG;
 		for(i=0; i<n; i++) if( c[i].code == DVM_DEBUG ) c[i].code = DVM_NOP;
 	}
-	if( (options & DAO_EXEC_SAFE) == (mode & DAO_EXEC_SAFE) ) return;
-	if( options & DAO_EXEC_SAFE ){
-		routine->body->mode |= DAO_EXEC_SAFE;
+	if( (options & DAO_OPTION_SAFE) == (mode & DAO_OPTION_SAFE) ) return;
+	if( options & DAO_OPTION_SAFE ){
+		routine->body->mode |= DAO_OPTION_SAFE;
 		for(i=0; i<n; i++) if( c[i].code == DVM_GOTO ) c[i].code = DVM_SAFE_GOTO;
-	}else if( mode & DAO_EXEC_SAFE ){
-		routine->body->mode &= ~DAO_EXEC_SAFE;
+	}else if( mode & DAO_OPTION_SAFE ){
+		routine->body->mode &= ~DAO_OPTION_SAFE;
 		for(i=0; i<n; i++) if( c[i].code == DVM_SAFE_GOTO ) c[i].code = DVM_GOTO;
 	}
 }

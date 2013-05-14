@@ -114,11 +114,11 @@ enum DaoTypes
 };
 enum DaoProcessStatus
 {
-	DAO_VMPROC_FINISHED ,  /* finished normally */
-	DAO_VMPROC_ABORTED ,   /* execution aborted */
-	DAO_VMPROC_SUSPENDED , /* suspended, by coroutine.yield() */
-	DAO_VMPROC_RUNNING ,   /* currently running */
-	DAO_VMPROC_STACKED     /* new context is pushed onto the stack of the process */
+	DAO_PROCESS_FINISHED ,  /* finished normally */
+	DAO_PROCESS_ABORTED ,   /* execution aborted */
+	DAO_PROCESS_SUSPENDED , /* suspended, by coroutine.yield() */
+	DAO_PROCESS_RUNNING ,   /* currently running */
+	DAO_PROCESS_STACKED     /* new context is pushed onto the stack of the process */
 };
 enum DaoNamespaceOption
 {
@@ -126,24 +126,27 @@ enum DaoNamespaceOption
 	DAO_NS_AUTO_GLOBAL = (1<<0)
 };
 /* Execution options, combinable by | */
-enum DaoExecOption
+enum DaoOptions
 {
-	DAO_EXEC_HELP      = (1<<0), /* -h, --help:         print this help information; */
-	DAO_EXEC_VINFO     = (1<<1), /* -v, --version:      print version information; */
-	DAO_EXEC_DEBUG     = (1<<2), /* -d, --debug:        run in debug mode; */
-	DAO_EXEC_INTERUN   = (1<<3), /* -i, --interactive:  run in interactive mode; */
-	DAO_EXEC_LIST_BC   = (1<<4), /* -l, --list-code:    print compiled bytecodes; */
-	DAO_EXEC_JIT       = (1<<5), /* -j, --jit:          enable JIT compiling; */
-	DAO_EXEC_COMP_BC   = (1<<6), /* -c, --compile:      compile to bytecodes; */
-	DAO_EXEC_ARCHIVE   = (1<<7), /* -a, --archive:      build archive file; */
+	DAO_OPTION_HELP     = (1<<0), /* -h, --help:         print this help information; */
+	DAO_OPTION_VINFO    = (1<<1), /* -v, --version:      print version information; */
+	DAO_OPTION_DEBUG    = (1<<2), /* -d, --debug:        run in debug mode; */
+	DAO_OPTION_INTERUN  = (1<<3), /* -i, --interactive:  run in interactive mode; */
+	DAO_OPTION_LIST_BC  = (1<<4), /* -l, --list-code:    print compiled bytecodes; */
+	DAO_OPTION_JIT      = (1<<5), /* -j, --jit:          enable JIT compiling; */
+	DAO_OPTION_COMP_BC  = (1<<6), /* -c, --compile:      compile to bytecodes; */
+	DAO_OPTION_ARCHIVE  = (1<<7), /* -a, --archive:      build archive file; */
 
-	DAO_EXEC_NO_TC     = (1<<8), /* no typed code; */
-	DAO_EXEC_SAFE      = (1<<9), /* run in safe mode; */
+	DAO_OPTION_NO_TC    = (1<<8), /* no typed code; */
+	DAO_OPTION_SAFE     = (1<<9), /* run in safe mode; */
 
-	/* -- disable JIT;
-	 * -- disable function specialization;
-	 * -- insert NOP codes for convenient setting up of break points; */
-	DAO_EXEC_IDE = (1<<31)
+	/*
+	// DAO_OPTION_IDE:
+	// -- disable JIT;
+	// -- disable function specialization;
+	// -- insert NOP codes for convenient setting up of break points;
+	*/
+	DAO_OPTION_IDE = (1<<31)
 };
 enum DaoExceptionType
 {

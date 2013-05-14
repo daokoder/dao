@@ -158,7 +158,7 @@ int main( int argc, char **argv )
 	read_history( NULL );
 #endif
 
-	if( DaoVmSpace_GetOptions( vmSpace ) & DAO_EXEC_INTERUN )
+	if( DaoVmSpace_GetOptions( vmSpace ) & DAO_OPTION_INTERUN )
 		signal( SIGINT, DaoSignalHandler );
 
 	/* Start execution. */
@@ -171,6 +171,5 @@ int main( int argc, char **argv )
 	DString_Delete( args );
 	DString_Delete( opts );
 	DaoQuit();
-	/* printf( "FINISHED %s\n", getenv( "PROC_NAME" ) ); */
 	return k;
 }

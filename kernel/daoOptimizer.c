@@ -1438,7 +1438,7 @@ static void DaoOptimizer_Optimize( DaoOptimizer *self, DaoRoutine *routine )
 {
 	DaoType *type, **types = routine->body->regType->items.pType;
 	DaoVmSpace *vms = routine->nameSpace->vmSpace;
-	daoint i, k, notide = ! (vms->options & DAO_EXEC_IDE);
+	daoint i, k, notide = ! (vms->options & DAO_OPTION_IDE);
 
 	if( daoConfig.optimize == 0 ) return;
 
@@ -2765,7 +2765,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	daoint j, k, m, K, M = routine->body->regCount;
 	char codetype, *inited = self->inited->mbs;
 	int typed_code = daoConfig.typedcode;
-	int notide = ! (NS->vmSpace->options & DAO_EXEC_IDE);
+	int notide = ! (NS->vmSpace->options & DAO_OPTION_IDE);
 	int code, opa, opb, opc, first, middle, last;
 	int TT1, TT2, TT3, TT4, TT5, TT6;
 

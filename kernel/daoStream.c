@@ -352,7 +352,7 @@ static void DaoIO_ReadFile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *res = DaoProcess_PutMBString( proc, "" );
 	daoint silent = p[1]->xInteger.value;
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
@@ -377,7 +377,7 @@ static void DaoIO_Open( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *stream = NULL;
 	char *mode;
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
@@ -514,7 +514,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 	int chop = p[1]->xInteger.value;
 	char buf[IO_BUF_SIZE];
 	FILE *fin;
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
@@ -537,7 +537,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 			if( chop ) DString_Chop( line->data );
 			proc->topFrame->entry = entry;
 			DaoProcess_Execute( proc );
-			if( proc->status == DAO_VMPROC_ABORTED ) break;
+			if( proc->status == DAO_PROCESS_ABORTED ) break;
 			res = proc->stackValues[0];
 			if( res && res->type != DAO_NONE ) DaoList_Append( list, res );
 		}
@@ -574,7 +574,7 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 			if( chop ) DString_Chop( line->data );
 			proc->topFrame->entry = entry;
 			DaoProcess_Execute( proc );
-			if( proc->status == DAO_VMPROC_ABORTED ) break;
+			if( proc->status == DAO_PROCESS_ABORTED ) break;
 			res = proc->stackValues[0];
 			if( res && res->type != DAO_NONE ) DaoList_Append( list, res );
 		}
@@ -604,7 +604,7 @@ static void DaoIO_WriteLines( DaoProcess *proc, DaoValue *p[], int N )
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
 		proc->topFrame->entry = entry;
 		DaoProcess_Execute( proc );
-		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
 		string = proc->stackValues[0]->xString.data;
 		if( string->mbs ){
 			fprintf( fout, "%s", string->mbs );

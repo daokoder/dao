@@ -96,7 +96,6 @@ DaoFuture* DaoFuture_New( DaoType *type, int vatype )
 	DaoCstruct_Init( (DaoCstruct*) self, type );
 	GC_IncRC( dao_none_value );
 	self->state = DAO_CALL_PAUSED;
-	self->restype = DAO_FUTRES_NONE;
 	self->value = dao_none_value;
 	return self;
 }
@@ -289,6 +288,7 @@ static void DaoCallServer_Timer( void *p )
 			time = Dao_GetCurrentTime();
 			if( node->key.pValue->xComplex.value.real < time ){
 				DaoTaskEvent *event = (DaoTaskEvent*) node->value.pVoid;
+				if( event->type == DAO_EVENT_WAIT_SENDING ) event->future->timeout = 1;
 				event->state = DAO_EVENT_RESUME;
 				DArray_Append( server->events, node->value.pVoid );
 				DMap_EraseNode( server->waitings, node );
@@ -385,7 +385,7 @@ void DaoCallServer_AddTimedWait( DaoProcess *wait, DaoTaskEvent *event, double t
 	server = daoCallServer;
 
 	DMutex_Lock( & server->mutex );
-	if( timeout >0 ){
+	if( timeout > 0.0 ){
 		server->timestamp.value.real = timeout + Dao_GetCurrentTime();
 		server->timestamp.value.imag += 1;
 		DMap_Insert( server->waitings, & server->timestamp, event );
@@ -400,17 +400,17 @@ void DaoCallServer_AddTimedWait( DaoProcess *wait, DaoTaskEvent *event, double t
 		// Need to suspend the native thread, for suspending inside code sections
 		// for functional methods such as std.iterate(), mt.iterate() etc:
 		*/
-		wait->pauseType = DAO_VMP_NATIVE_SUSPENSION;
+		wait->pauseType = DAO_PAUSE_NATIVE_THREAD;
 		if( timeout > 0 ){
 			DCondVar_TimedWait( wait->condv, & server->mutex, timeout );
 		}else{
 			DCondVar_Wait( wait->condv, & server->mutex );
 		}
-		wait->status = DAO_VMPROC_RUNNING;
+		wait->status = DAO_PROCESS_RUNNING;
 	}
 	DMutex_Unlock( & server->mutex );
 }
-void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout, int restype )
+void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout )
 {
 	DaoFuture *future;
 	DaoTaskEvent *event;
@@ -422,7 +422,6 @@ void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout, in
 	GC_ShiftRC( pre, future->precond );
 	future->precond = pre;
 	future->state = DAO_CALL_PAUSED;
-	future->restype = restype;
 
 	event = DaoCallServer_MakeEvent();
 	DaoTaskEvent_Init( event, DAO_EVENT_WAIT_TASKLET, DAO_EVENT_WAIT, future, NULL );
@@ -493,7 +492,6 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 			}
 			GC_ShiftRC( message, event->future->message );
 			event->future->message = message;
-			event->future->restype = DAO_FUTRES_VALUE;
 			DArray_PopFront( event->channel->buffer );
 			break;
 		default: break;
@@ -517,7 +515,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 {
 	DaoCallServer *server = daoCallServer;
 	double wt = 0.001;
-	int i, timeout;
+	daoint i, timeout;
 
 	self->thdData = DThread_GetSpecific();
 	if( self->taskFunc ) self->taskFunc( self->taskParam );
@@ -531,21 +529,30 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		DMutex_Lock( & server->mutex );
 		server->idle += 1;
 		while( server->pending->size == server->waitings->size ){
-			if( server->finishing && server->idle == server->total ) break;
+			if( server->finishing && server->idle == server->total ){
+				if( server->waitings->size == 0 ) break;
+			}
 			timeout = DCondVar_TimedWait( & server->condv, & server->mutex, wt );
 		}
-		if( server->parameters->size ){
-			function = (DThreadTask) DArray_Front( server->functions );
-			parameter = DArray_Front( server->parameters );
-			DArray_PopFront( server->functions );
-			DArray_PopFront( server->parameters );
+		for(i=0; i<server->parameters->size; ++i){
+			void *param = server->parameters->items.pVoid[i];
+			if( DMap_Find( server->active, param ) ) continue;
+			DMap_Insert( server->active, param, NULL );
+			function = (DThreadTask) server->functions->items.pVoid[i];
+			parameter = param;
+			DArray_Erase( server->functions, i, 1 );
+			DArray_Erase( server->parameters, i, 1 );
 			DMap_Erase( server->pending, parameter );
 			server->idle -= 1;
+			break;
 		}
 		DMutex_Unlock( & server->mutex );
 
 		if( function ){
 			(*function)( parameter );
+			DMutex_Lock( & server->mutex );
+			DMap_Erase( server->active, parameter );
+			DMutex_Unlock( & server->mutex );
 			continue;
 		}
 
@@ -563,7 +570,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 			GC_DecRC( future );
 			continue;
 		}
-		if( process->pauseType == DAO_VMP_NATIVE_SUSPENSION ){
+		if( process->pauseType == DAO_PAUSE_NATIVE_THREAD ){
 			DMutex_Lock( & server->mutex );
 			process->pauseType = 0;
 			DCondVar_Signal( process->condv );
@@ -634,6 +641,10 @@ static void CHANNEL_New( DaoProcess *proc, DaoValue *par[], int N )
 	DaoType *retype = DaoProcess_GetReturnType( proc );
 	DaoChannel *self = DaoChannel_New( retype, 0 );
 	self->cap = par[0]->xInteger.value;
+	if( self->cap <= 0 ){
+		self->cap = 1;
+		DaoProcess_RaiseException( proc, DAO_ERROR, "channel capacity must be greater than 0" );
+	}
 	DaoProcess_PutValue( proc, (DaoValue*) self );
 	if( daoCallServer == NULL ) DaoCallServer_Init( mainVmSpace );
 }
@@ -653,10 +664,10 @@ static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
 	if( self->buffer->size > self->cap ){
 		DaoTaskEvent *event = DaoCallServer_MakeEvent();
 		DaoTaskEvent_Init( event, DAO_EVENT_WAIT_SENDING, DAO_EVENT_WAIT, future, self );
+		proc->status = DAO_PROCESS_SUSPENDED;
+		proc->pauseType = DAO_PAUSE_CHANNEL_SEND;
+		future->timeout = 0;
 		DaoCallServer_AddTimedWait( proc, event, timeout );
-		future->restype = DAO_FUTRES_STATUS;
-		proc->status = DAO_VMPROC_SUSPENDED;
-		proc->pauseType = DAO_VMP_ASYNC;
 	}
 }
 static void CHANNEL_Receive( DaoProcess *proc, DaoValue *par[], int N )
@@ -668,16 +679,16 @@ static void CHANNEL_Receive( DaoProcess *proc, DaoValue *par[], int N )
 
 	event = DaoCallServer_MakeEvent();
 	DaoTaskEvent_Init( event, DAO_EVENT_WAIT_RECEIVING, DAO_EVENT_WAIT, future, self );
+	proc->status = DAO_PROCESS_SUSPENDED;
+	proc->pauseType = DAO_PAUSE_CHANNEL_RECEIVE;
 	DaoCallServer_AddTimedWait( proc, event, timeout );
-	proc->status = DAO_VMPROC_SUSPENDED;
-	proc->pauseType = DAO_VMP_ASYNC;
 	/* Message may have been sent before this call: */
 	if( self->buffer->size ) DaoCallServer_UpdateTimedWaits( NULL, self );
 }
 static DaoFuncItem channelMeths[] =
 {
 	{ CHANNEL_New,      "channel<@V>( cap = 1 )" },
-	{ CHANNEL_Send,     "send( self :channel<@V>, data :@V, timeout :float = 0 ) => int" },
+	{ CHANNEL_Send,     "send( self :channel<@V>, data :@V, timeout :float = -1 ) => int" },
 	{ CHANNEL_Receive,  "receive( self :channel<@V>, timeout :float = -1 ) => @V|none" },
 	{ NULL, NULL }
 };
@@ -710,9 +721,9 @@ static void FUTURE_Value( DaoProcess *proc, DaoValue *par[], int N )
 		DaoProcess_PutValue( proc, self->value );
 		return;
 	}
-	proc->status = DAO_VMPROC_SUSPENDED;
-	proc->pauseType = DAO_VMP_ASYNC;
-	DaoCallServer_AddWait( proc, self, -1, DAO_FUTRES_VALUE );
+	proc->status = DAO_PROCESS_SUSPENDED;
+	proc->pauseType = DAO_PAUSE_FUTURE_VALUE;
+	DaoCallServer_AddWait( proc, self, -1 );
 }
 static void FUTURE_Wait( DaoProcess *proc, DaoValue *par[], int N )
 {
@@ -720,9 +731,9 @@ static void FUTURE_Wait( DaoProcess *proc, DaoValue *par[], int N )
 	float timeout = par[1]->xFloat.value;
 	DaoProcess_PutInteger( proc, self->state == DAO_CALL_FINISHED );
 	if( self->state == DAO_CALL_FINISHED || timeout == 0 ) return;
-	proc->status = DAO_VMPROC_SUSPENDED;
-	proc->pauseType = DAO_VMP_ASYNC;
-	DaoCallServer_AddWait( proc, self, timeout, DAO_FUTRES_STATUS );
+	proc->status = DAO_PROCESS_SUSPENDED;
+	proc->pauseType = DAO_PAUSE_FUTURE_WAIT;
+	DaoCallServer_AddWait( proc, self, timeout );
 }
 static DaoFuncItem futureMeths[] =
 {

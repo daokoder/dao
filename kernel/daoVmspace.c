@@ -527,7 +527,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->loadedModules = DArray_New(D_VALUE);
 	self->preloadModules = NULL;
 
-	if( daoConfig.safe ) self->options |= DAO_EXEC_SAFE;
+	if( daoConfig.safe ) self->options |= DAO_OPTION_SAFE;
 
 #ifdef DAO_WITH_THREAD
 	DMutex_Init( & self->mutexLoad );
@@ -695,24 +695,24 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 		}
 		if( token->mbs[0] =='-' && token->size >1 && token->mbs[1] =='-' ){
 			if( strcmp( token->mbs, "--help" ) ==0 ){
-				self->options |= DAO_EXEC_HELP;
+				self->options |= DAO_OPTION_HELP;
 			}else if( strcmp( token->mbs, "--version" ) ==0 ){
-				self->options |= DAO_EXEC_VINFO;
+				self->options |= DAO_OPTION_VINFO;
 			}else if( strcmp( token->mbs, "--eval" ) ==0 ){
 				self->evalCmdline = 1;
 				DString_Clear( self->mainSource );
 			}else if( strcmp( token->mbs, "--debug" ) ==0 ){
-				self->options |= DAO_EXEC_DEBUG;
+				self->options |= DAO_OPTION_DEBUG;
 			}else if( strcmp( token->mbs, "--interactive" ) ==0 ){
-				self->options |= DAO_EXEC_INTERUN;
+				self->options |= DAO_OPTION_INTERUN;
 			}else if( strcmp( token->mbs, "--list-code" ) ==0 ){
-				self->options |= DAO_EXEC_LIST_BC;
+				self->options |= DAO_OPTION_LIST_BC;
 			}else if( strcmp( token->mbs, "--compile" ) ==0 ){
-				self->options |= DAO_EXEC_COMP_BC;
+				self->options |= DAO_OPTION_COMP_BC;
 			}else if( strcmp( token->mbs, "--archive" ) ==0 ){
-				self->options |= DAO_EXEC_ARCHIVE;
+				self->options |= DAO_OPTION_ARCHIVE;
 			}else if( strcmp( token->mbs, "--jit" ) ==0 ){
-				self->options |= DAO_EXEC_JIT;
+				self->options |= DAO_OPTION_JIT;
 				daoConfig.jit = 1;
 			}else if( strstr( token->mbs, "--module=" ) == token->mbs ){
 				if( self->preloadModules == NULL ) self->preloadModules = DArray_New(D_VALUE);
@@ -739,20 +739,20 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 			DString_Clear( str );
 			for( j=0; j<len; j++ ){
 				switch( token->mbs[j] ){
-				case 'h' : self->options |= DAO_EXEC_HELP;      break;
-				case 'v' : self->options |= DAO_EXEC_VINFO;     break;
-				case 'd' : self->options |= DAO_EXEC_DEBUG;     break;
-				case 'i' : self->options |= DAO_EXEC_INTERUN;   break;
-				case 'l' : self->options |= DAO_EXEC_LIST_BC;   break;
-				case 'c' : self->options |= DAO_EXEC_COMP_BC;   break;
-				case 'a' : self->options |= DAO_EXEC_ARCHIVE;   break;
-				case 's' : self->options |= DAO_EXEC_SAFE;
+				case 'h' : self->options |= DAO_OPTION_HELP;      break;
+				case 'v' : self->options |= DAO_OPTION_VINFO;     break;
+				case 'd' : self->options |= DAO_OPTION_DEBUG;     break;
+				case 'i' : self->options |= DAO_OPTION_INTERUN;   break;
+				case 'l' : self->options |= DAO_OPTION_LIST_BC;   break;
+				case 'c' : self->options |= DAO_OPTION_COMP_BC;   break;
+				case 'a' : self->options |= DAO_OPTION_ARCHIVE;   break;
+				case 's' : self->options |= DAO_OPTION_SAFE;
 						   daoConfig.safe = 1;
 						   break;
-				case 'j' : self->options |= DAO_EXEC_JIT;
+				case 'j' : self->options |= DAO_OPTION_JIT;
 						   daoConfig.jit = 1;
 						   break;
-				case 'T' : self->options |= DAO_EXEC_NO_TC;
+				case 'T' : self->options |= DAO_OPTION_NO_TC;
 						   daoConfig.typedcode = 0;
 						   break;
 				case 'e' : self->evalCmdline = 1;
@@ -774,7 +774,7 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 			}
 		}
 	}
-	if( self->options & DAO_EXEC_DEBUG ) daoConfig.optimize = 0;
+	if( self->options & DAO_OPTION_DEBUG ) daoConfig.optimize = 0;
 	DString_Delete( str );
 	DArray_Delete( array );
 	if( daoConfig.jit && dao_jit.Compile == NULL && DaoVmSpace_TryInitJIT( self, NULL ) == 0 ){
@@ -1149,15 +1149,15 @@ static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
 {
 	DaoNamespace *ns = self->mainNamespace;
 	daoint i;
-	if( self->options & DAO_EXEC_VINFO ){
+	if( self->options & DAO_OPTION_VINFO ){
 		DaoStream_WriteNewLine( self->stdioStream );
 		DaoStream_WriteMBS( self->stdioStream, dao_copy_notice );
 		DaoStream_WriteNewLine( self->stdioStream );
 	}
-	if( self->options & DAO_EXEC_HELP )  DaoStream_WriteMBS( self->stdioStream, cmd_help );
+	if( self->options & DAO_OPTION_HELP )  DaoStream_WriteMBS( self->stdioStream, cmd_help );
 	DaoStream_Flush( self->stdioStream );
 
-	if( self->options & DAO_EXEC_LIST_BC ){
+	if( self->options & DAO_OPTION_LIST_BC ){
 		for(i=ns->cstUser; i<ns->constants->size; i++){
 			DaoValue *p = ns->constants->items.pConst[i]->value;
 			if( p->type == DAO_ROUTINE && & p->xRoutine != ns->mainRoutine ){
@@ -1168,7 +1168,7 @@ static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
 		}
 		DaoStream_Flush( self->stdioStream );
 		if( ns->mainRoutine ) DaoRoutine_PrintCode( ns->mainRoutine, self->stdioStream );
-		if( ( self->options & DAO_EXEC_INTERUN ) && self->userHandler == NULL )
+		if( ( self->options & DAO_OPTION_INTERUN ) && self->userHandler == NULL )
 			DaoVmSpace_Interun( self, NULL );
 	}
 }
@@ -1333,7 +1333,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		}else{
 			DaoVmSpace_ExeCmdArgs( self );
 		}
-		if( (self->options & DAO_EXEC_INTERUN) && self->userHandler == NULL )
+		if( (self->options & DAO_OPTION_INTERUN) && self->userHandler == NULL )
 			DaoVmSpace_Interun( self, NULL );
 		return 1;
 	}
@@ -1358,7 +1358,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		DaoVmSpace_LoadArchive( self, archive );
 		DString_Delete( archive );
 	}
-	if( self->options & DAO_EXEC_ARCHIVE ){
+	if( self->options & DAO_OPTION_ARCHIVE ){
 		DArray_Append( self->sourceArchive, ns->name );
 		DArray_Append( self->sourceArchive, self->mainSource );
 	}
@@ -1368,11 +1368,11 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		DaoByteDecoder_Delete( decoder );
 	}else{
 		res = res && DaoProcess_Compile( vmp, ns, self->mainSource->mbs );
-		if( res && (self->options & DAO_EXEC_COMP_BC) ){
+		if( res && (self->options & DAO_OPTION_COMP_BC) ){
 			DaoVmSpace_SaveByteCodes( self, ns );
 		}
 	}
-	if( res && !(self->options & DAO_EXEC_ARCHIVE) ){
+	if( res && !(self->options & DAO_OPTION_ARCHIVE) ){
 		DString name = DString_WrapMBS( "main" );
 		int id = DaoNamespace_FindConst( ns, & name );
 		DaoValue *cst = DaoNamespace_GetConst( ns, id );
@@ -1391,13 +1391,13 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		return 0;
 	}
 
-	if( self->options & DAO_EXEC_ARCHIVE ){
+	if( self->options & DAO_OPTION_ARCHIVE ){
 		DaoVmSpace_SaveArchive( self, argValues );
 		DArray_Delete( argValues );
 		return 1;
 	}
 	DArray_Delete( argValues );
-	if( self->options & DAO_EXEC_COMP_BC ) return 1;
+	if( self->options & DAO_OPTION_COMP_BC ) return 1;
 
 	mainRoutine = ns->mainRoutine;
 
@@ -1413,7 +1413,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	if( expMain != NULL ){
 		if( DaoProcess_Call( vmp, expMain, NULL, ps, N ) ) return 0;
 	}
-	if( (self->options & DAO_EXEC_INTERUN) && self->userHandler == NULL )
+	if( (self->options & DAO_OPTION_INTERUN) && self->userHandler == NULL )
 		DaoVmSpace_Interun( self, NULL );
 
 	return 1;
@@ -1533,7 +1533,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	source = DString_New(1);
 	if( ! DaoVmSpace_ReadSource( self, libpath, source ) ) goto LoadingFailed;
 
-	if( self->options & DAO_EXEC_ARCHIVE ){
+	if( self->options & DAO_OPTION_ARCHIVE ){
 		DArray_Append( self->sourceArchive, libpath );
 		DArray_Append( self->sourceArchive, source );
 	}
@@ -1569,7 +1569,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 		DString_SetMBS( ns->mainRoutine->routName, "::main" );
 		DaoVmSpace_ReleaseParser( self, parser );
 		parser = NULL;
-		if( self->options & DAO_EXEC_COMP_BC ) DaoVmSpace_SaveByteCodes( self, ns );
+		if( self->options & DAO_OPTION_COMP_BC ) DaoVmSpace_SaveByteCodes( self, ns );
 	}
 
 ExecuteImplicitMain :
@@ -1647,7 +1647,7 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	daoint nsCount = self->loadedModules->size;
 	daoint i, retc;
 
-	if( self->options & DAO_EXEC_SAFE ){
+	if( self->options & DAO_OPTION_SAFE ){
 		DaoStream_WriteMBS( self->errorStream,
 				"ERROR: not permitted to open shared library in safe running mode.\n" );
 		return NULL;
@@ -1696,7 +1696,7 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 			}
 		}
 	}
-	if( self->options & DAO_EXEC_ARCHIVE ){
+	if( self->options & DAO_OPTION_ARCHIVE ){
 		if( name == NULL ) name = DString_New(1);
 		if( funpter == NULL ) DString_Clear( name );
 		DArray_Append( self->sourceArchive, libpath );

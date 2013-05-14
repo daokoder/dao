@@ -2416,7 +2416,7 @@ static int DaoParser_Preprocess( DaoParser *self )
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoMacro *macro, *macro2, *reapply;
 
-	int cons = (vmSpace->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
+	int cons = (vmSpace->options & DAO_OPTION_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
 	int i, end, tag = 0;
 	int k, right, start = 0;
 	unsigned char tki, tki2;
@@ -3542,7 +3542,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoToken *ptok;
 	DMap *switchMap;
-	int cons = (vmSpace->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
+	int cons = (vmSpace->options & DAO_OPTION_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
 	int i, k, rb, end, start = from, N = 0;
 	int reg, reg1, cst = 0, topll = 0;
 	int colon, comma, last, errorStart, needName;
@@ -4135,7 +4135,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	DaoClass *hostClass = self->hostClass;
 	DaoToken *ptok, *lastok, **tokens = self->tokens->items.pToken;
 	DaoInode *back = self->vmcLast;
-	int cons = (vms->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
+	int cons = (vms->options & DAO_OPTION_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
 	int topll = (self->levelBase + self->lexLevel) ==0;
 	int nameStart, oldcount = self->regCount;
 	int reg, cst, temp, eq, errorStart = start;
@@ -4440,7 +4440,7 @@ static int DaoParser_GetLastValue( DaoParser *self, DaoInode *it, DaoInode *back
 static int DaoParser_SetupBranching( DaoParser *self )
 {
 	DaoInode *it, *it2 = NULL;
-	int id = 0, unused = 0, notide = !(self->vmSpace->options & DAO_EXEC_IDE);;
+	int id = 0, unused = 0, notide = !(self->vmSpace->options & DAO_OPTION_IDE);;
 	if( self->vmcLast->code != DVM_RETURN ){
 		DaoVmSpace *vms = self->vmSpace;
 		DaoNamespace *ns = self->nameSpace;
@@ -4448,7 +4448,7 @@ static int DaoParser_SetupBranching( DaoParser *self )
 		int opa = 0, autoret = self->autoReturn;
 
 		if( autoret == 0 ){
-			int print = (vms->options & DAO_EXEC_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
+			int print = (vms->options & DAO_OPTION_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
 			int ismain = self->routine->attribs & DAO_ROUT_MAIN;
 			autoret = ismain && (print || vms->evalCmdline);
 		}
@@ -4461,7 +4461,7 @@ static int DaoParser_SetupBranching( DaoParser *self )
 		}
 		DaoParser_AddCode( self, DVM_RETURN, opa, autoret, 0, first,0,0 );
 	}
-	if( self->vmSpace->options & DAO_EXEC_IDE ){
+	if( self->vmSpace->options & DAO_OPTION_IDE ){
 		/* for setting break points in DaoStudio */
 		for(it=self->vmcFirst; it; it=it2){
 			it2 = it->next;

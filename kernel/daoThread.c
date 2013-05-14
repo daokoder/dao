@@ -735,14 +735,14 @@ void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )
 	type = future->ctype;
 	type = type && type->nested->size ? type->nested->items.pType[0] : NULL;
 	switch( self->status ){
-	case DAO_VMPROC_FINISHED :
-	case DAO_VMPROC_ABORTED :
+	case DAO_PROCESS_FINISHED :
+	case DAO_PROCESS_ABORTED :
 		DaoValue_Move( self->stackValues[0], & future->value, type );
 		future->state = DAO_CALL_FINISHED;
 		break;
-	case DAO_VMPROC_SUSPENDED : future->state = DAO_CALL_PAUSED; break;
-	case DAO_VMPROC_RUNNING :
-	case DAO_VMPROC_STACKED : future->state = DAO_CALL_RUNNING; break;
+	case DAO_PROCESS_SUSPENDED : future->state = DAO_CALL_PAUSED; break;
+	case DAO_PROCESS_RUNNING :
+	case DAO_PROCESS_STACKED : future->state = DAO_CALL_RUNNING; break;
 	default : break;
 	}
 }
@@ -775,7 +775,7 @@ static void DaoMT_RunIterateFunctional( void *p )
 		if( sect->b >1 ) DaoProcess_SetValue( clone, sect->a+1, threadid );
 		clone->topFrame->entry = self->entry;
 		DaoProcess_Execute( clone );
-		if( clone->status != DAO_VMPROC_FINISHED ) break;
+		if( clone->status != DAO_PROCESS_FINISHED ) break;
 	}
 }
 static void DaoMT_RunListFunctional( void *p )
@@ -802,7 +802,7 @@ static void DaoMT_RunListFunctional( void *p )
 		if( sect->b >2 ) DaoProcess_SetValue( clone, sect->a+2, threadid );
 		clone->topFrame->entry = self->entry;
 		DaoProcess_Execute( clone );
-		if( clone->status != DAO_VMPROC_FINISHED ) break;
+		if( clone->status != DAO_PROCESS_FINISHED ) break;
 		res = clone->stackValues[0];
 		if( self->funct == DVM_FUNCT_MAP ){
 			self->status |= DaoList_SetItem( list2, res, i );
@@ -843,7 +843,7 @@ static void DaoMT_RunMapFunctional( void *p )
 		if( sect->b >2 ) DaoProcess_SetValue( clone, sect->a+2, threadid );
 		clone->topFrame->entry = self->entry;
 		DaoProcess_Execute( clone );
-		if( clone->status != DAO_VMPROC_FINISHED ) break;
+		if( clone->status != DAO_PROCESS_FINISHED ) break;
 		res = clone->stackValues[0];
 		if( self->funct == DVM_FUNCT_MAP ){
 			self->status |= DaoList_SetItem( list2, res, i-1 );
@@ -919,7 +919,7 @@ static void DaoMT_RunArrayFunctional( void *p )
 		if( sect->b > 6 ) DaoProcess_SetValue( clone, sect->a+6, threadid );
 		clone->topFrame->entry = self->entry;
 		DaoProcess_Execute( clone );
-		if( clone->status != DAO_VMPROC_FINISHED ) break;
+		if( clone->status != DAO_PROCESS_FINISHED ) break;
 		res = clone->stackValues[0];
 		if( self->funct == DVM_FUNCT_MAP ){
 			DaoArray_SetValue( result, i, res );
@@ -943,7 +943,7 @@ static void DaoMT_RunFunctional( void *p )
 #endif
 	}
 	DaoProcess_ReleaseCV( clone );
-	self->status |= clone->status != DAO_VMPROC_FINISHED;
+	self->status |= clone->status != DAO_PROCESS_FINISHED;
 	DMutex_Lock( self->mutex );
 	*self->joined += 1;
 	if( clone->exceptions->size ) DaoProcess_PrintException( clone, 1 );
@@ -1047,11 +1047,13 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 static void DaoMT_Start0( void *p )
 {
 	DaoProcess *proc = (DaoProcess*)p;
+	int count = proc->exceptions->size;
 	DaoProcess_Execute( proc );
 	DaoProcess_ReturnFutureValue( proc, proc->future );
 	if( proc->future->state == DAO_CALL_FINISHED ){
 		DaoVmSpace_ReleaseProcess( proc->vmSpace, proc );
 	}
+	if( proc->exceptions->size > count ) DaoProcess_PrintException( proc, 1 );
 }
 static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 {

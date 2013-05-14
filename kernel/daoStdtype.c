@@ -691,7 +691,7 @@ void DaoValue_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValu
 }
 void DaoValue_SafeGetField( DaoValue *self, DaoProcess *proc, DString *name )
 {
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
@@ -699,7 +699,7 @@ void DaoValue_SafeGetField( DaoValue *self, DaoProcess *proc, DString *name )
 }
 void DaoValue_SafeSetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
 {
-	if( proc->vmSpace->options & DAO_EXEC_SAFE ){
+	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
 		return;
 	}
@@ -973,7 +973,7 @@ static daoint DaoSTR_CheckIndex( DString *self, DaoProcess *proc, daoint index, 
 }
 static void DaoSTR_Resize( DaoProcess *proc, DaoValue *p[], int N )
 {
-	if( ( proc->vmSpace->options & DAO_EXEC_SAFE ) && p[1]->xInteger.value > 1E5 ){
+	if( ( proc->vmSpace->options & DAO_OPTION_SAFE ) && p[1]->xInteger.value > 1E5 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR,
 				"not permitted to create long string in safe running mode" );
 		return;
@@ -1632,7 +1632,7 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, index );
 		proc->topFrame->entry = entry;
 		DaoProcess_Execute( proc );
-		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
 		res = proc->stackValues[0];
 		switch( funct ){
 		case DVM_FUNCT_MAP :
@@ -1946,7 +1946,7 @@ static void DaoLIST_Resize( DaoProcess *proc, DaoValue *p[], int N )
 	DaoList *self = & p[0]->xList;
 	DaoValue *fill = dao_none_value;
 	daoint size = p[1]->xInteger.value;
-	if( ( proc->vmSpace->options & DAO_EXEC_SAFE ) && size > 1000 ){
+	if( ( proc->vmSpace->options & DAO_OPTION_SAFE ) && size > 1000 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR,
 				"not permitted to create large list in safe running mode" );
 		return;
@@ -2383,7 +2383,7 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, index );
 		proc->topFrame->entry = entry;
 		DaoProcess_Execute( proc );
-		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
 		res = proc->stackValues[0];
 		switch( funct ){
 		case DVM_FUNCT_MAP : DaoList_Append( list2, res ); break;
@@ -2461,7 +2461,7 @@ static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar, int which
 		if( sect->b >2 ) DaoProcess_SetValue( proc, sect->a+2, index );
 		proc->topFrame->entry = entry;
 		DaoProcess_Execute( proc );
-		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
 		res = proc->stackValues[0];
 	}
 	DaoProcess_ReleaseCV( proc );
@@ -2498,7 +2498,7 @@ static void DaoLIST_Erase2( DaoProcess *proc, DaoValue *p[], int npar )
 		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, index );
 		proc->topFrame->entry = entry;
 		DaoProcess_Execute( proc );
-		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
 		if( proc->stackValues[0]->xInteger.value ){
 			GC_DecRC( items[i] );
 			items[i] = NULL; /* mark as deleted */
@@ -2540,7 +2540,7 @@ static void DaoLIST_Map2( DaoProcess *proc, DaoValue *p[], int npar )
 		if( sect->b >2 ) DaoProcess_SetValue( proc, sect->a+2, index );
 		proc->topFrame->entry = entry;
 		DaoProcess_Execute( proc );
-		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
 		DaoList_Append( list3, proc->stackValues[0] );
 	}
 	DaoProcess_ReleaseCV( proc );
@@ -3049,7 +3049,7 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, node->value.pValue );
 		proc->topFrame->entry = entry;
 		DaoProcess_Execute( proc );
-		if( proc->status == DAO_VMPROC_ABORTED ) break;
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
 		res = proc->stackValues[0];
 		switch( funct ){
 		case DVM_FUNCT_SELECT :

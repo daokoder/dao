@@ -52,13 +52,6 @@ enum DaoTaskStatus
 	DAO_CALL_FINISHED
 };
 
-enum DaoFutureResultType
-{
-	DAO_FUTRES_NONE ,
-	DAO_FUTRES_STATUS ,
-	DAO_FUTRES_VALUE
-};
-
 
 typedef struct DaoTaskEvent  DaoTaskEvent;
 
@@ -142,7 +135,7 @@ struct DaoFuture
 	DAO_CSTRUCT_COMMON;
 
 	uchar_t      state;
-	uchar_t      restype;
+	uchar_t      timeout;
 	DaoValue    *value;
 	DaoValue    *message;
 	DaoObject   *actor;
@@ -163,7 +156,7 @@ DAO_DLL void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )
 DAO_DLL void DaoCallServer_Join();
 DAO_DLL void DaoCallServer_Stop();
 DAO_DLL void DaoCallServer_AddTask( DThreadTask func, void *param, int now );
-DAO_DLL void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *future, double timeout, int restype );
+DAO_DLL void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *future, double timeout );
 DAO_DLL void DaoCallServer_AddCall( DaoProcess *call );
 #endif
 

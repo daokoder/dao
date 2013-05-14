@@ -148,19 +148,22 @@ enum DaoCaseMode
 
 enum DaoCallMode
 {
-	DAO_CALL_INIT = (1<<8), /* call to initialize a parent object */
-	DAO_CALL_TAIL = (1<<9), /* may do tail call */
+	DAO_CALL_INIT   = (1<<8), /* call to initialize a parent object */
+	DAO_CALL_TAIL   = (1<<9), /* may do tail call */
 	DAO_CALL_NOVIRT = (1<<10), /* call as non-virtual function */
 	DAO_CALL_COROUT = (1<<11), /* call for creating a coroutine vm process */
-	DAO_CALL_EXPAR = (1<<12), /* expand the last parameter of tuple type */
-	DAO_CALL_BLOCK = (1<<13) /* call with code block */
+	DAO_CALL_EXPAR  = (1<<12), /* expand the last parameter of tuple type */
+	DAO_CALL_BLOCK  = (1<<13) /* call with code block */
 };
-enum DaoVmProcPauseType
+enum DaoProcessPauseType
 {
-	DAO_VMP_NOPAUSE ,
-	DAO_VMP_ASYNC ,  /* by join mode of asynchronous call */
-	DAO_VMP_YIELD ,  /* by coroutine */
-	DAO_VMP_NATIVE_SUSPENSION
+	DAO_PAUSE_NONE ,
+	DAO_PAUSE_FUTURE_VALUE ,    /* future::value(); */
+	DAO_PAUSE_FUTURE_WAIT ,     /* future::wait(); */
+	DAO_PAUSE_CHANNEL_SEND ,    /* channel::send(); */
+	DAO_PAUSE_CHANNEL_RECEIVE , /* channel::send(); */
+	DAO_PAUSE_COROUTINE_YIELD , /* coroutine; */
+	DAO_PAUSE_NATIVE_THREAD     /* native thread; */
 };
 
 enum DaoDataPermission
