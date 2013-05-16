@@ -754,6 +754,7 @@ static void DaoMT_InitProcess( DaoProcess *proto, DaoProcess *clone )
 	DaoProcess_SetActiveFrame( clone, clone->topFrame );
 	DaoProcess_PushSectionFrame( clone );
 	clone->topFrame->outer = proto;
+	clone->topFrame->sect = proto->topFrame->prev;
 	clone->topFrame->returning = -1;
 }
 static void DaoMT_RunIterateFunctional( void *p )
@@ -1050,10 +1051,11 @@ static void DaoMT_Start0( void *p )
 	int count = proc->exceptions->size;
 	DaoProcess_Execute( proc );
 	DaoProcess_ReturnFutureValue( proc, proc->future );
+	if( proc->exceptions->size > count ) DaoProcess_PrintException( proc, 1 );
 	if( proc->future->state == DAO_CALL_FINISHED ){
+		DaoFuture_ActivateEvent( proc->future );
 		DaoVmSpace_ReleaseProcess( proc->vmSpace, proc );
 	}
-	if( proc->exceptions->size > count ) DaoProcess_PrintException( proc, 1 );
 }
 static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -1088,9 +1090,9 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 	for(vmc=sect; vmc!=end; vmc++){
 		int i = -1, code = vmc->code;
 		if( code == DVM_GETVH || (code >= DVM_GETVH_I && code <= DVM_GETVH_C) ){
-			if( vmc->a <= 1 ) i = vmc->b;
+			i = vmc->b;
 		}else if( code == DVM_SETVH || (code >= DVM_SETVH_II && code <= DVM_SETVH_CC) ){
-			if( vmc->c <= 1 ) i = vmc->b;
+			i = vmc->b;
 		}
 		if( i >= 0 ){
 			/* These values should be shared with the parent thread: */
@@ -1157,9 +1159,12 @@ static void DaoMT_Critical( DaoProcess *proc, DaoValue *p[], int n )
 	if( proc->mutex ) DMutex_Unlock( proc->mutex );
 	DaoProcess_PopFrame( proc );
 }
+void DaoMT_Select( DaoProcess *proc, DaoValue *p[], int n );
 
 DaoFuncItem dao_mt_methods[] =
 {
+	{ DaoMT_Select, "select( group : list<channel<any>|future<any>>, timeout :float=-1 ) => tuple<none|channel<any>|future<any>,any>" },
+
 	{ DaoMT_Critical, "critical()[]" },
 	{ DaoMT_Start, "start( when : enum<auto,now> = $auto )[=>@V] =>future<@V>" },
 	{ DaoMT_Iterate, "iterate( times :int, threads=2 )[index:int,threadid:int]" },

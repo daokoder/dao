@@ -38,6 +38,7 @@ enum DaoTaskEventType
 	DAO_EVENT_WAIT_TASKLET   ,  /* Wait for another tasklet; */
 	DAO_EVENT_WAIT_RECEIVING ,  /* Wait for receiving from a channel; */
 	DAO_EVENT_WAIT_SENDING   ,  /* Wait after sending to a channel; */
+	DAO_EVENT_WAIT_SELECT       /* Wait for multiple futures or channels; */
 };
 enum DaoTaskEventState
 {
@@ -64,28 +65,36 @@ typedef struct DaoTaskEvent  DaoTaskEvent;
 //        type = DAO_EVENT_RESUME_TASKLET;
 //        future = future value for the new tasklet;
 //        channel = NULL;
-//        value = NULL;
+//        selected = NULL;
 //    };
 // 2. Waiting for a tasklet (future value):
 //    DaoTaskEvent {
 //        type = DAO_EVENT_WAIT_TASKLET/DAO_EVENT_RESUME_TASKLET;
 //        future = future value for the waiting tasklet;
 //        channel = NULL;
-//        value = NULL;
+//        selected = NULL;
 //    };
 // 3. Waiting to Receive message from a channel:
 //    DaoTaskEvent {
 //        type = DAO_EVENT_WAIT_RECEIVING;
 //        future = future value for the waiting tasklet;
 //        channel = channel for receiving;
-//        value = NULL;
+//        selected = NULL;
 //    };
 // 4. Waiting after sending message to a channel:
 //    DaoTaskEvent {
 //        type = DAO_EVENT_WAIT_SENDING;
 //        future = future value for the sending tasklet;
 //        channel = channel for sending;
-//        value = NULL;
+//        selected = NULL;
+//    };
+// 5. Waiting for one of the future values or channels becoming ready:
+//    DaoTaskEvent {
+//        type = DAO_EVENT_WAIT_SENDING;
+//        future = future value for the waiting tasklet;
+//        channel = NULL;
+//        selected = future/channel value;
+//        slist = select list of future values or channels;
 //    };
 //
 */
@@ -95,7 +104,8 @@ struct DaoTaskEvent
 	ushort_t       state;
 	DaoFuture     *future;
 	DaoChannel    *channel;
-	DaoValue      *value;
+	DaoValue      *selected;
+	DaoList       *slist;
 };
 
 
@@ -138,6 +148,7 @@ struct DaoFuture
 	uchar_t      timeout;
 	DaoValue    *value;
 	DaoValue    *message;
+	DaoValue    *selected;
 	DaoObject   *actor;
 	DaoProcess  *process;
 	DaoFuture   *precond; /* the future value on which this one waits; */
@@ -150,6 +161,10 @@ DAO_DLL DaoType *dao_type_channel;
 DAO_DLL DaoType *dao_type_future;
 DAO_DLL DaoChannel* DaoChannel_New( DaoType *type, int dtype );
 DAO_DLL DaoFuture*  DaoFuture_New( DaoType *type, int vatype );
+
+DAO_DLL void DaoChannel_ActivateEvent( DaoChannel *self, int type );
+DAO_DLL void DaoFuture_ActivateEvent( DaoFuture *self );
+
 DAO_DLL void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future );
 
 

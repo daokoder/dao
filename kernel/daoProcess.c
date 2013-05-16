@@ -1160,6 +1160,7 @@ CallEntry:
 			(vmc->code == DVM_CALL || vmc->code == DVM_MCALL || vmc->code == DVM_YIELD) ){
 		DaoChannel *channel;
 		DaoFuture *precond;
+		DaoTuple *tuple;
 		DaoValue *value;
 		int finished;
 		switch( self->pauseType ){
@@ -1177,10 +1178,16 @@ CallEntry:
 			break;
 		case DAO_PAUSE_CHANNEL_SEND :
 			DaoProcess_PutInteger( self, self->future->timeout );
+			if( self->future->timeout == 0 ) vmc --;
 			break;
 		case DAO_PAUSE_CHANNEL_RECEIVE :
 			value = self->future->message;
 			DaoProcess_PutValue( self, value ? value : dao_none_value );
+			break;
+		case DAO_PAUSE_CHANFUT_SELECT :
+			tuple = DaoProcess_PutTuple( self, 0 );
+			DaoTuple_SetItem( tuple, self->future->selected, 0 );
+			DaoTuple_SetItem( tuple, self->future->message, 1 );
 			break;
 		default: break;
 		}

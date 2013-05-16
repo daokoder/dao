@@ -395,7 +395,7 @@ static int DaoType_MatchTemplateParams( DaoType *self, DaoType *type, DMap *defs
 	DaoType *template1 = core1 && core1->kernel ? core1->kernel->abtype : NULL;
 	DaoType *template2 = core2 && core2->kernel ? core2->kernel->abtype : NULL;
 	daoint i, k, n, mt = DAO_MT_NOT;
-	if( self->kernel && type->kernel && type->kernel->sptree && template1 == template2 ){
+	if( template1 == template2 && template1 && template1->kernel->sptree ){
 		DaoType **ts1 = self->nested->items.pType;
 		DaoType **ts2 = type->nested->items.pType;
 		if( self->nested->size != type->nested->size ) return 0;
@@ -435,7 +435,6 @@ static int DaoValue_MatchToParent( DaoValue *object, DaoType *parent, DMap *defs
 	}else if( object->type == DAO_CLASS ){
 		mt = DaoType_MatchToParent( object->xClass.clsType, parent, defs);
 	}
-	//printf( "%i %s\n", mt, parent->name->mbs );
 	return mt;
 }
 int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
@@ -1793,6 +1792,9 @@ DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int count )
 		}
 		DMap_Delete( defs );
 	}
+	/* May need to get rid of the attributes for type holders: */
+	DaoType_CheckAttributes( sptype );
+	DaoType_CheckAttributes( sptype2 );
 	if( tid == DAO_CTYPE ) return sptype2;
 	return sptype;
 }
