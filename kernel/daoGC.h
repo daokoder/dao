@@ -52,8 +52,6 @@ DAO_DLL void DaoGC_DecRCs( DArray *dbases );
 	if( (DaoValue*)(up) != (DaoValue*)(down) )\
 DaoGC_ShiftRC( (DaoValue*)(up), (DaoValue*)(down) )
 
-#define GC_IncRCs( p )  DaoGC_IncRCs( p )
-#define GC_DecRCs( p )  DaoGC_DecRCs( p )
 
 DAO_DLL void GC_Lock();
 DAO_DLL void GC_Unlock();

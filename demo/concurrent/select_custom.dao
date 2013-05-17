@@ -1,0 +1,52 @@
+
+const N = 100;
+
+chans = { mt::channel<int>(1), mt::channel<string>(1) }
+
+mt.start::{
+	index = 0;
+	io.writeln( 'begin producing' )
+	while( ++index <= N ){
+		if( rand(2) ){
+			io.writeln( "sending integer:", index );
+			chans[0].send( index )
+		}else{
+			io.writeln( "sending string: index_" + (string) index );
+			chans[1].send( 'index_' + (string) index )
+		}
+	}
+	io.writeln( 'end producing' )
+	chans[0].cap(0)  # set channel buffer size to zero to close the channel;
+	chans[1].cap(0)
+}
+
+select = mt::channel<int|string>(1)
+
+mt.start::{
+
+	f1 = mt.start::{
+		while( chans[0].active() ){
+			io.writeln( chans[0].cap(), chans[0].buffer() )
+			index = (int) chans[0].receive(1);
+			select.send( index )
+		}
+	}
+
+	f2 = mt.start::{
+		while( chans[1].active() ){
+			sindex = (string) chans[1].receive(1);
+			select.send( sindex )
+		}
+	}
+	f1.wait()
+	f2.wait()
+	select.cap(0)  # set channel buffer size to zero to close the channel;
+}
+
+io.writeln( 'begin consuming' )
+while( select.active() ){
+	data = select.receive(1)
+	io.writeln( "received:", data, select.cap() );
+}
+io.writeln( 'end consuming' )
+

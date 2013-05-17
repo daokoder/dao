@@ -5218,9 +5218,9 @@ AddScope:
 int DaoParser_ParseCondition( DaoParser *self, int start )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
-	int lb = start, rb = -1;
 	int from = self->vmcCount;
-	int reg, cst = 0;
+	int pos, semico, lb = start, rb = -1;
+	int reg, cst = 0, store = 0;
 
 	if( start < self->tokens->size && tokens[start]->name == DTOK_LB ){
 		rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
@@ -5228,9 +5228,25 @@ int DaoParser_ParseCondition( DaoParser *self, int start )
 		DString_SetMBS( self->mbs, "()" );
 		DaoParser_Error( self, DAO_CTW_IS_EXPECTED, self->mbs );
 	}
-	if( lb<0 || rb<0 ) return -1;
+	if( lb < 0 || rb < 0 ) return -1;
 
-	reg = DaoParser_MakeArithTree( self, lb+1, rb-1, & cst );
+	start = lb + 1;
+	semico = DaoParser_FindOpenToken( self, DTOK_SEMCO, start, rb, 0 );
+	if( semico >= 0 ){
+		if( tokens[start]->name == DKEY_VAR ){
+			store = DAO_DECL_LOCAL;
+			start += 1;
+		}
+		pos = DaoParser_ParseVarExpressions( self, start, rb-1, 0, store, store );
+		if( pos < 0 ) return -1;
+		if( pos != semico ){
+			DaoParser_Error4( self, DAO_TOKEN_EXPECTING, tokens[pos]->line, ";" );
+			return -1;
+		}
+		start = semico + 1;
+	}
+
+	reg = DaoParser_MakeArithTree( self, start, rb-1, & cst );
 	if( reg < 0 ) return -1;
 	DaoParser_AddCode( self, DVM_TEST, reg, from, 0, start, 0, rb );
 	return rb;

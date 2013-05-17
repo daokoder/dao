@@ -402,9 +402,31 @@ static int DaoType_MatchTemplateParams( DaoType *self, DaoType *type, DMap *defs
 		mt = DAO_MT_SUB;
 		for(i=0,n=self->nested->size; i<n; i++){
 			k = DaoType_MatchTo( ts1[i], ts2[i], defs );
+			/*
+			// When matching template types, the template argument types
+			// has to be equal, otherwise there will be a typing problem
+			// when calling its method.
+			// For example, if mt::channel<int> is allowed to match to
+			// mt::channel<any>, the following call to channel::cap()
+			// will result in an error:
+			//
+			//    chan : mt::channel<any> = mt::channel<int>(1)
+			//    chan.cap(0)
+			//
+			// This is because in the second line, the type of "chan.cap"
+			// will be inferenced to be a method type corresponding to
+			// mt::channel<any>, and can accept a wider range of parameters
+			// than that for mt::channel<int>. So at runtime, "chan.cap"
+			// will get an method of mt::channel<int> that cannot be assigned
+			// to a (temporary) variable with type for the method of
+			// mt::channel<int>.
+			*/
+			if( k < DAO_MT_EQ ) return DAO_MT_NOT;
+#if 0
 			if( k == 0 || k == DAO_MT_SUB || k == DAO_MT_SIM ) return DAO_MT_NOT;
 			if( (ts1[i]->tid & DAO_ANY) && !(ts2[i]->tid & DAO_ANY) ) return DAO_MT_NOT;
 			if( k < mt ) mt = k;
+#endif
 		}
 	}
 	return mt;

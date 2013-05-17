@@ -1161,7 +1161,8 @@ CallEntry:
 		DaoChannel *channel;
 		DaoFuture *precond;
 		DaoTuple *tuple;
-		DaoValue *value;
+		DaoValue *selected;
+		DaoValue *message;
 		int finished;
 		switch( self->pauseType ){
 		case DAO_PAUSE_NONE :
@@ -1181,13 +1182,22 @@ CallEntry:
 			if( self->future->timeout == 0 ) vmc --;
 			break;
 		case DAO_PAUSE_CHANNEL_RECEIVE :
-			value = self->future->message;
-			DaoProcess_PutValue( self, value ? value : dao_none_value );
+			message = self->future->message;
+			DaoProcess_PutValue( self, message ? message : dao_none_value );
 			break;
 		case DAO_PAUSE_CHANFUT_SELECT :
 			tuple = DaoProcess_PutTuple( self, 0 );
-			DaoTuple_SetItem( tuple, self->future->selected, 0 );
-			DaoTuple_SetItem( tuple, self->future->message, 1 );
+			selected = self->future->selected;
+			message = self->future->message;
+			DaoTuple_SetItem( tuple, selected ? selected : dao_none_value, 0 );
+			DaoTuple_SetItem( tuple, message ? message : dao_none_value, 1 );
+			if( self->future->aux1 ){
+				tuple->items[2]->xEnum.value = 2;
+			}else if( self->future->timeout ){
+				tuple->items[2]->xEnum.value = 1;
+			}else{
+				tuple->items[2]->xEnum.value = 0;
+			}
 			break;
 		default: break;
 		}
@@ -4136,7 +4146,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 	DaoRoutine *rout, *rout2 = NULL;
 
 	self->activeCode = vmc;
-	if( caller->type ==0 ){
+	if( caller == NULL || caller->type ==0 ){
 		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "none object not callable" );
 		return;
 	}

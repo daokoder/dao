@@ -1,0 +1,25 @@
+
+const N = 100000;
+
+chan = mt::channel<int>(2)
+
+produce = mt.start::{
+	index = 0;
+	io.writeln( 'begin producing' )
+	while( ++index <= N ){
+		if( index % 100 == 0 ) io.writeln( "sending", index )
+		chan.send( index )
+	}
+	io.writeln( 'end producing' )
+	chan.cap(0)  # set channel buffer size to zero to close the channel;
+}
+
+consume = mt.start::{
+	io.writeln( 'begin consuming' )
+	while( chan.active() ){
+		index = (int) chan.receive()
+		if( index % 100 == 0 ) io.writeln( "received", index );
+	}
+	io.writeln( 'end consuming' )
+}
+

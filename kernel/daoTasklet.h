@@ -43,7 +43,7 @@ enum DaoTaskEventType
 enum DaoTaskEventState
 {
 	DAO_EVENT_WAIT ,
-	DAO_EVENT_RESUME
+	DAO_EVENT_RESUME  /* Ensure the processing of timed-out events; */
 };
 
 enum DaoTaskStatus
@@ -65,47 +65,43 @@ typedef struct DaoTaskEvent  DaoTaskEvent;
 //        type = DAO_EVENT_RESUME_TASKLET;
 //        future = future value for the new tasklet;
 //        channel = NULL;
-//        selected = NULL;
 //    };
 // 2. Waiting for a tasklet (future value):
 //    DaoTaskEvent {
 //        type = DAO_EVENT_WAIT_TASKLET/DAO_EVENT_RESUME_TASKLET;
 //        future = future value for the waiting tasklet;
 //        channel = NULL;
-//        selected = NULL;
 //    };
 // 3. Waiting to Receive message from a channel:
 //    DaoTaskEvent {
 //        type = DAO_EVENT_WAIT_RECEIVING;
 //        future = future value for the waiting tasklet;
 //        channel = channel for receiving;
-//        selected = NULL;
 //    };
 // 4. Waiting after sending message to a channel:
 //    DaoTaskEvent {
 //        type = DAO_EVENT_WAIT_SENDING;
 //        future = future value for the sending tasklet;
 //        channel = channel for sending;
-//        selected = NULL;
 //    };
 // 5. Waiting for one of the future values or channels becoming ready:
 //    DaoTaskEvent {
-//        type = DAO_EVENT_WAIT_SENDING;
+//        type = DAO_EVENT_WAIT_SELECT;
 //        future = future value for the waiting tasklet;
 //        channel = NULL;
-//        selected = future/channel value;
-//        slist = select list of future values or channels;
+//        channels = select list of channels;
 //    };
 //
 */
 struct DaoTaskEvent
 {
-	ushort_t       type;
-	ushort_t       state;
-	DaoFuture     *future;
-	DaoChannel    *channel;
-	DaoValue      *selected;
-	DaoList       *slist;
+	uchar_t      type;
+	uchar_t      state;
+	uchar_t      timeout;
+	double       expiring;  /* expiring time for a timeout event; */
+	DaoFuture   *future;
+	DaoChannel  *channel;
+	DArray      *channels;  /* DArray<DaoChannel*> */
 };
 
 
@@ -146,6 +142,8 @@ struct DaoFuture
 
 	uchar_t      state;
 	uchar_t      timeout;
+	uchar_t      aux1;
+	uchar_t      aux2;
 	DaoValue    *value;
 	DaoValue    *message;
 	DaoValue    *selected;
