@@ -16,9 +16,10 @@ class @Producer
 class @Consumer
 {
 	routine Run( chan : mt::channel<int> ){
-		while( chan.active() ){
-			index = (int) chan.receive()
-			if( index % 100 == 0 ) io.writeln( "received", index );
+		while(1){
+			data = chan.receive()
+			if( (int)data.data % 100 == 0 ) io.writeln( "received", data );
+			if( data.status == $finished ) break
 		}
 	}
 }

@@ -1158,46 +1158,33 @@ CallEntry:
 
 	if( self->status == DAO_PROCESS_SUSPENDED &&
 			(vmc->code == DVM_CALL || vmc->code == DVM_MCALL || vmc->code == DVM_YIELD) ){
-		DaoChannel *channel;
-		DaoFuture *precond;
+		DaoFuture *future = self->future;
 		DaoTuple *tuple;
-		DaoValue *selected;
-		DaoValue *message;
 		int finished;
 		switch( self->pauseType ){
 		case DAO_PAUSE_NONE :
 			break;
 		case DAO_PAUSE_FUTURE_VALUE :
-			precond = self->future->precond;
-			finished = precond->state == DAO_CALL_FINISHED;
-			DaoProcess_PutValue( self, finished ? precond->value : dao_none_value );
+			finished = future->precond->state == DAO_CALL_FINISHED;
+			DaoProcess_PutValue( self, finished ? future->precond->value : dao_none_value );
 			break;
 		case DAO_PAUSE_FUTURE_WAIT :
-			precond = self->future->precond;
-			finished = precond->state == DAO_CALL_FINISHED;
-			DaoProcess_PutInteger( self, finished );
+			DaoProcess_PutInteger( self, future->precond->state == DAO_CALL_FINISHED );
 			break;
 		case DAO_PAUSE_CHANNEL_SEND :
-			DaoProcess_PutInteger( self, self->future->timeout );
-			if( self->future->timeout == 0 ) vmc --;
+			DaoProcess_PutInteger( self, future->timeout );
+			if( future->timeout == 0 ) vmc --;
 			break;
 		case DAO_PAUSE_CHANNEL_RECEIVE :
-			message = self->future->message;
-			DaoProcess_PutValue( self, message ? message : dao_none_value );
+			tuple = DaoProcess_PutTuple( self, 0 );
+			DaoTuple_SetItem( tuple, future->message ? future->message : dao_none_value, 0 );
+			tuple->items[1]->xEnum.value = future->aux1 ? 2 : future->timeout != 0;
 			break;
 		case DAO_PAUSE_CHANFUT_SELECT :
 			tuple = DaoProcess_PutTuple( self, 0 );
-			selected = self->future->selected;
-			message = self->future->message;
-			DaoTuple_SetItem( tuple, selected ? selected : dao_none_value, 0 );
-			DaoTuple_SetItem( tuple, message ? message : dao_none_value, 1 );
-			if( self->future->aux1 ){
-				tuple->items[2]->xEnum.value = 2;
-			}else if( self->future->timeout ){
-				tuple->items[2]->xEnum.value = 1;
-			}else{
-				tuple->items[2]->xEnum.value = 0;
-			}
+			DaoTuple_SetItem( tuple, future->selected ? future->selected : dao_none_value, 0 );
+			DaoTuple_SetItem( tuple, future->message ? future->message : dao_none_value, 1 );
+			tuple->items[2]->xEnum.value = future->aux1 ? 2 : future->timeout != 0;
 			break;
 		default: break;
 		}

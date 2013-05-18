@@ -25,17 +25,18 @@ select = mt::channel<int|string>(1)
 mt.start::{
 
 	f1 = mt.start::{
-		while( chans[0].active() ){
-			io.writeln( chans[0].cap(), chans[0].buffer() )
-			index = (int) chans[0].receive(1);
-			select.send( index )
+		while(1){
+			data = chans[0].receive();
+			if( data.status == $finished ) break
+			select.send( (int) data.data )
 		}
 	}
 
 	f2 = mt.start::{
-		while( chans[1].active() ){
-			sindex = (string) chans[1].receive(1);
-			select.send( sindex )
+		while(1){
+			data = chans[1].receive();
+			if( data.status == $finished ) break
+			select.send( (string) data.data )
 		}
 	}
 	f1.wait()
@@ -44,9 +45,10 @@ mt.start::{
 }
 
 io.writeln( 'begin consuming' )
-while( select.active() ){
-	data = select.receive(1)
-	io.writeln( "received:", data, select.cap() );
+while(1){
+	data = select.receive()
+	io.writeln( "received", data );
+	if( data.status == $finished ) break
 }
 io.writeln( 'end consuming' )
 

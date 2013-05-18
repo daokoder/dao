@@ -296,6 +296,7 @@ static void DaoCallServer_ActivateEvents()
 			break;
 		case DAO_EVENT_WAIT_RECEIVING :
 			move = chan->buffer->size > 0;
+			if( chan->cap <= 0 && chan->buffer->size == 0 ) move = 1;
 			break;
 		case DAO_EVENT_WAIT_SENDING :
 			move = chan->buffer->size < chan->cap;
@@ -457,11 +458,6 @@ void DaoCallServer_AddTimedWait( DaoProcess *wait, DaoTaskEvent *event, double t
 		DMap_Insert( server->waitings, & server->timestamp, event );
 		DMap_Insert( server->pending, event, NULL );
 		DCondVar_Signal( & server->condv2 );
-#if 0
-	}else if( timeout < 0.0 ){
-		DArray_Append( server->events2, event );
-		DMap_Insert( server->pending, event, NULL );
-#endif
 	}else{
 		event->expiring = -1.0;
 		DaoCallServer_AddEvent( event );
@@ -503,14 +499,17 @@ void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout )
 static int DaoCallServer_CheckEvent( DaoTaskEvent *event, DaoFuture *fut, DaoChannel *chan )
 {
 	DaoTaskEvent event2 = *event;
-	daoint i, move = 0;
+	daoint i, move = 0, closed = 0;
 	switch( event->type ){
 	case DAO_EVENT_WAIT_TASKLET :
 		move = event->future->precond == fut;
 		if( event->future->process->condv ) DCondVar_Signal( event->future->process->condv );
 		break;
 	case DAO_EVENT_WAIT_RECEIVING :
-		move = event->channel == chan && chan->buffer->size > 0;
+		if( event->channel == chan ){
+			move = chan->buffer->size > 0;
+			move |= chan->cap <= 0 && chan->buffer->size == 0;
+		}
 		break;
 	case DAO_EVENT_WAIT_SENDING :
 		move = event->channel == chan && chan->buffer->size < chan->cap;
@@ -519,10 +518,13 @@ static int DaoCallServer_CheckEvent( DaoTaskEvent *event, DaoFuture *fut, DaoCha
 		if( event->channels == NULL ) return 0;
 		for(i=0; i<event->channels->size; ++i){
 			DaoChannel *chan = (DaoChannel*) event->channels->items.pValue[i];
-			event2.type = DAO_EVENT_WAIT_RECEIVING;
-			event2.channel = chan;
-			if( DaoCallServer_CheckEvent( & event2, fut, chan ) ) return 1;
+			if( chan->buffer->size ){
+				return 1;
+			}else if( chan->cap <= 0 ){
+				closed += 1;
+			}
 		}
+		move = closed == event->channels->size;
 		break;
 	default: break;
 	}
@@ -602,30 +604,32 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 	for(i=0; i<events->size; i++){
 		DaoTaskEvent *event = (DaoTaskEvent*) events->items.pVoid[i];
 		DaoFuture *future = event->future;
+		DaoChannel *channel = event->channel;
 		DaoChannel *selected = NULL;
 		DaoValue *message = NULL;
 		int closed = 0;
 
 		switch( event->type ){
 		case DAO_EVENT_WAIT_SENDING :
-			if( event->channel->buffer->size >= event->channel->cap ){
+			if( channel->buffer->size >= channel->cap ){
 				if( event->state == DAO_EVENT_WAIT ) goto MoveToWaiting;
 			}
 			break;
 		case DAO_EVENT_WAIT_RECEIVING :
-			if( event->channel->buffer->size == 0 ){
-				if( event->state == DAO_EVENT_WAIT ) goto MoveToWaiting;
+			if( channel->buffer->size == 0 ){
+				if( channel->cap > 0 && event->state == DAO_EVENT_WAIT ) goto MoveToWaiting;
 				message = dao_none_value;
 			}else{
-				message = event->channel->buffer->items.pValue[0];
+				message = channel->buffer->items.pValue[0];
 			}
 			GC_ShiftRC( message, event->future->message );
 			event->future->message = message;
-			DArray_PopFront( event->channel->buffer );
-			if( event->channel->buffer->size < event->channel->cap )
-				DaoChannel_ActivateEvent( event->channel, DAO_EVENT_WAIT_SENDING );
-			if( event->channel->buffer->size )
-				DaoChannel_ActivateEvent( event->channel, DAO_EVENT_WAIT_RECEIVING );
+			event->future->aux1 = channel->cap <= 0 && channel->buffer->size == 0;
+			DArray_PopFront( channel->buffer );
+			if( channel->buffer->size < channel->cap )
+				DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_SENDING );
+			if( channel->buffer->size )
+				DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_RECEIVING );
 			break;
 		case DAO_EVENT_WAIT_SELECT :
 			for(j=0; j<event->channels->size; ++j){
@@ -901,11 +905,6 @@ static void CHANNEL_New( DaoProcess *proc, DaoValue *par[], int N )
 	DaoProcess_PutValue( proc, (DaoValue*) self );
 	if( daoCallServer == NULL ) DaoCallServer_Init( mainVmSpace );
 }
-static void CHANNEL_Active( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoChannel *self = (DaoChannel*) par[0];
-	DaoProcess_PutInteger( proc, (self->cap > 0) || (self->buffer->size > 0) );
-}
 static void CHANNEL_Buffer( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoChannel *self = (DaoChannel*) par[0];
@@ -1020,12 +1019,11 @@ void CHANNEL_Select( DaoProcess *proc, DaoValue *par[], int n )
 static DaoFuncItem channelMeths[] =
 {
 	{ CHANNEL_New,      "channel<@V>( cap = 1 )" },
-	{ CHANNEL_Active,   "active( self :channel<@V> ) => int" },
 	{ CHANNEL_Buffer,   "buffer( self :channel<@V> ) => int" },
 	{ CHANNEL_Cap,      "cap( self :channel<@V> ) => int" },
 	{ CHANNEL_Cap,      "cap( self :channel<@V>, cap :int ) =>int" },
 	{ CHANNEL_Send,     "send( self :channel<@V>, data :@V, timeout :float = -1 ) => int" },
-	{ CHANNEL_Receive,  "receive( self :channel<@V>, timeout :float = -1 ) => @V|none" },
+	{ CHANNEL_Receive,  "receive( self :channel<@V>, timeout :float = -1 ) => tuple<data :@V|none, status :enum<received,timeout,finished>>" },
 	{ CHANNEL_Select,   "select( group :list<@T>, timeout = -1.0 ) => tuple<selected: none|@T, value :any, status :enum<selected,timeout,finished>>" },
 	{ NULL, NULL }
 };
