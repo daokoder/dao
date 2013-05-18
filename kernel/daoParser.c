@@ -6162,7 +6162,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				return error;
 			}
 			result.konst = LOOKUP_BIND_LC( DaoRoutine_AddConstant( self->routine, value ));
-			regLast = DaoParser_GetNormRegister( self, cst, start, 0, rb );
+			regLast = DaoParser_GetNormRegister( self, result.konst, start, 0, rb );
 		}else{
 			regLast = DaoParser_PushRegister( self );
 			DaoParser_AddCode( self, DVM_MATH, tki-DKEY_RAND, reg, regLast, start, 0, rb );
