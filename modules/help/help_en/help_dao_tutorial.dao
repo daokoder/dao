@@ -2003,6 +2003,79 @@ Like calling @[green]mt.start()@[green], calling a method on an asynchronous
 class instance will return a future value, which can be used to check the
 status of the asynchronous call.
 
+
+
+@[subsection]
+Communication Channels
+@[subsection]
+
+Both @[green]mt::start@[green] and the methods of asynchronous class
+run as tasklets (represented by future values) that can be assigned
+to native threads to run concurrently.
+Tasklets can communicate and synchronize with each other using 
+@[green]communication channels@[green].
+
+
+The @[green]channel@[green] type is implemented as a customized C data type
+that supports template-like type arguments. So to construct a channel that 
+can send and receive integers, one can use,
+@[code]
+chan = mt::channel<int>()
+@[code]
+Here @[magenta]channel@[magenta] is prefixed with @[magenta]mt::@[magenta],
+because @[green]channel@[green] is defined in the built-in @[green]mt@[green]
+multi-threading module.
+
+
+The type argument @[magenta]int@[magenta] indicates this channel can only
+be used to transmit integers. Currently, only primitive types 
+(@[green]int@[green], @[green]float@[green], @[green]double@[green], 
+@[green]complex@[green], @[green]string@[green], @[green]enum@[green]) 
+plus @[green]array@[green] types, and their composition through 
+@[green]list@[green], @[green]map@[green] and @[green]tuple@[green] 
+types are supported for channels. 
+
+
+Each channel has a capacity for transmitting data, which are buffered in the channel. 
+When the channel's buffer reached its capacity, any attempt to send data to it 
+will result in the blocking of the sender, which will be resumed either after 
+a timeout or after some data of the channel have been read out of the buffer 
+to make room for the new data being sent by the blocked sender. 
+Channel capacity can be passed to the constructor of the channel as 
+an optional parameter, which is one by default.
+
+
+The essential methods of channel are:
+@[list]
+--send(): for sending data to the channel;
+--receive(): for receiving data from the channel;
+--select(): for selecting a group of channels;
+@[list]
+See @[node]dao.concurrent.channel@[node] for details.
+Here is a simple example,
+@[code]
+chan = mt::channel<int>(2)
+
+produce = mt.start::{
+	index = 0;
+	while( ++index <= 10 ){
+		io.writeln( 'sending', index )
+		chan.send( index )
+	}
+	chan.cap(0)  # set channel buffer size to zero to close the channel;
+}
+
+consume = mt.start::{
+	while(1){
+		data = chan.receive()
+		io.writeln( "received", data );
+		if( data.status == $finished ) break
+	}
+}
+@[code]
+
+
+
 @[text]
 
 

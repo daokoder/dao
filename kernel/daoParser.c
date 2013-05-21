@@ -2218,8 +2218,10 @@ static int DaoParser_AddScope2( DaoParser *self, int at )
 }
 static int DaoParser_DelScope( DaoParser *self, DaoInode *node )
 {
-	//printf( "DaoParser_DelScope() %i %li\n", self->lexLevel, self->scopeOpenings->size );
-	//DaoParser_PrintCodes( self );
+#if 0
+	printf( "DaoParser_DelScope() %i %li\n", self->lexLevel, self->scopeOpenings->size );
+	DaoParser_PrintCodes( self );
+#endif
 	DaoInode *opening = (DaoInode*) DArray_Back( self->scopeOpenings );
 	DaoInode *closing = (DaoInode*) DArray_Back( self->scopeClosings );
 	DaoParser_PopLevel( self );
@@ -3780,6 +3782,7 @@ DecoratorError:
 			start++;
 			continue;
 		case DTOK_RCB :
+			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			if( DaoParser_DelScope( self, NULL ) == 0 ) return 0;
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			start++;
@@ -4099,6 +4102,7 @@ InvalidMultiAssignment: DArray_Delete( inodes ); return 0;
 		DaoParser_CheckStatementSeparation( self, end-1, to );
 		start = end;
 	}
+	if( DaoParser_CompleteScope( self, to ) == 0 ) return 0;
 	DaoParser_PrintWarnings( self );
 	return 1;
 }

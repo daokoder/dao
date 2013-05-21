@@ -100,3 +100,128 @@ Asynchronous Class
 In addtion to the threading functionalities provided by @[green]mt@[green],
 Dao allows user 
 @[text]
+
+
+
+################################################################################
+################################################################################
+#### Channels
+################################################################################
+################################################################################
+
+@[name]
+dao.concurrent.channel
+@[name]
+
+@[title]
+Tasklet Communication Channel
+@[title]
+
+@[text]
+
+Both @[green]mt::start@[green] and the methods of asynchronous class
+run as tasklets (represented by future values) that can be assigned
+to native threads to run concurrently.
+Tasklets can communicate and synchronize with each other using 
+@[green]communication channels@[green].
+
+
+The @[green]channel@[green] type is implemented as a customized C data type
+that supports template-like type arguments. So to construct a channel that 
+can send and receive integers, one can use,
+@[code]
+chan = mt::channel<int>()
+@[code]
+Here @[magenta]channel@[magenta] is prefixed with @[magenta]mt::@[magenta],
+because @[green]channel@[green] is defined in the built-in @[green]mt@[green]
+multi-threading module.
+
+
+The type argument @[magenta]int@[magenta] indicates this channel can only
+be used to transmit integers. Currently, only primitive types 
+(@[green]int@[green], @[green]float@[green], @[green]double@[green], 
+@[green]complex@[green], @[green]string@[green], @[green]enum@[green]) 
+plus @[green]array@[green] types, and their composition through 
+@[green]list@[green], @[green]map@[green] and @[green]tuple@[green] 
+types are supported for channels. 
+
+
+Each channel has a capacity for transmitting data, which are buffered in the channel. 
+When the channel's buffer reached its capacity, any attempt to send data to it 
+will result in the blocking of the sender, which will be resumed either after 
+a timeout or after some data of the channel have been read out of the buffer 
+to make room for the new data being sent by the blocked sender. 
+Channel capacity can be passed to the constructor of the channel as 
+an optional parameter, which is one by default.
+
+
+The channel type has a number of methods which include:
+@[list]
+--@[code(dao)]buffer( self :channel<@V> ) => int@[code(dao)]
+
+It returns the number of unprocessed data items in the channel buffer.
+
+--@[code(dao)] cap( self :channel<@V> ) => int @[code(dao)]
+
+Return the channel capacity.
+
+--@[code(dao)] cap( self :channel<@V>, cap :int ) => int @[code(dao)]
+
+Set the channel capacity and returns the previous one. Set the capacity to zero to prevent it from receiving further data, and effectively close it when its buffer become empty.
+
+--@[code(dao)] send( self :channel<@V>, data :@V, timeout :float = -1 ) => int @[code(dao)]
+
+Send a data item with a timeout. A negative timeout parameter means infinite waiting. It return 1 upon timeout, 0 otherwise.
+
+--@[code(dao)] receive( self :channel<@V>, timeout :float = -1 ) => tuple<data :@V|none, status :enum<received,timeout,finished>> @[code(dao)]
+
+Receive a data item with a timeout. A negative timeout parameter means infinite waiting. It returns a tuple with the following possible values:
+ @[list(sub)]
+ -- (data, $received);
+ -- (none, $timeout);
+ -- (none, $finished);
+ @[list(sub)] 
+
+--@[code(dao)] select( group :list<@T>, timeout = -1.0 ) => tuple<selected: none|@T, value :any, status :enum<selected,timeout,finished>> @[code(dao)]
+
+Select on a group of channels, wait with a timeout for data become available from any of the channels. It returns a tuple with the following possible values:
+ @[list(sub)]
+ -- (channel, data, $selected);
+ -- (none, none, $timeout);
+ -- (none, none, $finished);
+ @[list(sub)] 
+As the signature indicates, this is a static method.
+
+@[list]
+
+Here is a simple example, where integers are sent through one channel and strings through another, and these integers and strings are received using the select method:
+@[code(dao)]
+load sys
+
+chans = { mt::channel<int>(1), mt::channel<string>(1) }
+
+mt.start::{
+    index = 0;
+    while( ++index <= 10 ){
+        if( rand(2) ){
+            io.writeln( "sending integer:", index );
+            chans[0].send( index )
+        }else{
+            io.writeln( "sending string: S" + (string) index );
+            chans[1].send( 'S' + (string) index )
+        }   
+        sys.sleep(0.5)
+    }   
+    # set channel buffer sizes to zero to close them:
+    chans[0].cap(0) 
+    chans[1].cap(0)
+}
+
+while( 1 ){
+    data = mt::channel::select( chans, 0.2 )
+    io.writeln( "received:", data );
+    if( data.status == $finished ) break
+}
+@[code(dao)]
+
+@[text]

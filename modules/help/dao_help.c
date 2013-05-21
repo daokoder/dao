@@ -642,7 +642,9 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 	DString *string = DString_New(1);
 	DaoLexer *lexer = DaoLexer_New();
 	DArray *tokens = lexer->tokens;
-	const char *bgcolor = "yellow"; 
+	const char *bgcolor = NULL; /* "yellow"; */
+	const char *defaultColor = NULL;
+	daoint start = 0, end = code->size-1;
 	daoint i, j, pos, last, color, fgcolor;
 	int line = 1, printedline = 0;
 	int println = 1;
@@ -650,9 +652,9 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 	if( self->offset && DString_FindChar( code, '\n', 0 ) != MAXSIZE ){
 		DaoxStream_WriteNewLine( self, "" );
 	}
-	DString_Trim( code );
 
-	println = self->offset <= offset;
+	println = DString_MatchMBS( code, "^ %s* %n", & start, & end );
+	if( println == 0 ) defaultColor = "blue";
 	if( println ){
 		bgcolor = NULL;
 		for(i=0; i<offset; i++) DaoxStream_WriteChar( self, ' ' );
@@ -667,6 +669,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 	}else if( isspace( self->last ) == 0 ){
 		DaoxStream_WriteChar( self, ' ' );
 	}
+	DString_Trim( code );
 
 	if( lang && strcmp( lang->mbs, "cxx" ) == 0 ){
 		DaoxHelp_TokenizeCodes( & daox_help_cxx_lexinfo, lexer, code->mbs );
@@ -755,7 +758,6 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 				DaoxStream_SetColor( self, dao_colors[fgcolor], bgcolor );
 				DaoxStream_WriteString( self, string );
 				DaoxStream_SetColor( self, NULL, NULL );
-				self->offset += string->size;
 				last = pos + 1;
 				pos = DString_FindChar( & tok->string, '\n', pos + 1 );
 			}
@@ -763,11 +765,11 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 			break;
 		case DTOK_LT :
 			if( self->output && self->fmtHTML ){
-				if( bgcolor != NULL ) DaoxStream_SetColor( self, NULL, bgcolor );
+				DaoxStream_SetColor( self, defaultColor, bgcolor );
 				DString_AppendMBS( self->output, "&lt;" );
 				self->offset += 1;
 				self->last = '<';
-				if( bgcolor != NULL ) DaoxStream_SetColor( self, NULL, NULL );
+				DaoxStream_SetColor( self, NULL, NULL );
 				fgcolor = -100;
 			}
 			break;
@@ -828,20 +830,19 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		if( fgcolor < -10 ) continue;
 		if( println == 0 && (self->offset + tok->string.size) > width ){
 			DaoxStream_WriteNewLine( self, "" );
+			for(j=0; j<offset; j++) DaoxStream_WriteChar( self, ' ' );
 		}
 		if( fgcolor < 0 ){
-			if( bgcolor != NULL ) DaoxStream_SetColor( self, NULL, bgcolor );
+			DaoxStream_SetColor( self, defaultColor, bgcolor );
 			self->last = '\0'; /* no space between two string output; */
 			DaoxStream_WriteString( self, & tok->string );
-			if( bgcolor != NULL ) DaoxStream_SetColor( self, NULL, NULL );
-			self->offset += tok->string.size;
+			DaoxStream_SetColor( self, NULL, NULL );
 			continue;
 		}
 		DaoxStream_SetColor( self, dao_colors[fgcolor], bgcolor );
 		self->last = '\0';
 		DaoxStream_WriteString( self, & tok->string );
 		DaoxStream_SetColor( self, NULL, NULL );
-		self->offset += tok->string.size;
 	}
 	if( println ){
 		DaoxStream_WriteNewLine( self, "" );
