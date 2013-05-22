@@ -4,6 +4,10 @@ load help;
 dao.type.tuple
 @[name]
 
+@[title]
+Tuple Type
+@[title]
+
 @[text]
 A @[green]tuple@[green] is an ordered list of a fixed number of items
 with the same type or different types. Each item in a tuple can optionally
@@ -49,13 +53,4 @@ tup2 :tuple<index:int,name:string> = (123, 'abc')
 tup3 :tuple<int,int,...> = (1, 2, 3, 'abc')
 @[code]
 @[text]
-
-
-@[title]
-Tuple Type
-@[title]
-
-@[name]
-dao.type.tuple.init
-@[name]
 

@@ -160,21 +160,41 @@ array<complex> %= (int|float|double|complex|array) # Modulo assignment
 
 
 
+@[subsection]
+String operators
+@[subsection]
+
+@[code]
+string + string   # Concatenation;
+string += int     # Character appending;
+string += string  # String appending;
+@[code]
+
 
 @[subsection]
 Type Operators
 @[subsection]
 
 @[code]
-?=
-?<
+# Operators:  ?=  ?<
+
+value1 ?= value2  # Type equal;
+value  ?< type    # Is type of;
 @[code]
 
-<table>
-^Operator ^Name ^Usage ^
-| ?=  | type equal | value1 ?= value2 |
-| ?<  | is type of | value ?< type    |
-</table>
+
+
+@[subsection]
+Ternery operator: ?:
+@[subsection]
+
+@[code]
+expression1 ? expression2 : expression3
+@[code]
+The value of @[cyan]expression2@[cyan] is returned if @[cyan]expression1@[cyan]
+is evaluated to true (non zero), otherwise the value of @[cyan]expression3@[cyan]
+is returned.
+
 
 
 @[subsection]Multiple Assignment:@[subsection]
@@ -187,5 +207,41 @@ the expression in the right side should yield a list or tuple,
 and each of the elements in the tuple/list is assigned accordingly to
 each of the variables in the left side.
 Extra elements are ignored.
+
+
+@[subsection]
+Miscellaneous operators
+@[subsection]
+
+@[code]
+# Size operator:
+% none     # Data type size: 0;
+% int      # Data type size: 4 on 32 bits machine, or 8 on 64 bits machine;
+% float    # Data type size: 4 for single precision;
+% double   # Data type size: 8 for double precision;
+% complex  # Data type size: 16 (double precision for both parts);
+% long     # Number of digits in base 256;
+% string   # Number of characters;
+% array    # Number of elements;
+% list     # Number of items;
+% map      # Number of key-value pairs;
+% tuple    # Number of items;
+
+# Complex conjugation operator:
+~ complex  # Conjugation;
+
+# "in" or "not in" operator:
+int    in string  # Test if a character is in the string;
+string in string  # Test if the left operand is a substring of the right;
+any    in list    # Test if a value is contained in a list;
+any    in map     # Test if a key is in a map;
+any    in tuple   # Test if a value is in a tuple;
+
+int    not in string  # Test if a character is not in the string;
+string not in string  # Test if the left operand is not a substring of the right;
+any    not in list    # Test if a value is not contained in a list;
+any    not in map     # Test if a key is not in a map;
+any    not in tuple   # Test if a value is not in a tuple;
+@[code]
 
 @[text]

@@ -5762,7 +5762,7 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 			DaoType *tb = B->xMap.unitype->nested->items.pType[0];
 			if( tb && DaoType_MatchTo( ta, tb, NULL ) < DAO_MT_SUB	 ) return;
 		}
-		*C = DMap_Find( B->xMap.items, & A ) != NULL;
+		*C = DMap_Find( B->xMap.items, A ) != NULL;
 	}else if( B->type == DAO_TUPLE && B->xTuple.subtype == DAO_PAIR ){
 		int c1 = DaoValue_Compare( B->xTuple.items[0], A );
 		int c2 = DaoValue_Compare( A, B->xTuple.items[1] );

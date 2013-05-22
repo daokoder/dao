@@ -1413,7 +1413,7 @@ static void FRAME_ScanCells( DaoProcess *proc, DaoValue *p[], int npar )
 			if( sect->b >3 ) DaoProcess_SetValue( proc, sect->a+3, (DaoValue*) depidx );
 			proc->topFrame->entry = entry;
 			DaoProcess_Execute( proc );
-			if( proc->status == DAO_VMPROC_ABORTED ) break;
+			if( proc->status == DAO_PROCESS_ABORTED ) break;
 		}
 	}
 	DaoProcess_ReleaseCV( proc );

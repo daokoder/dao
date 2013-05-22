@@ -18,6 +18,32 @@ dao.module.std
 Built-in Standard Module
 @[title]
 
+@[text]
+@[code]
+path( path :string, action :enum<set,add,remove>=$add )
+compile( source :string )
+eval( source :string, st=io::stdio, safe=0 )=>any
+load( file :string, import=1, runim=0, safe=0 )=>any
+resource( path :string )=>string
+argv() => list<any>
+about( ... )=>string
+callable( object )=>int
+debug( ... )
+warn( info :string )
+error( info :string )
+gcmax( limit=0 )=>int/*by default, return the current value;*/
+gcmin( limit=0 )=>int
+subtype( obj1, obj2 )=>int
+version()=>string
+
+iterate( times :int )[index:int]
+string( size :int, type :enum<mbs,wcs>=$mbs )[index:int =>int] =>string
+array( D1 :int, D2 =0, D3 =0 )[I:int, J:int, K:int =>@V<@T<int|float|double|complex>|array<@T>>] =>array<@T>
+list( size :int )[index:int =>@T] =>list<@T>
+list( size :int, init :@T )[index:int, prev:@T =>@T] =>list<@T>
+map( size :int, hashing = 0 )[index:int =>tuple<@K,@V>] =>map<@K,@V>
+@[code]
+@[text]
 
 
 
@@ -43,6 +69,21 @@ dao.module.io.method
 IO Module Methods
 @[title]
 
+@[text]
+@[code]
+write( ... )
+writef( format : string, ... )
+writeln( ... )
+read( )=>string
+read( file : string, silent=0 )=>string
+open( )=>stream
+open( file :string, mode :string )=>stream
+sstream( type :enum<mbs, wcs> = $mbs )=>stream
+
+readlines( file :string, chop=0 )[line:string=>none|@T]=>list<@T>
+@[code]
+@[text]
+
 
 @[name]
 dao.module.io.stream
@@ -59,6 +100,36 @@ dao.module.io.stream.method
 @[title]
 IO Stream Methods
 @[title]
+
+@[text]
+@[code]
+stream( )=>stream
+stream( type :enum<mbs, wcs> )=>stream
+stream( file :string, mode :string )=>stream
+write( self :stream, ... )
+writef( self :stream, format : string, ... )
+writeln( self :stream, ... )
+flush( self :stream )
+read( self :stream, count=0 )=>string
+read( self :stream, quantity :enum<line, all> )=>string
+getstring( self :stream )=>string
+close( self :stream )
+eof( self :stream )=>int
+isopen( self :stream )=>int
+seek( self :stream, pos :int, from :enum<begin,current,end> )=>int
+tell( self :stream )=>int
+fileno( self :stream )=>int
+name( self :stream )=>string
+mode( self :stream )=>enum<read; write>
+__for_iterator__( self :stream, iter : for_iterator )
+[]( self :stream, iter : for_iterator )=>string
+
+readlines( self :stream, numline=0, chop=0 )[line:string=>none|@T]=>list<@T>
+// Not particularly useful, may be removed!
+writelines( self :stream, lines :int)[line:int =>string]
+writelines( file :string, lines :int)[line:int =>string]
+@[code]
+@[text]
 
 
 
@@ -77,3 +148,8 @@ dao.module.mt
 Built-in Multi-threading Module
 @[title]
 
+
+@[text]
+@[code]
+@[code]
+@[text]

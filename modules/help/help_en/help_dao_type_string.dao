@@ -143,24 +143,27 @@ Dao string methods
 
 @[text]
 @[code]
-chop(  )
-erase( start = 0, n = -1 )
-find( str : string, from = 0, reverse = 0 ) => int
-insert( str : string, index = 0 )
-replace( str1 : string, str2 : string, index = 0 )
-replace( str1 : string, table : map<string,string>, max=0 )
-expand( keys :map<string,string>, spec='$', keep=1 )
-expand( keys : tuple, spec='$', keep=1 )
-resize( size : int )
-size(  ) => int
-split( sep : string, quote="", rm=1 ) => list<string>
-tokenize( seps : string, quotes="", backslash=0, simplify=0 ) => list<string>
-tonumber( base=10 ) => double
-tolower(  ) => string
-toupper(  ) => string
-encrypt( key : string, hex=0 ) => string
-decrypt( key : string, hex=0 ) => string
+chop( self :string )
+clear( self :string )
+convert( self :string, to :enum<mbs, wcs> ) => string
+erase( self :string, start = 0, n = -1 )
+find( self :string, str : string, from = 0, reverse = 0 ) => int
+insert( self :string, str : string, index = 0 )
+replace( self :string, str1 : string, str2 : string, index = 0 )
+replace( self :string, str1 : string, table : map<string,string>, max=0 )
+expand( self :string, keys :map<string,string>, spec='$', keep=1 )
+expand( self :string, keys : tuple, spec='$', keep=1 )
+resize( self :string, size : int )
+size( self :string ) => int
+split( self :string, sep : string, quote="", rm=1 ) => list<string>
+tolower( self :string ) => string
+toupper( self :string ) => string
+trim( self :string ) => string
+type( self :string ) => enum<mbs, wcs>
 @[code]
+
+See the subentries listed below for details.
+
 @[text]
 
 
@@ -169,12 +172,12 @@ dao.type.string.method.chop
 @[name]
 
 @[title]
-string.chop()
+chop( self :string )
 @[title]
 
 @[text]
 @[code]
-string.chop()
+chop( self :string )
 @[code]
 Chop off @[cyan]EOF@[cyan], @[cyan]\n@[cyan] and @[cyan]\r@[cyan]
 from the end of a string.
@@ -188,12 +191,12 @@ dao.type.string.method.erase
 @[name]
 
 @[title]
-string.erase()
+erase( self :string )
 @[title]
 
 @[text]
 @[code]
-string.erase( start = 0, n = -1 )
+erase( self :string, start = 0, n = -1 )
 @[code]
 Erase @[cyan]n@[cyan] characters starting from index @[cyan]start@[cyan].
 If @[cyan]n=-1@[cyan], erase all the rest.
@@ -205,12 +208,12 @@ dao.type.string.method.find
 @[name]
 
 @[title]
-string.find()
+find( self :string )
 @[title]
 
 @[text]
 @[code]
-string.find( str : string, from = 0, reverse = 0 ) => int
+find( self :string, str : string, from = 0, reverse = 0 ) => int
 @[code]
 Find substring @[cyan]str@[cyan], starting from @[cyan]from@[cyan];
 search backward if @[cyan]reverse@[cyan] is true.
@@ -224,12 +227,12 @@ dao.type.string.method.insert
 @[name]
 
 @[title]
-string.insert()
+insert( self :string )
 @[title]
 
 @[text]
 @[code]
-string.insert( str : string, index = 0, remove = 0, copy = 0 )
+insert( self :string, str : string, index = 0, remove = 0, copy = 0 )
 @[code]
 Insert substring @[cyan]str@[cyan] at @[cyan]index@[cyan].
 If @[cyan]remove@[cyan] is greater than zero, @[cyan]remove@[cyan] characters
@@ -243,19 +246,19 @@ dao.type.string.method.replace
 @[name]
 
 @[title]
-string.replace()
+replace( self :string )
 @[title]
 
 @[text]
 @[code]
-string.replace( str1 :string, str2 :string, index = 0 )
+replace( self :string, str1 :string, str2 :string, index = 0 )
 @[code]
 Replace the @[cyan]index@[cyan]-th occurrence of substring @[cyan]str1@[cyan] 
 to substring @[cyan]str2@[cyan];
 the index starts from 1, which means the first, and 0 means all.
 
 @[code]
-string.replace( table :map<string,string>, max = 0 )
+replace( self :string, table :map<string,string>, max = 0 )
 @[code]
 Replace the occurrence of the keys of @[cyan]table@[cyan] by the corresponding values.
 If @[cyan]max@[cyan] is zero, replace the shorter key first, otherwise,
@@ -268,12 +271,12 @@ dao.type.string.method.expand
 @[name]
 
 @[title]
-string.expand()
+expand( self :string )
 @[title]
 
 @[text]
 @[code]
-string.expand( keys :map<string,string>, spec = '$', keep = 1 ) => string
+expand( self :string, keys :map<string,string>, spec = '$', keep = 1 ) => string
 @[code]
 If the string contains place holders in form of @[cyan]$(name)@[cyan],
 where @[cyan]$@[cyan] is the special character passed in by @[cyan]spec@[cyan],
@@ -298,12 +301,12 @@ dao.type.string.method.expand
 @[name]
 
 @[title]
-string.expand()
+expand( self :string )
 @[title]
 
 @[text]
 @[code]
-string.expand( keys :tuple, spec = '$', keep = 1 ) => string
+expand( self :string, keys :tuple, spec = '$', keep = 1 ) => string
 @[code]
 If the string contains place holders in form of @[cyan]$(name)@[cyan],
 where @[cyan]$@[cyan] is the special character passed in by @[cyan]spec@[cyan],
@@ -327,12 +330,12 @@ dao.type.string.method.resize
 @[name]
 
 @[title]
-string.resize()
+resize( self :string )
 @[title]
 
 @[text]
 @[code]
-string.resize( size :int )
+resize( self :string, size :int )
 @[code]
 Resize the string to length @[cyan]@[cyan], and the extended part are filled with blank space.
 
@@ -343,12 +346,12 @@ dao.type.string.method.size
 @[name]
 
 @[title]
-string.size()
+size( self :string )
 @[title]
 
 @[text]
 @[code]
-string.size() => int
+size( self :string ) => int
 @[code]
 Return the length of a string.
 
@@ -359,12 +362,12 @@ dao.type.string.method.split
 @[name]
 
 @[title]
-string.split()
+split( self :string )
 @[title]
 
 @[text]
 @[code]
-string.split( sep :string, quote = '', quote = '', rm = 1 ) => list<string>
+split( self :string, sep :string, quote = '', quote = '', rm = 1 ) => list<string>
 @[code]
 Split the string by seperator @[cyan]sep@[cyan], and return the tokens as a list. 
 Quotation symbols may also be specified by @[cyan]quote@[cyan]
@@ -381,12 +384,12 @@ dao.type.string.method.tokenize
 @[name]
 
 @[title]
-string.tokenize()
+tokenize( self :string )
 @[title]
 
 @[text]
 @[code]
-string.tokenize( seps : string, quotes="", backslash=0 ) => list<string>
+tokenize( self :string, seps : string, quotes="", backslash=0 ) => list<string>
 @[code]
 Tokenize the string by a set of separators. 
 Each character in @[cyan]seps@[cyan] is treated as a separator.
@@ -404,12 +407,12 @@ dao.type.string.method.tonumber
 @[name]
 
 @[title]
-string.tonumber()
+tonumber( self :string )
 @[title]
 
 @[text]
 @[code]
-string.tonumber( base=10 ) => double
+tonumber( self :string, base=10 ) => double
 @[code]
 Convert the string to a number with base equal to @[cyan]base@[cyan].
 
@@ -422,12 +425,12 @@ dao.type.string.method.tolower
 @[name]
 
 @[title]
-string.tolower()
+tolower( self :string )
 @[title]
 
 @[text]
 @[code]
-string.tolower() => string
+tolower( self :string ) => string
 @[code]
 Convert the string to lower case.
 Return @[cyan]self@[cyan] string.
@@ -439,12 +442,12 @@ dao.type.string.method.toupper
 @[name]
 
 @[title]
-string.toupper()
+toupper( self :string )
 @[title]
 
 @[text]
 @[code]
-string.toupper() => string
+toupper( self :string ) => string
 @[code]
 Convert the string to upper case.
 Return @[cyan]self@[cyan] string.
@@ -469,6 +472,18 @@ Dao String Functional Methods
 @[title]
 
 @[text]
+
+@[code]
+iterate( self :string )[char :int, index :int]
+count( self :string )[char :int, index :int =>int] => int
+map( self :string )[char :int, index :int =>int] => string
+select( self :string )[char :int, index :int =>int] => string
+index( self :string )[char :int, index :int =>int] => list<int>
+apply( self :string )[char :int, index :int =>int] => string
+@[code]
+
+See the subentries listed below for details.
+
 @[text]
 
 
@@ -478,12 +493,12 @@ dao.type.string.functional.iterate
 @[name]
 
 @[title]
-string.iterate()
+iterate( self :string )
 @[title]
 
 @[text]
 @[code]
-string.iterate() => string
+iterate( self :string ) => string
 @[code]
 Convert the string to upper case.
 Return @[cyan]self@[cyan] string.
@@ -495,12 +510,12 @@ dao.type.string.functional.count
 @[name]
 
 @[title]
-string.count()
+count( self :string )
 @[title]
 
 @[text]
 @[code]
-string.count() => string
+count( self :string ) => string
 @[code]
 Convert the string to upper case.
 Return @[cyan]self@[cyan] string.
@@ -512,12 +527,12 @@ dao.type.string.functional.map
 @[name]
 
 @[title]
-string.map()
+map( self :string )
 @[title]
 
 @[text]
 @[code]
-string.map() => string
+map( self :string ) => string
 @[code]
 Convert the string to upper case.
 Return @[cyan]self@[cyan] string.
@@ -529,12 +544,12 @@ dao.type.string.functional.select
 @[name]
 
 @[title]
-string.select()
+select( self :string )
 @[title]
 
 @[text]
 @[code]
-string.select() => string
+select( self :string ) => string
 @[code]
 Convert the string to upper case.
 Return @[cyan]self@[cyan] string.
@@ -546,12 +561,12 @@ dao.type.string.functional.index
 @[name]
 
 @[title]
-string.index()
+index( self :string )
 @[title]
 
 @[text]
 @[code]
-string.index() => string
+index( self :string ) => string
 @[code]
 Convert the string to upper case.
 Return @[cyan]self@[cyan] string.
@@ -563,12 +578,12 @@ dao.type.string.functional.apply
 @[name]
 
 @[title]
-string.apply()
+apply( self :string )
 @[title]
 
 @[text]
 @[code]
-string.apply() => string
+apply( self :string ) => string
 @[code]
 Convert the string to upper case.
 Return @[cyan]self@[cyan] string.

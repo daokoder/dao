@@ -29,10 +29,35 @@ Map ::= MapEnumeration | HashEnumeration
 @[text]
 
 
-@[name]
-dao.type.map.init
-@[name]
 
 @[name]
 dao.type.map.method
 @[name]
+
+@[text]
+@[code]
+clear( self :map<any,any> )
+reset( self :map<any,any> )
+reset( self :map<any,any>, hashing :enum<none,default,random> )
+erase( self :map<any,any> )
+erase( self :map<@K,@V>, from :@K )
+erase( self :map<@K,@V>, from :@K, to :@K )
+insert( self :map<@K,@V>, key :@K, value :@V )
+find( self :map<@K,@V>, key :@K, type :enum<le,eq,ge>=$eq )=>tuple<key:@K,value:@V>|none
+keys( self :map<@K,any>, from :@K )=>list<@K>
+keys( self :map<@K,any>, from :@K, to :@K )=>list<@K>
+values( self :map<@K,@V>, from :@K )=>list<@V>
+values( self :map<@K,@V>, from :@K, to :@K )=>list<@V>
+has( self :map<@K,any>, key :@K )=>int
+size( self :map<any,any> )=>int
+
+iterate( self :map<@K,@V> )[key :@K, value :@V]
+count( self :map<@K,@V> )[key :@K, value :@V =>int] =>int
+keys( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@K>
+values( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@V>
+select( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<tuple<key:@K,value:@V>>
+find( self :map<@K,@V> )[key :@K, value :@V =>int] =>tuple<key:@K,value:@V>|none
+map( self :map<@K,@V> )[key :@K, value :@V =>@T] =>list<@T>
+apply( self :map<@K,@V> )[key :@K, value :@V =>@V] =>map<@K,@V>
+@[code]
+@[text]

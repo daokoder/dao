@@ -57,13 +57,51 @@ mat4 = array{ 1, 2; 3, 4 }  # 2x2 matrix
 
 @[text]
 
-@[name]
-dao.type.array.init
-@[name]
 
 @[name]
 dao.type.array.method
 @[name]
+
+@[title]
+Array methods
+@[title]
+
+@[text]
+
+@[code]
+dim( self :array, i : int )=>int
+dim( self :array )=>array<int>
+index( self :array, i : int )=>array<int>
+size( self :array )=>int
+resize( self :array, dims :array<int> )
+reshape( self :array, dims :array<int> )
+
+permute( self :array, dims :array<int> )
+transpose( self :array )
+max( self :array<@ITEM> )=>tuple<@ITEM,int>
+min( self :array<@ITEM> )=>tuple<@ITEM,int>
+sum( self :array<@ITEM> )=>@ITEM
+varn( self :array )=>double
+reverse( self :array<@ITEM> )=>array<@ITEM>
+rank( self :array<any>, order :enum<ascend,descend>=$ascend, k=0 )=>array<int>
+sort( self :array<@T>, order :enum<ascend,descend>=$ascend, k=0 )=>array<@T>
+
+fft( self :array<complex>, direction :enum<forward, backward> )
+
+map( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>@T2]=>array<@T2>
+reduce( self :array<@T> )[item:@T,res:@T,I:int,J:int,K:int,L:int,M:int=>@T]=>@T
+reduce( self :array<@T>, init :@V )[item:@T,res:@V,I:int,J:int,K:int,L:int,M:int=>@V]=>@V
+select( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>int]=>list<@T>
+index( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>int]=>list<array<int>>
+count( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>int]=>int
+iterate( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int]
+apply( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>@T]=>array<@T>
+@[code]
+
+@[text]
+
+
+
 
 @[name]
 dao.type.array.method.dim

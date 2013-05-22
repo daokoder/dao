@@ -39,10 +39,43 @@ list4 = list{ 1 : 2 : 5 }  # list<int>
 @[text]
 
 
-@[name]
-dao.type.list.init
-@[name]
 
 @[name]
 dao.type.list.method
 @[name]
+
+
+@[text]
+@[code]
+insert( self :list<@T>, item : @T, pos=0 )
+clear( self :list<any> )
+size( self :list<any> )=>int
+resize( self :list<any>, size :int )
+max( self :list<@T<int|long|float|double|complex|string|enum>> )=>tuple<@T,int>
+min( self :list<@T<int|long|float|double|complex|string|enum>> )=>tuple<@T,int>
+sum( self :list<@T<int|long|float|double|complex|string|enum>> )=>@T
+join( self :list<int|float|double|long|complex|string|enum>, separator='' )=>string
+append( self :list<@T>, item :@T )
+push( self :list<@T>, item :@T, to :enum<front, back> = $back )
+pop( self :list<@T>, from :enum<front, back> = $back ) => @T
+front( self :list<@T> )=>@T
+back( self :list<@T> )=>@T
+rank( self :list<any>, order :enum<ascend, descend>=$ascend, k=0 )=>list<int>
+reverse( self :list<@T> )=>list<@T>
+
+erase( self :list<@T>, start=0, n=1 )
+erase( self :list<@T>, mode :enum<all,first,last> )[item:@T,index:int=>int]=>int
+map( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>@V]=>list<@V>
+map( self :list<@T>, other :list<@S>, direction :enum<forward,backward>=$forward )[item:@T,item2:@S,index:int=>@V]=>list<@V>
+reduce( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,value:@T,index:int=>@T]=>@T
+reduce( self :list<@T>, init :@V, direction :enum<forward,backward>=$forward )[item:@T,value:@V,index:int=>@V]=>@V
+select( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>list<@T>
+find( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>tuple<index:int,value:@T>|none
+index( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>list<int>
+count( self :list<@T> )[item:@T,index:int=>int]=>int
+iterate( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int]
+sort( self :list<@T>, order :enum<ascend,descend>, k=0 )=>list<@T>
+sort( self :list<@T>, k=0 )[X:@T,Y:@T=>int]=>list<@T>
+apply( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>@T]=>list<@T>
+@[code]
+@[text]

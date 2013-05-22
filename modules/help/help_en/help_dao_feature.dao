@@ -41,8 +41,10 @@ Key features:
 
   Concurrent programming is made simple by a number of concurrent
   code section methods and asynchronous classes.
-  The basic concurrent computational unit is a virtual machine process
-  which is mapped to a native thread only when it becomes active.
+  The basic concurrent computational unit is a tasklet which consists
+  of a virtual machine process (context) and a future value (handle).
+  A tasklet is mapped to a native thread only when it becomes active.
+  Tasklets can communicate and synchronize with each other by channels.
   Concurrent garbage collection is supported by the virtual machine
   to make concurrent program safe.
 
