@@ -25,7 +25,7 @@ DecDigit ::= '0' ... '9'
 HexDigit ::= DecDigit | 'a' ... 'f' | 'A' ... 'F'
 
 DecInteger ::= DecDigit +
-HexInteger ::= ('0x' | '0X') DecDigit +
+HexInteger ::= ('0x' | '0X') HexDigit +
 Integer    ::= DecInteger | HexInteger
 @[code(syntax)]
 
@@ -144,7 +144,7 @@ precision floating point numbers.
 
 @[subsection]Definition@[subsection]
 @[code(syntax)]
-Complex ::= Float '$'
+Complex ::= [ Float ] '$'
 @[code(syntax)]
 
 @[green]complex@[green] has two fields @[green]real@[green] and @[green]imag@[green],
