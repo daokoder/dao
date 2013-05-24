@@ -9,6 +9,16 @@ Class for Object-Oriented Programming
 @[title]
 
 
+@[text]
+A @[green]class@[green] is a user-defined data structure consisting data fields and
+member methods, which define the states and behaviours for the instances of the class.
+
+
+
+@[text]
+
+
+
 
 @[name]
 dao.class.inheritance

@@ -975,23 +975,21 @@ void DaoFile_WriteString( FILE* file, DString *str )
 {
 	daoint pos = 0;
 	if( str->mbs ){
-		do {
+		while( 1 ){
 			fprintf( file, "%s", str->mbs + pos );
 			pos = DString_FindChar( str, '\0', pos );
-			if( pos != MAXSIZE ){
-				fprintf( file, "%c", 0 );
-				pos += 1;
-			}
-		} while( pos != MAXSIZE );
+			if( pos == MAXSIZE ) break;
+			fprintf( file, "%c", 0 );
+			pos += 1;
+		}
 	}else{
-		do {
+		while( 1 ){
 			fprintf( file, "%ls", str->wcs + pos );
 			pos = DString_FindWChar( str, L'\0', pos );
-			if( pos != MAXSIZE ){
-				fprintf( file, "%lc", 0 );
-				pos += 1;
-			}
-		} while( pos != MAXSIZE );
+			if( pos == MAXSIZE ) break;
+			fprintf( file, "%lc", 0 );
+			pos += 1;
+		}
 	}
 }
 

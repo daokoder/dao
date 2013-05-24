@@ -77,7 +77,7 @@ Some character conversions are performed on the program source codes
 during the lexical translation.
 
 
-@[section]Character Conversion from DBC to SBC@[section]
+@[subsection]Character Conversion from DBC to SBC@[subsection]
 
 Double Byte Characters (DBC) in the Unicode range 0xff00-0xff5f (exclusive)
 are converted to Single Byte Charactors (SBC).
@@ -86,7 +86,7 @@ This is to allow proper interpretation of operators which are not
 encoded in ASCII.
 
 
-@[section]Comments@[section]
+@[subsection]Comments@[subsection]
 
 Dao mainly uses the sharp mark @[green]#@[green] to mark comments.
 @[list]
@@ -99,7 +99,7 @@ Multiple line comments may contain other @[green]#{@[green] and @[green]#}@[gree
 if they are properly paired, namely, they are allowed to be nested.
 
 
-@[section]Quotation Marks@[section]
+@[subsection]Quotation Marks@[subsection]
 
 The basic quotation marks to enclose string literals are the 
 single quotation mark 0x27 and the double quotation mark 0x22.
@@ -146,7 +146,7 @@ Conversion to double quotation mark @[green]0x22@[green];
 
 
 
-@[section]Keywords@[section]
+@[subsection]Keywords@[subsection]
 
 The following keywords are reserved for the language:
 @[list]
@@ -207,7 +207,7 @@ Keyword ::= TypeKeyword | StructKeyword | StorageKeyword
           | OtherStmtKeyword | OperatorKeyword | MiscKeyword
 @[code(syntax)]
 
-@[section]Basic Character Class Definitions@[section]
+@[subsection]Basic Character Class Definitions@[subsection]
 
 Basic character classes:
 @[code(syntax)]
@@ -226,7 +226,7 @@ in such case, these UTF-8 bytes are converted into Unicode before passing
 to the C99 test functions.
 
 
-@[section]Identifiers@[section]
+@[subsection]Identifiers@[subsection]
 
 @[code(syntax)]
 AsciiIdentifier ::= ( AsciiLetter | '_' ) ( AsciiLetter | DecDigit | '_' )*
@@ -236,7 +236,7 @@ Identifier ::= AsciiIdentifier | WideIdentifier
 @[code(syntax)]
 
 
-@[section]Literals@[section]
+@[subsection]Literals@[subsection]
 
 @[subsection]Number Literals@[subsection]
 Integer literals:
@@ -273,6 +273,12 @@ Symbol literal:
 @[code(syntax)]
 Symbol ::= '$' Identifier
 @[code(syntax)]
+
+Type holder literal:
+@[code(syntax)]
+TypeHolder ::= '@' Identifier
+@[code(syntax)]
+
 
 
 @[subsection]String Literal@[subsection]
@@ -356,7 +362,7 @@ Escape digits (not implemented):
 @[list]
 
 
-@[section]Operators@[section]
+@[subsection]Operators@[subsection]
 
 @[list]
 -- Left unary operators:
@@ -395,7 +401,7 @@ Operator ::= UnaryOperator | BinaryOperator
            | AssignmentOperator | OtherOperator
 @[code(syntax)]
 
-@[section]Miscellaneous@[section]
+@[subsection]Miscellaneous@[subsection]
 
 @[subsection]Semicolon@[subsection]
 
@@ -440,99 +446,367 @@ Expressions
 
 Drafting in progress.
 
+
+@[section]
+Constant Expression
+@[section]
+
+
+@[subsection]
+Constant Atomic Expression
+@[subsection]
+
 @[code(syntax)]
-AtomicExpr ::= Identifier | Integer | LongInteger | Float | Double 
-             | ComplexImaginary | String | Symbol
+ConstAtomicExpression ::= ConstIdentifier | Integer | Float | Double 
+                        | ComplexImaginary | LongInteger | String | Symbol
+@[code(syntax)]
+Where @[green]ConstIdentifier@[green] represents identifiers for constants
+such as routines, classes, namespaces, type names and user defined constants.
 
-PrimaryExpr ::= AtomicExpr 
-              | EnumerationExpr
-              | '(' Expression ')'
-              | PrimaryExpr '::' Identifier
-              | PrimaryExpr '.'  Identifier
-              | PrimaryExpr '->' Identifier
-              | PrimaryExpr '[' ExpressionList ']'
-              | PrimaryExpr '(' ArgumentList ')'
-              | PrimaryExpr '{' ArgumentList '}'
-              | PrimaryExpr '::(' ArgumentList ')'
-              | PrimaryExpr '::{' ArgumentList '}'
 
-Expression ::= PrimaryExpr
-             | LeftUnaryOperator PrimaryExpr
-             | PrimaryExpr BinaryOperator PrimaryExpr
+@[subsection]
+Constant Primary Expression
+@[subsection]
 
-EmptyExprList ::= 
-NonEmptyExprList ::=  Expression | NonEmptyExprList ',' Expression
+@[code(syntax)]
+ConstBuiltinMathFuncs ::= 'abs' | 'ceil' | 'floor'
+                        | 'real' | 'imag' | 'arg' | 'norm'
+                        | 'acos' | 'cos' | 'cosh'
+                        | 'asin' | 'sin' | 'sinh'
+                        | 'atan' | 'tan' | 'tanh'
+                        | 'exp' | 'log' | 'sqrt'
 
-ExpressionList ::= EmptyExprList | NonEmptyExprList
-
-ArgumentItem ::= Expression | Identifier '=>' Expression
-EmptyArgumentList ::= 
-NonEmptyArgumentList ::= ArgumentItem | NonEmptyArgumentList ',' ArgumentItem
-
-ArgumentList = EmptyArgumentList | NonEmptyArgumentList
+ConstPrimaryExpression ::= ConstAtomicExpression 
+                         | ConstEnumerativeExpression
+                         | '(' ConstExpression ')'
+                         | ConstPrimaryExpression '::' Identifier
+                         | ConstPrimaryExpression '[' [ ConstExpression ] ']'
+                         | ConstBuiltinMathFuncs '(' ConstExpression ')'
 @[code(syntax)]
 
 
 @[subsection]
-Array Enumeration
+Constant Expression List
 @[subsection]
 
 @[code(syntax)]
-# Elements Enumeration:
-VectorEnumeration  ::= '[' ExpressionList ']'
-MatrixEnumeration  ::= '[' ExpressionList { ';' ExpressionList } ']'
-VectorEnumeration2 ::= 'array' '{' ExpressionList '}'
-MatrixEnumeration2 ::= 'array' '{' ExpressionList { ';' ExpressionList } '}'
+ConstExpressionList ::= ConstExpression { ',' ConstExpression }
+@[code(syntax)]
 
-# Elements of Arithmetic Progression sequence: count ~ start [ ~ step ]
-ArrayByArithProg  ::= '[' Expression ':' [ Expression ':' ] Expression ']'
-ArrayByArithProg2 ::= 'array' '{' Expression ':' [ Expression ':' ] Expression '}'
 
-Array ::= VectorEnumeration | MatrixEnumeration | ArrayByArithProg
-          | VectorEnumeration2 | MatrixEnumeration2 | ArrayByArithProg2
+
+@[subsection]
+Constant Enumerative Expression
+@[subsection]
+
+@[code(syntax)]
+ConstEnumerativeExpression ::= ConstArray | ConstList | ConstMap | ConstTuple
 @[code(syntax)]
 
 
 @[subsection]
-List Enumeration
+Constant Array
 @[subsection]
 
 @[code(syntax)]
-ListEnumeration ::= [ 'list' ] '{' ExpressionList '}'
+ConstVector  ::= '[' [ ConstExpressionList [ ',' ] ] ']'
+ConstMatrix  ::= '[' ConstExpressionList { ';' ConstExpressionList } ']'
+ConstVector2 ::= 'array' '{' [ ConstExpressionList ] '}'
+ConstMatrix2 ::= 'array' '{' ConstExpressionList { ';' ConstExpressionList } '}'
 
-ListByArithProg ::= [ 'list' ] '{' Expression ':' [ Expression ':' ] Expression '}'
+ConstArray   ::= ConstVector | ConstMatrix | ConstVector2 | ConstMatrix2
+@[code(syntax)]
 
-List ::= ListEnumeration | ListByArithProg
+
+@[subsection]
+Constant List
+@[subsection]
+
+@[code(syntax)]
+ConstList ::= [ 'list' ] '{' [ ConstExpressionList [ ',' ] ] '}'
 @[code(syntax)]
 Note: a list enumeration started with @[green]{@[green] has to appear inside an expression.
 
 
 
 @[subsection]
-Map Enumeration
+Constant Map
 @[subsection]
 
 @[code(syntax)]
-MapKeyValueList ::= Expression => Expression { ',' Expression => Expression }
-HashKeyValueList ::= Expression : Expression { ',' Expression : Expression }
+ConstMapKeyValue  ::= ConstExpression => ConstExpression
+ConstHashKeyValue ::= ConstExpression ~> ConstExpression
 
-MapEnumeration  ::= [ 'map' ] '{' MapKeyValueList '}'
-HashEnumeration ::= [ 'map' ] '{' HashKeyValueList '}'
+ConstEmptyMap  ::= '{' [ '=>' ] '}'
+ConstEmptyHash ::= '{' '~>' '}'
 
-Map ::= MapEnumeration | HashEnumeration
+ConstMapEnum  ::= [ 'map' ] '{' ( ConstMapKeyValue  ',' ) + '}'
+ConstHashEnum ::= [ 'map' ] '{' ( ConstHashKeyValue ',' ) + '}'
+
+ConstMap ::= ConstEmptyMap | ConstEmptyHash | ConstMapEnum | ConstHashEnum
 @[code(syntax)]
 
 
 @[subsection]
-Tuple Enumeration
+Constant Tuple
 @[subsection]
 
 @[code(syntax)]
-TupleEnum ::= '(' ArgumentItem ',' ArgumentList ')'
-TupleEnum2 ::= 'tuple' '{' ArgumentList } '}'
+ConstArgumentItem ::= [ Identifier '=>' ] ConstExpression
+
+ConstTupleEnum  ::=         '(' ( ConstArgumentItem ',' ) + ')'
+ConstTupleEnum2 ::= 'tuple' '{' { ConstArgumentItem ',' }   '}'
+
+ConstTuple ::= ConstTupleEnum | ConstTupleEnum2
+@[code(syntax)]
+
+
+
+@[subsection]
+Constant Expression
+@[subsection]
+
+@[code(syntax)]
+ConstExpression ::= ConstPrimaryExpression
+                  | LeftUnaryOperator ConstPrimaryExpression
+                  | ConstPrimaryExpression BinaryOperator ConstPrimaryExpression
+@[code(syntax)]
+
+
+@[section]
+Type Expression
+@[section]
+
+
+@[subsection]
+Special Types
+@[subsection]
+
+@[code(syntax)]
+NoneType       ::= 'none'
+AnyType        ::= 'any'
+UndefinedType  ::= '?'
+VariantHolder  ::= TypeHolder '<' VariantType '>'
+SpecialType    ::= NoneType | AnyType | UndefinedType | TypeHolder | VariantHolder
+@[code(syntax)]
+
+
+
+@[subsection]
+Primitive Types
+@[subsection]
+
+@[code(syntax)]
+PrimitiveType ::= 'none' | 'int' | 'float' | 'double' | 'complex' | 'long' | 'string'
+@[code(syntax)]
+
+
+@[subsection]
+Enum Symbol Types
+@[subsection]
+
+@[code(syntax)]
+SymbolItem ::= Identifier [ '=' Integer ]
+
+SymbolType ::= 'enum' '<' [ SymbolItem { ',' SymbolItem } ] '>'
+FlagType   ::= 'enum' '<' [ SymbolItem { ';' SymbolItem } ] '>'
+
+EnumSymbolType ::= 'enum' | SymbolType | FlagType
+@[code(syntax)]
+
+
+
+@[subsection]
+Array Type
+@[subsection]
+
+@[code(syntax)]
+ArrayNumType ::= 'int' | 'float' | 'double' | 'complex'
+ArrayType ::= 'array' [ '<' ( ArrayNumType | AnyType | UndefinedType | TypeHolder ) '>' ]
+@[code(syntax)]
+
+
+@[subsection]
+List Type
+@[subsection]
+
+@[code(syntax)]
+ListType ::= 'list' [ '<' Type '>' ]
+@[code(syntax)]
+
+
+@[subsection]
+Map Type
+@[subsection]
+
+@[code(syntax)]
+MapType ::= 'map' [ '<' Type, Type '>' ]
+@[code(syntax)]
+
+
+@[subsection]
+Tuple Type
+@[subsection]
+
+@[code(syntax)]
+TupleItemType ::= [ Identifier ':' ] Type
+TupleType ::= 'tuple' [ '<' TupleItemType { ',' TupleItemType } '>' ]
+@[code(syntax)]
+
+
+
+@[subsection]
+Cdata Type
+@[subsection]
+
+@[code(syntax)]
+TemplateParamList1 ::= TypeHolder { ',' TypeHolder } { ',' TypeHolder '=' Type }
+TemplateParamList2 ::= TypeHolder '=' Type { ',' TypeHolder '=' Type }
+
+CdataType ::= Identifier [ '<' ( TemplateParamList1 | TemplateParamList2 ) '>' ]
+@[code(syntax)]
+
+
+
+
+
+
+
+@[section]
+Expression
+@[section]
+
+
+@[subsection]
+Atomic Expression
+@[subsection]
+
+@[code(syntax)]
+AtomicExpression ::= Identifier | Integer | LongInteger | Float | Double 
+                   | ComplexImaginary | String | Symbol
+@[code(syntax)]
+
+
+@[subsection]
+Primary Expression
+@[subsection]
+
+@[code(syntax)]
+PrimaryExpression ::= AtomicExpression 
+                    | EnumerativeExpression
+                    | '(' Expression ')'
+                    | PrimaryExpression '::' Identifier
+                    | PrimaryExpression '.'  Identifier
+                    | PrimaryExpression '->' Identifier
+                    | PrimaryExpression '(' [ ArgumentList ] ')'
+                    | PrimaryExpression '[' [ ExpressionList [ ',' ] ] ']'
+                    | PrimaryExpression '{' [ ArgumentList [ ',' ] ] '}'
+                    | PrimaryExpression '::(' [ ArgumentList ] ')'
+                    | PrimaryExpression '::{' [ ArgumentList ] '}'
+@[code(syntax)]
+
+
+@[subsection]
+Expression List
+@[subsection]
+
+@[code(syntax)]
+ExpressionList ::= Expression { ',' Expression }
+@[code(syntax)]
+
+
+
+@[subsection]
+Argument List
+@[subsection]
+
+@[code(syntax)]
+ArgumentItem ::= [ Identifier '=>' ] Expression
+
+ArgumentList = ArgumentItem { ',' ArgumentItem }
+@[code(syntax)]
+
+
+
+@[subsection]
+Enumerative Expression
+@[subsection]
+
+@[code(syntax)]
+EnumerativeExpression ::= Array | List | Map | Tuple
+@[code(syntax)]
+
+
+@[subsection]
+Array
+@[subsection]
+
+@[code(syntax)]
+Vector  ::= '[' [ ExpressionList [ ',' ] ] ']'
+Matrix  ::= '[' ExpressionList { ';' ExpressionList } ']'
+Vector2 ::= 'array' '{' [ ExpressionList [ ',' ] ] '}'
+Matrix2 ::= 'array' '{' ExpressionList { ';' ExpressionList } '}'
+
+ArithProgArray  ::=         '[' Expression ':' [ Expression ':' ] Expression ']'
+ArithProgArray2 ::= 'array' '{' Expression ':' [ Expression ':' ] Expression '}'
+
+Array ::= Vector | Matrix | ArithProgArray | Vector2 | Matrix2 | ArithProgArray2
+@[code(syntax)]
+
+
+@[subsection]
+List
+@[subsection]
+
+@[code(syntax)]
+ListEnum ::= [ 'list' ] '{' [ ExpressionList [ ',' ] ] '}'
+
+ArithProgList ::= [ 'list' ] '{' Expression ':' [ Expression ':' ] Expression '}'
+
+List ::= ListEnum | ArithProgList
+@[code(syntax)]
+Note: a list enumeration started with @[green]{@[green] has to appear inside an expression.
+
+
+
+@[subsection]
+Map
+@[subsection]
+
+@[code(syntax)]
+MapKeyValue  ::= Expression => Expression
+HashKeyValue ::= Expression : Expression
+
+MapEnum  ::= [ 'map' ] '{' ( MapKeyValue  [ ',' ] ) + '}'
+HashEnum ::= [ 'map' ] '{' ( HashKeyValue [ ',' ] ) + '}'
+
+Map ::= ConstEmptyMap | ConstEmptyHash | MapEnum | HashEnum
+@[code(syntax)]
+
+
+@[subsection]
+Tuple
+@[subsection]
+
+@[code(syntax)]
+TupleEnum  ::=         '(' ( ArgumentItem ',' ) + ')'
+TupleEnum2 ::= 'tuple' '{' { ArgumentItem ',' }   '}'
 
 Tuple ::= TupleEnum | TupleEnum2
 @[code(syntax)]
+
+
+
+@[subsection]
+Expression
+@[subsection]
+
+@[code(syntax)]
+Expression ::= PrimaryExpression
+             | LeftUnaryOperator PrimaryExpression
+             | PrimaryExpression BinaryOperator PrimaryExpression
+@[code(syntax)]
+
 
 @[text]
 
@@ -616,7 +890,6 @@ Switch-case Statement
 SwitchCaseStmt ::= 'switch' '(' Expression ')' '{'
                    { 'case' Expression [ '...' Expression ] ':' ControlBlock }
 				   [ 'default' ':' ControlBlock ]
-                   { 'case' Expression [ '...' Expression ] ':' ControlBlock }
                    '}'
 @[code(syntax)]
 
@@ -631,14 +904,36 @@ SwitchCaseStmt ::= 'switch' '(' Expression ')' '{'
 ################################################################################
 ################################################################################
 @[name]
-dao.grammar.function
+dao.grammar.routine
 @[name]
 
 @[title]
-Functions
+Routines (Functions)
 @[title]
 
 @[text]
+
+@[code(syntax)]
+Id ::= Identifier
+Expr ::= Epxression
+
+RoutParams1 ::= Id [ ':' Type ] { ',' Id [ ':' Type ] }
+RoutParams2 ::= Id [ ':' Type ] { ',' Id [ ':' Type ] [ '=' Expr ] }
+RoutParams3 ::= Id [ ':' Type ] '=' Expr { ',' Id [ ':' Type ] '=' Expr }
+
+RoutineParams  ::= RoutParams1 | RoutParams2 | RoutParams2
+
+RoutReturn     ::= '=>' Type
+CoroutReturn   ::= '=>' '[' Type ']'
+CodeSectReturn ::= '[' [ RoutParams1 ] [ RoutReturn ] ']' [ RoutReturn ]
+
+RoutineReturn ::= RoutReturn | CoroutReturn | CodeSectReturn
+
+RoutineSignature ::= 'routine' { Id:: } Id '(' [ RoutineParams ] ')' [ RoutineReturn ]
+
+#OverloadableOpers ::= 
+@[code(syntax)]
+
 @[text]
 
 

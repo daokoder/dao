@@ -177,7 +177,11 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 	}else if( tid == DAO_ROUTINE || tid == DAO_TUPLE ){
 		self->nested = DArray_New(D_VALUE);
 	}
-	if( tid == DAO_ROUTINE || tid == DAO_TUPLE ) DaoType_MapNames( self );
+	switch( tid ){
+	case DAO_ENUM : self->mapNames = DMap_New(D_STRING,0); break;
+	case DAO_TUPLE :
+	case DAO_ROUTINE : DaoType_MapNames( self );
+	}
 	DaoType_CheckAttributes( self );
 	DaoType_InitDefault( self );
 	return self;
@@ -541,7 +545,6 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( self == type ) return DAO_MT_EQ;
 		if( DString_EQ( self->name, type->name ) ) return DAO_MT_SIM;
 		if( self->flagtype && type->flagtype ==0 ) return 0;
-		if( self->mapNames == NULL || type->mapNames == NULL ) return DAO_MT_SUB;
 		for(it=DMap_First(self->mapNames); it; it=DMap_Next(self->mapNames, it )){
 			node = DMap_Find( type->mapNames, it->key.pVoid );
 			if( node ==NULL ) return 0;

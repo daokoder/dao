@@ -203,7 +203,6 @@ Definition
 SwitchCaseStmt ::= 'switch' '(' Expression ')' '{'
                    { 'case' Expression [ '...' Expression ] ':' ControlBlock }
 				   [ 'default' ':' ControlBlock ]
-                   { 'case' Expression [ '...' Expression ] ':' ControlBlock }
                    '}'
 @[code(syntax)]
 @[comment]

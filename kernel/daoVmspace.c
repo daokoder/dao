@@ -2039,7 +2039,7 @@ static void DaoConfigure_FromFile( const char *name )
 			tk2 = tokens->items.pToken[i+2];
 			isnum = isint = 0;
 			yes = -1;
-			if( tk2->type >= DTOK_DIGITS_HEX && tk2->type <= DTOK_NUMBER_SCI ){
+			if( tk2->type >= DTOK_DIGITS_DEC && tk2->type <= DTOK_NUMBER_SCI ){
 				isnum = 1;
 				if( tk2->type <= DTOK_NUMBER_HEX ){
 					isint = 1;

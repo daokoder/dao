@@ -36,9 +36,11 @@ CodeSectReturn ::= '[' [ RoutParams1 ] [ RoutReturn ] ']' [ RoutReturn ]
 
 RoutineReturn ::= RoutReturn | CoroutReturn | CodeSectReturn
 
-RoutineProto ::= 'routine' { Id:: } Id '(' [ RoutineParams ] ')' [ RoutineReturn ]
+RoutineSignature ::= Id '(' [ RoutineParams ] ')' [ RoutineReturn ]
 
 #OverloadableOpers ::= 
+
+Routine ::= 'routine' { Id:: } Id
 @[code(syntax)]
 
 Dao routines are declared with keyword @[green]routine@[green]

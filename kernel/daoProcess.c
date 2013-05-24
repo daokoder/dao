@@ -2479,7 +2479,7 @@ DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 	}else if( vmc[1].c == DAO_CASE_UNORDERED ){
 		for(id=1; id<=vmc->c; id++){
 			mid = vmc + id;
-			if( DaoValue_Compare2( opa, cst[ mid->a ] ) ==0 ){
+			if( DaoValue_Compare( opa, cst[ mid->a ] ) ==0 ){
 				return self->topFrame->codes + mid->b;
 			}
 		}
@@ -2489,7 +2489,7 @@ DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 	while( first <= last ){
 		id = ( first + last ) / 2;
 		mid = vmc + id;
-		cmp = DaoValue_Compare2( opa, cst[ mid->a ] );
+		cmp = DaoValue_Compare( opa, cst[ mid->a ] );
 		if( cmp ==0 ){
 			if( cst[mid->a]->type== DAO_TUPLE && cst[mid->a]->xTuple.subtype == DAO_PAIR ){
 				while( id > first && DaoValue_Compare( opa, cst[ vmc[id-1].a ] ) ==0 ) id --;
@@ -2605,7 +2605,6 @@ DString* DaoProcess_PutMBString( DaoProcess *self, const char *mbs )
 	DaoString tmp = {DAO_STRING,0,0,0,0,NULL};
 	DaoValue *res, *dest;
 	tmp.data = & str;
-	if( self->activeCode->c >= self->activeRoutine->body->regCount ) return NULL;
 	dest = self->activeValues[ self->activeCode->c ];
 	if( dest && dest->type == DAO_STRING ){
 		DString_Reset( dest->xString.data, 0 );
@@ -2621,7 +2620,6 @@ DString* DaoProcess_PutWCString( DaoProcess *self, const wchar_t *wcs )
 	DaoString tmp = {DAO_STRING,0,0,0,0,NULL};
 	DaoValue *res, *dest;
 	tmp.data = & str;
-	if( self->activeCode->c >= self->activeRoutine->body->regCount ) return NULL;
 	dest = self->activeValues[ self->activeCode->c ];
 	if( dest && dest->type == DAO_STRING ){
 		DString_Reset( dest->xString.data, 0 );
@@ -5970,7 +5968,7 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 	}
 	if( tid != DAO_COMPLEX ){
 		if( toklen != mbs->size ) return 0;
-		if( toktype < DTOK_DIGITS_HEX || toktype > DTOK_NUMBER_SCI ) return 0;
+		if( toktype < DTOK_DIGITS_DEC || toktype > DTOK_NUMBER_SCI ) return 0;
 		if( tid == DAO_INTEGER ){
 			dC->xInteger.value = (sizeof(daoint) == 4) ? strtol( mbs->mbs, 0, 0 ) : strtoll( mbs->mbs, 0, 0 );
 			if( sign <0 ) dC->xInteger.value = - dC->xInteger.value;
@@ -5994,7 +5992,7 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 		return 1;
 	}
 	dC->xComplex.value.real = dC->xComplex.value.imag = 0.0;
-	if( toktype >= DTOK_DIGITS_HEX && toktype <= DTOK_NUMBER_SCI ){
+	if( toktype >= DTOK_DIGITS_DEC && toktype <= DTOK_NUMBER_SCI ){
 		set1 = 1;
 		d1 = strtod( mbs->mbs, 0 );
 		DString_Erase( mbs, 0, toklen );
@@ -6015,7 +6013,7 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 	DString_Erase( mbs, 0, toklen );
 	toktype = DaoToken_Check( mbs->mbs, mbs->size, & toklen );
 	if( imagfirst && toktype == DTOK_DOLLAR ) return 0;
-	if( toktype >= DTOK_DIGITS_HEX && toktype <= DTOK_NUMBER_SCI ){
+	if( toktype >= DTOK_DIGITS_DEC && toktype <= DTOK_NUMBER_SCI ){
 		set2 = 1;
 		d2 = strtod( mbs->mbs, 0 );
 		DString_Erase( mbs, 0, toklen );

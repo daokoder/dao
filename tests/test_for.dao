@@ -1,0 +1,114 @@
+
+
+@[test(code_01)]
+i = 0
+for( i = 1 : 3 ) io.writeln( i )
+io.writeln( i )
+@[test(code_01)]
+@[test(code_01)]
+1
+2
+3
+4
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+i = 0
+for(var i = 1 : 3 ) io.writeln( i )
+io.writeln( i )
+@[test(code_01)]
+@[test(code_01)]
+1
+2
+3
+0
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+i = 0
+for(i=1; i<=3; ++i) io.writeln( i )
+io.writeln( i )
+@[test(code_01)]
+@[test(code_01)]
+1
+2
+3
+4
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+i = 0
+for(var i=1; i<=3; ++i) io.writeln( i )
+io.writeln( i )
+@[test(code_01)]
+@[test(code_01)]
+1
+2
+3
+0
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+i = 0
+for( i in {1, 2, 3} ) io.writeln( i )
+io.writeln( i )
+@[test(code_01)]
+@[test(code_01)]
+1
+2
+3
+3
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+i = 0
+for(var i in {1, 2, 3} ) io.writeln( i )
+io.writeln( i )
+@[test(code_01)]
+@[test(code_01)]
+1
+2
+3
+0
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+for( i = 1 : 3 ) io.writeln( i )
+io.writeln( i )
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Symbol not defined}}
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+for( i=1; i<=3; ++i ) io.writeln( i )
+io.writeln( i )
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Symbol not defined}}
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+for( i in {1, 2, 3} ) io.writeln( i )
+io.writeln( i )
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Symbol not defined}}
+@[test(code_01)]
+

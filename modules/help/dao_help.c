@@ -116,6 +116,7 @@ struct DaoxHelpEntry
 	DaoxHelpBlock  *first;
 	DaoxHelpBlock  *last;
 
+	int  size;
 	int  failedTests;
 };
 struct DaoxHelp
@@ -316,6 +317,14 @@ static void DaoxStream_WriteInteger( DaoxStream *self, int i )
 {
 	char buf[20];
 	sprintf( buf, "%i", i );
+	DaoxStream_WriteMBS( self, buf );
+}
+static void DaoxStream_WriteFloat( DaoxStream *self, float f, int dec )
+{
+	char fmt[20];
+	char buf[20];
+	sprintf( fmt, "%%.%if", dec );
+	sprintf( buf, fmt, f );
 	DaoxStream_WriteMBS( self, buf );
 }
 static int DaoxStream_WriteItemID( DaoxStream *self, char type, int id )
@@ -731,7 +740,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 			fgcolor = -100;
 			DaoxStream_WriteMBS( self, "    " );
 			break;
-		case DTOK_DIGITS_HEX : case DTOK_DIGITS_DEC :
+		case DTOK_DIGITS_DEC :
 		case DTOK_NUMBER_HEX : case DTOK_NUMBER_DEC :
 		case DTOK_DOUBLE_DEC : case DTOK_NUMBER_IMG :
 		case DTOK_NUMBER_SCI : case DTOK_DOLLAR :
@@ -1169,6 +1178,7 @@ static DaoxHelpEntry* DaoxHelpEntry_New( DString *name )
 	self->nested2 = DArray_New(0);
 	self->first = self->last = NULL;
 	self->parent = NULL;
+	self->size = 0;
 	self->failedTests = 0;
 	return self;
 }
@@ -1183,6 +1193,15 @@ static void DaoxHelpEntry_Delete( DaoxHelpEntry *self )
 	DMap_Delete( self->nested );
 	dao_free( self );
 }
+static int DaoxHelpEntry_GetSize( DaoxHelpEntry *self )
+{
+	daoint i, size = self->size;
+	for(i=0; i<self->nested2->size; i++){
+		DaoxHelpEntry *entry = (DaoxHelpEntry*) self->nested2->items.pVoid[i];
+		size += DaoxHelpEntry_GetSize( entry );
+	}
+	return size;
+}
 static void DaoxHelpEntry_TryReset( DaoxHelpEntry *self, DaoNamespace *NS )
 {
 	/* No reset if the help file is not changed: */
@@ -1194,11 +1213,13 @@ static void DaoxHelpEntry_TryReset( DaoxHelpEntry *self, DaoNamespace *NS )
 	if( ! DString_EQ( self->nspace->name, NS->name ) ) return;
 	if( self->first ) DaoxHelpBlock_Delete( self->first );
 	self->first = self->last = NULL;
+	self->size = 0;
 }
 static void DaoxHelpEntry_AppendText( DaoxHelpEntry *self, DaoNamespace *NS, DString *text )
 {
 	DaoxHelpBlock *block = DaoxHelpBlock_New();
 	DaoxHelpEntry_TryReset( self, NS );
+	self->size += text->size;
 	block->entry = self;
 	block->type = DAOX_HELP_TEXT;
 	DString_Assign( block->text, text );
@@ -1331,6 +1352,17 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 					DaoxStream_WriteString( stream, line );
 					DaoxStream_WriteString( stream, chunk );
 				}
+			}
+			if( stream->fmtHTML ){
+				int size = DaoxHelpEntry_GetSize( self );
+				if( size > 100 ){
+					DaoxStream_SetColor( stream, "green", NULL );
+				}else{
+					DaoxStream_SetColor( stream, "red", NULL );
+				}
+				DaoxStream_WriteMBS( stream, " (" );
+				DaoxStream_WriteFloat( stream, size/1000.0, 1 );
+				DaoxStream_WriteMBS( stream, "KB)" );
 			}
 			DaoxStream_SetColor( stream, NULL, NULL );
 			DString_Delete( chunk );

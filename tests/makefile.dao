@@ -25,6 +25,11 @@ daotests.AddTest( "Strings", "test_strings.dao" )
 test_enum = daotests.AddTest( "EnumSymbol", "test_enum_symbol_def.dao" )
 test_enum.AddTest( "test_enum_symbol_type.dao" )
 
+test_control = daotests.AddTest( "Controls", "test_if_else.dao" )
+test_control.AddTest( "test_for.dao" )
+test_control.AddTest( "test_while.dao" )
+test_control.AddTest( "test_switch.dao" )
+
 test_routine = daotests.AddTest( "Routine", "test_routine.dao" )
 test_routine.AddTest( "test_coroutine.dao" )
 test_routine.AddTest( "test_anonymous_routine.dao" )

@@ -383,7 +383,6 @@ enum
 	TOK_DIGITS_0 ,
 	TOK_DIGITS_0X ,
 	TOK_DIGITS_DEC ,
-	TOK_DIGITS_HEX ,
 	TOK_DOT_DIGITS , /* .12 */
 	TOK_DIGITS_DOT , /* 12. */
 	TOK_NUMBER_DEC ,
@@ -490,9 +489,8 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_NONE , /* emit token, and change to states[TOKEN_START][ char ] */
 	DTOK_NONE ,
 	DTOK_DIGITS_DEC ,
-	DTOK_DIGITS_HEX ,
+	DTOK_NONE ,
 	DTOK_DIGITS_DEC ,
-	DTOK_DIGITS_HEX ,
 	DTOK_NUMBER_DEC , /* .12 */
 	DTOK_NUMBER_DEC , /* 12. */
 	DTOK_NUMBER_DEC ,
@@ -642,7 +640,6 @@ void DaoInitLexTable()
 		if( isdigit( j ) ){
 			daoLexTable[ TOK_START ][ j ] = TOK_DIGITS_DEC;
 			daoLexTable[ TOK_DIGITS_DEC ][ j ] = TOK_DIGITS_DEC;
-			daoLexTable[ TOK_DIGITS_HEX ][ j ] = TOK_DIGITS_HEX;
 			daoLexTable[ TOK_OP_DOT ][ j ] = TOK_DOT_DIGITS;
 			daoLexTable[ TOK_DIGITS_0 ][ j ] = TOK_DIGITS_DEC;
 			daoLexTable[ TOK_DIGITS_0X ][ j ] = TOK_NUMBER_HEX;
@@ -668,7 +665,6 @@ void DaoInitLexTable()
 			daoLexTable[ TOK_VERBATIM ][j] = TOK_VERBATIM;
 
 			daoLexTable[ TOK_DIGITS_DEC ][ j ] = TOK_ERROR;
-			daoLexTable[ TOK_DIGITS_HEX ][ j ] = TOK_ERROR;
 			daoLexTable[ TOK_DIGITS_0 ][ j ] = TOK_ERROR;
 			daoLexTable[ TOK_DOT_DIGITS ][ j ] = TOK_ERROR;
 			daoLexTable[ TOK_DIGITS_DOT ][ j ] = TOK_ERROR;
@@ -710,7 +706,6 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) '.' ] = TOK_DIGITS_DOT;
 	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) 'L' ] = TOK_DIGITS_DEC;
 	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) 'L' ] = TOK_DIGITS_DEC;
-	daoLexTable[ TOK_DIGITS_HEX ][ (unsigned) 'L' ] = TOK_DIGITS_HEX;
 	daoLexTable[ TOK_NUMBER_HEX ][ (unsigned) 'L' ] = TOK_NUMBER_HEX;
 	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
 	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
@@ -915,7 +910,7 @@ int DaoToken_IsNumber( const char *src, int size )
 		size -= 1;
 	}
 	t = DaoToken_Check( src, size, & n );
-	return t >= DTOK_DIGITS_HEX && t <= DTOK_NUMBER_SCI && n == size;
+	return t >= DTOK_DIGITS_DEC && t <= DTOK_NUMBER_SCI && n == size;
 }
 int DaoToken_IsValidName( const char *src, int size )
 {

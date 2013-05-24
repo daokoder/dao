@@ -1263,7 +1263,7 @@ is further enhanced by interface.
 @[subsection]Class Definition@[subsection]
 
 A @[green]class@[green] is a user-defined data structure consisting data fields and
-member methods, which define the states and behaviours the instances of the class.
+member methods, which define the states and behaviours for the instances of the class.
 Class supports three types of fields:
 @[list]
 --@[green]constant@[green]: declared with keyword @[green]const@[green];

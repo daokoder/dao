@@ -126,9 +126,9 @@ Mutex can be used to synchronize the accessing of shared data structures.
 It has two state: locked and unlocked. A mutex can be locked by only one
 thread. A thread is suspended when it attempt to lock a mutex which has
 been locked by another thread. Mutex can be created by 
-the <bf>mtlib</bf> library object,
+the @[green]mt@[green] library object,
 @[code(dao)]
-mutex = mtlib.mutex();
+mutex = mt::mutex();
 @[code(dao)]
 Then it can be locked or unlocked by,
 @[code(dao)]
@@ -150,7 +150,7 @@ suspended if a condition is not satisified and resume execution when
 it is signaled. The basic operations on a condition is: wait on the condition,
 or signal the condition.
 @[code(dao)]
-condvar = mtlib.condition();
+condvar = mt::condition();
 @[code(dao)]
 
 Condition variable should always be used together
@@ -181,7 +181,7 @@ decrement, the thread will be suspended until the count becomes non-zero.
 When the thread finished using the resource, it should increase the count
 of semaphore. A semaphore must be created with an initial count,
 @[code(dao)]
-sema = mtlib.semaphore( count );
+sema = mt::semaphore( count );
 @[code(dao)]
 
 To access a resource guarded by a semaphore, use,

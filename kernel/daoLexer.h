@@ -41,7 +41,6 @@ enum DaoTokNames
 	DTOK_IDENTIFIER ,
 	DTOK_ID_THTYPE , /* @type_holder, @decorator */
 	DTOK_ID_SYMBOL , /* $symbol */
-	DTOK_DIGITS_HEX ,
 	DTOK_DIGITS_DEC ,
 	DTOK_NUMBER_HEX ,
 	DTOK_NUMBER_DEC , /* 123. 123.5 */

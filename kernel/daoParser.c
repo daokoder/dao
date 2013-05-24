@@ -1595,7 +1595,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 			}
 			if( k+1 > end ) break;
 			c = tokens[k+1]->type;
-			if( c >= DTOK_DIGITS_HEX && c <= DTOK_NUMBER_HEX ){
+			if( c >= DTOK_DIGITS_DEC && c <= DTOK_NUMBER_HEX ){
 				k += 1;
 				set = 1;
 				value = strtoll( tokens[k]->string.mbs, 0, 0 );
@@ -2123,7 +2123,7 @@ static DaoInode* DaoParser_AddCode2( DaoParser *self, ushort_t code,
 }
 
 static void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int vt, DaoType *tp );
-static int DaoParser_ParseCondition( DaoParser *self, int start );
+static int DaoParser_ParseCondition( DaoParser *self, int start, int dec, DaoInode *opening );
 static int DaoParser_ParseForLoop( DaoParser *self, int start, int end );
 static int DaoParser_PostParsing( DaoParser *self );
 
@@ -2266,7 +2266,13 @@ static int DaoParser_CompleteScope( DaoParser *self, int at )
 		DaoInode *back = (DaoInode*) DArray_Back( self->scopeOpenings );
 		DaoInode *close = (DaoInode*) DArray_Back( self->scopeClosings );
 		if( back->code == DVM_LBRA ) break;
-		if( close != NULL && close->a && close->a == token ) break;
+		if( close != NULL && close->a ){
+			if( close->a == token ) break;
+			if( close->a == DKEY_WHILE ){ /* Too many statements between do-while: */
+				DaoParser_Error3( self, DAO_INVALID_SCOPE_ENDING, self->curToken );
+				return 0;
+			}
+		}
 		if( DaoParser_DelScope( self, NULL ) ==0 ) return 0;
 	}
 	return 1;
@@ -3523,12 +3529,14 @@ static int DaoParser_CheckDefault( DaoParser *self, DaoType *type, int estart )
 }
 static void DaoParser_CheckStatementSeparation( DaoParser *self, int check, int end )
 {
+	DaoInode *close = (DaoInode*) DArray_Back( self->scopeClosings );
 	DaoToken **tokens = self->tokens->items.pToken;
 	if( check >= end ) return;
 	self->curLine = tokens[check]->line;
 	if( tokens[check]->line != tokens[check+1]->line ) return;
 	switch( tokens[check+1]->name ){
 	case DTOK_RCB : case DTOK_SEMCO : case DKEY_ELSE : break;
+	case DKEY_WHILE : if( close && close->a == DKEY_WHILE ) break; /* else fall through; */
 	default : DaoParser_Warn( self, DAO_WARN_STATEMENT_SEPERATION, NULL );
 	}
 }
@@ -3577,8 +3585,8 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 		tki = tokens[start]->name;
 		topll = (self->levelBase + self->lexLevel) ==0;
 #if 0
-		printf("At tokPos : %i, %i, %p\n", start,ptok->line, ptok->string );
-		printf("At tokPos : %i, %i, %s\n", tki,ptok->line, ptok->string->mbs );
+		printf("At tokPos : %i, %i, %p\n", start, ptok->line, ptok->string );
+		printf("At tokPos : %i, %i, %s\n", tki, ptok->line, ptok->string.mbs );
 #endif
 		if( self->warnings->size ) DaoParser_PrintWarnings( self );
 		if( self->errors->size ) return 0;
@@ -3793,7 +3801,7 @@ DecoratorError:
 			if( closing && closing->c == DVM_DO ){
 				if( DaoParser_CompleteScope( self, start-1 ) == 0 ) return 0;
 				inode = self->vmcLast;
-				if( ( rb = DaoParser_ParseCondition( self, start+1 ) ) <0 ) return 0;
+				if( (rb = DaoParser_ParseCondition( self, start+1, 0, NULL )) <0 ) return 0;
 				opening->jumpTrue = inode->next; /* first instruction in the condition */
 				self->vmcLast->jumpFalse = closing; /* jump for failed testing */
 				inode = DaoParser_AddCode( self, DVM_GOTO, 0, 0, 0, start, 0, 0 );
@@ -3804,7 +3812,7 @@ DecoratorError:
 				/* see comments in case DKEY_IF: */
 				closing = DaoParser_AddCode( self, DVM_LABEL, 0, 1, 0, start, 0,0 );
 				opening = DaoParser_AddScope( self, DVM_LOOP, closing );
-				if( ( rb = DaoParser_ParseCondition( self, start+1 ) ) <0 ) return 0;
+				if( (rb = DaoParser_ParseCondition( self, start+1, 1, opening )) <0 ) return 0;
 				opening->jumpTrue = self->vmcLast;
 				start = 1 + rb + DaoParser_AddScope2( self, rb+1 );
 			}
@@ -3826,7 +3834,7 @@ DecoratorError:
 
 			closing = DaoParser_AddCode( self, DVM_LABEL, DKEY_ELSE, 0, 0, start, 0,0 );
 			opening = DaoParser_AddScope( self, DVM_BRANCH, closing );
-			if( ( rb = DaoParser_ParseCondition( self, start+1 ) ) <0 ) return 0;
+			if( (rb = DaoParser_ParseCondition( self, start+1, 1, NULL )) <0 ) return 0;
 			opening->jumpTrue = self->vmcLast;
 			start = 1 + rb + DaoParser_AddScope2( self, rb+1 );
 			continue;
@@ -3845,7 +3853,7 @@ DecoratorError:
 			opening->jumpTrue = inode; /* reset */
 
 			if( tokens[start+1]->name == DKEY_IF ){
-				if( ( rb = DaoParser_ParseCondition( self, start+2 ) ) <0 ) return 0;
+				if( (rb = DaoParser_ParseCondition( self, start+2, 1, NULL )) <0 ) return 0;
 				opening->jumpTrue = self->vmcLast; /* update the condition test */
 				start = 1 + rb + DaoParser_AddScope2( self, rb+1 );
 			}else{
@@ -4208,8 +4216,6 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 			}
 			self->curToken += 1;
 		}
-		start = self->curToken;
-		if( DaoParser_CompleteScope( self, start ) == 0 ) return -1;
 		return self->curToken;
 	}
 	start = end = k;
@@ -5219,7 +5225,7 @@ AddScope:
 	return 1 + rb + DaoParser_AddScope2( self, rb+1 );
 }
 /* Parse a condition test expression: */
-int DaoParser_ParseCondition( DaoParser *self, int start )
+int DaoParser_ParseCondition( DaoParser *self, int start, int dec, DaoInode *opening )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
 	int from = self->vmcCount;
@@ -5236,7 +5242,7 @@ int DaoParser_ParseCondition( DaoParser *self, int start )
 
 	start = lb + 1;
 	semico = DaoParser_FindOpenToken( self, DTOK_SEMCO, start, rb, 0 );
-	if( semico >= 0 ){
+	if( dec && semico >= 0 ){
 		if( tokens[start]->name == DKEY_VAR ){
 			store = DAO_DECL_LOCAL;
 			start += 1;
@@ -5248,6 +5254,7 @@ int DaoParser_ParseCondition( DaoParser *self, int start )
 			return -1;
 		}
 		start = semico + 1;
+		if( opening ) DaoParser_AppendCode( self, opening ); /* move to back */
 	}
 
 	reg = DaoParser_MakeArithTree( self, start, rb-1, & cst );
@@ -5404,7 +5411,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		}
 		varReg = LOOKUP_BIND_LC( MAP_Find( self->allConsts, str )->value.pInt );
 		*cst = varReg;
-	}else if( tki >= DTOK_DIGITS_HEX && tki <= DTOK_NUMBER_SCI ){
+	}else if( tki >= DTOK_DIGITS_DEC && tki <= DTOK_NUMBER_SCI ){
 		if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
 			value = DaoParseNumber( self, tokens[start], & buffer );
 			if( value == NULL ) return -1;
