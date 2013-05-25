@@ -6716,7 +6716,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 	DaoEnode result = { -1, 0, 1, NULL, NULL, NULL, NULL };
 	DaoEnode RHS = { -1, 0, 1, NULL, NULL, NULL, NULL };
 	DaoToken **tokens = self->tokens->items.pToken;
-	DaoInode *test, *jump, *inode = NULL;
+	DaoInode *move, *test, *jump, *inode = NULL;
 	int oper, code, postart = self->curToken-1, posend;
 
 	if( LHS.first ) postart = LHS.first->first;
@@ -6841,8 +6841,14 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 				assert( LHS.update != NULL || RHS.update != NULL );
 				if( LHS.last == NULL ) LHS.last = RHS.prev;
 				if( RHS.first == NULL ) RHS.first = self->vmcLast->prev;
-				test = DaoParser_InsertCode( self, LHS.last, DVM_TEST, LHS.reg,0,0,postart );
-				test->jumpFalse = result.last;
+				result.reg = DaoParser_PushRegister( self );
+				move = DaoParser_InsertCode( self, LHS.last, DVM_MOVE, LHS.reg, 0, result.reg, postart );
+				test = DaoParser_InsertCode( self, move, DVM_TEST, LHS.reg,0,0,postart );
+				result.last->code = DVM_MOVE;
+				result.last->a = result.last->b;
+				result.last->b = 0;
+				result.last->c = result.reg;
+				test->jumpFalse = DaoParser_AddCode( self, DVM_NOP, 0, 0, 0, postart,0,0 );
 				if( oper == DAO_OPER_OR ){
 					jump = DaoParser_InsertCode( self, test, DVM_GOTO, 0,0,0, postart );
 					jump->jumpTrue = self->vmcLast;

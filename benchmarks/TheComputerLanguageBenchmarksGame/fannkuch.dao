@@ -9,10 +9,10 @@
 routine fannkuch( n : int ) => int
 {
 	check = 0;
-	perm = [ n ~ 0 ~ 1 ];
-	perm1 = [ n ~ 0 ~ 1 ];
-	count = [ n ~ 0 ~ 1 ];
-	maxPerm = [ n ~ 0 ~ 1 ];
+	perm = [ 0 : 1 : n ];
+	perm1 = [ 0 : 1 : n ];
+	count = [ 0 : 1 : n ];
+	maxPerm = [ 0 : 1 : n ];
 	maxFlipsCount = 0;
 	m = n - 1;
 	r = n;

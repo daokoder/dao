@@ -435,11 +435,11 @@ MacroSeperator ::= '\(' | '\)' | '\{' | '\}' | '\[' | '\]'
 ################################################################################
 ################################################################################
 @[name]
-dao.grammar.expression
+dao.grammar.constexpr
 @[name]
 
 @[title]
-Expressions
+Constant Expressions
 @[title]
 
 @[text]
@@ -447,9 +447,6 @@ Expressions
 Drafting in progress.
 
 
-@[section]
-Constant Expression
-@[section]
 
 
 @[subsection]
@@ -537,11 +534,11 @@ Constant Map
 ConstMapKeyValue  ::= ConstExpression => ConstExpression
 ConstHashKeyValue ::= ConstExpression ~> ConstExpression
 
-ConstEmptyMap  ::= '{' [ '=>' ] '}'
-ConstEmptyHash ::= '{' '~>' '}'
+ConstEmptyMap  ::= '{' '=>' '}' | 'map' '{' [ '=>' ] '}'
+ConstEmptyHash ::= '{' '~>' '}' | 'map' '{'   '~>'   '}'
 
-ConstMapEnum  ::= [ 'map' ] '{' ( ConstMapKeyValue  ',' ) + '}'
-ConstHashEnum ::= [ 'map' ] '{' ( ConstHashKeyValue ',' ) + '}'
+ConstMapEnum  ::= [ 'map' ] '{' ConstMapKeyValue  { ',' ConstMapKeyValue  } [ ',' ] '}'
+ConstHashEnum ::= [ 'map' ] '{' ConstHashKeyValue { ',' ConstHashKeyValue } [ ',' ] '}'
 
 ConstMap ::= ConstEmptyMap | ConstEmptyHash | ConstMapEnum | ConstHashEnum
 @[code(syntax)]
@@ -554,10 +551,11 @@ Constant Tuple
 @[code(syntax)]
 ConstArgumentItem ::= [ Identifier '=>' ] ConstExpression
 
-ConstTupleEnum  ::=         '(' ( ConstArgumentItem ',' ) + ')'
-ConstTupleEnum2 ::= 'tuple' '{' { ConstArgumentItem ',' }   '}'
+ConstTupleEnum1 ::=         '('   ConstArgumentItem ',' ')'
+ConstTupleEnum2 ::=         '('   ConstArgumentItem { ',' ConstArgumentItem } [ ',' ]   ')'
+ConstTupleEnum3 ::= 'tuple' '{' [ ConstArgumentItem { ',' ConstArgumentItem } [ ',' ] ] '}'
 
-ConstTuple ::= ConstTupleEnum | ConstTupleEnum2
+ConstTuple ::= ConstTupleEnum1 | ConstTupleEnum2 | ConstTupleEnum3
 @[code(syntax)]
 
 
@@ -573,9 +571,29 @@ ConstExpression ::= ConstPrimaryExpression
 @[code(syntax)]
 
 
-@[section]
-Type Expression
-@[section]
+
+@[text]
+
+
+
+################################################################################
+################################################################################
+#### Dao Grammar Specification
+################################################################################
+################################################################################
+@[name]
+dao.grammar.typename
+@[name]
+
+@[title]
+Type Name
+@[title]
+
+@[text]
+
+Drafting in progress.
+
+
 
 
 @[subsection]
@@ -583,8 +601,8 @@ Special Types
 @[subsection]
 
 @[code(syntax)]
-NoneType       ::= 'none'
-AnyType        ::= 'any'
+NoneType       ::= [ 'dao' '::' ] 'none'
+AnyType        ::= [ 'dao' '::' ] 'any'
 UndefinedType  ::= '?'
 VariantHolder  ::= TypeHolder '<' VariantType '>'
 SpecialType    ::= NoneType | AnyType | UndefinedType | TypeHolder | VariantHolder
@@ -597,7 +615,7 @@ Primitive Types
 @[subsection]
 
 @[code(syntax)]
-PrimitiveType ::= 'none' | 'int' | 'float' | 'double' | 'complex' | 'long' | 'string'
+PrimitiveType ::= 'int' | 'float' | 'double' | 'complex' | 'long' | 'string'
 @[code(syntax)]
 
 
@@ -656,25 +674,73 @@ TupleType ::= 'tuple' [ '<' TupleItemType { ',' TupleItemType } '>' ]
 
 
 @[subsection]
+Named Type
+@[subsection]
+
+@[code(syntax)]
+NamedType ::= { Identifier '::' } Identifier
+@[code(syntax)]
+Where the first @[green]Identifier@[green] is the name for 
+a namespace, interface, class, cdata type or type etc.;
+and the second @[green]Identifier@[green] is the name for
+a interface, class, cdata type or type etc.
+
+
+@[subsection]
 Cdata Type
 @[subsection]
 
 @[code(syntax)]
-TemplateParamList1 ::= TypeHolder { ',' TypeHolder } { ',' TypeHolder '=' Type }
-TemplateParamList2 ::= TypeHolder '=' Type { ',' TypeHolder '=' Type }
+TemplParamList1 ::= TypeHolder { ',' TypeHolder } { ',' TypeHolder '=' Type }
+TemplParamList2 ::= TypeHolder '=' Type { ',' TypeHolder '=' Type }
+TemplArgument   ::= Type | ConstExpression { ',' Type | ConstExpression }
 
-CdataType ::= Identifier [ '<' ( TemplateParamList1 | TemplateParamList2 ) '>' ]
+CdataType ::= NamedType [ '<' ( TemplParamList1 | TemplParamList2 | TemplArgument ) '>' ]
 @[code(syntax)]
 
 
 
 
+@[subsection]
+Type
+@[subsection]
+
+@[code(syntax)]
+Type ::= SpecialType | NamedType | CdataType
+       | [ 'dao' '::' ] PrimitiveType
+       | [ 'dao' '::' ] EnumSymbolType
+       | [ 'dao' '::' ] ArrayType
+       | [ 'dao' '::' ] ListType
+       | [ 'dao' '::' ] MapType
+       | [ 'dao' '::' ] TupleType
+@[code(syntax)]
 
 
 
-@[section]
-Expression
-@[section]
+
+@[text]
+
+
+
+################################################################################
+################################################################################
+#### Dao Grammar Specification
+################################################################################
+################################################################################
+@[name]
+dao.grammar.expression
+@[name]
+
+@[title]
+Expressions
+@[title]
+
+@[text]
+
+Drafting in progress.
+
+
+
 
 
 @[subsection]
@@ -759,8 +825,7 @@ List
 @[subsection]
 
 @[code(syntax)]
-ListEnum ::= [ 'list' ] '{' [ ExpressionList [ ',' ] ] '}'
-
+ListEnum      ::= [ 'list' ] '{' [ ExpressionList [ ',' ] ] '}'
 ArithProgList ::= [ 'list' ] '{' Expression ':' [ Expression ':' ] Expression '}'
 
 List ::= ListEnum | ArithProgList
@@ -775,10 +840,10 @@ Map
 
 @[code(syntax)]
 MapKeyValue  ::= Expression => Expression
-HashKeyValue ::= Expression : Expression
+HashKeyValue ::= Expression ~> Expression
 
-MapEnum  ::= [ 'map' ] '{' ( MapKeyValue  [ ',' ] ) + '}'
-HashEnum ::= [ 'map' ] '{' ( HashKeyValue [ ',' ] ) + '}'
+MapEnum  ::= [ 'map' ] '{' MapKeyValue  { ',' MapKeyValue  } [ ',' ] '}'
+HashEnum ::= [ 'map' ] '{' HashKeyValue { ',' HashKeyValue } [ ',' ] '}'
 
 Map ::= ConstEmptyMap | ConstEmptyHash | MapEnum | HashEnum
 @[code(syntax)]
@@ -789,10 +854,11 @@ Tuple
 @[subsection]
 
 @[code(syntax)]
-TupleEnum  ::=         '(' ( ArgumentItem ',' ) + ')'
-TupleEnum2 ::= 'tuple' '{' { ArgumentItem ',' }   '}'
+TupleEnum1 ::=         '('   ArgumentItem ',' ')'
+TupleEnum2 ::=         '('   ArgumentItem { ',' ArgumentItem } [ ',' ]   ')'
+TupleEnum3 ::= 'tuple' '{' [ ArgumentItem { ',' ArgumentItem } [ ',' ] ] '}'
 
-Tuple ::= TupleEnum | TupleEnum2
+Tuple ::= TupleEnum1 | TupleEnum2 | TupleEnum3
 @[code(syntax)]
 
 
@@ -805,6 +871,7 @@ Expression
 Expression ::= PrimaryExpression
              | LeftUnaryOperator PrimaryExpression
              | PrimaryExpression BinaryOperator PrimaryExpression
+             | (Type) Expression
 @[code(syntax)]
 
 
@@ -830,33 +897,65 @@ Statements
 
 Drafting in progress.
 
+
+@[subsection]
+Declaration Statements
+@[subsection]
+
+@[code(syntax)]
+ConstSpecifier ::= 'const' | 'global' 'const' | 'const' 'global'
+VarSpecifier   ::= 'var' | 'global' | 'static'
+
+ConstDeclItem ::= Identifier [ ( '=' | ':=' | ':' Type '=' ) ConstExpression ]
+VarDeclItem   ::= Identifier [ ( '=' | ':=' | ':' Type '=' ) Expression ]
+
+ConstDeclaration    ::= ConstSpecifier ConstDeclItem { ',' ConstDeclItem }
+VarDeclaration      ::= VarSpecifier   VarDeclItem   { ',' VarDeclItem }
+LocalVarDeclaration ::= [ 'var' ] VarDeclItem   { ',' VarDeclItem }
+
+DeclarationStmt ::= ConstDeclaration | VarDeclaration
+@[code(syntax)]
+
+
+
+
+@[subsection]
+Basic Statement
+@[subsection]
+
+@[code(syntax)]
+BasicStatement ::= DeclarationStmt | Expression | 'break' | 'skip' | 'continue'
+@[code(syntax)]
+
+
+
+
 @[subsection]
 If-else Statement
 @[subsection]
+
 @[code(syntax)]
 ControlBlock ::= Statement | '{' [ StatementBlock ] '}'
 
-IfElseStmt ::= 'if' '(' Expression ')' ControlBlock
-               { 'else' 'if' '(' Expression  ')' ControlBlock }
+IfElseStmt ::= 'if' '(' [ LocalVarDeclaration ';' ] Expression ')' ControlBlock
+               { 'else' 'if' '(' [ LocalVarDeclaration ';' ] Expression  ')' ControlBlock }
 			   [ 'else' ControlBlock ]
 @[code(syntax)]
 
 
 @[subsection]
-For Looping Statement
+For Loop Statement
 @[subsection]
+
 @[code(syntax)]
-Id       ::= Identifier
-Expr     ::= Expression
-ExprList ::= ExpressionList
+CFor  ::= 'for' '(' [ LocalVarDeclaration ] ';' [ Expression ] ';' [ ExpressionList ] ')'
+              ControlBlock
 
-VarList ::= [ 'var' ] Id { ',' Id } '=' Expr { ',' Id { ',' Id } '=' Expr }
+APFor ::= 'for' '(' [ 'var' ] Identifier '=' Expression ':' [ Expression ':' ] Expression ')'
+              ControlBlock
 
-CFor  ::= 'for' '(' [ VarList ] ';' [ Expr ] ';' [ ExprList ] ')' ControlBlock
-
-APFor ::= 'for' '(' [ 'var' ] Id '=' Expr ':' [ Expr ':' ] Expr ')' ControlBlock
-
-ForIn ::= 'for' '(' [ 'var' ] Id 'in' Expr { ';' Id 'in' Expr } ')' ControlBlock
+ForIn ::= 'for' '(' [ 'var' ] Identifier 'in' Expression {';' Identifier 'in' Expression} ')'
+              ControlBlock
 
 ForStmt ::= APFor | CFor | ForIn
 @[code(syntax)]
@@ -864,11 +963,11 @@ ForStmt ::= APFor | CFor | ForIn
 
 
 @[subsection]
-While Looping Statement
-Definition
+While Loop Statement
 @[subsection]
+
 @[code(syntax)]
-WhileStmt ::= 'while' '(' Expr ')' ControlBlock
+WhileStmt ::= 'while' '(' [ LocalVarDeclaration ';' ] Expr ')' ControlBlock
 @[code(syntax)]
 
 
@@ -876,6 +975,7 @@ WhileStmt ::= 'while' '(' Expr ')' ControlBlock
 @[subsection]
 Do-while Looping Statement
 @[subsection]
+
 @[code(syntax)]
 DoWhileStmt ::= 'do' ControlBlock 'while' '(' Expr ')'
 @[code(syntax)]
@@ -886,9 +986,10 @@ DoWhileStmt ::= 'do' ControlBlock 'while' '(' Expr ')'
 @[subsection]
 Switch-case Statement
 @[subsection]
+
 @[code(syntax)]
 SwitchCaseStmt ::= 'switch' '(' Expression ')' '{'
-                   { 'case' Expression [ '...' Expression ] ':' ControlBlock }
+                   { 'case' Expression [ ( ',' | '...' ) Expression ] ':' ControlBlock }
 				   [ 'default' ':' ControlBlock ]
                    '}'
 @[code(syntax)]
