@@ -542,6 +542,21 @@ static void DString_AppendGap( DString *self )
 		if( size && iswspace( wcs[size-1] ) == 0 ) DString_AppendWChar( self, L' ' );
 	}
 }
+static int DString_CommonPrefixLength( DString *self, DString *other )
+{
+	daoint i = 0;
+	if( other->mbs ){
+		if( self->mbs == NULL ) DString_ToMBS( self );
+	}else if( self->wcs == NULL ){
+		DString_ToWCS( self );
+	}
+	if( self->mbs ){
+		while( i < self->size && i < other->size && self->mbs[i] == other->mbs[i] ) i += 1;
+	}else{
+		while( i < self->size && i < other->size && self->wcs[i] == other->wcs[i] ) i += 1;
+	}
+	return i;
+}
 
 
 
@@ -717,10 +732,12 @@ void DaoMakeUnit_MakeLinkingPathsEx( DaoMakeUnit *self, DString *lflags, DString
 	for(i=0; i<self->linkingPaths->size; ++i){
 		DString_Assign( path, self->linkingPaths->items.pString[i] );
 		DaoMakeProject_MakeBinaryPath( self->project, path );
+		if( refpath && DString_CommonPrefixLength( refpath, path ) > 1 ){
+			DaoMakeProject_MakeRelativePath( refpath, path );
+		}
 		DString_AppendGap( lflags );
 		DString_Append( lflags, rpath );
 		DString_Append( lflags, path );
-		if( refpath ) DaoMakeProject_MakeRelativePath( refpath, path );
 		DString_AppendGap( lflags );
 		DString_AppendMBS( lflags, "-L" );
 		DString_Append( lflags, path );
