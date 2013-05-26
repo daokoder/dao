@@ -2462,7 +2462,7 @@ static int DaoParser_Preprocess( DaoParser *self )
 #endif
 		}else if( tki == DKEY_LOAD && tki2 != DTOK_LB ){
 			/* only for top level "load", for macros in the module  */
-			end = DaoParser_ParseLoadStatement( self, start, self->tokens->size );
+			end = DaoParser_ParseLoadStatement( self, start, self->tokens->size-1 );
 			if( end < 0 ) return 0;
 			if( cons ) DaoParser_MakeCodes( self, start, end, ns->inputs );
 			DArray_Erase( self->tokens, start, end-start );
@@ -4905,7 +4905,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 
 	DString_Clear( self->mbs );
 
-	if( i >= end ) goto ErrorLoad;
+	if( i > end ) goto ErrorLoad;
 	tki = tokens[i]->name;
 	if( tki == DTOK_MBS || tki == DTOK_WCS ){
 		DString_SubString( & tokens[i]->string, self->mbs, 1, tokens[i]->string.size-2 );
@@ -4914,17 +4914,17 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		code = DAO_CTW_LOAD_INVALID;
 		goto ErrorLoad;
 	}else{
-		while( i < end && tokens[i]->type == DTOK_IDENTIFIER ){
+		while( i <= end && tokens[i]->type == DTOK_IDENTIFIER ){
 			DString_Append( self->mbs, & tokens[i]->string );
 			i ++;
-			if( i < end && (tokens[i]->type == DTOK_COLON2 || tokens[i]->type == DTOK_DOT) ){
+			if( i <= end && (tokens[i]->type == DTOK_COLON2 || tokens[i]->type == DTOK_DOT) ){
 				i ++;
 				DString_AppendMBS( self->mbs, "/" );
 			}else break;
 		}
 	}
-	if( i < end && tokens[i]->name == DKEY_AS ){
-		if( (i+1) >= end || tokens[i+1]->type != DTOK_IDENTIFIER ){
+	if( i <= end && tokens[i]->name == DKEY_AS ){
+		if( (i+1) > end || tokens[i+1]->type != DTOK_IDENTIFIER ){
 			code = DAO_CTW_LOAD_INVA_MOD_NAME;
 			goto ErrorLoad;
 		}

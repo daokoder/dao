@@ -732,12 +732,10 @@ void DaoMakeUnit_MakeLinkingPathsEx( DaoMakeUnit *self, DString *lflags, DString
 	for(i=0; i<self->linkingPaths->size; ++i){
 		DString_Assign( path, self->linkingPaths->items.pString[i] );
 		DaoMakeProject_MakeBinaryPath( self->project, path );
-		if( refpath && DString_CommonPrefixLength( refpath, path ) > 1 ){
-			DaoMakeProject_MakeRelativePath( refpath, path );
-		}
 		DString_AppendGap( lflags );
 		DString_Append( lflags, rpath );
 		DString_Append( lflags, path );
+		if( refpath ) DaoMakeProject_MakeRelativePath( refpath, path );
 		DString_AppendGap( lflags );
 		DString_AppendMBS( lflags, "-L" );
 		DString_Append( lflags, path );
