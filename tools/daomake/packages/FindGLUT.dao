@@ -10,6 +10,7 @@ if( DaoMake::IsUnix() ){
 		header_path = DaoMake::FindFile( "glut.h", header_hints )
 	}else{
 		header_path = DaoMake::FindFile( "GLUT/glut.h", header_hints )
+		if( header_path == "" ) header_path = DaoMake::FindFile( "GL/glut.h", header_hints )
 	}
 	if( header_path == "" ) return;
 
