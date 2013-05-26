@@ -20,7 +20,7 @@ if( DaoMake::IsUnix() ){
 	if( DaoMake::IsMacOSX() && header_path.find( "Frameworks" ) >= 0 ){
 		shlibs = "-framework GLUT"
 	}else{
-		shlibs = "-lGL -lGLU"
+		shlibs = "-lglut"
 	}
 	opengl.ExportLibrary( "GLUT", cflags, "", shlibs )
 }
