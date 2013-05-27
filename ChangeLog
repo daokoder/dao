@@ -2,17 +2,22 @@
 ChangeLog for the Dao language and virtual machine:
 
 ================================
-release dao-1.2, 2012-XX-XX
+release dao-2.0, 2013-XX-XX
 ================================
 ADDED:
+-- Bytecode format and single file deployment;
 -- DaoJIT, LLVM-based JIT compiler;
 -- DaoCXX, Clang-based module to support embedding C/C++ codes;
 -- ClangDao, Clang-based automatic binding tool;
 -- Code section methods (similar to Ruby code blocks);
 -- Parallelized code section methods in mt;
 -- Asynchronous class and future value;
+-- Communication channel for tasklets;
 -- Abstract interface type: interface Name{ methods };
 -- Meta fields, access by object->field;
+-- Deferred code block;
+-- Defer-recover exception handling;
+-- Framed code block;
 -- Typed function decorators;
 -- Runtime class creation;
 -- Enum/flag/symbol type;
@@ -45,6 +50,7 @@ CHANGED:
 -- Replaced builtin functional methods with various builtin code section methods;
 REMOVED:
 -- Posix like multi-threading methods;
+-- Try-catch style exception handling;
 -- Parameter passing by reference for basic data types;
 FIX:
 -- Many bugs;

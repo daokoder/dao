@@ -1868,7 +1868,7 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 	fout = fopen( fname->mbs, "w+" );
 	if( fout == NULL ) fout = stdout;
 	fprintf( fout, "<!DOCTYPE html><html><head>\n<title>Dao Help: %s</title>\n", title );
-	fprintf( fout, "<meta charset=\"utf-8\"/></head><body>%s", stream->output->mbs );
+	fprintf( fout, "<meta charset=\"utf-8\"/>\n</head>\n<body>%s", stream->output->mbs );
 	if( fout != stdout ) fclose( fout );
 
 	for(i=0; i<self->nested2->size; i++){
@@ -1882,7 +1882,7 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 	}
 	fout = fopen( fname->mbs, "a+" );
 	if( fout == NULL ) fout = stdout;
-	fprintf( fout, "\n<pre style=\"font-weight:500\">\n%s</pre></body></html>", stream->output->mbs );
+	fprintf( fout, "\n<pre style=\"font-weight:500\">\n%s</pre>\n</body>\n</html>", stream->output->mbs );
 	if( fout != stdout ) fclose( fout );
 }
 static void HELP_Export( DaoProcess *proc, DaoValue *p[], int N )

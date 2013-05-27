@@ -314,11 +314,17 @@ DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent )
 	}
 	return child;
 }
-DaoCdata* DaoObject_CastCdata( DaoObject *self, DaoType *type )
+DaoCstruct* DaoObject_CastCstruct( DaoObject *self, DaoType *type )
 {
 	DaoValue *p = NULL;
 	if( type ) p = DaoObject_CastToBase( self, type );
-	if( p && (p->type == DAO_CDATA || p->type == DAO_CSTRUCT) ) return (DaoCdata*) p;
+	if( p && (p->type == DAO_CDATA || p->type == DAO_CSTRUCT) ) return (DaoCstruct*) p;
+	return NULL;
+}
+DaoCdata* DaoObject_CastCdata( DaoObject *self, DaoType *type )
+{
+	DaoCstruct *p = DaoObject_CastCstruct( self, type );
+	if( p && p->type == DAO_CDATA ) return (DaoCdata*) p;
 	return NULL;
 }
 

@@ -28,6 +28,7 @@ Syntax definition: @[green]A ::= B@[green], @[green]A@[green] is defined
 as @[green]B@[green] , which can be a descriptive sentence or a combination 
 of the following definition items,
 @[list]
+== Token: @[green]'token'@[green]
 == Descriptive: @[green]"description"@[green]
 == Alternative: @[green]S | Y@[green]
 == Optional: @[green][ S ]@[green]
@@ -674,28 +675,42 @@ TupleType ::= 'tuple' [ '<' TupleItemType { ',' TupleItemType } '>' ]
 
 
 @[subsection]
-Named Type
+Routine Type
 @[subsection]
 
 @[code(syntax)]
-NamedType ::= { Identifier '::' } Identifier
+ParamTypeItem1 ::= 'Identifier' [ ':' Type ]
+ParamTypeItem2 ::= 'Identifier' [ '=' Type ]
+ParamTypeList1 ::= ParamTypeItem1 { ',' ParamTypeItem1 } { ',' ParamTypeItem2 } [ ',' '...' ]
+ParamTypeList2 ::= ParamTypeItem2 { ',' ParamTypeItem2 } [ ',' '...' ]
+ParamTypeList  ::= ParamTypeList1 | ParamTypeList2 | '...'
+
+ParamTypeItem3 ::= 'Identifier' ':' Type
+ParamTypeList3 ::= ParamTypeItem3 { ',' ParamTypeItem3 } 
+CodeBlockReturn ::= '[' ParamTypeList3 ']'
+
+RoutineType ::= 'routine' [ '<' [ ParamTypeList ] [ '=>' Type ] '>' [ CodeBlockReturn ] ]
 @[code(syntax)]
-Where the first @[green]Identifier@[green] is the name for 
-a namespace, interface, class, cdata type or type etc.;
-and the second @[green]Identifier@[green] is the name for
-a interface, class, cdata type or type etc.
 
 
 @[subsection]
-Cdata Type
+User Type
 @[subsection]
 
 @[code(syntax)]
+# For unspecialized C data types:
 TemplParamList1 ::= TypeHolder { ',' TypeHolder } { ',' TypeHolder '=' Type }
 TemplParamList2 ::= TypeHolder '=' Type { ',' TypeHolder '=' Type }
-TemplArgument   ::= Type | ConstExpression { ',' Type | ConstExpression }
 
-CdataType ::= NamedType [ '<' ( TemplParamList1 | TemplParamList2 | TemplArgument ) '>' ]
+
+# For specialized C data types:
+TemplArgList   ::= ( Type | ConstExpression) { ',' Type | ConstExpression }
+
+TemplType ::= Identifier '<' ( TemplParamList1 | TemplParamList2 | TemplType ) '>'
+
+UserType ::= Identifier
+           | UserType '::' Identifier
+           | UserType '::' TemplType
 @[code(syntax)]
 
 
@@ -706,13 +721,15 @@ Type
 @[subsection]
 
 @[code(syntax)]
-Type ::= SpecialType | NamedType | CdataType
+Type ::= SpecialType 
        | [ 'dao' '::' ] PrimitiveType
        | [ 'dao' '::' ] EnumSymbolType
        | [ 'dao' '::' ] ArrayType
        | [ 'dao' '::' ] ListType
        | [ 'dao' '::' ] MapType
        | [ 'dao' '::' ] TupleType
+       | [ 'dao' '::' ] RoutineType
+       | { Identifier '::' } UserType
 @[code(syntax)]
 
 
@@ -864,6 +881,43 @@ Tuple ::= TupleEnum1 | TupleEnum2 | TupleEnum3
 
 
 @[subsection]
+Anonymous Routine
+@[subsection]
+
+@[code(syntax)]
+AnParamItem1 ::= Identifier [ ':' Type ]
+AnParamItem2 ::= Identifier [ ':' Type ] '=' Expression
+
+AnParamList1 ::= AnParamItem1 { ',' AnParamItem1 }
+AnParamList2 ::= AnParamList1 { ',' AnParamItem2 } [ ',' '...' ]
+AnParamList3 ::= AnParamItem2 { ',' AnParamItem2 } [ ',' '...' ]
+AnParamList  ::= ( AnParamList2 | AnParamList3 | '...' ) [ 'as' Identifier ]
+
+AnonymousRoutine ::= ( 'routine' | '@' ) [ '(' [ AnParamList ] ')' ] '{' StatementBlock '}'
+@[code(syntax)]
+
+
+
+
+@[subsection]
+Anonymous Class
+@[subsection]
+
+@[code(syntax)]
+VarDeclItem   ::= Identifier [ ( '=' | ':=' | ':' Type '=' ) Expression ]
+ProtoClassData ::= [ 'const' | 'var' | 'static' ] VarDeclItem { ',' VarDeclItem }
+
+ProtoClassBody ::= { ProtoClassData | Routine }
+
+AnClassParamList ::= Expression [ ',' Expression [ ',' Expression [ ',' Expression ] ] ]
+
+AnonymousClass ::= 'class' '(' [ AnClassParamList ] ')' '{' [ ProtoClassBody ] '}'
+@[code(syntax)]
+
+
+
+
+@[subsection]
 Expression
 @[subsection]
 
@@ -872,6 +926,8 @@ Expression ::= PrimaryExpression
              | LeftUnaryOperator PrimaryExpression
              | PrimaryExpression BinaryOperator PrimaryExpression
              | (Type) Expression
+             | AnonymousRoutine
+             | AnonymousClass
 @[code(syntax)]
 
 
@@ -911,7 +967,8 @@ VarDeclItem   ::= Identifier [ ( '=' | ':=' | ':' Type '=' ) Expression ]
 
 ConstDeclaration    ::= ConstSpecifier ConstDeclItem { ',' ConstDeclItem }
 VarDeclaration      ::= VarSpecifier   VarDeclItem   { ',' VarDeclItem }
-LocalVarDeclaration ::= [ 'var' ] VarDeclItem   { ',' VarDeclItem }
+
+LocalVarDeclaration ::= [ 'var' ] VarDeclItem { ',' VarDeclItem }
 
 DeclarationStmt ::= ConstDeclaration | VarDeclaration
 @[code(syntax)]
@@ -967,7 +1024,7 @@ While Loop Statement
 @[subsection]
 
 @[code(syntax)]
-WhileStmt ::= 'while' '(' [ LocalVarDeclaration ';' ] Expr ')' ControlBlock
+WhileStmt ::= 'while' '(' [ LocalVarDeclaration ';' ] Expression ')' ControlBlock
 @[code(syntax)]
 
 
@@ -977,7 +1034,7 @@ Do-while Looping Statement
 @[subsection]
 
 @[code(syntax)]
-DoWhileStmt ::= 'do' ControlBlock 'while' '(' Expr ')'
+DoWhileStmt ::= 'do' ControlBlock 'while' '(' Expression ')'
 @[code(syntax)]
 
 
@@ -994,7 +1051,119 @@ SwitchCaseStmt ::= 'switch' '(' Expression ')' '{'
                    '}'
 @[code(syntax)]
 
+
+
+
+@[subsection]
+Defer Statement
+@[subsection]
+
+@[code(syntax)]
+DeferStmt ::= 'defer' '{' StatementBlock '}'
+@[code(syntax)]
+
+
+
+
+@[subsection]
+Framed Block Statement
+@[subsection]
+
+@[code(syntax)]
+FramedBlock ::= '@@' '{' StatementBlock '}'
+@[code(syntax)]
+
+
+
+
+
+@[subsection]
+Type Aliasing Statement
+@[subsection]
+
+@[code(syntax)]
+TypeAlias ::= 'type' Identifier '=' Type
+@[code(syntax)]
+
+
+
+
+@[subsection]
+Use Enum Statement
+@[subsection]
+
+@[code(syntax)]
+UseEnum ::= 'use' 'enum' Identifier
+@[code(syntax)]
+Expose the symbols of the enum symbol type to the current namespace.
+
+
+
+
+@[subsection]
+Use Syntax Statement
+@[subsection]
+
+@[code(syntax)]
+UseSyntax ::= 'use' 'syntax' Identifier
+@[code(syntax)]
+Use the syntax in the current file.
+
+
+
+
+
+@[subsection]
+Use Namespace Statement
+@[subsection]
+
+@[code(syntax)]
+UseNamespace ::= 'use' Identifier
+@[code(syntax)]
+Import the constants and globals from another namespace to the current.
+
+
+
+
+@[subsection]
+Load Statement
+@[subsection]
+
+@[code(syntax)]
+LoadStmt ::= 'load' ( String | { Identifier ('.' | '::') } Identifier ) [ 'as' Identifier ]
+@[code(syntax)]
+
+
+
+
+
+
+@[subsection]
+Load Statement
+@[subsection]
+
+@[code(syntax)]
+Statement ::= DeclarationStmt
+            | BasicStatement
+            | IfElseStmt
+            | ForStmt
+            | WhileStmt
+            | DoWhileStmt
+            | SwitchCaseStmt
+            | DeferStmt
+            | FramedBlock
+            | TypeAlias
+            | UseEnum 
+            | UseSyntax
+            | UseNamespace
+            | LoadStmt
+@[code(syntax)]
+
+
 @[text]
+
+
+
 
 
 
@@ -1015,24 +1184,28 @@ Routines (Functions)
 @[text]
 
 @[code(syntax)]
-Id ::= Identifier
-Expr ::= Epxression
+ParamItem1 ::= Identifier [ ':' Type ]
+ParamItem2 ::= Identifier [ ':' Type ] '=' ConstExpression
 
-RoutParams1 ::= Id [ ':' Type ] { ',' Id [ ':' Type ] }
-RoutParams2 ::= Id [ ':' Type ] { ',' Id [ ':' Type ] [ '=' Expr ] }
-RoutParams3 ::= Id [ ':' Type ] '=' Expr { ',' Id [ ':' Type ] '=' Expr }
+ParamList1 ::= ParamItem1 { ',' ParamItem1 }
+ParamList2 ::= ParamList1 { ',' ParamItem2 } [ ',' '...' ]
+ParamList3 ::= ParamItem2 { ',' ParamItem2 } [ ',' '...' ]
+ParamList  ::= ( ParamList2 | ParamList3 | '...' ) [ 'as' Identifier ]
 
-RoutineParams  ::= RoutParams1 | RoutParams2 | RoutParams2
+OverloadableOperator ::= Operator | 'cast' | '.' Identifier [ '=' ] | '[' ']' [ '=' ]
 
-RoutReturn     ::= '=>' Type
-CoroutReturn   ::= '=>' '[' Type ']'
-CodeSectReturn ::= '[' [ RoutParams1 ] [ RoutReturn ] ']' [ RoutReturn ]
+ParamReturn ::= '(' [ ParamList ] ')' [ '=>' Type ]
 
-RoutineReturn ::= RoutReturn | CoroutReturn | CodeSectReturn
+RoutineSig   ::= Identifier '(' [ ParamList ] ')' [ '=>' Type ]
+CoroutineSig ::= Identifier '(' [ ParamList ] ')' '=>' '[' Type ']'
+CodeBlockSig ::= Identifier '(' [ ParamList ] ')' '[' [ ParamList1 ] ']' [ '=>' Type ]
 
-RoutineSignature ::= 'routine' { Id:: } Id '(' [ RoutineParams ] ')' [ RoutineReturn ]
+RoutineDecl1 ::= 'routine' { Identifier '::' } ( RoutineSig | CoroutineSig | CodeBlockSig )
+RoutineDecl2 ::= 'operator' { Identifier '::' } OverloadableOperator ParamReturn
 
-#OverloadableOpers ::= 
+RoutineDecl ::= RoutineDecl1 | RoutineDecl2
+
+Routine ::= RoutineDecl '{' StatementBlock '}'
 @[code(syntax)]
 
 @[text]
@@ -1054,6 +1227,18 @@ Class
 @[title]
 
 @[text]
+
+@[code(syntax)]
+ClassConst ::= 'const' ConstDeclItem { ',' ConstDeclItem }
+ClassVar   ::= ( 'var' | 'static' ) VarDeclItem { ',' VarDeclItem }
+
+ClassBody ::= { ClassConst | ClassVar | Routine }
+
+Class ::= 'class' { Identifier '::' } Identifier [ ':' UserType { ',' UserType } ]
+              '{' [ ClassBody ] '}'
+@[code(syntax)]
+
+
 @[text]
 
 

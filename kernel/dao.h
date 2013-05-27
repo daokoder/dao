@@ -35,7 +35,7 @@
 #include<stddef.h>
 
 
-#define DAO_VERSION "1.2"
+#define DAO_VERSION "2.0"
 
 
 #if (defined DAO_WITH_CONCURRENT && !defined DAO_WITH_THREAD)
@@ -764,6 +764,7 @@ DAO_DLL int DaoRoutine_IsWrapper( DaoRoutine *self );
 
 DAO_DLL DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name );
 DAO_DLL DaoValue*   DaoObject_GetField( DaoObject *self, const char *name );
+DAO_DLL DaoCstruct* DaoObject_CastCstruct( DaoObject *self, DaoType *type );
 DAO_DLL DaoCdata*   DaoObject_CastCdata( DaoObject *self, DaoType *type );
 
 

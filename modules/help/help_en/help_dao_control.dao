@@ -24,8 +24,8 @@ Definition
 @[code(syntax)]
 ControlBlock ::= Statement | '{' [ StatementBlock ] '}'
 
-IfElseStmt ::= 'if' '(' Expression ')' ControlBlock
-               { 'else' 'if' '(' Expression  ')' ControlBlock }
+IfElseStmt ::= 'if' '(' [ LocalVarDeclaration ';' ] Expression ')' ControlBlock
+               { 'else' 'if' '(' [ LocalVarDeclaration ';' ] Expression  ')' ControlBlock }
 			   [ 'else' ControlBlock ]
 @[code(syntax)]
 
@@ -67,17 +67,14 @@ For Looping Control
 Definition
 @[subsection]
 @[code(syntax)]
-Id       ::= Identifier
-Expr     ::= Expression
-ExprList ::= ExpressionList
+CFor  ::= 'for' '(' [ LocalVarDeclaration ] ';' [ Expression ] ';' [ ExpressionList ] ')'
+              ControlBlock
 
-VarList ::= [ 'var' ] Id { ',' Id } '=' Expr { ',' Id { ',' Id } '=' Expr }
+APFor ::= 'for' '(' [ 'var' ] Identifier '=' Expression ':' [ Expression ':' ] Expression ')'
+              ControlBlock
 
-CFor  ::= 'for' '(' [ VarList ] ';' [ Expr ] ';' [ ExprList ] ')' ControlBlock
-
-APFor ::= 'for' '(' [ 'var' ] Id '=' Expr ':' [ Expr ':' ] Expr ')' ControlBlock
-
-ForIn ::= 'for' '(' [ 'var' ] Id 'in' Expr { ';' Id 'in' Expr } ')' ControlBlock
+ForIn ::= 'for' '(' [ 'var' ] Identifier 'in' Expression {';' Identifier 'in' Expression} ')'
+              ControlBlock
 
 ForStmt ::= APFor | CFor | ForIn
 @[code(syntax)]
@@ -135,7 +132,7 @@ While Looping Control
 Definition
 @[subsection]
 @[code(syntax)]
-WhileStmt ::= 'while' '(' Expr ')' ControlBlock
+WhileStmt ::= 'while' '(' [ LocalVarDeclaration ';' ] Expression ')' ControlBlock
 @[code(syntax)]
 
 @[code(dao)]
@@ -164,7 +161,7 @@ Do-while Looping Control
 Definition
 @[subsection]
 @[code(syntax)]
-DoWhileStmt ::= 'do' ControlBlock 'while' '(' Expr ')'
+DoWhileStmt ::= 'do' ControlBlock 'while' '(' Expression ')'
 @[code(syntax)]
 
 @[code(dao)]
@@ -201,7 +198,7 @@ Definition
 @[subsection]
 @[code(syntax)]
 SwitchCaseStmt ::= 'switch' '(' Expression ')' '{'
-                   { 'case' Expression [ '...' Expression ] ':' ControlBlock }
+                   { 'case' Expression [ ( ',' | '...' ) Expression ] ':' ControlBlock }
 				   [ 'default' ':' ControlBlock ]
                    '}'
 @[code(syntax)]

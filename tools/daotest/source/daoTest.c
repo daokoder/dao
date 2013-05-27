@@ -162,7 +162,10 @@ int main( int argc, char **argv )
 			DString_ChangeMBS( info, last_line_pattern, "%1", 0 );
 			DString_Append( summary, info );
 			end = string->size;
-			if( DString_MatchMBS( string, last_line_pattern, & start, & end ) == 0 ) continue;
+			if( DString_MatchMBS( string, last_line_pattern, & start, & end ) == 0 ){
+				mfails2 += 1;
+				continue;
+			}
 
 			GetCounts( string, & mps, & mfs, & ps, & fs );
 			mpasses2 += mps;

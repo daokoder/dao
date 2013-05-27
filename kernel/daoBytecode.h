@@ -31,7 +31,7 @@
 #include "daoStdtype.h"
 
 
-#define DAO_BC_SIGNATURE  "\33Dao\1\2\r\n"
+#define DAO_BC_SIGNATURE  "\33Dao\2\0\r\n"
 
 
 typedef struct DaoByteEncoder  DaoByteEncoder;

@@ -12,6 +12,177 @@ Class for Object-Oriented Programming
 @[text]
 A @[green]class@[green] is a user-defined data structure consisting data fields and
 member methods, which define the states and behaviours for the instances of the class.
+It is one of the basic building blocks for object-orient programming.
+@[text]
+
+
+
+
+@[name]
+dao.class.definition
+@[name]
+
+@[title]
+Class Definition
+@[title]
+
+
+@[text]
+Classes are defined using the @[green]class@[green] keyword, followed
+by a class name and base/parent classes if any, and then the class body.
+The following is the simplest class:
+@[code]
+class SimplestClass
+{
+}
+@[code]
+which has no base classes and contains no member fields.
+In order for the class to have meaningful use,
+it must contains some fields to define the states or behavior
+of the class or its instance.
+
+
+@[subsection]
+Member Data Field
+@[subsection]
+
+
+Class supports three types data of fields:
+@[list]
+--@[green]constant@[green]: declared with keyword @[green]const@[green];
+--@[green]static variable@[green]: declared with keyword @[green]static@[green];
+--@[green]instance variable@[green]: declared with keyword @[green]var@[green];
+@[list]
+Such fields can be declared with or without explicit types,
+and with or without default or initialization values,
+in the same way as specifying types and/or default values for function parameters.
+For example, the following can be used for instance variables,
+@[code]
+var variable;
+var variable = init_value;
+var variable : typename;
+var variable : typename = init_value;
+@[code]
+
+
+@[subsection]
+Member Method Field
+@[subsection]
+
+Dao class supports multiple type of member methods such as
+constructor, static method, instance method and virtual method, as well as
+methods for overloaded operators.
+
+
+Class methods must be declared with keyword @[green]routine@[green] 
+(or its alias keywords @[green]function@[green] or @[green]sub@[green])
+for constructors and normal methods, or keyword @[green]operator@[green]
+for operator overloading.
+
+
+The access of class fields and methods can be restricted by three permission keywords:
+@[list]
+--@[green]public@[green]: publically accessible without restriction;
+--@[green]protected@[green]: accessible from the class and its derived classes;
+--@[green]private@[green]: only accessible from the class;
+@[list]
+
+
+@[subsection]
+Class Instance
+@[subsection]
+
+The following is a simple class without a constructor:
+@[code]
+class Contact
+{
+	const description = 'This is a class for contact information'
+	var   name = 'Nobody'
+	var   address = 'Nowhere'
+
+	routine Show(){ io.writeln( name, 'lives at', address ) }
+}
+@[code]
+There are two ways to create instances of such simple classes:
+@[list]
+-- Call the default constructor which will initialize the instance variables
+   with their default values:
+   @[code]
+   obj = Contact()
+   @[code]
+-- Enumerate the values of the instance variables:
+   @[code]
+   obj = Contact{ 'Mike', '123 Main Street' }
+   @[code]
+   Field names can be specified for the values, so that these values can appear
+   in arbitrary order:
+   @[code]
+   obj = Contact{ address => '123 Main Street', name => 'Mike' }
+   @[code]
+   Please note, only simple classes without base classes and explicit constructors
+   can use this kind of instance construction.
+@[list]
+
+
+
+@[subsection]
+Class Constructor
+@[subsection]
+
+In a class, the methods with the same name as the class itself
+are considerred as class constructors.
+When the class name is used for a function call,
+a class instance will be created and then the appropriate constructor
+will be invoked to initialize the instance.
+Here is the same class as above, but with a constructor:
+@[code]
+class Contact
+{
+	const description = 'This is a class for contact information'
+	var   name = 'Nobody'
+	var   address = 'Nowhere'
+
+	routine Contact( name : string, address = 'Unknown' ){
+		self.name = name
+		self.address = address
+	}
+
+	routine Show(){ io.writeln( name, 'lives at', address ) }
+}
+@[code]
+Now calling the constructor is the only way to create 
+an instance of @[green]Contact@[green]:
+@[code]
+obj = Contact( 'Mike', '123 Main Street' )
+@[code]
+
+
+Class constructors can be overloaded in the same way as normal functions:
+@[code]
+class Contact
+{
+	const description = 'This is a class for contact information'
+	var   name = 'Nobody'
+	var   address = 'Nowhere'
+
+	routine Contact( name : string, address = 'Unknown' ){
+		self.name = name
+		self.address = address
+	}
+	routine Contact( another : Contact ){
+		name = another.name
+		address = another.address
+	}
+
+	routine Show(){ io.writeln( name, 'lives at', address ) }
+}
+@[code]
+
+
+@[subsection]
+Static Method
+@[subsection]
+
 
 
 

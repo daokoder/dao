@@ -4739,7 +4739,13 @@ static int DaoParser_GetRegister2( DaoParser *self, DaoToken *nametok )
 	/* Look for variable in class: */
 	if( self->hostClass && (node = MAP_Find( self->hostClass->lookupTable, name )) ){
 		int st = LOOKUP_ST( node->value.pInt );
-		if( st == DAO_OBJECT_VARIABLE ) routine->attribs |= DAO_ROUT_NEEDSELF;
+		if( st == DAO_OBJECT_VARIABLE ){
+			routine->attribs |= DAO_ROUT_NEEDSELF;
+			if( routine->attribs & DAO_ROUT_STATIC ){
+				DaoParser_ErrorToken( self, DAO_VARIABLE_OUT_OF_CONTEXT, nametok );
+				return -1;
+			}
+		}
 		return node->value.pInt;
 	}
 

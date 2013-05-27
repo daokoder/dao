@@ -1,0 +1,27 @@
+
+@[test(code_01)]
+class Klass
+{
+	var id = 123
+	static routine Klass(){ id = 1 }
+}
+obj = Klass()
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Variable declared out of context}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class Klass
+{
+	var id = 123
+	static routine StaticMethod(){ id = 1 }
+}
+obj = Klass::StaticMethod()
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Variable declared out of context}}
+@[test(code_01)]
