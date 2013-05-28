@@ -150,6 +150,74 @@ Built-in Multi-threading Module
 
 
 @[text]
+
+
+@[subsection]
+Mutex Methods
+@[subsection]
+
 @[code]
+mutex()=>mutex
+lock( self : mutex )
+unlock( self : mutex )
+trylock( self : mutex )=>int
+protect( self : mutex )[]
 @[code]
+
+
+@[subsection]
+Condition Variable Methods
+@[subsection]
+
+@[code]
+condition()=>condition
+wait( self : condition, mtx : mutex )
+timedwait( self : condition, mtx : mutex, seconds :float )=>int
+signal( self : condition )
+broadcast( self : condition )
+@[code]
+
+
+@[subsection]
+Semaphore Methods
+@[subsection]
+
+@[code]
+semaphore( value = 0 )=>semaphore
+wait( self : semaphore )
+post( self : semaphore )
+setvalue( self : semaphore, n :int )
+getvalue( self : semaphore )=>int
+protect( self : semaphore )[]
+@[code]
+
+
+@[subsection]
+Module Methods
+@[subsection]
+
+@[code]
+critical()[]
+start( when : enum<auto,now> = $auto )[=>@V] =>future<@V>
+iterate( times :int, threads=2 )[index:int,threadid:int]
+
+iterate( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int]
+map( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int =>@T2] =>list<@T2>
+apply( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int =>@T] =>list<@T>
+find( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int =>int] =>tuple<index:int,item:@T>|none
+
+iterate( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int]
+map( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int =>@T] =>list<@T>
+apply( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int =>@V] =>map<@K,@V>
+find( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int =>int] =>tuple<key:@K,value:@V>|none
+
+iterate( aarray :array<@T>, threads=2 )[item:@T,I:int,J:int,K:int,L:int,M:int,threadid:int]
+map( aarray :array<@T>, threads=2 )[item:@T,I:int,J:int,K:int,L:int,M:int,threadid:int =>@T2] =>array<@T2>
+apply( aarray :array<@T>, threads=2 )[item:@T,I:int,J:int,K:int,L:int,M:int,threadid:int =>@T] =>array<@T>
+@[code]
+
+
+
+
+
 @[text]

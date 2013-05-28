@@ -3186,7 +3186,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	DString *className, *ename = NULL;
 	DArray *holders, *defaults;
 	int begin, line = self->curLine;
-	int i, k, rb, right;
+	int i, k, rb, right, error = 0;
 	int errorStart = start;
 	int pm1, pm2, ec = 0;
 	if( start+1 > to ) goto ErrorClassDefinition;
@@ -3381,13 +3381,14 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		}
 	}
 	DaoClass_ResetAttributes( klass );
-	if( DaoParser_CompileRoutines( parser ) == 0 ) return -1;
-	if( klass->classRoutines->overloads->routines->size == 0 ){
+	error = DaoParser_CompileRoutines( parser ) == 0;
+	if( error == 0 && klass->classRoutines->overloads->routines->size == 0 ){
 		DArray_Clear( parser->tokens );
 		DaoLexer_AppendInitSuper( parser->lexer, klass, line, 0 );
-		DaoParser_ParseRoutine( parser );
+		error |= DaoParser_ParseRoutine( parser ) == 0;
 	}
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+	if( error ) return -1;
 
 	return right + 1;
 ErrorClassDefinition:

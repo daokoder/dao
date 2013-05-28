@@ -1105,6 +1105,15 @@ CallEntry:
 
 	vmcBase = topFrame->codes;
 	id = self->topFrame->entry;
+	vmc = vmcBase + id;
+	self->stopit = 0;
+	self->activeCode = vmc;
+	self->activeRoutine = routine;
+	self->activeObject = topFrame->object;
+	self->activeValues = self->stackValues + topFrame->stackBase;
+	self->activeTypes = routine->body->regType->items.pType;
+	self->activeNamespace = routine->nameSpace;
+
 	if( id >= routine->body->vmCodes->size ){
 		if( id == 0 ){
 			DString_SetMBS( self->mbstring, "Not implemented function, " );
@@ -1115,16 +1124,6 @@ CallEntry:
 		}
 		goto FinishCall;
 	}
-
-
-	vmc = vmcBase + id;
-	self->stopit = 0;
-	self->activeCode = vmc;
-	self->activeRoutine = routine;
-	self->activeObject = topFrame->object;
-	self->activeValues = self->stackValues + topFrame->stackBase;
-	self->activeTypes = routine->body->regType->items.pType;
-	self->activeNamespace = routine->nameSpace;
 
 	if( id == 0 && !(topFrame->state & DVM_FRAME_RUNNING) ){
 		topFrame->deferBase = self->defers->size;

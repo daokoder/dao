@@ -2150,6 +2150,7 @@ enum DaoTypingErrorCode
 	DTE_TYPE_WRONG_CONTAINER ,
 	DTE_DATA_CANNOT_CREATE ,
 	DTE_CALL_NOT_PERMIT ,
+	DTE_CALL_WITHOUT_INSTANCE ,
 	DTE_FIELD_NOT_PERMIT ,
 	DTE_FIELD_NOT_EXIST ,
 	DTE_FIELD_OF_INSTANCE ,
@@ -2176,6 +2177,7 @@ static const char*const DaoTypingErrorString[] =
 	"Wrong container type",
 	"Data cannot be created",
 	"Call not permitted",
+	"Calling nonstatic method without instance",
 	"Member not permitted",
 	"Member not exist",
 	"Need class instance",
@@ -4767,10 +4769,17 @@ NotExist_TryAux:
 					rout = DaoValue_Check( rout, bt, tp, j, code, errors );
 					if( rout == NULL ) goto ErrorTyping;
 					if( rout->attribs & DAO_ROUT_PRIVATE ){
-						if( rout->routHost && rout->routHost != routine->routHost ) goto NotPermitCall;
-						if( rout->routHost == NULL && rout->nameSpace != NS ) goto NotPermitCall;
+						if( rout->routHost && rout->routHost != routine->routHost ) goto CallNotPermit;
+						if( rout->routHost == NULL && rout->nameSpace != NS ) goto CallNotPermit;
 					}else if( rout->attribs & DAO_ROUT_PROTECTED ){
-						if( rout->routHost && routine->routHost == NULL ) goto NotPermitCall;
+						if( rout->routHost && routine->routHost == NULL ) goto CallNotPermit;
+					}else if( vmc->code == DVM_CALL && routine->routHost ){
+						if( DaoType_ChildOf( routine->routHost, rout->routHost ) ){
+							int att1 = routine->attribs & DAO_ROUT_STATIC;
+							int att2 = rout->attribs & DAO_ROUT_STATIC;
+							int att3 = rout->attribs & DAO_ROUT_INITOR;
+							if( att1 != 0 && att2 == 0 && att3 == 0 ) goto CallWithoutInst;
+						}
 					}
 					if( rout->routName->mbs[0] == '@' ){
 						ct = tp[0];
@@ -5630,7 +5639,6 @@ TryPushBlockReturnType:
 	return 1;
 NotMatch : return DaoInferencer_ErrorTypeNotMatching( self, NULL, NULL );
 NotInit : return DaoInferencer_ErrorNotInitialized( self, 0, 0, 0 );
-NotPermitCall : return DaoInferencer_Error( self, DTE_CALL_NOT_PERMIT );
 NotPermit : return DaoInferencer_Error( self, DTE_FIELD_NOT_PERMIT );
 NotExist : return DaoInferencer_Error( self, DTE_FIELD_NOT_EXIST );
 NeedInstVar : return DaoInferencer_Error( self, DTE_FIELD_OF_INSTANCE );
@@ -5641,6 +5649,8 @@ InvKey : return DaoInferencer_Error( self, DTE_KEY_NOT_VALID );
 InvField : return DaoInferencer_Error( self, DTE_KEY_NOT_VALID );
 InvOper : return DaoInferencer_Error( self, DTE_OPERATION_NOT_VALID );
 InvParam : return DaoInferencer_Error( self, DTE_PARAM_ERROR );
+CallNotPermit : return DaoInferencer_Error( self, DTE_CALL_NOT_PERMIT );
+CallWithoutInst : return DaoInferencer_Error( self, DTE_CALL_WITHOUT_INSTANCE );
 ErrorTyping: return DaoInferencer_Error( self, DTE_TYPE_NOT_MATCHING );
 }
 int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )

@@ -114,3 +114,109 @@ class DD : AA, BB
 @[test(code_01)]
 {{WARNING}} .* {{At line}} .* {{Method signature was used}}
 @[test(code_01)]
+
+
+
+
+
+# Test: automatic calling a constructor of the base class.
+@[test(code_01)]
+class Base
+{
+	var id = 0
+
+	routine Base( i = 123 ){
+		id = i
+		io.writeln( id )
+	}
+}
+class Sub : Base
+{
+	var value = 'abc'
+}
+Sub()
+@[test(code_01)]
+@[test(code_01)]
+123
+@[test(code_01)]
+
+
+
+
+
+# Test: automatic calling a constructor of the base class.
+@[test(code_01)]
+class Base
+{
+	var id = 0
+
+	routine Base( i = 123 ){
+		id = i
+		io.writeln( id )
+	}
+}
+class Sub : Base
+{
+	var value = 'abc'
+
+	routine Sub( v = 'ABC' ){ value = v }
+}
+Sub()
+@[test(code_01)]
+@[test(code_01)]
+123
+@[test(code_01)]
+
+
+
+
+
+# Test: calling a constructor of the base class.
+@[test(code_01)]
+class Base
+{
+	var id = 0
+
+	routine Base( i = 123 ){
+		id = i
+		io.writeln( id )
+	}
+}
+class Sub : Base
+{
+	var value = 'abc'
+
+	routine Sub( v = 'ABC', i = 456 ) : Base( i ) { value = v }
+}
+Sub()
+@[test(code_01)]
+@[test(code_01)]
+456
+@[test(code_01)]
+
+
+
+
+
+# Test: automatic calling a constructor of the base class.
+@[test(code_01)]
+class Base
+{
+	var id = 0
+
+	routine Base( i : int ){
+		id = i
+		io.writeln( id )
+	}
+}
+class Sub : Base
+{
+	var value = 'abc'
+}
+Sub()
+@[test(code_01)]
+@[test(code_01)]
+{{ERROR}} .* {{too few parameters}}
+@[test(code_01)]
+
+
