@@ -1033,6 +1033,7 @@ int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int s
 	start ++;
 	if( key == DKEY_OPERATOR ){
 		int lb = 0;
+		if( klass->attribs & DAO_CLS_ASYNCHRONOUS ) goto ErrorUnsupportedOperator;
 		if( tokens[start-1]->name == DTOK_LB ){ /* operator () */
 			if( tokens[start]->name != DTOK_RB ) goto ErrorUnsupportedOperator;
 			lb = DaoParser_FindOpenToken( self, DTOK_LB, start+1, -1, 1 );

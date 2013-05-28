@@ -9,6 +9,26 @@ module.core.sys
 System Dependent Core Functions
 @[title]
 
+@[text]
+
+@[code(syntax)]
+shell( command :string )
+popen( cmd :string, mode :string )=>io::stream
+sleep( seconds :float )
+exit( code=0 )
+clock()=>float
+ctime( time=0 )=>tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int>
+ctimef( time=0, format='%Y-%M-%D, %H:%I:%S', names : map<string,list<string>> = {=>} )=>string
+time(  )=>int
+time( tm : tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int> )=>int
+setlocale( category: enum<all,collate,ctype,monetary,numeric,time> = $all, locale = '' )=>string
+getenv( name: string )=>string
+putenv( name: string, value = '' )
+@[code(syntax)]
+
+@[text]
+
+
 
 @[name]
 module.core.aux

@@ -88,7 +88,7 @@ if( daovm_with_thread     == $ON ) daovm.AddDefinition( "DAO_WITH_THREAD" )
 if( daovm_with_concurrent == $ON ) daovm.AddDefinition( "DAO_WITH_CONCURRENT" )
 
 changeset = io.read( "manifest.uuid" )
-if( changeset ) daovm.AddDefinition( "CHANGESET_ID", "\\\"" + changeset[:11] + "\\\"" )
+if( changeset ) daovm.AddDefinition( "CHANGESET_ID", "\\\"FOS." + changeset[:11] + "\\\"" )
 
 
 ###########################################################################

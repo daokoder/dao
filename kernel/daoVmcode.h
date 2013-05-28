@@ -63,7 +63,7 @@ enum DaoOpcode
 	DVM_NOT ,  /* C = ! A; not */
 	DVM_MINUS , /* C = - A; unary minus; */
 	DVM_TILDE , /* C = ~ A */
-	DVM_SIZE , /* C = & A; size operation; */
+	DVM_SIZE , /* C = % A; size operation; */
 	DVM_ADD ,  /* C = A + B;  */
 	DVM_SUB ,  /* C = A - B;  */
 	DVM_MUL ,  /* C = A * B;  */

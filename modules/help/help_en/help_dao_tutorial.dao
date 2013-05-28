@@ -198,8 +198,8 @@ Dao has native supports for the following number types:
 
 
 @[green]int@[green] and @[green]float@[green] numbers can be expressed
-in the same ways as most other languages. But a @[green]double@[green] number,
-need a @[green]D@[green] suffix to @[green]int@[green] or @[green]float@[green] number
+in the same ways as in most other languages. But a @[green]double@[green] number,
+need a @[green]D@[green] suffix to a @[green]int@[green] or @[green]float@[green] number
 to be parsed as a double precision floating point number.
 
 
@@ -295,7 +295,7 @@ e3 : enum<AA,BB,CC> = $BB
 @[code]
 
 Enum values can be used in switch-case statements, which can be optimized
-to table lookup, if the enums are explicitly typed or can be inferred.
+into table lookup, if the enums are explicitly typed or can be inferred.
 For example,
 @[code]
 switch( (any)e1 ){
@@ -312,7 +312,7 @@ case $CC : ...
 @[code]
 Both will be optimized into table lookup, because the case values have
 well defined types (the cases in the second example have types inferred from
-the expression in @[cyan]switch()@[cyan] ).
+the expression inside @[cyan]switch()@[cyan] ).
 
 
 
@@ -419,7 +419,7 @@ Such arrays can be defined by using the squared brackets
 Using such constructs, one can either enumerate all the elements
 as a vector/matrix, or specify an arithmetic progression with
 a start value, a step value and the number of steps.
-If the step value is omitted, it will be assumed to be one.
+If the step value is omitted, it will be assumed to be zero.
 
 @[code]
 vec1 = [1, 2, 3]  # array<int> vector, or 1x3 matrix;
@@ -494,12 +494,12 @@ alist[4] += 10
 Maps and Hash Maps
 @[subsection]
 
-A map or hash map organize a set of key/value pairs into a structure
+A map or hash map organizes a set of key/value pairs into a structure
 for efficient lookup. The keys in a map are ordered, while the keys
-in a hash map is unordered.
+in a hash map are unordered.
 A map can be created using @[green]{key=>value...}@[green] or
 @[green]map{key=>value...}@[green]. Replacing the @[green]=>@[green]
-with colon @[green]:@[green] will create hash maps.
+with colon @[green]~>@[green] will create hash maps.
 Map and hash map can be used in identical ways.
 @[code]
 amap = { 'abc' => 123, 'def' => 456 }
@@ -613,6 +613,12 @@ and zero or one @[green]else@[green] statement can be used.
 if( 2 > 1 ) io.writeln("2 is larger than 1.");
 @[code]
 
+Before each condition expression, there can be an optional expression
+or variable declaration, for example,
+@[code]
+if( rnd = rand(100); rnd > 50 ) io.writeln( "random number is >50" );
+@[code]
+
 
 
 
@@ -661,8 +667,7 @@ for( item in list ){
 @[code]
 Multiple @[cyan]in@[cyan] can appear in one loop, and the items of the same
 indices from multiple lists are taken in each cycle. The loop is terminated
-after all the items in the first list have been iterated. So the other lists
-must be at least as long as the first, otherwise an exception will be arose.
+after all the items in the shortest list have been iterated.
 @[code]
 for( item1 in list1; item2 in list2; ... ){
    block;
@@ -685,17 +690,16 @@ for( i:=0; i<3; ++i ){
 }
 
 hash = { "b" => 11, "a" => 22, "e" => 33, "c" => 44 };
-for( a in hash.key(); b in hash.value(); c in {1 : 1 : hash.size()-1 } ){
+for( a in hash.keys(); b in hash.values(); c in {1 : 1 : hash.size()-1 } ){
    #if a == "a" break
    io.writeln( a, b, c );
 }
 @[code(dao)]
-This example raises an exception, because the last list @[cyan]c@[cyan] contains
-one less element.
 
 
-Note: if a single string is used in the condition expression in @[green]if,while,for@[green] statements,
-it returns true, if the string has length larger than zero, otherwise, returns false.
+Note: if a single string is used in the condition expression 
+in @[green]if,while,for@[green] statements, it returns true, 
+if the string has length larger than zero, otherwise, returns false.
 
 
 
@@ -712,7 +716,8 @@ while( expr ){
 }
 @[code]
 
-If @[cyan]expr@[cyan] is true, @[cyan]block@[cyan] is executed and repeated until @[cyan]expr@[cyan] becomes false,
+If @[cyan]expr@[cyan] is true, @[cyan]block@[cyan] is executed and repeated 
+until @[cyan]expr@[cyan] becomes false,
 namely, while @[cyan]expr@[cyan] is true, execute @[cyan]block@[cyan].
 
 @[code]
@@ -722,6 +727,13 @@ while( i < 5 ){
    i += 1;
 }
 @[code]
+
+Before the condition expression, there can be an optional expression
+or variable declaration, for example,
+@[code]
+while( rnd = rand(100); rnd > 50 ) io.writeln( "random number is >50" );
+@[code]
+
 
 
 
@@ -923,7 +935,7 @@ Dao Routine (Function)
 Routine is a relative independent block of codes that can be reused
 by invoking it at places where it is needed. 
 It can accept parameters to changes its behaviour.
-It may also return results to its callee.
+It may also return results to its caller.
 
 
 
@@ -1011,10 +1023,10 @@ foo = routine( x, y : TYPE, z = DEFAULT )
 The syntax is nearly identical to the definition of a normal function,
 except the following differences:
 @[list]
-==there is no need for a function name, but the created function must be assigned to a variable;
-==the default value expressions for parameters do not necessary to be constant expressions,
+== There is no need for a function name;
+== The expressions for default parameters do not need to be constant expressions,
 they are evaluated at running time when the function/closure is created;
-==the function body may contain variables defined in the "upper" function that creates it;
+== The function body may contain variables defined in the "upper" function that creates it;
 depending on the type of the "upper" variable, its copy (for simple types) 
 or reference will be used by the created function.
 @[list]
@@ -1054,6 +1066,7 @@ with two minor differences:
 ==Its return type must be placed in between a pair of squared brackets;
 ==It can contain @[green]yield@[green] statement(s) in the routine body.
 @[list]
+
 @[green]yield@[green] statement(s) can be used to suspend the current coroutine,
 and the parameters passed to the @[green]yield@[green] statement(s) are passed out
 to the routine that has invoked or resumed this coroutine.
@@ -1150,7 +1163,7 @@ routine meth_name( meth_params ) [sect_params => sect_return] => meth_return
 	...
 }
 @[code]
-The parameter list prototype @[cyan]sect_params@[cyan] for the code section specifies
+The parameter list signature @[cyan]sect_params@[cyan] for the code section specifies
 what kind of parameters this method will pass to the code section; and the section
 return type @[cyan]sect_return@[cyan] indicates what type of value this method expects
 the code section to return.
@@ -1179,7 +1192,7 @@ returned = meth_name::{ [index, item]
 
 
 For example, list type has a code section method for sorting with 
-the following prototype,
+the following signature,
 @[code]
 sort( self :list<@T>, k=0 ) [X :@T, Y :@T => int] => list<@T>
 @[code]
@@ -1569,7 +1582,7 @@ Abstract Interface
 
 @[text]
 Abstract interface is a type that describes how an object can be used,
-by specifying what methods and overloaded operators can be applied to the object.
+by specifying what methods and overloaded operators should be supported the object.
 An object is compatible (matching) to an interface type,
 if only if the object supports all the methods and operators that are specified by the interface.
 Interface is an abstract type, since no instance can be created from an interface,
@@ -1850,7 +1863,7 @@ The first is a concurrent Garbage Collector (GC), which works behind
 the scene. The other features come in two main forms:
 multi-threading module and asynchronous class, which are built 
 around a lightweight thread pool with a simple scheduler
-to map thread tasks to native threads.
+to map thread tasks (or tasklets) to native threads.
 
 
 @[subsection]
@@ -1860,7 +1873,7 @@ Multi-threading Module
 The Multi-threading Module (@[green]mt@[green]) offers the traditional
 multi-threading based on threads with mutexes, condition variables and semaphores.
 The main functionalities of @[green]mt@[green] are provided as code section methods
-for maximum flexibility and expressiveness. For example, a thread task can
+for maximum flexibility and expressiveness. For example, a tasklet can
 be started with the @[green]mt.start()@[green] method,
 @[code]
 fut1 = mt.start::{
@@ -1875,16 +1888,17 @@ fut2 = mt.start( $now )::{
 }
 io.writeln( fut1.value(), fut2.value() )
 @[code]
-@[green]mt.start()@[green] can execute any expression or block of codes as a thread task,
+@[green]mt.start()@[green] can execute any expression or block of codes as a tasklet,
 which may be scheduled to run when a native thread become available to it.
-If the thread task needs to be started immediately, the additional parameter @[cyan]$now@[cyan]
+If the tasklet needs to be started immediately, the additional parameter @[cyan]$now@[cyan]
 can be passed to @[green]mt.start()@[green], so that a new native thread may be created
 if there is no other native thread available for the task.
 
 
 @[green]mt.start()@[green] returns a future value which will be used to store the value
-returned by the thread task. Accessing its value by @[green]future.value()@[green]
-will cause the current thread to block until the value becomes available after the task finishs.
+returned by the tasklet.
+Accessing its value by @[green]future.value()@[green] will cause the current
+tasklet to block until the value becomes available after the tasklet finishs.
 If one wants to wait for the task for only a limited amount of time, the method
 @[green]future.value()@[green] can be used with a timeout parameter (a float value
 for seconds or fraction seconds, negative for infinite waiting).
@@ -1918,12 +1932,17 @@ parallelized code section methods of @[green]mt@[green],
    tested by the code block.
 @[list]
 
+
+The default number of threads used by these methods are 2.
 Examples,
 @[code]
 ls = {1,2,3,4,5,6}
 
+# Use 2 threads to iterate 10 times:
 mt.iterate( 10 )::{ io.writeln( X ) }
-mt.iterate( ls, 2 )::{ io.writeln( X ) }
+
+# Use 3 threads to iterate over a list:
+mt.iterate( ls, 3 )::{ io.writeln( X ) }
 
 mt.map( ls, 2 )::{ X*X } # produces new list: {1,4,9,16,25,36}
 mt.apply( ls, 2 )::{ X*X } # ls becomes: {1,4,9,16,25,36}
@@ -1936,7 +1955,7 @@ Asynchronous Class
 
 Asynchronous class is a class whose instance methods will be executed asynchronously, 
 namely, calling a method on an instance object of such class will return a future value 
-immediately, and the execution will be started in different thread. 
+immediately, and the execution will be started as tasklet. 
 Such executions are scheduled such that only one method is actively executed 
 for any single object at any time, namely, multiple executions on the same object 
 are mutually exclusive.
@@ -1952,8 +1971,9 @@ in the order of receiving.
 Defining an asynchronous class is very much like defining a normal class,
 but with the following restrictions:
 @[list]
---It cannot contain public data field;
 --It cannot derive from normal class (and vice versa);
+--It cannot contain public data fields;
+--It cannot overload operators;
 @[list]
 Preceeding the class name with @[green]@@[green] defines an asynchronous class.
 In other places, the class name should be used without the @[green]@@[green] prefix.

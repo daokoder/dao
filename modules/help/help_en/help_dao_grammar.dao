@@ -509,7 +509,7 @@ Constant Array
 @[code(syntax)]
 ConstVector  ::= '[' [ ConstExpressionList [ ',' ] ] ']'
 ConstMatrix  ::= '[' ConstExpressionList { ';' ConstExpressionList } ']'
-ConstVector2 ::= 'array' '{' [ ConstExpressionList ] '}'
+ConstVector2 ::= 'array' '{' [ ConstExpressionList [ ',' ] ] '}'
 ConstMatrix2 ::= 'array' '{' ConstExpressionList { ';' ConstExpressionList } '}'
 
 ConstArray   ::= ConstVector | ConstMatrix | ConstVector2 | ConstMatrix2
@@ -712,6 +712,18 @@ UserType ::= Identifier
            | UserType '::' Identifier
            | UserType '::' TemplType
 @[code(syntax)]
+
+
+
+
+@[subsection]
+Variant Type
+@[subsection]
+
+@[code(syntax)]
+VariantType ::= Type ( '|' Type )+
+@[code(syntax)]
+
 
 
 
