@@ -3808,7 +3808,8 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 		if( async ) async = rout->routHost->aux->xClass.attribs & DAO_CLS_ASYNCHRONOUS;
 		/* No tail call optimization for possible asynchronous calls: */
 		/* No tail call optimization in constructors etc.: */
-		if( async == 0 && self->topFrame->state == 0 && daoConfig.optimize ){
+		/* (self->topFrame->state>>1): get rid of the DVM_FRAME_RUNNING flag: */
+		if( async == 0 && (self->topFrame->state>>1) == 0 && daoConfig.optimize ){
 			/* No optimization if the tail call has a return type different from the current: */
 			if( rout->routType->aux == self->activeRoutine->routType->aux )
 				DaoProcess_PopFrame( self );

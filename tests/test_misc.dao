@@ -79,3 +79,22 @@ Integer    ::= DecInteger | HexInteger
 @[test(code_03)]
 	Invalid %s token
 @[test(code_03)]
+
+
+
+
+# Test tail call optimization:
+@[test(code_03)]
+routine TestTailCall( n = 0 )
+{
+	if( n == 0 ) panic( n )
+	TestTailCall( n - 1 )
+}
+TestTailCall( 5 )
+@[test(code_03)]
+# If broken, it will print multiple "Called by:  TestTailCall()"
+@[test(code_03)]
+{{Exception.Error}} [^%n]* %n
+{{Raised by:}} [^%n]* %n
+{{Called by:}} [^%n]* %s*
+@[test(code_03)]

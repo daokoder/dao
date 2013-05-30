@@ -86,6 +86,12 @@ Other interesting features:
   static type checking. A combination of interfaces and classes could support
   more flexible software design by both compositions and inheritances.
 
+--@[green]Deferred block and exception handling by defer-recover:@[green]
+
+  Deferred block is a code block whose execution is deferred to the time
+  when the function exits. Defer-recover is a mechanism to handle exceptions
+  in deferred blocks.
+
 --@[green]Code section methods:@[green]
 
   Code section/block method is an alternative to functional methods in other
