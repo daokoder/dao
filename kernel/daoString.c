@@ -374,42 +374,36 @@ static void DWCString_AppendWChar( DString *self, const wchar_t ch )
 	self->wcs[ self->size ] = 0;
 }
 #define MAX_CHAR_PER_WCHAR 7
-static void DMBString_AppendWCS( DString *self, const wchar_t *chs, daoint n )
+static void DMBString_AppendWCS( DString *self, const wchar_t *chs, daoint len )
 {
-	wchar_t buffer[101];
+	daoint i, smin, more = 2;
+	const wchar_t *end = chs + len;
 	mbstate_t state;
-	buffer[100] = 0;
-	if( self->sharing ) DString_Detach( self, self->size + n );
-	while( n ){
-		const wchar_t *wcs = buffer;
-		daoint smin, len, m = n;
-		len = n < 100 ? n : 100;
-		wcsncpy( buffer, chs, len );
-		buffer[len] = 0;
-		len = wcslen( buffer );
-		chs += len;
-		n -= len;
-		if( len == 0 ){
+
+	for(i=0; i<len; ++i) more += chs[i] < 128 ? 1 : MAX_CHAR_PER_WCHAR;
+
+	DString_Reserve( self, self->size + more );
+	if( len == 0 || chs == NULL ) return;
+	while( chs < end ){
+		const wchar_t *next = chs;
+		if( *chs == L'\0' ){
 			DMBString_AppendChar( self, '\0' );
-			chs ++;
-			n --;
+			chs += 1;
+			len -= 1;
 			continue;
 		}
-		if( self->bufSize < (self->size + len * MAX_CHAR_PER_WCHAR) ){
-			/* reserve potentially enough memory to avoid frequent memory allocation: */
-			if( (len * MAX_CHAR_PER_WCHAR) > m ) m = len * MAX_CHAR_PER_WCHAR;
-			DString_Reserve( self, self->size + m );
+		while( next < end && *next != L'\0' ) next += 1;
+		memset( & state, 0, sizeof(mbstate_t) );
+		smin = wcsrtombs( self->mbs + self->size, (const wchar_t**)& chs, self->bufSize - self->size, & state );
+		if( smin > 0 ){
+			self->size += smin;
+		}else if( chs != NULL ){
+			chs += 1;
 		}
-		/* under windows using MinGW, passing null output buffer,
-		 * will NOT cause the function to perform conversion and
-		 * return the required buffer size. */
-		memset( & state, 0, sizeof(state) );
-		smin = wcsrtombs( self->mbs + self->size, & wcs, len * MAX_CHAR_PER_WCHAR, & state );
-		if( smin == -1 ) break;
-		self->size += smin;
+		if( chs == NULL ) chs = next;
 	}
-	DString_Reserve( self, self->size );
 	self->mbs[ self->size ] = 0;
+	DString_Reset( self, self->size );
 }
 static void DWCString_Append( DString *self, const wchar_t *chs, daoint n )
 {
@@ -419,47 +413,34 @@ static void DWCString_Append( DString *self, const wchar_t *chs, daoint n )
 	self->size += n;
 	self->wcs[ self->size ] = 0;
 }
-static void DWCString_AppendMBS( DString *self, const char *chs, daoint n )
+static void DWCString_AppendMBS( DString *self, const char *chs, daoint len )
 {
-	char buffer[101];
+	const char *end = chs + len;
 	mbstate_t state;
-	buffer[100] = 0;
-	if( self->sharing ) DString_Detach( self, self->size + n );
-	while( n ){
-		const char *mbs = buffer;
-		daoint smin, len = n < 100 ? n : 100;
-		strncpy( buffer, chs, len );
-		buffer[len] = 0;
-		len = strlen( buffer );
-		chs += len;
-		n -= len;
-		if( len == 0 ){
+	daoint smin;
+
+	DString_Reserve( self, self->size + len + 2 );
+	if( len == 0 || chs == NULL ) return;
+	while( chs < end ){
+		const char *next = chs;
+		if( *chs == '\0' ){
 			DWCString_AppendWChar( self, L'\0' );
-			chs ++;
-			n --;
+			chs += 1;
+			len -= 1;
 			continue;
 		}
-		if( self->bufSize < (self->size + len) ){
-			/* reserve potentially enough memory to avoid frequent memory allocation: */
-			DString_Reserve( self, self->size + len + n );
+		while( next < end && *next != '\0' ) next += 1;
+		memset( & state, 0, sizeof(mbstate_t) );
+		smin = mbsrtowcs( self->wcs + self->size, (const char**)& chs, self->bufSize - self->size, & state );
+		if( smin > 0 ){
+			self->size += smin;
+		}else if( chs != NULL ){
+			chs += 1;
 		}
-		/* under windows using MinGW, passing null output buffer,
-		 * will NOT cause the function to perform conversion and
-		 * return the required buffer size. */
-		memset( & state, 0, sizeof (state) );
-		smin = mbsrtowcs( self->wcs + self->size, (const char**)&mbs, len, & state );
-		if( smin == -1 ){ /* a valid encoding may have been cut in the middle: */
-			daoint put = len - (mbs - buffer);
-			chs -= put;
-			n += put;
-			mbs = buffer;
-			buffer[len - put] = 0;
-			memset( & state, 0, sizeof (state) );
-			smin = mbsrtowcs( self->wcs + self->size, (const char**)&mbs, len, & state );
-		}
-		self->size += smin;
+		if( chs == NULL ) chs = next;
 	}
 	self->wcs[ self->size ] = 0;
+	DString_Reset( self, self->size );
 }
 void DString_AppendInteger( DString *self, int i )
 {

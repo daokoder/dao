@@ -3575,7 +3575,7 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 
 #if 0
 	printf("routine = %p; %i, %i\n", routine, start, to );
-	for(i=start; i<=to; i++) printf("%s  ", tokens[i]->string->mbs); printf("\n\n");
+	for(i=start; i<=to; i++) printf("%s  ", tokens[i]->string.mbs); printf("\n\n");
 #endif
 
 	while( start >= from && start <= to ){
