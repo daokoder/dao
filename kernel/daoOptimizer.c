@@ -3274,8 +3274,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}
 		case DVM_GETF :
 			{
+				DaoType **pars = NULL;
+				int npar = 0;
 				int ak = 0;
-				value = consts[opa] ? dao_none_value : NULL;
 				ct = NULL;
 				value = routConsts->items.pValue[opb];
 				if( value == NULL || value->type != DAO_STRING ) goto NotMatch;
@@ -3311,9 +3312,15 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 						DString_SetMBS( mbs, "." );
 						DString_Append( mbs, str );
 						node = DMap_Find( at->aux->xInterface.methods, mbs );
+						if( node == NULL ){
+							pars = & dao_type_string;
+							npar = 1;
+							DString_SetMBS( mbs, "." );
+							node = DMap_Find( at->aux->xInterface.methods, mbs );
+						}
 						if( node == NULL ) goto NotExist_TryAux;
 						meth = node->value.pRoutine;
-						rout = DaoValue_Check( meth, at, & bt, 0, DVM_CALL, errors );
+						rout = DaoValue_Check( meth, at, pars, npar, DVM_CALL, errors );
 						if( rout == NULL ) goto NotExist_TryAux;
 						ct = & rout->routType->aux->xType;
 					}
@@ -3322,14 +3329,22 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					klass = & at->aux->xClass;
 					type2 = DaoClass_GetDataType( klass, str, & j, hostClass );
 					if( j ){
+						value = NULL;
 						DString_SetMBS( mbs, "." );
 						DString_Append( mbs, str );
-						type2 = DaoClass_GetDataType( klass, mbs, & j, hostClass );
+						DaoClass_GetDataType( klass, mbs, & j, hostClass );
 						DaoClass_GetData( klass, mbs, & value, hostClass );
-						if( j==0 && type2 == NULL ) ct = DaoNamespace_GetType( NS, value );
-						if( value && ct && ct->tid == DAO_ROUTINE ){
+						if( j == DAO_ERROR_FIELD_NOTEXIST ){
+							pars = & dao_type_string;
+							npar = 1;
+							value = NULL;
+							DString_SetMBS( mbs, "." );
+							DaoClass_GetDataType( klass, mbs, & j, hostClass );
+							DaoClass_GetData( klass, mbs, & value, hostClass );
+						}
+						if( j == 0 && value && value->type == DAO_ROUTINE ){
 							rout2 = rout = (DaoRoutine*) value;
-							rout = DaoValue_Check( rout, at, & bt, 0, DVM_CALL, errors );
+							rout = DaoValue_Check( rout, at, pars, npar, DVM_CALL, errors );
 							if( rout == NULL ) goto NotMatch;
 							ct = & rout->routType->aux->xType;
 							getter = 1;
@@ -3425,8 +3440,14 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					DString_SetMBS( mbs, "." );
 					DString_Append( mbs, str );
 					meth = DaoType_FindFunction( at, mbs );
+					if( meth == NULL ){
+						pars = & dao_type_string;
+						npar = 1;
+						DString_SetMBS( mbs, "." );
+						meth = DaoType_FindFunction( at, mbs );
+					}
 					if( meth == NULL ) goto NotExist_TryAux;
-					rout = DaoValue_Check( meth, at, & bt, 0, DVM_CALL, errors );
+					rout = DaoValue_Check( meth, at, pars, npar, DVM_CALL, errors );
 					if( rout == NULL ) goto NotMatch;
 					ct = & rout->routType->aux->xType;
 				}
@@ -3708,16 +3729,17 @@ NotExist_TryAux:
 			}
 		case DVM_SETF :
 			{
+				DaoType *pars[2] = { NULL, NULL };
+				int j, setter = 0;
+				int npar = 1;
 				int ck = 0;
-				/*
-				   printf( "a: %s\n", types[opa]->name->mbs );
-				   printf( "c: %s\n", types[opc]->name->mbs );
-				 */
+#if 0
+				printf( "a: %s\n", types[opa]->name->mbs );
+				printf( "c: %s\n", types[opc]->name->mbs );
+#endif
+				pars[0] = pars[1] = types[opa];
 				value = routConsts->items.pValue[opb];
-				if( value == NULL || value->type != DAO_STRING ){
-					printf( "field: %i\n", value ? value->type : 0 );
-					goto NotMatch;
-				}
+				if( value == NULL || value->type != DAO_STRING ) goto NotMatch;
 				self->type_source = ct;
 				str = value->xString.data;
 				switch( ct->tid ){
@@ -3735,67 +3757,91 @@ NotExist_TryAux:
 					inode->code = DVM_SETF_CX;
 					inode->b = strcmp( str->mbs, "imag" ) == 0;
 					break;
+				case DAO_INTERFACE :
+					node = DMap_Find( at->aux->xInterface.methods, str );
+					if( node ){
+						ct = node->value.pRoutine->routType;
+					}else{
+						DString_SetMBS( mbs, "." );
+						DString_Append( mbs, str );
+						node = DMap_Find( at->aux->xInterface.methods, mbs );
+						if( node == NULL ){
+							pars[0] = dao_type_string;
+							npar = 2;
+							DString_SetMBS( mbs, "." );
+							node = DMap_Find( at->aux->xInterface.methods, mbs );
+						}
+						if( node == NULL ) goto NotExist_TryAux;
+						meth = node->value.pRoutine;
+						rout = DaoValue_Check( meth, at, pars, npar, DVM_CALL, errors );
+						if( rout == NULL ) goto NotExist_TryAux;
+						ct = & rout->routType->aux->xType;
+					}
+					break;
 				case DAO_CLASS :
 				case DAO_OBJECT :
-					{
-						int j, setter = 0;
-						ck = ct->tid ==DAO_CLASS;
-						klass = & types[opc]->aux->xClass;
-						type2 = DaoClass_GetDataType( klass, str, & j, hostClass );
-						if( STRCMP( str, "self" ) ==0 ) goto NotPermit;
-						if( j ){
-							DString_SetMBS( mbs, "." );
-							DString_Append( mbs, str );
-							DString_AppendMBS( mbs, "=" );
-							type2 = DaoClass_GetDataType( klass, mbs, & j, hostClass );
+					ck = ct->tid ==DAO_CLASS;
+					klass = & types[opc]->aux->xClass;
+					type2 = DaoClass_GetDataType( klass, str, & j, hostClass );
+					if( STRCMP( str, "self" ) ==0 ) goto NotPermit;
+					if( j ){
+						value = NULL;
+						DString_SetMBS( mbs, "." );
+						DString_Append( mbs, str );
+						DString_AppendMBS( mbs, "=" );
+						DaoClass_GetDataType( klass, mbs, & j, hostClass );
+						DaoClass_GetData( klass, mbs, & value, hostClass );
+						if( j == DAO_ERROR_FIELD_NOTEXIST ){
+							pars[0] = dao_type_string;
+							npar = 2;
+							value = NULL;
+							DString_SetMBS( mbs, ".=" );
+							DaoClass_GetDataType( klass, mbs, & j, hostClass );
 							DaoClass_GetData( klass, mbs, & value, hostClass );
-							if( j==0 && type2 == NULL ) ct = DaoNamespace_GetType( NS, value );
-							if(  ct && ct->tid == DAO_ROUTINE ){
-								meth = (DaoRoutine*) value;
-								setter = 1;
-								ts[0] = types[opc];
-								ts[1] = at;
-								rout = DaoValue_Check( meth, ct, ts, 2, DVM_MCALL, errors );
-								if( rout == NULL ) goto NotMatch;
-							}
 						}
-						if( j == DAO_ERROR_FIELD_NOTPERMIT ) goto NotPermit;
-						if( j == DAO_ERROR_FIELD_NOTEXIST ) goto NotExist;
-						j = DaoClass_GetDataIndex( klass, str );
-						k = LOOKUP_ST( j );
-						if( k == DAO_CLASS_CONSTANT ) goto InvOper;
-						if( k == DAO_OBJECT_VARIABLE && ct->tid ==DAO_CLASS ) goto NeedInstVar;
-						if( setter ) break;
-						if( type2 == NULL ) goto NotPermit;
-						if( *type2 == NULL || (*type2)->tid == DAO_UDT ){
-							GC_ShiftRC( types[opa], *type2 );
-							*type2 = types[opa];
+						if( j == 0 && value && value->type == DAO_ROUTINE ){
+							meth = (DaoRoutine*) value;
+							setter = 1;
+							rout = DaoValue_Check( meth, ct, pars, npar, DVM_CALL, errors );
+							if( rout == NULL ) goto NotMatch;
 						}
-						AssertTypeMatching( types[opa], *type2, defs );
-						j = DaoClass_GetDataIndex( klass, str );
-						if( typed_code ){
-							k = LOOKUP_ST( j );
-							if( *type2 && (*type2)->realnum && at->realnum ){
-								vmc->code = ck ? DVM_SETF_KGII : DVM_SETF_OGII;
-								if( k == DAO_OBJECT_VARIABLE ) vmc->code = DVM_SETF_OVII;
-								if( at->tid != (*type2)->tid )
-									DaoInferencer_InsertMove( self, inode, & inode->a, at, *type2 );
-								vmc->code += at->tid - DAO_INTEGER;
-								vmc->b = LOOKUP_ID( j );
-							}else if( *type2 && (*type2)->tid == DAO_COMPLEX && at->tid && at->tid <= DAO_COMPLEX ){
-								vmc->b = LOOKUP_ID( j );
-								vmc->code = ck ? DVM_SETF_KGCC : DVM_SETF_OGCC;
-								if( k == DAO_OBJECT_VARIABLE ) vmc->code = DVM_SETF_OVCC;
-								if( at->tid != (*type2)->tid )
-									DaoInferencer_InsertMove( self, inode, & inode->a, at, *type2 );
-							}else if( at == *type2 || (*type2)->tid == DAO_ANY ){
-								vmc->b = LOOKUP_ID( j );
-								vmc->code = ck ? DVM_SETF_KG : DVM_SETF_OG;
-								if( k == DAO_OBJECT_VARIABLE ) vmc->code = DVM_SETF_OV;
-							}
-						}
-						break;
 					}
+					if( j == DAO_ERROR_FIELD_NOTPERMIT ) goto NotPermit;
+					if( j == DAO_ERROR_FIELD_NOTEXIST ) goto NotExist;
+					j = DaoClass_GetDataIndex( klass, str );
+					k = LOOKUP_ST( j );
+					if( k == DAO_CLASS_CONSTANT ) goto InvOper;
+					if( k == DAO_OBJECT_VARIABLE && ct->tid ==DAO_CLASS ) goto NeedInstVar;
+					if( setter ) break;
+					if( type2 == NULL ) goto NotPermit;
+					if( *type2 == NULL || (*type2)->tid == DAO_UDT ){
+						GC_ShiftRC( types[opa], *type2 );
+						*type2 = types[opa];
+					}
+					AssertTypeMatching( types[opa], *type2, defs );
+					j = DaoClass_GetDataIndex( klass, str );
+					if( typed_code ){
+						k = LOOKUP_ST( j );
+						if( *type2 && (*type2)->realnum && at->realnum ){
+							vmc->code = ck ? DVM_SETF_KGII : DVM_SETF_OGII;
+							if( k == DAO_OBJECT_VARIABLE ) vmc->code = DVM_SETF_OVII;
+							if( at->tid != (*type2)->tid )
+								DaoInferencer_InsertMove( self, inode, & inode->a, at, *type2 );
+							vmc->code += at->tid - DAO_INTEGER;
+							vmc->b = LOOKUP_ID( j );
+						}else if( *type2 && (*type2)->tid == DAO_COMPLEX && at->tid && at->tid <= DAO_COMPLEX ){
+							vmc->b = LOOKUP_ID( j );
+							vmc->code = ck ? DVM_SETF_KGCC : DVM_SETF_OGCC;
+							if( k == DAO_OBJECT_VARIABLE ) vmc->code = DVM_SETF_OVCC;
+							if( at->tid != (*type2)->tid )
+								DaoInferencer_InsertMove( self, inode, & inode->a, at, *type2 );
+						}else if( at == *type2 || (*type2)->tid == DAO_ANY ){
+							vmc->b = LOOKUP_ID( j );
+							vmc->code = ck ? DVM_SETF_KG : DVM_SETF_OG;
+							if( k == DAO_OBJECT_VARIABLE ) vmc->code = DVM_SETF_OV;
+						}
+					}
+					break;
 				case DAO_TUPLE :
 					{
 						if( ct->mapNames == NULL ) goto NotExist;
@@ -3850,10 +3896,14 @@ NotExist_TryAux:
 						DString_Append( mbs, str );
 						DString_AppendMBS( mbs, "=" );
 						meth = DaoType_FindFunction( ct, mbs );
+						if( meth == NULL ){
+							pars[0] = dao_type_string;
+							npar = 2;
+							DString_SetMBS( mbs, ".=" );
+							meth = DaoType_FindFunction( ct, mbs );
+						}
 						if( meth == NULL ) goto NotMatch;
-						ts[0] = ct;
-						ts[1] = at;
-						rout = DaoValue_Check( meth, ct, ts, 2, DVM_MCALL, errors );
+						rout = DaoValue_Check( meth, ct, pars, npar, DVM_CALL, errors );
 						if( rout == NULL ) goto NotMatch;
 						break;
 					}

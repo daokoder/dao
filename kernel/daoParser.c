@@ -997,7 +997,7 @@ static int DaoParser_ExtractRoutineBody( DaoParser *self, DaoParser *parser, int
 	return right;
 }
 
-int DaoParser_ParsePrototype( DaoParser *self, DaoParser *module, int key, int start )
+int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int start )
 {
 	DNode *node;
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -2644,7 +2644,7 @@ static int DaoParser_ParseUseConstructor( DaoParser *self, int start, int to )
 	tmpRoutine->routHost = type;
 	tmpParser->hostType = type;
 	tmpParser->hostClass = klass;
-	right = DaoParser_ParsePrototype( self, tmpParser, DKEY_ROUTINE, start );
+	right = DaoParser_ParseSignature( self, tmpParser, DKEY_ROUTINE, start );
 	if( right < 0 ){
 		DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, start, 1 );
 		return -1;
@@ -2870,7 +2870,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		tmpRoutine->routHost = scope->xClass.objType;
 		tmpParser->hostType = scope->xClass.objType;
 		tmpParser->hostClass = & scope->xClass;
-		right = DaoParser_ParsePrototype( self, tmpParser, tki, start );
+		right = DaoParser_ParseSignature( self, tmpParser, tki, start );
 		if( right < 0 ) goto InvalidDefinition;
 		DString_Assign( mbs2, tmpRoutine->routName );
 		DString_Assign( mbs, tmpRoutine->routName );
@@ -2922,7 +2922,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			if( tmpParser->uplocs == NULL ) tmpParser->uplocs = DArray_New(0);
 			tmpParser->outParser = self;
 		}
-		right = DaoParser_ParsePrototype( self, tmpParser, tki, start );
+		right = DaoParser_ParseSignature( self, tmpParser, tki, start );
 		if( right < 0 ) goto InvalidDefinition;
 		DString_Assign( mbs, tmpRoutine->routName );
 		DString_AppendChar( mbs, ':' );
@@ -5528,7 +5528,7 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 		rb = DaoParser_ExtractRoutineBody( self, parser, offset );
 		if( rb < 0 ) goto ErrorParsing;
 	}else if( tokens[start+1]->name == DTOK_LB ){
-		rb = DaoParser_ParsePrototype( self, parser, DKEY_ROUTINE, start );
+		rb = DaoParser_ParseSignature( self, parser, DKEY_ROUTINE, start );
 	}else if( tokens[start+1]->name == DTOK_LCB ){
 		GC_ShiftRC( dao_routine, rout->routType );
 		rout->routType = dao_routine;
@@ -5538,7 +5538,7 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 		goto ErrorParsing;
 	}
 
-	/* Routine name may have been changed by DaoParser_ParsePrototype() */
+	/* Routine name may have been changed by DaoParser_ParseSignature() */
 	sprintf( name, "AnonymousFunction_%p", rout );
 	DString_SetMBS( rout->routName, name );
 	if( rb < 0 || tokens[rb]->name != DTOK_RCB ){

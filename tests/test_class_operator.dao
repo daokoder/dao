@@ -145,3 +145,43 @@ io.writeln( ilist[0] )
 set item
 789
 @[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+class Record
+{
+	var name = '';
+
+	operator .Name() {
+		io.writeln( 'Get name:', name )
+		return name
+	}
+	operator .Name=( value : string ) {
+		io.writeln( 'Set name:', value )
+		name = value
+	}
+
+	operator .( name : string ) {
+		io.writeln( 'Get undefined field:', name )
+		return 123
+	}
+	operator .=( name : string, value : any ) {
+		io.writeln( 'Set undefined field:', name, 'with value:', value )
+	}
+}
+record = Record()
+record.Name = 'abc'
+name = record.Name
+
+record.index = 123
+index = record.index
+@[test(code_01)]
+@[test(code_01)]
+Set name: abc
+Get name: abc
+Set undefined field: index with value: 123
+Get undefined field: index
+@[test(code_01)]

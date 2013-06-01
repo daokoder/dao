@@ -91,9 +91,17 @@ static void DaoObject_Core_GetField( DaoValue *self0, DaoProcess *proc, DString 
 	DaoValue *value = NULL;
 	int rc = DaoObject_GetData( self, name, & value, proc->activeObject );
 	if( rc ){
-		DString_SetMBS( proc->mbstring, "." );
-		DString_Append( proc->mbstring, name );
-		rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, NULL,0,0,0 );
+		DString *field = proc->mbstring;
+		DString_SetMBS( field, "." );
+		DString_Append( field, name );
+		rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, field, NULL,0,0,0 );
+		if( rc == DAO_ERROR_FIELD_NOTEXIST ){
+			DaoString str = {DAO_STRING,0,0,0,1,NULL};
+			DaoValue *pars = (DaoValue*) & str;
+			str.data = name;
+			DString_SetMBS( field, "." );
+			rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, field, &pars,1,0,0 );
+		}
 	}else{
 		DaoProcess_PutReference( proc, value );
 	}
@@ -110,6 +118,15 @@ static void DaoObject_Core_SetField( DaoValue *self0, DaoProcess *proc, DString 
 		DString_Append( mbs, name );
 		DString_AppendMBS( mbs, "=" );
 		ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, mbs, & value, 1,1,0 );
+		if( ec == DAO_ERROR_FIELD_NOTEXIST ){
+			DaoString str = {DAO_STRING,0,0,0,1,NULL};
+			DaoValue *pars[2];
+			pars[0] = (DaoValue*) & str;
+			pars[1] = value;
+			str.data = name;
+			DString_SetMBS( mbs, ".=" );
+			ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, mbs, pars,2,1,0 );
+		}
 		if( ec == DAO_ERROR_FIELD_NOTEXIST ) ec = ec2;
 	}
 	if( ec == DAO_ERROR ){

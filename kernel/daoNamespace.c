@@ -326,7 +326,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 				typer->core->kernel->Sliced = (FuncPtrSliced) typer->funcItems[i].fpter;
 				continue;
 			}
-			cur = DaoNamespace_ParsePrototype( self, proto, parser );
+			cur = DaoNamespace_ParseSignature( self, proto, parser );
 			if( cur == NULL ){
 				printf( "  In function: %s::%s\n", typer->name, proto );
 				continue;
@@ -728,7 +728,7 @@ DaoRoutine* DaoNamespace_MakeFunction( DaoNamespace *self, const char *proto, Da
 		defparser->nameSpace = self;
 		defparser->routine = self->constEvalRoutine;
 	}
-	func = DaoNamespace_ParsePrototype( self, proto, parser );
+	func = DaoNamespace_ParseSignature( self, proto, parser );
 	if( old == NULL ){
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 		DaoVmSpace_ReleaseParser( self->vmSpace, defparser );
@@ -1782,7 +1782,7 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 	return abtp;
 }
 
-DaoRoutine* DaoNamespace_ParsePrototype( DaoNamespace *self, const char *proto, DaoParser *parser )
+DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *proto, DaoParser *parser )
 {
 	DaoRoutine *func = DaoRoutine_New( self, NULL, 0 );
 	DaoParser *defparser;
@@ -1803,7 +1803,7 @@ DaoRoutine* DaoNamespace_ParsePrototype( DaoNamespace *self, const char *proto, 
 	}
 
 	parser->routine = (DaoRoutine*) func; /* safe to parse params only */
-	if( DaoParser_ParsePrototype( defparser, parser, key, optok ) < 0 ){
+	if( DaoParser_ParseSignature( defparser, parser, key, optok ) < 0 ){
 		DaoParser_PrintError( defparser, 0, 0, NULL );
 		goto Error;
 	}

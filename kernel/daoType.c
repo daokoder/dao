@@ -1416,17 +1416,30 @@ static void DaoCdata_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 		return;
 	}
 	if( p == NULL ){
-		daoint n = proc->factory->size;
+		DaoValue *pars[2];
 		DaoRoutine *func = NULL;
+		DaoString str = {DAO_STRING,0,0,0,1,NULL};
+		daoint n = proc->factory->size;
+		int npar = 1;
+
+		str.data = name;
+		pars[0] = self;
+
 		DString_SetMBS( proc->mbstring, "." );
 		DString_Append( proc->mbstring, name );
 		func = DaoType_FindFunction( type, proc->mbstring );
-		func = DaoRoutine_ResolveX( func, self, NULL, 0, DVM_CALL );
+		if( func == NULL ){
+			npar = 2;
+			pars[1] = (DaoValue*) & str;
+			DString_SetMBS( proc->mbstring, "." );
+			func = DaoType_FindFunction( type, proc->mbstring );
+		}
+		func = DaoRoutine_ResolveX( func, self, pars+1, npar-1, DVM_CALL );
 		if( func == NULL ){
 			DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "not exist" );
 			return;
 		}
-		func->pFunc( proc, & self, 1 );
+		func->pFunc( proc, pars, npar );
 		if( proc->factory->size > n ) DArray_Erase( proc->factory, n, -1 );
 	}else{
 		DaoProcess_PutValue( proc, p );
@@ -1434,8 +1447,15 @@ static void DaoCdata_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 }
 static void DaoCdata_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
 {
-	DaoType *type = self->xCdata.ctype;
+	int npar = 1;
+	DaoValue *pars[2];
 	DaoRoutine *func = NULL;
+	DaoString str = {DAO_STRING,0,0,0,1,NULL};
+	DaoType *type = self->xCdata.ctype;
+
+	str.data = name;
+	pars[0] = pars[1] = value;
+
 	DString_SetMBS( proc->mbstring, "." );
 	DString_Append( proc->mbstring, name );
 	DString_AppendMBS( proc->mbstring, "=" );
@@ -1445,10 +1465,16 @@ static void DaoCdata_SetField( DaoValue *self, DaoProcess *proc, DString *name, 
 	}
 	func = DaoType_FindFunction( type, proc->mbstring );
 	if( func == NULL ){
+		pars[0] = (DaoValue*) & str;
+		npar = 2;
+		DString_SetMBS( proc->mbstring, ".=" );
+		func = DaoType_FindFunction( type, proc->mbstring );
+	}
+	if( func == NULL ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
 		return;
 	}
-	DaoProcess_PushCallable( proc, func, self, & value, 1 );
+	DaoProcess_PushCallable( proc, func, self, pars, npar );
 }
 static void DaoCdata_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 {

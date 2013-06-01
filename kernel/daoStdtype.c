@@ -3928,6 +3928,8 @@ static void Dao_Exception_Get_info( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Set_info( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Get_data( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n );
+static void Dao_Exception_Getf( DaoProcess *proc, DaoValue *p[], int n );
+static void Dao_Exception_Setf( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_New( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n );
 
@@ -3944,6 +3946,10 @@ static DaoFuncItem dao_Exception_Meths[] =
 	/* for testing or demonstration */
 	{ Dao_Exception_Get_info, "serialize( self : Exception )=>string" },
 	//XXX { Dao_Exception_Get_info, "cast( self : Exception, @T<string> )=>@T" },
+#ifdef DEBUG
+	{ Dao_Exception_Getf, ".( self : Exception, name : string )=>any" },
+	{ Dao_Exception_Setf, ".=( self : Exception, name : string, value : any)" },
+#endif
 	{ NULL, NULL }
 };
 
@@ -3984,6 +3990,19 @@ static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n )
 	DaoException* self = (DaoException*) p[0];
 	DaoValue_Move( p[1], & self->edata, NULL );
 }
+#ifdef DEBUG
+static void Dao_Exception_Getf( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoException* self = (DaoException*) p[0];
+	DaoProcess_PutValue( proc, dao_none_value );
+	printf( "Get undefined field: %s\n", DaoValue_TryGetMBString( p[1] ) );
+}
+static void Dao_Exception_Setf( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoException* self = (DaoException*) p[0];
+	printf( "Set undefined field: %s\n", DaoValue_TryGetMBString( p[1] ) );
+}
+#endif
 static void Dao_Exception_New( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoType *type = proc->topFrame->routine->routHost;
