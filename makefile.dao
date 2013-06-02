@@ -295,6 +295,7 @@ syslib = daovm.AddDirectory( "syslib", "modules/syslib" )
 help = daovm.AddDirectory( "help", "modules/help" )
 math = daovm.AddDirectory( "math", "modules/math" )
 meta = daovm.AddDirectory( "meta", "modules/meta" )
+protobject = daovm.AddDirectory( "protobject", "modules/protobject" )
 serializer = daovm.AddDirectory( "serializer", "modules/serializer" )
 dataframe = daovm.AddDirectory( "dataframe", "modules/dataframe" )
 

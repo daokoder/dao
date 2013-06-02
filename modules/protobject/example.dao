@@ -1,0 +1,18 @@
+
+load protobject
+
+obj = Protobject()
+
+obj.name = 'FirstObject'
+
+io.writeln( obj.name )
+
+obj2 = Protobject()
+obj2.__proto__ = obj
+
+io.writeln( obj2.name )
+
+
+obj2.name = 'SecondObject'
+
+io.writeln( obj.name, obj2.name )

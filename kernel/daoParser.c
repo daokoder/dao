@@ -6580,6 +6580,12 @@ InvalidFunctional:
 		case DTOK_ARROW :
 			{
 				int opb, opa = result.reg;
+				static int warned = 0;
+				if( warned < 3 ){
+					DString w = DString_WrapMBS( "using -> for meta/dynamic field!" );
+					DaoParser_Warn( self, DAO_CTW_OBSOLETE_SYNTAX, & w );
+					warned += 1;
+				}
 				self->curToken += 1;
 				if( DaoParser_CurrentTokenType( self ) != DTOK_IDENTIFIER ){
 					DaoParser_Error2( self, DAO_INVALID_EXPRESSION, start, end, 0 );

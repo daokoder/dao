@@ -2,6 +2,7 @@
 std.path( 'auxlib', $add );
 std.path( 'syslib', $add );
 std.path( 'math', $add );
+std.path( 'protobject', $add );
 std.path( 'serializer', $add );
 std.path( 'string', $add );
 std.path( 'stream', $add );
