@@ -932,6 +932,7 @@ static int FindPattern( DaoRegex *self, DaoRgxItem *patts, int npatt,
 #endif
 	/* there is at least PAT_BEGIN and PAT_STOP */
 	if( self->count <= 2 ) return 0;
+	if( start && *start >= size ) return 0;
 	if( start ) from = *start; else start = & s1;
 	if( end ) to = *end + 1; else end = & s2;
 	if( to > size ) to = size;
