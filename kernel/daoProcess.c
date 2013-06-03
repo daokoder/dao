@@ -1125,7 +1125,7 @@ CallEntry:
 		goto FinishCall;
 	}
 
-	if( id == 0 && !(topFrame->state & DVM_FRAME_RUNNING) ){
+	if( !(topFrame->state & DVM_FRAME_RUNNING) ){
 		topFrame->deferBase = self->defers->size;
 		topFrame->exceptBase = self->exceptions->size;
 		if( (routine->attribs & (DAO_ROUT_PRIVATE|DAO_ROUT_PROTECTED)) && topFrame->prev ){
