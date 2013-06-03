@@ -2999,7 +2999,7 @@ void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], i
 	DaoType **types, *tp, *vlt = NULL, *ct = tuple->unitype;
 	int i, M;
 	if( ct == NULL ) return;
-	if( ct->nested == NULL || ct->nested->size > N ){
+	if( ct->nested == NULL || (ct->nested->size - (ct->variadic != 0)) > N ){
 		DaoProcess_RaiseException( self, DAO_ERROR, "invalid tuple enumeration" );
 		return;
 	}

@@ -5729,13 +5729,13 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 #ifdef DAO_WITH_DECORATOR
 /*
 // Function decoration is done in the following way:
-// 1. Use the decoration parameters to find the right decorator function, if overloaded;
-// 2. Use the decorator's parameter to determine the right subject (OLD) function, if overloaded;
+// 1. Use the decoration parameters to find the right decorator, if overloaded;
+// 2. Use the decorator's parameter to determine the right (OLD) function, if overloaded;
 // 3. The decorator function is copied to form the basis of the result (NEW) function;
 // 4. Then the NEW function is adjusted to take the same parameters as the OLD function;
-// 5. The arguments to the decorator is stored and accessed in the same way as local constants;
-// 6. Extra codes are added at the beginning of the NEW function to access decorator arguments;
-// 7. Code is also added to create a tuple (named args) from the parameters of the NEW function;
+// 5. Arguments to the decorator are stored and accessed in the same way as local constants;
+// 6. Code is added at the beginning of the NEW function to access decorator arguments;
+// 7. Code is added to create a tuple (named args) from the parameters of the NEW function;
 // 8. The registers from the decorate function will be mapped to higher indexes to reserve
 //    indexes for the parameters of the NEW function.
 */
