@@ -986,16 +986,15 @@ DaoRoutine* DaoClass_GetOverloadedRoutine( DaoClass *self, DString *signature )
 }
 void DaoClass_PrintCode( DaoClass *self, DaoStream *stream )
 {
-	DNode *node = DMap_First( self->lookupTable );
+	daoint i;
 	DaoStream_WriteMBS( stream, "class " );
 	DaoStream_WriteString( stream, self->className );
 	DaoStream_WriteMBS( stream, ":\n" );
-	for( ; node != NULL; node = DMap_Next( self->lookupTable, node ) ){
-		DaoValue *val;
-		if( LOOKUP_ST( node->value.pInt ) != DAO_CLASS_CONSTANT ) continue;
-		val = self->constants->items.pConst[ LOOKUP_ID( node->value.pInt ) ]->value;
-		if( val->type == DAO_ROUTINE && val->xRoutine.body )
-			DaoRoutine_PrintCode( & val->xRoutine, stream );
+	for(i=0; i<self->constants->size; ++i){
+		DaoValue *cst = self->constants->items.pConst[i]->value;
+		if( cst->type != DAO_ROUTINE || cst->xRoutine.body == NULL ) continue;
+		if( cst->xRoutine.routHost != self->objType ) continue;
+		DaoRoutine_PrintCode( & cst->xRoutine, stream );
 	}
 }
 DaoRoutine* DaoClass_FindOperator( DaoClass *self, const char *oper, DaoClass *scoped )

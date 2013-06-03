@@ -166,8 +166,10 @@ DaoParser* DaoParser_New()
 
 	self->scopeOpenings = DArray_New(0);
 	self->scopeClosings = DArray_New(0);
-	self->decoFuncs = DArray_New(0);
-	self->decoParams = DArray_New(D_VALUE);
+	self->decoFuncs   = DArray_New(0);
+	self->decoFuncs2  = DArray_New(0);
+	self->decoParams  = DArray_New(D_VALUE);
+	self->decoParams2 = DArray_New(D_VALUE);
 	self->tempTypes = DArray_New(0);
 
 	self->elexer = DaoLexer_New();
@@ -219,7 +221,9 @@ void DaoParser_Delete( DaoParser *self )
 	DString_Delete( self->str );
 	DArray_Delete( self->tempTypes );
 	DArray_Delete( self->decoFuncs );
+	DArray_Delete( self->decoFuncs2 );
 	DArray_Delete( self->decoParams );
+	DArray_Delete( self->decoParams2 );
 	DArray_Delete( self->toks );
 	DArray_Delete( self->localDataMaps );
 	DArray_Delete( self->switchMaps );
@@ -291,6 +295,7 @@ void DaoParser_Reset( DaoParser *self )
 	self->typeItems->size = 0;
 	self->tempTypes->size = 0;
 	self->decoFuncs->size = 0;
+	self->decoFuncs2->size = 0;
 	self->toks->size = 0;
 
 	self->scopeOpenings->size = 0;
@@ -307,6 +312,7 @@ void DaoParser_Reset( DaoParser *self )
 	self->returnType = NULL;
 
 	DArray_Clear( self->decoParams );
+	DArray_Clear( self->decoParams2 );
 	DArray_Clear( self->switchMaps );
 	DArray_Clear( self->enumTypes );
 	DArray_Clear( self->vmCodes );
@@ -2818,6 +2824,8 @@ static DaoParser* DaoParser_NewRoutineParser( DaoParser *self, int start, int at
 	parser->hostInter = self->hostInter;
 	parser->levelBase = self->levelBase + self->lexLevel + 1;
 	parser->defParser = self;
+	DArray_Assign( parser->decoFuncs, self->decoFuncs2 );
+	DArray_Assign( parser->decoParams, self->decoParams2 );
 	return parser;
 }
 static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int from, int to, int store )
@@ -3021,17 +3029,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		DArray_Append( self->routCompilable, parser );
 		return right+1;
 	}
-	if( k && self->decoFuncs->size ){ /* with body */
-		if( DaoParser_ParseRoutine( parser ) ==0 ) goto InvalidDefinition;
-#ifdef DAO_WITH_DECORATOR
-		DaoParser_DecorateRoutine( self, rout );
-#else
-		DaoParser_Error( self, DAO_DISABLED_DECORATOR, NULL );
-		goto Failed;
-#endif
-	}else if( k && rout->routName->mbs[0] == '@' ){ /* with body */
-		if( DaoParser_ParseRoutine( parser ) ==0 ) goto InvalidDefinition;
-	}else if( k ){ /* with body */
+	if( k ){ /* with body */
 		if( rout->body == NULL ){
 			DaoParser_Error2( self, DAO_ROUT_REDUNDANT_IMPLEMENTATION, errorStart+1, k, 0 );
 			goto InvalidDefinition;
@@ -3160,14 +3158,6 @@ static int DaoParser_CompileRoutines( DaoParser *self )
 		error |= DaoParser_ParseRoutine( parser ) == 0;
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 		if( error ) continue;
-		if( self->decoFuncs->size ){
-#ifdef DAO_WITH_DECORATOR
-			DaoParser_DecorateRoutine( self, rout );
-#else
-			DaoParser_Error( self, DAO_DISABLED_DECORATOR, NULL );
-			error |= 1;
-#endif
-		}
 	}
 	self->routCompilable->size = 0;
 	return error == 0;
@@ -3592,9 +3582,9 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 #endif
 		if( self->warnings->size ) DaoParser_PrintWarnings( self );
 		if( self->errors->size ) return 0;
-		if( empty_decos && self->decoFuncs->size ){
-			DArray_Clear( self->decoFuncs );
-			DArray_Clear( self->decoParams );
+		if( empty_decos && self->decoFuncs2->size ){
+			DArray_Clear( self->decoFuncs2 );
+			DArray_Clear( self->decoParams2 );
 		}
 		if( self->enumTypes->size ) DArray_Clear( self->enumTypes );
 		errorStart = start;
@@ -3717,8 +3707,8 @@ static int DaoParser_ParseCodeSect( DaoParser *self, int from, int to )
 				}
 				start = rb;
 			}
-			DArray_PushFront( self->decoFuncs, decfunc );
-			DArray_PushFront( self->decoParams, declist );
+			DArray_PushFront( self->decoFuncs2, decfunc );
+			DArray_PushFront( self->decoParams2, declist );
 			DaoParser_PopCodes( self, back );
 			start ++;
 			continue;
@@ -4579,7 +4569,11 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	routine->defLine = defLine;
 
 	if( self->errors->size ) return 0;
-	return DaoParser_PostParsing( self );
+	if( DaoParser_PostParsing( self ) == 0 ) return 0;
+#ifdef DAO_WITH_DECORATOR
+	DaoParser_DecorateRoutine( self, routine );
+#endif
+	return 1;
 }
 static DaoEnode DaoParser_NoneValue( DaoParser *self )
 {

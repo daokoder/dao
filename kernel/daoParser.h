@@ -109,7 +109,9 @@ struct DaoParser
 	DArray *uplocs;
 	DArray *outers;
 	DArray *decoFuncs;
+	DArray *decoFuncs2;
 	DArray *decoParams;
+	DArray *decoParams2;
 	DArray *tempTypes;
 	DArray *routCompilable; /* list of defined routines with bodies */
 
