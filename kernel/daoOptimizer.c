@@ -5851,6 +5851,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	vmc->a = decorator->body->regCount;
 	vmc->b = oldfn->parCount;
 	vmc->c = decorator->parCount;
+	if( vmc->b == 0 ) vmc->a = 0;
 	for(i=0,m=annotCodes->size; i<m; i++){
 		vmc = annotCodes->items.pVmc[i];
 		k = DaoVmCode_GetOpcodeType( (DaoVmCode*) vmc );

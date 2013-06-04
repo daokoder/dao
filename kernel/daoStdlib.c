@@ -146,7 +146,14 @@ static void Dao_AboutVar( DaoNamespace *ns, DaoValue *var, DString *str )
 	DaoType *abtp = DaoNamespace_GetType( ns, var );
 	char buf[50];
 	if( abtp ){
-		DString_Append( str, abtp->name );
+		if( var->type == DAO_ROUTINE ){
+			DString_Append( str, var->xRoutine.routName );
+			DString_AppendMBS( str, "{" );
+			DString_Append( str, abtp->name );
+			DString_AppendMBS( str, "}" );
+		}else{
+			DString_Append( str, abtp->name );
+		}
 		sprintf( buf, "[%p]", var );
 		DString_AppendMBS( str, buf );
 		if( var->type == DAO_CDATA ){

@@ -209,7 +209,7 @@ typedef struct DIntStringPair
 {
 	int   value;
 	const char *key;
-}DIntStringPair;
+} DIntStringPair;
 
 typedef struct {
 	unsigned char  oper;

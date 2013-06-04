@@ -4529,8 +4529,8 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	DaoType *tt, *ft;
 	DaoNamespace *myNS = self->nameSpace;
 	DaoRoutine *routine = self->routine;
-	const int tokChrCount = self->tokens->size;
-	int id, np, defLine = routine->defLine;
+	const int tokCount = self->tokens->size;
+	int id, np, offset = 0, defLine = routine->defLine;
 
 	if( self->parsed ) return 1;
 	GC_ShiftRC( myNS, routine->nameSpace );
@@ -4539,8 +4539,11 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	self->parsed  = 1;
 
 	if( routine->routName->mbs[0] == '@' && routine->routType->nested->size ){
-		DString name = DString_WrapMBS( "args" );
+		DString name = DString_WrapMBS( "__args__" );
 		DaoToken tok = { DTOK_IDENTIFIER, DTOK_IDENTIFIER, 0, 0, 0, };
+
+		tok.line = defLine;
+		tok.string = name;
 
 		assert( routine->parCount == self->regCount );
 		ft = routine->routType->nested->items.pType[0];
@@ -4549,10 +4552,9 @@ int DaoParser_ParseRoutine( DaoParser *self )
 		np = ft->nested->size;
 		//if( np && ft->nested->items.pType[np-1]->tid == DAO_PAR_VALIST ) np -= 1;
 		tt = DaoNamespace_MakeType( myNS, "tuple", DAO_TUPLE, 0, ft->nested->items.pType, np );
-		tok.line = defLine;
-		tok.string = name;
 		DaoParser_DeclareVariable( self, & tok, 0, tt );
-	}else if( self->argName ){
+	}
+	if( self->argName ){
 		DArray *partypes = routine->routType->nested;
 		np = partypes->size;
 		//if( np && partypes->items.pType[np-1]->tid == DAO_PAR_VALIST ) np -= 1;
@@ -4562,7 +4564,7 @@ int DaoParser_ParseRoutine( DaoParser *self )
 		DaoParser_AddCode( self, DVM_TUPLE, 0, routine->parCount, id, 0,0,0 );
 	}
 
-	if( DaoParser_ParseCodeSect( self, 0, tokChrCount-1 )==0 ){
+	if( DaoParser_ParseCodeSect( self, offset, tokCount-1 )==0 ){
 		DaoParser_PrintError( self, 0, 0, NULL );
 		return 0;
 	}
