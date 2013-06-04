@@ -989,6 +989,10 @@ static int FindPattern( DaoRegex *self, DaoRgxItem *patts, int npatt,
 				if( patt2->type == PAT_JOIN && patt2->gid ) sum += patt2->pos;
 				if( patt2->type == PAT_SPLIT && patt2->gid ) sum -= patt2->pos;
 			}
+			if( patt->type == PAT_STOP && pos == patts->pos ){
+				continue;
+				pos += 1;
+			}
 			if( ( minmode && sum < min ) || ( ! minmode && sum >= max ) ){
 				max = min = sum;
 				*start = patts->pos;
