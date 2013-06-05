@@ -5633,6 +5633,9 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 		}
 #endif
 #ifdef DAO_WITH_NUMARRAY
+	}else if( ta == DAO_ENUM ){
+		DaoProcess_PutInteger( self, ! A->xEnum.value );
+		return;
 	}else if( ta == DAO_ARRAY ){
 		DaoArray *array = & A->xArray;
 		daoint i, n;
@@ -5687,7 +5690,7 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 		}
 		return;
 	}
-	if( C ==0 ) DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "" );
+	if( C == NULL ) DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "" );
 }
 void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 {
@@ -5916,6 +5919,24 @@ void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc )
 		DLong_Move( bigint, A->xLong.value );
 		DLong_Flip( bigint );
 #endif
+	}else if( A->type == DAO_ENUM ){
+		DaoType *etype = A->xEnum.etype;
+		DaoValue *C = DaoProcess_PutValue( self, A );
+		DNode *it = DMap_First(etype->mapNames);
+		int min = 0, max = 0, value = 0;
+		if( it ) min = max = it->value.pInt;
+		for(; it; it=DMap_Next(etype->mapNames,it)){
+			if( it->value.pInt < min ) min = it->value.pInt;
+			if( it->value.pInt > max ) max = it->value.pInt;
+			value |= it->value.pInt;
+		}
+		if( etype->flagtype ){
+			C->xEnum.value = value & (~A->xEnum.value);
+		}else if( A->xEnum.value == min ){
+			C->xEnum.value = max;
+		}else{
+			C->xEnum.value = min;
+		}
 	}else{
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid operands" );
 	}

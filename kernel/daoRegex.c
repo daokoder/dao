@@ -279,6 +279,7 @@ static int MakeRegex( DaoRegex *self, DString *ds, void *spatt,
 	word.next = set.next = 1;
 	word.jump = set.jump = 0;
 	for(i=start; i<end; i++){
+		int verbatim = 0;
 		chi = bl ? mbs[i] : wcs[i];
 		chi2 = (i+1) >= end ? 0 : (bl ? mbs[i+1] : wcs[i+1]);
 		type = 0;
@@ -366,6 +367,7 @@ static int MakeRegex( DaoRegex *self, DString *ds, void *spatt,
 			}
 			i ++;
 		}else if( chi == '{' && chi2 == '{' ){ /* {{text}} */
+			verbatim = 1;
 			type = PAT_WORD;
 			i += 2;
 			while( i < end ){
@@ -500,6 +502,22 @@ static int MakeRegex( DaoRegex *self, DString *ds, void *spatt,
 		}
 		repeat = SetRepeat( & patt->min, & patt->max, spatt, ds, i+1, end, bl );
 		i += repeat;
+		if( patt->type == PAT_WORD && repeat && verbatim == 0 && patt->length > 1 ){
+			/* Handle single character repetition: */
+			int offset = patt->word;
+			int length = patt->length;
+			int min = patt->min;
+			int max = patt->max;
+			self->count += 1;
+			patt->min = patt->max = 1;
+			patt->length -= 1;
+			patt = PushRegex( self, PAT_WORD );
+			patt->min = min;
+			patt->max = max;
+			patt->word = offset + length - 1;
+			patt->length = 1;
+			self->count -= 1;
+		}
 		if( patt->type != PAT_WORD || repeat ){
 			patt2 = NULL;
 			if( self->count ) patt2 = patts + (self->count-1);

@@ -4201,7 +4201,7 @@ NotExist_TryAux:
 				if( ct != dao_type_int ) DaoInferencer_InsertMove2( self, inode, ct, dao_type_int );
 				continue;
 			}
-			if( at->tid == DAO_LONG || at->tid == DAO_ARRAY ) continue; /* XXX enum */
+			if( at->tid == DAO_LONG || at->tid == DAO_ENUM || at->tid == DAO_ARRAY ) continue;
 			/* TODO: check overloading? */
 			if( at->tid >= DAO_OBJECT && at->tid <= DAO_CTYPE ) continue;
 			goto InvOper;

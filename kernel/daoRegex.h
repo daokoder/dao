@@ -36,20 +36,19 @@ struct DaoRgxItem
 {
 	uchar_t  type; /* type of the pattern */
 	uchar_t  config;
-	short  gid;
-	short  next;
-	short  jump;
-	short  from;
-	short  min;
-	short  max;
-	daoint count;
-	daoint pos;
-	daoint offset;
-	daoint posave;
-	short  fromsave;
-
-	short  length; /* length of the pattern */
-	short  word;
+	short    gid;
+	short    next;
+	short    jump;
+	short    from;
+	short    min;
+	short    max;
+	daoint   count;
+	daoint   pos;
+	daoint   offset;
+	daoint   posave;
+	short    fromsave;
+	short    length; /* length of the pattern */
+	short    word;
 };
 
 struct DaoRegex
@@ -58,8 +57,7 @@ struct DaoRegex
 	daoint  start;
 	daoint  end;
 	DaoRgxItem *items;
-	/* total number of items; or free space in the buffer as input */
-	short  count;
+	short  count; /* total number of items; or free space in the buffer as input; */
 	short  config;
 	short  attrib;
 	short  mbs;
