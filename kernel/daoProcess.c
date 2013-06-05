@@ -543,23 +543,12 @@ static DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine,
 	if( (selfChecked + npar) < ndef ){
 		if( DaoRoutine_PassDefault( routine, dest, passed, defs ) == 0 ) goto ReturnZero;
 	}
-	if( defs && defs->size ){ /* Need specialization */
+	if( 0 && defs && defs->size ){ /* Need specialization */
 		DaoRoutine *original = routine->original ? routine->original : routine;
 		routine = DaoRoutine_Copy( original, 0, 0 );
 		DaoRoutine_Finalize( routine, routine->routHost, defs );
 
-		DMutex_Lock( & mutex_routine_specialize );
-		if( original->specialized == NULL ) original->specialized = DRoutines_New();
-		DMutex_Unlock( & mutex_routine_specialize );
-
-		GC_ShiftRC( original, routine->original );
-		DRoutines_Add( original->specialized, routine );
-		routine->original = original;
-	}
-	if( routine->original && routine->body && routine->body == routine->original->body ){
-		/* Specialize routine body (local types and VM instructions): */
-		DMutex_Lock( & mutex_routine_specialize2 );
-		if( routine->body == routine->original->body ){
+		if( routine->body ){
 			DaoRoutineBody *body = DaoRoutineBody_Copy( routine->body );
 			DMap *defs2 = DHash_New(0,0);
 
@@ -575,10 +564,20 @@ static DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine,
 				// Example: binary tree benchmark using list (binary_tree2.dao).
 				// But DO NOT revert back to the original function body,
 				// to avoid repeatly invoking of this specialization!
-				*/
+				 */
 			}
 		}
-		DMutex_Unlock( & mutex_routine_specialize2 );
+
+		DMutex_Lock( & mutex_routine_specialize );
+		if( original->specialized == NULL ) original->specialized = DRoutines_New();
+		DMutex_Unlock( & mutex_routine_specialize );
+
+		GC_ShiftRC( original, routine->original );
+		routine->original = original;
+		DRoutines_Add( original->specialized, routine );
+	}
+	if( routine->original && routine->body && routine->body == routine->original->body ){
+		/* Specialize routine body (local types and VM instructions): */
 	}
 	if( defs ) DMap_Delete( defs );
 	self->parCount = npar + selfChecked;
@@ -6833,6 +6832,8 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, const char *op )
 {
 	DString *details = DString_New(1);
+	if( from == NULL ) from = dao_type_udf;
+	if( to == NULL ) to = dao_type_udf;
 	DString_AppendMBS( details, op );
 	DString_AppendMBS( details, " from \'" );
 	DString_Append( details,  from->name );

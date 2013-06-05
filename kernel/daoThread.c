@@ -1094,11 +1094,7 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 		}else if( code == DVM_SETVH || (code >= DVM_SETVH_II && code <= DVM_SETVH_CC) ){
 			i = vmc->b;
 		}
-		if( i >= 0 ){
-			/* These values should be shared with the parent thread: */
-			GC_ShiftRC( proc->activeValues[i], clone->activeValues[i] );
-			clone->activeValues[i] = proc->activeValues[i];
-		}
+		if( i >= 0 ) DaoValue_Move( proc->activeValues[i], & clone->activeValues[i], NULL );
 	}
 	DaoCallServer_AddTask( DaoMT_Start0, clone, p[0]->xEnum.value );
 }

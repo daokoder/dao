@@ -641,11 +641,10 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 					closed += 1;
 				}
 			}
-			if( selected == NULL && closed < event->channels->size ){
-				if( event->state == DAO_EVENT_WAIT ) goto MoveToWaiting;
+			if( event->state == DAO_EVENT_WAIT && closed < event->channels->size ){
+				if( selected == NULL || selected->buffer->size == 0 ) goto MoveToWaiting;
 			}
 			if( selected == NULL || selected->buffer->size == 0 ){
-				if( event->state == DAO_EVENT_WAIT ) goto MoveToWaiting;
 				message = dao_none_value;
 			}else{
 				message = selected->buffer->items.pValue[0];

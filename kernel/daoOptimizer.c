@@ -4907,13 +4907,6 @@ NotExist_TryAux:
 						drout = DaoRoutine_Copy( rout, 0, 0 );
 						DaoRoutine_PassParamTypes( drout, bt, tp, j, code, defs2 );
 
-						DMutex_Lock( & mutex_routine_specialize );
-						if( orig->specialized == NULL ) orig->specialized = DRoutines_New();
-						DMutex_Unlock( & mutex_routine_specialize );
-
-						GC_ShiftRC( orig, drout->original );
-						DRoutines_Add( orig->specialized, drout );
-						drout->original = orig;
 						if( rout->body && drout->routType->aux->xType.tid == DAO_UDT ){
 							/* forward declared routine may have an empty routine body: */
 							if( rout->body->vmCodes->size ){
@@ -4927,6 +4920,15 @@ NotExist_TryAux:
 								if( DaoRoutine_DoTypeInference( drout, self->silent ) ==0 ) goto InvParam;
 							}
 						}
+
+						DMutex_Lock( & mutex_routine_specialize );
+						if( orig->specialized == NULL ) orig->specialized = DRoutines_New();
+						DMutex_Unlock( & mutex_routine_specialize );
+
+						GC_ShiftRC( orig, drout->original );
+						drout->original = orig;
+						DRoutines_Add( orig->specialized, drout );
+
 						rout = drout;
 					}
 					if( at->tid != DAO_CLASS && ! ctchecked ) ct = rout->routType;
