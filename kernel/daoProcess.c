@@ -3749,6 +3749,11 @@ static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoStackFrame *frame = self->topFrame;
 	DaoStackFrame *prev = frame->prev;
+	if( vmc->b & DAO_CALL_ASYNC ){
+		DaoCallServer_AddCall( self );
+		self->status = DAO_PROCESS_RUNNING;
+		return 1;
+	}
 	if( vmc->code != DVM_MCALL ) return 0;
 	if( frame->object && (frame->object->defClass->attribs & DAO_CLS_ASYNCHRONOUS) ){
 		if( prev->object == NULL || frame->object->rootObject != prev->object->rootObject ){
@@ -3773,7 +3778,7 @@ static int DaoProcess_InitBase( DaoProcess *self, DaoVmCode *vmc, DaoValue *call
 	return -1;
 }
 static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
-		DaoValue *O, DaoValue *P[], int N, DaoVmCode *vmc )
+		DaoValue *O, DaoValue *P[], int N, DaoVmCode *vmc, int noasync )
 {
 	DaoRoutine *rout2 = rout;
 	int need_self = rout->routType->attrib & DAO_TYPE_SELF;
@@ -3805,6 +3810,7 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 	if( (vmc->b & DAO_CALL_TAIL) && self->defers->size == self->topFrame->deferBase ){
 		int async = rout->routHost && rout->routHost->tid == DAO_OBJECT;
 		if( async ) async = rout->routHost->aux->xClass.attribs & DAO_CLS_ASYNCHRONOUS;
+		async |= vmc->b & DAO_CALL_ASYNC;
 		/* No tail call optimization for possible asynchronous calls: */
 		/* No tail call optimization in constructors etc.: */
 		/* (self->topFrame->state>>1): get rid of the DVM_FRAME_RUNNING flag: */
@@ -3815,12 +3821,13 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 		}
 	}
 	DaoProcess_PushRoutine( self, rout, DaoValue_CastObject( O ) );//, code );
+	if( noasync ) return;
 #ifdef DAO_WITH_CONCURRENT
 	DaoProcess_TryAsynCall( self, vmc );
 #endif
 }
 static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
-		DaoType *hostype, DaoRoutine *func, DaoValue *selfpar, DaoValue *P[], int N )
+		DaoType *hostype, DaoRoutine *func, DaoValue *selfpar, DaoValue *P[], int N, int noasync )
 {
 	DaoRoutine *rout = func;
 	DaoVmSpace *vmspace = self->vmSpace;
@@ -3843,6 +3850,9 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 		return;
 	}
 	DaoProcess_PushFunction( self, func );
+#ifdef DAO_WITH_CONCURRENT
+	if( noasync == 0 && DaoProcess_TryAsynCall( self, vmc ) ) return;
+#endif
 #if 0
 	if( caller->type == DAO_CTYPE ){
 		DaoType *retype = caller->xCtype.cdtype;
@@ -3901,7 +3911,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		}
 		DaoProcess_PutValue( self, (DaoValue*) othis );
 	}else{
-		DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc );
+		DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc, 1 );
 		if( self->exceptions->size ) goto DeleteObject;
 		obj = othis;
 		if( initbase >= 0 ){
@@ -3932,7 +3942,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 	if( caller->type == DAO_ROUTINE ){
 		rout = (DaoRoutine*) caller;
 		if( rout->pFunc ){
-			DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar );
+			DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar, 0 );
 			return;
 		}else if( rout->overloads == NULL && rout->body == NULL ){
 			DaoValue *caller = (DaoValue*) rout->original;
@@ -3956,7 +3966,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 			goto InvalidParameter;
 		}
 		if( rout->pFunc ){
-			DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar );
+			DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar, 0 );
 		}else{
 			if( rout->routName->mbs[0] == '@' ){
 #ifdef DAO_WITH_DECORATOR
@@ -3968,7 +3978,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 #endif
 				return;
 			}
-			DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc );
+			DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc, 0 );
 		}
 	}else if( caller->type == DAO_CLASS ){
 		DaoProcess_DoNewCall( self, vmc, & caller->xClass, selfpar, params, npar );
@@ -3986,9 +3996,9 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		rout = DaoRoutine_ResolveX( rout, caller, params, npar, codemode );
 		if( rout == NULL ) goto InvalidParameter;
 		if( rout->pFunc ){
-			DaoProcess_DoCxxCall( self, vmc, NULL, rout, caller, params, npar );
+			DaoProcess_DoCxxCall( self, vmc, NULL, rout, caller, params, npar, 0 );
 		}else if( rout->type == DAO_ROUTINE ){
-			DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc );
+			DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc, 0 );
 		}
 	}else if( caller->type == DAO_CTYPE ){
 		DaoType *type = caller->xCdata.ctype;
@@ -3999,7 +4009,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		}
 		rout = DaoRoutine_ResolveX( rout, selfpar, params, npar, codemode );
 		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
-		DaoProcess_DoCxxCall( self, vmc, caller->xCdata.ctype, rout, selfpar, params, npar );
+		DaoProcess_DoCxxCall( self, vmc, caller->xCdata.ctype, rout, selfpar, params, npar, 1 );
 		if( self->exceptions->size ) return;
 
 		sup = DaoProcess_InitBase( self, vmc, caller );
@@ -4022,7 +4032,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		}
 		rout = DaoRoutine_ResolveX( rout, selfpar, params, npar, codemode );
 		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
-		DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar );
+		DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar, 0 );
 	}else if( caller->type == DAO_PROCESS && caller->xProcess.abtype ){
 		DaoProcess *vmProc = & caller->xProcess;
 		if( vmProc->status == DAO_PROCESS_FINISHED ){
@@ -4081,9 +4091,9 @@ void DaoProcess_DoCall3( DaoProcess *self, DaoVmCode *vmc )
 	}
 	if( rout == NULL ) goto InvalidParameter;
 	if( rout->pFunc ){
-		DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar );
+		DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar, 0 );
 	}else{
-		DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc );
+		DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc, 0 );
 	}
 	return;
 InvalidParameter:

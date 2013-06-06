@@ -4954,6 +4954,8 @@ NotExist_TryAux:
 				if( code == DVM_MCALL && tp[0]->tid == DAO_OBJECT
 						&& (tp[0]->aux->xClass.attribs & DAO_CLS_ASYNCHRONOUS) ){
 					ct = DaoCdataType_Specialize( dao_type_future, & ct, ct != NULL );
+				}else if( vmc->b & DAO_CALL_ASYNC ){
+					ct = DaoCdataType_Specialize( dao_type_future, & ct, ct != NULL );
 				}
 #endif
 				if( types[opc] && types[opc]->tid == DAO_ANY ) goto TryPushBlockReturnType;

@@ -2128,6 +2128,7 @@ static void DaoConfigure()
 #ifdef DEBUG
 static void dao_FakeList_FakeList( DaoProcess *_proc, DaoValue *_p[], int _n );
 static void dao_FakeList_Size( DaoProcess *_proc, DaoValue *_p[], int _n );
+static void dao_FakeList_Iter( DaoProcess *_proc, DaoValue *_p[], int _n );
 static void dao_FakeList_GetItem( DaoProcess *_proc, DaoValue *_p[], int _n );
 static void dao_FakeList_SetItem( DaoProcess *_proc, DaoValue *_p[], int _n );
 
@@ -2139,6 +2140,7 @@ static DaoFuncItem dao_FakeList_Meths[] =
 	/* the names of allocators must be identical to the typer name: */
 	{ dao_FakeList_FakeList, FakeListName2 "( size=0 )" },
 	{ dao_FakeList_Size, "size( self :FakeList )=>int" },
+	{ dao_FakeList_Iter, "iterate( self :FakeList )=>int" },
 	{ dao_FakeList_GetItem, "[]( self :FakeList<@T<short|int|float>>, index :int )=>int" },
 	{ dao_FakeList_SetItem, "[]=( self :FakeList<@T<short|int|float>>, value :int, index :int )=>int" },
 	{ NULL, NULL }
@@ -2160,6 +2162,12 @@ static void dao_FakeList_FakeList( DaoProcess *_proc, DaoValue *_p[], int _n )
 static void dao_FakeList_Size( DaoProcess *_proc, DaoValue *_p[], int _n )
 {
   daoint size = (daoint) DaoCdata_GetData( & _p[0]->xCdata );
+  DaoProcess_PutInteger( _proc, size );
+}
+static void dao_FakeList_Iter( DaoProcess *_proc, DaoValue *_p[], int _n )
+{
+  daoint i, size = (daoint) DaoCdata_GetData( & _p[0]->xCdata );
+  for(i=0; i<size; ++i) printf( "FakeList::iterate(): %i\n", i );
   DaoProcess_PutInteger( _proc, size );
 }
 static void dao_FakeList_GetItem( DaoProcess *_proc, DaoValue *_p[], int _n )

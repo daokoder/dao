@@ -425,7 +425,11 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 
 	callee->parCount = count;
 	for(i=0; i<count; ++i) DaoValue_Copy( params[i], & callee->paramValues[i] );
-	DaoProcess_PushRoutine( callee, caller->topFrame->routine, future->actor );
+	if( caller->topFrame->routine->body ){
+		DaoProcess_PushRoutine( callee, caller->topFrame->routine, future->actor );
+	}else{
+		DaoProcess_PushFunction( callee, caller->topFrame->routine );
+	}
 
 	DaoTaskEvent_Init( event, DAO_EVENT_RESUME_TASKLET, DAO_EVENT_RESUME, future, NULL );
 

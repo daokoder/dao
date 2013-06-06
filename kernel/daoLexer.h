@@ -77,12 +77,13 @@ enum DaoTokNames
 	DTOK_NOT , /* ! */
 	DTOK_TILDE , /* ~ */
 	DTOK_DOLLAR , /* $ */
-	DTOK_AT , /* @ */
-	DTOK_AT2 , /* @@ */
-	DTOK_POW , /* ** */
-	DTOK_AND , /* && */
-	DTOK_OR , /* || */
-	DTOK_NOTIN , /* not in */
+	DTOK_AT ,     /* @ */
+	DTOK_AT2 ,    /* @@ */
+	DTOK_BANG2,   /* !! */
+	DTOK_POW ,    /* ** */
+	DTOK_AND ,    /* && */
+	DTOK_OR ,     /* || */
+	DTOK_NOTIN ,  /* not in */
 	DTOK_CASSN  , /* := */
 	DTOK_ADDASN , /* += */
 	DTOK_SUBASN , /* -= */

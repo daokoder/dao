@@ -6235,9 +6235,14 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				if( rb < 0 ) return error;
 				if( (rb+1) <= end && tokens[rb+1]->name == DTOK_ASSN ) return result;
 
-				if( (rb+1) <= end && tokens[rb+1]->name == DKEY__INIT ){
-					mode |= DAO_CALL_INIT;
-					rb += 1;
+				if( (rb+1) <= end ){
+					if( tokens[rb+1]->name == DKEY__INIT ){
+						mode |= DAO_CALL_INIT;
+						rb += 1;
+					}else if( tokens[rb+1]->name == DTOK_BANG2 ){
+						mode |= DAO_CALL_ASYNC;
+						rb += 1;
+					}
 				}
 				if( tokens[start-1]->name == DTOK_COLON2 ) mode |= DAO_CALL_COROUT;
 				inode = self->vmcLast;

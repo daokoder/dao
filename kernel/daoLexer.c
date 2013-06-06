@@ -415,15 +415,13 @@ enum
 	TOK_OP_DOT ,
 	TOK_OP_AT , /* @ */
 	TOK_OP_AT2 , /* @@, obsolete */
+	TOK_OP_BANG2 ,
 	TOK_OP_QUEST ,
 	TOK_OP_IMG ,
 	TOK_OP_TILDE ,
 	TOK_OP_DOT2 ,
 	TOK_OP_SHARP ,
 	TOK_OP_ESC , /* \ */
-	TOK_OP_RGXM , /* obsolete */
-	TOK_OP_RGXU , /* obsolete */
-	TOK_OP_RGXA , /* obsolete */
 	TOK_COMT_LINE ,
 	TOK_COMT_OPEN ,
 	TOK_COMT_CLOSE ,
@@ -523,15 +521,13 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_DOT ,
 	DTOK_AT , /* @ */
 	DTOK_AT2 , /* @@ */
+	DTOK_BANG2 ,
 	DTOK_QUERY ,
 	DTOK_DOLLAR ,
 	DTOK_TILDE ,
 	DTOK_NONE ,
 	DTOK_COMMENT , /* # */
 	DTOK_NONE , /* \ */
-	DTOK_NONE , /* =~ */
-	DTOK_NONE ,
-	DTOK_NONE ,
 	DTOK_COMMENT ,
 	DTOK_CMT_OPEN ,
 	DTOK_COMMENT ,
@@ -627,9 +623,6 @@ void DaoInitLexTable()
 	daoSpaceType[ (unsigned) '\r' ] = DTOK_NEWLN;
 	for(j=0; j<128; j++){
 		daoLexTable[ TOK_LSB ][j] = TOK_RESTART;
-		daoLexTable[ TOK_OP_RGXM ][ j ] = TOK_RESTART;
-		daoLexTable[ TOK_OP_RGXU ][ j ] = TOK_RESTART;
-		daoLexTable[ TOK_OP_RGXA ][ j ] = TOK_RESTART;
 		daoLexTable[ TOK_OP_ESC ][j] = TOK_END;
 		daoLexTable[ TOK_OP_SHARP ][j] = TOK_COMT_LINE;
 		daoLexTable[ TOK_COMT_LINE ][j] = TOK_COMT_LINE;
@@ -735,9 +728,6 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_VERBATIM ][ (unsigned) ')' ] = TOK_VERBATIM;
 	daoLexTable[ TOK_VERBATIM ][ (unsigned) '+' ] = TOK_VERBATIM;
 	daoLexTable[ TOK_START ][ (unsigned) '~' ] = TOK_OP_TILDE;
-	daoLexTable[ TOK_OP_EQ ][ (unsigned) '~' ] = TOK_OP_RGXM; /* =~ */
-	daoLexTable[ TOK_OP_NOT ][ (unsigned) '~' ] = TOK_OP_RGXU; /* !~ */
-	daoLexTable[ TOK_OP_TILDE ][ (unsigned) '~' ] = TOK_OP_RGXA; /* ~~ */
 	daoLexTable[ TOK_START ][ (unsigned) '=' ] = TOK_OP_EQ;
 
 	/*  :=  +=  -=  /=  *=  %=  &=  |=  ^=  !=  ==  <=  >=  */
@@ -773,6 +763,7 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_OP_OR ][ (unsigned) '|' ] = TOK_END_OR; /* || */
 	daoLexTable[ TOK_START ][ (unsigned) ':' ] = TOK_OP_COLON;
 	daoLexTable[ TOK_OP_COLON ][ (unsigned) ':' ] = TOK_END_COLON2; /* :: */
+	daoLexTable[ TOK_OP_NOT ][ (unsigned) '!' ] = TOK_OP_BANG2;
 	daoLexTable[ TOK_START ][ (unsigned) '%' ] = TOK_OP_MOD;
 	daoLexTable[ TOK_START ][ (unsigned) '!' ] = TOK_OP_NOT;
 	daoLexTable[ TOK_START ][ (unsigned) '^' ] = TOK_OP_XOR;
