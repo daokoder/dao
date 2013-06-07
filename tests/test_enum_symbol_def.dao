@@ -39,8 +39,8 @@ io.writeln( Bool::False )
 io.writeln( Bool.True )
 @[test()]
 @[test()]
-$False=0
-$True=1
+$False(0)
+$True(1)
 @[test()]
 
 
@@ -73,7 +73,7 @@ bl : Bool = $True
 io.writeln( bl )
 @[test()]
 @[test()]
-$True=1
+$True(1)
 @[test()]
 
 

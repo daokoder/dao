@@ -3944,7 +3944,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		if( rout->pFunc ){
 			DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar, 0 );
 			return;
-		}else if( rout->overloads == NULL && rout->body == NULL ){
+		}else if( rout->overloads == NULL && rout->body == NULL ){  /* function curry: */
 			DaoValue *caller = (DaoValue*) rout->original;
 			DaoVmCode vmc2 = *vmc;
 			if( rout->original == NULL ){
@@ -4049,63 +4049,12 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 InvalidParameter:
 	DaoProcess_ShowCallError( self, rout2, selfpar, params, npar, code );
 }
-void DaoProcess_DoCall3( DaoProcess *self, DaoVmCode *vmc )
-{
-	DaoRoutine *rout = NULL;
-	DaoValue *selfpar = NULL;
-	DaoValue *parbuf[DAO_MAX_PARAM+1];
-	DaoValue **params = self->activeValues + vmc->a + 1;
-	DaoValue *caller = self->activeValues[ vmc->a ];
-	DaoNameValue nameva = {DAO_PAR_NAMED,0,0,0,1,1,NULL,NULL,NULL};
-	int mcall = vmc->code == DVM_MCALL;
-	int mode = vmc->b & 0xff00;
-	int npar = vmc->b & 0xff;
-	int i, m, n = 0;
-
-	if( self->activeObject && mcall == 0 ) selfpar = (DaoValue*) self->activeObject;
-	for(i=0; i<npar; i++) parbuf[n++] = params[i];
-	if( mode & DAO_CALL_EXPAR ){
-		if( npar > mcall && params[npar-1]->type == DAO_TUPLE ){
-			DaoTuple *tup = & params[npar-1]->xTuple;
-			DArray *its = tup->unitype->nested;
-			n -= 1;
-			for(i=0,m=tup->size; i<m; i++){
-				/* Handle explicit "self" argument: */
-				if( n == 0 && its->size && (its->items.pType[0]->attrib & DAO_TYPE_SELFNAMED) ){
-					nameva.name = its->items.pType[0]->fname;
-					nameva.value = tup->items[0];
-					nameva.unitype = its->items.pType[0];
-					parbuf[n++] = (DaoValue*) & nameva;
-					continue;
-				}
-				parbuf[n++] = tup->items[i];
-			}
-		}
-	}
-	params = parbuf;
-	npar = n;
-	if( caller->xRoutine.overloads ){
-		rout = DaoRoutine_ResolveX( (DaoRoutine*)caller, selfpar, params, npar, DVM_CALL );
-	}else if( caller->type == DAO_ROUTINE ){
-		rout = (DaoRoutine*) caller;
-	}
-	if( rout == NULL ) goto InvalidParameter;
-	if( rout->pFunc ){
-		DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar, 0 );
-	}else{
-		DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc, 0 );
-	}
-	return;
-InvalidParameter:
-	DaoProcess_ShowCallError( self, (DaoRoutine*)caller, selfpar, params, npar, DVM_CALL );
-}
 static DaoProcess* DaoProcess_Create( DaoProcess *self, DaoValue *par[], int N )
 {
 	DaoProcess *vmProc;
 	DaoValue *val = par[0];
 	DaoRoutine *rout;
 	int i, passed = 0;
-	if( val->type == DAO_STRING ) val = DaoNamespace_GetData( self->activeNamespace, val->xString.data );
 	if( val == NULL || val->type != DAO_ROUTINE ){
 		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, NULL );
 		return NULL;
@@ -4133,9 +4082,11 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 	int mode = vmc->b & 0xff00;
 	int npar = vmc->b & 0xff;
 	int codemode = code | (mode<<16);
+	DaoNameValue nameva = {DAO_PAR_NAMED,0,0,0,1,1,NULL,NULL,NULL};
+	DaoValue *parbuf[DAO_MAX_PARAM+1];
 	DaoValue *selfpar = NULL;
 	DaoValue *caller = self->activeValues[ vmc->a ];
-	DaoValue **params = self->activeValues + vmc->a + 1;
+	DaoValue **params = self->activeValues + vmc->a;
 	DaoStackFrame *topFrame = self->topFrame;
 	DaoRoutine *rout, *rout2 = NULL;
 
@@ -4145,16 +4096,33 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 		return;
 	}
 	if( self->activeObject && mcall == 0 ) selfpar = (DaoValue*) self->activeObject;
+	if( (mode & DAO_CALL_EXPAR) && npar > mcall && params[npar]->type == DAO_TUPLE ){
+		DaoTuple *tup = & params[npar]->xTuple;
+		DArray *its = tup->unitype->nested;
+		int i, m, n = -1;
+		for(i=0; i<npar+1; ++i) parbuf[++n] = params[i];
+		for(i=0,m=tup->size; i<m; ++i){
+			/* Handle explicit "self" argument: */
+			if( n == 1 && its->size && (its->items.pType[0]->attrib & DAO_TYPE_SELFNAMED) ){
+				nameva.name = its->items.pType[0]->fname;
+				nameva.value = tup->items[0];
+				nameva.unitype = its->items.pType[0];
+				parbuf[n++] = (DaoValue*) & nameva;
+				continue;
+			}
+			parbuf[n++] = tup->items[i];
+		}
+		params = parbuf;
+		npar = n - 1;
+	}
 	if( mode & DAO_CALL_COROUT ){
-		DaoProcess *vmp = DaoProcess_Create( self, self->activeValues + vmc->a, npar+1 );
+		DaoProcess *vmp = DaoProcess_Create( self, params, npar+1 );
 		if( vmp == NULL ) return;
 		GC_ShiftRC( self->activeTypes[ vmc->c ], vmp->abtype );
 		vmp->abtype = self->activeTypes[ vmc->c ];
 		DaoProcess_PutValue( self, (DaoValue*) vmp );
-	}else if( mode & DAO_CALL_EXPAR ){
-		DaoProcess_DoCall3( self, vmc );
 	}else{
-		DaoProcess_DoCall2( self, vmc, caller, selfpar, params, npar );
+		DaoProcess_DoCall2( self, vmc, caller, selfpar, params + 1, npar );
 	}
 }
 

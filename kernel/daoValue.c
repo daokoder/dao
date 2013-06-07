@@ -363,8 +363,9 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 		name = DString_New(1);
 		DaoEnum_MakeName( & self->xEnum, name );
 		DaoStream_WriteMBS( stream, name->mbs );
-		DaoStream_WriteMBS( stream, "=" );
+		DaoStream_WriteMBS( stream, "(" );
 		DaoStream_WriteInt( stream, self->xEnum.value );
+		DaoStream_WriteMBS( stream, ")" );
 		DString_Delete( name );
 		break;
 	case DAO_STRING  :
