@@ -3996,6 +3996,10 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 			if( rout->routName->mbs[0] == '@' ){
 #ifdef DAO_WITH_DECORATOR
 				DaoRoutine *drout = (DaoRoutine*) rout;
+				if( params[0]->type != DAO_ROUTINE ){
+					DaoProcess_RaiseException( self, DAO_INVALID_FUNCTION_DECORATION, NULL );
+					return;
+				}
 				drout = DaoRoutine_Decorate( & params[0]->xRoutine, drout, params, npar, 0 );
 				DaoProcess_PutValue( self, (DaoValue*) drout );
 #else

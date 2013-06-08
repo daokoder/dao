@@ -2789,16 +2789,23 @@ InvalidAliasing:
 DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoValue *p[], int n, int i );
 static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 {
+	DaoValue *selfpar = NULL;
 	DaoValue *params[DAO_MAX_PARAM+1];
+	DaoObject object, *obj = & object;
 	int i, j, n, count = self->decoFuncs->size;
 
+	if( rout->routHost ){
+		/* To circumvent the default object issue for type matching: */
+		object = *(DaoObject*) rout->routHost->value;
+		selfpar = (DaoValue*) obj;
+	}
 	params[0] = (DaoValue*) rout;
 	for(i=0; i<count; i++){
 		DaoRoutine *decoFunc = self->decoFuncs->items.pRoutine[i];
 		DaoList *decoParam = self->decoParams->items.pList[i];
 		n = decoParam->items.size;
 		for(j=0; j<n; j++) params[j+1] = decoParam->items.items.pValue[j];
-		decoFunc = DaoRoutine_Resolve( decoFunc, NULL, params, n+1 );
+		decoFunc = DaoRoutine_Resolve( decoFunc, selfpar, params, n+1 );
 		if( decoFunc == NULL || DaoRoutine_Decorate( rout, decoFunc, params, n+1, 1 ) == NULL ){
 			DaoParser_Error( self, DAO_INVALID_FUNCTION_DECORATION, rout->routName );
 			return;

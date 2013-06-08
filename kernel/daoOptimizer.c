@@ -5745,10 +5745,12 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 */
 DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoValue *p[], int n, int ip )
 {
-	int i, j, k, m, code;
+	int i, j, k, m, code, decolen, hasself = 0;
 	int parpass[DAO_MAX_PARAM];
 	DArray *annotCodes, *added = NULL, *regmap = NULL;
 	DArray *nested, *ptypes;
+	DaoValue *selfpar = NULL;
+	DaoObject object, *obj = & object;
 	DaoType *ftype, **decotypes;
 	DaoRoutine *newfn, *oldfn = self;
 	DaoVmCodeX *vmc;
@@ -5777,12 +5779,27 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		return newfn;
 	}
 
-	decorator = DaoRoutine_Resolve( decorator, NULL, p, n );
+	if( self->routHost ){
+		/* To circumvent the default object issue for type matching: */
+		object = *(DaoObject*) self->routHost->value;
+		selfpar = (DaoValue*) obj;
+	}
+
+	decorator = DaoRoutine_Resolve( decorator, selfpar, p, n );
 	if( decorator == NULL || decorator->type != DAO_ROUTINE ) return NULL;
 
 	nested = decorator->routType->nested;
 	decotypes = nested->items.pType;
-	if( nested->size == 0 ) return NULL;
+	decolen = nested->size;
+	if( decotypes[0]->attrib & DAO_TYPE_SELFNAMED ){
+		/* Non-static decorator can only be applied to methods of the same class: */
+		if( decorator->routHost != self->routHost ) return NULL;
+		if( decolen == 1 ) return NULL;
+		decotypes += 1;
+		decolen -= 1;
+		hasself = 1;
+	}
+	if( decolen == 0 ) return NULL;
 
 	ftype = (DaoType*) decotypes[0]->aux;
 	ptypes = ftype->nested;
@@ -5811,8 +5828,8 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	}
 	newfn->body->regCount += oldfn->parCount;
 	annotCodes = newfn->body->annotCodes;
-	k = 0;
-	for(i=0,m=nested->size; i<m; i++) parpass[i] = 0;
+	k = hasself;
+	for(i=0; i<decolen; i++) parpass[i] = 0;
 	for(i=0; i<n; i++){
 		DaoValue *pv = p[i];
 		if( i == 0 ){
@@ -5838,7 +5855,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		vmc->b = DaoRoutine_AddConstant( newfn, pv );
 		vmc->c = k++;
 	}
-	for(i=1,m=nested->size; i<m; i++){
+	for(i=1; i<decolen; i++){
 		k = decotypes[i]->tid;
 		if( k == DAO_PAR_VALIST ) break;
 		if( parpass[i] ) continue;
