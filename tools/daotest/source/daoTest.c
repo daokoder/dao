@@ -211,6 +211,7 @@ int main( int argc, char **argv )
 			stream->StdioWrite = DaoTestStream_Write;
 			stream->output = output;
 			DaoVmSpace_SetUserStdio( vmSpace, (DaoUserStream*) stream );
+			DaoVmSpace_SetUserStdError( vmSpace, (DaoUserStream*) stream );
 			for(j=0; j<dao_tests->size; j+=3){
 				DString *id = dao_tests->items.pString[j];
 				DString *codes = dao_tests->items.pString[j+1];

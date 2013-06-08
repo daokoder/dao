@@ -499,6 +499,7 @@ DaoVmSpace* DaoVmSpace_New()
 	DaoValue_Init( self, DAO_VMSPACE );
 	self->stdioStream = DaoStream_New();
 	self->errorStream = DaoStream_New();
+	self->errorStream->file = stderr;
 	self->options = 0;
 	self->stopit = 0;
 	self->safeTag = 1;

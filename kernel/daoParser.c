@@ -1075,7 +1075,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	nested = DaoParser_GetArray( self );
 	DString_Reserve( mbs, 128 );
 	DString_Reserve( pname, 128 );
-	if( nameTok->type == DTOK_ID_THTYPE ) DString_AppendChar( pname, '@' );
+	if( nameTok->name == DTOK_ID_THTYPE ) DString_AppendChar( pname, '@' );
 	DString_AppendMBS( pname, "routine<" );
 	routine->parCount = 0;
 	if( tokens[start+1]->name == DKEY_SELF ){
@@ -1212,12 +1212,16 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 			e1 = hasdeft;  e2 = right;
 			goto ErrorInvalidDefault;
 		}
+		if( nameTok->name == DTOK_ID_THTYPE ){
+			if( nested->size == selfpar && type->tid != DAO_ROUTINE ) goto ErrorInvalidParam;
+		}
 
 		if( routine->body ) MAP_Insert( routine->body->localVarType, regCount, type );
 		if( type->tid != DAO_PAR_VALIST ){
 			j = type_default ? DAO_PAR_DEFAULT : DAO_PAR_NAMED;
 			type = DaoNamespace_MakeType( NS, tks->mbs, j, (DaoValue*) type, NULL, 0 );
 		}
+
 		DArray_Append( nested, (void*) type );
 		DaoRoutine_AddConstant( routine, dft );
 		k = pname->size >0 ? pname->mbs[pname->size-1] : 0;
@@ -3157,7 +3161,7 @@ static int DaoParser_CompileRoutines( DaoParser *self )
 		DaoRoutine *rout = parser->routine;
 		error |= DaoParser_ParseRoutine( parser ) == 0;
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
-		if( error ) continue;
+		if( error ) break;
 	}
 	self->routCompilable->size = 0;
 	return error == 0;
@@ -4547,8 +4551,12 @@ int DaoParser_ParseRoutine( DaoParser *self )
 
 		assert( routine->parCount == self->regCount );
 		ft = routine->routType->nested->items.pType[0];
+		if( ft->attrib & DAO_TYPE_SELFNAMED ){
+			if( routine->routType->nested->size == 1 ) return 0;
+			ft = routine->routType->nested->items.pType[1];
+		}
 		if( ft->tid == DAO_PAR_NAMED ) ft = (DaoType*) ft->aux;
-		if( ft->tid != DAO_ROUTINE ) return 0; //XXX error info;
+		if( ft->tid != DAO_ROUTINE ) return 0;
 		np = ft->nested->size;
 		//if( np && ft->nested->items.pType[np-1]->tid == DAO_PAR_VALIST ) np -= 1;
 		tt = DaoNamespace_MakeType( myNS, "tuple", DAO_TUPLE, 0, ft->nested->items.pType, np );

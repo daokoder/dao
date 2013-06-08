@@ -38,10 +38,10 @@
 
 void DaoStream_Flush( DaoStream *self )
 {
-	if( self->file ){
-		fflush( self->file );
-	}else if( self->redirect && self->redirect->StdioFlush ){
+	if( self->redirect && self->redirect->StdioFlush ){
 		self->redirect->StdioFlush( self->redirect );
+	}else if( self->file ){
+		fflush( self->file );
 	}else{
 		fflush( stdout );
 	}
@@ -724,13 +724,13 @@ DaoUserStream* DaoStream_SetUserStream( DaoStream *self, DaoUserStream *us )
 void DaoStream_WriteChar( DaoStream *self, char val )
 {
 	const char *format = "%c";
-	if( self->file ){
-		fprintf( self->file, format, val );
-	}else if( self->redirect && self->redirect->StdioWrite ){
+	if( self->redirect && self->redirect->StdioWrite ){
 		DString *mbs = DString_New(1);
 		DString_AppendChar( mbs, val );
 		self->redirect->StdioWrite( self->redirect, mbs );
 		DString_Delete( mbs );
+	}else if( self->file ){
+		fprintf( self->file, format, val );
 	}else if( self->attribs & DAO_IO_STRING ){
 		DString_AppendChar( self->streamString, val );
 	}else{
@@ -740,14 +740,14 @@ void DaoStream_WriteChar( DaoStream *self, char val )
 void DaoStream_WriteFormatedInt( DaoStream *self, daoint val, const char *format )
 {
 	char buffer[100];
-	if( self->file ){
-		fprintf( self->file, format, val );
-	}else if( self->redirect && self->redirect->StdioWrite ){
+	if( self->redirect && self->redirect->StdioWrite ){
 		DString *mbs = DString_New(1);
 		sprintf( buffer, format, val );
 		DString_SetMBS( mbs, buffer );
 		self->redirect->StdioWrite( self->redirect, mbs );
 		DString_Delete( mbs );
+	}else if( self->file ){
+		fprintf( self->file, format, val );
 	}else if( self->attribs & DAO_IO_STRING ){
 		sprintf( buffer, format, val );
 		DString_AppendMBS( self->streamString, buffer );
@@ -771,14 +771,14 @@ void DaoStream_WriteFloat( DaoStream *self, double val )
 		return;
 	}
 	if( format == NULL ) format = "%f";
-	if( self->file ){
-		fprintf( self->file, format, val );
-	}else if( self->redirect && self->redirect->StdioWrite ){
+	if( self->redirect && self->redirect->StdioWrite ){
 		DString *mbs = DString_New(1);
 		sprintf( buffer, format, val );
 		DString_SetMBS( mbs, buffer );
 		self->redirect->StdioWrite( self->redirect, mbs );
 		DString_Delete( mbs );
+	}else if( self->file ){
+		fprintf( self->file, format, val );
 	}else if( self->attribs & DAO_IO_STRING ){
 		sprintf( buffer, format, val );
 		DString_AppendMBS( self->streamString, buffer );
@@ -790,13 +790,13 @@ void DaoStream_WriteMBS( DaoStream *self, const char *val )
 {
 	const char *format = self->format;
 	if( format == NULL ) format = "%s";
-	if( self->file ){
-		fprintf( self->file, format, val );
-	}else if( self->redirect && self->redirect->StdioWrite ){
+	if( self->redirect && self->redirect->StdioWrite ){
 		DString *mbs = DString_New(1);
 		DString_SetMBS( mbs, val );
 		self->redirect->StdioWrite( self->redirect, mbs );
 		DString_Delete( mbs );
+	}else if( self->file ){
+		fprintf( self->file, format, val );
 	}else if( self->attribs & DAO_IO_STRING ){
 		DString_AppendMBS( self->streamString, val );
 	}else{
@@ -807,13 +807,13 @@ void DaoStream_WriteWCS( DaoStream *self, const wchar_t *val )
 {
 	const char *format = self->format;
 	if( format == NULL ) format = "%ls";
-	if( self->file ){
-		fprintf( self->file, format, val );
-	}else if( self->redirect && self->redirect->StdioWrite ){
+	if( self->redirect && self->redirect->StdioWrite ){
 		DString *mbs = DString_New(1);
 		DString_SetWCS( mbs, val );
 		self->redirect->StdioWrite( self->redirect, mbs );
 		DString_Delete( mbs );
+	}else if( self->file ){
+		fprintf( self->file, format, val );
 	}else if( self->attribs & DAO_IO_STRING ){
 		DString_AppendWCS( self->streamString, val );
 	}else{
@@ -835,17 +835,17 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 	int i;
 	if( val->mbs ){
 		const char *data = val->mbs;
-		if( self->file ){
+		if( self->redirect && self->redirect->StdioWrite ){
+			DString *mbs = DString_New(1);
+			DString_SetDataMBS( mbs, data, val->size );
+			self->redirect->StdioWrite( self->redirect, mbs );
+			DString_Delete( mbs );
+		}else if( self->file ){
 			if( self->format ){
 				fprintf( self->file, self->format, data );
 			}else{
 				DaoFile_WriteString( self->file, val );
 			}
-		}else if( self->redirect && self->redirect->StdioWrite ){
-			DString *mbs = DString_New(1);
-			DString_SetDataMBS( mbs, data, val->size );
-			self->redirect->StdioWrite( self->redirect, mbs );
-			DString_Delete( mbs );
 		}else if( self->attribs & DAO_IO_STRING ){
 			DString_AppendDataMBS( self->streamString, data, val->size );
 		}else{
@@ -857,17 +857,17 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 		}
 	}else{
 		const wchar_t *data = val->wcs;
-		if( self->file ){
+		if( self->redirect && self->redirect->StdioWrite ){
+			DString *mbs = DString_New(1);
+			DString_SetWords( mbs, data, val->size );
+			self->redirect->StdioWrite( self->redirect, mbs );
+			DString_Delete( mbs );
+		}else if( self->file ){
 			if( self->format ){
 				fprintf( self->file, self->format, data );
 			}else{
 				DaoFile_WriteString( self->file, val );
 			}
-		}else if( self->redirect && self->redirect->StdioWrite ){
-			DString *mbs = DString_New(1);
-			DString_SetWords( mbs, data, val->size );
-			self->redirect->StdioWrite( self->redirect, mbs );
-			DString_Delete( mbs );
 		}else if( self->attribs & DAO_IO_STRING ){
 			DString *wcs = self->streamString;
 			int size = 0;
@@ -889,14 +889,14 @@ void DaoStream_WritePointer( DaoStream *self, void *val )
 	const char *format = self->format;
 	char buffer[100];
 	if( format == NULL ) format = "%p";
-	if( self->file ){
-		fprintf( self->file, format, val );
-	}else if( self->redirect && self->redirect->StdioWrite ){
+	if( self->redirect && self->redirect->StdioWrite ){
 		DString *mbs = DString_New(1);
 		sprintf( buffer, format, val );
 		DString_SetMBS( mbs, buffer );
 		self->redirect->StdioWrite( self->redirect, mbs );
 		DString_Delete( mbs );
+	}else if( self->file ){
+		fprintf( self->file, format, val );
 	}else if( self->attribs & DAO_IO_STRING ){
 		sprintf( buffer, format, val );
 		DString_AppendMBS( self->streamString, buffer );
@@ -916,7 +916,10 @@ int DaoStream_ReadLine( DaoStream *self, DString *line )
 
 	DString_Clear( line );
 	DString_ToMBS( line );
-	if( self->file ){
+	if( self->redirect && self->redirect->StdioRead ){
+		self->redirect->StdioRead( self->redirect, line, 0 );
+		return line->size >0;
+	}else if( self->file ){
 		return DaoFile_ReadLine( self->file, line );
 	}else if( self->attribs & DAO_IO_STRING ){
 		daoint pos = DString_FindWChar( self->streamString, delim, 0 );
@@ -928,9 +931,6 @@ int DaoStream_ReadLine( DaoStream *self, DString *line )
 			DString_Erase( self->streamString, 0, pos+1 );
 		}
 		return self->streamString->size >0;
-	}else if( self->redirect && self->redirect->StdioRead ){
-		self->redirect->StdioRead( self->redirect, line, 0 );
-		return line->size >0;
 	}else{
 		*start = ch = getchar();
 		start += 1;

@@ -4798,8 +4798,8 @@ NotExist_TryAux:
 					ct = dao_type_any;
 					ctchecked = 1;
 				}else if( rout == NULL ){
-					if( DaoRoutine_CheckType( at, NS, bt, tp, j, code, 0 ) ==0 ){
-						DaoRoutine_CheckError( NS, NULL, at, bt, tp, j, code, errors );
+					if( DaoRoutine_CheckType( at, NS, NULL, tp, j, code, 0 ) ==0 ){
+						DaoRoutine_CheckError( NS, NULL, at, NULL, tp, j, code, errors );
 						goto ErrorTyping;
 					}
 					if( at->name->mbs[0] == '@' ){
@@ -4810,7 +4810,7 @@ NotExist_TryAux:
 						goto TryPushBlockReturnType;
 					}
 					cbtype = at->cbtype;
-					DaoRoutine_CheckType( at, NS, bt, tp, j, code, 1 );
+					DaoRoutine_CheckType( at, NS, NULL, tp, j, code, 1 );
 					ct = types[opa];
 				}else{
 					if( rout->type != DAO_ROUTINE ) goto ErrorTyping;
