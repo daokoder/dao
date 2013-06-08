@@ -5883,7 +5883,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	}
 
 	DaoRoutine_UpdateRegister( newfn, regmap );
-	DaoRoutine_DoTypeInference( newfn, 0 );
+	if( DaoRoutine_DoTypeInference( newfn, 0 ) ==  0 ) goto ErrorDecorator;
 
 	if( ip ){
 		/* For in place decoration, override the old function by swapping the function
@@ -5905,7 +5905,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 ErrorDecorator:
 	if( added ) DArray_Delete( added );
 	if( regmap ) DArray_Delete( regmap );
-	DaoRoutine_Delete( newfn );
+	DaoGC_TryDelete( (DaoValue*) newfn );
 	return NULL;
 }
 #endif

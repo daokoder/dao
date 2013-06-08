@@ -455,6 +455,10 @@ void DaoCallServer_AddTimedWait( DaoProcess *wait, DaoTaskEvent *event, double t
 	server = daoCallServer;
 
 	DMutex_Lock( & server->mutex );
+	if( wait->active == 0 ){
+		DMap_Insert( server->active, wait, NULL );
+		wait->active = 1;
+	}
 	if( timeout >= 1E-27 ){
 		server->timestamp.value.real = timeout + Dao_GetCurrentTime();
 		server->timestamp.value.imag += 1;
@@ -499,6 +503,26 @@ void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout )
 	DaoTaskEvent_Init( event, DAO_EVENT_WAIT_TASKLET, DAO_EVENT_WAIT, future, NULL );
 
 	DaoCallServer_AddTimedWait( wait, event, timeout );
+}
+int DaoCallServer_MarkActiveProcess( DaoProcess *process, int active )
+{
+	int ret = 0;
+	DaoCallServer *server = daoCallServer;
+
+	if( daoCallServer == NULL ) return 0;
+
+	DMutex_Lock( & server->mutex );
+	ret = DMap_Find( server->active, process ) != NULL;
+	if( active ){
+		ret = !ret;
+		DMap_Insert( server->active, process, NULL );
+		process->active = 1;
+	}else{
+		DMap_Erase( server->active, process );
+		process->active = 0;
+	}
+	DMutex_Unlock( & server->mutex );
+	return ret;
 }
 static int DaoCallServer_CheckEvent( DaoTaskEvent *event, DaoFuture *fut, DaoChannel *chan )
 {
@@ -778,6 +802,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		}
 		DMutex_Lock( & server->mutex );
 		DMap_Erase( server->active, process );
+		process->active = 0;
 		DMutex_Unlock( & server->mutex );
 
 		DaoProcess_ReturnFutureValue( process, future );

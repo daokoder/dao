@@ -4574,6 +4574,10 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	if( DaoParser_PostParsing( self ) == 0 ) return 0;
 #ifdef DAO_WITH_DECORATOR
 	DaoParser_DecorateRoutine( self, routine );
+	if( self->errors->size ){
+		DaoParser_PrintError( self, 0, 0, NULL );
+		return 0;
+	}
 #endif
 	return 1;
 }

@@ -390,11 +390,15 @@ static void DaoIO_Open( DaoProcess *proc, DaoValue *p[], int N )
 			return;
 		}
 	}else{
-		DString_Assign( stream->fname, p[0]->xString.data );
-		DString_ToMBS( stream->fname );
-		mode = DString_GetMBS( p[1]->xString.data );
-		stream->file = DaoIO_OpenFile( proc, stream->fname, mode, 0 );
 		/* XXX Error handling? */
+		mode = DString_GetMBS( p[1]->xString.data );
+		if( p[0]->type == DAO_INTEGER ){
+			stream->file = fdopen( p[0]->xInteger.value, mode );
+		}else{
+			DString_Assign( stream->fname, p[0]->xString.data );
+			DString_ToMBS( stream->fname );
+			stream->file = DaoIO_OpenFile( proc, stream->fname, mode, 0 );
+		}
 		stream->mode = 0;
 		if( strstr( mode, "+" ) )
 			stream->mode = DAO_IO_WRITE | DAO_IO_READ;
@@ -624,6 +628,7 @@ DaoFuncItem dao_io_methods[] =
 	{ DaoIO_ReadFile,  "read( file : string, silent=0 )=>string" },
 	{ DaoIO_Open,      "open( )=>stream" },
 	{ DaoIO_Open,      "open( file :string, mode :string )=>stream" },
+	{ DaoIO_Open,      "open( fileno :int, mode :string )=>stream" },
 	{ DaoIO_SStream,   "sstream( type :enum<mbs, wcs> = $mbs )=>stream" },
 
 	{ DaoIO_ReadLines,  "readlines( file :string, chop=0 )[line:string=>none|@T]=>list<@T>" },
@@ -635,6 +640,7 @@ static DaoFuncItem streamMeths[] =
 	{ DaoIO_Open,      "stream( )=>stream" },
 	{ DaoIO_SStream,   "stream( type :enum<mbs, wcs> )=>stream" },
 	{ DaoIO_Open,      "stream( file :string, mode :string )=>stream" },
+	{ DaoIO_Open,      "stream( fileno :int, mode :string )=>stream" },
 	{ DaoIO_Write,     "write( self :stream, ... )" },
 	{ DaoIO_Writef,    "writef( self :stream, format : string, ... )" },
 	{ DaoIO_Writeln,   "writeln( self :stream, ... )" },

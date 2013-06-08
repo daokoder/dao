@@ -44,7 +44,7 @@
 
 struct DaoStackFrame
 {
-	ushort_t        entry;      /* entry code id; */
+	int             entry;      /* entry code id; */
 	ushort_t        state;      /* frame state; */
 	ushort_t        returning;  /* return register id; */
 	ushort_t        parCount;   /* the actual number of parameters passed in; */
@@ -114,7 +114,8 @@ struct DaoProcess
 	uchar_t         parCount;
 	uchar_t         pauseType;
 	uchar_t         status;
-	uchar_t         stopit;
+	uchar_t         active : 4;
+	uchar_t         stopit : 4;
 
 	DaoType        *abtype; /* for coroutine */
 	DaoFuture      *future;

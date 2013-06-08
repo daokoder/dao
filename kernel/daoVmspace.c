@@ -256,6 +256,7 @@ DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self )
 #endif
 	if( self->processes->size ){
 		proc = (DaoProcess*) DArray_Back( self->processes );
+		proc->active = 0;
 		DArray_PopBack( self->processes );
 	}else{
 		proc = DaoProcess_New( self );
@@ -497,6 +498,7 @@ DaoVmSpace* DaoVmSpace_New()
 	DaoVmSpace *self = (DaoVmSpace*) dao_malloc( sizeof(DaoVmSpace) );
 	DaoValue_Init( self, DAO_VMSPACE );
 	self->stdioStream = DaoStream_New();
+	self->errorStream = DaoStream_New();
 	self->options = 0;
 	self->stopit = 0;
 	self->safeTag = 1;
@@ -547,8 +549,8 @@ DaoVmSpace* DaoVmSpace_New()
 	self->mainNamespace = DaoNamespace_New( self, "MainNamespace" );
 	self->mainNamespace->vmSpace = self;
 	self->mainNamespace->refCount ++;
-	self->stdioStream->refCount += 2;
-	self->errorStream = self->stdioStream;
+	self->stdioStream->refCount += 1;
+	self->errorStream->refCount += 1;
 
 	self->ReadLine = NULL;
 	self->AddHistory = NULL;
@@ -2529,9 +2531,12 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_AddConstValue( ns, "io", (DaoValue*) ns2 );
 	dao_type_stream = DaoNamespace_WrapType( ns2, & streamTyper, 0 );
 	GC_ShiftRC( dao_type_stream, vms->stdioStream->ctype );
+	GC_ShiftRC( dao_type_stream, vms->errorStream->ctype );
 	vms->stdioStream->ctype = dao_type_stream;
+	vms->errorStream->ctype = dao_type_stream;
 	DaoNamespace_WrapFunctions( ns2, dao_io_methods );
-	DaoNamespace_AddConstValue( ns2, "stdio", (DaoValue*) vms->stdioStream );
+	DaoNamespace_AddConstValue( ns2, "stdio",  (DaoValue*) vms->stdioStream );
+	DaoNamespace_AddConstValue( ns2, "stderr", (DaoValue*) vms->errorStream );
 
 	dao_default_cdata.ctype = DaoNamespace_WrapType( vms->nsInternal, & defaultCdataTyper, 1 );
 	GC_IncRC( dao_default_cdata.ctype );

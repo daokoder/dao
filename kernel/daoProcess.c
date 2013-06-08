@@ -156,6 +156,7 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->mbstring = DString_New(1);
 	self->regexCaches = NULL;
 	self->pauseType = 0;
+	self->active = 0;
 	return self;
 }
 
@@ -847,6 +848,11 @@ static daoint DaoArray_ComputeIndex( DaoArray *self, DaoValue *ivalues[], int co
 static int DaoProcess_Move( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t );
 static void DaoProcess_AdjustCodes( DaoProcess *self, int options );
 
+#ifdef DAO_WITH_CONCURRENT
+int DaoCallServer_MarkActiveProcess( DaoProcess *process, int active );
+#endif
+
+
 #ifndef WITHOUT_DIRECT_THREADING
 #if !defined( __GNUC__ ) || defined( __STRICT_ANSI__ )
 #define WITHOUT_DIRECT_THREADING
@@ -886,15 +892,14 @@ int DaoProcess_Execute( DaoProcess *self )
 	DString *str;
 	complex16 com = {0,0};
 	complex16 czero = {0,0};
-	daoint size, *dims, *dmac;
-	daoint i, j, id, print, retCode;
+	int invokehost = handler && handler->InvokeHost;
+	int print, active = self->active;
+	daoint i, j, id, size;
 	daoint exceptCount = 0;
 	daoint gotoCount = 0;
 	daoint inum=0;
 	float fnum=0;
 	double AA, BB, dnum=0;
-	int invokehost = handler && handler->InvokeHost;
-	ushort_t *range;
 	complex16 acom, bcom;
 	DaoStackFrame *base;
 
@@ -1057,6 +1062,7 @@ int DaoProcess_Execute( DaoProcess *self )
 
 #endif
 
+
 	if( self->topFrame == self->firstFrame ) goto ReturnFalse;
 	rollback = self->topFrame->prev;
 	base = self->topFrame;
@@ -1073,9 +1079,12 @@ CallEntry:
 		/*if( eventHandler ) eventHandler->mainRoutineExit(); */
 		goto ReturnTrue;
 	}
+	if( self->topFrame->entry == -1 ) goto FinishCall;
 	if( routine->pFunc ){
 		DaoValue **p = self->stackValues + topFrame->stackBase;
-		DaoProcess_CallFunction( self, topFrame->routine, p, topFrame->parCount );
+		if( self->status == DAO_PROCESS_STACKED ){
+			DaoProcess_CallFunction( self, topFrame->routine, p, topFrame->parCount );
+		}
 		DaoProcess_PopFrame( self );
 		goto CallEntry;
 	}
@@ -1093,6 +1102,7 @@ CallEntry:
 		printf("class name = %s\n", routine->routHost->aux->xClass.className->mbs);
 	printf("routine name = %s\n", routine->routName->mbs);
 	printf("number of instruction: %i\n", routine->body->vmCodes->size );
+	printf("entry instruction: %i\n", self->topFrame->entry );
 	if( routine->routType ) printf("routine type = %s\n", routine->routType->name->mbs);
 #endif
 
@@ -1508,7 +1518,7 @@ CallEntry:
 			self->activeCode = vmc;
 			value = DaoProcess_DoReturn( self, vmc );
 			if( self->defers->size > self->topFrame->deferBase ){
-				self->topFrame->entry = (int)(vmc - self->topFrame->codes) + 1;
+				self->topFrame->entry = -1;
 				DaoProcess_PushDefers( self, value );
 				goto CallEntry;
 			}
@@ -2374,7 +2384,7 @@ CheckException:
 			//XXX if( invokehost ) handler->InvokeHost( handler, topCtx );
 			if( self->exceptions->size > exceptCount ){
 				if( self->defers->size > self->topFrame->deferBase ){
-					self->topFrame->entry = routine->body->vmCodes->size;
+					self->topFrame->entry = -1;
 					DaoProcess_PushDefers( self, NULL );
 					goto CallEntry;
 				}
@@ -2433,9 +2443,19 @@ FinishProc:
 	DaoProcess_PopFrames( self, rollback );
 	self->status = DAO_PROCESS_ABORTED;
 	/*if( eventHandler ) eventHandler->mainRoutineExit(); */
+
 ReturnFalse :
+#ifdef DAO_WITH_CONCURRENT
+	/*
+	// active==0:       if the process is started outside of the tasklet pool;
+	// self->active!=0: if the process has been added to the active process list;
+	// Now it must be manually removed from the active process list:
+	*/
+	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
+#endif
 	DaoGC_TryInvoke();
 	return 0;
+
 ReturnTrue :
 	if( self->topFrame == self->firstFrame && self->topFrame->next && self->topFrame->next->routine ){
 		print = (vmSpace->options & DAO_OPTION_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
@@ -2449,6 +2469,9 @@ ReturnTrue :
 			DaoProcess_PopFrame( self );
 		}
 	}
+#ifdef DAO_WITH_CONCURRENT
+	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
+#endif
 	DaoGC_TryInvoke();
 	return 1;
 }
@@ -3484,10 +3507,12 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		type = NULL;
 	}
 	if( retValue == NULL ){
+		int cmdline = self->vmSpace->evalCmdline;
 		int opt1 = self->vmSpace->options & DAO_OPTION_INTERUN;
 		int opt2 = self->activeNamespace->options & DAO_NS_AUTO_GLOBAL;
-		int retnull = type == NULL || type->tid == DAO_UDT;
-		if( retnull || self->vmSpace->evalCmdline || (opt1 && opt2) ) retValue = dao_none_value;
+		int retnull = type == NULL || type->tid == DAO_NONE || type->tid == DAO_UDT;
+		int retnull2 = type && type->tid == DAO_VALTYPE && type->value->type == DAO_NONE;
+		if( retnull || retnull2 || cmdline || (opt1 && opt2) ) retValue = dao_none_value;
 	}
 	if( DaoValue_Move( retValue, dest, type ) ==0 ) goto InvalidReturn;
 	return retValue;
