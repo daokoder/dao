@@ -5709,22 +5709,28 @@ ErrorTyping: return DaoInferencer_Error( self, DTE_TYPE_NOT_MATCHING );
 }
 int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 {
-	int retc;
 	DaoInferencer *inferencer;
 	DaoOptimizer *optimizer;
 	DaoVmSpace *vmspace = self->nameSpace->vmSpace;
+	int retc, decorator = self->routName->mbs[0] == '@';
 
 	if( self->body->vmCodes->size == 0 ) return 1;
 
 	optimizer = DaoVmSpace_AcquireOptimizer( vmspace );
 	DArray_Resize( self->body->regType, self->body->regCount, NULL );
-	DaoOptimizer_RemoveUnreachableCodes( optimizer, self );
+	if( ! decorator ) DaoOptimizer_RemoveUnreachableCodes( optimizer, self );
 
 	inferencer = DaoVmSpace_AcquireInferencer( vmspace );
 	DaoInferencer_Init( inferencer, self, silent );
 	retc = DaoInferencer_DoInference( inferencer );
 	DaoVmSpace_ReleaseInferencer( vmspace, inferencer );
-	if( retc ) DaoOptimizer_Optimize( optimizer, self );
+	/*
+	// Do not optimize decorators now, because there are reverved
+	// registers for decoration, but not used in the codes.
+	// Optimization may lose those registers, and lead to error
+	// during decorator application.
+	*/
+	if( retc && ! decorator ) DaoOptimizer_Optimize( optimizer, self );
 	/* DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->errorStream ); */
 	DaoVmSpace_ReleaseOptimizer( vmspace, optimizer );
 	return retc;

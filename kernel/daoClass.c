@@ -649,6 +649,11 @@ static void DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed )
 		DArray_Append( self->objDataName, (void*) name );
 		DArray_Append( self->instvars, DaoVariable_New( var, type ) );
 	}
+
+	DVector_PushUshort( self->ranges, self->constants->size );
+	DVector_PushUshort( self->ranges, self->variables->size );
+	DVector_PushUshort( self->ranges, self->instvars->size );
+
 	for(i=0; i<routines->size; i++){
 		DaoRoutine *rout = routines->items.pRoutine[i];
 		it = DMap_Find( overloads, rout->routName );
@@ -667,10 +672,6 @@ static void DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed )
 		if( DMap_Find( self->lookupTable, it->key.pString ) ) continue;
 		MAP_Insert( self->lookupTable, it->key.pString, LOOKUP_BIND( st, pm, up, id ) );
 	}
-
-	DVector_PushUshort( self->ranges, self->constants->size );
-	DVector_PushUshort( self->ranges, self->variables->size );
-	DVector_PushUshort( self->ranges, self->instvars->size );
 
 	for(i=0; i<routines->size; i++){
 		DaoRoutine *rout = routines->items.pRoutine[i];
@@ -1004,6 +1005,7 @@ void DaoClass_UseMixinDecorators( DaoClass *self )
 		DaoClass *mixin = self->mixins->items.pClass[i];
 		daoint J0 = self->ranges->data.ushorts[6*i];
 		daoint J1 = self->ranges->data.ushorts[6*i+3];
+		//printf( "J0 = %i; J1 = %i\n", J0, J1 );
 		for(j=J1-1; j>=J0; --j){
 			DaoRoutine *deco = (DaoRoutine*) self->constants->items.pConst[j]->value;
 			DString *decoName = deco->routName;
@@ -1023,7 +1025,7 @@ void DaoClass_UseMixinDecorators( DaoClass *self )
 				if( pos == MAXSIZE ) pos = 0;
 				DString_SubString( decoName, suffix, pos+1, decoName->size-2-pos );
 			}
-			//printf( "%s %s\n", prefix->mbs, suffix->mbs );
+			//printf( "%s %s %s\n", decoName->mbs, prefix->mbs, suffix->mbs );
 			for(k=J1; k<self->constants->size; ++k){
 				DaoValue *cst = self->constants->items.pConst[k]->value;
 				DaoRoutine *rout = (DaoRoutine*) cst;
