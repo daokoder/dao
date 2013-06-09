@@ -50,7 +50,10 @@ struct DaoClass
 	DArray  *glbDataName;  /* <DString*>: keep track field declaration order: */
 	DArray  *objDataName;  /* <DString*>: keep tracking field declaration order: */
 
-	DArray  *superClass; /* <DaoClass/DaoCData*>: direct super classes. */
+	DArray  *baseClass;    /* <DaoClass/DaoCData*>: mixin or super classes; */
+	DArray  *superClass;   /* <DaoClass/DaoCData*>: direct super classes; */
+	DArray  *mixinClass;   /* <DaoClass*>: mixin classes; */
+	DVector *mixinOffset;  /* <ushort_t>: offsets of the fields of the mixin classes; */
 
 	/* Routines with overloading signatures: */
 	/* They are inserted into constants, no refCount updating for this. */
@@ -107,6 +110,7 @@ DAO_DLL DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types );
 
 DAO_DLL int  DaoClass_FindSuper( DaoClass *self, DaoValue *super );
 DAO_DLL int  DaoClass_ChildOf( DaoClass *self, DaoValue *super );
+DAO_DLL void DaoClass_AddMixinClass( DaoClass *self, DaoValue *mixin );
 DAO_DLL void DaoClass_AddSuperClass( DaoClass *self, DaoValue *super );
 DAO_DLL DaoValue* DaoClass_CastToBase( DaoClass *self, DaoType *parent );
 

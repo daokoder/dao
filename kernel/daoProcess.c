@@ -6454,6 +6454,7 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 		if( tp ) printf( "%3i: %s\n", i, tp->name->mbs );
 	}
 #endif
+	/* TODO static variable type; */
 	for(i=0,n=self->routConsts->items.size; i<n; i++){
 		DaoValue_Update( & self->routConsts->items.items.pValue[i], self->nameSpace, deftypes );
 	}

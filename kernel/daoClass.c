@@ -37,6 +37,7 @@
 #include"daoNumtype.h"
 #include"daoValue.h"
 #include"daoNamespace.h"
+#include"daoVmspace.h"
 
 static void DaoClass_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
 {
@@ -111,7 +112,10 @@ DaoClass* DaoClass_New()
 	self->objDataName = DArray_New(D_STRING);
 	self->cstDataName = DArray_New(D_STRING);
 	self->glbDataName = DArray_New(D_STRING);
-	self->superClass  = DArray_New(D_VALUE);
+	self->baseClass   = DArray_New(D_VALUE);
+	self->superClass  = DArray_New(0);
+	self->mixinClass  = DArray_New(0);
+	self->mixinOffset = DVector_New(sizeof(ushort_t));
 	self->references  = DArray_New(D_VALUE);
 	return self;
 }
@@ -127,7 +131,10 @@ void DaoClass_Delete( DaoClass *self )
 	DArray_Delete( self->objDataName );
 	DArray_Delete( self->cstDataName );
 	DArray_Delete( self->glbDataName );
+	DArray_Delete( self->baseClass );
 	DArray_Delete( self->superClass );
+	DArray_Delete( self->mixinClass );
+	DVector_Delete( self->mixinOffset );
 	DArray_Delete( self->references );
 	if( self->vtable ) DMap_Delete( self->vtable );
 	if( self->protoValues ) DMap_Delete( self->protoValues );
@@ -240,7 +247,12 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 	for(i=self->constants->size; i<other->constants->size; i++){
 		DaoValue *value = other->constants->items.pConst[i]->value;
 		DaoRoutine *rout = & value->xRoutine;
-		if( value->type == DAO_ROUTINE && rout->overloads == NULL && rout->routHost == other->objType ){
+		if( value->type != DAO_ROUTINE || rout->routHost != other->objType ){
+			DArray_Append( self->constants, DaoConstant_New( value ) );
+			DaoValue_Update( & self->constants->items.pConst[i]->value, ns, deftypes );
+			continue;
+		}
+		if( rout->overloads == NULL ){
 			DString *name = rout->routName;
 			rout = DaoRoutine_Copy( rout, 1, 1 );
 			value = (DaoValue*) rout;
@@ -264,7 +276,7 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 			DArray_Append( routines, rout );
 			if( k == 0 ) goto Failed;
 			continue;
-		}else if( value->type == DAO_ROUTINE ){
+		}else{
 			/* No need to added the overloaded routines now; */
 			/* Each of them has an entry in constants, and will be handled later: */
 			DaoRoutine *routs = DaoRoutines_New( ns, self->objType, NULL );
@@ -370,6 +382,8 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 
 	self->objType = DaoType_New( name->mbs, DAO_OBJECT, (DaoValue*)self, NULL );
 	self->clsType = DaoType_New( name->mbs, DAO_CLASS, (DaoValue*) self, NULL );
+	self->objType->attrib |= DAO_TYPE_SPEC;  /* for mixin class; */
+	self->clsType->attrib |= DAO_TYPE_SPEC;  /* for mixin class; */
 	GC_IncRC( self->clsType );
 	DString_InsertMBS( self->clsType->name, "class<", 0, 0, 0 );
 	DString_AppendChar( self->clsType->name, '>' );
@@ -441,17 +455,329 @@ void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets )
 		}
 	}
 }
+static DaoClass* DaoClass_FindMixin( DaoClass *mixin, int st, int id, int *offset )
+{
+	DaoClass *last;
+	ushort_t *offsets = mixin->mixinOffset->data.ushorts;
+	int size1 = mixin->mixinClass->size - 1;
+	int i = 0, j = size1;
+	int st2 = 0, count = 0;
+
+	*offset = 0;
+	if( size1 == -1 ) return mixin;
+	last = mixin->mixinClass->items.pClass[size1];
+	switch( st ){
+	case DAO_CLASS_CONSTANT  : st2 = 0; count = last->cstDataName->size; break;
+	case DAO_CLASS_VARIABLE  : st2 = 1; count = last->glbDataName->size; break;
+	case DAO_OBJECT_VARIABLE : st2 = 2; count = last->objDataName->size - 1; break;
+	/* Minus one to ignore the self variable; */
+	}
+	if( id < offsets[st2] ) return mixin;
+	if( id >= (offsets[3*size1+st2] + count) ) return mixin;
+	*offset = offsets[st2];
+	if( size1 == 0 ) return last;
+	while( i <= j ){
+		int k = (i + j) / 2;
+		DaoClass *mid = mixin->mixinClass->items.pClass[k];
+		*offset = offsets[3*k+st2];
+		if( i == j ) return mid;
+		switch( st ){
+		case DAO_CLASS_CONSTANT  : count = mid->cstDataName->size; break;
+		case DAO_CLASS_VARIABLE  : count = mid->glbDataName->size; break;
+		case DAO_OBJECT_VARIABLE : count = mid->objDataName->size - 1; break;
+		}
+		if( id < offsets[3*k+st2] ){
+			j = k;
+		}else if( id >= (offsets[3*k+st2] + count) ){
+			i = k;
+		}else{
+			return mid;
+		}
+	}
+	return mixin;
+}
+static int DaoClass_MapIndex( DaoClass *mixin, int st, int id, DMap *mixed )
+{
+	int offset = 0;
+	DaoClass *mx = DaoClass_FindMixin( mixin, st, id, & offset );
+	DNode *it = DMap_Find( mixed, mx );
+	if( it != NULL ) it = MAP_Find( it->value.pMap, LOOKUP_BIND( st, 0, 0, id-offset ) );
+	if( it != NULL ) return LOOKUP_ID( it->value.pInt );
+	return id;
+}
+static DString* DaoClass_GetDataName( DaoClass *self, int st, int id )
+{
+	DNode *it;
+	for(it=DMap_First(self->lookupTable); it; it=DMap_Next(self->lookupTable,it)){
+		if( st == LOOKUP_ST(it->value.pInt) && id == LOOKUP_ID(it->value.pInt) ){
+			return it->value.pString;
+		}
+	}
+	return NULL;
+}
+static int DaoRoutine_GetFieldIndex( DaoRoutine *self, DString *name )
+{
+	DString none = DString_WrapMBS( "" );
+	DaoString str = {DAO_STRING,0,0,0,0,NULL};
+	DaoString *s = & str;
+	daoint i;
+	if( name == NULL ) name = & none;
+	for(i=0; i<self->routConsts->items.size; ++i){
+		DaoValue *item = DaoList_GetItem( self->routConsts, i );
+		DString *field = DaoValue_TryGetString( item );
+		if( field == NULL ) continue;
+		if( DString_EQ( field, name ) ) return i;
+	}
+	str.data = name;
+	return DaoRoutine_AddConstant( self, (DaoValue*) s );
+}
+static void DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed )
+{
+	daoint i, j, k, id;
+	ushort_t C1, S1, O1;
+	ushort_t *cc, *ss, *oo;
+	DaoNamespace *ns = self->classRoutine->nameSpace;
+	DArray *routines;
+	DMap *overloads;
+	DMap *deftypes;
+	DMap *routmap;
+	DMap *idmap;
+	DNode *it;
+
+	if( mixin->superClass->size ) return;
+	if( DMap_Find( mixed, mixin ) != NULL ) return;
+
+	idmap = DMap_New(0,0);
+	routmap = DMap_New(0,0);
+	deftypes = DMap_New(0,0);
+	overloads = DMap_New(D_STRING,0);
+	routines = DArray_New(0);
+	DMap_Insert( mixed, mixin, idmap );
+	DMap_Delete( idmap );
+	idmap = DMap_Find( mixed, mixin )->value.pMap;
+
+	DVector_Reserve( self->mixinOffset, self->mixinOffset->size + 3 );
+	cc = (ushort_t*) DVector_Push( self->mixinOffset );
+	ss = (ushort_t*) DVector_Push( self->mixinOffset );
+	oo = (ushort_t*) DVector_Push( self->mixinOffset );
+
+	*cc = self->cstDataName->size;
+	*ss = self->glbDataName->size;
+	*oo = self->objDataName->size;
+
+	for(i=0; i<mixin->mixinClass->size; ++i){
+		DaoClass_MixIn( self, mixin->mixinClass->items.pClass[i], mixed );
+	}
+	C1 = 2;
+	S1 = 0;
+	O1 = 1;
+	if( mixin->mixinClass->size ){
+		int id = mixin->mixinClass->size-1;
+		DaoClass *last = mixin->mixinClass->items.pClass[id];
+		C1 = mixin->mixinOffset->data.ushorts[3*id+0] + last->cstDataName->size;
+		S1 = mixin->mixinOffset->data.ushorts[3*id+1] + last->glbDataName->size;
+		O1 = mixin->mixinOffset->data.ushorts[3*id+2] + last->objDataName->size - 1;
+		/* Minus one to ignore the self variable; */
+	}
+	for(i=0; i<2; ++i){
+		id = LOOKUP_BIND( DAO_CLASS_CONSTANT, DAO_DATA_PUBLIC, 0, self->constants->size );
+		MAP_Insert( self->lookupTable, mixin->className, id );
+		DArray_Append( self->constants, mixin->constants->items.pConst[i] );
+		DArray_Append( self->cstDataName, (void*) mixin->className );
+	}
+	DMap_Insert( deftypes, mixin->clsType, self->clsType );
+	DMap_Insert( deftypes, mixin->objType, self->objType );
+	for(i=C1; i<mixin->cstDataName->size; ++i){
+		daoint src = LOOKUP_BIND( DAO_CLASS_CONSTANT, 0, 0, i );
+		daoint des = LOOKUP_BIND( DAO_CLASS_CONSTANT, 0, 0, self->constants->size );
+		DString *name = mixin->cstDataName->items.pString[i];
+		DaoValue *cst = mixin->constants->items.pConst[i]->value;
+		DaoRoutine *rout = (DaoRoutine*) cst;
+
+		MAP_Insert( idmap, src, des );
+		DArray_Append( self->cstDataName, (void*) name );
+		if( cst->type != DAO_ROUTINE || rout->routHost != mixin->objType ){
+			DArray_Append( self->constants, DaoConstant_New( cst ) );
+			continue;
+		}
+		if( rout->overloads == NULL ){
+			rout = DaoRoutine_Copy( rout, 1, 1 );
+			k = DaoRoutine_Finalize( rout, self->objType, deftypes );
+#if 0
+			printf( "%i %p:  %s  %s\n", i, rout, rout->routName->mbs, rout->routType->name->mbs );
+#endif
+			/*
+			// Do not use DaoClass_AddConst() here, so that the original
+			// method overloading structures will be mantained, without
+			// interference from methods of other mixin component classes
+			// or of the host class.
+			*/
+			it = DMap_Find( routmap, rout );
+			if( it ) DRoutines_Add( it->value.pRoutine->overloads, rout );
+			DArray_Append( self->constants, DaoConstant_New( (DaoValue*) rout ) );
+			DArray_Append( routines, rout );
+			it = DMap_Find( overloads, rout->routName );
+			if( it == NULL ) it = DMap_Insert( overloads, rout->routName, NULL );
+			it->value.pInt += 1;
+			//if( k == 0 ) goto Failed; TODO
+		}else{
+			/* No need to added the overloaded routines now; */
+			/* Each of them has an entry in constants, and will be handled later: */
+			DaoRoutine *routs = DaoRoutines_New( ns, self->objType, NULL );
+			DArray_Append( self->constants, DaoConstant_New( (DaoValue*) routs ) );
+			for(j=0; j<rout->overloads->routines->size; ++j){
+				DaoRoutine *R = rout->overloads->routines->items.pRoutine[j];
+				DMap_Insert( routmap, R, routs );
+			}
+		}
+	}
+	for(i=S1; i<mixin->glbDataName->size; ++i){
+		daoint src = LOOKUP_BIND( DAO_CLASS_VARIABLE, 0, 0, i );
+		daoint des = LOOKUP_BIND( DAO_CLASS_VARIABLE, 0, 0, self->variables->size );
+		DString *name = mixin->glbDataName->items.pString[i];
+		DaoValue *var = mixin->variables->items.pVar[i]->value;
+		DaoType *type = mixin->variables->items.pVar[i]->dtype;
+
+		type = DaoType_DefineTypes( type, ns, deftypes );
+
+		MAP_Insert( idmap, src, des );
+		DArray_Append( self->glbDataName, (void*) name );
+		DArray_Append( self->variables, DaoVariable_New( var, type ) );
+	}
+	for(i=O1; i<mixin->objDataName->size; ++i){
+		daoint src = LOOKUP_BIND( DAO_OBJECT_VARIABLE, 0, 0, i );
+		daoint des = LOOKUP_BIND( DAO_OBJECT_VARIABLE, 0, 0, self->instvars->size );
+		DString *name = mixin->objDataName->items.pString[i];
+		DaoValue *var = mixin->instvars->items.pVar[i]->value;
+		DaoType *type = mixin->instvars->items.pVar[i]->dtype;
+
+		type = DaoType_DefineTypes( type, ns, deftypes );
+
+		MAP_Insert( idmap, src, des );
+		DArray_Append( self->objDataName, (void*) name );
+		DArray_Append( self->instvars, DaoVariable_New( var, type ) );
+	}
+	for(i=0; i<routines->size; i++){
+		DaoRoutine *rout = routines->items.pRoutine[i];
+		it = DMap_Find( overloads, rout->routName );
+		if( it == NULL || it->value.pInt <= 1 ) continue;
+		DaoClass_AddConst( self, rout->routName, (DaoValue*) rout, DAO_DATA_PUBLIC );
+	}
+	for(it=DMap_First(mixin->lookupTable); it; it=DMap_Next(mixin->lookupTable,it)){
+		int pm = LOOKUP_PM( it->value.pInt );
+		int st = LOOKUP_ST( it->value.pInt );
+		int up = LOOKUP_UP( it->value.pInt );
+		int id = LOOKUP_ID( it->value.pInt );
+		if( st != DAO_OBJECT_VARIABLE || id != 0 ){ /* not a "self": */
+			DNode *it2 = MAP_Find( idmap, LOOKUP_BIND( st, 0, 0, id ) );
+			if( it2 ) id = LOOKUP_ID( it2->value.pInt );
+		}
+		if( DMap_Find( self->lookupTable, it->key.pString ) ) continue;
+		MAP_Insert( self->lookupTable, it->key.pString, LOOKUP_BIND( st, pm, up, id ) );
+	}
+	for(i=0; i<routines->size; i++){
+		DaoRoutine *rout = routines->items.pRoutine[i];
+		DaoType **types;
+		if( rout->body == NULL ) continue;
+		//DaoRoutine_PrintCode( rout, rout->nameSpace->vmSpace->stdioStream );
+		types = rout->body->regType->items.pType;
+		for(j=0; j<rout->body->annotCodes->size; ++j){
+			DaoVmCodeX *vmc = rout->body->annotCodes->items.pVmc[j];
+			DaoClass *klass;
+			DString *name;
+			switch( vmc->code ){
+			case DVM_GETCK:
+			case DVM_GETCK_I: case DVM_GETCK_F:
+			case DVM_GETCK_D: case DVM_GETCK_C:
+				vmc->b = DaoClass_MapIndex( mixin, DAO_CLASS_CONSTANT, vmc->b, mixed );
+				break;
+			case DVM_GETVK:
+			case DVM_GETVK_I: case DVM_GETVK_F:
+			case DVM_GETVK_D: case DVM_GETVK_C:
+			case DVM_SETVK:
+			case DVM_SETVK_II: case DVM_SETVK_FF:
+			case DVM_SETVK_DD: case DVM_SETVK_CC:
+				vmc->b = DaoClass_MapIndex( mixin, DAO_CLASS_VARIABLE, vmc->b, mixed );
+				break;
+			case DVM_GETVO:
+			case DVM_GETVO_I: case DVM_GETVO_F:
+			case DVM_GETVO_D: case DVM_GETVO_C:
+			case DVM_SETVO:
+			case DVM_SETVO_II: case DVM_SETVO_FF:
+			case DVM_SETVO_DD: case DVM_SETVO_CC:
+				vmc->b = DaoClass_MapIndex( mixin, DAO_OBJECT_VARIABLE, vmc->b, mixed );
+				break;
+			case DVM_GETF_KC:
+			case DVM_GETF_KCI: case DVM_GETF_KCF:
+			case DVM_GETF_KCD: case DVM_GETF_KCC:
+			case DVM_GETF_OC:
+			case DVM_GETF_OCI: case DVM_GETF_OCF:
+			case DVM_GETF_OCD: case DVM_GETF_OCC:
+				klass = (DaoClass*) types[ vmc->a ]->aux;
+				name  = DaoClass_GetDataName( klass, DAO_CLASS_CONSTANT, vmc->b );
+				vmc->b = DaoRoutine_GetFieldIndex( rout, name );
+				break;
+			case DVM_GETF_KG:
+			case DVM_GETF_KGI: case DVM_GETF_KGF:
+			case DVM_GETF_KGD: case DVM_GETF_KGC:
+			case DVM_GETF_OG:
+			case DVM_GETF_OGI: case DVM_GETF_OGF:
+			case DVM_GETF_OGD: case DVM_GETF_OGC:
+				klass = (DaoClass*) types[ vmc->a ]->aux;
+				name  = DaoClass_GetDataName( klass, DAO_CLASS_VARIABLE, vmc->b );
+				vmc->b = DaoRoutine_GetFieldIndex( rout, name );
+				break;
+			case DVM_GETF_OV:
+			case DVM_GETF_OVI: case DVM_GETF_OVF:
+			case DVM_GETF_OVD: case DVM_GETF_OVC:
+				klass = (DaoClass*) types[ vmc->a ]->aux;
+				name  = DaoClass_GetDataName( klass, DAO_OBJECT_VARIABLE, vmc->b );
+				vmc->b = DaoRoutine_GetFieldIndex( rout, name );
+				break;
+			case DVM_SETF_KG:
+			case DVM_SETF_KGII: case DVM_SETF_KGFF:
+			case DVM_SETF_KGDD: case DVM_SETF_KGCC:
+			case DVM_SETF_OG:
+			case DVM_SETF_OGII: case DVM_SETF_OGFF:
+			case DVM_SETF_OGDD: case DVM_SETF_OGCC:
+				klass = (DaoClass*) types[ vmc->c ]->aux;
+				name  = DaoClass_GetDataName( klass, DAO_CLASS_VARIABLE, vmc->b );
+				vmc->b = DaoRoutine_GetFieldIndex( rout, name );
+				break;
+			case DVM_SETF_OV:
+			case DVM_SETF_OVII: case DVM_SETF_OVFF:
+			case DVM_SETF_OVDD: case DVM_SETF_OVCC:
+				klass = (DaoClass*) types[ vmc->c ]->aux;
+				name  = DaoClass_GetDataName( klass, DAO_OBJECT_VARIABLE, vmc->b );
+				vmc->b = DaoRoutine_GetFieldIndex( rout, name );
+				break;
+			}
+		}
+		//DaoRoutine_PrintCode( rout, rout->nameSpace->vmSpace->stdioStream );
+		if( DaoRoutine_DoTypeInference( rout, 0 ) == 0 ) break;//TODO goto Failed;
+	}
+	DMap_Delete( routmap );
+	DMap_Delete( deftypes );
+	DMap_Delete( overloads );
+	DArray_Delete( routines );
+}
 /* assumed to be called before parsing class body */
 void DaoClass_DeriveClassData( DaoClass *self )
 {
 	DaoType *type;
 	DaoValue *value;
+	DMap *mixed = DMap_New(0,D_MAP);
 	DArray *parents, *offsets;
 	DString *mbs;
 	DNode *it, *search;
 	daoint i, k, id, perm, index;
 
 	mbs = DString_New(1);
+
+	for(i=0; i<self->mixinClass->size; ++i){
+		DaoClass *mixin = self->mixinClass->items.pClass[i];
+		DaoClass_MixIn( self, mixin, mixed );
+	}
 
 	if( self->clsType->bases == NULL ) self->clsType->bases = DArray_New(D_VALUE);
 	if( self->objType->bases == NULL ) self->objType->bases = DArray_New(D_VALUE);
@@ -601,6 +927,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 			}
 		}
 	}
+	DMap_Delete( mixed );
 	DArray_Delete( parents );
 	DArray_Delete( offsets );
 	DString_Delete( mbs );
@@ -763,6 +1090,11 @@ DaoValue* DaoClass_CastToBase( DaoClass *self, DaoType *parent )
 	}
 	return NULL;
 }
+void DaoClass_AddMixinClass( DaoClass *self, DaoValue *mixin )
+{
+	DArray_Append( self->baseClass, mixin );
+	DArray_Append( self->mixinClass, mixin );
+}
 void DaoClass_AddSuperClass( DaoClass *self, DaoValue *super )
 {
 	if( self->superClass->size >= DAO_MAX_PARENT ){
@@ -770,6 +1102,7 @@ void DaoClass_AddSuperClass( DaoClass *self, DaoValue *super )
 				DAO_MAX_PARENT, self->className->mbs );
 		return;
 	}
+	DArray_Append( self->baseClass, super );
 	DArray_Append( self->superClass, super );
 }
 int  DaoClass_FindConst( DaoClass *self, DString *name )

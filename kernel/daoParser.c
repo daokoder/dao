@@ -3245,6 +3245,34 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		}else{
 			DaoClass_SetName( klass, className, myNS );
 		}
+#ifdef DAO_WITH_DECORATOR
+		if( start+1 <= to && tokens[start+1]->name == DTOK_LB ){
+			int rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start+1, -1 );
+			unsigned char sep = DTOK_LB;
+			start += 1;
+			while( tokens[start]->name == sep ){
+				DaoClass *mixin;
+				start = DaoParser_FindScopedConstant( self, & value, start+1 );
+				if( start <0 ) goto ErrorClassDefinition;
+				ename = & tokens[start]->string;
+				if( value == NULL || value->type != DAO_CLASS ){
+					ec = DAO_SYMBOL_NEED_CLASS;
+					if( value == NULL || value->type == 0 || value->type == DAO_STRING )
+						ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
+					goto ErrorClassDefinition;
+				}
+				mixin = (DaoClass*) value;
+				if( mixin->superClass->size ){
+					/* Class with parent classes cannot be used as mixin: */
+					ec = DAO_INVALID_MIXIN_CLASS;
+					goto ErrorClassDefinition;
+				}
+				DaoClass_AddMixinClass( klass, mixin );
+				sep = DTOK_COMMA;
+				start ++;
+			}
+		}
+#endif
 		DArray_Append( myNS->definedRoutines, klass->classRoutine );
 		if( routine != myNS->mainRoutine ) ns = NULL;
 		value = (DaoValue*) klass;

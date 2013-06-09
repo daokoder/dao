@@ -112,6 +112,7 @@ struct DVector
 		daoint     *daoints;
 		float      *floats;
 		double     *doubles;
+		ushort_t   *ushorts;
 		complex16  *complexes;
 		DString    *strings;
 		DaoToken   *tokens;

@@ -121,8 +121,11 @@ void DaoType_CheckAttributes( DaoType *self )
 	if( DString_FindChar( self->name, '@', 0 ) != MAXSIZE ) self->attrib |= DAO_TYPE_SPEC;
 	if( DString_FindChar( self->name, '?', 0 ) != MAXSIZE ) self->attrib |= DAO_TYPE_UNDEF;
 
-	if( (self->tid == DAO_PAR_NAMED || self->tid == DAO_PAR_DEFAULT) && self->fname ){
-		if( strcmp( self->fname->mbs, "self" ) == 0 ) self->attrib |= DAO_TYPE_SELFNAMED;
+	if( (self->tid == DAO_PAR_NAMED || self->tid == DAO_PAR_DEFAULT) ){
+		if( self->aux && self->aux->xType.attrib & DAO_TYPE_SPEC )
+			self->attrib |= DAO_TYPE_SPEC;
+		if( self->fname != NULL && strcmp( self->fname->mbs, "self" ) == 0 )
+			self->attrib |= DAO_TYPE_SELFNAMED;
 	}
 
 	if( self->tid == DAO_TUPLE ){
@@ -137,6 +140,7 @@ void DaoType_CheckAttributes( DaoType *self )
 		for(i=0; i<self->nested->size; i++){
 			DaoType *it = self->nested->items.pType[i];
 			if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
+			if( it->attrib & DAO_TYPE_SPEC ) self->attrib |= DAO_TYPE_SPEC;
 			count += it->tid >= DAO_INTEGER && it->tid <= DAO_STRING;
 		}
 		self->simtype = count == self->nested->size;
@@ -977,6 +981,8 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	}else if( self->tid == DAO_CLASS ){ /* e.g., class<Item<@T>> */
 		copy = DaoType_DefineTypes( self->aux->xClass.objType, ns, defs );
 		if( copy->aux != self->aux ) self = copy->aux->xClass.clsType;
+		return self;
+	}else if( self->tid == DAO_OBJECT ){
 		return self;
 	}
 
