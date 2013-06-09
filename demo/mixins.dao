@@ -35,3 +35,48 @@ k.Meth()
 k.Meth2()
 k.Meth2( 'abc' )
 k.Meth2( 789 )
+
+
+class Decorator
+{
+	routine @_Test_( meth :routine<self:Decorator> ){
+		io.writeln( 'Decorator::_Test_()' )
+		meth( __args__, ... );
+	}
+	routine @_Prefix( meth :routine<self:Decorator> ){
+		io.writeln( 'Decorator::_Prefix()' )
+		meth( __args__, ... );
+	}
+	routine @Suffix_( meth :routine<self:Decorator> ){
+		io.writeln( 'Decorator::Suffix_()' )
+		meth( __args__, ... );
+	}
+	routine @_Prefix_Suffix_( meth :routine<self:Decorator> ){
+		io.writeln( 'Decorator::_Prefix_Suffix_()' )
+		meth( __args__, ... );
+	}
+}
+
+class MyClass ( Decorator )
+{
+	routine Test(){
+		io.writeln( 'MyClass::Test()' )
+	}
+	routine PrefixTest(){
+		io.writeln( 'MyClass::PrefixTest()' )
+	}
+	routine TestSuffix(){
+		io.writeln( 'MyClass::TestSuffix()' )
+	}
+	routine PrefixTestSuffix(){
+		io.writeln( 'MyClass::PrefixTestSuffix()' )
+	}
+}
+
+obj = MyClass()
+obj.Test()
+obj.PrefixTest()
+obj.TestSuffix()
+obj.PrefixTestSuffix()
+#{
+#}

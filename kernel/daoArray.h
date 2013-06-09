@@ -147,6 +147,7 @@ DAO_DLL void DVector_Erase( DVector *self, daoint i, daoint n );
 
 DAO_DLL void DVector_PushInt( DVector *self, int value );
 DAO_DLL void DVector_PushFloat( DVector *self, float value );
+DAO_DLL void DVector_PushUshort( DVector *self, ushort_t value );
 
 
 

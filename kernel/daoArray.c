@@ -580,6 +580,11 @@ void DVector_PushFloat( DVector *self, float value )
 	float *item = (float*) DVector_Push( self );
 	*item = value;
 }
+void DVector_PushUshort( DVector *self, ushort_t value )
+{
+	ushort_t *item = (ushort_t*) DVector_Push( self );
+	*item = value;
+}
 
 DaoVmCode* DVector_PushCode( DVector *self, DaoVmCode code )
 {

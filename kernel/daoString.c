@@ -60,9 +60,10 @@ static daoint DMBString_RFind( DString *self, daoint S, const char* chs, daoint 
 {
 	daoint i, j;
 
+	if( S < 0 ) S += self->size;
 	if( M == 0 || self->size == 0 ) return MAXSIZE;
 	if( S >= self->size ) S = self->size-1;
-	if( M > S || M > self->size ) return MAXSIZE;
+	if( (S+1) < M || M > self->size ) return MAXSIZE;
 	for( i=S; i>=M-1; i--){
 		int found = 1;
 		for( j=0; j<M; j++ ){

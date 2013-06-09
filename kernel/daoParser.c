@@ -2786,7 +2786,6 @@ InvalidAliasing:
 	return -1;
 }
 #ifdef DAO_WITH_DECORATOR
-DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoValue *p[], int n, int i );
 static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 {
 	DaoValue *selfpar = NULL;
@@ -3173,6 +3172,7 @@ static int DaoParser_CompileRoutines( DaoParser *self )
 	self->routCompilable->size = 0;
 	return error == 0;
 }
+void DaoClass_UseMixinDecorators( DaoClass *self );
 static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, int storeType )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -3419,6 +3419,8 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	}
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	if( error ) return -1;
+
+	DaoClass_UseMixinDecorators( klass );
 
 	return right + 1;
 ErrorClassDefinition:

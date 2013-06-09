@@ -32,6 +32,7 @@
 #include"daoObject.h"
 #include"daoRoutine.h"
 #include"daoProcess.h"
+#include"daoOptimizer.h"
 #include"daoGC.h"
 #include"daoStream.h"
 #include"daoNumtype.h"
@@ -115,7 +116,8 @@ DaoClass* DaoClass_New()
 	self->baseClass   = DArray_New(D_VALUE);
 	self->superClass  = DArray_New(0);
 	self->mixinClass  = DArray_New(0);
-	self->mixinOffset = DVector_New(sizeof(ushort_t));
+	self->mixins = DArray_New(0);
+	self->ranges = DVector_New(sizeof(ushort_t));
 	self->references  = DArray_New(D_VALUE);
 	return self;
 }
@@ -134,7 +136,8 @@ void DaoClass_Delete( DaoClass *self )
 	DArray_Delete( self->baseClass );
 	DArray_Delete( self->superClass );
 	DArray_Delete( self->mixinClass );
-	DVector_Delete( self->mixinOffset );
+	DArray_Delete( self->mixins );
+	DVector_Delete( self->ranges );
 	DArray_Delete( self->references );
 	if( self->vtable ) DMap_Delete( self->vtable );
 	if( self->protoValues ) DMap_Delete( self->protoValues );
@@ -458,37 +461,31 @@ void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets )
 static DaoClass* DaoClass_FindMixin( DaoClass *mixin, int st, int id, int *offset )
 {
 	DaoClass *last;
-	ushort_t *offsets = mixin->mixinOffset->data.ushorts;
-	int size1 = mixin->mixinClass->size - 1;
+	ushort_t *offsets = mixin->ranges->data.ushorts;
+	int size1 = mixin->mixins->size - 1;
 	int i = 0, j = size1;
-	int st2 = 0, count = 0;
+	int st2 = 0;
 
 	*offset = 0;
 	if( size1 == -1 ) return mixin;
-	last = mixin->mixinClass->items.pClass[size1];
+	last = mixin->mixins->items.pClass[size1];
 	switch( st ){
-	case DAO_CLASS_CONSTANT  : st2 = 0; count = last->cstDataName->size; break;
-	case DAO_CLASS_VARIABLE  : st2 = 1; count = last->glbDataName->size; break;
-	case DAO_OBJECT_VARIABLE : st2 = 2; count = last->objDataName->size - 1; break;
-	/* Minus one to ignore the self variable; */
+	case DAO_CLASS_CONSTANT  : st2 = 0; break;
+	case DAO_CLASS_VARIABLE  : st2 = 1; break;
+	case DAO_OBJECT_VARIABLE : st2 = 2; break;
 	}
 	if( id < offsets[st2] ) return mixin;
-	if( id >= (offsets[3*size1+st2] + count) ) return mixin;
+	if( id >= offsets[6*size1+3+st2] ) return mixin;
 	*offset = offsets[st2];
 	if( size1 == 0 ) return last;
 	while( i <= j ){
 		int k = (i + j) / 2;
-		DaoClass *mid = mixin->mixinClass->items.pClass[k];
-		*offset = offsets[3*k+st2];
+		DaoClass *mid = mixin->mixins->items.pClass[k];
+		*offset = offsets[6*k+st2];
 		if( i == j ) return mid;
-		switch( st ){
-		case DAO_CLASS_CONSTANT  : count = mid->cstDataName->size; break;
-		case DAO_CLASS_VARIABLE  : count = mid->glbDataName->size; break;
-		case DAO_OBJECT_VARIABLE : count = mid->objDataName->size - 1; break;
-		}
-		if( id < offsets[3*k+st2] ){
+		if( id < offsets[6*k+st2] ){
 			j = k;
-		}else if( id >= (offsets[3*k+st2] + count) ){
+		}else if( id >= offsets[6*k+3+st2] ){
 			i = k;
 		}else{
 			return mid;
@@ -535,7 +532,6 @@ static void DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed )
 {
 	daoint i, j, k, id;
 	ushort_t C1, S1, O1;
-	ushort_t *cc, *ss, *oo;
 	DaoNamespace *ns = self->classRoutine->nameSpace;
 	DArray *routines;
 	DMap *overloads;
@@ -547,6 +543,10 @@ static void DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed )
 	if( mixin->superClass->size ) return;
 	if( DMap_Find( mixed, mixin ) != NULL ) return;
 
+	for(i=0; i<mixin->mixinClass->size; ++i){
+		DaoClass_MixIn( self, mixin->mixinClass->items.pClass[i], mixed );
+	}
+
 	idmap = DMap_New(0,0);
 	routmap = DMap_New(0,0);
 	deftypes = DMap_New(0,0);
@@ -556,28 +556,20 @@ static void DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed )
 	DMap_Delete( idmap );
 	idmap = DMap_Find( mixed, mixin )->value.pMap;
 
-	DVector_Reserve( self->mixinOffset, self->mixinOffset->size + 3 );
-	cc = (ushort_t*) DVector_Push( self->mixinOffset );
-	ss = (ushort_t*) DVector_Push( self->mixinOffset );
-	oo = (ushort_t*) DVector_Push( self->mixinOffset );
+	DArray_Append( self->mixins, mixin );
+	DVector_PushUshort( self->ranges, self->constants->size );
+	DVector_PushUshort( self->ranges, self->variables->size );
+	DVector_PushUshort( self->ranges, self->instvars->size );
 
-	*cc = self->cstDataName->size;
-	*ss = self->glbDataName->size;
-	*oo = self->objDataName->size;
-
-	for(i=0; i<mixin->mixinClass->size; ++i){
-		DaoClass_MixIn( self, mixin->mixinClass->items.pClass[i], mixed );
-	}
 	C1 = 2;
 	S1 = 0;
 	O1 = 1;
-	if( mixin->mixinClass->size ){
-		int id = mixin->mixinClass->size-1;
-		DaoClass *last = mixin->mixinClass->items.pClass[id];
-		C1 = mixin->mixinOffset->data.ushorts[3*id+0] + last->cstDataName->size;
-		S1 = mixin->mixinOffset->data.ushorts[3*id+1] + last->glbDataName->size;
-		O1 = mixin->mixinOffset->data.ushorts[3*id+2] + last->objDataName->size - 1;
-		/* Minus one to ignore the self variable; */
+	if( mixin->mixins->size ){
+		int id = mixin->mixins->size-1;
+		DaoClass *last = mixin->mixins->items.pClass[id];
+		C1 = mixin->ranges->data.ushorts[6*id+3+0];
+		S1 = mixin->ranges->data.ushorts[6*id+3+1];
+		O1 = mixin->ranges->data.ushorts[6*id+3+2];
 	}
 	for(i=0; i<2; ++i){
 		id = LOOKUP_BIND( DAO_CLASS_CONSTANT, DAO_DATA_PUBLIC, 0, self->constants->size );
@@ -675,6 +667,11 @@ static void DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed )
 		if( DMap_Find( self->lookupTable, it->key.pString ) ) continue;
 		MAP_Insert( self->lookupTable, it->key.pString, LOOKUP_BIND( st, pm, up, id ) );
 	}
+
+	DVector_PushUshort( self->ranges, self->constants->size );
+	DVector_PushUshort( self->ranges, self->variables->size );
+	DVector_PushUshort( self->ranges, self->instvars->size );
+
 	for(i=0; i<routines->size; i++){
 		DaoRoutine *rout = routines->items.pRoutine[i];
 		DaoType **types;
@@ -770,6 +767,7 @@ void DaoClass_DeriveClassData( DaoClass *self )
 	DArray *parents, *offsets;
 	DString *mbs;
 	DNode *it, *search;
+	ushort_t *cc, *ss, *oo;
 	daoint i, k, id, perm, index;
 
 	mbs = DString_New(1);
@@ -993,11 +991,70 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 	DaoValue_MarkConst( self->objType->value );
 	DaoValue_MarkConst( self->constants->items.pConst[1]->value ); /* ::default */
 }
+void DaoClass_UseMixinDecorators( DaoClass *self )
+{
+#ifdef DAO_WITH_DECORATOR
+	DaoObject object, *obj = & object;
+	DString *prefix = DString_New(1);
+	DString *suffix = DString_New(1);
+	daoint i, j, k;
+
+	object = *(DaoObject*) self->objType->value;
+	for(i=self->mixins->size-1; i>=0; --i){
+		DaoClass *mixin = self->mixins->items.pClass[i];
+		daoint J0 = self->ranges->data.ushorts[6*i];
+		daoint J1 = self->ranges->data.ushorts[6*i+3];
+		for(j=J1-1; j>=J0; --j){
+			DaoRoutine *deco = (DaoRoutine*) self->constants->items.pConst[j]->value;
+			DString *decoName = deco->routName;
+			int exact = 0;
+			if( deco->type != DAO_ROUTINE || deco->body == NULL ) continue;
+			if( decoName->size < 2 || decoName->mbs[0] != '@' ) continue;
+			DString_Reset( prefix, 0 );
+			DString_Reset( suffix, 0 );
+			if( decoName->mbs[1] == '_' ){
+				daoint pos = DString_FindChar( decoName, '_', 2 );
+				if( pos == MAXSIZE ) pos = decoName->size;
+				DString_SubString( decoName, prefix, 2, pos - 2 );
+				exact = pos == decoName->size - 1;
+			}
+			if( decoName->mbs[decoName->size-1] == '_' ){
+				daoint pos = DString_RFindChar( decoName, '_', decoName->size-2 );
+				if( pos == MAXSIZE ) pos = 0;
+				DString_SubString( decoName, suffix, pos+1, decoName->size-2-pos );
+			}
+			//printf( "%s %s\n", prefix->mbs, suffix->mbs );
+			for(k=J1; k<self->constants->size; ++k){
+				DaoValue *cst = self->constants->items.pConst[k]->value;
+				DaoRoutine *rout = (DaoRoutine*) cst;
+				DaoRoutine *deco2;
+
+				if( rout->type != DAO_ROUTINE || rout->body == NULL ) continue;
+				if( rout->routHost != self->objType ) continue;
+
+				if( exact && DString_EQ( rout->routName, prefix ) == 0 ) continue;
+				if( prefix->size && DString_Find( rout->routName, prefix, 0 ) != 0 ) continue;
+				if( suffix->size ){
+					daoint pos = DString_RFind( rout->routName, suffix, -1 );
+					if( pos == MAXSIZE ) continue;
+					if( pos != (rout->routName->size - 1) ) continue;
+				}
+				deco2 = DaoRoutine_Resolve( deco, (DaoValue*) obj, & cst, 1 );
+				if( deco2 == NULL ) continue;
+				DaoRoutine_Decorate( rout, deco2, & cst, 1, 1 ); // TODO error;
+			}
+		}
+	}
+	DString_Delete( prefix );
+	DString_Delete( suffix );
+#endif
+}
 void DaoClass_ResetAttributes( DaoClass *self )
 {
 	DString *mbs = DString_New(1);
 	DNode *node;
 	int i, k, id, autodef = 0;
+
 	for(i=0; i<self->classRoutines->overloads->routines->size; i++){
 		DaoRoutine *r2 = self->classRoutines->overloads->routines->items.pRoutine[i];
 		DArray *types = r2->routType->nested;
@@ -1090,7 +1147,7 @@ DaoValue* DaoClass_CastToBase( DaoClass *self, DaoType *parent )
 	}
 	return NULL;
 }
-void DaoClass_AddMixinClass( DaoClass *self, DaoValue *mixin )
+void DaoClass_AddMixinClass( DaoClass *self, DaoClass *mixin )
 {
 	DArray_Append( self->baseClass, mixin );
 	DArray_Append( self->mixinClass, mixin );

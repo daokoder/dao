@@ -3953,7 +3953,6 @@ InvalidParameter:
 DeleteObject:
 	if( onew ){ GC_IncRC( onew ); GC_DecRC( onew ); }
 }
-DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoValue *p[], int n, int i );
 void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, DaoValue *selfpar, DaoValue *params[], int npar )
 {
 	int i, sup = 0;
