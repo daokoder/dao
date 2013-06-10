@@ -154,7 +154,8 @@ enum DaoCallMode
 	DAO_CALL_COROUT = (1<<11), /* call for creating a coroutine vm process */
 	DAO_CALL_EXPAR  = (1<<12), /* expand the last parameter of tuple type */
 	DAO_CALL_ASYNC  = (1<<13), /* asynchronous call */
-	DAO_CALL_BLOCK  = (1<<14) /* call with code block */
+	DAO_CALL_BLOCK  = (1<<14), /* call with code block */
+	DAO_CALL_NOSELF = (1<<15)  /* call without implicit self */
 };
 enum DaoProcessPauseType
 {

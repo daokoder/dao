@@ -293,12 +293,12 @@ void DaoProcess_PopFrame( DaoProcess *self )
 	if( self->topFrame == NULL ) return;
 	self->topFrame->outer = NULL;
 	GC_DecRC( self->topFrame->retype );
+	GC_DecRC( self->topFrame->object );
+	GC_DecRC( self->topFrame->routine );
 	self->topFrame->retype = NULL;
+	self->topFrame->routine = NULL;
+	self->topFrame->object = NULL;
 	if( self->topFrame->state & DVM_FRAME_SECT ){
-		GC_DecRC( self->topFrame->object );
-		GC_DecRC( self->topFrame->routine );
-		self->topFrame->routine = NULL;
-		self->topFrame->object = NULL;
 		self->topFrame = self->topFrame->prev;
 		return;
 	}
@@ -4124,22 +4124,15 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 		return;
 	}
 	if( self->activeObject && mcall == 0 ) selfpar = (DaoValue*) self->activeObject;
+	if( mode & DAO_CALL_NOSELF ) selfpar = NULL;
 	if( (mode & DAO_CALL_EXPAR) && npar > mcall && params[npar]->type == DAO_TUPLE ){
 		DaoTuple *tup = & params[npar]->xTuple;
-		DArray *its = tup->unitype->nested;
+		DArray *ts = tup->unitype->nested;
 		int i, m, n = -1;
+		/* Handle explicit "self" argument: */
+		if( ts->size && (ts->items.pType[0]->attrib & DAO_TYPE_SELFNAMED) ) selfpar = NULL;
 		for(i=0; i<npar+1; ++i) parbuf[++n] = params[i];
-		for(i=0,m=tup->size; i<m; ++i){
-			/* Handle explicit "self" argument: */
-			if( n == 1 && its->size && (its->items.pType[0]->attrib & DAO_TYPE_SELFNAMED) ){
-				nameva.name = its->items.pType[0]->fname;
-				nameva.value = tup->items[0];
-				nameva.unitype = its->items.pType[0];
-				parbuf[n++] = (DaoValue*) & nameva;
-				continue;
-			}
-			parbuf[n++] = tup->items[i];
-		}
+		for(i=0,m=tup->size; i<m; ++i) parbuf[n++] = tup->items[i];
 		params = parbuf;
 		npar = n - 1;
 	}

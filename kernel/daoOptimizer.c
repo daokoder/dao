@@ -4795,9 +4795,11 @@ NotExist_TryAux:
 				DMap_Assign( defs2, defs );
 				if( rout == NULL && at->aux == NULL ){
 					/* "routine" type: */
+					vmc->b |= DAO_CALL_NOSELF;
 					ct = dao_type_any;
 					ctchecked = 1;
 				}else if( rout == NULL ){
+					vmc->b |= DAO_CALL_NOSELF;
 					if( DaoRoutine_CheckType( at, NS, NULL, tp, j, code, 0 ) ==0 ){
 						DaoRoutine_CheckError( NS, NULL, at, NULL, tp, j, code, errors );
 						goto ErrorTyping;
