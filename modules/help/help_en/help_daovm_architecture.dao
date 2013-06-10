@@ -652,7 +652,9 @@ struct RoutineValue
 	uint32      # declaration reference number for the routine;
 	uint32      # type reference number for the routine type;
 	uint32      # type reference number for the host type;
-	uint8       # routine attributes;
+	uint16      # routine attributes;
+	uint16      # number of overloaded routines;
+	uint32[]    # value reference number for the overloaded routine;
 }
 
 # Class, ctype, interface and namespace:
@@ -849,17 +851,27 @@ struct Instruction
 	uint16      # operand c;
 }
 
+struct StaticVar
+{
+	uint32      # type reference number for the variable;
+	            # 0x0000 can be used for variables without explicit types;
+
+	uint32      # value reference number for the initial or default value;
+	            # 0x00000000 can be used for variables without such value;
+}
+
 struct Routine 
 {
 	uint32         # declaration reference number to the routine;
 	uint32         # identifier reference number to the routine name;
 	uint32         # type reference number for the routine type;
 	uint32         # type reference number for the host type;
-	uint32         # declaration reference number to the up routine;
 	uint16         # attributes;
 	uint16         # line of definition;
 	uint16         # number of local constants;
 	uint32[]       # list of value reference numbers for the constants;
+	uint16         # number of static variables;
+	StaticVar[]    # list of static variables;
 	uint16         # number of local variables;
 	uint16         # number of local variables with explicit types;
 	struct {       # list of variable indices with type reference numbers;

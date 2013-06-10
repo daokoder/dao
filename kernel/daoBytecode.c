@@ -615,7 +615,7 @@ int DaoByteEncoder_EncodeType( DaoByteEncoder *self, DaoType *type )
 		break;
 	case DAO_ROUTINE :
 		dec = tpid = 0;
-		if( type->aux->type == DAO_ROUTINE ){
+		if( type->aux && type->aux->type == DAO_ROUTINE ){
 			dec = DaoByteEncoder_EncodeDeclaration( self, type->aux );
 		}else{
 			tpid = DaoByteEncoder_EncodeType( self, (DaoType*) type->aux );
@@ -838,6 +838,12 @@ void DaoByteEncoder_EncodeValue2( DaoByteEncoder *self, DaoValue *value )
 		DString_Append( valueBytes, string );
 		break;
 	case DAO_ROUTINE :
+		if( value->xRoutine.overloads ){
+			DArray *routines = value->xRoutine.overloads->routines;
+			for(i=0; i<routines->size; ++i){
+				DaoByteEncoder_EncodeValue( self, routines->items.pValue[i] );
+			}
+		}
 		id = DaoByteEncoder_EncodeDeclaration( self, value );
 		typeid = DaoByteEncoder_EncodeType( self, value->xRoutine.routType );
 		id2 = DaoByteEncoder_EncodeType( self, value->xRoutine.routHost );
@@ -846,7 +852,17 @@ void DaoByteEncoder_EncodeValue2( DaoByteEncoder *self, DaoValue *value )
 		DString_AppendUInt( valueBytes, id );
 		DString_AppendUInt( valueBytes, typeid );
 		DString_AppendUInt( valueBytes, id2 );
-		DString_AppendUInt8( valueBytes, value->xRoutine.attribs );
+		DString_AppendUInt16( valueBytes, value->xRoutine.attribs );
+		if( value->xRoutine.overloads ){
+			DArray *routines = value->xRoutine.overloads->routines;
+			DString_AppendUInt16( valueBytes, routines->size );
+			for(i=0; i<routines->size; ++i){
+				valueid = DaoByteEncoder_EncodeValue( self, routines->items.pValue[i] );
+				DString_AppendUInt( valueBytes, valueid );
+			}
+		}else{
+			DString_AppendUInt16( valueBytes, 0 );
+		}
 		break;
 	case DAO_CLASS :
 	case DAO_CTYPE :
@@ -1006,6 +1022,12 @@ void DaoByteEncoder_EncodeClass( DaoByteEncoder *self, DaoClass *klass )
 		id = DaoByteEncoder_EncodeDeclaration( self, value );
 		DString_AppendUInt( self->classes, id );
 	}
+	DString_AppendUInt16( self->classes, klass->mixinClass->size );
+	for(i=0; i<klass->mixinClass->size; ++i){
+		DaoValue *value = klass->mixinClass->items.pValue[i];
+		id = DaoByteEncoder_EncodeDeclaration( self, value );
+		DString_AppendUInt( self->classes, id );
+	}
 
 	count = 0;
 	self->tmpBytes->size = 0;
@@ -1107,6 +1129,14 @@ void DaoByteEncoder_EncodeRoutine( DaoByteEncoder *self, DaoRoutine *routine )
 		DaoValue *value = routine->routConsts->items.items.pValue[i];
 		id = DaoByteEncoder_EncodeValue( self, value );
 		DString_AppendUInt( self->routines, id );
+	}
+	DString_AppendUInt16( self->routines, routine->body->svariables->size );
+	for(i=0; i<routine->body->svariables->size; ++i){
+		DaoVariable *var = routine->body->svariables->items.pVar[i];
+		int tid = DaoByteEncoder_EncodeType( self, var->dtype );
+		int vid = DaoByteEncoder_EncodeValue( self, var->value );
+		DString_AppendUInt( self->routines, tid );
+		DString_AppendUInt( self->routines, vid );
 	}
 	abstypes = routine->body->localVarType;
 	DString_AppendUInt16( self->routines, routine->body->regCount );
@@ -1818,7 +1848,8 @@ static DaoValue* DaoByteDecoder_DecodeValue( DaoByteDecoder *self )
 		id = DaoByteDecoder_DecodeUInt( self );
 		id2 = DaoByteDecoder_DecodeUInt( self );
 		id3 = DaoByteDecoder_DecodeUInt( self );
-		flag = DaoByteDecoder_DecodeUInt8( self );
+		flag = DaoByteDecoder_DecodeUInt16( self );
+		count = DaoByteDecoder_DecodeUInt16( self );
 		routine = (DaoRoutine*) DaoByteDecoder_GetDeclaration( self, id );
 		type = DaoByteDecoder_GetType( self, id2 );
 		hostype = DaoByteDecoder_GetType( self, id3 );
@@ -1831,6 +1862,11 @@ static DaoValue* DaoByteDecoder_DecodeValue( DaoByteDecoder *self )
 		GC_ShiftRC( hostype, routine->routHost );
 		routine->routHost = hostype;
 		value = (DaoValue*) routine;
+		for(i=0; i<count; ++i){
+			int id = DaoByteDecoder_DecodeUInt( self );
+			DaoRoutine *rout = (DaoRoutine*) DaoByteDecoder_GetValue( self, id );
+			if( routine->overloads ) DRoutines_Add( routine->overloads, rout );
+		}
 		break;
 	case DAO_OBJECT :
 		flag = DaoByteDecoder_DecodeUInt8( self );
@@ -2011,7 +2047,7 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 			}else{
 				value = (DaoValue*) DaoByteDecoder_GetType( self, id2 );
 				if( self->codes >= self->error ) break;
-				if( value == NULL || value->type != DAO_TYPE ) self->codes = self->error;
+				if( value != NULL && value->type != DAO_TYPE ) self->codes = self->error;
 				type = DaoNamespace_MakeType( self->nspace, "routine", tid|(attrib<<16), value, types, count );
 				if( id3 ){
 					DString *name = self->string;
@@ -2261,6 +2297,14 @@ void DaoByteDecoder_DecodeClasses( DaoByteDecoder *self )
 			DaoValue *sup = DaoByteDecoder_GetDeclaration( self, supid );
 			if( self->codes >= self->error ) break;
 			DaoClass_AddSuperClass( klass, sup );
+		}
+		if( self->codes >= self->error ) break;
+		count = DaoByteDecoder_DecodeUInt16( self );
+		for(j=0; j<count; ++j){
+			int supid = DaoByteDecoder_DecodeUInt( self );
+			DaoValue *mixin = DaoByteDecoder_GetDeclaration( self, supid );
+			if( self->codes >= self->error ) break;
+			DaoClass_AddMixinClass( klass, (DaoClass*) mixin );
 		}
 		if( self->codes >= self->error ) break;
 		DaoClass_DeriveClassData( klass );
@@ -2522,6 +2566,7 @@ InvalidInstruction:
 void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 {
 	DArray *lines = DArray_New(0);
+	DArray *routines = DArray_New(0);
 	int num = DaoByteDecoder_DecodeUInt( self );
 	int i, j, k, m, flag, count, lineInfoCount;
 	int id, id2, id3;
@@ -2549,6 +2594,16 @@ void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 			if( self->codes >= self->error ) break;
 			DaoRoutine_AddConstant( routine, value );
 		}
+		count = DaoByteDecoder_DecodeUInt16( self );
+		for(j=0; j<count; ++j){
+			int typeid = DaoByteDecoder_DecodeUInt( self );
+			int valueid = DaoByteDecoder_DecodeUInt( self );
+			DaoType *type = DaoByteDecoder_GetType( self, typeid );
+			DaoValue *value = DaoByteDecoder_GetValue( self, valueid );
+			if( self->codes >= self->error ) break;
+			DArray_Append( routine->body->svariables, DaoVariable_New( value, type ) );
+		}
+
 		routine->body->regCount = DaoByteDecoder_DecodeUInt16( self );
 		count = DaoByteDecoder_DecodeUInt16( self );
 		for(j=0; j<count; ++j){
@@ -2583,16 +2638,25 @@ void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 			DVector_PushCode( routine->body->vmCodes, * (DaoVmCode*) & vmc );
 		}
 		if( self->codes >= self->error ) break;
+		DArray_Append( routines, routine );
+	}
+	for(i=0; i<(int)routines->size; ++i){
+		DaoRoutine *routine = routines->items.pRoutine[i];
 		DaoByteDecoder_VerifyRoutine( self, routine );
 		if( self->codes >= self->error ) break;
 		//DaoRoutine_PrintCode( routine, self->vmspace->stdioStream );
 	}
+	DArray_Delete( routines );
 	DArray_Delete( lines );
 }
 
 int DaoByteDecoder_Decode( DaoByteDecoder *self, DString *input, DaoNamespace *nspace )
 {
-	if( strncmp( input->mbs, DAO_BC_SIGNATURE, 8 ) != 0 ) return 0;
+	DString header = *input;
+	DString signature = DString_WrapBytes( DAO_BC_SIGNATURE, 8 );
+
+	if( header.size > 8 ) header.size = 8;
+	if( DString_EQ( & header, & signature ) == 0 ) return 0;
 	if( input->mbs[8] != 0 ) return 0; /* Not official format; */
 
 	self->intSize = input->mbs[9];

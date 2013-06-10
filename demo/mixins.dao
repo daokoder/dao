@@ -64,11 +64,11 @@ class Header
 {
 	static routine @__Delimiter__( meth : routine ){
 		io.writeln( '=======================' )
-		return meth( ... )
+		return meth( __args__, ... )
 	}
 	routine @__Delimiter__( meth : routine ){
 		io.writeln( '-----------------------' )
-		return meth( ... )
+		return meth( __args__, ... )
 	}
 }
 class Decorator
