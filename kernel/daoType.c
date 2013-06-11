@@ -1094,15 +1094,6 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		DString_Assign( copy->name, self->name );
 	}
 	DaoType_CheckAttributes( copy );
-#ifdef DAO_WITH_DYNCLASS
-	if( self->tid == DAO_OBJECT && self->aux->xClass.instanceClasses ){
-		DaoClass *klass = & self->aux->xClass;
-		klass = DaoClass_Instantiate( klass, copy->nested );
-		assert( klass != NULL );
-		DMap_Erase2( defs, copy );
-		return klass->objType;
-	}
-#endif
 	node = DMap_Find( ns->abstypes, copy->name );
 #if 0
 	if( strstr( copy->name->mbs, "map<" ) == copy->name->mbs ){

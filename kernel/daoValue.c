@@ -707,13 +707,6 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 			S = DaoObject_CastToBase( S->xObject.rootObject, T );
 			tm = (S != NULL);
 		}
-#ifdef DAO_WITH_DYNCLASS
-	}else if( S->type == DAO_CLASS && T->tid == DAO_CLASS && S->xClass.typeHolders ){
-		if( DMap_Find( S->xClass.instanceClasses, T->aux->xClass.className ) ){
-			S = T->aux;
-			tm = DAO_MT_SUB;
-		}
-#endif
 	}else if( (T->tid == DAO_CLASS || T->tid == DAO_CTYPE) && S->type == DAO_CLASS ){
 		if( S->xClass.clsType != T ){
 			S = DaoClass_CastToBase( (DaoClass*)S, T );

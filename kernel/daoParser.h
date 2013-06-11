@@ -86,7 +86,6 @@ struct DaoParser
 	char autoReturn;
 	char isClassBody;
 	char isInterBody;
-	char isDynamicClass;
 	char permission;
 	char isFunctional;
 

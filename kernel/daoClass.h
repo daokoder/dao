@@ -83,21 +83,6 @@ struct DaoClass
 	DaoType  *objType; /* GC handled in constants; */
 	DMap     *abstypes;
 
-	/* When DaoClass is used as a proto-class structure,
-	 * protoValues map upvalue register ids to member names.
-	 * so that those upvalues can be used to set the constant or
-	 * default values of the fields in the classes created from
-	 * this proto-class. */
-	DMap     *protoValues; /* <int,DString*> */
-
-#ifdef DAO_WITH_DYNCLASS
-	/* for template class: class name<@S,@T=some_type> */
-	DArray   *typeHolders; /* @S, @T */
-	DArray   *typeDefaults; /* some_type */
-	DMap     *instanceClasses; /* instantiated classes */
-	DaoClass *templateClass; /* for incomplete instantiation */
-#endif
-
 	/* for GC */
 	DArray *references;
 

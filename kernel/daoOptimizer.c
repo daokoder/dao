@@ -5016,28 +5016,6 @@ TryPushBlockReturnType:
 			AssertTypeMatching( at, types[opc], defs );
 			break;
 
-		case DVM_CLASS :
-			if( at->tid != DAO_TUPLE ) goto InvParam;
-			if( at->nested->size ){
-				bt = at->nested->items.pType[0];
-				if( bt->tid == DAO_PAR_NAMED ) bt = & bt->aux->xType;
-				if( bt->tid != DAO_STRING ) goto InvParam;
-			}
-			if( at->nested->size > 1 ){
-				bt = at->nested->items.pType[1];
-				if( bt->tid == DAO_PAR_NAMED ) bt = & bt->aux->xType;
-				k = DaoType_MatchTo( bt, dao_list_any, defs ) == 0;
-				if( k && DaoType_MatchTo( bt, dao_map_any, defs ) == 0 ) goto InvParam;
-			}
-			for(j=2,K=at->nested->size; j<K; j++){
-				bt = at->nested->items.pType[j];
-				if( bt->tid == DAO_PAR_NAMED ) bt = & bt->aux->xType;
-				if( DaoType_MatchTo( bt, dao_list_any, defs ) == 0 ) goto InvParam;
-			}
-			ct = dao_type_udf;
-			DaoInferencer_UpdateType( self, opc, ct );
-			AssertTypeMatching( ct, types[opc], defs );
-			break;
 		case DVM_RETURN :
 		case DVM_YIELD :
 			{

@@ -2270,20 +2270,8 @@ DaoType *dao_map_any = NULL;
 DaoType *dao_map_meta = NULL;
 DaoType *dao_routine = NULL;
 DaoType *dao_type_for_iterator = NULL;
-DaoType *dao_access_enum = NULL;
-DaoType *dao_storage_enum = NULL;
-DaoType *dao_dynclass_field = NULL;
-DaoType *dao_dynclass_method = NULL;
 DaoType *dao_array_types[DAO_COMPLEX+1] = {0};
 
-/* name:string,value:any,storage:enum<>,access:enum<> */
-const char *field_typename =
-"tuple<string,any>|tuple<string,any,enum<const,global,var>>|"
-"tuple<string,any,enum<const,global,var>,enum<private,protected,public>>";
-
-/* name:string,method:routine,access:enum<> */
-const char *method_typename =
-"tuple<string,routine>|tuple<string,routine,enum<private,protected,public>>";
 
 
 #ifdef DAO_WITH_THREAD
@@ -2483,10 +2471,6 @@ DaoVmSpace* DaoInit( const char *command )
 
 	dao_type_none = DaoNamespace_MakeValueType( ns, dao_none_value );
 	dao_type_for_iterator = DaoParser_ParseTypeName( "tuple<valid:int,iterator:any>", ns, NULL );
-	dao_access_enum = DaoNamespace_MakeEnumType( ns, "private,protected,public" );
-	dao_storage_enum = DaoNamespace_MakeEnumType( ns, "const,global,var"  );
-	dao_dynclass_field = DaoParser_ParseTypeName( field_typename, ns, NULL );
-	dao_dynclass_method = DaoParser_ParseTypeName( method_typename, ns, NULL );
 
 	DString_SetMBS( dao_type_for_iterator->name, "for_iterator" );
 	DaoNamespace_AddType( ns, dao_type_for_iterator->name, dao_type_for_iterator );

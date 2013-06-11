@@ -101,7 +101,6 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "CURRY",      DVM_CURRY,      DAO_CODE_ENUM2,   1 },
 	{ "MCURRY",     DVM_MCURRY,     DAO_CODE_ENUM2,   1 },
 	{ "ROUTINE",    DVM_ROUTINE,    DAO_CODE_ROUTINE, 1 },
-	{ "CLASS",      DVM_CLASS,      DAO_CODE_CLASS,   1 },
 	{ "GOTO",       DVM_GOTO,       DAO_CODE_JUMP,    0 },
 	{ "SWITCH",     DVM_SWITCH,     DAO_CODE_BRANCH,  0 },
 	{ "CASE",       DVM_CASE,       DAO_CODE_JUMP,    0 },

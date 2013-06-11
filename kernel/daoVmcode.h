@@ -94,7 +94,6 @@ enum DaoOpcode
 	DVM_CURRY ,    /* class_or_routine_name: A{ A+1, ..., A+B } */
 	DVM_MCURRY ,   /* object.method: A{ A+1, ..., A+B } */
 	DVM_ROUTINE ,  /* create a function, possibly with closure */
-	DVM_CLASS ,  /* C = class{}, A,A+1,..A+B: A, tuple, A+1, proto class, A+2,.. proto values */
 	DVM_GOTO ,   /* go to B; */
 	DVM_SWITCH , /* A: variable, B: location of default codes, C: number of cases */
 	DVM_CASE ,   /* A: constant of the case, B: location of the case codes, C: case mode */

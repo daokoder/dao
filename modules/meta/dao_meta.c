@@ -34,6 +34,445 @@
 #include"daoGC.h"
 
 
+#if 0
+
+int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
+{
+	DaoNamespace *ns = other->classRoutine->nameSpace;
+	DaoType *tp;
+	DArray *offsets = DArray_New(0);
+	DArray *routines = DArray_New(0);
+	DNode *it;
+	int i, k, st, up, id;
+
+	for(i=0; i<other->superClass->size; i++){
+		DaoValue *sup = other->superClass->items.pValue[i];
+		if( sup->type == DAO_CLASS && sup->xClass.typeHolders ){
+			tp = DaoType_DefineTypes( sup->xClass.objType, ns, deftypes );
+			DArray_Append( self->superClass, tp->aux );
+		}else if( sup->type == DAO_CTYPE && sup->xCtype.ctype->typer->core->kernel->sptree ){
+			tp = DaoType_DefineTypes( sup->xCtype.ctype, ns, deftypes );
+			DArray_Append( self->superClass, tp->aux );
+		}else{
+			DArray_Append( self->superClass, sup );
+		}
+	}
+
+	DaoRoutine_CopyFields( self->classRoutine, other->classRoutine, 1, 1 );
+	for(it=DMap_First(other->lookupTable);it;it=DMap_Next(other->lookupTable,it)){
+		st = LOOKUP_ST( it->value.pInt );
+		up = LOOKUP_UP( it->value.pInt );
+		id = LOOKUP_ID( it->value.pInt );
+		if( up ==0 ){
+			if( st == DAO_CLASS_CONSTANT && id <self->constants->size ) continue;
+			if( st == DAO_CLASS_VARIABLE && id <self->variables->size ) continue;
+			if( st == DAO_OBJECT_VARIABLE && id <self->instvars->size ) continue;
+		}
+		DMap_Insert( self->lookupTable, it->key.pVoid, it->value.pVoid );
+	}
+	for(i=self->objDataName->size; i<other->objDataName->size; i++)
+		DArray_Append( self->objDataName, other->objDataName->items.pString[i] );
+	for(i=self->cstDataName->size; i<other->cstDataName->size; i++)
+		DArray_Append( self->cstDataName, other->cstDataName->items.pString[i] );
+	for(i=self->glbDataName->size; i<other->glbDataName->size; i++)
+		DArray_Append( self->glbDataName, other->glbDataName->items.pString[i] );
+	for(i=self->variables->size; i<other->variables->size; i++){
+		DaoVariable *var = other->variables->items.pVar[i];
+		var = DaoVariable_New( var->value, DaoType_DefineTypes( var->dtype, ns, deftypes ) );
+		DArray_Append( self->variables, var );
+	}
+	for(i=self->instvars->size; i<other->instvars->size; i++){
+		DaoVariable *var = other->instvars->items.pVar[i];
+		var = DaoVariable_New( var->value, DaoType_DefineTypes( var->dtype, ns, deftypes ) );
+		DArray_Append( self->instvars, var );
+		/* TODO fail checking */
+	}
+	for(i=self->constants->size; i<other->constants->size; i++){
+		DaoValue *value = other->constants->items.pConst[i]->value;
+		DaoRoutine *rout = & value->xRoutine;
+		if( value->type != DAO_ROUTINE || rout->routHost != other->objType ){
+			DArray_Append( self->constants, DaoConstant_New( value ) );
+			DaoValue_Update( & self->constants->items.pConst[i]->value, ns, deftypes );
+			continue;
+		}
+		if( rout->overloads == NULL ){
+			DString *name = rout->routName;
+			rout = DaoRoutine_Copy( rout, 1, 1 );
+			value = (DaoValue*) rout;
+			k = DaoRoutine_Finalize( rout, self->objType, deftypes );
+#if 0
+			printf( "%i %p:  %s  %s\n", i, rout, rout->routName->mbs, rout->routType->name->mbs );
+#endif
+			if( rout->attribs & DAO_ROUT_INITOR ){
+				DRoutines_Add( self->classRoutines->overloads, rout );
+			}else if( (it = DMap_Find( other->lookupTable, name )) ){
+				st = LOOKUP_ST( it->value.pInt );
+				up = LOOKUP_UP( it->value.pInt );
+				id = LOOKUP_ID( it->value.pInt );
+				if( st == DAO_CLASS_CONSTANT && up ==0 && id < i ){
+					DaoValue *v = self->constants->items.pConst[id]->value;
+					if( v->type == DAO_ROUTINE && v->xRoutine.overloads )
+						DRoutines_Add( v->xRoutine.overloads, rout );
+				}
+			}
+			DArray_Append( self->constants, DaoConstant_New( value ) );
+			DArray_Append( routines, rout );
+			if( k == 0 ) goto Failed;
+			continue;
+		}else{
+			/* No need to added the overloaded routines now; */
+			/* Each of them has an entry in constants, and will be handled later: */
+			DaoRoutine *routs = DaoRoutines_New( ns, self->objType, NULL );
+			DArray_Append( self->constants, DaoConstant_New( (DaoValue*) routs ) );
+			continue;
+		}
+		DArray_Append( self->constants, DaoConstant_New( value ) );
+		DaoValue_Update( & self->constants->items.pConst[i]->value, ns, deftypes );
+	}
+	for(i=0; i<routines->size; i++){
+		if( DaoRoutine_DoTypeInference( routines->items.pRoutine[i], 0 ) == 0 ) goto Failed;
+	}
+	DArray_Delete( offsets );
+	DArray_Delete( routines );
+	DaoRoutine_Finalize( self->classRoutine, self->objType, deftypes );
+	return DaoRoutine_DoTypeInference( self->classRoutine, 0 );
+Failed:
+	DArray_Delete( offsets );
+	DArray_Delete( routines );
+	return 0;
+}
+DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
+{
+	DaoClass *klass = NULL;
+	DaoType *type;
+	DString *name;
+	DNode *node;
+	DMap *deftypes;
+	daoint lt = DString_FindChar( self->className, '<', 0 );
+	daoint i, holders = 0;
+	if( self->typeHolders == NULL || self->typeHolders->size ==0 ) return self;
+	while( types->size < self->typeHolders->size ){
+		type = self->typeDefaults->items.pType[ types->size ];
+		if( type == NULL ) type = self->typeHolders->items.pType[ types->size ];
+		DArray_Append( types, type );
+	}
+	name = DString_New(1);
+	DString_Append( name, self->className );
+	if( lt != MAXSIZE ) DString_Erase( name, lt, MAXSIZE );
+	DString_AppendChar( name, '<' );
+	for(i=0; i<types->size; i++){
+		type = types->items.pType[i];
+		holders += type->tid == DAO_THT;
+		if( i ) DString_AppendChar( name, ',' );
+		DString_Append( name, type->name );
+	}
+	DString_AppendChar( name, '>' );
+	while( self->templateClass ) self = self->templateClass;
+	node = DMap_Find( self->instanceClasses, name );
+	if( node ){
+		klass = node->value.pClass;
+	}else{
+		deftypes = DMap_New(0,0);
+		klass = DaoClass_New();
+		if( holders ) klass->templateClass = self;
+		DMap_Insert( self->instanceClasses, name, klass );
+		DaoClass_AddReference( self, klass ); /* No need for cleanup of klass; */
+		DaoClass_SetName( klass, name, self->classRoutine->nameSpace );
+		for(i=0; i<types->size; i++){
+			type = types->items.pType[i];
+			if( DaoType_MatchTo( type, self->typeHolders->items.pType[i], deftypes ) ==0 ){
+				DString_Delete( name );
+				return NULL;
+			}
+			MAP_Insert( deftypes, self->typeHolders->items.pVoid[i], type );
+		}
+		klass->objType->nested = DArray_New(D_VALUE);
+		DArray_Assign( klass->objType->nested, types );
+		if( DaoClass_CopyField( klass, self, deftypes ) == 0 ){
+			DString_Delete( name );
+			return NULL;
+		}
+		DaoClass_DeriveClassData( klass );
+		DaoClass_DeriveObjectData( klass );
+		DaoClass_ResetAttributes( klass );
+		DMap_Delete( deftypes );
+		if( holders ){
+			klass->typeHolders = DArray_New(0);
+			klass->typeDefaults = DArray_New(0);
+			klass->instanceClasses = DMap_New(D_STRING,0);
+			DMap_Insert( klass->instanceClasses, klass->className, klass );
+			for(i=0; i<types->size; i++){
+				DArray_Append( klass->typeHolders, types->items.pType[i] );
+				DArray_Append( klass->typeDefaults, NULL );
+			}
+			for(i=0; i<klass->typeHolders->size; i++){
+				DaoClass_AddReference( klass, klass->typeHolders->items.pType[i] );
+				DaoClass_AddReference( klass, klass->typeDefaults->items.pType[i] );
+			}
+		}
+	}
+	DString_Delete( name );
+	return klass;
+}
+
+
+/* storage enum<const,global,var> */
+static int storages[3] = { DAO_CLASS_CONSTANT, DAO_CLASS_VARIABLE, DAO_OBJECT_VARIABLE };
+
+/* access enum<private,protected,public> */
+static int permissions[3] = { DAO_DATA_PRIVATE, DAO_DATA_PROTECTED, DAO_DATA_PUBLIC };
+
+/* a = class( name, parents, fields, methods ){ proto_class_body }
+ * (1) parents: optional, list<class> or map<string,class>
+ * (2) fields: optional, tuple<name:string,value:any,storage:enum<>,access:enum<>>
+ * (3) methods: optional, tuple<name:string,method:routine,access:enum<>>
+ * (4) default storage: $var, default access: $public.
+ */
+void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
+{
+	DaoType *tp;
+	DaoValue **values = self->activeValues;
+	DaoRoutine *routine = self->activeRoutine;
+	DaoNamespace *ns = self->activeNamespace;
+	DaoNamespace *ns2 = self->activeNamespace;
+	DaoTuple *tuple = (DaoTuple*) values[vmc->a];
+	DaoClass *klass = DaoClass_New();
+	DaoClass *proto = NULL;
+	DaoList *parents = NULL;
+	DaoMap *parents2 = NULL;
+	DaoList *fields = NULL;
+	DaoList *methods = NULL;
+	DString *name = NULL;
+	DaoValue **data = tuple->items;
+	DMap *keys = tuple->unitype->mapNames;
+	DMap *deftypes = DMap_New(0,0);
+	DMap *pm_map = DMap_New(D_STRING,0);
+	DMap *st_map = DMap_New(D_STRING,0);
+	DArray *routines = DArray_New(0);
+	DNode *it, *node;
+	DaoEnum pmEnum = {DAO_ENUM,0,0,0,0,0,0,NULL};
+	DaoEnum stEnum = {DAO_ENUM,0,0,0,0,0,0,NULL};
+	int iclass = values[vmc->a+1]->xInteger.value;
+	int i, n, st, pm, up, id, size;
+	char buf[50];
+
+	pmEnum.etype = dao_access_enum;
+	stEnum.etype = dao_storage_enum;
+
+	DaoProcess_SetValue( self, vmc->c, (DaoValue*) klass );
+	//printf( "%s\n", tuple->unitype->name->mbs );
+	if( iclass && routine->routConsts->items.items.pValue[iclass-1]->type == DAO_CLASS ){
+		proto = & routine->routConsts->items.items.pValue[iclass-1]->xClass;
+		ns2 = proto->classRoutine->nameSpace;
+	}
+
+	/* extract parameters */
+	if( tuple->size && data[0]->type == DAO_STRING ) name = data[0]->xString.data;
+	if( parents ==NULL && parents2 == NULL && tuple->size >1 ){
+		if( data[1]->type == DAO_LIST ) parents = & data[1]->xList;
+		if( data[1]->type == DAO_MAP ) parents2 = & data[1]->xMap;
+	}
+	if( fields ==NULL && tuple->size >2 && data[2]->type == DAO_LIST ) fields = & data[2]->xList;
+	if( methods ==NULL && tuple->size >3 && data[3]->type == DAO_LIST ) methods = & data[3]->xList;
+
+	if( name == NULL || name->size ==0 ){
+		sprintf( buf, "AnonymousClass%p", klass );
+		DString_SetMBS( klass->className, buf );
+		DaoClass_SetName( klass, klass->className, ns2 );
+	}else{
+		DaoClass_SetName( klass, name, ns2 );
+	}
+	for(i=0; i<routine->parCount; i++){
+		DaoType *type = routine->routType->nested->items.pType[i];
+		DaoValue *value = self->activeValues[i];
+		/* type<@T<int|float>> kind of types may be specialized to type<float>
+		 * the type holder is only available from the original routine parameters: */
+		if( routine->original ) type = routine->original->routType->nested->items.pType[i];
+		if( type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_DEFAULT ) type = (DaoType*) type->aux;
+		if( type->tid != DAO_TYPE ) continue;
+		type = type->nested->items.pType[0];
+		if( type->tid == DAO_VARIANT && type->aux ) type = (DaoType*) type->aux;
+		if( type->tid == DAO_THT && value->type == DAO_TYPE ){
+			MAP_Insert( deftypes, type, value );
+		}
+	}
+	tp = DaoNamespace_MakeType( ns, "@class", DAO_THT, NULL,NULL,0 );
+	if( tp ) MAP_Insert( deftypes, tp, klass->objType );
+	DaoProcess_MapTypes( self, deftypes );
+
+	/* copy data from the proto class */
+	if( proto ) DaoClass_CopyField( klass, proto, deftypes );
+
+	/* update class members with running time data */
+	for(i=2; i<=vmc->b; i+=3){
+		DaoValue *value;
+		st = values[vmc->a+i+1]->xInteger.value;
+		id = values[vmc->a+i+2]->xInteger.value;
+		value = self->activeValues[vmc->a+i];
+		if( st == DAO_CLASS_CONSTANT ){
+			DaoRoutine *newRout = NULL;
+			DaoConstant *dest2 = klass->constants->items.pConst[id];
+			DaoValue *dest = dest2->value;
+			if( value->type == DAO_ROUTINE && value->xRoutine.routHost == proto->objType ){
+				newRout = & value->xRoutine;
+				if( DaoRoutine_Finalize( newRout, klass->objType, deftypes ) == 0){
+					DaoProcess_RaiseException( self, DAO_ERROR, "method creation failed" );
+					continue;
+				}
+				DArray_Append( routines, newRout );
+				if( strcmp( newRout->routName->mbs, "@class" ) ==0 ){
+					node = DMap_Find( proto->lookupTable, newRout->routName );
+					DString_Assign( newRout->routName, klass->className );
+					st = LOOKUP_ST( node->value.pInt );
+					up = LOOKUP_UP( node->value.pInt );
+					if( st == DAO_CLASS_CONSTANT && up ==0 ){
+						id = LOOKUP_ID( node->value.pInt );
+						dest2 = klass->constants->items.pConst[id];
+					}
+					DRoutines_Add( klass->classRoutines->overloads, newRout );
+				}
+			}
+			dest = dest2->value;
+			if( dest->type == DAO_ROUTINE ){
+				DaoRoutine *rout = & dest->xRoutine;
+				if( rout->routHost != klass->objType ) DaoValue_Clear( & dest2->value );
+			}
+			if( dest->type == DAO_ROUTINE && dest->xRoutine.overloads ){
+				DRoutines_Add( dest->xRoutine.overloads, newRout );
+			}else{
+				DaoValue_Copy( value, & dest2->value );
+			}
+		}else if( st == DAO_CLASS_VARIABLE ){
+			DaoVariable *var = klass->variables->items.pVar[id];
+			DaoValue_Move( value, & var->value, var->dtype );
+		}else if( st == DAO_OBJECT_VARIABLE ){
+			DaoVariable *var = klass->instvars->items.pVar[id];
+			DaoValue_Move( value, & var->value, var->dtype );
+		}
+	}
+
+	/* add parents from parameters */
+	if( parents ){
+		for(i=0,n=parents->items.size; i<n; i++){
+			DaoClass_AddSuperClass( klass, parents->items.items.pValue[i] );
+		}
+	}else if( parents2 ){
+		for(it=DMap_First(parents2->items);it;it=DMap_Next(parents2->items,it)){
+			int type = it->value.pValue->type;
+			if( it->key.pValue->type == DAO_STRING && (type == DAO_CLASS || type == DAO_CTYPE) ){
+				DaoClass_AddSuperClass( klass, it->value.pValue );
+			}//XXX error handling
+		}
+	}
+	DaoClass_DeriveClassData( klass );
+	if( fields ){ /* add fields from parameters */
+		for(i=0,n=fields->items.size; i<n; i++){
+			DaoValue *fieldv = fields->items.items.pValue[i];
+			DaoType *type = NULL;
+			DaoValue *value = NULL;
+
+			if( DaoType_MatchValue( dao_dynclass_field, fieldv, NULL ) == 0) continue;//XXX
+			data = fieldv->xTuple.items;
+			size = fieldv->xTuple.size;
+			st = DAO_OBJECT_VARIABLE;
+			pm = DAO_DATA_PUBLIC;
+
+			name = NULL;
+			if( size && data[0]->type == DAO_STRING ) name = data[0]->xString.data;
+			if( size > 1 && data[1]->type ){
+				value = data[1];
+				type = fieldv->xTuple.unitype->nested->items.pType[1];
+			}
+			if( name == NULL || value == NULL ) continue;
+			if( MAP_Find( klass->lookupTable, name ) ) continue;
+
+			if( size > 2 && data[2]->type == DAO_ENUM ){
+				if( DaoEnum_SetValue( & stEnum, & data[2]->xEnum, NULL ) ==0) goto InvalidField;
+				st = storages[ stEnum.value ];
+			}
+			if( size > 3 && data[3]->type == DAO_ENUM ){
+				if( DaoEnum_SetValue( & pmEnum, & data[3]->xEnum, NULL ) ==0) goto InvalidField;
+				pm = permissions[ pmEnum.value ];
+			}
+			/* printf( "%s %i %i\n", name->mbs, st, pm ); */
+			switch( st ){
+			case DAO_OBJECT_VARIABLE: DaoClass_AddObjectVar( klass, name, value, type, pm ); break;
+			case DAO_CLASS_VARIABLE : DaoClass_AddGlobalVar( klass, name, value, type, pm ); break;
+			case DAO_CLASS_CONSTANT : DaoClass_AddConst( klass, name, value, pm ); break;
+			default : break;
+			}
+			continue;
+InvalidField:
+			DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "" );
+		}
+	}
+	if( methods ){ /* add methods from parameters */
+		for(i=0,n=methods->items.size; i<n; i++){
+			DaoValue *methodv = methods->items.items.pValue[i];
+			DaoRoutine *newRout;
+			DaoValue *method = NULL;
+			DaoValue *dest;
+
+			if( DaoType_MatchValue( dao_dynclass_method, methodv, NULL ) == 0) continue;//XXX
+			data = methodv->xTuple.items;
+			size = methodv->xTuple.size;
+			pm = DAO_DATA_PUBLIC;
+
+			name = NULL;
+			if( size && data[0]->type == DAO_STRING ) name = data[0]->xString.data;
+			if( size > 1 && data[1]->type == DAO_ROUTINE ) method = data[1];
+			if( name == NULL || method == NULL ) continue;
+			if( size > 2 && data[2]->type == DAO_ENUM ){
+				if( DaoEnum_SetValue( & pmEnum, & data[2]->xEnum, NULL ) ==0) goto InvalidMethod;
+				pm = permissions[ pmEnum.value ];
+			}
+
+			newRout = & method->xRoutine;
+			if( ROUT_HOST_TID( newRout ) !=0 ) continue;
+			if( DaoRoutine_Finalize( newRout, klass->objType, deftypes ) == 0){
+				DaoProcess_RaiseException( self, DAO_ERROR, "method creation failed" );
+				continue; // XXX
+			}
+			DArray_Append( routines, newRout );
+			DString_Assign( newRout->routName, name );
+			if( DString_EQ( newRout->routName, klass->className ) ){
+				DRoutines_Add( klass->classRoutines->overloads, newRout );
+			}
+
+			node = DMap_Find( proto->lookupTable, name );
+			if( node == NULL ){
+				DaoClass_AddConst( klass, name, method, pm );
+				continue;
+			}
+			if( LOOKUP_UP( node->value.pInt ) ) continue;
+			if( LOOKUP_ST( node->value.pInt ) != DAO_CLASS_CONSTANT ) continue;
+			id = LOOKUP_ID( node->value.pInt );
+			dest = klass->constants->items.pConst[id]->value;
+			if( dest->type == DAO_ROUTINE && dest->xRoutine.overloads ){
+				DRoutines_Add( dest->xRoutine.overloads, newRout );
+			}
+			continue;
+InvalidMethod:
+			DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "" );
+		}
+	}
+	for(i=0,n=routines->size; i<n; i++){
+		if( DaoRoutine_DoTypeInference( routines->items.pRoutine[i], 0 ) == 0 ){
+			DaoProcess_RaiseException( self, DAO_ERROR, "method creation failed" );
+			// XXX
+		}
+	}
+	DaoClass_DeriveObjectData( klass );
+	DaoClass_ResetAttributes( klass );
+	DArray_Delete( routines );
+	DMap_Delete( deftypes );
+	DMap_Delete( pm_map );
+	DMap_Delete( st_map );
+}
+#endif
+
+
+
 static void META_NS( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoNamespace *res = proc->activeNamespace;
