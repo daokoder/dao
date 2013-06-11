@@ -2727,12 +2727,12 @@ DaoList* DaoList_Copy( DaoList *self, DaoType *type )
 /**/
 static void DaoMap_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
+	DNode *node = NULL;
 	DaoMap *self = & self0->xMap;
-	const char *kvsym = self->items->hashing ? " ~> " : " => ";
+	const char *kvsym = self->items->hashing ? "->" : "=>";
 	const daoint size = self->items->size;
 	daoint i = 0;
 
-	DNode *node = NULL;
 	if( cycData ) node = MAP_Find( cycData, self );
 	if( node ){
 		DaoStream_WriteMBS( stream, "{ ... }" );
@@ -2746,7 +2746,9 @@ static void DaoMap_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, 
 		if( node->key.pValue->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
 		DaoValue_Print( node->key.pValue, proc, stream, cycData );
 		if( node->key.pValue->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
+		DaoStream_WriteChar( stream, ' ' );
 		DaoStream_WriteMBS( stream, kvsym );
+		DaoStream_WriteChar( stream, ' ' );
 		if( node->value.pValue->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
 		DaoValue_Print( node->value.pValue, proc, stream, cycData );
 		if( node->value.pValue->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );

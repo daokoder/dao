@@ -541,18 +541,15 @@ static DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine,
 	if( (selfChecked + npar) < ndef ){
 		if( DaoRoutine_PassDefault( routine, dest, passed, defs ) == 0 ) goto ReturnZero;
 	}
-	if( 0 && defs && defs->size ){ /* Need specialization */
+	if( defs && defs->size ){ /* Need specialization */
 		DaoRoutine *original = routine->original ? routine->original : routine;
-		routine = DaoRoutine_Copy( original, 0, 0 );
+		/* Do not share function body. It may be thread unsafe to share: */
+		routine = DaoRoutine_Copy( original, 0, 1 );
 		DaoRoutine_Finalize( routine, routine->routHost, defs );
 
 		if( routine->body ){
-			DaoRoutineBody *body = DaoRoutineBody_Copy( routine->body );
 			DMap *defs2 = DHash_New(0,0);
-
 			DaoType_MatchTo( routine->routType, routine->original->routType, defs2 );
-			GC_ShiftRC( body, routine->body );
-			routine->body = body;
 			/* Only specialize explicitly declared variables: */
 			DaoRoutine_MapTypes( routine, defs2 );
 			DMap_Delete( defs2 );
@@ -565,7 +562,6 @@ static DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine,
 				 */
 			}
 		}
-
 		DMutex_Lock( & mutex_routine_specialize );
 		if( original->specialized == NULL ) original->specialized = DRoutines_New();
 		DMutex_Unlock( & mutex_routine_specialize );
@@ -573,9 +569,6 @@ static DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine,
 		GC_ShiftRC( original, routine->original );
 		routine->original = original;
 		DRoutines_Add( original->specialized, routine );
-	}
-	if( routine->original && routine->body && routine->body == routine->original->body ){
-		/* Specialize routine body (local types and VM instructions): */
 	}
 	if( defs ) DMap_Delete( defs );
 	self->parCount = npar + selfChecked;
@@ -3411,7 +3404,9 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 	if( DaoValue_Move( retValue, dest, type ) ==0 ) goto InvalidReturn;
 	return retValue;
 InvalidReturn:
-	/* printf( "retValue = %p %i %p %s\n", retValue, retValue->type, type, type->name->mbs ); */
+#if 0
+	printf( "retValue = %p %i %p %s\n", retValue, retValue->type, type, type->name->mbs );
+#endif
 	DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid returned value" );
 	return NULL;
 }
@@ -5955,13 +5950,16 @@ static DaoArray* DaoProcess_PrepareArray( DaoProcess *self, DaoValue *dC, int et
 static DaoTuple* DaoProcess_PrepareTuple( DaoProcess *self, DaoValue *dC, DaoType *ct, int size )
 {
 	DaoTuple *tuple = NULL;
-	if( dC && dC->type == DAO_TUPLE && dC->xTuple.refCount == 1 && dC->xTuple.unitype == ct ){
-		tuple = (DaoTuple*) dC;
-	}else{
-		tuple = DaoProcess_NewTuple( self, size );
-		tuple->unitype = ct;
-		GC_IncRC( ct );
+
+	if( size < (ct->nested->size - ct->variadic) ) return NULL;
+	if( ct->variadic == 0 ) size = ct->nested->size;
+
+	if( dC && dC->type == DAO_TUPLE && dC->xTuple.unitype == ct ){
+		if( dC->xTuple.size == size && dC->xTuple.refCount == 1 ) return (DaoTuple*) dC;
 	}
+	tuple = DaoProcess_NewTuple( self, size );
+	tuple->unitype = ct;
+	GC_IncRC( ct );
 	return tuple;
 }
 DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC )
@@ -5977,7 +5975,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 	DString *str;
 	DNode *node;
 	daoint i, n, size;
-	int type;
+	int type, variadic, tsize;
 	if( ct == NULL ) goto FailConversion;
 	if( ct->tid == DAO_ANY ) goto Rebind;
 	if( dA->type == ct->tid && ct->tid >= DAO_INTEGER && ct->tid < DAO_ARRAY ) goto Rebind;
@@ -6188,14 +6186,16 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		}
 		break;
 	case DAO_TUPLE :
+		tsize = ct->nested->size - ct->variadic;
 		if( dA->type == DAO_TUPLE ){
 			tuple2 = (DaoTuple*) dA;
-			if( tuple2->unitype == ct || ct->nested->size ==0 ) goto Rebind;
-			if( tuple2->size < ct->nested->size ) goto FailConversion;
-			tuple = DaoProcess_PrepareTuple( proc, dC, ct, ct->nested->size );
+			if( tuple2->unitype == ct || tsize == 0 ) goto Rebind;
+			tuple = DaoProcess_PrepareTuple( proc, dC, ct, tuple2->size );
+			if( tuple == NULL ) goto FailConversion;
 			for(i=0; i<tuple->size; i++){
 				DaoValue *V = tuple2->items[i];
-				tp2 = ct->nested->items.pType[i];
+				tp2 = dao_type_any;
+				if( i < tsize ) tp2 = ct->nested->items.pType[i];
 				if( tp2->tid == DAO_PAR_NAMED ) tp2 = & tp2->aux->xType;
 				V = DaoTypeCast( proc, tp2, V, K );
 				if( V == NULL || V->type == 0 ) goto FailConversion;
@@ -6203,33 +6203,16 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			}
 		}else if( dA->type == DAO_LIST ){
 			list = (DaoList*) dA;
-			if( list->items.size < ct->nested->size ) goto FailConversion;
 			tuple = DaoProcess_PrepareTuple( proc, dC, ct, list->items.size );
+			if( tuple == NULL ) goto FailConversion;
 			for(i=0; i<tuple->size; i++){
 				DaoValue *V = list->items.items.pValue[i];
-				if( i < ct->nested->size ){
-					tp2 = ct->nested->items.pType[i];
-					if( tp2->tid == DAO_PAR_NAMED ) tp2 = & tp2->aux->xType;
-					V = DaoTypeCast( proc, tp2, V, K );
-				}
+				tp2 = dao_type_any;
+				if( i < tsize ) tp2 = ct->nested->items.pType[i];
+				if( tp2->tid == DAO_PAR_NAMED ) tp2 = & tp2->aux->xType;
+				V = DaoTypeCast( proc, tp2, V, K );
 				if( V == NULL || V->type == 0 ) goto FailConversion;
 				DaoValue_Copy( V, tuple->items + i );
-			}
-		}else if( dA->type == DAO_MAP ){
-			map = (DaoMap*) dA;
-			if( map->items->size < ct->nested->size ) goto FailConversion;
-			tuple = DaoProcess_PrepareTuple( proc, dC, ct, map->items->size );
-			node = DMap_First( map->items );
-			for(i=0; node!=NULL; i++, node=DMap_Next(map->items,node) ){
-				if( i >= ct->nested->size ){
-					DaoValue_Copy( node->value.pValue, tuple->items + i );
-				}else{
-					tp2 = ct->nested->items.pType[i];
-					if( node->key.pValue->type != DAO_STRING ) goto FailConversion;
-					V = DaoTypeCast( proc, tp2, node->value.pValue, V );
-					if( V == NULL || V->type ==0 ) goto FailConversion;
-					DaoValue_Copy( V, tuple->items + i );
-				}
 			}
 		}else{
 			goto FailConversion;

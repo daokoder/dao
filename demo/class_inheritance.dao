@@ -41,10 +41,10 @@ class CC : AA, BB
 
 c = CC();
 
-io.writeln( c.cst == 123 ? 'ok' ~ 'error' );
-io.writeln( c.obj == 123 ? 'ok' ~ 'error' );
-io.writeln( c.obj2 == 0$ ? 'ok' ~ 'error' );
-io.writeln( c.Meth() == 123 ? 'ok' ~ 'error' );
+io.writeln( c.cst == 123 ? 'ok' : 'error' );
+io.writeln( c.obj == 123 ? 'ok' : 'error' );
+io.writeln( c.obj2 == 0$ ? 'ok' : 'error' );
+io.writeln( c.Meth() == 123 ? 'ok' : 'error' );
 
 io.writeln( c.Meth(1) );
 

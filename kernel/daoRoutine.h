@@ -119,9 +119,10 @@ struct DaoRoutineBody
 
 	int mode;
 
-	ushort_t regCount;
-	ushort_t codeStart;
-	ushort_t codeEnd;
+	ushort_t  regCount;
+	ushort_t  codeStart;
+	ushort_t  codeEnd;
+	ushort_t  specialized;
 
 	DMap *abstypes;
 

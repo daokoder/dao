@@ -264,6 +264,7 @@ DaoRoutineBody* DaoRoutineBody_New()
 	self->simpleVariables = DArray_New(0);
 	self->codeStart = self->codeEnd = 0;
 	self->jitData = NULL;
+	self->specialized = 0;
 	return self;
 }
 void DaoRoutineBody_Delete( DaoRoutineBody *self )
@@ -832,7 +833,13 @@ DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *obj, DaoValue *p[],
 	if( rout->specialized ){
 		/* strict checking for specialized routines: */
 		DaoRoutine *rt = DRoutines_Lookup2( rout->specialized, obj, p, n, code, 1 );
-		if( rt ) rout = rt;
+		/*
+		// If the routine has a body, check if it has done specialization.
+		// Only used specialized routine for thread safety to avoid the
+		// situation where the routine is used for execution, but its body
+		// is still undergoing specialization.
+		*/
+		if( rt && (rt->body == NULL || rt->body->specialized) ) rout = rt;
 	}
 	return (DaoRoutine*) rout;
 }
@@ -846,6 +853,10 @@ DaoRoutine* DaoRoutine_ResolveByTypeX( DaoRoutine *self, DaoType *st, DaoType *t
 	if( self->specialized ){
 		/* strict checking for specialized routines: */
 		DaoRoutine *rt = DRoutines_LookupByType2( self->specialized, st, t, n, code, 1 );
+		/*
+		// no need to check for specialization,
+		// because routines returned by this are not used for execution:
+		*/
 		if( rt ) return rt;
 	}
 	return self;

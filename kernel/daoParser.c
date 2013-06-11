@@ -5513,7 +5513,7 @@ ErrorParsing:
 }
 static int DaoParser_ClassExpression( DaoParser *self, int start )
 {
-	DaoParser_Error( self, DAO_DISABLED_DYNCLASS, NULL );
+	DaoParser_Error( self, DAO_CTW_OBSOLETE_SYNTAX, NULL );
 	return -1;
 }
 
@@ -5634,6 +5634,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 	int enumcode = DVM_LIST;
 	int pto = DaoParser_FindOpenToken( self, DTOK_FIELD, lb, rb, 0 );
 	int appxto = DaoParser_FindOpenToken( self, DTOK_APPXTO, lb, rb, 0 );
+	int arrow = DaoParser_FindOpenToken( self, DTOK_ARROW, lb, rb, 0 );
 	int colon = DaoParser_FindOpenToken( self, DTOK_COLON, lb, rb, 0 );
 	int semi = DaoParser_FindOpenToken( self, DTOK_SEMCO, lb, rb, 0 );
 	int comma = DaoParser_FindOpenToken( self, DTOK_COMMA, lb, rb, 0 );
@@ -5660,12 +5661,16 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 		regC = DaoParser_PushRegister( self );
 		enumcode = DVM_TUPLE;
 		DaoParser_AddCode( self, DVM_TUPLE, enode.reg, enode.count, regC, start, mid, end );
-	}else if( etype == DKEY_MAP || (etype == 0 && btype == DTOK_LCB && (pto >= 0 || appxto >= 0) ) ){
+	}else if( (etype == DKEY_MAP || etype == 0) && btype == DTOK_LCB && appxto >= 0 ){
+		DString w = DString_WrapMBS( "using ~> for hash map, please use -> instead." );
+		DaoParser_Error( self, DAO_CTW_OBSOLETE_SYNTAX, & w );
+		regC = -1;
+	}else if( etype == DKEY_MAP || (etype == 0 && btype == DTOK_LCB && (pto >= 0 || arrow >= 0) ) ){
 		/* { a=>1, b=>[] }; {=>}; */
-		/* { a: 1, b: [] }; {:}; */
+		/* { a->1, b->[] }; {->}; */
 		if( tp && tp->tid != DAO_MAP ) goto ParsingError;
 		enumcode = pto >= 0 ? DVM_MAP : DVM_HASH;
-		if( etype == DKEY_MAP && appxto < 0 ) enumcode = DVM_MAP;
+		if( etype == DKEY_MAP && arrow < 0 ) enumcode = DVM_MAP;
 		isempty = lb >= rb;
 		if( lb >= rb ){
 			if( self->needConst ){
@@ -5681,7 +5686,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 				DaoParser_AddCode( self, enumcode, regC, 0, regC, start, mid, end );
 			}
 		}else{
-			int sep = pto >= 0 ? DTOK_FIELD : DTOK_APPXTO;
+			int sep = pto >= 0 ? DTOK_FIELD : DTOK_ARROW;
 			step = 2;
 			enode = DaoParser_ParseExpressionLists( self, sep, DTOK_COMMA, & step, cid );
 			if( enode.reg < 0 || self->curToken != end ) goto ParsingError;
@@ -6086,7 +6091,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				}
 				if( tokens[start-1]->name == DTOK_COLON2 ) mode |= DAO_CALL_COROUT;
 				inode = self->vmcLast;
-				if( result.last && inode->code == DVM_LOAD2 ){ /* X.Y or X->Y */
+				if( result.last && inode->code == DVM_LOAD2 ){ /* X.Y */
 					DaoParser_PopRegister( self ); /* opc of GETF will be reallocated; */
 					inode->code = DVM_LOAD;
 					inode->b = 0;
@@ -6142,7 +6147,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				int rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
 				if( rb < 0 ) return error;
 
-				if( result.last && back->code == DVM_LOAD2 ){ /* X.Y or X->Y */
+				if( result.last && back->code == DVM_LOAD2 ){ /* X.Y */
 					DaoParser_PopRegister( self ); /* opc of GETF will be reallocated; */
 					extra = back->prev;
 					back->code = DVM_LOAD;
@@ -6246,7 +6251,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					int rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
 					if( rb < 0 ) return error;
 
-					if( result.last && back->code == DVM_LOAD2 ){ /* X.Y or X->Y */
+					if( result.last && back->code == DVM_LOAD2 ){ /* X.Y */
 						DaoParser_PopRegister( self ); /* opc of GETF will be reallocated; */
 						back->code = DVM_LOAD;
 						back->b = 0;
@@ -6418,13 +6423,6 @@ InvalidFunctional:
 				self->curToken += 1;
 				break;
 			}
-		case DTOK_ARROW :
-			{
-				DString w = DString_WrapMBS( "using -> for meta/dynamic field!" );
-				DaoParser_Error( self, DAO_CTW_OBSOLETE_SYNTAX, & w );
-				return error;
-			}
-			break;
 		case DTOK_LT :
 			if( result.konst == 0 ) return result;
 			value = DaoParser_GetVariable( self, result.konst );
@@ -6585,15 +6583,16 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			RHS = DaoParser_NoneValue( self );
 		}
 		result.update = NULL;
-		if( oper == DAO_OPER_IF ){ /* conditional operation:  c ? e1 ~ e2 */
+		if( oper == DAO_OPER_IF ){ /* conditional operation:  c ? e1 : e2 */
 			DaoEnode RHS1, RHS2;
-			int prec2 = 10*(20 - daoArithOper[DTOK_TILDE].binary);
-			RHS1 = DaoParser_ParseOperator(self, RHS, prec2 + 1, DTOK_TILDE, 1 );
+			int prec2 = 10*(20 - daoArithOper[DTOK_COLON].binary);
+			RHS1 = DaoParser_ParseOperator(self, RHS, prec2 + 1, DTOK_COLON, 1 );
+			if( DaoParser_CheckTokenType( self, DTOK_COLON, ":" ) == 0 ) RHS1.reg = -1;
 			if( RHS1.reg < 0 ) return RHS1;
 			self->curToken += 1;
-			RHS2 = DaoParser_ParseUnary( self, DTOK_TILDE );
+			RHS2 = DaoParser_ParseUnary( self, DTOK_COLON );
 			if( RHS2.reg < 0 ) return RHS2;
-			RHS2 = DaoParser_ParseOperator(self, RHS2, prec2 + 1, DTOK_TILDE, 1 );
+			RHS2 = DaoParser_ParseOperator(self, RHS2, prec2 + 1, DTOK_COLON, 1 );
 			if( RHS2.reg < 0 ) return RHS2;
 
 			result.reg = DaoParser_PushRegister( self );

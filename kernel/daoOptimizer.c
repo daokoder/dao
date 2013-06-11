@@ -2549,6 +2549,7 @@ static void DaoInferencer_Finalize( DaoInferencer *self )
 
 	body->regCount = body->regType->size;
 	DaoRoutine_SetupSimpleVars( self->routine );
+	body->specialized = 1;
 }
 static DaoType* DaoInferencer_UpdateType( DaoInferencer *self, int id, DaoType *type )
 {
@@ -4881,37 +4882,37 @@ NotExist_TryAux:
 
 					k = defs2->size;
 					DaoRoutine_PassParamTypes2( rout, bt, tp, j, code, defs2 );
-					if( notide && rout != routine && defs2->size && (defs2->size > k || rout->routType->aux->xType.tid == DAO_UDT) ){
-						DaoRoutine *orig, *drout;
-						if( rout->original ) rout = rout->original;
-						/* rout may has only been declared */
-						orig = rout;
-						drout = DaoRoutine_Copy( rout, 0, 0 );
-						DaoRoutine_PassParamTypes( drout, bt, tp, j, code, defs2 );
+					if( rout != routine && defs2->size && (defs2->size > k || rout->routType->aux->xType.tid == DAO_UDT) ){
+						DaoRoutine *orig = rout;
+						if( rout->original ) rout = orig = rout->original;
 
-						if( rout->body && drout->routType->aux->xType.tid == DAO_UDT ){
-							/* forward declared routine may have an empty routine body: */
-							if( rout->body->vmCodes->size ){
-								DaoRoutineBody *body = DaoRoutineBody_Copy( drout->body );
-								GC_ShiftRC( body, drout->body );
-								drout->body = body;
-								DMap_Reset( defs3 );
-								DaoType_MatchTo( drout->routType, orig->routType, defs3 );
-								DaoRoutine_MapTypes( drout, defs3 );
-								/* to infer returned type */
-								if( DaoRoutine_DoTypeInference( drout, self->silent ) ==0 ) goto InvParam;
-							}
-						}
+						/* Do not share function body. It may be thread unsafe to share: */
+						rout = DaoRoutine_Copy( rout, 0, 1 );
+						DaoRoutine_PassParamTypes( rout, bt, tp, j, code, defs2 );
 
 						DMutex_Lock( & mutex_routine_specialize );
 						if( orig->specialized == NULL ) orig->specialized = DRoutines_New();
 						DMutex_Unlock( & mutex_routine_specialize );
 
-						GC_ShiftRC( orig, drout->original );
-						drout->original = orig;
-						DRoutines_Add( orig->specialized, drout );
+						GC_ShiftRC( orig, rout->original );
+						rout->original = orig;
+						/*
+						// Need to add before specializing the body,
+						// to avoid possible infinite recursion:
+						*/
+						body->specialized = 0;
+						DRoutines_Add( orig->specialized, rout );
 
-						rout = drout;
+						/* rout may has only been declared */
+						/* forward declared routine may have an empty routine body: */
+						if( notide && rout->body && rout->body->vmCodes->size ){
+							DMap_Reset( defs3 );
+							DaoType_MatchTo( rout->routType, orig->routType, defs3 );
+							DaoRoutine_MapTypes( rout, defs3 );
+
+							/* to infer returned type */
+							if( DaoRoutine_DoTypeInference( rout, self->silent ) ==0 ) goto InvParam;
+						}
 					}
 					if( at->tid != DAO_CLASS && ! ctchecked ) ct = rout->routType;
 					/*
