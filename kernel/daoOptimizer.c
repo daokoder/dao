@@ -3717,16 +3717,6 @@ NotExist_TryAux:
 				}
 				break;
 			}
-		case DVM_GETMF :
-			{
-				ct = dao_type_udf;
-				value = routConsts->items.pValue[opb];
-				if( value == NULL || value->type != DAO_STRING ) goto NotMatch;
-				DaoInferencer_UpdateType( self, opc, ct );
-				AssertTypeMatching( ct, types[opc], defs );
-				value = consts[opa] ? dao_none_value : NULL;
-				break;
-			}
 		case DVM_SETF :
 			{
 				DaoType *pars[2] = { NULL, NULL };
@@ -3909,16 +3899,6 @@ NotExist_TryAux:
 					}
 				default: goto InvOper;
 				}
-				break;
-			}
-		case DVM_SETMF :
-			{
-				/*
-				   printf( "a: %s\n", types[opa]->name->mbs );
-				   printf( "c: %s\n", types[opc]->name->mbs );
-				 */
-				value = routConsts->items.pValue[opb];
-				if( value == NULL || value->type != DAO_STRING ) goto NotMatch;
 				break;
 			}
 		case DVM_CAST :

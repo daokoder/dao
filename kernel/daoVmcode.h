@@ -46,7 +46,6 @@ enum DaoOpcode
 	DVM_GETDI , /* GET Item(s) : C = A[B], B is the (direct) index; */
 	DVM_GETMI , /* GET Item(s) : C = A[A+1, ..., A+B]; */
 	DVM_GETF ,  /* GET Field : C = A.B */
-	DVM_GETMF , /* GET Meta Field: C = A->B */
 	DVM_SETVH , /* set host variable in code section: C::B = A; C, outer level; */
 	DVM_SETVS , /* set static variable or captured up variable from closure; */
 	DVM_SETVO , /* set object variables: C::B = A, C the same as A in DVM_GETVO */
@@ -56,7 +55,6 @@ enum DaoOpcode
 	DVM_SETDI , /* SET Item(s) : C[B] = A, B is the (direct) index; */
 	DVM_SETMI , /* SET Item(s) : C[C+1, ..., C+B] = A;  */
 	DVM_SETF ,  /* SET Field : C.B = A */
-	DVM_SETMF , /* SET Meta Field : C->B = A */
 	DVM_LOAD , /* put local value A as reference at C; */
 	DVM_CAST , /* convert A to C if they have different types; */
 	DVM_MOVE , /* C = A; if B==0, XXX it is compile from assignment, for typing system only */

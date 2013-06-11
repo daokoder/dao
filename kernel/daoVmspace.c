@@ -2313,7 +2313,6 @@ extern DaoFuncItem dao_io_methods[];
 void print_trace();
 
 extern DMap *dao_cdata_bindings;
-extern DHash *dao_meta_tables;
 
 int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module )
 {
@@ -2386,7 +2385,6 @@ DaoVmSpace* DaoInit( const char *command )
 	if( mainVmSpace ) return mainVmSpace;
 
 	dao_cdata_bindings = DHash_New(0,0);
-	dao_meta_tables = DHash_New(0,0);
 
 	/* signal( SIGSEGV, print_trace ); */
 	/* signal( SIGABRT, print_trace ); */
@@ -2609,9 +2607,7 @@ void DaoQuit()
 #endif
 	DaoVmSpace_Delete( mainVmSpace );
 	DMap_Delete( dao_cdata_bindings );
-	DMap_Delete( dao_meta_tables );
 	dao_cdata_bindings = NULL;
-	dao_meta_tables = NULL;
 	dao_type_stream = NULL;
 	mainVmSpace = NULL;
 	mainProcess = NULL;

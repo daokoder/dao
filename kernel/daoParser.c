@@ -4108,7 +4108,7 @@ DecoratorError:
 					DArray_Append( inodes, self->vmcLast );
 				}else{
 					int code = enode.update->code;
-					if( code < DVM_GETVH || code > DVM_GETMF ){
+					if( code < DVM_GETVH || code > DVM_GETF ){
 						DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
 						goto InvalidMultiAssignment;
 					}
@@ -6272,7 +6272,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		if( result.first == NULL && result.last ) result.first = result.last;
 		if( result.last ){
 			postart = result.last->first + result.last->middle;
-			if( getx->code < DVM_GETVH || getx->code > DVM_GETMF ) getx = NULL;
+			if( getx->code < DVM_GETVH || getx->code > DVM_GETF ) getx = NULL;
 		}
 		start = self->curToken;
 		switch( DaoParser_CurrentTokenName( self ) ){
@@ -6629,27 +6629,9 @@ InvalidFunctional:
 			}
 		case DTOK_ARROW :
 			{
-				int opb, opa = result.reg;
-				static int warned = 0;
-				if( warned < 3 ){
-					DString w = DString_WrapMBS( "using -> for meta/dynamic field!" );
-					DaoParser_Warn( self, DAO_CTW_OBSOLETE_SYNTAX, & w );
-					warned += 1;
-				}
-				self->curToken += 1;
-				if( DaoParser_CurrentTokenType( self ) != DTOK_IDENTIFIER ){
-					DaoParser_Error2( self, DAO_INVALID_EXPRESSION, start, end, 0 );
-					return error;
-				}
-				opb = DaoParser_AddFieldConst( self, & tokens[self->curToken]->string );
-				regLast = DaoParser_PushRegister( self );
-				DaoParser_AddCode( self, DVM_GETMF, opa, opb, regLast, postart, start, start+1 );
-				if( getx ) self->vmcLast->extra = getx;
-				result.last = result.update = self->vmcLast;
-				result.reg = regLast;
-				result.konst = 0;
-				DaoParser_AddCode( self, DVM_LOAD2, opa, 0, 0, postart, start, start+1 );
-				self->curToken += 1;
+				DString w = DString_WrapMBS( "using -> for meta/dynamic field!" );
+				DaoParser_Error( self, DAO_CTW_OBSOLETE_SYNTAX, & w );
+				return error;
 			}
 			break;
 		case DTOK_LT :
@@ -6684,10 +6666,10 @@ static void DaoParser_TryAddSetCodes( DaoParser *self )
 {
 	DaoInode *setx, *inode = self->vmcLast;
 	unsigned short opc = inode->c;
-	if( inode->code < DVM_SETVH || inode->code > DVM_SETMF ) return;
+	if( inode->code < DVM_SETVH || inode->code > DVM_SETF ) return;
 	while( inode->extra && inode->c == opc ){
 		inode = inode->extra;
-		if( inode->code < DVM_GETVH || inode->code > DVM_GETMF ) continue;
+		if( inode->code < DVM_GETVH || inode->code > DVM_GETF ) continue;
 		setx = DaoParser_PushBackCode( self, (DaoVmCodeX*)inode );
 		setx->code += DVM_SETVH - DVM_GETVH;
 		setx->c = inode->a;
@@ -6744,7 +6726,7 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 		DaoInode *vmc = self->vmcLast;
 		opb = DaoParser_IntegerOne( self, start );
 		DaoParser_AddCode( self, code, opa, opb, opa, start, 0, end );
-		if( vmc->code == DVM_GETVH || (vmc->code >= DVM_GETI && vmc->code <= DVM_GETMF) ){
+		if( vmc->code == DVM_GETVH || (vmc->code >= DVM_GETI && vmc->code <= DVM_GETF) ){
 			DaoParser_PushBackCode( self, (DaoVmCodeX*) vmc );
 			self->vmcLast->extra = vmc->extra;
 			vmc = self->vmcLast;
@@ -6754,7 +6736,6 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 			case DVM_GETI  : vmc->code = DVM_SETI; break;
 			case DVM_GETMI : vmc->code = DVM_SETMI; break;
 			case DVM_GETF  : vmc->code = DVM_SETF; break;
-			case DVM_GETMF : vmc->code = DVM_SETMF; break;
 			}
 			DaoParser_TryAddSetCodes( self );
 		}
@@ -6800,7 +6781,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 		self->curToken += 1; /* eat the operator */
 
 		code = LHS.update ? LHS.update->code : DVM_NOP;
-		if( oper == DAO_OPER_ASSN && code >= DVM_GETVH && code <= DVM_GETMF ){
+		if( oper == DAO_OPER_ASSN && code >= DVM_GETVH && code <= DVM_GETF ){
 			/* GETX will be to SETX, pop unused register: */
 			DaoParser_PopRegister( self ); /* opc of LHS.last */
 		}
@@ -6856,7 +6837,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			if( warn && curtok == DTOK_ASSN )
 				DaoParser_Warn2( self, DAO_WARN_ASSIGNMENT, postart, posend );
 
-			if( code >= DVM_GETVH && code <= DVM_GETMF ){ /* change GETX to SETX */
+			if( code >= DVM_GETVH && code <= DVM_GETF ){ /* change GETX to SETX */
 				LHS.last->code += DVM_SETVH - DVM_GETVH;
 				LHS.last->c = LHS.last->a;
 				LHS.last->a = RHS.reg;
@@ -6875,7 +6856,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			result.last = DaoParser_AddBinaryCode( self, mapAithOpcode[oper], & LHS, & RHS, pos );
 			result.update = result.last;
 			DaoParser_PopRegister( self ); /* result.last->c */
-			if( code >= DVM_GETVH && code <= DVM_GETMF ){ /* add SETX */
+			if( code >= DVM_GETVH && code <= DVM_GETF ){ /* add SETX */
 				/* For X += Y, if X is not local, it will be compiled into:
 				 *   GETX A1, B1, C1; # LHS.last;
 				 *   ADD  C1, B2, C2; # result.last;

@@ -152,8 +152,6 @@ static void DaoCGC_Recycle( void * );
 static void DaoCGC_TryBlock();
 #endif
 
-DaoMap* DaoMetaTables_Get( DaoValue *object, int insert );
-DaoMap* DaoMetaTables_Remove( DaoValue *object );
 
 
 typedef struct DaoGarbageCollector  DaoGarbageCollector;
@@ -790,9 +788,6 @@ void DaoCGC_CycRefCountDecScan()
 	for(i=0; i<workList->size; i++){
 		DaoValue *value = workList->items.pValue[i];
 		if( (value->xBase.trait & delay) | value->xGC.delay ) continue;
-		if( value->xBase.trait & DAO_VALUE_WIMETA ){
-			cycRefCountDecrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
-		}
 		DaoGC_CycRefCountDecScan( value );
 	}
 }
@@ -846,9 +841,6 @@ int DaoCGC_AliveObjectScan()
 	for( i=0; i<auxList->size; i++){
 		DaoValue *value = auxList->items.pValue[i];
 		if( (value->xBase.trait & delay) | value->xGC.delay ) continue;
-		if( value->xBase.trait & DAO_VALUE_WIMETA ){
-			cycRefCountIncrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
-		}
 		DaoGC_CycRefCountIncScan( value );
 	}
 	return auxList->size;
@@ -864,10 +856,6 @@ void DaoCGC_RefCountDecScan()
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
 		if( (value->xBase.trait & delay) | value->xGC.delay ) continue;
-		if( value->xBase.trait & DAO_VALUE_WIMETA ){
-			DaoMap *table = DaoMetaTables_Remove( value );
-			if( table ) table->refCount --;
-		}
 
 		DMutex_Lock( & gcWorker.mutex_idle_list );
 		DaoGC_RefCountDecScan( value );
@@ -1017,9 +1005,6 @@ void DaoIGC_CycRefCountDecScan()
 	for( ; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
 		if( (value->xBase.trait & delay) | value->xGC.delay ) continue;
-		if( value->xBase.trait & DAO_VALUE_WIMETA ){
-			cycRefCountDecrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
-		}
 		j += DaoGC_CycRefCountDecScan( value );
 		if( (++j) >= min ) break;
 	}
@@ -1100,9 +1085,6 @@ int DaoIGC_AliveObjectScan()
 	for( ; j<auxList->size; j++){
 		DaoValue *value = auxList->items.pValue[j];
 		if( (value->xBase.trait & delay) | value->xGC.delay ) continue;
-		if( value->xBase.trait & DAO_VALUE_WIMETA ){
-			cycRefCountIncrement( (DaoValue*) DaoMetaTables_Get( value, 0 ) );
-		}
 		k += DaoGC_CycRefCountIncScan( value );
 		if( (++k) >= min ) break;
 	}
@@ -1126,10 +1108,6 @@ void DaoIGC_RefCountDecScan()
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
 		if( (value->xBase.trait & delay) | value->xGC.delay ) continue;
-		if( value->xBase.trait & DAO_VALUE_WIMETA ){
-			DaoMap *table = DaoMetaTables_Remove( value );
-			if( table ) table->refCount --;
-		}
 		j += DaoGC_RefCountDecScan( value );
 		if( j >= min ) break;
 	}

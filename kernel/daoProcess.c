@@ -76,8 +76,6 @@ static void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoSetField( DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoGetMetaField( DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoSetMetaField( DaoProcess *self, DaoVmCode *vmc );
 
 static void DaoProcess_DoIter( DaoProcess *self, DaoVmCode *vmc );
 
@@ -909,9 +907,9 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_DATA ,
 		&& LAB_GETCL , && LAB_GETCK , && LAB_GETCG ,
 		&& LAB_GETVH , && LAB_GETVS , && LAB_GETVO , && LAB_GETVK , && LAB_GETVG ,
-		&& LAB_GETI  , && LAB_GETDI , && LAB_GETMI , && LAB_GETF  , && LAB_GETMF ,
+		&& LAB_GETI  , && LAB_GETDI , && LAB_GETMI , && LAB_GETF  ,
 		&& LAB_SETVH , && LAB_SETVS , && LAB_SETVO , && LAB_SETVK , && LAB_SETVG ,
-		&& LAB_SETI  , && LAB_SETDI , && LAB_SETMI , && LAB_SETF  , && LAB_SETMF ,
+		&& LAB_SETI  , && LAB_SETDI , && LAB_SETMI , && LAB_SETF  ,
 		&& LAB_LOAD  , && LAB_CAST , && LAB_MOVE ,
 		&& LAB_NOT , && LAB_MINUS , && LAB_TILDE , && LAB_SIZE ,
 		&& LAB_ADD , && LAB_SUB ,
@@ -1296,9 +1294,6 @@ CallEntry:
 		}OPNEXT() OPCASE( GETF ){
 			DaoProcess_DoGetField( self, vmc );
 			goto CheckException;
-		}OPNEXT() OPCASE( GETMF ){
-			DaoProcess_DoGetMetaField( self, vmc );
-			goto CheckException;
 		}OPNEXT() OPCASE( SETVH ){
 			abtp = dataVH[ vmc->c ]->activeTypes[ vmc->b ];
 			if( DaoProcess_Move( self, locVars[vmc->a], dataVH[ vmc->c ]->activeValues + vmc->b, abtp ) ==0 )
@@ -1323,9 +1318,6 @@ CallEntry:
 			goto CheckException;
 		}OPNEXT() OPCASE( SETF ){
 			DaoProcess_DoSetField( self, vmc );
-			goto CheckException;
-		}OPNEXT() OPCASE( SETMF ){
-			DaoProcess_DoSetMetaField( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( LOAD ){
 			if( (vA = locVars[ vmc->a ]) ){
@@ -3289,79 +3281,8 @@ void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc )
 	DaoProcess_PutValue( self, C );
 }
 
-DHash *dao_meta_tables = NULL; /* hash<DaoValue*,DaoMap*> */
-
-DaoMap* DaoMetaTables_Get( DaoValue *object, int insert )
-{
-	DaoMap *table = NULL;
-	DNode *node = NULL;
-	GC_Lock();
-	if( object->xBase.trait & DAO_VALUE_WIMETA ) node = DMap_Find( dao_meta_tables, object );
-	if( node ){
-		table = (DaoMap*) node->value.pValue;
-	}else if( insert ){
-		table = DaoMap_New(1);
-		object->xBase.trait |= DAO_VALUE_WIMETA;
-		GC_IncRC( table );
-		DMap_Insert( dao_meta_tables, object, table );
-	}
-	GC_Unlock();
-	return table;
-}
-static void DaoMetaTables_Set( DaoValue *object, DaoMap *table )
-{
-	DNode *node;
-	GC_Lock();
-	node = DMap_Find( dao_meta_tables, object );
-	GC_IncRC( table );
-	if( node ) GC_DecRC( node->value.pValue );
-	object->xBase.trait |= DAO_VALUE_WIMETA;
-	DMap_Insert( dao_meta_tables, object, table );
-	GC_Unlock();
-}
-DaoMap* DaoMetaTables_Remove( DaoValue *object )
-{
-	DaoMap *table = NULL;
-	DNode *node;
-	GC_Lock();
-	node = DMap_Find( dao_meta_tables, object );
-	object->xBase.trait &= ~DAO_VALUE_WIMETA;
-	if( node ){
-		table = (DaoMap*) node->value.pValue;
-		DMap_EraseNode( dao_meta_tables, node );
-	}
-	GC_Unlock();
-	return table;
-}
 
 
-static DaoValue* DaoMap_GetMetaField( DaoMap *self, DaoValue *key )
-{
-	DNode *node = DMap_Find( self->items, key );
-	if( node ) return node->value.pValue;
-	self = DaoMetaTables_Get( (DaoValue*)self, 0 );
-	if( self ) return DaoMap_GetMetaField( self, key );
-	return NULL;
-}
-void DaoProcess_DoGetMetaField( DaoProcess *self, DaoVmCode *vmc )
-{
-	DaoValue *value;
-	DaoValue *A = self->activeValues[ vmc->a ];
-	DaoMap *meta = A->type == DAO_MAP ? & A->xMap : DaoMetaTables_Get( A, 0 );
-
-	self->activeCode = vmc;
-	if( meta == NULL ){
-		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "object has no meta fields" );
-		return;
-	}
-	value = DaoMap_GetMetaField( meta, self->activeRoutine->routConsts->items.items.pValue[ vmc->b] );
-	if( value == NULL ){
-		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "meta field not exists" );
-		return;
-	}
-	self->activeCode = vmc;
-	DaoProcess_PutValue( self, value );
-}
 void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoValue *A, *B = dao_none_value, *C = self->activeValues[ vmc->c ];
@@ -3432,29 +3353,7 @@ void DaoProcess_DoSetField( DaoProcess *self, DaoVmCode *vmc )
 	}
 	tc->SetField( C, self, fname->xString.data, A );
 }
-void DaoProcess_DoSetMetaField( DaoProcess *self, DaoVmCode *vmc )
-{
-	DaoValue *A = self->activeValues[ vmc->a ];
-	DaoValue *C = self->activeValues[ vmc->c ];
-	DaoValue *fname = self->activeRoutine->routConsts->items.items.pValue[ vmc->b ];
-	DaoMap *meta = DaoMetaTables_Get( C, 1 );
-	int m = 1;
 
-	self->activeCode = vmc;
-	if( meta == NULL ){
-		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "object can not have meta fields" );
-		return;
-	}
-	/* If C is a map, try first to insert A with field name as key into C: */
-	if( C->type == DAO_MAP ) m = DaoMap_Insert( & C->xMap, fname, A );
-	/* If A is failed to be inserted into C, insert into the meta table: */
-	if( m ) DaoMap_Insert( meta, fname, A );
-	/* If A itself is a map, and the field name is __proto__,
-	 * set the meta table's meta table as A: */
-	if( A->type == DAO_MAP && strcmp( fname->xString.data->mbs, "__proto__" ) ==0 ){
-		DaoMetaTables_Set( (DaoValue*) meta, (DaoMap*) A );
-	}
-}
 
 DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 {
