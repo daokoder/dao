@@ -121,6 +121,9 @@ void DaoType_CheckAttributes( DaoType *self )
 	if( DString_FindChar( self->name, '@', 0 ) != MAXSIZE ) self->attrib |= DAO_TYPE_SPEC;
 	if( DString_FindChar( self->name, '?', 0 ) != MAXSIZE ) self->attrib |= DAO_TYPE_UNDEF;
 
+	/* For potential mixin class: */
+	if( self->tid == DAO_CLASS || self->tid == DAO_OBJECT ) self->attrib |= DAO_TYPE_SPEC;
+
 	if( (self->tid == DAO_PAR_NAMED || self->tid == DAO_PAR_DEFAULT) ){
 		if( self->aux && self->aux->xType.attrib & DAO_TYPE_SPEC )
 			self->attrib |= DAO_TYPE_SPEC;

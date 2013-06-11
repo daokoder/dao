@@ -2457,9 +2457,9 @@ ReturnFalse :
 	return 0;
 
 ReturnTrue :
-	if( self->topFrame == self->firstFrame && self->topFrame->next && self->topFrame->next->routine ){
+	if( self->topFrame == self->firstFrame && self == vmSpace->mainProcess ){
 		print = (vmSpace->options & DAO_OPTION_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
-		if( (print || vmSpace->evalCmdline) && self->stackValues[0] && self == vmSpace->mainProcess ){
+		if( (print || vmSpace->evalCmdline) && self->stackValues[0] ){
 			/* Need one extra frame to ensure this part is not executed again,
 			// in case that DaoValue_Print() will invoke some methods: */
 			DaoProcess_PushFrame( self, 0 );
@@ -6437,18 +6437,14 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 		tp = DaoType_DefineTypes( it->value.pType, self->nameSpace, deftypes );
 		it->value.pType = tp;
 	}
-#if 0
-	for(i=0,n=self->body->regType->size; i<n; i++){
-		tp = self->body->regType->items.pType[i];
-		tp = DaoType_DefineTypes( tp, self->nameSpace, deftypes );
-		GC_ShiftRC( tp, self->body->regType->items.pType[i] );
-		self->body->regType->items.pType[i] = tp;
-		if( tp ) printf( "%3i: %s\n", i, tp->name->mbs );
-	}
-#endif
-	/* TODO static variable type; */
 	for(i=0,n=self->routConsts->items.size; i<n; i++){
 		DaoValue_Update( & self->routConsts->items.items.pValue[i], self->nameSpace, deftypes );
+	}
+	for(i=0,n=self->body->svariables->size; i<n; ++i){
+		DaoVariable *var = self->body->svariables->items.pVar[i];
+		DaoType *type = DaoType_DefineTypes( var->dtype, self->nameSpace, deftypes );
+		GC_ShiftRC( type, var->dtype );
+		var->dtype = type;
 	}
 }
 int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes )

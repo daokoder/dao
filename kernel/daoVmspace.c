@@ -2505,7 +2505,12 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_array_types[DAO_DOUBLE]  = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_double, 1 );
 	dao_array_types[DAO_COMPLEX] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_complex, 1 );
 
-#ifdef DEBUG
+#if 0
+	/*
+	// Do not use "#ifdef DEBUG", it will make bytecode encoded by interpreter
+	// compiled in debug mode, fail the decoding by interpreter compiled in
+	// release mode.
+	*/
 	DaoNamespace_TypeDefine( ns, "int", "short" );
 	DaoNamespace_WrapType( vms->nsInternal, dao_FakeList_Typer, 1 );
 	DaoNamespace_TypeDefine( ns, "FakeList<short>", "FakeList<int>" );

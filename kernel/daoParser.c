@@ -3373,7 +3373,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( right < 0 ) goto ErrorClassDefinition;
 
 	parser->defined = 1;
-	DaoClass_DeriveClassData( klass );
+	if( DaoClass_DeriveClassData( klass ) == 0 ) goto ErrorClassDefinition;
 
 	for(i=begin+1; i<right; i++) DaoLexer_AppendToken( parser->lexer, tokens[i] );
 	DaoLexer_Append( parser->lexer, DTOK_SEMCO, tokens[right-1]->line, ";" );

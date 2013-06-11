@@ -57,6 +57,16 @@ struct DaoClass
 	DArray  *mixins;  /* <DaoClass*>: mixin classes; */
 	DVector *ranges;  /* <ushort_t>: ranges of the fields of the mixin classes; */
 
+	ushort_t  cstMixinStart;
+	ushort_t  glbMixinStart;
+	ushort_t  objMixinStart;
+	ushort_t  cstMixinEnd;
+	ushort_t  glbMixinEnd;
+	ushort_t  objMixinEnd;
+	ushort_t  cstMixinEnd2;
+	ushort_t  glbMixinEnd2;
+	ushort_t  objMixinEnd2;
+
 	/* Routines with overloading signatures: */
 	/* They are inserted into constants, no refCount updating for this. */
 	DMap  *ovldRoutMap; /* <DString*,DaoRoutine*> */
@@ -102,9 +112,10 @@ DAO_DLL void DaoClass_Delete( DaoClass *self );
 DAO_DLL void DaoClass_PrintCode( DaoClass *self, DaoStream *stream );
 DAO_DLL void DaoClass_AddReference( DaoClass *self, void *reference );
 
-DAO_DLL int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes );
 DAO_DLL void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns );
-DAO_DLL void DaoClass_DeriveClassData( DaoClass *self );
+
+DAO_DLL int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes );
+DAO_DLL int DaoClass_DeriveClassData( DaoClass *self );
 DAO_DLL void DaoClass_DeriveObjectData( DaoClass *self );
 DAO_DLL void DaoClass_ResetAttributes( DaoClass *self );
 

@@ -430,6 +430,7 @@ int DaoByteEncoder_EncodeDeclaration( DaoByteEncoder *self, DaoValue *object )
 	DaoClass *klass;
 	DaoRoutine *routine;
 	DaoType *type = NULL;
+	DaoType *type2 = NULL;
 	DString *name = NULL;
 	DNode *node, *node2;
 	int nameid, nameid2 = 0, hostid = 0;
@@ -452,6 +453,7 @@ int DaoByteEncoder_EncodeDeclaration( DaoByteEncoder *self, DaoValue *object )
 	case DAO_CLASS :
 		klass = (DaoClass*) object;
 		type = klass->objType;
+		type2 = klass->clsType;
 		name = object->xClass.className;
 		if( klass->classRoutine->nameSpace == self->nspace ){
 			DArray_Append( self->objects, object );
@@ -460,6 +462,7 @@ int DaoByteEncoder_EncodeDeclaration( DaoByteEncoder *self, DaoValue *object )
 		break;
 	case DAO_CTYPE :
 		type = object->xCtype.ctype;
+		type = object->xCtype.cdtype;
 		name = type->name;
 		/* See comments in DaoByteEncoder_AddLookupValue(): */
 		aux = object->xCtype.ctype->kernel->abtype->aux;
@@ -506,6 +509,7 @@ int DaoByteEncoder_EncodeDeclaration( DaoByteEncoder *self, DaoValue *object )
 	DString_AppendUInt( self->declarations, nameid2 );
 
 	if( type ) DaoByteEncoder_EncodeType( self, type );
+	if( type2 ) DaoByteEncoder_EncodeType( self, type2 );
 	return self->mapDeclarations->size;
 }
 int DaoByteEncoder_FindType( DaoByteEncoder *self, DaoType *type )
@@ -1036,6 +1040,7 @@ void DaoByteEncoder_EncodeClass( DaoByteEncoder *self, DaoClass *klass )
 		DString *name = klass->cstDataName->items.pString[i];
 		DNode *node = MAP_Find( klass->lookupTable, name );
 		if( LOOKUP_UP( node->value.pInt ) ) continue;
+		if( i >= klass->cstMixinStart && i < klass->cstMixinEnd2 ) continue;
 		id = LOOKUP_ID( node->value.pInt );
 		DaoByteEncoder_EncodeDeclaration( self, value );
 		DaoByteEncoder_EncodeConstant( self, name, value, id, LOOKUP_PM( node->value.pInt ) );
@@ -1053,6 +1058,7 @@ void DaoByteEncoder_EncodeClass( DaoByteEncoder *self, DaoClass *klass )
 		DNode *node = MAP_Find( klass->lookupTable, name );
 		int pm = LOOKUP_PM( node->value.pInt );
 		if( LOOKUP_UP( node->value.pInt ) ) continue;
+		if( i >= klass->glbMixinStart && i < klass->glbMixinEnd2 ) continue;
 		id = LOOKUP_ID( node->value.pInt );
 		DaoByteEncoder_EncodeDeclaration( self, var->value );
 		DaoByteEncoder_EncodeVariable( self, name, var, id, pm );
@@ -1070,6 +1076,7 @@ void DaoByteEncoder_EncodeClass( DaoByteEncoder *self, DaoClass *klass )
 		DNode *node = MAP_Find( klass->lookupTable, name );
 		int pm = LOOKUP_PM( node->value.pInt );
 		if( LOOKUP_UP( node->value.pInt ) ) continue;
+		if( i >= klass->objMixinStart && i < klass->objMixinEnd2 ) continue;
 		id = LOOKUP_ID( node->value.pInt );
 		if( id < i ) break; /* self from parent class; */
 		DaoByteEncoder_EncodeDeclaration( self, var->value );
@@ -1281,15 +1288,15 @@ void DaoByteEncoder_Encode( DaoByteEncoder *self, DaoNamespace *nspace, DString 
 	DString_AppendMBS( output, "Global Types:\n" );
 	DString_AppendUInt( output, nspace->abstypes->size );
 	DString_Append( output, self->glbtypes );
+	DString_AppendMBS( output, "Routines:\n" );
+	DString_AppendUInt( output, self->mapRoutines->size );
+	DString_Append( output, self->routines );
 	DString_AppendMBS( output, "Interfaces:\n" );
 	DString_AppendUInt( output, self->mapInterfaces->size );
 	DString_Append( output, self->interfaces );
 	DString_AppendMBS( output, "Classes:\n" );
 	DString_AppendUInt( output, self->mapClasses->size );
 	DString_Append( output, self->classes );
-	DString_AppendMBS( output, "Routines:\n" );
-	DString_AppendUInt( output, self->mapRoutines->size );
-	DString_Append( output, self->routines );
 	return;
 #endif
 
@@ -1325,6 +1332,14 @@ void DaoByteEncoder_Encode( DaoByteEncoder *self, DaoNamespace *nspace, DString 
 	DString_AppendUInt( output, nspace->abstypes->size );
 	DString_Append( output, self->glbtypes );
 
+	/*
+	// Routines:
+	// Routines need to be encoded and decoded before classes,
+	// in order to handle mixin classes properly.
+	*/
+	DString_AppendUInt( output, self->mapRoutines->size );
+	DString_Append( output, self->routines );
+
 	/* Interfaces: */
 	DString_AppendUInt( output, self->mapInterfaces->size );
 	DString_Append( output, self->interfaces );
@@ -1332,10 +1347,6 @@ void DaoByteEncoder_Encode( DaoByteEncoder *self, DaoNamespace *nspace, DString 
 	/* Classes: */
 	DString_AppendUInt( output, self->mapClasses->size );
 	DString_Append( output, self->classes );
-
-	/* Routines: */
-	DString_AppendUInt( output, self->mapRoutines->size );
-	DString_Append( output, self->routines );
 }
 
 
@@ -2307,7 +2318,8 @@ void DaoByteDecoder_DecodeClasses( DaoByteDecoder *self )
 			DaoClass_AddMixinClass( klass, (DaoClass*) mixin );
 		}
 		if( self->codes >= self->error ) break;
-		DaoClass_DeriveClassData( klass );
+		if( DaoClass_DeriveClassData( klass ) == 0 ) self->codes = self->error;
+		if( self->codes >= self->error ) break;
 		count = DaoByteDecoder_DecodeUInt16( self );
 		for(j=0; j<count; ++j){
 			int nameID = DaoByteDecoder_DecodeUInt( self );
@@ -2566,7 +2578,6 @@ InvalidInstruction:
 void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 {
 	DArray *lines = DArray_New(0);
-	DArray *routines = DArray_New(0);
 	int num = DaoByteDecoder_DecodeUInt( self );
 	int i, j, k, m, flag, count, lineInfoCount;
 	int id, id2, id3;
@@ -2638,20 +2649,14 @@ void DaoByteDecoder_DecodeRoutines( DaoByteDecoder *self )
 			DVector_PushCode( routine->body->vmCodes, * (DaoVmCode*) & vmc );
 		}
 		if( self->codes >= self->error ) break;
-		DArray_Append( routines, routine );
+		DArray_Append( self->routines, routine );
 	}
-	for(i=0; i<(int)routines->size; ++i){
-		DaoRoutine *routine = routines->items.pRoutine[i];
-		DaoByteDecoder_VerifyRoutine( self, routine );
-		if( self->codes >= self->error ) break;
-		//DaoRoutine_PrintCode( routine, self->vmspace->stdioStream );
-	}
-	DArray_Delete( routines );
 	DArray_Delete( lines );
 }
 
 int DaoByteDecoder_Decode( DaoByteDecoder *self, DString *input, DaoNamespace *nspace )
 {
+	daoint i;
 	DString header = *input;
 	DString signature = DString_WrapBytes( DAO_BC_SIGNATURE, 8 );
 
@@ -2675,9 +2680,18 @@ int DaoByteDecoder_Decode( DaoByteDecoder *self, DString *input, DaoNamespace *n
 	DaoByteDecoder_DecodeConstants( self );
 	DaoByteDecoder_DecodeVariables( self );
 	DaoByteDecoder_DecodeGlobalTypes( self );
+	DaoByteDecoder_DecodeRoutines( self );
 	DaoByteDecoder_DecodeInterfaces( self );
 	DaoByteDecoder_DecodeClasses( self );
-	DaoByteDecoder_DecodeRoutines( self );
+#if 0
+	printf( "debug: %i\n", self->codes >= self->error );
+#endif
+	for(i=0; i<self->routines->size; ++i){
+		DaoRoutine *routine = self->routines->items.pRoutine[i];
+		DaoByteDecoder_VerifyRoutine( self, routine );
+		if( self->codes >= self->error ) break;
+		//DaoRoutine_PrintCode( routine, self->vmspace->stdioStream );
+	}
 
 	if( self->codes >= self->error ){
 		DaoStream_WriteMBS( self->vmspace->errorStream, "ERROR: bytecode decoding failed!\n" );
