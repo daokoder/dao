@@ -833,7 +833,7 @@ static int DaoParser_AddDefaultInitializer( DaoParser *self, DaoClass *klass, in
 			}
 		}else{
 			int offset = klass->offsets->data.ushorts[2*(i - klass->mixinClass->size)];
-			opb = offset + DAO_CLASS_CONST_CSTOR;
+			opb = offset + (base->type == DAO_CLASS ? DAO_CLASS_CONST_CSTOR : 0);
 		}
 		inode = DaoParser_AddCode( self, DVM_GETCK, 1, 0, 0, 0, 0, 0 );
 		inode->b = opb;

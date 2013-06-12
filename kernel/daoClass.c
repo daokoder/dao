@@ -754,7 +754,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 	DString *mbs;
 	DNode *it, *search;
 	DaoMethodFields *mf;
-	daoint i, j, k, id, perm, index;
+	daoint i, j, k, id;
 
 	if( DaoCass_DeriveMixinData( self ) == 0 ) return 0;
 
@@ -768,7 +768,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 
 	for(i=0; i<self->superClass->size; ++i){
 		DaoClass *klass = self->superClass->items.pClass[i];
-		DaoCtype *cdata = self->superClass->items.pCdata[i];
+		DaoCtype *cdata = self->superClass->items.pCtype[i];
 		int cstOffset = self->constants->size;
 		int glbOffset = self->variables->size;
 		DVector_PushUshort( self->offsets, self->constants->size );
@@ -824,49 +824,42 @@ int DaoClass_DeriveClassData( DaoClass *self )
 		}else if( cdata->type == DAO_CTYPE ){
 			DaoTypeKernel *kernel = cdata->ctype->kernel;
 			DaoTypeBase *typer = kernel->typer;
-			DMap *values = kernel->values;
-			DMap *methods = kernel->methods;
+			DMap *values, *methods;
 
 			DArray_Append( self->clsType->bases, cdata->ctype );
 			DArray_Append( self->objType->bases, cdata->cdtype );
+			DaoClass_AddConst( self, cdata->ctype->name, (DaoValue*)cdata, DAO_DATA_PUBLIC );
+
+			if( values == NULL ) DaoNamespace_SetupValues( kernel->nspace, kernel->typer );
+			if( methods == NULL ) DaoNamespace_SetupMethods( kernel->nspace, kernel->typer );
 
 			DaoCdataType_SpecializeMethods( cdata->ctype );
 			kernel = cdata->ctype->kernel;
+			values = kernel->values;
 			methods = kernel->methods;
-
-			DaoClass_AddConst( self, cdata->ctype->name, cdata, DAO_DATA_PUBLIC );
-			for(it=DMap_First( methods ); it; it=DMap_Next( methods, it )){
-				DaoRoutine *func = it->value.pRoutine;
-				if( func->attribs & DAO_ROUT_INITOR ){
-					DArray_Append( self->cstDataName, cdata->ctype->name );
-					DArray_Append( self->constants, DaoConstant_New( (DaoValue*) func ) );
-					break;
-				}
-			}
 
 			if( typer->numItems ){
 				for(j=0; typer->numItems[j].name!=NULL; j++){
 					DString name = DString_WrapMBS( typer->numItems[j].name );
 					it = DMap_Find( values, & name );
-					if( it && DMap_Find( self->lookupTable, & name ) == NULL )
-						DaoClass_AddConst( self, it->key.pString, it->value.pValue, DAO_DATA_PUBLIC );
+					if( it == NULL ) continue;
+					id = self->constants->size;
+					id = LOOKUP_BIND( DAO_CLASS_CONSTANT, DAO_DATA_PUBLIC, 1, id );
+					DMap_Insert( self->lookupTable, it->key.pString, IntToPointer( id ) );
+					DArray_Append( self->cstDataName, it->key.pString );
+					DArray_Append( self->constants, DaoConstant_New( it->value.pValue ) );
 				}
 			}
 			for(it=DMap_First( methods ); it; it=DMap_Next( methods, it )){
-				DaoRoutine *func = it->value.pRoutine;
-				DaoRoutine **funcs = & func;
-				int k, count = 1;
-				if( it->value.pValue->type == DAO_ROUTINE && it->value.pRoutine->overloads ){
-					DRoutines *routs = it->value.pRoutine->overloads;
-					funcs = routs->routines->items.pRoutine;
-					count = routs->routines->size;
-				}
-				for(k=0; k<count; k++){
-					DaoRoutine *func = funcs[k];
-					if( func->routHost != cdata->cdtype ) continue;
-					if( func->attribs & DAO_ROUT_INITOR ) continue;
-					DaoClass_AddConst( self, it->key.pString, (DaoValue*)func, DAO_DATA_PUBLIC );
-				}
+				id = self->constants->size;
+				id = LOOKUP_BIND( DAO_CLASS_CONSTANT, DAO_DATA_PUBLIC, 1, id );
+				DMap_Insert( self->lookupTable, it->key.pString, IntToPointer( id ) );
+				DArray_Append( self->cstDataName, it->key.pString );
+				DArray_Append( self->constants, DaoConstant_New( it->value.pValue ) );
+
+				DArray_Append( mf->names, it->key.pString );
+				DArray_Append( mf->perms, IntToPointer( DAO_DATA_PUBLIC ) );
+				DArray_Append( mf->routines, it->value.pValue );
 			}
 		}
 	}
