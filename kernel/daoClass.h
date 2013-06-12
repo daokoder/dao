@@ -32,6 +32,10 @@
 
 #define DAO_MAX_PARENT 16
 
+#define DAO_CLASS_CONST_CSTOR  1
+#define DAO_CLASS_CONST_DEF    2
+
+
 struct DaoClass
 {
 	DAO_DATA_COMMON;
@@ -56,6 +60,7 @@ struct DaoClass
 
 	DArray  *mixins;  /* <DaoClass*>: mixin classes; */
 	DVector *ranges;  /* <ushort_t>: ranges of the fields of the mixin classes; */
+	DVector *offsets; /* <ushort_t>: offsets of the fields from parent classes; */
 
 	ushort_t  cstMixinStart;
 	ushort_t  glbMixinStart;

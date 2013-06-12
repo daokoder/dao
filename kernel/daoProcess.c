@@ -366,7 +366,6 @@ static void DaoProcess_CopyStackParams( DaoProcess *self )
 }
 void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *object )
 {
-	int need_self = routine->routType->attrib & DAO_TYPE_SELF;
 	DaoType *routHost = routine->routHost;
 	DaoStackFrame *frame = DaoProcess_PushFrame( self, routine->body->regCount );
 
@@ -374,8 +373,8 @@ void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *o
 	frame->active = frame;
 	self->status = DAO_PROCESS_STACKED;
 	DaoProcess_CopyStackParams( self );
-	if( need_self && routHost && routHost->tid == DAO_OBJECT ){
-		DaoValue *firstParam = self->paramValues[0];
+	if( routHost && routHost->tid == DAO_OBJECT && !(routine->attribs & DAO_ROUT_STATIC) ){
+		DaoValue *firstParam = frame->parCount ? self->paramValues[0] : frame->prev->object;
 		if( object == NULL && firstParam->type == DAO_OBJECT ) object = (DaoObject*)firstParam;
 		if( object ) object = (DaoObject*) DaoObject_CastToBase( object->rootObject, routHost );
 		assert( object && object != (DaoObject*)object->defClass->objType->value );
@@ -549,7 +548,7 @@ static DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine,
 
 		if( routine->body ){
 			DMap *defs2 = DHash_New(0,0);
-			DaoType_MatchTo( routine->routType, routine->original->routType, defs2 );
+			DaoType_MatchTo( routine->routType, original->routType, defs2 );
 			/* Only specialize explicitly declared variables: */
 			DaoRoutine_MapTypes( routine, defs2 );
 			DMap_Delete( defs2 );
@@ -3802,10 +3801,6 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		selfpar = (DaoValue*) othis;
 		rout = DaoRoutine_ResolveX( routines, selfpar, params, npar, codemode );
 	}
-	if( rout == NULL && (npar ==0 || (npar == 1 && code == DVM_MCALL) ) ){
-		/* default contstructor */
-		rout = klass->classRoutine;
-	}
 	if( rout == NULL ) goto InvalidParameter;
 	if( rout->pFunc ){
 		rout = DaoProcess_PassParams( self, rout, klass->objType, selfpar, params, npar, vmc->code );
@@ -3825,16 +3820,11 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		}
 		DaoProcess_PutValue( self, (DaoValue*) othis );
 	}else{
-		DaoProcess_PrepareCall( self, rout, selfpar, params, npar, vmc, 1 );
-		if( self->exceptions->size ) goto DeleteObject;
 		obj = othis;
-		if( initbase >= 0 ){
-			obj = (DaoObject*) DaoObject_CastToBase( obj, rout->routHost );
-		}else{
-			self->topFrame->state = DVM_MAKE_OBJECT;
-		}
-		GC_ShiftRC( obj, self->topFrame->object );
-		self->topFrame->object = obj;
+		if( initbase >= 0 ) obj = (DaoObject*) DaoObject_CastToBase( obj, rout->routHost );
+		DaoProcess_PrepareCall( self, rout, obj, params, npar, vmc, 1 );
+		if( initbase < 0 ) self->topFrame->state = DVM_MAKE_OBJECT;
+		if( self->exceptions->size ) goto DeleteObject;
 	}
 	return;
 InvalidParameter:
@@ -4650,11 +4640,10 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 	case DAO_CLASS :
 		{
 			DaoClass *klass = & p->xClass;
-			DArray *routines = klass->classRoutines->overloads->routines;
 			object = DaoObject_New( klass );
 			DaoProcess_SetValue( self, vmc->c, (DaoValue*)object );
 			mtype = klass->instvars->items.pVar;
-			if( klass->superClass->size || (routines && routines->size) ){
+			if( !(klass->attribs & DAO_CLS_AUTO_DEFAULT) ){
 				DaoProcess_RaiseException( self, DAO_ERROR, "cannot initialize instance" );
 				break;
 			}else if( opb >= object->valueCount ){

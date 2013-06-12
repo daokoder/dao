@@ -4445,8 +4445,7 @@ NotExist_TryAux:
 					DArray *routines;
 					if( consts[opa] == NULL ) goto NotInit;
 					klass = & at->aux->xClass;
-					routines = klass->classRoutines->overloads->routines;
-					if( klass->superClass->size || (routines && routines->size) ) goto InvOper;
+					if( !(klass->attribs & DAO_CLS_AUTO_DEFAULT) ) goto InvOper;
 					str = klass->className;
 					ct = klass->objType;
 					/* XXX: check field names */

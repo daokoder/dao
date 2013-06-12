@@ -810,39 +810,38 @@ static int DaoParser_FindPairToken2( DaoParser *self,  uchar_t l, uchar_t r, int
 	return DaoParser_FindPairToken( self, l, r, m, n );
 }
 
-static void DaoLexer_AppendInitSuper( DaoLexer *self, DaoClass *klass, int line, int flags )
+static int DaoParser_PushRegister( DaoParser *self );
+static DaoInode* DaoParser_AddCode( DaoParser *self, ushort_t code,
+		ushort_t a, ushort_t b, ushort_t c, int first, int mid, int last );
+
+static int DaoParser_AddDefaultInitializer( DaoParser *self, DaoClass *klass, int flags )
 {
-	DString *sup = DString_New(1);
-	DString *info = DString_New(1);
-	int i;
-	for(i=0; i<klass->superClass->size; i++){
-		DaoCdata *cdata = (DaoCdata*) klass->superClass->items.pValue[i];
+	daoint i, j;
+	for(i=0; i<klass->baseClass->size; i++){
+		DaoClass *base = (DaoClass*) klass->baseClass->items.pValue[i];
+		DaoCdata *cdata = (DaoCdata*) klass->baseClass->items.pValue[i];
+		DaoInode *inode;
+		int reg, opb = 0;
 		if( flags & (1<<i) ) continue;
-		if( cdata->type == DAO_CLASS ){
-			DString_Assign( sup, klass->superClass->items.pClass[i]->className );
-		}else if( cdata->type == DAO_CTYPE ){
-			DaoRoutine *func = DaoType_FindFunction( cdata->ctype, cdata->ctype->name );
-			DString_Assign( sup, cdata->ctype->name );
-			if( func ) func = DaoRoutine_ResolveX( func, NULL, NULL, 0, DVM_CALL );
-			if( func ) goto AppendInitSuper;
-			DString_SetMBS( info, "'No default constructor for parent type \"" );
-			DString_Append( info, sup );
-			DString_AppendMBS( info, "\"'" );
-			DaoLexer_AddRaiseStatement( self, "Error", info->mbs, line );
-			continue;
+		if( i < klass->mixinClass->size ){
+			for(j=0; j<klass->mixins->size; ++j){
+				if( klass->mixins->items.pClass[j] == base ){
+					int offset = klass->ranges->data.ushorts[6*j];
+					opb = offset + DAO_CLASS_CONST_CSTOR;
+					break;
+				}
+			}
+		}else{
+			int offset = klass->offsets->data.ushorts[2*(i - klass->mixinClass->size)];
+			opb = offset + DAO_CLASS_CONST_CSTOR;
 		}
-AppendInitSuper:
-		/* need to be compiled into DVM_GETCK, for proper class instantiation: */
-		DString_AppendChar( sup, '#' );
-		DString_AppendInteger( sup, i+1 );
-		DaoLexer_Append( self, DTOK_IDENTIFIER, line, sup->mbs );
-		DaoLexer_Append( self, DTOK_LB, line, "(" );
-		DaoLexer_Append( self, DTOK_RB, line, ")" );
-		DaoLexer_Append( self, DKEY__INIT, line, "#init" );
-		DaoLexer_Append( self, DTOK_SEMCO, line, ";" );
+		inode = DaoParser_AddCode( self, DVM_GETCK, 1, 0, 0, 0, 0, 0 );
+		inode->b = opb;
+		inode->c = DaoParser_PushRegister( self );
+		reg = DaoParser_PushRegister( self );
+		DaoParser_AddCode( self, DVM_CALL, inode->c, DAO_CALL_INIT, reg, 0,0,0 );
 	}
-	DString_Delete( sup );
-	DString_Delete( info );
+	return 1;
 }
 
 int DaoParser_FindScopedConstant( DaoParser *self, DaoValue **value, int start );
@@ -862,35 +861,59 @@ static int DaoParser_ParseInitSuper( DaoParser *self, DaoParser *module, int sta
 	init = DaoLexer_New();
 	if( tokens[start]->name == DTOK_COLON ){
 		do {
+			DaoEnode enode;
+			DaoInode *inode;
 			DaoValue *value = NULL;
-			int found = -1;
+			DaoLexer *lexer = module->lexer;
 			int pos = DaoParser_FindScopedConstant( self, & value, dlm+1 );
-			if( pos <0 || tokens[pos+1]->type != DTOK_LB ) goto ErrorRoutine;
-			if( value == NULL || (value->type != DAO_CLASS && value->type != DAO_CTYPE) ) goto ErrorRoutine;
+			int reg, offset, count, found = -1;
 
-			for(i=0; i<klass->superClass->size; i++){
-				if( value == klass->superClass->items.pValue[i] ){
+			if( value == NULL ) goto ErrorRoutine;
+			if( value->type != DAO_CLASS && value->type != DAO_CTYPE ) goto ErrorRoutine;
+			if( pos < 0 || tokens[pos+1]->type != DTOK_LB ) goto ErrorRoutine;
+
+			for(i=0; i<klass->baseClass->size; ++i){
+				if( value == klass->baseClass->items.pValue[i] ){
 					found = i;
 					break;
 				}
 			}
-			if( found <0 ) goto ErrorRoutine;
+			if( found < 0 ) goto ErrorRoutine;
 			flags |= 1<<found;
-			line = tokens[dlm]->line;
+
 			rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, dlm, -1 );
-			if( rb <0 ) goto ErrorRoutine;
-			for(i=start+1; i<=rb; i++) DaoLexer_AppendToken( init, tokens[i] );
-			DaoLexer_Append( init, DKEY__INIT, line, "#init" );
-			DaoLexer_Append( init, DTOK_SEMCO, line, ";" );
+			if( rb < 0 ) goto ErrorRoutine;
+
+			offset = klass->offsets->data.ushorts[2*(found - klass->mixinClass->size)];
+			inode = DaoParser_AddCode( module, DVM_GETCK, 1, 0, 0, 0, 0, 0 );
+			inode->b = offset + DAO_CLASS_CONST_CSTOR;
+			inode->c = DaoParser_PushRegister( module );
+			inode->first = inode->middle = start + 1;
+			inode->last = pos - 1;
+
+			if( rb > (pos + 2) ){
+				module->lexer = self->lexer;
+				module->tokens = self->lexer->tokens;
+				module->curToken = pos + 2;
+				enode = DaoParser_ParseExpressionList( module, DTOK_COMMA, inode, NULL );
+				module->lexer = lexer;
+				module->tokens = lexer->tokens;
+				if( enode.reg < 0 ) goto ErrorRoutine;
+			}else{
+				enode.reg = inode->c;
+				enode.count = 1;
+			}
+
+			reg = DaoParser_PushRegister( module );
+			inode = DaoParser_AddCode( module, DVM_CALL, enode.reg, 0, reg, dlm+1,pos,rb );
+			inode->b = (enode.count-1)|DAO_CALL_INIT;
 			dlm = rb + 1;
 		} while( dlm < size && tokens[dlm]->name == DTOK_COMMA );
 		start = dlm;
 		if( tokens[start]->name != DTOK_LCB ) goto ErrorRoutine;
 	}
 	if( tokens[start]->name == DTOK_LCB ){
-		for(i=0; i<init->tokens->size; i++)
-			DaoLexer_AppendToken( module->lexer, init->tokens->items.pToken[i] );
-		DaoLexer_AppendInitSuper( module->lexer, klass, line, flags );
+		DaoParser_AddDefaultInitializer( module, klass, flags );
 	}
 	if( init ) DaoLexer_Delete( init );
 	return start;
@@ -3308,9 +3331,11 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	DaoClass_ResetAttributes( klass );
 	error = DaoParser_CompileRoutines( parser ) == 0;
 	if( error == 0 && klass->classRoutines->overloads->routines->size == 0 ){
+		DString *ctorname = klass->cstDataName->items.pString[DAO_CLASS_CONST_CSTOR];
 		DArray_Clear( parser->tokens );
-		DaoLexer_AppendInitSuper( parser->lexer, klass, line, 0 );
+		DaoParser_AddDefaultInitializer( parser, klass, 0 );
 		error |= DaoParser_ParseRoutine( parser ) == 0;
+		DaoClass_AddConst( klass, ctorname, (DaoValue*)klass->classRoutine, DAO_DATA_PUBLIC );
 	}
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	if( error ) return -1;
