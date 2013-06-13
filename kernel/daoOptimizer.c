@@ -4773,13 +4773,13 @@ NotExist_TryAux:
 				if( at->tid == DAO_ROUTINE && at->overloads ) rout = (DaoRoutine*)at->aux;
 				DMap_Reset( defs2 );
 				DMap_Assign( defs2, defs );
-				if( rout == NULL && at->aux == NULL ){
-					/* "routine" type: */
-					vmc->b |= DAO_CALL_NOSELF;
+				if( rout == NULL && at->aux == NULL ){ /* "routine" type: */
+					/* DAO_CALL_INIT: mandatory passing the implicit self parameter. */
+					if( !(vmc->b & DAO_CALL_INIT) ) vmc->b |= DAO_CALL_NOSELF;
 					ct = dao_type_any;
 					ctchecked = 1;
 				}else if( rout == NULL ){
-					vmc->b |= DAO_CALL_NOSELF;
+					if( !(vmc->b & DAO_CALL_INIT) ) vmc->b |= DAO_CALL_NOSELF;
 					if( DaoRoutine_CheckType( at, NS, NULL, tp, j, code, 0 ) ==0 ){
 						DaoRoutine_CheckError( NS, NULL, at, NULL, tp, j, code, errors );
 						goto ErrorTyping;
@@ -5867,6 +5867,32 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 
 	DaoRoutine_UpdateRegister( newfn, regmap );
 	if( DaoRoutine_DoTypeInference( newfn, 0 ) ==  0 ) goto ErrorDecorator;
+
+	for(i=0,m=annotCodes->size; i<m; i++){
+		vmc = annotCodes->items.pVmc[i];
+		if( vmc->code == DVM_CALL && (vmc->b & DAO_CALL_DECSUB) ){
+			/*
+			// Call to the decorated function was marked with DAO_CALL_NOSELF
+			// by the type inferencer, to not pass an implicit self parameter.
+			// But for decorating constructors, it is necessary to pass the
+			// implicit self parameter, because the self parameter is not in
+			// the parameter list.
+			*/
+			if( oldfn->attribs & DAO_ROUT_INITOR ){
+				vmc->b &= ~ DAO_CALL_NOSELF; /* Allow passing implicit self; */
+				vmc->b |= DAO_CALL_INIT; /* Avoid resetting DAO_CALL_NOSELF; */
+			}
+			vmc->b &= ~ DAO_CALL_DECSUB;
+			newfn->body->vmCodes->data.codes[i] = *(DaoVmCode*) vmc;
+		}
+	}
+#if 0
+	printf( "###################################\n" );
+	printf( "################################### %s\n", oldfn->routName->mbs );
+	printf( "###################################\n" );
+	DaoRoutine_PrintCode( decorator, decorator->nameSpace->vmSpace->errorStream );
+	DaoRoutine_PrintCode( newfn, newfn->nameSpace->vmSpace->errorStream );
+#endif
 
 	if( ip ){
 		/* For in place decoration, override the old function by swapping the function

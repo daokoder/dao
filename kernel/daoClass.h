@@ -71,6 +71,10 @@ struct DaoClass
 	ushort_t  cstMixinEnd2;
 	ushort_t  glbMixinEnd2;
 	ushort_t  objMixinEnd2;
+	ushort_t  cstParentStart;
+	ushort_t  glbParentStart;
+	ushort_t  cstParentEnd;
+	ushort_t  glbParentEnd;
 
 	/* Routines with overloading signatures: */
 	/* They are inserted into constants, no refCount updating for this. */

@@ -139,6 +139,7 @@ void DaoType_CheckAttributes( DaoType *self )
 			self->rntcount += it->tid >= DAO_INTEGER && it->tid <= DAO_DOUBLE;
 		}
 	}
+	if( self->aux && self->aux->xType.attrib & DAO_TYPE_SPEC ) self->attrib |= DAO_TYPE_SPEC;
 	if( self->nested ){
 		for(i=0; i<self->nested->size; i++){
 			DaoType *it = self->nested->items.pType[i];
@@ -412,6 +413,7 @@ static int DaoType_MatchTemplateParams( DaoType *self, DaoType *type, DMap *defs
 		if( self->nested->size != type->nested->size ) return 0;
 		mt = DAO_MT_SUB;
 		for(i=0,n=self->nested->size; i<n; i++){
+			int tid = ts2[i]->tid ;
 			k = DaoType_MatchTo( ts1[i], ts2[i], defs );
 			/*
 			// When matching template types, the template argument types
@@ -432,7 +434,7 @@ static int DaoType_MatchTemplateParams( DaoType *self, DaoType *type, DMap *defs
 			// to a (temporary) variable with type for the method of
 			// mt::channel<int>.
 			*/
-			if( k < DAO_MT_EQ ) return DAO_MT_NOT;
+			if( k < DAO_MT_EQ && tid != DAO_THT && tid != DAO_UDT ) return DAO_MT_NOT;
 #if 0
 			if( k == 0 || k == DAO_MT_SUB || k == DAO_MT_SIM ) return DAO_MT_NOT;
 			if( (ts1[i]->tid & DAO_ANY) && !(ts2[i]->tid & DAO_ANY) ) return DAO_MT_NOT;

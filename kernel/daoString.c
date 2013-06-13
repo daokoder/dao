@@ -1323,6 +1323,42 @@ daoint DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0
 	return MAXSIZE;
 }
 
+int DString_ExtractAffix( DString *self, DString *prefix, DString *suffix, int offset )
+{
+	int exact = 0;
+
+	if( self->size <= offset ) return -1;
+	if( self->mbs[offset] != '_' && self->mbs[self->size-1] != '_' ) return -1;
+
+	DString_ToMBS( self );
+	DString_Reset( prefix, 0 );
+	DString_Reset( suffix, 0 );
+	if( self->mbs[offset] == '_' ){
+		daoint pos = DString_FindChar( self, '_', offset+1 );
+		if( pos == MAXSIZE ) pos = self->size;
+		DString_SubString( self, prefix, offset+1, pos - offset - 1 );
+		exact = pos == self->size - 1;
+	}
+	if( self->mbs[self->size-1] == '_' ){
+		daoint pos = DString_RFindChar( self, '_', self->size-offset-1 );
+		if( pos == MAXSIZE ) pos = 0;
+		DString_SubString( self, suffix, pos+1, self->size-offset-1-pos );
+	}
+	return exact;
+}
+int DString_MatchAffix( DString *self, DString *prefix, DString *suffix, int exact )
+{
+	if( exact && DString_EQ( self, prefix ) == 0 ) return 0;
+	if( prefix->size && DString_Find( self, prefix, 0 ) != 0 ) return 0;
+	if( suffix->size ){
+		daoint pos = DString_RFind( self, suffix, -1 );
+		if( pos == MAXSIZE ) return 0;
+		if( pos != (self->size - 1) ) return 0;
+	}
+	return 1;
+}
+
+
 static char empty_mbs[] = "";
 static wchar_t empty_wcs[] = L"";
 

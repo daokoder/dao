@@ -133,5 +133,7 @@ DAO_DLL DString DString_WrapWCS( const wchar_t *wcs );
 
 DAO_DLL void DString_AppendPathSep( DString *self );
 
+int DString_ExtractAffix( DString *self, DString *prefix, DString *suffix, int offset );
+int DString_MatchAffix( DString *self, DString *prefix, DString *suffix, int exact );
 
 #endif

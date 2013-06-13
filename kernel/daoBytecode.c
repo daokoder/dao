@@ -1039,8 +1039,8 @@ void DaoByteEncoder_EncodeClass( DaoByteEncoder *self, DaoClass *klass )
 		DaoValue *value = klass->constants->items.pConst[i]->value;
 		DString *name = klass->cstDataName->items.pString[i];
 		DNode *node = MAP_Find( klass->lookupTable, name );
-		if( LOOKUP_UP( node->value.pInt ) ) continue;
 		if( i >= klass->cstMixinStart && i < klass->cstMixinEnd2 ) continue;
+		if( i >= klass->cstParentStart && i < klass->cstParentEnd ) continue;
 		id = LOOKUP_ID( node->value.pInt );
 		DaoByteEncoder_EncodeDeclaration( self, value );
 		DaoByteEncoder_EncodeConstant( self, name, value, id, LOOKUP_PM( node->value.pInt ) );
@@ -1057,8 +1057,8 @@ void DaoByteEncoder_EncodeClass( DaoByteEncoder *self, DaoClass *klass )
 		DString *name = klass->glbDataName->items.pString[i];
 		DNode *node = MAP_Find( klass->lookupTable, name );
 		int pm = LOOKUP_PM( node->value.pInt );
-		if( LOOKUP_UP( node->value.pInt ) ) continue;
 		if( i >= klass->glbMixinStart && i < klass->glbMixinEnd2 ) continue;
+		if( i >= klass->glbParentStart && i < klass->glbParentEnd ) continue;
 		id = LOOKUP_ID( node->value.pInt );
 		DaoByteEncoder_EncodeDeclaration( self, var->value );
 		DaoByteEncoder_EncodeVariable( self, name, var, id, pm );

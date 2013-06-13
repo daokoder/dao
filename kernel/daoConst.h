@@ -149,12 +149,12 @@ enum DaoCallMode
 {
 	DAO_CALL_INIT   = (1<<8), /* call to initialize a parent object */
 	DAO_CALL_TAIL   = (1<<9), /* may do tail call */
-	DAO_CALL_NOVIRT = (1<<10), /* call as non-virtual function */
-	DAO_CALL_COROUT = (1<<11), /* call for creating a coroutine vm process */
-	DAO_CALL_EXPAR  = (1<<12), /* expand the last parameter of tuple type */
-	DAO_CALL_ASYNC  = (1<<13), /* asynchronous call */
-	DAO_CALL_BLOCK  = (1<<14), /* call with code block */
-	DAO_CALL_NOSELF = (1<<15)  /* call without implicit self */
+	DAO_CALL_COROUT = (1<<10), /* call for creating a coroutine vm process */
+	DAO_CALL_EXPAR  = (1<<11), /* expand the last parameter of tuple type */
+	DAO_CALL_ASYNC  = (1<<12), /* asynchronous call */
+	DAO_CALL_BLOCK  = (1<<13), /* call with code block */
+	DAO_CALL_NOSELF = (1<<14), /* call without implicit self */
+	DAO_CALL_DECSUB = (1<<15)  /* call decorated function */
 };
 enum DaoProcessPauseType
 {

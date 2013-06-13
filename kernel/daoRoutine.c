@@ -814,7 +814,7 @@ DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *obj, DaoValue *p[],
 		if( self == NULL ) return NULL;
 	}
 	rout = self;
-	if( (rout->attribs & DAO_ROUT_VIRTUAL) && (mode & DAO_CALL_NOVIRT) ==0 ){
+	if( rout->attribs & DAO_ROUT_VIRTUAL ){
 		DaoClass *klass = NULL;
 		if( obj && obj->type == DAO_OBJECT ){
 			klass = obj->xObject.rootObject->defClass;

@@ -124,6 +124,8 @@ DaoClass* DaoClass_New()
 	self->cstMixinStart = self->cstMixinEnd = self->cstMixinEnd2 = 0;
 	self->glbMixinStart = self->glbMixinEnd = self->glbMixinEnd2 = 0;
 	self->objMixinStart = self->objMixinEnd = self->objMixinEnd2 = 0;
+	self->cstParentStart = self->cstParentEnd = 0;
+	self->glbParentStart = self->glbParentEnd = 0;
 	return self;
 }
 void DaoClass_Delete( DaoClass *self )
@@ -203,8 +205,6 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 
 	self->objType = DaoType_New( name->mbs, DAO_OBJECT, (DaoValue*)self, NULL );
 	self->clsType = DaoType_New( name->mbs, DAO_CLASS, (DaoValue*) self, NULL );
-	self->objType->attrib |= DAO_TYPE_SPEC;  /* for mixin class; */
-	self->clsType->attrib |= DAO_TYPE_SPEC;  /* for mixin class; */
 	GC_IncRC( self->clsType );
 	DString_InsertMBS( self->clsType->name, "class<", 0, 0, 0 );
 	DString_AppendChar( self->clsType->name, '>' );
@@ -766,6 +766,9 @@ int DaoClass_DeriveClassData( DaoClass *self )
 	DArray_Clear( self->clsType->bases );
 	DArray_Clear( self->objType->bases );
 
+	self->cstParentStart = self->constants->size;
+	self->glbParentStart = self->variables->size;
+
 	for(i=0; i<self->superClass->size; ++i){
 		DaoClass *klass = self->superClass->items.pClass[i];
 		DaoCtype *cdata = self->superClass->items.pCtype[i];
@@ -866,6 +869,9 @@ int DaoClass_DeriveClassData( DaoClass *self )
 	DaoClass_SetupMethodFields( self, mf );
 	DaoMethodFields_Delete( mf );
 
+	self->cstParentEnd = self->constants->size;
+	self->glbParentEnd = self->variables->size;
+
 #if 0
 	for(j=0; j<self->constants->size; ++j){
 		DaoValue *value = self->constants->items.pConst[j]->value;
@@ -954,64 +960,59 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 	DaoValue_MarkConst( self->objType->value );
 	DaoValue_MarkConst( self->constants->items.pConst[1]->value ); /* ::default */
 }
-void DaoClass_UseMixinDecorators( DaoClass *self )
+int DaoClass_UseMixinDecorators( DaoClass *self )
 {
+	int bl = 1;
 #ifdef DAO_WITH_DECORATOR
-	DaoObject object, *obj = & object;
+	daoint i, j, k;
 	DString *prefix = DString_New(1);
 	DString *suffix = DString_New(1);
-	daoint i, j, k;
+	DaoObject object = *(DaoObject*) self->objType->value;
+	DaoObject *obj = & object;
 
-	object = *(DaoObject*) self->objType->value;
-	for(i=self->mixins->size-1; i>=0; --i){
-		DaoClass *mixin = self->mixins->items.pClass[i];
-		daoint J0 = self->ranges->data.ushorts[6*i];
-		daoint J1 = self->ranges->data.ushorts[6*i+3];
-		//printf( "J0 = %i; J1 = %i\n", J0, J1 );
-		for(j=J1-1; j>=J0; --j){
-			DaoRoutine *deco = (DaoRoutine*) self->constants->items.pConst[j]->value;
-			DString *decoName = deco->routName;
-			int exact = 0;
-			if( deco->type != DAO_ROUTINE || deco->body == NULL ) continue;
-			if( decoName->size < 2 || decoName->mbs[0] != '@' ) continue;
-			DString_Reset( prefix, 0 );
-			DString_Reset( suffix, 0 );
-			if( decoName->mbs[1] == '_' ){
-				daoint pos = DString_FindChar( decoName, '_', 2 );
-				if( pos == MAXSIZE ) pos = decoName->size;
-				DString_SubString( decoName, prefix, 2, pos - 2 );
-				exact = pos == decoName->size - 1;
-			}
-			if( decoName->mbs[decoName->size-1] == '_' ){
-				daoint pos = DString_RFindChar( decoName, '_', decoName->size-2 );
-				if( pos == MAXSIZE ) pos = 0;
-				DString_SubString( decoName, suffix, pos+1, decoName->size-2-pos );
-			}
-			//printf( "%s %s %s\n", decoName->mbs, prefix->mbs, suffix->mbs );
-			for(k=J1; k<self->constants->size; ++k){
-				DaoValue *cst = self->constants->items.pConst[k]->value;
-				DaoRoutine *rout = (DaoRoutine*) cst;
-				DaoRoutine *deco2;
+	/*
+	// Apply the decorators from mixins only to the methods defined in this class.
+	// Two reasons for doing this:
+	// 1. Mixins are only presented once in the current class, so when the mixins
+	//    are composed of mixins, they are flatten in the current class.
+	//    The order in which they are arranged in the current class is not obvious,
+	//    if the decorators are allowed to decorate the methods from mixins, the
+	//    result may be quite confusing;
+	// 2. If the methods from mixins are allowed to be decorated, such decoration
+	//    will not be written to bytecode file. Because when a class is written
+	//    to a bytecode file, only its own data are encoded and saved (this is
+	//    necessary to properly handle module loading). As a result, when a class
+	//    is loaded from a bytecode file, it will obtain an un-decorated version
+	//    of the methods from the mixins.
+	*/
+	for(j=self->cstMixinEnd-1; j>=self->cstMixinStart; --j){
+		DaoRoutine *deco = (DaoRoutine*) self->constants->items.pConst[j]->value;
+		DString *decoName = deco->routName;
+		int exact, ret;
+		if( deco->type != DAO_ROUTINE || deco->body == NULL ) continue;
+		if( decoName->size < 2 || decoName->mbs[0] != '@' ) continue;
+		ret = DString_ExtractAffix( decoName, prefix, suffix, 1 );
+		exact = ret == 1;
+		if( ret < 0 ) continue;
+		//printf( "%s %s %s\n", decoName->mbs, prefix->mbs, suffix->mbs );
+		for(k=self->cstParentEnd; k<self->constants->size; ++k){
+			DaoValue *cst = self->constants->items.pConst[k]->value;
+			DaoRoutine *rout = (DaoRoutine*) cst;
+			DaoRoutine *deco2;
 
-				if( rout->type != DAO_ROUTINE || rout->body == NULL ) continue;
-				if( rout->routHost != self->objType ) continue;
+			if( rout->type != DAO_ROUTINE || rout->body == NULL ) continue;
+			if( rout->routHost != self->objType ) continue;
+			if( DString_MatchAffix( rout->routName, prefix, suffix, exact ) ==0 ) continue;
 
-				if( exact && DString_EQ( rout->routName, prefix ) == 0 ) continue;
-				if( prefix->size && DString_Find( rout->routName, prefix, 0 ) != 0 ) continue;
-				if( suffix->size ){
-					daoint pos = DString_RFind( rout->routName, suffix, -1 );
-					if( pos == MAXSIZE ) continue;
-					if( pos != (rout->routName->size - 1) ) continue;
-				}
-				deco2 = DaoRoutine_Resolve( deco, (DaoValue*) obj, & cst, 1 );
-				if( deco2 == NULL ) continue;
-				DaoRoutine_Decorate( rout, deco2, & cst, 1, 1 ); // TODO error;
-			}
+			deco2 = DaoRoutine_Resolve( deco, (DaoValue*) obj, & cst, 1 );
+			if( deco2 == NULL ) continue;
+			bl = bl && DaoRoutine_Decorate( rout, deco2, & cst, 1, 1 ) != NULL;
 		}
 	}
 	DString_Delete( prefix );
 	DString_Delete( suffix );
 #endif
+	return bl;
 }
 void DaoClass_ResetAttributes( DaoClass *self )
 {

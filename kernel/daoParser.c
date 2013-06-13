@@ -1100,10 +1100,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	if( nameTok->name == DTOK_ID_THTYPE ) DString_AppendChar( pname, '@' );
 	DString_AppendMBS( pname, "routine<" );
 	routine->parCount = 0;
-	if( tokens[start+1]->name == DKEY_SELF ){
-		routine->attribs |= DAO_ROUT_PARSELF;
-		selfpar = 1;
-	}
+	if( tokens[start+1]->name == DKEY_SELF ) selfpar = 1;
 
 	isMeth = klass && routine != klass->classRoutine;
 	notStatic = (routine->attribs & DAO_ROUT_STATIC) ==0;
@@ -1125,6 +1122,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 		routine->parCount ++;
 		selfpar = 1;
 	}
+	if( selfpar ) routine->attribs |= DAO_ROUT_PARSELF;
 	type = NULL;
 	i = start + 1;
 	while( i < right ){
@@ -3139,7 +3137,7 @@ static int DaoParser_CompileRoutines( DaoParser *self )
 	self->routCompilable->size = 0;
 	return error == 0;
 }
-void DaoClass_UseMixinDecorators( DaoClass *self );
+int DaoClass_UseMixinDecorators( DaoClass *self );
 static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, int storeType )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -3154,10 +3152,11 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	DString *str, *mbs = DaoParser_GetString( self );
 	DString *className, *ename = NULL;
 	DArray *holders, *defaults;
-	int begin, line = self->curLine;
-	int i, k, rb, right, error = 0;
+	daoint begin, line = self->curLine;
+	daoint i, k, rb, right, error = 0;
 	int errorStart = start;
 	int pm1, pm2, ec = 0;
+
 	if( start+1 > to ) goto ErrorClassDefinition;
 	tokName = tokens[start+1];
 	className = ename = & tokName->string;
@@ -3165,9 +3164,10 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( start <0 ) goto ErrorClassDefinition;
 	ename = & tokens[start]->string;
 	if( value == NULL || value->type == 0 ){
+		DString *prefix, *suffix;
+		DString *name = & tokens[start]->string;
 		int line = tokens[start]->line;
 		int t = tokens[start]->name;
-		DString *name = & tokens[start]->string;
 		if( t != DTOK_IDENTIFIER && t != DTOK_ID_THTYPE && t < DKEY_ABS ) goto ErrorClassDefinition;
 		klass = DaoClass_New();
 
@@ -3183,6 +3183,34 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 #endif
 		}
 		DaoClass_SetName( klass, className, myNS );
+
+		if( start+1 <= to ){
+			int tname = tokens[start+1]->name;
+			if( tname != DTOK_LB && tname != DTOK_COLON && tname != DTOK_LCB ){
+				start += 1;
+				return start;
+			}
+		}else{
+			return start;
+		}
+		prefix = DString_New(1);
+		suffix = DString_New(1);
+		/* Apply aspects (to normal classes only): */
+		if( DString_ExtractAffix( klass->className, prefix, suffix, 0 ) < 0 ){
+			for(i=0; i<myNS->constants->size; ++i){
+				DaoClass *mixin = (DaoClass*) myNS->constants->items.pConst[i]->value;
+				int exact, ret;
+				if( mixin->type != DAO_CLASS ) continue;
+				if( mixin->superClass->size ) continue;
+				ret = DString_ExtractAffix( mixin->className, prefix, suffix, 0 );
+				exact = ret == 1;
+				if( ret < 0 ) continue; /* Not an aspect class; */
+				if( DString_MatchAffix( klass->className, prefix, suffix, exact ) ==0 ) continue;
+				DaoClass_AddMixinClass( klass, mixin );
+			}
+		}
+		DString_Delete( prefix );
+		DString_Delete( suffix );
 
 		if( start+1 <= to && tokens[start+1]->name == DTOK_LB ){
 			int rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start+1, -1 );
@@ -3214,11 +3242,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		if( routine != myNS->mainRoutine ) ns = NULL;
 		value = (DaoValue*) klass;
 		DaoParser_AddToScope( self, scope, className, value, klass->objType, storeType, line );
-
-		if( start+1 <= to && tokens[start+1]->name == DTOK_SEMCO ){
-			start += 2;
-			return start;
-		}
 	}else if( value->type != DAO_CLASS ){
 		ec = DAO_SYMBOL_WAS_DEFINED;
 		goto ErrorClassDefinition;
@@ -3340,7 +3363,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	if( error ) return -1;
 
-	DaoClass_UseMixinDecorators( klass );
+	if( DaoClass_UseMixinDecorators( klass ) == 0 ) goto ErrorClassDefinition;
 
 	return right + 1;
 ErrorClassDefinition:
@@ -6130,6 +6153,15 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					DaoParser_AddCode( self, DVM_LOAD, regLast,0,0/*unset*/, start,0,0 );
 					inode = self->vmcLast;
 					extra = self->vmcLast;
+				}
+				/*
+				// Marking the call to the decorated function decorators,
+				// so that decoration can be done properly for constructors:
+				*/
+				if( routine->routName->mbs[0] == '@' ){
+					int mv = inode->code == DVM_MOVE || inode->code == DVM_LOAD;
+					int fp = (routine->attribs & DAO_ROUT_PARSELF) != 0;
+					if( mv && inode->a == fp ) mode |= DAO_CALL_DECSUB;
 				}
 				self->curToken += 1;
 				cid = DaoParser_GetArray( self );

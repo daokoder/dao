@@ -374,10 +374,17 @@ void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *o
 	self->status = DAO_PROCESS_STACKED;
 	DaoProcess_CopyStackParams( self );
 	if( routHost && routHost->tid == DAO_OBJECT && !(routine->attribs & DAO_ROUT_STATIC) ){
-		DaoValue *firstParam = frame->parCount ? self->paramValues[0] : frame->prev->object;
-		if( object == NULL && firstParam->type == DAO_OBJECT ) object = (DaoObject*)firstParam;
-		if( object ) object = (DaoObject*) DaoObject_CastToBase( object->rootObject, routHost );
+		DaoValue *firstParam = frame->parCount ? self->paramValues[0] : NULL;
+		if( firstParam && firstParam->type != DAO_OBJECT ) firstParam = NULL;
+		if( object == NULL && firstParam != NULL ) object = (DaoObject*)firstParam;
+		if( object ) object = (DaoObject*)DaoObject_CastToBase( object->rootObject, routHost );
+#if 0
+		printf( "%s %s\n", routine->routName->mbs, routine->routType->name->mbs );
+		printf( "%s\n", routHost->name->mbs );
+#endif
+#ifdef DEBUG
 		assert( object && object != (DaoObject*)object->defClass->objType->value );
+#endif
 		GC_ShiftRC( object, frame->object );
 		frame->object = object;
 	}
@@ -3361,7 +3368,7 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		type = lastframe->routine->body->regType->items.pType[ returning ];
 		dest = self->stackValues + lastframe->stackBase + returning;
 	}
-	if( topFrame->state & DVM_MAKE_OBJECT ){
+	if( topFrame->routine->attribs & DAO_ROUT_INITOR ){
 		retValue = (DaoValue*)self->activeObject;
 	}else if( vmc->b == 1 ){
 		retValue = self->activeValues[ vmc->a ];
@@ -3822,8 +3829,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 	}else{
 		obj = othis;
 		if( initbase >= 0 ) obj = (DaoObject*) DaoObject_CastToBase( obj, rout->routHost );
-		DaoProcess_PrepareCall( self, rout, obj, params, npar, vmc, 1 );
-		if( initbase < 0 ) self->topFrame->state = DVM_MAKE_OBJECT;
+		DaoProcess_PrepareCall( self, rout, (DaoValue*) obj, params, npar, vmc, 1 );
 		if( self->exceptions->size ) goto DeleteObject;
 	}
 	return;

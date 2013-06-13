@@ -1,0 +1,43 @@
+
+# In Dao, a class can be effectly used as an aspect for AOP,
+# if the class name is named according some simple affix rules.
+# Please see demo/mixins.dao for such affix rules.
+#
+# The fields of such class will be automatically injected to
+# normal classes selected according to the affix rules, and
+# the decorators defined in such aspect class are automatically
+# applied to the methods (selected according to the same affix
+# rules) of the normal classes.
+class __AspectForAnyClass__
+{
+	var injected = {}
+
+	routine __AspectForAnyClass__(){
+		io.writeln( 'In __AspectForAnyClass__:' );
+		injected = { 1, 2, 3 }
+	}
+
+	# This decorator will also be applied to the default constructors:
+	routine @__DecoratorForAnyMethod__( meth : routine ){
+		io.writeln( 'In __DecoratorForAnyMethod__:', std.about(meth) )
+		io.writeln( injected )
+		return meth( __args__, ... )
+	}
+}
+
+# For classes with names prefixed with My:
+class _My_AspectForMyClasses
+{
+	routine @Method_( meth : routine ){
+		io.writeln( 'In _My_AspectForMyClasses::Method_:', std.about(meth) )
+		return meth( __args__, ... )
+	}
+}
+
+class MyClass
+{
+	routine Method(){ io.writeln( 'MyClass::Method()' ) }
+}
+
+k = MyClass()  # Invoke the default constructor of Klass;
+k.Method()
