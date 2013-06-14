@@ -111,7 +111,12 @@ Other interesting features:
   Anonymous functions and closures can be created anywhere in a program.
   Their definition is very similar to the normal functions.
 
---@[green]Anonymous class:@[green]
+--@[green]Mixin class, class decorator and aspect class:@[green]
+
+  New and experimental in dao-2.0-devel-2013-06-09.
+  Complete in the code repository.
+
+--@[green]Anonymous class:@[green] (Obsolete; Remove since dao-2.0-devel-2013-06-09)
 
   Anonymous class can now be created at runtime in a similar way as
   creating anonymous function.
@@ -132,6 +137,7 @@ Other interesting features:
   Any value can be associated to another object as a meta field.
   It can be used to do prototype based programming. Or simply, it can be used 
   to ensure an object is garbage collected after another.
+  (Obsolete; Replaced by module @[green]protobject@[green] since dao-2.0-devel-2013-06-02)
 --@[green]Auxiliary methods:@[green]
 
   Any type can be attached with auxiliary methods that do not actually belong
@@ -154,6 +160,7 @@ Other interesting features:
 #and released under the Simplified BSD License.
 
 
+#{
 
 @[name]
 dao.feature.optyping
@@ -175,3 +182,4 @@ dao.feature.concurrent
 Concurrent Programming
 @[title]
 
+#}

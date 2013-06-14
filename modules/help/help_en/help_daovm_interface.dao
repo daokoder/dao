@@ -19,7 +19,7 @@ daovm.interface.embedding
 @[name]
 
 @[title]
-Embedding Dao Virtual Machine
+Embedding Dao VM
 @[title]
 
 @[text]
@@ -291,7 +291,7 @@ daovm.interface.extending
 @[name]
 
 @[title]
-Extending Dao Virtual Machine
+Extending Dao VM
 @[title]
 
 @[text]

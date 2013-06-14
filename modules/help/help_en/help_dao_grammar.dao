@@ -20,7 +20,7 @@ dao.grammar.notation
 @[name]
 
 @[title]
-Dao Grammar Notations
+Grammar Notations
 @[title]
 
 @[text]
@@ -533,10 +533,10 @@ Constant Map
 
 @[code(syntax)]
 ConstMapKeyValue  ::= ConstExpression => ConstExpression
-ConstHashKeyValue ::= ConstExpression ~> ConstExpression
+ConstHashKeyValue ::= ConstExpression -> ConstExpression
 
 ConstEmptyMap  ::= '{' '=>' '}' | 'map' '{' [ '=>' ] '}'
-ConstEmptyHash ::= '{' '~>' '}' | 'map' '{'   '~>'   '}'
+ConstEmptyHash ::= '{' '->' '}' | 'map' '{'   '->'   '}'
 
 ConstMapEnum  ::= [ 'map' ] '{' ConstMapKeyValue  { ',' ConstMapKeyValue  } [ ',' ] '}'
 ConstHashEnum ::= [ 'map' ] '{' ConstHashKeyValue { ',' ConstHashKeyValue } [ ',' ] '}'
@@ -792,7 +792,6 @@ PrimaryExpression ::= AtomicExpression
                     | '(' Expression ')'
                     | PrimaryExpression '::' Identifier
                     | PrimaryExpression '.'  Identifier
-                    | PrimaryExpression '->' Identifier
                     | PrimaryExpression '(' [ ArgumentList ] ')'
                     | PrimaryExpression '[' [ ExpressionList [ ',' ] ] ']'
                     | PrimaryExpression '{' [ ArgumentList [ ',' ] ] '}'
@@ -869,7 +868,7 @@ Map
 
 @[code(syntax)]
 MapKeyValue  ::= Expression => Expression
-HashKeyValue ::= Expression ~> Expression
+HashKeyValue ::= Expression -> Expression
 
 MapEnum  ::= [ 'map' ] '{' MapKeyValue  { ',' MapKeyValue  } [ ',' ] '}'
 HashEnum ::= [ 'map' ] '{' HashKeyValue { ',' HashKeyValue } [ ',' ] '}'
@@ -911,22 +910,6 @@ AnonymousRoutine ::= ( 'routine' | '@' ) [ '(' [ AnParamList ] ')' ] '{' Stateme
 
 
 
-@[subsection]
-Anonymous Class
-@[subsection]
-
-@[code(syntax)]
-VarDeclItem   ::= Identifier [ ( '=' | ':=' | ':' Type '=' ) Expression ]
-ProtoClassData ::= [ 'const' | 'var' | 'static' ] VarDeclItem { ',' VarDeclItem }
-
-ProtoClassBody ::= { ProtoClassData | Routine }
-
-AnClassParamList ::= Expression [ ',' Expression [ ',' Expression [ ',' Expression ] ] ]
-
-AnonymousClass ::= 'class' '(' [ AnClassParamList ] ')' '{' [ ProtoClassBody ] '}'
-@[code(syntax)]
-
-
 
 
 @[subsection]
@@ -939,7 +922,6 @@ Expression ::= PrimaryExpression
              | PrimaryExpression BinaryOperator PrimaryExpression
              | (Type) Expression
              | AnonymousRoutine
-             | AnonymousClass
 @[code(syntax)]
 
 
@@ -1244,9 +1226,14 @@ Class
 ClassConst ::= 'const' ConstDeclItem { ',' ConstDeclItem }
 ClassVar   ::= ( 'var' | 'static' ) VarDeclItem { ',' VarDeclItem }
 
+UserTypeList  ::= UserType { ',' UserType }
+
+Mixins  ::= '(' [ UserTypeList ] ')'
+Parents ::= ':' UserTypeList
+
 ClassBody ::= { ClassConst | ClassVar | Routine }
 
-Class ::= 'class' { Identifier '::' } Identifier [ ':' UserType { ',' UserType } ]
+Class ::= 'class' { Identifier '::' } Identifier [ Mixins ] [ Parents ]
               '{' [ ClassBody ] '}'
 @[code(syntax)]
 

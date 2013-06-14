@@ -31,7 +31,7 @@ to communicate and synchronize with each other by channels.
 ################################################################################
 ################################################################################
 @[name]
-dao.concurrent.multithreading
+dao.concurrent.threading
 @[name]
 @[title]
 Multithreading Module
@@ -200,6 +200,43 @@ which will increase the count.
 @[text]
 
 
+
+
+
+################################################################################
+################################################################################
+#### Asynchronous Class
+################################################################################
+################################################################################
+@[name]
+dao.concurrent.asyncall
+@[name]
+
+@[title]
+Asynchronous Function Call
+@[title]
+
+@[text]
+
+Asynchronous Function Call (AFC) allows a function call to be executed
+as a tasklet, and return immediately a future value that can be use to block on
+the tasklet and wait for its completion.
+
+
+Any standard function call followed by @[green]!!@[green] will start an AFC.
+@[code]
+routine MyFunction( n = 10 )
+{
+	for( i = 1 : n ) io.writeln( i )
+}
+f = MyFunction( 20 ) !!
+io.writeln( f.value() )
+@[code]
+@[text]
+
+
+
+
 ################################################################################
 ################################################################################
 #### Asynchronous Class
@@ -300,7 +337,7 @@ dao.concurrent.channel
 @[name]
 
 @[title]
-Tasklet Communication Channel
+Communication Channel
 @[title]
 
 @[text]

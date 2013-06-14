@@ -16,7 +16,7 @@ daovm.architecture.vmspace
 @[name]
 
 @[title]
-Virtual Machine Space
+VM Space
 @[title]
 
 
@@ -52,7 +52,7 @@ daovm.architecture.process
 @[name]
 
 @[title]
-Virutal Machine Process
+VM Process
 @[title]
 
 
@@ -61,14 +61,14 @@ daovm.architecture.instruction
 @[name]
 
 @[title]
-Virtual Machine Instructions
+VM Instructions
 @[title]
 
 @[text]
 @[code]
 DVM_NOP      # no operation, the VM assumes maximum one NOP between two effective codes;
 DVM_DATA     # create primitive data: A: type<=DAO_COMPLEX, B: value, C: register;
-DVM_GETCL    # get local const: C = A::B;
+DVM_GETCL    # get local const: C = A::B; A=0; B, index of the constant;
 DVM_GETCK    # get class const: C = A::B; current class, A=0; parent class: A>=1;
 DVM_GETCG    # get global const: C = A::B; current namespace, A=0; loaded: A>=1;
 DVM_GETVH    # get host variable from code section: C = A::B; A, outer level;
@@ -80,7 +80,6 @@ DVM_GETI     # GET Item(s) : C = A[B];
 DVM_GETDI    # GET Item(s) : C = A[B], B is the (direct) index;
 DVM_GETMI    # GET Item(s) : C = A[A+1, ..., A+B];
 DVM_GETF     # GET Field : C = A.B
-DVM_GETMF    # GET Meta Field: C = A->B
 DVM_SETVH    # set host variable in code section: C::B = A; C, outer level;
 DVM_SETVS    # set static variable or captured up variable from closure;
 DVM_SETVO    # set object variables: C::B = A, C the same as A in DVM_GETVO
@@ -90,7 +89,6 @@ DVM_SETI     # SET Item(s) : C[B] = A;
 DVM_SETDI    # SET Item(s) : C[B] = A, B is the (direct) index;
 DVM_SETMI    # SET Item(s) : C[C+1, ..., C+B] = A;
 DVM_SETF     # SET Field : C.B = A
-DVM_SETMF    # SET Meta Field : C->B = A
 DVM_LOAD     # put local value A as reference at C;
 DVM_CAST     # convert A to C if they have different types;
 DVM_MOVE     # C = A; if B==0, XXX it is compile from assignment, for typing system only
@@ -120,9 +118,9 @@ DVM_CHECK    # check type: C = A ?= B; C = A ?< B, where A is data, B is data or
 DVM_NAMEVA   # C = A => B: name A, local constant, value B, local register
 DVM_PAIR     # C = A : B; create a pair of index, as a tuple;
 DVM_TUPLE    # tuple: C = ( A, A+1, ..., A+B-1 ); B>=2, items can be: name=>value
-DVM_LIST     # list: C = { A, A+1, ..., A+B-1 };
-DVM_MAP      # map: C = { A => A+1, ..., A+B-2 => A+B-1 }; if B==0, empty;
-DVM_HASH     # hash: C = { A ~> A+1, ..., A+B-2 ~> A+B-1 }; if B==0, empty;
+DVM_LIST     # list:  C = { A, A+1, ..., A+B-1 };
+DVM_MAP      # map:   C = { A => A+1, ..., A+B-2 => A+B-1 }; if B==0, empty;
+DVM_HASH     # hash:  C = { A -> A+1, ..., A+B-2 -> A+B-1 }; if B==0, empty;
 DVM_VECTOR   # vector: C = [ A, A+1, ..., A+B-1 ];
 DVM_MATRIX   # matrix: C=[A,..,A+c-1;..;A+c*(r-1),..,A+c*r-1]; B=rc;r,c:8-bits each.
 DVM_APLIST   # arithmetic progression list: C = { A : ... : A+B-1 }, B = 2 or 3;
@@ -157,7 +155,7 @@ daovm.architecture.bytecode
 @[name]
 
 @[title]
-Binary Bytecode Format
+Bytecode Format
 @[title]
 
 @[text]
@@ -200,9 +198,9 @@ A Dao binary bytecode file will contain the following sections:
 ==@[green]Global Constants@[green]: global constants;
 ==@[green]Global Variables@[green]: global variables;
 ==@[green]Global Types@[green]: global types;
+==@[green]Routines@[green]: routine definitions;
 ==@[green]Interfaces@[green]: interface definitions;
 ==@[green]Classes@[green]: class definitions;
-==@[green]Routines@[green]: routine definitions;
 @[list]
 
 
@@ -776,68 +774,6 @@ struct GlobalTypes
 
 
 @[section]
-Interfaces
-@[section]
-
-
-Each interface is declared with the following fields:
-@[code(dao)]
-struct Interface 
-{
-	uint32      # declaration reference number to the interface;
-	uint16      # number of parent interfaces;
-	uint32[]    # list of declaration reference numbers to parents;
-	uint16      # number of abstract methods;
-	uint32[]    # list of value reference numbers to the methods;
-}
-
-struct Interfaces 
-{
-	uint32       # number of interfaces;
-	Interface[]  # list of interfaces;
-}
-@[code(dao)]
-
-
-
-
-@[section]
-Classes
-@[section]
-
-
-Each class is declared in the following format:
-@[code(dao)]
-struct Class 
-{
-	uint32      # declaration reference number to the class;
-	uint32      # declaration reference number to the default constructor;
-	uint16      # class attributes;
-	uint16      # number of parent classs;
-	uint32[]    # list of declaration reference numbers to the parents;
-	uint16      # number of constants (including methods);
-	Constant[]  # list of constants in the same format as global constants;
-	uint16      # number of static varaibles;
-	Variable[]  # list of variables in the same format as global variables;
-	uint16      # number of instance varaibles;
-	Variable[]  # list of variables in the same format as global variables;
-	uint16      # number of types in the class scope;
-	Type[]      # list of types;
-}
-
-struct Classes 
-{
-	uint32      # number of classes;
-	Class[]     # list of classes;
-}
-@[code(dao)]
-
-
-
-
-
-
-@[section]
 Routines
 @[section]
 
@@ -894,6 +830,69 @@ struct Routines
 	Routine[]   # list of routines;
 }
 @[code(dao)]
+
+
+
+
+
+
+@[section]
+Interfaces
+@[section]
+
+
+Each interface is declared with the following fields:
+@[code(dao)]
+struct Interface 
+{
+	uint32      # declaration reference number to the interface;
+	uint16      # number of parent interfaces;
+	uint32[]    # list of declaration reference numbers to parents;
+	uint16      # number of abstract methods;
+	uint32[]    # list of value reference numbers to the methods;
+}
+
+struct Interfaces 
+{
+	uint32       # number of interfaces;
+	Interface[]  # list of interfaces;
+}
+@[code(dao)]
+
+
+
+
+@[section]
+Classes
+@[section]
+
+
+Each class is declared in the following format:
+@[code(dao)]
+struct Class 
+{
+	uint32      # declaration reference number to the class;
+	uint32      # declaration reference number to the default constructor;
+	uint16      # class attributes;
+	uint16      # number of parent classs;
+	uint32[]    # list of declaration reference numbers to the parents;
+	uint16      # number of constants (including methods);
+	Constant[]  # list of constants in the same format as global constants;
+	uint16      # number of static varaibles;
+	Variable[]  # list of variables in the same format as global variables;
+	uint16      # number of instance varaibles;
+	Variable[]  # list of variables in the same format as global variables;
+	uint16      # number of types in the class scope;
+	Type[]      # list of types;
+}
+
+struct Classes 
+{
+	uint32      # number of classes;
+	Class[]     # list of classes;
+}
+@[code(dao)]
+
 
 
 @[text]

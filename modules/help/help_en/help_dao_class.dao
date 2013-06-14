@@ -23,7 +23,7 @@ dao.class.definition
 @[name]
 
 @[title]
-Class Definition
+Definition
 @[title]
 
 
@@ -210,7 +210,7 @@ dao.class.inheritance
 @[name]
 
 @[title]
-Class Inheritance
+Inheritance
 @[title]
 
 
@@ -406,13 +406,258 @@ for( i = 1 : 3 ) I3 = I1 + I2
 
 
 
+@[name]
+dao.class.mixin
+@[name]
+
+@[title]
+Mixin Class (New)
+@[title]
+
+
+@[text]
+(New in the code repository and online version)
+
+
+Classes to be used as mixins can be specified in a pair of brackets
+following the class name. Only classes without parent classes can
+be used as mixins.
+
+@[code]
+class Base
+{
+	var value = 456
+	routine Meth2(){ io.writeln( self, value ) }
+}
+
+class Mixin ( Base )
+{
+	var index = 123
+
+	routine Meth(){ io.writeln( self, index, value ) }
+	routine Meth2( a : string ){ io.writeln( self, index, value, a ) }
+}
+
+#
+# The "Base" class will be presented only once in "Klass":
+#
+class Klass ( Base, Mixin )
+{
+	var index = 123456
+	routine Meth2( a : int ){ io.writeln( self, index, value, a ) }
+}
+
+k = Klass()
+
+io.writeln( k.index )
+
+k.Meth()
+k.Meth2()
+k.Meth2( 'abc' )
+k.Meth2( 789 )
+@[code]
+
+@[text]
+
+
+
+
+
+
+@[name]
+dao.class.decorator
+@[name]
+
+@[title]
+Class Decorator (New)
+@[title]
+
+
+@[text]
+(New in the code repository and online version)
+
+
+When a class is used as a mixin class in another class (host),
+the decorator methods of the mixin will be applied to the methods
+of the host class, if the names of the decorators are started
+(excluding the '@') or ended with a underscore. Such names
+are interpreted as the following patterns:
+@[list]
+== The non-underscore-containing substring following the starting
+   underscore is considered as a prefix that a method name must
+   has, as a precondition that the method can be applied with
+   the decorator;
+
+   Example:
+   @[list(sub)]
+   -- "_abc", "_abc_" and "any_abc_" define "abc" as the prefix;
+   -- "__" and "__any" define an empty string as prefix,
+       which can match to any method name.
+   @[list(sub)]
+== The non-underscore-containing substring preceding the ending
+   underscore is considered as a suffix that a method name must
+   has, as a precondition that the method can be applied with
+   the decorator;
+
+   Example:
+   @[list(sub)]
+   -- "abc_", "_abc_" and "_abc_any" define "abc" as the suffix;
+   -- "__" and "any__" define an empty string as suffix,
+       which can match to any method name.
+   @[list(sub)]
+== If the prefix substring and the suffixing substring of a decorator
+   name are the same substring (not merely the same), only the methods
+   with names that are the same as the prefix (suffix) could be applied
+   with this decorator. 
+
+   Example:
+   @[list(sub)]
+   -- "_abc_" define "abc" as both the prefix and the suffix,
+       so it can only be matched to method name equal to it.
+       But "_abc_abc_" can match to any method names starts
+       with "abc" and ends with "abc";
+   -- "__" and "__any__" define an empty string as both prefix and suffix,
+       so it can match to any method name;
+   @[list(sub)]
+@[list]
+
+When multiple mixins are used in a host class, the decorators of the
+first mixin are applied the last. An the first decorator of the same
+decorator is also applied the last as well.
+
+@[code]
+class Header
+{
+	static routine @__Delimiter__( meth : routine ){
+		io.writeln( '=======================' )
+		return meth( __args__, ... )
+	}
+	routine @__Delimiter__( meth : routine ){
+		io.writeln( '-----------------------' )
+		return meth( __args__, ... )
+	}
+}
+class Decorator
+{
+	var value = 654321
+
+	routine @_Test_( meth :routine<self:Decorator> ){
+		io.writeln( 'Decorator::_Test_()', value )
+		meth( __args__, ... );
+	}
+	routine @_Prefix( meth :routine<self:Decorator> ){
+		io.writeln( 'Decorator::_Prefix()' )
+		meth( __args__, ... );
+	}
+	routine @Suffix_( meth :routine<self:Decorator> ){
+		io.writeln( 'Decorator::Suffix_()' )
+		meth( __args__, ... );
+	}
+	routine @_Prefix_Suffix_( meth :routine<self:Decorator> ){
+		io.writeln( 'Decorator::_Prefix_Suffix_()' )
+		meth( __args__, ... );
+	}
+}
+
+class MyClass ( Header, Decorator )
+{
+	routine Test(){
+		io.writeln( 'MyClass::Test()' )
+	}
+	routine PrefixTest(){
+		io.writeln( 'MyClass::PrefixTest()' )
+	}
+	routine TestSuffix(){
+		io.writeln( 'MyClass::TestSuffix()' )
+	}
+	routine PrefixTestSuffix(){
+		io.writeln( 'MyClass::PrefixTestSuffix()' )
+	}
+}
+
+obj = MyClass()
+obj.Test()
+obj.PrefixTest()
+obj.TestSuffix()
+obj.PrefixTestSuffix()
+@[code]
+@[text]
+
+
+
+
+
+
+@[name]
+dao.class.aspect
+@[name]
+
+@[title]
+Aspect Class (New)
+@[title]
+
+
+@[text]
+(New in the code repository and online version)
+
+
+In Dao, a class can be effectly used as an aspect for AOP,
+if the class name is named according some simple affix rules.
+Please see @[node]dao.class.mixin@[node] for such affix rules.
+
+
+The fields of such class will be automatically injected to
+normal classes selected according to the affix rules, and
+the decorators defined in such aspect class are automatically
+applied to the methods (selected according to the same affix
+rules) of the normal classes.
+
+@[code]
+class __AspectForAnyClass__
+{
+	var injected = {}
+
+	routine __AspectForAnyClass__(){
+		io.writeln( 'In __AspectForAnyClass__:' );
+		injected = { 1, 2, 3 }
+	}
+
+	# This decorator will also be applied to the default constructors:
+	routine @__DecoratorForAnyMethod__( meth : routine ){
+		io.writeln( 'In __DecoratorForAnyMethod__:', std.about(meth) )
+		io.writeln( injected )
+		return meth( __args__, ... )
+	}
+}
+
+# For classes with names prefixed with My:
+class _My_AspectForMyClasses
+{
+	routine @Method_( meth : routine ){
+		io.writeln( 'In _My_AspectForMyClasses::Method_:', std.about(meth) )
+		return meth( __args__, ... )
+	}
+}
+
+class MyClass
+{
+	routine Method(){ io.writeln( 'MyClass::Method()' ) }
+}
+
+k = MyClass()  # Invoke the default constructor of Klass;
+k.Method()
+@[code]
+@[text]
+
+
+
 
 @[name]
 dao.class.dynamic
 @[name]
 
 @[title]
-Dynamic Class
+Dynamic Class (Obsolete; Remove since dao-2.0-devel-2013-06-09)
 @[title]
 
 
@@ -551,18 +796,19 @@ PrintSize2( {} );
 
 
 
-
 @[name]
 dao.metafield
 @[name]
 
 @[title]
-Meta Field
+Meta Field (Obsolete; Remove since dao-2.0-devel-2013-06-09)
 @[title]
 
 
 @[text]
+@[text]
 
+#{
 Meta fields are supported for all data types.
 Such fields can be set and got by meta field operator @[green]->@[green].
 @[code]
@@ -609,5 +855,5 @@ t->__proto__ = c;
 
 io.writeln( t->name, t->index );
 @[code]
+#}
 
-@[text]

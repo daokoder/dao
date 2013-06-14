@@ -48,7 +48,7 @@ dao.type.float
 @[name]
 
 @[title]
-Single Precision Floating Point Number Type
+Single Precision FP Number Type
 @[title]
 
 @[text]
@@ -92,7 +92,7 @@ dao.type.double
 @[name]
 
 @[title]
-Double Precision Floating Point Number Type
+Double Precision FP Number Type
 @[title]
 
 @[text]

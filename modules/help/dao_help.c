@@ -201,13 +201,6 @@ static DaoxStream* DaoxStream_New( DaoStream *stream, DaoProcess *proc )
 	DString ssubsect = DString_WrapMBS( "subsection" );
 	DString ssubsect2 = DString_WrapMBS( "subsubsection" );
 	DaoxStream *self = (DaoxStream*) calloc( 1, sizeof(DaoxStream) );
-	int screen = DAOX_TEXT_WIDTH;
-
-#if defined(UNIX) && !defined(MINIX)
-	struct winsize ws;
-	ioctl( STDOUT_FILENO, TIOCGWINSZ, &ws );
-	if( ws.ws_col <= DAOX_TEXT_WIDTH ) screen = ws.ws_col - 1;
-#endif
 
 	self->mtypes = DHash_New(D_STRING,0);
 	self->regex = DaoRegex_New( & spat );
@@ -1140,6 +1133,13 @@ static int DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, i
 static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoxStream *stream, DaoProcess *proc )
 {
 	int screen = DAOX_TEXT_WIDTH;
+
+#if defined(UNIX) && !defined(MINIX)
+	struct winsize ws;
+	ioctl( STDOUT_FILENO, TIOCGWINSZ, &ws );
+	if( ws.ws_col <= DAOX_TEXT_WIDTH ) screen = ws.ws_col - 1;
+#endif
+
 	stream->section = 0;
 	stream->subsect = 0;
 	stream->subsect2 = 0;

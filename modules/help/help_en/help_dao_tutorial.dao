@@ -13,7 +13,7 @@ dao.tutorial.basics
 @[name]
 
 @[title]
-Dao Programming Basics
+Basics
 @[title]
 
 @[text]
@@ -178,7 +178,7 @@ dao.tutorial.types
 @[name]
 
 @[title]
-Dao Essential Types
+Essential Types
 @[title]
 
 @[text]
@@ -499,14 +499,14 @@ for efficient lookup. The keys in a map are ordered, while the keys
 in a hash map are unordered.
 A map can be created using @[green]{key=>value...}@[green] or
 @[green]map{key=>value...}@[green]. Replacing the @[green]=>@[green]
-with colon @[green]~>@[green] will create hash maps.
+with colon @[green]->@[green] will create hash maps.
 Map and hash map can be used in identical ways.
 @[code]
-amap = { 'abc' => 123, 'def' => 456 }
-ahash = { 'abc' ~> 123, 'def' ~> 456 }
+amap  = { 'abc' => 123, 'def' => 456 }
+ahash = { 'abc' -> 123, 'def' -> 456 }
 
-amap = map{ 'abc' => 123, 'def' => 456 }
-ahash = map{ 'abc' ~> 123, 'def' ~> 456 }
+amap  = map{ 'abc' => 123, 'def' => 456 }
+ahash = map{ 'abc' -> 123, 'def' -> 456 }
 @[code]
 
 Sub-scripting and slicing are also supported for map to access value(s)
@@ -572,7 +572,7 @@ dao.tutorial.controls
 @[name]
 
 @[title]
-Dao Constrol Structures
+Constrol Structures
 @[title]
 
 @[text]
@@ -927,7 +927,7 @@ dao.tutorial.routine
 @[name]
 
 @[title]
-Dao Routine (Function)
+Routine and Decorator
 @[title]
 
 @[text]
@@ -1244,6 +1244,91 @@ Test::{
 @[code]
 
 
+
+
+@[subsection]
+Decorator
+@[subsection]
+
+@[red]
+Note: this feature is only functional in the online demos
+and the latest Dao that is available from the source repositories.
+@[red]
+
+
+
+Decorators are a special type of functions that can be used to
+modify (decorate) other functions or create modified versions of these functions.
+There are two main ways to decorate a function: one is to specify one or more
+decorators for a function at its definition; the other is to call a decorator
+in an expression in the same way to call a function.
+Decorating a function at its definition will change that function,
+and decorating a function in an expression will create a modified copy of the function.
+
+
+A decorator can be defined in almost identical way as definition a normal function
+with a few exceptions.
+First, a decorator must be declared with a name prefixed with @[green]@@[green],
+and second, the first parameter must be a routine type,
+which determines which type of routines can be decorated by this decorator.
+
+
+For example,
+@[code]
+routine @Decorator( func : routine, extra = 123 )
+{
+	io.writeln( 'Calling function:', std.about( func ), extra );
+	return func( __args__, ... ); # ... for parameter expanding;
+}
+@[code]
+This decorator can be applied to any function.
+In this decorator, the decorated function is called with
+@[green]__args__@[green], which is expanded for the call
+as indicated by @[green]...@[green].
+@[green]__args__@[green] is an automatically declared variable
+to hold the parameters that will be passed to the function.
+
+
+In the following example, the function is decorated and modified at its definition,
+@[code]
+# brackets can be omitted when the decorator take no parameter:
+@Decorator
+@Decorator( 456 )
+routine Function()
+{
+	io.writeln( 'Function()' )
+}
+@[code]
+
+While in this one, a modified copy of the function will be returned,
+@[code]
+routine Function()
+{
+	io.writeln( 'Function()' )
+}
+func = @Decorator( Function )
+@[code]
+
+If a decorator expression uses only constants, the decoration can be done
+at compiling time,
+@[code]
+const MyFunc = @Decorator( Function )
+@[code]
+
+This feature can be exploited to create modified copies of existing functions
+that are imported or loaded from other modules, and use the same function names,
+@[code]
+load MyModule  # MyFunction is defined in this module;
+
+# Create a modified copy and use the same name:
+const MyFunction = @Decorator( MyFunction )
+@[code]
+
+
+Decorators can be overloaded just like normal functions,
+and be applied to overloaded functions, as well as class methods.
+Please see @[node]dao.routine.decorator@[node] for additional information.
+
 @[text]
 
 
@@ -1262,7 +1347,7 @@ dao.tutorial.class
 @[name]
 
 @[title]
-Dao Class and Object-Oriented Programming
+Class, Mixin, OOP and AOP
 @[title]
 
 @[text]
@@ -1551,6 +1636,225 @@ can be passed to parent classes in the way as shown in the example.
 Constructors from parent classes can be inherited by using the @[green]use@[green]
 statement, in which the full function signature of the constructor should be specified.
 
+
+
+@[subsection]
+Mixin
+@[subsection]
+
+@[red]
+Features introduced in the this and the remaining sections
+are available only in the latest code repository and the online version.
+@[red]
+
+
+Classes to be used as mixins can be specified in a pair of brackets
+following the class name. Only classes without parent classes can
+be used as mixins.
+
+@[code]
+class Base
+{
+	var value = 456
+	routine Meth2(){ io.writeln( self, value ) }
+}
+
+class Mixin ( Base )
+{
+	var index = 123
+
+	routine Meth(){ io.writeln( self, index, value ) }
+	routine Meth2( a : string ){ io.writeln( self, index, value, a ) }
+}
+
+#
+# The "Base" class will be presented only once in "Klass":
+#
+class Klass ( Base, Mixin )
+{
+	var index = 123456
+	routine Meth2( a : int ){ io.writeln( self, index, value, a ) }
+}
+
+k = Klass()
+
+io.writeln( k.index )
+
+k.Meth()
+k.Meth2()
+k.Meth2( 'abc' )
+k.Meth2( 789 )
+@[code]
+
+
+
+@[subsection]
+Class Decorator
+@[subsection]
+
+(New in the code repository and online version)
+
+
+When a class is used as a mixin class in another class (host),
+the decorator methods of the mixin will be applied to the methods
+of the host class, if the names of the decorators are started
+(excluding the '@') or ended with a underscore. Such names
+are interpreted as the following patterns:
+@[list]
+== The non-underscore-containing substring following the starting
+   underscore is considered as a prefix that a method name must
+   has, as a precondition that the method can be applied with
+   the decorator;
+
+   Example:
+   @[list(sub)]
+   -- "_abc", "_abc_" and "any_abc_" define "abc" as the prefix;
+   -- "__" and "__any" define an empty string as prefix,
+       which can match to any method name.
+   @[list(sub)]
+== The non-underscore-containing substring preceding the ending
+   underscore is considered as a suffix that a method name must
+   has, as a precondition that the method can be applied with
+   the decorator;
+
+   Example:
+   @[list(sub)]
+   -- "abc_", "_abc_" and "_abc_any" define "abc" as the suffix;
+   -- "__" and "any__" define an empty string as suffix,
+       which can match to any method name.
+   @[list(sub)]
+== If the prefix substring and the suffixing substring of a decorator
+   name are the same substring (not merely the same), only the methods
+   with names that are the same as the prefix (suffix) could be applied
+   with this decorator. 
+
+   Example:
+   @[list(sub)]
+   -- "_abc_" define "abc" as both the prefix and the suffix,
+       so it can only be matched to method name equal to it.
+       But "_abc_abc_" can match to any method names starts
+       with "abc" and ends with "abc";
+   -- "__" and "__any__" define an empty string as both prefix and suffix,
+       so it can match to any method name;
+   @[list(sub)]
+@[list]
+
+When multiple mixins are used in a host class, the decorators of the
+first mixin are applied the last. An the first decorator of the same
+decorator is also applied the last as well.
+
+@[code]
+class Header
+{
+	static routine @__Delimiter__( meth : routine ){
+		io.writeln( '=======================' )
+		return meth( __args__, ... )
+	}
+	routine @__Delimiter__( meth : routine ){
+		io.writeln( '-----------------------' )
+		return meth( __args__, ... )
+	}
+}
+class Decorator
+{
+	var value = 654321
+
+	routine @_Test_( meth :routine<self:Decorator> ){
+		io.writeln( 'Decorator::_Test_()', value )
+		meth( __args__, ... );
+	}
+	routine @_Prefix( meth :routine<self:Decorator> ){
+		io.writeln( 'Decorator::_Prefix()' )
+		meth( __args__, ... );
+	}
+	routine @Suffix_( meth :routine<self:Decorator> ){
+		io.writeln( 'Decorator::Suffix_()' )
+		meth( __args__, ... );
+	}
+	routine @_Prefix_Suffix_( meth :routine<self:Decorator> ){
+		io.writeln( 'Decorator::_Prefix_Suffix_()' )
+		meth( __args__, ... );
+	}
+}
+
+class MyClass ( Header, Decorator )
+{
+	routine Test(){
+		io.writeln( 'MyClass::Test()' )
+	}
+	routine PrefixTest(){
+		io.writeln( 'MyClass::PrefixTest()' )
+	}
+	routine TestSuffix(){
+		io.writeln( 'MyClass::TestSuffix()' )
+	}
+	routine PrefixTestSuffix(){
+		io.writeln( 'MyClass::PrefixTestSuffix()' )
+	}
+}
+
+obj = MyClass()
+obj.Test()
+obj.PrefixTest()
+obj.TestSuffix()
+obj.PrefixTestSuffix()
+@[code]
+
+
+
+@[subsection]
+Aspect Class
+@[subsection]
+
+(New in the code repository and online version)
+
+
+In Dao, a class can be effectly used as an aspect for AOP,
+if the class name is named according some simple affix rules.
+Please see @[node]dao.class.mixin@[node] for such affix rules.
+
+
+The fields of such class will be automatically injected to
+normal classes selected according to the affix rules, and
+the decorators defined in such aspect class are automatically
+applied to the methods (selected according to the same affix
+rules) of the normal classes.
+
+@[code]
+class __AspectForAnyClass__
+{
+	var injected = {}
+
+	routine __AspectForAnyClass__(){
+		io.writeln( 'In __AspectForAnyClass__:' );
+		injected = { 1, 2, 3 }
+	}
+
+	# This decorator will also be applied to the default constructors:
+	routine @__DecoratorForAnyMethod__( meth : routine ){
+		io.writeln( 'In __DecoratorForAnyMethod__:', std.about(meth) )
+		io.writeln( injected )
+		return meth( __args__, ... )
+	}
+}
+
+# For classes with names prefixed with My:
+class _My_AspectForMyClasses
+{
+	routine @Method_( meth : routine ){
+		io.writeln( 'In _My_AspectForMyClasses::Method_:', std.about(meth) )
+		return meth( __args__, ... )
+	}
+}
+
+class MyClass
+{
+	routine Method(){ io.writeln( 'MyClass::Method()' ) }
+}
+
+k = MyClass()  # Invoke the default constructor of Klass;
+k.Method()
+@[code]
 
 
 @[text]
@@ -1861,8 +2165,8 @@ Concurrent Programming
 Dao has several features that support concurrent programming.
 The first is a concurrent Garbage Collector (GC), which works behind
 the scene. The other features come in two main forms:
-multi-threading module and asynchronous class, which are built 
-around a lightweight thread pool with a simple scheduler
+multi-threading module, asynchronous function call and asynchronous class,
+which are built around a lightweight thread pool with a simple scheduler
 to map thread tasks (or tasklets) to native threads.
 
 
@@ -1947,6 +2251,28 @@ mt.iterate( ls, 3 )::{ io.writeln( X ) }
 mt.map( ls, 2 )::{ X*X } # produces new list: {1,4,9,16,25,36}
 mt.apply( ls, 2 )::{ X*X } # ls becomes: {1,4,9,16,25,36}
 @[code]
+
+
+
+@[subsection]
+Asynchronous Function Call
+@[subsection]
+
+Asynchronous Function Call (AFC) allows a function call to be executed
+as a tasklet, and return immediately a future value that can be use to block on
+the tasklet and wait for its completion.
+
+
+Any standard function call followed by @[green]!!@[green] will start an AFC.
+@[code]
+routine MyFunction( n = 10 )
+{
+	for( i = 1 : n ) io.writeln( i )
+}
+f = MyFunction( 20 ) !!
+io.writeln( f.value() )
+@[code]
+
 
 
 @[subsection]
@@ -2120,7 +2446,7 @@ dao.tutorial.tips
 @[name]
 
 @[title]
-Dao Programming Tips
+Programming Tips
 @[title]
 
 @[text]
