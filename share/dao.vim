@@ -51,6 +51,8 @@ syn region  daoString		start="\z(@@\?\[[0-9a-zA-Z_ .+-:=()]*\]\)" end="\z1"
 " integer number
 syn match daoNumber		"\<[0-9]\+\>"
 syn match daoNumber		"\<[0-9]\+L\>"
+syn match daoFloat		"\<[0-9]\+\.\?[0-9]*[FDC]\>"
+syn match daoFloat		"\<[0-9]*\.\?[0-9]\+[FDC]\>"
 " floating point number, with dot, optional exponent
 syn match daoFloat		"\<[0-9]\+\.[0-9]*\%(e[-+]\=[0-9]\+\)\=\>"
 " floating point number, starting with a dot, optional exponent

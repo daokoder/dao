@@ -43,10 +43,12 @@ enum DaoTokNames
 	DTOK_ID_SYMBOL , /* $symbol */
 	DTOK_DIGITS_DEC ,
 	DTOK_NUMBER_HEX ,
-	DTOK_NUMBER_DEC , /* 123. 123.5 */
+	DTOK_SINGLE_DEC , /* 345F, 123.25F */
 	DTOK_DOUBLE_DEC , /* 345D, 123.25D */
-	DTOK_NUMBER_IMG , /* 123.0$, imaginary part of complex */
+	DTOK_NUMBER_DEC , /* 123. 123.5 */
 	DTOK_NUMBER_SCI ,
+	DTOK_NUMBER_IMG , /* 123.0C, imaginary part of complex */
+	DTOK_DIGITS_LONG ,
 	DTOK_VERBATIM ,
 	DTOK_MBS , /* MBS */
 	DTOK_WCS , /* WCS */
@@ -200,7 +202,6 @@ enum DaoKeyNames
 	DKEY_SQRT ,
 	DKEY_TAN ,
 	DKEY_TANH ,
-	DKEY__INIT , /* fake keyword */
 	DAO_NOKEY2
 };
 

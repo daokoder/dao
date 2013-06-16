@@ -61,23 +61,21 @@ floating point numbers.
 @[code(syntax)]
 DotDec ::= DecDigit * '.' DecDigit +
 DecDot ::= DecDigit + '.' DecDigit *
+DecNumber ::= DotDec | DecDot
+DecNumber ::= DecInteger | DecNumber
+SciNumber ::= DecNumber ( 'e' | 'E' ) [ '+' | '-' ] DecInteger
 
-DecSinglePrecision ::= DotDec | DecDot
-DecNumber ::= DecInteger | DecSinglePrecision
-
-SciSinglePrecision ::= DecNumber 'e' [ '+' | '-' ] DecInteger
-
-Float ::= DecSinglePrecision | SciSinglePrecision
+Float  ::= ( DecInteger | DecNumber | SciNumber ) 'F'
 @[code(syntax)]
 where @[green]DecInteger@[green] is defined @[node]dao.type.int@[node].
 
 
 @[subsection]Examples@[subsection]
 @[code]
-A = .12
-B = 12.
-C = 12.5
-D = 2e-3
+A = .12F
+B = 12.F
+C = 12.5F
+D = 2e-3F
 @[code]
 @[text]
 
@@ -103,8 +101,7 @@ floating point numbers.
 
 @[subsection]Definition@[subsection]
 @[code(syntax)]
-SciDoublePrecision ::= DecNumber 'E' [ '+' | '-' ] DecInteger
-Double ::= (DecInteger | DecSinglePrecision) 'D' | SciDoublePrecision
+Double ::= ( DecInteger | DecNumber | SciNumber ) [ 'D' ]
 @[code(syntax)]
 where @[green]DecInteger@[green] is defined @[node]dao.type.int@[node],
 and @[green]DecNumber@[green] and @[green]DecSinglePrecision@[green]
@@ -113,11 +110,15 @@ are defined in @[node]dao.type.float@[node].
 
 @[subsection]Examples@[subsection]
 @[code]
+A = .12
 A = .12D
+B = 12.
 B = 12.D
+C = 12.5
 C = 12.5D
 D = 123D
 E = 2E-3
+E = 2E-3D
 @[code]
 @[text]
 
@@ -144,7 +145,7 @@ precision floating point numbers.
 
 @[subsection]Definition@[subsection]
 @[code(syntax)]
-Complex ::= [ Float ] '$'
+Complex ::= [ Float ] 'C'
 @[code(syntax)]
 
 @[green]complex@[green] has two fields @[green]real@[green] and @[green]imag@[green],
@@ -153,9 +154,9 @@ which can be used to set and get the real and imaginary part of the complex.
 
 @[subsection]Examples@[subsection]
 @[code]
-A = $
-B = 123$
-C = 12.3$
+A = 1C
+B = 123C
+C = 12.3C
 R = C.real;
 I = C.imag;
 @[code]

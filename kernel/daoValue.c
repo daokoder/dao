@@ -349,7 +349,7 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 		DaoStream_WriteFloat( stream, self->xComplex.value.real );
 		if( self->xComplex.value.imag >= -0.0 ) DaoStream_WriteMBS( stream, "+" );
 		DaoStream_WriteFloat( stream, self->xComplex.value.imag );
-		DaoStream_WriteMBS( stream, "$" );
+		DaoStream_WriteMBS( stream, "C" );
 		break;
 #ifdef DAO_WITH_LONGINT
 	case DAO_LONG :
@@ -416,7 +416,7 @@ DString* DaoValue_GetString( DaoValue *self, DString *str )
 	case DAO_INTEGER : sprintf( chs, "%" DAO_INT_FORMAT, self->xInteger.value ); break;
 	case DAO_FLOAT   : sprintf( chs, "%g", self->xFloat.value ); break;
 	case DAO_DOUBLE  : sprintf( chs, "%g", self->xDouble.value ); break;
-	case DAO_COMPLEX : sprintf( chs, (self->xComplex.value.imag < 0) ? "%g%g$" : "%g+%g$", self->xComplex.value.real, self->xComplex.value.imag ); break;
+	case DAO_COMPLEX : sprintf( chs, (self->xComplex.value.imag < 0) ? "%g%gC" : "%g+%gC", self->xComplex.value.real, self->xComplex.value.imag ); break;
 #ifdef DAO_WITH_LONGINT
 	case DAO_LONG  : DLong_Print( self->xLong.value, str ); break;
 #endif

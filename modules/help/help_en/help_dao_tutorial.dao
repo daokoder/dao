@@ -61,11 +61,11 @@ Invoking @[green]dao@[green] without any argument will start an interactive shel
 @[code]
 $$ dao
 
-  Dao Virtual Machine 1.2
-  Built date: Jun 20 2012
+  Dao Virtual Machine 2.0
+  Built date: Jun 16 2013
   Changeset ID: FOS.a019d384dd7c
 
-  Copyright(C) 2006-2012, Fu Limin
+  Copyright(C) 2006-2013, Fu Limin
   Dao is released under the terms of the Simplified BSD License
   Dao Language website: http://www.daovm.net
 
@@ -192,24 +192,28 @@ list and map etc.
 @[subsection]
 Numbers
 @[subsection]
+
 Dao has native supports for the following number types:
 @[green]int@[green], @[green]float@[green], @[green]double@[green],
 @[green]complex@[green] and @[green]long@[green].
 
 
-@[green]int@[green] and @[green]float@[green] numbers can be expressed
-in the same ways as in most other languages. But a @[green]double@[green] number,
-need a @[green]D@[green] suffix to a @[green]int@[green] or @[green]float@[green] number
-to be parsed as a double precision floating point number.
+Integer and floating point numbers can be expressed
+in the same ways as in most other languages.
+But floating point numbers in Dao are parsed as double precision
+floating point numbers @[green]double@[green] by default
+(since release dao-2.0-devel-2013-06-16).
+To explicitly express a single (double) precision floating point number 
+@[green]float@[green] (@[green]double@[green]),
+it is necessary to append a suffix @[green]F@[green] (@[green]D@[green])
+to a normally expressed number.
 
 
-For numbers written in scientific format,
-lower case @[green]e@[green] is used for @[green]float@[green];
-while upper case @[green]E@[green] is used for @[green]double@[green].
-
-
-A @[green]complex@[green] number can be expressed as an @[green]int@[green]
-or @[green]float@[green] number with a @[green]$@[green] suffix.
+The imaginary part of a @[green]complex@[green] number can be expressed as an 
+@[green]int@[green] or @[green]float@[green] number with a @[green]C@[green] suffix.
+A general @[green]complex@[green] number can be expressed by combining
+an integer or a floating point number as the real part and an imginary part,
+which are both stored as double precision floating point numbers.
 
 
 @[green]long@[green] type represents arbitrary precision integers. They
@@ -224,15 +228,17 @@ Examples,
 I1 = 123
 I2 = 0xabc
 
-F1 = 456.7
-F2 = 123e4
+F1 = 456.7F
+F2 = 123e4F
 
 D1 = 123D
+D2 = 456.7
 D2 = 456.7D
 D3 = 123E4
+D3 = 123E4D
 
-C1 = 123$
-C2 = 456.6$
+C1 = 123C
+C2 = 456.6C
 
 L1 = 123456789L
 L2 = 10001001110L2

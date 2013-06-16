@@ -256,18 +256,17 @@ Floating pointer number literals:
 @[code(syntax)]
 DotDec ::= DecDigit * '.' DecDigit +
 DecDot ::= DecDigit + '.' DecDigit *
-DecSinglePrecision ::= DotDec | DecDot
-DecNumber ::= DecInteger | DecSinglePrecision
-SciSinglePrecision ::= DecNumber 'e' [ '+' | '-' ] DecInteger
-SciDoublePrecision ::= DecNumber 'E' [ '+' | '-' ] DecInteger
+DecNumber ::= DotDec | DecDot
+DecNumber ::= DecInteger | DecNumber
+SciNumber ::= DecNumber ( 'e' | 'E' ) [ '+' | '-' ] DecInteger
 
-Float ::= DecSinglePrecision | SciSinglePrecision
-Double ::= DecNumber 'D' | SciDoublePrecision
+Float  ::= ( DecInteger | DecNumber | SciNumber ) 'F'
+Double ::= ( DecInteger | DecNumber | SciNumber ) [ 'D' ]
 @[code(syntax)]
 
 Complex number, imaginary part literal:
 @[code(syntax)]
-ComplexImaginary ::= [ Float ] '$'
+ComplexImaginary ::= [ Float ] 'C'
 @[code(syntax)]
 
 Symbol literal:

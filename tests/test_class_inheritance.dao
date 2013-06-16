@@ -28,7 +28,7 @@ class BB
 
 class CC : AA, BB
 {
-	var    obj2 = 0$;
+	var    obj2 = 0C;
 
 	use routine BB( i = 0 );
 
@@ -69,7 +69,7 @@ c.obj
 return c.obj2
 @[test(code_01)]
 @[test(code_01)]
-return 0$
+return 0C
 @[test(code_01)]
 
 

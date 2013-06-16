@@ -5,7 +5,7 @@ dao.tutorial
 @[name]
 
 @[title]
-Dao Programming Tutorials
+道语言编程教程
 @[title]
 
 @[name]
@@ -13,73 +13,74 @@ dao.tutorial.basics
 @[name]
 
 @[title]
-Dao Programming Basics
+基础
 @[title]
 
 @[text]
 
-This tutorial will cover some of the basics of Dao programming.
-We will start with the traditional @[green]str world@[green] example.
+此教程将从经典的@[green]世界你好@[green]开始介绍,
+并涵盖道语言的基础部分。
 
 
 @[subsection]
-Hello World!
+世界你好
 @[subsection]
 
-To simply write "Hello world!" to the screen, one can use,
+在屏幕简单地打印“世界你好”，可使用，
 @[code]
 io.write( 'Hello world!' )
 @[code]
-In this simple example, the built-in @[green]io@[green] module is used
-to access the IO functionalities of the module.
-@[green]write()@[green] is a method provided by the @[green]io@[green] module
-to write outputs on to the standard output (the screen in this case).
-In Dao, string can be quoted with a pair of single quotation marks
-or with a pair of double quotation marks.
+这个例子使用了内置的模块@[green]io@[green]来访问输出输入(IO)功能。
+@[green]write()@[green]是@[green]io@[green]模块提供的一个方法，
+可用来在标准输出打印。在道里，字符串通常由单引号或双引号来引用表示。
+
 
 
 @[subsection]
-Running Scripts
+运行程序
 @[subsection]
 
-There are three ways to run codes in Dao.
-The most typical way is to create a script file (e.g. @[cyan]str_world.dao@[cyan]),
-and put the codes into this file, and then run @[green]dao@[green] using this file
-as argument,
+道支持三种方式运行。
+最通常的方式是将代码写入一个文件（hello_world.dao），
+然后在命令行使用道解释器执行：
 @[code]
-$$ dao str_world.dao
+$$ dao hello_world.dao
 @[code]
 
+另一种方式是将代码直接从命令行传给道解释器：
 But if you just want to run the codes once, you can simple run them from command line using,
 @[code]
 $$ dao -e "io.write( 'Hello world!' )"
 @[code]
 
-For learning Dao, it may be the best to run codes in interactive mode.
-Invoking @[green]dao@[green] without any argument will start an interactive shell,
+最方便学习的执行方式是交互式执行。
+从命令行，不加任何参数执行道解释器，将进入交互式。
 @[code]
 $$ dao
 
-  Dao Virtual Machine 1.2
-  Built date: Jun 20 2012
+  Dao Virtual Machine 2.0
+  Built date: Jun 16 2013
   Changeset ID: FOS.a019d384dd7c
 
-  Copyright(C) 2006-2012, Fu Limin
+  Copyright(C) 2006-2013, Fu Limin
   Dao is released under the terms of the Simplified BSD License
   Dao Language website: http://www.daovm.net
 
 (dao) 
 @[code]
-If you have the Dao @[green]help@[green] properly installed,
-starting @[green]dao@[green] in interactive mode will automatically load
-the help files and print out the following information,
+如果你道解释器安装正常，使用交互模式运行道将自动
+载入帮助文件。并显示如下信息：
 @[code]
-  Module Help is loaded.
-  Now you may run "help()" to list all the available help entries;
-  or run "help('help')" for detailed information about the help system.
+  帮助模块已载入。
+  现在您可以使用"help()"来列出所有可用的帮助条目;
+  或者运行"help('help')"来获得此帮助系统的详细信息。
 @[code] 
-If you are reading this tutorial from a webpage, and want to access it from
-the interactive command line, you can simple run,
+如果你未看到此信息，尝试如下方式执行：
+@[code]
+$$ DAO_HELP_LANG=ZH dao
+@[code]
+如果你查看的是此帮助的网页版，你可以使用一下命令在交互模式下查看
+次帮助文件：
 @[code]
 (dao) help( 'dao.tutorial.basics' )
 @[code]
@@ -87,23 +88,21 @@ the interactive command line, you can simple run,
 
 
 @[subsection]
-Commenting Codes
+注释代码
 @[subsection]
 
-It is always a good idea to comment your codes.
-Dao supports both single line comments and multiple line comments.
-A single comment starts at a @[green]#@[green] 
-(not followed by a left curly bracket @[green]{@[green]),
-and ends at the end of the current line.
-And a multiple line comment (or just part of a single line)
-opens by @[green]#{@[green] and closes by @[green]#}@[green].
+给自己的代码加注释通常是个好习惯。
+道语言支持单行和多行注释。
+单行注释以@[green]#@[green]开始，直到行末；
+多行注释以@[green]#{@[green]开始，@[green]#}@[green]结束。
+例如：
 For example,
 @[code]
-# This is a simple demo:
-io.write( "Hello World!" #{ comment inside codes #} );
+# 这个是单行注释例子：
+io.write( "Hello World!" #{ 代码中注释 #} );
 #{
-Here are multi-lines comments.
-Here are multi-lines comments.
+这里是多行注释例子。
+这里是多行注释例子。
 #}
 @[code]
 
@@ -124,7 +123,7 @@ dao.tutorial.types
 @[name]
 
 @[title]
-Dao Basic Types
+基本类型
 @[title]
 
 @[text]
@@ -132,22 +131,24 @@ Dao Basic Types
 
 
 @[subsection]
-Numbers
+数字
 @[subsection]
-Dao has native supports for the following types of numbers:
-@[green]int@[green], @[green]float@[green], @[green]double@[green],
-@[green]complex@[green] and @[green]long@[green].
+道语言对以下数字类型有内在支持：
+@[green]int@[green]， @[green]float@[green]， @[green]double@[green]，
+@[green]complex@[green] 和 @[green]long@[green]。
 
 
-@[green]int@[green] and @[green]float@[green] numbers can be expressed
-in the same ways as most other languages. But a @[green]double@[green] number,
-need a @[green]D@[green] suffix to @[green]int@[green] or @[green]float@[green] number
-to be parsed as a double precision floating point number.
+道语言里整数和浮点数的表达方式跟其他语言一样。
+不过浮点数被默认为双精度@[green]double@[green]（从发布dao-2.0-devel-2013-06-16开始）。
+要显示表示单（双）精度浮点数@[green]float@[green]（@[green]double@[green]），
+有必要在整数和浮点数后附加@[green]F@[green] （@[green]D@[green]）后缀。
 
 
-For numbers written in scientific format,
-lower case @[green]e@[green] is used for @[green]float@[green];
-while upper case @[green]E@[green] is used for @[green]double@[green].
+The imaginary part of a @[green]complex@[green] number can be expressed as an 
+@[green]int@[green] or @[green]float@[green] number with a @[green]C@[green] suffix.
+A general @[green]complex@[green] number can be expressed by combining
+an integer or a floating point number as the real part and an imginary part,
+which are both stored as double precision floating point numbers.
 
 
 A @[green]complex@[green] number can be expressed as an @[green]int@[green]
@@ -259,8 +260,8 @@ str = 'ABCDEFGHIJK';
 
 io.writeln( str[1] )    # the second character;
 io.writeln( str[:4] )   # the substring from the start to the 4th character;
-io.writeln(  str[6:] )  # the substring from the 6th character to the end;
-io.writeln(  str[3:8] ) # the substring from the 3rd to the 8th character;
+io.writeln( str[6:] )   # the substring from the 6th character to the end;
+io.writeln( str[3:8] )  # the substring from the 3rd to the 8th character;
 
 # Set single character:
 str[1] = 'X';

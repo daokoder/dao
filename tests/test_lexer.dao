@@ -82,7 +82,7 @@ Float ::= DecSinglePrecision | SciSinglePrecision
 	123.
 @[test(code_03)]
 @[test(code_03)]
-	123
+	123D
 @[test(code_03)]
 
 
@@ -90,7 +90,7 @@ Float ::= DecSinglePrecision | SciSinglePrecision
 	123e1
 @[test(code_03)]
 @[test(code_03)]
-	1230
+	1230D
 @[test(code_03)]
 
 
@@ -98,7 +98,7 @@ Float ::= DecSinglePrecision | SciSinglePrecision
 	123e+1
 @[test(code_03)]
 @[test(code_03)]
-	1230
+	1230D
 @[test(code_03)]
 
 
@@ -106,7 +106,7 @@ Float ::= DecSinglePrecision | SciSinglePrecision
 	12.3e+1
 @[test(code_03)]
 @[test(code_03)]
-	123
+	123D
 @[test(code_03)]
 
 
@@ -114,7 +114,7 @@ Float ::= DecSinglePrecision | SciSinglePrecision
 	123e-1
 @[test(code_03)]
 @[test(code_03)]
-	12.3
+	12.3D
 @[test(code_03)]
 
 
@@ -130,7 +130,7 @@ Float ::= DecSinglePrecision | SciSinglePrecision
 	io.writeln( std.about( 123e-1 ) )
 @[test(code_03)]
 @[test(code_03)]
-	float
+	double
 @[test(code_03)]
 
 
@@ -286,56 +286,49 @@ Double ::= (DecInteger | DecSinglePrecision) 'D' | SciDoublePrecision
 
 
 #{
-Complex ::= Float '$'
+Complex ::= Float 'C'
 #}
 
 
 @[test(code_03)]
-	io.writeln( 0$ )
+	io.writeln( 0C )
 @[test(code_03)]
 @[test(code_03)]
-	0%.(0+) %+ 0%.(0+) %$
-@[test(code_03)]
-
-
-@[test(code_03)]
-	io.writeln( 123$ )
-@[test(code_03)]
-@[test(code_03)]
-	0%.(0+) %+ 123%.(0+) %$
+	0%.(0+) %+ 0%.(0+) C
 @[test(code_03)]
 
 
 @[test(code_03)]
-	io.writeln( 12.3$ )
+	io.writeln( 123C )
 @[test(code_03)]
 @[test(code_03)]
-	0%.(0+) %+ 12%.3(0+) %$
-@[test(code_03)]
-
-
-@[test(code_03)]
-	io.writeln( 123e1$ )
-@[test(code_03)]
-@[test(code_03)]
-	0%.(0+) %+ 1230%.(0+) %$
+	0%.(0+) %+ 123%.(0+) C
 @[test(code_03)]
 
 
 @[test(code_03)]
-	io.writeln( 123e-1$ )
+	io.writeln( 12.3C )
 @[test(code_03)]
 @[test(code_03)]
-	0%.(0+) %+ 12%.3(0+) %$
+	0%.(0+) %+ 12%.3(0+) C
 @[test(code_03)]
 
 
 @[test(code_03)]
-	0X1$
+	io.writeln( 123e1C )
 @[test(code_03)]
 @[test(code_03)]
-	WARNING
+	0%.(0+) %+ 1230%.(0+) C
 @[test(code_03)]
+
+
+@[test(code_03)]
+	io.writeln( 123e-1C )
+@[test(code_03)]
+@[test(code_03)]
+	0%.(0+) %+ 12%.3(0+) C
+@[test(code_03)]
+
 
 
 #{

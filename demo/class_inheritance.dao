@@ -31,7 +31,7 @@ class BB
 
 class CC : AA, BB
 {
-	var    obj2 = 0$;
+	var    obj2 = 0C;
 
 	use routine BB( i = 0 );
 	use routine AA( i = 0 ); # this raises error, due to duplicated signature.
@@ -43,7 +43,7 @@ c = CC();
 
 io.writeln( c.cst == 123 ? 'ok' : 'error' );
 io.writeln( c.obj == 123 ? 'ok' : 'error' );
-io.writeln( c.obj2 == 0$ ? 'ok' : 'error' );
+io.writeln( c.obj2 == 0C ? 'ok' : 'error' );
 io.writeln( c.Meth() == 123 ? 'ok' : 'error' );
 
 io.writeln( c.Meth(1) );

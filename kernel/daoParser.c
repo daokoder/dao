@@ -5295,28 +5295,19 @@ static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoValue *value
 {
 	char *str = tok->string.mbs;
 	daoint pl = 0;
-	if( tok->name == DTOK_NUMBER_SCI ){
-		if( DString_FindChar( & tok->string, 'e', 0 ) != MAXSIZE ){
-			value->type = DAO_FLOAT;
-			value->xFloat.value = strtod( str, 0 );
-		}else{
-			value->type = DAO_DOUBLE;
-			value->xDouble.value = strtod( str, 0 );
-		}
-	}else if( tok->name == DTOK_DOUBLE_DEC ){
+	if( tok->name == DTOK_SINGLE_DEC ){
+		value->type = DAO_FLOAT;
+		value->xFloat.value = strtod( str, 0 );
+	}else if( tok->name >= DTOK_DOUBLE_DEC && tok->name <= DTOK_NUMBER_SCI ){
 		value->type = DAO_DOUBLE;
-		/*errno = 0;*/
 		value->xDouble.value = strtod( str, 0 );
 	}else if( tok->name == DTOK_NUMBER_IMG ){
 		str[tok->string.size-1] = '\0';
 		value->type = DAO_COMPLEX;
 		value->xComplex.value.real = 0;
 		value->xComplex.value.imag = strtod( str, 0 );
-		str[tok->string.size-1] = '$';
-	}else if( tok->name == DTOK_NUMBER_DEC ){
-		value->type = DAO_FLOAT;
-		value->xFloat.value = strtod( str, 0 );
-	}else if( (pl = DString_FindChar( & tok->string, 'L', 0)) != MAXSIZE ){
+		str[tok->string.size-1] = 'C';
+	}else if( tok->name == DTOK_DIGITS_LONG ){
 #ifdef DAO_WITH_LONGINT
 		char ec;
 		value->xLong.value = self->bigint;
@@ -5396,7 +5387,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		}
 		varReg = LOOKUP_BIND_LC( MAP_Find( self->allConsts, str )->value.pInt );
 		*cst = varReg;
-	}else if( tki >= DTOK_DIGITS_DEC && tki <= DTOK_NUMBER_SCI ){
+	}else if( tki >= DTOK_DIGITS_DEC && tki <= DTOK_DIGITS_LONG ){
 		if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
 			value = DaoParseNumber( self, tokens[start], & buffer );
 			if( value == NULL ) return -1;
@@ -5422,9 +5413,6 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		DaoEnum_SetType( self->denum, type );
 		varReg = DaoNamespace_AddConst( ns, str, value, DAO_DATA_PUBLIC );
 		if( varReg <0 ) return -1;
-		*cst = varReg;
-	}else if( tki == DTOK_DOLLAR ){
-		varReg = DaoParser_ImaginaryOne( self, start );
 		*cst = varReg;
 	}else if( tki == DTOK_COLON ){
 		if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
@@ -6095,7 +6083,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		result.first = last->next;
 		result.last = result.update = self->vmcLast;
 		start += 1;
-	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_DOLLAR || tki == DTOK_COLON
+	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_COLON
 			|| (tki >= DKEY_ANY && tki <= DKEY_CDATA ) || tki >= DKEY_ABS || tki == DKEY_SELF ){
 		regLast = DaoParser_ParseAtomicExpression( self, start, & cst );
 		if( last != self->vmcLast ) result.first = result.last = result.update = self->vmcLast;
@@ -6128,10 +6116,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				if( (rb+1) <= end && tokens[rb+1]->name == DTOK_ASSN ) return result;
 
 				if( (rb+1) <= end ){
-					if( tokens[rb+1]->name == DKEY__INIT ){
-						mode |= DAO_CALL_INIT;
-						rb += 1;
-					}else if( tokens[rb+1]->name == DTOK_BANG2 ){
+					if( tokens[rb+1]->name == DTOK_BANG2 ){
 						mode |= DAO_CALL_ASYNC;
 						rb += 1;
 					}

@@ -11,11 +11,12 @@ io.writeln( std.about(I1), '\n' )
 
 
 # Single precision floating point numbers:
+# 'F' suffix;
 
-F1 = .12
-F2 = 12.
-F3 = 12.5
-F4 = 2e-3  # Scientific notation with LOWER case 'e';
+F1 = .12F
+F2 = 12.F
+F3 = 12.5F
+F4 = 2e-3   # Scientific notation with LOWER case 'e';
 
 io.writeln( F1, F2, F3, F4 )
 io.writeln( 'size of float:', %F1 )
@@ -23,8 +24,9 @@ io.writeln( std.about(F1), '\n' )
 
 
 # Double precision floating point numbers:
+# 'D' suffix or none;
 
-D1 = .12D  # 'D' suffix;
+D1 = .12
 D2 = 12.D
 D3 = 12.5D
 D4 = 123D
@@ -35,11 +37,11 @@ io.writeln( 'size of double:', %D1 )
 io.writeln( std.about(D1), '\n' )
 
 
-# Complex number ($ stands for i):
+# Complex number (C suffix for the imaginary part):
 
-C1 = $
-C2 = 123$
-C3 = 12.3$
+C1 = 1C
+C2 = 123C
+C3 = 12.3C
 C4 = C3.real;
 C5 = C3.imag;
 

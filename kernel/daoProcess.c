@@ -5848,14 +5848,16 @@ static void DaoArray_ToString( DaoArray *self, DString *str, daoint offset, daoi
 /* Set dC->type before calling to instruct this function what type number to convert: */
 int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 {
+	DaoLexer *lexer;
+	DaoParser *parser;
+	DaoToken *tok, **tokens;
 	DString *mbs = proc->mbstring;
-	double d1 = 0.0, d2 = 0.0;
-	int set1 = 0, set2 = 0;
-	int toktype,  toklen = 0;
 	int tid = dC->type;
-	int imagfirst = 0;
+	int tokid = 0;
 	int ec, sign = 1;
+
 	if( dA->type != DAO_STRING || tid == DAO_NONE || tid > DAO_LONG ) return 0;
+
 	if( dA->xString.data->mbs ){
 		DString_SetDataMBS( mbs, dA->xString.data->mbs, dA->xString.data->size );
 	}else{
@@ -5863,71 +5865,82 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 	}
 	DString_Trim( mbs );
 	if( mbs->size ==0 ) return 0;
-	toktype = DaoToken_Check( mbs->mbs, mbs->size, & toklen );
-	if( toktype == DTOK_ADD || toktype == DTOK_SUB ){
-		if( toktype == DTOK_SUB ) sign = -1;
-		DString_Erase( mbs, 0, toklen );
-		toktype = DaoToken_Check( mbs->mbs, mbs->size, & toklen );
+
+	parser = DaoVmSpace_AcquireParser( proc->vmSpace );
+	lexer = parser->lexer;
+
+	DaoLexer_Tokenize( lexer, mbs->mbs, DAO_LEX_COMMENT|DAO_LEX_SPACE );
+	tokens = lexer->tokens->items.pToken;
+
+	if( lexer->tokens->size == 0 ) goto ReturnFalse;
+	switch( tokens[tokid]->name ){
+	case DTOK_ADD : tokid += 1; break;
+	case DTOK_SUB : tokid += 1; sign = -1; break;
 	}
-	if( tid != DAO_COMPLEX ){
-		if( toklen != mbs->size ) return 0;
-		if( toktype < DTOK_DIGITS_DEC || toktype > DTOK_NUMBER_SCI ) return 0;
-		if( tid == DAO_INTEGER ){
-			dC->xInteger.value = (sizeof(daoint) == 4) ? strtol( mbs->mbs, 0, 0 ) : strtoll( mbs->mbs, 0, 0 );
-			if( sign <0 ) dC->xInteger.value = - dC->xInteger.value;
-		}else if( tid == DAO_FLOAT ){
-			dC->xFloat.value = strtod( mbs->mbs, 0 );
-			if( sign <0 ) dC->xFloat.value = - dC->xFloat.value;
-		}else if( tid == DAO_DOUBLE ){
-			dC->xDouble.value = strtod( mbs->mbs, 0 );
-			if( sign <0 ) dC->xDouble.value = - dC->xDouble.value;
-#ifdef DAO_WITH_LONGINT
-		}else{ /* DAO_LONG */
-			ec = DLong_FromString( dC->xLong.value, mbs );
-			if( ec ){
-				const char *msg = ec == 'L' ? "invalid radix" : "invalid digit";
-				DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, msg );
-				return 0;
-			}
-			dC->xLong.value->sign = sign;
-#endif
+	if( tokid >= lexer->tokens->size ) goto ReturnFalse;
+	tok = tokens[tokid++];
+
+	switch( tid ){
+	case DAO_INTEGER :
+		if( tok->name < DTOK_DIGITS_DEC || tok->name > DTOK_DOUBLE_DEC ) goto ReturnFalse;
+		if( sizeof(daoint) == 4 ){
+			dC->xInteger.value = strtol( tok->string.mbs, 0, 0 );
+		}else{
+			dC->xInteger.value = strtoll( tok->string.mbs, 0, 0 );
 		}
-		return 1;
+		if( sign <0 ) dC->xInteger.value = - dC->xInteger.value;
+		break;
+	case DAO_FLOAT :
+		if( tok->name < DTOK_DIGITS_DEC || tok->name > DTOK_NUMBER_SCI ) goto ReturnFalse;
+		dC->xFloat.value = strtod( tok->string.mbs, 0 );
+		if( sign <0 ) dC->xFloat.value = - dC->xFloat.value;
+		break;
+	case DAO_DOUBLE :
+		if( tok->name < DTOK_DIGITS_DEC || tok->name > DTOK_NUMBER_SCI ) goto ReturnFalse;
+		dC->xDouble.value = strtod( tok->string.mbs, 0 );
+		if( sign <0 ) dC->xDouble.value = - dC->xDouble.value;
+		break;
+	case DAO_COMPLEX :
+		dC->xComplex.value.real = 0.0;
+		dC->xComplex.value.imag = 0.0;
+		if( tok->name >= DTOK_DIGITS_DEC && tok->name <= DTOK_NUMBER_SCI ){
+			dC->xComplex.value.real = strtod( tok->string.mbs, 0 );
+			if( sign <0 ) dC->xComplex.value.real = - dC->xComplex.value.real;
+
+			if( tokid >= lexer->tokens->size ) goto ReturnTrue;
+			tok = tokens[tokid];
+			switch( tok->name ){
+			case DTOK_ADD : tokid += 1; break;
+			case DTOK_SUB : tokid += 1; sign = -1; break;
+			default : goto ReturnFalse;
+			}
+			if( tokid >= lexer->tokens->size ) goto ReturnFalse;
+			tok = tokens[tokid++];
+		}
+		if( tok->name != DTOK_NUMBER_IMG ) goto ReturnFalse;
+		dC->xComplex.value.imag = strtod( tok->string.mbs, 0 );
+		if( sign <0 ) dC->xComplex.value.imag = - dC->xComplex.value.imag;
+		break;
+#ifdef DAO_WITH_LONGINT
+	case DAO_LONG :
+		ec = DLong_FromString( dC->xLong.value, mbs );
+		if( ec ){
+			const char *msg = ec == 'L' ? "invalid radix" : "invalid digit";
+			DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, msg );
+			return 0;
+		}
+		dC->xLong.value->sign = sign;
+		break;
+#endif
 	}
-	dC->xComplex.value.real = dC->xComplex.value.imag = 0.0;
-	if( toktype >= DTOK_DIGITS_DEC && toktype <= DTOK_NUMBER_SCI ){
-		set1 = 1;
-		d1 = strtod( mbs->mbs, 0 );
-		DString_Erase( mbs, 0, toklen );
-		toktype = DaoToken_Check( mbs->mbs, mbs->size, & toklen );
-	}
-	if( toktype == DTOK_DOLLAR ){
-		imagfirst = 1;
-		if( set1 ==0 ) d1 = 1.0;
-		DString_Erase( mbs, 0, toklen );
-		toktype = DaoToken_Check( mbs->mbs, mbs->size, & toklen );
-	}
-	if( sign <0 ) d1 = - d1;
-	if( imagfirst ) dC->xComplex.value.imag = d1; else dC->xComplex.value.real = d1;
-	if( mbs->size ==0 ) return 1;
-	if( toktype != DTOK_ADD && toktype != DTOK_SUB ) return 0;
-	if( toklen == (int)mbs->size ) return 0;
-	sign = toktype == DTOK_ADD ? 1 : -1;
-	DString_Erase( mbs, 0, toklen );
-	toktype = DaoToken_Check( mbs->mbs, mbs->size, & toklen );
-	if( imagfirst && toktype == DTOK_DOLLAR ) return 0;
-	if( toktype >= DTOK_DIGITS_DEC && toktype <= DTOK_NUMBER_SCI ){
-		set2 = 1;
-		d2 = strtod( mbs->mbs, 0 );
-		DString_Erase( mbs, 0, toklen );
-		toktype = DaoToken_Check( mbs->mbs, mbs->size, & toklen );
-	}
-	if( imagfirst && toktype == DTOK_DOLLAR ) return 0;
-	if( imagfirst ==0 && toktype != DTOK_DOLLAR ) return 0;
-	if( toktype == DTOK_DOLLAR && set2 ==0 ) d2 = 1.0;
-	if( sign <0 ) d2 = - d2;
-	if( imagfirst ) dC->xComplex.value.real = d2; else dC->xComplex.value.imag = d2;
-	return toklen == (int)mbs->size;
+	if( tokid < lexer->tokens->size ) goto ReturnFalse;
+
+ReturnTrue:
+	DaoVmSpace_ReleaseParser( proc->vmSpace, parser );
+	return 1;
+ReturnFalse:
+	DaoVmSpace_ReleaseParser( proc->vmSpace, parser );
+	return 0;
 }
 #ifdef DAO_WITH_NUMARRAY
 static DaoArray* DaoProcess_PrepareArray( DaoProcess *self, DaoValue *dC, int etype )

@@ -1198,7 +1198,7 @@ static int DaoParser_ParsePrimary( DaoParser *self, int stop )
 		start = rb + 1;
 	}else if( tki == DTOK_ID_THTYPE && tki2 == DTOK_LB ){
 		start += 1;
-	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_DOLLAR || tki == DTOK_COLON || tki >= DKEY_ABS || tki == DKEY_SELF ){
+	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_COLON || tki >= DKEY_ABS || tki == DKEY_SELF ){
 		start += 1;
 	}
 	if( start < 0 ) return -1;
@@ -1209,7 +1209,7 @@ static int DaoParser_ParsePrimary( DaoParser *self, int stop )
 		case DTOK_LB :
 			rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
 			if( rb < 0 ) return -1;
-			if( (rb+1) <= end && tokens[rb+1]->name == DKEY__INIT ) rb += 1;
+			if( (rb+1) <= end && tokens[rb+1]->name == DTOK_BANG2 ) rb += 1;
 			self->curToken = rb + 1;
 			break;
 		case DTOK_LCB :
