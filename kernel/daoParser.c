@@ -5458,7 +5458,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 static int DaoParser_ExpClosure( DaoParser *self, int start )
 {
 	char name[100];
-	daoint regCall, opc, rb = 0;
+	daoint offset, regCall, opc, rb = 0;
 	daoint i, k, n, end = self->tokens->size-1;
 	daoint tokPos = self->tokens->items.pToken[ start ]->line;
 	DString *mbs = DaoParser_GetString( self );
@@ -5516,6 +5516,7 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	}else{
 		goto ErrorParsing;
 	}
+	offset = rb - parser->tokens->size;
 
 	/* Routine name may have been changed by DaoParser_ParseSignature() */
 	sprintf( name, "AnonymousFunction_%p", rout );
@@ -5536,8 +5537,8 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	for(i=0; i<uplocs->size; i+=4 ){
 		int up = uplocs->items.pInt[i];
 		int loc = uplocs->items.pInt[i+1];
-		int first = uplocs->items.pInt[i+2];
-		int last = uplocs->items.pInt[i+3];
+		int first = uplocs->items.pInt[i+2] + offset;
+		int last = uplocs->items.pInt[i+3] + offset;
 		DaoParser_AddCode( self, DVM_MOVE, up, 0, regCall+1+i/4, first, 0, last );
 	}
 	DaoParser_PushRegisters( self, uplocs->size/4 );
@@ -5626,7 +5627,7 @@ int DaoParser_GetOperPrecedence( DaoParser *self )
 		}
 	}
 	oper = daoArithOper[tokens[self->curToken]->name];
-	if( oper.oper == 0 ) return -1;
+	if( oper.oper == 0 || oper.binary == 0 ) return -1;
 	return 10*(20 - oper.binary);
 }
 static DaoInode* DaoParser_InsertCode( DaoParser *self, DaoInode *after, int code, int a, int b, int c, int first )
@@ -6569,7 +6570,7 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 		result.first = result.last = result.update = self->vmcLast;
 		return result;
 	}else if( code == DVM_ADD || code == DVM_SUB ){
-		DaoInode *vmc = self->vmcLast;
+		DaoInode *vmc = result.last;
 		opb = DaoParser_IntegerOne( self, start );
 		DaoParser_AddCode( self, code, opa, opb, opa, start, 0, end );
 		if( vmc->code == DVM_GETVH || (vmc->code >= DVM_GETI && vmc->code <= DVM_GETF) ){
@@ -6796,12 +6797,12 @@ static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int warn 
 {
 	int start = self->curToken;
 	DaoEnode LHS = { -1, 0, 1, NULL, NULL, NULL, NULL };
+	DaoToken **tokens = self->tokens->items.pToken;
 
 #if 0
 	int i, end = self->tokens->size;
-	DaoToken **tokens = self->tokens->items.pToken;
 	printf("DaoParser_ParseExpression(): start = %i;\n", start );
-	for( i=start;i<end;i++) printf("%s  ", tokens[i]->string->mbs); printf("\n");
+	for( i=start;i<end;i++) printf("%s  ", tokens[i]->string.mbs); printf("\n");
 #endif
 	if( DaoParser_CurrentTokenType( self ) == DTOK_COLON ){
 		/* : e , */
@@ -6809,7 +6810,9 @@ static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int warn 
 	}else{
 		LHS = DaoParser_ParseUnary( self, stop );
 	}
-	if( LHS.reg >= 0 ) LHS = DaoParser_ParseOperator( self, LHS, 0, stop, warn );
+	if( LHS.reg >= 0 && DaoParser_GetOperPrecedence( self ) >= 0 ){
+		LHS = DaoParser_ParseOperator( self, LHS, 0, stop, warn );
+	}
 	if( LHS.reg < 0 ){
 		if( self->curToken < self->tokens->size && DaoParser_CurrentTokenType( self ) < DTOK_COMMENT ){
 			DString *tok = & self->tokens->items.pToken[ self->curToken ]->string;
