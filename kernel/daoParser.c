@@ -1020,7 +1020,6 @@ static int DaoParser_ExtractRoutineBody( DaoParser *self, DaoParser *parser, int
 	routine->body->codeStart = tokens[left]->line;
 	routine->body->codeEnd = tokens[right]->line;
 	for(i=left+1; i<right; ++i) DaoLexer_AppendToken( parser->lexer, tokens[i] );
-	DaoLexer_Append( parser->lexer, DTOK_SEMCO, routine->body->codeEnd, ";" );
 	parser->defined = 1;
 	return right;
 }
@@ -3099,7 +3098,6 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 
 	DaoInterface_DeriveMethods( inter );
 	for(i=start+1; i<right; i++) DaoLexer_AppendToken( parser->lexer, tokens[i] );
-	DaoLexer_Append( parser->lexer, DTOK_SEMCO, tokens[right-1]->line, ";" );
 	parser->defined = 1;
 
 	if( DaoParser_ParseCodeSect( parser, 0, parser->tokens->size-1 )==0 ){
@@ -3317,7 +3315,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( DaoClass_DeriveClassData( klass ) == 0 ) goto ErrorClassDefinition;
 
 	for(i=begin+1; i<right; i++) DaoLexer_AppendToken( parser->lexer, tokens[i] );
-	DaoLexer_Append( parser->lexer, DTOK_SEMCO, tokens[right-1]->line, ";" );
 	if( DaoParser_ParseCodeSect( parser, 0, parser->tokens->size-1 )==0 ){
 		if( DString_EQ( self->fileName, parser->fileName ) )
 			DArray_InsertArray( self->errors, self->errors->size, parser->errors, 0, -1 );
@@ -4657,6 +4654,7 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 		MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, found );
 		return;
 	}
+	if( self->errors->size ) return;
 
 	if( (storeType & DAO_DECL_GLOBAL) && (storeType & DAO_DECL_CONST) ){
 		DaoNamespace_AddConst( nameSpace, name, dao_none_value, perm );
@@ -6571,9 +6569,10 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 		return result;
 	}else if( code == DVM_ADD || code == DVM_SUB ){
 		DaoInode *vmc = result.last;
+		int code2 = vmc ? vmc->code : -1;
 		opb = DaoParser_IntegerOne( self, start );
 		DaoParser_AddCode( self, code, opa, opb, opa, start, 0, end );
-		if( vmc->code == DVM_GETVH || (vmc->code >= DVM_GETI && vmc->code <= DVM_GETF) ){
+		if( code2 == DVM_GETVH || (code2 >= DVM_GETI && code2 <= DVM_GETF) ){
 			DaoParser_PushBackCode( self, (DaoVmCodeX*) vmc );
 			self->vmcLast->extra = vmc->extra;
 			vmc = self->vmcLast;
