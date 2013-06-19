@@ -1258,7 +1258,7 @@ Decorator
 
 @[red]
 Note: this feature is only functional in the online demos
-and the latest Dao that is available from the source repositories.
+and the latest devel release.
 @[red]
 
 
@@ -1650,7 +1650,7 @@ Mixin
 
 @[red]
 Features introduced in the this and the remaining sections
-are available only in the latest code repository and the online version.
+are available only in the latest devel release and the online version.
 @[red]
 
 
@@ -1698,7 +1698,7 @@ k.Meth2( 789 )
 Class Decorator
 @[subsection]
 
-(New in the code repository and online version)
+(New in the latest devel release and online version)
 
 
 When a class is used as a mixin class in another class (host),
@@ -1812,7 +1812,7 @@ obj.PrefixTestSuffix()
 Aspect Class
 @[subsection]
 
-(New in the code repository and online version)
+(New in the latest devel release and online version)
 
 
 In Dao, a class can be effectly used as an aspect for AOP,

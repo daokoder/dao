@@ -5448,13 +5448,18 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		}
 	}else if( A->type == B->type && (A->type == DAO_LIST || A->type == DAO_ARRAY) ){
 		D = DaoValue_Compare( A, B );
-		if( abs( D ) > 1 ) goto InvalidOperation;
 		switch( vmc->code ){
-			case DVM_LT: D = D <  0; break;
-			case DVM_LE: D = D <= 0; break;
-			case DVM_EQ: D = D == 0; break;
-			case DVM_NE: D = D != 0; break;
-			default: break;
+		case DVM_LT:
+			if( abs( D ) > 1 ) goto InvalidOperation;
+			D = D <  0;
+			break;
+		case DVM_LE:
+			if( abs( D ) > 1 ) goto InvalidOperation;
+			D = D <= 0;
+			break;
+		case DVM_EQ: D = D == 0; break;
+		case DVM_NE: D = D != 0; break;
+		default: break;
 		}
 	}else{
 InvalidOperation:

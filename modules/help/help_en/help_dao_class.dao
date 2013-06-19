@@ -416,7 +416,7 @@ Mixin Class (New)
 
 
 @[text]
-(New in the code repository and online version)
+(New in the latest devel release and online version)
 
 
 Classes to be used as mixins can be specified in a pair of brackets
@@ -474,7 +474,7 @@ Class Decorator (New)
 
 
 @[text]
-(New in the code repository and online version)
+(New in the latest devel release and online version)
 
 
 When a class is used as a mixin class in another class (host),
@@ -598,7 +598,7 @@ Aspect Class (New)
 
 
 @[text]
-(New in the code repository and online version)
+(New in the latest devel release and online version)
 
 
 In Dao, a class can be effectly used as an aspect for AOP,

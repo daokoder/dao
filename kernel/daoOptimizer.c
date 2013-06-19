@@ -2556,13 +2556,22 @@ static DaoType* DaoInferencer_UpdateType( DaoInferencer *self, int id, DaoType *
 	DaoNamespace *NS = self->routine->nameSpace;
 	DaoType **types = self->types->items.pType;
 	DMap *defs = (DMap*)DArray_Back( self->typeMaps );
-	if( types[id] == NULL || (types[id]->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) ){
-		if( types[id] == NULL || DaoType_MatchTo( type, types[id], NULL ) ){
-			if( type->attrib & DAO_TYPE_SPEC ) type = DaoType_DefineTypes( type, NS, defs );
-			GC_ShiftRC( type, types[id] );
-			types[id] = type;
-		}
-	}
+	/*
+	// Do NOT update types that have been inferred (even as undefined types):
+	// Because if it has been inferred, some instructions may have been
+	// specialized according to this inferred type. If it is allowed to
+	// be updated here, other instructions may be specialized differently.
+	// So the previously specialized instruction and the currently specialized
+	// instruction will assume different types of the same register!
+	//
+	// This happens for short curcuit evaluation of boolean operations:
+	// expression_produces_string_but_inferred_as_undefined && expression_produces_int
+	*/
+	if( types[id] != NULL ) return types[id];
+
+	if( type->attrib & DAO_TYPE_SPEC ) type = DaoType_DefineTypes( type, NS, defs );
+	GC_ShiftRC( type, types[id] );
+	types[id] = type;
 	return types[id];
 }
 static void DaoInferencer_WriteErrorHeader( DaoInferencer *self )
@@ -2916,8 +2925,8 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			DaoInferencer_UpdateType( self, opc, at );
 			/*
 			   printf( "%s\n", at->name->mbs );
-			   printf( "%p %p\n", at, type[opc] );
-			   printf( "%s %s\n", at->name->mbs, type[opc]->name->mbs );
+			   printf( "%p %p\n", at, types[opc] );
+			   printf( "%s %s\n", at->name->mbs, types[opc]->name->mbs );
 			 */
 			AssertTypeMatching( at, types[opc], defs );
 			if( typed_code && at->tid >= DAO_INTEGER && at->tid <= DAO_COMPLEX ){
