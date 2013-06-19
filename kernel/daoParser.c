@@ -6721,9 +6721,9 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 				result.reg = DaoParser_PushRegister( self );
 				move = DaoParser_InsertCode( self, LHS.last, DVM_MOVE, LHS.reg, 0, result.reg, postart );
 				test = DaoParser_InsertCode( self, move, DVM_TEST, LHS.reg,0,0,postart );
-				result.last->code = DVM_MOVE;
-				result.last->a = result.last->b;
-				result.last->b = 0;
+				result.last->code = mapAithOpcode[oper];
+				result.last->a = result.reg;
+				result.last->b = result.last->b;
 				result.last->c = result.reg;
 				test->jumpFalse = DaoParser_AddCode( self, DVM_NOP, 0, 0, 0, postart,0,0 );
 				if( oper == DAO_OPER_OR ){

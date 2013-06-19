@@ -5112,6 +5112,8 @@ TryPushBlockReturnType:
 								ct = DaoType_DefineTypes( ct, NS, defs2 );
 								if( ct != NULL && redef != NULL ){
 									tt = DaoType_DefineTypes( types[redef->c], NS, defs2 );
+									GC_DecRC( types[redef->c] );
+									types[redef->c] = NULL;
 									DaoInferencer_UpdateType( self, redef->c, tt );
 								}
 								if( popped == 0 ) rettypes->items.pType[ rettypes->size - 1 ] = ct;
@@ -5137,12 +5139,16 @@ TryPushBlockReturnType:
 							ct = DaoType_DefineTypes( ct, NS, defs2 );
 							if( ct != NULL && redef != NULL ){
 								tt = DaoType_DefineTypes( types[redef->c], NS, defs2 );
+								GC_DecRC( types[redef->c] );
+								types[redef->c] = NULL;
 								DaoInferencer_UpdateType( self, redef->c, tt );
 							}
 							if( popped == 0 ) rettypes->items.pType[ rettypes->size - 1 ] = ct;
 						}
 					}
 					if( redef != NULL && redef->code == DVM_EVAL ){
+						GC_DecRC( types[redef->c] );
+						types[redef->c] = NULL;
 						DaoInferencer_UpdateType( self, redef->c, at );
 					}
 				}

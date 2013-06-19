@@ -5426,6 +5426,7 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		}
 	}else if( vmc->code == DVM_AND || vmc->code == DVM_OR ){
 		DaoValue *AA = A, *BB = B;
+		/* TODO: trict type checking! */
 		if( vmc->code == DVM_OR ){ AA = B; BB = A; }
 		switch( A->type ){
 			case DAO_INTEGER : C = A->xInteger.value ? BB : AA; break;

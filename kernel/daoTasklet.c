@@ -734,7 +734,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		DThreadTask function = NULL;
 		void *parameter = NULL;
 
-		self->thdData->state = 0;
+		if( self->thdData != NULL ) self->thdData->state = 0;
 		DMutex_Lock( & server->mutex );
 		server->idle += 1;
 		while( server->pending->size == (server->events2->size + server->waitings->size) ){
@@ -828,19 +828,26 @@ void DaoCallServer_Join()
 void DaoCallServer_Stop()
 {
 	DCondVar condv;
+	DaoCallThread *calth;
 	if( daoCallServer == NULL ) return;
 	DCondVar_Init( & condv );
 	daoCallServer->finishing = 1;
+
+	calth = DaoCallThread_New( NULL, NULL );
 	DMutex_Lock( & daoCallServer->mutex );
-	while( daoCallServer->pending->size || daoCallServer->idle != daoCallServer->total ){
-		/* printf( "finalizing: %3i %3i\n", daoCallServer->idle, daoCallServer->total ); */
-		DCondVar_TimedWait( & condv, & daoCallServer->mutex, 0.01 );
-	}
+	daoCallServer->total += 1;
+	DMutex_Unlock( & daoCallServer->mutex );
+
+	DaoCallThread_Run( calth );  /* process tasks in the main thread; */
+
+	DMutex_Lock( & daoCallServer->mutex );
 	while( daoCallServer->stopped != daoCallServer->total || daoCallServer->timing ){
 		DCondVar_TimedWait( & condv, & daoCallServer->mutex, 0.01 );
 	}
 	DMutex_Unlock( & daoCallServer->mutex );
+
 	DCondVar_Destroy( & condv );
+	DaoCallThread_Delete( calth );
 	DaoCallServer_Delete( daoCallServer );
 	daoCallServer = NULL;
 }

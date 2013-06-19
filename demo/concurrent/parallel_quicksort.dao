@@ -35,10 +35,9 @@ routine QuickSort( data: array<int>, first: int, last: int )
 	#}
 
 	if( first+10000 < upper and upper+10000 < last ){
-		fv1 = mt.start::{ if( first+1 < upper ) QuickSort( data, first, upper-1 ) }
-		fv2 = mt.start::{ if( upper+1 < last ) QuickSort( data, upper+1, last ) }
+		fv1 = QuickSort( data, first, upper-1 ) !!
+		QuickSort( data, upper+1, last )
 		fv1.wait();
-		fv2.wait();
 	}else{
 		if( first+1 < upper ) QuickSort( data, first, upper-1 );
 		if( upper+1 < last ) QuickSort( data, upper+1, last );
