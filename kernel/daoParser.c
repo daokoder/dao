@@ -4330,7 +4330,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 						return -1;
 					}
 					remove = 1;
-				}else{
+				}else if( reg >= 0 ){
 					DaoParser_AddCode( self, DVM_SETVS, reg, id, 0, first, mid, end );
 				}
 				break;
@@ -4663,7 +4663,7 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 	}else if( storeType & DAO_DECL_STATIC ){
 		int i = LOOKUP_BIND( DAO_STATIC_VARIABLE, 0, 0, routine->body->svariables->size );
 		MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, i );
-		DArray_Append( routine->body->svariables, DaoVariable_New(NULL,NULL) );
+		DArray_Append( routine->body->svariables, DaoVariable_New( abtp->value, abtp ) );
 	}else{
 		int id = 0;
 		if( storeType & DAO_DECL_CONST ){

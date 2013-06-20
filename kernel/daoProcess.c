@@ -774,7 +774,7 @@ DaoValue* DaoProcess_GetReturned( DaoProcess *self )
 void DaoProcess_AcquireCV( DaoProcess *self )
 {
 #ifdef DAO_WITH_THREAD
-	self->depth = 1;
+	self->depth += 1;
 #endif
 }
 void DaoProcess_ReleaseCV( DaoProcess *self )

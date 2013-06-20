@@ -2828,10 +2828,13 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			break;
 		case DAO_CODE_SETG :
 		case DAO_CODE_SETU :
-		case DAO_CODE_SETF :
 		case DAO_CODE_MOVE :
 		case DAO_CODE_UNARY :
 			AssertInitialized( inode->a, 0, last, last );
+			break;
+		case DAO_CODE_SETF :
+			AssertInitialized( inode->a, 0, last, last );
+			AssertInitialized( inode->c, 0, last, last );
 			break;
 		case DAO_CODE_GETM :
 			AssertInitialized( inode->a, DTE_ITEM_WRONG_ACCESS, last, last );

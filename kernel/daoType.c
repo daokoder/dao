@@ -226,8 +226,15 @@ void DaoType_InitDefault( DaoType *self )
 		value->xTuple.unitype = self;
 		GC_IncRC( self );
 		for(i=0; i<count; i++){
-			DaoType_InitDefault( types[i] );
-			DaoValue_Copy( types[i]->value, & value->xTuple.items[i] );
+			DaoType *it = types[i];
+			if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_DEFAULT ){
+				it = (DaoType*) it->aux;
+			}else if( it->tid == DAO_PAR_VALIST ){
+				DaoValue_Copy( dao_none_value, & value->xTuple.items[i] );
+				continue;
+			}
+			DaoType_InitDefault( it );
+			DaoValue_Copy( it->value, & value->xTuple.items[i] );
 		}
 		break;
 	case DAO_VARIANT :
