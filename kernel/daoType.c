@@ -125,8 +125,6 @@ void DaoType_CheckAttributes( DaoType *self )
 	if( self->tid == DAO_CLASS || self->tid == DAO_OBJECT ) self->attrib |= DAO_TYPE_SPEC;
 
 	if( (self->tid == DAO_PAR_NAMED || self->tid == DAO_PAR_DEFAULT) ){
-		if( self->aux && self->aux->xType.attrib & DAO_TYPE_SPEC )
-			self->attrib |= DAO_TYPE_SPEC;
 		if( self->fname != NULL && strcmp( self->fname->mbs, "self" ) == 0 )
 			self->attrib |= DAO_TYPE_SELFNAMED;
 	}
@@ -139,7 +137,9 @@ void DaoType_CheckAttributes( DaoType *self )
 			self->rntcount += it->tid >= DAO_INTEGER && it->tid <= DAO_DOUBLE;
 		}
 	}
-	if( self->aux && self->aux->xType.attrib & DAO_TYPE_SPEC ) self->attrib |= DAO_TYPE_SPEC;
+	if( self->aux && self->aux->type == DAO_TYPE ){
+		if( self->aux->xType.attrib & DAO_TYPE_SPEC ) self->attrib |= DAO_TYPE_SPEC;
+	}
 	if( self->nested ){
 		for(i=0; i<self->nested->size; i++){
 			DaoType *it = self->nested->items.pType[i];
