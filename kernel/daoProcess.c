@@ -205,17 +205,18 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 	if( self->regexCaches == NULL ) self->regexCaches = DHash_New(D_STRING,0);
 	node = DMap_Find( self->regexCaches, src );
 	if( node ) return (DaoRegex*) node->value.pVoid;
-	pat = DaoRegex_New( src );
-	DMap_Insert( self->regexCaches, src, pat );
 
+	pat = DaoRegex_New( src );
 	for( i=0; i<pat->count; i++ ){
 		it = pat->items + i;
 		if( it->type ==0 ){
 			sprintf( buf, "incorrect pattern, at char %i.", it->length );
 			if( self->activeRoutine ) DaoProcess_RaiseException( self, DAO_ERROR, buf );
+			DaoRegex_Delete( pat );
 			return NULL;
 		}
 	}
+	DMap_Insert( self->regexCaches, src, pat );
 	return pat;
 #else
 	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_REGEX ) );
@@ -773,24 +774,13 @@ DaoValue* DaoProcess_GetReturned( DaoProcess *self )
 void DaoProcess_AcquireCV( DaoProcess *self )
 {
 #ifdef DAO_WITH_THREAD
-	if( self->condv ){
-		self->depth += 1;
-		return;
-	}
 	self->depth = 1;
-	self->condv = (DCondVar*) dao_malloc( sizeof(DCondVar) );
-	DCondVar_Init( self->condv );
 #endif
 }
 void DaoProcess_ReleaseCV( DaoProcess *self )
 {
 #ifdef DAO_WITH_THREAD
-	if( self->condv == NULL ) return;
 	self->depth -= 1;
-	if( self->depth ) return;
-	DCondVar_Destroy( self->condv );
-	dao_free( self->condv );
-	self->condv = NULL;
 #endif
 }
 static void DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )

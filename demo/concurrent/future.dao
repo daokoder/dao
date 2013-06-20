@@ -20,14 +20,13 @@ mt.iterate( 4 )::{
 			#sys.sleep(0.01);
 		}
 	}
-	f.value(); # waiting for the future value
+	#f.value(); # ERROR: cannot block inside code section methods;
 	io.writeln( '---------', X );
 }
 
-return;
 
 mt.iterate( 4 )::{
 	io.writeln( '=========', X );
-	t.Meth().wait( 5 ); # waiting for the future value
+	t.Meth() #.wait( 5 ); # ERROR: cannot block inside code section methods;
 	io.writeln( '---------', X );
 }

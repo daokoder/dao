@@ -125,6 +125,9 @@ static const char *const cmd_help =
 "   -l, --list-code:      print compiled bytecodes;\n"
 "   -j, --jit:            enable just-in-time compiling;\n"
 "   -Ox:                  optimization level (x=0 or 1);\n"
+"   --threads=number      minimum number of threads for processing tasklets;\n"
+"   --path=directory      add module searching path;\n"
+"   --module=module       preloading module;\n"
 ;
 
 
@@ -276,7 +279,6 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 		GC_DecRC( proc->future );
 		proc->future = NULL;
 #ifdef DAO_WITH_THREAD
-		proc->condv = NULL;
 		proc->mutex = NULL;
 #endif
 		if( proc->factory ) DArray_Clear( proc->factory );
@@ -717,6 +719,10 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 			}else if( strcmp( token->mbs, "--jit" ) ==0 ){
 				self->options |= DAO_OPTION_JIT;
 				daoConfig.jit = 1;
+			}else if( strstr( token->mbs, "--threads=" ) == token->mbs ){
+				daoConfig.cpu = strtol( token->mbs + 10, 0, 0 );
+			}else if( strstr( token->mbs, "--path=" ) == token->mbs ){
+				DaoVmSpace_AddPath( self, token->mbs + 7 );
 			}else if( strstr( token->mbs, "--module=" ) == token->mbs ){
 				if( self->preloadModules == NULL ) self->preloadModules = DArray_New(D_VALUE);
 				if( (ns = DaoVmSpace_Load( self, token->mbs + 9 )) ){

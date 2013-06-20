@@ -126,7 +126,6 @@ struct DaoProcess
 
 #ifdef DAO_WITH_THREAD
 	daoint          depth;
-	DCondVar       *condv; /* condition variable for resuming suspended process; */
 	DMutex         *mutex; /* mutex for mt.critical::{} */
 #endif
 
