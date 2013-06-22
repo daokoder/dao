@@ -2364,6 +2364,7 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	daoint entry, i, j, N = list->items.size;
+	int popped = 0;
 	switch( funct ){
 	case DVM_FUNCT_MAP :
 	case DVM_FUNCT_SELECT :
@@ -2393,6 +2394,7 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 		case DVM_FUNCT_APPLY : DaoList_SetItem( list, res, i ); break;
 		}
 		if( funct == DVM_FUNCT_FIND && res->xInteger.value ){
+			popped = 1;
 			DaoProcess_PopFrame( proc );
 			DaoProcess_SetActiveFrame( proc, proc->topFrame );
 			tuple = DaoProcess_PutTuple( proc, 0 );
@@ -2403,7 +2405,7 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 		}
 	}
 	DaoProcess_ReleaseCV( proc );
-	if( funct != DVM_FUNCT_FIND ) DaoProcess_PopFrame( proc );
+	if( popped == 0 ) DaoProcess_PopFrame( proc );
 }
 static void DaoLIST_Map( DaoProcess *proc, DaoValue *p[], int npar )
 {
@@ -3032,6 +3034,7 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 	DaoValue *res;
 	DNode *node;
 	ushort_t entry;
+	int popped = 0;
 	switch( funct ){
 	case DVM_FUNCT_MAP :
 	case DVM_FUNCT_SELECT :
@@ -3073,6 +3076,7 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 		case DVM_FUNCT_MAP : DaoList_Append( list, res ); break;
 		}
 		if( funct == DVM_FUNCT_FIND && res->xInteger.value ){
+			popped = 1;
 			DaoProcess_PopFrame( proc );
 			DaoProcess_SetActiveFrame( proc, proc->topFrame );
 			tuple = DaoProcess_PutTuple( proc, 0 );
@@ -3084,7 +3088,7 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 		}
 	}
 	DaoProcess_ReleaseCV( proc );
-	if( funct != DVM_FUNCT_FIND ) DaoProcess_PopFrame( proc );
+	if( popped ) DaoProcess_PopFrame( proc );
 }
 static void DaoMAP_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 {

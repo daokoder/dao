@@ -98,9 +98,12 @@ struct DaoTaskEvent
 	uchar_t      type;
 	uchar_t      state;
 	uchar_t      timeout;
+	uchar_t      auxiliary;
 	double       expiring;  /* expiring time for a timeout event; */
 	DaoFuture   *future;
 	DaoChannel  *channel;
+	DaoChannel  *selected;
+	DaoValue    *message;
 	DArray      *channels;  /* DArray<DaoChannel*> */
 };
 

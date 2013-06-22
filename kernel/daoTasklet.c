@@ -56,11 +56,16 @@ void DaoTaskEvent_Reset( DaoTaskEvent *self )
 	self->type = 0;
 	self->state = 0;
 	self->timeout = 0;
+	self->auxiliary = 0;
 	self->expiring = -1.0;
 	GC_DecRC( self->future );
 	GC_DecRC( self->channel );
+	GC_DecRC( self->selected );
+	GC_DecRC( self->message );
 	self->future = NULL;
 	self->channel = NULL;
+	self->selected = NULL;
+	self->message = NULL;
 	if( self->channels ) DArray_Delete( self->channels );
 	self->channels = NULL;
 }
@@ -279,6 +284,7 @@ static void DaoCallServer_TryAddThread( DThreadTask func, void *param, int todo 
 static void DaoCallServer_ActivateEvents()
 {
 	DaoCallServer *server = daoCallServer;
+	char message[128];
 	daoint i, j;
 
 	if( server->idle != server->total ) return;
@@ -286,7 +292,9 @@ static void DaoCallServer_ActivateEvents()
 	if( server->events2->size == 0 ) return;
 
 #ifdef DEBUG
-	DaoStream_WriteMBS( mainVmSpace->errorStream, "WARNING: activating events!\n" );
+	sprintf( message, "WARNING: activating events (%i,%i,%i,%i)!\n",
+			server->total, server->idle, server->events->size, server->events2->size );
+	DaoStream_WriteMBS( mainVmSpace->errorStream, message );
 #endif
 	for(i=0; i<server->events2->size; ++i){
 		DaoTaskEvent *event = (DaoTaskEvent*) server->events2->items.pVoid[i];
@@ -454,10 +462,6 @@ void DaoCallServer_AddTimedWait( DaoProcess *wait, DaoTaskEvent *event, double t
 	DaoCallServer *server = daoCallServer;
 
 	DMutex_Lock( & server->mutex );
-	if( wait->active == 0 ){
-		DMap_Insert( server->active, wait, NULL );
-		wait->active = 1;
-	}
 	if( timeout >= 1E-27 ){
 		server->timestamp.value.real = timeout + Dao_GetCurrentTime();
 		server->timestamp.value.imag += 1;
@@ -618,23 +622,35 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 		DaoChannel *selected = NULL;
 		DaoValue *message = NULL;
 		int closed = 0;
+		int type = event->type;
 
+		if( event->state == DAO_EVENT_WAIT && future->precond != NULL ){
+			if( future->precond->state != DAO_CALL_FINISHED ) goto MoveToWaiting;
+		}
 		switch( event->type ){
 		case DAO_EVENT_WAIT_SENDING :
 			if( channel->buffer->size >= channel->cap ){
-				if( event->state == DAO_EVENT_WAIT ) goto MoveToWaiting;
+				if( event->state == DAO_EVENT_WAIT ){
+					DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_RECEIVING );
+					goto MoveToWaiting;
+				}
 			}
+			event->type = DAO_EVENT_RESUME_TASKLET;
 			break;
 		case DAO_EVENT_WAIT_RECEIVING :
 			if( channel->buffer->size == 0 ){
-				if( channel->cap > 0 && event->state == DAO_EVENT_WAIT ) goto MoveToWaiting;
+				if( channel->cap > 0 && event->state == DAO_EVENT_WAIT ){
+					DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_SENDING );
+					goto MoveToWaiting;
+				}
 				message = dao_none_value;
 			}else{
 				message = channel->buffer->items.pValue[0];
 			}
-			GC_ShiftRC( message, event->future->message );
-			event->future->message = message;
-			event->future->aux1 = channel->cap <= 0 && channel->buffer->size == 0;
+			GC_ShiftRC( message, event->message );
+			event->message = message;
+			event->auxiliary = channel->cap <= 0 && channel->buffer->size == 0;
+			event->type = DAO_EVENT_RESUME_TASKLET;
 			DArray_PopFront( channel->buffer );
 			if( channel->buffer->size < channel->cap )
 				DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_SENDING );
@@ -659,11 +675,12 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 			}else{
 				message = selected->buffer->items.pValue[0];
 			}
-			GC_ShiftRC( message, event->future->message );
-			GC_ShiftRC( selected, event->future->selected );
-			event->future->message = message;
-			event->future->selected = (DaoValue*) selected;
-			event->future->aux1 = closed == event->channels->size;
+			GC_ShiftRC( message, event->message );
+			GC_ShiftRC( selected, event->selected );
+			event->message = message;
+			event->selected = selected;
+			event->auxiliary = closed == event->channels->size;
+			event->type = DAO_EVENT_RESUME_TASKLET;
 			if( selected ){
 				DArray_PopFront( selected->buffer );
 				if( selected->buffer->size < selected->cap )
@@ -674,17 +691,21 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 			break;
 		default: break;
 		}
-		if( event->state == DAO_EVENT_WAIT && future->precond != NULL ){
-			if( future->precond->state != DAO_CALL_FINISHED ) goto MoveToWaiting;
-		}
 		if( future->actor && DMap_Find( active, future->actor->rootObject ) ) continue;
 		if( future->process && DMap_Find( active, future->process ) ) continue;
 		DArray_Erase( events, i, 1 );
 		DMap_Erase( pending, event );
 		if( future->actor ) DMap_Insert( active, future->actor->rootObject, NULL );
 		if( future->process ) DMap_Insert( active, future->process, NULL );
-		GC_IncRC( future ); /* To be decreased at the end of tasklet; */
+
+		GC_ShiftRC( event->message, future->message );
+		GC_ShiftRC( event->selected, future->selected );
+		future->message = event->message;
+		future->selected = (DaoValue*) event->selected;
+		future->aux1 = event->auxiliary;
 		future->timeout = event->timeout;
+
+		GC_IncRC( future ); /* To be decreased at the end of tasklet; */
 		DaoCallServer_CacheEvent( event );
 		return future;
 MoveToWaiting:
@@ -753,6 +774,10 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		DMutex_Lock( & server->mutex );
 		server->idle -= 1;
 		future = DaoCallServer_GetNextFuture();
+		if( future && future->process->active == 0 ){
+			DMap_Insert( server->active, future->process, NULL );
+			future->process->active = 1;
+		}
 		DMutex_Unlock( & server->mutex );
 
 		if( future == NULL ) continue;
@@ -957,16 +982,6 @@ static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
 		return;
 	}
 
-	if( self->buffer->size >= self->cap ){
-		DaoTaskEvent *event = DaoCallServer_MakeEvent();
-		DaoTaskEvent_Init( event, DAO_EVENT_WAIT_SENDING, DAO_EVENT_WAIT, future, self );
-		proc->status = DAO_PROCESS_SUSPENDED;
-		proc->pauseType = DAO_PAUSE_CHANNEL_SEND;
-		DaoCallServer_AddTimedWait( proc, event, timeout );
-		/* This condition may have been changed: */
-		if( self->buffer->size >= self->cap ) return;
-	}
-
 	data = DaoValue_DeepCopy( par[1] );
 	if( data == NULL ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid data for the channel" );
@@ -980,6 +995,14 @@ static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
 	DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_SELECT );
 	DCondVar_Signal( & daoCallServer->condv );
 	DMutex_Unlock( & daoCallServer->mutex );
+
+	if( self->buffer->size >= self->cap ){
+		DaoTaskEvent *event = DaoCallServer_MakeEvent();
+		DaoTaskEvent_Init( event, DAO_EVENT_WAIT_SENDING, DAO_EVENT_WAIT, future, self );
+		proc->status = DAO_PROCESS_SUSPENDED;
+		proc->pauseType = DAO_PAUSE_CHANNEL_SEND;
+		DaoCallServer_AddTimedWait( proc, event, timeout );
+	}
 }
 static void CHANNEL_Receive( DaoProcess *proc, DaoValue *par[], int N )
 {

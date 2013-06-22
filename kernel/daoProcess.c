@@ -1167,7 +1167,6 @@ CallEntry:
 			break;
 		case DAO_PAUSE_CHANNEL_SEND :
 			DaoProcess_PutInteger( self, future->timeout );
-			if( future->timeout == 0 ) vmc --;
 			break;
 		case DAO_PAUSE_CHANNEL_RECEIVE :
 			tuple = DaoProcess_PutTuple( self, 0 );
