@@ -4398,18 +4398,14 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	}
 	return end;
 }
-static int DaoParser_GetLastValue( DaoParser *self, DaoInode *it, DaoInode *back )
+static int DaoParser_GetLastValue( DaoParser *self, DaoInode *it, DaoInode *back, int lex )
 {
 	int id = -1;
-	while( it != back && DaoVmCode_GetResultOperand( (DaoVmCode*) it ) == DAO_OPERAND_N ) it = it->prev;
-	if( it == back ) return -1;
-	switch( DaoVmCode_GetResultOperand( (DaoVmCode*) it ) ){
-	case DAO_OPERAND_N : break;
-	case DAO_OPERAND_A : id = it->a; break;
-	case DAO_OPERAND_B : id = it->b; break;
-	case DAO_OPERAND_C : id = it->c; break;
-	}
-	return id;
+	while( it != back && it->level == lex && it->code == DVM_NOP ) it = it->prev;
+	if( it->code == DVM_LOAD2 ) it = it->prev;
+	if( it == back || it->level != lex ) return -1;
+	if( DaoVmCode_GetResultOperand( (DaoVmCode*) it ) != DAO_OPERAND_C ) return -1;
+	return it->c;
 }
 static int DaoParser_SetupBranching( DaoParser *self )
 {
@@ -4427,7 +4423,7 @@ static int DaoParser_SetupBranching( DaoParser *self )
 			autoret = ismain && (print || vms->evalCmdline);
 		}
 		if( autoret ){
-			opa = DaoParser_GetLastValue( self, self->vmcLast, self->vmcFirst );
+			opa = DaoParser_GetLastValue( self, self->vmcLast, self->vmcFirst, 0 );
 			if( opa < 0 ){
 				opa = 0;
 				autoret = 0;
@@ -5981,7 +5977,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		}
 		if( self->vmcLast->code != DVM_RETURN ){
 			int first = self->vmcLast->first;
-			int opa = DaoParser_GetLastValue( self, self->vmcLast, back );
+			int opa = DaoParser_GetLastValue( self, self->vmcLast, back, label->level+1 );
 			int opb = opa >= 0;
 			if( opa < 0 ) opa = 0;
 			DaoParser_AddCode( self, DVM_RETURN, opa, opb, DVM_FUNCT_NULL, rb, 0, rb );
@@ -6363,7 +6359,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					}
 					if( self->vmcLast->code != DVM_RETURN ){
 						int first = self->vmcLast->first;
-						opa = DaoParser_GetLastValue( self, self->vmcLast, back );
+						opa = DaoParser_GetLastValue( self, self->vmcLast, back, label->level+1 );
 						opb = opa >= 0;
 						if( opa < 0 ) opa = 0;
 						DaoParser_AddCode( self, DVM_RETURN, opa, opb, DVM_FUNCT_NULL, first, 0, rb );

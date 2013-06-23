@@ -115,6 +115,7 @@ struct DaoProcess
 	uchar_t         status;
 	uchar_t         active : 4;
 	uchar_t         stopit : 4;
+	ushort_t        depth;
 
 	DaoType        *abtype; /* for coroutine */
 	DaoFuture      *future;
@@ -125,7 +126,6 @@ struct DaoProcess
 	DArray         *factory;
 
 #ifdef DAO_WITH_THREAD
-	daoint          depth;
 	DMutex         *mutex; /* mutex for mt.critical::{} */
 #endif
 

@@ -693,6 +693,10 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 	DaoStackFrame *next, *frame = DaoProcess_FindSectionFrame( self );
 	int returning = -1;
 
+	if( self->depth >= 1000 ){
+		DaoProcess_RaiseException( self, DAO_ERROR, "Too deep nested code section method calls!" );
+		return NULL;
+	}
 	if( frame == NULL ) return NULL;
 	if( self->topFrame->routine->body ){
 		self->topFrame->entry = 1 + self->activeCode - self->topFrame->codes;
@@ -773,15 +777,11 @@ DaoValue* DaoProcess_GetReturned( DaoProcess *self )
 }
 void DaoProcess_AcquireCV( DaoProcess *self )
 {
-#ifdef DAO_WITH_THREAD
 	self->depth += 1;
-#endif
 }
 void DaoProcess_ReleaseCV( DaoProcess *self )
 {
-#ifdef DAO_WITH_THREAD
 	self->depth -= 1;
-#endif
 }
 static void DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
 {
@@ -880,9 +880,10 @@ int DaoProcess_Execute( DaoProcess *self )
 	complex16 czero = {0,0};
 	int invokehost = handler && handler->InvokeHost;
 	int print, active = self->active;
-	daoint i, j, id, size;
+	daoint exceptCount0 = self->exceptions->size;
 	daoint exceptCount = 0;
 	daoint gotoCount = 0;
+	daoint i, j, id, size;
 	daoint inum=0;
 	float fnum=0;
 	double AA, BB, dnum=0;
@@ -2398,7 +2399,7 @@ FinishCall:
 	if( self->topFrame->state & DVM_FRAME_KEEP ){
 		self->topFrame->state &= ~DVM_FRAME_RUNNING;
 		self->status = DAO_PROCESS_FINISHED;
-		if( self->exceptions->size > exceptCount ){
+		if( self->exceptions->size > exceptCount0 ){
 			self->status = DAO_PROCESS_ABORTED;
 			goto ReturnFalse;
 		}
@@ -2416,7 +2417,6 @@ FinishProc:
 
 	if( self->exceptions->size ) DaoProcess_PrintException( self, 1 );
 	DaoProcess_PopFrames( self, rollback );
-	self->status = DAO_PROCESS_ABORTED;
 	/*if( eventHandler ) eventHandler->mainRoutineExit(); */
 
 ReturnFalse :
@@ -2428,6 +2428,7 @@ ReturnFalse :
 	*/
 	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
 #endif
+	self->status = DAO_PROCESS_ABORTED;
 	DaoGC_TryInvoke();
 	return 0;
 

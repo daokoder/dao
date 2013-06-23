@@ -55,6 +55,7 @@ enum DaoxHelpBlockType
 	DAOX_HELP_TEXT ,
 	DAOX_HELP_CODE ,
 	DAOX_HELP_LIST ,
+	DAOX_HELP_TABLE ,
 	DAOX_HELP_SECTION ,
 	DAOX_HELP_SUBSECT ,
 	DAOX_HELP_SUBSECT2 ,
@@ -196,6 +197,7 @@ static DaoxStream* DaoxStream_New( DaoStream *stream, DaoProcess *proc )
 	DString snode = DString_WrapMBS( "node" );
 	DString scode = DString_WrapMBS( "code" );
 	DString slist = DString_WrapMBS( "list" );
+	DString stable = DString_WrapMBS( "table" );
 	DString comment = DString_WrapMBS( "comment" );
 	DString ssection = DString_WrapMBS( "section" );
 	DString ssubsect = DString_WrapMBS( "subsection" );
@@ -210,6 +212,7 @@ static DaoxStream* DaoxStream_New( DaoStream *stream, DaoProcess *proc )
 	DMap_Insert( self->mtypes, & snode, (void*)(size_t)DAOX_HELP_NODE );
 	DMap_Insert( self->mtypes, & scode, (void*)(size_t)DAOX_HELP_CODE );
 	DMap_Insert( self->mtypes, & slist, (void*)(size_t)DAOX_HELP_LIST );
+	DMap_Insert( self->mtypes, & stable, (void*)(size_t)DAOX_HELP_TABLE );
 	DMap_Insert( self->mtypes, & comment, (void*)(size_t)DAOX_HELP_COMMENT );
 	DMap_Insert( self->mtypes, & ssection, (void*)(size_t)DAOX_HELP_SECTION );
 	DMap_Insert( self->mtypes, & ssubsect, (void*)(size_t)DAOX_HELP_SUBSECT );
@@ -899,6 +902,87 @@ static int DaoxStream_WriteList( DaoxStream *self, DString *text, int offset, in
 	DaoxStream_WriteNewLine( self, "" );
 	return fails;
 }
+static void DaoxStream_WriteTable( DaoxStream *self, DString *text, int offset, int width, int islist, int listdep )
+{
+	DVector *widths = DVector_New(sizeof(int));
+	DArray *rows = DArray_New(D_ARRAY);
+	DArray *row = DArray_New(D_STRING);
+	DString *cell = DString_New(1);
+	daoint newline, next, start = 0;
+	daoint i, j, k, m;
+
+	DString_Trim( text );
+	while( start < text->size ){
+		DArray_Clear( row );
+		newline = DString_FindChar( text, '\n', start );
+		if( newline < 0 ) newline = text->size;
+		while( start < newline ){
+			daoint hash2 = DString_FindMBS( text, "##", start + 2 );
+			daoint amd2  = DString_FindMBS( text, "&&", start + 2 );
+			if( hash2 < 0 ) hash2 = newline;
+			if( amd2  < 0 ) amd2  = newline;
+			next = hash2 < amd2 ? hash2 : amd2;
+			if( next > newline ) next = newline;
+			DString_SubString( text, cell, start, next - start );
+			DString_Trim( cell );
+			DArray_Append( row, cell );
+			start = next;
+		}
+		DArray_Append( rows, row );
+		start = newline + 1;
+	}
+	if( rows->size == 0 || rows->items.pArray[0]->size == 0 ){
+		DArray_Delete( rows );
+		DArray_Delete( row );
+		DString_Delete( cell );
+		return;
+	}
+	DVector_Resize( widths, rows->items.pArray[0]->size );
+	for(i=0; i<widths->size; ++i) widths->data.ints[i] = 0;
+	for(i=0; i<rows->size; ++i){
+		m = rows->items.pArray[i]->size;
+		if( m > widths->size ) m = widths->size;
+		for(j=0; j<m; ++j){
+			DString *cell = rows->items.pArray[i]->items.pString[j];
+			if( cell->size > widths->data.ints[j] ) widths->data.ints[j] = cell->size;
+		}
+	}
+	for(i=0; i<rows->size; ++i){
+		m = rows->items.pArray[i]->size;
+		if( m > widths->size ) m = widths->size;
+		for(j=0; j<offset; ++j) DaoxStream_WriteChar( self, ' ' );
+		for(j=0; j<m; ++j){
+			DString *cell = rows->items.pArray[i]->items.pString[j];
+			int hash2 = DString_FindMBS( cell, "##", 0 ) == 0;
+			int amd2  = DString_FindMBS( cell, "&&", 0 ) == 0;
+			int right = 0;
+			if( hash2 || amd2 ){
+				DString_Erase( cell, 0, 2 );
+				right = cell->size && isspace( cell->mbs[0] );
+				DString_Trim( cell );
+			}
+			if( hash2 ){
+				if( i && j ){
+					DaoxStream_SetColor( self, NULL, "yellow" );
+				}else{
+					DaoxStream_SetColor( self, NULL, j%2 ? "cyan" : "green" );
+				}
+			}
+			if( right == 0 ) DaoxStream_WriteString( self, cell );
+			for(k=cell->size; k<widths->data.ints[j]; ++k){
+				DaoxStream_WriteChar( self, ' ' );
+			}
+			if( right ) DaoxStream_WriteString( self, cell );
+			DaoxStream_WriteChar( self, ' ' );
+			if( hash2 ) DaoxStream_SetColor( self, NULL, NULL );
+		}
+		DaoxStream_WriteNewLine( self, "" );
+	}
+	DArray_Delete( rows );
+	DArray_Delete( row );
+	DString_Delete( cell );
+}
+
 typedef struct DaoxTestStream DaoxTestStream;
 struct DaoxTestStream
 {
@@ -1092,6 +1176,8 @@ static int DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, i
 				}
 			}else if( mtype == DAOX_HELP_LIST ){
 				DaoxStream_WriteList( self, part, offset, width, 1, listdep+1 );
+			}else if( mtype == DAOX_HELP_TABLE ){
+				DaoxStream_WriteTable( self, part, offset, width, 1, listdep+1 );
 			}else if( mtype == DAOX_HELP_NODE ){
 				DaoxStream_WriteEntryName( self, part );
 			}else if( mtype == DAOX_HELP_COMMENT ){
