@@ -79,7 +79,7 @@ Benchmarks
 
 @[text]
 
-Here are some random benchmarks which should be taken too seriously.
+Here are some random benchmarks which shouldn't be taken too seriously.
 They are presented to give developers some rough idea what one can expect from Dao
 regarding its efficiency.
 @[red]These benchmarks by no means indicate the performance of these languages
