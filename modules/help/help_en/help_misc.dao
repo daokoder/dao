@@ -1,0 +1,139 @@
+load help;
+
+
+@[name]
+misc.comparison
+@[name]
+
+@[title]
+Comparisons
+@[title]
+
+
+@[text]
+@[text]
+
+
+
+
+@[name]
+misc.comparison
+@[name]
+
+@[title]
+
+@[title]
+
+
+@[text]
+@[text]
+
+
+
+
+@[name]
+misc.benchmarks
+@[name]
+
+@[title]
+Benchmarking
+@[title]
+
+
+@[text]
+@[text]
+
+
+
+
+@[name]
+misc.benchmarks
+@[name]
+
+@[title]
+Benchmarking
+@[title]
+
+
+@[text]
+@[text]
+
+
+
+
+@[name]
+misc.benchmarks
+@[name]
+
+@[title]
+Benchmarks
+@[title]
+
+##Program       ## Argument ## Dao  ## Dao+JIT ## Speedup ## ## Lua   ## Python ## Go   ## C
+##nbody         && 10000000 && 41.2 && 12.1    &&  3.4X   && && 103.9 && 279.8  &&  2.6 && 1.8
+##fannkuch      && 11       && 57.4 && 16.5    &&  3.6X   && && 151.4 && 284.0  &&  4.4 && 2.9
+##mandelbrot    && 4000     && 25.9 &&  4.3    &&  6.0X   && &&  63.7 && 137.2  && 1.3* && 2.3
+##spectral-norm && 3000     && 21.7 &&  2.1    && 10.2X   && &&  78.2 && 305.7  && 1.5* && 1.9
+##binary-trees  && 16       && 55.9 && 57.7    &&  1.0X   && &&  21.2 &&  20.1  &&  4.5 && 4.7
+
+
+@[text]
+
+Here are some random benchmarks which should be taken too seriously.
+They are presented to give developers some rough idea what one can expect from Dao
+regarding its efficiency.
+@[red]These benchmarks by no means indicate the performance of these languages
+in real applications.@[red]
+
+
+Some of the benchmarks are taken from the 
+@[link]The Computer Language Benchmarks Game@@http://benchmarksgame.alioth.debian.org@[link].
+All the tested benchmarks are available here
+@[link]benchmarks@@/projects/DaoBenchmarks/dir?ci=tip@[link];
+
+
+The following languages are chosen for comparison,
+
+@[table]
+##Language   ##Version/Compiler
+##Dao        &&2.0-devel-2013-06-23
+##Lua        &&5.2.1
+##Python     &&2.7.2
+##Go         &&1.1
+##C          &&Apple Clang V4.0 (-O2)
+@[table]
+
+
+The benchmarks are executed on Mac OS X 10.8.3 with 1.8GHz Intel Core i5.
+In these tests, time is measured in seconds (S), and memory is measured in Mega-Bytes (M).
+
+@[table]
+##Program       ## Argument ## Dao  ## Dao+JIT ## Speedup ## ## Lua   ## Python ## C
+##nbody         && 10000000 && 41.2 && 12.1    &&  3.4X   && && 103.9 && 279.8  && 1.8
+##fannkuch      && 11       && 57.4 && 16.5    &&  3.6X   && && 151.4 && 284.0  && 2.9
+##mandelbrot    && 4000     && 25.9 &&  4.3    &&  6.0X   && &&  63.7 && 137.2  && 2.3
+##spectral-norm && 3000     && 21.7 &&  2.1    && 10.2X   && &&  78.2 && 305.7  && 1.9
+##binary-trees  && 16       && 55.9 && 57.7    &&  1.0X   && &&  21.2 &&  20.1  && 4.7
+##pidigits      && 5000     &&  9.2 &&  9.2    &&  1.0X   && &&  53.2 &&   3.1  && --
+@[table]
+
+
+The followings are a couple of benchmarks to compare Dao to Go.
+
+Time:
+
+@[table]
+##Program           ## Test Case         ## Dao      ## Dao+JIT   ## Go
+##massive-tasklets  && 100000 tasklets   && 115.8 S  && 36.5 S    && 46.4 S
+##massive-messages  && 1000000 messages  &&  83.1 S  && 80.9 S    &&  0.5 S
+@[table]
+
+Memory:
+
+@[table]
+##Program           ## Test Case         ## Dao      ## Dao+JIT   ## Go
+##massive-tasklets  && 100000 tasklets   && 138.0 M  && 141.0 M   && 525.0 M
+##massive-messages  && 1000000 messages  &&   2.2 M  &&   5.4 M   &&   7.3 M
+@[table]
+
+@[text]

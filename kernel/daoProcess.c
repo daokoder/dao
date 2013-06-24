@@ -1062,7 +1062,7 @@ CallEntry:
 
 	if( topFrame == base->prev ){
 		self->status = DAO_PROCESS_FINISHED;
-		if( self->exceptions->size > 0 ) goto FinishProc;
+		if( self->exceptions->size > 0 ) goto FinishProcess;
 		/*if( eventHandler ) eventHandler->mainRoutineExit(); */
 		goto ReturnTrue;
 	}
@@ -1079,7 +1079,7 @@ CallEntry:
 	if( (vmSpace->options & DAO_OPTION_SAFE) && self->topFrame->index >= 100 ){
 		DaoProcess_RaiseException( self, DAO_ERROR,
 				"too deep recursion for safe running mode." );
-		goto FinishProc;
+		goto FinishProcess;
 	}
 #endif
 
@@ -1093,7 +1093,7 @@ CallEntry:
 	if( routine->routType ) printf("routine type = %s\n", routine->routType->name->mbs);
 #endif
 
-	if( self->stopit | vmSpace->stopit ) goto FinishProc;
+	if( self->stopit | vmSpace->stopit ) goto FinishProcess;
 	//XXX if( invokehost ) handler->InvokeHost( handler, topCtx );
 
 	if( (vmSpace->options & DAO_OPTION_DEBUG) | (routine->body->mode & DAO_OPTION_DEBUG) )
@@ -1116,7 +1116,7 @@ CallEntry:
 			DString_Append( self->mbstring, routine->routName );
 			DString_AppendMBS( self->mbstring, "()" );
 			DaoProcess_RaiseException( self, DAO_ERROR, self->mbstring->mbs );
-			goto FinishProc;
+			goto FinishProcess;
 		}
 		goto FinishCall;
 	}
@@ -1221,7 +1221,7 @@ CallEntry:
 
 	OPBEGIN(){
 		OPCASE( NOP ){
-			if( self->stopit | vmSpace->stopit ) goto FinishProc;
+			if( self->stopit | vmSpace->stopit ) goto FinishProcess;
 		}OPNEXT() OPCASE( DATA ){
 			if( vmc->a == DAO_NONE ){
 				GC_ShiftRC( dao_none_value, locVars[ vmc->c ] );
@@ -1472,7 +1472,7 @@ CallEntry:
 				goto RaiseErrorInvalidOperation;
 		}OPNEXT() OPCASE( CALL ) OPCASE( MCALL ){
 			self->activeCode = vmc;
-			if( self->stopit | vmSpace->stopit ) goto FinishProc;
+			if( self->stopit | vmSpace->stopit ) goto FinishProcess;
 			DaoProcess_DoCall( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( ROUTINE ){
@@ -1498,7 +1498,7 @@ CallEntry:
 				DaoProcess_PushDefers( self, value );
 				goto CallEntry;
 			}
-			if( self->stopit | vmSpace->stopit ) goto FinishProc;
+			if( self->stopit | vmSpace->stopit ) goto FinishProcess;
 			goto FinishCall;
 		}OPNEXT() OPCASE( YIELD ){
 			self->activeCode = vmc;
@@ -1506,7 +1506,7 @@ CallEntry:
 				DaoVmCode *vmc2;
 				if( DaoProcess_PushSectionFrame( self ) == NULL ){
 					printf( "No code section is found\n" ); //XXX
-					goto FinishProc;
+					goto FinishProcess;
 				}
 				self->topFrame->state = DVM_FRAME_SECT;
 				vmc2 = self->topFrame->codes + self->topFrame->entry - 1;
@@ -1529,7 +1529,7 @@ CallEntry:
 			self->pauseType = DAO_PAUSE_COROUTINE_YIELD;
 			goto CheckException;
 		}OPCASE( DEBUG ){
-			if( self->stopit | vmSpace->stopit ) goto FinishProc;
+			if( self->stopit | vmSpace->stopit ) goto FinishProcess;
 			if( (vmSpace->options & DAO_OPTION_DEBUG ) ){
 				self->activeCode = vmc;
 				if( handler && handler->StdlibDebug ) handler->StdlibDebug( handler, self );
@@ -1539,7 +1539,7 @@ CallEntry:
 			self->activeCode = vmc;
 			if( DaoProcess_PushSectionFrame( self ) == NULL ){
 				printf( "No code section is found\n" ); //XXX
-				goto FinishProc;
+				goto FinishProcess;
 			}
 			topFrame->entry = vmc - topFrame->codes;
 			self->topFrame->state = DVM_FRAME_SECT;
@@ -2356,7 +2356,7 @@ RaiseErrorNullObject:
 CheckException:
 
 			locVars = self->activeValues;
-			if( self->stopit | vmSpace->stopit ) goto FinishProc;
+			if( self->stopit | vmSpace->stopit ) goto FinishProcess;
 			//XXX if( invokehost ) handler->InvokeHost( handler, topCtx );
 			if( self->exceptions->size > exceptCount ){
 				if( self->defers->size > self->topFrame->deferBase ){
@@ -2371,7 +2371,7 @@ CheckException:
 				self->topFrame->entry = (short)(vmc - vmcBase);
 				goto ReturnFalse;
 			}else if( self->status == DAO_PROCESS_ABORTED ){
-				goto FinishProc;
+				goto FinishProcess;
 			}
 			OPNEXT()
 		}
@@ -2399,10 +2399,7 @@ FinishCall:
 	if( self->topFrame->state & DVM_FRAME_KEEP ){
 		self->topFrame->state &= ~DVM_FRAME_RUNNING;
 		self->status = DAO_PROCESS_FINISHED;
-		if( self->exceptions->size > exceptCount0 ){
-			self->status = DAO_PROCESS_ABORTED;
-			goto ReturnFalse;
-		}
+		if( self->exceptions->size > exceptCount0 ) goto AbortProcess;
 		goto ReturnTrue;
 	}
 	DaoProcess_PopFrame( self );
@@ -2413,13 +2410,16 @@ CallNotPermitted:
 	/* DaoProcess_PopFrame( self ); cannot popframe, it may be tail-call optimized! */
 	DaoProcess_RaiseException( self, DAO_ERROR, "CallNotPermitted" );
 
-FinishProc:
+FinishProcess:
 
 	if( self->exceptions->size ) DaoProcess_PrintException( self, 1 );
 	DaoProcess_PopFrames( self, rollback );
 	/*if( eventHandler ) eventHandler->mainRoutineExit(); */
 
-ReturnFalse :
+AbortProcess:
+	self->status = DAO_PROCESS_ABORTED;
+
+ReturnFalse:
 #ifdef DAO_WITH_CONCURRENT
 	/*
 	// active==0:       if the process is started outside of the tasklet pool;
@@ -2428,11 +2428,10 @@ ReturnFalse :
 	*/
 	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
 #endif
-	self->status = DAO_PROCESS_ABORTED;
 	DaoGC_TryInvoke();
 	return 0;
 
-ReturnTrue :
+ReturnTrue:
 	if( self->topFrame == self->firstFrame && self == vmSpace->mainProcess ){
 		print = (vmSpace->options & DAO_OPTION_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
 		if( (print || vmSpace->evalCmdline) && self->stackValues[0] ){

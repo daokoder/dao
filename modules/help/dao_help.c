@@ -52,6 +52,7 @@ enum DaoxHelpBlockType
 {
 	DAOX_HELP_NONE ,
 	DAOX_HELP_NODE ,
+	DAOX_HELP_LINK ,
 	DAOX_HELP_TEXT ,
 	DAOX_HELP_CODE ,
 	DAOX_HELP_LIST ,
@@ -195,6 +196,7 @@ static DaoxStream* DaoxStream_New( DaoStream *stream, DaoProcess *proc )
 	const char *pat = "@ %[ %s* (| : | %w+%s*:) %s* %w+ %s* ( %( %s* (|%w+) %s* %) | ) [^%]]* %]";
 	DString spat = DString_WrapMBS( pat );
 	DString snode = DString_WrapMBS( "node" );
+	DString slink = DString_WrapMBS( "link" );
 	DString scode = DString_WrapMBS( "code" );
 	DString slist = DString_WrapMBS( "list" );
 	DString stable = DString_WrapMBS( "table" );
@@ -210,6 +212,7 @@ static DaoxStream* DaoxStream_New( DaoStream *stream, DaoProcess *proc )
 	self->stream = stream;
 	self->output = NULL;
 	DMap_Insert( self->mtypes, & snode, (void*)(size_t)DAOX_HELP_NODE );
+	DMap_Insert( self->mtypes, & slink, (void*)(size_t)DAOX_HELP_LINK );
 	DMap_Insert( self->mtypes, & scode, (void*)(size_t)DAOX_HELP_CODE );
 	DMap_Insert( self->mtypes, & slist, (void*)(size_t)DAOX_HELP_LIST );
 	DMap_Insert( self->mtypes, & stable, (void*)(size_t)DAOX_HELP_TABLE );
@@ -442,6 +445,42 @@ static void DaoxStream_WriteEntryName2( DaoxStream *self, DString *name )
 	}
 	self->offset += 4 + name->size;
 	self->last = name->mbs[name->size-1];
+}
+static void DaoxStream_WriteLink( DaoxStream *self, DString *link, int offset, int width )
+{
+	DString *name = DString_Copy( link );
+	DString *addr = DString_Copy( link );
+	daoint pos = DString_FindMBS( link, "@@", 0 );
+	if( pos > 0 ){
+		DString_Erase( name, pos, -1 );
+		DString_Erase( addr, 0, pos+2 );
+	}
+	if( self->offset && isalnum( self->last ) ) DaoxStream_WriteChar( self, ' ' );
+	if( self->output ){
+		if( self->fmtHTML ){
+			DString_AppendMBS( self->output, "<a href=\"" );
+			DString_AppendMBS( self->output, addr->mbs );
+			DString_AppendMBS( self->output, "\">" );
+			DString_AppendMBS( self->output, name->mbs );
+			DString_AppendMBS( self->output, "</a>" );
+		}else{
+			DString_AppendMBS( self->output, name->mbs );
+			DaoxStream_WriteChar( self, '(' );
+			DaoxStream_WriteMBS( self, addr->mbs );
+			DaoxStream_WriteChar( self, ')' );
+		}
+		self->offset += name->size;
+		self->last = name->mbs[name->size-1];
+	}else{
+		DaoxStream_SetColor( self, "blue", NULL );
+		DaoxStream_WriteMBS( self, name->mbs );
+		DaoxStream_SetColor( self, NULL, NULL );
+		DaoxStream_WriteChar( self, '(' );
+		DaoxStream_SetColor( self, "cyan", NULL );
+		DaoxStream_WriteText( self, addr, offset, width );
+		DaoxStream_SetColor( self, NULL, NULL );
+		DaoxStream_WriteChar( self, ')' );
+	}
 }
 
 typedef struct DaoxLexInfo DaoxLexInfo;
@@ -944,13 +983,16 @@ static void DaoxStream_WriteTable( DaoxStream *self, DString *text, int offset, 
 		if( m > widths->size ) m = widths->size;
 		for(j=0; j<m; ++j){
 			DString *cell = rows->items.pArray[i]->items.pString[j];
-			if( cell->size > widths->data.ints[j] ) widths->data.ints[j] = cell->size;
+			int hash2 = DString_FindMBS( cell, "##", 0 ) == 0;
+			int amd2  = DString_FindMBS( cell, "&&", 0 ) == 0;
+			int width = cell->size - ((hash2||amd2) ? 2 : 0);
+			if( width > widths->data.ints[j] ) widths->data.ints[j] = width;
 		}
 	}
 	for(i=0; i<rows->size; ++i){
 		m = rows->items.pArray[i]->size;
 		if( m > widths->size ) m = widths->size;
-		for(j=0; j<offset; ++j) DaoxStream_WriteChar( self, ' ' );
+		while( self->offset < offset ) DaoxStream_WriteChar( self, ' ' );
 		for(j=0; j<m; ++j){
 			DString *cell = rows->items.pArray[i]->items.pString[j];
 			int hash2 = DString_FindMBS( cell, "##", 0 ) == 0;
@@ -964,10 +1006,13 @@ static void DaoxStream_WriteTable( DaoxStream *self, DString *text, int offset, 
 			if( hash2 ){
 				if( i && j ){
 					DaoxStream_SetColor( self, NULL, "yellow" );
-				}else{
-					DaoxStream_SetColor( self, NULL, j%2 ? "cyan" : "green" );
+				}else if( i == 0 ){
+					DaoxStream_SetColor( self, "white", j%2 ? "blue" : "green" );
+				}else if( j == 0 ){
+					DaoxStream_SetColor( self, "white", i%2 ? "blue" : "green" );
 				}
 			}
+			DaoxStream_WriteChar( self, ' ' );
 			if( right == 0 ) DaoxStream_WriteString( self, cell );
 			for(k=cell->size; k<widths->data.ints[j]; ++k){
 				DaoxStream_WriteChar( self, ' ' );
@@ -1180,6 +1225,8 @@ static int DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, i
 				DaoxStream_WriteTable( self, part, offset, width, 1, listdep+1 );
 			}else if( mtype == DAOX_HELP_NODE ){
 				DaoxStream_WriteEntryName( self, part );
+			}else if( mtype == DAOX_HELP_LINK ){
+				DaoxStream_WriteLink( self, part, offset, width );
 			}else if( mtype == DAOX_HELP_COMMENT ){
 				/* skip comments; */
 			}else{
@@ -2185,6 +2232,11 @@ DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 	DString_SetMBS( fname, "help_" );
 	DString_AppendMBS( fname, lang );
 	DString_AppendMBS( fname, "/help_module" );
+	DaoVmSpace_Load( vmSpace, fname->mbs );
+
+	DString_SetMBS( fname, "help_" );
+	DString_AppendMBS( fname, lang );
+	DString_AppendMBS( fname, "/help_misc" );
 	DaoVmSpace_Load( vmSpace, fname->mbs );
 
 	DString_Delete( fname );

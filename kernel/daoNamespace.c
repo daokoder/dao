@@ -1193,20 +1193,12 @@ static void DaoNS_ImportRoutine( DaoNamespace *self, DString *name, DaoRoutine *
 }
 void DaoNamespace_UpdateLookupTable( DaoNamespace *self )
 {
-	DArray *namespaces = DArray_Copy( self->namespaces );
-	DArray *upindexes = DArray_New(0);
 	DNode *it, *search;
 	daoint i, j, k, pm, st, up, id;
 
-	for(i=0; i<namespaces->size; i++) DArray_Append( upindexes, i );
-	for(i=1; i<namespaces->size; i++){
-		DaoNamespace *ns = namespaces->items.pNS[i];
+	for(i=1; i<self->namespaces->size; i++){
+		DaoNamespace *ns = self->namespaces->items.pNS[i];
 		DaoNamespace_UpdateLookupTable( ns );
-		for(j=1; j<ns->namespaces->size; j++){
-			DArray_Append( namespaces, ns->namespaces->items.pVoid[j] );
-			DArray_Append( upindexes, i );
-		}
-		k = upindexes->items.pInt[i];
 		for(it=DMap_First( ns->lookupTable ); it; it=DMap_Next(ns->lookupTable,it) ){
 			DaoValue *value = DaoNamespace_GetValue( ns, it->value.pInt );
 			DString *name = it->key.pString;
@@ -1214,10 +1206,10 @@ void DaoNamespace_UpdateLookupTable( DaoNamespace *self )
 			pm = LOOKUP_PM( it->value.pInt );
 			st = LOOKUP_ST( it->value.pInt );
 			id = LOOKUP_ID( it->value.pInt );
-			if( up || pm != DAO_DATA_PUBLIC || value == NULL ) continue;
+			if( pm != DAO_DATA_PUBLIC || value == NULL ) continue;
 
 			search = MAP_Find( self->lookupTable, name );
-			if( search && value->type == DAO_ROUTINE ){
+			if( search && value->type == DAO_ROUTINE && up == 0 ){
 				DaoNS_ImportRoutine( self, name, (DaoRoutine*)value, pm );
 				continue;
 			}
@@ -1231,16 +1223,14 @@ void DaoNamespace_UpdateLookupTable( DaoNamespace *self )
 				}
 			}
 			if( st == DAO_GLOBAL_CONSTANT ){
-				MAP_Insert( self->lookupTable, name, LOOKUP_BIND( st, pm, k, self->constants->size ) );
+				MAP_Insert( self->lookupTable, name, LOOKUP_BIND( st, pm, up+1, self->constants->size ) );
 				DArray_Append( self->constants, ns->constants->items.pConst[id] );
 			}else{
-				MAP_Insert( self->lookupTable, name, LOOKUP_BIND( st, pm, k, self->variables->size ) );
+				MAP_Insert( self->lookupTable, name, LOOKUP_BIND( st, pm, up+1, self->variables->size ) );
 				DArray_Append( self->variables, ns->variables->items.pVar[id] );
 			}
 		}
 	}
-	DArray_Delete( namespaces );
-	DArray_Delete( upindexes );
 }
 int DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent )
 {

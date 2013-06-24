@@ -3195,15 +3195,17 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		suffix = DString_New(1);
 		/* Apply aspects (to normal classes only): */
 		if( DString_ExtractAffix( klass->className, prefix, suffix, 0 ) < 0 ){
-			for(i=0; i<myNS->constants->size; ++i){
-				DaoClass *mixin = (DaoClass*) myNS->constants->items.pConst[i]->value;
-				int exact, ret;
+			DNode *it;
+			for(it=DMap_First(myNS->lookupTable); it; it=DMap_Next(myNS->lookupTable,it)){
+				int ret, id = LOOKUP_ID( it->value.pInt );
+				DaoClass *mixin = (DaoClass*) myNS->constants->items.pConst[id]->value;
+				if( LOOKUP_ST( it->value.pInt ) != DAO_GLOBAL_CONSTANT ) continue;
+				if( LOOKUP_UP( it->value.pInt ) > 1 ) continue; /* skip indirectly loaded; */
 				if( mixin->type != DAO_CLASS ) continue;
 				if( mixin->superClass->size ) continue;
 				ret = DString_ExtractAffix( mixin->className, prefix, suffix, 0 );
-				exact = ret == 1;
 				if( ret < 0 ) continue; /* Not an aspect class; */
-				if( DString_MatchAffix( klass->className, prefix, suffix, exact ) ==0 ) continue;
+				if( DString_MatchAffix( klass->className, prefix, suffix, ret == 1 ) ==0 ) continue;
 				DaoClass_AddMixinClass( klass, mixin );
 			}
 		}

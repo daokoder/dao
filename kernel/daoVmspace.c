@@ -938,13 +938,18 @@ static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, D
 	DaoList *argParams = ns->argParams;
 	DaoType *routype = routine->routType;
 	DaoType *type;
+	int set[2*DAO_MAX_PARAM];
 	int i, j;
 
 	val = DString_New(1);
 	sval.xString.data = val;
 	DaoList_Clear( argParams );
 
-	for(i=0; i<argNames->size; ++i) DaoList_Append( argParams, dao_none_value );
+	memset( set, 0, sizeof(int) );
+	for(i=0; i<routype->nested->size; ++i){
+		DaoList_Append( argParams, routine->routConsts->items.items.pValue[i] );
+		set[i] = 0;
+	}
 	for(i=0; i<argNames->size; ++i){
 		DString *name = argNames->items.pString[i];
 		DString *value = argValues->items.pString[i];
@@ -976,11 +981,16 @@ static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, D
 			DNode *node = DMap_Find( routype->mapNames, name );
 			if( node ) ito = node->value.pInt;
 		}
+		if( ito >= routype->nested->size ){
+			DaoStream_WriteMBS( self->errorStream, "redundant argument" );
+			goto Failed;
+		}
 		type = (DaoType*) routype->nested->items.pType[ito]->aux;
-		if( argParams->items.items.pValue[ito]->type != DAO_NONE ){
+		if( set[ito] ){
 			DaoStream_WriteMBS( self->errorStream, "duplicated argument" );
 			goto Failed;
 		}
+		set[ito] = 1;
 		DaoList_SetArgument( argParams, ito, type, value, & sval );
 	}
 	DString_Delete( val );
@@ -1387,11 +1397,11 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		DaoValue *cst = DaoNamespace_GetConst( ns, id );
 		expMain = DaoVmSpace_FindExplicitMain( ns, argNames, argValues );
 		if( expMain ){
-			DaoVmSpace_ConvertArguments( self, expMain, argNames, argValues );
+			res = DaoVmSpace_ConvertArguments( self, expMain, argNames, argValues );
 		}else if( (cst && cst->type == DAO_ROUTINE) || argValues->size ){
-			DaoStream_WriteMBS( io, "ERROR: invalid command line arguments.\n" );
 			res = 0;
 		}
+		if( res == 0 ) DaoStream_WriteMBS( io, "ERROR: invalid command line arguments.\n" );
 	}
 	DArray_Delete( argNames );
 
@@ -1420,7 +1430,11 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	ps = ns->argParams->items.items.pValue;
 	N = ns->argParams->items.size;
 	if( expMain != NULL ){
-		if( DaoProcess_Call( vmp, expMain, NULL, ps, N ) ) return 0;
+		int ret = DaoProcess_Call( vmp, expMain, NULL, ps, N );
+		if( ret == DAO_ERROR_PARAM ){
+			DaoStream_WriteMBS( io, "ERROR: invalid command line arguments.\n" );
+		}
+		if( ret ) return 0;
 	}
 	if( (self->options & DAO_OPTION_INTERUN) && self->userHandler == NULL )
 		DaoVmSpace_Interun( self, NULL );
@@ -1608,7 +1622,10 @@ ExecuteExplicitMain :
 
 	if( args ){
 		mainRoutine = DaoVmSpace_FindExplicitMain( ns, argNames, argValues );
-		if( mainRoutine ) DaoVmSpace_ConvertArguments( self, mainRoutine, argNames, argValues );
+		if( mainRoutine ){
+			if( DaoVmSpace_ConvertArguments( self, mainRoutine, argNames, argValues ) == 0 )
+				goto LoadingFailed;;
+		}
 	}
 	if( mainRoutine != NULL ){
 		int ret, N = ns->argParams->items.size;

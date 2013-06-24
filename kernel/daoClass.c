@@ -988,11 +988,10 @@ int DaoClass_UseMixinDecorators( DaoClass *self )
 	for(j=self->cstMixinEnd-1; j>=self->cstMixinStart; --j){
 		DaoRoutine *deco = (DaoRoutine*) self->constants->items.pConst[j]->value;
 		DString *decoName = deco->routName;
-		int exact, ret;
+		int ret;
 		if( deco->type != DAO_ROUTINE || deco->body == NULL ) continue;
 		if( decoName->size < 2 || decoName->mbs[0] != '@' ) continue;
 		ret = DString_ExtractAffix( decoName, prefix, suffix, 1 );
-		exact = ret == 1;
 		if( ret < 0 ) continue;
 		//printf( "%s %s %s\n", decoName->mbs, prefix->mbs, suffix->mbs );
 		for(k=self->cstParentEnd; k<self->constants->size; ++k){
@@ -1002,7 +1001,7 @@ int DaoClass_UseMixinDecorators( DaoClass *self )
 
 			if( rout->type != DAO_ROUTINE || rout->body == NULL ) continue;
 			if( rout->routHost != self->objType ) continue;
-			if( DString_MatchAffix( rout->routName, prefix, suffix, exact ) ==0 ) continue;
+			if( DString_MatchAffix( rout->routName, prefix, suffix, ret == 1 ) ==0 ) continue;
 
 			deco2 = DaoRoutine_Resolve( deco, (DaoValue*) obj, & cst, 1 );
 			if( deco2 == NULL ) continue;
