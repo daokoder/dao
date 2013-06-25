@@ -892,7 +892,7 @@ static void META_Trace( DaoProcess *proc, DaoValue *p[], int N )
 	if( N ==2 ) maxDepth = p[1]->xInteger.value;
 
 	if( print ){
-		//XXX DaoProcess_Trace( proc, maxDepth );
+		DaoProcess_Trace( proc, maxDepth );
 		return;
 	}
 

@@ -240,9 +240,14 @@ void DaoProcess_Trace( DaoProcess *self, int depth )
 		DaoRoutine *routine = frame->routine;
 		if( depth && ++i > depth ) break;
 
+		DaoStream_SetColor( stream, "white", "green" );
 		DaoStream_WriteString( stream, routine->routName );
-		DaoStream_WriteMBS( stream, "(): " );
+		DaoStream_WriteMBS( stream, "()" );
+		DaoStream_SetColor( stream, NULL, NULL );
+		DaoStream_WriteMBS( stream, ": " );
+		DaoStream_SetColor( stream, "green", NULL );
 		if( routine->routType ) DaoStream_WriteString( stream, routine->routType->name );
+		DaoStream_SetColor( stream, NULL, NULL );
 
 		if( frame->routine->body ){
 			k = (i==1) ? (int)( self->activeCode - frame->codes ) : frame->entry;

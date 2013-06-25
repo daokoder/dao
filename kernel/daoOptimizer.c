@@ -4974,6 +4974,8 @@ TryPushBlockReturnType:
 						tt = cbtype->nested->items.pType[j];
 						if( tt->tid == DAO_PAR_NAMED || tt->tid == DAO_PAR_DEFAULT ) tt = (DaoType*)tt->aux;
 						tt = DaoType_DefineTypes( tt, NS, defs2 );
+						GC_DecRC( types[k] );
+						types[k] = NULL;
 						DaoInferencer_UpdateType( self, k, tt );
 					}
 					tt = DaoType_DefineTypes( (DaoType*)cbtype->aux, NS, defs2 );

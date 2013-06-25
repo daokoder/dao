@@ -3337,7 +3337,7 @@ static int DaoTuple_GetIndexE( DaoTuple *self, DaoProcess *proc, DString *name )
 {
 	int id = DaoTuple_GetIndex( self, name );
 	if( id <0 || id >= self->size ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid tuple" );
+		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "invalid tuple" );
 		return -1;
 	}
 	return id;
