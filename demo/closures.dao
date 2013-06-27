@@ -2,9 +2,6 @@
 # Anonymous functions and closures can be created using the same syntax
 # as defining a normal function but without function name. For example,
 #     rout = routine( a :int ){ io.writeln( a ) }
-#     rout = @( a :int ){ io.writeln( a ) }
-# The above two are equivalent, except that "{" can directly follow "@"
-# to define a anonymous function or closure that accept no parameters.
 #
 # In anonymous functions or closures, the default parameters can be
 # non-constant expressions that will be evaluated at the time of creation

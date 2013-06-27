@@ -5043,14 +5043,10 @@ TryPushBlockReturnType:
 				redef = rettypes->items.pInode[ rettypes->size - 3 ];
 				DMap_Reset( defs2 );
 				DMap_Assign( defs2, defs );
-				if( (i+1) < (int)body->annotCodes->size ){
-					int nop = inodes[i+1]->code == DVM_NOP;
-					if( inodes[i+nop+1]->code == DVM_GOTO && inodes[i+nop+1]->c == DVM_SECT ){
-						/* Special GOTO marks the ending of a code section: */
-						DArray_Erase( rettypes, rettypes->size - 3, -1 );
-						DArray_PopBack( self->typeMaps );
-						popped = 1;
-					}
+				if( vmc->code == DVM_RETURN && vmc->c == DVM_SECT ){
+					DArray_Erase( rettypes, rettypes->size - 3, -1 );
+					DArray_PopBack( self->typeMaps );
+					popped = 1;
 				}
 				if( i && inodes[i-1]->code == DVM_TUPLE && inodes[i-1]->c == vmc->a && vmc->b == 1 ){
 					vmc->a = inodes[i-1]->a;

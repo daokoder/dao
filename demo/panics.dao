@@ -62,15 +62,15 @@ Test3()
 # To simplify the handling of panics, Dao support a special type
 # of code blocks that are executed in new stack frames. Such blocks
 # can be defined in the following ways:
-#     @@ { block }
-#     @@ ( value ) { block }
+#     frame { block }
+#     frame ( value ) { block }
 # which are expressions that may return values. In the second case,
 # if the "block" raises an exception, the default "value" is returned
 # instead, and the exception is suppressed.
 
 fout = io::stdio
 
-@@ {
+frame {
 	defer { recover() }
 	fout = io.open( "NonExistentFile.txt", 'r+' )
 }
@@ -81,7 +81,10 @@ fout.writeln( 'hello' )
 
 
 # A simpler way to write the above codes:
-fout = @@( io::stdio ){ io.open( "NonExistentFile.txt", 'r+' ) }
+fout = frame( io::stdio ){ io.open( "NonExistentFile.txt", 'r+' ) }
+
+# Or using the assertion operator ??:
+# fout = io.open( "NonExistentFile.txt", 'r+' ) ?? io::stdio
 
 if( fout != io::stdio ) defer{ fout.close() }
 
