@@ -618,6 +618,7 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 	for(i=0; i<events->size; i++){
 		DaoTaskEvent *event = (DaoTaskEvent*) events->items.pVoid[i];
 		DaoFuture *future = event->future;
+		DaoObject *actor = future->actor;
 		DaoChannel *channel = event->channel;
 		DaoChannel *selected = NULL;
 		DaoValue *message = NULL;
@@ -691,11 +692,21 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 			break;
 		default: break;
 		}
-		if( future->actor && DMap_Find( active, future->actor->rootObject ) ) continue;
+		if( actor ){
+			DNode *it = DMap_Find( active, actor->rootObject );
+			if( actor->rootObject->isAsync ){
+				if( it && it->value.pVoid != (void*) future ) continue;
+			}else if( it ){
+				continue;
+			}
+		}
 		if( future->process && DMap_Find( active, future->process ) ) continue;
 		DArray_Erase( events, i, 1 );
 		DMap_Erase( pending, event );
-		if( future->actor ) DMap_Insert( active, future->actor->rootObject, NULL );
+		if( actor ){
+			void *value = actor->rootObject->isAsync ? future : NULL;
+			DMap_Insert( active, actor->rootObject, value );
+		}
 		if( future->process ) DMap_Insert( active, future->process, NULL );
 
 		GC_ShiftRC( event->message, future->message );
@@ -795,8 +806,12 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		if( process->exceptions->size > count ) DaoProcess_PrintException( process, 1 );
 
 		if( future->actor ){
+			int erase = 1;
 			DMutex_Lock( & server->mutex );
-			DMap_Erase( server->active, future->actor->rootObject );
+			if( future->actor->rootObject->isAsync ){
+				erase = process->status == DAO_PROCESS_FINISHED;
+			}
+			if( erase ) DMap_Erase( server->active, future->actor->rootObject );
 			DMutex_Unlock( & server->mutex );
 		}
 		DMutex_Lock( & server->mutex );

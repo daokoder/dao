@@ -147,6 +147,7 @@ void DaoClass_Delete( DaoClass *self )
 	DVector_Delete( self->ranges );
 	DVector_Delete( self->offsets );
 	DArray_Delete( self->references );
+	if( self->decoTargets ) DArray_Delete( self->decoTargets );
 	if( self->vtable ) DMap_Delete( self->vtable );
 
 	DString_Delete( self->className );
@@ -960,13 +961,35 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 	DaoValue_MarkConst( self->objType->value );
 	DaoValue_MarkConst( self->constants->items.pConst[1]->value ); /* ::default */
 }
+int DArray_MatchAffix( DArray *self, DString *name )
+{
+	daoint i, pos;
+	if( self == NULL ) return 0;
+	for(i=0; i<self->size; ++i){
+		DString tmp, *pat = self->items.pString[i];
+		daoint pos = DString_FindChar( pat, '~', 0 );
+		if( pos < 0 ){
+			if( DString_EQ( pat, name ) ) return 1;
+			continue;
+		}
+		if( pos ){
+			tmp = *pat;
+			tmp.size = pos;
+			if( DString_Find( name, & tmp, 0 ) != 0 ) continue;
+		}
+		if( pos < pat->size-1 ){
+			tmp = DString_WrapMBS( pat->mbs + pos + 1 );
+			if( DString_RFind( name, & tmp, -1 ) != (name->size - 1) ) continue;
+		}
+		return 1;
+	}
+	return 0;
+}
 int DaoClass_UseMixinDecorators( DaoClass *self )
 {
 	int bl = 1;
 #ifdef DAO_WITH_DECORATOR
 	daoint i, j, k;
-	DString *prefix = DString_New(1);
-	DString *suffix = DString_New(1);
 	DaoObject object = *(DaoObject*) self->objType->value;
 	DaoObject *obj = & object;
 
@@ -988,12 +1011,11 @@ int DaoClass_UseMixinDecorators( DaoClass *self )
 	for(j=self->cstMixinEnd-1; j>=self->cstMixinStart; --j){
 		DaoRoutine *deco = (DaoRoutine*) self->constants->items.pConst[j]->value;
 		DString *decoName = deco->routName;
-		int ret;
+
 		if( deco->type != DAO_ROUTINE || deco->body == NULL ) continue;
-		if( decoName->size < 2 || decoName->mbs[0] != '@' ) continue;
-		ret = DString_ExtractAffix( decoName, prefix, suffix, 1 );
-		if( ret < 0 ) continue;
-		//printf( "%s %s %s\n", decoName->mbs, prefix->mbs, suffix->mbs );
+		if( !(deco->attribs & DAO_ROUT_DECORATOR) ) continue; /* Not a decorator; */
+		if( deco->body->decoTargets == NULL || deco->body->decoTargets->size == 0 ) continue;
+
 		for(k=self->cstParentEnd; k<self->constants->size; ++k){
 			DaoValue *cst = self->constants->items.pConst[k]->value;
 			DaoRoutine *rout = (DaoRoutine*) cst;
@@ -1001,15 +1023,13 @@ int DaoClass_UseMixinDecorators( DaoClass *self )
 
 			if( rout->type != DAO_ROUTINE || rout->body == NULL ) continue;
 			if( rout->routHost != self->objType ) continue;
-			if( DString_MatchAffix( rout->routName, prefix, suffix, ret == 1 ) ==0 ) continue;
 
 			deco2 = DaoRoutine_Resolve( deco, (DaoValue*) obj, & cst, 1 );
 			if( deco2 == NULL ) continue;
+			if( DArray_MatchAffix( deco2->body->decoTargets, rout->routName ) == 0 ) continue;
 			bl = bl && DaoRoutine_Decorate( rout, deco2, & cst, 1, 1 ) != NULL;
 		}
 	}
-	DString_Delete( prefix );
-	DString_Delete( suffix );
 #endif
 	return bl;
 }

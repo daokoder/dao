@@ -1,6 +1,6 @@
 load sys;
 
-class @Test
+class Test
 {
 	routine Meth(){
 		for( i = 1 : 5 ){
@@ -10,7 +10,7 @@ class @Test
 	}
 }
 
-t = Test();
+t = Test() !!;
 
 mt.iterate( 4 )::{
 	io.writeln( '=========', 'X'+(string)X );

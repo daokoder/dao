@@ -1,10 +1,13 @@
+load coroutine
 
 type QuadLong = tuple<long,long,long,long>;
 
-routine gen_x()=>[?]
+global gen_co = coroutine<none,QuadLong>()
+
+routine gen_x( self :coroutine<none,QuadLong> )
 {
-	for( k = 1 : ) yield( k+0L, 4L*k + 2L, 0L, 2L*k + 1L );
-	return (0L,0L,0L,0L);
+	self.yield( (0L,0L,0L,0L) );
+	for( k = 1 : ) self.yield( (k+0L, 4L*k + 2L, 0L, 2L*k + 1L) );
 }
 routine compose( a : QuadLong, b : QuadLong )
 {
@@ -17,26 +20,27 @@ routine extract( a : QuadLong, j = 0 )
 	(q, r, s, t) = a;
 	return (int)( (q*j + r) / (s*j + t) );
 }
-routine pi_digits()=>[int]
+routine pi_digits( self :coroutine<none,int> )
 {
 	y = 0;
 	z = (1L, 0L, 0L, 1L);
-	x = gen_x::();
+	gen_co.start( gen_x );
+	self.yield(0);
 	while(1){
-		while( ( y:=extract(z,3) ) != extract(z, 4) ) z = compose(z, x() );
+		while( ( y:=extract(z,3) ) != extract(z, 4) ) z = compose(z, gen_co.resume() );
 		z = compose((10L, -10L*y, 0L, 1L), z);
-		yield( y );
+		self.yield( y );
 	}
-	return 0;
 }
 routine main( n = 200 )
 {
 	width = 10;
 	if( width > n ) width = n;
-	digits = pi_digits::();
+	digits = coroutine<none,int>()
+	digits.start( pi_digits )
 	for(i = 0 : width : n-1 ){
 		#s = ''; for( j = 1 : width ) s += (string)digits();
-		s = std.string( width )::{ digits() + '0'[0] }
+		s = std.string( width )::{ digits.resume() + '0'[0] }
 		io.writef( '%s\t:%d\n', s, i+width );
 	}
 }

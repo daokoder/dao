@@ -10,15 +10,6 @@ res = add( 123, 456 )
 
 
 
-@[test(code_01)]
-add = @(x, y){ return x + y }
-res = add( 123, 456 )
-@[test(code_01)]
-@[test(code_01)]
-579
-@[test(code_01)]
-
-
 
 @[test(code_01)]
 a = "ABC";

@@ -1469,8 +1469,6 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		abtp = nameva->unitype; break;
 	case DAO_TUPLE :
 		abtp = tuple->unitype; break;
-	case DAO_PROCESS :
-		abtp = vmp->abtype; break;
 	case DAO_INTERFACE :
 		abtp = p->xInterface.abtype; break;
 	default : break;
@@ -1638,9 +1636,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		}
 		if( (tid == DAO_ROUTINE || tid == DAO_CODEBLOCK) && pb && pb->type == DAO_TYPE ){
 			DString_AppendMBS( mbs, "=>" );
-			if( attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( mbs, '[' );
 			DString_Append( mbs, ((DaoType*)pb)->name );
-			if( attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( mbs, ']' );
 		}
 		if( n || tid != DAO_VARIANT ) DString_AppendChar( mbs, '>' );
 	}else if( tid == DAO_LIST || tid == DAO_ARRAY ){
@@ -1671,9 +1667,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	}else if( (tid == DAO_ROUTINE || tid == DAO_CODEBLOCK) && pb && pb->type == DAO_TYPE ){
 		DString_AppendChar( mbs, '<' );
 		DString_AppendMBS( mbs, "=>" );
-		if( attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( mbs, '[' );
 		DString_Append( mbs, ((DaoType*)pb)->name );
-		if( attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( mbs, ']' );
 		DString_AppendChar( mbs, '>' );
 	}else if( tid == DAO_PAR_NAMED ){
 		DString_AppendMBS( mbs, ":" );
@@ -1745,9 +1739,7 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 	tp = retp ? retp : & routype->aux->xType;
 	if( tp ){
 		DString_AppendMBS( abtp->name, "=>" );
-		if( routype->attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( abtp->name, '[' );
 		DString_Append( abtp->name, tp->name );
-		if( routype->attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( abtp->name, ']' );
 	}
 	DString_AppendMBS( abtp->name, ">" );
 	GC_ShiftRC( tp, abtp->aux );

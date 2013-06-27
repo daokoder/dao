@@ -835,7 +835,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		case DKEY_IF : case DKEY_ELSE :
 		case DKEY_WHILE : case DKEY_DO :
 		case DKEY_FOR : case DKEY_IN :
-		case DKEY_SKIP : case DKEY_BREAK : case DKEY_CONTINUE :
+		case DKEY_SKIP : case DKEY_BREAK :
 		case DKEY_RETURN : case DKEY_YIELD :
 		case DKEY_SWITCH : case DKEY_CASE : case DKEY_DEFAULT :
 		case DKEY_DEFER :
@@ -848,8 +848,8 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		case DKEY_STRING : case DKEY_COMPLEX :
 		case DKEY_LIST : case DKEY_MAP : case DKEY_TUPLE : case DKEY_ARRAY :
 		case DKEY_CLASS : case DKEY_INTERFACE :
-		case DKEY_FUNCTION : case DKEY_ROUTINE : case DKEY_SUB :
-		case DKEY_SYNTAX : 
+		case DKEY_ROUTINE :
+		case DKEY_SYNTAX :
 		case DKEY_OPERATOR :
 		case DKEY_SELF :
 		case DTOK_ID_THTYPE :

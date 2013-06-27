@@ -1,7 +1,7 @@
 
 const N = 100000;
 
-class @Producer
+class Producer
 {
 	routine Run( chan : mt::channel<int> ){
 		index = 0;
@@ -13,7 +13,7 @@ class @Producer
 	}
 }
 
-class @Consumer
+class Consumer
 {
 	routine Run( chan : mt::channel<int> ){
 		while(1){
@@ -26,8 +26,8 @@ class @Consumer
 
 chan = mt::channel<int>(100)
 
-producer = Producer()
-consumer = Consumer()
+producer = Producer() !!
+consumer = Consumer() !!
 
 producer.Run( chan )
 consumer.Run( chan )

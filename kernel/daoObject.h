@@ -36,8 +36,9 @@ struct DaoObject
 
 	uchar_t     isRoot     : 1;
 	uchar_t     isDefault  : 1;
-	uchar_t     baseCount  : 6; /* number of base objects; may be set to zero by GC; */
-	uchar_t     baseCount2 : 6; /* used to determine if objValues is allocated with the object; */
+	uchar_t     isAsync    : 2;
+	uchar_t     baseCount  : 4; /* number of base objects; may be set to zero by GC; */
+	uchar_t     baseCount2 : 4; /* used to determine if objValues is allocated with the object; */
 	ushort_t    valueCount;
 
 	DaoClass   *defClass; /* definition class; */

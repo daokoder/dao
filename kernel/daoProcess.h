@@ -117,7 +117,6 @@ struct DaoProcess
 	uchar_t         stopit : 4;
 	ushort_t        depth;
 
-	DaoType        *abtype; /* for coroutine */
 	DaoFuture      *future;
 	DaoStream      *stdioStream;
 
@@ -150,6 +149,9 @@ DAO_DLL void DaoProcess_PushFunction( DaoProcess *self, DaoRoutine *function );
 DAO_DLL int DaoProcess_PushCallable( DaoProcess *self, DaoRoutine *M, DaoValue *O, DaoValue *P[], int N );
 
 DAO_DLL void DaoProcess_InterceptReturnValue( DaoProcess *self );
+
+DAO_DLL void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], int N );
+DAO_DLL DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoType *hostype, DaoValue *obj, DaoValue *p[], int np, int code );
 
 DAO_DLL int DaoProcess_Call( DaoProcess *self, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
 

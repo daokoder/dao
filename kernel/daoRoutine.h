@@ -112,10 +112,10 @@ struct DaoRoutineBody
 	/* definition of local constants and variables: */
 	DArray *defLocals; /* DArray<DaoToken*> */
 	DArray *source; /* DArray<DaoToken*> */
+	DArray *decoTargets;
 
 	DArray *simpleVariables;
-
-	DMap *localVarType; /* DMap<int,DaoType*> local variable types */
+	DMap   *localVarType; /* DMap<int,DaoType*> local variable types */
 
 	int mode;
 

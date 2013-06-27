@@ -134,8 +134,7 @@ enum DaoTypeAttribs
 	DAO_TYPE_UNDEF = (1<<1), /* undefined type, with at least one undefined type; */
 	DAO_TYPE_SELF  = (1<<2), /* routine type that has self parameter; */
 	DAO_TYPE_VARIADIC = (1<<3), /* variadic type (routine or tuple); */
-	DAO_TYPE_COROUTINE = (1<<4), /* routine type that can run as coroutine; */
-	DAO_TYPE_SELFNAMED = (1<<5)
+	DAO_TYPE_SELFNAMED = (1<<4)
 };
 enum DaoCaseMode
 {
@@ -149,12 +148,11 @@ enum DaoCallMode
 {
 	DAO_CALL_INIT   = (1<<8), /* call to initialize a parent object */
 	DAO_CALL_TAIL   = (1<<9), /* may do tail call */
-	DAO_CALL_COROUT = (1<<10), /* call for creating a coroutine vm process */
-	DAO_CALL_EXPAR  = (1<<11), /* expand the last parameter of tuple type */
-	DAO_CALL_ASYNC  = (1<<12), /* asynchronous call */
-	DAO_CALL_BLOCK  = (1<<13), /* call with code block */
-	DAO_CALL_NOSELF = (1<<14), /* call without implicit self */
-	DAO_CALL_DECSUB = (1<<15)  /* call decorated function */
+	DAO_CALL_EXPAR  = (1<<10), /* expand the last parameter of tuple type */
+	DAO_CALL_ASYNC  = (1<<11), /* asynchronous call */
+	DAO_CALL_BLOCK  = (1<<12), /* call with code block */
+	DAO_CALL_NOSELF = (1<<13), /* call without implicit self */
+	DAO_CALL_DECSUB = (1<<14)  /* call decorated function */
 };
 enum DaoProcessPauseType
 {
@@ -164,8 +162,7 @@ enum DaoProcessPauseType
 	DAO_PAUSE_CHANNEL_SEND ,    /* channel::send(); */
 	DAO_PAUSE_CHANNEL_RECEIVE , /* channel::send(); */
 	DAO_PAUSE_CHANFUT_SELECT ,  /* mt::select(); */
-	DAO_PAUSE_COROUTINE_YIELD , /* coroutine; */
-	DAO_PAUSE_NATIVE_THREAD     /* native thread; */
+	DAO_PAUSE_COROUTINE_YIELD   /* coroutine; */
 };
 
 enum DaoDataPermission
@@ -176,8 +173,7 @@ enum DaoDataPermission
 };
 enum DaoClassAttrib
 {
-	DAO_CLS_AUTO_DEFAULT = 1,
-	DAO_CLS_ASYNCHRONOUS = 2
+	DAO_CLS_AUTO_DEFAULT = 1
 };
 enum DaoRoutineAttrib
 {
@@ -189,8 +185,9 @@ enum DaoRoutineAttrib
 	DAO_ROUT_PROTECTED = (1<<5),  /* protected method */
 	DAO_ROUT_DEFERRED  = (1<<6),  /* deferred closure */
 	DAO_ROUT_PASSRET   = (1<<7),  /* pass returned value to deferred closure */
-	DAO_ROUT_INITOR    = (1<<8),  /* class constructor */
-	DAO_ROUT_MAIN      = (1<<9)   /* main function */
+	DAO_ROUT_DECORATOR = (1<<8),  /* function decorator */
+	DAO_ROUT_INITOR    = (1<<9),  /* class constructor */
+	DAO_ROUT_MAIN      = (1<<10)  /* main function */
 };
 
 #define DAO_TYPER_PRIV_FREE  (DAO_ROUT_MAIN<<1)
@@ -278,16 +275,12 @@ enum DaoCtInfoId
 	DAO_WARN_ASSIGNMENT ,
 	DAO_WARN_GET_SETTER ,
 	DAO_NO_METHOD_TO_USE ,
-	DAO_NO_PUBLIC_IN_ASYNCLASS ,
-	DAO_NO_STATIC_IN_ASYNCLASS ,
 	DAO_SYMBOL_POSSIBLY_UNDEFINED ,
 	DAO_SYMBOL_NOT_DEFINED ,
 	DAO_SYMBOL_WAS_DEFINED ,
 	DAO_SYMBOL_NEED_CONSTANT ,
 	DAO_SYMBOL_NEED_CLASS ,
 	DAO_SYMBOL_NEED_CLASS_CTYPE ,
-	DAO_SYMBOL_NEED_NON_ASYNCLASS ,
-	DAO_SYMBOL_NEED_ASYNCLASS ,
 	DAO_SYMBOL_NEED_INTERFACE ,
 	DAO_SYMBOL_NEED_BINDABLE ,
 	DAO_TOKEN_NEED_STRING ,
@@ -320,10 +313,10 @@ enum DaoCtInfoId
 	DAO_INVALID_STATEMENT ,
 	DAO_INVALID_SCOPE_ENDING ,
 	DAO_INVALID_FUNCTIONAL ,
+	DAO_INVALID_DECO_PATTERN ,
 	DAO_INVALID_DEFINITION ,
 	DAO_INVALID_ENUM_DEFINITION ,
 	DAO_INVALID_CLASS_DEFINITION ,
-	DAO_INVALID_ASYNC_CLASS_DEFINITION ,
 	DAO_INVALID_FUNCTION_DEFINITION ,
 	DAO_INVALID_INTERFACE_DEFINITION ,
 	DAO_INVALID_FUNCTION_DECORATION ,
@@ -376,9 +369,6 @@ enum DaoCtInfoId
 	DAO_DISABLED_REGEX ,
 	DAO_DISABLED_LONGINT ,
 	DAO_DISABLED_NUMARRAY ,
-	DAO_DISABLED_ASYNCLASS ,
-	DAO_DISABLED_TEMPCLASS ,
-	DAO_DISABLED_DYNCLASS ,
 	DAO_DISABLED_DECORATOR ,
 	DAO_CTW_PAR_NOT_CST_DEF ,
 	DAO_CTW_PAR_INVALID ,

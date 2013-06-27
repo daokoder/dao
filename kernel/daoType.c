@@ -625,7 +625,6 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( self->name->mbs[0] != type->name->mbs[0] ) return 0; /* @routine */
 		if( type->aux == NULL ) return DAO_MT_SIM; /* match to "routine"; */
 		if( self->nested->size < type->nested->size ) return DAO_MT_NOT;
-		if( (self->attrib & DAO_TYPE_COROUTINE) && !(type->attrib & DAO_TYPE_COROUTINE) ) return 0;
 		if( (self->cbtype == NULL) != (type->cbtype == NULL) ) return 0;
 		if( self->aux == NULL && type->aux ) return 0;
 		if( self->cbtype && DaoType_MatchTo( self->cbtype, type->cbtype, defs ) ==0 ) return 0;
@@ -877,11 +876,6 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( tp == self ) return DAO_MT_EQ;
 		if( tp ) return DaoType_MatchTo( tp, self, NULL );
 		break;
-	case DAO_PROCESS :
-		tp = value->xProcess.abtype;
-		if( tp == self ) return DAO_MT_EQ;
-		if( tp ) return DaoType_MatchTo( tp, self, defs );
-		break;
 	case DAO_CLASS :
 		if( self->aux == NULL ) return DAO_MT_SUB; /* par : class */
 		if( self->aux == value ) return DAO_MT_EQ;
@@ -1053,9 +1047,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 			GC_IncRC( copy->aux );
 			if( self->tid != DAO_VARIANT && (m || self->tid == DAO_CODEBLOCK) ){
 				DString_AppendMBS( copy->name, "=>" );
-				if( self->attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( copy->name, '[' );
 				DString_Append( copy->name, copy->aux->xType.name );
-				if( self->attrib & DAO_TYPE_COROUTINE ) DString_AppendChar( copy->name, ']' );
 			}
 		}
 		if( self->tid == DAO_CODEBLOCK ){
@@ -1154,6 +1146,39 @@ void DaoType_GetTypeHolders( DaoType *self, DMap *types )
 	}
 	if( self->tid == DAO_TYPE && self->aux && self->aux->type == DAO_TYPE )
 		DaoType_GetTypeHolders( & self->aux->xType, types );
+}
+int DaoType_CheckTypeHolder( DaoType *self, DaoType *tht )
+{
+	daoint i, n, bl = 0;
+	if( self == tht ) return 1;
+	if( self->tid == DAO_THT && tht->tid == DAO_THT ) return 0;
+	if( self->tid == DAO_THT ) return DaoType_CheckTypeHolder( tht, self );
+	if( self->nested ){
+		for(i=0,n=self->nested->size; i<n; i++){
+			bl |= DaoType_CheckTypeHolder( self->nested->items.pType[i], tht );
+		}
+	}
+	if( self->bases ){
+		for(i=0,n=self->bases->size; i<n; i++){
+			bl |= DaoType_CheckTypeHolder( self->bases->items.pType[i], tht );
+		}
+	}
+	if( self->cbtype ) bl |= DaoType_CheckTypeHolder( self->cbtype, tht );
+	if( self->aux && self->aux->type == DAO_TYPE )
+		bl |= DaoType_CheckTypeHolder( & self->aux->xType, tht );
+	return bl;
+}
+void DaoType_ResetTypeHolders( DaoType *self, DMap *types )
+{
+	DNode *it;
+	for(it=DMap_First(types); it; ){
+		if( DaoType_CheckTypeHolder( it->key.pType, self ) ){
+			DMap_EraseNode( types, it );
+			it = DMap_First(types);
+			continue;
+		}
+		it = DMap_Next( types, it );
+	}
 }
 
 extern DMutex mutex_methods_setup;

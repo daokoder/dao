@@ -1761,7 +1761,7 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 	inited = self->inited->mbs;
 	types = self->types->items.pType;
 
-	if( routine->routName->mbs[0] == '@' && partypes->size ) inited[routine->parCount] = 1;
+	if( (routine->attribs & DAO_ROUT_DECORATOR) && partypes->size ) inited[routine->parCount] = 1;
 	for(i=0,n=partypes->size; i<n; i++){
 		inited[i] = 1;
 		types[i] = partypes->items.pType[i];
@@ -2084,10 +2084,17 @@ void DaoRoutine_PassParamTypes2( DaoRoutine *self, DaoType *selftype,
 	/* Check for explicit self parameter: */
 	if( np && (ts[0]->attrib & DAO_TYPE_SELFNAMED) ) selftype = NULL;
 	if( npar == ndef && ndef == 0 ) return;
+
+	/* Remove type holder bindings for the self parameter: */
+	if( self->routType->attrib & DAO_TYPE_SELF ){
+		abtp = & self->routType->nested->items.pType[0]->aux->xType;
+		DaoType_ResetTypeHolders( abtp, defs );
+	}
+
 	if( code == DVM_MCALL && ! ( self->routType->attrib & DAO_TYPE_SELF ) ){
 		npar --;
 		tps ++;
-	}else if( selftype && ( self->routType->attrib & DAO_TYPE_SELF) && code != DVM_MCALL ){
+	}else if( selftype && (self->routType->attrib & DAO_TYPE_SELF) && code != DVM_MCALL ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		abtp = & self->routType->nested->items.pType[0]->aux->xType;
 		if( DaoType_MatchTo( selftype, abtp, defs ) ) selfChecked = 1;
@@ -3466,6 +3473,13 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				}
 				if( ct == NULL ) ct = dao_type_udf;
 			}
+			if( ct && ct->tid == DAO_ROUTINE && (ct->attrib & DAO_TYPE_SELF) ){
+				DaoType *selftype = (DaoType*) ct->nested->items.pType[0]->aux;
+				/* Remove type holder bindings for the self parameter: */
+				DaoType_ResetTypeHolders( selftype, defs );
+				DaoType_MatchTo( at, selftype, defs );
+				ct = DaoType_DefineTypes( ct, NS, defs );
+			}
 			DaoInferencer_UpdateType( self, opc, ct );
 			AssertTypeMatching( ct, types[opc], defs );
 			break;
@@ -4825,7 +4839,7 @@ NotExist_TryAux:
 							if( att1 != 0 && att2 == 0 && att3 == 0 ) goto CallWithoutInst;
 						}
 					}
-					if( rout->routName->mbs[0] == '@' ){
+					if( rout->attribs & DAO_ROUT_DECORATOR ){
 						ct = tp[0];
 						if( pp[0] && pp[0]->type == DAO_ROUTINE ){
 							ct = pp[0]->xRoutine.routType;
@@ -4931,24 +4945,11 @@ NotExist_TryAux:
 					 */
 				}
 				k = routine->routType->attrib & ct->attrib;
-				if( (k & DAO_TYPE_COROUTINE) && ! (opb & DAO_CALL_COROUT) ){
-					if( DaoType_MatchTo( (DaoType*) ct->aux, (DaoType*) routine->routType->aux, defs ) == 0 ){
-						printf( "Coroutine calls a coroutine that may yield different values!\n" );
-						goto InvOper;
-					}
-				}
-				if( at->tid != DAO_CLASS && ! ctchecked && ! (opb & DAO_CALL_COROUT) ) ct = & ct->aux->xType;
+				if( at->tid != DAO_CLASS && ! ctchecked ) ct = & ct->aux->xType;
 				if( ct ) ct = DaoType_DefineTypes( ct, NS, defs2 );
-				if( (opb & DAO_CALL_COROUT) && (ct->attrib & DAO_TYPE_COROUTINE) ){
-					DaoType **ts = ct->nested->items.pType;
-					ct = DaoNamespace_MakeType( NS, "routine", DAO_ROUTINE, ct->aux, ts, ct->nested->size );
-				}
 
 #ifdef DAO_WITH_CONCURRENT
-				if( code == DVM_MCALL && tp[0]->tid == DAO_OBJECT
-						&& (tp[0]->aux->xClass.attribs & DAO_CLS_ASYNCHRONOUS) ){
-					ct = DaoCdataType_Specialize( dao_type_future, & ct, ct != NULL );
-				}else if( vmc->b & DAO_CALL_ASYNC ){
+				if( (vmc->b & DAO_CALL_ASYNC) && at->tid != DAO_CLASS ){
 					ct = DaoCdataType_Specialize( dao_type_future, & ct, ct != NULL );
 				}
 #endif
@@ -5079,10 +5080,6 @@ TryPushBlockReturnType:
 					}
 					break;
 				}
-				if( code == DVM_YIELD && !(routine->routType->attrib & DAO_TYPE_COROUTINE) ){
-					DaoStream_WriteMBS( stream, "Cannot yield from normal function!\n" );
-					goto InvOper;
-				}
 				if( vmc->b ==0 ){
 					/* less strict checking for type holder as well (case mt.start()): */
 					if( ct && ct->tid == DAO_UDT ){
@@ -5176,7 +5173,7 @@ TryPushBlockReturnType:
 				break;
 			}
 		case DVM_EVAL :
-			if( vmc->b == 0 ) at = NULL;
+			if( vmc->b != 1 ) at = NULL;
 			DArray_Append( rettypes, inode );
 			DArray_Append( rettypes, at );
 			DArray_Append( rettypes, at );
@@ -5692,7 +5689,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	DaoInferencer *inferencer;
 	DaoOptimizer *optimizer;
 	DaoVmSpace *vmspace = self->nameSpace->vmSpace;
-	int retc, decorator = self->routName->mbs[0] == '@';
+	int retc, decorator = self->attribs & DAO_ROUT_DECORATOR;
 
 	if( self->body->vmCodes->size == 0 ) return 1;
 

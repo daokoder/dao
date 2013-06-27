@@ -149,6 +149,7 @@ DAO_DLL void DaoType_RenewTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
 
 /* all DAO_INITYPE: @T ... */
 DAO_DLL void DaoType_GetTypeHolders( DaoType *self, DMap *types );
+DAO_DLL void DaoType_ResetTypeHolders( DaoType *self, DMap *types );
 
 DAO_DLL DaoType* DaoType_GetVariantItem( DaoType *self, int tid );
 

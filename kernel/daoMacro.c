@@ -1177,8 +1177,8 @@ static int DaoParser_ParsePrimary( DaoParser *self, int stop )
 		start = rb + 1;
 	}else if( tki == DTOK_LB ){
 		start = DaoParser_ParseParenthesis( self );
-	}else if( tki == DTOK_AT || (tki >= DKEY_CLASS && tki <= DKEY_FUNCTION) ){
-		/* closure/class expression */
+	}else if( tki == DTOK_AT || tki == DKEY_ROUTINE ){
+		/* closure expression */
 		self->curToken += 1;
 		if( DaoParser_CurrentTokenName( self ) != DTOK_LB ) return -1;
 		rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, self->curToken, end );

@@ -277,6 +277,7 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 	DArray_Delete( self->annotCodes );
 	DMap_Delete( self->localVarType );
 	DMap_Delete( self->abstypes );
+	if( self->decoTargets ) DArray_Delete( self->decoTargets );
 	if( self->revised ) GC_DecRC( self->revised );
 	if( dao_jit.Free && self->jitData ){
 		/* LLVMContext provides no locking guarantees: */
@@ -294,6 +295,11 @@ void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other )
 	self->source = other->source;
 	self->annotCodes = DArray_Copy( other->annotCodes );
 	self->localVarType = DMap_Copy( other->localVarType );
+	if( self->decoTargets ){
+		DArray_Delete( self->decoTargets );
+		self->decoTargets = NULL;
+	}
+	if( other->decoTargets ) self->decoTargets = DArray_Copy( other->decoTargets );
 	DVector_Assign( self->vmCodes, other->vmCodes );
 	DArray_Assign( self->regType, other->regType );
 	DArray_Assign( self->simpleVariables, other->simpleVariables );

@@ -92,6 +92,8 @@ struct DaoClass
 	DaoType  *objType; /* GC handled in constants; */
 	DMap     *abstypes;
 
+	DArray *decoTargets;
+
 	/* for GC */
 	DArray *references;
 

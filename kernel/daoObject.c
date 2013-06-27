@@ -181,7 +181,6 @@ DaoObject* DaoObject_Allocate( DaoClass *klass, int value_count )
 	GC_IncRC( klass );
 	self->defClass = klass;
 	self->isRoot = 1;
-	self->isDefault = 0;
 	self->baseCount = parent_count;
 	self->baseCount2 = parent_count;
 	self->valueCount = value_count;

@@ -180,7 +180,6 @@ void DaoProcess_Delete( DaoProcess *self )
 	DString_Delete( self->mbstring );
 	DArray_Delete( self->exceptions );
 	DArray_Delete( self->defers );
-	if( self->abtype ) GC_DecRC( self->abtype );
 	if( self->future ) GC_DecRC( self->future );
 	if( self->factory ) DArray_Delete( self->factory );
 	dao_free( self );
@@ -424,7 +423,7 @@ static int DaoRoutine_PassDefault( DaoRoutine *routine, DaoValue *dest[], int pa
 void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
 int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
 /* Return the routine or its specialized version on success, and NULL on failure: */
-static DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoType *hostype, DaoValue *obj, DaoValue *p[], int np, int code )
+DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoType *hostype, DaoValue *obj, DaoValue *p[], int np, int code )
 {
 	DMap *defs = NULL;
 	DaoType *routype = routine->routType;
@@ -615,7 +614,6 @@ void DaoProcess_InterceptReturnValue( DaoProcess *self )
 		DaoProcess_SetActiveFrame( self, self->firstFrame );
 	}
 }
-void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], int N );
 int DaoProcess_Resume( DaoProcess *self, DaoValue *par[], int N, DaoProcess *ret )
 {
 	DaoType *tp;
@@ -656,7 +654,7 @@ static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 	DaoVmCode *codes;
 	int nop = 0;
 	if( self->activeCode->code == DVM_EVAL ){
-		codes = self->activeCode + 1;
+		codes = self->activeCode + 1 + (self->activeCode->b == 2);
 		nop = codes[1].code == DVM_NOP;
 		if( codes[nop].code == DVM_GOTO && codes[nop+1].code == DVM_SECT ) return frame;
 		return NULL;
@@ -691,6 +689,7 @@ static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 {
 	DaoStackFrame *next, *frame = DaoProcess_FindSectionFrame( self );
+	int asserting = self->activeCode->code == DVM_EVAL && self->activeCode->b == 2;
 	int returning = -1;
 
 	if( self->depth >= 1000 ){
@@ -703,7 +702,7 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 		returning = self->activeCode->c;
 	}
 	next = DaoProcess_PushFrame( self, 0 );
-	next->entry = frame->entry + 2;
+	next->entry = frame->entry + 2 + asserting;
 	next->state = DVM_FRAME_SECT | DVM_FRAME_KEEP;
 
 	GC_ShiftRC( frame->object, next->object );
@@ -851,8 +850,7 @@ int DaoProcess_Execute( DaoProcess *self )
 	DaoStackFrame *rollback = NULL;
 	DaoUserHandler *handler = self->vmSpace->userHandler;
 	DaoVmSpace *vmSpace = self->vmSpace;
-	DaoVmCode *vmc=NULL;
-	DaoVmCode *vmcBase;
+	DaoVmCode *vmcBase, *vmc2, *vmc = NULL;
 	DaoStackFrame *topFrame;
 	DaoRoutine *routine;
 	DaoNamespace *here = NULL;
@@ -1141,9 +1139,10 @@ CallEntry:
 		if( self->exceptions->size > topFrame->exceptBase ){
 			if( vmc->b == 0 ) goto FinishCall;
 			DArray_Erase( self->exceptions, topFrame->exceptBase, -1 );
-			if( DaoProcess_SetValue( self, vmc->c, locVars[vmc->a] ) == 0 ){
+			if( vmc->b == 1 && DaoProcess_SetValue( self, vmc->c, locVars[vmc->a] ) == 0 ){
 				DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid default value" );
 			}
+			vmc += vmc->b == 2;
 		}
 		vmc += 1;
 	}
@@ -1502,31 +1501,24 @@ CallEntry:
 			goto FinishCall;
 		}OPNEXT() OPCASE( YIELD ){
 			self->activeCode = vmc;
-			if( routine->routType->cbtype ){
-				DaoVmCode *vmc2;
-				if( DaoProcess_PushSectionFrame( self ) == NULL ){
-					printf( "No code section is found\n" ); //XXX
-					goto FinishProcess;
-				}
-				self->topFrame->state = DVM_FRAME_SECT;
-				vmc2 = self->topFrame->codes + self->topFrame->entry - 1;
-				locVars = self->stackValues + topFrame->stackBase;
-				for(i=0; i<vmc2->b; i++){
-					if( i >= vmc->b ) break;
-					if( DaoProcess_SetValue( self, vmc2->a + i, locVars[vmc->a + i] ) == 0 ){
-						DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "invalid yield" );
-					}
-				}
-				self->status = DAO_PROCESS_STACKED;
+			if( routine->routType->cbtype == NULL ){
+				DaoProcess_RaiseException( self, DAO_ERROR, "Not in code section methods." );
 				goto CheckException;
 			}
-			if( self->abtype == NULL ){
-				DaoProcess_RaiseException( self, DAO_ERROR, "Not a coroutine to yield." );
-				goto CheckException;
+			if( DaoProcess_PushSectionFrame( self ) == NULL ){
+				printf( "No code section is found\n" ); //XXX
+				goto FinishProcess;
 			}
-			DaoProcess_DoReturn( self, vmc );
-			self->status = DAO_PROCESS_SUSPENDED;
-			self->pauseType = DAO_PAUSE_COROUTINE_YIELD;
+			self->topFrame->state = DVM_FRAME_SECT;
+			vmc2 = self->topFrame->codes + self->topFrame->entry - 1;
+			locVars = self->stackValues + topFrame->stackBase;
+			for(i=0; i<vmc2->b; i++){
+				if( i >= vmc->b ) break;
+				if( DaoProcess_SetValue( self, vmc2->a + i, locVars[vmc->a + i] ) == 0 ){
+					DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "invalid yield" );
+				}
+			}
+			self->status = DAO_PROCESS_STACKED;
 			goto CheckException;
 		}OPCASE( DEBUG ){
 			if( self->stopit | vmSpace->stopit ) goto FinishProcess;
@@ -2382,9 +2374,9 @@ FinishCall:
 	if( (routine->attribs & DAO_ROUT_PASSRET) ){ /* Update the modified return: */
 		if( self->topFrame->prev->deferBase < self->topFrame->deferBase ){
 			/* This deferred closure was created by its caller: */
-			DaoType *type = self->abtype ? (DaoType*)self->abtype->aux : NULL;
-			DaoValue **dest = self->stackValues;
 			daoint returning = self->topFrame->prev->returning;
+			DaoValue **dest = self->stackValues;
+			DaoType *type = NULL;
 
 			if( returning != (ushort_t)-1 ){
 				DaoStackFrame *lastframe = self->topFrame->prev->prev;
@@ -3341,7 +3333,7 @@ void DaoProcess_DoSetField( DaoProcess *self, DaoVmCode *vmc )
 DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoStackFrame *topFrame = self->topFrame;
-	DaoType *type = self->abtype ? (DaoType*)self->abtype->aux : NULL;
+	DaoType *type = NULL;
 	DaoValue **src = self->activeValues + vmc->a;
 	DaoValue **dest = self->stackValues;
 	DaoValue *retValue = NULL;
@@ -3349,7 +3341,7 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 
 	self->activeCode = vmc;
 
-	if( vmc->code == DVM_RETURN && returning != (ushort_t)-1 ){
+	if( returning != (ushort_t)-1 ){
 		DaoStackFrame *lastframe = topFrame->prev;
 #ifdef DEBUG
 		assert( lastframe && lastframe->routine );
@@ -3664,7 +3656,7 @@ static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 		return 1;
 	}
 	if( vmc->code != DVM_MCALL ) return 0;
-	if( frame->object && (frame->object->defClass->attribs & DAO_CLS_ASYNCHRONOUS) ){
+	if( frame->object && frame->object->isAsync ){
 		if( prev->object == NULL || frame->object->rootObject != prev->object->rootObject ){
 			DaoCallServer_AddCall( self );
 			self->status = DAO_PROCESS_RUNNING;
@@ -3717,9 +3709,16 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 	}
 	/* no tail call optimization when there is deferred code blocks: */
 	if( (vmc->b & DAO_CALL_TAIL) && self->defers->size == self->topFrame->deferBase ){
-		int async = rout->routHost && rout->routHost->tid == DAO_OBJECT;
-		if( async ) async = rout->routHost->aux->xClass.attribs & DAO_CLS_ASYNCHRONOUS;
-		async |= vmc->b & DAO_CALL_ASYNC;
+		int async = vmc->b & DAO_CALL_ASYNC;
+		DaoObject *root = NULL;
+		switch( O ? O->type : 0 ){
+		case DAO_CDATA   :
+		case DAO_CSTRUCT :
+			if( O->xCstruct.object ) root = O->xCstruct.object->rootObject;
+			break;
+		case DAO_OBJECT  : root = O->xObject.rootObject; break;
+		}
+		if( root ) async |= root->isAsync;
 		/* No tail call optimization for possible asynchronous calls: */
 		/* No tail call optimization in constructors etc.: */
 		/* (self->topFrame->state>>1): get rid of the DVM_FRAME_RUNNING flag: */
@@ -3791,6 +3790,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		othis = self->activeObject;
 	}else{
 		othis = onew = DaoObject_New( klass );
+		if( vmc->b & DAO_CALL_ASYNC ) onew->isAsync = 1;
 	}
 	rout = DaoRoutine_ResolveX( routines, selfpar, params, npar, codemode );
 	if( rout == NULL ){
@@ -3866,7 +3866,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		if( rout->pFunc ){
 			DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar, 0 );
 		}else{
-			if( rout->routName->mbs[0] == '@' ){
+			if( rout->attribs & DAO_ROUT_DECORATOR ){
 #ifdef DAO_WITH_DECORATOR
 				DaoRoutine *drout = (DaoRoutine*) rout;
 				if( params[0]->type != DAO_ROUTINE ){
@@ -3935,47 +3935,12 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		rout = DaoRoutine_ResolveX( rout, selfpar, params, npar, codemode );
 		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
 		DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, npar, 0 );
-	}else if( caller->type == DAO_PROCESS && caller->xProcess.abtype ){
-		DaoProcess *vmProc = & caller->xProcess;
-		if( vmProc->status == DAO_PROCESS_FINISHED ){
-			DaoProcess_RaiseException( self, DAO_WARNING, "coroutine execution is finished." );
-			return;
-		}
-		DaoProcess_Resume( vmProc, params, npar, self );
-		if( vmProc->status == DAO_PROCESS_ABORTED )
-			DaoProcess_RaiseException( self, DAO_ERROR, "coroutine execution is aborted." );
 	}else{
 		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "object not callable" );
 	}
 	return;
 InvalidParameter:
 	DaoProcess_ShowCallError( self, rout2, selfpar, params, npar, code );
-}
-static DaoProcess* DaoProcess_Create( DaoProcess *self, DaoValue *par[], int N )
-{
-	DaoProcess *vmProc;
-	DaoValue *val = par[0];
-	DaoRoutine *rout;
-	int i, passed = 0;
-	if( val == NULL || val->type != DAO_ROUTINE ){
-		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, NULL );
-		return NULL;
-	}
-	rout = DaoRoutine_ResolveX( (DaoRoutine*)val, NULL, par+1, N-1, DVM_CALL );
-	if( rout ) rout = DaoProcess_PassParams( self, rout, NULL, NULL, par+1, N-1, DVM_CALL );
-	if( rout == NULL || rout->body == NULL ){
-		DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "not matched" );
-		return NULL;
-	}
-	vmProc = DaoProcess_New( self->vmSpace );
-	DaoProcess_PushRoutine( vmProc, rout, NULL );
-	vmProc->activeValues = vmProc->stackValues + vmProc->topFrame->stackBase;
-	for(i=0; i<rout->parCount; i++){
-		vmProc->activeValues[i] = self->paramValues[i];
-		GC_IncRC( vmProc->activeValues[i] );
-	}
-	vmProc->status = DAO_PROCESS_SUSPENDED;
-	return vmProc;
 }
 void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 {
@@ -4010,15 +3975,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 		params = parbuf;
 		npar = n - 1;
 	}
-	if( mode & DAO_CALL_COROUT ){
-		DaoProcess *vmp = DaoProcess_Create( self, params, npar+1 );
-		if( vmp == NULL ) return;
-		GC_ShiftRC( self->activeTypes[ vmc->c ], vmp->abtype );
-		vmp->abtype = self->activeTypes[ vmc->c ];
-		DaoProcess_PutValue( self, (DaoValue*) vmp );
-	}else{
-		DaoProcess_DoCall2( self, vmc, caller, selfpar, params + 1, npar );
-	}
+	DaoProcess_DoCall2( self, vmc, caller, selfpar, params + 1, npar );
 }
 
 daoint DaoArray_SliceSize( DaoArray *self );

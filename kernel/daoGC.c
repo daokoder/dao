@@ -1420,7 +1420,6 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 		{
 			DaoProcess *vmp = (DaoProcess*) value;
 			DaoStackFrame *frame = vmp->firstFrame;
-			cycRefCountDecrement( (DaoValue*) vmp->abtype );
 			cycRefCountDecrement( (DaoValue*) vmp->future );
 			cycRefCountDecrements( vmp->exceptions );
 			cycRefCountDecrements( vmp->factory );
@@ -1616,7 +1615,6 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 		{
 			DaoProcess *vmp = (DaoProcess*) value;
 			DaoStackFrame *frame = vmp->firstFrame;
-			cycRefCountIncrement( (DaoValue*) vmp->abtype );
 			cycRefCountIncrement( (DaoValue*) vmp->future );
 			cycRefCountIncrements( vmp->exceptions );
 			cycRefCountIncrements( vmp->factory );
@@ -1818,7 +1816,6 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		{
 			DaoProcess *vmp = (DaoProcess*) value;
 			DaoStackFrame *frame = vmp->firstFrame;
-			directRefCountDecrement( (DaoValue**) & vmp->abtype );
 			directRefCountDecrement( (DaoValue**) & vmp->future );
 			directRefCountDecrements( vmp->exceptions );
 			directRefCountDecrements( vmp->factory );

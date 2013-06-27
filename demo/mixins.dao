@@ -6,7 +6,7 @@ class Base
 }
 
 #
-# Classes to be used as mixins can be specified in a pair of brackets
+# Classes to be used as mixin bases can be specified in a pair of brackets
 # following the class name. Only classes without parent classes can
 # be used as mixins.
 #
@@ -37,95 +37,3 @@ k.Meth2( 'abc' )
 k.Meth2( 789 )
 
 
-#
-# When a class is used as a mixin class in another class (host),
-# the decorator methods of the mixin will be applied to the methods
-# of the host class, if the names of the decorators are started
-# (excluding the '@') or ended with a underscore. Such names
-# are interpreted as the following patterns:
-# 1. The non-underscore-containing substring following the starting
-#    underscore is considered as a prefix that a method name must
-#    has, as a precondition that the method can be applied with
-#    the decorator;
-#    Example:
-#    (A) "_abc", "_abc_" and "any_abc_" define "abc" as the prefix;
-#    (B) "__" and "__any" define an empty string as prefix,
-#        which can match to any method name.
-# 2. The non-underscore-containing substring preceding the ending
-#    underscore is considered as a suffix that a method name must
-#    has, as a precondition that the method can be applied with
-#    the decorator;
-#    Example:
-#    (A) "abc_", "_abc_" and "_abc_any" define "abc" as the suffix;
-#    (B) "__" and "any__" define an empty string as suffix,
-#        which can match to any method name.
-# 3. If the prefix substring and the suffixing substring of a decorator
-#    name are the same substring (not merely the same), only the methods
-#    with names that are the same as the prefix (suffix) could be applied
-#    with this decorator. 
-#    Example:
-#    (A) "_abc_" define "abc" as both the prefix and the suffix,
-#        so it can only be matched to method name equal to it.
-#        But "_abc_abc_" can match to any method names starts
-#        with "abc" and ends with "abc";
-#    (B) "__" and "__any__" define an empty string as both prefix and suffix,
-#        so it can match to any method name;
-#
-# When multiple mixins are used in a host class, the decorators of the
-# first mixin are applied the last. An the first decorator of the same
-# decorator is also applied the last as well.
-#
-class Header
-{
-	static routine @__Delimiter__( meth : routine ){
-		io.writeln( '=======================' )
-		return meth( __args__, ... )
-	}
-	routine @__Delimiter__( meth : routine ){
-		io.writeln( '-----------------------' )
-		return meth( __args__, ... )
-	}
-}
-class Decorator
-{
-	var value = 654321
-
-	routine @_Test_( meth :routine<self:Decorator> ){
-		io.writeln( 'Decorator::_Test_()', value )
-		meth( __args__, ... );
-	}
-	routine @_Prefix( meth :routine<self:Decorator> ){
-		io.writeln( 'Decorator::_Prefix()' )
-		meth( __args__, ... );
-	}
-	routine @Suffix_( meth :routine<self:Decorator> ){
-		io.writeln( 'Decorator::Suffix_()' )
-		meth( __args__, ... );
-	}
-	routine @_Prefix_Suffix_( meth :routine<self:Decorator> ){
-		io.writeln( 'Decorator::_Prefix_Suffix_()' )
-		meth( __args__, ... );
-	}
-}
-
-class MyClass ( Header, Decorator )
-{
-	routine Test(){
-		io.writeln( 'MyClass::Test()' )
-	}
-	routine PrefixTest(){
-		io.writeln( 'MyClass::PrefixTest()' )
-	}
-	routine TestSuffix(){
-		io.writeln( 'MyClass::TestSuffix()' )
-	}
-	routine PrefixTestSuffix(){
-		io.writeln( 'MyClass::PrefixTestSuffix()' )
-	}
-}
-
-obj = MyClass()
-obj.Test()
-obj.PrefixTest()
-obj.TestSuffix()
-obj.PrefixTestSuffix()
