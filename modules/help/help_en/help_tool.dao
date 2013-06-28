@@ -10,6 +10,22 @@ Dao Tools
 
 
 @[name]
+tool.core.daomake
+@[name]
+
+@[title]
+DaoMake Tool
+@[title]
+
+@[text]
+
+DaoMake is a make tool based on Dao.
+
+@[text]
+
+
+
+@[name]
 tool.standard
 @[name]
 

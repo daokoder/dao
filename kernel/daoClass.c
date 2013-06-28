@@ -493,7 +493,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 		}
 		if( rout->overloads == NULL ){
 			DaoRoutine *old = rout;
-			rout = DaoRoutine_Copy( rout, 1, 1 );
+			rout = DaoRoutine_Copy( rout, 1, 1, 1 );
 			bl = bl && DaoRoutine_Finalize( rout, self->objType, deftypes );
 #if 0
 			printf( "%2i:  %s  %s\n", i, rout->routName->mbs, rout->routType->name->mbs );

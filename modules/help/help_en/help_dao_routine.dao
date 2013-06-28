@@ -84,6 +84,11 @@ MyRout( "DAO", 123 ) # invoke the first MyRout()
 MyRout( 456, "script" ) # invoke the second MyRout()
 @[code]
 
+
+
+For coroutines, please see @[node]module.core.coroutine@[node].
+
+
 @[text]
 
 
@@ -140,107 +145,6 @@ rout( 1, "XXX" );
 
 
 
-
-
-@[name]
-dao.routine.coroutine
-@[name]
-
-@[title]
-Coroutine and Generator
-@[title]
-
-
-@[text]
-
-
-@[subsection]
-Coroutine and Generator
-@[subsection]
-
-Coroutines and generator (a special form of coroutine) are special routines 
-that can suspend and yield their execution to other routines or coroutines, 
-and be resumed by them when needed.
-
-
-Definition of a coroutine is very similar to define a normal routine,
-with two minor differences:
-@[list]
-==Its return type must be placed in between a pair of squared brackets;
-==It can contain @[green]yield@[green] statement(s) in the routine body.
-@[list]
-@[green]yield@[green] statement(s) can be used to suspend the current coroutine,
-and the parameters passed to the @[green]yield@[green] statement(s) are passed out
-to the routine that has invoked or resumed this coroutine.
-After suspension, the coroutine can be resumed in the same way as function calls,
-and the parameters to such calls are passed into the coroutine, and become
-the returned values of the @[green]yield@[green] statement(s).
-
-
-When a @[green]return@[green] statment is executed or the end of the function is reached, 
-the coroutine will exit and become not resumable anymore.
-
-
-The creation of a coroutine or generator is similar to a function call,
-but with @[green]::@[green] place before the brackets:
-@[code]
-corout = ACoroutine::( parameters )
-@[code]
-
-
-An example generator:
-@[code]
-# int => tuple<int,int>
-routine gen1( a = 0 ) => [?] # use ? for automatic inferring;
-{
-    k = 0;
-    while( ++k < 3 ) a = yield( k, a );
-    return 0,0;
-}
-routine gen2( a = 0 ) => [?] 
-{
-    return gen1( a );
-}
-g = gen2::( 1 );
-# parameters can be omitted the first time it's called;
-# the first call may use the parameters 
-# that are used for creating the generator:
-io.writeln( 'main1: ', g() );
-io.writeln( 'main2: ', g( 100 ) );
-io.writeln( 'main3: ', g( 200 ) );
-
-io.writeln( std.about(gen1) )
-@[code]
-
-
-An example coroutine:
-@[code]
-routine foo( a = 0, b = '' )=>[?]
-{
-    io.writeln( 'foo:', a );
-    return yield( 2 * a, 'by foo()' );
-}
-
-routine bar( a = 0, b = '' )=>[?]
-{
-    io.writeln( 'bar:', a, b );
-    ( r, s ) = foo( a + 1, b );
-    io.writeln( 'bar:', r, s );
-    ( r, s ) = yield( a + 100, b );
-    io.writeln( 'bar:', r, s );
-    return a, 'ended';
-}
-
-co = bar::( 1, "a" );
-   
-io.writeln( 'main: ', co() );
-io.writeln( 'main: ', co( 1, 'x' ) );
-io.writeln( 'main: ', co( 2, 'y' ) );
-# coroutine has been finished, the following will rise an exception.
-io.writeln( 'main: ', co( 3, 'z' ) );
-@[code]
-
-@[text]
 
 
 

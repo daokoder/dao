@@ -1944,14 +1944,14 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 				for(i=0; i<routine->overloads->routines->size; i++){
 					rout = rout2 = routine->overloads->routines->items.pRoutine[i];
 					if( rout->routHost->aux != original->aux ) continue;
-					rout = DaoRoutine_Copy( rout, 1, 1 );
+					rout = DaoRoutine_Copy( rout, 1, 0, 0 );
 					if( rout2->attribs & DAO_ROUT_INITOR )
 						DString_Assign( rout->routName, self->name );
 					DaoRoutine_Finalize( rout, self, defs );
 					DaoMethods_Insert( methods, rout, nspace, self );
 				}
 			}else{
-				rout = DaoRoutine_Copy( routine, 1, 1 );
+				rout = DaoRoutine_Copy( routine, 1, 0, 0 );
 				if( routine->attribs & DAO_ROUT_INITOR )
 					DString_Assign( rout->routName, self->name );
 				DaoRoutine_Finalize( rout, self, defs );

@@ -4201,7 +4201,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	temp = start > to ? 0 : tokens[start]->name;
 	if( temp == DTOK_ASSN || temp == DTOK_CASSN ){ /* V=E  V:=E  V:TYPE=E */
 		int foldConst = self->isClassBody && (store & DAO_DECL_MEMBER);
-		foldConst |= (store & DAO_DECL_CONST);
+		foldConst |= store & (DAO_DECL_CONST|DAO_DECL_STATIC);
 		eq = start;
 		if( start + 1 > to ){
 			DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
@@ -4637,9 +4637,10 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 	}else if( storeType & DAO_DECL_GLOBAL ){
 		DaoNamespace_AddVariable( nameSpace, name, NULL, abtp, perm );
 	}else if( storeType & DAO_DECL_STATIC ){
+		DaoVariable *var = DaoVariable_New( abtp ? abtp->value : NULL, abtp ? abtp : NULL );
 		int i = LOOKUP_BIND( DAO_STATIC_VARIABLE, 0, 0, routine->body->svariables->size );
 		MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, i );
-		DArray_Append( routine->body->svariables, DaoVariable_New( abtp->value, abtp ) );
+		DArray_Append( routine->body->svariables, var );
 	}else{
 		int id = 0;
 		if( storeType & DAO_DECL_CONST ){

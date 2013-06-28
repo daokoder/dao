@@ -1265,7 +1265,7 @@ static int DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, i
 
 static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoxStream *stream, DaoProcess *proc )
 {
-	int screen = DAOX_TEXT_WIDTH;
+	int fails, screen = DAOX_TEXT_WIDTH;
 
 #if defined(UNIX) && !defined(MINIX)
 	struct winsize ws;
@@ -1281,7 +1281,8 @@ static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoxStream *stream, DaoPro
 	stream->last = 0;
 	stream->nspace = self->entry->help->nspace;
 	if( self->type == DAOX_HELP_TEXT ){
-		int fails = DaoxStream_WriteBlock( stream, self->text, 0, screen, 0, 0 );
+		DaoxStream_WriteMBS( stream, "\n" );
+		fails = DaoxStream_WriteBlock( stream, self->text, 0, screen, 0, 0 );
 		self->entry->failedTests += fails;
 	}else if( self->type == DAOX_HELP_CODE ){
 		DaoxStream_PrintCode( stream, self->text, self->lang, 0, screen );

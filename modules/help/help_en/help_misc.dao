@@ -2,6 +2,74 @@ load help;
 
 
 @[name]
+misc.installation
+@[name]
+
+@[title]
+Installation
+@[title]
+
+
+@[text]
+
+
+@[subsection]
+Compiling and Building
+@[subsection]
+
+The recommended way to compile Dao is to run the following from
+the shell:
+@[code]
+$ make -f Makefile.daomake PLATFORM
+@[code]
+where PLATFORM can be one of the followings:
+@[list]
+-- linux
+-- macosx
+-- freebsd
+-- mingw
+-- minix
+-- haiku
+@[list]
+
+
+@[subsection]
+Customized Building
+@[subsection]
+
+Build mode (release, debug or profile) and installation directory
+can be set by: 
+@[code]
+$ make -f Makefile.daomake PLATFORM MODE=debug INSTALL=directory
+@[code]
+
+
+Out of source building can be done by executing the following
+from the build directory:
+@[code]
+$ make -f DAO-DIR/Makefile.daomake PLATFORM SRCDIR=DAO-DIR
+@[code]
+
+Please read Makefile.daomake for more options such as making
+static build and compiling to JavaScript etc.
+
+
+
+@[subsection]
+Installation
+@[subsection]
+
+Simply run the following to install,
+@[code]
+$ make install
+@[code]
+
+@[text]
+
+
+
+
+@[name]
 misc.comparison
 @[name]
 

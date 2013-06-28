@@ -205,7 +205,7 @@ which will increase the count.
 
 ################################################################################
 ################################################################################
-#### Asynchronous Class
+#### Asynchronous Object
 ################################################################################
 ################################################################################
 @[name]
@@ -232,52 +232,55 @@ routine MyFunction( n = 10 )
 f = MyFunction( 20 ) !!
 io.writeln( f.value() )
 @[code]
-@[text]
 
 
-
-
-################################################################################
-################################################################################
-#### Asynchronous Class
-################################################################################
-################################################################################
-@[name]
-dao.concurrent.asynclass
-@[name]
-
-@[title]
-Asynchronous Class
-@[title]
+When multiple methods of a class instance are called in asynchronous mode,
+their execution will be mutually exclusive, namely, at any given time only
+call (tasklet) can be active. So in this way, the class instance acts
+just like a @[link]monitor@@http://en.wikipedia.org/wiki/Monitor_(synchronization)@[link].
 
 @[text]
 
-Asynchronous class is a class whose instance methods will be executed asynchronously, 
-namely, calling a method on an instance object of such class will return a future value 
-immediately, and the execution will be started in different thread. 
-Such executions are scheduled such that only one method is actively executed 
-for any single object at any time, namely, multiple executions on the same object 
-are mutually exclusive.
 
 
-So each instance of an asynchronous class act just like a monitor,
-but it also acts like an actor in the actor model considering that calling methods
-of such instance is just like sending messages to the instance with function parameters
-being the message contents. For each instance, these messages are processed one by one
+
+################################################################################
+################################################################################
+#### Asynchronous Object
+################################################################################
+################################################################################
+@[name]
+dao.concurrent.asyncobject
+@[name]
+
+@[title]
+Asynchronous Object
+@[title]
+
+@[text]
+
+
+An asynchronous object is a class instance that is created with asynchronous call mode,
+@[code]
+async_objet = some_class( ... ) !!
+@[code]
+
+When an asynchronous object invokes a method, it will be automatically called in
+asynchronous mode, and start a tasklet and return a future value.
+Such tasklets are queued and and executed in the order they are queued.
+
+
+So such asynchronous object acts like an actor in the 
+@[link]actor model@@http://en.wikipedia.org/wiki/Actor_model@[link]
+considering that calling methods of such object is just like sending messages
+to the object with function parameters being the message contents.
+For each instance, these messages are processed one by one
 in the order of receiving.
 
 
-Defining an asynchronous class is very much like defining a normal class,
-but with the following restrictions:
-@[list]
---It cannot contain public data field;
---It cannot derive from normal class (and vice versa);
-@[list]
-Preceeding the class name with @[green]@@[green] defines an asynchronous class.
-In other places, the class name should be used without the @[green]@@[green] prefix.
 Here is an simple example,
 @[code]
-class @Account
+class Account
 {
 	private
 
@@ -305,8 +308,8 @@ class @Account
 	}
 }
 
-acount1 = Account( 100 )
-acount2 = Account( 100 )
+acount1 = Account( 100 ) !!
+acount2 = Account( 100 ) !!
 
 future1 = acount1.Withdraw( 10 )
 if( future1.value() == $true ) future2 = acount2.Deposit( 10 )
@@ -318,7 +321,7 @@ io.writeln( 'Balance in account2:', acount2.Balance().value() )
 @[code]
 
 Like calling @[green]mt.start()@[green], calling a method on an asynchronous
-class instance will return a future value, which can be used to check the
+object will return a future value, which can be used to check the
 status of the asynchronous call.
 
 
@@ -342,9 +345,9 @@ Communication Channel
 
 @[text]
 
-Both @[green]mt::start@[green] and the methods of asynchronous class
-run as tasklets (represented by future values) that can be assigned
-to native threads to run concurrently.
+Tasklets (represented by future values) created from @[green]mt::start@[green],
+asynchronous function call and the methods of asynchronous object 
+can be assigned to native threads to run concurrently.
 Tasklets can communicate and synchronize with each other using 
 @[green]communication channels@[green].
 

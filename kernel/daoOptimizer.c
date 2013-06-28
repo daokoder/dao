@@ -4912,7 +4912,7 @@ NotExist_TryAux:
 						if( rout->original ) rout = orig = rout->original;
 
 						/* Do not share function body. It may be thread unsafe to share: */
-						rout = DaoRoutine_Copy( rout, 0, 1 );
+						rout = DaoRoutine_Copy( rout, 0, 1, 0 );
 						DaoRoutine_PassParamTypes( rout, bt, tp, j, code, defs2 );
 
 						DMutex_Lock( & mutex_routine_specialize );
@@ -5751,7 +5751,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 			DArray_Delete( routs );
 			return newfn;
 		}
-		newfn = DaoRoutine_Copy( self, 0, 0 );
+		newfn = DaoRoutine_Copy( self, 0, 0, 1 );
 		newfn->overloads = DRoutines_New();
 		for(i=0; i<routs->size; i++) DRoutines_Add( newfn->overloads, routs->items.pRoutine[i] );
 		DArray_Delete( routs );
@@ -5788,7 +5788,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		oldfn = DaoRoutine_ResolveByType( self, NULL, ptypes->items.pType, ptypes->size, code );
 	if( oldfn == NULL ) return NULL;
 
-	newfn = DaoRoutine_Copy( decorator, 1, 1 );
+	newfn = DaoRoutine_Copy( decorator, 1, 1, 1 );
 	added = DArray_New(D_VMCODE);
 	regmap = DArray_New(0);
 

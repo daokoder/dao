@@ -379,7 +379,7 @@ BinArith ::= '+' | '-' | '*' | '/' | '%' | '**'
 BinComp  ::= '==' | '!=' | '<' | '>' | '<=' | '>='
 BinBool  ::= '&&' | '||' | 'and' | 'or'
 BinBit   ::= '&' | '|' | '^' | '<<' | '>>'
-BinMisc  ::= 'in' | 'not in' | '?=' | '?<'
+BinMisc  ::= 'in' | 'not in' | '?=' | '?<' | '??'
 
 BinaryOperator ::= BinArith | BinComp | BinBool | BinBit | BinMisc
 @[code(syntax)]
@@ -794,7 +794,6 @@ PrimaryExpression ::= AtomicExpression
                     | PrimaryExpression '(' [ ArgumentList ] ')'
                     | PrimaryExpression '[' [ ExpressionList [ ',' ] ] ']'
                     | PrimaryExpression '{' [ ArgumentList [ ',' ] ] '}'
-                    | PrimaryExpression '::(' [ ArgumentList ] ')'
                     | PrimaryExpression '::{' [ ArgumentList ] '}'
 @[code(syntax)]
 
@@ -903,7 +902,7 @@ AnParamList2 ::= AnParamList1 { ',' AnParamItem2 } [ ',' '...' ]
 AnParamList3 ::= AnParamItem2 { ',' AnParamItem2 } [ ',' '...' ]
 AnParamList  ::= ( AnParamList2 | AnParamList3 | '...' ) [ 'as' Identifier ]
 
-AnonymousRoutine ::= ( 'routine' | '@' ) [ '(' [ AnParamList ] ')' ] '{' StatementBlock '}'
+AnonymousRoutine ::= 'routine' [ '(' [ AnParamList ] ')' ] '{' StatementBlock '}'
 @[code(syntax)]
 
 
@@ -1063,7 +1062,7 @@ Framed Block Statement
 @[subsection]
 
 @[code(syntax)]
-FramedBlock ::= '@@' '{' StatementBlock '}'
+FramedBlock ::= 'frame' [ '(' Expression ')' ] '{' StatementBlock '}'
 @[code(syntax)]
 
 
@@ -1190,10 +1189,9 @@ OverloadableOperator ::= Operator | 'cast' | '.' Identifier [ '=' ] | '[' ']' [ 
 ParamReturn ::= '(' [ ParamList ] ')' [ '=>' Type ]
 
 RoutineSig   ::= Identifier '(' [ ParamList ] ')' [ '=>' Type ]
-CoroutineSig ::= Identifier '(' [ ParamList ] ')' '=>' '[' Type ']'
 CodeBlockSig ::= Identifier '(' [ ParamList ] ')' '[' [ ParamList1 ] ']' [ '=>' Type ]
 
-RoutineDecl1 ::= 'routine' { Identifier '::' } ( RoutineSig | CoroutineSig | CodeBlockSig )
+RoutineDecl1 ::= 'routine' { Identifier '::' } ( RoutineSig | CodeBlockSig )
 RoutineDecl2 ::= 'operator' { Identifier '::' } OverloadableOperator ParamReturn
 
 RoutineDecl ::= RoutineDecl1 | RoutineDecl2

@@ -94,7 +94,7 @@ DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *in
 	}
 	return self;
 }
-void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int cst, int cbody )
+void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int cst, int cbody, int stat )
 {
 	int i;
 	self->attribs = from->attribs;
@@ -119,15 +119,15 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int cst, int cbo
 	}
 	if( from->body ){
 		DaoRoutineBody *body = from->body;
-		if( cbody ) body = DaoRoutineBody_Copy( body );
+		if( cbody ) body = DaoRoutineBody_Copy( body, stat );
 		GC_ShiftRC( body, self->body );
 		self->body = body;
 	}
 }
-DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int cst, int body )
+DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int cst, int body, int stat )
 {
 	DaoRoutine *copy = DaoRoutine_New( self->nameSpace, self->routHost, 0 );
-	DaoRoutine_CopyFields( copy, self, cst, body );
+	DaoRoutine_CopyFields( copy, self, cst, body, stat );
 	return copy;
 }
 void DaoRoutine_Delete( DaoRoutine *self )
@@ -287,7 +287,7 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 	}
 	dao_free( self );
 }
-void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other )
+void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other, int copy_stat )
 {
 	int i;
 	DMap_Delete( self->localVarType );
@@ -309,13 +309,14 @@ void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other )
 	DArray_Clear( self->svariables );
 	for(i=0; i<other->svariables->size; ++i){
 		DaoVariable *var = other->svariables->items.pVar[i];
-		DArray_Append( self->svariables, DaoVariable_New( var->value, var->dtype ) );
+		if( copy_stat ) var = DaoVariable_New( var->value, var->dtype );
+		DArray_Append( self->svariables, var );
 	}
 }
-DaoRoutineBody* DaoRoutineBody_Copy( DaoRoutineBody *self )
+DaoRoutineBody* DaoRoutineBody_Copy( DaoRoutineBody *self, int copy_stat )
 {
 	DaoRoutineBody *copy = DaoRoutineBody_New();
-	DaoRoutineBody_CopyFields( copy, self );
+	DaoRoutineBody_CopyFields( copy, self, copy_stat );
 	return copy;
 }
 

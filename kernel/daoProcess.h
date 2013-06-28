@@ -36,9 +36,10 @@
 #include"daoThread.h"
 #include"daoOptimizer.h"
 
-#define DVM_FRAME_RUNNING (1<<0)
-#define DVM_FRAME_SECT    (1<<5)
-#define DVM_FRAME_KEEP    (1<<6)
+#define DVM_FRAME_RUNNING  (1<<0)
+#define DVM_FRAME_FINISHED (1<<1)
+#define DVM_FRAME_SECT     (1<<5)
+#define DVM_FRAME_KEEP     (1<<6)
 
 
 struct DaoStackFrame

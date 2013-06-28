@@ -35,7 +35,7 @@ module.core.aux
 @[name]
 
 @[title]
-System Dependent Core Functions
+Aux Module
 @[title]
 
 
@@ -44,8 +44,140 @@ module.core.math
 @[name]
 
 @[title]
-System Dependent Core Functions
+Math Module
 @[title]
+
+
+
+
+
+@[name]
+module.core.coroutine
+@[name]
+
+@[title]
+Coroutine and Generator
+@[title]
+
+@[text]
+
+Coroutine is a generic data type that can turn a routine into coroutine or generator.
+It has the following type form,
+@[code]
+coroutine<@RESUME,@YIELD>
+@[code]
+where @[green]@RESUME@[green] is the type holder for the type
+that can be passed to its @[green]resume()@[green] method,
+and @[green]@YIELD@[green] is the type holder for the type
+that can be passed to its @[green]yeild()@[green] method.
+
+
+To create a coroutine that can be resume with a integer value,
+and yield a string value, the coroutine type should be created in following way,
+@[code]
+co = coroutine<int,string>()
+@[code]
+
+
+The routine that will be used to create the coroutine need to be defined
+with the first parameter named @[green]self@[green] with the coroutine type,
+@[code]
+routine Test( self :coroutine<int,string>, initpar : string )
+{
+	for( i = 1 : 5 ) io.writeln( self.yield( initpar + 'abc' ) )
+}
+@[code]
+In such routine, @[green]self.yield()@[green] can be used yield the
+control of the execution and pass its parameter to the caller of
+@[green]self.yield()@[green] or @[green]self.resume()@[green].
+
+
+Then the coroutine can be started by,
+@[code]
+a = co.start( Test, 'test' )
+@[code]
+which will start the coroutine and execute it until the first yield (if any).
+It will return the first yielded value.
+
+
+The coroutie can be resumed using,
+@[code]
+a = co.resume( 100 )
+@[code]
+The parameter passed to resume() will become the returned value of yield().
+And the parameter passed to yield() will become the returned value of resume().
+
+
+The status of coroutine can be checked with,
+@[code]
+status = co.status()
+@[code]
+
+
+A complete example,
+@[code]
+load coroutine
+
+routine Test( self :coroutine<int,string>, par : int )
+{
+	for( i = 1 : 5 ) io.writeln( i, self.yield( 'index_' + (string) (par*i) ) )
+	return 'done'
+}
+
+co = coroutine<int,string>()
+
+io.writeln( co )
+
+a = co.start( Test, 100 )
+io.writeln( a )
+
+for( i = 1 : 6 ) io.writeln( co.resume( 100*i ), co.status() )
+@[code]
+
+@[text]
+
+
+
+
+@[name]
+module.core.protobject
+@[name]
+
+@[title]
+Protobject
+@[title]
+
+@[text]
+
+@[green]Protobject@[green] is a data type to provide support for prototype-based OOP.
+Arbitrary fields can be set to or gotten from a @[green]Protobject@[green] object.
+A delegator can also be set for such object.
+When a @[green]Protobject@[green] has a delegator, setting a field for this
+object will only affect this object, not the delegator.
+
+@[code]
+load protobject
+
+obj = Protobject()
+
+obj.name = 'FirstObject'  # set a field;
+
+io.writeln( obj.name )    # get a field;
+
+obj2 = Protobject()
+obj2.__proto__ = obj  # set a delegator;
+
+io.writeln( obj2.name )
+
+
+obj2.name = 'SecondObject'
+
+io.writeln( obj.name, obj2.name )
+@[code]
+
+@[text]
+
+
 
 
 @[name]
@@ -53,5 +185,10 @@ module.core.meta
 @[name]
 
 @[title]
-System Dependent Core Functions
+Meta
 @[title]
+
+
+@[text]
+TODO
+@[text]

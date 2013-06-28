@@ -1061,88 +1061,8 @@ rout( 1, "XXX" );
 Coroutine and Generator
 @[subsection]
 
-Coroutines and generator (a special form of coroutine) are special routines 
-that can suspend and yield their execution to other routines or coroutines, 
-and be resumed by them when needed.
+See @[node]module.core.coroutine@[node].
 
-
-Definition of a coroutine is very similar to define a normal routine,
-with two minor differences:
-@[list]
-==Its return type must be placed in between a pair of squared brackets;
-==It can contain @[green]yield@[green] statement(s) in the routine body.
-@[list]
-
-@[green]yield@[green] statement(s) can be used to suspend the current coroutine,
-and the parameters passed to the @[green]yield@[green] statement(s) are passed out
-to the routine that has invoked or resumed this coroutine.
-After suspension, the coroutine can be resumed in the same way as function calls,
-and the parameters to such calls are passed into the coroutine, and become
-the returned values of the @[green]yield@[green] statement(s).
-
-
-When a @[green]return@[green] statment is executed or the end of the function is reached, 
-the coroutine will exit and become not resumable anymore.
-
-
-The creation of a coroutine or generator is similar to a function call,
-but with @[green]::@[green] place before the brackets:
-@[code]
-corout = ACoroutine::( parameters )
-@[code]
-
-
-An example generator:
-@[code]
-# int => tuple<int,int>
-routine gen1( a = 0 ) => [?] # use ? for automatic inferring;
-{
-    k = 0;
-    while( ++k < 3 ) a = yield( k, a );
-    return 0,0;
-}
-routine gen2( a = 0 ) => [?] 
-{
-    return gen1( a );
-}
-g = gen2::( 1 );
-# parameters can be omitted the first time it's called;
-# the first call may use the parameters 
-# that are used for creating the generator:
-io.writeln( 'main1: ', g() );
-io.writeln( 'main2: ', g( 100 ) );
-io.writeln( 'main3: ', g( 200 ) );
-
-io.writeln( std.about(gen1) )
-@[code]
-
-
-An example coroutine:
-@[code]
-routine foo( a = 0, b = '' )=>[?]
-{
-    io.writeln( 'foo:', a );
-    return yield( 2 * a, 'by foo()' );
-}
-
-routine bar( a = 0, b = '' )=>[?]
-{
-    io.writeln( 'bar:', a, b );
-    ( r, s ) = foo( a + 1, b );
-    io.writeln( 'bar:', r, s );
-    ( r, s ) = yield( a + 100, b );
-    io.writeln( 'bar:', r, s );
-    return a, 'ended';
-}
-
-co = bar::( 1, "a" );
-   
-io.writeln( 'main: ', co() );
-io.writeln( 'main: ', co( 1, 'x' ) );
-io.writeln( 'main: ', co( 2, 'y' ) );
-# coroutine has been finished, the following will rise an exception.
-io.writeln( 'main: ', co( 3, 'z' ) );
-@[code]
 
 
 
@@ -2170,8 +2090,8 @@ Concurrent Programming
 
 Dao has several features that support concurrent programming.
 The first is a concurrent Garbage Collector (GC), which works behind
-the scene. The other features come in two main forms:
-multi-threading module, asynchronous function call and asynchronous class,
+the scene. The other features come in the following forms:
+multi-threading module, asynchronous function call and asynchronous object,
 which are built around a lightweight thread pool with a simple scheduler
 to map thread tasks (or tasklets) to native threads.
 
@@ -2280,38 +2200,39 @@ io.writeln( f.value() )
 @[code]
 
 
+When multiple methods of a class instance are called in asynchronous mode,
+their execution will be mutually exclusive, namely, at any given time only
+call (tasklet) can be active. So in this way, the class instance acts
+just like a @[link]monitor@@http://en.wikipedia.org/wiki/Monitor_(synchronization)@[link].
+
+
 
 @[subsection]
-Asynchronous Class
+Asynchronous Object
 @[subsection]
 
-Asynchronous class is a class whose instance methods will be executed asynchronously, 
-namely, calling a method on an instance object of such class will return a future value 
-immediately, and the execution will be started as tasklet. 
-Such executions are scheduled such that only one method is actively executed 
-for any single object at any time, namely, multiple executions on the same object 
-are mutually exclusive.
+
+An asynchronous object is a class instance that is created with asynchronous call mode,
+@[code]
+async_objet = some_class( ... ) !!
+@[code]
+
+When an asynchronous object invokes a method, it will be automatically called in
+asynchronous mode, and start a tasklet and return a future value.
+Such tasklets are queued and and executed in the order they are queued.
 
 
-So each instance of an asynchronous class act just like a monitor,
-but it also acts like an actor in the actor model considering that calling methods
-of such instance is just like sending messages to the instance with function parameters
-being the message contents. For each instance, these messages are processed one by one
+So such asynchronous object acts like an actor in the 
+@[link]actor model@@http://en.wikipedia.org/wiki/Actor_model@[link]
+considering that calling methods of such object is just like sending messages
+to the object with function parameters being the message contents.
+For each instance, these messages are processed one by one
 in the order of receiving.
 
 
-Defining an asynchronous class is very much like defining a normal class,
-but with the following restrictions:
-@[list]
---It cannot derive from normal class (and vice versa);
---It cannot contain public data fields;
---It cannot overload operators;
-@[list]
-Preceeding the class name with @[green]@@[green] defines an asynchronous class.
-In other places, the class name should be used without the @[green]@@[green] prefix.
 Here is an simple example,
 @[code]
-class @Account
+class Account
 {
 	private
 
@@ -2339,8 +2260,8 @@ class @Account
 	}
 }
 
-acount1 = Account( 100 )
-acount2 = Account( 100 )
+acount1 = Account( 100 ) !!
+acount2 = Account( 100 ) !!
 
 future1 = acount1.Withdraw( 10 )
 if( future1.value() == $true ) future2 = acount2.Deposit( 10 )
@@ -2352,7 +2273,7 @@ io.writeln( 'Balance in account2:', acount2.Balance().value() )
 @[code]
 
 Like calling @[green]mt.start()@[green], calling a method on an asynchronous
-class instance will return a future value, which can be used to check the
+object will return a future value, which can be used to check the
 status of the asynchronous call.
 
 
@@ -2361,9 +2282,9 @@ status of the asynchronous call.
 Communication Channels
 @[subsection]
 
-Both @[green]mt::start@[green] and the methods of asynchronous class
-run as tasklets (represented by future values) that can be assigned
-to native threads to run concurrently.
+Tasklets (represented by future values) created from @[green]mt::start@[green],
+asynchronous function call and the methods of asynchronous object 
+can be assigned to native threads to run concurrently.
 Tasklets can communicate and synchronize with each other using 
 @[green]communication channels@[green].
 

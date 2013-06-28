@@ -411,17 +411,16 @@ dao.class.mixin
 @[name]
 
 @[title]
-Mixin Class (New)
+Mixin Class
 @[title]
 
 
 @[text]
-(New in the latest devel release and online version)
 
 
-Classes to be used as mixins can be specified in a pair of brackets
-following the class name. Only classes without parent classes can
-be used as mixins.
+Classes to be used as mixin bases (components) can be specified in
+a pair of brackets following the class name.
+Only classes without parent classes can be used as mixin bases.
 
 @[code]
 class Base
@@ -469,118 +468,109 @@ dao.class.decorator
 @[name]
 
 @[title]
-Class Decorator (New)
+Class Decorator
 @[title]
 
 
 @[text]
-(New in the latest devel release and online version)
 
 
-When a class is used as a mixin class in another class (host),
-the decorator methods of the mixin will be applied to the methods
-of the host class, if the names of the decorators are started
-(excluding the '@') or ended with a underscore. Such names
-are interpreted as the following patterns:
+Class decorators are classes (prefixed with @[green]@@[green])
+that can be used modify other classes.
+The modification is done by using such class as a mixin base class
+to inject (combine) its members into the modified class, and by
+automatically applying its method decorators the methods of the
+modified class.
+
+
+For such auto decorator application, only decorators with explicitly
+specified decoration targets are automatically applied. Such targets
+are expressed as prefix and suffix rules which can be expressed in
+the following ways:
 @[list]
-== The non-underscore-containing substring following the starting
-   underscore is considered as a prefix that a method name must
-   has, as a precondition that the method can be applied with
-   the decorator;
+-- @[green]Prefix~@[green] : a prefix pattern.
 
-   Example:
-   @[list(sub)]
-   -- "_abc", "_abc_" and "any_abc_" define "abc" as the prefix;
-   -- "__" and "__any" define an empty string as prefix,
-       which can match to any method name.
-   @[list(sub)]
-== The non-underscore-containing substring preceding the ending
-   underscore is considered as a suffix that a method name must
-   has, as a precondition that the method can be applied with
-   the decorator;
+   The decorator will be auto applied to methods that have names
+   with such prefix;
 
-   Example:
-   @[list(sub)]
-   -- "abc_", "_abc_" and "_abc_any" define "abc" as the suffix;
-   -- "__" and "any__" define an empty string as suffix,
-       which can match to any method name.
-   @[list(sub)]
-== If the prefix substring and the suffixing substring of a decorator
-   name are the same substring (not merely the same), only the methods
-   with names that are the same as the prefix (suffix) could be applied
-   with this decorator. 
+-- @[green]~Suffix@[green] : a suffix pattern.
 
-   Example:
-   @[list(sub)]
-   -- "_abc_" define "abc" as both the prefix and the suffix,
-       so it can only be matched to method name equal to it.
-       But "_abc_abc_" can match to any method names starts
-       with "abc" and ends with "abc";
-   -- "__" and "__any__" define an empty string as both prefix and suffix,
-       so it can match to any method name;
-   @[list(sub)]
+   The decorator will be auto applied to methods that have names
+   with such suffix;
+
+-- @[green]Prefix~Suffix@[green] : a prefix and suffix pattern.
+
+   The decorator will be auto applied to methods that have names
+   with such prefix and suffix;
+
+-- @[green]~@[green] : an empty prefix and suffix pattern.
+
+   The decorator will be auto applied to any methods.
 @[list]
 
-When multiple mixins are used in a host class, the decorators of the
-first mixin are applied the last. An the first decorator of the same
+
+
+When multiple mixin bases are used in a host class, the decorators of the
+first mixin base are applied the last. An the first decorator of the same
 decorator is also applied the last as well.
 
 @[code]
-class Header
+class @Header
 {
-	static routine @__Delimiter__( meth : routine ){
-		io.writeln( '=======================' )
-		return meth( __args__, ... )
-	}
-	routine @__Delimiter__( meth : routine ){
-		io.writeln( '-----------------------' )
-		return meth( __args__, ... )
-	}
+    static routine @Delimiter( meth : routine ) for ~ { 
+        io.writeln( '=======================' )
+        return meth( __args__, ... )
+    }   
+    routine @Delimiter( meth : routine ) for ~ { 
+        io.writeln( '-----------------------' )
+        return meth( __args__, ... )
+    }   
 }
-class Decorator
+class @Decorator
 {
-	var value = 654321
+    var value = 654321
 
-	routine @_Test_( meth :routine<self:Decorator> ){
-		io.writeln( 'Decorator::_Test_()', value )
-		meth( __args__, ... );
-	}
-	routine @_Prefix( meth :routine<self:Decorator> ){
-		io.writeln( 'Decorator::_Prefix()' )
-		meth( __args__, ... );
-	}
-	routine @Suffix_( meth :routine<self:Decorator> ){
-		io.writeln( 'Decorator::Suffix_()' )
-		meth( __args__, ... );
-	}
-	routine @_Prefix_Suffix_( meth :routine<self:Decorator> ){
-		io.writeln( 'Decorator::_Prefix_Suffix_()' )
-		meth( __args__, ... );
-	}
-}
-
-class MyClass ( Header, Decorator )
-{
-	routine Test(){
-		io.writeln( 'MyClass::Test()' )
-	}
-	routine PrefixTest(){
-		io.writeln( 'MyClass::PrefixTest()' )
-	}
-	routine TestSuffix(){
-		io.writeln( 'MyClass::TestSuffix()' )
-	}
-	routine PrefixTestSuffix(){
-		io.writeln( 'MyClass::PrefixTestSuffix()' )
-	}
+    routine @Test( meth :routine<self:@Decorator> ) for Test {
+        io.writeln( 'Decorator::Test()', value )
+        meth( __args__, ... );
+    }   
+    routine @Prefix( meth :routine<self:@Decorator> ) for Prefix~ {
+        io.writeln( 'Decorator::Prefix()' )
+        meth( __args__, ... );
+    }
+    routine @Suffix( meth :routine<self:@Decorator> ) for ~Suffix {
+        io.writeln( 'Decorator::Suffix()' )
+        meth( __args__, ... );
+    }
+    routine @Prefix_Suffix( meth :routine<self:@Decorator> ) for Prefix~Suffix {
+        io.writeln( 'Decorator::Prefix_Suffix()' )
+        meth( __args__, ... );
+    }
 }
 
-obj = MyClass()
+class MyMixin ( @Header, @Decorator )
+{
+    routine Test(){
+        io.writeln( 'MyMixin::Test()' )
+    }
+    routine PrefixTest(){
+        io.writeln( 'MyMixin::PrefixTest()' )
+    }
+    routine TestSuffix(){
+        io.writeln( 'MyMixin::TestSuffix()' )
+    }
+    routine PrefixTestSuffix(){
+        io.writeln( 'MyMixin::PrefixTestSuffix()' )
+    }
+}
+
+obj = MyMixin()
 obj.Test()
 obj.PrefixTest()
 obj.TestSuffix()
 obj.PrefixTestSuffix()
 @[code]
+
 @[text]
 
 
@@ -593,17 +583,17 @@ dao.class.aspect
 @[name]
 
 @[title]
-Aspect Class (New)
+Aspect Class
 @[title]
 
 
 @[text]
-(New in the latest devel release and online version)
 
 
-In Dao, a class can be effectly used as an aspect for AOP,
-if the class name is named according some simple affix rules.
-Please see @[node]dao.class.mixin@[node] for such affix rules.
+In Dao, a class decorator can be effectly used as an aspect for AOP,
+if decoration target patterns are specified for auto application.
+The target patterns are can be specified in the same way as the
+target patterns for class method decorators.
 
 
 The fields of such class will be automatically injected to
@@ -612,53 +602,53 @@ the decorators defined in such aspect class are automatically
 applied to the methods (selected according to the same affix
 rules) of the normal classes.
 
+
+To avoid unintentional application of aspects, a class can only be modified
+by aspects that are accessible at the definition point of the class.
+Furthermore, only aspects defined in the same file as the class
+or in the directly loaded file will be automatically applied.
+
+
 @[code]
-class __AspectForAnyClass__
+class @AspectForAnyClass for ~  # To be applied to any classes;
 {
-	var injected = {}
+    var injected = {}
 
-	routine __AspectForAnyClass__(){
-		io.writeln( 'In __AspectForAnyClass__:' );
-		injected = { 1, 2, 3 }
-	}
+    routine @AspectForAnyClass(){
+        io.writeln( 'In @AspectForAnyClass():' );
+        injected = { 1, 2, 3 }
+    }
 
-	# This decorator will also be applied to the default constructors:
-	routine @__DecoratorForAnyMethod__( meth : routine ){
-		io.writeln( 'In __DecoratorForAnyMethod__:', std.about(meth) )
-		io.writeln( injected )
-		return meth( __args__, ... )
-	}
+    # This decorator will also be applied to the default constructors:
+    routine @DecoratorForAnyMethod( meth : routine ) for ~ {
+        io.writeln( 'In @DecoratorForAnyMethod():', std.about(meth) )
+        io.writeln( injected )
+        return meth( __args__, ... )
+    }
 }
 
 # For classes with names prefixed with My:
-class _My_AspectForMyClasses
+class @AspectForMyClasses for My~
 {
-	routine @Method_( meth : routine ){
-		io.writeln( 'In _My_AspectForMyClasses::Method_:', std.about(meth) )
-		return meth( __args__, ... )
-	}
+    routine @Method( meth : routine ) for Method~ {
+        io.writeln( 'In @AspectForMyClasses::@Method():', std.about(meth) )
+        return meth( __args__, ... )
+    }
 }
 
 class MyClass
 {
-	routine Method(){ io.writeln( 'MyClass::Method()' ) }
+    routine Method(){ io.writeln( 'MyClass::Method()' ) }
 }
 
 k = MyClass()  # Invoke the default constructor of Klass;
 k.Method()
 @[code]
+
 @[text]
 
 
 
-
-@[name]
-dao.class.dynamic
-@[name]
-
-@[title]
-Dynamic Class (Obsolete; Remove since dao-2.0-devel-2013-06-09)
-@[title]
 
 
 
@@ -794,66 +784,4 @@ PrintSize2( {} );
 @[text]
 
 
-
-
-@[name]
-dao.metafield
-@[name]
-
-@[title]
-Meta Field (Obsolete; Remove since dao-2.0-devel-2013-06-09)
-@[title]
-
-
-@[text]
-@[text]
-
-#{
-Meta fields are supported for all data types.
-Such fields can be set and got by meta field operator @[green]->@[green].
-@[code]
-obj = 123
-obj->name = 'abc'
-name = obj->name
-@[code]
-Meta fields do not subject to static type checking,
-and do not interfere with the normal fields.
-
-
-For a map with string keys, its value can also be accessed
-using the meta field operator @[green]->@[green],
-@[code]
-amap = { 'name' => 'Test' }
-value = amap->name
-
-amap->color = 'Green'  # insert (color, Green);
-@[code]
-
-
-A special meta field @[green]__proto__@[green] can be set to be a map,
-for delegated field lookup.
-@[code]
-a = { 'name' => 'Test' }
-
-a->meth = routine( self : map<string,string> )
-{
-  for( it in self ) io.writeln( it )
-}
-a->meth();
-
-c = { 'index' => 123 }
-c->__proto__ = a;
-io.writeln( c->name, c );
-
-class Test{}
-t = Test();
-
-t->value = 123;
-io.writeln( t->value );
-
-t->__proto__ = c;
-
-io.writeln( t->name, t->index );
-@[code]
-#}
 

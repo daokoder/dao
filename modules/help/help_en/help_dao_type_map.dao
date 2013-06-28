@@ -26,6 +26,56 @@ Map ::= MapEnumeration | HashEnumeration
 @[code(syntax)]
 
 
+A map is created using "=>",
+@[code]
+map1  = { 'EE' => 5, 'BB' => 2, 'CC' => 3, 'AA' => 1 }
+@[code]
+
+
+A hash map is created using "->",
+@[code]
+hash1 = { 'EE' -> 5, 'BB' -> 2, 'CC' -> 3, 'AA' -> 1 }
+@[code]
+
+
+Get value by key,
+@[code]
+io.writeln( map1['BB'] )
+io.writeln( hash1['CC'] )
+@[code]
+
+
+Get sub map/hash by slicing,
+@[code]
+io.writeln( map1[ 'AA' : 'CC' ] )
+io.writeln( map1[ 'BB' : ] )
+io.writeln( map1[ : 'CC' ] )
+@[code]
+
+
+Get size, keys and values,
+@[code]
+io.writeln( %hash1 )         # get size;
+io.writeln( map2.size() )    # get size;
+io.writeln( map2.keys() )    # get keys;
+io.writeln( map2.values() )  # get values;
+@[code]
+
+
+Alternative way to define map/hash,
+@[code]
+map2  = map{ 'ABC' => 123, 'DEF' => 456 }
+hash2 = map{ 'ABC' -> 123, 'DEF' -> 456 }
+@[code]
+
+
+Iterate over maps,
+@[code]
+for( keyvalue in map1 ) io.writeln( keyvalue )
+for( keyvalue in hash1 ) io.writeln( keyvalue )
+@[code]
+
+
 @[text]
 
 

@@ -265,6 +265,8 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 	frame->entry = 0;
 	frame->state = 0;
 	frame->returning = -1;
+	frame->deferBase = self->defers->size;
+	frame->exceptBase = self->exceptions->size;
 	if( self->topFrame->routine && self->topFrame->routine->body && self->activeCode ){
 		self->topFrame->entry = (int)(self->activeCode - self->topFrame->codes) + 1;
 		frame->returning = self->activeCode->c;
@@ -550,7 +552,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 	if( defs && defs->size ){ /* Need specialization */
 		DaoRoutine *original = routine->original ? routine->original : routine;
 		/* Do not share function body. It may be thread unsafe to share: */
-		routine = DaoRoutine_Copy( original, 0, 1 );
+		routine = DaoRoutine_Copy( original, 0, 1, 0 );
 		DaoRoutine_Finalize( routine, routine->routHost, defs );
 
 		if( routine->body ){
@@ -1064,7 +1066,7 @@ CallEntry:
 		/*if( eventHandler ) eventHandler->mainRoutineExit(); */
 		goto ReturnTrue;
 	}
-	if( self->topFrame->entry == -1 ) goto FinishCall;
+	if( self->topFrame->state & DVM_FRAME_FINISHED ) goto FinishCall;
 	if( routine->pFunc ){
 		DaoValue **p = self->stackValues + topFrame->stackBase;
 		if( self->status == DAO_PROCESS_STACKED ){
@@ -1493,7 +1495,7 @@ CallEntry:
 			self->activeCode = vmc;
 			value = DaoProcess_DoReturn( self, vmc );
 			if( self->defers->size > self->topFrame->deferBase ){
-				self->topFrame->entry = -1;
+				self->topFrame->state |= DVM_FRAME_FINISHED;
 				DaoProcess_PushDefers( self, value );
 				goto CallEntry;
 			}
@@ -2351,11 +2353,6 @@ CheckException:
 			if( self->stopit | vmSpace->stopit ) goto FinishProcess;
 			//XXX if( invokehost ) handler->InvokeHost( handler, topCtx );
 			if( self->exceptions->size > exceptCount ){
-				if( self->defers->size > self->topFrame->deferBase ){
-					self->topFrame->entry = -1;
-					DaoProcess_PushDefers( self, NULL );
-					goto CallEntry;
-				}
 				goto FinishCall;
 			}else if( self->status == DAO_PROCESS_STACKED ){
 				goto CallEntry;
@@ -2370,6 +2367,12 @@ CheckException:
 	}OPEND()
 
 FinishCall:
+
+	if( self->defers->size > self->topFrame->deferBase ){
+		self->topFrame->state |= DVM_FRAME_FINISHED;
+		DaoProcess_PushDefers( self, NULL );
+		goto CallEntry;
+	}
 
 	if( (routine->attribs & DAO_ROUT_PASSRET) ){ /* Update the modified return: */
 		if( self->topFrame->prev->deferBase < self->topFrame->deferBase ){
@@ -6318,13 +6321,22 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 		}
 	}
 	if( proto->body->svariables->size == 0 && proto->routHost == NULL && vmc->b == 0 ){
-		/* proto->routHost is not NULL for methods of runtime class. */
-		DaoProcess_SetValue( self, vmc->c, (DaoValue*) proto );
-		if( proto->attribs & DAO_ROUT_DEFERRED ) DArray_Append( self->defers, proto );
-		return;
+		/*
+		// proto->routHost is not NULL for methods of runtime class.
+		//
+		// If (proto->attribs&DAO_ROUT_PASSRET), it is a deferred block that
+		// modifies the returned value, which are stored as a static variable.
+		// It is necessary to copy the routine in order to avoid interference
+		// between different calls.
+		*/
+		if( !(proto->attribs & DAO_ROUT_PASSRET) ){
+			DaoProcess_SetValue( self, vmc->c, (DaoValue*) proto );
+			if( proto->attribs & DAO_ROUT_DEFERRED ) DArray_Append( self->defers, proto );
+			return;
+		}
 	}
 
-	closure = DaoRoutine_Copy( proto, 1, 1 );
+	closure = DaoRoutine_Copy( proto, 1, 1, 1 );
 	pp2 = closure->routConsts->items.items.pValue;
 
 	K = vmc->b - closure->body->svariables->size;

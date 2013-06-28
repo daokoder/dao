@@ -83,8 +83,8 @@ struct DaoRoutine
 
 DaoRoutine* DaoRoutine_New( DaoNamespace *nspace, DaoType *host, int body );
 DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *init );
-DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int copy_const, int copy_body );
-void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int copy_body, int copy_const );
+DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int copy_const, int copy_body, int copy_stat );
+void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int copy_body, int copy_const, int copy_stat );
 void DaoRoutine_Delete( DaoRoutine *self );
 int  DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value );
 
@@ -132,7 +132,7 @@ struct DaoRoutineBody
 };
 
 DaoRoutineBody* DaoRoutineBody_New();
-DaoRoutineBody* DaoRoutineBody_Copy( DaoRoutineBody *self );
+DaoRoutineBody* DaoRoutineBody_Copy( DaoRoutineBody *self, int copy_stat );
 void DaoRoutineBody_Delete( DaoRoutineBody *self );
 
 
