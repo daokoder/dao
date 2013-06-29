@@ -32,7 +32,7 @@
 #include"daoPlatforms.h"
 
 
-#define IntToPointer( x ) ((void*)(size_t)x)
+#define IntToPointer( x ) ((void*)(size_t)(x))
 
 
 typedef struct DRoutines     DRoutines;

@@ -102,9 +102,9 @@ struct DaoTaskEvent
 	double       expiring;  /* expiring time for a timeout event; */
 	DaoFuture   *future;
 	DaoChannel  *channel;
-	DaoChannel  *selected;
 	DaoValue    *message;
-	DArray      *channels;  /* DArray<DaoChannel*> */
+	DaoValue    *selected;
+	DaoMap      *selects;  /* DHash<DaoFuture*|DaoChannel*,0|1>; */
 };
 
 

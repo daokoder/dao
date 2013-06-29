@@ -134,7 +134,8 @@ enum DaoTypeAttribs
 	DAO_TYPE_UNDEF = (1<<1), /* undefined type, with at least one undefined type; */
 	DAO_TYPE_SELF  = (1<<2), /* routine type that has self parameter; */
 	DAO_TYPE_VARIADIC = (1<<3), /* variadic type (routine or tuple); */
-	DAO_TYPE_SELFNAMED = (1<<4)
+	DAO_TYPE_SELFNAMED = (1<<4),
+	DAO_TYPE_CODESECT = (1<<5)
 };
 enum DaoCaseMode
 {
@@ -185,9 +186,10 @@ enum DaoRoutineAttrib
 	DAO_ROUT_PROTECTED = (1<<5),  /* protected method */
 	DAO_ROUT_DEFERRED  = (1<<6),  /* deferred closure */
 	DAO_ROUT_PASSRET   = (1<<7),  /* pass returned value to deferred closure */
-	DAO_ROUT_DECORATOR = (1<<8),  /* function decorator */
-	DAO_ROUT_INITOR    = (1<<9),  /* class constructor */
-	DAO_ROUT_MAIN      = (1<<10)  /* main function */
+	DAO_ROUT_CODESECT  = (1<<8),  /* code section routine */
+	DAO_ROUT_DECORATOR = (1<<9),  /* function decorator */
+	DAO_ROUT_INITOR    = (1<<10), /* class constructor */
+	DAO_ROUT_MAIN      = (1<<11)  /* main function */
 };
 
 #define DAO_TYPER_PRIV_FREE  (DAO_ROUT_MAIN<<1)

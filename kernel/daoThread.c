@@ -1155,6 +1155,8 @@ static void DaoMT_Critical( DaoProcess *proc, DaoValue *p[], int n )
 	if( proc->mutex ) DMutex_Unlock( proc->mutex );
 	DaoProcess_PopFrame( proc );
 }
+
+void DaoMT_Ration( DaoProcess *proc, DaoValue *par[], int n );
 void DaoMT_Select( DaoProcess *proc, DaoValue *p[], int n );
 
 DaoFuncItem dao_mt_methods[] =
@@ -1162,6 +1164,7 @@ DaoFuncItem dao_mt_methods[] =
 	{ DaoMT_Critical, "critical()[]" },
 	{ DaoMT_Start, "start( when : enum<auto,now> = $auto )[=>@V] =>future<@V>" },
 	{ DaoMT_Iterate, "iterate( times :int, threads=2 )[index:int,threadid:int]" },
+	{ DaoMT_Select,  "select( group :map<@T,int>, timeout = -1.0 ) => tuple<selected: none|@T, value :any, status :enum<selected,timeout,finished>>" },
 
 	{ DaoMT_ListIterate, "iterate( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int]" },
 	{ DaoMT_ListMap, "map( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int =>@T2] =>list<@T2>" },

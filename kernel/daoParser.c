@@ -1316,6 +1316,8 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	if( cbtype ){
 		GC_ShiftRC( cbtype, type->cbtype );
 		type->cbtype = cbtype;
+		type->attrib |= DAO_TYPE_CODESECT;
+		routine->attribs |= DAO_ROUT_CODESECT;
 		DString_Append( type->name, cbtype->name );
 		DString_Append( pname, cbtype->name );
 	}
@@ -1808,7 +1810,8 @@ WrongType:
 				type = tt;
 			}else{
 				type = DaoType_Copy( type );
-				type->attrib = 0;
+				//type->attrib = 0; // XXX
+				type->attrib |= DAO_TYPE_CODESECT;
 				DString_Assign( type->name, name );
 				DArray_Append( ns->auxData, type );
 			}
@@ -5842,6 +5845,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 	tkn = tokens[start]->type;
 	tki = tokens[start]->name;
 	tki2 = DaoParser_NextTokenName( self );
+	if( tki2 == stop ) tki2 = 0;
 	if( (start + 2) <= end ) tki3 = tokens[start+2]->type;
 	if( tki == DTOK_IDENTIFIER && tki2 == DTOK_COLON2 && tki3 == DTOK_IDENTIFIER ){
 		int pos = DaoParser_FindScopedConstant( self, & value, start );

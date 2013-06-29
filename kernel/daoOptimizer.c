@@ -1532,6 +1532,8 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 		at = types[vmc->a] ? types[vmc->a]->tid : DAO_UDT;
 		bt = types[vmc->b] ? types[vmc->b]->tid : DAO_UDT;
 		ct = types[vmc->c] ? types[vmc->c]->tid : DAO_UDT;
+		/* Need to be executed in any case to finish a loop: */
+		if( types[vmc->b] == dao_type_for_iterator ) return;
 		if( (at & DAO_ANY) || at == DAO_VARIANT ) return;
 		if( (bt & DAO_ANY) || bt == DAO_VARIANT ) return;
 		if( (ct & DAO_ANY) || ct == DAO_VARIANT ) return;
@@ -1918,9 +1920,14 @@ FinishError:
 	return 0;
 }
 static int DaoRoutine_CheckType( DaoType *routType, DaoNamespace *ns, DaoType *selftype,
-		DaoType *ts[], int np, int code, int def )
+		DaoType *ts[], int np, int codemode, int def )
 {
 	int parpass[DAO_MAX_PARAM];
+	int code = codemode & 0xffff;
+	int mode = codemode >> 16;
+	int b1 = ((codemode>>16) & DAO_CALL_BLOCK) != 0;
+	int b2 = (routType->attrib & DAO_TYPE_CODESECT) != 0;
+	if( b1 != b2 ) return 0;
 	return DaoRoutine_CheckTypeX( routType, ns, selftype, ts, np, code, def, parpass, 1 );
 }
 
@@ -1971,12 +1978,12 @@ DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *routype, DArray *ro
 	return DaoNamespace_MakeType( NS, "routine", DAO_ROUTINE, routype->aux, types, k );
 }
 
-DaoRoutine* DaoRoutine_ResolveByTypeX( DaoRoutine *self, DaoType *st, DaoType *t[], int n, int code );
-DaoRoutine* DaoRoutine_ResolveByType( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int code )
+DaoRoutine* DaoRoutine_ResolveByTypeX( DaoRoutine *self, DaoType *st, DaoType *t[], int n, int codemode );
+DaoRoutine* DaoRoutine_ResolveByType( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int codemode )
 {
-	DaoRoutine *rout = DaoRoutine_ResolveByTypeX( self, selftype, ts, np, code );
+	DaoRoutine *rout = DaoRoutine_ResolveByTypeX( self, selftype, ts, np, codemode );
 	if( rout == (DaoRoutine*)self ){ /* parameters not yet checked: */
-		if( DaoRoutine_CheckType( rout->routType, rout->nameSpace, selftype, ts, np, code, 0 ) ==0){
+		if( DaoRoutine_CheckType( rout->routType, rout->nameSpace, selftype, ts, np, codemode, 0 ) ==0){
 			rout = NULL;
 		}
 	}
@@ -2156,6 +2163,7 @@ enum DaoTypingErrorCode
 	DTE_TYPE_NOT_INITIALIZED,
 	DTE_TYPE_WRONG_CONTAINER ,
 	DTE_DATA_CANNOT_CREATE ,
+	DTE_CALL_INVALID ,
 	DTE_CALL_NOT_PERMIT ,
 	DTE_CALL_WITHOUT_INSTANCE ,
 	DTE_FIELD_NOT_PERMIT ,
@@ -2183,6 +2191,8 @@ static const char*const DaoTypingErrorString[] =
 	"Variable not initialized",
 	"Wrong container type",
 	"Data cannot be created",
+	"Invalid call",
+	"Call not permitted",
 	"Call not permitted",
 	"Calling nonstatic method without instance",
 	"Member not permitted",
@@ -2292,7 +2302,7 @@ static void DString_AppendTypeError( DString *self, DaoType *from, DaoType *to )
 	DString_Append( self, to->name );
 	DString_AppendMBS( self, "\' \";\n" );
 }
-void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routType, DaoType *selftype, DaoType *ts[], int np, int code, DArray *errors )
+void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routType, DaoType *selftype, DaoType *ts[], int np, int codemode, DArray *errors )
 {
 	DNode *node;
 	DMap *defs = DHash_New(0,0);
@@ -2303,6 +2313,19 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 	int ifrom, ito;
 	int parpass[DAO_MAX_PARAM];
 	int selfChecked = 0, selfMatch = 0;
+	int code = codemode & 0xffff;
+	int b1 = ((codemode>>16) & DAO_CALL_BLOCK) != 0;
+	int b2 = (routType->attrib & DAO_TYPE_CODESECT) != 0;
+
+	if( b1 == 0 && b2 != 0 ){
+		DString *s = AppendError( errors, routobj, DTE_CALL_INVALID );
+		DString_AppendMBS( s, "calling code section method without code section \";\n" );
+		goto FinishError;
+	}else if( b1 != 0 && b2 == 0 ){
+		DString *s = AppendError( errors, routobj, DTE_CALL_INVALID );
+		DString_AppendMBS( s, "calling normal method with code section \";\n" );
+		goto FinishError;
+	}
 
 	if( routType->nested ){
 		ndef = routType->nested->size;
@@ -2428,13 +2451,13 @@ FinishOK:
 FinishError:
 	DMap_Delete( defs );
 }
-DaoRoutine* DaoValue_Check( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int code, DArray *errors )
+DaoRoutine* DaoValue_Check( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int codemode, DArray *errors )
 {
 	int i, n;
-	DaoRoutine *rout = DaoRoutine_ResolveByType( self, selftype, ts, np, code );
+	DaoRoutine *rout = DaoRoutine_ResolveByType( self, selftype, ts, np, codemode );
 	if( rout ) return rout;
 	if( self->overloads == NULL ){
-		DaoRoutine_CheckError( self->nameSpace, self, self->routType, selftype, ts, np, code, errors );
+		DaoRoutine_CheckError( self->nameSpace, self, self->routType, selftype, ts, np, codemode, errors );
 		return NULL;
 	}
 	for(i=0,n=self->overloads->routines->size; i<n; i++){
@@ -2443,7 +2466,7 @@ DaoRoutine* DaoValue_Check( DaoRoutine *self, DaoType *selftype, DaoType *ts[], 
 		   printf( "=====================================\n" );
 		   printf("ovld %i, %p %s : %s\n", i, rout, self->routName->mbs, rout->routType->name->mbs);
 		 */
-		DaoRoutine_CheckError( rout->nameSpace, rout, rout->routType, selftype, ts, np, code, errors );
+		DaoRoutine_CheckError( rout->nameSpace, rout, rout->routType, selftype, ts, np, codemode, errors );
 	}
 	return NULL;
 }
@@ -2657,7 +2680,7 @@ static void DaoInferencer_WriteErrorSpecific( DaoInferencer *self, int error )
 	DaoStream_WriteMBS( stream, " --- \" " );
 	if( error == DTE_TYPE_NOT_INITIALIZED ){
 		vmc2.middle = 0;
-		vmc2.first += annot_first;
+		vmc2.first = annot_first;
 		vmc2.last = annot_last > annot_first ? annot_last - annot_first : 0;
 		DaoLexer_AnnotateCode( routine->body->source, vmc2, mbs, 32 );
 	}else if( error == DTE_TYPE_NOT_MATCHING ){
@@ -4702,6 +4725,7 @@ NotExist_TryAux:
 		case DVM_CALL : case DVM_MCALL :
 			{
 				int ctchecked = 0;
+				int codemode = code | ((int)vmc->b<<16);
 				DaoType *cbtype = NULL;
 				DaoInode *sect = NULL;
 				if( (vmc->b & DAO_CALL_BLOCK) && inodes[i+2]->code == DVM_SECT ){
@@ -4806,8 +4830,8 @@ NotExist_TryAux:
 					ctchecked = 1;
 				}else if( rout == NULL ){
 					if( !(vmc->b & DAO_CALL_INIT) ) vmc->b |= DAO_CALL_NOSELF;
-					if( DaoRoutine_CheckType( at, NS, NULL, tp, j, code, 0 ) ==0 ){
-						DaoRoutine_CheckError( NS, NULL, at, NULL, tp, j, code, errors );
+					if( DaoRoutine_CheckType( at, NS, NULL, tp, j, codemode, 0 ) ==0 ){
+						DaoRoutine_CheckError( NS, NULL, at, NULL, tp, j, codemode, errors );
 						goto ErrorTyping;
 					}
 					if( at->name->mbs[0] == '@' ){
@@ -4818,13 +4842,13 @@ NotExist_TryAux:
 						goto TryPushBlockReturnType;
 					}
 					cbtype = at->cbtype;
-					DaoRoutine_CheckType( at, NS, NULL, tp, j, code, 1 );
+					DaoRoutine_CheckType( at, NS, NULL, tp, j, codemode, 1 );
 					ct = types[opa];
 				}else{
 					if( rout->type != DAO_ROUTINE ) goto ErrorTyping;
 					rout2 = rout;
 					/* rout can be DRoutines: */
-					rout = DaoValue_Check( rout, bt, tp, j, code, errors );
+					rout = DaoValue_Check( rout, bt, tp, j, codemode, errors );
 					if( rout == NULL ) goto ErrorTyping;
 					if( rout->attribs & DAO_ROUT_PRIVATE ){
 						if( rout->routHost && rout->routHost != routine->routHost ) goto CallNotPermit;
@@ -4848,7 +4872,7 @@ NotExist_TryAux:
 								DaoType **pts = ft->nested->items.pType;
 								int nn = ft->nested->size;
 								int cc = DVM_CALL + (ft->attrib & DAO_TYPE_SELF);
-								rout = DaoValue_Check( (DaoRoutine*)pp[0], NULL, pts, nn, cc, errors );
+								rout = DaoValue_Check( (DaoRoutine*)pp[0], NULL, pts, nn, cc|((int)vmc->b<<16), errors );
 								if( rout == NULL ) goto ErrorTyping;
 							}
 						}
@@ -4859,7 +4883,7 @@ NotExist_TryAux:
 
 					if( rout2->overloads && rout2->overloads->routines->size > 1 ){
 						DArray *routines = rout2->overloads->routines;
-						m = DaoRoutine_CheckType( rout->routType, NS, bt, tp, j, code, 1 );
+						m = DaoRoutine_CheckType( rout->routType, NS, bt, tp, j, codemode, 1 );
 						if( m <= DAO_MT_ANY ){
 							/* For situations like:
 							//
@@ -4876,7 +4900,7 @@ NotExist_TryAux:
 							DArray_Clear( self->array );
 							for(k=0,K=routines->size; k<K; k++){
 								DaoType *type = routines->items.pRoutine[k]->routType;
-								m = DaoRoutine_CheckType( type, NS, bt, tp, j, code, 1 );
+								m = DaoRoutine_CheckType( type, NS, bt, tp, j, codemode, 1 );
 								if( m == 0 ) continue;
 								type = (DaoType*) type->aux;
 								if( type == NULL ) type = dao_type_none;

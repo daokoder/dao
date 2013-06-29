@@ -183,6 +183,17 @@ int DaoList_Compare( DaoList *list1, DaoList *list2 )
 	if( size1 == size2  ) return 0;
 	return size1 < size2 ? -100 : 100;
 }
+int DaoCstruct_Compare( DaoValue *left, DaoValue *right )
+{
+	if( left == right ) return 0;
+	if( left->xCstruct.ctype != right->xCstruct.ctype ){
+		return number_compare( (size_t)left->xCstruct.ctype, (size_t)right->xCstruct.ctype );
+	}
+	if( left->type == DAO_CDATA ){
+		return number_compare( (size_t)left->xCdata.data, (size_t)right->xCdata.data );
+	}
+	return number_compare( (size_t)left, (size_t)right );
+}
 int DaoValue_Compare( DaoValue *left, DaoValue *right )
 {
 	double L, R;
@@ -232,9 +243,9 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	case DAO_ENUM    : return DaoEnum_Compare( & left->xEnum, & right->xEnum );
 	case DAO_TUPLE   : return DaoTuple_Compare( & left->xTuple, & right->xTuple );
 	case DAO_LIST    : return DaoList_Compare( & left->xList, & right->xList );
+	case DAO_CDATA :
 	case DAO_CSTRUCT :
-	case DAO_CTYPE : return left == right ? 0 : -1;
-	case DAO_CDATA : return number_compare( (daoint)left->xCdata.data, (daoint)right->xCdata.data );
+	case DAO_CTYPE : return DaoCstruct_Compare( left, right );
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY   : return DaoArray_Compare( & left->xArray, & right->xArray );
 #endif

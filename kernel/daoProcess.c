@@ -108,7 +108,7 @@ static int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue
 int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, DaoProcess *ctx );
 int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, DaoProcess *ctx );
 int DaoArray_ArrayArith( DaoArray *s, DaoArray *l, DaoArray *r, short p, DaoProcess *c );
-void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int code );
+void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int codemode );
 
 extern void DaoProcess_Trace( DaoProcess *self, int depth );
 
@@ -3671,8 +3671,7 @@ static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 #endif
 static int DaoProcess_InitBase( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller )
 {
-	int mode = vmc->b & 0xff00;
-	if( (mode & DAO_CALL_INIT) && self->activeObject ){
+	if( (vmc->b & DAO_CALL_INIT) && self->activeObject ){
 		DaoClass *klass = self->activeObject->defClass;
 		int init = self->activeRoutine->attribs & DAO_ROUT_INITOR;
 		if( self->activeRoutine->routHost == klass->objType && init ){
@@ -3689,7 +3688,7 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 	rout = DaoProcess_PassParams( self, rout, NULL, O, P, N, vmc->code );
 	if( rout == NULL ){
 		DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "not matched (passing)" );
-		DaoProcess_ShowCallError( self, rout2, O, P, N, vmc->code );
+		DaoProcess_ShowCallError( self, rout2, O, P, N, vmc->code|((int)vmc->b<<16) );
 		return;
 	}
 	if( need_self && rout->routHost && rout->routHost->tid == DAO_OBJECT ){
@@ -3744,9 +3743,10 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 	DaoVmSpace *vmspace = self->vmSpace;
 	DaoValue *caller = self->activeValues[ vmc->a ];
 	int status, code = vmc->code;
-	func = DaoRoutine_ResolveX( func, selfpar, P, N, code );
+	int codemode = code|((int)vmc->b<<16);
+	func = DaoRoutine_ResolveX( func, selfpar, P, N, codemode );
 	if( func == NULL ){
-		DaoProcess_ShowCallError( self, rout, selfpar, P, N, code );
+		DaoProcess_ShowCallError( self, rout, selfpar, P, N, codemode );
 		return;
 	}
 	if( (vmspace->options & DAO_OPTION_SAFE) && func->nameSpace != vmspace->nsInternal ){
@@ -3757,7 +3757,7 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 		return;
 	}
 	if( (func = DaoProcess_PassParams( self, func, hostype, selfpar, P, N, code )) == NULL ){
-		DaoProcess_ShowCallError( self, rout, selfpar, P, N, code );
+		DaoProcess_ShowCallError( self, rout, selfpar, P, N, codemode );
 		return;
 	}
 	DaoProcess_PushFunction( self, func );
@@ -3786,8 +3786,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 	DaoRoutine *routines = klass->classRoutines;
 	DaoObject *obj, *othis = NULL, *onew = NULL;
 	int i, code = vmc->code;
-	int mode = vmc->b & 0xff00;
-	int codemode = code | (mode<<16);
+	int codemode = code | (vmc->b<<16);
 	int initbase = DaoProcess_InitBase( self, vmc, (DaoValue*) klass );
 	if( initbase >= 0 ){
 		othis = self->activeObject;
@@ -3834,8 +3833,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 {
 	int i, sup = 0;
 	int code = vmc->code;
-	int mode = vmc->b & 0xff00;
-	int codemode = code | (mode<<16);
+	int codemode = code | (vmc->b<<16);
 	DaoStackFrame *topFrame = self->topFrame;
 	DaoRoutine *rout, *rout2;
 	DArray *array, *bindings;
@@ -3943,13 +3941,13 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 	}
 	return;
 InvalidParameter:
-	DaoProcess_ShowCallError( self, rout2, selfpar, params, npar, code );
+	DaoProcess_ShowCallError( self, rout2, selfpar, params, npar, codemode );
 }
 void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 {
 	int sup = 0, code = vmc->code;
 	int mcall = code == DVM_MCALL;
-	int mode = vmc->b & 0xff00;
+	int mode = vmc->b;
 	int npar = vmc->b & 0xff;
 	int codemode = code | (mode<<16);
 	DaoNameValue nameva = {DAO_PAR_NAMED,0,0,0,1,1,NULL,NULL,NULL};
@@ -6231,7 +6229,7 @@ FailConversion :
 DaoRoutine* DaoValue_Check( DaoRoutine *self, DaoType *selftp, DaoType *ts[], int np, int code, DArray *es );
 void DaoPrintCallError( DArray *errors, DaoStream *stdio );
 
-void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int code )
+void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int codemode )
 {
 	DaoStream *ss = DaoStream_New();
 	DaoNamespace *ns = self->activeNamespace;
@@ -6240,7 +6238,7 @@ void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *sel
 	DArray *errors = DArray_New(0);
 	int i;
 	for(i=0; i<np; i++) ts[i] = DaoNamespace_GetType( ns, ps[i] );
-	DaoValue_Check( rout, selftype, ts, np, code, errors );
+	DaoValue_Check( rout, selftype, ts, np, codemode, errors );
 	ss->attribs |= DAO_IO_STRING;
 	DaoPrintCallError( errors, ss );
 	DArray_Delete( errors );
@@ -6390,6 +6388,16 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 	DaoType *warning = DaoException_GetType( DAO_WARNING );
 	DaoStream *stream = self->vmSpace->errorStream;
 	DaoException *except;
+
+#ifdef DEBUG
+	if( self->topFrame->routine->body ){
+		DaoVmCode *vmc = self->activeCode;
+		int i = vmc - self->topFrame->codes;
+		if( self->topFrame->routine != self->activeRoutine ) i = self->topFrame->entry;
+		DaoVmCodeX_Print( *self->topFrame->routine->body->annotCodes->items.pVmc[i], NULL );
+	}
+#endif
+
 	if( type <= 1 ) return;
 	if( type >= ENDOF_BASIC_EXCEPT ) type = DAO_ERROR;
 	if( self->activeRoutine == NULL ) return; // TODO: Error infor;

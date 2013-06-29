@@ -42,6 +42,7 @@ typedef union
 	DArray      *pArray;
 	DMap        *pMap;
 	DaoValue    *pValue;
+	DaoInteger  *pInteger;
 	DaoClass    *pClass;
 	DaoRoutine  *pRoutine;
 	DaoType     *pType;

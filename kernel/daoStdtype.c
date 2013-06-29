@@ -2577,7 +2577,7 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Index,    "index( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>list<int>" },
 	{ DaoLIST_Count,    "count( self :list<@T> )[item:@T,index:int=>int]=>int" },
 	{ DaoLIST_Iterate,  "iterate( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int]" },
-	{ DaoLIST_Sort,     "sort( self :list<@T>, order :enum<ascend,descend>, k=0 )=>list<@T>" },
+	{ DaoLIST_Sort,     "sort( self :list<@T>, order :enum<ascend,descend>=$ascend, k=0 )=>list<@T>" },
 	{ DaoLIST_Sort,     "sort( self :list<@T>, k=0 )[X:@T,Y:@T=>int]=>list<@T>" },
 	{ DaoLIST_Apply,    "apply( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>@T]=>list<@T>" },
 	{ NULL, NULL }

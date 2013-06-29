@@ -1081,6 +1081,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		copy->cbtype = DaoType_DefineTypes( self->cbtype, ns, defs );
 		if( copy->cbtype ==NULL ) goto DefFailed;
 		GC_IncRC( copy->cbtype );
+		copy->attrib |= DAO_TYPE_CODESECT;
 		DString_Append( copy->name, copy->cbtype->name );
 	}
 	if( self->tid == DAO_PAR_NAMED ){
