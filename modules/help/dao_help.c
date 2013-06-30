@@ -1419,6 +1419,7 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 	screen = ws.ws_col - 1;
 #endif
 
+	if( stream->fmtHTML ) screen += 20;
 	if( depth > 4 && hlerror == 0 ) return;
 	if( hlerror && self->failedTests == 0 ) return;
 

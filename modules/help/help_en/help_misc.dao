@@ -1,6 +1,13 @@
 load help;
 
 
+
+
+############################################################
+#### Installation
+############################################################
+
+
 @[name]
 misc.installation
 @[name]
@@ -77,18 +84,11 @@ $ make install
 
 
 
-@[name]
-misc.comparison
-@[name]
-
-@[title]
-Comparisons
-@[title]
 
 
-@[text]
-@[text]
-
+############################################################
+#### Comparisons
+############################################################
 
 
 
@@ -97,7 +97,7 @@ misc.comparison
 @[name]
 
 @[title]
-
+Comparisons between Dao and Other Languages
 @[title]
 
 
@@ -108,26 +108,410 @@ misc.comparison
 
 
 @[name]
-misc.benchmarks
+misc.comparison.typing
 @[name]
 
 @[title]
-Benchmarking
+Optional VS Duck Typing (Python)
 @[title]
 
 
 @[text]
+
+
+@[subsection]
+Type Checking
+@[subsection]
+
+
+Duck typing offers much flexibility in programming,
+but it lacks of compiling time type safety checking.
+As a result, even obvious type errors cannot be detected
+at compiling time by an interpreter or compiler for
+a duck typing language.
+This problem can be well illustrated by the following
+example in Python,
+@[code]
+def SomeFunction(a, b):
+    return a * b
+
+SomeFunction( 'abc', 'def' )  # Running time error!
+@[code]
+Since not all the execution paths can be covered by testing,
+some bugs caused by such simple typing errors may go undetected.
+
+
+
+But such error can be easily detected with type inference
+and function specialization in an optional typing language
+such as Dao. 
+For example, the following will raise a compiling error
+for the second function call,
+@[code]
+routine SomeFunction( a, b )
+{
+	return a * b
+}
+SomeFunction( 123, 456 )      # No error.
+SomeFunction( 'abc', 'def' )  # Compiling time error!
+@[code]
+In this example, even though the parameter types of @[green]SomeFunction()@[green]
+are not explicitly specified, but at its call sites, the types of the arguments
+for the calls can be inferred. Using these type information, Dao interpreter
+will specialize @[green]SomeFunction()@[green] into two functions, one for
+@[green]int@[green] and @[green]int@[green] parameters, the other for
+@[green]string@[green] and @[green]string@[green] parameters. 
+
+
+The first call is valid because the specialized function will do 
+integer-integer multiplication. But the second call is not, 
+because it attempts to do string-string multiplication, 
+which is not a valid operation. Because such function
+specialization and type checking is done at compiling time,
+such errors can be easily detected at compiling time.
+
+
+
+@[subsection]
+Explicit Typing
+@[subsection]
+
+
+Another problem with duck typing is that explicit types cannot be specified
+to make codes clearer and more readable.
+For example, in Python, without looking into the documentations for a function,
+or the implementation of the function, it may be very difficult to guess what
+are the correct parameter types for the function.
+
+
+But in Dao with optional typing, one can write a function in the following way,
+@[code]
+routine SomeFunction( a :float, b :float )
+{
+	return a * b
+}
+@[code]
+This will make it clear that this function will accept two floats as parameters.
+Such explicit parameter type specification is also very helpful in creating
+bindings for C/C++ functions, because this will guarantee that the parameters
+passed to the functions are of the expected types, so it can save a lot of
+boilerplate codes for type checking (and conversion in some cases).
+
+
 @[text]
+
 
 
 
 
 @[name]
-misc.benchmarks
+misc.comparison.enumsym
 @[name]
 
 @[title]
-Benchmarking
+Enum Symbols (C++,Ruby)
+@[title]
+
+
+@[text]
+
+Dao supports a data type that is roughly a combination 
+of C++ enum and Ruby symbol types.
+Like in C++, enum symbol in Dao can be declared in the
+following way,
+@[code]
+enum Boolean { False, True }
+@[code]
+And zero will be associated with @[green]False@[green]
+and one will be associated with @[green]True@[green].
+
+
+But unlike in C++, this will not add integer constants named 
+@[green]False@[green] and @[green]True@[green], so they have
+to be accessed in the following way,
+@[code]
+bl1 = Boolean::False
+bl2 = Boolean::True
+@[code]
+To use @[green]False@[green] and @[green]True@[green] as integer
+constants as in C++, one may do,
+@[code]
+use enum Boolean
+@[code]
+
+
+However, the more convenient way to use this type is to use them as symbols.
+A symbol is an identifier prefixed with a dollar symbol.
+A symbol is a like a "polymorphic" enum: it can be used freely without
+being fixed to a particular enum type, but its actually value will depend
+on the type of the variable that holds it.
+
+
+For example,
+@[code]
+enum EnumRF{ Real, False }
+
+A = $False
+
+B : Boolean = $False
+C : EnumRF  = $False
+@[code]
+Here @[green]A@[green] will hold a free symbol @[green]$False@[green]
+with value @[green]zero@[green].
+And @[green]B@[green] will hold a symbol @[green]$False@[green] of 
+type @[green]Boolean@[green] with value @[green]zero@[green].
+And @[green]C@[green] will hold a symbol @[green]$False@[green] of 
+type @[green]EnumRF@[green] with value @[green]one@[green].
+
+
+The main difference between Dao enum symbol and C++ enum and Ruby symbol
+is this polymophic behavior of Dao enum symbol.
+Another important difference is that Dao enum symbol is trictly typed,
+while the others are not.
+
+
+@[text]
+
+
+
+
+
+@[name]
+misc.comparison.codesect
+@[name]
+
+@[title]
+Code Block Method (Ruby)
+@[title]
+
+
+@[text]
+
+Ruby supports a special type of functions called @[green]code block method@[green],
+which can accept a block of codes as an addtional and implicit parameter.
+Dao also supports such method in a similar way, and such method
+is also often called @[green]code section method@[green] in Dao,
+that because there is a significant difference between the implementation of
+such methods in Dao and in Ruby.
+
+
+In Ruby, the code block attached to a call is compiled and passed to the call
+as a closure. But in Dao, the code block is compile as a part (section) of
+the host (caller) function, and is not passed to the call.
+Instead, the call will locate the right code section in the caller and
+execute that section when necessary.
+There are advantages and disadvantages of both implementation,
+but the implementation as code sections should be more efficient.
+
+
+The following examples should demonstrate some syntactic differences.
+@[code]
+# Ruby
+def CodeBlock
+	puts 'Starting CodeBlock'
+	yield 123
+	puts 'Ending CodeBlock'
+end
+
+CodeBlock { |x| puts "#{x}" }
+@[code]
+
+@[code]
+# Dao
+routine CodeBlock()
+[ int ] # parameter type for the block;
+{
+	io.writeln( 'Starting CodeBlock' )
+	yield( 123 )
+	io.writeln(  'Ending CodeBlock' )
+}
+
+CodeBlock::{ [x] io.writeln( x ) }
+@[code]
+
+Note: code section method is not really inspired by Ruby, 
+but it was evolved from the previous functional method in Dao.
+Only the syntax was eventually settled down and converged to
+something similar to Ruby code block method, whose syntax
+seems quite appropriate for such feature.
+
+
+@[text]
+
+
+
+
+
+
+@[name]
+misc.comparison.decorator
+@[name]
+
+@[title]
+Function Decorator (Python)
+@[title]
+
+
+@[text]
+
+Decorators are a special type of functions that can be used to
+enhance the functionalities of other functions by decorating them.
+
+
+@[subsection]
+Decorators for Single Functions
+@[subsection]
+
+In Python, a decorator is just a callable that can take a function 
+as an input argument and return a replacement function as output.
+For example,
+@[code]
+def Decorator( func ):
+	def newfunc():
+		ret = func()
+		return ret + 123
+	return newfunc
+
+def Foo():
+	return 456
+
+deco = Decorator( Foo )
+deco()
+@[code]
+
+
+Dao decorators are quite different from Python decorators.
+Dao decorators do not return replacement functions, instead,
+they are defined as the templates from which the replacement functions
+can be created. Such replacement functions may or may not call
+the original function, this is the same as Python decorators,
+but Dao decorators are typed and can be strictly typed.
+So all the static type checking that can be applied to normal functions
+can also be applied to decorators as well.
+
+
+An equivalent Dao decorator for the above Python example is,
+@[code]
+routine @Decorator( func : routine< =>int > )
+{
+	ret = func( __args__, ... )  # call the original function;
+	return ret + 123
+}
+routine Foo()
+{
+	return 456
+}
+deco = @Decorator( Foo )
+deco()
+@[code]
+Where the parameter and type @[green]func : routine< =>int >@[green]
+of @[green]@Decorator()@[green] indicates that this decorator can
+only be applied to functions that can take no parameter and return an integer.
+@[green]__args__@[green] is an automatically defined variable of tuple type
+to hold the parameters that will be passed to the decorated function.
+The @[green]...@[green] in the end of the argument list indicates
+that the call must expand the previous tuple argument in the argument list,
+namely, removing the tuple and placing its items in the argument list.
+
+
+In both Python and Dao, decorators can be applied at function definition sites
+in the same way.
+
+
+@[subsection]
+Decorators for Any Functions
+@[subsection]
+
+If one wants to define a decorator that can be applied to any functions.
+In Python, one might do,
+@[code]
+def Decorator( func ):
+	def newfunc( *args, **kwargs ):
+		print "Calling with: %s, %s" % (args, kwargs)
+		return func( *args, **kwargs )
+	return newfunc
+
+def Foo( a ):
+	return a + 456
+
+deco = Decorator( Foo )
+deco( 123 )
+@[code]
+The equivalent in Dao would be,
+@[code]
+routine @Decorator( func : routine )
+{
+	io.writeln( 'Calling with:', __args__, ... )
+	return func( __args__, ... )  # call the original function;
+}
+routine Foo( a )
+{
+	return a + 456
+}
+deco = @Decorator( Foo )
+deco( 123 )
+@[code]
+
+
+
+@[subsection]
+Overloaded Decorators
+@[subsection]
+
+
+If one wants to write a decorator for multiple type of functions,
+in Python one would have to create decorators as in the above
+Python examples and check the argumenet types to handle different
+types of functions. Because Python does not support function overloading.
+
+
+In Dao, one could simply create different decorators for different
+target functions, and overload them with the same name.
+For example,
+@[code]
+routine @Decorator( func : routine<int=>int> )
+{
+	return func( __args__, ... ) + 123
+}
+routine @Decorator( func : routine<string=>string> )
+{
+	return func( __args__, ... ) + 'abc'
+}
+
+@Decorator  # the first decorator will be applied;
+routine Foo( a : int )
+{
+	return a * 100
+}
+
+@Decorator  # the second decorator will be applied;
+routine Foo( a : string )
+{
+	return a + '##';
+}
+
+f = @Decorator( Foo )
+f( 123 )
+f( 'xyz' )
+@[code]
+When the target function is also overloaded, the decorator will be
+applied to each of the overloaded functions, and create a new
+(and possible also overloaded as well) function.
+
+
+
+@[text]
+
+
+
+
+
+@[name]
+misc.comparison.overloading
+@[name]
+
+@[title]
+Operator Overloading (Python)
 @[title]
 
 
@@ -135,6 +519,64 @@ Benchmarking
 @[text]
 
 
+
+
+
+@[name]
+misc.comparison.tasklet
+@[name]
+
+@[title]
+Concurrency Tasklet (Go)
+@[title]
+
+
+@[text]
+@[text]
+
+
+
+
+
+@[name]
+misc.comparison.channel
+@[name]
+
+@[title]
+Communication Channel (Go)
+@[title]
+
+
+@[text]
+@[text]
+
+
+
+
+
+@[name]
+misc.comparison.binding
+@[name]
+
+@[title]
+C/C++ Function Binding (Python, Lua)
+@[title]
+
+
+@[text]
+@[text]
+
+
+
+
+
+
+
+
+
+############################################################
+#### Benchmarking
+############################################################
 
 
 @[name]

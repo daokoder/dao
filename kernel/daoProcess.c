@@ -6318,20 +6318,10 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 			return;
 		}
 	}
-	if( proto->body->svariables->size == 0 && proto->routHost == NULL && vmc->b == 0 ){
-		/*
-		// proto->routHost is not NULL for methods of runtime class.
-		//
-		// If (proto->attribs&DAO_ROUT_PASSRET), it is a deferred block that
-		// modifies the returned value, which are stored as a static variable.
-		// It is necessary to copy the routine in order to avoid interference
-		// between different calls.
-		*/
-		if( !(proto->attribs & DAO_ROUT_PASSRET) ){
-			DaoProcess_SetValue( self, vmc->c, (DaoValue*) proto );
-			if( proto->attribs & DAO_ROUT_DEFERRED ) DArray_Append( self->defers, proto );
-			return;
-		}
+	if( proto->body->svariables->size == 0 && vmc->b == 0 ){
+		DaoProcess_SetValue( self, vmc->c, (DaoValue*) proto );
+		if( proto->attribs & DAO_ROUT_DEFERRED ) DArray_Append( self->defers, proto );
+		return;
 	}
 
 	closure = DaoRoutine_Copy( proto, 1, 1, 1 );
