@@ -150,7 +150,7 @@ for the second function call,
 @[code]
 routine SomeFunction( a, b )
 {
-	return a * b
+    return a * b
 }
 SomeFunction( 123, 456 )      # No error.
 SomeFunction( 'abc', 'def' )  # Compiling time error!
@@ -188,7 +188,7 @@ But in Dao with optional typing, one can write a function in the following way,
 @[code]
 routine SomeFunction( a :float, b :float )
 {
-	return a * b
+    return a * b
 }
 @[code]
 This will make it clear that this function will accept two floats as parameters.
@@ -227,8 +227,8 @@ and one will be associated with @[green]True@[green].
 
 
 But unlike in C++, this will not add integer constants named 
-@[green]False@[green] and @[green]True@[green], so they have
-to be accessed in the following way,
+@[green]False@[green] and @[green]True@[green] to the current namespace,
+so they have to be accessed in the following way,
 @[code]
 bl1 = Boolean::False
 bl2 = Boolean::True
@@ -237,6 +237,7 @@ To use @[green]False@[green] and @[green]True@[green] as integer
 constants as in C++, one may do,
 @[code]
 use enum Boolean
+bl3 = True
 @[code]
 
 
@@ -266,8 +267,6 @@ type @[green]EnumRF@[green] with value @[green]one@[green].
 
 The main difference between Dao enum symbol and C++ enum and Ruby symbol
 is this polymophic behavior of Dao enum symbol.
-Another important difference is that Dao enum symbol is trictly typed,
-while the others are not.
 
 
 @[text]
@@ -288,10 +287,10 @@ Code Block Method (Ruby)
 @[text]
 
 Ruby supports a special type of functions called @[green]code block method@[green],
-which can accept a block of codes as an addtional and implicit parameter.
+which can accept a block of codes as an additional and implicit parameter.
 Dao also supports such method in a similar way, and such method
-is also often called @[green]code section method@[green] in Dao,
-that because there is a significant difference between the implementation of
+is often called @[green]code section method@[green] in Dao,
+that's because there is a significant difference between the implementation of
 such methods in Dao and in Ruby.
 
 
@@ -308,9 +307,9 @@ The following examples should demonstrate some syntactic differences.
 @[code]
 # Ruby
 def CodeBlock
-	puts 'Starting CodeBlock'
-	yield 123
-	puts 'Ending CodeBlock'
+    puts 'Starting CodeBlock'
+    yield 123
+    puts 'Ending CodeBlock'
 end
 
 CodeBlock { |x| puts "#{x}" }
@@ -321,9 +320,9 @@ CodeBlock { |x| puts "#{x}" }
 routine CodeBlock()
 [ int ] # parameter type for the block;
 {
-	io.writeln( 'Starting CodeBlock' )
-	yield( 123 )
-	io.writeln(  'Ending CodeBlock' )
+    io.writeln( 'Starting CodeBlock' )
+    yield( 123 )
+    io.writeln(  'Ending CodeBlock' )
 }
 
 CodeBlock::{ [x] io.writeln( x ) }
@@ -367,13 +366,13 @@ as an input argument and return a replacement function as output.
 For example,
 @[code]
 def Decorator( func ):
-	def newfunc():
-		ret = func()
-		return ret + 123
-	return newfunc
+    def newfunc():
+        ret = func()
+        return ret + 123
+    return newfunc
 
 def Foo():
-	return 456
+    return 456
 
 deco = Decorator( Foo )
 deco()
@@ -394,17 +393,17 @@ An equivalent Dao decorator for the above Python example is,
 @[code]
 routine @Decorator( func : routine< =>int > )
 {
-	ret = func( __args__, ... )  # call the original function;
-	return ret + 123
+    ret = func( __args__, ... )  # call the original function;
+    return ret + 123
 }
 routine Foo()
 {
-	return 456
+    return 456
 }
 deco = @Decorator( Foo )
 deco()
 @[code]
-Where the parameter and type @[green]func : routine< =>int >@[green]
+Where the parameter type @[green]routine< =>int >@[green]
 of @[green]@Decorator()@[green] indicates that this decorator can
 only be applied to functions that can take no parameter and return an integer.
 @[green]__args__@[green] is an automatically defined variable of tuple type
@@ -426,13 +425,13 @@ If one wants to define a decorator that can be applied to any functions.
 In Python, one might do,
 @[code]
 def Decorator( func ):
-	def newfunc( *args, **kwargs ):
-		print "Calling with: %s, %s" % (args, kwargs)
-		return func( *args, **kwargs )
-	return newfunc
+    def newfunc( *args, **kwargs ):
+        print "Calling with: %s, %s" % (args, kwargs)
+        return func( *args, **kwargs )
+    return newfunc
 
 def Foo( a ):
-	return a + 456
+    return a + 456
 
 deco = Decorator( Foo )
 deco( 123 )
@@ -441,12 +440,12 @@ The equivalent in Dao would be,
 @[code]
 routine @Decorator( func : routine )
 {
-	io.writeln( 'Calling with:', __args__, ... )
-	return func( __args__, ... )  # call the original function;
+    io.writeln( 'Calling with:', __args__, ... )
+    return func( __args__, ... )  # call the original function;
 }
 routine Foo( a )
 {
-	return a + 456
+    return a + 456
 }
 deco = @Decorator( Foo )
 deco( 123 )
@@ -461,7 +460,7 @@ Overloaded Decorators
 
 If one wants to write a decorator for multiple type of functions,
 in Python one would have to create decorators as in the above
-Python examples and check the argumenet types to handle different
+Python examples and check the argument types to handle different
 types of functions. Because Python does not support function overloading.
 
 
@@ -471,23 +470,23 @@ For example,
 @[code]
 routine @Decorator( func : routine<int=>int> )
 {
-	return func( __args__, ... ) + 123
+    return func( __args__, ... ) + 123
 }
 routine @Decorator( func : routine<string=>string> )
 {
-	return func( __args__, ... ) + 'abc'
+    return func( __args__, ... ) + 'abc'
 }
 
 @Decorator  # the first decorator will be applied;
 routine Foo( a : int )
 {
-	return a * 100
+    return a * 100
 }
 
 @Decorator  # the second decorator will be applied;
 routine Foo( a : string )
 {
-	return a + '##';
+    return a + '##';
 }
 
 f = @Decorator( Foo )
@@ -516,7 +515,139 @@ Operator Overloading (Python)
 
 
 @[text]
+
+
+@[subsection]
+Field Getter and Setter
+@[subsection]
+
+@[code]
+# Python
+class Something:
+    def __init__(self):
+        self.thing = {}
+
+    def __getattr__(self, name):
+        if name == "something":
+            return self.thing
+        return None
+
+    def __setattr__(self, name, value):
+        if name == "something":
+            self.thing = value;
+@[code]
+
+@[code]
+# Dao
+class Something
+{
+    var thing = {}
+
+    routine Something() {  # Not really needed;
+        thing = {}
+    }
+    operator .something() {
+        return thing
+    }
+    operator .something=( value ){
+        thing = value;
+    }
+    # Or alternatively:
+    operator .( name : string ) {
+        if( name == "something" ) return thing
+        return none;
+    }
+    operator .=( name : string, value ){
+        if( name == "something" ) thing = value;
+    }
+}
+@[code]
+
+
+
+@[subsection]
+Item Getter and Setter
+@[subsection]
+
+@[code]
+# Python
+class UserDict:
+    def __init__(self):
+        self.data = {}
+
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __setitem__(self, key, item):
+        self.data[key] = item
+@[code]
+
+@[code]
+# Dao
+class UserDict
+{
+    var data = {=>}
+
+    routine UserDict() { # Not really needed;
+        data = {=>}
+    }
+    operator []( key ){
+        return data[key]
+    }
+    operator []=( item, key ){
+        data[key] = item
+    }
+}
+@[code]
+Please note that in @[green]operator[]=@[green], @[green]item@[green]
+is the first parameter. It is arranged in this way to naturally support
+multiple keys/indices. For example, for a multidimensional array, one may define,
+@[code]
+    operator []( index1, index2 ){
+        return data[ index1, index2 ]
+    }
+    operator []=( item, index1, index2 ){
+        data[ index1, index2 ] = item
+    }
+@[code]
+
+
+@[subsection]
+Arithmetic Operators
+@[subsection]
+
+@[code]
+# Python
+class MyNumber:
+
+    def __init__(self, value):
+        self.value = value
+
+    def __add__(self, other):
+        return MyNumber( self.value + other.value )
+@[code]
+
+@[code]
+# Dao
+class MyNumber
+{
+    var value = 0
+
+    routine MyNumber( value = 0 ) {
+        self.value = value
+    }
+
+    operator +( other : MyNumber ) {
+        return MyNumber( value + other.value )
+    }
+}
+@[code]
+
+
 @[text]
+
+
+
 
 
 
@@ -532,7 +663,44 @@ Concurrency Tasklet (Go)
 
 
 @[text]
+
+In Go, lightweight threads or tasklets can be created by starting goroutines:
+@[code]
+func Sum( ch chan int ){
+    sum = 0
+    for index := 0; index < 100; index++ {
+        sum += index
+    }
+    ch <- sum
+}
+ch := make(chan int, 1)
+
+go Sum( ch )  # Start goroutine;
+sum = <-ch    # Wait for the result;
+@[code]
+
+
+In Dao, they can be created by using Asynchronous Function Calls:
+@[code]
+routine Sum(){
+    sum = 0
+    for( index = 0; index < 100; ++index ){
+        sum += index
+    }
+    return sum
+}
+fut = Sum() !!     # Asynchronous Function Call (returns a future value);
+sum = fut.value()  # Wait for the result;
+@[code]
+There are other ways to create tasklet in Dao,
+please see @[node]lua.concurrent@[node] for details.
+
+
+
+
 @[text]
+
+
 
 
 
@@ -548,7 +716,96 @@ Communication Channel (Go)
 
 
 @[text]
+
+
+The main differences between Go channel and Dao channel are:
+@[list]
+-- Go has syntax support for channels; But Dao doesn't;
+-- Dao channel has builtin support for timeout for both sending and receiving;
+   But Go channel doesn't;
+-- Data receive from Dao channel has an additional attribute to indicate whether
+   the channel has been closed;
+   But Go channel doesn't support this;
+@[list]
+
+
+@[code]
+# Go
+
+package main
+
+const N = 1000000;
+
+var c1 = make(chan int, 1)
+var c2 = make(chan int, 1)
+
+func Producer( ch chan int ){
+    for index := 0; index < N; index++ {
+        if index % 100000 == 0 { println( "sending", index ) } 
+        ch <- index
+    }   
+    c1 <- 1
+}
+
+func Consumer( ch chan int ){
+    println( "Consumer" )
+    for index := 0; index < N; index++ {
+        var data = <-ch
+        if int(data) % 100000 == 0 { println( "received", data ) } 
+    }   
+    c2 <- 1
+}
+
+func main() {
+    ch := make(chan int, 1)
+
+    go Producer( ch )
+    go Consumer( ch )
+    <-c1
+    <-c2
+}
+@[code]
+
+
+@[code]
+# Dao
+
+const N = 1000000
+
+routine Producer( chan : mt::channel<int> )
+{
+    index = 0;
+    while( ++index <= N ){
+        if( index % 10000 == 0 ) io.writeln( "sending", index )
+        chan.send( index )  # Or chan.send( index, 1.5 ) for a 1.5 second timeout;
+    }   
+    chan.cap(0)  # set channel buffer size to zero to close the channel;
+}
+
+routine Consumer( chan : mt::channel<int> )
+{
+    while(1){
+        data = chan.receive()  # Or chan.receive( 1.5 ) for a 1.5 second timeout;
+        if( (int)data.data % 10000 == 0 ) io.writeln( "received", data );
+        if( data.status == $finished ) break
+    }   
+}
+
+routine main() 
+{
+    chan = mt::channel<int>(1)
+
+    Producer( chan ) !! 
+    Consumer( chan ) !! 
+
+    # Tasklets are automatically joined at the end of the program;
+}
+@[code]
+
+
 @[text]
+
+
 
 
 
@@ -564,7 +821,136 @@ C/C++ Function Binding (Python, Lua)
 
 
 @[text]
+
+
+@[subsubsection]
+Python
+@[subsubsection]
+
+@[code(cxx)]
+#include <Python.h>
+
+/* Function to be called from Python */
+static PyObject* py_MySum(PyObject* self, PyObject* args)
+{
+    double x, y;
+    PyArg_ParseTuple( args, "dd", &x, &y );
+    return Py_BuildValue( "d", x + y );
+}
+
+/* Bind Python function names to C function(s) */
+static PyMethodDef MyModule_Methods[] =
+{
+    { "MySum", py_MySum, METH_VARARGS },
+    { NULL, NULL }
+};
+
+/* Module entry function: */
+void initMyModule()
+{
+    (void) Py_InitModule("MyModule", MyModule_Methods);
+}
+@[code(cxx)]
+
+
+
+@[subsubsection]
+Lua
+@[subsubsection]
+
+@[code(cxx)]
+#define LUA_LIB
+#include "lua.h"
+#include "lauxlib.h"
+
+static int lua_MySum(lua_State *L)
+{
+    double x = luaL_checknumber(L, 1);
+    double y = luaL_checknumber(L, 2);
+    lua_pushnumber( L, x + y );
+    return 1;
+}
+
+static const luaL_reg myfuncs[] =
+{
+    { "MySum", lua_MySum },
+    { NULL, NULL }
+};
+
+/* Module entry function: */
+LUALIB_API int luaopen_MyModule( lua_State *L )
+{
+    luaL_register( L, "MyModule", myfuncs );
+    return 1;
+}
+@[code(cxx)]
+
+
+
+@[subsubsection]
+Dao
+@[subsubsection]
+
+@[code(cxx)]
+#include "dao.h"
+#include "daoValue.h"
+
+static void dao_MySum( DaoProcess *proc, DaoValue *pars[], int npar )
+{
+    /*
+    // No need to check parameter types here, they are guaranteed to be
+    // two doubles when this function is registered as:
+    //   MySum( x : double, y : double ) => double
+    //
+    // So the parameter values can be retrieved directly if "daoValue.h"
+    // has been included, otherwise, one may use "DaoValue_TryGetDouble()".
+    */
+    double x = pars[0]->xDouble.value;
+    double y = pars[1]->xDouble.value;
+    DaoProcess_PutDouble( proc, x + y );
+}
+
+static const DaoFuncItem myfuncs[] =
+{
+    /* A function signature must be provided for each function: */
+    { dao_MySum, "MySum( x : double, y : double ) => double" },
+    { NULL, NULL }
+};
+
+/* Module entry function: */
+DAO_DLL int DaoMyModule_Init( DaoVmSpace *vmSpace, DaoNamespace *ns )
+{
+    DaoNamespace_WrapFunctions( ns, myfuncs );
+    return 0;
+}
+@[code(cxx)]
+
+The main advantage of Dao for interfacing C/C++ functions is that,
+the C/C++ functions can be registered with Dao function signatures,
+so that Dao can guarantee that only parameters with correct types
+can be passed to the functions.
+This can save much boilerplate code and overheads for parameter
+type checking and conversion, as well as codes for error handling
+for incorrect parameters.
+
+
+
+
 @[text]
+
+
+
+
+#{
+In Python,
+@[code]
+from MyModule import *
+
+print "Result from MySum(2.0, 3.0):", MySum(2.0, 3.0)
+@[code]
+#}
+
+
 
 
 
