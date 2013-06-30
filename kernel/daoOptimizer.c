@@ -2193,7 +2193,6 @@ static const char*const DaoTypingErrorString[] =
 	"Data cannot be created",
 	"Invalid call",
 	"Call not permitted",
-	"Call not permitted",
 	"Calling nonstatic method without instance",
 	"Member not permitted",
 	"Member not exist",

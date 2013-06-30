@@ -32,6 +32,14 @@ where PLATFORM can be one of the followings:
 -- haiku
 @[list]
 
+Dao uses DaoMake, which is a make tool based on Dao
+(see @[node]tool.standard.daomake@[node]),
+as the default building system.
+Running the above make command will make a bootstrap build of DaoMake,
+and then use the bootstrapped DaoMake to configure a full build of 
+Dao and its modules and tools and generate appropriate make files
+for building and installation.
+
 
 @[subsection]
 Customized Building

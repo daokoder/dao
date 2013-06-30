@@ -311,8 +311,8 @@ static void DaoCallServer_ActivateEvents()
 	if( server->events2->size == 0 ) return;
 
 #ifdef DEBUG
-	sprintf( message, "WARNING: activating events (%i,%i,%i,%i)!\n",
-			server->total, server->idle, server->events->size, server->events2->size );
+	sprintf( message, "WARNING: activating events (%i,%i,%i,%i)!\n", server->total,
+			server->idle, (int)server->events->size, (int)server->events2->size );
 	DaoStream_WriteMBS( mainVmSpace->errorStream, message );
 #endif
 	for(i=0; i<server->events2->size; ++i){
@@ -470,9 +470,37 @@ DaoFuture* DaoProcess_GetInitFuture( DaoProcess *self )
 	GC_IncRC( self );
 	return self->future;
 }
+void DaoCallServer_MarkActiveProcess( DaoProcess *process, int active )
+{
+	DaoCallServer *server = daoCallServer;
+
+	if( daoCallServer == NULL ) return;
+	if( process->active == active ) return;
+
+	DMutex_Lock( & server->mutex );
+	if( active ){
+		DMap_Insert( server->active, process, NULL );
+		process->active = 1;
+	}else{
+		DMap_Erase( server->active, process );
+		process->active = 0;
+	}
+	DMutex_Unlock( & server->mutex );
+}
 void DaoCallServer_AddTimedWait( DaoProcess *wait, DaoTaskEvent *event, double timeout )
 {
 	DaoCallServer *server = daoCallServer;
+
+	/*
+	// The "wait" process may not be running in the thread pool,
+	// so it may have not been added to active process list.
+	// It is necessary to add it to the active list now,
+	// to avoid it being activated immediately after it is blocked.
+	// Activating it immediately may cause a race condition,
+	// because it may have not been blocked completely
+	// (namely, it may be still running).
+	*/
+	DaoCallServer_MarkActiveProcess( wait, 1 );
 
 	DMutex_Lock( & server->mutex );
 	if( timeout >= 1E-27 ){
@@ -503,26 +531,6 @@ void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout )
 	DaoTaskEvent_Init( event, DAO_EVENT_WAIT_TASKLET, DAO_EVENT_WAIT, future, NULL );
 
 	DaoCallServer_AddTimedWait( wait, event, timeout );
-}
-int DaoCallServer_MarkActiveProcess( DaoProcess *process, int active )
-{
-	int ret = 0;
-	DaoCallServer *server = daoCallServer;
-
-	if( daoCallServer == NULL ) return 0;
-
-	DMutex_Lock( & server->mutex );
-	ret = DMap_Find( server->active, process ) != NULL;
-	if( active ){
-		ret = !ret;
-		DMap_Insert( server->active, process, NULL );
-		process->active = 1;
-	}else{
-		DMap_Erase( server->active, process );
-		process->active = 0;
-	}
-	DMutex_Unlock( & server->mutex );
-	return ret;
 }
 static int DaoCallServer_CheckEvent( DaoTaskEvent *event, DaoFuture *fut, DaoChannel *chan )
 {
@@ -678,6 +686,7 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 						chselect = chan;
 						selected = it->key.pValue;
 						message = chan->buffer->items.pValue[0];
+						closed = NULL;
 						break;
 					}else if( chan->cap == 0 ){
 						closed = chan;
@@ -713,7 +722,8 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 					DaoChannel_ActivateEvent( chselect, DAO_EVENT_WAIT_SELECT );
 			}
 			if( futselect != NULL || closed != NULL ){
-				DMap_Erase( event->selects->items, futselect ? futselect : closed );
+				void *key = futselect ? (void*)futselect : (void*)closed;
+				DMap_Erase( event->selects->items, key );
 			}
 			break;
 		default: break;
@@ -733,7 +743,10 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 			void *value = actor->rootObject->isAsync ? future : NULL;
 			DMap_Insert( active, actor->rootObject, value );
 		}
-		if( future->process ) DMap_Insert( active, future->process, NULL );
+		if( future->process ){
+			DMap_Insert( active, future->process, NULL );
+			future->process->active = 1;
+		}
 
 		GC_ShiftRC( event->message, future->message );
 		GC_ShiftRC( event->selected, future->selected );
@@ -811,10 +824,6 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		DMutex_Lock( & server->mutex );
 		server->idle -= 1;
 		future = DaoCallServer_GetNextFuture();
-		if( future && future->process->active == 0 ){
-			DMap_Insert( server->active, future->process, NULL );
-			future->process->active = 1;
-		}
 		DMutex_Unlock( & server->mutex );
 
 		if( future == NULL ) continue;
@@ -1190,7 +1199,6 @@ void DaoMT_Select( DaoProcess *proc, DaoValue *par[], int n )
 			DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid type selection" );
 			return;
 		}
-		it->value.pInteger->value = ischan != 0;
 	}
 
 	event = DaoCallServer_MakeEvent();

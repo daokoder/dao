@@ -45,7 +45,7 @@
 #include <unistd.h>
 #endif
 
-#define DAOX_TEXT_WIDTH 79
+#define DAOX_TEXT_WIDTH 89
 #define DAOX_TREE_WIDTH 99
 
 enum DaoxHelpBlockType
@@ -817,9 +817,15 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 				fgcolor = -100;
 			}
 			break;
+		case DTOK_LB : case DTOK_LCB : case DTOK_LSB :
+		case DTOK_RB : case DTOK_RCB : case DTOK_RSB :
+		case DTOK_COLON :  case DTOK_COLON2 : case DTOK_ASSN :
+		case DTOK_COMMA : case DTOK_SEMCO :
+			if( println == 0 ) fgcolor = DAOX_BLACK;
+			break;
 		case DTOK_AT2 :
 		case DKEY_USE : case DKEY_LOAD :
-		case DKEY_AS : 
+		case DKEY_AS :
 		case DKEY_AND : case DKEY_OR : case DKEY_NOT :
 		case DKEY_VIRTUAL :
 			if( self->fmtHTML ){
