@@ -1,0 +1,269 @@
+load help;
+
+@[name]
+dao.builtin
+@[name]
+
+@[title]
+Built-ins
+@[title]
+
+
+
+@[name]
+dao.builtin.method
+@[name]
+
+@[title]
+Built-in Methods
+@[title]
+
+@[text]
+
+@[list]
+--@[code]warn( message:string)@[code]
+
+  Print a warning message, with the line number and file name of the code.
+
+
+--@[code]panic(value:any)@[code]
+
+  Raise an exception (and put the program in panic mode).
+  This function can take any value as a parameter.
+  If the parameter is an exception object, this exception will be raised;
+  otherwise, an generic exception object will be created to hold the parameter value,
+  and then the created exception object will be raised.
+
+
+--@[code]recover()=>list<any>@[code]
+
+  Recover the program the program from panic mode and return a list of exception objects.
+
+
+--@[code]recover(eclass:class<Exception>)=>any@[code]
+
+  Return an exception object of a specific type and recover partially.
+
+
+@[list]
+
+@[text]
+
+
+
+
+
+
+@[name]
+dao.builtin.math
+@[name]
+
+@[title]
+Built-in Math Functions
+@[title]
+
+
+@[text]
+
+@[list]
+--@[green]rand( x : int|float|double )@[green]
+  
+  Generate a random number of the same type as the parameter
+  between @[green]0@[green] (inclusive) and @[green]x@[green] (exclusive).
+
+
+--@[green]ceil( x : double|complex )@[green]
+
+  Round to smallest integral value not less than @[green]x@[green].
+
+  For complex parameter, the real and imaginary part are rounded separately.
+
+
+--@[green]floor( x : double|complex )@[green]
+
+  Round to largest integral value not greater than @[green]x@[green].
+
+  For complex parameter, the real and imaginary part are rounded separately.
+
+
+--@[green]abs( x : int|double )@[green]
+
+  Return the absolute value of the parameter.
+
+
+--@[green]abs( x : complex )@[green]
+
+  Return the magnitude (or modulus, or Euclidean norm) of a complex number.
+
+
+--@[green]arg( x : complex )@[green]
+
+  Return the phase angle of a complex number.
+
+
+--@[green]real( x : complex )@[green]
+
+  Return the real part of a complex number.
+
+
+--@[green]imag( x : complex )@[green]
+
+  Return the imaginary part of a complex number.
+
+
+--@[green]norm( x : complex )@[green]
+
+  Return the norm value (squared magnitude) of a complex number.
+
+
+--@[green]acos( x : double )@[green]
+
+  Returns the principal value of the arc cosine of @[green]x@[green], expressed in radians.
+
+
+--@[green]asin( x : double )@[green]
+
+  Returns the principal value of the arc sine of @[green]x@[green], expressed in radians.
+
+
+--@[green]atan( x : double )@[green]
+
+  Returns the principal value of the arc tangent of @[green]x@[green], expressed in radians.
+
+
+--@[green]cos( x : double )@[green]
+
+  Returns the cosine of an angle of @[green]x@[green] radians.
+
+
+--@[green]cos( x : complex )@[green]
+
+  Returns the cosine of a complex number.
+
+
+--@[green]cosh( x : double )@[green]
+
+  Returns the hyperbolic cosine of @[green]x@[green] radians.
+
+
+--@[green]cosh( x : complex )@[green]
+
+  Returns the hyperbolic cosine of the complex number.
+
+
+--@[green]exp( x : double )@[green]
+
+  Returns the base-e exponential value of @[green]x@[green].
+
+
+--@[green]exp( x : complex )@[green]
+
+  Returns the base-e exponential of the complex number.
+
+
+--@[green]log( x : double )@[green]
+
+  Returns the natural logarithm of @[green]x@[green].
+
+
+--@[green]log( x : complex )@[green]
+
+  Returns the natural logarithm of the complex number.
+
+
+--@[green]sin( x : double )@[green]
+
+  Returns the sine of an angle of @[green]x@[green] radians.
+
+
+--@[green]sin( x : complex )@[green]
+
+  Returns the sine of a complex number.
+
+
+--@[green]sinh( x : double )@[green]
+
+  Returns the hyperbolic sine of @[green]x@[green] radians.
+
+
+--@[green]sinh( x : complex )@[green]
+
+  Returns the hyperbolic sine of the complex number.
+
+
+--@[green]tan( x : double )@[green]
+
+  Returns the tangent of an angle of @[green]x@[green] radians.
+
+
+--@[green]tan( x : complex )@[green]
+
+  Returns the tangent of the complex number.
+
+
+--@[green]tanh( x : double )@[green]
+
+  Returns the hyperbolic tangent of @[green]x@[green] radians.
+
+
+--@[green]tanh( x : complex )@[green]
+
+  Returns the hyperbolic tangent of the complex number.
+
+
+--@[green]sqrt( x : double )@[green]
+
+  Returns the square root of @[green]x@[green].
+
+
+--@[green]sqrt( x : complex )@[green]
+
+  Returns the square root of @[green]x@[green].
+
+@[list]
+
+@[text]
+
+
+
+
+
+
+
+@[name]
+dao.builtin.exception
+@[name]
+
+@[title]
+Exception Types
+@[title]
+
+@[text]
+
+@[list]
+--@[green]Exception@[green]
+--@[green]Exception::None@[green]
+--@[green]Exception::Any@[green]
+--@[green]Exception::Warning@[green]
+--@[green]Exception::Error@[green]
+--@[green]Exception::Error::Field@[green]
+--@[green]Exception::Error::Field::NotExist@[green]
+--@[green]Exception::Error::Field::NotPermit@[green]
+--@[green]Exception::Error::Float@[green]
+--@[green]Exception::Error::Float::DivByZero@[green]
+--@[green]Exception::Error::Float::OverFlow@[green]
+--@[green]Exception::Error::Float::UnderFlow@[green]
+--@[green]Exception::Error::Index@[green]
+--@[green]Exception::Error::Index::OutOfRange@[green]
+--@[green]Exception::Error::Key@[green]
+--@[green]Exception::Error::Key::NotExist@[green]
+--@[green]Exception::Error::Param@[green]
+--@[green]Exception::Warning::Syntax@[green]
+--@[green]Exception::Error::Syntax@[green]
+--@[green]Exception::Error::Type@[green]
+--@[green]Exception::Warning::Value@[green]
+--@[green]Exception::Error::Value@[green]
+@[list]
+
+
+@[text]

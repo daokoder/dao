@@ -5,7 +5,8 @@ author: Fu Limin (phoolimin@gmail.com)
 
 #}
 
-load sys;
+load sys
+load coroutine
 
 class DaoCxxVariable
 {
@@ -2742,13 +2743,14 @@ global daoqt_sig_slot_code =
 global daoqt_sig_slot_emit = 
 '  emit signal_$(ssname)( _message );\n}\n';
 
-routine NewProxyFunctionName()=>[string]
+routine NewProxyFunctionName( self :coroutine<none,string> )
 {
 	id = 10000L16;
-	while(1) yield ('Function_' + (string)(++id));
+	while(1) self.yield ('Function_' + (string)(++id));
 	return '';
 }
-global new_proxy_function_name = NewProxyFunctionName::();
+global new_proxy_function_name = coroutine<none,string>();
+new_proxy_function_name.start( NewProxyFunctionName )
 
 routine Function::Generate()
 {
@@ -3043,7 +3045,7 @@ routine Function::Generate()
 	#io.writeln( signature2 );
 	proxy_name = '';
 	if( not proxy_functions.has( signature2 ) ){
-		proxy_name = new_proxy_function_name();
+		proxy_name = new_proxy_function_name.resume();
 		proxy_name = proxy_name[ : proxy_name.size()-4 ];
 		kvmap3[ 'proxy_name' ] = proxy_name;
 		proxy_codes = '';

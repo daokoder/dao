@@ -3181,6 +3181,11 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DString_Assign( className, name );
 		DaoClass_SetName( klass, className, myNS );
 
+		DArray_Append( myNS->definedRoutines, klass->classRoutine );
+		if( routine != myNS->mainRoutine ) ns = NULL;
+		value = (DaoValue*) klass;
+		DaoParser_AddToScope( self, scope, className, value, klass->objType, storeType, line );
+
 		if( start+1 <= to ){
 			int tkn = tokens[start+1]->name;
 			if( tkn != DTOK_LB && tkn != DTOK_COLON && tkn != DTOK_LCB && tkn != DKEY_FOR ){
@@ -3190,52 +3195,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		}else{
 			return start;
 		}
-		/* Apply aspects (to normal classes only): */
-		if( klass->className->mbs[0] != '@' ){
-			DNode *it;
-			for(it=DMap_First(myNS->lookupTable); it; it=DMap_Next(myNS->lookupTable,it)){
-				int id = LOOKUP_ID( it->value.pInt );
-				DaoClass *mixin = (DaoClass*) myNS->constants->items.pConst[id]->value;
-				if( LOOKUP_ST( it->value.pInt ) != DAO_GLOBAL_CONSTANT ) continue;
-				if( LOOKUP_UP( it->value.pInt ) > 1 ) continue; /* skip indirectly loaded; */
-				if( mixin->type != DAO_CLASS ) continue;
-				if( mixin->superClass->size ) continue;
-				if( mixin->className->mbs[0] != '@' ) continue; /* Not an aspect class; */
-				if( DArray_MatchAffix( mixin->decoTargets, klass->className ) == 0 ) continue;
-				DaoClass_AddMixinClass( klass, mixin );
-			}
-		}
-
-		if( start+1 <= to && tokens[start+1]->name == DTOK_LB ){
-			int rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start+1, -1 );
-			unsigned char sep = DTOK_LB;
-			start += 1;
-			while( tokens[start]->name == sep ){
-				DaoClass *mixin;
-				start = DaoParser_FindScopedConstant( self, & value, start+1 );
-				if( start <0 ) goto ErrorClassDefinition;
-				ename = & tokens[start]->string;
-				if( value == NULL || value->type != DAO_CLASS ){
-					ec = DAO_SYMBOL_NEED_CLASS;
-					if( value == NULL || value->type == 0 || value->type == DAO_STRING )
-						ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
-					goto ErrorClassDefinition;
-				}
-				mixin = (DaoClass*) value;
-				if( mixin->superClass->size ){
-					/* Class with parent classes cannot be used as mixin: */
-					ec = DAO_INVALID_MIXIN_CLASS;
-					goto ErrorClassDefinition;
-				}
-				DaoClass_AddMixinClass( klass, mixin );
-				sep = DTOK_COMMA;
-				start ++;
-			}
-		}
-		DArray_Append( myNS->definedRoutines, klass->classRoutine );
-		if( routine != myNS->mainRoutine ) ns = NULL;
-		value = (DaoValue*) klass;
-		DaoParser_AddToScope( self, scope, className, value, klass->objType, storeType, line );
 	}else if( value->type != DAO_CLASS ){
 		ec = DAO_SYMBOL_WAS_DEFINED;
 		goto ErrorClassDefinition;
@@ -3264,7 +3223,51 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	DString_Assign( parser->fileName, self->fileName );
 
 	start ++; /* token after class name. */
-	if( start > to || tokens[start]->name == DTOK_LB ) goto ErrorClassDefinition;
+	if( start > to ) goto ErrorClassDefinition;
+
+	/* Apply aspects (to normal classes only): */
+	if( klass->className->mbs[0] != '@' ){
+		DNode *it;
+		for(it=DMap_First(myNS->lookupTable); it; it=DMap_Next(myNS->lookupTable,it)){
+			int id = LOOKUP_ID( it->value.pInt );
+			DaoClass *mixin = (DaoClass*) myNS->constants->items.pConst[id]->value;
+			if( LOOKUP_ST( it->value.pInt ) != DAO_GLOBAL_CONSTANT ) continue;
+			if( LOOKUP_UP( it->value.pInt ) > 1 ) continue; /* skip indirectly loaded; */
+			if( mixin->type != DAO_CLASS ) continue;
+			if( mixin->superClass->size ) continue;
+			if( mixin->className->mbs[0] != '@' ) continue; /* Not an aspect class; */
+			if( DArray_MatchAffix( mixin->decoTargets, klass->className ) == 0 ) continue;
+			DaoClass_AddMixinClass( klass, mixin );
+		}
+	}
+
+	if( start <= to && tokens[start]->name == DTOK_LB ){
+		int rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
+		unsigned char sep = DTOK_LB;
+		while( tokens[start]->name == sep ){
+			DaoClass *mixin;
+			start = DaoParser_FindScopedConstant( self, & value, start+1 );
+			if( start <0 ) goto ErrorClassDefinition;
+			ename = & tokens[start]->string;
+			if( value == NULL || value->type != DAO_CLASS ){
+				ec = DAO_SYMBOL_NEED_CLASS;
+				if( value == NULL || value->type == 0 || value->type == DAO_STRING )
+					ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
+				goto ErrorClassDefinition;
+			}
+			mixin = (DaoClass*) value;
+			if( mixin->superClass->size ){
+				/* Class with parent classes cannot be used as mixin: */
+				ec = DAO_INVALID_MIXIN_CLASS;
+				goto ErrorClassDefinition;
+			}
+			DaoClass_AddMixinClass( klass, mixin );
+			sep = DTOK_COMMA;
+			start ++;
+		}
+		start += 1;
+	}
+
 	if( tokens[start]->name == DTOK_COLON ){
 		/* class AA : NS::BB, CC{ } */
 		unsigned char sep = DTOK_COLON;

@@ -6,6 +6,18 @@ module.standard.jit
 @[name]
 
 @[title]
-System Dependent Core Functions
+DaoJIT - JIT Compiler Based on LLVM
 @[title]
 
+@[text]
+
+DaoJIT is a JIT compiler for Dao based on LLVM.
+It provides JIT compiling for a subset of Dao virtual instructions.
+DaoJIT is implemented as a automatically loadable module.
+After it is enabled (by command line option @[green]-j@[green] or @[green]--jit@[green]),
+it will search for a chunk of consecutive compilable instructions and
+compile them into native code, and replace them with a single instruction (DVM_JITC)
+which can invoke the JIT compiled code.
+Currently, DaoJIT can only achieve good speedups for numeric intensive programs.
+
+@[text]

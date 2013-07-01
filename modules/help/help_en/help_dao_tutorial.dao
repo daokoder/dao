@@ -2025,8 +2025,8 @@ the caller of the function that handles the exceptions in its deferred blocks.
 In order to resume the normal execution right after handling of exceptions,
 a special type of code blocks can be used to "host" the deferred blocks,
 @[code(dao)]
-@@ { block }
-@@ ( value ) { block }
+frame { block }
+frame ( value ) { block }
 @[code(dao)]
 These kinds of blocks are executed in new stack frames,
 and when these blocks are finished and the frames are removed from the stack,
@@ -2034,11 +2034,11 @@ deferred blocks encounted in these blocks will be automatically executed
 in the same way as the deferred blocks defined in normal functions.
 If the exceptions are recovered in these deferred blocks,
 the normal execution will be resumed right after these 
-@[green]@@{}@[green] blocks,
+@[green]frame{}@[green] blocks,
 @[code(dao)]
 fout = io::stdio
 
-@@ {
+frame {
 	defer { recover() }
 	fout = io.open( "NonExistentFile.txt", 'r+' )
 }
@@ -2048,15 +2048,15 @@ if( fout != io::stdio ) defer{ fout.close() }
 fout.writeln( 'hello' )
 @[code(dao)]
 
-Such @[green]@@{}@[green] blocks are actually expressions that may return values.
-The only difference between @[green]@@{block}@[green] and 
-@[green]@@(value){block}@[green] is that,
+Such @[green]frame{}@[green] blocks are actually expressions that may return values.
+The only difference between @[green]frame{block}@[green] and 
+@[green]frame(value){block}@[green] is that,
 in the second case, if the @[cyan]block@[cyan] raises an exception,
 the default @[cyan]value@[cyan] is returned instead, 
 and the exception is suppressed.
 This can make codes such as shown in the above example simpler,
 @[code(dao)]
-fout = @@( io::stdio ){ io.open( "NonExistentFile.txt", 'r+' ) }
+fout = frame( io::stdio ){ io.open( "NonExistentFile.txt", 'r+' ) }
 if( fout != io::stdio ) defer{ fout.close() }
 fout.writeln( 'hello' )
 @[code(dao)]

@@ -517,6 +517,10 @@ Operator Overloading (Python)
 @[text]
 
 
+This help entry will demonstrate a few examples to compare Dao and Python
+in operator overloading for field accessing, subindexing and binary operator etc.
+
+
 @[subsection]
 Field Getter and Setter
 @[subsection]
@@ -603,12 +607,17 @@ Please note that in @[green]operator[]=@[green], @[green]item@[green]
 is the first parameter. It is arranged in this way to naturally support
 multiple keys/indices. For example, for a multidimensional array, one may define,
 @[code]
+class UserDict
+{
+    var data = {=>}
+
     operator []( index1, index2 ){
         return data[ index1, index2 ]
     }
     operator []=( item, index1, index2 ){
         data[ index1, index2 ] = item
     }
+}
 @[code]
 
 
@@ -823,6 +832,19 @@ C/C++ Function Binding (Python, Lua)
 @[text]
 
 
+The followings are simple examples to demostrate the differences
+in building C/C++ function bindings for Python, Lua and Dao.
+
+
+The main advantage of Dao for interfacing C/C++ functions is that,
+the C/C++ functions can be registered with Dao function signatures,
+so that Dao can guarantee that only parameters with correct types
+can be passed to the functions.
+This can save much boilerplate code and overheads for parameter
+type checking and conversion, as well as codes for error handling
+for incorrect parameters.
+
+
 @[subsubsection]
 Python
 @[subsubsection]
@@ -918,20 +940,12 @@ static const DaoFuncItem myfuncs[] =
 };
 
 /* Module entry function: */
-DAO_DLL int DaoMyModule_Init( DaoVmSpace *vmSpace, DaoNamespace *ns )
+DAO_DLL int DaoMyModule_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
     DaoNamespace_WrapFunctions( ns, myfuncs );
     return 0;
 }
 @[code(cxx)]
-
-The main advantage of Dao for interfacing C/C++ functions is that,
-the C/C++ functions can be registered with Dao function signatures,
-so that Dao can guarantee that only parameters with correct types
-can be passed to the functions.
-This can save much boilerplate code and overheads for parameter
-type checking and conversion, as well as codes for error handling
-for incorrect parameters.
 
 
 
