@@ -1018,6 +1018,7 @@ The following languages are chosen for comparison,
 ##Lua        &&5.2.1
 ##Python     &&2.7.2
 ##Go         &&1.1
+##Java       &&1.6 (-server)
 ##C          &&Apple Clang V4.0 (-O2)
 @[table]
 
@@ -1026,13 +1027,13 @@ The benchmarks are executed on Mac OS X 10.8.3 with 1.8GHz Intel Core i5.
 In these tests, time is measured in seconds (S), and memory is measured in Mega-Bytes (M).
 
 @[table]
-##Program       ## Argument ## Dao  ## Dao+JIT ## Speedup ## ## Lua   ## Python ## C
-##nbody         && 10000000 && 41.2 && 12.1    &&  3.4X   && && 103.9 && 279.8  && 1.8
-##fannkuch      && 11       && 57.4 && 16.5    &&  3.6X   && && 151.4 && 284.0  && 2.9
-##mandelbrot    && 4000     && 25.9 &&  4.3    &&  6.0X   && &&  63.7 && 137.2  && 2.3
-##spectral-norm && 3000     && 21.7 &&  2.1    && 10.2X   && &&  78.2 && 305.7  && 1.9
-##binary-trees  && 16       && 55.9 && 57.7    &&  1.0X   && &&  21.2 &&  20.1  && 4.7
-##pidigits      && 5000     &&  9.2 &&  9.2    &&  1.0X   && &&  53.2 &&   3.1  && --
+##Program       ## Argument ## Dao  ## Dao+JIT ## Speedup ## ## Lua   ## Python ## Java ## C
+##nbody         && 10000000 && 41.2 && 12.1    &&  3.4X   && && 103.9 && 279.8  && 2.1  && 1.8
+##fannkuch      && 11       && 57.4 && 16.5    &&  3.6X   && && 151.4 && 284.0  && 3.4  && 2.9
+##mandelbrot    && 4000     && 25.9 &&  4.3    &&  6.0X   && &&  63.7 && 137.2  && 2.5  && 2.3
+##spectral-norm && 3000     && 21.7 &&  2.1    && 10.2X   && &&  78.2 && 305.7  && 2.6  && 1.9
+##binary-trees  && 16       && 55.9 && 57.7    &&  1.0X   && &&  21.2 &&  20.1  && 0.7  && 4.7
+##pidigits      && 5000     &&  9.2 &&  9.2    &&  1.0X   && &&  53.2 &&   3.1  && 6.4  && --
 @[table]
 
 

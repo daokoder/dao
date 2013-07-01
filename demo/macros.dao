@@ -1,0 +1,64 @@
+
+# Please see http://daovm.net/help/en/dao.macro.html for a documentation.
+#
+# If a syntax macro is not associated with any language id, the macro will
+# only be applied automatically to the code in the same file where the macro
+# is defined. If it is associated with a language id by:
+#   syntax lang {...} as {...}
+# It will be applied automatically to code in files with extenstion the same
+# as the language id. Or one must use the syntax explicitly by:
+#   use syntax lang
+
+
+# Macros without language id:
+# routine definition
+syntax {
+	routine $ID1 \{ :: $ID2 \} ( \[ $BL1 \] ) \( ; \) \!
+		\( { $BL2 } \) \!
+		\[ $BL3 \]
+		end 
+}as{
+	routine $ID1 \{ :: $ID2 \} ( \[ $BL1 \] ){
+		\[ $BL3 \]
+	}   
+}
+
+# class definition
+syntax {
+	class $ID1 \{ :: $ID2 \} \[ ( \[ $BL1 \] ) \]
+		\[ : $ID3 \{ :: $ID4 \} \[ ( \[ $BL2 \] ) \]
+		\{ , $ID5 \{ :: $ID6 \} \[ ( \[ $BL3 \] ) \] \} \]
+		\( { $BL5 } \) \!
+		\[ $BL4 \]
+	end
+} as {
+	class $ID1 \{ :: $ID2 \}
+		\[ : $ID3 \{ :: $ID4 \} \[ ( \[ $BL2 \] ) \]
+		\{ , $ID5 \{ :: $ID6 \} \[ ( \[ $BL3 \] ) \] \} \]
+	{
+		\[ $BL4 \]
+	}
+}
+
+syntax {
+	my $ID1
+} as {
+	var $ID1
+}
+
+
+class Klass
+	public
+
+	my name = "Klass";
+
+	routine test(a:float) io.writeln( "by test():", a ) end
+	routine test(b:string) io.writeln( "by test():", b ) end
+end
+
+obj = Klass();
+
+io.writeln( obj.name );
+
+obj.test( 123 );
+obj.test( "abc" );
