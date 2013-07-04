@@ -5020,10 +5020,10 @@ TryPushBlockReturnType:
 			}
 		case DVM_ROUTINE :
 			if( types[opa]->tid != DAO_ROUTINE ) goto ErrorTyping;
-			if( types[opc] && types[opc]->tid == DAO_ANY ) continue;
 			/* close on types */
 			at = types[opa];
 			closure = (DaoRoutine*) consts[opa];
+			DaoRoutine_DoTypeInference( closure, self->silent );
 
 			self->array->size = 0;
 			DArray_Resize( self->array, closure->parCount, 0 );
@@ -5126,9 +5126,11 @@ TryPushBlockReturnType:
 							goto ErrorTyping;
 						}else if( mac==0 ){
 							if( rettypes->size == 3 && popped == 0 ){
-								tt = DaoNamespace_MakeRoutType( NS, routine->routType, NULL, NULL, at );
-								GC_ShiftRC( tt, routine->routType );
-								routine->routType = tt;
+								if( at && at->tid != DAO_UDT ){
+									tt = DaoNamespace_MakeRoutType( NS, routine->routType, NULL, NULL, at );
+									GC_ShiftRC( tt, routine->routType );
+									routine->routType = tt;
+								}
 							}else{
 								ct = DaoType_DefineTypes( ct, NS, defs2 );
 								if( ct != NULL && redef != NULL ){
@@ -5152,10 +5154,12 @@ TryPushBlockReturnType:
 						}
 					}else{
 						if( rettypes->size == 3 && popped == 0 ){
-							tt = DaoNamespace_MakeRoutType( NS, routine->routType, NULL, NULL, at );
-							GC_ShiftRC( tt, routine->routType );
-							routine->routType = tt;
-							rettypes->items.pType[ rettypes->size - 1 ] = (DaoType*)tt->aux;
+							if( at && at->tid != DAO_UDT ){
+								tt = DaoNamespace_MakeRoutType( NS, routine->routType, NULL, NULL, at );
+								GC_ShiftRC( tt, routine->routType );
+								routine->routType = tt;
+							}
+							rettypes->items.pType[ rettypes->size - 1 ] = (DaoType*)routine->routType->aux;
 						}else{
 							ct = DaoType_DefineTypes( ct, NS, defs2 );
 							if( ct != NULL && redef != NULL ){

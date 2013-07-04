@@ -138,7 +138,7 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->vmSpace = vms;
 	self->status = DAO_PROCESS_SUSPENDED;
 	self->exceptions = DArray_New(D_VALUE);
-	self->defers = DArray_New(0);
+	self->defers = DArray_New(D_VALUE);
 
 	self->firstFrame = self->topFrame = DaoStackFrame_New();
 	self->firstFrame->active = self->firstFrame;
@@ -289,7 +289,9 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 }
 void DaoProcess_PopFrame( DaoProcess *self )
 {
+	int att = 0;
 	if( self->topFrame == NULL ) return;
+	if( self->topFrame->routine ) att = self->topFrame->routine->attribs;
 	self->topFrame->outer = NULL;
 	GC_DecRC( self->topFrame->retype );
 	GC_DecRC( self->topFrame->object );
@@ -301,6 +303,7 @@ void DaoProcess_PopFrame( DaoProcess *self )
 		self->topFrame = self->topFrame->prev;
 		return;
 	}
+	if( att & DAO_ROUT_DEFERRED ) DArray_PopBack( self->defers );
 	self->status = DAO_PROCESS_RUNNING;
 	self->stackTop = self->topFrame->stackBase;
 	self->topFrame = self->topFrame->prev;
@@ -2389,7 +2392,6 @@ FinishCall:
 			DaoValue_Move( routine->body->svariables->items.pVar[0]->value, dest, type );
 		}
 	}
-	if( routine->attribs & DAO_ROUT_DEFERRED ) DArray_PopBack( self->defers );
 
 	if( self->topFrame->state & DVM_FRAME_KEEP ){
 		self->topFrame->state &= ~DVM_FRAME_RUNNING;

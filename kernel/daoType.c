@@ -1792,7 +1792,11 @@ int DTypeSpecTree_Test( DTypeSpecTree *self, DaoType *types[], int count )
 	for(i=0; i<count; i++){
 		DaoType *par = self->holders->items.pType[i];
 		DaoType *arg = types[i];
-		if( arg->tid == DAO_UDT ) return 0;
+		/*
+		// ? should be allowed as type arguments for AFC to a function
+		// with return type ? (see type inference for AFC).
+		*/
+		//XXX if( arg->tid == DAO_UDT ) return 0;
 		if( DaoType_MatchTo( arg, par, NULL ) ==0 ) return 0;
 	}
 	return 1;
