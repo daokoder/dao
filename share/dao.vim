@@ -111,7 +111,7 @@ if version >= 508 || !exists("did_dao_syntax_inits")
   HiLink daoError		Error
   HiLink daoSpecial		SpecialChar
   HiLink daoMacro		Structure
-  HiLink daoSpecReg		SpecialChar
+  HiLink daoSpecReg		Identifier
   HiLink daoMethDecl		Function
   HiLink daoFunc		Identifier
 

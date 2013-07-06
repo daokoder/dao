@@ -37,17 +37,17 @@ syntax [optional_language_id] {
 
 The following control symbols are recognized by the Dao macro system,
 @[list]
---@[green]\(\)@[green]: grouping;
---@[green]\?@[green]: optional( repeat zero or once ), must follow @[cyan]\(\)@[cyan];
---@[green]\*@[green]: repeat zero or more times, must follow @[cyan]\(\)@[cyan];
---@[green]\+@[green]: repeat once or more times, must follow @[cyan]\(\)@[cyan];
---@[green]\!@[green]: repeat zero times, ie, the previous group should not appear, must follow @[cyan]\(\)@[cyan];
---@[green]\[\]@[green]: optional, equivalent to @[cyan]\(\) \?@[cyan];
---@[green]\{\}@[green]: repeat zero or more times, equivalent to @[cyan]\(\) \*@[cyan];
---@[green]\|@[green]: alternative pattern, must be inside paired control tokens such as @[cyan]\(\), \[\],\{\}@[cyan];
+--@[green]()@[green]: grouping;
+--@[green]?@[green]: optional( repeat zero or once ), must follow @[cyan]()@[cyan];
+--@[green]*@[green]: repeat zero or more times, must follow @[cyan]()@[cyan];
+--@[green]+@[green]: repeat once or more times, must follow @[cyan]()@[cyan];
+--@[green]!@[green]: repeat zero times, ie, the previous group should not appear, must follow @[cyan]()@[cyan];
+--@[green][]@[green]: optional, equivalent to @[cyan]() ?@[cyan];
+--@[green]{}@[green]: repeat zero or more times, equivalent to @[cyan]() *@[cyan];
+--@[green]|@[green]: alternative pattern, must be inside paired control tokens such as @[cyan](), [], {}@[cyan];
 @[list]
-If @[green]\?,\*,\+,\!@[green] follow the special grouping@[green]\[\]@[green] or @[green]\{\}@[green],
-these special grouping is @[red]considered the same@[red] as @[green]\(\)@[green].
+If @[green]?,*,+,!@[green] follow the special grouping@[green][]@[green] or @[green]{}@[green],
+these special grouping is @[red]considered the same@[red] as @[green]()@[green].
 
 
 @[section]Variables@[section]
@@ -104,35 +104,37 @@ use syntax lang_id
 @[code(dao)]
 # routine definition
 syntax dao_v1_syntax {
-	routine $ID1 \{ :: $ID2 \} ( \[ $BL1 \] ) \( ; \) \!
-		\( { $BL2 } \) \!
-		\[ $BL3 \]
-		end 
-}as{
-	routine $ID1 \{ :: $ID2 \} ( \[ $BL1 \] ){
-		\[ $BL3 \]
-	}   
+	'routine' $ID1 { '::' $ID2 } '(' [ $BL1 ] ')' ( ';' ) !
+		( '{' $BL2 '}' ) !
+		[ $BL3 ]
+	'end'
+} as {
+	'routine' $ID1 { '::' $ID2 } '(' [ $BL1 ] ')' '{'
+		[ $BL3 ]
+	'}'
 }
+
 # class definition
 syntax dao_v1_syntax {
-	class $ID1 \{ :: $ID2 \} \[ ( \[ $BL1 \] ) \]
-		\[ : $ID3 \{ :: $ID4 \} \[ ( \[ $BL2 \] ) \]
-		\{ , $ID5 \{ :: $ID6 \} \[ ( \[ $BL3 \] ) \] \} \]
-		\( { $BL5 } \) \!
-		\[ $BL4 \]
-	end
-}as{
-	class $ID1 \{ :: $ID2 \}
-		\[ : $ID3 \{ :: $ID4 \} \[ ( \[ $BL2 \] ) \]
-		\{ , $ID5 \{ :: $ID6 \} \[ ( \[ $BL3 \] ) \] \} \]
-	{
-		\[ $BL4 \]
-	}
+	'class'   $ID1 { '::' $ID2 } [ '(' [ $BL1 ] ')' ]
+		[ ':' $ID3 { '::' $ID4 } [ '(' [ $BL2 ] ')' ]
+		{ ',' $ID5 { '::' $ID6 } [ '(' [ $BL3 ] ')' ] } ]
+		( '{' $BL5 '}' ) !
+		[ $BL4 ]
+	'end'
+} as {
+	'class' $ID1 { '::' $ID2 }
+		[ ':' $ID3 { '::' $ID4 } [ '(' [ $BL2 ] ')' ]
+		{ ',' $ID5 { '::' $ID6 } [ '(' [ $BL3 ] ')' ] } ]
+	'{'
+		[ $BL4 ]
+	'}'
 }
+
 syntax dao_v1_syntax {
-	my $ID1
-}as{
-	var $ID1
+	'my' $ID1
+} as {
+	'var' $ID1
 }
 
 use syntax dao_v1_syntax;
@@ -142,27 +144,19 @@ class Klass
 
 	my name = "Klass";
 
-	routine test(a:float) io.writeln( "by test() 1" ) end
-	routine test(b:string) io.writeln( "by test() 2" ) end
+	routine test( a :float ) io.writeln( "by test():", a ) end
+	routine test( b :string ) io.writeln( "by test():", b ) end
 end
 
 obj = Klass();
 
 io.writeln( obj.name );
 
-obj.test(1);
-obj.test("1");
+obj.test( 123 );
+obj.test( "abc" );
+
 @[code(dao)]
 
 
 @[text]
 
-#{
-@[white:green]4. Examples@[white:green]
-
-Starting from a release in 2007, the core syntax of Dao no longer supports
-scoping by @[green]do-end@[green], @[green]else-end@[green], @[green]routine-end@[green] and @[green]class-end@[green]
-etc. Instead @[green]{}@[green] should be used for scoping, as in some early releases.
-However, scoping by @[green]do/else/routine/class/try-end@[green] can be still supported
-by the following macros:
-#}

@@ -112,19 +112,6 @@ enum DaoTokNames
 	DTOK_INCR , /* ++ */
 	DTOK_DECR , /* -- */
 	DTOK_DOTS , /* ... */
-	DTOK_ESC_LB ,  /* \( */
-	DTOK_ESC_RB ,  /* \) */
-	DTOK_ESC_LCB ,  /* \{ */
-	DTOK_ESC_RCB ,  /* \} */
-	DTOK_ESC_LSB ,  /* \[ */
-	DTOK_ESC_RSB ,  /* \] */
-	DTOK_ESC_PIPE ,  /* \| */
-	DTOK_ESC_EXCLA ,  /* \! */
-	DTOK_ESC_QUES ,  /* \? */
-	DTOK_ESC_STAR ,  /* \* */
-	DTOK_ESC_PLUS ,  /* \+ */
-	DTOK_ESC_SQUO ,  /* \' */
-	DTOK_ESC_DQUO ,  /* \" */
 	DTOK_NONE2
 };
 enum DaoKeyNames

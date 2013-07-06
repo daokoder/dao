@@ -410,19 +410,6 @@ of a statement. However the use of semicolon is optional, the compiler
 is able to determine the end of a statement based on some semantic rules.
 
 
-@[subsection]Macro Identifier and Seperators@[subsection]
-
-Identifier:
-@[code(syntax)]
-MacroIdentifier ::=  '$' ( 'VAR' | 'EXP' | 'ID' | 'OP' | 'BL' ) Identifier
-@[code(syntax)]
-
-Seperators:
-@[code(syntax)]
-MacroSeperator ::= '\(' | '\)' | '\{' | '\}' | '\[' | '\]'
-                 | '\|' | '\!' | '\*' | '\+'
-@[code(syntax)]
-
 
 
 @[text]

@@ -41,20 +41,18 @@ enum DMacroUnitTypes
 	DMACRO_ID  , /* $ID  prefixed identifier: identifier token */
 	DMACRO_OP  , /* $OP  prefixed identifier: operator token */
 	DMACRO_BL  , /* $BL  prefixed identifier: code block tokens */
-	DMACRO_IBL , /* $IBL prefixed identifier: indented code block tokens */
-	DMACRO_BR  , /* '<' '>' '[' ']' '{' '}' */
-	DMACRO_GRP , /* \( ... \) */
-	DMACRO_ALT   /* \( ... \| ... \) */
+	DMACRO_GRP , /* ( ... ) */
+	DMACRO_ALT   /* ( ... | ... ) */
 };
 
 enum DaoMacroGroupRepeatTypes
 {
-	DMACRO_ZERO ,          /* \( ... \) \!  */
-	DMACRO_ZERO_OR_ONE ,   /* \( ... \) \? OR \[ ... \] */
-	DMACRO_ZERO_OR_MORE ,  /* \( ... \) \* OR \{ ... \} */
-	DMACRO_ONE_OR_MORE ,   /* \( ... \) \+  */
-	DMACRO_ONE ,           /* \( ... \)     */
-	DMACRO_AUTO            /* implicit group in (), [], {} */
+	DMACRO_ZERO ,          /* ( ... ) !              */
+	DMACRO_ZERO_OR_ONE ,   /* ( ... ) ?  OR  [ ... ] */
+	DMACRO_ZERO_OR_MORE ,  /* ( ... ) *  OR  { ... } */
+	DMACRO_ONE_OR_MORE ,   /* ( ... ) +              */
+	DMACRO_ONE ,           /* ( ... )                */
+	DMACRO_AUTO            /* implicit group in '(' ')', '[' ']', '{' '}' */
 };
 
 struct DMacroUnit
@@ -62,19 +60,17 @@ struct DMacroUnit
 	uchar_t     type;
 	uchar_t     dummy1;
 	uchar_t     dummy2;
-	uchar_t     indent;
 	DArray     *stops;
 	DaoToken   *marker;
 };
 
-/* \( mykey1 $EXP1 mykey2 \) \? \* \+ */
-/* \( mykey1 $EXP1 mykey2 \| mykey3 $EXP2 mykey3 \) \? \* \+ */
+/* ( mykey1 $EXP1 mykey2 ) ? * + */
+/* ( mykey1 $EXP1 mykey2 | mykey3 $EXP2 mykey3 ) ? * + */
 struct DMacroGroup
 {
 	uchar_t       type;
 	uchar_t       repeat;
 	uchar_t       cpos;
-	uchar_t       indent;
 	DArray       *stops;
 	DArray       *units; /* DArray<DMacroUnit*> */
 	DArray       *variables; /* DArray<DaoToken*> */

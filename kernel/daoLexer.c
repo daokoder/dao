@@ -117,19 +117,6 @@ const char *const dao_oper_tokens[] =
 	"++" ,
 	"--" ,
 	"..." ,
-	"\\(" ,
-	"\\)" ,
-	"\\{" ,
-	"\\}" ,
-	"\\[" ,
-	"\\]" ,
-	"\\|" ,
-	"\\!" ,
-	"\\?" ,
-	"\\*" ,
-	"\\+" ,
-	"\\'" ,
-	"\\\"" ,
 	""
 };
 
@@ -465,19 +452,6 @@ enum
 	TOK_EQ_EQ ,  /* == */
 	TOK_EQ_LT ,  /* <= */
 	TOK_EQ_GT ,  /* >= */
-	TOK_ESC_LB ,  /* \( */
-	TOK_ESC_RB ,  /* \] */
-	TOK_ESC_LCB ,  /* \{ */
-	TOK_ESC_RCB ,  /* \} */
-	TOK_ESC_LSB ,  /* \[ */
-	TOK_ESC_RSB ,  /* \] */
-	TOK_ESC_PIPE ,  /* \| */
-	TOK_ESC_EXCLA ,  /* \! */
-	TOK_ESC_QUES ,  /* \? */
-	TOK_ESC_STAR ,  /* \* */
-	TOK_ESC_PLUS ,  /* \+ */
-	TOK_ESC_SQUO ,  /* \' */
-	TOK_ESC_DQUO ,  /* \" */
 	TOK_ERROR /* emit error */
 };
 static unsigned char daoSpaceType[128] = {0};
@@ -574,19 +548,6 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_EQ ,  /* == */
 	DTOK_LE ,  /* <= */
 	DTOK_GE ,  /* >= */
-	DTOK_ESC_LB ,  /* \( */
-	DTOK_ESC_RB ,  /* \] */
-	DTOK_ESC_LCB ,  /* \{ */
-	DTOK_ESC_RCB ,  /* \} */
-	DTOK_ESC_LSB ,  /* \[ */
-	DTOK_ESC_RSB ,  /* \] */
-	DTOK_ESC_PIPE ,  /* \| */
-	DTOK_ESC_EXCLA ,  /* \! */
-	DTOK_ESC_QUES ,  /* \? */
-	DTOK_ESC_STAR ,  /* \* */
-	DTOK_ESC_PLUS ,  /* \+ */
-	DTOK_ESC_SQUO ,  /* \' */
-	DTOK_ESC_DQUO ,  /* \" */
 };
 
 
@@ -795,20 +756,6 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_NUMBER_DEC ][ (unsigned) 'E' ] = TOK_NUMBER_SCI_E;
 	daoLexTable[ TOK_NUMBER_SCI_E ][ (unsigned) '+' ] = TOK_NUMBER_SCI_ES;
 	daoLexTable[ TOK_NUMBER_SCI_E ][ (unsigned) '-' ] = TOK_NUMBER_SCI_ES;
-
-	daoLexTable[ TOK_OP_ESC ][ (unsigned) '(' ] = TOK_ESC_LB;
-	daoLexTable[ TOK_OP_ESC ][ (unsigned) ')' ] = TOK_ESC_RB;
-	daoLexTable[ TOK_OP_ESC ][ (unsigned) '{' ] = TOK_ESC_LCB;
-	daoLexTable[ TOK_OP_ESC ][ (unsigned) '}' ] = TOK_ESC_RCB;
-	daoLexTable[ TOK_OP_ESC ][ (unsigned) '[' ] = TOK_ESC_LSB;
-	daoLexTable[ TOK_OP_ESC ][ (unsigned) ']' ] = TOK_ESC_RSB;
-	daoLexTable[ TOK_OP_ESC ][ (unsigned) '|' ] = TOK_ESC_PIPE;
-	daoLexTable[ TOK_OP_ESC ][ (unsigned) '!' ] = TOK_ESC_EXCLA;
-	daoLexTable[ TOK_OP_ESC ][ (unsigned) '?' ] = TOK_ESC_QUES;
-	daoLexTable[ TOK_OP_ESC ][ (unsigned) '*' ] = TOK_ESC_STAR;
-	daoLexTable[ TOK_OP_ESC ][ (unsigned) '+' ] = TOK_ESC_PLUS;
-	daoLexTable[ TOK_OP_ESC ][ (unsigned) '\'' ] = TOK_ESC_SQUO;
-	daoLexTable[ TOK_OP_ESC ][ (unsigned) '\"' ] = TOK_ESC_DQUO;
 
 	memset( daoArithOper, 0, DAO_NOKEY2*sizeof(DOper) );
 

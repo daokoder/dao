@@ -13,37 +13,37 @@
 # Macros without language id:
 # routine definition
 syntax {
-	routine $ID1 \{ :: $ID2 \} ( \[ $BL1 \] ) \( ; \) \!
-		\( { $BL2 } \) \!
-		\[ $BL3 \]
-		end 
-}as{
-	routine $ID1 \{ :: $ID2 \} ( \[ $BL1 \] ){
-		\[ $BL3 \]
-	}   
+	'routine' $ID1 { '::' $ID2 } '(' [ $BL1 ] ')' ( ';' ) !
+		( '{' $BL2 '}' ) !
+		[ $BL3 ]
+	'end'
+} as {
+	'routine' $ID1 { '::' $ID2 } '(' [ $BL1 ] ')' '{'
+		[ $BL3 ]
+	'}'
 }
 
 # class definition
 syntax {
-	class $ID1 \{ :: $ID2 \} \[ ( \[ $BL1 \] ) \]
-		\[ : $ID3 \{ :: $ID4 \} \[ ( \[ $BL2 \] ) \]
-		\{ , $ID5 \{ :: $ID6 \} \[ ( \[ $BL3 \] ) \] \} \]
-		\( { $BL5 } \) \!
-		\[ $BL4 \]
-	end
+	'class'   $ID1 { '::' $ID2 } [ '(' [ $BL1 ] ')' ]
+		[ ':' $ID3 { '::' $ID4 } [ '(' [ $BL2 ] ')' ]
+		{ ',' $ID5 { '::' $ID6 } [ '(' [ $BL3 ] ')' ] } ]
+		( '{' $BL5 '}' ) !
+		[ $BL4 ]
+	'end'
 } as {
-	class $ID1 \{ :: $ID2 \}
-		\[ : $ID3 \{ :: $ID4 \} \[ ( \[ $BL2 \] ) \]
-		\{ , $ID5 \{ :: $ID6 \} \[ ( \[ $BL3 \] ) \] \} \]
-	{
-		\[ $BL4 \]
-	}
+	'class' $ID1 { '::' $ID2 }
+		[ ':' $ID3 { '::' $ID4 } [ '(' [ $BL2 ] ')' ]
+		{ ',' $ID5 { '::' $ID6 } [ '(' [ $BL3 ] ')' ] } ]
+	'{'
+		[ $BL4 ]
+	'}'
 }
 
 syntax {
-	my $ID1
+	'my' $ID1
 } as {
-	var $ID1
+	'var' $ID1
 }
 
 
@@ -52,8 +52,8 @@ class Klass
 
 	my name = "Klass";
 
-	routine test(a:float) io.writeln( "by test():", a ) end
-	routine test(b:string) io.writeln( "by test():", b ) end
+	routine test( a :float ) io.writeln( "by test():", a ) end
+	routine test( b :string ) io.writeln( "by test():", b ) end
 end
 
 obj = Klass();
