@@ -21,3 +21,101 @@ which can invoke the JIT compiled code.
 Currently, DaoJIT can only achieve good speedups for numeric intensive programs.
 
 @[text]
+
+
+
+@[name]
+module.standard.sync
+@[name]
+
+@[title]
+Synchronization
+@[title]
+
+@[text]
+
+
+Mutex, conditional variable and semaphore are the convetional way
+for thread synchronization. These constructs synchronize tasklet
+by block the native threads, so they are not the recommended way
+for synchronization and communication channels are the preferrable way.
+
+
+@[subsection]Mutex@[subsection]
+
+Mutex can be used to synchronize the accessing of shared data structures.
+It has two state: locked and unlocked. A mutex can be locked by only one
+thread. A thread is suspended when it attempt to lock a mutex which has
+been locked by another thread.
+@[code(dao)]
+mutex = mutex();
+@[code(dao)]
+Then it can be locked or unlocked by,
+@[code(dao)]
+mutex.lock();
+mutex.unlock();
+mutex.trylock();
+@[code(dao)]
+By calling @[cyan]lock()@[cyan], the calling thread will be block if the mutex is
+already locked by another thread. If the mutex is locked by the same thread,
+a second calling of @[cyan]lock()@[cyan] may cause a deadlock. @[cyan]trylock()@[cyan] is the same
+as @[cyan]lock()@[cyan] except that it will return immediately instead of blocking
+the calling thread if the mutex is already locked.
+
+
+@[subsection]Condition Variable@[subsection]
+
+Condition variable is a synchronization device which allow a thread to be
+suspended if a condition is not satisified and resume execution when
+it is signaled. The basic operations on a condition is: wait on the condition,
+or signal the condition.
+@[code(dao)]
+condvar = condition();
+@[code(dao)]
+
+Condition variable should always be used together
+with a mutex. To wait on a condition,
+@[code(dao)]
+mtx.lock()
+condvar.wait( mtx );
+mtx.unlock();
+@[code(dao)]
+
+To wait on a condition for a maximum time,
+@[code(dao)]
+mtx.lock()
+condvar.timedwait( mtx, seconds );
+mtx.unlock();
+@[code(dao)]
+
+@[cyan]seconds@[cyan] can be a decimal, for example, @[cyan]condvar.timedwait( mtx, 0.005 )@[cyan]
+will wait for five miliseconds.
+
+
+@[subsection]Semaphore@[subsection]
+
+Semaphore can be used to set a limit on resources. It maintains a count
+for the resource, and allows a thread to proceed, when it attempts to
+decrease a non-zero count. If the count already reaches 0 before the
+decrement, the thread will be suspended until the count becomes non-zero.
+When the thread finished using the resource, it should increase the count
+of semaphore. A semaphore must be created with an initial count,
+@[code(dao)]
+sema = semaphore( count );
+@[code(dao)]
+
+To access a resource guarded by a semaphore, use,
+@[code(dao)]
+sema.wait()
+@[code(dao)]
+If the resource is acquired, the count of @[cyan]sema@[cyan] will be decreased.
+
+To release the resource, use
+@[code(dao)]
+sema.post()
+@[code(dao)]
+which will increase the count.
+
+
+
+@[text]

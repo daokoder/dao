@@ -1178,9 +1178,6 @@ DaoTypeBase futureTyper =
 
 
 
-void DaoMT_Ration( DaoProcess *proc, DaoValue *par[], int n )
-{
-}
 void DaoMT_Select( DaoProcess *proc, DaoValue *par[], int n )
 {
 	DNode *it;

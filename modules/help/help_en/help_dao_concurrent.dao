@@ -46,9 +46,9 @@ This module also provides a list of parallelized methods that
 can make some typical parallelization tasks straightforward.
 
 
-@[section]
+@[subsection]
 Starting Tasklet
-@[section]
+@[subsection]
 
 The simplest way to start a tasklet is to use the functional method
 @[green]mt.start@[green] to run an expression or a block of codes:
@@ -64,6 +64,14 @@ method, and can take a block of code as an additional implicit parameter.
 @[green]mt.start@[green] returns the created tasklet in the form of a future value.
 The created tasklet may be executed by a reused thread from the internal
 thread pool or by a newly created thread.
+
+
+@[subsection]
+Future Value
+@[subsection]
+
+Future value is a type that represents a value that is available only
+after a tasklet has been completed.
 The future value for the tasklet can be used to perform simple scheduling
 such as blocking the current thread indefinitely or a finite amount of time
 to wait for the thread to finish. For example,
@@ -71,11 +79,18 @@ to wait for the thread to finish. For example,
 fut.wait()
 fut2.wait( 0.1 )
 @[code]
+Its value can be obtained by,
+@[code]
+value = fut.value()
+@[code]
+which will block the current tasklet and wait for the completion of the tasklet
+represented by @[cyan]fut@[cyan].
 
 
-@[section]
+
+@[subsection]
 Using Parallelized Code Block Methods
-@[section]
+@[subsection]
 
 However, the simplest way to do parallel programming is to use the
 parallelized functional methods of @[green]mt@[green], which provides
@@ -106,95 +121,6 @@ Examples,
 mt.iterate( 10 )::{ io.writeln( X ) }
 mt.iterate( {1,2,3,4,5,6}, 3 )::{ io.writeln( X ) }
 @[code]
-
-
-
-@[section]
-Synchronization by Mutex, Conditional Variable and Semaphore
-@[section]
-
-Mutex, conditional variable and semaphore are the convetional way
-for thread synchronization. They are provided by @[green]mt@[green]
-module for convenience. But these constructs synchronize tasklet
-by block the native threads, so they are not the recommended way
-for synchronization and communication channels are the preferrable way.
-
-
-@[subsection]Mutex@[subsection]
-
-Mutex can be used to synchronize the accessing of shared data structures.
-It has two state: locked and unlocked. A mutex can be locked by only one
-thread. A thread is suspended when it attempt to lock a mutex which has
-been locked by another thread. Mutex can be created by 
-the @[green]mt@[green] library object,
-@[code(dao)]
-mutex = mt::mutex();
-@[code(dao)]
-Then it can be locked or unlocked by,
-@[code(dao)]
-mutex.lock();
-mutex.unlock();
-mutex.trylock();
-@[code(dao)]
-By calling @[cyan]lock()@[cyan], the calling thread will be block if the mutex is
-already locked by another thread. If the mutex is locked by the same thread,
-a second calling of @[cyan]lock()@[cyan] may cause a deadlock. @[cyan]trylock()@[cyan] is the same
-as @[cyan]lock()@[cyan] except that it will return immediately instead of blocking
-the calling thread if the mutex is already locked.
-
-
-@[subsection]Condition Variable@[subsection]
-
-Condition variable is a synchronization device which allow a thread to be
-suspended if a condition is not satisified and resume execution when
-it is signaled. The basic operations on a condition is: wait on the condition,
-or signal the condition.
-@[code(dao)]
-condvar = mt::condition();
-@[code(dao)]
-
-Condition variable should always be used together
-with a mutex. To wait on a condition,
-@[code(dao)]
-mtx.lock()
-condvar.wait( mtx );
-mtx.unlock();
-@[code(dao)]
-
-To wait on a condition for a maximum time,
-@[code(dao)]
-mtx.lock()
-condvar.timedwait( mtx, seconds );
-mtx.unlock();
-@[code(dao)]
-
-@[cyan]seconds@[cyan] can be a decimal, for example, @[cyan]condvar.timedwait( mtx, 0.005 )@[cyan]
-will wait for five miliseconds.
-
-
-@[subsection]Semaphore@[subsection]
-
-Semaphore can be used to set a limit on resources. It maintains a count
-for the resource, and allows a thread to proceed, when it attempts to
-decrease a non-zero count. If the count already reaches 0 before the
-decrement, the thread will be suspended until the count becomes non-zero.
-When the thread finished using the resource, it should increase the count
-of semaphore. A semaphore must be created with an initial count,
-@[code(dao)]
-sema = mt::semaphore( count );
-@[code(dao)]
-
-To access a resource guarded by a semaphore, use,
-@[code(dao)]
-sema.wait()
-@[code(dao)]
-If the resource is acquired, the count of @[cyan]sema@[cyan] will be decreased.
-
-To release the resource, use
-@[code(dao)]
-sema.post()
-@[code(dao)]
-which will increase the count.
 
 
 @[text]

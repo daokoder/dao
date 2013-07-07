@@ -55,12 +55,12 @@
 typedef struct DaoEnode DaoEnode;
 struct DaoEnode
 {
-	int reg; /* vm register id, for the value produced by the expression */
-	int konst; /* constant id, for the value of a constant expression */
-	int count; /* number of expressions in an expression list */
-	DaoInode *prev; /* the previous instruction, should never be NULL */
-	DaoInode *first; /* the first instruction node for the expression */
-	DaoInode *last; /* the last instruction node for the expression */
+	int reg;    /* vm register id, for the value produced by the expression */
+	int konst;  /* constant id, for the value of a constant expression */
+	int count;  /* number of expressions in an expression list */
+	DaoInode *prev;   /* the previous instruction, should never be NULL */
+	DaoInode *first;  /* the first instruction node for the expression */
+	DaoInode *last;   /* the last instruction node for the expression */
 	DaoInode *update; /* the last instruction that updates the value of "reg" */
 };
 int DaoParser_GetOperPrecedence( DaoParser *self );

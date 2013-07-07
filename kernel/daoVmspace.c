@@ -153,11 +153,7 @@ extern DaoTypeBase  comTyper;
 extern DaoTypeBase  abstypeTyper;
 extern DaoTypeBase  rgxMatchTyper;
 extern DaoTypeBase  futureTyper;
-
-extern DaoTypeBase mutexTyper;
-extern DaoTypeBase condvTyper;
-extern DaoTypeBase semaTyper;
-extern DaoTypeBase channelTyper;
+extern DaoTypeBase  channelTyper;
 
 extern DaoTypeBase macroTyper;
 extern DaoTypeBase regexTyper;
@@ -276,12 +272,14 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 	DMutex_Lock( & self->mutexProc );
 #endif
 	if( DMap_Find( self->allProcesses, proc ) ){
+		if( proc->factory ) DArray_Clear( proc->factory );
+		if( proc->aux ) DaoVmSpace_ReleaseProcessAux( self, proc->aux );
 		GC_DecRC( proc->future );
 		proc->future = NULL;
+		proc->aux = NULL;
 #ifdef DAO_WITH_THREAD
 		proc->mutex = NULL;
 #endif
-		if( proc->factory ) DArray_Clear( proc->factory );
 		DaoProcess_PopFrames( proc, proc->firstFrame );
 		DArray_Clear( proc->exceptions );
 		DArray_PushBack( self->processes, proc );
@@ -369,6 +367,25 @@ DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self )
 #endif
 	return optimizer;
 }
+DaoProcessAux* DaoVmSpace_AcquireProcessAux( DaoVmSpace *self )
+{
+	DaoProcessAux *processaux = NULL;
+
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->mutexMisc );
+#endif
+	if( self->processaux->size ){
+		processaux = (DaoProcessAux*) DArray_Back( self->processaux );
+		DArray_PopBack( self->processaux );
+	}else{
+		processaux = DaoProcessAux_New();
+		DMap_Insert( self->allProcessAux, processaux, 0 );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->mutexMisc );
+#endif
+	return processaux;
+}
 void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser )
 {
 #ifdef SHARE_NO_PARSER
@@ -414,6 +431,22 @@ void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *optimizer )
 #endif
 	if( DMap_Find( self->allOptimizers, optimizer ) ){
 		DArray_PushBack( self->optimizers, optimizer );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->mutexMisc );
+#endif
+}
+void DaoVmSpace_ReleaseProcessAux( DaoVmSpace *self, DaoProcessAux *processaux )
+{
+#ifdef SHARE_NO_OPTIMIZER
+	DaoProcessAux_Delete( processaux ); return;
+#endif
+
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->mutexMisc );
+#endif
+	if( DMap_Find( self->allProcessAux, processaux ) ){
+		DArray_PushBack( self->processaux, processaux );
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->mutexMisc );
@@ -526,9 +559,11 @@ DaoVmSpace* DaoVmSpace_New()
 	self->parsers = DArray_New(0);
 	self->inferencers = DArray_New(0);
 	self->optimizers = DArray_New(0);
+	self->processaux = DArray_New(0);
 	self->allParsers = DMap_New(0,0);
 	self->allInferencers = DMap_New(0,0);
 	self->allOptimizers = DMap_New(0,0);
+	self->allProcessAux = DMap_New(0,0);
 	self->loadedModules = DArray_New(D_VALUE);
 	self->preloadModules = NULL;
 
@@ -577,6 +612,9 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	for(it=DMap_First(self->allOptimizers); it; it=DMap_Next(self->allOptimizers,it)){
 		DaoOptimizer_Delete( (DaoOptimizer*) it->key.pVoid );
 	}
+	for(it=DMap_First(self->allProcessAux); it; it=DMap_Next(self->allProcessAux,it)){
+		DaoProcessAux_Delete( (DaoProcessAux*) it->key.pVoid );
+	}
 	GC_DecRC( self->nsInternal );
 	GC_DecRC( self->mainNamespace );
 	GC_DecRC( self->stdioStream );
@@ -595,12 +633,14 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DArray_Delete( self->parsers );
 	DArray_Delete( self->inferencers );
 	DArray_Delete( self->optimizers );
+	DArray_Delete( self->processaux );
 	DMap_Delete( self->vfiles );
 	DMap_Delete( self->vmodules );
 	DMap_Delete( self->allProcesses );
 	DMap_Delete( self->allParsers );
 	DMap_Delete( self->allInferencers );
 	DMap_Delete( self->allOptimizers );
+	DMap_Delete( self->allProcessAux );
 	GC_DecRC( self->mainProcess );
 	self->stdioStream = NULL;
 	if( self->preloadModules ) DArray_Delete( self->preloadModules );
@@ -2298,9 +2338,6 @@ DaoType *dao_array_types[DAO_COMPLEX+1] = {0};
 
 
 #ifdef DAO_WITH_THREAD
-DaoType *dao_type_mutex   = NULL;
-DaoType *dao_type_condvar = NULL;
-DaoType *dao_type_sema    = NULL;
 DaoType *dao_type_channel = NULL;
 DaoType *dao_type_future  = NULL;
 
@@ -2557,9 +2594,6 @@ DaoVmSpace* DaoInit( const char *command )
 #ifdef DAO_WITH_CONCURRENT
 	ns2 = DaoVmSpace_GetNamespace( vms, "mt" );
 	DaoNamespace_AddConstValue( ns, "mt", (DaoValue*) ns2 );
-	dao_type_mutex   = DaoNamespace_WrapType( ns2, & mutexTyper, 0 );
-	dao_type_condvar = DaoNamespace_WrapType( ns2, & condvTyper, 0 );
-	dao_type_sema    = DaoNamespace_WrapType( ns2, & semaTyper, 0 );
 	dao_type_channel = DaoNamespace_WrapType( ns2, & channelTyper, 0 );
 	dao_type_future  = DaoNamespace_WrapType( ns2, & futureTyper, 0 );
 	DaoNamespace_WrapFunctions( ns2, dao_mt_methods );

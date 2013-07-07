@@ -33,6 +33,7 @@
 #include"daoType.h"
 #include"daoThread.h"
 #include"daoOptimizer.h"
+#include"daoProcess.h"
 
 enum DaoPathType
 {
@@ -79,11 +80,13 @@ struct DaoVmSpace
 	DMap    *allParsers;
 	DMap    *allInferencers;
 	DMap    *allOptimizers;
+	DMap    *allProcessAux;
 
 	DArray  *processes;
 	DArray  *parsers;
 	DArray  *inferencers;
 	DArray  *optimizers;
+	DArray  *processaux;
 
 	DString *daoBinPath;
 	DString *startPath;
@@ -160,8 +163,10 @@ DAO_DLL DaoTypeBase* DaoVmSpace_GetTyper( short type );
 DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self );
 DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self );
 DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self );
+DaoProcessAux* DaoVmSpace_AcquireProcessAux( DaoVmSpace *self );
 void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser );
-void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *parser );
-void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *parser );
+void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *inferencer );
+void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *optimizer );
+void DaoVmSpace_ReleaseProcessAux( DaoVmSpace *self, DaoProcessAux *processaux );
 
 #endif

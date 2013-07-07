@@ -21,29 +21,57 @@ GNU Free Documentation License
 
 Dao supports a docent macro system which can be used to create new syntax or to simplify
 scripts. A set of markups can be used in a macro definition to control the syntax matching
-and transformation. These markups are similar to what are commonly used in BNF representation
-of syntax. So that defining a macro ressembles to write a BNF-like representation of the source
+and transformation. These markups are similar to what are commonly used in
+Extended Backus-Naur Form (EBNF or simply BNF) representation of syntax.
+So that defining a macro ressembles to write a BNF-like representation of the source
 syntax to be matched, and a BNF-like representation of the target syntax to be applied.
 
 @[code]
 syntax [optional_language_id] {
 	source_syntax_pattern
-}as{
+} as {
 	target_syntax_pattern
 }
 @[code]
+
+The following is a simple example to support a customized syntax such as
+@[code]for...in...do...end @[code]:
+@[code(dao)]
+syntax {
+	'for' $ID1 'in' $EXP1 'do'
+		[ $BL1 ]
+	'end'
+} as {
+	'for' '(' $ID1 'in' $EXP1 ')' '{'
+		[ $BL1 ]
+	'}'
+}
+
+for a in {1, 2, 3 } do
+	io.writeln( a )
+end
+@[code(dao)]
+In the syntax patterns in this example, the tokens (identifiers) prefixed with
+@[green]$@[green] are special markers used as special variables to represent
+identifier tokens, expressions or blocks. 
+And, the string tokens with single qutotation marks represents normal tokens
+if they contain single valid tokens.
+These tokens can be placed between brackets and organized into groups to
+form complex patterns. Normal tokens may not need quotation marks, if they are
+not used as special variables, grouping and repetition markers.
+
 
 @[section]Controlling Markers@[section]
 
 The following control symbols are recognized by the Dao macro system,
 @[list]
 --@[green]()@[green]: grouping;
---@[green]?@[green]: optional( repeat zero or once ), must follow @[cyan]()@[cyan];
+--@[green]?@[green]: optional (repeat zero or once), must follow @[cyan]()@[cyan];
 --@[green]*@[green]: repeat zero or more times, must follow @[cyan]()@[cyan];
 --@[green]+@[green]: repeat once or more times, must follow @[cyan]()@[cyan];
 --@[green]!@[green]: repeat zero times, ie, the previous group should not appear, must follow @[cyan]()@[cyan];
---@[green][]@[green]: optional, equivalent to @[cyan]() ?@[cyan];
---@[green]{}@[green]: repeat zero or more times, equivalent to @[cyan]() *@[cyan];
+--@[green][]@[green]: optional group, equivalent to @[cyan]() ?@[cyan];
+--@[green]{}@[green]: group with zero or more repeats, equivalent to @[cyan]() *@[cyan];
 --@[green]|@[green]: alternative pattern, must be inside paired control tokens such as @[cyan](), [], {}@[cyan];
 @[list]
 If @[green]?,*,+,!@[green] follow the special grouping@[green][]@[green] or @[green]{}@[green],
@@ -74,11 +102,6 @@ a grouping pattern, the macro system will check the patterns in the grouping to
 figure out if there is a proper stoping token for the special variables.
 
 
-Normal Dao operators can be used in the syntax patterns.
-If brackets are used, they must be properly paired. To use
-an unpaired bracket, enclose it in quotes such as '(', '[', '{' etc.
-
-
 For special variables with the same names in the source and targe syntax patterns, 
 it is preferable that they appear in the same grouping
 and repeating patterns in the source and target syntax. In this case,
@@ -86,6 +109,7 @@ the syntax transformation has well defined behaviour.
 After the source pattern is matched and the tokens matching
 the special variables are extracted, the target pattern is scanned,
 and the extracted tokens are expanded at the position of the proper special variables.
+
 
 @[section]Accessibility@[section]
 

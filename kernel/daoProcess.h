@@ -41,6 +41,8 @@
 #define DVM_FRAME_SECT     (1<<5)
 #define DVM_FRAME_KEEP     (1<<6)
 
+typedef struct DaoProcessAux DaoProcessAux;
+
 
 struct DaoStackFrame
 {
@@ -130,7 +132,7 @@ struct DaoProcess
 #endif
 
 	DString        *mbstring;
-	DMap           *regexCaches; /* DHash<DString*,DString*> */
+	DaoProcessAux  *aux;
 };
 
 /* Create a new virtual machine process */
@@ -208,5 +210,19 @@ struct DaoJitCallData
 
 	DaoProcess **processes;
 };
+
+
+#define DAO_MTCOUNT 624
+
+struct DaoProcessAux
+{
+	DMap   *regexCaches; /* DHash<DString*,DString*> */
+	uint_t  mtBuffer[DAO_MTCOUNT];
+	int     mtIndex;
+};
+DAO_DLL DaoProcessAux* DaoProcessAux_New();
+DAO_DLL void DaoProcessAux_Delete( DaoProcessAux *self );
+
+DAO_DLL double DaoProcess_Random( DaoProcess *self );
 
 #endif

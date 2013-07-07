@@ -46,9 +46,6 @@
 #include"daoValue.h"
 #include"daoTasklet.h"
 
-#ifndef FE_ALL_EXCEPT
-#define FE_ALL_EXCEPT 0xffff
-#endif
 
 extern DMutex mutex_routine_specialize;
 extern DMutex mutex_routine_specialize2;
@@ -151,7 +148,6 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->factory = DArray_New(D_VALUE);
 
 	self->mbstring = DString_New(1);
-	self->regexCaches = NULL;
 	self->pauseType = 0;
 	self->active = 0;
 	return self;
@@ -160,13 +156,7 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 void DaoProcess_Delete( DaoProcess *self )
 {
 	DaoStackFrame *frame = self->firstFrame;
-	DNode *n;
 	daoint i;
-	if( self->regexCaches ){
-		n = DMap_First( self->regexCaches );
-		for( ; n !=NULL; n = DMap_Next(self->regexCaches, n) ) dao_free( n->value.pVoid );
-		DMap_Delete( self->regexCaches );
-	}
 	while( frame ){
 		DaoStackFrame *p = frame;
 		if( frame->object ) GC_DecRC( frame->object );
@@ -176,6 +166,7 @@ void DaoProcess_Delete( DaoProcess *self )
 	}
 	for(i=0; i<self->stackSize; i++) GC_DecRC( self->stackValues[i] );
 	if( self->stackValues ) dao_free( self->stackValues );
+	if( self->aux ) DaoVmSpace_ReleaseProcessAux( self->vmSpace, self->aux );
 
 	DString_Delete( self->mbstring );
 	DArray_Delete( self->exceptions );
@@ -185,43 +176,6 @@ void DaoProcess_Delete( DaoProcess *self )
 	dao_free( self );
 }
 
-DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
-{
-#ifdef DAO_WITH_REGEX
-	DaoRegex *pat = NULL;
-	DaoRgxItem *it;
-	DNode *node;
-	char buf[50];
-	int i;
-	if( mbs && src->wcs ) DString_ToMBS( src );
-	if( mbs==0 && src->mbs ) DString_ToWCS( src );
-	DString_Trim( src );
-	if( src->size ==0 ){
-		if( self->activeRoutine )
-			DaoProcess_RaiseException( self, DAO_ERROR, "pattern with empty string" );
-		return NULL;
-	}
-	if( self->regexCaches == NULL ) self->regexCaches = DHash_New(D_STRING,0);
-	node = DMap_Find( self->regexCaches, src );
-	if( node ) return (DaoRegex*) node->value.pVoid;
-
-	pat = DaoRegex_New( src );
-	for( i=0; i<pat->count; i++ ){
-		it = pat->items + i;
-		if( it->type ==0 ){
-			sprintf( buf, "incorrect pattern, at char %i.", it->length );
-			if( self->activeRoutine ) DaoProcess_RaiseException( self, DAO_ERROR, buf );
-			DaoRegex_Delete( pat );
-			return NULL;
-		}
-	}
-	DMap_Insert( self->regexCaches, src, pat );
-	return pat;
-#else
-	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_REGEX ) );
-	return NULL;
-#endif
-}
 
 DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 {
@@ -2257,7 +2211,7 @@ CallEntry:
 		}OPJUMP() OPCASE( MATH_I ){
 			switch( vmc->a ){
 			case DVM_MATH_RAND :
-				IntegerOperand(vmc->c) = (int)(IntegerOperand(vmc->b) * (rand() / (RAND_MAX+1.0)));
+				IntegerOperand(vmc->c) = (int)(IntegerOperand(vmc->b)*DaoProcess_Random(self));
 				break;
 			case DVM_MATH_CEIL : IntegerOperand(vmc->c) = ceil( IntegerOperand(vmc->b) ); break;
 			case DVM_MATH_FLOOR: IntegerOperand(vmc->c) = floor( IntegerOperand(vmc->b) ); break;
@@ -2279,7 +2233,7 @@ CallEntry:
 		}OPNEXT() OPCASE( MATH_F ){
 			switch( vmc->a ){
 			case DVM_MATH_RAND :
-				FloatOperand(vmc->c) = FloatOperand(vmc->b) * rand() / (RAND_MAX+1.0); break;
+				FloatOperand(vmc->c) = FloatOperand(vmc->b) * DaoProcess_Random(self); break;
 			case DVM_MATH_CEIL : FloatOperand(vmc->c) = ceil( FloatOperand(vmc->b) ); break;
 			case DVM_MATH_FLOOR : FloatOperand(vmc->c) = floor( FloatOperand(vmc->b) ); break;
 			case DVM_MATH_ABS  : FloatOperand(vmc->c) = fabs( FloatOperand(vmc->b) );  break;
@@ -2300,7 +2254,7 @@ CallEntry:
 		}OPNEXT() OPCASE( MATH_D ){
 			switch( vmc->a ){
 			case DVM_MATH_RAND :
-				DoubleOperand(vmc->c) = DoubleOperand(vmc->b) * rand() / (RAND_MAX+1.0); break;
+				DoubleOperand(vmc->c) = DoubleOperand(vmc->b) * DaoProcess_Random(self); break;
 			case DVM_MATH_CEIL : DoubleOperand(vmc->c) = ceil( DoubleOperand(vmc->b) ); break;
 			case DVM_MATH_FLOOR : DoubleOperand(vmc->c) = floor( DoubleOperand(vmc->b) ); break;
 			case DVM_MATH_ABS  : DoubleOperand(vmc->c) = fabs( DoubleOperand(vmc->b) );  break;
@@ -3456,7 +3410,7 @@ int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 	}else if( A->type == DAO_INTEGER && func <= DVM_MATH_ABS ){
 		daoint res = A->xInteger.value;
 		switch( func ){
-		case DVM_MATH_RAND : res = res * (rand() / (RAND_MAX+1.0)); break;
+		case DVM_MATH_RAND : res = res * DaoProcess_Random( self ); break;
 		case DVM_MATH_ABS  : res = abs( res );  break;
 		/* case DVM_MATH_CEIL : res = par; break; */
 		/* case DVM_MATH_FLOOR: res = par; break; */
@@ -3482,7 +3436,7 @@ int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 		case DVM_MATH_EXP  : res = exp( par );  break;
 		case DVM_MATH_FLOOR: res = floor( par ); break;
 		case DVM_MATH_LOG  : res = log( par );  break;
-		case DVM_MATH_RAND : res = par * rand() / (RAND_MAX+1.0); break;
+		case DVM_MATH_RAND : res = par * DaoProcess_Random( self ); break;
 		case DVM_MATH_SIN  : res = sin( par );  break;
 		case DVM_MATH_SINH : res = sinh( par ); break;
 		case DVM_MATH_SQRT : res = sqrt( par ); break;
@@ -6562,3 +6516,87 @@ void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream )
 	self->stdioStream = stream;
 }
 
+DaoProcessAux* DaoProcessAux_New()
+{
+	int i;
+	DaoProcessAux *self = (DaoProcessAux*) dao_malloc( sizeof(DaoProcessAux) );
+	self->regexCaches = DHash_New(D_STRING,0);
+	self->mtIndex = 0;
+	self->mtBuffer[0] = rand();
+	for(i=1; i<DAO_MTCOUNT; ++i){
+		uint_t prev = self->mtBuffer[i-1];
+		self->mtBuffer[i] = 0x6c078965 * (prev ^ (prev>>30)) + i;
+	}
+	return self;
+}
+void DaoProcessAux_Delete( DaoProcessAux *self )
+{
+	DNode *it = DMap_First( self->regexCaches );
+	for( ; it !=NULL; it = DMap_Next(self->regexCaches, it) ) dao_free( it->value.pVoid );
+	DMap_Delete( self->regexCaches );
+}
+void DaoProcessAux_GenerateMT( DaoProcessAux *self )
+{
+	uint_t i, *mtnums = self->mtBuffer;
+	for(i=1; i<DAO_MTCOUNT; ++i){
+		uint_t y = (mtnums[i] & 0x80000000) + (mtnums[(i+1)%DAO_MTCOUNT] & 0x7fffffff);
+		mtnums[i] = mtnums[(i+397)%DAO_MTCOUNT] ^ (y >> 1);
+		if( y % 2 ) mtnums[i] ^= 0x9908b0df;
+	}
+}
+uint_t DaoProcessAux_ExtractMT( DaoProcessAux *self )
+{
+	uint_t y;
+	if( self->mtIndex == 0 ) DaoProcessAux_GenerateMT( self );
+	y = self->mtBuffer[ self->mtIndex ];
+	y ^= y>>11;
+	y ^= (y<<7) & 0x9d2c5680;
+	y ^= (y<<15) & 0xefc60000;
+	y ^= y>>18;
+	self->mtIndex = (self->mtIndex + 1) % DAO_MTCOUNT;
+	return y;
+}
+double DaoProcess_Random( DaoProcess *self )
+{
+	if( self->aux == NULL ) self->aux = DaoVmSpace_AcquireProcessAux( self->vmSpace );
+	return DaoProcessAux_ExtractMT( self->aux ) / (double) 0xffffffff;
+}
+
+
+DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
+{
+#ifdef DAO_WITH_REGEX
+	DaoRegex *pat = NULL;
+	DaoRgxItem *it;
+	DNode *node;
+	char buf[50];
+	int i;
+	if( mbs && src->wcs ) DString_ToMBS( src );
+	if( mbs==0 && src->mbs ) DString_ToWCS( src );
+	DString_Trim( src );
+	if( src->size ==0 ){
+		if( self->activeRoutine )
+			DaoProcess_RaiseException( self, DAO_ERROR, "pattern with empty string" );
+		return NULL;
+	}
+	if( self->aux == NULL ) self->aux = DaoVmSpace_AcquireProcessAux( self->vmSpace );
+	node = DMap_Find( self->aux->regexCaches, src );
+	if( node ) return (DaoRegex*) node->value.pVoid;
+
+	pat = DaoRegex_New( src );
+	for( i=0; i<pat->count; i++ ){
+		it = pat->items + i;
+		if( it->type ==0 ){
+			sprintf( buf, "incorrect pattern, at char %i.", it->length );
+			if( self->activeRoutine ) DaoProcess_RaiseException( self, DAO_ERROR, buf );
+			DaoRegex_Delete( pat );
+			return NULL;
+		}
+	}
+	DMap_Insert( self->aux->regexCaches, src, pat );
+	return pat;
+#else
+	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_REGEX ) );
+	return NULL;
+#endif
+}

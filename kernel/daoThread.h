@@ -45,7 +45,6 @@
 
 #define dao_mutex_t    pthread_mutex_t
 #define dao_cond_t     pthread_cond_t
-#define dao_sema_t     sem_t
 #define dao_thread_t   pthread_t
 #define dao_thdspec_t  pthread_key_t
 #define dao_retcode_t  int
@@ -57,7 +56,6 @@
 
 #define dao_mutex_t CRITICAL_SECTION
 #define dao_cond_t  HANDLE
-#define dao_sema_t  HANDLE
 #define dao_thread_t    HANDLE
 #define dao_thdspec_t   DWORD
 #define dao_retcode_t   DWORD
@@ -66,7 +64,6 @@
 
 typedef struct DMutex       DMutex;
 typedef struct DCondVar     DCondVar;
-typedef struct DSema        DSema;
 typedef struct DThreadData  DThreadData;
 typedef struct DThread      DThread;
 
@@ -98,15 +95,6 @@ DAO_DLL int  DCondVar_TimedWait( DCondVar *self, DMutex *mutex, double seconds )
 DAO_DLL void DCondVar_Signal( DCondVar *self );
 DAO_DLL void DCondVar_BroadCast( DCondVar *self );
 
-struct DSema
-{
-	dao_sema_t  mySema;
-	int         count;
-};
-DAO_DLL void DSema_Init( DSema *self, int n );
-DAO_DLL void DSema_Destroy( DSema *self );
-DAO_DLL void DSema_Wait( DSema *self );
-DAO_DLL void DSema_Post( DSema *self );
 
 enum DThreadState
 {
@@ -159,60 +147,6 @@ typedef int DMutex;
 
 #endif /* DAO_WITH_THREAD */
 
-
-#ifdef DAO_WITH_CONCURRENT
-
-/* Dao threading types: */
-struct DaoMutex
-{
-	DAO_CSTRUCT_COMMON;
-
-	DMutex  myMutex;
-};
-DAO_DLL DaoType *dao_type_mutex;
-
-DAO_DLL DaoMutex* DaoMutex_New();
-DAO_DLL void DaoMutex_Lock( DaoMutex *self );
-DAO_DLL void DaoMutex_Unlock( DaoMutex *self );
-DAO_DLL int DaoMutex_TryLock( DaoMutex *self );
-
-struct DaoCondVar
-{
-	DAO_CSTRUCT_COMMON;
-
-	DCondVar  myCondVar;
-};
-DAO_DLL DaoType *dao_type_condvar;
-
-DAO_DLL DaoCondVar* DaoCondVar_New();
-DAO_DLL void DaoCondVar_Delete( DaoCondVar *self );
-
-DAO_DLL void DaoCondVar_Wait( DaoCondVar *self, DaoMutex *mutex );
-DAO_DLL int  DaoCondVar_TimedWait( DaoCondVar *self, DaoMutex *mutex, double seconds );
-/* return true if time out. */
-
-DAO_DLL void DaoCondVar_Signal( DaoCondVar *self );
-DAO_DLL void DaoCondVar_BroadCast( DaoCondVar *self );
-
-struct DaoSema
-{
-	DAO_CSTRUCT_COMMON;
-
-	DSema  mySema;
-};
-DAO_DLL DaoType *dao_type_sema;
-
-DAO_DLL DaoSema* DaoSema_New( int n );
-DAO_DLL void DaoSema_Delete( DaoSema *self );
-
-DAO_DLL void DaoSema_Wait( DaoSema *self );
-DAO_DLL void DaoSema_Post( DaoSema *self );
-
-DAO_DLL void DaoSema_SetValue( DaoSema *self, int n );
-DAO_DLL int  DaoSema_GetValue( DaoSema *self );
-
-
-#endif /* DAO_WITH_CONCURRENT */
 
 
 
