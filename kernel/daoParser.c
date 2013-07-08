@@ -877,7 +877,7 @@ static int DaoParser_ParseInitSuper( DaoParser *self, DaoParser *module, int sta
 
 			offset = klass->offsets->data.ushorts[2*(found - klass->mixinClass->size)];
 			inode = DaoParser_AddCode( module, DVM_GETCK, 1, 0, 0, 0, 0, 0 );
-			inode->b = offset + DAO_CLASS_CONST_CSTOR;
+			inode->b = offset;
 			inode->c = DaoParser_PushRegister( module );
 			inode->first = inode->middle = start + 1;
 			inode->last = pos - 1;
@@ -1517,8 +1517,7 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *
 				type = DaoParser_ParseType( self, i+1, end, & i, types );
 			type = DaoNamespace_MakeType( ns, "...", DAO_PAR_VALIST, (DaoValue*) type, NULL, 0 );
 		}else{
-			if( tokens[i]->type != DTOK_IDENTIFIER ) goto InvalidTypeForm;
-			if( t == DTOK_COLON || t == DTOK_ASSN ){
+			if( tokens[i]->type == DTOK_IDENTIFIER && (t == DTOK_COLON || t == DTOK_ASSN) ){
 				name = & tokens[i]->string;
 				tid = (t == DTOK_COLON) ? DAO_PAR_NAMED : DAO_PAR_DEFAULT;
 				if( i + 2 > end ) goto InvalidTypeForm;

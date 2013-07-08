@@ -747,9 +747,128 @@ enum
 	DAOX_DF_WRONG_VALUE
 };
 
-static int DaoxDataFrame_SetArray( DaoxDataFrame *self, DaoArray *array )
+static int DaoValue_Update( DaoValue *self, DaoValue *other, int opcode )
+{
+	double D1, D2;
+	complex16 C1, C2;
+
+	switch( (self->type<<8)|other->type ){
+	case (DAO_INTEGER<<8)|DAO_INTEGER :
+		switch( opcode ){
+		case DVM_MOVE   : self->xInteger.value  = other->xInteger.value; break;
+		case DVM_ADD    : self->xInteger.value += other->xInteger.value; break;
+		case DVM_SUB    : self->xInteger.value -= other->xInteger.value; break;
+		case DVM_MUL    : self->xInteger.value *= other->xInteger.value; break;
+		case DVM_DIV    : self->xInteger.value /= other->xInteger.value; break;
+		case DVM_MOD    : self->xInteger.value %= other->xInteger.value; break;
+		case DVM_BITAND : self->xInteger.value &= other->xInteger.value; break;
+		case DVM_BITOR  : self->xInteger.value |= other->xInteger.value; break;
+		case DVM_BITXOR : self->xInteger.value ^= other->xInteger.value; break;
+		default : return 1;
+		}
+		break;
+	case (DAO_FLOAT<<8)|DAO_FLOAT :
+		D1 = self->xFloat.value;
+		D2 = other->xFloat.value;
+		switch( opcode ){
+		case DVM_MOVE : self->xFloat.value  = other->xFloat.value; break;
+		case DVM_ADD  : self->xFloat.value += other->xFloat.value; break;
+		case DVM_SUB  : self->xFloat.value -= other->xFloat.value; break;
+		case DVM_MUL  : self->xFloat.value *= other->xFloat.value; break;
+		case DVM_DIV  : self->xFloat.value /= other->xFloat.value; break;
+		case DVM_MOD  : self->xFloat.value  = D1-D2*(daoint)(D1/D2); break;
+		default : return 1;
+		}
+		break;
+	case (DAO_DOUBLE<<8)|DAO_DOUBLE :
+		D1 = self->xDouble.value;
+		D2 = other->xDouble.value;
+		switch( opcode ){
+		case DVM_MOVE : self->xDouble.value  = other->xDouble.value; break;
+		case DVM_ADD  : self->xDouble.value += other->xDouble.value; break;
+		case DVM_SUB  : self->xDouble.value -= other->xDouble.value; break;
+		case DVM_MUL  : self->xDouble.value *= other->xDouble.value; break;
+		case DVM_DIV  : self->xDouble.value /= other->xDouble.value; break;
+		case DVM_MOD  : self->xDouble.value  = D1-D2*(daoint)(D1/D2); break;
+		default : return 1;
+		}
+		break;
+	case (DAO_INTEGER<<8)|DAO_FLOAT :
+	case (DAO_INTEGER<<8)|DAO_DOUBLE :
+		D1 = self->xInteger.value;
+		D2 = DaoValue_GetDouble( other );
+		switch( opcode ){
+		case DVM_MOVE : self->xInteger.value = (daoint) D2; break;
+		case DVM_ADD  : self->xInteger.value = (daoint)(D1 + D2); break;
+		case DVM_SUB  : self->xInteger.value = (daoint)(D1 - D2); break;
+		case DVM_MUL  : self->xInteger.value = (daoint)(D1 * D2); break;
+		case DVM_DIV  : self->xInteger.value = (daoint)(D1 / D2); break;
+		case DVM_MOD  : self->xInteger.value = (daoint)(D1-D2*(daoint)(D1/D2)); break;
+		default : return 1;
+		}
+		break;
+	case (DAO_FLOAT<<8)|DAO_INTEGER :
+	case (DAO_FLOAT<<8)|DAO_DOUBLE :
+		D1 = self->xFloat.value;
+		D2 = DaoValue_GetDouble( other );
+		switch( opcode ){
+		case DVM_MOVE : self->xFloat.value =  D2; break;
+		case DVM_ADD  : self->xFloat.value = (D1 + D2); break;
+		case DVM_SUB  : self->xFloat.value = (D1 - D2); break;
+		case DVM_MUL  : self->xFloat.value = (D1 * D2); break;
+		case DVM_DIV  : self->xFloat.value = (D1 / D2); break;
+		case DVM_MOD  : self->xFloat.value = (D1-D2*(daoint)(D1/D2)); break;
+		default : return 1;
+		}
+		break;
+	case (DAO_DOUBLE<<8)|DAO_INTEGER :
+	case (DAO_DOUBLE<<8)|DAO_FLOAT :
+		D1 = self->xDouble.value;
+		D2 = DaoValue_GetDouble( other );
+		switch( opcode ){
+		case DVM_MOVE : self->xDouble.value =  D2; break;
+		case DVM_ADD  : self->xDouble.value = (D1 + D2); break;
+		case DVM_SUB  : self->xDouble.value = (D1 - D2); break;
+		case DVM_MUL  : self->xDouble.value = (D1 * D2); break;
+		case DVM_DIV  : self->xDouble.value = (D1 / D2); break;
+		case DVM_MOD  : self->xDouble.value = (D1-D2*(daoint)(D1/D2)); break;
+		default : return 1;
+		}
+		break;
+	case (DAO_COMPLEX<<8)|DAO_INTEGER :
+	case (DAO_COMPLEX<<8)|DAO_FLOAT :
+	case (DAO_COMPLEX<<8)|DAO_DOUBLE :
+		C1 = self->xComplex.value;
+		D2 = DaoValue_GetDouble( other );
+		switch( opcode ){
+		case DVM_MOVE : C1.real = D2;  C1.imag = 0.0; self->xComplex.value = C1; break;
+		case DVM_MUL  : C1.real *= D2; C1.imag *= D2; self->xComplex.value = C1; break;
+		case DVM_DIV  : C1.real /= D2; C1.imag /= D2; self->xComplex.value = C1; break;
+		case DVM_ADD  : self->xComplex.value.real += D2; break;
+		case DVM_SUB  : self->xComplex.value.real -= D2; break;
+		default : return 1;
+		}
+		break;
+	case (DAO_COMPLEX<<8)|DAO_COMPLEX :
+		C1 = self->xComplex.value;
+		C2 = other->xComplex.value;
+		switch( opcode ){
+		case DVM_MOVE : self->xComplex.value = C2; break;
+		case DVM_ADD  : COM_IP_ADD( C1, C2 ); self->xComplex.value = C1; break;
+		case DVM_SUB  : COM_IP_SUB( C1, C2 ); self->xComplex.value = C1; break;
+		case DVM_MUL  : COM_IP_MUL( C1, C2 ); self->xComplex.value = C1; break;
+		case DVM_DIV  : COM_IP_DIV( C1, C2 ); self->xComplex.value = C1; break;
+		default : return 1;
+		}
+		break;
+	}
+	return 0;
+}
+
+static int DaoxDataFrame_UpdateByArray( DaoxDataFrame *self, DaoArray *array, int opcode )
 {
 	DaoValue value = {0};
+	DaoValue value2 = {0};
 	DArray *destSlices = self->slices;
 	DArray *fromSlices = array->slices;
 	DArray *fromSlices2 = array->slices;
@@ -787,8 +906,10 @@ static int DaoxDataFrame_SetArray( DaoxDataFrame *self, DaoArray *array )
 				daoint kksrc = DaoSlice_GetIndex( fromSlices->items.pVector[2], k );
 				daoint idsrc = iisrc * M * K + jjsrc * K + kksrc;
 				daoint iddes = kkdes * N + iides;
+				DaoValue *dest = DaoxDataColumn_GetCell( column, iddes, & value2 );
 				DaoArray_GetValue( array, idsrc, & value );
-				DaoxDataColumn_SetCell( column, iddes, & value );
+				if( DaoValue_Update( dest, & value, opcode ) ) return DAOX_DF_WRONG_VALUE;
+				DaoxDataColumn_SetCell( column, iddes, dest );
 			}
 		}
 	}
@@ -796,9 +917,10 @@ static int DaoxDataFrame_SetArray( DaoxDataFrame *self, DaoArray *array )
 	if( fromSlices != fromSlices2 ) DArray_Delete( fromSlices );
 	return 0;
 }
-static int DaoxDataFrame_SetFrame( DaoxDataFrame *self, DaoxDataFrame *df )
+static int DaoxDataFrame_UpdateByFrame( DaoxDataFrame *self, DaoxDataFrame *df, int opcode )
 {
 	DaoValue value = {0};
+	DaoValue value2 = {0};
 	DArray *destSlices = self->slices;
 	DArray *fromSlices = df->slices;
 	DArray *fromSlices2 = df->slices;
@@ -839,8 +961,15 @@ static int DaoxDataFrame_SetFrame( DaoxDataFrame *self, DaoxDataFrame *df )
 				daoint kksrc = DaoSlice_GetIndex( fromSlices->items.pVector[2], k );
 				daoint idsrc = kksrc * N + iisrc;
 				daoint iddes = kkdes * N + iides;
+				DaoValue *dest = DaoxDataColumn_GetCell( coldes, iddes, & value2 );
 				DaoValue *val = DaoxDataColumn_GetCell( colsrc, idsrc, & value );
-				DaoxDataColumn_SetCell( coldes, iddes, val );
+				if( val->type == dest->type && val->type == DAO_STRING ){
+					DString_Assign( dest->xString.data, val->xString.data );
+					continue;
+				}else if( DaoValue_Update( dest, val, opcode ) ){
+					return DAOX_DF_WRONG_VALUE;
+				}
+				DaoxDataColumn_SetCell( coldes, iddes, dest );
 			}
 		}
 	}
@@ -927,7 +1056,7 @@ static void FRAME_GetIndex( DaoProcess *proc, DaoValue *p[], int N )
 	idx = DaoxDataFrame_GetIndex( self, dim, lab->mbs );
 	DaoProcess_PutInteger( proc, idx );
 }
-static void FRAME_AddArray( DaoProcess *proc, DaoValue *p[], int N )
+static void FRAME_AddArrayCol( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoValue value = {0};
 	DaoxDataColumn *col;
@@ -958,7 +1087,7 @@ static void FRAME_AddArray( DaoProcess *proc, DaoValue *p[], int N )
 	M = self->dims[0] * self->dims[2];
 	for(i=array->size; i<M; ++i) DaoxDataColumn_SetCell( col, i, NULL );
 }
-static void FRAME_AddList( DaoProcess *proc, DaoValue *p[], int N )
+static void FRAME_AddListCol( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxDataColumn *col;
 	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
@@ -1066,9 +1195,9 @@ static void FRAME_SETMI( DaoProcess *proc, DaoValue *p[], int N )
 		df2.original = self;
 		if( value->type == DAO_ARRAY ){
 			DaoArray *array = (DaoArray*) value;
-			rc = DaoxDataFrame_SetArray( & df2, array );
+			rc = DaoxDataFrame_UpdateByArray( & df2, array, DVM_MOVE );
 		}else if( df != NULL ){
-			rc = DaoxDataFrame_SetFrame( & df2, df );
+			rc = DaoxDataFrame_UpdateByFrame( & df2, df, DVM_MOVE );
 		}else{
 		}
 		if( rc == DAOX_DF_WRONG_SHAP ){
@@ -1221,7 +1350,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 			DVector_PushInt( aligns, 1 );
 			DVector_PushInt( scifmts, 0 );
 			DVector_PushInt( decimals, 0 );
-		}else if( max >= maxwidth || min <= -dec ){
+		}else if( max >= maxwidth || min < -dec ){
 			width = 16;
 			DVector_PushInt( aligns, 0 );
 			DVector_PushInt( scifmts, 1 );
@@ -1257,7 +1386,8 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 		}
 		DaoStream_WriteMBS( stream, "\n" );
 		for(j=0; j<M; j=J){
-			int width2, width = idwidth+1;
+			int idigits, width2, width = idwidth+1;
+			daoint maxidx = 0;
 			for(i=0; i<rlabwidth->size; ++i) width += rlabwidth->data.ints[i] + 1;
 			width += 1;
 
@@ -1276,6 +1406,38 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 			sprintf( buf, "from %" DAO_INT_FORMAT " to %" DAO_INT_FORMAT ":\n", j, J-1 );
 			DaoStream_WriteMBS( stream, j == 0 ? "| Columns " : "> Columns " );
 			DaoStream_WriteMBS( stream, buf );
+
+			for(s=j; s<J; ++s){
+				daoint jj = DaoSlice_GetIndex( self->slices->items.pVector[1], s );
+				if( jj > maxidx ) maxidx = jj;
+			}
+			idigits = 1 + log( maxidx ) / log(10);
+
+			for(g=0; g<idigits; ++g){
+				int R = 1;
+				sprintf( fmt, "%%-%is", width );
+				sprintf( buf, fmt, j == 0 ? "|" : ">" );
+				DaoStream_WriteMBS( stream, buf );
+				for(s=1; s<(idigits-g); ++s) R *= 10;
+				for(s=j; s<J; ++s){
+					daoint jj = DaoSlice_GetIndex( self->slices->items.pVector[1], s );
+					int width = clabwidth->data.ints[s];
+					int align = aligns->data.ints[s];
+					int d = (jj / R) % 10;
+					if( align ){
+						sprintf( fmt, "%%-%ii", width );
+					}else{
+						sprintf( fmt, "%%%ii", width );
+					}
+					snprintf( buf, width+1, fmt, d );
+					DaoStream_SetColor( stream, "white", (s%2) ? "yellow" : "cyan" );
+					DaoStream_WriteMBS( stream, "  " );
+					DaoStream_WriteMBS( stream, buf );
+					DaoStream_SetColor( stream, NULL, NULL );
+				}
+				DaoStream_WriteMBS( stream, "\n" );
+			}
+
 			for(g=0; g<original->labels[DAOX_DF_COL]->size; ++g){
 				sprintf( fmt, "%%-%is", width );
 				sprintf( buf, fmt, j == 0 ? "|" : ">" );
@@ -1292,8 +1454,10 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 					DaoxDataFrame_GetLabel( original, DAOX_DF_COL, g, jj, label );
 					if( label->size > width ) DString_Reset( label, width );
 					snprintf( buf, width+1, fmt, label->mbs );
+					DaoStream_SetColor( stream, "blue", (s%2) ? "yellow" : "cyan" );
 					DaoStream_WriteMBS( stream, "  " );
 					DaoStream_WriteMBS( stream, buf );
+					DaoStream_SetColor( stream, NULL, NULL );
 				}
 				DaoStream_WriteMBS( stream, "\n" );
 			}
@@ -1304,17 +1468,25 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 			for(i=0; i<N; ++i){
 				daoint ii = DaoSlice_GetIndex( self->slices->items.pVector[0], i );
 				sprintf( buf, idfmt, ii );
+				DaoStream_SetColor( stream, "white", (i%2) ? "yellow" : "cyan" );
 				DaoStream_WriteMBS( stream, buf );
+				DaoStream_SetColor( stream, NULL, NULL );
 				for(g=0; g<original->labels[DAOX_DF_ROW]->size; ++g){
 					int width = rlabwidth->data.ints[g];
 					DaoxDataFrame_GetLabel( original, DAOX_DF_ROW, g, ii, label );
 					if( label->size > width ) DString_Reset( label, width );
+					DaoStream_SetColor( stream, "white", (i%2) ? "yellow" : "cyan" );
 					if( g ) DaoStream_WriteMBS( stream, "," );
+					DaoStream_SetColor( stream, NULL, NULL );
 					sprintf( fmt, "%%-%is", width );
 					snprintf( buf, width+1, fmt, label->mbs );
+					DaoStream_SetColor( stream, "blue", (i%2) ? "yellow" : "cyan" );
 					DaoStream_WriteMBS( stream, buf );
+					DaoStream_SetColor( stream, NULL, NULL );
 				}
-				DaoStream_WriteMBS( stream, ": " );
+				DaoStream_SetColor( stream, "white", (i%2) ? "yellow" : "cyan" );
+				DaoStream_WriteMBS( stream, g > 0 ? ": " : " " );
+				DaoStream_SetColor( stream, NULL, NULL );
 				for(s=j; s<J; ++s){
 					int scifmt = scifmts->data.ints[s];
 					int dec = decimals->data.ints[s];
@@ -1376,9 +1548,10 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 	DString_Delete( label );
 }
 
-static void FRAME_ScanCells( DaoProcess *proc, DaoValue *p[], int npar )
+static void FRAME_CellsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, int func )
 {
 	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
+	DaoxDataFrame *original = self->original;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoInteger integer1 = {DAO_INTEGER,0,0,0,0,0};
 	DaoInteger integer2 = {DAO_INTEGER,0,0,0,0,0};
@@ -1386,39 +1559,291 @@ static void FRAME_ScanCells( DaoProcess *proc, DaoValue *p[], int npar )
 	DaoInteger *rowidx = & integer1;
 	DaoInteger *colidx = & integer2;
 	DaoInteger *depidx = & integer3;
+	DaoValue *nulls[3] = {NULL,NULL,NULL};
 	DaoValue value;
-	daoint N = self->dims[0];
-	daoint M = self->dims[1];
-	daoint K = self->dims[2];
-	daoint NK = N * K;
-	daoint entry, i, j;
+	daoint N, M, K;
+	daoint entry, i, j, k;
 
 	value.xInteger = integer1;
 	if( sect == NULL ) return;
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+
+	if( self->original == NULL ){
+		DaoxDataFrame_PrepareSlices( self );
+		DaoDataFrame_MakeSlice( self, proc, nulls, 3, self->slices );
+		original = self;
+	}
+
+	N = self->slices->items.pVector[0]->data.daoints[1];
+	M = self->slices->items.pVector[1]->data.daoints[1];
+	K = self->slices->items.pVector[2]->data.daoints[1];
+
 	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );
-	for(j=0; j<M; ++j){
-		DaoxDataColumn *column = (DaoxDataColumn*) self->columns->items.pVoid[j];
-		colidx->value = j;
-		for(i=0; i<NK; ++i){
-			rowidx->value = i % N;
-			depidx->value = i / N;
-			if( sect->b >0 ){
-				DaoValue *cell = DaoxDataColumn_GetCell( column, i, & value );
-				DaoProcess_SetValue( proc, sect->a, cell );
+	for(k=0; k<K; ++k){
+		daoint kk = DaoSlice_GetIndex( self->slices->items.pVector[2], k );
+		depidx->value = kk;
+		for(j=0; j<M; ++j){
+			daoint jj = DaoSlice_GetIndex( self->slices->items.pVector[1], j );
+			DaoxDataColumn *column = (DaoxDataColumn*) original->columns->items.pVoid[jj];
+			colidx->value = jj;
+			for(i=0; i<N; ++i){
+				daoint ii = DaoSlice_GetIndex( self->slices->items.pVector[0], i );
+				rowidx->value = ii;
+				if( sect->b >0 ){
+					DaoValue *cell = DaoxDataColumn_GetCell( column, kk*N+ii, & value );
+					DaoProcess_SetValue( proc, sect->a, cell );
+				}
+				if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, (DaoValue*) rowidx );
+				if( sect->b >2 ) DaoProcess_SetValue( proc, sect->a+2, (DaoValue*) colidx );
+				if( sect->b >3 ) DaoProcess_SetValue( proc, sect->a+3, (DaoValue*) depidx );
+				proc->topFrame->entry = entry;
+				DaoProcess_Execute( proc );
+				if( proc->status == DAO_PROCESS_ABORTED ) break;
+				if( func ){
+					DaoxDataColumn_SetCell( column, kk*N+ii, proc->stackValues[0] );
+				}
 			}
-			if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, (DaoValue*) rowidx );
-			if( sect->b >2 ) DaoProcess_SetValue( proc, sect->a+2, (DaoValue*) colidx );
-			if( sect->b >3 ) DaoProcess_SetValue( proc, sect->a+3, (DaoValue*) depidx );
-			proc->topFrame->entry = entry;
-			DaoProcess_Execute( proc );
-			if( proc->status == DAO_PROCESS_ABORTED ) break;
 		}
 	}
 	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 }
+static void FRAME_RowsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, int func )
+{
+	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
+	DaoxDataFrame *original = self->original;
+	DaoNamespace *ns = proc->activeNamespace;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoInteger integer1 = {DAO_INTEGER,0,0,0,0,0};
+	DaoInteger integer3 = {DAO_INTEGER,0,0,0,0,0};
+	DaoInteger *rowidx = & integer1;
+	DaoInteger *depidx = & integer3;
+	DaoValue *nulls[3] = {NULL,NULL,NULL};
+	DaoValue value;
+	DaoTuple *tuple;
+	DaoType *type;
+	DArray *ts;
+	daoint N, M, K;
+	daoint entry, i, j, k;
+
+	value.xInteger = integer1;
+	if( sect == NULL ) return;
+	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+
+	if( self->original == NULL ){
+		DaoxDataFrame_PrepareSlices( self );
+		DaoDataFrame_MakeSlice( self, proc, nulls, 3, self->slices );
+		original = self;
+	}
+
+	N = self->slices->items.pVector[0]->data.daoints[1];
+	M = self->slices->items.pVector[1]->data.daoints[1];
+	K = self->slices->items.pVector[2]->data.daoints[1];
+
+	ts = DArray_New(0);
+	for(j=0; j<M; ++j){
+		daoint jj = DaoSlice_GetIndex( self->slices->items.pVector[1], j );
+		DaoxDataColumn *column = (DaoxDataColumn*) original->columns->items.pVoid[jj];
+		DArray_Append( ts, column->type );
+	}
+	type = DaoNamespace_MakeType( ns, "tuple", DAO_TUPLE, NULL, ts->items.pType, ts->size );
+	DArray_Delete( ts );
+
+	tuple = DaoTuple_Create( type, 0, 0 );
+	GC_IncRC( tuple );
+
+	entry = proc->topFrame->entry;
+	DaoProcess_AcquireCV( proc );
+	for(k=0; k<K; ++k){
+		daoint kk = DaoSlice_GetIndex( self->slices->items.pVector[2], k );
+		depidx->value = kk;
+		for(i=0; i<N; ++i){
+			daoint ii = DaoSlice_GetIndex( self->slices->items.pVector[0], i );
+			rowidx->value = ii;
+			for(j=0; j<M; ++j){
+				daoint jj = DaoSlice_GetIndex( self->slices->items.pVector[1], j );
+				DaoxDataColumn *column = (DaoxDataColumn*) original->columns->items.pVoid[jj];
+				DaoValue *cell = DaoxDataColumn_GetCell( column, kk*N+ii, & value );
+				DaoTuple_SetItem( tuple, cell, j );
+			}
+			if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, (DaoValue*) tuple );
+			if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, (DaoValue*) rowidx );
+			if( sect->b >2 ) DaoProcess_SetValue( proc, sect->a+2, (DaoValue*) depidx );
+			proc->topFrame->entry = entry;
+			DaoProcess_Execute( proc );
+			if( proc->status == DAO_PROCESS_ABORTED ) break;
+			if( func == 0 ) continue;
+			for(j=0; j<M; ++j){
+				daoint jj = DaoSlice_GetIndex( self->slices->items.pVector[1], j );
+				DaoxDataColumn *column = (DaoxDataColumn*) original->columns->items.pVoid[jj];
+				DaoxDataColumn_SetCell( column, kk*N+ii, tuple->items[j] );
+			}
+		}
+	}
+	DaoProcess_ReleaseCV( proc );
+	DaoProcess_PopFrame( proc );
+	GC_DecRC( tuple );
+}
+static void FRAME_ColsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, int func )
+{
+	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
+	DaoxDataFrame *original = self->original;
+	DaoNamespace *ns = proc->activeNamespace;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoInteger integer2 = {DAO_INTEGER,0,0,0,0,0};
+	DaoInteger integer3 = {DAO_INTEGER,0,0,0,0,0};
+	DaoInteger *colidx = & integer2;
+	DaoInteger *depidx = & integer3;
+	DaoValue *nulls[3] = {NULL,NULL,NULL};
+	DaoValue value;
+	DaoList *list;
+	daoint N, M, K;
+	daoint entry, i, j, k;
+
+	value.xInteger = integer2;
+	if( sect == NULL ) return;
+	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+
+	if( self->original == NULL ){
+		DaoxDataFrame_PrepareSlices( self );
+		DaoDataFrame_MakeSlice( self, proc, nulls, 3, self->slices );
+		original = self;
+	}
+
+	N = self->slices->items.pVector[0]->data.daoints[1];
+	M = self->slices->items.pVector[1]->data.daoints[1];
+	K = self->slices->items.pVector[2]->data.daoints[1];
+
+	list = DaoList_New();
+	GC_IncRC( list );
+
+	entry = proc->topFrame->entry;
+	DaoProcess_AcquireCV( proc );
+	for(k=0; k<K; ++k){
+		daoint kk = DaoSlice_GetIndex( self->slices->items.pVector[2], k );
+		depidx->value = kk;
+		for(j=0; j<M; ++j){
+			daoint jj = DaoSlice_GetIndex( self->slices->items.pVector[1], j );
+			DaoxDataColumn *column = (DaoxDataColumn*) original->columns->items.pVoid[jj];
+			DaoType *type = DaoNamespace_MakeType( ns, "list", DAO_LIST, NULL, & column->type, 1 );
+			colidx->value = jj;
+			DaoList_Clear( list );
+			GC_ShiftRC( type, list->unitype );
+			list->unitype = type;
+			for(i=0; i<N; ++i){
+				daoint ii = DaoSlice_GetIndex( self->slices->items.pVector[0], i );
+				DaoValue *cell = DaoxDataColumn_GetCell( column, kk*N+ii, & value );
+				DaoList_Append( list, cell );
+			}
+			if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, (DaoValue*) list );
+			if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, (DaoValue*) colidx );
+			if( sect->b >2 ) DaoProcess_SetValue( proc, sect->a+2, (DaoValue*) depidx );
+			proc->topFrame->entry = entry;
+			DaoProcess_Execute( proc );
+			if( proc->status == DAO_PROCESS_ABORTED ) break;
+			if( func == 0 ) continue;
+			for(i=0; i<N; ++i){
+				daoint ii = DaoSlice_GetIndex( self->slices->items.pVector[0], i );
+				DaoxDataColumn_SetCell( column, kk*N+ii, list->items.items.pValue[i] );
+			}
+		}
+	}
+	DaoProcess_ReleaseCV( proc );
+	DaoProcess_PopFrame( proc );
+	GC_DecRC( list );
+}
+static void FRAME_ScanCells( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	FRAME_CellsCodeSection( proc, p, npar, 0 );
+}
+static void FRAME_UpdateCells( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	FRAME_CellsCodeSection( proc, p, npar, 1 );
+}
+static void FRAME_ScanRows( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	FRAME_RowsCodeSection( proc, p, npar, 0 );
+}
+static void FRAME_UpdateRows( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	FRAME_RowsCodeSection( proc, p, npar, 1 );
+}
+static void FRAME_ScanCols( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	FRAME_ColsCodeSection( proc, p, npar, 0 );
+}
+static void FRAME_UpdateCols( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	FRAME_ColsCodeSection( proc, p, npar, 1 );
+}
+
+static void FRAME_AddFrame( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByFrame( (DaoxDataFrame*) P[0], (DaoxDataFrame*) P[1], DVM_ADD );
+}
+static void FRAME_SubFrame( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByFrame( (DaoxDataFrame*) P[0], (DaoxDataFrame*) P[1], DVM_SUB );
+}
+static void FRAME_MulFrame( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByFrame( (DaoxDataFrame*) P[0], (DaoxDataFrame*) P[1], DVM_MUL );
+}
+static void FRAME_DivFrame( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByFrame( (DaoxDataFrame*) P[0], (DaoxDataFrame*) P[1], DVM_DIV );
+}
+static void FRAME_ModFrame( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByFrame( (DaoxDataFrame*) P[0], (DaoxDataFrame*) P[1], DVM_MOD );
+}
+static void FRAME_BitAndFrame( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByFrame( (DaoxDataFrame*) P[0], (DaoxDataFrame*) P[1], DVM_BITAND );
+}
+static void FRAME_BitOrFrame( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByFrame( (DaoxDataFrame*) P[0], (DaoxDataFrame*) P[1], DVM_BITOR );
+}
+static void FRAME_BitXorFrame( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByFrame( (DaoxDataFrame*) P[0], (DaoxDataFrame*) P[1], DVM_BITXOR );
+}
+
+static void FRAME_AddArray( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByArray( (DaoxDataFrame*) P[0], (DaoArray*) P[1], DVM_ADD );
+}
+static void FRAME_SubArray( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByArray( (DaoxDataFrame*) P[0], (DaoArray*) P[1], DVM_SUB );
+}
+static void FRAME_MulArray( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByArray( (DaoxDataFrame*) P[0], (DaoArray*) P[1], DVM_MUL );
+}
+static void FRAME_DivArray( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByArray( (DaoxDataFrame*) P[0], (DaoArray*) P[1], DVM_DIV );
+}
+static void FRAME_ModArray( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByArray( (DaoxDataFrame*) P[0], (DaoArray*) P[1], DVM_MOD );
+}
+static void FRAME_BitAndArray( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByArray( (DaoxDataFrame*) P[0], (DaoArray*) P[1], DVM_BITAND );
+}
+static void FRAME_BitOrArray( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByArray( (DaoxDataFrame*) P[0], (DaoArray*) P[1], DVM_BITOR );
+}
+static void FRAME_BitXorArray( DaoProcess *proc, DaoValue *P[], int N )
+{
+	DaoxDataFrame_UpdateByArray( (DaoxDataFrame*) P[0], (DaoArray*) P[1], DVM_BITXOR );
+}
+
 
 static void FRAME_SLICED( DaoProcess *proc, DaoValue *p[], int npar )
 {
@@ -1426,23 +1851,6 @@ static void FRAME_SLICED( DaoProcess *proc, DaoValue *p[], int npar )
 	DaoxDataFrame_Sliced( self );
 }
 
-#if 0
-
-operator[](row:int, col:string)
-operator[](row:string, col:string)
-
-operator + - * / ...
-
-frame.ScanCells( rows, cols )::{}
-frame.UpdateCells( rows, cols )::{}
-frame.SelectCells( rows, cols )::{}
-frame.ScanRows( rows )::{}
-frame.UpdateRows( rows )::{}
-frame.SelectRows( rows )::{}
-frame.ScanColumns( cols )::{}
-frame.UpdateColumns( cols )::{}
-frame.SelectColumns( cols )::{}
-#endif
 
 static DaoFuncItem dataframeMeths[]=
 {
@@ -1457,8 +1865,8 @@ static DaoFuncItem dataframeMeths[]=
 	{ FRAME_AddLabel,  "AddLabel( self :DataFrame, dim :DimType, label :string, index :int )" },
 	{ FRAME_GetIndex,  "GetIndex( self :DataFrame, dim :DimType, label :string ) => int" },
 
-	{ FRAME_AddArray,  "AddColumn( self :DataFrame, data :array<any>, label :string ='' )" },
-	{ FRAME_AddList,   "AddColumn( self :DataFrame, data :list<any>, label :string ='' )" },
+	{ FRAME_AddArrayCol, "AddColumn( self :DataFrame, data :array<any>, label :string ='' )" },
+	{ FRAME_AddListCol,  "AddColumn( self :DataFrame, data :list<any>, label :string ='' )" },
 
 	{ FRAME_GETMI,
 		"[]( self :DataFrame, i :IndexType, j :IndexType =none, k :IndexType =none ) => any" },
@@ -1469,6 +1877,31 @@ static DaoFuncItem dataframeMeths[]=
 	{ FRAME_PRINT,  "__PRINT__( self :DataFrame )" },
 
 	{ FRAME_ScanCells,  "ScanCells( self :DataFrame )[cell:@T,row:int,column:int,depth:int]" },
+	{ FRAME_UpdateCells, "UpdateCells( self :DataFrame )[cell:@T,row:int,column:int,depth:int=>@T]" },
+
+	{ FRAME_ScanRows,  "ScanRows( self :DataFrame )[value:tuple,row:int,depth:int]" },
+	{ FRAME_UpdateRows, "UpdateRows( self :DataFrame )[value:tuple,row:int,depth:int=>tuple]" },
+
+	{ FRAME_ScanCols,  "ScanColumns( self :DataFrame )[value:tuple,column:int,depth:int]" },
+	{ FRAME_UpdateCols, "UpdateColumns( self :DataFrame )[value:tuple,column:int,depth:int=>tuple]" },
+
+	{ FRAME_AddFrame,     "+=( self :DataFrame, other :DataFrame )" },
+	{ FRAME_SubFrame,     "-=( self :DataFrame, other :DataFrame )" },
+	{ FRAME_MulFrame,     "*=( self :DataFrame, other :DataFrame )" },
+	{ FRAME_DivFrame,     "/=( self :DataFrame, other :DataFrame )" },
+	{ FRAME_ModFrame,     "%=( self :DataFrame, other :DataFrame )" },
+	{ FRAME_BitAndFrame,  "&=( self :DataFrame, other :DataFrame )" },
+	{ FRAME_BitOrFrame,   "|=( self :DataFrame, other :DataFrame )" },
+	{ FRAME_BitXorFrame,  "^=( self :DataFrame, other :DataFrame )" },
+
+	{ FRAME_AddArray,     "+=( self :DataFrame, other :array )" },
+	{ FRAME_SubArray,     "-=( self :DataFrame, other :array )" },
+	{ FRAME_MulArray,     "*=( self :DataFrame, other :array )" },
+	{ FRAME_DivArray,     "/=( self :DataFrame, other :array )" },
+	{ FRAME_ModArray,     "%=( self :DataFrame, other :array )" },
+	{ FRAME_BitAndArray,  "&=( self :DataFrame, other :array )" },
+	{ FRAME_BitOrArray,   "|=( self :DataFrame, other :array )" },
+	{ FRAME_BitXorArray,  "^=( self :DataFrame, other :array )" },
 
 	{ FRAME_SLICED,  "__SLICED__" },
 

@@ -3008,15 +3008,18 @@ void DaoProcess_DoPair( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoNamespace *ns = self->activeNamespace;
 	DaoType *tp = self->activeTypes[ vmc->c ];
-	DaoValue *dA = self->activeValues[ vmc->a ];
-	DaoValue *dB = self->activeValues[ vmc->b ];
+	DaoType *ta = self->activeTypes[ vmc->a ];
+	DaoType *tb = self->activeTypes[ vmc->b ];
 	DaoTuple *tuple;
 	self->activeCode = vmc;
-	if( tp == NULL ) tp = DaoNamespace_MakePairValueType( ns, dA, dB );
+	//XXX if( tp == NULL ) tp = DaoNamespace_MakePairValueType( ns, dA, dB );
+	if( ta == NULL ) ta = DaoNamespace_GetType( ns, self->activeValues[ vmc->a ] );
+	if( tb == NULL ) tb = DaoNamespace_GetType( ns, self->activeValues[ vmc->b ] );
+	if( tp == NULL ) tp = DaoNamespace_MakePairType( ns, ta, tb );
 	tuple = DaoProcess_GetTuple( self, tp, 2, 1 );
 	tuple->subtype = DAO_PAIR;
-	DaoValue_Copy( dA, & tuple->items[0] );
-	DaoValue_Copy( dB, & tuple->items[1] );
+	DaoValue_Copy( self->activeValues[ vmc->a ], & tuple->items[0] );
+	DaoValue_Copy( self->activeValues[ vmc->b ], & tuple->items[1] );
 }
 void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 {
@@ -4309,8 +4312,8 @@ void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc )
 		if( a0->ndim == 2 && (a0->dims[0] == 1 || a0->dims[1] == 1) ){
 			DaoArray_SetDimCount( array, 2 );
 			memmove( array->dims, a0->dims, 2*sizeof(daoint) );
-			array->dims[ a0->dims[1] == 1 ] = num;
-			transvec = a0->dims[1] == 1;
+			array->dims[ a0->dims[0] > 1 ] = num;
+			transvec = a0->dims[0] > 1;
 		}else{
 			DaoArray_SetDimCount( array, a0->ndim + 1 );
 			array->dims[0] = num;

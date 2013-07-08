@@ -223,6 +223,7 @@ struct DaoProcessAux
 DAO_DLL DaoProcessAux* DaoProcessAux_New();
 DAO_DLL void DaoProcessAux_Delete( DaoProcessAux *self );
 
+/* Mersenne twister random number in [0,1] interval: */
 DAO_DLL double DaoProcess_Random( DaoProcess *self );
 
 #endif

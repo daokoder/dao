@@ -326,6 +326,7 @@ int DaoValue_Serialize2( DaoValue *self, DString *serial, DaoNamespace *ns, DaoP
 	case DAO_TUPLE :
 	case DAO_OBJECT :
 	case DAO_CDATA :
+	case DAO_CSTRUCT :
 		DMap_Insert( omap, self, self );
 		sprintf( chs, "(%p)", self );
 		DString_AppendMBS( serial, chs );
@@ -344,6 +345,7 @@ int DaoValue_Serialize2( DaoValue *self, DString *serial, DaoNamespace *ns, DaoP
 			rc = DaoObject_Serialize( & self->xObject, serial, ns, proc, buf, omap );
 			break;
 		case DAO_CDATA :
+		case DAO_CSTRUCT :
 			if( proc == NULL ) break;
 			rc = DaoCdata_Serialize( & self->xCdata, serial, ns, proc, buf, omap );
 			break;
@@ -395,7 +397,7 @@ static DaoCdata* DaoCdata_MakeObject( DaoCdata *self, DaoValue *param, DaoProces
 	DaoProcess_SetActiveFrame( proc, proc->firstFrame ); /* return value in stackValues[0] */
 	if( DaoProcess_Execute( proc ) == 0 ) return NULL;
 	value = proc->stackValues[0];
-	if( value && value->type == DAO_CDATA ) return & value->xCdata;
+	if( value && (value->type == DAO_CDATA || value->type == DAO_CSTRUCT) ) return & value->xCdata;
 	return NULL;
 }
 
@@ -659,6 +661,7 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 		if( object ) DaoValue_Copy( (DaoValue*) object, value2 );
 		break;
 	case DAO_CDATA :
+	case DAO_CSTRUCT :
 		DArray_PushFront( types, NULL );
 		DaoParser_Deserialize( self, start, end, & tmp, types, ns, proc, omap );
 		DArray_PopFront( types );

@@ -847,6 +847,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 					DString name = DString_WrapMBS( typer->numItems[j].name );
 					it = DMap_Find( values, & name );
 					if( it == NULL ) continue;
+					if( DMap_Find( self->lookupTable, it->key.pString ) ) continue;
 					id = self->constants->size;
 					id = LOOKUP_BIND( DAO_CLASS_CONSTANT, DAO_DATA_PUBLIC, 1, id );
 					DMap_Insert( self->lookupTable, it->key.pString, IntToPointer( id ) );
@@ -855,6 +856,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 				}
 			}
 			for(it=DMap_First( methods ); it; it=DMap_Next( methods, it )){
+				if( DMap_Find( self->lookupTable, it->key.pString ) ) continue;
 				id = self->constants->size;
 				id = LOOKUP_BIND( DAO_CLASS_CONSTANT, DAO_DATA_PUBLIC, 1, id );
 				DMap_Insert( self->lookupTable, it->key.pString, IntToPointer( id ) );
