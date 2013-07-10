@@ -195,11 +195,8 @@ OperatorKeyword ::= and | or | not | in
 
 -- Miscellaneous:
 @[code(syntax)]
-MiscKeyword ::= virtual | function | sub | continue
+MiscKeyword ::= 
 @[code(syntax)]
-Note: @[green]function@[green] and @[green]sub@[green] 
-are aliases for @[green]routine@[green],
-and @[green]continue@[green] is an alias for @[green]skip@[green].
 
 @[list]
 @[code(syntax)]
@@ -960,7 +957,7 @@ Basic Statement
 @[subsection]
 
 @[code(syntax)]
-BasicStatement ::= DeclarationStmt | Expression | 'break' | 'skip' | 'continue'
+BasicStatement ::= DeclarationStmt | Expression | 'break' | 'skip'
 @[code(syntax)]
 
 

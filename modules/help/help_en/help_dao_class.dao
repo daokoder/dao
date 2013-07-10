@@ -70,7 +70,7 @@ Member Method Field
 @[subsection]
 
 Dao class supports multiple type of member methods such as
-constructor, static method, instance method and virtual method, as well as
+constructor, static method, instance method and
 methods for overloaded operators.
 
 
@@ -264,15 +264,17 @@ class Sub : Base
 @[code]
 
 
-Like in C++, Dao supports virtual functions which are defined by specifying
-the @[green]virtual@[green] before the @[green]routine@[green] keyword.
 @[code]
+load meta
+
 class Base
 {
 	var id = 0
 
-	virtual routine VirtMeth(){ io.writeln( 'Base::VirtMeth()' ) }
-	routine NormMeth(){ VirtMeth() }
+	routine VirtMeth(){ io.writeln( 'Base::VirtMeth()' ) }
+	routine NormMeth(){
+		meta.self( self ).VirtMeth() # emulate virtual method call;
+	}
 }
 class Sub : Base
 {

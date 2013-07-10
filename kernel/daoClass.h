@@ -80,9 +80,6 @@ struct DaoClass
 	/* They are inserted into constants, no refCount updating for this. */
 	DMap  *ovldRoutMap; /* <DString*,DaoRoutine*> */
 
-	/* Map virtual methods of parent classes to its reimplementation in this class: */
-	DMap  *vtable; /* <DaoRoutine*,DaoRoutine*> */
-
 	DaoRoutine  *classRoutine; /* Default class constructor. */
 	DaoRoutine  *classRoutines; /* All explicitly defined constructors; GC handled in constants; */
 

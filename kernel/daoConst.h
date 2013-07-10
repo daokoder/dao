@@ -180,16 +180,15 @@ enum DaoRoutineAttrib
 {
 	DAO_ROUT_PARSELF   = 1,       /* need self parameter */
 	DAO_ROUT_NEEDSELF  = (1<<1),  /* for routines use class instance variable(s) */
-	DAO_ROUT_VIRTUAL   = (1<<2),  /* virtual function */
-	DAO_ROUT_STATIC    = (1<<3),  /* static function */
-	DAO_ROUT_PRIVATE   = (1<<4),  /* private method */
-	DAO_ROUT_PROTECTED = (1<<5),  /* protected method */
-	DAO_ROUT_DEFERRED  = (1<<6),  /* deferred closure */
-	DAO_ROUT_PASSRET   = (1<<7),  /* pass returned value to deferred closure */
-	DAO_ROUT_CODESECT  = (1<<8),  /* code section routine */
-	DAO_ROUT_DECORATOR = (1<<9),  /* function decorator */
-	DAO_ROUT_INITOR    = (1<<10), /* class constructor */
-	DAO_ROUT_MAIN      = (1<<11)  /* main function */
+	DAO_ROUT_STATIC    = (1<<2),  /* static function */
+	DAO_ROUT_PRIVATE   = (1<<3),  /* private method */
+	DAO_ROUT_PROTECTED = (1<<4),  /* protected method */
+	DAO_ROUT_DEFERRED  = (1<<5),  /* deferred closure */
+	DAO_ROUT_PASSRET   = (1<<6),  /* pass returned value to deferred closure */
+	DAO_ROUT_CODESECT  = (1<<7),  /* code section routine */
+	DAO_ROUT_DECORATOR = (1<<8),  /* function decorator */
+	DAO_ROUT_INITOR    = (1<<9),  /* class constructor */
+	DAO_ROUT_MAIN      = (1<<10)  /* main function */
 };
 
 #define DAO_TYPER_PRIV_FREE  (DAO_ROUT_MAIN<<1)

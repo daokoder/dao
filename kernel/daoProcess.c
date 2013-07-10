@@ -438,8 +438,8 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 			}
 		}else{
 			if( obj->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA || tp->tid ==DAO_CSTRUCT) ){
-				/* for virtual method call, or calling C function on Dao object: */
-				obj = DaoObject_CastToBase( obj->xObject.rootObject, tp );
+				/* calling C function on Dao object: */
+				obj = DaoObject_CastToBase( (DaoObject*) obj, tp );
 			}
 			if( DaoValue_Move2( obj, & dest[0], tp, defs ) ){
 				selfChecked = 1;
@@ -3559,6 +3559,15 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		ct = at;
 	}
 	if( ct->tid == DAO_INTERFACE ){
+		switch( va->type ){
+		case DAO_OBJECT  :
+			va = (DaoValue*) va->xObject.rootObject;
+			break;
+		case DAO_CSTRUCT :
+		case DAO_CDATA   :
+			if( va->xCstruct.object ) va = (DaoValue*) va->xCstruct.object->rootObject;
+			break;
+		}
 		at = DaoNamespace_GetType( self->activeNamespace, va );
 		/* automatic binding when casted to an interface: */
 		mt = DaoInterface_BindTo( & ct->aux->xInterface, at, NULL );

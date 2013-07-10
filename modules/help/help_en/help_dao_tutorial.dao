@@ -1339,9 +1339,6 @@ in the same way as in C++, but in Dao, one should make sure that, the parameter 
 must be exactly the same in the places for declaration and definition.
 
 
-Like in C++, virtual method can be declared by adding keyword @[green]virtual@[green]
-before the @[green]routine@[green] or @[green]function@[green] keyword.
-
 
 
 @[subsection]Class Instance@[subsection]

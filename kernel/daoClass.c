@@ -148,7 +148,6 @@ void DaoClass_Delete( DaoClass *self )
 	DVector_Delete( self->offsets );
 	DArray_Delete( self->references );
 	if( self->decoTargets ) DArray_Delete( self->decoTargets );
-	if( self->vtable ) DMap_Delete( self->vtable );
 
 	DString_Delete( self->className );
 	dao_free( self );
@@ -514,6 +513,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 			/* No need to added the overloaded routines now; */
 			/* Each of them has an entry in constants, and will be handled later: */
 			DaoRoutine *routs = DaoRoutines_New( ns, self->objType, NULL );
+			routs->trait |= DAO_VALUE_CONST;
 			DArray_Append( self->constants, DaoConstant_New( (DaoValue*) routs ) );
 			for(j=0; j<rout->overloads->routines->size; ++j){
 				DaoRoutine *R = rout->overloads->routines->items.pRoutine[j];
@@ -780,21 +780,11 @@ int DaoClass_DeriveClassData( DaoClass *self )
 		if( klass->type == DAO_CLASS ){
 			DArray_Append( self->clsType->bases, klass->clsType );
 			DArray_Append( self->objType->bases, klass->objType );
-			if( klass->vtable ){
-				if( self->vtable == NULL ) self->vtable = DHash_New(0,0);
-				for(it=DMap_First(klass->vtable); it; it=DMap_Next(klass->vtable,it)){
-					DMap_Insert( self->vtable, it->key.pVoid, it->value.pVoid );
-				}
-			}
 			DArray_AppendArray( self->cstDataName, klass->cstDataName );
 			DArray_AppendArray( self->glbDataName, klass->glbDataName );
 			for(j=0; j<klass->constants->size; ++j){
 				DaoValue *cst = klass->constants->items.pConst[j]->value;
 				DArray_Append( self->constants, klass->constants->items.pVoid[j] );
-				if( cst->type == DAO_ROUTINE && (cst->xRoutine.attribs & DAO_ROUT_VIRTUAL) ){
-					if( self->vtable == NULL ) self->vtable = DHash_New(0,0);
-					MAP_Insert( self->vtable, cst, cst );
-				}
 			}
 			for(j=0; j<klass->variables->size; ++j){
 				DArray_Append( self->variables, klass->variables->items.pVoid[j] );
@@ -1247,12 +1237,6 @@ static void DaoClass_AddConst3( DaoClass *self, DString *name, DaoValue *data )
 	DArray_Append( self->cstDataName, (void*)name );
 	DArray_Append( self->constants, cst );
 	DaoValue_MarkConst( cst->value );
-	if( data->type == DAO_ROUTINE && data->xRoutine.routHost != self->objType ){
-		if( data->xRoutine.attribs & DAO_ROUT_VIRTUAL ){ /* data->xRoutine.overloads == NULL */
-			if( self->vtable == NULL ) self->vtable = DHash_New(0,0);
-			MAP_Insert( self->vtable, data, data );
-		}
-	}
 }
 static int DaoClass_AddConst2( DaoClass *self, DString *name, DaoValue *data, int s )
 {
@@ -1307,8 +1291,9 @@ int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *data, int s )
 		dest = self->constants->items.pConst[id];
 		if( dest->value->type == DAO_ROUTINE && data->type == DAO_ROUTINE ){
 			/* Add the inherited routine(s) for overloading: */
-			DaoRoutine *routs = DaoRoutines_New( ns, self->objType, (DaoRoutine*) dest->value );
+			DaoRoutine *routs = DaoRoutines_New( ns, self->objType, (DaoRoutine*)dest->value );
 			DaoConstant *cst = DaoConstant_New( (DaoValue*) routs );
+			routs->trait |= DAO_VALUE_CONST;
 			node->value.pInt = LOOKUP_BIND( sto, pm, 0, self->constants->size );
 			DArray_Append( self->cstDataName, (void*) name );
 			DArray_Append( self->constants, cst );
@@ -1343,7 +1328,6 @@ int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *data, int s )
 		}else{
 			DaoRoutine *rout = (DaoRoutine*) data;
 			DRoutines_Add( dest->value->xRoutine.overloads, rout );
-			if( self->vtable ) DaoRoutine_UpdateVtable( (DaoRoutine*)dest->value, rout, self->vtable );
 			/* Add individual entry for the new function: */
 			if( data->xRoutine.routHost == self->objType ) DaoClass_AddConst3( self, name, data );
 		}

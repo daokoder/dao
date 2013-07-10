@@ -160,7 +160,6 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int
 	DMap *defs = NULL;
 	DMap *mapNames = self->routType->mapNames;
 	DaoType *abtp, **parType = self->routType->nested->items.pType;
-	int is_virtual = self->attribs & DAO_ROUT_VIRTUAL;
 	int need_self = self->routType->attrib & DAO_TYPE_SELF;
 	int selfChecked = 0, selfMatch = 0;
 	int ndef = self->parCount;
@@ -182,9 +181,6 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int
 		 */
 		abtp = & parType[0]->aux->xType;
 		selfMatch = DaoType_MatchValue2( abtp, obj, defs );
-		if( is_virtual && selfMatch == 0 && obj->type == DAO_OBJECT ){
-			selfMatch = DaoType_MatchValue2( abtp, (DaoValue*) obj->xObject.rootObject, defs );
-		}
 		if( selfMatch ){
 			parpass[0] = selfMatch;
 			selfChecked = 1;
@@ -220,9 +216,6 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int
 		if( ito >= ndef ) goto NotMatched;
 		abtp = & parType[ito]->aux->xType; /* must be named */
 		parpass[ito] = DaoType_MatchValue2( abtp, val, defs );
-		if( is_virtual && ifrom == 0 && parpass[ito] == 0 && val->type == DAO_OBJECT ){
-			parpass[ito] = DaoType_MatchValue2( abtp, (DaoValue*) val->xObject.rootObject, defs );
-		}
 		/*
 		   printf( "%i:  %i  %s\n", parpass[ito], abtp->tid, abtp->name->mbs );
 		 */
@@ -833,22 +826,6 @@ DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *obj, DaoValue *p[],
 		if( self == NULL ) return NULL;
 	}
 	rout = self;
-	if( rout->attribs & DAO_ROUT_VIRTUAL ){
-		DaoClass *klass = NULL;
-		if( obj && obj->type == DAO_OBJECT ){
-			klass = obj->xObject.rootObject->defClass;
-		}else if( mcall && n && p[0]->type == DAO_OBJECT ){
-			klass = p[0]->xObject.rootObject->defClass;
-		}
-		if( klass && klass != (DaoClass*)rout->routHost->aux && klass->vtable ){
-			DNode *node = MAP_Find( klass->vtable, rout );
-			if( node && node->value.pRoutine ){
-				DaoType *t1 = (DaoType*) rout->routType->aux;
-				DaoType *t2 = (DaoType*) node->value.pRoutine->routType->aux;
-				if( t1->tid == 0 || t1 == t2 ) rout = node->value.pRoutine;
-			}
-		}
-	}
 	if( rout->specialized ){
 		/* strict checking for specialized routines: */
 		DaoRoutine *rt = DRoutines_Lookup2( rout->specialized, obj, p, n, code, mode, 1 );
@@ -922,38 +899,3 @@ static DaoRoutine* DParamNode_LookupByType2( DParamNode *self, DaoType *types[],
 	if( param == NULL ) return NULL;
 	return DParamNode_LookupByType2( param, types+1, n-1 );
 }
-void DaoRoutine_UpdateVtable( DaoRoutine *self, DaoRoutine *routine, DMap *vtable )
-{
-	DNode *node;
-	DParamNode *param;
-	DaoRoutine *rout;
-	DaoClass *klass;
-	DaoType *rhost = routine->routHost;
-	DaoType *retype2, *retype = & routine->routType->aux->xType;
-	DaoType **types = routine->routType->nested->items.pType;
-	int i, m = routine->routType->nested->size;
-	if( self->overloads == NULL ) return;
-	if( self->routHost == NULL || routine->routHost == NULL ) return;
-	if( self->routHost->tid != DAO_OBJECT ) return;
-	if( self->overloads->mtree == NULL || self->overloads->mtree->first == NULL ) return;
-	if( rhost->tid != DAO_OBJECT && rhost->tid != DAO_CDATA && rhost->tid == DAO_CSTRUCT ) return;
-	if( ! (routine->routType->attrib & DAO_TYPE_SELF) ) return;
-	klass = & self->routHost->aux->xClass;
-	if( DaoClass_ChildOf( klass, rhost->aux ) ==0 ) return;
-	for(param=self->overloads->mtree->first; param; param=param->next){
-		int tid = param->type->tid;
-		if( tid != DAO_OBJECT && tid != DAO_CDATA && tid != DAO_CSTRUCT ) continue;
-		if( DaoClass_ChildOf( klass, param->type->aux ) ==0 ) continue;
-		rout = DParamNode_LookupByType2( param, types+1, m-1 );
-		if( rout == NULL ) continue;
-		retype2 = & rout->routType->aux->xType;
-		/*
-		// DO NOT CHECK RETURN TYPE HERE! It may have not been inferred yet.
-		// if( retype->tid && retype != retype2 ) continue;
-		*/
-		if( ! (rout->attribs & DAO_ROUT_VIRTUAL) ) continue;
-		node = MAP_Find( vtable, rout );
-		if( node ) node->value.pRoutine = routine;
-	}
-}
-

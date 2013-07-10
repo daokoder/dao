@@ -728,6 +728,24 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 			S = DaoType_CastToParent( S, T );
 			tm = (S != NULL);
 		}
+	}else if( T->tid == DAO_ROUTINE && T->overloads == 0 && S->type == DAO_ROUTINE && S->xRoutine.overloads ){
+		DArray *routines = S->xRoutine.overloads->routines;
+		DaoRoutine *best = NULL;
+		int i, k, n;
+		/*
+		// Do not use DaoRoutine_ResolveByType( S, ... )
+		// "S" should match to "T", not the other way around!
+		*/
+		tm = 0;
+		for(i=0,n=routines->size; i<n; i++){
+			DaoRoutine *rout = routines->items.pRoutine[i];
+			k = rout->routType == T ? DAO_MT_EQ : DaoType_MatchTo( rout->routType, T, defs );
+			if( k > tm ){
+				best = rout;
+				tm = k;
+			}
+			if( rout->routType == T ) break;
+		}
 	}else{
 		tm = DaoType_MatchValue( T, S, defs );
 	}

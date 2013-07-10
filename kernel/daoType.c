@@ -860,16 +860,19 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			if( self->overloads ){
 				return DAO_MT_EQ * (self == value->xRoutine.routType);
 			}else{
-				DaoRoutine *rout;
-				DaoType **tps = self->nested->items.pType;
 				DArray *routines = value->xRoutine.overloads->routines;
-				int np = self->nested->size;
+				int max = 0;
+				/*
+				// Do not use DaoRoutine_ResolveByType( value, ... )
+				// "value" should match to "self", not the other way around!
+				*/
 				for(i=0,n=routines->size; i<n; i++){
-					if( routines->items.pRoutine[i]->routType == self ) return DAO_MT_EQ;
+					DaoRoutine *rout = routines->items.pRoutine[i];
+					if( rout->routType == self ) return DAO_MT_EQ;
+					mt = DaoType_MatchTo( rout->routType, self, defs );
+					if( mt > max ) max = mt;
 				}
-				rout = DaoRoutine_ResolveByType( (DaoRoutine*)value, NULL, tps, np, DVM_CALL );
-				if( rout == NULL ) return DAO_MT_NOT;
-				return DaoType_MatchTo( rout->routType, self, defs );
+				return max;
 			}
 		}
 		tp = value->xRoutine.routType;

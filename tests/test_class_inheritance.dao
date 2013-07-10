@@ -1,4 +1,9 @@
 
+interface Interface
+{
+	 routine Virt()
+}
+
 class AA
 {
 	const  cst = 123;
@@ -10,8 +15,8 @@ class AA
 	routine Meth(){ io.writeln( 'AA::Meth()' ); return 123; }
 	routine Meth( a ){ io.writeln( 'AA::Meth(a)' ); return 123; }
 
-	virtual routine Virt(){ io.writeln( 'AA::Virt()' ) }
-	routine CallVirt(){ Virt() }
+	routine Virt(){ io.writeln( 'AA::Virt()' ) }
+	routine CallVirt(){ ((Interface)self).Virt() }
 }
 
 class BB

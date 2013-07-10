@@ -2869,16 +2869,11 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 	int errorStart = start;
 	if( start > from ){
 		int ttkk = tokens[start-1]->name;
-		if( ttkk == DKEY_VIRTUAL ) virt = DAO_ROUT_VIRTUAL;
 		if( ttkk == DKEY_STATIC ) stat = DAO_ROUT_STATIC;
 	}
 	if( start > from + 1 ){
 		int ttkk = tokens[start-2]->name;
-		if( virt && ttkk == DKEY_STATIC ){
-			stat = DAO_ROUT_STATIC;
-		}else if( stat && ttkk == DKEY_VIRTUAL ){
-			virt = DAO_ROUT_VIRTUAL;
-		}
+		if( virt && ttkk == DKEY_STATIC ) stat = DAO_ROUT_STATIC;
 	}
 	right = -1;
 	if( start+2 <= to && ((k=tokens[start+2]->name) == DTOK_COLON2 || k == DTOK_LT) ){
@@ -3704,18 +3699,6 @@ DecoratorError:
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			start ++;
 			continue;
-		}else if( tki == DKEY_VIRTUAL ){
-			int t3 = start+2 <= to ? tokens[start+2]->name : 0;
-			if( tki2 == DKEY_ROUTINE ){
-				start ++;
-				continue;
-			}else if( tki2 == DKEY_STATIC && t3 == DKEY_ROUTINE ){
-				start ++;
-				continue;
-			}else{
-				DaoParser_Error3( self, DAO_STATEMENT_OUT_OF_CONTEXT, start );
-				return 0;
-			}
 		}else if( tki == DKEY_USE ){
 			start = DaoParser_ParseUseStatement( self, start, to );
 			if( start <0 ) return 0;
