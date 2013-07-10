@@ -47,7 +47,7 @@ syntax {
 	'}'
 }
 
-for a in {1, 2, 3 } do
+for a in {1, 2, 3} do
 	io.writeln( a )
 end
 @[code(dao)]

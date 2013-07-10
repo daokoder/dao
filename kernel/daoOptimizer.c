@@ -1757,9 +1757,14 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 
 	DaoRoutine_CodesToInodes( routine, self->inodes );
 
-	DArray_Resize( self->consts, M, NULL );
-	DArray_Resize( self->types, M, NULL );
 	DString_Resize( self->inited, M );
+	DArray_Resize( self->consts, M, NULL );
+	/*
+	// Allocate more memory so that the "types" and "typeVH" variables in
+	// DaoInferencer_DoInference() will not be invalidated by inserting instructions.
+	*/
+	DArray_Resize( self->types, 3*M, NULL );
+	self->types->size = M;
 	inited = self->inited->mbs;
 	types = self->types->items.pType;
 

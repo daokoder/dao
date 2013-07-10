@@ -2,18 +2,18 @@
 // Dao Standard Modules
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2012, Limin Fu
+// Copyright (c) 2006-2013, Limin Fu
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
-// 
+//
 // * Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
 // * Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
 // OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
@@ -38,6 +38,13 @@
 
 #ifdef _MSC_VER
 #define putenv _putenv
+#endif
+
+#ifdef MAC_OSX
+#  include <crt_externs.h>
+#  define environ (*_NSGetEnviron())
+#else
+extern char ** environ;
 #endif
 
 #include"daoString.h"
@@ -315,6 +322,41 @@ static void SYS_PutEnv( DaoProcess *proc, DaoValue *p[], int N )
 		free( buf );
 	}
 }
+static void SYS_EnvVars( DaoProcess *proc, DaoValue *p[], int N )
+{
+#define LOCAL_BUF_SIZE 256
+	DaoMap *map = DaoProcess_PutMap( proc, 0 );
+	DaoValue *vk = (DaoValue*) DaoProcess_NewMBString( proc, NULL, 0 );
+	DaoValue *vv = (DaoValue*) DaoProcess_NewMBString( proc, NULL, 0 );
+	DString *key = DaoString_Get( DaoValue_CastString( vk ) );
+	DString *value = DaoString_Get( DaoValue_CastString( vv ) );
+	char **envs = environ;
+	char buffer[ LOCAL_BUF_SIZE + 1 ];
+	int nc = 0;
+
+	while( *envs != NULL ){
+		char *c = *envs;
+		nc = 0;
+		while( *c != '=' ){
+			if( nc >= LOCAL_BUF_SIZE ){
+				buffer[ nc ] = 0;
+				DString_AppendMBS( key, buffer );
+				nc = 0;
+			}
+			buffer[ nc ] = *c;
+			nc ++;
+			c ++;
+		}
+		buffer[ nc ] = 0;
+		DString_AppendMBS( key, buffer );
+		c ++;
+		DString_AppendMBS( value, c );
+		DaoMap_Insert( map, vk, vv );
+		DString_Clear( key );
+		DString_Clear( value );
+		envs ++;
+	}
+}
 
 static DaoFuncItem sysMeths[]=
 {
@@ -328,6 +370,7 @@ static DaoFuncItem sysMeths[]=
 	{ SYS_Time,      "time(  )=>int" },
 	{ SYS_Time2,     "time( tm : tuple<year:int,month:int,day:int,wday:int,hour:int,minute:int,second:int> )=>int" },
 	{ SYS_SetLocale, "setlocale( category: enum<all,collate,ctype,monetary,numeric,time> = $all, locale = '' )=>string" },
+	{ SYS_EnvVars,   "getenv() => map<string,string>"},
 	{ SYS_GetEnv,    "getenv( name: string )=>string" },
 	{ SYS_PutEnv,    "putenv( name: string, value = '' )"},
 	{ NULL, NULL }

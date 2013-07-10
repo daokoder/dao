@@ -300,9 +300,11 @@ dataframe = daovm.AddDirectory( "dataframe", "modules/dataframe" )
 
 daomake = daovm.AddDirectory( "daomake", "tools/daomake" )
 daotest = daovm.AddDirectory( "daotest", "tools/daotest" )
-modules = daovm.AddDirectory( "modules", "modules" )
+
 
 if( DaoMake::IsDir( "tools/clangdao" ) ) daovm.AddDirectory( "clangdao", "tools/clangdao" );
+
+modules = daovm.AddDirectory( "modules", "modules" )
 
 
 # Add dependencies:

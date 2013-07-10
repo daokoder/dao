@@ -612,9 +612,6 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	for(it=DMap_First(self->allOptimizers); it; it=DMap_Next(self->allOptimizers,it)){
 		DaoOptimizer_Delete( (DaoOptimizer*) it->key.pVoid );
 	}
-	for(it=DMap_First(self->allProcessAux); it; it=DMap_Next(self->allProcessAux,it)){
-		DaoProcessAux_Delete( (DaoProcessAux*) it->key.pVoid );
-	}
 	GC_DecRC( self->nsInternal );
 	GC_DecRC( self->mainNamespace );
 	GC_DecRC( self->stdioStream );
@@ -633,21 +630,30 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DArray_Delete( self->parsers );
 	DArray_Delete( self->inferencers );
 	DArray_Delete( self->optimizers );
-	DArray_Delete( self->processaux );
 	DMap_Delete( self->vfiles );
 	DMap_Delete( self->vmodules );
 	DMap_Delete( self->allProcesses );
 	DMap_Delete( self->allParsers );
 	DMap_Delete( self->allInferencers );
 	DMap_Delete( self->allOptimizers );
-	DMap_Delete( self->allProcessAux );
 	GC_DecRC( self->mainProcess );
 	self->stdioStream = NULL;
 	if( self->preloadModules ) DArray_Delete( self->preloadModules );
 }
 void DaoVmSpace_Delete( DaoVmSpace *self )
 {
+	DNode *it;
 	if( self->stdioStream ) DaoVmSpace_DeleteData( self );
+	/*
+	// DaoProcessAux caches must be deleted after the GC has be completed,
+	// because deleting DaoProcess may need to free DaoProcessAux to the
+	// VM Space structure.
+	*/
+	for(it=DMap_First(self->allProcessAux); it; it=DMap_Next(self->allProcessAux,it)){
+		DaoProcessAux_Delete( (DaoProcessAux*) it->key.pVoid );
+	}
+	DArray_Delete( self->processaux );
+	DMap_Delete( self->allProcessAux );
 	DMap_Delete( self->nsModules );
 #ifdef DAO_WITH_THREAD
 	DMutex_Destroy( & self->mutexLoad );
