@@ -106,18 +106,7 @@ static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 	ns = DaoVmSpace_LoadEx( vms, DString_GetMBS( name ), runim );
 	DaoProcess_PutValue( proc, (DaoValue*) ns );
 	if( ! wasProt ) vms->options &= ~DAO_OPTION_SAFE;
-	if( ns ){ /* in the case that it is cancelled from console */
-		DArray_PushFront( vms->pathLoading, ns->path );
-		res = DaoProcess_Call( proc, ns->mainRoutine, NULL, NULL, 0 );
-		if( proc->stopit | vms->stopit ){
-			DaoProcess_RaiseException( proc, DAO_ERROR, "loading cancelled" );
-		}else if( res ){
-			DaoProcess_RaiseException( proc, res, "loading failed" );
-		}
-		DArray_PopFront( vms->pathLoading );
-	}else{
-		DaoProcess_RaiseException( proc, DAO_ERROR, "loading failed" );
-	}
+	if( ns == NULL ) DaoProcess_RaiseException( proc, DAO_ERROR, "loading failed" );
 	DArray_PopFront( vms->pathLoading );
 	if( import && ns ) DaoNamespace_AddParent( proc->activeNamespace, ns );
 }
@@ -251,10 +240,12 @@ void DaoProcess_Trace( DaoProcess *self, int depth )
 
 		if( frame->routine->body ){
 			k = (i==1) ? (int)( self->activeCode - frame->codes ) : frame->entry;
-			DaoStream_WriteMBS( stream, ", instruction " );
-			DaoStream_WriteInt( stream, k );
-			DaoStream_WriteMBS( stream, " at line " );
-			DaoStream_WriteInt( stream, frame->routine->body->annotCodes->items.pVmc[k]->line );
+			if( k >= 0 && k < frame->routine->body->annotCodes->size ){
+				DaoStream_WriteMBS( stream, ", instruction " );
+				DaoStream_WriteInt( stream, k );
+				DaoStream_WriteMBS( stream, " at line " );
+				DaoStream_WriteInt( stream, frame->routine->body->annotCodes->items.pVmc[k]->line );
+			}
 		}
 
 		DaoStream_WriteMBS( stream, " in " );

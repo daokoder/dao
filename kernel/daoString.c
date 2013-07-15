@@ -916,13 +916,15 @@ void DString_Assign( DString *self, DString *chs )
 	if( data1 == data2 ) return;
 	//XXX
 
-	if( data1 != dao_string && data2 != dao_string ){
+	if( data2 != dao_string ){
 #ifdef DAO_WITH_THREAD
 		DMutex_Lock( & mutex_string_sharing );
 #endif
 		if( self->sharing && chs->sharing ){
-			data1[0] -= 1;
-			if( data1[0] ==0 ) dao_free( data1 );
+			if( data1 != dao_string ){
+				data1[0] -= 1;
+				if( data1[0] ==0 ) dao_free( data1 );
+			}
 			*self = *chs;
 			data2[0] += 1;
 			assigned = 1;

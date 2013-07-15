@@ -128,6 +128,7 @@ static const char *const cmd_help =
 "   --threads=number      minimum number of threads for processing tasklets;\n"
 "   --path=directory      add module searching path;\n"
 "   --module=module       preloading module;\n"
+"   --config=config       use configure file;\n"
 ;
 
 
@@ -728,6 +729,7 @@ void SplitByWhiteSpaces( const char *chs, DArray *tokens )
 	DString_Delete( tok );
 }
 
+static void DaoConfigure_FromFile( const char *name );
 int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module );
 int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 {
@@ -780,6 +782,8 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 					DaoStream_WriteMBS( self->errorStream, token->mbs );
 					DaoStream_WriteMBS( self->errorStream, ";\n" );
 				}
+			}else if( strstr( token->mbs, "--config=" ) == token->mbs ){
+				DaoConfigure_FromFile( token->mbs + 9 );
 			}else if( token->size ){
 				DaoStream_WriteMBS( self->errorStream, "Unknown option: " );
 				DaoStream_WriteMBS( self->errorStream, token->mbs );
@@ -2166,6 +2170,10 @@ InvalidConfigValue :
 	}
 	DaoLexer_Delete( lexer );
 	DString_Delete( mbs );
+#ifdef DAO_MBSTRING_ONLY
+	daoConfig.mbs = 1;
+	daoConfig.wcs = 0;
+#endif
 }
 static void DaoConfigure()
 {

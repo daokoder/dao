@@ -1166,7 +1166,7 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 				replace = 1;
 				for(i=pos1+2; i<pos2; i++){
 					ch = self->mbs[i];
-					if( ch != '_' && ! isalnum( ch ) ){
+					if( ch != '-' && ch != '_' && ! isalnum( ch ) ){
 						replace = 0;
 						break;
 					}
@@ -1218,7 +1218,7 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 				replace = 1;
 				for(i=pos1+2; i<pos2; i++){
 					ch = self->wcs[i];
-					if( ch != L'_' && ! isalnum( ch ) ){
+					if( ch != L'-' && ch != L'_' && ! isalnum( ch ) ){
 						replace = 0;
 						break;
 					}

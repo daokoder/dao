@@ -629,7 +629,7 @@ DaoFuncItem dao_io_methods[] =
 	{ DaoIO_Open,      "open( )=>stream" },
 	{ DaoIO_Open,      "open( file :string, mode :string )=>stream" },
 	{ DaoIO_Open,      "open( fileno :int, mode :string )=>stream" },
-	{ DaoIO_SStream,   "sstream( type :enum<mbs, wcs> = $mbs )=>stream" },
+	{ DaoIO_SStream,   "sstream( type :enum<mbs,wcs> = $mbs )=>stream" },
 
 	{ DaoIO_ReadLines,  "readlines( file :string, chop=0 )[line:string=>none|@T]=>list<@T>" },
 	{ NULL, NULL }

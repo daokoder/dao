@@ -1948,7 +1948,7 @@ void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output, int 
 	DaoMakeProject_MakeFindPackageForInstall( self, find1, 1 );
 	DaoMakeProject_MakeFindPackageForBuild( self, find2, 1 );
 
-	DString_AppendMBS( output, "if( DaoMake::SourcePath() == " );
+	DString_AppendMBS( output, "if( project.SourcePath() == " );
 	DString_AppendVerbatim( output, installPath, md5 );
 	DString_AppendMBS( output, " ){\n" );
 	DString_Append( output, find1 );

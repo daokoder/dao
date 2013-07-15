@@ -6150,6 +6150,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		break;
 	case DAO_CLASS :
 		if( dA == NULL || dA->type != DAO_CLASS ) goto FailConversion;
+		if( ct->aux == NULL ) goto Rebind; /* to "class"; */
 		dC = DaoClass_CastToBase( (DaoClass*)dA, ct );
 		if( dC == NULL ) goto FailConversion;
 		break;
@@ -6352,7 +6353,8 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 		DaoVmCode *vmc = self->activeCode;
 		int i = vmc - self->topFrame->codes;
 		if( self->topFrame->routine != self->activeRoutine ) i = self->topFrame->entry;
-		DaoVmCodeX_Print( *self->topFrame->routine->body->annotCodes->items.pVmc[i], NULL );
+		if( i >= 0 && i < self->topFrame->routine->body->annotCodes->size )
+			DaoVmCodeX_Print( *self->topFrame->routine->body->annotCodes->items.pVmc[i], NULL );
 	}
 #endif
 

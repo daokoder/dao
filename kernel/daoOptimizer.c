@@ -1584,7 +1584,7 @@ void DaoInode_Print( DaoInode *self, int index )
 	const char *name = DaoVmCode_GetOpcodeName( self->code );
 	static const char *fmt = "%3i: %-8s : %5i, %5i, %5i;  [%3i] [%2i] %9p %9p %9p, %s\n";
 	if( index < 0 ) index = self->index;
-	printf( fmt, self->index, name, self->a, self->b, self->c, self->line, self->level,
+	printf( fmt, index, name, self->a, self->b, self->c, self->line, self->level,
 			self, self->jumpTrue, self->jumpFalse, "" );
 }
 
@@ -2998,8 +2998,11 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			if( type2[0]->tid && type2[0]->tid <= DAO_COMPLEX && at->tid && at->tid <= DAO_COMPLEX ){
 				if( typed_code ){
 					if( code == DVM_SETVG ){
-						DaoValue **p = & NS->variables->items.pVar[opb]->value;
-						if( *p == NULL ) *p = DaoValue_SimpleCopy( at->value );
+						DaoVariable *var = NS->variables->items.pVar[opb];
+						if( var->value == NULL || var->value->type != at->value->type ){
+							GC_DecRC( var->value );
+							var->value = DaoValue_SimpleCopy( at->value );
+						}
 					}
 					if( at->tid != type2[0]->tid ){
 						DaoInferencer_InsertMove( self, inode, & inode->a, at, *type2 );
@@ -5152,7 +5155,7 @@ TryPushBlockReturnType:
 							if( ct->tid == DAO_TUPLE && DaoType_MatchTo( ct, at, defs2 ) ){
 								/* typedef tuple<x:float,y:float> Point2D
 								 * routine Test()=>Point2D{ return (1.0,2.0); } */
-								DaoInferencer_InsertCast( self, inode, & inode->a, ct );
+								DaoInferencer_InsertCast( self, inode, & inode->c, ct );
 							}else{
 								goto ErrorTyping;
 							}

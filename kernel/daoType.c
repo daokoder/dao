@@ -988,8 +988,6 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	}else if( self->tid == DAO_ANY ){
 		return self;
 	}else if( self->tid == DAO_CLASS ){ /* e.g., class<Item<@T>> */
-		copy = DaoType_DefineTypes( self->aux->xClass.objType, ns, defs );
-		if( copy->aux != self->aux ) self = copy->aux->xClass.clsType;
 		return self;
 	}else if( self->tid == DAO_OBJECT ){
 		return self;

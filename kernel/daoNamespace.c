@@ -1923,7 +1923,7 @@ DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 {
 	DaoType *type;
 	DString *name;
-	if( value->type >= DAO_ARRAY ) return NULL;
+	if( value == NULL || value->type >= DAO_ARRAY ) return NULL;
 	name = DString_New(1);
 	DaoValue_GetString( value, name );
 	if( value->type == DAO_STRING ){

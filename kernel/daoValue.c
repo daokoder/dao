@@ -719,7 +719,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 			tm = (S != NULL);
 		}
 	}else if( (T->tid == DAO_CLASS || T->tid == DAO_CTYPE) && S->type == DAO_CLASS ){
-		if( S->xClass.clsType != T ){
+		if( S->xClass.clsType != T && T->aux != NULL ){ /* T->aux == NULL for "class"; */
 			S = DaoClass_CastToBase( (DaoClass*)S, T );
 			tm = (S != NULL);
 		}

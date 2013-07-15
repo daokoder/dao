@@ -6694,12 +6694,18 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			result.reg = result.last->c;
 			fold = 1;
 			if( LHS.first != LHS.last || RHS.first != RHS.last ){ /* use branching */
+				DaoInode *it = LHS.first;
 				assert( LHS.update != NULL || RHS.update != NULL );
 				if( LHS.last == NULL ) LHS.last = RHS.prev;
 				if( RHS.first == NULL ) RHS.first = self->vmcLast->prev;
 				result.reg = DaoParser_PushRegister( self );
 				move = DaoParser_InsertCode( self, LHS.last, DVM_MOVE, LHS.reg, 0, result.reg, postart );
 				test = DaoParser_InsertCode( self, move, DVM_TEST, LHS.reg,0,0,postart );
+				while( it ){
+					if( it->jumpTrue == test->next ) it->jumpTrue = test;
+					if( it->jumpFalse == test->next ) it->jumpFalse = test;
+					it = it->next;
+				}
 				result.last->code = mapAithOpcode[oper];
 				result.last->a = result.reg;
 				result.last->b = result.last->b;
@@ -6864,6 +6870,9 @@ static DaoEnode DaoParser_ParseExpressionLists( DaoParser *self, int sep1, int s
 	self->curToken -= 1;
 	do {
 		self->curToken += 1;
+		tok = DaoParser_CurrentTokenName( self );
+		if( tok == DTOK_RB || tok == DTOK_RCB || tok == DTOK_RSB ) break;
+		if( tok == DTOK_DOTS || tok == DTOK_SEMCO ) break;
 		DaoParser_PushItemType( self, type, id++, sep1 );
 		item = DaoParser_ParseExpression( self, sep1 );
 		DArray_PopFront( self->enumTypes );
