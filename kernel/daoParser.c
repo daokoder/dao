@@ -1778,6 +1778,12 @@ WrongType:
 			case DAO_OBJECT : return type->aux->xClass.clsType;
 			}
 			goto InvalidTypeForm;
+		case DKEY_INTERFACE :
+			if( count2 != 1 ) goto InvalidTypeForm;
+			type = types->items.pType[ count ];
+			DArray_Erase( types, count, count2 );
+			if( type == NULL || type->tid != DAO_OBJECT ) goto InvalidTypeForm;
+			return type->aux->xClass.inter->abtype;
 		default : break;
 		}
 		tks = & tokens[start]->string;
@@ -4613,7 +4619,6 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 					ec = DaoClass_AddGlobalVar( hostClass, name, NULL, abtp, perm );
 				}else{
 					ec = DaoClass_AddObjectVar( hostClass, name, dao_none_value, abtp, perm );
-					routine->attribs |= DAO_ROUT_NEEDSELF;
 				}
 				if( ec < 0 ) DaoParser_Warn( self, -ec, name );
 			}else{
@@ -4678,8 +4683,6 @@ static int DaoParser_GetRegister2( DaoParser *self, DaoToken *nametok )
 	if( self->isClassBody ){ /* a=1; b=class('t'){ var a = 2 }; */
 		/* Look for variable in class: */
 		if( self->hostClass && (node = MAP_Find( self->hostClass->lookupTable, name )) ){
-			int st = LOOKUP_ST( node->value.pInt );
-			if( st == DAO_OBJECT_VARIABLE ) routine->attribs |= DAO_ROUT_NEEDSELF;
 			return node->value.pInt;
 		}
 	}
@@ -4694,7 +4697,6 @@ static int DaoParser_GetRegister2( DaoParser *self, DaoToken *nametok )
 	if( self->hostClass && (node = MAP_Find( self->hostClass->lookupTable, name )) ){
 		int st = LOOKUP_ST( node->value.pInt );
 		if( st == DAO_OBJECT_VARIABLE ){
-			routine->attribs |= DAO_ROUT_NEEDSELF;
 			if( routine->attribs & DAO_ROUT_STATIC ){
 				DaoParser_ErrorToken( self, DAO_VARIABLE_OUT_OF_CONTEXT, nametok );
 				return -1;

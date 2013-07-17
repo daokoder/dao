@@ -3329,7 +3329,10 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		}
 		if( tuple->unitype ){
 			DaoType **TS = tuple->unitype->nested->items.pType;
-			for(i=0,n=tuple->size; i<n; i++) DaoValue_Move( src[i], tuple->items + i, TS[i] );
+			for(i=0,n=tuple->size; i<n; i++){
+				DaoType *tp = TS[i]->tid == DAO_PAR_NAMED ? (DaoType*)TS[i]->aux : TS[i];
+				DaoValue_Move( src[i], tuple->items + i, tp );
+			}
 		}else{
 			for(i=0,n=tuple->size; i<n; i++) DaoValue_Copy( src[i], tuple->items + i );
 		}
@@ -3354,7 +3357,7 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 	return retValue;
 InvalidReturn:
 #if 0
-	printf( "retValue = %p %i %p %s\n", retValue, retValue->type, type, type->name->mbs );
+	fprintf( stderr, "retValue = %p %i %p %s\n", retValue, retValue->type, type, type->name->mbs );
 #endif
 	DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid returned value" );
 	return NULL;
@@ -3923,6 +3926,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *selfpar = NULL;
 	DaoValue *caller = self->activeValues[ vmc->a ];
 	DaoValue **params = self->activeValues + vmc->a;
+	DaoType *retype = self->activeTypes[ vmc->c ];
 	DaoStackFrame *topFrame = self->topFrame;
 	DaoRoutine *rout, *rout2 = NULL;
 
@@ -3945,6 +3949,18 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 		npar = n - 1;
 	}
 	DaoProcess_DoCall2( self, vmc, caller, selfpar, params + 1, npar );
+	/*
+	// Put a none value in case that a routine is inferred to return none value,
+	// and actually returns no value. Because a none value may be expected by
+	// other expression.
+	*/
+	if( retype == NULL || (retype->tid == DAO_VALTYPE && retype->aux->type == DAO_NONE) ){
+		DaoValue *revalue = self->activeValues[vmc->c];
+		if( revalue != NULL && revalue->type != DAO_NONE ){
+			GC_ShiftRC( dao_none_value, revalue );
+			self->activeValues[vmc->c] = dao_none_value;
+		}
+	}
 }
 
 daoint DaoArray_SliceSize( DaoArray *self );

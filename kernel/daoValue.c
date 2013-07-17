@@ -730,7 +730,6 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 		}
 	}else if( T->tid == DAO_ROUTINE && T->overloads == 0 && S->type == DAO_ROUTINE && S->xRoutine.overloads ){
 		DArray *routines = S->xRoutine.overloads->routines;
-		DaoRoutine *best = NULL;
 		int i, k, n;
 		/*
 		// Do not use DaoRoutine_ResolveByType( S, ... )
@@ -740,11 +739,11 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 		for(i=0,n=routines->size; i<n; i++){
 			DaoRoutine *rout = routines->items.pRoutine[i];
 			k = rout->routType == T ? DAO_MT_EQ : DaoType_MatchTo( rout->routType, T, defs );
-			if( k > tm ){
-				best = rout;
-				tm = k;
+			if( k > tm ) tm = k;
+			if( rout->routType == T ){
+				S = (DaoValue*) rout;
+				break;
 			}
-			if( rout->routType == T ) break;
 		}
 	}else{
 		tm = DaoType_MatchValue( T, S, defs );

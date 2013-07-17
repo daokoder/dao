@@ -85,6 +85,8 @@ struct DaoClass
 
 	DString  *className;
 
+	DaoInterface *inter;
+
 	DaoType  *clsType;
 	DaoType  *objType; /* GC handled in constants; */
 	DMap     *abstypes;

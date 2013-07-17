@@ -155,6 +155,7 @@ struct DaoMakeTarget
 	DArray   *tests;
 	DArray   *commands;
 	DArray   *depends;
+	DString  *extradeps;
 	DString  *testMacro;
 	DString  *path;
 	DString  *install;
@@ -290,6 +291,7 @@ DaoMakeTarget* DaoMakeTarget_New()
 	self->tests   = DArray_New(D_STRING);
 	self->commands = DArray_New(D_STRING);
 	self->depends = DArray_New(D_VALUE);
+	self->extradeps = DString_New(1);
 	self->testMacro = DString_New(1);
 	self->path = DString_New(1);
 	self->install = DString_New(1);
@@ -306,6 +308,7 @@ void DaoMakeTarget_Delete( DaoMakeTarget *self )
 	DArray_Delete( self->tests );
 	DArray_Delete( self->commands );
 	DArray_Delete( self->depends );
+	DString_Delete( self->extradeps );
 	DString_Delete( self->testMacro );
 	DString_Delete( self->path );
 	DString_Delete( self->install );
@@ -1037,6 +1040,8 @@ void DaoMakeProject_MakeDependency( DaoMakeProject *self, DaoMakeTarget *target,
 		DString_AppendGap( deps );
 		DString_Append( deps, tname );
 	}
+	DString_AppendGap( deps );
+	DString_Append( deps, target->extradeps );
 	self->usedStrings -= 1;
 }
 DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *target )
@@ -1400,7 +1405,11 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 			}
 			DString_AppendGap( all );
 			DString_Append( all, ruleName );
-			if( target->ttype >= DAOMAKE_COMMAND ){
+			DString_Trim( ruleName );
+			if( target->ttype == DAOMAKE_COMMAND && DString_MatchMBS( ruleName, "%W", NULL, NULL ) ==0 ){
+				DString_AppendGap( phony );
+				DString_Append( phony, ruleName );
+			}else if( target->ttype >= DAOMAKE_DIRECTORY ){
 				DString_AppendGap( phony );
 				DString_Append( phony, ruleName );
 			}
@@ -2411,6 +2420,11 @@ static void PROJECT_AddCMD( DaoProcess *proc, DaoValue *p[], int N )
 	target->ttype = DAOMAKE_COMMAND;
 	target->base.project = self;
 	DString_Assign( target->name, name );
+	i = DString_FindChar( target->name, ':', 0 );
+	if( i >= 0 ){
+		DString_Erase( target->name, i, -1 );
+		DString_SubString( name, target->extradeps, i+1, -1 );
+	}
 	for(i=2; i<N; ++i){
 		DString *cmd = DaoValue_TryGetString( p[i] );
 		DArray_Append( target->commands, cmd );

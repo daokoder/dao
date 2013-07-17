@@ -120,6 +120,7 @@ DaoClass* DaoClass_New()
 	self->ranges  = DVector_New(sizeof(ushort_t));
 	self->offsets = DVector_New(sizeof(ushort_t));
 	self->references  = DArray_New(D_VALUE);
+	self->inter = NULL;
 
 	self->cstMixinStart = self->cstMixinEnd = self->cstMixinEnd2 = 0;
 	self->glbMixinStart = self->glbMixinEnd = self->glbMixinEnd2 = 0;
@@ -202,6 +203,12 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 	DString *str;
 
 	if( self->classRoutine ) return;
+
+	self->inter = DaoInterface_New( ns, name->mbs );
+	DString_SetMBS( self->inter->abtype->name, "interface<" );
+	DString_Append( self->inter->abtype->name, name );
+	DString_AppendChar( self->inter->abtype->name, '>' );
+	DaoClass_AddReference( self, self->inter );
 
 	self->objType = DaoType_New( name->mbs, DAO_OBJECT, (DaoValue*)self, NULL );
 	self->clsType = DaoType_New( name->mbs, DAO_CLASS, (DaoValue*) self, NULL );
@@ -1025,11 +1032,71 @@ int DaoClass_UseMixinDecorators( DaoClass *self )
 #endif
 	return bl;
 }
+void DaoClass_MakeInterface( DaoClass *self )
+{
+	daoint i, j;
+	DaoType *tp;
+	DaoRoutine *meth;
+	DaoInterface *inter = self->inter;
+	DMap *deftypes = DHash_New(0,0);
+
+	DArray_Clear( self->inter->supers );
+	DMap_Clear( self->inter->methods );
+
+	for(i=0; i<self->superClass->size; ++i){
+		DaoClass *klass = self->superClass->items.pClass[i];
+		if( klass->type != DAO_CLASS ) continue;
+		DArray_Append( inter->supers, klass->inter );
+	}
+
+	for(i=0; i<self->cstDataName->size; ++i){
+		DString *name = self->cstDataName->items.pString[i];
+		DaoValue *value = self->constants->items.pConst[i]->value;
+		DaoRoutine *rout = (DaoRoutine*) value;
+		DNode *it;
+
+		if( value->type != DAO_ROUTINE ) continue;
+		if( value->xRoutine.attribs & DAO_ROUT_DECORATOR ) continue;
+
+		it = MAP_Find( self->lookupTable, rout->routName );
+		if( it == NULL || LOOKUP_PM( it->value.pInt ) != DAO_DATA_PUBLIC ) continue;
+
+		DMap_Reset( deftypes );
+		DMap_Insert( deftypes, rout->routHost, inter->abtype );
+
+		if( rout->overloads == NULL ){
+			tp = DaoType_DefineTypes( rout->routType, rout->nameSpace, deftypes );
+			if( tp == NULL ) continue; /* TODO: handle error; */
+			meth = DaoRoutine_New( rout->nameSpace, inter->abtype, 0 );
+			meth->attribs = rout->attribs;
+			DString_Assign( meth->routName, rout->routName );
+			GC_ShiftRC( tp, meth->routType );
+			meth->routType = tp;
+			DaoMethods_Insert( inter->methods, meth, meth->nameSpace, meth->routHost );
+		}else{
+			for(j=0; j<rout->overloads->routines->size; ++j){
+				DaoRoutine *rout2 = rout->overloads->routines->items.pRoutine[j];
+				if( rout2->attribs & DAO_ROUT_DECORATOR ) continue;
+				tp = DaoType_DefineTypes( rout2->routType, rout2->nameSpace, deftypes );
+				if( tp == NULL ) continue; /* TODO: handle error; */
+				meth = DaoRoutine_New( rout2->nameSpace, inter->abtype, 0 );
+				meth->attribs = rout2->attribs;
+				DString_Assign( meth->routName, rout->routName );
+				GC_ShiftRC( tp, meth->routType );
+				meth->routType = tp;
+				DaoMethods_Insert( inter->methods, meth, meth->nameSpace, meth->routHost );
+			}
+		}
+	}
+	DMap_Delete( deftypes );
+}
 void DaoClass_ResetAttributes( DaoClass *self )
 {
 	DNode *node;
 	DString *mbs = DString_New(1);
 	int i, k, id, autodef = self->classRoutines->overloads->routines->size == 0;
+
+	DaoClass_MakeInterface( self );
 
 	for(i=0; i<self->classRoutines->overloads->routines->size; i++){
 		DaoRoutine *r2 = self->classRoutines->overloads->routines->items.pRoutine[i];

@@ -2257,7 +2257,7 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 	if( setname ) DString_SetMBS( mbs, daoBitBoolArithOpers[code-DVM_NOT] );
 	if( at->tid == DAO_INTERFACE ){
 		node = DMap_Find( at->aux->xInterface.methods, mbs );
-		rout = node->value.pRoutine;
+		rout = node ? node->value.pRoutine : NULL;
 	}else if( at->tid == DAO_OBJECT ){
 		rout = DaoClass_FindOperator( & at->aux->xClass, mbs->mbs, hostClass );
 	}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
@@ -3002,6 +3002,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 						if( var->value == NULL || var->value->type != at->value->type ){
 							GC_DecRC( var->value );
 							var->value = DaoValue_SimpleCopy( at->value );
+							GC_IncRC( var->value );
 						}
 					}
 					if( at->tid != type2[0]->tid ){

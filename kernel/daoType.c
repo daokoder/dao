@@ -851,7 +851,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		tp = value->xTuple.unitype;
 		for(node=DMap_First(names); node; node=DMap_Next(names,node)){
 			DNode *search = DMap_Find( tp->mapNames, node->key.pVoid );
-			if( search && search->value.pInt != node->value.pInt ) return 0;
+			if( search == NULL || search->value.pInt != node->value.pInt ) return 0;
 		}
 		return DAO_MT_EQ;
 	case DAO_ROUTINE :
@@ -1309,24 +1309,33 @@ int DaoInterface_CheckBind( DArray *methods, DaoType *type, DMap *binds )
 		DaoClass *klass = & type->aux->xClass;
 		for(i=0,n=methods->size; i<n; i++){
 			DaoRoutine *rout = methods->items.pRoutine[i];
-			id = DaoClass_FindConst( klass, rout->routName );
-			if( id <0 ) return 0;
-			rout2 = (DaoRoutine*) DaoClass_GetConst( klass, id );
-			if( rout2->type != DAO_ROUTINE ) return 0;
+			rout2 = klass->classRoutines;
+			if( !(rout->attribs & DAO_ROUT_INITOR) ){
+				id = DaoClass_FindConst( klass, rout->routName );
+				if( id <0 ) return 0;
+				rout2 = (DaoRoutine*) DaoClass_GetConst( klass, id );
+				if( rout2->type != DAO_ROUTINE ) return 0;
+			}
 			if( DaoRoutine_IsCompatible( rout2, rout->routType, binds ) ==0 ) return 0;
 		}
 	}else if( type->tid == DAO_INTERFACE ){
 		DaoInterface *inter = (DaoInterface*) type->aux;
 		for(i=0,n=methods->size; i<n; i++){
 			DaoRoutine *rout = methods->items.pRoutine[i];
-			DNode *it = DMap_Find( inter->methods, rout->routName );
+			DString *name = rout->routName;
+			DNode *it;
+			if( rout->attribs & DAO_ROUT_INITOR ) name = inter->abtype->name;
+			it = DMap_Find( inter->methods, name );
 			if( it == NULL ) return 0;
 			if( DaoRoutine_IsCompatible( it->value.pRoutine, rout->routType, binds ) ==0 ) return 0;
 		}
 	}else{
 		for(i=0,n=methods->size; i<n; i++){
 			DaoRoutine *rout = methods->items.pRoutine[i];
-			DaoRoutine *func = DaoType_FindFunction( type, rout->routName );
+			DString *name = rout->routName;
+			DaoRoutine *func;
+			if( rout->attribs & DAO_ROUT_INITOR ) name = type->name;
+			func = DaoType_FindFunction( type, name );
 			if( func == NULL ) return 0;
 			if( DaoRoutine_IsCompatible( func, rout->routType, binds ) ==0 ) return 0;
 		}

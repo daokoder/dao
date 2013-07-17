@@ -152,6 +152,7 @@ struct DaoxStream
 	unsigned       subsect2; /* subsubsection index; */
 	unsigned       offset;   /* offset in the current line; */
 	wchar_t        last;     /* last char in the current line; */
+	int            cstack;   /* number of non-null color settings; */
 };
 DaoxHelper *daox_helper = NULL;
 DaoValue *daox_cdata_helper = NULL;
@@ -234,11 +235,13 @@ static void DaoxStream_SetColor( DaoxStream *self, const char *fg, const char *b
 	DString bg2 = DString_WrapMBS( bg );
 	DaoStream_SetColor( self->stream, fg, bg );
 	if( fg == NULL && bg == NULL ){
-		if( self->fmtHTML ){
+		if( self->fmtHTML && self->cstack ){
 			DString_AppendMBS( self->output, "</span>" );
+			self->cstack -= 1;
 		}
 	}else{
 		if( self->fmtHTML ){
+			self->cstack += 1;
 			DString_AppendMBS( self->output, "<span style=\"" );
 			if( fg ){
 				DString_AppendMBS( self->output, "color:" );
