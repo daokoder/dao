@@ -1,0 +1,8 @@
+
+header_path = DaoMake::FindFile( "sqlite3.h" )
+if( header_path == "" ) return;
+
+sqlite = DaoMake::Project( "SQLite" )
+cflags = "-I" + header_path
+shlibs = "-lsqlite3";
+sqlite.ExportLibrary( "SQLite", cflags, "", shlibs )

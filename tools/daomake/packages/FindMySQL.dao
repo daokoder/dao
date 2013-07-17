@@ -1,0 +1,9 @@
+
+header_path = DaoMake::FindFile( "mysql/mysql.h" )
+
+if( header_path == "" ) return;
+
+mysql = DaoMake::Project( "MySQL" )
+cflags = "-I" + header_path + "/mysql"
+shlibs = "-lmysqlclient";
+mysql.ExportLibrary( "MySQL", cflags, "", shlibs )

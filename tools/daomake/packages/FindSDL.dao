@@ -1,0 +1,11 @@
+
+if( DaoMake::IsUnix() ){
+	cflags = DaoMake::Shell( "sdl2-config --cflags" )
+	lflags = ""; #DaoMake::Shell( "sdl2-config --ldflags" )
+	libs = ""; #DaoMake::Shell( "sdl2-config --libs" )
+	stlibs = DaoMake::Shell( "sdl2-config --static-libs" )
+	if( stlibs == "" ) return;
+
+	sdl = DaoMake::Project( "SDL" )
+	sdl.ExportLibrary( "SDL", cflags.chop(), lflags.chop(), libs.chop(), stlibs.chop() )
+}

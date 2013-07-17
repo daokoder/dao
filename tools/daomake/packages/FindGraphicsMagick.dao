@@ -1,0 +1,11 @@
+
+if( DaoMake::IsUnix() ){
+	cflags = DaoMake::Shell( "GraphicsMagick-config --cflags" )
+	lflags = DaoMake::Shell( "GraphicsMagick-config --ldflags" )
+	libs = DaoMake::Shell( "GraphicsMagick-config --libs" )
+	stlibs = ""
+	if( libs == "" ) return;
+
+	magick = DaoMake::Project( "GraphicsMagick" )
+	magick.ExportLibrary( "Magick", cflags.chop(), lflags.chop(), libs.chop(), stlibs.chop() )
+}

@@ -1,0 +1,11 @@
+
+if( DaoMake::IsUnix() ){
+	cflags = DaoMake::Shell( "GraphicsMagickWand-config --cflags" )
+	lflags = DaoMake::Shell( "GraphicsMagickWand-config --ldflags" )
+	libs = DaoMake::Shell( "GraphicsMagickWand-config --libs" )
+	stlibs = ""
+	if( libs == "" ) return;
+
+	wand = DaoMake::Project( "GraphicsMagickWand" )
+	wand.ExportLibrary( "Wand", cflags.chop(), lflags.chop(), libs.chop(), stlibs.chop() )
+}
