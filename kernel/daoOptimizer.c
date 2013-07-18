@@ -5080,6 +5080,20 @@ TryPushBlockReturnType:
 					DArray_PopBack( self->typeMaps );
 					popped = 1;
 				}
+
+				/*
+				// DO NOT CHANGE
+				// FROM: return (e1, e2, e3, ... )
+				// TO:   return e1, e2, e3, ...
+				//
+				// Because they bear different semantic meaning.
+				// For example, if "e1" is in the form of "name=>expression",
+				// the name is not stored in the tuple value but in the tuple type for
+				// the first. For the second, it should be part of the returned value.
+				//
+				// The following code should NOT be used!
+				*/
+#if 0
 				if( i && inodes[i-1]->code == DVM_TUPLE && inodes[i-1]->c == vmc->a && vmc->b == 1 ){
 					vmc->a = inodes[i-1]->a;
 					vmc->b = inodes[i-1]->b;
@@ -5088,6 +5102,8 @@ TryPushBlockReturnType:
 					opb = vmc->b;
 					opc = vmc->c;
 				}
+#endif
+
 				/*
 				   printf( "%p %i %s %s\n", self, routine->routType->nested->size, routine->routType->name->mbs, ct?ct->name->mbs:"" );
 				 */
@@ -5156,7 +5172,7 @@ TryPushBlockReturnType:
 							if( ct->tid == DAO_TUPLE && DaoType_MatchTo( ct, at, defs2 ) ){
 								/* typedef tuple<x:float,y:float> Point2D
 								 * routine Test()=>Point2D{ return (1.0,2.0); } */
-								DaoInferencer_InsertCast( self, inode, & inode->c, ct );
+								if( opb == 1 ) DaoInferencer_InsertCast( self, inode, & inode->a, ct );
 							}else{
 								goto ErrorTyping;
 							}

@@ -6564,6 +6564,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 	if( LHS.first ) postart = LHS.first->first;
 	result.prev = LHS.prev;
 	while(1){
+		DaoInode *last2, *last1;
 		int pos = self->curToken, fold = 0;
 		int thisPrec, nextPrec, curtok = DaoParser_CurrentTokenName( self );
 		if( curtok == stop ) return LHS;
@@ -6584,6 +6585,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 		}
 
 		/* Parse the primary expression after the binary operator: */
+		last1 = self->vmcLast;
 		RHS = DaoParser_ParseUnary( self, stop );
 		if( RHS.reg < 0 ){
 			if( oper != DAO_OPER_COLON || self->curToken > pos + 1 ) return RHS;
@@ -6597,11 +6599,20 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			RHS1 = DaoParser_ParseOperator(self, RHS, prec2 + 1, DTOK_COLON, 1 );
 			if( DaoParser_CheckTokenType( self, DTOK_COLON, ":" ) == 0 ) RHS1.reg = -1;
 			if( RHS1.reg < 0 ) return RHS1;
+			if( last1 == self->vmcLast ){
+				last1 = DaoParser_AddCode( self, DVM_MOVE, RHS1.reg, 888, RHS1.reg, 0,0, pos );
+				RHS1.first = RHS1.update = RHS1.last = last1;
+			}
+			last2 = self->vmcLast;
 			self->curToken += 1;
 			RHS2 = DaoParser_ParseUnary( self, DTOK_COLON );
 			if( RHS2.reg < 0 ) return RHS2;
 			RHS2 = DaoParser_ParseOperator(self, RHS2, prec2 + 1, DTOK_COLON, 1 );
 			if( RHS2.reg < 0 ) return RHS2;
+			if( last2 == self->vmcLast ){
+				last2 = DaoParser_AddCode( self, DVM_MOVE, RHS2.reg, 999, RHS2.reg, 0,0, pos );
+				RHS2.first = RHS2.update = RHS2.last = last2;
+			}
 
 			result.reg = DaoParser_PushRegister( self );
 			if( LHS.last == NULL ) LHS.last = RHS1.prev;
@@ -6704,8 +6715,8 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 				move = DaoParser_InsertCode( self, LHS.last, DVM_MOVE, LHS.reg, 0, result.reg, postart );
 				test = DaoParser_InsertCode( self, move, DVM_TEST, LHS.reg,0,0,postart );
 				while( it ){
-					if( it->jumpTrue == test->next ) it->jumpTrue = test;
-					if( it->jumpFalse == test->next ) it->jumpFalse = test;
+					if( it->jumpTrue == test->next ) it->jumpTrue = move;
+					if( it->jumpFalse == test->next ) it->jumpFalse = move;
 					it = it->next;
 				}
 				result.last->code = mapAithOpcode[oper];

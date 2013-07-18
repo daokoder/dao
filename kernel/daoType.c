@@ -851,7 +851,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		tp = value->xTuple.unitype;
 		for(node=DMap_First(names); node; node=DMap_Next(names,node)){
 			DNode *search = DMap_Find( tp->mapNames, node->key.pVoid );
-			if( search == NULL || search->value.pInt != node->value.pInt ) return 0;
+			if( search == NULL || search->value.pInt != node->value.pInt ) return DAO_MT_SUB;
 		}
 		return DAO_MT_EQ;
 	case DAO_ROUTINE :
