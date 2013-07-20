@@ -1005,6 +1005,17 @@ void DaoLexer_Append( DaoLexer *self, int name, int line, const char *data )
 
 	DaoLexer_AppendToken( self, & token );
 }
+/* http://www.cl.cam.ac.uk/~mgk25/ucs/quotes.html */
+static wchar_t quotes[] =
+{
+	0x27 , 0x27 , 0x27, /* single q.m. */
+	0x22 , 0x22 , 0x22, /* double q.m. */
+	0x27 + 0xfee0 , 0x27 + 0xfee0 , 0x27 , /* single q.m. unicode */
+	0x22 + 0xfee0 , 0x22 + 0xfee0 , 0x22 , /* double q.m. unicode */
+	0x60 , 0x27 , 0x27, /* grave accent */
+	0x2018 , 0x2019 , 0x27 , /* left/right single q.m. */
+	0x201C , 0x201D , 0x22   /* left/right double q.m. */
+};
 int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 {
 	DString *source = DString_New(1);
@@ -1032,18 +1043,14 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 			break;
 		}
 	}
+	if( unicoded ){
+		mbstate_t state;
+		memset( & state, 0, sizeof(mbstate_t) );
+		i = mbsrtowcs( NULL, (const char**)& src, srcSize, & state );
+		unicoded = i >= 0;
+	}
 	if( unicoded && daoConfig.mbs == 0 ){
 		DString *wcs = DString_New(0);
-		/* http://www.cl.cam.ac.uk/~mgk25/ucs/quotes.html */
-		wchar_t quotes[] = {
-			0x27 , 0x27 , 0x27, /* single q.m. */
-			0x22 , 0x22 , 0x22, /* double q.m. */
-			0x27 + 0xfee0 , 0x27 + 0xfee0 , 0x27 , /* single q.m. unicode */
-			0x22 + 0xfee0 , 0x22 + 0xfee0 , 0x22 , /* double q.m. unicode */
-			0x60 , 0x27 , 0x27, /* grave accent */
-			0x2018 , 0x2019 , 0x27 , /* left/right single q.m. */
-			0x201C , 0x201D , 0x22   /* left/right double q.m. */
-		};
 		wchar_t sl = L'\\' + 0xfee0;
 		wchar_t stop;
 		int i, N = 21;

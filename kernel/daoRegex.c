@@ -792,11 +792,13 @@ static int MatchPair( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 	return 1;
 }
 static int CountRegex( DaoRegex *self, DaoRgxItem *patts, int npatt,
-		void *src, daoint size, daoint start, daoint end )
+		void *src, daoint size, daoint start, daoint end, daoint start0, daoint end0 )
 {
 	daoint count = 0, m1 = start, m2 = end;
 	while( FindPattern( self, patts, npatt, self->source, size, & m1, & m2, 0 ) ){
-		count ++;
+		if( (m2 - m1) == (end0 - start0) ){
+			count += strncmp( src + m1, src + start0, m2 - m1 + 1 ) == 0;
+		}
 		m1 = m2;
 		m2 = end;
 	}
@@ -820,7 +822,7 @@ static int MatchPatPair( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 	m6 = m2;
 	bl = FindPattern( self, pr, itr, src, end, & m3, & m4, 0 );
 	if( bl == 0 )  return 0;
-	count = CountRegex( self, pl, itl, src, end, m2, m3 );
+	count = CountRegex( self, pl, itl, src, end, m2, m3, m1, m2 );
 	/* printf( "count = %i, %i %i\n", count, m2, m3 ); */
 	m2 = m4 + 1;
 	while( count >0 ){
@@ -830,7 +832,7 @@ static int MatchPatPair( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 		bl = FindPattern( self, pr, itr, src, end, & m3, & m4, 0 );
 		/* printf( "bl2 = %i, %i %i\n", bl, m3, m4 ); */
 		if( bl == 0 )  return 0;
-		count += CountRegex( self, pl, itl, src, end, m2, m3 ) - 1;
+		count += CountRegex( self, pl, itl, src, end, m2, m3, m5, m6 ) - 1;
 		/* printf( "count = %i, %i %i\n", count, m2, m3 ); */
 		m2 = m4 + 1;
 	}
