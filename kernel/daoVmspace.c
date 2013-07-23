@@ -2346,6 +2346,7 @@ DaoType *dao_list_any = NULL;
 DaoType *dao_map_any = NULL;
 DaoType *dao_map_meta = NULL;
 DaoType *dao_routine = NULL;
+DaoType *dao_routine_any = NULL;
 DaoType *dao_type_for_iterator = NULL;
 DaoType *dao_array_types[DAO_COMPLEX+1] = {0};
 
@@ -2495,6 +2496,7 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_complex = DaoType_New( "complex", DAO_COMPLEX, NULL, NULL );
 	dao_type_long = DaoType_New( "long", DAO_LONG, NULL, NULL );
 	dao_type_string = DaoType_New( "string", DAO_STRING, NULL, NULL );
+	dao_routine_any = DaoType_New( "routine", DAO_ROUTINE, NULL, NULL );
 	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoValue*)dao_type_udf, NULL );
 
 	mainVmSpace = vms = DaoVmSpace_New();

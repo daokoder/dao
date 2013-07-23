@@ -6130,7 +6130,14 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					if( deco && deco->type == DAO_ROUTINE && (deco->attribs & DAO_ROUT_DECORATOR) ){
 						cid->items.pInt[0] = result.konst;
 						enode.prev = extra ? extra->prev : back;
+						/*
+						// DaoProcess_DoCall() will check for the returned type,
+						// if it is NULL, a none value will be returned instead.
+						// Set dao_routine_any as the returned type to avoid this.
+						*/
+						DArray_PushFront( self->enumTypes, dao_routine_any );
 						regLast = DaoParser_MakeEnumConst( self, & enode, cid, regcount );
+						DArray_PopFront( self->enumTypes );
 						if( regLast >=0 ){
 							result.first = self->vmcLast;
 							konst = enode.konst;

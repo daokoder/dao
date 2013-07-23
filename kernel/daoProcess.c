@@ -3960,6 +3960,10 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			GC_ShiftRC( dao_none_value, revalue );
 			self->activeValues[vmc->c] = dao_none_value;
 		}
+#ifdef DEBUG
+		/* Make sure the return type is set for constant folding: */
+		assert( retype != NULL || !(self->trait & DAO_VALUE_CONST) );
+#endif
 	}
 }
 
