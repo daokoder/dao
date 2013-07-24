@@ -769,7 +769,7 @@ static void META_Class( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_PutValue( proc, (DaoValue*) p[0]->v.object->defClass );
 	}
 #endif
-	DaoProcess_PutValue( proc, dao_none_value );
+	DaoProcess_PutNone( proc );
 }
 static void META_Isa( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -818,7 +818,7 @@ static void META_Self( DaoProcess *proc, DaoValue *p[], int N )
 	if( p[0]->type == DAO_OBJECT )
 		DaoProcess_PutValue( proc, (DaoValue*) p[0]->xObject.rootObject );
 	else
-		DaoProcess_PutValue( proc, dao_none_value );
+		DaoProcess_PutNone( proc );
 }
 static void META_Param( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -868,7 +868,7 @@ static void META_Argv( DaoProcess *proc, DaoValue *p[], int N )
 		DaoList *list = DaoProcess_PutList( proc );
 		for(i=0; i<proc->topFrame->parCount; i++) DaoList_Append( list, proc->activeValues[i] );
 	}else{
-		DaoValue *val = dao_none_value;
+		DaoValue *val = DaoValue_MakeNone();
 		if( p[0]->xInteger.value < proc->topFrame->parCount )
 			val = proc->activeValues[ p[0]->xInteger.value ];
 		DaoProcess_PutValue( proc, val );

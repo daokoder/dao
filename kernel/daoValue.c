@@ -971,6 +971,11 @@ DaoType* DaoValue_CastType( DaoValue *self )
 	return (DaoType*) self;
 }
 
+DaoValue* DaoValue_MakeNone()
+{
+	return dao_none_value;
+}
+
 daoint DaoValue_TryGetInteger( DaoValue *self )
 {
 	if( self->type != DAO_INTEGER ) return 0;

@@ -122,15 +122,10 @@ DAO_DLL DaoType *dao_type_tuple;
 DAO_DLL DaoType *dao_array_any;
 DAO_DLL DaoType *dao_list_any;
 DAO_DLL DaoType *dao_map_any;
-DAO_DLL DaoType *dao_map_meta;
 DAO_DLL DaoType *dao_routine;
 DAO_DLL DaoType *dao_routine_any;
 DAO_DLL DaoType *dao_class_any;
 DAO_DLL DaoType *dao_type_for_iterator;
-DAO_DLL DaoType *dao_access_enum;
-DAO_DLL DaoType *dao_storage_enum;
-DAO_DLL DaoType *dao_dynclass_field;
-DAO_DLL DaoType *dao_dynclass_method;
 DAO_DLL DaoType *dao_array_types[DAO_COMPLEX+1];
 
 DAO_DLL DaoType* DaoType_New( const char *name, int tid, DaoValue *pb, DArray *nest );

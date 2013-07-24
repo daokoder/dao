@@ -84,10 +84,6 @@ typedef struct DaoStackFrame    DaoStackFrame;
 
 #define LOOKUP_ISCST( one ) (LOOKUP_ST(one)&1)
 
-DAO_DLL void* dao_malloc( size_t size );
-DAO_DLL void* dao_calloc( size_t nmemb, size_t size );
-DAO_DLL void* dao_realloc( void *ptr, size_t size );
-DAO_DLL void  dao_free( void *p );
 
 typedef struct DaoConfig  DaoConfig;
 struct DaoConfig

@@ -2344,7 +2344,6 @@ DaoType *dao_type_tuple = NULL;
 DaoType *dao_array_any = NULL;
 DaoType *dao_list_any = NULL;
 DaoType *dao_map_any = NULL;
-DaoType *dao_map_meta = NULL;
 DaoType *dao_routine = NULL;
 DaoType *dao_routine_any = NULL;
 DaoType *dao_type_for_iterator = NULL;
@@ -2554,7 +2553,6 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_array_any = DaoParser_ParseTypeName( "array<any>", ns, NULL );
 	dao_list_any = DaoParser_ParseTypeName( "list<any>", ns, NULL );
 	dao_map_any = DaoParser_ParseTypeName( "map<any,any>", ns, NULL );
-	dao_map_meta = DaoParser_ParseTypeName( "map<string,any>", ns, NULL );
 	dao_type_tuple = DaoParser_ParseTypeName( "tuple<...>", ns, NULL );
 
 	dao_array_types[DAO_NONE] = dao_array_any;

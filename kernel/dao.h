@@ -394,6 +394,8 @@ DAO_DLL DaoProcess*   DaoValue_CastProcess( DaoValue *self );
 DAO_DLL DaoNamespace* DaoValue_CastNamespace( DaoValue *self );
 DAO_DLL DaoType*      DaoValue_CastType( DaoValue *self );
 
+DAO_DLL DaoValue* DaoValue_MakeNone();
+
 /*
 // The following functions will check the type of the DaoValue and
 // return the requested data on success. Otherwise return zero or NULL;
@@ -538,7 +540,6 @@ DAO_DLL daoint DString_RFindMBS( DString *self, const char *ch, daoint start );
 DAO_DLL daoint DString_RFindChar( DString *self, char ch, daoint start );
 DAO_DLL void DString_Assign( DString *left, DString *right );
 DAO_DLL int DString_Compare( DString *left, DString *right );
-
 
 
 DAO_DLL DaoInteger* DaoInteger_New( daoint value );
@@ -1104,6 +1105,11 @@ DAO_DLL void DaoGC_ShiftRC( DaoValue *up, DaoValue *down );
 DAO_DLL void DaoGC_TryDelete( DaoValue *p );
 
 DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns );
+
+DAO_DLL void* dao_malloc( size_t size );
+DAO_DLL void* dao_calloc( size_t nmemb, size_t size );
+DAO_DLL void* dao_realloc( void *ptr, size_t size );
+DAO_DLL void  dao_free( void *p );
 
 #ifdef __cplusplus
 }

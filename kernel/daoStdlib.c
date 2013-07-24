@@ -58,12 +58,15 @@ static void STD_Path( DaoProcess *proc, DaoValue *p[], int N )
 static void STD_Compile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	char *source = DaoValue_TryGetMBString( p[0] );
-	DaoNamespace *ns = proc->activeNamespace;
+	DaoNamespace *ns = DaoValue_CastNamespace( p[1] );
+	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
+	if( ns == NULL ) ns = proc->activeNamespace;
+	DaoTuple_SetItem( tuple, (DaoValue*) ns, 0 );
 	if( DaoProcess_Compile( proc, ns, source ) ==0 ){
-		DaoProcess_PutValue( proc, dao_none_value );
+		DaoTuple_SetItem( tuple, dao_none_value, 1 );
 		return;
 	}
-	DaoProcess_PutValue( proc, ns->mainRoutines->items.pValue[ ns->mainRoutines->size-1 ] );
+	DaoTuple_SetItem( tuple, ns->mainRoutines->items.pValue[ ns->mainRoutines->size-1 ], 1 );
 }
 static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -597,7 +600,7 @@ static void STD_Map( DaoProcess *proc, DaoValue *p[], int N )
 DaoFuncItem dao_std_methods[] =
 {
 	{ STD_Path,      "path( path :string, action :enum<set,add,remove>=$add )" },
-	{ STD_Compile,   "compile( source :string )" },
+	{ STD_Compile,   "compile( source :string, ns := none ) => tuple<ns:any,main:routine>" },
 	{ STD_Eval,      "eval( source :string, st=io::stdio, safe=0 )=>any" },
 	{ STD_Load,      "load( file :string, import=1, runim=0, safe=0 )=>any" },
 	{ STD_Resource,  "resource( path :string )=>string" },

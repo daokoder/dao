@@ -10,13 +10,3 @@ mt.iterate( 10, 4 )::{
 }
 io.writeln( count );
 
-count = 0;
-mutex = mt.mutex();
-
-mt.iterate( 10, 4 )::{
-	mutex.protect::{
-		io.writeln( 'in protected section' );
-		for( i = 1 : 100000 ) count += 1;
-	}
-}
-io.writeln( count );

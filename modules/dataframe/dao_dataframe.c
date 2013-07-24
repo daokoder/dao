@@ -37,6 +37,8 @@
 #include "daoGC.h"
 
 
+static DaoType *dao_type_any2 = NULL;
+
 
 enum { SLICE_RANGE, SLICE_ENUM };
 /*
@@ -85,7 +87,7 @@ static int DaoType_GetDataType( DaoType *self )
 DaoxDataColumn* DaoxDataColumn_New( DaoType *type )
 {
 	DaoxDataColumn *self = (DaoxDataColumn*) dao_calloc( 1, sizeof(DaoxDataColumn) );
-	if( type == NULL ) type = dao_type_any;
+	if( type == NULL ) type = dao_type_any2;
 	GC_IncRC( type );
 	self->type = type;
 	self->cells = DVector_New( DaoType_GetDataSize( type ) );
@@ -129,7 +131,7 @@ void DaoxDataColumn_SetType( DaoxDataColumn *self, DaoType *type )
 	int datatype, datasize;
 
 	DaoxDataColumn_Reset( self, 0 );
-	if( type == NULL ) type = dao_type_any;
+	if( type == NULL ) type = dao_type_any2;
 	datatype = DaoType_GetDataType( type );
 	datasize = DaoType_GetDataSize( type );
 
@@ -1093,7 +1095,7 @@ static void FRAME_AddListCol( DaoProcess *proc, DaoValue *p[], int N )
 	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
 	DaoList *list = (DaoList*) p[1];
 	DString *lab = DaoValue_TryGetString( p[2] );
-	DaoType *etype = dao_type_any;
+	DaoType *etype = dao_type_any2;
 	daoint i, M = self->dims[0] * self->dims[2];
 
 	if( list->unitype && list->unitype->nested->size ){
@@ -1918,6 +1920,7 @@ DaoTypeBase dataframeTyper =
 DAO_DLL int DaoDataframe_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	daox_type_dataframe = DaoNamespace_WrapType( ns, & dataframeTyper, 0 );
+	dao_type_any2 = DaoNamespace_FindTypeMBS( ns, "any" );
 	DaoNamespace_TypeDefine( ns, "enum<row,column,depth>", "DataFrame::DimType" );
 	DaoNamespace_TypeDefine( ns, "none|int|string|tuple<none,none>|tuple<int,int>|tuple<string,string>|tuple<int|string,none>|tuple<none,int|string>", "DataFrame::IndexType" );
 	return 0;

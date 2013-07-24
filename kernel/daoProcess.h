@@ -173,6 +173,8 @@ DAO_DLL DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue 
 
 DAO_DLL void DaoProcess_PrintException( DaoProcess *self, int clear );
 
+DAO_DLL void DaoProcess_Trace( DaoProcess *self, int depth );
+
 DAO_DLL DaoValue* DaoProcess_MakeConst( DaoProcess *self );
 
 

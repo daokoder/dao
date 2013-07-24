@@ -12,8 +12,10 @@ class AA
 
 	routine AA( i = 0 ){ io.writeln( 'AA::AA( i = 0 )' ); }
 
-	virtual routine Virt(){ io.writeln( 'AA::Virt()' ) }
-	routine CallVirt(){ Virt() }
+	routine Virt(){ io.writeln( 'AA::Virt()' ) }
+	routine CallVirt(){
+		((interface<AA>)self).Virt()
+	}
 }
 
 class BB

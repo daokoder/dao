@@ -107,7 +107,6 @@ int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, D
 int DaoArray_ArrayArith( DaoArray *s, DaoArray *l, DaoArray *r, short p, DaoProcess *c );
 void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int codemode );
 
-extern void DaoProcess_Trace( DaoProcess *self, int depth );
 
 static DaoStackFrame* DaoStackFrame_New()
 {
@@ -5397,6 +5396,10 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		case DVM_NE: D = D != 0; break;
 		default: break;
 		}
+	}else if( vmc->code == DVM_EQ ){
+		D = A == B;
+	}else if( vmc->code == DVM_NE ){
+		D = A != B;
 	}else{
 InvalidOperation:
 		DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "" );

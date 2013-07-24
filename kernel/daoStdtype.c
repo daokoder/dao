@@ -3499,19 +3499,30 @@ DaoTuple* DaoTuple_Create( DaoType *type, int init )
 	return self;
 }
 #else
+/*
+// Note:
+// integer, float and double items are allocated with the tuple,
+// and are placed right after the last item.
+*/
 DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 {
+	DaoTuple *self;
+	DaoDouble *buffer;
+	DaoType **types = type->nested->items.pType;
 	int M = type->nested->size;
 	int i, size = N > M ? N : M;
 	int extit = size > DAO_TUPLE_ITEMS ? size - DAO_TUPLE_ITEMS : 0;
 	int extra = extit*sizeof(DaoValue*) + type->rntcount*sizeof(DaoDouble);
-	DaoType **types = type->nested->items.pType;
-	DaoTuple *self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + extra );
-	DaoDouble *buffer = (DaoDouble*)(self->items + size);
+	if( type->variadic ){
+		int vt = types[M-1]->aux->xType.tid;
+		if( vt > DAO_NONE && vt <= DAO_DOUBLE ) extra += (N - M + 1)*sizeof(DaoDouble);
+	}
+	self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + extra );
 	self->type = DAO_TUPLE;
-	for(i=0; i<M; i++){
-		DaoType *it = types[i];
-		if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
+	buffer = (DaoDouble*)(self->items + size);
+	for(i=0; i<size; i++){
+		DaoType *it = i < M ? types[i] : types[M-1];
+		if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_VALIST ) it = & it->aux->xType;
 		if( it->tid >= DAO_INTEGER && it->tid <= DAO_DOUBLE ){
 			self->items[i] = (DaoValue*)buffer;
 			buffer->type = it->tid;

@@ -159,7 +159,7 @@ static void COROUT_Resume( DaoProcess *proc, DaoValue *p[], int N )
 static void COROUT_Yield( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxCoroutine *self = (DaoxCoroutine*) p[0];
-	DaoValue *value = N > 1 ? p[1] : dao_none_value;
+	DaoValue *value = N > 1 ? p[1] : DaoValue_MakeNone();
 	if( self->process != proc ){
 		DaoProcess_RaiseException( proc, DAO_WARNING, "coroutine cannot yield in alien process." );
 		return;

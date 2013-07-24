@@ -4390,6 +4390,7 @@ static int DaoParser_GetLastValue( DaoParser *self, DaoInode *it, DaoInode *back
 	while( it != back && it->level == lex && it->code == DVM_NOP ) it = it->prev;
 	if( it->code == DVM_LOAD2 ) it = it->prev;
 	if( it == back || it->level != lex ) return -1;
+	if( it->code >= DVM_SETVH && it->code <= DVM_SETF ) return it->c;
 	if( DaoVmCode_GetResultOperand( (DaoVmCode*) it ) != DAO_OPERAND_C ) return -1;
 	return it->c;
 }
@@ -5576,6 +5577,11 @@ int DaoParser_GetOperPrecedence( DaoParser *self )
 			self->curToken += 1;
 		}
 	}
+	if( self->curToken > 0 ){
+		DaoToken *t1 = tokens[self->curToken-1];
+		DaoToken *t2 = tokens[self->curToken];
+		if( t1->line != t2->line ) return -1;
+	}
 	oper = daoArithOper[tokens[self->curToken]->name];
 	if( oper.oper == 0 || oper.binary == 0 ) return -1;
 	return 10*(20 - oper.binary);
@@ -6065,13 +6071,17 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		DaoInode *getx = result.last;
 		int regcount = self->regCount;
 		int postart = start - 1;
+		tkn = DaoParser_CurrentTokenName( self );
+		if( tokens[self->curToken]->line != tokens[self->curToken-1]->line ){
+			if( tkn != DTOK_DOT && tkn != DTOK_COLON2 ) return result;
+		}
 		if( result.first == NULL && result.last ) result.first = result.last;
 		if( result.last ){
 			postart = result.last->first + result.last->middle;
 			if( getx->code < DVM_GETVH || getx->code > DVM_GETF ) getx = NULL;
 		}
 		start = self->curToken;
-		switch( DaoParser_CurrentTokenName( self ) ){
+		switch( tkn ){
 		case DTOK_LB :
 			{
 				int rb, rb2, mode = 0, konst = 0, code = DVM_CALL;
@@ -6530,17 +6540,12 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop )
 		int code2 = vmc ? vmc->code : -1;
 		opb = DaoParser_IntegerOne( self, start );
 		DaoParser_AddCode( self, code, opa, opb, opa, start, 0, end );
-		if( code2 == DVM_GETVH || (code2 >= DVM_GETI && code2 <= DVM_GETF) ){
+		if( code2 >= DVM_GETVH && code2 <= DVM_GETF ){
 			DaoParser_PushBackCode( self, (DaoVmCodeX*) vmc );
 			self->vmcLast->extra = vmc->extra;
 			vmc = self->vmcLast;
 			opa = vmc->a; vmc->a = vmc->c; vmc->c = opa;
-			switch( vmc->code ){
-			case DVM_GETVH : vmc->code = DVM_SETVH; break;
-			case DVM_GETI  : vmc->code = DVM_SETI; break;
-			case DVM_GETMI : vmc->code = DVM_SETMI; break;
-			case DVM_GETF  : vmc->code = DVM_SETF; break;
-			}
+			vmc->code += DVM_SETVH - DVM_GETVH;
 			DaoParser_TryAddSetCodes( self );
 		}
 		result.update = self->vmcLast;

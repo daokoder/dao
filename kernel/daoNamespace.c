@@ -1372,6 +1372,11 @@ DaoType* DaoNamespace_FindType( DaoNamespace *self, DString *name )
 	}
 	return NULL;
 }
+DaoType* DaoNamespace_FindTypeMBS( DaoNamespace *self, const char *name )
+{
+	DString name2 = DString_WrapMBS( name );
+	return DaoNamespace_FindType( self, & name2 );
+}
 DaoType* DaoNamespace_AddType( DaoNamespace *self, DString *name, DaoType *type )
 {
 	DNode *node;

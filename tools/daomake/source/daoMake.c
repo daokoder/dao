@@ -1562,6 +1562,16 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 	DString_AppendChar( makefile, '\n' );
 	DString_AppendMBS( makefile, ".PHONY: clean\n\n" );
 
+	DString_AppendMBS( makefile, "distclean:\n\t" );
+	if( self->objectsMacros->size + self->testsMacros->size ){
+		DString_AppendMBS( makefile, "$(DAOMAKE) remove " );
+		DString_AppendMBS( makefile, daomake_objects_dir );
+		DString_AppendChar( makefile, '\n' );
+	}
+	DaoMakeProject_MakeDirectoryMake( self, makefile, "distclean" );
+	DString_AppendChar( makefile, '\n' );
+	DString_AppendMBS( makefile, ".PHONY: distclean\n\n" );
+
 	/* Regenerate if there was MD5 signature conflict: */
 	if( self->signature != sig ) DaoMakeProject_MakeFile( self, makefile );
 }

@@ -82,7 +82,7 @@ static void PROTOBJ_New( DaoProcess *proc, DaoValue *p[], int N )
 static void PROTOBJ_GetProto( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxProtobject *self = (DaoxProtobject*) p[0];
-	DaoValue *value = self->proto ? (DaoValue*) self->proto : dao_none_value;
+	DaoValue *value = self->proto ? (DaoValue*) self->proto : DaoValue_MakeNone();
 	DaoProcess_PutValue( proc, value );
 }
 static void PROTOBJ_SetProto( DaoProcess *proc, DaoValue *p[], int N )
