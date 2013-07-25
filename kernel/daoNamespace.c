@@ -1772,13 +1772,19 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *proto, DaoParser *parser )
 {
 	DaoRoutine *func = DaoRoutine_New( self, NULL, 0 );
-	DaoParser *defparser;
+	DaoParser *defparser, *oldparser = NULL;
 	int key = DKEY_OPERATOR;
 	int optok = 0;
 
 	assert( parser != NULL );
-	assert( parser->defParser != NULL );
-	defparser = parser->defParser;
+	defparser = oldparser = parser->defParser;
+	if( parser->defParser == NULL ){
+		parser->defParser = defparser = DaoVmSpace_AcquireParser( self->vmSpace );
+		defparser->vmSpace = self->vmSpace;
+		defparser->nameSpace = self;
+		defparser->hostCdata = parser->hostCdata;
+		defparser->routine = self->constEvalRoutine;
+	}
 
 	GC_IncRC( parser->hostCdata );
 	func->routHost = parser->hostCdata;
@@ -1794,9 +1800,13 @@ DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *proto, 
 		DaoParser_PrintError( defparser, 0, 0, NULL );
 		goto Error;
 	}
+	if( oldparser == NULL ) DaoVmSpace_ReleaseParser( self->vmSpace, parser->defParser );
+	parser->defParser = oldparser;
 	return func;
 Error:
 	printf( "Function wrapping failed for %s\n", proto );
+	if( oldparser == NULL ) DaoVmSpace_ReleaseParser( self->vmSpace, parser->defParser );
+	parser->defParser = oldparser;
 	DaoRoutine_Delete( func );
 	return NULL;
 }

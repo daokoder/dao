@@ -123,7 +123,6 @@ DAO_DLL DaoType *dao_array_any;
 DAO_DLL DaoType *dao_list_any;
 DAO_DLL DaoType *dao_map_any;
 DAO_DLL DaoType *dao_routine;
-DAO_DLL DaoType *dao_routine_any;
 DAO_DLL DaoType *dao_class_any;
 DAO_DLL DaoType *dao_type_for_iterator;
 DAO_DLL DaoType *dao_array_types[DAO_COMPLEX+1];

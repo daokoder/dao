@@ -6136,16 +6136,16 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				regLast = DaoParser_PushRegister( self );
 				DaoParser_AddCode( self, code, enode.reg, (enode.count-1)|mode, regLast, postart, start, rb );
 				if( self->needConst && result.konst && enode.konst == (enode.count-1) ){
-					DaoRoutine *deco = (DaoRoutine*) DaoParser_GetVariable( self, result.konst );
-					if( deco && deco->type == DAO_ROUTINE && (deco->attribs & DAO_ROUT_DECORATOR) ){
+					DaoRoutine *rout = (DaoRoutine*) DaoParser_GetVariable( self, result.konst );
+					if( rout != NULL ){
 						cid->items.pInt[0] = result.konst;
 						enode.prev = extra ? extra->prev : back;
 						/*
 						// DaoProcess_DoCall() will check for the returned type,
 						// if it is NULL, a none value will be returned instead.
-						// Set dao_routine_any as the returned type to avoid this.
-						*/
-						DArray_PushFront( self->enumTypes, dao_routine_any );
+						// Set dao_type_any as the returned type to avoid this.
+						 */
+						DArray_PushFront( self->enumTypes, dao_type_any );
 						regLast = DaoParser_MakeEnumConst( self, & enode, cid, regcount );
 						DArray_PopFront( self->enumTypes );
 						if( regLast >=0 ){

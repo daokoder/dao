@@ -1,0 +1,13 @@
+
+header_hints = { "." }
+if( DaoMake::IsMacOSX() ){
+	header_hints.append( "/usr/local/Cellar/libffi/include" )
+}
+header_path = DaoMake::FindFile( "ffi.h", header_hints )
+
+if( header_path == "" ) return;
+
+sqlite = DaoMake::Project( "FFI" )
+cflags = "-I" + header_path
+shlibs = "-lffi";
+sqlite.ExportLibrary( "FFI", cflags, "", shlibs )

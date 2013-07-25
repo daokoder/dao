@@ -6511,6 +6511,10 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 		break;
 	default: break;
 	}
+	if( self->status == DAO_PROCESS_STACKED ){
+		self->topFrame->returning = -1;
+		DaoProcess_Execute( self );
+	}
 	self->activeCode = NULL;
 	self->activeTypes = NULL;
 	if( self->exceptions->size >0 ){
