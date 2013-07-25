@@ -1044,7 +1044,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 		}
 	}
 	if( unicoded ){
-		char *tmp = src;
+		const char *tmp = src;
 		mbstate_t state;
 		memset( & state, 0, sizeof(mbstate_t) );
 		i = mbsrtowcs( NULL, (const char**) &tmp, srcSize, & state );

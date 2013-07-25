@@ -4390,7 +4390,7 @@ static int DaoParser_GetLastValue( DaoParser *self, DaoInode *it, DaoInode *back
 	while( it != back && it->level == lex && it->code == DVM_NOP ) it = it->prev;
 	if( it->code == DVM_LOAD2 ) it = it->prev;
 	if( it == back || it->level != lex ) return -1;
-	if( it->code >= DVM_SETVH && it->code <= DVM_SETF ) return it->c;
+	if( it->code >= DVM_SETVH && it->code <= DVM_SETF ) return it->a;
 	if( DaoVmCode_GetResultOperand( (DaoVmCode*) it ) != DAO_OPERAND_C ) return -1;
 	return it->c;
 }
