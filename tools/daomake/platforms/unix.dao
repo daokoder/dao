@@ -20,8 +20,8 @@ DaoMake::Settings["RELEASE-CFLAG"]   = "-O2"
 DaoMake::Settings["RELEASE-LFLAG"]   = ""
 DaoMake::Settings["DEBUG-CFLAG"]     = "-ggdb -O0 -DDEBUG"
 DaoMake::Settings["DEBUG-LFLAG"]     = "-ggdb"
-DaoMake::Settings["PROFILE-CFLAG"]     = "-pg"
-DaoMake::Settings["PROFILE-LFLAG"]     = "-pg"
+DaoMake::Settings["PROFILE-CFLAG"]   = "-pg"
+DaoMake::Settings["PROFILE-LFLAG"]   = "-pg"
 
 DaoMake::Includes.append( "/usr/local/include" );
 DaoMake::Includes.append( "/usr/include" );

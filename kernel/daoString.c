@@ -618,7 +618,7 @@ static void DWCString_Insert( DString *self, const wchar_t* chs, daoint at, daoi
 }
 void DString_Insert( DString *self, DString *chs, daoint at, daoint rm, daoint cp )
 {
-	if( cp ==0 ) cp = chs->size;
+	if( cp <= 0 ) cp = chs->size;
 	if( self->sharing ) DString_Detach( self, self->size + cp - rm );
 	if( self->mbs && chs->mbs ){
 		DMBString_Insert( self, chs->mbs, at, rm, cp );
@@ -638,7 +638,7 @@ void DString_Insert( DString *self, DString *chs, daoint at, daoint rm, daoint c
 }
 void DString_InsertMBS( DString *self, const char *chs, daoint at, daoint rm, daoint n )
 {
-	if( n ==0 ) n = strlen( chs );
+	if( n <= 0 ) n = strlen( chs );
 	if( self->sharing ) DString_Detach( self, self->size + n - rm );
 	if( self->mbs ){
 		DMBString_Insert( self, chs, at, rm, n );
@@ -658,7 +658,7 @@ void DString_InsertChar( DString *self, const char ch, daoint at )
 }
 void DString_InsertWCS( DString *self, const wchar_t *chs, daoint at, daoint rm, daoint n )
 {
-	if( n ==0 ) n = wcslen( chs );
+	if( n <= 0 ) n = wcslen( chs );
 	if( self->sharing ) DString_Detach( self, self->size + n - rm );
 	if( self->wcs ){
 		DWCString_Insert( self, chs, at, rm, n );
