@@ -204,7 +204,7 @@ class Variable
 	var isconst = 0;
 	var refer = ''; # *, **, &
 	var square = ''; # [...], [...][...]
-	var sqsizes = {};
+	var sqsizes :list<string> = {};
 	var vdefault = '';
 	var cxxdefault = '';
 	var host = '';
@@ -520,8 +520,8 @@ attribs=FunctionTrait::FUNC_NONE, snamespace='' )
 	}
 	if( pars.pfind( 'const %s+ (short|int|long|float|double) %s* %*%* %s* %w+' ) ) excluded = 1;
 	#if( pars.pfind( '(char|wchar_t) %s* %*%* %s* %w+' ) ) excluded = 1;
-	if( pars.pfind( '%) %s* %(' ).size() || pars.pfind( '%W ((%s*)) %(' ).size()
-		|| ret.pfind( 'template' ).size() ){
+	if( pars.pfind( '%) %s* %(' ).size() || pars.pfind( '%W ((%s*)) %(' ).size() || 
+				ret.pfind( 'template' ).size() ){
 		log_file.writeln( source );
 		excluded = 1;
 	}
@@ -588,10 +588,10 @@ attribs=FunctionTrait::FUNC_NONE, snamespace='' )
 	for( i = 0 : func.parlist.size()-2 ){
 		vo = func.parlist[i];
 		var2 = func.parlist[i+1];
-		if( var2.typeid >= $CT_SHORT && var2.typeid <= $CT_ULONG
-			&& var2.refer =='' && var2.square =='' ){
-			if( vo.refer == '*' && vo.square == ''
-				&& vo.typeid >= $CT_SHORT && vo.typeid <= $CT_COMPLEX16){
+		if( var2.typeid >= $CT_SHORT && var2.typeid <= $CT_ULONG && 
+				var2.refer =='' && var2.square =='' ){
+			if( vo.refer == '*' && vo.square == '' && 
+				vo.typeid >= $CT_SHORT && vo.typeid <= $CT_COMPLEX16){
 				vo.refer = '';
 				vo.square = '[]';
 				vo.sqsizes.append( '0' );
@@ -2767,15 +2767,15 @@ routine Function::Generate()
 		if( sq ){
 			pi1 = parlist[i+1];
 			tid = pi1.typeid;
-			if( tid >=$CT_SHORT and tid <= $CT_COMPLEX16 
-			and pi1.refer == '' and pi1.square == '' ){
+			if( tid >=$CT_SHORT and tid <= $CT_COMPLEX16 and 
+				pi1.refer == '' and pi1.square == '' ){
 				vo.sqsizes[0] = pi1.name;
 				if( sq >1 ) vo.sqsizes[1] = pi1.name;
 				if( sq >1 and i+2<pcount ){
 					pi2 = parlist[i+2];
 					tid = pi2.typeid;
-					if( tid >=$CT_SHORT and tid <= $CT_COMPLEX16
-					and pi2.refer == '' and pi2.square == '' )
+					if( tid >=$CT_SHORT and tid <= $CT_COMPLEX16 and
+						pi2.refer == '' and pi2.square == '' )
 					vo.sqsizes[1] = pi2.name;
 				}
 			}
@@ -3904,8 +3904,8 @@ routine UserType::GenerateType()
 		}
 	}
 	#if( name == 'Fl_Free' ) io.writeln( name, allocators, private_default );
-	if( imp_default and not exp_default and not private_default and not noWrapping 
-	and (not noConstructor or hasVirtual) ){
+	if( imp_default and not exp_default and not private_default and 
+		not noWrapping and (not noConstructor or hasVirtual) ){
 		if( hasVirtual ){
 			#			if( not isPureVirt ){
 			dao_meths += dao_proto.expand( kvmap2 );
@@ -4502,7 +4502,7 @@ routine SortFiles( files : list<string>, dir='', subdir='', mod='' )
 
 	depends = { '' -> {'' -> 1} };
 	for( file in files ){
-		depends[ file ] = {->};
+		depends[ file ] = {''->1};
 
 		file2 = file;
 		source = io.read( file, 1 );
@@ -4634,7 +4634,7 @@ onload='DaoOnLoad' )
 	if( size && dir_inc[ size-1 ] != '/'[0] ) dir_inc += '/';
 	
 	file2fixing : map<string,list<list<string>>> = {=>};
-	for( file in files ) file2fixing[file] = {};
+	for( file in files ) file2fixing[file] = (list<list<string>>){};
 	source = '';
 	dft_fixing = {};
 	unused_fixing = {};
@@ -4724,13 +4724,15 @@ onload='DaoOnLoad' )
 	
 	for( utp in user_types ){
 		if( utp.snamespace ){
-			if( not ns_types.has( utp.snamespace ) ) ns_types[ utp.snamespace ] = {};
+			if( not ns_types.has( utp.snamespace ) )
+				ns_types[ utp.snamespace ] = (list<UserType>){};
 			ns_types[ utp.snamespace ].append( utp );
 		}
 	}
 	for( func in functions.funcs ){
 		if( func.snamespace ){
-			if( not ns_funcs.has( func.snamespace ) ) ns_funcs[ func.snamespace ] = {};
+			if( not ns_funcs.has( func.snamespace ) )
+				ns_funcs[ func.snamespace ] = (list<Function>){};
 			ns_funcs[ func.snamespace ].append( func );
 		}
 	}
@@ -4985,7 +4987,7 @@ onload='DaoOnLoad' )
 		if( name != utp.name && name.pfind( '(%s|:)' ).size()==0 ){
 			ns = utp.snamespace;
 			if( ns ){
-				if( not ns_aliases.has( ns ) ) ns_aliases[ ns ] = {};
+				if( not ns_aliases.has( ns ) ) ns_aliases[ ns ] = (list<string>){};
 				ns_aliases[ ns ].append( utp.name );
 				ns_aliases[ ns ].append( name );
 				skip;

@@ -17,3 +17,4 @@ std::path( 'web', $add );
 std::path( 'clinker', $add );
 std::path( 'DaoCXX', $add );
 std::path( 'DaoJIT', $add );
+std::path( 'DaoSQL', $add );

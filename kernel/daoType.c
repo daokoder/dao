@@ -14,15 +14,16 @@
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
-// SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
-// OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// THIS SOFTWARE IS PROVIDED  BY THE COPYRIGHT HOLDERS AND  CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED  WARRANTIES,  INCLUDING,  BUT NOT LIMITED TO,  THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL  THE COPYRIGHT HOLDER OR CONTRIBUTORS  BE LIABLE FOR ANY DIRECT,
+// INDIRECT,  INCIDENTAL, SPECIAL,  EXEMPLARY,  OR CONSEQUENTIAL  DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO,  PROCUREMENT OF  SUBSTITUTE  GOODS OR  SERVICES;  LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION)  HOWEVER CAUSED  AND ON ANY THEORY OF
+// LIABILITY,  WHETHER IN CONTRACT,  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+// OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include<stdlib.h>
@@ -42,6 +43,81 @@
 #include"daoGC.h"
 #include"daoClass.h"
 #include"daoValue.h"
+
+
+
+static unsigned char dao_type_matrix[END_EXTRA_TYPES][END_EXTRA_TYPES];
+
+void DaoType_Init()
+{
+	int i, j;
+	memset( dao_type_matrix, DAO_MT_NOT, END_EXTRA_TYPES*END_EXTRA_TYPES );
+	for(i=DAO_INTEGER; i<=DAO_DOUBLE; i++){
+		dao_type_matrix[DAO_ENUM][i] = DAO_MT_SUB;
+		dao_type_matrix[i][DAO_COMPLEX] = DAO_MT_SUB;
+		for(j=DAO_INTEGER; j<=DAO_DOUBLE; j++)
+			dao_type_matrix[i][j] = DAO_MT_SIM;
+	}
+	dao_type_matrix[DAO_ENUM][DAO_STRING] = DAO_MT_SUB;
+	for(i=0; i<END_EXTRA_TYPES; i++) dao_type_matrix[i][i] = DAO_MT_EQ;
+	for(i=0; i<END_EXTRA_TYPES; i++){
+		dao_type_matrix[i][DAO_PAR_NAMED] = DAO_MT_EXACT+2;
+		dao_type_matrix[i][DAO_PAR_DEFAULT] = DAO_MT_EXACT+2;
+		dao_type_matrix[DAO_PAR_NAMED][i] = DAO_MT_EXACT+2;
+		dao_type_matrix[DAO_PAR_DEFAULT][i] = DAO_MT_EXACT+2;
+
+		dao_type_matrix[DAO_VALTYPE][i] = DAO_MT_EXACT+1;
+		dao_type_matrix[i][DAO_VALTYPE] = DAO_MT_EXACT+1;
+		dao_type_matrix[DAO_VARIANT][i] = DAO_MT_EXACT+1;
+		dao_type_matrix[i][DAO_VARIANT] = DAO_MT_EXACT+1;
+	}
+	dao_type_matrix[DAO_VALTYPE][DAO_VALTYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_VARIANT][DAO_VARIANT] = DAO_MT_EXACT+1;
+
+	for(i=0; i<END_EXTRA_TYPES; i++){
+		dao_type_matrix[DAO_UDT][i] = DAO_MT_UDF;
+		dao_type_matrix[i][DAO_UDT] = DAO_MT_UDF;
+		dao_type_matrix[i][DAO_ANY] = DAO_MT_ANY;
+		dao_type_matrix[DAO_ANY][i] = DAO_MT_ANYX;
+		dao_type_matrix[DAO_THT][i] = DAO_MT_INIT;
+		dao_type_matrix[i][DAO_THT] = DAO_MT_INIT;
+	}
+
+	dao_type_matrix[DAO_ANY][DAO_ANY] = DAO_MT_EQ;
+	dao_type_matrix[DAO_UDT][DAO_ANY] = DAO_MT_ANYUDF;
+	dao_type_matrix[DAO_ANY][DAO_UDT] = DAO_MT_ANYUDF;
+	dao_type_matrix[DAO_THT][DAO_ANY] = DAO_MT_ANYUDF;
+	dao_type_matrix[DAO_ANY][DAO_THT] = DAO_MT_ANYUDF;
+	dao_type_matrix[DAO_UDT][DAO_THT] = DAO_MT_UDF;
+	dao_type_matrix[DAO_THT][DAO_UDT] = DAO_MT_UDF;
+
+	dao_type_matrix[DAO_ENUM][DAO_ENUM] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_TYPE][DAO_TYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_ARRAY][DAO_ARRAY] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_LIST][DAO_LIST] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_MAP][DAO_MAP] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_TUPLE][DAO_TUPLE] = DAO_MT_EXACT+1;
+
+	dao_type_matrix[DAO_CLASS][DAO_CLASS] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CLASS][DAO_CTYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CLASS][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_OBJECT][DAO_CDATA] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_OBJECT][DAO_CSTRUCT] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_OBJECT][DAO_OBJECT] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_OBJECT][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CTYPE][DAO_CTYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CTYPE][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CSTRUCT][DAO_CTYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CSTRUCT][DAO_CSTRUCT] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CSTRUCT][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CDATA][DAO_CTYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CDATA][DAO_CDATA] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CDATA][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_ROUTINE][DAO_ROUTINE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_PROCESS][DAO_ROUTINE] = DAO_MT_EXACT+1;
+}
+
+
 
 void DaoType_Delete( DaoType *self )
 {
@@ -310,78 +386,6 @@ DaoType* DaoType_GetVariantItem( DaoType *self, int tid )
 	return NULL;
 }
 
-#define MIN(x,y) (x>y?y:x)
-
-
-static unsigned char dao_type_matrix[END_EXTRA_TYPES][END_EXTRA_TYPES];
-
-void DaoType_Init()
-{
-	int i, j;
-	memset( dao_type_matrix, DAO_MT_NOT, END_EXTRA_TYPES*END_EXTRA_TYPES );
-	for(i=DAO_INTEGER; i<=DAO_DOUBLE; i++){
-		dao_type_matrix[DAO_ENUM][i] = DAO_MT_SUB;
-		dao_type_matrix[i][DAO_COMPLEX] = DAO_MT_SUB;
-		for(j=DAO_INTEGER; j<=DAO_DOUBLE; j++)
-			dao_type_matrix[i][j] = DAO_MT_SIM;
-	}
-	dao_type_matrix[DAO_ENUM][DAO_STRING] = DAO_MT_SUB;
-	for(i=0; i<END_EXTRA_TYPES; i++) dao_type_matrix[i][i] = DAO_MT_EQ;
-	for(i=0; i<END_EXTRA_TYPES; i++){
-		dao_type_matrix[i][DAO_PAR_NAMED] = DAO_MT_EXACT+2;
-		dao_type_matrix[i][DAO_PAR_DEFAULT] = DAO_MT_EXACT+2;
-		dao_type_matrix[DAO_PAR_NAMED][i] = DAO_MT_EXACT+2;
-		dao_type_matrix[DAO_PAR_DEFAULT][i] = DAO_MT_EXACT+2;
-
-		dao_type_matrix[DAO_VALTYPE][i] = DAO_MT_EXACT+1;
-		dao_type_matrix[i][DAO_VALTYPE] = DAO_MT_EXACT+1;
-		dao_type_matrix[DAO_VARIANT][i] = DAO_MT_EXACT+1;
-		dao_type_matrix[i][DAO_VARIANT] = DAO_MT_EXACT+1;
-	}
-	dao_type_matrix[DAO_VALTYPE][DAO_VALTYPE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_VARIANT][DAO_VARIANT] = DAO_MT_EXACT+1;
-
-	for(i=0; i<END_EXTRA_TYPES; i++){
-		dao_type_matrix[DAO_UDT][i] = DAO_MT_UDF;
-		dao_type_matrix[i][DAO_UDT] = DAO_MT_UDF;
-		dao_type_matrix[i][DAO_ANY] = DAO_MT_ANY;
-		dao_type_matrix[DAO_ANY][i] = DAO_MT_ANYX;
-		dao_type_matrix[DAO_THT][i] = DAO_MT_INIT;
-		dao_type_matrix[i][DAO_THT] = DAO_MT_INIT;
-	}
-
-	dao_type_matrix[DAO_UDT][DAO_ANY] = DAO_MT_ANYUDF;
-	dao_type_matrix[DAO_ANY][DAO_UDT] = DAO_MT_ANYUDF;
-	dao_type_matrix[DAO_THT][DAO_ANY] = DAO_MT_ANYUDF;
-	dao_type_matrix[DAO_ANY][DAO_THT] = DAO_MT_ANYUDF;
-	dao_type_matrix[DAO_UDT][DAO_THT] = DAO_MT_UDF;
-	dao_type_matrix[DAO_THT][DAO_UDT] = DAO_MT_UDF;
-
-	dao_type_matrix[DAO_ENUM][DAO_ENUM] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_TYPE][DAO_TYPE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_ARRAY][DAO_ARRAY] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_LIST][DAO_LIST] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_MAP][DAO_MAP] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_TUPLE][DAO_TUPLE] = DAO_MT_EXACT+1;
-
-	dao_type_matrix[DAO_CLASS][DAO_CLASS] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CLASS][DAO_CTYPE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CLASS][DAO_INTERFACE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_OBJECT][DAO_CDATA] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_OBJECT][DAO_CSTRUCT] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_OBJECT][DAO_OBJECT] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_OBJECT][DAO_INTERFACE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CTYPE][DAO_CTYPE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CTYPE][DAO_INTERFACE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CSTRUCT][DAO_CTYPE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CSTRUCT][DAO_CSTRUCT] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CSTRUCT][DAO_INTERFACE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CDATA][DAO_CTYPE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CDATA][DAO_CDATA] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CDATA][DAO_INTERFACE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_ROUTINE][DAO_ROUTINE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_PROCESS][DAO_ROUTINE] = DAO_MT_EXACT+1;
-}
 static int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds );
 
 static int DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int host )
@@ -442,11 +446,6 @@ static int DaoType_MatchTemplateParams( DaoType *self, DaoType *type, DMap *defs
 			// mt::channel<int>.
 			*/
 			if( k < DAO_MT_EQ && tid != DAO_THT && tid != DAO_UDT ) return DAO_MT_NOT;
-#if 0
-			if( k == 0 || k == DAO_MT_SUB || k == DAO_MT_SIM ) return DAO_MT_NOT;
-			if( (ts1[i]->tid & DAO_ANY) && !(ts2[i]->tid & DAO_ANY) ) return DAO_MT_NOT;
-			if( k < mt ) mt = k;
-#endif
 		}
 	}
 	return mt;
@@ -483,7 +482,9 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 {
 	DaoType *it1, *it2;
 	DNode *it, *node = NULL;
-	daoint i, k, n, mt2, mt3, mt = DAO_MT_NOT;
+	int tid, mt2, mt3, mt = DAO_MT_NOT;
+	daoint i, k, n;
+
 	if( self == NULL || type == NULL ) return DAO_MT_NOT;
 	if( self == type ) return DAO_MT_EQ;
 	mt = dao_type_matrix[self->tid][type->tid];
@@ -566,18 +567,17 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			if( node ==NULL ) return 0;
 			/* if( node->value.pInt != it->value.pInt ) return 0; */
 		}
-		return DAO_MT_EQ;
+		return DAO_MT_SIM;
 	case DAO_ARRAY : case DAO_LIST : case DAO_MAP :
 	case DAO_TYPE :
 		if( self->nested->size != type->nested->size ) return DAO_MT_NOT;
 		for(i=0,n=self->nested->size; i<n; i++){
 			it1 = self->nested->items.pType[i];
 			it2 = type->nested->items.pType[i];
+			tid = it2->tid;
 			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
 			/* printf( "%i %s %s\n", k, it1->name->mbs, it2->name->mbs ); */
-			/* Do not match between array<int>, array<float>, array<double>: */
-			if( self->tid == DAO_ARRAY && k == DAO_MT_SIM ) return DAO_MT_NOT;
-			if( k == DAO_MT_NOT ) return k;
+			if( k < DAO_MT_EQ && tid != DAO_THT && tid != DAO_UDT ) return DAO_MT_NOT;
 			if( k < mt ) mt = k;
 		}
 		break;
@@ -774,48 +774,26 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			if( DMap_Find( self->mapNames, node->key.pVoid ) == NULL ) return 0;
 		}
 		return DAO_MT_SIM;
-		break;
 	case DAO_ARRAY :
 		if( value->xArray.size == 0 ) return DAO_MT_ANY;
 		tp = dao_array_types[ value->xArray.etype ];
 		if( tp == self ) return DAO_MT_EQ;
-		// XXX
 		if( self->tid != value->type ) return DAO_MT_NOT;
-		if( self->nested && self->nested->size ) it1 = self->nested->items.pType[0]->tid;
-		if( it1 == DAO_UDT ) return DAO_MT_UDF;
-		if( it1 == DAO_ANY ) return DAO_MT_ANY;
-		if( it1 == DAO_THT ) return DAO_MT_INIT;
-		if( value->xArray.etype == it1 ) return DAO_MT_EQ;
-		/* return DAO_MT_EQ for exact match, or zero otherwise: */
-		if( tp ) return (DaoType_MatchTo( tp, self, defs ) == DAO_MT_EQ) * DAO_MT_EQ;
-		break;
+		return DaoType_MatchTo( tp, self, defs );
 	case DAO_LIST :
 		tp = value->xList.unitype;
 		if( tp == self ) return DAO_MT_EQ;
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
-		if( value->xList.items.size == 0 ) return DAO_MT_ANY;
-		if( self->nested && self->nested->size ) it1 = self->nested->items.pType[0]->tid;
-		if( it1 == DAO_UDT ) return DAO_MT_UDF;
-		if( it1 == DAO_ANY ) return DAO_MT_ANY;
-		if( it1 == DAO_THT ) return DAO_MT_INIT;
-		if( tp ) return (DaoType_MatchTo( tp, self, defs ) == DAO_MT_EQ) * DAO_MT_EQ;
-		break;
+		if( tp == NULL ) return value->xList.items.size == 0 ? DAO_MT_ANY : DAO_MT_NOT;
+		return DaoType_MatchTo( tp, self, defs );
 	case DAO_MAP :
 		tp = value->xMap.unitype;
 		if( tp == self ) return DAO_MT_EQ;
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
-		if( value->xMap.items->size == 0 ) return DAO_MT_ANY;
-		if( self->nested && self->nested->size ) it1 = self->nested->items.pType[0]->tid;
-		if( self->nested && self->nested->size >1 ) it2 = self->nested->items.pType[1]->tid;
-		if( (it1|it2) & DAO_ANY ){ /* check for bit (1<<6) */
-			if( it1 == DAO_UDT || it2 == DAO_UDT ) return DAO_MT_UDF;
-			if( it1 == DAO_THT || it2 == DAO_THT ) return DAO_MT_INIT;
-			if( it1 == DAO_ANY || it2 == DAO_ANY ) return DAO_MT_ANY;
-		}
-		if( tp ) return (DaoType_MatchTo( tp, self, defs ) == DAO_MT_EQ) * DAO_MT_EQ;
-		break;
+		if( tp == NULL ) return value->xMap.items->size == 0 ? DAO_MT_ANY : DAO_MT_NOT;
+		return DaoType_MatchTo( tp, self, defs );
 	case DAO_TUPLE :
 		tp = value->xTuple.unitype;
 		if( tp == self ) return DAO_MT_EQ;

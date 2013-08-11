@@ -14,15 +14,16 @@
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
-// SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
-// OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// THIS SOFTWARE IS PROVIDED  BY THE COPYRIGHT HOLDERS AND  CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED  WARRANTIES,  INCLUDING,  BUT NOT LIMITED TO,  THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL  THE COPYRIGHT HOLDER OR CONTRIBUTORS  BE LIABLE FOR ANY DIRECT,
+// INDIRECT,  INCIDENTAL, SPECIAL,  EXEMPLARY,  OR CONSEQUENTIAL  DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO,  PROCUREMENT OF  SUBSTITUTE  GOODS OR  SERVICES;  LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION)  HOWEVER CAUSED  AND ON ANY THEORY OF
+// LIABILITY,  WHETHER IN CONTRACT,  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+// OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include<string.h>
@@ -1668,16 +1669,29 @@ void DaoRoutine_CodesFromInodes( DaoRoutine *self, DArray *inodes )
 }
 void DaoRoutine_SetupSimpleVars( DaoRoutine *self )
 {
-	int i, n;
+	DMap *refers = DMap_New(0,0);
 	DaoRoutineBody *body = self->body;
+	DaoVmCodeX **vmcs = body->annotCodes->items.pVmc;
+	int i, n;
+
+	self->attribs &= ~DAO_ROUT_REUSABLE;
+	for(i=0,n=body->annotCodes->size; i<n; ++i){
+		if( DaoVmCode_MayCreateReference( vmcs[i]->code ) ){
+			DMap_Insert( refers, IntToPointer( vmcs[i]->code ), 0 );
+		}
+	}
 
 	DArray_Clear( body->simpleVariables );
-	for(i=self->parCount,n=body->regType->size; i<n; i++){
+	for(i=self->parCount,n=body->regType->size; i<n; ++i){
 		DaoType *tp = body->regType->items.pType[i];
 		if( tp && tp->tid <= DAO_ENUM ){
 			DArray_Append( body->simpleVariables, (daoint)i );
+			if( DMap_Find( refers, IntToPointer(i) ) != NULL ){
+				self->attribs |= DAO_ROUT_REUSABLE;
+			}
 		}
 	}
+	DMap_Delete( refers );
 }
 
 
@@ -3515,7 +3529,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				/* Remove type holder bindings for the self parameter: */
 				DaoType_ResetTypeHolders( selftype, defs );
 				DaoType_MatchTo( at, selftype, defs );
-				ct = DaoType_DefineTypes( ct, NS, defs );
+				//ct = DaoType_DefineTypes( ct, NS, defs );
 			}
 			DaoInferencer_UpdateType( self, opc, ct );
 			AssertTypeMatching( ct, types[opc], defs );
@@ -4240,7 +4254,7 @@ NotExist_TryAux:
 			if( NoCheckingType( at ) ) continue;
 			AssertTypeMatching( dao_type_int, ct, defs );
 			if( at->realnum ){
-				if( typed_code ) continue;
+				if( typed_code == 0 ) continue;
 				if( ct->realnum ) inode->code = DVM_NOT_I + (at->tid - DAO_INTEGER);
 				if( ct != dao_type_int ) DaoInferencer_InsertMove2( self, inode, ct, dao_type_int );
 				continue;
@@ -4398,6 +4412,15 @@ NotExist_TryAux:
 		case DVM_LIST : case DVM_VECTOR :
 		case DVM_APLIST : case DVM_APVECTOR :
 			{
+				int tid = (code == DVM_LIST || code == DVM_APLIST) ? DAO_LIST : DAO_ARRAY;
+				if( types[opc] && types[opc]->tid == tid ){
+					if( types[opc]->nested && types[opc]->nested->size == 1 ){
+						DaoType *it = types[opc]->nested->items.pType[0];
+						int n = opb - (code == DVM_APLIST || code == DVM_APVECTOR);
+						for(j=0; j<n; ++j) AssertTypeMatching( types[opa+j], it, defs );
+						continue;
+					}
+				}
 				at = dao_type_udf;
 				if( code == DVM_VECTOR && opb ){
 					at = types[opa];
@@ -4436,6 +4459,12 @@ NotExist_TryAux:
 						}
 						if( vmc->code == DVM_VECTOR && init == DAO_STRING ) goto ErrorTyping;
 					}
+				}else if( opb == 0 && types[opc] != NULL ){
+					if( types[opc]->tid == DAO_LIST ){
+						if( code == DVM_LIST || code == DVM_APLIST ) break;
+					}else if( types[opc]->tid == DAO_ARRAY ){
+						if( code == DVM_VECTOR || code == DVM_APVECTOR ) break;
+					}
 				}
 				if( code == DVM_LIST || code == DVM_APLIST )
 					ct = DaoNamespace_MakeType( NS, "list", DAO_LIST, NULL, &at, at!=NULL );
@@ -4454,6 +4483,17 @@ NotExist_TryAux:
 		case DVM_HASH :
 			{
 				if( types[opc] && types[opc]->tid == DAO_ANY ) continue;
+				if( types[opc] && types[opc]->tid == DAO_MAP ){
+					if( types[opc]->nested && types[opc]->nested->size == 2 ){
+						DaoType *kt = types[opc]->nested->items.pType[0];
+						DaoType *vt = types[opc]->nested->items.pType[1];
+						for(j=0; j<opb; j+=2){
+							AssertTypeMatching( types[opa+j], kt, defs );
+							AssertTypeMatching( types[opa+j+1], vt, defs );
+						}
+						continue;
+					}
+				}
 				ts[0] = ts[1] = dao_type_udf;
 				if( opb > 0 ){
 					ts[0] = types[opa];
@@ -4463,6 +4503,8 @@ NotExist_TryAux:
 						if( DaoType_MatchTo( types[opa+j+1], ts[1], defs ) ==0 ) ts[1] = NULL;
 						if( ts[0] ==NULL && ts[1] ==NULL ) break;
 					}
+				}else if( opb == 0 && types[opc] != NULL && types[opc]->tid == DAO_MAP ){
+					continue;
 				}
 				if( ts[0] ==NULL ) ts[0] = opb ? dao_type_any : dao_type_udf;
 				if( ts[1] ==NULL ) ts[1] = opb ? dao_type_any : dao_type_udf;
@@ -4473,8 +4515,9 @@ NotExist_TryAux:
 			}
 		case DVM_MATRIX :
 			{
-				if( types[opc] && types[opc]->tid == DAO_ANY ) continue;
 				k = (vmc->b >> 8) * (0xff & vmc->b);
+				if( types[opc] && types[opc]->tid == DAO_ANY ) continue;
+				if( k == 0 && types[opc] != NULL ) continue;
 				at = k > 0 ? types[opa] : dao_type_udf;
 				for( j=0; j<k; j++){
 					if( DaoType_MatchTo( types[opa+j], at, defs )==0 ) goto ErrorTyping;
@@ -4734,7 +4777,9 @@ NotExist_TryAux:
 			break;
 		case DVM_CALL : case DVM_MCALL :
 			{
+				int checkfast = 0;
 				int ctchecked = 0;
+				int argc = vmc->b & 0xff;
 				int codemode = code | ((int)vmc->b<<16);
 				DaoType *cbtype = NULL;
 				DaoInode *sect = NULL;
@@ -4769,8 +4814,7 @@ NotExist_TryAux:
 
 				pp = consts+opa+1;
 				tp = types+opa+1;
-				j = vmc->b & 0xff;
-				for(k=0; k<j; k++){
+				for(k=0; k<argc; k++){
 					tt = DaoType_DefineTypes( tp[k], NS, defs );
 					GC_ShiftRC( tt, tp[k] );
 					tp[k] = tt;
@@ -4787,17 +4831,17 @@ NotExist_TryAux:
 					break;
 				}
 				if( m ) vmc->b |= DAO_CALL_TAIL;
-				if( (vmc->b & DAO_CALL_EXPAR) && j && tp[j-1]->tid == DAO_TUPLE ){
-					DArray *its = tp[j-1]->nested;
+				if( (vmc->b & DAO_CALL_EXPAR) && argc && tp[argc-1]->tid == DAO_TUPLE ){
+					DArray *its = tp[argc-1]->nested;
 					DArray_Clear( self->array2 );
-					for(k=0; k<(j-1); k++) DArray_Append( self->array2, tp[k] );
+					for(k=0; k<(argc-1); k++) DArray_Append( self->array2, tp[k] );
 					for(k=0; k<its->size; k++){
 						DaoType *it = its->items.pType[k];
 						if( it->tid == DAO_PAR_NAMED ) it = (DaoType*) it->aux;
 						DArray_Append( self->array2, it );
 					}
 					tp = self->array2->items.pType;
-					j = self->array2->size;
+					argc = self->array2->size;
 				}
 
 				ct = types[opa];
@@ -4840,8 +4884,8 @@ NotExist_TryAux:
 					ctchecked = 1;
 				}else if( rout == NULL ){
 					if( !(vmc->b & DAO_CALL_INIT) ) vmc->b |= DAO_CALL_NOSELF;
-					if( DaoRoutine_CheckType( at, NS, NULL, tp, j, codemode, 0 ) ==0 ){
-						DaoRoutine_CheckError( NS, NULL, at, NULL, tp, j, codemode, errors );
+					if( DaoRoutine_CheckType( at, NS, NULL, tp, argc, codemode, 0 ) ==0 ){
+						DaoRoutine_CheckError( NS, NULL, at, NULL, tp, argc, codemode, errors );
 						goto ErrorTyping;
 					}
 					if( at->name->mbs[0] == '@' ){
@@ -4852,13 +4896,13 @@ NotExist_TryAux:
 						goto TryPushBlockReturnType;
 					}
 					cbtype = at->cbtype;
-					DaoRoutine_CheckType( at, NS, NULL, tp, j, codemode, 1 );
+					DaoRoutine_CheckType( at, NS, NULL, tp, argc, codemode, 1 );
 					ct = types[opa];
 				}else{
 					if( rout->type != DAO_ROUTINE ) goto ErrorTyping;
 					rout2 = rout;
 					/* rout can be DRoutines: */
-					rout = DaoValue_Check( rout, bt, tp, j, codemode, errors );
+					rout = DaoValue_Check( rout, bt, tp, argc, codemode, errors );
 					if( rout == NULL ) goto ErrorTyping;
 					if( rout->attribs & DAO_ROUT_PRIVATE ){
 						if( rout->routHost && rout->routHost != routine->routHost ) goto CallNotPermit;
@@ -4872,6 +4916,25 @@ NotExist_TryAux:
 							int att3 = rout->attribs & DAO_ROUT_INITOR;
 							if( att1 != 0 && att2 == 0 && att3 == 0 ) goto CallWithoutInst;
 						}
+					}
+					checkfast = DVM_CALL && ((vmc->b & 0xff00) & ~DAO_CALL_TAIL) == 0;
+					checkfast &= at->tid == DAO_ROUTINE && argc >= rout2->parCount;
+					checkfast &= rout2->routHost == NULL;
+					checkfast &= rout2->overloads == NULL && rout2->specialized == NULL;
+					checkfast &= rout2->body != NULL || rout2->pFunc != NULL; /* not curry; */
+					if( checkfast ){
+						int fast = 1;
+						for(k=0; fast && k<argc; ++k) fast &= tp[k]->tid != DAO_PAR_NAMED;
+						for(k=0; fast && k<rout2->routType->nested->size; ++k){
+							DaoType *part = rout2->routType->nested->items.pType[k];
+							DaoType *argt = tp[k];
+							if( part->tid >= DAO_PAR_NAMED && part->tid <= DAO_PAR_VALIST ){
+								part = (DaoType*) part->aux;
+							}
+							if( part->tid == DAO_ANY ) continue;
+							fast &= DaoType_MatchTo( argt, part, NULL ) >= DAO_MT_EQ;
+						}
+						if( fast ) vmc->b |= DAO_CALL_FAST;
 					}
 					if( rout->attribs & DAO_ROUT_DECORATOR ){
 						ct = tp[0];
@@ -4893,7 +4956,7 @@ NotExist_TryAux:
 
 					if( rout2->overloads && rout2->overloads->routines->size > 1 ){
 						DArray *routines = rout2->overloads->routines;
-						m = DaoRoutine_CheckType( rout->routType, NS, bt, tp, j, codemode, 1 );
+						m = DaoRoutine_CheckType( rout->routType, NS, bt, tp, argc, codemode, 1 );
 						if( m <= DAO_MT_ANY ){
 							/* For situations like:
 							//
@@ -4910,7 +4973,7 @@ NotExist_TryAux:
 							DArray_Clear( self->array );
 							for(k=0,K=routines->size; k<K; k++){
 								DaoType *type = routines->items.pRoutine[k]->routType;
-								m = DaoRoutine_CheckType( type, NS, bt, tp, j, codemode, 1 );
+								m = DaoRoutine_CheckType( type, NS, bt, tp, argc, codemode, 1 );
 								if( m == 0 ) continue;
 								type = (DaoType*) type->aux;
 								if( type == NULL ) type = dao_type_none;
@@ -4940,37 +5003,42 @@ NotExist_TryAux:
 					}
 
 					k = defs2->size;
-					DaoRoutine_PassParamTypes2( rout, bt, tp, j, code, defs2 );
+					DaoRoutine_PassParamTypes2( rout, bt, tp, argc, code, defs2 );
 					if( rout != routine && defs2->size && (defs2->size > k || rout->routType->aux->xType.tid == DAO_UDT) ){
-						DaoRoutine *orig = rout;
+						DaoRoutine *orig = rout, *rout2 = rout;
 						if( rout->original ) rout = orig = rout->original;
 
 						/* Do not share function body. It may be thread unsafe to share: */
 						rout = DaoRoutine_Copy( rout, 0, 1, 0 );
-						DaoRoutine_PassParamTypes( rout, bt, tp, j, code, defs2 );
+						DaoRoutine_PassParamTypes( rout, bt, tp, argc, code, defs2 );
 
-						DMutex_Lock( & mutex_routine_specialize );
-						if( orig->specialized == NULL ) orig->specialized = DRoutines_New();
-						DMutex_Unlock( & mutex_routine_specialize );
+						if( rout->routType->attrib & DAO_TYPE_SPEC ){
+							DaoGC_TryDelete( (DaoValue*) rout );
+							rout = rout2;
+						}else{
+							DMutex_Lock( & mutex_routine_specialize );
+							if( orig->specialized == NULL ) orig->specialized = DRoutines_New();
+							DMutex_Unlock( & mutex_routine_specialize );
 
-						GC_ShiftRC( orig, rout->original );
-						rout->original = orig;
-						/*
-						// Need to add before specializing the body,
-						// to avoid possible infinite recursion:
-						*/
-						body->specialized = 0;
-						DRoutines_Add( orig->specialized, rout );
+							GC_ShiftRC( orig, rout->original );
+							rout->original = orig;
+							/*
+							// Need to add before specializing the body,
+							// to avoid possible infinite recursion:
+							 */
+							body->specialized = 0;
+							DRoutines_Add( orig->specialized, rout );
 
-						/* rout may has only been declared */
-						/* forward declared routine may have an empty routine body: */
-						if( notide && rout->body && rout->body->vmCodes->size ){
-							DMap_Reset( defs3 );
-							DaoType_MatchTo( rout->routType, orig->routType, defs3 );
-							DaoRoutine_MapTypes( rout, defs3 );
+							/* rout may has only been declared */
+							/* forward declared routine may have an empty routine body: */
+							if( notide && rout->body && rout->body->vmCodes->size ){
+								DMap_Reset( defs3 );
+								DaoType_MatchTo( rout->routType, orig->routType, defs3 );
+								DaoRoutine_MapTypes( rout, defs3 );
 
-							/* to infer returned type */
-							if( DaoRoutine_DoTypeInference( rout, self->silent ) ==0 ) goto InvParam;
+								/* to infer returned type */
+								if( DaoRoutine_DoTypeInference( rout, self->silent ) ==0 ) goto InvParam;
+							}
 						}
 					}
 					if( at->tid != DAO_CLASS && ! ctchecked ) ct = rout->routType;

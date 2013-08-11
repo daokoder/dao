@@ -14,15 +14,16 @@
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
-// SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
-// OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// THIS SOFTWARE IS PROVIDED  BY THE COPYRIGHT HOLDERS AND  CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED  WARRANTIES,  INCLUDING,  BUT NOT LIMITED TO,  THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL  THE COPYRIGHT HOLDER OR CONTRIBUTORS  BE LIABLE FOR ANY DIRECT,
+// INDIRECT,  INCIDENTAL, SPECIAL,  EXEMPLARY,  OR CONSEQUENTIAL  DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO,  PROCUREMENT OF  SUBSTITUTE  GOODS OR  SERVICES;  LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION)  HOWEVER CAUSED  AND ON ANY THEORY OF
+// LIABILITY,  WHETHER IN CONTRACT,  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+// OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include"stdlib.h"
@@ -170,7 +171,6 @@ DaoParser* DaoParser_New()
 	self->decoFuncs2  = DArray_New(0);
 	self->decoParams  = DArray_New(D_VALUE);
 	self->decoParams2 = DArray_New(D_VALUE);
-	self->tempTypes = DArray_New(0);
 
 	self->elexer = DaoLexer_New();
 	self->wlexer = DaoLexer_New();
@@ -219,7 +219,6 @@ void DaoParser_Delete( DaoParser *self )
 	DString_Delete( self->mbs );
 	DString_Delete( self->mbs2 );
 	DString_Delete( self->str );
-	DArray_Delete( self->tempTypes );
 	DArray_Delete( self->decoFuncs );
 	DArray_Delete( self->decoFuncs2 );
 	DArray_Delete( self->decoParams );
@@ -292,7 +291,6 @@ void DaoParser_Reset( DaoParser *self )
 	DString_Reset( self->str, 0 );
 
 	self->typeItems->size = 0;
-	self->tempTypes->size = 0;
 	self->decoFuncs->size = 0;
 	self->decoFuncs2->size = 0;
 	self->toks->size = 0;
@@ -6864,7 +6862,7 @@ static DaoEnode DaoParser_ParseExpressionList( DaoParser *self, int sep, DaoInod
 				p2 = p1 + item.update->middle;
 				p3 = p1 + item.update->last;
 			}
-			inode = DaoParser_AddCode( self, DVM_LOAD, item.reg,0,0, p1,p2,p3);
+			inode = DaoParser_AddCode( self, DVM_MOVE, item.reg,0,0, p1,p2,p3);
 			DArray_Append( inodes, inode );
 		}
 		if( cids ) DArray_Append( cids, item.konst );
@@ -6914,7 +6912,7 @@ static DaoEnode DaoParser_ParseExpressionLists( DaoParser *self, int sep1, int s
 				p2 = p1 + item.update->middle;
 				p3 = p1 + item.update->last;
 			}
-			inode = DaoParser_AddCode( self, DVM_LOAD, item.reg,0,0, p1,p2,p3);
+			inode = DaoParser_AddCode( self, DVM_MOVE, item.reg,0,0, p1,p2,p3);
 			DArray_Append( inodes, inode );
 		}
 		if( cids ) DArray_Append( cids, item.konst );
@@ -6942,16 +6940,18 @@ Finalize:
 DaoProcess* DaoParser_ReserveFoldingOperands( DaoParser *self, int N )
 {
 	DaoNamespace *ns = self->nameSpace;
+	DaoRoutine *rout;
 	DaoProcess *proc;
 
 	DaoNamespace_InitConstEvalData( ns );
 	proc = ns->constEvalProcess;
-	if( self->tempTypes->size < N ) DArray_Resize( self->tempTypes, N, NULL );
+	rout = ns->constEvalRoutine;
+	if( rout->body->regType->size < N ) DArray_Resize( rout->body->regType, N, NULL );
 	DaoProcess_PushFrame( proc, N );
 	DaoProcess_PopFrame( proc );
 	proc->activeRoutine = ns->constEvalRoutine;
 	proc->activeValues = proc->stackValues;
-	proc->activeTypes = self->tempTypes->items.pType;
+	proc->activeTypes = rout->body->regType->items.pType;
 	proc->activeNamespace = ns;
 	return proc;
 }
@@ -6980,6 +6980,7 @@ int DaoParser_MakeEnumConst( DaoParser *self, DaoEnode *enode, DArray *cid, int 
 	for(i=regcount; i<self->regCount; i++) MAP_Erase( self->routine->body->localVarType, i );
 	DaoParser_PopRegisters( self, self->regCount - regcount );
 	/* Execute the instruction to get the const result: */
+	GC_ShiftRC( type, proc->activeTypes[0] );
 	proc->activeTypes[0] = type;
 	proc->activeCode = & vmcValue;
 	value = DaoProcess_MakeConst( proc );
@@ -7005,6 +7006,7 @@ int DaoParser_MakeArithConst( DaoParser *self, ushort_t code, DaoValue *a, DaoVa
 	if( code == DVM_NAMEVA ) vmc.a = DaoRoutine_AddConstant( proc->activeRoutine, a );
 	DaoValue_Copy( a, & proc->activeValues[1] );
 	DaoValue_Copy( b, & proc->activeValues[2] );
+	GC_DecRC( proc->activeTypes[0] );
 	proc->activeTypes[0] = NULL;
 	proc->activeCode = & vmc;
 	value = DaoProcess_MakeConst( proc );

@@ -1857,9 +1857,9 @@ static void FRAME_SLICED( DaoProcess *proc, DaoValue *p[], int npar )
 static DaoFuncItem dataframeMeths[]=
 {
 	{ FRAME_New,         "DataFrame()=>DataFrame" },
-	{ FRAME_NewMatrix,   "DataFrame( mat : array )=>DataFrame" },
+	{ FRAME_NewMatrix,   "DataFrame( mat : array<@T> )=>DataFrame" },
 
-	{ FRAME_FromMatrix,  "FromMatrix( self :DataFrame, mat : array )" },
+	{ FRAME_FromMatrix,  "FromMatrix( self :DataFrame, mat : array<@T> )" },
 
 	{ FRAME_Size,      "Size( self :DataFrame )=>int" },
 	{ FRAME_UseLabels, "UseLabels( self :DataFrame, dim :DimType, group :int )" },
@@ -1867,8 +1867,8 @@ static DaoFuncItem dataframeMeths[]=
 	{ FRAME_AddLabel,  "AddLabel( self :DataFrame, dim :DimType, label :string, index :int )" },
 	{ FRAME_GetIndex,  "GetIndex( self :DataFrame, dim :DimType, label :string ) => int" },
 
-	{ FRAME_AddArrayCol, "AddColumn( self :DataFrame, data :array<any>, label :string ='' )" },
-	{ FRAME_AddListCol,  "AddColumn( self :DataFrame, data :list<any>, label :string ='' )" },
+	{ FRAME_AddArrayCol, "AddColumn( self :DataFrame, data :array<@T>, label :string ='' )" },
+	{ FRAME_AddListCol,  "AddColumn( self :DataFrame, data :list<@T>, label :string ='' )" },
 
 	{ FRAME_GETMI,
 		"[]( self :DataFrame, i :IndexType, j :IndexType =none, k :IndexType =none ) => any" },
@@ -1896,14 +1896,14 @@ static DaoFuncItem dataframeMeths[]=
 	{ FRAME_BitOrFrame,   "|=( self :DataFrame, other :DataFrame )" },
 	{ FRAME_BitXorFrame,  "^=( self :DataFrame, other :DataFrame )" },
 
-	{ FRAME_AddArray,     "+=( self :DataFrame, other :array )" },
-	{ FRAME_SubArray,     "-=( self :DataFrame, other :array )" },
-	{ FRAME_MulArray,     "*=( self :DataFrame, other :array )" },
-	{ FRAME_DivArray,     "/=( self :DataFrame, other :array )" },
-	{ FRAME_ModArray,     "%=( self :DataFrame, other :array )" },
-	{ FRAME_BitAndArray,  "&=( self :DataFrame, other :array )" },
-	{ FRAME_BitOrArray,   "|=( self :DataFrame, other :array )" },
-	{ FRAME_BitXorArray,  "^=( self :DataFrame, other :array )" },
+	{ FRAME_AddArray,     "+=( self :DataFrame, other :array<@T> )" },
+	{ FRAME_SubArray,     "-=( self :DataFrame, other :array<@T> )" },
+	{ FRAME_MulArray,     "*=( self :DataFrame, other :array<@T> )" },
+	{ FRAME_DivArray,     "/=( self :DataFrame, other :array<@T> )" },
+	{ FRAME_ModArray,     "%=( self :DataFrame, other :array<@T> )" },
+	{ FRAME_BitAndArray,  "&=( self :DataFrame, other :array<@T> )" },
+	{ FRAME_BitOrArray,   "|=( self :DataFrame, other :array<@T> )" },
+	{ FRAME_BitXorArray,  "^=( self :DataFrame, other :array<@T> )" },
 
 	{ FRAME_SLICED,  "__SLICED__" },
 

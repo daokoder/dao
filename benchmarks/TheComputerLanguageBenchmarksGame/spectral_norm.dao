@@ -5,7 +5,7 @@
 -- modified by Fu Limin for Dao language.
 #}
 
-function Av( n :int, x :array<double>, y :array<double>)
+routine Av( n :int, x :array<double>, y :array<double>)
 {
 	for( i = 0 : n-1 ){
 		a = 0D;
@@ -17,7 +17,7 @@ function Av( n :int, x :array<double>, y :array<double>)
 	}
 }
 
-function Atv(n :int, x :array<double>, y :array<double>)
+routine Atv(n :int, x :array<double>, y :array<double>)
 {
 	for( i = 0 : n-1 ){
 		a = 0D;
@@ -29,13 +29,13 @@ function Atv(n :int, x :array<double>, y :array<double>)
 	}
 }
 
-function AtAv(n :int, x :array<double>, y :array<double>, t :array<double>)
+routine AtAv(n :int, x :array<double>, y :array<double>, t :array<double>)
 {
 	Av(n, x, t);
 	Atv(n, t, y);
 }
 
-function main( n = 100 )
+routine main( n = 100 )
 {
 	u = [ 1D : n ];
 	v = [ 1D : n ];

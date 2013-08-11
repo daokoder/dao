@@ -143,9 +143,11 @@ daovm_kernel_sources =
 	"kernel/daoParser.c" ,
 	"kernel/daoBytecode.c" ,
 	"kernel/daoOptimizer.c" ,
-	"kernel/daoProcess.c" ,
-	"kernel/daoRegex.c" ,
 	"kernel/daoRoutine.c" ,
+	"kernel/daoProcess.c" ,
+	"kernel/daoValue.c" ,
+	"kernel/daoType.c" ,
+	"kernel/daoRegex.c" ,
 	"kernel/daoTasklet.c" ,
 	"kernel/daoStdlib.c" ,
 	"kernel/daoStdtype.c" ,
@@ -153,8 +155,6 @@ daovm_kernel_sources =
 	"kernel/daoString.c" ,
 	"kernel/daoThread.c" ,
 	"kernel/daoPlatforms.c" ,
-	"kernel/daoType.c" ,
-	"kernel/daoValue.c" ,
 	"kernel/daoVmcode.c" ,
 	"kernel/daoVmspace.c" 
 }

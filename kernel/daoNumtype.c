@@ -14,15 +14,16 @@
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
-// SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
-// OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// THIS SOFTWARE IS PROVIDED  BY THE COPYRIGHT HOLDERS AND  CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED  WARRANTIES,  INCLUDING,  BUT NOT LIMITED TO,  THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL  THE COPYRIGHT HOLDER OR CONTRIBUTORS  BE LIABLE FOR ANY DIRECT,
+// INDIRECT,  INCIDENTAL, SPECIAL,  EXEMPLARY,  OR CONSEQUENTIAL  DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO,  PROCUREMENT OF  SUBSTITUTE  GOODS OR  SERVICES;  LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION)  HOWEVER CAUSED  AND ON ANY THEORY OF
+// LIABILITY,  WHETHER IN CONTRACT,  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+// OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include"daoStream.h"
@@ -2884,21 +2885,21 @@ static void DaoARRAY_Reduce( DaoProcess *proc, DaoValue *p[], int npar )
 }
 static DaoFuncItem numarMeths[] =
 {
-	{ DaoARRAY_Dim,       "dim( self :array, i : int )=>int" },
-	{ DaoARRAY_Dim,       "dim( self :array )=>array<int>" },
-	{ DaoARRAY_Index,     "index( self :array, i : int )=>array<int>" },
-	{ DaoARRAY_Size,      "size( self :array )=>int" },
-	{ DaoARRAY_Resize,    "resize( self :array, dims :array<int> )" },
-	{ DaoARRAY_Reshape,   "reshape( self :array, dims :array<int> )" },
+	{ DaoARRAY_Dim,       "dim( self :array<@T>, i : int )=>int" },
+	{ DaoARRAY_Dim,       "dim( self :array<@T> )=>array<int>" },
+	{ DaoARRAY_Index,     "index( self :array<@T>, i : int )=>array<int>" },
+	{ DaoARRAY_Size,      "size( self :array<@T> )=>int" },
+	{ DaoARRAY_Resize,    "resize( self :array<@T>, dims :array<int> )" },
+	{ DaoARRAY_Reshape,   "reshape( self :array<@T>, dims :array<int> )" },
 
-	{ DaoARRAY_Permute,   "permute( self :array, dims :array<int> )" },
+	{ DaoARRAY_Permute,   "permute( self :array<@T>, dims :array<int> )" },
 	{ DaoARRAY_Transpose, "transpose( self :array )" },
-	{ DaoARRAY_max,       "max( self :array<@ITEM> )=>tuple<@ITEM,int>" },
-	{ DaoARRAY_min,       "min( self :array<@ITEM> )=>tuple<@ITEM,int>" },
-	{ DaoARRAY_sum,       "sum( self :array<@ITEM> )=>@ITEM" },
-	{ DaoARRAY_varn,      "varn( self :array )=>double" },
-	{ DaoARRAY_Reverse,   "reverse( self :array<@ITEM> )=>array<@ITEM>" },
-	{ DaoARRAY_rank,  "rank( self :array<any>, order :enum<ascend,descend>=$ascend, k=0 )=>array<int>" },
+	{ DaoARRAY_max,       "max( self :array<@T> )=>tuple<@T,int>" },
+	{ DaoARRAY_min,       "min( self :array<@T> )=>tuple<@T,int>" },
+	{ DaoARRAY_sum,       "sum( self :array<@T> )=>@T" },
+	{ DaoARRAY_varn,      "varn( self :array<@T> )=>double" },
+	{ DaoARRAY_Reverse,   "reverse( self :array<@T> )=>array<@T>" },
+	{ DaoARRAY_rank,  "rank( self :array<@T>, order :enum<ascend,descend>=$ascend, k=0 )=>array<int>" },
 	{ DaoARRAY_sort,  "sort( self :array<@T>, order :enum<ascend,descend>=$ascend, k=0 )=>array<@T>" },
 
 	{ DaoARRAY_FFT,    "fft( self :array<complex>, direction :enum<forward, backward> )" },

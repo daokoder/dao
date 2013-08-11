@@ -92,7 +92,7 @@ obj.PrefixTestSuffix()
 #
 class @AspectForAnyClass for ~  # To be applied to any classes;
 {
-	var injected = {}
+	var injected : list<int> = {}
 
 	routine @AspectForAnyClass(){
 		io.writeln( 'In @AspectForAnyClass():' );

@@ -12,7 +12,7 @@ routine BottomUpTree(item:int, depth:int) => any
 routine ItemCheck( node : any ) =>int
 {
 	if( node ?< type(int) ) return (int)node;
-	(item, left, right) = node;
+	(item, left, right) = (Node) node;
 	return item + ItemCheck(left) - ItemCheck(right);
 }
 

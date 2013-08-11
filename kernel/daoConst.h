@@ -14,15 +14,16 @@
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
-// SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
-// OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// THIS SOFTWARE IS PROVIDED  BY THE COPYRIGHT HOLDERS AND  CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED  WARRANTIES,  INCLUDING,  BUT NOT LIMITED TO,  THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL  THE COPYRIGHT HOLDER OR CONTRIBUTORS  BE LIABLE FOR ANY DIRECT,
+// INDIRECT,  INCIDENTAL, SPECIAL,  EXEMPLARY,  OR CONSEQUENTIAL  DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO,  PROCUREMENT OF  SUBSTITUTE  GOODS OR  SERVICES;  LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION)  HOWEVER CAUSED  AND ON ANY THEORY OF
+// LIABILITY,  WHETHER IN CONTRACT,  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+// OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifndef DAO_CONST_H
@@ -147,13 +148,14 @@ enum DaoCaseMode
 
 enum DaoCallMode
 {
-	DAO_CALL_INIT   = (1<<8), /* call to initialize a parent object */
-	DAO_CALL_TAIL   = (1<<9), /* may do tail call */
-	DAO_CALL_EXPAR  = (1<<10), /* expand the last parameter of tuple type */
-	DAO_CALL_ASYNC  = (1<<11), /* asynchronous call */
-	DAO_CALL_BLOCK  = (1<<12), /* call with code block */
-	DAO_CALL_NOSELF = (1<<13), /* call without implicit self */
-	DAO_CALL_DECSUB = (1<<14)  /* call decorated function */
+	DAO_CALL_INIT   = (1<<8),  /* call to initialize a parent object; */
+	DAO_CALL_NOSELF = (1<<9),  /* call without implicit self; */
+	DAO_CALL_EXPAR  = (1<<10), /* expand the last parameter of tuple type; */
+	DAO_CALL_BLOCK  = (1<<11), /* call with code block; */
+	DAO_CALL_DECSUB = (1<<12), /* call decorated function; */
+	DAO_CALL_ASYNC  = (1<<13), /* asynchronous call; */
+	DAO_CALL_TAIL   = (1<<14), /* may do tail call; */
+	DAO_CALL_FAST   = (1<<15)  /* may do fast call; */
 };
 enum DaoProcessPauseType
 {
@@ -187,10 +189,11 @@ enum DaoRoutineAttrib
 	DAO_ROUT_CODESECT  = (1<<6),  /* code section routine */
 	DAO_ROUT_DECORATOR = (1<<7),  /* function decorator */
 	DAO_ROUT_INITOR    = (1<<8),  /* class constructor */
-	DAO_ROUT_MAIN      = (1<<9)  /* main function */
+	DAO_ROUT_MAIN      = (1<<9),  /* main function */
+	DAO_ROUT_REUSABLE  = (1<<10)  /* stack data for the routine is reusable */
 };
 
-#define DAO_TYPER_PRIV_FREE  (DAO_ROUT_MAIN<<1)
+#define DAO_TYPER_PRIV_FREE  (DAO_ROUT_REUSABLE<<1)
 #define DAO_OPER_OVERLOADED  (DAO_TYPER_PRIV_FREE<<1)
 
 enum DaoGlobalConstOffset

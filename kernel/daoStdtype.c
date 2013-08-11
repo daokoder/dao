@@ -14,15 +14,16 @@
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
-// SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
-// OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// THIS SOFTWARE IS PROVIDED  BY THE COPYRIGHT HOLDERS AND  CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED  WARRANTIES,  INCLUDING,  BUT NOT LIMITED TO,  THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL  THE COPYRIGHT HOLDER OR CONTRIBUTORS  BE LIABLE FOR ANY DIRECT,
+// INDIRECT,  INCIDENTAL, SPECIAL,  EXEMPLARY,  OR CONSEQUENTIAL  DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO,  PROCUREMENT OF  SUBSTITUTE  GOODS OR  SERVICES;  LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION)  HOWEVER CAUSED  AND ON ANY THEORY OF
+// LIABILITY,  WHETHER IN CONTRACT,  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+// OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include"stdlib.h"
@@ -72,8 +73,7 @@ DaoNone* DaoNone_New()
 DaoInteger* DaoInteger_New( daoint value )
 {
 	DaoInteger *self = (DaoInteger*) dao_malloc( sizeof(DaoInteger) );
-	memset( self, 0, sizeof(DaoInteger) );
-	self->type = DAO_INTEGER;
+	DaoValue_Init( self, DAO_INTEGER );
 	self->value = value;
 	return self;
 }
@@ -89,8 +89,7 @@ void DaoInteger_Set( DaoInteger *self, daoint value )
 DaoFloat* DaoFloat_New( float value )
 {
 	DaoFloat *self = (DaoFloat*) dao_malloc( sizeof(DaoFloat) );
-	memset( self, 0, sizeof(DaoFloat) );
-	self->type = DAO_FLOAT;
+	DaoValue_Init( self, DAO_FLOAT );
 	self->value = value;
 	return self;
 }
@@ -106,8 +105,7 @@ void DaoFloat_Set( DaoFloat *self, float value )
 DaoDouble* DaoDouble_New( double value )
 {
 	DaoDouble *self = (DaoDouble*) dao_malloc( sizeof(DaoDouble) );
-	memset( self, 0, sizeof(DaoDouble) );
-	self->type = DAO_DOUBLE;
+	DaoValue_Init( self, DAO_DOUBLE );
 	self->value = value;
 	return self;
 }
@@ -123,9 +121,16 @@ void DaoDouble_Set( DaoDouble *self, double value )
 DaoComplex* DaoComplex_New( complex16 value )
 {
 	DaoComplex *self = (DaoComplex*) dao_malloc( sizeof(DaoComplex) );
-	memset( self, 0, sizeof(DaoComplex) );
-	self->type = DAO_COMPLEX;
+	DaoValue_Init( self, DAO_COMPLEX );
 	self->value = value;
+	return self;
+}
+DaoComplex* DaoComplex_New2( double real, double imag )
+{
+	DaoComplex *self = (DaoComplex*) dao_malloc( sizeof(DaoComplex) );
+	DaoValue_Init( self, DAO_COMPLEX );
+	self->value.real = real;
+	self->value.imag = imag;
 	return self;
 }
 complex16  DaoComplex_Get( DaoComplex *self )
@@ -2551,19 +2556,19 @@ static void DaoLIST_Map2( DaoProcess *proc, DaoValue *p[], int npar )
 static DaoFuncItem listMeths[] =
 {
 	{ DaoLIST_Insert,   "insert( self :list<@T>, item : @T, pos=0 )" },
-	{ DaoLIST_Clear,    "clear( self :list<any> )" },
-	{ DaoLIST_Size,     "size( self :list<any> )=>int" },
-	{ DaoLIST_Resize,   "resize( self :list<any>, size :int )" },
+	{ DaoLIST_Clear,    "clear( self :list<@T> )" },
+	{ DaoLIST_Size,     "size( self :list<@T> )=>int" },
+	{ DaoLIST_Resize,   "resize( self :list<@T>, size :int )" },
 	{ DaoLIST_Max,      "max( self :list<@T<int|long|float|double|complex|string|enum>> )=>tuple<@T,int>" },
 	{ DaoLIST_Min,      "min( self :list<@T<int|long|float|double|complex|string|enum>> )=>tuple<@T,int>" },
 	{ DaoLIST_Sum,      "sum( self :list<@T<int|long|float|double|complex|string|enum>> )=>@T" },
-	{ DaoLIST_Join,     "join( self :list<int|float|double|long|complex|string|enum>, separator='' )=>string" },
+	{ DaoLIST_Join,     "join( self :list<@T<int|float|double|long|complex|string|enum>>, separator='' )=>string" },
 	{ DaoLIST_PushBack, "append( self :list<@T>, item :@T )" },
 	{ DaoLIST_Push,     "push( self :list<@T>, item :@T, to :enum<front, back> = $back )" },
 	{ DaoLIST_Pop,      "pop( self :list<@T>, from :enum<front, back> = $back ) => @T" },
 	{ DaoLIST_Front,    "front( self :list<@T> )=>@T" },
 	{ DaoLIST_Top,      "back( self :list<@T> )=>@T" },
-	{ DaoLIST_Rank,     "rank( self :list<any>, order :enum<ascend, descend>=$ascend, k=0 )=>list<int>" },
+	{ DaoLIST_Rank,     "rank( self :list<@T>, order :enum<ascend, descend>=$ascend, k=0 )=>list<int>" },
 	{ DaoLIST_Reverse,  "reverse( self :list<@T> )=>list<@T>" },
 
 	{ DaoLIST_Erase,    "erase( self :list<@T>, start=0, n=1 )" },
@@ -3134,22 +3139,22 @@ static void DaoMAP_Apply( DaoProcess *proc, DaoValue *p[], int N )
 }
 static DaoFuncItem mapMeths[] =
 {
-	{ DaoMAP_Clear,  "clear( self :map<any,any> )" },
-	{ DaoMAP_Reset,  "reset( self :map<any,any> )" },
-	{ DaoMAP_Reset,  "reset( self :map<any,any>, hashing :enum<none,default,random> )" },
-	{ DaoMAP_Erase,  "erase( self :map<any,any> )" },
+	{ DaoMAP_Clear,  "clear( self :map<@K,@V> )" },
+	{ DaoMAP_Reset,  "reset( self :map<@K,@V> )" },
+	{ DaoMAP_Reset,  "reset( self :map<@K,@V>, hashing :enum<none,default,random> )" },
+	{ DaoMAP_Erase,  "erase( self :map<@K,@V> )" },
 	{ DaoMAP_Erase,  "erase( self :map<@K,@V>, from :@K )" },
 	{ DaoMAP_Erase,  "erase( self :map<@K,@V>, from :@K, to :@K )" },
 	{ DaoMAP_Insert, "insert( self :map<@K,@V>, key :@K, value :@V )" },
 	{ DaoMAP_Find,   "find( self :map<@K,@V>, key :@K, type :enum<le,eq,ge>=$eq )=>tuple<key:@K,value:@V>|none" },
-	{ DaoMAP_Key,    "keys( self :map<@K,any> )=>list<@K>" },
-	{ DaoMAP_Key,    "keys( self :map<@K,any>, from :@K )=>list<@K>" },
-	{ DaoMAP_Key,    "keys( self :map<@K,any>, from :@K, to :@K )=>list<@K>" },
+	{ DaoMAP_Key,    "keys( self :map<@K,@V> )=>list<@K>" },
+	{ DaoMAP_Key,    "keys( self :map<@K,@V>, from :@K )=>list<@K>" },
+	{ DaoMAP_Key,    "keys( self :map<@K,@V>, from :@K, to :@K )=>list<@K>" },
 	{ DaoMAP_Value,  "values( self :map<@K,@V> )=>list<@V>" },
 	{ DaoMAP_Value,  "values( self :map<@K,@V>, from :@K )=>list<@V>" },
 	{ DaoMAP_Value,  "values( self :map<@K,@V>, from :@K, to :@K )=>list<@V>" },
-	{ DaoMAP_Has,    "has( self :map<@K,any>, key :@K )=>int" },
-	{ DaoMAP_Size,   "size( self :map<any,any> )=>int" },
+	{ DaoMAP_Has,    "has( self :map<@K,@V>, key :@K )=>int" },
+	{ DaoMAP_Size,   "size( self :map<@K,@V> )=>int" },
 
 	{ DaoMAP_Iterate,   "iterate( self :map<@K,@V> )[key :@K, value :@V]" },
 	{ DaoMAP_Count,  "count( self :map<@K,@V> )[key :@K, value :@V =>int] =>int" },
@@ -3403,6 +3408,7 @@ static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 #warning "=================="
 			// XXX
 		}else{
+			if( type->tid != DAO_TUPLE ) type = dao_type_tuple;
 			end = second->type == DAO_NONE ? self->size : end + 1;
 			tuple = DaoProcess_GetTuple( proc, NULL, end - start, 0 );
 			GC_ShiftRC( type, tuple->unitype );
@@ -3472,8 +3478,9 @@ DaoTuple* DaoTuple_New( int size )
 {
 	int extra = size > DAO_TUPLE_ITEMS ? size - DAO_TUPLE_ITEMS : 0;
 	DaoTuple *self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + extra*sizeof(DaoValue*) );
-	self->type = DAO_TUPLE;
+	DaoValue_Init( self, DAO_TUPLE );
 	self->size = size;
+	self->cap = size;
 	self->unitype = NULL;
 	return self;
 }
@@ -3499,15 +3506,9 @@ DaoTuple* DaoTuple_Create( DaoType *type, int init )
 	return self;
 }
 #else
-/*
-// Note:
-// integer, float and double items are allocated with the tuple,
-// and are placed right after the last item.
-*/
 DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 {
 	DaoTuple *self;
-	DaoDouble *buffer;
 	DaoType **types = type->nested->items.pType;
 	int M = type->nested->size;
 	int i, size = N > M ? N : M;
@@ -3518,23 +3519,19 @@ DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 		if( vt > DAO_NONE && vt <= DAO_DOUBLE ) extra += (N - M + 1)*sizeof(DaoDouble);
 	}
 	self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + extra );
-	self->type = DAO_TUPLE;
-	buffer = (DaoDouble*)(self->items + size);
+	DaoValue_Init( self, DAO_TUPLE );
+	GC_IncRC( type );
+	self->cap = extra / sizeof(DaoValue*);
+	self->size = size;
+	self->unitype = type;
+	if( init == 0 ) return self;
 	for(i=0; i<size; i++){
 		DaoType *it = i < M ? types[i] : types[M-1];
 		if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_VALIST ) it = & it->aux->xType;
-		if( it->tid >= DAO_INTEGER && it->tid <= DAO_DOUBLE ){
-			self->items[i] = (DaoValue*)buffer;
-			buffer->type = it->tid;
-			buffer->refCount = 2;
-			buffer ++;
-		}else if( init && it->tid >= DAO_COMPLEX && it->tid <= DAO_ENUM ){
+		if( init && it->tid >= DAO_INTEGER && it->tid <= DAO_ENUM ){
 			DaoValue_Move( it->value, self->items + i, it );
 		}
 	}
-	GC_IncRC( type );
-	self->size = size;
-	self->unitype = type;
 	return self;
 }
 #endif

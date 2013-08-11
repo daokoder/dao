@@ -14,15 +14,16 @@
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
-// SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
-// OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// THIS SOFTWARE IS PROVIDED  BY THE COPYRIGHT HOLDERS AND  CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED  WARRANTIES,  INCLUDING,  BUT NOT LIMITED TO,  THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL  THE COPYRIGHT HOLDER OR CONTRIBUTORS  BE LIABLE FOR ANY DIRECT,
+// INDIRECT,  INCIDENTAL, SPECIAL,  EXEMPLARY,  OR CONSEQUENTIAL  DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO,  PROCUREMENT OF  SUBSTITUTE  GOODS OR  SERVICES;  LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION)  HOWEVER CAUSED  AND ON ANY THEORY OF
+// LIABILITY,  WHETHER IN CONTRACT,  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+// OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifndef DAO_VMCODE_H
@@ -260,24 +261,24 @@ enum DaoOpcode
 
 	/* single indexing C=A[B]: GETI and MOVE */
 	/* index should be integer, may be casted from float/double by the typing system */
-	DVM_GETI_LI , /* get item : C = A[B]; X=list<X>[int] */
-	DVM_SETI_LI , /* set item : C[B] = A; list<X>[int]=X, or list<any>[int]=X; */
-	DVM_GETI_SI , /* get char from a string: string[int] */
-	DVM_SETI_SII , /* set char to a string: string[int]=int */
-	DVM_GETI_LII , /* get item : C = A[B]; list<int>[int] */
-	DVM_GETI_LFI , /* get item : C = A[B]; list<float>[int] */
-	DVM_GETI_LDI , /* get item : C = A[B]; list<double>[int] */
-	DVM_GETI_LCI , /* get item : C = A[B]; list<complex>[int] */
-	DVM_GETI_LSI , /* get item : C = A[B]; list<string>[int] */
+	DVM_GETI_LI ,   /* get item : C = A[B]; X=list<X>[int] */
+	DVM_SETI_LI ,   /* set item : C[B] = A; list<X>[int]=X, or list<any>[int]=X; */
+	DVM_GETI_SI ,   /* get char from a string: string[int] */
+	DVM_SETI_SII ,  /* set char to a string: string[int]=int */
+	DVM_GETI_LII ,  /* get item : C = A[B]; list<int>[int] */
+	DVM_GETI_LFI ,  /* get item : C = A[B]; list<float>[int] */
+	DVM_GETI_LDI ,  /* get item : C = A[B]; list<double>[int] */
+	DVM_GETI_LCI ,  /* get item : C = A[B]; list<complex>[int] */
+	DVM_GETI_LSI ,  /* get item : C = A[B]; list<string>[int] */
 	DVM_SETI_LIII , /* set item : C[B] = A; list<int>[int]=int */
 	DVM_SETI_LFIF , /* set item : C[B] = A;  */
 	DVM_SETI_LDID , /* set item : C[B] = A;  */
 	DVM_SETI_LCIC , /* set item : C[B] = A;  */
 	DVM_SETI_LSIS , /* set item : C[B] = A;  */
-	DVM_GETI_AII , /* get item : C = A[B]; array<int>[int] */
-	DVM_GETI_AFI , /* get item : C = A[B]; array<float>[int] */
-	DVM_GETI_ADI , /* get item : C = A[B]; array<double>[int] */
-	DVM_GETI_ACI , /* get item : C = A[B]; array<complex>[int] */
+	DVM_GETI_AII ,  /* get item : C = A[B]; array<int>[int] */
+	DVM_GETI_AFI ,  /* get item : C = A[B]; array<float>[int] */
+	DVM_GETI_ADI ,  /* get item : C = A[B]; array<double>[int] */
+	DVM_GETI_ACI ,  /* get item : C = A[B]; array<complex>[int] */
 	DVM_SETI_AIII , /* set item : C[B] = A;  */
 	DVM_SETI_AFIF , /* set item : C[B] = A;  */
 	DVM_SETI_ADID , /* set item : C[B] = A;  */

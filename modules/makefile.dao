@@ -30,6 +30,10 @@ if( DaoMake::IsDir( "graphics" ) ) modules.AddDirectory( "graphics", "graphics" 
 
 if( DaoMake::IsDir( "DaoGraphics" ) ) modules.AddDirectory( "Graphics", "DaoGraphics" );
 
-#if( DaoMake::IsDir( "cblas" ) ) modules.AddDirectory( "cblas", "cblas" );
+if( DaoMake::IsDir( "cblas" ) ) modules.AddDirectory( "cblas", "cblas" );
+
+if( DaoMake::IsDir( "clinker" ) ) modules.AddDirectory( "clinker", "clinker" );
+
+if( DaoMake::IsDir( "DaoSQL" ) ) modules.AddDirectory( "DaoSQL", "DaoSQL" );
 
 if( DaoMake::IsDir( "DaoSDL" ) ) modules.AddDirectory( "SDL", "DaoSDL" );

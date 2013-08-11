@@ -14,15 +14,16 @@
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
-// SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
-// OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// THIS SOFTWARE IS PROVIDED  BY THE COPYRIGHT HOLDERS AND  CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED  WARRANTIES,  INCLUDING,  BUT NOT LIMITED TO,  THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL  THE COPYRIGHT HOLDER OR CONTRIBUTORS  BE LIABLE FOR ANY DIRECT,
+// INDIRECT,  INCIDENTAL, SPECIAL,  EXEMPLARY,  OR CONSEQUENTIAL  DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO,  PROCUREMENT OF  SUBSTITUTE  GOODS OR  SERVICES;  LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION)  HOWEVER CAUSED  AND ON ANY THEORY OF
+// LIABILITY,  WHETHER IN CONTRACT,  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+// OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include"stdlib.h"
@@ -496,17 +497,63 @@ static DaoArray* DaoArray_CopyX( DaoArray *self, DaoType *tp )
 }
 #endif
 
-DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
+/*
+// Assumming the value "self" is compatible to the type "tp", if it is not null.
+*/
+DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoDataCache *cache )
 {
 	DaoEnum *e;
 	daoint i, n;
 
 	if( self == NULL ) return dao_none_value;
+	if( (tp == NULL || tp->tid == self->type) && self->type < DAO_ENUM ){
+		if( cache ){
+			DaoValue *value = DaoDataCache_MakeValue( cache, self->type );
+			switch( self->type ){
+			case DAO_NONE : return self;
+			case DAO_INTEGER : value->xInteger.value = self->xInteger.value; break;
+			case DAO_FLOAT   : value->xFloat.value   = self->xFloat.value;   break;
+			case DAO_DOUBLE  : value->xDouble.value  = self->xDouble.value;  break;
+			case DAO_COMPLEX : value->xComplex.value = self->xComplex.value; break;
+#ifdef DAO_WITH_LONGINT
+			case DAO_LONG    : DLong_Move( value->xLong.value, self->xLong.value ); break;
+#endif
+			case DAO_STRING  : DString_Assign( value->xString.data, self->xString.data ); break;
+			}
+			return value;
+		}else{
+			switch( self->type ){
+			case DAO_NONE : return self;
+			case DAO_INTEGER : return (DaoValue*) DaoInteger_New( self->xInteger.value );
+			case DAO_FLOAT   : return (DaoValue*) DaoFloat_New( self->xFloat.value );
+			case DAO_DOUBLE  : return (DaoValue*) DaoDouble_New( self->xDouble.value );
+			case DAO_COMPLEX : return (DaoValue*) DaoComplex_New( self->xComplex.value );
+			case DAO_LONG    : return (DaoValue*) DaoLong_Copy( & self->xLong );
+			case DAO_STRING  : return (DaoValue*) DaoString_Copy( & self->xString );
+			}
+		}
+		return self; /* unreachable; */
+	}else if( self->type == DAO_ENUM ){
+		return (DaoValue*) DaoEnum_Copy( & self->xEnum, tp );
+	}else if( tp && tp->tid >= DAO_INTEGER && tp->tid <= DAO_DOUBLE ){
+		DaoValue *value = cache ? DaoDataCache_MakeValue( cache, tp->tid ) : NULL;
+		switch( value == NULL ? tp->tid : 0 ){
+		case DAO_INTEGER : value = (DaoValue*) DaoInteger_New(0); break;
+		case DAO_FLOAT   : value = (DaoValue*) DaoFloat_New(0);   break;
+		case DAO_DOUBLE  : value = (DaoValue*) DaoDouble_New(0);  break;
+		}
+		switch( tp->tid ){
+		case DAO_INTEGER : value->xInteger.value = DaoValue_GetInteger( self ); break;
+		case DAO_FLOAT   : value->xFloat.value   = DaoValue_GetFloat( self );   break;
+		case DAO_DOUBLE  : value->xDouble.value  = DaoValue_GetDouble( self );  break;
+		}
+		return value;
+	}
 #ifdef DAO_WITH_NUMARRAY
 	if( self->type == DAO_ARRAY && self->xArray.original ){
 		DaoArray_Sliced( (DaoArray*)self );
 		return self;
-	}
+	}else
 #endif
 	if( self->type == DAO_CSTRUCT || self->type == DAO_CDATA ){
 		FuncPtrSliced sliced = self->xCstruct.ctype->kernel->Sliced;
@@ -514,24 +561,6 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 		return self;
 	}
 	if( self->xBase.trait & DAO_VALUE_NOCOPY ) return self;
-	if( tp && tp->tid >= DAO_INTEGER && tp->tid <= DAO_DOUBLE ){
-		double value = DaoValue_GetDouble( self );
-		switch( tp->tid ){
-		case DAO_INTEGER : return (DaoValue*) DaoInteger_New( (daoint) value );
-		case DAO_FLOAT   : return (DaoValue*) DaoFloat_New( value );
-		case DAO_DOUBLE  : return (DaoValue*) DaoDouble_New( value );
-		}
-	}
-	switch( self->type ){
-	case DAO_NONE : return self;
-	case DAO_INTEGER : return (DaoValue*) DaoInteger_New( self->xInteger.value );
-	case DAO_FLOAT   : return (DaoValue*) DaoFloat_New( self->xFloat.value );
-	case DAO_DOUBLE  : return (DaoValue*) DaoDouble_New( self->xDouble.value );
-	case DAO_COMPLEX : return (DaoValue*) DaoComplex_New( self->xComplex.value );
-	case DAO_LONG    : return (DaoValue*) DaoLong_Copy( & self->xLong );
-	case DAO_STRING  : return (DaoValue*) DaoString_Copy( & self->xString );
-	case DAO_ENUM    : return (DaoValue*) DaoEnum_Copy( & self->xEnum, tp );
-	}
 	if( (self->xBase.trait & DAO_VALUE_CONST) == 0 ) return self;
 	switch( self->type ){
 	case DAO_LIST  : return (DaoValue*) DaoList_Copy( (DaoList*) self, tp );
@@ -544,12 +573,16 @@ DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 	}
 	return self;
 }
+DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
+{
+	return DaoValue_SimpleCopyWithTypeX( self, tp, NULL );
+}
 DaoValue* DaoValue_SimpleCopy( DaoValue *self )
 {
 	return DaoValue_SimpleCopyWithType( self, NULL );
 }
 
-void DaoValue_Copy( DaoValue *src, DaoValue **dest )
+void DaoValue_CopyX( DaoValue *src, DaoValue **dest, DaoDataCache *cache )
 {
 	DaoValue *dest2 = *dest;
 	if( src == dest2 ) return;
@@ -558,13 +591,13 @@ void DaoValue_Copy( DaoValue *src, DaoValue **dest )
 		*dest = dest2 = NULL;
 	}
 	if( dest2 == NULL ){
-		src = DaoValue_SimpleCopyWithType( src, NULL );
+		src = DaoValue_SimpleCopyWithTypeX( src, NULL, cache );
 		GC_IncRC( src );
 		*dest = src;
 		return;
 	}
 	if( src->type != dest2->type || src->type > DAO_ENUM ){
-		src = DaoValue_SimpleCopyWithType( src, NULL );
+		src = DaoValue_SimpleCopyWithTypeX( src, NULL, cache );
 		GC_ShiftRC( src, dest2 );
 		*dest = src;
 		return;
@@ -583,6 +616,10 @@ void DaoValue_Copy( DaoValue *src, DaoValue **dest )
 #endif
 	case DAO_STRING  : DString_Assign( dest2->xString.data, src->xString.data ); break;
 	}
+}
+void DaoValue_Copy( DaoValue *src, DaoValue **dest )
+{
+	DaoValue_CopyX( src, dest, NULL );
 }
 void DaoValue_SetType( DaoValue *to, DaoType *tp )
 {
@@ -692,9 +729,27 @@ static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp )
 	if( itp == NULL ) return 0;
 	return DaoValue_Move( src, dest, itp );
 }
-int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
+int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs, DaoDataCache *cache )
 {
 	int tm = 1;
+	switch( (T->tid << 8) | S->type ){
+	case (DAO_INTEGER << 8) | DAO_INTEGER :
+	case (DAO_INTEGER << 8) | DAO_FLOAT   :
+	case (DAO_INTEGER << 8) | DAO_DOUBLE  :
+	case (DAO_FLOAT   << 8) | DAO_INTEGER :
+	case (DAO_FLOAT   << 8) | DAO_FLOAT   :
+	case (DAO_FLOAT   << 8) | DAO_DOUBLE  :
+	case (DAO_DOUBLE  << 8) | DAO_INTEGER :
+	case (DAO_DOUBLE  << 8) | DAO_FLOAT   :
+	case (DAO_DOUBLE  << 8) | DAO_DOUBLE  :
+	case (DAO_COMPLEX << 8) | DAO_COMPLEX :
+	case (DAO_LONG    << 8) | DAO_LONG    :
+	case (DAO_STRING  << 8) | DAO_STRING  :
+		S = DaoValue_SimpleCopyWithTypeX( S, T, cache );
+		GC_ShiftRC( S, *D );
+		*D = S;
+		return 1;
+	}
 	if( !(S->xTuple.trait & DAO_VALUE_CONST) ){
 		DaoType *ST = NULL;
 		switch( (S->type << 8) | T->tid ){
@@ -767,7 +822,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 	 * but if d is of type list<list<any>>,
 	 * the matching do not necessary to be exact.
 	 */
-	S = DaoValue_SimpleCopyWithType( S, T );
+	S = DaoValue_SimpleCopyWithTypeX( S, T, cache );
 	GC_ShiftRC( S, *D );
 	*D = S;
 	if( S->type == DAO_TUPLE && S->xTuple.unitype != T && tm >= DAO_MT_SIM ){
@@ -777,7 +832,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 	}
 	return 1;
 }
-int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
+int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs, DaoDataCache *cache )
 {
 	DaoValue *D2 = *D;
 	if( S == D2 ) return 1;
@@ -787,21 +842,21 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 		return 0;
 	}
 	if( T == NULL ){
-		DaoValue_Copy( S, D );
+		DaoValue_CopyX( S, D, cache );
 		return 1;
 	}
 	switch( T->tid ){
 	case DAO_UDT :
 	case DAO_THT :
-		DaoValue_Copy( S, D );
+		DaoValue_CopyX( S, D, cache );
 		return 1;
 	case DAO_ANY :
-		DaoValue_Copy( S, D );
+		DaoValue_CopyX( S, D, cache );
 		DaoValue_SetType( *D, T );
 		return 1;
 	case DAO_VALTYPE :
 		if( DaoValue_Compare( S, T->aux ) !=0 ) return 0;
-		DaoValue_Copy( S, D );
+		DaoValue_CopyX( S, D, cache );
 		return 1;
 	case DAO_VARIANT :
 		return DaoValue_MoveVariant( S, D, T );
@@ -811,7 +866,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 		GC_DecRC( D2 );
 		*D = D2 = NULL;
 	}
-	if( D2 == NULL || D2->type != T->tid ) return DaoValue_Move4( S, D, T, defs );
+	if( D2 == NULL || D2->type != T->tid ) return DaoValue_Move4( S, D, T, defs, cache );
 
 	switch( (S->type << 8) | T->tid ){
 	case (DAO_STRING<<8)|DAO_STRING :
@@ -834,17 +889,21 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 #ifdef DAO_WITH_LONGINT
 	case (DAO_LONG   <<8)|DAO_LONG    : DLong_Move( D2->xLong.value, S->xLong.value ); break;
 #endif
-	default : return DaoValue_Move4( S, D, T, defs );
+	default : return DaoValue_Move4( S, D, T, defs, cache );
 	}
 	return 1;
 }
+int DaoValue_MoveX( DaoValue *S, DaoValue **D, DaoType *T, DaoDataCache *cache )
+{
+	return DaoValue_Move5( S, D, T, NULL, cache );
+}
 int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 {
-	return DaoValue_Move5( S, D, T, NULL );
+	return DaoValue_Move5( S, D, T, NULL, NULL );
 }
-int DaoValue_Move2( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
+int DaoValue_Move2( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs, DaoDataCache *cache )
 {
-	int rc = DaoValue_Move5( S, D, T, defs );
+	int rc = DaoValue_Move5( S, D, T, defs, cache );
 	if( rc == 0 || T == NULL ) return rc;
 	if( S->type <= DAO_TUPLE || S->type != T->tid ) return rc;
 	if( S->type == DAO_CDATA ){
