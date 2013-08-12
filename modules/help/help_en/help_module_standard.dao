@@ -117,5 +117,58 @@ sema.post()
 which will increase the count.
 
 
+@[subsection]State@[subsection]
+State is an abstraction layer for multiple condition variables coupled
+with the principles of atomic operations. Semantically, it represent a
+state of certain process or object which can be set, altered or waited
+upon by arbitrary number of concurrent tasks. A state contains single value
+which can be assigned or modified using test-and-set and fetch-and-add
+principles. One or more threads can wait until a state reaches certain value,
+in this case the synchronization is similar to using conditional variables
+with broadcasting.
+
+A state can represent an @[cyan]int@[cyan], @[cyan]float@[cyan], @[cyan]double@[cyan], @[cyan]complex@[cyan] or @[cyan]enum@[cyan] value:
+@[code(dao)]
+st = state<int>(0);
+
+type status = enum<on; off; running; idle; finished; canceled>
+st2 = state<status>($on + $idle);
+@[code(dao)]
+
+To perform basic read and write, @[cyan]value()@[cyan] and @[cyan]set()@[cyan] are provided,
+the latter returns the old value of a state:
+@[code(dao)]
+if (st.value() == 0)
+	old = st2.set($off);
+@[code(dao)]
+
+@[cyan]alter(old, new)@[cyan] can be used to assign @[cyan]new@[cyan] value to a state
+if it currently contains @[cyan]old@[cyan] value. The routine returns non-zero if the
+operation has succeeded:
+@[code(dao)]
+success = st.alter(0, 1);
+
+if (success){
+	... #will be executed by the only succeeded thread
+}
+@[code(dao)]
+
+@[cyan]add()@[cyan] and @[cyan]sub()@[cyan] are meant to add/substract for numeric values and
+append/remove symbols for a combined enum. The old value of state is returned:
+@[code(dao)]
+old = st.sub(1);
+st2.add($finished);
+@[code(dao)]
+
+To block the current thread until a state is assigned the desired value, @[cyan]wait()@[cyan]
+is to be used. A timeout may specified, in this case the routine will return zero if time-outed.
+To determine what values are currently awaited by other threads, @[cyan]waitlist()@[cyan] is
+provided:
+@[code(dao)]
+if (2 not in st.waitlist())
+	success = st.wait(1, 5.0);
+@[code(dao)]
+
+
 
 @[text]

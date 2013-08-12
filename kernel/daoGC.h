@@ -88,12 +88,15 @@ DAO_DLL void DaoGC_UnlockMap( DMap *map, int locked );
 #define DAO_TUPLE_LIMIT 24
 
 
+typedef struct DCache DCache;
+
+
 struct DaoDataCache
 {
 	daoint  count;
 	daoint  fails;
-	DArray *values[DAO_TUPLE];
-	DArray *tuples[DAO_TUPLE_LIMIT];
+	DCache *values[DAO_TUPLE];
+	DCache *tuples[DAO_TUPLE_LIMIT];
 };
 
 DAO_DLL DaoDataCache* DaoDataCache_Acquire( DaoDataCache *self, int caching );

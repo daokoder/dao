@@ -146,7 +146,6 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->stackValues = (DaoValue**)dao_calloc( self->stackSize, sizeof(DaoValue*) );
 	self->paramValues = self->stackValues + 1;
 	self->factory = DArray_New(D_VALUE);
-	self->cache = DaoDataCache_Acquire( NULL, 0 );
 
 	self->mbstring = DString_New(1);
 	self->pauseType = 0;
@@ -1040,7 +1039,7 @@ CallEntry:
 	}
 	if( self->topFrame->state & DVM_FRAME_FINISHED ) goto FinishCall;
 
-	if( self->cache->fails > 10 ){
+	if( self->cache == NULL || self->cache->fails > 10 ){
 		//printf( "%12p %9i %9i; ", self->cache, self->cache->fails, self->cache->count );
 		self->cache = DaoDataCache_Acquire( self->cache, 0 );
 		//printf( "%12p %9i\n", self->cache, self->cache->count );
@@ -2400,6 +2399,8 @@ ReturnFalse:
 	*/
 	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
 #endif
+	DaoDataCache_Release( self->cache );
+	self->cache = NULL;
 	DaoGC_TryInvoke();
 	return 0;
 
@@ -2419,6 +2420,8 @@ ReturnTrue:
 #ifdef DAO_WITH_CONCURRENT
 	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
 #endif
+	DaoDataCache_Release( self->cache );
+	self->cache = NULL;
 	DaoGC_TryInvoke();
 	return 1;
 }
