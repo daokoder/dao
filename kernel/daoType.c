@@ -1169,10 +1169,10 @@ DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 	DaoTypeCore *core = self->typer->core;
 	DaoTypeKernel *kernel = self->kernel;
 	if( core->kernel == NULL ) return NULL;
-	if( core->kernel->methods == NULL ){
-		DaoNamespace_SetupMethods( core->kernel->nspace, self->typer );
-		if( core->kernel->methods == NULL ) return NULL;
+	if( core->kernel->SetupMethods ){
+		core->kernel->SetupMethods( core->kernel->nspace, self->typer );
 	}
+	if( core->kernel->methods == NULL ) return NULL;
 	if( self->tid == DAO_CSTRUCT || self->tid == DAO_CDATA || self->tid == DAO_CTYPE ){
 		/* For non cdata type, core->kernel->abtype could be NULL: */
 		if( self->kernel == core->kernel && self->aux != core->kernel->abtype->aux ){
@@ -1217,10 +1217,8 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 	if( kernel->abtype && kernel->abtype->aux ){
 		if( DString_EQ( name, kernel->abtype->name ) ) value = kernel->abtype->aux;
 	}
-	if( kernel->values == NULL ){
-		DaoNamespace_SetupValues( kernel->nspace, self->typer );
-		if( kernel->values == NULL ) return value;
-	}
+	if( kernel->SetupValues ) kernel->SetupValues( kernel->nspace, self->typer );
+	if( kernel->values == NULL ) return value;
 	node = DMap_Find( kernel->values, name );
 	if( node ) return node->value.pValue;
 	return value;

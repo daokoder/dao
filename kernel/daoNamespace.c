@@ -207,6 +207,7 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 
 	if( typer->core == NULL ) return 0;
 	if( typer->core->kernel && typer->core->kernel->values != NULL ) return 1;
+	typer->core->kernel->SetupValues = NULL;
 	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
 		if( typer->supers[i] == NULL ) break;
 		DaoNamespace_SetupValues( self, typer->supers[i] );
@@ -290,6 +291,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 	assert( typer->core != NULL );
 	if( typer->funcItems == NULL ) return 0;
 	if( typer->core->kernel && typer->core->kernel->methods != NULL ) return 1;
+	typer->core->kernel->SetupMethods = NULL;
 	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
 		if( typer->supers[i] == NULL ) break;
 		DaoNamespace_SetupMethods( self, typer->supers[i] );
@@ -656,6 +658,8 @@ static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, 
 	ctype_type = DaoCdata_WrapType( self, typer, opaque );
 	cdata_type = typer->core->kernel->abtype;
 	typer->core->kernel->attribs |= DAO_TYPER_PRIV_FREE;
+	typer->core->kernel->SetupValues = DaoNamespace_SetupValues;
+	typer->core->kernel->SetupMethods = DaoNamespace_SetupMethods;
 	if( DaoNS_ParseType( self, typer->name, ctype_type, cdata_type, 1 ) == DAO_DT_FAILED ){
 		GC_IncRC( ctype_type );
 		GC_DecRC( ctype_type );
@@ -676,6 +680,8 @@ DaoType* DaoNamespace_SetupType( DaoNamespace *self, DaoTypeBase *typer )
 	if( typer->core->kernel == NULL ){
 		typer->core->kernel = DaoTypeKernel_New( typer );
 		typer->core->kernel->nspace = self;
+		typer->core->kernel->SetupValues = DaoNamespace_SetupValues;
+		typer->core->kernel->SetupMethods = DaoNamespace_SetupMethods;
 		GC_IncRC( self );
 		DArray_Append( self->auxData, typer->core->kernel );
 	}

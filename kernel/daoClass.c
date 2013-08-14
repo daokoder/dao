@@ -826,14 +826,15 @@ int DaoClass_DeriveClassData( DaoClass *self )
 		}else if( cdata->type == DAO_CTYPE ){
 			DaoTypeKernel *kernel = cdata->ctype->kernel;
 			DaoTypeBase *typer = kernel->typer;
-			DMap *values, *methods;
+			DMap *methods = kernel->methods;
+			DMap *values = kernel->values;
 
 			DArray_Append( self->clsType->bases, cdata->ctype );
 			DArray_Append( self->objType->bases, cdata->cdtype );
 			DaoClass_AddConst( self, cdata->ctype->name, (DaoValue*)cdata, DAO_DATA_PUBLIC );
 
-			if( values == NULL ) DaoNamespace_SetupValues( kernel->nspace, kernel->typer );
-			if( methods == NULL ) DaoNamespace_SetupMethods( kernel->nspace, kernel->typer );
+			if( kernel->SetupValues ) kernel->SetupValues( kernel->nspace, kernel->typer );
+			if( kernel->SetupMethods ) kernel->SetupMethods( kernel->nspace, kernel->typer );
 
 			DaoCdataType_SpecializeMethods( cdata->ctype );
 			kernel = cdata->ctype->kernel;

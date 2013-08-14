@@ -1,0 +1,13 @@
+
+header_hints = { "." }
+if( DaoMake::IsMacOSX() ){
+	header_hints.append( "/usr/local/Cellar/gobject-introspection/include" )
+}
+header_path = DaoMake::FindFile( "girepository.h", header_hints )
+
+if( header_path == "" ) return;
+
+sqlite = DaoMake::Project( "GIR" )
+cflags = "-I" + header_path
+shlibs = "-lgirepository-1.0";
+sqlite.ExportLibrary( "GIR", cflags, "", shlibs )

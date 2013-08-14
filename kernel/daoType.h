@@ -88,7 +88,8 @@ struct DaoType
 	uchar_t   flagtype : 1; /* for enum type */
 	uchar_t   simtype  : 1; /* if the nested contains only simple types */
 	uchar_t   overloads : 4; /* overloaded routines */
-	uchar_t   rntcount; /* real number type count */
+	uchar_t   rntcount  : 4; /* real number type count */
+	uchar_t   ffitype   : 4; /* for modules using ffi */
 	DString  *name; /* type name */
 	DString  *fname; /* field name, or parameter name */
 	DArray   *nested; /* type items */
@@ -205,6 +206,9 @@ struct DaoTypeKernel
 	DaoTypeBase   *typer;
 
 	void (*Sliced)( DaoValue *self );
+
+	int  (*SetupValues)( DaoNamespace *nspace, DaoTypeBase *typer );
+	int  (*SetupMethods)( DaoNamespace *space, DaoTypeBase *typer );
 };
 DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer );
 

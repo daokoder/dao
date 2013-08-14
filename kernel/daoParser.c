@@ -1321,7 +1321,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	}
 	/* printf( "%i  %s\n", routine->parCount, routine->routType->name->mbs ); */
 	/* for(j=0; j<nested->size; j++) printf( "%s\n", nested->items.pType[j]->name->mbs ); */
-	if( routine->attribs & DAO_ROUT_PARSELF ) routine->routType->attrib |= DAO_ROUT_PARSELF;
 	GC_IncRC( routine->routType );
 	/*  remove vmcode for consts */
 	DaoParser_ClearCodes( module );
