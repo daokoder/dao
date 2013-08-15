@@ -94,6 +94,8 @@ void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns );
 
 void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );
 
+void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
+int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
 int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent );
 
 struct DaoRoutineBody

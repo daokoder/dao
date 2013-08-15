@@ -480,7 +480,6 @@ enum DaoCodeType
 	DAO_CODE_ENUM2 ,    /*  C,A,A+1,...,A+B; */
 	DAO_CODE_CALL ,     /*  C,A,A+1,...,A+N; where N=B&0xff*/
 	DAO_CODE_ROUTINE ,  /*  C,A,A+1,...,A+B; */
-	DAO_CODE_CLASS ,    /*  C,A,A+1,...,A+B;   */
 	DAO_CODE_YIELD ,    /*  C,A,A+1,...,A+B-1; */
 	DAO_CODE_EXPLIST ,  /*  A,A+1,...,A+B-1; */
 	DAO_CODE_BRANCH ,   /*  A;   */

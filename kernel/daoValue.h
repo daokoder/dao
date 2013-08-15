@@ -125,6 +125,7 @@ DAO_DLL int DaoValue_Move( DaoValue *src, DaoValue **dest, DaoType *destype );
 DAO_DLL int DaoValue_MoveX( DaoValue *S, DaoValue **D, DaoType *T, DaoDataCache *cache );
 DAO_DLL int DaoValue_Move2( DaoValue *src, DaoValue **dest, DaoType *destype, DMap *defs, DaoDataCache *cache );
 
+DAO_DLL void DaoValue_SetType( DaoValue *to, DaoType *tp );
 DAO_DLL void DaoValue_MarkConst( DaoValue *self );
 
 DAO_DLL int DaoValue_IsZero( DaoValue *self );

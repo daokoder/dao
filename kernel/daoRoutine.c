@@ -342,6 +342,53 @@ void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns )
 	self->body->source = (DArray*) DArray_Back( ns->sources );
 }
 
+
+void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes );
+void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
+{
+	DaoType *tp;
+	DNode *it;
+	int i, n;
+#if 0
+	printf( "DaoRoutine_MapTypes() %s\n", self->routName->mbs );
+	for(it=DMap_First(deftypes); it; it=DMap_Next(deftypes,it) ){
+		printf( "%16p -> %p\n", it->key.pType, it->value.pType );
+		printf( "%16s -> %s\n", it->key.pType->name->mbs, it->value.pType->name->mbs );
+	}
+#endif
+	for(it=DMap_First(self->body->localVarType); it; it=DMap_Next(self->body->localVarType,it) ){
+		tp = DaoType_DefineTypes( it->value.pType, self->nameSpace, deftypes );
+		it->value.pType = tp;
+	}
+	for(i=0,n=self->routConsts->items.size; i<n; i++){
+		DaoValue_Update( & self->routConsts->items.items.pValue[i], self->nameSpace, deftypes );
+	}
+	for(i=0,n=self->body->svariables->size; i<n; ++i){
+		DaoVariable *var = self->body->svariables->items.pVar[i];
+		DaoType *type = DaoType_DefineTypes( var->dtype, self->nameSpace, deftypes );
+		GC_ShiftRC( type, var->dtype );
+		var->dtype = type;
+	}
+}
+int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes )
+{
+	DaoType *tp = DaoType_DefineTypes( self->routType, self->nameSpace, deftypes );
+	if( tp == NULL ) return 0;
+	GC_ShiftRC( tp, self->routType );
+	self->routType = tp;
+	if( host ){
+		GC_ShiftRC( host, self->routHost );
+		self->routHost = host;
+	}
+	if( self->body == NULL ) return 1;
+	DaoRoutine_MapTypes( self, deftypes );
+	return 1;
+	/*
+	 DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdioStream );
+	 */
+}
+
+
 static const char *const sep1 = "==========================================\n";
 static const char *const sep2 =
 "-------------------------------------------------------------------------\n";

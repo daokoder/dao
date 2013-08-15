@@ -87,7 +87,10 @@ struct DaoType
 	uchar_t   realnum  : 1; /* for type of int/float/double */
 	uchar_t   flagtype : 1; /* for enum type */
 	uchar_t   simtype  : 1; /* if the nested contains only simple types */
-	uchar_t   overloads : 4; /* overloaded routines */
+	uchar_t   overloads : 1; /* overloaded routines */
+	uchar_t   isempty1  : 1; /* is empty container, for compiling time use */
+	uchar_t   isempty2  : 1; /* is empty container, for running time use */
+	uchar_t   unused    : 1;
 	uchar_t   rntcount  : 4; /* real number type count */
 	uchar_t   ffitype   : 4; /* for modules using ffi */
 	DString  *name; /* type name */
@@ -142,7 +145,6 @@ DAO_DLL int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs );
 DAO_DLL int DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs );
 /* define @X */
 DAO_DLL DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
-DAO_DLL void DaoType_RenewTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
 
 /* all DAO_INITYPE: @T ... */
 DAO_DLL void DaoType_GetTypeHolders( DaoType *self, DMap *types );

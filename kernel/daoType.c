@@ -571,6 +571,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	case DAO_ARRAY : case DAO_LIST : case DAO_MAP :
 	case DAO_TYPE :
 		if( self->nested->size != type->nested->size ) return DAO_MT_NOT;
+		if( self->isempty1 ) return DAO_MT_ANY;
 		for(i=0,n=self->nested->size; i<n; i++){
 			it1 = self->nested->items.pType[i];
 			it2 = type->nested->items.pType[i];
@@ -786,6 +787,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( tp == NULL ) return value->xList.items.size == 0 ? DAO_MT_ANY : DAO_MT_NOT;
+		if( tp && tp->isempty2 && value->xList.items.size == 0 ) return DAO_MT_ANY;
 		return DaoType_MatchTo( tp, self, defs );
 	case DAO_MAP :
 		tp = value->xMap.unitype;
@@ -793,6 +795,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( tp == NULL ) return value->xMap.items->size == 0 ? DAO_MT_ANY : DAO_MT_NOT;
+		if( tp && tp->isempty2 && value->xMap.items->size == 0 ) return DAO_MT_ANY;
 		return DaoType_MatchTo( tp, self, defs );
 	case DAO_TUPLE :
 		tp = value->xTuple.unitype;
@@ -1097,15 +1100,6 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 DefFailed:
 	printf( "redefine failed\n" );
 	return NULL;
-}
-void DaoType_RenewTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
-{
-	DaoType *tp = DaoType_DefineTypes( self, ns, defs );
-	DaoType tmp = *self;
-	if( tp == self || tp == NULL ) return;
-	*self = *tp;
-	*tp = tmp;
-	DaoType_Delete( tp );
 }
 void DaoType_GetTypeHolders( DaoType *self, DMap *types )
 {

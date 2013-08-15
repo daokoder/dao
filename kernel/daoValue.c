@@ -626,8 +626,17 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 	DaoType *tp2;
 	DNode *it;
 	if( to->type != tp->tid && tp->tid != DAO_ANY ) return;
-	/* XXX compatible types? list<int> list<float> */
+	if( tp->attrib & DAO_TYPE_SPEC ) return;
 	switch( to->type ){
+#ifdef DAO_WITH_NUMARRAY
+	case DAO_ARRAY :
+		if( to->xArray.size ) return;
+		if( tp->tid != DAO_ARRAY || tp->nested == NULL || tp->nested->size == 0 ) break;
+		tp = tp->nested->items.pType[0];
+		if( tp->tid == DAO_NONE || tp->tid > DAO_COMPLEX ) break;
+		DaoArray_SetNumType( (DaoArray*) to, tp->tid );
+		break;
+#endif
 	case DAO_LIST :
 		/* v : any = {}, v->unitype should be list<any> */
 		if( tp->tid == DAO_ANY ) tp = dao_list_any;
@@ -827,7 +836,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs, DaoDataCa
 	*D = S;
 	if( S->type == DAO_TUPLE && S->xTuple.unitype != T && tm >= DAO_MT_SIM ){
 		return DaoValue_TryCastTuple( S, D, T );
-	}else if( T && T->tid == S->type ){
+	}else if( T && T->tid == S->type && !(T->attrib & DAO_TYPE_SPEC) ){
 		DaoValue_SetType( S, T );
 	}
 	return 1;

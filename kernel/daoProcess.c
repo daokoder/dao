@@ -387,8 +387,6 @@ static int DaoRoutine_PassDefault( DaoRoutine *routine, DaoValue *dest[], int pa
 	}
 	return 1;
 }
-void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
-int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
 /* Return the routine or its specialized version on success, and NULL on failure: */
 DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoType *hostype, DaoValue *obj, DaoValue *p[], int np, int code )
 {
@@ -4151,6 +4149,10 @@ void DaoProcess_DoList(  DaoProcess *self, DaoVmCode *vmc )
 		GC_ShiftRC( t, list->unitype );
 		list->unitype = t;
 	}
+	if( vmc->b && list->unitype && list->unitype->isempty2 ){
+		GC_ShiftRC( dao_list_any, list->unitype );
+		list->unitype = dao_list_any;
+	}
 	for( i=0; i<bval; i++){
 		if( DaoList_SetItem( list, regValues[opA+i], i ) ){
 			DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid items" );
@@ -5803,7 +5805,7 @@ void DaoProcess_DoBitShift( DaoProcess *self, DaoVmCode *vmc )
 				abtp = abtp->nested->items.pType[0];
 				if( DaoType_MatchValue( abtp, B, NULL ) ==0 ) return; /* XXX information */
 			}
-			DArray_PushBack( & list->items, B );
+			DaoList_PushBack( list, B );
 		}else{
 			if( list->items.size ==0 ) return; /* XXX information */
 			B = list->items.items.pValue[list->items.size-1];
@@ -6328,7 +6330,6 @@ void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *sel
 }
 
 int DaoRoutine_SetVmCodes2( DaoRoutine *self, DVector *vmCodes );
-void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes );
 
 static void DaoProcess_MapTypes( DaoProcess *self, DMap *deftypes )
 {
@@ -6339,49 +6340,6 @@ static void DaoProcess_MapTypes( DaoProcess *self, DMap *deftypes )
 		if( V == NULL || V->type != DAO_TYPE || it->value.pType->tid != DAO_TYPE ) continue;
 		MAP_Insert( deftypes, it->value.pType->nested->items.pType[0], V );
 	}
-}
-void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
-{
-	DaoType *tp;
-	DNode *it;
-	int i, n;
-#if 0
-	printf( "DaoRoutine_MapTypes() %s\n", self->routName->mbs );
-	for(it=DMap_First(deftypes); it; it=DMap_Next(deftypes,it) ){
-		printf( "%16p -> %p\n", it->key.pType, it->value.pType );
-		printf( "%16s -> %s\n", it->key.pType->name->mbs, it->value.pType->name->mbs );
-	}
-#endif
-	for(it=DMap_First(self->body->localVarType); it; it=DMap_Next(self->body->localVarType,it) ){
-		tp = DaoType_DefineTypes( it->value.pType, self->nameSpace, deftypes );
-		it->value.pType = tp;
-	}
-	for(i=0,n=self->routConsts->items.size; i<n; i++){
-		DaoValue_Update( & self->routConsts->items.items.pValue[i], self->nameSpace, deftypes );
-	}
-	for(i=0,n=self->body->svariables->size; i<n; ++i){
-		DaoVariable *var = self->body->svariables->items.pVar[i];
-		DaoType *type = DaoType_DefineTypes( var->dtype, self->nameSpace, deftypes );
-		GC_ShiftRC( type, var->dtype );
-		var->dtype = type;
-	}
-}
-int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes )
-{
-	DaoType *tp = DaoType_DefineTypes( self->routType, self->nameSpace, deftypes );
-	if( tp == NULL ) return 0;
-	GC_ShiftRC( tp, self->routType );
-	self->routType = tp;
-	if( host ){
-		GC_ShiftRC( host, self->routHost );
-		self->routHost = host;
-	}
-	if( self->body == NULL ) return 1;
-	DaoRoutine_MapTypes( self, deftypes );
-	return 1;
-	/*
-	 DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdioStream );
-	 */
 }
 
 void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )

@@ -112,7 +112,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "MCALL",      DVM_MCALL,      DAO_CODE_CALL,    0 },
 	{ "RETURN",     DVM_RETURN,     DAO_CODE_EXPLIST, 0 },
 	{ "YIELD",      DVM_YIELD,      DAO_CODE_YIELD,   0 },
-	{ "EVAL",       DVM_EVAL,       DAO_CODE_ROUTINE /*Not for DCE*/,   0 },
+	{ "EVAL",       DVM_EVAL,       DAO_CODE_ROUTINE /*To avoid DCE*/,   0 },
 	{ "SECT",       DVM_SECT,       DAO_CODE_EXPLIST, 0 },
 	{ "JITC",       DVM_JITC,       DAO_CODE_NOP,     0 },
 	{ "DEBUG",      DVM_DEBUG,      DAO_CODE_NOP,     0 },
@@ -441,8 +441,7 @@ DaoVmCode DaoVmCode_CheckOperands( DaoVmCode *self )
 		break;
 	case DAO_CODE_GETM :
 	case DAO_CODE_ENUM2 : case DAO_CODE_MATRIX :
-	case DAO_CODE_ROUTINE : case DAO_CODE_CLASS :
-	case DAO_CODE_CALL :
+	case DAO_CODE_ROUTINE : case DAO_CODE_CALL :
 		vmc.a = 1;
 		vmc.c = 1;
 		break;

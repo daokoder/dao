@@ -2529,7 +2529,6 @@ static void DaoByteDecoder_VerifyRoutine( DaoByteDecoder *self, DaoRoutine *rout
 			break;
 		case DAO_CODE_ENUM2 :
 		case DAO_CODE_ROUTINE :
-		case DAO_CODE_CLASS :
 			if( vmc->a >= regCount ) goto InvalidInstruction;
 			if( vmc->c >= regCount ) goto InvalidInstruction;
 			if( (vmc->a + vmc->b) >= regCount ) goto InvalidInstruction;

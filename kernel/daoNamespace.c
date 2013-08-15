@@ -1430,7 +1430,6 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 	int i, tid;
 
 	if( p == NULL ) return NULL;
-	if( p->type == DAO_TYPE && itp->tid == DAO_TYPE ) return itp;
 	tid = p->type;
 
 	switch( p->type ){
