@@ -2,7 +2,7 @@
 # Class decorators are classes that can be used modify other classes.
 # The modification is done by using such class as a mixin base class
 # to inject (combine) its members into the modified class, and by
-# automatically applying its method decorators the methods of the
+# automatically applying its method decorators to the methods of the
 # modified class.
 #
 # For such auto decorator application, only decorators with explicitly

@@ -31,9 +31,6 @@
 
 #include"daoBase.h"
 
-#define GET_BIT( bits, id ) (bits[id/8] & (1<<(id%8)))
-#define SET_BIT0( bits, id ) bits[id/8] &= ~(1<<(id%8))
-#define SET_BIT1( bits, id ) bits[id/8] |= (1<<(id%8))
 
 enum DaoCnodeOperandType
 {
@@ -66,10 +63,11 @@ struct DaoCnode
 	DArray   *defs; /* definitions for this use node; */
 	DArray   *uses; /* uses for this definition node; */
 
-	DMap     *set;  /* set for the analysis; */
+	DArray   *list; /* sorted list for the analysis results; */
 };
 
 DAO_DLL void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *code );
+DAO_DLL int  DaoCnode_FindResult( DaoCnode *self, void *key );
 
 typedef void (*AnalysisInit)( DaoOptimizer*, DaoCnode* );
 typedef int (*AnalysisUpdate)( DaoOptimizer*, DaoCnode*, DaoCnode* );
@@ -93,8 +91,9 @@ struct DaoOptimizer
 	DMap    *finals;  /* final nodes; */
 
 	DMap    *tmp;
-	DMap    *tmp2;
 	DArray  *array;
+	DArray  *array2;
+	DArray  *array3;
 	DArray  *nodeCache;
 	DArray  *arrayCache;
 };

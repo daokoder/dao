@@ -51,7 +51,7 @@ static DaoCnode* DaoCnode_New()
 	self->kills = DArray_New(0);
 	self->defs = DArray_New(0);
 	self->uses = DArray_New(0);
-	self->set = DHash_New(0,0);
+	self->list = DArray_New(0);
 	return self;
 }
 static void DaoCnode_Delete( DaoCnode *self )
@@ -61,13 +61,13 @@ static void DaoCnode_Delete( DaoCnode *self )
 	DArray_Delete( self->kills );
 	DArray_Delete( self->defs );
 	DArray_Delete( self->uses );
-	DMap_Delete( self->set );
+	DArray_Delete( self->list );
 	dao_free( self );
 }
 static void DaoCnode_Clear( DaoCnode *self )
 {
-	DMap_Reset( self->set );
 	self->ins->size = self->outs->size = 0;
+	self->list->size = 0;
 	self->kills->size = 0;
 }
 void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *vmc )
@@ -187,6 +187,22 @@ void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *vmc )
 	/* Handle zero number of variables in the range: */
 	if( self->type == DAO_OP_RANGE && self->second == 0xffff ) self->type = DAO_OP_NONE;
 }
+int DaoCnode_FindResult( DaoCnode *self, void *key )
+{
+	int first = 0, last = self->list->size - 1;
+	while( first <= last ){
+		int mid = (first + last) / 2;
+		void *val = self->list->items.pVoid[mid];
+		if( val == key ){
+			return mid;
+		}else if( val < key ){
+			first = mid + 1;
+		}else{
+			last = mid - 1;
+		}
+	}
+	return -1;
+}
 
 
 DaoOptimizer* DaoOptimizer_New()
@@ -194,6 +210,8 @@ DaoOptimizer* DaoOptimizer_New()
 	DaoOptimizer *self = (DaoOptimizer*) dao_malloc( sizeof(DaoOptimizer) );
 	self->routine = NULL;
 	self->array = DArray_New(0); /* DArray<daoint> */
+	self->array2 = DArray_New(0); /* DArray<DaoCnode*> */
+	self->array3 = DArray_New(0); /* DArray<DaoCnode*> */
 	self->nodeCache  = DArray_New(0); /* DArray<DaoCnode*> */
 	self->arrayCache = DArray_New(D_ARRAY); /* DArray<DArray<DaoCnode*>> */
 	self->nodes = DArray_New(0);  /* DArray<DaoCnode*> */
@@ -204,7 +222,6 @@ DaoOptimizer* DaoOptimizer_New()
 	self->inits = DHash_New(0,0);   /* DMap<DaoCnode*,int> */
 	self->finals = DHash_New(0,0);  /* DMap<DaoCnode*,int> */
 	self->tmp = DHash_New(0,0);
-	self->tmp2 = DHash_New(0,0);
 	self->reverseFlow = 0;
 	self->update = NULL;
 	return self;
@@ -223,6 +240,8 @@ void DaoOptimizer_Delete( DaoOptimizer *self )
 	daoint i;
 	for(i=0; i<self->nodeCache->size; i++) DaoCnode_Delete( self->nodeCache->items.pCnode[i] );
 	DArray_Delete( self->array );
+	DArray_Delete( self->array2 );
+	DArray_Delete( self->array3 );
 	DArray_Delete( self->nodeCache );
 	DArray_Delete( self->arrayCache );
 	DArray_Delete( self->enodes );
@@ -233,7 +252,6 @@ void DaoOptimizer_Delete( DaoOptimizer *self )
 	DMap_Delete( self->finals );
 	DMap_Delete( self->exprs );
 	DMap_Delete( self->tmp );
-	DMap_Delete( self->tmp2 );
 	dao_free( self );
 }
 
@@ -248,7 +266,7 @@ static void DaoOptimizer_Print( DaoOptimizer *self )
 	DaoStream *stream = routine->nameSpace->vmSpace->stdioStream;
 	DaoVmCodeX **vmCodes = routine->body->annotCodes->items.pVmc;
 	DString *annot = DString_New(1);
-	daoint j, k, m, n;
+	daoint i, j, k, m, n;
 
 	DaoStream_WriteMBS( stream, "============================================================\n" );
 	DaoStream_WriteMBS( stream, daoRoutineCodeHeader );
@@ -261,19 +279,18 @@ static void DaoOptimizer_Print( DaoOptimizer *self )
 		DaoStream_WriteString( stream, annot );
 		if( self->update == DaoOptimizer_UpdateAEA ){
 			k = -1;
-			if( node->exprid != 0xffff )
-				k = self->enodes->items.pCnode[node->exprid]->index;
+			if( node->exprid != 0xffff ) k = self->enodes->items.pCnode[node->exprid]->index;
 			DaoStream_WriteInt( stream, k );
 			DaoStream_WriteMBS( stream, " | " );
-			for(it=DMap_First(node->set); it; it=DMap_Next(node->set,it)){
-				DaoStream_WriteInt( stream, it->key.pCnode->index );
+			for(i=0; i<node->list->size; ++i){
+				DaoStream_WriteInt( stream, node->list->items.pCnode[i]->index );
 				DaoStream_WriteMBS( stream, ", " );
 			}
 		}else{
 			DaoStream_WriteInt( stream, j );
 			DaoStream_WriteMBS( stream, " | " );
-			for(it=DMap_First(node->set); it; it=DMap_Next(node->set,it)){
-				DaoStream_WriteInt( stream, it->key.pInt );
+			for(i=0; i<node->list->size; ++i){
+				DaoStream_WriteInt( stream, node->list->items.pInt[i] );
 				DaoStream_WriteMBS( stream, ", " );
 			}
 		}
@@ -284,22 +301,70 @@ static void DaoOptimizer_Print( DaoOptimizer *self )
 
 
 
+static int DaoAEA_Compare( DaoCnode *node1, DaoCnode *node2, DaoVmCode *codes )
+{
+	DaoVmCode c1 = codes[node1->index];
+	DaoVmCode c2 = codes[node2->index];
+	if( c1.code != c2.code ) return c1.code - c2.code;
+	if( c1.a != c2.a ) return c1.a - c2.a;
+	if( c1.b != c2.b ) return c1.b - c2.b;
+	return node1->index - node2->index;
+}
+static int DaoAEA_Compare2( DaoCnode *node1, DaoCnode *node2, DaoVmCode *codes )
+{
+	DaoVmCode c1 = codes[node1->index];
+	DaoVmCode c2 = codes[node2->index];
+	if( c1.code != c2.code ) return c1.code - c2.code;
+	if( c1.a != c2.a ) return c1.a - c2.a;
+	return c1.b - c2.b;
+}
+static void DaoAEA_Sort( DaoCnode **nodes, int first, int last, DaoVmCode *codes )
+{
+	int lower=first+1, upper=last;
+	DaoCnode *val;
+	DaoCnode *pivot;
+	if( first >= last ) return;
+	val = nodes[first];
+	nodes[first] = nodes[ (first+last)/2 ];
+	nodes[ (first+last)/2 ] = val;
+	pivot = nodes[ first ];
+
+	while( lower <= upper ){
+		while( lower < last && DaoAEA_Compare( nodes[lower], pivot, codes ) < 0 ) lower ++;
+		while( upper > first && DaoAEA_Compare( pivot, nodes[upper], codes ) < 0 ) upper --;
+		if( lower < upper ){
+			val = nodes[lower];
+			nodes[lower] = nodes[upper];
+			nodes[upper] = val;
+			upper --;
+		}
+		lower ++;
+	}
+	val = nodes[first];
+	nodes[first] = nodes[upper];
+	nodes[upper] = val;
+	if( first+1 < upper ) DaoAEA_Sort( nodes, first, upper-1, codes );
+	if( upper+1 < last  ) DaoAEA_Sort( nodes, upper+1, last, codes );
+}
 static void DaoOptimizer_InitNodeAEA( DaoOptimizer *self, DaoCnode *node )
 {
-	DMap_Reset( node->set );
+	node->list->size = 0;
 	if( DMap_Find( self->inits, node ) == 0 ){
+		DaoVmCode *codes = self->routine->body->vmCodes->data.codes;
 		daoint i;
 		for(i=0; i<node->index; ++i){
 			DaoCnode *node2 = self->nodes->items.pCnode[i];
-			if( node2->exprid != 0xffff ) DMap_Insert( node->set, node2, NULL );
+			if( node2->exprid != 0xffff ) DArray_Append( node->list, node2 );
 		}
+		DaoAEA_Sort( node->list->items.pCnode, 0, node->list->size - 1, codes );
 	}
 }
 /* Transfer function for Available Expression Analysis: */
-static void DaoOptimizer_AEA( DaoOptimizer *self, DaoCnode *node, DMap *out )
+static void DaoOptimizer_AEA( DaoOptimizer *self, DaoCnode *node, DArray *out )
 {
+	DaoVmCode *codes = self->routine->body->vmCodes->data.codes;
 	DaoCnode *genAE = node->exprid == 0xffff ? NULL : node;
-	daoint i;
+	daoint i, j, pushed = 0;
 
 	switch( node->type ){
 	case DAO_OP_SINGLE :
@@ -318,39 +383,168 @@ static void DaoOptimizer_AEA( DaoOptimizer *self, DaoCnode *node, DMap *out )
 		break;
 	}
 
+#if 0
 	DMap_Assign( out, node->set );
 	for(i=0; i<node->kills->size; i++) DMap_Erase( out, node->kills->items.pVoid[i] );
 	if( genAE != NULL ) DMap_Insert( out, genAE, NULL );
+#endif
+
+	out->size = 0;
+	for(i=0,j=0; i<node->list->size; ){
+		DaoCnode *node1 = node->list->items.pCnode[i];
+		/* Skip the node if it is in the kills: */
+		if( j < node->kills->size ){
+			DaoCnode *node2 = node->kills->items.pCnode[j];
+			if( node1->index == node2->index ){
+				i += 1;
+				j += 1;
+				continue;
+			}else if( DaoAEA_Compare( node1, node2, codes ) > 0 ){
+				j += 1;
+				continue;
+			}
+		}
+		i += 1;
+		if( genAE != NULL ){
+			//if( DaoAEA_Compare2( node1, genAE, codes ) == 0 ) continue;
+			if( node1 == genAE ) pushed = 1;
+			if( pushed == 0 && DaoAEA_Compare( genAE, node1, codes ) < 0 ){
+				DArray_Append( out, genAE );
+				pushed = 1;
+			}
+		}
+		DArray_Append( out, node1 );
+	}
+	if( genAE != NULL && pushed == 0 ) DArray_Append( out, genAE );
 }
 static int DaoOptimizer_UpdateAEA( DaoOptimizer *self, DaoCnode *first, DaoCnode *second )
 {
-	DaoVmCode *codes = self->routine->body->vmCodes->data.codes;
 	DNode *it, *it2;
+	DaoCnode **cnodes1, **cnodes2;
+	DaoVmCode *codes = self->routine->body->vmCodes->data.codes;
+	daoint i, j, k, m, size1, size2, changes = 0;
 
-	DaoOptimizer_AEA( self, first, self->tmp );
+	DaoOptimizer_AEA( self, first, self->array3 );
+
 	/* Intersection: */
-	DMap_Reset( self->tmp2 );
-	for(it=DMap_First(second->set); it; it=DMap_Next(second->set,it)){
-		int found = 0;
-		for(it2=DMap_First(self->tmp); it2; it2=DMap_Next(self->tmp,it2)){
-			DaoVmCode vmc1 = codes[it->key.pCnode->index];
-			DaoVmCode vmc2 = codes[it2->key.pCnode->index];
-			if( vmc1.code == vmc2.code && vmc1.a == vmc2.a && vmc1.b == vmc2.b ){
-				found = 1;
-				break;
+	DArray_Assign( self->array2, second->list );
+	cnodes1 = self->array2->items.pCnode;
+	cnodes2 = self->array3->items.pCnode;
+	size1 = self->array2->size;
+	size2 = self->array3->size;
+	second->list->size = 0;
+	for(i=0, j=0; i<size1 && j<size2; ){
+		DaoCnode *node1 = cnodes1[i];
+		DaoCnode *node2 = cnodes2[j];
+		int cmp = DaoAEA_Compare2( node1, node2, codes );
+		if( cmp == 0 ){
+			/*
+			// Find all the equivalent expressions;
+			// And push them only once to second->list;
+			*/
+			for(k=i+1;  k<size1 && DaoAEA_Compare2( node1, cnodes1[k], codes ) ==0; ) k += 1;
+			for(m=j+1;  m<size2 && DaoAEA_Compare2( node2, cnodes2[m], codes ) ==0; ) m += 1;
+			while( i < k || j < m ){
+				if( i < k && j < m ){
+					DaoCnode *node1 = cnodes1[i];
+					DaoCnode *node2 = cnodes2[j];
+					if( node1->index == node2->index ){
+						DArray_Append( second->list, node1 );
+						i += 1;
+						j += 1;
+					}else if( node1->index < node2->index ){
+						DArray_Append( second->list, node1 );
+						i += 1;
+					}else{
+						DArray_Append( second->list, node2 );
+						changes += 1;
+						j += 1;
+					}
+				}else if( i < k ){
+					DArray_Append( second->list, cnodes1[i] );
+					i += 1;
+				}else{
+					DArray_Append( second->list, cnodes2[j] );
+					changes += 1;
+					j += 1;
+				}
 			}
-		}
-		if( ! found ){
-			DMap_Insert( self->tmp2, it->key.pVoid, NULL );
-			continue;
+		}else if( cmp < 0 ){
+			changes += 1;
+			i += 1;
+		}else{
+			j += 1;
 		}
 	}
-	for(it=DMap_First(self->tmp2); it; it=DMap_Next(self->tmp2,it)){
-		DMap_Erase( second->set, it->key.pVoid );
-	}
-	return self->tmp2->size;
+	return changes;
 }
 
+
+static void Dao_SortInts( daoint *values, int first, int last )
+{
+	int lower=first+1, upper=last;
+	daoint val;
+	daoint pivot;
+	if( first >= last ) return;
+	val = values[first];
+	values[first] = values[ (first+last)/2 ];
+	values[ (first+last)/2 ] = val;
+	pivot = values[ first ];
+
+	while( lower <= upper ){
+		while( lower < last  && values[lower] < pivot ) lower ++;
+		while( upper > first && pivot < values[upper] ) upper --;
+		if( lower < upper ){
+			val = values[lower];
+			values[lower] = values[upper];
+			values[upper] = val;
+			upper --;
+		}
+		lower ++;
+	}
+	val = values[first];
+	values[first] = values[upper];
+	values[upper] = val;
+	if( first+1 < upper ) Dao_SortInts( values, first, upper-1 );
+	if( upper+1 < last  ) Dao_SortInts( values, upper+1, last );
+}
+static int Dao_IntsUnion( DArray *first, DArray *second, DArray *output, daoint excluding )
+{
+	daoint size1 = first->size;
+	daoint size2 = second->size;
+	daoint i, j, changes = 0;
+	output->size = 0;
+	for(i=0, j=0; i<size1 || j<size2; ){
+		if( i < size1 && first->items.pInt[i] == excluding ){
+			i += 1;
+			continue;
+		}
+		if( i < size1 && j < size2 ){
+			daoint id1 = first->items.pInt[i];
+			daoint id2 = second->items.pInt[j];
+			if( id1 == id2 ){
+				DArray_Append( output, IntToPointer(id1) );
+				i += 1;
+				j += 1;
+			}else if( id1 < id2 ){
+				DArray_Append( output, IntToPointer(id1) );
+				i += 1;
+			}else{
+				DArray_Append( output, IntToPointer(id2) );
+				changes += 1;
+				j += 1;
+			}
+		}else if( i < size1 ){
+			DArray_Append( output, first->items.pVoid[i] );
+			i += 1;
+		}else{
+			DArray_Append( output, second->items.pVoid[j] );
+			changes += 1;
+			j += 1;
+		}
+	}
+	return changes;
+}
 
 #define RDA_OFFSET  0xffff
 
@@ -362,55 +556,113 @@ static int DaoOptimizer_UpdateAEA( DaoOptimizer *self, DaoCnode *first, DaoCnode
 static void DaoOptimizer_InitNodeRDA( DaoOptimizer *self, DaoCnode *node )
 {
 	int i;
-	DMap_Reset( node->set );
+	node->list->size = 0;
 	if( DMap_Find( self->inits, node ) ){
 		for(i=0; i<self->routine->body->regCount; i++)
-			DMap_Insert( node->set, IntToPointer(i), NULL );
+			DArray_Append( node->list, IntToPointer(i) );
 	}
 }
 /* Transfer function for Reaching Definition Analysis: */
-static void DaoOptimizer_RDA( DaoOptimizer *self, DaoCnode *node, DMap *out )
+static void DaoOptimizer_RDA( DaoOptimizer *self, DaoCnode *node, DArray *out )
 {
 	DArray *kills;
-	daoint i;
+	daoint i, j, pushed = 0;
 
-	DMap_Assign( out, node->set );
-	if( node->lvalue == 0xffff ) return;
+	if( node->lvalue == 0xffff ){
+		DArray_Assign( out, node->list );
+		return;
+	}
+	out->size = 0;
 	kills = self->uses->items.pArray[node->lvalue];
+	for(i=0,j=0; i<node->list->size; ){
+		daoint id = node->list->items.pInt[i];
+		if( id == node->lvalue ){
+			i += 1;
+			continue;
+		}else if( j < kills->size ){
+			/* Skip if it is in the kills: */
+			daoint id2 = kills->items.pInt[j];
+			if( id == id2 ){
+				i += 1;
+				j += 1;
+				continue;
+			}else if( id > id2 ){
+				j += 1;
+				continue;
+			}
+		}
+		i += 1;
+		if( (node->index + RDA_OFFSET) == id ) pushed = 1;
+		if( pushed == 0 && (node->index + RDA_OFFSET) < id ){
+			DArray_Append( out, IntToPointer( node->index + RDA_OFFSET ) );
+			pushed = 1;
+		}
+		DArray_Append( out, IntToPointer( id ) );
+	}
+	if( pushed == 0 ) DArray_Append( out, IntToPointer( node->index + RDA_OFFSET ) );
+#if 0
 	DMap_Erase( out, IntToPointer(node->lvalue) );
 	for(i=0; i<kills->size; i++) DMap_Erase( out, kills->items.pVoid[i] );
 	DMap_Insert( out, IntToPointer(node->index + RDA_OFFSET), NULL );
+#endif
 }
 static int DaoOptimizer_UpdateRDA( DaoOptimizer *self, DaoCnode *first, DaoCnode *second )
 {
-	int changed = 0;
-	DNode *it;
-
-	DaoOptimizer_RDA( self, first, self->tmp );
+	DaoOptimizer_RDA( self, first, self->array3 );
 	/* Union: */
+#if 0
 	for(it=DMap_First(self->tmp); it; it=DMap_Next(self->tmp,it)){
 		if( DMap_Find( second->set, it->key.pVoid ) == NULL ){
 			DMap_Insert( second->set, it->key.pVoid, NULL );
 			changed = 1;
 		}
 	}
-	return changed;
+#endif
+	DArray_Assign( self->array2, second->list );
+	return Dao_IntsUnion( self->array2, self->array3, second->list, -1 );
 }
 
 
+static void DaoCnode_GetOperands( DaoCnode *self, DArray *operands )
+{
+	int i;
+	operands->size = 0;
+	switch( self->type ){
+	case DAO_OP_SINGLE :
+		DArray_Append( operands, IntToPointer(self->first) );
+		break;
+	case DAO_OP_PAIR   :
+		DArray_Append( operands, IntToPointer(self->first) );
+		DArray_Append( operands, IntToPointer(self->second) );
+		break;
+	case DAO_OP_TRIPLE :
+		DArray_Append( operands, IntToPointer(self->first) );
+		DArray_Append( operands, IntToPointer(self->second) );
+		DArray_Append( operands, IntToPointer(self->third) );
+		break;
+	case DAO_OP_RANGE :
+	case DAO_OP_RANGE2 :
+		for(i=self->first; i<=self->second; i++) DArray_Append( operands, IntToPointer(i) );
+		if( self->type == DAO_OP_RANGE2 ) DArray_Append( operands, IntToPointer(self->third) );
+		break;
+	}
+	Dao_SortInts( operands->items.pInt, 0, operands->size-1 );
+}
 static void DaoOptimizer_InitNodeLVA( DaoOptimizer *self, DaoCnode *node )
 {
 	int i;
-	DMap_Reset( node->set );
-	if( DMap_Find( self->finals, node ) && node->type == DAO_OP_RANGE ){
-		for(i=node->first; i<=node->second; i++) DMap_Insert( node->set, IntToPointer(i), NULL );
-	}
+	node->list->size = 0;
+	if( DMap_Find( self->finals, node ) ) DaoCnode_GetOperands( node, node->list );
 }
 /* Transfer function for Live Variable Analysis: */
-static void DaoOptimizer_LVA( DaoOptimizer *self, DaoCnode *node, DMap *out )
+static void DaoOptimizer_LVA( DaoOptimizer *self, DaoCnode *node, DArray *out )
 {
 	ushort_t i;
 
+	DaoCnode_GetOperands( node, self->array2 );
+	Dao_IntsUnion( node->list, self->array2, out, node->lvalue );
+
+#if 0
 	DMap_Assign( out, node->set );
 	if( node->lvalue != 0xffff ) DMap_Erase( out, IntToPointer(node->lvalue) );
 	switch( node->type ){
@@ -432,21 +684,24 @@ static void DaoOptimizer_LVA( DaoOptimizer *self, DaoCnode *node, DMap *out )
 		if( node->type == DAO_OP_RANGE2 ) DMap_Insert( out, IntToPointer(node->third), NULL );
 		break;
 	}
+#endif
 }
 static int DaoOptimizer_UpdateLVA( DaoOptimizer *self, DaoCnode *first, DaoCnode *second )
 {
-	int changed = 0;
-	DNode *it;
+	DaoOptimizer_LVA( self, first, self->array3 );
 
+#if 0
 	DaoOptimizer_LVA( self, first, self->tmp );
-	/* Union: */
 	for(it=DMap_First(self->tmp); it; it=DMap_Next(self->tmp,it)){
 		if( DMap_Find( second->set, it->key.pVoid ) == NULL ){
 			DMap_Insert( second->set, it->key.pVoid, NULL );
 			changed = 1;
 		}
 	}
-	return changed;
+#endif
+	/* Union: */
+	DArray_Assign( self->array2, second->list );
+	return Dao_IntsUnion( self->array2, self->array3, second->list, -1 );
 }
 static void DaoOptimizer_ProcessWorklist( DaoOptimizer *self, DArray *worklist )
 {
@@ -657,11 +912,11 @@ void DaoOptimizer_LinkDU( DaoOptimizer *self, DaoRoutine *routine )
 	}
 	for(i=0; i<N; i++){
 		node = nodes[i];
-		for(it=DMap_First(node->set); it; it=DMap_Next(node->set,it)){
+		for(j=0; j<node->list->size; ++j){
+			int id = node->list->items.pInt[j];
 			int uses = 0;
-			j = it->key.pInt;
-			if( j < RDA_OFFSET ) continue;
-			node2 = self->nodes->items.pCnode[j-RDA_OFFSET];
+			if( id < RDA_OFFSET ) continue;
+			node2 = self->nodes->items.pCnode[id-RDA_OFFSET];
 			switch( node->type ){
 			case DAO_OP_SINGLE :
 				uses = node->first == node2->lvalue;
@@ -727,6 +982,7 @@ static void DaoOptimizer_InitKills( DaoOptimizer *self )
 	DaoType **types = self->routine->body->regType->items.pType;
 	DaoCnode *node, **nodes = self->nodes->items.pCnode;
 	DaoVmCodeX *vmc, **codes = self->routine->body->annotCodes->items.pVmc;
+	DaoVmCode *codes2 = self->routine->body->vmCodes->data.codes;
 	daoint i, j, N = self->nodes->size;
 	daoint at, bt, ct, code, lvalue, overload;
 	for(i=0; i<N; i++){
@@ -802,6 +1058,7 @@ static void DaoOptimizer_InitKills( DaoOptimizer *self )
 		for(it=DMap_First(kills); it; it=DMap_Next(kills,it)){
 			DArray_Append( node->kills, it->key.pVoid );
 		}
+		DaoAEA_Sort( node->kills->items.pCnode, 0, node->kills->size - 1, codes2 );
 	}
 }
 static void DaoOptimizer_InitNodesRDA( DaoOptimizer *self )
@@ -1074,8 +1331,8 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 
 		sametype = 1;
 		avexprs->size = 0;
-		for(it=DMap_First(node->set); it; it=DMap_Next(node->set,it)){
-			node2 = it->key.pCnode;
+		for(j=0; j<node->list->size; ++j){
+			node2 = node->list->items.pCnode[j];
 			vmc2 = inodes->items.pInode[node2->index];
 			if( vmc->code != vmc2->code || vmc->a != vmc2->a || vmc->b != vmc2->b ) continue;
 			if( types->items.pType[vmc->c] != types->items.pType[node2->lvalue] ) sametype = 0;
@@ -1190,7 +1447,7 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 		if( node->lvalue == 0xffff ) continue;
 		if( node->exprid == 0xffff ) continue; /* this instruction may have side effect; */
 		if( DaoRoutine_IsVolatileParameter( self->routine, node->lvalue ) ) continue;
-		if( DMap_Find( node->set, IntToPointer(node->lvalue) ) ){
+		if( DaoCnode_FindResult( node, IntToPointer(node->lvalue) ) >= 0 ){
 			/* Check if the instructions that use node->lvalue are marked as dead: */
 			for(j=0; j<node->uses->size; ++j){
 				node2 = node->uses->items.pCnode[j];
@@ -1334,10 +1591,10 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 	for(i=0; i<N; i++){
 		node = nodes[i];
 		vmc = codes[i];
-		for(k=0,it=DMap_First(node->set); it; it=DMap_Next(node->set,it)){
-			j = it->key.pInt;
-			if( intervals[2*j] < 0 ) intervals[2*j] = i;
-			intervals[2*j+1] = i + 1; /* plus one because it is alive at the exit; */
+		for(j=0,k=0; j<node->list->size; ++j){
+			int id = node->list->items.pInt[j];
+			if( intervals[2*id] < 0 ) intervals[2*id] = i;
+			intervals[2*id+1] = i + 1; /* plus one because it is alive at the exit; */
 			k += 1;
 		}
 		if( vmc->code == DVM_LOAD || vmc->code == DVM_CAST ){

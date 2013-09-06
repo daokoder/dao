@@ -729,6 +729,7 @@ int DaoProcess_Call( DaoProcess *self, DaoRoutine *M, DaoValue *O, DaoValue *P[]
 	DaoStream_Flush( self->vmSpace->stdioStream );
 	DaoStream_Flush( self->vmSpace->errorStream );
 	fflush( stdout );
+	fflush( stderr );
 	return ret;
 }
 void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[], int n )
