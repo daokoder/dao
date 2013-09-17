@@ -79,6 +79,7 @@ static const char* const daoCtInfo[] =
 	"Invalid reference to non-local variable",
 	"Invalid expression",
 	"Invalid statement",
+	"Unclosed scope",
 	"Invalid scope ending",
 	"Invalid target pattern for decorator",
 	"Invalid functional method",

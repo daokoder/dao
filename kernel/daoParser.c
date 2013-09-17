@@ -3986,8 +3986,20 @@ DecoratorError:
 			start += 1;
 			reg = N = end = 0;
 			if( start <= to && tokens[start]->line == tokens[start-1]->line ){
+				DaoType *retype = (DaoType*) routine->routType->aux;
+				int container = retype->tid >= DAO_ARRAY && retype->tid <= DAO_TUPLE;
+				int tok = tokens[start]->type;
 				self->curToken = start;
-				enode = DaoParser_ParseExpressionList( self, DTOK_COMMA, NULL, NULL );
+				if( container && (tok == DTOK_LB || tok == DTOK_LSB || tok == DTOK_LCB) ){
+					/* routine test() => list<tuple<a:int,b:int>> { return {(1,2), (3,4)} } */
+					int rb = DaoParser_FindPairToken( self, tok, tok + 1, start, to );
+					DArray_PushFront( self->enumTypes, retype );
+					enode = DaoParser_ParseEnumeration( self, 0, tok, start+1, rb-1 );
+					DArray_PopFront( self->enumTypes );
+					self->curToken += 1;
+				}else{
+					enode = DaoParser_ParseExpressionList( self, DTOK_COMMA, NULL, NULL );
+				}
 				if( enode.reg < 0 && self->curToken != start ) return 0;
 				if( enode.reg >= 0 ){
 					reg = enode.reg;
@@ -4521,6 +4533,11 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	}
 
 	if( DaoParser_ParseCodes( self, offset, tokCount-1 )==0 ){
+		DaoParser_PrintError( self, 0, 0, NULL );
+		return 0;
+	}
+	if( self->scopeOpenings->size ){
+		DaoParser_Error3( self, DAO_INVALID_UNCLOSED_SCOPE, self->curToken );
 		DaoParser_PrintError( self, 0, 0, NULL );
 		return 0;
 	}

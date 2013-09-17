@@ -1420,20 +1420,6 @@ CallEntry:
 			case DAO_ENUM  :
 				vmc = vA->xEnum.value ? vmc+1 : vmcBase + vmc->b;
 				break;
-			case DAO_STRING  :
-				vmc = vA->xString.data->size ? vmc+1 : vmcBase + vmc->b;
-				break;
-			case DAO_LIST  :
-				vmc = vA->xList.items.size ? vmc+1 : vmcBase + vmc->b;
-				break;
-			case DAO_MAP   :
-				vmc = vA->xMap.items->size ? vmc+1 : vmcBase + vmc->b;
-				break;
-#ifdef DAO_WITH_NUMARRAY
-			case DAO_ARRAY :
-				vmc = vA->xArray.size ? vmc+1 : vmcBase + vmc->b;
-				break;
-#endif
 			case DAO_CTYPE :
 			case DAO_CSTRUCT :
 				vmc += 1;

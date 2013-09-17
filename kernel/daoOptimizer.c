@@ -3028,8 +3028,8 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		bt = opb < M ? types[opb] : NULL;
 		ct = opc < M ? types[opc] : NULL;
 		first = vmc->first;
-		middle = vmc->middle;
-		last = vmc->last;
+		middle = first + vmc->middle;
+		last = middle + vmc->last;
 
 		if( i >= rettypes->items.pInt[ rettypes->size - 4 ] ){
 			DArray_Erase( rettypes, rettypes->size - 4, -1 );
@@ -3062,13 +3062,15 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			break;
 		case DAO_CODE_SETG :
 		case DAO_CODE_SETU :
+			AssertInitialized( inode->a, 0, first, first );
+			break;
 		case DAO_CODE_MOVE :
 		case DAO_CODE_UNARY :
-			AssertInitialized( inode->a, 0, last, last );
+			AssertInitialized( inode->a, 0, first, last );
 			break;
 		case DAO_CODE_SETF :
-			AssertInitialized( inode->a, 0, last, last );
-			AssertInitialized( inode->c, 0, last, last );
+			AssertInitialized( inode->a, 0, last+1, last+1 );
+			AssertInitialized( inode->c, 0, first, first );
 			break;
 		case DAO_CODE_GETI :
 			AssertInitialized( inode->a, DTE_ITEM_WRONG_ACCESS, first, first );
@@ -3081,7 +3083,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DAO_CODE_SETI :
 			AssertInitialized( inode->c, DTE_ITEM_WRONG_ACCESS, first, first );
 			AssertInitialized( inode->b, DTE_ITEM_WRONG_ACCESS, middle, middle );
-			AssertInitialized( inode->a, DTE_ITEM_WRONG_ACCESS, last, last );
+			AssertInitialized( inode->a, DTE_ITEM_WRONG_ACCESS, last+1, last+1 );
 			break;
 		case DAO_CODE_GETM :
 		case DAO_CODE_ENUM2 :
