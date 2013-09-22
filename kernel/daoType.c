@@ -212,6 +212,11 @@ void DaoType_CheckAttributes( DaoType *self )
 			if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
 			self->rntcount += it->tid >= DAO_INTEGER && it->tid <= DAO_DOUBLE;
 		}
+	}else if( self->tid == DAO_THT ){
+		daoint pos = DString_FindChar( self->name, '<', 0 );
+		if( self->fname == NULL ) self->fname = DString_New(1);
+		DString_Assign( self->fname, self->name );
+		if( pos >= 0 ) DString_Erase( self->fname, pos, -1 );
 	}
 	if( self->aux && self->aux->type == DAO_TYPE ){
 		if( self->aux->xType.attrib & DAO_TYPE_SPEC ) self->attrib |= DAO_TYPE_SPEC;
@@ -500,6 +505,16 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( type && type->tid == DAO_THT ){
 			if( defs ) node = MAP_Find( defs, type );
 			if( node == NULL ){
+				if( type->nested && type->nested->size ){
+					mt = DAO_MT_NOT;
+					for(i=0,n=type->nested->size; i<n; i++){
+						it2 = type->nested->items.pType[i];
+						mt2 = DaoType_MatchTo( self, it2, defs );
+						if( mt2 > mt ) mt = mt2;
+						if( mt == DAO_MT_EQ ) break;
+					}
+					if( mt == DAO_MT_NOT ) return DAO_MT_NOT;
+				}
 				if( defs ) MAP_Insert( defs, type, self );
 				if( self == NULL || self->tid==DAO_ANY || self->tid==DAO_UDT )
 					return DAO_MT_ANYUDF;
@@ -537,8 +552,6 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			if( mt2 < mt ) mt = mt2;
 			if( mt == DAO_MT_NOT ) break;
 		}
-		if( mt && defs && type->aux && type->aux->type == DAO_TYPE )
-			MAP_Insert( defs, type->aux, self->aux );
 		return mt;
 	}else if( type->tid == DAO_VARIANT ){
 		mt = DAO_MT_NOT;
@@ -548,8 +561,6 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			if( mt2 > mt ) mt = mt2;
 			if( mt == DAO_MT_EQ ) break;
 		}
-		if( mt && defs && type->aux && type->aux->type == DAO_TYPE )
-			MAP_Insert( defs, type->aux, self );
 		return mt;
 	}else if( type->tid == DAO_VALTYPE ){
 		if( self->tid != DAO_VALTYPE ) return DaoType_MatchValue( self, type->aux, defs );
@@ -957,16 +968,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	if( node ){
 		if( node->value.pType == self ) return self;
 		return DaoType_DefineTypes( node->value.pType, ns, defs );
-
 	}else if( self->tid & DAO_ANY ){
-		return self;
-	}else if( self->tid == DAO_VARIANT && self->aux ){ /* @T<int|float> */
-		node = MAP_Find( defs, self->aux );
-		if( node == NULL || node->value.pType == self ) return self;
-		type = DaoType_DefineTypes( node->value.pType, ns, defs );
-		if( type == NULL ) return self;
-		return type;
-	}else if( self->tid == DAO_ANY ){
 		return self;
 	}else if( self->tid == DAO_CLASS ){ /* e.g., class<Item<@T>> */
 		return self;
@@ -1047,13 +1049,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	}
 	if( copy->aux == NULL && self->aux != NULL ){
 		copy->aux = self->aux;
-		/* NOT FOR @T<int|string> kind types. Consider:
-		 *   routine Sum( alist : list<@T<int|string>> ) =>@T { return alist.sum(); }
-		 * when type inference is performed for "Sum( { 1, 2, 3 } )",
-		 * type holder "@T" will be defined to "int", then type inference is
-		 * performed on "alist.sum()", and "@T" will be defined to "@T<int|string>",
-		 * because of the prototype of "sum()"; So a cyclic definition is formed. */
-		if( self->aux->type == DAO_TYPE && self->tid != DAO_VARIANT ){
+		if( self->aux->type == DAO_TYPE ){
 			copy->aux = (DaoValue*) DaoType_DefineTypes( & self->aux->xType, ns, defs );
 			if( copy->aux ==NULL ) goto DefFailed;
 		}

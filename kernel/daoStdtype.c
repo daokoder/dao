@@ -1004,8 +1004,9 @@ static void DaoSTR_Clear( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoSTR_Erase( DaoProcess *proc, DaoValue *p[], int N )
 {
 	daoint at = DaoSTR_CheckIndex( p[0]->xString.data, proc, p[1]->xInteger.value, 0 );
-	daoint rm = DaoSTR_CheckParam( proc, p[2]->xInteger.value );
-	if( (at < 0) | (rm < 0) ) return;
+	daoint rm = p[2]->xInteger.value;
+	if( at < 0 ) return;
+	if( rm < 0 ) rm = p[0]->xString.data->size - at;
 	DString_Erase( p[0]->xString.data, at, rm );
 }
 static void DaoSTR_Chop( DaoProcess *proc, DaoValue *p[], int N )

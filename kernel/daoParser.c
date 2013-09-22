@@ -1333,8 +1333,9 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 
 	for(i=0; i<routine->routType->nested->size; i++){
 		type = routine->routType->nested->items.pType[i];
-		if( type ) DaoType_GetTypeHolders( type, self->initTypes );
+		if( type ) DaoType_GetTypeHolders( type, module->initTypes );
 	}
+	if( retype ) DaoType_GetTypeHolders( retype, module->initTypes );
 
 	module->parEnd = right;
 	if( routine->body == NULL || right+1 >= size ) return right;
@@ -1467,6 +1468,12 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 		type = DaoNamespace_MakeType( self->vmSpace->nsInternal, name->mbs, i, pbasic, 0,0 );
 		if( type->tid == DAO_TUPLE ) type->variadic = 1; /* "tuple" is variadic; */
 		return type;
+	}else if( token->name == DTOK_ID_THTYPE ){
+		DNode *it;
+		for(it=DMap_First(self->initTypes); it; it=DMap_Next(self->initTypes,it)){
+			DaoType *initype = it->key.pType;
+			if( DString_EQ( initype->fname, & token->string ) ) return initype;
+		}
 	}
 	type = DaoType_FindType( name, ns, self->hostCdata, klass, routine );
 	if( type && type->tid == DAO_CTYPE ) type = type->kernel->abtype; /* get its cdata type */
@@ -1691,10 +1698,10 @@ static DaoType* DaoParser_ParseType2( DaoParser *self, int start, int end, int *
 			vartype = DaoParser_ParseType( self, start + 2, gt, newpos, types );
 			if( vartype == NULL || *newpos != gt ) goto WrongType;
 			if( vartype->tid == DAO_VARIANT ){
-				type = DaoNamespace_MakeType( ns, type->name->mbs, DAO_VARIANT, initype,
+				type = DaoNamespace_MakeType( ns, type->name->mbs, DAO_THT, NULL,
 						vartype->nested->items.pType, vartype->nested->size );
 			}else{
-				type = DaoNamespace_MakeType( ns, type->name->mbs, DAO_VARIANT, initype,
+				type = DaoNamespace_MakeType( ns, type->name->mbs, DAO_THT, NULL,
 						&vartype, 1 );
 			}
 			*newpos = gt + 1;
@@ -2771,6 +2778,7 @@ InvalidUse:
 static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
+	DaoToken *alias = tokens[start];
 	DaoNamespace *myNS = self->nameSpace;
 	DaoRoutine *routine = self->routine;
 	DaoRoutine *tmpRoutine;
@@ -2785,12 +2793,17 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 	str = & tokens[start]->string;
 	start += 2;
 	if( start >to || tokens[start]->type != DTOK_IDENTIFIER ) goto InvalidAliasing;
-	type = DaoParser_ParseType( self, start, to, & start, NULL );
-	if( type == NULL ) goto InvalidAliasing;
 	if( DaoType_FindType( str, myNS, self->hostCdata, self->hostClass, routine ) ){
+		/* Redundant ??? */
 		DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
 		goto InvalidAliasing;
 	}
+	if( DaoParser_GetRegister( self, alias ) >= 0 ){
+		DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
+		goto InvalidAliasing;
+	}
+	type = DaoParser_ParseType( self, start, to, & start, NULL );
+	if( type == NULL ) goto InvalidAliasing;
 	type = DaoType_Copy( type );
 	DString_Assign( type->name, str );
 	/*  XXX typedef in routine or class */
@@ -3987,10 +4000,15 @@ DecoratorError:
 			reg = N = end = 0;
 			if( start <= to && tokens[start]->line == tokens[start-1]->line ){
 				DaoType *retype = (DaoType*) routine->routType->aux;
-				int container = retype->tid >= DAO_ARRAY && retype->tid <= DAO_TUPLE;
-				int tok = tokens[start]->type;
+				int tok = 0;
 				self->curToken = start;
-				if( container && (tok == DTOK_LB || tok == DTOK_LSB || tok == DTOK_LCB) ){
+				switch(  retype->tid ){
+				case DAO_ARRAY : tok = DTOK_LSB; break;
+				case DAO_LIST  : tok = DTOK_LCB; break;
+				case DAO_MAP   : tok = DTOK_LCB; break;
+				case DAO_TUPLE : tok = DTOK_LB; break;
+				}
+				if( tokens[start]->type == tok ){
 					/* routine test() => list<tuple<a:int,b:int>> { return {(1,2), (3,4)} } */
 					int rb = DaoParser_FindPairToken( self, tok, tok + 1, start, to );
 					DArray_PushFront( self->enumTypes, retype );
