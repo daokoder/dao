@@ -691,6 +691,14 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 	DaoProcess_SetActiveFrame( self, frame );
 	return frame;
 }
+static void DaoProcess_FlushStdStreams( DaoProcess *self )
+{
+	if( self->stdioStream ) DaoStream_Flush( self->stdioStream );
+	DaoStream_Flush( self->vmSpace->stdioStream );
+	DaoStream_Flush( self->vmSpace->errorStream );
+	fflush( stdout );
+	fflush( stderr );
+}
 int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *src )
 {
 	DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
@@ -700,6 +708,7 @@ int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *src )
 	DString_Assign( parser->fileName, ns->name );
 	res = DaoParser_LexCode( parser, src, 1 ) && DaoParser_ParseScript( parser );
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+	DaoProcess_FlushStdStreams( self );
 	return res;
 }
 int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *source )
@@ -713,6 +722,7 @@ int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *source )
 	DString_SetMBS( parser->fileName, "code string" );
 	res = DaoParser_LexCode( parser, source, 1 ) && DaoParser_ParseScript( parser );
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+	DaoProcess_FlushStdStreams( self );
 	if( res == 0 ) return 0;
 	rout = ns->mainRoutines->items.pRoutine[ ns->mainRoutines->size-1 ];
 	if( DaoProcess_Call( self, rout, NULL, NULL, 0 ) ) return 0;
@@ -721,15 +731,12 @@ int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *source )
 int DaoProcess_Call( DaoProcess *self, DaoRoutine *M, DaoValue *O, DaoValue *P[], int N )
 {
 	int ret = DaoProcess_PushCallable( self, M, O, P, N );
-	if( ret ) return ret;
+	if( ret ) goto Done;
 	/* no return value to the previous stack frame */
 	DaoProcess_InterceptReturnValue( self );
 	ret = DaoProcess_Execute( self ) == 0 ? DAO_ERROR : 0;
-	if( self->stdioStream ) DaoStream_Flush( self->stdioStream );
-	DaoStream_Flush( self->vmSpace->stdioStream );
-	DaoStream_Flush( self->vmSpace->errorStream );
-	fflush( stdout );
-	fflush( stderr );
+Done:
+	DaoProcess_FlushStdStreams( self );
 	return ret;
 }
 void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[], int n )
