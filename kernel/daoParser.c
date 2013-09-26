@@ -81,6 +81,7 @@ static DaoProcess* DaoParser_ReserveFoldingOperands( DaoParser *self, int N );
 static int DaoParser_MakeEnumConst( DaoParser *self, DaoEnode *enode, DArray *cid, int regcount );
 static int DaoParser_MakeArithConst( DaoParser *self, ushort_t, DaoValue*, DaoValue*, int*, DaoInode*, int );
 static int DaoParser_ExpClosure( DaoParser *self, int start );
+static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc );
 
 
 typedef struct DStringIntPair
@@ -493,7 +494,7 @@ void DaoParser_Warn( DaoParser *self, int code, DString *ext )
 }
 void DaoParser_Error( DaoParser *self, int code, DString *ext )
 {
-	if( ext && ext->size > 100 ) DString_Erase( ext, 100, -1 );
+	if( code != DAO_EVAL_EXCEPTION &&  ext && ext->size > 100 ) DString_Erase( ext, 100, -1 );
 	DaoLexer_Append( self->elexer, code, self->curLine, ext ? ext->mbs : "" );
 }
 void DaoParser_SumTokens( DaoParser *self, DString *sum, int m, int n, int single_line )
@@ -581,6 +582,12 @@ void DaoParser_PrintInformation( DaoParser *self, DArray *infolist, const char *
 			DaoStream_WriteMBS( stream, " : " );
 			DaoStream_WriteMBS( stream, getCtInfo( tok->name ) );
 			if( tok->string.size ) DaoStream_WriteMBS( stream, " --- " );
+		}
+		if( tok->name == DAO_EVAL_EXCEPTION ){
+			DaoStream_WriteMBS( stream, "\n" );
+			DaoStream_WriteString( stream, & tok->string );
+			DaoStream_WriteMBS( stream, "\n" );
+			continue;
 		}
 		if( tok->string.size ){
 			DaoStream_WriteMBS( stream, "\" " );
@@ -5873,7 +5880,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 	int reg, rb, cst = 0;
 
 	/*
-	int i; for(i=start;i<=end;i++) printf("%s  ", tokens[i]->string->mbs);printf("\n");
+	int i; for(i=start;i<=end;i++) printf("%s  ", tokens[i]->string.mbs);printf("\n");
 	 */
 	result.prev = self->vmcLast;
 	if( start >= size ) return result;
@@ -5891,6 +5898,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		result.last = result.update = self->vmcLast;
 		start = pos + 1;
 	}else if( (tki == DTOK_IDENTIFIER || tki == DKEY_SELF || tki >= DKEY_RAND) && tki2 == DTOK_FIELD ){
+		DaoType *type = self->enumTypes->size ? self->enumTypes->items.pType[0] : NULL;
 		DaoString ds = {DAO_STRING,0,0,0,1,NULL};
 		DaoValue *value = (DaoValue*) & ds;
 		DString *field = & tokens[start]->string;
@@ -5899,7 +5907,10 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		MAP_Insert( self->allConsts, mbs, routine->routConsts->items.size );
 		ds.data = field;
 		self->curToken += 2;
+		if( type && type->tid == DAO_PAR_NAMED ) type = (DaoType*) type->aux;
+		if( type ) DArray_PushFront( self->enumTypes, type );
 		enode = DaoParser_ParseExpression( self, stop );
+		DArray_PopFront( self->enumTypes );
 		if( enode.reg < 0 ) return enode;
 		if( enode.konst ){
 			DaoValue *v2 = DaoParser_GetVariable( self, enode.konst );
@@ -6054,11 +6065,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 			proc = DaoParser_ReserveFoldingOperands( self, 2 );
 			DaoValue_Copy( DaoParser_GetVariable( self, cst ), & proc->activeValues[1] );
 			proc->activeCode = & vmc;
-			value = DaoProcess_MakeConst( proc );
-			if( value == NULL ){
-				DaoParser_Error( self, DAO_CTW_INV_CONST_EXPR, NULL );
-				return error;
-			}
+			value = DaoParser_EvalConst( self, proc );
+			if( value == NULL ) return error;
 			result.konst = LOOKUP_BIND_LC( DaoRoutine_AddConstant( self->routine, value ));
 			regLast = DaoParser_GetNormRegister( self, result.konst, start, 0, rb );
 		}else{
@@ -6989,6 +6997,19 @@ DaoProcess* DaoParser_ReserveFoldingOperands( DaoParser *self, int N )
 	proc->activeNamespace = ns;
 	return proc;
 }
+static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc )
+{
+	DaoValue *value = DaoProcess_MakeConst( proc );
+	if( proc->exceptions->size > 0 ){
+		DaoStream *stream = DaoStream_New();
+		stream->attribs |= DAO_IO_STRING;
+		DaoProcess_PrintException( proc, stream, 1 );
+		DaoParser_Error( self, DAO_EVAL_EXCEPTION, stream->streamString );
+		DaoStream_Delete( stream );
+	}
+	if( value == NULL ) DaoParser_Error( self, DAO_CTW_INV_CONST_EXPR, NULL );
+	return value;
+}
 int DaoParser_MakeEnumConst( DaoParser *self, DaoEnode *enode, DArray *cid, int regcount )
 {
 	DaoProcess *proc;
@@ -7017,7 +7038,7 @@ int DaoParser_MakeEnumConst( DaoParser *self, DaoEnode *enode, DArray *cid, int 
 	GC_ShiftRC( type, proc->activeTypes[0] );
 	proc->activeTypes[0] = type;
 	proc->activeCode = & vmcValue;
-	value = DaoProcess_MakeConst( proc );
+	value = DaoParser_EvalConst( self, proc );
 	if( value == NULL ) return -1;
 	enode->konst = LOOKUP_BIND_LC( DaoRoutine_AddConstant( self->routine, value ));
 	return DaoParser_GetNormRegister( self, enode->konst, p1, 0, p3 );
@@ -7043,7 +7064,7 @@ int DaoParser_MakeArithConst( DaoParser *self, ushort_t code, DaoValue *a, DaoVa
 	GC_DecRC( proc->activeTypes[0] );
 	proc->activeTypes[0] = NULL;
 	proc->activeCode = & vmc;
-	value = DaoProcess_MakeConst( proc );
+	value = DaoParser_EvalConst( self, proc );
 	if( value == NULL ) return -1;
 	*cst = LOOKUP_BIND_LC( DaoRoutine_AddConstant( self->routine, value ));
 	return DaoParser_GetNormRegister( self, *cst, p1, p2, p3 );

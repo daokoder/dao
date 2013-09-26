@@ -839,7 +839,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		future->state = DAO_CALL_RUNNING;
 		DaoProcess_InterceptReturnValue( process );
 		DaoProcess_Execute( process );
-		if( process->exceptions->size > count ) DaoProcess_PrintException( process, 1 );
+		if( process->exceptions->size > count ) DaoProcess_PrintException( process, NULL, 1 );
 
 		if( future->actor ){
 			int erase = 1;

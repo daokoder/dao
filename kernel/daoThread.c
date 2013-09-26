@@ -661,7 +661,7 @@ static void DaoMT_RunFunctional( void *p )
 	self->status |= clone->status != DAO_PROCESS_FINISHED;
 	DMutex_Lock( self->mutex );
 	*self->joined += 1;
-	if( clone->exceptions->size ) DaoProcess_PrintException( clone, 1 );
+	if( clone->exceptions->size ) DaoProcess_PrintException( clone, NULL, 1 );
 	DCondVar_Signal( self->condv );
 	DMutex_Unlock( self->mutex );
 }
@@ -765,7 +765,7 @@ static void DaoMT_Start0( void *p )
 	int count = proc->exceptions->size;
 	DaoProcess_Execute( proc );
 	DaoProcess_ReturnFutureValue( proc, proc->future );
-	if( proc->exceptions->size > count ) DaoProcess_PrintException( proc, 1 );
+	if( proc->exceptions->size > count ) DaoProcess_PrintException( proc, NULL, 1 );
 	if( proc->future->state == DAO_CALL_FINISHED ){
 		DaoFuture_ActivateEvent( proc->future );
 		DaoVmSpace_ReleaseProcess( proc->vmSpace, proc );

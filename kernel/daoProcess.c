@@ -2368,7 +2368,7 @@ CallNotPermitted:
 
 FinishProcess:
 
-	if( self->exceptions->size ) DaoProcess_PrintException( self, 1 );
+	if( self->exceptions->size ) DaoProcess_PrintException( self, NULL, 1 );
 	DaoProcess_PopFrames( self, rollback );
 	/*if( eventHandler ) eventHandler->mainRoutineExit(); */
 
@@ -6434,7 +6434,7 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 	if( (self->vmSpace->options & DAO_OPTION_DEBUG) ){
 		if( self->stopit ==0 && self->vmSpace->stopit ==0 ){
 			DaoProcess_Trace( self, 10 );
-			DaoProcess_PrintException( self, 0 );
+			DaoProcess_PrintException( self, NULL, 0 );
 			STD_Debug( self, NULL, 0 );
 		}
 	}
@@ -6454,12 +6454,13 @@ void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, co
 	DString_Delete( details );
 }
 
-void DaoProcess_PrintException( DaoProcess *self, int clear )
+void DaoProcess_PrintException( DaoProcess *self, DaoStream *stream, int clear )
 {
 	DaoType *extype = dao_Exception_Typer.core->kernel->abtype;
-	DaoStream *stream = self->vmSpace->errorStream;
 	DaoValue **excobjs = self->exceptions->items.pValue;
 	int i, n;
+
+	if( stream == NULL ) stream = self->vmSpace->errorStream;
 	for(i=0,n=self->exceptions->size; i<n; i++){
 		DaoException *except = NULL;
 		if( excobjs[i]->type == DAO_CSTRUCT ){
@@ -6558,10 +6559,7 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 		self->topFrame->returning = -1;
 		DaoProcess_Execute( self );
 	}
-	if( self->exceptions->size >0 ){
-		DaoProcess_PrintException( self, 1 );
-		return NULL;
-	}
+	if( self->exceptions->size >0 ) return NULL;
 
 	/* avoid GC */
 	/* DArray_Clear( self->regArray ); */
