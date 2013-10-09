@@ -4040,7 +4040,7 @@ DecoratorError:
 			}else{
 				DaoParser_AddCode( self, DVM_RETURN, reg, N, 0, start, 0, end );
 			}
-			if( DaoParser_CompleteScope( self, start ) ==0) return 0;
+			if( DaoParser_CompleteScope( self, start-1 ) == 0 ) return 0;
 			continue;
 		}
 
