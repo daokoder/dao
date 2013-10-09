@@ -2791,7 +2791,22 @@ static DaoType* DaoInferencer_UpdateType( DaoInferencer *self, int id, DaoType *
 	*/
 	if( types[id] != NULL ) return types[id];
 
-	if( type->attrib & DAO_TYPE_SPEC ) type = DaoType_DefineTypes( type, NS, defs );
+	/*
+	// Routine type should not be specialized implicitly?
+	// a = {1}
+	// b = {2, 3, 4}
+	// a.iterate::{
+	//     b.iterate::{}
+	// }
+	// Otherwise, the type of b.iterate will be specialized for int type
+	// due to the association of type holder @T to int by a.iterate::{}.
+	// But the methods for list are not specialized, so at runtime,
+	// b.iterate will return the original routine with type holders,
+	// which will not match to the specialized routine type for int!
+	*/
+	if( type->tid != DAO_ROUTINE && (type->attrib & DAO_TYPE_SPEC) ){
+		type = DaoType_DefineTypes( type, NS, defs );
+	}
 	GC_ShiftRC( type, types[id] );
 	types[id] = type;
 	return types[id];
