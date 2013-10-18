@@ -6864,11 +6864,12 @@ static DaoEnode DaoParser_ParseExpression( DaoParser *self, int stop )
 
 static DaoEnode DaoParser_ParseExpressionList( DaoParser *self, int sep, DaoInode *pre, DArray *cids )
 {
-	DaoType *type = self->enumTypes->size ? self->enumTypes->items.pType[0] : NULL;
 	DaoInode *inode;
+	DaoType *type = self->enumTypes->size ? self->enumTypes->items.pType[0] : NULL;
 	DaoEnode item, result = { -1, 0, 1, NULL, NULL, NULL, NULL };
+	DMap *vartypes = self->routine->body->localVarType;
 	DArray *inodes = DArray_New(0);
-	int i, elast, tok, cur, id = 0;
+	int i, tok, cur, id = 0;
 	while( pre != NULL ){
 		DArray_Append( inodes, pre );
 		pre = pre->next;
@@ -6891,9 +6892,8 @@ static DaoEnode DaoParser_ParseExpressionList( DaoParser *self, int sep, DaoInod
 			goto Finalize;
 		}
 		result.konst += item.konst != 0;
-		/* For avoiding adding extra LOAD for the last expression item: */
-		elast = DaoParser_CurrentTokenName( self ) != sep;
-		if( item.update == self->vmcLast && (elast || DaoVmCode_CheckPermutable( item.update->code )) ){
+		/* Avoid adding an extra MOVE for intermediate result: */
+		if( item.update == self->vmcLast && MAP_Find( vartypes, item.update->c ) == NULL ){
 			DaoParser_PopRegister( self );
 			DArray_Append( inodes, item.last );
 		}else{ /* { a[1] += 2 }: item.update is ADD, but item.last is SETI */
@@ -6911,10 +6911,11 @@ static DaoEnode DaoParser_ParseExpressionList( DaoParser *self, int sep, DaoInod
 	} while( DaoParser_CurrentTokenName( self ) == sep );
 	result.count = inodes->size;
 	result.reg = DaoParser_PushRegisters( self, inodes->size );
-	for(i=0; i<inodes->size; i++){
-		DaoParser_AppendCode( self, inodes->items.pInode[i] );
-		self->vmcLast->c = result.reg + i;
-	}
+	/*
+	// Do not change the order of these instructions!
+	// Consider: b = 2; a = { b, b += 3 };
+	*/
+	for(i=0; i<inodes->size; i++) inodes->items.pInode[i]->c = result.reg + i;
 	result.first = result.prev->next;
 	result.last = self->vmcLast;
 Finalize:
@@ -6927,6 +6928,7 @@ static DaoEnode DaoParser_ParseExpressionLists( DaoParser *self, int sep1, int s
 	DaoType *type = self->enumTypes->size ? self->enumTypes->items.pType[0] : NULL;
 	DaoInode *inode;
 	DaoEnode item, result = { -1, 0, 1, NULL, NULL, NULL, NULL };
+	DMap *vartypes = self->routine->body->localVarType;
 	DArray *inodes = DArray_New(0);
 	int i, tok, id=0, count = 0;
 
@@ -6943,7 +6945,8 @@ static DaoEnode DaoParser_ParseExpressionLists( DaoParser *self, int sep1, int s
 		DArray_PopFront( self->enumTypes );
 		if( item.reg < 0 ) goto Finalize;
 		result.konst += item.konst != 0;
-		if( item.update == self->vmcLast && DaoVmCode_CheckPermutable( item.update->code ) ){
+		/* Avoid adding an extra MOVE for intermediate result: */
+		if( item.update == self->vmcLast && MAP_Find( vartypes, item.update->c ) == NULL ){
 			DaoParser_PopRegister( self );
 			DArray_Append( inodes, item.last );
 		}else{ /* { a[1] += 2 }: item.update is ADD, but item.last is SETI */
@@ -6968,10 +6971,8 @@ static DaoEnode DaoParser_ParseExpressionLists( DaoParser *self, int sep1, int s
 	} while( tok == sep1 || tok == sep2 );
 	result.count = inodes->size;
 	result.reg = DaoParser_PushRegisters( self, inodes->size );
-	for(i=0; i<inodes->size; i++){
-		DaoParser_AppendCode( self, inodes->items.pInode[i] );
-		self->vmcLast->c = result.reg + i;
-	}
+	/* Do not change the order of these instructions! */
+	for(i=0; i<inodes->size; i++) self->vmcLast->c = result.reg + i;
 	result.first = result.prev->next;
 	result.last = self->vmcLast;
 Finalize:
