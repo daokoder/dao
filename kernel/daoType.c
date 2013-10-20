@@ -925,14 +925,14 @@ DaoValue* DaoType_CastToParent( DaoValue *object, DaoType *parent )
 		if( DaoType_MatchToParent( object->xCdata.ctype, parent, NULL ) ) return object;
 	}else if( object->type == DAO_OBJECT ){
 		if( object->xObject.defClass->objType == parent ) return object;
-		for(i=0, n=object->xObject.baseCount; i<n; i++){
-			value = DaoType_CastToParent( object->xObject.parents[i], parent );
+		if( object->xObject.parent ){
+			value = DaoType_CastToParent( object->xObject.parent, parent );
 			if( value ) return value;
 		}
 	}else if( object->type == DAO_CLASS ){
 		if( object->xClass.clsType == parent ) return object;
-		for(i=0, n=object->xClass.superClass->size; i<n; i++){
-			value = DaoType_CastToParent( object->xClass.superClass->items.pValue[i], parent );
+		if( object->xClass.parent ){
+			value = DaoType_CastToParent( object->xClass.parent, parent );
 			if( value ) return value;
 		}
 	}

@@ -3662,10 +3662,10 @@ static int DaoProcess_InitBase( DaoProcess *self, DaoVmCode *vmc, DaoValue *call
 		DaoClass *klass = self->activeObject->defClass;
 		int init = self->activeRoutine->attribs & DAO_ROUT_INITOR;
 		if( self->activeRoutine->routHost == klass->objType && init ){
-			return DaoClass_FindSuper( klass, caller );
+			return klass->parent == caller;
 		}
 	}
-	return -1;
+	return 0;
 }
 static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 		DaoValue *O, DaoValue *P[], int N, DaoVmCode *vmc, int noasync )
@@ -3776,7 +3776,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 	int i, code = vmc->code;
 	int codemode = code | (vmc->b<<16);
 	int initbase = DaoProcess_InitBase( self, vmc, (DaoValue*) klass );
-	if( initbase >= 0 ){
+	if( initbase ){
 		othis = self->activeObject;
 	}else{
 		othis = onew = DaoObject_New( klass );
@@ -3807,7 +3807,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoProcess_PutValue( self, (DaoValue*) othis );
 	}else{
 		obj = othis;
-		if( initbase >= 0 ) obj = (DaoObject*) DaoObject_CastToBase( obj, rout->routHost );
+		if( initbase ) obj = (DaoObject*) DaoObject_CastToBase( obj, rout->routHost );
 		DaoProcess_PrepareCall( self, rout, (DaoValue*) obj, params, npar, vmc, 1 );
 		if( self->exceptions->size ) goto DeleteObject;
 	}
@@ -3905,12 +3905,12 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 
 		sup = DaoProcess_InitBase( self, vmc, caller );
 		//printf( "sup = %i\n", sup );
-		if( caller->type == DAO_CTYPE && sup >= 0 ){
+		if( caller->type == DAO_CTYPE && sup ){
 			DaoCdata *cdata = & self->activeValues[ vmc->c ]->xCdata;
 			if( cdata && (cdata->type == DAO_CDATA || cdata->type == DAO_CSTRUCT) ){
 				//printf( "%p %p %p\n", cdata, cdata->object, self->activeObject->rootObject );
-				GC_ShiftRC( cdata, self->activeObject->parents[sup] );
-				self->activeObject->parents[sup] = (DaoValue*) cdata;
+				GC_ShiftRC( cdata, self->activeObject->parent );
+				self->activeObject->parent = (DaoValue*) cdata;
 				GC_ShiftRC( self->activeObject->rootObject, cdata->object );
 				cdata->object = self->activeObject->rootObject;
 			}

@@ -19,10 +19,10 @@ class AA
 	routine CallVirt(){ ((Interface)self).Virt() }
 }
 
-class BB
+class BB : AA
 {
 	const  cst = 'abc';
-	var    obj = 'abc';
+	var    obj = 'def';
 	var    obj2 = 'abc';
 
 	routine BB( i = 0 ){ io.writeln( 'BB::BB( i = 0 )' ); }
@@ -31,7 +31,7 @@ class BB
 	routine Virt(){ io.writeln( 'BB::Virt()' ) }
 }
 
-class CC : AA, BB
+class CC : BB
 {
 	var    obj2 = 0C;
 
@@ -47,6 +47,7 @@ global c;
 c = CC();
 @[test(code_01)]
 @[test(code_01)]
+AA::AA( i = 0 )
 BB::BB( i = 0 )
 @[test(code_01)]
 
@@ -56,7 +57,7 @@ BB::BB( i = 0 )
 c.cst
 @[test(code_01)]
 @[test(code_01)]
-123
+'abc'
 @[test(code_01)]
 
 
@@ -65,7 +66,7 @@ c.cst
 c.obj
 @[test(code_01)]
 @[test(code_01)]
-456
+'def'
 @[test(code_01)]
 
 
@@ -104,20 +105,6 @@ c.CallVirt();
 @[test(code_01)]
 @[test(code_01)]
 CC::Virt()
-@[test(code_01)]
-
-
-
-
-@[test(code_01)]
-class DD : AA, BB
-{
-	use routine BB( i = 0 );
-	use routine AA( i = 0 ); # this raises error, due to duplicated signature.
-}
-@[test(code_01)]
-@[test(code_01)]
-{{WARNING}} .* {{At line}} .* {{Method signature was used}}
 @[test(code_01)]
 
 

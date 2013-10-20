@@ -465,11 +465,7 @@ void DaoValue_MarkConst( DaoValue *self )
 	case DAO_OBJECT :
 		n = self->xObject.defClass->instvars->size;
 		for(i=1; i<n; i++) DaoValue_MarkConst( self->xObject.objValues[i] );
-		for(i=0; i<self->xObject.baseCount; i++){
-			DaoValue *obj = (DaoValue*) self->xObject.parents[i];
-			if( obj == NULL || obj->type != DAO_OBJECT ) continue;
-			DaoValue_MarkConst( obj );
-		}
+		if( self->xObject.parent ) DaoValue_MarkConst( self->xObject.parent );
 		break;
 	default : break;
 	}

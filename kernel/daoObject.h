@@ -35,17 +35,16 @@ struct DaoObject
 {
 	DAO_DATA_COMMON;
 
-	uchar_t     isRoot     : 1;
-	uchar_t     isDefault  : 1;
-	uchar_t     isAsync    : 2;
-	uchar_t     baseCount  : 4; /* number of base objects; may be set to zero by GC; */
-	uchar_t     baseCount2 : 4; /* used to determine if objValues is allocated with the object; */
+	ushort_t    isRoot    : 1;
+	ushort_t    isDefault : 1;
+	ushort_t    isAsync   : 1;
+	ushort_t    unused    : 13;
 	ushort_t    valueCount;
 
 	DaoClass   *defClass; /* definition class; */
 	DaoObject  *rootObject; /* root object for safe down-casting; */
+	DaoValue   *parent;    /* parent object; */
 	DaoValue  **objValues; /* instance variable values; */
-	DaoValue   *parents[1]; /* the actual size is equal to ::baseCount; */
 };
 
 DAO_DLL DaoObject* DaoObject_Allocate( DaoClass *klass, int value_count );
@@ -56,7 +55,7 @@ DAO_DLL void DaoObject_Delete( DaoObject *self );
 DAO_DLL int DaoObject_ChildOf( DaoValue *self, DaoValue *obj );
 
 DAO_DLL DaoValue* DaoObject_CastToBase( DaoObject *self, DaoType *host );
-DAO_DLL DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent );
+DAO_DLL void DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent );
 
 DAO_DLL void DaoObject_AddData( DaoObject *self, DString *name, DaoValue *data );
 

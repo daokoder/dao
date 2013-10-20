@@ -174,19 +174,16 @@ DaoTypeBase objTyper=
 
 DaoObject* DaoObject_Allocate( DaoClass *klass, int value_count )
 {
-	int parent_count = klass->superClass->size;
-	int extra = (parent_count + value_count - 1)*sizeof(DaoValue*);
+	int extra = value_count * sizeof(DaoValue*);
 	DaoObject *self = (DaoObject*) dao_calloc( 1, sizeof(DaoObject) + extra );
 
 	DaoValue_Init( self, DAO_OBJECT );
 	GC_IncRC( klass );
 	self->defClass = klass;
 	self->isRoot = 1;
-	self->baseCount = parent_count;
-	self->baseCount2 = parent_count;
 	self->valueCount = value_count;
-	self->objValues = self->parents + parent_count;
-	memset( self->parents, 0, (parent_count + value_count)*sizeof(DaoValue*) );
+	self->objValues = (DaoValue**) (self + 1);
+	memset( self->objValues, 0, value_count*sizeof(DaoValue*) );
 	return self;
 }
 DaoObject* DaoObject_New( DaoClass *klass )
@@ -210,28 +207,22 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 		GC_IncRC( self );
 		self->rootObject = self;
 		if( self->isDefault ){ /* no value space is allocated for default object yet! */
-			self->baseCount = klass->superClass->size;
-			self->baseCount2 = klass->superClass->size;
 			self->valueCount = klass->objDataName->size;
 			self->objValues = (DaoValue**) dao_calloc( self->valueCount, sizeof(DaoValue*) );
 		}
 	}
 	offset += self->defClass->objDefCount;
-	for(i=0; i<klass->superClass->size; i++){
-		DaoClass *supclass = klass->superClass->items.pClass[i];
+	if( klass->parent != NULL && klass->parent->type == DAO_CLASS ){
 		DaoObject *sup = NULL;
-		if( supclass->type == DAO_CLASS ){
-			if( self->isDefault ){
-				sup = & supclass->objType->value->xObject;
-			}else{
-				sup = DaoObject_Allocate( supclass, 0 );
-				sup->isRoot = 0;
-				DaoObject_Init( sup, self->rootObject, offset );
-			}
-			GC_IncRC( sup );
-			offset += sup->defClass->objDataName->size;
+		if( self->isDefault ){
+			sup = & klass->parent->xClass.objType->value->xObject;
+		}else{
+			sup = DaoObject_Allocate( (DaoClass*) klass->parent, 0 );
+			sup->isRoot = 0;
+			DaoObject_Init( sup, self->rootObject, offset );
 		}
-		self->parents[i] = (DaoValue*)sup;
+		GC_IncRC( sup );
+		self->parent = (DaoValue*)sup;
 	}
 	self->objValues[0] = (DaoValue*) self;
 	GC_IncRC( self );
@@ -253,10 +244,10 @@ void DaoObject_Delete( DaoObject *self )
 {
 	int i;
 	GC_DecRC( self->defClass );
-	for(i=0; i<self->baseCount; i++) GC_DecRC( self->parents[i] );
+	GC_DecRC( self->parent );
 	if( self->isRoot ){
 		for(i=0; i<self->valueCount; i++) GC_DecRC( self->objValues[i] );
-		if( self->objValues != (self->parents + self->baseCount2) ) dao_free( self->objValues );
+		if( self->objValues != (DaoValue**) (self + 1) ) dao_free( self->objValues );
 	}
 	dao_free( self );
 }
@@ -277,59 +268,43 @@ int DaoObject_ChildOf( DaoValue *self, DaoValue *obj )
 		}
 		return 0;
 	}
-	if( self->type != DAO_OBJECT ) return 0;
-	for(i=0; i<self->xObject.baseCount; i++){
-		if( obj == self->xObject.parents[i] ) return 1;
-		if( DaoObject_ChildOf( self->xObject.parents[i], obj ) ) return 1;
-	}
+	if( self->type != DAO_OBJECT || self->xObject.parent == NULL ) return 0;
+	if( obj == self->xObject.parent ) return 1;
+	if( DaoObject_ChildOf( self->xObject.parent, obj ) ) return 1;
 	return 0;
 }
 
 DaoValue* DaoObject_CastToBase( DaoObject *self, DaoType *host )
 {
-	int i;
+	DaoValue *sup = self->parent;
 	if( host == NULL ) return NULL;
 	if( self->defClass->objType == host ) return (DaoValue*) self;
-	for(i=0; i<self->baseCount; i++){
-		DaoValue *sup = self->parents[i];
-		if( sup == NULL ) return NULL;
-		if( sup->type == DAO_OBJECT ){
-			if( (sup = DaoObject_CastToBase( & sup->xObject, host ) ) ) return sup;
-		}else if( sup->type == DAO_CSTRUCT && host->tid == DAO_CSTRUCT ){
-			if( DaoType_ChildOf( sup->xCdata.ctype, host ) ) return sup;
-		}else if( sup->type == DAO_CDATA && host->tid == DAO_CDATA ){
-			if( DaoType_ChildOf( sup->xCdata.ctype, host ) ) return sup;
-		}
+	if( self->parent == NULL ) return NULL;
+	if( sup->type == DAO_OBJECT ){
+		if( (sup = DaoObject_CastToBase( & sup->xObject, host ) ) ) return sup;
+	}else if( sup->type == DAO_CSTRUCT && host->tid == DAO_CSTRUCT ){
+		if( DaoType_ChildOf( sup->xCdata.ctype, host ) ) return sup;
+	}else if( sup->type == DAO_CDATA && host->tid == DAO_CDATA ){
+		if( DaoType_ChildOf( sup->xCdata.ctype, host ) ) return sup;
 	}
 	return NULL;
 }
-DaoObject* DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent )
+void DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent )
 {
-	int i;
 	DaoObject *child = NULL;
-	if( parent == NULL ) return NULL;
-	for(i=0; i<self->baseCount; i++){
-		DaoObject *obj = (DaoObject*) self->parents[i];
-		DaoValue *sup = self->defClass->superClass->items.pValue[i];
-		if( sup == NULL ) continue;
-		if( obj ){
-			if( sup->type == DAO_CLASS ){
-				DaoObject *o = DaoObject_SetParentCdata( obj, parent );
-				/* TODO: map to first common child for multiple inheritance: */
-				if( o ) child = o;
-			}
-			continue;
-		}
-		if( sup->type == DAO_CTYPE ){
-			DaoCdata *cdata = (DaoCdata*)sup;
-			if( DaoType_ChildOf( cdata->ctype, parent->ctype ) ){
-				GC_IncRC( parent );
-				self->parents[i] = (DaoValue*)parent;
-				return self;
-			}
+	DaoObject *obj = (DaoObject*) self->parent;
+	DaoValue *sup = self->defClass->parent;
+	if( parent == NULL ) return;
+	if( sup == NULL ) return;
+	if( obj && obj->type == DAO_OBJECT ){
+		DaoObject_SetParentCdata( obj, parent );
+	}else if( sup->type == DAO_CTYPE ){
+		DaoCdata *cdata = (DaoCdata*)sup;
+		if( DaoType_ChildOf( cdata->ctype, parent->ctype ) ){
+			GC_ShiftRC( parent, self->parent );
+			self->parent = (DaoValue*) parent;
 		}
 	}
-	return child;
 }
 DaoCstruct* DaoObject_CastCstruct( DaoObject *self, DaoType *type )
 {

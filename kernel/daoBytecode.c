@@ -1021,15 +1021,18 @@ void DaoByteEncoder_EncodeClass( DaoByteEncoder *self, DaoClass *klass )
 	DString_AppendUInt( self->classes, id );
 	DString_AppendUInt( self->classes, id2 );
 	DString_AppendUInt16( self->classes, klass->attribs );
+#warning "--------------- superClass"
+#if 0
 	DString_AppendUInt16( self->classes, klass->superClass->size );
 	for(i=0; i<klass->superClass->size; ++i){
 		DaoValue *value = klass->superClass->items.pValue[i];
 		id = DaoByteEncoder_EncodeDeclaration( self, value );
 		DString_AppendUInt( self->classes, id );
 	}
-	DString_AppendUInt16( self->classes, klass->mixinClass->size );
-	for(i=0; i<klass->mixinClass->size; ++i){
-		DaoValue *value = klass->mixinClass->items.pValue[i];
+#endif
+	DString_AppendUInt16( self->classes, klass->mixinBases->size );
+	for(i=0; i<klass->mixinBases->size; ++i){
+		DaoValue *value = klass->mixinBases->items.pValue[i];
 		id = DaoByteEncoder_EncodeDeclaration( self, value );
 		DString_AppendUInt( self->classes, id );
 	}

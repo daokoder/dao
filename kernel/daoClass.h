@@ -31,8 +31,6 @@
 
 #include"daoType.h"
 
-#define DAO_MAX_PARENT 16
-
 #define DAO_CLASS_CONST_CSTOR  1
 #define DAO_CLASS_CONST_DEF    2
 
@@ -55,9 +53,14 @@ struct DaoClass
 	DArray  *glbDataName;  /* <DString*>: keep track field declaration order: */
 	DArray  *objDataName;  /* <DString*>: keep tracking field declaration order: */
 
-	DArray  *baseClass;    /* <DaoClass/DaoCData*>: mixin or super classes; */
-	DArray  *superClass;   /* <DaoClass/DaoCData*>: direct super classes; */
-	DArray  *mixinClass;   /* <DaoClass*>: direct mixin classes; */
+	DaoValue  *parent;     /* DaoClass or DaoCData; */
+
+	DArray  *mixinBases;   /* <DaoClass*>: direct mixin classes; */
+	DArray  *allBases;     /* <DaoClass/DaoCData*>: mixin or parent classes; */
+
+	//DArray  *baseClass;    /* <DaoClass/DaoCData*>: mixin or super classes; */
+	//DArray  *superClass;   /* <DaoClass/DaoCData*>: direct super classes; */
+	//DArray  *mixinClass;   /* <DaoClass*>: direct mixin classes; */
 
 	DArray  *mixins;  /* <DaoClass*>: mixin classes; */
 	DVector *ranges;  /* <ushort_t>: ranges of the fields of the mixin classes; */
@@ -117,7 +120,6 @@ DAO_DLL void DaoClass_ResetAttributes( DaoClass *self );
 
 DAO_DLL DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types );
 
-DAO_DLL int  DaoClass_FindSuper( DaoClass *self, DaoValue *super );
 DAO_DLL int  DaoClass_ChildOf( DaoClass *self, DaoValue *super );
 DAO_DLL void DaoClass_AddMixinClass( DaoClass *self, DaoClass *mixin );
 DAO_DLL void DaoClass_AddSuperClass( DaoClass *self, DaoValue *super );

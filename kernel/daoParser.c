@@ -813,13 +813,13 @@ static DaoInode* DaoParser_AddCode( DaoParser *self, ushort_t code,
 static int DaoParser_AddDefaultInitializer( DaoParser *self, DaoClass *klass, int flags )
 {
 	daoint i, j;
-	for(i=0; i<klass->baseClass->size; i++){
-		DaoClass *base = (DaoClass*) klass->baseClass->items.pValue[i];
-		DaoCdata *cdata = (DaoCdata*) klass->baseClass->items.pValue[i];
+	for(i=0; i<klass->allBases->size; i++){
+		DaoClass *base = (DaoClass*) klass->allBases->items.pValue[i];
+		DaoCdata *cdata = (DaoCdata*) klass->allBases->items.pValue[i];
 		DaoInode *inode;
 		int reg, opb = 0;
 		if( flags & (1<<i) ) continue;
-		if( i < klass->mixinClass->size ){
+		if( i < klass->mixinBases->size ){
 			for(j=0; j<klass->mixins->size; ++j){
 				if( klass->mixins->items.pClass[j] == base ){
 					int offset = klass->ranges->data.ushorts[6*j];
@@ -828,7 +828,7 @@ static int DaoParser_AddDefaultInitializer( DaoParser *self, DaoClass *klass, in
 				}
 			}
 		}else{
-			int offset = klass->offsets->data.ushorts[2*(i - klass->mixinClass->size)];
+			int offset = klass->offsets->data.ushorts[2*(i - klass->mixinBases->size)];
 			opb = offset + (base->type == DAO_CLASS ? DAO_CLASS_CONST_CSTOR : 0);
 		}
 		inode = DaoParser_AddCode( self, DVM_GETCK, 1, 0, 0, 0, 0, 0 );
@@ -868,8 +868,8 @@ static int DaoParser_ParseInitSuper( DaoParser *self, DaoParser *module, int sta
 			if( value->type != DAO_CLASS && value->type != DAO_CTYPE ) goto ErrorRoutine;
 			if( pos < 0 || tokens[pos+1]->type != DTOK_LB ) goto ErrorRoutine;
 
-			for(i=0; i<klass->baseClass->size; ++i){
-				if( value == klass->baseClass->items.pValue[i] ){
+			for(i=0; i<klass->allBases->size; ++i){
+				if( value == klass->allBases->items.pValue[i] ){
 					found = i;
 					break;
 				}
@@ -880,7 +880,7 @@ static int DaoParser_ParseInitSuper( DaoParser *self, DaoParser *module, int sta
 			rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, dlm, -1 );
 			if( rb < 0 ) goto ErrorRoutine;
 
-			offset = klass->offsets->data.ushorts[2*(found - klass->mixinClass->size)];
+			offset = klass->offsets->data.ushorts[2*(found - klass->mixinBases->size)];
 			inode = DaoParser_AddCode( module, DVM_GETCK, 1, 0, 0, 0, 0, 0 );
 			inode->b = offset;
 			inode->c = DaoParser_PushRegister( module );
@@ -2650,7 +2650,7 @@ static int DaoParser_ParseUseConstructor( DaoParser *self, int start, int to )
 	DaoRoutine *routine = self->routine;
 	DaoRoutine *tmpRoutine;
 	DaoParser *tmpParser;
-	DaoCdata *cdata = NULL;
+	DaoCtype *ctype = NULL;
 	DaoClass *klass = NULL, *host = self->hostClass;
 	DaoToken **tokens = self->tokens->items.pToken;
 	DString *name = & tokens[start]->string;
@@ -2661,23 +2661,19 @@ static int DaoParser_ParseUseConstructor( DaoParser *self, int start, int to )
 	if( self->isClassBody == 0 ) goto InvalidUse;
 	if( DaoParser_CheckNameToken( self, start, to, DAO_INVALID_USE_STMT, use ) ==0 ) goto InvalidUse;
 
-	for(i=0; i<host->superClass->size; i++){
-		if( host->superClass->items.pValue[i]->type == DAO_CLASS ){
-			klass = host->superClass->items.pClass[i];
-			if( DString_EQ( klass->className, name ) ) break;
-			klass = NULL;
-		}else if( host->superClass->items.pValue[i]->type == DAO_CTYPE ){
-			cdata = host->superClass->items.pCdata[i];
-			if( DString_EQ( cdata->ctype->name, name ) ) break;
-			cdata = NULL;
-		}
+	if( host->parent && host->parent->type == DAO_CLASS ){
+		klass = (DaoClass*) host->parent;
+		if( DString_EQ( host->parent->xClass.className, name ) == 0 ) klass = NULL;
+	}else if( host->parent && host->parent->type == DAO_CTYPE ){
+		ctype = (DaoCtype*) host->parent;
+		if( DString_EQ( host->parent->xCtype.ctype->name, name ) == 0 ) ctype = NULL;
 	}
-	if( klass == NULL && cdata == NULL ){
+	if( klass == NULL && ctype == NULL ){
 		DaoParser_Error( self, DAO_SYMBOL_NEED_CLASS_CTYPE, & tokens[start]->string );
 		DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, start, 1 );
 		return -1;
 	}
-	type = klass ? klass->objType : cdata->ctype->kernel->abtype;
+	type = klass ? klass->objType : ctype->ctype->kernel->abtype;
 	tmpParser = DaoParser_NewRoutineParser( self, start, 0 );
 	tmpRoutine = tmpParser->routine;
 	GC_ShiftRC( type, tmpRoutine->routHost );
@@ -2706,8 +2702,8 @@ static int DaoParser_ParseUseConstructor( DaoParser *self, int start, int to )
 				found |= DaoParser_UseConstructor( self, rs, use, start );
 			}
 		}
-	}else if( cdata ){
-		DaoRoutine *func = DaoType_FindFunction( cdata->ctype, name );
+	}else if( ctype ){
+		DaoRoutine *func = DaoType_FindFunction( ctype->ctype, name );
 		if( func == NULL ){
 			DaoParser_Error( self, DAO_CONSTR_NOT_DEFINED, name );
 			DaoParser_Error2( self, DAO_INVALID_USE_STMT, use, start, 1 );
@@ -3261,7 +3257,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			if( LOOKUP_ST( it->value.pInt ) != DAO_GLOBAL_CONSTANT ) continue;
 			if( LOOKUP_UP( it->value.pInt ) > 1 ) continue; /* skip indirectly loaded; */
 			if( mixin->type != DAO_CLASS ) continue;
-			if( mixin->superClass->size ) continue;
+			if( mixin->parent != NULL ) continue;
 			if( mixin->className->mbs[0] != '@' ) continue; /* Not an aspect class; */
 			if( DArray_MatchAffix( mixin->decoTargets, klass->className ) == 0 ) continue;
 			DaoClass_AddMixinClass( klass, mixin );
@@ -3283,7 +3279,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 				goto ErrorClassDefinition;
 			}
 			mixin = (DaoClass*) value;
-			if( mixin->superClass->size ){
+			if( mixin->parent != NULL ){
 				/* Class with parent classes cannot be used as mixin: */
 				ec = DAO_INVALID_MIXIN_CLASS;
 				goto ErrorClassDefinition;
@@ -3296,31 +3292,28 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	}
 
 	if( tokens[start]->name == DTOK_COLON ){
-		/* class AA : NS::BB, CC{ } */
-		unsigned char sep = DTOK_COLON;
-		while( tokens[start]->name == sep ){
-			DaoClass *super = NULL;
-			start = DaoParser_FindScopedConstant( self, & value, start+1 );
-			if( start <0 ) goto ErrorClassDefinition;
-			ename = & tokens[start]->string;
-			if( value == NULL || (value->type != DAO_CLASS && value->type != DAO_CTYPE) ){
-				ec = DAO_SYMBOL_NEED_CLASS_CTYPE;
-				if( value == NULL || value->type == 0 || value->type == DAO_STRING )
-					ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
-				goto ErrorClassDefinition;
-			}
-			super = & value->xClass;
-			start ++;
-
-			if( tokens[start]->name == DTOK_LB ) goto ErrorClassDefinition;
-			if( super == NULL ){
+		/* class AA : NS::BB { } */
+		DaoClass *super = NULL;
+		start = DaoParser_FindScopedConstant( self, & value, start+1 );
+		if( start <0 ) goto ErrorClassDefinition;
+		ename = & tokens[start]->string;
+		if( value == NULL || (value->type != DAO_CLASS && value->type != DAO_CTYPE) ){
+			ec = DAO_SYMBOL_NEED_CLASS_CTYPE;
+			if( value == NULL || value->type == 0 || value->type == DAO_STRING )
 				ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
-				goto ErrorClassDefinition;
-			}
-			/* Add a reference to its super classes: */
-			DaoClass_AddSuperClass( klass, (DaoValue*) super );
-			sep = DTOK_COMMA;
+			goto ErrorClassDefinition;
 		}
+		super = & value->xClass;
+		start ++;
+
+		if( tokens[start]->name == DTOK_LB ) goto ErrorClassDefinition; /* old syntax; */
+		if( tokens[start]->name == DTOK_COMMA ) goto ErrorClassDefinition; /* old syntax; */
+		if( super == NULL ){
+			ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
+			goto ErrorClassDefinition;
+		}
+		/* Add a reference to its super classes: */
+		DaoClass_AddSuperClass( klass, (DaoValue*) super );
 	}/* end parsing super classes */
 	if( tokens[start]->name == DKEY_FOR ){
 		ec = DAO_INVALID_DECO_PATTERN;
@@ -6925,8 +6918,8 @@ Finalize:
 /* sep2 should be a natural seperator such as comma and semicolon: */
 static DaoEnode DaoParser_ParseExpressionLists( DaoParser *self, int sep1, int sep2, int *step, DArray *cids )
 {
-	DaoType *type = self->enumTypes->size ? self->enumTypes->items.pType[0] : NULL;
 	DaoInode *inode;
+	DaoType *type = self->enumTypes->size ? self->enumTypes->items.pType[0] : NULL;
 	DaoEnode item, result = { -1, 0, 1, NULL, NULL, NULL, NULL };
 	DMap *vartypes = self->routine->body->localVarType;
 	DArray *inodes = DArray_New(0);

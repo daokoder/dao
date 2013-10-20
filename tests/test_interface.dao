@@ -107,7 +107,7 @@ routine TestJointInterface( inter : JointInterface )
 	TestIteratorInterface( inter )
 }
 
-class JointClass : MethodClass, OperatorClass, IteratorClass
+class JointClass ( MethodClass, OperatorClass, IteratorClass )
 {
 }
 
