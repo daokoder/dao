@@ -6972,7 +6972,7 @@ static DaoEnode DaoParser_ParseExpressionLists( DaoParser *self, int sep1, int s
 	result.count = inodes->size;
 	result.reg = DaoParser_PushRegisters( self, inodes->size );
 	/* Do not change the order of these instructions! */
-	for(i=0; i<inodes->size; i++) self->vmcLast->c = result.reg + i;
+	for(i=0; i<inodes->size; i++) inodes->items.pInode[i]->c = result.reg + i;
 	result.first = result.prev->next;
 	result.last = self->vmcLast;
 Finalize:
