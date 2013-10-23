@@ -161,40 +161,6 @@ void DaoClass_AddReference( DaoClass *self, void *reference )
 void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
 int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
 void DaoClass_Parents( DaoClass *self, DArray *parents, DArray *offsets );
-void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes )
-{
-	DaoValue *value = *self;
-	DaoType *tp, *tp2;
-
-	if( value == NULL || value->type < DAO_ENUM ) return;
-	tp = DaoNamespace_GetType( ns, value );
-	/* DaoType_DefineTypes() will make proper specialization of template-like type: */
-	tp2 = DaoType_DefineTypes( tp, ns, deftypes );
-	if( tp == tp2 ) return;
-	if( tp2->tid == DAO_OBJECT && value->type == DAO_OBJECT && value->xObject.isDefault ){
-		/* "self" is supposed to be a constant, so it has to be a default instance: */
-		GC_ShiftRC( tp2->value, value ); /* default instance of specialized Dao class; */
-		*self = tp2->value;
-		return;
-	}else if( tp2->tid == DAO_CLASS && value->type == DAO_CLASS ){
-		GC_ShiftRC( tp2->aux, value ); /* specialized Dao class; */
-		*self = tp2->aux;
-		return;
-	}else if( tp2->tid == DAO_CTYPE && value->type == DAO_CTYPE ){
-		GC_ShiftRC( tp2->aux, value ); /* specialized C type; */
-		*self = tp2->aux;
-		return;
-	}else if( tp2->tid == DAO_CDATA && value->type == DAO_CDATA ){
-		GC_ShiftRC( tp2->value, value ); /* default instance of specialized C type; */
-		*self = tp2->value;
-		return;
-	}else if( tp2->tid == DAO_CSTRUCT && value->type == DAO_CSTRUCT ){
-		GC_ShiftRC( tp2->value, value ); /* default instance of specialized C type; */
-		*self = tp2->value;
-		return;
-	}
-	DaoValue_Move( value, self, tp2 );
-}
 
 
 void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
@@ -494,7 +460,6 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 		if( value->type != DAO_ROUTINE || rout->routHost != mixin->objType ){
 			DaoConstant *cst = DaoConstant_New( value );
 			DArray_Append( self->constants, cst );
-			DaoValue_Update( & cst->value, ns, deftypes );
 			continue;
 		}
 		if( rout->overloads == NULL ){

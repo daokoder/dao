@@ -1007,7 +1007,7 @@ void DaoByteEncoder_EncodeClass( DaoByteEncoder *self, DaoClass *klass )
 {
 	DNode *it;
 	DMap *abstypes;
-	int i, id, id2, count;
+	int i, id, id2, id3, count;
 
 	if( DMap_Find( self->mapClasses, klass ) ) return;
 
@@ -1016,20 +1016,13 @@ void DaoByteEncoder_EncodeClass( DaoByteEncoder *self, DaoClass *klass )
 
 	DMap_Insert( self->mapClasses, klass, IntToPointer( self->mapClasses->size + 1 ) );
 	id2 = DaoByteEncoder_EncodeDeclaration( self, (DaoValue*)klass->classRoutine );
+	id3 = DaoByteEncoder_EncodeDeclaration( self, klass->parent );
 
 	DaoByteEncoder_EncodeValue( self, (DaoValue*)klass->classRoutine );
 	DString_AppendUInt( self->classes, id );
-	DString_AppendUInt( self->classes, id2 );
 	DString_AppendUInt16( self->classes, klass->attribs );
-#warning "--------------- superClass"
-#if 0
-	DString_AppendUInt16( self->classes, klass->superClass->size );
-	for(i=0; i<klass->superClass->size; ++i){
-		DaoValue *value = klass->superClass->items.pValue[i];
-		id = DaoByteEncoder_EncodeDeclaration( self, value );
-		DString_AppendUInt( self->classes, id );
-	}
-#endif
+	DString_AppendUInt( self->classes, id2 );
+	DString_AppendUInt( self->classes, id3 );
 	DString_AppendUInt16( self->classes, klass->mixinBases->size );
 	for(i=0; i<klass->mixinBases->size; ++i){
 		DaoValue *value = klass->mixinBases->items.pValue[i];
@@ -2294,8 +2287,9 @@ void DaoByteDecoder_DecodeClasses( DaoByteDecoder *self )
 	int id, id2, id3;
 	for(i=0; i<num; ++i){
 		int classID = DaoByteDecoder_DecodeUInt( self );
-		int cstrID = DaoByteDecoder_DecodeUInt( self );
 		int attribs = DaoByteDecoder_DecodeUInt16( self );
+		int cstrID = DaoByteDecoder_DecodeUInt( self );
+		int baseID = DaoByteDecoder_DecodeUInt( self );
 		DaoClass *klass = (DaoClass*) DaoByteDecoder_GetDeclaration( self, classID );
 		DaoRoutine *rout = (DaoRoutine*) DaoByteDecoder_GetDeclaration( self, cstrID );
 		DArray *constants = klass->constants;
@@ -2306,14 +2300,10 @@ void DaoByteDecoder_DecodeClasses( DaoByteDecoder *self )
 
 		GC_ShiftRC( rout, klass->classRoutine );
 		klass->classRoutine = rout;
-		count = DaoByteDecoder_DecodeUInt16( self );
-		for(j=0; j<count; ++j){
-			int supid = DaoByteDecoder_DecodeUInt( self );
-			DaoValue *sup = DaoByteDecoder_GetDeclaration( self, supid );
-			if( self->codes >= self->error ) break;
+		if( baseID ){
+			DaoValue *sup = DaoByteDecoder_GetDeclaration( self, baseID );
 			DaoClass_AddSuperClass( klass, sup );
 		}
-		if( self->codes >= self->error ) break;
 		count = DaoByteDecoder_DecodeUInt16( self );
 		for(j=0; j<count; ++j){
 			int supid = DaoByteDecoder_DecodeUInt( self );

@@ -3807,7 +3807,11 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoProcess_PutValue( self, (DaoValue*) othis );
 	}else{
 		obj = othis;
-		if( initbase ) obj = (DaoObject*) DaoObject_CastToBase( obj, rout->routHost );
+		if( initbase ){
+			obj = (DaoObject*) DaoObject_CastToBase( obj, rout->routHost );
+			if( obj->isInited ) return;
+		}
+		obj->isInited = 1;
 		DaoProcess_PrepareCall( self, rout, (DaoValue*) obj, params, npar, vmc, 1 );
 		if( self->exceptions->size ) goto DeleteObject;
 	}

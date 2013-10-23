@@ -1207,14 +1207,11 @@ Class
 ClassConst ::= 'const' ConstDeclItem { ',' ConstDeclItem }
 ClassVar   ::= ( 'var' | 'static' ) VarDeclItem { ',' VarDeclItem }
 
-UserTypeList  ::= UserType { ',' UserType }
-
-Mixins  ::= '(' [ UserTypeList ] ')'
-Parents ::= ':' UserTypeList
+Mixins  ::= '(' [ UserType { ',' UserType } ] ')'
 
 ClassBody ::= { ClassConst | ClassVar | Routine }
 
-Class ::= 'class' { Identifier '::' } Identifier [ Mixins ] [ Parents ]
+Class ::= 'class' { Identifier '::' } Identifier [ Mixins ] [ ':' UserType ]
               '{' [ ClassBody ] '}'
 @[code(syntax)]
 

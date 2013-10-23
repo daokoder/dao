@@ -225,8 +225,8 @@ a parent or base class.
 
 To derive one class from another, the base class must be placed after
 the class name of the derived one separated by a colon.
-If there are multiple base classes, they must be separated from each other
-using commas.
+<red>(Since 2013-10-20, classic multiple inheritance is no longer support.
+Now mixins are the preferred way to do similar things.)</red>
 
 
 Here is a simple example,

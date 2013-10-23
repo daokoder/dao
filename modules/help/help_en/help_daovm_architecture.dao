@@ -872,10 +872,9 @@ Each class is declared in the following format:
 struct Class 
 {
 	uint32      # declaration reference number to the class;
-	uint32      # declaration reference number to the default constructor;
 	uint16      # class attributes;
-	uint16      # number of parent classs;
-	uint32[]    # list of declaration reference numbers to the parents;
+	uint32      # declaration reference number to the default constructor;
+	uint32      # declaration reference number for the parent class or ctype;
 	uint16      # number of constants (including methods);
 	Constant[]  # list of constants in the same format as global constants;
 	uint16      # number of static varaibles;

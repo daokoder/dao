@@ -810,6 +810,22 @@ static int DaoParser_PushRegister( DaoParser *self );
 static DaoInode* DaoParser_AddCode( DaoParser *self, ushort_t code,
 		ushort_t a, ushort_t b, ushort_t c, int first, int mid, int last );
 
+static int DaoClass_BaseCstrOffset( DaoClass *self, DaoClass *base, int idx )
+{
+	daoint j, offset = 0;
+	if( idx < self->mixinBases->size ){
+		for(j=0; j<self->mixins->size; ++j){
+			if( self->mixins->items.pClass[j] == base ){
+				offset = self->ranges->data.ushorts[6*j] + DAO_CLASS_CONST_CSTOR;
+				break;
+			}
+		}
+	}else{
+		offset = self->offsets->data.ushorts[2*(idx - self->mixinBases->size)];
+		offset += (base->type == DAO_CLASS ? DAO_CLASS_CONST_CSTOR : 0);
+	}
+	return offset;
+}
 static int DaoParser_AddDefaultInitializer( DaoParser *self, DaoClass *klass, int flags )
 {
 	daoint i, j;
@@ -819,20 +835,8 @@ static int DaoParser_AddDefaultInitializer( DaoParser *self, DaoClass *klass, in
 		DaoInode *inode;
 		int reg, opb = 0;
 		if( flags & (1<<i) ) continue;
-		if( i < klass->mixinBases->size ){
-			for(j=0; j<klass->mixins->size; ++j){
-				if( klass->mixins->items.pClass[j] == base ){
-					int offset = klass->ranges->data.ushorts[6*j];
-					opb = offset + DAO_CLASS_CONST_CSTOR;
-					break;
-				}
-			}
-		}else{
-			int offset = klass->offsets->data.ushorts[2*(i - klass->mixinBases->size)];
-			opb = offset + (base->type == DAO_CLASS ? DAO_CLASS_CONST_CSTOR : 0);
-		}
 		inode = DaoParser_AddCode( self, DVM_GETCK, 1, 0, 0, 0, 0, 0 );
-		inode->b = opb;
+		inode->b = DaoClass_BaseCstrOffset( klass, base, i );
 		inode->c = DaoParser_PushRegister( self );
 		reg = DaoParser_PushRegister( self );
 		DaoParser_AddCode( self, DVM_CALL, inode->c, DAO_CALL_INIT, reg, 0,0,0 );
@@ -882,7 +886,7 @@ static int DaoParser_ParseInitSuper( DaoParser *self, DaoParser *module, int sta
 
 			offset = klass->offsets->data.ushorts[2*(found - klass->mixinBases->size)];
 			inode = DaoParser_AddCode( module, DVM_GETCK, 1, 0, 0, 0, 0, 0 );
-			inode->b = offset;
+			inode->b = DaoClass_BaseCstrOffset( klass, (DaoClass*) value, found );
 			inode->c = DaoParser_PushRegister( module );
 			inode->first = inode->middle = start + 1;
 			inode->last = pos - 1;

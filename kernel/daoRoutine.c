@@ -343,7 +343,6 @@ void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns )
 }
 
 
-void DaoValue_Update( DaoValue **self, DaoNamespace *ns, DMap *deftypes );
 void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 {
 	DaoType *tp;
@@ -359,9 +358,6 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 	for(it=DMap_First(self->body->localVarType); it; it=DMap_Next(self->body->localVarType,it) ){
 		tp = DaoType_DefineTypes( it->value.pType, self->nameSpace, deftypes );
 		it->value.pType = tp;
-	}
-	for(i=0,n=self->routConsts->items.size; i<n; i++){
-		DaoValue_Update( & self->routConsts->items.items.pValue[i], self->nameSpace, deftypes );
 	}
 	for(i=0,n=self->body->svariables->size; i<n; ++i){
 		DaoVariable *var = self->body->svariables->items.pVar[i];

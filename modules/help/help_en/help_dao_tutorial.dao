@@ -1551,12 +1551,14 @@ magenta = ColorRGBA( $magenta )
 
 In the definition of derived class,
 the parent class @[cyan]ColorRBG@[cyan] should be put after the derived class 
-and be separated with @[green]:@[green]. If there are more than
-one parent classes, separate them with @[green],@[green]. The parameters for derived class
+and be separated with @[green]:@[green]. 
+<red>(Since 2013-10-20, classic multiple inheritance is no longer support.
+Now mixins are the preferred way to do similar things.)</red>
+The constructor parameters for derived class
 can be passed to parent classes in the way as shown in the example.
 
 
-Constructors from parent classes can be inherited by using the @[green]use@[green]
+Constructors from the parent class can be inherited by using the @[green]use@[green]
 statement, in which the full function signature of the constructor should be specified.
 
 

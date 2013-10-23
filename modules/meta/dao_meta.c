@@ -507,12 +507,10 @@ static void META_Base( DaoProcess *proc, DaoValue *p[], int N )
 	int i;
 	if( p[0]->type == DAO_CLASS ){
 		DaoClass *k = & p[0]->xClass;
-		for( i=0; i<k->superClass->size; i++ ){
-			DaoList_Append( ls, k->superClass->items.pValue[i] );
-		}
+		DaoList_Append( ls, k->parent );
 	}else if( p[0]->type == DAO_OBJECT ){
 		DaoObject *k = & p[0]->xObject;
-		for( i=0; i<k->baseCount; i++ ) DaoList_Append( ls, k->parents[i] );
+		DaoList_Append( ls, k->parent );
 	}
 }
 static void META_Type( DaoProcess *proc, DaoValue *p[], int N )

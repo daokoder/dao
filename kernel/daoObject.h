@@ -38,7 +38,8 @@ struct DaoObject
 	ushort_t    isRoot    : 1;
 	ushort_t    isDefault : 1;
 	ushort_t    isAsync   : 1;
-	ushort_t    unused    : 13;
+	ushort_t    isInited  : 1;
+	ushort_t    unused    : 12;
 	ushort_t    valueCount;
 
 	DaoClass   *defClass; /* definition class; */
