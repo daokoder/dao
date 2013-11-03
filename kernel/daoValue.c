@@ -684,13 +684,7 @@ static int DaoValue_TryCastTuple( DaoValue *src, DaoValue **dest, DaoType *tp )
 		src->xTuple.unitype = tp;
 		return 1;
 	}
-	for(i=0; i<T; i++){
-		DaoType *it = item_types[i];
-		if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
-		tm = DaoType_MatchValue( it, data[i], NULL );
-		if( tm < DAO_MT_SIM ) return 1;
-		eqs += tm >= DAO_MT_EQ;
-	}
+	if( DaoType_MatchValue( tp, src, NULL ) < DAO_MT_SUB ) return 1;
 	/* casting is not necessary if the tuple's field names are a superset of the
 	 * field names of the target type: */
 	if( tp->mapNames == NULL || tp->mapNames->size ==0 ) goto Finalize;
@@ -705,18 +699,16 @@ static int DaoValue_TryCastTuple( DaoValue *src, DaoValue **dest, DaoType *tp )
 		if( count == tp->mapNames->size ) goto Finalize;
 	}
 Finalize:
-	if( eqs != T ){
-		tuple = DaoTuple_New( T );
-		for(i=0; i<T; i++){
-			DaoType *it = item_types[i];
-			if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
-			DaoValue_Move( data[i], tuple->items+i, it );
-		}
-		GC_IncRC( tp );
-		tuple->unitype = tp;
-		GC_ShiftRC( tuple, *dest );
-		*dest = (DaoValue*) tuple;
+	tuple = DaoTuple_New( T );
+	for(i=0; i<T; i++){
+		DaoType *it = item_types[i];
+		if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
+		DaoValue_Move( data[i], tuple->items+i, it );
 	}
+	GC_IncRC( tp );
+	tuple->unitype = tp;
+	GC_ShiftRC( tuple, *dest );
+	*dest = (DaoValue*) tuple;
 	return 1;
 }
 static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp )

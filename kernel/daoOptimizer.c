@@ -5463,17 +5463,7 @@ TryPushBlockReturnType:
 								rettypes->items.pType[ rettypes->size - 1 ] = ct;
 							}
 						}
-					}else if( ct && !( ct->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) ){
-						if( notide && DaoType_MatchTo( at, ct, defs2 ) == DAO_MT_SUB ){
-							if( ct->tid == DAO_TUPLE && DaoType_MatchTo( ct, at, defs2 ) ){
-								/* typedef tuple<x:float,y:float> Point2D
-								 * routine Test()=>Point2D{ return (1.0,2.0); } */
-								if( opb == 1 ) DaoInferencer_InsertCast( self, inode, & inode->a, ct );
-							}else{
-								goto ErrorTyping;
-							}
-						}
-					}else{
+					}else if( ct == NULL || ( ct->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) ){
 						if( rettypes->size == 4 ){
 							if( at && at->tid != DAO_UDT ){
 								tt = DaoNamespace_MakeRoutType( NS, routine->routType, NULL, NULL, at );

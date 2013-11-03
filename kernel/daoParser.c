@@ -4003,10 +4003,10 @@ DecoratorError:
 			start += 1;
 			reg = N = end = 0;
 			if( start <= to && tokens[start]->line == tokens[start-1]->line ){
-				DaoType *retype = (DaoType*) routine->routType->aux;
-				int tok = 0;
+				DaoType *retype = self->returnType;
+				int tok = 0, ecount = self->errors->size;
 				self->curToken = start;
-				switch(  retype->tid ){
+				switch( retype ? retype->tid : 0 ){
 				case DAO_ARRAY : tok = DTOK_LSB; break;
 				case DAO_LIST  : tok = DTOK_LCB; break;
 				case DAO_MAP   : tok = DTOK_LCB; break;
@@ -4022,7 +4022,9 @@ DecoratorError:
 				}else{
 					enode = DaoParser_ParseExpressionList( self, DTOK_COMMA, NULL, NULL );
 				}
-				if( enode.reg < 0 && self->curToken != start ) return 0;
+				if( tokens[start]->type != DTOK_SEMCO && tokens[start]->type != DTOK_RCB ){
+					if( self->errors->size > ecount ) return 0;
+				}
 				if( enode.reg >= 0 ){
 					reg = enode.reg;
 					N = enode.count;
@@ -4523,6 +4525,7 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	routine->nameSpace = myNS;
 
 	self->parsed  = 1;
+	self->returnType = (DaoType*) routine->routType->aux;
 
 	if( (routine->attribs & DAO_ROUT_DECORATOR) && routine->routType->nested->size ){
 		DString name = DString_WrapMBS( "__args__" );
@@ -5956,6 +5959,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		start = self->curToken;
 	}else if( tki == DKEY_FRAME && (tki2 == DTOK_LB || tki2 == DTOK_LCB) ){
 		DaoInode *back, *jump, *label, *sect, *call;
+		DaoType *oldret = self->returnType;
 		int isFunctional = self->isFunctional;
 		int rb, lb = start + 1;
 		int opa = 0, opb = 0;
@@ -5986,10 +5990,13 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 		back = self->vmcLast;
 		self->isFunctional = 1;
 		self->curToken = start + 2;
-		if( DaoParser_ParseCodes( self, lb+1, rb-1 ) ==0 ){
+		self->returnType = NULL;
+		if( DaoParser_ParseCodes( self, lb+1, rb-1 ) == 0 ){
+			self->returnType = oldret;
 			DaoParser_Error3( self, DAO_CTW_INVA_SYNTAX, start ); // XXX
 			return error;
 		}
+		self->returnType = oldret;
 		if( self->vmcLast->code == DVM_RETURN ){
 			self->vmcLast->c = DVM_SECT;
 		}else{
@@ -6375,8 +6382,14 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 						if( enode.reg >= 0 && self->curToken == rb ){
 							DaoParser_AddCode( self, DVM_RETURN, enode.reg, enode.count, DVM_SECT, start, 0, rb-1 );
 						}else{
+							DaoType *oldret = self->returnType;
 							DaoParser_Restore( self, back, regCount );
-							if( DaoParser_ParseCodes( self, start, rb-1 ) ==0 ) goto InvalidFunctional;
+							self->returnType = NULL;
+							if( DaoParser_ParseCodes( self, start, rb-1 ) == 0 ){
+								self->returnType = oldret;
+								goto InvalidFunctional;
+							}
+							self->returnType = oldret;
 						}
 					}
 					if( self->vmcLast->code == DVM_RETURN ){
