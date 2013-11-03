@@ -1103,6 +1103,9 @@ void DaoType_GetTypeHolders( DaoType *self, DMap *types )
 	if( self->tid == DAO_THT ){
 		DMap_Insert( types, self, 0 );
 		return;
+	}else if( self->tid >= DAO_PAR_NAMED && self->tid <= DAO_PAR_VALIST ){
+		if( self->aux ) DaoType_GetTypeHolders( (DaoType*) self->aux, types );
+		return;
 	}
 	if( self->nested ){
 		for(i=0,n=self->nested->size; i<n; i++){
