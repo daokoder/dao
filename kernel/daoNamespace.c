@@ -392,7 +392,6 @@ void DaoParser_PrintError( DaoParser *self, int line, int code, DString *ext );
 int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop );
 int DaoParser_ParseScopedName( DaoParser *self, DaoValue **scope, DaoValue **value, int i, int loc );
 int DaoParser_ParseTemplateParams( DaoParser *self, int start, int end, DArray *holders, DArray *defaults, DString *name );
-DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DArray *types );
 DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *types, int *co );
 DaoType* DaoCdata_WrapType( DaoNamespace *ns, DaoTypeBase *typer, int opaque );
 DaoType* DaoCdata_NewType( DaoTypeBase *typer );
@@ -1387,15 +1386,19 @@ DaoType* DaoNamespace_FindTypeMBS( DaoNamespace *self, const char *name )
 DaoType* DaoNamespace_AddType( DaoNamespace *self, DString *name, DaoType *type )
 {
 	DNode *node;
-	DMutex_Lock( & mutex_type_map );
-	node = MAP_Find( self->abstypes, name );
-	if( node == NULL ){
-		MAP_Insert( self->abstypes, name, type );
+	if( DString_FindChar( type->name, '@', 0 ) == MAXSIZE ){
+		DMutex_Lock( & mutex_type_map );
+		node = MAP_Find( self->abstypes, name );
+		if( node == NULL ){
+			MAP_Insert( self->abstypes, name, type );
+		}else{
+			DArray_Append( self->auxData, type );
+			type = node->value.pType;
+		}
+		DMutex_Unlock( & mutex_type_map );
 	}else{
 		DArray_Append( self->auxData, type );
-		type = node->value.pType;
 	}
-	DMutex_Unlock( & mutex_type_map );
 	return type;
 }
 void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *tp )

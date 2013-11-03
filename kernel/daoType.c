@@ -1097,29 +1097,6 @@ DefFailed:
 	printf( "redefine failed\n" );
 	return NULL;
 }
-void DaoType_GetTypeHolders( DaoType *self, DMap *types )
-{
-	daoint i, n;
-	if( self->tid == DAO_THT ){
-		DMap_Insert( types, self, 0 );
-		return;
-	}else if( self->tid >= DAO_PAR_NAMED && self->tid <= DAO_PAR_VALIST ){
-		if( self->aux ) DaoType_GetTypeHolders( (DaoType*) self->aux, types );
-		return;
-	}
-	if( self->nested ){
-		for(i=0,n=self->nested->size; i<n; i++){
-			DaoType_GetTypeHolders( self->nested->items.pType[i], types );
-		}
-	}
-	if( self->bases ){
-		for(i=0,n=self->bases->size; i<n; i++){
-			DaoType_GetTypeHolders( self->bases->items.pType[i], types );
-		}
-	}
-	if( self->tid == DAO_TYPE && self->aux && self->aux->type == DAO_TYPE )
-		DaoType_GetTypeHolders( & self->aux->xType, types );
-}
 int DaoType_CheckTypeHolder( DaoType *self, DaoType *tht )
 {
 	daoint i, n, bl = 0;

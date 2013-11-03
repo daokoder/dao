@@ -94,7 +94,8 @@ struct DaoParser
 	DaoClass     *hostClass;
 	DaoType      *hostCdata;
 	DaoType      *hostType;
-	DaoParser    *outParser;
+	DaoParser    *outerParser;
+	DaoParser    *innerParser;
 
 	DaoType      *returnType;
 	DaoToken     *argName;
