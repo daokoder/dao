@@ -2574,6 +2574,7 @@ DString* DaoProcess_PutMBString( DaoProcess *self, const char *mbs )
 	}
 	res = DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) & tmp );
 	if( res ==NULL ) return NULL;
+	DString_ToMBS( res->xString.data );
 	return res->xString.data;
 }
 DString* DaoProcess_PutWCString( DaoProcess *self, const wchar_t *wcs )
@@ -2589,6 +2590,7 @@ DString* DaoProcess_PutWCString( DaoProcess *self, const wchar_t *wcs )
 	}
 	res = DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) & tmp );
 	if( res ==NULL ) return NULL;
+	DString_ToWCS( res->xString.data );
 	return res->xString.data;
 }
 DString* DaoProcess_PutString( DaoProcess *self, DString *str )
