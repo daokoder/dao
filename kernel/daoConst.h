@@ -93,6 +93,7 @@ enum DaoMatchType
 	DAO_MT_ANYUDF ,
 	DAO_MT_INIT ,
 	DAO_MT_UDF ,
+	DAO_MT_EMPTY ,
 	DAO_MT_ANYX , /* match any to X */
 	DAO_MT_ANY , /* match to type "any" */
 	DAO_MT_SUB ,

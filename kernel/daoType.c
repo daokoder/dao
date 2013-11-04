@@ -349,6 +349,8 @@ DaoType* DaoType_Copy( DaoType *other )
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->nested = NULL;
 	self->bases = NULL;
+	self->isempty1 = 0;
+	self->isempty2 = 0;
 	self->name = DString_Copy( other->name );
 	if( other->fname ) self->fname = DString_Copy( other->fname );
 	if( other->bases ) self->bases = DArray_Copy( other->bases );
@@ -797,16 +799,16 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( tp == self ) return DAO_MT_EQ;
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
-		if( tp == NULL ) return value->xList.items.size == 0 ? DAO_MT_ANY : DAO_MT_NOT;
-		if( tp && tp->isempty2 && value->xList.items.size == 0 ) return DAO_MT_ANY;
+		if( tp == NULL ) return value->xList.items.size == 0 ? DAO_MT_EMPTY : DAO_MT_NOT;
+		if( tp && tp->isempty2 && value->xList.items.size == 0 ) return DAO_MT_EMPTY;
 		return DaoType_MatchTo( tp, self, defs );
 	case DAO_MAP :
 		tp = value->xMap.unitype;
 		if( tp == self ) return DAO_MT_EQ;
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
-		if( tp == NULL ) return value->xMap.items->size == 0 ? DAO_MT_ANY : DAO_MT_NOT;
-		if( tp && tp->isempty2 && value->xMap.items->size == 0 ) return DAO_MT_ANY;
+		if( tp == NULL ) return value->xMap.items->size == 0 ? DAO_MT_EMPTY : DAO_MT_NOT;
+		if( tp && tp->isempty2 && value->xMap.items->size == 0 ) return DAO_MT_EMPTY;
 		return DaoType_MatchTo( tp, self, defs );
 	case DAO_TUPLE :
 		tp = value->xTuple.unitype;
