@@ -58,6 +58,7 @@ struct DaoParser
 	DaoInode *vmcFirst; /* the first instruction node; */
 	DaoInode *vmcLast;  /* the last instruction node; */
 	DaoInode *vmcFree;  /* the first node in the free list; */
+	DaoInode *vmcValue;  /* the last instruction node; */
 	int vmcCount;
 
 	/* Stack of maps: mapping local variable names to virtual register ids at each level: */

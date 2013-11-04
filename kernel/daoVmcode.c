@@ -357,35 +357,6 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "unused",     DVM_UNUSED,     DAO_CODE_NOP, 0 }
 };
 
-static uchar_t dao_vmcode_result_operand[] =
-{
-	DAO_OPERAND_N ,
-	DAO_OPERAND_C ,
-	DAO_OPERAND_C ,
-	DAO_OPERAND_C ,
-	DAO_OPERAND_C ,
-	DAO_OPERAND_C ,
-	DAO_OPERAND_C , /* DAO_CODE_GETM; */
-	DAO_OPERAND_A ,
-	DAO_OPERAND_A ,
-	DAO_OPERAND_A ,
-	DAO_OPERAND_A ,
-	DAO_OPERAND_A , /* DAO_CODE_SETM; */
-	DAO_OPERAND_C ,
-	DAO_OPERAND_C ,
-	DAO_OPERAND_C ,
-	DAO_OPERAND_C ,
-	DAO_OPERAND_C ,
-	DAO_OPERAND_C ,
-	DAO_OPERAND_C ,
-	DAO_OPERAND_C ,
-	DAO_OPERAND_C ,
-	DAO_OPERAND_C ,
-	DAO_OPERAND_C ,
-	DAO_OPERAND_N ,
-	DAO_OPERAND_N ,
-	DAO_OPERAND_N
-};
 
 const char* DaoVmCode_GetOpcodeName( int code )
 {
@@ -408,10 +379,6 @@ uchar_t DaoVmCode_GetOpcodeType( DaoVmCode *self )
 	//if( code == DVM_ITER && self->b ) return DAO_CODE_ENUM;
 	if( code >= 0 && code <= DVM_UNUSED ) return dao_code_infolist[ code ].type;
 	return DAO_CODE_NOP;
-}
-uchar_t DaoVmCode_GetResultOperand( DaoVmCode *self )
-{
-	return dao_vmcode_result_operand[ DaoVmCode_GetOpcodeType( self ) ];
 }
 DaoVmCode DaoVmCode_CheckOperands( DaoVmCode *self )
 {

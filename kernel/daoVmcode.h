@@ -504,7 +504,6 @@ DAO_DLL const char* DaoVmCode_GetOpcodeName( int code );
 DAO_DLL uchar_t     DaoVmCode_GetOpcodeBase( int code );
 DAO_DLL uchar_t     DaoVmCode_CheckPermutable( int code );
 DAO_DLL uchar_t     DaoVmCode_GetOpcodeType( DaoVmCode *self );
-DAO_DLL uchar_t     DaoVmCode_GetResultOperand( DaoVmCode *self );
 DAO_DLL DaoVmCode   DaoVmCode_CheckOperands( DaoVmCode *self );
 
 DAO_DLL DaoVmCode*  DVector_PushCode( DVector *self, DaoVmCode code );

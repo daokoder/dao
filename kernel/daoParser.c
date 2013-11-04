@@ -309,6 +309,7 @@ void DaoParser_Reset( DaoParser *self )
 	self->outerParser = NULL;
 	self->innerParser = NULL;
 	self->returnType = NULL;
+	self->vmcValue = NULL;
 
 	DArray_Clear( self->decoParams );
 	DArray_Clear( self->decoParams2 );
@@ -441,6 +442,7 @@ static int DaoParser_PopCodes( DaoParser *self, DaoInode *back )
 	int count = 0;
 	DaoInode *node = NULL;
 	while( (node=self->vmcLast) != back ) DaoParser_PopBackCode( self ), count ++;
+	self->vmcValue = NULL;
 	return count;
 }
 /* In constant folding, do not actually remove the codes, which may invalidate
@@ -454,6 +456,7 @@ static int DaoParser_PopCodes2( DaoParser *self, DaoInode *back )
 		node = node->prev;
 		count ++;
 	}
+	self->vmcValue = NULL;
 	return count;
 }
 static void DaoParser_AppendCode( DaoParser *self, DaoInode *inode )
@@ -3600,8 +3603,10 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 	for(i=start; i<=to; i++) printf("%s  ", tokens[i]->string.mbs); printf("\n\n");
 #endif
 
+	self->vmcValue = NULL;
 	while( start >= from && start <= to ){
 
+		self->vmcValue = NULL;
 		self->usedString = 0;
 		self->usedArray = 0;
 		self->curLine = tokens[start]->line;
@@ -4447,16 +4452,6 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	}
 	return end;
 }
-static int DaoParser_GetLastValue( DaoParser *self, DaoInode *it, DaoInode *back, int lex )
-{
-	int id = -1;
-	while( it != back && it->level == lex && it->code == DVM_NOP ) it = it->prev;
-	if( it->code == DVM_LOAD2 ) it = it->prev;
-	if( it == back || it->level != lex ) return -1;
-	if( it->code >= DVM_SETVH && it->code <= DVM_SETF ) return it->a;
-	if( DaoVmCode_GetResultOperand( (DaoVmCode*) it ) != DAO_OPERAND_C ) return -1;
-	return it->c;
-}
 static int DaoParser_SetupBranching( DaoParser *self )
 {
 	DaoInode *it, *it2 = NULL;
@@ -4472,13 +4467,8 @@ static int DaoParser_SetupBranching( DaoParser *self )
 			int ismain = self->routine->attribs & DAO_ROUT_MAIN;
 			autoret = ismain && (print || vms->evalCmdline);
 		}
-		if( autoret ){
-			opa = DaoParser_GetLastValue( self, self->vmcLast, self->vmcFirst, 0 );
-			if( opa < 0 ){
-				opa = 0;
-				autoret = 0;
-			}
-		}
+		if( autoret && self->vmcValue ) opa = self->vmcValue->c;
+		autoret &= self->vmcValue != NULL;
 		DaoParser_AddCode( self, DVM_RETURN, opa, autoret, 0, first,0,0 );
 	}
 	if( self->vmSpace->options & DAO_OPTION_IDE ){
@@ -5827,6 +5817,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 	result.reg = regC;
 	result.konst = enode.konst;
 	result.first = result.last = result.update = self->vmcLast;
+	self->vmcValue = self->vmcLast;
 	if( back->next ) result.first = back->next;
 	return result;
 ParsingError:
@@ -6031,9 +6022,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 			self->vmcLast->c = DVM_SECT;
 		}else{
 			int first = self->vmcLast->first;
-			int opa = DaoParser_GetLastValue( self, self->vmcLast, back, label->level+1 );
-			int opb = opa >= 0;
-			if( opa < 0 ) opa = 0;
+			int opa = self->vmcValue ? self->vmcValue->c : 0;
+			int opb = self->vmcValue != NULL;
 			DaoParser_AddCode( self, DVM_RETURN, opa, opb, DVM_SECT, rb, 0, rb );
 		}
 		self->isFunctional = isFunctional;
@@ -6426,9 +6416,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 						self->vmcLast->c = DVM_SECT;
 					}else{
 						int first = self->vmcLast->first;
-						opa = DaoParser_GetLastValue( self, self->vmcLast, back, label->level+1 );
-						opb = opa >= 0;
-						if( opa < 0 ) opa = 0;
+						opa = self->vmcValue ? self->vmcValue->c : 0;
+						opb = self->vmcValue != NULL;
 						DaoParser_AddCode( self, DVM_RETURN, opa, opb, DVM_SECT, first, 0, rb );
 					}
 					self->isFunctional = isFunctional;
@@ -6895,6 +6884,7 @@ static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int warn 
 		self->curToken = start;
 		DaoParser_Error3( self, DAO_INVALID_EXPRESSION, start );
 	}
+	self->vmcValue = LHS.update;
 	return LHS;
 }
 static DaoEnode DaoParser_ParseExpression( DaoParser *self, int stop )
