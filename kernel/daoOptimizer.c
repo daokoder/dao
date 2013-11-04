@@ -4962,7 +4962,9 @@ NotExist_TryAux:
 		case DVM_TEST :
 			{
 				/* if( inited[opa] ==0 ) goto NotInit;  allow none value for testing! */
-				if( types[opa] ==NULL ) goto NotMatch;
+				if( types[opa] == NULL ) goto NotMatch;
+				if( at->tid == DAO_STRING ) goto NotMatch;
+				if( at->tid >= DAO_ARRAY && at->tid <= DAO_TUPLE ) goto NotMatch;
 				if( consts[opa] && consts[opa]->type <= DAO_LONG ){
 					vmc->code =  DaoValue_IsZero( consts[opa] ) ? (int)DVM_GOTO : (int)DVM_UNUSED;
 					continue;
@@ -5106,8 +5108,6 @@ NotExist_TryAux:
 					goto ErrorTyping;
 				}
 				if( at->tid == DAO_ROUTINE && at->overloads ) rout = (DaoRoutine*)at->aux;
-				DMap_Reset( defs2 );
-				DMap_Assign( defs2, defs );
 				if( rout == NULL && at->aux == NULL ){ /* "routine" type: */
 					/* DAO_CALL_INIT: mandatory passing the implicit self parameter. */
 					if( !(vmc->b & DAO_CALL_INIT) ) vmc->b |= DAO_CALL_NOSELF;
@@ -5228,6 +5228,7 @@ NotExist_TryAux:
 					tt = rout->routType;
 					cbtype = tt->cbtype;
 
+					DMap_Reset( defs2 );
 					if( at->tid == DAO_CTYPE && at->kernel->sptree ){
 						/* For type holder specialization: */
 						k = DaoType_MatchTo( at, at->kernel->abtype->aux->xCdata.ctype, defs2 );

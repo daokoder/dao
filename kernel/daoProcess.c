@@ -1435,8 +1435,7 @@ CallEntry:
 				vmc = vA->xCdata.data ? vmc+1 : vmcBase + vmc->b;
 				break;
 			default :
-				vmc = vmcBase + vmc->b;
-				break;
+				goto RaiseErrorInvalidOperation;
 			}
 		}OPJUMP() OPCASE( MATH ){
 			if( DaoVM_DoMath( self, vmc, locVars[ vmc->c ], locVars[vmc->b] ) )
