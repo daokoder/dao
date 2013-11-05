@@ -66,7 +66,7 @@ static void DaoProcess_DoVector( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoAPList(  DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc );
+static void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoCheck( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_BindNameValue( DaoProcess *self, DaoVmCode *vmc );
 
@@ -892,7 +892,7 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_MAP    , && LAB_HASH ,
 		&& LAB_VECTOR , && LAB_MATRIX ,
 		&& LAB_APLIST , && LAB_APVECTOR ,
-		&& LAB_CURRY  , && LAB_MCURRY ,
+		&& LAB_PACK  , && LAB_MPACK ,
 		&& LAB_ROUTINE ,
 		&& LAB_GOTO ,
 		&& LAB_SWITCH , && LAB_CASE ,
@@ -1396,8 +1396,8 @@ CallEntry:
 			DaoProcess_DoAPList( self, vmc );
 		}OPNEXT() OPCASE( APVECTOR ){
 			DaoProcess_DoAPVector( self, vmc );
-		}OPNEXT() OPCASE( CURRY ) OPCASE( MCURRY ){
-			DaoProcess_DoCurry( self, vmc );
+		}OPNEXT() OPCASE( PACK ) OPCASE( MPACK ){
+			DaoProcess_DoPacking( self, vmc );
 		}OPNEXT() OPCASE( CASE ) OPCASE( GOTO ){
 			vmc = vmcBase + vmc->b;
 		}OPJUMP() OPCASE( SWITCH ){
@@ -4647,7 +4647,7 @@ void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc )
 
 DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *T, DArray *RS, DArray *TS, int C, int *W, int *M );
 
-void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
+void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 {
 	int i, k;
 	int opa = vmc->a;
@@ -4659,7 +4659,7 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *selfobj = NULL;
 	DNode *node;
 
-	if( vmc->code == DVM_MCURRY && p->type != DAO_ROUTINE ){
+	if( vmc->code == DVM_MPACK && p->type != DAO_ROUTINE ){
 		selfobj = values[0];
 		values ++;
 		opb --;
@@ -4703,7 +4703,7 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 		}
 	case DAO_ROUTINE :
 		{
-			int wh = 0, mc = 0, call = DVM_CALL + (vmc->code - DVM_CURRY);
+			int wh = 0, mc = 0, call = DVM_CALL + (vmc->code - DVM_PACK);
 			DaoNamespace *NS = self->activeNamespace;
 			DaoRoutine *parout = DaoRoutine_New( NS, NULL, 0 );
 			DaoRoutine *routine = (DaoRoutine*) p;
@@ -4741,7 +4741,7 @@ void DaoProcess_DoCurry( DaoProcess *self, DaoVmCode *vmc )
 			GC_IncRC( parout->original );
 			if( bindings ) DArray_Assign( & parout->routConsts->items, & bindings->items );
 			/* skip the self value if the routine needs none: */
-			i = vmc->code == DVM_MCURRY && (parout->original->routType->attrib & DAO_TYPE_SELF) == 0;
+			i = vmc->code == DVM_MPACK && (parout->original->routType->attrib & DAO_TYPE_SELF) == 0;
 			for(; i<opb; i++) DArray_Append( & parout->routConsts->items, values[i] );
 			DaoProcess_SetValue( self, vmc->c, (DaoValue*) parout );
 			break;
@@ -6557,9 +6557,9 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 	case DVM_MATH :
 		DaoVM_DoMath( self, vmc, self->activeValues[ vmc->c ], self->activeValues[1] );
 		break;
-	case DVM_CURRY :
-	case DVM_MCURRY :
-		DaoProcess_DoCurry( self, vmc );
+	case DVM_PACK :
+	case DVM_MPACK :
+		DaoProcess_DoPacking( self, vmc );
 		break;
 	case DVM_CALL :
 	case DVM_MCALL :

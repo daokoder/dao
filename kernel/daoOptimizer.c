@@ -4758,13 +4758,13 @@ NotExist_TryAux:
 				AssertTypeMatching( ct, types[opc], defs );
 				break;
 			}
-		case DVM_CURRY :
-		case DVM_MCURRY :
+		case DVM_PACK :
+		case DVM_MPACK :
 			{
 				ct = NULL;
 				if( at->tid == DAO_TYPE ) at = at->nested->items.pType[0];
 				if( at->tid == DAO_ROUTINE ){
-					int wh = 0, mc = 0, call = DVM_CALL + (code - DVM_CURRY);
+					int wh = 0, mc = 0, call = DVM_CALL + (code - DVM_PACK);
 					DArray *routines;
 					rout = (DaoRoutine*)consts[opa];
 					if( rout == NULL && at->overloads ) rout = (DaoRoutine*) at->aux;
@@ -4784,7 +4784,7 @@ NotExist_TryAux:
 					/* XXX: check field names */
 				}else if( at->tid == DAO_TUPLE ){
 					ct = at;
-					if( code == DVM_MCURRY && (at->nested->size+1) == opb ){
+					if( code == DVM_MPACK && (at->nested->size+1) == opb ){
 						opa += 1;
 						opb -= 1;
 					}

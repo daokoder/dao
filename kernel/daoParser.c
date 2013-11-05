@@ -6229,7 +6229,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				/* dao_class{ members } enumeration,
 				 * or routine{ parameters } */
 				DaoInode *inode = self->vmcLast;
-				int code = DVM_CURRY;
+				int code = DVM_PACK;
 				int rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
 				if( rb < 0 ) return error;
 
@@ -6238,7 +6238,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 					extra = back->prev;
 					back->code = DVM_LOAD;
 					back->b = 0;
-					code = DVM_MCURRY;
+					code = DVM_MPACK;
 				}else if( result.last &&  DaoVmCode_CheckPermutable( back->code ) ){
 					extra = back;
 				}else{
@@ -6255,7 +6255,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 
 				if( self->needConst && result.konst && enode.konst == (enode.count-1) ){
 					value = DaoParser_GetVariable( self, result.konst );
-					if( code == DVM_CURRY && (value == NULL || value->type != DAO_CLASS) ){
+					if( code == DVM_PACK && (value == NULL || value->type != DAO_CLASS) ){
 						cid->items.pInt[0] = result.konst;
 						if( extra ){
 							DaoInode *inode = self->vmcLast;
