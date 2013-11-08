@@ -5431,8 +5431,7 @@ TryPushBlockReturnType:
 						routine->routType = ct;
 						continue;
 					}
-					if( ct && NoCheckingType( ct ) ) continue;
-					if( ct && ct->tid == DAO_VALTYPE && ct->aux->type == DAO_NONE ) continue;
+					if( ct && DaoType_MatchValue( ct, dao_none_value, NULL ) ) continue;
 					if( ct && ! (routine->attribs & DAO_ROUT_INITOR) ) goto ErrorTyping;
 				}else{
 					at = types[opa];

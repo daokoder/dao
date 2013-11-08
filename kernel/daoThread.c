@@ -875,7 +875,7 @@ void DaoMT_Select( DaoProcess *proc, DaoValue *p[], int n );
 DaoFuncItem dao_mt_methods[] =
 {
 	{ DaoMT_Critical, "critical()[]" },
-	{ DaoMT_Start, "start( when : enum<auto,now> = $auto )[=>@V] =>future<@V>" },
+	{ DaoMT_Start, "start( when : enum<auto,now> = $auto )[=>@V|none] =>future<@V>" },
 	{ DaoMT_Iterate, "iterate( times :int, threads=2 )[index:int,threadid:int]" },
 	{ DaoMT_Select,  "select( group :map<@T,int>, timeout = -1.0 ) => tuple<selected: none|@T, value :any, status :enum<selected,timeout,finished>>" },
 

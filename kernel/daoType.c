@@ -507,14 +507,8 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( type && type->tid == DAO_THT ){
 			if( defs ) node = MAP_Find( defs, type );
 			if( node == NULL ){
-				if( type->nested && type->nested->size ){
-					mt = DAO_MT_NOT;
-					for(i=0,n=type->nested->size; i<n; i++){
-						it2 = type->nested->items.pType[i];
-						mt2 = DaoType_MatchTo( self, it2, defs );
-						if( mt2 > mt ) mt = mt2;
-						if( mt == DAO_MT_EQ ) break;
-					}
+				if( type->aux != NULL ){ /* @type_holder<type> */
+					mt = DaoType_MatchTo( self, (DaoType*) type->aux, defs );
 					if( mt == DAO_MT_NOT ) return DAO_MT_NOT;
 				}
 				if( defs ) MAP_Insert( defs, type, self );
@@ -749,6 +743,8 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( defs ){
 			node = MAP_Find( defs, self );
 			if( node ) return DaoType_MatchValue( node->value.pType, value, defs );
+		}else if( self->tid == DAO_THT && self->aux != NULL ){
+			return DaoType_MatchValue( (DaoType*) self->aux, value, defs );
 		}
 		return self->tid == DAO_UDT ? DAO_MT_UDF : DAO_MT_INIT;
 	case DAO_VARIANT :

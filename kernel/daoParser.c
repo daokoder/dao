@@ -1726,25 +1726,10 @@ static DaoType* DaoParser_ParseType2( DaoParser *self, int start, int end, int *
 			name = DaoParser_GetString( self );
 			DString_Assign( name, type->name );
 			DString_AppendChar( name, '<' );
-			if( vartype->tid == DAO_VARIANT ){
-				for(j=0; j<vartype->nested->size; ++j){
-					if( j ) DString_AppendChar( name, '|' );
-					DString_Append( name, vartype->nested->items.pType[j]->name );
-				}
-			}else{
-				DString_Append( name, vartype->name );
-			}
+			DString_Append( name, vartype->name );
 			DString_AppendChar( name, '>' );
 			type2 = DaoParser_FindTypeHolder( self, name );
-			if( type2 == NULL ){
-				if( vartype->tid == DAO_VARIANT ){
-					type2 = DaoType_New( name->mbs, DAO_THT, NULL, vartype->nested );
-				}else{
-					DArray *its = DaoParser_GetArray( self );
-					DArray_Append( its, vartype );
-					type2 = DaoType_New( name->mbs, DAO_THT, NULL, its );
-				}
-			}
+			if( type2 == NULL ) type2 = DaoType_New( name->mbs, DAO_THT, (DaoValue*) vartype, NULL );
 			DMap_Insert( scope->initTypes, type2->name, type2 );
 			DMap_Insert( scope->initTypes, type->name, type2 );
 			type = type2;
