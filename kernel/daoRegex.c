@@ -320,6 +320,7 @@ static int MakeRegex( DaoRegex *self, DString *ds, void *spatt,
 					if( ! iswspace( chi ) && ! iswspace( chi2 ) ){
 						set.type = type = PAT_PAIR;
 						set.word = i + 1;
+						set.length = 2;
 						if( bl ){
 							char *buf = ((char*)self->wordbuf) + set.word;
 							buf[0] = chi;  buf[1] = chi2;
