@@ -4631,16 +4631,42 @@ NotExist_TryAux:
 					if( types[opc]->nested && types[opc]->nested->size == 1 ){
 						DaoType *it = types[opc]->nested->items.pType[0];
 						int n = opb - (code == DVM_APLIST || code == DVM_APVECTOR);
-						for(j=0; j<n; ++j) AssertTypeMatching( types[opa+j], it, defs );
+						if( code == DVM_APVECTOR ){
+							int m1 = DaoType_MatchTo( types[opa], types[opc], defs );
+							int m2 = DaoType_MatchTo( types[opa], it, defs );
+							if( m1 == 0 && m2 == 0 ){
+								return DaoInferencer_ErrorTypeNotMatching( self, types[opa], it );
+							}
+							if( opb == 3 ){
+								int m1 = DaoType_MatchTo( types[opa+1], types[opc], defs );
+								int m2 = DaoType_MatchTo( types[opa+1], it, defs );
+								if( m1 == 0 && m2 == 0 ){
+									return DaoInferencer_ErrorTypeNotMatching( self, types[opa+1], it );
+								}
+							}
+							AssertTypeMatching( types[opa+opb-1], dao_type_int, defs );
+						}else if( code == DVM_APLIST ){
+							AssertTypeMatching( types[opa], it, defs );
+							if( opb == 3 ) AssertTypeMatching( types[opa+1], it, defs );
+							AssertTypeMatching( types[opa+opb-1], dao_type_int, defs );
+						}else if( code == DVM_VECTOR ){
+							int m1 = DaoType_MatchTo( types[opa], types[opc], defs );
+							int m2 = DaoType_MatchTo( types[opa], it, defs );
+							if( m1 == 0 && m2 == 0 ){
+								return DaoInferencer_ErrorTypeNotMatching( self, types[opa], it );
+							}
+							if( m1 ) it = types[opc];
+							for(j=0; j<n; ++j) AssertTypeMatching( types[opa+j], it, defs );
+						}else{
+							for(j=0; j<n; ++j) AssertTypeMatching( types[opa+j], it, defs );
+						}
 						continue;
 					}
 				}
 				at = dao_type_udf;
 				if( code == DVM_VECTOR && opb ){
 					at = types[opa];
-					for(j=1; j<opb; j++){
-						if( DaoType_MatchTo( types[opa+j], at, defs )==0 ) goto ErrorTyping;
-					}
+					for(j=1; j<opb; j++) AssertTypeMatching( types[opa+j], at, defs );
 					if( at->tid == DAO_ARRAY ) at = at->nested->items.pType[0];
 					if( at->tid == DAO_NONE || at->tid > DAO_COMPLEX ) at = dao_type_float;
 				}else if( code == DVM_LIST && opb ){
