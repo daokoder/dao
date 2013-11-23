@@ -22,11 +22,12 @@ class Point3D
 	var z = 0D;
 }
 # Create instance enumerating the members of the class,
-point = Point3D{ 1, 2, 3 };
+point = Point3D::{ 1, 2, 3 };
 
 
 # The names of instance variables may also be specified in enumeration,
-point = Point3D{
+point = Point3D::
+{
 	y => 2,
 	x => 1,
 	z => 3,
