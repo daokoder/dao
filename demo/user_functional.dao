@@ -10,7 +10,7 @@ routine Test()[X:int=>string] => string
 	return s;
 }
 
-Test::{
+Test {
 	io.writeln( 'In code section:', X );
 	return 'abc';
 }
@@ -18,11 +18,11 @@ Test::{
 routine Test( alist : list<@T> )[ item :@T, index :int =>int ] =>list<@T>
 {
 	yield( 55, 0 ); # invoke the code section of the caller;
-	io.writeln( alist.select::{ X < 33 } );
+	io.writeln( alist.select{ X < 33 } );
 	# call the list functional method with the caller's code section;
-	return alist.select::{ yield(X,Y) };
+	return alist.select{ yield(X,Y) };
 }
 
-res = Test( {11,22,33,44} )::{ X > 22 }
+res = Test( {11,22,33,44} ){ X > 22 }
 
 io.writeln( res, std.about(res) );

@@ -3,7 +3,7 @@ const N = 100;
 
 chans = { mt::channel<int>(1), mt::channel<string>(1) }
 
-mt.start::{
+mt.start {
 	index = 0;
 	io.writeln( 'begin producing' )
 	while( ++index <= N ){
@@ -22,9 +22,9 @@ mt.start::{
 
 select = mt::channel<int|string>(1)
 
-mt.start::{
+mt.start {
 
-	f1 = mt.start::{
+	f1 = mt.start {
 		while(1){
 			data = chans[0].receive();
 			if( data.status == $finished ) break
@@ -32,7 +32,7 @@ mt.start::{
 		}
 	}
 
-	f2 = mt.start::{
+	f2 = mt.start {
 		while(1){
 			data = chans[1].receive();
 			if( data.status == $finished ) break

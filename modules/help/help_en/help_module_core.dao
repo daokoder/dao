@@ -394,17 +394,17 @@ dframe2d[:,1] += dframe2d[:,0]
 Using code section methods of data frame:
 @[code]
 # Scan cells:
-dframe2d[1:5,:3].ScanCells::{ [value,row,column]
+dframe2d[1:5,:3].ScanCells { [value,row,column]
 	io.writeln( row, column, value )
 }
 
 # Scan rows:
-dframe2d[1:5,:3].ScanRows::{ [value,row]
+dframe2d[1:5,:3].ScanRows { [value,row]
 	io.writeln( row, value )
 }
 
 # Scan columns:
-dframe2d[1:5,:3].ScanColumns::{ [value,column]
+dframe2d[1:5,:3].ScanColumns { [value,column]
 	io.writeln( column, value )
 }
 @[code]

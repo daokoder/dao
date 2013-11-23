@@ -14,11 +14,11 @@ io.writeln( '########################' )
 
 
 # Here is a simple decorator that can decorate any function.
-# In decorators, a tuple variable named "__args__" is automatically
-# declared to hold the parameters that are passed to the function.
-routine @Decorator( func : routine )
+# In decorators, a variable must be declared in a pair of brackets
+# right after the first parameter name. This variable will be used
+# to hold the parameters that are passed to the function.
+routine @Decorator( func(args) : routine )
 {
-	var args = __args__
 	io.writeln( 'Calling function:', std.about(func) );
 	return func( args, ... ); # ... for parameter expanding;
 }
@@ -48,9 +48,9 @@ io.writeln( '########################' )
 #
 # For a decorator for testing such as this one, the expected
 # output can be passed as additional parameters to the decorator:
-routine @TestDecorator( func : routine<index:int=>string>, expected = '' )
+routine @TestDecorator( func(args) : routine<index:int=>string>, expected = '' )
 {
-	res = func( __args__, ... );
+	res = func( args, ... );
 	io.writeln( res );
 	io.writeln( 'Test result:', res == expected ? 'passed' : 'failed' );
 	return res;
@@ -75,9 +75,9 @@ io.writeln( '########################' )
 
 # Here is an overloaded deocrator that can only be applied to functions
 # that accepts a string as parameter and returns an integer.
-routine @TestDecorator( func : routine<name:string=>int>, expected = 0 )
+routine @TestDecorator( func(args) : routine<name:string=>int>, expected = 0 )
 {
-	res = func( __args__, ... );
+	res = func( args, ... );
 	io.writeln( res );
 	io.writeln( 'Test result:', res == expected ? 'passed' : 'failed' );
 	return res;
@@ -141,18 +141,16 @@ io.writeln( '##########################' )
 
 # Decorators can be applied to class methods as well.
 # Here is a decorator for static methods:
-routine @StaticDecorator( meth :routine<id:int=>int>, value = 123 )
+routine @StaticDecorator( meth(args) :routine<id:int=>int>, value = 123 )
 {
-	var args = __args__
 	io.writeln( args, value );
 	args.id = value;
 	return meth( args, ... );
 }
 
 # Here is a decorator for instance methods:
-routine @MethodDecorator( meth :routine<self:@T,id:int=>int>, value = 123 )
+routine @MethodDecorator( meth(args) :routine<self:@T,id:int=>int>, value = 123 )
 {
-	var args = __args__
 	io.writeln( args, value );
 	args.id = value;
 	return meth( args, ... );
@@ -163,8 +161,7 @@ class Klass
 	# Decorator can also be defined a class method.
 	# Since the first parameter of a decorator must be a routine type,
 	# such decorator method has to be defined as a static method.
-	static routine @ClassDecorator( meth :routine<id:string=>?>, value = 'abc' ){
-		var args = __args__
+	static routine @ClassDecorator( meth(args) :routine<id:string=>?>, value = 'abc' ){
 		io.writeln( args, value );
 		args.id = value;
 		return meth( args, ... );

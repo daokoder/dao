@@ -10,13 +10,13 @@ class Test
 	}
 }
 
-t = Test() !!;
+t = Test() !!
 
-mt.iterate( 4 )::{
+mt.iterate( 4 ) {
 	io.writeln( '=========', 'X'+(string)X );
-	f = mt.start::{
+	f = mt.start {
 		for( i = 1 : 5 ){
-			io.writeln( 'start::{}', i );
+			io.writeln( 'start{}', i );
 			#sys.sleep(0.01);
 		}
 	}
@@ -25,7 +25,7 @@ mt.iterate( 4 )::{
 }
 
 
-mt.iterate( 4 )::{
+mt.iterate( 4 ) {
 	io.writeln( '=========', X );
 	t.Meth() #.wait( 5 ); # ERROR: cannot block inside code section methods;
 	io.writeln( '---------', X );

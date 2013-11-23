@@ -299,6 +299,8 @@ A decorator is almost identical to a noraml function except that it
 must be declared with a name prefixed with @, and the first parameter
 must be a routine type, which determines which type of routines can be
 decorated by this decorator.
+A variable to hold the parameters that will be passed to the function,
+must also be declared inside a pair of brackets right after the name of the first parameter.
 
 
 @[subsection]
@@ -312,15 +314,12 @@ can be declared as the most generic function type @[green]routine@[green]
 
 Here is a simple decorator that can decorate any function.
 @[code]
-routine @Decorator( func : routine )
+routine @Decorator( func(args) : routine )
 {
-	var args = __args__
 	io.writeln( 'Calling function:', std.about(func) );
 	return func( args, ... ); # ... for parameter expanding;
 }
 @[code]
-In decorators, a tuple variable named @[green]__args__@[green] is automatically
-declared to hold the parameters that are passed to the function.
 
 
 Decorators can be applied at the places where functions are defined.
@@ -356,9 +355,9 @@ accepts an integer as parameter and returns a string.
 For a decorator for testing such as this one, the expected
 output can be passed as additional parameters to the decorator:
 @[code]
-routine @TestDecorator( func : routine<index:int=>string>, expected = '' )
+routine @TestDecorator( func(args) : routine<index:int=>string>, expected = '' )
 {
-	res = func( __args__, ... );
+	res = func( args, ... );
 	io.writeln( res );
 	io.writeln( 'Test result:', res == expected ? 'passed' : 'failed' );
 	return res;
@@ -386,9 +385,9 @@ Decorators can be overloaded just like the normal functions.
 Here is an overloaded deocrator that can only be applied to functions
 that accepts a string as parameter and returns an integer.
 @[code]
-routine @TestDecorator( func : routine<name:string=>int>, expected = 0 )
+routine @TestDecorator( func(args) : routine<name:string=>int>, expected = 0 )
 {
-	res = func( __args__, ... );
+	res = func( args, ... );
 	io.writeln( res );
 	io.writeln( 'Test result:', res == expected ? 'passed' : 'failed' );
 	return res;
@@ -488,9 +487,8 @@ as well as inside the class as a class member.
 If the routine type of the first parameter of a decorator does not
 contain a self parameter, this decorator can be applied to static methods,
 @[code]
-routine @StaticDecorator( meth :routine<id:int=>int>, value = 123 )
+routine @StaticDecorator( meth(args) :routine<id:int=>int>, value = 123 )
 {
-	var args = __args__
 	io.writeln( args, value );
 	args.id = value;
 	return meth( args, ... );
@@ -498,9 +496,8 @@ routine @StaticDecorator( meth :routine<id:int=>int>, value = 123 )
 @[code]
 Otherwise, it can be applied to instance methods,
 @[code]
-routine @MethodDecorator( meth :routine<self:@T,id:int=>int>, value = 123 )
+routine @MethodDecorator( meth(args) :routine<self:@T,id:int=>int>, value = 123 )
 {
-	var args = __args__
 	io.writeln( args, value );
 	args.id = value;
 	return meth( args, ... );
@@ -514,8 +511,7 @@ because its first parameter must be a routine type,
 @[code]
 class Klass
 {
-	static routine @ClassDecorator( meth :routine<id:string=>?>, value = 'abc' ){
-		var args = __args__
+	static routine @ClassDecorator( meth(args) :routine<id:string=>?>, value = 'abc' ){
 		io.writeln( args, value );
 		args.id = value;
 		return meth( args, ... );

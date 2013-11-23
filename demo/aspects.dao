@@ -23,34 +23,34 @@
 #
 class @Header
 {
-	static routine @Delimiter( meth : routine ) for ~ {
+	static routine @Delimiter( meth(args) : routine ) for ~ {
 		io.writeln( '=======================' )
-		return meth( __args__, ... )
+		return meth( args, ... )
 	}
-	routine @Delimiter( meth : routine ) for ~ {
+	routine @Delimiter( meth(args) : routine ) for ~ {
 		io.writeln( '-----------------------' )
-		return meth( __args__, ... )
+		return meth( args, ... )
 	}
 }
 class @Decorator
 {
 	var value = 654321
 
-	routine @Test( meth :routine<self:@Decorator> ) for Test {
+	routine @Test( meth(args) :routine<self:@Decorator> ) for Test {
 		io.writeln( 'Decorator::Test()', value )
-		meth( __args__, ... );
+		meth( args, ... );
 	}
-	routine @Prefix( meth :routine<self:@Decorator> ) for Prefix~ {
+	routine @Prefix( meth(args) :routine<self:@Decorator> ) for Prefix~ {
 		io.writeln( 'Decorator::Prefix()' )
-		meth( __args__, ... );
+		meth( args, ... );
 	}
-	routine @Suffix( meth :routine<self:@Decorator> ) for ~Suffix {
+	routine @Suffix( meth(args) :routine<self:@Decorator> ) for ~Suffix {
 		io.writeln( 'Decorator::Suffix()' )
-		meth( __args__, ... );
+		meth( args, ... );
 	}
-	routine @Prefix_Suffix( meth :routine<self:@Decorator> ) for Prefix~Suffix {
+	routine @Prefix_Suffix( meth(args) :routine<self:@Decorator> ) for Prefix~Suffix {
 		io.writeln( 'Decorator::Prefix_Suffix()' )
-		meth( __args__, ... );
+		meth( args, ... );
 	} 
 }
 
@@ -94,25 +94,26 @@ class @AspectForAnyClass for ~  # To be applied to any classes;
 {
 	var injected : list<int> = {}
 
+	# This is not a decorator!
 	routine @AspectForAnyClass(){
 		io.writeln( 'In @AspectForAnyClass():' );
 		injected = { 1, 2, 3 }
 	}
 
 	# This decorator will also be applied to the default constructors:
-	routine @DecoratorForAnyMethod( meth : routine ) for ~ {
+	routine @DecoratorForAnyMethod( meth(args) : routine ) for ~ {
 		io.writeln( 'In @DecoratorForAnyMethod():', std.about(meth) )
 		io.writeln( injected )
-		return meth( __args__, ... )
+		return meth( args, ... )
 	}
 }
 
 # For classes with names prefixed with My:
 class @AspectForMyClasses for My~
 {
-	routine @Method( meth : routine ) for Method~ {
+	routine @Method( meth(args) : routine ) for Method~ {
 		io.writeln( 'In @AspectForMyClasses::@Method():', std.about(meth) )
-		return meth( __args__, ... )
+		return meth( args, ... )
 	}
 }
 

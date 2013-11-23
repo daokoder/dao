@@ -156,6 +156,55 @@ Other interesting features:
 
 @[text]
 
+
+
+
+@[name]
+dao.changelog
+@[name]
+
+@[title]
+Dao Change Logs
+@[title]
+
+@[text]
+
+@[list]
+--@[code]2013-11-23@[code]:
+
+  @[red]CHANGED:@[red] 
+  Syntax for calling code section methods and syntax for data packing
+  (function partial application, uniform initialization etc.) are @[red]swapped@[red].
+  Namely, there is no need for @[code]::@[code] before @[code]{@[code] for code sections,
+  and it is required for data packing. For example,
+@[code]
+type MyTuple = tuple<int,string>
+tup = MyTuple::{ 123, 'abc' }
+fut = mt::start { rand() } # no ::
+@[code]
+
+  @[red]CHANGED:@[red] 
+  Syntax for decorator declaration is improved to avoid implicit declaration of the
+  variable for function parameters.
+  Previously the variable @[code]__args__@[code] is automatically declared,
+  now users can declare it to be any name by placing it in a pair of brackets
+  right after the parameter name of the first parameter.
+@[code]
+routine @Decorator( func(args) : routine )
+{
+	io.writeln( 'Calling function:', std.about(func) );
+	return func( args, ... ); # ... for parameter expanding;
+}
+@[code]
+
+  @[red]REMOVE:@[red] Support for the @[code]:=@[code] operator.
+
+@[list]
+
+@[text]
+
+
+
 #Last but not least, Dao virtual machine is programmed in standard C,
 #and released under the Simplified BSD License.
 

@@ -3,7 +3,7 @@ const N = 100000;
 
 chan = mt::channel<int>(2)
 
-produce = mt.start::{
+produce = mt.start {
 	index = 0;
 	io.writeln( 'begin producing' )
 	while( ++index <= N ){
@@ -14,7 +14,7 @@ produce = mt.start::{
 	chan.cap(0)  # set channel buffer size to zero to close the channel;
 }
 
-consume = mt.start::{
+consume = mt.start {
 	io.writeln( 'begin consuming' )
 	while(1){
 		data = chan.receive()

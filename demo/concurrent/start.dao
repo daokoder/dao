@@ -4,13 +4,13 @@ routine Test()
 {
 	id = 123;
 	name = 'abc';
-	return mt.start::{
+	return mt.start {
 		for( i = 1 : 10 ){
 			io.writeln( i );
 			sys.sleep( 0.1 );
 		}
-# here id, name should have been copied, and it is safe to
-# access them even after Test() and its process is finished!
+		# here id, name should have been copied, and it is safe to
+		# access them even after Test() and its process is finished!
 		io.writeln( id, name );
 	}
 }

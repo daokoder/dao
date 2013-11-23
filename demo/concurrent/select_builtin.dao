@@ -7,7 +7,7 @@ ichan = mt::channel<int>(C)
 schan = mt::channel<string>(C)
 
 
-mt.start::{
+mt.start {
 	index = 0;
 	io.writeln( 'begin producing' )
 	while( ++index <= N ){

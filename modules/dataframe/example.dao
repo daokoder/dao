@@ -51,7 +51,7 @@ dframe2d[1:5,:3].ScanRows::{ [value,row]
 }
 
 # Scan columns:
-dframe2d[1:5,:3].ScanColumns::{ [value,column]
+dframe2d[1:5,:3].ScanColumns { [value,column]
 	io.writeln( column, value )
 }
 

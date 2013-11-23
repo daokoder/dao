@@ -325,7 +325,7 @@ routine CodeBlock()
     io.writeln(  'Ending CodeBlock' )
 }
 
-CodeBlock::{ [x] io.writeln( x ) }
+CodeBlock { [x] io.writeln( x ) }
 @[code]
 
 Note: code section method is not really inspired by Ruby, 
@@ -391,9 +391,9 @@ can also be applied to decorators as well.
 
 An equivalent Dao decorator for the above Python example is,
 @[code]
-routine @Decorator( func : routine< =>int > )
+routine @Decorator( func(args) : routine< =>int > )
 {
-    ret = func( __args__, ... )  # call the original function;
+    ret = func( args, ... )  # call the original function;
     return ret + 123
 }
 routine Foo()
@@ -406,7 +406,7 @@ deco()
 Where the parameter type @[green]routine< =>int >@[green]
 of @[green]@Decorator()@[green] indicates that this decorator can
 only be applied to functions that can take no parameter and return an integer.
-@[green]__args__@[green] is an automatically defined variable of tuple type
+@[green]args@[green] is a specially defined variable of tuple type
 to hold the parameters that will be passed to the decorated function.
 The @[green]...@[green] in the end of the argument list indicates
 that the call must expand the previous tuple argument in the argument list,
@@ -438,10 +438,10 @@ deco( 123 )
 @[code]
 The equivalent in Dao would be,
 @[code]
-routine @Decorator( func : routine )
+routine @Decorator( func(args) : routine )
 {
-    io.writeln( 'Calling with:', __args__, ... )
-    return func( __args__, ... )  # call the original function;
+    io.writeln( 'Calling with:', args, ... )
+    return func( args, ... )  # call the original function;
 }
 routine Foo( a )
 {
@@ -468,13 +468,13 @@ In Dao, one could simply create different decorators for different
 target functions, and overload them with the same name.
 For example,
 @[code]
-routine @Decorator( func : routine<int=>int> )
+routine @Decorator( func(args) : routine<int=>int> )
 {
-    return func( __args__, ... ) + 123
+    return func( args, ... ) + 123
 }
-routine @Decorator( func : routine<string=>string> )
+routine @Decorator( func(args) : routine<string=>string> )
 {
-    return func( __args__, ... ) + 'abc'
+    return func( args, ... ) + 'abc'
 }
 
 @Decorator  # the first decorator will be applied;
@@ -1014,7 +1014,7 @@ The following languages are chosen for comparison,
 
 @[table]
 ##Language   ##Version/Compiler
-##Dao        &&2.0-devel-2013-08-11
+##Dao        &&2.0-devel-2013-11-10
 ##Lua        &&5.1.5
 ##Python     &&2.7.2
 ##Go         &&1.1.1
@@ -1035,7 +1035,11 @@ In these tests, time is measured in seconds (S), and memory is measured in Mega-
 ##binary-trees  && 16       && 30.4 && 30.3    &&  1.0X   && &&  20.7 &&  19.7  && 0.6  && 4.5
 ##pidigits      && 5000     &&  9.0 &&  8.8    &&  1.0X   && &&  40.8 &&   2.7  && 6.2  && --
 ##meteor        && 2098     &&  5.5 &&  5.5    &&  1.0X   && &&  2.1  &&   9.6  && 0.4  && 0.1
+##meteor2       && 2098     &&  2.0 &&  --     &&  --     && &&  2.1  &&   9.6  && 0.4  && 0.1
 @[table]
+Note: @[green]meteor@[green] is a port of the Python @[green]meteor@[green] program;
+@[green]meteor2@[green] is a port of the C @[green]meteor@[green] program;
+and DaoJIT did not work on the @[green]meteor2@[green] program.
 
 
 The followings are a couple of benchmarks to compare Dao to Go.

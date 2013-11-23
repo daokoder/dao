@@ -601,7 +601,7 @@ static void STD_Map( DaoProcess *proc, DaoValue *p[], int N )
 DaoFuncItem dao_std_methods[] =
 {
 	{ STD_Path,      "path( path :string, action :enum<set,add,remove>=$add )" },
-	{ STD_Compile,   "compile( source :string, ns := none ) => tuple<ns:any,main:routine>" },
+	{ STD_Compile,   "compile( source :string, ns :any= none ) => tuple<ns:any,main:routine>" },
 	{ STD_Eval,      "eval( source :string, st=io::stdio, safe=0 )=>any" },
 	{ STD_Load,      "load( file :string, import=1, runim=0, safe=0 )=>any" },
 	{ STD_Resource,  "resource( path :string )=>string" },

@@ -94,7 +94,6 @@ const char *const dao_oper_tokens[] =
 	"&&" ,
 	"||" ,
 	"not in",
-	":=" ,
 	"+=" ,
 	"-=" ,
 	"*=" ,
@@ -437,7 +436,6 @@ enum
 	TOK_END_ARROW ,  /* -> */
 	TOK_END_FIELD ,  /* => */
 	TOK_END_COLON2 , /* :: */
-	TOK_EQ_COLON ,  /* := */
 	TOK_EQ_ADD ,  /* += */
 	TOK_EQ_SUB ,  /* -= */
 	TOK_EQ_MUL ,  /* *= */
@@ -533,7 +531,6 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_ARROW ,   /* -> */
 	DTOK_FIELD ,   /* => */
 	DTOK_COLON2 ,  /* :: */
-	DTOK_CASSN ,   /* := */
 	DTOK_ADDASN ,  /* += */
 	DTOK_SUBASN ,  /* -= */
 	DTOK_MULASN ,  /* *= */
@@ -700,9 +697,9 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_START ][ (unsigned) '~' ] = TOK_OP_TILDE;
 	daoLexTable[ TOK_START ][ (unsigned) '=' ] = TOK_OP_EQ;
 
-	/*  :=  +=  -=  /=  *=  %=  &=  |=  ^=  !=  ==  <=  >=  */
-	for(i=TOK_OP_COLON; i<TOK_OP_GT; i++)
-		daoLexTable[i][ (unsigned) '=' ] = i + (TOK_EQ_COLON - TOK_OP_COLON);
+	/*  +=  -=  /=  *=  %=  &=  |=  ^=  !=  ==  <=  >=  */
+	for(i=TOK_OP_ADD; i<TOK_OP_GT; i++)
+		daoLexTable[i][ (unsigned) '=' ] = i + (TOK_EQ_ADD - TOK_OP_ADD);
 	daoLexTable[ TOK_START ][ (unsigned) '>' ] = TOK_OP_GT;
 	daoLexTable[ TOK_OP_QUEST ][ (unsigned) '?' ] = TOK_END_ASSERT; /* ?? */
 	daoLexTable[ TOK_OP_QUEST ][ (unsigned) '=' ] = TOK_END_TEQ; /* ?= */
@@ -766,7 +763,6 @@ void DaoInitLexTable()
 	daoArithOper[ DTOK_TILDE ]  = doper( DAO_OPER_TILDE,    1, 0, 10 );
 	daoArithOper[ DTOK_AMAND ]  = doper( DAO_OPER_BIT_AND,  0, 0, 1 );
 	daoArithOper[ DTOK_ASSN ]   = doper( DAO_OPER_ASSN,     0, 0, 12 );
-	daoArithOper[ DTOK_CASSN ]  = doper( DAO_OPER_ASSN,     0, 0, 12 );
 	daoArithOper[ DTOK_ADDASN ] = doper( DAO_OPER_ASSN_ADD, 0, 0, 11 );
 	daoArithOper[ DTOK_SUBASN ] = doper( DAO_OPER_ASSN_SUB, 0, 0, 11 );
 	daoArithOper[ DTOK_MULASN ] = doper( DAO_OPER_ASSN_MUL, 0, 0, 11 );

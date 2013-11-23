@@ -938,8 +938,8 @@ Declaration Statements
 ConstSpecifier ::= 'const' | 'global' 'const' | 'const' 'global'
 VarSpecifier   ::= 'var' | 'global' | 'static'
 
-ConstDeclItem ::= Identifier [ ( '=' | ':=' | ':' Type '=' ) ConstExpression ]
-VarDeclItem   ::= Identifier [ ( '=' | ':=' | ':' Type '=' ) Expression ]
+ConstDeclItem ::= Identifier [ ( '=' | ':' Type '=' ) ConstExpression ]
+VarDeclItem   ::= Identifier [ ( '=' | ':' Type '=' ) Expression ]
 
 ConstDeclaration    ::= ConstSpecifier ConstDeclItem { ',' ConstDeclItem }
 VarDeclaration      ::= VarSpecifier   VarDeclItem   { ',' VarDeclItem }
@@ -1174,8 +1174,9 @@ ParamReturn ::= '(' [ ParamList ] ')' [ '=>' Type ]
 
 RoutineSig   ::= Identifier '(' [ ParamList ] ')' [ '=>' Type ]
 CodeBlockSig ::= Identifier '(' [ ParamList ] ')' '[' [ ParamList1 ] ']' [ '=>' Type ]
+DecoratorSig ::= TypeHolder '(' Identifier '(' Identifier ')' [ ',' ParamList ] ')'
 
-RoutineDecl1 ::= 'routine' { Identifier '::' } ( RoutineSig | CodeBlockSig )
+RoutineDecl1 ::= 'routine' { Identifier '::' } ( RoutineSig | CodeBlockSig | DecoratorSig )
 RoutineDecl2 ::= 'operator' { Identifier '::' } OverloadableOperator ParamReturn
 
 RoutineDecl ::= RoutineDecl1 | RoutineDecl2

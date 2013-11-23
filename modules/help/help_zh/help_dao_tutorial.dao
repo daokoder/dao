@@ -561,7 +561,7 @@ for( item1 in list1; item2 in list2; ... ){
 
 例子，
 @[code]
-for( i:=0; i<3; i++ ){
+for( i=0; i<3; i++ ){
 	io.writeln( i );
 }
 

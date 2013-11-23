@@ -12,7 +12,8 @@ const DAYS_PER_YEAR = 365.24D;
 type OneBody = tuple<x:double,y:double,z:double,vx:double,vy:double,vz:double,mass:double>;
 
 # define by field enumeration:
-Jupiter = OneBody {
+Jupiter = OneBody::
+{
 	x => 4.84143144246472090E+00 ,
 	y => -1.16032004402742839E+00 ,
 	z => -1.03622044471123109E-01 ,
@@ -23,7 +24,8 @@ Jupiter = OneBody {
 }
 
 
-Saturn = OneBody {
+Saturn = OneBody::
+{
 	x => 8.34336671824457987E+0 ,
 	y => 4.12479856412430479E+0 ,
 	z => -4.03523417114321381E-01 ,
@@ -33,7 +35,8 @@ Saturn = OneBody {
 	mass => 2.85885980666130812E-04 * SOLAR_MASS
 }
 
-Uranus = OneBody {
+Uranus = OneBody::
+{
 	x => 1.28943695621391310E+01 ,
 	y => -1.51111514016986312E+01 ,
 	z => -2.23307578892655734E-01 ,
@@ -43,7 +46,8 @@ Uranus = OneBody {
 	mass => 4.36624404335156298E-05 * SOLAR_MASS
 }
 
-Neptune = OneBody {
+Neptune = OneBody::
+{
 	x => 1.53796971148509165E+01 ,
 	y => -2.59193146099879641E+01 ,
 	z => 1.79258772950371181E-01 ,
@@ -53,7 +57,7 @@ Neptune = OneBody {
 	mass => 5.15138902046611451E-05 * SOLAR_MASS 
 }
 
-Sun = OneBody{ x => 0.0D, y => 0.0D, z => 0.0D,
+Sun = OneBody::{ x => 0.0D, y => 0.0D, z => 0.0D,
               vx => 0.0D, vy => 0.0D, vz => 0.0D, mass => SOLAR_MASS }
 
 routine advance( bodies : list<OneBody>, nbody : int, dt : double )

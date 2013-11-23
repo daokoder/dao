@@ -796,7 +796,7 @@ static void DLong_UMulK( DLong *z, DLong *x, DLong *y, DLongBuffer **bufs, int d
 	y0 = buf->y0; y1 = buf->y1;
 	z0 = buf->z0; z1 = buf->z1; z2 = buf->z2;
 	m = ny>>1;
-	DLong_Split( y, y1, y0, m ); /* y := y1 * B^m + y0; */
+	DLong_Split( y, y1, y0, m ); /* y = y1 * B^m + y0; */
 	if( nx + nx < ny ){
 		DLong_UMulK( y1, x, y1, bufs, dep ); /* y1 = x * y1; */
 		DLong_UMulK( y0, x, y0, bufs, dep ); /* y0 = x * y1; */
@@ -808,7 +808,7 @@ static void DLong_UMulK( DLong *z, DLong *x, DLong *y, DLongBuffer **bufs, int d
 		DLong_UAdd( z1, z1, z1 ); /* z1 = 2 * z1; */
 		LongMulSum( z, z2, z1, z0, m );
 	}else{
-		DLong_Split( x, x1, x0, m ); /* x := x1 * B^m + x0; */
+		DLong_Split( x, x1, x0, m ); /* x = x1 * B^m + x0; */
 		DLong_UMulK( z2, x1, y1, bufs, dep ); /* z2 = x1 * y1; */
 		DLong_UMulK( z0, x0, y0, bufs, dep ); /* z0 = x0 * y0; */
 		DLong_UAdd( x1, x1, x0 ); /* x1 = x1 + x0 */

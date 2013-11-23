@@ -54,8 +54,8 @@ The simplest way to start a tasklet is to use the functional method
 @[green]mt.start@[green] to run an expression or a block of codes:
 @[code]
 a = 123
-fut = mt.start::{ a*a }
-fut2 = mt.start::{
+fut = mt.start { a*a }
+fut2 = mt.start {
 	for( i = 1 : 1000 ) b = a*a
 }
 @[code]
@@ -118,8 +118,8 @@ the following parallelized functional methods,
 
 Examples,
 @[code]
-mt.iterate( 10 )::{ io.writeln( X ) }
-mt.iterate( {1,2,3,4,5,6}, 3 )::{ io.writeln( X ) }
+mt.iterate( 10 ) { io.writeln( X ) }
+mt.iterate( {1,2,3,4,5,6}, 3 ) { io.writeln( X ) }
 @[code]
 
 
@@ -352,7 +352,7 @@ load sys
 
 chans = { mt::channel<int>(1), mt::channel<string>(1) }
 
-mt.start::{
+mt.start {
     index = 0;
     while( ++index <= 10 ){
         if( rand(2) ){

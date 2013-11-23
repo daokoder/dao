@@ -100,6 +100,7 @@ struct DaoParser
 
 	DaoType      *returnType;
 	DaoToken     *argName;
+	DaoToken     *decoArgName;
 
 	int curLine;
 	int lineCount;

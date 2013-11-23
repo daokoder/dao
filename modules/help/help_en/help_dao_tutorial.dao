@@ -691,7 +691,7 @@ for( item in a_map ){
 
 Examples,
 @[code(dao)]
-for( i:=0; i<3; ++i ){
+for( i=0; i<3; ++i ){
    io.writeln( i );
 }
 
@@ -1097,13 +1097,13 @@ the code section to return.
 
 Code section method can be called in the following way:
 @[code]
-returned = meth_name( meth_params )::{
+returned = meth_name( meth_params ) {
 	code_block
 }
 @[code]
 If there is no method parameter, it can be simply written as:
 @[code]
-returned = meth_name::{
+returned = meth_name {
 	code_block
 }
 @[code]
@@ -1111,7 +1111,7 @@ By default, the code section receives the parameters passed in by the method
 through implicitly defined variables named @[green]X@[green] and @[green]Y@[green].
 User can choose to use more meaningful names by,
 @[code]
-returned = meth_name::{ [index, item]
+returned = meth_name { [index, item]
 	code_block
 }
 @[code]
@@ -1131,14 +1131,14 @@ So this @[green]sort()@[green] can be use in the following ways,
 numlist = { 11, 44, 21, 32, 56, 67, 25 }
 
 # Sort all by ascend order:
-numlist.sort::{ X < Y }
+numlist.sort { X < Y }
 
 # Sort by descend order until the largest 3 items are sorted:
-numlist.sort( 3 )::{ X > Y }
+numlist.sort( 3 ) { X > Y }
 # Now the first 3 items of the list is the largest 3 items;
 
 tuplist = { ( 2, 'ghi' ), ( 1, 'def' ), ( 2, 'abc' ), ( 1, 'abc' ) }
-tuplist.sort::{
+tuplist.sort {
 	# First sort by the first items of the tuples;
 	if( X[0] != Y[0] ) return X[0] < Y[0];
 	# Then sort by the second items;
@@ -1163,7 +1163,7 @@ routine Test() [X :int => string] => string
 	return s;
 }
 
-Test::{
+Test {
 	io.writeln( 'In code section:', X );
 	return 'abc';
 }
@@ -1197,21 +1197,23 @@ with a few exceptions.
 First, a decorator must be declared with a name prefixed with @[green]@@[green],
 and second, the first parameter must be a routine type,
 which determines which type of routines can be decorated by this decorator.
+A variable to hold the parameters that will be passed to the function,
+must also be declared inside a pair of brackets right after the name of the first parameter.
 
 
 For example,
 @[code]
-routine @Decorator( func : routine, extra = 123 )
+routine @Decorator( func(args) : routine, extra = 123 )
 {
 	io.writeln( 'Calling function:', std.about( func ), extra );
-	return func( __args__, ... ); # ... for parameter expanding;
+	return func( args, ... ); # ... for parameter expanding;
 }
 @[code]
 This decorator can be applied to any function.
 In this decorator, the decorated function is called with
-@[green]__args__@[green], which is expanded for the call
+@[green]args@[green], which is expanded for the call
 as indicated by @[green]...@[green].
-@[green]__args__@[green] is an automatically declared variable
+@[green]args@[green] is a specially declared variable
 to hold the parameters that will be passed to the function.
 
 
@@ -1363,11 +1365,11 @@ class Point3D
 	var y = 0D;
 	var z = 0D;
 }
-point = Point3D{ 1, 2, 3 };
+point = Point3D::{ 1, 2, 3 };
 @[code]
 The names of instance variables may also be specified in enumeration,
 @[code]
-point = Point3D{
+point = Point3D::{
 	y => 2,
 	x => 1,
 	z => 3,
@@ -1619,106 +1621,86 @@ Class Decorator
 
 (New in the latest devel release and online version)
 
+Class decorators are classes that can be used modify other classes.
+The modification is done by using such class as a mixin base class
+to inject (combine) its members into the modified class, and by
+automatically applying its method decorators to the methods of the
+modified class.
 
-When a class is used as a mixin class in another class (host),
-the decorator methods of the mixin will be applied to the methods
-of the host class, if the names of the decorators are started
-(excluding the '@') or ended with a underscore. Such names
-are interpreted as the following patterns:
+For such auto decorator application, only decorators with explicitly
+specified decoration targets are automatically applied. Such targets
+are expressed as prefix and suffix rules which can be expressed in
+the following ways:
 @[list]
-== The non-underscore-containing substring following the starting
-   underscore is considered as a prefix that a method name must
-   has, as a precondition that the method can be applied with
-   the decorator;
-
-   Example:
-   @[list(sub)]
-   -- "_abc", "_abc_" and "any_abc_" define "abc" as the prefix;
-   -- "__" and "__any" define an empty string as prefix,
-       which can match to any method name.
-   @[list(sub)]
-== The non-underscore-containing substring preceding the ending
-   underscore is considered as a suffix that a method name must
-   has, as a precondition that the method can be applied with
-   the decorator;
-
-   Example:
-   @[list(sub)]
-   -- "abc_", "_abc_" and "_abc_any" define "abc" as the suffix;
-   -- "__" and "any__" define an empty string as suffix,
-       which can match to any method name.
-   @[list(sub)]
-== If the prefix substring and the suffixing substring of a decorator
-   name are the same substring (not merely the same), only the methods
-   with names that are the same as the prefix (suffix) could be applied
-   with this decorator. 
-
-   Example:
-   @[list(sub)]
-   -- "_abc_" define "abc" as both the prefix and the suffix,
-       so it can only be matched to method name equal to it.
-       But "_abc_abc_" can match to any method names starts
-       with "abc" and ends with "abc";
-   -- "__" and "__any__" define an empty string as both prefix and suffix,
-       so it can match to any method name;
-   @[list(sub)]
+== Prefix~ : a prefix pattern.
+   The decorator will be auto applied to methods that have names
+   with such prefix;
+== ~Suffix : a suffix pattern.
+   The decorator will be auto applied to methods that have names
+   with such suffix;
+== Prefix~Suffix : a prefix and suffix pattern.
+   The decorator will be auto applied to methods that have names
+   with such prefix and suffix;
+== ~ : an empty prefix and suffix pattern.
+   The decorator will be auto applied to any methods.
 @[list]
+
 
 When multiple mixins are used in a host class, the decorators of the
-first mixin are applied the last. An the first decorator of the same
+first mixin are applied the last. And the first decorator of the same
 decorator is also applied the last as well.
 
 @[code]
-class Header
+class @Header
 {
-	static routine @__Delimiter__( meth : routine ){
+	static routine @Delimiter( meth(args) : routine ) for ~ {
 		io.writeln( '=======================' )
-		return meth( __args__, ... )
+		return meth( args, ... )
 	}
-	routine @__Delimiter__( meth : routine ){
+	routine @Delimiter( meth(args) : routine ) for ~ {
 		io.writeln( '-----------------------' )
-		return meth( __args__, ... )
+		return meth( args, ... )
 	}
 }
-class Decorator
+class @Decorator
 {
 	var value = 654321
 
-	routine @_Test_( meth :routine<self:Decorator> ){
-		io.writeln( 'Decorator::_Test_()', value )
-		meth( __args__, ... );
+	routine @Test( meth(args) :routine<self:@Decorator> ) for Test {
+		io.writeln( 'Decorator::Test()', value )
+		meth( args, ... );
 	}
-	routine @_Prefix( meth :routine<self:Decorator> ){
-		io.writeln( 'Decorator::_Prefix()' )
-		meth( __args__, ... );
+	routine @Prefix( meth(args) :routine<self:@Decorator> ) for Prefix~ {
+		io.writeln( 'Decorator::Prefix()' )
+		meth( args, ... );
 	}
-	routine @Suffix_( meth :routine<self:Decorator> ){
-		io.writeln( 'Decorator::Suffix_()' )
-		meth( __args__, ... );
+	routine @Suffix( meth(args) :routine<self:@Decorator> ) for ~Suffix {
+		io.writeln( 'Decorator::Suffix()' )
+		meth( args, ... );
 	}
-	routine @_Prefix_Suffix_( meth :routine<self:Decorator> ){
-		io.writeln( 'Decorator::_Prefix_Suffix_()' )
-		meth( __args__, ... );
-	}
+	routine @Prefix_Suffix( meth(args) :routine<self:@Decorator> ) for Prefix~Suffix {
+		io.writeln( 'Decorator::Prefix_Suffix()' )
+		meth( args, ... );
+	} 
 }
 
-class MyClass ( Header, Decorator )
+class MyMixin ( @Header, @Decorator )
 {
 	routine Test(){
-		io.writeln( 'MyClass::Test()' )
+		io.writeln( 'MyMixin::Test()' )
 	}
 	routine PrefixTest(){
-		io.writeln( 'MyClass::PrefixTest()' )
+		io.writeln( 'MyMixin::PrefixTest()' )
 	}
 	routine TestSuffix(){
-		io.writeln( 'MyClass::TestSuffix()' )
+		io.writeln( 'MyMixin::TestSuffix()' )
 	}
 	routine PrefixTestSuffix(){
-		io.writeln( 'MyClass::PrefixTestSuffix()' )
+		io.writeln( 'MyMixin::PrefixTestSuffix()' )
 	}
 }
 
-obj = MyClass()
+obj = MyMixin()
 obj.Test()
 obj.PrefixTest()
 obj.TestSuffix()
@@ -1734,9 +1716,10 @@ Aspect Class
 (New in the latest devel release and online version)
 
 
-In Dao, a class can be effectly used as an aspect for AOP,
-if the class name is named according some simple affix rules.
-Please see @[node]dao.class.mixin@[node] for such affix rules.
+In Dao, a class decorator can be effectly used as an aspect for AOP,
+if decoration target patterns are specified for auto application.
+The target patterns are can be specified in the same way as the
+target patterns for class method decorators.
 
 
 The fields of such class will be automatically injected to
@@ -1746,29 +1729,30 @@ applied to the methods (selected according to the same affix
 rules) of the normal classes.
 
 @[code]
-class __AspectForAnyClass__
+class @AspectForAnyClass for ~  # To be applied to any classes;
 {
-	var injected = {}
+	var injected : list<int> = {}
 
-	routine __AspectForAnyClass__(){
-		io.writeln( 'In __AspectForAnyClass__:' );
+	# This is not a decorator!
+	routine @AspectForAnyClass(){
+		io.writeln( 'In @AspectForAnyClass():' );
 		injected = { 1, 2, 3 }
 	}
 
 	# This decorator will also be applied to the default constructors:
-	routine @__DecoratorForAnyMethod__( meth : routine ){
-		io.writeln( 'In __DecoratorForAnyMethod__:', std.about(meth) )
+	routine @DecoratorForAnyMethod( meth(args) : routine ) for ~ {
+		io.writeln( 'In @DecoratorForAnyMethod():', std.about(meth) )
 		io.writeln( injected )
-		return meth( __args__, ... )
+		return meth( args, ... )
 	}
 }
 
 # For classes with names prefixed with My:
-class _My_AspectForMyClasses
+class @AspectForMyClasses for My~
 {
-	routine @Method_( meth : routine ){
-		io.writeln( 'In _My_AspectForMyClasses::Method_:', std.about(meth) )
-		return meth( __args__, ... )
+	routine @Method( meth(args) : routine ) for Method~ {
+		io.writeln( 'In @AspectForMyClasses::@Method():', std.about(meth) )
+		return meth( args, ... )
 	}
 }
 
@@ -2105,12 +2089,12 @@ The main functionalities of @[green]mt@[green] are provided as code section meth
 for maximum flexibility and expressiveness. For example, a tasklet can
 be started with the @[green]mt.start()@[green] method,
 @[code]
-fut1 = mt.start::{
+fut1 = mt.start {
 	sum = 0;
 	for( i = 1 : 10000 ) sum += i * i
 	return sum
 }
-fut2 = mt.start( $now )::{
+fut2 = mt.start( $now ) {
 	sum = 0;
 	for( i = 1 : 10000 ) sum += i * i
 	return sum
@@ -2168,13 +2152,13 @@ Examples,
 ls = {1,2,3,4,5,6}
 
 # Use 2 threads to iterate 10 times:
-mt.iterate( 10 )::{ io.writeln( X ) }
+mt.iterate( 10 ) { io.writeln( X ) }
 
 # Use 3 threads to iterate over a list:
-mt.iterate( ls, 3 )::{ io.writeln( X ) }
+mt.iterate( ls, 3 ) { io.writeln( X ) }
 
-mt.map( ls, 2 )::{ X*X } # produces new list: {1,4,9,16,25,36}
-mt.apply( ls, 2 )::{ X*X } # ls becomes: {1,4,9,16,25,36}
+mt.map( ls, 2 ) { X*X } # produces new list: {1,4,9,16,25,36}
+mt.apply( ls, 2 ) { X*X } # ls becomes: {1,4,9,16,25,36}
 @[code]
 
 
@@ -2328,7 +2312,7 @@ Here is a simple example,
 @[code]
 chan = mt::channel<int>(2)
 
-produce = mt.start::{
+produce = mt.start {
 	index = 0;
 	while( ++index <= 10 ){
 		io.writeln( 'sending', index )
@@ -2337,7 +2321,7 @@ produce = mt.start::{
 	chan.cap(0)  # set channel buffer size to zero to close the channel;
 }
 
-consume = mt.start::{
+consume = mt.start {
 	while(1){
 		data = chan.receive()
 		io.writeln( "received", data );
