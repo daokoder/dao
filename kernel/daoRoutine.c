@@ -601,6 +601,7 @@ static DaoRoutine* DParamNode_GetLeaf( DParamNode *self, int *ms, int mode )
 		if( param->type == NULL ){
 			int b2 = (param->routine->attribs & DAO_ROUT_CODESECT) != 0;
 			if( b1 == b2 ) return param->routine; /* a leaf */
+			continue;
 			return NULL;
 		}
 		if( param->type->tid == DAO_PAR_VALIST ){

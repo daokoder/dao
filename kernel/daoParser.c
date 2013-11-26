@@ -5968,62 +5968,6 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 	}else if( tki == DTOK_LB ){
 		result = DaoParser_ParseParenthesis( self );
 		start = self->curToken;
-	}else if( tki == DKEY_FRAME && (tki2 == DTOK_LB || tki2 == DTOK_LCB) ){
-		DaoInode *back, *jump, *label, *sect, *call;
-		DaoType *oldret = self->returnType;
-		int isFunctional = self->isFunctional;
-		int rb, lb = start + 1;
-		int opa = 0, opb = 0;
-		if( tki2 == DTOK_LB ){
-			rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
-			self->curToken = lb + 1;
-			enode = DaoParser_ParseExpression( self, stop );
-			if( enode.reg < 0 ) return error;
-			if( DaoParser_CheckTokenType( self, DTOK_RB, ")" ) == 0 ) return error;
-			self->curToken = lb = rb + 1;
-			if( DaoParser_CheckTokenType( self, DTOK_LCB, "{" ) == 0 ) return error;
-			opa = enode.reg;
-			opb = 1;
-		}
-		call = DaoParser_AddCode( self, DVM_EVAL, opa, opb, self->regCount, start,0,0 );
-		DaoParser_PushRegister( self );
-
-		rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, lb, end );
-		if( rb < 0 ) return error;
-		if( DaoParser_PushOuterRegOffset( self, lb, rb ) == 0 ) return error;
-
-		jump = DaoParser_AddCode( self, DVM_GOTO, 0, 0, DVM_SECT, lb+1, 0, 0 );
-		DaoParser_AddCode( self, DVM_SECT, self->regCount, 0, 0, lb+1, 0, 0 );
-
-		label = jump->jumpTrue = DaoParser_AddCode( self, DVM_LABEL, 0,0,0,rb,0,0 );
-		DaoParser_AddScope( self, DVM_LBRA, NULL );
-
-		back = self->vmcLast;
-		self->isFunctional = 1;
-		self->curToken = start + 2;
-		self->returnType = NULL;
-		if( DaoParser_ParseCodes( self, lb+1, rb-1 ) == 0 ){
-			self->returnType = oldret;
-			DaoParser_Error3( self, DAO_CTW_INVA_SYNTAX, start ); // XXX
-			return error;
-		}
-		self->returnType = oldret;
-		if( self->vmcLast->code == DVM_RETURN ){
-			self->vmcLast->c = DVM_SECT;
-		}else{
-			int first = self->vmcLast->first;
-			int opa = self->vmcValue ? self->vmcValue->c : 0;
-			int opb = self->vmcValue != NULL;
-			DaoParser_AddCode( self, DVM_RETURN, opa, opb, DVM_SECT, rb, 0, rb );
-		}
-		self->isFunctional = isFunctional;
-		self->curToken = rb + 1;
-		DaoParser_DelScope( self, NULL );
-		DArray_PopBack( self->outers );
-		DaoParser_AppendCode( self, label ); /* move to back */
-		result.reg = regLast = call->c;
-		result.last = result.update = call;
-		start = rb + 1;
 	}else if( tki == DKEY_ROUTINE ){
 		int tokname = DaoParser_NextTokenName( self );
 		/* anonymous function or closure expression */
@@ -6758,21 +6702,6 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 				result.last->c = result.last->a;
 				result.reg = result.last->a;
 			}
-		}else if( oper == DAO_OPER_ASSERT ){ /* assertation with failed value: e1 ?? e2 */
-			DaoInode *first = LHS.prev->next;
-			DaoInode *second = RHS.prev->next;
-			result.reg = DaoParser_PushRegister( self );
-			inode = DaoParser_InsertCode( self, first->prev, DVM_EVAL, 0,2, result.reg, postart );
-			jump = DaoParser_InsertCode( self, first->prev, DVM_GOTO, 0,0, DVM_SECT, postart );
-			jump2 = DaoParser_InsertCode( self, first->prev, DVM_GOTO, 0,0, DVM_SECT, postart );
-			DaoParser_InsertCode( self, first->prev, DVM_SECT, self->regCount, 0,0, postart );
-
-			DaoParser_InsertCode( self, second->prev, DVM_RETURN, LHS.reg, 1, DVM_SECT, postart );
-			jump2->jumpTrue = DaoParser_InsertCode( self, second->prev, DVM_LABEL, 0,0,0, postart );
-			result.update = DaoParser_AddCode( self, DVM_MOVE, RHS.reg,0,result.reg,postart,0,posend );
-
-			jump->jumpTrue = DaoParser_AddCode( self, DVM_LABEL, 0,0,0, postart,0,posend );
-			result.last = inode;
 		}else if( oper == DAO_OPER_AND || oper == DAO_OPER_OR ){
 			result.last = DaoParser_AddBinaryCode( self, mapAithOpcode[oper], & LHS, & RHS, pos );
 			result.reg = result.last->c;

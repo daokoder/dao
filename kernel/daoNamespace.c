@@ -633,7 +633,7 @@ DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const cha
 	*/
 	if( tp->tid == DAO_CDATA || tp->tid == DAO_CSTRUCT ) tp = tp->aux->xCtype.ctype;
 	tp2 = tp;
-	if( tp->tid && tp->tid < DAO_ARRAY ){
+	if( tp->tid && tp->tid <= DAO_TUPLE ){
 		tp = DaoType_Copy( tp );
 		DString_SetMBS( tp->name, type );
 	}
@@ -1185,6 +1185,7 @@ static void DaoNS_ImportRoutine( DaoNamespace *self, DString *name, DaoRoutine *
 	}else if( LOOKUP_ST( search->value.pInt ) == DAO_GLOBAL_CONSTANT ){
 		DaoRoutine *routine2 = (DaoRoutine*) DaoNamespace_GetConst( self, search->value.pInt );
 		if( routine2->type != DAO_ROUTINE ) return;
+		if( routine == routine2 ) return;
 		if( routine2->overloads ){
 			DRoutines_Add( routine2->overloads, routine );
 		}else{
@@ -1222,8 +1223,7 @@ void DaoNamespace_UpdateLookupTable( DaoNamespace *self )
 			if( search ) continue;
 			if( st == DAO_GLOBAL_CONSTANT ){
 				DaoValue *value = ns->constants->items.pConst[id]->value;
-				if( value->type == DAO_ROUTINE && value->xRoutine.overloads ){
-					/* To skip the private methods: */
+				if( value->type == DAO_ROUTINE ){
 					DaoNamespace_AddConst( self, name, value, pm );
 					continue;
 				}

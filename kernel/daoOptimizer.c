@@ -3103,10 +3103,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DAO_CODE_GETM :
 		case DAO_CODE_ENUM2 :
 		case DAO_CODE_ROUTINE :
-			if( code == DVM_EVAL ){
-				if( opb == 1 ) AssertInitialized( opa, 0, first, first );
-				break;
-			}
 			for(j=0; j<=opb; ++j) AssertInitialized( opa+j, 0, first, first );
 			break;
 		case DAO_CODE_SETM :
@@ -5508,11 +5504,6 @@ TryPushBlockReturnType:
 							rettypes->items.pType[ rettypes->size - 1 ] = ct;
 						}
 					}
-					if( redef != NULL && redef->code == DVM_EVAL ){
-						GC_DecRC( types[redef->c] );
-						types[redef->c] = NULL;
-						DaoInferencer_UpdateType( self, redef->c, at );
-					}
 				}
 				if( code == DVM_YIELD ){
 					tt = routine->routType;
@@ -5532,14 +5523,6 @@ TryPushBlockReturnType:
 				}
 				break;
 			}
-		case DVM_EVAL :
-			if( vmc->b != 1 ) at = NULL;
-			DArray_Append( rettypes, IntToPointer( inodes[i+1+(vmc->b==2)]->b ) );
-			DArray_Append( rettypes, inode );
-			DArray_Append( rettypes, at );
-			DArray_Append( rettypes, at );
-			DArray_PushBack( self->typeMaps, defs2 );
-			break;
 
 #define USE_TYPED_OPCODE 1
 

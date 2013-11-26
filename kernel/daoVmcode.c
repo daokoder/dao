@@ -112,7 +112,6 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "MCALL",      DVM_MCALL,      DAO_CODE_CALL,    0 },
 	{ "RETURN",     DVM_RETURN,     DAO_CODE_EXPLIST, 0 },
 	{ "YIELD",      DVM_YIELD,      DAO_CODE_YIELD,   0 },
-	{ "EVAL",       DVM_EVAL,       DAO_CODE_ROUTINE /*To avoid DCE*/,   0 },
 	{ "SECT",       DVM_SECT,       DAO_CODE_EXPLIST, 0 },
 	{ "JITC",       DVM_JITC,       DAO_CODE_NOP,     0 },
 	{ "DEBUG",      DVM_DEBUG,      DAO_CODE_NOP,     0 },

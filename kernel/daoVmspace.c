@@ -2321,6 +2321,31 @@ static void DaoBuiltIn_Recover2( DaoProcess *proc, DaoValue *p[], int n )
 	}
 	DaoProcess_PutValue( proc, ret ? ret : dao_none_value );
 }
+static void DaoBuiltIn_Frame( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoValue *retvalue = NULL;
+	DaoValue *defvalue = n ? p[0] : NULL;
+	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	int ecount;
+
+	if( sect == NULL ) return;
+	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	DaoProcess_AcquireCV( proc );
+	ecount = proc->exceptions->size;
+	DaoProcess_Execute( proc );
+	retvalue = proc->stackValues[0];
+	DaoProcess_ReleaseCV( proc );
+	DaoProcess_PopFrame( proc );
+	DaoProcess_SetActiveFrame( proc, proc->topFrame );
+	if( proc->exceptions->size > ecount ){
+		if( n > 0 ){
+			DaoProcess_PutValue( proc, defvalue );
+			DArray_Erase( proc->exceptions, ecount, -1 );
+		}
+	}else if( n > 0 ){
+		DaoProcess_PutValue( proc, retvalue );
+	}
+}
 
 DaoFuncItem dao_builtin_methods[] =
 {
@@ -2328,6 +2353,7 @@ DaoFuncItem dao_builtin_methods[] =
 	{ DaoBuiltIn_Panic,     "panic( value : any )" },
 	{ DaoBuiltIn_Recover,   "recover( ) => list<any>" },
 	{ DaoBuiltIn_Recover2,  "recover( eclass : class<Exception> ) => any" },
+	{ DaoBuiltIn_Frame,     "frame( default_value :@T|none = none ) [] => @T" },
 	{ NULL, NULL }
 };
 

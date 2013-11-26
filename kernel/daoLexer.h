@@ -74,7 +74,6 @@ enum DaoTokNames
 	DTOK_DIV , /* / */
 	DTOK_MOD , /* % */
 	DTOK_QUERY , /* ? */
-	DTOK_ASSERT , /* ?? */
 	DTOK_AMAND , /* & */
 	DTOK_PIPE , /* | */
 	DTOK_XOR , /* ^ */
@@ -156,7 +155,6 @@ enum DaoKeyNames
 	DKEY_BREAK ,
 	DKEY_SKIP ,
 	DKEY_DEFER ,
-	DKEY_FRAME ,
 	DKEY_RETURN ,
 	DKEY_YIELD ,
 	DKEY_CONST ,

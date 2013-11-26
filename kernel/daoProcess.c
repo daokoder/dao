@@ -624,12 +624,7 @@ static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 	DaoType *cbtype = NULL;
 	DaoVmCode *codes;
 	int nop = 0;
-	if( self->activeCode->code == DVM_EVAL ){
-		codes = self->activeCode + 1 + (self->activeCode->b == 2);
-		nop = codes[1].code == DVM_NOP;
-		if( codes[nop].code == DVM_GOTO && codes[nop+1].code == DVM_SECT ) return frame;
-		return NULL;
-	}
+
 	if( frame->routine ) cbtype = frame->routine->routType->cbtype;
 	if( cbtype == NULL ) return NULL;
 	if( frame->sect ){
@@ -660,7 +655,6 @@ static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 {
 	DaoStackFrame *next, *frame = DaoProcess_FindSectionFrame( self );
-	int asserting = self->activeCode->code == DVM_EVAL && self->activeCode->b == 2;
 	int returning = -1;
 
 	if( self->depth >= 1000 ){
@@ -673,7 +667,7 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 		returning = self->activeCode->c;
 	}
 	next = DaoProcess_PushFrame( self, 0 );
-	next->entry = frame->entry + 2 + asserting;
+	next->entry = frame->entry + 2;
 	next->state = DVM_FRAME_SECT | DVM_FRAME_KEEP;
 
 	GC_ShiftRC( frame->object, next->object );
@@ -900,7 +894,7 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_MATH ,
 		&& LAB_CALL , && LAB_MCALL ,
 		&& LAB_RETURN , && LAB_YIELD ,
-		&& LAB_EVAL , && LAB_SECT ,
+		&& LAB_SECT ,
 		&& LAB_JITC ,
 		&& LAB_DEBUG ,
 
@@ -1120,17 +1114,6 @@ CallEntry:
 				goto CallNotPermitted;
 			}
 		}
-	}
-	if( vmc->code == DVM_EVAL && (topFrame->state & DVM_FRAME_RUNNING) ){
-		if( self->exceptions->size > topFrame->exceptBase ){
-			if( vmc->b == 0 ) goto FinishCall;
-			DArray_Erase( self->exceptions, topFrame->exceptBase, -1 );
-			if( vmc->b == 1 && DaoProcess_SetValue( self, vmc->c, locVars[vmc->a] ) == 0 ){
-				DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid default value" );
-			}
-			vmc += vmc->b == 2;
-		}
-		vmc += 1;
 	}
 
 	exceptCount = self->exceptions->size;
@@ -1497,15 +1480,6 @@ CallEntry:
 				if( handler && handler->StdlibDebug ) handler->StdlibDebug( handler, self );
 				goto CheckException;
 			}
-		}OPNEXT() OPCASE( EVAL ){
-			self->activeCode = vmc;
-			if( DaoProcess_PushSectionFrame( self ) == NULL ){
-				printf( "No code section is found\n" ); //XXX
-				goto FinishProcess;
-			}
-			topFrame->entry = vmc - topFrame->codes;
-			self->topFrame->state = DVM_FRAME_SECT;
-			goto CallEntry;
 		}OPNEXT() OPCASE( SECT ){
 			goto ReturnFalse;
 		}OPNEXT() OPCASE( DATA_I ){

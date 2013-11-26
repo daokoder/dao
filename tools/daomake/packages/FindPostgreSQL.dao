@@ -1,0 +1,9 @@
+
+header_path = DaoMake::FindFile( "libpq-fe.h" )
+
+if( header_path == "" ) return;
+
+mysql = DaoMake::Project( "PostgreSQL" )
+cflags = "-I" + header_path
+shlibs = "-lpq";
+mysql.ExportLibrary( "PostgreSQL", cflags, "", shlibs )

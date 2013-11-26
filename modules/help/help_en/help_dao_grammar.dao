@@ -376,7 +376,7 @@ BinArith ::= '+' | '-' | '*' | '/' | '%' | '**'
 BinComp  ::= '==' | '!=' | '<' | '>' | '<=' | '>='
 BinBool  ::= '&&' | '||' | 'and' | 'or'
 BinBit   ::= '&' | '|' | '^' | '<<' | '>>'
-BinMisc  ::= 'in' | 'not in' | '?=' | '?<' | '??'
+BinMisc  ::= 'in' | 'not in' | '?=' | '?<'
 
 BinaryOperator ::= BinArith | BinComp | BinBool | BinBit | BinMisc
 @[code(syntax)]
