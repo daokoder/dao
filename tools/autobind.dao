@@ -604,7 +604,7 @@ attribs=FunctionTrait::FUNC_NONE, snamespace='' )
 	tpname = tks[2];
 	if( tpname.size() ){
 		if( not map_user_types.has( tpname ) ){
-			utp = UserType{ name => tpname, input_file => input };
+			utp = UserType::{ name => tpname, input_file => input };
 			map_user_types[ tpname ] = utp;
 		}
 		utp = map_user_types[ tpname ];
@@ -698,7 +698,7 @@ routine UserType::Parse( source='', inExtFile=0 )
 				if( map_user_types.has( old ) ){
 					map_user_types[ scoped ] = map_user_types[ old ];
 				}else{
-					utp = UserType{ name => typer, input_file => input_file };
+					utp = UserType::{ name => typer, input_file => input_file };
 					if( tks[1] == 'class' ) utp.isCppClass = 1;
 					utp.name2 = scoped;
 					utp.nested = i;
@@ -946,7 +946,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 	}
 	source.change( ';%s*;[;%s]+', ';' );
 
-	allpats.sort::{ X[1] < Y[1] };
+	allpats.sort{ X[1] < Y[1] };
 	for(var it in allpats ){
 		part = (string)it[2];
 		switch( (PatternType) it[0] ){
@@ -955,7 +955,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			typename = tks[1];
 			name = tks[3];
 			if( not map_user_types.has( name ) ){
-				utp = UserType{ name => name, input_file => fname };
+				utp = UserType::{ name => name, input_file => fname };
 				map_user_types[ name ] = utp;
 			}
 			utp = map_user_types[ name ];
@@ -980,7 +980,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 				name2 = fullname;
 				name2.change( ':', '_' );
 				if( not map_user_types.has( name2 ) ){
-					utp2 = UserType{ name => name2, fullname=>fullname, input_file => fname };
+					utp2 = UserType::{ name => name2, fullname=>fullname, input_file => fname };
 					map_user_types[ name2 ] = utp2;
 				}
 				utp2 = map_user_types[ name2 ];
@@ -996,7 +996,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			alias = tks[3];
 			name = tks[4];
 			if( not map_user_types.has( alias ) ){
-				utp = UserType{ name => name, input_file => fname };
+				utp = UserType::{ name => name, input_file => fname };
 				map_user_types[ alias ] = utp;
 			}
 			utp = map_user_types[ alias ];
@@ -1056,7 +1056,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 				 typedef_ns_types[alias] = map_ns_types[name];
 			 }else if( % snamespace ){
 				 typer = snamespace + '_' + alias;
-				 utp = UserType{ name => typer, input_file => fname };
+				 utp = UserType::{ name => typer, input_file => fname };
 				 if( tks[1] == 'class' ) utp.isCppClass = 1;
 				 utp.name2 = scoped;
 				 utp.fullname = snamespace + '::' + alias;
@@ -1067,7 +1067,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			 if( tks[2] == '*' ) pointer_types[ alias ] = name;
 			 if( pointer_types.has( name ) ) pointer_types[ alias ] = pointer_types[name];
 			 if( % name.pfind( '(struct|union)' ) ){
-				 map_user_types[ name ] = UserType{ name => alias, input_file => fname };;
+				 map_user_types[ name ] = UserType::{ name => alias, input_file => fname };;
 				 map_user_types[ alias ] = map_user_types[ name ];
 				 if( tks[2] == '*' ) pointer_types[ alias ] = alias;
 			 }
@@ -1725,7 +1725,7 @@ routine Variable::Parse( fname = '' )
 			}
 		}
 		if( user and not map_user_types.has( typename ) ){
-			utp = UserType{ name => typename, input_file => fname, source=>source2 };
+			utp = UserType::{ name => typename, input_file => fname, source=>source2 };
 			map_user_types[ typename ] = utp;
 			map_user_types[ 'struct ' + typename ] = utp;
 			if( utp.name[0:0] == '_' ){

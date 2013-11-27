@@ -6260,6 +6260,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 				self->vmcLast->jumpTrue = jump;
 				DaoParser_AppendCode( self, label ); /* move to back */
 				regLast = call->c;
+				result.konst = 0;
 				result.reg = regLast;
 				result.last = self->vmcLast;
 				result.update = call;

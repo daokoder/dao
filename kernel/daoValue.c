@@ -822,7 +822,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs, DaoDataCa
 	S = DaoValue_SimpleCopyWithTypeX( S, T, cache );
 	GC_ShiftRC( S, *D );
 	*D = S;
-	if( S->type == DAO_TUPLE && S->xTuple.unitype != T && tm >= DAO_MT_SIM ){
+	if( S->type == DAO_TUPLE && S->xTuple.unitype != T && tm == DAO_MT_SIM ){
 		return DaoValue_TryCastTuple( S, D, T );
 	}else if( T && T->tid == S->type && !(T->attrib & DAO_TYPE_SPEC) ){
 		DaoValue_SetType( S, T );

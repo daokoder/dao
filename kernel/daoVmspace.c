@@ -2342,7 +2342,7 @@ static void DaoBuiltIn_Frame( DaoProcess *proc, DaoValue *p[], int n )
 			DaoProcess_PutValue( proc, defvalue );
 			DArray_Erase( proc->exceptions, ecount, -1 );
 		}
-	}else if( n > 0 ){
+	}else{
 		DaoProcess_PutValue( proc, retvalue );
 	}
 }
@@ -2353,7 +2353,8 @@ DaoFuncItem dao_builtin_methods[] =
 	{ DaoBuiltIn_Panic,     "panic( value : any )" },
 	{ DaoBuiltIn_Recover,   "recover( ) => list<any>" },
 	{ DaoBuiltIn_Recover2,  "recover( eclass : class<Exception> ) => any" },
-	{ DaoBuiltIn_Frame,     "frame( default_value :@T|none = none ) [] => @T" },
+	{ DaoBuiltIn_Frame,     "frame() [=>@T] => @T" },
+	{ DaoBuiltIn_Frame,     "frame( default_value :@T ) [=>@T] => @T" },
 	{ NULL, NULL }
 };
 
