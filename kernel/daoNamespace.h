@@ -115,6 +115,7 @@ DAO_DLL DaoCodeInliner DaoNamespace_FindCodeInliner( DaoNamespace *self, DString
 
 DAO_DLL DaoType* DaoNamespace_FindType( DaoNamespace *self, DString *name );
 DAO_DLL DaoType* DaoNamespace_FindTypeMBS( DaoNamespace *self, const char *name );
+DAO_DLL DaoType* DaoNamespace_ParseType( DaoNamespace *self, const char *name );
 DAO_DLL DaoType* DaoNamespace_AddType( DaoNamespace *self, DString *name, DaoType *tp );
 DAO_DLL void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *tp );
 

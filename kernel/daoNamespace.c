@@ -1383,6 +1383,10 @@ DaoType* DaoNamespace_FindTypeMBS( DaoNamespace *self, const char *name )
 	DString name2 = DString_WrapMBS( name );
 	return DaoNamespace_FindType( self, & name2 );
 }
+DaoType* DaoNamespace_ParseType( DaoNamespace *self, const char *name )
+{
+	return DaoParser_ParseTypeName( name, self, NULL );
+}
 DaoType* DaoNamespace_AddType( DaoNamespace *self, DString *name, DaoType *type )
 {
 	DNode *node;

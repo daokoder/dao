@@ -3094,7 +3094,7 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 		}
 	}
 	DaoProcess_ReleaseCV( proc );
-	if( popped ) DaoProcess_PopFrame( proc );
+	if( popped == 0 ) DaoProcess_PopFrame( proc );
 }
 static void DaoMAP_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 {

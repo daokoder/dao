@@ -37,3 +37,5 @@ if( DaoMake::IsDir( "clinker" ) ) modules.AddDirectory( "clinker", "clinker" );
 if( DaoMake::IsDir( "DaoSQL" ) ) modules.AddDirectory( "DaoSQL", "DaoSQL" );
 
 if( DaoMake::IsDir( "DaoSDL" ) ) modules.AddDirectory( "SDL", "DaoSDL" );
+
+if( DaoMake::IsDir( "weblit" ) ) modules.AddDirectory( "weblit", "weblit" );

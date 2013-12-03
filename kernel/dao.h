@@ -1108,6 +1108,8 @@ DAO_DLL void DaoGC_TryDelete( DaoValue *p );
 
 DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns );
 
+DAO_DLL void Dao_MakePath( DString *base, DString *path );
+
 DAO_DLL void* dao_malloc( size_t size );
 DAO_DLL void* dao_calloc( size_t nmemb, size_t size );
 DAO_DLL void* dao_realloc( void *ptr, size_t size );
