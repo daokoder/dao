@@ -121,6 +121,7 @@ static const char *const cmd_help =
 "   -e, --eval:           evaluate command line codes;\n"
 "   -d, --debug:          run in debug mode;\n"
 "   -i, --interactive:    run in interactive mode;\n"
+"   -r, --restart:        restart program on crash (unix) or nozero exit (win);\n"
 "   -c, --compile:        compile to bytecodes;\n"
 "   -a, --archive:        build archive file;\n"
 "   -l, --list-code:      print compiled bytecodes;\n"
@@ -760,6 +761,7 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 				self->options |= DAO_OPTION_DEBUG;
 			}else if( strcmp( token->mbs, "--interactive" ) ==0 ){
 				self->options |= DAO_OPTION_INTERUN;
+			}else if( strcmp( token->mbs, "--restart" ) ==0 ){
 			}else if( strcmp( token->mbs, "--list-code" ) ==0 ){
 				self->options |= DAO_OPTION_LIST_BC;
 			}else if( strcmp( token->mbs, "--compile" ) ==0 ){
@@ -819,6 +821,7 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 				case 'e' : self->evalCmdline = 1;
 						   DString_Clear( self->mainSource );
 						   break;
+				case 'r' : break;
 				case '-' : break;
 				default :
 						   if( token->mbs[j] ){

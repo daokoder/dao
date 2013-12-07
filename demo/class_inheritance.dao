@@ -1,8 +1,7 @@
 
 class AA
 {
-	global glb;
-	#global glb = 1;
+	static glb = 1;
 	const  cst = 123;
 	var    obj = 456;
 	var    obj2 = 789;

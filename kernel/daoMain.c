@@ -26,10 +26,11 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include"stdio.h"
-#include"stdlib.h"
-#include"string.h"
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
 #include"dao.h"
+
 
 #ifdef DAO_USE_READLINE
 #include"readline/readline.h"
@@ -72,6 +73,85 @@ static void DaoSignalHandler( int sig )
 }
 
 
+#ifdef UNIX
+
+#include <unistd.h>
+
+void DaoRestartRun()
+{
+	int forked = 0;
+	for(;;){
+		int status = 0;
+		if( forked ) waitpid( 0, & status, 0 );
+		if( forked == 0 || !WIFEXITED( status ) ){
+			int pid = fork();
+			forked = 1;
+			if( pid == 0 ){
+				fprintf( stderr, "Dao process forked!\n" );
+				break;
+			}else if( pid < 0 ){
+				fprintf( stderr, "Failed to fork and restart!\n" );
+				exit(1);
+			}
+		}else if( forked ){
+			exit(1);
+		}
+	}
+}
+
+#elif defined(WIN32)
+
+#include <windows.h>
+
+/* XXX: NOT TESTED!!! */
+void DaoRestartRun()
+{
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+
+	for(;;){
+		DWORD exitCode = 0;
+		ZeroMemory( &si, sizeof(si) );
+		ZeroMemory( &pi, sizeof(pi) );
+		si.cb = sizeof(si);
+
+		/* Start the child process.  */
+		if( !CreateProcess( NULL,      /* No module name (use command line) */
+					GetCommandLine(),  /* Command line */
+					NULL,              /* Process handle not inheritable */
+					NULL,              /* Thread handle not inheritable */
+					FALSE,             /* Set handle inheritance to FALSE */
+					0,                 /* No creation flags */
+					NULL,              /* Use parent's environment block */
+					NULL,              /* Use parent's starting directory  */
+					&si,               /* Pointer to STARTUPINFO structure */
+					&pi )              /* Pointer to PROCESS_INFORMATION structure */
+		  ){
+			fprintf( stderr, "CreateProcess failed (%d).\n", GetLastError() );
+			return;
+		}
+
+		/* Wait until child process exits. */
+		WaitForSingleObject( pi.hProcess, INFINITE );
+
+		GetExitCodeProcess( pi.hProcess, & exitCode );
+		if( exitCode == 0 ) exit(0);
+
+		/* Close process and thread handles.  */
+		CloseHandle( pi.hProcess );
+		CloseHandle( pi.hThread );
+	}
+}
+
+#else
+
+void DaoRestartRun()
+{
+}
+
+#endif
+
+
 /*
 // Adding virtual modules:
 //
@@ -95,10 +175,19 @@ extern DaoVModule dao_virtual_modules[];
 
 int main( int argc, char **argv )
 {
+	int restart = 0;
 	int i, k, idsrc, vmods = 0;
 	DString *opts, *args;
 
 	/*mtrace(); */
+
+	for(i=1; i<argc; i++){
+		if( strcmp( argv[i], "-r" ) ==0 || strcmp( argv[i], "--restart" ) ==0 ){
+			restart = 1;
+			break;
+		}
+	}
+	if( restart ) DaoRestartRun();
 
 	vmSpace = DaoInit( argv[0] );
 
