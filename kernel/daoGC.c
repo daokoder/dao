@@ -714,6 +714,19 @@ void DaoGC_Finish()
 	}
 	DaoGC_PrintProfile( gcWorker.idleList, gcWorker.workList );
 
+#ifdef DAO_WITH_THREAD
+	if( gcWorker.concurrent ){
+		DThread_Destroy( & gcWorker.thread );
+		DMutex_Destroy( & gcWorker.data_lock );
+		DMutex_Destroy( & gcWorker.generic_lock );
+		DMutex_Destroy( & gcWorker.mutex_idle_list );
+		DMutex_Destroy( & gcWorker.mutex_start_gc );
+		DMutex_Destroy( & gcWorker.mutex_block_mutator );
+		DCondVar_Destroy( & gcWorker.condv_start_gc );
+		DCondVar_Destroy( & gcWorker.condv_block_mutator );
+	}
+#endif
+
 	DArray_Delete( gcWorker.caches );
 	DArray_Delete( gcWorker.idleList );
 	DArray_Delete( gcWorker.workList );
@@ -1124,15 +1137,6 @@ void DaoCGC_Finish()
 	gcWorker.gcMin = 0;
 	gcWorker.finalizing = 1;
 	DThread_Join( & gcWorker.thread );
-
-	DThread_Destroy( & gcWorker.thread );
-	DMutex_Destroy( & gcWorker.data_lock );
-	DMutex_Destroy( & gcWorker.generic_lock );
-	DMutex_Destroy( & gcWorker.mutex_idle_list );
-	DMutex_Destroy( & gcWorker.mutex_start_gc );
-	DMutex_Destroy( & gcWorker.mutex_block_mutator );
-	DCondVar_Destroy( & gcWorker.condv_start_gc );
-	DCondVar_Destroy( & gcWorker.condv_block_mutator );
 }
 void DaoCGC_TryBlock()
 {

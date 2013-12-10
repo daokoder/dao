@@ -139,7 +139,6 @@ enum DaoOptions
 	DAO_OPTION_ARCHIVE  = (1<<7), /* -a, --archive:      build archive file; */
 
 	DAO_OPTION_NO_TC    = (1<<8), /* no typed code; */
-	DAO_OPTION_SAFE     = (1<<9), /* run in safe mode; */
 
 	/*
 	// DAO_OPTION_IDE:

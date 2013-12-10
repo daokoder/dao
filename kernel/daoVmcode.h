@@ -369,10 +369,6 @@ enum DaoOpcode
 
 	DVM_CHECK_ST , /* check against simple types: int, float, double, complex, long, string; */
 
-	/* increase a count, and perform the normal goto operation
-	 * if the count does not exceed a safe bound. */
-	DVM_SAFE_GOTO,
-
 	DVM_NULL
 };
 typedef enum DaoOpcode DaoOpcode;

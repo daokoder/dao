@@ -694,22 +694,6 @@ void DaoValue_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 void DaoValue_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
 {
 }
-void DaoValue_SafeGetField( DaoValue *self, DaoProcess *proc, DString *name )
-{
-	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
-	DaoValue_GetField( self, proc, name );
-}
-void DaoValue_SafeSetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
-{
-	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
-	DaoValue_SetField( self, proc, name, value );
-}
 void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N )
 {
 	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
@@ -978,11 +962,6 @@ static daoint DaoSTR_CheckIndex( DString *self, DaoProcess *proc, daoint index, 
 }
 static void DaoSTR_Resize( DaoProcess *proc, DaoValue *p[], int N )
 {
-	if( ( proc->vmSpace->options & DAO_OPTION_SAFE ) && p[1]->xInteger.value > 1E5 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR,
-				"not permitted to create long string in safe running mode" );
-		return;
-	}
 	if( DaoSTR_CheckParam( proc, p[1]->xInteger.value ) < 0 ) return;
 	DString_Resize( p[0]->xString.data, p[1]->xInteger.value );
 }
@@ -1952,11 +1931,6 @@ static void DaoLIST_Resize( DaoProcess *proc, DaoValue *p[], int N )
 	DaoList *self = & p[0]->xList;
 	DaoValue *fill = dao_none_value;
 	daoint size = p[1]->xInteger.value;
-	if( ( proc->vmSpace->options & DAO_OPTION_SAFE ) && size > 1000 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR,
-				"not permitted to create large list in safe running mode" );
-		return;
-	}
 	if( self->unitype && self->unitype->nested->size )
 		fill = self->unitype->nested->items.pType[0]->value;
 	DArray_Resize( & self->items, size, fill );

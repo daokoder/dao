@@ -77,7 +77,7 @@ static void DaoSignalHandler( int sig )
 
 #include <unistd.h>
 
-void DaoRestartRun()
+void DaoRestartRun( char **argv, int argc, int optid )
 {
 	int forked = 0;
 	for(;;){
@@ -103,11 +103,23 @@ void DaoRestartRun()
 
 #include <windows.h>
 
-/* XXX: NOT TESTED!!! */
-void DaoRestartRun()
+void DaoRestartRun( char **argv, int argc, int optid )
 {
+	int i, m, offset = 0;
+	char cmdline[1024] = {0};
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
+
+	for(i=0; i<argc; ++i){
+		if( i == optid ) continue;
+		m = strlen( argv[i] );
+		if( offset + m + 1 >= sizeof(cmdline) ){
+			fprintf( stderr, "Failed option \"%s\": command line too long!\n", argv[optid] );
+			return;
+		}
+		if( i ) strcat( cmdline + (offset++), " " );
+		strcat( cmdline + offset, argv[i] );
+	}
 
 	for(;;){
 		DWORD exitCode = 0;
@@ -116,20 +128,21 @@ void DaoRestartRun()
 		si.cb = sizeof(si);
 
 		/* Start the child process.  */
-		if( !CreateProcess( NULL,      /* No module name (use command line) */
-					GetCommandLine(),  /* Command line */
-					NULL,              /* Process handle not inheritable */
-					NULL,              /* Thread handle not inheritable */
-					FALSE,             /* Set handle inheritance to FALSE */
-					0,                 /* No creation flags */
-					NULL,              /* Use parent's environment block */
-					NULL,              /* Use parent's starting directory  */
-					&si,               /* Pointer to STARTUPINFO structure */
-					&pi )              /* Pointer to PROCESS_INFORMATION structure */
+		if( !CreateProcess( NULL,  /* No module name (use command line) */
+					cmdline,  /* Command line */
+					NULL,     /* Process handle not inheritable */
+					NULL,     /* Thread handle not inheritable */
+					FALSE,    /* Set handle inheritance to FALSE */
+					0,        /* No creation flags */
+					NULL,     /* Use parent's environment block */
+					NULL,     /* Use parent's starting directory  */
+					&si,      /* Pointer to STARTUPINFO structure */
+					&pi )     /* Pointer to PROCESS_INFORMATION structure */
 		  ){
 			fprintf( stderr, "CreateProcess failed (%d).\n", GetLastError() );
 			return;
 		}
+		fprintf( stderr, "Dao process forked!\n" );
 
 		/* Wait until child process exits. */
 		WaitForSingleObject( pi.hProcess, INFINITE );
@@ -145,7 +158,7 @@ void DaoRestartRun()
 
 #else
 
-void DaoRestartRun()
+void DaoRestartRun( char **argv, int argc, int optid )
 {
 }
 
@@ -183,11 +196,11 @@ int main( int argc, char **argv )
 
 	for(i=1; i<argc; i++){
 		if( strcmp( argv[i], "-r" ) ==0 || strcmp( argv[i], "--restart" ) ==0 ){
-			restart = 1;
+			restart = i;
 			break;
 		}
 	}
-	if( restart ) DaoRestartRun();
+	if( restart ) DaoRestartRun( argv, argc, restart );
 
 	vmSpace = DaoInit( argv[0] );
 

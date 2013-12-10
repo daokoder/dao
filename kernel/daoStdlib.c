@@ -76,18 +76,13 @@ static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 	DaoStream *prevStream = proc->stdioStream;
 	DaoStream *redirect = (DaoStream*) p[1];
 	char *source = DaoValue_TryGetMBString( p[0] );
-	int safe = p[2]->xInteger.value;
-	int wasProt = 0;
-	if( vms->options & DAO_OPTION_SAFE ) wasProt = 1;
 	if( redirect != prevStream ){
 		GC_ShiftRC( redirect, proc->stdioStream );
 		proc->stdioStream = redirect;
 	}
 
-	if( safe ) vms->options |= DAO_OPTION_SAFE;
 	DaoProcess_Eval( proc, ns, source );
 	DaoProcess_PutValue( proc, proc->stackValues[0] );
-	if( ! wasProt ) vms->options &= ~DAO_OPTION_SAFE;
 	if( redirect != prevStream ){
 		GC_ShiftRC( prevStream, proc->stdioStream );
 		proc->stdioStream = prevStream;
@@ -98,18 +93,13 @@ static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 	DString *name = p[0]->xString.data;
 	int import = p[1]->xInteger.value;
 	int runim = p[2]->xInteger.value;
-	int safe = p[3]->xInteger.value;
-	int wasProt = 0;
 	int res = 0;
 	DaoVmSpace *vms = proc->vmSpace;
 	DaoNamespace *ns;
 	DString_ToMBS( name );
-	if( safe ) vms->options |= DAO_OPTION_SAFE;
-	if( vms->options & DAO_OPTION_SAFE ) wasProt = 1;
 	DArray_PushFront( vms->pathLoading, proc->activeNamespace->path );
 	ns = DaoVmSpace_LoadEx( vms, DString_GetMBS( name ), runim );
 	DaoProcess_PutValue( proc, (DaoValue*) ns );
-	if( ! wasProt ) vms->options &= ~DAO_OPTION_SAFE;
 	if( ns == NULL ) DaoProcess_RaiseException( proc, DAO_ERROR, "loading failed" );
 	DArray_PopFront( vms->pathLoading );
 	if( import && ns ) DaoNamespace_AddParent( proc->activeNamespace, ns );
@@ -391,19 +381,11 @@ static void STD_Error( DaoProcess *proc, DaoValue *p[], int N )
 static void STD_Gcmax( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutInteger( proc, DaoGC_Max( -1 ) );
-	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
-		if( N == 1 ) DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
 	if( N == 1 ) DaoGC_Max( (int)p[0]->xInteger.value );
 }
 static void STD_Gcmin( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutInteger( proc, DaoGC_Min( -1 ) );
-	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
-		if( N == 1 ) DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
 	if( N == 1 ) DaoGC_Min( (int)p[0]->xInteger.value );
 }
 static void STD_SubType( DaoProcess *proc, DaoValue *p[], int N )
@@ -602,8 +584,8 @@ DaoFuncItem dao_std_methods[] =
 {
 	{ STD_Path,      "path( path :string, action :enum<set,add,remove>=$add )" },
 	{ STD_Compile,   "compile( source :string, ns :any= none ) => tuple<ns:any,main:routine>" },
-	{ STD_Eval,      "eval( source :string, st=io::stdio, safe=0 )=>any" },
-	{ STD_Load,      "load( file :string, import=1, runim=0, safe=0 )=>any" },
+	{ STD_Eval,      "eval( source :string, st=io::stdio )=>any" },
+	{ STD_Load,      "load( file :string, import=1, runim=0 )=>any" },
 	{ STD_Resource,  "resource( path :string )=>string" },
 	{ STD_Argv,      "argv() => list<any>" },
 	{ STD_About,     "about( ... )=>string" },

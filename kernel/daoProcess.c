@@ -982,9 +982,7 @@ int DaoProcess_Execute( DaoProcess *self )
 
 		&& LAB_TEST_I , && LAB_TEST_F , && LAB_TEST_D ,
 		&& LAB_MATH_I , && LAB_MATH_F , && LAB_MATH_D ,
-		&& LAB_CHECK_ST ,
-
-		&& LAB_SAFE_GOTO
+		&& LAB_CHECK_ST 
 	};
 #endif
 
@@ -1053,13 +1051,6 @@ CallEntry:
 		DaoProcess_PopFrame( self );
 		goto CallEntry;
 	}
-#if 0
-	if( (vmSpace->options & DAO_OPTION_SAFE) && self->topFrame->index >= 100 ){
-		DaoProcess_RaiseException( self, DAO_ERROR,
-				"too deep recursion for safe running mode." );
-		goto FinishProcess;
-	}
-#endif
 
 
 #if 0
@@ -2175,19 +2166,7 @@ CallEntry:
 		OPCASE( CHECK_ST ){
 			vA = locVars[vmc->a];
 			locVars[vmc->c]->xInteger.value = vA && vA->type == locVars[vmc->b]->xType.tid;
-		}OPNEXT()
-		OPCASE( SAFE_GOTO ){
-			if( ( self->vmSpace->options & DAO_OPTION_SAFE ) ){
-				gotoCount ++;
-				if( gotoCount > 1E6 ){
-					self->activeCode = vmc;
-					DaoProcess_RaiseException( self, DAO_ERROR,
-							"too many goto operations for safe running mode." );
-					goto CheckException;
-				}
-			}
-			vmc = vmcBase + vmc->b;
-		}OPJUMP() OPCASE( TEST_I ){
+		}OPNEXT() OPCASE( TEST_I ){
 			vmc = IntegerOperand( vmc->a ) ? vmc+1 : vmcBase+vmc->b;
 		}OPJUMP() OPCASE( TEST_F ){
 			vmc = FloatOperand( vmc->a ) ? vmc+1 : vmcBase+vmc->b;
@@ -3712,13 +3691,6 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoProcess_ShowCallError( self, rout, selfpar, P, N, codemode );
 		return;
 	}
-	if( (vmspace->options & DAO_OPTION_SAFE) && func->nameSpace != vmspace->nsInternal ){
-		/* normally this condition will not be satisfied.
-		 * it is possible only if the safe mode is set in C codes
-		 * by embedding or extending. */
-		DaoProcess_RaiseException( self, DAO_ERROR, "not permitted" );
-		return;
-	}
 	if( (func = DaoProcess_PassParams( self, func, hostype, selfpar, P, N, code )) == NULL ){
 		DaoProcess_ShowCallError( self, rout, selfpar, P, N, codemode );
 		return;
@@ -4280,10 +4252,6 @@ void DaoProcess_DoAPList(  DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "need a number or string as first value" );
 		return;
 	}
-	if( ( self->vmSpace->options & DAO_OPTION_SAFE ) && num > 1000 ){
-		DaoProcess_RaiseException( self, DAO_ERROR, "not permitted" );
-		return;
-	}
 	DArray_Resize( & list->items, num, initValue );
 	if( num == 0 || stepValue == NULL ) goto SetupType;
 
@@ -4388,10 +4356,6 @@ void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc )
 	self->activeCode = vmc;
 	if( countValue->type < DAO_INTEGER || countValue->type > DAO_DOUBLE ){
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "need number" );
-		return;
-	}
-	if( ( self->vmSpace->options & DAO_OPTION_SAFE ) && num > 1000 ){
-		DaoProcess_RaiseException( self, DAO_ERROR, "not permitted" );
 		return;
 	}
 	array = DaoProcess_GetArray( self, vmc );
@@ -4530,10 +4494,6 @@ void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc )
 			break;
 		}
 		default: break;
-	}
-	if( ( self->vmSpace->options & DAO_OPTION_SAFE ) && array->size > 5000 ){
-		DaoProcess_RaiseException( self, DAO_ERROR, "not permitted" );
-		return;
 	}
 #else
 	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_NUMARRAY ) );
@@ -6339,18 +6299,13 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	closure = DaoRoutine_Copy( proto, 1, 1, 1 );
 	pp2 = closure->routConsts->items.items.pValue;
 
-	K = vmc->b - closure->body->svariables->size;
-	for(j=0,k=0; j<closure->parCount; j+=1){
-		DaoType *partype = closure->routType->nested->items.pType[j];
-		if( partype->tid != DAO_PAR_DEFAULT ) continue;
-		if( closure->routConsts->items.items.pValue[j] != NULL ) continue;
-		if( k >= K ) break;
-		DaoValue_Copy( pp[k], pp2 + j );
-		k += 1;
-	}
-	m = (proto->attribs & DAO_ROUT_PASSRET) != 0;
-	for(j=m; j<closure->body->svariables->size; ++j){
-		DaoVariable_Set( closure->body->svariables->items.pVar[j], pp[k+j-m], NULL );
+	for(j=0; j<vmc->b; j+=2){
+		k = pp[j+1]->xInteger.value;
+		if( k < DAO_MAX_PARAM ){
+			DaoValue_Copy( pp[j], pp2 + k );
+		}else{
+			DaoVariable_Set( closure->body->svariables->items.pVar[k-DAO_MAX_PARAM], pp[j], NULL );
+		}
 	}
 
 	tp = DaoNamespace_MakeRoutType( self->activeNamespace, closure->routType, pp2, NULL, NULL );
@@ -6565,14 +6520,6 @@ static void DaoProcess_AdjustCodes( DaoProcess *self, int options )
 	}else if( mode & DAO_OPTION_DEBUG ){
 		routine->body->mode &= ~DAO_OPTION_DEBUG;
 		for(i=0; i<n; i++) if( c[i].code == DVM_DEBUG ) c[i].code = DVM_NOP;
-	}
-	if( (options & DAO_OPTION_SAFE) == (mode & DAO_OPTION_SAFE) ) return;
-	if( options & DAO_OPTION_SAFE ){
-		routine->body->mode |= DAO_OPTION_SAFE;
-		for(i=0; i<n; i++) if( c[i].code == DVM_GOTO ) c[i].code = DVM_SAFE_GOTO;
-	}else if( mode & DAO_OPTION_SAFE ){
-		routine->body->mode &= ~DAO_OPTION_SAFE;
-		for(i=0; i<n; i++) if( c[i].code == DVM_SAFE_GOTO ) c[i].code = DVM_GOTO;
 	}
 }
 

@@ -2396,11 +2396,6 @@ static void DaoARRAY_Resize( DaoProcess *proc, DaoValue *par[], int N )
 		size *= dims[i];
 	}
 	DaoProcess_PutValue( proc, (DaoValue*)self );
-	if( (proc->vmSpace->options & DAO_OPTION_SAFE) && size > 1000 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		DVector_Delete( ad );
-		return;
-	}
 	DaoArray_ResizeArray( self, dims, ad->size );
 	DVector_Delete( ad );
 }

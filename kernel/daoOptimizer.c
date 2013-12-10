@@ -770,7 +770,7 @@ static int DaoVmCode_MayCreateReference( int code )
 }
 
 /* Optimization should be done on routine->body->annotCodes,
-// which should not contain opcodes such as DEBUG, JITC or SAFE_GOTO etc. */
+// which should not contain opcodes such as DEBUG and JITC. */
 static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 {
 	DaoCnode *node, **nodes;
@@ -5362,26 +5362,26 @@ TryPushBlockReturnType:
 
 			self->array->size = 0;
 			DArray_Resize( self->array, closure->parCount, 0 );
-			K = vmc->b - closure->body->svariables->size;
-			for(j=0,k=0; j<closure->parCount; j+=1){
+			for(j=0; j<closure->parCount; j+=1){
 				DaoType *partype = closure->routType->nested->items.pType[j];
 				self->array->items.pType[j] = partype;
-				if( partype->tid != DAO_PAR_DEFAULT ) continue;
-				if( closure->routConsts->items.items.pValue[j] != NULL ) continue;
-				if( k >= K ) goto ErrorTyping;
-				self->array->items.pType[j] = types[opa+1+k];
-				k += 1;
 			}
-			m = (closure->attribs & DAO_ROUT_PASSRET) != 0;
-			if( m ){
+			for(j=0; j<opb; j+=2){
+				DaoInode *imove = inodes[i-opb+j];
+				DaoInode *idata = inodes[i-opb+j+1];
+				if( idata->b < DAO_MAX_PARAM ){
+					self->array->items.pType[idata->b] = types[opa+1+j];
+				}else{
+					DaoType *uptype = types[opa+1+j];
+					DaoVariable *var = closure->body->svariables->items.pVar[ idata->b - DAO_MAX_PARAM ];
+					GC_ShiftRC( uptype, var->dtype );
+					var->dtype = uptype;
+				}
+			}
+			if( closure->attribs & DAO_ROUT_PASSRET ){
 				DaoType *retype = (DaoType*) routine->routType->aux;
 				GC_ShiftRC( retype, closure->body->svariables->items.pVar[0]->dtype );
 				closure->body->svariables->items.pVar[0]->dtype = retype;
-			}
-			for(j=m; j<closure->body->svariables->size; ++j){
-				DaoType *uptype = types[opa+1+k+j-m];
-				GC_ShiftRC( uptype, closure->body->svariables->items.pVar[j]->dtype );
-				closure->body->svariables->items.pVar[j]->dtype = uptype;
 			}
 			at = DaoNamespace_MakeRoutType( NS, at, NULL, self->array->items.pType, NULL );
 

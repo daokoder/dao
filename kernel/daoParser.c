@@ -4782,7 +4782,7 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 				int tokpos = nametok->index;
 				i = DaoParser_GetNormRegister( self->outerParser, i, tokpos, 0, tokpos );
 				DArray_Append( self->uplocs, i );
-				DArray_Append( self->uplocs, routine->body->svariables->size );
+				DArray_Append( self->uplocs, routine->body->svariables->size + DAO_MAX_PARAM );
 				DArray_Append( self->uplocs, tokpos );
 				DArray_Append( self->uplocs, tokpos );
 				i = LOOKUP_BIND( DAO_STATIC_VARIABLE, 0, 0, routine->body->svariables->size );
@@ -5533,22 +5533,23 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 
 	regCall = self->regCount;
 	DaoParser_PushRegister( self );
+	i = DaoRoutine_AddConstant( routine, (DaoValue*)rout );
+	DaoParser_AddCode( self, DVM_GETCL, 0, i, regCall, start, rb, end );
+
 	for(i=0; i<uplocs->size; i+=4 ){
 		int up = uplocs->items.pInt[i];
 		int loc = uplocs->items.pInt[i+1];
 		int first = uplocs->items.pInt[i+2] + offset;
 		int last = uplocs->items.pInt[i+3] + offset;
-		DaoParser_AddCode( self, DVM_MOVE, up, 0, regCall+1+i/4, first, 0, last );
+		DaoParser_AddCode( self, DVM_MOVE, up, 0, regCall+1+i/2, first, 0, last );
+		DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, loc, regCall+2+i/2, first, 0, last );
 	}
-	DaoParser_PushRegisters( self, uplocs->size/4 );
-
-	i = DaoRoutine_AddConstant( routine, (DaoValue*)rout );
-	DaoParser_AddCode( self, DVM_GETCL, 0, i, regCall, start, rb, end );
+	DaoParser_PushRegisters( self, uplocs->size/2 );
 
 	self->curToken = rb + 1;
 	opc = DaoParser_PushRegister( self );
 	/* DVM_ROUTINE rout_proto, upv1, upv2, ..., opc */
-	DaoParser_AddCode( self, DVM_ROUTINE, regCall, uplocs->size/4, opc, start, rb, end );
+	DaoParser_AddCode( self, DVM_ROUTINE, regCall, uplocs->size/2, opc, start, rb, end );
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return opc;
 ErrorParsing:

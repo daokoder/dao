@@ -59,7 +59,6 @@ DaoConfig daoConfig =
 {
 	1, /*cpu*/
 	0, /*jit*/
-	0, /*safe*/
 	1, /*typedcode*/
 	1, /*optimize*/
 	0, /*iscgi*/
@@ -541,7 +540,6 @@ DaoVmSpace* DaoVmSpace_New()
 	self->errorStream->file = stderr;
 	self->options = 0;
 	self->stopit = 0;
-	self->safeTag = 1;
 	self->evalCmdline = 0;
 	self->hasAuxlibPath = 0;
 	self->hasSyslibPath = 0;
@@ -570,8 +568,6 @@ DaoVmSpace* DaoVmSpace_New()
 	self->allProcessAux = DMap_New(0,0);
 	self->loadedModules = DArray_New(D_VALUE);
 	self->preloadModules = NULL;
-
-	if( daoConfig.safe ) self->options |= DAO_OPTION_SAFE;
 
 #ifdef DAO_WITH_THREAD
 	DMutex_Init( & self->mutexLoad );
@@ -809,9 +805,6 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 				case 'l' : self->options |= DAO_OPTION_LIST_BC;   break;
 				case 'c' : self->options |= DAO_OPTION_COMP_BC;   break;
 				case 'a' : self->options |= DAO_OPTION_ARCHIVE;   break;
-				case 's' : self->options |= DAO_OPTION_SAFE;
-						   daoConfig.safe = 1;
-						   break;
 				case 'j' : self->options |= DAO_OPTION_JIT;
 						   daoConfig.jit = 1;
 						   break;
@@ -1728,11 +1721,6 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	daoint nsCount = self->loadedModules->size;
 	daoint i, retc;
 
-	if( self->options & DAO_OPTION_SAFE ){
-		DaoStream_WriteMBS( self->errorStream,
-				"ERROR: not permitted to open shared library in safe running mode.\n" );
-		return NULL;
-	}
 	ns = DaoVmSpace_FindNamespace( self, libpath );
 	if( ns ) return ns;
 
@@ -2139,9 +2127,6 @@ static void DaoConfigure_FromFile( const char *name )
 			}else if( TOKCMP( tk1, "jit" )==0 ){
 				if( yes <0 ) goto InvalidConfigValue;
 				daoConfig.jit = yes;
-			}else if( TOKCMP( tk1, "safe" )==0 ){
-				if( yes <0 ) goto InvalidConfigValue;
-				daoConfig.safe = yes;
 			}else if( TOKCMP( tk1, "typedcode" )==0 ){
 				if( yes <0 ) goto InvalidConfigValue;
 				daoConfig.typedcode = yes;
@@ -2561,7 +2546,6 @@ DaoVmSpace* DaoInit( const char *command )
 		mbs->mbs[ mbs->size ] = 0;
 	}
 
-	vms->safeTag = 0;
 	ns = vms->nsInternal;
 
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_udf );
@@ -2658,7 +2642,6 @@ DaoVmSpace* DaoInit( const char *command )
 	   printf( "initialized...\n" );
 	 */
 	DString_Delete( mbs );
-	vms->safeTag = 1;
 	return vms;
 }
 extern DaoType* DaoParser_ParseTypeName( const char *type, DaoNamespace *ns, DaoClass *cls );

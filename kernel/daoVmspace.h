@@ -104,7 +104,6 @@ struct DaoVmSpace
 
 	int options;
 	char stopit;
-	char safeTag;
 	char evalCmdline;
 	char hasAuxlibPath;
 	char hasSyslibPath;

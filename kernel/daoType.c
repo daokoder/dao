@@ -1400,10 +1400,6 @@ static void DaoCdata_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 {
 	DaoType *type = self->xCdata.ctype;
 	DaoValue *p = DaoType_FindValue( type, name );
-	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
 	if( p == NULL ){
 		DaoValue *pars[2];
 		DaoRoutine *func = NULL;
@@ -1448,10 +1444,6 @@ static void DaoCdata_SetField( DaoValue *self, DaoProcess *proc, DString *name, 
 	DString_SetMBS( proc->mbstring, "." );
 	DString_Append( proc->mbstring, name );
 	DString_AppendMBS( proc->mbstring, "=" );
-	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
 	func = DaoType_FindFunction( type, proc->mbstring );
 	if( func == NULL ){
 		pars[0] = (DaoValue*) & str;
@@ -1471,10 +1463,6 @@ static void DaoCdata_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid 
 	DaoType *type = self->ctype;
 	DaoRoutine *func = NULL;
 
-	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
 	func = DaoType_FindFunctionMBS( type, "[]" );
 	if( func == NULL ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
@@ -1489,10 +1477,6 @@ static void DaoCdata_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid,
 	DaoValue *p[2];
 
 	DString_SetMBS( proc->mbstring, "[]=" );
-	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
 	func = DaoType_FindFunction( type, proc->mbstring );
 	if( func == NULL ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
@@ -1506,10 +1490,6 @@ static void DaoCdata_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[],
 {
 	DaoType *type = self->xCdata.ctype;
 	DaoRoutine *func = NULL;
-	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
 	if( N == 1 ){
 		DaoCdata_GetItem1( self, proc, ids[0] );
 		return;
@@ -1526,10 +1506,6 @@ static void DaoCdata_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[],
 	DaoType *type = self->xCdata.ctype;
 	DaoRoutine *func = NULL;
 	DaoValue *p[ DAO_MAX_PARAM ];
-	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
 	if( N == 1 ){
 		DaoCdata_SetItem1( self, proc, ids[0], value );
 		return;

@@ -189,7 +189,6 @@ static const char* const daoCtInfo[] =
 	"invalid type form",
 	"invalid type name",
 	"invalid constant expression",
-	"not permited in the safe running mode",
 	"type not matched",
 	"interface binding failed",
 	"is not enabled",

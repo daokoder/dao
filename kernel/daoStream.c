@@ -353,10 +353,6 @@ static void DaoIO_ReadFile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *res = DaoProcess_PutMBString( proc, "" );
 	daoint silent = p[1]->xInteger.value;
-	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
 	if( DString_Size( p[0]->xString.data ) ==0 ){
 		char buf[1024];
 		while(1){
@@ -378,10 +374,6 @@ static void DaoIO_Open( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *stream = NULL;
 	char *mode;
-	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
 	stream = DaoStream_New();
 	stream->attribs |= DAO_IO_FILE;
 	if( N==0 ){
@@ -519,10 +511,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 	int chop = p[1]->xInteger.value;
 	char buf[IO_BUF_SIZE];
 	FILE *fin;
-	if( proc->vmSpace->options & DAO_OPTION_SAFE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "not permitted" );
-		return;
-	}
+
 	fin = DaoIO_OpenFile( proc, p[0]->xString.data, "r", 0 );
 	if( fin == NULL ) return;
 	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
