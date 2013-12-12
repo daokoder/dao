@@ -6416,6 +6416,57 @@ void DaoProcess_PrintException( DaoProcess *self, DaoStream *stream, int clear )
 }
 
 
+static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc )
+{
+	DaoValue *C = NULL, *A = self->activeValues[ vmc->a ];
+	DaoType *type = (DaoType*) A;
+	DaoEnum denum2 = {DAO_ENUM,0,0,0,0,0,0,NULL};
+	DaoEnum *denum = & denum2;
+	DaoClass *thisClass = NULL;
+	DaoRoutine *routine = self->activeRoutine;
+	DString *name = routine->routConsts->items.items.pValue[vmc->b]->xString.data;
+	int opb;
+
+	self->activeCode = vmc;
+	if( A == NULL || A->type == 0 ){
+		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on none object" );
+		return;
+	}
+	switch( A->type ){
+	case DAO_TYPE :
+		if( type->tid == DAO_TYPE ) type = type->nested->items.pType[0];
+		if( type && type->tid == DAO_ENUM && type->mapNames ){
+			DNode *node = DMap_Find( type->mapNames, name );
+			if( node ){
+				GC_ShiftRC( type, denum->etype );
+				denum->etype = type;
+				denum->value = node->value.pInt;
+				C = (DaoValue*) denum;
+			}
+		}
+		break;
+	case DAO_NAMESPACE :
+		opb = DaoNamespace_FindConst( & A->xNamespace, name );
+		if( opb >=0 ) C = DaoNamespace_GetConst( & A->xNamespace, opb );
+		break;
+	case DAO_CLASS :
+		if( routine->routHost ) thisClass = DaoValue_CastClass( routine->routHost->aux );
+		if( DaoClass_GetData( (DaoClass*) A, name, &C, thisClass ) ) goto Done;
+		opb = DaoClass_FindConst( & A->xClass, name );
+		if( opb >=0 ) C = DaoClass_GetConst( & A->xClass, opb );
+		break;
+	default :
+		type = DaoNamespace_GetType( self->activeNamespace, A );
+		C = DaoType_FindValue( type, name );
+		break;
+	}
+Done:
+	if( C == NULL ){
+		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid constant field" );
+		return;
+	}
+	DaoProcess_PutValue( self, C );
+}
 DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 {
 	DaoVmCodeX vmcx = {0,0,0,0,0,0,0,0,0};
@@ -6468,7 +6519,7 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 	case DVM_GETMI :
 		DaoProcess_DoGetItem( self, vmc ); break;
 	case DVM_GETF :
-		DaoProcess_DoGetField( self, vmc ); break;
+		DaoProcess_DoGetConstField( self, vmc ); break;
 	case DVM_SETI :
 	case DVM_SETMI :
 		DaoProcess_DoSetItem( self, vmc ); break;

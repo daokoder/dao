@@ -796,6 +796,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 			if( server->finishing && server->idle == server->total ){
 				if( (server->events2->size + server->waitings->size) == 0 ) break;
 			}
+			wt = 0.01*(server->idle == server->total) + 0.001;
 			timeout = DCondVar_TimedWait( & server->condv, & server->mutex, wt );
 		}
 		for(i=0; i<server->parameters->size; ++i){

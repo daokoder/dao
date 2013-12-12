@@ -303,11 +303,21 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 	}
 	if( typer->core->kernel->methods == NULL ){
 		DaoType *hostype = typer->core->kernel->abtype;
+		DMap *methods2 = DHash_New( D_STRING, D_VALUE );
 		methods = DHash_New( D_STRING, D_VALUE );
 		size = 0;
 		name1 = DString_New(1);
 		name2 = DString_New(1);
 		DaoNamespace_InitConstEvalData( self );
+
+		/*
+		// Set a temporary empty method list, so that this method setup
+		// will not be invoked again on the same ctype, when its method
+		// is accessed during constant folding. The shortcoming of this
+		// is that the method accession will not be successful, but it is
+		// acceptable as such case is extremely rare.
+		*/
+		typer->core->kernel->methods = methods2;
 
 		parser = DaoVmSpace_AcquireParser( self->vmSpace );
 		parser->vmSpace = self->vmSpace;
@@ -380,6 +390,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		DString_Delete( name2 );
 		/* Set methods field after it has been setup, for read safety in multithreading: */
 		typer->core->kernel->methods = methods;
+		DMap_Delete( methods2 );
 	}
 	DMutex_Unlock( & mutex_methods_setup );
 	return 1;
