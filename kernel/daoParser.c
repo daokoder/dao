@@ -3654,8 +3654,9 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 					storeType |= DAO_DECL_GLOBAL;
 					storeType2 |= DAO_DECL_GLOBAL;
 				}else if( self->isClassBody == 0 ){
-					storeType |= DAO_DECL_STATIC;
-					storeType2 |= DAO_DECL_STATIC;
+					DString_SetMBS( self->mbs, "global has to be declared at top level!" );
+					DaoParser_Error( self, DAO_INVALID_STORAGE, self->mbs );
+					return 0;
 				}
 				break;
 			case DKEY_STATIC :
@@ -4180,7 +4181,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	int nameStart, oldcount = self->regCount;
 	int reg, cst, temp, eq, errorStart = start;
 	int k, end = start, remove = 1;
-	unsigned char tki, tki2;
+	unsigned char tki, tki2, errors;
 #if 0
 	int mm;
 	for(mm=start; mm<=to; mm++) printf( "%s ", tokens[mm]->string->mbs );
@@ -4226,7 +4227,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 			valid_name = tki == DTOK_IDENTIFIER || tki >= DKEY_ABS;
 			assignment = tki2 == DTOK_ASSN;
 			abtp = NULL;
-			if( valid_name && (assignment || self->curToken >= to) ){
+			if( valid_name && assignment ){
 				reg = DaoParser_GetRegister( self, ptok );
 				if( reg <0 ) DaoParser_DeclareVariable( self, ptok, store, abtp );
 			}
@@ -4260,18 +4261,26 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 		end = start;
 	}
 	abtp = extype;
-	if( extype || store2 ){
-		int errors = self->errors->size;
+	temp = start > to ? 0 : tokens[start]->name;
+
+	errors = self->errors->size;
+	if( store2 != 0 && extype != NULL ){
 		for(k=nameStart; k<self->toks->size; k++){
 			DString *name = & self->toks->items.pToken[k]->string;
 			DNode *node = MAP_Find( DaoParser_GetCurrentDataMap( self ), name );
 			if( node ) DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, name );
 		}
-		if( self->errors->size > errors ) return -1;
+	}else if( store2 == 0 && extype == NULL && temp != DTOK_ASSN ){
+		for(k=nameStart; k<self->toks->size; k++){
+			DaoToken *varTok = self->toks->items.pToken[k];
+			int reg = DaoParser_GetRegister( self, varTok );
+			if( reg < 0 ) DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, & varTok->string );
+		}
 	}
+	if( self->errors->size > errors ) return -1;
+
 	enode.reg = -1;
 	enode.konst = 0;
-	temp = start > to ? 0 : tokens[start]->name;
 	if( temp == DTOK_ASSN ){ /* V=E  V:TYPE=E */
 		int foldConst = self->isClassBody && (store & DAO_DECL_MEMBER);
 		foldConst |= store & (DAO_DECL_CONST|DAO_DECL_STATIC);
@@ -4290,6 +4299,10 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 		end = self->curToken;
 		if( enode.reg < 0 ){
 			DaoParser_Error2( self, DAO_INVALID_STATEMENT, start, end, 0 );
+			return -1;
+		}
+		if( foldConst && enode.konst == 0 ){
+			DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, start, end, 0 );
 			return -1;
 		}
 	}else if( abtp == NULL && cons && topll && store2 ==0 ){

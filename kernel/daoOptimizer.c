@@ -2997,6 +2997,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	DArray *errors = self->errors;
 	DString *str, *mbs = self->mbstring;
 	DaoRoutine *closure;
+	DaoVariable *var;
 	DaoVmCodeX *vmc, *vmc2;
 	DaoType *at, *bt, *ct, *tt, *catype, *ts[DAO_ARRAY+DAO_MAX_PARAM];
 	DaoType *type, **tp, **type2, **types = self->types->items.pType;
@@ -3205,14 +3206,16 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DVM_SETVO :
 		case DVM_SETVK :
 		case DVM_SETVG :
+			var = NULL;
 			type2 = NULL;
 			switch( code ){
 			case DVM_SETVH : type2 = typeVH[opc] + opb; break;
-			case DVM_SETVS : type2 = & body->svariables->items.pVar[opb]->dtype; break;
-			case DVM_SETVO : type2 = & hostClass->instvars->items.pVar[opb]->dtype; break;
-			case DVM_SETVK : type2 = & hostClass->variables->items.pVar[opb]->dtype; break;
-			case DVM_SETVG : type2 = & NS->variables->items.pVar[opb]->dtype; break;
+			case DVM_SETVS : var = body->svariables->items.pVar[opb]; break;
+			case DVM_SETVO : var = hostClass->instvars->items.pVar[opb]; break;
+			case DVM_SETVK : var = hostClass->variables->items.pVar[opb]; break;
+			case DVM_SETVG : var = NS->variables->items.pVar[opb]; break;
 			}
+			if( var ) type2 = & var->dtype;
 			at = types[opa];
 			if( type2 && ( *type2 == NULL || (*type2)->tid == DAO_UDT ) ){
 				GC_ShiftRC( at, *type2 );
@@ -3220,20 +3223,17 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}
 			/* less strict checking */
 			if( types[opa]->tid & DAO_ANY ) break;
-			if( type2 == 0 ) break;
+			if( type2 == NULL ) break;
 
 			k = DaoType_MatchTo( types[opa], *type2, defs );
 			if( k ==0 ) return DaoInferencer_ErrorTypeNotMatching( self, types[opa], *type2 );
 			at = types[opa];
 			if( type2[0]->tid && type2[0]->tid <= DAO_COMPLEX && at->tid && at->tid <= DAO_COMPLEX ){
 				if( typed_code ){
-					if( code == DVM_SETVG ){
-						DaoVariable *var = NS->variables->items.pVar[opb];
-						if( var->value == NULL || var->value->type != at->value->type ){
-							GC_DecRC( var->value );
-							var->value = DaoValue_SimpleCopy( at->value );
-							GC_IncRC( var->value );
-						}
+					if( var && (var->value == NULL || var->value->type != at->value->type) ){
+						GC_DecRC( var->value );
+						var->value = DaoValue_SimpleCopy( at->value );
+						GC_IncRC( var->value );
 					}
 					if( at->tid != type2[0]->tid ){
 						DaoInferencer_InsertMove( self, inode, & inode->a, at, *type2 );
