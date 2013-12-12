@@ -3690,6 +3690,68 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 				storeType |= DAO_DECL_GLOBAL;
 			}
 		}
+
+		rb = -1;
+		tki = tokens[start]->type;
+		if( tki == DTOK_LB ) rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
+		if( rb >0 && (rb+1) <= to && tokens[rb+1]->type == DTOK_ASSN ){
+			/* multiple assignment: */
+			DArray *inodes = DArray_New(0);
+			int foldConst = storeType & (DAO_DECL_CONST|DAO_DECL_STATIC);
+			self->curToken = start + 1;
+			while( self->curToken < rb ){
+				int tid = self->curToken;
+				int cur = tokens[tid]->name;
+				int nxt = tokens[tid+1]->name;
+				cur = cur == DTOK_IDENTIFIER || cur >= DKEY_ABS;
+				nxt = nxt == DTOK_COMMA || nxt == DTOK_RB;
+				if( cur && nxt ){
+					k = DaoParser_GetRegister( self, tokens[tid] );
+					if( k < 0 ) DaoParser_DeclareVariable( self, tokens[tid], storeType, NULL );
+				}
+				enode = DaoParser_ParseExpression( self, 0 );
+				if( enode.reg < 0 ) goto InvalidMultiAssignment;
+				if( enode.update == NULL ){
+					DaoParser_AddCode( self, DVM_MOVE, 0,0, enode.reg, tid, 0, 0 );
+					DArray_Append( inodes, self->vmcLast );
+				}else{
+					int code = enode.update->code;
+					if( code < DVM_GETVH || code > DVM_GETF ){
+						DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
+						goto InvalidMultiAssignment;
+					}
+					enode.update->code += DVM_SETVH - DVM_GETVH;
+					enode.update->c = enode.update->a;
+					DaoParser_PopRegister( self );
+					DArray_Append( inodes, enode.update );
+				}
+				if( DaoParser_CurrentTokenType( self ) == DTOK_COMMA ) self->curToken += 1;
+			}
+			self->curToken = rb + 2;
+			if( foldConst ) self->needConst += 1;
+			enode = DaoParser_ParseExpression( self, 0 );
+			if( foldConst ) self->needConst -= 1;
+			if( enode.reg < 0 ) goto InvalidMultiAssignment;
+			if( foldConst && enode.konst == 0 ){
+				DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, start, end, 0 );
+				goto InvalidMultiAssignment;
+			}
+			i = DaoParser_PushRegister( self );
+			for(k=0; k<inodes->size; k++){
+				int p1 = inodes->items.pInode[k]->first;
+				int p2 = p1 + inodes->items.pInode[k]->last;
+				reg = DaoParser_PushRegister( self );
+				DaoParser_AddCode( self, DVM_GETDI, enode.reg, k, reg, p1, 0, p2 );
+				DaoParser_AppendCode( self, inodes->items.pInode[k] );
+				self->vmcLast->a = reg;
+			}
+			DArray_Delete( inodes );
+			start = self->curToken;
+			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
+			continue;
+InvalidMultiAssignment: DArray_Delete( inodes ); return 0;
+		}
+
 		tki = tokens[start]->name;
 		tki2 = start+1 <= to ? tokens[start+1]->name : 0;
 		if( needName && (ptok->type != DTOK_IDENTIFIER || (tki != DKEY_ENUM
@@ -4018,7 +4080,8 @@ DecoratorError:
 			DaoParser_PushLevel( self );
 			start = colon + 1;
 			continue;
-		case DKEY_BREAK : case DKEY_SKIP :
+		case DKEY_BREAK :
+		case DKEY_SKIP :
 			inode = DaoParser_AddCode( self, DVM_GOTO, 0, 0, tki, start,0,0 );
 			opening = DaoParser_GetBreakableScope( self );
 			if( opening == NULL ){
@@ -4080,59 +4143,6 @@ DecoratorError:
 			continue;
 		}
 
-		rb = -1;
-		tki = tokens[start]->type;
-		if( tki == DTOK_LB ) rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
-		if( rb >0 && (rb+1) <= to && tokens[rb+1]->type == DTOK_ASSN ){
-			/* multiple assignment: */
-			DArray *inodes = DArray_New(0);
-			self->curToken = start + 1;
-			while( self->curToken < rb ){
-				int tid = self->curToken;
-				int cur = tokens[tid]->name;
-				int nxt = tokens[tid+1]->name;
-				cur = cur == DTOK_IDENTIFIER || cur >= DKEY_ABS;
-				nxt = nxt == DTOK_COMMA || nxt == DTOK_RB;
-				if( cur && nxt ){
-					k = DaoParser_GetRegister( self, tokens[tid] );
-					if( k < 0 ) DaoParser_DeclareVariable( self, tokens[tid], 0, NULL );
-				}
-				enode = DaoParser_ParseExpression( self, 0 );
-				if( enode.reg < 0 ) goto InvalidMultiAssignment;
-				if( enode.update == NULL ){
-					DaoParser_AddCode( self, DVM_MOVE, 0,0, enode.reg, tid, 0, 0 );
-					DArray_Append( inodes, self->vmcLast );
-				}else{
-					int code = enode.update->code;
-					if( code < DVM_GETVH || code > DVM_GETF ){
-						DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
-						goto InvalidMultiAssignment;
-					}
-					enode.update->code += DVM_SETVH - DVM_GETVH;
-					enode.update->c = enode.update->a;
-					DaoParser_PopRegister( self );
-					DArray_Append( inodes, enode.update );
-				}
-				if( DaoParser_CurrentTokenType( self ) == DTOK_COMMA ) self->curToken += 1;
-			}
-			self->curToken = rb + 2;
-			enode = DaoParser_ParseExpression( self, 0 );
-			if( enode.reg < 0 ) goto InvalidMultiAssignment;
-			i = DaoParser_PushRegister( self );
-			for(k=0; k<inodes->size; k++){
-				int p1 = inodes->items.pInode[k]->first;
-				int p2 = p1 + inodes->items.pInode[k]->last;
-				reg = DaoParser_PushRegister( self );
-				DaoParser_AddCode( self, DVM_GETDI, enode.reg, k, reg, p1, 0, p2 );
-				DaoParser_AppendCode( self, inodes->items.pInode[k] );
-				self->vmcLast->a = reg;
-			}
-			DArray_Delete( inodes );
-			start = self->curToken;
-			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
-			continue;
-InvalidMultiAssignment: DArray_Delete( inodes ); return 0;
-		}
 		end = DaoParser_ParseVarExpressions( self, start, to, 0, storeType, storeType2 );
 		if( end < 0 ) return 0;
 		if( DaoParser_CompleteScope( self, end-1 ) == 0 ) return 0;
@@ -6316,6 +6326,8 @@ InvalidFunctional:
 						DaoValue *v2 = DaoParser_GetVariable( self, enode.konst );
 						regLast = DaoParser_MakeArithConst( self, DVM_GETI, v1, v2, & cst, back, regcount );
 						result.konst = cst;
+					}else{
+						result.konst = 0;
 					}
 					if( result.konst == 0 ){
 						regLast = DaoParser_PushRegister( self );
