@@ -6674,7 +6674,6 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 #ifdef DAO_WITH_REGEX
 	DMap *regexCaches = NULL;
 	DaoRegex *pat = NULL;
-	DaoRgxItem *it;
 	DNode *node;
 	char buf[50];
 	int i;
@@ -6688,7 +6687,7 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 	}
 	regexCaches = (DMap*) DaoProcess_GetAuxData( self, DaoProcess_FreeRegexCaches );
 	if( regexCaches == NULL ){
-		regexCaches = DMap_New(D_STRING,0);
+		regexCaches = DHash_New(D_STRING,0);
 		DaoProcess_SetAuxData( self, DaoProcess_FreeRegexCaches, regexCaches );
 	}
 	node = DMap_Find( regexCaches, src );
@@ -6696,7 +6695,7 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 
 	pat = DaoRegex_New( src );
 	for( i=0; i<pat->count; i++ ){
-		it = pat->items + i;
+		DaoRgxItem *it = pat->items + i;
 		if( it->type ==0 ){
 			sprintf( buf, "incorrect pattern, at char %i.", it->length );
 			if( self->activeRoutine ) DaoProcess_RaiseException( self, DAO_ERROR, buf );

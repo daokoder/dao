@@ -398,9 +398,20 @@ static void STD_Warn( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_RaiseException( proc, DAO_WARNING, DString_GetMBS( p[0]->xString.data ) );
 }
+
+#ifndef CHANGESET_ID
+#define CHANGESET_ID "Undefined"
+#endif
+
+const char *const dao_version = "Dao " DAO_VERSION " (" CHANGESET_ID ", " __DATE__ ")";
+
 static void STD_Version( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoProcess_PutMBString( proc, DAO_VERSION );
+	if( p[0]->xInteger.value ){
+		DaoProcess_PutMBString( proc, dao_version );
+	}else{
+		DaoProcess_PutMBString( proc, DAO_VERSION );
+	}
 }
 
 
@@ -596,7 +607,7 @@ DaoFuncItem dao_std_methods[] =
 	{ STD_Gcmax,     "gcmax( limit=0 )=>int" },/*by default, return the current value;*/
 	{ STD_Gcmin,     "gcmin( limit=0 )=>int" },
 	{ STD_SubType,   "subtype( obj1, obj2 )=>int" },
-	{ STD_Version,   "version()=>string" },
+	{ STD_Version,   "version( verbose=0 )=>string" },
 
 	{ STD_Iterate,  "iterate( times :int )[index:int]" },
 	{ STD_String,   "string( size :int, type :enum<mbs,wcs>=$mbs )[index:int =>int] =>string" },
