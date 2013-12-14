@@ -276,7 +276,6 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 #endif
 	if( DMap_Find( self->allProcesses, proc ) ){
 		if( proc->factory ) DArray_Clear( proc->factory );
-		if( proc->aux ) DaoVmSpace_ReleaseProcessAux( self, proc->aux );
 		DaoDataCache_Release( proc->cache );
 		GC_DecRC( proc->future );
 		proc->future = NULL;
@@ -372,25 +371,6 @@ DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self )
 #endif
 	return optimizer;
 }
-DaoProcessAux* DaoVmSpace_AcquireProcessAux( DaoVmSpace *self )
-{
-	DaoProcessAux *processaux = NULL;
-
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexMisc );
-#endif
-	if( self->processaux->size ){
-		processaux = (DaoProcessAux*) DArray_Back( self->processaux );
-		DArray_PopBack( self->processaux );
-	}else{
-		processaux = DaoProcessAux_New();
-		DMap_Insert( self->allProcessAux, processaux, 0 );
-	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexMisc );
-#endif
-	return processaux;
-}
 void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser )
 {
 #ifdef SHARE_NO_PARSER
@@ -436,22 +416,6 @@ void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *optimizer )
 #endif
 	if( DMap_Find( self->allOptimizers, optimizer ) ){
 		DArray_PushBack( self->optimizers, optimizer );
-	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexMisc );
-#endif
-}
-void DaoVmSpace_ReleaseProcessAux( DaoVmSpace *self, DaoProcessAux *processaux )
-{
-#ifdef SHARE_NO_OPTIMIZER
-	DaoProcessAux_Delete( processaux ); return;
-#endif
-
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexMisc );
-#endif
-	if( DMap_Find( self->allProcessAux, processaux ) ){
-		DArray_PushBack( self->processaux, processaux );
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->mutexMisc );
@@ -561,11 +525,9 @@ DaoVmSpace* DaoVmSpace_New()
 	self->parsers = DArray_New(0);
 	self->inferencers = DArray_New(0);
 	self->optimizers = DArray_New(0);
-	self->processaux = DArray_New(0);
 	self->allParsers = DMap_New(0,0);
 	self->allInferencers = DMap_New(0,0);
 	self->allOptimizers = DMap_New(0,0);
-	self->allProcessAux = DMap_New(0,0);
 	self->loadedModules = DArray_New(D_VALUE);
 	self->preloadModules = NULL;
 
@@ -642,18 +604,7 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 }
 void DaoVmSpace_Delete( DaoVmSpace *self )
 {
-	DNode *it;
 	if( self->stdioStream ) DaoVmSpace_DeleteData( self );
-	/*
-	// DaoProcessAux caches must be deleted after the GC has be completed,
-	// because deleting DaoProcess may need to free DaoProcessAux to the
-	// VM Space structure.
-	*/
-	for(it=DMap_First(self->allProcessAux); it; it=DMap_Next(self->allProcessAux,it)){
-		DaoProcessAux_Delete( (DaoProcessAux*) it->key.pVoid );
-	}
-	DArray_Delete( self->processaux );
-	DMap_Delete( self->allProcessAux );
 	DMap_Delete( self->nsModules );
 #ifdef DAO_WITH_THREAD
 	DMutex_Destroy( & self->mutexLoad );

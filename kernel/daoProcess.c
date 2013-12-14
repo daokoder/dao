@@ -166,7 +166,15 @@ void DaoProcess_Delete( DaoProcess *self )
 	}
 	for(i=0; i<self->stackSize; i++) GC_DecRC( self->stackValues[i] );
 	if( self->stackValues ) dao_free( self->stackValues );
-	if( self->aux ) DaoVmSpace_ReleaseProcessAux( self->vmSpace, self->aux );
+	if( self->aux ){
+		DNode *it;
+		typedef void (*aux_delete)(void*);
+		for(it=DMap_First(self->aux); it; it=DMap_Next(self->aux,it)){
+			aux_delete del = (aux_delete) it->key.pVoid;
+			(*del)( it->value.pVoid );
+		}
+		DMap_Delete( self->aux );
+	}
 	DaoDataCache_Release( self->cache );
 	self->cache = NULL;
 
@@ -6580,11 +6588,36 @@ void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream )
 	self->stdioStream = stream;
 }
 
-DaoProcessAux* DaoProcessAux_New()
+void* DaoProcess_GetAuxData( DaoProcess *self, void *key )
+{
+	DNode *node;
+	if( self->aux == NULL ) self->aux = DMap_New(0,0);
+	node = DMap_Find( self->aux, key );
+	if( node ) return node->value.pVoid;
+	return NULL;
+}
+void DaoProcess_SetAuxData( DaoProcess *self, void *key, void *value )
+{
+	if( self->aux == NULL ) self->aux = DMap_New(0,0);
+	DMap_Insert( self->aux, key, value );
+}
+
+
+
+#define DAO_MTCOUNT 624
+
+typedef struct DaoRandGenCache DaoRandGenCache;
+
+struct DaoRandGenCache
+{
+	uint_t  mtBuffer[DAO_MTCOUNT];
+	int     mtIndex;
+};
+
+DaoRandGenCache* DaoRandGenCache_New()
 {
 	int i;
-	DaoProcessAux *self = (DaoProcessAux*) dao_malloc( sizeof(DaoProcessAux) );
-	self->regexCaches = DHash_New(D_STRING,0);
+	DaoRandGenCache *self = (DaoRandGenCache*) dao_malloc( sizeof(DaoRandGenCache) );
 	self->mtIndex = 0;
 	self->mtBuffer[0] = rand();
 	for(i=1; i<DAO_MTCOUNT; ++i){
@@ -6593,13 +6626,11 @@ DaoProcessAux* DaoProcessAux_New()
 	}
 	return self;
 }
-void DaoProcessAux_Delete( DaoProcessAux *self )
+void DaoRandGenCache_Delete( DaoRandGenCache *self )
 {
-	DNode *it = DMap_First( self->regexCaches );
-	for( ; it !=NULL; it = DMap_Next(self->regexCaches, it) ) dao_free( it->value.pVoid );
-	DMap_Delete( self->regexCaches );
+	free( self );
 }
-void DaoProcessAux_GenerateMT( DaoProcessAux *self )
+void DaoRandGenCache_GenerateMT( DaoRandGenCache *self )
 {
 	uint_t i, *mtnums = self->mtBuffer;
 	for(i=1; i<DAO_MTCOUNT; ++i){
@@ -6608,10 +6639,10 @@ void DaoProcessAux_GenerateMT( DaoProcessAux *self )
 		if( y % 2 ) mtnums[i] ^= 0x9908b0df;
 	}
 }
-uint_t DaoProcessAux_ExtractMT( DaoProcessAux *self )
+uint_t DaoRandGenCache_ExtractMT( DaoRandGenCache *self )
 {
 	uint_t y;
-	if( self->mtIndex == 0 ) DaoProcessAux_GenerateMT( self );
+	if( self->mtIndex == 0 ) DaoRandGenCache_GenerateMT( self );
 	y = self->mtBuffer[ self->mtIndex ];
 	y ^= y>>11;
 	y ^= (y<<7) & 0x9d2c5680;
@@ -6622,14 +6653,26 @@ uint_t DaoProcessAux_ExtractMT( DaoProcessAux *self )
 }
 double DaoProcess_Random( DaoProcess *self )
 {
-	if( self->aux == NULL ) self->aux = DaoVmSpace_AcquireProcessAux( self->vmSpace );
-	return DaoProcessAux_ExtractMT( self->aux ) / (double) 0xffffffff;
+	DaoRandGenCache *randgen = (DaoRandGenCache*) DaoProcess_GetAuxData( self, DaoRandGenCache_Delete );
+	if( randgen == NULL ){
+		randgen = DaoRandGenCache_New();
+		DaoProcess_SetAuxData( self, DaoRandGenCache_Delete, randgen );
+	}
+	return DaoRandGenCache_ExtractMT( randgen ) / (double) 0xffffffff;
 }
 
+
+void DaoProcess_FreeRegexCaches( DMap *regexCaches )
+{
+	DNode *it = DMap_First( regexCaches );
+	for( ; it !=NULL; it = DMap_Next(regexCaches, it) ) dao_free( it->value.pVoid );
+	DMap_Delete( regexCaches );
+}
 
 DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 {
 #ifdef DAO_WITH_REGEX
+	DMap *regexCaches = NULL;
 	DaoRegex *pat = NULL;
 	DaoRgxItem *it;
 	DNode *node;
@@ -6643,8 +6686,12 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 			DaoProcess_RaiseException( self, DAO_ERROR, "pattern with empty string" );
 		return NULL;
 	}
-	if( self->aux == NULL ) self->aux = DaoVmSpace_AcquireProcessAux( self->vmSpace );
-	node = DMap_Find( self->aux->regexCaches, src );
+	regexCaches = (DMap*) DaoProcess_GetAuxData( self, DaoProcess_FreeRegexCaches );
+	if( regexCaches == NULL ){
+		regexCaches = DMap_New(D_STRING,0);
+		DaoProcess_SetAuxData( self, DaoProcess_FreeRegexCaches, regexCaches );
+	}
+	node = DMap_Find( regexCaches, src );
 	if( node ) return (DaoRegex*) node->value.pVoid;
 
 	pat = DaoRegex_New( src );
@@ -6657,7 +6704,7 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 			return NULL;
 		}
 	}
-	DMap_Insert( self->aux->regexCaches, src, pat );
+	DMap_Insert( regexCaches, src, pat );
 	return pat;
 #else
 	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_REGEX ) );

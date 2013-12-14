@@ -42,8 +42,6 @@
 #define DVM_FRAME_SECT     (1<<5)
 #define DVM_FRAME_KEEP     (1<<6)
 
-typedef struct DaoProcessAux DaoProcessAux;
-
 
 struct DaoStackFrame
 {
@@ -133,8 +131,12 @@ struct DaoProcess
 	DMutex         *mutex; /* mutex for mt.critical::{} */
 #endif
 
+	/*
+	// Process auxiliary data (process specific data):
+	// Pairs of deallocator function pointer and data pointer;
+	*/
+	DMap           *aux;
 	DString        *mbstring;
-	DaoProcessAux  *aux;
 };
 
 /* Create a new virtual machine process */
@@ -179,6 +181,9 @@ DAO_DLL void DaoProcess_Trace( DaoProcess *self, int depth );
 
 DAO_DLL DaoValue* DaoProcess_MakeConst( DaoProcess *self );
 
+DAO_DLL void* DaoProcess_GetAuxData( DaoProcess *self, void *key );
+DAO_DLL void DaoProcess_SetAuxData( DaoProcess *self, void *key, void *value );
+
 
 
 typedef struct DaoJIT         DaoJIT;
@@ -215,17 +220,6 @@ struct DaoJitCallData
 	DaoProcess **processes;
 };
 
-
-#define DAO_MTCOUNT 624
-
-struct DaoProcessAux
-{
-	DMap   *regexCaches; /* DHash<DString*,DString*> */
-	uint_t  mtBuffer[DAO_MTCOUNT];
-	int     mtIndex;
-};
-DAO_DLL DaoProcessAux* DaoProcessAux_New();
-DAO_DLL void DaoProcessAux_Delete( DaoProcessAux *self );
 
 /* Mersenne twister random number in [0,1] interval: */
 DAO_DLL double DaoProcess_Random( DaoProcess *self );
