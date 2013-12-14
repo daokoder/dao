@@ -2743,7 +2743,7 @@ DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc )
 
 	if( tp && (tp->tid & DAO_ANY) ) tp = NULL;
 	if( tp && tp->tid != DAO_ENUM ) return NULL;
-	if( dC && dC->type == DAO_ENUM && tp->tid == DAO_ENUM ){
+	if( dC && dC->type == DAO_ENUM && tp && tp->tid == DAO_ENUM ){
 		if( tp != dC->xEnum.etype ) DaoEnum_SetType( & dC->xEnum, tp );
 		return & dC->xEnum;
 	}
@@ -6446,12 +6446,13 @@ static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc )
 		}
 		break;
 	case DAO_NAMESPACE :
+		if( DaoNamespace_GetData( & A->xNamespace, name ) == NULL ) goto InvalidConstField;
 		opb = DaoNamespace_FindConst( & A->xNamespace, name );
-		if( opb >=0 ) C = DaoNamespace_GetConst( & A->xNamespace, opb );
+		if( opb >= 0 ) C = DaoNamespace_GetConst( & A->xNamespace, opb );
 		break;
 	case DAO_CLASS :
 		if( routine->routHost ) thisClass = DaoValue_CastClass( routine->routHost->aux );
-		if( DaoClass_GetData( (DaoClass*) A, name, &C, thisClass ) ) goto Done;
+		if( DaoClass_GetData( (DaoClass*) A, name, &C, thisClass ) ) goto InvalidConstField;
 		opb = DaoClass_FindConst( & A->xClass, name );
 		if( opb >=0 ) C = DaoClass_GetConst( & A->xClass, opb );
 		break;
@@ -6460,12 +6461,11 @@ static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc )
 		C = DaoType_FindValue( type, name );
 		break;
 	}
-Done:
-	if( C == NULL ){
-		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid constant field" );
-		return;
-	}
 	DaoProcess_PutValue( self, C );
+	return;
+InvalidConstField:
+	DaoProcess_RaiseException( self, DAO_ERROR_FIELD, "invalid field" );
+	DaoProcess_PutValue( self, NULL );
 }
 DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 {

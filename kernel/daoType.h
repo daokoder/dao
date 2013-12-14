@@ -86,7 +86,7 @@ struct DaoType
 	uchar_t   variadic : 1; /* type for variadic tuple or routine */
 	uchar_t   realnum  : 1; /* for type of int/float/double */
 	uchar_t   flagtype : 1; /* for enum type */
-	uchar_t   simtype  : 1; /* if the nested contains only simple types */
+	uchar_t   noncyclic : 1; /* this type representing non-cyclic data */
 	uchar_t   overloads : 1; /* overloaded routines */
 	uchar_t   isempty1  : 1; /* is empty container, for compiling time use */
 	uchar_t   isempty2  : 1; /* is empty container, for running time use */

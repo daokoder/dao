@@ -199,6 +199,7 @@ DaoParser* DaoParser_New()
 	self->switchMaps = DArray_New(D_MAP);
 	self->enumTypes = DArray_New(0);
 	self->routCompilable = DArray_New(0);
+	self->routExtraInf = DArray_New(0);
 	DArray_Append( self->localDataMaps, self->lvm );
 	DArray_Append( self->strings, self->mbs );
 	DArray_Append( self->arrays, self->toks );
@@ -235,6 +236,7 @@ void DaoParser_Delete( DaoParser *self )
 	DArray_Delete( self->strings );
 	DArray_Delete( self->arrays );
 	DArray_Delete( self->routCompilable );
+	DArray_Delete( self->routExtraInf );
 	DArray_Delete( self->typeItems );
 
 	DaoLexer_Delete( self->lexer );
@@ -270,6 +272,7 @@ void DaoParser_Reset( DaoParser *self )
 	self->permission = 0;
 	self->isFunctional = 0;
 	self->needConst = 0;
+	self->usingGlobal = 0;
 
 	self->curToken = 0;
 	self->regCount = 0;
@@ -320,6 +323,7 @@ void DaoParser_Reset( DaoParser *self )
 	DArray_Clear( self->enumTypes );
 	DArray_Clear( self->vmCodes );
 	DArray_Clear( self->routCompilable );
+	DArray_Clear( self->routExtraInf );
 
 	DaoLexer_Reset( self->lexer );
 	DaoLexer_Reset( self->elexer );
@@ -2123,6 +2127,11 @@ int DaoParser_ParseScript( DaoParser *self )
 		DaoParser_PrintError( self, 0, 0, NULL );
 		return 0;
 	}
+	for(i=0; i<self->routExtraInf->size; i++){
+		DaoRoutine *rout = (DaoRoutine*) self->routExtraInf->items.pValue[i];
+		DaoRoutine_DoTypeInference( rout, 1 );
+	}
+	self->routExtraInf->size = 0;
 	return 1;
 }
 
@@ -3075,6 +3084,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			goto InvalidDefinition;
 		}
 		if( DaoParser_ParseRoutine( parser ) == 0 ) goto Failed;
+		if( parser->usingGlobal ) DArray_Append( self->routExtraInf, parser->routine );
 	}
 	if( parser ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return right+1;
@@ -3192,9 +3202,10 @@ static int DaoParser_CompileRoutines( DaoParser *self )
 {
 	daoint i, error = 0;
 	for(i=0; i<self->routCompilable->size; i++){
-		DaoParser* parser = (DaoParser*) self->routCompilable->items.pValue[i];
+		DaoParser *parser = (DaoParser*) self->routCompilable->items.pValue[i];
 		DaoRoutine *rout = parser->routine;
 		error |= DaoParser_ParseRoutine( parser ) == 0;
+		if( parser->usingGlobal ) DArray_Append( self->routExtraInf, rout );
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 		if( error ) break;
 	}
@@ -4457,6 +4468,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					remove = 1;
 				}else{
 					DaoParser_AddCode( self, DVM_SETVG, reg, id, up, first, mid, end );
+					self->usingGlobal = 1;
 				}
 				break;
 			default :
@@ -4880,6 +4892,7 @@ int DaoParser_GetNormRegister( DaoParser *self, int reg, int first, int mid, int
 	case DAO_GLOBAL_CONSTANT : code = DVM_GETCG; break;
 	default : break;
 	}
+	self->usingGlobal |= code == DVM_GETVG;
 	/*
 	   printf( "i = %i %s %i\n", i, DaoVmCode_GetOpcodeName(get), leftval );
 	 */
@@ -5179,6 +5192,7 @@ CleanUp:
 		case DAO_CLASS_VARIABLE  : set = DVM_SETVK; break;
 		case DAO_GLOBAL_VARIABLE : set = DVM_SETVG; break;
 		}
+		self->usingGlobal |= set == DVM_SETVG;
 		if( set ) DaoParser_AddCode( self, set, loc, id, up, start+2, eq, colon1 );
 
 		pos = tokens[colon1]->line;
@@ -6979,6 +6993,7 @@ DaoProcess* DaoParser_ReserveFoldingOperands( DaoParser *self, int N )
 }
 static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc )
 {
+	DaoStream *stream;
 	DaoValue *value;
 	if( self->hostType ){
 		GC_ShiftRC( self->hostType, proc->activeRoutine->routHost );
@@ -6987,15 +7002,20 @@ static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc )
 	value = DaoProcess_MakeConst( proc );
 	GC_DecRC( proc->activeRoutine->routHost );
 	proc->activeRoutine->routHost = NULL;
-	if( self->needConst == 0 && proc->exceptions->size > 0 ) return value;
-	if( proc->exceptions->size > 0 ){
-		DaoStream *stream = DaoStream_New();
-		stream->attribs |= DAO_IO_STRING;
-		DaoProcess_PrintException( proc, stream, 1 );
-		DaoParser_Error( self, DAO_EVAL_EXCEPTION, stream->streamString );
-		DaoStream_Delete( stream );
-	}
-	if( value == NULL ) DaoParser_Error( self, DAO_CTW_INV_CONST_EXPR, NULL );
+
+	/*
+	// DaoProcess_MakeConst() may produce a NULL value without
+	// raising an exceptioin. This is acceptable for constant
+	// folding for field expressions such as: namespace::variable.
+	*/
+	if( proc->exceptions->size == 0 ) return value;
+
+	stream = DaoStream_New();
+	stream->attribs |= DAO_IO_STRING;
+	DaoProcess_PrintException( proc, stream, 1 );
+	DaoParser_Error( self, DAO_EVAL_EXCEPTION, stream->streamString );
+	DaoParser_Error( self, DAO_CTW_INV_CONST_EXPR, NULL );
+	DaoStream_Delete( stream );
 	return value;
 }
 int DaoParser_MakeEnumConst( DaoParser *self, DaoEnode *enode, DArray *cid, int regcount )

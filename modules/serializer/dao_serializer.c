@@ -208,7 +208,7 @@ static int DaoList_Serialize( DaoList *self, DString *serial, DaoNamespace *ns, 
 	DaoType *type = self->unitype;
 	int i, rc = 1;
 	if( type->nested && type->nested->size ) type = type->nested->items.pType[0];
-	if( type && type->simtype == 0 && (type->tid == 0 || type->tid >= DAO_ENUM)) type = NULL;
+	if( type && type->noncyclic == 0 && (type->tid == 0 || type->tid >= DAO_ENUM)) type = NULL;
 	for(i=0; i<self->items.size; i++){
 		DaoType *it = NULL;
 		if( type == NULL ) it = DaoNamespace_GetType( ns, self->items.items.pValue[i] );

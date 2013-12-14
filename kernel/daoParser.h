@@ -90,6 +90,7 @@ struct DaoParser
 	char isInterBody;
 	char permission;
 	char isFunctional;
+	char usingGlobal;
 
 	DaoInterface *hostInter;
 	DaoClass     *hostClass;
@@ -116,6 +117,7 @@ struct DaoParser
 	DArray *decoParams;
 	DArray *decoParams2;
 	DArray *routCompilable; /* list of defined routines with bodies */
+	DArray *routExtraInf;
 
 	DaoLexer  *elexer;
 	DaoLexer  *wlexer;

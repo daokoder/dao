@@ -5821,10 +5821,11 @@ TryPushBlockReturnType:
 		case DVM_SETMI_AIII : case DVM_SETMI_AFIF :
 		case DVM_SETMI_ADID : case DVM_SETMI_ACIC :
 			for(j=0; j<opb; j++){
-				bt = types[opa + j + 1];
+				bt = types[opc + j + 1];
 				if( bt->tid == DAO_NONE || bt->tid > DAO_DOUBLE ) goto InvIndex;
 			}
-			if( at->tid == DAO_NONE || at->tid > DAO_DOUBLE ) goto NotMatch;
+			if( at->tid == DAO_NONE || at->tid > DAO_COMPLEX ) goto NotMatch;
+			if( ct->tid != DAO_ARRAY || ct->nested->items.pType[0]->tid != at->tid ) goto NotMatch;
 			break;
 		case DVM_GETI_TI :
 			if( at->tid != DAO_TUPLE || bt->tid != DAO_INTEGER ) goto NotMatch;

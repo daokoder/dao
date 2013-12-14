@@ -657,7 +657,7 @@ static int DaoGC_DecRC2( DaoValue *p )
 			DaoArray_ResizeVector( & p->xArray, 0 ); break;
 #endif
 		case DAO_TUPLE :
-			if( p->xTuple.unitype && p->xTuple.unitype->simtype ){
+			if( p->xTuple.unitype && p->xTuple.unitype->noncyclic ){
 				DaoTuple *tuple = & p->xTuple;
 				for(i=0,n=tuple->size; i<n; i++){
 					if( tuple->items[i] ){
@@ -669,7 +669,7 @@ static int DaoGC_DecRC2( DaoValue *p )
 			}
 			break;
 		case DAO_LIST : // TODO same for map
-			if( p->xList.unitype && p->xList.unitype->simtype ){
+			if( p->xList.unitype && p->xList.unitype->noncyclic ){
 				DArray *array = & p->xList.items;
 				DaoValue **items = array->items.pValue;
 				for(i=0,n=array->size; i<n; i++) if( items[i] ) DaoGC_DecRC2( items[i] );
@@ -1706,7 +1706,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 		{
 			DaoTuple *tuple = (DaoTuple*) value;
 			cycRefCountDecrement( (DaoValue*) tuple->unitype );
-			if( tuple->unitype == NULL || tuple->unitype->simtype ==0 ){
+			if( tuple->unitype == NULL || tuple->unitype->noncyclic ==0 ){
 				DaoGC_CycRefCountDecrements( tuple->items, tuple->size );
 				count += tuple->size;
 			}
@@ -1716,7 +1716,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 		{
 			DaoList *list = (DaoList*) value;
 			cycRefCountDecrement( (DaoValue*) list->unitype );
-			if( list->unitype == NULL || list->unitype->simtype ==0 ){
+			if( list->unitype == NULL || list->unitype->noncyclic ==0 ){
 				cycRefCountDecrements( & list->items );
 				count += list->items.size;
 			}
@@ -1900,7 +1900,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 		{
 			DaoTuple *tuple= (DaoTuple*) value;
 			cycRefCountIncrement( (DaoValue*) tuple->unitype );
-			if( tuple->unitype == NULL || tuple->unitype->simtype ==0 ){
+			if( tuple->unitype == NULL || tuple->unitype->noncyclic ==0 ){
 				DaoGC_CycRefCountIncrements( tuple->items, tuple->size );
 				count += tuple->size;
 			}
@@ -1910,7 +1910,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 		{
 			DaoList *list= (DaoList*) value;
 			cycRefCountIncrement( (DaoValue*) list->unitype );
-			if( list->unitype == NULL || list->unitype->simtype ==0 ){
+			if( list->unitype == NULL || list->unitype->noncyclic ==0 ){
 				cycRefCountIncrements( & list->items );
 				count += list->items.size;
 			}

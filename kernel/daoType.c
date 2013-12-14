@@ -205,6 +205,7 @@ void DaoType_CheckAttributes( DaoType *self )
 			self->attrib |= DAO_TYPE_SELFNAMED;
 	}
 
+	self->noncyclic = self->tid <= DAO_TUPLE;
 	if( self->tid == DAO_TUPLE ){
 		self->rntcount = 0;
 		for(i=0; i<self->nested->size; i++){
@@ -220,15 +221,15 @@ void DaoType_CheckAttributes( DaoType *self )
 	}
 	if( self->aux && self->aux->type == DAO_TYPE ){
 		if( self->aux->xType.attrib & DAO_TYPE_SPEC ) self->attrib |= DAO_TYPE_SPEC;
+		self->noncyclic &= self->aux->xType.noncyclic;
 	}
 	if( self->nested ){
 		for(i=0; i<self->nested->size; i++){
 			DaoType *it = self->nested->items.pType[i];
 			if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
 			if( it->attrib & DAO_TYPE_SPEC ) self->attrib |= DAO_TYPE_SPEC;
-			count += it->tid >= DAO_INTEGER && it->tid <= DAO_STRING;
+			self->noncyclic &= it->noncyclic;
 		}
-		self->simtype = count == self->nested->size;
 		if( (self->tid == DAO_TUPLE || self->tid == DAO_ROUTINE) && self->nested->size ){
 			DaoType *it = self->nested->items.pType[self->nested->size - 1];
 			if( it->tid == DAO_PAR_VALIST ) self->variadic = 1;
