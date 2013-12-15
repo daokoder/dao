@@ -3422,6 +3422,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DaoClass_AddConst( klass, ctorname, (DaoValue*)klass->classRoutine, DAO_DATA_PUBLIC );
 	}
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+	DaoClass_UpdateMixinConstructors( klass );
 	if( error ) return -1;
 
 	if( DaoClass_UseMixinDecorators( klass ) == 0 ) goto ErrorClassDefinition;

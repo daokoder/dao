@@ -1181,6 +1181,7 @@ static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
 			if( p->type == DAO_ROUTINE && & p->xRoutine != ns->mainRoutine ){
 				DaoRoutine_PrintCode( & p->xRoutine, self->stdioStream );
 			}else if( p->type == DAO_CLASS ){
+				DaoStream_WriteMBS( self->stdioStream, "\n\n" );
 				DaoClass_PrintCode( & p->xClass, self->stdioStream );
 			}
 		}

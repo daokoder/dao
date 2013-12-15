@@ -131,6 +131,7 @@ struct DaoRoutineBody
 
 	DaoRoutine  *revised; /* to support edit & continue */
 
+	void *original2; /* original class for a mixin class method/constructor; */
 	void *jitData;
 };
 

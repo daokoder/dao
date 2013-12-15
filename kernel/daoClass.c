@@ -465,6 +465,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 		if( rout->overloads == NULL ){
 			DaoRoutine *old = rout;
 			rout = DaoRoutine_Copy( rout, 1, 1, 1 );
+			rout->body->original2 = old->body->original2 ? old->body->original2 : old->routHost;
 			bl = bl && DaoRoutine_Finalize( rout, self->objType, deftypes );
 #if 0
 			printf( "%2i:  %s  %s\n", i, rout->routName->mbs, rout->routType->name->mbs );
@@ -649,6 +650,65 @@ Finalize:
 	DMap_Delete( routmap );
 	DMap_Delete( deftypes );
 	return bl;
+}
+static void* DaoRoutine_GetOriginal2( DaoRoutine *self )
+{
+	if( self->body && self->body->original2 ) return self->body->original2;
+	return self->routHost;
+}
+static void DaoClass_UpdateConstructor( DaoClass *self, DaoRoutine *routine, DMap *updated )
+{
+	DArray *values;
+	int i, modified = 0;
+	if( routine->overloads ){
+		for(i=0; i<routine->overloads->routines->size; ++i){
+			DaoRoutine *rout = routine->overloads->routines->items.pRoutine[i];
+			DaoClass_UpdateConstructor( self, rout, updated );
+		}
+		return;
+	}
+	if( !(routine->attribs & DAO_ROUT_INITOR) ) return;
+	if( routine->routHost != self->objType ) return;
+	if( routine->body == NULL ) return;
+	if( DMap_Find( updated, DaoRoutine_GetOriginal2( routine ) ) != NULL ) return;
+
+	DMap_Insert( updated, DaoRoutine_GetOriginal2( routine ), NULL );
+
+	values = DArray_New(0);
+	DArray_Resize( values, routine->body->regCount, NULL );
+	for(i=0; i<routine->body->annotCodes->size; ++i){
+		DaoVmCodeX *vmc = routine->body->annotCodes->items.pVmc[i];
+		if( vmc->code == DVM_GETCK ){
+			values->items.pValue[vmc->c] = self->constants->items.pConst[ vmc->b ]->value;;
+		}else if( vmc->code == DVM_CALL && (vmc->b & DAO_CALL_INIT) ){
+			DaoRoutine *callee = values->items.pRoutine[ vmc->a ];
+			if( callee->overloads ){
+				if( callee->overloads->routines->size == 0 ) continue;
+				callee = callee->overloads->routines->items.pRoutine[0];
+			}
+			if( DMap_Find( updated, DaoRoutine_GetOriginal2( callee ) ) != NULL ){
+				vmc->code = DVM_UNUSED;
+				modified = 1;
+				continue;
+			}
+			DaoClass_UpdateConstructor( self, callee, updated );
+		}
+	}
+	DArray_Delete( values );
+	if( modified ) DaoRoutine_DoTypeInference( routine, 1 );
+}
+void DaoClass_UpdateMixinConstructors( DaoClass *self )
+{
+	DMap *updated;
+	daoint i;
+	if( self->mixins->size == 0 ) return;
+	updated = DMap_New(0,0);
+	for(i=0; i<self->constants->size; ++i){
+		DaoValue *cst = self->constants->items.pConst[i]->value;
+		if( cst == NULL || cst->type != DAO_ROUTINE ) continue;
+		DaoClass_UpdateConstructor( self, (DaoRoutine*) cst, updated );
+	}
+	DMap_Delete( updated );
 }
 static void DaoClass_SetupMethodFields( DaoClass *self, DaoMethodFields *mf )
 {

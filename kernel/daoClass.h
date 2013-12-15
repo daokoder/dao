@@ -116,9 +116,8 @@ DAO_DLL void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 DAO_DLL int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes );
 DAO_DLL int DaoClass_DeriveClassData( DaoClass *self );
 DAO_DLL void DaoClass_DeriveObjectData( DaoClass *self );
+DAO_DLL void DaoClass_UpdateMixinConstructors( DaoClass *self );
 DAO_DLL void DaoClass_ResetAttributes( DaoClass *self );
-
-DAO_DLL DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types );
 
 DAO_DLL int  DaoClass_ChildOf( DaoClass *self, DaoValue *super );
 DAO_DLL void DaoClass_AddMixinClass( DaoClass *self, DaoClass *mixin );

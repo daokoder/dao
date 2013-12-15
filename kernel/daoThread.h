@@ -143,6 +143,8 @@ DAO_DLL void DaoInitThread();
 
 typedef int DMutex;
 
+#define DMutex_Init( x ) {}
+#define DMutex_Destroy( x ) {}
 #define DMutex_Lock( x ) {}
 #define DMutex_Unlock( x ) {}
 
