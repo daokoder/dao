@@ -4100,6 +4100,11 @@ DecoratorError:
 				return 0;
 			}
 			inode->jumpTrue = tki == DKEY_BREAK ? opening->jumpFalse : opening->next;
+			if( opening->c == DVM_SECT ){
+				inode->code = DVM_GOTOX;
+				inode->a = tki == DKEY_BREAK;
+				inode->jumpTrue = opening->jumpFalse;
+			}
 			if( inode->jumpTrue->code == DVM_SWITCH ) inode->jumpTrue = inode->jumpTrue->jumpFalse;
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			start += 1;
@@ -4558,10 +4563,11 @@ static int DaoParser_SetupBranching( DaoParser *self )
 		*/
 		switch( it->code ){
 		case DVM_NOP : break;
-		case DVM_TEST : it->b = it->jumpFalse->index; break;
-		case DVM_GOTO : it->b = it->jumpTrue->index; break;
+		case DVM_TEST   : it->b = it->jumpFalse->index; break;
+		case DVM_GOTO   : it->b = it->jumpTrue->index;  break;
+		case DVM_GOTOX  : it->b = it->jumpTrue->index;  break;
 		case DVM_SWITCH : it->b = it->jumpFalse->index; break;
-		case DVM_CASE  : it->b = it->jumpTrue->index; break;
+		case DVM_CASE   : it->b = it->jumpTrue->index;  break;
 		default : break;
 		}
 		if( it->code != DVM_UNUSED ) DArray_Append( self->vmCodes, (DaoVmCodeX*) it );
@@ -6207,7 +6213,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 			}
 		case DTOK_LCB :
 			{
-				DaoInode *jump, *label, *sect, *call;
+				DaoInode *open, *jump, *label, *sect, *call;
 				DMap *varFunctional;
 				int isFunctional, opa = result.reg, opb = -1;
 				int lb = start, regCount;
@@ -6235,8 +6241,10 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop )
 
 				jump = DaoParser_AddCode( self, DVM_GOTO, 0, 0, DVM_SECT, start+1, 0, 0 );
 				sect = DaoParser_AddCode( self, DVM_SECT, self->regCount, 0, 0, start+1, 0, 0 );
-				label = jump->jumpTrue = DaoParser_AddCode( self, DVM_LABEL, 0,0,0,rb,0,0 );
-				DaoParser_AddScope( self, DVM_LBRA, NULL );
+				label = DaoParser_AddCode( self, DVM_LABEL, 0, 1, 0, rb, 0,0 );
+				open = DaoParser_AddScope( self, DVM_LBRA, label ); /* breakable scope; */
+				jump->jumpTrue = label;
+				open->c = DVM_SECT;
 				varFunctional = DaoParser_GetCurrentDataMap( self );
 				start += 1;
 				regCount = self->regCount;

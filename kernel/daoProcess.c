@@ -896,7 +896,7 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_APLIST , && LAB_APVECTOR ,
 		&& LAB_PACK  , && LAB_MPACK ,
 		&& LAB_ROUTINE ,
-		&& LAB_GOTO ,
+		&& LAB_GOTO , && LAB_GOTOX ,
 		&& LAB_SWITCH , && LAB_CASE ,
 		&& LAB_ITER , && LAB_TEST ,
 		&& LAB_MATH ,
@@ -1382,6 +1382,10 @@ CallEntry:
 			DaoProcess_DoPacking( self, vmc );
 		}OPNEXT() OPCASE( CASE ) OPCASE( GOTO ){
 			vmc = vmcBase + vmc->b;
+		}OPJUMP() OPCASE( GOTOX ){
+			if( vmc->a ) self->status = DAO_PROCESS_ABORTED;
+			vmc = vmcBase + vmc->b;
+			goto ReturnTrue;
 		}OPJUMP() OPCASE( SWITCH ){
 			vmc = DaoProcess_DoSwitch( self, vmc );
 		}OPJUMP() OPCASE( ITER ){
@@ -6426,7 +6430,8 @@ void DaoProcess_PrintException( DaoProcess *self, DaoStream *stream, int clear )
 
 static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc )
 {
-	DaoValue *C = NULL, *A = self->activeValues[ vmc->a ];
+	DaoValue *C = NULL, *tmp = NULL;
+	DaoValue *A = self->activeValues[ vmc->a ];
 	DaoType *type = (DaoType*) A;
 	DaoEnum denum2 = {DAO_ENUM,0,0,0,0,0,0,NULL};
 	DaoEnum *denum = & denum2;
@@ -6460,7 +6465,7 @@ static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc )
 		break;
 	case DAO_CLASS :
 		if( routine->routHost ) thisClass = DaoValue_CastClass( routine->routHost->aux );
-		if( DaoClass_GetData( (DaoClass*) A, name, &C, thisClass ) ) goto InvalidConstField;
+		if( DaoClass_GetData( (DaoClass*) A, name, &tmp, thisClass ) ) goto InvalidConstField;
 		opb = DaoClass_FindConst( & A->xClass, name );
 		if( opb >=0 ) C = DaoClass_GetConst( & A->xClass, opb );
 		break;

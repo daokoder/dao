@@ -819,7 +819,7 @@ static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 		node = nodes[i];
 		if( i && vmc->code != DVM_CASE ){
 			k = codes[i-1]->code;
-			if( k != DVM_GOTO && k != DVM_RETURN ){
+			if( k != DVM_GOTO && k != DVM_GOTOX && k != DVM_RETURN ){
 				DArray_Append( nodes[i-1]->outs, node );
 				DArray_Append( node->ins, nodes[i-1] );
 			}else if( vmc->code == DVM_SECT || (vmc->code == DVM_GOTO && vmc->c == DVM_SECT) ){
@@ -829,7 +829,7 @@ static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 			}
 		}
 		switch( vmc->code ){
-		case DVM_GOTO : case DVM_CASE :
+		case DVM_GOTO : case DVM_GOTOX  : case DVM_CASE :
 		case DVM_TEST : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
 			DArray_Append( node->outs, nodes[vmc->b] );
 			DArray_Append( nodes[vmc->b]->ins, node );
@@ -1092,7 +1092,7 @@ static void DaoRoutine_UpdateCodes( DaoRoutine *self )
 		vmc = vmcs[i];
 		if( vmc->code >= DVM_UNUSED ) continue;
 		switch( vmc->code ){
-		case DVM_GOTO : case DVM_CASE : case DVM_SWITCH :
+		case DVM_GOTO : case DVM_GOTOX  : case DVM_CASE : case DVM_SWITCH :
 		case DVM_TEST : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
 			vmc->b = ids[ vmc->b ];
 			break;
@@ -1108,7 +1108,7 @@ static void DaoRoutine_UpdateCodes( DaoRoutine *self )
 		vmc = vmcs[i];
 		vmCodes->data.codes[i] = *(DaoVmCode*)vmc;
 		C = vmc->code;
-		if( C == DVM_GOTO || C == DVM_TEST || (C >= DVM_TEST_I && C <= DVM_TEST_D) ){
+		if( C == DVM_GOTO || C == DVM_GOTOX || C == DVM_TEST || (C >= DVM_TEST_I && C <= DVM_TEST_D) ){
 			if( vmc->b == (i+1) ){
 				vmc->code = DVM_UNUSED;
 				N = 1;
@@ -1886,7 +1886,7 @@ void DaoRoutine_CodesToInodes( DaoRoutine *self, DArray *inodes )
 		vmc = vmcs[i];
 		inode = inodes->items.pInode[i];
 		switch( vmc->code ){
-		case DVM_GOTO : case DVM_CASE : case DVM_SWITCH :
+		case DVM_GOTO : case DVM_GOTOX  : case DVM_CASE : case DVM_SWITCH :
 		case DVM_TEST : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
 			inode->jumpFalse = inodes->items.pInode[vmc->b];
 			break;
@@ -1910,7 +1910,7 @@ void DaoRoutine_CodesFromInodes( DaoRoutine *self, DArray *inodes )
 	for(it=first,count=0; it; it=it->next){
 		/* DaoInode_Print( it ); */
 		switch( it->code ){
-		case DVM_GOTO : case DVM_CASE : case DVM_SWITCH :
+		case DVM_GOTO : case DVM_GOTOX  : case DVM_CASE : case DVM_SWITCH :
 		case DVM_TEST : case DVM_TEST_I : case DVM_TEST_F : case DVM_TEST_D :
 			it->b = it->jumpFalse->index;
 			break;
@@ -4980,6 +4980,7 @@ NotExist_TryAux:
 				break;
 			}
 		case DVM_GOTO :
+		case DVM_GOTOX :
 			break;
 		case DVM_TEST :
 			{

@@ -99,10 +99,11 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "MATRIX",     DVM_MATRIX,     DAO_CODE_MATRIX,  1 },
 	{ "APLIST",     DVM_APLIST,     DAO_CODE_ENUM,    1 },
 	{ "APVECTOR",   DVM_APVECTOR,   DAO_CODE_ENUM,    1 },
-	{ "PACK",      DVM_PACK,      DAO_CODE_ENUM2,   1 },
-	{ "MPACK",     DVM_MPACK,     DAO_CODE_ENUM2,   1 },
+	{ "PACK",       DVM_PACK,       DAO_CODE_ENUM2,   1 },
+	{ "MPACK",      DVM_MPACK,      DAO_CODE_ENUM2,   1 },
 	{ "ROUTINE",    DVM_ROUTINE,    DAO_CODE_ROUTINE, 1 },
 	{ "GOTO",       DVM_GOTO,       DAO_CODE_JUMP,    0 },
+	{ "GOTOX",      DVM_GOTOX,      DAO_CODE_JUMP,    0 },
 	{ "SWITCH",     DVM_SWITCH,     DAO_CODE_BRANCH,  0 },
 	{ "CASE",       DVM_CASE,       DAO_CODE_JUMP,    0 },
 	{ "ITER",       DVM_ITER,       DAO_CODE_MOVE,    0 },
@@ -341,7 +342,6 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "MATH_F",     DVM_MATH_F,     DAO_CODE_UNARY2,  1 },
 	{ "MATH_D",     DVM_MATH_D,     DAO_CODE_UNARY2,  1 },
 	{ "CHECK_ST",   DVM_CHECK_ST,   DAO_CODE_BINARY,  0 },
-	{ "GOTO",       DVM_GOTO,       DAO_CODE_JUMP,    0 },
 	{ "???",        DVM_UNUSED,     DAO_CODE_NOP,     0 },
 
 	/* for compiling only */
