@@ -124,7 +124,6 @@ DAO_DLL DaoType *dao_type_complex;
 DAO_DLL DaoType *dao_type_long;
 DAO_DLL DaoType *dao_type_string;
 DAO_DLL DaoType *dao_type_tuple;
-DAO_DLL DaoType *dao_array_any;
 DAO_DLL DaoType *dao_list_any;
 DAO_DLL DaoType *dao_map_any;
 DAO_DLL DaoType *dao_routine;

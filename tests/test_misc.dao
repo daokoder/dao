@@ -4,6 +4,7 @@ a : array<any>
 @[test(code_01)]
 
 @[test(output_01)]
+Invalid %s type %s form
 @[test(output_01)]
 
 @[test(code_02)]

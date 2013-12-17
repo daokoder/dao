@@ -2310,7 +2310,6 @@ DaoType *dao_type_complex = NULL;
 DaoType *dao_type_long = NULL;
 DaoType *dao_type_string = NULL;
 DaoType *dao_type_tuple = NULL;
-DaoType *dao_array_any = NULL;
 DaoType *dao_list_any = NULL;
 DaoType *dao_map_any = NULL;
 DaoType *dao_routine = NULL;
@@ -2516,12 +2515,10 @@ DaoVmSpace* DaoInit( const char *command )
 	DString_SetMBS( dao_type_for_iterator->name, "for_iterator" );
 	DaoNamespace_AddType( ns, dao_type_for_iterator->name, dao_type_for_iterator );
 
-	dao_array_any = DaoParser_ParseTypeName( "array<any>", ns, NULL );
 	dao_list_any = DaoParser_ParseTypeName( "list<any>", ns, NULL );
 	dao_map_any = DaoParser_ParseTypeName( "map<any,any>", ns, NULL );
 	dao_type_tuple = DaoParser_ParseTypeName( "tuple<...>", ns, NULL );
 
-	dao_array_types[DAO_NONE] = dao_array_any;
 	dao_array_types[DAO_INTEGER] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_int, 1 );
 	dao_array_types[DAO_FLOAT]   = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_float, 1 );
 	dao_array_types[DAO_DOUBLE]  = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_double, 1 );

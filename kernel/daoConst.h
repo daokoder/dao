@@ -38,7 +38,7 @@
 #include"dao.h"
 #include"daoBase.h"
 
-enum DaoRTTI
+enum DaoExtraTypes
 {
 	DAO_VARIANT = END_CORE_TYPES, /* variant or disjoint union type */
 	DAO_MACRO ,
@@ -48,7 +48,6 @@ enum DaoRTTI
 	DAO_TYPEKERNEL ,
 	DAO_CODEBLOCK ,
 
-	DAO_PAIR ,
 	DAO_PAR_NAMED ,   /* name:type */
 	DAO_PAR_DEFAULT , /* name=type */
 	DAO_PAR_VALIST , /* ... */
@@ -60,9 +59,13 @@ enum DaoRTTI
 	DAO_THT = (1<<6)|1, /* type holder type */
 	DAO_UDT = (1<<6)|2, /* undefined type */
 
-	END_EXTRA_TYPES ,
+	END_EXTRA_TYPES 
+};
 
-	END_NOT_TYPES
+enum DaoSubTypes
+{
+	DAO_PAIR = END_EXTRA_TYPES,
+	END_SUB_TYPES
 };
 
 enum DaoBasicStruct
