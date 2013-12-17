@@ -281,6 +281,7 @@ void DaoParser_Reset( DaoParser *self )
 	self->isFunctional = 0;
 	self->needConst = 0;
 	self->usingGlobal = 0;
+	self->numSections = 0;
 
 	self->curToken = 0;
 	self->regCount = 0;
@@ -6266,7 +6267,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 					goto InvalidFunctional;
 
 				jump = DaoParser_AddCode( self, DVM_GOTO, 0, 0, DVM_SECT, start+1, 0, 0 );
-				sect = DaoParser_AddCode( self, DVM_SECT, self->regCount, 0, 0, start+1, 0, 0 );
+				sect = DaoParser_AddCode( self, DVM_SECT, self->regCount, 0,0, start+1, 0,0 );
 				label = DaoParser_AddCode( self, DVM_LABEL, 0, 1, 0, rb, 0,0 );
 				open = DaoParser_AddScope( self, DVM_LBRA, label ); /* breakable scope; */
 				jump->jumpTrue = label;
@@ -6292,6 +6293,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 						start = rb2 + 1;
 					}
 				}
+				assert( sect->c < 16 && self->numSections < 14 );
+				sect->c |= (++self->numSections) << 4;
 				if( start == lb + 1 ){
 					DString X = DString_WrapMBS( "X" );
 					DString Y = DString_WrapMBS( "Y" );

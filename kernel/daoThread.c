@@ -870,22 +870,21 @@ static void DaoMT_RoutMutexSet( DMap *mutexes )
 	}
 	DMap_Delete( mutexes );
 }
-static DMutex* DaoMT_GetMutex( DaoRoutine *routine, DaoVmCode *vmc )
+static DMutex* DaoMT_GetMutex( DaoRoutine *routine, void *key )
 {
 	DNode *it;
 	DMap *mutexes;
 	DMutex *mutex = NULL;
 
-	while( routine->original ) routine = routine->original;
 	DMutex_Lock( & mainVmSpace->mutexMisc );
 	it = DMap_Find( routine->body->aux, DaoMT_RoutMutexSet );
-	if( it == NULL ) it = DMap_Insert( routine->body->aux, DaoMT_RoutMutexSet, DMap_New(0,0) );
+	if( it == NULL ) it = DMap_Insert( routine->body->aux, DaoMT_RoutMutexSet, DHash_New(0,0) );
 	mutexes = (DMap*) it->value.pVoid;
-	it = DMap_Find( mutexes, vmc );
+	it = DMap_Find( mutexes, key );
 	if( it == NULL ){
 		mutex = (DMutex*) dao_calloc(1,sizeof(DMutex));
 		DMutex_Init( mutex );
-		DMap_Insert( mutexes, vmc, mutex );
+		DMap_Insert( mutexes, key, mutex );
 	}else{
 		mutex = (DMutex*) it->value.pVoid;
 	}
@@ -898,17 +897,30 @@ static void DaoMT_ProcMutexCache( DMap *self )
 }
 static void DaoMT_Critical( DaoProcess *proc, DaoValue *p[], int n )
 {
+	void *key;
 	DNode *it;
 	DMap *cache = (DMap*) DaoProcess_GetAuxData( proc, cache );
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoRoutine *routine = proc->activeRoutine;
+
 	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
+
+	/* Get the original routine, if this one is a specialized copy: */
+	while( routine->original ) routine = routine->original;
+
+	/*
+	// Use "routine + sect->c" instead of "sect" as the key for mutex,
+	// as "sect" may be different for different copy of specialized routine.
+	// But "sect->c" won't change after being set during compiling.
+	*/
+	key = routine + sect->c;
+
 	if( cache == NULL ){
-		cache = DMap_New(0,0);
+		cache = DHash_New(0,0); /* Local cache is used to avoid extra locking; */
 		DaoProcess_SetAuxData( proc, DaoMT_ProcMutexCache, cache );
 	}
-	it = DMap_Find( cache, sect );
-	if( it == NULL ) it = DMap_Insert( cache, sect, DaoMT_GetMutex( routine, sect ) );
+	it = DMap_Find( cache, key ); /* Check local cache first; */
+	if( it == NULL ) it = DMap_Insert( cache, key, DaoMT_GetMutex( routine, key ) );
 	DMutex_Lock( (DMutex*) it->value.pVoid );
 	DaoProcess_Execute( proc );
 	DMutex_Unlock( (DMutex*) it->value.pVoid );

@@ -69,6 +69,7 @@ struct DaoParser
 	short levelBase;
 	short lexLevel;
 	short needConst;
+	short numSections;
 
 	DMap  *allConsts; /* DMap<DString*,int>: implicit and explict local constants; */
 
