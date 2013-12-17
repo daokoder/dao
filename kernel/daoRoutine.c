@@ -275,12 +275,7 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 	if( self->decoTargets ) DArray_Delete( self->decoTargets );
 	if( self->revised ) GC_DecRC( self->revised );
 	if( self->aux ) DaoAux_Delete( self->aux );
-	if( dao_jit.Free && self->jitData ){
-		/* LLVMContext provides no locking guarantees: */
-		DMutex_Lock( & mutex_routine_specialize );
-		dao_jit.Free( self->jitData );
-		DMutex_Unlock( & mutex_routine_specialize );
-	}
+	if( dao_jit.Free && self->jitData ) dao_jit.Free( self->jitData );
 	dao_free( self );
 }
 void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other, int copy_stat )

@@ -357,6 +357,7 @@ static int DaoRoutine_GetFieldIndex( DaoRoutine *self, DString *name )
 	str.data = name;
 	return DaoRoutine_AddConstant( self, (DaoValue*) s );
 }
+static void DaoRoutine_OriginalHost( void *p ){}
 /*
 // The layout of mixins in a host class:
 // 1. Each mixin occupies a continuous segment in the data arrays of the host.
@@ -464,8 +465,10 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 		}
 		if( rout->overloads == NULL ){
 			DaoRoutine *old = rout;
+			DNode *it = DMap_Find( old->body->aux, DaoRoutine_OriginalHost );
+			void *original2 = it ? it->value.pVoid : old->routHost;
 			rout = DaoRoutine_Copy( rout, 1, 1, 1 );
-			rout->body->original2 = old->body->original2 ? old->body->original2 : old->routHost;
+			DMap_Insert( rout->body->aux, DaoRoutine_OriginalHost, original2 );
 			bl = bl && DaoRoutine_Finalize( rout, self->objType, deftypes );
 #if 0
 			printf( "%2i:  %s  %s\n", i, rout->routName->mbs, rout->routType->name->mbs );
@@ -653,7 +656,10 @@ Finalize:
 }
 static void* DaoRoutine_GetOriginal2( DaoRoutine *self )
 {
-	if( self->body && self->body->original2 ) return self->body->original2;
+	DNode *it;
+	if( self->body == NULL ) return self->routHost;
+	it = DMap_Find( self->body->aux, DaoRoutine_OriginalHost );
+	if( it ) return it->value.pVoid;
 	return self->routHost;
 }
 static void DaoClass_UpdateConstructor( DaoClass *self, DaoRoutine *routine, DMap *updated )
