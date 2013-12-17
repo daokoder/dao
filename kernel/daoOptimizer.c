@@ -5326,7 +5326,7 @@ TryPushBlockReturnType:
 				if( sect && cbtype && cbtype->nested ){
 					for(j=0, k=sect->a; j<sect->b; j++, k++){
 						if( j >= (int)cbtype->nested->size ){
-							if( j < (sect->c & 0xff) ){
+							if( j < (sect->c & 0xf) ){
 								printf( "Unsupported code section parameter!\n" );
 							}
 							break;
