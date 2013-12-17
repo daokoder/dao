@@ -726,7 +726,6 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		task->condv = & condv;
 		task->mutex = & mutex;
 		task->clone = DaoVmSpace_AcquireProcess( proc->vmSpace );
-		task->clone->mutex = & mutex;
 		if( i ) DaoCallServer_AddTask( DaoMT_RunFunctional, task, 1 );
 	}
 	DaoMT_RunFunctional( tasks );
@@ -860,13 +859,59 @@ static void DaoMT_ArrayApply( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoMT_Functional( proc, p, n, DVM_FUNCT_APPLY );
 }
+
+static void DaoMT_RoutMutexSet( DMap *mutexes )
+{
+	DNode *it;
+	for(it=DMap_First(mutexes); it; it=DMap_Next(mutexes,it)){
+		DMutex *mutex = (DMutex*) it->value.pVoid;
+		DMutex_Destroy( mutex );
+		dao_free( mutex );
+	}
+	DMap_Delete( mutexes );
+}
+static DMutex* DaoMT_GetMutex( DaoRoutine *routine, DaoVmCode *vmc )
+{
+	DNode *it;
+	DMap *mutexes;
+	DMutex *mutex = NULL;
+
+	while( routine->original ) routine = routine->original;
+	DMutex_Lock( & mainVmSpace->mutexMisc );
+	it = DMap_Find( routine->body->aux, DaoMT_RoutMutexSet );
+	if( it == NULL ) it = DMap_Insert( routine->body->aux, DaoMT_RoutMutexSet, DMap_New(0,0) );
+	mutexes = (DMap*) it->value.pVoid;
+	it = DMap_Find( mutexes, vmc );
+	if( it == NULL ){
+		mutex = (DMutex*) dao_calloc(1,sizeof(DMutex));
+		DMutex_Init( mutex );
+		DMap_Insert( mutexes, vmc, mutex );
+	}else{
+		mutex = (DMutex*) it->value.pVoid;
+	}
+	DMutex_Unlock( & mainVmSpace->mutexMisc );
+	return mutex;
+}
+static void DaoMT_ProcMutexCache( DMap *self )
+{
+	DMap_Delete( self );
+}
 static void DaoMT_Critical( DaoProcess *proc, DaoValue *p[], int n )
 {
+	DNode *it;
+	DMap *cache = (DMap*) DaoProcess_GetAuxData( proc, cache );
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoRoutine *routine = proc->activeRoutine;
 	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
-	if( proc->mutex ) DMutex_Lock( proc->mutex );
+	if( cache == NULL ){
+		cache = DMap_New(0,0);
+		DaoProcess_SetAuxData( proc, DaoMT_ProcMutexCache, cache );
+	}
+	it = DMap_Find( cache, sect );
+	if( it == NULL ) it = DMap_Insert( cache, sect, DaoMT_GetMutex( routine, sect ) );
+	DMutex_Lock( (DMutex*) it->value.pVoid );
 	DaoProcess_Execute( proc );
-	if( proc->mutex ) DMutex_Unlock( proc->mutex );
+	DMutex_Unlock( (DMutex*) it->value.pVoid );
 	DaoProcess_PopFrame( proc );
 }
 

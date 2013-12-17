@@ -257,6 +257,7 @@ DaoRoutineBody* DaoRoutineBody_New()
 	self->abstypes = DMap_New(D_STRING,D_VALUE);
 	self->simpleVariables = DArray_New(0);
 	self->codeStart = self->codeEnd = 0;
+	self->aux = DMap_New(0,0);
 	self->jitData = NULL;
 	self->specialized = 0;
 	return self;
@@ -273,6 +274,7 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 	DMap_Delete( self->abstypes );
 	if( self->decoTargets ) DArray_Delete( self->decoTargets );
 	if( self->revised ) GC_DecRC( self->revised );
+	if( self->aux ) DaoAux_Delete( self->aux );
 	if( dao_jit.Free && self->jitData ){
 		/* LLVMContext provides no locking guarantees: */
 		DMutex_Lock( & mutex_routine_specialize );

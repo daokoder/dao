@@ -127,10 +127,6 @@ struct DaoProcess
 	DArray         *factory;
 	DaoDataCache   *cache;
 
-#ifdef DAO_WITH_THREAD
-	DMutex         *mutex; /* mutex for mt.critical::{} */
-#endif
-
 	/*
 	// Process auxiliary data (process specific data):
 	// Pairs of deallocator function pointer and data pointer;
@@ -182,7 +178,7 @@ DAO_DLL void DaoProcess_Trace( DaoProcess *self, int depth );
 DAO_DLL DaoValue* DaoProcess_MakeConst( DaoProcess *self );
 
 DAO_DLL void* DaoProcess_GetAuxData( DaoProcess *self, void *key );
-DAO_DLL void DaoProcess_SetAuxData( DaoProcess *self, void *key, void *value );
+DAO_DLL void* DaoProcess_SetAuxData( DaoProcess *self, void *key, void *value );
 
 
 

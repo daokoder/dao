@@ -166,15 +166,7 @@ void DaoProcess_Delete( DaoProcess *self )
 	}
 	for(i=0; i<self->stackSize; i++) GC_DecRC( self->stackValues[i] );
 	if( self->stackValues ) dao_free( self->stackValues );
-	if( self->aux ){
-		DNode *it;
-		typedef void (*aux_delete)(void*);
-		for(it=DMap_First(self->aux); it; it=DMap_Next(self->aux,it)){
-			aux_delete del = (aux_delete) it->key.pVoid;
-			(*del)( it->value.pVoid );
-		}
-		DMap_Delete( self->aux );
-	}
+	if( self->aux ) DaoAux_Delete( self->aux );
 	DaoDataCache_Release( self->cache );
 	self->cache = NULL;
 
@@ -6601,10 +6593,11 @@ void* DaoProcess_GetAuxData( DaoProcess *self, void *key )
 	if( node ) return node->value.pVoid;
 	return NULL;
 }
-void DaoProcess_SetAuxData( DaoProcess *self, void *key, void *value )
+void* DaoProcess_SetAuxData( DaoProcess *self, void *key, void *value )
 {
 	if( self->aux == NULL ) self->aux = DMap_New(0,0);
 	DMap_Insert( self->aux, key, value );
+	return value;
 }
 
 

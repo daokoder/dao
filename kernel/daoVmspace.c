@@ -83,6 +83,16 @@ static int TestPath( DaoVmSpace *vms, DString *fname, int type )
 	if( type == DAO_FILE_PATH ) return TestFile( vms, fname );
 	return Dao_IsDir( fname->mbs );
 }
+void DaoAux_Delete( DMap *aux )
+{
+	DNode *it;
+	typedef void (*aux_delete)(void*);
+	for(it=DMap_First(aux); it; it=DMap_Next(aux,it)){
+		aux_delete del = (aux_delete) it->key.pVoid;
+		(*del)( it->value.pVoid );
+	}
+	DMap_Delete( aux );
+}
 
 
 #define DAO_FILE_TYPE_NUM  6
@@ -281,9 +291,6 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 		proc->future = NULL;
 		proc->cache = NULL;
 		proc->aux = NULL;
-#ifdef DAO_WITH_THREAD
-		proc->mutex = NULL;
-#endif
 		DaoProcess_PopFrames( proc, proc->firstFrame );
 		DArray_Clear( proc->exceptions );
 		DArray_PushBack( self->processes, proc );

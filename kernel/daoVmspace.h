@@ -165,4 +165,6 @@ void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser );
 void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *inferencer );
 void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *optimizer );
 
+void DaoAux_Delete( DMap *aux );
+
 #endif
