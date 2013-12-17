@@ -5287,6 +5287,7 @@ int DaoParser_ParseCondition( DaoParser *self, int start, int dec, DaoInode *ope
 		DaoParser_Error( self, DAO_CTW_IS_EXPECTED, self->mbs );
 	}
 	if( lb < 0 || rb < 0 ) return -1;
+	if( opening ) DaoParser_AppendCode( self, opening ); /* move to back */
 
 	start = lb + 1;
 	semico = DaoParser_FindOpenToken( self, DTOK_SEMCO, start, rb, 0 );
@@ -5302,7 +5303,6 @@ int DaoParser_ParseCondition( DaoParser *self, int start, int dec, DaoInode *ope
 			return -1;
 		}
 		start = semico + 1;
-		if( opening ) DaoParser_AppendCode( self, opening ); /* move to back */
 	}
 
 	reg = DaoParser_MakeArithTree( self, start, rb-1, & cst );

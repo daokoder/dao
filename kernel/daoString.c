@@ -1216,7 +1216,8 @@ void DString_Reverse( DString *self )
 }
 daoint DString_FindReplace( DString *self, DString *str1, DString *str2, daoint index )
 {
-	daoint pos, from = 0, count = 0;
+	daoint pos, prev = -1, from = 0, count = 0;
+	int chsize = self->mbs ? sizeof(char) : sizeof(wchar_t);
 	if( self->mbs ){
 		DString_ToMBS( str1 );
 		DString_ToMBS( str2 );
@@ -1224,14 +1225,66 @@ daoint DString_FindReplace( DString *self, DString *str1, DString *str2, daoint 
 		DString_ToWCS( str1 );
 		DString_ToWCS( str2 );
 	}
-	if( index == 0 ){
+	if( index == 0 && str1->size == str2->size ){
+		void *str2data = str2->mbs ? (void*) str2->mbs : (void*) str2->wcs;
+		DString_Detach( self, self->size );
 		pos = DString_Find( self, str1, from );
 		while( pos != MAXSIZE ){
+			void *dest = self->mbs ? (void*)(self->mbs + pos) : (void*)(self->wcs + pos);
+			memcpy( dest, str2data, str2->size * chsize );
 			count ++;
-			DString_Insert( self, str2, pos, DString_Size( str1 ), 0 );
-			from = pos + DString_Size( str2 );
+			from = pos + str2->size;
 			pos = DString_Find( self, str1, from );
 		}
+	}else if( index == 0 && str1->size > str2->size ){
+		void *str2data = str2->mbs ? (void*) str2->mbs : (void*) str2->wcs;
+		DString_Detach( self, self->size );
+		pos = DString_Find( self, str1, from );
+		if( pos == MAXSIZE ) pos = self->size;
+		while( from < self->size ){
+			if( prev >= 0 ){
+				void *dest = self->mbs ? (void*)(self->mbs + prev) : (void*)(self->wcs + prev);
+				void *src  = self->mbs ? (void*)(self->mbs + from) : (void*)(self->wcs + from);
+				memmove( dest, src, (pos - from) * chsize );
+				prev += pos - from;
+			}else{
+				prev = pos;
+			}
+			if( pos < self->size ){
+				void *dest = self->mbs ? (void*)(self->mbs + prev) : (void*)(self->wcs + prev);
+				memcpy( dest, str2data, str2->size * chsize );
+				count ++;
+			}
+			prev += str2->size;
+			from = pos + str1->size;
+			pos = DString_Find( self, str1, from );
+			if( pos == MAXSIZE ) pos = self->size;
+		}
+		self->size -= count * (str1->size - str2->size);
+		if( self->mbs ){
+			self->mbs[self->size] = 0;
+		}else{
+			self->wcs[self->size] = 0;
+		}
+	}else if( index == 0 ){
+		DString *aux = DString_New( self->mbs != NULL );
+		DString_Reserve( aux, self->size + (str2->size - str1->size) );
+		pos = DString_Find( self, str1, from );
+		if( pos == MAXSIZE ) pos = self->size;
+		while( from < self->size ){
+			count += pos < self->size;
+			if( self->mbs ){
+				DString_AppendDataMBS( aux, self->mbs + from, pos - from );
+			}else{
+				DString_AppendDataWCS( aux, self->wcs + from, pos - from );
+			}
+			if( pos < self->size ) DString_Append( aux, str2 );
+			from = pos + str1->size;
+			pos = DString_Find( self, str1, from );
+			if( pos == MAXSIZE ) pos = self->size;
+		}
+		DString_Assign( self, aux );
+		DString_Delete( aux );
 	}else if( index > 0){
 		pos = DString_Find( self, str1, from );
 		while( pos != MAXSIZE ){

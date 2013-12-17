@@ -1701,7 +1701,7 @@ static DaoFuncItem stringMeths[] =
 	/* return -1, if not found. */
 	{ DaoSTR_Find,    "find( self :string, str :string, from=0, reverse=0 )=>int" },
 	/* replace index-th occurrence: =0: replace all; >0: from begin; <0: from end. */
-	/* return int of occurrence replaced. */
+	/* return number of occurrence replaced. */
 	{ DaoSTR_Replace, "replace( self :string, str1 :string, str2 :string, index=0 )=>int" },
 	{ DaoSTR_Replace2, "replace( self :string, table : map<string,string>, max=0 )" },
 	{ DaoSTR_Expand,  "expand( self :string, keys :map<string,string>, spec='$', keep=1 )=>string" },
