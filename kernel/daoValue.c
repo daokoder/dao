@@ -479,20 +479,6 @@ void DaoValue_Clear( DaoValue **self )
 }
 
 
-#ifdef DAO_WITH_NUMARRAY
-static DaoArray* DaoArray_CopyX( DaoArray *self, DaoType *tp )
-{
-	DaoArray *copy = DaoArray_New( self->etype );
-	if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
-		int nt = tp->nested->items.pType[0]->tid;
-		if( nt >= DAO_INTEGER && nt <= DAO_COMPLEX ) copy->etype = nt;
-	}
-	DaoArray_ResizeArray( copy, self->dims, self->ndim );
-	DaoArray_CopyArray( copy, self );
-	return copy;
-}
-#endif
-
 /*
 // Assumming the value "self" is compatible to the type "tp", if it is not null.
 */

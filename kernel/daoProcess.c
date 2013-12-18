@@ -4847,56 +4847,58 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 	}
 }
 
-/* Operator (in daoBitBoolArithOpers) validity rules,
- for operation involving DaoObject:
-
- A. when one of the operand is not DaoObject:
- 1. all these operators are not valid, unless overloaded;
-
- B. when both operands are DaoObject:
-
- 1. AND, OR, LT, LE, EQ, NE are valid, only if none operator
- in daoBitBoolArithOpers is overloaded; In this case,
- the operations will be based on pointers;
-
- 2. AND, OR, LT, LE, EQ, NE are based on pointers, if they
- are used inside the function overloaded for the same
- operator. Example:
-
- class Test{
- operator == ( A : Test, B : Test ){
- return A == B; # this will be based on pointers!
- }
- }
-
- 3. since "A>B" (or "A>=B") is compiled as "B<A" (or "B<=A"),
- when a DVM_LT or DVM_LE is executed, "operator<()"
- or "operator<=()" will be search first, if not found,
- then "operator>()" or "operator>=()" is searched,
- and applied by swapping A and B'
-
- 4. "A<B" and "A>B" inside "operator<()" and "operator>()"
- or "A<=B" and "A>=B" inside "operator<=()" and "operator>=()"
- will be based on pointers.
- */
-/* Examples of possible ways of operator overloading:
- All these overloading functions must be "static",
- namely, they do not require a class instance for being invoked:
-
- Unary operation:
- operator ! ( C : Number, A : Number ){... return C_or_something_else}
- operator ! ( A : Number ){... return something}
-
- Binary operation:
- operator + ( C : Number, A : Number, B : Number ){... return C_or_else}
- operator + ( A : Number, B : Number ){... return something}
-
- The first method is always tried first if C is found NOT to be null,
- and have reference count equal to one;
-
- For binary operation, if C == A, the following will be tried first:
- operator += ( C : Number, B : Number ){... return C_or_else}
- */
+/*
+// Operator (in daoBitBoolArithOpers) validity rules,
+// for operation involving DaoObject:
+//
+// A. when one of the operand is not DaoObject:
+//    1. all these operators are not valid, unless overloaded;
+//
+// B. when both operands are DaoObject:
+//
+//    1. AND, OR, LT, LE, EQ, NE are valid, only if none operator
+//       in daoBitBoolArithOpers is overloaded; In this case,
+//       the operations will be based on pointers;
+//
+//    2. AND, OR, LT, LE, EQ, NE are based on pointers, if they
+//       are used inside the function overloaded for the same
+//       operator. Example:
+//
+//       class Test{
+//         operator == ( A : Test, B : Test ){
+//           return A == B; # this will be based on pointers!
+//         }
+//       }
+//
+//    3. since "A>B" (or "A>=B") is compiled as "B<A" (or "B<=A"),
+//       when a DVM_LT or DVM_LE is executed, "operator<()"
+//       or "operator<=()" will be search first, if not found,
+//       then "operator>()" or "operator>=()" is searched,
+//       and applied by swapping A and B'
+//
+//    4. "A<B" and "A>B" inside "operator<()" and "operator>()"
+//        or "A<=B" and "A>=B" inside "operator<=()" and "operator>=()"
+//        will be based on pointers.
+*/
+/*
+// Examples of possible ways of operator overloading:
+// All these overloading functions must be "static",
+// namely, they do not require a class instance for being invoked:
+//
+// Unary operation:
+// operator ! ( C : Number, A : Number ){... return C_or_something_else}
+// operator ! ( A : Number ){... return something}
+//
+// Binary operation:
+// operator + ( C : Number, A : Number, B : Number ){... return C_or_else}
+// operator + ( A : Number, B : Number ){... return something}
+//
+// The first method is always tried first if C is found NOT to be null,
+// and have reference count equal to one;
+//
+// For binary operation, if C == A, the following will be tried first:
+// operator += ( C : Number, B : Number ){... return C_or_else}
+*/
 static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoValue *C )
 {
 	DaoRoutine *rout = 0;

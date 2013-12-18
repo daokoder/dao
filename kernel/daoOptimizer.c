@@ -2435,8 +2435,8 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 		if( rout ){
 			rout2 = rout;
 			/* Check the method with self parameter first, then other methods: */
-			rout = DaoRoutine_ResolveByType( rout, ts[1], ts+2, 1, DVM_CALL );
-			if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout, NULL, ts+1, 2, DVM_CALL );
+			rout = DaoRoutine_ResolveByType( rout, ts[1], ts+2, bt!=NULL, DVM_CALL );
+			if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout2, NULL, ts+1, 1+(bt!=NULL), DVM_CALL );
 			/* if the operation is used in the overloaded operator, do operation by address */
 			if( boolop && rout == self ) return dao_type_int;
 			if( rout ) return ct;
@@ -2456,12 +2456,12 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 	rout = NULL;
 	if( ct ){ /* Check methods that can take all three parameters: */
 		/* Check the method with self parameter first, then other methods: */
-		rout = DaoRoutine_ResolveByType( rout2, ts[0], ts+1, 2, DVM_CALL );
-		if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout2, NULL, ts, 3, DVM_CALL );
+		rout = DaoRoutine_ResolveByType( rout2, ts[0], ts+1, 1+(bt!=NULL), DVM_CALL );
+		if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout2, NULL, ts, 2+(bt!=NULL), DVM_CALL );
 	}
 	/* Check the method with self parameter first, then other methods: */
-	if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout2, ts[1], ts+2, 1, DVM_CALL );
-	if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout2, NULL, ts+1, 2, DVM_CALL );
+	if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout2, ts[1], ts+2, bt!=NULL, DVM_CALL );
+	if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout2, NULL, ts+1, 1+(bt!=NULL), DVM_CALL );
 	/* if the operation is used in the overloaded operator, do operation by address */
 	if( boolop && rout == self ) return dao_type_int;
 	if( rout ) ct = & rout->routType->aux->xType;
@@ -4460,9 +4460,14 @@ NotExist_TryAux:
 			break;
 		case DVM_NOT :
 			ct = NoCheckingType( at ) ? dao_type_udf : dao_type_int;
-			ct = DaoInferencer_UpdateType( self, opc, ct );
+			if( at->tid == DAO_OBJECT || at->tid == DAO_CDATA
+					|| at->tid == DAO_CSTRUCT || at->tid == DAO_INTERFACE ){
+				ct = DaoCheckBinArith( routine, vmc, at, NULL, types[opc], hostClass, mbs );
+				if( ct == NULL ) ct = dao_type_int;
+			}
+			DaoInferencer_UpdateType( self, opc, ct );
+			AssertTypeMatching( ct, types[opc], defs );
 			if( NoCheckingType( at ) ) continue;
-			AssertTypeMatching( dao_type_int, ct, defs );
 			if( at->realnum ){
 				if( typed_code == 0 ) continue;
 				if( ct->realnum ) inode->code = DVM_NOT_I + (at->tid - DAO_INTEGER);
@@ -4470,14 +4475,18 @@ NotExist_TryAux:
 				continue;
 			}
 			if( at->tid == DAO_LONG || at->tid == DAO_ENUM || at->tid == DAO_ARRAY ) continue;
-			/* TODO: check overloading? */
 			if( at->tid >= DAO_OBJECT && at->tid <= DAO_CTYPE ) continue;
 			goto InvOper;
 			break;
 		case DVM_MINUS :
 			ct = DaoInferencer_UpdateType( self, opc, at );
-			if( NoCheckingType( at ) ) continue;
+			if( at->tid == DAO_OBJECT || at->tid == DAO_CDATA
+					|| at->tid == DAO_CSTRUCT || at->tid == DAO_INTERFACE ){
+				ct = DaoCheckBinArith( routine, vmc, at, NULL, types[opc], hostClass, mbs );
+				if( ct == NULL ) ct = dao_type_int;
+			}
 			AssertTypeMatching( at, ct, defs );
+			if( NoCheckingType( at ) ) continue;
 			if( at->tid >= DAO_INTEGER && at->tid <= DAO_COMPLEX ){
 				if( typed_code ){
 					if( at != ct ) DaoInferencer_InsertMove( self, inode, & inode->a, at, ct );
@@ -4486,7 +4495,6 @@ NotExist_TryAux:
 				continue;
 			}
 			if( at->tid == DAO_LONG || at->tid == DAO_ARRAY ) continue;
-			/* TODO: check overloading? */
 			if( at->tid >= DAO_OBJECT && at->tid <= DAO_CTYPE ) continue;
 			goto InvOper;
 			break;

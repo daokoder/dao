@@ -2845,7 +2845,6 @@ InvalidUse:
 static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
-	DaoToken *alias = tokens[start];
 	DaoNamespace *myNS = self->nameSpace;
 	DaoRoutine *routine = self->routine;
 	DaoRoutine *tmpRoutine;
@@ -2865,7 +2864,7 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 		DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
 		goto InvalidAliasing;
 	}
-	if( DaoParser_GetRegister( self, alias ) >= 0 ){
+	if( DaoParser_GetRegister( self, tokens[start] ) >= 0 ){
 		DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
 		goto InvalidAliasing;
 	}
@@ -4227,7 +4226,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	int topll = (self->levelBase + self->lexLevel) ==0;
 	int nameStart, oldcount = self->regCount;
 	int reg, cst, temp, eq, errorStart = start;
-	int k, end = start, remove = 1;
+	int k, m, end = start, remove = 1;
 	unsigned char tki, tki2, errors;
 #if 0
 	int mm;
@@ -4317,14 +4316,31 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 			DNode *node = MAP_Find( DaoParser_GetCurrentDataMap( self ), name );
 			if( node ) DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, name );
 		}
+		if( self->errors->size > errors ) return -1;
 	}else if( store2 == 0 && extype == NULL && temp != DTOK_ASSN ){
-		for(k=nameStart; k<self->toks->size; k++){
+		for(k=nameStart,m=0; k<self->toks->size; ++k,++m){
 			DaoToken *varTok = self->toks->items.pToken[k];
 			int reg = DaoParser_GetRegister( self, varTok );
-			if( reg < 0 ) DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, & varTok->string );
+			int pos = varTok->index;
+			if( reg < 0 ){
+				DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, & varTok->string );
+				break;
+			}
+			reg = DaoParser_GetNormRegister( self, reg, start, start, end );
+			DaoParser_AddCode( self, DVM_MOVE, reg, 0, self->regCount+m, pos, pos, 0 );
 		}
+		if( self->errors->size > errors ) return -1;
+
+		if( m == 1 ){
+			DaoParser_PushRegister( self );
+		}else{
+			reg = self->regCount;
+			DaoParser_AddCode( self, DVM_TUPLE, reg, m, reg + m, start, end, 0 );
+			DaoParser_PushRegisters( self, m + 1 );
+		}
+		DArray_Erase( self->toks, nameStart, self->toks->size - nameStart );
+		return end;
 	}
-	if( self->errors->size > errors ) return -1;
 
 	enode.reg = -1;
 	enode.konst = 0;

@@ -3369,6 +3369,17 @@ DaoArray* DaoArray_Copy( DaoArray *self )
 	memcpy( copy->data.p, self->data.p, self->size * DaoArray_DataTypeSize( self ) );
 	return copy;
 }
+DaoArray* DaoArray_CopyX( DaoArray *self, DaoType *tp )
+{
+	DaoArray *copy = DaoArray_New( self->etype );
+	if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
+		int nt = tp->nested->items.pType[0]->tid;
+		if( nt >= DAO_INTEGER && nt <= DAO_COMPLEX ) copy->etype = nt;
+	}
+	DaoArray_ResizeArray( copy, self->dims, self->ndim );
+	DaoArray_CopyArray( copy, self );
+	return copy;
+}
 void DaoArray_ResizeData( DaoArray *self, daoint size, daoint old )
 {
 	daoint item_size = DaoArray_DataTypeSize( self );

@@ -1104,7 +1104,7 @@ static void DaoChannel_GetGCFields( void *p, DArray *vs, DArray *arrays, DArray 
 
 DaoTypeBase channelTyper =
 {
-	"channel<@V=none>", NULL, NULL, (DaoFuncItem*) channelMeths, {0}, {0},
+	"channel<@V>", NULL, NULL, (DaoFuncItem*) channelMeths, {0}, {0},
 	(FuncPtrDel) DaoChannel_Delete, DaoChannel_GetGCFields
 };
 

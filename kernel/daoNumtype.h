@@ -181,6 +181,7 @@ struct DaoArray
 
 DAO_DLL DaoArray* DaoArray_New( int type );
 DAO_DLL DaoArray* DaoArray_Copy( DaoArray *self );
+DAO_DLL DaoArray* DaoArray_CopyX( DaoArray *self, DaoType *tp );
 DAO_DLL int DaoArray_CopyArray( DaoArray *self, DaoArray *other );
 DAO_DLL void DaoArray_Delete( DaoArray *self );
 
