@@ -36,7 +36,7 @@ struct DaoObject
 	DAO_DATA_COMMON;
 
 	ushort_t    isRoot    : 1;
-	ushort_t    isDefault : 1;
+	ushort_t    isNull    : 1;
 	ushort_t    isAsync   : 1;
 	ushort_t    isInited  : 1;
 	ushort_t    unused    : 12;

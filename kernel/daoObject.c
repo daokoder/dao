@@ -64,7 +64,7 @@ static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *strea
 	sprintf( buf, "[%p]", self );
 	if( self0 == self->defClass->objType->value ){
 		DaoStream_WriteString( stream, self->defClass->className );
-		DaoStream_WriteMBS( stream, "[default]" );
+		DaoStream_WriteMBS( stream, "[null]" );
 		return;
 	}
 	if( cycData != NULL && DMap_Find( cycData, self ) != NULL ){
@@ -206,7 +206,7 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 	}else if( self->rootObject == NULL ){
 		GC_IncRC( self );
 		self->rootObject = self;
-		if( self->isDefault ){ /* no value space is allocated for default object yet! */
+		if( self->isNull ){ /* no value space is allocated for null object yet! */
 			self->valueCount = klass->objDataName->size;
 			self->objValues = (DaoValue**) dao_calloc( self->valueCount, sizeof(DaoValue*) );
 		}
@@ -214,7 +214,7 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 	offset += self->defClass->objDefCount;
 	if( klass->parent != NULL && klass->parent->type == DAO_CLASS ){
 		DaoObject *sup = NULL;
-		if( self->isDefault ){
+		if( self->isNull ){
 			sup = & klass->parent->xClass.objType->value->xObject;
 		}else{
 			sup = DaoObject_Allocate( (DaoClass*) klass->parent, 0 );

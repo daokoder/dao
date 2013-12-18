@@ -1287,25 +1287,25 @@ CallEntry:
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( ADD )
-			OPCASE( SUB )
-			OPCASE( MUL )
-			OPCASE( DIV )
-			OPCASE( MOD )
-			OPCASE( POW ){
-				self->activeCode = vmc;
-				DaoProcess_DoBinArith( self, vmc );
-				goto CheckException;
-			}OPNEXT()
+		OPCASE( SUB )
+		OPCASE( MUL )
+		OPCASE( DIV )
+		OPCASE( MOD )
+		OPCASE( POW ){
+			self->activeCode = vmc;
+			DaoProcess_DoBinArith( self, vmc );
+			goto CheckException;
+		}OPNEXT()
 		OPCASE( AND )
-			OPCASE( OR )
-			OPCASE( LT )
-			OPCASE( LE )
-			OPCASE( EQ )
-			OPCASE( NE ){
-				self->activeCode = vmc;
-				DaoProcess_DoBinBool( self, vmc );
-				goto CheckException;
-			}OPNEXT()
+		OPCASE( OR )
+		OPCASE( LT )
+		OPCASE( LE )
+		OPCASE( EQ )
+		OPCASE( NE ){
+			self->activeCode = vmc;
+			DaoProcess_DoBinBool( self, vmc );
+			goto CheckException;
+		}OPNEXT()
 		OPCASE( IN ){
 			self->activeCode = vmc;
 			DaoProcess_DoInTest( self, vmc );
@@ -1851,25 +1851,25 @@ CallEntry:
 			DaoValue_Copy( locVars[ vmc->a ], list->items.items.pValue + id );
 		}OPNEXT()
 		OPCASE( GETI_LII )
-			OPCASE( GETI_LFI )
-			OPCASE( GETI_LDI )
-			OPCASE( GETI_LCI )
-			OPCASE( GETI_LSI ){
-				list = & locVars[ vmc->a ]->xList;
-				id = IntegerOperand( vmc->b );
-				if( id <0 ) id += list->items.size;
-				if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
-				vA = list->items.items.pValue[id];
-				switch( vmc->code ){
-				case DVM_GETI_LSI :
-					GC_ShiftRC( vA, locVars[ vmc->c ] );
-					locVars[ vmc->c ] = vA;
-					break;
-				case DVM_GETI_LII : locVars[ vmc->c ]->xInteger.value = vA->xInteger.value; break;
-				case DVM_GETI_LFI : locVars[ vmc->c ]->xFloat.value = vA->xFloat.value; break;
-				case DVM_GETI_LDI : locVars[ vmc->c ]->xDouble.value = vA->xDouble.value; break;
-				case DVM_GETI_LCI : locVars[ vmc->c ]->xComplex.value = vA->xComplex.value; break;
-				}
+		OPCASE( GETI_LFI )
+		OPCASE( GETI_LDI )
+		OPCASE( GETI_LCI )
+		OPCASE( GETI_LSI ){
+			list = & locVars[ vmc->a ]->xList;
+			id = IntegerOperand( vmc->b );
+			if( id <0 ) id += list->items.size;
+			if( id <0 || id >= list->items.size ) goto RaiseErrorIndexOutOfRange;
+			vA = list->items.items.pValue[id];
+			switch( vmc->code ){
+			case DVM_GETI_LSI :
+				GC_ShiftRC( vA, locVars[ vmc->c ] );
+				locVars[ vmc->c ] = vA;
+				break;
+			case DVM_GETI_LII : locVars[ vmc->c ]->xInteger.value = vA->xInteger.value; break;
+			case DVM_GETI_LFI : locVars[ vmc->c ]->xFloat.value = vA->xFloat.value; break;
+			case DVM_GETI_LDI : locVars[ vmc->c ]->xDouble.value = vA->xDouble.value; break;
+			case DVM_GETI_LCI : locVars[ vmc->c ]->xComplex.value = vA->xComplex.value; break;
+			}
 			}OPNEXT()
 		OPCASE( SETI_LIII ){
 			list = & locVars[ vmc->c ]->xList;
@@ -1914,7 +1914,7 @@ CallEntry:
 			case DVM_GETI_AII : IntegerOperand( vmc->c ) = array->data.i[id]; break;
 			case DVM_GETI_AFI : FloatOperand( vmc->c ) = array->data.f[id]; break;
 			case DVM_GETI_ADI : DoubleOperand( vmc->c ) = array->data.d[id]; break;
-			case DVM_GETI_ACI : locVars[ vmc->c ]->xComplex.value = array->data.c[id]; break;
+			case DVM_GETI_ACI : ComplexOperand( vmc->c ) = array->data.c[id]; break;
 			}
 
 		}OPNEXT() OPCASE(SETI_AIII) OPCASE(SETI_AFIF) OPCASE(SETI_ADID) OPCASE(SETI_ACIC){
@@ -1927,7 +1927,7 @@ CallEntry:
 			case DVM_SETI_AIII : array->data.i[id] = locVars[ vmc->a ]->xInteger.value; break;
 			case DVM_SETI_AFIF : array->data.f[id] = locVars[ vmc->a ]->xFloat.value; break;
 			case DVM_SETI_ADID : array->data.d[id] = locVars[ vmc->a ]->xDouble.value; break;
-			case DVM_SETI_ACIC : array->data.c[ id ] = locVars[ vmc->a ]->xComplex.value; break;
+			case DVM_SETI_ACIC : array->data.c[id] = locVars[ vmc->a ]->xComplex.value; break;
 			}
 
 		}OPNEXT() OPCASE(GETMI_AII) OPCASE(GETMI_AFI) OPCASE(GETMI_ADI) OPCASE(GETMI_ACI){
@@ -1936,10 +1936,10 @@ CallEntry:
 			id = DaoArray_ComputeIndex( array, locVars + vmc->a + 1, vmc->b );
 			if( id < 0 ) goto RaiseErrorIndexOutOfRange;
 			switch( vmc->code ){
-			case DVM_GETMI_AII: locVars[ vmc->c ]->xInteger.value = array->data.i[ id ]; break;
-			case DVM_GETMI_AFI: locVars[ vmc->c ]->xFloat.value = array->data.f[ id ]; break;
-			case DVM_GETMI_ADI: locVars[ vmc->c ]->xDouble.value = array->data.d[ id ]; break;
-			case DVM_GETMI_ACI: locVars[ vmc->c ]->xComplex.value = array->data.c[ id ]; break;
+			case DVM_GETMI_AII: locVars[ vmc->c ]->xInteger.value = array->data.i[id]; break;
+			case DVM_GETMI_AFI: locVars[ vmc->c ]->xFloat.value = array->data.f[id]; break;
+			case DVM_GETMI_ADI: locVars[ vmc->c ]->xDouble.value = array->data.d[id]; break;
+			case DVM_GETMI_ACI: locVars[ vmc->c ]->xComplex.value = array->data.c[id]; break;
 			}
 
 		}OPNEXT() OPCASE(SETMI_AIII) OPCASE(SETMI_AFIF) OPCASE(SETMI_ADID) OPCASE(SETMI_ACIC){
@@ -1948,19 +1948,19 @@ CallEntry:
 			id = DaoArray_ComputeIndex( array, locVars + vmc->c + 1, vmc->b  );
 			if( id < 0 ) goto RaiseErrorIndexOutOfRange;
 			switch( vmc->code ){
-			case DVM_SETMI_AIII: array->data.i[ id ] = locVars[ vmc->a ]->xInteger.value; break;
-			case DVM_SETMI_AFIF: array->data.f[ id ] = locVars[ vmc->a ]->xFloat.value; break;
-			case DVM_SETMI_ADID: array->data.d[ id ] = locVars[ vmc->a ]->xDouble.value; break;
-			case DVM_SETMI_ACIC: array->data.c[ id ] = locVars[ vmc->a ]->xComplex.value; break;
+			case DVM_SETMI_AIII: array->data.i[id] = locVars[ vmc->a ]->xInteger.value; break;
+			case DVM_SETMI_AFIF: array->data.f[id] = locVars[ vmc->a ]->xFloat.value; break;
+			case DVM_SETMI_ADID: array->data.d[id] = locVars[ vmc->a ]->xDouble.value; break;
+			case DVM_SETMI_ACIC: array->data.c[id] = locVars[ vmc->a ]->xComplex.value; break;
 			}
 		}OPNEXT()
 #else
 		OPCASE( GETI_AII ) OPCASE( GETI_AFI ) OPCASE( GETI_ADI ) OPCASE( GETI_ACI )
-			OPCASE( SETI_AIII ) OPCASE( SETI_AFIF ) OPCASE( SETI_ADID ) OPCASE( SETI_ACIC )
-			OPCASE( GETMI_AII ) OPCASE( GETMI_AFI )
-			OPCASE( GETMI_ADI ) OPCASE( GETMI_ACI )
-			OPCASE( SETMI_AIII ) OPCASE( SETMI_AFIF )
-			OPCASE( SETMI_ADID ) OPCASE( SETMI_ACIC )
+		OPCASE( SETI_AIII ) OPCASE( SETI_AFIF ) OPCASE( SETI_ADID ) OPCASE( SETI_ACIC )
+		OPCASE( GETMI_AII ) OPCASE( GETMI_AFI )
+		OPCASE( GETMI_ADI ) OPCASE( GETMI_ACI )
+		OPCASE( SETMI_AIII ) OPCASE( SETMI_AFIF )
+		OPCASE( SETMI_ADID ) OPCASE( SETMI_ACIC )
 			{
 				self->activeCode = vmc;
 				DaoProcess_RaiseException( self, DAO_ERROR, "numeric array is disabled" );
@@ -2052,7 +2052,7 @@ CallEntry:
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( GETF_OV ){
 			object = & locVars[ vmc->a ]->xObject;
-			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
+			if( object->isNull ) goto AccessNullInstance;
 			value = object->objValues[ vmc->b ];
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
@@ -2105,17 +2105,21 @@ CallEntry:
 			value = locVars[ vmc->a ]->xObject.defClass->variables->items.pVar[ vmc->b ]->value;
 			locVars[ vmc->c ]->xComplex.value = value->xComplex.value;
 		}OPNEXT() OPCASE( GETF_OVI ){
-			value = locVars[ vmc->a ]->xObject.objValues[ vmc->b ];
-			locVars[ vmc->c ]->xInteger.value = value->xInteger.value;
+			object = & locVars[ vmc->a ]->xObject;
+			if( object->isNull ) goto AccessNullInstance;
+			locVars[ vmc->c ]->xInteger.value = object->objValues[ vmc->b ]->xInteger.value;
 		}OPNEXT() OPCASE( GETF_OVF ){
-			value = locVars[ vmc->a ]->xObject.objValues[ vmc->b ];
-			locVars[ vmc->c ]->xFloat.value = value->xFloat.value;
+			object = & locVars[ vmc->a ]->xObject;
+			if( object->isNull ) goto AccessNullInstance;
+			locVars[ vmc->c ]->xFloat.value = object->objValues[ vmc->b ]->xFloat.value;
 		}OPNEXT() OPCASE( GETF_OVD ){
-			value = locVars[ vmc->a ]->xObject.objValues[ vmc->b ];
-			locVars[ vmc->c ]->xDouble.value = value->xDouble.value;
+			object = & locVars[ vmc->a ]->xObject;
+			if( object->isNull ) goto AccessNullInstance;
+			locVars[ vmc->c ]->xDouble.value = object->objValues[ vmc->b ]->xDouble.value;
 		}OPNEXT() OPCASE( GETF_OVC ){
-			value = locVars[ vmc->a ]->xObject.objValues[ vmc->b ];
-			locVars[ vmc->c ]->xComplex.value = value->xComplex.value;
+			object = & locVars[ vmc->a ]->xObject;
+			if( object->isNull ) goto AccessNullInstance;
+			locVars[ vmc->c ]->xComplex.value = object->objValues[ vmc->b ]->xComplex.value;
 		}OPNEXT() OPCASE( SETF_KG ){
 			klass = & locVars[ vmc->c ]->xClass;
 			DaoValue_Copy( locVars[vmc->a], & klass->variables->items.pVar[vmc->b]->value );
@@ -2124,7 +2128,7 @@ CallEntry:
 			DaoValue_Copy( locVars[vmc->a], & klass->variables->items.pVar[vmc->b]->value );
 		}OPNEXT() OPCASE( SETF_OV ){
 			object = & locVars[ vmc->c ]->xObject;
-			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
+			if( object->isNull ) goto AccessNullInstance;
 			DaoValue_Copy( locVars[vmc->a], object->objValues + vmc->b );
 		}OPNEXT() OPCASE( SETF_KGII ){
 			klass = & locVars[ vmc->c ]->xClass;
@@ -2152,19 +2156,19 @@ CallEntry:
 			klass->variables->items.pVar[vmc->b]->value->xComplex.value = ComplexOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_OVII ){
 			object = (DaoObject*) locVars[ vmc->c ];
-			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
+			if( object->isNull ) goto AccessNullInstance;
 			object->objValues[ vmc->b ]->xInteger.value = IntegerOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_OVFF ){
 			object = (DaoObject*) locVars[ vmc->c ];
-			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
+			if( object->isNull ) goto AccessNullInstance;
 			object->objValues[ vmc->b ]->xFloat.value = FloatOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_OVDD ){
 			object = (DaoObject*) locVars[ vmc->c ];
-			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
+			if( object->isNull ) goto AccessNullInstance;
 			object->objValues[ vmc->b ]->xDouble.value = DoubleOperand( vmc->a );
 		}OPNEXT() OPCASE( SETF_OVCC ){
 			object = (DaoObject*) locVars[ vmc->c ];
-			if( object == & object->defClass->objType->value->xObject ) goto AccessDefault;
+			if( object->isNull ) goto AccessNullInstance;
 			object->objValues[ vmc->b ]->xComplex.value = ComplexOperand( vmc->a );
 		}OPNEXT()
 		OPCASE( CHECK_ST ){
@@ -2264,9 +2268,9 @@ ModifyConstant:
 			self->activeCode = vmc;
 			DaoProcess_RaiseException( self, DAO_ERROR, "attempt to modify a constant" );
 			goto CheckException;
-AccessDefault:
+AccessNullInstance:
 			self->activeCode = vmc;
-			DaoProcess_RaiseException( self, DAO_ERROR, "cannot modify default class instance" );
+			DaoProcess_RaiseException( self, DAO_ERROR, "cannot access class null instance" );
 			goto CheckException;
 RaiseErrorNullObject:
 			self->activeCode = vmc;

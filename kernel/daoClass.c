@@ -210,9 +210,9 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 
 	self->objType->value = (DaoValue*) DaoObject_Allocate( self, 0 );
 	self->objType->value->xObject.trait |= DAO_VALUE_CONST|DAO_VALUE_NOCOPY;
-	self->objType->value->xObject.isDefault = 1;
+	self->objType->value->xObject.isNull = 1;
 	GC_IncRC( self->objType->value );
-	DString_SetMBS( str, "default" );
+	DString_SetMBS( str, "null" );
 	DaoClass_AddConst( self, str, self->objType->value, DAO_DATA_PUBLIC );
 
 	DString_Delete( str );
