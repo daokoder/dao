@@ -88,7 +88,8 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "BITXOR",     DVM_BITXOR,     DAO_CODE_BINARY,  0 },
 	{ "BITLFT",     DVM_BITLFT,     DAO_CODE_BINARY,  0 },
 	{ "BITRIT",     DVM_BITRIT,     DAO_CODE_BINARY,  0 },
-	{ "CHECK",      DVM_CHECK,      DAO_CODE_BINARY,  1 },
+	{ "SAME",       DVM_SAME,       DAO_CODE_BINARY,  1 },
+	{ "ISA",        DVM_ISA,        DAO_CODE_BINARY,  1 },
 	{ "NAMEVA",     DVM_NAMEVA,     DAO_CODE_UNARY2,  1 },
 	{ "PAIR",       DVM_PAIR,       DAO_CODE_BINARY,  1 },
 	{ "TUPLE",      DVM_TUPLE,      DAO_CODE_ENUM,    1 },
@@ -341,7 +342,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "MATH_I",     DVM_MATH_I,     DAO_CODE_UNARY2,  1 },
 	{ "MATH_F",     DVM_MATH_F,     DAO_CODE_UNARY2,  1 },
 	{ "MATH_D",     DVM_MATH_D,     DAO_CODE_UNARY2,  1 },
-	{ "CHECK_ST",   DVM_CHECK_ST,   DAO_CODE_BINARY,  0 },
+	{ "ISA_ST",     DVM_ISA_ST,     DAO_CODE_BINARY,  0 },
 	{ "???",        DVM_UNUSED,     DAO_CODE_NOP,     0 },
 
 	/* for compiling only */

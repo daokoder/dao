@@ -4576,18 +4576,45 @@ NotExist_TryAux:
 				}
 				break;
 			}
-		case DVM_CHECK :
-		case DVM_CHECK_ST :
+		case DVM_SAME :
 			{
 				DaoInferencer_UpdateType( self, opc, dao_type_int );
+				if( NoCheckingType( at ) || NoCheckingType( bt ) ) continue;
+				AssertTypeMatching( dao_type_int, types[opc], defs );
+				if( at->tid != bt->tid && ct->tid == DAO_INTEGER ){
+					vmc->code = DVM_DATA_I;
+					vmc->b = 0;
+				}
+				break;
+			}
+		case DVM_ISA :
+			{
+				DaoInferencer_UpdateType( self, opc, dao_type_int );
+				if( NoCheckingType( bt ) ) continue;
+				if( bt->tid == DAO_CTYPE || bt->tid == DAO_CLASS ){
+					AssertTypeMatching( dao_type_int, types[opc], defs );
+					continue;
+				}
+				if( bt->tid != DAO_TYPE ) goto ErrorTyping;
 				AssertTypeMatching( dao_type_int, types[opc], defs );
 				ct = types[opc];
 				k = bt->tid == DAO_TYPE ? bt->nested->items.pType[0]->tid : DAO_UDT;
 				if( k <= DAO_STRING && ct->tid == DAO_INTEGER ){
-					vmc->code = DVM_CHECK_ST;
-				}else if( code == DVM_CHECK_ST ){
-					goto ErrorTyping;
+					if( at->tid == k ){
+						vmc->code = DVM_DATA_I;
+						vmc->b = 1;
+					}else{
+						vmc->code = DVM_ISA_ST;
+					}
 				}
+				break;
+			}
+		case DVM_ISA_ST :
+			{
+				DaoInferencer_UpdateType( self, opc, dao_type_int );
+				if( bt->tid != DAO_TYPE ) goto ErrorTyping;
+				k = bt->tid == DAO_TYPE ? bt->nested->items.pType[0]->tid : DAO_UDT;
+				if( k > DAO_STRING ) goto ErrorTyping;
 				break;
 			}
 		case DVM_NAMEVA :

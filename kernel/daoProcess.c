@@ -67,7 +67,8 @@ static void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoAPList(  DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoCheck( DaoProcess *self, DaoVmCode *vmc );
+static void DaoProcess_DoCheckSame( DaoProcess *self, DaoVmCode *vmc );
+static void DaoProcess_DoCheckIsa( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_BindNameValue( DaoProcess *self, DaoVmCode *vmc );
 
 static void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc );
@@ -880,7 +881,7 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_EQ , && LAB_NE , && LAB_IN ,
 		&& LAB_BITAND , && LAB_BITOR ,
 		&& LAB_BITXOR , && LAB_BITLFT ,
-		&& LAB_BITRIT , && LAB_CHECK ,
+		&& LAB_BITRIT , && LAB_SAME , && LAB_ISA ,
 		&& LAB_NAMEVA , && LAB_PAIR ,
 		&& LAB_TUPLE  , && LAB_LIST ,
 		&& LAB_MAP    , && LAB_HASH ,
@@ -982,7 +983,7 @@ int DaoProcess_Execute( DaoProcess *self )
 
 		&& LAB_TEST_I , && LAB_TEST_F , && LAB_TEST_D ,
 		&& LAB_MATH_I , && LAB_MATH_F , && LAB_MATH_D ,
-		&& LAB_CHECK_ST 
+		&& LAB_ISA_ST 
 	};
 #endif
 
@@ -1346,8 +1347,10 @@ CallEntry:
 #endif
 			default : goto RaiseErrorInvalidOperation;
 			}
-		}OPNEXT() OPCASE( CHECK ){
-			DaoProcess_DoCheck( self, vmc );
+		}OPNEXT() OPCASE( SAME ){
+			DaoProcess_DoCheckSame( self, vmc );
+		}OPNEXT() OPCASE( ISA ){
+			DaoProcess_DoCheckIsa( self, vmc );
 		}OPNEXT() OPCASE( NAMEVA ){
 			DaoProcess_BindNameValue( self, vmc );
 		}OPNEXT() OPCASE( PAIR ){
@@ -2171,7 +2174,7 @@ CallEntry:
 			if( object->isNull ) goto AccessNullInstance;
 			object->objValues[ vmc->b ]->xComplex.value = ComplexOperand( vmc->a );
 		}OPNEXT()
-		OPCASE( CHECK_ST ){
+		OPCASE( ISA_ST ){
 			vA = locVars[vmc->a];
 			locVars[vmc->c]->xInteger.value = vA && vA->type == locVars[vmc->b]->xType.tid;
 		}OPNEXT() OPCASE( TEST_I ){
@@ -3055,60 +3058,105 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_MakeTuple( self, tuple, self->activeValues + vmc->a, count );
 	}
 }
-void DaoProcess_DoCheck( DaoProcess *self, DaoVmCode *vmc )
+void DaoProcess_DoCheckSame( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoValue *dA = self->activeValues[ vmc->a ];
 	DaoValue *dB = self->activeValues[ vmc->b ];
 	DaoType *type = (DaoType*) dB;
 	daoint *res = 0;
+
 	self->activeCode = vmc;
 	res = DaoProcess_PutInteger( self, 0 );
-	if( dA->type && dB->type == DAO_TYPE ){
-		if( dA->type == DAO_OBJECT ) dA = (DaoValue*) dA->xObject.rootObject;
-		if( type->tid == DAO_VARIANT ){
-			int i, n, mt = 0, id = 0, max = 0;
-			for(i=0,n=type->nested->size; i<n; i++){
-				if( dA->type == DAO_TYPE ){
-					mt = DaoType_MatchTo( & dA->xType, type->nested->items.pType[i], NULL );
-				}else{
-					mt = DaoType_MatchValue( type->nested->items.pType[i], dA, NULL );
-				}
-				if( mt > max ){
-					max = mt;
-					id = i + 1;
-				}
-				if( max == DAO_MT_EQ ) break;
-			}
-			*res = id;
-			return;
+
+	if( dA->type != dB->type ) return;
+
+	if( dA->type == DAO_OBJECT ){
+		*res = dA->xObject.rootObject->defClass == dB->xObject.rootObject->defClass;
+	}else if( dA->type == DAO_CDATA || dA->type == DAO_CSTRUCT ){
+		*res = dA->xCdata.ctype == dB->xCdata.ctype;
+	}else if( dA->type >= DAO_ENUM && dA->type <= DAO_TUPLE ){
+		DaoType *t1 = NULL;
+		DaoType *t2 = NULL;
+		*res = 0;
+		switch( dA->type ){
+		case DAO_ENUM :
+			t1 = dA->xEnum.etype;
+			t2 = dB->xEnum.etype;
+			break;
+		case DAO_ARRAY :
+			t1 = dao_array_types[ dA->xArray.etype ];
+			t2 = dao_array_types[ dB->xArray.etype ];
+			break;
+		case DAO_LIST : t1 = dA->xList.unitype; t2 = dB->xList.unitype; break;
+		case DAO_MAP  : t1 = dA->xMap.unitype;  t2 = dB->xMap.unitype; break;
+		case DAO_TUPLE : t1 = dA->xTuple.unitype; t2 = dB->xTuple.unitype; break;
+		default : break;
 		}
-		if( dA->type < DAO_ARRAY ){
-			*res = dA->type == type->tid;
-		}else{
-			*res = DaoType_MatchValue( type, dA, NULL ) != 0;
-		}
-	}else if( dA->type == dB->type ){
+		*res = DaoType_MatchTo( t1, t2, NULL ) == DAO_MT_EQ;
+	}else if( dA->type == DAO_TYPE ){
+		*res = DaoType_MatchTo( (DaoType*) dA, (DaoType*) dB, NULL ) == DAO_MT_EQ;
+	}else if( dA-> type <= DAO_STRING ){
 		*res = 1;
-		if( dA->type == DAO_OBJECT ){
-			*res = dA->xObject.rootObject->defClass == dB->xObject.rootObject->defClass;
-		}else if( dA->type == DAO_CDATA || dA->type == DAO_CSTRUCT ){
-			*res = dA->xCdata.ctype == dB->xCdata.ctype;
-		}else if( dA->type >= DAO_ARRAY && dA->type <= DAO_TUPLE ){
-			DaoType *t1 = NULL;
-			DaoType *t2 = NULL;
-			*res = 0;
-			switch( dA->type ){
-				case DAO_ARRAY :
-					t1 = dao_array_types[ dA->xArray.etype ];
-					t2 = dao_array_types[ dB->xArray.etype ];
-					break;
-				case DAO_LIST : t1 = dA->xList.unitype; t2 = dB->xList.unitype; break;
-				case DAO_MAP  : t1 = dA->xMap.unitype;  t2 = dB->xMap.unitype; break;
-				case DAO_TUPLE : t1 = dA->xTuple.unitype; t2 = dB->xTuple.unitype; break;
-				default : break;
+	}
+}
+
+void DaoProcess_DoCheckIsa( DaoProcess *self, DaoVmCode *vmc )
+{
+	DaoValue *dA = self->activeValues[ vmc->a ];
+	DaoValue *dB = self->activeValues[ vmc->b ];
+	DaoType *type = (DaoType*) dB;
+	daoint *res = 0;
+
+	self->activeCode = vmc;
+	res = DaoProcess_PutInteger( self, 0 );
+
+	if( dB->type == DAO_CTYPE ){
+		dB = (DaoValue*) dB->xCtype.cdtype;
+		if( dA->type == DAO_CTYPE ) dA = (DaoValue*) dA->xCtype.cdtype;
+	}else if( dB->type == DAO_CLASS ){
+		dB = (DaoValue*) dB->xClass.objType;
+		if( dA->type == DAO_CLASS ) dA = (DaoValue*) dA->xClass.objType;
+	}
+
+	if( dB->type != DAO_TYPE ){
+		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid type operand" );
+		return;
+	}
+	if( dA == dB ) return;
+
+	if( dA->type == DAO_TYPE ){
+		*res = DaoType_ChildOf( (DaoType*) dA, (DaoType*) dB ) != 0;
+		if( DaoType_ChildOf( (DaoType*) dB, (DaoType*) dA ) ) *res = 0;
+		return;
+	}
+
+	if( dA->type == DAO_OBJECT ){
+		*res = dA->xObject.defClass->objType == (DaoType*) dB;
+		return;
+	}else if( dA->type == DAO_CSTRUCT || dA->type == DAO_CDATA ){
+		*res = dA->xCstruct.ctype == (DaoType*) dB;
+		return;
+	}else if( type->tid == DAO_VARIANT ){
+		int i, n, mt = 0, id = 0, max = 0;
+		for(i=0,n=type->nested->size; i<n; i++){
+			if( dA->type == DAO_TYPE ){
+				mt = DaoType_MatchTo( & dA->xType, type->nested->items.pType[i], NULL );
+			}else{
+				mt = DaoType_MatchValue( type->nested->items.pType[i], dA, NULL );
 			}
-			*res = DaoType_MatchTo( t1, t2, NULL ) == DAO_MT_EQ;
+			if( mt > max ){
+				max = mt;
+				id = i + 1;
+			}
+			if( max == DAO_MT_EQ ) break;
 		}
+		*res = id;
+		return;
+	}
+	if( dA->type < DAO_ARRAY ){
+		*res = dA->type == type->tid;
+	}else{
+		*res = DaoType_MatchValue( type, dA, NULL ) != 0;
 	}
 }
 void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
@@ -6516,8 +6564,10 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 		DaoProcess_DoBitShift( self, vmc ); break;
 	case DVM_TILDE :
 		DaoProcess_DoBitFlip( self, vmc ); break;
-	case DVM_CHECK :
-		DaoProcess_DoCheck( self, vmc ); break;
+	case DVM_SAME :
+		DaoProcess_DoCheckSame( self, vmc ); break;
+	case DVM_ISA :
+		DaoProcess_DoCheckIsa( self, vmc ); break;
 	case DVM_NAMEVA :
 		DaoProcess_BindNameValue( self, vmc ); break;
 	case DVM_PAIR :

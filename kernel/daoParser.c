@@ -137,8 +137,8 @@ static const int mapAithOpcode[]=
 	DVM_NE  , /* DAO_OPER_NE */
 	DVM_LE  , /* DAO_OPER_LE */
 	-DVM_LE , /* DAO_OPER_GE */
-	DVM_CHECK ,
-	DVM_CHECK ,
+	DVM_SAME ,
+	DVM_ISA ,
 	200 , /* padding for assertion operator */
 
 	DVM_ADD , /* DAO_OPER_ADD */

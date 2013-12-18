@@ -81,7 +81,8 @@ enum DaoOpcode
 	DVM_BITXOR , /* C = A ^ B */
 	DVM_BITLFT , /* C = A << B */
 	DVM_BITRIT , /* C = A >> B */
-	DVM_CHECK ,  /* check type: C = A ?= B; C = A ?< B, where A is data, B is data or type */
+	DVM_SAME ,   /* C = A ?= B, same type; A, B, both are data objects or type objects; */
+	DVM_ISA ,    /* C = A ?< B; B, type; A (data) is a B; A (type) is a sub type of B; */
 	DVM_NAMEVA , /* C = A => B: name A, local constant, value B, local register */
 	DVM_PAIR ,   /* C = A : B; create a pair of index, as a tuple; */
 	DVM_TUPLE ,  /* tuple: C = ( A, A+1, ..., A+B-1 ); B>=2, items can be: name=>value */
@@ -368,7 +369,7 @@ enum DaoOpcode
 	DVM_MATH_F ,
 	DVM_MATH_D ,
 
-	DVM_CHECK_ST , /* check against simple types: int, float, double, complex, long, string; */
+	DVM_ISA_ST , /* check against simple types: int, float, double, complex, long, string; */
 
 	DVM_NULL
 };
