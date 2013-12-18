@@ -1935,6 +1935,30 @@ static void DaoLIST_Resize( DaoProcess *proc, DaoValue *p[], int N )
 		fill = self->unitype->nested->items.pType[0]->value;
 	DArray_Resize( & self->items, size, fill );
 }
+static void DaoLIST_Resize2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoList *self = & p[0]->xList;
+	DaoType *tp = NULL;
+	DaoValue *fill = p[1];
+	daoint size = p[2]->xInteger.value;
+	if( self->unitype && self->unitype->nested->size )
+		tp = self->unitype->nested->items.pType[0];
+	switch( fill->type ){
+	case DAO_LIST  : fill = (DaoValue*) DaoList_Copy( (DaoList*) fill, tp ); break;
+	case DAO_MAP   : fill = (DaoValue*) DaoMap_Copy( (DaoMap*) fill, tp );   break;
+	case DAO_TUPLE : fill = (DaoValue*) DaoTuple_Copy( (DaoTuple*) fill, tp ); break;
+#ifdef DAO_WITH_NUMARRAY
+	case DAO_ARRAY : fill = (DaoValue*) DaoArray_CopyX( (DaoArray*) fill, tp ); break;
+#endif
+	default : break;
+	}
+	if( fill != p[1] ){
+		fill->xBase.trait |= DAO_VALUE_CONST; /* force copying; */
+		DaoGC_IncRC( fill );
+	}
+	DArray_Resize( & self->items, size, fill );
+	if( fill != p[1] ) DaoGC_DecRC( fill );
+}
 static int DaoList_CheckType( DaoList *self, DaoProcess *proc )
 {
 	daoint i, type;
@@ -2533,7 +2557,8 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Insert,   "insert( self :list<@T>, item : @T, pos=0 )" },
 	{ DaoLIST_Clear,    "clear( self :list<@T> )" },
 	{ DaoLIST_Size,     "size( self :list<@T> )=>int" },
-	{ DaoLIST_Resize,   "resize( self :list<@T>, size :int )" },
+	{ DaoLIST_Resize,   "resize( self :list<@T<int|float|double|complex|long|string|enum>>, size :int )" },
+	{ DaoLIST_Resize2,  "resize( self :list<@T>, value :@T, size :int )" },
 	{ DaoLIST_Max,      "max( self :list<@T<int|long|float|double|complex|string|enum>> )=>tuple<@T,int>" },
 	{ DaoLIST_Min,      "min( self :list<@T<int|long|float|double|complex|string|enum>> )=>tuple<@T,int>" },
 	{ DaoLIST_Sum,      "sum( self :list<@T<int|long|float|double|complex|string|enum>> )=>@T" },

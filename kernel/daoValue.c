@@ -747,6 +747,10 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs, DaoDataCa
 		*D = S;
 		return 1;
 	}
+	switch( S->type ){
+	case DAO_OBJECT : if( S->xObject.isNull ) return 0; break;
+	case DAO_CDATA  : if( S->xCdata.data == NULL ) return 0; break;
+	}
 	if( !(S->xTuple.trait & DAO_VALUE_CONST) ){
 		DaoType *ST = NULL;
 		switch( (S->type << 8) | T->tid ){

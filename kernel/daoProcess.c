@@ -1773,13 +1773,22 @@ CallEntry:
 		}OPNEXT() OPCASE( MOVE_SS ){
 			DString_Assign( locVars[ vmc->c ]->xString.data, locVars[ vmc->a ]->xString.data );
 		}OPNEXT() OPCASE( MOVE_PP ){
-			if( locVars[ vmc->a ] == NULL ) goto RaiseErrorNullObject;
 			value = locVars[ vmc->a ];
+			switch( value->type ){
+			case DAO_OBJECT : if( value->xObject.isNull ) value = NULL; break;
+			case DAO_CDATA  : if( value->xCdata.data == NULL ) value = NULL; break;
+			}
+			if( value == NULL ) goto RaiseErrorNullObject;
 			GC_ShiftRC( value, locVars[ vmc->c ] );
 			locVars[ vmc->c ] = value;
 		}OPNEXT() OPCASE( MOVE_XX ){
-			if( locVars[ vmc->a ] == NULL ) goto RaiseErrorNullObject;
-			DaoValue_CopyX( locVars[ vmc->a ], locVars + vmc->c, self->cache );
+			value = locVars[ vmc->a ];
+			switch( value->type ){
+			case DAO_OBJECT : if( value->xObject.isNull ) value = NULL; break;
+			case DAO_CDATA  : if( value->xCdata.data == NULL ) value = NULL; break;
+			}
+			if( value == NULL ) goto RaiseErrorNullObject;
+			DaoValue_CopyX( value, locVars + vmc->c, self->cache );
 		}OPNEXT() OPCASE( MINUS_C ){
 			acom = ComplexOperand( vmc->a );
 			vC = locVars[ vmc->c ];
@@ -3938,49 +3947,55 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 InvalidParameter:
 	DaoProcess_ShowCallError( self, rout2, selfpar, params, npar, codemode );
 }
-static void DaoProcess_FastPassParams( DaoProcess *self, DaoValue *params[], int npar )
+static int DaoProcess_FastPassParams( DaoProcess *self, DaoValue *params[], int npar )
 {
 	int i;
 	DaoValue **dests = self->stackValues + self->topFrame->stackBase;
 	for(i=0; i<npar; ++i){
-		if( dests[i] && dests[i]->xBase.refCount == 1 && params[i]->type == dests[i]->type ){
-			switch( params[i]->type ){
+		DaoValue *param = params[i];
+		if( dests[i] && dests[i]->xBase.refCount == 1 && param->type == dests[i]->type ){
+			switch( param->type ){
 			case DAO_INTEGER :
-				dests[i]->xInteger.value = params[i]->xInteger.value;
+				dests[i]->xInteger.value = param->xInteger.value;
 				break;
 			case DAO_FLOAT :
-				dests[i]->xFloat.value = params[i]->xFloat.value;
+				dests[i]->xFloat.value = param->xFloat.value;
 				break;
 			case DAO_DOUBLE :
-				dests[i]->xDouble.value = params[i]->xDouble.value;
+				dests[i]->xDouble.value = param->xDouble.value;
 				break;
 			case DAO_COMPLEX :
-				dests[i]->xComplex.value = params[i]->xComplex.value;
+				dests[i]->xComplex.value = param->xComplex.value;
 				break;
 #ifdef DAO_WITH_LONGINT
 			case DAO_LONG :
-				DLong_Move( dests[i]->xLong.value, params[i]->xLong.value );
+				DLong_Move( dests[i]->xLong.value, param->xLong.value );
 				break;
 #endif
 			case DAO_STRING :
-				DString_Assign( dests[i]->xString.data, params[i]->xString.data );
+				DString_Assign( dests[i]->xString.data, param->xString.data );
 				break;
 			default :
-				GC_ShiftRC( params[i], dests[i] );
-				dests[i] = params[i];
+				GC_ShiftRC( param, dests[i] );
+				dests[i] = param;
 				break;
 			}
-		}else if( params[i]->type >= DAO_ARRAY ){
-			GC_ShiftRC( params[i], dests[i] );
-			dests[i] = params[i];
+		}else if( param->type >= DAO_ARRAY ){
+			switch( param->type ){
+			case DAO_OBJECT : if( param->xObject.isNull ) return 0; break;
+			case DAO_CDATA  : if( param->xCdata.data == NULL ) return 0; break;
+			}
+			GC_ShiftRC( param, dests[i] );
+			dests[i] = param;
 		}else{
-			DaoValue_CopyX( params[i], dests + i, self->cache );
+			DaoValue_CopyX( param, dests + i, self->cache );
 		}
 	}
+	return 1;
 }
 void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 {
-	int status;
+	int status, ret;
 	int mode = vmc->b;
 	int npar = vmc->b & 0xff;
 	int mcall = vmc->code == DVM_MCALL;
@@ -4001,7 +4016,8 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			frame->routine = rout;
 			frame->active = frame->prev->active;
 			self->status = DAO_PROCESS_STACKED;
-			DaoProcess_FastPassParams( self, self->activeValues + vmc->a + 1, npar );
+			ret = DaoProcess_FastPassParams( self, self->activeValues + vmc->a + 1, npar );
+			if( ret == 0 ) goto FastCallError;
 			DaoProcess_CallFunction( self, rout, values, rout->parCount );
 			status = self->status;
 			DaoProcess_PopFrame( self );
@@ -4011,8 +4027,13 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			frame->active = frame;
 			self->status = DAO_PROCESS_STACKED;
 			DaoProcess_InitTopFrame( self, rout, NULL );
-			DaoProcess_FastPassParams( self, self->activeValues + vmc->a + 1, npar );
+			ret = DaoProcess_FastPassParams( self, self->activeValues + vmc->a + 1, npar );
+			if( ret == 0 ) goto FastCallError;
 		}
+		return;
+FastCallError:
+		DaoProcess_PopFrame( self );
+		DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "null instance" );
 		return;
 	}
 

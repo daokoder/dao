@@ -329,7 +329,7 @@ int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject
 	DaoType *type;
 	DaoValue **value ;
 	DaoClass *klass = self->defClass;
-	DaoObject *dft = & klass->objType->value->xObject;
+	DaoObject *null = & klass->objType->value->xObject;
 	int child = othis && DaoObject_ChildOf( (DaoValue*)othis, (DaoValue*)self );
 	int id, st, up, pm, access;
 
@@ -342,7 +342,7 @@ int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject
 	st = LOOKUP_ST( node->value.pInt );
 	up = LOOKUP_UP( node->value.pInt );
 	id = LOOKUP_ID( node->value.pInt );
-	if( self == dft && st == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_NOTPERMIT;
+	if( self == null && st == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_NOTPERMIT;
 	access = othis == self || pm == DAO_DATA_PUBLIC || (child && pm >= DAO_DATA_PROTECTED);
 	if( access == 0 ) return DAO_ERROR_FIELD_NOTPERMIT;
 	if( st == DAO_OBJECT_VARIABLE ){
@@ -365,7 +365,7 @@ int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObjec
 	DNode *node;
 	DaoValue *p = NULL;
 	DaoClass *klass = self->defClass;
-	DaoObject *dft = & klass->objType->value->xObject;
+	DaoObject *null = & klass->objType->value->xObject;
 	int child = othis && DaoObject_ChildOf( (DaoValue*)othis, (DaoValue*)self );
 	int id, st, up, pm, access;
 
@@ -377,7 +377,7 @@ int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObjec
 	st = LOOKUP_ST( node->value.pInt );
 	up = LOOKUP_UP( node->value.pInt );
 	id = LOOKUP_ID( node->value.pInt );
-	if( self == dft && st == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_NOTPERMIT;
+	if( self == null && st == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_NOTPERMIT;
 	access = othis == self || pm == DAO_DATA_PUBLIC || (child && pm >= DAO_DATA_PROTECTED);
 	if( access == 0 ) return DAO_ERROR_FIELD_NOTPERMIT;
 	switch( st ){
