@@ -3133,12 +3133,6 @@ void DaoProcess_DoCheckIsa( DaoProcess *self, DaoVmCode *vmc )
 	}
 	if( dA == dB ) return;
 
-	if( dA->type == DAO_TYPE ){
-		*res = DaoType_ChildOf( (DaoType*) dA, (DaoType*) dB ) != 0;
-		if( DaoType_ChildOf( (DaoType*) dB, (DaoType*) dA ) ) *res = 0;
-		return;
-	}
-
 	if( dA->type == DAO_OBJECT ){
 		*res = dA->xObject.defClass->objType == (DaoType*) dB;
 		return;
@@ -3160,6 +3154,10 @@ void DaoProcess_DoCheckIsa( DaoProcess *self, DaoVmCode *vmc )
 			if( max == DAO_MT_EQ ) break;
 		}
 		*res = id;
+		return;
+	}else if( dA->type == DAO_TYPE ){
+		*res = DaoType_ChildOf( (DaoType*) dA, (DaoType*) dB ) != 0;
+		if( DaoType_ChildOf( (DaoType*) dB, (DaoType*) dA ) ) *res = 0;
 		return;
 	}
 	if( dA->type < DAO_ARRAY ){
@@ -5320,6 +5318,13 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 				D = cdata->data ? 0 : 1;
 			}else if( vmc->code == DVM_NE ){
 				D = cdata->data ? 1 : 0;
+			}
+		}else if( A->type == DAO_OBJECT || B->type == DAO_OBJECT ){
+			DaoObject *object = (DaoObject*)(A->type == DAO_OBJECT ? A : B);
+			if( vmc->code == DVM_EQ ){
+				D = object->isNull ? 1 : 0;
+			}else if( vmc->code == DVM_NE ){
+				D = object->isNull ? 0 : 1;
 			}
 		}
 		if( C ) DaoProcess_PutValue( self, C );
