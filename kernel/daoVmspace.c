@@ -128,8 +128,9 @@ static const char *const cmd_help =
 "   -h, --help:           print this help information;\n"
 "   -v, --version:        print version information;\n"
 "   -e, --eval:           evaluate command line codes;\n"
-"   -d, --debug:          run in debug mode;\n"
 "   -i, --interactive:    run in interactive mode;\n"
+"   -d, --debug:          run in debug mode;\n"
+"   -p, --profile:        run in profile mode;\n"
 "   -r, --restart:        restart program on crash (unix) or nozero exit (win);\n"
 "   -c, --compile:        compile to bytecodes;\n"
 "   -a, --archive:        build archive file;\n"
@@ -448,6 +449,19 @@ DaoUserStream* DaoVmSpace_SetUserStdError( DaoVmSpace *self, DaoUserStream *stre
 	}
 	return DaoStream_SetUserStream( self->errorStream, stream );
 }
+DaoDebugger* DaoVmSpace_SetUserDebugger( DaoVmSpace *self, DaoDebugger *handler )
+{
+	DaoDebugger *hd = self->debugger;
+	self->debugger = handler;
+	return hd;
+}
+DaoProfiler* DaoVmSpace_SetUserProfiler( DaoVmSpace *self, DaoProfiler *handler )
+{
+	DaoProfiler *hd = self->profiler;
+	if( handler->EnterFrame == NULL || handler->LeaveFrame == NULL ) handler = NULL;
+	self->profiler = handler;
+	return hd;
+}
 DaoUserHandler* DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler )
 {
 	DaoUserHandler *hd = self->userHandler;
@@ -504,17 +518,11 @@ Done:
 
 DaoVmSpace* DaoVmSpace_New()
 {
-	DaoVmSpace *self = (DaoVmSpace*) dao_malloc( sizeof(DaoVmSpace) );
+	DaoVmSpace *self = (DaoVmSpace*) dao_calloc( 1, sizeof(DaoVmSpace) );
 	DaoValue_Init( self, DAO_VMSPACE );
 	self->stdioStream = DaoStream_New();
 	self->errorStream = DaoStream_New();
 	self->errorStream->file = stderr;
-	self->options = 0;
-	self->stopit = 0;
-	self->evalCmdline = 0;
-	self->hasAuxlibPath = 0;
-	self->hasSyslibPath = 0;
-	self->userHandler = NULL;
 	self->daoBinPath = DString_New(1);
 	self->startPath = DString_New(1);
 	self->mainSource = DString_New(1);
@@ -536,7 +544,6 @@ DaoVmSpace* DaoVmSpace_New()
 	self->allInferencers = DMap_New(0,0);
 	self->allOptimizers = DMap_New(0,0);
 	self->loadedModules = DArray_New(D_VALUE);
-	self->preloadModules = NULL;
 
 #ifdef DAO_WITH_THREAD
 	DMutex_Init( & self->mutexLoad );
@@ -558,9 +565,6 @@ DaoVmSpace* DaoVmSpace_New()
 	self->mainNamespace->refCount ++;
 	self->stdioStream->refCount += 1;
 	self->errorStream->refCount += 1;
-
-	self->ReadLine = NULL;
-	self->AddHistory = NULL;
 
 	self->mainProcess = DaoProcess_New( self );
 	GC_IncRC( self->mainProcess );
@@ -687,6 +691,8 @@ void SplitByWhiteSpaces( const char *chs, DArray *tokens )
 }
 
 static void DaoConfigure_FromFile( const char *name );
+int DaoVmSpace_TryInitDebugger( DaoVmSpace *self, const char *module );
+int DaoVmSpace_TryInitProfiler( DaoVmSpace *self, const char *module );
 int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module );
 int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 {
@@ -711,10 +717,12 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 			}else if( strcmp( token->mbs, "--eval" ) ==0 ){
 				self->evalCmdline = 1;
 				DString_Clear( self->mainSource );
-			}else if( strcmp( token->mbs, "--debug" ) ==0 ){
-				self->options |= DAO_OPTION_DEBUG;
 			}else if( strcmp( token->mbs, "--interactive" ) ==0 ){
 				self->options |= DAO_OPTION_INTERUN;
+			}else if( strcmp( token->mbs, "--debug" ) ==0 ){
+				self->options |= DAO_OPTION_DEBUG;
+			}else if( strcmp( token->mbs, "--profile" ) ==0 ){
+				self->options |= DAO_OPTION_PROFILE;
 			}else if( strcmp( token->mbs, "--restart" ) ==0 ){
 			}else if( strcmp( token->mbs, "--list-code" ) ==0 ){
 				self->options |= DAO_OPTION_LIST_BC;
@@ -758,17 +766,16 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 				switch( token->mbs[j] ){
 				case 'h' : self->options |= DAO_OPTION_HELP;      break;
 				case 'v' : self->options |= DAO_OPTION_VINFO;     break;
-				case 'd' : self->options |= DAO_OPTION_DEBUG;     break;
 				case 'i' : self->options |= DAO_OPTION_INTERUN;   break;
+				case 'd' : self->options |= DAO_OPTION_DEBUG;     break;
+				case 'p' : self->options |= DAO_OPTION_PROFILE;   break;
 				case 'l' : self->options |= DAO_OPTION_LIST_BC;   break;
 				case 'c' : self->options |= DAO_OPTION_COMP_BC;   break;
 				case 'a' : self->options |= DAO_OPTION_ARCHIVE;   break;
 				case 'j' : self->options |= DAO_OPTION_JIT;
 						   daoConfig.jit = 1;
 						   break;
-				case 'T' : self->options |= DAO_OPTION_NO_TC;
-						   daoConfig.typedcode = 0;
-						   break;
+				case 'T' : daoConfig.typedcode = 0; break;
 				case 'e' : self->evalCmdline = 1;
 						   DString_Clear( self->mainSource );
 						   break;
@@ -792,9 +799,9 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 	if( self->options & DAO_OPTION_DEBUG ) daoConfig.optimize = 0;
 	DString_Delete( str );
 	DArray_Delete( array );
-	if( daoConfig.jit && dao_jit.Compile == NULL && DaoVmSpace_TryInitJIT( self, NULL ) == 0 ){
-		DaoStream_WriteMBS( self->errorStream, "Failed to enable Just-In-Time compiling!\n" );
-	}
+	if( daoConfig.jit && dao_jit.Compile == NULL ) DaoVmSpace_TryInitJIT( self, NULL );
+	if( self->options & DAO_OPTION_PROFILE ) DaoVmSpace_TryInitProfiler( self, NULL );
+	if( self->options & DAO_OPTION_DEBUG ) DaoVmSpace_TryInitDebugger( self, NULL );
 	return 1;
 }
 
@@ -2350,36 +2357,30 @@ void print_trace();
 
 extern DMap *dao_cdata_bindings;
 
+int DaoVmSpace_TryInitDebugger( DaoVmSpace *self, const char *module )
+{
+	DaoDebugger *debugger = self->debugger;
+	DaoVmSpace_Load( self, module ? module : "debugger" );
+	if( self->debugger != debugger ) return 1;
+	DaoStream_WriteMBS( self->errorStream, "Failed to enable debugger!\n" );
+	return 0;
+}
+int DaoVmSpace_TryInitProfiler( DaoVmSpace *self, const char *module )
+{
+	DaoProfiler *profiler = self->profiler;
+	DaoVmSpace_Load( self, module ? module : "profiler" );
+	if( self->profiler && self->profiler != profiler ) return 1;
+	DaoStream_WriteMBS( self->errorStream, "Failed to enable profiler!\n" );
+	return 0;
+}
 int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module )
 {
-	DString *name = DString_New(1);
-	void (*init)( DaoVmSpace*, DaoJIT* );
-	void *jitHandle = NULL;
-	if( module ){
-		DString_SetMBS( name, module );
-		jitHandle = Dao_OpenDLL( name->mbs );
-	}else{
-		DString_SetMBS( name, "libDaoJIT" DAO_DLL_SUFFIX );
-		DaoVmSpace_SearchPath( self, name, DAO_FILE_PATH, 1 );
-		if( TestPath( self, name, DAO_FILE_PATH ) ) jitHandle = Dao_OpenDLL( name->mbs );
-		if( jitHandle == NULL ){
-			DString_SetMBS( name, "DaoJIT" DAO_DLL_SUFFIX );
-			DaoVmSpace_SearchPath( self, name, DAO_FILE_PATH, 1 );
-			if( TestPath( self, name, DAO_FILE_PATH ) )  jitHandle = Dao_OpenDLL( name->mbs );
-		}
-	}
-	DString_Delete( name );
-	if( jitHandle == NULL ) return 0;
-	init = (DaoJIT_InitFPT) Dao_GetSymbolAddress( jitHandle, "DaoJIT_Init" );
-	if( init == NULL ) return 0;
-	(*init)( self, & dao_jit );
-	dao_jit.Quit = (DaoJIT_QuitFPT) Dao_GetSymbolAddress( jitHandle, "DaoJIT_Quit" );
-	dao_jit.Free = (DaoJIT_FreeFPT) Dao_GetSymbolAddress( jitHandle, "DaoJIT_Free" );
-	dao_jit.Compile = (DaoJIT_CompileFPT) Dao_GetSymbolAddress( jitHandle, "DaoJIT_Compile" );
-	dao_jit.Execute = (DaoJIT_ExecuteFPT) Dao_GetSymbolAddress( jitHandle, "DaoJIT_Execute" );
-	if( dao_jit.Execute == NULL ) dao_jit.Compile = NULL;
-	return dao_jit.Compile != NULL;
+	DaoVmSpace_Load( self, module ? module : "jit" );
+	if( dao_jit.Compile ) return 1;
+	DaoStream_WriteMBS( self->errorStream, "Failed to enable Just-In-Time compiling!\n" );
+	return 0;
 }
+
 static int Dao_GetExecutablePath( const char *command, DString *path )
 {
 	char *PATH = getenv( "PATH" );
@@ -2613,6 +2614,11 @@ void DaoQuit()
 #endif
 
 	if( daoConfig.iscgi ) return;
+
+	if( (mainVmSpace->options & DAO_OPTION_PROFILE) && mainVmSpace->profiler ){
+		DaoProfiler *profiler = mainVmSpace->profiler;
+		if( profiler->Report ) profiler->Report( profiler, mainVmSpace->stdioStream );
+	}
 
 	GC_DecRC( dao_default_cdata.ctype );
 	dao_default_cdata.ctype = NULL;

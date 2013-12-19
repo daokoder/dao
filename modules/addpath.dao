@@ -15,6 +15,8 @@ std::path( 'net', $add );
 std::path( 'os', $add );
 std::path( 'web', $add );
 std::path( 'clinker', $add );
+std::path( 'debugger', $add );
+std::path( 'profiler', $add );
 std::path( 'DaoCXX', $add );
 std::path( 'DaoJIT', $add );
 std::path( 'DaoSQL', $add );

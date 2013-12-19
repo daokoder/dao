@@ -131,14 +131,13 @@ enum DaoOptions
 {
 	DAO_OPTION_HELP     = (1<<0), /* -h, --help:         print this help information; */
 	DAO_OPTION_VINFO    = (1<<1), /* -v, --version:      print version information; */
-	DAO_OPTION_DEBUG    = (1<<2), /* -d, --debug:        run in debug mode; */
-	DAO_OPTION_INTERUN  = (1<<3), /* -i, --interactive:  run in interactive mode; */
-	DAO_OPTION_LIST_BC  = (1<<4), /* -l, --list-code:    print compiled bytecodes; */
-	DAO_OPTION_JIT      = (1<<5), /* -j, --jit:          enable JIT compiling; */
-	DAO_OPTION_COMP_BC  = (1<<6), /* -c, --compile:      compile to bytecodes; */
-	DAO_OPTION_ARCHIVE  = (1<<7), /* -a, --archive:      build archive file; */
-
-	DAO_OPTION_NO_TC    = (1<<8), /* no typed code; */
+	DAO_OPTION_INTERUN  = (1<<2), /* -i, --interactive:  run in interactive mode; */
+	DAO_OPTION_DEBUG    = (1<<3), /* -d, --debug:        run in debug mode; */
+	DAO_OPTION_PROFILE  = (1<<4), /* -p, --profile:      run in profile mode; */
+	DAO_OPTION_LIST_BC  = (1<<5), /* -l, --list-code:    print compiled bytecodes; */
+	DAO_OPTION_JIT      = (1<<6), /* -j, --jit:          enable JIT compiling; */
+	DAO_OPTION_COMP_BC  = (1<<7), /* -c, --compile:      compile to bytecodes; */
+	DAO_OPTION_ARCHIVE  = (1<<8), /* -a, --archive:      build archive file; */
 
 	/*
 	// DAO_OPTION_IDE:
@@ -195,8 +194,11 @@ typedef struct DMap        DMap;
 
 typedef struct DaoTypeCore     DaoTypeCore;
 typedef struct DaoTypeBase     DaoTypeBase;
+typedef struct DaoStackFrame   DaoStackFrame;
 typedef struct DaoUserStream   DaoUserStream;
 typedef struct DaoUserHandler  DaoUserHandler;
+typedef struct DaoDebugger     DaoDebugger;
+typedef struct DaoProfiler     DaoProfiler;
 
 typedef union  DaoValue        DaoValue;
 typedef struct DaoNone         DaoNone;
@@ -326,17 +328,25 @@ struct DaoUserStream
 };
 
 /*
-// This structure can be passed to DaoVmSpace by DaoVmSpace_SetUserHandler(),
+// These structures can be passed to DaoVmSpace
 // to change the handling of debugging and profiling behaviour.
 */
+struct DaoDebugger
+{
+	void (*Debug)( DaoDebugger *self, DaoProcess *process, DaoStream *stream );
+	/* properly change some NOP codes to DEBUG codes */
+	void (*BreakPoints)( DaoDebugger *self, DaoRoutine *routine );
+};
+struct DaoProfiler
+{
+	void (*Reset)( DaoProfiler *self );
+	void (*EnterFrame)( DaoProfiler *self, DaoProcess *proc, DaoStackFrame *frame, int start );
+	void (*LeaveFrame)( DaoProfiler *self, DaoProcess *proc, DaoStackFrame *frame, int end );
+	void (*Summarize)( DaoProfiler *self, DaoList *stat );
+	void (*Report)( DaoProfiler *self, DaoStream *stream );
+};
 struct DaoUserHandler
 {
-	void (*StdlibDebug)( DaoUserHandler *self, DaoProcess *process );
-	/* properly change some NOP codes to DEBUG codes */
-	void (*BreakPoints)( DaoUserHandler *self, DaoRoutine *routine );
-	/* profiling hooks, for future use */
-	void (*Called)( DaoUserHandler *self, DaoRoutine *caller, DaoRoutine *callee );
-	void (*Returned)( DaoUserHandler *self, DaoRoutine *caller, DaoRoutine *callee );
 	/* invoke host execution to do whatever (e.g., to process GUI events) */
 	void (*InvokeHost)( DaoUserHandler *self, DaoProcess *process );
 };
@@ -954,6 +964,8 @@ DAO_DLL DaoStream* DaoVmSpace_ErrorStream( DaoVmSpace *self );
 DAO_DLL DaoUserStream* DaoVmSpace_SetUserStdio( DaoVmSpace *self, DaoUserStream *stream );
 DAO_DLL DaoUserStream* DaoVmSpace_SetUserStdError( DaoVmSpace *self, DaoUserStream *stream );
 DAO_DLL DaoUserHandler* DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler );
+DAO_DLL DaoDebugger* DaoVmSpace_SetUserDebugger( DaoVmSpace *self, DaoDebugger *debugger );
+DAO_DLL DaoProfiler* DaoVmSpace_SetUserProfiler( DaoVmSpace *self, DaoProfiler *profiler );
 DAO_DLL void DaoVmSpace_ReadLine( DaoVmSpace *self, ReadLine fptr );
 DAO_DLL void DaoVmSpace_AddHistory( DaoVmSpace *self, AddHistory fptr );
 

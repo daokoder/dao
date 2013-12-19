@@ -8,6 +8,9 @@ if( daovm == none ) return
 modules.Install( daovm.GetPath( "MOD-PATH" ), "addpath.dao" )
 
 
+if( DaoMake::IsDir( "debugger" ) ) modules.AddDirectory( "debugger", "debugger" );
+if( DaoMake::IsDir( "profiler" ) ) modules.AddDirectory( "profiler", "profiler" );
+
 if( DaoMake::IsDir( "DaoJIT" ) ) modules.AddDirectory( "DaoJIT", "DaoJIT" );
 
 if( DaoMake::IsDir( "DaoCXX" ) ) modules.AddDirectory( "DaoCXX", "DaoCXX" );

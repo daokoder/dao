@@ -4725,6 +4725,10 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 	int perm = self->permission;
 	int found;
 
+	if( tok->name >= DKEY_USE && tok->name <= DKEY_PUBLIC ){
+		DaoParser_Error3( self, DAO_TOKEN_NEED_NAME, tok->index );
+		return;
+	}
 	if( self->isInterBody ){
 		DaoParser_Error3( self, DAO_VARIABLE_OUT_OF_CONTEXT, tok->index );
 		return;

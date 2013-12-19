@@ -184,6 +184,10 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 {
 	daoint i, N = self->stackTop + size;
 	DaoStackFrame *f, *frame = self->topFrame->next;
+	DaoProfiler *profiler = self->vmSpace->profiler;
+
+	if( profiler && self->topFrame ) profiler->LeaveFrame( profiler, self, self->topFrame, 0 );
+
 	if( N > self->stackSize ){
 		daoint offset = self->activeValues - self->stackValues;
 		self->stackValues = (DaoValue**)dao_realloc( self->stackValues, N*sizeof(DaoValue*) );
@@ -247,7 +251,14 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 void DaoProcess_PopFrame( DaoProcess *self )
 {
 	int att = 0;
+	DaoProfiler *profiler = self->vmSpace->profiler;
+
 	if( self->topFrame == NULL ) return;
+	if( profiler ){
+		profiler->LeaveFrame( profiler, self, self->topFrame, 1 );
+		if( self->topFrame->prev ) profiler->EnterFrame( profiler, self, self->topFrame->prev, 0 );
+	}
+
 	if( self->topFrame->routine ){
 		att = self->topFrame->routine->attribs;
 		if( !(self->topFrame->routine->attribs & DAO_ROUT_REUSABLE) ){
@@ -336,6 +347,7 @@ void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *o
 {
 	DaoType *routHost = routine->routHost;
 	DaoStackFrame *frame = DaoProcess_PushFrame( self, routine->body->regCount );
+	DaoProfiler *profiler = self->vmSpace->profiler;
 
 	DaoProcess_InitTopFrame( self, routine, object );
 	frame->active = frame;
@@ -356,15 +368,18 @@ void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *o
 		GC_ShiftRC( object, frame->object );
 		frame->object = object;
 	}
+	if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 }
 void DaoProcess_PushFunction( DaoProcess *self, DaoRoutine *routine )
 {
+	DaoProfiler *profiler = self->vmSpace->profiler;
 	DaoStackFrame *frame = DaoProcess_PushFrame( self, routine->parCount );
 	frame->active = frame->prev->active;
 	GC_ShiftRC( routine, frame->routine );
 	frame->routine = routine;
 	self->status = DAO_PROCESS_STACKED;
 	DaoProcess_CopyStackParams( self );
+	if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 }
 static int DaoRoutine_PassDefault( DaoRoutine *routine, DaoValue *dest[], int passed, DMap *defs, DaoDataCache *cache )
 {
@@ -656,6 +671,7 @@ static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 {
 	DaoStackFrame *next, *frame = DaoProcess_FindSectionFrame( self );
+	DaoProfiler *profiler = self->vmSpace->profiler;
 	int returning = -1;
 
 	if( self->depth >= 1000 ){
@@ -684,6 +700,7 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 	next->outer = self;
 	next->returning = returning;
 	DaoProcess_SetActiveFrame( self, frame );
+	if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 0 );
 	return frame;
 }
 static void DaoProcess_FlushStdStreams( DaoProcess *self )
@@ -822,6 +839,8 @@ int DaoProcess_Execute( DaoProcess *self )
 {
 	DaoJitCallData jitCallData = {NULL};
 	DaoStackFrame *rollback = NULL;
+	DaoDebugger *debugger = self->vmSpace->debugger;
+	DaoProfiler *profiler = self->vmSpace->profiler;
 	DaoUserHandler *handler = self->vmSpace->userHandler;
 	DaoVmSpace *vmSpace = self->vmSpace;
 	DaoVmCode *vmcBase, *vmc2, *vmc = NULL;
@@ -1064,7 +1083,7 @@ CallEntry:
 #endif
 
 	if( self->stopit | vmSpace->stopit ) goto FinishProcess;
-	//XXX if( invokehost ) handler->InvokeHost( handler, topCtx );
+	if( invokehost ) handler->InvokeHost( handler, self );
 
 	if( (vmSpace->options & DAO_OPTION_DEBUG) | (routine->body->mode & DAO_OPTION_DEBUG) )
 		DaoProcess_AdjustCodes( self, vmSpace->options );
@@ -1116,6 +1135,7 @@ CallEntry:
 		DaoFuture *future = self->future;
 		DaoTuple *tuple;
 		int finished;
+		if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 0 );
 		switch( self->pauseType ){
 		case DAO_PAUSE_NONE :
 			break;
@@ -1436,10 +1456,6 @@ CallEntry:
 			if( self->exceptions->size > exceptCount ) goto CheckException;
 			vmc += vmc->b;
 			OPJUMP()
-				/*
-				   dbase = (DaoValue*)inum;
-				   printf( "jitc: %#x, %i\n", inum, dbase->type );
-				 */
 		}OPNEXT() OPCASE( RETURN ){
 			self->activeCode = vmc;
 			value = DaoProcess_DoReturn( self, vmc );
@@ -1475,7 +1491,7 @@ CallEntry:
 			if( self->stopit | vmSpace->stopit ) goto FinishProcess;
 			if( (vmSpace->options & DAO_OPTION_DEBUG ) ){
 				self->activeCode = vmc;
-				if( handler && handler->StdlibDebug ) handler->StdlibDebug( handler, self );
+				if( debugger && debugger->Debug ) debugger->Debug( debugger, self, NULL );
 				goto CheckException;
 			}
 		}OPNEXT() OPCASE( SECT ){
@@ -2292,13 +2308,14 @@ CheckException:
 
 			locVars = self->activeValues;
 			if( self->stopit | vmSpace->stopit ) goto FinishProcess;
-			//XXX if( invokehost ) handler->InvokeHost( handler, topCtx );
+			if( invokehost ) handler->InvokeHost( handler, self );
 			if( self->exceptions->size > exceptCount ){
 				goto FinishCall;
 			}else if( self->status == DAO_PROCESS_STACKED ){
 				goto CallEntry;
 			}else if( self->status == DAO_PROCESS_SUSPENDED ){
 				self->topFrame->entry = (short)(vmc - vmcBase);
+				if( profiler ) profiler->LeaveFrame( profiler, self, self->topFrame, 0 );
 				goto ReturnFalse;
 			}else if( self->status == DAO_PROCESS_ABORTED ){
 				goto FinishProcess;
@@ -4001,6 +4018,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *selfpar = NULL;
 	DaoValue *caller = self->activeValues[ vmc->a ];
 	DaoValue **params = self->activeValues + vmc->a;
+	DaoProfiler *profiler = self->vmSpace->profiler;
 	DaoRoutine *rout, *rout2 = NULL;
 	DaoType *retype;
 
@@ -4016,6 +4034,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			self->status = DAO_PROCESS_STACKED;
 			ret = DaoProcess_FastPassParams( self, self->activeValues + vmc->a + 1, npar );
 			if( ret == 0 ) goto FastCallError;
+			if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 			DaoProcess_CallFunction( self, rout, values, rout->parCount );
 			status = self->status;
 			DaoProcess_PopFrame( self );
@@ -4027,6 +4046,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			DaoProcess_InitTopFrame( self, rout, NULL );
 			ret = DaoProcess_FastPassParams( self, self->activeValues + vmc->a + 1, npar );
 			if( ret == 0 ) goto FastCallError;
+			if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 		}
 		return;
 FastCallError:
@@ -6647,14 +6667,14 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 
 static void DaoProcess_AdjustCodes( DaoProcess *self, int options )
 {
-	DaoUserHandler *handler = self->vmSpace->userHandler;
+	DaoDebugger *debugger = self->vmSpace->debugger;
 	DaoRoutine *routine = self->topFrame->routine;
 	DaoVmCode *c = self->topFrame->codes;
 	int i, n = routine->body->vmCodes->size;
 	int mode = routine->body->mode;
 	if( options & DAO_OPTION_DEBUG ){
 		routine->body->mode |= DAO_OPTION_DEBUG;
-		if( handler && handler->BreakPoints ) handler->BreakPoints( handler, routine );
+		if( debugger && debugger->BreakPoints ) debugger->BreakPoints( debugger, routine );
 	}else if( mode & DAO_OPTION_DEBUG ){
 		routine->body->mode &= ~DAO_OPTION_DEBUG;
 		for(i=0; i<n; i++) if( c[i].code == DVM_DEBUG ) c[i].code = DVM_NOP;

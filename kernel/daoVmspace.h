@@ -112,7 +112,9 @@ struct DaoVmSpace
 	/* map full file name (including path and suffix) to module namespace */
 	DMap  *nsModules; /* No GC for this, namespaces should remove themselves from this; */
 
-	DaoUserHandler *userHandler;
+	DaoDebugger     *debugger;
+	DaoProfiler     *profiler;
+	DaoUserHandler  *userHandler;
 
 	char* (*ReadLine)( const char *prompt );
 	int   (*AddHistory)( const char *cmd );

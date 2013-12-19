@@ -92,6 +92,7 @@ int  DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value );
 int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes );
 void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns );
 
+void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output );
 void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );
 
 void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );

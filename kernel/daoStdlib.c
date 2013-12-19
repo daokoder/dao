@@ -124,7 +124,7 @@ static void STD_Argv( DaoProcess *proc, DaoValue *p[], int N )
 	DaoList *list = DaoProcess_PutList( proc );
 	for(i=0; i<proc->topFrame->parCount; i++) DaoList_Append( list, proc->activeValues[i] );
 }
-static void Dao_AboutVar( DaoNamespace *ns, DaoValue *var, DString *str )
+void Dao_AboutVar( DaoNamespace *ns, DaoValue *var, DString *str )
 {
 	DaoType *abtp = DaoNamespace_GetType( ns, var );
 	char buf[50];
@@ -200,20 +200,6 @@ static void STD_Callable( DaoProcess *proc, DaoValue *p[], int N )
 	}
 }
 
-extern void SplitByWhiteSpaces( const char *str, DArray *tokens );
-
-static const char *const sep =
-"-------------------------------------------------------------------\n";
-static const char *const help =
-"h, help:       print this help info.\n"
-"q, quit:       quit debugging.\n"
-"k, kill:       kill the current virtual process.\n"
-"a, about reg:  print info. about the data held by the register.\n"
-"g, goto id:    goto id-th instruction.\n"
-"l, list num:   list num instructions before or after the current.\n"
-"p, print reg:  print the data held by the register.\n"
-"t, trace dep:  trace back dep-depth in the calling stack.\n";
-
 void DaoProcess_Trace( DaoProcess *self, int depth )
 {
 	DaoStream *stream = self->vmSpace->stdioStream;
@@ -249,17 +235,13 @@ void DaoProcess_Trace( DaoProcess *self, int depth )
 		frame = frame->prev;
 	}
 }
-void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output );
+
 void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoUserHandler *handler = proc->vmSpace->userHandler;
+	DaoDebugger *debugger = proc->vmSpace->debugger;
 	DaoRoutine *routine = proc->activeRoutine;
 	DaoStream *stream = proc->vmSpace->stdioStream;
 	DString *input;
-	DArray *tokens;
-	DMap   *cycData;
-	char *chs, *cmd;
-	int i;
 	if( ! (proc->vmSpace->options & DAO_OPTION_DEBUG ) ) return;
 	input = DString_New(1);
 	if( N > 0 && DaoValue_CastCstruct( p[0], dao_type_stream ) ){
@@ -274,105 +256,8 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 		DString_Delete( input );
 		return;
 	}
-	if( handler && handler->StdlibDebug ){
-		handler->StdlibDebug( handler, proc );
-		return;
-	}
-	tokens = DArray_New(D_STRING);
-	cycData = DMap_New(0,0);
-	while(1){
-		if( proc->vmSpace->ReadLine ){
-			chs = proc->vmSpace->ReadLine( "(debug) " );
-			if( chs ){
-				DString_SetMBS( input, chs );
-				DString_Trim( input );
-				if( input->size && proc->vmSpace->AddHistory )
-					proc->vmSpace->AddHistory( chs );
-				dao_free( chs );
-			}
-		}else{
-			DaoStream_WriteMBS( stream, "(debug) " );
-			DaoStream_ReadLine( stream, input );
-		}
-		if( input->size == 0 ) continue;
-		SplitByWhiteSpaces( input->mbs, tokens );
-		if( tokens->size == 0 ) continue;
-		cmd = tokens->items.pString[0]->mbs;
-		if( strcmp( cmd, "q" ) == 0 || strcmp( cmd, "quit" ) == 0 ){
-			break;
-		}else if( strcmp( cmd, "k" ) == 0 || strcmp( cmd, "kill" ) == 0 ){
-			proc->status = DAO_PROCESS_ABORTED;
-			break;
-		}else if( strcmp( cmd, "a" ) == 0 || strcmp( cmd, "about" ) == 0 ){
-			if( tokens->size > 1 ){
-				ushort_t reg = (ushort_t)strtod( tokens->items.pString[1]->mbs, 0 );
-				DaoType *tp = proc->activeTypes[ reg ];
-				DString_Clear( input );
-				Dao_AboutVar( proc->activeNamespace, proc->activeValues[reg], input );
-				DaoStream_WriteMBS( stream, "type: " );
-				if( tp )
-					DaoStream_WriteString( stream, tp->name );
-				else
-					DaoStream_WriteMBS( stream, "?" );
-				DaoStream_WriteMBS( stream, ", value: " );
-				DaoStream_WriteString( stream, input );
-				DaoStream_WriteMBS( stream, "\n" );
-			}
-		}else if( strcmp( cmd, "g" ) == 0 || strcmp( cmd, "goto" ) == 0 ){
-			if( tokens->size > 1 ){
-				int n = atoi( tokens->items.pString[1]->mbs );
-				int entry = proc->activeCode - proc->activeRoutine->body->vmCodes->data.codes;
-				if( n < 0 ) n = entry - n;
-				if( n >= routine->body->vmCodes->size ) n = routine->body->vmCodes->size -1;
-				proc->topFrame->entry = n;
-				proc->status = DAO_PROCESS_STACKED;
-				return;
-			}
-		}else if( strcmp( cmd, "h" ) == 0 || strcmp( cmd, "help" ) == 0 ){
-			DaoStream_WriteMBS( stream, help );
-		}else if( strcmp( cmd, "l" ) == 0 || strcmp( cmd, "list" ) == 0 ){
-			DString *mbs = DString_New(1);
-			int entry = proc->activeCode - proc->activeRoutine->body->vmCodes->data.codes;
-			int start = entry - 10;
-			int end = entry;
-			if( tokens->size >1 ){
-				int dn = atoi( tokens->items.pString[1]->mbs );
-				if( dn < 0 ){
-					start = entry + dn;
-				}else if( dn > 0 ){
-					start = entry;
-					end = entry + dn;
-				}
-			}
-			if( start < 0 ) start = 0;
-			if( end >= routine->body->vmCodes->size ) end = routine->body->vmCodes->size - 1;
-			DaoStream_WriteString( stream, routine->routName );
-			DaoStream_WriteMBS( stream, "(): " );
-			if( routine->routType ) DaoStream_WriteString( stream, routine->routType->name );
-			DaoStream_WriteMBS( stream, "\n" );
-			DaoStream_WriteMBS( stream, daoRoutineCodeHeader );
-			DaoStream_WriteMBS( stream, sep );
-			for( i=start; i<=end; i++ ){
-				DaoRoutine_FormatCode( routine, i, *routine->body->annotCodes->items.pVmc[i], mbs );
-				DaoStream_WriteString( stream, mbs );
-			}
-			DString_Delete( mbs );
-		}else if( strcmp( cmd, "p" ) == 0 || strcmp( cmd, "print" ) == 0 ){
-			if( tokens->size > 1 ){
-				ushort_t reg = (ushort_t)atoi( tokens->items.pString[1]->mbs );
-				DaoValue_Print( proc->activeValues[reg], proc, stream, cycData );
-				DaoStream_WriteMBS( stream, "\n" );
-			}
-		}else if( strcmp( cmd, "t" ) == 0 || strcmp( cmd, "trace" ) == 0 ){
-			int depth = 1;
-			if( tokens->size >1 ) depth = atoi( tokens->items.pString[1]->mbs );
-			DaoProcess_Trace( proc, depth );
-		}else{
-			DaoStream_WriteMBS( stream, "Unknown debugging command.\n" );
-		}
-	}
 	DString_Delete( input );
-	DArray_Delete( tokens );
+	if( debugger && debugger->Debug ) debugger->Debug( debugger, proc, stream );
 }
 static void STD_Error( DaoProcess *proc, DaoValue *p[], int N )
 {
