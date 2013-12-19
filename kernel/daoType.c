@@ -1822,6 +1822,24 @@ DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int count )
 
 int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
 
+/*
+// Init type defines for methods which may have type holders different from
+// those of the host type.
+*/
+void DaoCdataType_InitTypeDefines( DaoType *self, DaoRoutine *method, DMap *defs )
+{
+	DaoType *type = method->routType;
+	daoint i;
+
+	if( !(type->attrib & DAO_TYPE_SELF) ) return;
+	type = (DaoType*) type->nested->items.pType[0]->aux; /* self:type */
+
+	if( type->nested->size != self->nested->size ) return;
+	DMap_Insert( defs, type, self );
+	for(i=0; i<self->nested->size; i++){
+		DaoType_MatchTo( self->nested->items.pType[i], type->nested->items.pType[i], defs );
+	}
+}
 
 void DaoCdataType_SpecializeMethods( DaoType *self )
 {
@@ -1861,6 +1879,7 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 		self->aux->xCtype.ctype->kernel = kernel;
 		self->aux->xCtype.cdtype->kernel = kernel;
 
+		/* Required for redefining routHost: */
 		for(i=0; i<self->nested->size; i++){
 			DaoType_MatchTo( self->nested->items.pType[i], original->nested->items.pType[i], defs );
 		}
@@ -1883,6 +1902,7 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 					rout = DaoRoutine_Copy( rout, 1, 0, 0 );
 					if( rout2->attribs & DAO_ROUT_INITOR )
 						DString_Assign( rout->routName, self->name );
+					DaoCdataType_InitTypeDefines( self, rout, defs );
 					DaoRoutine_Finalize( rout, self, defs );
 					DaoMethods_Insert( methods, rout, nspace, self );
 				}
@@ -1890,6 +1910,7 @@ void DaoCdataType_SpecializeMethods( DaoType *self )
 				rout = DaoRoutine_Copy( routine, 1, 0, 0 );
 				if( routine->attribs & DAO_ROUT_INITOR )
 					DString_Assign( rout->routName, self->name );
+					DaoCdataType_InitTypeDefines( self, rout, defs );
 				DaoRoutine_Finalize( rout, self, defs );
 				DaoMethods_Insert( methods, rout, nspace, self );
 			}
