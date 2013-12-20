@@ -4836,6 +4836,7 @@ NotExist_TryAux:
 					if( consts[opa] == NULL ) goto NotInit;
 					klass = & at->aux->xClass;
 					if( !(klass->attribs & DAO_CLS_AUTO_INITOR) ) goto InvOper;
+					if( klass->attribs & (DAO_CLS_PRIVATE_VAR|DAO_CLS_PROTECTED_VAR) ) goto InvOper;
 					if( opb >= klass->instvars->size ) goto InvOper;
 					str = klass->className;
 					ct = klass->objType;

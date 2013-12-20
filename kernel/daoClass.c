@@ -1276,6 +1276,10 @@ int DaoClass_AddObjectVar( DaoClass *self, DString *name, DaoValue *deft, DaoTyp
 	if( deft == NULL && t ) deft = t->value;
 
 	id = self->objDataName->size;
+	if( id != 0 ){ /* not self; */
+		if( s == DAO_DATA_PRIVATE   ) self->attribs |= DAO_CLS_PRIVATE_VAR;
+		if( s == DAO_DATA_PROTECTED ) self->attribs |= DAO_CLS_PROTECTED_VAR;
+	}
 	MAP_Insert( self->lookupTable, name, LOOKUP_BIND( DAO_OBJECT_VARIABLE, s, 0, id ) );
 	DArray_Append( self->objDataName, (void*)name );
 	DArray_Append( self->instvars, DaoVariable_New( deft, t ) );

@@ -4670,7 +4670,8 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 			object = DaoObject_New( klass );
 			DaoProcess_SetValue( self, vmc->c, (DaoValue*)object );
 			mtype = klass->instvars->items.pVar;
-			if( !(klass->attribs & DAO_CLS_AUTO_INITOR) ){
+			if( !(klass->attribs & DAO_CLS_AUTO_INITOR)
+					|| (klass->attribs & (DAO_CLS_PRIVATE_VAR|DAO_CLS_PROTECTED_VAR)) ){
 				DaoProcess_RaiseException( self, DAO_ERROR, "cannot initialize instance" );
 				break;
 			}else if( opb >= object->valueCount ){
