@@ -35,45 +35,47 @@
 #include"daoArray.h"
 #include"daoMap.h"
 
-#define DAO_DATA_CORE    uchar_t type, subtype, trait, marks; int refCount
-#define DAO_DATA_COMMON  DAO_DATA_CORE; int cycRefCount
+#define DAO_VALUE_CORE      uchar_t type, subtype, trait, marks; int refCount
+#define DAO_VALUE_COMMON    DAO_VALUE_CORE; int cycRefCount
+#define DAO_GENERIC_COMMON  DAO_VALUE_COMMON; DaoType *ctype
+#define DAO_CSTRUCT_COMMON  DAO_GENERIC_COMMON; DaoObject *object
 
 void DaoValue_Init( void *dbase, char type );
 
 struct DaoNone
 {
-	DAO_DATA_CORE;
+	DAO_VALUE_CORE;
 };
 DAO_DLL DaoValue *dao_none_value;
 DAO_DLL DaoNone* DaoNone_New();
 
 struct DaoInteger
 {
-	DAO_DATA_CORE;
+	DAO_VALUE_CORE;
 
 	daoint value;
 };
 struct DaoFloat
 {
-	DAO_DATA_CORE;
+	DAO_VALUE_CORE;
 
 	float value;
 };
 struct DaoDouble
 {
-	DAO_DATA_CORE;
+	DAO_VALUE_CORE;
 
 	double value;
 };
 struct DaoComplex
 {
-	DAO_DATA_CORE;
+	DAO_VALUE_CORE;
 
 	complex16 value;
 };
 struct DaoLong
 {
-	DAO_DATA_CORE;
+	DAO_VALUE_CORE;
 
 	DLong  *value;
 };
@@ -82,7 +84,7 @@ DAO_DLL void DaoLong_Delete( DaoLong *self );
 
 struct DaoString
 {
-	DAO_DATA_CORE;
+	DAO_VALUE_CORE;
 
 	DString  *data;
 };
@@ -98,7 +100,7 @@ DAO_DLL void DaoString_Delete( DaoString *self );
  */
 struct DaoEnum
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	int       value; /* value associated with the symbol(s) or flag(s) */
 	DaoType  *etype; /* type information structure */
@@ -118,10 +120,9 @@ DAO_DLL int DaoEnum_SubSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNames
 
 struct DaoList
 {
-	DAO_DATA_COMMON;
+	DAO_GENERIC_COMMON;
 
 	DArray    items;
-	DaoType  *unitype;
 };
 
 DAO_DLL DaoList* DaoList_New();
@@ -136,10 +137,9 @@ DAO_DLL DaoList* DaoList_Copy( DaoList *self, DaoType *type );
 
 struct DaoMap
 {
-	DAO_DATA_COMMON;
+	DAO_GENERIC_COMMON;
 
 	DMap     *items;
-	DaoType  *unitype;
 };
 
 DAO_DLL DaoMap* DaoMap_New( unsigned int hashing );
@@ -160,12 +160,12 @@ DAO_DLL void DaoMap_Erase( DaoMap *self, DaoValue *key );
 
 struct DaoTuple
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	/* packed with the previous field in 64-bits system; */
 	ushort_t    size;
 	ushort_t    cap;
-	DaoType    *unitype;
+	DaoType    *ctype;
 	DaoValue   *items[DAO_TUPLE_ITEMS]; /* the actual number of items is in ::size; */
 };
 
@@ -180,18 +180,17 @@ DAO_DLL int DaoTuple_GetIndex( DaoTuple *self, DString *name );
  * passing named parameters and fields: */
 struct DaoNameValue
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	DString   *name;
 	DaoValue  *value;
-	DaoType   *unitype;
+	DaoType   *ctype;
 };
 DaoNameValue* DaoNameValue_New( DString *name, DaoValue *value );
 
 
 
 
-#define DAO_CSTRUCT_COMMON DAO_DATA_COMMON; DaoType *ctype; DaoObject *object
 
 /* Customized/extended Dao data: */
 struct DaoCstruct

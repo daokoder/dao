@@ -982,8 +982,8 @@ static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, D
 					DaoNameValue *nameva = DaoNameValue_New( name, argv );
 					DaoValue *st = (DaoValue*) dao_type_string;
 					type = DaoNamespace_MakeType( ns, name->mbs, DAO_PAR_NAMED, st, NULL, 0 );
-					nameva->unitype = type;
-					GC_IncRC( nameva->unitype );
+					nameva->ctype = type;
+					GC_IncRC( nameva->ctype );
 					argv = (DaoValue*) nameva;
 				}
 				DaoList_SetItem( argParams, argv, j );
@@ -2324,6 +2324,10 @@ DaoType *dao_type_complex = NULL;
 DaoType *dao_type_long = NULL;
 DaoType *dao_type_string = NULL;
 DaoType *dao_type_tuple = NULL;
+DaoType *dao_type_generic_list = NULL;
+DaoType *dao_type_generic_map = NULL;
+DaoType *dao_type_empty_list = NULL;
+DaoType *dao_type_empty_map = NULL;
 DaoType *dao_list_any = NULL;
 DaoType *dao_map_any = NULL;
 DaoType *dao_routine = NULL;
@@ -2523,8 +2527,6 @@ DaoVmSpace* DaoInit( const char *command )
 	DString_SetMBS( dao_type_for_iterator->name, "for_iterator" );
 	DaoNamespace_AddType( ns, dao_type_for_iterator->name, dao_type_for_iterator );
 
-	dao_list_any = DaoParser_ParseTypeName( "list<any>", ns, NULL );
-	dao_map_any = DaoParser_ParseTypeName( "map<any,any>", ns, NULL );
 	dao_type_tuple = DaoParser_ParseTypeName( "tuple<...>", ns, NULL );
 
 	dao_array_types[DAO_INTEGER] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_int, 1 );
@@ -2550,8 +2552,15 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_SetupType( vms->nsInternal, & stringTyper );
 	DaoNamespace_SetupType( vms->nsInternal, & longTyper );
 	DaoNamespace_SetupType( vms->nsInternal, & comTyper );
-	DaoNamespace_SetupType( vms->nsInternal, & listTyper );
-	DaoNamespace_SetupType( vms->nsInternal, & mapTyper );
+	dao_type_generic_list = DaoNamespace_WrapGenericType( ns, & listTyper, DAO_LIST );
+	dao_type_generic_map = DaoNamespace_WrapGenericType( ns, & mapTyper, DAO_MAP );
+
+	dao_list_any = DaoType_Specialize( dao_type_generic_list, NULL, 0 );
+	dao_map_any  = DaoType_Specialize( dao_type_generic_map, NULL, 0 );
+
+	type1 = DaoType_New( "any", DAO_ANY, NULL, NULL );
+	dao_type_empty_list = DaoType_Specialize( dao_type_generic_list, & type1, 1 );
+	dao_type_empty_map  = DaoType_Specialize( dao_type_generic_map, & type1, 1 );
 
 	GC_ShiftRC( dao_type_complex, comTyper.core->kernel->abtype );
 	GC_ShiftRC( dao_type_long, longTyper.core->kernel->abtype );

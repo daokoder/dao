@@ -231,7 +231,7 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 		DaoVariable *var = klass->instvars->items.pVar[i];
 		DaoValue **value = self->objValues + i;
 		/* for data type such as list/map/array,
-		 * its .unitype may need to be set properaly */
+		 * its .ctype may need to be set properaly */
 		if( var->value ){
 			DaoValue_Move( var->value, value, var->dtype );
 			continue;

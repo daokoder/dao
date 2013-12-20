@@ -620,25 +620,25 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 		break;
 #endif
 	case DAO_LIST :
-		/* v : any = {}, v->unitype should be list<any> */
+		/* v : any = {}, v->ctype should be list<any> */
 		if( tp->tid == DAO_ANY ) tp = dao_list_any;
-		if( to->xList.unitype && !(to->xList.unitype->attrib & DAO_TYPE_UNDEF) ) break;
-		GC_ShiftRC( tp, to->xList.unitype );
-		to->xList.unitype = tp;
+		if( to->xList.ctype && !(to->xList.ctype->attrib & DAO_TYPE_UNDEF) ) break;
+		GC_ShiftRC( tp, to->xList.ctype );
+		to->xList.ctype = tp;
 		break;
 	case DAO_MAP :
 		if( tp->tid == DAO_ANY ) tp = dao_map_any;
-		if( to->xMap.unitype && !(to->xMap.unitype->attrib & DAO_TYPE_UNDEF) ) break;
-		GC_ShiftRC( tp, to->xMap.unitype );
-		to->xMap.unitype = tp;
+		if( to->xMap.ctype && !(to->xMap.ctype->attrib & DAO_TYPE_UNDEF) ) break;
+		GC_ShiftRC( tp, to->xMap.ctype );
+		to->xMap.ctype = tp;
 		break;
 	case DAO_TUPLE :
-		tp2 = to->xTuple.unitype;
+		tp2 = to->xTuple.ctype;
 		if( tp->tid == DAO_ANY ) break;
 		if( tp->nested->size ==0 ) break; /* not to the generic tuple type */
 		if( tp2 == NULL || tp2->mapNames == NULL || tp2->mapNames->size ==0 ){
-			GC_ShiftRC( tp, to->xTuple.unitype );
-			to->xTuple.unitype = tp;
+			GC_ShiftRC( tp, to->xTuple.ctype );
+			to->xTuple.ctype = tp;
 			break;
 		}
 		if( tp->mapNames == NULL || tp->mapNames->size ) break;
@@ -646,8 +646,8 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 			if( DMap_Find( tp->mapNames, it->key.pVoid ) == NULL ) break;
 		}
 		if( it ) break;
-		GC_ShiftRC( tp, to->xTuple.unitype );
-		to->xTuple.unitype = tp;
+		GC_ShiftRC( tp, to->xTuple.ctype );
+		to->xTuple.ctype = tp;
 		break;
 	default : break;
 	}
@@ -656,7 +656,7 @@ static int DaoValue_TryCastTuple( DaoValue *src, DaoValue **dest, DaoType *tp )
 {
 	DaoTuple *tuple;
 	DaoType **item_types = tp->nested->items.pType;
-	DaoType *totype = src->xTuple.unitype;
+	DaoType *totype = src->xTuple.ctype;
 	DaoValue **data = src->xTuple.items;
 	DMap *names = totype ? totype->mapNames : NULL;
 	DNode *node, *search;
@@ -664,10 +664,10 @@ static int DaoValue_TryCastTuple( DaoValue *src, DaoValue **dest, DaoType *tp )
 	int tm, eqs = 0;
 	/* auto-cast tuple type, on the following conditions:
 	 * (1) the item values of "dest" must match exactly to the item types of "tp";
-	 * (2) "tp->mapNames" must contain "(*dest)->xTuple.unitype->mapNames"; */
-	if( src->xTuple.unitype == NULL ){
+	 * (2) "tp->mapNames" must contain "(*dest)->xTuple.ctype->mapNames"; */
+	if( src->xTuple.ctype == NULL ){
 		GC_IncRC( tp );
-		src->xTuple.unitype = tp;
+		src->xTuple.ctype = tp;
 		return 1;
 	}
 	if( DaoType_MatchValue( tp, src, NULL ) < DAO_MT_SUB ) return 1;
@@ -692,7 +692,7 @@ Finalize:
 		DaoValue_Move( data[i], tuple->items+i, it );
 	}
 	GC_IncRC( tp );
-	tuple->unitype = tp;
+	tuple->ctype = tp;
 	GC_ShiftRC( tuple, *dest );
 	*dest = (DaoValue*) tuple;
 	return 1;
@@ -740,10 +740,10 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs, DaoDataCa
 	if( !(S->xTuple.trait & DAO_VALUE_CONST) ){
 		DaoType *ST = NULL;
 		switch( (S->type << 8) | T->tid ){
-		case (DAO_TUPLE<<8)|DAO_TUPLE : ST = S->xTuple.unitype; break;
+		case (DAO_TUPLE<<8)|DAO_TUPLE : ST = S->xTuple.ctype; break;
 		case (DAO_ARRAY<<8)|DAO_ARRAY : ST = dao_array_types[ S->xArray.etype ]; break;
-		case (DAO_LIST <<8)|DAO_LIST  : ST = S->xList.unitype; break;
-		case (DAO_MAP  <<8)|DAO_MAP   : ST = S->xMap.unitype; break;
+		case (DAO_LIST <<8)|DAO_LIST  : ST = S->xList.ctype; break;
+		case (DAO_MAP  <<8)|DAO_MAP   : ST = S->xMap.ctype; break;
 		case (DAO_CDATA<<8)|DAO_CDATA : ST = S->xCdata.ctype; break;
 		case (DAO_CSTRUCT<<8)|DAO_CSTRUCT : ST = S->xCstruct.ctype; break;
 		case (DAO_OBJECT<<8)|DAO_OBJECT : ST = S->xObject.defClass->objType; break;
@@ -794,8 +794,8 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs, DaoDataCa
 	if( tm ==0 ){
 		printf( "T = %p; S = %p, type = %i %i\n", T, S, S->type, DAO_ROUTINE );
 		printf( "T: %s %i %i\n", T->name->mbs, T->tid, tm );
-		if( S->type == DAO_LIST ) printf( "%s\n", S->xList.unitype->name->mbs );
-		if( S->type == DAO_TUPLE ) printf( "%p\n", S->xTuple.unitype );
+		if( S->type == DAO_LIST ) printf( "%s\n", S->xList.ctype->name->mbs );
+		if( S->type == DAO_TUPLE ) printf( "%p\n", S->xTuple.ctype );
 	}
 	printf( "S->type = %p %s %i\n", S, T->name->mbs, tm );
 #endif
@@ -812,7 +812,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs, DaoDataCa
 	S = DaoValue_SimpleCopyWithTypeX( S, T, cache );
 	GC_ShiftRC( S, *D );
 	*D = S;
-	if( S->type == DAO_TUPLE && S->xTuple.unitype != T && tm == DAO_MT_SIM ){
+	if( S->type == DAO_TUPLE && S->xTuple.ctype != T && tm == DAO_MT_SIM ){
 		return DaoValue_TryCastTuple( S, D, T );
 	}else if( T && T->tid == S->type && !(T->attrib & DAO_TYPE_SPEC) ){
 		DaoValue_SetType( S, T );

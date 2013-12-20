@@ -244,7 +244,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	DaoList *methods = NULL;
 	DString *name = NULL;
 	DaoValue **data = tuple->items;
-	DMap *keys = tuple->unitype->mapNames;
+	DMap *keys = tuple->ctype->mapNames;
 	DMap *deftypes = DMap_New(0,0);
 	DMap *pm_map = DMap_New(D_STRING,0);
 	DMap *st_map = DMap_New(D_STRING,0);
@@ -260,7 +260,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	stEnum.etype = dao_storage_enum;
 
 	DaoProcess_SetValue( self, vmc->c, (DaoValue*) klass );
-	//printf( "%s\n", tuple->unitype->name->mbs );
+	//printf( "%s\n", tuple->ctype->name->mbs );
 	if( iclass && routine->routConsts->items.items.pValue[iclass-1]->type == DAO_CLASS ){
 		proto = & routine->routConsts->items.items.pValue[iclass-1]->xClass;
 		ns2 = proto->classRoutine->nameSpace;
@@ -381,7 +381,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 			if( size && data[0]->type == DAO_STRING ) name = data[0]->xString.data;
 			if( size > 1 && data[1]->type ){
 				value = data[1];
-				type = fieldv->xTuple.unitype->nested->items.pType[1];
+				type = fieldv->xTuple.ctype->nested->items.pType[1];
 			}
 			if( name == NULL || value == NULL ) continue;
 			if( MAP_Find( klass->lookupTable, name ) ) continue;
@@ -525,7 +525,7 @@ static void META_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 	DaoTuple *tuple;
 	DaoClass *klass;
 	DaoObject *object;
-	DaoType *tp = map->unitype->nested->items.pType[1];
+	DaoType *tp = map->ctype->nested->items.pType[1];
 	DaoNamespace *ns, *here = proc->activeNamespace;
 	DMap *index = NULL, *lookup = NULL;
 	DArray *data;
@@ -560,7 +560,7 @@ static void META_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 		if( restri && lookup && LOOKUP_PM( id ) != DAO_DATA_PUBLIC ) continue;
 		if( lookup ) id = LOOKUP_ID( id );
 		tuple = DaoTuple_New( 2 );
-		tuple->unitype = tp;
+		tuple->ctype = tp;
 		GC_IncRC( tp );
 		value = data->items.pConst[ id ]->value;
 		vabtp = (DaoValue*) DaoNamespace_GetType( here, value );
@@ -577,7 +577,7 @@ static void META_Var1( DaoProcess *proc, DaoValue *p[], int N )
 	DaoTuple *tuple;
 	DaoClass *klass = NULL;
 	DaoObject *object = NULL;
-	DaoType *tp = map->unitype->nested->items.pType[1];
+	DaoType *tp = map->ctype->nested->items.pType[1];
 	DaoNamespace *ns = NULL;
 	DMap *index = NULL, *lookup = NULL;
 	DNode *node;
@@ -613,7 +613,7 @@ static void META_Var1( DaoProcess *proc, DaoValue *p[], int N )
 			if( st == DAO_CLASS_CONSTANT ) continue;
 		}
 		tuple = DaoTuple_New( 2 );
-		tuple->unitype = tp;
+		tuple->ctype = tp;
 		GC_IncRC( tp );
 		value = NULL;
 		if( lookup ){
@@ -824,7 +824,7 @@ static void META_Param( DaoProcess *proc, DaoValue *p[], int N )
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoTuple *tuple;
 	DaoType *routype = routine->routType;
-	DaoType *itp = list->unitype->nested->items.pType[0];
+	DaoType *itp = list->ctype->nested->items.pType[0];
 	DaoType **nested = routype->nested->items.pType;
 	DString *mbs = DString_New(1);
 	DNode *node;
@@ -835,7 +835,7 @@ static void META_Param( DaoProcess *proc, DaoValue *p[], int N )
 	for(i=0; i<routine->parCount; i++){
 		if( i >= routype->nested->size ) break;
 		tuple = DaoTuple_New( 4 );
-		tuple->unitype = itp;
+		tuple->ctype = itp;
 		GC_IncRC( itp );
 		num.value = 0;
 		if( nested[i]->tid == DAO_PAR_DEFAULT ) num.value = 1;
@@ -910,8 +910,8 @@ static void META_Trace( DaoProcess *proc, DaoValue *p[], int N )
 		/* Tuple type: tuple<rout_name:string,rout_type:any,line:int,namespace:string> */
 		/* Also, namespace is most often the current file name, but not always! */
 		entry = DaoTuple_New( 5 );
-		entry->unitype = backtrace->unitype->nested->items.pType[0];
-		GC_IncRC( entry->unitype );
+		entry->ctype = backtrace->ctype->nested->items.pType[0];
+		GC_IncRC( entry->ctype );
 
 		DaoTuple_SetItem( entry, (DaoValue*) & routName, 0 );
 		DaoTuple_SetItem( entry, (DaoValue*) vRoutType, 1 );

@@ -37,7 +37,7 @@
 
 struct DaoClass
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	/* Holding index of class members, including data from its parents: */
 	/* negative index indicates an inaccessible private member from a parent? XXX */

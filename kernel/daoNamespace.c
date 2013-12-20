@@ -482,7 +482,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 		return DAO_DT_SCOPED;
 	}
 	ret = k ? DAO_DT_SCOPED : DAO_DT_UNSCOPED;
-	if( type->tid != DAO_CTYPE ) goto Error;
+	if( type->tid != DAO_CTYPE && type->tid != DAO_LIST && type->tid != DAO_MAP ) goto Error;
 	if( (value && value->type != DAO_CTYPE) || tokens[k+1]->type != DTOK_LT ) goto Error;
 	if( DaoParser_FindPairToken( parser, DTOK_LT, DTOK_GT, k+1, -1 ) != (int)n ) goto Error;
 
@@ -494,10 +494,10 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	if( parser->errors->size ) goto Error;
 
 	type->nested = DArray_New(D_VALUE);
-	type2->nested = DArray_New(D_VALUE);
+	if( type2 != type ) type2->nested = DArray_New(D_VALUE);
 	for(i=0; i<types->size; i++){
 		DArray_Append( type->nested, types->items.pType[i] );
-		DArray_Append( type2->nested, types->items.pType[i] );
+		if( type2 != type ) DArray_Append( type2->nested, types->items.pType[i] );
 	}
 	if( isnew ){
 		DString_Assign( type->name, & tokens[k]->string );
@@ -545,7 +545,6 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	if( value == NULL ){
 		DaoTypeKernel *kernel = type->typer->core->kernel;
 		DaoType *alias = type2;
-		DaoType *temp = type2;
 		DString *name = & tokens[k]->string;
 
 		if( scope == NULL ) scope = (DaoValue*) self;
@@ -565,7 +564,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 
 		/* CASE 2: */
 		if( defts->size && defts->items.pType[0] )
-			alias = DaoCdataType_Specialize( type, defts->items.pType, defts->size );
+			alias = DaoType_Specialize( type, defts->items.pType, defts->size );
 		DaoValue_AddType( scope, name, alias );
 
 	}else{
@@ -657,11 +656,9 @@ DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const cha
 	return tp;
 }
 
-static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, int opaque, DaoParser *parser )
+static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, int opaque )
 {
-	DaoParser *parser2 = parser;
 	DaoType *ctype_type, *cdata_type;
-	DaoCdataCore *hostCore;
 
 	if( typer->core ) return typer->core->kernel->abtype;
 
@@ -681,7 +678,35 @@ static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, 
 }
 DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque )
 {
-	return DaoNamespace_WrapType2( self, typer, opaque, NULL );
+	return DaoNamespace_WrapType2( self, typer, opaque );
+}
+DaoType* DaoNamespace_WrapGenericType( DaoNamespace *self, DaoTypeBase *typer, int tid )
+{
+	DaoTypeKernel *kernel;
+	DaoType *cdata_type;
+
+	if( typer->core->kernel ) return typer->core->kernel->abtype;
+
+	kernel = DaoTypeKernel_New( typer );
+	cdata_type = DaoType_New( typer->name, tid, NULL, NULL );
+
+	GC_IncRC( self );
+	GC_IncRC( cdata_type );
+	kernel->nspace = self;
+	kernel->abtype = cdata_type;
+	GC_ShiftRC( kernel, cdata_type->kernel );
+	cdata_type->kernel = kernel;
+	typer->core = kernel->core;
+	typer->core->kernel->attribs |= DAO_TYPER_PRIV_FREE;
+	typer->core->kernel->SetupValues = DaoNamespace_SetupValues;
+	typer->core->kernel->SetupMethods = DaoNamespace_SetupMethods;
+	if( DaoNS_ParseType( self, typer->name, cdata_type, cdata_type, 0 ) == DAO_DT_FAILED ){
+		GC_DecRC( cdata_type );
+		printf( "type wrapping failed: %s\n", typer->name );
+		return NULL;
+	}
+	//printf( "type wrapping: %s\n", typer->name );
+	return cdata_type;
 }
 DaoType* DaoNamespace_SetupType( DaoNamespace *self, DaoTypeBase *typer )
 {
@@ -703,7 +728,7 @@ int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typers[] )
 	DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	int i, ec = 0;
 	for(i=0; typers[i]; i++ ){
-		ec += DaoNamespace_WrapType2( self, typers[i], 1, parser ) == NULL;
+		ec += DaoNamespace_WrapType2( self, typers[i], 1 ) == NULL;
 		/* e |= ( DaoNamespace_SetupValues( self, typers[i] ) == 0 ); */
 	}
 	/* if( setup ) return DaoNamespace_SetupTypes( self, typers ); */
@@ -872,12 +897,6 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DaoNamespace_AddConst( self, name, dao_none_value, DAO_DATA_PUBLIC );
 
 	DArray_Append( self->constants, DaoConstant_New( dao_none_value ) ); /* reserved for main */
-
-	if( vms == NULL || vms->nsInternal == NULL ){
-		DString_SetMBS( name, "exceptions" );
-		value = (DaoValue*) DaoList_New();
-		DaoNamespace_AddVariable( self, name, value, NULL, DAO_DATA_PUBLIC );
-	}
 
 	if( vms && vms->nsInternal ){
 		DaoNamespace *ns = vms->nsInternal;
@@ -1476,9 +1495,9 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		GC_IncRC( abtp );
 		break;
 	case DAO_LIST :
-		abtp = list->unitype; break;
+		abtp = list->ctype; break;
 	case DAO_MAP :
-		abtp = map->unitype; break;
+		abtp = map->ctype; break;
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY :
 		abtp = dao_array_types[ array->etype ]; break;
@@ -1495,9 +1514,9 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		abtp = p->xRoutine.routType;
 		break;
 	case DAO_PAR_NAMED :
-		abtp = nameva->unitype; break;
+		abtp = nameva->ctype; break;
 	case DAO_TUPLE :
-		abtp = tuple->unitype; break;
+		abtp = tuple->ctype; break;
 	case DAO_INTERFACE :
 		abtp = p->xInterface.abtype; break;
 	default : break;
@@ -1507,31 +1526,29 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		return abtp;
 	}
 
+	if( p->type == DAO_LIST ){
+		DaoType *itp = list->items.size ? dao_type_any : dao_type_udf;
+		return DaoNamespace_MakeType( self, "list", DAO_LIST, NULL, & itp, 1 );
+	}else if( p->type == DAO_MAP ){
+		DaoType *itp = map->items->size ? dao_type_any : dao_type_udf;
+		DaoType *tps[2];
+		tps[0] = tps[1] = itp;
+		return DaoNamespace_MakeType( self, "map", DAO_MAP, NULL, tps, 2 );
+	}
+
 	mbs = DString_New(1);
 	if( p->type <= DAO_TUPLE ){
 		DString_SetMBS( mbs, coreTypeNames[p->type] );
-		if( p->type == DAO_LIST ){
+		if( p->type == DAO_TUPLE ){
+			DString_SetMBS( mbs, "tuple<" );
 			nested = DArray_New(0);
-			if( list->items.size ==0 ){
-				DString_AppendMBS( mbs, "<?>" );
-				DArray_Append( nested, dao_type_udf );
-			}else{
-				itp = dao_type_any;
-				DString_AppendMBS( mbs, "<any>" );
+			for(i=0; i<tuple->size; i++){
+				itp = DaoNamespace_GetType( self, tuple->items[i] );
 				DArray_Append( nested, itp );
+				DString_Append( mbs, itp->name );
+				if( i+1 < tuple->size ) DString_AppendMBS( mbs, "," );
 			}
-		}else if( p->type == DAO_MAP ){
-			nested = DArray_New(0);
-			if( map->items->size ==0 ){
-				DString_AppendMBS( mbs, "<?,?>" );
-				DArray_Append( nested, dao_type_udf );
-				DArray_Append( nested, dao_type_udf );
-			}else{
-				itp = dao_type_any;
-				DString_AppendMBS( mbs, "<any,any>" );
-				DArray_Append( nested, itp );
-				DArray_Append( nested, itp );
-			}
+			DString_AppendMBS( mbs, ">" );
 #ifdef DAO_WITH_NUMARRAY
 		}else if( p->type == DAO_ARRAY ){
 			nested = DArray_New(0);
@@ -1556,16 +1573,6 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 				DArray_Append( nested, itp );
 			}
 #endif
-		}else if( p->type == DAO_TUPLE ){
-			DString_SetMBS( mbs, "tuple<" );
-			nested = DArray_New(0);
-			for(i=0; i<tuple->size; i++){
-				itp = DaoNamespace_GetType( self, tuple->items[i] );
-				DArray_Append( nested, itp );
-				DString_Append( mbs, itp->name );
-				if( i+1 < tuple->size ) DString_AppendMBS( mbs, "," );
-			}
-			DString_AppendMBS( mbs, ">" );
 		}
 		abtp = DaoNamespace_FindType( self, mbs );
 		if( abtp == NULL ){
@@ -1621,6 +1628,12 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 
 	tid = tid & 0xffff;
 	if( tid != DAO_ANY ) any = dao_type_any;
+
+	if( tid == DAO_LIST ){
+		return DaoType_Specialize( dao_type_generic_list, nest, N );
+	}else if( tid == DAO_MAP ){
+		return DaoType_Specialize( dao_type_generic_map, nest, N );
+	}
 
 	mbs = DString_New(1);
 	DString_Reserve( mbs, 128 );
@@ -1976,8 +1989,8 @@ DaoTuple* DaoNamespace_MakePair( DaoNamespace *self, DaoValue *first, DaoValue *
 	DaoTuple *tuple = DaoTuple_New(2);
 	DaoType *type1 = DaoNamespace_MakeValueType( self, first );
 	DaoType *type2 = DaoNamespace_MakeValueType( self, second );
-	tuple->unitype = DaoNamespace_MakePairType( self, type1, type2 );
-	GC_IncRC( tuple->unitype );
+	tuple->ctype = DaoNamespace_MakePairType( self, type1, type2 );
+	GC_IncRC( tuple->ctype );
 	DaoValue_Copy( first, & tuple->items[0] );
 	DaoValue_Copy( second, & tuple->items[1] );
 	tuple->subtype = DAO_PAIR;

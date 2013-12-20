@@ -1957,7 +1957,6 @@ DaoInferencer* DaoInferencer_New()
 	self->consts = DArray_New(D_VALUE);
 	self->types = DArray_New(D_VALUE);
 	self->inited = DString_New(1);
-	self->usedtypes = DArray_New(0);
 	self->rettypes = DArray_New(0);
 	self->typeMaps = DArray_New(D_MAP);
 	self->errors = DArray_New(0);
@@ -1979,7 +1978,6 @@ void DaoInferencer_Reset( DaoInferencer *self )
 	DMap_Reset( self->defs );
 	DMap_Reset( self->defs2 );
 	DMap_Reset( self->defs3 );
-	self->usedtypes->size = 0;
 	self->rettypes->size = 0;
 	self->errors->size = 0;
 	self->array->size = 0;
@@ -1998,7 +1996,6 @@ void DaoInferencer_Delete( DaoInferencer *self )
 	DArray_Delete( self->consts );
 	DArray_Delete( self->types );
 	DString_Delete( self->inited );
-	DArray_Delete( self->usedtypes );
 	DArray_Delete( self->rettypes );
 	DArray_Delete( self->typeMaps );
 	DArray_Delete( self->errors );
@@ -2791,22 +2788,7 @@ static DaoType* DaoInferencer_UpdateType( DaoInferencer *self, int id, DaoType *
 	*/
 	if( types[id] != NULL ) return types[id];
 
-	/*
-	// Routine type should not be specialized implicitly?
-	// a = {1}
-	// b = {2, 3, 4}
-	// a.iterate::{
-	//     b.iterate::{}
-	// }
-	// Otherwise, the type of b.iterate will be specialized for int type
-	// due to the association of type holder @T to int by a.iterate::{}.
-	// But the methods for list are not specialized, so at runtime,
-	// b.iterate will return the original routine with type holders,
-	// which will not match to the specialized routine type for int!
-	*/
-	if( type->tid != DAO_ROUTINE && (type->attrib & DAO_TYPE_SPEC) ){
-		type = DaoType_DefineTypes( type, NS, defs );
-	}
+	if( type->attrib & DAO_TYPE_SPEC ) type = DaoType_DefineTypes( type, NS, defs );
 	GC_ShiftRC( type, types[id] );
 	types[id] = type;
 	return types[id];
@@ -2979,7 +2961,6 @@ static int DaoInferencer_AssertPairNumberType( DaoInferencer *self, DaoType *typ
 	if( source == NULL || source->tid != id ) return DaoInferencer_ErrorTypeID( self, id );
 
 #define AssertInitialized( reg, ec, first, last ) { \
-	if( types[reg] && types[reg]->isempty1 ) DArray_Append( usedtypes, types[reg] ); \
 	if( inited[reg] == 0 || types[reg] == NULL ) \
 		return DaoInferencer_ErrorNotInitialized( self, ec, first, last ); }
 
@@ -3010,7 +2991,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	DaoRoutineBody *body = routine->body;
 	DaoInteger integer = {DAO_INTEGER,0,0,0,1,0};
 	DaoType **typeVH[DAO_MAX_SECTDEPTH+1] = { NULL };
-	DArray  *usedtypes = self->usedtypes;
 	DArray  *rettypes = self->rettypes;
 	DArray  *routConsts = & routine->routConsts->items;
 	daoint i, n, N = routine->body->annotCodes->size;
@@ -3028,7 +3008,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 
 	for(i=1; i<=DAO_MAX_SECTDEPTH; i++) typeVH[i] = types;
 
-	usedtypes->size = 0;
 	DArray_Append( rettypes, IntToPointer( N ) );
 	DArray_Append( rettypes, NULL );
 	DArray_Append( rettypes, routine->routType->aux );
@@ -3058,9 +3037,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		DaoLexer_AnnotateCode( routine->body->source, *(DaoVmCodeX*)inode, mbs, 24 );
 		printf( "%4i: ", i );DaoVmCodeX_Print( *(DaoVmCodeX*)inode, mbs->mbs );
 #endif
-
-		for(j=0; j<usedtypes->size; ++j) usedtypes->items.pType[j]->isempty1 = 0;
-		usedtypes->size = 0;
 
 		K = DaoVmCode_GetOpcodeType( (DaoVmCode*) inode );
 		/* No need to check for operands in expression list,
@@ -4748,14 +4724,10 @@ NotExist_TryAux:
 				/* else goto ErrorTyping; */
 				if( opb == 0 ){
 					if( code == DVM_LIST || code == DVM_APLIST ){
-						ct = DaoNamespace_MakeType( NS, "list", DAO_LIST, NULL, & dao_type_udf, 1 );
+						ct = dao_type_empty_list;
 					}else{
 						ct = DaoNamespace_MakeType( NS, "array", DAO_ARRAY, NULL, & dao_type_udf, 1 );
 					}
-					ct = DaoType_Copy( ct );
-					ct->isempty1 = 1;
-					ct->isempty2 = 1;
-					DArray_Append( NS->auxData, ct );
 				}
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
@@ -4791,12 +4763,7 @@ NotExist_TryAux:
 				if( ts[0] ==NULL ) ts[0] = opb ? dao_type_any : dao_type_udf;
 				if( ts[1] ==NULL ) ts[1] = opb ? dao_type_any : dao_type_udf;
 				ct = DaoNamespace_MakeType( NS, "map", DAO_MAP, NULL, ts, 2 );
-				if( opb == 0 ){
-					ct = DaoType_Copy( ct );
-					ct->isempty1 = 1;
-					ct->isempty2 = 1;
-					DArray_Append( NS->auxData, ct );
-				}
+				if( opb == 0 ) ct = dao_type_empty_map;
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
 				break;
@@ -5360,7 +5327,7 @@ NotExist_TryAux:
 
 #ifdef DAO_WITH_CONCURRENT
 				if( (vmc->b & DAO_CALL_ASYNC) && at->tid != DAO_CLASS ){
-					ct = DaoCdataType_Specialize( dao_type_future, & ct, ct != NULL );
+					ct = DaoType_Specialize( dao_type_future, & ct, ct != NULL );
 				}
 #endif
 				if( types[opc] && types[opc]->tid == DAO_ANY ) goto TryPushBlockReturnType;

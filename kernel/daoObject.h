@@ -33,7 +33,7 @@
 
 struct DaoObject
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	ushort_t    isRoot    : 1;
 	ushort_t    isNull    : 1;

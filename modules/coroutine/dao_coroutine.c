@@ -72,8 +72,8 @@ int DaoProcess_Resume( DaoProcess *self, DaoValue *par[], int N, DaoProcess *ret
 			DaoProcess_PutValue( self, par[0] );
 		}else if( N ){ /* TODO */
 			tuple = DaoTuple_New( N );
-			tuple->unitype = tp;
-			GC_IncRC( tuple->unitype );
+			tuple->ctype = tp;
+			GC_IncRC( tuple->ctype );
 			DaoProcess_MakeTuple( self, tuple, par, N );
 			DaoProcess_PutValue( self, (DaoValue*) tuple );
 		}

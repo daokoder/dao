@@ -41,12 +41,12 @@ io.writeln( dframe2d )
 dframe2d[1:5,4:].Print()
 
 # Scan cells:
-dframe2d[1:5,:3].ScanCells::{ [value,row,column]
+dframe2d[1:5,:3].ScanCells { [value,row,column]
 	io.writeln( row, column, value )
 }
 
 # Scan rows:
-dframe2d[1:5,:3].ScanRows::{ [value,row]
+dframe2d[1:5,:3].ScanRows { [value,row]
 	io.writeln( row, value )
 }
 

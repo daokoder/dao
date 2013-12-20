@@ -544,7 +544,7 @@ static void DaoMT_RunMapFunctional( void *p )
 	DaoList *list2 = (DaoList*) self->result;
 	DaoProcess *clone = self->clone;
 	DaoVmCode *sect = self->sect;
-	DaoType *type = map->unitype;
+	DaoType *type = map->ctype;
 	DNode *node = NULL;
 	daoint i = 0;
 

@@ -94,7 +94,7 @@ struct DaoStackFrame
 
 struct DaoProcess
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	DaoVmSpace     *vmSpace;
 

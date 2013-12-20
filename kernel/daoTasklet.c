@@ -90,7 +90,7 @@ void DaoTaskEvent_Init( DaoTaskEvent *self, int T, int S, DaoFuture *F, DaoChann
 DaoChannel* DaoChannel_New( DaoType *type, int dtype )
 {
 	DaoChannel *self = (DaoChannel*) dao_calloc( 1, sizeof(DaoChannel) );
-	if( dtype ) type = DaoCdataType_Specialize( dao_type_channel, & type, type != NULL );
+	if( dtype ) type = DaoType_Specialize( dao_type_channel, & type, type != NULL );
 	DaoCstruct_Init( (DaoCstruct*) self, type );
 	self->buffer = DArray_New(D_VALUE);
 	return self;
@@ -102,7 +102,7 @@ DaoChannel* DaoChannel_New( DaoType *type, int dtype )
 DaoFuture* DaoFuture_New( DaoType *type, int vatype )
 {
 	DaoFuture *self = (DaoFuture*) dao_calloc( 1, sizeof(DaoFuture) );
-	if( vatype ) type = DaoCdataType_Specialize( dao_type_future, & type, type != NULL );
+	if( vatype ) type = DaoType_Specialize( dao_type_future, & type, type != NULL );
 	DaoCstruct_Init( (DaoCstruct*) self, type );
 	GC_IncRC( dao_none_value );
 	self->state = DAO_CALL_PAUSED;
@@ -935,8 +935,8 @@ static DaoValue* DaoValue_DeepCopy( DaoValue *self )
 	if( self->type == DAO_LIST ){
 		DaoList *list = (DaoList*) self;
 		DaoList *copy = DaoList_New();
-		GC_ShiftRC( list->unitype, copy->unitype );
-		copy->unitype = list->unitype;
+		GC_ShiftRC( list->ctype, copy->ctype );
+		copy->ctype = list->ctype;
 		for(i=0; i<list->items.size; ++i){
 			DaoValue *value = DaoValue_DeepCopy( list->items.items.pValue[i] );
 			DaoList_Append( copy, value );
@@ -945,8 +945,8 @@ static DaoValue* DaoValue_DeepCopy( DaoValue *self )
 	}else if( self->type == DAO_MAP ){
 		DaoMap *map = (DaoMap*) self;
 		DaoMap *copy = DaoMap_New( map->items->hashing );
-		GC_ShiftRC( map->unitype, copy->unitype );
-		copy->unitype = map->unitype;
+		GC_ShiftRC( map->ctype, copy->ctype );
+		copy->ctype = map->ctype;
 		for(it=DMap_First(map->items); it; it=DMap_Next(map->items,it)){
 			DaoValue *key = DaoValue_DeepCopy( it->key.pValue );
 			DaoValue *value = DaoValue_DeepCopy( it->value.pValue );
@@ -956,8 +956,8 @@ static DaoValue* DaoValue_DeepCopy( DaoValue *self )
 	}else if( self->type == DAO_TUPLE ){
 		DaoTuple *tuple = (DaoTuple*) self;
 		DaoTuple *copy = DaoTuple_New( tuple->size );
-		GC_ShiftRC( tuple->unitype, copy->unitype );
-		copy->unitype = tuple->unitype;
+		GC_ShiftRC( tuple->ctype, copy->ctype );
+		copy->ctype = tuple->ctype;
 		for(i=0; i<tuple->size; ++i){
 			DaoValue *value = DaoValue_DeepCopy( tuple->items[i] );
 			DaoTuple_SetItem( copy, value, i );

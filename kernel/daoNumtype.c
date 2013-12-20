@@ -1745,7 +1745,7 @@ static void MakeSlice( DaoProcess *proc, DaoValue *pid, daoint N, DVector *slice
 			DaoValue **data = pid->xTuple.items;
 			DVector_Clear( slice );
 			if( data[0]->type == DAO_INTEGER && data[1]->type == DAO_INTEGER ){
-				if( pid->xTuple.unitype == dao_type_for_iterator ){
+				if( pid->xTuple.ctype == dao_type_for_iterator ){
 					rc = SliceRange2( slice, N, data[1]->xInteger.value, 1 );
 					data[1]->xInteger.value += 1;
 					data[0]->xInteger.value = data[1]->xInteger.value < N;
@@ -1992,7 +1992,7 @@ static void DaoArray_Print( DaoValue *value, DaoProcess *proc, DaoStream *stream
 static void DaoArray_GetItem1( DaoValue *value, DaoProcess *proc, DaoValue *pid )
 {
 	DaoArray *na, *self = & value->xArray;
-	/* if( self->unitype ) printf( "DaoArray_GetItem: %s\n", self->unitype->name->mbs ); */
+	/* if( self->ctype ) printf( "DaoArray_GetItem: %s\n", self->ctype->name->mbs ); */
 
 	if( pid->type >= DAO_INTEGER && pid->type <= DAO_DOUBLE ){
 		daoint id = DaoValue_GetInteger( pid );
@@ -2009,7 +2009,7 @@ static void DaoArray_GetItem1( DaoValue *value, DaoProcess *proc, DaoValue *pid 
 		default : break;
 		}
 		return;
-	}else if( pid->type == DAO_TUPLE && pid->xTuple.unitype == dao_type_for_iterator ){
+	}else if( pid->type == DAO_TUPLE && pid->xTuple.ctype == dao_type_for_iterator ){
 		DaoValue **data = pid->xTuple.items;
 		daoint id = data[1]->xInteger.value;
 		if( data[1]->type != DAO_INTEGER || id < 0 || id >= self->size ){

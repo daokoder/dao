@@ -1953,7 +1953,7 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 	if( tpl == NULL || tpl->type != DAO_CTYPE ) goto FailedInstantiation;
 	DaoParser_ParseTypeItems( self, start, end, types );
 	if( self->errors->size ) goto FailedInstantiation;
-		sptype = DaoCdataType_Specialize( ctype->cdtype, types->items.pType, types->size );
+		sptype = DaoType_Specialize( ctype->cdtype, types->items.pType, types->size );
 		if( sptype == NULL ) goto FailedInstantiation;
 
 DoneInstantiation:
@@ -5820,8 +5820,8 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 		if( lb >= rb ){
 			if( self->needConst ){
 				DaoMap *hm = DaoMap_New(colon>=0);
-				hm->unitype = tp ? tp : dao_map_any;
-				GC_IncRC( hm->unitype );
+				hm->ctype = tp ? tp : dao_map_any;
+				GC_IncRC( hm->ctype );
 				regC = DaoRoutine_AddConstant( self->routine, (DaoValue*) hm );
 				enode.konst = LOOKUP_BIND_LC( regC );
 				enode.count = 0;

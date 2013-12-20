@@ -62,7 +62,7 @@ extern const char *const dao_copy_notice;
  */
 struct DaoVmSpace
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	/* To run the main script specified in the commad line (or the first loaded one),
 	 * or scripts from an interactive console. */

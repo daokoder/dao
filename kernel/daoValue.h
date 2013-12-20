@@ -42,14 +42,14 @@
 
 struct DaoConstant
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	DaoValue *value;
 };
 
 struct DaoVariable
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	DaoValue *value;
 	DaoType  *dtype;

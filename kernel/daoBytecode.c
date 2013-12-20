@@ -782,7 +782,7 @@ void DaoByteEncoder_EncodeValue2( DaoByteEncoder *self, DaoValue *value )
 			valueid = DaoByteEncoder_EncodeValue( self, value->xList.items.items.pValue[i] );
 			DString_AppendUInt( string, valueid );
 		}
-		typeid = DaoByteEncoder_EncodeType( self, value->xList.unitype );
+		typeid = DaoByteEncoder_EncodeType( self, value->xList.ctype );
 		self->valueBytes->size = 0;
 		DString_AppendUInt8( valueBytes, value->type );
 		DString_AppendUInt( valueBytes, typeid );
@@ -796,7 +796,7 @@ void DaoByteEncoder_EncodeValue2( DaoByteEncoder *self, DaoValue *value )
 			DString_AppendUInt( string, ik );
 			DString_AppendUInt( string, iv );
 		}
-		typeid = DaoByteEncoder_EncodeType( self, value->xMap.unitype );
+		typeid = DaoByteEncoder_EncodeType( self, value->xMap.ctype );
 		self->valueBytes->size = 0;
 		DString_AppendUInt8( valueBytes, value->type );
 		DString_AppendUInt( valueBytes, typeid );
@@ -809,7 +809,7 @@ void DaoByteEncoder_EncodeValue2( DaoByteEncoder *self, DaoValue *value )
 			valueid = DaoByteEncoder_EncodeValue( self, value->xTuple.items[i] );
 			DString_AppendUInt( string, valueid );
 		}
-		typeid = DaoByteEncoder_EncodeType( self, value->xTuple.unitype );
+		typeid = DaoByteEncoder_EncodeType( self, value->xTuple.ctype );
 		self->valueBytes->size = 0;
 		DString_AppendUInt8( valueBytes, value->type );
 		DString_AppendUInt( valueBytes, typeid );
@@ -886,7 +886,7 @@ void DaoByteEncoder_EncodeValue2( DaoByteEncoder *self, DaoValue *value )
 		break;
 	case DAO_PAR_NAMED :
 		id = DaoByteEncoder_EncodeIdentifier( self, value->xNameValue.name );
-		typeid = DaoByteEncoder_EncodeType( self, (DaoType*) value->xNameValue.unitype );
+		typeid = DaoByteEncoder_EncodeType( self, (DaoType*) value->xNameValue.ctype );
 		valueid = DaoByteEncoder_EncodeValue( self, value->xNameValue.value );
 		self->valueBytes->size = 0;
 		DString_AppendUInt8( valueBytes, value->type );
@@ -1804,8 +1804,8 @@ static DaoValue* DaoByteDecoder_DecodeValue( DaoByteDecoder *self )
 		if( self->codes >= self->error ) break;
 		list = DaoList_New();
 		value = (DaoValue*) list;
-		GC_ShiftRC( type, list->unitype );
-		list->unitype = type;
+		GC_ShiftRC( type, list->ctype );
+		list->ctype = type;
 		for(k=0; k<ivalue; ++k){
 			uint_t it = DaoByteDecoder_DecodeUInt32( self );
 			DaoValue *va = DaoByteDecoder_GetValue( self, it );
@@ -1821,8 +1821,8 @@ static DaoValue* DaoByteDecoder_DecodeValue( DaoByteDecoder *self )
 		if( self->codes >= self->error ) break;
 
 		map = DaoMap_New( hashing );
-		GC_ShiftRC( type, map->unitype );
-		map->unitype = type;
+		GC_ShiftRC( type, map->ctype );
+		map->ctype = type;
 		value = (DaoValue*) map;
 		for(k=0; k<ivalue; ++k){
 			uint_t key = DaoByteDecoder_DecodeUInt32( self );
@@ -1921,8 +1921,8 @@ static DaoValue* DaoByteDecoder_DecodeValue( DaoByteDecoder *self )
 		nameva = DaoNameValue_New( name, value );
 		value = (DaoValue*) nameva;
 		if( id2 ){
-			nameva->unitype = DaoByteDecoder_GetType( self, id2 );
-			GC_IncRC( nameva->unitype );
+			nameva->ctype = DaoByteDecoder_GetType( self, id2 );
+			GC_IncRC( nameva->ctype );
 		}
 		break;
 	default:
@@ -2114,7 +2114,7 @@ void DaoByteDecoder_DecodeTypes( DaoByteDecoder *self )
 					DaoType *tp = DaoByteDecoder_GetType( self, it );
 					DArray_Append( self->array, tp );
 				}
-				type = DaoCdataType_Specialize( type, self->array->items.pType, self->array->size );
+				type = DaoType_Specialize( type, self->array->items.pType, self->array->size );
 			}
 			break;
 		case DAO_ANY :

@@ -205,7 +205,7 @@ static void DaoArray_Serialize( DaoArray *self, DString *serial, DString *buf )
 }
 static int DaoList_Serialize( DaoList *self, DString *serial, DaoNamespace *ns, DaoProcess *proc, DString *buf, DMap *omap )
 {
-	DaoType *type = self->unitype;
+	DaoType *type = self->ctype;
 	int i, rc = 1;
 	if( type->nested && type->nested->size ) type = type->nested->items.pType[0];
 	if( type && type->noncyclic == 0 && (type->tid == 0 || type->tid >= DAO_ENUM)) type = NULL;
@@ -221,7 +221,7 @@ static int DaoList_Serialize( DaoList *self, DString *serial, DaoNamespace *ns, 
 }
 static int DaoMap_Serialize( DaoMap *self, DString *serial, DaoNamespace *ns, DaoProcess *proc, DString *buf, DMap *omap )
 {
-	DaoType *type = self->unitype;
+	DaoType *type = self->ctype;
 	DaoType *keytype = NULL;
 	DaoType *valtype = NULL;
 	DNode *node;
@@ -244,7 +244,7 @@ static int DaoMap_Serialize( DaoMap *self, DString *serial, DaoNamespace *ns, Da
 }
 static int DaoTuple_Serialize( DaoTuple *self, DString *serial, DaoNamespace *ns, DaoProcess *proc, DString *buf, DMap *omap )
 {
-	DArray *nested = self->unitype ? self->unitype->nested : NULL;
+	DArray *nested = self->ctype ? self->ctype->nested : NULL;
 	int i, rc = 1;
 	for(i=0; i<self->size; i++){
 		DaoType *type = NULL;

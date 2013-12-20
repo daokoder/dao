@@ -4632,8 +4632,8 @@ onload='DaoOnLoad' )
 	size = dir_inc.size();
 	if( size && dir_inc[ size-1 ] != '/'[0] ) dir_inc += '/';
 	
-	file2fixing : map<string,list<list<string>>> = {=>};
-	for( file in files ) file2fixing[file] = (list<list<string>>){};
+	file2fixing = {=>};
+	for( file in files ) file2fixing[file] = {};
 	source = '';
 	dft_fixing = {};
 	unused_fixing = {};
@@ -4932,6 +4932,7 @@ onload='DaoOnLoad' )
 	kvmap[ 'namespace' ] = '';
 	lastns = '';
 	#sort( constNumbers )->{ x[0]<=y[0] and x[1]<=y[1] and x[2]<=y[2] };
+	io.writeln( std.about(constNumbers, constNumbers.sort) )
 	constNumbers.sort( $ascend );
 	ns_numbers = {=>};
 	for( it in constNumbers ){

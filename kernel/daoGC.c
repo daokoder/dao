@@ -254,9 +254,9 @@ void DaoDataCache_Cache( DaoDataCache *self, DaoValue *value )
 			}
 			tup->size = 0;
 		}
-		if( tup->unitype ){
-			GC_DecRC( tup->unitype );
-			tup->unitype = NULL;
+		if( tup->ctype ){
+			GC_DecRC( tup->ctype );
+			tup->ctype = NULL;
 		}
 		DCache_PushBack( self->tuples[tup->cap], tup );
 		return;
@@ -284,16 +284,16 @@ void DaoDataCache_Cache( DaoDataCache *self, DaoValue *value )
 #endif
 	case DAO_LIST   :
 		DaoList_Clear( (DaoList*) value );
-		if( value->xList.unitype ){
-			GC_DecRC( value->xList.unitype );
-			value->xList.unitype = NULL;
+		if( value->xList.ctype ){
+			GC_DecRC( value->xList.ctype );
+			value->xList.ctype = NULL;
 		}
 		break;
 	case DAO_MAP   :
 		DaoMap_Clear( (DaoMap*) value );
-		if( value->xMap.unitype ){
-			GC_DecRC( value->xMap.unitype );
-			value->xMap.unitype = NULL;
+		if( value->xMap.ctype ){
+			GC_DecRC( value->xMap.ctype );
+			value->xMap.ctype = NULL;
 		}
 		break;
 	}
@@ -339,8 +339,12 @@ DaoArray* DaoDataCache_MakeArray( DaoDataCache *self, int numtype )
 #ifdef DAO_WITH_NUMARRAY
 	DaoArray *array;
 	if( self == NULL ) goto NewValue;
-	array = (DaoArray*) DCache_PopBack( self->values[DAO_LIST] );
+	array = (DaoArray*) DCache_PopBack( self->values[DAO_ARRAY] );
 	if( array ){
+		if( array->owner == 0 ){
+			array->data.p = NULL;
+			array->owner = 1;
+		}
 		DaoArray_SetNumType( array, numtype );
 		return array;
 	}
@@ -359,8 +363,8 @@ DaoList* DaoDataCache_MakeList( DaoDataCache *self, DaoType *type )
 	self->fails += list == NULL;
 NewValue:
 	if( list == NULL ) list = DaoList_New();
-	GC_ShiftRC( type, list->unitype );
-	list->unitype = type;
+	GC_ShiftRC( type, list->ctype );
+	list->ctype = type;
 	return list;
 }
 DaoMap* DaoDataCache_MakeMap( DaoDataCache *self, DaoType *type, int hashing )
@@ -371,8 +375,8 @@ DaoMap* DaoDataCache_MakeMap( DaoDataCache *self, DaoType *type, int hashing )
 	self->fails += map == NULL;
 NewValue:
 	if( map == NULL ) map = DaoMap_New( hashing );
-	GC_ShiftRC( type, map->unitype );
-	map->unitype = type;
+	GC_ShiftRC( type, map->ctype );
+	map->ctype = type;
 	return map;
 }
 static int DaoTuple_ComputeExtraSpace( DaoType *type, int size )
@@ -400,15 +404,15 @@ static DaoTuple* DaoTuple_Create2( DaoType *type, int size )
 	DaoValue_Init( self, DAO_TUPLE );
 	memset( self->items, 0, size * sizeof(DaoValue*) );
 	GC_IncRC( type );
-	self->unitype = type;
+	self->ctype = type;
 	self->size = size;
 	self->cap = ext;
 	return self;
 }
 static void DaoDataCache_InitTuple( DaoDataCache *self, DaoTuple *tuple )
 {
-	int i, M = tuple->unitype->nested->size;
-	DaoType **types = tuple->unitype->nested->items.pType;
+	int i, M = tuple->ctype->nested->size;
+	DaoType **types = tuple->ctype->nested->items.pType;
 	DaoDouble *buffer = (DaoDouble*)(tuple->items + tuple->size);
 	for(i=0; i<tuple->size; ++i){
 		DaoType *it = i < M ? types[i] : types[M-1];
@@ -446,8 +450,8 @@ NewValue:
 			tuple = DaoTuple_New( size );
 		}
 	}else{
-		GC_ShiftRC( type, tuple->unitype );
-		tuple->unitype = type;
+		GC_ShiftRC( type, tuple->ctype );
+		tuple->ctype = type;
 		tuple->size = size;
 		if( init && type != NULL ) DaoDataCache_InitTuple( self, tuple );
 	}
@@ -657,7 +661,7 @@ static int DaoGC_DecRC2( DaoValue *p )
 			DaoArray_ResizeVector( & p->xArray, 0 ); break;
 #endif
 		case DAO_TUPLE :
-			if( p->xTuple.unitype && p->xTuple.unitype->noncyclic ){
+			if( p->xTuple.ctype && p->xTuple.ctype->noncyclic ){
 				DaoTuple *tuple = & p->xTuple;
 				for(i=0,n=tuple->size; i<n; i++){
 					if( tuple->items[i] ){
@@ -669,7 +673,7 @@ static int DaoGC_DecRC2( DaoValue *p )
 			}
 			break;
 		case DAO_LIST : // TODO same for map
-			if( p->xList.unitype && p->xList.unitype->noncyclic ){
+			if( p->xList.ctype && p->xList.ctype->noncyclic ){
 				DArray *array = & p->xList.items;
 				DaoValue **items = array->items.pValue;
 				for(i=0,n=array->size; i<n; i++) if( items[i] ) DaoGC_DecRC2( items[i] );
@@ -1691,7 +1695,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 	case DAO_PAR_NAMED :
 		{
 			cycRefCountDecrement( value->xNameValue.value );
-			cycRefCountDecrement( (DaoValue*) value->xNameValue.unitype );
+			cycRefCountDecrement( (DaoValue*) value->xNameValue.ctype );
 			break;
 		}
 #ifdef DAO_WITH_NUMARRAY
@@ -1705,8 +1709,8 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 	case DAO_TUPLE :
 		{
 			DaoTuple *tuple = (DaoTuple*) value;
-			cycRefCountDecrement( (DaoValue*) tuple->unitype );
-			if( tuple->unitype == NULL || tuple->unitype->noncyclic ==0 ){
+			cycRefCountDecrement( (DaoValue*) tuple->ctype );
+			if( tuple->ctype == NULL || tuple->ctype->noncyclic ==0 ){
 				DaoGC_CycRefCountDecrements( tuple->items, tuple->size );
 				count += tuple->size;
 			}
@@ -1715,8 +1719,8 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 	case DAO_LIST :
 		{
 			DaoList *list = (DaoList*) value;
-			cycRefCountDecrement( (DaoValue*) list->unitype );
-			if( list->unitype == NULL || list->unitype->noncyclic ==0 ){
+			cycRefCountDecrement( (DaoValue*) list->ctype );
+			if( list->ctype == NULL || list->ctype->noncyclic ==0 ){
 				cycRefCountDecrements( & list->items );
 				count += list->items.size;
 			}
@@ -1725,7 +1729,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 	case DAO_MAP :
 		{
 			DaoMap *map = (DaoMap*) value;
-			cycRefCountDecrement( (DaoValue*) map->unitype );
+			cycRefCountDecrement( (DaoValue*) map->ctype );
 			count += DaoGC_ScanMap( map->items, DAO_GC_DEC, 1, 1 );
 			break;
 		}
@@ -1885,7 +1889,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 	case DAO_PAR_NAMED :
 		{
 			cycRefCountIncrement( value->xNameValue.value );
-			cycRefCountIncrement( (DaoValue*) value->xNameValue.unitype );
+			cycRefCountIncrement( (DaoValue*) value->xNameValue.ctype );
 			break;
 		}
 #ifdef DAO_WITH_NUMARRAY
@@ -1899,8 +1903,8 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 	case DAO_TUPLE :
 		{
 			DaoTuple *tuple= (DaoTuple*) value;
-			cycRefCountIncrement( (DaoValue*) tuple->unitype );
-			if( tuple->unitype == NULL || tuple->unitype->noncyclic ==0 ){
+			cycRefCountIncrement( (DaoValue*) tuple->ctype );
+			if( tuple->ctype == NULL || tuple->ctype->noncyclic ==0 ){
 				DaoGC_CycRefCountIncrements( tuple->items, tuple->size );
 				count += tuple->size;
 			}
@@ -1909,8 +1913,8 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 	case DAO_LIST :
 		{
 			DaoList *list= (DaoList*) value;
-			cycRefCountIncrement( (DaoValue*) list->unitype );
-			if( list->unitype == NULL || list->unitype->noncyclic ==0 ){
+			cycRefCountIncrement( (DaoValue*) list->ctype );
+			if( list->ctype == NULL || list->ctype->noncyclic ==0 ){
 				cycRefCountIncrements( & list->items );
 				count += list->items.size;
 			}
@@ -1919,7 +1923,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 	case DAO_MAP :
 		{
 			DaoMap *map = (DaoMap*)value;
-			cycRefCountIncrement( (DaoValue*) map->unitype );
+			cycRefCountIncrement( (DaoValue*) map->ctype );
 			count += DaoGC_ScanMap( map->items, DAO_GC_INC, 1, 1 );
 			break;
 		}
@@ -2080,7 +2084,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 	case DAO_PAR_NAMED :
 		{
 			directRefCountDecrement( & value->xNameValue.value );
-			directRefCountDecrement( (DaoValue**) & value->xNameValue.unitype );
+			directRefCountDecrement( (DaoValue**) & value->xNameValue.ctype );
 			break;
 		}
 #ifdef DAO_WITH_NUMARRAY
@@ -2095,7 +2099,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		{
 			DaoTuple *tuple = (DaoTuple*) value;
 			count += tuple->size;
-			directRefCountDecrement( (DaoValue**) & tuple->unitype );
+			directRefCountDecrement( (DaoValue**) & tuple->ctype );
 			DaoGC_RefCountDecrements( tuple->items, tuple->size );
 			tuple->size = 0;
 			break;
@@ -2105,14 +2109,14 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			DaoList *list = (DaoList*) value;
 			count += list->items.size;
 			directRefCountDecrements( & list->items );
-			directRefCountDecrement( (DaoValue**) & list->unitype );
+			directRefCountDecrement( (DaoValue**) & list->ctype );
 			break;
 		}
 	case DAO_MAP :
 		{
 			DaoMap *map = (DaoMap*) value;
 			count += DaoGC_ScanMap( map->items, DAO_GC_BREAK, 1, 1 );
-			directRefCountDecrement( (DaoValue**) & map->unitype );
+			directRefCountDecrement( (DaoValue**) & map->ctype );
 			break;
 		}
 	case DAO_OBJECT :

@@ -156,7 +156,7 @@ DAO_DLL daoint DLong_NormCount( DLong *self );
 /* Multi-dimensional array stored in row major order: */
 struct DaoArray
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	uchar_t  etype; /* element type; */
 	uchar_t  owner; /* own the data; */

@@ -861,7 +861,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 		if( kernel->SetupValues ) kernel->SetupValues( kernel->nspace, kernel->typer );
 		if( kernel->SetupMethods ) kernel->SetupMethods( kernel->nspace, kernel->typer );
 
-		DaoCdataType_SpecializeMethods( cdata->ctype );
+		DaoType_SpecializeMethods( cdata->ctype );
 		kernel = cdata->ctype->kernel;
 		values = kernel->values;
 		methods = kernel->methods;

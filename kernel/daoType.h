@@ -79,7 +79,7 @@
  */
 struct DaoType
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	uchar_t   tid; /* type id */
 	uchar_t   attrib;
@@ -88,9 +88,7 @@ struct DaoType
 	uchar_t   flagtype : 1; /* for enum type */
 	uchar_t   noncyclic : 1; /* this type representing non-cyclic data */
 	uchar_t   overloads : 1; /* overloaded routines */
-	uchar_t   isempty1  : 1; /* is empty container, for compiling time use */
-	uchar_t   isempty2  : 1; /* is empty container, for running time use */
-	uchar_t   unused    : 1;
+	uchar_t   unused    : 3;
 	uchar_t   rntcount  : 4; /* real number type count */
 	uchar_t   ffitype   : 4; /* for modules using ffi */
 	DString  *name; /* type name */
@@ -130,6 +128,10 @@ DAO_DLL DaoType *dao_routine;
 DAO_DLL DaoType *dao_class_any;
 DAO_DLL DaoType *dao_type_for_iterator;
 DAO_DLL DaoType *dao_array_types[DAO_COMPLEX+1];
+DAO_DLL DaoType *dao_type_generic_list;
+DAO_DLL DaoType *dao_type_generic_map;
+DAO_DLL DaoType *dao_type_empty_list;
+DAO_DLL DaoType *dao_type_empty_map;
 
 DAO_DLL DaoType* DaoType_New( const char *name, int tid, DaoValue *pb, DArray *nest );
 DAO_DLL DaoType* DaoType_Copy( DaoType *self );
@@ -163,7 +165,7 @@ DAO_DLL DaoRoutine* DaoType_FindFunctionMBS( DaoType *self, const char *name );
 
 struct DaoInterface
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	DaoNamespace  *nspace;
 	DArray        *supers; /* parent interfaces */
@@ -194,7 +196,7 @@ typedef void (*FuncPtrSliced)( DaoValue *self );
  * Its reference counting is handled and only handled by DaoType. */
 struct DaoTypeKernel
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	uint_t         attribs;
 	DMap          *values;
@@ -279,8 +281,8 @@ int DTypeSpecTree_Test( DTypeSpecTree *self, DaoType *types[], int count );
 void DTypeSpecTree_Add( DTypeSpecTree *self, DaoType *types[], int count, DaoType *sptype );
 DaoType* DTypeSpecTree_Get( DTypeSpecTree *self, DaoType *types[], int count );
 
-DAO_DLL DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int count );
-DAO_DLL void DaoCdataType_SpecializeMethods( DaoType *self );
+DAO_DLL DaoType* DaoType_Specialize( DaoType *self, DaoType *types[], int count );
+DAO_DLL void DaoType_SpecializeMethods( DaoType *self );
 
 
 #endif

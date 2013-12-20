@@ -1098,8 +1098,8 @@ static void FRAME_AddListCol( DaoProcess *proc, DaoValue *p[], int N )
 	DaoType *etype = dao_type_any2;
 	daoint i, M = self->dims[0] * self->dims[2];
 
-	if( list->unitype && list->unitype->nested->size ){
-		DaoType *tp = list->unitype->nested->items.pType[0];
+	if( list->ctype && list->ctype->nested->size ){
+		DaoType *tp = list->ctype->nested->items.pType[0];
 		if( tp != NULL && !(tp->tid & DAO_ANY) ) etype = tp;
 	}
 
@@ -1731,8 +1731,8 @@ static void FRAME_ColsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, in
 			DaoType *type = DaoNamespace_MakeType( ns, "list", DAO_LIST, NULL, & column->type, 1 );
 			colidx->value = jj;
 			DaoList_Clear( list );
-			GC_ShiftRC( type, list->unitype );
-			list->unitype = type;
+			GC_ShiftRC( type, list->ctype );
+			list->ctype = type;
 			for(i=0; i<N; ++i){
 				daoint ii = DaoSlice_GetIndex( self->slices->items.pVector[0], i );
 				DaoValue *cell = DaoxDataColumn_GetCell( column, kk*N+ii, & value );

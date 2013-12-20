@@ -164,7 +164,6 @@ struct DaoInferencer
 	DArray      *types;
 	DString     *inited;
 
-	DArray      *usedtypes;
 	DArray      *rettypes;
 	DArray      *typeMaps;
 	DArray      *errors;

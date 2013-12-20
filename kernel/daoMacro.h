@@ -80,7 +80,7 @@ struct DMacroGroup
 
 struct DaoMacro
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	DMacroGroup  *macroMatch;
 	DMacroGroup  *macroApply;

@@ -63,7 +63,7 @@ typedef struct DaoRoutineBody DaoRoutineBody;
 */
 struct DaoRoutine
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	ushort_t         attribs;
 	ushort_t         parCount; /* number of parameters that can be accepted; */
@@ -101,7 +101,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent );
 
 struct DaoRoutineBody
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	/* virtual machine codes: */
 	DVector *vmCodes;

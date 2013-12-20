@@ -39,7 +39,7 @@
 
 struct DaoNamespace
 {
-	DAO_DATA_COMMON;
+	DAO_VALUE_COMMON;
 
 	DaoVmSpace *vmSpace;
 
@@ -146,5 +146,7 @@ DAO_DLL DaoValue* DaoValue_FindAuxMethod( DaoValue *self, DString *name, DaoName
 DAO_DLL DaoValue* DaoType_FindAuxMethod( DaoType *self, DString *name, DaoNamespace *nspace );
 
 DAO_DLL void DaoNamespace_InitConstEvalData( DaoNamespace *self );
+
+DAO_DLL DaoType* DaoNamespace_WrapGenericType( DaoNamespace *self, DaoTypeBase *typer, int tid );
 
 #endif
