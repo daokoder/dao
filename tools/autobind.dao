@@ -4457,7 +4457,7 @@ routine WriteUserTypeCode( utp : UserType, del_tests : map<UserType,string> )
 	if( utp.name == 'QApplication' or utp.name == 'QCoreApplication' ) kvmap[ 'comment' ] = '//';
 	if( utp.isQWidget )
 	kvmap['if_parent'] = 'if( ((' + utp.name2 + '*)self)->parentWidget() == NULL )';
-	if( utp.condType != UserType::default and del_tests.has( utp.condType ) ){
+	if( utp.condType != none and del_tests.has( utp.condType ) ){
 		kvmap['condition'] = del_tests[ utp.condType ];
 		kvmap['deltest'] = 'Dao_' + utp.name + '_DelTest';
 		return usertype_code_class2.expand( kvmap );

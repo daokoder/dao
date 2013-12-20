@@ -1826,7 +1826,7 @@ int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
 // Init type defines for methods which may have type holders different from
 // those of the host type.
 */
-void DaoCdataType_InitTypeDefines( DaoType *self, DaoRoutine *method, DMap *defs )
+static void DaoCdataType_InitTypeDefines( DaoType *self, DaoRoutine *method, DMap *defs )
 {
 	DaoType *type = method->routType;
 	daoint i;

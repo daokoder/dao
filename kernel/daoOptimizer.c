@@ -4835,13 +4835,30 @@ NotExist_TryAux:
 					DArray *routines;
 					if( consts[opa] == NULL ) goto NotInit;
 					klass = & at->aux->xClass;
-					if( !(klass->attribs & DAO_CLS_AUTO_DEFAULT) ) goto InvOper;
+					if( !(klass->attribs & DAO_CLS_AUTO_INITOR) ) goto InvOper;
+					if( opb >= klass->instvars->size ) goto InvOper;
 					str = klass->className;
 					ct = klass->objType;
-					/* XXX: check field names */
+					if( code == DVM_MPACK ){
+						opa += 1;
+						opb -= 1;
+					}
+					for(j=1; j<=opb; j++){
+						int id = j;
+						bt = types[opa+j];
+						if( bt == NULL ) goto ErrorTyping;
+						if( bt->tid == DAO_PAR_NAMED ){
+							id = DaoClass_GetDataIndex( klass, bt->fname );
+							if( LOOKUP_ST( id ) != DAO_OBJECT_VARIABLE ) goto InvField;
+							bt = & bt->aux->xType;
+							id = LOOKUP_ID( id );
+						}
+						tt = klass->instvars->items.pVar[id]->dtype;
+						AssertTypeMatching( bt, tt, defs );
+					}
 				}else if( at->tid == DAO_TUPLE ){
 					ct = at;
-					if( code == DVM_MPACK && (at->nested->size+1) == opb ){
+					if( code == DVM_MPACK ){
 						opa += 1;
 						opb -= 1;
 					}

@@ -32,68 +32,63 @@
 #include "dao.h"
 
 
-/*==============================================*/
 #ifdef WIN32
 
-	/* Get rid of the effects of UNICODE: */
-	#ifdef UNICODE
-		#undef UNICODE
-	#endif /* UNICODE */
+/* Get rid of the effects of UNICODE: */
+#  ifdef UNICODE
+#    undef UNICODE
+#  endif /* UNICODE */
 
 
-	#define DAO_DIR "C:\\dao"
-	#define DAO_DLL_SUFFIX ".dll"
+#  define DAO_DIR "C:\\dao"
+#  define DAO_DLL_SUFFIX ".dll"
 
-	#define DAO_ENV_PATH_SEP ';'
-
-
-	#include <windows.h>
-
-	#define stat _stat
-	#define fstat _fstat
-	#define fileno _fileno
-
-	#ifdef _MSC_VER
-		#include<direct.h>
-		#define getcwd _getcwd
-	#else
-		#include<unistd.h>
-	#endif
-
-	#ifndef __GNUC__
-		#define strtoll _strtoi64
-		#define wcstoll _wcstoi64
-		#define snprintf _snprintf
-		#define popen _popen
-		#define pclose _pclose
-	#endif
+#  define DAO_ENV_PATH_SEP ';'
 
 
+#  include <windows.h>
 
-/*==============================================*/
+#  define stat _stat
+#  define fstat _fstat
+#  define fileno _fileno
+
+#  ifdef _MSC_VER
+#    include<direct.h>
+#    define getcwd _getcwd
+#  else
+#    include<unistd.h>
+#  endif
+
+#  ifndef __GNUC__
+#    define strtoll _strtoi64
+#    define wcstoll _wcstoi64
+#    define snprintf _snprintf
+#    define popen _popen
+#    define pclose _pclose
+#  endif
+
+
 #elif defined(UNIX) /* UNIX */
 
-	#define DAO_DIR "/usr/local/dao"
-	#define DAO_ENV_PATH_SEP ':'
+#  define DAO_DIR "/usr/local/dao"
+#  define DAO_ENV_PATH_SEP ':'
 
-	#include<unistd.h>
-	#include<dlfcn.h>
-	#include<sys/time.h>
+#  include<unistd.h>
+#  include<dlfcn.h>
+#  include<sys/time.h>
 
-	#ifdef MAC_OSX
-		#define DAO_DLL_SUFFIX ".dylib"
-	#else /* UNIX */
-		#define DAO_DLL_SUFFIX ".so"
-	#endif /* MAC_OSX */
+#  ifdef MAC_OSX
+#    define DAO_DLL_SUFFIX ".dylib"
+#  else /* UNIX */
+#    define DAO_DLL_SUFFIX ".so"
+#  endif /* MAC_OSX */
 
 
-
-/*==============================================*/
 #else /* other system */
 
-	#define DAO_DIR ""
-	#define DAO_DLL_SUFFIX ".unkown"
-	#define DAO_ENV_PATH_SEP ':'
+#  define DAO_DIR ""
+#  define DAO_DLL_SUFFIX ".unkown"
+#  define DAO_ENV_PATH_SEP ':'
 
 #endif /* WIN32 */
 

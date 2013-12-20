@@ -40,41 +40,41 @@
 
 
 #if (defined DAO_WITH_CONCURRENT && !defined DAO_WITH_THREAD)
-#define DAO_WITH_THREAD
+#  define DAO_WITH_THREAD
 #endif
 
 
 #if defined(MAC_OSX) && ! defined(UNIX)
-#define UNIX
+#  define UNIX
 #endif /* MAC_OSX */
 
 
 #ifdef WIN32
 
 /* Get rid of the effects of UNICODE: */
-#ifdef UNICODE
-#undef UNICODE
-#endif /* UNICODE */
+#  ifdef UNICODE
+#    undef UNICODE
+#  endif /* UNICODE */
 
-#define DAO_DLL        __declspec(dllexport)
-#define DAO_DLL_EXPORT __declspec(dllexport)
-#define DAO_DLL_IMPORT __declspec(dllimport)
+#  define DAO_DLL        __declspec(dllexport)
+#  define DAO_DLL_EXPORT __declspec(dllexport)
+#  define DAO_DLL_IMPORT __declspec(dllimport)
 
 #else /* other system */
 
-#define DAO_DLL extern
-#define DAO_DLL_EXPORT
-#define DAO_DLL_IMPORT
+#  define DAO_DLL extern
+#  define DAO_DLL_EXPORT
+#  define DAO_DLL_IMPORT
 
 #endif /* WIN32 */
 
 
 #ifndef DAO_INT_FORMAT
-#ifdef WIN32
-#define DAO_INT_FORMAT  "Ii"
-#else
-#define DAO_INT_FORMAT  "ti"
-#endif /* WIN32 */
+#  ifdef WIN32
+#    define DAO_INT_FORMAT  "Ii"
+#  else
+#    define DAO_INT_FORMAT  "ti"
+#  endif /* WIN32 */
 #endif /* DAO_INT_FORMAT */
 
 

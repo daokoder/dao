@@ -198,8 +198,8 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 	}
 	if( frame == NULL ){
 		frame = DaoStackFrame_New();
-		self->topFrame->next = frame;
 		frame->prev = self->topFrame;
+		self->topFrame->next = frame;
 	}
 
 	/*
@@ -600,38 +600,6 @@ void DaoProcess_InterceptReturnValue( DaoProcess *self )
 		self->topFrame->active = self->firstFrame;
 		DaoProcess_SetActiveFrame( self, self->firstFrame );
 	}
-}
-int DaoProcess_Resume( DaoProcess *self, DaoValue *par[], int N, DaoProcess *ret )
-{
-	DaoType *tp;
-	DaoVmCode *vmc;
-	DaoTuple *tuple;
-	if( self->status != DAO_PROCESS_SUSPENDED ) return 0;
-	if( self->activeCode && self->activeCode->code == DVM_YIELD ){
-		tp = self->activeTypes[ self->activeCode->c ];
-		if( N == 1 ){
-			DaoProcess_PutValue( self, par[0] );
-		}else if( N ){
-			tuple = DaoTuple_New( N );
-			tuple->unitype = tp;
-			GC_IncRC( tuple->unitype );
-			DaoProcess_MakeTuple( self, tuple, par, N );
-			DaoProcess_PutValue( self, (DaoValue*) tuple );
-		}
-		self->topFrame->entry ++;
-	}else if( N ){
-		DaoRoutine *rout = self->topFrame->routine;
-		self->paramValues = self->stackValues + self->topFrame->stackBase;
-		if( rout ) rout = DaoProcess_PassParams( self, rout, NULL, NULL, par, N, DVM_CALL );
-		self->paramValues = self->stackValues + 1;
-		if( rout == NULL ){
-			DaoProcess_RaiseException( ret, DAO_ERROR, "invalid parameters." );
-			return 0;
-		}
-	}
-	DaoProcess_Execute( self );
-	DaoProcess_PutValue( ret, self->stackValues[0] );
-	return 1;
 }
 
 static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
@@ -4702,7 +4670,7 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 			object = DaoObject_New( klass );
 			DaoProcess_SetValue( self, vmc->c, (DaoValue*)object );
 			mtype = klass->instvars->items.pVar;
-			if( !(klass->attribs & DAO_CLS_AUTO_DEFAULT) ){
+			if( !(klass->attribs & DAO_CLS_AUTO_INITOR) ){
 				DaoProcess_RaiseException( self, DAO_ERROR, "cannot initialize instance" );
 				break;
 			}else if( opb >= object->valueCount ){

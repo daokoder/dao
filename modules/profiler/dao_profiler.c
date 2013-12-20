@@ -30,13 +30,12 @@
 #include <stdlib.h>
 
 #ifdef UNIX
-#include<unistd.h>
-#include<sys/time.h>
+#  include<unistd.h>
+#  include<sys/time.h>
 #endif
 
 #ifdef MAC_OSX
 #  include <crt_externs.h>
-#  define environ (*_NSGetEnviron())
 #endif
 
 
@@ -48,9 +47,9 @@
 #include "daoVmspace.h"
 
 
-void DaoProfiler_EnterFrame( DaoProfiler *self, DaoProcess *proc, DaoStackFrame *frame, int );
-void DaoProfiler_LeaveFrame( DaoProfiler *self, DaoProcess *proc, DaoStackFrame *frame, int );
-void DaoProfiler_Report( DaoProfiler *self, DaoStream *stream );
+static void DaoProfiler_EnterFrame( DaoProfiler *self, DaoProcess *, DaoStackFrame *, int );
+static void DaoProfiler_LeaveFrame( DaoProfiler *self, DaoProcess *, DaoStackFrame *, int );
+static void DaoProfiler_Report( DaoProfiler *self, DaoStream *stream );
 
 typedef struct DaoxProfiler DaoxProfiler;
 
@@ -63,7 +62,7 @@ struct DaoxProfiler
 	DMap   *one;     /* map<DaoRoutine*,DaoComplex*> */
 };
 
-DaoxProfiler* DaoxProfiler_New()
+static DaoxProfiler* DaoxProfiler_New()
 {
 	DaoxProfiler *self = (DaoxProfiler*) dao_calloc(1,sizeof(DaoxProfiler));
 	self->profile = DHash_New(0,D_MAP);
@@ -74,14 +73,14 @@ DaoxProfiler* DaoxProfiler_New()
 	DMutex_Init( & self->mutex );
 	return self;
 }
-void DaoxProfiler_Delete( DaoxProfiler *self )
+static void DaoxProfiler_Delete( DaoxProfiler *self )
 {
 	DMutex_Destroy( & self->mutex );
 	DMap_Delete( self->profile );
 	DMap_Delete( self->one );
 	dao_free( self );
 }
-void DaoxProfiler_Update( DaoxProfiler *self, DaoStackFrame *frame, double time )
+static void DaoxProfiler_Update( DaoxProfiler *self, DaoStackFrame *frame, double time )
 {
 	DaoComplex com = {DAO_COMPLEX,0,0,0,1,{0.0,0.0}};
 	DaoRoutine *caller = frame->prev ? frame->prev->routine : NULL;
@@ -106,17 +105,17 @@ void DaoxProfiler_Update( DaoxProfiler *self, DaoStackFrame *frame, double time 
 }
 
 
-double dao_clock()
+static double dao_clock()
 {
 	return ((double)clock())/CLOCKS_PER_SEC;
 }
 
-void DMap_DeleteTimeMap( DMap *self )
+static void DMap_DeleteTimeMap( DMap *self )
 {
 	DMap_Delete( self );
 }
 
-DMap* DaoProcess_GetTimeMap( DaoProcess *self )
+static DMap* DaoProcess_GetTimeMap( DaoProcess *self )
 {
 	DMap *mapTime = (DMap*) DaoProcess_GetAuxData( self, DMap_DeleteTimeMap );
 	if( mapTime ) return mapTime;
@@ -124,7 +123,7 @@ DMap* DaoProcess_GetTimeMap( DaoProcess *self )
 	DaoProcess_SetAuxData( self, DMap_DeleteTimeMap, mapTime );
 	return mapTime;
 }
-DaoComplex* DaoProcess_GetTimeData( DaoProcess *self, DaoStackFrame *frame )
+static DaoComplex* DaoProcess_GetTimeData( DaoProcess *self, DaoStackFrame *frame )
 {
 	DaoComplex com = {DAO_COMPLEX,0,0,0,1,{0.0,0.0}};
 	DMap *mapTime = DaoProcess_GetTimeMap( self );
@@ -133,7 +132,7 @@ DaoComplex* DaoProcess_GetTimeData( DaoProcess *self, DaoStackFrame *frame )
 	return (DaoComplex*) it->value.pValue;
 }
 
-void DaoProfiler_EnterFrame( DaoProfiler *self, DaoProcess *proc, DaoStackFrame *frame, int start )
+static void DaoProfiler_EnterFrame( DaoProfiler *self, DaoProcess *proc, DaoStackFrame *frame, int start )
 {
 	DaoComplex *tmdata;
 	if( frame->routine == NULL ) return;
@@ -143,28 +142,18 @@ void DaoProfiler_EnterFrame( DaoProfiler *self, DaoProcess *proc, DaoStackFrame 
 	if( start ) tmdata->value.real = 0.0;
 	tmdata->value.imag = dao_clock();
 }
-void DaoProfiler_LeaveFrame( DaoProfiler *self, DaoProcess *proc, DaoStackFrame *frame, int end )
+static void DaoProfiler_LeaveFrame( DaoProfiler *self, DaoProcess *proc, DaoStackFrame *frame, int end )
 {
+	double time;
 	DaoComplex *tmdata;
 	if( frame->routine == NULL ) return;
 	//printf( "DaoProfiler_LeaveFrame: %-20s %s\n", frame->routine->routName->mbs, end?"end":"" );
 
+	time = dao_clock();
 	tmdata = DaoProcess_GetTimeData( proc, frame );
-	tmdata->value.real += dao_clock() - tmdata->value.imag;
-	tmdata->value.imag = dao_clock();
+	tmdata->value.real += time - tmdata->value.imag;
+	tmdata->value.imag = time;
 	if( end ) DaoxProfiler_Update( (DaoxProfiler*) self, frame, tmdata->value.real );
-}
-complex16 DaoProfiler_Sum( DMap *profile )
-{
-	DNode *it2;
-	complex16 com = {0.0, 0.0};
-	for(it2=DMap_First(profile); it2; it2=DMap_Next(profile,it2)){
-		DaoRoutine *caller = (DaoRoutine*) it2->key.pValue;
-		DaoComplex *data = (DaoComplex*) it2->value.pValue;
-		com.real += data->value.real;
-		com.imag += data->value.imag;
-	}
-	return com;
 }
 
 const char *delimiter = 
@@ -182,7 +171,7 @@ const char *row_format = "%-58s: %9i, %8.2f\n";
 const char *header_format2 = "%-32s: %24s, %9s, %8s\n";
 const char *row_format2 = "%-32s: %24s, %9i, %8.2f\n";
 
-void DString_PartialAppend( DString *self, DString *other, int max )
+static void DString_PartialAppend( DString *self, DString *other, int max )
 {
 	DString_ToMBS( other );
 	if( other->size > max ){
@@ -192,7 +181,7 @@ void DString_PartialAppend( DString *self, DString *other, int max )
 		DString_Append( self, other );
 	}
 }
-void DaoRoutine_MakeName( DaoRoutine *self, DString *name, int max1, int max2, int max3 )
+static void DaoRoutine_MakeName( DaoRoutine *self, DString *name, int max1, int max2, int max3 )
 {
 	DString *hostName = self->routHost ? self->routHost->name : NULL;
 	DaoType *routType = self->routType;
@@ -219,20 +208,38 @@ void DaoRoutine_MakeName( DaoRoutine *self, DString *name, int max1, int max2, i
 		return;
 	}
 	DString_AppendMBS( name, "( " );
-	for(i=M; i<N; ++i){
-		DaoType *type = routType->nested->items.pType[i];
-		if( i > M ) DString_AppendMBS( name, ", " );
-		if( i < M + max3 ){
-			DString_PartialAppend( name, type->name, max2 );
-		}else{
-			DString_AppendMBS( name, "~~" );
-			break;
+	if( N == M+1 ){
+		DaoType *type = routType->nested->items.pType[M];
+		DString_PartialAppend( name, type->name, 2*max2 );
+	}else{
+		for(i=M; i<N; ++i){
+			DaoType *type = routType->nested->items.pType[i];
+			if( i > M ) DString_AppendMBS( name, ", " );
+			if( i < M + max3 ){
+				DString_PartialAppend( name, type->name, max2 );
+			}else{
+				DString_AppendMBS( name, "~~" );
+				break;
+			}
 		}
 	}
 	DString_AppendMBS( name, " )" );
 }
 
-void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream )
+static complex16 DaoProfiler_Sum( DMap *profile )
+{
+	DNode *it2;
+	complex16 com = {0.0, 0.0};
+	for(it2=DMap_First(profile); it2; it2=DMap_Next(profile,it2)){
+		DaoRoutine *caller = (DaoRoutine*) it2->key.pValue;
+		DaoComplex *data = (DaoComplex*) it2->value.pValue;
+		com.real += data->value.real;
+		com.imag += data->value.imag;
+	}
+	return com;
+}
+
+static void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream )
 {
 	DaoComplex com = {DAO_COMPLEX,0,0,0,1,{0.0,0.0}};
 	DaoxProfiler *self = (DaoxProfiler*) self0;

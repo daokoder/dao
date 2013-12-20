@@ -1113,34 +1113,21 @@ void DaoClass_ResetAttributes( DaoClass *self )
 {
 	DNode *node;
 	DString *mbs = DString_New(1);
-	int i, k, id, autodef = self->classRoutines->overloads->routines->size == 0;
+	int i, k, id, autoinitor = self->parent == NULL;
 
 	DaoClass_MakeInterface( self );
 
-	for(i=0; i<self->classRoutines->overloads->routines->size; i++){
-		DaoRoutine *r2 = self->classRoutines->overloads->routines->items.pRoutine[i];
-		DArray *types = r2->routType->nested;
-		autodef = r2->parCount == 0;
-		if( autodef ) break;
-		for(k=0; k<types->size; k++){
-			int tid = types->items.pType[k]->tid;
-			if( tid != DAO_PAR_DEFAULT && tid != DAO_PAR_VALIST ) break;
-		}
-		autodef = k == types->size;
-		if( autodef ) break;
+	for(i=0; autoinitor && (i<self->classRoutines->overloads->routines->size); i++){
+		DaoRoutine *rout = self->classRoutines->overloads->routines->items.pRoutine[i];
+		if( rout == self->classRoutine ) continue;
+		if( !(rout->attribs & DAO_ROUT_INITOR) ) continue;
+		if( rout->routHost != self->objType ) continue;
+		autoinitor = 0;
 	}
-	if( autodef && self->parent ){
-		if( self->parent->type == DAO_CLASS ){
-			DaoClass *klass = (DaoClass*) self->parent;
-			autodef = autodef && (klass->attribs & DAO_CLS_AUTO_DEFAULT);
-		}else{
-			autodef = 0;
-		}
-	}
+	if( autoinitor ) self->attribs |= DAO_CLS_AUTO_INITOR;
 #if 0
 	printf( "%s %i\n", self->className->mbs, autodef );
 #endif
-	if( autodef ) self->attribs |= DAO_CLS_AUTO_DEFAULT;
 	for(i=DVM_NOT; i<=DVM_BITRIT; i++){
 		DString_SetMBS( mbs, daoBitBoolArithOpers[i-DVM_NOT] );
 		node = DMap_Find( self->lookupTable, mbs );

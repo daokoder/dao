@@ -180,7 +180,7 @@ enum DaoDataPermission
 };
 enum DaoClassAttrib
 {
-	DAO_CLS_AUTO_DEFAULT = 1
+	DAO_CLS_AUTO_INITOR = 1
 };
 enum DaoRoutineAttrib
 {
