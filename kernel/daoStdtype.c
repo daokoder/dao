@@ -1943,15 +1943,8 @@ static void DaoLIST_Resize2( DaoProcess *proc, DaoValue *p[], int N )
 	daoint size = p[2]->xInteger.value;
 	if( self->ctype && self->ctype->nested->size )
 		tp = self->ctype->nested->items.pType[0];
-	switch( fill->type ){
-	case DAO_LIST  : fill = (DaoValue*) DaoList_Copy( (DaoList*) fill, tp ); break;
-	case DAO_MAP   : fill = (DaoValue*) DaoMap_Copy( (DaoMap*) fill, tp );   break;
-	case DAO_TUPLE : fill = (DaoValue*) DaoTuple_Copy( (DaoTuple*) fill, tp ); break;
-#ifdef DAO_WITH_NUMARRAY
-	case DAO_ARRAY : fill = (DaoValue*) DaoArray_CopyX( (DaoArray*) fill, tp ); break;
-#endif
-	default : break;
-	}
+
+	fill = DaoValue_CopyContainer( fill, tp );
 	if( fill != p[1] ){
 		fill->xBase.trait |= DAO_VALUE_CONST; /* force copying; */
 		DaoGC_IncRC( fill );
@@ -2791,7 +2784,7 @@ static void DaoMap_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 		DaoProcess_PutReference( proc, node->value.pValue );
 	}
 }
-extern DaoType *dao_map_any;
+extern DaoType *dao_type_map_any;
 static void DaoMap_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, DaoValue *value )
 {
 	DaoMap *self = & self0->xMap;
@@ -2834,7 +2827,7 @@ static void DaoMap_SetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 		/* a : tuple<string,map<string,int>> = ('',{=>});
 		   duplicating the constant to assign to "a" may not set the ctype properly */
 		tp = proc->activeTypes[ proc->activeCode->c ];
-		if( tp == NULL || tp->tid == DAO_UDT ) tp = dao_map_any;
+		if( tp == NULL || tp->tid == DAO_UDT ) tp = dao_type_map_any;
 		self->ctype = tp;
 		GC_IncRC( tp );
 	}

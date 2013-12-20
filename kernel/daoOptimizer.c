@@ -4724,9 +4724,9 @@ NotExist_TryAux:
 				/* else goto ErrorTyping; */
 				if( opb == 0 ){
 					if( code == DVM_LIST || code == DVM_APLIST ){
-						ct = dao_type_empty_list;
+						ct = dao_type_list_empty;
 					}else{
-						ct = DaoNamespace_MakeType( NS, "array", DAO_ARRAY, NULL, & dao_type_udf, 1 );
+						ct = dao_type_array_empty;
 					}
 				}
 				DaoInferencer_UpdateType( self, opc, ct );
@@ -4763,7 +4763,7 @@ NotExist_TryAux:
 				if( ts[0] ==NULL ) ts[0] = opb ? dao_type_any : dao_type_udf;
 				if( ts[1] ==NULL ) ts[1] = opb ? dao_type_any : dao_type_udf;
 				ct = DaoNamespace_MakeType( NS, "map", DAO_MAP, NULL, ts, 2 );
-				if( opb == 0 ) ct = dao_type_empty_map;
+				if( opb == 0 ) ct = dao_type_map_empty;
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
 				break;

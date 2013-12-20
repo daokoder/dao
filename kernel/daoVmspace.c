@@ -2314,25 +2314,6 @@ DaoFuncItem dao_builtin_methods[] =
 
 extern void DaoType_Init();
 
-DaoType *dao_type_udf = NULL;
-DaoType *dao_type_none = NULL;
-DaoType *dao_type_any = NULL;
-DaoType *dao_type_int = NULL;
-DaoType *dao_type_float = NULL;
-DaoType *dao_type_double = NULL;
-DaoType *dao_type_complex = NULL;
-DaoType *dao_type_long = NULL;
-DaoType *dao_type_string = NULL;
-DaoType *dao_type_tuple = NULL;
-DaoType *dao_type_generic_list = NULL;
-DaoType *dao_type_generic_map = NULL;
-DaoType *dao_type_empty_list = NULL;
-DaoType *dao_type_empty_map = NULL;
-DaoType *dao_list_any = NULL;
-DaoType *dao_map_any = NULL;
-DaoType *dao_routine = NULL;
-DaoType *dao_type_for_iterator = NULL;
-DaoType *dao_array_types[DAO_COMPLEX+1] = {0};
 
 
 
@@ -2474,7 +2455,7 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_complex = DaoType_New( "complex", DAO_COMPLEX, NULL, NULL );
 	dao_type_long = DaoType_New( "long", DAO_LONG, NULL, NULL );
 	dao_type_string = DaoType_New( "string", DAO_STRING, NULL, NULL );
-	dao_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoValue*)dao_type_udf, NULL );
+	dao_type_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoValue*)dao_type_udf, NULL );
 
 	mainVmSpace = vms = DaoVmSpace_New();
 
@@ -2512,7 +2493,7 @@ DaoVmSpace* DaoInit( const char *command )
 	ns = vms->nsInternal;
 
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_udf );
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_routine );
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_routine );
 	DaoNamespace_AddTypeConstant( ns, dao_type_any->name, dao_type_any );
 	DaoNamespace_AddTypeConstant( ns, dao_type_int->name, dao_type_int );
 	DaoNamespace_AddTypeConstant( ns, dao_type_float->name, dao_type_float );
@@ -2529,10 +2510,12 @@ DaoVmSpace* DaoInit( const char *command )
 
 	dao_type_tuple = DaoParser_ParseTypeName( "tuple<...>", ns, NULL );
 
+	dao_array_types[DAO_NONE] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_int, 1 );
 	dao_array_types[DAO_INTEGER] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_int, 1 );
 	dao_array_types[DAO_FLOAT]   = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_float, 1 );
 	dao_array_types[DAO_DOUBLE]  = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_double, 1 );
 	dao_array_types[DAO_COMPLEX] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_complex, 1 );
+	dao_type_array_empty = dao_array_types[DAO_NONE];
 
 #if 0
 	/*
@@ -2552,15 +2535,15 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_SetupType( vms->nsInternal, & stringTyper );
 	DaoNamespace_SetupType( vms->nsInternal, & longTyper );
 	DaoNamespace_SetupType( vms->nsInternal, & comTyper );
-	dao_type_generic_list = DaoNamespace_WrapGenericType( ns, & listTyper, DAO_LIST );
-	dao_type_generic_map = DaoNamespace_WrapGenericType( ns, & mapTyper, DAO_MAP );
+	dao_type_list_template = DaoNamespace_WrapGenericType( ns, & listTyper, DAO_LIST );
+	dao_type_map_template = DaoNamespace_WrapGenericType( ns, & mapTyper, DAO_MAP );
 
-	dao_list_any = DaoType_Specialize( dao_type_generic_list, NULL, 0 );
-	dao_map_any  = DaoType_Specialize( dao_type_generic_map, NULL, 0 );
+	dao_type_list_any = DaoType_Specialize( dao_type_list_template, NULL, 0 );
+	dao_type_map_any  = DaoType_Specialize( dao_type_map_template, NULL, 0 );
 
 	type1 = DaoType_New( "any", DAO_ANY, NULL, NULL );
-	dao_type_empty_list = DaoType_Specialize( dao_type_generic_list, & type1, 1 );
-	dao_type_empty_map  = DaoType_Specialize( dao_type_generic_map, & type1, 1 );
+	dao_type_list_empty = DaoType_Specialize( dao_type_list_template, & type1, 1 );
+	dao_type_map_empty  = DaoType_Specialize( dao_type_map_template, & type1, 1 );
 
 	GC_ShiftRC( dao_type_complex, comTyper.core->kernel->abtype );
 	GC_ShiftRC( dao_type_long, longTyper.core->kernel->abtype );

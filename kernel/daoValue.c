@@ -479,13 +479,27 @@ void DaoValue_Clear( DaoValue **self )
 }
 
 
+DaoValue* DaoValue_CopyContainer( DaoValue *self, DaoType *tp )
+{
+	switch( self->type ){
+	case DAO_LIST  : return (DaoValue*) DaoList_Copy( (DaoList*) self, tp );
+	case DAO_MAP   : return (DaoValue*) DaoMap_Copy( (DaoMap*) self, tp );
+	case DAO_TUPLE : return (DaoValue*) DaoTuple_Copy( (DaoTuple*) self, tp );
+#ifdef DAO_WITH_NUMARRAY
+	case DAO_ARRAY : return (DaoValue*) DaoArray_CopyX( (DaoArray*) self, tp );
+#endif
+	default : break;
+	}
+	return self;
+}
+
 /*
 // Assumming the value "self" is compatible to the type "tp", if it is not null.
 */
 DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoDataCache *cache )
 {
 	DaoEnum *e;
-	daoint i, n;
+	daoint i, n, force = 0;
 
 	if( self == NULL ) return dao_none_value;
 	if( (tp == NULL || tp->tid == self->type) && self->type < DAO_ENUM ){
@@ -542,18 +556,19 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoDataCach
 		if( sliced ) (*sliced)( self );
 		return self;
 	}
-	if( self->xBase.trait & DAO_VALUE_NOCOPY ) return self;
-	if( (self->xBase.trait & DAO_VALUE_CONST) == 0 ) return self;
 	switch( self->type ){
-	case DAO_LIST  : return (DaoValue*) DaoList_Copy( (DaoList*) self, tp );
-	case DAO_MAP   : return (DaoValue*) DaoMap_Copy( (DaoMap*) self, tp );
-	case DAO_TUPLE : return (DaoValue*) DaoTuple_Copy( (DaoTuple*) self, tp );
+	case DAO_LIST  : force = self->xList.ctype == dao_type_list_empty; break;
+	case DAO_MAP   : force = self->xMap.ctype == dao_type_map_empty; break;
 #ifdef DAO_WITH_NUMARRAY
-	case DAO_ARRAY : return (DaoValue*) DaoArray_CopyX( (DaoArray*) self, tp );
+	case DAO_ARRAY : force = self->xArray.etype == DAO_NONE; break;
 #endif
 	default : break;
 	}
-	return self;
+	if( force == 0 ){
+		if( self->xBase.trait & DAO_VALUE_NOCOPY ) return self;
+		if( (self->xBase.trait & DAO_VALUE_CONST) == 0 ) return self;
+	}
+	return DaoValue_CopyContainer( self, tp );
 }
 DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
 {
@@ -621,13 +636,13 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 #endif
 	case DAO_LIST :
 		/* v : any = {}, v->ctype should be list<any> */
-		if( tp->tid == DAO_ANY ) tp = dao_list_any;
+		if( tp->tid == DAO_ANY ) tp = dao_type_list_any;
 		if( to->xList.ctype && !(to->xList.ctype->attrib & DAO_TYPE_UNDEF) ) break;
 		GC_ShiftRC( tp, to->xList.ctype );
 		to->xList.ctype = tp;
 		break;
 	case DAO_MAP :
-		if( tp->tid == DAO_ANY ) tp = dao_map_any;
+		if( tp->tid == DAO_ANY ) tp = dao_type_map_any;
 		if( to->xMap.ctype && !(to->xMap.ctype->attrib & DAO_TYPE_UNDEF) ) break;
 		GC_ShiftRC( tp, to->xMap.ctype );
 		to->xMap.ctype = tp;

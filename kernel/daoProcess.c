@@ -2783,7 +2783,7 @@ DaoList* DaoProcess_GetListByType( DaoProcess *self, DaoVmCode *vmc, DaoType *tp
 			}
 		}
 	}
-	if( tp == NULL || tp->tid != DAO_LIST ) tp = dao_list_any;
+	if( tp == NULL || tp->tid != DAO_LIST ) tp = dao_type_list_any;
 	list = DaoDataCache_MakeList( self->cache, tp );
 	DaoValue_Move( (DaoValue*) list, self->activeValues + vmc->c, tp );
 	return list;
@@ -2817,7 +2817,7 @@ DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc, unsigned int hashi
 			}
 		}
 	}
-	if( tp == NULL || tp->tid != DAO_MAP ) tp = dao_map_any;
+	if( tp == NULL || tp->tid != DAO_MAP ) tp = dao_type_map_any;
 	map = DaoDataCache_MakeMap( self->cache, tp, hashing );
 	DaoValue_Move( (DaoValue*) map, self->activeValues + vmc->c, tp );
 	return map;
@@ -4157,9 +4157,9 @@ void DaoProcess_DoList(  DaoProcess *self, DaoVmCode *vmc )
 		GC_ShiftRC( t, list->ctype );
 		list->ctype = t;
 	}
-	if( vmc->b && list->ctype == dao_type_empty_list ){
-		GC_ShiftRC( dao_list_any, list->ctype );
-		list->ctype = dao_list_any;
+	if( vmc->b && list->ctype == dao_type_list_empty ){
+		GC_ShiftRC( dao_type_list_any, list->ctype );
+		list->ctype = dao_type_list_any;
 	}
 	for( i=0; i<bval; i++){
 		if( DaoList_SetItem( list, regValues[opA+i], i ) ){

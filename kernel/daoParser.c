@@ -2126,8 +2126,8 @@ int DaoParser_ParseScript( DaoParser *self )
 	 */
 
 	if( routMain->routType == NULL ){
-		routMain->routType = dao_routine;
-		GC_IncRC( dao_routine );
+		routMain->routType = dao_type_routine;
+		GC_IncRC( dao_type_routine );
 	}
 	routMain->attribs |= DAO_ROUT_MAIN;
 	ns->mainRoutine = routMain;
@@ -5591,15 +5591,15 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 			if( tokens[offset]->name != DTOK_RB ) goto ErrorParsing;
 			offset += 1;
 		}
-		GC_ShiftRC( dao_routine, rout->routType );
-		rout->routType = dao_routine;
+		GC_ShiftRC( dao_type_routine, rout->routType );
+		rout->routType = dao_type_routine;
 		rb = DaoParser_ExtractRoutineBody( self, parser, offset );
 		if( rb < 0 ) goto ErrorParsing;
 	}else if( tokens[start+1]->name == DTOK_LB ){
 		rb = DaoParser_ParseSignature( self, parser, DKEY_ROUTINE, start );
 	}else if( tokens[start+1]->name == DTOK_LCB ){
-		GC_ShiftRC( dao_routine, rout->routType );
-		rout->routType = dao_routine;
+		GC_ShiftRC( dao_type_routine, rout->routType );
+		rout->routType = dao_type_routine;
 		rb = DaoParser_ExtractRoutineBody( self, parser, start+1 );
 		if( rb < 0 ) goto ErrorParsing;
 	}else{
@@ -5820,7 +5820,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 		if( lb >= rb ){
 			if( self->needConst ){
 				DaoMap *hm = DaoMap_New(colon>=0);
-				hm->ctype = tp ? tp : dao_map_any;
+				hm->ctype = tp ? tp : dao_type_map_any;
 				GC_IncRC( hm->ctype );
 				regC = DaoRoutine_AddConstant( self->routine, (DaoValue*) hm );
 				enode.konst = LOOKUP_BIND_LC( regC );

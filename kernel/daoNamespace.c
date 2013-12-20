@@ -948,9 +948,9 @@ void DaoNamespace_InitConstEvalData( DaoNamespace *self )
 	if( self->constEvalProcess ) return;
 	self->constEvalProcess = DaoProcess_New( self->vmSpace );
 	self->constEvalRoutine = DaoRoutine_New( self, NULL, 1 );
-	self->constEvalRoutine->routType = dao_routine;
+	self->constEvalRoutine->routType = dao_type_routine;
 	self->constEvalProcess->activeNamespace = self;
-	GC_IncRC( dao_routine );
+	GC_IncRC( dao_type_routine );
 	DaoProcess_InitTopFrame( self->constEvalProcess, self->constEvalRoutine, NULL );
 	DaoProcess_SetActiveFrame( self->constEvalProcess, self->constEvalProcess->topFrame );
 	self->constEvalRoutine->trait |= DAO_VALUE_CONST;
@@ -1630,9 +1630,9 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	if( tid != DAO_ANY ) any = dao_type_any;
 
 	if( tid == DAO_LIST ){
-		return DaoType_Specialize( dao_type_generic_list, nest, N );
+		return DaoType_Specialize( dao_type_list_template, nest, N );
 	}else if( tid == DAO_MAP ){
-		return DaoType_Specialize( dao_type_generic_map, nest, N );
+		return DaoType_Specialize( dao_type_map_template, nest, N );
 	}
 
 	mbs = DString_New(1);

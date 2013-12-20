@@ -45,6 +45,27 @@
 #include"daoValue.h"
 
 
+DaoType *dao_type_udf = NULL;
+DaoType *dao_type_none = NULL;
+DaoType *dao_type_any = NULL;
+DaoType *dao_type_int = NULL;
+DaoType *dao_type_float = NULL;
+DaoType *dao_type_double = NULL;
+DaoType *dao_type_complex = NULL;
+DaoType *dao_type_long = NULL;
+DaoType *dao_type_string = NULL;
+DaoType *dao_type_tuple = NULL;
+DaoType *dao_type_array_empty = NULL;
+DaoType *dao_type_list_template = NULL;
+DaoType *dao_type_list_empty = NULL;
+DaoType *dao_type_list_any = NULL;
+DaoType *dao_type_map_template = NULL;
+DaoType *dao_type_map_empty = NULL;
+DaoType *dao_type_map_any = NULL;
+DaoType *dao_type_routine = NULL;
+DaoType *dao_type_for_iterator = NULL;
+DaoType *dao_array_types[DAO_COMPLEX+1] = {0};
+
 
 static unsigned char dao_type_matrix[END_EXTRA_TYPES][END_EXTRA_TYPES];
 
@@ -577,8 +598,9 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	case DAO_ARRAY : case DAO_LIST : case DAO_MAP :
 	case DAO_TYPE :
 		switch( self->tid ){
-		case DAO_LIST : if( self == dao_type_empty_list ) return DAO_MT_ANY; break;
-		case DAO_MAP  : if( self == dao_type_empty_map )  return DAO_MT_ANY; break;
+		case DAO_ARRAY : if( self == dao_type_array_empty ) return DAO_MT_ANY; break;
+		case DAO_LIST  : if( self == dao_type_list_empty )  return DAO_MT_ANY; break;
+		case DAO_MAP   : if( self == dao_type_map_empty )   return DAO_MT_ANY; break;
 		}
 		if( self->nested->size != type->nested->size ) return DAO_MT_NOT;
 		for(i=0,n=self->nested->size; i<n; i++){
@@ -798,7 +820,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( tp == NULL ) return value->xList.items.size == 0 ? DAO_MT_EMPTY : DAO_MT_NOT;
-		if( tp == dao_type_empty_list && value->xList.items.size == 0 ) return DAO_MT_EMPTY;
+		if( tp == dao_type_list_empty && value->xList.items.size == 0 ) return DAO_MT_EMPTY;
 		return DaoType_MatchTo( tp, self, defs );
 	case DAO_MAP :
 		tp = value->xMap.ctype;
@@ -806,7 +828,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( tp == NULL ) return value->xMap.items->size == 0 ? DAO_MT_EMPTY : DAO_MT_NOT;
-		if( tp == dao_type_empty_map && value->xMap.items->size == 0 ) return DAO_MT_EMPTY;
+		if( tp == dao_type_map_empty && value->xMap.items->size == 0 ) return DAO_MT_EMPTY;
 		return DaoType_MatchTo( tp, self, defs );
 	case DAO_TUPLE :
 		tp = value->xTuple.ctype;
