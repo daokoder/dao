@@ -8,9 +8,6 @@ if( daovm == none ) return
 modules.Install( daovm.GetPath( "MOD-PATH" ), "addpath.dao" )
 
 
-if( DaoMake::IsDir( "debugger" ) ) modules.AddDirectory( "debugger", "debugger" );
-if( DaoMake::IsDir( "profiler" ) ) modules.AddDirectory( "profiler", "profiler" );
-
 if( DaoMake::IsDir( "DaoJIT" ) ) modules.AddDirectory( "DaoJIT", "DaoJIT" );
 
 if( DaoMake::IsDir( "DaoCXX" ) ) modules.AddDirectory( "DaoCXX", "DaoCXX" );
@@ -18,6 +15,8 @@ if( DaoMake::IsDir( "DaoCXX" ) ) modules.AddDirectory( "DaoCXX", "DaoCXX" );
 if( DaoMake::IsDir( "string" ) ) modules.AddDirectory( "string", "string" );
 
 if( DaoMake::IsDir( "graph" ) ) modules.AddDirectory( "graph", "graph" );
+
+if( DaoMake::IsDir( "time" ) ) modules.AddDirectory( "time", "time" );
 
 if( DaoMake::IsDir( "net" ) ) modules.AddDirectory( "net", "net" );
 

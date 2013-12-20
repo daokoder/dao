@@ -288,6 +288,8 @@ if( daovm_with_readline == $ON ){
 #
 ###########################################################################
 
+debugger = daovm.AddDirectory( "debugger", "modules/debugger" );
+profiler = daovm.AddDirectory( "profiler", "modules/profiler" );
 auxlib = daovm.AddDirectory( "auxlib", "modules/auxlib" )
 syslib = daovm.AddDirectory( "syslib", "modules/syslib" )
 help = daovm.AddDirectory( "help", "modules/help" )
@@ -308,6 +310,8 @@ modules = daovm.AddDirectory( "modules", "modules" )
 
 
 # Add dependencies:
+debugger.AddDependency( daovm_dll )
+profiler.AddDependency( daovm_dll )
 auxlib.AddDependency( daovm_dll )
 syslib.AddDependency( daovm_dll )
 help.AddDependency( daovm_dll )

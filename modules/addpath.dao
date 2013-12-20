@@ -11,6 +11,7 @@ std::path( 'help', $add );
 std::path( 'graph', $add );
 std::path( 'sync', $add );
 std::path( 'meta', $add );
+std::path( 'time', $add );
 std::path( 'net', $add );
 std::path( 'os', $add );
 std::path( 'web', $add );
