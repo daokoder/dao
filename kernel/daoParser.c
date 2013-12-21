@@ -6242,9 +6242,15 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 						/*
 						// DaoProcess_DoCall() will check for the returned type,
 						// if it is NULL, a none value will be returned instead.
-						// Set dao_type_any as the returned type to avoid this.
+						// Set dao_type_udf as the returned type to avoid this.
+						//
+						// Don't use dao_type_any, because the evaluation may call
+						// DaoProcess_GetReturnType(), which need to find the
+						// specialized return type.
+						//
+						// static s = state<int>()
 						*/
-						DArray_PushFront( self->enumTypes, dao_type_any );
+						DArray_PushFront( self->enumTypes, dao_type_udf );
 						regLast = DaoParser_MakeEnumConst( self, & enode, cid, regcount );
 						DArray_PopFront( self->enumTypes );
 						if( regLast >=0 ){
