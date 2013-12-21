@@ -2380,6 +2380,8 @@ static void DaoARRAY_Resize( DaoProcess *proc, DaoValue *par[], int N )
 	daoint *dims;
 	daoint i, size = 1;
 
+	if( self->etype == DAO_NONE && self->size == 0 ) self->etype = DAO_FLOAT;
+
 	DaoArray_Sliced( self );
 	DaoArray_Sliced( nad );
 

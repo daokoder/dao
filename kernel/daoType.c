@@ -819,16 +819,16 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( tp == self ) return DAO_MT_EQ;
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
-		if( tp == NULL ) return value->xList.items.size == 0 ? DAO_MT_EMPTY : DAO_MT_NOT;
-		if( tp == dao_type_list_empty && value->xList.items.size == 0 ) return DAO_MT_EMPTY;
+		if( tp == NULL || tp == dao_type_list_empty )
+			return value->xList.items.size == 0 ? DAO_MT_EMPTY : DAO_MT_NOT;
 		return DaoType_MatchTo( tp, self, defs );
 	case DAO_MAP :
 		tp = value->xMap.ctype;
 		if( tp == self ) return DAO_MT_EQ;
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
-		if( tp == NULL ) return value->xMap.items->size == 0 ? DAO_MT_EMPTY : DAO_MT_NOT;
-		if( tp == dao_type_map_empty && value->xMap.items->size == 0 ) return DAO_MT_EMPTY;
+		if( tp == NULL || dao_type_map_empty )
+			return value->xMap.items->size == 0 ? DAO_MT_EMPTY : DAO_MT_NOT;
 		return DaoType_MatchTo( tp, self, defs );
 	case DAO_TUPLE :
 		tp = value->xTuple.ctype;
@@ -842,9 +842,11 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			tp = self->nested->items.pType[i];
 			if( tp->tid == DAO_PAR_NAMED ) tp = & tp->aux->xType;
 
-			/* for C functions that returns a tuple:
-			 * the tuple may be assigned to a context value before
-			 * its values are set properly! */
+			/*
+			// for C functions that returns a tuple:
+			// the tuple may be assigned to a context value before
+			// its values are set properly!
+			*/
 			if( value->xTuple.items[i] == NULL ) continue;
 			if( tp->tid == DAO_UDT || tp->tid == DAO_ANY || tp->tid == DAO_THT ) continue;
 
@@ -1119,6 +1121,30 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 DefFailed:
 	printf( "redefine failed\n" );
 	return NULL;
+}
+void DaoType_GetTypeHolders( DaoType *self, DMap *types )
+{
+	daoint i, n;
+	if( self->tid == DAO_THT ){
+		if( types->keytype == D_STRING ){
+			DMap_Insert( types, self->name, self );
+		}else{
+			DMap_Insert( types, self, 0 );
+		}
+		return;
+	}
+	if( self->nested ){
+		for(i=0,n=self->nested->size; i<n; i++){
+			DaoType_GetTypeHolders( self->nested->items.pType[i], types );
+		}
+	}
+	if( self->bases ){
+		for(i=0,n=self->bases->size; i<n; i++){
+			DaoType_GetTypeHolders( self->bases->items.pType[i], types );
+		}
+	}
+	if( self->tid == DAO_TYPE && self->aux && self->aux->type == DAO_TYPE )
+		DaoType_GetTypeHolders( & self->aux->xType, types );
 }
 int DaoType_CheckTypeHolder( DaoType *self, DaoType *tht )
 {
@@ -1888,6 +1914,10 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 	DString_AppendChar( sptype->name, '>' );
 	DTypeSpecTree_Add( sptree, sptype->nested->items.pType, sptype->nested->size, sptype );
 
+#if 0
+	printf( "DaoGenericType_Specialize: %s %s %p\n", self->name->mbs, sptype->name->mbs, sptype );
+#endif
+
 	/* May need to get rid of the attributes for type holders: */
 	DaoType_CheckAttributes( sptype );
 	return sptype;
@@ -1932,6 +1962,10 @@ void DaoType_SpecializeMethods( DaoType *self )
 	DaoType *original = self->typer->core->kernel->abtype;
 	DaoTypeKernel *kernel;
 	daoint i, k;
+
+#if 0
+	printf( "DaoType_SpecializeMethods: %s\n", self->name->mbs );
+#endif
 
 	if( self == original ) return;
 	if( self->kernel != original->kernel ) return;

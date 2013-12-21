@@ -207,7 +207,7 @@ DaoParser* DaoParser_New()
 	self->switchMaps = DArray_New(D_MAP);
 	self->enumTypes = DArray_New(0);
 	self->routCompilable = DArray_New(0);
-	self->routExtraInf = DArray_New(0);
+	self->routReInferable = DArray_New(0);
 	DArray_Append( self->localDataMaps, self->lvm );
 	DArray_Append( self->strings, self->mbs );
 	DArray_Append( self->arrays, self->toks );
@@ -244,7 +244,7 @@ void DaoParser_Delete( DaoParser *self )
 	DArray_Delete( self->strings );
 	DArray_Delete( self->arrays );
 	DArray_Delete( self->routCompilable );
-	DArray_Delete( self->routExtraInf );
+	DArray_Delete( self->routReInferable );
 	DArray_Delete( self->typeItems );
 
 	DaoLexer_Delete( self->lexer );
@@ -332,7 +332,7 @@ void DaoParser_Reset( DaoParser *self )
 	DArray_Clear( self->enumTypes );
 	DArray_Clear( self->vmCodes );
 	DArray_Clear( self->routCompilable );
-	DArray_Clear( self->routExtraInf );
+	DArray_Clear( self->routReInferable );
 
 	DaoLexer_Reset( self->lexer );
 	DaoLexer_Reset( self->elexer );
@@ -1149,6 +1149,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	}
 	if( selfpar ) routine->attribs |= DAO_ROUT_PARSELF;
 	DMap_Clear( module->initTypes );
+	if( hostype ) DaoType_GetTypeHolders( hostype, module->initTypes );
 	self->innerParser = module;
 	type = NULL;
 	i = start + 1;
@@ -2147,11 +2148,11 @@ int DaoParser_ParseScript( DaoParser *self )
 		DaoParser_PrintError( self, 0, 0, NULL );
 		return 0;
 	}
-	for(i=0; i<self->routExtraInf->size; i++){
-		DaoRoutine *rout = (DaoRoutine*) self->routExtraInf->items.pValue[i];
+	for(i=0; i<self->routReInferable->size; i++){
+		DaoRoutine *rout = (DaoRoutine*) self->routReInferable->items.pValue[i];
 		DaoRoutine_DoTypeInference( rout, 1 );
 	}
-	self->routExtraInf->size = 0;
+	self->routReInferable->size = 0;
 	return 1;
 }
 
@@ -3103,7 +3104,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			goto InvalidDefinition;
 		}
 		if( DaoParser_ParseRoutine( parser ) == 0 ) goto Failed;
-		if( parser->usingGlobal ) DArray_Append( self->routExtraInf, parser->routine );
+		if( parser->usingGlobal ) DArray_Append( self->routReInferable, parser->routine );
 	}
 	if( parser ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return right+1;
@@ -3224,7 +3225,7 @@ static int DaoParser_CompileRoutines( DaoParser *self )
 		DaoParser *parser = (DaoParser*) self->routCompilable->items.pValue[i];
 		DaoRoutine *rout = parser->routine;
 		error |= DaoParser_ParseRoutine( parser ) == 0;
-		if( parser->usingGlobal ) DArray_Append( self->routExtraInf, rout );
+		if( parser->usingGlobal ) DArray_Append( self->routReInferable, rout );
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 		if( error ) break;
 	}
@@ -4139,7 +4140,7 @@ DecoratorError:
 			start += 1;
 			reg = N = end = 0;
 			if( start <= to && tokens[start]->line == tokens[start-1]->line ){
-				DaoType *retype = self->returnType;
+				DaoType *retype = self->returnType; /* Updated for code section; */
 				int tok = 0, ecount = self->errors->size;
 				self->curToken = start;
 				switch( retype ? retype->tid : 0 ){
@@ -4230,7 +4231,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	unsigned char tki, tki2, errors;
 #if 0
 	int mm;
-	for(mm=start; mm<=to; mm++) printf( "%s ", tokens[mm]->string->mbs );
+	for(mm=start; mm<=to; mm++) printf( "%s ", tokens[mm]->string.mbs );
 	printf("\n");
 #endif
 
@@ -4487,7 +4488,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 			case DAO_CLASS_VARIABLE :
 				if( isdecl && cst ){
 					DaoVariable *var = hostClass->variables->items.pVar[id];
-					DaoValue_Move( value, & var->value, var->dtype );
+					DaoVariable_Set( var, value, DaoNamespace_GetType( ns, value ) );
 					remove = 1;
 				}else if( ! self->isClassBody ){
 					if( reg < 0 ) continue;
@@ -4757,7 +4758,7 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 				}else{
 					ec = DaoClass_AddObjectVar( hostClass, name, dao_none_value, abtp, perm );
 				}
-				if( ec < 0 ) DaoParser_Warn( self, -ec, name );
+				if( ec == -DAO_CTW_WAS_DEFINED ) DaoParser_Warn( self, -ec, name );
 			}else{
 				DaoParser_Warn( self, DAO_VARIABLE_OUT_OF_CONTEXT, name );
 			}

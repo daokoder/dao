@@ -118,7 +118,7 @@ struct DaoParser
 	DArray *decoParams;
 	DArray *decoParams2;
 	DArray *routCompilable; /* list of defined routines with bodies */
-	DArray *routExtraInf;
+	DArray *routReInferable;
 
 	DaoLexer  *elexer;
 	DaoLexer  *wlexer;

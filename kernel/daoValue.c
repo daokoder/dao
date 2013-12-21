@@ -556,11 +556,20 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoDataCach
 		if( sliced ) (*sliced)( self );
 		return self;
 	}
-	switch( self->type ){
-	case DAO_LIST  : force = self->xList.ctype == dao_type_list_empty; break;
-	case DAO_MAP   : force = self->xMap.ctype == dao_type_map_empty; break;
+	switch( tp ? self->type : 0 ){
+	case DAO_LIST  :
+		force = self->xList.ctype == dao_type_list_empty;
+		force &= tp != dao_type_list_empty;
+		break;
+	case DAO_MAP   :
+		force = self->xMap.ctype == dao_type_map_empty;
+		force &= tp != dao_type_map_empty;
+		break;
 #ifdef DAO_WITH_NUMARRAY
-	case DAO_ARRAY : force = self->xArray.etype == DAO_NONE; break;
+	case DAO_ARRAY :
+		force = self->xArray.etype == DAO_NONE;
+		force &= tp != dao_type_array_empty;
+		break;
 #endif
 	default : break;
 	}

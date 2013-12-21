@@ -163,7 +163,7 @@ const char *delimiter2 =
 "-------------------------------------------------------------------------------\n";
 
 const char *delimiter3 =
-"---------------------------------------------------------------------------------\n";
+"-------------------------------------------------------------------------------\n";
 
 const char *header_format = "%-58s: %9s, %8s\n";
 const char *row_format = "%-58s: %9i, %8.2f\n";
@@ -188,9 +188,18 @@ static void DaoRoutine_MakeName( DaoRoutine *self, DString *name, int max1, int 
 	int M = (routType->attrib & DAO_TYPE_SELF) != 0;
 	int N = routType->nested->size;
 	int i;
-	if( hostName == NULL && M ) hostName = routType->nested->items.pType[0]->aux->xType.name;
+
 	DString_Reset( name, 0 );
-	if( hostName && !(self->attribs & DAO_ROUT_INITOR) ){
+
+	/* For builtin containers, whose methods may have no routHost set: */
+	if( hostName == NULL && M ) hostName = routType->nested->items.pType[0]->aux->xType.name;
+
+	/*
+	// Mixin classes have methods converted from constructors of component classes.
+	// These methods still have the DAO_ROUT_INITOR flag. So checking the names is
+	// the better way to use here.
+	*/
+	if( hostName && ! DString_EQ( self->routName, hostName ) ){
 		if( hostName->size + self->routName->size < (max1-2) ){
 			DString_Append( name, hostName );
 			DString_AppendMBS( name, "::" );

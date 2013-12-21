@@ -4713,21 +4713,22 @@ NotExist_TryAux:
 						if( code == DVM_VECTOR || code == DVM_APVECTOR ) break;
 					}
 				}
-				if( code == DVM_LIST || code == DVM_APLIST )
-					ct = DaoNamespace_MakeType( NS, "list", DAO_LIST, NULL, &at, at!=NULL );
-				else if( at && at->tid >=DAO_INTEGER && at->tid <= DAO_COMPLEX )
-					ct = DaoNamespace_MakeType( NS, "array", DAO_ARRAY, NULL, &at, 1 );
-				else if( at && at->tid == DAO_ARRAY )
-					ct = at;
-				else
-					ct = DaoNamespace_MakeType( NS, "array", DAO_ARRAY,NULL, &at, at!=NULL );
-				/* else goto ErrorTyping; */
 				if( opb == 0 ){
 					if( code == DVM_LIST || code == DVM_APLIST ){
 						ct = dao_type_list_empty;
 					}else{
 						ct = dao_type_array_empty;
 					}
+				}else if( code == DVM_LIST || code == DVM_APLIST ){
+					ct = DaoNamespace_MakeType( NS, "list", DAO_LIST, NULL, &at, at!=NULL );
+				}else if( at && at->tid >=DAO_INTEGER && at->tid <= DAO_COMPLEX ){
+					ct = DaoNamespace_MakeType( NS, "array", DAO_ARRAY, NULL, &at, 1 );
+				}else if( at && at->tid == DAO_ARRAY ){
+					ct = at;
+				}else if( NoCheckingType( at ) ){
+					ct = dao_type_array_empty; /* specially handled for copying; */
+				}else{
+					goto ErrorTyping;
 				}
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );

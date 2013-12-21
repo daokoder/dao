@@ -2905,13 +2905,11 @@ DaoTuple* DaoProcess_PutTuple( DaoProcess *self, int size )
 }
 DaoType* DaoProcess_GetReturnType( DaoProcess *self )
 {
+	DaoType *type;
 	DaoStackFrame *frame = self->topFrame;
-	DaoType *type = self->activeTypes[ self->activeCode->c ]; /* could be specialized; */
+	if( frame->routine ) return (DaoType*) frame->routine->routType->aux;
 	if( frame->retype ) return frame->retype;
-	if( type == NULL || (type->attrib & DAO_TYPE_UNDEF) ){
-		if( frame->routine ) type = (DaoType*) frame->routine->routType->aux;
-	}
-	if( type == NULL ) type = self->activeTypes[ self->activeCode->c ];
+	type = self->activeTypes[ self->activeCode->c ];
 	GC_ShiftRC( type, frame->retype );
 	frame->retype = type;
 	return type;

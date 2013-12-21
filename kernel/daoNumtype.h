@@ -165,7 +165,7 @@ struct DaoArray
 	daoint  *dims; /* for i=0,...,ndim-1: dims[i], size of the i-th dimension; */
 	/* dims[ndim+i], products of the sizes of the remaining dimensions after the i-th; */
 
-	union{
+	union {
 		void       *p;
 		daoint     *i;
 		float      *f;

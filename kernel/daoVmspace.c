@@ -2510,7 +2510,7 @@ DaoVmSpace* DaoInit( const char *command )
 
 	dao_type_tuple = DaoParser_ParseTypeName( "tuple<...>", ns, NULL );
 
-	dao_array_types[DAO_NONE] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_int, 1 );
+	dao_array_types[DAO_NONE] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_none, 1 );
 	dao_array_types[DAO_INTEGER] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_int, 1 );
 	dao_array_types[DAO_FLOAT]   = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_float, 1 );
 	dao_array_types[DAO_DOUBLE]  = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_double, 1 );
@@ -2541,9 +2541,10 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_list_any = DaoType_Specialize( dao_type_list_template, NULL, 0 );
 	dao_type_map_any  = DaoType_Specialize( dao_type_map_template, NULL, 0 );
 
-	type1 = DaoType_New( "any", DAO_ANY, NULL, NULL );
-	dao_type_list_empty = DaoType_Specialize( dao_type_list_template, & type1, 1 );
-	dao_type_map_empty  = DaoType_Specialize( dao_type_map_template, & type1, 1 );
+	dao_type_list_empty = DaoType_Copy( dao_type_list_any );
+	dao_type_map_empty = DaoType_Copy( dao_type_map_any );
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_list_empty );
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_map_empty );
 
 	GC_ShiftRC( dao_type_complex, comTyper.core->kernel->abtype );
 	GC_ShiftRC( dao_type_long, longTyper.core->kernel->abtype );

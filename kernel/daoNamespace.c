@@ -323,6 +323,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		parser->vmSpace = self->vmSpace;
 		parser->nameSpace = self;
 		parser->hostCdata = hostype;
+		parser->hostType = hostype;
 		parser->defParser = defparser = DaoVmSpace_AcquireParser( self->vmSpace );
 		defparser->vmSpace = self->vmSpace;
 		defparser->nameSpace = self;
@@ -1527,13 +1528,11 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 	}
 
 	if( p->type == DAO_LIST ){
-		DaoType *itp = list->items.size ? dao_type_any : dao_type_udf;
-		return DaoNamespace_MakeType( self, "list", DAO_LIST, NULL, & itp, 1 );
+		if( list->items.size == 0 ) return dao_type_list_empty;
+		return DaoNamespace_MakeType( self, "list", DAO_LIST, NULL, NULL, 0 );
 	}else if( p->type == DAO_MAP ){
-		DaoType *itp = map->items->size ? dao_type_any : dao_type_udf;
-		DaoType *tps[2];
-		tps[0] = tps[1] = itp;
-		return DaoNamespace_MakeType( self, "map", DAO_MAP, NULL, tps, 2 );
+		if( map->items->size == 0 ) return dao_type_map_empty;
+		return DaoNamespace_MakeType( self, "map", DAO_MAP, NULL, NULL, 0 );
 	}
 
 	mbs = DString_New(1);
