@@ -1,7 +1,6 @@
 
 header_hints = { "." }
 
-
 if( DaoMake::IsUnix() ){
 	header_path = "";
 	if( DaoMake::IsMacOSX() ){

@@ -2676,7 +2676,7 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 				if( p[1]->xEnum.value ){
 					DaoProcess_RaiseException( proc, DAO_ERROR, message->mbs );
 				}
-				project = daomake_type_project->value;
+				project = dao_none_value;
 			}
 			DaoProcess_PutValue( proc, project );
 			DString_Delete( original );
@@ -2693,7 +2693,7 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 		if( p[1]->xEnum.value ){
 			DaoProcess_RaiseException( proc, DAO_ERROR, message->mbs );
 		}
-		project = daomake_type_project->value;
+		project = dao_none_value;
 	}else{
 		DaoMakeProject *proj = (DaoMakeProject*) project;
 		DaoMakeProject_MakeFindPackage( proj, cache, 1 );
@@ -2931,7 +2931,7 @@ static void DAOMAKE_Is64Bit( DaoProcess *proc, DaoValue *p[], int N )
 
 static DaoFuncItem DaoMakeMeths[] =
 {
-	{ DAOMAKE_FindPackage, "FindPackage( name : string, opt :enum<OPTIONAL,REQUIRED> = $OPTIONAL ) => Project" },
+	{ DAOMAKE_FindPackage, "FindPackage( name : string, opt :enum<OPTIONAL,REQUIRED> = $OPTIONAL ) => Project|none" },
 	{ DAOMAKE_FindFile,    "FindFile( file : string, hints : list<string> = {} ) => string" },
 	{ DAOMAKE_TestCompile, "TestCompile( code :string, lflag='', cflag='', cxx=0 ) => int" },
 

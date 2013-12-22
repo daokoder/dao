@@ -2951,6 +2951,26 @@ static int DaoInferencer_AssertPairNumberType( DaoInferencer *self, DaoType *typ
 	if( k > DAO_DOUBLE && ! NoCheckingType(itp) ) return 0;
 	return 1;
 }
+static int DaoType_IsNone( DaoType *self )
+{
+	if( self->tid == DAO_NONE ) return 1;
+	if( self->tid == DAO_VALTYPE ) return self->value && self->value->type == DAO_NONE;
+	return 0;
+}
+static DaoType* DaoType_GetVariantUsable( DaoType *self )
+{
+	if( self->tid != DAO_VARIANT ) return NULL;
+	if( self->nested->size == 1 ){
+		DaoType *T = self->nested->items.pType[0];
+		if( !DaoType_IsNone(T) && !(T->tid & DAO_ANY) ) return T;
+	}else if( self->nested->size == 2 ){
+		DaoType *T1 = self->nested->items.pType[0];
+		DaoType *T2 = self->nested->items.pType[1];
+		if( DaoType_IsNone(T1) && !DaoType_IsNone(T2) && !(T2->tid & DAO_ANY) ) return T2;
+		if( DaoType_IsNone(T2) && !DaoType_IsNone(T1) && !(T1->tid & DAO_ANY) ) return T1;
+	}
+	return NULL;
+}
 
 
 #define AssertTypeMatching( source, target, defs ) \
@@ -3014,6 +3034,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	DArray_Append( rettypes, routine->routType->aux );
 	for(i=0; i<N; i++){
 		types = self->types->items.pType;
+		M = self->types->size;
 		self->currentIndex = i;
 		inode = inodes[i];
 		vmc = (DaoVmCodeX*) inode;
@@ -3106,6 +3127,41 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				if( k != DAO_CLASS && k != DAO_NAMESPACE ) goto ModifyConstant;
 			}else if( consts[inode->c] && K > DAO_CODE_GETG ) goto ModifyConstant;
 		}
+
+		switch( K ){
+		case DAO_CODE_GETF :
+		case DAO_CODE_GETI :
+		case DAO_CODE_UNARY :
+		case DAO_CODE_GETM :
+		case DAO_CODE_ENUM2 :
+		case DAO_CODE_CALL :
+			tt = DaoType_GetVariantUsable( at );
+			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->a, tt );
+			break;
+		case DAO_CODE_UNARY2 :
+			tt = DaoType_GetVariantUsable( bt );
+			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->b, tt );
+			break;
+		case DAO_CODE_SETF :
+		case DAO_CODE_SETI :
+		case DAO_CODE_SETM :
+			tt = DaoType_GetVariantUsable( ct );
+			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->c, tt );
+			break;
+		case DAO_CODE_BINARY :
+			if( code == DVM_EQ || code == DVM_NE ) break;
+			tt = DaoType_GetVariantUsable( at );
+			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->a, tt );
+			tt = DaoType_GetVariantUsable( bt );
+			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->b, tt );
+			break;
+		}
+		M = self->types->size;
+		types = self->types->items.pType;
+		opa = vmc->a;  opb = vmc->b;  opc = vmc->c;
+		at = opa < M ? types[opa] : NULL;
+		bt = opb < M ? types[opb] : NULL;
+		ct = opc < M ? types[opc] : NULL;
 
 		switch( code ){
 		case DVM_NOP :

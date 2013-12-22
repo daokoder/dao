@@ -375,8 +375,16 @@ enum DaoOpcode
 };
 typedef enum DaoOpcode DaoOpcode;
 
+enum DaoAuxOpcode
+{
+	DVM_LOAD_FILE ,
+	DVM_USE_ROUTINE ,
+	DVM_USE_VALUE ,
+	DVM_USE_TYPE ,
+};
+
 /*
-// Additional nodes for the virtual machine instructions:
+// Additional notes for the virtual machine instructions:
 //
 // DVM_GETVH and DVM_SETVH:
 //
