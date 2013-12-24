@@ -4970,14 +4970,6 @@ int DaoParser_PostParsing( DaoParser *self )
 	return 1;
 }
 int DaoNamespace_CyclicParent( DaoNamespace *self, DaoNamespace *parent );
-DaoModuleLoader DaoNamespace_FindModuleLoader2( DaoNamespace *self, DString *file )
-{
-	DString suffix;
-	daoint i = DString_RFindChar( file, '.', file->size - 1 );
-	if( i == MAXSIZE ) return NULL;
-	suffix = DString_WrapMBS( file->mbs + i + 1 );
-	return DaoNamespace_FindModuleLoader( self, & suffix );
-}
 int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 {
 	DaoNamespace *mod = NULL, *nameSpace = self->nameSpace;
@@ -5028,28 +5020,11 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	}
 
 	if( (mod = DaoNamespace_FindNamespace(nameSpace, self->mbs)) == NULL ){
-		DaoModuleLoader loader = DaoNamespace_FindModuleLoader2( nameSpace, self->mbs );
-		/* self->mbs could be changed during loading */
-		DString_Assign( self->str, self->mbs );
-		if( loader ){
-			DaoVmSpace_SearchPath( vmSpace, self->mbs, DAO_FILE_PATH, 1 );
-			if( Dao_IsFile( self->mbs->mbs ) ){
-				mod = DaoNamespace_New( vmSpace, self->mbs->mbs );
-				if( (*loader)( mod, self->mbs, self->mbs2 ) ){
-					GC_IncRC( mod );
-					GC_DecRC( mod );
-					mod = NULL;
-					DaoParser_Error( self, DAO_CTW_LOAD_FAILED, self->mbs2 );
-					goto ErrorLoad;
-				}
-			}
-		}else{
-			mod = DaoVmSpace_LoadModule( vmSpace, self->mbs );
-			if( mod == NULL && modname == NULL ){
-				mod = DaoVmSpace_FindModule( vmSpace, self->mbs );
-				cyclic = mod && DaoNamespace_CyclicParent( mod, nameSpace );
-				mod = NULL;
-			}
+		mod = DaoVmSpace_LoadModule( vmSpace, self->mbs );
+		if( mod == NULL && modname == NULL ){
+			mod = DaoVmSpace_FindModule( vmSpace, self->mbs );
+			cyclic = mod && DaoNamespace_CyclicParent( mod, nameSpace );
+			mod = NULL;
 		}
 	}
 

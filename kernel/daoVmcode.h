@@ -375,13 +375,6 @@ enum DaoOpcode
 };
 typedef enum DaoOpcode DaoOpcode;
 
-enum DaoAuxOpcode
-{
-	DVM_LOAD_FILE ,
-	DVM_USE_ROUTINE ,
-	DVM_USE_VALUE ,
-	DVM_USE_TYPE ,
-};
 
 /*
 // Additional notes for the virtual machine instructions:
@@ -402,6 +395,7 @@ enum DaoAuxOpcode
 // TODO
 */
 
+
 /* Extra vmcode type for compiling:
  * They are used to setup proper indexing, branching or jumping. After this,
  * they will be removed or replaced with proper instructions from DaoOpcode.
@@ -418,6 +412,7 @@ enum DaoOpcodeExtra
 	DVM_DEFAULT ,
 	DVM_UNUSED
 };
+
 
 enum DaoMathFunct
 {
@@ -442,6 +437,7 @@ enum DaoMathFunct
 	DVM_MATH_TAN ,
 	DVM_MATH_TANH
 };
+
 enum DaoFunctMeth
 {
 	DVM_FUNCT_APPLY ,

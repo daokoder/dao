@@ -872,7 +872,6 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->localMacros = DHash_New(D_STRING,D_VALUE);
 	self->globalMacros = DHash_New(D_STRING,D_VALUE);
 	self->abstypes = DHash_New(D_STRING,D_VALUE);
-	self->moduleLoaders = DHash_New(D_STRING,0);
 	self->codeInliners = DHash_New(D_STRING,0);
 	self->argParams = DaoList_New();
 	self->time = 0;
@@ -933,7 +932,6 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	DMap_Delete( self->localMacros );
 	DMap_Delete( self->globalMacros );
 	DMap_Delete( self->abstypes );
-	DMap_Delete( self->moduleLoaders );
 	DMap_Delete( self->codeInliners );
 	DString_Delete( self->file );
 	DString_Delete( self->path );
@@ -1354,27 +1352,10 @@ void DaoNamespace_ImportMacro( DaoNamespace *self, DString *lang )
 	}
 	DString_Delete( name2 );
 }
-void DaoNamespace_AddModuleLoader( DaoNamespace *self, const char *name, DaoModuleLoader fp )
-{
-	DString mbs = DString_WrapMBS( name );
-	DMap_Insert( self->moduleLoaders, & mbs, (void*)fp );
-}
 void DaoNamespace_AddCodeInliner( DaoNamespace *self, const char *name, DaoCodeInliner fp )
 {
 	DString mbs = DString_WrapMBS( name );
 	DMap_Insert( self->codeInliners, & mbs, (void*)fp );
-}
-DaoModuleLoader DaoNamespace_FindModuleLoader( DaoNamespace *self, DString *name )
-{
-	int i, n = self->namespaces->size;
-	DNode *node = MAP_Find( self->moduleLoaders, name );
-	if( node ) return (DaoModuleLoader) node->value.pVoid;
-	for(i=1; i<n; i++){
-		DaoNamespace *ns = self->namespaces->items.pNS[i];
-		DaoModuleLoader loader = DaoNamespace_FindModuleLoader( ns, name );
-		if( loader ) return loader;
-	}
-	return NULL;
 }
 DaoCodeInliner DaoNamespace_FindCodeInliner( DaoNamespace *self, DString *name )
 {
@@ -2033,31 +2014,13 @@ DaoValue* DaoType_FindAuxMethod( DaoType *self, DString *name, DaoNamespace *nsp
 }
 
 
-DaoModuleLoader DaoNamespace_FindModuleLoader2( DaoNamespace *self, DString *file );
-
 DaoNamespace* DaoNamespace_LoadModule( DaoNamespace *self, DString *name )
 {
-	DaoModuleLoader loader;
 	DaoNamespace *mod = DaoNamespace_FindNamespace( self, name );
 	if( mod ) return mod;
 
 	name = DString_Copy( name );
-	loader = DaoNamespace_FindModuleLoader2( self, name );
-	if( loader ){
-		DaoVmSpace_SearchPath( self->vmSpace, name, DAO_FILE_PATH, 1 );
-		if( Dao_IsFile( name->mbs ) ){
-			DString *error = DString_New(1);
-			mod = DaoNamespace_New( self->vmSpace, name->mbs );
-			if( (*loader)( mod, name, error ) ){
-				GC_IncRC( mod );
-				GC_DecRC( mod );
-				mod = NULL;
-			}
-			DString_Delete( error );
-		}
-	}else{
-		mod = DaoVmSpace_LoadModule( self->vmSpace, name );
-	}
+	mod = DaoVmSpace_LoadModule( self->vmSpace, name );
 	DString_Delete( name );
 	return mod;
 }

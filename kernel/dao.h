@@ -239,7 +239,6 @@ typedef void  (*FuncPtrDel)( void* );
 typedef void  (*DaoCFunction) ( DaoProcess *process, DaoValue *params[], int npar );
 
 typedef int (*DaoModuleOnLoad)( DaoVmSpace *vmspace, DaoNamespace *nspace );
-typedef int (*DaoModuleLoader)( DaoNamespace *nspace, DString *filename, DString *emsg );
 typedef int (*DaoCodeInliner)( DaoNamespace *nspace, DString *mode, DString *source, DString *out, int line );
 
 typedef struct DaoNumItem   DaoNumItem;
@@ -937,7 +936,6 @@ DAO_DLL int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items )
 DAO_DLL int DaoNamespace_Load( DaoNamespace *self, const char *file );
 DAO_DLL int DaoNamespace_GetOptions( DaoNamespace *self );
 DAO_DLL void DaoNamespace_SetOptions( DaoNamespace *self, int options );
-DAO_DLL void DaoNamespace_AddModuleLoader( DaoNamespace *self, const char *name, DaoModuleLoader fp );
 DAO_DLL void DaoNamespace_AddCodeInliner( DaoNamespace *self, const char *name, DaoCodeInliner fp );
 
 

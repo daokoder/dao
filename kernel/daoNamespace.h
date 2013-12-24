@@ -62,7 +62,6 @@ struct DaoNamespace
 	DMap   *localMacros; /* <DString*,DaoMacro*> */
 	DMap   *globalMacros; /* <DString*,DaoMacro*> */
 	DMap   *abstypes;     /* <DString*,DaoType*> */
-	DMap   *moduleLoaders; /* <DString*,DaoModuleLoader> */
 	DMap   *codeInliners; /* <DString*,DaoCodeInliner> */
 
 	DString *file;
@@ -110,7 +109,6 @@ DAO_DLL void DaoNamespace_ImportMacro( DaoNamespace *self, DString *lang );
 DAO_DLL void DaoNamespace_AddMacro( DaoNamespace *self, DString *lang, DString *name, DaoMacro *macro );
 DAO_DLL DaoMacro* DaoNamespace_FindMacro( DaoNamespace *self, DString *lang, DString *name );
 
-DAO_DLL DaoModuleLoader DaoNamespace_FindModuleLoader( DaoNamespace *self, DString *name );
 DAO_DLL DaoCodeInliner DaoNamespace_FindCodeInliner( DaoNamespace *self, DString *name );
 
 DAO_DLL DaoType* DaoNamespace_FindType( DaoNamespace *self, DString *name );
