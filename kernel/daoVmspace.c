@@ -333,6 +333,68 @@ DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )
 #endif
 	return parser;
 }
+void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser )
+{
+#ifdef SHARE_NO_PARSER
+	DaoParser_Delete( parser ); return;
+#endif
+
+	if( parser->mainCoder ) DaoVmSpace_ReleaseMainCoder( self, parser->mainCoder );
+
+	DaoParser_Reset( parser );
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->mutexMisc );
+#endif
+	if( DMap_Find( self->allParsers, parser ) ){
+		DArray_PushBack( self->parsers, parser );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->mutexMisc );
+#endif
+}
+DaoMainCoder* DaoVmSpace_AcquireMainCoder( DaoVmSpace *self )
+{
+	DaoMainCoder *mainCoder = NULL;
+
+#ifdef SHARE_NO_PARSER
+	mainCoder = DaoMainCoder_New();
+	//mainCoder->vmSpace = self;
+	return mainCoder;
+#endif
+
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->mutexMisc );
+#endif
+	if( self->maincoders->size ){
+		mainCoder = (DaoMainCoder*) DArray_Back( self->maincoders );
+		DArray_PopBack( self->maincoders );
+	}else{
+		mainCoder = DaoMainCoder_New();
+		//mainCoder->vmSpace = self;
+		DMap_Insert( self->allMaincoders, mainCoder, 0 );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->mutexMisc );
+#endif
+	return mainCoder;
+}
+void DaoVmSpace_ReleaseMainCoder( DaoVmSpace *self, DaoMainCoder *mainCoder )
+{
+#ifdef SHARE_NO_PARSER
+	DaoMainCoder_Delete( mainCoder ); return;
+#endif
+
+	DaoMainCoder_Reset( mainCoder );
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->mutexMisc );
+#endif
+	if( DMap_Find( self->allMaincoders, mainCoder ) ){
+		DArray_PushBack( self->maincoders, mainCoder );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->mutexMisc );
+#endif
+}
 DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self )
 {
 	DaoInferencer *inferencer = NULL;
@@ -356,6 +418,23 @@ DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self )
 #endif
 	return inferencer;
 }
+void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *inferencer )
+{
+#ifdef SHARE_NO_INFERENCER
+	DaoInferencer_Delete( inferencer ); return;
+#endif
+
+	DaoInferencer_Reset( inferencer );
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->mutexMisc );
+#endif
+	if( DMap_Find( self->allInferencers, inferencer ) ){
+		DArray_PushBack( self->inferencers, inferencer );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->mutexMisc );
+#endif
+}
 DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self )
 {
 	DaoOptimizer *optimizer = NULL;
@@ -378,40 +457,6 @@ DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self )
 	DMutex_Unlock( & self->mutexMisc );
 #endif
 	return optimizer;
-}
-void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser )
-{
-#ifdef SHARE_NO_PARSER
-	DaoParser_Delete( parser ); return;
-#endif
-
-	DaoParser_Reset( parser );
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexMisc );
-#endif
-	if( DMap_Find( self->allParsers, parser ) ){
-		DArray_PushBack( self->parsers, parser );
-	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexMisc );
-#endif
-}
-void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *inferencer )
-{
-#ifdef SHARE_NO_INFERENCER
-	DaoInferencer_Delete( inferencer ); return;
-#endif
-
-	DaoInferencer_Reset( inferencer );
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexMisc );
-#endif
-	if( DMap_Find( self->allInferencers, inferencer ) ){
-		DArray_PushBack( self->inferencers, inferencer );
-	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexMisc );
-#endif
 }
 void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *optimizer )
 {
@@ -536,11 +581,13 @@ DaoVmSpace* DaoVmSpace_New()
 	self->virtualPaths = DArray_New(D_STRING);
 	self->sourceArchive = DArray_New(D_STRING);
 	self->processes = DArray_New(0);
-	self->allProcesses = DMap_New(D_VALUE,0);
 	self->parsers = DArray_New(0);
+	self->maincoders = DArray_New(0);
 	self->inferencers = DArray_New(0);
 	self->optimizers = DArray_New(0);
+	self->allProcesses = DMap_New(D_VALUE,0);
 	self->allParsers = DMap_New(0,0);
+	self->allMaincoders = DMap_New(0,0);
 	self->allInferencers = DMap_New(0,0);
 	self->allOptimizers = DMap_New(0,0);
 	self->loadedModules = DArray_New(D_VALUE);
@@ -579,6 +626,9 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	for(it=DMap_First(self->allParsers); it; it=DMap_Next(self->allParsers,it)){
 		DaoParser_Delete( (DaoParser*) it->key.pVoid );
 	}
+	for(it=DMap_First(self->allMaincoders); it; it=DMap_Next(self->allMaincoders,it)){
+		DaoMainCoder_Delete( (DaoMainCoder*) it->key.pVoid );
+	}
 	for(it=DMap_First(self->allInferencers); it; it=DMap_Next(self->allInferencers,it)){
 		DaoInferencer_Delete( (DaoInferencer*) it->key.pVoid );
 	}
@@ -601,12 +651,14 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DArray_Delete( self->loadedModules );
 	DArray_Delete( self->sourceArchive );
 	DArray_Delete( self->parsers );
+	DArray_Delete( self->maincoders );
 	DArray_Delete( self->inferencers );
 	DArray_Delete( self->optimizers );
 	DMap_Delete( self->vfiles );
 	DMap_Delete( self->vmodules );
 	DMap_Delete( self->allProcesses );
 	DMap_Delete( self->allParsers );
+	DMap_Delete( self->allMaincoders );
 	DMap_Delete( self->allInferencers );
 	DMap_Delete( self->allOptimizers );
 	GC_DecRC( self->mainProcess );
@@ -1601,6 +1653,10 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 		parser->nameSpace = ns;
 		DString_Assign( parser->fileName, libpath );
 		if( ! DaoParser_LexCode( parser, DString_GetMBS( source ), 1 ) ) goto LoadingFailed;
+		if( self->options & DAO_OPTION_COMP_BC ){
+			parser->mainCoder = DaoVmSpace_AcquireMainCoder( self );
+			parser->blockCoder = DaoMainCoder_Init( parser->mainCoder );
+		}
 		if( ! DaoParser_ParseScript( parser ) ) goto LoadingFailed;
 		if( ns->mainRoutine == NULL ) goto LoadingFailed;
 		DString_SetMBS( ns->mainRoutine->routName, "::main" );

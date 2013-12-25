@@ -854,18 +854,16 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 {
 	DaoValue *value;
 	DString *name = DString_New(1);
-	DaoNamespace *self = (DaoNamespace*) dao_malloc( sizeof(DaoNamespace) );
+	DaoNamespace *self = (DaoNamespace*) dao_calloc( 1, sizeof(DaoNamespace) );
 	DaoValue_Init( self, DAO_NAMESPACE );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->vmSpace = vms;
-	self->cstUser = 0;
-	self->options = 0;
-	self->mainRoutine = NULL;
 	self->constants = DArray_New(D_VALUE);
 	self->variables = DArray_New(D_VALUE);
 	self->auxData = DArray_New(D_VALUE);
 	self->namespaces = DArray_New(0);
 	/* DO NOT USE HASH: name ordering needed for bytecode format to work: */
+	/* XXX: will not be true with the new bytecode encoder and decoder? */
 	self->lookupTable = DMap_New(D_STRING,0);
 	self->mainRoutines  = DArray_New(D_VALUE);
 	self->definedRoutines = DArray_New(0);
@@ -874,7 +872,6 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->abstypes = DHash_New(D_STRING,D_VALUE);
 	self->codeInliners = DHash_New(D_STRING,0);
 	self->argParams = DaoList_New();
-	self->time = 0;
 	self->file = DString_New(1);
 	self->path = DString_New(1);
 	self->name = DString_New(1);
@@ -882,8 +879,6 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->inputs = DString_New(1);
 	self->loadings = DArray_New(D_STRING);
 	self->sources = DArray_New(D_ARRAY);
-	self->constEvalProcess = NULL;
-	self->constEvalRoutine = NULL;
 
 	DArray_Append( self->auxData, self->argParams );
 
