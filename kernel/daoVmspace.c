@@ -339,8 +339,6 @@ void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser )
 	DaoParser_Delete( parser ); return;
 #endif
 
-	if( parser->mainCoder ) DaoVmSpace_ReleaseMainCoder( self, parser->mainCoder );
-
 	DaoParser_Reset( parser );
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & self->mutexMisc );
@@ -1452,10 +1450,28 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		res = DaoByteDecoder_Decode( decoder, self->mainSource, ns );
 		DaoByteDecoder_Delete( decoder );
 	}else{
-		res = res && DaoProcess_Compile( vmp, ns, self->mainSource->mbs );
-		if( res && (self->options & DAO_OPTION_COMP_BC) ){
-			DaoVmSpace_SaveByteCodes( self, ns );
+		DaoParser *parser = DaoVmSpace_AcquireParser( self );
+
+		if( self->options & DAO_OPTION_COMP_BC ){
+			parser->mainCoder = DaoVmSpace_AcquireMainCoder( self );
+			parser->blockCoder = DaoMainCoder_Init( parser->mainCoder );
 		}
+		parser->nameSpace = ns;
+		DString_Assign( parser->fileName, ns->name );
+		res = res && DaoParser_LexCode( parser, self->mainSource->mbs, 1 );
+		res = res && DaoParser_ParseScript( parser );
+
+		if( res && (self->options & DAO_OPTION_COMP_BC) ){
+			DString *output = DString_New(1);
+			DaoMainCoder_EncodeToString( parser->mainCoder, output );
+
+			FILE *fout = fopen( "bytecode/test.dac", "w+" );
+			DaoFile_WriteString( fout, output );
+			DString_Delete( output );
+			//DaoVmSpace_SaveByteCodes( self, ns );
+		}
+		if( parser->mainCoder ) DaoVmSpace_ReleaseMainCoder( self, parser->mainCoder );
+		DaoVmSpace_ReleaseParser( self, parser );
 	}
 	if( res && !(self->options & DAO_OPTION_ARCHIVE) ){
 		DString name = DString_WrapMBS( "main" );
@@ -1660,6 +1676,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 		if( ! DaoParser_ParseScript( parser ) ) goto LoadingFailed;
 		if( ns->mainRoutine == NULL ) goto LoadingFailed;
 		DString_SetMBS( ns->mainRoutine->routName, "::main" );
+		if( parser->mainCoder ) DaoVmSpace_ReleaseMainCoder( self, parser->mainCoder );
 		DaoVmSpace_ReleaseParser( self, parser );
 		parser = NULL;
 		if( self->options & DAO_OPTION_COMP_BC ) DaoVmSpace_SaveByteCodes( self, ns );

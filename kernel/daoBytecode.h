@@ -185,6 +185,13 @@
 // value:
 // See above;
 //
+//
+// evaluation:
+// ASM_EVAL(1B): Opcode(2B), OperandCount(2B), Value-Index(2B), Value-Index(2B);
+//   ASM_DATA(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
+// ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
+//
+//
 // consts:
 // ASM_CONSTS(1B): Count(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //   ASM_DATA(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
@@ -242,7 +249,7 @@
 // ASM_DECO(1B): ~(2B), 0, 0, 0;
 // 
 // seek:
-// ASM_SEEK(1B): New-Index(4B), Zeros(4B);
+// ASM_SEEK(1B): New-Index(2B), Zeros(6B);
 //
 //##########################################################################
 //
@@ -322,10 +329,11 @@
 //     ASM_DATA: "random_s";
 //   ASM_END: "tring";
 //
-//   ASM_CODE: 1, 1, 6, 3;
-//     ASM_DATA: GETCG, 1 ("random_string"), 0, 1;
-//     ASM_DATA: DATA, 1 (DAO_INTEGER), 10, 2;
-//   ASM_END:    CALL, 1, 2, 0;
+//   ASM_VALUE: DAO_INTEGER, 0, 13;
+//   ASM_END: 10, 0;
+//
+//   ASM_EVAL: CALL, 2, 2, 1;
+//   ASM_END: 0;
 //
 //   ASM_VALUE: DAO_STRING, 0, 3;
 //   ASM_END: "abc";
@@ -398,6 +406,7 @@ enum DaoAuxOpcode
 	DAO_ASM_ENUM      ,
 	DAO_ASM_TYPE      ,
 	DAO_ASM_VALUE     ,
+	DAO_ASM_EVAL      ,
 	DAO_ASM_CONSTS    ,
 	DAO_ASM_TYPES     ,
 	DAO_ASM_CODE      ,
@@ -422,7 +431,9 @@ typedef struct DaoBlockCoder  DaoBlockCoder;
 
 struct DaoBlockCoder
 {
-	uchar_t  type;
+	uint_t   type  : 8;
+	uint_t   index : 24;
+
 	uchar_t  begin[8];
 	uchar_t  end[8];
 
@@ -443,6 +454,8 @@ struct DaoBlockCoder
 
 struct DaoMainCoder
 {
+	uint_t  index;
+
 	DaoBlockCoder  *top;
 
 	DMap  *blocks; /* hash<DaoValue*,DaoBlockCoder*> */
@@ -451,24 +464,28 @@ struct DaoMainCoder
 	DArray  *caches; /* list<DaoBlockCoder*> */
 };
 
-DaoBlockCoder* DaoBlockCoder_New();
+DaoBlockCoder* DaoBlockCoder_New( DaoMainCoder *main );
 void DaoBlockCoder_Delete( DaoBlockCoder *self );
 
 DaoMainCoder* DaoMainCoder_New();
 void DaoMainCoder_Delete( DaoMainCoder *self );
 
 DaoBlockCoder* DaoMainCoder_Init( DaoMainCoder *self );
-DaoBlockCoder* DaoMainCoder_NewBlock( DaoMainCoder *self );
+DaoBlockCoder* DaoMainCoder_NewBlock( DaoMainCoder *self, int type );
 
 DaoBlockCoder* DaoBlockCoder_NewBlock( DaoBlockCoder *self, int type );
 DaoBlockCoder* DaoBlockCoder_FindBlock( DaoBlockCoder *self, DaoValue *value );
 DaoBlockCoder* DaoBlockCoder_AddBlock( DaoBlockCoder *self, DaoValue *value, int type );
 DaoBlockCoder* DaoBlockCoder_AddRoutineBlock( DaoBlockCoder *self, DaoRoutine *routine );
+DaoBlockCoder* DaoBlockCoder_AddEvalBlock( DaoBlockCoder *self, DaoValue *value, int code, int operands );
+
+void DaoBlockCoder_InsertBlockIndex( DaoBlockCoder *self, uchar_t *code, DaoBlockCoder *block );
 
 DaoBlockCoder* DaoBlockCoder_EncodeString( DaoBlockCoder *self, DString *string );
 DaoBlockCoder* DaoBlockCoder_EncodeType( DaoBlockCoder *self, DaoType *type );
 DaoBlockCoder* DaoBlockCoder_EncodeValue( DaoBlockCoder *self, DaoValue *value );
 DaoBlockCoder* DaoBlockCoder_EncodeLoadStmt( DaoBlockCoder *self, DString *mod, DString *ns );
+DaoBlockCoder* DaoBlockCoder_EncodeSeekStmt( DaoBlockCoder *self, DaoBlockCoder *target );
 
 DaoBlockCoder* DaoBlockCoder_EncodeInteger( DaoBlockCoder *self, daoint value );
 DaoBlockCoder* DaoBlockCoder_EncodeFloat( DaoBlockCoder *self, float value );
@@ -482,6 +499,11 @@ DaoBlockCoder* DaoBlockCoder_EncodeList( DaoBlockCoder *self, DaoList *value );
 
 DaoBlockCoder* DaoBlockCoder_EncodeValue( DaoBlockCoder *self, DaoValue *value );
 
+void DaoBlockCoder_EncodeValues( DaoBlockCoder *self, DaoValue **values, int count );
+int DaoBlockCoder_EncodeValues2( DaoBlockCoder *self, DArray *values );
+void DaoBlockCoder_AddBlockIndexData( DaoBlockCoder *self, int head, int size );
+
+void DaoMainCoder_EncodeToString( DaoMainCoder *self, DString *output );
 
 
 typedef struct DaoByteEncoder  DaoByteEncoder;
