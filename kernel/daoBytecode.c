@@ -73,29 +73,101 @@ static const char* const dao_asm_names[] =
 #define DEBUG_BC
 #endif
 
-void DaoBlockCoder_EncodeUInt16( uchar_t *data, uint_t value )
+void DaoMainCoder_EncodeUInt16( uchar_t *data, uint_t value )
 {
 	data[0] = (value >> 8) & 0xFF;
 	data[1] = value & 0xFF;
 }
-void DaoBlockCoder_EncodeUInt32( uchar_t *data, uint_t value )
+void DaoMainCoder_EncodeUInt32( uchar_t *data, uint_t value )
 {
 	data[0] = (value >> 24) & 0xFF;
 	data[1] = (value >> 16) & 0xFF;
 	data[2] = (value >>  8) & 0xFF;
 	data[3] = value & 0xFF;
 }
-uint_t DaoBlockCoder_DecodeUInt8( uchar_t *data )
+void DaoMainCoder_EncodeDaoInt( uchar_t *data, daoint value )
+{
+	uchar_t i, m = sizeof(daoint);
+	for(i=0; i<m; ++i) data[i] = (value >> 8*(m-1-i)) & 0xFF;
+}
+/*
+// IEEE 754 double-precision binary floating-point format:
+//   sign(1)--exponent(11)------------fraction(52)---------------------
+//   S EEEEEEEEEEE FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+//   63         52                                                    0
+//
+//   value = (-1)^S  *  ( 1 + \sigma_0^51 (b_i * 2^{-(52-i)}) )  *  2^{E-1023}
+//
+// Exponents 0x000 is used to represent zero (if F=0) and subnormals (if F!=0);
+// Exponents 0x7FF is used to represent inf (if F=0) and NaNs (if F!=0);
+// Where F is the fraction mantissa.
+*/
+static void DaoMainCoder_EncodeNAN( uchar_t *data )
+{
+	DaoMainCoder_EncodeUInt32( data, 0x7FF << 20 );
+	DaoMainCoder_EncodeUInt32( data + 4, 1 );
+}
+static void DaoMainCoder_EncodeInf( uchar_t *data )
+{
+	DaoMainCoder_EncodeUInt32( data, 0x7FF << 20 );
+	DaoMainCoder_EncodeUInt32( data + 4, 0 );
+}
+static void DaoMainCoder_EncodeDouble( uchar_t *data, double value )
+{
+	uint_t i = 20, m1 = 0, m2 = 0;
+	int first = 1;
+	int neg = value < 0.0;
+	int expon = 0;
+	double frac;
+
+	if( value == 0.0 ){
+		DaoMainCoder_EncodeUInt32( data, 0 );
+		DaoMainCoder_EncodeUInt32( data + 4, 0 );
+		return;
+	}else if( isnan( value ) ){
+		DaoMainCoder_EncodeNAN( data );
+		return;
+	}else if( isinf( value ) ){
+		DaoMainCoder_EncodeInf( data );
+		return;
+	}
+
+	frac = frexp( fabs( value ), & expon );
+	frac = 2.0 * frac - 1.0;
+	expon -= 1;
+	while(1){
+		double prod = frac * 2.0;
+		uint_t bit = (uint_t) prod;
+		frac = prod - bit;
+		i -= 1;
+		if( first ){
+			m1 |= bit << i;
+			if( i == 0 ){
+				first = 0;
+				i = 32;
+			}
+		}else{
+			m2 |= bit << i;
+			if( i == 0 ) break;
+		}
+		if( frac <= 0.0 ) break;
+	}
+	m1 |= (expon+1023) << 20;
+	if( neg ) m1 |= 1 << 31;
+	DaoMainCoder_EncodeUInt32( data, m1 );
+	DaoMainCoder_EncodeUInt32( data + 4, m2 );
+}
+uint_t DaoMainCoder_DecodeUInt8( uchar_t *data )
 {
 	return data[0];
 }
-uint_t DaoBlockCoder_DecodeUInt16( uchar_t *data )
+uint_t DaoMainCoder_DecodeUInt16( uchar_t *data )
 {
 	int value = (data[0]<<8) + data[1];
 	data += 2;
 	return value;
 }
-uint_t DaoBlockCoder_DecodeUInt32( uchar_t *data )
+uint_t DaoMainCoder_DecodeUInt32( uchar_t *data )
 {
 	uint_t value = data[0] << 24;
 	value += data[1] << 16;
@@ -104,42 +176,119 @@ uint_t DaoBlockCoder_DecodeUInt32( uchar_t *data )
 	data += 4;
 	return value;
 }
-void DaoBlockCoder_DecodeChunk2222( uchar_t *data, uint_t *A, uint_t *B, uint_t *C, uint_t *D )
+daoint DaoMainCoder_DecodeDaoInt( DaoMainCoder *self, uchar_t *data )
 {
-	*A = DaoBlockCoder_DecodeUInt16( data + 0 );
-	*B = DaoBlockCoder_DecodeUInt16( data + 2 );
-	*C = DaoBlockCoder_DecodeUInt16( data + 4 );
-	*D = DaoBlockCoder_DecodeUInt16( data + 6 );
+	DaoStream *stream = self->vmspace->errorStream;
+	uchar_t i, m = self->intSize;
+	daoint value = 0;
+
+	if( self->intSize > sizeof(daoint) ){ /* self->intSize=8, sizeof(daoint)=4 */
+		daoint B1 = data[0], B2 = data[1], B3 = data[2], B4 = data[3];
+		daoint B5 = data[4], B6 = data[5], B7 = data[6], B8 = data[7];
+
+		if( (B1 == 0x7F || B1 == 0xFF) && B2 == 0xFF && B3 == 0xFF && B4 == 0xFF ){
+			if( B5 & 0x80 ) goto TooBigInteger;
+			if( B1 == 0xFF ) B5 |= 0x80;
+		}else if( B1 || B2 || B3 || B4 ){
+			goto TooBigInteger;
+		}
+		return (B5<<24)|(B6<<16)|(B7<<8)|B8;
+	}else if( self->intSize < sizeof(daoint) ){ /* self->intSize=4, sizeof(daoint)=8 */
+		daoint B1 = data[0], B2 = data[1], B3 = data[2], B4 = data[3];
+
+		if( B1 & 0x80 ){
+			daoint leading = (0xFF<<24)|(0xFF<<16)|(0xFF<<8)|0xFF;
+			daoint shift = 32; /* just to avoid a warning on 32 bit systems; */
+			return (leading<<shift)|(0xFF<<24)|((B1&0x7F)<<24)|(B2<<16)|(B3<<8)|B4;
+		}
+		return (B1<<24)|(B2<<16)|(B3<<8)|B4;
+	}
+
+	for(i=0; i<m; ++i) value |= ((daoint)data[i]) << 8*(m-1-i);
+	return value;
+TooBigInteger:
+	DaoStream_WriteMBS( stream, "Error: too big integer value for the platform!" );
+	self->error = 1;
+	return 0;
 }
-void DaoBlockCoder_DecodeChunk2114( uchar_t *data, uint_t *A, uint_t *B, uint_t *C, uint_t *D )
+/*
+// IEEE 754 double-precision binary floating-point format:
+//   sign(1)--exponent(11)------------fraction(52)---------------------
+//   S EEEEEEEEEEE FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+//   63         52                                                    0
+//
+//   value = (-1)^S  *  ( 1 + \sigma_0^51 (b_i * 2^{-(52-i)}) )  *  2^{E-1023}
+*/
+double DaoMainCoder_DecodeDouble( DaoMainCoder *self, uchar_t *data )
 {
-	*A = DaoBlockCoder_DecodeUInt16( data + 0 );
-	*B = DaoBlockCoder_DecodeUInt8( data + 2 );
-	*C = DaoBlockCoder_DecodeUInt8( data + 3 );
-	*D = DaoBlockCoder_DecodeUInt32( data + 4 );
+	double value = 1.0;
+	uint_t first = DaoMainCoder_DecodeUInt32( data );
+	uint_t second = DaoMainCoder_DecodeUInt32( data+4 );
+	uint_t negative = first & (1<<31);
+	int i, expon;
+
+	if( first == 0 && second == 0 ) return 0;
+	if( first == (0x7FF<<20) && second == 0 ) return INFINITY;
+	if( first == (0x7FF<<20) && second == 1 ) return NAN;
+
+	first = (first<<1)>>1;
+	expon = (first>>20) - 1023;
+	for(i=0; i<32; ++i){
+		if( (second>>i)&0x1 ){
+			int e = -(52-i);
+			value += e >= 0 ? pow( 2, e ) : 1.0 / pow( 2, -e );
+		}
+	}
+	for(i=0; i<20; ++i){
+		if( (first>>i) & 0x1 ){
+			int e = -(20-i);
+			value += e >= 0 ? pow( 2, e ) : 1.0 / pow( 2, -e );
+		}
+	}
+	if( expon >= 0 ){
+		value *= pow( 2, expon );
+	}else{
+		value /= pow( 2, -expon );
+	}
+	if( negative ) value = -value;
+	return value;
 }
-void DaoBlockCoder_DecodeChunk224( uchar_t *data, uint_t *A, uint_t *B, uint_t *C )
+void DaoMainCoder_DecodeChunk2222( uchar_t *data, uint_t *A, uint_t *B, uint_t *C, uint_t *D )
 {
-	*A = DaoBlockCoder_DecodeUInt16( data + 0 );
-	*B = DaoBlockCoder_DecodeUInt16( data + 2 );
-	*C = DaoBlockCoder_DecodeUInt32( data + 4 );
+	*A = DaoMainCoder_DecodeUInt16( data + 0 );
+	*B = DaoMainCoder_DecodeUInt16( data + 2 );
+	*C = DaoMainCoder_DecodeUInt16( data + 4 );
+	*D = DaoMainCoder_DecodeUInt16( data + 6 );
+}
+void DaoMainCoder_DecodeChunk2114( uchar_t *data, uint_t *A, uint_t *B, uint_t *C, uint_t *D )
+{
+	*A = DaoMainCoder_DecodeUInt16( data + 0 );
+	*B = DaoMainCoder_DecodeUInt8( data + 2 );
+	*C = DaoMainCoder_DecodeUInt8( data + 3 );
+	*D = DaoMainCoder_DecodeUInt32( data + 4 );
+}
+void DaoMainCoder_DecodeChunk224( uchar_t *data, uint_t *A, uint_t *B, uint_t *C )
+{
+	*A = DaoMainCoder_DecodeUInt16( data + 0 );
+	*B = DaoMainCoder_DecodeUInt16( data + 2 );
+	*C = DaoMainCoder_DecodeUInt32( data + 4 );
 }
 void DaoBlockCoder_DecodeSubChunk222( uchar_t *data, uint_t *A, uint_t *B, uint_t *C )
 {
-	*A = DaoBlockCoder_DecodeUInt16( data + 0 );
-	*B = DaoBlockCoder_DecodeUInt16( data + 2 );
-	*C = DaoBlockCoder_DecodeUInt16( data + 4 );
+	*A = DaoMainCoder_DecodeUInt16( data + 0 );
+	*B = DaoMainCoder_DecodeUInt16( data + 2 );
+	*C = DaoMainCoder_DecodeUInt16( data + 4 );
 }
 void DaoBlockCoder_DecodeSubChunk114( uchar_t *data, uint_t *A, uint_t *B, uint_t *C )
 {
-	*A = DaoBlockCoder_DecodeUInt8( data + 0 );
-	*B = DaoBlockCoder_DecodeUInt8( data + 1 );
-	*C = DaoBlockCoder_DecodeUInt32( data + 2 );
+	*A = DaoMainCoder_DecodeUInt8( data + 0 );
+	*B = DaoMainCoder_DecodeUInt8( data + 1 );
+	*C = DaoMainCoder_DecodeUInt32( data + 2 );
 }
 void DaoBlockCoder_DecodeSubChunk24( uchar_t *data, uint_t *A, uint_t *B )
 {
-	*A = DaoBlockCoder_DecodeUInt16( data + 0 );
-	*B = DaoBlockCoder_DecodeUInt32( data + 2 );
+	*A = DaoMainCoder_DecodeUInt16( data + 0 );
+	*B = DaoMainCoder_DecodeUInt32( data + 2 );
 }
 
 
@@ -147,41 +296,44 @@ DaoBlockCoder* DaoBlockCoder_New( DaoMainCoder *main )
 {
 	DaoBlockCoder *self = (DaoBlockCoder*) dao_calloc(1,sizeof(DaoBlockCoder));
 	self->main = main;
-	printf( "DaoBlockCoder_New %p\n", self );
 	return self;
 }
 void DaoBlockCoder_Delete( DaoBlockCoder *self )
 {
-	printf( "DaoBlockCoder_Delete %p\n", self );
 	if( self->blocks ) DMap_Delete( self->blocks );
 	dao_free( self );
 }
 
-DaoMainCoder* DaoMainCoder_New()
+DaoMainCoder* DaoMainCoder_New( DaoVmSpace *vms )
 {
 	DaoMainCoder *self = (DaoMainCoder*) dao_calloc(1,sizeof(DaoMainCoder));
 	self->blocks = DHash_New(D_VALUE,0);
 	self->caches = DArray_New(0);
 	self->stack = DArray_New(0);
+	self->lines = DArray_New(0);
+	self->intSize = sizeof(daoint);
+	self->vmspace = vms;
 	return self;
 }
-void DaoMainCoder_Remove( DaoMainCoder *self, DaoBlockCoder *block )
+void DaoMainCoder_Remove( DaoMainCoder *self, DaoBlockCoder *block, DaoBlockCoder *parent )
 {
 	DaoBlockCoder *it = block->first;
 	while( it ){
 		DaoBlockCoder *b = it;
 		it = it->next;
-		DaoMainCoder_Remove( self, b );
+		DaoMainCoder_Remove( self, b, block );
 	}
 	if( block->prev ) block->prev->next = block->next;
 	if( block->next ) block->next->prev = block->prev;
+	if( parent && parent->first == block ) parent->first = block->next;
+	if( parent && parent->last == block ) parent->last = block->prev;
 	block->first = block->last = NULL;
 	block->prev = block->next = NULL;
 	DArray_Append( self->caches, block );
 }
 void DaoMainCoder_Reset( DaoMainCoder *self )
 {
-	if( self->top ) DaoMainCoder_Remove( self, self->top );
+	if( self->top ) DaoMainCoder_Remove( self, self->top, NULL );
 	self->top = NULL;
 	DArray_Clear( self->stack );
 	DMap_Reset( self->blocks );
@@ -196,6 +348,7 @@ void DaoMainCoder_Delete( DaoMainCoder *self )
 	}
 	DArray_Delete( self->caches );
 	DArray_Delete( self->stack );
+	DArray_Delete( self->lines );
 	DMap_Delete( self->blocks );
 	dao_free( self );
 }
@@ -232,10 +385,12 @@ int DaoMainCoder_UpdateIndex( DaoMainCoder *self, DaoBlockCoder *block )
 }
 void DaoMainCoder_FinalizeBlock( DaoMainCoder *self, DaoBlockCoder *block )
 {
-	DaoBlockCoder *consts, *types, *code;
+	DaoBlockCoder *consts, *types, *code, *cur;
 	DaoBlockCoder *pb = block->first;
 	DaoRoutine *routine;
+	DMap *vartypes;
 	DNode *it;
+	uchar_t *data;
 	int i, N;
 
 	while( pb ){
@@ -246,14 +401,79 @@ void DaoMainCoder_FinalizeBlock( DaoMainCoder *self, DaoBlockCoder *block )
 
 	routine = (DaoRoutine*) block->value;
 
-	printf( "=============================\n" );
+	/* local constants: */
 	N = DaoBlockCoder_EncodeValues2( block, & routine->routConsts->items );
 	consts = DaoBlockCoder_NewBlock( block, DAO_ASM_CONSTS );
-	DaoBlockCoder_EncodeUInt16( consts->begin, N );
+	DaoMainCoder_EncodeUInt16( consts->begin, N );
 	DaoBlockCoder_AddBlockIndexData( consts, 3, N );
 
+	/* explicit types: */
+	i = block->main->stack->size;
+	vartypes = routine->body->localVarType;
+	for(it=DMap_First(vartypes); it; it=DMap_Next(vartypes,it)){
+		DaoBlockCoder *pb = DaoBlockCoder_EncodeType( block, it->value.pType );
+		DArray_Append( block->main->stack, pb );
+	}
 	types = DaoBlockCoder_NewBlock( block, DAO_ASM_TYPES );
+	DaoMainCoder_EncodeUInt16( types->begin, vartypes->size );
+	cur = types;
+	data = types->begin + 4;
+	for(it=DMap_First(vartypes); it; it=DMap_Next(vartypes,it), ++i, data+=4){
+		DaoBlockCoder *pb = (DaoBlockCoder*) block->main->stack->items.pVoid[i];
+		if( data >= cur->begin + 8 ){
+			cur = DaoBlockCoder_NewBlock( types, DAO_ASM_DATA );
+			data = cur->begin;
+		}
+		DaoMainCoder_EncodeUInt16( data, it->key.pInt );
+		DaoBlockCoder_InsertBlockIndex( cur, data+2, pb );
+	}
+	if( cur != types ){
+		memcpy( types->end, cur->begin, 8 );
+		DaoMainCoder_Remove( types->main, cur, types );
+	}
+
+	/* code: */
 	code = DaoBlockCoder_NewBlock( block, DAO_ASM_CODE );
+	self->lines->size = 0;
+	for(i=0; i<routine->body->annotCodes->size; ++i){
+		DaoVmCodeX *vmc = routine->body->annotCodes->items.pVmc[i];
+		int count = self->lines->size;
+		int lastline = count ? self->lines->items.pInt[count-2] : -1;
+		int lastcount = count ? self->lines->items.pInt[count-1] : -1;
+		if( vmc->line != lastline ){
+			DArray_PushBack( self->lines, IntToPointer( vmc->line ) );
+			DArray_PushBack( self->lines, IntToPointer( 1 ) );
+		}else{
+			self->lines->items.pInt[count-1] += 1;
+		}
+	}
+	DaoMainCoder_EncodeUInt16( code->begin, routine->body->annotCodes->size );
+	DaoMainCoder_EncodeUInt16( code->begin + 2, self->lines->size/2 );
+	cur = code;
+	data = cur->begin + 4;
+	for(i=0; i<self->lines->size; i+=2, data+=4){
+		int line = self->lines->items.pInt[i];
+		int count = self->lines->items.pInt[i+1];
+		if( data >= cur->begin + 8 ){
+			cur = DaoBlockCoder_NewBlock( code, DAO_ASM_DATA );
+			data = cur->begin;
+		}
+		DaoMainCoder_EncodeUInt16( data, line );
+		DaoMainCoder_EncodeUInt16( data+2, count );
+	}
+
+	for(i=0; i<routine->body->annotCodes->size; ++i){
+		DaoVmCodeX *vmc = routine->body->annotCodes->items.pVmc[i];
+		cur = DaoBlockCoder_NewBlock( code, DAO_ASM_DATA );
+		DaoMainCoder_EncodeUInt16( cur->begin + 0, vmc->code );
+		DaoMainCoder_EncodeUInt16( cur->begin + 2, vmc->a );
+		DaoMainCoder_EncodeUInt16( cur->begin + 4, vmc->b );
+		DaoMainCoder_EncodeUInt16( cur->begin + 6, vmc->c );
+	}
+	if( cur != code ){
+		memcpy( code->end, cur->begin, 8 );
+		DaoMainCoder_Remove( code->main, cur, code );
+	}
 }
 void DaoMainCoder_FinalizeEncoding( DaoMainCoder *self, DaoBlockCoder *block )
 {
@@ -270,7 +490,7 @@ void DaoMainCoder_FinalizeEncoding( DaoMainCoder *self, DaoBlockCoder *block )
 				diff = block->index - pb->index;
 				if( diff == 0 ) diff = 1;
 			}
-			DaoBlockCoder_EncodeUInt16( (uchar_t*) it->key.pVoid, diff );
+			DaoMainCoder_EncodeUInt16( (uchar_t*) it->key.pVoid, diff );
 		}
 	}
 	while( pb ){
@@ -278,103 +498,33 @@ void DaoMainCoder_FinalizeEncoding( DaoMainCoder *self, DaoBlockCoder *block )
 		pb = pb->next;
 	}
 }
-void DaoMainCoder_PrintBlock( DaoMainCoder *self, DaoBlockCoder *block, int spaces );
-void DaoMainCoder_PrintSubBlocks( DaoMainCoder *self, DaoBlockCoder *block, int spaces )
+void DaoMainCoder_EncodeHeader( DaoMainCoder *self, const char *fname, DString *output )
 {
-	DaoBlockCoder *pb = block->first;
-	while( pb ){
-		DaoMainCoder_PrintBlock( self, pb, spaces );
-		pb = pb->next;
-	}
-}
-void DaoBlockCoder_PrintTag( int tag, int spaces )
-{
-	while( spaces -- ) printf( " " );
-	printf( "%s: ", dao_asm_names[tag] );
-}
-void DaoBlockCoder_PrintChars( uchar_t *chars, int count )
-{
-	int i;
-	printf( "\"" );
-	for(i=0; i<count; ++i){
-		int ch = chars[i];
-		if( isprint(ch) ){
-			printf( "%c", ch );
-		}else{
-			printf( "\\%i", ch );
-		}
-	}
-	printf( "\";\n" );
-}
-void DaoMainCoder_PrintBlock( DaoMainCoder *self, DaoBlockCoder *block, int spaces )
-{
-	uint_t i, A, B, C, D;
-	DaoBlockCoder *pb = block->first;
+	DString *path = DString_New(1);
+	char *daodir = getenv( "DAO_DIR" );
+	char *home = getenv( "HOME" );
+	uchar_t bytes[2];
 
-	DaoBlockCoder_PrintTag( block->type, spaces );
-	switch( block->type ){
-	case DAO_ASM_ROUTINE :
-		DaoBlockCoder_DecodeChunk2222( block->begin, & A, & B, & C, & D );
-		printf( "%i, %i, %i, %i;\n", A, B, C, D );
-		DaoMainCoder_PrintSubBlocks( self, block, spaces + 4 );
-		DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
-		printf( " ;\n" );
-		break;
-	case DAO_ASM_VALUE :
-		A = DaoBlockCoder_DecodeUInt16( block->begin );
-		switch( A ){
-		case DAO_STRING :
-			DaoBlockCoder_DecodeSubChunk24( block->begin + 2, & B, & C );
-			printf( "DAO_STRING, %i, %i;\n", B, C );
-			while( pb ){
-				DaoBlockCoder_PrintTag( pb->type, spaces + 4 );
-				DaoBlockCoder_PrintChars( pb->begin, 8 );
-				pb = pb->next;
-			}
-			DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
-			DaoBlockCoder_PrintChars( block->end, (C%8) ? (C%8) : 8 );
-			break;
-		default :
-			DaoMainCoder_PrintSubBlocks( self, block, spaces + 4 );
-			DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
-			printf( " ;\n" );
-			break;
-		}
-		break;
-	case DAO_ASM_EVAL :
-		DaoBlockCoder_DecodeChunk2222( block->begin, & A, & B, & C, & D );
-		printf( "%s, %i, %i, %i;\n", DaoVmCode_GetOpcodeName( A ), B, C, D );
-		while( pb ){
-			DaoBlockCoder_DecodeChunk2222( pb->begin, & A, & B, & C, & D );
-			DaoBlockCoder_PrintTag( pb->type, spaces + 4 );
-			printf( "%i, %i, %i, %i;\n", A, B, C, D );
-			pb = pb->next;
-		}
-		DaoBlockCoder_DecodeChunk2222( block->end, & A, & B, & C, & D );
-		DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
-		printf( "%i, %i, %i, %i;\n", A, B, C, D );
-		break;
-	case DAO_ASM_CONSTS :
-		DaoBlockCoder_DecodeChunk2222( block->begin, & A, & B, & C, & D );
-		printf( "%i, %i, %i, %i;\n", A, B, C, D );
-		while( pb ){
-			DaoBlockCoder_DecodeChunk2222( pb->begin, & A, & B, & C, & D );
-			DaoBlockCoder_PrintTag( pb->type, spaces + 4 );
-			printf( "%i, %i, %i, %i;\n", A, B, C, D );
-			pb = pb->next;
-		}
-		DaoBlockCoder_DecodeChunk2222( block->end, & A, & B, & C, & D );
-		DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
-		printf( "%i, %i, %i, %i;\n", A, B, C, D );
-		break;
-	default:
-		if( block->type < DAO_ASM_END ){
-			printf( ";\n" );
-			DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
-		}
-		printf( ";\n" );
-		break;
+	DString_SetMBS( path, fname );
+	if( daodir && DString_Find( path, daodir, 0 ) == 0 ){
+		DString_ReplaceMBS( path, "$(DAO_DIR)", 0, strlen(daodir) );
+	}else if( home && DString_Find( path, home, 0 ) == 0 ){
+		DString_ReplaceMBS( path, "$(HOME)", 0, strlen(home) );
 	}
+
+	DaoMainCoder_EncodeUInt16( bytes, path->size );
+
+	DString_AppendDataMBS( output, DAO_BC_SIGNATURE "\0", 9 );
+	DString_AppendChar( output, sizeof(daoint) == 4 ? '\4' : '\x8' );
+	DString_AppendDataMBS( output, "\0\0\0\0\0", 5 );
+	DString_AppendDataMBS( output, "\0\0\0\0\0", 5 );
+	DString_AppendDataMBS( output, "\0\0\0\0\0", 5 );
+	DString_AppendDataMBS( output, "\0\0\0\0\0\r\n", 7 );
+
+	DString_AppendDataMBS( output, bytes, 2 );
+	DString_AppendDataMBS( output, path->mbs, path->size );
+	DString_AppendDataMBS( output, "\0\r\n", 3 );
+	DString_Delete( path );
 }
 void DaoBlockCoder_EncodeToString( DaoBlockCoder *block, DString *output )
 {
@@ -393,14 +543,12 @@ void DaoBlockCoder_EncodeToString( DaoBlockCoder *block, DString *output )
 void DaoMainCoder_Finalize( DaoMainCoder *self )
 {
 	if( self->top == NULL ) return;
-	printf( "~~~~~~~~~~~~~~DaoMainCoder_Finalize()\n" );
 
 	DaoMainCoder_FinalizeBlock( self, self->top );
 
 	self->index = 0;
 	while( DaoMainCoder_UpdateIndex( self, self->top ) ) self->index = 0;
 	DaoMainCoder_FinalizeEncoding( self, self->top );
-	DaoMainCoder_PrintBlock( self, self->top, 0 );
 }
 void DaoMainCoder_EncodeToString( DaoMainCoder *self, DString *output )
 {
@@ -436,7 +584,9 @@ DaoBlockCoder* DaoBlockCoder_NewBlock( DaoBlockCoder *self, int type )
 
 DaoBlockCoder* DaoBlockCoder_FindBlock( DaoBlockCoder *self, DaoValue *value )
 {
-	DNode *it = DMap_Find( self->main->blocks, value );
+	DNode *it;
+	if( value == NULL ) return NULL;
+	it = DMap_Find( self->main->blocks, value );
 	if( it ) return (DaoBlockCoder*) it->value.pVoid;
 	return NULL;
 }
@@ -455,8 +605,8 @@ DaoBlockCoder* DaoBlockCoder_AddRoutineBlock( DaoBlockCoder *self, DaoRoutine *r
 DaoBlockCoder* DaoBlockCoder_AddEvalBlock( DaoBlockCoder *self, DaoValue *value, int code, int operands )
 {
 	DaoBlockCoder *block = DaoBlockCoder_AddBlock( self, value, DAO_ASM_EVAL );
-	DaoBlockCoder_EncodeUInt16( block->begin, code );
-	DaoBlockCoder_EncodeUInt16( block->begin+2, operands );
+	DaoMainCoder_EncodeUInt16( block->begin, code );
+	DaoMainCoder_EncodeUInt16( block->begin+2, operands );
 	return block;
 }
 void DaoBlockCoder_InsertBlockIndex( DaoBlockCoder *self, uchar_t *code, DaoBlockCoder *block )
@@ -464,6 +614,7 @@ void DaoBlockCoder_InsertBlockIndex( DaoBlockCoder *self, uchar_t *code, DaoBloc
 	if( self->blocks == NULL ) self->blocks = DMap_New(0,0);
 	DMap_Insert( self->blocks, code, block );
 }
+
 
 DaoBlockCoder* DaoBlockCoder_EncodeString( DaoBlockCoder *self, DString *string )
 {
@@ -476,9 +627,9 @@ DaoBlockCoder* DaoBlockCoder_EncodeString( DaoBlockCoder *self, DString *string 
 	block = DaoBlockCoder_FindBlock( self, value );
 	if( block ) return block;
 	block = DaoBlockCoder_AddBlock( self, value, DAO_ASM_VALUE );
-	DaoBlockCoder_EncodeUInt16( block->begin, DAO_STRING );
-	DaoBlockCoder_EncodeUInt16( block->begin+2, string->mbs == NULL );
-	DaoBlockCoder_EncodeUInt32( block->begin+4, string->size );
+	DaoMainCoder_EncodeUInt16( block->begin, DAO_STRING );
+	DaoMainCoder_EncodeUInt16( block->begin+2, string->mbs == NULL );
+	DaoMainCoder_EncodeUInt32( block->begin+4, string->size );
 	if( string->mbs ){
 		for(i=0; (i+8)<size; i+=8){
 			DaoBlockCoder *dataBlock = DaoBlockCoder_NewBlock( block, DAO_ASM_DATA );
@@ -488,11 +639,11 @@ DaoBlockCoder* DaoBlockCoder_EncodeString( DaoBlockCoder *self, DString *string 
 	}else{
 		for(i=0; (i+2)<size; i+=2){
 			DaoBlockCoder *dataBlock = DaoBlockCoder_NewBlock( block, DAO_ASM_DATA );
-			DaoBlockCoder_EncodeUInt32( dataBlock->begin, string->wcs[i] );
-			DaoBlockCoder_EncodeUInt32( dataBlock->begin+4, string->wcs[i+1] );
+			DaoMainCoder_EncodeUInt32( dataBlock->begin, string->wcs[i] );
+			DaoMainCoder_EncodeUInt32( dataBlock->begin+4, string->wcs[i+1] );
 		}
-		if( i < size ) DaoBlockCoder_EncodeUInt32( block->end, string->wcs[i] );
-		if( (i+1) < size ) DaoBlockCoder_EncodeUInt32( block->end+4, string->wcs[i] );
+		if( i < size ) DaoMainCoder_EncodeUInt32( block->end, string->wcs[i] );
+		if( (i+1) < size ) DaoMainCoder_EncodeUInt32( block->end+4, string->wcs[i] );
 	}
 	return block;
 }
@@ -512,30 +663,24 @@ int DaoBlockCoder_EncodeValues2( DaoBlockCoder *self, DArray *values )
 }
 void DaoBlockCoder_AddBlockIndexData( DaoBlockCoder *self, int head, int size )
 {
+	DaoBlockCoder *dataBlock = self;
+	uchar_t *data = dataBlock->begin + 2*(4-head);
 	int i, j, offset;
 	if( size > self->main->stack->size ) size = self->main->stack->size;
 	offset = self->main->stack->size - size;
-	if( head ){
-		for(i=0; i<head; ++i){
-			DaoBlockCoder *block = (DaoBlockCoder*) self->main->stack->items.pVoid[i+offset];
-			printf( "--------- %p\n", block );
-			DaoBlockCoder_InsertBlockIndex( self, self->begin + 2*(4-head+i), block );
-		}
-		offset += head;
-		size -= head;
-	}
-	for(i=0; (i+4)<size; i+=4){
-		DaoBlockCoder *dataBlock = DaoBlockCoder_NewBlock( self, DAO_ASM_DATA );
-		for(j=i; j<(i+4); ++j){
-			DaoBlockCoder *block = (DaoBlockCoder*) self->main->stack->items.pVoid[j+offset];
-			DaoBlockCoder_InsertBlockIndex( dataBlock, dataBlock->begin + 2*(j-i), block );
-		}
-	}
-	for(j=0; i<size; ++i, ++j){
+	for(i=0; i<size; ++i, data+=2){
 		DaoBlockCoder *block = (DaoBlockCoder*) self->main->stack->items.pVoid[i+offset];
-		DaoBlockCoder_InsertBlockIndex( self, self->end + 2*j, block );
+		if( data >= dataBlock->begin + 8 ){
+			dataBlock = DaoBlockCoder_NewBlock( self, DAO_ASM_DATA );
+			data = dataBlock->begin;
+		}
+		DaoBlockCoder_InsertBlockIndex( dataBlock, data, block );
 	}
-	DArray_Erase( self->main->stack, offset-head, size+head );
+	if( dataBlock != self ){
+		memcpy( self->end, dataBlock->begin, 8 );
+		DaoMainCoder_Remove( self->main, dataBlock, self );
+	}
+	DArray_Erase( self->main->stack, offset, size );
 }
 DaoBlockCoder* DaoBlockCoder_EncodeType( DaoBlockCoder *self, DaoType *type )
 {
@@ -562,7 +707,7 @@ DaoBlockCoder* DaoBlockCoder_EncodeValue( DaoBlockCoder *self, DaoValue *value )
 	case DAO_INTEGER : return DaoBlockCoder_EncodeInteger( self, value->xInteger.value );
 	case DAO_FLOAT   : return DaoBlockCoder_EncodeFloat( self, value->xFloat.value );
 	case DAO_DOUBLE  : return DaoBlockCoder_EncodeDouble( self, value->xDouble.value );
-	case DAO_COMPLEX : return DaoBlockCoder_EncodeComplex( self, value->xComplex.value );
+	case DAO_COMPLEX : return DaoBlockCoder_EncodeComplex( self, (DaoComplex*) value );
 	case DAO_STRING : return DaoBlockCoder_EncodeString( self, value->xString.data );
 	case DAO_LIST  : return DaoBlockCoder_EncodeList( self, (DaoList*) value );
 	//case DAO_MAP   : return DaoBlockCoder_EncodeMap( self, (DaoMap*) value );
@@ -587,17 +732,58 @@ DaoBlockCoder* DaoBlockCoder_EncodeSeekStmt( DaoBlockCoder *self, DaoBlockCoder 
 	return newBlock;
 }
 
-DaoBlockCoder* DaoBlockCoder_EncodeInteger( DaoBlockCoder *self, daoint value )
+DaoBlockCoder* DaoBlockCoder_EncodeInteger( DaoBlockCoder *self, daoint val )
 {
+	DaoBlockCoder *block;
+	DaoInteger tmp = {DAO_INTEGER,0,0,0,0,0.0};
+	DaoValue *value = (DaoValue*) & tmp;
+
+	value->xInteger.value = val;
+	block = DaoBlockCoder_FindBlock( self, value );
+	if( block ) return block;
+	block = DaoBlockCoder_AddBlock( self, value, DAO_ASM_VALUE );
+	DaoMainCoder_EncodeUInt16( block->begin, DAO_INTEGER );
+	DaoMainCoder_EncodeDaoInt( block->end, val );
+	return block;
 }
-DaoBlockCoder* DaoBlockCoder_EncodeFloat( DaoBlockCoder *self, float value )
+DaoBlockCoder* DaoBlockCoder_EncodeFloat( DaoBlockCoder *self, float val )
 {
+	DaoBlockCoder *block;
+	DaoFloat tmp = {DAO_FLOAT,0,0,0,0,0.0};
+	DaoValue *value = (DaoValue*) & tmp;
+
+	value->xFloat.value = val;
+	block = DaoBlockCoder_FindBlock( self, value );
+	if( block ) return block;
+	block = DaoBlockCoder_AddBlock( self, value, DAO_ASM_VALUE );
+	DaoMainCoder_EncodeUInt16( block->begin, DAO_FLOAT );
+	DaoMainCoder_EncodeFloat( block->end, val );
+	return block;
 }
-DaoBlockCoder* DaoBlockCoder_EncodeDouble( DaoBlockCoder *self, double value )
+DaoBlockCoder* DaoBlockCoder_EncodeDouble( DaoBlockCoder *self, double val )
 {
+	DaoBlockCoder *block;
+	DaoDouble tmp = {DAO_DOUBLE,0,0,0,0,0.0};
+	DaoValue *value = (DaoValue*) & tmp;
+
+	value->xDouble.value = val;
+	block = DaoBlockCoder_FindBlock( self, value );
+	if( block ) return block;
+	block = DaoBlockCoder_AddBlock( self, value, DAO_ASM_VALUE );
+	DaoMainCoder_EncodeUInt16( block->begin, DAO_DOUBLE );
+	DaoMainCoder_EncodeDouble( block->end, val );
+	return block;
 }
-DaoBlockCoder* DaoBlockCoder_EncodeComplex( DaoBlockCoder *self, complex16 value )
+DaoBlockCoder* DaoBlockCoder_EncodeComplex( DaoBlockCoder *self, DaoComplex *value )
 {
+	DaoBlockCoder *block2, *block = DaoBlockCoder_FindBlock( self, (DaoValue*) value );
+	if( block ) return block;
+	block = DaoBlockCoder_AddBlock( self, value, DAO_ASM_VALUE );
+	block2 = DaoBlockCoder_AddBlock( block, value, DAO_ASM_VALUE );
+	DaoMainCoder_EncodeUInt16( block->begin, DAO_COMPLEX );
+	DaoMainCoder_EncodeDouble( block2->begin, value->value.real );
+	DaoMainCoder_EncodeDouble( block->end, value->value.imag );
+	return block;
 }
 DaoBlockCoder* DaoBlockCoder_EncodeLong( DaoBlockCoder *self, DLong *value )
 {
@@ -621,12 +807,166 @@ DaoBlockCoder* DaoBlockCoder_EncodeList( DaoBlockCoder *self, DaoList *value )
 	typeBlock = DaoBlockCoder_EncodeString( self, value->ctype );
 	newBlock = DaoBlockCoder_AddBlock( self, value, DAO_ASM_VALUE );
 
-	DaoBlockCoder_EncodeUInt16( newBlock->begin, DAO_LIST );
-	DaoBlockCoder_EncodeUInt32( newBlock->begin+4, value->items.size );
+	DaoMainCoder_EncodeUInt16( newBlock->begin, DAO_LIST );
+	DaoMainCoder_EncodeUInt32( newBlock->begin+4, value->items.size );
 	DaoBlockCoder_InsertBlockIndex( newBlock, newBlock->begin+2, typeBlock );
 	DaoBlockCoder_AddBlockIndexData( newBlock, 0, size );
 	return newBlock;
 }
+
+
+
+void DaoMainCoder_PrintBlock( DaoMainCoder *self, DaoBlockCoder *block, int spaces );
+void DaoMainCoder_PrintSubBlocks( DaoMainCoder *self, DaoBlockCoder *block, int spaces )
+{
+	DaoBlockCoder *pb = block->first;
+	while( pb ){
+		DaoMainCoder_PrintBlock( self, pb, spaces );
+		pb = pb->next;
+	}
+}
+void DaoBlockCoder_PrintTag( int tag, int spaces )
+{
+	while( spaces -- ) printf( " " );
+	printf( "%s: ", dao_asm_names[tag] );
+}
+void DaoBlockCoder_PrintChars( uchar_t *chars, int count, int wcs )
+{
+	int i;
+	if( wcs ){
+		wchar_t ch1 = DaoMainCoder_DecodeUInt32( chars );
+		wchar_t ch2 = DaoMainCoder_DecodeUInt32( chars + 4 );
+		printf( "\"" );
+		if( count > 0 ) printf( iswprint( ch1 ) ? "%lc" : "\\%i", ch1 );
+		if( count > 1 ) printf( iswprint( ch2 ) ? "%lc" : "\\%i", ch2 );
+		printf( "\";\n" );
+		return;
+	}
+	printf( "\'" );
+	for(i=0; i<count; ++i){
+		int ch = chars[i];
+		if( isprint(ch) ){
+			printf( "%c", ch );
+		}else{
+			printf( "\\%i", ch );
+		}
+	}
+	printf( "\';\n" );
+}
+void DaoMainCoder_PrintBlock( DaoMainCoder *self, DaoBlockCoder *block, int spaces )
+{
+	int lines;
+	uint_t i, A, B, C, D;
+	DaoBlockCoder *pb = block->first;
+
+	DaoBlockCoder_PrintTag( block->type, spaces );
+	switch( block->type ){
+	case DAO_ASM_ROUTINE :
+		DaoMainCoder_DecodeChunk2222( block->begin, & A, & B, & C, & D );
+		printf( "%i, %i, %i, %i;\n", A, B, C, D );
+		DaoMainCoder_PrintSubBlocks( self, block, spaces + 4 );
+		DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
+		printf( " ;\n" );
+		break;
+	case DAO_ASM_VALUE :
+		A = DaoMainCoder_DecodeUInt16( block->begin );
+		switch( A ){
+		case DAO_INTEGER :
+			printf( "DAO_INTEGER;\n", B, C );
+			DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
+			printf( " %" DAO_INT_FORMAT " ;\n", DaoMainCoder_DecodeDaoInt( self, block->end ) );
+			break;
+		case DAO_FLOAT :
+			printf( "DAO_FLOAT;\n", B, C );
+			DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
+			printf( " %g ;\n", DaoMainCoder_DecodeDouble( self, block->end ) );
+			break;
+		case DAO_DOUBLE :
+			printf( "DAO_DOUBLE;\n", B, C );
+			DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
+			printf( " %g ;\n", DaoMainCoder_DecodeDouble( self, block->end ) );
+			break;
+		case DAO_STRING :
+			DaoBlockCoder_DecodeSubChunk24( block->begin + 2, & B, & C );
+			printf( "DAO_STRING, %i, %i;\n", B, C );
+			D = B ? 2 : 8;
+			while( pb ){
+				DaoBlockCoder_PrintTag( pb->type, spaces + 4 );
+				DaoBlockCoder_PrintChars( pb->begin, D, B );
+				pb = pb->next;
+			}
+			DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
+			DaoBlockCoder_PrintChars( block->end, (C%D) ? (C%D) : D, B );
+			break;
+		default :
+			DaoMainCoder_PrintSubBlocks( self, block, spaces + 4 );
+			DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
+			printf( " ;\n" );
+			break;
+		}
+		break;
+	case DAO_ASM_EVAL :
+		DaoMainCoder_DecodeChunk2222( block->begin, & A, & B, & C, & D );
+		printf( "%s, %i, %i, %i;\n", DaoVmCode_GetOpcodeName( A ), B, C, D );
+		while( pb ){
+			DaoMainCoder_DecodeChunk2222( pb->begin, & A, & B, & C, & D );
+			DaoBlockCoder_PrintTag( pb->type, spaces + 4 );
+			printf( "%i, %i, %i, %i;\n", A, B, C, D );
+			pb = pb->next;
+		}
+		DaoMainCoder_DecodeChunk2222( block->end, & A, & B, & C, & D );
+		DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
+		printf( "%i, %i, %i, %i;\n", A, B, C, D );
+		break;
+	case DAO_ASM_TYPE :
+	case DAO_ASM_CONSTS :
+	case DAO_ASM_TYPES :
+		DaoMainCoder_DecodeChunk2222( block->begin, & A, & B, & C, & D );
+		printf( "%5i, %5i, %5i, %5i;\n", A, B, C, D );
+		while( pb ){
+			DaoMainCoder_DecodeChunk2222( pb->begin, & A, & B, & C, & D );
+			DaoBlockCoder_PrintTag( pb->type, spaces + 4 );
+			printf( "%5i, %5i, %5i, %5i;\n", A, B, C, D );
+			pb = pb->next;
+		}
+		DaoMainCoder_DecodeChunk2222( block->end, & A, & B, & C, & D );
+		DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
+		printf( "%5i, %5i, %5i, %5i;\n", A, B, C, D );
+		break;
+	case DAO_ASM_CODE :
+		DaoMainCoder_DecodeChunk2222( block->begin, & A, & B, & C, & D );
+		printf( "%5i, %5i, %5i, %5i;\n", A, B, C, D );
+		lines = B - 1;
+		while( pb ){
+			DaoMainCoder_DecodeChunk2222( pb->begin, & A, & B, & C, & D );
+			DaoBlockCoder_PrintTag( pb->type, spaces + 4 );
+			if( lines > 0 ){
+				printf( "%5i, %5i, %5i, %5i;\n", A, B, C, D );
+			}else{
+				printf( "   %-11s, %5i, %5i, %5i;\n", DaoVmCode_GetOpcodeName( A ), B, C, D );
+			}
+			pb = pb->next;
+			lines -= 2;
+		}
+		DaoMainCoder_DecodeChunk2222( block->end, & A, & B, & C, & D );
+		DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
+		printf( "        %-11s, %5i, %5i, %5i;\n", DaoVmCode_GetOpcodeName( A ), B, C, D );
+		break;
+	default:
+		if( block->type < DAO_ASM_END ){
+			printf( ";\n" );
+			DaoBlockCoder_PrintTag( DAO_ASM_END, spaces );
+		}
+		printf( ";\n" );
+		break;
+	}
+}
+void DaoMainCoder_Disassemble( DaoMainCoder *self )
+{
+	if( self->top == NULL ) return;
+	DaoMainCoder_PrintBlock( self, self->top, 0 );
+}
+
 
 
 enum DaoRoutineSubTypes

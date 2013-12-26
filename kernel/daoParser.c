@@ -5359,11 +5359,13 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		if( self->blockCoder && (varReg & (DAO_CLASS_CONSTANT|DAO_GLOBAL_CONSTANT)) ){
 			int opcode = (varReg & DAO_CLASS_CONSTANT) ? DVM_GETCK : DVM_GETCG;
 			DaoBlockCoder *coder = self->blockCoder;
-			if( DaoBlockCoder_FindBlock( coder, value ) == NULL ){
-				DaoBlockCoder *name = DaoBlockCoder_EncodeString( coder, str );
-				DaoBlockCoder *eval = DaoBlockCoder_AddEvalBlock( coder, value, opcode, 1 );
-				DaoBlockCoder_InsertBlockIndex( eval, eval->begin+4, name );
-				printf( ">>>>>>>>>>>> %p %p\n", value, eval );
+			if( value && value->type >= DAO_ENUM ){
+				if( DaoBlockCoder_FindBlock( coder, value ) == NULL ){
+					DaoBlockCoder *name = DaoBlockCoder_EncodeString( coder, str );
+					DaoBlockCoder *eval = DaoBlockCoder_AddEvalBlock( coder, value, opcode, 1 );
+					DaoBlockCoder_InsertBlockIndex( eval, eval->begin+4, name );
+					printf( ">>>>>>>>>>>> %p %p\n", value, eval );
+				}
 			}
 		}
 		/*
@@ -6958,7 +6960,7 @@ DaoProcess* DaoParser_ReserveFoldingOperands( DaoParser *self, int N )
 static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nvalues )
 {
 	DaoVmCode *vmc = proc->activeCode;
-	DaoValue **operands = proc->activeValues + vmc->a;
+	DaoValue **operands = proc->activeValues + 1;
 	DaoBlockCoder *coder = self->blockCoder;
 	DaoStream *stream;
 	DaoValue *value;

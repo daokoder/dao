@@ -50,7 +50,13 @@
 // Byte       # Line Feed (LF), 0x0A;
 // Byte       # format version, 0x0 for the official one;
 // Byte       # size of integer type, default 0x4;
-// Byte[22]   # 22 reserved bytes;
+// Byte[20]   # 20 reserved bytes;
+// Byte       # Carriage Return (CR), 0x0D;
+// Byte       # Line Feed (LF), 0x0A;
+// Byte[2]    # length of the source path;
+// Byte[]     # source path (null-terminated);
+// Byte       # Carriage Return (CR), 0x0D;
+// Byte       # Line Feed (LF), 0x0A;
 //
 //##########################################################################
 //
@@ -205,7 +211,7 @@
 //
 //
 // code:
-// ASM_CODE(1B): Const/Normal(2B), Line-Num-Count(2B), LineNum(2B), Count(2B);
+// ASM_CODE(1B): Zeros(2B), Line-Num-Count(2B), LineNum(2B), Count(2B);
 // ASM_DATA(1B): LineNum(2B), Count(2B), LineNum(2B), Count(2B);
 // ASM_DATA(1B): Opcode(2B), A(2B), B(2B), C(2B);
 // ASM_END(1B): Opcode(2B), A(2B), B(2B), C(2B);
@@ -454,7 +460,11 @@ struct DaoBlockCoder
 
 struct DaoMainCoder
 {
-	uint_t  index;
+	DaoVmSpace  *vmspace;
+
+	uint_t   index;
+	uchar_t  intSize;
+	uchar_t  error;
 
 	DaoBlockCoder  *top;
 
@@ -462,12 +472,13 @@ struct DaoMainCoder
 
 	DArray  *stack;  /* list<DaoBlockCoder*> */
 	DArray  *caches; /* list<DaoBlockCoder*> */
+	DArray  *lines;
 };
 
 DaoBlockCoder* DaoBlockCoder_New( DaoMainCoder *main );
 void DaoBlockCoder_Delete( DaoBlockCoder *self );
 
-DaoMainCoder* DaoMainCoder_New();
+DaoMainCoder* DaoMainCoder_New( DaoVmSpace *vms );
 void DaoMainCoder_Delete( DaoMainCoder *self );
 
 DaoBlockCoder* DaoMainCoder_Init( DaoMainCoder *self );
@@ -490,7 +501,7 @@ DaoBlockCoder* DaoBlockCoder_EncodeSeekStmt( DaoBlockCoder *self, DaoBlockCoder 
 DaoBlockCoder* DaoBlockCoder_EncodeInteger( DaoBlockCoder *self, daoint value );
 DaoBlockCoder* DaoBlockCoder_EncodeFloat( DaoBlockCoder *self, float value );
 DaoBlockCoder* DaoBlockCoder_EncodeDouble( DaoBlockCoder *self, double value );
-DaoBlockCoder* DaoBlockCoder_EncodeComplex( DaoBlockCoder *self, complex16 value );
+DaoBlockCoder* DaoBlockCoder_EncodeComplex( DaoBlockCoder *self, DaoComplex *value );
 DaoBlockCoder* DaoBlockCoder_EncodeLong( DaoBlockCoder *self, DLong *value );
 DaoBlockCoder* DaoBlockCoder_EncodeEnum( DaoBlockCoder *self, DaoEnum *value );
 
@@ -503,7 +514,9 @@ void DaoBlockCoder_EncodeValues( DaoBlockCoder *self, DaoValue **values, int cou
 int DaoBlockCoder_EncodeValues2( DaoBlockCoder *self, DArray *values );
 void DaoBlockCoder_AddBlockIndexData( DaoBlockCoder *self, int head, int size );
 
+void DaoMainCoder_EncodeHeader( DaoMainCoder *self, const char *fname, DString *output );
 void DaoMainCoder_EncodeToString( DaoMainCoder *self, DString *output );
+void DaoMainCoder_Disassemble( DaoMainCoder *self );
 
 
 typedef struct DaoByteEncoder  DaoByteEncoder;

@@ -355,7 +355,7 @@ DaoMainCoder* DaoVmSpace_AcquireMainCoder( DaoVmSpace *self )
 	DaoMainCoder *mainCoder = NULL;
 
 #ifdef SHARE_NO_PARSER
-	mainCoder = DaoMainCoder_New();
+	mainCoder = DaoMainCoder_New( self );
 	//mainCoder->vmSpace = self;
 	return mainCoder;
 #endif
@@ -367,7 +367,7 @@ DaoMainCoder* DaoVmSpace_AcquireMainCoder( DaoVmSpace *self )
 		mainCoder = (DaoMainCoder*) DArray_Back( self->maincoders );
 		DArray_PopBack( self->maincoders );
 	}else{
-		mainCoder = DaoMainCoder_New();
+		mainCoder = DaoMainCoder_New( self );
 		//mainCoder->vmSpace = self;
 		DMap_Insert( self->allMaincoders, mainCoder, 0 );
 	}
@@ -1463,12 +1463,16 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 
 		if( res && (self->options & DAO_OPTION_COMP_BC) ){
 			DString *output = DString_New(1);
+			DaoMainCoder_EncodeHeader( parser->mainCoder, ns->name->mbs, output );
 			DaoMainCoder_EncodeToString( parser->mainCoder, output );
 
 			FILE *fout = fopen( "bytecode/test.dac", "w+" );
 			DaoFile_WriteString( fout, output );
 			DString_Delete( output );
 			//DaoVmSpace_SaveByteCodes( self, ns );
+			if( self->options & DAO_OPTION_LIST_BC ){
+				DaoMainCoder_Disassemble( parser->mainCoder );
+			}
 		}
 		if( parser->mainCoder ) DaoVmSpace_ReleaseMainCoder( self, parser->mainCoder );
 		DaoVmSpace_ReleaseParser( self, parser );
