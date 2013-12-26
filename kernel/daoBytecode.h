@@ -193,7 +193,7 @@
 //
 //
 // evaluation:
-// ASM_EVAL(1B): Opcode(2B), OperandCount(2B), Value-Index(2B), Value-Index(2B);
+// ASM_EVAL(1B): Opcode(2B), OpB(2B), Type-Index(2B), Zeros(2B);
 //   ASM_DATA(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 // ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //
@@ -444,11 +444,14 @@ struct DaoByteBlock
 	uchar_t  begin[8];
 	uchar_t  end[8];
 
-	DMap  *blocks;
+	DMap  *wordToBlocks;
+	DMap  *valueToBlocks;
 
 	DaoValue  *value;
 
 	DaoByteCoder   *coder;
+
+	DaoByteBlock  *parent;
 
 	/* Children blocks: */
 	DaoByteBlock  *first;
@@ -472,13 +475,17 @@ struct DaoByteCoder
 
 	DString  *path;
 
-	DMap  *blocks; /* hash<DaoValue*,DaoByteBlock*> */
+	DMap  *valueToBlocks; /* hash<DaoValue*,DaoByteBlock*> */
 
-	DArray  *stack;  /* list<DaoByteBlock*> */
-	DArray  *caches; /* list<DaoByteBlock*> */
-	DArray  *lines;
+	DArray  *stack;    /* list<DaoByteBlock*> */
+	DArray  *caches;   /* list<DaoByteBlock*> */
+	DArray  *lines;    /* list<daoint> */
+	DArray  *iblocks;  /* list<DaoByteBlock*> */
+	DArray  *itypes;   /* list<DaoType*> */
+	DArray  *indices;   /* list<DaoType*> */
 
-	DaoVmSpace  *vmspace;
+	DaoNamespace  *nspace;
+	DaoVmSpace    *vmspace;
 };
 
 DaoByteBlock* DaoByteBlock_New( DaoByteCoder *coder );
@@ -494,7 +501,7 @@ DaoByteBlock* DaoByteBlock_NewBlock( DaoByteBlock *self, int type );
 DaoByteBlock* DaoByteBlock_FindBlock( DaoByteBlock *self, DaoValue *value );
 DaoByteBlock* DaoByteBlock_AddBlock( DaoByteBlock *self, DaoValue *value, int type );
 DaoByteBlock* DaoByteBlock_AddRoutineBlock( DaoByteBlock *self, DaoRoutine *routine );
-DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, int code, int operands );
+DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, int code, int opb, DaoType *type );
 
 void DaoByteBlock_InsertBlockIndex( DaoByteBlock *self, uchar_t *code, DaoByteBlock *block );
 

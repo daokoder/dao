@@ -87,7 +87,7 @@ static DaoEnode DaoParser_ParseExpressionList2( DaoParser *self, int, DaoInode*,
 static DaoEnode DaoParser_ParseExpressionLists( DaoParser *self, int, int, int*, DArray* );
 static DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int lb, int rb );
 
-static DaoProcess* DaoParser_ReserveFoldingOperands( DaoParser *self, int N );
+DaoProcess* DaoNamespace_ReserveFoldingOperands( DaoNamespace *self, int N );
 static int DaoParser_MakeEnumConst( DaoParser *self, DaoEnode *enode, DArray *cid, int regcount );
 static int DaoParser_MakeArithConst( DaoParser *self, ushort_t, DaoValue*, DaoValue*, int*, DaoInode*, int );
 static int DaoParser_ExpClosure( DaoParser *self, int start );
@@ -1938,6 +1938,7 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *next, DA
 		DArray_Erase( types, count, count2 );
 		if( type == NULL ) goto InvalidType;
 	}
+	if( self->byteBlock ) DaoByteBlock_EncodeType( self->byteBlock, type );
 	return type;
 InvalidType:
 	return NULL;
@@ -5352,19 +5353,19 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 	   printf("name=%s; %i\n", tok, varReg);
 	 */
 	if( varReg >= 0 ){
+		int st = LOOKUP_ST( varReg );
 		if( LOOKUP_ISCST( varReg ) ){
 			*cst = varReg;
 			value = DaoParser_GetVariable( self, varReg );
 		}
-		if( self->byteBlock && (varReg & (DAO_CLASS_CONSTANT|DAO_GLOBAL_CONSTANT)) ){
-			int opcode = (varReg & DAO_CLASS_CONSTANT) ? DVM_GETCK : DVM_GETCG;
-			DaoByteBlock *coder = self->byteBlock;
+		if( self->byteBlock && (st == DAO_CLASS_CONSTANT || st == DAO_GLOBAL_CONSTANT) ){
+			int opcode = (st == DAO_CLASS_CONSTANT) ? DVM_GETCK : DVM_GETCG;
+			DaoByteBlock *eval, *coder = self->byteBlock;
 			if( value && value->type >= DAO_ENUM ){
 				if( DaoByteBlock_FindBlock( coder, value ) == NULL ){
 					DaoByteBlock *name = DaoByteBlock_EncodeString( coder, str );
-					DaoByteBlock *eval = DaoByteBlock_AddEvalBlock( coder, value, opcode, 1 );
-					DaoByteBlock_InsertBlockIndex( eval, eval->begin+4, name );
-					printf( ">>>>>>>>>>>> %p %p\n", value, eval );
+					eval = DaoByteBlock_AddEvalBlock( coder, value, opcode, 1, NULL );
+					DaoByteBlock_InsertBlockIndex( eval, eval->end, name );
 				}
 			}
 		}
@@ -6012,7 +6013,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 			DaoValue *value;
 
 			vmc.a = tki - DKEY_RAND;
-			proc = DaoParser_ReserveFoldingOperands( self, 2 );
+			proc = DaoNamespace_ReserveFoldingOperands( self->nameSpace, 2 );
 			DaoValue_Copy( DaoParser_GetVariable( self, cst ), & proc->activeValues[1] );
 			proc->activeCode = & vmc;
 			value = DaoParser_EvalConst( self, proc, 2 );
@@ -6939,29 +6940,28 @@ Finalize:
 	return result;
 }
 
-DaoProcess* DaoParser_ReserveFoldingOperands( DaoParser *self, int N )
+DaoProcess* DaoNamespace_ReserveFoldingOperands( DaoNamespace *self, int N )
 {
-	DaoNamespace *ns = self->nameSpace;
 	DaoRoutine *rout;
 	DaoProcess *proc;
 
-	DaoNamespace_InitConstEvalData( ns );
-	proc = ns->constEvalProcess;
-	rout = ns->constEvalRoutine;
+	DaoNamespace_InitConstEvalData( self );
+	proc = self->constEvalProcess;
+	rout = self->constEvalRoutine;
 	if( rout->body->regType->size < N ) DArray_Resize( rout->body->regType, N, NULL );
 	DaoProcess_PushFrame( proc, N );
 	DaoProcess_PopFrame( proc );
-	proc->activeRoutine = ns->constEvalRoutine;
+	proc->activeRoutine = self->constEvalRoutine;
 	proc->activeValues = proc->stackValues;
 	proc->activeTypes = rout->body->regType->items.pType;
-	proc->activeNamespace = ns;
+	proc->activeNamespace = self;
 	return proc;
 }
 static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nvalues )
 {
 	DaoVmCode *vmc = proc->activeCode;
 	DaoValue **operands = proc->activeValues + 1;
-	DaoByteBlock *coder = self->byteBlock;
+	DaoByteBlock *eval, *coder = self->byteBlock;
 	DaoStream *stream;
 	DaoValue *value;
 	int i, j, count, encode = 0;
@@ -6985,12 +6985,16 @@ static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nva
 		// Encode the operands before doing constant folding, because they might
 		// be changed by the evaluation.
 		*/
-		if( encode ) DaoByteBlock_EncodeValues( coder, operands, nvalues );
+		if( encode ){
+			DaoByteBlock_EncodeValues( coder, operands, nvalues );
+			DaoByteBlock_EncodeType( coder, proc->activeTypes[0] );
+		}
 	}
 	value = DaoProcess_MakeConst( proc );
 	if( encode ){
-		DaoByteBlock *eval = DaoByteBlock_AddEvalBlock( coder, value, vmc->code, nvalues );
-		DaoByteBlock_AddBlockIndexData( eval, 2, nvalues );
+		int opb = vmc->code == DVM_GETF ? 2 : vmc->b;
+		eval = DaoByteBlock_AddEvalBlock( coder, value, vmc->code, opb, proc->activeTypes[0] );
+		DaoByteBlock_AddBlockIndexData( eval, 0, nvalues );
 	}
 	GC_DecRC( proc->activeRoutine->routHost );
 	proc->activeRoutine->routHost = NULL;
@@ -7022,7 +7026,7 @@ int DaoParser_MakeEnumConst( DaoParser *self, DaoEnode *enode, DArray *cid, int 
 
 	vmcValue.code = self->vmcLast->code;
 	vmcValue.b = self->vmcLast->b;
-	proc = DaoParser_ReserveFoldingOperands( self, N+1 );
+	proc = DaoNamespace_ReserveFoldingOperands( self->nameSpace, N+1 );
 	/* printf( "code = %s, %i\n", DaoVmCode_GetOpcodeName( code ), N ); */
 	/* Prepare registers for the instruction. */
 	for( i=0; i<N; i++ ){
@@ -7057,7 +7061,7 @@ int DaoParser_MakeArithConst( DaoParser *self, ushort_t code, DaoValue *a, DaoVa
 
 	*cst = 0;
 	vmc.code = code;
-	proc = DaoParser_ReserveFoldingOperands( self, 3 );
+	proc = DaoNamespace_ReserveFoldingOperands( self->nameSpace, 3 );
 	if( code == DVM_NAMEVA ) vmc.a = DaoRoutine_AddConstant( proc->activeRoutine, a );
 	if( code == DVM_GETF ) vmc.b = DaoRoutine_AddConstant( proc->activeRoutine, b );
 	DaoValue_Copy( a, & proc->activeValues[1] );

@@ -1463,8 +1463,8 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	if( self->mainSource->mbs[0] == DAO_BC_SIGNATURE[0] ){
 		DaoByteCoder *byteCoder = DaoVmSpace_AcquireByteCoder( self );
 		res = DaoByteCoder_Decode( byteCoder, self->mainSource );
-		res = res && DaoByteCoder_Build( byteCoder, ns );
 		if( self->options & DAO_OPTION_LIST_BC ) DaoByteCoder_Disassemble( byteCoder );
+		res = res && DaoByteCoder_Build( byteCoder, ns );
 		DaoVmSpace_ReleaseByteCoder( self, byteCoder );
 	}else{
 		DaoParser *parser = DaoVmSpace_AcquireParser( self );
@@ -1675,8 +1675,8 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	if( source->mbs[0] == DAO_BC_SIGNATURE[0] ){
 		DaoByteCoder *byteCoder = DaoVmSpace_AcquireByteCoder( self );
 		int bl = DaoByteCoder_Decode( byteCoder, self->mainSource );
-		bl = bl && DaoByteCoder_Build( byteCoder, ns );
 		if( self->options & DAO_OPTION_LIST_BC ) DaoByteCoder_Disassemble( byteCoder );
+		bl = bl && DaoByteCoder_Build( byteCoder, ns );
 		DaoVmSpace_ReleaseByteCoder( self, byteCoder );
 		if( bl == 0 ) goto LoadingFailed;
 	}else{
