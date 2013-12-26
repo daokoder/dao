@@ -80,13 +80,13 @@ struct DaoVmSpace
 
 	DMap    *allProcesses;
 	DMap    *allParsers;
-	DMap    *allMaincoders;
+	DMap    *allByteCoders;
 	DMap    *allInferencers;
 	DMap    *allOptimizers;
 
 	DArray  *processes;
 	DArray  *parsers;
-	DArray  *maincoders;
+	DArray  *byteCoders;
 	DArray  *inferencers;
 	DArray  *optimizers;
 
@@ -164,11 +164,11 @@ DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
 DAO_DLL DaoTypeBase* DaoVmSpace_GetTyper( short type );
 
 DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self );
-DaoMainCoder* DaoVmSpace_AcquireMainCoder( DaoVmSpace *self );
+DaoByteCoder* DaoVmSpace_AcquireByteCoder( DaoVmSpace *self );
 DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self );
 DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self );
 void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser );
-void DaoVmSpace_ReleaseMainCoder( DaoVmSpace *self, DaoMainCoder *mainCoder );
+void DaoVmSpace_ReleaseByteCoder( DaoVmSpace *self, DaoByteCoder *byteCoder );
 void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *inferencer );
 void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *optimizer );
 

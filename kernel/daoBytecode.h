@@ -211,7 +211,7 @@
 //
 //
 // code:
-// ASM_CODE(1B): Zeros(2B), Line-Num-Count(2B), LineNum(2B), Count(2B);
+// ASM_CODE(1B): InstructionCount(2B), Line-Num-Count(2B), LineNum(2B), Count(2B);
 // ASM_DATA(1B): LineNum(2B), Count(2B), LineNum(2B), Count(2B);
 // ASM_DATA(1B): Opcode(2B), A(2B), B(2B), C(2B);
 // ASM_END(1B): Opcode(2B), A(2B), B(2B), C(2B);
@@ -426,16 +426,17 @@ enum DaoAuxOpcode
 	DAO_ASM_MIXIN     ,
 	DAO_ASM_DECOPAT   ,
 	DAO_ASM_DATA      ,
+	DAO_ASM_DATA2     ,
 	DAO_ASM_SEEK
 };
 
 
 
-typedef struct DaoMainCoder   DaoMainCoder;
-typedef struct DaoBlockCoder  DaoBlockCoder;
+typedef struct DaoByteCoder   DaoByteCoder;
+typedef struct DaoByteBlock  DaoByteBlock;
 
 
-struct DaoBlockCoder
+struct DaoByteBlock
 {
 	uint_t   type  : 8;
 	uint_t   index : 24;
@@ -447,165 +448,87 @@ struct DaoBlockCoder
 
 	DaoValue  *value;
 
-	DaoMainCoder   *main;
+	DaoByteCoder   *coder;
 
 	/* Children blocks: */
-	DaoBlockCoder  *first;
-	DaoBlockCoder  *last;
+	DaoByteBlock  *first;
+	DaoByteBlock  *last;
 
 	/* Sibling blocks: */
-	DaoBlockCoder  *prev;
-	DaoBlockCoder  *next;
+	DaoByteBlock  *prev;
+	DaoByteBlock  *next;
 };
 
-struct DaoMainCoder
+struct DaoByteCoder
 {
-	DaoVmSpace  *vmspace;
-
 	uint_t   index;
 	uchar_t  intSize;
-	uchar_t  error;
-
-	DaoBlockCoder  *top;
-
-	DMap  *blocks; /* hash<DaoValue*,DaoBlockCoder*> */
-
-	DArray  *stack;  /* list<DaoBlockCoder*> */
-	DArray  *caches; /* list<DaoBlockCoder*> */
-	DArray  *lines;
-};
-
-DaoBlockCoder* DaoBlockCoder_New( DaoMainCoder *main );
-void DaoBlockCoder_Delete( DaoBlockCoder *self );
-
-DaoMainCoder* DaoMainCoder_New( DaoVmSpace *vms );
-void DaoMainCoder_Delete( DaoMainCoder *self );
-
-DaoBlockCoder* DaoMainCoder_Init( DaoMainCoder *self );
-DaoBlockCoder* DaoMainCoder_NewBlock( DaoMainCoder *self, int type );
-
-DaoBlockCoder* DaoBlockCoder_NewBlock( DaoBlockCoder *self, int type );
-DaoBlockCoder* DaoBlockCoder_FindBlock( DaoBlockCoder *self, DaoValue *value );
-DaoBlockCoder* DaoBlockCoder_AddBlock( DaoBlockCoder *self, DaoValue *value, int type );
-DaoBlockCoder* DaoBlockCoder_AddRoutineBlock( DaoBlockCoder *self, DaoRoutine *routine );
-DaoBlockCoder* DaoBlockCoder_AddEvalBlock( DaoBlockCoder *self, DaoValue *value, int code, int operands );
-
-void DaoBlockCoder_InsertBlockIndex( DaoBlockCoder *self, uchar_t *code, DaoBlockCoder *block );
-
-DaoBlockCoder* DaoBlockCoder_EncodeString( DaoBlockCoder *self, DString *string );
-DaoBlockCoder* DaoBlockCoder_EncodeType( DaoBlockCoder *self, DaoType *type );
-DaoBlockCoder* DaoBlockCoder_EncodeValue( DaoBlockCoder *self, DaoValue *value );
-DaoBlockCoder* DaoBlockCoder_EncodeLoadStmt( DaoBlockCoder *self, DString *mod, DString *ns );
-DaoBlockCoder* DaoBlockCoder_EncodeSeekStmt( DaoBlockCoder *self, DaoBlockCoder *target );
-
-DaoBlockCoder* DaoBlockCoder_EncodeInteger( DaoBlockCoder *self, daoint value );
-DaoBlockCoder* DaoBlockCoder_EncodeFloat( DaoBlockCoder *self, float value );
-DaoBlockCoder* DaoBlockCoder_EncodeDouble( DaoBlockCoder *self, double value );
-DaoBlockCoder* DaoBlockCoder_EncodeComplex( DaoBlockCoder *self, DaoComplex *value );
-DaoBlockCoder* DaoBlockCoder_EncodeLong( DaoBlockCoder *self, DLong *value );
-DaoBlockCoder* DaoBlockCoder_EncodeEnum( DaoBlockCoder *self, DaoEnum *value );
-
-DaoBlockCoder* DaoBlockCoder_EncodeArray( DaoBlockCoder *self, DaoArray *value );
-DaoBlockCoder* DaoBlockCoder_EncodeList( DaoBlockCoder *self, DaoList *value );
-
-DaoBlockCoder* DaoBlockCoder_EncodeValue( DaoBlockCoder *self, DaoValue *value );
-
-void DaoBlockCoder_EncodeValues( DaoBlockCoder *self, DaoValue **values, int count );
-int DaoBlockCoder_EncodeValues2( DaoBlockCoder *self, DArray *values );
-void DaoBlockCoder_AddBlockIndexData( DaoBlockCoder *self, int head, int size );
-
-void DaoMainCoder_EncodeHeader( DaoMainCoder *self, const char *fname, DString *output );
-void DaoMainCoder_EncodeToString( DaoMainCoder *self, DString *output );
-void DaoMainCoder_Disassemble( DaoMainCoder *self );
-
-
-typedef struct DaoByteEncoder  DaoByteEncoder;
-typedef struct DaoByteDecoder  DaoByteDecoder;
-
-struct DaoByteEncoder
-{
-	DaoNamespace  *nspace;
-
-	daoint    valueCount;
-	daoint    constCount;
-	daoint    varCount;
-
-	DString  *header;
-	DString  *source;
-	DString  *modules;
-	DString  *identifiers;
-	DString  *declarations;
-	DString  *types;
-	DString  *values;
-	DString  *constants;
-	DString  *variables;
-	DString  *glbtypes;
-	DString  *interfaces;
-	DString  *classes;
-	DString  *routines;
-
-	DString  *tmpBytes;
-	DString  *valueBytes;
-	DArray   *lookups;      /* <daoint> */
-	DArray   *names;        /* <DString*> (not managed); */
-
-	DArray   *objects;      /* <DaoValue*> */
-	DArray   *lines;
-
-	DArray   *hosts;
-	DMap     *handled;
-
-	DMap  *mapLookupHost;   /* <DaoValue*,DaoValue*> */
-	DMap  *mapLookupName;   /* <DaoValue*,DString*> */
-
-	DMap  *mapIdentifiers;  /* <DString*,daoint> */
-	DMap  *mapDeclarations; /* <DaoValue*,daoint> */
-	DMap  *mapTypes;        /* <DaoType*,daoint> */
-	DMap  *mapValues;       /* <DaoValue*,daoint> */
-	DMap  *mapValueBytes;   /* <DString*,daoint> */
-	DMap  *mapInterfaces;   /* <DaoInterface*,daoint> */
-	DMap  *mapClasses;      /* <DaoClass*,daoint> */
-	DMap  *mapRoutines;     /* <DaoRoutine*,daoint> */
-};
-
-DaoByteEncoder* DaoByteEncoder_New();
-void DaoByteEncoder_Delete( DaoByteEncoder *self );
-
-void DaoByteEncoder_Encode( DaoByteEncoder *self, DaoNamespace *nspace, DString *output );
-
-
-
-struct DaoByteDecoder
-{
-	DaoVmSpace    *vmspace;
-	DaoNamespace  *nspace;
-
-	DArray   *identifiers;  /* <DString*> */
-	DArray   *namespaces;   /* <DaoNamespace*> */
-	DArray   *declarations; /* <DaoValue*> */
-	DArray   *types;        /* <DaoType*> */
-	DArray   *values;       /* <DString*>: encoded values; */
-	DArray   *interfaces;   /* <DaoInterface*> */
-	DArray   *classes;      /* <DaoClass*> */
-	DArray   *routines;     /* <DaoRoutine*> */
-
-	DArray   *array;
-	DString  *string;
-	DMap     *valueTypes;
-	DMap     *map;
-
-	int  intSize;
 
 	uchar_t  *codes;
 	uchar_t  *end;
 	uchar_t  *error;
+
+	DaoByteBlock  *top;
+
+	DString  *path;
+
+	DMap  *blocks; /* hash<DaoValue*,DaoByteBlock*> */
+
+	DArray  *stack;  /* list<DaoByteBlock*> */
+	DArray  *caches; /* list<DaoByteBlock*> */
+	DArray  *lines;
+
+	DaoVmSpace  *vmspace;
 };
 
+DaoByteBlock* DaoByteBlock_New( DaoByteCoder *coder );
+void DaoByteBlock_Delete( DaoByteBlock *self );
 
-DaoByteDecoder* DaoByteDecoder_New( DaoVmSpace *vmspace );
-void DaoByteDecoder_Delete( DaoByteDecoder *self );
+DaoByteCoder* DaoByteCoder_New( DaoVmSpace *vms );
+void DaoByteCoder_Delete( DaoByteCoder *self );
 
-int DaoByteDecoder_Decode( DaoByteDecoder *self, DString *input, DaoNamespace *nspace );
+DaoByteBlock* DaoByteCoder_Init( DaoByteCoder *self );
+DaoByteBlock* DaoByteCoder_NewBlock( DaoByteCoder *self, int type );
+
+DaoByteBlock* DaoByteBlock_NewBlock( DaoByteBlock *self, int type );
+DaoByteBlock* DaoByteBlock_FindBlock( DaoByteBlock *self, DaoValue *value );
+DaoByteBlock* DaoByteBlock_AddBlock( DaoByteBlock *self, DaoValue *value, int type );
+DaoByteBlock* DaoByteBlock_AddRoutineBlock( DaoByteBlock *self, DaoRoutine *routine );
+DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, int code, int operands );
+
+void DaoByteBlock_InsertBlockIndex( DaoByteBlock *self, uchar_t *code, DaoByteBlock *block );
+
+DaoByteBlock* DaoByteBlock_EncodeString( DaoByteBlock *self, DString *string );
+DaoByteBlock* DaoByteBlock_EncodeType( DaoByteBlock *self, DaoType *type );
+DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value );
+DaoByteBlock* DaoByteBlock_EncodeLoadStmt( DaoByteBlock *self, DString *mod, DString *ns );
+DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *target );
+
+DaoByteBlock* DaoByteBlock_EncodeInteger( DaoByteBlock *self, daoint value );
+DaoByteBlock* DaoByteBlock_EncodeFloat( DaoByteBlock *self, float value );
+DaoByteBlock* DaoByteBlock_EncodeDouble( DaoByteBlock *self, double value );
+DaoByteBlock* DaoByteBlock_EncodeComplex( DaoByteBlock *self, DaoComplex *value );
+DaoByteBlock* DaoByteBlock_EncodeLong( DaoByteBlock *self, DLong *value );
+DaoByteBlock* DaoByteBlock_EncodeEnum( DaoByteBlock *self, DaoEnum *value );
+
+DaoByteBlock* DaoByteBlock_EncodeArray( DaoByteBlock *self, DaoArray *value );
+DaoByteBlock* DaoByteBlock_EncodeList( DaoByteBlock *self, DaoList *value );
+
+DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value );
+
+void DaoByteBlock_EncodeValues( DaoByteBlock *self, DaoValue **values, int count );
+int DaoByteBlock_EncodeValues2( DaoByteBlock *self, DArray *values );
+void DaoByteBlock_AddBlockIndexData( DaoByteBlock *self, int head, int size );
+
+void DaoByteCoder_EncodeHeader( DaoByteCoder *self, const char *fname, DString *output );
+void DaoByteCoder_EncodeToString( DaoByteCoder *self, DString *output );
+void DaoByteCoder_Disassemble( DaoByteCoder *self );
+
+
+int DaoByteCoder_Decode( DaoByteCoder *self, DString *source );
+int DaoByteCoder_Build( DaoByteCoder *self, DaoNamespace *nspace );
+
+
 
 
 #endif

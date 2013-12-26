@@ -350,44 +350,44 @@ void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser )
 	DMutex_Unlock( & self->mutexMisc );
 #endif
 }
-DaoMainCoder* DaoVmSpace_AcquireMainCoder( DaoVmSpace *self )
+DaoByteCoder* DaoVmSpace_AcquireByteCoder( DaoVmSpace *self )
 {
-	DaoMainCoder *mainCoder = NULL;
+	DaoByteCoder *byteCoder = NULL;
 
 #ifdef SHARE_NO_PARSER
-	mainCoder = DaoMainCoder_New( self );
-	//mainCoder->vmSpace = self;
-	return mainCoder;
+	byteCoder = DaoByteCoder_New( self );
+	//byteCoder->vmSpace = self;
+	return byteCoder;
 #endif
 
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & self->mutexMisc );
 #endif
-	if( self->maincoders->size ){
-		mainCoder = (DaoMainCoder*) DArray_Back( self->maincoders );
-		DArray_PopBack( self->maincoders );
+	if( self->byteCoders->size ){
+		byteCoder = (DaoByteCoder*) DArray_Back( self->byteCoders );
+		DArray_PopBack( self->byteCoders );
 	}else{
-		mainCoder = DaoMainCoder_New( self );
-		//mainCoder->vmSpace = self;
-		DMap_Insert( self->allMaincoders, mainCoder, 0 );
+		byteCoder = DaoByteCoder_New( self );
+		//byteCoder->vmSpace = self;
+		DMap_Insert( self->allByteCoders, byteCoder, 0 );
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->mutexMisc );
 #endif
-	return mainCoder;
+	return byteCoder;
 }
-void DaoVmSpace_ReleaseMainCoder( DaoVmSpace *self, DaoMainCoder *mainCoder )
+void DaoVmSpace_ReleaseByteCoder( DaoVmSpace *self, DaoByteCoder *byteCoder )
 {
 #ifdef SHARE_NO_PARSER
-	DaoMainCoder_Delete( mainCoder ); return;
+	DaoByteCoder_Delete( byteCoder ); return;
 #endif
 
-	DaoMainCoder_Reset( mainCoder );
+	DaoByteCoder_Reset( byteCoder );
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & self->mutexMisc );
 #endif
-	if( DMap_Find( self->allMaincoders, mainCoder ) ){
-		DArray_PushBack( self->maincoders, mainCoder );
+	if( DMap_Find( self->allByteCoders, byteCoder ) ){
+		DArray_PushBack( self->byteCoders, byteCoder );
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->mutexMisc );
@@ -580,12 +580,12 @@ DaoVmSpace* DaoVmSpace_New()
 	self->sourceArchive = DArray_New(D_STRING);
 	self->processes = DArray_New(0);
 	self->parsers = DArray_New(0);
-	self->maincoders = DArray_New(0);
+	self->byteCoders = DArray_New(0);
 	self->inferencers = DArray_New(0);
 	self->optimizers = DArray_New(0);
 	self->allProcesses = DMap_New(D_VALUE,0);
 	self->allParsers = DMap_New(0,0);
-	self->allMaincoders = DMap_New(0,0);
+	self->allByteCoders = DMap_New(0,0);
 	self->allInferencers = DMap_New(0,0);
 	self->allOptimizers = DMap_New(0,0);
 	self->loadedModules = DArray_New(D_VALUE);
@@ -624,8 +624,8 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	for(it=DMap_First(self->allParsers); it; it=DMap_Next(self->allParsers,it)){
 		DaoParser_Delete( (DaoParser*) it->key.pVoid );
 	}
-	for(it=DMap_First(self->allMaincoders); it; it=DMap_Next(self->allMaincoders,it)){
-		DaoMainCoder_Delete( (DaoMainCoder*) it->key.pVoid );
+	for(it=DMap_First(self->allByteCoders); it; it=DMap_Next(self->allByteCoders,it)){
+		DaoByteCoder_Delete( (DaoByteCoder*) it->key.pVoid );
 	}
 	for(it=DMap_First(self->allInferencers); it; it=DMap_Next(self->allInferencers,it)){
 		DaoInferencer_Delete( (DaoInferencer*) it->key.pVoid );
@@ -649,14 +649,14 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DArray_Delete( self->loadedModules );
 	DArray_Delete( self->sourceArchive );
 	DArray_Delete( self->parsers );
-	DArray_Delete( self->maincoders );
+	DArray_Delete( self->byteCoders );
 	DArray_Delete( self->inferencers );
 	DArray_Delete( self->optimizers );
 	DMap_Delete( self->vfiles );
 	DMap_Delete( self->vmodules );
 	DMap_Delete( self->allProcesses );
 	DMap_Delete( self->allParsers );
-	DMap_Delete( self->allMaincoders );
+	DMap_Delete( self->allByteCoders );
 	DMap_Delete( self->allInferencers );
 	DMap_Delete( self->allOptimizers );
 	GC_DecRC( self->mainProcess );
@@ -1255,26 +1255,41 @@ static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
 			DaoVmSpace_Interun( self, NULL );
 	}
 }
-void DaoVmSpace_SaveByteCodes( DaoVmSpace *self, DaoNamespace *ns )
+void DaoVmSpace_SaveByteCodes( DaoVmSpace *self, DaoByteCoder *coder, DaoNamespace *ns )
 {
 	FILE *fout;
-	DString *bytecodes = DString_New(1);
-	DaoByteEncoder *encoder = DaoByteEncoder_New();
+	DString *output = DString_New(1);
 
-	DString_Append( bytecodes, ns->name );
-	if( bytecodes->size > ns->lang->size ) bytecodes->size -= ns->lang->size;
-	DString_AppendMBS( bytecodes, "dac" );
-	fout = fopen( bytecodes->mbs, "w+" );
-	bytecodes->size = 0;
-	DaoByteEncoder_Encode( encoder, ns, bytecodes );
-	DaoFile_WriteString( fout, bytecodes );
-	DaoByteEncoder_Delete( encoder );
-	DString_Delete( bytecodes );
+	DString_Append( output, ns->name );
+	if( output->size > ns->lang->size ) output->size -= ns->lang->size;
+	DString_AppendMBS( output, "dac" );
+	fout = fopen( output->mbs, "w+" );
+	output->size = 0;
+
+	DaoByteCoder_EncodeHeader( coder, ns->name->mbs, output );
+	DaoByteCoder_EncodeToString( coder, output );
+
+	DaoFile_WriteString( fout, output );
+	DString_Delete( output );
 	fclose( fout );
 }
 
-void DString_AppendUInt16( DString *bytecodes, int value );
-void DString_AppendUInt32( DString *bytecodes, int value );
+void DString_AppendUInt16( DString *bytecodes, int value )
+{
+	uchar_t bytes[2];
+	bytes[0] = (value >> 8) & 0xFF;
+	bytes[1] = value & 0xFF;
+	DString_AppendBytes( bytecodes, bytes, 2 );
+}
+void DString_AppendUInt32( DString *bytecodes, uint_t value )
+{
+	uchar_t bytes[4];
+	bytes[0] = (value >> 24) & 0xFF;
+	bytes[1] = (value >> 16) & 0xFF;
+	bytes[2] = (value >>  8) & 0xFF;
+	bytes[3] = value & 0xFF;
+	DString_AppendBytes( bytecodes, bytes, 4 );
+}
 
 int DaoDecodeUInt16( const char *data )
 {
@@ -1446,15 +1461,17 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		DArray_Append( self->sourceArchive, self->mainSource );
 	}
 	if( self->mainSource->mbs[0] == DAO_BC_SIGNATURE[0] ){
-		DaoByteDecoder *decoder = DaoByteDecoder_New( self );
-		res = DaoByteDecoder_Decode( decoder, self->mainSource, ns );
-		DaoByteDecoder_Delete( decoder );
+		DaoByteCoder *byteCoder = DaoVmSpace_AcquireByteCoder( self );
+		res = DaoByteCoder_Decode( byteCoder, self->mainSource );
+		res = res && DaoByteCoder_Build( byteCoder, ns );
+		if( self->options & DAO_OPTION_LIST_BC ) DaoByteCoder_Disassemble( byteCoder );
+		DaoVmSpace_ReleaseByteCoder( self, byteCoder );
 	}else{
 		DaoParser *parser = DaoVmSpace_AcquireParser( self );
 
 		if( self->options & DAO_OPTION_COMP_BC ){
-			parser->mainCoder = DaoVmSpace_AcquireMainCoder( self );
-			parser->blockCoder = DaoMainCoder_Init( parser->mainCoder );
+			parser->byteCoder = DaoVmSpace_AcquireByteCoder( self );
+			parser->byteBlock = DaoByteCoder_Init( parser->byteCoder );
 		}
 		parser->nameSpace = ns;
 		DString_Assign( parser->fileName, ns->name );
@@ -1462,19 +1479,12 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		res = res && DaoParser_ParseScript( parser );
 
 		if( res && (self->options & DAO_OPTION_COMP_BC) ){
-			DString *output = DString_New(1);
-			DaoMainCoder_EncodeHeader( parser->mainCoder, ns->name->mbs, output );
-			DaoMainCoder_EncodeToString( parser->mainCoder, output );
-
-			FILE *fout = fopen( "bytecode/test.dac", "w+" );
-			DaoFile_WriteString( fout, output );
-			DString_Delete( output );
-			//DaoVmSpace_SaveByteCodes( self, ns );
+			DaoVmSpace_SaveByteCodes( self, parser->byteCoder, ns );
 			if( self->options & DAO_OPTION_LIST_BC ){
-				DaoMainCoder_Disassemble( parser->mainCoder );
+				DaoByteCoder_Disassemble( parser->byteCoder );
 			}
 		}
-		if( parser->mainCoder ) DaoVmSpace_ReleaseMainCoder( self, parser->mainCoder );
+		if( parser->byteCoder ) DaoVmSpace_ReleaseByteCoder( self, parser->byteCoder );
 		DaoVmSpace_ReleaseParser( self, parser );
 	}
 	if( res && !(self->options & DAO_OPTION_ARCHIVE) ){
@@ -1663,9 +1673,11 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	poppath = ns->path->size;
 
 	if( source->mbs[0] == DAO_BC_SIGNATURE[0] ){
-		DaoByteDecoder *decoder = DaoByteDecoder_New( self );
-		int bl = DaoByteDecoder_Decode( decoder, source, ns );
-		DaoByteDecoder_Delete( decoder );
+		DaoByteCoder *byteCoder = DaoVmSpace_AcquireByteCoder( self );
+		int bl = DaoByteCoder_Decode( byteCoder, self->mainSource );
+		bl = bl && DaoByteCoder_Build( byteCoder, ns );
+		if( self->options & DAO_OPTION_LIST_BC ) DaoByteCoder_Disassemble( byteCoder );
+		DaoVmSpace_ReleaseByteCoder( self, byteCoder );
 		if( bl == 0 ) goto LoadingFailed;
 	}else{
 		parser = DaoVmSpace_AcquireParser( self );
@@ -1674,16 +1686,18 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 		DString_Assign( parser->fileName, libpath );
 		if( ! DaoParser_LexCode( parser, DString_GetMBS( source ), 1 ) ) goto LoadingFailed;
 		if( self->options & DAO_OPTION_COMP_BC ){
-			parser->mainCoder = DaoVmSpace_AcquireMainCoder( self );
-			parser->blockCoder = DaoMainCoder_Init( parser->mainCoder );
+			parser->byteCoder = DaoVmSpace_AcquireByteCoder( self );
+			parser->byteBlock = DaoByteCoder_Init( parser->byteCoder );
 		}
 		if( ! DaoParser_ParseScript( parser ) ) goto LoadingFailed;
 		if( ns->mainRoutine == NULL ) goto LoadingFailed;
 		DString_SetMBS( ns->mainRoutine->routName, "::main" );
-		if( parser->mainCoder ) DaoVmSpace_ReleaseMainCoder( self, parser->mainCoder );
+		if( parser->byteCoder ){
+			DaoVmSpace_SaveByteCodes( self, parser->byteCoder, ns );
+			DaoVmSpace_ReleaseByteCoder( self, parser->byteCoder );
+		}
 		DaoVmSpace_ReleaseParser( self, parser );
 		parser = NULL;
-		if( self->options & DAO_OPTION_COMP_BC ) DaoVmSpace_SaveByteCodes( self, ns );
 	}
 
 ExecuteImplicitMain :

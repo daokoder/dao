@@ -101,8 +101,8 @@ struct DaoParser
 	DaoParser    *outerParser;
 	DaoParser    *innerParser;
 
-	DaoMainCoder   *mainCoder;
-	DaoBlockCoder  *blockCoder;
+	DaoByteCoder  *byteCoder;
+	DaoByteBlock  *byteBlock;
 
 	DaoType      *returnType;
 	DaoToken     *argName;
