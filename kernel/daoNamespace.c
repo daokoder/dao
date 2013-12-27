@@ -543,19 +543,23 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	//
 	// Note: @TypeHolder can be a variant type holder: @TypeHolder<Type1|Type2...>;
 	*/
+	if( types->size ){
+		DString *name = & tokens[k]->string;
+		DaoType *it = types->items.pType[0];
+		DaoType *aux = (DaoType*) it->aux;
+		if( it->tid == DAO_VARIANT && it->aux && it->aux->type == DAO_TYPE ) it = aux;
+		if( it->tid != DAO_THT ){ /* CASE 4: ConcreteType; */
+			int id = DaoNamespace_FindConst( self, name );
+			value = DaoNamespace_GetConst( self, id );
+			if( value == NULL ) goto Error;
+		}
+	}
 	if( value == NULL ){
 		DaoTypeKernel *kernel = type->typer->core->kernel;
 		DaoType *alias = type2;
 		DString *name = & tokens[k]->string;
 
 		if( scope == NULL ) scope = (DaoValue*) self;
-
-		if( types->size ){
-			DaoType *it = types->items.pType[0];
-			DaoType *aux = (DaoType*) it->aux;
-			if( it->tid == DAO_VARIANT && it->aux && it->aux->type == DAO_TYPE ) it = aux;
-			if( it->tid != DAO_THT ) goto Error; /* CASE 4: ConcreteType; */
-		}
 
 		kernel->sptree = DTypeSpecTree_New();
 		for(i=0; i<types->size; i++){
@@ -877,7 +881,6 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->name = DString_New(1);
 	self->lang = DString_New(1);
 	self->inputs = DString_New(1);
-	self->loadings = DArray_New(D_STRING);
 	self->sources = DArray_New(D_ARRAY);
 
 	DArray_Append( self->auxData, self->argParams );
@@ -933,7 +936,6 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	DString_Delete( self->name );
 	DString_Delete( self->lang );
 	DString_Delete( self->inputs );
-	DArray_Delete( self->loadings );
 	DArray_Delete( self->sources );
 	dao_free( self );
 }

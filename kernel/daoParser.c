@@ -1468,12 +1468,14 @@ static DaoType* DaoParser_ParseValueType( DaoParser *self, int start )
 }
 static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, int *newpos )
 {
+	DaoInode *back = self->vmcLast;
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoNamespace *ns = self->nameSpace;
 	DaoType *type = NULL;
 	DaoValue *value = NULL;
 	DString *name = & tokens[start]->string;
 	int t, k = DaoParser_FindScopedConstant( self, &value, start );
+	DaoParser_PopCodes( self, back );
 	if( k <0 ) k = start;
 	*newpos = k + 1;
 	switch( value ? value->type : 0 ){
@@ -2721,7 +2723,7 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 		DaoNamespace_ImportMacro( myNS, & tokens[start+1]->string );
 		return start + 2;
 	}else if( tokens[start]->name == DKEY_ENUM ){
-		start = DaoParser_ParseScopedName( self, & scope, & value, start + 1, 1 );
+		start = DaoParser_FindScopedConstant( self, & value, start + 1 );
 		if( start > 0 && value && value->type == DAO_TYPE && value->xType.tid == DAO_ENUM ){
 			DaoValue item = {DAO_INTEGER};
 			type = (DaoType*) value;
@@ -2733,7 +2735,7 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 			return start + 1;
 		}
 	}else{
-		start = DaoParser_ParseScopedName( self, & scope, & value, start, 1 );
+		start = DaoParser_FindScopedConstant( self, & value, start );
 		if( start > 0 && value && value->type == DAO_NAMESPACE ){
 			DaoNamespace_AddParent( myNS, (DaoNamespace*) value );
 			return start + 1;
@@ -2745,7 +2747,7 @@ InvalidUse:
 }
 static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 {
-	DaoToken **tokens = self->tokens->items.pToken;
+	DaoToken *nameTok, **tokens = self->tokens->items.pToken;
 	DaoNamespace *myNS = self->nameSpace;
 	DaoRoutine *routine = self->routine;
 	DaoRoutine *tmpRoutine;
@@ -2757,7 +2759,8 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 	int use = start;
 	start ++;
 	if( DaoParser_CheckNameToken( self, start, to, DAO_INVALID_USE_STMT, use ) ==0 ) return -1;
-	str = & tokens[start]->string;
+	nameTok = tokens[start];
+	str = & nameTok->string;
 	start += 2;
 	if( start >to || tokens[start]->type != DTOK_IDENTIFIER ) goto InvalidAliasing;
 	if( DaoType_FindType( str, myNS, self->hostCdata, self->hostClass, routine ) ){
@@ -2765,7 +2768,7 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 		DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
 		goto InvalidAliasing;
 	}
-	if( DaoParser_GetRegister( self, tokens[start] ) >= 0 ){
+	if( DaoParser_GetRegister( self, nameTok ) >= 0 ){
 		DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
 		goto InvalidAliasing;
 	}
@@ -2871,6 +2874,8 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			self->curLine = ptok->line;
 			if( start >=0 ) DaoParser_Error( self, DAO_SYMBOL_NEED_CLASS, & ptok->string );
 			goto InvalidDefinition;
+		}else if( value->type == DAO_CLASS ){
+			value = (DaoValue*) value->xClass.classRoutine;
 		}else if( value->type != DAO_ROUTINE ){
 			goto InvalidDefinition;
 		//}else if( value->xRoutine.body || value->xRoutine.pFunc ){
@@ -3320,8 +3325,8 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	}
 	DaoClass_DeriveObjectData( klass );
 	if( parser->vmcLast != parser->vmcBase ){
-#if 0
 		DaoParser_PrintCodes( parser );
+#if 0
 #endif
 		DArray_InsertArray( self->errors, self->errors->size, parser->errors, 0, -1 );
 		DaoParser_StatementError( self, parser, DAO_STATEMENT_IN_CLASS );
@@ -4325,8 +4330,9 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	}
 	for(k=nameStart; k<self->toks->size; k++){
 		DaoToken *varTok = self->toks->items.pToken[k];
+		DString *name = & varTok->string;
 		int id = 0;
-		/* printf( "declaring %s\n", varTok->string->mbs ); */
+		/* printf( "declaring %s\n", varTok->string.mbs ); */
 		DaoParser_DeclareVariable( self, varTok, store, abtp );
 		if( store & DAO_DECL_CONST ){
 			if( store & DAO_DECL_GLOBAL ){
@@ -4336,6 +4342,9 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					return -1;
 				}
 				DaoNamespace_SetConst( ns, id, value );
+				if( self->byteBlock ){
+					DaoByteBlock_EncodeDeclConst( self->byteBlock, name, value );
+				}
 			}else if( self->isClassBody && hostClass ){
 				id = DaoClass_FindConst( hostClass, & varTok->string );
 				if( cst ){
@@ -4343,6 +4352,9 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 				}else if( eq >=0 ){
 					DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, eq+1, end, 0 );
 					return -1;
+				}
+				if( self->byteBlock ){
+					DaoByteBlock_EncodeDeclConst( self->byteBlock, name, value );
 				}
 			}else{
 				id = LOOKUP_ID( DaoParser_GetRegister( self, varTok) );
@@ -4374,6 +4386,9 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 						return -1;
 					}
 					remove = 1;
+					if( self->byteBlock ){
+						DaoByteBlock_EncodeDeclStatic( self->byteBlock, name, var->value, var->dtype );
+					}
 				}else if( reg >= 0 ){
 					DaoParser_AddCode( self, DVM_SETVS, reg, id, 0, first, mid, end );
 				}
@@ -4386,6 +4401,9 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					}
 					remove = 1;
 					DaoValue_MarkConst( var->value );
+					if( self->byteBlock ){
+						DaoByteBlock_EncodeDeclVar( self->byteBlock, name, var->value, NULL );
+					}
 				}else if( ! self->isClassBody ){
 					if( reg < 0 ) continue;
 					DaoParser_AddCode( self, DVM_SETVO, reg, id, 0, first, mid, end );
@@ -4402,6 +4420,9 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					DaoVariable *var = hostClass->variables->items.pVar[id];
 					DaoVariable_Set( var, value, DaoNamespace_GetType( ns, value ) );
 					remove = 1;
+					if( self->byteBlock ){
+						DaoByteBlock_EncodeDeclStatic( self->byteBlock, name, var->value, var->dtype );
+					}
 				}else if( ! self->isClassBody ){
 					if( reg < 0 ) continue;
 					DaoParser_AddCode( self, DVM_SETVK, reg, id, up, first, mid, end );
@@ -4421,9 +4442,16 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 						return -1;
 					}
 					remove = 1;
+					if( self->byteBlock ){
+						DaoByteBlock_EncodeDeclGlobal( self->byteBlock, name, var->value, var->dtype );
+					}
 				}else{
 					DaoParser_AddCode( self, DVM_SETVG, reg, id, up, first, mid, end );
 					self->usingGlobal = 1;
+					if( self->byteBlock ){
+						DaoVariable *var = ns->variables->items.pVar[id];
+						DaoByteBlock_EncodeDeclGlobal( self->byteBlock, name, NULL, var->dtype );
+					}
 				}
 				break;
 			default :
@@ -4924,13 +4952,6 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		i += 2;
 	}
 	if( self->byteBlock ) DaoByteBlock_EncodeLoadStmt( self->byteBlock, self->mbs, modname );
-	DArray_Append( nameSpace->loadings, self->mbs );
-	if( modname ){
-		DArray_Append( nameSpace->loadings, modname );
-	}else{
-		DString empty = DString_WrapMBS( "" );
-		DArray_Append( nameSpace->loadings, & empty );
-	}
 
 	if( (mod = DaoNamespace_FindNamespace(nameSpace, self->mbs)) == NULL ){
 		mod = DaoVmSpace_LoadModule( vmSpace, self->mbs );
@@ -4951,11 +4972,9 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	if( modname == NULL ){
 		cyclic = (DaoNamespace_AddParent( nameSpace, mod ) == 0);
 	}else if( hostClass && self->isClassBody ){
-		value = (DaoValue*) mod;
-		DaoClass_AddConst( hostClass, modname, value, perm );
+		DaoClass_AddConst( hostClass, modname, (DaoValue*) mod, perm );
 	}else{
-		value = (DaoValue*) mod;
-		DaoNamespace_AddConst( nameSpace, modname, value, perm );
+		DaoNamespace_AddConst( nameSpace, modname, (DaoValue*) mod, perm );
 	}
 	if( cyclic ) DaoParser_Warn( self, DAO_LOAD_CYCLIC, NULL );
 

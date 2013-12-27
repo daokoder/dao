@@ -211,8 +211,8 @@
 //
 //
 // code:
-// ASM_CODE(1B): InstructionCount(2B), Line-Num-Count(2B), LineNum(2B), Count(2B);
-// ASM_DATA(1B): LineNum(2B), Count(2B), LineNum(2B), Count(2B);
+// ASM_CODE(1B): CodeNum(2B), Line-Num-Count(2B), LineNum(2B), Count(2B);
+// ASM_DATA(1B): LineDiff(2B), Count(2B), LineDiff(2B), Count(2B);
 // ASM_DATA(1B): Opcode(2B), A(2B), B(2B), C(2B);
 // ASM_END(1B): Opcode(2B), A(2B), B(2B), C(2B);
 //
@@ -500,6 +500,7 @@ DaoByteBlock* DaoByteCoder_NewBlock( DaoByteCoder *self, int type );
 DaoByteBlock* DaoByteBlock_NewBlock( DaoByteBlock *self, int type );
 DaoByteBlock* DaoByteBlock_FindBlock( DaoByteBlock *self, DaoValue *value );
 DaoByteBlock* DaoByteBlock_AddBlock( DaoByteBlock *self, DaoValue *value, int type );
+
 DaoByteBlock* DaoByteBlock_AddRoutineBlock( DaoByteBlock *self, DaoRoutine *routine );
 DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, int code, int opb, DaoType *type );
 
@@ -510,6 +511,11 @@ DaoByteBlock* DaoByteBlock_EncodeType( DaoByteBlock *self, DaoType *type );
 DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value );
 DaoByteBlock* DaoByteBlock_EncodeLoadStmt( DaoByteBlock *self, DString *mod, DString *ns );
 DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *target );
+
+DaoByteBlock* DaoByteBlock_EncodeDeclConst( DaoByteBlock *self, DString *name, DaoValue *value );
+DaoByteBlock* DaoByteBlock_EncodeDeclVar( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type );
+DaoByteBlock* DaoByteBlock_EncodeDeclStatic( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type );
+DaoByteBlock* DaoByteBlock_EncodeDeclGlobal( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type );
 
 DaoByteBlock* DaoByteBlock_EncodeInteger( DaoByteBlock *self, daoint value );
 DaoByteBlock* DaoByteBlock_EncodeFloat( DaoByteBlock *self, float value );

@@ -622,6 +622,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			it1 = self->nested->items.pType[i];
 			it2 = type->nested->items.pType[i];
 			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
+			if( k > DAO_MT_SIM && it1->tid != it2->tid ) k = DAO_MT_SIM; /*name:type to type;*/
 			/* printf( "%i %s %s\n", k, it1->name->mbs, it2->name->mbs ); */
 			if( k == DAO_MT_NOT ) return k;
 			if( k < mt ) mt = k;
@@ -631,6 +632,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		for(i=type->nested->size-(type->variadic!=0),n=self->nested->size-(self->variadic!=0); i<n; ++i){
 			it1 = self->nested->items.pType[i];
 			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
+			if( k > DAO_MT_SIM && it1->tid != it2->tid ) k = DAO_MT_SIM; /*name:type to type;*/
 			/* printf( "%i %s %s\n", k, it1->name->mbs, it2->name->mbs ); */
 			if( k == DAO_MT_NOT ) return k;
 			if( k < mt ) mt = k;
@@ -1778,12 +1780,13 @@ int DTypeSpecTree_Test( DTypeSpecTree *self, DaoType *types[], int count )
 	for(i=0; i<count; i++){
 		DaoType *par = self->holders->items.pType[i];
 		DaoType *arg = types[i];
+		int mt = DaoType_MatchTo( arg, par, NULL );
 		/*
 		// ? should be allowed as type arguments for AFC to a function
 		// with return type ? (see type inference for AFC).
 		*/
 		//XXX if( arg->tid == DAO_UDT ) return 0;
-		if( DaoType_MatchTo( arg, par, NULL ) ==0 ) return 0;
+		if( mt <= DAO_MT_NEGLECT || (mt >= DAO_MT_SUB && mt <= DAO_MT_SIM) ) return 0;
 	}
 	return 1;
 }
