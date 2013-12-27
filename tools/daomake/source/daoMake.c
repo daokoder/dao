@@ -3412,6 +3412,8 @@ ErrorInvalidArgValue:
 	DaoGC_IncRC( (DaoValue*) daomake_includes );
 
 	nspace = DaoVmSpace_GetNamespace( vmSpace, "DaoMake" );
+	DaoNamespace_AddConst( vmSpace->nsInternal, nspace->name, nspace, DAO_DATA_PUBLIC );
+	DaoNamespace_AddConst( vmSpace->mainNamespace, nspace->name, nspace, DAO_DATA_PUBLIC );
 	daomake_type_unit    = DaoNamespace_WrapType( nspace, & DaoMakeUnit_Typer, 0 );
 	daomake_type_objects = DaoNamespace_WrapType( nspace, & DaoMakeObjects_Typer, 0 );
 	daomake_type_target  = DaoNamespace_WrapType( nspace, & DaoMakeTarget_Typer, 0 );

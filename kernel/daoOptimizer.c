@@ -3017,6 +3017,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	daoint j, k, m, J, K, M = routine->body->regCount;
 	char codetype, *inited = self->inited->mbs;
 	int typed_code = daoConfig.typedcode;
+	int optimize_xetf = ! (NS->vmSpace->options & DAO_OPTION_COMP_BC);
 	int notide = ! (NS->vmSpace->options & DAO_OPTION_IDE);
 	int code, opa, opb, opc, first, middle, last;
 	int TT1, TT2, TT3, TT4, TT5, TT6;
@@ -3602,7 +3603,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				}else if( at->tid == DAO_COMPLEX ){
 					if( strcmp( str->mbs, "real" ) && strcmp( str->mbs, "imag" ) ) goto NotExist_TryAux;
 					ct = DaoInferencer_UpdateType( self, opc, dao_type_double );
-					if( ct->realnum ){
+					if( ct->realnum && optimize_xetf ){
 						inode->code = DVM_GETF_CX;
 						inode->b = strcmp( str->mbs, "imag" ) == 0;
 						if( ct->tid != DAO_DOUBLE )
@@ -3684,7 +3685,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 						ct = *type2;
 					}
 					j = DaoClass_GetDataIndex( klass, str );
-					if( typed_code ){
+					if( typed_code && optimize_xetf ){
 						int code = vmc->code;
 						/* specialize instructions for finalized class/instance: */
 						k = LOOKUP_ST( j );
@@ -3714,7 +3715,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					ct = at->nested->items.pType[ k ];
 					if( ct->tid == DAO_PAR_NAMED ) ct = & ct->aux->xType;
 					DaoInferencer_UpdateType( self, opc, ct );
-					if( typed_code && notide && ct == types[opc] && k < 0xffff ){
+					if( typed_code && optimize_xetf && notide && ct == types[opc] && k < 0xffff ){
 						if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_COMPLEX ){
 							vmc->code = DVM_GETF_TI + ( ct->tid - DAO_INTEGER );
 							vmc->b = k;
@@ -4130,7 +4131,7 @@ NotExist_TryAux:
 					}
 					AssertTypeMatching( types[opa], *type2, defs );
 					j = DaoClass_GetDataIndex( klass, str );
-					if( typed_code ){
+					if( typed_code && optimize_xetf ){
 						k = LOOKUP_ST( j );
 						if( *type2 && (*type2)->realnum && at->realnum ){
 							vmc->code = ck ? DVM_SETF_KGII : DVM_SETF_OGII;
@@ -4162,7 +4163,7 @@ NotExist_TryAux:
 						ct = ct->nested->items.pType[ k ];
 						if( ct->tid == DAO_PAR_NAMED ) ct = & ct->aux->xType;
 						AssertTypeMatching( at, ct, defs );
-						if( typed_code && k < 0xffff ){
+						if( typed_code && optimize_xetf && k < 0xffff ){
 							if( ct->tid && ct->tid <= DAO_COMPLEX && at->tid && at->tid <= DAO_COMPLEX ){
 								if( at->tid != ct->tid )
 									DaoInferencer_InsertMove( self, inode, & inode->a, at, ct );

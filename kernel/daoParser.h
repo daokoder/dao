@@ -31,6 +31,7 @@
 
 #include"daoType.h"
 #include"daoLexer.h"
+#include"daoBytecode.h"
 
 
 struct DaoParser
@@ -99,6 +100,9 @@ struct DaoParser
 	DaoType      *hostType;
 	DaoParser    *outerParser;
 	DaoParser    *innerParser;
+
+	DaoByteCoder  *byteCoder;
+	DaoByteBlock  *byteBlock;
 
 	DaoType      *returnType;
 	DaoToken     *argName;

@@ -671,7 +671,8 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 	if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 0 );
 	return frame;
 }
-static void DaoProcess_FlushStdStreams( DaoProcess *self )
+DAO_DLL void DaoProcess_FlushStdStreams( DaoProcess *self );
+void DaoProcess_FlushStdStreams( DaoProcess *self )
 {
 	if( self->stdioStream ) DaoStream_Flush( self->stdioStream );
 	DaoStream_Flush( self->vmSpace->stdioStream );
@@ -6543,6 +6544,8 @@ InvalidConstField:
 }
 DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 {
+	daoint size;
+	DaoValue *A;
 	DaoVmCodeX vmcx = {0,0,0,0,0,0,0,0,0};
 	DaoVmCode *vmc = self->activeCode;
 
@@ -6581,6 +6584,29 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 		DaoProcess_DoBitShift( self, vmc ); break;
 	case DVM_TILDE :
 		DaoProcess_DoBitFlip( self, vmc ); break;
+	case DVM_SIZE :
+		size = -1;
+		A = self->activeValues[ vmc->a ];
+		switch( A->type ){
+		case DAO_NONE    : size = 0; break;
+		case DAO_INTEGER : size = sizeof(daoint); break;
+		case DAO_FLOAT   : size = sizeof(float); break;
+		case DAO_DOUBLE  : size = sizeof(double); break;
+		case DAO_COMPLEX : size = sizeof(complex16); break;
+		case DAO_LONG    : size = A->xLong.value->size; break;
+		case DAO_ENUM    : size = sizeof(int); break; break;
+		case DAO_STRING  : size = A->xString.data->size; break;
+		case DAO_LIST    : size = A->xList.items.size; break;
+		case DAO_MAP     : size = A->xMap.items->size; break;
+		case DAO_TUPLE   : size = A->xTuple.size; break;
+#ifdef DAO_WITH_NUMARRAY
+		case DAO_ARRAY   : size = A->xArray.size; break;
+#endif
+		default : break;//goto RaiseErrorInvalidOperation;
+		}
+		if( size < 0 ) break;
+		DaoProcess_PutInteger( self, size );
+		break;
 	case DVM_SAME :
 		DaoProcess_DoCheckSame( self, vmc ); break;
 	case DVM_ISA :
