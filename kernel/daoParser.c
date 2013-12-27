@@ -869,7 +869,45 @@ static int DaoParser_AddDefaultInitializer( DaoParser *self, DaoClass *klass, in
 	return 1;
 }
 
-int DaoParser_FindScopedConstant( DaoParser *self, DaoValue **value, int start );
+static DaoValue* DaoParser_GetVariable( DaoParser *self, int reg );
+int DaoParser_FindScopedConstant2( DaoParser *self, DaoValue **value, int start, int stop, int type )
+{
+	DaoEnode enode;
+	self->curToken = start;
+	enode = DaoParser_ParsePrimary( self, stop, type );
+	if( enode.reg < 0 || enode.konst == 0 ){
+		DaoParser_Error3( self, DAO_EXPR_NEED_CONST_EXPR, start );
+		return -1;
+	}
+	*value = DaoParser_GetVariable( self, enode.konst );
+	return self->curToken - 1;
+}
+int DaoParser_FindScopedConstant( DaoParser *self, DaoValue **value, int start )
+{
+	return DaoParser_FindScopedConstant2( self, value, start, DTOK_LCB, 0 );
+}
+int DaoParser_ParseScopedName( DaoParser *self, DaoValue **scope, DaoValue **value, int start, int local )
+{
+	DaoToken **tokens = self->tokens->items.pToken;
+
+	if( (start+1) >= self->tokens->size || tokens[start+1]->type != DTOK_COLON2 ) return start;
+
+	start = DaoParser_FindScopedConstant2( self, scope, start, DTOK_LCB, DAO_EXPRLIST_SCOPE );
+	if( start < 0 ) return -1;
+
+	if( tokens[++start]->name != DTOK_COLON2 ) goto ErrorWasDefined;
+	if( tokens[++start]->name != DTOK_IDENTIFIER ) goto InvalidName;// XXX
+	if( (start+1) >= self->tokens->size || tokens[start+1]->type != DTOK_COLON2 ) return start;
+
+	DaoParser_Error2( self, DAO_UNDEFINED_SCOPE_NAME, start, start, 0 );
+	return -1;
+ErrorWasDefined:
+	DaoParser_Error2( self, DAO_SYMBOL_WAS_DEFINED, start, start, 0 );
+	return -1;
+InvalidName:
+	DaoParser_Error2( self, DAO_TOKEN_NEED_NAME, start, start+2, 0 );
+	return -1;
+}
 
 static int DaoParser_ParseInitSuper( DaoParser *self, DaoParser *module, int start )
 {
@@ -890,9 +928,11 @@ static int DaoParser_ParseInitSuper( DaoParser *self, DaoParser *module, int sta
 			DaoInode *inode;
 			DaoValue *value = NULL;
 			DaoLexer *lexer = module->lexer;
-			int pos = DaoParser_FindScopedConstant( self, & value, dlm+1 );
+			DaoInode *back = self->vmcLast;
+			int pos = DaoParser_FindScopedConstant2( self, & value, dlm+1, DTOK_LB, 0 );
 			int reg, offset, count, found = -1;
 
+			DaoParser_PopCodes( self, back );
 			if( value == NULL ) goto ErrorRoutine;
 			if( value->type != DAO_CLASS && value->type != DAO_CTYPE ) goto ErrorRoutine;
 			if( pos < 0 || tokens[pos+1]->type != DTOK_LB ) goto ErrorRoutine;
@@ -987,7 +1027,6 @@ static void DaoParser_Restore( DaoParser *self, DaoInode *back, int regCount )
 
 void DaoType_MapNames( DaoType *self );
 DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *types );
-static DaoValue* DaoParser_GetVariable( DaoParser *self, int reg );
 static int DaoParser_MakeArithTree( DaoParser *self, int start, int end, int *cst );
 
 static DaoType* DaoParser_ParseCodeBlockType( DaoParser *self, int start, int *next )
@@ -1971,44 +2010,6 @@ FailedInstantiation:
 	return NULL;
 }
 
-int DaoParser_FindScopedConstant2( DaoParser *self, DaoValue **value, int start, int stop, int type )
-{
-	DaoEnode enode;
-	self->curToken = start;
-	enode = DaoParser_ParsePrimary( self, stop, type );
-	if( enode.reg < 0 || enode.konst == 0 ){
-		DaoParser_Error3( self, DAO_EXPR_NEED_CONST_EXPR, start );
-		return -1;
-	}
-	*value = DaoParser_GetVariable( self, enode.konst );
-	return self->curToken - 1;
-}
-int DaoParser_FindScopedConstant( DaoParser *self, DaoValue **value, int start )
-{
-	return DaoParser_FindScopedConstant2( self, value, start, DTOK_LCB, 0 );
-}
-int DaoParser_ParseScopedName( DaoParser *self, DaoValue **scope, DaoValue **value, int start, int local )
-{
-	DaoToken **tokens = self->tokens->items.pToken;
-
-	if( (start+1) >= self->tokens->size || tokens[start+1]->type != DTOK_COLON2 ) return start;
-
-	start = DaoParser_FindScopedConstant2( self, scope, start, DTOK_LCB, DAO_EXPRLIST_SCOPE );
-	if( start < 0 ) return -1;
-
-	if( tokens[++start]->name != DTOK_COLON2 ) goto ErrorWasDefined;
-	if( tokens[++start]->name != DTOK_IDENTIFIER ) goto InvalidName;// XXX
-	if( (start+1) >= self->tokens->size || tokens[start+1]->type != DTOK_COLON2 ) return start;
-
-	DaoParser_Error2( self, DAO_UNDEFINED_SCOPE_NAME, start, start, 0 );
-	return -1;
-ErrorWasDefined:
-	DaoParser_Error2( self, DAO_SYMBOL_WAS_DEFINED, start, start, 0 );
-	return -1;
-InvalidName:
-	DaoParser_Error2( self, DAO_TOKEN_NEED_NAME, start, start+2, 0 );
-	return -1;
-}
 
 static int DaoParser_Preprocess( DaoParser *self );
 int DaoParser_ParseScript( DaoParser *self )
