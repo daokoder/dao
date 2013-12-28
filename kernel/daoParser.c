@@ -3307,6 +3307,11 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		if( start < 0 ) goto ErrorClassDefinition;
 		ec = 0;
 	}
+	if( self->byteBlock ){
+		DaoByteBlock *block = DaoByteBlock_AddClassBlock( self->byteBlock, klass );
+		parser->byteCoder = self->byteCoder;
+		parser->byteBlock = block;
+	}
 	begin = start;
 	right = tokens[start]->name == DTOK_LCB ?
 		DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, -1 ) : -1 ;

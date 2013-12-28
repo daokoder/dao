@@ -97,7 +97,7 @@
 //
 //
 // long:
-// ASM_VALUE(1B): DAO_LONG(2B), Zeros(2B), Size(4B);
+// ASM_VALUE(1B): DAO_LONG(2B), Base(1B), Sign(1B), Size(4B);
 // ASM_DATA(1B); Digits (8B);
 // ASM_END(1B): Digits(8B);
 //
@@ -109,14 +109,14 @@
 //
 //
 // enum symbol:
-// ASM_VALUE(1B): DAO_ENUM(2B), Name-Index(2B), Type-Index(2B), Zeros(2B);
+// ASM_VALUE(1B): DAO_ENUM(2B), Type-Index(2B), Zeros(4B);
 // ASM_END(1B): Value(4B), Zeros(0);
 //
 //   Notes:
-//   The "Name-Index" and "Type-Index" reference previous blocks which are
-//   located backwardly by a such "index" offset. Such index is stored as
-//   a two-byte short. In case short is not sufficient to represent such
-//   index, an intermediate indexing chunk can be used:
+//   The "Type-Index" reference previous blocks which are located backwardly
+//   by a such "index" offset. Such index is stored as a two-byte short.
+//   In case short is not sufficient to represent such index, an intermediate
+//   indexing chunk can be used:
 //
 //     ASM_SEEK(1B): New-Index(4B), Zeros(4B);
 // 
@@ -148,7 +148,7 @@
 //
 //
 // tuple:
-// ASM_VALUE(1B): DAO_TUPLE(2B), Type-Index(2B), Size(4B);
+// ASM_VALUE(1B): DAO_TUPLE(2B), Type-Index(2B), Size(2B), Value-Index(2B);
 // ASM_DATA(1B); Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 // ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //
@@ -166,7 +166,7 @@
 //
 //
 // class:
-// ASM_CLASS(1B): Name-Index(2B), Parent-Index(2B), Host-Index(2B), Attrib(2B);
+// ASM_CLASS(1B): Name-Index(2B), Parent-Index(2B), Attrib(4B);
 // ...
 // ASM_END(1B): LineDef(2B), Zeros(6B);
 //
@@ -502,6 +502,7 @@ DaoByteBlock* DaoByteBlock_FindBlock( DaoByteBlock *self, DaoValue *value );
 DaoByteBlock* DaoByteBlock_AddBlock( DaoByteBlock *self, DaoValue *value, int type );
 
 DaoByteBlock* DaoByteBlock_AddRoutineBlock( DaoByteBlock *self, DaoRoutine *routine );
+DaoByteBlock* DaoByteBlock_AddClassBlock( DaoByteBlock *self, DaoClass *klass );
 DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, int code, int opb, DaoType *type );
 
 void DaoByteBlock_InsertBlockIndex( DaoByteBlock *self, uchar_t *code, DaoByteBlock *block );
@@ -521,7 +522,7 @@ DaoByteBlock* DaoByteBlock_EncodeInteger( DaoByteBlock *self, daoint value );
 DaoByteBlock* DaoByteBlock_EncodeFloat( DaoByteBlock *self, float value );
 DaoByteBlock* DaoByteBlock_EncodeDouble( DaoByteBlock *self, double value );
 DaoByteBlock* DaoByteBlock_EncodeComplex( DaoByteBlock *self, DaoComplex *value );
-DaoByteBlock* DaoByteBlock_EncodeLong( DaoByteBlock *self, DLong *value );
+DaoByteBlock* DaoByteBlock_EncodeLong( DaoByteBlock *self, DaoLong *value );
 DaoByteBlock* DaoByteBlock_EncodeEnum( DaoByteBlock *self, DaoEnum *value );
 
 DaoByteBlock* DaoByteBlock_EncodeArray( DaoByteBlock *self, DaoArray *value );

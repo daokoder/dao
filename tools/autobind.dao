@@ -93,71 +93,71 @@ global enum CxxTypeID
 # Supported C type names, with mapping to IDs:
 const CT_MAP_BASIC =
 {
-	"char" => CxxTypeID::CT_CHAR ,
-	"signed char" => CxxTypeID::CT_SCHAR ,
-	"unsigned char" => CxxTypeID::CT_UCHAR ,
-	"wchar_t" => CxxTypeID::CT_WCHAR ,
-	"short" => CxxTypeID::CT_SHORT ,
-	"signed short" => CxxTypeID::CT_SSHORT ,
-	"unsigned short" => CxxTypeID::CT_USHORT ,
-	"bool" => CxxTypeID::CT_INT ,
-	"int" => CxxTypeID::CT_INT ,
-	"signed int" => CxxTypeID::CT_SINT ,
-	"ptrdiff_t" => CxxTypeID::CT_SINT , # XXX
-	"unsigned" => CxxTypeID::CT_UINT ,
-	"unsigned int" => CxxTypeID::CT_UINT ,
-	"size_t" => CxxTypeID::CT_UINT ,
-	"int8_t" => CxxTypeID::CT_INT ,
-	"uint8_t" => CxxTypeID::CT_UINT ,
-	"int16_t" => CxxTypeID::CT_INT ,
-	"uint16_t" => CxxTypeID::CT_UINT ,
-	"int32_t" => CxxTypeID::CT_INT ,
-	"uint32_t" => CxxTypeID::CT_UINT ,
-	"int64_t" => CxxTypeID::CT_INT ,
-	"uint64_t" => CxxTypeID::CT_UINT ,
-	"long" => CxxTypeID::CT_LONG ,
-	"signed long" => CxxTypeID::CT_SLONG ,
-	"unsigned long" => CxxTypeID::CT_ULONG ,
-	"long long" => CxxTypeID::CT_DOUBLE ,
-	"long double" => CxxTypeID::CT_DOUBLE ,
-	"signed long int" => CxxTypeID::CT_INT ,
-	"unsigned long int" => CxxTypeID::CT_UINT ,
-	"signed long long" => CxxTypeID::CT_DOUBLE ,
-	"unsigned long long" => CxxTypeID::CT_DOUBLE ,
-	"__int64" => CxxTypeID::CT_DOUBLE ,
-	"signed __int64" => CxxTypeID::CT_DOUBLE ,
-	"unsigned __int64" => CxxTypeID::CT_DOUBLE ,
-	"float" => CxxTypeID::CT_FLOAT ,
-	"double" => CxxTypeID::CT_DOUBLE ,
-	"complex8" => CxxTypeID::CT_COMPLEX8 ,
-	"complex16" => CxxTypeID::CT_COMPLEX16 ,
-	"void" => CxxTypeID::CT_VOID, 
-	"FILE" => CxxTypeID::CT_FILE 
+	'char' => CxxTypeID::CT_CHAR ,
+	'signed char' => CxxTypeID::CT_SCHAR ,
+	'unsigned char' => CxxTypeID::CT_UCHAR ,
+	'wchar_t' => CxxTypeID::CT_WCHAR ,
+	'short' => CxxTypeID::CT_SHORT ,
+	'signed short' => CxxTypeID::CT_SSHORT ,
+	'unsigned short' => CxxTypeID::CT_USHORT ,
+	'bool' => CxxTypeID::CT_INT ,
+	'int' => CxxTypeID::CT_INT ,
+	'signed int' => CxxTypeID::CT_SINT ,
+	'ptrdiff_t' => CxxTypeID::CT_SINT , # XXX
+	'unsigned' => CxxTypeID::CT_UINT ,
+	'unsigned int' => CxxTypeID::CT_UINT ,
+	'size_t' => CxxTypeID::CT_UINT ,
+	'int8_t' => CxxTypeID::CT_INT ,
+	'uint8_t' => CxxTypeID::CT_UINT ,
+	'int16_t' => CxxTypeID::CT_INT ,
+	'uint16_t' => CxxTypeID::CT_UINT ,
+	'int32_t' => CxxTypeID::CT_INT ,
+	'uint32_t' => CxxTypeID::CT_UINT ,
+	'int64_t' => CxxTypeID::CT_INT ,
+	'uint64_t' => CxxTypeID::CT_UINT ,
+	'long' => CxxTypeID::CT_LONG ,
+	'signed long' => CxxTypeID::CT_SLONG ,
+	'unsigned long' => CxxTypeID::CT_ULONG ,
+	'long long' => CxxTypeID::CT_DOUBLE ,
+	'long double' => CxxTypeID::CT_DOUBLE ,
+	'signed long int' => CxxTypeID::CT_INT ,
+	'unsigned long int' => CxxTypeID::CT_UINT ,
+	'signed long long' => CxxTypeID::CT_DOUBLE ,
+	'unsigned long long' => CxxTypeID::CT_DOUBLE ,
+	'__int64' => CxxTypeID::CT_DOUBLE ,
+	'signed __int64' => CxxTypeID::CT_DOUBLE ,
+	'unsigned __int64' => CxxTypeID::CT_DOUBLE ,
+	'float' => CxxTypeID::CT_FLOAT ,
+	'double' => CxxTypeID::CT_DOUBLE ,
+	'complex8' => CxxTypeID::CT_COMPLEX8 ,
+	'complex16' => CxxTypeID::CT_COMPLEX16 ,
+	'void' => CxxTypeID::CT_VOID, 
+	'FILE' => CxxTypeID::CT_FILE 
 };
 const DT_MAP = 
 {
-	"DaoValue" => CxxTypeID::DAO_NIL_101 ,
-	"DString" => CxxTypeID::DAO_STRING ,
-	"DaoList" => CxxTypeID::DAO_LIST ,
-	"DaoMap" => CxxTypeID::DAO_MAP ,
-	"DaoTuple" => CxxTypeID::DAO_TUPLE ,
-	"DaoArray" => CxxTypeID::DAO_ARRAY ,
-	"DaoRoutine" => CxxTypeID::DAO_ROUTINE ,
-	"DaoObject" => CxxTypeID::DAO_OBJECT
+	'DaoValue' => CxxTypeID::DAO_NIL_101 ,
+	'DString' => CxxTypeID::DAO_STRING ,
+	'DaoList' => CxxTypeID::DAO_LIST ,
+	'DaoMap' => CxxTypeID::DAO_MAP ,
+	'DaoTuple' => CxxTypeID::DAO_TUPLE ,
+	'DaoArray' => CxxTypeID::DAO_ARRAY ,
+	'DaoRoutine' => CxxTypeID::DAO_ROUTINE ,
+	'DaoObject' => CxxTypeID::DAO_OBJECT
 };
 const DAO_TYPES0 =
 {
-	"any" , "int" , "float" , "double" , "complex" ,
-	"string" , "list" , "map" , "array" , "routine" , "any" 
+	'any' , 'int' , 'float' , 'double' , 'complex' ,
+	'string' , 'list' , 'map' , 'array' , 'routine' , 'any' 
 }
 # The corresponding Dao scalar types:
 const DAO_TYPES = 
 {
-	"int" , "int" , "int" , "int" , "int" ,
-	"int" , "int" , "int" , "int" , "int" ,
-	"int" , "int" , "int" , "float" , "double" ,
-	"complex", "complex",
-	"cdata" , "stream"
+	'int' , 'int' , 'int' , 'int' , 'int' ,
+	'int' , 'int' , 'int' , 'int' , 'int' ,
+	'int' , 'int' , 'int' , 'float' , 'double' ,
+	'complex', 'complex',
+	'cdata' , 'stream'
 }
 
 global enum LibType{ LIB_NONE, LIB_QT }
