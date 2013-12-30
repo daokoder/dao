@@ -2739,6 +2739,9 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 		start = DaoParser_FindScopedConstant( self, & value, start );
 		if( start > 0 && value && value->type == DAO_NAMESPACE ){
 			DaoNamespace_AddParent( myNS, (DaoNamespace*) value );
+			if( self->byteBlock ){
+				DaoByteBlock_EncodeUseStmt( self->byteBlock, value, DAO_NAMESPACE );
+			}
 			return start + 1;
 		}
 	}
@@ -5440,6 +5443,9 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		value = (DaoValue*) self->denum;
 		self->denum->value = 0;
 		DaoEnum_SetType( self->denum, type );
+		if( self->byteBlock ){
+			DaoByteBlock_EncodeDeclConst( self->byteBlock, str, value );
+		}
 		varReg = DaoNamespace_AddConst( ns, str, value, DAO_DATA_PUBLIC );
 		if( varReg <0 ) return -1;
 		*cst = varReg;

@@ -153,6 +153,10 @@
 // ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //
 //
+// namevalue:
+// ASM_VALUE(1B): DAO_PAR_NAMED(2B), Name-Index(2B), Value-Index(2B), Type-Index(2B);
+// ASM_END(1B): Zeros(8B);
+// 
 //
 //
 //#########
@@ -482,7 +486,7 @@ struct DaoByteCoder
 	DArray  *lines;    /* list<daoint> */
 	DArray  *iblocks;  /* list<DaoByteBlock*> */
 	DArray  *itypes;   /* list<DaoType*> */
-	DArray  *indices;   /* list<DaoType*> */
+	DArray  *indices;  /* list<DaoType*> */
 
 	DaoNamespace  *nspace;
 	DaoVmSpace    *vmspace;
@@ -511,6 +515,7 @@ DaoByteBlock* DaoByteBlock_EncodeString( DaoByteBlock *self, DString *string );
 DaoByteBlock* DaoByteBlock_EncodeType( DaoByteBlock *self, DaoType *type );
 DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value );
 DaoByteBlock* DaoByteBlock_EncodeLoadStmt( DaoByteBlock *self, DString *mod, DString *ns );
+DaoByteBlock* DaoByteBlock_EncodeUseStmt( DaoByteBlock *self, DaoValue *value, int tag );
 DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *target );
 
 DaoByteBlock* DaoByteBlock_EncodeDeclConst( DaoByteBlock *self, DString *name, DaoValue *value );

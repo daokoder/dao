@@ -45,11 +45,11 @@ enum DaoPathType
 
 enum DaoModuleTypes
 {
-	DAO_MODULE_NONE,
-	DAO_MODULE_DAC,
-	DAO_MODULE_DAO,
-	DAO_MODULE_DLL,
-	DAO_MODULE_ANY
+	DAO_MODULE_NONE = 0,
+	DAO_MODULE_DAC  = 1,
+	DAO_MODULE_DAO  = 2,
+	DAO_MODULE_DLL  = 4,
+	DAO_MODULE_ANY  = DAO_MODULE_DAC|DAO_MODULE_DAO|DAO_MODULE_DLL
 };
 
 extern const char *const dao_copy_notice;
@@ -155,7 +155,7 @@ DAO_DLL DaoNamespace* DaoVmSpace_FindNamespace( DaoVmSpace *self, DString *name 
 DAO_DLL int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname );
 
 DAO_DLL void DaoVmSpace_SearchPath( DaoVmSpace *self, DString *fname, int type, int check );
-DAO_DLL int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname );
+DAO_DLL int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int types );
 
 DAO_DLL void DaoVmSpace_SetPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path );
