@@ -141,8 +141,8 @@
 //
 // map:
 // ASM_VALUE(1B): DAO_MAP(2B), Type-Index(2B), Hash-Seed(4B);
-// ASM_DATA(1B); Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
-// ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
+// ASM_DATA(1B); Key-Index(2B), Value-Index(2B), Key-Index(2B), Value-Index(2B);
+// ASM_END(1B): Key-Index(2B), Value-Index(2B), Key-Index(2B), Value-Index(2B);
 //
 // A pair of "Value-Index"s is for a pair of key-value, zero marks the end.
 //
@@ -166,13 +166,13 @@
 // routine:
 // ASM_ROUTINE(1B): Name-Index(2B), Type-Index(2B), Host-Index(2B), Attrib(2B);
 // ...
-// ASM_END: LineDef(2B), Zeros(6B);
+// ASM_END: RegCount(2B), Zeros(4B), Permission(2B);
 //
 //
 // class:
-// ASM_CLASS(1B): Name-Index(2B), Parent-Index(2B), Attrib(4B);
+// ASM_CLASS(1B): Name/Decl-Index(2B), Parent-Index(2B), Attrib(4B);
 // ...
-// ASM_END(1B): LineDef(2B), Zeros(6B);
+// ASM_END(1B): LineDef(2B), Zeros(4B), Permission(2B);
 //
 //
 // enum:
@@ -238,16 +238,16 @@
 // ASM_USE(1B): DAO_ROUTINE(2B), Name-Index(2B), Type-Index(2B), Zeros(2B);
 //
 // var declaration:
-// ASM_VAR(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Zeros(2B);
+// ASM_VAR(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Permission(2B);
 //
 // const declaration:
-// ASM_CONST(1B): Name-Index(2B), Value-Index(2B), Zeros(4B);
+// ASM_CONST(1B): Name-Index(2B), Value-Index(2B), Zeros(2B), Permission(2B);
 //
 // static declaration:
-// ASM_STATIC(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Zeros(2B);
+// ASM_STATIC(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Permission(2B);
 //
 // global declaration:
-// ASM_GLOBAL(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Zeros(2B);
+// ASM_GLOBAL(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Permission(2B);
 //
 // mixin:
 // ASM_MIXIN(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
@@ -485,8 +485,8 @@ struct DaoByteCoder
 	DArray  *caches;   /* list<DaoByteBlock*> */
 	DArray  *lines;    /* list<daoint> */
 	DArray  *iblocks;  /* list<DaoByteBlock*> */
-	DArray  *itypes;   /* list<DaoType*> */
-	DArray  *indices;  /* list<DaoType*> */
+	DArray  *ivalues;   /* list<DaoValue*> */
+	DArray  *indices;  /* list<daoint> */
 
 	DaoNamespace  *nspace;
 	DaoVmSpace    *vmspace;
@@ -498,6 +498,8 @@ void DaoByteBlock_Delete( DaoByteBlock *self );
 DaoByteCoder* DaoByteCoder_New( DaoVmSpace *vms );
 void DaoByteCoder_Delete( DaoByteCoder *self );
 
+void DaoByteCoder_Reset( DaoByteCoder *self );
+
 DaoByteBlock* DaoByteCoder_Init( DaoByteCoder *self );
 DaoByteBlock* DaoByteCoder_NewBlock( DaoByteCoder *self, int type );
 
@@ -505,8 +507,8 @@ DaoByteBlock* DaoByteBlock_NewBlock( DaoByteBlock *self, int type );
 DaoByteBlock* DaoByteBlock_FindBlock( DaoByteBlock *self, DaoValue *value );
 DaoByteBlock* DaoByteBlock_AddBlock( DaoByteBlock *self, DaoValue *value, int type );
 
-DaoByteBlock* DaoByteBlock_AddRoutineBlock( DaoByteBlock *self, DaoRoutine *routine );
-DaoByteBlock* DaoByteBlock_AddClassBlock( DaoByteBlock *self, DaoClass *klass );
+DaoByteBlock* DaoByteBlock_AddRoutineBlock( DaoByteBlock *self, DaoRoutine *routine, int perm );
+DaoByteBlock* DaoByteBlock_AddClassBlock( DaoByteBlock *self, DaoClass *klass, int perm );
 DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, int code, int opb, DaoType *type );
 
 void DaoByteBlock_InsertBlockIndex( DaoByteBlock *self, uchar_t *code, DaoByteBlock *block );
@@ -518,10 +520,10 @@ DaoByteBlock* DaoByteBlock_EncodeLoadStmt( DaoByteBlock *self, DString *mod, DSt
 DaoByteBlock* DaoByteBlock_EncodeUseStmt( DaoByteBlock *self, DaoValue *value, int tag );
 DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *target );
 
-DaoByteBlock* DaoByteBlock_EncodeDeclConst( DaoByteBlock *self, DString *name, DaoValue *value );
-DaoByteBlock* DaoByteBlock_EncodeDeclVar( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type );
-DaoByteBlock* DaoByteBlock_EncodeDeclStatic( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type );
-DaoByteBlock* DaoByteBlock_EncodeDeclGlobal( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type );
+DaoByteBlock* DaoByteBlock_EncodeDeclConst( DaoByteBlock *self, DString *name, DaoValue *value, int perm );
+DaoByteBlock* DaoByteBlock_EncodeDeclVar( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int perm );
+DaoByteBlock* DaoByteBlock_EncodeDeclStatic( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int perm );
+DaoByteBlock* DaoByteBlock_EncodeDeclGlobal( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int perm );
 
 DaoByteBlock* DaoByteBlock_EncodeInteger( DaoByteBlock *self, daoint value );
 DaoByteBlock* DaoByteBlock_EncodeFloat( DaoByteBlock *self, float value );

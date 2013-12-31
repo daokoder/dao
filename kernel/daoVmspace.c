@@ -1284,7 +1284,7 @@ void DString_AppendUInt16( DString *bytecodes, int value )
 	uchar_t bytes[2];
 	bytes[0] = (value >> 8) & 0xFF;
 	bytes[1] = value & 0xFF;
-	DString_AppendDataMBS( bytecodes, bytes, 2 );
+	DString_AppendDataMBS( bytecodes, (char*) bytes, 2 );
 }
 void DString_AppendUInt32( DString *bytecodes, uint_t value )
 {
@@ -1293,7 +1293,7 @@ void DString_AppendUInt32( DString *bytecodes, uint_t value )
 	bytes[1] = (value >> 16) & 0xFF;
 	bytes[2] = (value >>  8) & 0xFF;
 	bytes[3] = value & 0xFF;
-	DString_AppendDataMBS( bytecodes, bytes, 4 );
+	DString_AppendDataMBS( bytecodes, (char*) bytes, 4 );
 }
 
 int DaoDecodeUInt16( const char *data )

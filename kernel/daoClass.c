@@ -961,18 +961,20 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 			/* For object data: */
 			for( id=0; id<klass->objDataName->size; id ++ ){
 				DString *name = klass->objDataName->items.pString[id];
-				search = MAP_Find( klass->lookupTable, name );
-				perm = LOOKUP_PM( search->value.pInt );
+				DNode *search2, *search = MAP_Find( klass->lookupTable, name );
+				int perm = LOOKUP_PM( search->value.pInt );
+				int idx = LOOKUP_ID( search->value.pInt );
 				/* NO deriving private member: */
 				if( perm <= DAO_DATA_PRIVATE ) continue;
-				search = MAP_Find( self->lookupTable, name );
-				if( search == NULL ){ /* To not overide data and routine: */
-					index = LOOKUP_BIND( DAO_OBJECT_VARIABLE, perm, i, (offset+id) );
+				search2 = MAP_Find( self->lookupTable, name );
+				if( search2 == NULL ){ /* To not overide data and routine: */
+					index = LOOKUP_BIND( DAO_OBJECT_VARIABLE, perm, i, (offset+idx) );
 					MAP_Insert( self->lookupTable, name, index );
 				}
 			}
 		}
 	}
+
 	self->derived = 1;
 	DString_Delete( mbs );
 	DArray_Delete( parents );
@@ -1272,7 +1274,7 @@ int DaoClass_AddObjectVar( DaoClass *self, DString *name, DaoValue *deft, DaoTyp
 {
 	int id;
 	DNode *node = MAP_Find( self->lookupTable, name );
-	if( node && LOOKUP_UP( node->value.pInt ) ) return -DAO_CTW_WAS_DEFINED;
+	if( node && LOOKUP_UP( node->value.pInt ) == 0 ) return -DAO_CTW_WAS_DEFINED;
 	if( deft == NULL && t ) deft = t->value;
 
 	id = self->objDataName->size;

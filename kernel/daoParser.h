@@ -33,6 +33,14 @@
 #include"daoLexer.h"
 #include"daoBytecode.h"
 
+enum DaoExpressionListTypes
+{
+	DAO_EXPRLIST_ARRAY = 1,
+	DAO_EXPRLIST_TUPLE = 2,
+	DAO_EXPRLIST_SLICE = 4,
+	DAO_EXPRLIST_SCOPE = 8, /* just for convenience; */
+};
+
 
 struct DaoParser
 {

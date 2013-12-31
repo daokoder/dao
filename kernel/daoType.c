@@ -251,6 +251,10 @@ void DaoType_CheckAttributes( DaoType *self )
 			if( it->attrib & DAO_TYPE_SPEC ) self->attrib |= DAO_TYPE_SPEC;
 			self->noncyclic &= it->noncyclic;
 		}
+		if( self->tid == DAO_ROUTINE && self->nested->size ){
+			DaoType *it = self->nested->items.pType[0];
+			if( it->attrib & DAO_TYPE_SELFNAMED ) self->attrib |= DAO_TYPE_SELF;
+		}
 		if( (self->tid == DAO_TUPLE || self->tid == DAO_ROUTINE) && self->nested->size ){
 			DaoType *it = self->nested->items.pType[self->nested->size - 1];
 			if( it->tid == DAO_PAR_VALIST ) self->variadic = 1;

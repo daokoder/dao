@@ -402,11 +402,35 @@ void DaoParser_Error( DaoParser *self, int code, DString *ext );
 void DaoParser_Error2( DaoParser *self, int code, int m, int n, int single_line );
 void DaoParser_PrintError( DaoParser *self, int line, int code, DString *ext );
 int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop );
-int DaoParser_ParseScopedName( DaoParser *self, DaoValue **scope, DaoValue **value, int i, int loc );
 int DaoParser_ParseTemplateParams( DaoParser *self, int start, int end, DArray *holders, DArray *defaults, DString *name );
 DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *types, int *co );
 DaoType* DaoCdata_WrapType( DaoNamespace *ns, DaoTypeBase *typer, int opaque );
 DaoType* DaoCdata_NewType( DaoTypeBase *typer );
+
+int DaoParser_FindScopedConstant2( DaoParser *self, DaoValue **value, int start, int stop, int type );
+
+static int DaoParser_ParseScopedName( DaoParser *self, DaoValue **scope, DaoValue **value, int start )
+{
+	DaoToken **tokens = self->tokens->items.pToken;
+
+	if( (start+1) >= self->tokens->size || tokens[start+1]->type != DTOK_COLON2 ) return start;
+
+	start = DaoParser_FindScopedConstant2( self, scope, start, DTOK_LCB, DAO_EXPRLIST_SCOPE );
+	if( start < 0 ) return -1;
+
+	if( tokens[++start]->name != DTOK_COLON2 ) goto ErrorWasDefined;
+	if( tokens[++start]->name != DTOK_IDENTIFIER ) goto InvalidName;// XXX
+	if( (start+1) >= self->tokens->size || tokens[start+1]->type != DTOK_COLON2 ) return start;
+
+	DaoParser_Error2( self, DAO_UNDEFINED_SCOPE_NAME, start, start, 0 );
+	return -1;
+ErrorWasDefined:
+	DaoParser_Error2( self, DAO_SYMBOL_WAS_DEFINED, start, start, 0 );
+	return -1;
+InvalidName:
+	DaoParser_Error2( self, DAO_TOKEN_NEED_NAME, start, start+2, 0 );
+	return -1;
+}
 
 static void DaoValue_AddType( DaoValue *self, DString *name, DaoType *type )
 {
@@ -458,7 +482,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	tokens = parser->tokens->items.pToken;
 	n = parser->tokens->size - 1;
 	DArray_Clear( parser->errors );
-	if( (k = DaoParser_ParseScopedName( parser, & scope, & value, 0, 0 )) <0 ) goto Error;
+	if( (k = DaoParser_ParseScopedName( parser, & scope, & value, 0 )) <0 ) goto Error;
 	if( k == 0 && n ==0 ) goto Finalize; /* single identifier name; */
 	if( scope && (tid=scope->type) != DAO_CTYPE && tid != DAO_CLASS && tid != DAO_NAMESPACE ){
 		DaoParser_Error2( parser, DAO_UNDEFINED_SCOPE_NAME, k-2, k-2, 0 );
