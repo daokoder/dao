@@ -32,7 +32,6 @@
 #include"daoType.h"
 
 #define DAO_CLASS_CONST_CSTOR  1
-#define DAO_CLASS_CONST_DEF    2
 
 
 struct DaoClass

@@ -166,13 +166,21 @@
 // routine:
 // ASM_ROUTINE(1B): Name-Index(2B), Type-Index(2B), Host-Index(2B), Attrib(2B);
 // ...
-// ASM_END: RegCount(2B), Zeros(4B), Permission(2B);
+// ASM_END: RegCount(2B), Zeros(4B), DefaultConstructor(1B), Permission(1B);
 //
 //
 // class:
 // ASM_CLASS(1B): Name/Decl-Index(2B), Parent-Index(2B), Attrib(4B);
+// ASM_BASES(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 // ...
-// ASM_END(1B): LineDef(2B), Zeros(4B), Permission(2B);
+// ASM_END(1B): LineDef(2B), Zeros(5B), Permission(1B);
+//
+//
+// interface:
+// ASM_INTERFACE(1B): Name/Decl-Index(2B), Parent-Count(2B), Zeros(4B);
+// ASM_BASES(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
+// ...
+// ASM_END(1B): LineDef(2B), Zeros(5B), Permission(1B);
 //
 //
 // enum:
@@ -237,6 +245,9 @@
 // use constructors:
 // ASM_USE(1B): DAO_ROUTINE(2B), Name-Index(2B), Type-Index(2B), Zeros(2B);
 //
+// bases (mixin components or interface parents):
+// ASM_BASES(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
+//
 // var declaration:
 // ASM_VAR(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Permission(2B);
 //
@@ -248,9 +259,6 @@
 //
 // global declaration:
 // ASM_GLOBAL(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Permission(2B);
-//
-// mixin:
-// ASM_MIXIN(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //
 // decorator target:
 // ASM_DECO(1B): Prefix-Index(2B), ~(2B), 0, 0;
@@ -423,11 +431,11 @@ enum DaoAuxOpcode
 	DAO_ASM_END       ,
 	DAO_ASM_LOAD      ,
 	DAO_ASM_USE       ,
+	DAO_ASM_BASES     ,
 	DAO_ASM_CONST     ,
 	DAO_ASM_STATIC    ,
 	DAO_ASM_GLOBAL    ,
 	DAO_ASM_VAR       ,
-	DAO_ASM_MIXIN     ,
 	DAO_ASM_DECOPAT   ,
 	DAO_ASM_DATA      ,
 	DAO_ASM_DATA2     ,
@@ -436,7 +444,7 @@ enum DaoAuxOpcode
 
 
 
-typedef struct DaoByteCoder   DaoByteCoder;
+typedef struct DaoByteCoder  DaoByteCoder;
 typedef struct DaoByteBlock  DaoByteBlock;
 
 
@@ -507,8 +515,9 @@ DaoByteBlock* DaoByteBlock_NewBlock( DaoByteBlock *self, int type );
 DaoByteBlock* DaoByteBlock_FindBlock( DaoByteBlock *self, DaoValue *value );
 DaoByteBlock* DaoByteBlock_AddBlock( DaoByteBlock *self, DaoValue *value, int type );
 
-DaoByteBlock* DaoByteBlock_AddRoutineBlock( DaoByteBlock *self, DaoRoutine *routine, int perm );
-DaoByteBlock* DaoByteBlock_AddClassBlock( DaoByteBlock *self, DaoClass *klass, int perm );
+DaoByteBlock* DaoByteBlock_AddRoutineBlock( DaoByteBlock *self, DaoRoutine *routine, int pm );
+DaoByteBlock* DaoByteBlock_AddClassBlock( DaoByteBlock *self, DaoClass *klass, int pm );
+DaoByteBlock* DaoByteBlock_AddInterfaceBlock( DaoByteBlock *self, DaoInterface *inter, int pm );
 DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, int code, int opb, DaoType *type );
 
 void DaoByteBlock_InsertBlockIndex( DaoByteBlock *self, uchar_t *code, DaoByteBlock *block );

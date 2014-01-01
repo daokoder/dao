@@ -2706,6 +2706,9 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 				item.xInteger.value = node->value.pInt;
 				DaoParser_AddConstant( self, node->key.pString, & item, tokens[start] );
 			}
+			if( self->byteBlock ){
+				DaoByteBlock_EncodeUseStmt( self->byteBlock, value, DAO_ENUM );
+			}
 			return start + 1;
 		}
 	}else{
@@ -3038,6 +3041,9 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 		DaoParser_AddToScope( self, interName, value, inter->abtype, storeType, line );
 
 		if( start+1 <= to && tokens[start+1]->name == DTOK_SEMCO ){
+			if( self->byteBlock ){
+				DaoByteBlock_AddInterfaceBlock( self->byteBlock, inter, self->permission );
+			}
 			start += 2;
 			return start;
 		}
@@ -3084,6 +3090,11 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 	right = tokens[start]->name == DTOK_LCB ?
 		DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, -1 ) : -1 ;
 	if( right < 0 ) goto ErrorInterfaceDefinition;
+
+	if( self->byteBlock ){
+		parser->byteBlock = DaoByteBlock_AddInterfaceBlock( self->byteBlock, inter, self->permission );
+		parser->byteCoder = self->byteCoder;
+	}
 
 	DaoInterface_DeriveMethods( inter );
 	for(i=start+1; i<right; i++) DaoLexer_AppendToken( parser->lexer, tokens[i] );
@@ -3288,9 +3299,8 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		ec = 0;
 	}
 	if( self->byteBlock ){
-		DaoByteBlock *block = DaoByteBlock_AddClassBlock( self->byteBlock, klass, self->permission );
+		parser->byteBlock = DaoByteBlock_AddClassBlock( self->byteBlock, klass, self->permission );
 		parser->byteCoder = self->byteCoder;
-		parser->byteBlock = block;
 	}
 	begin = start;
 	right = tokens[start]->name == DTOK_LCB ?
@@ -3309,6 +3319,11 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		else
 			DaoParser_PrintError( parser, 0, 0, NULL );
 		goto ErrorClassDefinition;
+	}
+	if( parser->byteBlock ){
+		DaoByteBlock *block = DaoByteBlock_AddInterfaceBlock( parser->byteBlock, klass->inter, self->permission );
+		DaoByteBlock *decl = DaoByteBlock_FindBlock(parser->byteBlock, (DaoValue*) klass );
+		DaoByteBlock_InsertBlockIndex( block, block->begin, decl );
 	}
 	if( parser->vmcLast != parser->vmcBase ){
 #if 0
@@ -3343,6 +3358,9 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DaoParser_AddDefaultInitializer( parser, klass, 0 );
 		error |= DaoParser_ParseRoutine( parser ) == 0;
 		DaoClass_AddConst( klass, ctorname, (DaoValue*)klass->classRoutine, DAO_DATA_PUBLIC );
+		if( parser->byteBlock ){
+			DaoByteBlock_AddRoutineBlock( parser->byteBlock, klass->classRoutine, DAO_DATA_PUBLIC );
+		}
 	}
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	DaoClass_UpdateMixinConstructors( klass );

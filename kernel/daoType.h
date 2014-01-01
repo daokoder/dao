@@ -169,7 +169,7 @@ struct DaoInterface
 	DAO_VALUE_COMMON;
 
 	DaoNamespace  *nspace;
-	DArray        *supers; /* parent interfaces */
+	DArray        *supers;  /* parent interfaces */
 	DMap          *methods; /* DHash<DString*,DaoRoutine*> */
 	DaoType       *abtype;
 
