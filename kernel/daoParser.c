@@ -1981,8 +1981,13 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 	if( tpl == NULL || tpl->type != DAO_CTYPE ) goto FailedInstantiation;
 	DaoParser_ParseTypeItems( self, start, end, types );
 	if( self->errors->size ) goto FailedInstantiation;
-		sptype = DaoType_Specialize( ctype->cdtype, types->items.pType, types->size );
-		if( sptype == NULL ) goto FailedInstantiation;
+	sptype = DaoType_Specialize( ctype->cdtype, types->items.pType, types->size );
+	if( sptype == NULL ) goto FailedInstantiation;
+	if( self->byteBlock ){
+		DaoType **ts = types->items.pType;
+		DaoByteBlock_EncodeCtype( self->byteBlock, (DaoCtype*) sptype->aux, ctype, ts, types->size );
+		DaoByteBlock_EncodeType( self->byteBlock, sptype );
+	}
 
 DoneInstantiation:
 	DArray_Delete( types );
@@ -2546,6 +2551,9 @@ static int DaoParser_UseConstructor( DaoParser *self, DaoRoutine *rout, int t1, 
 			return 0;
 		}
 	}
+	if( self->byteBlock ){
+		DaoByteBlock_EncodeUseStmt( self->byteBlock, (DaoValue*) rout, DAO_ROUTINE );
+	}
 	DRoutines_Add( host->classRoutines->overloads, rout );
 	DString_Assign( s1, host->className );
 	DString_AppendChar( s1, ':' );
@@ -2732,7 +2740,7 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 	DaoRoutine *routine = self->routine;
 	DaoRoutine *tmpRoutine;
 	DaoParser *tmpParser;
-	DaoType *type;
+	DaoType *type, *old;
 	DString *str;
 	DNode *node;
 	int estart = start;
@@ -2752,13 +2760,16 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 		DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
 		goto InvalidAliasing;
 	}
-	type = DaoParser_ParseType( self, start, to, & start, NULL );
+	type = old = DaoParser_ParseType( self, start, to, & start, NULL );
 	if( type == NULL ) goto InvalidAliasing;
 	type = DaoType_Copy( type );
 	DString_Assign( type->name, str );
 	/*  XXX typedef in routine or class */
 	DaoNamespace_AddType( myNS, str, type );
 	DaoNamespace_AddTypeConstant( myNS, str, type );
+	if( self->byteBlock ){
+		DaoByteBlock_EncodeTypeAlias( self->byteBlock, old, type, str );
+	}
 	return start;
 InvalidAliasing:
 	DaoParser_Error3( self, DAO_INVALID_TYPE_ALIAS, estart );
@@ -3320,6 +3331,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			DaoParser_PrintError( parser, 0, 0, NULL );
 		goto ErrorClassDefinition;
 	}
+	DaoList_Clear( klass->classRoutine->routConsts );
 	if( parser->byteBlock ){
 		DaoByteBlock *block = DaoByteBlock_AddInterfaceBlock( parser->byteBlock, klass->inter, self->permission );
 		DaoByteBlock *decl = DaoByteBlock_FindBlock(parser->byteBlock, (DaoValue*) klass );
@@ -3474,10 +3486,14 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 		abtp2 = abtp;
 	}
 	if( alias ){
+		DaoType *old = abtp2;
 		abtp2 = DaoType_Copy( abtp2 );
 		DString_Assign( abtp2->name, alias );
 		DaoNamespace_AddType( self->nameSpace, abtp2->name, abtp2 );
 		DaoParser_AddConstant( self, abtp2->name, (DaoValue*) abtp2, tokens[enumkey] );
+		if( self->byteBlock ){
+			DaoByteBlock_EncodeTypeAlias( self->byteBlock, old, abtp2, alias );
+		}
 	}
 	return rb + 1;
 ErrorEnumDefinition:
@@ -4321,16 +4337,9 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 			return -1;
 		}
 	}
-	if( abtp ==0 && value ) abtp = DaoNamespace_GetType( ns, value );
-	if( reg < 0 && extype && (store == 0 || store == DAO_DECL_LOCAL) ){
-		/* prepare default value for local variables */
-		int id = DaoRoutine_AddConstant( self->routine, abtp->value );
-		if( DaoParser_CheckDefault( self, abtp, errorStart ) ==0 ) return -1;
-		if( abtp->tid <= DAO_STRING && abtp->value ){
-			reg = self->regCount;
-			DaoParser_PushRegister( self );
-			DaoParser_AddCode( self, DVM_GETCL, 0, id, reg, start, end,0 );
-		}
+	if( abtp == NULL && value ){
+		abtp = DaoNamespace_GetType( ns, value );
+		if( self->byteBlock ) DaoByteBlock_EncodeTypeOf( self->byteBlock, abtp, value );
 	}
 	for(k=nameStart; k<self->toks->size; k++){
 		DaoToken *varTok = self->toks->items.pToken[k];

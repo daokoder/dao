@@ -1630,10 +1630,27 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	tid = tid & 0xffff;
 	if( tid != DAO_ANY ) any = dao_type_any;
 
-	if( tid == DAO_LIST ){
+	switch( tid ){
+	case DAO_LIST :
 		return DaoType_Specialize( dao_type_list_template, nest, N );
-	}else if( tid == DAO_MAP ){
+	case DAO_MAP :
 		return DaoType_Specialize( dao_type_map_template, nest, N );
+	case DAO_INTERFACE :
+		if( pb == NULL ) return NULL;
+		return pb->xInterface.abtype;
+	case DAO_CLASS :
+		if( pb == NULL ) return NULL;
+		return pb->xClass.clsType;
+	case DAO_OBJECT :
+		if( pb == NULL ) return NULL;
+		return pb->xClass.objType;
+	case DAO_CTYPE :
+		if( pb == NULL ) return NULL;
+		return pb->xCtype.ctype;
+	case DAO_CDATA :
+	case DAO_CSTRUCT :
+		if( pb == NULL ) return NULL;
+		return pb->xCtype.cdtype;
 	}
 
 	mbs = DString_New(1);

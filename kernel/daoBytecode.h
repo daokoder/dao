@@ -158,6 +158,11 @@
 // ASM_END(1B): Zeros(8B);
 // 
 //
+// specialized ctype:
+// ASM_VALUE(1B): DAO_CTYPE(2B), Value-Index(2B), Type-Index(2B) X 2;
+// ASM_DATA(1B): Type-Index(2B) X 4;
+// ASM_END(1B): Type-Index(2B) X 4;
+//
 //
 //#########
 // Blocks:
@@ -196,8 +201,14 @@
 //
 // Note 1: the nested types are zero Type-Index terminated;
 // Note 2: "Aux-Index" could be index to returned type or class block etc;
-// Note 3: if "TypeID" == 0, and "Aux-Index" reference to a type, create an alias;
-// Note 4: if "TypeID" != 0, and "Aux-Index" reference to a string, import type;
+//
+//
+// type alias:
+// ASM_TYPE(1B): Name-Index(2B), Type-Index(2B), Zeros(4B);
+//
+//
+// typeof:
+// ASM_TYPE(1B): Value-Index(2B), Zeros(6B);
 //
 //
 // value:
@@ -243,7 +254,7 @@
 // ASM_USE(1B): DAO_ENUM(2B), Type-Index(2B), Zeros(4B);
 //
 // use constructors:
-// ASM_USE(1B): DAO_ROUTINE(2B), Name-Index(2B), Type-Index(2B), Zeros(2B);
+// ASM_USE(1B): DAO_ROUTINE(2B), Routine-Index(2B), Zeros(4B);
 //
 // bases (mixin components or interface parents):
 // ASM_BASES(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
@@ -418,6 +429,8 @@
 enum DaoAuxOpcode
 {
 	DAO_ASM_NONE      ,
+	DAO_ASM_TYPEOF    ,
+	DAO_ASM_TYPEDEF   ,
 	DAO_ASM_ROUTINE   ,
 	DAO_ASM_CLASS     ,
 	DAO_ASM_INTERFACE ,
@@ -525,6 +538,9 @@ void DaoByteBlock_InsertBlockIndex( DaoByteBlock *self, uchar_t *code, DaoByteBl
 DaoByteBlock* DaoByteBlock_EncodeString( DaoByteBlock *self, DString *string );
 DaoByteBlock* DaoByteBlock_EncodeType( DaoByteBlock *self, DaoType *type );
 DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value );
+DaoByteBlock* DaoByteBlock_EncodeCtype( DaoByteBlock *self, DaoCtype *ctype, DaoCtype *generic, DaoType **types, int n );
+DaoByteBlock* DaoByteBlock_EncodeTypeAlias( DaoByteBlock *self, DaoType *type, DaoType *aliased, DString *alias );
+DaoByteBlock* DaoByteBlock_EncodeTypeOf( DaoByteBlock *self, DaoType *type, DaoValue *value );
 DaoByteBlock* DaoByteBlock_EncodeLoadStmt( DaoByteBlock *self, DString *mod, DString *ns );
 DaoByteBlock* DaoByteBlock_EncodeUseStmt( DaoByteBlock *self, DaoValue *value, int tag );
 DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *target );
