@@ -4353,6 +4353,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 		if( self->byteBlock ) DaoByteBlock_EncodeTypeOf( self->byteBlock, abtp, value );
 	}
 	for(k=nameStart; k<self->toks->size; k++){
+		DaoByteBlock *block = self->byteBlock;
 		DaoToken *varTok = self->toks->items.pToken[k];
 		DString *name = & varTok->string;
 		int id = 0;
@@ -4366,8 +4367,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					return -1;
 				}
 				DaoNamespace_SetConst( ns, id, value );
-				if( self->byteBlock ){
-					DaoByteBlock_EncodeDeclConst( self->byteBlock, name, value, LOOKUP_PM(id) );
+				if( block ){
+					DaoByteBlock_DeclareConst( block, name, value, LOOKUP_PM(id) );
 				}
 			}else if( self->isClassBody && hostClass ){
 				id = DaoClass_FindConst( hostClass, & varTok->string );
@@ -4377,8 +4378,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, eq+1, end, 0 );
 					return -1;
 				}
-				if( self->byteBlock ){
-					DaoByteBlock_EncodeDeclConst( self->byteBlock, name, value, LOOKUP_PM(id) );
+				if( block ){
+					DaoByteBlock_DeclareConst( block, name, value, LOOKUP_PM(id) );
 				}
 			}else{
 				id = LOOKUP_ID( DaoParser_GetRegister( self, varTok) );
@@ -4411,8 +4412,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 						return -1;
 					}
 					remove = 1;
-					if( self->byteBlock ){
-						DaoByteBlock_EncodeDeclStatic( self->byteBlock, name, var->value, var->dtype, pm );
+					if( block ){
+						DaoByteBlock_DeclareStatic( block, name, var->value, var->dtype, pm );
 					}
 				}else if( reg >= 0 ){
 					DaoParser_AddCode( self, DVM_SETVS, reg, id, 0, first, mid, end );
@@ -4426,8 +4427,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					}
 					remove = 1;
 					DaoValue_MarkConst( var->value );
-					if( self->byteBlock ){
-						DaoByteBlock_EncodeDeclVar( self->byteBlock, name, var->value, var->dtype, pm );
+					if( block ){
+						DaoByteBlock_DeclareVar( block, name, var->value, var->dtype, pm );
 					}
 				}else if( ! self->isClassBody ){
 					if( reg < 0 ) continue;
@@ -4439,8 +4440,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					DaoParser_Error2( self, DAO_TYPE_NO_DEFAULT, errorStart, start, 0 );
 					return -1;
 				}else{
-					if( self->byteBlock ){
-						DaoByteBlock_EncodeDeclVar( self->byteBlock, name, NULL, abtp, pm );
+					if( block ){
+						DaoByteBlock_DeclareVar( block, name, NULL, abtp, pm );
 					}
 				}
 				break;
@@ -4449,8 +4450,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					DaoVariable *var = hostClass->variables->items.pVar[id];
 					DaoVariable_Set( var, value, DaoNamespace_GetType( ns, value ) );
 					remove = 1;
-					if( self->byteBlock ){
-						DaoByteBlock_EncodeDeclStatic( self->byteBlock, name, var->value, var->dtype, pm );
+					if( block ){
+						DaoByteBlock_DeclareStatic( block, name, var->value, var->dtype, pm );
 					}
 				}else if( ! self->isClassBody ){
 					if( reg < 0 ) continue;
@@ -4471,15 +4472,15 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 						return -1;
 					}
 					remove = 1;
-					if( self->byteBlock ){
-						DaoByteBlock_EncodeDeclGlobal( self->byteBlock, name, var->value, var->dtype, pm );
+					if( block ){
+						DaoByteBlock_DeclareGlobal( block, name, var->value, var->dtype, pm );
 					}
 				}else{
 					DaoParser_AddCode( self, DVM_SETVG, reg, id, up, first, mid, end );
 					self->usingGlobal = 1;
-					if( self->byteBlock ){
+					if( block ){
 						DaoVariable *var = ns->variables->items.pVar[id];
-						DaoByteBlock_EncodeDeclGlobal( self->byteBlock, name, NULL, var->dtype, pm );
+						DaoByteBlock_DeclareGlobal( block, name, NULL, var->dtype, pm );
 					}
 				}
 				break;
@@ -5464,7 +5465,8 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		self->denum->value = 0;
 		DaoEnum_SetType( self->denum, type );
 		if( self->byteBlock ){
-			DaoByteBlock_EncodeDeclConst( self->byteBlock, str, value, 0 );
+			DaoByteBlock *block = DaoByteBlock_DeclareConst( self->byteBlock, str, value, 0 );
+			block->begin[6] = 1; /* global scope; */
 		}
 		varReg = DaoNamespace_AddConst( ns, str, value, DAO_DATA_PUBLIC );
 		if( varReg <0 ) return -1;
@@ -5544,7 +5546,7 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 				rout->attribs |= DAO_ROUT_PASSRET;
 				offset += 1;
 				if( parser->byteBlock ){
-					DaoByteBlock_EncodeDeclStatic( parser->byteBlock, NULL, NULL, NULL, 0 );
+					DaoByteBlock_DeclareStatic( parser->byteBlock, NULL, NULL, NULL, 0 );
 				}
 			}
 			if( tokens[offset]->name != DTOK_RB ) goto ErrorParsing;
@@ -5593,7 +5595,7 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 		DaoParser_AddCode( self, DVM_MOVE, up, 0, regCall+1+i/2, first, 0, last );
 		DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, loc, regCall+2+i/2, first, 0, last );
 		if( parser->byteBlock ){
-			DaoByteBlock_EncodeDeclStatic( parser->byteBlock, NULL, NULL, NULL, 0 );
+			DaoByteBlock_DeclareStatic( parser->byteBlock, NULL, NULL, NULL, 0 );
 		}
 	}
 	DaoParser_PushRegisters( self, uplocs->size/2 );
