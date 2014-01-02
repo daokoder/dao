@@ -76,40 +76,40 @@
 //########
 //
 // int:
-// ASM_VALUE(1Byte): DAO_INTEGER(2Bytes), Zeros(6Bytes);
+// ASM_VALUE(1Byte): DAO_INTEGER(1Bytes), Zeros(7Bytes);
 // ASM_END(1B): Value(4B/8B), Zeros(4B/0B);
 //
 //
 // float:
-// ASM_VALUE(1B): DAO_FLOAT(2B), Zeros(6B);
+// ASM_VALUE(1B): DAO_FLOAT(1B), Zeros(7B);
 // ASM_END(1B): Value(4B), Zeros(4B);
 //
 //
 // double:
-// ASM_VALUE(1B): DAO_DOUBLE(2B), Zeros(6B);
+// ASM_VALUE(1B): DAO_DOUBLE(1B), Zeros(7B);
 // ASM_END(1B): Value(8B);
 //
 //
 // complex:
-// ASM_VALUE(1B): DAO_COMPLEX(2B), Zeros(6B);
+// ASM_VALUE(1B): DAO_COMPLEX(1B), Zeros(7B);
 // ASM_DATA(1B): Real(8B);
 // ASM_END(1B): Imag(8B);
 //
 //
 // long:
-// ASM_VALUE(1B): DAO_LONG(2B), Base(1B), Sign(1B), Size(4B);
+// ASM_VALUE(1B): DAO_LONG(1B), Base(1B), Sign(1B), SizeMod16(1B), Digits(4B);
 // ASM_DATA(1B); Digits (8B);
 // ASM_END(1B): Digits(8B);
 //
 //
 // string:
-// ASM_VALUE(1B): DAO_STRING(2B), MBS/WCS(2B), Size(4B);
-// ASM_DATA(1B); Bytes (8B);
+// ASM_VALUE(1B): DAO_STRING(1B), MBS/WCS(1B), SizeMod16(1B), Bytes(5B);
+// ASM_DATA(1B); Bytes(8B);
 // ASM_END(1B): Bytes(8B);
 //
 //
 // enum symbol:
-// ASM_VALUE(1B): DAO_ENUM(2B), Type-Index(2B), Zeros(4B);
+// ASM_VALUE(1B): DAO_ENUM(1B), Zeros(1B) Type-Index(2B), Zeros(4B);
 // ASM_END(1B): Value(4B), Zeros(0);
 //
 //   Notes:
@@ -125,7 +125,7 @@
 //
 //
 // array:
-// ASM_VALUE(1B): DAO_ARRAY(2B), Numeric-Type(1B), Dimensions(1B), Size(4B);
+// ASM_VALUE(1B): DAO_ARRAY(1B), Numeric-Type(1B), Dimensions(2B), Size(4B);
 // ASM_DATA(1B); Dim1(4B), Dim2(4B);
 // ASM_DATA(1B); More dimensions;
 // ASM_DATA(1B); Data(4B), Data(4B); Or Data(8B);
@@ -134,13 +134,13 @@
 //
 //
 // list:
-// ASM_VALUE(1B): DAO_LIST(2B), Type-Index(2B), Size(4B);
+// ASM_VALUE(1B): DAO_LIST(1B), Zeros(1B), Type-Index(2B), Size(4B);
 // ASM_DATA(1B); Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 // ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //
 //
 // map:
-// ASM_VALUE(1B): DAO_MAP(2B), Type-Index(2B), Hash-Seed(4B);
+// ASM_VALUE(1B): DAO_MAP(1B), Zeros(1B), Type-Index(2B), Hash-Seed(4B);
 // ASM_DATA(1B); Key-Index(2B), Value-Index(2B), Key-Index(2B), Value-Index(2B);
 // ASM_END(1B): Key-Index(2B), Value-Index(2B), Key-Index(2B), Value-Index(2B);
 //
@@ -148,18 +148,18 @@
 //
 //
 // tuple:
-// ASM_VALUE(1B): DAO_TUPLE(2B), Type-Index(2B), Size(2B), Value-Index(2B);
+// ASM_VALUE(1B): DAO_TUPLE(1B), SubTypeID(1B), Type-Index(2B), Size(2B), Value-Index(2B);
 // ASM_DATA(1B); Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 // ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //
 //
 // namevalue:
-// ASM_VALUE(1B): DAO_PAR_NAMED(2B), Name-Index(2B), Value-Index(2B), Type-Index(2B);
+// ASM_VALUE(1B): DAO_PAR_NAMED(1B), Zeros(1B), Name-Index(2B), Value-Index(2B), Type-Index(2B);
 // ASM_END(1B): Zeros(8B);
 // 
 //
 // specialized ctype:
-// ASM_VALUE(1B): DAO_CTYPE(2B), Value-Index(2B), Type-Index(2B) X 2;
+// ASM_VALUE(1B): DAO_CTYPE(1B), Zeros(1B), Value-Index(2B), Type-Index(2B) X 2;
 // ASM_DATA(1B): Type-Index(2B) X 4;
 // ASM_END(1B): Type-Index(2B) X 4;
 //
@@ -221,6 +221,24 @@
 // ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //
 //
+// bases (mixin components or interface parents):
+// ASM_BASES(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
+//   ASM_DATA(1B): Value-Index(2B) X 4;
+// ASM_END(1B): Value-Index(2B) X 4;
+//
+//
+// decorators for the current routine:
+// ASM_DECOS(1B): Func-Index(2B), ParList-Index(2B), Func-Index(2B), ParList-Index(2B);
+//   ASM_DATA(1B): Func-Index(2B), ParList-Index(2B), Func-Index(2B), ParList-Index(2B);
+// ASM_END(1B): Func-Index(2B), ParList-Index(2B), Func-Index(2B), ParList-Index(2B);
+//
+//
+// patterns for automatic decorator application:
+// ASM_PATTERNS(1B): PatternString-Index(2B) X 4;
+//   ASM_DATA(1B): PatternString-Index(2B) X 4;
+// ASM_END(1B): PatternString-Index(2B) X 4;
+//
+//
 // consts:
 // ASM_CONSTS(1B): Count(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //   ASM_DATA(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
@@ -256,9 +274,6 @@
 // use constructors:
 // ASM_USE(1B): DAO_ROUTINE(2B), Routine-Index(2B), Zeros(4B);
 //
-// bases (mixin components or interface parents):
-// ASM_BASES(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
-//
 // var declaration:
 // ASM_VAR(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Permission(2B);
 //
@@ -270,12 +285,6 @@
 //
 // global declaration:
 // ASM_GLOBAL(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Permission(2B);
-//
-// decorator target:
-// ASM_DECO(1B): Prefix-Index(2B), ~(2B), 0, 0;
-// ASM_DECO(1B): ~(2B), Suffix-Index(2B), 0, 0;
-// ASM_DECO(1B): Prefix-Index(2B), ~, Suffix-Index(2B), 0;
-// ASM_DECO(1B): ~(2B), 0, 0, 0;
 // 
 // seek:
 // ASM_SEEK(1B): New-Index(2B), Zeros(6B);
@@ -438,18 +447,19 @@ enum DaoAuxOpcode
 	DAO_ASM_TYPE      ,
 	DAO_ASM_VALUE     ,
 	DAO_ASM_EVAL      ,
+	DAO_ASM_BASES     ,
+	DAO_ASM_DECOS     ,
+	DAO_ASM_PATTERNS  ,
 	DAO_ASM_CONSTS    ,
 	DAO_ASM_TYPES     ,
 	DAO_ASM_CODE      ,
 	DAO_ASM_END       ,
 	DAO_ASM_LOAD      ,
 	DAO_ASM_USE       ,
-	DAO_ASM_BASES     ,
 	DAO_ASM_CONST     ,
 	DAO_ASM_STATIC    ,
 	DAO_ASM_GLOBAL    ,
 	DAO_ASM_VAR       ,
-	DAO_ASM_DECOPAT   ,
 	DAO_ASM_DATA      ,
 	DAO_ASM_DATA2     ,
 	DAO_ASM_SEEK
@@ -544,6 +554,7 @@ DaoByteBlock* DaoByteBlock_EncodeTypeOf( DaoByteBlock *self, DaoType *type, DaoV
 DaoByteBlock* DaoByteBlock_EncodeLoadStmt( DaoByteBlock *self, DString *mod, DString *ns );
 DaoByteBlock* DaoByteBlock_EncodeUseStmt( DaoByteBlock *self, DaoValue *value, int tag );
 DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *target );
+DaoByteBlock* DaoByteBlock_EncodeDecorators( DaoByteBlock *self, DArray *decos, DArray *pars );
 
 DaoByteBlock* DaoByteBlock_EncodeDeclConst( DaoByteBlock *self, DString *name, DaoValue *value, int perm );
 DaoByteBlock* DaoByteBlock_EncodeDeclVar( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int perm );

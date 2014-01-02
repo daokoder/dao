@@ -2783,6 +2783,11 @@ static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 	DaoObject object, *obj = & object;
 	int i, j, n, count = self->decoFuncs->size;
 
+	if( self->byteBlock && count ){
+		DaoByteBlock_EncodeDecorators( self->byteBlock, self->decoFuncs, self->decoParams );
+		return;
+	}
+
 	if( rout->routHost ){
 		/* To circumvent the default object issue for type matching: */
 		object = *(DaoObject*) rout->routHost->value;
@@ -3378,7 +3383,9 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	DaoClass_UpdateMixinConstructors( klass );
 	if( error ) return -1;
 
-	if( DaoClass_UseMixinDecorators( klass ) == 0 ) goto ErrorClassDefinition;
+	if( self->byteBlock == NULL ){
+		if( DaoClass_UseMixinDecorators( klass ) == 0 ) goto ErrorClassDefinition;
+	}
 
 	return right + 1;
 ErrorClassDefinition:
@@ -3764,6 +3771,10 @@ InvalidMultiAssignment: DArray_Delete( inodes ); return 0;
 					DaoList_Append( declist, v );
 				}
 				start = rb;
+			}
+			if( self->byteBlock ){
+				DaoByteBlock_EncodeValue( self->byteBlock, (DaoValue*) decfunc );
+				DaoByteBlock_EncodeValue( self->byteBlock, (DaoValue*) declist );
 			}
 			DArray_PushFront( self->decoFuncs2, decfunc );
 			DArray_PushFront( self->decoParams2, declist );
@@ -7023,7 +7034,10 @@ static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nva
 	if( self->byteBlock ){
 		for(i=0; i<nvalues; ++i){
 			DaoByteBlock *block = DaoByteBlock_FindBlock( coder, operands[i] );
-			if( block != NULL && block->type == DAO_ASM_EVAL ){
+			if( operands[i] && operands[i]->type >= DAO_OBJECT ){
+				encode = 1;
+				break;
+			}else if( block != NULL && block->type == DAO_ASM_EVAL ){
 				encode = 1;
 				break;
 			}
