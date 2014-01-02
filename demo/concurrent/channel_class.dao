@@ -1,16 +1,26 @@
 
-const N = 10;
+const N = 100000;
 
 class Producer
 {
 	routine Run( chan : mt::channel<int> ){
+		index = 0;
+		while( ++index <= N ){
+			if( index % 100 == 0 ) io.writeln( "sending", index )
+			chan.send( index )
+		}
+		chan.cap(0)  # set channel buffer size to zero to close the channel;
 	}
 }
 
 class Consumer
 {
 	routine Run( chan : mt::channel<int> ){
-		io.writeln( $finished )
+		while(1){
+			data = chan.receive()
+			if( (int)data.data % 100 == 0 ) io.writeln( "received", data );
+			if( data.status == $finished ) break
+		}
 	}
 }
 
