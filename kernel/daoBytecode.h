@@ -50,7 +50,8 @@
 // Byte       # Line Feed (LF), 0x0A;
 // Byte       # format version, 0x0 for the official one;
 // Byte       # size of integer type, default 0x4;
-// Byte[20]   # 20 reserved bytes;
+// Byte[4]    # format hash (rotating hash of the ASM tags and VM opcodes);
+// Byte[16]   # 16 reserved bytes;
 // Byte       # Carriage Return (CR), 0x0D;
 // Byte       # Line Feed (LF), 0x0A;
 // Byte[2]    # length of the source path;
@@ -286,10 +287,6 @@
 // global declaration:
 // ASM_GLOBAL(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Scope(1B), Perm(1B);
 // 
-// update type:
-// ASM_UPDATE(1B): Routine-Index(2B), Type-Index(2B), Zeros(4B);
-// ASM_UPDATE(1B): Routine-Index(2B), Type-Index(2B), Name-Index(2B), Zeros(2B);
-//
 // seek:
 // ASM_SEEK(1B): New-Index(2B), Zeros(6B);
 //
@@ -464,10 +461,10 @@ enum DaoAuxOpcode
 	DAO_ASM_STATIC    ,
 	DAO_ASM_GLOBAL    ,
 	DAO_ASM_VAR       ,
-	DAO_ASM_UPDATE    ,
 	DAO_ASM_DATA      ,
 	DAO_ASM_DATA2     ,
-	DAO_ASM_SEEK
+	DAO_ASM_SEEK      ,
+	DAO_ASM_INVALID
 };
 
 
@@ -505,6 +502,7 @@ struct DaoByteBlock
 struct DaoByteCoder
 {
 	uint_t   index;
+	uint_t   fmthash;
 	uchar_t  intSize;
 
 	uchar_t  *codes;
@@ -550,6 +548,8 @@ DaoByteBlock* DaoByteBlock_AddClassBlock( DaoByteBlock *self, DaoClass *klass, i
 DaoByteBlock* DaoByteBlock_AddInterfaceBlock( DaoByteBlock *self, DaoInterface *inter, int pm );
 DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, int code, int opb, DaoType *type );
 
+void DaoByteCoder_FinalizeRoutineBlock( DaoByteCoder *self, DaoByteBlock *block );
+
 void DaoByteBlock_InsertBlockIndex( DaoByteBlock *self, uchar_t *code, DaoByteBlock *block );
 
 DaoByteBlock* DaoByteBlock_EncodeString( DaoByteBlock *self, DString *string );
@@ -591,8 +591,6 @@ void DaoByteCoder_Disassemble( DaoByteCoder *self );
 
 int DaoByteCoder_Decode( DaoByteCoder *self, DString *source );
 int DaoByteCoder_Build( DaoByteCoder *self, DaoNamespace *nspace );
-
-
 
 
 #endif

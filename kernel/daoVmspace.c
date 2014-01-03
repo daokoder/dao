@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2013, Limin Fu
+// Copyright (c) 2006-2014, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -122,7 +122,7 @@ const char *const dao_copy_notice =
 "  Dao Virtual Machine " DAO_VERSION "\n"
 "  Built date: " __DATE__ "\n"
 "  Changeset ID: " CHANGESET_ID "\n\n"
-"  Copyright(C) 2006-2013, Fu Limin\n"
+"  Copyright(C) 2006-2014, Fu Limin\n"
 "  Dao is released under the terms of the Simplified BSD License\n"
 "  Dao Language website: http://www.daovm.net\n"
 ;
@@ -1232,18 +1232,10 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 	DaoLexer_Delete( lexer );
 }
 
-static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
+static void DaoVmSpace_PrintCode( DaoVmSpace *self )
 {
 	DaoNamespace *ns = self->mainNamespace;
 	daoint i;
-	if( self->options & DAO_OPTION_VINFO ){
-		DaoStream_WriteNewLine( self->stdioStream );
-		DaoStream_WriteMBS( self->stdioStream, dao_copy_notice );
-		DaoStream_WriteNewLine( self->stdioStream );
-	}
-	if( self->options & DAO_OPTION_HELP )  DaoStream_WriteMBS( self->stdioStream, cmd_help );
-	DaoStream_Flush( self->stdioStream );
-
 	if( self->options & DAO_OPTION_LIST_BC ){
 		for(i=ns->cstUser; i<ns->constants->size; i++){
 			DaoValue *p = ns->constants->items.pConst[i]->value;
@@ -1259,6 +1251,18 @@ static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
 		if( ( self->options & DAO_OPTION_INTERUN ) && self->userHandler == NULL )
 			DaoVmSpace_Interun( self, NULL );
 	}
+}
+static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
+{
+	if( self->options & DAO_OPTION_VINFO ){
+		DaoStream_WriteNewLine( self->stdioStream );
+		DaoStream_WriteMBS( self->stdioStream, dao_copy_notice );
+		DaoStream_WriteNewLine( self->stdioStream );
+	}
+	if( self->options & DAO_OPTION_HELP )  DaoStream_WriteMBS( self->stdioStream, cmd_help );
+	DaoStream_Flush( self->stdioStream );
+
+	DaoVmSpace_PrintCode( self );
 }
 void DaoVmSpace_SaveByteCodes( DaoVmSpace *self, DaoByteCoder *coder, DaoNamespace *ns )
 {
@@ -1502,7 +1506,10 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		}else if( (cst && cst->type == DAO_ROUTINE) || argValues->size ){
 			res = 0;
 		}
-		if( res == 0 ) DaoStream_WriteMBS( io, "ERROR: invalid command line arguments.\n" );
+		if( res == 0 ){
+			DaoVmSpace_PrintCode( self );
+			DaoStream_WriteMBS( io, "ERROR: invalid command line arguments.\n" );
+		}
 	}
 	DArray_Delete( argNames );
 

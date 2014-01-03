@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2013, Limin Fu
+// Copyright (c) 2006-2014, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -5684,49 +5684,45 @@ TryPushBlockReturnType:
 			AssertTypeIdMatching( tp[0], TT1 );
 			break;
 		case DVM_SETVS_II : case DVM_SETVS_FF : case DVM_SETVS_DD : case DVM_SETVS_CC :
-			tp = & body->svariables->items.pVar[opb]->dtype;
-			if( *tp == NULL || (*tp)->tid == DAO_UDT ){
-				GC_ShiftRC( types[opa], *tp );
-				*tp = types[opa];
+			var = body->svariables->items.pVar[opb];
+			if( var->dtype == NULL || var->dtype->tid == DAO_UDT ){
+				DaoVariable_SetType( var, at );
 			}
 			TT1 = DAO_INTEGER + (code - DVM_SETVS_II);
-			AssertTypeMatching( types[opa], *tp, defs );
+			AssertTypeMatching( types[opa], var->dtype, defs );
 			AssertTypeIdMatching( at, TT1 );
-			AssertTypeIdMatching( tp[0], TT1 );
+			AssertTypeIdMatching( var->dtype, TT1 );
 			break;
 		case DVM_SETVO_II : case DVM_SETVO_FF : case DVM_SETVO_DD : case DVM_SETVO_CC :
 			if( self->tidHost != DAO_OBJECT ) goto ErrorTyping;
-			tp = & hostClass->instvars->items.pVar[opb]->dtype;
-			if( *tp == NULL || (*tp)->tid == DAO_UDT ){
-				GC_ShiftRC( types[opa], *tp );
-				*tp = types[opa];
+			var = hostClass->instvars->items.pVar[opb];
+			if( var->dtype == NULL || var->dtype->tid == DAO_UDT ){
+				DaoVariable_SetType( var, at );
 			}
 			TT1 = DAO_INTEGER + (code - DVM_SETVO_II);
-			AssertTypeMatching( types[opa], *tp, defs );
+			AssertTypeMatching( types[opa], var->dtype, defs );
 			AssertTypeIdMatching( at, TT1 );
-			AssertTypeIdMatching( tp[0], TT1 );
+			AssertTypeIdMatching( var->dtype, TT1 );
 			break;
 		case DVM_SETVK_II : case DVM_SETVK_FF : case DVM_SETVK_DD : case DVM_SETVK_CC :
-			tp = & hostClass->variables->items.pVar[opb]->dtype;
-			if( *tp == NULL || (*tp)->tid == DAO_UDT ){
-				GC_ShiftRC( types[opa], *tp );
-				*tp = types[opa];
+			var = hostClass->variables->items.pVar[opb];
+			if( var->dtype == NULL || var->dtype->tid == DAO_UDT ){
+				DaoVariable_SetType( var, at );
 			}
 			TT1 = DAO_INTEGER + (code - DVM_SETVK_II);
-			AssertTypeMatching( types[opa], *tp, defs );
+			AssertTypeMatching( types[opa], var->dtype, defs );
 			AssertTypeIdMatching( at, TT1 );
-			AssertTypeIdMatching( tp[0], TT1 );
+			AssertTypeIdMatching( var->dtype, TT1 );
 			break;
 		case DVM_SETVG_II : case DVM_SETVG_FF : case DVM_SETVG_DD : case DVM_SETVG_CC :
-			tp = & NS->variables->items.pVar[opb]->dtype;
-			if( *tp == NULL || (*tp)->tid == DAO_UDT ){
-				GC_ShiftRC( types[opa], *tp );
-				*tp = types[opa];
+			var = NS->variables->items.pVar[opb];
+			if( var->dtype == NULL || var->dtype->tid == DAO_UDT ){
+				DaoVariable_SetType( var, at );
 			}
 			TT1 = DAO_INTEGER + (code - DVM_SETVG_II);
-			AssertTypeMatching( types[opa], *tp, defs );
+			AssertTypeMatching( types[opa], var->dtype, defs );
 			AssertTypeIdMatching( at, TT1 );
-			AssertTypeIdMatching( tp[0], TT1 );
+			AssertTypeIdMatching( var->dtype, TT1 );
 			break;
 		case DVM_MOVE_II : case DVM_MOVE_IF : case DVM_MOVE_ID :
 		case DVM_MOVE_FI : case DVM_MOVE_FF : case DVM_MOVE_FD :

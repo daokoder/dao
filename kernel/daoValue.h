@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2013, Limin Fu
+// Copyright (c) 2006-2014, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -63,6 +63,7 @@ DAO_DLL void DaoVariable_Delete( DaoVariable *self );
 
 DAO_DLL void DaoConstant_Set( DaoConstant *self, DaoValue *value );
 DAO_DLL int  DaoVariable_Set( DaoVariable *self, DaoValue *value, DaoType *type );
+DAO_DLL void  DaoVariable_SetType( DaoVariable *self, DaoType *type );
 
 
 

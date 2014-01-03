@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2013, Limin Fu
+// Copyright (c) 2006-2014, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -847,27 +847,29 @@ DNode* DMap_Next( DMap *self, DNode *node )
 
 
 /*
-   PUBLIC DOMAIN CODES
-http://sites.google.com/site/murmurhash/
-http://www.burtleburtle.net/bob/hash/doobs.html
- */
+//  PUBLIC DOMAIN CODES
+//  http://sites.google.com/site/murmurhash/
+//  http://www.burtleburtle.net/bob/hash/doobs.html
+*/
 
-/* -----------------------------------------------------------------------------
-   MurmurHash2, by Austin Appleby
-
-   Note - This code makes a few assumptions about how your machine behaves -
-   1. We can read a 4-byte value from any address without crashing
-   2. sizeof(int) == 4
-
-   And it has a few limitations -
-   1. It will not work incrementally.
-   2. It will not produce the same results on little-endian and big-endian
-   machines.
- */
+/*
+//  MurmurHash2, by Austin Appleby
+//
+//  Note - This code makes a few assumptions about how your machine behaves -
+//  1. We can read a 4-byte value from any address without crashing
+//  2. sizeof(int) == 4
+//
+//  And it has a few limitations -
+//  1. It will not work incrementally.
+//  2. It will not produce the same results on little-endian and big-endian
+//  machines.
+*/
 unsigned int MurmurHash2 ( const void * key, int len, unsigned int seed )
 {
-	/* 'm' and 'r' are mixing constants generated offline.
-	   They're not really 'magic', they just happen to work well. */
+	/*
+	// 'm' and 'r' are mixing constants generated offline.
+	// They're not really 'magic', they just happen to work well.
+	*/
 	const unsigned int m = 0x5bd1e995;
 	const int r = 24;
 
@@ -900,8 +902,10 @@ unsigned int MurmurHash2 ( const void * key, int len, unsigned int seed )
 			h *= m;
 	};
 
-	/* Do a few final mixes of the hash to ensure the last few
-	   bytes are well-incorporated. */
+	/*
+	// Do a few final mixes of the hash to ensure the last few
+	// bytes are well-incorporated.
+	*/
 	h ^= h >> 13;
 	h *= m;
 	h ^= h >> 15;

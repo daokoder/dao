@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2013, Limin Fu
+// Copyright (c) 2006-2014, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -2038,6 +2038,27 @@ int DaoParser_ParseScript( DaoParser *self )
 		DaoParser_PrintError( self, 0, 0, NULL );
 		return 0;
 	}
+	/*
+	// Currently the __main__ routine is inferenced after other routines.
+	// As a result, some code in those routines cannot be specialized,
+	// because the type information for some global variable may not be
+	// available. Redoing inference on those routines may allow these
+	// code to be specialized.
+	//
+	// Do not redo such inference on compiling to bytecode.
+	// Because the type information for some global variables (declare
+	// without explicit types) are not yet available when those routines
+	// are decoded. Without proper type information, type errors may arise
+	// for specialized code that use global variables.
+	//
+	// Example:
+	//   global glb = rand(100)
+	//   routine func() 
+	//   {
+	//     return glb + 456 
+	//   }
+	*/
+	if( self->byteBlock ) return 1;
 	for(i=0; i<self->routReInferable->size; i++){
 		DaoRoutine *rout = (DaoRoutine*) self->routReInferable->items.pValue[i];
 		DaoRoutine_DoTypeInference( rout, 1 );
@@ -4160,7 +4181,7 @@ static int DaoParser_SetInitValue( DaoParser *self, DaoVariable *var, DaoValue *
 	DaoValue_Copy( value, & var->value );
 	return 1;
 }
-int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, int store, int store2 )
+int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, int store, int explicit_store )
 {
 	DaoValue *value;
 	DaoEnode enode;
@@ -4259,14 +4280,14 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	temp = start > to ? 0 : tokens[start]->name;
 
 	errors = self->errors->size;
-	if( store2 != 0 && extype != NULL ){
+	if( explicit_store != 0 && extype != NULL ){
 		for(k=nameStart; k<self->toks->size; k++){
 			DString *name = & self->toks->items.pToken[k]->string;
 			DNode *node = MAP_Find( DaoParser_GetCurrentDataMap( self ), name );
 			if( node ) DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, name );
 		}
 		if( self->errors->size > errors ) return -1;
-	}else if( store2 == 0 && extype == NULL && temp != DTOK_ASSN ){
+	}else if( explicit_store == 0 && extype == NULL && temp != DTOK_ASSN ){
 		for(k=nameStart,m=0; k<self->toks->size; ++k,++m){
 			DaoToken *varTok = self->toks->items.pToken[k];
 			int reg = DaoParser_GetRegister( self, varTok );
@@ -4317,7 +4338,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 			DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, start, end, 0 );
 			return -1;
 		}
-	}else if( abtp == NULL && cons && topll && store2 ==0 ){
+	}else if( abtp == NULL && cons && topll && explicit_store ==0 ){
 		/* (dao) a, b */
 		for(k=nameStart; k<self->toks->size; k++){
 			DaoToken *varTok = self->toks->items.pToken[k];
@@ -4406,7 +4427,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 				}
 				break;
 			case DAO_STATIC_VARIABLE :
-				if( cst && (store2 & DAO_DECL_STATIC) ){
+				if( cst && (explicit_store & DAO_DECL_STATIC) ){
 					DaoVariable *var = routine->body->svariables->items.pVar[id];
 					if( DaoParser_SetInitValue( self, var, value, abtp, start, end ) == 0 ){
 						return -1;
@@ -4417,6 +4438,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					}
 				}else if( reg >= 0 ){
 					DaoParser_AddCode( self, DVM_SETVS, reg, id, 0, first, mid, end );
+				}else if( explicit_store && block ){
+					DaoByteBlock_DeclareStatic( block, name, NULL, extype, pm );
 				}
 				break;
 			case DAO_OBJECT_VARIABLE :
@@ -4439,10 +4462,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 				}else if( abtp && DaoParser_CheckDefault( self, abtp, errorStart ) ==0 ){
 					DaoParser_Error2( self, DAO_TYPE_NO_DEFAULT, errorStart, start, 0 );
 					return -1;
-				}else{
-					if( block ){
-						DaoByteBlock_DeclareVar( block, name, NULL, abtp, pm );
-					}
+				}else if( block ){
+					DaoByteBlock_DeclareVar( block, name, NULL, extype, pm );
 				}
 				break;
 			case DAO_CLASS_VARIABLE :
@@ -4462,11 +4483,18 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 				}else if( abtp && DaoParser_CheckDefault( self, abtp, errorStart ) ==0 ){
 					DaoParser_Error2( self, DAO_TYPE_NO_DEFAULT, errorStart, start, 0 );
 					return -1;
+				}else if( block ){
+					DaoByteBlock_DeclareStatic( block, name, NULL, extype, pm );
 				}
 				break;
 			case DAO_GLOBAL_VARIABLE :
-				if( reg < 0 ) continue;
-				if( cst && (store2 & DAO_DECL_GLOBAL) ){
+				if( reg < 0 ){
+					if( explicit_store && block ){
+						DaoByteBlock_DeclareGlobal( block, name, NULL, extype, pm );
+					}
+					continue;
+				}
+				if( cst && (explicit_store & DAO_DECL_GLOBAL) ){
 					DaoVariable *var = ns->variables->items.pVar[id];
 					if( DaoParser_SetInitValue( self, var, value, abtp, start, end ) == 0 ){
 						return -1;
@@ -4478,7 +4506,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 				}else{
 					DaoParser_AddCode( self, DVM_SETVG, reg, id, up, first, mid, end );
 					self->usingGlobal = 1;
-					if( block ){
+					if( explicit_store && block ){
 						DaoVariable *var = ns->variables->items.pVar[id];
 						DaoByteBlock_DeclareGlobal( block, name, NULL, var->dtype, pm );
 					}
@@ -4497,7 +4525,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	}
 	self->curToken = end;
 	if( DaoParser_CurrentTokenType( self ) == DTOK_COMMA && (end+1) <= to ){
-		return DaoParser_ParseVarExpressions( self, end+1, to, 1, store, store2 );
+		return DaoParser_ParseVarExpressions( self, end+1, to, 1, store, explicit_store );
 	}
 	return end;
 }
@@ -4934,6 +4962,8 @@ int DaoParser_PostParsing( DaoParser *self )
 	vmCodes = self->vmCodes->items.pVmc;
 
 	if( DaoRoutine_SetVmCodes( routine, self->vmCodes ) ==0) return 0;
+
+	if( self->byteBlock ) DaoByteCoder_FinalizeRoutineBlock( self->byteCoder, self->byteBlock );
 	/*
 	   DaoRoutine_PrintCode( routine, self->vmSpace->errorStream );
 	 */
@@ -7027,7 +7057,7 @@ static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nva
 	DaoByteBlock *eval, *coder = self->byteBlock;
 	DaoStream *stream;
 	DaoValue *value;
-	int i, j, count, encode = 0;
+	int i, j, count, max = 0;
 
 	if( self->hostType ){
 		GC_ShiftRC( self->hostType, proc->activeRoutine->routHost );
@@ -7036,12 +7066,10 @@ static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nva
 	if( self->byteBlock ){
 		for(i=0; i<nvalues; ++i){
 			DaoByteBlock *block = DaoByteBlock_FindBlock( coder, operands[i] );
-			if( operands[i] && operands[i]->type >= DAO_OBJECT ){
-				encode = 1;
-				break;
+			if( operands[i] && operands[i]->type > max ){
+				max = operands[i]->type;
 			}else if( block != NULL && block->type == DAO_ASM_EVAL ){
-				encode = 1;
-				break;
+				max = DAO_OBJECT;
 			}
 		}
 		/*
@@ -7051,16 +7079,19 @@ static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nva
 		// Encode the operands before doing constant folding, because they might
 		// be changed by the evaluation.
 		*/
-		if( encode ){
+		if( max > DAO_COMPLEX ){
 			DaoByteBlock_EncodeValues( coder, operands, nvalues );
 			DaoByteBlock_EncodeType( coder, proc->activeTypes[0] );
 		}
 	}
 	value = DaoProcess_MakeConst( proc );
-	if( encode ){
-		int opb = vmc->code == DVM_GETF ? 2 : vmc->b;
-		eval = DaoByteBlock_AddEvalBlock( coder, value, vmc->code, opb, proc->activeTypes[0] );
-		DaoByteBlock_AddBlockIndexData( eval, 0, nvalues );
+	if( max > DAO_COMPLEX ){
+		if( max > DAO_ENUM || DaoByteBlock_FindBlock( coder, value ) == NULL ){
+			DaoType* retype = proc->activeTypes[0];
+			int opb = vmc->code == DVM_GETF ? 2 : vmc->b;
+			eval = DaoByteBlock_AddEvalBlock( coder, value, vmc->code, opb, retype );
+			DaoByteBlock_AddBlockIndexData( eval, 0, nvalues );
+		}
 	}
 	GC_DecRC( proc->activeRoutine->routHost );
 	proc->activeRoutine->routHost = NULL;
