@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2013, Limin Fu
+// Copyright (c) 2006-2014, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -118,7 +118,7 @@
 //   In case short is not sufficient to represent such index, an intermediate
 //   indexing chunk can be used:
 //
-//     ASM_SEEK(1B): New-Index(4B), Zeros(4B);
+//     ASM_SEEK(1B): New-Index(2B), Zeros(6B);
 // 
 //   When "New-Index" is also seeked backwardly, and is relative to the
 //   seek chunk.
@@ -286,6 +286,10 @@
 // global declaration:
 // ASM_GLOBAL(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Scope(1B), Perm(1B);
 // 
+// update type:
+// ASM_UPDATE(1B): Routine-Index(2B), Type-Index(2B), Zeros(4B);
+// ASM_UPDATE(1B): Routine-Index(2B), Type-Index(2B), Name-Index(2B), Zeros(2B);
+//
 // seek:
 // ASM_SEEK(1B): New-Index(2B), Zeros(6B);
 //
@@ -460,6 +464,7 @@ enum DaoAuxOpcode
 	DAO_ASM_STATIC    ,
 	DAO_ASM_GLOBAL    ,
 	DAO_ASM_VAR       ,
+	DAO_ASM_UPDATE    ,
 	DAO_ASM_DATA      ,
 	DAO_ASM_DATA2     ,
 	DAO_ASM_SEEK
@@ -518,6 +523,8 @@ struct DaoByteCoder
 	DArray  *iblocks;  /* list<DaoByteBlock*> */
 	DArray  *ivalues;  /* list<DaoValue*> */
 	DArray  *indices;  /* list<daoint> */
+
+	DArray  *routines;
 
 	DaoNamespace  *nspace;
 	DaoVmSpace    *vmspace;

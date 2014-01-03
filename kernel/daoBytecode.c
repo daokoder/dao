@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2013, Limin Fu
+// Copyright (c) 2006-2014, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -62,6 +62,7 @@ static const char* const dao_asm_names[] =
 	"ASM_STATIC"    ,
 	"ASM_GLOBAL"    ,
 	"ASM_VAR"       ,
+	"ASM_UPDATE"    ,
 	"ASM_DATA"      ,
 	"ASM_DATA2"     ,
 	"ASM_SEEK"
@@ -76,6 +77,7 @@ DaoByteBlock* DaoByteBlock_New( DaoByteCoder *coder )
 }
 void DaoByteBlock_Delete( DaoByteBlock *self )
 {
+	GC_DecRC( self->value );
 	if( self->wordToBlocks ) DMap_Delete( self->wordToBlocks );
 	if( self->valueToBlocks ) DMap_Delete( self->valueToBlocks );
 	dao_free( self );
@@ -105,6 +107,7 @@ DaoByteCoder* DaoByteCoder_New( DaoVmSpace *vms )
 	self->ivalues = DArray_New(0);
 	self->iblocks = DArray_New(0);
 	self->indices = DArray_New(0);
+	self->routines = DArray_New(0);
 	self->path = DString_New(1);
 	self->intSize = sizeof(daoint);
 	self->vmspace = vms;
@@ -125,6 +128,8 @@ void DaoByteCoder_Remove( DaoByteCoder *self, DaoByteBlock *block, DaoByteBlock 
 	block->parent = NULL;
 	block->first = block->last = NULL;
 	block->prev = block->next = NULL;
+	GC_DecRC( block->value );
+	block->value = NULL;
 	DArray_Append( self->caches, block );
 }
 void DaoByteCoder_Reset( DaoByteCoder *self )
@@ -148,6 +153,7 @@ void DaoByteCoder_Delete( DaoByteCoder *self )
 	DArray_Delete( self->ivalues );
 	DArray_Delete( self->iblocks );
 	DArray_Delete( self->indices );
+	DArray_Delete( self->routines );
 	DString_Delete( self->path );
 	DMap_Delete( self->valueToBlocks );
 	dao_free( self );
@@ -1062,12 +1068,14 @@ static int DaoByteCoder_UpdateIndex( DaoByteCoder *self, DaoByteBlock *block )
 }
 static void DaoByteCoder_FinalizeBlock( DaoByteCoder *self, DaoByteBlock *block )
 {
+	DaoType *type;
 	DaoNamespace *nspace;
-	DaoByteBlock *cur, *defblock;
-	DaoByteBlock *consts, *types, *code;
+	DaoByteBlock *cur, *typebk, *namebk, *defblock;
+	DaoByteBlock *newbk, *consts, *types, *code;
 	DaoByteBlock *pb = block->first;
 	DaoByteBlock *decos = NULL;
 	DaoRoutine *routine;
+	DString *name;
 	DMap *id2names;
 	DMap *varblocks;
 	DMap *vartypes;
@@ -1075,10 +1083,9 @@ static void DaoByteCoder_FinalizeBlock( DaoByteCoder *self, DaoByteBlock *block 
 	uchar_t *data;
 	int i, N;
 
-	while( pb ){
+	for(pb=block->first; pb; pb=pb->next){
 		if( pb->type == DAO_ASM_DECOS ) decos = pb;
 		DaoByteCoder_FinalizeBlock( self, pb );
-		pb = pb->next;
 	}
 	defblock = DaoByteBlock_FindBlock( block, block->value );
 	if( defblock && defblock != block ) return; /* Just declaration; */
@@ -1095,6 +1102,42 @@ static void DaoByteCoder_FinalizeBlock( DaoByteCoder *self, DaoByteBlock *block 
 	nspace = routine->nameSpace;
 	DaoByteCoder_EncodeUInt16( block->begin+6, routine->attribs );
 	DaoByteCoder_EncodeUInt16( block->end, routine->body->regCount );
+
+	if( block != self->top ){
+		it = DMap_Find( block->wordToBlocks, block->begin+2 );
+		pb = (DaoByteBlock*) it->value.pVoid;
+		if( pb == NULL || pb->value != (DaoValue*) routine->routType ){
+			typebk = DaoByteBlock_EncodeType( block, routine->routType );
+			pb = DaoByteBlock_NewBlock( block, DAO_ASM_UPDATE );
+			DaoByteBlock_InsertBlockIndex( pb, pb->begin, block );
+			DaoByteBlock_InsertBlockIndex( pb, pb->begin+2, typebk );
+		}
+	}
+
+	for(pb=block->first; pb; pb=pb->next){
+		if( pb->type != DAO_ASM_GLOBAL ) continue;
+		if( block != self->top && pb->begin[7] == 0 ) continue;
+
+		it = DMap_Find( pb->wordToBlocks, pb->begin );
+		if( it == NULL ) continue;
+		namebk = (DaoByteBlock*) it->value.pVoid;
+		name = DaoValue_TryGetString( namebk->value );
+		if( name == NULL ) continue;
+
+		it = DMap_Find( pb->wordToBlocks, pb->begin+4 );
+		typebk = it ? (DaoByteBlock*) it->value.pVoid : NULL;
+
+		i = DaoNamespace_FindVariable( nspace, name );
+		if( i < 0 ) continue;
+		type = DaoNamespace_GetVariableType( nspace, i );
+		if( typebk == NULL || typebk->value != (DaoValue*) type ){
+			typebk = DaoByteBlock_EncodeType( block, type );
+			newbk = DaoByteBlock_NewBlock( block, DAO_ASM_UPDATE );
+			DaoByteBlock_InsertBlockIndex( newbk, newbk->begin, self->top );
+			DaoByteBlock_InsertBlockIndex( newbk, newbk->begin+2, typebk );
+			DaoByteBlock_InsertBlockIndex( newbk, newbk->begin+4, namebk );
+		}
+	}
 
 	/* local constants: */
 	N = DaoByteBlock_EncodeValues2( block, & routine->routConsts->items );
@@ -1986,6 +2029,8 @@ static int DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block )
 		DaoNamespace_SetConst( self->nspace, DVR_NSC_MAIN, (DaoValue*) routine );
 	}
 	if( routine == NULL ) return 0;
+	DArray_Append( self->routines, routine );
+
 	GC_ShiftRC( routine, block->value );
 	block->value = (DaoValue*) routine;
 	routine->attribs = D;
@@ -2039,7 +2084,7 @@ static int DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block )
 			}
 		}
 	}
-	return ret;
+	return 1;
 }
 static int DaoByteCoder_DecodeRoutineConsts( DaoByteCoder *self, DaoByteBlock *block )
 {
@@ -2318,6 +2363,36 @@ int DaoByteBlock_DecodeUseStmt( DaoByteCoder *self, DaoByteBlock *block )
 	}
 	return 1;
 }
+int DaoByteBlock_DecodeUpdate( DaoByteCoder *self, DaoByteBlock *block )
+{
+	uint_t A = DaoByteCoder_DecodeUInt16( block->begin );
+	uint_t B = DaoByteCoder_DecodeUInt16( block->begin+2 );
+	uint_t C = DaoByteCoder_DecodeUInt16( block->begin+4 );
+	DaoByteBlock *routbk = DaoByteCoder_LookupBlock( self, block, A );
+	DaoByteBlock *typebk = DaoByteCoder_LookupBlock( self, block, B );
+	DaoByteBlock *namebk = DaoByteCoder_LookupBlock( self, block, C );
+	DaoType *type = DaoValue_CastType( typebk->value );
+	if( namebk ){
+		DString *name = DaoValue_TryGetString( namebk->value );
+		if( name && type ){
+			int id = DaoNamespace_FindVariable( self->nspace, name );
+			if( id >= 0 ){
+				DaoVariable *var = self->nspace->variables->items.pVar[LOOKUP_ID(id)];
+				GC_ShiftRC( type, var->dtype );
+				var->dtype = type;
+				if( var->value == NULL || var->value->type != type->tid )
+					DaoValue_Copy( type->value, & var->value );
+			}
+		}
+	}else{
+		DaoRoutine *routine = DaoValue_CastRoutine( routbk->value );
+		if( routine && type ){
+			GC_ShiftRC( type, routine->routType );
+			routine->routType = type;
+		}
+	}
+	return 1;
+}
 static int DaoByteCoder_DecodeBlock( DaoByteCoder *self, DaoByteBlock *block )
 {
 	int ret = 0;
@@ -2342,6 +2417,7 @@ static int DaoByteCoder_DecodeBlock( DaoByteCoder *self, DaoByteBlock *block )
 	case DAO_ASM_TYPES     : ret = DaoByteCoder_DecodeRoutineTypes( self, block ); break;
 	case DAO_ASM_CODE      : ret = DaoByteCoder_DecodeRoutineCode( self, block ); break;
 	case DAO_ASM_USE       : ret = DaoByteBlock_DecodeUseStmt( self, block ); break;
+	case DAO_ASM_UPDATE    : ret = DaoByteBlock_DecodeUpdate( self, block ); break;
 	case DAO_ASM_TYPEDEF   : ret = DaoByteCoder_DecodeTypeAlias( self, block ); break;
 	case DAO_ASM_TYPEOF    : ret = DaoByteCoder_DecodeTypeOf( self, block ); break;
 	case DAO_ASM_BASES     : ret = DaoByteCoder_DecodeBases( self, block ); break;
@@ -2353,6 +2429,8 @@ static int DaoByteCoder_DecodeBlock( DaoByteCoder *self, DaoByteBlock *block )
 }
 int DaoByteCoder_Build( DaoByteCoder *self, DaoNamespace *nspace )
 {
+	int i;
+
 	if( self->top == NULL ) return 0;
 	DaoByteCoder_SplitData( self, self->top );
 
@@ -2362,8 +2440,13 @@ int DaoByteCoder_Build( DaoByteCoder *self, DaoNamespace *nspace )
 	self->ivalues->size = 0;
 	self->iblocks->size = 0;
 	self->indices->size = 0;
+	self->routines->size = 0;
 	self->nspace = nspace;
 	DaoByteCoder_DecodeBlock( self, self->top );
+	for(i=0; i<self->routines->size; i++){
+		DaoRoutine *rout = (DaoRoutine*) self->routines->items.pValue[i];
+		DaoRoutine_DoTypeInference( rout, 1 );
+	}
 	return 1;
 }
 
