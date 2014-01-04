@@ -1543,7 +1543,7 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 	*newpos = start + 1;
 	if( i > 0 && i < 100 ){
 		/* Always compile unscoped builtin type names as builtin types: */
-		DaoValue *pbasic = token->name == DKEY_CDATA ? (DaoValue*) cdata : NULL;
+		DaoValue *pbasic = token->name == DKEY_CDATA ? cdata->ctype->aux : NULL;
 		type = DaoNamespace_MakeType( self->vmSpace->nsInternal, name->mbs, i, pbasic, 0,0 );
 		if( type->tid == DAO_TUPLE ) type->variadic = 1; /* "tuple" is variadic; */
 		return type;
@@ -2392,6 +2392,9 @@ static int DaoParser_HandleVerbatim( DaoParser *self, int start )
 				printf( "inlined code not handled, inliner \"%s\" not found\n", self->mbs->mbs );
 			start ++;
 			return start;
+		}
+		if( self->byteBlock ){
+			DaoByteBlock_EncodeVerbatim( self->byteBlock, self->mbs, self->mbs2, verbatim, line );
 		}
 		DString_Clear( self->mbs );
 		if( (*inliner)( ns, self->mbs2, verbatim, self->mbs, line ) ){
@@ -3397,7 +3400,9 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		error |= DaoParser_ParseRoutine( parser ) == 0;
 		DaoClass_AddConst( klass, ctorname, (DaoValue*)klass->classRoutine, DAO_DATA_PUBLIC );
 		if( parser->byteBlock ){
-			DaoByteBlock_AddRoutineBlock( parser->byteBlock, klass->classRoutine, DAO_DATA_PUBLIC );
+			DaoByteBlock *bk = parser->byteBlock;
+			bk = DaoByteBlock_AddRoutineBlock( bk, klass->classRoutine, DAO_DATA_PUBLIC );
+			DaoByteCoder_FinalizeRoutineBlock( self->byteCoder, bk );
 		}
 	}
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );

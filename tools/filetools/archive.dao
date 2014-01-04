@@ -18,7 +18,7 @@ routine CharToHex( source : string )
 			if( count % 10 == 0 ) hex += '\n  ';
 		}
 		hex += '0x';
-		hex += digits[ char>>8 ];
+		hex += digits[ char>>4 ];
 		hex += digits[ char&0xf ];
 		count += 1;
 	}
@@ -75,7 +75,7 @@ routine main( file : string )
 		io.writeln( 'ERROR: input is not a Dao archive file!' );
 		return;
 	}
-	archive = archive.map::{ (X+256)%256 }
+	archive = archive.map{ (X+256)%256 }
 	(source, finders) = ArchiveToCSource( archive )
 	fout = io.open( file + '.c', 'w+' );
 	fout2 = io.open( file + '.finders', 'w+' );

@@ -48,7 +48,7 @@
 // Byte       # minor version number, 0x2;
 // Byte       # Carriage Return (CR), 0x0D;
 // Byte       # Line Feed (LF), 0x0A;
-// Byte       # format version, 0x0 for the official one;
+// Byte       # format class, 0x0 for the official one;
 // Byte       # size of integer type, default 0x4;
 // Byte[4]    # format hash (rotating hash of the ASM tags and VM opcodes);
 // Byte[16]   # 16 reserved bytes;
@@ -275,6 +275,9 @@
 // use constructors:
 // ASM_USE(1B): DAO_ROUTINE(2B), Routine-Index(2B), Zeros(4B);
 //
+// verbatim:
+// ASM_VERBATIM(1B): Tag-Index(2B), Mode-Index(2B), Text-Index(2B), LineNum(2B);
+//
 // var declaration:
 // ASM_VAR(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Scope(1B), Perm(1B);
 //
@@ -457,6 +460,7 @@ enum DaoAuxOpcode
 	DAO_ASM_END       ,
 	DAO_ASM_LOAD      ,
 	DAO_ASM_USE       ,
+	DAO_ASM_VERBATIM  ,
 	DAO_ASM_CONST     ,
 	DAO_ASM_STATIC    ,
 	DAO_ASM_GLOBAL    ,
@@ -561,6 +565,7 @@ DaoByteBlock* DaoByteBlock_EncodeTypeOf( DaoByteBlock *self, DaoType *type, DaoV
 DaoByteBlock* DaoByteBlock_EncodeLoadStmt( DaoByteBlock *self, DString *mod, DString *ns );
 DaoByteBlock* DaoByteBlock_EncodeUseStmt( DaoByteBlock *self, DaoValue *value, int tag );
 DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *target );
+DaoByteBlock* DaoByteBlock_EncodeVerbatim( DaoByteBlock *self, DString *tag, DString *mode, DString *text, int line );
 DaoByteBlock* DaoByteBlock_EncodeDecorators( DaoByteBlock *self, DArray *decos, DArray *pars );
 
 DaoByteBlock* DaoByteBlock_DeclareConst( DaoByteBlock *self, DString *name, DaoValue *value, int perm );
@@ -592,5 +597,7 @@ void DaoByteCoder_Disassemble( DaoByteCoder *self );
 int DaoByteCoder_Decode( DaoByteCoder *self, DString *source );
 int DaoByteCoder_Build( DaoByteCoder *self, DaoNamespace *nspace );
 
+typedef void (*DaoByteCodeEncrypt)( DString *data, int aux );
+typedef void (*DaoByteCodeDecrypt)( DString *data, int aux );
 
 #endif

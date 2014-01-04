@@ -2663,8 +2663,8 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 	DString_AppendMBS( cache, ".dao" );
 	DaoMake_MakeOutOfSourcePath( cache );
 
-	if( DaoVmSpace_CompleteModuleName( vmSpace, cache ) == DAO_MODULE_NONE ) reset = 1;
-	DaoVmSpace_CompleteModuleName( vmSpace, original );
+	if( DaoVmSpace_CompleteModuleName( vmSpace, cache, DAO_MODULE_DAO ) == DAO_MODULE_NONE ) reset = 1;
+	DaoVmSpace_CompleteModuleName( vmSpace, original, DAO_MODULE_DAO );
 	otime = Dao_FileChangedTime( original->mbs );
 	ctime = Dao_FileChangedTime( cache->mbs );
 	if( otime > ctime ) reset = 1;
@@ -3412,8 +3412,8 @@ ErrorInvalidArgValue:
 	DaoGC_IncRC( (DaoValue*) daomake_includes );
 
 	nspace = DaoVmSpace_GetNamespace( vmSpace, "DaoMake" );
-	DaoNamespace_AddConst( vmSpace->nsInternal, nspace->name, nspace, DAO_DATA_PUBLIC );
-	DaoNamespace_AddConst( vmSpace->mainNamespace, nspace->name, nspace, DAO_DATA_PUBLIC );
+	DaoNamespace_AddConst( vmSpace->nsInternal, nspace->name, (DaoValue*) nspace, DAO_DATA_PUBLIC );
+	DaoNamespace_AddConst( vmSpace->mainNamespace, nspace->name, (DaoValue*) nspace, DAO_DATA_PUBLIC );
 	daomake_type_unit    = DaoNamespace_WrapType( nspace, & DaoMakeUnit_Typer, 0 );
 	daomake_type_objects = DaoNamespace_WrapType( nspace, & DaoMakeObjects_Typer, 0 );
 	daomake_type_target  = DaoNamespace_WrapType( nspace, & DaoMakeTarget_Typer, 0 );

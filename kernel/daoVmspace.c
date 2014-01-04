@@ -1264,6 +1264,38 @@ static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )
 
 	DaoVmSpace_PrintCode( self );
 }
+void DaoVmSpace_ConvertPath( DaoVmSpace *self, DString *path )
+{
+	char *daodir = getenv( "DAO_DIR" );
+	char *home = getenv( "HOME" );
+
+	if( DString_Find( path, self->startPath, 0 ) == 0 ){
+		DString_ReplaceMBS( path, "$(CMD_DIR)/", 0, self->startPath->size );
+	}else if( DString_Find( path, self->daoBinPath, 0 ) == 0 ){
+		DString_ReplaceMBS( path, "$(EXE_DIR)/", 0, self->daoBinPath->size );
+	}else if( daodir && DString_FindMBS( path, daodir, 0 ) == 0 ){
+		DString_ReplaceMBS( path, "$(DAO_DIR)", 0, strlen(daodir) );
+	}else if( home && DString_FindMBS( path, home, 0 ) == 0 ){
+		DString_ReplaceMBS( path, "$(HOME)", 0, strlen(home) );
+	}
+}
+#if 0
+void DaoVmSpace_ConvertPath2( DaoVmSpace *self, DString *path )
+{
+	char *daodir = getenv( "DAO_DIR" );
+	char *home = getenv( "HOME" );
+
+	if( DString_FindMBS( path, "$(CMD_DIR)/", 0 ) == 0 ){
+		DString_Replace( path, self->startPath, 0, strlen( "$(CMD_DIR)/" ) );
+	}else if( DString_FindMBS( path, "$(EXE_DIR)/", 0 ) == 0 ){
+		DString_ReplaceMBS( path, self->daoBinPath, 0, strlen( "$(EXE_DIR)/" ) );
+	}else if( daodir && DString_FindMBS( path, "$(DAO_DIR)", 0 ) == 0 ){
+		DString_ReplaceMBS( path, daodir, 0, strlen( "$(DAO_DIR)" ) );
+	}else if( home && DString_FindMBS( path, "$(HOME)", 0 ) == 0 ){
+		DString_ReplaceMBS( path, home, 0, strlen( "$(HOME)" ) );
+	}
+}
+#endif
 void DaoVmSpace_SaveByteCodes( DaoVmSpace *self, DaoByteCoder *coder, DaoNamespace *ns )
 {
 	FILE *fout;
@@ -1329,6 +1361,7 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DArray *argValues )
 	for(i=0; i<self->sourceArchive->size; i+=2){
 		DString *name = self->sourceArchive->items.pString[i];
 		DString *source = self->sourceArchive->items.pString[i+1];
+		DaoVmSpace_ConvertPath( self, name );
 		DString_AppendUInt16( archive, name->size );
 		DString_Append( archive, name );
 		DString_AppendUInt32( archive, source->size );
@@ -1689,7 +1722,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 
 	if( source->mbs[0] == DAO_BC_SIGNATURE[0] ){
 		DaoByteCoder *byteCoder = DaoVmSpace_AcquireByteCoder( self );
-		int bl = DaoByteCoder_Decode( byteCoder, self->mainSource );
+		int bl = DaoByteCoder_Decode( byteCoder, source );
 		if( self->options & DAO_OPTION_LIST_BC ) DaoByteCoder_Disassemble( byteCoder );
 		bl = bl && DaoByteCoder_Build( byteCoder, ns );
 		DaoVmSpace_ReleaseByteCoder( self, byteCoder );
