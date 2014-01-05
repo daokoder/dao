@@ -123,7 +123,7 @@ int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
 	char SL = L->etype->name->mbs[0];
 	char SR = R->etype->name->mbs[0];
 	if( L->etype == R->etype ){
-		return L->value == R->value ? 0 : ( L->value < R->value ? -1 : 1 );
+		return L->value == R->value ? 0 : (L->value < R->value ? -1 : 1);
 	}else if( SL == '$' && SR == '$' && FL == 0 && FR == 0 ){
 		return DString_Compare( L->etype->name, R->etype->name );
 	}else if( SL == '$' && SR == '$' ){
@@ -138,16 +138,16 @@ int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
 	}else if( SL == '$' ){
 		E.etype = R->etype;
 		E.value = R->value;
-		DaoEnum_SetValue( & E, L, NULL );
-		return E.value == R->value ? 0 : ( E.value < R->value ? -1 : 1 );
+		if( DaoEnum_SetSymbols( & E, L->etype->name->mbs ) == 0 ) goto CompareAddress;
+		return E.value == R->value ? 0 : (E.value < R->value ? -1 : 1);
 	}else if( SR == '$' ){
 		E.etype = L->etype;
 		E.value = L->value;
-		DaoEnum_SetValue( & E, R, NULL );
-		return L->value == E.value ? 0 : ( L->value < E.value ? -1 : 1 );
-	}else{
-		return L->value == R->value ? 0 : ( L->value < R->value ? -1 : 1 );
+		if( DaoEnum_SetSymbols( & E, R->etype->name->mbs ) == 0 ) goto CompareAddress;
+		return L->value == E.value ? 0 : (L->value < E.value ? -1 : 1);
 	}
+CompareAddress:
+	return L->etype < R->etype ? -100 : 100;
 }
 int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt )
 {

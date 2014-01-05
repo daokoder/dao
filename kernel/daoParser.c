@@ -5036,8 +5036,6 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	}
 	if( modname == NULL ){
 		cyclic = (DaoNamespace_AddParent( nameSpace, mod ) == 0);
-	}else if( hostClass && self->isClassBody ){
-		DaoClass_AddConst( hostClass, modname, (DaoValue*) mod, perm );
 	}else{
 		DaoNamespace_AddConst( nameSpace, modname, (DaoValue*) mod, perm );
 	}
@@ -6004,9 +6002,6 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 			return error;
 		}
 
-		DString_Assign( mbs, field );
-		DString_AppendMBS( mbs, "=>" );
-		MAP_Insert( self->allConsts, mbs, routine->routConsts->items.size );
 		ds.data = field;
 		self->curToken += 2;
 		if( type && type->tid == DAO_PAR_NAMED ) type = (DaoType*) type->aux;

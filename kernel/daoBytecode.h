@@ -508,10 +508,7 @@ struct DaoByteCoder
 	uint_t   index;
 	uint_t   fmthash;
 	uchar_t  intSize;
-
-	uchar_t  *codes;
-	uchar_t  *end;
-	uchar_t  *error;
+	uchar_t  error;
 
 	DaoByteBlock  *top;
 

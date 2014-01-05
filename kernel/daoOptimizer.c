@@ -6106,12 +6106,63 @@ CallNotPermit : return DaoInferencer_Error( self, DTE_CALL_NOT_PERMIT );
 CallWithoutInst : return DaoInferencer_Error( self, DTE_CALL_WITHOUT_INSTANCE );
 ErrorTyping: return DaoInferencer_Error( self, DTE_TYPE_NOT_MATCHING );
 }
+static void DaoRoutine_ReduceLocalConsts( DaoRoutine *self )
+{
+	DaoList *list = DaoList_New( self->routConsts->ctype );
+	DaoList *old = self->routConsts;
+	DMap *used = DMap_New(0,0);
+	DNode *it;
+	daoint i;
+	for(i=0; i<self->routType->nested->size; ++i){
+		DMap_Insert( used, IntToPointer(i), IntToPointer(i) );
+	}
+	for(i=0; i<self->routConsts->items.size; ++i){
+		/* For reserved space in the constant list (for example, in decorators): */
+		if( self->routConsts->items.items.pValue[i] == NULL ){
+			DMap_Insert( used, IntToPointer(i), IntToPointer(i) );
+		}
+	}
+	for(i=0; i<self->body->annotCodes->size; ++i){
+		DaoVmCodeX *vmc = self->body->annotCodes->items.pVmc[i];
+		DaoVmCode *vmc2 = self->body->vmCodes->data.codes + i;
+		int id = used->size;
+		switch( vmc->code ){
+		case DVM_GETCL :
+		case DVM_GETCL_I : case DVM_GETCL_F :
+		case DVM_GETCL_D : case DVM_GETCL_C :
+		case DVM_GETF : case DVM_SETF :
+		case DVM_CAST :
+			it = DMap_Find( used, IntToPointer(vmc->b) );
+			if( it == NULL ) it = DMap_Insert( used, IntToPointer(vmc->b), IntToPointer(id) );
+			vmc->b = vmc2->b = it->value.pInt;
+			break;
+		case DVM_NAMEVA :
+		case DVM_CASE :
+			it = DMap_Find( used, IntToPointer(vmc->a) );
+			if( it == NULL ) it = DMap_Insert( used, IntToPointer(vmc->a), IntToPointer(id) );
+			vmc->a = vmc2->a = it->value.pInt;
+			break;
+		}
+	}
+	DArray_Resize( & list->items, used->size, NULL );
+	for(it=DMap_First(used); it; it=DMap_Next(used,it)){
+		DaoValue **src = self->routConsts->items.items.pValue + it->key.pInt;
+		DaoValue **dest = list->items.items.pValue + it->value.pInt;
+		DaoValue_Copy( src[0], dest );
+		DaoValue_MarkConst( dest[0] );
+	}
+	GC_ShiftRC( list, self->routConsts );
+	self->routConsts = list;
+	DMap_Delete( used );
+}
 int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 {
 	DaoInferencer *inferencer;
 	DaoOptimizer *optimizer;
 	DaoVmSpace *vmspace = self->nameSpace->vmSpace;
 	int retc, decorator = self->attribs & DAO_ROUT_DECORATOR;
+
+	DaoRoutine_ReduceLocalConsts( self );
 
 	if( self->body->vmCodes->size == 0 ) return 1;
 

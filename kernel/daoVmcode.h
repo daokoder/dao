@@ -497,7 +497,7 @@ enum DaoOperandType
 
 struct DaoVmCode
 {
-	unsigned short  code; /* opcode */
+	unsigned short  code;    /* opcode */
 	unsigned short  a, b, c; /* register ids for operands */
 };
 
@@ -512,13 +512,13 @@ DAO_DLL DaoVmCode*  DVector_PushCode( DVector *self, DaoVmCode code );
 
 struct DaoVmCodeX
 {
-	unsigned short  code; /* opcode */
+	unsigned short  code;    /* opcode */
 	unsigned short  a, b, c; /* register ids for operands */
-	unsigned short  level; /* lexical level */
-	unsigned short  line; /* line number in the source file */
-	unsigned int    first; /* first token */
-	unsigned short  middle; /* middle token, with respect to first */
-	unsigned short  last; /* last token, with respect to first */
+	unsigned short  level;   /* lexical level */
+	unsigned short  line;    /* line number in the source file */
+	unsigned int    first;   /* first token */
+	unsigned short  middle;  /* middle token, with respect to first */
+	unsigned short  last;    /* last token, with respect to first */
 };
 void DaoVmCode_Print( DaoVmCode self, char *buffer );
 void DaoVmCodeX_Print( DaoVmCodeX self, char *buffer );
