@@ -2912,8 +2912,9 @@ static int DaoInferencer_ErrorTypeNotMatching( DaoInferencer *self, DaoType *S, 
 	DaoInferencer_WriteErrorSpecific( self, DTE_TYPE_NOT_MATCHING );
 	return 0;
 }
-static int DaoInferencer_ErrorTypeID( DaoInferencer *self, int tid )
+static int DaoInferencer_ErrorTypeID( DaoInferencer *self, DaoType *S, int tid )
 {
+	self->type_source = S;
 	self->tid_target = tid;
 	DaoInferencer_WriteErrorHeader( self );
 	DaoInferencer_WriteErrorGeneral( self, DTE_TYPE_NOT_MATCHING );
@@ -2978,7 +2979,8 @@ static DaoType* DaoType_GetVariantUsable( DaoType *self )
 		return DaoInferencer_ErrorTypeNotMatching( self, source, target );
 
 #define AssertTypeIdMatching( source, id ) \
-	if( source == NULL || source->tid != id ) return DaoInferencer_ErrorTypeID( self, id );
+	if( source == NULL || source->tid != id ) \
+		return DaoInferencer_ErrorTypeID( self, source, id );
 
 #define AssertInitialized( reg, ec, first, last ) { \
 	if( inited[reg] == 0 || types[reg] == NULL ) \

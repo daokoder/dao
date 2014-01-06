@@ -72,6 +72,7 @@ enum DaoBasicStruct
 {
 	D_NULL ,
 	D_VALUE ,   /* garbage collectable items, managed by the container; */
+	D_VALUE2 ,  /* the same as D_VALUE, except more strict comparing as map/hash keys; */
 	D_VMCODE ,
 	D_VMCODE2 , /* for DMap, compare code and operands only; */
 	D_TOKEN ,   /* for DArray only; */

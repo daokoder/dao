@@ -1535,6 +1535,24 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 	DString *name = & token->string;
 	int i = token->name > DKEY_USE ? dao_keywords[ token->name - DKEY_USE ].value : 0;
 
+	if( self->byteBlock && token->name == DTOK_IDENTIFIER ){
+		DaoByteBlock *block = self->byteBlock;
+		DaoValue *value = NULL;
+		int id, opcode = 0;
+		if( self->hostClass && (id = DaoClass_FindConst( self->hostClass, name )) >= 0 ){
+			value = DaoClass_GetConst( self->hostClass, id );
+			opcode = DVM_GETCK;
+		}else if( (id = DaoNamespace_FindConst( ns, name )) >= 0 ){
+			value = DaoNamespace_GetConst( ns, id );
+			opcode = DVM_GETCG;
+		}
+		if( value != NULL ){
+			DaoByteBlock *namebk = DaoByteBlock_EncodeString( block, name );
+			DaoByteBlock *eval = DaoByteBlock_AddEvalBlock( block, value, opcode, 1, NULL );
+			DaoByteBlock_InsertBlockIndex( eval, eval->end, namebk );
+		}
+	}
+
 	if( end > start && token->name == DTOK_IDENTIFIER ){
 		type = DaoParser_ParseUserType( self, start, end, newpos );
 		if( type ) return type;
@@ -3394,6 +3412,9 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		}
 	}
 	DaoClass_ResetAttributes( klass );
+	if( parser->byteBlock ){
+		DaoByteCoder_EncodeUInt32( parser->byteBlock->begin+4, klass->attribs );
+	}
 	error = DaoParser_CompileRoutines( parser ) == 0;
 	if( error == 0 && klass->classRoutines->overloads->routines->size == 0 ){
 		DString *ctorname = klass->cstDataName->items.pString[DAO_CLASS_CONST_CSTOR];
@@ -4397,7 +4418,6 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 				DaoNamespace_SetConst( ns, id, value );
 				if( block ){
 					DaoByteBlock_DeclareConst( block, name, value, LOOKUP_PM(id) );
-					DMap_Insert( block->coder->globalConsts, value, name );
 				}
 			}else if( self->isClassBody && hostClass ){
 				id = DaoClass_FindConst( hostClass, & varTok->string );
@@ -4409,7 +4429,6 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 				}
 				if( block ){
 					DaoByteBlock_DeclareConst( block, name, value, LOOKUP_PM(id) );
-					DMap_Insert( block->coder->classConsts, value, name );
 				}
 			}else{
 				id = LOOKUP_ID( DaoParser_GetRegister( self, varTok) );
@@ -5446,27 +5465,15 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		}
 		if( self->byteBlock && (st == DAO_CLASS_CONSTANT || st == DAO_GLOBAL_CONSTANT) ){
 			int opcode = (st == DAO_CLASS_CONSTANT) ? DVM_GETCK : DVM_GETCG;
-			DaoByteBlock *eval, *block = self->byteBlock;
+			DaoByteBlock *bk, *eval, *block = self->byteBlock;
 			if( value && value->type >= DAO_ENUM ){
-				if( value->type <= DAO_TUPLE ){
-					DNode *it;
-					if( st == DAO_CLASS_CONSTANT ){
-						it = DMap_Find( block->coder->classConsts, value );
-						if( it == NULL ){
-							DaoByteBlock_DeclareConst( block, str, value, DAO_DATA_PUBLIC );
-							DMap_Insert( block->coder->classConsts, value, str );
-						}
-					}else{
-						it = DMap_Find( block->coder->globalConsts, value );
-						if( it == NULL ){
-							DaoByteBlock_DeclareConst( block, str, value, DAO_DATA_PUBLIC );
-							DMap_Insert( block->coder->globalConsts, value, str );
-							block->begin[6] = 1; /* global scope; */
-						}
-					}
-				}
 				if( DaoByteBlock_FindBlock( block, value ) == NULL ){
 					DaoByteBlock *name = DaoByteBlock_EncodeString( block, str );
+					int id = DaoNamespace_FindConst( ns, str );
+					if( value->type <= DAO_TUPLE && id >= 0 && LOOKUP_UP(id) >= 1 ){
+						bk = DaoByteBlock_DeclareConst( block, str, value, DAO_DATA_PUBLIC );
+						bk->begin[6] = 1; /* global scope; */
+					}
 					eval = DaoByteBlock_AddEvalBlock( block, value, opcode, 1, NULL );
 					DaoByteBlock_InsertBlockIndex( eval, eval->end, name );
 				}
@@ -5520,7 +5527,6 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		DaoEnum_SetType( self->denum, type );
 		if( self->byteBlock ){
 			DaoByteBlock *block = DaoByteBlock_DeclareConst( self->byteBlock, str, value, 0 );
-			DMap_Insert( block->coder->globalConsts, value, str );
 			block->begin[6] = 1; /* global scope; */
 		}
 		varReg = DaoNamespace_AddConst( ns, str, value, DAO_DATA_PUBLIC );

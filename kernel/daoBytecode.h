@@ -515,8 +515,6 @@ struct DaoByteCoder
 	DString  *path;
 
 	DMap  *valueToBlocks; /* hash<DaoValue*,DaoByteBlock*> */
-	DMap  *globalConsts;
-	DMap  *classConsts;
 
 	DArray  *stack;    /* list<DaoByteBlock*> */
 	DArray  *caches;   /* list<DaoByteBlock*> */
@@ -554,6 +552,8 @@ DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, in
 void DaoByteCoder_FinalizeRoutineBlock( DaoByteCoder *self, DaoByteBlock *block );
 
 void DaoByteBlock_InsertBlockIndex( DaoByteBlock *self, uchar_t *code, DaoByteBlock *block );
+
+void DaoByteCoder_EncodeUInt32( uchar_t *data, uint_t value );
 
 DaoByteBlock* DaoByteBlock_EncodeString( DaoByteBlock *self, DString *string );
 DaoByteBlock* DaoByteBlock_EncodeType( DaoByteBlock *self, DaoType *type );

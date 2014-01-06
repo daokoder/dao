@@ -1129,7 +1129,7 @@ void DaoClass_ResetAttributes( DaoClass *self )
 	}
 	if( autoinitor ) self->attribs |= DAO_CLS_AUTO_INITOR;
 #if 0
-	printf( "%s %i\n", self->className->mbs, autodef );
+	printf( "%s %i\n", self->className->mbs, autoinitor );
 #endif
 	for(i=DVM_NOT; i<=DVM_BITRIT; i++){
 		DString_SetMBS( mbs, daoBitBoolArithOpers[i-DVM_NOT] );
