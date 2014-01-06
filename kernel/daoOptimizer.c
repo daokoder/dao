@@ -4069,22 +4069,22 @@ NotExist_TryAux:
 					inode->b = strcmp( str->mbs, "imag" ) == 0;
 					break;
 				case DAO_INTERFACE :
-					node = DMap_Find( at->aux->xInterface.methods, str );
+					node = DMap_Find( ct->aux->xInterface.methods, str );
 					if( node ){
 						ct = node->value.pRoutine->routType;
 					}else{
 						DString_SetMBS( mbs, "." );
 						DString_Append( mbs, str );
-						node = DMap_Find( at->aux->xInterface.methods, mbs );
+						node = DMap_Find( ct->aux->xInterface.methods, mbs );
 						if( node == NULL ){
 							pars[0] = dao_type_string;
 							npar = 2;
 							DString_SetMBS( mbs, "." );
-							node = DMap_Find( at->aux->xInterface.methods, mbs );
+							node = DMap_Find( ct->aux->xInterface.methods, mbs );
 						}
 						if( node == NULL ) goto NotExist_TryAux;
 						meth = node->value.pRoutine;
-						rout = DaoValue_Check( meth, at, pars, npar, DVM_CALL, errors );
+						rout = DaoValue_Check( meth, ct, pars, npar, DVM_CALL, errors );
 						if( rout == NULL ) goto NotExist_TryAux;
 						ct = & rout->routType->aux->xType;
 					}

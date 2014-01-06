@@ -10,9 +10,9 @@ load aux;
 load sdml_parser;
 
 
-class CodeHL : SdmlCodeHL
+class CodeHL
 {
-	virtual routine Highlight( source : string, name='' )=>string{ return '+++'; }
+	routine Highlight( source : string, name='' )=>string{ return '+++'; }
 	static routine StartCode( name="" );
 	static routine FinishCode( name="" );
 }
@@ -149,9 +149,9 @@ routine DaoCodeHL::Highlight( source : string, name='' ) => string
 				}
 			}
 			output += "}";
-		}else if( tok.pfind( '^[%d%C_]+$' ) ){
+		}else if( % tok.pfind( '^[%d%C_]+$' ) ){
 			output += "\\NUMBER{" + replace( tok ) + "}";
-		}else if( tok.pfind( '^%d* %.%d+$' ) ){
+		}else if( % tok.pfind( '^%d* %.%d+$' ) ){
 			output += "\\NUMBER{" + replace( tok ) + "}";
 		}else if( tok[0:1] == "#{" ){
 			tok = replace( tok );
@@ -243,9 +243,9 @@ routine CppCodeHL::Highlight( source : string, name='' )=> string
 			output += HilitMap[tok] + tok + "}";
 		}else if( tok[0:0] == "\"" || tok[0:0] == "\'" ){
 			output += "\\STRING{" + replace( tok ) + "}";
-		}else if( tok.pfind( '^[%d%C_]+$' ) ){
+		}else if( % tok.pfind( '^[%d%C_]+$' ) ){
 			output += "\\NUMBER{" + replace(tok) + "}";
-		}else if( tok.pfind( '^%d* %.%d+$' ) ){
+		}else if( % tok.pfind( '^%d* %.%d+$' ) ){
 			output += "\\NUMBER{" + replace( tok ) + "}";
 		}else if( tok == "#" ){
 			output += "\\SPECIAL{\\#" + tokens[i+1] + "}";
@@ -321,9 +321,9 @@ routine BnfCodeHL::Highlight( source : string, name = '' ) => string
 		}else if( HilitMap.has( tok ) ){
 			output += HilitMap[tok] + replace( tok ) + "}";
 		# }else if( tok =~/^(\d|\C|_)+$/ ){
-		}else if( tok.pfind( '^[%d%C_]+$' ) ){
+		}else if( % tok.pfind( '^[%d%C_]+$' ) ){
 			output += "\\NUMBER{" + replace( tok ) + "}";
-		}else if( tok.pfind( '^%d* %.%d+$' ) ){
+		}else if( % tok.pfind( '^%d* %.%d+$' ) ){
 			output += "\\NUMBER{" + replace( tok ) + "}";
 		}else if( tok[0:1] == "#{" ){
 			tok = replace( tok );

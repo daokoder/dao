@@ -979,10 +979,6 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 	DString_Delete( mbs );
 	DArray_Delete( parents );
 	DArray_Delete( offsets );
-	DaoObject_Init( & self->objType->value->xObject, NULL, 0 );
-	self->objType->value->xObject.trait &= ~DAO_VALUE_CONST;
-	DaoValue_MarkConst( self->objType->value );
-	DaoValue_MarkConst( self->constants->items.pConst[1]->value ); /* ::default */
 }
 int DArray_MatchAffix( DArray *self, DString *name )
 {
@@ -1116,6 +1112,11 @@ void DaoClass_ResetAttributes( DaoClass *self )
 	DNode *node;
 	DString *mbs = DString_New(1);
 	int i, k, id, autoinitor = self->parent == NULL;
+
+	DaoObject_Init( & self->objType->value->xObject, NULL, 0 );
+	self->objType->value->xObject.trait &= ~DAO_VALUE_CONST;
+	DaoValue_MarkConst( self->objType->value );
+	DaoValue_MarkConst( self->constants->items.pConst[1]->value ); /* ::default */
 
 	DaoClass_MakeInterface( self );
 

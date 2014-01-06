@@ -515,6 +515,8 @@ struct DaoByteCoder
 	DString  *path;
 
 	DMap  *valueToBlocks; /* hash<DaoValue*,DaoByteBlock*> */
+	DMap  *globalConsts;
+	DMap  *classConsts;
 
 	DArray  *stack;    /* list<DaoByteBlock*> */
 	DArray  *caches;   /* list<DaoByteBlock*> */

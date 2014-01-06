@@ -10,7 +10,7 @@ load codehl2html;
 
 class Sdml2Html : SdmlParser
 {
-  routine Sdml2Html();
+	routine Sdml2Html();
 	routine New(){ return Sdml2Html(); }
 	routine Warn( info : string );
 	routine Error( info : string );
@@ -41,7 +41,7 @@ routine Sdml2Html::Sdml2Html()
 	unorderlist = ( '<ul>', '\n</ul>\n' );
 	listitem = ( '\n<li>', '</li>\n' );
 	empty_table = '\n<table class="sdmltable"><tr><td>&nbsp;</td></tr></table>';
-	quotebegin = "<div class=\"hlcode text_italic\">";
+	quotebegin = "<div class=\"hlcite text_italic\">";
 	quoteend = "</div>";
 	quotename1 = "<span class=text_bold>";
 	quotename2 = ":</span><p>";
@@ -61,10 +61,12 @@ routine Sdml2Html::Sdml2Html()
 routine Sdml2Html::Warn( info : string )
 {
 	output += '<div><font color=\"#f00\">WARNING: ' + info + '!</font></div>\n';
+	panic( info )
 }
 routine Sdml2Html::Error( info : string )
 {
 	output += '<div><font color=\"#f00\">ERROR: ' + info + '!</font></div>\n';
+	panic( info )
 }
 routine Sdml2Html::OpenHeader( dtype = '' )
 {
@@ -106,9 +108,8 @@ routine Sdml2Html::MakeTOC( sect : TextSection )
 }
 routine Sdml2Html::MakeImage( name = '' )
 {
-	#const html_image = '<table align="$(align)" class="textwrap"><tr><td><a @(attrib_$(suffix))="PromptUploadImage( \'$(name)\' );" class="@(class_$(suffix))"><img src="/image.dao?space=@(space_$(suffix))&image=$(name)"/><div>@(tooltip_$(suffix))</div></a></td></tr></table>';
-	const html_image = '<table align="$(align)" class="textwrap"><tr><td><a @(onclick_$(suffix))="PromptUploadImage( \'$(name)\' );" @(href_$(suffix))="/image.dao?space=@(space_$(suffix))&image=$(name)&size=large" class="@(class_$(suffix))"><img src="/image.dao?space=@(space_$(suffix))&image=$(name)"/><div>@(tooltip_$(suffix))</div></a></td></tr></table>';
-	if( name.pfind( '^ %w+ $' ) ){
+	const html_image = '<table align="right" class="textwrap" style="margin-right:50pt" ><tr><td><a @(onclick_$(suffix))="PromptUploadImage( \'$(name)\' );" @(href_$(suffix))="/space/@(space_$(suffix))/image/$(name)/?size=large" class="@(class_$(suffix))"><img src="/space/@(space_$(suffix))/image/$(name)"/><div>@(tooltip_$(suffix))</div></a></td></tr></table>';
+	if( %name.pfind( '^ %w+ $' ) ){
 		expand = { 'align' => 'right', 'suffix' => suffix, 'name' => '' };
 		expand[ 'name' ] = name;
 		output += html_image.expand( expand );
@@ -116,12 +117,12 @@ routine Sdml2Html::MakeImage( name = '' )
 		output += '<img src="' + name + '"/>';
 	}
 }
-routine Sdml2Html::MakeLink( name='', tok1='', tok2='' )
+routine Sdml2Html::MakeLink( name='', tok1='', tok2='' )=>string
 {
 	code = "<a href=\"";
 	if( tok2.size() ){
 		code += "/space" + tok1 + "/page/" + tok2;
-	}else if( tok1.pfind( '^ %w+ (|#[%d%.]*) $' ) ){
+	}else if( %tok1.pfind( '^ %w+ (|#[%d%.]*) $' ) ){
 		code += "@(url_base_" + suffix + ")/page/" + tok1;
 	}else{
 		code += tok1;
@@ -172,7 +173,7 @@ routine Sdml2Html::CloseSection( level=0, numbering='' )
 	tag = "H" + (string) (level+1);
 	output += "</" + tag + ">\n";
 	output += "</td><td align=\"right\"><a href=\"@(url_edit_" + suffix;
-	output += ")&section=" + numbering + "\">@(edit_" + suffix + ")</a>&nbsp;";
+	output += ")/?section=" + numbering + "\">@(edit_" + suffix + ")</a>&nbsp;";
 	output += "<a href=\"#start\">@(top_" + suffix + ")</a></td></tr></table>\n";
 #io.writeln( subsect.numbering, subsect.sectname );
 }
@@ -185,13 +186,29 @@ routine Sdml2Html::Replace( src = '' ) => string
 	return src;
 }
 
+
 #{
+src = 
+@[sdml]
+abc
+<code dao>
+class A
+{
+	var i
+}
+</code>
+@[sdml]
+
+src = io.read( 'test2.sdml' )
 parser = Sdml2Html();
 fout = io.open( 'test.html', 'w' );
-fout.writeln( parser.Parse( src ) );
+html = parser.Parse( src )
+#io.writeln( html )
+fout.writeln( html );
 fout.close();
 #}
 
+#{
 routine main( input : string, output = "" )
 {
 	src = io.read( input );
@@ -208,3 +225,4 @@ routine main( input : string, output = "" )
 	fout.writeln( parser.Parse( src ) );
 	fout.close();
 }
+#}

@@ -266,7 +266,7 @@ routine Sdml2Tex::MakeTable( headers :list<string>, cells :list<list<string> >, 
 	rows = cells.size();
 	colm = headers.size();
 	if( colm ==0 ) colm = cells[0].size();
-	widths = { colm ~ 0 };
+	widths = { 0 : colm };
 	for( i = 0 : headers.size()-1 ) widths[i] = headers[i].size();
 	for( i = 0 : rows-1 ){
 		if( cells[i].size() ==0 ) skip;
@@ -275,7 +275,7 @@ routine Sdml2Tex::MakeTable( headers :list<string>, cells :list<list<string> >, 
 			if( w > widths[j] ) widths[j] = w;
 		}
 	}
-	wcode = { colm ~ "" };
+	wcode = { "" : colm };
 	sum = 0.0;
 	for( i = 0 : colm-1 ) sum += widths[i];
 	thd = sum / colm;
@@ -333,7 +333,7 @@ routine Sdml2Tex::EvalDemo( source = '' )
 	output += "\\texttt{\\textcolor{CommentColor}{Output}}}}}\n";
 	output += "\\begin{verbatim}\n";
 	ss = io.sstream();
-	std.eval( source, 1, ss );
+	std.eval( source, ss );
 	str = ss.getstring();
 	if( str.size() && str[ str.size()-1: ] != "\n" ) str += "\n";
 	output += str;

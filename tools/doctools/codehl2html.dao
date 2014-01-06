@@ -10,27 +10,26 @@ License: GPL
 load aux;
 load sdml_parser;
 
-class DaoCodeHL : SdmlCodeHL
+class DaoCodeHL
 {
 
-	const Library = { "io"=>1, "std"=>1, "reflect"=>1, "math"=>1, "coroutine"=>1 };
-	const Replace = { "<"=>"&lt;", ">"=>"&gt;", " "=>"&thinsp; ", 
-		"\t"=>"&nbsp;&nbsp;&nbsp;&nbsp; ", "\n"=>"<br/>" };
+	const Library = { "io"=>1, "std"=>1, "mt"=>1, "sys"=>1, "math"=>1 };
+	const Replace = { "<"=>"&lt;", ">"=>"&gt;" };
 
 	const Block = { "#"=>"<span class=Comment>", "\'"=>"<span class=String>", 
 		"\""=>"<span class=String>" };
 
 	const HilitMap = {
-		"my"     => "<span class=DataPrefix>",
+		"var"     => "<span class=DataPrefix>",
 		"const"  => "<span class=DataPrefix>",
 		"global" => "<span class=DataPrefix>",
-		"typedef"   => "<span class=CodeStruct>",
+		"static" => "<span class=DataPrefix>",
+		"interface" => "<span class=CodeStruct>",
 		"class"   => "<span class=CodeStruct>",
 		"routine" => "<span class=CodeStruct>",
-		"function" => "<span class=CodeStruct>",
+		"operator" => "<span class=CodeStruct>",
 		"syntax" => "<span class=CodeStruct>",
 		"as" => "<span class=CodeStruct>",
-		"end"     => "<span class=CodeStruct>",
 		"public"    => "<span class=PermiPrefix>",
 		"protected" => "<span class=PermiPrefix>",
 		"private"   => "<span class=PermiPrefix>",
@@ -46,11 +45,13 @@ class DaoCodeHL : SdmlCodeHL
 		"skip"    => "<span class=StmtKey>",
 		"break"  => "<span class=StmtKey>",
 		"return"  => "<span class=StmtKey>",
+		"yield"  => "<span class=StmtKey>",
 		"load"    => "<span class=StmtKey>",
-		"require"    => "<span class=StmtKey>",
-		"async"   => "<span class=StmtKey>",
-		"join"    => "<span class=StmtKey>",
-		"hurry"   => "<span class=StmtKey>",
+		"use"    => "<span class=StmtKey>",
+		"frame"   => "<span class=StmtKey>",
+		"defer"    => "<span class=StmtKey>",
+		"type"   => "<span class=DataType>",
+		"enum"   => "<span class=DataType>",
 		"int"   => "<span class=DataType>",
 		"long"   => "<span class=DataType>",
 		"float"   => "<span class=DataType>",
@@ -59,9 +60,10 @@ class DaoCodeHL : SdmlCodeHL
 		"string"   => "<span class=DataType>",
 		"list"     => "<span class=DataType>",
 		"map"     => "<span class=DataType>",
-		"tuple"     => "<span class=DataType>",
-		"stream"   => "<span class=DataType>",
-		"array" => "<span class=DataType>",
+		"tuple"   => "<span class=DataType>",
+		"array"   => "<span class=DataType>",
+		"stream"  => "<span class=DataType>",
+		"cdata"   => "<span class=DataType>",
 		"read"    => "<span class=Method>",
 		"write"   => "<span class=Method>",
 		"writeln" => "<span class=Method>",
@@ -76,6 +78,12 @@ class DaoCodeHL : SdmlCodeHL
 		"exit"   => "<span class=Method>",
 		"error"   => "<span class=Method>",
 		"warn"   => "<span class=Method>",
+		"none"   => "<span class=Number>",
+		"self"   => "<span class=Number>",
+		"and"   => "<span class=SpecSymbol>",
+		"or"   => "<span class=SpecSymbol>",
+		"not"   => "<span class=SpecSymbol>",
+		"in"   => "<span class=SpecSymbol>",
 		"("   => "<span class=SpecSymbol>",
 		")"   => "<span class=SpecSymbol>",
 		"["   => "<span class=SpecSymbol>",
@@ -98,10 +106,10 @@ class DaoCodeHL : SdmlCodeHL
 
 }
 
-routine DaoCodeHL::Highlight( source : string, name = '' )
+routine DaoCodeHL::Highlight( source : string, name = '' )=>string
 {
 	tokens = std.tokenize( source );
-	output = '<div class="hlcode">\n';
+	output = '<pre class="hlcode">\n';
 
 	size = tokens.size();
 	i = 0;
@@ -115,11 +123,10 @@ routine DaoCodeHL::Highlight( source : string, name = '' )
 			output += tag + tok + "</span>";
 		}else if( Library.has( tok ) ){
 			output += "<span class=Method>" + tok;
-			i += 1;
-			if( i+1<size ){
-				if( tokens[i] == "." ){
-					output += tokens[i] + tokens[i+1];
-					i += 1;
+			if( i+2<size ){
+				if( tokens[i+1] == "." or tokens[i+1] == "::" ){
+					output += tokens[i+1] + tokens[i+2];
+					i += 2;
 				}
 			}
 			output += "</span>";
@@ -128,32 +135,28 @@ routine DaoCodeHL::Highlight( source : string, name = '' )
 			tmp = tok;
 			tmp.replace( "<", "&lt;" );
 			tmp.replace( ">", "&gt;" );
-			tmp.replace( "\t", "&nbsp;&nbsp;&nbsp;&nbsp;" );
-			tmp.replace( "\n", "\n<br />" );
 			output += tag + tmp + "</span>";
-		}else if( tok.pfind( '^ ( 0 (x|X) %x+ | %d[%d%.]+ | [%C_%d]+ ) $' ) ){
+		}else if( %tok.pfind( '^ ( 0 (x|X) %x+ | %d[%d%.]+ | [%C_%d]+ ) $' ) ){
+			output += "<span class=Number>" + tok + "</span>";
+		}else if( %tok.pfind( '^ %$ %w+ $' ) ){
 			output += "<span class=Number>" + tok + "</span>";
 		}else if( i+2 <size && tokens[i+1]=="@" && tokens[i+2]=="END" ){
 			tmp = tok[1:];
 			tmp.replace( "<", "&lt;" );
 			tmp.replace( ">", "&gt;" );
-			tmp.replace( " ", "&nbsp;" );
-			tmp.replace( "\t", "&nbsp;&nbsp;&nbsp;&nbsp;" );
-			tmp.replace( "\n", "\n<br />" );
 			output += tmp;
 		}else{
 			output += tok;
 		}
 		i += 1;
 	}
-	output += "</div>\n";
+	output += "</pre>\n";
 	return output;
 }
 
-class CppCodeHL : SdmlCodeHL
+class CppCodeHL
 {
-	const Replace = { "<"=>"&lt;", ">"=>"&gt;", " "=>"&thinsp; ", 
-		"\t"=>"&nbsp;&nbsp;&nbsp;&nbsp; ", "\n"=>"<br /> " };
+	const Replace = { "<"=>"&lt;", ">"=>"&gt;" };
 	const Block = { "\'"=>"<span class=String>", "\""=>"<span class=String>" };
 
 	const HilitMap = {
@@ -195,10 +198,10 @@ class CppCodeHL : SdmlCodeHL
 	routine Highlight( source : string, name = '' )=>string;
 }
 
-routine CppCodeHL::Highlight( source : string, name = '' )
+routine CppCodeHL::Highlight( source : string, name = '' )=>string
 {
 	tokens = source.tokenize( "#!%^&*()-=+|/{}[];:,.~<>? \t\n\r", "\'\"", 1 );
-	output = '<div class="hlcode">\n';
+	output = '<pre class="hlcode">\n';
 
 	size = tokens.size();
 	i = 0;
@@ -212,10 +215,8 @@ routine CppCodeHL::Highlight( source : string, name = '' )
 			tmp = tok;
 			tmp.replace( "<", "&lt;" );
 			tmp.replace( ">", "&gt;" );
-			tmp.replace( "\t", "&nbsp;&nbsp;&nbsp;&nbsp;" );
-			tmp.replace( "\n", "\n<br />" );
 			output += Block[ tok[0:0] ] + tmp + "</span>";
-		}else if( tok.pfind( '^ ( 0 (x|X) %x+ | %d[%d%.]+ | [%C_%d]+ ) $' ) ){
+		}else if( %tok.pfind( '^ ( 0 (x|X) %x+ | %d[%d%.]+ | [%C_%d]+ ) $' ) ){
 			output += "<span class=Number>" + tok + "</span>";
 		}else if( tok == "#" ){
 			output += "<span class=SpecSymbol>" + tok + tokens[i+1] + "</span>";
@@ -233,9 +234,7 @@ routine CppCodeHL::Highlight( source : string, name = '' )
 			}
 			tmp.replace( "<", "&lt;" );
 			tmp.replace( ">", "&gt;" );
-			tmp.replace( "\t", "&nbsp;&nbsp;&nbsp;&nbsp;" );
-			tmp.replace( "\n", "\n<br />" );
-			output += tmp + "<br />";
+			output += tmp;
 			output += "</span>";
 		}else if( tok == "/" && i+1<size && tokens[i+1]=="*" ){
 			output += "<span class=Comment>/*";
@@ -250,8 +249,6 @@ routine CppCodeHL::Highlight( source : string, name = '' )
 			i += 1;
 			tmp.replace( "<", "&lt;" );
 			tmp.replace( ">", "&gt;" );
-			tmp.replace( "\t", "&nbsp;&nbsp;&nbsp;&nbsp;" );
-			tmp.replace( "\n", "<br />" );
 			output += tmp;
 			output += "</span>";
 		}else{
@@ -259,15 +256,14 @@ routine CppCodeHL::Highlight( source : string, name = '' )
 		}
 		i += 1;
 	}
-	output += "</div>\n";
+	output += "</pre>\n";
 	return output;
 }
 
 
-class BnfCodeHL : SdmlCodeHL
+class BnfCodeHL
 {
-	const Replace = { "<"=>"&lt;", ">"=>"&gt;", " "=>"&thinsp; ", 
-		"\t"=>"&nbsp;&nbsp;&nbsp;&nbsp; ", "\n"=>"<br /> " };
+	const Replace = { "<"=>"&lt;", ">"=>"&gt;" };
 	const Block = { "\'"=>"<span class=String>", "\""=>"<span class=String>" };
 
 	const HilitMap = {
@@ -288,10 +284,10 @@ class BnfCodeHL : SdmlCodeHL
 	routine Highlight( source : string, name = '' )=>string;
 }
 
-routine BnfCodeHL::Highlight( source : string, name = '' )
+routine BnfCodeHL::Highlight( source : string, name = '' )=>string
 {
 	tokens = source.tokenize( "|+*(){}[] \t\n\r", "\'\"", 1 );
-	output = '<div class="hlcode">\n';
+	output = '<pre class="hlcode">\n';
 
 	size = tokens.size();
 	i = 0;
@@ -306,23 +302,20 @@ routine BnfCodeHL::Highlight( source : string, name = '' )
 			tmp = tok;
 			tmp.replace( "<", "&lt;" );
 			tmp.replace( ">", "&gt;" );
-			tmp.replace( "\t", "&nbsp;&nbsp;&nbsp;&nbsp;" );
-			tmp.replace( "\n", "\n<br />" );
 			output += tag + tmp + "</span>";
 		}else{
 			output += tok;
 		}
 		i += 1;
 	}
-	output += "</div>\n";
+	output += "</pre>\n";
 	return output;
 }
 
 
-class SdmlCodeHL2 : SdmlCodeHL
+class SdmlCodeHL2
 {
-	const Replace = { "<"=>"&lt;", ">"=>"&gt;", " "=>"&thinsp; ", 
-		"\t"=>"&nbsp;&nbsp;&nbsp;&nbsp; ", "\n"=>"<br />\n" };
+	const Replace = { "<"=>"&lt;", ">"=>"&gt;" };
 	const Block = { "\'"=>"<span class=String>", "\""=>"<span class=String>" };
 
 	const HilitMap = {
@@ -343,7 +336,7 @@ class SdmlCodeHL2 : SdmlCodeHL
 	routine Highlight( source : string, name = '' )=>string;
 }
 
-routine SdmlCodeHL2::HL( source : string )
+routine SdmlCodeHL2::HL( source : string )=>string
 {
 	const pat1 = '%B{ %<%s* ([%w=]+ |%* |%% |_) [%s%w]* %> }{ %< %s* / %s* ([%w=]+ |%* |%% |_) %s*%> }';
 	const pat2 = '^( %<%s* ([%w=]+ |%* |%% |_) [%s%w]* %> ) (.*) ( %<%s* / %s* %2 %s*%> )$';
@@ -373,11 +366,11 @@ routine SdmlCodeHL2::HL( source : string )
 		"_"  => "<span class=SpecSymbol>",
 		'' => ''
 	};
-	tokens = source.extract( pat1, 0 );
+	tokens = source.extract( pat1, $both );
 	output = '';
 	for( tok in tokens ){
 		tks = tok.capture( pat2 );
-		if( tks ){
+		if( %tks ){
 			tag = tks[2];
 			tk1 = tks[1];  tk1.replace( Replace );
 			tk4 = tks[4];  tk4.replace( Replace );
@@ -398,11 +391,11 @@ routine SdmlCodeHL2::HL( source : string )
 	}
 	return output;
 }
-routine SdmlCodeHL2::Highlight( source : string, name = '' )
+routine SdmlCodeHL2::Highlight( source : string, name = '' )=>string
 {
-	output = '<div class="hlcode">\n';
+	output = '<pre class="hlcode">\n';
 	output += HL( source );
-	output += "</div>\n";
+	output += "</pre>\n";
 	return output;
 }
 

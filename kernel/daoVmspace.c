@@ -2802,10 +2802,9 @@ DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname )
 DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname )
 {
 	DaoNamespace *ns = NULL;
-#if 0
-	printf( "modtype = %i\n", modtype );
-#endif
-	switch( DaoVmSpace_CompleteModuleName( self, fname, DAO_MODULE_ANY ) ){
+	int modtype = DAO_MODULE_ANY;
+	if( self->options & DAO_OPTION_COMP_BC ) modtype = DAO_MODULE_DAO | DAO_MODULE_DLL;
+	switch( DaoVmSpace_CompleteModuleName( self, fname, modtype ) ){
 	case DAO_MODULE_DAC :
 	case DAO_MODULE_DAO : ns = DaoVmSpace_LoadDaoModule( self, fname ); break;
 	case DAO_MODULE_DLL : ns = DaoVmSpace_LoadDllModule( self, fname ); break;
