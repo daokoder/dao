@@ -200,9 +200,8 @@ Dao has native supports for the following number types:
 
 Integer and floating point numbers can be expressed
 in the same ways as in most other languages.
-But floating point numbers in Dao are parsed as double precision
-floating point numbers @[green]double@[green] by default
-(since release dao-2.0-devel-2013-06-16).
+Floating point numbers in Dao are parsed as double precision
+floating point numbers @[green]double@[green] by default.
 To explicitly express a single (double) precision floating point number 
 @[green]float@[green] (@[green]double@[green]),
 it is necessary to append a suffix @[green]F@[green] (@[green]D@[green])

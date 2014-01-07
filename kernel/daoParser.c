@@ -1546,7 +1546,7 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 			value = DaoNamespace_GetConst( ns, id );
 			opcode = DVM_GETCG;
 		}
-		if( value != NULL ){
+		if( value != NULL && DaoByteBlock_FindObjectBlock( block, value ) == NULL ){
 			DaoByteBlock *namebk = DaoByteBlock_EncodeString( block, name );
 			DaoByteBlock *eval = DaoByteBlock_AddEvalBlock( block, value, opcode, 1, NULL );
 			DaoByteBlock_InsertBlockIndex( eval, eval->end, namebk );
@@ -5465,15 +5465,10 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		}
 		if( self->byteBlock && (st == DAO_CLASS_CONSTANT || st == DAO_GLOBAL_CONSTANT) ){
 			int opcode = (st == DAO_CLASS_CONSTANT) ? DVM_GETCK : DVM_GETCG;
-			DaoByteBlock *bk, *eval, *block = self->byteBlock;
+			DaoByteBlock *eval, *block = self->byteBlock;
 			if( value && value->type >= DAO_ENUM ){
-				if( DaoByteBlock_FindBlock( block, value ) == NULL ){
+				if( DaoByteBlock_FindObjectBlock( block, value ) == NULL ){
 					DaoByteBlock *name = DaoByteBlock_EncodeString( block, str );
-					int id = DaoNamespace_FindConst( ns, str );
-					if( value->type <= DAO_TUPLE && id >= 0 && LOOKUP_UP(id) >= 1 ){
-						bk = DaoByteBlock_DeclareConst( block, str, value, DAO_DATA_PUBLIC );
-						bk->begin[6] = 1; /* global scope; */
-					}
 					eval = DaoByteBlock_AddEvalBlock( block, value, opcode, 1, NULL );
 					DaoByteBlock_InsertBlockIndex( eval, eval->end, name );
 				}
@@ -5483,7 +5478,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		   printf("value = %i; %i; c : %i\n", value->type, varReg, *cst );
 		 */
 	}else if( tki == DTOK_MBS || tki == DTOK_WCS || tki == DTOK_VERBATIM ){
-		if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
+		if( (node = MAP_Find( self->allConsts, str )) == NULL ){
 			DaoString dummy = {DAO_STRING,0,0,0,0,NULL};
 			int wcs = tok[0] == '"';
 			dummy.data = self->str;
@@ -5496,19 +5491,18 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 				DString_SetDataMBS( self->str, tok + 1, str->size-2 );
 			}
 			if( daoConfig.wcs || (daoConfig.mbs == 0 && wcs) ) DString_ToWCS( self->str );
-			MAP_Insert( self->allConsts, str, routine->routConsts->items.size );
+			node = MAP_Insert( self->allConsts, str, routine->routConsts->items.size );
 			DaoRoutine_AddConstant( routine, (DaoValue*) & dummy );
 		}
-		varReg = LOOKUP_BIND_LC( MAP_Find( self->allConsts, str )->value.pInt );
+		varReg = LOOKUP_BIND_LC( node->value.pInt );
 		*cst = varReg;
 	}else if( tki >= DTOK_DIGITS_DEC && tki <= DTOK_DIGITS_LONG ){
-		if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
+		if( (node = MAP_Find( self->allConsts, str )) == NULL ){
 			value = DaoParseNumber( self, tokens[start], & buffer );
 			if( value == NULL ) return -1;
-			MAP_Insert( self->allConsts, str, routine->routConsts->items.size );
+			node = MAP_Insert( self->allConsts, str, routine->routConsts->items.size );
 			DaoRoutine_AddConstant( routine, value );
 		}
-		node = MAP_Find( self->allConsts, str );
 		*cst = LOOKUP_BIND_LC( node->value.pInt );
 		value = routine->routConsts->items.items.pValue[ node->value.pInt ];
 		varReg = *cst;
@@ -5522,24 +5516,23 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 			DMap_Insert( type->mapNames, self->mbs, (void*)0 );
 			DaoNamespace_AddType( ns, str, type );
 		}
-		value = (DaoValue*) self->denum;
-		self->denum->value = 0;
-		DaoEnum_SetType( self->denum, type );
-		if( self->byteBlock ){
-			DaoByteBlock *block = DaoByteBlock_DeclareConst( self->byteBlock, str, value, 0 );
-			block->begin[6] = 1; /* global scope; */
+		if( (node = MAP_Find( self->allConsts, str )) == NULL ){
+			value = (DaoValue*) self->denum;
+			self->denum->value = 0;
+			DaoEnum_SetType( self->denum, type );
+			node = MAP_Insert( self->allConsts, str, routine->routConsts->items.size );
+			DaoRoutine_AddConstant( routine, (DaoValue*) self->denum );
 		}
-		varReg = DaoNamespace_AddConst( ns, str, value, DAO_DATA_PUBLIC );
-		if( varReg <0 ) return -1;
+		varReg = LOOKUP_BIND_LC( node->value.pInt );
 		*cst = varReg;
 	}else if( tki == DTOK_COLON ){
-		if( ( node = MAP_Find( self->allConsts, str ) )==NULL ){
+		if( (node = MAP_Find( self->allConsts, str )) == NULL ){
 			DaoTuple *tuple = DaoNamespace_MakePair( ns, dao_none_value, dao_none_value );
 			tuple->trait = 0;
-			MAP_Insert( self->allConsts, str, routine->routConsts->items.size );
+			node = MAP_Insert( self->allConsts, str, routine->routConsts->items.size );
 			DaoRoutine_AddConstant( routine, (DaoValue*) tuple );
 		}
-		varReg = LOOKUP_BIND_LC( MAP_Find( self->allConsts, str )->value.pInt );
+		varReg = LOOKUP_BIND_LC( node->value.pInt );
 		*cst = varReg;
 	}else{
 		*cst = 0;
@@ -7093,7 +7086,7 @@ static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nva
 	}
 	if( self->byteBlock ){
 		for(i=0; i<nvalues; ++i){
-			DaoByteBlock *block = DaoByteBlock_FindBlock( coder, operands[i] );
+			DaoByteBlock *block = DaoByteBlock_FindObjectBlock( coder, operands[i] );
 			if( operands[i] && operands[i]->type > max ){
 				max = operands[i]->type;
 			}else if( block != NULL && block->type == DAO_ASM_EVAL ){
@@ -7114,7 +7107,7 @@ static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nva
 	}
 	value = DaoProcess_MakeConst( proc );
 	if( max > DAO_COMPLEX ){
-		if( max > DAO_ENUM || DaoByteBlock_FindBlock( coder, value ) == NULL ){
+		if( max > DAO_ENUM || DaoByteBlock_FindObjectBlock( coder, value ) == NULL ){
 			DaoType* retype = proc->activeTypes[0];
 			int opb = vmc->code == DVM_GETF ? 2 : vmc->b;
 			eval = DaoByteBlock_AddEvalBlock( coder, value, vmc->code, opb, retype );

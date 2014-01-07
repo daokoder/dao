@@ -102,10 +102,6 @@ Other interesting features:
   Function decorators are functions that modify the behavior of other functions.
   Dao function decorators support static type checking.
 
---@[green]Coroutine and generator:@[green]
-
-  Syntax support for coroutine makes collaborative multithreading simple,
-  and allows static type checking across the yielding and resuming boundary.
 --@[green]Anonymous function:@[green]
 
   Anonymous functions and closures can be created anywhere in a program.
@@ -113,13 +109,10 @@ Other interesting features:
 
 --@[green]Mixin class, class decorator and aspect class:@[green]
 
-  New and experimental in dao-2.0-devel-2013-06-09.
-  Complete in the code repository.
-
---@[green]Anonymous class:@[green] (Obsolete; Remove since dao-2.0-devel-2013-06-09)
-
-  Anonymous class can now be created at runtime in a similar way as
-  creating anonymous function.
+  Mixin class supports composing new classes without inheritance.
+  Class decorator supports compiling time modification of classes,
+  and support Aspect-Orient Programming through automatic application
+  of class decorators.
 
 --@[green]Enum/flag/symbol type:@[green]
 
@@ -132,12 +125,11 @@ Other interesting features:
   Variant type is a combination of two or more types. A variant variable
   can hold a value of any of the combined types.
 
---@[green]Meta fields and prototype based programming:@[green]
+--@[green]Coroutine and generator:@[green]
 
-  Any value can be associated to another object as a meta field.
-  It can be used to do prototype based programming. Or simply, it can be used 
-  to ensure an object is garbage collected after another.
-  (Obsolete; Replaced by module @[green]protobject@[green] since dao-2.0-devel-2013-06-02)
+  Module support for coroutine makes collaborative multithreading simple,
+  and allows static type checking across the yielding and resuming boundary.
+
 --@[green]Auxiliary methods:@[green]
 
   Any type can be attached with auxiliary methods that do not actually belong

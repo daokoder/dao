@@ -202,6 +202,7 @@ static int DHash_HashIndex( DMap *self, void *key )
 		break;
 	case D_VALUE :
 	case D_VALUE2 :
+	case D_VALUE3 :
 		m = DaoValue_Hash( (DaoValue*) key, buf, 0, HASH_MAX, self->hashing );
 		if( m ==1 ){
 			id = buf[0] % T;
@@ -252,8 +253,8 @@ static void DMap_InsertTree( DMap *self, DNode *node )
 }
 static int DMap_Lockable( DMap *self )
 {
-	int lockable = self->keytype == D_VALUE || self->valtype == D_VALUE;
-	lockable |= self->keytype == D_VALUE2 || self->valtype == D_VALUE2;
+	int lockable = self->keytype >= D_VALUE && self->keytype <= D_VALUE3;
+	lockable |= self->valtype >= D_VALUE && self->valtype <= D_VALUE3;
 	return lockable;
 }
 static void DHash_ResetTable( DMap *self )
@@ -329,7 +330,8 @@ static void DMap_CopyItem( void **dest, void *item, short type )
 		case D_ARRAY  : *dest = DArray_Copy( (DArray*) item ); break;
 		case D_MAP    : *dest = DMap_Copy( (DMap*) item ); break;
 		case D_VALUE  :
-		case D_VALUE2 : DaoValue_Copy( (DaoValue*)item, (DaoValue**) dest ); break;
+		case D_VALUE2 :
+		case D_VALUE3 : DaoValue_Copy( (DaoValue*)item, (DaoValue**) dest ); break;
 		case D_VOID2  : *dest = dao_malloc(n); memcpy(*dest, item, n); break;
 		default : *dest = item; break;
 		}
@@ -339,7 +341,8 @@ static void DMap_CopyItem( void **dest, void *item, short type )
 		case D_ARRAY  : DArray_Assign( (DArray*)(*dest), (DArray*) item ); break;
 		case D_MAP    : DMap_Assign( (DMap*)(*dest), (DMap*) item ); break;
 		case D_VALUE  :
-		case D_VALUE2 : DaoValue_Copy( (DaoValue*) item, (DaoValue**) dest ); break;
+		case D_VALUE2 :
+		case D_VALUE3 : DaoValue_Copy( (DaoValue*) item, (DaoValue**) dest ); break;
 		case D_VOID2  : memcpy(*dest, item, n); break;
 		default : *dest = item; break;
 		}
@@ -352,7 +355,8 @@ static void DMap_DeleteItem( void *item, short type )
 	case D_ARRAY  : DArray_Delete( (DArray*) item ); break;
 	case D_MAP    : DMap_Delete( (DMap*) item ); break;
 	case D_VALUE  :
-	case D_VALUE2 : GC_DecRC( (DaoValue*) item ); break;
+	case D_VALUE2 :
+	case D_VALUE3 : GC_DecRC( (DaoValue*) item ); break;
 	case D_VOID2  : dao_free( item ); break;
 	default : break;
 	}
@@ -360,8 +364,8 @@ static void DMap_DeleteItem( void *item, short type )
 static void DMap_BufferNode( DMap *self, DNode *node )
 {
 	node->parent = node->left = node->right = NULL;
-	if( self->keytype == D_VALUE || self->keytype == D_VALUE2 ) DaoValue_Clear( & node->key.pValue );
-	if( self->valtype == D_VALUE || self->valtype == D_VALUE2 ) DaoValue_Clear( & node->value.pValue );
+	if( self->keytype >= D_VALUE && self->keytype <= D_VALUE3 ) DaoValue_Clear( & node->key.pValue );
+	if( self->valtype >= D_VALUE && self->valtype <= D_VALUE3 ) DaoValue_Clear( & node->value.pValue );
 	if( self->list == NULL ){
 		self->list = node;
 		return;
@@ -665,7 +669,29 @@ static daoint DaoVmCode_Compare2( DaoVmCode *k1, DaoVmCode *k2 )
 	if( k1->a != k2->a ) return k1->a - k2->a;
 	return k1->b - k2->b;
 }
+
+extern int DaoArray_Compare( DaoArray *x, DaoArray *y );
+extern int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt );
+extern int DaoList_Compare( DaoList *list1, DaoList *list2 );
+
 int DaoValue_Compare2( DaoValue *left, DaoValue *right )
+{
+	if( left == right ) return 0;
+	if( left == NULL || right == NULL ) return left < right ? -100 : 100;
+	if( left->type != right->type ) return left->type < right->type ? -100 : 100;
+	if( left->type == DAO_TUPLE && left->xTuple.ctype == right->xTuple.ctype ){
+		return DaoTuple_Compare( (DaoTuple*) left, (DaoTuple*) right );
+#ifdef DAO_WITH_NUMARRAY
+	}else if( left->type == DAO_ARRAY && left->xArray.etype == right->xArray.etype ){
+		return DaoArray_Compare( (DaoArray*) left, (DaoArray*) right );
+#endif
+	}else if( left->type == DAO_LIST && left->xList.ctype == right->xList.ctype ){
+		return DaoList_Compare( (DaoList*) left, (DaoList*) right );
+	}
+	if( left->type <= DAO_STRING ) return DaoValue_Compare( left, right );
+	return left < right ? -100 : 100;
+}
+int DaoValue_Compare3( DaoValue *left, DaoValue *right )
 {
 	if( left == right ) return 0;
 	if( left == NULL || right == NULL ) return left < right ? -100 : 100;
@@ -680,6 +706,7 @@ static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
 	case D_STRING : cmp = DString_Compare( (DString*) k1, (DString*) k2 );        break;
 	case D_VALUE  : cmp = DaoValue_Compare( (DaoValue*) k1, (DaoValue*) k2 );     break;
 	case D_VALUE2 : cmp = DaoValue_Compare2( (DaoValue*) k1, (DaoValue*) k2 );    break;
+	case D_VALUE3 : cmp = DaoValue_Compare3( (DaoValue*) k1, (DaoValue*) k2 );    break;
 	case D_ARRAY  : cmp = DArray_Compare( (DArray*) k1, (DArray*) k2 );           break;
 	case D_VOID2  : cmp = DVoid2_Compare( (void**) k1, (void**) k2 );             break;
 	case D_VMCODE : cmp = DaoVmCode_Compare( (DaoVmCode*) k1, (DaoVmCode*) k2 );  break;
@@ -702,7 +729,7 @@ static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
 		if( self->keytype == D_STRING ){
 			s1 = (DString*) k1;
 			s2 = (DString*) k2;
-		}else if( self->keytype == D_VALUE || self->keytype == D_VALUE2 ){
+		}else if( self->keytype >= D_VALUE && self->keytype <= D_VALUE3 ){
 			DaoValue *skv1 = (DaoValue*) k1;
 			DaoValue *skv2 = (DaoValue*) k2;
 			if( skv1->type == DAO_STRING ){

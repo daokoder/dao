@@ -44,8 +44,8 @@
 // Byte       # 0x44, namely 'D';
 // Byte       # 0x61, namely 'a';
 // Byte       # 0x6F, namely 'o';
-// Byte       # major version number, 0x1;
-// Byte       # minor version number, 0x2;
+// Byte       # major version number, 0x2;
+// Byte       # minor version number, 0x0;
 // Byte       # Carriage Return (CR), 0x0D;
 // Byte       # Line Feed (LF), 0x0A;
 // Byte       # format class, 0x0 for the official one;
@@ -72,7 +72,7 @@
 //
 // Specifications:
 //
-//################
+//########
 // Values:
 //########
 //
@@ -93,29 +93,31 @@
 //
 // complex:
 // ASM_VALUE(1B): DAO_COMPLEX(1B), Zeros(7B);
-// ASM_DATA(1B): Real(8B);
+//   ASM_DATA(1B): Real(8B);
 // ASM_END(1B): Imag(8B);
 //
 //
 // long:
 // ASM_VALUE(1B): DAO_LONG(1B), Base(1B), Sign(1B), SizeMod16(1B), Digits(4B);
-// ASM_DATA(1B); Digits (8B);
+//   ASM_DATA(1B); Digits (8B);
 // ASM_END(1B): Digits(8B);
 //
 //
 // string:
 // ASM_VALUE(1B): DAO_STRING(1B), MBS/WCS(1B), SizeMod16(1B), Bytes(5B);
-// ASM_DATA(1B); Bytes(8B);
+//   ASM_DATA(1B); Bytes(8B);
 // ASM_END(1B): Bytes(8B);
 //
 //
 // enum symbol:
-// ASM_VALUE(1B): DAO_ENUM(1B), Zeros(1B) Type-Index(2B), Zeros(4B);
+// ASM_VALUE(1B): DAO_ENUM(1B), Zeros(1B), Type-Index(2B), Zeros(4B);
 // ASM_END(1B): Value(4B), Zeros(0);
 //
 //   Notes:
 //   The "Type-Index" reference previous blocks which are located backwardly
-//   by a such "index" offset. Such index is stored as a two-byte short.
+//   by a such "index" offset. Only blocks that represent values are indexed,
+//   And such index is stored as a two-byte short.
+//
 //   In case short is not sufficient to represent such index, an intermediate
 //   indexing chunk can be used:
 //
@@ -127,22 +129,22 @@
 //
 // array:
 // ASM_VALUE(1B): DAO_ARRAY(1B), Numeric-Type(1B), Dimensions(2B), Size(4B);
-// ASM_DATA(1B); Dim1(4B), Dim2(4B);
-// ASM_DATA(1B); More dimensions;
-// ASM_DATA(1B); Data(4B), Data(4B); Or Data(8B);
-// ASM_DATA(1B); More Data;
+//   ASM_DATA(1B); Dim1(4B), Dim2(4B);
+//   ASM_DATA(1B); More dimensions;
+//   ASM_DATA(1B); Data(4B), Data(4B); Or Data(8B);
+//   ASM_DATA(1B); More Data;
 // ASM_END(1B): Data(8B);
 //
 //
 // list:
 // ASM_VALUE(1B): DAO_LIST(1B), Zeros(1B), Type-Index(2B), Size(4B);
-// ASM_DATA(1B); Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
+//   ASM_DATA(1B); Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 // ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //
 //
 // map:
 // ASM_VALUE(1B): DAO_MAP(1B), Zeros(1B), Type-Index(2B), Hash-Seed(4B);
-// ASM_DATA(1B); Key-Index(2B), Value-Index(2B), Key-Index(2B), Value-Index(2B);
+//   ASM_DATA(1B); Key-Index(2B), Value-Index(2B), Key-Index(2B), Value-Index(2B);
 // ASM_END(1B): Key-Index(2B), Value-Index(2B), Key-Index(2B), Value-Index(2B);
 //
 // A pair of "Value-Index"s is for a pair of key-value, zero marks the end.
@@ -150,7 +152,7 @@
 //
 // tuple:
 // ASM_VALUE(1B): DAO_TUPLE(1B), SubTypeID(1B), Type-Index(2B), Size(2B), Value-Index(2B);
-// ASM_DATA(1B); Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
+//   ASM_DATA(1B); Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 // ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //
 //
@@ -161,8 +163,22 @@
 //
 // specialized ctype:
 // ASM_VALUE(1B): DAO_CTYPE(1B), Zeros(1B), Value-Index(2B), Type-Index(2B) X 2;
-// ASM_DATA(1B): Type-Index(2B) X 4;
+//   ASM_DATA(1B): Type-Index(2B) X 4;
 // ASM_END(1B): Type-Index(2B) X 4;
+//
+//
+//#############
+// Other Values
+//#############
+//
+// copied value:
+// ASM_COPY(1B): Value-Index(2B), Zeros(6B);
+//
+// type of a value:
+// ASM_TYPEOF(1B): Value-Index(2B), Zeros(6B);
+//
+// type alias:
+// ASM_TYPEDEF(1B): Name-Index(2B), Type-Index(2B), Zeros(4B);
 //
 //
 //#########
@@ -171,33 +187,33 @@
 //
 // routine:
 // ASM_ROUTINE(1B): Name-Index(2B), Type-Index(2B), Host-Index(2B), Attrib(2B);
-// ...
+//   ...
 // ASM_END: RegCount(2B), Zeros(4B), DefaultConstructor(1B), Permission(1B);
 //
 //
 // class:
 // ASM_CLASS(1B): Name/Decl-Index(2B), Parent-Index(2B), Attrib(4B);
-// ASM_BASES(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
-// ...
+//   ASM_BASES(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
+//   ...
 // ASM_END(1B): LineDef(2B), Zeros(5B), Permission(1B);
 //
 //
 // interface:
 // ASM_INTERFACE(1B): Name/Decl-Index(2B), Parent-Count(2B), Zeros(4B);
-// ASM_BASES(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
-// ...
+//   ASM_BASES(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
+//   ...
 // ASM_END(1B): LineDef(2B), Zeros(5B), Permission(1B);
 //
 //
 // enum:
 // ASM_ENUM(1B): Name-Index(2B), Enum/Flag(2B), Count(4B);
-// ASM_DATA(1B): Name-Index(2B), Value(4B), Zeros(2B);
+//   ASM_DATA(1B): Name-Index(2B), Value(4B), Zeros(2B);
 // ASM_END(1B): Name-Index(2B), Value(4B), Zeros(2B);
 //
 //
 // type:
 // ASM_TYPE(1B): Name-Index(2B), TypeID(2B), Aux-Index(2B), CodeBlockType-Index(2B);
-// ASM_DATA(1B): Type-Index(2B) X 4;
+//   ASM_DATA(1B): Type-Index(2B) X 4;
 // ASM_END(1B): Type-Index(2B) X 4;
 //
 // Note 1: the nested types are zero Type-Index terminated;
@@ -254,8 +270,8 @@
 //
 // code:
 // ASM_CODE(1B): CodeNum(2B), Line-Num-Count(2B), LineNum(2B), Count(2B);
-// ASM_DATA(1B): LineDiff(2B), Count(2B), LineDiff(2B), Count(2B);
-// ASM_DATA(1B): Opcode(2B), A(2B), B(2B), C(2B);
+//   ASM_DATA(1B): LineDiff(2B), Count(2B), LineDiff(2B), Count(2B);
+//   ASM_DATA(1B): Opcode(2B), A(2B), B(2B), C(2B);
 // ASM_END(1B): Opcode(2B), A(2B), B(2B), C(2B);
 //
 //
@@ -442,6 +458,7 @@
 enum DaoAuxOpcode
 {
 	DAO_ASM_NONE      ,
+	DAO_ASM_COPY      ,
 	DAO_ASM_TYPEOF    ,
 	DAO_ASM_TYPEDEF   ,
 	DAO_ASM_ROUTINE   ,
@@ -485,8 +502,9 @@ struct DaoByteBlock
 	uchar_t  begin[8];
 	uchar_t  end[8];
 
-	DMap  *wordToBlocks;
-	DMap  *valueToBlocks;
+	DMap  *wordToBlocks;      /* map<uchar_t*,DaoByteBlock*>; */
+	DMap  *valueDataBlocks;   /* hash<DaoValue*,DaoByteBlock*>; Same data to same block; */
+	DMap  *valueObjectBlocks; /* hash<DaoValue*,DaoByteBlock*>; Same object to same block; */
 
 	DaoValue  *value;
 
@@ -514,7 +532,8 @@ struct DaoByteCoder
 
 	DString  *path;
 
-	DMap  *valueToBlocks; /* hash<DaoValue*,DaoByteBlock*> */
+	DMap  *valueDataBlocks;   /* hash<DaoValue*,DaoByteBlock*>; Same data to same block; */
+	DMap  *valueObjectBlocks; /* hash<DaoValue*,DaoByteBlock*>; Same object to same block; */
 
 	DArray  *stack;    /* list<DaoByteBlock*> */
 	DArray  *caches;   /* list<DaoByteBlock*> */
@@ -541,7 +560,7 @@ DaoByteBlock* DaoByteCoder_Init( DaoByteCoder *self );
 DaoByteBlock* DaoByteCoder_NewBlock( DaoByteCoder *self, int type );
 
 DaoByteBlock* DaoByteBlock_NewBlock( DaoByteBlock *self, int type );
-DaoByteBlock* DaoByteBlock_FindBlock( DaoByteBlock *self, DaoValue *value );
+DaoByteBlock* DaoByteBlock_FindObjectBlock( DaoByteBlock *self, DaoValue *value );
 DaoByteBlock* DaoByteBlock_AddBlock( DaoByteBlock *self, DaoValue *value, int type );
 
 DaoByteBlock* DaoByteBlock_AddRoutineBlock( DaoByteBlock *self, DaoRoutine *routine, int pm );
