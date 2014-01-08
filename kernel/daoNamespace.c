@@ -1639,7 +1639,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		if( pb == NULL ) return NULL;
 		return pb->xInterface.abtype;
 	case DAO_CLASS :
-		if( pb == NULL ) return NULL;
+		if( pb == NULL ) break; /* may be the general "class" type; */
 		return pb->xClass.clsType;
 	case DAO_OBJECT :
 		if( pb == NULL ) return NULL;
@@ -1691,11 +1691,12 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		DString_AppendMBS( mbs, "<...>" );
 		attrib |= DAO_TYPE_VARIADIC;
 	}else if( tid == DAO_CLASS && pb ){
-		/* do not save the abstract type for class and object in namespace,
-		 * because the class may be nested in another class, and different
-		 * class may nest different class with the same name, eg:
-		 * Error::Field::NotExist and Error::Key::NotExist
-		 * */
+		/*
+		// do not save the abstract type for class and object in namespace,
+		// because the class may be nested in another class, and different
+		// class may nest different class with the same name, eg:
+		// Error::Field::NotExist and Error::Key::NotExist
+		*/
 		klass = (DaoClass*) pb;
 		tp = klass->clsType;
 		goto Finalizing;

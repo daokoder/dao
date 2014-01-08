@@ -6426,7 +6426,7 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 		int i = vmc - self->topFrame->codes;
 		if( self->topFrame->routine != self->activeRoutine ) i = self->topFrame->entry;
 		if( i >= 0 && i < self->topFrame->routine->body->annotCodes->size )
-			DaoVmCodeX_Print( *self->topFrame->routine->body->annotCodes->items.pVmc[i], NULL );
+			DaoVmCodeX_Print( *self->topFrame->routine->body->annotCodes->items.pVmc[i], NULL, NULL );
 	}
 #endif
 

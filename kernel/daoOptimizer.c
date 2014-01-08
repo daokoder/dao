@@ -4140,7 +4140,7 @@ NotExist_TryAux:
 							if( k == DAO_OBJECT_VARIABLE ) vmc->code = DVM_SETF_OVII;
 							if( at->tid != (*type2)->tid )
 								DaoInferencer_InsertMove( self, inode, & inode->a, at, *type2 );
-							vmc->code += at->tid - DAO_INTEGER;
+							vmc->code += (*type2)->tid - DAO_INTEGER;
 							vmc->b = LOOKUP_ID( j );
 						}else if( *type2 && (*type2)->tid == DAO_COMPLEX && at->tid && at->tid <= DAO_COMPLEX ){
 							vmc->b = LOOKUP_ID( j );

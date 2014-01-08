@@ -521,7 +521,7 @@ struct DaoVmCodeX
 	unsigned short  last;    /* last token, with respect to first */
 };
 void DaoVmCode_Print( DaoVmCode self, char *buffer );
-void DaoVmCodeX_Print( DaoVmCodeX self, char *buffer );
+void DaoVmCodeX_Print( DaoVmCodeX self, char *annot, char *buffer );
 
 
 #define DaoGetSectionCode1(C) ((C[1].code == DVM_GOTO && C[2].code == DVM_SECT) ? C+2 : NULL)

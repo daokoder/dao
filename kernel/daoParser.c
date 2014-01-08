@@ -1463,6 +1463,25 @@ ErrorRoutine:
 	return -1;
 }
 
+static void DaoParser_ByteEncodeGetConst( DaoParser *self, DString *name )
+{
+	DaoByteBlock *block = self->byteBlock;
+	DaoNamespace *ns = self->nameSpace;
+	DaoValue *value = NULL;
+	int id, opcode = 0;
+	if( self->hostClass && (id = DaoClass_FindConst( self->hostClass, name )) >= 0 ){
+		value = DaoClass_GetConst( self->hostClass, id );
+		opcode = DVM_GETCK;
+	}else if( (id = DaoNamespace_FindConst( ns, name )) >= 0 ){
+		value = DaoNamespace_GetConst( ns, id );
+		opcode = DVM_GETCG;
+	}
+	if( value != NULL && DaoByteBlock_FindObjectBlock( block, value ) == NULL ){
+		DaoByteBlock *namebk = DaoByteBlock_EncodeString( block, name );
+		DaoByteBlock *eval = DaoByteBlock_AddEvalBlock( block, value, opcode, 1, NULL );
+		DaoByteBlock_InsertBlockIndex( eval, eval->end, namebk );
+	}
+}
 static DaoType* DaoType_FindType( DString *name, DaoNamespace *ns, DaoType *ctype, DaoClass *klass, DaoRoutine *rout )
 {
 	DNode *node = NULL;
@@ -1498,6 +1517,9 @@ static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, in
 	DaoValue *value = NULL;
 	DString *name = & tokens[start]->string;
 	int t, k = DaoParser_FindScopedConstant( self, &value, start );
+	if( self->byteBlock && k == start ){
+		DaoParser_ByteEncodeGetConst( self, name );
+	}
 	DaoParser_PopCodes( self, back );
 	if( k <0 ) k = start;
 	*newpos = k + 1;
@@ -1535,22 +1557,8 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 	DString *name = & token->string;
 	int i = token->name > DKEY_USE ? dao_keywords[ token->name - DKEY_USE ].value : 0;
 
-	if( self->byteBlock && token->name == DTOK_IDENTIFIER ){
-		DaoByteBlock *block = self->byteBlock;
-		DaoValue *value = NULL;
-		int id, opcode = 0;
-		if( self->hostClass && (id = DaoClass_FindConst( self->hostClass, name )) >= 0 ){
-			value = DaoClass_GetConst( self->hostClass, id );
-			opcode = DVM_GETCK;
-		}else if( (id = DaoNamespace_FindConst( ns, name )) >= 0 ){
-			value = DaoNamespace_GetConst( ns, id );
-			opcode = DVM_GETCG;
-		}
-		if( value != NULL && DaoByteBlock_FindObjectBlock( block, value ) == NULL ){
-			DaoByteBlock *namebk = DaoByteBlock_EncodeString( block, name );
-			DaoByteBlock *eval = DaoByteBlock_AddEvalBlock( block, value, opcode, 1, NULL );
-			DaoByteBlock_InsertBlockIndex( eval, eval->end, namebk );
-		}
+	if( self->byteBlock && end >= start && token->name == DTOK_IDENTIFIER ){
+		DaoParser_ByteEncodeGetConst( self, name );
 	}
 
 	if( end > start && token->name == DTOK_IDENTIFIER ){
@@ -2079,7 +2087,7 @@ int DaoParser_ParseScript( DaoParser *self )
 	if( self->byteBlock ) return 1;
 	for(i=0; i<self->routReInferable->size; i++){
 		DaoRoutine *rout = (DaoRoutine*) self->routReInferable->items.pValue[i];
-		DaoRoutine_DoTypeInference( rout, 1 );
+		DaoRoutine_DoTypeInference( rout, 0 );
 	}
 	self->routReInferable->size = 0;
 	return 1;
@@ -7106,7 +7114,7 @@ static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nva
 		}
 	}
 	value = DaoProcess_MakeConst( proc );
-	if( max > DAO_COMPLEX ){
+	if( value != NULL && max > DAO_COMPLEX ){
 		if( max > DAO_ENUM || DaoByteBlock_FindObjectBlock( coder, value ) == NULL ){
 			DaoType* retype = proc->activeTypes[0];
 			int opb = vmc->code == DVM_GETF ? 2 : vmc->b;

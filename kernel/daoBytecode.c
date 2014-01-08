@@ -255,6 +255,15 @@ DaoByteBlock* DaoByteBlock_FindObjectBlock( DaoByteBlock *self, DaoValue *value 
 	if( it ) return (DaoByteBlock*) it->value.pVoid;
 	return NULL;
 }
+static void DaoByteBlock_SetValue( DaoByteBlock *self, DaoValue *value )
+{
+	if( value && value->type <= DAO_ENUM ){
+		DaoValue_Copy( value, & self->value );
+		return;
+	}
+	GC_ShiftRC( value, self->value );
+	self->value = value;
+}
 DaoByteBlock* DaoByteBlock_FindOrCopyBlock( DaoByteBlock *self, DaoValue *value )
 {
 	DaoByteBlock *newbk, *block = DaoByteBlock_FindObjectBlock( self, value );
@@ -263,7 +272,7 @@ DaoByteBlock* DaoByteBlock_FindOrCopyBlock( DaoByteBlock *self, DaoValue *value 
 	if( block == NULL ) return NULL;
 	newbk = DaoByteBlock_NewBlock( self, DAO_ASM_COPY );
 	if( self->valueObjectBlocks == NULL ) self->valueObjectBlocks = DHash_New(D_VALUE3,0);
-	DaoValue_Copy( value, & newbk->value );
+	DaoByteBlock_SetValue( newbk, value );
 	DMap_Insert( self->coder->valueObjectBlocks, value, newbk );
 	DMap_Insert( self->valueObjectBlocks, value, newbk );
 	DaoByteBlock_InsertBlockIndex( newbk, newbk->begin, block );
@@ -274,7 +283,7 @@ DaoByteBlock* DaoByteBlock_AddBlock( DaoByteBlock *self, DaoValue *value, int ty
 	DaoByteBlock *block = DaoByteBlock_NewBlock( self, type );
 	if( self->valueDataBlocks == NULL ) self->valueDataBlocks = DHash_New(D_VALUE2,0);
 	if( self->valueObjectBlocks == NULL ) self->valueObjectBlocks = DHash_New(D_VALUE3,0);
-	DaoValue_Copy( value, & block->value );
+	DaoByteBlock_SetValue( block, value );
 	DMap_Insert( self->coder->valueDataBlocks, value, block );
 	DMap_Insert( self->coder->valueObjectBlocks, value, block );
 	DMap_Insert( self->valueDataBlocks, value, block );
@@ -849,10 +858,14 @@ DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value )
 	default :
 		DaoByteCoder_Error2( self->coder, NULL, "Unencoded value (type id=%i)!", value->type );
 		break;
+	case DAO_CLASS :
+		chs = value->xClass.className->mbs;
+		DaoByteCoder_Error3( self->coder, NULL, "Unencoded class (name=%s)!", chs );
+		break;
 	case DAO_CTYPE :
 	case DAO_CDATA :
 		chs = value->xCtype.ctype->name->mbs;
-		DaoByteCoder_Error3( self->coder, NULL, "Unencoded value (typename=%s)!", chs );
+		DaoByteCoder_Error3( self->coder, NULL, "Unencoded cdata type (name=%s)!", chs );
 		break;
 	case DAO_ROUTINE :
 		chs = value->xRoutine.routName->mbs;
@@ -1312,15 +1325,31 @@ void DaoByteCoder_FinalizeRoutineBlock( DaoByteCoder *self, DaoByteBlock *block 
 		int st = 0;
 		switch( vmc->code ){
 #if 0
-		case DVM_GETCK : st = DAO_CLASS_CONSTANT; break;
+		case DVM_GETCK :
+			st = DAO_CLASS_CONSTANT;
+			break;
 		case DVM_GETVK :
-		case DVM_SETVK : st = DAO_CLASS_VARIABLE; break;
+		case DVM_SETVK :
+			st = DAO_CLASS_VARIABLE;
+			break;
 		case DVM_GETVO :
-		case DVM_SETVO : st = DAO_OBJECT_VARIABLE; break;
+		case DVM_SETVO :
+			st = DAO_OBJECT_VARIABLE;
+			break;
 #endif
-		case DVM_GETCG : st = DAO_GLOBAL_CONSTANT; break;
+		case DVM_GETCG :
+		case DVM_GETCG_I : case DVM_GETCG_F :
+		case DVM_GETCG_D : case DVM_GETCG_C :
+			st = DAO_GLOBAL_CONSTANT;
+			break;
 		case DVM_GETVG :
-		case DVM_SETVG : st = DAO_GLOBAL_VARIABLE; break;
+		case DVM_GETVG_I : case DVM_GETVG_F :
+		case DVM_GETVG_D : case DVM_GETVG_C :
+		case DVM_SETVG :
+		case DVM_SETVG_II : case DVM_SETVG_FF :
+		case DVM_SETVG_DD : case DVM_SETVG_CC :
+			st = DAO_GLOBAL_VARIABLE;
+			break;
 		}
 		cur = DaoByteBlock_NewBlock( code, DAO_ASM_DATA );
 		DaoByteCoder_EncodeUInt16( cur->begin + 0, vmc->code );
@@ -1712,7 +1741,7 @@ void DaoByteBlock_GetAllBlocks( DaoByteCoder *self, DaoByteBlock *block, int hea
 		if( idx == 0 && nullterm ) break;
 		DArray_Append( self->iblocks, pb );
 	}
-	if( size > 0 && size > (self->iblocks->size - offset) ){
+	if( size >= 0 && size > (self->iblocks->size - offset) ){
 		int count = self->iblocks->size - offset;
 		char buffer[128];
 		snprintf( buffer, sizeof(buffer), "expecting %i, but decoded %i!", size, count );
@@ -1920,7 +1949,7 @@ static void DaoByteCoder_DecodeValue( DaoByteCoder *self, DaoByteBlock *block )
 			map->ctype = (DaoType*) pb2->value;
 		}
 		D = self->iblocks->size;
-		DaoByteBlock_GetAllBlocks( self, block, 0, B, 1 );
+		DaoByteBlock_GetAllBlocks( self, block, 0, -1, 1 );
 		if( self->error ) break;
 		for(i=D; i<self->iblocks->size; i+=2){
 			pb2 = (DaoByteBlock*) self->iblocks->items.pVoid[i];
@@ -2266,8 +2295,8 @@ static void DaoByteCoder_DecodeClass( DaoByteCoder *self, DaoByteBlock *block )
 }
 static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 {
-	DaoVmCode *vmc2, *vmc = NULL;
-	DMap *outer = DHash_New(0,0);
+	DaoVmCodeX *vmc2, *vmc = NULL;
+	DMap *current, *outer = DHash_New(0,0);
 	DArray *outers = DArray_New(D_MAP);
 	DaoInferencer *inferencer;
 	DaoRoutine *routine = (DaoRoutine*) block->value;
@@ -2277,18 +2306,22 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 
 	DArray_PushBack( outers, outer );
 	DArray_PushBack( outers, outer );
+	current = (DMap*) DArray_Back( outers );
+	for(i=0; i<routine->routType->nested->size; ++i){
+		DMap_Insert( current, IntToPointer(i), 0 );
+	}
 	for(i=0; i<N; ++i){
-		DMap *current = (DMap*) DArray_Back( outers );
-		vmc = (DaoVmCode*) routine->body->annotCodes->items.pVmc[i];
+		current = (DMap*) DArray_Back( outers );
+		vmc = (DaoVmCodeX*) routine->body->annotCodes->items.pVmc[i];
 
 		if( vmc->code >= DVM_NULL ) goto InvalidInstruction;
 
 #if 0
-		DaoVmCode_Print( *vmc, buf );
+		DaoVmCodeX_Print( *vmc, NULL, buf );
 		printf( "%3i: %s", i, buf );
 #endif
 
-		T = DaoVmCode_GetOpcodeType( vmc );
+		T = DaoVmCode_GetOpcodeType( (DaoVmCode*) vmc );
 		switch( T ){
 		case DAO_CODE_GETU :
 			if( vmc->c >= regCount ) goto InvalidInstruction;
@@ -2407,7 +2440,7 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 			break;
 		case DVM_GOTO :
 			if( vmc->b >= i ) break;
-			vmc2 = (DaoVmCode*) routine->body->annotCodes->items.pVmc[vmc->b+1];
+			vmc2 = (DaoVmCodeX*) routine->body->annotCodes->items.pVmc[vmc->b+1];
 			if( vmc2->code == DVM_SECT ) DArray_PopBack( outers );
 			break;
 		}
@@ -2430,7 +2463,7 @@ InvalidInstruction:
 	DaoStream_WriteMBS( self->vmspace->errorStream, "()!\n" );
 	if( vmc ){
 		sprintf( buf, "%5i: ", i );
-		DaoVmCode_Print( *vmc, buf + 7 );
+		DaoVmCodeX_Print( *vmc, NULL, buf + 7 );
 		DaoStream_WriteMBS( self->vmspace->errorStream, buf );
 	}
 	if( outers ) DArray_Delete( outers );
@@ -2501,6 +2534,11 @@ static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block 
 	routine->body->regCount = A;
 
 	if( block->first == NULL ) return; /* Declaration only; */
+
+	/* Set proper namespace: */
+	GC_ShiftRC( self->nspace, routine->nameSpace );
+	routine->nameSpace = self->nspace;
+
 	for(pb=block->first; pb; pb = pb->next){
 		DaoByteCoder_DecodeBlock( self, pb );
 		if( self->error ) return;
@@ -2670,16 +2708,30 @@ static void DaoByteCoder_DecodeRoutineCode( DaoByteCoder *self, DaoByteBlock *bl
 		case DVM_GETVO : case DVM_SETVO :
 			break;
 #endif
-		case DVM_GETCG : case DVM_GETVG : case DVM_SETVG :
-			lookupTable = self->nspace->lookupTable;
-			if( vmc.code != DVM_GETCG ) useGlobal = 1;
+		case DVM_GETCG :
+		case DVM_GETCG_I : case DVM_GETCG_F :
+		case DVM_GETCG_D : case DVM_GETCG_C :
+			lookupTable = routine->nameSpace->lookupTable;
+			break;
+		case DVM_GETVG :
+		case DVM_GETVG_I : case DVM_GETVG_F :
+		case DVM_GETVG_D : case DVM_GETVG_C :
+		case DVM_SETVG :
+		case DVM_SETVG_II : case DVM_SETVG_FF :
+		case DVM_SETVG_DD : case DVM_SETVG_CC :
+			lookupTable = routine->nameSpace->lookupTable;
+			useGlobal = 1;
 			break;
 		}
 		if( lookupTable != NULL ){
 			DaoByteBlock *pb = DaoByteCoder_LookupStringBlock( self, block, vmc.b );
 			DString *name = pb->value->xString.data;
 			DNode *it = DMap_Find( lookupTable, name );
-			if( it ) vmc.b = LOOKUP_ID( it->value.pInt );
+			if( it == NULL ){
+				DaoByteCoder_Error3( self, block, "global name \"%s\" not found!", name->mbs );
+				break;
+			}
+			vmc.b = LOOKUP_ID( it->value.pInt );
 		}
 		DArray_Append( routine->body->annotCodes, & vmc );
 		DVector_PushCode( routine->body->vmCodes, * (DaoVmCode*) & vmc );
@@ -2764,7 +2816,8 @@ ConstantNotFound:
 	}
 	for(i=0; i<count; ++i){
 		DaoByteBlock *block = (DaoByteBlock*) self->iblocks->items.pVoid[offset+i];
-		DaoValue_Copy( block->value, & process->activeValues[i+1] );
+		DaoValue *value = block->value ? block->value : dao_none_value;
+		DaoValue_Copy( value, & process->activeValues[i+1] );
 	}
 	GC_ShiftRC( retype, process->activeTypes[0] );
 	process->activeTypes[0] = retype;
@@ -2778,7 +2831,10 @@ ConstantNotFound:
 	}
 	value = DaoProcess_MakeConst( process );
 
-	DaoProcess_PrintException( process, self->nspace->vmSpace->errorStream, 1 );
+	if( process->exceptions->size ){
+		DaoByteCoder_Error( self, block, "Constant evaluation failed!" );
+		DaoProcess_PrintException( process, self->nspace->vmSpace->errorStream, 1 );
+	}
 	GC_DecRC( process->activeRoutine->routHost );
 	process->activeRoutine->routHost = NULL;
 
@@ -2893,7 +2949,17 @@ static void DaoByteCoder_DecodeUseStmt( DaoByteCoder *self, DaoByteBlock *block 
 		return;
 InvalidUseConstructor:
 		DaoByteCoder_Error( self, block, "Invalid constructor using!" );
+	}else if( value->value->type == DAO_TYPE && value->value->xType.tid == DAO_ENUM ){
+		DaoValue item = {DAO_INTEGER};
+		DaoType *type = (DaoType*) value->value;
+		DNode *it;
+		if( type->mapNames == NULL ) goto InvalidUse;
+		for(it=DMap_First(type->mapNames); it; it=DMap_Next(type->mapNames,it)){
+			item.xInteger.value = it->value.pInt;
+			DaoByteCoder_AddToScope( self, block, it->key.pString, & item );
+		}
 	}else{
+InvalidUse:
 		DaoByteCoder_Error( self, block, "Invalid use statement!" );
 	}
 }
@@ -2988,9 +3054,9 @@ int DaoByteCoder_Build( DaoByteCoder *self, DaoNamespace *nspace )
 	self->routines->size = 0;
 	self->nspace = nspace;
 	DaoByteCoder_DecodeBlock( self, self->top );
-	for(i=0; i<self->routines->size; i++){
+	for(i=0; i<self->routines->size && self->error == 0; i++){
 		DaoRoutine *rout = (DaoRoutine*) self->routines->items.pValue[i];
-		DaoRoutine_DoTypeInference( rout, 0 );
+		self->error |= DaoRoutine_DoTypeInference( rout, 0 ) == 0;
 	}
 	return self->error == 0;
 }
@@ -3211,9 +3277,16 @@ void DaoByteCoder_PrintBlock( DaoByteCoder *self, DaoByteBlock *block, int space
 		case DAO_LIST :
 		case DAO_MAP :
 			B = DaoByteCoder_DecodeUInt16( block->begin+2 );
-			C = DaoByteCoder_DecodeUInt32( block->begin+4 );
-			DaoStream_WriteMBS( stream, A == DAO_LIST ? "DAO_LIST" : "DAO_MAP" );
-			DaoStream_PrintInt3( stream, ", %i, %i, %i;\n", block->begin[1], B, C );
+			if( A == DAO_LIST ){
+				C = DaoByteCoder_DecodeUInt32( block->begin+4 );
+				DaoStream_WriteMBS( stream, "DAO_LIST" );
+				DaoStream_PrintInt3( stream, ", %i, %i, %i;\n", block->begin[1], B, C );
+			}else{
+				C = DaoByteCoder_DecodeUInt16( block->begin+4 );
+				D = DaoByteCoder_DecodeUInt16( block->begin+6 );
+				DaoStream_WriteMBS( stream, "DAO_MAP" );
+				DaoStream_PrintInt4( stream, ", %i, %i, %i, %i;\n", block->begin[1], B, C, D );
+			}
 			while( pb ){
 				DaoStream_PrintTag( stream, pb->type, spaces + 4 );
 				DaoByteCoder_DecodeChunk2222( pb->begin, & A, & B, & C, & D );

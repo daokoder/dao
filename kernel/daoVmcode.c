@@ -450,9 +450,12 @@ void DaoVmCode_Print( DaoVmCode self, char *buffer )
 	else
 		sprintf( buffer, fmt, name, self.a, self.b, self.c );
 }
-void DaoVmCodeX_Print( DaoVmCodeX self, char *annot )
+void DaoVmCodeX_Print( DaoVmCodeX self, char *annot, char *buffer )
 {
 	const char *name = DaoVmCode_GetOpcodeName( self.code );
 	static const char *fmt = "%-11s : %6i , %6i , %6i ;  %4i,  %s\n";
-	printf( fmt, name, self.a, self.b, self.c, self.line, annot ? annot : "" );
+	if( buffer == NULL )
+		printf( fmt, name, self.a, self.b, self.c, self.line, annot ? annot : "" );
+	else
+		sprintf( buffer, fmt, name, self.a, self.b, self.c, self.line, annot ? annot : "" );
 }
