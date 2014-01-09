@@ -2000,7 +2000,7 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 	}
 	DString_AppendMBS( fname, ".html" );
 	DString_Reset( stream->output, 0 );
-	DString_AppendMBS( stream->output, "\n<pre style=\"font-weight:500\">\n" );
+	DString_AppendMBS( stream->output, "\n<pre style=\"font-family: courier; font-weight:500\">\n" );
 	if( self->parent ){
 		DaoxHelpEntry_Print( self, stream, stream->process );
 	}else{

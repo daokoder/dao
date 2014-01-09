@@ -1562,7 +1562,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	mainRoutine = ns->mainRoutine;
 
 	DaoVmSpace_ExeCmdArgs( self );
-	/* always execute default ::main() routine first for initialization: */
+	/* always execute default __main__() routine first for initialization: */
 	if( mainRoutine ){
 		DaoProcess_PushRoutine( vmp, mainRoutine, NULL );
 		DaoProcess_Execute( vmp );
@@ -1739,7 +1739,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 		}
 		if( ! DaoParser_ParseScript( parser ) ) goto LoadingFailed;
 		if( ns->mainRoutine == NULL ) goto LoadingFailed;
-		DString_SetMBS( ns->mainRoutine->routName, "::main" );
+		DString_SetMBS( ns->mainRoutine->routName, "__main__" );
 		if( parser->byteCoder ){
 			DaoVmSpace_SaveByteCodes( self, parser->byteCoder, ns );
 			DaoVmSpace_ReleaseByteCoder( self, parser->byteCoder );

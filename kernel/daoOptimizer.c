@@ -5256,6 +5256,7 @@ NotExist_TryAux:
 					checkfast &= rout2->routHost == NULL;
 					checkfast &= rout2->overloads == NULL && rout2->specialized == NULL;
 					checkfast &= rout2->body != NULL || rout2->pFunc != NULL; /* not curry; */
+					checkfast &= (vmc->code == DVM_CALL) == !(rout2->routType->attrib & DAO_TYPE_SELF);
 					if( checkfast ){
 						int fast = 1;
 						for(k=0; fast && k<argc; ++k) fast &= tp[k]->tid != DAO_PAR_NAMED;

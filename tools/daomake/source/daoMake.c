@@ -2813,6 +2813,11 @@ static void DAOMAKE_OptionSTR( DaoProcess *proc, DaoValue *p[], int N )
 	if( it ) res = it->value.pString;
 	DaoProcess_PutString( proc, res );
 }
+static void DAOMAKE_Suffix( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoNamespace *ns = proc->activeNamespace;
+	DaoProcess_PutMBString( proc, daomake_makefile_suffix );
+}
 static void DAOMAKE_IsFile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *path = DaoValue_TryGetString( p[0] );
@@ -2843,6 +2848,13 @@ static void DAOMAKE_SourcePath( DaoProcess *proc, DaoValue *p[], int N )
 static void DAOMAKE_BinaryPath( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutString( proc, vmSpace->startPath );
+}
+static void DAOMAKE_MakePath( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *base = DaoValue_TryGetString( p[0] );
+	DString *sub = DaoValue_TryGetString( p[1] );
+	DString *res = DaoProcess_PutString( proc, sub );
+	DaoMake_MakePath( base, res );
 }
 static void DAOMAKE_MakeRpath( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2938,10 +2950,14 @@ static DaoFuncItem DaoMakeMeths[] =
 	{ DAOMAKE_OptionBOOL,  "Option( name : string, value : enum<OFF,ON> ) => enum<OFF,ON>" },
 	{ DAOMAKE_OptionSTR,   "Option( name : string, value = '' ) => string" },
 
+	{ DAOMAKE_Suffix,      "MakefileSuffix() => string" },
+
 	{ DAOMAKE_Shell,       "Shell( command : string ) => string" },
 
 	{ DAOMAKE_SourcePath,  "SourcePath() => string" },
 	{ DAOMAKE_BinaryPath,  "BinaryPath() => string" },
+
+	{ DAOMAKE_MakePath,    "MakePath( base : string, sub : string ) => string" },
 
 	{ DAOMAKE_MakeRpath,   "MakeRpath( path : string, ... : string ) => string" },
 

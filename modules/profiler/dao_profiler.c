@@ -29,6 +29,8 @@
 #include <time.h>
 #include <stdlib.h>
 
+#include "dao_profiler.h"
+
 #ifdef UNIX
 #  include<unistd.h>
 #  include<sys/time.h>
@@ -39,30 +41,11 @@
 #endif
 
 
-#include "daoValue.h"
-#include "daoStream.h"
-#include "daoRoutine.h"
-#include "daoProcess.h"
-#include "daoNamespace.h"
-#include "daoVmspace.h"
-
-
 static void DaoProfiler_EnterFrame( DaoProfiler *self, DaoProcess *, DaoStackFrame *, int );
 static void DaoProfiler_LeaveFrame( DaoProfiler *self, DaoProcess *, DaoStackFrame *, int );
-static void DaoProfiler_Report( DaoProfiler *self, DaoStream *stream );
+static void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream );
 
-typedef struct DaoxProfiler DaoxProfiler;
-
-struct DaoxProfiler
-{
-	DaoProfiler base;
-
-	DMutex  mutex;
-	DMap   *profile; /* map<DaoRoutine*,map<DaoRoutine*,DaoComplex*>> */
-	DMap   *one;     /* map<DaoRoutine*,DaoComplex*> */
-};
-
-static DaoxProfiler* DaoxProfiler_New()
+DaoxProfiler* DaoxProfiler_New()
 {
 	DaoxProfiler *self = (DaoxProfiler*) dao_calloc(1,sizeof(DaoxProfiler));
 	self->profile = DHash_New(0,D_MAP);
@@ -73,7 +56,7 @@ static DaoxProfiler* DaoxProfiler_New()
 	DMutex_Init( & self->mutex );
 	return self;
 }
-static void DaoxProfiler_Delete( DaoxProfiler *self )
+void DaoxProfiler_Delete( DaoxProfiler *self )
 {
 	DMutex_Destroy( & self->mutex );
 	DMap_Delete( self->profile );
@@ -156,6 +139,21 @@ static void DaoProfiler_LeaveFrame( DaoProfiler *self, DaoProcess *proc, DaoStac
 	if( end ) DaoxProfiler_Update( (DaoxProfiler*) self, frame, tmdata->value.real );
 }
 
+complex16 DaoProfiler_Sum( DMap *profile )
+{
+	DNode *it2;
+	complex16 com = {0.0, 0.0};
+	for(it2=DMap_First(profile); it2; it2=DMap_Next(profile,it2)){
+		DaoRoutine *caller = (DaoRoutine*) it2->key.pValue;
+		DaoComplex *data = (DaoComplex*) it2->value.pValue;
+		com.real += data->value.real;
+		com.imag += data->value.imag;
+	}
+	return com;
+}
+
+
+
 const char *delimiter = 
 "============== Program Profile (Time in Seconds) ==============\n";
 
@@ -181,7 +179,7 @@ static void DString_PartialAppend( DString *self, DString *other, int max )
 		DString_Append( self, other );
 	}
 }
-static void DaoRoutine_MakeName( DaoRoutine *self, DString *name, int max1, int max2, int max3 )
+void DaoRoutine_MakeName( DaoRoutine *self, DString *name, int max1, int max2, int max3 )
 {
 	DString *hostName = self->routHost ? self->routHost->name : NULL;
 	DaoType *routType = self->routType;
@@ -235,20 +233,7 @@ static void DaoRoutine_MakeName( DaoRoutine *self, DString *name, int max1, int 
 	DString_AppendMBS( name, " )" );
 }
 
-static complex16 DaoProfiler_Sum( DMap *profile )
-{
-	DNode *it2;
-	complex16 com = {0.0, 0.0};
-	for(it2=DMap_First(profile); it2; it2=DMap_Next(profile,it2)){
-		DaoRoutine *caller = (DaoRoutine*) it2->key.pValue;
-		DaoComplex *data = (DaoComplex*) it2->value.pValue;
-		com.real += data->value.real;
-		com.imag += data->value.imag;
-	}
-	return com;
-}
-
-static void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream )
+void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream )
 {
 	DaoComplex com = {DAO_COMPLEX,0,0,0,1,{0.0,0.0}};
 	DaoxProfiler *self = (DaoxProfiler*) self0;

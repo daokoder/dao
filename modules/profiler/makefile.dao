@@ -7,7 +7,7 @@ if( daovm == none ) return
 
 project.UseImportLibrary( daovm, "dao" )
 
-project_objs = project.AddObjects( { "dao_profiler.c" } )
+project_objs = project.AddObjects( { "dao_profiler.c" }, { "dao_profiler.h" } )
 project_dll  = project.AddSharedLibrary( "dao_profiler", project_objs )
 project_lib  = project.AddStaticLibrary( "dao_profiler", project_objs )
 
