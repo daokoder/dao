@@ -503,11 +503,13 @@ DaoDebugger* DaoVmSpace_SetUserDebugger( DaoVmSpace *self, DaoDebugger *handler 
 	self->debugger = handler;
 	return hd;
 }
-DaoProfiler* DaoVmSpace_SetUserProfiler( DaoVmSpace *self, DaoProfiler *handler )
+DaoProfiler* DaoVmSpace_SetUserProfiler( DaoVmSpace *self, DaoProfiler *profiler )
 {
 	DaoProfiler *hd = self->profiler;
-	if( handler->EnterFrame == NULL || handler->LeaveFrame == NULL ) handler = NULL;
-	self->profiler = handler;
+	if( profiler == NULL || profiler->EnterFrame == NULL || profiler->LeaveFrame == NULL ){
+		profiler = NULL;
+	}
+	self->profiler = profiler;
 	return hd;
 }
 DaoUserHandler* DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler )
@@ -939,7 +941,7 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 	DString_Delete( val );
 	DString_Delete( str );
 }
-static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNames, DArray *argValues )
+static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNames, DArray *argValues, int *error )
 {
 	DArray *types;
 	DString *name;
@@ -949,6 +951,7 @@ static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNam
 	types = DArray_New(0);
 	name = DString_New(1);
 
+	*error = DAO_ERROR;
 	DString_SetMBS( name, "main" );
 	i = DaoNamespace_FindConst( ns, name );
 	if( i >=0 ){
@@ -971,7 +974,10 @@ static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNam
 		}
 		DArray_Append( types, type );
 	}
-	return DaoRoutine_ResolveByType( rout, NULL, types->items.pType, types->size, DVM_CALL );
+	*error = DAO_ERROR_PARAM;
+	rout = DaoRoutine_ResolveByType( rout, NULL, types->items.pType, types->size, DVM_CALL );
+	if( rout ) *error = 0;
+	return rout;
 }
 static void DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *value, DaoValue *sval )
 {
@@ -1531,9 +1537,9 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	}
 	if( res && !(self->options & DAO_OPTION_ARCHIVE) ){
 		DString name = DString_WrapMBS( "main" );
-		int id = DaoNamespace_FindConst( ns, & name );
+		int error = 0, id = DaoNamespace_FindConst( ns, & name );
 		DaoValue *cst = DaoNamespace_GetConst( ns, id );
-		expMain = DaoVmSpace_FindExplicitMain( ns, argNames, argValues );
+		expMain = DaoVmSpace_FindExplicitMain( ns, argNames, argValues, & error );
 		if( expMain ){
 			res = DaoVmSpace_ConvertArguments( self, expMain, argNames, argValues );
 		}else if( (cst && cst->type == DAO_ROUTINE) || argValues->size ){
@@ -1567,6 +1573,9 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		DaoProcess_PushRoutine( vmp, mainRoutine, NULL );
 		DaoProcess_Execute( vmp );
 	}
+#ifdef DAO_WITH_CONCURRENT
+	if( vmp->status >= DAO_PROCESS_SUSPENDED ) DaoCallServer_Join();
+#endif
 	/* check and execute explicitly defined main() routine  */
 	ps = ns->argParams->items.items.pValue;
 	N = ns->argParams->items.size;
@@ -1750,34 +1759,37 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 
 ExecuteImplicitMain :
 	if( ns->mainRoutine->body->vmCodes->size > 1 ){
+		int status;
 		process = DaoVmSpace_AcquireProcess( self );
 		DaoVmSpace_Lock( self );
 		DArray_PushFront( self->nameLoading, ns->path );
 		DArray_PushFront( self->pathLoading, ns->path );
 		DaoVmSpace_Unlock( self );
 		DaoProcess_PushRoutine( process, ns->mainRoutine, NULL );
-		if( ! DaoProcess_Execute( process ) ){
-			DaoVmSpace_ReleaseProcess( self, process );
-			DaoVmSpace_Lock( self );
-			DArray_PopFront( self->nameLoading );
-			DArray_PopFront( self->pathLoading );
-			DaoVmSpace_Unlock( self );
-			goto LoadingFailed;
-		}
+		DaoProcess_Execute( process );
+#ifdef DAO_WITH_CONCURRENT
+		if( process->status >= DAO_PROCESS_SUSPENDED ) DaoCallServer_Join();
+#endif
+		status = process->status;
 		DaoVmSpace_ReleaseProcess( self, process );
 		DaoVmSpace_Lock( self );
 		DArray_PopFront( self->nameLoading );
 		DArray_PopFront( self->pathLoading );
 		DaoVmSpace_Unlock( self );
+		if( status == DAO_PROCESS_ABORTED ) goto LoadingFailed;
 	}
 
 ExecuteExplicitMain :
 
+	/* check and execute explicitly defined main() routine  */
 	if( args ){
-		mainRoutine = DaoVmSpace_FindExplicitMain( ns, argNames, argValues );
+		int error = 0;
+		mainRoutine = DaoVmSpace_FindExplicitMain( ns, argNames, argValues, & error );
 		if( mainRoutine ){
 			if( DaoVmSpace_ConvertArguments( self, mainRoutine, argNames, argValues ) == 0 )
-				goto LoadingFailed;;
+				goto InvalidArgument;
+		}else if( error == DAO_ERROR_PARAM ){
+			goto InvalidArgument;
 		}
 	}
 	if( mainRoutine != NULL ){
@@ -1786,6 +1798,7 @@ ExecuteExplicitMain :
 		process = DaoVmSpace_AcquireProcess( self );
 		ret = DaoProcess_Call( process, mainRoutine, NULL, ps, N );
 		DaoVmSpace_ReleaseProcess( self, process );
+		if( ret == DAO_ERROR_PARAM ) goto InvalidArgument;
 		if( ret ) goto LoadingFailed;
 	}
 	DaoVmSpace_PopLoadingNamePath( self, poppath );
@@ -1798,6 +1811,8 @@ ExecuteExplicitMain :
 	if( argNames ) DArray_Delete( argNames );
 	if( argValues ) DArray_Delete( argValues );
 	return ns;
+InvalidArgument:
+	DaoStream_WriteMBS( self->errorStream, "ERROR: invalid arguments for the explicit main().\n" );
 LoadingFailed :
 	DaoVmSpace_PopLoadingNamePath( self, poppath );
 	if( self->loadedModules->size > nsCount ){

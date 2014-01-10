@@ -4589,6 +4589,7 @@ static int DaoParser_SetupBranching( DaoParser *self )
 		for(it=self->vmcFirst; it; it=it2){
 			it2 = it->next;
 			if( it->code == DVM_NOP ) it->code = DVM_UNUSED;
+			if( it2 && it2->code == DVM_CASE ) continue;
 			if( it2 && it2->line != it->line ){
 				DaoParser_InsertCode( self, it, DVM_NOP, 0,0,0, it2->first )->line = it2->line;
 			}

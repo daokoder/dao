@@ -32,3 +32,10 @@ for( i = 1 : 5 ){
 	sys.sleep(0.5)
 }
 chan.cap(0)
+
+routine main(){
+	for(i=1:10){
+		io.writeln( 'main()' )
+		sys.sleep(0.5)
+	}
+}

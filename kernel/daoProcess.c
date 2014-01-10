@@ -623,7 +623,7 @@ static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 			cbtype2 = frame->routine->routType->cbtype;
 			if( frame->routine->body ){
 				codes = frame->codes + frame->entry;
-				nop = codes[1].code == DVM_NOP;
+				nop = codes[0].code == DVM_NOP;
 				if( codes[nop].code == DVM_GOTO && codes[nop+1].code == DVM_SECT ) return frame;
 			}
 		}
@@ -632,7 +632,7 @@ static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 	}
 	if( frame == NULL || frame->routine == NULL ) return NULL;
 	codes = frame->codes + frame->entry;
-	nop = codes[1].code == DVM_NOP;
+	nop = codes[0].code == DVM_NOP;
 	if( codes[nop].code == DVM_GOTO && codes[nop+1].code == DVM_SECT ) return frame;
 	return NULL;
 }

@@ -524,7 +524,7 @@ void DaoVmCodeX_Print( DaoVmCodeX self, char *annot, char *buffer );
 
 
 #define DaoGetSectionCode1(C) ((C[1].code == DVM_GOTO && C[2].code == DVM_SECT) ? C+2 : NULL)
-#define DaoGetSectionCode2(C) ((C[1].code == DVM_GOTO && C[3].code == DVM_SECT) ? C+3 : NULL)
-#define DaoGetSectionCode(C)  (C[2].code == DVM_NOP ? DaoGetSectionCode2(C) : DaoGetSectionCode1(C))
+#define DaoGetSectionCode2(C) ((C[2].code == DVM_GOTO && C[3].code == DVM_SECT) ? C+3 : NULL)
+#define DaoGetSectionCode(C)  (C[1].code == DVM_NOP ? DaoGetSectionCode2(C) : DaoGetSectionCode1(C))
 
 #endif

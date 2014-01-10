@@ -3059,7 +3059,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 
 #if 0
 		DaoLexer_AnnotateCode( routine->body->source, *(DaoVmCodeX*)inode, mbs, 24 );
-		printf( "%4i: ", i );DaoVmCodeX_Print( *(DaoVmCodeX*)inode, mbs->mbs );
+		printf( "%4i: ", i );DaoVmCodeX_Print( *(DaoVmCodeX*)inode, mbs->mbs, NULL );
 #endif
 
 		K = DaoVmCode_GetOpcodeType( (DaoVmCode*) inode );
@@ -5117,10 +5117,11 @@ NotExist_TryAux:
 				int ctchecked = 0;
 				int argc = vmc->b & 0xff;
 				int codemode = code | ((int)vmc->b<<16);
+				int nop = inodes[i+1]->code == DVM_NOP; /* inserted in some mode; */
 				DaoType *cbtype = NULL;
 				DaoInode *sect = NULL;
-				if( (vmc->b & DAO_CALL_BLOCK) && inodes[i+2]->code == DVM_SECT ){
-					sect = inodes[ i + 2 ];
+				if( (vmc->b & DAO_CALL_BLOCK) && inodes[i+2+nop]->code == DVM_SECT ){
+					sect = inodes[ i + 2 + nop ];
 					for(j=0, k=sect->a; j<sect->b; j++, k++){
 						inited[k] = 1;
 						DaoInferencer_UpdateType( self, k, dao_type_udf );
@@ -5128,11 +5129,11 @@ NotExist_TryAux:
 				}
 				j = types[opa+1] ? types[opa+1]->tid : DAO_UDT;
 				if( code == DVM_MCALL && j >= DAO_ARRAY && j != DAO_ANY ){
-					DaoInode *p = inodes[i+1];
+					DaoInode *p = inodes[i+1+nop];
 					if( p->code == DVM_MOVE && p->a == opa+1 ){
 						p->code = DVM_NOP;
 						if( i+2 < N ){
-							p = inodes[i+2];
+							p = inodes[i+2+nop];
 							if( p->code >= DVM_SETVH && p->code <= DVM_SETF && p->a == opa+1 )
 								p->code = DVM_NOP;
 						}
@@ -5420,7 +5421,7 @@ TryPushBlockReturnType:
 						DaoInferencer_UpdateType( self, k, tt );
 					}
 					tt = DaoType_DefineTypes( (DaoType*)cbtype->aux, NS, defs2 );
-					DArray_Append( rettypes, IntToPointer( inodes[i+1]->b ) );
+					DArray_Append( rettypes, IntToPointer( inodes[i+1+nop]->b ) );
 					DArray_Append( rettypes, inode ); /* type at "opc" to be redefined; */
 					DArray_Append( rettypes, tt );
 					DArray_Append( rettypes, tt );
@@ -5429,7 +5430,7 @@ TryPushBlockReturnType:
 					if( NoCheckingType( types[opc] ) == 0 ){
 						printf( "Unused code section at line %i!\n", vmc->line );
 					}
-					DArray_Append( rettypes, IntToPointer( inodes[i+1]->b ) );
+					DArray_Append( rettypes, IntToPointer( inodes[i+1+nop]->b ) );
 					DArray_Append( rettypes, inode );
 					DArray_Append( rettypes, NULL );
 					DArray_Append( rettypes, NULL );
