@@ -41,6 +41,7 @@
 #endif
 
 
+static void DaoProfiler_Reset( DaoProfiler *self );
 static void DaoProfiler_EnterFrame( DaoProfiler *self, DaoProcess *, DaoStackFrame *, int );
 static void DaoProfiler_LeaveFrame( DaoProfiler *self, DaoProcess *, DaoStackFrame *, int );
 static void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream );
@@ -53,6 +54,7 @@ DaoxProfiler* DaoxProfiler_New()
 	self->base.EnterFrame = DaoProfiler_EnterFrame;
 	self->base.LeaveFrame = DaoProfiler_LeaveFrame;
 	self->base.Report = DaoProfiler_Report;
+	self->base.Reset = DaoProfiler_Reset;
 	DMutex_Init( & self->mutex );
 	return self;
 }
@@ -62,6 +64,11 @@ void DaoxProfiler_Delete( DaoxProfiler *self )
 	DMap_Delete( self->profile );
 	DMap_Delete( self->one );
 	dao_free( self );
+}
+void DaoProfiler_Reset( DaoProfiler *self0 )
+{
+	DaoxProfiler *self = (DaoxProfiler*) self0;
+	DMap_Clear( self->profile );
 }
 static void DaoxProfiler_Update( DaoxProfiler *self, DaoStackFrame *frame, double time )
 {

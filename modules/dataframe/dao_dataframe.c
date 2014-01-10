@@ -1463,8 +1463,8 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 				}
 				DaoStream_WriteMBS( stream, "\n" );
 			}
-			printf( j == 0 ? "|" : ">" );
-			while( --width2 ) printf( "-" );
+			DaoStream_WriteMBS( stream, j == 0 ? "|" : ">" );
+			while( --width2 ) DaoStream_WriteMBS( stream, "-" );
 			DaoStream_WriteMBS( stream, J < M ? ">" : "|" );
 			DaoStream_WriteMBS( stream, "\n" );
 			for(i=0; i<N; ++i){
@@ -1862,18 +1862,18 @@ static DaoFuncItem dataframeMeths[]=
 	{ FRAME_FromMatrix,  "FromMatrix( self :DataFrame, mat : array<@T> )" },
 
 	{ FRAME_Size,      "Size( self :DataFrame )=>int" },
-	{ FRAME_UseLabels, "UseLabels( self :DataFrame, dim :DimType, group :int )" },
-	{ FRAME_AddLabels, "AddLabels( self :DataFrame, dim :DimType, labels :map<string,int> )" },
-	{ FRAME_AddLabel,  "AddLabel( self :DataFrame, dim :DimType, label :string, index :int )" },
-	{ FRAME_GetIndex,  "GetIndex( self :DataFrame, dim :DimType, label :string ) => int" },
+	{ FRAME_UseLabels, "UseLabels( self :DataFrame, dim :DataFrame_DimType, group :int )" },
+	{ FRAME_AddLabels, "AddLabels( self :DataFrame, dim :DataFrame_DimType, labels :map<string,int> )" },
+	{ FRAME_AddLabel,  "AddLabel( self :DataFrame, dim :DataFrame_DimType, label :string, index :int )" },
+	{ FRAME_GetIndex,  "GetIndex( self :DataFrame, dim :DataFrame_DimType, label :string ) => int" },
 
 	{ FRAME_AddArrayCol, "AddColumn( self :DataFrame, data :array<@T>, label :string ='' )" },
 	{ FRAME_AddListCol,  "AddColumn( self :DataFrame, data :list<@T>, label :string ='' )" },
 
 	{ FRAME_GETMI,
-		"[]( self :DataFrame, i :IndexType, j :IndexType =none, k :IndexType =none ) => any" },
+		"[]( self :DataFrame, i :DataFrame_IndexType, j :DataFrame_IndexType =none, k :DataFrame_IndexType =none ) => any" },
 	{ FRAME_SETMI,
-		"[]=( self :DataFrame, value :any, i :IndexType, j :IndexType =none, k :IndexType =none )" },
+		"[]=( self :DataFrame, value :any, i :DataFrame_IndexType, j :DataFrame_IndexType =none, k :DataFrame_IndexType =none )" },
 
 	{ FRAME_PRINT,  "Print( self :DataFrame )" },
 	{ FRAME_PRINT,  "__PRINT__( self :DataFrame )" },
@@ -1921,7 +1921,7 @@ DAO_DLL int DaoDataframe_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	daox_type_dataframe = DaoNamespace_WrapType( ns, & dataframeTyper, 0 );
 	dao_type_any2 = DaoNamespace_FindTypeMBS( ns, "any" );
-	DaoNamespace_TypeDefine( ns, "enum<row,column,depth>", "DataFrame::DimType" );
-	DaoNamespace_TypeDefine( ns, "none|int|string|tuple<none,none>|tuple<int,int>|tuple<string,string>|tuple<int|string,none>|tuple<none,int|string>", "DataFrame::IndexType" );
+	DaoNamespace_TypeDefine( ns, "enum<row,column,depth>", "DataFrame_DimType" );
+	DaoNamespace_TypeDefine( ns, "none|int|string|tuple<none,none>|tuple<int,int>|tuple<string,string>|tuple<int|string,none>|tuple<none,int|string>", "DataFrame_IndexType" );
 	return 0;
 }
