@@ -601,6 +601,7 @@ DaoVmSpace* DaoVmSpace_New()
 	DMutex_Init( & self->mutexLoad );
 	DMutex_Init( & self->mutexProc );
 	DMutex_Init( & self->mutexMisc );
+	DCondVar_Init( & self->condvWait );
 #endif
 
 	self->nsInternal = NULL; /* need to be set for DaoNamespace_New() */
@@ -678,6 +679,7 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 	DMutex_Destroy( & self->mutexLoad );
 	DMutex_Destroy( & self->mutexProc );
 	DMutex_Destroy( & self->mutexMisc );
+	DCondVar_Destroy( & self->condvWait );
 #endif
 	dao_free( self );
 }
@@ -1574,7 +1576,12 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		DaoProcess_Execute( vmp );
 	}
 #ifdef DAO_WITH_CONCURRENT
-	if( vmp->status >= DAO_PROCESS_SUSPENDED ) DaoCallServer_Join();
+	if( vmp->status >= DAO_PROCESS_SUSPENDED ){
+		DMutex_Lock( & self->mutexLoad );
+		while( vmp->status >= DAO_PROCESS_SUSPENDED )
+			DCondVar_TimedWait( & self->condvWait, & self->mutexLoad, 0.01 );
+		DMutex_Unlock( & self->mutexLoad );
+	}
 #endif
 	/* check and execute explicitly defined main() routine  */
 	ps = ns->argParams->items.items.pValue;
@@ -1768,7 +1775,12 @@ ExecuteImplicitMain :
 		DaoProcess_PushRoutine( process, ns->mainRoutine, NULL );
 		DaoProcess_Execute( process );
 #ifdef DAO_WITH_CONCURRENT
-		if( process->status >= DAO_PROCESS_SUSPENDED ) DaoCallServer_Join();
+		if( process->status >= DAO_PROCESS_SUSPENDED ){
+			DMutex_Lock( & self->mutexLoad );
+			while( process->status >= DAO_PROCESS_SUSPENDED )
+				DCondVar_TimedWait( & self->condvWait, & self->mutexLoad, 0.01 );
+			DMutex_Unlock( & self->mutexLoad );
+		}
 #endif
 		status = process->status;
 		DaoVmSpace_ReleaseProcess( self, process );

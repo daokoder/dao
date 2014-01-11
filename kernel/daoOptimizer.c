@@ -819,11 +819,12 @@ static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 		node = nodes[i];
 		if( i && vmc->code != DVM_CASE ){
 			k = codes[i-1]->code;
-			if( k != DVM_GOTO && k != DVM_GOTOX && k != DVM_RETURN ){
-				DArray_Append( nodes[i-1]->outs, node );
-				DArray_Append( node->ins, nodes[i-1] );
-			}else if( vmc->code == DVM_SECT || (vmc->code == DVM_GOTO && vmc->c == DVM_SECT) ){
+			if( vmc->code == DVM_SECT || (vmc->code == DVM_GOTO && vmc->c == DVM_SECT) ){
 				/* Code section is isolated from the main codes: */
+				int nop = codes[i-1]->code == DVM_NOP;
+				DArray_Append( nodes[i-1-nop]->outs, node );
+				DArray_Append( node->ins, nodes[i-1-nop] );
+			}else if( k != DVM_GOTO && k != DVM_GOTOX && k != DVM_RETURN ){
 				DArray_Append( nodes[i-1]->outs, node );
 				DArray_Append( node->ins, nodes[i-1] );
 			}

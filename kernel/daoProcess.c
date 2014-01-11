@@ -640,6 +640,7 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 {
 	DaoStackFrame *next, *frame = DaoProcess_FindSectionFrame( self );
 	DaoProfiler *profiler = self->vmSpace->profiler;
+	int nop = self->activeCode[1].code == DVM_NOP;
 	int returning = -1;
 
 	if( self->depth >= 1000 ){
@@ -652,7 +653,7 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 		returning = self->activeCode->c;
 	}
 	next = DaoProcess_PushFrame( self, 0 );
-	next->entry = frame->entry + 2;
+	next->entry = frame->entry + 2 + nop;
 	next->state = DVM_FRAME_SECT | DVM_FRAME_KEEP;
 
 	GC_ShiftRC( frame->object, next->object );
@@ -1002,7 +1003,7 @@ int DaoProcess_Execute( DaoProcess *self )
 #define OPEND() vmc++; }
 
 #if 0
-#define OPBEGIN() for(;;){ printf("%3i:", (i=vmc-vmcBase) ); DaoVmCodeX_Print( *topFrame->routine->body->annotCodes->items.pVmc[i], NULL ); switch( vmc->code )
+#define OPBEGIN() for(;;){ printf("%3i:", (i=vmc-vmcBase) ); DaoVmCodeX_Print( *topFrame->routine->body->annotCodes->items.pVmc[i], NULL, NULL ); switch( vmc->code )
 #endif
 
 #endif

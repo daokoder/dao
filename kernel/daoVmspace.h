@@ -123,9 +123,10 @@ struct DaoVmSpace
 	int   (*AddHistory)( const char *cmd );
 
 #ifdef DAO_WITH_THREAD
-	DMutex  mutexLoad;
-	DMutex  mutexProc;
-	DMutex  mutexMisc;
+	DMutex    mutexLoad;
+	DMutex    mutexProc;
+	DMutex    mutexMisc;
+	DCondVar  condvWait;
 #endif
 };
 
