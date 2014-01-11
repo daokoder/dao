@@ -115,8 +115,7 @@ struct DaoProcess
 	uchar_t         parCount;
 	uchar_t         pauseType;
 	uchar_t         status;
-	uchar_t         active : 4;
-	uchar_t         stopit : 4;
+	uchar_t         active;
 	ushort_t        depth;
 
 	DaoFuture      *future;

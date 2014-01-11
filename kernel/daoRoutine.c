@@ -52,6 +52,7 @@ DaoRoutine* DaoRoutine_New( DaoNamespace *nspace, DaoType *host, int body )
 	DaoRoutine *self = (DaoRoutine*) dao_calloc( 1, sizeof(DaoRoutine) );
 	DaoValue_Init( self, DAO_ROUTINE );
 	self->trait |= DAO_VALUE_DELAYGC;
+	self->subtype = body ? DAO_ROUTINE : DAO_CFUNCTION;
 	self->routName = DString_New(1);
 	self->routConsts = DaoList_New();
 	self->nameSpace = nspace;
@@ -68,6 +69,7 @@ DaoRoutine* DaoRoutine_New( DaoNamespace *nspace, DaoType *host, int body )
 DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *init )
 {
 	DaoRoutine *self = DaoRoutine_New( nspace, host, 0 );
+	self->subtype = DAO_ROUTINES;
 	self->overloads = DRoutines_New();
 	self->routType = DaoType_New( "routine", DAO_ROUTINE, (DaoValue*)self, NULL );
 	self->routType->overloads = 1;
@@ -98,6 +100,7 @@ DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *in
 void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int cst, int cbody, int stat )
 {
 	int i;
+	self->subtype = from->subtype;
 	self->attribs = from->attribs;
 	self->parCount = from->parCount;
 	self->defLine = from->defLine;

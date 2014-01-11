@@ -727,10 +727,6 @@ void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[],
 	func->pFunc( self, p, n );
 	if( self->factory->size > m ) DArray_Erase( self->factory, m, -1 );
 }
-void DaoProcess_Stop( DaoProcess *self )
-{
-	self->stopit = 1;
-}
 DaoValue* DaoProcess_GetReturned( DaoProcess *self )
 {
 	return self->stackValues[0];
@@ -1052,7 +1048,7 @@ CallEntry:
 	if( routine->routType ) printf("routine type = %s\n", routine->routType->name->mbs);
 #endif
 
-	if( self->stopit | vmSpace->stopit ) goto FinishProcess;
+	if( vmSpace->stopit ) goto FinishProcess;
 	if( invokehost ) handler->InvokeHost( handler, self );
 
 	if( (vmSpace->options & DAO_OPTION_DEBUG) | (routine->body->mode & DAO_OPTION_DEBUG) )
@@ -1061,7 +1057,6 @@ CallEntry:
 	vmcBase = topFrame->codes;
 	id = self->topFrame->entry;
 	vmc = vmcBase + id;
-	self->stopit = 0;
 	self->activeCode = vmc;
 	self->activeRoutine = routine;
 	self->activeObject = topFrame->object;
@@ -1171,7 +1166,7 @@ CallEntry:
 
 	OPBEGIN(){
 		OPCASE( NOP ){
-			if( self->stopit | vmSpace->stopit ) goto FinishProcess;
+			if( vmSpace->stopit ) goto FinishProcess;
 		}OPNEXT() OPCASE( DATA ){
 			if( vmc->a == DAO_NONE ){
 				GC_ShiftRC( dao_none_value, locVars[ vmc->c ] );
@@ -1412,7 +1407,7 @@ CallEntry:
 			if( DaoVM_DoMath( self, vmc, locVars[ vmc->c ], locVars[vmc->b] ) )
 				goto RaiseErrorInvalidOperation;
 		}OPNEXT() OPCASE( CALL ) OPCASE( MCALL ){
-			if( self->stopit | vmSpace->stopit ) goto FinishProcess;
+			if( vmSpace->stopit ) goto FinishProcess;
 			DaoProcess_DoCall( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( ROUTINE ){
@@ -1434,7 +1429,7 @@ CallEntry:
 				DaoProcess_PushDefers( self, value );
 				goto CallEntry;
 			}
-			if( self->stopit | vmSpace->stopit ) goto FinishProcess;
+			if( vmSpace->stopit ) goto FinishProcess;
 			goto FinishCall;
 		}OPNEXT() OPCASE( YIELD ){
 			self->activeCode = vmc;
@@ -1458,7 +1453,7 @@ CallEntry:
 			self->status = DAO_PROCESS_STACKED;
 			goto CheckException;
 		}OPCASE( DEBUG ){
-			if( self->stopit | vmSpace->stopit ) goto FinishProcess;
+			if( vmSpace->stopit ) goto FinishProcess;
 			if( (vmSpace->options & DAO_OPTION_DEBUG ) ){
 				self->activeCode = vmc;
 				if( debugger && debugger->Debug ) debugger->Debug( debugger, self, NULL );
@@ -2277,7 +2272,7 @@ RaiseErrorNullObject:
 CheckException:
 
 			locVars = self->activeValues;
-			if( self->stopit | vmSpace->stopit ) goto FinishProcess;
+			if( vmSpace->stopit ) goto FinishProcess;
 			if( invokehost ) handler->InvokeHost( handler, self );
 			if( self->exceptions->size > exceptCount ){
 				goto FinishCall;
@@ -6448,7 +6443,7 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 	DaoException_Init( except, self, value );
 	DArray_Append( self->exceptions, (DaoValue*) except );
 	if( (self->vmSpace->options & DAO_OPTION_DEBUG) ){
-		if( self->stopit ==0 && self->vmSpace->stopit ==0 ){
+		if( self->vmSpace->stopit ==0 ){
 			DaoProcess_Trace( self, 10 );
 			DaoProcess_PrintException( self, NULL, 0 );
 			STD_Debug( self, NULL, 0 );

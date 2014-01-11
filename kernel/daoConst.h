@@ -65,6 +65,8 @@ enum DaoExtraTypes
 enum DaoSubTypes
 {
 	DAO_PAIR = END_EXTRA_TYPES,
+	DAO_CFUNCTION ,
+	DAO_ROUTINES ,
 	END_SUB_TYPES
 };
 
