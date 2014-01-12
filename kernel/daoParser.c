@@ -1062,7 +1062,7 @@ static int DaoParser_ParseDecoTargets( DaoParser *self, int start, int to, DArra
 }
 static int DaoParser_ExtractRoutineBody( DaoParser *self, DaoParser *parser, int left )
 {
-	DaoRoutine *routine = self->routine;
+	DaoRoutine *routine = parser->routine;
 	DaoToken **tokens = self->tokens->items.pToken;
 	int i, right = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, left, -1 );
 	if( right < 0 ) return -1;

@@ -49,7 +49,7 @@ static const char *const help =
 "t, trace dep:  trace back dep-depth in the calling stack.\n";
 
 
-void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *stream )
+DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *stream )
 {
 	DaoRoutine *routine = proc->activeRoutine;
 	DString *input;
@@ -62,7 +62,7 @@ void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *stream )
 	tokens = DArray_New(D_STRING);
 	cycData = DMap_New(0,0);
 	if( stream == NULL ) stream = proc->vmSpace->stdioStream;
-	while(1){
+	while( proc->vmSpace->stopit == 0 ){
 		if( proc->vmSpace->ReadLine ){
 			chs = proc->vmSpace->ReadLine( "(debug) " );
 			if( chs ){
