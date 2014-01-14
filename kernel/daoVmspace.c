@@ -1307,13 +1307,13 @@ void DaoVmSpace_ConvertPath2( DaoVmSpace *self, DString *path )
 void DaoVmSpace_SaveByteCodes( DaoVmSpace *self, DaoByteCoder *coder, DaoNamespace *ns )
 {
 	FILE *fout;
+	DString *fname = DString_New(1);
 	DString *output = DString_New(1);
 
-	DString_Append( output, ns->name );
-	if( output->size > ns->lang->size ) output->size -= ns->lang->size;
-	DString_AppendMBS( output, "dac" );
-	fout = fopen( output->mbs, "w+" );
-	output->size = 0;
+	DString_Append( fname, ns->name );
+	if( fname->size > ns->lang->size ) fname->size -= ns->lang->size;
+	DString_AppendMBS( fname, "dac" );
+	fout = fopen( fname->mbs, "w+" );
 
 	DaoByteCoder_EncodeHeader( coder, ns->name->mbs, output );
 	DaoByteCoder_EncodeToString( coder, output );
@@ -1321,6 +1321,14 @@ void DaoVmSpace_SaveByteCodes( DaoVmSpace *self, DaoByteCoder *coder, DaoNamespa
 	DaoFile_WriteString( fout, output );
 	DString_Delete( output );
 	fclose( fout );
+
+	DaoStream_WriteMBS( self->stdioStream, "Source file: " );
+	DaoStream_WriteString( self->stdioStream, ns->name );
+	DaoStream_WriteChar( self->stdioStream, '\n' );
+	DaoStream_WriteMBS( self->stdioStream, "Compiled to: " );
+	DaoStream_WriteString( self->stdioStream, fname );
+	DaoStream_WriteMBS( self->stdioStream, "\n\n" );
+	DString_Delete( fname );
 }
 
 void DString_AppendUInt16( DString *bytecodes, int value )
@@ -1362,6 +1370,11 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DArray *argValues )
 	DString_Append( archive, ns->name );
 	if( archive->size > ns->lang->size ) archive->size -= ns->lang->size;
 	DString_AppendMBS( archive, "dar" );
+
+	DaoStream_WriteMBS( self->stdioStream, "Creating Dao archive file: " );
+	DaoStream_WriteString( self->stdioStream, archive );
+	DaoStream_WriteMBS( self->stdioStream, "\n" );
+
 	fout = fopen( archive->mbs, "w+" );
 	archive->size = 0;
 
@@ -1369,6 +1382,9 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DArray *argValues )
 	for(i=0; i<self->sourceArchive->size; i+=2){
 		DString *name = self->sourceArchive->items.pString[i];
 		DString *source = self->sourceArchive->items.pString[i+1];
+		DaoStream_WriteMBS( self->stdioStream, "Adding to the archive: " );
+		DaoStream_WriteString( self->stdioStream, name );
+		DaoStream_WriteMBS( self->stdioStream, "\n" );
 		DaoVmSpace_ConvertPath( self, name );
 		DString_AppendUInt16( archive, name->size );
 		DString_Append( archive, name );
@@ -1389,6 +1405,9 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DArray *argValues )
 			DaoStream_WriteMBS( self->errorStream, "\".\n" );
 			continue;
 		}
+		DaoStream_WriteMBS( self->stdioStream, "Adding to the archive: " );
+		DaoStream_WriteString( self->stdioStream, data );
+		DaoStream_WriteMBS( self->stdioStream, "\n" );
 		count += 1;
 		DaoFile_ReadAll( fin, data, 1 );
 		DString_AppendUInt16( archive, file->size );

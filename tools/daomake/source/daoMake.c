@@ -636,6 +636,9 @@ void DaoMake_MakeOutOfSourcePath( DString *path )
 		path->mbs[k] = '/';
 		k += 1;
 	}
+	if( DaoMake_IsDir( path->mbs ) == 0 && DaoMake_IsFile( path->mbs ) == 0 ){
+		DaoMake_MakeDir( path->mbs );
+	}
 }
 void Dao_MakePath( DString *base, DString *path );
 void DaoMake_MakePath( DString *base, DString *path )

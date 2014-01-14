@@ -2329,6 +2329,10 @@ CallNotPermitted:
 
 FinishProcess:
 
+	if( vmSpace->stopit ){
+		DArray_Clear( self->exceptions );
+		DaoProcess_RaiseException( self, DAO_ERROR, "Execution cancelled" );
+	}
 	if( self->exceptions->size ) DaoProcess_PrintException( self, NULL, 1 );
 	DaoProcess_PopFrames( self, rollback );
 	/*if( eventHandler ) eventHandler->mainRoutineExit(); */
