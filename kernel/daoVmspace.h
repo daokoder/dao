@@ -52,7 +52,7 @@ enum DaoModuleTypes
 	DAO_MODULE_ANY  = DAO_MODULE_DAC|DAO_MODULE_DAO|DAO_MODULE_DLL
 };
 
-extern const char *const dao_copy_notice;
+DAO_DLL const char *const dao_copy_notice;
 
 /* Dao Virtual Machine Space:
  * For handling:
@@ -165,14 +165,14 @@ DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
 
 DAO_DLL DaoTypeBase* DaoVmSpace_GetTyper( short type );
 
-DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self );
-DaoByteCoder* DaoVmSpace_AcquireByteCoder( DaoVmSpace *self );
-DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self );
-DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self );
-void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser );
-void DaoVmSpace_ReleaseByteCoder( DaoVmSpace *self, DaoByteCoder *byteCoder );
-void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *inferencer );
-void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *optimizer );
+DAO_DLL DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self );
+DAO_DLL DaoByteCoder* DaoVmSpace_AcquireByteCoder( DaoVmSpace *self );
+DAO_DLL DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self );
+DAO_DLL DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self );
+DAO_DLL void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser );
+DAO_DLL void DaoVmSpace_ReleaseByteCoder( DaoVmSpace *self, DaoByteCoder *byteCoder );
+DAO_DLL void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *inferencer );
+DAO_DLL void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *optimizer );
 
 void DaoAux_Delete( DMap *aux );
 

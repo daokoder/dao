@@ -56,9 +56,14 @@
 #    undef UNICODE
 #  endif /* UNICODE */
 
-#  define DAO_DLL        __declspec(dllexport)
 #  define DAO_DLL_EXPORT __declspec(dllexport)
 #  define DAO_DLL_IMPORT __declspec(dllimport)
+
+#  ifdef DAO_KERNEL
+#     define DAO_DLL DAO_DLL_EXPORT
+#  else
+#     define DAO_DLL DAO_DLL_IMPORT
+#  endif
 
 #else /* other system */
 

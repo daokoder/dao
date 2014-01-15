@@ -2847,11 +2847,11 @@ Done:
 }
 static void DaoByteCoder_DecodeDeclaration( DaoByteCoder *self, DaoByteBlock *block )
 {
-	uint A = DaoByteCoder_DecodeUInt16( block->begin + 0 );
-	uint B = DaoByteCoder_DecodeUInt16( block->begin + 2 );
-	uint C = DaoByteCoder_DecodeUInt16( block->begin + 4 );
-	uint global = block->begin[6];
-	uint perm = block->begin[7];
+	uint_t A = DaoByteCoder_DecodeUInt16( block->begin + 0 );
+	uint_t B = DaoByteCoder_DecodeUInt16( block->begin + 2 );
+	uint_t C = DaoByteCoder_DecodeUInt16( block->begin + 4 );
+	uint_t global = block->begin[6];
+	uint_t perm = block->begin[7];
 	DaoByteBlock *name0  = A ? DaoByteCoder_LookupStringBlock( self, block, A ) : NULL;
 	DaoByteBlock *value0 = DaoByteCoder_LookupBlock( self, block, B );
 	DaoByteBlock *type0  = DaoByteCoder_LookupBlock( self, block, C );

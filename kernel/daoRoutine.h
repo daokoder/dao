@@ -82,22 +82,22 @@ struct DaoRoutine
 	DRoutines       *overloads; /* overloaded routines; */
 };
 
-DaoRoutine* DaoRoutine_New( DaoNamespace *nspace, DaoType *host, int body );
-DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *init );
-DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int copy_const, int copy_body, int copy_stat );
-void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int copy_body, int copy_const, int copy_stat );
-void DaoRoutine_Delete( DaoRoutine *self );
-int  DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value );
+DAO_DLL DaoRoutine* DaoRoutine_New( DaoNamespace *nspace, DaoType *host, int body );
+DAO_DLL DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *init );
+DAO_DLL DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int copy_const, int copy_body, int copy_stat );
+DAO_DLL void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int copy_body, int copy_const, int copy_stat );
+DAO_DLL void DaoRoutine_Delete( DaoRoutine *self );
+DAO_DLL int  DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value );
 
-int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes );
-void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns );
+DAO_DLL int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes );
+DAO_DLL void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns );
 
-void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output );
-void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );
+DAO_DLL void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output );
+DAO_DLL void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );
 
-void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
-int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
-int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent );
+DAO_DLL void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
+DAO_DLL int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
+DAO_DLL int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent );
 
 struct DaoRoutineBody
 {

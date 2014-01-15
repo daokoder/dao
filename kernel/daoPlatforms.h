@@ -29,6 +29,7 @@
 #ifndef __DAO_PLATFORMS_H__
 #define __DAO_PLATFORMS_H__
 
+#define DAO_KERNEL
 #include "dao.h"
 
 
@@ -50,7 +51,10 @@
 
 #  define stat _stat
 #  define fstat _fstat
-#  define fileno _fileno
+
+#  ifndef fileno
+#    define fileno _fileno
+#  endif
 
 #  ifdef _MSC_VER
 #    include<direct.h>

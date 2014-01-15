@@ -1,4 +1,4 @@
-load DataFrame
+load dataframe
 
 # Create a 2D matrix:
 matrix = [ [ -1.0D : -1 : 8] : 1.51 : 16 ]

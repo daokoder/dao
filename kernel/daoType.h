@@ -37,46 +37,47 @@
 #include"daoStdtype.h"
 
 
-/* Dao abstract type:
- * type class for number, string, ... list<X>, ...
- *
- * for core types: number, string, complex, list, map, array
- * eg:DaoType.name = "int", "float", "string", ...
- *    DaoType.tid = DAO_INTEGER, DAO_STRING, ...
- *
- * for Dao class and routine types:
- *    DaoType.name = "foo", "bar", ...
- *    DaoType.count = 0;
- *    DaoType.tid = DAO_CLASS, DAO_CDATA,
- *    DaoType.aux = the Dao class or C type
- *
- * for nested type: list<float>, map<string,float>, ...
- *    DaoType.name = "list<float>", "map<string,float>", ...
- *    DaoType.tid = DAO_LIST, DAO_MAP
- *    DaoType.aux = NULL;
- *    DaoType.nested[] = nested DaoType(s) : X<nested[0],nested[1],...>
- *
- * for routine type: routine(float,string):float
- *    DaoType.name = "routine<float,string=>float>"
- *    DaoType.tid = DAO_ROUTINE
- *    DaoType.aux = returned type
- *    DaoType.nested[] = parameter DaoType(s) : (<nested[0],...)
- *
- *    e.g.:
- *        routine<float=>?>: foo( a : float ){}
- *        routine<float=>float>: foo( a : float ) : float{}
- *        routine<a:float=>?>: foo( a : float ){}
- *        routine<a=float=>?>: foo( a = 1 ){}
- *        routine<a:float,b=string=>?>: foo( a : float, b="abc" ){}
- *        routine<a:float,b:?=>?>: foo( a : float, b ){}
- *        routine<a:float,b:?=>?>: foo( a : float, b : @b ){}
- *        routine<a:float,b:?=>?>: foo( a : float, b ) : @b{}
- *
- * for named parameter passing: name => value
- *    DaoType.name = "string:type" or "string=type"
- *    DaoType.tid = DAO_PAR_NAMED or DAO_PAR_DEFAULT
- *    DaoType.aux = actual type
- */
+/*
+// Dao abstract type:
+// type class for number, string, ... list<X>, ...
+//
+// for core types: number, string, complex, list, map, array
+// eg:DaoType.name = "int", "float", "string", ...
+//    DaoType.tid = DAO_INTEGER, DAO_STRING, ...
+//
+// for Dao class and routine types:
+//    DaoType.name = "foo", "bar", ...
+//    DaoType.count = 0;
+//    DaoType.tid = DAO_CLASS, DAO_CDATA,
+//    DaoType.aux = the Dao class or C type
+//
+// for nested type: list<float>, map<string,float>, ...
+//    DaoType.name = "list<float>", "map<string,float>", ...
+//    DaoType.tid = DAO_LIST, DAO_MAP
+//    DaoType.aux = NULL;
+//    DaoType.nested[] = nested DaoType(s) : X<nested[0],nested[1],...>
+//
+// for routine type: routine(float,string):float
+//    DaoType.name = "routine<float,string=>float>"
+//    DaoType.tid = DAO_ROUTINE
+//    DaoType.aux = returned type
+//    DaoType.nested[] = parameter DaoType(s) : (<nested[0],...)
+//
+//    e.g.:
+//        routine<float=>?>: foo( a : float ){}
+//        routine<float=>float>: foo( a : float ) : float{}
+//        routine<a:float=>?>: foo( a : float ){}
+//        routine<a=float=>?>: foo( a = 1 ){}
+//        routine<a:float,b=string=>?>: foo( a : float, b="abc" ){}
+//        routine<a:float,b:?=>?>: foo( a : float, b ){}
+//        routine<a:float,b:?=>?>: foo( a : float, b : @b ){}
+//        routine<a:float,b:?=>?>: foo( a : float, b ) : @b{}
+//
+// for named parameter passing: name => value
+//    DaoType.name = "string:type" or "string=type"
+//    DaoType.tid = DAO_PAR_NAMED or DAO_PAR_DEFAULT
+//    DaoType.aux = actual type
+*/
 struct DaoType
 {
 	DAO_VALUE_COMMON;
@@ -98,12 +99,14 @@ struct DaoType
 	DMap     *mapNames;
 	DMap     *interfaces;
 
-	/* Auxiliary data for the type:
-	 * aux can be the returned type in a routine type;
-	 * aux can be the parameter type in a named parameter type;
-	 * aux can be the class object in class or object type;
-	 * aux can be the DaoCdata type object (DAO_CTYPE) in wrapped C type;
-	 * aux can be the constant value in a constant value type. */
+	/*
+	// Auxiliary data for the type:
+	// aux can be the returned type in a routine type;
+	// aux can be the parameter type in a named parameter type;
+	// aux can be the class object in class or object type;
+	// aux can be the DaoCdata type object (DAO_CTYPE) in wrapped C type;
+	// aux can be the constant value in a constant value type.
+	*/
 	DaoValue  *aux;
 	DaoValue  *value; /* default value for the type; */
 
@@ -191,10 +194,12 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds );
 typedef void (*FuncPtrSliced)( DaoValue *self );
 
 
-/* Structure DaoTypeKernel will contain generated wrapping data for the type.
- * It is GC collectable, so that it will be automatically deleted once it is
- * no longer used, which make it possible to unload external modules automatically.
- * Its reference counting is handled and only handled by DaoType. */
+/*
+// Structure DaoTypeKernel will contain generated wrapping data for the type.
+// It is GC collectable, so that it will be automatically deleted once it is
+// no longer used, which make it possible to unload external modules automatically.
+// Its reference counting is handled and only handled by DaoType.
+*/
 struct DaoTypeKernel
 {
 	DAO_VALUE_COMMON;
@@ -216,9 +221,11 @@ struct DaoTypeKernel
 DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer );
 
 
-/* The separation of DaoTypeKernel from DaoTypeCore will make it simpler
- * to create DaoTypeCore structures, and also make it unnecessary to change
- * the DaoTypeCore definitions when DaoTypeKernel needs to be changed. */
+/*
+// The separation of DaoTypeKernel from DaoTypeCore will make it simpler
+// to create DaoTypeCore structures, and also make it unnecessary to change
+// the DaoTypeCore definitions when DaoTypeKernel needs to be changed.
+*/
 struct DaoTypeCore
 {
 	DaoTypeKernel  *kernel;

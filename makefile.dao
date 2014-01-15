@@ -218,6 +218,7 @@ if( DaoMake::IsWin32() ) daovm_partial_static = $OFF;
 
 
 if( daovm_partial_static == $ON ){
+	daovm_main_object.AddDefinition( "DAO_KERNEL" );
 	daovm_exe.AddObjects( daovm_kernel_objects );
 }else{
 	daovm_exe.UseSharedLibrary( daovm, "dao" )
@@ -328,7 +329,7 @@ modules.AddDependency( daovm_exe )
 
 
 
-DaoMake::SetTestTool( DaoMake::BinaryPath() + "/daotest" )
+DaoMake::SetTestTool( DaoMake::MakePath( DaoMake::BinaryPath(), "daotest" ) )
 tests = daovm.AddDirectory( "tests", "tests" )
 tests.AddDependency( modules )
 tests.AddDependency( daotest )

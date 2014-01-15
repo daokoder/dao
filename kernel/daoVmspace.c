@@ -95,7 +95,11 @@ void DaoAux_Delete( DMap *aux )
 }
 
 
-#define DAO_FILE_TYPE_NUM  6
+#ifdef WIN32
+#  define DAO_FILE_TYPE_NUM  4
+#else
+#  define DAO_FILE_TYPE_NUM  6
+#endif
 
 static const char* const daoDllPrefix[] =
 {
@@ -541,6 +545,8 @@ static void DaoVmSpace_InitPath( DaoVmSpace *self )
 {
 	DString *path;
 	char *daodir = getenv( "DAO_DIR" );
+	const char *const paths[] = { "modules", "./lib/dao/modules", "../lib/dao/modules" };
+	int i;
 
 	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
 	DaoVmSpace_SetPath( self, self->startPath->mbs );
@@ -549,15 +555,12 @@ static void DaoVmSpace_InitPath( DaoVmSpace *self )
 	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
 
 	path = DString_New(1);
-	DString_SetMBS( path, "modules" );
-	Dao_MakePath( mainVmSpace->daoBinPath, path );
-	DaoVmSpace_AddPath( self, path->mbs );
-	if( self->hasAuxlibPath && self->hasSyslibPath ) goto Done;
-
-	DString_SetMBS( path, "../lib/dao/modules" );
-	Dao_MakePath( mainVmSpace->daoBinPath, path );
-	DaoVmSpace_AddPath( self, path->mbs );
-	if( self->hasAuxlibPath && self->hasSyslibPath ) goto Done;
+	for(i=0; i<3; ++i){
+		DString_SetMBS( path, paths[i] );
+		Dao_MakePath( mainVmSpace->daoBinPath, path );
+		DaoVmSpace_AddPath( self, path->mbs );
+		if( self->hasAuxlibPath && self->hasSyslibPath ) goto Done;
+	}
 
 	if( daodir ) DaoVmSpace_AddPath( self, daodir );
 Done:
@@ -709,7 +712,8 @@ int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname, DString *source )
 	DaoStream_WriteMBS( self->errorStream, "\".\n" );
 	return 0;
 }
-void SplitByWhiteSpaces( const char *chs, DArray *tokens )
+/* modules/debugger */
+DAO_DLL void SplitByWhiteSpaces( const char *chs, DArray *tokens )
 {
 	DString temp = DString_WrapMBS( chs );
 	DString *tok = DString_New(1);
@@ -1650,7 +1654,7 @@ int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int types )
 		}
 		for(i=0; i<DAO_FILE_TYPE_NUM; i++){
 			if( !(types & daoModuleTypes[i]) ) continue;
-			if( i < DAO_MODULE_DLL ){
+			if( daoModuleTypes[i] < DAO_MODULE_DLL ){
 				DString_Assign( fn, fname );
 			}else{
 				if( strncmp( fname->mbs, "lib", 3 ) == 0 ) break;
@@ -1661,14 +1665,15 @@ int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int types )
 			DString_AppendMBS( fn, daoFileSuffix[i] );
 			DaoVmSpace_SearchPath( self, fn, DAO_FILE_PATH, 1 );
 #if 0
-			printf( "%s %s\n", fn->mbs, self->nameLoading->items.pString[0]->mbs );
+			printf( "%i %s %s\n", i, fn->mbs, self->nameLoading->items.pString[0]->mbs );
 #endif
-			/* skip the current file: reason, example, in gsl_vector.dao:
-			   load gsl_vector require gsl_complex, gsl_block;
-			   which will allow searching for gsl_vector.so, gsl_vector.dylib or gsl_vector.dll. */
+			/*
+			// skip the current file, since one may create .dao file with the same name
+			// as a dll module to load that dll module in certain way, or do extra things.
+			*/
 			if( self->nameLoading->size && DString_EQ( fn, self->nameLoading->items.pString[0] ) ) continue;
 			if( TestFile( self, fn ) ){
-				modtype = i+1;
+				modtype = daoModuleTypes[i];
 				if( modtype > DAO_MODULE_DLL ) modtype = DAO_MODULE_DLL;
 				DString_Assign( fname, fn );
 				break;
@@ -1892,12 +1897,12 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 		ns->libHandle = handle;
 		funpter = (DaoModuleOnLoad) Dao_GetSymbolAddress( handle, "DaoOnLoad" );
 		if( funpter == NULL ){
-			const char *prefixes[4] = { "dao_", "dao", "libdao_", "libdao" };
 			int size = strlen( DAO_DLL_SUFFIX );
 			DString_SetDataMBS( name, ns->file->mbs, ns->file->size - size );
-			for(i=0; i<4; i++){
-				if( DString_FindMBS( name, prefixes[i], 0 ) != 0 ) continue;
-				DString_Erase( name, 0, strlen( prefixes[i] ) );
+			for(i=0; i<DAO_FILE_TYPE_NUM; i++){
+				if( daoModuleTypes[i] < DAO_MODULE_DLL ) continue;
+				if( DString_FindMBS( name, daoDllPrefix[i], 0 ) != 0 ) continue;
+				DString_Erase( name, 0, strlen( daoDllPrefix[i] ) );
 			}
 			DString_InsertMBS( name, "Dao", 0, 0, 3 );
 			DString_AppendMBS( name, "_OnLoad" );

@@ -389,7 +389,7 @@ static const char *const sep1 = "==========================================\n";
 static const char *const sep2 =
 "-------------------------------------------------------------------------\n";
 
-void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output )
+DAO_DLL void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output )
 {
 	char buffer1[10];
 	char buffer2[200];

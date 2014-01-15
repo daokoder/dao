@@ -124,7 +124,8 @@ static void STD_Argv( DaoProcess *proc, DaoValue *p[], int N )
 	DaoList *list = DaoProcess_PutList( proc );
 	for(i=0; i<proc->topFrame->parCount; i++) DaoList_Append( list, proc->activeValues[i] );
 }
-void Dao_AboutVar( DaoNamespace *ns, DaoValue *var, DString *str )
+/* modules/debugger */
+DAO_DLL void Dao_AboutVar( DaoNamespace *ns, DaoValue *var, DString *str )
 {
 	DaoType *abtp = DaoNamespace_GetType( ns, var );
 	char buf[50];

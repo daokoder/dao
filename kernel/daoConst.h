@@ -34,6 +34,7 @@
 
 #define DAO_MAX_SECTDEPTH  8
 
+#define DAO_KERNEL
 
 #include"dao.h"
 #include"daoBase.h"
@@ -460,8 +461,8 @@ extern const char* const coreTypeNames[];
 extern const char *const daoBitBoolArithOpers[];
 extern const char *const daoBitBoolArithOpers2[];
 
-extern const char *daoRoutineCodeHeader;
-extern const char *daoRoutineCodeFormat;
+DAO_DLL const char *daoRoutineCodeHeader;
+DAO_DLL const char *daoRoutineCodeFormat;
 
 extern const char utf8_markers[256];
 

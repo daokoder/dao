@@ -29,6 +29,8 @@
 #ifndef DAO_BASE_H
 #define DAO_BASE_H
 
+#define DAO_KERNEL
+
 #include"dao.h"
 #include"daoPlatforms.h"
 
