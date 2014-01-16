@@ -90,10 +90,13 @@ const char *const daomake_objects_dir = "DaoMake.Objs";
 
 const char *const daomake_mode_keys[] =
 {
+	"RELEASE-AFLAG" ,
 	"RELEASE-CFLAG" ,
 	"RELEASE-LFLAG" ,
+	"DEBUG-AFLAG" ,
 	"DEBUG-CFLAG" ,
 	"DEBUG-LFLAG" ,
+	"PROFILE-AFLAG" ,
 	"PROFILE-CFLAG" ,
 	"PROFILE-LFLAG"
 };
@@ -131,6 +134,7 @@ struct DaoMakeUnit
 	DArray  *definitions;
 	DArray  *includePaths;
 	DArray  *linkingPaths;
+	DArray  *assemblingFlags;
 	DArray  *compilingFlags;
 	DArray  *linkingFlags;
 	DArray  *staticLibNames;
@@ -191,6 +195,7 @@ struct DaoMakeProject
 	// the values are the entire macro or rule;
 	*/
 	DMap     *headerMacros;   /* HEADERS = header1.h header2.h; */
+	DMap     *aflagsMacros;   /* AFLAGS = ...; */
 	DMap     *cflagsMacros;   /* CFLAGS = ...; */
 	DMap     *lflagsMacros;   /* LFLAGS = ...; */
 	DMap     *objectRules;    /* OBJECT: DEPS \n\t COMMAND; */
@@ -252,6 +257,7 @@ void DaoMakeUnit_Init( DaoMakeUnit *self, DaoType *type )
 	self->definitions = DArray_New(D_STRING);
 	self->includePaths = DArray_New(D_STRING);
 	self->linkingPaths = DArray_New(D_STRING);
+	self->assemblingFlags = DArray_New(D_STRING);
 	self->compilingFlags = DArray_New(D_STRING);
 	self->linkingFlags = DArray_New(D_STRING);
 	self->staticLibNames = DArray_New(D_STRING);
@@ -262,6 +268,7 @@ void DaoMakeUnit_Free( DaoMakeUnit *self )
 	DArray_Delete( self->definitions );
 	DArray_Delete( self->includePaths );
 	DArray_Delete( self->linkingPaths );
+	DArray_Delete( self->assemblingFlags );
 	DArray_Delete( self->compilingFlags );
 	DArray_Delete( self->linkingFlags );
 	DArray_Delete( self->staticLibNames );
@@ -335,6 +342,7 @@ DaoMakeProject* DaoMakeProject_New()
 	self->exportStlibs = DMap_New(D_STRING,D_STRING);
 
 	self->headerMacros = DMap_New(D_STRING,D_STRING);
+	self->aflagsMacros = DMap_New(D_STRING,D_STRING);
 	self->cflagsMacros = DMap_New(D_STRING,D_STRING);
 	self->lflagsMacros = DMap_New(D_STRING,D_STRING);
 	self->objectRules = DMap_New(D_STRING,D_STRING);
@@ -373,6 +381,7 @@ void DaoMakeProject_Delete( DaoMakeProject *self )
 	DMap_Delete( self->exportStlibs );
 
 	DMap_Delete( self->headerMacros );
+	DMap_Delete( self->aflagsMacros );
 	DMap_Delete( self->cflagsMacros );
 	DMap_Delete( self->lflagsMacros );
 	DMap_Delete( self->objectRules );
@@ -753,6 +762,21 @@ void DaoMakeUnit_MakeLinkingPaths( DaoMakeUnit *self, DString *lflags )
 {
 	DaoMakeUnit_MakeLinkingPathsEx( self, lflags, self->project->binaryPath );
 }
+void DaoMakeUnit_MakeAssemblingFlagsEx( DaoMakeUnit *self, DString *aflags, DString *refpath )
+{
+	daoint i, j;
+	DString_AppendGap( aflags );
+	for(i=0; i<self->assemblingFlags->size; ++i){
+		DString_AppendGap( aflags );
+		DString_Append( aflags, self->assemblingFlags->items.pString[i] );
+	}
+	DaoMakeUnit_MakeIncludePathsEx( self, aflags, refpath );
+	DaoMakeUnit_MakeDefinitions( self, aflags );
+}
+void DaoMakeUnit_MakeAssemblingFlags( DaoMakeUnit *self, DString *aflags )
+{
+	DaoMakeUnit_MakeAssemblingFlagsEx( self, aflags, self->project->binaryPath );
+}
 void DaoMakeUnit_MakeCompilingFlagsEx( DaoMakeUnit *self, DString *cflags, DString *refpath )
 {
 	daoint i, j;
@@ -912,6 +936,10 @@ DString* DaoMakeProject_MakeLFlagsMacro( DaoMakeProject *self, DString *flags )
 {
 	return DaoMakeProject_MakeSimpleMacro( self, self->lflagsMacros, flags, "LFLAGS" );
 }
+DString* DaoMakeProject_MakeAFlagsMacro( DaoMakeProject *self, DString *flags )
+{
+	return DaoMakeProject_MakeSimpleMacro( self, self->aflagsMacros, flags, "AFLAGS" );
+}
 
 const char* DaoMakeProject_GetFileExtension( DString *file )
 {
@@ -962,12 +990,21 @@ DString* DaoMakeProject_MakeObjectRule( DaoMakeProject *self, DaoMakeTarget *tar
 	DaoMakeProject_MakeSourcePath( self, source2 );
 	DaoMakeProject_MakeRelativePath( self->binaryPath, source2 );
 
-	mode = DaoMake_GetSettingValue( daomake_mode_keys[ 2*daomake_build_mode ] );
-	if( mode ) DString_Append( cflags, mode );
+	if( assembler ){
+		mode = DaoMake_GetSettingValue( daomake_mode_keys[ 3*daomake_build_mode ] );
+		if( mode ) DString_Append( cflags, mode );
 
-	DaoMakeUnit_MakeCompilingFlags( & self->base, cflags );
-	DaoMakeUnit_MakeCompilingFlags( & target->base, cflags );
-	DaoMakeUnit_MakeCompilingFlags( & objects->base, cflags );
+		DaoMakeUnit_MakeAssemblingFlags( & self->base, cflags );
+		DaoMakeUnit_MakeAssemblingFlags( & target->base, cflags );
+		DaoMakeUnit_MakeAssemblingFlags( & objects->base, cflags );
+	}else{
+		mode = DaoMake_GetSettingValue( daomake_mode_keys[ 3*daomake_build_mode+1 ] );
+		if( mode ) DString_Append( cflags, mode );
+
+		DaoMakeUnit_MakeCompilingFlags( & self->base, cflags );
+		DaoMakeUnit_MakeCompilingFlags( & target->base, cflags );
+		DaoMakeUnit_MakeCompilingFlags( & objects->base, cflags );
+	}
 
 	DString_Assign( signature, cflags );
 	DString_AppendGap( signature );
@@ -1001,14 +1038,10 @@ DString* DaoMakeProject_MakeObjectRule( DaoMakeProject *self, DaoMakeTarget *tar
 	if( target->ttype == DAOMAKE_JAVASCRIPT ) DString_AppendMBS( it->value.pString, "EM" );
 	if( assembler ){
 		DString_Append( it->value.pString, assembler );
-#ifdef WIN32
 		/* #include main appear in .S file: */
 		DString_AppendMBS( it->value.pString, ") $(" );
-		DString_Append( it->value.pString, DaoMakeProject_MakeCFlagsMacro( self, cflags ) );
+		DString_Append( it->value.pString, DaoMakeProject_MakeAFlagsMacro( self, cflags ) );
 		DString_AppendMBS( it->value.pString, ") -c " );
-#else
-		DString_AppendMBS( it->value.pString, ") " );
-#endif
 	}else{
 		if( compiler ){
 			DString_Append( it->value.pString, compiler );
@@ -1172,7 +1205,7 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 		return target->name;
 	}
 
-	mode = DaoMake_GetSettingValue( daomake_mode_keys[ 2*daomake_build_mode+1 ] );
+	mode = DaoMake_GetSettingValue( daomake_mode_keys[ 3*daomake_build_mode+2 ] );
 	if( mode ) DString_Append( lflags, mode );
 
 	DaoMakeUnit_MakeLinkingFlags( & self->base, lflags );
@@ -1485,6 +1518,12 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 	for(it=DMap_First(self->headerMacros); it; it=DMap_Next(self->headerMacros,it)){
 		DString_Append( makefile, it->value.pString );
 		DString_AppendChar( makefile, '\n' );
+	}
+	DString_AppendChar( makefile, '\n' );
+
+	for(it=DMap_First(self->aflagsMacros); it; it=DMap_Next(self->aflagsMacros,it)){
+		DString_Append( makefile, it->value.pString );
+		DString_AppendMBS( makefile, "\n\n" );
 	}
 	DString_AppendChar( makefile, '\n' );
 
@@ -2057,6 +2096,11 @@ static void UNIT_AddLinkingPath( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
 	DaoMakeUnit_ImportPaths( self, self->linkingPaths, p+1, N-1 );
 }
+static void UNIT_AddAssemblingFlag( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
+	DArray_ImportStringParameters( self->assemblingFlags, p+1, N-1 );
+}
 static void UNIT_AddCompilingFlag( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
@@ -2234,6 +2278,7 @@ static DaoFuncItem DaoMakeUnitMeths[]=
 	{ UNIT_AddDefinition,     "AddDefinition( self : Unit, name : string, value = '' )" },
 	{ UNIT_AddIncludePath,    "AddIncludePath( self : Unit, path : string, ... : string )" },
 	{ UNIT_AddLinkingPath,    "AddLinkingPath( self : Unit, path : string, ... : string )" },
+	{ UNIT_AddAssemblingFlag,  "AddAssemblingFlag( self : Unit, flag : string, ... : string )" },
 	{ UNIT_AddCompilingFlag,  "AddCompilingFlag( self : Unit, flag : string, ... : string )" },
 	{ UNIT_AddLinkingFlag,    "AddLinkingFlag( self : Unit, flag : string, ... : string )" },
 	{ UNIT_AddRpath,          "AddRpath( self : Unit, flag : string, ... : string )" },
@@ -2800,12 +2845,14 @@ static void DAOMAKE_TestCompile( DaoProcess *proc, DaoValue *p[], int N )
 	DaoFile_WriteString( file, code );
 	fclose( file );
 
+	DString_Assign( source, output );
 	DString_SetMBS( output, daomake_objects_dir );
 	DString_AppendMBS( output, "/null" );
 	DString_AppendMBS( command, " &> " );
 	DString_Append( command, output );
 
-	*res = system( command->mbs ) == 0;
+	system( command->mbs );
+	*res = DaoMake_IsFile( source->mbs );
 	DString_Delete( command );
 	DString_Delete( source );
 	DString_Delete( output );
@@ -3247,8 +3294,8 @@ const char *const daomake_error_makefile_existing =
 
 static const char *const daomake_lang_assemblers[] =
 {
-	".s" ,    "AS" ,
-	".S" ,    "AS" ,
+	".s" ,    "CC" , /* gcc supports command line arguments such as -I -c etc.; */
+	".S" ,    "CC" ,
 	NULL ,    NULL
 };
 
