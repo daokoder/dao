@@ -326,7 +326,7 @@ if( DaoMake::IsWin32() == 0 ){
 }
 daovm_doc.AddDependency( daovm_dll );
 
-daovm.Install( daovm.GetPath( "DOC-PATH" ), daovm_doc )
+daovm.Install( daovm_doc_path, "./doc" )
 
 
 # Add dependencies:
