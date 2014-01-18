@@ -18,16 +18,13 @@ project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_lib );
 
 
-project_lang = DaoMake::Option( "HELP-LANG", "en" )
-
-# Add variables that will be included in the generated Makefile.
-project.AddVariable( "HELP_LANG", project_lang );
-
 # Add shell commands as a target:
 daovm_doc = project.AddCommand( "../../doc/html/en/index.html: Makefile" + DaoMake::MakefileSuffix(), "@$(DAOMAKE) mkdir2 ../../doc/" );
 daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ../../doc/html/" );
-daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ../../doc/html/$(HELP_LANG)" );
-daovm_doc.AddCommand( "DAO_HELP_LANG=$(HELP_LANG) ../../dao -e \"load help; help.export('','../../doc/html/$(HELP_LANG)')\"" );
+daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ../../doc/html/en" );
+daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ../../doc/html/zh" );
+daovm_doc.AddCommand( "@$(DAOMAKE) eval \"load help; help::set_language('en'); help::export('','../../doc/html/en')\"" );
+daovm_doc.AddCommand( "@$(DAOMAKE) eval \"load help; help::set_language('zh'); help::export('','../../doc/html/zh')\"" );
 
 daovm_doc.AddDependency( project_dll );
 

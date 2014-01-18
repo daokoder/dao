@@ -130,6 +130,8 @@ struct DaoxHelp
 };
 struct DaoxHelper
 {
+	DAO_CSTRUCT_COMMON;
+
 	DaoxHelpEntry  *tree;
 	DMap           *trees;
 	DMap           *entries;
@@ -154,9 +156,11 @@ struct DaoxStream
 	wchar_t        last;     /* last char in the current line; */
 	int            cstack;   /* number of non-null color settings; */
 };
+DaoType *daox_type_helper = NULL;
 DaoxHelper *daox_helper = NULL;
-DaoValue *daox_cdata_helper = NULL;
 DaoVmSpace *dao_vmspace = NULL;
+DaoNamespace *dao_help_namespace = NULL;
+DaoMap *daox_helpers = NULL;
 
 
 
@@ -1616,6 +1620,7 @@ static DaoxHelper* DaoxHelper_New()
 	int i;
 	DString name = DString_WrapMBS( "ALL" );
 	DaoxHelper *self = (DaoxHelper*) dao_malloc( sizeof(DaoxHelper) );
+	DaoCstruct_Init( (DaoCstruct*) self, daox_type_helper );
 	self->helps = DHash_New(0,0);
 	self->tree = DaoxHelpEntry_New( & name );
 	self->entries = DMap_New(D_STRING,0);
@@ -1644,6 +1649,7 @@ static void DaoxHelper_Delete( DaoxHelper *self )
 	DMap_Delete( self->helps );
 	DArray_Delete( self->nslist );
 	DString_Delete( self->notice );
+	DaoCstruct_Free( (DaoCstruct*) self );
 	free( self );
 }
 static void DaoxHelper_GetGCFields( void *p, DArray *v, DArray *arrays, DArray *m, int rm )
@@ -1688,6 +1694,48 @@ static DaoxHelpEntry* DaoxHelper_GetEntry( DaoxHelper *self, DaoxHelp *help, Dao
 	}
 	DMap_Insert( self->entries, name, entry );
 	return entry;
+}
+static void DaoxHelper_Load( DaoxHelper *self, const char *lang )
+{
+	DaoNamespace *mod;
+	DString *fname = DString_New(1);
+	daox_helper = self;
+
+	DString_SetMBS( fname, "help_" );
+	DString_AppendMBS( fname, lang );
+	DString_AppendMBS( fname, "/help_dao" );
+	DaoVmSpace_Load( dao_vmspace, fname->mbs );
+
+	DString_SetMBS( fname, "help_" );
+	DString_AppendMBS( fname, lang );
+	DString_AppendMBS( fname, "/help_daovm" );
+	DaoVmSpace_Load( dao_vmspace, fname->mbs );
+
+	DString_SetMBS( fname, "help_" );
+	DString_AppendMBS( fname, lang );
+	DString_AppendMBS( fname, "/help_help" );
+	mod = DaoVmSpace_Load( dao_vmspace, fname->mbs );
+	if( mod ){
+		DaoValue *value = DaoNamespace_FindData( mod, "help_message" );
+		if( value ) DaoNamespace_AddValue( dao_help_namespace, "help_message", value, NULL );
+	}
+
+	DString_SetMBS( fname, "help_" );
+	DString_AppendMBS( fname, lang );
+	DString_AppendMBS( fname, "/help_tool" );
+	DaoVmSpace_Load( dao_vmspace, fname->mbs );
+
+	DString_SetMBS( fname, "help_" );
+	DString_AppendMBS( fname, lang );
+	DString_AppendMBS( fname, "/help_module" );
+	DaoVmSpace_Load( dao_vmspace, fname->mbs );
+
+	DString_SetMBS( fname, "help_" );
+	DString_AppendMBS( fname, lang );
+	DString_AppendMBS( fname, "/help_misc" );
+	DaoVmSpace_Load( dao_vmspace, fname->mbs );
+
+	DString_Delete( fname );
 }
 
 
@@ -1875,7 +1923,7 @@ static void HELP_Help1( DaoProcess *proc, DaoValue *p[], int N )
 	DaoxStream *stream;
 	DaoStream *stdio = proc->stdioStream;
 	if( stdio == NULL ) stdio = proc->vmSpace->stdioStream;
-	DaoProcess_PutValue( proc, daox_cdata_helper );
+	DaoProcess_PutValue( proc, (DaoValue*) daox_helper );
 	stream = DaoxStream_New( stdio, NULL );
 	DaoxHelpEntry_PrintTree( daox_helper->tree, stream, NULL, 0, daox_helper->tree->name->size, 1,1,1, 0 );
 	DaoxStream_Delete( stream );
@@ -1889,7 +1937,7 @@ static void HELP_Help2( DaoProcess *proc, DaoValue *p[], int N )
 	DaoxHelpEntry *entry = NULL;
 	DaoxHelp *help = NULL;
 
-	DaoProcess_PutValue( proc, daox_cdata_helper );
+	DaoProcess_PutValue( proc, (DaoValue*) daox_helper );
 	if( stdio == NULL ) stdio = proc->vmSpace->stdioStream;
 
 	help = HELP_GetHelp( proc, entry_name );
@@ -1925,7 +1973,7 @@ static void HELP_Help3( DaoProcess *proc, DaoValue *p[], int N )
 	DaoxHelp *help;
 	DString *name;
 
-	DaoProcess_PutValue( proc, daox_cdata_helper );
+	DaoProcess_PutValue( proc, (DaoValue*) daox_helper );
 	if( stdio == NULL ) stdio = proc->vmSpace->stdioStream;
 	if( type == NULL ){
 		DaoStream_WriteMBS( stdio, "Cannot determine the type of the parameter object!\n" );
@@ -1979,6 +2027,17 @@ static void HELP_Load( DaoProcess *proc, DaoValue *p[], int N )
 		DaoStream_WriteString( stdio, p[0]->xString.data );
 		DaoStream_WriteMBS( stdio, "\"!\n" );
 	}
+}
+static void HELP_SetLang( DaoProcess *proc, DaoValue *p[], int N )
+{
+	const char *lang = DaoValue_TryGetMBString( p[0] );
+	DaoxHelper *helper = (DaoxHelper*) DaoMap_GetValueMBS( daox_helpers, lang );
+	if( helper == NULL ){
+		helper = DaoxHelper_New();
+		DaoMap_InsertMBS( daox_helpers, lang, (DaoValue*) helper );
+		DaoxHelper_Load( helper, lang );
+	}
+	daox_helper = helper;
 }
 static void HELP_SetTempl( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2037,7 +2096,7 @@ static void HELP_Export( DaoProcess *proc, DaoValue *p[], int N )
 	DaoxHelpEntry *entry = NULL;
 	DaoxHelp *help = NULL;
 
-	DaoProcess_PutValue( proc, daox_cdata_helper );
+	DaoProcess_PutValue( proc, (DaoValue*) daox_helper );
 	if( stdio == NULL ) stdio = proc->vmSpace->stdioStream;
 	if( entry_name->size == 0 ){
 		entry = daox_helper->tree;
@@ -2079,6 +2138,7 @@ static DaoFuncItem helpMeths[]=
 	{ HELP_Search2,   "search( object :any, keywords :string )" },
 	{ HELP_Load,      "load( help_file :string )" },
 	{ HELP_List,      "list( object :any, type :enum<values,methods,auxmeths>=$methods )" },
+	{ HELP_SetLang,   "set_language( lang :string )" },
 	{ HELP_SetTempl,  "set_template( tpl :string, ttype :enum<notice> )" },
 	{ HELP_Export,    "export( root = '', dir = '', format :enum<html> = $html, run = 0 )" },
 	{ NULL, NULL }
@@ -2181,27 +2241,6 @@ static int dao_help_license( DaoNamespace *NS, DString *mode, DString *verbatim,
 
 DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	const char *evname = "DAO_HELP_LANG";
-	char *lang = getenv( evname );
-	int len = strlen( evname );
-	DString *fname = DString_New(1);
-	DaoNamespace *mod;
-	DaoType *type;
-
-	if( lang == NULL ){
-		char *lang2 = getenv( "LANG" );
-		if( lang2 == NULL ) lang2 = setlocale( LC_CTYPE, NULL );
-		lang = (char*) malloc( len + 4 );
-		lang[0] = '\0';
-		strcat( lang, evname );
-		strcat( lang, "=" );
-		strncat( lang, lang2, 2 );
-		lang[len+1] = tolower( lang[len+1] );
-		lang[len+2] = tolower( lang[len+2] );
-		putenv( lang );
-		lang += len + 1;
-	}
-
 	dao_vmspace = vmSpace;
 	DaoNamespace_AddCodeInliner( ns, "name", dao_help_name );
 	DaoNamespace_AddCodeInliner( ns, "title", dao_help_title );
@@ -2209,46 +2248,15 @@ DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 	DaoNamespace_AddCodeInliner( ns, "code", dao_help_code );
 	DaoNamespace_AddCodeInliner( ns, "author", dao_help_author );
 	DaoNamespace_AddCodeInliner( ns, "license", dao_help_license );
-	type = DaoNamespace_WrapType( ns, & helpTyper, 1 );
+
+	daox_helpers = DaoMap_New(0);
+	dao_help_namespace = ns;
+	daox_type_helper = DaoNamespace_WrapType( ns, & helpTyper, 1 );
+	DaoNamespace_AddValue( ns, "__helpers__", (DaoValue*)daox_helpers, "map<string,help>" );
 	daox_helper = DaoxHelper_New();
-	daox_cdata_helper = (DaoValue*) DaoCdata_New( type, daox_helper );
-	DaoNamespace_AddConstValue( ns, "__helper__", daox_cdata_helper );
+	DaoMap_InsertMBS( daox_helpers, "en", (DaoValue*) daox_helper );
 
-	DString_SetMBS( fname, "help_" );
-	DString_AppendMBS( fname, lang );
-	DString_AppendMBS( fname, "/help_dao" );
-	DaoVmSpace_Load( vmSpace, fname->mbs );
-
-	DString_SetMBS( fname, "help_" );
-	DString_AppendMBS( fname, lang );
-	DString_AppendMBS( fname, "/help_daovm" );
-	DaoVmSpace_Load( vmSpace, fname->mbs );
-
-	DString_SetMBS( fname, "help_" );
-	DString_AppendMBS( fname, lang );
-	DString_AppendMBS( fname, "/help_help" );
-	mod = DaoVmSpace_Load( vmSpace, fname->mbs );
-	if( mod ){
-		DaoValue *value = DaoNamespace_FindData( mod, "help_message" );
-		if( value ) DaoNamespace_AddValue( ns, "help_message", value, NULL );
-	}
-
-	DString_SetMBS( fname, "help_" );
-	DString_AppendMBS( fname, lang );
-	DString_AppendMBS( fname, "/help_tool" );
-	DaoVmSpace_Load( vmSpace, fname->mbs );
-
-	DString_SetMBS( fname, "help_" );
-	DString_AppendMBS( fname, lang );
-	DString_AppendMBS( fname, "/help_module" );
-	DaoVmSpace_Load( vmSpace, fname->mbs );
-
-	DString_SetMBS( fname, "help_" );
-	DString_AppendMBS( fname, lang );
-	DString_AppendMBS( fname, "/help_misc" );
-	DaoVmSpace_Load( vmSpace, fname->mbs );
-
-	DString_Delete( fname );
+	DaoxHelper_Load( daox_helper, "en" );
 	return 0;
 }
 

@@ -940,6 +940,36 @@ int DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs )
 	}
 	return m;
 }
+DaoType* DaoType_GetCommonType( int type, int subtype )
+{
+	switch( type ){
+	case DAO_ARRAY :
+		if( subtype <= DAO_COMPLEX ) return dao_array_types[ subtype ];
+		break;
+	case DAO_LIST :
+		switch( subtype ){
+		case DAO_NONE : return dao_type_list_template;
+		case DAO_ANY : return dao_type_list_any;
+		}
+		break;
+	case DAO_MAP  :
+		switch( subtype ){
+		case DAO_NONE : return dao_type_map_template;
+		case DAO_ANY : return dao_type_map_any;
+		}
+		break;
+	case DAO_NONE    : return dao_type_none;
+	case DAO_ANY     : return dao_type_any;
+	case DAO_INTEGER : return dao_type_int;
+	case DAO_FLOAT   : return dao_type_float;
+	case DAO_DOUBLE  : return dao_type_double;
+	case DAO_COMPLEX : return dao_type_complex;
+	case DAO_LONG    : return dao_type_long;
+	case DAO_STRING  : return dao_type_string;
+	default : break;
+	}
+	return NULL;
+}
 int DaoType_ChildOf( DaoType *self, DaoType *other )
 {
 	if( self == NULL || other == NULL ) return 0;

@@ -1,10 +1,25 @@
 
+code = 
+@[cxx]
+#include<stdio.h>
+#include<readline/readline.h>
+int main(void){
+	char *chs = readline( "test" );
+	return chs != NULL;
+}
+@[cxx]
 
 if( DaoMake::IsUnix() ){
 	header_path  = DaoMake::FindFile( "readline/readline.h" )
 	header_path2 = DaoMake::FindFile( "readline/history.h" )
 	if( header_path == "" or header_path2 == "" ) return;
 
+	lflags = "-lreadline";
+	if( DaoMake::TestCompile( code, '-lreadline', '-I.' ) == 0 ){
+		if( DaoMake::TestCompile( code, '-lreadline -lncurses', '-I.' ) == 0 ) return;
+		lflags = "-lreadline -lncurses";
+	}
+
 	readline = DaoMake::Project( "ReadLine" )
-	readline.ExportLibrary( "readline", "-I" + header_path, "-lreadline" )
+	readline.ExportLibrary( "readline", "-I" + header_path, lflags )
 }

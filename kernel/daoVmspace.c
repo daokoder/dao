@@ -95,27 +95,19 @@ void DaoAux_Delete( DMap *aux )
 }
 
 
-#ifdef WIN32
-#  define DAO_FILE_TYPE_NUM  4
-#else
-#  define DAO_FILE_TYPE_NUM  6
-#endif
+#define DAO_FILE_TYPE_NUM  3
 
 static const char* const daoDllPrefix[] =
 {
-	"", "", "",
-	"dao_", "libdao_", "lib"
+	"", "", DAO_DLL_PREFIX "dao_"
 };
 static const char* const daoFileSuffix[] =
 {
-	".dac", ".dao", DAO_DLL_SUFFIX,
-	DAO_DLL_SUFFIX, DAO_DLL_SUFFIX, DAO_DLL_SUFFIX
-	/* duplicated for automatically adding "dao/libdao_/lib" prefix; */
+	".dac", ".dao", DAO_DLL_SUFFIX
 };
 static int daoModuleTypes[] =
 {
-	DAO_MODULE_DAC, DAO_MODULE_DAO, DAO_MODULE_DLL,
-	DAO_MODULE_DLL, DAO_MODULE_DLL, DAO_MODULE_DLL
+	DAO_MODULE_DAC, DAO_MODULE_DAO, DAO_MODULE_DLL
 };
 
 #ifndef CHANGESET_ID
@@ -1657,7 +1649,7 @@ int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int types )
 			if( daoModuleTypes[i] < DAO_MODULE_DLL ){
 				DString_Assign( fn, fname );
 			}else{
-				if( strncmp( fname->mbs, "lib", 3 ) == 0 ) break;
+				if( strncmp( fname->mbs, daoDllPrefix[i], 3 ) == 0 ) break;
 				DString_Assign( fn, path );
 				DString_AppendMBS( fn, daoDllPrefix[i] );
 				DString_Append( fn, file );

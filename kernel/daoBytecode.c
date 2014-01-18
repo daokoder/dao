@@ -322,60 +322,31 @@ void DaoByteCoder_EncodeDaoInt( uchar_t *data, daoint value )
 // Exponents 0x7FF is used to represent inf (if F=0) and NaNs (if F!=0);
 // Where F is the fraction mantissa.
 */
-static void DaoByteCoder_EncodeNAN( uchar_t *data )
+static int DaoByteCoder_BigEndianFloat()
 {
-	DaoByteCoder_EncodeUInt32( data, 0x7FF << 20 );
-	DaoByteCoder_EncodeUInt32( data + 4, 1 );
+	double inf = INFINITY;
+	uchar_t *bytes = (uchar_t*) & inf;
+	return bytes[0] != 0;
 }
-static void DaoByteCoder_EncodeInf( uchar_t *data )
+static void DaoByteCoder_EncodeFloat( uchar_t *data, float value )
 {
-	DaoByteCoder_EncodeUInt32( data, 0x7FF << 20 );
-	DaoByteCoder_EncodeUInt32( data + 4, 0 );
+	int i;
+	uchar_t *bytes = (uchar_t*) & value;
+	if( DaoByteCoder_BigEndianFloat() ){
+		for(i=0; i<4; ++i) data[i] = bytes[i];
+	}else{
+		for(i=0; i<4; ++i) data[i] = bytes[3-i];
+	}
 }
 static void DaoByteCoder_EncodeDouble( uchar_t *data, double value )
 {
-	uint_t i = 20, m1 = 0, m2 = 0;
-	int first = 1;
-	int neg = value < 0.0;
-	int expon = 0;
-	double frac;
-
-	if( value == 0.0 ){
-		DaoByteCoder_EncodeUInt32( data, 0 );
-		DaoByteCoder_EncodeUInt32( data + 4, 0 );
-		return;
-	}else if( isnan( value ) ){
-		DaoByteCoder_EncodeNAN( data );
-		return;
-	}else if( isinf( value ) ){
-		DaoByteCoder_EncodeInf( data );
-		return;
+	int i;
+	uchar_t *bytes = (uchar_t*) & value;
+	if( DaoByteCoder_BigEndianFloat() ){
+		for(i=0; i<8; ++i) data[i] = bytes[i];
+	}else{
+		for(i=0; i<8; ++i) data[i] = bytes[7-i];
 	}
-
-	frac = frexp( fabs( value ), & expon );
-	frac = 2.0 * frac - 1.0;
-	expon -= 1;
-	while(1){
-		double prod = frac * 2.0;
-		uint_t bit = (uint_t) prod;
-		frac = prod - bit;
-		i -= 1;
-		if( first ){
-			m1 |= bit << i;
-			if( i == 0 ){
-				first = 0;
-				i = 32;
-			}
-		}else{
-			m2 |= bit << i;
-			if( i == 0 ) break;
-		}
-		if( frac <= 0.0 ) break;
-	}
-	m1 |= (expon+1023) << 20;
-	if( neg ) m1 |= 1 << 31;
-	DaoByteCoder_EncodeUInt32( data, m1 );
-	DaoByteCoder_EncodeUInt32( data + 4, m2 );
 }
 uint_t DaoByteCoder_DecodeUInt8( uchar_t *data )
 {
@@ -438,39 +409,21 @@ TooBigInteger:
 //
 //   value = (-1)^S  *  ( 1 + \sigma_0^51 (b_i * 2^{-(52-i)}) )  *  2^{E-1023}
 */
+float DaoByteCoder_DecodeFloat( DaoByteCoder *self, uchar_t *data )
+{
+	int i;
+	uchar_t bytes[4];
+	if( DaoByteCoder_BigEndianFloat() ) return *(float*) data;
+	for(i=0; i<4; ++i) bytes[i] = data[3-i];
+	return *(float*) bytes;
+}
 double DaoByteCoder_DecodeDouble( DaoByteCoder *self, uchar_t *data )
 {
-	double value = 1.0;
-	uint_t first = DaoByteCoder_DecodeUInt32( data );
-	uint_t second = DaoByteCoder_DecodeUInt32( data+4 );
-	uint_t negative = first & (1<<31);
-	int i, expon;
-
-	if( first == 0 && second == 0 ) return 0;
-	if( first == (0x7FF<<20) && second == 0 ) return INFINITY;
-	if( first == (0x7FF<<20) && second == 1 ) return NAN;
-
-	first = (first<<1)>>1;
-	expon = (first>>20) - 1023;
-	for(i=0; i<32; ++i){
-		if( (second>>i)&0x1 ){
-			int e = -(52-i);
-			value += e >= 0 ? pow( 2, e ) : 1.0 / pow( 2, -e );
-		}
-	}
-	for(i=0; i<20; ++i){
-		if( (first>>i) & 0x1 ){
-			int e = -(20-i);
-			value += e >= 0 ? pow( 2, e ) : 1.0 / pow( 2, -e );
-		}
-	}
-	if( expon >= 0 ){
-		value *= pow( 2, expon );
-	}else{
-		value /= pow( 2, -expon );
-	}
-	if( negative ) value = -value;
-	return value;
+	int i;
+	uchar_t bytes[8];
+	if( DaoByteCoder_BigEndianFloat() ) return *(double*) data;
+	for(i=0; i<8; ++i) bytes[i] = data[7-i];
+	return *(double*) bytes;
 }
 void DaoByteCoder_DecodeChunk2222( uchar_t *data, uint_t *A, uint_t *B, uint_t *C, uint_t *D )
 {
@@ -536,7 +489,7 @@ DaoByteBlock* DaoByteBlock_EncodeFloat( DaoByteBlock *self, float val )
 	if( block ) return block;
 	block = DaoByteBlock_AddBlock( self, value, DAO_ASM_VALUE );
 	block->begin[0] = DAO_FLOAT;
-	DaoByteCoder_EncodeDouble( block->end, val );
+	DaoByteCoder_EncodeFloat( block->end, val );
 	return block;
 }
 DaoByteBlock* DaoByteBlock_EncodeDouble( DaoByteBlock *self, double val )
@@ -745,11 +698,13 @@ DaoByteBlock* DaoByteBlock_EncodeArray( DaoByteBlock *self, DaoArray *value )
 		if( i < value->size ) DaoByteCoder_EncodeDaoInt( block->end, value->data.i[i] );
 		if( (i+1)<value->size ) DaoByteCoder_EncodeDaoInt( block->end+4, value->data.i[i+1] );
 	}else if( value->etype == DAO_FLOAT ){
-		for(i=0; (i+1)<value->size; i+=1){
+		for(i=0; (i+2)<value->size; i+=2){
 			databk = DaoByteBlock_NewBlock( block, DAO_ASM_DATA );
-			DaoByteCoder_EncodeDouble( databk->begin, value->data.f[i] );
+			DaoByteCoder_EncodeFloat( databk->begin, value->data.f[i] );
+			DaoByteCoder_EncodeFloat( databk->begin+4, value->data.f[i+1] );
 		}
-		if( i < value->size ) DaoByteCoder_EncodeDouble( block->end, value->data.f[i] );
+		if( i < value->size ) DaoByteCoder_EncodeFloat( block->end, value->data.f[i] );
+		if( (i+1)<value->size ) DaoByteCoder_EncodeFloat( block->end+4, value->data.f[i+1] );
 	}else if( value->etype == DAO_DOUBLE ){
 		for(i=0; (i+1)<value->size; i+=1){
 			databk = DaoByteBlock_NewBlock( block, DAO_ASM_DATA );
@@ -1791,7 +1746,7 @@ static void DaoByteCoder_DecodeValue( DaoByteCoder *self, DaoByteBlock *block )
 		break;
 	case DAO_FLOAT :
 		value = (DaoValue*) DaoFloat_New(0.0);
-		value->xFloat.value = DaoByteCoder_DecodeDouble( self, block->end );
+		value->xFloat.value = DaoByteCoder_DecodeFloat( self, block->end );
 		break;
 	case DAO_DOUBLE :
 		value = (DaoValue*) DaoDouble_New(0.0);
@@ -1895,10 +1850,14 @@ static void DaoByteCoder_DecodeValue( DaoByteCoder *self, DaoByteBlock *block )
 				if( !(C%2) ) array->data.i[i+1] = DaoByteCoder_DecodeDaoInt( self, block->end+4 );
 			}
 		}else if( array->etype == DAO_FLOAT ){
-			for(i=0; (i+1)<C && pb != NULL; i+=1, pb=pb->next){
-				array->data.f[i] = DaoByteCoder_DecodeDouble( self, pb->begin );
+			for(i=0; (i+2)<C && pb != NULL; i+=2, pb=pb->next){
+				array->data.f[i] = DaoByteCoder_DecodeFloat( self, pb->begin );
+				array->data.f[i+1] = DaoByteCoder_DecodeFloat( self, pb->begin+4 );
 			}
-			if(C) array->data.f[i] = DaoByteCoder_DecodeDouble( self, block->end );
+			if(C){
+				array->data.f[i] = DaoByteCoder_DecodeFloat( self, block->end );
+				if( !(C%2) ) array->data.f[i+1] = DaoByteCoder_DecodeFloat( self, block->end+4 );
+			}
 		}else if( array->etype == DAO_DOUBLE ){
 			for(i=0; (i+1)<C && pb != NULL; i+=1, pb=pb->next){
 				array->data.d[i] = DaoByteCoder_DecodeDouble( self, pb->begin );
@@ -3182,7 +3141,7 @@ void DaoByteCoder_PrintBlock( DaoByteCoder *self, DaoByteBlock *block, int space
 		case DAO_FLOAT :
 			DaoStream_WriteMBS( stream, "DAO_FLOAT;\n" );
 			DaoStream_PrintTag( stream, DAO_ASM_END, spaces );
-			DaoStream_PrintDouble( stream, " %g ;\n", DaoByteCoder_DecodeDouble( self, block->end ) );
+			DaoStream_PrintDouble( stream, " %g ;\n", DaoByteCoder_DecodeFloat( self, block->end ) );
 			break;
 		case DAO_DOUBLE :
 			DaoStream_WriteMBS( stream, "DAO_DOUBLE;\n" );
@@ -3255,8 +3214,25 @@ void DaoByteCoder_PrintBlock( DaoByteCoder *self, DaoByteBlock *block, int space
 					k = DaoByteCoder_DecodeDaoInt( self, block->end );
 					DaoStream_PrintDaoInt( stream, "%12"DAO_INT_FORMAT"", k );
 					if( !(C%2) ){
-						m = DaoByteCoder_DecodeDaoInt( self, block->end+4 );
+						k = DaoByteCoder_DecodeDaoInt( self, block->end+4 );
 						DaoStream_PrintDaoInt( stream, ", %12"DAO_INT_FORMAT"", k );
+					}
+				}
+			}else if( block->begin[1] == DAO_FLOAT ){
+				for(; pb!=NULL; pb=pb->next){
+					float f = DaoByteCoder_DecodeFloat( self, pb->begin );
+					float g = DaoByteCoder_DecodeFloat( self, pb->begin+4 );
+					DaoStream_PrintTag( stream, DAO_ASM_DATA, spaces + 4 );
+					DaoStream_PrintDouble( stream, "%12g, ", f );
+					DaoStream_PrintDouble( stream, "%12g;\n", g );
+				}
+				DaoStream_PrintTag( stream, DAO_ASM_END, spaces );
+				if( C ){
+					float f = DaoByteCoder_DecodeFloat( self, block->end );
+					DaoStream_PrintDouble( stream, "%12g;\n", f );
+					if( !(C%2) ){
+						f = DaoByteCoder_DecodeFloat( self, block->end+4 );
+						DaoStream_PrintDouble( stream, "%12g;\n", f );
 					}
 				}
 			}else{

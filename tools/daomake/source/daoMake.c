@@ -3380,6 +3380,17 @@ int main( int argc, char *argv[] )
 			return DaoMake_Remove( argc - 2, argv + 2 );
 		}else if( strcmp( argv[1], "copy" ) == 0 ){
 			return DaoMake_Copy( argc - 2, argv + 2 );
+		}else if( strcmp( argv[1], "eval" ) == 0 ){
+			DaoRoutine *rout;
+			DaoNamespace *ns = DaoVmSpace_MainNamespace( vmSpace );
+			DaoProcess *vmp = DaoVmSpace_MainProcess( vmSpace );
+			if( argc <= 2 ) return 1;
+			DArray_PushFront( vmSpace->nameLoading, vmSpace->pathWorking );
+			DArray_PushFront( vmSpace->pathLoading, vmSpace->pathWorking );
+			DString_SetMBS( vmSpace->mainNamespace->name, "command line codes" );
+			if( DaoProcess_Compile( vmp, ns, argv[2] ) ==0 ) return 0;
+			rout = ns->mainRoutines->items.pRoutine[ ns->mainRoutines->size-1 ];
+			return DaoProcess_Call( vmp, rout, NULL, NULL, 0 );
 		}
 	}
 

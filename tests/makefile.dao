@@ -7,7 +7,7 @@ if( daovm == none ) return
 
 
 chartype_objs = daotests.AddObjects( { 'dao_CharType.c' } )
-chartype_dll  = daotests.AddSharedLibrary( 'CharType', chartype_objs )
+chartype_dll  = daotests.AddSharedLibrary( 'dao_CharType', chartype_objs )
 
 chartype_dll.UseSharedLibrary( daovm, "dao" )
 chartype_dll.EnableDynamicLinking()

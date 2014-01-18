@@ -184,12 +184,6 @@ DAO_DLL void* DaoProcess_SetAuxData( DaoProcess *self, void *key, void *value );
 typedef struct DaoJIT         DaoJIT;
 typedef struct DaoJitCallData DaoJitCallData;
 
-typedef void (*DaoJIT_InitFPT)( DaoVmSpace*, DaoJIT* );
-typedef void (*DaoJIT_QuitFPT)();
-typedef void (*DaoJIT_FreeFPT)( void *jitdata );
-typedef void (*DaoJIT_CompileFPT)( DaoRoutine *routine, DaoOptimizer *optimizer );
-typedef void (*DaoJIT_ExecuteFPT)( DaoProcess *process, DaoJitCallData *data, int jitcode );
-
 struct DaoJIT
 {
 	void (*Quit)();

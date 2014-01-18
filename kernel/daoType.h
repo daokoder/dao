@@ -149,6 +149,7 @@ DAO_DLL int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs );
 DAO_DLL int DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs );
 /* define @X */
 DAO_DLL DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
+DAO_DLL DaoType* DaoType_GetCommonType( int type, int subtype );
 
 /* all DAO_THT: @T ... */
 DAO_DLL void DaoType_ResetTypeHolders( DaoType *self, DMap *types );

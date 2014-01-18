@@ -1532,28 +1532,6 @@ static void DaoSTR_Change( DaoProcess *proc, DaoValue *p[], int N )
 	n = DaoRegex_ChangeExt( patt, self, str, index, & start, & end );
 	DaoProcess_PutInteger( proc, n );
 }
-static void DaoSTR_Mpack( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *self = p[0]->xString.data;
-	DString *pt = p[1]->xString.data;
-	DString *str = p[2]->xString.data;
-	daoint index = p[3]->xInteger.value;
-	DaoRegex *patt = DaoProcess_MakeRegex( proc, pt, self->wcs ==NULL );
-	if( N == 5 ){
-		DaoList *res = DaoProcess_PutList( proc );
-		daoint count = p[4]->xInteger.value;
-		DaoRegex_MatchAndPack( patt, self, str, index, count, & res->items );
-	}else{
-		DArray *packs = DArray_New(D_VALUE);
-		DaoRegex_MatchAndPack( patt, self, str, index, 1, packs );
-		if( packs->size ){
-			DaoProcess_PutValue( proc, packs->items.pValue[0] );
-		}else{
-			DaoProcess_PutMBString( proc, "" );
-		}
-		DArray_Delete( packs );
-	}
-}
 #endif
 
 static void DaoSTR_Type( DaoProcess *proc, DaoValue *p[], int N )
@@ -1714,8 +1692,6 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Extract, "extract( self :string, pt :string, mtype :enum<both,matched,unmatched>=$matched, mask :tuple<pattern:string,reversed:enum<false,true>> = ('', $false) )=>list<string>" },
 	{ DaoSTR_Capture, "capture( self :string, pt :string, start=0, end=0 )=>list<string>" },
 	{ DaoSTR_Change,  "change( self :string, pt :string, s :string, index=0, start=0, end=0 )=>int" },
-	{ DaoSTR_Mpack,  "mpack( self :string, pt :string, s :string, index=0 )=>string" },
-	{ DaoSTR_Mpack,  "mpack( self :string, pt :string, s :string, index :int, count :int )=>list<string>" },
 #endif
 	{ DaoSTR_Tolower, "tolower( self :string ) =>string" },
 	{ DaoSTR_Toupper, "toupper( self :string ) =>string" },

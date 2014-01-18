@@ -167,7 +167,6 @@ The following methods are provided:
 --@[green]string.extract()@[green]: see @[node]dao.type.string.pattern.extract@[node];
 --@[green]string.capture()@[green]: see @[node]dao.type.string.pattern.capture@[node];
 --@[green]string.change()@[green]: see @[node]dao.type.string.pattern.change@[node];
---@[green]string.mpack()@[green]: see @[node]dao.type.string.pattern.mpack@[node];
 @[list]
 @[text]
 
@@ -324,17 +323,3 @@ The number of occurrence of substitution is returned.
 @[text]
 
 
-@[name]
-dao.type.string.pattern.mpack
-@[name]
-
-@[title]
-string.mpack()
-@[title]
-
-@[text]
-@[code]
-string.mpack( pt :string, s :string, index=0 ) => string
-string.mpack( pt :string, s :string, index :int, count :int ) => list<string>
-@[code]
-@[text]

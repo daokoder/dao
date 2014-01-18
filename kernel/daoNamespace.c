@@ -1306,6 +1306,7 @@ int DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent )
 	return 1;
 }
 
+#ifdef DAO_WITH_MACRO
 static DaoMacro* DaoNamespace_FindMacro2( DaoNamespace *self, DString *lang, DString *name )
 {
 	daoint i, n = self->namespaces->size;
@@ -1373,6 +1374,7 @@ void DaoNamespace_ImportMacro( DaoNamespace *self, DString *lang )
 	}
 	DString_Delete( name2 );
 }
+#endif
 void DaoNamespace_AddCodeInliner( DaoNamespace *self, const char *name, DaoCodeInliner fp )
 {
 	DString mbs = DString_WrapMBS( name );

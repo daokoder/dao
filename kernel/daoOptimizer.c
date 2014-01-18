@@ -600,24 +600,11 @@ static void DaoOptimizer_RDA( DaoOptimizer *self, DaoCnode *node, DArray *out )
 		DArray_Append( out, IntToPointer( id ) );
 	}
 	if( pushed == 0 ) DArray_Append( out, IntToPointer( node->index + RDA_OFFSET ) );
-#if 0
-	DMap_Erase( out, IntToPointer(node->lvalue) );
-	for(i=0; i<kills->size; i++) DMap_Erase( out, kills->items.pVoid[i] );
-	DMap_Insert( out, IntToPointer(node->index + RDA_OFFSET), NULL );
-#endif
 }
 static int DaoOptimizer_UpdateRDA( DaoOptimizer *self, DaoCnode *first, DaoCnode *second )
 {
 	DaoOptimizer_RDA( self, first, self->array3 );
 	/* Union: */
-#if 0
-	for(it=DMap_First(self->tmp); it; it=DMap_Next(self->tmp,it)){
-		if( DMap_Find( second->set, it->key.pVoid ) == NULL ){
-			DMap_Insert( second->set, it->key.pVoid, NULL );
-			changed = 1;
-		}
-	}
-#endif
 	DArray_Assign( self->array2, second->list );
 	return Dao_IntsUnion( self->array2, self->array3, second->list, -1 );
 }
@@ -661,44 +648,11 @@ static void DaoOptimizer_LVA( DaoOptimizer *self, DaoCnode *node, DArray *out )
 
 	DaoCnode_GetOperands( node, self->array2 );
 	Dao_IntsUnion( node->list, self->array2, out, node->lvalue );
-
-#if 0
-	DMap_Assign( out, node->set );
-	if( node->lvalue != 0xffff ) DMap_Erase( out, IntToPointer(node->lvalue) );
-	switch( node->type ){
-	case DAO_OP_SINGLE :
-		DMap_Insert( out, IntToPointer(node->first), NULL );
-		break;
-	case DAO_OP_PAIR   :
-		DMap_Insert( out, IntToPointer(node->first), NULL );
-		DMap_Insert( out, IntToPointer(node->second), NULL );
-		break;
-	case DAO_OP_TRIPLE :
-		DMap_Insert( out, IntToPointer(node->first), NULL );
-		DMap_Insert( out, IntToPointer(node->second), NULL );
-		DMap_Insert( out, IntToPointer(node->third), NULL );
-		break;
-	case DAO_OP_RANGE :
-	case DAO_OP_RANGE2 :
-		for(i=node->first; i<=node->second; i++) DMap_Insert( out, IntToPointer(i), NULL );
-		if( node->type == DAO_OP_RANGE2 ) DMap_Insert( out, IntToPointer(node->third), NULL );
-		break;
-	}
-#endif
 }
 static int DaoOptimizer_UpdateLVA( DaoOptimizer *self, DaoCnode *first, DaoCnode *second )
 {
 	DaoOptimizer_LVA( self, first, self->array3 );
 
-#if 0
-	DaoOptimizer_LVA( self, first, self->tmp );
-	for(it=DMap_First(self->tmp); it; it=DMap_Next(self->tmp,it)){
-		if( DMap_Find( second->set, it->key.pVoid ) == NULL ){
-			DMap_Insert( second->set, it->key.pVoid, NULL );
-			changed = 1;
-		}
-	}
-#endif
 	/* Union: */
 	DArray_Assign( self->array2, second->list );
 	return Dao_IntsUnion( self->array2, self->array3, second->list, -1 );
@@ -4902,7 +4856,7 @@ NotExist_TryAux:
 							bt = & bt->aux->xType;
 						}
 						tt = at->nested->items.pType[j-1];
-						if( tt->tid == DAO_PAR_NAMED ) tt = & tt->aux->xType;
+						if( tt->tid == DAO_PAR_NAMED || tt->tid == DAO_PAR_DEFAULT ) tt = & tt->aux->xType;
 						AssertTypeMatching( bt, tt, defs );
 					}
 				}else{
@@ -5175,7 +5129,7 @@ NotExist_TryAux:
 					for(k=0; k<(argc-1); k++) DArray_Append( self->array2, tp[k] );
 					for(k=0; k<its->size; k++){
 						DaoType *it = its->items.pType[k];
-						if( it->tid == DAO_PAR_NAMED ) it = (DaoType*) it->aux;
+						if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_DEFAULT ) it = (DaoType*) it->aux;
 						DArray_Append( self->array2, it );
 					}
 					tp = self->array2->items.pType;

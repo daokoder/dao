@@ -74,7 +74,7 @@ static void DaoSignalHandler( int sig )
 }
 
 
-#ifdef UNIX
+#if defined(DAO_WITH_RESTART) && defined(UNIX)
 
 #include <unistd.h>
 
@@ -100,7 +100,7 @@ void DaoRestartRun( char **argv, int argc, int optid )
 	}
 }
 
-#elif defined(WIN32)
+#elif defined(DAO_WITH_RESTART) && defined(WIN32)
 
 #include <windows.h>
 

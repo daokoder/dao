@@ -42,6 +42,7 @@
 
 
 #  define DAO_DIR "C:\\dao"
+#  define DAO_DLL_PREFIX ""
 #  define DAO_DLL_SUFFIX ".dll"
 
 #  define DAO_ENV_PATH_SEP ';'
@@ -81,6 +82,8 @@
 #  include<dlfcn.h>
 #  include<sys/time.h>
 
+#  define DAO_DLL_PREFIX "lib"
+
 #  ifdef MAC_OSX
 #    define DAO_DLL_SUFFIX ".dylib"
 #  else /* UNIX */
@@ -91,6 +94,7 @@
 #else /* other system */
 
 #  define DAO_DIR ""
+#  define DAO_DLL_PREFIX ""
 #  define DAO_DLL_SUFFIX ".unkown"
 #  define DAO_ENV_PATH_SEP ':'
 
