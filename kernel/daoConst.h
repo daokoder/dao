@@ -425,8 +425,6 @@ typedef struct DaoExceptionTripple
 extern const char* const daoExceptionName[];
 extern const char* const daoExceptionInfo[];
 
-DAO_DLL const char* getExceptName( int id );
-
 extern const char* const coreTypeNames[];
 extern const char *const daoBitBoolArithOpers[];
 extern const char *const daoBitBoolArithOpers2[];

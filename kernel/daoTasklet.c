@@ -782,7 +782,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 
 	self->thdData = DThread_GetSpecific();
 	if( self->taskFunc ) self->taskFunc( self->taskParam );
-	while(1){
+	while( server->vmspace->stopit == 0 ){
 		DaoProcess *process = NULL;
 		DaoFuture *future = NULL;
 		DThreadTask function = NULL;
@@ -793,6 +793,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		server->idle += 1;
 		while( server->pending->size == (server->events2->size + server->waitings->size) ){
 			//printf( "%p %i %i %i %i\n", self, server->events->size, server->pending->size, server->events2->size, server->waitings->size );
+			if( server->vmspace->stopit ) break;
 			if( server->finishing && server->idle == server->total ){
 				if( (server->events2->size + server->waitings->size) == 0 ) break;
 			}
@@ -813,6 +814,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		}
 		DMutex_Unlock( & server->mutex );
 
+		if( server->vmspace->stopit ) break;
 		if( function ){
 			(*function)( parameter );
 			DMutex_Lock( & server->mutex );

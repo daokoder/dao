@@ -52,7 +52,7 @@ enum DaoModuleTypes
 	DAO_MODULE_ANY  = DAO_MODULE_DAC|DAO_MODULE_DAO|DAO_MODULE_DLL
 };
 
-DAO_DLL const char *const dao_copy_notice;
+extern const char *const dao_copy_notice;
 
 /* Dao Virtual Machine Space:
  * For handling:
@@ -163,6 +163,7 @@ DAO_DLL void DaoVmSpace_SetPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
 
+DAO_DLL const char*const DaoVmSpace_GetCopyNotice();
 DAO_DLL DaoTypeBase* DaoVmSpace_GetTyper( short type );
 
 DAO_DLL DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self );

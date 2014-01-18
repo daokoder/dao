@@ -201,10 +201,11 @@ daovm.AddIncludePath( "kernel" )
 # so that some linking flags can be generated properly:
 #
 ###########################################################################
+daomake_pkg_path = DaoMake::MakePath( daovm.GetPath( "INSTALL-PATH" ), "shared/daomake/packages/" )
 daovm.Install( daovm_bin_path, daovm_exe )
 daovm.Install( daovm_lib_path, daovm_dll, daovm_lib )
 daovm.Install( daovm_inc_path, daovm_kernel_headers )
-daovm.Install( daovm.GetPath( "INSTALL-PATH" ) + "shared/daomake/packages/", "FindDao.dao" );
+daovm.Install( daomake_pkg_path, "FindDao.dao" );
 
 
 
@@ -308,6 +309,24 @@ daotest = daovm.AddDirectory( "daotest", "tools/daotest" )
 if( DaoMake::IsDir( "tools/clangdao" ) ) daovm.AddDirectory( "clangdao", "tools/clangdao" );
 
 modules = daovm.AddDirectory( "modules", "modules" )
+
+
+daovm.AddVariable( "DAO", DaoMake::MakePath( daovm.BinaryPath(), "dao" ) );
+
+# Add shell commands as a target:
+# Generate documentations here instead of inside modules/help,
+# as it might be problematic to use relative path in windows to invoke Dao.
+daovm_doc = daovm.AddCommand( "./doc/html/en/index.html: Makefile" + DaoMake::MakefileSuffix(), "@$(DAOMAKE) mkdir2 ./doc/" );
+daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/" );
+daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/en" );
+daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/zh" );
+daovm_doc.AddCommand( "$(DAO) -e \"load help; help::set_language('en'); help::export('','./doc/html/en')\"" );
+if( DaoMake::IsWin32() == 0 ){
+	daovm_doc.AddCommand( "$(DAO) -e \"load help; help::set_language('zh'); help::export('','./doc/html/zh')\"" );
+}
+daovm_doc.AddDependency( daovm_dll );
+
+daovm.Install( daovm.GetPath( "DOC-PATH" ), daovm_doc )
 
 
 # Add dependencies:

@@ -218,6 +218,10 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	}
 	return & baseTyper;
 }
+const char*const DaoVmSpace_GetCopyNotice()
+{
+	return dao_copy_notice;
+}
 
 void DaoVmSpace_SetOptions( DaoVmSpace *self, int options )
 {

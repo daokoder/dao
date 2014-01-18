@@ -12,7 +12,9 @@ project_exe.UseSharedLibrary( daovm, "dao" )
 
 project.AddCommand( "copylib", "$(DAOMAKE) copy -u " + project_exe.Name() + " ../../" )
 
+shared = DaoMake::MakePath( daovm.GetPath( "INSTALL-PATH" ), "/shared/daomake" );
+
 project.Install( daovm.GetPath( "BIN-PATH" ), project_exe );
-project.Install( daovm.GetPath( "INSTALL-PATH" ) + "/shared/daomake", "platforms" );
-project.Install( daovm.GetPath( "INSTALL-PATH" ) + "/shared/daomake", "packages" );
+project.Install( shared, "platforms" );
+project.Install( shared, "packages" );
 

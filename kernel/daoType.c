@@ -833,7 +833,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( tp == self ) return DAO_MT_EQ;
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
-		if( tp == NULL || dao_type_map_empty )
+		if( tp == NULL || tp == dao_type_map_empty )
 			return value->xMap.items->size == 0 ? DAO_MT_EMPTY : DAO_MT_NOT;
 		return DaoType_MatchTo( tp, self, defs );
 	case DAO_TUPLE :

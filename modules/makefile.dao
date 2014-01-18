@@ -7,6 +7,10 @@ if( daovm == none ) return
 
 modules.Install( daovm.GetPath( "MOD-PATH" ), "addpath.dao" )
 
+if( modules.SourcePath() != modules.BinaryPath() ){
+	addpath = DaoMake::MakePath( modules.SourcePath(), "addpath.dao" );
+	daovm.AddCommand( "addpath:", "$(DAOMAKE) copy " + addpath + " " + modules.BinaryPath() );
+}
 
 if( DaoMake::IsDir( "DaoJIT" ) ) modules.AddDirectory( "DaoJIT", "DaoJIT" );
 
