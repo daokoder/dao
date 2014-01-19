@@ -311,23 +311,6 @@ if( DaoMake::IsDir( "tools/clangdao" ) ) daovm.AddDirectory( "clangdao", "tools/
 modules = daovm.AddDirectory( "modules", "modules" )
 
 
-daovm.AddVariable( "DAO", DaoMake::MakePath( daovm.BinaryPath(), "dao" ) );
-
-# Add shell commands as a target:
-# Generate documentations here instead of inside modules/help,
-# as it might be problematic to use relative path in windows to invoke Dao.
-daovm_doc = daovm.AddCommand( "./doc/html/en/index.html: Makefile" + DaoMake::MakefileSuffix(), "@$(DAOMAKE) mkdir2 ./doc/" );
-daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/" );
-daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/en" );
-daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/zh" );
-daovm_doc.AddCommand( "$(DAO) -e \"load help; help::set_language('en'); help::export('','./doc/html/en')\"" );
-if( DaoMake::IsWin32() == 0 ){
-	daovm_doc.AddCommand( "$(DAO) -e \"load help; help::set_language('zh'); help::export('','./doc/html/zh')\"" );
-}
-daovm_doc.AddDependency( daovm_dll );
-
-daovm.Install( daovm_doc_path, "./doc" )
-
 
 # Add dependencies:
 debugger.AddDependency( daovm_dll )
@@ -346,6 +329,68 @@ daomake.AddDependency( daovm_lib )
 modules.AddDependency( daovm_lib )
 modules.AddDependency( daovm_exe )
 
+
+daovm.AddVariable( "DAO", DaoMake::MakePath( daovm.BinaryPath(), "dao" ) );
+
+# Add shell commands as a target:
+# Generate documentations here instead of inside modules/help,
+# as it might be problematic to use relative path in windows to invoke Dao.
+daovm_doc = daovm.AddCommand( "./doc/html/en/index.html: Makefile" + DaoMake::MakefileSuffix(), "@$(DAOMAKE) mkdir2 ./doc/" );
+daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/" );
+daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/en" );
+daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/zh" );
+daovm_doc.AddCommand( "$(DAO) -e \"load help; help::set_language('en'); help::export('','./doc/html/en')\"" );
+if( DaoMake::IsWin32() == 0 ){
+	daovm_doc.AddCommand( "$(DAO) -e \"load help; help::set_language('zh'); help::export('','./doc/html/zh')\"" );
+}
+daovm_doc.AddDependency( daovm_dll );
+
+daovm.Install( daovm_doc_path, "./doc" )
+
+demos = {
+	"demo/arrays.dao",
+	"demo/aspects.dao",
+	"demo/bytecode_test.dao",
+	"demo/class_forward_claration.dao",
+	"demo/class_inheritance.dao",
+	"demo/classes.dao",
+	"demo/closures.dao",
+	"demo/decorators.dao",
+	"demo/defers.dao",
+	"demo/disjoint_union.dao",
+	"demo/enums.dao",
+	"demo/hello.dao",
+	"demo/interface.dao",
+	"demo/interface_forward_declaration.dao",
+	"demo/lists.dao",
+	"demo/macros.dao",
+	"demo/maps.dao",
+	"demo/mixins.dao",
+	"demo/numbers.dao",
+	"demo/object_operator.dao",
+	"demo/panics.dao",
+	"demo/routines.dao",
+	"demo/strings.dao",
+	"demo/tuples.dao",
+	"demo/user_functional.dao",
+	"demo/user_type_casting.dao",
+	"demo/verbatim.dao"
+}
+demos2 = {
+	"demo/concurrent/async_object.dao",
+	"demo/concurrent/channel_block.dao",
+	"demo/concurrent/channel_class.dao",
+	"demo/concurrent/critical.dao",
+	"demo/concurrent/future.dao",
+	"demo/concurrent/parallel_quicksort.dao",
+	"demo/concurrent/select_builtin.dao",
+	"demo/concurrent/select_custom.dao",
+	"demo/concurrent/select_mix.dao",
+	"demo/concurrent/start.dao"
+}
+
+daovm.Install( DaoMake::MakePath( daovm_doc_path, "./demo" ), demos )
+daovm.Install( DaoMake::MakePath( daovm_doc_path, "./demo/concurrent" ), demos2 )
 
 
 DaoMake::SetTestTool( DaoMake::MakePath( DaoMake::BinaryPath(), "daotest" ) )

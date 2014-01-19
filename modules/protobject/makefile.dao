@@ -17,3 +17,7 @@ project.GenerateFinder( $TRUE );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_lib );
 project.Install( daovm.GetPath( "INSTALL-PATH" ) + "/shared/daomake/packages/", "FindDaoProtobject.dao" );
+
+daovm_doc_path = daovm.GetPath( "DOC-PATH" );
+demos = { "example.dao" }
+project.Install( DaoMake::MakePath( daovm_doc_path, "./demo/modules/protobject" ), demos )
