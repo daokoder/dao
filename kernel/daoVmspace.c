@@ -74,12 +74,14 @@ DaoProcess *mainProcess = NULL;
 
 static int TestFile( DaoVmSpace *vms, DString *fname )
 {
+	DString_ToMBS( fname );
 	if( MAP_Find( vms->vfiles, fname ) ) return 1;
 	if( MAP_Find( vms->vmodules, fname ) ) return 1;
 	return Dao_IsFile( fname->mbs );
 }
 static int TestPath( DaoVmSpace *vms, DString *fname, int type )
 {
+	DString_ToMBS( fname );
 	if( type == DAO_FILE_PATH ) return TestFile( vms, fname );
 	return Dao_IsDir( fname->mbs );
 }
@@ -702,6 +704,7 @@ int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname, DString *source )
 		DString_Assign( source, node->value.pString );
 		return 1;
 	}
+	DString_ToMBS( fname );
 	if( DaoFile_ReadAll( fopen( fname->mbs, "r" ), source, 1 ) ) return 1;
 	DaoStream_WriteMBS( self->errorStream, "ERROR: can not open file \"" );
 	DaoStream_WriteMBS( self->errorStream, fname->mbs );
@@ -1115,6 +1118,7 @@ static int CheckCodeCompletion( DString *source, DaoLexer *lexer )
 {
 	DArray *tokens = lexer->tokens;
 	int i, bcount, cbcount, sbcount, tki = 0, completed = 1;
+	DString_ToMBS( source );
 	DaoLexer_Tokenize( lexer, source->mbs, DAO_LEX_COMMENT|DAO_LEX_SPACE );
 	if( tokens->size ) tki = tokens->items.pToken[tokens->size-1]->type;
 	switch( tki ){
@@ -1434,9 +1438,11 @@ void DaoVmSpace_LoadArchive( DaoVmSpace *self, DString *archive )
 	int pos = 4, size = archive->size;
 	int i, m, n, files;
 
+	DString_ToMBS( archive );
 	DString_Clear( self->mainSource );
 	if( size < 8 ) return;
 	name = DString_New(1);
+	data = (char*) archive->mbs;
 	files = DaoDecodeUInt32( data + pos );
 	pos += 4;
 	for(i=0; i<files; ++i){
@@ -1723,6 +1729,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 		argValues = DArray_New(D_STRING);
 	}
 
+	DString_ToMBS( libpath );
 	ns = ns2 = DaoVmSpace_FindNamespace( self, libpath );
 
 	tm = Dao_FileChangedTime( libpath->mbs );
@@ -1876,6 +1883,7 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	ns = DaoVmSpace_FindNamespace( self, libpath );
 	if( ns ) return ns;
 
+	DString_ToMBS( libpath );
 	if( (node = MAP_Find( self->vmodules, libpath ) ) ){
 		funpter = (DaoModuleOnLoad) node->value.pVoid;
 		ns = DaoNamespace_New( self, libpath->mbs );
@@ -1995,6 +2003,8 @@ void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, DaoVModule *module )
 void Dao_MakePath( DString *base, DString *path )
 {
 	base = DString_Copy( base );
+	DString_ToMBS( base );
+	DString_ToMBS( path );
 	Dao_NormalizePathSep( base );
 	Dao_NormalizePathSep( path );
 	while( DString_MatchMBS( path, " ^ %.%. / ", NULL, NULL ) ){
@@ -2025,6 +2035,7 @@ void Dao_MakePath( DString *base, DString *path )
 int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname )
 {
 	DString *path;
+	DString_ToMBS( fname );
 	if( fname->size == 0 || fname->mbs[0] != '@' ) return 0;
 	path = DString_New(1);
 	DString_AppendMBS( path, "/@/" );
@@ -2125,6 +2136,7 @@ void DaoVmSpace_MakePath( DaoVmSpace *self, DString *path )
 {
 	DString *wpath = self->pathWorking;
 
+	DString_ToMBS( path );
 	if( path->size == 0 ) return;
 	/* C:\dir\source.dao; /home/...  */
 	if( path->size > 1 && (path->mbs[0] == '/' || path->mbs[1] == ':') ) return;
@@ -2559,6 +2571,7 @@ static int Dao_GetExecutablePath( const char *command, DString *path )
 	daoint i = 0;
 
 	DString_Reset( path, 0 );
+	DString_ToMBS( path );
 	if( PATH == NULL ) return 0;
 
 	while( i < paths.size ){

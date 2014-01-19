@@ -994,17 +994,6 @@ void DaoLexer_Append( DaoLexer *self, int name, int line, const char *data )
 
 	DaoLexer_AppendToken( self, & token );
 }
-/* http://www.cl.cam.ac.uk/~mgk25/ucs/quotes.html */
-static wchar_t quotes[] =
-{
-	0x27 , 0x27 , 0x27, /* single q.m. */
-	0x22 , 0x22 , 0x22, /* double q.m. */
-	0x27 + 0xfee0 , 0x27 + 0xfee0 , 0x27 , /* single q.m. unicode */
-	0x22 + 0xfee0 , 0x22 + 0xfee0 , 0x22 , /* double q.m. unicode */
-	0x60 , 0x27 , 0x27, /* grave accent */
-	0x2018 , 0x2019 , 0x27 , /* left/right single q.m. */
-	0x201C , 0x201D , 0x22   /* left/right double q.m. */
-};
 int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 {
 	DString *source = DString_New(1);
@@ -1018,7 +1007,6 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 	int srcSize = (int)strlen( src );
 	int old=0, state = TOK_START;
 	int lexenv = LEX_ENV_NORMAL;
-	int unicoded = 0;
 	int line = 1;
 	int cpos = 0;
 	int ret = 1;
@@ -1026,58 +1014,6 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 	int i, m = 4;
 
 	DString_SetSharing( literal, 0 );
-	for(it=0; it<srcSize; it++){
-		if( (signed char) src[it] < 0 ){
-			unicoded = 1;
-			break;
-		}
-	}
-	if( unicoded ){
-		const char *tmp = src;
-		mbstate_t state;
-		memset( & state, 0, sizeof(mbstate_t) );
-		i = mbsrtowcs( NULL, (const char**) &tmp, srcSize, & state );
-		unicoded = i >= 0;
-	}
-	if( unicoded && daoConfig.mbs == 0 ){
-		DString *wcs = DString_New(0);
-		wchar_t sl = L'\\' + 0xfee0;
-		wchar_t stop;
-		int i, N = 21;
-		it = 0;
-		DString_SetMBS( wcs, src );
-		while( it < wcs->size ){ // TODO: handle verbatim string!
-			for( i=0; i<N; i+=3 ){
-				if( wcs->wcs[it] == quotes[i] ){
-					stop = quotes[i+1];
-					wcs->wcs[it] = quotes[i+2];
-					it ++;
-					while( it < wcs->size && wcs->wcs[it] != stop ){
-						if( wcs->wcs[it] == sl || wcs->wcs[it] == L'\\' ){
-							it ++;
-							continue;
-						}
-						it ++;
-					}
-					if( it < wcs->size ) wcs->wcs[it] = quotes[i+2];
-					break;
-				}
-			}
-			if( it >= wcs->size ) break;
-			if( wcs->wcs[it] == 0x3000 ){
-				wcs->wcs[it] = 32; /* blank space */
-			}else if( wcs->wcs[it] > 0xff00 && wcs->wcs[it] < 0xff5f ){
-				wcs->wcs[it] -= 0xfee0; /* DBC to SBC */
-			}
-			it ++;
-		}
-		if( wcs->size ){
-			DString_SetWCS( source, wcs->wcs );
-			src = source->mbs;
-			srcSize = source->size;
-		}
-		DString_Delete( wcs );
-	}
 	DaoLexer_Reset( self );
 
 	DVector_PushInt( lexenvs, LEX_ENV_NORMAL );

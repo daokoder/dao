@@ -340,9 +340,7 @@ daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/" );
 daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/en" );
 daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/zh" );
 daovm_doc.AddCommand( "$(DAO) -e \"load help; help::set_language('en'); help::export('','./doc/html/en')\"" );
-if( DaoMake::IsWin32() == 0 ){
-	daovm_doc.AddCommand( "$(DAO) -e \"load help; help::set_language('zh'); help::export('','./doc/html/zh')\"" );
-}
+daovm_doc.AddCommand( "$(DAO) -e \"load help; help::set_language('zh'); help::export('','./doc/html/zh')\"" );
 daovm_doc.AddDependency( daovm_dll );
 
 daovm.Install( daovm_doc_path, "./doc" )
