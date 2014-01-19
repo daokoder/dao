@@ -16,7 +16,6 @@ project_lib  = project.AddStaticLibrary( "dao_dataframe", project_objs )
 project.GenerateFinder( $TRUE );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_lib );
-project.Install( daovm.GetPath( "INSTALL-PATH" ) + "/shared/daomake/packages/", "FindDaoDataFrame.dao" );
 
 daovm_doc_path = daovm.GetPath( "DOC-PATH" );
 demos = { "example.dao" }

@@ -205,7 +205,7 @@ daomake_pkg_path = DaoMake::MakePath( daovm.GetPath( "INSTALL-PATH" ), "shared/d
 daovm.Install( daovm_bin_path, daovm_exe )
 daovm.Install( daovm_lib_path, daovm_dll, daovm_lib )
 daovm.Install( daovm_inc_path, daovm_kernel_headers )
-daovm.Install( daomake_pkg_path, "FindDao.dao" );
+daovm.Install( daomake_pkg_path, DaoMake::MakePath( DaoMake::BinaryPath(), "FindDao.dao" ) );
 
 
 
@@ -350,7 +350,6 @@ daovm.Install( daovm_doc_path, "./doc" )
 demos = {
 	"demo/arrays.dao",
 	"demo/aspects.dao",
-	"demo/bytecode_test.dao",
 	"demo/class_forward_claration.dao",
 	"demo/class_inheritance.dao",
 	"demo/classes.dao",

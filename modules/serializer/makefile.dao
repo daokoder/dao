@@ -12,10 +12,11 @@ project_dll  = project.AddSharedLibrary( "dao_serializer", project_objs )
 project_lib  = project.AddStaticLibrary( "dao_serializer", project_objs )
 
 
+findpkg = DaoMake::MakePath( DaoMake::BinaryPath(), "FindDaoSerializer.dao" );
 project.GenerateFinder( $TRUE );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_lib );
-project.Install( daovm.GetPath( "INSTALL-PATH" ) + "/shared/daomake/packages/", "FindDaoSerializer.dao" );
+project.Install( daovm.GetPath( "INSTALL-PATH" ) + "/shared/daomake/packages/", findpkg );
 
 daovm_doc_path = daovm.GetPath( "DOC-PATH" );
 demos = { "example.dao" }

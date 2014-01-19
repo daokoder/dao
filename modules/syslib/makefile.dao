@@ -13,7 +13,8 @@ project_dll  = project.AddSharedLibrary( "dao_sys", project_objs )
 project_lib  = project.AddStaticLibrary( "dao_sys", project_objs )
 
 
+findpkg = DaoMake::MakePath( DaoMake::BinaryPath(), "FindDaoSys.dao" );
 project.GenerateFinder( $TRUE );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_lib );
-project.Install( daovm.GetPath( "INSTALL-PATH" ) + "/shared/daomake/packages/", "FindDaoSys.dao" );
+project.Install( daovm.GetPath( "INSTALL-PATH" ) + "/shared/daomake/packages/", findpkg );
