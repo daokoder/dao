@@ -422,7 +422,7 @@ static void DaoxStream_WriteEntryName( DaoxStream *self, DString *name )
 		self->last = name->mbs[name->size-1];
 	}else{
 		DaoxStream_SetColor( self, "blue", NULL );
-		DaoxStream_WriteMBS( self, name->mbs );
+		DaoxStream_WriteString( self, name );
 		DaoxStream_SetColor( self, NULL, NULL );
 	}
 }
@@ -473,14 +473,14 @@ static void DaoxStream_WriteLink( DaoxStream *self, DString *link, int offset, i
 		}else{
 			DString_AppendMBS( self->output, name->mbs );
 			DaoxStream_WriteChar( self, '(' );
-			DaoxStream_WriteMBS( self, addr->mbs );
+			DaoxStream_WriteString( self, addr );
 			DaoxStream_WriteChar( self, ')' );
 		}
 		self->offset += name->size;
 		self->last = name->mbs[name->size-1];
 	}else{
 		DaoxStream_SetColor( self, "blue", NULL );
-		DaoxStream_WriteMBS( self, name->mbs );
+		DaoxStream_WriteString( self, name );
 		DaoxStream_SetColor( self, NULL, NULL );
 		DaoxStream_WriteChar( self, '(' );
 		DaoxStream_SetColor( self, "cyan", NULL );
@@ -2059,7 +2059,7 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 	}
 	DString_AppendMBS( fname, ".html" );
 	DString_Reset( stream->output, 0 );
-	DString_AppendMBS( stream->output, "\n<pre style=\"font-family: courier; font-weight:500\">\n" );
+	DString_AppendMBS( stream->output, "\n<pre style=\"font-family: monospace; font-weight: bold;\">\n" );
 	if( self->parent ){
 		DaoxHelpEntry_Print( self, stream, stream->process );
 	}else{
@@ -2069,7 +2069,8 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 	fout = fopen( fname->mbs, "w+" );
 	if( fout == NULL ) fout = stdout;
 	fprintf( fout, "<!DOCTYPE html><html><head>\n<title>Dao Help: %s</title>\n", title );
-	fprintf( fout, "<meta charset=\"utf-8\"/>\n</head>\n<body>%s", stream->output->mbs );
+	fprintf( fout, "<meta charset=\"utf-8\"/>\n</head>\n<body>" );
+	DaoFile_WriteString( fout, stream->output );
 	if( fout != stdout ) fclose( fout );
 
 	for(i=0; i<self->nested2->size; i++){
@@ -2083,7 +2084,9 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 	}
 	fout = fopen( fname->mbs, "a+" );
 	if( fout == NULL ) fout = stdout;
-	fprintf( fout, "\n<pre style=\"font-weight:500\">\n%s</pre>\n</body>\n</html>", stream->output->mbs );
+	fprintf( fout, "\n<pre style=\"font-weight:500\">\n" );
+	DaoFile_WriteString( fout, stream->output );
+	fprintf( fout, "\n</pre>\n</body>\n</html>" );
 	if( fout != stdout ) fclose( fout );
 }
 static void HELP_Export( DaoProcess *proc, DaoValue *p[], int N )

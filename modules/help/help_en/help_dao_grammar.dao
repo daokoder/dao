@@ -935,18 +935,14 @@ Declaration Statements
 @[subsection]
 
 @[code(syntax)]
-ConstSpecifier ::= 'const' | 'global' 'const' | 'const' 'global'
-VarSpecifier   ::= 'var' | 'global' | 'static'
+ConstStatic    ::= 'const' | 'global' 'const' | 'const' 'global' | 'static'
+VarGlobal      ::= 'var' | 'global'
+IdentifierList ::= Identifier {',' Identifier }
 
-ConstDeclItem ::= Identifier [ ( '=' | ':' Type '=' ) ConstExpression ]
-VarDeclItem   ::= Identifier [ ( '=' | ':' Type '=' ) Expression ]
+ConstStaticDecl ::= ConstStatic IdentifierList [ ':' Type ] [ '=' ConstExpression ]
+VarGlobalDecl   ::= VarGlobal   IdentifierList [ ':' Type ] [ '=' Expression ]
 
-ConstDeclaration    ::= ConstSpecifier ConstDeclItem { ',' ConstDeclItem }
-VarDeclaration      ::= VarSpecifier   VarDeclItem   { ',' VarDeclItem }
-
-LocalVarDeclaration ::= [ 'var' ] VarDeclItem { ',' VarDeclItem }
-
-DeclarationStmt ::= ConstDeclaration | VarDeclaration
+DeclarationStmt ::= ConstStaticDecl | VarGlobalDecl
 @[code(syntax)]
 
 

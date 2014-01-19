@@ -395,6 +395,15 @@ static void DMBString_AppendWCS( DString *self, const wchar_t *chs, daoint len )
 			continue;
 		}
 		while( next < end && *next != L'\0' ) next += 1;
+#ifdef WIN32
+		smin = WideCharToMultiByte( CP_UTF8, 0, chs, -1, self->mbs + self->size, self->bufSize - self->size, NULL, 0 );
+		if( smin > 0 ){
+			self->size += smin-1;
+			chs = next;
+		}else{
+			chs += 1;
+		}
+#else
 		memset( & state, 0, sizeof(mbstate_t) );
 		smin = wcsrtombs( self->mbs + self->size, (const wchar_t**)& chs, self->bufSize - self->size, & state );
 		if( smin > 0 ){
@@ -403,6 +412,7 @@ static void DMBString_AppendWCS( DString *self, const wchar_t *chs, daoint len )
 			chs += 1;
 		}
 		if( chs == NULL ) chs = next;
+#endif
 	}
 	self->mbs[ self->size ] = 0;
 	DString_Reset( self, self->size );
@@ -432,6 +442,15 @@ static void DWCString_AppendMBS( DString *self, const char *chs, daoint len )
 			continue;
 		}
 		while( next < end && *next != '\0' ) next += 1;
+#ifdef WIN32
+		smin = MultiByteToWideChar( CP_UTF8, 0, chs, -1, self->wcs + self->size, self->bufSize - self->size );
+		if( smin > 0 ){
+			self->size += smin-1;
+			chs = next;
+		}else{
+			chs += 1;
+		}
+#else
 		memset( & state, 0, sizeof(mbstate_t) );
 		smin = mbsrtowcs( self->wcs + self->size, (const char**)& chs, self->bufSize - self->size, & state );
 		if( smin > 0 ){
@@ -440,6 +459,7 @@ static void DWCString_AppendMBS( DString *self, const char *chs, daoint len )
 			chs += 1;
 		}
 		if( chs == NULL ) chs = next;
+#endif
 	}
 	self->wcs[ self->size ] = 0;
 	DString_Reset( self, self->size );
