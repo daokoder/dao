@@ -12,7 +12,7 @@ project_dll  = project.AddSharedLibrary( "dao_serializer", project_objs )
 project_lib  = project.AddStaticLibrary( "dao_serializer", project_objs )
 
 
-findpkg = DaoMake::MakePath( DaoMake::BinaryPath(), "FindDaoSerializer.dao" );
+findpkg = DaoMake::MakePath( project.BinaryPath(), "FindDaoSerializer.dao" );
 project.GenerateFinder( $TRUE );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_lib );

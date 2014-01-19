@@ -205,7 +205,7 @@ daomake_pkg_path = DaoMake::MakePath( daovm.GetPath( "INSTALL-PATH" ), "shared/d
 daovm.Install( daovm_bin_path, daovm_exe )
 daovm.Install( daovm_lib_path, daovm_dll, daovm_lib )
 daovm.Install( daovm_inc_path, daovm_kernel_headers )
-daovm.Install( daomake_pkg_path, DaoMake::MakePath( DaoMake::BinaryPath(), "FindDao.dao" ) );
+daovm.Install( daomake_pkg_path, DaoMake::MakePath( daovm.BinaryPath(), "FindDao.dao" ) );
 
 
 
