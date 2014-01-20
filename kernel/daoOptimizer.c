@@ -2314,11 +2314,10 @@ enum DaoTypingErrorCode
 	DTE_FIELD_NOT_PERMIT ,
 	DTE_FIELD_NOT_EXIST ,
 	DTE_FIELD_OF_INSTANCE ,
+	DTE_INVALID_ENUMERATION ,
 	DTE_ITEM_WRONG_ACCESS ,
 	DTE_INDEX_NOT_VALID ,
-	DTE_INDEX_WRONG_TYPE ,
 	DTE_KEY_NOT_VALID ,
-	DTE_KEY_WRONG_TYPE ,
 	DTE_OPERATION_NOT_VALID ,
 	DTE_PARAM_ERROR ,
 	DTE_PARAM_WRONG_NUMBER ,
@@ -2342,11 +2341,10 @@ static const char*const DaoTypingErrorString[] =
 	"Member not permitted",
 	"Member not exist",
 	"Need class instance",
+	"Invalid enumeration" ,
 	"Invalid index/key access",
 	"Invalid index access",
-	"Invalid index type",
 	"Invalid key acess",
-	"Invalid key type",
 	"Invalid operation on the type",
 	"Invalid parameters for the call",
 	"Invalid number of parameter",
@@ -4819,7 +4817,7 @@ NotExist_TryAux:
 					klass = & at->aux->xClass;
 					if( !(klass->attribs & DAO_CLS_AUTO_INITOR) ) goto InvOper;
 					if( klass->attribs & (DAO_CLS_PRIVATE_VAR|DAO_CLS_PROTECTED_VAR) ) goto InvOper;
-					if( opb >= klass->instvars->size ) goto InvOper;
+					if( opb >= klass->instvars->size ) goto InvEnum;
 					str = klass->className;
 					ct = klass->objType;
 					if( code == DVM_MPACK ){
@@ -4829,10 +4827,10 @@ NotExist_TryAux:
 					for(j=1; j<=opb; j++){
 						int id = j;
 						bt = types[opa+j];
-						if( bt == NULL ) goto ErrorTyping;
+						if( bt == NULL ) goto InvEnum;
 						if( bt->tid == DAO_PAR_NAMED ){
 							id = DaoClass_GetDataIndex( klass, bt->fname );
-							if( LOOKUP_ST( id ) != DAO_OBJECT_VARIABLE ) goto InvField;
+							if( LOOKUP_ST( id ) != DAO_OBJECT_VARIABLE ) goto InvEnum;
 							bt = & bt->aux->xType;
 							id = LOOKUP_ID( id );
 						}
@@ -4845,14 +4843,14 @@ NotExist_TryAux:
 						opa += 1;
 						opb -= 1;
 					}
-					if( at->nested->size != opb ) goto NotMatch;
+					if( at->nested->size != opb ) goto InvEnum;
 					for(j=1; j<=opb; j++){
 						bt = types[opa+j];
 						if( bt == NULL ) goto ErrorTyping;
 						if( bt->tid == DAO_PAR_NAMED ){
-							if( at->mapNames == NULL ) goto InvField;
+							if( at->mapNames == NULL ) goto InvEnum;
 							node = MAP_Find( at->mapNames, bt->fname );
-							if( node == NULL || node->value.pInt != j-1 ) goto InvField;
+							if( node == NULL || node->value.pInt != j-1 ) goto InvEnum;
 							bt = & bt->aux->xType;
 						}
 						tt = at->nested->items.pType[j-1];
@@ -6056,6 +6054,7 @@ NotExist : return DaoInferencer_Error( self, DTE_FIELD_NOT_EXIST );
 NeedInstVar : return DaoInferencer_Error( self, DTE_FIELD_OF_INSTANCE );
 WrongContainer : return DaoInferencer_Error( self, DTE_TYPE_WRONG_CONTAINER );
 ModifyConstant: return DaoInferencer_Error( self, DTE_CONST_WRONG_MODIFYING );
+InvEnum: return DaoInferencer_Error( self, DTE_INVALID_ENUMERATION );
 InvIndex : return DaoInferencer_Error( self, DTE_INDEX_NOT_VALID );
 InvKey : return DaoInferencer_Error( self, DTE_KEY_NOT_VALID );
 InvField : return DaoInferencer_Error( self, DTE_KEY_NOT_VALID );

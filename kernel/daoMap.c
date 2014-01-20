@@ -115,7 +115,7 @@ DMap* DHash_New( short kt, short vt )
 	return self;
 }
 
-unsigned int MurmurHash2 ( const void * key, int len, unsigned int seed );
+unsigned int MurmurHash3( const void * key, int len, unsigned int seed );
 
 static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max, unsigned int seed )
 {
@@ -168,7 +168,7 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max, u
 		break;
 	default : data = & self; len = sizeof(DaoValue*); break;
 	}
-	if( data ) hash = MurmurHash2( data, len, seed );
+	if( data ) hash = MurmurHash3( data, len, seed );
 	if( id == id2 && id < max ){
 		buf[id] = hash;
 		id += 1;
@@ -198,7 +198,7 @@ static int DHash_HashIndex( DMap *self, void *key )
 			data = s->wcs;
 			m *= sizeof(wchar_t);
 		}
-		id = MurmurHash2( data, m, self->hashing ) % T;
+		id = MurmurHash3( data, m, self->hashing ) % T;
 		break;
 	case D_VALUE :
 	case D_VALUE2 :
@@ -207,25 +207,25 @@ static int DHash_HashIndex( DMap *self, void *key )
 		if( m ==1 ){
 			id = buf[0] % T;
 		}else{
-			id = MurmurHash2( buf, m*sizeof(unsigned int), self->hashing ) % T;
+			id = MurmurHash3( buf, m*sizeof(unsigned int), self->hashing ) % T;
 		}
 		break;
 	case D_ARRAY :
 		array = (DArray*)key;
 		m = array->size * sizeof(void*);
-		id = MurmurHash2( array->items.pVoid, m, self->hashing ) % T;
+		id = MurmurHash3( array->items.pVoid, m, self->hashing ) % T;
 		break;
 	case D_VOID2 :
-		id = MurmurHash2( key, 2*sizeof(void*), self->hashing ) % T;
+		id = MurmurHash3( key, 2*sizeof(void*), self->hashing ) % T;
 		break;
 	case D_VMCODE :
-		id = MurmurHash2( key, 4*sizeof(unsigned short), self->hashing ) % T;
+		id = MurmurHash3( key, 4*sizeof(unsigned short), self->hashing ) % T;
 		break;
 	case D_VMCODE2 :
-		id = MurmurHash2( key, 3*sizeof(unsigned short), self->hashing ) % T;
+		id = MurmurHash3( key, 3*sizeof(unsigned short), self->hashing ) % T;
 		break;
 	default :
-		id = MurmurHash2( & key, sizeof(void*), self->hashing ) % T;
+		id = MurmurHash3( & key, sizeof(void*), self->hashing ) % T;
 		break;
 	}
 	return (int)id;
@@ -893,68 +893,53 @@ DNode* DMap_Next( DMap *self, DNode *node )
 
 
 /*
+//  MurmurHash3, by Austin Appleby
 //  PUBLIC DOMAIN CODES
 //  http://sites.google.com/site/murmurhash/
+//  http://code.google.com/p/smhasher/
 //  http://www.burtleburtle.net/bob/hash/doobs.html
 */
 
-/*
-//  MurmurHash2, by Austin Appleby
-//
-//  Note - This code makes a few assumptions about how your machine behaves -
-//  1. We can read a 4-byte value from any address without crashing
-//  2. sizeof(int) == 4
-//
-//  And it has a few limitations -
-//  1. It will not work incrementally.
-//  2. It will not produce the same results on little-endian and big-endian
-//  machines.
-*/
-unsigned int MurmurHash2 ( const void * key, int len, unsigned int seed )
+#define ROTL32(x,r) ((x << r) | (x >> (32 - r)))
+
+unsigned int MurmurHash3( const void *key, int len, unsigned int seed )
 {
-	/*
-	// 'm' and 'r' are mixing constants generated offline.
-	// They're not really 'magic', they just happen to work well.
-	*/
-	const unsigned int m = 0x5bd1e995;
-	const int r = 24;
+	const int nblocks = len / 4;
+	const uchar_t *data = (const uchar_t*)key;
+	const uchar_t *tail = (const uchar_t*)(data + nblocks*4);
+	const uint_t *blocks = (const uint_t *)(data + nblocks*4);
+	const uint_t c1 = 0xcc9e2d51;
+	const uint_t c2 = 0x1b873593;
+	uint_t h1 = seed;
+	uint_t k1 = 0;
+	int i;
 
-	/* Initialize the hash to a 'random' value */
-	unsigned int h = seed ^ len;
+	/* body: */
+	for(i = -nblocks; i; i++){
+		k1 = blocks[i];
 
-	/* Mix 4 bytes at a time into the hash */
-	const unsigned char * data = (const unsigned char *)key;
+		k1 *= c1;
+		k1 = ROTL32(k1,15);
+		k1 *= c2;
 
-	while(len >= 4) {
-		unsigned int k = *(unsigned int *)data;
-
-		k *= m;
-		k ^= k >> r;
-		k *= m;
-
-		h *= m;
-		h ^= k;
-
-		data += 4;
-		len -= 4;
+		h1 ^= k1;
+		h1 = ROTL32(h1,13); 
+		h1 = h1*5+0xe6546b64;
 	}
 
-	/* Handle the last few bytes of the input array */
-	switch(len)
-	{
-	case 3: h ^= data[2] << 16;
-	case 2: h ^= data[1] << 8;
-	case 1: h ^= data[0];
-			h *= m;
-	};
+	/* tail: */
+	switch(len & 3){
+	case 3: k1 ^= tail[2] << 16;
+	case 2: k1 ^= tail[1] << 8;
+	case 1: k1 ^= tail[0]; k1 *= c1; k1 = ROTL32(k1,15); k1 *= c2; h1 ^= k1;
+	}
 
-	/*
-	// Do a few final mixes of the hash to ensure the last few
-	// bytes are well-incorporated.
-	*/
-	h ^= h >> 13;
-	h *= m;
-	h ^= h >> 15;
-
-	return h;
+	/* finalization: */
+	h1 ^= len;
+	h1 ^= h1 >> 16;
+	h1 *= 0x85ebca6b;
+	h1 ^= h1 >> 13;
+	h1 *= 0xc2b2ae35;
+	h1 ^= h1 >> 16;
+	return h1;
 }

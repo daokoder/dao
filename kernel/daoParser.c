@@ -3599,7 +3599,7 @@ static void DaoParser_CheckStatementSeparation( DaoParser *self, int check, int 
 	switch( tokens[check+1]->name ){
 	case DTOK_RCB : case DTOK_SEMCO : case DKEY_ELSE : break;
 	case DKEY_WHILE : if( close && close->a == DKEY_WHILE ) break; /* else fall through; */
-	default : DaoParser_Warn( self, DAO_WARN_STATEMENT_SEPERATION, NULL );
+	default : DaoParser_Warn( self, DAO_WARN_STATEMENT_SEPERATION, NULL ); break;
 	}
 }
 static int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, int st, int st2 );
@@ -4274,10 +4274,9 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 		ptok = tokens[k];
 	}
 	lastok = ptok;
-	if( ptok->name == DTOK_ASSN && self->toks->size == nameStart + 1 ){
+	if( explicit_store == 0 && ptok->name == DTOK_ASSN && self->toks->size == nameStart+1 ){
 		DaoToken *varTok = self->toks->items.pToken[nameStart];
-		int reg = DaoParser_GetRegister( self, varTok );
-		expression = explicit_store == 0 && reg >= 0;
+		expression = DaoParser_GetRegister( self, varTok ) >= 0;
 	}
 	if( expression ){
 		if( explicit_store ){
@@ -4346,6 +4345,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 
 	reg = enode.reg;
 	cst = enode.konst;
+	start = end = self->curToken;
 	if( cst == 0 && (store & DAO_DECL_CONST) ){
 		DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, start + 1, end, 0 );
 		return -1;
@@ -4950,10 +4950,8 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	DaoNamespace *mod = NULL, *nameSpace = self->nameSpace;
 	DaoRoutine *mainRout = nameSpace->mainRoutine;
 	DaoVmSpace *vmSpace = self->vmSpace;
-	DaoClass *hostClass = self->hostClass;
 	DaoToken **tokens = self->tokens->items.pToken;
 	DString *modname = NULL;
-	DaoValue *value;
 	int i = start+1, j, code = 0, cyclic = 0;
 	int perm = self->permission;
 	unsigned char tki;
