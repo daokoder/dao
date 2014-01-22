@@ -4279,6 +4279,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 		expression = DaoParser_GetRegister( self, varTok ) >= 0;
 	}
 	if( expression ){
+		DArray_Erase( self->toks, nameStart, self->toks->size - nameStart );
 		if( explicit_store ){
 			DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
 			return -1;
