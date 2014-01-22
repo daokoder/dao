@@ -1359,8 +1359,8 @@ static void DaoSTR_Fetch( DaoProcess *proc, DaoValue *p[], int N )
 	DString_Clear( pt ); /* passed in by value; */
 	if( start < 0 ) start += self->size;
 	if( end < 0 ) end += self->size;
+	if( end == 0 ) end = DString_Size( self ) - 1;
 	if( (patt == NULL) | (start < 0) | (end < 0) ) goto Done;
-	if( end == 0 ) end = DString_Size( self );
 	if( DaoRegex_Match( patt, self, & start, & end ) ){
 		matched = 1;
 		if( group > 0 && DaoRegex_SubMatch( patt, group, & start, & end ) ==0 ) matched = 0;
@@ -1381,8 +1381,8 @@ static void DaoSTR_Match( DaoProcess *proc, DaoValue *p[], int N )
 
 	if( start < 0 ) start += self->size;
 	if( end < 0 ) end += self->size;
+	if( end == 0 ) end = DString_Size( self ) - 1;
 	if( (patt == NULL) | (start < 0) | (end < 0) ) goto Done;
-	if( end == 0 ) end = DString_Size( self );
 	if( DaoRegex_Match( patt, self, & start, & end ) ){
 		matched = 1;
 		if( group > 0 && DaoRegex_SubMatch( patt, group, & start, & end ) ==0 ) matched = 0;
@@ -1408,6 +1408,7 @@ static void DaoSTR_Change( DaoProcess *proc, DaoValue *p[], int N )
 	daoint n, size = self->size;
 	if( start < 0 ) start += self->size;
 	if( end < 0 ) end += self->size;
+	if( end == 0 ) end = DString_Size( self ) - 1;
 	if( (patt == NULL) | (start < 0) | (end < 0) ) return;
 	n = DaoRegex_ChangeExt( patt, self, str, index, & start, & end );
 	DaoProcess_PutInteger( proc, n );
@@ -1425,14 +1426,14 @@ static void DaoSTR_Capture( DaoProcess *proc, DaoValue *p[], int N )
 
 	if( start < 0 ) start += self->size;
 	if( end < 0 ) end += self->size;
+	if( end == 0 ) end = DString_Size( self ) - 1;
 	if( (patt == NULL) | (start < 0) | (end < 0) ) return;
-	if( end == 0 ) end = DString_Size( self );
 	if( DaoRegex_Match( patt, self, & start, & end ) ==0 ) return;
 	subs = DaoString_New( pt->mbs != NULL );
 	for(gid=0; gid<=patt->group; ++gid){
 		DString_Clear( subs->data );
 		if( DaoRegex_SubMatch( patt, gid, & start, & end ) ){
-			DString_SubString( self, subs->data, end, end-start+1 );
+			DString_SubString( self, subs->data, start, end-start+1 );
 		}
 		DArray_Append( & list->items, (DaoValue*) subs );
 	}
@@ -1448,12 +1449,13 @@ static void DaoSTR_Extract( DaoProcess *proc, DaoValue *p[], int N )
 	DaoRegex *patt = DaoProcess_MakeRegex( proc, pt, self->wcs ==NULL );
 	DaoString *subs;
 	
+	size = DString_Size( self );
 	start = offset = 0;
-	end = size = DString_Size( self );
+	end = size - 1;
 	if( size == 0 || patt == NULL ) return;
 	subs = DaoString_New( pt->mbs != NULL );
 	while( (matched = DaoRegex_Match( patt, self, & start, & end )) || done == 0 ){
-		if( matched == 0 ) start = end;
+		if( matched == 0 ) start = size;
 		if( type == 0 || type == 2 ){
 			if( start > offset ){
 				DString_SubString( self, subs->data, offset, start-offset );
@@ -1469,7 +1471,7 @@ static void DaoSTR_Extract( DaoProcess *proc, DaoValue *p[], int N )
 		}
 		done = matched == 0;
 		start = offset = end + 1;
-		end = size;
+		end = size - 1;
 	}
 	DaoString_Delete( subs );
 }
@@ -1490,6 +1492,7 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 
 	if( from < 0 ) from += self->size;
 	if( to < 0 ) to += self->size;
+	if( to == 0 ) to = DString_Size( self ) - 1;
 	if( (patt == NULL) | (sect == NULL) | (from < 0) | (to < 0) ) return;
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 
@@ -1497,11 +1500,10 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );
 
-	if( to == 0 ) to = DString_Size( self );
 	start = offset = from;
 	end = to;
 	while( (matched = DaoRegex_Match( patt, self, & start, & end )) || done == 0 ){
-		if( matched == 0 ) start = end;
+		if( matched == 0 ) start = to + 1;
 		if( start > offset ){
 			startpos.value = offset;
 			endpos.value = start-1;
@@ -1692,7 +1694,7 @@ static DaoFuncItem stringMeths[] =
 #ifdef DAO_WITH_REGEX
 	{ DaoSTR_Fetch, "fetch( self :string, pt :string, group=0, start=0, end=0 )=>string" },
 	{ DaoSTR_Match, "match( self :string, pt :string, group=0, start=0, end=0 )=>tuple<start:int,end:int>|none" },
-	{ DaoSTR_Change,  "change( self :string, pt :string, s :string, index=0, start=0, end=0 )=>int" },
+	{ DaoSTR_Change, "change( self :string, pt :string, s :string, index=0, start=0, end=0 )=>int" },
 	{ DaoSTR_Capture, "capture( self :string, pt :string, start=0, end=0 )=>list<string>" },
 	{ DaoSTR_Extract, "extract( self :string, pt :string, mtype :enum<both,matched,unmatched>=$matched )=>list<string>" },
 	{ DaoSTR_Scan, "scan( self :string, pt :string, from=0, to=0 )[start:int,end:int,state:enum<unmatched,matched>=>@V|none] => list<@V>" },

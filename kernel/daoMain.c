@@ -56,7 +56,12 @@ static char* DaoReadLine( const char *s )
 static void DaoSignalHandler( int sig )
 {
 	DaoVmSpace_Stop( vmSpace, 1);
-	if( !(DaoVmSpace_GetOptions( vmSpace ) & DAO_OPTION_INTERUN) ) return;
+	if( !(DaoVmSpace_GetOptions( vmSpace ) & DAO_OPTION_INTERUN) ){
+		static count = 0;
+		if( count ) exit(1);
+		count += 1;
+		return;
+	}
 	if( readingline ){
 		printf( "\n" );
 #ifdef DAO_USE_READLINE
