@@ -550,7 +550,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 			DNode *it2 = MAP_Find( idmap, LOOKUP_BIND( st, 0, 0, id ) );
 			if( it2 ) id = LOOKUP_ID( it2->value.pInt ); /* map index; */
 		}
-		MAP_Insert( self->lookupTable, it->key.pString, LOOKUP_BIND( st, pm, up, id ) );
+		MAP_Insert( self->lookupTable, it->key.pString, LOOKUP_BIND( st, pm, up+1, id ) );
 		if( st != DAO_CLASS_CONSTANT ) continue;
 		cst = self->constants->items.pConst[id]->value;
 		if( cst->type != DAO_ROUTINE ) continue;

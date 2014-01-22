@@ -4577,7 +4577,7 @@ NotExist_TryAux:
 				DaoInferencer_UpdateType( self, opc, dao_type_int );
 				if( NoCheckingType( at ) || NoCheckingType( bt ) ) continue;
 				AssertTypeMatching( dao_type_int, types[opc], defs );
-				if( at->tid != bt->tid && ct->tid == DAO_INTEGER ){
+				if( at->tid != bt->tid && types[opc]->tid == DAO_INTEGER ){
 					vmc->code = DVM_DATA_I;
 					vmc->b = 0;
 				}

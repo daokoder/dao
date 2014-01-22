@@ -84,7 +84,4 @@ DAO_DLL int DaoRegex_Change( DaoRegex *self, DString *src, DString *target, int 
 DAO_DLL int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target,
 		int index, daoint *start2, daoint *end2 );
 
-DAO_DLL int DaoRegex_MatchAndPack( DaoRegex *self, DString *source, DString *target,
-		int index, int count, DArray *packs );
-
 #endif

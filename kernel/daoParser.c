@@ -4714,17 +4714,20 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 		}
 	}else if( storeType & DAO_DECL_MEMBER ){
 		if( self->hostClass ){
-			DaoClass *hostClass = self->hostClass;
+			DaoClass *klass = self->hostClass;
 			if( self->isClassBody ){
-				int ec = 0;
-				if( storeType & DAO_DECL_CONST ){
-					ec = DaoClass_AddConst( hostClass, name, dao_none_value, perm );
-				}else if( storeType & DAO_DECL_STATIC ){
-					ec = DaoClass_AddGlobalVar( hostClass, name, NULL, abtp, perm );
-				}else{
-					ec = DaoClass_AddObjectVar( hostClass, name, dao_none_value, abtp, perm );
+				DNode *it = DMap_Find( klass->lookupTable, name );
+				if( it != NULL && LOOKUP_UP( it->value.pInt ) == 0 ){
+					DaoParser_Error( self, DAO_CTW_WAS_DEFINED, name );
+					return;
 				}
-				if( ec == -DAO_CTW_WAS_DEFINED ) DaoParser_Error( self, -ec, name );
+				if( storeType & DAO_DECL_CONST ){
+					DaoClass_AddConst( klass, name, dao_none_value, perm );
+				}else if( storeType & DAO_DECL_STATIC ){
+					DaoClass_AddGlobalVar( klass, name, NULL, abtp, perm );
+				}else{
+					DaoClass_AddObjectVar( klass, name, dao_none_value, abtp, perm );
+				}
 			}else{
 				DaoParser_Error( self, DAO_VARIABLE_OUT_OF_CONTEXT, name );
 			}
