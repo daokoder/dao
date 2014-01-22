@@ -1697,7 +1697,11 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Change, "change( self :string, pt :string, s :string, index=0, start=0, end=0 )=>int" },
 	{ DaoSTR_Capture, "capture( self :string, pt :string, start=0, end=0 )=>list<string>" },
 	{ DaoSTR_Extract, "extract( self :string, pt :string, mtype :enum<both,matched,unmatched>=$matched )=>list<string>" },
-	{ DaoSTR_Scan, "scan( self :string, pt :string, from=0, to=0 )[start:int,end:int,state:enum<unmatched,matched>=>@V|none] => list<@V>" },
+	/*
+	// Use "none|@V" for the code section return, so that if "return none" is used first,
+	// it will not be specialized to "none|none", which is the case for "@V|none".
+	*/
+	{ DaoSTR_Scan, "scan( self :string, pt :string, from=0, to=0 )[start:int,end:int,state:enum<unmatched,matched>=>none|@V] => list<@V>" },
 #endif
 	{ DaoSTR_Tolower, "tolower( self :string ) =>string" },
 	{ DaoSTR_Toupper, "toupper( self :string ) =>string" },

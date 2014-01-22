@@ -494,10 +494,10 @@ routine ParseFunction( funcs : list<Function>, source='', host='', input='',
 attribs=FunctionTrait::FUNC_NONE, snamespace='' )
 {
 	excluded = 0;
-	if( % source.pfind( '(^|%W) operator %W' ) ) return;
-	if( % source.pfind( '(%w+) :: %~ %1 %s* %b()' ) ) excluded = 1;
-	if( % source.pfind( '%w+ %s* %< %s* [%s%w%*,:]+ %s* %>' ) ) excluded = 1; # template function
-	if( % source.pfind( '%b() %s* const' ) ) attribs += $FUNC_CONST;
+	if( source.match( '(^|%W) operator %W' ) != none ) return;
+	if( source.match( '(%w+) :: %~ %1 %s* %b()' ) != none ) excluded = 1;
+	if( source.match( '%w+ %s* %< %s* [%s%w%*,:]+ %s* %>' ) != none ) excluded = 1; # template function
+	if( source.match( '%b() %s* const' ) != none ) attribs += $FUNC_CONST;
 	source.change( '%s+', ' ' );
 	pat2 = '%s* ((virtual|)) ((%s+)) ( [^%(%)]* %b() [%s%w]* )';
 	tks = source.capture( pat2 );
@@ -512,23 +512,23 @@ attribs=FunctionTrait::FUNC_NONE, snamespace='' )
 	if( name.find( 'operator' ) >= 0 ) excluded = 1;
 	if( tks[6].find( 'NotImplemented' ) >= 0 ) excluded = 1;
 	if( % tks[2] ) return; # skip class::method()
-	if( % pars.pfind( '%] %s* %[' ) ) excluded = 1; # XXX skip a[][]
-	if( % pars.pfind( '%* %s* %w+ %s* %[' ) ){
+	if( pars.match( '%] %s* %[' ) != none ) excluded = 1; # XXX skip a[][]
+	if( pars.match( '%* %s* %w+ %s* %[' ) != none ){
 		pts = pars.extract( '(%w+) %* %s* %w+ %s* %[' );
-		for( pt in pts ) if( pt.pfind( '(short|int|float|double)' ).size()==0 ) excluded = 1;
+		for( pt in pts ) if( pt.match( '(short|int|float|double)' ) == none ) excluded = 1;
 		#return; # XXX skip *a[]
 	}
-	if( % pars.pfind( 'const %s+ (short|int|long|float|double) %s* %*%* %s* %w+' ) ) excluded = 1;
+	if( pars.match( 'const %s+ (short|int|long|float|double) %s* %*%* %s* %w+' ) != none ) excluded = 1;
 	#if( pars.pfind( '(char|wchar_t) %s* %*%* %s* %w+' ) ) excluded = 1;
-	if( % pars.pfind( '%) %s* %(' ) || % pars.pfind( '%W ((%s*)) %(' ) || % ret.pfind( 'template' ) ){
+	if( pars.match( '%) %s* %(' ) != none || pars.match( '%W ((%s*)) %(' ) != none || ret.match( 'template' ) != none ){
 		log_file.writeln( source );
 		excluded = 1;
 	}
-	if( name != host && ret.pfind( '%w' ).size()==0 ){
+	if( name != host && ret.match( '%w' ) == none ){
 		log_file.writeln( source );
 		excluded = 1;
 	}
-	if( % source.pfind( '(short|int|long|float|double) %s* %* %s* %*' ) ){
+	if( source.match( '(short|int|long|float|double) %s* %* %s* %*' ) != none ){
 		log_file.writeln( source );
 		excluded = 1;
 	}
@@ -536,16 +536,16 @@ attribs=FunctionTrait::FUNC_NONE, snamespace='' )
 	#if( pars.pfind( '= %s* ([:%w]+) %s* %b()' ) ) excluded = 1;
 	parts = pars.extract( pat_type );
 	pars.change( pat_type, '' );
-	if( pars.pfind( '%( [,%s]* %)' ).size() ==0 ){
+	if( pars.match( '%( [,%s]* %)' ) == none ){
 		log_file.writeln( source );
 		excluded = 1;
 	}
-	if( % source.pfind( 'typedef %s' ) ){
+	if( source.match( 'typedef %s' ) != none ){
 		log_file.writeln( source );
 		return;
 	}
 	for( part in parts ){
-		if( % part.pfind( '%* %s* %*' ) ){
+		if( part.match( '%* %s* %*' ) != none ){
 			#log_file.writeln( source );
 			#return;
 		}
@@ -559,11 +559,11 @@ attribs=FunctionTrait::FUNC_NONE, snamespace='' )
 	func.excluded = excluded;
 	func.snamespace = snamespace;
 	
-	if( % ret.pfind( '^ %s* virtual %s+' ) ){
+	if( ret.match( '^ %s* virtual %s+' ) != none ){
 		func.attribs += $FUNC_VIRTUAL;
 		if( % tks[5] ) func.attribs += $FUNC_PURE_VIRTUAL;
 		ret.change( '^ %s* virtual %s+', '' );
-	}else if( % ret.pfind( '^ %s* static %s+' ) ){
+	}else if( ret.match( '^ %s* static %s+' ) != none ){
 		func.attribs += $FUNC_STATIC;
 		ret.change( '^ %s* static %s+', '' );
 	}else if( host == name ){
@@ -595,8 +595,8 @@ attribs=FunctionTrait::FUNC_NONE, snamespace='' )
 				vo.square = '[]';
 				vo.sqsizes.append( '0' );
 			}
-			hint = var2.name.pfind( '<I>^ (n|m|size|count|length) $' ).size();
-			if( vo.refer == '' && vo.square == '[]' && hint ){
+			hint = var2.name.match( '<I>^ (n|m|size|count|length) $' );
+			if( vo.refer == '' && vo.square == '[]' && hint != none ){
 				vo.sqsizes[0] = var2.name;
 			}
 		}
@@ -630,25 +630,25 @@ routine UserType::Parse( source='', inExtFile=0 )
 	parts = source.extract( '(private|protected|public|Q_SIGNALS)%s*(Q_SLOTS|)%s*:', $both );
 	perm = isStruct==0 ? 0 : 2;
 	for( part in parts ){
-		if( % part.pfind( ' ^ private %s* : $' ) ){
+		if( part.match( ' ^ private %s* : $' ) != none ){
 			perm = 0;
 			skip;
-		}else if( % part.pfind( ' ^ protected %s* : $' ) ){
+		}else if( part.match( ' ^ protected %s* : $' ) != none ){
 			perm = 1;
 			skip;
-		}else if( % part.pfind( ' ^ public %s* : $' ) ){
+		}else if( part.match( ' ^ public %s* : $' ) != none ){
 			perm = 2;
 			skip;
-		}else if( % part.pfind( ' ^ private %s+ Q_SLOTS %s* : $' ) ){
+		}else if( part.match( ' ^ private %s+ Q_SLOTS %s* : $' ) != none ){
 			perm = 0;
 			skip;
-		}else if( % part.pfind( ' ^ protected %s+ Q_SLOTS %s* : $' ) ){
+		}else if( part.match( ' ^ protected %s+ Q_SLOTS %s* : $' ) != none ){
 			perm = 3;
 			skip;
-		}else if( % part.pfind( ' ^ public %s+ Q_SLOTS %s* : $' ) ){
+		}else if( part.match( ' ^ public %s+ Q_SLOTS %s* : $' ) != none ){
 			perm = 4;
 			skip;
-		}else if( % part.pfind( ' ^ Q_SIGNALS %s* : $' ) ){
+		}else if( part.match( ' ^ Q_SIGNALS %s* : $' ) != none ){
 			perm = 5;
 			skip;
 		}
@@ -732,13 +732,13 @@ routine UserType::Parse( source='', inExtFile=0 )
 		}
 		for( part in parts ){
 			ispure = 0;
-			if( % part.pfind( '= %s* 0 %s*;' ) ){
+			if( part.match( '= %s* 0 %s*;' ) != none ){
 				ispure = 1;
 				isPureVirt = 1;
 				hasVirtual = 1;
 				if( i == 0 ) noWrapping = 1;
 			}
-			if( part.pfind( 'virtual ? %s* %~ %s* %w+' ).size() ){
+			if( part.match( 'virtual ? %s* %~ %s* %w+' ) != none ){
 				noDestructor = (i != 2);
 				if( ispure ) noWrapping = 1;
 				skip; # XXX
@@ -807,16 +807,16 @@ routine UserType::Parse( source='', inExtFile=0 )
 			for( part in parts ){
 				hasMember = 1; # XXX
 				varname = '';
-				if( % part.pfind( '%b<>' ) ) skip; # template class
-				if( % part.pfind( ': %s* %d+' ) ) skip; # bit field
-				if( % part.pfind( '%* %s* %*' ) ) skip; # type **name;
-				if( % part.pfind( '%] %s* %[' ) ) skip; # type name[][];
-				if( % part.pfind( '(class|struct|union) %s+ %w+ %s*' ) ){
+				if( part.match( '%b<>' ) != none ) skip; # template class
+				if( part.match( ': %s* %d+' ) != none ) skip; # bit field
+				if( part.match( '%* %s* %*' ) != none ) skip; # type **name;
+				if( part.match( '%] %s* %[' ) != none ) skip; # type name[][];
+				if( part.match( '(class|struct|union) %s+ %w+ %s*' ) != none ){
 					tmp = part.capture( '(class|struct|union) %s+ (%w+) %s*' )
 					ParseCode( 'typedef ' + tmp[1] + ' ' + tmp[2] + ' ' + tmp[2] + ';', name );
 					skip;
 				}
-				if( % part.pfind( 'typedef %s+ %w+ %s*' ) ) skip;
+				if( part.match( 'typedef %s+ %w+ %s*' ) != none ) skip;
 				tks = part.capture( '^ %s* ( %w+ ) %s* $' ); # int x, y;
 				if( tks.size() && prevar.size() ){
 					varname = tks[1];
@@ -826,7 +826,7 @@ routine UserType::Parse( source='', inExtFile=0 )
 				vo = Variable( part, INDEX_FIELD, src );
 				vo.host = name;
 				vo.Parse( input_file );
-				if( vo.typename.pfind( 'struct %s+' ).size() and not map_user_types.has( vo.typename ) ) skip;
+				if( vo.typename.match( 'struct %s+' ) != none and not map_user_types.has( vo.typename ) ) skip;
 				if( vo.refer == '*' && vo.square.size() ) skip;
 				if( % varname ) vo.name = varname;
 				fields.append( vo );
@@ -866,15 +866,15 @@ routine UserType::Parse( source='', inExtFile=0 )
 	}
 	tt = '%W' + name + '%s* %( %s* %)';
 	# private constructor:
-	if( % psources[0].pfind( tt ) ) hasPrivConstr = 1;
+	if( psources[0].match( tt ) != none ) hasPrivConstr = 1;
 	# protected constructor:
-	if( % psources[1].pfind( tt ) ) hasProtConstr = 1;
-	if( hasPrivConstr and psources[2].pfind( tt ).size() ==0 ) noWrapping = 1;
+	if( psources[1].match( tt ) != none ) hasProtConstr = 1;
+	if( hasPrivConstr and psources[2].match( tt ) == none ) noWrapping = 1;
 	# private/protected constructor:
 	temp = name + '%s* %( %s* (const %s+|)' + name + '%s* %& %s* %w* %)';
-	if( % psources[0].pfind( temp ) ) noCopyConstructor = 1;
-	if( % psources[1].pfind( temp ) ) noCopyConstructor = 1;
-	if( % psources[2].pfind( temp ) ) copyConstructor = 1;
+	if( psources[0].match( temp ) != none ) noCopyConstructor = 1;
+	if( psources[1].match( temp ) != none ) noCopyConstructor = 1;
+	if( psources[2].match( temp ) != none ) copyConstructor = 1;
 	
 	source.change( '[%{%}%;]', '' );
 	source.trim();
@@ -888,6 +888,16 @@ enum PatternType{
 	pat_struct, pat_struct2, pat_enum, pat_typedef, pat_enum2, pat_usercst, pat_funct
 };
 
+routine ExtractPatterns( self :string, pattern :string, ptype :PatternType )
+{
+	blank = ';'[0];
+	return self.scan( pattern ){ [start,end,state]
+		if( state == $unmatched ) return none;
+		codes = self[ start : end ];
+		self[ start : end ] = blank;
+		return (ptype, start, codes );
+	}
+}
 routine ParseCode( source : string, snamespace='', lang='', fname : string='', inExtFile=0  )
 {
 	ns_utp : UserType;
@@ -902,48 +912,14 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 
 	blank = ';'[0];
 	allpats : list<tuple<PatternType,int,string>> = {};
-	mlist = source.pfind( pat_struct );
-	for( it in mlist ){
-		codes = source[ it.start : it.end ];
-		source[ it.start : it.end ] = blank;
-		allpats.append( ($pat_struct, it.start, codes ) );
-	}
-	mlist = source.pfind( pat_struct2 );
-	for( it in mlist ){
-		codes = source[ it.start : it.end ];
-		source[ it.start : it.end ] = blank;
-		allpats.append( ($pat_struct2, it.start, codes ) );
-	}
-	mlist = source.pfind( pat_enum );
-	for( it in mlist ){
-		codes = source[ it.start : it.end ];
-		source[ it.start : it.end ] = blank;
-		allpats.append( ($pat_enum, it.start, codes ) );
-	}
-	mlist = source.pfind( pat_typedef );
-	for( it in mlist ){
-		codes = source[ it.start : it.end ];
-		source[ it.start : it.end ] = blank;
-		allpats.append( ($pat_typedef, it.start, codes ) );
-	}
-	mlist = source.pfind( pat_enum2 );
-	for( it in mlist ){
-		codes = source[ it.start : it.end ];
-		source[ it.start : it.end ] = blank;
-		allpats.append( ($pat_enum2, it.start, codes ) );
-	}
-	mlist = source.pfind( pat_usercst );
-	for( it in mlist ){
-		codes = source[ it.start : it.end ];
-		source[ it.start : it.end ] = blank;
-		allpats.append( ($pat_usercst, it.start, codes ) );
-	}
-	mlist = source.pfind( pat_funct );
-	for( it in mlist ){
-		codes = source[ it.start : it.end ];
-		source[ it.start : it.end ] = blank;
-		allpats.append( ($pat_funct, it.start, codes ) );
-	}
+	allpats += source.ExtractPatterns( pat_struct, $pat_struct );
+	allpats += source.ExtractPatterns( pat_struct2, $pat_struct2 );
+	allpats += source.ExtractPatterns( pat_enum, $pat_enum );
+	allpats += source.ExtractPatterns( pat_typedef, $pat_typedef );
+	allpats += source.ExtractPatterns( pat_enum2, $pat_enum2 );
+	allpats += source.ExtractPatterns( pat_usercst, $pat_usercst );
+	allpats += source.ExtractPatterns( pat_funct, $pat_funct );
+
 	source.change( ';%s*;[;%s]+', ';' );
 
 	allpats.sort{ X[1] < Y[1] };
@@ -1066,7 +1042,7 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 			 if( % snamespace ) otherClassTypedef[ scoped ] = ns_utp.classTypedef[ alias ];
 			 if( tks[2] == '*' ) pointer_types[ alias ] = name;
 			 if( pointer_types.has( name ) ) pointer_types[ alias ] = pointer_types[name];
-			 if( % name.pfind( '(struct|union)' ) ){
+			 if( name.match( '(struct|union)' ) != none ){
 				 map_user_types[ name ] = UserType::{ name => alias, input_file => fname };;
 				 map_user_types[ alias ] = map_user_types[ name ];
 				 if( tks[2] == '*' ) pointer_types[ alias ] = alias;
@@ -1133,9 +1109,9 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 		while( k ){
 			if( pat[0].find( '%B{ # %s* if' ) == 0 and pat[1] == '' ){
 				sb = source.match( pat[0] );
-				while( sb.start >=0 ){
+				while( sb != none ){
 					sb2 = source.match( patder, sb.start + 3, sb.end );
-					if( sb2.start <0 ) break;
+					if( sb2 == none ) break;
 					sb = sb2;
 				};
 				k = 0;
@@ -1221,7 +1197,7 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 	for( part in parts ){
 		tks = part.capture( pat_defcst );
 		name = tks[1];
-		if( % tks[2].pfind( '(%. | %/)' ) ){
+		if( tks[2].match( '(%. | %/)' ) != none ){
 			constNumbers.append( ( '', 'DAO_DOUBLE', name, name, inExtFile ) );
 		}else{
 			constNumbers.append( ( '', 'DAO_INTEGER', name, name, inExtFile ) );
@@ -1665,7 +1641,7 @@ global setter_doubles =
 
 routine Variable::Parse( fname = '' )
 {
-	if( index == INDEX_RETURN && source.pfind( '^ %s* (%w+) %s* $' ).size() ){
+	if( index == INDEX_RETURN && source.match( '^ %s* (%w+) %s* $' ) != none ){
 		name = source;
 		name.trim();
 		typename = '';
@@ -1701,7 +1677,7 @@ routine Variable::Parse( fname = '' )
 	}
 	if( CT_MAP.has( typename ) ){
 		typeid = CT_MAP[ typename ];
-	}else if( % typename.pfind( 'enum %s' ) ){
+	}else if( typename.match( 'enum %s' ) != none ){
 		tks = typename.capture( 'enum %s+ ( %w+ )' );
 		typeid = $CT_INT;
 		tpname = tks[1];
@@ -1712,7 +1688,7 @@ routine Variable::Parse( fname = '' )
 		}
 	}else if( typename.find('::') >= 0 and otherClassTypedef.has( typename ) ){
 		typeid = otherClassTypedef[ typename ];
-	}else if( typename.pfind( '^ %w+ $' ).size() and not map_user_types.has( typename ) ){
+	}else if( typename.match( '^ %w+ $' ) != none and not map_user_types.has( typename ) ){
 		user = 1;
 		if( map_user_types.has( host ) ){
 			utp = map_user_types[ host ];
@@ -1760,7 +1736,7 @@ routine Variable::Generate( cxx_no_self =0 )
 	if( % typename == 'unsigned' ){
 		typename = 'unsigned';
 		typeid = $CT_UINT;
-	}else if( typename.pfind( '^ unsigned %s (char|short|int|long) $' ).size() ==0 ) {
+	}else if( typename.match( '^ unsigned %s (char|short|int|long) $' ) != none ) {
 		tks = typename.capture( '^ unsigned %s (%w+) $' );
 		if( tks.size() ){
 			typename = 'unsigned';
@@ -1841,7 +1817,7 @@ routine Variable::Generate( cxx_no_self =0 )
 			tpl_procput = ctxput_int;
 			tpl_getres = getres_int;
 			tpl_setter = setter_int;
-			if( % vdefault.pfind( '= %s* \'.\'' ) ) vdefault += '[0]';
+			if( vdefault.match( '= %s* \'.\'' ) != none ) vdefault += '[0]';
 			switch( typeid ){
 				#{
 								case $CT_CHAR :
@@ -1863,7 +1839,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_procput = ctxput_float;
 				tpl_getres = getres_float;
 				tpl_setter = setter_float;
-				if( % vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
+				if( vdefault.match( '= %s* (0|NULL|0f|0%.0f)' ) != none ) vdefault = '=0.0';
 				case $CT_DOUBLE :
 				daotype = 'double';
 				tpl_daopar = daopar_double;
@@ -1901,7 +1877,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_procput = ctxput_mbs;
 				tpl_parset = parset_mbs;
 				tpl_getres = getres_mbs;
-				if( % vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\'\\\'';
+				if( vdefault.match( '= %s* (0|NULL)' ) != none ) vdefault = '=\\\'\\\'';
 				case $CT_WCHAR :
 				daotype = 'string';
 				tpl_daopar = daopar_string;
@@ -1910,7 +1886,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_procput = ctxput_wcs;
 				tpl_parset = parset_wcs;
 				tpl_getres = getres_wcs;
-				if( % vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\"\\\"';
+				if( vdefault.match( '= %s* (0|NULL)' ) != none ) vdefault = '=\\\"\\\"';
 				case $CT_SHORT, $CT_SSHORT, $CT_USHORT, 
 				$CT_INT, $CT_SINT, $CT_UINT, 
 				$CT_LONG, $CT_SLONG, $CT_ULONG :
@@ -1926,7 +1902,7 @@ routine Variable::Generate( cxx_no_self =0 )
 					tpl_getres = getres_ints;
 					tpl_cxx2dao = cxx2dao_int2;
 				}
-				if( % vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0';
+				if( vdefault.match( '= %s* (0|NULL)' ) != none ) vdefault = '=0';
 				case $CT_FLOAT :
 				daotype = 'float';
 				tpl_daopar = daopar_float;
@@ -1940,7 +1916,7 @@ routine Variable::Generate( cxx_no_self =0 )
 					tpl_getres = getres_floats;
 					tpl_cxx2dao = cxx2dao_float2;
 				}
-				if( % vdefault.pfind( '= %s* (0|NULL|0f|0%.0f)' ) ) vdefault = '=0.0';
+				if( vdefault.match( '= %s* (0|NULL|0f|0%.0f)' ) != none ) vdefault = '=0.0';
 				case $CT_DOUBLE :
 				daotype = 'double';
 				tpl_daopar = daopar_double;
@@ -1954,12 +1930,12 @@ routine Variable::Generate( cxx_no_self =0 )
 					tpl_getres = getres_doubles;
 					tpl_cxx2dao = cxx2dao_double2;
 				}
-				if( % vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0.0D';
+				if( vdefault.match( '= %s* (0|NULL)' ) != none ) vdefault = '=0.0D';
 				case $CT_COMPLEX8 , $CT_COMPLEX16 :
 				daotype = 'complex';
 				tpl_daopar = daopar_complex;
 				tpl_dao2cxx = dao2cxx_complex;
-				if( % vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=0.0$';
+				if( vdefault.match( '= %s* (0|NULL)' ) != none ) vdefault = '=0.0$';
 				case $CT_VOID :
 				daotype = 'cdata';
 				tpl_daopar = daopar_buffer;
@@ -1970,7 +1946,7 @@ routine Variable::Generate( cxx_no_self =0 )
 					tpl_dao2cxx = dao2cxx_void2;
 					tpl_cxx2dao = cxx2dao_user;
 				}
-				if( % vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '|none=none';
+				if( vdefault.match( '= %s* (0|NULL)' ) != none ) vdefault = '|none=none';
 				if( name == 'userdata' and refer == '*' ){
 					daotype = 'any';
 					cxxtype = 'DaoValue*';
@@ -1979,7 +1955,7 @@ routine Variable::Generate( cxx_no_self =0 )
 					tpl_daopar = daopar_userdata;
 					tpl_dao2cxx = dao2cxx_userdata;
 					tpl_cxx2dao = cxx2dao_userdata;
-					if( % vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '|none=none';
+					if( vdefault.match( '= %s* (0|NULL)' ) != none ) vdefault = '|none=none';
 				}
 				case $CT_FILE :
 				daotype = 'stream';
@@ -1987,10 +1963,10 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_dao2cxx = dao2cxx_stream;
 				tpl_procput = ctxput_stream;
 				tpl_cxx2dao = cxx2dao_stream;
-				if( % vdefault.pfind( '= %s* 0' ) ) vdefault = '=0';
+				if( vdefault.match( '= %s* 0' ) != none ) vdefault = '=0';
 			}
-			if( % vdefault2.pfind( '= %s* NULL' ) ) vdefault = '|none=none';
-			if( refer == '*' and vdefault2.pfind( '= %s* 0' ).size() ) vdefault = '|none=none';
+			if( vdefault2.match( '= %s* NULL' ) != none ) vdefault = '|none=none';
+			if( refer == '*' and vdefault2.match( '= %s* 0' ) != none ) vdefault = '|none=none';
 			if( index == INDEX_RETURN ){
 				if( refer == '*' && typeid >= $CT_SHORT && typeid <=$CT_DOUBLE ){
 					daotype = 'array<' + daotype + '>';
@@ -2195,7 +2171,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_procput = ctxput_mbs;
 				tpl_parset = parset_mbs2;
 				tpl_getres = getres_mbs;
-				if( % vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\'\'';
+				if( vdefault.match( '= %s* (0|NULL)' ) != none ) vdefault = '=\'\'';
 				case $CT_WCHAR :
 				daotype = 'string';
 				tpl_daopar = daopar_string;
@@ -2204,7 +2180,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_procput = ctxput_wcs;
 				tpl_parset = parset_wcs2;
 				tpl_getres = getres_wcs;
-				if( % vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '=\\\"\\\"';
+				if( vdefault.match( '= %s* (0|NULL)' ) != none ) vdefault = '=\\\"\\\"';
 				case $CT_VOID :
 				daotype = 'cdata';
 				cxxcall = name;
@@ -2212,9 +2188,9 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_dao2cxx = dao2cxx_user3;
 				tpl_procput = ctxput_voidp;
 				tpl_cxx2dao = cxx2dao_voidp;
-				if( % vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '|none=none';
+				if( vdefault.match( '= %s* (0|NULL)' ) != none ) vdefault = '|none=none';
 			}
-			if( % vdefault2.pfind( '= %s* NULL' ) ) vdefault = '|none=none';
+			if( vdefault2.match( '= %s* NULL' ) != none ) vdefault = '|none=none';
 		}else{
 		}
 	}else if( map_user_types.has( typename ) or map_ns_types.has( typename ) ){
@@ -2245,7 +2221,7 @@ routine Variable::Generate( cxx_no_self =0 )
 			cxxcall = '*' + name;
 			if( ispointer ) cxxcall = name;
 		}
-		if( % vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '|none=none';
+		if( vdefault.match( '= %s* (0|NULL)' ) != none ) vdefault = '|none=none';
 		if( % utp.snamespace ){
 			cxxtype = utp.snamespace + '::' + cxxtype;
 			cxxpar = utp.snamespace + '::' + cxxpar;
@@ -2324,7 +2300,7 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_qbytearray;
 				tpl_getres = getres_qbytearray;
 				cxxcall = name;
-				if( % vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '|none=none';
+				if( vdefault.match( '= %s* (0|NULL)' ) != none ) vdefault = '|none=none';
 			}
 		}else if( typename == 'QString' and refer != '*' ){
 			if(host != typename or index >=1 or (index == INDEX_RETURN and host != typename) ){
@@ -2336,9 +2312,9 @@ routine Variable::Generate( cxx_no_self =0 )
 				tpl_parset = parset_qstring;
 				tpl_getres = getres_qstring;
 				cxxcall = name;
-				if( % vdefault.pfind( '= %s* (0|NULL)' ) ) vdefault = '|none=none';
+				if( vdefault.match( '= %s* (0|NULL)' ) != none ) vdefault = '|none=none';
 			}
-		}else if( typename == 'QVariant' and vdefault.pfind( '=%s*0' ).size() ){
+		}else if( typename == 'QVariant' and vdefault.match( '=%s*0' ) != none ){
 			tpl_dao2cxx += '  QVariant _$(name);\n';
 			tpl_dao2cxx += '  if( $(name) == NULL ) $(name) = & _$(name);\n';
 		}
@@ -4984,7 +4960,7 @@ onload='DaoOnLoad' )
 	for( name in map_user_types.keys(); utp in map_user_types.values() ){
 		if( utp.isNameSpace or utp.isCallback ) skip;
 		if( extfiles.has( utp.input_file ) ) skip;
-		if( name != utp.name && name.pfind( '(%s|:)' ).size()==0 ){
+		if( name != utp.name && name.match( '(%s|:)' ) != none ){
 			ns = utp.snamespace;
 			if( % ns ){
 				if( not ns_aliases.has( ns ) ) ns_aliases[ ns ] = (list<string>){};

@@ -1938,9 +1938,10 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	MAP_Insert( self->nsModules, libpath, ns );
 	DaoVmSpace_Unlock( self );
 
-
-	/* no warning or error for loading a C/C++ dynamic linking library
-	   for solving symbols in Dao modules. */
+	/*
+	// no warning or error for loading a C/C++ dynamic linking library
+	// for solving symbols in Dao modules.
+	*/
 	if( funpter == NULL ) return ns;
 
 	DaoVmSpace_Lock( self );

@@ -2696,6 +2696,7 @@ static DaoInode* DaoInferencer_InsertMove( DaoInferencer *self, DaoInode *inode,
 static DaoInode* DaoInferencer_InsertCast( DaoInferencer *self, DaoInode *inode, unsigned short *op, DaoType *ct )
 {
 	DaoInode *cast = DaoInferencer_InsertNode( self, inode, DVM_CAST, 1, ct );
+	cast->b = DaoRoutine_AddConstant( self->routine, (DaoValue*) ct );
 	cast->a = *op;
 	*op = cast->c;
 	return cast;
@@ -5500,30 +5501,8 @@ TryPushBlockReturnType:
 						at = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, NULL, types+opa, vmc->b);
 
 					if( ct && DaoType_MatchTo( at, ct, defs2 ) == 0 ) goto ErrorTyping;
-					if( ct != ct2 && ct->tid != DAO_UDT && ct->tid != DAO_THT ){
-						int mac = DaoType_MatchTo( at, ct, defs2 );
-						int mca = DaoType_MatchTo( ct, at, defs2 );
-						if( mac==0 && mca==0 ){
-							goto ErrorTyping;
-						}else if( mac==0 ){
-							if( rettypes->size == 4 ){
-								if( at && at->tid != DAO_UDT ){
-									tt = DaoNamespace_MakeRoutType( NS, routine->routType, NULL, NULL, at );
-									GC_ShiftRC( tt, routine->routType );
-									routine->routType = tt;
-								}
-							}else{
-								ct = DaoType_DefineTypes( ct, NS, defs2 );
-								if( ct != NULL && redef != NULL ){
-									tt = DaoType_DefineTypes( types[redef->c], NS, defs2 );
-									GC_DecRC( types[redef->c] );
-									types[redef->c] = NULL;
-									DaoInferencer_UpdateType( self, redef->c, tt );
-								}
-								rettypes->items.pType[ rettypes->size - 1 ] = ct;
-							}
-						}
-					}else if( ct == NULL || ( ct->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) ){
+					/* XXX */
+					if( ct == NULL || ( ct->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) ){
 						if( rettypes->size == 4 ){
 							if( at && at->tid != DAO_UDT ){
 								tt = DaoNamespace_MakeRoutType( NS, routine->routType, NULL, NULL, at );
@@ -5531,6 +5510,7 @@ TryPushBlockReturnType:
 								routine->routType = tt;
 							}
 							rettypes->items.pType[ rettypes->size - 1 ] = (DaoType*)routine->routType->aux;
+							ct = rettypes->items.pType[ rettypes->size - 1 ];
 						}else{
 							ct = DaoType_DefineTypes( ct, NS, defs2 );
 							if( ct != NULL && redef != NULL ){
@@ -5541,6 +5521,11 @@ TryPushBlockReturnType:
 							}
 							rettypes->items.pType[ rettypes->size - 1 ] = ct;
 						}
+					}
+					if( ct != ct2 ){
+						int m1 = DaoType_MatchTo( at, ct2, defs2 );
+						int m2 = DaoType_MatchTo( ct, ct2, defs2 );
+						if( m1 == 0 || m2 == 0 ) goto ErrorTyping;
 					}
 				}
 				if( code == DVM_YIELD ){

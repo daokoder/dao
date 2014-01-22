@@ -1266,10 +1266,7 @@ int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target,
 
 	matched.data = tmp;
 	Dao_ParseTarget( target, array, (DaoValue*) & matched );
-	if( end == 0 ){
-		end = DString_Size( source );
-		p2 = end - 1;
-	}
+	if( end == 0 ) end = p2 = DString_Size( source ) - 1;
 	n = last = 0;
 	target = DString_Copy( target );
 	while( DaoRegex_Match( self, source, & p1, & p2 ) ){
@@ -1297,7 +1294,7 @@ int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target,
 		p2 = end;
 		if( index && n == index ) break;
 	}
-	DString_SubString( source, target, last, end - last );
+	DString_SubString( source, target, last, end - last + 1 );
 	DString_Append( replace, target );
 	DString_Assign( source, replace );
 	DString_Delete( target );
