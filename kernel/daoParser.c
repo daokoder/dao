@@ -2249,6 +2249,7 @@ static int DaoParser_DelScope( DaoParser *self, DaoInode *node )
 	DaoInode *opening = (DaoInode*) DArray_Back( self->scopeOpenings );
 	DaoInode *closing = (DaoInode*) DArray_Back( self->scopeClosings );
 	DaoParser_PopLevel( self );
+	self->vmcValue = NULL;
 	if( self->lexLevel < 0 || self->scopeOpenings->size == 0 ){
 		DaoParser_Error3( self, DAO_INVALID_SCOPE_ENDING, self->curToken );
 		return 0;

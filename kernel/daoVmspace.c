@@ -1260,8 +1260,6 @@ static void DaoVmSpace_PrintCode( DaoVmSpace *self )
 		}
 		DaoStream_Flush( self->stdioStream );
 		if( ns->mainRoutine ) DaoRoutine_PrintCode( ns->mainRoutine, self->stdioStream );
-		if( ( self->options & DAO_OPTION_INTERUN ) && self->userHandler == NULL )
-			DaoVmSpace_Interun( self, NULL );
 	}
 }
 static void DaoVmSpace_ExeCmdArgs( DaoVmSpace *self )

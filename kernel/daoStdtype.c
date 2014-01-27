@@ -3693,6 +3693,7 @@ DaoCdata* DaoCdata_New( DaoType *type, void *data )
 	if( self && self->ctype == type && self->data == data ) return self;
 	self = (DaoCdata*)dao_calloc( 1, sizeof(DaoCdata) );
 	DaoCstruct_Init( (DaoCstruct*)self, type );
+	self->subtype = DAO_CDATA_CXX;
 	self->data = data;
 	if( data ) DaoCdataBindings_Insert( data, self );
 	return self;
