@@ -6516,7 +6516,7 @@ InvalidFunctional:
 			if( result.konst == 0 ) return result;
 			value = DaoParser_GetVariable( self, result.konst );
 			if( value->type != DAO_CLASS && value->type != DAO_CTYPE ) return result;
-			rb = DaoLexer_FindRightPair( self->lexer, DTOK_LT, DTOK_GT, start, end );
+			rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
 			if( rb < 0 ) return result;
 			dbase = DaoParse_InstantiateType( self, value, start+1, rb-1 );
 			if( dbase ){

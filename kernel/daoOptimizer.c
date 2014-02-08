@@ -3925,7 +3925,7 @@ NotExist_TryAux:
 					rout = DaoValue_Check( meth, ct, ts, k, DVM_CALL, errors );
 					if( rout == NULL ) goto InvIndex;
 					break;
-				default : break;
+				default : goto InvIndex;
 				}
 				break;
 			}

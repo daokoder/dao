@@ -259,12 +259,6 @@ DAO_DLL int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags );
 DAO_DLL void DaoLexer_AppendToken( DaoLexer *self, DaoToken *token );
 DAO_DLL void DaoLexer_Append( DaoLexer *self, int name, int line, const char *data );
 
-DAO_DLL int DaoLexer_FindOpenToken( DaoLexer *self, uchar_t tok, int start, int end );
-DAO_DLL int DaoLexer_FindLeftPair( DaoLexer *self,  uchar_t lw, uchar_t rw, int start, int stop );
-DAO_DLL int DaoLexer_FindRightPair( DaoLexer *self,  uchar_t lw, uchar_t rw, int start, int stop );
-
-DString* DaoLexer_AddRaiseStatement( DaoLexer *self, const char *type, const char *info, int line );
-
 DAO_DLL void DaoLexer_AnnotateCode( DArray *tokens, DaoVmCodeX vmc, DString *annot, int max );
 
 DAO_DLL DaoToken*  DVector_PushToken( DVector *self, DaoToken token );
