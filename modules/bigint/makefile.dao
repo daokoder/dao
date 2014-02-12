@@ -1,0 +1,17 @@
+
+project = DaoMake::Project( "DaoBigInt" ) 
+
+daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
+
+if( daovm == none ) return
+
+project.UseImportLibrary( daovm, "dao" )
+
+project_objs = project.AddObjects( { "dao_bigint.c" } )
+project_dll  = project.AddSharedLibrary( "dao_bigint", project_objs )
+project_lib  = project.AddStaticLibrary( "dao_bigint", project_objs )
+
+
+project.GenerateFinder( $TRUE );
+project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );
+project.Install( daovm.GetPath( "MOD-PATH" ), project_lib );

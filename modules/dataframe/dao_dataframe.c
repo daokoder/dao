@@ -233,6 +233,7 @@ void DaoxDataFrame_Delete( DaoxDataFrame *self )
 	DArray_Delete( self->columns );
 	DArray_Delete( self->caches );
 	GC_DecRC( self->original );
+	DaoCstruct_Free( (DaoCstruct*) self );
 	dao_free( self );
 }
 
