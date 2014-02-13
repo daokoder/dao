@@ -62,9 +62,6 @@ typedef struct DaoCnode      DaoCnode;
 typedef struct DaoOptimizer  DaoOptimizer;
 typedef struct DaoDataCache  DaoDataCache;
 
-typedef struct DaoMacro      DaoMacro;
-typedef struct DaoParser     DaoParser;
-
 
 #define STRCMP( x, y ) strcmp( (x)->mbs, y )
 #define TOKCMP( x, y ) strcmp( (x)->string.mbs, y )

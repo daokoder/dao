@@ -202,6 +202,7 @@ typedef struct DaoUserStream   DaoUserStream;
 typedef struct DaoUserHandler  DaoUserHandler;
 typedef struct DaoDebugger     DaoDebugger;
 typedef struct DaoProfiler     DaoProfiler;
+typedef struct DaoParser       DaoParser;
 
 typedef union  DaoValue        DaoValue;
 typedef struct DaoNone         DaoNone;
@@ -233,13 +234,13 @@ typedef struct DaoType         DaoType;
 /* Complex type: */
 typedef struct complex16 { double real, imag; } complex16;
 
-typedef void (*CallbackOnString)( const char *str );
-typedef void (*FuncDaoInit)();
+typedef void  (*CallbackOnString)( const char *str );
 typedef void  (*DThreadTask)( void *arg );
 typedef void* (*FuncPtrCast)( void*, int );
 typedef void  (*FuncPtrDel)( void* );
-typedef void  (*DaoCFunction) ( DaoProcess *process, DaoValue *params[], int npar );
+typedef void  (*DaoCFunction)( DaoProcess *process, DaoValue *params[], int npar );
 
+typedef int (*DaoTokenFilter)( DaoParser *parser );
 typedef int (*DaoModuleOnLoad)( DaoVmSpace *vmspace, DaoNamespace *nspace );
 typedef int (*DaoCodeInliner)( DaoNamespace *nspace, DString *mode, DString *source, DString *out, int line );
 

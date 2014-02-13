@@ -45,7 +45,6 @@ daovm.ExportPath( "DOC-PATH", daovm_doc_path );
 #
 ###########################################################################
 
-daovm_with_macro      = DaoMake::Option( "MACRO",      $ON )
 daovm_with_regex      = DaoMake::Option( "REGEX",      $ON )
 daovm_with_numarray   = DaoMake::Option( "NUMARRAY",   $ON )
 daovm_with_decorator  = DaoMake::Option( "DECORATOR",  $ON )
@@ -76,7 +75,6 @@ if( daovm_with_thread == $OFF ) daovm_with_concurrent = $OFF;
 #
 ###########################################################################
 
-if( daovm_with_macro      == $ON ) daovm.AddDefinition( "DAO_WITH_MACRO" )
 if( daovm_with_regex      == $ON ) daovm.AddDefinition( "DAO_WITH_REGEX" )
 if( daovm_with_numarray   == $ON ) daovm.AddDefinition( "DAO_WITH_NUMARRAY" )
 if( daovm_with_decorator  == $ON ) daovm.AddDefinition( "DAO_WITH_DECORATOR" )
@@ -102,7 +100,6 @@ daovm_kernel_headers =
 	"kernel/daoConst.h" ,
 	"kernel/daoGC.h" ,
 	"kernel/daoLexer.h" ,
-	"kernel/daoMacro.h" ,
 	"kernel/daoMap.h" ,
 	"kernel/daoNamespace.h" ,
 	"kernel/daoNumtype.h" ,
@@ -133,7 +130,6 @@ daovm_kernel_sources =
 	"kernel/daoConst.c" ,
 	"kernel/daoGC.c" ,
 	"kernel/daoLexer.c" ,
-	"kernel/daoMacro.c" ,
 	"kernel/daoMap.c" ,
 	"kernel/daoNamespace.c" ,
 	"kernel/daoNumtype.c" ,
@@ -295,6 +291,7 @@ syslib = daovm.AddDirectory( "syslib", "modules/syslib" )
 help = daovm.AddDirectory( "help", "modules/help" )
 math = daovm.AddDirectory( "math", "modules/math" )
 meta = daovm.AddDirectory( "meta", "modules/meta" )
+macro = daovm.AddDirectory( "macro", "modules/macro" )
 bigint = daovm.AddDirectory( "bigint", "modules/bigint" )
 coroutine = daovm.AddDirectory( "coroutine", "modules/coroutine" )
 protobject = daovm.AddDirectory( "protobject", "modules/protobject" )
@@ -318,6 +315,7 @@ auxlib.AddDependency( daovm_dll )
 syslib.AddDependency( daovm_dll )
 help.AddDependency( daovm_dll )
 math.AddDependency( daovm_dll )
+macro.AddDependency( daovm_dll )
 bigint.AddDependency( daovm_dll )
 meta.AddDependency( daovm_dll )
 coroutine.AddDependency( daovm_dll )

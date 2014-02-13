@@ -40,6 +40,8 @@
 #   use syntax lang
 
 
+load macro
+
 # Macros without language id:
 # routine definition
 syntax {

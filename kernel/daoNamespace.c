@@ -44,7 +44,6 @@
 #include"daoStdlib.h"
 #include"daoClass.h"
 #include"daoParser.h"
-#include"daoMacro.h"
 #include"daoRegex.h"
 #include"daoValue.h"
 
@@ -899,6 +898,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->globalMacros = DHash_New(D_STRING,D_VALUE);
 	self->abstypes = DHash_New(D_STRING,D_VALUE);
 	self->codeInliners = DHash_New(D_STRING,0);
+	self->tokenFilters = DArray_New(0);
 	self->argParams = DaoList_New();
 	self->file = DString_New(1);
 	self->path = DString_New(1);
@@ -955,6 +955,7 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	DMap_Delete( self->globalMacros );
 	DMap_Delete( self->abstypes );
 	DMap_Delete( self->codeInliners );
+	DArray_Delete( self->tokenFilters );
 	DString_Delete( self->file );
 	DString_Delete( self->path );
 	DString_Delete( self->name );
@@ -1198,24 +1199,6 @@ DaoNamespace* DaoNamespace_FindNamespace( DaoNamespace *self, DString *name )
 	if( value && value->type == DAO_NAMESPACE ) return & value->xNamespace;
 	return NULL;
 }
-void DaoNamespace_AddMacro( DaoNamespace *self, DString *lang, DString *name, DaoMacro *macro )
-{
-	DMap *macros = lang ? self->globalMacros : self->localMacros;
-	DString *combo = lang ? DString_Copy( lang ) : name;
-	DNode *node;
-	if( lang ){
-		DString_AppendMBS( combo, ":" );
-		DString_Append( combo, name );
-	}
-	node = MAP_Find( macros, combo );
-	if( node == NULL ){
-		MAP_Insert( macros, combo, macro );
-	}else{
-		DaoMacro *m2 = (DaoMacro*) node->value.pVoid;
-		DArray_Append( m2->macroList, macro );
-	}
-	if( lang ) DString_Delete( combo );
-}
 int DaoNamespace_CyclicParent( DaoNamespace *self, DaoNamespace *parent )
 {
 	daoint i;
@@ -1306,75 +1289,6 @@ int DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent )
 	return 1;
 }
 
-#ifdef DAO_WITH_MACRO
-static DaoMacro* DaoNamespace_FindMacro2( DaoNamespace *self, DString *lang, DString *name )
-{
-	daoint i, n = self->namespaces->size;
-	DString *combo = DString_Copy( lang );
-	DNode *node;
-
-	DString_AppendMBS( combo, ":" );
-	DString_Append( combo, name );
-	node = MAP_Find( self->globalMacros, combo );
-	DString_Delete( combo );
-	if( node ) return (DaoMacro*) node->value.pVoid;
-	for(i=1; i<n; i++){
-		DaoNamespace *ns = self->namespaces->items.pNS[i];
-		DaoMacro *macro = DaoNamespace_FindMacro2( ns, lang, name );
-		if( macro ) return macro;
-	}
-	return NULL;
-}
-DaoMacro* DaoNamespace_FindMacro( DaoNamespace *self, DString *lang, DString *name )
-{
-	daoint i, n = self->namespaces->size;
-	DString *combo = NULL;
-	DNode *node;
-
-	/* check local macros that are not associated with any language name: */
-	if( (node = MAP_Find( self->localMacros, name )) ) return (DaoMacro*) node->value.pVoid;
-
-	combo = DString_Copy( lang );
-	DString_AppendMBS( combo, ":" );
-	DString_Append( combo, name );
-	if( (node = MAP_Find( self->localMacros, combo )) ) goto ReturnMacro;
-	if( (node = MAP_Find( self->globalMacros, combo )) ) goto ReturnMacro;
-	/* Stop searching upstream namespaces if the current is .dao file: */
-	if( strcmp( self->lang->mbs, "dao" ) ==0 ) goto ReturnNull;
-	for(i=1; i<n; i++){
-		DaoNamespace *ns = self->namespaces->items.pNS[i];
-		DaoMacro *macro = DaoNamespace_FindMacro2( ns, lang, name );
-		if( macro == NULL ) continue;
-		MAP_Insert( self->globalMacros, combo, macro );
-		DString_Delete( combo );
-		return macro;
-	}
-ReturnNull:
-	DString_Delete( combo );
-	return NULL;
-ReturnMacro:
-	DString_Delete( combo );
-	return (DaoMacro*) node->value.pVoid;
-}
-void DaoNamespace_ImportMacro( DaoNamespace *self, DString *lang )
-{
-	DString *name2 = DString_New(1);
-	DNode *it;
-	daoint i, pos;
-	for(i=0; i<self->namespaces->size; i++){
-		DaoNamespace *ns = self->namespaces->items.pNS[i];
-		for(it=DMap_First( ns->globalMacros ); it; it=DMap_Next(ns->globalMacros,it) ){
-			DString *name = it->key.pString;
-			pos = DString_Find( name, lang, 0 );
-			if( pos != 0 || name->mbs[lang->size] != ':' ) continue;
-			/* Add as local macro: */
-			DString_SetDataMBS( name2, name->mbs + lang->size + 1, name->size - lang->size - 1 );
-			DaoNamespace_AddMacro( self, NULL, name2, (DaoMacro*) it->value.pVoid );
-		}
-	}
-	DString_Delete( name2 );
-}
-#endif
 void DaoNamespace_AddCodeInliner( DaoNamespace *self, const char *name, DaoCodeInliner fp )
 {
 	DString mbs = DString_WrapMBS( name );

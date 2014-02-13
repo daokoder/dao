@@ -37,7 +37,6 @@
 #include"daoVmcode.h"
 #include"daoParser.h"
 #include"daoRegex.h"
-#include"daoMacro.h"
 #include"daoNumtype.h"
 #include"daoRoutine.h"
 #include"daoClass.h"
@@ -65,6 +64,19 @@ struct DaoEnode
 	DaoInode *last;   /* the last instruction node for the expression */
 	DaoInode *update; /* the last instruction that updates the value of "reg" */
 };
+
+
+DAO_DLL void DaoParser_Warn2( DaoParser *self, int code, int start, int end );
+DAO_DLL void DaoParser_Warn( DaoParser *self, int code, DString *ext );
+DAO_DLL void DaoParser_Error( DaoParser *self, int code, DString *ext );
+DAO_DLL void DaoParser_Error2( DaoParser *self, int code, int m, int n, int single_line );
+DAO_DLL void DaoParser_Error3( DaoParser *self, int code, int m );
+DAO_DLL void DaoParser_MakeCodes( DaoParser *self, int start, int end, DString *output );
+DAO_DLL int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end );
+DAO_DLL int DaoParser_FindOpenToken( DaoParser *self, uchar_t tok, int start, int end, int warn );
+DAO_DLL int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop );
+
+
 int DaoParser_GetOperPrecedence( DaoParser *self );
 int DaoParser_CurrentTokenType( DaoParser *self );
 int DaoParser_CurrentTokenName( DaoParser *self );
@@ -377,7 +389,6 @@ DMap* DaoParser_GetCurrentDataMap( DaoParser *self )
 {
 	return self->localDataMaps->items.pMap[ self->lexLevel ];
 }
-void DaoParser_Error2( DaoParser *self, int code, int m, int n, int single_line );
 static int DaoParser_PushOuterRegOffset( DaoParser *self, int start, int end )
 {
 	if( self->outers == NULL ) self->outers = DArray_New(0);
@@ -1994,7 +2005,7 @@ InvalidType:
 }
 
 int DaoParser_ParseRoutine( DaoParser *self );
-static int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end );
+DAO_DLL int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end );
 
 static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int start, int end )
 {
@@ -2310,7 +2321,7 @@ static DaoInode* DaoParser_GetBreakableScope( DaoParser *self )
 	}
 	return NULL;
 }
-static void DaoParser_MakeCodes( DaoParser *self, int start, int end, DString *output )
+void DaoParser_MakeCodes( DaoParser *self, int start, int end, DString *output )
 {
 	DaoToken *tok, **tokens = self->tokens->items.pToken;
 	int i, cpos = 0, line = -1;
@@ -2443,13 +2454,23 @@ static int DaoParser_HandleVerbatim( DaoParser *self, int start )
 
 static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to );
 
+static int DaoParser_ApplyTokenFilters( DaoParser *self, DaoNamespace *nspace )
+{
+	int i, ret = 1;
+	for(i=1; i<nspace->namespaces->size; ++i){
+		ret &= DaoParser_ApplyTokenFilters( self, nspace->namespaces->items.pNS[i] );
+	}
+	for(i=0; i<nspace->tokenFilters->size; ++i){
+		DaoTokenFilter filter = (DaoTokenFilter) nspace->tokenFilters->items.pVoid[i];
+		ret &= (*filter)( self );
+	}
+	return ret;
+}
 static int DaoParser_Preprocess( DaoParser *self )
 {
 	DaoNamespace *ns = self->nameSpace;
 	DaoVmSpace *vmSpace = self->vmSpace;
 	DaoToken **tokens = self->tokens->items.pToken;
-	DaoMacro *macro, *macro2, *reapply;
-
 	int cons = (vmSpace->options & DAO_OPTION_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
 	int i, end, tag = 0;
 	int k, right, start = 0;
@@ -2469,33 +2490,12 @@ static int DaoParser_Preprocess( DaoParser *self )
 
 		tki = tokens[start]->name;
 		tki2 = start+1 < self->tokens->size ? tokens[start+1]->name : 0;
-		if( tki == DKEY_SYNTAX && (start == 0 || tokens[start-1]->name != DKEY_USE) ){
-#ifdef DAO_WITH_MACRO
-			right = DaoParser_ParseMacro( self, start );
-			/*
-			   printf( "macro : %s %i\n", tokens[start+2]->string->mbs, right );
-			 */
-			if( right <0 ){
-				DaoParser_Error3( self, DAO_CTW_INV_MAC_DEFINE, start );
-				return 0;
-			}
-			if( cons ) DaoParser_MakeCodes( self, start, right+1, ns->inputs );
-			DArray_Erase( self->tokens, start, right - start + 1 );
-			tokens = self->tokens->items.pToken;
-#else
-			DaoStream_WriteMBS( vmSpace->errorStream, "macro is not enabled.\n" );
-			return 0;
-#endif
-		}else if( tki == DKEY_LOAD && tki2 != DTOK_LB ){
+		if( tki == DKEY_LOAD && tki2 != DTOK_LB ){
 			/* only for top level "load", for macros in the module  */
 			end = DaoParser_ParseLoadStatement( self, start, self->tokens->size-1 );
 			if( end < 0 ) return 0;
 			if( cons ) DaoParser_MakeCodes( self, start, end, ns->inputs );
 			DArray_Erase( self->tokens, start, end-start );
-			tokens = self->tokens->items.pToken;
-		}else if( tki == DKEY_USE && tki2 == DKEY_SYNTAX ){
-			end = DaoParser_ParseUseStatement( self, start, self->tokens->size-1 );
-			DArray_Erase( self->tokens, start, end-start+1 );
 			tokens = self->tokens->items.pToken;
 		}else if( tki == DTOK_VERBATIM ){
 			start = DaoParser_HandleVerbatim( self, start );
@@ -2505,35 +2505,8 @@ static int DaoParser_Preprocess( DaoParser *self )
 			start ++;
 		}
 	}
-#ifdef DAO_WITH_MACRO
-	for(start = self->tokens->size-1; start >=0 && start < self->tokens->size; start--){
-		macro = DaoNamespace_FindMacro( ns, ns->lang, & tokens[start]->string );
-		self->curLine = tokens[start]->line;
-		if( macro == NULL ) continue;
-#if 0
-		printf( "macro %i %s\n", start, tokens[start]->string.mbs );
-#endif
-		for( i=0; i<macro->macroList->size; i++){
-			macro2 = (DaoMacro*) macro->macroList->items.pVoid[i];
-			end = DaoParser_MacroTransform( self, macro2, start, tag );
-#if 0
-			printf( "overloaded: %i, %i\n", i, end );
-#endif
-			if( end <= 0 ) continue;
 
-			tag ++;
-			reapply = NULL;
-			tokens = self->tokens->items.pToken;
-			for(k=0; k<macro2->keyListApply->size; k++){
-				/* printf( "%i, %s\n", k, macro2->keyListApply->items.pString[k]->mbs ); */
-				reapply = DaoNamespace_FindMacro( ns, ns->lang, macro2->keyListApply->items.pString[k] );
-				if( reapply ) break;
-			}
-			if( reapply ) start = end;
-			break;
-		}
-	}
-#endif
+	if( DaoParser_ApplyTokenFilters( self, ns ) == 0 ) return 0;
 
 #if 0
 	for(i=0; i<self->tokens->size; i++) printf("%s  ", tokens[i]->string.mbs); printf("\n\n");
@@ -2749,14 +2722,6 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 	if( DaoParser_CheckNameToken( self, start, to, DAO_INVALID_USE_STMT, use ) ==0 ) return -1;
 	if( tokens[start]->name == DKEY_ROUTINE ){
 		return DaoParser_ParseUseConstructor( self, start+1, to );
-	}else if( tokens[start]->name == DKEY_SYNTAX ){
-#ifdef DAO_WITH_MACRO
-		if( DaoParser_CheckNameToken( self, start+1, to, DAO_INVALID_USE_STMT, use ) ==0 ) return -1;
-		DaoNamespace_ImportMacro( myNS, & tokens[start+1]->string );
-#else
-		goto InvalidUse;
-#endif
-		return start + 2;
 	}else if( tokens[start]->name == DKEY_ENUM ){
 		start = DaoParser_FindScopedConstant( self, & value, start + 1 );
 		if( start > 0 && value && value->type == DAO_TYPE && value->xType.tid == DAO_ENUM ){
