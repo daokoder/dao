@@ -8,12 +8,11 @@ CFLAGS = $(DEBUG) -O0 $(SYSCFLAGS) -DDAO_WITH_REGEX
 LFLAGS = $(SYSLIBS)
 
 
-HEADERS = $(DAO_SRC_DIR)/dao.h $(DAO_SRC_DIR)/daoGC.h \
+HEADERS = $(DAO_SRC_DIR)/dao.h $(DAO_SRC_DIR)/daoBase.h $(DAO_SRC_DIR)/daoGC.h \
 		  $(DAO_SRC_DIR)/daoObject.h $(DAO_SRC_DIR)/daoRoutine.h \
 		  $(DAO_SRC_DIR)/daoThread.h $(DAO_SRC_DIR)/daoArray.h \
 		  $(DAO_SRC_DIR)/daoLexer.h $(DAO_SRC_DIR)/daoOptimizer.h \
 		  $(DAO_SRC_DIR)/daoStdlib.h $(DAO_SRC_DIR)/daoType.h \
-		  $(DAO_SRC_DIR)/daoBase.h $(DAO_SRC_DIR)/daoMacro.h \
 		  $(DAO_SRC_DIR)/daoParser.h $(DAO_SRC_DIR)/daoStdtype.h \
 		  $(DAO_SRC_DIR)/daoValue.h $(DAO_SRC_DIR)/daoBytecode.h \
 		  $(DAO_SRC_DIR)/daoMap.h $(DAO_SRC_DIR)/daoPlatforms.h \
@@ -59,9 +58,6 @@ daoString.o: $(HEADERS) $(DAO_SRC_DIR)/daoString.c
 
 daoStdlib.o: $(HEADERS) $(DAO_SRC_DIR)/daoStdlib.c
 	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoStdlib.c -o daoStdlib.o
-
-daoMacro.o: $(HEADERS) $(DAO_SRC_DIR)/daoMacro.c
-	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoMacro.c -o daoMacro.o
 
 daoLexer.o: $(HEADERS) $(DAO_SRC_DIR)/daoLexer.c
 	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoLexer.c -o daoLexer.o
@@ -119,8 +115,8 @@ OBJECTS = daoConst.o daoVmcode.o \
 		  daoProcess.o daoNamespace.o daoVmspace.o \
 		  daoLexer.o daoParser.o daoBytecode.o \
 		  daoType.o daoOptimizer.o daoStdlib.o \
-		  daoMacro.o daoStream.o daoRegex.o \
-		  daoGC.o daoThread.o daoTasklet.o daoPlatforms.o daoMake.o
+		  daoStream.o daoRegex.o daoGC.o \
+		  daoThread.o daoTasklet.o daoPlatforms.o daoMake.o
 
 
 

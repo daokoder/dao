@@ -42,7 +42,6 @@
 enum DaoExtraTypes
 {
 	DAO_VARIANT = END_CORE_TYPES, /* variant or disjoint union type */
-	DAO_MACRO ,
 	DAO_CONSTANT ,
 	DAO_VARIABLE ,
 	DAO_ROUTBODY ,
