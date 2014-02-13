@@ -1451,7 +1451,7 @@ void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *t
 	}
 }
 
-DaoType *simpleTypes[ DAO_ARRAY ] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+DaoType *simpleTypes[ DAO_ARRAY ] = { 0, 0, 0, 0, 0, 0, 0 };
 
 DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 {
@@ -1483,7 +1483,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		}
 		break;
 	case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
-	case DAO_COMPLEX : case DAO_LONG : case DAO_STRING :
+	case DAO_COMPLEX : case DAO_STRING :
 		abtp = simpleTypes[ p->type ];
 		if( abtp ) break;
 		abtp = DaoNamespace_MakeType( self, coreTypeNames[p->type], p->type, NULL, NULL, 0 );

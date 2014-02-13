@@ -50,13 +50,3 @@ io.writeln( 'size of complex:', %C1 )
 io.writeln( std.about(C1), '\n' )
 
 
-# Arbitray precision integer (with 'L' suffix):
-
-L1 = 123L         # base-10
-L2 = 0xa2fe3L     # base-16: due to the 0x prefix;
-L3 = 100111001L2  # base-2:  due to the L2 suffix;
-L4 = 0xa2fe3L8    # base-8:  due to the L8 suffix;
-
-io.writeln( L1, L2, L3, L4 )
-io.writeln( 'number of digits (base 256):', %L4 )
-io.writeln( std.about(L1), '\n' )

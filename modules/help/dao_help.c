@@ -854,10 +854,11 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 			break;
 		case DKEY_TYPE :
 		case DKEY_ANY : case DKEY_ENUM :
-		case DKEY_INT : case DKEY_LONG :
-		case DKEY_FLOAT : case DKEY_DOUBLE :
-		case DKEY_STRING : case DKEY_COMPLEX :
-		case DKEY_LIST : case DKEY_MAP : case DKEY_TUPLE : case DKEY_ARRAY :
+		case DKEY_INT : case DKEY_FLOAT :
+		case DKEY_DOUBLE : case DKEY_COMPLEX :
+		case DKEY_STRING :
+		case DKEY_LIST : case DKEY_MAP :
+		case DKEY_TUPLE : case DKEY_ARRAY :
 		case DKEY_CLASS : case DKEY_INTERFACE :
 		case DKEY_ROUTINE :
 		case DKEY_SYNTAX :

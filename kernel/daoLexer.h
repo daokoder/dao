@@ -49,7 +49,6 @@ enum DaoTokNames
 	DTOK_NUMBER_DEC , /* 123. 123.5 */
 	DTOK_NUMBER_SCI ,
 	DTOK_NUMBER_IMG , /* 123.0C, imaginary part of complex */
-	DTOK_DIGITS_LONG ,
 	DTOK_VERBATIM ,
 	DTOK_MBS , /* MBS */
 	DTOK_WCS , /* WCS */
@@ -132,7 +131,6 @@ enum DaoKeyNames
 	DKEY_FLOAT ,
 	DKEY_DOUBLE ,
 	DKEY_COMPLEX ,
-	DKEY_LONG ,
 	DKEY_STRING ,
 	DKEY_ENUM ,
 	DKEY_ARRAY ,

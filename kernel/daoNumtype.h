@@ -90,67 +90,6 @@ DAO_DLL complex16 tanh_c( const complex16 com );
 DAO_DLL complex16 ceil_c( const complex16 com );
 DAO_DLL complex16 floor_c( const complex16 com );
 
-#define LONG_BITS 8
-#define LONG_BASE 256
-#define LONG_MASK 255
-
-typedef signed char schar_t;
-
-/* bit integer */
-struct DLong
-{
-	uchar_t  *data;
-	uchar_t   base;
-	schar_t   sign;
-	ushort_t  offset;
-	daoint    size;
-	daoint    bufSize;
-};
-
-DAO_DLL DLong* DLong_New();
-DAO_DLL void DLong_Init( DLong *self );
-DAO_DLL void DLong_Delete( DLong *self );
-DAO_DLL void DLong_Detach( DLong *self );
-DAO_DLL void DLong_Clear( DLong *self );
-
-#ifdef DAO_WITH_LONGINT
-DAO_DLL void DLong_Copy( DLong *z, DLong *x );
-DAO_DLL void DLong_Resize( DLong *self, daoint size );
-DAO_DLL void DLong_PushBack( DLong *self, uchar_t it );
-DAO_DLL void DLong_PushFront( DLong *self, uchar_t it );
-DAO_DLL int DLong_Compare( DLong *x, DLong *y );
-DAO_DLL void DLong_Move( DLong *z, DLong *x );
-DAO_DLL void DLong_Add( DLong *z, DLong *x, DLong *y );
-DAO_DLL void DLong_Sub( DLong *z, DLong *x, DLong *y );
-DAO_DLL void DLong_Mul( DLong *z, DLong *x, DLong *y );
-DAO_DLL void DLong_Div( DLong *z, DLong *x, DLong *y, DLong *r );
-DAO_DLL void DLong_Pow( DLong *z, DLong *x, daoint n );
-DAO_DLL void DLong_AddInt( DLong *z, DLong *x, daoint y, DLong *buf );
-DAO_DLL void DLong_MulInt( DLong *z, DLong *x, daoint y );
-DAO_DLL void DLong_Flip( DLong *self );
-DAO_DLL void DLong_BitAND( DLong *z, DLong *x, DLong *y );
-DAO_DLL void DLong_BitOR( DLong *z, DLong *x, DLong *y );
-DAO_DLL void DLong_BitXOR( DLong *z, DLong *x, DLong *y );
-DAO_DLL void DLong_ShiftLeft( DLong *self, int bits );
-DAO_DLL void DLong_ShiftRight( DLong *self, int bits );
-DAO_DLL void DLong_Print( DLong *self, DString *s );
-DAO_DLL void DLong_FromInteger( DLong *self, daoint x );
-DAO_DLL void DLong_FromDouble( DLong *self, double x );
-DAO_DLL char DLong_FromString( DLong *self, DString *s );
-DAO_DLL void DLong_FromValue( DLong *self, DaoValue *value );
-DAO_DLL daoint DLong_ToInteger( DLong *self );
-DAO_DLL double DLong_ToDouble( DLong *self );
-DAO_DLL int DLong_CompareToZero( DLong *self );
-DAO_DLL int DLong_CompareToInteger( DLong *self, daoint x );
-DAO_DLL int DLong_CompareToDouble( DLong *self, double x );
-
-DAO_DLL void DLong_UAdd( DLong *z, DLong *x, DLong *y );
-DAO_DLL void DLong_UMul( DLong *z, DLong *x, DLong *y );
-DAO_DLL int DLong_UCompare( DLong *x, DLong *y );
-DAO_DLL daoint DLong_NormCount( DLong *self );
-#define DLong_Append  DLong_PushBack
-#endif
-
 
 
 /* Multi-dimensional array stored in row major order: */

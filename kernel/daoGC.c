@@ -160,8 +160,7 @@ static void DaoCGC_TryBlock();
 const daoint dao_cache_limits[DAO_TUPLE] =
 {
 	10000, 40000, 30000, 30000, 20000,
-	10000, 10000, 10000, 10000, 10000,
-	10000
+	10000, 10000, 10000, 10000, 10000
 };
 
 
@@ -265,11 +264,6 @@ void DaoDataCache_Cache( DaoDataCache *self, DaoValue *value )
 		return;
 	}
 	switch( value->type ){
-#ifdef DAO_WITH_LONGINT
-	case DAO_LONG   :
-		DLong_Clear( value->xLong.value );
-		break;
-#endif
 	case DAO_STRING :
 		DString_Clear( value->xString.data );
 		break;
@@ -316,7 +310,6 @@ NewValue:
 	case DAO_FLOAT   : value = (DaoValue*) DaoFloat_New(0.0); break;
 	case DAO_DOUBLE  : value = (DaoValue*) DaoDouble_New(0.0); break;
 	case DAO_COMPLEX : value = (DaoValue*) DaoComplex_New2(0.0,0.0); break;
-	case DAO_LONG    : value = (DaoValue*) DaoLong_New(); break;
 	case DAO_STRING  : value = (DaoValue*) DaoString_New(1); break;
 	}
 	return value;
@@ -592,9 +585,6 @@ static void DaoGC_DeleteSimpleData( DaoValue *value )
 	case DAO_COMPLEX :
 		dao_free( value );
 		break;
-	case DAO_LONG :
-		DaoLong_Delete( & value->xLong );
-		break;
 	case DAO_STRING :
 		DaoString_Delete( & value->xString );
 		break;
@@ -644,7 +634,6 @@ static int DaoGC_DecRC2( DaoValue *p )
 		case DAO_FLOAT :
 		case DAO_DOUBLE :
 		case DAO_COMPLEX :
-		case DAO_LONG :
 		case DAO_STRING :
 #if 1
 			if( gcWorker.concurrent ){

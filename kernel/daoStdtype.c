@@ -142,32 +142,6 @@ void DaoComplex_Set( DaoComplex *self, complex16 value )
 	self->value = value;
 }
 
-DaoLong* DaoLong_New()
-{
-	DaoLong *self = (DaoLong*) dao_malloc( sizeof(DaoLong) );
-	DaoValue_Init( self, DAO_LONG );
-	self->value = DLong_New();
-	return self;
-}
-DLong* DaoLong_Get( DaoLong *self )
-{
-	return self->value;
-}
-DaoLong* DaoLong_Copy( DaoLong *self )
-{
-	DaoLong *copy = (DaoLong*) dao_malloc( sizeof(DaoLong) );
-	DaoValue_Init( copy, DAO_LONG );
-	copy->value = DLong_New();
-#ifdef DAO_WITH_LONGINT
-	DLong_Move( copy->value, self->value );
-#endif
-	return copy;
-}
-void DaoLong_Delete( DaoLong *self )
-{
-	DLong_Delete( self->value );
-	dao_free( self );
-}
 
 DaoString* DaoString_New( int mbs )
 {
@@ -380,7 +354,6 @@ DaoValue *dao_none_value = (DaoValue*) (void*) & none;
 
 extern DaoTypeBase numberTyper;
 extern DaoTypeBase comTyper;
-extern DaoTypeBase longTyper;
 extern DaoTypeBase stringTyper;
 
 DaoEnum* DaoEnum_New( DaoType *type, int value )
@@ -667,7 +640,6 @@ DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
 	case DAO_FLOAT   :
 	case DAO_DOUBLE  : return & numberTyper;
 	case DAO_COMPLEX : return & comTyper;
-	case DAO_LONG    : return & longTyper;
 	case DAO_ENUM    : return & enumTyper;
 	case DAO_STRING  : return & stringTyper;
 	case DAO_CTYPE   :
@@ -2004,7 +1976,6 @@ static void DaoLIST_Min( DaoProcess *proc, DaoValue *p[], int N )
 	tuple->items[1]->xInteger.value = imin;
 	DaoTuple_SetItem( tuple, res, 0 );
 }
-extern DLong* DaoProcess_GetLong( DaoProcess *self, DaoVmCode *vmc );
 extern DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc );
 static void DaoLIST_Sum( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2045,14 +2016,6 @@ static void DaoLIST_Sum( DaoProcess *proc, DaoValue *p[], int N )
 			DaoProcess_PutComplex( proc, res );
 			break;
 		}
-#ifdef DAO_WITH_LONGINT
-	case DAO_LONG :
-		{
-			DLong *dlong = DaoProcess_GetLong( proc, proc->activeCode );
-			for(i=0; i<self->items.size; i++) DLong_Add( dlong, dlong, data[i]->xLong.value );
-			break;
-		}
-#endif
 	case DAO_ENUM :
 		{
 			/* XXX */
@@ -2294,12 +2257,6 @@ static void DaoLIST_Join( DaoProcess *proc, DaoValue *p[], int N )
 		case DAO_COMPLEX:
 			size += ( data[i]->xComplex.value.real < 0 ) ? 5 : 4;
 			break;
-		case DAO_LONG:
-			digits = self->items.items.pValue[i]->xLong.value->size;
-			digits = digits > 1 ? (LONG_BITS * (digits - 1) + 1) : 1; /* bits */
-			digits /= (int)(log( self->items.items.pValue[i]->xLong.value->base ) / log(2)); /* digits */
-			size += digits + ((data[i]->xLong.value->sign < 0) ? 3 : 2); /* sign + suffix */
-			break;
 		case DAO_ENUM :
 			size += 1;
 			break;
@@ -2536,12 +2493,12 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Insert,   "insert( self :list<@T>, item : @T, pos=0 )" },
 	{ DaoLIST_Clear,    "clear( self :list<@T> )" },
 	{ DaoLIST_Size,     "size( self :list<@T> )=>int" },
-	{ DaoLIST_Resize,   "resize( self :list<@T<int|float|double|complex|long|string|enum>>, size :int )" },
+	{ DaoLIST_Resize,   "resize( self :list<@T<int|float|double|complex|string|enum>>, size :int )" },
 	{ DaoLIST_Resize2,  "resize( self :list<@T>, value :@T, size :int )" },
-	{ DaoLIST_Max,      "max( self :list<@T<int|long|float|double|complex|string|enum>> )=>tuple<@T,int>" },
-	{ DaoLIST_Min,      "min( self :list<@T<int|long|float|double|complex|string|enum>> )=>tuple<@T,int>" },
-	{ DaoLIST_Sum,      "sum( self :list<@T<int|long|float|double|complex|string|enum>> )=>@T" },
-	{ DaoLIST_Join,     "join( self :list<@T<int|float|double|long|complex|string|enum>>, separator='' )=>string" },
+	{ DaoLIST_Max,      "max( self :list<@T<int|float|double|complex|string|enum>> )=>tuple<@T,int>" },
+	{ DaoLIST_Min,      "min( self :list<@T<int|float|double|complex|string|enum>> )=>tuple<@T,int>" },
+	{ DaoLIST_Sum,      "sum( self :list<@T<int|float|double|complex|string|enum>> )=>@T" },
+	{ DaoLIST_Join,     "join( self :list<@T<int|float|double|complex|string|enum>>, separator='' )=>string" },
 	{ DaoLIST_PushBack, "append( self :list<@T>, item :@T )" },
 	{ DaoLIST_Push,     "push( self :list<@T>, item :@T, to :enum<front, back> = $back )" },
 	{ DaoLIST_Pop,      "pop( self :list<@T>, from :enum<front, back> = $back ) => @T" },

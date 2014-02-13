@@ -52,7 +52,6 @@ DaoType *dao_type_int = NULL;
 DaoType *dao_type_float = NULL;
 DaoType *dao_type_double = NULL;
 DaoType *dao_type_complex = NULL;
-DaoType *dao_type_long = NULL;
 DaoType *dao_type_string = NULL;
 DaoType *dao_type_tuple = NULL;
 DaoType *dao_type_array_empty = NULL;
@@ -358,7 +357,6 @@ void DaoType_InitDefault( DaoType *self )
 	case DAO_FLOAT  : value = (DaoValue*) DaoFloat_New(0.0); break;
 	case DAO_DOUBLE : value = (DaoValue*) DaoDouble_New(0.0); break;
 	case DAO_COMPLEX : value = (DaoValue*) DaoComplex_New(com); break;
-	case DAO_LONG   : value = (DaoValue*) DaoLong_New(); break;
 	case DAO_STRING : value = (DaoValue*) DaoString_New(1); break;
 	case DAO_ENUM : value = (DaoValue*) DaoEnum_New( self, 0 ); break;
 	}
@@ -758,7 +756,6 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case (DAO_FLOAT   << 8) | DAO_FLOAT   : return DAO_MT_EQ;
 	case (DAO_DOUBLE  << 8) | DAO_DOUBLE  : return DAO_MT_EQ;
 	case (DAO_COMPLEX << 8) | DAO_COMPLEX : return DAO_MT_EQ;
-	case (DAO_LONG    << 8) | DAO_LONG    : return DAO_MT_EQ;
 	case (DAO_STRING  << 8) | DAO_STRING  : return DAO_MT_EQ;
 	case (DAO_INTEGER << 8) | DAO_FLOAT   : return DAO_MT_SIM;
 	case (DAO_INTEGER << 8) | DAO_DOUBLE  : return DAO_MT_SIM;
@@ -793,9 +790,6 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	}
 	dinterface = self->tid == DAO_INTERFACE ? (DaoInterface*) self->aux : NULL;
 	switch( value->type ){
-	case DAO_LONG :
-		if( dinterface ) return DaoType_MatchInterface( dao_type_long, dinterface, NULL );
-		break;
 	case DAO_STRING :
 		if( dinterface ) return DaoType_MatchInterface( dao_type_string, dinterface, NULL );
 		break;
@@ -964,7 +958,6 @@ DaoType* DaoType_GetCommonType( int type, int subtype )
 	case DAO_FLOAT   : return dao_type_float;
 	case DAO_DOUBLE  : return dao_type_double;
 	case DAO_COMPLEX : return dao_type_complex;
-	case DAO_LONG    : return dao_type_long;
 	case DAO_STRING  : return dao_type_string;
 	default : break;
 	}

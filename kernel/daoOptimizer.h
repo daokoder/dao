@@ -182,7 +182,6 @@ struct DaoInferencer
 	int          annot_first;
 	int          annot_last;
 
-	DaoType     *typeLong;
 	DaoType     *typeEnum;
 	DaoType     *typeString;
 	DaoType     *basicTypes[DAO_ARRAY];

@@ -309,7 +309,7 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 			value2 = dao_none_value;
 			break;
 		case DAO_INTEGER :  case DAO_FLOAT :  case DAO_DOUBLE : 
-		case DAO_COMPLEX :  case DAO_LONG  :  case DAO_STRING :
+		case DAO_COMPLEX :  case DAO_STRING :
 			value2 = DaoDataCache_MakeValue( self->cache, tid );
 			break;
 		case DAO_ENUM :
@@ -1321,7 +1321,6 @@ CallEntry:
 			case DAO_FLOAT   : vC->xInteger.value = sizeof(float); break;
 			case DAO_DOUBLE  : vC->xInteger.value = sizeof(double); break;
 			case DAO_COMPLEX : vC->xInteger.value = sizeof(complex16); break;
-			case DAO_LONG    : vC->xInteger.value = vA->xLong.value->size; break;
 			case DAO_ENUM    : vC->xInteger.value = sizeof(int); break; break;
 			case DAO_STRING  : vC->xInteger.value = vA->xString.data->size; break;
 			case DAO_LIST    : vC->xInteger.value = vA->xList.items.size; break;
@@ -1385,10 +1384,6 @@ CallEntry:
 				vmc = vA->xDouble.value ? vmc+1 : vmcBase + vmc->b; break;
 			case DAO_COMPLEX :
 				vmc = (vA->xComplex.value.real || vA->xComplex.value.imag) ? vmc+1 : vmcBase + vmc->b;
-				break;
-			case DAO_LONG :
-				j = vA->xLong.value->size >1 || (vA->xLong.value->size ==1 && vA->xLong.value->data[0]);
-				vmc = j ? vmc+1 : vmcBase + vmc->b;
 				break;
 			case DAO_ENUM  :
 				vmc = vA->xEnum.value ? vmc+1 : vmcBase + vmc->b;
@@ -2716,32 +2711,6 @@ DaoType* DaoProcess_GetCallReturnType( DaoProcess *self, DaoVmCode *vmc, int tid
 	}
 	return type;
 }
-DLong* DaoProcess_GetLong( DaoProcess *self, DaoVmCode *vmc )
-{
-#ifdef DAO_WITH_LONGINT
-	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_LONG );
-	DaoValue *dC = self->activeValues[ vmc->c ];
-	if( dC && dC->type == DAO_LONG ){
-		dC->xLong.value->sign = 1;
-		dC->xLong.value->base = 10;
-		dC->xLong.value->size = 0;
-		return dC->xLong.value;
-	}
-	if( tp && tp->tid != DAO_LONG && !(tp->tid & DAO_ANY) ) return NULL;
-	dC = (DaoValue*) DaoLong_New();
-	GC_ShiftRC( dC, self->activeValues[ vmc->c ] );
-	self->activeValues[ vmc->c ] = dC;
-	return dC->xLong.value;
-#else
-	self->activeCode = vmc;
-	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_LONGINT ) );
-	return NULL;
-#endif
-}
-DLong* DaoProcess_PutLong( DaoProcess *self )
-{
-	return DaoProcess_GetLong( self, self->activeCode );
-}
 DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_ENUM );
@@ -3532,7 +3501,6 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		case DAO_FLOAT   : vc->xFloat.value = DaoValue_GetFloat( va ); return;
 		case DAO_DOUBLE  : vc->xDouble.value = DaoValue_GetDouble( va ); return;
 		case DAO_COMPLEX : vc->xComplex.value = DaoValue_GetComplex( va ); return;
-		case DAO_LONG    : DaoValue_GetLong( va, vc->xLong.value ); return;
 		case DAO_STRING  : DaoValue_GetString( va, vc->xString.data ); return;
 		}
 	}
@@ -3951,11 +3919,6 @@ static int DaoProcess_FastPassParams( DaoProcess *self, DaoValue *params[], int 
 			case DAO_COMPLEX :
 				dests[i]->xComplex.value = param->xComplex.value;
 				break;
-#ifdef DAO_WITH_LONGINT
-			case DAO_LONG :
-				DLong_Move( dests[i]->xLong.value, param->xLong.value );
-				break;
-#endif
 			case DAO_STRING :
 				DString_Assign( dests[i]->xString.data, param->xString.data );
 				break;
@@ -4355,23 +4318,6 @@ void DaoProcess_DoAPList(  DaoProcess *self, DaoVmCode *vmc )
 			}
 			break;
 		}
-#ifdef DAO_WITH_LONGINT
-	case DAO_LONG :
-		{
-			DLong *value = initValue->xLong.value;
-			DLong *step = NULL, *buf = NULL;
-			if( stepValue->type == DAO_LONG ){
-				step = stepValue->xLong.value;
-			}else{
-				step = buf = DLong_New();
-				DLong_FromValue( buf, stepValue );
-			}
-			DLong_Move( items[0]->xLong.value, value );
-			for(i=1; i<num; i++) DLong_Add( items[i]->xLong.value, items[i-1]->xLong.value, step );
-			if( buf ) DLong_Delete( buf );
-			break;
-		}
-#endif
 	case DAO_STRING :
 		{
 			DString *value = initValue->xString.data;
@@ -4751,7 +4697,6 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 			DaoType *retype = DaoProcess_GetCallReturnType( self, vmc, type->tid );
 			complex16 c = {0.0,0.0};
 			complex16 *cplx;
-			DLong  *lng;
 			DString *str;
 			DaoArray *vec;
 			DaoList *list;
@@ -4762,7 +4707,6 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 			}
 			switch( type->tid ){
 			case DAO_COMPLEX :
-			case DAO_LONG :
 			case DAO_STRING :
 				for(i=0; i<opb; ++i){
 					int tid = values[i]->type;
@@ -4780,19 +4724,6 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 				if( opb > 1 ) cplx->imag = DaoValue_GetDouble( values[1] );
 				if( opb > 2 ) DaoProcess_RaiseException( self, DAO_WARNING, "too many values" );
 				break;
-#ifdef DAO_WITH_LONGINT
-			case DAO_LONG :
-				lng = DaoProcess_PutLong( self );
-				for(i=0; i<opb; ++i){
-					daoint digit = DaoValue_GetInteger( values[i] );
-					if( digit < 0 || digit > 255 ){
-						DaoProcess_RaiseException( self, DAO_ERROR, "invalid digit" );
-						return;
-					}
-					DLong_PushFront( lng, digit );
-				}
-				break;
-#endif
 			case DAO_STRING :
 				str = DaoProcess_PutWCString( self, L"" );
 				DString_Resize( str, opb );
@@ -4969,29 +4900,6 @@ TryAgain:
 	}
 	return 0;
 }
-#ifdef DAO_WITH_LONGINT
-static void DaoProcess_LongDiv ( DaoProcess *self, DLong *z, DLong *x, DLong *y, DLong *r )
-{
-	if( x->size ==0 || (x->size ==1 && x->data[0] ==0) ){
-		DaoProcess_RaiseException( self, DAO_ERROR_FLOAT_DIVBYZERO, "" );
-		return;
-	}
-	DLong_Div( z, x, y, r );
-}
-static int DaoProcess_CheckLong2Integer( DaoProcess *self, DLong *x )
-{
-	daoint d = 8*sizeof(daoint);
-	if( x->size * LONG_BITS < d ) return 1;
-	if( (x->size - 1) * LONG_BITS >= d ) goto RaiseInexact;
-	d -= (x->size - 1) * LONG_BITS + 1; /* one bit for sign */
-	if( (x->data[ x->size - 1 ] >> d) > 0 ) goto RaiseInexact;
-	return 1;
-RaiseInexact:
-	DaoProcess_RaiseException( self, DAO_ERROR_VALUE,
-							  "long integer value is too big for the operation" );
-	return 0;
-}
-#endif
 void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoValue *A = self->activeValues[ vmc->a ];
@@ -5102,64 +5010,6 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		default: break; /* XXX: pow for complex??? */
 		}
 		DaoProcess_SetValue( self, vmc->c, (DaoValue*) & res );
-#ifdef DAO_WITH_LONGINT
-	}else if( A->type == DAO_LONG && B->type == DAO_LONG ){
-		DLong *b, *c;
-		if( vmc->code == DVM_POW && DaoProcess_CheckLong2Integer( self, B->xLong.value ) == 0 ) return;
-		b = DLong_New();
-		if( vmc->c == vmc->a || vmc->c == vmc->b ){
-			c = b;
-		}else{
-			c = DaoProcess_GetLong( self, vmc );
-		}
-		switch( vmc->code ){
-		case DVM_ADD : DLong_Add( c, A->xLong.value, B->xLong.value ); break;
-		case DVM_SUB : DLong_Sub( c, A->xLong.value, B->xLong.value ); break;
-		case DVM_MUL : DLong_Mul( c, A->xLong.value, B->xLong.value ); break;
-		case DVM_DIV : DaoProcess_LongDiv( self, A->xLong.value, B->xLong.value, c, b ); break;
-		case DVM_MOD : DaoProcess_LongDiv( self, A->xLong.value, B->xLong.value, b, c ); break;
-		case DVM_POW : DLong_Pow( c, A->xLong.value, DLong_ToInteger( B->xLong.value ) ); break;
-		default : break;
-		}
-		if( vmc->c == vmc->a || vmc->c == vmc->b ){
-			c = DaoProcess_GetLong( self, vmc );
-			DLong_Move( c, b );
-		}
-		DLong_Delete( b );
-	}else if( A->type == DAO_LONG && B->type >= DAO_INTEGER && B->type <= DAO_DOUBLE ){
-		DLong *c = vmc->a == vmc->c ? C->xLong.value : DaoProcess_GetLong( self, vmc );
-		DLong *b = DLong_New();
-		DLong *b2 = DLong_New();
-		DLong_FromValue( b, B );
-		switch( vmc->code ){
-		case DVM_ADD : DLong_Add( c, A->xLong.value, b ); break;
-		case DVM_SUB : DLong_Sub( c, A->xLong.value, b ); break;
-		case DVM_MUL : DLong_Mul( c, A->xLong.value, b ); break;
-		case DVM_DIV : DaoProcess_LongDiv( self, A->xLong.value, b, c, b2 ); break;
-		case DVM_MOD : DaoProcess_LongDiv( self, A->xLong.value, b, b2, c ); break;
-		case DVM_POW : DLong_Pow( c, A->xLong.value, DaoValue_GetInteger( B ) ); break;
-		default: break;
-		}
-		DLong_Delete( b );
-		DLong_Delete( b2 );
-	}else if( B->type == DAO_LONG && A->type >= DAO_INTEGER && A->type <= DAO_DOUBLE ){
-		DLong *a, *b2, *c = DaoProcess_GetLong( self, vmc );
-		if( vmc->code == DVM_POW && DaoProcess_CheckLong2Integer( self, B->xLong.value ) == 0 ) return;
-		a = DLong_New();
-		b2 = DLong_New();
-		DLong_FromValue( a, A );
-		switch( vmc->code ){
-		case DVM_ADD : DLong_Add( c, a, B->xLong.value ); break;
-		case DVM_SUB : DLong_Sub( c, a, B->xLong.value ); break;
-		case DVM_MUL : DLong_Mul( c, B->xLong.value, a ); break;
-		case DVM_DIV : DaoProcess_LongDiv( self, a, B->xLong.value, c, b2 ); break;
-		case DVM_MOD : DaoProcess_LongDiv( self, a, B->xLong.value, b2, c ); break;
-		case DVM_POW : DLong_Pow( c, a, DLong_ToInteger( B->xLong.value ) ); break;
-		default: break;
-		}
-		DLong_Delete( a );
-		DLong_Delete( b2 );
-#endif
 #ifdef DAO_WITH_NUMARRAY
 	}else if( B->type >=DAO_INTEGER && B->type <=DAO_COMPLEX && A->type ==DAO_ARRAY ){
 		DaoArray *na = & A->xArray;
@@ -5381,60 +5231,6 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		case DVM_NE: D = (AR != BR) || (AI != BI); break;
 		default: break;
 		}
-#ifdef DAO_WITH_LONGINT
-	}else if( A->type == DAO_LONG && B->type == DAO_LONG ){
-		switch( vmc->code ){
-		case DVM_AND: C = DLong_CompareToZero( A->xLong.value ) ? B : A; break;
-		case DVM_OR:  C = DLong_CompareToZero( A->xLong.value ) ? A : B; break;
-		case DVM_LT:  D = DLong_Compare( A->xLong.value, B->xLong.value )< 0; break;
-		case DVM_LE:  D = DLong_Compare( A->xLong.value, B->xLong.value )<=0; break;
-		case DVM_EQ:  D = DLong_Compare( A->xLong.value, B->xLong.value )==0; break;
-		case DVM_NE:  D = DLong_Compare( A->xLong.value, B->xLong.value )!=0; break;
-		default: break;
-		}
-	}else if( A->type == DAO_INTEGER && B->type == DAO_LONG ){
-		switch( vmc->code ){
-		case DVM_AND: C = A->xInteger.value ? B : A; break;
-		case DVM_OR:  C = A->xInteger.value ? A : B; break;
-		case DVM_LT:  D = DLong_CompareToInteger( B->xLong.value, A->xInteger.value )> 0; break;
-		case DVM_LE:  D = DLong_CompareToInteger( B->xLong.value, A->xInteger.value )>=0; break;
-		case DVM_EQ:  D = DLong_CompareToInteger( B->xLong.value, A->xInteger.value )==0; break;
-		case DVM_NE:  D = DLong_CompareToInteger( B->xLong.value, A->xInteger.value )!=0; break;
-		default: break;
-		}
-	}else if( A->type == DAO_LONG && B->type == DAO_INTEGER ){
-		switch( vmc->code ){
-		case DVM_AND: C = DLong_CompareToZero( A->xLong.value ) ? B : A; break;
-		case DVM_OR:  C = DLong_CompareToZero( A->xLong.value ) ? A : B; break;
-		case DVM_LT:  D = DLong_CompareToInteger( A->xLong.value, B->xInteger.value )< 0; break;
-		case DVM_LE:  D = DLong_CompareToInteger( A->xLong.value, B->xInteger.value )<=0; break;
-		case DVM_EQ:  D = DLong_CompareToInteger( A->xLong.value, B->xInteger.value )==0; break;
-		case DVM_NE:  D = DLong_CompareToInteger( A->xLong.value, B->xInteger.value )!=0; break;
-		default: break;
-		}
-	}else if( (A->type == DAO_FLOAT || A->type == DAO_DOUBLE) && B->type == DAO_LONG ){
-		double va = DaoValue_GetDouble( A );
-		switch( vmc->code ){
-		case DVM_AND: C = va ? B : A; break;
-		case DVM_OR:  C = va ? A : B; break;
-		case DVM_LT:  D = DLong_CompareToDouble( B->xLong.value, va )> 0; break;
-		case DVM_LE:  D = DLong_CompareToDouble( B->xLong.value, va )>=0; break;
-		case DVM_EQ:  D = DLong_CompareToDouble( B->xLong.value, va )==0; break;
-		case DVM_NE:  D = DLong_CompareToDouble( B->xLong.value, va )!=0; break;
-		default: break;
-		}
-	}else if( A->type == DAO_LONG && (B->type == DAO_FLOAT || B->type == DAO_DOUBLE) ){
-		double vb = DaoValue_GetDouble( B );
-		switch( vmc->code ){
-		case DVM_AND: C = DLong_CompareToZero( A->xLong.value ) ? B : A; break;
-		case DVM_OR:  C = DLong_CompareToZero( A->xLong.value ) ? A : B; break;
-		case DVM_LT:  D = DLong_CompareToDouble( A->xLong.value, vb )< 0; break;
-		case DVM_LE:  D = DLong_CompareToDouble( A->xLong.value, vb )<=0; break;
-		case DVM_EQ:  D = DLong_CompareToDouble( A->xLong.value, vb )==0; break;
-		case DVM_NE:  D = DLong_CompareToDouble( A->xLong.value, vb )!=0; break;
-		default: break;
-		}
-#endif
 	}else if( A->type == DAO_STRING && B->type == DAO_STRING ){
 		switch( vmc->code ){
 		case DVM_AND: C = DString_Size( A->xString.data ) ? B : A; break;
@@ -5465,9 +5261,6 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		case DAO_FLOAT   : C = A->xFloat.value ? BB : AA; break;
 		case DAO_DOUBLE  : C = A->xDouble.value ? BB : AA; break;
 		case DAO_COMPLEX : C = A->xComplex.value.real && A->xComplex.value.imag ? BB : AA; break;
-#ifdef DAO_WITH_LONGINT
-		case DAO_LONG : C = DLong_CompareToZero( A->xLong.value ) ? BB : AA; break;
-#endif
 		case DAO_STRING : C = DString_Size( A->xString.data ) ? BB : AA; break;
 		case DAO_ENUM : C = A->xEnum.value ? BB : AA; break;
 		case DAO_LIST : C = A->xList.items.size ? BB : AA; break;
@@ -5544,18 +5337,6 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 			C->xComplex.value.real = - C->xComplex.value.real;
 			C->xComplex.value.imag = - C->xComplex.value.imag;
 		}
-#ifdef DAO_WITH_LONGINT
-	}else if( ta == DAO_LONG ){
-		C = DaoProcess_SetValue( self, vmc->c, A );
-		switch( vmc->code ){
-		case DVM_NOT  :
-			ta = DLong_CompareToZero( C->xLong.value ) == 0;
-			DLong_FromInteger( C->xLong.value, ta );
-			break;
-		case DVM_MINUS : C->xLong.value->sign = - C->xLong.value->sign; break;
-		default: break;
-		}
-#endif
 #ifdef DAO_WITH_NUMARRAY
 	}else if( ta == DAO_ENUM ){
 		DaoProcess_PutInteger( self, ! A->xEnum.value );
@@ -5724,34 +5505,6 @@ void DaoProcess_DoBitLogic( DaoProcess *self, DaoVmCode *vmc )
 		}else{
 			DaoProcess_PutInteger( self, inum );
 		}
-#ifdef DAO_WITH_LONGINT
-	}else if( A->type == DAO_LONG && B->type >= DAO_INTEGER && B->type <= DAO_DOUBLE ){
-		DLong *bigint = DaoProcess_PutLong( self );
-		DLong_FromValue( bigint, B );
-		switch( vmc->code ){
-		case DVM_BITAND : DLong_BitAND( bigint, A->xLong.value, bigint ); break;
-		case DVM_BITOR  : DLong_BitOR( bigint, A->xLong.value, bigint ); break;
-		case DVM_BITXOR : DLong_BitXOR( bigint, A->xLong.value, bigint ); break;
-		default : break;
-		}
-	}else if( B->type == DAO_LONG && A->type >= DAO_INTEGER && A->type <= DAO_DOUBLE ){
-		DLong *bigint = DaoProcess_PutLong( self );
-		DLong_FromValue( bigint, A );
-		switch( vmc->code ){
-		case DVM_BITAND : DLong_BitAND( bigint, B->xLong.value, bigint ); break;
-		case DVM_BITOR  : DLong_BitOR( bigint, B->xLong.value, bigint ); break;
-		case DVM_BITXOR : DLong_BitXOR( bigint, B->xLong.value, bigint ); break;
-		default : break;
-		}
-	}else if( A->type == DAO_LONG && B->type == DAO_LONG ){
-		DLong *bigint = DaoProcess_PutLong( self );
-		switch( vmc->code ){
-		case DVM_BITAND : DLong_BitAND( bigint, A->xLong.value, B->xLong.value ); break;
-		case DVM_BITOR  : DLong_BitOR( bigint, A->xLong.value, B->xLong.value ); break;
-		case DVM_BITXOR : DLong_BitXOR( bigint, A->xLong.value, B->xLong.value ); break;
-		default : break;
-		}
-#endif
 	}else if( A->type == DAO_ENUM && B->type == DAO_ENUM ){
 		DaoEnum *en = DaoProcess_GetEnum( self, vmc );
 		if( A->xEnum.etype != B->xEnum.etype ) goto InvalidOperation;
@@ -5760,6 +5513,11 @@ void DaoProcess_DoBitLogic( DaoProcess *self, DaoVmCode *vmc )
 		case DVM_BITAND : en->value = A->xEnum.value & B->xEnum.value; break;
 		case DVM_BITOR  : en->value = A->xEnum.value | B->xEnum.value; break;
 		default : goto InvalidOperation;
+		}
+	}else if( A->type == DAO_OBJECT || A->type == DAO_CDATA || A->type == DAO_CSTRUCT ){
+		DaoValue *C = self->activeValues[ vmc->c ];
+		if( DaoProcess_TryUserArith( self, A, B, C ) == 0 ){
+			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "" );
 		}
 	}else{
 InvalidOperation:
@@ -5784,24 +5542,6 @@ void DaoProcess_DoBitShift( DaoProcess *self, DaoVmCode *vmc )
 		}else{
 			DaoProcess_PutInteger( self, inum );
 		}
-#ifdef DAO_WITH_LONGINT
-	}else if( A->type ==DAO_LONG && B->type >=DAO_INTEGER && B->type <= DAO_DOUBLE ){
-		if( vmc->a == vmc->c ){
-			if( vmc->code == DVM_BITLFT ){
-				DLong_ShiftLeft( A->xLong.value, DaoValue_GetInteger( B ) );
-			}else{
-				DLong_ShiftRight( A->xLong.value, DaoValue_GetInteger( B ) );
-			}
-		}else{
-			DLong *bigint = DaoProcess_PutLong( self );
-			DLong_Move( bigint, A->xLong.value );
-			if( vmc->code == DVM_BITLFT ){
-				DLong_ShiftLeft( bigint, DaoValue_GetInteger( B ) );
-			}else{
-				DLong_ShiftRight( bigint, DaoValue_GetInteger( B ) );
-			}
-		}
-#endif
 	}else if( A->type ==DAO_LIST && (vmc->code ==DVM_BITLFT || vmc->code ==DVM_BITRIT) ){
 		DaoList *list = & self->activeValues[ vmc->a ]->xList;
 		self->activeCode = vmc;
@@ -5818,6 +5558,12 @@ void DaoProcess_DoBitShift( DaoProcess *self, DaoVmCode *vmc )
 			B = list->items.items.pValue[list->items.size-1];
 			if( DaoProcess_SetValue( self, vmc->b, B ) ==0 ) return;
 			DArray_PopBack( & list->items );
+		}
+	}else if( A->type == DAO_OBJECT || A->type == DAO_CDATA || A->type == DAO_CSTRUCT ){
+		DaoValue *C = self->activeValues[ vmc->c ];
+		self->activeCode = vmc;
+		if( DaoProcess_TryUserArith( self, A, B, C ) == 0 ){
+			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "" );
 		}
 	}else{
 		self->activeCode = vmc;
@@ -5837,12 +5583,6 @@ void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc )
 	}else if( A->type == DAO_COMPLEX ){
 		complex16 *C = DaoProcess_PutComplex( self, A->xComplex.value );
 		C->imag = - C->imag;
-#ifdef DAO_WITH_LONGINT
-	}else if( A->type == DAO_LONG ){
-		DLong *bigint = DaoProcess_PutLong( self );
-		DLong_Move( bigint, A->xLong.value );
-		DLong_Flip( bigint );
-#endif
 	}else if( A->type == DAO_ENUM ){
 		DaoType *etype = A->xEnum.etype;
 		DaoValue *C = DaoProcess_PutValue( self, A );
@@ -5860,6 +5600,11 @@ void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc )
 			C->xEnum.value = max;
 		}else{
 			C->xEnum.value = min;
+		}
+	}else if( A->type == DAO_OBJECT || A->type == DAO_CDATA || A->type == DAO_CSTRUCT ){
+		DaoValue *C = self->activeValues[ vmc->c ];
+		if( DaoProcess_TryUserArith( self, A, NULL, C ) == 0 ){
+			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "" );
 		}
 	}else{
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid operands" );
@@ -5898,7 +5643,7 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 	int tokid = 0;
 	int ec, sign = 1;
 
-	if( dA->type != DAO_STRING || tid == DAO_NONE || tid > DAO_LONG ) return 0;
+	if( dA->type != DAO_STRING || tid == DAO_NONE || tid > DAO_COMPLEX ) return 0;
 
 	if( dA->xString.data->mbs ){
 		DString_SetDataMBS( mbs, dA->xString.data->mbs, dA->xString.data->size );
@@ -5963,17 +5708,6 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 		dC->xComplex.value.imag = strtod( tok->string.mbs, 0 );
 		if( sign <0 ) dC->xComplex.value.imag = - dC->xComplex.value.imag;
 		break;
-#ifdef DAO_WITH_LONGINT
-	case DAO_LONG :
-		ec = DLong_FromString( dC->xLong.value, mbs );
-		if( ec ){
-			const char *msg = ec == 'L' ? "invalid radix" : "invalid digit";
-			DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, msg );
-			return 0;
-		}
-		dC->xLong.value->sign = sign;
-		break;
-#endif
 	}
 	if( tokid < lexer->tokens->size ) goto ReturnFalse;
 
@@ -6033,7 +5767,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		dC = DaoValue_SimpleCopy( ct->value );
 		DaoProcess_CacheValue( proc, dC );
 	}
-	if( dA->type == DAO_STRING && ct->tid > DAO_NONE && ct->tid <= DAO_LONG ){
+	if( dA->type == DAO_STRING && ct->tid > DAO_NONE && ct->tid <= DAO_COMPLEX ){
 		if( ConvertStringToNumber( proc, dA, dC ) ==0 ) goto FailConversion;
 		return dC;
 	}
@@ -6051,16 +5785,6 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		if( dA->type == DAO_COMPLEX ) goto Rebind;
 		if( dA->type >= DAO_ARRAY ) goto FailConversion;
 		dC->xComplex.value = DaoValue_GetComplex( dA );
-		break;
-	case DAO_LONG :
-		if( dA->type == DAO_LONG ) goto Rebind;
-		if( dA->type >= DAO_ARRAY ) goto FailConversion;
-#ifdef DAO_WITH_LONGINT
-		DLong_FromValue( dC->xLong.value, dA );
-		dC->type = DAO_LONG;
-#else
-		goto FailConversion;
-#endif
 		break;
 	case DAO_STRING :
 		if( dA->type == DAO_STRING ) goto Rebind;
@@ -6593,7 +6317,6 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 		case DAO_FLOAT   : size = sizeof(float); break;
 		case DAO_DOUBLE  : size = sizeof(double); break;
 		case DAO_COMPLEX : size = sizeof(complex16); break;
-		case DAO_LONG    : size = A->xLong.value->size; break;
 		case DAO_ENUM    : size = sizeof(int); break; break;
 		case DAO_STRING  : size = A->xString.data->size; break;
 		case DAO_LIST    : size = A->xList.items.size; break;

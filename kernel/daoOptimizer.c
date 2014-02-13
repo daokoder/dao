@@ -1659,7 +1659,7 @@ static void DaoOptimizer_Optimize( DaoOptimizer *self, DaoRoutine *routine )
 	if( routine->body->simpleVariables->size < routine->body->regCount / 2 ) return;
 	for(i=0,k=0; i<routine->body->simpleVariables->size; i++){
 		type = types[ routine->body->simpleVariables->items.pInt[i] ];
-		k += type ? type->tid >= DAO_INTEGER && type->tid <= DAO_LONG : 0;
+		k += type ? type->tid >= DAO_INTEGER && type->tid <= DAO_COMPLEX : 0;
 	}
 	/* Optimize only if there are sufficient amount of numeric calculations: */
 	if( k < routine->body->regCount / 2 ) return;
@@ -2015,7 +2015,6 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 	for(i=0; i<self->types->size; i++) GC_IncRC( types[i] );
 	DArray_PushBack( self->typeMaps, defs );
 
-	self->typeLong = DaoNamespace_MakeType( NS, "long", DAO_LONG, NULL, NULL, 0 );
 	self->typeEnum = DaoNamespace_MakeType( NS, "enum", DAO_ENUM, NULL, NULL, 0 );
 	self->typeString = DaoNamespace_MakeType( NS, "string", DAO_STRING, NULL, NULL, 0 );
 	self->basicTypes[DAO_NONE] = dao_type_none;
@@ -2023,7 +2022,6 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 	self->basicTypes[DAO_FLOAT] = dao_type_float;
 	self->basicTypes[DAO_DOUBLE] = dao_type_double;
 	self->basicTypes[DAO_COMPLEX] = dao_type_complex;
-	self->basicTypes[DAO_LONG] = self->typeLong;
 	self->basicTypes[DAO_ENUM] = self->typeEnum;
 	self->basicTypes[DAO_STRING] = self->typeString;
 }
@@ -3278,8 +3276,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					k = bt->nested->items.pType[0]->tid;
 					if( k > DAO_DOUBLE && k !=DAO_ANY ) goto NotMatch;
 				}
-			}else if( at->tid == DAO_LONG ){
-				ct = dao_type_int; /* XXX slicing */
 			}else if( at->tid == DAO_TYPE ){
 				at = at->nested->items.pType[0];
 				if( at->tid == DAO_ENUM && at->mapNames ){
@@ -3779,9 +3775,6 @@ NotExist_TryAux:
 						/* less strict checking */
 						goto NotMatch;
 					}
-					break;
-				case DAO_LONG :
-					ct = dao_type_int; /* XXX slicing */
 					break;
 				case DAO_LIST :
 					type = ct->nested->items.pType[0];
@@ -4298,7 +4291,6 @@ NotExist_TryAux:
 					ct = at;
 					switch( at->tid ){
 					case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
-					case DAO_LONG :
 						break;
 					case DAO_COMPLEX :
 						if( code == DVM_MOD || code >= DVM_AND ) goto InvOper;
@@ -4333,10 +4325,9 @@ NotExist_TryAux:
 					ct = at->tid > bt->tid ? at : bt;
 				}else if( at->tid != bt->tid && (code == DVM_AND || code == DVM_OR) ){
 					goto InvOper;
-				}else if( at->realnum && (bt->tid ==DAO_COMPLEX || bt->tid == DAO_LONG
-							|| bt->tid ==DAO_ARRAY) ){
+				}else if( at->realnum && (bt->tid ==DAO_COMPLEX || bt->tid ==DAO_ARRAY) ){
 					ct = bt;
-				}else if( (at->tid ==DAO_COMPLEX || at->tid == DAO_LONG || at->tid ==DAO_ARRAY)
+				}else if( (at->tid ==DAO_COMPLEX || at->tid ==DAO_ARRAY)
 						&& bt->realnum ){
 					ct = at;
 				}else if( at->tid ==DAO_STRING && bt->tid ==DAO_INTEGER && opa==opc  ){
@@ -4399,9 +4390,8 @@ NotExist_TryAux:
 				}else if( at->tid == bt->tid ){
 					if( at->tid == DAO_COMPLEX && code < DVM_EQ ) goto InvOper;
 					if( at->tid > DAO_TUPLE && code != DVM_EQ && code != DVM_NE ) goto InvOper;
-				}else if( at->tid >= DAO_INTEGER && at->tid <= DAO_LONG
-						&& bt->tid >= DAO_INTEGER && bt->tid <= DAO_LONG
-						&& at->tid != DAO_COMPLEX && bt->tid != DAO_COMPLEX ){
+				}else if( at->tid >= DAO_INTEGER && at->tid <= DAO_DOUBLE
+						&& bt->tid >= DAO_INTEGER && bt->tid <= DAO_DOUBLE ){
 					/* pass */
 				}else if( code != DVM_EQ && code != DVM_NE ){
 					goto InvOper;
@@ -4463,7 +4453,7 @@ NotExist_TryAux:
 				if( ct != dao_type_int ) DaoInferencer_InsertMove2( self, inode, ct, dao_type_int );
 				continue;
 			}
-			if( at->tid == DAO_LONG || at->tid == DAO_ENUM || at->tid == DAO_ARRAY ) continue;
+			if( at->tid == DAO_ENUM || at->tid == DAO_ARRAY ) continue;
 			if( at->tid >= DAO_OBJECT && at->tid <= DAO_CTYPE ) continue;
 			goto InvOper;
 			break;
@@ -4483,7 +4473,7 @@ NotExist_TryAux:
 				}
 				continue;
 			}
-			if( at->tid == DAO_LONG || at->tid == DAO_ARRAY ) continue;
+			if( at->tid == DAO_ARRAY ) continue;
 			if( at->tid >= DAO_OBJECT && at->tid <= DAO_CTYPE ) continue;
 			goto InvOper;
 			break;
@@ -4547,9 +4537,8 @@ NotExist_TryAux:
 					ct = at;
 				}else if( at->tid == bt->tid ){
 					ct = at;
-					if( at->tid > DAO_DOUBLE && at->tid != DAO_LONG ) goto InvOper;
-				}else if( (at->realnum || at->tid == DAO_LONG)
-						&& (bt->realnum || bt->tid == DAO_LONG) ){
+					if( at->tid > DAO_DOUBLE ) goto InvOper;
+				}else if( at->realnum && bt->realnum ){
 					ct = at->tid > bt->tid ? at : bt;
 				}else{
 					goto InvOper;
@@ -5022,7 +5011,7 @@ NotExist_TryAux:
 				if( types[opa] == NULL ) goto NotMatch;
 				if( at->tid == DAO_STRING ) goto NotMatch;
 				if( at->tid >= DAO_ARRAY && at->tid <= DAO_TUPLE ) goto NotMatch;
-				if( consts[opa] && consts[opa]->type <= DAO_LONG ){
+				if( consts[opa] && consts[opa]->type <= DAO_COMPLEX ){
 					vmc->code =  DaoValue_IsZero( consts[opa] ) ? (int)DVM_GOTO : (int)DVM_UNUSED;
 					continue;
 				}

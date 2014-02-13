@@ -122,7 +122,6 @@ DAO_DLL DaoType *dao_type_int;
 DAO_DLL DaoType *dao_type_float;
 DAO_DLL DaoType *dao_type_double;
 DAO_DLL DaoType *dao_type_complex;
-DAO_DLL DaoType *dao_type_long;
 DAO_DLL DaoType *dao_type_string;
 DAO_DLL DaoType *dao_type_tuple;
 DAO_DLL DaoType *dao_type_array_empty;

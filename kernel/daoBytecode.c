@@ -517,26 +517,6 @@ DaoByteBlock* DaoByteBlock_EncodeComplex( DaoByteBlock *self, DaoComplex *value 
 	DaoByteCoder_EncodeDouble( block->end, value->value.imag );
 	return block;
 }
-DaoByteBlock* DaoByteBlock_EncodeLong( DaoByteBlock *self, DaoLong *value )
-{
-	int i;
-	DaoByteBlock *block = DaoByteBlock_FindOrCopyBlock( self, (DaoValue*) value );
-	if( block ) return block;
-	block = DaoByteBlock_AddBlock( self, (DaoValue*) value, DAO_ASM_VALUE );
-	block->begin[0] = DAO_LONG;
-	block->begin[1] = value->value->base;
-	block->begin[2] = value->value->sign;
-	block->begin[3] = value->value->size % 16;
-	for(i=0; i<4 && i<value->value->size; ++i) block->begin[i+4] = value->value->data[i];
-	for(i=4; (i+8)<value->value->size; i+=8){
-		DaoByteBlock *dataBlock = DaoByteBlock_NewBlock( block, DAO_ASM_DATA );
-		memcpy( dataBlock->begin, value->value->data+i, 8*sizeof(char) );
-	}
-	if( i < value->value->size ){
-		memcpy( block->end, value->value->data+i, (value->value->size-i)*sizeof(char) );
-	}
-	return block;
-}
 DaoByteBlock* DaoByteBlock_EncodeString( DaoByteBlock *self, DString *string )
 {
 	DaoByteBlock *block;
@@ -833,7 +813,6 @@ DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value )
 	case DAO_FLOAT   : return DaoByteBlock_EncodeFloat( self, value->xFloat.value );
 	case DAO_DOUBLE  : return DaoByteBlock_EncodeDouble( self, value->xDouble.value );
 	case DAO_COMPLEX : return DaoByteBlock_EncodeComplex( self, (DaoComplex*) value );
-	case DAO_LONG   : return DaoByteBlock_EncodeLong( self, (DaoLong*) value );
 	case DAO_STRING : return DaoByteBlock_EncodeString( self, value->xString.data );
 	case DAO_ENUM : return DaoByteBlock_EncodeEnum( self, (DaoEnum*) value );
 	case DAO_ARRAY  : return DaoByteBlock_EncodeArray( self, (DaoArray*) value );
@@ -1718,7 +1697,6 @@ void DaoByteBlock_GetAllValues( DaoByteCoder *self, DaoByteBlock *block, int hea
 
 static void DaoByteCoder_DecodeValue( DaoByteCoder *self, DaoByteBlock *block )
 {
-	DLong *dlong;
 	DString *dstring;
 	DaoMap *map;
 	DaoList *list;
@@ -1758,21 +1736,6 @@ static void DaoByteCoder_DecodeValue( DaoByteCoder *self, DaoByteBlock *block )
 		value->xComplex.value.imag = DaoByteCoder_DecodeDouble( self, block->end );
 		pb = pb->next;
 		break;
-#ifdef DAO_WITH_LONGINT
-	case DAO_LONG :
-		value = (DaoValue*) DaoLong_New();
-		dlong = value->xLong.value;
-		dlong->base = block->begin[1];
-		dlong->sign = block->begin[2];
-		D = block->begin[3];
-		for(i=0; i<4 && (i<D || pb!=NULL); ++i) DLong_PushBack( dlong, block->begin[i+4] );
-		for(; pb; pb=pb->next){
-			for(i=0; i<8; ++i) DLong_PushBack( dlong, pb->begin[i] );
-		}
-		for(i=0; i<8 && (dlong->size%16)!=D; ++i) DLong_PushBack( dlong, block->end[i] );
-		if( (dlong->size%16) != D ) DaoByteCoder_Error( self, block, "size not matching!" );
-		break;
-#endif
 	case DAO_STRING :
 		A = block->begin[1];
 		B = block->begin[2];

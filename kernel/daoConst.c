@@ -139,7 +139,6 @@ static const char* const daoCtInfo[] =
 	"Constant evaluation aborted with exception(s)",
 	"Cyclic loading detected",
 	"String pattern matching is disabled",
-	"Long integer type is disabled",
 	"Numeric array is disabled",
 	"Function decorator is disabled",
 	"invalid load statement",
@@ -230,7 +229,7 @@ const char* const daoExceptionInfo[] =
 
 const char* const coreTypeNames[] =
 {
-	"none", "int", "float", "double", "complex", "long", "string",
+	"none", "int", "float", "double", "complex", "string",
 	"enum", "array", "list", "map", "tuple"
 };
 const char *const daoBitBoolArithOpers[] = {

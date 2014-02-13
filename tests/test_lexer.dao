@@ -331,69 +331,6 @@ Complex ::= Float 'C'
 
 
 
-#{
-LongBase ::= '2' ... '16'
-Long ::= Integer 'L' [ LongBase ]
-#}
-
-@[test(code_03)]
-	io.writeln( 123L )
-@[test(code_03)]
-@[test(code_03)]
-	123L
-@[test(code_03)]
-
-
-@[test(code_03)]
-	io.writeln( 0xffL )
-@[test(code_03)]
-@[test(code_03)]
-	255L
-@[test(code_03)]
-
-
-@[test(code_03)]
-	io.writeln( 100111001L2 )
-@[test(code_03)]
-@[test(code_03)]
-	0* 100111001L2
-@[test(code_03)]
-
-
-@[test(code_03)]
-	io.writeln( 0xffL8 )
-@[test(code_03)]
-@[test(code_03)]
-	377L8
-@[test(code_03)]
-
-
-@[test(code_03)]
-	125L2
-@[test(code_03)]
-@[test(code_03)]
-	Invalid %s number %s digit
-@[test(code_03)]
-
-
-@[test(code_03)]
-	0L1
-@[test(code_03)]
-@[test(code_03)]
-	Invalid %s number %s radix
-@[test(code_03)]
-
-
-@[test(code_03)]
-	123L20
-@[test(code_03)]
-@[test(code_03)]
-	Invalid %s number %s radix
-@[test(code_03)]
-
-
-
-
 # Incomplete string:
 @[test(code_03)]
 	'incomplete string

@@ -39,7 +39,7 @@
 #define LONG_BASE 256
 #define LONG_MASK 255
 
-typedef signed char       schar_t;
+typedef signed char        schar_t;
 typedef struct DaoxBigInt  DaoxBigInt;
 
 /* bit integer */
@@ -1777,6 +1777,232 @@ static void BIGINT_POW4( DaoProcess *proc, DaoValue *p[], int N )
 {
 	BIGINT_BinaryOper4( proc, p, N, DVM_POW );
 }
+static void BIGINT_UnaryOper( DaoProcess *proc, DaoValue *p[], int N, int oper )
+{
+	daoint ta;
+	DaoxBigInt *A = (DaoxBigInt*) p[0];
+	DaoxBigInt *C = DaoxBigInt_New();
+	DaoProcess_PutValue( proc, (DaoValue*) C );
+	switch( oper ){
+	case DVM_NOT  :
+		ta = DaoxBigInt_CompareToZero( A ) == 0;
+		DaoxBigInt_FromInteger( C, ta );
+		break;
+	case DVM_MINUS :
+		DaoxBigInt_Move( C, A );
+		C->sign = - C->sign;
+		break;
+	case DVM_TILDE :
+		DaoxBigInt_Move( C, A );
+		DaoxBigInt_Flip( C );
+		break;
+	default: break;
+	}
+}
+static void BIGINT_MINUS( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_UnaryOper( proc, p, N, DVM_MINUS );
+}
+static void BIGINT_NOT( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_UnaryOper( proc, p, N, DVM_NOT );
+}
+static void BIGINT_TILDE( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_UnaryOper( proc, p, N, DVM_TILDE );
+}
+static void BIGINT_BitOper1( DaoProcess *proc, DaoValue *p[], int N, int oper )
+{
+	DaoxBigInt *A = (DaoxBigInt*) p[0];
+	DaoxBigInt *C = DaoxBigInt_New();
+	DaoProcess_PutValue( proc, (DaoValue*) C );
+	switch( oper ){
+	case DVM_BITAND :
+		DaoxBigInt_FromValue( C, p[1] );
+		DaoxBigInt_BitAND( C, A, C );
+		break;
+	case DVM_BITOR  :
+		DaoxBigInt_FromValue( C, p[1] );
+		DaoxBigInt_BitOR( C, A, C );
+		break;
+	case DVM_BITXOR :
+		DaoxBigInt_FromValue( C, p[1] );
+		DaoxBigInt_BitXOR( C, A, C );
+		break;
+	case DVM_BITLFT :
+		DaoxBigInt_Move( C, A );
+		DaoxBigInt_ShiftLeft( C, DaoValue_GetInteger( p[1] ) );
+		break;
+	case DVM_BITRIT :
+		DaoxBigInt_Move( C, A );
+		DaoxBigInt_ShiftRight( C, DaoValue_GetInteger( p[1] ) );
+		break;
+	default : break;
+	}
+}
+static void BIGINT_BITAND1( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper1( proc, p, N, DVM_BITAND );
+}
+static void BIGINT_BITOR1( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper1( proc, p, N, DVM_BITOR );
+}
+static void BIGINT_BITXOR1( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper1( proc, p, N, DVM_BITXOR );
+}
+static void BIGINT_BITLFT1( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper1( proc, p, N, DVM_BITLFT );
+}
+static void BIGINT_BITRIT1( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper1( proc, p, N, DVM_BITRIT );
+}
+static void BIGINT_BitOper2( DaoProcess *proc, DaoValue *p[], int N, int oper )
+{
+	DaoxBigInt *A = (DaoxBigInt*) p[0];
+	DaoxBigInt *B = (DaoxBigInt*) p[1];
+	DaoxBigInt *C = DaoxBigInt_New();
+	DaoProcess_PutValue( proc, (DaoValue*) C );
+	switch( oper ){
+	case DVM_BITAND :
+		DaoxBigInt_BitAND( C, A, B );
+		break;
+	case DVM_BITOR  :
+		DaoxBigInt_BitOR( C, A, B );
+		break;
+	case DVM_BITXOR :
+		DaoxBigInt_BitXOR( C, A, B );
+		break;
+	case DVM_BITLFT :
+		DaoxBigInt_Move( C, A );
+		DaoxBigInt_ShiftLeft( C, DaoxBigInt_ToInteger( B ) );
+		break;
+	case DVM_BITRIT :
+		DaoxBigInt_Move( C, A );
+		DaoxBigInt_ShiftRight( C, DaoxBigInt_ToInteger( B ) );
+		break;
+	default : break;
+	}
+}
+static void BIGINT_BITAND2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper2( proc, p, N, DVM_BITAND );
+}
+static void BIGINT_BITOR2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper2( proc, p, N, DVM_BITOR );
+}
+static void BIGINT_BITXOR2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper2( proc, p, N, DVM_BITXOR );
+}
+static void BIGINT_BITLFT2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper2( proc, p, N, DVM_BITLFT );
+}
+static void BIGINT_BITRIT2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper2( proc, p, N, DVM_BITRIT );
+}
+static void BIGINT_BitOper3( DaoProcess *proc, DaoValue *p[], int N, int oper )
+{
+	DaoxBigInt *A = (DaoxBigInt*) p[1];
+	DaoxBigInt *C = (DaoxBigInt*) p[0];
+	DaoProcess_PutValue( proc, (DaoValue*) C );
+	switch( oper ){
+	case DVM_BITAND :
+		DaoxBigInt_FromValue( C, p[2] );
+		DaoxBigInt_BitAND( C, A, C );
+		break;
+	case DVM_BITOR  :
+		DaoxBigInt_FromValue( C, p[2] );
+		DaoxBigInt_BitOR( C, A, C );
+		break;
+	case DVM_BITXOR :
+		DaoxBigInt_FromValue( C, p[2] );
+		DaoxBigInt_BitXOR( C, A, C );
+		break;
+	case DVM_BITLFT :
+		DaoxBigInt_Move( C, A );
+		DaoxBigInt_ShiftLeft( C, DaoValue_GetInteger( p[2] ) );
+		break;
+	case DVM_BITRIT :
+		DaoxBigInt_Move( C, A );
+		DaoxBigInt_ShiftRight( C, DaoValue_GetInteger( p[2] ) );
+		break;
+	default : break;
+	}
+}
+static void BIGINT_BITAND3( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper3( proc, p, N, DVM_BITAND );
+}
+static void BIGINT_BITOR3( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper3( proc, p, N, DVM_BITOR );
+}
+static void BIGINT_BITXOR3( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper3( proc, p, N, DVM_BITXOR );
+}
+static void BIGINT_BITLFT3( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper3( proc, p, N, DVM_BITLFT );
+}
+static void BIGINT_BITRIT3( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper3( proc, p, N, DVM_BITRIT );
+}
+static void BIGINT_BitOper4( DaoProcess *proc, DaoValue *p[], int N, int oper )
+{
+	DaoxBigInt *A = (DaoxBigInt*) p[1];
+	DaoxBigInt *B = (DaoxBigInt*) p[2];
+	DaoxBigInt *C = (DaoxBigInt*) p[0];
+	DaoProcess_PutValue( proc, (DaoValue*) C );
+	switch( oper ){
+	case DVM_BITAND :
+		DaoxBigInt_BitAND( C, A, B );
+		break;
+	case DVM_BITOR  :
+		DaoxBigInt_BitOR( C, A, B );
+		break;
+	case DVM_BITXOR :
+		DaoxBigInt_BitXOR( C, A, B );
+		break;
+	case DVM_BITLFT :
+		DaoxBigInt_Move( C, A );
+		DaoxBigInt_ShiftLeft( C, DaoxBigInt_ToInteger( B ) );
+		break;
+	case DVM_BITRIT :
+		DaoxBigInt_Move( C, A );
+		DaoxBigInt_ShiftRight( C, DaoxBigInt_ToInteger( B ) );
+		break;
+	default : break;
+	}
+}
+static void BIGINT_BITAND4( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper4( proc, p, N, DVM_BITAND );
+}
+static void BIGINT_BITOR4( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper4( proc, p, N, DVM_BITOR );
+}
+static void BIGINT_BITXOR4( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper4( proc, p, N, DVM_BITXOR );
+}
+static void BIGINT_BITLFT4( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper4( proc, p, N, DVM_BITLFT );
+}
+static void BIGINT_BITRIT4( DaoProcess *proc, DaoValue *p[], int N )
+{
+	BIGINT_BitOper4( proc, p, N, DVM_BITRIT );
+}
 static void BIGINT_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoxBigInt *self = (DaoxBigInt*) p[0];
@@ -1840,6 +2066,34 @@ static DaoFuncItem bigintMeths[]=
 	{ BIGINT_MOD4, "%( C :BigInt, A :BigInt, B :BigInt ) => BigInt" },
 	{ BIGINT_POW4, "**( C :BigInt, A :BigInt, B :BigInt ) => BigInt" },
 
+	{ BIGINT_MINUS, "-( A :BigInt ) => BigInt" },
+	{ BIGINT_NOT,   "!( A :BigInt ) => BigInt" },
+	{ BIGINT_TILDE, "~( A :BigInt ) => BigInt" },
+
+	{ BIGINT_BITAND1, "&( A :BigInt, B :int ) => BigInt" },
+	{ BIGINT_BITOR1,  "|( A :BigInt, B :int ) => BigInt" },
+	{ BIGINT_BITXOR1, "^( A :BigInt, B :int ) => BigInt" },
+	{ BIGINT_BITLFT1, "<<( A :BigInt, B :int ) => BigInt" },
+	{ BIGINT_BITRIT1, ">>( A :BigInt, B :int ) => BigInt" },
+
+	{ BIGINT_BITAND2, "&( A :BigInt, B :BigInt ) => BigInt" },
+	{ BIGINT_BITOR2,  "|( A :BigInt, B :BigInt ) => BigInt" },
+	{ BIGINT_BITXOR2, "^( A :BigInt, B :BigInt ) => BigInt" },
+	{ BIGINT_BITLFT2, "<<( A :BigInt, B :BigInt ) => BigInt" },
+	{ BIGINT_BITRIT2, ">>( A :BigInt, B :BigInt ) => BigInt" },
+
+	{ BIGINT_BITAND3, "&( C :BigInt, A :BigInt, B :int ) => BigInt" },
+	{ BIGINT_BITOR3,  "|( C :BigInt, A :BigInt, B :int ) => BigInt" },
+	{ BIGINT_BITXOR3, "^( C :BigInt, A :BigInt, B :int ) => BigInt" },
+	{ BIGINT_BITLFT3, "<<( C :BigInt, A :BigInt, B :int ) => BigInt" },
+	{ BIGINT_BITRIT3, ">>( C :BigInt, A :BigInt, B :int ) => BigInt" },
+
+	{ BIGINT_BITAND4, "&( C :BigInt, A :BigInt, B :BigInt ) => BigInt" },
+	{ BIGINT_BITOR4,  "|( C :BigInt, A :BigInt, B :BigInt ) => BigInt" },
+	{ BIGINT_BITXOR4, "^( C :BigInt, A :BigInt, B :BigInt ) => BigInt" },
+	{ BIGINT_BITLFT4, "<<( C :BigInt, A :BigInt, B :BigInt ) => BigInt" },
+	{ BIGINT_BITRIT4, ">>( C :BigInt, A :BigInt, B :BigInt ) => BigInt" },
+
 	{ BIGINT_PRINT,  "Print( self :BigInt )" },
 	{ BIGINT_PRINT,  "__PRINT__( self :BigInt )" },
 
@@ -1853,6 +2107,9 @@ DaoTypeBase bigintTyper =
 
 DAO_DLL int DaoBigint_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
+#ifdef DAO_WITH_THREAD
+	DMutex_Init( & mutex_long_sharing ); /* TODO: destroy; */
+#endif
 	daox_type_bigint = DaoNamespace_WrapType( ns, & bigintTyper, 0 );
 	return 0;
 }

@@ -98,7 +98,6 @@ enum DaoTypes
 	DAO_FLOAT   ,
 	DAO_DOUBLE  ,
 	DAO_COMPLEX ,
-	DAO_LONG  ,
 	DAO_STRING ,
 	DAO_ENUM  ,
 	DAO_ARRAY ,
@@ -193,7 +192,6 @@ typedef unsigned int    uint_t;
 
 typedef struct DString     DString;
 typedef struct DArray      DArray;
-typedef struct DLong       DLong;
 typedef struct DNode       DNode;
 typedef struct DMap        DMap;
 
@@ -211,7 +209,6 @@ typedef struct DaoInteger      DaoInteger;
 typedef struct DaoFloat        DaoFloat;
 typedef struct DaoDouble       DaoDouble;
 typedef struct DaoComplex      DaoComplex;
-typedef struct DaoLong         DaoLong;
 typedef struct DaoString       DaoString;
 typedef struct DaoEnum         DaoEnum;
 typedef struct DaoArray        DaoArray;
@@ -390,7 +387,6 @@ DAO_DLL DaoInteger*   DaoValue_CastInteger( DaoValue *self );
 DAO_DLL DaoFloat*     DaoValue_CastFloat( DaoValue *self );
 DAO_DLL DaoDouble*    DaoValue_CastDouble( DaoValue *self );
 DAO_DLL DaoComplex*   DaoValue_CastComplex( DaoValue *self );
-DAO_DLL DaoLong*      DaoValue_CastLong( DaoValue *self );
 DAO_DLL DaoString*    DaoValue_CastString( DaoValue *self );
 DAO_DLL DaoEnum*      DaoValue_CastEnum( DaoValue *self );
 DAO_DLL DaoArray*     DaoValue_CastArray( DaoValue *self );
@@ -572,8 +568,6 @@ DAO_DLL DaoComplex* DaoComplex_New( complex16 value );
 DAO_DLL DaoComplex* DaoComplex_New2( double real, double imag );
 DAO_DLL complex16   DaoComplex_Get( DaoComplex *self );
 DAO_DLL void        DaoComplex_Set( DaoComplex *self, complex16 value );
-
-DAO_DLL DaoLong*  DaoLong_New();
 
 DAO_DLL DaoString*  DaoString_New( int mbs );
 DAO_DLL DaoString*  DaoString_NewMBS( const char *mbs );
@@ -853,7 +847,6 @@ DAO_DLL daoint*    DaoProcess_PutInteger( DaoProcess *self, daoint value );
 DAO_DLL float*     DaoProcess_PutFloat( DaoProcess *self, float value );
 DAO_DLL double*    DaoProcess_PutDouble( DaoProcess *self, double value );
 DAO_DLL complex16* DaoProcess_PutComplex( DaoProcess *self, complex16 value );
-DAO_DLL DLong*     DaoProcess_PutLong( DaoProcess *self );
 DAO_DLL DString*   DaoProcess_PutMBString( DaoProcess *self, const char *mbs );
 DAO_DLL DString*   DaoProcess_PutWCString( DaoProcess *self, const wchar_t *wcs );
 DAO_DLL DString*   DaoProcess_PutString( DaoProcess *self, DString *str );
@@ -1018,7 +1011,6 @@ DAO_DLL DaoInteger* DaoProcess_NewInteger( DaoProcess *self, daoint v );
 DAO_DLL DaoFloat*   DaoProcess_NewFloat( DaoProcess *self, float v );
 DAO_DLL DaoDouble*  DaoProcess_NewDouble( DaoProcess *self, double v );
 DAO_DLL DaoComplex* DaoProcess_NewComplex( DaoProcess *self, complex16 v );
-DAO_DLL DaoLong*    DaoProcess_NewLong( DaoProcess *self );
 DAO_DLL DaoString*  DaoProcess_NewString( DaoProcess *self, int mbs );
 /*
 // Negative "n" indicates a null-terminated string:

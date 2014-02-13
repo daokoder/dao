@@ -284,6 +284,7 @@ static void MATH_min( DaoProcess *proc, DaoValue *p[], int N )
 
 
 
+#if 0
 /* z = x * x + r */
 /* binary searching */
 void DLong_Sqrt( DLong *z, DLong *x, DLong *r )
@@ -339,6 +340,7 @@ static void LONG_Sqrt( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	DLong_Sqrt( z, items[0]->xLong.value, items[1]->xLong.value );
 }
+#endif
 
 
 static DaoFuncItem mathMeths[]=
@@ -398,7 +400,7 @@ static DaoFuncItem mathMeths[]=
 	{ MATH_pow_cr,    "pow( p1 :complex, p2 :double )=>complex" },
 	{ MATH_pow_cc,    "pow( p1 :complex, p2 :complex )=>complex" },
 
-	{ LONG_Sqrt, "sqrt( self : long ) => tuple<long,long>" },
+	//{ LONG_Sqrt, "sqrt( self : long ) => tuple<long,long>" },
 
 	{ NULL, NULL }
 };

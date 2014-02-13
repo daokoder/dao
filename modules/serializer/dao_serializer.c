@@ -151,16 +151,6 @@ static void DaoSerializeComplex( complex16 value, DString *serial )
 	DString_AppendChar( serial, ' ' );
 	DaoSerializeDouble( value.imag, serial );
 }
-static void DaoSerializeLong( DLong *value, DString *serial )
-{
-	int i;
-	DaoSerializeInteger( value->base, serial );
-	DString_AppendChar( serial, value->sign > 0 ? '+' : '-' );
-	for(i=0; i<value->size; i++){
-		if( i ) DString_AppendChar( serial, ',' );
-		DaoSerializeInteger( value->data[i], serial );
-	}
-}
 
 static int DaoValue_Serialize2( DaoValue*, DString*, DaoNamespace*, DaoProcess*, DaoType*, DString*, DMap* );
 
@@ -308,9 +298,6 @@ int DaoValue_Serialize2( DaoValue *self, DString *serial, DaoNamespace *ns, DaoP
 		break;
 	case DAO_COMPLEX :
 		DaoSerializeComplex( self->xComplex.value, serial );
-		break;
-	case DAO_LONG :
-		DaoSerializeLong( self->xLong.value, serial );
 		break;
 	case DAO_STRING :
 		DString_Serialize( self->xString.data, serial, buf );
@@ -526,23 +513,6 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 		if( minus ) value->xComplex.value.imag = - value->xComplex.value.imag;
 		next = start + 2;
 		break;
-#ifdef DAO_WITH_LONGINT
-	case DAO_LONG :
-		value->xLong.value->base = DaoDecodeInteger( str );
-		start += 1;
-		if( tokens[start]->name == DTOK_ADD ){
-			value->xLong.value->sign = 1;
-			start += 1;
-		}else if( tokens[start]->name == DTOK_SUB ){
-			value->xLong.value->sign = -1;
-			start += 1;
-		}
-		for(i=start; i<=end; i++){
-			if( tokens[i]->name == DTOK_COMMA ) continue;
-			DLong_PushBack( value->xLong.value, DaoDecodeInteger( tokens[i]->string.mbs ) );
-		}
-		break;
-#endif
 	case DAO_STRING :
 		n = tokens[start]->string.size - 1;
 		for(i=1; i<n; i++){

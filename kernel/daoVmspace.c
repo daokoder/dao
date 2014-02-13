@@ -150,7 +150,6 @@ static const char *const cmd_help =
 extern DaoTypeBase  baseTyper;
 extern DaoTypeBase  numberTyper;
 extern DaoTypeBase  stringTyper;
-extern DaoTypeBase  longTyper;
 extern DaoTypeBase  enumTyper;
 extern DaoTypeBase  listTyper;
 extern DaoTypeBase  mapTyper;
@@ -189,7 +188,6 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_FLOAT    :  return & numberTyper;
 	case DAO_DOUBLE   :  return & numberTyper;
 	case DAO_COMPLEX  :  return & comTyper;
-	case DAO_LONG     :  return & longTyper;
 	case DAO_ENUM     :  return & enumTyper;
 	case DAO_STRING   :  return & stringTyper;
 	case DAO_LIST     :  return & listTyper;
@@ -2518,7 +2516,6 @@ extern void DaoType_Init();
 DaoType *dao_type_channel = NULL;
 DaoType *dao_type_future  = NULL;
 
-extern DMutex mutex_long_sharing;
 extern DMutex mutex_string_sharing;
 extern DMutex mutex_type_map;
 extern DMutex mutex_values_setup;
@@ -2610,7 +2607,6 @@ DaoVmSpace* DaoInit( const char *command )
 	/* signal( SIGABRT, print_trace ); */
 
 #ifdef DAO_WITH_THREAD
-	DMutex_Init( & mutex_long_sharing );
 	DMutex_Init( & mutex_string_sharing );
 	DMutex_Init( & mutex_type_map );
 	DMutex_Init( & mutex_values_setup );
@@ -2651,7 +2647,6 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_float = DaoType_New( "float", DAO_FLOAT, NULL, NULL );
 	dao_type_double = DaoType_New( "double", DAO_DOUBLE, NULL, NULL );
 	dao_type_complex = DaoType_New( "complex", DAO_COMPLEX, NULL, NULL );
-	dao_type_long = DaoType_New( "long", DAO_LONG, NULL, NULL );
 	dao_type_string = DaoType_New( "string", DAO_STRING, NULL, NULL );
 	dao_type_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoValue*)dao_type_udf, NULL );
 
@@ -2697,7 +2692,6 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_AddTypeConstant( ns, dao_type_float->name, dao_type_float );
 	DaoNamespace_AddTypeConstant( ns, dao_type_double->name, dao_type_double );
 	DaoNamespace_AddTypeConstant( ns, dao_type_complex->name, dao_type_complex );
-	DaoNamespace_AddTypeConstant( ns, dao_type_long->name, dao_type_long );
 	DaoNamespace_AddTypeConstant( ns, dao_type_string->name, dao_type_string );
 
 	dao_type_none = DaoNamespace_MakeValueType( ns, dao_none_value );
@@ -2731,7 +2725,6 @@ DaoVmSpace* DaoInit( const char *command )
 #endif
 
 	DaoNamespace_SetupType( vms->nsInternal, & stringTyper );
-	DaoNamespace_SetupType( vms->nsInternal, & longTyper );
 	DaoNamespace_SetupType( vms->nsInternal, & comTyper );
 	dao_type_list_template = DaoNamespace_WrapGenericType( ns, & listTyper, DAO_LIST );
 	dao_type_map_template = DaoNamespace_WrapGenericType( ns, & mapTyper, DAO_MAP );
@@ -2745,10 +2738,8 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_map_empty );
 
 	GC_ShiftRC( dao_type_complex, comTyper.core->kernel->abtype );
-	GC_ShiftRC( dao_type_long, longTyper.core->kernel->abtype );
 	GC_ShiftRC( dao_type_string, stringTyper.core->kernel->abtype );
 	comTyper.core->kernel->abtype = dao_type_complex;
-	longTyper.core->kernel->abtype = dao_type_long;
 	stringTyper.core->kernel->abtype = dao_type_string;
 
 	ns2 = DaoVmSpace_GetNamespace( vms, "io" );
@@ -2840,7 +2831,6 @@ void DaoQuit()
 		dao_jit.Execute = NULL;
 	}
 #ifdef DAO_WITH_THREAD
-	DMutex_Destroy( & mutex_long_sharing );
 	DMutex_Destroy( & mutex_string_sharing );
 	DMutex_Destroy( & mutex_type_map );
 	DMutex_Destroy( & mutex_values_setup );

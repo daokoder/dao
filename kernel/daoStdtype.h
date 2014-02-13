@@ -73,14 +73,6 @@ struct DaoComplex
 
 	complex16 value;
 };
-struct DaoLong
-{
-	DAO_VALUE_CORE;
-
-	DLong  *value;
-};
-DAO_DLL DaoLong* DaoLong_Copy( DaoLong *self );
-DAO_DLL void DaoLong_Delete( DaoLong *self );
 
 struct DaoString
 {

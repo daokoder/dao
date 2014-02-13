@@ -57,7 +57,7 @@ static void DaoSignalHandler( int sig )
 {
 	DaoVmSpace_Stop( vmSpace, 1);
 	if( !(DaoVmSpace_GetOptions( vmSpace ) & DAO_OPTION_INTERUN) ){
-		static count = 0;
+		static int count = 0;
 		if( count ) exit(1);
 		count += 1;
 		return;

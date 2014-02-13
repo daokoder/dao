@@ -189,7 +189,6 @@ DaoParser* DaoParser_New()
 	self->mbs = DString_New(1);
 	self->mbs2 = DString_New(1);
 	self->str = DString_New(1);
-	self->bigint = DLong_New();
 	self->denum = DaoEnum_New(NULL,0);
 
 	self->toks = DArray_New(0);
@@ -251,7 +250,6 @@ void DaoParser_Delete( DaoParser *self )
 	if( self->protoValues ) DMap_Delete( self->protoValues );
 	DMap_Delete( self->initTypes );
 	DMap_Delete( self->lvm );
-	DLong_Delete( self->bigint );
 	DaoParser_ClearCodes( self );
 	node = self->vmcFree;
 	while( node ){
@@ -5354,28 +5352,6 @@ static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoValue *value
 		value->xComplex.value.real = 0;
 		value->xComplex.value.imag = strtod( str, 0 );
 		str[tok->string.size-1] = 'C';
-	}else if( tok->name == DTOK_DIGITS_LONG ){
-#ifdef DAO_WITH_LONGINT
-		char ec;
-		value->xLong.value = self->bigint;
-		ec = DLong_FromString( value->xLong.value, & tok->string );
-		if( ec ){
-			if( ec == 'L' ){
-				DString_SetMBS( self->mbs, tok->string.mbs + pl );
-				DaoParser_Error( self, DAO_INVALID_RADIX, self->mbs );
-			}else{
-				DString_Clear( self->mbs );
-				DString_AppendChar( self->mbs, ec );
-				DaoParser_Error( self, DAO_INVALID_DIGIT, self->mbs );
-			}
-			DaoParser_Error( self, DAO_INVALID_LITERAL, & tok->string );
-			return NULL;
-		}
-		value->type = DAO_LONG;
-#else
-		DaoParser_Error( self, DAO_DISABLED_LONGINT, NULL );
-		return NULL;
-#endif
 	}else{
 		value->type = DAO_INTEGER;
 		value->xInteger.value = (sizeof(daoint) == 4) ? strtol( str, 0, 0 ) : strtoll( str, 0, 0 );
@@ -5446,7 +5422,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		}
 		varReg = LOOKUP_BIND_LC( node->value.pInt );
 		*cst = varReg;
-	}else if( tki >= DTOK_DIGITS_DEC && tki <= DTOK_DIGITS_LONG ){
+	}else if( tki >= DTOK_DIGITS_DEC && tki <= DTOK_NUMBER_IMG ){
 		if( (node = MAP_Find( self->allConsts, str )) == NULL ){
 			value = DaoParseNumber( self, tokens[start], & buffer );
 			if( value == NULL ) return -1;

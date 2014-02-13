@@ -97,12 +97,6 @@
 // ASM_END(1B): Imag(8B);
 //
 //
-// long:
-// ASM_VALUE(1B): DAO_LONG(1B), Base(1B), Sign(1B), SizeMod16(1B), Digits(4B);
-//   ASM_DATA(1B); Digits (8B);
-// ASM_END(1B): Digits(8B);
-//
-//
 // string:
 // ASM_VALUE(1B): DAO_STRING(1B), MBS/WCS(1B), SizeMod16(1B), Bytes(5B);
 //   ASM_DATA(1B); Bytes(8B);
@@ -595,7 +589,6 @@ DaoByteBlock* DaoByteBlock_EncodeInteger( DaoByteBlock *self, daoint value );
 DaoByteBlock* DaoByteBlock_EncodeFloat( DaoByteBlock *self, float value );
 DaoByteBlock* DaoByteBlock_EncodeDouble( DaoByteBlock *self, double value );
 DaoByteBlock* DaoByteBlock_EncodeComplex( DaoByteBlock *self, DaoComplex *value );
-DaoByteBlock* DaoByteBlock_EncodeLong( DaoByteBlock *self, DaoLong *value );
 DaoByteBlock* DaoByteBlock_EncodeEnum( DaoByteBlock *self, DaoEnum *value );
 
 DaoByteBlock* DaoByteBlock_EncodeArray( DaoByteBlock *self, DaoArray *value );
