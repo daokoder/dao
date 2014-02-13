@@ -2003,6 +2003,18 @@ static void BIGINT_BITRIT4( DaoProcess *proc, DaoValue *p[], int N )
 {
 	BIGINT_BitOper4( proc, p, N, DVM_BITRIT );
 }
+static void BIGINT_CastToInt( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoxBigInt *self = (DaoxBigInt*) p[0];
+	daoint *res = DaoProcess_PutInteger( proc, 0 );
+	*res = DaoxBigInt_ToInteger( self );
+}
+static void BIGINT_CastToString( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoxBigInt *self = (DaoxBigInt*) p[0];
+	DString *res = DaoProcess_PutMBString( proc, "" );
+	DaoxBigInt_Print( self, res );
+}
 static void BIGINT_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoxBigInt *self = (DaoxBigInt*) p[0];
@@ -2093,6 +2105,9 @@ static DaoFuncItem bigintMeths[]=
 	{ BIGINT_BITXOR4, "^( C :BigInt, A :BigInt, B :BigInt ) => BigInt" },
 	{ BIGINT_BITLFT4, "<<( C :BigInt, A :BigInt, B :BigInt ) => BigInt" },
 	{ BIGINT_BITRIT4, ">>( C :BigInt, A :BigInt, B :BigInt ) => BigInt" },
+
+	{ BIGINT_CastToInt,     "operator cast( self :BigInt ) => int" },
+	{ BIGINT_CastToString,  "operator cast( self :BigInt ) => string" },
 
 	{ BIGINT_PRINT,  "Print( self :BigInt )" },
 	{ BIGINT_PRINT,  "__PRINT__( self :BigInt )" },

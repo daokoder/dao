@@ -6,6 +6,7 @@ author: Fu Limin (phoolimin@gmail.com)
 #}
 
 load sys
+load bigint
 load coroutine
 
 class DaoCxxVariable
@@ -2720,7 +2721,7 @@ global daoqt_sig_slot_emit =
 
 routine NewProxyFunctionName( self :coroutine<none,string> )
 {
-	id = 10000L16;
+	id = BigInt( '10000L16' )
 	while(1) self.yield ('Function_' + (string)(++id));
 	return '';
 }

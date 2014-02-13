@@ -2208,7 +2208,6 @@ static void DaoByteCoder_DecodeClass( DaoByteCoder *self, DaoByteBlock *block )
 		if( self->error ) return;
 		pb = pb->next;
 	}
-	DaoClass_ResetAttributes( klass );
 	DaoClass_UpdateMixinConstructors( klass );
 	DaoClass_UseMixinDecorators( klass );
 	if( klass->attribs != C ){
@@ -2449,6 +2448,15 @@ static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block 
 		if( self->error ) return;
 		GC_ShiftRC( host->value, routine->routHost );
 		routine->routHost = (DaoType*) host->value;
+	}
+	if( block->parent && block->parent->type == DAO_ASM_CLASS && block->first != NULL ){
+		DaoClass *klass = (DaoClass*) block->parent->value;
+		if( routine->routHost == klass->objType && block->prev != NULL ){
+			if( block->prev->type != DAO_ASM_ROUTINE || block->prev->first == NULL ){
+				/* Not a routine block, or just a routine declation block: */
+				DaoClass_ResetAttributes( klass );
+			}
+		}
 	}
 	if( add ) DaoByteCoder_AddToScope( self, block, routine->routName, (DaoValue*) routine );
 
