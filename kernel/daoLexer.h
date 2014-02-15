@@ -200,6 +200,8 @@ typedef struct {
 	unsigned char  binary;
 } DOper;
 
+DAO_DLL DOper DaoLexer_GetTokenOperInfo( int token );
+
 
 enum DaoLexFlags
 {

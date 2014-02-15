@@ -77,11 +77,12 @@ DAO_DLL int DaoParser_FindOpenToken( DaoParser *self, uchar_t tok, int start, in
 DAO_DLL int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop );
 
 
-int DaoParser_GetOperPrecedence( DaoParser *self );
-int DaoParser_CurrentTokenType( DaoParser *self );
-int DaoParser_CurrentTokenName( DaoParser *self );
-int DaoParser_NextTokenType( DaoParser *self );
-int DaoParser_NextTokenName( DaoParser *self );
+DAO_DLL int DaoParser_GetOperPrecedence( DaoParser *self );
+DAO_DLL int DaoParser_CurrentTokenType( DaoParser *self );
+DAO_DLL int DaoParser_CurrentTokenName( DaoParser *self );
+DAO_DLL int DaoParser_NextTokenType( DaoParser *self );
+DAO_DLL  int DaoParser_NextTokenName( DaoParser *self );
+
 static int DaoParser_CheckTokenType( DaoParser *self, int tok, const char *str );
 static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype );
 static DaoEnode DaoParser_ParseExpression( DaoParser *self, int stop );

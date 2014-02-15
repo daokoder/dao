@@ -503,13 +503,15 @@ static DParamNode* DParamNode_Add( DParamNode *self, DaoRoutine *routine, int pi
 	/* Add a new internal node: */
 	param = DParamNode_New();
 	param->type = routine->routType->nested->items.pType[pid];
-	if( param->type->tid == DAO_PAR_NAMED || param->type->tid == DAO_PAR_DEFAULT ){
+	if( param->type->tid >= DAO_PAR_NAMED && param->type->tid <= DAO_PAR_VALIST ){
 		param->type2 = param->type;
 		param->type = (DaoType*) param->type->aux;
 	}
 	it = DParamNode_Add( param, routine, pid+1 );
-	/* Add the node to the tree after all its child nodes have been created, to ensure
-	 * a reader will always lookup in a valid tree in multi-threaded applications: */
+	/*
+	// Add the node to the tree after all its child nodes have been created, to ensure
+	// a reader will always lookup in a valid tree in multi-threaded applications:
+	*/
 	if( self->last ){
 		self->last->next = param;
 		self->last = param;
@@ -541,11 +543,13 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 		if( self->tree == NULL ) self->tree = DParamNode_New();
 		param = DParamNode_Add( self->tree, routine, 0 );
 	}
-	/* Runtime routine specialization based on parameter types may create
-	 * two specializations with identical parameter signature, so one of
-	 * the specialized routine will not be successully added to the tree.
-	 * To avoid memory leaking, the one not added to the tree should also
-	 * be appended to "array", so that it can be properly garbage collected. */
+	/*
+	// Runtime routine specialization based on parameter types may create
+	// two specializations with identical parameter signature, so one of
+	// the specialized routine will not be successully added to the tree.
+	// To avoid memory leaking, the one not added to the tree should also
+	// be appended to "array", so that it can be properly garbage collected.
+	*/
 	DArray_Append( self->array, routine );
 	if( routine != param->routine && routine->routHost && param->routine->routHost ){
 		DaoType *t1 = routine->routHost;
@@ -613,7 +617,8 @@ static DaoRoutine* DParamNode_GetLeaf( DParamNode *self, int *ms, int mode )
 	}
 	/* check for routines with default parameters: */
 	for(param=self->first; param; param=param->next){
-		if( param->type2 == NULL || param->type2->tid != DAO_PAR_DEFAULT ) continue;
+		if( param->type2 == NULL ) continue;
+		if( param->type2->tid != DAO_PAR_DEFAULT && param->type2->tid != DAO_PAR_VALIST ) continue;
 		rout = DParamNode_GetLeaf( param, ms, mode );
 		if( rout == NULL ) continue;
 		*ms += 1;
@@ -636,7 +641,7 @@ static DaoRoutine* DParamNode_LookupByName( DParamNode *self, DaoValue *p[], int
 		p[i] = p[0];
 		for(param=self->first; param; param=param->next){
 			if( param->type2 == NULL ) continue;
-			if( DString_EQ( param->type2->fname, nameva->name ) ==0 ) continue;
+			if( param->type2->tid != DAO_PAR_VALIST && DString_EQ( param->type2->fname, nameva->name ) ==0 ) continue;
 			m = DaoType_MatchValue( param->type, nameva->value, defs );
 			if( strict && m < DAO_MT_ANY ) continue;
 			if( m == 0 ) continue;
@@ -666,7 +671,7 @@ static DaoRoutine* DParamNode_LookupByName2( DParamNode *self, DaoType *ts[], in
 		ts[i] = ts[0];
 		for(param=self->first; param; param=param->next){
 			if( param->type2 == NULL ) continue;
-			if( DString_EQ( param->type2->fname, ptype->fname ) ==0 ) continue;
+			if( param->type2->tid != DAO_PAR_VALIST && DString_EQ( param->type2->fname, ptype->fname ) ==0 ) continue;
 			m = DaoType_MatchTo( vtype, param->type, defs );
 			if( strict && m < DAO_MT_ANY ) continue;
 			if( m == 0 ) continue;
@@ -692,22 +697,24 @@ static DaoRoutine* DParamNode_Lookup( DParamNode *self, DaoValue *p[], int n, in
 
 	*ms = 1;
 	if( n == 0 ) return DParamNode_GetLeaf( self, ms, mode );
-	if( p[0]->type == DAO_PAR_NAMED ) return DParamNode_LookupByName( self, p, n, mode, strict, ms, defs );
+	if( p[0]->type == DAO_PAR_NAMED )
+		return DParamNode_LookupByName( self, p, n, mode, strict, ms, defs );
+
+	if( self->type2 && self->type2->tid == DAO_PAR_VALIST ){
+		*ms = DAO_MT_EQ;
+		for(i=0; i<n; ++i){
+			m = DaoType_MatchValue( self->type, p[i], defs );
+			if( m == 0 ) return NULL;
+			if( m < *ms ) *ms = m;
+		}
+		return DParamNode_GetLeaf( self, & k, mode );
+	}
+
 	value = p[0];
 	for(param=self->first; param; param=param->next){
 		DaoType *type = param->type;
 		if( type == NULL ) continue;
 		if( defs && clear ) DMap_Reset( defs );
-		if( type->tid == DAO_PAR_VALIST ){
-			type = type->aux ? (DaoType*)type->aux : dao_type_any;
-			m = 0;
-			for(i=0; i<n; ++i){
-				m = DaoType_MatchValue( type, p[i], defs );
-				if( m == 0 ) continue;
-			}
-			if( m == 0 ) continue;
-			n = 1;
-		}
 		m = DaoType_MatchValue( type, value, defs );
 		if( m == 0 ) continue;
 		if( strict && m < DAO_MT_ANY ) continue;
@@ -734,21 +741,22 @@ static DaoRoutine* DParamNode_LookupByType( DParamNode *self, DaoType *types[], 
 	if( n == 0 ) return DParamNode_GetLeaf( self, ms, mode );
 	if( types[0]->tid == DAO_PAR_NAMED && types[0]->tid != DAO_PAR_DEFAULT )
 		return DParamNode_LookupByName2( self, types, n, mode, strict, ms, defs );
+	
+	if( self->type2 && self->type2->tid == DAO_PAR_VALIST ){
+		*ms = DAO_MT_EQ;
+		for(i=0; i<n; ++i){
+			m = DaoType_MatchTo( types[i], self->type, defs );
+			if( m == 0 ) return NULL;
+			if( m < *ms ) *ms = m;
+		}
+		return DParamNode_GetLeaf( self, & k, mode );
+	}
+
 	partype = types[0];
 	for(param=self->first; param; param=param->next){
 		DaoType *type = param->type;
 		if( type == NULL ) continue;
 		if( defs && clear ) DMap_Reset( defs );
-		if( type->tid == DAO_PAR_VALIST ){
-			type = type->aux ? (DaoType*)type->aux : dao_type_any;
-			m = 0;
-			for(i=0; i<n; ++i){
-				m = DaoType_MatchTo( types[i], type, defs );
-				if( m == 0 ) continue;
-			}
-			if( m == 0 ) continue;
-			n = 1;
-		}
 		m = DaoType_MatchTo( partype, type, defs );
 		if( m == 0 ) continue;
 		if( strict && m < DAO_MT_ANY ) continue;

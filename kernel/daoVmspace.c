@@ -944,12 +944,70 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 	DString_Delete( val );
 	DString_Delete( str );
 }
+static int DaoRoutine_CheckParamTypes( DaoRoutine *self, DaoType *argtypes[], int argcount )
+{
+	DMap *defs = DMap_New(0,0);
+	DaoType *routType = self->routType;
+	DaoType  *abtp, **partypes = routType->nested->items.pType;
+	int size = routType->nested->size;
+	int parpass[DAO_MAX_PARAM];
+	int ndef = self->parCount;
+	int i, j, match = 1;
+	int ifrom, ito;
+
+	if( argcount == ndef && ndef == 0 ) goto FinishOK;
+	match = 0;
+
+	for(j=0; j<ndef; j++) parpass[j] = 0;
+	for(ifrom=0; ifrom<argcount; ifrom++){
+		DaoType *tp = argtypes[ifrom];
+		ito = ifrom;
+		if( ito >= ndef ) goto FinishError;
+		if( partypes[ito]->tid == DAO_PAR_VALIST ){
+			DaoType *vlt = (DaoType*) partypes[ito]->aux;
+			for(; ifrom<argcount; ifrom++, ito++){
+				parpass[ito] = 1;
+				if( vlt && DaoType_MatchTo( tp, vlt, defs ) == 0 ) goto FinishError;
+			}
+			break;
+		}
+		if( tp == NULL ) goto FinishError;
+		if( tp->tid == DAO_PAR_NAMED ){
+			DNode *node = DMap_Find( routType->mapNames, tp->fname );
+			if( node == NULL ) goto FinishError;
+			ito = node->value.pInt;
+			tp = & tp->aux->xType;
+		}
+		if( ito >= ndef || tp ==NULL )  goto FinishError;
+		abtp = routType->nested->items.pType[ito];
+		if( abtp->tid == DAO_PAR_NAMED || abtp->tid == DAO_PAR_DEFAULT ) abtp = & abtp->aux->xType;
+		parpass[ito] = DaoType_MatchTo( tp, abtp, defs );
+		if( parpass[ito] == 0 ) goto FinishError;
+	}
+	for(ito=0; ito<ndef; ito++){
+		if( parpass[ito] || partypes[ito]->tid == DAO_PAR_VALIST ) break;
+		if( partypes[ito]->tid != DAO_PAR_DEFAULT ) goto FinishError;
+		parpass[ito] = 1;
+	}
+	match = DAO_MT_EQ;
+	for(j=0; j<argcount; j++) if( match > parpass[j] ) match = parpass[j];
+
+#if 0
+	printf( "%s %i %i %i\n", routType->name->mbs, match, ndef, argcount );
+#endif
+
+FinishOK:
+FinishError:
+	DMap_Delete( defs );
+	return match;
+}
 static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNames, DArray *argValues, int *error )
 {
 	DArray *types;
 	DString *name;
 	DaoRoutine *rout = NULL;
-	int i, j, count = 0;
+	DaoRoutine **routs = NULL;
+	int i, j, max = 0, count = 0;
 
 	types = DArray_New(0);
 	name = DString_New(1);
@@ -978,7 +1036,21 @@ static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNam
 		DArray_Append( types, type );
 	}
 	*error = DAO_ERROR_PARAM;
-	rout = DaoRoutine_ResolveByType( rout, NULL, types->items.pType, types->size, DVM_CALL );
+	if( rout->overloads ){
+		routs = rout->overloads->routines->items.pRoutine;
+		count = rout->overloads->routines->size;
+	}else{
+		routs = & rout;
+		count = 1;
+	}
+	for(i=0; i<count; ++i){
+		int s = DaoRoutine_CheckParamTypes( routs[i], types->items.pType, types->size );
+		if( s > max ){
+			rout = routs[i];
+			max = s;
+		}
+	}
+	if( max == 0 ) rout = NULL;
 	if( rout ) *error = 0;
 	return rout;
 }
@@ -2493,6 +2565,10 @@ static void DaoBuiltIn_Frame( DaoProcess *proc, DaoValue *p[], int n )
 		DaoProcess_PutValue( proc, retvalue );
 	}
 }
+static void DaoBuiltIn_Test( DaoProcess *proc, DaoValue *p[], int n )
+{
+	printf( "%i\n", p[0]->type );
+}
 
 DaoFuncItem dao_builtin_methods[] =
 {
@@ -2502,6 +2578,9 @@ DaoFuncItem dao_builtin_methods[] =
 	{ DaoBuiltIn_Recover2,  "recover( eclass : class<Exception> ) => any" },
 	{ DaoBuiltIn_Frame,     "frame() [=>@T] => @T" },
 	{ DaoBuiltIn_Frame,     "frame( default_value :@T ) [=>@T] => @T" },
+#if 0
+	{ DaoBuiltIn_Test,      "test( ... : int|string )" },
+#endif
 	{ NULL, NULL }
 };
 

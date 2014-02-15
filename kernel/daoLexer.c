@@ -534,6 +534,11 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 
 DOper daoArithOper[DAO_NOKEY2];
 
+DOper DaoLexer_GetTokenOperInfo( int token )
+{
+	return daoArithOper[token];
+}
+
 static int dao_hash( const char *str0, int len)
 {
 	const unsigned char *str = (const unsigned char*)str0;

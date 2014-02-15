@@ -1047,11 +1047,10 @@ Failed :
 }
 
 /* parsing without code generation: */
-extern DOper daoArithOper[DAO_NOKEY2];
-int DaoParser_CurrentTokenType( DaoParser *self );
-int DaoParser_CurrentTokenName( DaoParser *self );
-int DaoParser_NextTokenName( DaoParser *self );
-int DaoParser_GetOperPrecedence( DaoParser *self );
+extern int DaoParser_CurrentTokenType( DaoParser *self );
+extern int DaoParser_CurrentTokenName( DaoParser *self );
+extern int DaoParser_NextTokenName( DaoParser *self );
+extern int DaoParser_GetOperPrecedence( DaoParser *self );
 
 static int DaoParser_ParsePrimary( DaoParser *self, int stop );
 static int DaoParser_ParseExpression( DaoParser *self, int stop );
@@ -1178,7 +1177,7 @@ static int DaoParser_ParsePrimary( DaoParser *self, int stop )
 static int DaoParser_ParseUnary( DaoParser *self, int stop )
 {
 	int tok = DaoParser_CurrentTokenName( self );
-	if( daoArithOper[ tok ].left == 0 ) return DaoParser_ParsePrimary( self, stop );
+	if( DaoLexer_GetTokenOperInfo( tok ).left == 0 ) return DaoParser_ParsePrimary( self, stop );
 	/* parse left hand unary operator */
 	self->curToken += 1;
 	return DaoParser_ParseUnary( self, stop );
@@ -1194,7 +1193,7 @@ static int DaoParser_ParseOperator( DaoParser *self, int LHS, int prec, int stop
 		thisPrec = DaoParser_GetOperPrecedence( self );
 		if(thisPrec < prec) return LHS;
 
-		oper = daoArithOper[ tokens[self->curToken]->name ].oper;
+		oper = DaoLexer_GetTokenOperInfo( tokens[self->curToken]->name ).oper;
 		self->curToken += 1; /* eat the operator */
 
 		RHS = DaoParser_ParseUnary( self, stop );
@@ -1203,7 +1202,7 @@ static int DaoParser_ParseOperator( DaoParser *self, int LHS, int prec, int stop
 			RHS = self->curToken - 1;
 		}
 		if( oper == DAO_OPER_IF ){ /* conditional operation:  c ? e1 : e2 */
-			int RHS1, RHS2, prec2 = 10*(20 - daoArithOper[DTOK_COLON].binary);
+			int RHS1, RHS2, prec2 = 10*(20 - DaoLexer_GetTokenOperInfo(DTOK_COLON).binary);
 			RHS1 = DaoParser_ParseOperator(self, RHS, prec2 + 1, DTOK_COLON );
 			if( RHS1 < 0 ) return RHS1;
 			self->curToken += 1;
