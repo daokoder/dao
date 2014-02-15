@@ -640,17 +640,21 @@ static int DaoValue_TryCastTuple( DaoValue *src, DaoValue **dest, DaoType *tp )
 	DNode *node, *search;
 	daoint i, T = tp->nested->size;
 	int tm, eqs = 0;
-	/* auto-cast tuple type, on the following conditions:
-	 * (1) the item values of "dest" must match exactly to the item types of "tp";
-	 * (2) "tp->mapNames" must contain "(*dest)->xTuple.ctype->mapNames"; */
+	/*
+	// auto-cast tuple type, on the following conditions:
+	// (1) the item values of "dest" must match exactly to the item types of "tp";
+	// (2) "tp->mapNames" must contain "(*dest)->xTuple.ctype->mapNames";
+	*/
 	if( src->xTuple.ctype == NULL ){
 		GC_IncRC( tp );
 		src->xTuple.ctype = tp;
 		return 1;
 	}
 	if( DaoType_MatchValue( tp, src, NULL ) < DAO_MT_SUB ) return 1;
-	/* casting is not necessary if the tuple's field names are a superset of the
-	 * field names of the target type: */
+	/*
+	// casting is not necessary if the tuple's field names are a superset of the
+	// field names of the target type:
+	*/
 	if( tp->mapNames == NULL || tp->mapNames->size ==0 ) goto Finalize;
 	if( names ){
 		daoint count = 0;
@@ -777,15 +781,16 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs, DaoDataCa
 	printf( "S->type = %p %s %i\n", S, T->name->mbs, tm );
 #endif
 	if( tm == 0 ) return 0;
-	/* composite known types must match exactly. example,
-	 * where it will not work if composite types are allowed to match loosely.
-	 * d : list<list<int>> = {};
-	 * e : list<float> = { 1.0 };
-	 * d.append( e );
-	 *
-	 * but if d is of type list<list<any>>,
-	 * the matching do not necessary to be exact.
-	 */
+	/*
+	// composite known types must match exactly. example,
+	// where it will not work if composite types are allowed to match loosely.
+	// d : list<list<int>> = {};
+	// e : list<float> = { 1.0 };
+	// d.append( e );
+	//
+	// but if d is of type list<list<any>>,
+	// the matching do not necessary to be exact.
+	*/
 	S = DaoValue_SimpleCopyWithTypeX( S, T, cache );
 	GC_ShiftRC( S, *D );
 	*D = S;

@@ -183,8 +183,10 @@ enum DaoExceptionType
 };
 
 
-/* define an integer type with size equal to the size of pointers
- * under both 32-bits and 64-bits systems. */
+/*
+// define an integer type with size equal to the size of pointers
+// under both 32-bits and 64-bits systems.
+*/
 typedef ptrdiff_t       daoint;
 typedef unsigned char   uchar_t;
 typedef unsigned short  ushort_t;

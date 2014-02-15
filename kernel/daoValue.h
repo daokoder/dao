@@ -110,8 +110,10 @@ union DaoValue
 	} xGC;
 };
 
-/* Copy when self is a simple data type (with type <= DAO_ENUM),
- * or it is a constant array, list, map or tuple. */
+/*
+// Copy when self is a simple data type (with type <= DAO_ENUM),
+// or it is a constant array, list, map or tuple.
+*/
 DAO_DLL DaoValue* DaoValue_SimpleCopy( DaoValue *self );
 DAO_DLL DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *type );
 DAO_DLL DaoValue* DaoValue_CopyContainer( DaoValue *self, DaoType *tp );

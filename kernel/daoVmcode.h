@@ -197,11 +197,12 @@ enum DaoOpcode
 	DVM_MINUS_C ,
 	DVM_TILDE_I ,
 	DVM_TILDE_C ,
-	/* C = A + B: will be compiled into: ADD, MOVE,
-	 * and the C operand of ADD is always an intermediate data with type to be inferred,
-	 * so it is only necessary to add specialized opcode according the A,B operands. */
-	/* integer: */
-	DVM_ADD_III ,
+	/*
+	// C = A + B: will be compiled into: ADD, MOVE,
+	// and the C operand of ADD is always an intermediate data with type to be inferred,
+	// so it is only necessary to add specialized opcode according the A,B operands.
+	*/
+	DVM_ADD_III , /* integer: */
 	DVM_SUB_III ,
 	DVM_MUL_III ,
 	DVM_DIV_III ,
@@ -218,8 +219,7 @@ enum DaoOpcode
 	DVM_BITXOR_III ,
 	DVM_BITLFT_III ,
 	DVM_BITRIT_III ,
-	/* float: */
-	DVM_ADD_FFF ,
+	DVM_ADD_FFF , /* float: */
 	DVM_SUB_FFF ,
 	DVM_MUL_FFF ,
 	DVM_DIV_FFF ,
@@ -231,8 +231,7 @@ enum DaoOpcode
 	DVM_LE_IFF ,
 	DVM_EQ_IFF ,
 	DVM_NE_IFF ,
-	/* double: */
-	DVM_ADD_DDD ,
+	DVM_ADD_DDD , /* double: */
 	DVM_SUB_DDD ,
 	DVM_MUL_DDD ,
 	DVM_DIV_DDD ,
@@ -396,10 +395,11 @@ typedef enum DaoOpcode DaoOpcode;
 */
 
 
-/* Extra vmcode type for compiling:
- * They are used to setup proper indexing, branching or jumping. After this,
- * they will be removed or replaced with proper instructions from DaoOpcode.
- */
+/*
+// Extra vmcode type for compiling:
+// They are used to setup proper indexing, branching or jumping. After this,
+// they will be removed or replaced with proper instructions from DaoOpcode.
+*/
 enum DaoOpcodeExtra
 {
 	DVM_LABEL = DVM_NULL + 1,

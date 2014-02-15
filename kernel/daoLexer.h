@@ -220,13 +220,14 @@ struct DaoToken
 	unsigned int    index; /* index of the token in current routine */
 	DString         string; /* token string */
 
-	/* When DaoToken is used in an array to store the definitions
-	 * of local constants and variables in a routine,
-	 * (1) type field indicates if it is a constant=0, or varaible=1;
-	 * (2) name field indicates the lixical level of the cst/var;
-	 * (3) index field indicates the index of the cst/var value;
-	 * (4) string field stores the name.
-	 */
+	/*
+	// When DaoToken is used in an array to store the definitions
+	// of local constants and variables in a routine,
+	// (1) type field indicates if it is a constant=0, or varaible=1;
+	// (2) name field indicates the lixical level of the cst/var;
+	// (3) index field indicates the index of the cst/var value;
+	// (4) string field stores the name.
+	*/
 };
 
 DAO_DLL DaoToken* DaoToken_New();

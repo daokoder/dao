@@ -86,13 +86,14 @@ enum DaoBasicStruct
 	D_VOID2 /* a pair of pointer; */
 };
 
-/* It is for the typing system, to decide when to specialize a routine.
- * when any or ? match to @X in parameter list, no routine specialization.
- *   ls = {};
- *   ls.append( "" );
- *   ls2 = { 1, 3, 4 };
- *   ls2.append( "" );
- */
+/*
+// It is for the typing system, to decide when to specialize a routine.
+// when any or ? match to @X in parameter list, no routine specialization.
+//   ls = {};
+//   ls.append( "" );
+//   ls2 = { 1, 3, 4 };
+//   ls2.append( "" );
+*/
 enum DaoMatchType
 {
 	DAO_MT_NOT ,

@@ -58,9 +58,11 @@ struct DaoParser
 	DaoLexer  *lexer;
 	DArray    *tokens; /* lexer->tokens; */
 
-	/* DArray<DaoVmCodeX*>: need to be store as pointers, because in code generation,
-	 * it may be necessary to modify previously generated codes, for this,
-	 * it is much easier to use pointers. */
+	/*
+	// DArray<DaoVmCodeX*>: need to be store as pointers, because in code generation,
+	// it may be necessary to modify previously generated codes, for this,
+	// it is much easier to use pointers.
+	*/
 	DArray  *vmCodes;
 
 	DaoInode *vmcBase;  /* the node before the ::vmcFirst; */

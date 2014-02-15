@@ -3767,11 +3767,13 @@ DaoCdata dao_default_cdata = {DAO_CDATA,0,DAO_VALUE_CONST,0,1,0,NULL,NULL,NULL};
 
 
 
-/* In analog to Dao classes, two type objects are created for each cdata type:
- * one for the cdata type type, the other for the cdata object type.
- * Additionally, two dummy cdata objects are created:
- * one with typeid DAO_CTYPE serves an auxiliary value for the two type objects;
- * the other with typeid DAO_CDATA serves as the default value for the cdata object type. */
+/*
+// In analog to Dao classes, two type objects are created for each cdata type:
+// one for the cdata type type, the other for the cdata object type.
+// Additionally, two dummy cdata objects are created:
+// one with typeid DAO_CTYPE serves an auxiliary value for the two type objects;
+// the other with typeid DAO_CDATA serves as the default value for the cdata object type.
+*/
 DaoType* DaoCdata_NewType( DaoTypeBase *typer )
 {
 	DaoCdata *cdata = DaoCdata_New( NULL, NULL );

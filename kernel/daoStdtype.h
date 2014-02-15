@@ -83,13 +83,14 @@ struct DaoString
 DAO_DLL DaoString* DaoString_Copy( DaoString *self );
 DAO_DLL void DaoString_Delete( DaoString *self );
 
-/* Structure for symbol, enum and flag:
- * Storage modes:
- * Symbol: $AA => { type<$AA>, 0 }
- * Symbols: $AA + $BB => { type<$AA$BB>, 1|2 }
- * Enum: enum MyEnum{ AA=1, BB=2 }, MyEnum.AA => { type<MyEnum>, 1 }
- * Flag: enum MyFlag{ AA=1; BB=2 }, MyFlag.AA + MyFlag.BB => { type<MyFlag>, 1|2 }
- */
+/*
+// Structure for symbol, enum and flag:
+// Storage modes:
+// Symbol: $AA => { type<$AA>, 0 }
+// Symbols: $AA + $BB => { type<$AA$BB>, 1|2 }
+// Enum: enum MyEnum{ AA=1, BB=2 }, MyEnum.AA => { type<MyEnum>, 1 }
+// Flag: enum MyFlag{ AA=1; BB=2 }, MyFlag.AA + MyFlag.BB => { type<MyFlag>, 1|2 }
+*/
 struct DaoEnum
 {
 	DAO_VALUE_COMMON;
@@ -145,10 +146,12 @@ DAO_DLL void DaoMap_Erase( DaoMap *self, DaoValue *key );
 
 
 #define DAO_TUPLE_ITEMS 2
-/* 2 is used instead of 1, for two reasons:
- * A. most often used tuples have at least two items;
- * B. some builtin tuples have at least two items, and are accessed by
- *    constant sub index, compilers such Clang may complain if 1 is used. */
+/*
+// 2 is used instead of 1, for two reasons:
+// A. most often used tuples have at least two items;
+// B. some builtin tuples have at least two items, and are accessed by
+//    constant sub index, compilers such Clang may complain if 1 is used.
+*/
 
 struct DaoTuple
 {
@@ -168,8 +171,10 @@ DAO_DLL void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
 DAO_DLL int DaoTuple_GetIndex( DaoTuple *self, DString *name );
 
 
-/* DaoNameValue is not data type for general use, it is mainly used for
- * passing named parameters and fields: */
+/*
+// DaoNameValue is not data type for general use, it is mainly used for
+// passing named parameters and fields:
+*/
 struct DaoNameValue
 {
 	DAO_VALUE_COMMON;

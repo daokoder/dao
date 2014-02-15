@@ -1765,13 +1765,15 @@ static void DaoVmSpace_PopLoadingNamePath( DaoVmSpace *self, int path )
 	DArray_PopFront( self->nameLoading );
 	DaoVmSpace_Unlock( self );
 }
-/* Loading module in Dao source file.
- * The first time the module is loaded:
- * (1) its implicit main (codes outside of any class and function) is executed;
- * (2) then, its explicit main that matches with "args" will be executed.
- * The next time the module is loaded:
- * (1) its implicit main is executed, IF run != 0; (mainly for IDE)
- * (2) its explicit main that matches with "args" will be executed. */
+/*
+// Loading module in Dao source file.
+// The first time the module is loaded:
+//   (1) its implicit main (codes outside of any class and function) is executed;
+//   (2) then, its explicit main that matches with "args" will be executed.
+// The next time the module is loaded:
+//   (1) its implicit main is executed, IF run != 0; (mainly for IDE)
+//   (2) its explicit main that matches with "args" will be executed.
+*/
 DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args, int run )
 {
 	DString *source = NULL;

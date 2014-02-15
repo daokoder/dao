@@ -1965,10 +1965,12 @@ CallEntry:
 			if( DaoProcess_Move( self, locVars[vmc->a], tuple->items + id, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( GETF_TI ){
-			/* Do not get reference here!
-			 * Getting reference is always more expensive due to reference counting.
-			 * The compiler always generates SETX, if element modification is done
-			 * through index or field accessing: A[B] += C, A.B += C. */
+			/*
+			// Do not get reference here!
+			// Getting reference is always more expensive due to reference counting.
+			// The compiler always generates SETX, if element modification is done
+			// through index or field accessing: A[B] += C, A.B += C.
+			*/
 			tuple = & locVars[ vmc->a ]->xTuple;
 			locVars[ vmc->c ]->xInteger.value = tuple->items[ vmc->b ]->xInteger.value;
 		}OPNEXT() OPCASE( GETF_TF ){

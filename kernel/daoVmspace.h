@@ -54,22 +54,27 @@ enum DaoModuleTypes
 
 extern const char *const dao_copy_notice;
 
-/* Dao Virtual Machine Space:
- * For handling:
- * -- Execution options and configuration;
- * -- Module loading and namespace management;
- * -- C types and functions defined in modules;
- * -- Path management;
- */
+/*
+// Dao Virtual Machine Space:
+// For handling:
+// -- Execution options and configuration;
+// -- Module loading and namespace management;
+// -- C types and functions defined in modules;
+// -- Path management;
+*/
 struct DaoVmSpace
 {
 	DAO_VALUE_COMMON;
 
-	/* To run the main script specified in the commad line (or the first loaded one),
-	 * or scripts from an interactive console. */
+	/*
+	// To run the main script specified in the commad line (or the first loaded one),
+	// or scripts from an interactive console.
+	*/
 	DaoProcess  *mainProcess;
-	/* To store globals in the main script,
-	 * or scripts from an interactive console. */
+	/*
+	// To store globals in the main script,
+	// or scripts from an interactive console.
+	*/
 	DaoNamespace  *mainNamespace;
 
 	/* for some internal scripts and predefined objects or types */
@@ -133,10 +138,11 @@ struct DaoVmSpace
 extern DaoVmSpace *mainVmSpace;
 
 DAO_DLL DaoVmSpace* DaoVmSpace_New();
-/* DaoVmSpace is not handled by GC, it should be deleted manually.
- * Normally, DaoVmSpace structures are allocated in the beginning of a program and
- * persist until the program exits. So DaoVmSpace_Delete() is rarely needed to be called.
- */
+/*
+// DaoVmSpace is not handled by GC, it should be deleted manually.
+// Normally, DaoVmSpace structures are allocated in the beginning of a program and
+// persist until the program exits. So DaoVmSpace_Delete() is rarely needed to be called.
+*/
 DAO_DLL void DaoVmSpace_Delete( DaoVmSpace *self );
 
 DAO_DLL void DaoVmSpace_Lock( DaoVmSpace *self );
