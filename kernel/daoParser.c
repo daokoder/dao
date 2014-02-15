@@ -2736,12 +2736,15 @@ static int DaoParser_ParseUseStatement( DaoParser *self, int start, int to )
 	}else if( tokens[start]->name == DKEY_ENUM ){
 		start = DaoParser_FindScopedConstant( self, & value, start + 1 );
 		if( start > 0 && value && value->type == DAO_TYPE && value->xType.tid == DAO_ENUM ){
-			DaoValue item = {DAO_INTEGER};
+			DaoEnum item = {DAO_ENUM,0,0,0,0,0,0,NULL};
+			DaoValue *cst = (DaoValue*) & item;
 			type = (DaoType*) value;
+			item.etype = type;
+			item.subtype = type->subtid;
 			if( type->mapNames == NULL ) goto InvalidUse;
 			for(node=DMap_First(type->mapNames);node;node=DMap_Next(type->mapNames,node)){
-				item.xInteger.value = node->value.pInt;
-				DaoParser_AddConstant( self, node->key.pString, & item, tokens[start] );
+				item.value = node->value.pInt;
+				DaoParser_AddConstant( self, node->key.pString, cst, tokens[start] );
 			}
 			if( self->byteBlock ){
 				DaoByteBlock_EncodeUseStmt( self->byteBlock, value, DAO_ENUM );
