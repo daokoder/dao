@@ -45,7 +45,6 @@ daovm.ExportPath( "DOC-PATH", daovm_doc_path );
 #
 ###########################################################################
 
-daovm_with_regex      = DaoMake::Option( "REGEX",      $ON )
 daovm_with_numarray   = DaoMake::Option( "NUMARRAY",   $ON )
 daovm_with_decorator  = DaoMake::Option( "DECORATOR",  $ON )
 daovm_with_thread     = DaoMake::Option( "THREAD",     $ON )
@@ -75,7 +74,6 @@ if( daovm_with_thread == $OFF ) daovm_with_concurrent = $OFF;
 #
 ###########################################################################
 
-if( daovm_with_regex      == $ON ) daovm.AddDefinition( "DAO_WITH_REGEX" )
 if( daovm_with_numarray   == $ON ) daovm.AddDefinition( "DAO_WITH_NUMARRAY" )
 if( daovm_with_decorator  == $ON ) daovm.AddDefinition( "DAO_WITH_DECORATOR" )
 if( daovm_with_thread     == $ON ) daovm.AddDefinition( "DAO_WITH_THREAD" )

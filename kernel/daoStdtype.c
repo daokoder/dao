@@ -359,6 +359,7 @@ DaoEnum* DaoEnum_New( DaoType *type, int value )
 {
 	DaoEnum *self = (DaoEnum*) dao_malloc( sizeof(DaoEnum) );
 	DaoValue_Init( self, DAO_ENUM );
+	self->subtype = type ? type->subtid : DAO_ENUM_SYM;
 	self->value = value;
 	self->etype = type;
 	if( type ) GC_IncRC( type );
@@ -367,6 +368,7 @@ DaoEnum* DaoEnum_New( DaoType *type, int value )
 DaoEnum* DaoEnum_Copy( DaoEnum *self, DaoType *type )
 {
 	DaoEnum *copy = DaoEnum_New( self->etype, self->value );
+	copy->subtype = self->subtype;
 	if( self->etype != type && type ){
 		DaoEnum_SetType( copy, type );
 		DaoEnum_SetValue( copy, self, NULL );
@@ -385,7 +387,7 @@ void DaoEnum_MakeName( DaoEnum *self, DString *name )
 	DString_Clear( name );
 	mapNames = self->etype->mapNames;
 	for(node=DMap_First(mapNames);node;node=DMap_Next(mapNames,node)){
-		if( self->etype->flagtype ){
+		if( self->subtype == DAO_ENUM_FLAG ){
 			if( !(node->value.pInt & self->value) ) continue;
 		}else if( node->value.pInt != self->value ){
 			continue;
@@ -399,6 +401,7 @@ void DaoEnum_SetType( DaoEnum *self, DaoType *type )
 	if( self->etype == type ) return;
 	GC_ShiftRC( type, self->etype );
 	self->etype = type;
+	self->subtype = type->subtid;
 	self->value = type->mapNames->root->value.pInt;
 }
 int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols )
@@ -408,7 +411,9 @@ int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols )
 	daoint value = 0;
 	int notfound = 0;
 	int i, n, k = 0;
-	if( self->etype->name->mbs[0] == '$' ) return 0;
+
+	if( self->subtype == DAO_ENUM_SYM ) return 0;
+	
 	names = DString_New(1);
 	DString_SetMBS( names, symbols );
 	for(i=0,n=names->size; i<n; i++) if( names->mbs[i] == '$' ) names->mbs[i] = 0;
@@ -428,7 +433,7 @@ int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols )
 	}while( i < names->size );
 	DString_Delete( names );
 	if( k == 0 ) return 0;
-	if( self->etype->flagtype ==0 && k > 1 ){
+	if( self->subtype != DAO_ENUM_FLAG && k > 1 ){
 		self->value = first;
 		return 0;
 	}
@@ -445,25 +450,25 @@ int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other, DString *enames )
 		self->value = other->value;
 		return 1;
 	}
-	if( self->etype->name->mbs[0] == '$' ) return 0;
+	if( self->subtype == DAO_ENUM_SYM ) return 0;
 
 	self->value = 0;
-	if( self->etype->flagtype && other->etype->flagtype ){
-		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
+	if( self->subtype == DAO_ENUM_FLAG && other->subtype == DAO_ENUM_FLAG ){
+		for(node=DMap_First(otherNames); node; node=DMap_Next(otherNames,node)){
 			if( !(node->value.pInt & other->value) ) continue;
 			search = DMap_Find( selfNames, node->key.pVoid );
 			if( search == NULL ) return 0;
 			self->value |= search->value.pInt;
 		}
-	}else if( self->etype->flagtype ){
-		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
+	}else if( self->subtype == DAO_ENUM_FLAG ){
+		for(node=DMap_First(otherNames); node; node=DMap_Next(otherNames,node)){
 			if( node->value.pInt != other->value ) continue;
 			search = DMap_Find( selfNames, node->key.pVoid );
 			if( search == NULL ) return 0;
 			self->value |= search->value.pInt;
 		}
-	}else if( other->etype->flagtype ){
-		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
+	}else if( other->subtype == DAO_ENUM_FLAG ){
+		for(node=DMap_First(otherNames); node; node=DMap_Next(otherNames,node)){
 			if( !(node->value.pInt & other->value) ) continue;
 			search = DMap_Find( selfNames, node->key.pVoid );
 			if( search == NULL ) return 0;
@@ -472,7 +477,7 @@ int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other, DString *enames )
 		}
 		return node && (node->value.pInt == other->value);
 	}else{
-		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
+		for(node=DMap_First(otherNames); node; node=DMap_Next(otherNames,node)){
 			if( node->value.pInt != other->value ) continue;
 			search = DMap_Find( selfNames, node->key.pVoid );
 			if( search == NULL ) return 0;
@@ -480,7 +485,7 @@ int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other, DString *enames )
 			break;
 		}
 	}
-	return other->etype->name->mbs[0] == '$';
+	return other->subtype == DAO_ENUM_SYM;
 }
 int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other, DString *enames )
 {
@@ -488,27 +493,24 @@ int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other, DString *enames )
 	DMap *otherNames = other->etype->mapNames;
 	DNode *node, *search;
 
-	if( self->etype->flagtype ==0 || self->etype->name->mbs[0] == '$' ) return 0;
+	if( self->subtype != DAO_ENUM_FLAG ) return 0;
 
 	if( self->etype == other->etype ){
 		self->value |= other->value;
 		return 1;
-	}else if( other->etype->flagtype ){
-		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
-			if( !(node->value.pInt & other->value) ) continue;
-			search = DMap_Find( selfNames, node->key.pVoid );
-			if( search == NULL ) return 0;
-			self->value |= search->value.pInt;
-		}
-	}else{
-		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
-			if( node->value.pInt != other->value ) continue;
-			search = DMap_Find( selfNames, node->key.pVoid );
-			if( search == NULL ) return 0;
-			self->value |= search->value.pInt;
-		}
 	}
-	return other->etype->name->mbs[0] == '$';
+
+	for(node=DMap_First(otherNames); node; node=DMap_Next(otherNames,node)){
+		if( other->subtype == DAO_ENUM_FLAG ){
+			if( !(node->value.pInt & other->value) ) continue;
+		}else{
+			if( node->value.pInt != other->value ) continue;
+		}
+		search = DMap_Find( selfNames, node->key.pVoid );
+		if( search == NULL ) return 0;
+		self->value |= search->value.pInt;
+	}
+	return other->subtype == DAO_ENUM_SYM;
 }
 int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other, DString *enames )
 {
@@ -516,109 +518,24 @@ int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other, DString *enames )
 	DMap *otherNames = other->etype->mapNames;
 	DNode *node, *search;
 
-	if( self->etype->flagtype ==0 || self->etype->name->mbs[0] == '$' ) return 0;
+	if( self->subtype != DAO_ENUM_FLAG ) return 0;
 
 	if( self->etype == other->etype ){
 		self->value &= ~ other->value;
 		return 1;
-	}else if( other->etype->flagtype ){
-		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
+	}
+
+	for(node=DMap_First(otherNames); node; node=DMap_Next(otherNames,node)){
+		if( other->subtype == DAO_ENUM_FLAG ){
 			if( !(node->value.pInt & other->value) ) continue;
-			search = DMap_Find( selfNames, node->key.pVoid );
-			if( search == NULL ) return 0;
-			self->value &= ~search->value.pInt;
-		}
-	}else{
-		for(node=DMap_First(otherNames);node;node=DMap_Next(otherNames,node)){
+		}else{
 			if( node->value.pInt != other->value ) continue;
-			search = DMap_Find( selfNames, node->key.pVoid );
-			if( search == NULL ) return 0;
-			self->value &= ~search->value.pInt;
 		}
+		search = DMap_Find( selfNames, node->key.pVoid );
+		if( search == NULL ) return 0;
+		self->value &= ~search->value.pInt;
 	}
-	return other->etype->name->mbs[0] == '$';
-}
-int DaoEnum_AddSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNamespace *ns )
-{
-	DaoType *type;
-	DMap *names1 = s1->etype->mapNames;
-	DMap *names2 = s2->etype->mapNames;
-	DMap *mapNames;
-	DNode *node;
-	DString *name;
-	daoint value = 0;
-	if( s1->etype->name->mbs[0] != '$' && s2->etype->name->mbs[0] != '$' ) return 0;
-	name = DString_New(1);
-	for(node=DMap_First(names1);node;node=DMap_Next(names1,node)){
-		DString_AppendChar( name, '$' );
-		DString_Append( name, node->key.pString );
-	}
-	for(node=DMap_First(names2);node;node=DMap_Next(names2,node)){
-		if( DMap_Find( names1, node->key.pVoid ) ) continue;
-		DString_AppendChar( name, '$' );
-		DString_Append( name, node->key.pString );
-	}
-	type = DaoNamespace_FindType( ns, name );
-	if( type == NULL ){
-		type = DaoType_New( name->mbs, DAO_ENUM, NULL, NULL );
-		type->flagtype = 1;
-		type->mapNames = mapNames = DMap_Copy( names1 );
-		value = s1->value;
-		if( mapNames->size == 1 ){
-			mapNames->root->value.pInt = 1;
-			value = 1;
-		}
-		for(node=DMap_First(names2);node;node=DMap_Next(names2,node)){
-			if( DMap_Find( names1, node->key.pVoid ) ) continue;
-			value |= (1<<mapNames->size);
-			MAP_Insert( mapNames, node->key.pVoid, 1<<mapNames->size );
-		}
-		DaoNamespace_AddType( ns, name, type );
-	}
-	DaoEnum_SetType( self, type );
-	DString_Delete( name );
-	self->value = value;
-	return 1;
-}
-int DaoEnum_SubSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNamespace *ns )
-{
-	DaoType *type;
-	DMap *names1 = s1->etype->mapNames;
-	DMap *names2 = s2->etype->mapNames;
-	DMap *mapNames;
-	DNode *node;
-	DString *name;
-	daoint value = 0;
-	int count = 0;
-	if( s1->etype->name->mbs[0] != '$' && s2->etype->name->mbs[0] != '$' ) return 0;
-	name = DString_New(1);
-	for(node=DMap_First(names1);node;node=DMap_Next(names1,node)){
-		if( DMap_Find( names2, node->key.pVoid ) ) continue;
-		DString_AppendChar( name, '$' );
-		DString_Append( name, node->key.pString );
-		count += 1;
-	}
-	if( count ==0 ){
-		DString_Delete( name );
-		return 0;
-	}
-	type = DaoNamespace_FindType( ns, name );
-	if( type == NULL ){
-		type = DaoType_New( name->mbs, DAO_ENUM, NULL, NULL );
-		type->flagtype = count > 1 ? 1 : 0;
-		type->mapNames = mapNames = DMap_New(D_STRING,0);
-		value = type->flagtype;
-		for(node=DMap_First(names1);node;node=DMap_Next(names1,node)){
-			if( DMap_Find( names2, node->key.pVoid ) ) continue;
-			value |= (1<<mapNames->size);
-			MAP_Insert( mapNames, node->key.pVoid, 1<<mapNames->size );
-		}
-		DaoNamespace_AddType( ns, name, type );
-	}
-	DaoEnum_SetType( self, type );
-	DString_Delete( name );
-	self->value = value;
-	return 1;
+	return other->subtype == DAO_ENUM_SYM;
 }
 
 DaoTypeBase enumTyper=
@@ -1316,7 +1233,6 @@ static void DaoSTR_Toupper( DaoProcess *proc, DaoValue *p[], int N )
 	DString_ToUpper( p[0]->xString.data );
 	DaoProcess_PutReference( proc, p[0] );
 }
-#ifdef DAO_WITH_REGEX
 static void DaoSTR_Fetch( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.data;
@@ -1509,7 +1425,6 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 }
-#endif
 
 static void DaoSTR_Type( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1662,7 +1577,6 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Expand,  "expand( self :string, keys :map<string,string>, spec='$', keep=1 )=>string" },
 	{ DaoSTR_Expand,  "expand( self :string, keys :tuple, spec='$', keep=1 )=>string" },
 	{ DaoSTR_Split, "split( self :string, sep='', quote='', rm=1 )=>list<string>" },
-#ifdef DAO_WITH_REGEX
 	{ DaoSTR_Fetch, "fetch( self :string, pt :string, group=0, start=0, end=0 )=>string" },
 	{ DaoSTR_Match, "match( self :string, pt :string, group=0, start=0, end=0 )=>tuple<start:int,end:int>|none" },
 	{ DaoSTR_Change, "change( self :string, pt :string, s :string, index=0, start=0, end=0 )=>int" },
@@ -1673,7 +1587,7 @@ static DaoFuncItem stringMeths[] =
 	// it will not be specialized to "none|none", which is the case for "@V|none".
 	*/
 	{ DaoSTR_Scan, "scan( self :string, pt :string, from=0, to=0 )[start:int,end:int,state:enum<unmatched,matched>=>none|@V] => list<@V>" },
-#endif
+
 	{ DaoSTR_Tolower, "tolower( self :string ) =>string" },
 	{ DaoSTR_Toupper, "toupper( self :string ) =>string" },
 	{ DaoSTR_Reverse, "reverse( self :string ) =>string" },

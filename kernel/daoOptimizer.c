@@ -4289,15 +4289,8 @@ NotExist_TryAux:
 						break;
 					case DAO_ENUM :
 						if( code != DVM_ADD && code != DVM_SUB ) goto InvOper;
-						if( at->name->mbs[0] =='$' && bt->name->mbs[0] =='$' ){
-							ct = NULL;
-							if( code == DVM_ADD ){
-								ct = DaoNamespace_SymbolTypeAdd( NS, at, bt, NULL );
-							}else{
-								ct = DaoNamespace_SymbolTypeSub( NS, at, bt, NULL );
-							}
-							if( ct == NULL ) goto InvOper;
-						}else if( at->name->mbs[0] =='$' ){
+						if( at->subtid == DAO_ENUM_SYM ){
+							if( bt->subtid == DAO_ENUM_SYM ) goto InvOper;
 							ct = bt;
 						}
 						break;
@@ -4848,9 +4841,11 @@ NotExist_TryAux:
 			j = 0;
 			for(k=1; k<=opc; k++){
 				DaoValue *cc = routConsts->items.pValue[ inodes[i+k]->a ];
-				j += (cc && cc->type == DAO_ENUM && cc->xEnum.etype->name->mbs[0] == '$');
+				j += (cc && cc->type == DAO_ENUM && cc->xEnum.subtype == DAO_ENUM_SYM);
 				bt = DaoNamespace_GetType( NS, cc );
-				if( at->name->mbs[0] == '$' && bt->name->mbs[0] == '$' ) continue;
+				if( at->tid == DAO_ENUM && bt->tid == DAO_ENUM ){
+					if( at->subtid == DAO_ENUM_SYM && bt->subtid == DAO_ENUM_SYM ) continue;
+				}
 				if( DaoType_MatchValue( at, cc, defs ) ==0 ){
 					int matched = 0;
 					if( cc->type == DAO_TUPLE && cc->xBase.subtype == DAO_PAIR ){
@@ -4874,10 +4869,10 @@ NotExist_TryAux:
 						break;
 					}
 				}
-			}else if( at->tid == DAO_ENUM && at->name->mbs[0] != '$' && j == opc ){
+			}else if( at->tid == DAO_ENUM && at->subtid != DAO_ENUM_SYM && j == opc ){
 				DaoInode *front = inodes[i];
 				DaoInode *back = inodes[i+opc+1];
-				DaoEnum denum = {DAO_ENUM,0,0,0,0,0,0,NULL};
+				DaoEnum denum = {DAO_ENUM,DAO_ENUM_STATE,0,0,0,0,0,NULL};
 				DMap *jumps = DMap_New(D_VALUE,0);
 				DNode *it, *find;
 				int max=0, min=0;
@@ -4897,7 +4892,7 @@ NotExist_TryAux:
 					}
 					MAP_Insert( jumps, (DaoValue*) & denum, inodes[i+k] );
 				}
-				if( at->flagtype == 0 && opc > 0.75*(max-min+1) ){
+				if( at->subtid != DAO_ENUM_FLAG && opc > 0.75*(max-min+1) ){
 					for(it=DMap_First(at->mapNames); it; it=DMap_Next(at->mapNames,it)){
 						if( it->value.pInt < min || it->value.pInt > max ) continue;
 						denum.value = it->value.pInt;

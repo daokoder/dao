@@ -590,7 +590,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	case DAO_ENUM :
 		if( self == type ) return DAO_MT_EQ;
 		if( DString_EQ( self->name, type->name ) ) return DAO_MT_SIM;
-		if( self->flagtype && type->flagtype ==0 ) return 0;
+		if( self->subtid != type->subtid && self->subtid != DAO_ENUM_SYM ) return 0;
 		for(it=DMap_First(self->mapNames); it; it=DMap_Next(self->mapNames, it )){
 			node = DMap_Find( type->mapNames, it->key.pVoid );
 			if( node ==NULL ) return 0;
@@ -794,13 +794,14 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( dinterface ) return DaoType_MatchInterface( dao_type_string, dinterface, NULL );
 		break;
 	case DAO_ENUM :
+		other = & value->xEnum;
 		if( self == value->xEnum.etype ) return DAO_MT_EQ;
 		if( dinterface ) return DaoType_MatchInterface( value->xEnum.etype, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
-		other = & value->xEnum;
+		if( self->subtid != other->subtype && other->subtype != DAO_ENUM_SYM ) return 0;
 		names = other->etype->mapNames;
 		for(node=DMap_First(names); node; node=DMap_Next(names,node)){
-			if( other->etype->flagtype ){
+			if( other->subtype == DAO_ENUM_FLAG ){
 				if( !(node->value.pInt & other->value) ) continue;
 			}else if( node->value.pInt != other->value ){
 				continue;
@@ -1033,6 +1034,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	GC_ShiftRC( self->kernel, copy->kernel );
 	copy->kernel = self->kernel;
 	copy->typer = self->typer;
+	copy->subtid = self->subtid;
 	copy->attrib = self->attrib;
 	copy->overloads = self->overloads;
 	copy->trait |= DAO_VALUE_DELAYGC;

@@ -1763,7 +1763,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 		if( tok->type != DTOK_COMMA && tok->type != DTOK_SEMCO ) break;
 		if( sep != tok->type ) break;
 	}
-	if( sep == DTOK_SEMCO ) type->flagtype = 1;
+	type->subtid = sep == DTOK_SEMCO ? DAO_ENUM_FLAG : DAO_ENUM_STATE;
 	if( k < end ) goto WrongForm;
 	for(k=start; k<=end; k++) DString_Append( type->name, & tokens[k]->string );
 	DString_AppendChar( type->name, '>' );
@@ -3463,10 +3463,8 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 		comma = semco;
 	}
 	if( comma <0 ) comma = rb;
-	if( sep == DTOK_SEMCO ){
-		value = 1;
-		abtp->flagtype = 1;
-	}
+	value = sep == DTOK_SEMCO;
+	abtp->subtid = sep == DTOK_SEMCO ? DAO_ENUM_FLAG : DAO_ENUM_STATE;
 	start = start + 2;
 	while( comma >=0 ){
 		if( start >= comma ) break;
@@ -5403,6 +5401,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		if( type == NULL ){
 			type = DaoType_New( str->mbs, DAO_ENUM, NULL, NULL );
 			type->mapNames = DMap_New(D_STRING,0);
+			type->subtype = DAO_ENUM_SYM;
 			DString_Assign( self->mbs, str );
 			DString_Erase( self->mbs, 0, 1 );
 			DMap_Insert( type->mapNames, self->mbs, (void*)0 );

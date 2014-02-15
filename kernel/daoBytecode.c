@@ -838,7 +838,7 @@ DaoByteBlock* DaoByteBlock_EncodeEnumType( DaoByteBlock *self, DaoType *type )
 	newBlock = DaoByteBlock_AddBlock( self, (DaoValue*) type, DAO_ASM_ENUM );
 
 	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin, nameBlock );
-	DaoByteCoder_EncodeUInt16( newBlock->begin+2, type->flagtype );
+	DaoByteCoder_EncodeUInt16( newBlock->begin+2, type->subtid );
 	DaoByteCoder_EncodeUInt32( newBlock->begin+4, type->mapNames->size );
 	if( type->mapNames->size == 0 ) return newBlock;
 	for(it=DMap_First(type->mapNames); it; it=DMap_Next(type->mapNames,it)){
@@ -2078,7 +2078,7 @@ static void DaoByteCoder_DecodeEnum( DaoByteCoder *self, DaoByteBlock *block )
 	}
 	type = DaoType_New( name->mbs, DAO_ENUM, NULL, NULL );
 	type->mapNames = DMap_New(D_STRING,0);
-	type->flagtype = B;
+	type->subtid = B;
 	DaoByteCoder_CheckDataBlocks( self, block );
 	for(pb=block->first; pb; pb=pb->next){
 		A = DaoByteCoder_DecodeUInt16( pb->begin+0 );

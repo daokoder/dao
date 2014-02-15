@@ -118,29 +118,18 @@ int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
 	DNode *N = NULL;
 	DMap *ML = L->etype->mapNames;
 	DMap *MR = R->etype->mapNames;
-	uchar_t FL = L->etype->flagtype;
-	uchar_t FR = R->etype->flagtype;
 	char SL = L->etype->name->mbs[0];
 	char SR = R->etype->name->mbs[0];
 	if( L->etype == R->etype ){
 		return L->value == R->value ? 0 : (L->value < R->value ? -1 : 1);
-	}else if( SL == '$' && SR == '$' && FL == 0 && FR == 0 ){
+	}else if( L->subtype == DAO_ENUM_SYM && R->subtype == DAO_ENUM_SYM ){
 		return DString_Compare( L->etype->name, R->etype->name );
-	}else if( SL == '$' && SR == '$' ){
-		if( L->etype->mapNames->size != R->etype->mapNames->size ){
-			return number_compare( L->etype->mapNames->size, R->etype->mapNames->size );
-		}else{
-			for(N=DMap_First(ML);N;N=DMap_Next(ML,N)){
-				if( DMap_Find( MR, N->key.pVoid ) ==0 ) return -1;
-			}
-			return 0;
-		}
-	}else if( SL == '$' ){
+	}else if( L->subtype == DAO_ENUM_SYM ){
 		E.etype = R->etype;
 		E.value = R->value;
 		if( DaoEnum_SetSymbols( & E, L->etype->name->mbs ) == 0 ) goto CompareAddress;
 		return E.value == R->value ? 0 : (E.value < R->value ? -1 : 1);
-	}else if( SR == '$' ){
+	}else if( R->subtype == DAO_ENUM_SYM ){
 		E.etype = L->etype;
 		E.value = L->value;
 		if( DaoEnum_SetSymbols( & E, R->etype->name->mbs ) == 0 ) goto CompareAddress;

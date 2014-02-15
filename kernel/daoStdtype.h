@@ -55,24 +55,28 @@ struct DaoInteger
 
 	daoint value;
 };
+
 struct DaoFloat
 {
 	DAO_VALUE_CORE;
 
 	float value;
 };
+
 struct DaoDouble
 {
 	DAO_VALUE_CORE;
 
 	double value;
 };
+
 struct DaoComplex
 {
 	DAO_VALUE_CORE;
 
 	complex16 value;
 };
+
 
 struct DaoString
 {
@@ -83,14 +87,23 @@ struct DaoString
 DAO_DLL DaoString* DaoString_Copy( DaoString *self );
 DAO_DLL void DaoString_Delete( DaoString *self );
 
+
 /*
-// Structure for symbol, enum and flag:
+// Structure for symbol, enum, flag and bool:
 // Storage modes:
 // Symbol: $AA => { type<$AA>, 0 }
 // Symbols: $AA + $BB => { type<$AA$BB>, 1|2 }
-// Enum: enum MyEnum{ AA=1, BB=2 }, MyEnum.AA => { type<MyEnum>, 1 }
-// Flag: enum MyFlag{ AA=1; BB=2 }, MyFlag.AA + MyFlag.BB => { type<MyFlag>, 1|2 }
+// Enum: enum MyEnum{ AA=1, BB=2 }, MyEnum.AA => { 1, type<MyEnum> }
+// Flag: enum MyFlag{ AA=1; BB=2 }, MyFlag.AA + MyFlag.BB => { 1|2, type<MyFlag> }
 */
+enum DaoEnumType
+{
+	DAO_ENUM_SYM ,
+	DAO_ENUM_STATE ,
+	DAO_ENUM_FLAG ,
+	DAO_ENUM_BOOL
+};
+
 struct DaoEnum
 {
 	DAO_VALUE_COMMON;
@@ -108,8 +121,7 @@ DAO_DLL int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols );
 DAO_DLL int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other, DString *enames );
 DAO_DLL int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other, DString *enames );
 DAO_DLL int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other, DString *enames );
-DAO_DLL int DaoEnum_AddSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNamespace *ns );
-DAO_DLL int DaoEnum_SubSymbol( DaoEnum *self, DaoEnum *s1, DaoEnum *s2, DaoNamespace *ns );
+
 
 struct DaoList
 {
@@ -127,6 +139,7 @@ DAO_DLL int DaoList_SetItem( DaoList *self, DaoValue *it, daoint id );
 DAO_DLL int DaoList_Append( DaoList *self, DaoValue *it );
 
 DAO_DLL DaoList* DaoList_Copy( DaoList *self, DaoType *type );
+
 
 struct DaoMap
 {

@@ -82,14 +82,14 @@ struct DaoType
 {
 	DAO_VALUE_COMMON;
 
-	uchar_t   tid; /* type id */
-	uchar_t   attrib;
-	uchar_t   variadic : 1; /* type for variadic tuple or routine */
-	uchar_t   realnum  : 1; /* for type of int/float/double */
-	uchar_t   flagtype : 1; /* for enum type */
+	uchar_t   tid;    /* type id; */
+	uchar_t   subtid; /* subtype id; */
+	uchar_t   attrib; /* attributes; */
+	uchar_t   variadic  : 1; /* type for variadic tuple or routine */
+	uchar_t   realnum   : 1; /* for type of int/float/double */
 	uchar_t   noncyclic : 1; /* this type representing non-cyclic data */
 	uchar_t   overloads : 1; /* overloaded routines */
-	uchar_t   unused    : 3;
+	uchar_t   unused    : 4;
 	uchar_t   rntcount  : 4; /* real number type count */
 	uchar_t   ffitype   : 4; /* for modules using ffi */
 	DString  *name; /* type name */

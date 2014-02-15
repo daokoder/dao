@@ -5055,19 +5055,8 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		DaoType *tb = B->xEnum.etype;
 		DaoEnum *denum = & A->xEnum;
 		int rc = 0;
-		if( vmc->c != vmc->a && ta->name->mbs[0] == '$' && tb->name->mbs[0] == '$' ){
-			DaoNamespace *ns = self->activeNamespace;
-			DaoType *type = NULL;
-			int value = 0;
-			denum = DaoProcess_GetEnum( self, vmc );
-			if( vmc->code == DVM_ADD ){
-				type = DaoNamespace_SymbolTypeAdd( ns, ta, tb, &value );
-			}else{
-				type = DaoNamespace_SymbolTypeAdd( ns, ta, tb, &value );
-			}
-			if( type == NULL ) DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "symbol not found in the enum" );
-			DaoEnum_SetType( denum, type );
-			denum->value = value;
+		if( A->xEnum.subtype == DAO_ENUM_SYM && B->xEnum.subtype == DAO_ENUM_SYM ){
+			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "not combinable enum" );
 			return;
 		}
 		if( vmc->c != vmc->a ){
@@ -5081,7 +5070,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 			rc = DaoEnum_RemoveValue( denum, & B->xEnum, NULL );
 		}
 		if( rc == 0 ){
-			if( denum->etype->flagtype ==0 )
+			if( denum->subtype != DAO_ENUM_FLAG )
 				DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "not combinable enum" );
 			else
 				DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "symbol not found in the enum" );
@@ -5432,7 +5421,7 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 			DNode *it, *node;
 			*C = 1;
 			for(it=DMap_First(ma); it; it=DMap_Next(ma,it) ){
-				if( ta->flagtype ){
+				if( A->xEnum.subtype == DAO_ENUM_FLAG ){
 					if( !(it->value.pInt & A->xEnum.value) ) continue;
 				}else if( it->value.pInt != A->xEnum.value ){
 					continue;
@@ -5590,7 +5579,7 @@ void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc )
 			if( it->value.pInt > max ) max = it->value.pInt;
 			value |= it->value.pInt;
 		}
-		if( etype->flagtype ){
+		if( A->xEnum.subtype == DAO_ENUM_FLAG ){
 			C->xEnum.value = value & (~A->xEnum.value);
 		}else if( A->xEnum.value == min ){
 			C->xEnum.value = max;
@@ -6485,7 +6474,6 @@ void DaoProcess_FreeRegexCaches( DMap *regexCaches )
 
 DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 {
-#ifdef DAO_WITH_REGEX
 	DMap *regexCaches = NULL;
 	DaoRegex *pat = NULL;
 	DNode *node;
@@ -6519,8 +6507,4 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src, int mbs )
 	}
 	DMap_Insert( regexCaches, src, pat );
 	return pat;
-#else
-	DaoProcess_RaiseException( self, DAO_ERROR, getCtInfo( DAO_DISABLED_REGEX ) );
-	return NULL;
-#endif
 }

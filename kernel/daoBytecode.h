@@ -200,7 +200,7 @@
 //
 //
 // enum:
-// ASM_ENUM(1B): Name-Index(2B), Enum/Flag(2B), Count(4B);
+// ASM_ENUM(1B): Name-Index(2B), SubType(2B), Count(4B);
 //   ASM_DATA(1B): Name-Index(2B), Value(4B), Zeros(2B);
 // ASM_END(1B): Name-Index(2B), Value(4B), Zeros(2B);
 //
