@@ -210,13 +210,7 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int
 			}
 			break;
 		}
-		if( val->type == DAO_PAR_NAMED ){
-			DaoNameValue *nameva = & val->xNameValue;
-			val = nameva->value;
-			node = DMap_Find( mapNames, nameva->name );
-			if( node == NULL ) goto NotMatched;
-			ito = node->value.pInt;
-		}
+		if( val->type == DAO_PAR_NAMED ) val = val->xNameValue.value;
 		if( ito >= ndef ) goto NotMatched;
 		abtp = & parType[ito]->aux->xType; /* must be named */
 		parpass[ito] = DaoType_MatchValue2( abtp, val, defs );
@@ -626,67 +620,6 @@ static DaoRoutine* DParamNode_GetLeaf( DParamNode *self, int *ms, int mode )
 	}
 	return NULL;
 }
-static DaoRoutine* DParamNode_LookupByName( DParamNode *self, DaoValue *p[], int n, int mode, int strict, int *ms, DMap *defs )
-{
-	DParamNode *param;
-	DaoRoutine *rout = NULL, *best = NULL;
-	int i, k = 0, m = 0, max = 0;
-
-	if( n ==0 ) return DParamNode_GetLeaf( self, ms, mode );
-	for(i=0; i<n; i++){
-		DaoValue *pval = p[i];
-		DaoNameValue *nameva = & pval->xNameValue;
-		if( pval->type != DAO_PAR_NAMED ) return NULL;
-		if( nameva->value == NULL ) continue;
-		p[i] = p[0];
-		for(param=self->first; param; param=param->next){
-			if( param->type2 == NULL ) continue;
-			if( param->type2->tid != DAO_PAR_VALIST && DString_EQ( param->type2->fname, nameva->name ) ==0 ) continue;
-			m = DaoType_MatchValue( param->type, nameva->value, defs );
-			if( strict && m < DAO_MT_ANY ) continue;
-			if( m == 0 ) continue;
-			rout = DParamNode_LookupByName( param, p+1, n-1, mode, strict, & k, defs );
-			m += k;
-			if( m > max ){
-				best = rout;
-				max = m;
-			}
-		}
-		p[i] = pval;
-	}
-	*ms = max;
-	return best;
-}
-static DaoRoutine* DParamNode_LookupByName2( DParamNode *self, DaoType *ts[], int n, int mode, int strict, int *ms, DMap *defs )
-{
-	DParamNode *param;
-	DaoRoutine *rout = NULL, *best = NULL;
-	int i, k = 0, m = 0, max = 0;
-
-	if( n ==0 ) return DParamNode_GetLeaf( self, ms, mode );
-	for(i=0; i<n; i++){
-		DaoType *ptype = ts[i];
-		DaoType *vtype = & ptype->aux->xType;
-		if( ptype->tid != DAO_PAR_NAMED && ptype->tid != DAO_PAR_DEFAULT ) return NULL;
-		ts[i] = ts[0];
-		for(param=self->first; param; param=param->next){
-			if( param->type2 == NULL ) continue;
-			if( param->type2->tid != DAO_PAR_VALIST && DString_EQ( param->type2->fname, ptype->fname ) ==0 ) continue;
-			m = DaoType_MatchTo( vtype, param->type, defs );
-			if( strict && m < DAO_MT_ANY ) continue;
-			if( m == 0 ) continue;
-			rout = DParamNode_LookupByName2( param, ts+1, n-1, mode, strict, & k, defs );
-			m += k;
-			if( m > max ){
-				best = rout;
-				max = m;
-			}
-		}
-		ts[i] = ptype;
-	}
-	*ms = max;
-	return best;
-}
 static DaoRoutine* DParamNode_Lookup( DParamNode *self, DaoValue *p[], int n, int mode, int strict, int *ms, DMap *defs, int clear )
 {
 	int i, m, k = 0, max = 0;
@@ -697,8 +630,6 @@ static DaoRoutine* DParamNode_Lookup( DParamNode *self, DaoValue *p[], int n, in
 
 	*ms = 1;
 	if( n == 0 ) return DParamNode_GetLeaf( self, ms, mode );
-	if( p[0]->type == DAO_PAR_NAMED )
-		return DParamNode_LookupByName( self, p, n, mode, strict, ms, defs );
 
 	if( self->type2 && self->type2->tid == DAO_PAR_VALIST ){
 		*ms = DAO_MT_EQ;
@@ -739,8 +670,6 @@ static DaoRoutine* DParamNode_LookupByType( DParamNode *self, DaoType *types[], 
 
 	*ms = 1;
 	if( n == 0 ) return DParamNode_GetLeaf( self, ms, mode );
-	if( types[0]->tid == DAO_PAR_NAMED && types[0]->tid != DAO_PAR_DEFAULT )
-		return DParamNode_LookupByName2( self, types, n, mode, strict, ms, defs );
 	
 	if( self->type2 && self->type2->tid == DAO_PAR_VALIST ){
 		*ms = DAO_MT_EQ;

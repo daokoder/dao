@@ -919,7 +919,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case DAO_PAR_NAMED :
 	case DAO_PAR_DEFAULT :
 		if( value->xNameValue.ctype == self ) return DAO_MT_EQ;
-		return DaoType_MatchTo( value->xNameValue.ctype, self, defs );
+		return 0;
 	}
 	return (self->tid == value->type) ? DAO_MT_EQ : DAO_MT_NOT;
 }

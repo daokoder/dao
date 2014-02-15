@@ -949,7 +949,6 @@ static int DaoRoutine_CheckParamTypes( DaoRoutine *self, DaoType *argtypes[], in
 	DMap *defs = DMap_New(0,0);
 	DaoType *routType = self->routType;
 	DaoType  *abtp, **partypes = routType->nested->items.pType;
-	int size = routType->nested->size;
 	int parpass[DAO_MAX_PARAM];
 	int ndef = self->parCount;
 	int i, j, match = 1;
@@ -2578,8 +2577,9 @@ DaoFuncItem dao_builtin_methods[] =
 	{ DaoBuiltIn_Recover2,  "recover( eclass : class<Exception> ) => any" },
 	{ DaoBuiltIn_Frame,     "frame() [=>@T] => @T" },
 	{ DaoBuiltIn_Frame,     "frame( default_value :@T ) [=>@T] => @T" },
-#if 0
-	{ DaoBuiltIn_Test,      "test( ... : int|string )" },
+#if DEBUG
+	{ DaoBuiltIn_Test,      "__test1__( ... )" },
+	{ DaoBuiltIn_Test,      "__test2__( ... : int|string )" },
 #endif
 	{ NULL, NULL }
 };

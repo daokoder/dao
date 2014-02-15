@@ -2096,12 +2096,7 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 			break;
 		}
 		if( tp == NULL ) goto FinishError;
-		if( tp->tid == DAO_PAR_NAMED ){
-			node = DMap_Find( routType->mapNames, tp->fname );
-			if( node == NULL ) goto FinishError;
-			ito = node->value.pInt;
-			tp = & tp->aux->xType;
-		}
+		if( tp->tid == DAO_PAR_NAMED ) tp = (DaoType*) tp->aux;
 		if( ito >= ndef || tp ==NULL )  goto FinishError;
 		abtp = routType->nested->items.pType[ito];
 		if( abtp->tid == DAO_PAR_NAMED || abtp->tid == DAO_PAR_DEFAULT ) abtp = & abtp->aux->xType;
@@ -2259,12 +2254,7 @@ void DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype,
 		}
 		tp = tps[ifrom];
 		if( tp == NULL ) break;
-		if( tp->tid == DAO_PAR_NAMED ){
-			node = DMap_Find( mapNames, tp->fname );
-			if( node == NULL ) break;
-			ito = node->value.pInt;
-			tp = & tp->aux->xType;
-		}
+		if( tp->tid == DAO_PAR_NAMED ) tp = (DaoType*) tp->aux;
 		abtp = parType[ito];
 		if( ito >= ndef || tp ==NULL || abtp ==NULL )  break;
 		if( abtp->tid == DAO_PAR_NAMED || abtp->tid == DAO_PAR_DEFAULT ) abtp = & abtp->aux->xType;
@@ -2529,13 +2519,12 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 		}
 		if( tp->tid == DAO_PAR_NAMED ){
 			node = DMap_Find( routType->mapNames, tp->fname );
-			if( node == NULL ){
+			if( node == NULL || node->value.pInt != ito ){
 				DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_NAME );
 				DString_Append( s, tp->fname );
 				DString_AppendMBS( s, " \";\n" );
 				goto FinishError;
 			}
-			ito = node->value.pInt;
 			tp = & tp->aux->xType;
 		}
 		if( tp ==NULL ){
@@ -6229,13 +6218,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 			*/
 			pv = (DaoValue*)(ip ? newfn : oldfn);
 		}
-		if( pv->type == DAO_PAR_NAMED ){
-			DaoNameValue *nameva = & pv->xNameValue;
-			DNode *node = DMap_Find( decorator->routType->mapNames, nameva->name );
-			if( node == NULL ) goto ErrorDecorator;
-			pv = nameva->value;
-			k = node->value.pInt;
-		}
+		if( pv->type == DAO_PAR_NAMED ) pv = pv->xNameValue.value;
 		parpass[k] = 1;
 		DArray_PushBack( added, annotCodes->items.pVoid[0] );
 		vmc = added->items.pVmc[added->size-1];

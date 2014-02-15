@@ -490,21 +490,13 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 		if( ito < ndef && types[ito]->tid == DAO_PAR_VALIST ){
 			tp = types[ito]->aux ? (DaoType*) types[ito]->aux : dao_type_any;
 			for(; ifrom<npar; ifrom++){
-				val = p[ifrom];
 				ito = ifrom + selfChecked;
-				//if( val->type == DAO_PAR_NAMED ) val = val->xNameValue.value;
-				if( DaoValue_Move2( val, & dest[ito], tp, defs, self->cache ) == 0 ) goto ReturnZero;
+				if( DaoValue_Move2( p[ifrom], & dest[ito], tp, defs, self->cache ) == 0 ) goto ReturnZero;
 				passed |= (size_t)1<<ito;
 			}
 			break;
 		}
-		if( val->type == DAO_PAR_NAMED ){
-			DaoNameValue *nameva = & val->xNameValue;
-			DNode *node = DMap_Find( routype->mapNames, nameva->name );
-			val = nameva->value;
-			if( node == NULL ) goto ReturnZero;
-			ito = node->value.pInt;
-		}
+		if( val->type == DAO_PAR_NAMED ) val = val->xNameValue.value;
 		if( ito >= ndef ) goto ReturnZero;
 		passed |= (size_t)1<<ito;
 		tp = & types[ito]->aux->xType;
