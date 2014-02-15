@@ -165,11 +165,10 @@ static void DaoType_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
 	DaoType *self = & self0->xType;
 	DaoEnum *denum = DaoProcess_GetEnum( proc, proc->activeCode );
 	DNode *node;
-	if( self->mapNames == NULL ) goto ErrorNotExist;
+	if( self->mapNames == NULL || self->tid != DAO_ENUM ) goto ErrorNotExist;
 	node = DMap_Find( self->mapNames, name );
 	if( node == NULL ) goto ErrorNotExist;
-	GC_ShiftRC( self, denum->etype );
-	denum->etype = self;
+	DaoEnum_SetType( denum, self );
 	denum->value = node->value.pInt;
 	return;
 ErrorNotExist:
@@ -180,11 +179,11 @@ static void DaoType_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 	DaoType *self = & self0->xType;
 	DaoEnum *denum = DaoProcess_GetEnum( proc, proc->activeCode );
 	DNode *node;
-	if( self->mapNames == NULL || N != 1 || ids[0]->type != DAO_INTEGER ) goto ErrorNotExist;
+	if( N != 1 || ids[0]->type != DAO_INTEGER ) goto ErrorNotExist;
+	if( self->mapNames == NULL || self->tid != DAO_ENUM ) goto ErrorNotExist;
 	for(node=DMap_First(self->mapNames);node;node=DMap_Next(self->mapNames,node)){
 		if( node->value.pInt == ids[0]->xInteger.value ){
-			GC_ShiftRC( self, denum->etype );
-			denum->etype = self;
+			DaoEnum_SetType( denum, self );
 			denum->value = node->value.pInt;
 			return;
 		}

@@ -1746,7 +1746,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 		}
 		if( sep ==0 && (k+1) <= end ){
 			sep = tokens[k+1]->type;
-			if( sep != DTOK_COMMA && sep != DTOK_SEMCO ) break;
+			if( sep != DTOK_COMMA && sep != DTOK_SEMCO && sep != DTOK_COLON ) break;
 			if( sep == DTOK_SEMCO && set == 0 ) value = 1;
 		}
 		if( DMap_Find( type->mapNames, field ) ) goto WrongForm;
@@ -1760,11 +1760,21 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 		if( k+1 > end ) break;
 		k += 1;
 		tok = tokens[k];
-		if( tok->type != DTOK_COMMA && tok->type != DTOK_SEMCO ) break;
 		if( sep != tok->type ) break;
 	}
-	type->subtid = sep == DTOK_SEMCO ? DAO_ENUM_FLAG : DAO_ENUM_STATE;
+	switch( sep ){
+	case DTOK_COMMA : type->subtid = DAO_ENUM_STATE; break;
+	case DTOK_SEMCO : type->subtid = DAO_ENUM_FLAG;  break;
+	case DTOK_COLON : type->subtid = DAO_ENUM_BOOL;  break;
+	}
 	if( k < end ) goto WrongForm;
+	if( type->subtid == DAO_ENUM_BOOL ){
+		DNode *first = DMap_First( type->mapNames );
+		DNode *last = DMap_Next( type->mapNames, first );
+		if( type->mapNames->size != 2 ) goto WrongForm;
+		if( first->value.pInt != 0 && first->value.pInt != 1 ) goto WrongForm;
+		if( last->value.pInt != ! first->value.pInt ) goto WrongForm;
+	}
 	for(k=start; k<=end; k++) DString_Append( type->name, & tokens[k]->string );
 	DString_AppendChar( type->name, '>' );
 	/*
@@ -3468,7 +3478,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 	start = start + 2;
 	while( comma >=0 ){
 		if( start >= comma ) break;
-		if( tokens[start]->type != DTOK_IDENTIFIER ){
+		if( tokens[start]->name != DTOK_IDENTIFIER ){
 			DaoParser_Error( self, DAO_TOKEN_NEED_NAME, & tokens[start]->string );
 			goto ErrorEnumDefinition;
 		}

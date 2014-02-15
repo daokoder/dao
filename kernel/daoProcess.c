@@ -5324,7 +5324,12 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 		}
 #ifdef DAO_WITH_NUMARRAY
 	}else if( ta == DAO_ENUM ){
-		DaoProcess_PutInteger( self, ! A->xEnum.value );
+		if( A->xEnum.subtype == DAO_ENUM_BOOL ){
+			DaoValue *res = DaoProcess_PutValue( self, A );
+			res->xEnum.value = ! A->xEnum.value;
+		}else{
+			DaoProcess_PutInteger( self, ! A->xEnum.value );
+		}
 		return;
 	}else if( ta == DAO_ARRAY ){
 		DaoArray *array = & A->xArray;
@@ -5493,6 +5498,7 @@ void DaoProcess_DoBitLogic( DaoProcess *self, DaoVmCode *vmc )
 	}else if( A->type == DAO_ENUM && B->type == DAO_ENUM ){
 		DaoEnum *en = DaoProcess_GetEnum( self, vmc );
 		if( A->xEnum.etype != B->xEnum.etype ) goto InvalidOperation;
+		if( A->xEnum.subtype <= DAO_ENUM_STATE ) goto InvalidOperation;
 		if( en == NULL || en->etype != A->xEnum.etype ) goto InvalidOperation;
 		switch( vmc->code ){
 		case DVM_BITAND : en->value = A->xEnum.value & B->xEnum.value; break;
@@ -6222,8 +6228,7 @@ static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc )
 		if( type && type->tid == DAO_ENUM && type->mapNames ){
 			DNode *node = DMap_Find( type->mapNames, name );
 			if( node ){
-				GC_ShiftRC( type, denum->etype );
-				denum->etype = type;
+				DaoEnum_SetType( denum, type );
 				denum->value = node->value.pInt;
 				C = (DaoValue*) denum;
 			}

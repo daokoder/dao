@@ -1384,6 +1384,7 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 
 	denum.etype = DaoNamespace_MakeEnumType( proc->activeNamespace, "unmatched,matched" );
+	denum.subtype = DAO_ENUM_STATE;
 	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );
 

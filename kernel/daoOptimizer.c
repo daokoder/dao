@@ -3551,7 +3551,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 							DaoInferencer_InsertMove2( self, inode, dao_type_double, ct );
 					}
 				}else if( at->tid == DAO_TYPE ){
-					at = at->nested->items.pType[0];
 					self->type_source = at;
 					if( at->tid == DAO_ENUM && at->mapNames ){
 						if( DMap_Find( at->mapNames, str ) == NULL ) goto NotExist_TryAux;
@@ -4288,6 +4287,20 @@ NotExist_TryAux:
 						if( code != DVM_ADD ) goto InvOper;
 						break;
 					case DAO_ENUM :
+						if( code == DVM_AND || code == DVM_OR ){
+							ct = NULL;
+							if( at->subtid == DAO_ENUM_BOOL || bt->subtid == DAO_ENUM_BOOL ){
+								if( at->subtid == bt->subtid ){
+									if( DaoType_MatchTo( at, bt, NULL ) ) ct = at;
+								}else if( at->subtid == DAO_ENUM_SYM ){
+									ct = bt;
+								}else if( bt->subtid == DAO_ENUM_SYM ){
+									ct = at;
+								}
+							}
+							if( ct == NULL ) goto InvOper;
+							break;
+						}
 						if( code != DVM_ADD && code != DVM_SUB ) goto InvOper;
 						if( at->subtid == DAO_ENUM_SYM ){
 							if( bt->subtid == DAO_ENUM_SYM ) goto InvOper;
@@ -4420,7 +4433,11 @@ NotExist_TryAux:
 			AssertTypeMatching( ct, types[opc], defs );
 			break;
 		case DVM_NOT :
-			ct = NoCheckingType( at ) ? dao_type_udf : dao_type_int;
+			if( at->tid == DAO_ENUM && at->subtid == DAO_ENUM_BOOL ){
+				ct = at;
+			}else{
+				ct = NoCheckingType( at ) ? dao_type_udf : dao_type_int;
+			}
 			if( at->tid == DAO_OBJECT || at->tid == DAO_CDATA
 					|| at->tid == DAO_CSTRUCT || at->tid == DAO_INTERFACE ){
 				ct = DaoCheckBinArith( routine, vmc, at, NULL, types[opc], hostClass, mbs );
@@ -4872,11 +4889,12 @@ NotExist_TryAux:
 			}else if( at->tid == DAO_ENUM && at->subtid != DAO_ENUM_SYM && j == opc ){
 				DaoInode *front = inodes[i];
 				DaoInode *back = inodes[i+opc+1];
-				DaoEnum denum = {DAO_ENUM,DAO_ENUM_STATE,0,0,0,0,0,NULL};
+				DaoEnum denum = {DAO_ENUM,0,0,0,0,0,0,NULL};
 				DMap *jumps = DMap_New(D_VALUE,0);
 				DNode *it, *find;
 				int max=0, min=0;
 				denum.etype = at;
+				denum.subtype = at->subtid;
 				for(k=1; k<=opc; k++){
 					DaoValue *cc = routConsts->items.pValue[ inodes[i+k]->a ];
 					if( DaoEnum_SetValue( & denum, & cc->xEnum, NULL ) == 0 ){

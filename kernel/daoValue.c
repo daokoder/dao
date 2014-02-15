@@ -125,13 +125,11 @@ int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
 	}else if( L->subtype == DAO_ENUM_SYM && R->subtype == DAO_ENUM_SYM ){
 		return DString_Compare( L->etype->name, R->etype->name );
 	}else if( L->subtype == DAO_ENUM_SYM ){
-		E.etype = R->etype;
-		E.value = R->value;
+		E = *R;
 		if( DaoEnum_SetSymbols( & E, L->etype->name->mbs ) == 0 ) goto CompareAddress;
 		return E.value == R->value ? 0 : (E.value < R->value ? -1 : 1);
 	}else if( R->subtype == DAO_ENUM_SYM ){
-		E.etype = L->etype;
-		E.value = L->value;
+		E = *L;
 		if( DaoEnum_SetSymbols( & E, R->etype->name->mbs ) == 0 ) goto CompareAddress;
 		return L->value == E.value ? 0 : (L->value < E.value ? -1 : 1);
 	}

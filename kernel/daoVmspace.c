@@ -2790,6 +2790,8 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_array_types[DAO_COMPLEX] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_complex, 1 );
 	dao_type_array_empty = dao_array_types[DAO_NONE];
 
+	DaoNamespace_TypeDefine( ns, "enum<false:true>", "bool" );
+
 #if 0
 	/*
 	// Do not use "#ifdef DEBUG", it will make bytecode encoded by interpreter
