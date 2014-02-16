@@ -241,18 +241,11 @@ extern DaoTypeCore  baseCore;
 
 DaoTypeBase* DaoValue_GetTyper( DaoValue *p );
 
-DaoValue* DaoValue_Duplicate( void *dbase, DaoType *type );
-
-void DaoValue_GetField( DaoValue *self, DaoProcess *proc, DString *name );
-void DaoValue_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value );
-void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N );
-void DaoValue_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value );
-void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData );
-DaoValue* DaoValue_NoCopy( DaoValue *self, DaoProcess *proc, DMap *cycData );
-
-void DaoValue_SafeGetField( DaoValue *self, DaoProcess *proc, DString *name );
-void DaoValue_SafeSetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value );
-
+DAO_DLL void DaoValue_GetField( DaoValue *self, DaoProcess *proc, DString *name );
+DAO_DLL void DaoValue_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value );
+DAO_DLL void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N );
+DAO_DLL void DaoValue_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value );
+DAO_DLL void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData );
 
 
 typedef struct DTypeParam DTypeParam;

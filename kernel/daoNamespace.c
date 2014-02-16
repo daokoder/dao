@@ -889,9 +889,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->variables = DArray_New(D_VALUE);
 	self->auxData = DArray_New(D_VALUE);
 	self->namespaces = DArray_New(0);
-	/* DO NOT USE HASH: name ordering needed for bytecode format to work: */
-	/* XXX: will not be true with the new bytecode encoder and decoder? */
-	self->lookupTable = DMap_New(D_STRING,0);
+	self->lookupTable = DHash_New(D_STRING,0);
 	self->mainRoutines  = DArray_New(D_VALUE);
 	self->definedRoutines = DArray_New(0);
 	self->localMacros = DHash_New(D_STRING,D_VALUE);

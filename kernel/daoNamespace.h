@@ -44,10 +44,10 @@ struct DaoNamespace
 	DaoVmSpace *vmSpace;
 
 	DMap    *lookupTable; /* <DString*,size_t> */
-	DArray  *namespaces; /* <DaoNamespace*> */
-	DArray  *constants; /* <DaoConstant*>, global constants; */
-	DArray  *variables; /* <DaoVariable*>, global variables; */
-	DArray  *auxData;   /* mainly for GC */
+	DArray  *namespaces;  /* <DaoNamespace*> */
+	DArray  *constants;   /* <DaoConstant*>, global constants; */
+	DArray  *variables;   /* <DaoVariable*>, global variables; */
+	DArray  *auxData;     /* mainly for GC */
 
 	DaoRoutine *mainRoutine;
 	DaoList    *argParams;

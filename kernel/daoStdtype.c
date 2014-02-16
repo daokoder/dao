@@ -577,7 +577,7 @@ void DaoValue_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 		DString_Delete( mbs );
 		return;
 	}
-	void *pp = DaoProcess_PutValue( proc, p );
+	DaoProcess_PutValue( proc, p );
 }
 void DaoValue_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
 {

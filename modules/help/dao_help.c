@@ -2059,7 +2059,7 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 	}
 	DString_AppendMBS( fname, ".html" );
 	DString_Reset( stream->output, 0 );
-	DString_AppendMBS( stream->output, "\n<pre style=\"font-family: monospace; font-weight: bold;\">\n" );
+	DString_AppendMBS( stream->output, "\n<pre style=\"font-family: monospace;\">\n" );
 	if( self->parent ){
 		DaoxHelpEntry_Print( self, stream, stream->process );
 	}else{
@@ -2254,7 +2254,7 @@ DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 
 	daox_helpers = DaoMap_New(0);
 	dao_help_namespace = ns;
-	daox_type_helper = DaoNamespace_WrapType( ns, & helpTyper, 1 );
+	daox_type_helper = DaoNamespace_WrapType( ns, & helpTyper, 0 );
 	DaoNamespace_AddValue( ns, "__helpers__", (DaoValue*)daox_helpers, "map<string,help>" );
 	daox_helper = DaoxHelper_New();
 	DaoMap_InsertMBS( daox_helpers, "en", (DaoValue*) daox_helper );

@@ -28,6 +28,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "dao_dataframe.h"
 #include "daoVmspace.h"
 #include "daoProcess.h"
@@ -81,13 +82,15 @@ static int DaoType_GetDataType( DaoType *self )
 
 
 
+DaoType *daox_type_datacolumn = NULL;
 
 DaoxDataColumn* DaoxDataColumn_New( DaoType *type )
 {
 	DaoxDataColumn *self = (DaoxDataColumn*) dao_calloc( 1, sizeof(DaoxDataColumn) );
+	DaoCstruct_Init( (DaoCstruct*) self, daox_type_datacolumn );
 	if( type == NULL ) type = DaoType_GetCommonType( DAO_ANY, 0 );
 	GC_IncRC( type );
-	self->type = type;
+	self->vatype = type;
 	self->cells = DVector_New( DaoType_GetDataSize( type ) );
 	self->cells->type = DaoType_GetDataType( type );
 	return self;
@@ -96,12 +99,16 @@ void DaoxDataColumn_Delete( DaoxDataColumn *self )
 {
 	DaoxDataColumn_Reset( self, 0 );
 	DVector_Delete( self->cells );
-	GC_DecRC( self->type );
+	GC_DecRC( self->vatype );
+	DaoCstruct_Free( (DaoCstruct*) self );
 	dao_free( self );
 }
 void DaoxDataColumn_Reset( DaoxDataColumn *self, daoint size )
 {
-	daoint i, datatype = DaoType_GetDataType( self->type );
+	daoint i, datatype;
+	if( self->vatype == NULL && self->cells->size == 0 && size == 0 ) return;
+	assert( self->vatype != NULL );
+	datatype = DaoType_GetDataType( self->vatype );
 	if( size < self->cells->size ){
 		for(i=size; i<self->cells->size; ++i){
 			if( datatype == DAO_STRING ){
@@ -118,7 +125,7 @@ void DaoxDataColumn_Reset( DaoxDataColumn *self, daoint size )
 				DString_Init( self->cells->data.strings + i, 0 );
 				DString *s = & self->cells->data.strings[i];
 			}else if( datatype == 0 ){
-				self->cells->data.values[i]  = NULL;
+				self->cells->data.values[i] = NULL;
 			}
 		}
 		DVector_Reset( self->cells, size );
@@ -133,8 +140,8 @@ void DaoxDataColumn_SetType( DaoxDataColumn *self, DaoType *type )
 	datatype = DaoType_GetDataType( type );
 	datasize = DaoType_GetDataSize( type );
 
-	GC_ShiftRC( type, self->type );
-	self->type = type;
+	GC_ShiftRC( type, self->vatype );
+	self->vatype = type;
 	self->cells->capacity = (self->cells->capacity * self->cells->stride) / datasize;
 	self->cells->stride = datasize;
 	self->cells->type = datatype;
@@ -143,7 +150,7 @@ void DaoxDataColumn_SetCell( DaoxDataColumn *self, daoint i, DaoValue *value )
 {
 	if( value == NULL ){
 		complex16 zero = {0.0,0.0};
-		switch( self->type->tid ){
+		switch( self->vatype->tid ){
 		default :
 			GC_DecRC( self->cells->data.values[i] );
 			self->cells->data.values[i] = value;
@@ -156,7 +163,7 @@ void DaoxDataColumn_SetCell( DaoxDataColumn *self, daoint i, DaoValue *value )
 		}
 		return;
 	}
-	switch( self->type->tid ){
+	switch( self->vatype->tid ){
 	default :
 		GC_ShiftRC( value, self->cells->data.values[i] );
 		self->cells->data.values[i] = value;
@@ -170,8 +177,8 @@ void DaoxDataColumn_SetCell( DaoxDataColumn *self, daoint i, DaoValue *value )
 }
 DaoValue* DaoxDataColumn_GetCell( DaoxDataColumn *self, daoint i, DaoValue *value )
 {
-	value->xNone.type = self->type->tid;
-	switch( self->type->tid ){
+	value->xNone.type = self->vatype->tid;
+	switch( self->vatype->tid ){
 	case DAO_INTEGER : value->xInteger.value = self->cells->data.daoints[i]; break;
 	case DAO_FLOAT   : value->xFloat.value   = self->cells->data.floats[i];  break;
 	case DAO_DOUBLE  : value->xDouble.value  = self->cells->data.doubles[i]; break;
@@ -184,14 +191,14 @@ DaoValue* DaoxDataColumn_GetCell( DaoxDataColumn *self, daoint i, DaoValue *valu
 static int DaoxDataColumn_GetPrintWidth( DaoxDataColumn *self, int max )
 {
 	daoint i, width = 0;
-	switch( self->type->tid ){
+	switch( self->vatype->tid ){
 	case DAO_FLOAT   :
 	case DAO_DOUBLE  : return 12;
 	case DAO_COMPLEX : return 16;
 	}
 	for(i=0; i<self->cells->size; ++i){
 		int w = 0;
-		switch( self->type->tid ){
+		switch( self->vatype->tid ){
 		case DAO_INTEGER : w = 1 + log10( 1 + abs( self->cells->data.daoints[i] ) ); break;
 		case DAO_STRING  : w = self->cells->data.strings[i].size; break;
 		default : w = max; break;
@@ -203,6 +210,22 @@ static int DaoxDataColumn_GetPrintWidth( DaoxDataColumn *self, int max )
 	if( width > max ) width = max;
 	return width;
 }
+
+static void DaoxDataColumn_GetGCFields( void *p, DArray *values, DArray *a, DArray *m, int rm )
+{
+	DaoxDataColumn *self = (DaoxDataColumn*) p;
+	if( self->vatype ) DArray_Append( values, self->vatype );
+	if( rm ){
+		DaoxDataColumn_Reset( self, 0 );
+		self->vatype = NULL;
+	}
+}
+
+DaoTypeBase datacolumnTyper =
+{
+	"DataColumn", NULL, NULL, NULL, {0}, {0},
+	(FuncPtrDel)DaoxDataColumn_Delete, DaoxDataColumn_GetGCFields
+};
 
 
 
@@ -219,8 +242,8 @@ DaoxDataFrame* DaoxDataFrame_New()
 		self->groups[i] = 0;
 		self->labels[i] = DArray_New(D_MAP);
 	}
-	self->columns = DArray_New(0);
-	self->caches = DArray_New(0);
+	self->columns = DArray_New(D_VALUE);
+	self->caches = DArray_New(D_VALUE);
 	self->original = NULL;
 	self->slices = NULL;
 	return self;
@@ -263,8 +286,8 @@ void DaoxDataFrame_Reset( DaoxDataFrame *self )
 }
 DaoxDataColumn* DaoxDataFrame_MakeColumn( DaoxDataFrame *self, DaoType *type )
 {
-	DaoxDataColumn *column = (DaoxDataColumn*) DArray_Back( self->caches );
 	if( self->caches->size ){
+		DaoxDataColumn *column = (DaoxDataColumn*) DArray_Back( self->caches );
 		DaoxDataColumn_SetType( column, type );
 		DArray_PopBack( self->caches );
 		return column;
@@ -426,8 +449,8 @@ static void DaoxDataFrame_SliceFrom( DaoxDataFrame *self, DaoxDataFrame *orig, D
 	for(j=0; j<M; ++j){
 		daoint jj = DaoSlice_GetIndex( slices->items.pVector[1], j );
 		DaoxDataColumn *source = (DaoxDataColumn*) orig->columns->items.pVoid[jj];
-		DaoxDataColumn *target = DaoxDataFrame_MakeColumn( self, source->type );
-		int datatype = DaoType_GetDataType( target->type );
+		DaoxDataColumn *target = DaoxDataFrame_MakeColumn( self, source->vatype );
+		int datatype = DaoType_GetDataType( target->vatype );
 
 		cols->data.daoints[jj] = j;
 		DArray_Append( self->columns, target );
@@ -952,7 +975,7 @@ static int DaoxDataFrame_UpdateByFrame( DaoxDataFrame *self, DaoxDataFrame *df, 
 		daoint jjsrc = DaoSlice_GetIndex( fromSlices->items.pVector[1], j );
 		DaoxDataColumn *coldes = (DaoxDataColumn*) self->columns->items.pVoid[jjdes];
 		DaoxDataColumn *colsrc = (DaoxDataColumn*) df->columns->items.pVoid[jjsrc];
-		if( DaoType_MatchTo( colsrc->type, coldes->type, NULL ) < DAO_MT_SUB )
+		if( DaoType_MatchTo( colsrc->vatype, coldes->vatype, NULL ) < DAO_MT_SUB )
 			return DAOX_DF_WRONG_VALUE;
 		for(i=0; i<N; ++i){
 			daoint iides = DaoSlice_GetIndex( destSlices->items.pVector[0], i );
@@ -1305,7 +1328,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 		DaoxDataColumn *col = (DaoxDataColumn*) original->columns->items.pVoid[jj];
 		DVector *cells = col->cells;
 
-		datatype = DaoType_GetDataType( col->type );
+		datatype = DaoType_GetDataType( col->vatype );
 		width = DaoxDataColumn_GetPrintWidth( col, 16 );
 		for(i=0; i<N && i<1000; ++i){
 			daoint v, ii = DaoSlice_GetIndex( self->slices->items.pVector[0], i );
@@ -1335,7 +1358,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 			}
 		}
 		if( dec > maxdec ) dec = maxdec;
-		if( col->type->tid == DAO_COMPLEX ){
+		if( col->vatype->tid == DAO_COMPLEX ){
 			max *= 2;
 			min *= 2;
 		}
@@ -1356,7 +1379,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 			DVector_PushInt( decimals, dec );
 		}else{
 			width = max + dec + 1;
-			if( col->type->tid == DAO_COMPLEX ) width += dec + 6;
+			if( col->vatype->tid == DAO_COMPLEX ) width += dec + 6;
 			DVector_PushInt( aligns, 0 );
 			DVector_PushInt( scifmts, 0 );
 			DVector_PushInt( decimals, dec );
@@ -1644,7 +1667,7 @@ static void FRAME_RowsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, in
 	for(j=0; j<M; ++j){
 		daoint jj = DaoSlice_GetIndex( self->slices->items.pVector[1], j );
 		DaoxDataColumn *column = (DaoxDataColumn*) original->columns->items.pVoid[jj];
-		DArray_Append( ts, column->type );
+		DArray_Append( ts, column->vatype );
 	}
 	type = DaoNamespace_MakeType( ns, "tuple", DAO_TUPLE, NULL, ts->items.pType, ts->size );
 	DArray_Delete( ts );
@@ -1725,7 +1748,7 @@ static void FRAME_ColsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, in
 		for(j=0; j<M; ++j){
 			daoint jj = DaoSlice_GetIndex( self->slices->items.pVector[1], j );
 			DaoxDataColumn *column = (DaoxDataColumn*) original->columns->items.pVoid[jj];
-			DaoType *type = DaoNamespace_MakeType( ns, "list", DAO_LIST, NULL, & column->type, 1 );
+			DaoType *type = DaoNamespace_MakeType( ns, "list", DAO_LIST, NULL, & column->vatype, 1 );
 			colidx->value = jj;
 			DaoList_Clear( list );
 			GC_ShiftRC( type, list->ctype );
@@ -1907,15 +1930,25 @@ static DaoFuncItem dataframeMeths[]=
 	{ NULL, NULL },
 };
 
+static void DaoxDataFrame_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *m, int rm )
+{
+	DaoxDataFrame *self = (DaoxDataFrame*) p;
+	DArray_Append( arrays, self->columns );
+	DArray_Append( arrays, self->caches );
+	if( self->original ) DArray_Append( values, self->original );
+	if( rm ) self->original = NULL;
+}
+
 DaoTypeBase dataframeTyper =
 {
 	"DataFrame", NULL, NULL, (DaoFuncItem*) dataframeMeths, {0}, {0},
-	(FuncPtrDel)DaoxDataFrame_Delete, NULL
+	(FuncPtrDel)DaoxDataFrame_Delete, DaoxDataFrame_GetGCFields
 };
 
 
 DAO_DLL int DaoDataframe_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
+	daox_type_datacolumn = DaoNamespace_WrapType( ns, & datacolumnTyper, 0 );
 	daox_type_dataframe = DaoNamespace_WrapType( ns, & dataframeTyper, 0 );
 	DaoNamespace_TypeDefine( ns, "enum<row,column,depth>", "DataFrame_DimType" );
 	DaoNamespace_TypeDefine( ns, "none|int|string|tuple<none,none>|tuple<int,int>|tuple<string,string>|tuple<int|string,none>|tuple<none,int|string>", "DataFrame_IndexType" );

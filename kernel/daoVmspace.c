@@ -1784,14 +1784,9 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	DaoProcess *process;
 	DString name;
 	DNode *node;
-	size_t tm = 0;
-	daoint i = DString_FindMBS( libpath, "/addpath.dao", 0 );
-	daoint j = DString_FindMBS( libpath, "/delpath.dao", 0 );
 	daoint nsCount = self->loadedModules->size;
 	int bl, m, poppath = 0;
-	int cfgpath = i != MAXSIZE && i == libpath->size - 12;
-	cfgpath = cfgpath || (j != MAXSIZE && j == libpath->size - 12);
-	/*  XXX if cfgpath == true, only parsing? */
+	size_t tm = 0;
 
 	if( args ){
 		argNames = DArray_New(D_STRING);

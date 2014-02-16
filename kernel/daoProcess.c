@@ -3511,6 +3511,11 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		if( DaoEnum_SetValue( & vc->xEnum, & va->xEnum, NULL ) ==0 ) goto FailConversion;
 		return;
 	}else if( ct->tid == DAO_ENUM && va->type == DAO_INTEGER ){
+		if( ct->subtid == DAO_ENUM_BOOL ){
+			DaoEnum_SetType( & vc->xEnum, ct );
+			vc->xEnum.value = va->xInteger.value != 0;
+			return;
+		}
 		if( ct->mapNames == NULL ) goto FailConversion;
 		for(node=DMap_First(ct->mapNames);node;node=DMap_Next(ct->mapNames,node)){
 			if( node->value.pInt == va->xInteger.value ) break;

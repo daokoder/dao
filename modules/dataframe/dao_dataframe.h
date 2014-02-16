@@ -45,9 +45,13 @@ enum DaoxDataFrameDims
 
 struct DaoxDataColumn
 {
-	DaoType  *type;   // type of the cells;
-	DVector  *cells;  // DVector<daoint|float|double|complex|DString | DaoValue* >
+	DAO_CSTRUCT_COMMON;
+
+	DaoType  *vatype;  // type of the cells;
+	DVector  *cells;   // DVector<daoint|float|double|complex|DString | DaoValue* >
 };
+
+DAO_DLL DaoType *daox_type_datacolumn;
 
 DAO_DLL DaoxDataColumn* DaoxDataColumn_New( DaoType *type );
 DAO_DLL void DaoxDataColumn_Delete( DaoxDataColumn *self );

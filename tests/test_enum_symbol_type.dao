@@ -76,7 +76,7 @@ use enum Bool
 a = True
 @[test()]
 @[test()]
-1
+Bool::True
 @[test()]
 
 

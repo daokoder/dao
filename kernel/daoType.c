@@ -79,6 +79,8 @@ void DaoType_Init()
 			dao_type_matrix[i][j] = DAO_MT_SIM;
 	}
 	dao_type_matrix[DAO_ENUM][DAO_STRING] = DAO_MT_SUB;
+	dao_type_matrix[DAO_STRING][DAO_ENUM] = DAO_MT_SUB;
+	dao_type_matrix[DAO_INTEGER][DAO_ENUM] = DAO_MT_SUB;
 	for(i=0; i<END_EXTRA_TYPES; i++) dao_type_matrix[i][i] = DAO_MT_EQ;
 	for(i=0; i<END_EXTRA_TYPES; i++){
 		dao_type_matrix[i][DAO_PAR_NAMED] = DAO_MT_EXACT+2;
@@ -787,6 +789,9 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		return DAO_MT_NOT;
 	case DAO_ANY : return DAO_MT_ANY;
 	}
+	mt = dao_type_matrix[value->type][self->tid];
+	if( mt <= DAO_MT_EXACT ) return mt;
+
 	dinterface = self->tid == DAO_INTERFACE ? (DaoInterface*) self->aux : NULL;
 	switch( value->type ){
 	case DAO_STRING :

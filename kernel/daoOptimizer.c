@@ -4322,8 +4322,7 @@ NotExist_TryAux:
 					goto InvOper;
 				}else if( at->realnum && (bt->tid ==DAO_COMPLEX || bt->tid ==DAO_ARRAY) ){
 					ct = bt;
-				}else if( (at->tid ==DAO_COMPLEX || at->tid ==DAO_ARRAY)
-						&& bt->realnum ){
+				}else if( (at->tid ==DAO_COMPLEX || at->tid ==DAO_ARRAY) && bt->realnum ){
 					ct = at;
 				}else if( at->tid ==DAO_STRING && bt->tid ==DAO_INTEGER && opa==opc  ){
 					ct = at;
