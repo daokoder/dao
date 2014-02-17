@@ -2095,11 +2095,18 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 			}
 			break;
 		}
-		if( tp == NULL ) goto FinishError;
-		if( tp->tid == DAO_PAR_NAMED ) tp = (DaoType*) tp->aux;
 		if( ito >= ndef || tp ==NULL )  goto FinishError;
 		abtp = routType->nested->items.pType[ito];
-		if( abtp->tid == DAO_PAR_NAMED || abtp->tid == DAO_PAR_DEFAULT ) abtp = & abtp->aux->xType;
+		if( abtp->tid == DAO_PAR_NAMED || abtp->tid == DAO_PAR_DEFAULT ){
+			if( tp->tid == DAO_PAR_NAMED ){
+				if( DString_EQ( abtp->fname, tp->fname ) == 0 ) goto FinishError;
+			}
+			abtp = (DaoType*) abtp->aux;
+		}
+		if( tp->tid == DAO_PAR_NAMED ){
+			tp = (DaoType*) tp->aux;
+			if( tp == NULL ) goto FinishError;
+		}
 		parpass[ito] = DaoType_MatchTo( tp, abtp, defs );
 
 #if 0
@@ -2253,11 +2260,16 @@ void DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype,
 			break;
 		}
 		tp = tps[ifrom];
-		if( tp == NULL ) break;
-		if( tp->tid == DAO_PAR_NAMED ) tp = (DaoType*) tp->aux;
+		if( tp == NULL || ito >= ndef ) break;
 		abtp = parType[ito];
-		if( ito >= ndef || tp ==NULL || abtp ==NULL )  break;
-		if( abtp->tid == DAO_PAR_NAMED || abtp->tid == DAO_PAR_DEFAULT ) abtp = & abtp->aux->xType;
+		if( abtp->tid == DAO_PAR_NAMED || abtp->tid == DAO_PAR_DEFAULT ){
+			if( tp->tid == DAO_PAR_NAMED ){
+				if( DString_EQ( abtp->fname, tp->fname ) == 0 ) break;
+			}
+			abtp = (DaoType*) abtp->aux;
+		}
+		if( tp->tid == DAO_PAR_NAMED ) tp = (DaoType*) tp->aux;
+		if( tp == NULL || abtp == NULL )  break;
 		DaoType_MatchTo( tp, abtp, defs );
 	}
 	/*

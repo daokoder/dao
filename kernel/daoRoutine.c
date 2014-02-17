@@ -210,10 +210,13 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int
 			}
 			break;
 		}
-		if( val->type == DAO_PAR_NAMED ) val = val->xNameValue.value;
 		if( ito >= ndef ) goto NotMatched;
-		abtp = & parType[ito]->aux->xType; /* must be named */
-		parpass[ito] = DaoType_MatchValue2( abtp, val, defs );
+		abtp = parType[ito];
+		if( val->type == DAO_PAR_NAMED ){
+			if( DString_EQ( val->xNameValue.name, abtp->fname ) == 0 ) goto NotMatched;
+			val = val->xNameValue.value;
+		}
+		parpass[ito] = DaoType_MatchValue2( (DaoType*) abtp->aux, val, defs );
 		/*
 		   printf( "%i:  %i  %s\n", parpass[ito], abtp->tid, abtp->name->mbs );
 		 */
@@ -643,8 +646,12 @@ static DaoRoutine* DParamNode_Lookup( DParamNode *self, DaoValue *p[], int n, in
 
 	value = p[0];
 	for(param=self->first; param; param=param->next){
+		int tid = param->type2 ? param->type2->tid : 0;
 		DaoType *type = param->type;
 		if( type == NULL ) continue;
+		if( value->type == DAO_PAR_NAMED && (tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT) ){
+			if( DString_EQ( value->xNameValue.name, param->type2->fname ) == 0 ) continue;
+		}
 		if( defs && clear ) DMap_Reset( defs );
 		m = DaoType_MatchValue( type, value, defs );
 		if( m == 0 ) continue;
@@ -683,8 +690,12 @@ static DaoRoutine* DParamNode_LookupByType( DParamNode *self, DaoType *types[], 
 
 	partype = types[0];
 	for(param=self->first; param; param=param->next){
+		int tid = param->type2 ? param->type2->tid : 0;
 		DaoType *type = param->type;
 		if( type == NULL ) continue;
+		if( partype->tid == DAO_PAR_NAMED && (tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT) ){
+			if( DString_EQ( partype->fname, param->type2->fname ) == 0 ) continue;
+		}
 		if( defs && clear ) DMap_Reset( defs );
 		m = DaoType_MatchTo( partype, type, defs );
 		if( m == 0 ) continue;

@@ -249,6 +249,10 @@ void DaoType_CheckAttributes( DaoType *self )
 			DaoType *it = self->nested->items.pType[i];
 			if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
 			if( it->attrib & DAO_TYPE_SPEC ) self->attrib |= DAO_TYPE_SPEC;
+			if( it->tid >= DAO_ENUM ){
+				self->noncyclic = 0;
+				break;
+			}
 			self->noncyclic &= it->noncyclic;
 		}
 		if( self->tid == DAO_ROUTINE && self->nested->size ){
@@ -848,7 +852,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			if( tp->tid == DAO_PAR_NAMED ) tp = & tp->aux->xType;
 
 			/*
-			// for C functions that returns a tuple:
+			// for C function that returns a tuple:
 			// the tuple may be assigned to a context value before
 			// its values are set properly!
 			*/

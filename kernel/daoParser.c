@@ -5699,7 +5699,6 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 	int regcount = self->regCount;
 	int enumcode = DVM_LIST;
 	int pto = DaoParser_FindOpenToken( self, DTOK_FIELD, lb, rb, 0 );
-	int appxto = DaoParser_FindOpenToken( self, DTOK_APPXTO, lb, rb, 0 );
 	int arrow = DaoParser_FindOpenToken( self, DTOK_ARROW, lb, rb, 0 );
 	int colon = DaoParser_FindOpenToken( self, DTOK_COLON, lb, rb, 0 );
 	int semi = DaoParser_FindOpenToken( self, DTOK_SEMCO, lb, rb, 0 );
@@ -5728,10 +5727,6 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 		regC = DaoParser_PushRegister( self );
 		enumcode = DVM_TUPLE;
 		DaoParser_AddCode( self, DVM_TUPLE, enode.reg, enode.count, regC, start, mid, end );
-	}else if( (etype == DKEY_MAP || etype == 0) && btype == DTOK_LCB && appxto >= 0 ){
-		DString w = DString_WrapMBS( "using ~> for hash map, please use -> instead." );
-		DaoParser_Error( self, DAO_CTW_OBSOLETE_SYNTAX, & w );
-		regC = -1;
 	}else if( etype == DKEY_MAP || (etype == 0 && btype == DTOK_LCB && (pto >= 0 || arrow >= 0) ) ){
 		/* { a=>1, b=>[] }; {=>}; */
 		/* { a->1, b->[] }; {->}; */

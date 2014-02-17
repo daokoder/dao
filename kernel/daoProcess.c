@@ -496,10 +496,14 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 			}
 			break;
 		}
-		if( val->type == DAO_PAR_NAMED ) val = val->xNameValue.value;
 		if( ito >= ndef ) goto ReturnZero;
+		tp = types[ito];
+		if( val->type == DAO_PAR_NAMED ){
+			if( DString_EQ( val->xNameValue.name, tp->fname ) == 0 ) goto ReturnZero;
+			val = val->xNameValue.value;
+		}
+		tp = (DaoType*) tp->aux;
 		passed |= (size_t)1<<ito;
-		tp = & types[ito]->aux->xType;
 		if( need_self && ito ==0 ){
 			if( val->type == DAO_OBJECT && (tp->tid ==DAO_OBJECT || tp->tid ==DAO_CDATA || tp->tid == DAO_CSTRUCT) ){
 				/* for virtual method call */

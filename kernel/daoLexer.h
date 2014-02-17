@@ -102,7 +102,6 @@ enum DaoTokNames
 	DTOK_GE , /* >= */
 	DTOK_TEQ , /* ?=, Type EQ */
 	DTOK_TISA , /* ?<, Type IS A */
-	DTOK_APPXTO , /* ~> */
 	DTOK_ARROW ,  /* -> */
 	DTOK_FIELD ,  /* => */
 	DTOK_LSHIFT , /* << */
