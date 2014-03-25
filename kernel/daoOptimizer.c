@@ -146,13 +146,13 @@ void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *vmc )
 	case DAO_CODE_ROUTINE :
 		self->type = DAO_OP_RANGE;
 		self->first = vmc->a;
-		self->second = vmc->a + vmc->b - (type == DAO_CODE_ENUM);
+		self->second = vmc->a + vmc->b - (type == DAO_CODE_ENUM) + 1;
 		self->lvalue = vmc->c;
 		break;
 	case DAO_CODE_SETM:
 		self->type = DAO_OP_RANGE2;
 		self->first = vmc->c;
-		self->second = vmc->c + vmc->b;
+		self->second = vmc->c + vmc->b + 1;
 		self->third = vmc->a;
 		self->lvalue2 = vmc->c;
 		break;
@@ -160,7 +160,7 @@ void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *vmc )
 		k = vmc->b & 0xff;
 		self->type = DAO_OP_RANGE;
 		self->first = vmc->a;
-		self->second = vmc->a + k;
+		self->second = vmc->a + k + 1;
 		self->lvalue = vmc->c;
 		break;
 	case DAO_CODE_MATRIX :
@@ -168,7 +168,7 @@ void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *vmc )
 		m = vmc->b >> 8;
 		self->type = DAO_OP_RANGE;
 		self->first = vmc->a;
-		self->second = vmc->a + k*m - 1;
+		self->second = vmc->a + k*m;
 		self->lvalue = vmc->c;
 		break;
 	case DAO_CODE_BRANCH :
@@ -179,7 +179,7 @@ void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *vmc )
 	case DAO_CODE_EXPLIST :
 		self->type = DAO_OP_RANGE;
 		self->first = vmc->a;
-		self->second = vmc->a + vmc->b - 1;
+		self->second = vmc->a + vmc->b;
 		if( type == DAO_CODE_YIELD ) self->lvalue = vmc->c;
 		break;
 	default: break;
@@ -375,7 +375,7 @@ static void DaoOptimizer_AEA( DaoOptimizer *self, DaoCnode *node, DArray *out )
 		if( node->lvalue == node->second ) genAE = NULL;
 		break;
 	case DAO_OP_RANGE :
-		if( node->first <= node->lvalue && node->lvalue <= node->second ) genAE = NULL;
+		if( node->first <= node->lvalue && node->lvalue < node->second ) genAE = NULL;
 		break;
 	case DAO_OP_TRIPLE :
 	case DAO_OP_RANGE2 :
@@ -629,7 +629,7 @@ static void DaoCnode_GetOperands( DaoCnode *self, DArray *operands )
 		break;
 	case DAO_OP_RANGE :
 	case DAO_OP_RANGE2 :
-		for(i=self->first; i<=self->second; i++) DArray_Append( operands, IntToPointer(i) );
+		for(i=self->first; i<self->second; i++) DArray_Append( operands, IntToPointer(i) );
 		if( self->type == DAO_OP_RANGE2 ) DArray_Append( operands, IntToPointer(self->third) );
 		break;
 	}
@@ -887,7 +887,7 @@ void DaoOptimizer_LinkDU( DaoOptimizer *self, DaoRoutine *routine )
 				break;
 			case DAO_OP_RANGE :
 			case DAO_OP_RANGE2 :
-				uses = node->first <= node2->lvalue && node2->lvalue <= node->second;
+				uses = node->first <= node2->lvalue && node2->lvalue < node->second;
 				if( node->type == DAO_OP_RANGE2 ) uses |= node->third == node2->lvalue;
 				break;
 			}
@@ -952,7 +952,7 @@ static void DaoOptimizer_InitKills( DaoOptimizer *self )
 		switch( code ){
 		case DAO_CODE_CALL :
 		case DAO_CODE_YIELD :
-			for(j=node->first; j<=node->second; j++) DaoOptimizer_AddKill( self, kills, j );
+			for(j=node->first; j<node->second; j++) DaoOptimizer_AddKill( self, kills, j );
 			break;
 		case DAO_CODE_GETF :
 		case DAO_CODE_GETI :
@@ -965,7 +965,7 @@ static void DaoOptimizer_InitKills( DaoOptimizer *self )
 			if( code == DAO_CODE_GETI ) DaoOptimizer_AddKill( self, kills, node->second );
 			/* node->lvalue must already be in kills; */
 			if( code != DAO_CODE_GETM ) break;
-			for(j=node->first; j<=node->second; j++) DaoOptimizer_AddKill( self, kills, j );
+			for(j=node->first; j<node->second; j++) DaoOptimizer_AddKill( self, kills, j );
 			break;
 		case DAO_CODE_SETF :
 		case DAO_CODE_SETI :
@@ -978,7 +978,7 @@ static void DaoOptimizer_InitKills( DaoOptimizer *self )
 			if( code == DAO_CODE_SETI ) DaoOptimizer_AddKill( self, kills, node->second );
 			/* node->lvalue2 must already be in kills; */
 			if( code != DAO_CODE_SETM ) break;
-			for(j=node->first; j<=node->second; j++) DaoOptimizer_AddKill( self, kills, j );
+			for(j=node->first; j<node->second; j++) DaoOptimizer_AddKill( self, kills, j );
 			DaoOptimizer_AddKill( self, kills, node->third );
 			break;
 		case DAO_CODE_MOVE :
@@ -1273,7 +1273,7 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 	for(i=0; i<N; ++i){
 		node = nodes[i];
 		if( node->type != DAO_OP_RANGE && node->type != DAO_OP_RANGE2 ) continue;
-		for(j=node->first; j<=node->second; ++j) fixed->items.pInt[j] = 1;
+		for(j=node->first; j<node->second; ++j) fixed->items.pInt[j] = 1;
 	}
 
 	for(i=0; i<N; ++i){
@@ -1454,7 +1454,7 @@ static void DaoOptimizer_RemapRegister( DaoOptimizer *self, DaoRoutine *routine 
 			break;
 		case DAO_OP_RANGE :
 		case DAO_OP_RANGE2 :
-			for(j=node->first; j<=node->second; j++) regmap[j] = j;
+			for(j=node->first; j<node->second; j++) regmap[j] = j;
 			if( node->type == DAO_OP_RANGE2 ) regmap[ node->third ] = node->third;
 			break;
 		}
@@ -1563,7 +1563,7 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 				case DAO_OP_PAIR   : k |= node2->second == vmc->c; /* fall through; */
 				case DAO_OP_SINGLE : k |= node2->first == vmc->c; break;
 				case DAO_OP_RANGE :
-				case DAO_OP_RANGE2 : k = node2->first <= vmc->c && vmc->c <= node2->second; break;
+				case DAO_OP_RANGE2 : k = node2->first <= vmc->c && vmc->c < node2->second; break;
 				}
 				if( k ) break;
 			}
@@ -1583,7 +1583,7 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 		}
 		if( node->type != DAO_OP_RANGE && node->type != DAO_OP_RANGE2 ) continue;
 		/* map this range of registers to a new range of registers: */
-		for(j=node->first; j<=node->second; j++){
+		for(j=node->first; j<node->second; j++){
 			if( regmap[j] >= 0 ) continue;
 			regmap[j] = regCount ++;
 		}
@@ -1773,7 +1773,7 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 		DArray_Append( uses[node->second], node );
 		break;
 	case DAO_OP_RANGE :
-		for(i=node->first; i<=node->second; i++) DArray_Append( uses[i], node );
+		for(i=node->first; i<node->second; i++) DArray_Append( uses[i], node );
 		break;
 	}
 }
@@ -5506,13 +5506,15 @@ TryPushBlockReturnType:
 					/* XXX */
 					if( ct == NULL || ( ct->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) ){
 						if( rettypes->size == 4 ){
-							if( at && at->tid != DAO_UDT ){
-								tt = DaoNamespace_MakeRoutType( NS, routine->routType, NULL, NULL, at );
+							DaoType *ct3 = DaoType_DefineTypes( ct, NS, defs2 );
+							if( ct3 != NULL && ct3 != ct ){
+								tt = DaoNamespace_MakeRoutType( NS, routine->routType, NULL, NULL, ct3 );
 								GC_ShiftRC( tt, routine->routType );
 								routine->routType = tt;
+
+								ct = (DaoType*)routine->routType->aux;
+								rettypes->items.pType[ rettypes->size - 1 ] = ct;
 							}
-							rettypes->items.pType[ rettypes->size - 1 ] = (DaoType*)routine->routType->aux;
-							ct = rettypes->items.pType[ rettypes->size - 1 ];
 						}else{
 							ct = DaoType_DefineTypes( ct, NS, defs2 );
 							if( ct != NULL && redef != NULL ){

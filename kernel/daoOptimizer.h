@@ -49,9 +49,9 @@ struct DaoCnode
 	uchar_t   type;       /* use type of operands; */
 	uchar_t   reachable;  /* reachable status; */
 	ushort_t  index;      /* index of the node; */
-	ushort_t  first;      /* the only (for SINGLE) or the first (for PAIR/RANGE) used variable; */
-	ushort_t  second;     /* the second (for PAIR) or the last (for RANGE) used variable; */
-	ushort_t  third;      /* the third (for TRIPLE) used variable; */
+	ushort_t  first;      /* the only (SINGLE) or the first (PAIR/RANGE) used variable; */
+	ushort_t  second;     /* the second (PAIR) or the one-past-last (RANGE) used variable; */
+	ushort_t  third;      /* the third (TRIPLE) used variable; */
 	ushort_t  lvalue;     /* variable defined by the instruction; 0xffff for none; */
 	ushort_t  lvalue2;    /* C operand for SETF, SETI, SETDI, SETMI instructions; */
 	ushort_t  exprid;     /* expression id; 0xffff for none; */
