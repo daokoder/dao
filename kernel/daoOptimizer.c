@@ -3218,10 +3218,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			at = types[opa];
 			if( type2[0]->tid && type2[0]->tid <= DAO_COMPLEX && at->tid && at->tid <= DAO_COMPLEX ){
 				if( typed_code ){
-					if( var && (var->value == NULL || var->value->type != at->value->type) ){
-						GC_DecRC( var->value );
-						var->value = DaoValue_SimpleCopy( at->value );
-						GC_IncRC( var->value );
+					/* Check and make a proper value object with default value: */
+					if( var && (var->value == NULL || var->value->type != type2[0]->value->type) ){
+						DaoValue_Copy( type2[0]->value, & var->value );
 					}
 					if( at->tid != type2[0]->tid ){
 						DaoInferencer_InsertMove( self, inode, & inode->a, at, *type2 );
