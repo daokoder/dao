@@ -86,28 +86,37 @@ enum DaoBasicStruct
 	D_VOID2 /* a pair of pointer; */
 };
 
+
 /*
-// It is for the typing system, to decide when to specialize a routine.
-// when any or ? match to @X in parameter list, no routine specialization.
-//   ls = {};
-//   ls.append( "" );
-//   ls2 = { 1, 3, 4 };
-//   ls2.append( "" );
+// Dao type matching states:
+// ** These states give scores to each type of type matching.
+//    Useful for resolving overloaded routines;
+// ** For loose matching, the state with smaller score is used in case
+//    that multiple states can be assigned to the same matching.
+//    For example, matching a type holder type "@T" to "any" should give
+//    DAO_MT_THTX instead of DAO_MT_ANY;
+// ** Undefined types are treated as type holder types.
+//    They simply hold some types that are not successfully inferred;
+// ** DAO_MT_THT should have higher score than DAO_MT_SUB and DAO_MT_SIM.
+//    Because DAO_MT_THT means starting a type association for the type
+//    holder type, and should be considered more or less as precise as
+//    DAO_MT_EQ;
+// ** DAO_MT_EXACT is more precise than DAO_MT_EQ, as it means not only
+//    type matching but also value matching.
 */
-enum DaoMatchType
+enum DaoTypeMatchState
 {
-	DAO_MT_NOT ,
-	DAO_MT_NEGLECT , /* for less strict checking when a parameter is any or udf */
-	DAO_MT_ANYUDF ,
-	DAO_MT_INIT ,
-	DAO_MT_UDF ,
-	DAO_MT_EMPTY ,
-	DAO_MT_ANYX , /* match any to X */
-	DAO_MT_ANY , /* match to type "any" */
-	DAO_MT_SUB ,
-	DAO_MT_SIM , /* int, float, double */
-	DAO_MT_EQ ,
-	DAO_MT_EXACT /* value to value type */
+	DAO_MT_NOT     , /* Type not matching; */
+	DAO_MT_LOOSE   , /* Loose matching not covered by the following cases; */
+	DAO_MT_THTX    , /* Loose matching of a type holder type (THT) to any other type; */
+	DAO_MT_ANYX    , /* Loose matching of the "any" type to any other type; */
+	DAO_MT_EMPTY   , /* Loose matching of an empty container value to a container type; */
+	DAO_MT_ANY     , /* Matching of any type to the "any" type; */
+	DAO_MT_SUB     , /* Matching of a sub type to a parent type; */
+	DAO_MT_SIM     , /* Matching of a type to a compatible type (eg, int to float); */
+	DAO_MT_THT     , /* Matching of any type to a type holder type; */
+	DAO_MT_EQ      , /* Type precisely matching; */
+	DAO_MT_EXACT     /* Type and value precisely matching; */
 };
 
 enum DaoVarDeclaration

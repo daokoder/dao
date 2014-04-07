@@ -2114,13 +2114,6 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 		printf( "%i:  %i\n", ito, parpass[ito] );
 #endif
 
-		/* less strict */
-		if( tp && parpass[ito] ==0 ){
-			if( tp->tid == DAO_ANY && abtp->tid == DAO_ANY )
-				parpass[ito] = DAO_MT_ANY;
-			else if( tp->tid == DAO_ANY || tp->tid == DAO_UDT )
-				parpass[ito] = DAO_MT_NEGLECT;
-		}
 		if( parpass[ito] == 0 ) goto FinishError;
 		if( def ) tps[ifrom] = DaoType_DefineTypes( tps[ifrom], ns, defs );
 	}
@@ -2557,13 +2550,6 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 		printf( "%i:  %i\n", ito, parpass[ito] );
 #endif
 
-		/* less strict */
-		if( tp && parpass[ito] ==0 ){
-			if( tp->tid == DAO_ANY && abtp->tid == DAO_ANY )
-				parpass[ito] = DAO_MT_ANY;
-			else if( tp->tid == DAO_ANY || tp->tid == DAO_UDT )
-				parpass[ito] = DAO_MT_NEGLECT;
-		}
 		if( parpass[ito] == 0 ){
 			DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );
 			tp = ts[ifrom];

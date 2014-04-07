@@ -96,22 +96,23 @@ void DaoType_Init()
 	dao_type_matrix[DAO_VALTYPE][DAO_VALTYPE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_VARIANT][DAO_VARIANT] = DAO_MT_EXACT+1;
 
-	for(i=0; i<END_EXTRA_TYPES; i++){
-		dao_type_matrix[DAO_UDT][i] = DAO_MT_UDF;
-		dao_type_matrix[i][DAO_UDT] = DAO_MT_UDF;
+	for(i=0; i<END_EXTRA_TYPES; ++i){
+		dao_type_matrix[i][DAO_UDT] = DAO_MT_THT;
+		dao_type_matrix[i][DAO_THT] = DAO_MT_THT;
 		dao_type_matrix[i][DAO_ANY] = DAO_MT_ANY;
+		dao_type_matrix[DAO_UDT][i] = DAO_MT_THTX;
+		dao_type_matrix[DAO_THT][i] = DAO_MT_THTX;
 		dao_type_matrix[DAO_ANY][i] = DAO_MT_ANYX;
-		dao_type_matrix[DAO_THT][i] = DAO_MT_INIT;
-		dao_type_matrix[i][DAO_THT] = DAO_MT_INIT;
+	}
+	for(i=DAO_ANY; i<=DAO_UDT; ++i){
+		for(j=DAO_ANY; j<=DAO_UDT; ++j){
+			dao_type_matrix[i][j] = DAO_MT_LOOSE;
+		}
 	}
 
 	dao_type_matrix[DAO_ANY][DAO_ANY] = DAO_MT_EQ;
-	dao_type_matrix[DAO_UDT][DAO_ANY] = DAO_MT_ANYUDF;
-	dao_type_matrix[DAO_ANY][DAO_UDT] = DAO_MT_ANYUDF;
-	dao_type_matrix[DAO_THT][DAO_ANY] = DAO_MT_ANYUDF;
-	dao_type_matrix[DAO_ANY][DAO_THT] = DAO_MT_ANYUDF;
-	dao_type_matrix[DAO_UDT][DAO_THT] = DAO_MT_UDF;
-	dao_type_matrix[DAO_THT][DAO_UDT] = DAO_MT_UDF;
+	dao_type_matrix[DAO_ANY][DAO_THT] = DAO_MT_THT;
+	dao_type_matrix[DAO_THT][DAO_ANY] = DAO_MT_THTX;
 
 	dao_type_matrix[DAO_ENUM][DAO_ENUM] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_TYPE][DAO_TYPE] = DAO_MT_EXACT+1;
@@ -526,40 +527,26 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	printf( "here: %i  %i  %i, %s  %s,  %p\n", mt, self->tid, type->tid,
 			self->name->mbs, type->name->mbs, defs );
 	 */
-	if( mt == DAO_MT_INIT ){
+	if( mt == DAO_MT_THT ){
 		if( self && self->tid == DAO_THT ){
 			if( defs ) node = MAP_Find( defs, self );
 			if( node ) self = node->value.pType;
 		}
 		if( type && type->tid == DAO_THT ){
-			if( defs ) node = MAP_Find( defs, type );
-			if( node == NULL ){
+			node = defs ? MAP_Find( defs, type ) : NULL;
+			if( node ){
+				type = node->value.pType;  /* type associated to the type holder; */
+				if( type->tid == DAO_THT || type->tid == DAO_UDT ) return DAO_MT_LOOSE;
+				return DaoType_MatchToX( self, type, defs, binds );
+			}else{
 				if( type->aux != NULL ){ /* @type_holder<type> */
 					mt = DaoType_MatchTo( self, (DaoType*) type->aux, defs );
 					if( mt == DAO_MT_NOT ) return DAO_MT_NOT;
 				}
 				if( defs ) MAP_Insert( defs, type, self );
-				if( self == NULL || self->tid==DAO_ANY || self->tid==DAO_UDT )
-					return DAO_MT_ANYUDF;
-				return DAO_MT_INIT; /* even if self==NULL, for typing checking for undefined @X */
+				return DAO_MT_THT;
 			}
-			type = node->value.pType;
-			mt = DAO_MT_INIT;
-			if( type == NULL || type->tid==DAO_ANY || type->tid==DAO_UDT )
-				return DAO_MT_ANYUDF;
 		}
-	}else if( mt == DAO_MT_UDF ){
-		if( self->tid == DAO_UDT ){
-			if( type->tid==DAO_ANY || type->tid==DAO_UDT ) return DAO_MT_ANYUDF;
-		}else{
-			if( self->tid==DAO_ANY || self->tid==DAO_UDT ) return DAO_MT_ANYUDF;
-		}
-		return mt;
-	}else if( mt == DAO_MT_ANYUDF ){
-		if( self->tid == DAO_ANY && type->tid == DAO_THT ){
-			if( defs ) MAP_Insert( defs, type, self );
-		}
-		return mt;
 	}else if( type->tid == DAO_INTERFACE ){
 		return DaoType_MatchInterface( self, (DaoInterface*) type->aux, binds );
 	}
@@ -611,13 +598,28 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		}
 		if( self->nested->size != type->nested->size ) return DAO_MT_NOT;
 		for(i=0,n=self->nested->size; i<n; i++){
+			int ndefs = defs ? defs->size : 0;
 			it1 = self->nested->items.pType[i];
 			it2 = type->nested->items.pType[i];
 			tid = it2->tid;
 			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
 			/* printf( "%i %s %s\n", k, it1->name->mbs, it2->name->mbs ); */
-			if( k < DAO_MT_EQ && tid != DAO_THT && tid != DAO_UDT ) return DAO_MT_NOT;
-			if( k < mt ) mt = k;
+			if( defs && defs->size == ndefs ){
+				/*
+				// No unassociated type holders involved in the matching,
+				// so the matching has to be exact.
+				*/
+				if( k < mt ) mt = k;
+			}else if( tid == DAO_THT || tid == DAO_UDT ){
+				/*
+				// Target type is an unassociated type holder,
+				// the matching is not exact, but allowed.
+				*/
+				continue;
+			}else{
+				if( k < mt ) mt = k;
+			}
+			if( k < DAO_MT_EQ ) return DAO_MT_NOT;
 		}
 		break;
 	case DAO_TUPLE :
@@ -739,7 +741,7 @@ int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		printf( "%i %p\n", binds->size, DMap_Find( binds, pvoid ) );
 	}
 #endif
-	if( mt ==0 && binds && DMap_Find( binds, pvoid ) ) return DAO_MT_INIT;
+	if( mt ==0 && binds && DMap_Find( binds, pvoid ) ) return DAO_MT_THT;
 	return mt;
 }
 int DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs )
@@ -778,7 +780,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		}else if( self->tid == DAO_THT && self->aux != NULL ){
 			return DaoType_MatchValue( (DaoType*) self->aux, value, defs );
 		}
-		return self->tid == DAO_UDT ? DAO_MT_UDF : DAO_MT_INIT;
+		return DAO_MT_THT;
 	case DAO_VARIANT :
 		mt = DAO_MT_NOT;
 		for(i=0,n=self->nested->size; i<n; i++){
@@ -1636,7 +1638,7 @@ static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream
 	if( cycData ) MAP_Insert( cycData, self, self );
 
 	meth = DaoType_FindFunctionMBS( self->ctype, "__PRINT__" );
-	if( meth && DaoProcess_Call( proc, meth, NULL, &self0, 1 ) == 0 ) return
+	if( meth && DaoProcess_Call( proc, meth, NULL, &self0, 1 ) == 0 ) return;
 
 	DaoValue_Clear( & proc->stackValues[0] );
 	meth = DaoType_FindFunctionMBS( self->ctype, "serialize" );
@@ -1818,12 +1820,7 @@ int DTypeSpecTree_Test( DTypeSpecTree *self, DaoType *types[], int count )
 		DaoType *par = self->holders->items.pType[i];
 		DaoType *arg = types[i];
 		int mt = DaoType_MatchTo( arg, par, NULL );
-		/*
-		// ? should be allowed as type arguments for AFC to a function
-		// with return type ? (see type inference for AFC).
-		*/
-		//XXX if( arg->tid == DAO_UDT ) return 0;
-		if( mt <= DAO_MT_NEGLECT || (mt >= DAO_MT_SUB && mt <= DAO_MT_SIM) ) return 0;
+		if( mt >= DAO_MT_SUB && mt <= DAO_MT_SIM ) return 0;
 	}
 	return 1;
 }
