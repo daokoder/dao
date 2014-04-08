@@ -227,6 +227,7 @@ typedef struct DaoCtype        DaoCtype;
 typedef struct DaoCdata        DaoCdata;
 typedef struct DaoCstruct      DaoCstruct;
 typedef struct DaoRegex        DaoRegex;
+typedef struct DaoException    DaoException;
 typedef struct DaoNamespace    DaoNamespace;
 typedef struct DaoVmSpace      DaoVmSpace;
 typedef struct DaoProcess      DaoProcess;
@@ -823,7 +824,8 @@ DAO_DLL int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *
 DAO_DLL int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *src );
 DAO_DLL int DaoProcess_Call( DaoProcess *s, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
 DAO_DLL void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream );
-DAO_DLL void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value );
+DAO_DLL void DaoProcess_RaiseException( DaoProcess *self, int type, const char *info );
+DAO_DLL DaoException* DaoProcess_RaiseUserException( DaoProcess *self, const char *type, const char *info );
 DAO_DLL DaoValue* DaoProcess_GetReturned( DaoProcess *self );
 DAO_DLL DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt, int mbs );
 DAO_DLL DaoType*  DaoProcess_GetReturnType( DaoProcess *self );
@@ -928,6 +930,7 @@ DAO_DLL void DaoNamespace_AddConstValue( DaoNamespace *self, const char *name, D
 DAO_DLL void DaoNamespace_AddValue( DaoNamespace *self, const char *name, DaoValue *d, const char *type);
 DAO_DLL DaoValue* DaoNamespace_FindData( DaoNamespace *self, const char *name );
 DAO_DLL DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const char *type );
+DAO_DLL DaoType* DaoNamespace_MakeExceptionType( DaoNamespace *self, const char *name, int fatal );
 DAO_DLL DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque );
 DAO_DLL DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fp, const char *proto );
 DAO_DLL int DaoNamespace_TypeDefines( DaoNamespace *self, const char *alias[] );

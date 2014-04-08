@@ -1144,28 +1144,12 @@ void DaoClass_ResetAttributes( DaoClass *self )
 	DString_Delete( mbs );
 }
 
-int DaoCdata_ChildOf( DaoTypeBase *self, DaoTypeBase *super )
+int DaoClass_ChildOf( DaoClass *self, DaoValue *other )
 {
-	int i;
-	if( self == super ) return 1;
-	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
-		if( self->supers[i] == NULL ) break;
-		if( DaoCdata_ChildOf( self->supers[i], super ) ) return 1;
-	}
-	return 0;
-}
-int DaoClass_ChildOf( DaoClass *self, DaoValue *klass )
-{
-	DaoCdata *cdata = (DaoCdata*) klass;
-	if( self == NULL || klass == NULL ) return 0;
-	if( klass == (DaoValue*) self ) return 1;
-	if( klass == self->parent ) return 1;
-	if( self->parent == NULL ) return 0;
-	if( self->parent->type == DAO_CLASS ){
-		return DaoClass_ChildOf( (DaoClass*) self->parent, klass );
-	}else if( self->parent->type == DAO_CTYPE && klass->type == DAO_CTYPE ){
-		DaoCdata *csup = (DaoCdata*) self->parent;
-		return DaoCdata_ChildOf( csup->ctype->kernel->typer, cdata->ctype->kernel->typer );
+	if( other->type == DAO_CLASS ){
+		return DaoType_ChildOf( self->objType, other->xClass.objType );
+	}else if( other->type == DAO_CTYPE ){
+		return DaoType_ChildOf( self->objType, other->xCtype.ctype );
 	}
 	return 0;
 }

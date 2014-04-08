@@ -6137,9 +6137,8 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 
 void STD_Debug( DaoProcess *proc, DaoValue *p[], int N );
 
-void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
+static DaoException* DaoProcess_RaiseExceptionEx( DaoProcess *self, DaoType *etype, const char *value )
 {
-	DaoType *etype;
 	DaoType *warning = DaoException_GetType( DAO_WARNING );
 	DaoStream *stream = self->vmSpace->errorStream;
 	DaoException *except;
@@ -6154,18 +6153,15 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 	}
 #endif
 
-	if( type <= 1 ) return;
-	if( type >= ENDOF_BASIC_EXCEPT ) type = DAO_ERROR;
-	if( self->activeRoutine == NULL ) return; // TODO: Error infor;
+	if( self->activeRoutine == NULL ) return NULL; // TODO: Error infor;
 
-	etype = DaoException_GetType( type );
 	if( DaoType_ChildOf( etype, warning ) ){
 		/* XXX support warning suppression */
 		except = DaoException_New( etype );
 		DaoException_Init( except, self, value );
 		DaoException_Print( except, stream );
 		DaoException_Delete( except );
-		return;
+		return except;
 	}
 	except = DaoException_New( etype );
 	DaoException_Init( except, self, value );
@@ -6177,6 +6173,19 @@ void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
 			STD_Debug( self, NULL, 0 );
 		}
 	}
+	return except;
+}
+void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
+{
+	if( type <= 1 ) return;
+	if( type >= ENDOF_BASIC_EXCEPT ) type = DAO_ERROR;
+	DaoProcess_RaiseExceptionEx( self, DaoException_GetType( type ), value );
+}
+DaoException* DaoProcess_RaiseUserException( DaoProcess *self, const char *type, const char *info )
+{
+	DaoType *etype = DaoParser_ParseTypeName( type, self->activeNamespace, NULL );
+	if( etype == NULL ) return NULL;
+	return DaoProcess_RaiseExceptionEx( self, etype, info );
 }
 void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, const char *op )
 {

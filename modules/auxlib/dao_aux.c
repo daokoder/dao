@@ -63,11 +63,19 @@ static void AUX_Log( DaoProcess *proc, DaoValue *p[], int N )
 	fprintf( fout, "%s\n", info->mbs );
 	fclose( fout );
 }
+static void AUX_Test( DaoProcess *proc, DaoValue *p[], int N )
+{
+	void *pp = DaoProcess_RaiseUserException( proc, "std::MyException", "just a test" );
+	printf( "AUX_Test: %p\n", pp );
+}
 
 static DaoFuncItem auxMeths[]=
 {
 	{ AUX_Tokenize,    "tokenize( source :string )=>list<string>" },
 	{ AUX_Log,         "log( info='' )" },
+#ifdef DEBUG
+	{ AUX_Test,        "__test__()" },
+#endif
 	{ NULL, NULL }
 };
 
@@ -75,6 +83,9 @@ DAO_DLL int DaoAux_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	ns = DaoVmSpace_GetNamespace( vmSpace, "std" );
 	DaoNamespace_WrapFunctions( ns, auxMeths );
+#ifdef DEBUG
+	DaoNamespace_MakeExceptionType( ns, "MyException", 1 ); /* in std namespace; */
+#endif
 	return 0;
 }
 

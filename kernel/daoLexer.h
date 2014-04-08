@@ -53,17 +53,17 @@ enum DaoTokNames
 	DTOK_MBS , /* MBS */
 	DTOK_WCS , /* WCS */
 	DTOK_BLANK , /*  */
-	DTOK_TAB , /* \t */
+	DTOK_TAB ,   /* \t */
 	DTOK_NEWLN , /* \n */
 	DTOK_SEMCO , /* ; */
-	DTOK_LB , /* ( */
-	DTOK_RB , /* ) */
+	DTOK_LB ,  /* ( */
+	DTOK_RB ,  /* ) */
 	DTOK_LCB , /* { */
 	DTOK_RCB , /* } */
 	DTOK_LSB , /* [ */
 	DTOK_RSB , /* ] */
-	DTOK_ASSN , /* = */
-	DTOK_DOT , /* . */
+	DTOK_ASSN ,  /* = */
+	DTOK_DOT ,   /* . */
 	DTOK_COMMA , /* , */
 	DTOK_COLON , /* : */
 	DTOK_COLON2 , /* :: */
@@ -74,9 +74,9 @@ enum DaoTokNames
 	DTOK_MOD , /* % */
 	DTOK_QUERY , /* ? */
 	DTOK_AMAND , /* & */
-	DTOK_PIPE , /* | */
-	DTOK_XOR , /* ^ */
-	DTOK_NOT , /* ! */
+	DTOK_PIPE ,  /* | */
+	DTOK_XOR ,   /* ^ */
+	DTOK_NOT ,   /* ! */
 	DTOK_TILDE , /* ~ */
 	DTOK_DOLLAR , /* $ */
 	DTOK_AT ,     /* @ */
@@ -100,7 +100,7 @@ enum DaoTokNames
 	DTOK_GT , /* > */
 	DTOK_LE , /* <= */
 	DTOK_GE , /* >= */
-	DTOK_TEQ , /* ?=, Type EQ */
+	DTOK_TEQ ,  /* ?=, Type EQ */
 	DTOK_TISA , /* ?<, Type IS A */
 	DTOK_ARROW ,  /* -> */
 	DTOK_FIELD ,  /* => */

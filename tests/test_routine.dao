@@ -179,7 +179,7 @@ global TestVariadicFunction3 : any = TestVariadicFunction
 	TestFunction3()
 @[test(code_01)]
 @[test(code_01)]
-	{{Exception.Error.Param}} .* {{too few parameters}}
+	{{Exception::Error::Param}} .* {{too few parameters}}
 @[test(code_01)]
 
 
@@ -187,7 +187,7 @@ global TestVariadicFunction3 : any = TestVariadicFunction
 	TestFunction3( 'abc', 123, 456 )
 @[test(code_01)]
 @[test(code_01)]
-	{{Exception.Error.Param}} .* {{too many parameters}}
+	{{Exception::Error::Param}} .* {{too many parameters}}
 @[test(code_01)]
 
 
@@ -210,7 +210,7 @@ global TestVariadicFunction3 : any = TestVariadicFunction
 	TestVariadicFunction3( 123 )  # wrong first parameter;
 @[test(code_01)]
 @[test(code_01)]
-	{{Exception.Error.Param}} .* {{Invalid parameter type}}
+	{{Exception::Error::Param}} .* {{Invalid parameter type}}
 @[test(code_01)]
 
 
@@ -218,6 +218,6 @@ global TestVariadicFunction3 : any = TestVariadicFunction
 	TestVariadicFunction3( 'abc', 'abc' )  # wrong second parameter;
 @[test(code_01)]
 @[test(code_01)]
-	{{Exception.Error.Param}} .* {{Invalid parameter type}}
+	{{Exception::Error::Param}} .* {{Invalid parameter type}}
 @[test(code_01)]
 

@@ -403,7 +403,6 @@ void DaoParser_PrintError( DaoParser *self, int line, int code, DString *ext );
 int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop );
 int DaoParser_ParseTemplateParams( DaoParser *self, int start, int end, DArray *holders, DArray *defaults, DString *name );
 DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *types, int *co );
-DaoType* DaoCdata_WrapType( DaoNamespace *ns, DaoTypeBase *typer, int opaque );
 DaoType* DaoCdata_NewType( DaoTypeBase *typer );
 
 int DaoParser_FindScopedConstant2( DaoParser *self, DaoValue **value, int start, int stop, int type );
@@ -684,15 +683,45 @@ DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const cha
 	return tp;
 }
 
+static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeBase *typer, int opaque )
+{
+	DaoTypeKernel *kernel = DaoTypeKernel_New( typer );
+	DaoType *cdata_type = DaoCdata_NewType( typer );
+	DaoType *ctype_type = cdata_type->aux->xCdata.ctype;
+
+	GC_IncRC( self );
+	GC_IncRC( cdata_type );
+	kernel->nspace = self;
+	kernel->abtype = cdata_type;
+	cdata_type->tid = opaque ? DAO_CDATA : DAO_CSTRUCT;
+	GC_ShiftRC( kernel, ctype_type->kernel );
+	GC_ShiftRC( kernel, cdata_type->kernel );
+	ctype_type->kernel = kernel;
+	cdata_type->kernel = kernel;
+	typer->core = kernel->core;
+	return ctype_type;
+}
+
+DaoType* DaoNamespace_MakeExceptionType( DaoNamespace *self, const char *name, int fatal )
+{
+	DaoType *type, *parent = DaoException_GetType( fatal ? DAO_ERROR : DAO_WARNING );
+	DaoTypeBase *typer = (DaoTypeBase*) dao_calloc( 1, sizeof(DaoTypeBase) );
+	typer->name = name;
+	typer->supers[0] = parent->typer;
+	typer->Delete = parent->typer->Delete;
+	typer->GetGCFields = parent->typer->GetGCFields;
+	type = DaoNamespace_WrapType( self, typer, 0 );
+	type->kernel->attribs |= DAO_TYPER_FREE;
+	return type;
+}
 static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, int opaque )
 {
 	DaoType *ctype_type, *cdata_type;
 
 	if( typer->core ) return typer->core->kernel->abtype;
 
-	ctype_type = DaoCdata_WrapType( self, typer, opaque );
+	ctype_type = DaoNamespace_MakeCdataType( self, typer, opaque );
 	cdata_type = typer->core->kernel->abtype;
-	typer->core->kernel->attribs |= DAO_TYPER_PRIV_FREE;
 	typer->core->kernel->SetupValues = DaoNamespace_SetupValues;
 	typer->core->kernel->SetupMethods = DaoNamespace_SetupMethods;
 	if( DaoNS_ParseType( self, typer->name, ctype_type, cdata_type, 1 ) == DAO_DT_FAILED ){
@@ -725,7 +754,6 @@ DaoType* DaoNamespace_WrapGenericType( DaoNamespace *self, DaoTypeBase *typer, i
 	GC_ShiftRC( kernel, cdata_type->kernel );
 	cdata_type->kernel = kernel;
 	typer->core = kernel->core;
-	typer->core->kernel->attribs |= DAO_TYPER_PRIV_FREE;
 	typer->core->kernel->SetupValues = DaoNamespace_SetupValues;
 	typer->core->kernel->SetupMethods = DaoNamespace_SetupMethods;
 	if( DaoNS_ParseType( self, typer->name, cdata_type, cdata_type, 0 ) == DAO_DT_FAILED ){

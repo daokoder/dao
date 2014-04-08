@@ -1660,6 +1660,7 @@ void DaoTypeKernel_Delete( DaoTypeKernel *self )
 	if( self->values ) DMap_Delete( self->values );
 	if( self->methods ) DMap_Delete( self->methods );
 	if( self->sptree ) DTypeSpecTree_Delete( self->sptree );
+	if( self->attribs & DAO_TYPER_FREE ) dao_free( self->typer );
 	dao_free( self );
 }
 

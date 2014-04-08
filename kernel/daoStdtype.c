@@ -3729,24 +3729,6 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer )
 	}
 	return cdata_type;
 }
-DaoType* DaoCdata_WrapType( DaoNamespace *nspace, DaoTypeBase *typer, int opaque )
-{
-	DaoTypeKernel *kernel = DaoTypeKernel_New( typer );
-	DaoType *cdata_type = DaoCdata_NewType( typer );
-	DaoType *ctype_type = cdata_type->aux->xCdata.ctype;
-
-	GC_IncRC( nspace );
-	GC_IncRC( cdata_type );
-	kernel->nspace = nspace;
-	kernel->abtype = cdata_type;
-	cdata_type->tid = opaque ? DAO_CDATA : DAO_CSTRUCT;
-	GC_ShiftRC( kernel, ctype_type->kernel );
-	GC_ShiftRC( kernel, cdata_type->kernel );
-	ctype_type->kernel = kernel;
-	cdata_type->kernel = kernel;
-	typer->core = kernel->core;
-	return ctype_type;
-}
 
 
 
@@ -4196,9 +4178,9 @@ DaoType* DaoException_GetType( int type )
 void DaoException_InitByType( DaoException *self, DaoType *type )
 {
 	int i;
+	DString_SetMBS( self->name, type->typer->name );
 	for(i=DAO_EXCEPTION; i<ENDOF_BASIC_EXCEPT; i++){
 		if( type == DaoException_GetType( i ) ){
-			DString_SetMBS( self->name, daoExceptionName[i] );
 			DString_SetMBS( self->info, daoExceptionInfo[i] );
 			return;
 		}

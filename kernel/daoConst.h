@@ -213,8 +213,8 @@ enum DaoRoutineAttrib
 	DAO_ROUT_REUSABLE  = (1<<10)  /* stack data for the routine is reusable */
 };
 
-#define DAO_TYPER_PRIV_FREE  (DAO_ROUT_REUSABLE<<1)
-#define DAO_OPER_OVERLOADED  (DAO_TYPER_PRIV_FREE<<1)
+#define DAO_TYPER_FREE       (DAO_ROUT_REUSABLE<<1)
+#define DAO_OPER_OVERLOADED  (DAO_TYPER_FREE<<1)
 
 enum DaoGlobalConstOffset
 {
@@ -430,7 +430,6 @@ typedef struct DaoExceptionTripple
 	const char *info;
 }DaoExceptionTripple;
 
-extern const char* const daoExceptionName[];
 extern const char* const daoExceptionInfo[];
 
 extern const char* const coreTypeNames[];

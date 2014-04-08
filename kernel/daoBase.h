@@ -53,7 +53,6 @@ typedef struct DaoVmCodeX    DaoVmCodeX;
 typedef struct DVector   DVector;
 
 typedef struct DaoFuture     DaoFuture;
-typedef struct DaoException  DaoException;
 typedef struct DaoNameValue  DaoNameValue;
 typedef struct DaoConstant   DaoConstant;
 typedef struct DaoVariable   DaoVariable;
