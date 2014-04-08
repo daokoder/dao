@@ -186,52 +186,6 @@ complex16 floor_c( const complex16 com )
 	return res;
 }
 
-#define PI2 6.283185307179586
-
-#define complex16_mul(z,x,y) { complex16 tmp; \
-	tmp.real=x.real*y.real-x.imag*y.imag; \
-	tmp.imag=x.real*y.imag+x.imag*y.real; z = tmp; }
-#define complex_init(c,r,i) { c.real=r; c.imag=i; }
-
-void dao_fft16( complex16 data[], daoint M, int inv )
-{
-	daoint d, i, j, k, m, S, B, D, N = 1<<M;
-	double expo = PI2 / (double) N;
-	complex16 wn = { 0.0, 0.0 };
-	complex16 wi, wj, ws, tmp;
-
-	wn.real = cos( 0.5 * PI2 );  wn.imag = inv * sin( 0.5 * PI2 );
-	assert( abs(inv) == 1 );
-	D = N >> 1;
-	for(i=0; i<N; i++){ /* even/odd permutation */
-		k = 0; j = i; m = D;
-		while( j ){
-			if( j & 0x1 ) k += m;
-			j >>= 1; m >>= 1;
-		}
-		if( i < k ) tmp = data[k], data[k] = data[i], data[i] = tmp;
-	}
-	for(m=0; m<M; m++){ /* levels */
-		B = 1<<m;     /* butterfly size */
-		S = 1<<(m+1); /* DFT size */
-		D = N>>(m+1); /* number of DFTs */
-		complex_init( ws, cos( expo * D ), inv * sin( expo * D ) );
-		complex_init( wi, 1.0, 0.0 );
-		for(k=0; k<B; k++){ /* for k-th butterfly */
-			complex16_mul( wj, wi, wn );
-			for(d=0; d<D; d++){ /* in each DFT */
-				i = d * S + k;  j = i + B;
-				tmp = data[i];
-				complex16_mul( data[i], data[j], wi );
-				complex16_mul( data[j], data[j], wj );
-				data[i].real += tmp.real; data[i].imag += tmp.imag;
-				data[j].real += tmp.real; data[j].imag += tmp.imag;
-			}
-			complex16_mul( wi, wi, ws );
-		}
-	}
-}
-
 
 
 #ifdef DAO_WITH_NUMARRAY

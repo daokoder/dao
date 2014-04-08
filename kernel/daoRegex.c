@@ -799,7 +799,7 @@ static int CountRegex( DaoRegex *self, DaoRgxItem *patts, int npatt,
 	daoint count = 0, m1 = start, m2 = end;
 	while( DaoRegex_Search( self, patts, npatt, self->source, size, & m1, & m2, 0 ) ){
 		if( (m2 - m1) == (end0 - start0) ){
-			count += strncmp( src + m1, src + start0, m2 - m1 + 1 ) == 0;
+			count += strncmp( (char*)src + m1, (char*)src + start0, m2 - m1 + 1 ) == 0;
 		}
 		m1 = m2 + 1;
 		m2 = end;

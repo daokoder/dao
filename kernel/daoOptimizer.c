@@ -5146,9 +5146,11 @@ NotExist_TryAux:
 				}else if( at->tid == DAO_OBJECT ){
 					rout = DaoClass_FindOperator( & at->aux->xClass, "()", hostClass );
 					if( rout == NULL ) goto ErrorTyping;
+					bt = at;
 				}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
 					rout = DaoType_FindFunctionMBS( at, "()" );
 					if( rout == NULL ) goto ErrorTyping;
+					bt = at;
 				}else if( at->tid != DAO_ROUTINE ){
 					goto ErrorTyping;
 				}

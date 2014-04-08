@@ -482,6 +482,7 @@ void DRoutines_Delete( DRoutines *self )
 
 static DParamNode* DParamNode_Add( DParamNode *self, DaoRoutine *routine, int pid )
 {
+	DaoType *partype;
 	DParamNode *param, *it;
 	if( pid >= (int)routine->routType->nested->size ){
 		/* If a routine with the same parameter signature is found, return it: */
@@ -496,6 +497,12 @@ static DParamNode* DParamNode_Add( DParamNode *self, DaoRoutine *routine, int pi
 			self->first = self->last = param;
 		}
 		return param;
+	}
+	partype = routine->routType->nested->items.pType[pid];
+	for(it=self->first; it; it=it->next){
+		if( DaoType_MatchTo( partype, it->type2, NULL ) >= DAO_MT_EQ ){
+			return DParamNode_Add( it, routine, pid + 1 );
+		}
 	}
 	/* Add a new internal node: */
 	param = DParamNode_New();
@@ -541,6 +548,11 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 		param = DParamNode_Add( self->tree, routine, 0 );
 	}
 	/*
+	// Always replace the previous routine with the current one.
+	*/
+	param->routine = routine;
+
+	/*
 	// Runtime routine specialization based on parameter types may create
 	// two specializations with identical parameter signature, so one of
 	// the specialized routine will not be successully added to the tree.
@@ -548,18 +560,7 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 	// be appended to "array", so that it can be properly garbage collected.
 	*/
 	DArray_Append( self->array, routine );
-	if( routine != param->routine && routine->routHost && param->routine->routHost ){
-		DaoType *t1 = routine->routHost;
-		DaoType *t2 = param->routine->routHost;
-		if( t1->tid == DAO_CDATA && t2->tid == DAO_CDATA ){
-			bl = DaoType_ChildOf( t1, t2 );
-		}else if( t1->tid == DAO_CSTRUCT && t2->tid == DAO_CSTRUCT ){
-			bl = DaoType_ChildOf( t1, t2 );
-		}else if( t1->tid == DAO_OBJECT && (t2->tid == DAO_OBJECT || t2->tid == DAO_CDATA || t2->tid == DAO_CSTRUCT) ){
-			bl = DaoClass_ChildOf( & t1->aux->xClass, t2->aux );
-		}
-		if( bl ) param->routine = routine;
-	}
+
 	self->array2->size = 0;
 	if( self->mtree ) DParamNode_ExportRoutine( self->mtree, self->array2 );
 	if( self->tree ) DParamNode_ExportRoutine( self->tree, self->array2 );
