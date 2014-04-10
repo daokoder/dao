@@ -65,7 +65,7 @@ static void AUX_Log( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void AUX_Test( DaoProcess *proc, DaoValue *p[], int N )
 {
-	void *pp = DaoProcess_RaiseUserException( proc, "std::MyException", "just a test" );
+	void *pp = DaoProcess_InvokeException( proc, "std::MyException", "just a test", NULL );
 	printf( "AUX_Test: %p\n", pp );
 }
 

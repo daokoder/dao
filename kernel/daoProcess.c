@@ -670,6 +670,16 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 	if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 0 );
 	return frame;
 }
+DaoVmCode* DaoProcess_InitCodeSection( DaoProcess *self )
+{
+	DaoVmCode *sect = DaoGetSectionCode( self->activeCode );
+	DaoStackFrame *frame = DaoProcess_PushSectionFrame( self );
+	if( sect == NULL || frame == NULL ){
+		DaoProcess_RaiseException( self, DAO_ERROR, "Invalid code section" );
+		return NULL;
+	}
+	return sect;
+}
 DAO_DLL void DaoProcess_FlushStdStreams( DaoProcess *self );
 void DaoProcess_FlushStdStreams( DaoProcess *self )
 {
@@ -6175,17 +6185,19 @@ static DaoException* DaoProcess_RaiseExceptionEx( DaoProcess *self, DaoType *ety
 	}
 	return except;
 }
-void DaoProcess_RaiseException( DaoProcess *self, int type, const char *value )
+DaoException* DaoProcess_RaiseException( DaoProcess *self, int type, const char *info )
 {
-	if( type <= 1 ) return;
-	if( type >= ENDOF_BASIC_EXCEPT ) type = DAO_ERROR;
-	DaoProcess_RaiseExceptionEx( self, DaoException_GetType( type ), value );
+	if( type <= 1 || type >= ENDOF_BASIC_EXCEPT ) return NULL;
+	return DaoProcess_RaiseExceptionEx( self, DaoException_GetType( type ), info );
 }
-DaoException* DaoProcess_RaiseUserException( DaoProcess *self, const char *type, const char *info )
+DaoException* DaoProcess_InvokeException( DaoProcess *self, const char *type, const char *info, DaoValue *data )
 {
+	DaoException *exception;
 	DaoType *etype = DaoParser_ParseTypeName( type, self->activeNamespace, NULL );
 	if( etype == NULL ) return NULL;
-	return DaoProcess_RaiseExceptionEx( self, etype, info );
+	exception = DaoProcess_RaiseExceptionEx( self, etype, info );
+	if( data != NULL && exception != NULL ) DaoValue_Copy( data, & exception->edata );
+	return exception;
 }
 void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, const char *op )
 {
@@ -6204,7 +6216,7 @@ void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, co
 
 void DaoProcess_PrintException( DaoProcess *self, DaoStream *stream, int clear )
 {
-	DaoType *extype = dao_Exception_Typer.core->kernel->abtype;
+	DaoType *extype = DaoException_GetType( DAO_EXCEPTION );
 	DaoValue **excobjs = self->exceptions->items.pValue;
 	int i, n;
 

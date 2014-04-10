@@ -140,6 +140,7 @@ DAO_DLL void DaoProcess_Delete( DaoProcess *self );
 
 DAO_DLL DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size );
 DAO_DLL DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self );
+DAO_DLL DaoVmCode* DaoProcess_InitCodeSection( DaoProcess *self );
 DAO_DLL void DaoProcess_PopFrame( DaoProcess *self );
 DAO_DLL void DaoProcess_PopFrames( DaoProcess *self, DaoStackFrame *rollback );
 

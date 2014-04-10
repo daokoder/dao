@@ -824,11 +824,11 @@ DAO_DLL int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *
 DAO_DLL int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *src );
 DAO_DLL int DaoProcess_Call( DaoProcess *s, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
 DAO_DLL void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream );
-DAO_DLL void DaoProcess_RaiseException( DaoProcess *self, int type, const char *info );
-DAO_DLL DaoException* DaoProcess_RaiseUserException( DaoProcess *self, const char *type, const char *info );
 DAO_DLL DaoValue* DaoProcess_GetReturned( DaoProcess *self );
-DAO_DLL DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt, int mbs );
 DAO_DLL DaoType*  DaoProcess_GetReturnType( DaoProcess *self );
+DAO_DLL DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt, int mbs );
+DAO_DLL DaoException* DaoProcess_RaiseException( DaoProcess *self, int type, const char *info );
+DAO_DLL DaoException* DaoProcess_InvokeException( DaoProcess *self, const char *type, const char *info, DaoValue *data );
 
 /*
 // The following functions can be called within a wrapped C function to create

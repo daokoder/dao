@@ -1371,17 +1371,22 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 	daoint entry, offset, start, end, matched, done = 0;
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoRegex *patt = DaoProcess_MakeRegex( proc, pt, self->wcs ==NULL );
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoInteger startpos = {DAO_INTEGER,0,0,0,0,0};
 	DaoInteger endpos = {DAO_INTEGER,0,0,0,0,0};
 	DaoEnum denum = {DAO_ENUM,0,0,0,0,0,0,NULL};
 	DaoValue *res;
+	DaoVmCode *sect;
 
 	if( from < 0 ) from += self->size;
 	if( to < 0 ) to += self->size;
 	if( to == 0 ) to = DString_Size( self ) - 1;
-	if( (patt == NULL) | (sect == NULL) | (from < 0) | (to < 0) ) return;
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	if( (patt == NULL) | (from < 0) | (to < 0) ){
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "Invalid parameter value" );
+		return;
+	}
+
+	sect = DaoProcess_InitCodeSection( proc );
+	if( sect == NULL ) return;
 
 	denum.etype = DaoNamespace_MakeEnumType( proc->activeNamespace, "unmatched,matched" );
 	denum.subtype = DAO_ENUM_STATE;
@@ -1456,7 +1461,7 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
 	DaoValue *chr = (DaoValue*)(void*)&chint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
 	DString *data = self->data;
 	daoint entry, i, n, N = data->size;
 	wchar_t k;
@@ -1478,7 +1483,6 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 		data = DString_Copy( self->data );
 		DString_ToWCS( data );
 	}
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );
 	for(i=0; i<N; i++){
@@ -2216,7 +2220,7 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue **items = list->items.items.pValue;
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
 	daoint entry, i, j, N = list->items.size;
 	int popped = 0;
 	switch( funct ){
@@ -2228,7 +2232,6 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 	case DVM_FUNCT_FIND : DaoProcess_PutValue( proc, dao_none_value ); break;
 	}
 	if( sect == NULL ) return;
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );
 	for(j=0; j<N; j++){
@@ -2295,19 +2298,24 @@ static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar, int which
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue **items = list->items.items.pValue;
 	DaoValue *res = NULL, *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	daoint entry, i, j, first = 0, D = 0, N = list->items.size;
-	if( sect == NULL || list->items.size == 0 ) return; // TODO exception
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
-	entry = proc->topFrame->entry;
+	DaoVmCode *sect;
+
 	if( which == 1 ){
+		res = list->items.size ? items[0] : dao_none_value;
 		D = p[1]->xEnum.value;
-		res = items[0];
 		first = 1;
 	}else{
 		res= p[1];
 		D = p[2]->xEnum.value;
 	}
+	if( list->items.size == 0 ){
+		DaoProcess_PutValue( proc, res );
+		return;
+	}
+	sect = DaoProcess_InitCodeSection( proc );
+	if( sect == NULL ) return;
+	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );
 	for(j=first; j<N; j++){
 		i = D ? N-1-j : j;
@@ -2339,12 +2347,12 @@ static void DaoLIST_Erase2( DaoProcess *proc, DaoValue *p[], int npar )
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue **items = list->items.items.pValue;
 	DaoValue *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
 	daoint *count = DaoProcess_PutInteger( proc, 0 );
 	daoint entry, i, j, N = list->items.size;
 	int mode = p[1]->xEnum.value;
+
 	if( sect == NULL ) return;
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );
 	for(j=0; j<N; j++){
@@ -2380,12 +2388,12 @@ static void DaoLIST_Map2( DaoProcess *proc, DaoValue *p[], int npar )
 	DaoValue **items = list->items.items.pValue;
 	DaoValue **items2 = list2->items.items.pValue;
 	DaoValue *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
 	daoint entry, i, j, N = list->items.size;
 	int direction = p[2]->xEnum.value;
+
 	if( sect == NULL ) return;
 	if( N > list2->items.size ) N = list2->items.size;
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );
 	for(j=0; j<N; j++){
@@ -2425,7 +2433,7 @@ static DaoFuncItem listMeths[] =
 	{ DaoLIST_Erase2,   "erase( self :list<@T>, mode :enum<all,first,last> )[item:@T,index:int=>int]=>int" },
 	{ DaoLIST_Map,      "map( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>@V]=>list<@V>" },
 	{ DaoLIST_Map2,     "map( self :list<@T>, other :list<@S>, direction :enum<forward,backward>=$forward )[item:@T,item2:@S,index:int=>@V]=>list<@V>" },
-	{ DaoLIST_Reduce1,  "reduce( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,value:@T,index:int=>@T]=>@T" },
+	{ DaoLIST_Reduce1,  "reduce( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,value:@T,index:int=>@T]=>@T|none" },
 	{ DaoLIST_Reduce2,  "reduce( self :list<@T>, init :@V, direction :enum<forward,backward>=$forward )[item:@T,value:@V,index:int=>@V]=>@V" },
 	{ DaoLIST_Select,   "select( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>list<@T>" },
 	{ DaoLIST_Find,     "find( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>tuple<index:int,value:@T>|none" },
@@ -2885,7 +2893,7 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 	DaoList *list = NULL;
 	DaoTuple *tuple = NULL;
 	DaoType *type = self->ctype;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
 	DaoValue *res;
 	DNode *node;
 	ushort_t entry;
@@ -2900,7 +2908,6 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 	case DVM_FUNCT_FIND : DaoProcess_PutValue( proc, dao_none_value ); break;
 	}
 	if( sect == NULL ) return;
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	entry = proc->topFrame->entry;
 	type = type && type->nested->size > 1 ? type->nested->items.pType[1] : NULL;
 	DaoProcess_AcquireCV( proc );
@@ -3749,12 +3756,6 @@ DaoException* DaoException_New( DaoType *type )
 	DaoException_InitByType( self, type );
 	return self;
 }
-DaoException* DaoException_New2( DaoType *type, DaoValue *v )
-{
-	DaoException *self = DaoException_New( type );
-	DaoValue_Move( v, & self->edata, NULL );
-	return self;
-}
 void DaoException_Delete( DaoException *self )
 {
 	DaoCstruct_Free( (DaoCstruct*)self );
@@ -3764,6 +3765,10 @@ void DaoException_Delete( DaoException *self )
 	DArray_Delete( self->callers );
 	DArray_Delete( self->lines );
 	dao_free( self );
+}
+void DaoException_SetData( DaoException *self, DaoValue *data )
+{
+	DaoValue_Move( data, & self->edata, NULL );
 }
 void DaoException_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *maps, int remove )
 {
@@ -3864,7 +3869,8 @@ static void Dao_Exception_New( DaoProcess *proc, DaoValue *p[], int n )
 static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoType *type = proc->topFrame->routine->routHost;
-	DaoException *self = (DaoException*)DaoException_New2( type, p[0] );
+	DaoException *self = (DaoException*)DaoException_New( type );
+	DaoException_SetData( self, p[0] );
 	DaoProcess_PutValue( proc, (DaoValue*)self );
 }
 
@@ -4203,7 +4209,7 @@ void DaoException_Init( DaoException *self, DaoProcess *proc, const char *value 
 	line = line2 = rout->defLine;
 	if( vmc && rout->body->vmCodes->size ) line = annotCodes[id]->line;
 	line2 = line;
-	self->routine = rout;
+	self->routine = proc->topFrame->routine;
 	self->toLine = line;
 	self->fromLine = line2;
 	if( value && value[0] != 0 ){
@@ -4293,7 +4299,7 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 	DaoStream_WriteString( ss, self->routine->routName );
 	DaoStream_WriteMBS( ss, "(), " );
 
-	if( self->routine->type == DAO_ROUTINE ){
+	if( self->routine->subtype == DAO_ROUTINE ){
 		DaoStream_WriteMBS( ss, "at line " );
 		DaoStream_WriteInt( ss, self->fromLine );
 		if( self->fromLine != self->toLine ){

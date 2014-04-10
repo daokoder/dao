@@ -2498,7 +2498,8 @@ static void DaoBuiltIn_Panic( DaoProcess *proc, DaoValue *p[], int n )
 	if( self == NULL && object != NULL ){
 		self = (DaoException*) DaoObject_CastCdata( object, type );
 	}
-	if( self == NULL ) self = (DaoException*)DaoException_New2( type, p[0] );
+	if( self == NULL ) self = (DaoException*)DaoException_New( type );
+	DaoException_SetData( self, p[0] );
 	DaoException_Init( self, proc, NULL );
 	DArray_Append( proc->exceptions, object ? (void*)object : (void*)self );
 }
@@ -2540,11 +2541,10 @@ static void DaoBuiltIn_Frame( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoValue *retvalue = NULL;
 	DaoValue *defvalue = n ? p[0] : NULL;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
 	int ecount;
 
 	if( sect == NULL ) return;
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 	DaoProcess_AcquireCV( proc );
 	ecount = proc->exceptions->size;
 	DaoProcess_Execute( proc );

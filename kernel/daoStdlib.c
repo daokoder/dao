@@ -305,11 +305,15 @@ static void STD_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	daoint i, entry, times = p[0]->xInteger.value;
+	DaoVmCode *sect;
 
-	if( sect == NULL || times < 0 ) return; // TODO exception
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	if( times < 0 ){
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "Invalid parameter value" );
+		return;
+	}
+	sect = DaoProcess_InitCodeSection( proc );
+	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );
 	for(i=0; i<times; i++){
@@ -326,13 +330,18 @@ static void STD_String( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DString *string = DaoProcess_PutMBString( proc, "" );
 	daoint i, entry, size = p[0]->xInteger.value;
+	DaoVmCode *sect;
 
 	if( p[1]->xEnum.value ) DString_ToWCS( string );
-	if( sect == NULL || size < 0 ) return; // TODO exception
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	if( size < 0 ){
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "Invalid parameter value" );
+		return;
+	}
+	if( size == 0 ) return;
+	sect = DaoProcess_InitCodeSection( proc );
+	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );
 	for(i=0; i<size; i++){
@@ -351,11 +360,11 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoArray *array = DaoProcess_PutArray( proc );
 	DaoArray *first = NULL;
 	DaoArray *sub = NULL;
 	daoint i, j, k, entry, size = 1;
+	DaoVmCode *sect;
 
 	/* if multi-dimensional array is disabled, DaoProcess_PutArray() will raise exception. */
 #ifdef DAO_WITH_NUMARRAY
@@ -367,9 +376,13 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 		}
 		size *= d;
 	}
+	if( size < 0 ){
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "Invalid parameter value" );
+		return;
+	}
 	if( size == 0 ) return;
-	if( sect == NULL ) return; // TODO exception
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	sect = DaoProcess_InitCodeSection( proc );
+	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );
 	for(i=0; i<size; i++){
@@ -428,14 +441,19 @@ static void STD_List( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *res = p[N==2], *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoList *list = DaoProcess_PutList( proc );
 	daoint i, entry, size = p[0]->xInteger.value;
 	daoint fold = N == 2;
+	DaoVmCode *sect;
 
 	if( fold ) DaoList_Append( list, res );
-	if( sect == NULL || size < 0 ) return; // TODO exception
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	if( size < 0 ){
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "Invalid parameter value" );
+		return;
+	}
+	if( size == 0 ) return;
+	sect = DaoProcess_InitCodeSection( proc );
+	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );
 	for(i=fold; i<size; i++){
@@ -455,12 +473,17 @@ static void STD_Map( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	DaoMap *map = DaoProcess_PutMap( proc, p[1]->xInteger.value );
 	daoint i, entry, size = p[0]->xInteger.value;
+	DaoVmCode *sect;
 
-	if( sect == NULL || size < 0 ) return; // TODO exception
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	if( size < 0 ){
+		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "Invalid parameter value" );
+		return;
+	}
+	if( size == 0 ) return;
+	sect = DaoProcess_InitCodeSection( proc );
+	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );
 	for(i=0; i<size; i++){

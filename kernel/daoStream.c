@@ -581,9 +581,9 @@ static void DaoIO_WriteLines( DaoProcess *proc, DaoValue *p[], int N )
 	DString *string;
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
 	daoint i, entry, lines = p[1]->xInteger.value;
 	FILE *fout = stdout;
+	DaoVmCode *sect;
 
 	if( p[0]->type == DAO_STRING ){
 		fout = DaoIO_OpenFile( proc, p[0]->xString.data, "w+", 0 );
@@ -591,7 +591,8 @@ static void DaoIO_WriteLines( DaoProcess *proc, DaoValue *p[], int N )
 	}else{
 		if( p[0]->xStream.file ) fout = p[0]->xStream.file;
 	}
-	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	sect = DaoProcess_InitCodeSection( proc );
+	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
 	for(i=0; i<lines; i++){
 		idint.value = i;
