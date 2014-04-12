@@ -486,7 +486,14 @@ static DParamNode* DParamNode_Add( DParamNode *self, DaoRoutine *routine, int pi
 	DParamNode *param, *it;
 	if( pid >= (int)routine->routType->nested->size ){
 		/* If a routine with the same parameter signature is found, return it: */
-		for(it=self->first; it; it=it->next) if( it->routine ) return it;
+		for(it=self->first; it; it=it->next){
+			/*
+			// Code section methods may be overloaded with normal methods with
+			// exactly the same parameter signatures (map::keys()).
+			// But they differ in attributes.
+			*/
+			if( it->routine && it->routine->attribs == routine->attribs ) return it;
+		}
 		param = DParamNode_New();
 		param->routine = routine;
 		/* Add as a leaf. */
