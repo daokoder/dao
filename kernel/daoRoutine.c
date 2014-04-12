@@ -721,6 +721,12 @@ static DaoRoutine* DRoutines_Lookup2( DRoutines *self, DaoValue *obj, DaoValue *
 	DMap *defs = NULL;
 	if( self->attribs ) defs = DHash_New(0,0);
 	if( obj && obj->type && mcall ==0 ){
+		/*
+		// class Klass {
+		//     routine Meth1() { }
+		//     routine Meth2() { Meth1() }
+		// }
+		*/
 		if( self->mtree ){
 			DaoRoutine *rout2 = NULL;
 			for(param=self->mtree->first; param; param=param->next){
@@ -741,11 +747,25 @@ static DaoRoutine* DRoutines_Lookup2( DRoutines *self, DaoValue *obj, DaoValue *
 		}
 	}
 	if( mcall && self->mtree ){
+		/*
+		// object = Klass()
+		// object.Meth1()
+		*/
+		rout = DParamNode_Lookup( self->mtree, p, n, mode, strict, & score, defs, 1 );
+		if( rout ) goto Finalize;
+	}
+	if( mcall == 0 && obj == NULL && self->mtree ){
+		/*
+		// routine test(self: array<int>){}
+		// routine test(self: array<int>, x: int){}
+		// test([1, 2, 3]) 
+		*/
 		rout = DParamNode_Lookup( self->mtree, p, n, mode, strict, & score, defs, 1 );
 		if( rout ) goto Finalize;
 	}
 	if( self->tree ){
 		if( mcall ){
+			/* obj.function(), where function() is not method of obj: */
 			p += 1;
 			n -= 1;
 		}
@@ -784,6 +804,10 @@ static DaoRoutine* DRoutines_LookupByType2( DRoutines *self, DaoType *selftype, 
 		}
 	}
 	if( mcall && self->mtree ){
+		rout = DParamNode_LookupByType( self->mtree, types, n, mode, strict, & score, defs, 1 );
+		if( rout ) goto Finalize;
+	}
+	if( mcall == 0 && selftype == NULL && self->mtree ){
 		rout = DParamNode_LookupByType( self->mtree, types, n, mode, strict, & score, defs, 1 );
 		if( rout ) goto Finalize;
 	}

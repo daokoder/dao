@@ -596,10 +596,12 @@ static void DaoMT_RunArrayFunctional( void *p )
 	DaoVmCode *sect = self->sect;
 	DaoArray *param = (DaoArray*) self->param;
 	DaoArray *result = (DaoArray*) self->result;
-	DaoArray *original = param->original;
-	DaoArray *array = original ? original : param;
-	DArray *slices = param->slices;
-	daoint *dims = array->dims;
+	DaoArray *array = DaoArray_GetWorkArray( param );
+	daoint size = DaoArray_GetWorkSize( param );
+	daoint start = DaoArray_GetWorkStart( param );
+	daoint len = DaoArray_GetWorkIntervalSize( param );
+	daoint step = DaoArray_GetWorkStep( param );
+	daoint *dims = param->dims;
 	daoint i, id, id2, n = DaoArray_SliceSize( param );
 	int j, D = array->ndim;
 	int isvec = (D == 2 && (dims[0] ==1 || dims[1] == 1));
@@ -613,7 +615,7 @@ static void DaoMT_RunArrayFunctional( void *p )
 	for(j=0; j<vdim; j++) idval[j]->xInteger.value = 0;
 	for(i=self->first; i<n; i+=self->step){
 		idval = clone->stackValues + stackBase + sect->a + 1;
-		id = id2 = (original ? DaoArray_IndexFromSlice( original, slices, i ) : i);
+		id = id2 = start + (i / len) * step + (i % len);
 		if( isvec ){
 			if( vdim >0 ) idval[0]->xInteger.value = id2;
 			if( vdim >1 ) idval[1]->xInteger.value = id2;

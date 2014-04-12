@@ -75,7 +75,7 @@ struct DaoxDataFrame
 	DArray  *caches;     // DArray<DaoxDataColumn*>
 
 	DaoxDataFrame  *original;  // the original dataframe;
-	DArray         *slices;    // DArray<DVector<daoint>*>
+	DVector        *slices;    // see comments in daoNumtype.h;
 };
 
 DAO_DLL DaoType *daox_type_dataframe;

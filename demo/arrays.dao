@@ -1,7 +1,7 @@
 
 vec1 = [1, 2, 3]  # array<int> vector, or 1x3 matrix;
-vec2 = [1.0; 2; 3]  # array<float> 3x1 matrix, or transposed vector;
-mat1 = [1D, 2; 3, 4]  # array<double> 2x2 matrix;
+vec2 = [1.0; 2; 3]  # array<double> 3x1 matrix, or transposed vector;
+mat1 = [1F, 2; 3, 4]  # array<float> 2x2 matrix;
 mat2 = [ [1, 2], [3, 4] ]  # 2x2 matrix
 mat3 = [ [1, 2, 3] : 5 ]   # 5x3 matrix;
 mat4 = array{ 1, 2; 3, 4 }  # 2x2 matrix

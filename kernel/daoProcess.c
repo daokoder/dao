@@ -3099,10 +3099,10 @@ void DaoProcess_DoCheckIsa( DaoProcess *self, DaoVmCode *vmc )
 	if( dA == dB ) return;
 
 	if( dA->type == DAO_OBJECT ){
-		*res = dA->xObject.defClass->objType == (DaoType*) dB;
+		*res = DaoType_ChildOf( dA->xObject.defClass->objType, (DaoType*) dB ) != 0;
 		return;
-	}else if( dA->type == DAO_CSTRUCT || dA->type == DAO_CDATA ){
-		*res = dA->xCstruct.ctype == (DaoType*) dB;
+	}else if( dA->type == DAO_CSTRUCT || dA->type == DAO_CDATA || dA->type == DAO_CTYPE ){
+		*res = DaoType_ChildOf( dA->xCstruct.ctype, (DaoType*) dB ) != 0;
 		return;
 	}else if( type->tid == DAO_VARIANT ){
 		int i, n, mt = 0, id = 0, max = 0;

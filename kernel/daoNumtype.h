@@ -31,14 +31,6 @@
 
 #include"daoStdtype.h"
 
-#define BBITS    (sizeof(unsigned short) * 8)
-#define BSIZE(x)  (((x) / 8) + sizeof(unsigned int))
-#define BMASK(x)  (1 << ((x) % BBITS))
-#define BTEST(p, x)  ((p)[(x) / BBITS] & BMASK(x))
-#define BSET(p, x)  ((p)[(x) / BBITS] |= BMASK(x))
-#define BCLEAR(p, x)  ((p)[(x) / BBITS] &= ~BMASK(x))
-#define BFLIP(p, x)  (p)[(x) / BBITS] ^= BMASK(x)
-
 
 #define COM_ASSN( self, com ) \
 { (self).real = (com).real; (self).imag = (com).imag; }
@@ -91,6 +83,17 @@ DAO_DLL complex16 ceil_c( const complex16 com );
 DAO_DLL complex16 floor_c( const complex16 com );
 
 
+typedef union DaoArrayData DaoArrayData;
+
+union DaoArrayData
+{
+	void       *p;
+	daoint     *i;
+	float      *f;
+	double     *d;
+	complex16  *c;
+};
+
 
 /* Multi-dimensional array stored in row major order: */
 struct DaoArray
@@ -99,23 +102,31 @@ struct DaoArray
 
 	uchar_t  etype; /* element type; */
 	uchar_t  owner; /* own the data; */
-	short    ndim; /* number of dimensions; */
-	daoint   size; /* total number of elements; */
-	daoint  *dims; /* for i=0,...,ndim-1: dims[i], size of the i-th dimension; */
-	/* dims[ndim+i], products of the sizes of the remaining dimensions after the i-th; */
+	short    ndim;  /* number of dimensions; */
+	daoint   size;  /* total number of elements; */
+	daoint  *dims;  /* 2*ndim values; the first ndim values: size for each dimension; */
+	/* the second ndim values: product of the sizes of the remaining dimensions; */
 
-	union {
-		void       *p;
-		daoint     *i;
-		float      *f;
-		double     *d;
-		complex16  *c;
-	} data;
+	DaoArrayData data;
 
-	DaoArray *original; /* original array */
-	DArray   *slices; /* list of slicing in each dimension */
-
+	DaoArray *original; /* original array for an array slicing; */
+	DVector  *slices;
+	/*
+	// ::slices structure:
+	// The first 2*ndim values: slice in each dimension;
+	// The remaining values: slice information in the raw 1D value array;
+	//
+	//   Start_D1, Count_D1; # Slice in dimension-1;
+	//   Start_D2, Count_D2; # Slice in dimension-2;
+	//   ...
+	//   Start_DN, Count_DN; # Slice in dimension-N;
+	//   Slice_Count;        # Number of slices in the raw 1D array;
+	//   Slice_Step;         # Step (distance) between two slices;
+	//   Slice_Start;        # Starting index of the first slice;
+	//   Slice_Length;       # Length of single slice (the same as Count_DN);
+	*/
 };
+
 #ifdef DAO_WITH_NUMARRAY
 
 DAO_DLL DaoArray* DaoArray_New( int type );
@@ -138,6 +149,12 @@ DAO_DLL float  DaoArray_GetFloat( DaoArray *na, daoint i );
 DAO_DLL double DaoArray_GetDouble( DaoArray *na, daoint i );
 DAO_DLL complex16 DaoArray_GetComplex( DaoArray *na, daoint i );
 DAO_DLL DaoValue* DaoArray_GetValue( DaoArray *self, daoint i, DaoValue *res );
+
+DAO_DLL DaoArray* DaoArray_GetWorkArray( DaoArray *self );
+DAO_DLL daoint DaoArray_GetWorkSize( DaoArray *self );
+DAO_DLL daoint DaoArray_GetWorkStep( DaoArray *self );
+DAO_DLL daoint DaoArray_GetWorkStart( DaoArray *self );
+DAO_DLL daoint DaoArray_GetWorkIntervalSize( DaoArray *self );
 
 #endif
 

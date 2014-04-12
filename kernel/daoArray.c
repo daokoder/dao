@@ -571,20 +571,29 @@ void DVector_Erase( DVector *self, daoint i, daoint n )
 	self->size -= n;
 }
 
-void DVector_PushInt( DVector *self, int value )
+int* DVector_PushInt( DVector *self, int value )
 {
 	int *item = (int*) DVector_Push( self );
 	*item = value;
+	return item;
 }
-void DVector_PushFloat( DVector *self, float value )
+daoint* DVector_PushDaoInt( DVector *self, daoint value )
+{
+	daoint *item = (daoint*) DVector_Push( self );
+	*item = value;
+	return item;
+}
+float* DVector_PushFloat( DVector *self, float value )
 {
 	float *item = (float*) DVector_Push( self );
 	*item = value;
+	return item;
 }
-void DVector_PushUshort( DVector *self, ushort_t value )
+ushort_t* DVector_PushUshort( DVector *self, ushort_t value )
 {
 	ushort_t *item = (ushort_t*) DVector_Push( self );
 	*item = value;
+	return item;
 }
 
 DaoVmCode* DVector_PushCode( DVector *self, DaoVmCode code )

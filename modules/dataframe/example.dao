@@ -30,7 +30,7 @@ io.writeln( dframe2d )
 dframe2d[0,1] = 1000000.23
 
 # Update one column:
-dframe2d[:,2] += [[0]:100:9]
+dframe2d[1:9,2] += [[0]:100:9]
 
 # Add the first column to the second:
 dframe2d[:,1] += dframe2d[:,0]

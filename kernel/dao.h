@@ -696,7 +696,7 @@ DAO_DLL void DaoArray_ResizeArray( DaoArray *self, daoint *dims, int D );
 // "indexes" is expected to contain the same number of indexes
 // as the array's number of dimensions.
 */
-DAO_DLL int DaoArray_GetFlatIndex( DaoArray *self, daoint *indexes );
+DAO_DLL daoint DaoArray_GetFlatIndex( DaoArray *self, daoint *indexes );
 
 /*
 // The following functions convert the data in the internal buffer to
