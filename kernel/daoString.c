@@ -391,7 +391,6 @@ static void DMBString_AppendWCS( DString *self, const wchar_t *chs, daoint len )
 		if( *chs == L'\0' ){
 			DMBString_AppendChar( self, '\0' );
 			chs += 1;
-			len -= 1;
 			continue;
 		}
 		while( next < end && *next != L'\0' ) next += 1;
@@ -438,7 +437,6 @@ static void DWCString_AppendMBS( DString *self, const char *chs, daoint len )
 		if( *chs == '\0' ){
 			DWCString_AppendWChar( self, L'\0' );
 			chs += 1;
-			len -= 1;
 			continue;
 		}
 		while( next < end && *next != '\0' ) next += 1;
@@ -1437,3 +1435,92 @@ void DString_AppendPathSep( DString *self )
 		if( last != L'/' && last != L'\\' ) DString_AppendWChar( self, L'/' );
 	}
 }
+
+
+#ifdef WIN32
+
+int DWCString_AppendUTF8( DString *self, const char *chs, daoint len )
+{
+	const char *end = chs + len;
+	daoint smin;
+
+	DString_Reserve( self, self->size + len + 2 );
+	if( len == 0 || chs == NULL ) return 0;
+	while( chs < end ){
+		const char *next = chs;
+		if( *chs == '\0' ){
+			DWCString_AppendWChar( self, L'\0' );
+			chs += 1;
+			continue;
+		}
+		while( next < end && *next != '\0' ) next += 1;
+		smin = MultiByteToWideChar( CP_UTF8, 0, chs, -1, self->wcs + self->size, self->bufSize - self->size );
+		if( smin == 0 ) return 0;
+		self->size += smin-1;
+		chs = next;
+	}
+	self->wcs[ self->size ] = 0;
+	DString_Reset( self, self->size );
+	return 1;
+}
+
+int DString_FromUTF8( DString *self, DString *utf8 )
+{
+	int ret, mbs = self->mbs != NULL;
+	if( utf8->mbs == NULL ) return 0;
+	DString_Reset( self, 0 );
+	DString_ToWCS( self );
+	ret = DWCString_AppendUTF8( self, utf8->mbs, utf8->size );
+	if( mbs ) DString_ToMBS( self );
+	return ret;
+}
+
+#elif defined(DAO_USE_ICONV)
+
+#include<iconv.h>
+
+int DString_FromUTF8( DString *self, DString *utf8 )
+{
+	char *chs = utf8->mbs;
+	char *end = chs + utf8->size;
+	size_t ret, ins, outs, wcs = self->wcs != NULL;
+	iconv_t state = iconv_open( "", "UTF-8" );
+
+	if( utf8->mbs == NULL ) return 0;
+	DString_Reset( self, 0 );
+	DString_ToMBS( self );
+
+	DString_Reserve( self, self->size + 4*utf8->size );
+	while( chs < end ){
+		char *next = chs;
+		char *outbuf = self->mbs + self->size;
+		if( *chs == '\0' ){
+			DString_AppendChar( self, '\0' );
+			chs += 1;
+			continue;
+		}
+		while( next < end && *next != '\0' ) next += 1;
+
+		ins = next - chs;
+		outs = self->bufSize - self->size;
+		ret = iconv( state, & chs, & ins, & outbuf, & outs );
+		if( ret == (size_t)-1 ) return 0;
+		self->size = self->bufSize - outs;
+		chs = next;
+	}
+	self->mbs[ self->size ] = 0;
+	DString_Reset( self, self->size );
+
+	if( wcs ) DString_ToWCS( self );
+	return 1;
+}
+
+#else
+
+int DString_FromUTF8( DString *self, DString *utf8 )
+{
+	DString_Assign( self, utf8 ); /* Do nothing; */
+	return 1;
+}
+
+#endif

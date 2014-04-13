@@ -4040,7 +4040,6 @@ FastCallError:
 	}
 }
 
-daoint DaoArray_SliceSize( DaoArray *self );
 int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc,
 		DString *name, DaoValue *P[], int N, int ignore_return, int execute );
 static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
@@ -4069,7 +4068,7 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 		DaoValue_Copy( (DaoValue*) index, iter->items + 1 );
 #ifdef DAO_WITH_NUMARRAY
 	}else if( va->type == DAO_ARRAY ){
-		iter->items[0]->xInteger.value = DaoArray_SliceSize( (DaoArray*) va ) >0;
+		iter->items[0]->xInteger.value = DaoArray_GetWorkSize( (DaoArray*) va ) >0;
 		DaoValue_Copy( (DaoValue*) index, iter->items + 1 );
 #endif
 	}else if( va->type == DAO_LIST ){

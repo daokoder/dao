@@ -31,6 +31,7 @@
 #include"string.h"
 #include"ctype.h"
 #include"math.h"
+#include"locale.h"
 
 #include"daoType.h"
 #include"daoVmspace.h"
@@ -1437,12 +1438,25 @@ static void DaoSTR_Type( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutEnum( proc, ( p[0]->xString.data->mbs != NULL )? "mbs" : "wcs" );
 }
 
+/*
+// MBS to MBS and WCS to WCS do nothing;
+// When WCS is converted into MBS, MBS will use system encoding;
+// When MBS is converted into WCS, MBS is assumed to use either UTF-8 or system encoding;
+*/
 static void DaoSTR_Convert( DaoProcess *proc, DaoValue *p[], int N )
 {
-	if( p[1]->xEnum.value == 0 )
-		DString_ToMBS( p[0]->xString.data );
-	else
-		DString_ToWCS( p[0]->xString.data );
+	DString *self = p[0]->xString.data;
+	if( p[1]->xEnum.value == 0 ){
+		DString_ToMBS( self );
+	}else{
+		char *locale = setlocale( LC_CTYPE, NULL );
+		if( self->mbs != NULL && strstr( locale, "UTF-8" ) == NULL ){
+			DString *string = DString_New(1);
+			if( DString_FromUTF8( string, self ) ) DString_Assign( self, string );
+			DString_Delete( string );
+		}
+		DString_ToWCS( self );
+	}
 	DaoProcess_PutReference( proc, p[0] );
 }
 static void DaoSTR_Reverse( DaoProcess *proc, DaoValue *p[], int N )

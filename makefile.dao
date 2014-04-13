@@ -243,6 +243,11 @@ if( DaoMake::IsUnix() ){
 	# /Haiku/develop/lib/x86/libroot.so.
 }
 
+iconv = DaoMake::FindPackage( "Iconv" )
+if( iconv ){
+	daovm.AddDefinition( "DAO_USE_ICONV" )
+	daovm.UseSharedLibrary( iconv, "iconv" )
+}
 
 
 if( daovm_with_readline == $ON ){

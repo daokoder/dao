@@ -134,5 +134,6 @@ DAO_DLL DString DString_WrapWCS( const wchar_t *wcs );
 
 DAO_DLL void DString_AppendPathSep( DString *self );
 
+DAO_DLL int DString_FromUTF8( DString *self, DString *utf8 );
 
 #endif

@@ -986,15 +986,17 @@ void DaoLexer_Append( DaoLexer *self, int name, int line, const char *data )
 }
 int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 {
+	DString src2 = DString_WrapMBS( src );
 	DString *source = DString_New(1);
 	DVector *lexenvs = DVector_New( sizeof(int) );
 	DaoToken *token = DaoToken_New();
 	DString *literal = & token->string;
+	char *locale = setlocale( LC_CTYPE, NULL );
 	char ch, *ss, hex[11] = "0x00000000";
 	int replace = flags & DAO_LEX_ESCAPE;
 	int comment = flags & DAO_LEX_COMMENT;
 	int space = flags & DAO_LEX_SPACE;
-	int srcSize = (int)strlen( src );
+	int srcSize = strlen( src );
 	int old=0, state = TOK_START;
 	int lexenv = LEX_ENV_NORMAL;
 	int line = 1;
@@ -1002,6 +1004,11 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 	int ret = 1;
 	int it = 0;
 	int i, m = 4;
+
+	if( strstr( locale, "UTF-8" ) == NULL && DString_FromUTF8( source, & src2 ) ){
+		src = source->mbs;
+		srcSize = strlen( src );
+	}
 
 	DString_SetSharing( literal, 0 );
 	DaoLexer_Reset( self );

@@ -579,7 +579,6 @@ static void DaoMT_RunMapFunctional( void *p )
 
 #ifdef DAO_WITH_NUMARRAY
 void DaoArray_GetSliceShape( DaoArray *self, daoint **dims, short *ndim );
-int DaoArray_SliceSize( DaoArray *self );
 int DaoArray_IndexFromSlice( DaoArray *self, DArray *slice, daoint sid );
 DaoValue* DaoArray_GetValue( DaoArray *self, daoint i, DaoValue *res );
 void DaoArray_SetValue( DaoArray *self, daoint i, DaoValue *value );
@@ -602,7 +601,7 @@ static void DaoMT_RunArrayFunctional( void *p )
 	daoint len = DaoArray_GetWorkIntervalSize( param );
 	daoint step = DaoArray_GetWorkStep( param );
 	daoint *dims = param->dims;
-	daoint i, id, id2, n = DaoArray_SliceSize( param );
+	daoint i, id, id2, n = size;
 	int j, D = array->ndim;
 	int isvec = (D == 2 && (dims[0] ==1 || dims[1] == 1));
 	int stackBase, vdim = sect->b - 1;
