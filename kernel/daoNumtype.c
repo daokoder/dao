@@ -432,7 +432,7 @@ static int DaoArray_MakeSlice( DaoArray *self, DaoProcess *proc, DaoValue *idx[]
 	DVector_PushDaoInt( result->slices, length );
 	return S;
 }
-static daoint DaoArray_MatchShape( DaoArray *self, DaoArray *other )
+daoint DaoArray_MatchShape( DaoArray *self, DaoArray *other )
 {
 	daoint i = 0, j = 0, m = 1;
 	daoint ndim1 = self->original ? self->original->ndim : self->ndim;

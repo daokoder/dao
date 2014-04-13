@@ -1005,6 +1005,10 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 	int it = 0;
 	int i, m = 4;
 
+	/*
+	// The source may be encoded in UTF-8, which might be different
+	// from the system encoding:
+	*/
 	if( strstr( locale, "UTF-8" ) == NULL && DString_FromUTF8( source, & src2 ) ){
 		src = source->mbs;
 		srcSize = strlen( src );

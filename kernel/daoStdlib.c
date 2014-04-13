@@ -355,7 +355,7 @@ static void STD_String( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 }
-int DaoArray_AlignShape( DaoArray *self, DArray *sidx, daoint *dims, int ndim );
+daoint DaoArray_MatchShape( DaoArray *self, DaoArray *other );
 static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
@@ -410,7 +410,7 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 		}
 		if( res->type == DAO_ARRAY ){
 			sub = (DaoArray*) res;
-			if( first == NULL || DaoArray_AlignShape( sub, NULL, first->dims, first->ndim ) ==0 ){
+			if( first == NULL || DaoArray_MatchShape( sub, first ) == 0 ){
 				DaoProcess_RaiseException( proc, DAO_ERROR, "inconsistent elements or subarrays" );
 				break;
 			}
