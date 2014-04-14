@@ -1302,6 +1302,9 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 			DaoProcess_Eval( self->mainProcess, self->mainNamespace, input->mbs );
 		}
 #ifdef DAO_WITH_CONCURRENT
+		if( self->mainProcess->status >= DAO_PROCESS_SUSPENDED ){
+			if( DaoCallServer_GetThreadCount() == 0 ) DaoCallServer_AddThread( NULL, NULL );
+		}
 		DaoCallServer_Join();
 #endif
 		/*
@@ -1669,6 +1672,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	}
 #ifdef DAO_WITH_CONCURRENT
 	if( vmp->status >= DAO_PROCESS_SUSPENDED ){
+		if( DaoCallServer_GetThreadCount() == 0 ) DaoCallServer_AddThread( NULL, NULL );
 		DMutex_Lock( & self->mutexLoad );
 		while( vmp->status >= DAO_PROCESS_SUSPENDED )
 			DCondVar_TimedWait( & self->condvWait, & self->mutexLoad, 0.01 );
@@ -1867,6 +1871,7 @@ ExecuteImplicitMain :
 		DaoProcess_Execute( process );
 #ifdef DAO_WITH_CONCURRENT
 		if( process->status >= DAO_PROCESS_SUSPENDED ){
+			if( DaoCallServer_GetThreadCount() == 0 ) DaoCallServer_AddThread( NULL, NULL );
 			DMutex_Lock( & self->mutexLoad );
 			while( process->status >= DAO_PROCESS_SUSPENDED )
 				DCondVar_TimedWait( & self->condvWait, & self->mutexLoad, 0.01 );

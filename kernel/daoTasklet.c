@@ -263,7 +263,12 @@ static void DaoCallServer_CacheEvent( DaoTaskEvent *event )
 	DaoTaskEvent_Reset( event );
 	DArray_PushBack( server->caches, event );
 }
-static void DaoCallServer_AddThread( DThreadTask func, void *param )
+int DaoCallServer_GetThreadCount()
+{
+	DaoCallServer_TryInit( mainVmSpace );
+	return daoCallServer->total;
+}
+void DaoCallServer_AddThread( DThreadTask func, void *param )
 {
 	DaoCallThread *calth;
 	DaoCallServer_TryInit( mainVmSpace );
@@ -305,14 +310,14 @@ static void DaoCallServer_ActivateEvents()
 {
 	DaoCallServer *server = daoCallServer;
 	char message[128];
-	daoint i, j;
+	daoint i, j, count = 0;
 
 	if( server->idle != server->total ) return;
 	if( server->events->size != 0 ) return;
 	if( server->events2->size == 0 ) return;
 
 #ifdef DEBUG
-	sprintf( message, "WARNING: activating events (%i,%i,%i,%i)!\n", server->total,
+	sprintf( message, "WARNING: try activating events (%i,%i,%i,%i)!\n", server->total,
 			server->idle, (int)server->events->size, (int)server->events2->size );
 	DaoStream_WriteMBS( mainVmSpace->errorStream, message );
 #endif
@@ -341,10 +346,16 @@ static void DaoCallServer_ActivateEvents()
 		if( move ){
 			DArray_Append( server->events, event );
 			DArray_Erase( server->events2, i, 1 );
+			count += 1;
 			i -= 1;
 		}
 	}
 	DCondVar_Signal( & server->condv );
+	if( count == 0 ){
+		DaoStream *stream = mainVmSpace->errorStream;
+		DaoStream_WriteMBS( stream, "ERROR: All tasklets are suspended - deadlock!\n" );
+		exit(1);
+	}
 }
 static void DaoCallServer_Timer( void *p )
 {
@@ -1030,6 +1041,7 @@ static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
 	DaoChannel *self = (DaoChannel*) par[0];
 	float timeout = par[2]->xFloat.value;
 
+	DaoProcess_PutInteger( proc, 0 );
 	if( DaoProcess_CheckCB( proc, "cannot send/block inside code section method" ) ) return;
 	if( self->cap <= 0 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "channel is closed" );

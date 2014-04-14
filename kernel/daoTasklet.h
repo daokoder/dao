@@ -170,8 +170,10 @@ DAO_DLL void DaoFuture_ActivateEvent( DaoFuture *self );
 DAO_DLL void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future );
 
 
+DAO_DLL int DaoCallServer_GetThreadCount();
 DAO_DLL void DaoCallServer_Join();
 DAO_DLL void DaoCallServer_Stop();
+DAO_DLL void DaoCallServer_AddThread( DThreadTask func, void *param );
 DAO_DLL void DaoCallServer_AddTask( DThreadTask func, void *param, int now );
 DAO_DLL void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *future, double timeout );
 DAO_DLL void DaoCallServer_AddCall( DaoProcess *call );
