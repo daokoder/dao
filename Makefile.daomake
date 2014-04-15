@@ -44,8 +44,11 @@ DAOMAKE_ARGS += --option-JAVASCRIPT $(JAVASCRIPT)
 DAOMAKE_ARGS += --option-STATIC $(STATIC)
 DAOMAKE_ARGS += $(RESET) $(OPTIONS)
 
+all:
+	@echo "Please choose a platform!"
+
 $(PLATS) :
 	cd $(SRCDIR)/tools/daomake/bootstrap && $(MAKE) $@
-	$(SRCDIR)/tools/daomake/bootstrap/daomake --platform $@ $(DAOMAKE_ARGS) $(SRCDIR)
+	$(SRCDIR)/tools/daomake/bootstrap/daomake $(DAOMAKE_ARGS) $(SRCDIR)
 	$(MAKE)
 

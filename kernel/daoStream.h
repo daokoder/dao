@@ -66,8 +66,6 @@ DAO_DLL void DaoStream_Delete( DaoStream *self );
 DAO_DLL void DaoStream_Close( DaoStream *self );
 DAO_DLL void DaoStream_Flush( DaoStream *self );
 
-DAO_DLL void DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor );
-
 DAO_DLL void DaoStream_WriteChar( DaoStream *self, char val );
 DAO_DLL void DaoStream_WriteInt( DaoStream *self, daoint val );
 DAO_DLL void DaoStream_WriteFloat( DaoStream *self, double val );
@@ -78,10 +76,11 @@ DAO_DLL void DaoStream_WritePointer( DaoStream *self, void *val );
 DAO_DLL void DaoStream_WriteFormatedInt( DaoStream *self, daoint val, const char *format );
 DAO_DLL void DaoStream_WriteNewLine( DaoStream *self );
 
-DAO_DLL void DaoFile_WriteString( FILE *fout, DString *str );
+DAO_DLL int DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor );
 DAO_DLL int DaoStream_ReadLine( DaoStream *self, DString *buf );
 DAO_DLL int DaoFile_ReadLine( FILE *fin, DString *line );
 DAO_DLL int DaoFile_ReadAll( FILE *fin, DString *all, int close );
+DAO_DLL void DaoFile_WriteString( FILE *fout, DString *str );
 
 
 #endif

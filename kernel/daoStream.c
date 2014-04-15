@@ -108,10 +108,10 @@ static void DaoIO_Writeln2( DaoProcess *proc, DaoValue *p[], int N )
 /*
 // C printf format: %[parameter][flags][width][.precision][length]type
 //
-// Dao writef format: %[parameter][flags][width][.precision]type[color]
+// Dao writef format: %[flags][width][.precision]type[color]
 //
-// Where 'parameter', 'flags', 'width' and 'precision' will conform to the
-// C format, but 'type' can only be:
+// Where 'flags', 'width' and 'precision' will conform to the C format,
+// but 'type' can only be:
 //   c, d, i, o, u, x/X : for integer;
 //   e/E, f/F, g/G : for float and double;
 //   s : for string;
@@ -132,7 +132,7 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 	DString *fgcolor, *bgcolor;
 	const char *convs = "aspcdiouxXfFeEgG";
 	char F, *s, *end, *fg, *bg, *fmt, message[100];
-	int k, id = 1;
+	int k, id = 0;
 	if( (self->attribs & (DAO_IO_FILE | DAO_IO_PIPE)) && self->file == NULL ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "stream is not open!" );
 		return;
@@ -146,108 +146,91 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 	s = format->mbs;
 	end = s + format->size;
 	for(; s<end; s++){
-		k = 0;
-		if( *s =='%' ){
+		if( *s != '%' ){
+			DaoStream_WriteChar( self, *s );
+			continue;
+		}
+
+		fmt = s;
+		s += 1;
+		if( *s =='%' || *s == '[' ){
+			DaoStream_WriteChar( self, *s );
+			continue;
+		}
+
+		if( ++id > N || p[id] == NULL ) goto NullParameter;
+		value = p[id];
+
+		/* flags: */
+		while( *s == '+' || *s == '-' || *s == '#' || *s == '0' || *s == ' ' ) s += 1;
+		while( isdigit( *s ) ) s += 1; /* width; */
+		if( *s == '.' ){ /* precision: */
+			s += 1;
+			while( isdigit( *s ) ) s += 1;
+		}
+		DString_SetDataMBS( fmt2, fmt, s - fmt + 1 );
+		if( strchr( convs, *s ) == NULL ){
+			DaoProcess_RaiseException( proc, DAO_WARNING, "invalid format conversion" );
+			continue;
+		}
+		F = *s;
+		s += 1;
+		fg = bg = NULL;
+		if( *s == '[' ){
+			s += 1;
 			fmt = s;
-			s += 1;
-			if( *s =='%' || *s == '[' ){
-				DaoStream_WriteChar( self, *s );
-				continue;
-			}
-			if( isdigit( *s ) && (*s > '0') ){
-				while( isdigit( *s ) ) s += 1;
-				if( *s == '$' ){ /* parameter: number$ */
-					*s = '\0';
-					k = strtol( fmt + 1, NULL, 10 );
-					if( k == 0 || k >= N ){
-						DaoProcess_RaiseException( proc, DAO_WARNING, "invalid parameter number" );
-					}
-					*s = '%';
-					fmt = s ++;
-				}
-			}
-			/* flags: */
-			while( *s == '+' || *s == '-' || *s == '#' || *s == '0' || *s == ' ' ) s += 1;
-			while( isdigit( *s ) ) s += 1; /* width; */
-			if( *s == '.' ){ /* precision: */
-				s += 1;
-				while( isdigit( *s ) ) s += 1;
-			}
-			DString_SetDataMBS( fmt2, fmt, s - fmt + 1 );
-			if( strchr( convs, *s ) == NULL ){
-				DaoProcess_RaiseException( proc, DAO_WARNING, "invalid format conversion" );
-				continue;
-			}
-			F = *s;
-			s += 1;
-			fg = bg = NULL;
-			if( *s == '[' ){
+			while( isalnum( *s ) ) s += 1;
+			DString_SetDataMBS( fgcolor, fmt, s - fmt );
+			if( fgcolor->size ) fg = fgcolor->mbs;
+			if( *s == ':' ){
 				s += 1;
 				fmt = s;
 				while( isalnum( *s ) ) s += 1;
-				DString_SetDataMBS( fgcolor, fmt, s - fmt );
-				if( fgcolor->size ) fg = fgcolor->mbs;
-				if( *s == ':' ){
-					s += 1;
-					fmt = s;
-					while( isalnum( *s ) ) s += 1;
-					DString_SetDataMBS( bgcolor, fmt, s - fmt );
-					if( bgcolor->size ) bg = bgcolor->mbs;
-				}
-				if( *s != ']' ) DaoProcess_RaiseException( proc, DAO_WARNING, "invalid color format" );
-			}else{
-				s -= 1;
+				DString_SetDataMBS( bgcolor, fmt, s - fmt );
+				if( bgcolor->size ) bg = bgcolor->mbs;
 			}
-			if( k == 0 ) k = id;
-			value = p[k];
-			id += 1;
-			if( fg || bg ) DaoStream_SetColor( self, fg, bg );
-			self->format = fmt2->mbs;
-			if( value == NULL ){
-				if( F == 'p' ){
-					DaoStream_WriteMBS( self, "0x0" );
-				}else{
-					DaoProcess_RaiseException( proc, DAO_WARNING, "null parameter" );
-				}
-			}
-			self->format = fmt2->mbs;
-			if( F == 'c' || F == 'd' || F == 'i' || F == 'o' || F == 'x' || F == 'X' ){
-				if( sizeof(daoint) != 4 ) DString_InsertChar( fmt2, DAO_INT_FORMAT[0], fmt2->size-1 );
-				self->format = fmt2->mbs;
-				if( value->type == DAO_INTEGER ){
-					DaoStream_WriteInt( self, value->xInteger.value );
-				}else{
-					goto WrongParameter;
-				}
-			}else if( toupper( F ) == 'E' || toupper( F ) == 'F' || toupper( F ) == 'G' ){
-				if( value->type == DAO_FLOAT ){
-					DaoStream_WriteFloat( self, value->xFloat.value );
-				}else if( value->type == DAO_DOUBLE ){
-					DaoStream_WriteFloat( self, value->xDouble.value );
-				}else{
-					goto WrongParameter;
-				}
-			}else if( F == 's' && value->type == DAO_STRING ){
-				DaoStream_WriteString( self, value->xString.data );
-			}else if( F == 'p' ){
-				DaoStream_WritePointer( self, value );
-			}else if( F == 'a' ){
-				self->format = NULL;
-				DaoValue_Print( value, proc, self, cycData );
-			}else{
-				goto WrongParameter;
-			}
-			self->format = NULL;
-			if( fg || bg ) DaoStream_SetColor( self, NULL, NULL );
-			continue;
-WrongParameter:
-			self->format = NULL;
-			if( fg || bg ) DaoStream_SetColor( self, NULL, NULL );
-			sprintf( message, "%i-th parameter has wrong type for format \"%s\"!", k, fmt2->mbs );
-			DaoProcess_RaiseException( proc, DAO_WARNING, message );
+			if( *s != ']' ) goto WrongColor;
 		}else{
-			DaoStream_WriteChar( self, *s );
+			s -= 1;
 		}
+		if( fg || bg ){
+			if( DaoStream_SetColor( self, fg, bg ) == 0 ) goto WrongColor;
+		}
+		self->format = fmt2->mbs;
+		if( F == 'c' || F == 'd' || F == 'i' || F == 'o' || F == 'x' || F == 'X' ){
+			if( sizeof(daoint) != 4 ) DString_InsertChar( fmt2, DAO_INT_FORMAT[0], fmt2->size-1 );
+			self->format = fmt2->mbs;
+			if( value->type == DAO_NONE || value->type > DAO_DOUBLE ) goto WrongParameter;
+			DaoStream_WriteInt( self, DaoValue_GetInteger( value ) );
+		}else if( toupper( F ) == 'E' || toupper( F ) == 'F' || toupper( F ) == 'G' ){
+			if( value->type == DAO_NONE || value->type > DAO_DOUBLE ) goto WrongParameter;
+			DaoStream_WriteFloat( self, DaoValue_GetDouble( value ) );
+		}else if( F == 's' && value->type == DAO_STRING ){
+			DaoStream_WriteString( self, value->xString.data );
+		}else if( F == 'p' ){
+			DaoStream_WritePointer( self, value );
+		}else if( F == 'a' ){
+			self->format = NULL;
+			DaoValue_Print( value, proc, self, cycData );
+		}else{
+			goto WrongParameter;
+		}
+		self->format = NULL;
+		if( fg || bg ) DaoStream_SetColor( self, NULL, NULL );
+		continue;
+NullParameter:
+		sprintf( message, "%i-th parameter is null!", id );
+		DaoProcess_RaiseException( proc, DAO_WARNING, message );
+		continue;
+WrongColor:
+		sprintf( message, "%i-th parameter has wrong color format!", id );
+		DaoProcess_RaiseException( proc, DAO_WARNING, message );
+		continue;
+WrongParameter:
+		self->format = NULL;
+		if( fg || bg ) DaoStream_SetColor( self, NULL, NULL );
+		sprintf( message, "%i-th parameter has wrong type for format \"%s\"!", id, fmt2->mbs );
+		DaoProcess_RaiseException( proc, DAO_WARNING, message );
 	}
 	DString_Delete( fgcolor );
 	DString_Delete( bgcolor );

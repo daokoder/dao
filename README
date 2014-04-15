@@ -11,6 +11,8 @@ released under the Simplified BSD License.
 
 
 ================================================================
+How to Build?
+-------------
 
 The recommended way to compile Dao is to run the following from
 the shell:
@@ -30,8 +32,10 @@ Then run the following to install:
 
 $ make install
 
+
 ================================================================
-Customized building:
+How to Customize Building?
+--------------------------
 
 Build mode (release, debug or profile) and installation directory
 can be set by:
@@ -45,3 +49,20 @@ $ make -f DAO-DIR/Makefile.daomake PLATFORM SRCDIR=DAO-DIR
 
 Please read Makefile.daomake for more options such as making
 static build and compiling to JavaScript etc.
+
+
+================================================================
+How to Contribute?
+------------------
+
+Contributions to the development of Dao are highly welcome. However,
+if you wish to contribute something to the official code base and/or
+documentations etc., you must agree to transfer the copyright of
+your contributions in whatever form to the copyright holder of the
+Dao programming language to avoid potential copyright issues. Your
+contribution will be properly credited.
+
+Of course, you can also contribute by testing and reporting bugs,
+developing modules, creating packages for popular Linux distributions,
+building and release binaries for some platforms, or even just spreading
+words for Dao:). All contributions in any form are highly appreciated!

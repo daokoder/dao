@@ -57,6 +57,20 @@
 #include<dirent.h>
 #endif
 
+#ifdef LINUX
+#define DAOMAKE_PLATFORM  "linux"
+#elif defined( MAC_OSX )
+#define DAOMAKE_PLATFORM  "macosx"
+#elif defined( FREEBSD )
+#define DAOMAKE_PLATFORM  "freebsd"
+#elif defined( MINIX )
+#define DAOMAKE_PLATFORM  "minix"
+#elif defined( BEOS )
+#define DAOMAKE_PLATFORM  "beos"
+#elif defined( MINGW )
+#define DAOMAKE_PLATFORM  "mingw"
+#endif
+
 
 static DaoVmSpace *vmSpace = NULL;
 
@@ -3344,7 +3358,7 @@ static const char *const daomake_lang_linkers[] =
 int main( int argc, char *argv[] )
 {
 	int i, k, m;
-	char *platform = NULL;
+	char *platform = DAOMAKE_PLATFORM;
 	char *mode = NULL;
 	FILE *fin, *fout;
 	DaoNamespace *nspace;
@@ -3539,7 +3553,7 @@ ErrorInvalidArgValue:
 	Dao_MakePath( vmSpace->daoBinPath, name );
 	DaoVmSpace_AddPath( vmSpace, name->mbs );
 #endif
-	if( platform ){
+	if( platform && *platform ){
 		DaoNamespace *pns;
 		DString_SetMBS( daomake_platform, platform );
 		DString_SetMBS( name, "platforms/" );

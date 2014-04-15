@@ -231,10 +231,12 @@ static int MapColor( const char *mbs )
 	return 254;
 }
 
-void DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor )
+int DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor )
 {
 	static int fg = -1;
 	static int bg = -1;
+	if( fgcolor && fgcolor[0] && MapColor( fgcolor ) >= 254 ) return 0;
+	if( bgcolor && bgcolor[0] && MapColor( bgcolor ) >= 254 ) return 0;
 	if( self->redirect == NULL && self->file == NULL ){
 		/* reset first, because resetting one of foreground and background could reset both: */
 		if( fg >= 0 && (fgcolor == NULL || fgcolor[0] == 0) ) SetCharForeground( self, fg );
@@ -242,10 +244,11 @@ void DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcol
 
 		if( fgcolor && fgcolor[0] ) fg = SetCharForeground( self, MapColor( fgcolor ) );
 		if( bgcolor && bgcolor[0] ) bg = SetCharBackground( self, MapColor( bgcolor ) );
-		return;
+		return 1;
 	}
-	if( self->redirect == NULL || self->redirect->SetColor == NULL ) return;
+	if( self->redirect == NULL || self->redirect->SetColor == NULL ) return 0;
 	self->redirect->SetColor( self->redirect, fgcolor, bgcolor );
+	return 1;
 }
 
 #else
