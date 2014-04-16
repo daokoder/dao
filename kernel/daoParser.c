@@ -5836,13 +5836,15 @@ static DaoEnode DaoParser_ParseParenthesis( DaoParser *self )
 
 	result.prev = self->vmcLast;
 	if( rb > 0 && rb < end && maybeType && tokens[rb]->line == tokens[rb+1]->line ){
-		int count = self->errors->size;
+		int cur, count = self->errors->size;
 		self->curToken = rb + 1;
 		enode = DaoParser_ParsePrimary( self, 0, 0 );
+		cur = self->curToken;
 		if( enode.reg >= 0 ){
 			/* type casting expression */
 			int it, newpos = 0;
 			DaoType *abtp = DaoParser_ParseType( self, start+1, rb-1, & newpos, NULL );
+			self->curToken = cur;
 			if( abtp == NULL || newpos != rb ){
 				GC_IncRC( abtp );
 				GC_DecRC( abtp );

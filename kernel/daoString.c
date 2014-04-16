@@ -388,30 +388,21 @@ static void DMBString_AppendWCS( DString *self, const wchar_t *chs, daoint len )
 	if( len == 0 || chs == NULL ) return;
 	while( chs < end ){
 		const wchar_t *next = chs;
+		char *dst = self->mbs + self->size;
 		if( *chs == L'\0' ){
 			DMBString_AppendChar( self, '\0' );
 			chs += 1;
 			continue;
 		}
 		while( next < end && *next != L'\0' ) next += 1;
-#ifdef WIN32
-		smin = WideCharToMultiByte( CP_UTF8, 0, chs, -1, self->mbs + self->size, self->bufSize - self->size, NULL, 0 );
-		if( smin > 0 ){
-			self->size += smin-1;
-			chs = next;
-		}else{
-			chs += 1;
-		}
-#else
 		memset( & state, 0, sizeof(mbstate_t) );
-		smin = wcsrtombs( self->mbs + self->size, (const wchar_t**)& chs, self->bufSize - self->size, & state );
+		smin = wcsrtombs( dst, (const wchar_t**)& chs, self->bufSize - self->size, & state );
 		if( smin > 0 ){
 			self->size += smin;
 		}else if( chs != NULL ){
 			chs += 1;
 		}
 		if( chs == NULL ) chs = next;
-#endif
 	}
 	self->mbs[ self->size ] = 0;
 	DString_Reset( self, self->size );
@@ -434,30 +425,21 @@ static void DWCString_AppendMBS( DString *self, const char *chs, daoint len )
 	if( len == 0 || chs == NULL ) return;
 	while( chs < end ){
 		const char *next = chs;
+		wchar_t *dst = self->wcs + self->size;
 		if( *chs == '\0' ){
 			DWCString_AppendWChar( self, L'\0' );
 			chs += 1;
 			continue;
 		}
 		while( next < end && *next != '\0' ) next += 1;
-#ifdef WIN32
-		smin = MultiByteToWideChar( CP_UTF8, 0, chs, -1, self->wcs + self->size, self->bufSize - self->size );
-		if( smin > 0 ){
-			self->size += smin-1;
-			chs = next;
-		}else{
-			chs += 1;
-		}
-#else
 		memset( & state, 0, sizeof(mbstate_t) );
-		smin = mbsrtowcs( self->wcs + self->size, (const char**)& chs, self->bufSize - self->size, & state );
+		smin = mbsrtowcs( dst, (const char**)& chs, self->bufSize - self->size, & state );
 		if( smin > 0 ){
 			self->size += smin;
 		}else if( chs != NULL ){
 			chs += 1;
 		}
 		if( chs == NULL ) chs = next;
-#endif
 	}
 	self->wcs[ self->size ] = 0;
 	DString_Reset( self, self->size );
@@ -1054,15 +1036,16 @@ void DString_Add( DString *self, DString *left, DString *right )
 }
 void DString_Chop( DString *self )
 {
+	if( self->size == 0 ) return;
 	if( self->sharing ) DString_Detach( self, self->size );
 	if( self->mbs ){
-		if( self->size > 0 && self->mbs[ self->size-1 ] == EOF  ) self->mbs[ --self->size ] = 0;
-		if( self->size > 0 && self->mbs[ self->size-1 ] == '\n' ) self->mbs[ --self->size ] = 0;
-		if( self->size > 0 && self->mbs[ self->size-1 ] == '\r' ) self->mbs[ --self->size ] = 0;
+		if( self->mbs[ self->size-1 ] == EOF  ) self->mbs[ --self->size ] = 0;
+		if( self->mbs[ self->size-1 ] == '\n' ) self->mbs[ --self->size ] = 0;
+		if( self->mbs[ self->size-1 ] == '\r' ) self->mbs[ --self->size ] = 0;
 	}else{
-		if( self->size > 0 && self->wcs[ self->size-1 ] == EOF   ) self->wcs[ --self->size ] = 0;
-		if( self->size > 0 && self->wcs[ self->size-1 ] == L'\n' ) self->wcs[ --self->size ] = 0;
-		if( self->size > 0 && self->wcs[ self->size-1 ] == L'\r' ) self->wcs[ --self->size ] = 0;
+		if( self->wcs[ self->size-1 ] == EOF   ) self->wcs[ --self->size ] = 0;
+		if( self->wcs[ self->size-1 ] == L'\n' ) self->wcs[ --self->size ] = 0;
+		if( self->wcs[ self->size-1 ] == L'\r' ) self->wcs[ --self->size ] = 0;
 	}
 }
 void DString_Trim( DString *self )
@@ -1437,90 +1420,47 @@ void DString_AppendPathSep( DString *self )
 }
 
 
-#ifdef WIN32
-
-int DWCString_AppendUTF8( DString *self, const char *chs, daoint len )
-{
-	const char *end = chs + len;
-	daoint smin;
-
-	DString_Reserve( self, self->size + len + 2 );
-	if( len == 0 || chs == NULL ) return 0;
-	while( chs < end ){
-		const char *next = chs;
-		if( *chs == '\0' ){
-			DWCString_AppendWChar( self, L'\0' );
-			chs += 1;
-			continue;
-		}
-		while( next < end && *next != '\0' ) next += 1;
-		smin = MultiByteToWideChar( CP_UTF8, 0, chs, -1, self->wcs + self->size, self->bufSize - self->size );
-		if( smin == 0 ) return 0;
-		self->size += smin-1;
-		chs = next;
-	}
-	self->wcs[ self->size ] = 0;
-	DString_Reset( self, self->size );
-	return 1;
-}
-
-int DString_FromUTF8( DString *self, DString *utf8 )
-{
-	int ret, mbs = self->mbs != NULL;
-	if( utf8->mbs == NULL ) return 0;
-	DString_Reset( self, 0 );
-	DString_ToWCS( self );
-	ret = DWCString_AppendUTF8( self, utf8->mbs, utf8->size );
-	if( mbs ) DString_ToMBS( self );
-	return ret;
-}
-
-#elif defined(DAO_USE_ICONV)
-
-#include<iconv.h>
+#define IsU8Trail( ch )          ((uchar_t)ch >> 6 == 0x2)
+#define GetU8Trail( ch, shift )  (((uint_t)ch & 0x3F) << 6*shift)
 
 int DString_FromUTF8( DString *self, DString *utf8 )
 {
 	char *chs = utf8->mbs;
 	char *end = chs + utf8->size;
-	size_t ret, ins, outs, wcs = self->wcs != NULL;
-	iconv_t state = iconv_open( "", "UTF-8" );
 
-	if( utf8->mbs == NULL ) return 0;
 	DString_Reset( self, 0 );
-	DString_ToMBS( self );
 
-	DString_Reserve( self, self->size + 4*utf8->size );
 	while( chs < end ){
-		char *next = chs;
-		char *outbuf = self->mbs + self->size;
-		if( *chs == '\0' ){
-			DString_AppendChar( self, '\0' );
+		uchar_t ch = *chs;
+		wchar_t cp = ch;
+		if( ch >> 7 == 0 ){ /* 0xxxxxxx */
 			chs += 1;
-			continue;
+        }else if ( ch >> 5 == 0x6 ){ /* 110xxxxx 10xxxxxx */
+			if( (chs+1) >= end || ! IsU8Trail( chs[1] ) ) return 0;
+			cp = ((uint_t)(ch&0x1F) << 6) + GetU8Trail( chs[1], 0 );
+			chs += 2;
+        }else if ( ch >> 4 == 0xE ){ /* 1110xxxx 10xxxxxx 10xxxxxx */
+			if( (chs+2) >= end || ! IsU8Trail( chs[1] ) || ! IsU8Trail( chs[2] ) ) return 0;
+			cp = ((uint_t)(ch&0xF) << 12) + GetU8Trail( chs[1], 1 ) + GetU8Trail( chs[2], 0 );
+			chs += 3;
+        }else if ( ch >> 3 == 0x1E ){ /* 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx */
+			if( (chs+3) >= end || ! IsU8Trail( chs[1] ) || ! IsU8Trail( chs[2] ) ) return 0;
+			if( ! IsU8Trail( chs[3] ) ) return 0;
+			cp = ((uint_t)(ch&0x7) << 18) + GetU8Trail( chs[1], 2 ) + GetU8Trail( chs[2], 1 );
+			cp += GetU8Trail( chs[3], 0 );
+            chs += 4;
+        }else{
+            return 0;
 		}
-		while( next < end && *next != '\0' ) next += 1;
-
-		ins = next - chs;
-		outs = self->bufSize - self->size;
-		ret = iconv( state, & chs, & ins, & outbuf, & outs );
-		if( ret == (size_t)-1 ) return 0;
-		self->size = self->bufSize - outs;
-		chs = next;
+        if( sizeof(wchar_t) == 4 ){ /* utf-32 */
+            DString_AppendWChar( self, cp );
+        }else if( cp <= 0xFFFF ){ /* utf-16, bmp */
+			DString_AppendWChar( self, cp );
+		}else{ /* utf-16, surrogates */
+			cp -= 0x10000;
+			DString_AppendWChar( self, (wchar_t)( ( cp >> 10 ) + 0xD800 ) );
+			DString_AppendWChar( self, (wchar_t)( ( cp & 0x3FF ) + 0xDC00 ) );
+		}
 	}
-	self->mbs[ self->size ] = 0;
-	DString_Reset( self, self->size );
-
-	if( wcs ) DString_ToWCS( self );
 	return 1;
 }
-
-#else
-
-int DString_FromUTF8( DString *self, DString *utf8 )
-{
-	DString_Assign( self, utf8 ); /* Do nothing; */
-	return 1;
-}
-
-#endif

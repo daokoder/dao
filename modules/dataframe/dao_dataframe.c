@@ -1331,7 +1331,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 	}
 
 	for(k=0; k<K; ++k){
-		daoint kk = DaoSlice_GetIndex( self->slices, 3, k );
+		daoint kk = DaoSlice_GetIndex( self->slices, 2, k );
 		DaoStream_WriteMBS( stream, "Depth: " );
 		DaoStream_WriteInt( stream, kk );
 		DaoStream_WriteMBS( stream, ";" );

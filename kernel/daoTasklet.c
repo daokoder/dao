@@ -1041,7 +1041,7 @@ static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
 	DaoChannel *self = (DaoChannel*) par[0];
 	float timeout = par[2]->xFloat.value;
 
-	DaoProcess_PutInteger( proc, 0 );
+	DaoProcess_PutInteger( proc, 1 );
 	if( DaoProcess_CheckCB( proc, "cannot send/block inside code section method" ) ) return;
 	if( self->cap <= 0 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "channel is closed" );

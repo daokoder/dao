@@ -1120,7 +1120,7 @@ CallEntry:
 			DaoProcess_PutInteger( self, future->precond->state == DAO_CALL_FINISHED );
 			break;
 		case DAO_PAUSE_CHANNEL_SEND :
-			DaoProcess_PutInteger( self, future->timeout );
+			DaoProcess_PutInteger( self, future->timeout == 0 );
 			break;
 		case DAO_PAUSE_CHANNEL_RECEIVE :
 			tuple = DaoProcess_PutTuple( self, 0 );
