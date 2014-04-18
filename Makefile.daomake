@@ -1,5 +1,5 @@
 
-PLATS = linux macosx freebsd mingw minix haiku
+PLATS = linux macosx freebsd openbsd mingw minix haiku
 
 # Set build mode: release, debug or profile;
 MODE ?= release

@@ -34,6 +34,7 @@ where PLATFORM can be one of the followings:
 -- linux
 -- macosx
 -- freebsd
+-- openbsd
 -- mingw
 -- minix
 -- haiku

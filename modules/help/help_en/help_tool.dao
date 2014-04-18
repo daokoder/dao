@@ -99,6 +99,7 @@ where PLATFORM can be one of the followings:
 -- linux
 -- macosx
 -- freebsd
+-- openbsd
 -- mingw
 -- minix
 -- haiku
@@ -217,6 +218,7 @@ DaoMake Methods
 --@[code]IsMacOSX()=>int@[code]
 --@[code]IsBSD()=>int@[code]
 --@[code]IsFreeBSD()=>int@[code]
+--@[code]IsOpenBSD()=>int@[code]
 --@[code]IsMinix()=>int@[code]
 --@[code]IsBeOS()=>int@[code]
 --@[code]IsHaiku()=>int@[code]
