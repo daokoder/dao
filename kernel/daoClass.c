@@ -1139,7 +1139,8 @@ void DaoClass_ResetAttributes( DaoClass *self )
 		id = LOOKUP_ID( node->value.pInt );
 		k = self->constants->items.pConst[id]->value->type;
 		if( k != DAO_ROUTINE ) continue;
-		self->attribs |= DAO_OPER_OVERLOADED | (DAO_OPER_OVERLOADED<<(i-DVM_NOT+1));
+		self->attribs |= DAO_OPER_OVERLOADED;
+		break;
 	}
 	DString_Delete( mbs );
 }

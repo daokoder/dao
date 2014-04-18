@@ -384,7 +384,8 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		for(i=DVM_NOT; i<=DVM_BITRIT; i++){
 			DString_SetMBS( name1, daoBitBoolArithOpers[i-DVM_NOT] );
 			if( DMap_Find( methods, name1 ) == NULL ) continue;
-			typer->core->kernel->attribs |= DAO_OPER_OVERLOADED | (DVM_NOT<<(i-DVM_NOT+1));
+			typer->core->kernel->attribs |= DAO_OPER_OVERLOADED;
+			break;
 		}
 		DString_Delete( name1 );
 		DString_Delete( name2 );

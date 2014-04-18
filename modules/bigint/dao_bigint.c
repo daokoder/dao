@@ -41,6 +41,7 @@
 
 typedef signed char        schar_t;
 typedef struct DaoxBigInt  DaoxBigInt;
+typedef struct DaoxBigIntBuffer DaoxBigIntBuffer;
 
 /* bit integer */
 struct DaoxBigInt
@@ -69,9 +70,9 @@ DAO_DLL int DaoxBigInt_Compare( DaoxBigInt *x, DaoxBigInt *y );
 DAO_DLL void DaoxBigInt_Move( DaoxBigInt *z, DaoxBigInt *x );
 DAO_DLL void DaoxBigInt_Add( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y );
 DAO_DLL void DaoxBigInt_Sub( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y );
-DAO_DLL void DaoxBigInt_Mul( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y );
+DAO_DLL void DaoxBigInt_Mul( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, DaoxBigIntBuffer *b );
 DAO_DLL void DaoxBigInt_Div( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, DaoxBigInt *r );
-DAO_DLL void DaoxBigInt_Pow( DaoxBigInt *z, DaoxBigInt *x, daoint n );
+DAO_DLL void DaoxBigInt_Pow( DaoxBigInt *z, DaoxBigInt *x, daoint n, DaoxBigIntBuffer *b );
 DAO_DLL void DaoxBigInt_AddInt( DaoxBigInt *z, DaoxBigInt *x, daoint y, DaoxBigInt *buf );
 DAO_DLL void DaoxBigInt_MulInt( DaoxBigInt *z, DaoxBigInt *x, daoint y );
 DAO_DLL void DaoxBigInt_Flip( DaoxBigInt *self );
@@ -92,11 +93,57 @@ DAO_DLL int DaoxBigInt_CompareToInteger( DaoxBigInt *self, daoint x );
 DAO_DLL int DaoxBigInt_CompareToDouble( DaoxBigInt *self, double x );
 
 DAO_DLL void DaoxBigInt_UAdd( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y );
-DAO_DLL void DaoxBigInt_UMul( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y );
+DAO_DLL void DaoxBigInt_UMul( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, DaoxBigIntBuffer *b );
 DAO_DLL int DaoxBigInt_UCompare( DaoxBigInt *x, DaoxBigInt *y );
 DAO_DLL daoint DaoxBigInt_NormCount( DaoxBigInt *self );
 #define DaoxBigInt_Append  DaoxBigInt_PushBack
 
+
+struct DaoxBigIntBuffer
+{
+	DArray *coms;
+	DArray *ints;
+};
+static DaoxBigIntBuffer* DaoxBigIntBuffer_New()
+{
+	DaoxBigIntBuffer *self = (DaoxBigIntBuffer*) dao_malloc( sizeof(DaoxBigIntBuffer) );
+	self->coms = DArray_New(0);
+	self->ints = DArray_New(0);
+	return self;
+}
+static void DaoxBigIntBuffer_Delete( DaoxBigIntBuffer *self )
+{
+	int i;
+	for(i=0; i<self->coms->size; ++i){
+		DVector_Delete( (DVector*) self->coms->items.pVoid[i] );
+	}
+	for(i=0; i<self->ints->size; ++i){
+		DaoxBigInt_Delete( (DaoxBigInt*) self->ints->items.pVoid[i] );
+	}
+	DArray_Delete( self->coms );
+	DArray_Delete( self->ints );
+	dao_free( self );
+}
+static DVector* DaoxBigIntBuffer_NewVector( DaoxBigIntBuffer *self )
+{
+	DVector *vec;
+	if( self->coms->size ) return (DVector*) DArray_PopBack( self->coms );
+	return DVector_New( sizeof(complex16) );
+}
+static DaoxBigInt* DaoxBigIntBuffer_NewBigInt( DaoxBigIntBuffer *self )
+{
+	DaoxBigInt *bigint;
+	if( self->ints->size ) return (DaoxBigInt*) DArray_PopBack( self->ints );
+	return DaoxBigInt_New();
+}
+static void DaoxBigIntBuffer_FreeVector( DaoxBigIntBuffer *self, DVector *vec )
+{
+	DArray_Append( self->coms, vec );
+}
+static void DaoxBigIntBuffer_FreeBigInt( DaoxBigIntBuffer *self, DaoxBigInt *bigint )
+{
+	DArray_Append( self->ints, bigint );
+}
 
 
 #define PI2 6.283185307179586
@@ -361,7 +408,12 @@ void DaoxBigInt_Move( DaoxBigInt *z, DaoxBigInt *x )
 		zbuf[0] -= 1;
 		if( zbuf[0] ==0 ) dao_free( zbuf );
 	}
-	*z = *x;
+	z->data = x->data;
+	z->base = x->base;
+	z->sign = x->sign;
+	z->offset = x->offset;
+	z->size = x->size;
+	z->bufSize = x->bufSize;
 	if( xbuf ) xbuf[0] += 1;
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & mutex_long_sharing );
@@ -522,47 +574,25 @@ void DaoxBigInt_Sub( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y )
 }
 static void DaoxBigInt_MulAdd( DaoxBigInt *z, DaoxBigInt *x, uchar_t y, short m );
 void DaoxBigInt_UMulDigitX( DaoxBigInt *z, DaoxBigInt *x, uchar_t digit );
-static void DaoxBigInt_UMulSimple( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y )
+static void DaoxBigInt_UMulSimple( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, DaoxBigIntBuffer *buffer )
 {
 	daoint i, n = x->size + y->size;
 	DaoxBigInt_Detach( z );
 	if( z == x || z == y ){
-		DaoxBigInt *z2 = DaoxBigInt_New();
-		DaoxBigInt_UMulSimple( z2, x, y );
+		DaoxBigIntBuffer *inbuf = buffer;
+		DaoxBigInt *z2;
+		if( buffer == NULL ) buffer = DaoxBigIntBuffer_New();
+		z2 = DaoxBigIntBuffer_NewBigInt( buffer );
+		DaoxBigInt_UMulSimple( z2, x, y, buffer );
 		DaoxBigInt_Move( z, z2 );
-		DaoxBigInt_Delete( z2 );
+		DaoxBigIntBuffer_FreeBigInt( buffer, z2 );
+		if( buffer != inbuf ) DaoxBigIntBuffer_Delete( buffer );
 		return;
 	}
 	if( z->bufSize < n ) DaoxBigInt_Reserve( z, n );
 	z->size = n;
 	memset( z->data, 0, z->size * sizeof(uchar_t) );
 	for(i=0; i<x->size; i++) DaoxBigInt_MulAdd( z, y, x->data[i], i );
-}
-typedef struct DaoxBigIntBuffer DaoxBigIntBuffer;
-struct DaoxBigIntBuffer
-{
-	DaoxBigInt *x0, *x1;
-	DaoxBigInt *y0, *y1;
-	DaoxBigInt *z0, *z1, *z2;
-};
-static DaoxBigIntBuffer* DaoxBigIntBuffer_New( int max )
-{
-	DaoxBigIntBuffer *self = (DaoxBigIntBuffer*) dao_malloc( sizeof(DaoxBigIntBuffer) );
-	self->x0 = DaoxBigInt_New();
-	self->x1 = DaoxBigInt_New();
-	self->y0 = DaoxBigInt_New();
-	self->y1 = DaoxBigInt_New();
-	self->z0 = DaoxBigInt_New();
-	self->z1 = DaoxBigInt_New();
-	self->z2 = DaoxBigInt_New();
-	DaoxBigInt_Resize( self->x0, max );
-	DaoxBigInt_Resize( self->x1, max );
-	DaoxBigInt_Resize( self->y0, max );
-	DaoxBigInt_Resize( self->y1, max );
-	DaoxBigInt_Resize( self->z0, max );
-	DaoxBigInt_Resize( self->z1, max );
-	DaoxBigInt_Resize( self->z2, max );
-	return self;
 }
 static void DaoxBigInt_Split( DaoxBigInt *x, DaoxBigInt *x1, DaoxBigInt *x0, daoint m )
 {
@@ -573,17 +603,6 @@ static void DaoxBigInt_Split( DaoxBigInt *x, DaoxBigInt *x1, DaoxBigInt *x0, dao
 	memmove( x1->data, x->data + m, (size-m) * sizeof(uchar_t) );
 	x0->size = m;
 	x1->size = size - m;
-}
-static void DaoxBigIntBuffer_Delete( DaoxBigIntBuffer *self )
-{
-	DaoxBigInt_Delete( self->x0 );
-	DaoxBigInt_Delete( self->x1 );
-	DaoxBigInt_Delete( self->y0 );
-	DaoxBigInt_Delete( self->y1 );
-	DaoxBigInt_Delete( self->z0 );
-	DaoxBigInt_Delete( self->z1 );
-	DaoxBigInt_Delete( self->z2 );
-	dao_free( self );
 }
 static void LongCat( DaoxBigInt *z, DaoxBigInt *x1, daoint m, DaoxBigInt *x0 )
 {
@@ -645,97 +664,11 @@ static void LongZ1( DaoxBigInt *z1, DaoxBigInt *z0, DaoxBigInt *z2 )
 	while( nz1 && dz1[ nz1-1 ] ==0 ) nz1 --;
 	z1->size = nz1;
 }
-/* Karatsuba's algorithm */
-static void DaoxBigInt_UMulK( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, DaoxBigIntBuffer **bufs, int dep )
+static void DaoxBigInt_UMulFFT( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, DaoxBigIntBuffer *buffer )
 {
-	DaoxBigIntBuffer **inbufs = bufs;
-	DaoxBigIntBuffer  *buf;
-	DaoxBigInt *x0, *x1, *y0, *y1;
-	DaoxBigInt *z0, *z1, *z2;
-	uchar_t *dx = x->data;
-	uchar_t *dy = y->data;
-	daoint nx = x->size;
-	daoint ny = y->size;
-	daoint m = 0;
-	/*
-	   printf( "nx = %i,  ny = %i,  dep = %i\n", nx, ny, dep );
-	   DaoxBigInt_Print( x, NULL );
-	   DaoxBigInt_Print( y, NULL );
-	 */
-	DaoxBigInt_Detach( z );
-	if( (nx|ny) <= 1 ){
-		if( (nx&ny) == 1 ){
-			int prod = dx[0] * dy[0];
-			if( z->bufSize < 2 ) DaoxBigInt_Reserve( z, 2 );
-			z->data[0] = prod & LONG_MASK;
-			z->data[1] = prod >> LONG_BITS;
-			z->size = prod >> LONG_BITS ? 2 : (prod ? 1 : 0);
-		}else{
-			z->size = 0;
-		}
-		return;
-	}else if( nx == 1 ){
-		DaoxBigInt_UMulDigitX( z, y, dx[0] );
-		return;
-	}else if( ny == 1 ){
-		DaoxBigInt_UMulDigitX( z, x, dy[0] );
-		return;
-	}else if( nx <= 4 ){
-		DaoxBigInt_UMulSimple( z, x, y );
-		return;
-	}else if( ny <= 4 ){
-		DaoxBigInt_UMulSimple( z, y, x );
-		return;
-	}else if( nx <= 20 && ny <= 20 ){
-		DaoxBigInt_UMulSimple( z, x, y );
-		return;
-	}
-	if( nx > ny ){
-		DaoxBigInt *tmp = x;
-		m = nx;  nx = ny;  ny = m;
-		x = y;  y = tmp;
-	}
-	if( bufs == NULL ){
-		int maxdep = 2 * (1 + log( ny ) / log(2));
-		bufs = (DaoxBigIntBuffer**) dao_calloc( maxdep, sizeof(DaoxBigIntBuffer*) );
-	}
-	if( bufs[dep] ==NULL ) bufs[dep] = DaoxBigIntBuffer_New( ny+1 );
-	buf = bufs[ dep ++ ];
-	x0 = buf->x0; x1 = buf->x1;
-	y0 = buf->y0; y1 = buf->y1;
-	z0 = buf->z0; z1 = buf->z1; z2 = buf->z2;
-	m = ny>>1;
-	DaoxBigInt_Split( y, y1, y0, m ); /* y = y1 * B^m + y0; */
-	if( nx + nx < ny ){
-		DaoxBigInt_UMulK( y1, x, y1, bufs, dep ); /* y1 = x * y1; */
-		DaoxBigInt_UMulK( y0, x, y0, bufs, dep ); /* y0 = x * y1; */
-		LongCat( z, y1, m, y0 ); /* z = y1 * B^m + y0; */
-	}else if( x == y ){
-		DaoxBigInt_UMulK( z1, y0, y1, bufs, dep ); /* z1 = y0 * y1; */
-		DaoxBigInt_UMulK( z2, y1, y1, bufs, dep ); /* y1 = y1 * y1; */
-		DaoxBigInt_UMulK( z0, y0, y0, bufs, dep ); /* y0 = y0 * y0; */
-		DaoxBigInt_UAdd( z1, z1, z1 ); /* z1 = 2 * z1; */
-		LongMulSum( z, z2, z1, z0, m );
-	}else{
-		DaoxBigInt_Split( x, x1, x0, m ); /* x = x1 * B^m + x0; */
-		DaoxBigInt_UMulK( z2, x1, y1, bufs, dep ); /* z2 = x1 * y1; */
-		DaoxBigInt_UMulK( z0, x0, y0, bufs, dep ); /* z0 = x0 * y0; */
-		DaoxBigInt_UAdd( x1, x1, x0 ); /* x1 = x1 + x0 */
-		DaoxBigInt_UAdd( y1, y1, y0 ); /* y1 = y1 + y0 */
-		DaoxBigInt_UMulK( z1, x1, y1, bufs, dep ); /* z1 = x1 * y1; */
-		LongZ1( z1, z0, z2 ); /* (x1+x0)*(y1+y0)-z0-z2; */
-		LongMulSum( z, z2, z1, z0, m ); /* z2 * B^2m + z1 * B^m + z0; */
-	}
-	if( bufs != inbufs ){
-		int i, maxdep = 2*(1 + log( ny ) / log(2));
-		for(i=0; i<maxdep; i++) if( bufs[i] ) DaoxBigIntBuffer_Delete( bufs[i] );
-		free( bufs );
-	}
-	z->sign = x->sign * y->sign;
-}
-void DaoxBigInt_UMulFFT( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y )
-{
-	complex16 *cx, *cy = NULL;
+	DVector *vx = DaoxBigIntBuffer_NewVector( buffer );
+	DVector *vy = DaoxBigIntBuffer_NewVector( buffer );
+	complex16 *cx, *cy;
 	uchar_t *dx = x->data;
 	uchar_t *dy = y->data;
 	daoint nx = x->size;
@@ -746,18 +679,21 @@ void DaoxBigInt_UMulFFT( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y )
 	int mc = 0;
 	while( (nc>>1) < max ) nc <<= 1, mc ++;
 	/* printf( "nc = %i, mc = %i, max = %i\n", nc, mc, max ); */
-	cx = (complex16*) dao_calloc( nc, sizeof(complex16) );
+	DVector_Reserve( vx, nc );
+	cx = cy = vx->data.complexes;
+	memset( cx, 0, nc*sizeof(complex16) );
 	for(i=0; i<nx; i++) cx[i].real = dx[i];
 	dao_fft16( cx, mc, -1 );
 	if( x == y ){
 		cy = cx;
 	}else{
-		cy = (complex16*) dao_calloc( nc, sizeof(complex16) );
+		DVector_Reserve( vy, nc );
+		cy = vy->data.complexes;
+		memset( cy, 0, nc*sizeof(complex16) );
 		for(i=0; i<ny; i++) cy[i].real = dy[i];
 		dao_fft16( cy, mc, -1 );
 	}
 	for(i=0; i<nc; i++) complex16_mul( cx[i], cx[i], cy[i] );
-	if( x != y ) dao_free( cy );
 	dao_fft16( cx, mc, 1 );
 	DaoxBigInt_Resize( z, nc );
 	memset( z->data, 0, nc*sizeof(uchar_t) );
@@ -768,9 +704,10 @@ void DaoxBigInt_UMulFFT( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y )
 	}
 	while( nc && z->data[nc-1] ==0 ) nc --;
 	DaoxBigInt_Resize( z, nc );
-	dao_free( cx );
+	DaoxBigIntBuffer_FreeVector( buffer, vx );
+	DaoxBigIntBuffer_FreeVector( buffer, vy );
 }
-void DaoxBigInt_UMul( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y )
+void DaoxBigInt_UMul( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, DaoxBigIntBuffer *buffer )
 {
 	uchar_t *dx = x->data;
 	uchar_t *dy = y->data;
@@ -800,13 +737,13 @@ void DaoxBigInt_UMul( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y )
 		DaoxBigInt_UMulDigitX( z, x, dy[0] );
 		return;
 	}else if( nx <= 4 ){
-		DaoxBigInt_UMulSimple( z, x, y );
+		DaoxBigInt_UMulSimple( z, x, y, buffer );
 		return;
 	}else if( ny <= 4 ){
-		DaoxBigInt_UMulSimple( z, y, x );
+		DaoxBigInt_UMulSimple( z, y, x, buffer );
 		return;
 	}else if( nx < 16 && ny < 16 ){
-		DaoxBigInt_UMulSimple( z, x, y );
+		DaoxBigInt_UMulSimple( z, x, y, buffer );
 		return;
 #if 0
 	}else if( nx < 64 && nx < 64 ){
@@ -816,15 +753,18 @@ void DaoxBigInt_UMul( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y )
 #if 0
 	DaoxBigInt_UMulK( z, x, y, NULL, 0 );
 #else
-	DaoxBigInt_UMulFFT( z, x, y );
+	DaoxBigInt_UMulFFT( z, x, y, buffer );
 #endif
 }
-void DaoxBigInt_Mul( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y )
+void DaoxBigInt_Mul( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, DaoxBigIntBuffer *buffer )
 {
-	DaoxBigInt_UMul( z, x, y );
+	DaoxBigIntBuffer *inbuf = buffer;
+	if( buffer == NULL ) buffer = DaoxBigIntBuffer_New();
+	DaoxBigInt_UMul( z, x, y, buffer );
 	DaoxBigInt_Normalize2( z );
 	/* DaoxBigInt_UMulK( z, x, y, NULL, 0 ); */
 	z->sign = x->sign * y->sign;
+	if( buffer != inbuf ) DaoxBigIntBuffer_Delete( buffer );
 }
 daoint DaoxBigInt_NormCount( DaoxBigInt *self )
 {
@@ -956,8 +896,9 @@ void DaoxBigInt_Div( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, DaoxBigInt *r 
 	DaoxBigInt_Normalize2( y );
 	DaoxBigInt_Normalize2( r );
 }
-void DaoxBigInt_Pow( DaoxBigInt *z, DaoxBigInt *x, daoint n )
+void DaoxBigInt_Pow( DaoxBigInt *z, DaoxBigInt *x, daoint n, DaoxBigIntBuffer *buffer )
 {
+	DaoxBigIntBuffer *inbuf = buffer;
 	daoint m = 1;
 	if( n == 1 ){
 		DaoxBigInt_Move( z, x );
@@ -975,20 +916,24 @@ void DaoxBigInt_Pow( DaoxBigInt *z, DaoxBigInt *x, daoint n )
 		z->sign = n%2 ? 1 : x->sign;
 		return;
 	}else if( n == 2 ){
-		DaoxBigInt_Mul( z, x, x );
+		if( buffer == NULL ) buffer = DaoxBigIntBuffer_New();
+		DaoxBigInt_Mul( z, x, x, buffer );
+		if( buffer != inbuf ) DaoxBigIntBuffer_Delete( buffer );
 		return;
 	}
+	if( buffer == NULL ) buffer = DaoxBigIntBuffer_New();
 	DaoxBigInt_Copy( z, x );
 	while( 2*m <= n ){
-		DaoxBigInt_Mul( z, z, z );
+		DaoxBigInt_Mul( z, z, z, buffer );
 		m *= 2;
 	}
 	if( m < n ){
 		DaoxBigInt *tmp = DaoxBigInt_New();
-		DaoxBigInt_Pow( tmp, x, n-m );
-		DaoxBigInt_Mul( z, z, tmp );
+		DaoxBigInt_Pow( tmp, x, n-m, buffer );
+		DaoxBigInt_Mul( z, z, tmp, buffer );
 		DaoxBigInt_Delete( tmp );
 	}
+	if( buffer != inbuf ) DaoxBigIntBuffer_Delete( buffer );
 }
 static void LongMulInt( DaoxBigInt *z, DaoxBigInt *x, int y, int base )
 {
@@ -1533,10 +1478,10 @@ static void BIGINT_BinaryOper1( DaoProcess *proc, DaoValue *p[], int N, int oper
 	switch( oper ){
 	case DVM_ADD : DaoxBigInt_Add( C, A, B ); break;
 	case DVM_SUB : DaoxBigInt_Sub( C, A, B ); break;
-	case DVM_MUL : DaoxBigInt_Mul( C, A, B ); break;
+	case DVM_MUL : DaoxBigInt_Mul( C, A, B, NULL ); break;
 	case DVM_DIV : DaoProcess_LongDiv( proc, A, B, C, B2 ); break;
 	case DVM_MOD : DaoProcess_LongDiv( proc, A, B, B2, C ); break;
-	case DVM_POW : DaoxBigInt_Pow( C, A, DaoValue_GetInteger( p[1] ) ); break;
+	case DVM_POW : DaoxBigInt_Pow( C, A, DaoValue_GetInteger( p[1] ), NULL ); break;
 	default: break;
 	}
 	DaoxBigInt_Delete( B );
@@ -1617,10 +1562,10 @@ static void BIGINT_BinaryOper2( DaoProcess *proc, DaoValue *p[], int N, int oper
 	switch( oper ){
 	case DVM_ADD : DaoxBigInt_Add( C, A, B ); break;
 	case DVM_SUB : DaoxBigInt_Sub( C, A, B ); break;
-	case DVM_MUL : DaoxBigInt_Mul( C, A, B ); break;
+	case DVM_MUL : DaoxBigInt_Mul( C, A, B, NULL ); break;
 	case DVM_DIV : DaoProcess_LongDiv( proc, A, B, C, B2 ); break;
 	case DVM_MOD : DaoProcess_LongDiv( proc, A, B, B2, C ); break;
-	case DVM_POW : DaoxBigInt_Pow( C, A, DaoxBigInt_ToInteger( B ) ); break;
+	case DVM_POW : DaoxBigInt_Pow( C, A, DaoxBigInt_ToInteger( B ), NULL ); break;
 	default: break;
 	}
 	DaoxBigInt_Delete( B2 );
@@ -1702,10 +1647,10 @@ static void BIGINT_BinaryOper3( DaoProcess *proc, DaoValue *p[], int N, int oper
 	switch( oper ){
 	case DVM_ADD : DaoxBigInt_Add( C, A, B ); break;
 	case DVM_SUB : DaoxBigInt_Sub( C, A, B ); break;
-	case DVM_MUL : DaoxBigInt_Mul( C, A, B ); break;
+	case DVM_MUL : DaoxBigInt_Mul( C, A, B, NULL ); break;
 	case DVM_DIV : DaoProcess_LongDiv( proc, A, B, C, B2 ); break;
 	case DVM_MOD : DaoProcess_LongDiv( proc, A, B, B2, C ); break;
-	case DVM_POW : DaoxBigInt_Pow( C, A, DaoValue_GetInteger( p[2] ) ); break;
+	case DVM_POW : DaoxBigInt_Pow( C, A, DaoValue_GetInteger( p[2] ), NULL ); break;
 	default: break;
 	}
 	DaoxBigInt_Delete( B );
@@ -1745,10 +1690,10 @@ static void BIGINT_BinaryOper4( DaoProcess *proc, DaoValue *p[], int N, int oper
 	switch( oper ){
 	case DVM_ADD : DaoxBigInt_Add( C, A, B ); break;
 	case DVM_SUB : DaoxBigInt_Sub( C, A, B ); break;
-	case DVM_MUL : DaoxBigInt_Mul( C, A, B ); break;
+	case DVM_MUL : DaoxBigInt_Mul( C, A, B, NULL ); break;
 	case DVM_DIV : DaoProcess_LongDiv( proc, A, B, C, B2 ); break;
 	case DVM_MOD : DaoProcess_LongDiv( proc, A, B, B2, C ); break;
-	case DVM_POW : DaoxBigInt_Pow( C, A, DaoxBigInt_ToInteger( B ) ); break;
+	case DVM_POW : DaoxBigInt_Pow( C, A, DaoxBigInt_ToInteger( B ), NULL ); break;
 	default: break;
 	}
 	DaoxBigInt_Delete( B2 );
