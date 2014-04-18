@@ -4106,11 +4106,6 @@ DecoratorError:
 				return 0;
 			}
 			inode->jumpTrue = tki == DKEY_BREAK ? opening->jumpFalse : opening->next;
-			if( opening->c == DVM_SECT ){
-				inode->code = DVM_GOTOX;
-				inode->a = tki == DKEY_BREAK;
-				inode->jumpTrue = opening->jumpFalse;
-			}
 			if( inode->jumpTrue->code == DVM_SWITCH ) inode->jumpTrue = inode->jumpTrue->jumpFalse;
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			start += 1;
@@ -4568,7 +4563,6 @@ static int DaoParser_SetupBranching( DaoParser *self )
 		case DVM_NOP : break;
 		case DVM_TEST   : it->b = it->jumpFalse->index; break;
 		case DVM_GOTO   : it->b = it->jumpTrue->index;  break;
-		case DVM_GOTOX  : it->b = it->jumpTrue->index;  break;
 		case DVM_SWITCH : it->b = it->jumpFalse->index; break;
 		case DVM_CASE   : it->b = it->jumpTrue->index;  break;
 		default : break;

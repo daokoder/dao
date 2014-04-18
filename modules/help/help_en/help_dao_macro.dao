@@ -126,6 +126,9 @@ use syntax lang_id
 @[section]Examples@[section]
 
 @[code(dao)]
+
+load macro
+
 # routine definition
 syntax dao_v1_syntax {
 	'routine' $ID1 { '::' $ID2 } '(' [ $BL1 ] ')' ( ';' ) !

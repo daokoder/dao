@@ -47,7 +47,7 @@ routine ArchiveToCSource( archive : string )
 
 		name = archive[pos+2 : pos+2+m-1];
 		source = archive[pos+2+m+4 : pos+2+m+4+n-1];
-		if( name.match( '%.(dll|so|dylib)$' ).start >= 0 ){
+		if( name.match( '%.(dll|so|dylib)$' ) != none ){
 			onloads += 'extern int ' + source + '( DaoVmSpace *vms, DaoNamespace *ns );\n';
 			modules += '  { "' + name + '", 0, NULL, ' + source + ' },\n';
 

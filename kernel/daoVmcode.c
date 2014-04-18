@@ -104,7 +104,6 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "MPACK",      DVM_MPACK,      DAO_CODE_ENUM2,   1 },
 	{ "ROUTINE",    DVM_ROUTINE,    DAO_CODE_ROUTINE, 1 },
 	{ "GOTO",       DVM_GOTO,       DAO_CODE_JUMP,    0 },
-	{ "GOTOX",      DVM_GOTOX,      DAO_CODE_JUMP,    0 },
 	{ "SWITCH",     DVM_SWITCH,     DAO_CODE_BRANCH,  0 },
 	{ "CASE",       DVM_CASE,       DAO_CODE_JUMP,    0 },
 	{ "ITER",       DVM_ITER,       DAO_CODE_MOVE,    0 },

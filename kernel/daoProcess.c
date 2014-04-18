@@ -882,7 +882,7 @@ int DaoProcess_Execute( DaoProcess *self )
 		&& LAB_APLIST , && LAB_APVECTOR ,
 		&& LAB_PACK  , && LAB_MPACK ,
 		&& LAB_ROUTINE ,
-		&& LAB_GOTO , && LAB_GOTOX ,
+		&& LAB_GOTO ,
 		&& LAB_SWITCH , && LAB_CASE ,
 		&& LAB_ITER , && LAB_TEST ,
 		&& LAB_MATH ,
@@ -1369,10 +1369,6 @@ CallEntry:
 			DaoProcess_DoPacking( self, vmc );
 		}OPNEXT() OPCASE( CASE ) OPCASE( GOTO ){
 			vmc = vmcBase + vmc->b;
-		}OPJUMP() OPCASE( GOTOX ){
-			if( vmc->a ) self->status = DAO_PROCESS_ABORTED;
-			vmc = vmcBase + vmc->b;
-			goto ReturnTrue;
 		}OPJUMP() OPCASE( SWITCH ){
 			vmc = DaoProcess_DoSwitch( self, vmc );
 		}OPJUMP() OPCASE( ITER ){
@@ -3199,8 +3195,6 @@ void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc )
 	DaoTypeCore *tc = DaoValue_GetTyper( A )->core;
 	DaoNamespace *ns = self->activeNamespace;
 	DString *name = self->activeRoutine->routConsts->items.items.pValue[ vmc->b ]->xString.data;
-	DArray *elist = self->exceptions;
-	daoint E = elist->size;
 
 	self->activeCode = vmc;
 	if( A == NULL || A->type == 0 ){
@@ -3208,12 +3202,6 @@ void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc )
 		return;
 	}
 	tc->GetField( A, self, name );
-	if( elist->size != (E + 1) ) return;
-	if( elist->items.pCdata[E]->ctype != DaoException_GetType( DAO_ERROR_FIELD_NOTEXIST ) ) return;
-	C = DaoValue_FindAuxMethod( A, name, ns );
-	if( C == NULL ) return;
-	DArray_PopBack( elist );
-	DaoProcess_PutValue( self, C );
 }
 
 

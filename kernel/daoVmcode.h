@@ -97,7 +97,6 @@ enum DaoOpcode
 	DVM_MPACK ,   /* packing: (A+1).A{ A+2, ..., A+B }; (A+1).A, routine, class or type; */
 	DVM_ROUTINE , /* create a function, possibly with closure */
 	DVM_GOTO  ,   /* go to B; */
-	DVM_GOTOX ,   /* go to B; for skip (A==0) or break (A==1) from code section; */
 	DVM_SWITCH , /* A: variable, B: location of default codes, C: number of cases */
 	DVM_CASE ,   /* A: constant of the case, B: location of the case codes, C: case mode */
 	DVM_ITER ,   /* create an iterator at C for A if B==0, else test an array of iterators; */

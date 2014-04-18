@@ -130,11 +130,11 @@ Other interesting features:
   Module support for coroutine makes collaborative multithreading simple,
   and allows static type checking across the yielding and resuming boundary.
 
+@[comment]
 --@[green]Auxiliary methods:@[green]
 
   Any type can be attached with auxiliary methods that do not actually belong
   to the type, but can be invoked as its member methods.
-@[comment]
   --@[green]Customized for-in iteration;@[green]
 @[comment]
 --@[green]Built-in multi-dimensional numeric array;@[green]

@@ -1879,43 +1879,6 @@ DaoTuple* DaoNamespace_MakePair( DaoNamespace *self, DaoValue *first, DaoValue *
 	tuple->subtype = DAO_PAIR;
 	return tuple;
 }
-DaoValue* DaoValue_FindAuxMethod( DaoValue *self, DString *name, DaoNamespace *nspace )
-{
-	int i;
-	DaoValue *meth = DaoNamespace_GetConst( nspace, DaoNamespace_FindConst( nspace, name ) );
-	if( meth == NULL || meth->type != DAO_ROUTINE ) return NULL;
-	if( meth->type == DAO_ROUTINE && meth->xRoutine.overloads ){
-		DRoutines *routs = meth->xRoutine.overloads;
-		DParamNode *param;
-		if( routs->mtree == NULL ) return NULL;
-		for(param=routs->mtree->first; param; param=param->next){
-			if( param->type && DaoType_MatchValue( param->type, self, NULL ) ) return meth;
-		}
-	}else if( meth->xRoutine.attribs & DAO_ROUT_PARSELF ){
-		DaoType *type = meth->xRoutine.routType->nested->items.pType[0];
-		if( DaoType_MatchValue( (DaoType*) type->aux, self, NULL ) ) return meth;
-	}
-	return NULL;
-}
-DaoValue* DaoType_FindAuxMethod( DaoType *self, DString *name, DaoNamespace *nspace )
-{
-	int i;
-	DaoValue *meth = DaoNamespace_GetConst( nspace, DaoNamespace_FindConst( nspace, name ) );
-	if( meth == NULL || meth->type != DAO_ROUTINE ) return NULL;
-	if( meth->type == DAO_ROUTINE && meth->xRoutine.overloads ){
-		DRoutines *routs = meth->xRoutine.overloads;
-		DParamNode *param;
-		if( routs->mtree == NULL ) return NULL;
-		for(param=routs->mtree->first; param; param=param->next){
-			if( param->type && DaoType_MatchTo( self, param->type, NULL ) ) return meth;
-		}
-	}else if( meth->xRoutine.attribs & DAO_ROUT_PARSELF ){
-		DaoType *type = meth->xRoutine.routType->nested->items.pType[0];
-		if( DaoType_MatchTo( self, (DaoType*) type->aux, NULL ) ) return meth;
-	}
-	return NULL;
-}
-
 
 DaoNamespace* DaoNamespace_LoadModule( DaoNamespace *self, DString *name )
 {
