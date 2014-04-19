@@ -3590,6 +3590,7 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoToken *ptok;
 	DMap *switchMap;
+	int regcount = self->regCount;
 	int cons = (vmSpace->options & DAO_OPTION_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
 	int i, k, rb, end, start = from, N = 0;
 	int reg, reg1, cst = 0, topll = 0;
@@ -3613,6 +3614,20 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 	printf("routine = %p; %i, %i\n", routine, start, to );
 	for(i=start; i<=to; i++) printf("%s  ", tokens[i]->string.mbs); printf("\n\n");
 #endif
+
+	self->curToken = from;
+	enode = DaoParser_ParseExpression( self, 0 );
+	if( enode.reg >= 0 ){
+		i = self->curToken;
+		while( i <= to && tokens[i]->type == DTOK_SEMCO ) i += 1;
+		if( i > to ){
+			if( !(routine->attribs & DAO_ROUT_INITOR) ){
+				DaoParser_AddCode( self, DVM_RETURN, enode.reg, 1, 0, from, 0, to );
+			}
+			return 1;
+		}
+	}
+	DaoParser_Restore( self, back, regcount );
 
 	self->vmcValue = NULL;
 	while( start >= from && start <= to ){
@@ -5526,11 +5541,6 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	if( rb < 0 || tokens[rb]->name != DTOK_RCB ){
 		DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, NULL );
 		goto ErrorParsing;
-	}
-	if( tokens[rb-1]->name != DTOK_SEMCO ){
-		DaoToken *tok = DArray_Append( parser->tokens, tokens[rb-1] );
-		tok->type = tok->name = DTOK_SEMCO;
-		DString_SetMBS( & tok->string, ";" );
 	}
 	if( ! DaoParser_ParseRoutine( parser ) ) goto ErrorParsing;
 

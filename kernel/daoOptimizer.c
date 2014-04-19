@@ -5455,6 +5455,7 @@ TryPushBlockReturnType:
 					ct = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, NULL, tp, tt->nested->size );
 					if( DaoType_MatchTo( at, ct, defs2 ) == 0 ) goto ErrorTyping;
 					ct = (DaoType*) routine->routType->cbtype->aux;
+					if( ct == NULL ) ct = dao_type_none;
 					if( ct ){
 						DaoInferencer_UpdateType( self, opc, ct );
 						AssertTypeMatching( ct, types[opc], defs2 );
@@ -6137,6 +6138,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 
 	/* No in place decoration of overloaded function: */
 	if( self->overloads && ip ) return NULL;
+	if( self->attribs & (DAO_ROUT_CODESECT|DAO_ROUT_DECORATOR) ) return NULL;
 	if( self->overloads ){
 		DArray *routs = DArray_New(0);
 		for(i=0; i<self->overloads->routines->size; i++){

@@ -1041,6 +1041,7 @@ int DaoClass_UseMixinDecorators( DaoClass *self )
 			DaoRoutine *deco2;
 
 			if( rout->type != DAO_ROUTINE || rout->body == NULL ) continue;
+			if( rout->attribs & (DAO_ROUT_CODESECT|DAO_ROUT_DECORATOR) ) continue;
 			if( rout->routHost != self->objType ) continue;
 
 			deco2 = DaoRoutine_Resolve( deco, (DaoValue*) obj, & cst, 1 );

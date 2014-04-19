@@ -732,7 +732,9 @@ Done:
 void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[], int n )
 {
 	daoint m = self->factory->size;
+	self->returned = 0xffff;
 	func->pFunc( self, p, n );
+	if( self->returned == 0xffff ) DaoProcess_PutNone( self );
 	if( self->factory->size > m ) DArray_Erase( self->factory, m, -1 );
 }
 DaoValue* DaoProcess_GetReturned( DaoProcess *self )
@@ -2454,6 +2456,7 @@ DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value )
 }
 DaoValue* DaoProcess_PutValue( DaoProcess *self, DaoValue *value )
 {
+	self->returned = self->activeCode->c;
 	return DaoProcess_SetValue( self, self->activeCode->c, value );
 }
 int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer )
@@ -2462,6 +2465,7 @@ int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer )
 	DaoValue **value = & self->activeValues[reg];
 	DaoType *tp2, *tp = self->activeTypes[reg];
 
+	self->returned = self->activeCode->c;
 	if( *value == refer ) return 1;
 	if( !(refer->xBase.trait & DAO_VALUE_CONST) ){
 		if( tp == NULL ){
@@ -2722,6 +2726,7 @@ DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc )
 	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_ENUM );
 	DaoValue *dC = self->activeValues[ vmc->c ];
 
+	self->returned = self->activeCode->c;
 	if( tp && (tp->tid & DAO_ANY) ) tp = NULL;
 	if( tp && tp->tid != DAO_ENUM ) return NULL;
 	if( dC && dC->type == DAO_ENUM && tp && tp->tid == DAO_ENUM ){
@@ -2744,6 +2749,7 @@ DaoList* DaoProcess_GetListByType( DaoProcess *self, DaoVmCode *vmc, DaoType *tp
 {
 	/* create a new list in any case. */
 	DaoList *list = (DaoList*)self->activeValues[ vmc->c ];
+	self->returned = self->activeCode->c;
 	if( list && list->type == DAO_LIST && list->ctype == tp ){
 		if( list->refCount == 1 ){
 			DaoList_Clear( list );
@@ -2774,6 +2780,7 @@ DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc, unsigned int hashi
 	DaoMap *map = (DaoMap*) self->activeValues[ vmc->c ];
 	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_MAP );
 
+	self->returned = self->activeCode->c;
 	if( map && map->type == DAO_MAP && map->ctype == tp ){
 		if( (map->items->hashing == 0) == (hashing == 0) ){
 			if( map->refCount == 1 ){
@@ -2805,6 +2812,8 @@ DaoArray* DaoProcess_GetArrayByType( DaoProcess *self, DaoVmCode *vmc, DaoType *
 	DaoValue *dC = self->activeValues[ vmc->c ];
 	DaoArray *array = (DaoArray*) dC;
 	int type = DAO_NONE;
+
+	self->returned = self->activeCode->c;
 	if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
 		type = tp->nested->items.pType[0]->tid;
 		if( type > DAO_COMPLEX ) type = DAO_NONE;
@@ -2845,6 +2854,7 @@ DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int in
 	DaoValue *val = self->activeValues[ self->activeCode->c ];
 	DaoTuple *tup = val && val->type == DAO_TUPLE ? & val->xTuple : NULL;
 
+	self->returned = self->activeCode->c;
 	if( tup && tup->ctype == type && tup->size == size ){
 		if( tup->refCount == 1 ) return tup;
 		if( tup->refCount == 2 && !(self->trait & DAO_VALUE_CONST) ){
@@ -2868,6 +2878,7 @@ DaoTuple* DaoProcess_PutTuple( DaoProcess *self, int size )
 	DaoType *type = DaoProcess_GetCallReturnType( self, self->activeCode, DAO_TUPLE );
 	DaoTuple *tuple;
 
+	self->returned = self->activeCode->c;
 	if( type == NULL || type->tid != DAO_TUPLE ) return NULL;
 	if( size == 0 ) return DaoProcess_GetTuple( self, type, type->nested->size, 1 );
 	if( type->variadic == 0 && N != type->nested->size ) return NULL;
@@ -3281,10 +3292,10 @@ void DaoProcess_DoSetField( DaoProcess *self, DaoVmCode *vmc )
 DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoStackFrame *topFrame = self->topFrame;
-	DaoType *type = NULL;
 	DaoValue **src = self->activeValues + vmc->a;
 	DaoValue **dest = self->stackValues;
-	DaoValue *retValue = NULL;
+	DaoValue *retValue = dao_none_value;
+	DaoType *type = NULL;
 	daoint i, n, returning = topFrame->returning;
 
 	self->activeCode = vmc;
@@ -3327,9 +3338,6 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		DaoTuple *tuple = DaoDataCache_MakeTuple( self->cache, NULL, vmc->b, 0 );
 		retValue = (DaoValue*) tuple;
 		for(i=0; i<vmc->b; i++) DaoValue_CopyX( src[i], tuple->items + i, self->cache );
-	}else{
-		retValue = dao_none_value;
-		type = NULL;
 	}
 	if( retValue == NULL ){
 		int cmdline = self->vmSpace->evalCmdline;
@@ -4008,24 +4016,6 @@ FastCallError:
 		npar = n - 1;
 	}
 	DaoProcess_DoCall2( self, vmc, caller, selfpar, params + 1, npar );
-	/*
-	// Put a none value in case that a routine is inferred to return none value,
-	// and actually returns no value. Because a none value may be expected by
-	// other expression.
-	*/
-	vmc = self->activeCode; /* tail call optimization may have changed this; */
-	retype = self->activeTypes[ vmc->c ];
-	if( retype == NULL || (retype->tid == DAO_VALTYPE && retype->aux->type == DAO_NONE) ){
-		DaoValue *revalue = self->activeValues[vmc->c];
-		if( revalue != NULL && revalue->type != DAO_NONE ){
-			GC_ShiftRC( dao_none_value, revalue );
-			self->activeValues[vmc->c] = dao_none_value;
-		}
-#ifdef DEBUG
-		/* Make sure the return type is set for constant folding: */
-		assert( retype != NULL || !(self->trait & DAO_VALUE_CONST) );
-#endif
-	}
 }
 
 int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc,

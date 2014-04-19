@@ -1498,31 +1498,27 @@ static void DaoCdata_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 	DaoType *type = self->xCdata.ctype;
 	DaoValue *p = DaoType_FindValue( type, name );
 	if( p == NULL ){
-		DaoValue *pars[2];
 		DaoRoutine *func = NULL;
 		DaoString str = {DAO_STRING,0,0,0,1,NULL};
-		daoint n = proc->factory->size;
-		int npar = 1;
+		DaoValue *pars = (DaoValue*) & str;
+		int error, npar = 0;
 
 		str.data = name;
-		pars[0] = self;
-
 		DString_SetMBS( proc->mbstring, "." );
 		DString_Append( proc->mbstring, name );
 		func = DaoType_FindFunction( type, proc->mbstring );
 		if( func == NULL ){
-			npar = 2;
-			pars[1] = (DaoValue*) & str;
+			npar = 1;
 			DString_SetMBS( proc->mbstring, "." );
 			func = DaoType_FindFunction( type, proc->mbstring );
 		}
-		func = DaoRoutine_ResolveX( func, self, pars+1, npar-1, DVM_CALL );
 		if( func == NULL ){
 			DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "not exist" );
 			return;
 		}
-		func->pFunc( proc, pars, npar );
-		if( proc->factory->size > n ) DArray_Erase( proc->factory, n, -1 );
+		if( (error = DaoProcess_PushCallable( proc, func, self, & pars, npar )) != 0 ){
+			DaoProcess_RaiseException( proc, error, "invalid field access" );
+		}
 	}else{
 		DaoProcess_PutValue( proc, p );
 	}

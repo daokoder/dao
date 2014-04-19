@@ -117,6 +117,7 @@ struct DaoProcess
 	uchar_t         status;
 	uchar_t         active;
 	ushort_t        depth;
+	ushort_t        returned;
 
 	DaoFuture      *future;
 	DaoStream      *stdioStream;
@@ -128,7 +129,7 @@ struct DaoProcess
 
 	/*
 	// Process auxiliary data (process specific data):
-	// Pairs of deallocator function pointer and data pointer;
+	// Pairs of deallocation function pointer and data pointer;
 	*/
 	DMap           *aux;
 	DString        *mbstring;
