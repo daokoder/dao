@@ -401,12 +401,13 @@ daovm.GenerateFinder( $TRUE );
 ###########################################################################
 
 if( daovm_bundle_program.size() ){
+	daos = daovm_bundle_program + '.dao'
 	darc = daovm_bundle_program + '.dar.c'
 	daomake_args  = '--platform ' + DaoMake::Platform();
 	daomake_args += ' --option-BUNDLE ' + daovm_bundle_program
 	daomake_args += ' --suffix .bundle bundle.dao'
 
-	archive = daovm.AddCommand( darc, './dao -c ' + daovm_bundle_program + '.dao' )
+	archive = daovm.AddCommand( darc + ': ' + daos, './dao -c ' + daos )
 	archive.AddCommand( './dao -a ' + daovm_bundle_program + '.dac' + daovm_bundle_resources )
 	archive.AddCommand( './dao tools/filetools/archive.dao ' + daovm_bundle_program + '.dar' )
 	archive.AddCommand( '$(DAOMAKE) ' + daomake_args )

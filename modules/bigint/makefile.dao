@@ -1,9 +1,9 @@
 
-project = DaoMake::Project( "DaoBigInt" ) 
-
 daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
+
+project = DaoMake::Project( "DaoBigint" ) 
 
 project.UseImportLibrary( daovm, "dao" )
 

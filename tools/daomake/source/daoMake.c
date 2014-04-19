@@ -2916,6 +2916,13 @@ static void DAOMAKE_Shell( DaoProcess *proc, DaoValue *p[], int N )
 	DaoFile_ReadAll( fin, res, 0 );
 	pclose( fin );
 }
+static void DAOMAKE_GetEnv( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *res = DaoProcess_PutMBString( proc, "" );
+	DString *name = DaoValue_TryGetString( p[0] );
+	char *value = getenv( DString_GetMBS( name ) );
+	if( value ) DString_SetMBS( res, value );
+}
 static void DAOMAKE_SourcePath( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoNamespace *ns = proc->activeNamespace;
@@ -3029,6 +3036,7 @@ static DaoFuncItem DaoMakeMeths[] =
 	{ DAOMAKE_Suffix,      "MakefileSuffix() => string" },
 
 	{ DAOMAKE_Shell,       "Shell( command : string ) => string" },
+	{ DAOMAKE_GetEnv,      "GetEnv( name : string ) => string" },
 
 	{ DAOMAKE_SourcePath,  "SourcePath() => string" },
 	{ DAOMAKE_BinaryPath,  "BinaryPath() => string" },

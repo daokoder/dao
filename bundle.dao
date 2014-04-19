@@ -29,7 +29,13 @@ finders = io.read( daovm_bundle + ".dar.finders" )
 
 bundle_finders = finders.split( '\n' )
 
+cmd_dir = DaoMake::SourcePath()
+dao_dir = DaoMake::GetEnv( 'DAO_DIR' )
+home_dir = DaoMake::GetEnv( 'HOME' )
 for( finder in bundle_finders ){
+	finder.replace( '$(CMD_DIR)/', cmd_dir )
+	finder.replace( '$(DAO_DIR)/', dao_dir )
+	finder.replace( '$(HOME)/', home_dir )
 	fields = finder.capture( '^ ([^%t]+) %t ([^%t]+) $' )
 	if( fields.size() < 3 ) skip;
 	if( DaoMake::IsFile( fields[2] ) ) std.load( fields[2] )
