@@ -6179,7 +6179,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 			}
 		case DTOK_LCB :
 			{
-				DaoInode *open, *jump, *label, *sect, *call;
+				DaoInode *jump, *label, *sect, *call;
 				DMap *varFunctional;
 				int isFunctional, opa = result.reg, opb = -1;
 				int lb = start, regCount;
@@ -6207,10 +6207,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 
 				jump = DaoParser_AddCode( self, DVM_GOTO, 0, 0, DVM_SECT, start+1, 0, 0 );
 				sect = DaoParser_AddCode( self, DVM_SECT, self->regCount, 0,0, start+1, 0,0 );
-				label = DaoParser_AddCode( self, DVM_LABEL, 0, 1, 0, rb, 0,0 );
-				open = DaoParser_AddScope( self, DVM_LBRA, label ); /* breakable scope; */
-				jump->jumpTrue = label;
-				open->c = DVM_SECT;
+				label = jump->jumpTrue = DaoParser_AddCode( self, DVM_LABEL, 0,0,0,rb,0,0 );
+				DaoParser_AddScope( self, DVM_LBRA, NULL );
 				varFunctional = DaoParser_GetCurrentDataMap( self );
 				start += 1;
 				regCount = self->regCount;
