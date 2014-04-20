@@ -432,39 +432,6 @@ void DaoxBigInt_Copy( DaoxBigInt *z, DaoxBigInt *x )
 	if( x->base != 2 ) DaoxBigInt_Normalize2( z );
 }
 
-static void LongAdd2( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, int base )
-{
-	uchar_t *dx, *dy, *dz;
-	daoint nx = x->size;
-	daoint ny = y->size;
-	daoint i, sum = 0;
-	DaoxBigInt_Detach( z );
-	if( x->size > y->size ){
-		DaoxBigInt *tmp = x;
-		x = y;  y = tmp;
-	}
-	nx = x->size;
-	ny = y->size;
-	if( z->bufSize <= ny ) DaoxBigInt_Resize( z, ny );
-	dx = x->data;
-	dy = y->data;
-	dz = z->data;
-	for(i=0; i<nx; i++){
-		sum += dx[i] + dy[i];
-		dz[i] = sum % base;
-		sum = sum / base;
-	}
-	for(i=nx; i<ny; i++){
-		sum += dy[i];
-		dz[i] = sum % base;
-		sum = sum / base;
-	}
-	z->size = ny;
-	while( sum ){
-		dz[ z->size ++ ] = sum % base;
-		sum = sum / base;
-	}
-}
 void DaoxBigInt_UAdd( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y )
 {
 	uchar_t *dx, *dy, *dz;
@@ -935,23 +902,6 @@ void DaoxBigInt_Pow( DaoxBigInt *z, DaoxBigInt *x, daoint n, DaoxBigIntBuffer *b
 	}
 	if( buffer != inbuf ) DaoxBigIntBuffer_Delete( buffer );
 }
-static void LongMulInt( DaoxBigInt *z, DaoxBigInt *x, int y, int base )
-{
-	uchar_t *dz, *dx = x->data;
-	long i, sum = 0, nx = x->size;
-	DaoxBigInt_Detach( z );
-	dz = z->data;
-	for(i=0; i<nx; i++){
-		sum += dx[i] * y;
-		dz[i] = sum % base;
-		sum = sum / base;
-	}
-	z->size = nx;
-	while( sum ){
-		dz[ z->size ++ ] = sum % base;
-		sum = sum / base;
-	}
-}
 void DaoxBigInt_AddInt( DaoxBigInt *z, DaoxBigInt *x, daoint y, DaoxBigInt *buf )
 {
 }
@@ -1099,28 +1049,53 @@ void DaoxBigInt_Flip( DaoxBigInt *self )
 	DaoxBigInt_Detach( self );
 	for(i=0; i<self->size; i++) self->data[i] = (LONG_BASE-1) ^ self->data[i];
 }
-void DaoxBigInt_Convert( DaoxBigInt *self, int base, DaoxBigInt *to, int tobase )
+void DaoxBigInt_Convert( DaoxBigInt *self, int base, DaoxBigInt *result, int tobase )
 {
-	DaoxBigInt *radix, *digit;
-	daoint j, i = 1 + self->size * (log(base)/ log(tobase)+1);
-	radix = DaoxBigInt_New();
-	digit = DaoxBigInt_New();
-	DaoxBigInt_Resize( radix, i );
-	DaoxBigInt_Resize( digit, i );
-	DaoxBigInt_Resize( to, i );
-	radix->size = 1;
-	radix->data[0] = 1;
-	to->size = 0;
-	for(j=0; j<self->size; j++){
-		LongMulInt( digit, radix, self->data[j], tobase );
-		LongAdd2( to, to, digit, tobase );
-		LongMulInt( radix, radix, base, tobase );
+	double baselog = log(tobase)/log(2);
+	daoint ispower2 = baselog == (daoint) baselog;
+	daoint i, j, powers = 1, powerbase = tobase;
+	daoint intbits = CHAR_BIT * sizeof(daoint);
+	daoint n = 1 + self->size * (log(base) / log(tobase) + 1);
+	DaoxBigInt *source;
+
+	if( tobase == 256 ){
+		DaoxBigInt_Copy( result, self );
+		return;
 	}
-	i = to->size;
-	while(i >0 && to->data[i-1] ==0 ) i--;
-	DaoxBigInt_Resize( to, i );
-	DaoxBigInt_Delete( radix );
-	DaoxBigInt_Delete( digit );
+	DaoxBigInt_Reserve( result, n );
+	if( ispower2 && tobase < 256 ){
+		daoint tobits = (daoint) baselog;
+		daoint tomask = ((uchar_t)(0xff << (8-tobits))) >> (8-tobits);
+		daoint chunks = 8 / tobits;
+		for(i=0; i<self->size; ++i){
+			for(j=0; j<chunks; ++j){
+				result->data[result->size++] = (self->data[i] >> (j*tobits)) & tomask;
+			}
+		}
+		return;
+	}
+
+	source = DaoxBigInt_New();
+	DaoxBigInt_Copy( source, self );
+	while( ((powerbase * tobase) >> (intbits - LONG_BITS)) == 0 ){
+		powerbase *= tobase;
+		powers += 1;
+	}
+	while( source->size ){
+		daoint remainder = 0;
+		for(i=source->size-1; i>=0; --i){
+			daoint div, num = source->data[i] | (remainder << LONG_BITS);
+			source->data[i] = div = num / powerbase;
+			remainder = num - div * powerbase;
+		}
+		while( source->size && source->data[ source->size - 1 ] == 0 ) source->size -= 1;
+		j = powers;
+		while( j-- ){
+			result->data[result->size++] = remainder % tobase;
+			remainder = remainder / tobase;
+		}
+	}
+	DaoxBigInt_Delete( source );
 }
 static void DaoxBigInt_PrintBits( DaoxBigInt *self, DString *s )
 {
@@ -1435,12 +1410,14 @@ static void BIGINT_New1( DaoProcess *proc, DaoValue *p[], int N )
 	DaoxBigInt *self = DaoxBigInt_New();
 	DaoProcess_PutValue( proc, (DaoValue*) self );
 	DaoxBigInt_FromInteger( self, p[0]->xInteger.value );
+	self->base = p[1]->xInteger.value;
 }
 static void BIGINT_New2( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxBigInt *self = DaoxBigInt_New();
 	DaoProcess_PutValue( proc, (DaoValue*) self );
 	DaoxBigInt_FromString( self, p[0]->xString.data );
+	self->base = p[1]->xInteger.value;
 }
 static void BIGINT_New3( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1448,6 +1425,7 @@ static void BIGINT_New3( DaoProcess *proc, DaoValue *p[], int N )
 	DaoxBigInt *other = (DaoxBigInt*) DaoValue_CastCstruct( p[0], daox_type_bigint );
 	DaoProcess_PutValue( proc, (DaoValue*) self );
 	DaoxBigInt_Move( self, other );
+	self->base = p[1]->xInteger.value;
 }
 static void BIGINT_GETI( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1484,6 +1462,7 @@ static void BIGINT_BinaryOper1( DaoProcess *proc, DaoValue *p[], int N, int oper
 	case DVM_POW : DaoxBigInt_Pow( C, A, DaoValue_GetInteger( p[1] ), NULL ); break;
 	default: break;
 	}
+	C->base = A->base;
 	DaoxBigInt_Delete( B );
 	DaoxBigInt_Delete( B2 );
 }
@@ -1568,6 +1547,7 @@ static void BIGINT_BinaryOper2( DaoProcess *proc, DaoValue *p[], int N, int oper
 	case DVM_POW : DaoxBigInt_Pow( C, A, DaoxBigInt_ToInteger( B ), NULL ); break;
 	default: break;
 	}
+	C->base = A->base;
 	DaoxBigInt_Delete( B2 );
 }
 static void BIGINT_CompOper2( DaoProcess *proc, DaoValue *p[], int N, int oper )
@@ -1743,6 +1723,7 @@ static void BIGINT_UnaryOper( DaoProcess *proc, DaoValue *p[], int N, int oper )
 		break;
 	default: break;
 	}
+	C->base = A->base;
 }
 static void BIGINT_MINUS( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1784,6 +1765,7 @@ static void BIGINT_BitOper1( DaoProcess *proc, DaoValue *p[], int N, int oper )
 		break;
 	default : break;
 	}
+	C->base = A->base;
 }
 static void BIGINT_BITAND1( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1831,6 +1813,7 @@ static void BIGINT_BitOper2( DaoProcess *proc, DaoValue *p[], int N, int oper )
 		break;
 	default : break;
 	}
+	C->base = A->base;
 }
 static void BIGINT_BITAND2( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1972,9 +1955,9 @@ static void BIGINT_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 }
 static DaoFuncItem bigintMeths[]=
 {
-	{ BIGINT_New1, "BigInt( value :int ) => BigInt" },
-	{ BIGINT_New2, "BigInt( value :string ) => BigInt" },
-	{ BIGINT_New3, "BigInt( value :BigInt ) => BigInt" },
+	{ BIGINT_New1, "BigInt( value :int, base = 10 ) => BigInt" },
+	{ BIGINT_New2, "BigInt( value :string, base = 10 ) => BigInt" },
+	{ BIGINT_New3, "BigInt( value :BigInt, base = 10 ) => BigInt" },
 
 	{ BIGINT_GETI, "[]( self :BigInt, idx :none ) => BigInt" },
 	{ BIGINT_GETI, "[]( self :BigInt, idx :int ) => int" },

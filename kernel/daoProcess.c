@@ -732,10 +732,13 @@ Done:
 void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[], int n )
 {
 	daoint m = self->factory->size;
+	int opc = self->activeCode->c;
+	int cur = self->returned;
 	self->returned = 0xffff;
 	func->pFunc( self, p, n );
-	if( self->returned == 0xffff ) DaoProcess_PutNone( self );
+	if( self->returned == 0xffff ) DaoProcess_SetValue( self, opc, dao_none_value );
 	if( self->factory->size > m ) DArray_Erase( self->factory, m, -1 );
+	self->returned = cur;
 }
 DaoValue* DaoProcess_GetReturned( DaoProcess *self )
 {
@@ -2489,7 +2492,7 @@ TypeNotMatching:
 }
 DaoNone* DaoProcess_PutNone( DaoProcess *self )
 {
-	DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) dao_none_value );
+	DaoProcess_SetValue( self, self->activeCode->c, dao_none_value );
 	return (DaoNone*) dao_none_value;
 }
 daoint* DaoProcess_PutInteger( DaoProcess *self, daoint value )
