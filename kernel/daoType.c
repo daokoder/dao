@@ -219,9 +219,6 @@ void DaoType_CheckAttributes( DaoType *self )
 	if( DString_FindChar( self->name, '@', 0 ) != MAXSIZE ) self->attrib |= DAO_TYPE_SPEC;
 	if( DString_FindChar( self->name, '?', 0 ) != MAXSIZE ) self->attrib |= DAO_TYPE_UNDEF;
 
-	/* For potential mixin class: */
-	if( self->tid == DAO_CLASS || self->tid == DAO_OBJECT ) self->attrib |= DAO_TYPE_SPEC;
-
 	if( (self->tid == DAO_PAR_NAMED || self->tid == DAO_PAR_DEFAULT) ){
 		if( self->fname != NULL && strcmp( self->fname->mbs, "self" ) == 0 )
 			self->attrib |= DAO_TYPE_SELFNAMED;
@@ -489,8 +486,9 @@ static int DaoType_MatchToParent( DaoType *self, DaoType *type, DMap *defs )
 {
 	daoint i, k, n, mt = DAO_MT_NOT;
 	if( self == type ) return DAO_MT_EQ;
-	if( self->tid == type->tid && (self->tid >= DAO_OBJECT && self->tid <= DAO_CTYPE) )
+	if( self->tid == type->tid && (self->tid >= DAO_OBJECT && self->tid <= DAO_CTYPE) ){
 		if( self->aux == type->aux ) return DAO_MT_EQ; /* for aliased type; */
+	}
 	if( (mt = DaoType_MatchTemplateParams( self, type, defs )) ) return mt;
 	if( self->bases == NULL || self->bases->size == 0 ) return DAO_MT_NOT;
 	for(i=0,n=self->bases->size; i<n; i++){
@@ -909,6 +907,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case DAO_CLASS :
 		if( self->aux == NULL ) return DAO_MT_SUB; /* par : class */
 		if( self->aux == value ) return DAO_MT_EQ;
+		if( dinterface ) return DaoType_MatchInterface( value->xClass.clsType, dinterface, NULL );
 		return DaoValue_MatchToParent( value, self, defs );
 	case DAO_OBJECT :
 		if( self->aux == (DaoValue*) value->xObject.defClass ) return DAO_MT_EQ;
@@ -917,10 +916,10 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case DAO_CTYPE :
 	case DAO_CDATA :
 	case DAO_CSTRUCT :
-		tp = value->xCdata.ctype;
+		tp = value->xCstruct.ctype;
 		if( self == tp ) return DAO_MT_EQ;
 		if( self->tid == value->type && self->aux == tp->aux ) return DAO_MT_EQ; /* alias type */
-		if( dinterface && value->type != DAO_CTYPE ) return DaoType_MatchInterface( tp, dinterface, NULL );
+		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		return DaoValue_MatchToParent( value, self, defs );
 	case DAO_TYPE :
 		tp = & value->xType;
@@ -1019,6 +1018,26 @@ static void DMap_Erase2( DMap *defs, void *p )
 	for(i=0,n=keys->size; i<n; i++) DMap_Erase( defs, keys->items.pVoid[i] );
 	DArray_Delete( keys );
 }
+static int DaoType_CheckTypeMapping( DaoType *self, DMap *defs )
+{
+	daoint i, n;
+	if( DMap_Find( defs, self ) != NULL ) return 1;
+
+	if( self->nested ){
+		for(i=0,n=self->nested->size; i<n; i++){
+			if( DaoType_CheckTypeMapping( self->nested->items.pType[i], defs ) ) return 1;
+		}
+	}
+	if( self->bases ){
+		for(i=0,n=self->bases->size; i<n; i++){
+			if( DaoType_CheckTypeMapping( self->bases->items.pType[i], defs ) ) return 1;
+		}
+	}
+	if( self->aux && self->aux->type == DAO_TYPE ){
+		if( DaoType_CheckTypeMapping( & self->aux->xType, defs ) ) return 1;
+	}
+	return 0;
+}
 DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 {
 	DaoType *type, *copy = NULL;
@@ -1026,7 +1045,9 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	daoint i, n;
 
 	if( self == NULL ) return NULL;
-	if( !(self->attrib & DAO_TYPE_SPEC) ) return self;
+
+	n = DaoType_CheckTypeMapping( self, defs );
+	if( n == 0 && !(self->attrib & DAO_TYPE_SPEC) ) return self;
 
 	node = MAP_Find( defs, self );
 	if( node ){
@@ -1184,8 +1205,11 @@ void DaoType_GetTypeHolders( DaoType *self, DMap *types )
 			DaoType_GetTypeHolders( self->bases->items.pType[i], types );
 		}
 	}
-	if( self->tid == DAO_TYPE && self->aux && self->aux->type == DAO_TYPE )
-		DaoType_GetTypeHolders( & self->aux->xType, types );
+	if( self->tid == DAO_TYPE || self->tid == DAO_ROUTINE ){ /* XXX */
+		if( self->aux && self->aux->type == DAO_TYPE ){
+			DaoType_GetTypeHolders( & self->aux->xType, types );
+		}
+	}
 }
 int DaoType_CheckTypeHolder( DaoType *self, DaoType *tht )
 {
@@ -1223,6 +1247,26 @@ void DaoType_ResetTypeHolders( DaoType *self, DMap *types )
 
 extern DMutex mutex_methods_setup;
 
+static void DaoType_TrySpecializeMethods( DaoType *self )
+{
+	DaoTypeCore *core = self->typer->core;
+	switch( self->tid ){
+	case DAO_LIST : case DAO_MAP :
+		if( self->kernel == core->kernel ){
+			/* Specialize methods for specialized generic type: */
+			DaoType_SpecializeMethods( self );
+		}
+		break;
+	case DAO_CSTRUCT : case DAO_CDATA : case DAO_CTYPE :
+		/* For non cdata type, core->kernel->abtype could be NULL: */
+		if( self->kernel == core->kernel && self->aux != core->kernel->abtype->aux ){
+			/* Specialize methods for specialized cdata type: */
+			DaoType_SpecializeMethods( self );
+		}
+		break;
+	}
+}
+
 DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 {
 	DNode *node;
@@ -1233,18 +1277,7 @@ DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 		core->kernel->SetupMethods( core->kernel->nspace, self->typer );
 	}
 	if( core->kernel->methods == NULL ) return NULL;
-	if( self->tid == DAO_LIST || self->tid == DAO_MAP ){
-		if( self->kernel == core->kernel ){
-			/* Specialize methods for specialized generic type: */
-			DaoType_SpecializeMethods( self );
-		}
-	}else if( self->tid == DAO_CSTRUCT || self->tid == DAO_CDATA || self->tid == DAO_CTYPE ){
-		/* For non cdata type, core->kernel->abtype could be NULL: */
-		if( self->kernel == core->kernel && self->aux != core->kernel->abtype->aux ){
-			/* Specialize methods for specialized cdata type: */
-			DaoType_SpecializeMethods( self );
-		}
-	}
+	DaoType_TrySpecializeMethods( self );
 	if( self->kernel == NULL ){
 		/* The type is created before the setup of the typer structure: */
 		DMutex_Lock( & mutex_methods_setup );
@@ -1294,8 +1327,8 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 /* interface implementations */
 void DaoInterface_Delete( DaoInterface *self )
 {
-	GC_DecRC( self->nspace );
 	GC_DecRC( self->abtype );
+	GC_DecRC( self->model );
 	DArray_Delete( self->supers );
 	DMap_Delete( self->methods );
 	dao_free( self );
@@ -1306,18 +1339,16 @@ DaoTypeBase interTyper=
 	(FuncPtrDel) DaoInterface_Delete, NULL
 };
 
-DaoInterface* DaoInterface_New( DaoNamespace *nspace, const char *name )
+DaoInterface* DaoInterface_New( const char *name )
 {
-	DaoInterface *self = (DaoInterface*) dao_malloc( sizeof(DaoInterface) );
+	DaoInterface *self = (DaoInterface*) dao_calloc( 1, sizeof(DaoInterface) );
 	DaoValue_Init( self, DAO_INTERFACE );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->derived = 0;
 	self->supers = DArray_New(D_VALUE);
 	self->methods = DHash_New(D_STRING,D_VALUE);
 	self->abtype = DaoType_New( name, DAO_INTERFACE, (DaoValue*)self, NULL );
-	self->nspace = nspace;
 	GC_IncRC( self->abtype );
-	GC_IncRC( self->nspace );
 	return self;
 }
 static int DaoRoutine_IsCompatible( DaoRoutine *self, DaoType *type, DMap *binds )
@@ -1333,20 +1364,21 @@ static int DaoRoutine_IsCompatible( DaoRoutine *self, DaoType *type, DMap *binds
 		rout = self->overloads->routines->items.pRoutine[i];
 		j = DaoType_Match( rout->routType, type, NULL, binds );
 		/*
-		   printf( "%3i: %3i  %s  %s\n",i,j,rout->routType->name->mbs,type->name->mbs );
+		   printf( "%3i %3i: %3i  %s  %s\n",n,i,j,rout->routType->name->mbs,type->name->mbs );
 		 */
 		if( j && j >= max ){
 			max = j;
 			k = i;
 		}
 	}
+			fflush( stdout );
 	return (k >= 0);
 }
 int DaoInterface_CheckBind( DArray *methods, DaoType *type, DMap *binds )
 {
 	DaoRoutine *rout2;
 	daoint i, n, id;
-	if( type->tid == DAO_OBJECT ){
+	if( type->tid == DAO_OBJECT || type->tid == DAO_CLASS ){
 		DaoClass *klass = & type->aux->xClass;
 		for(i=0,n=methods->size; i<n; i++){
 			DaoRoutine *rout = methods->items.pRoutine[i];
@@ -1449,6 +1481,52 @@ void DaoInterface_DeriveMethods( DaoInterface *self )
 	}
 	self->derived = 1;
 }
+int DaoInterface_CopyMethod( DaoInterface *self, DaoRoutine *rout, DMap *deftypes )
+{
+	DaoRoutine *meth;
+	DaoType *tp, *model = self->model;
+	daoint j, typeinter = model && (model->tid == DAO_CLASS || model->tid == DAO_CTYPE);
+
+	DMap_Reset( deftypes );
+	DMap_Insert( deftypes, rout->routHost, self->abtype );
+
+	if( rout->overloads == NULL ){
+		if( typeinter ){
+			/* TODO: handle constructor; */
+			if( rout->attribs & (DAO_ROUT_PARSELF|DAO_ROUT_INITOR) ) return 1;
+		}else{
+			if( rout->attribs & DAO_ROUT_INITOR ) return 1;
+		}
+		tp = DaoType_DefineTypes( rout->routType, rout->nameSpace, deftypes );
+		if( tp == NULL ) return 0;
+		meth = DaoRoutine_New( rout->nameSpace, self->abtype, 0 );
+		meth->attribs = rout->attribs;
+		DString_Assign( meth->routName, rout->routName );
+		GC_ShiftRC( tp, meth->routType );
+		meth->routType = tp;
+		DaoMethods_Insert( self->methods, meth, meth->nameSpace, meth->routHost );
+	}else{
+		for(j=0; j<rout->overloads->routines->size; ++j){
+			DaoRoutine *rout2 = rout->overloads->routines->items.pRoutine[j];
+			if( rout2->attribs & DAO_ROUT_DECORATOR ) continue;
+			if( typeinter ){
+				/* TODO: handle constructor; */
+				if( rout2->attribs & (DAO_ROUT_PARSELF|DAO_ROUT_INITOR) ) continue;
+			}else{
+				if( rout2->attribs & DAO_ROUT_INITOR ) continue;
+			}
+			tp = DaoType_DefineTypes( rout2->routType, rout2->nameSpace, deftypes );
+			if( tp == NULL ) return 0;
+			meth = DaoRoutine_New( rout2->nameSpace, self->abtype, 0 );
+			meth->attribs = rout2->attribs;
+			DString_Assign( meth->routName, rout->routName );
+			GC_ShiftRC( tp, meth->routType );
+			meth->routType = tp;
+			DaoMethods_Insert( self->methods, meth, meth->nameSpace, meth->routHost );
+		}
+	}
+	return 1;
+}
 
 DAO_DLL void DMap_SortMethods( DMap *hash, DArray *methods )
 {
@@ -1486,6 +1564,17 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds )
 	DNode *it;
 	daoint i;
 	if( inter == NULL ) return DAO_MT_NOT;
+	if( inter->model != NULL ){
+		DaoType *model = inter->model;
+		if( DaoType_MatchToParent( self, model, NULL ) < DAO_MT_SUB ) return DAO_MT_NOT;
+		if( model->tid == DAO_CSTRUCT || model->tid == DAO_CDATA ){
+			DaoTypeCore *core = model->kernel->core;
+			if( inter->model->kernel->SetupMethods ){
+				model->kernel->SetupMethods( model->kernel->nspace, model->typer );
+			}
+			DaoType_TrySpecializeMethods( model );
+		}
+	}
 	if( inters == NULL ) return DAO_MT_SUB * DaoInterface_BindTo( inter, self, binds );
 	if( (it = DMap_Find( inters, inter )) ) return it->value.pVoid ? DAO_MT_SUB : DAO_MT_NOT;
 	return DAO_MT_SUB * DaoInterface_BindTo( inter, self, binds );
@@ -1995,6 +2084,7 @@ void DaoType_SpecializeMethods( DaoType *self )
 {
 	DaoType *original = self->typer->core->kernel->abtype;
 	DaoTypeKernel *kernel;
+	DNode *it;
 	daoint i, k;
 
 #if 0
@@ -2010,6 +2100,8 @@ void DaoType_SpecializeMethods( DaoType *self )
 		for(i=0; i<self->bases->size; i++){
 			DaoType *base = self->bases->items.pType[i];
 			DaoType_SpecializeMethods( base );
+			DArray_Append( self->aux->xCtype.clsInter->supers, base->aux->xCtype.clsInter );
+			DArray_Append( self->aux->xCtype.objInter->supers, base->aux->xCtype.objInter );
 		}
 	}
 	if( original->kernel->sptree == NULL ) return;
@@ -2074,7 +2166,6 @@ void DaoType_SpecializeMethods( DaoType *self )
 				DaoMethods_Insert( methods, rout, nspace, self );
 			}
 		}
-		DMap_Delete( defs );
 
 		for(i=1; i<parents->size; i++){
 			DaoType *sup = parents->items.pType[i];
@@ -2101,6 +2192,15 @@ void DaoType_SpecializeMethods( DaoType *self )
 			}
 		}
 		DArray_Delete( parents );
+		DMap_Reset( defs );
+		if( self->aux ){ /* may be builtin generic types such as list<@T> */
+			for(it=DMap_First(methods); it; it=DMap_Next(methods, it)){
+				DaoRoutine *rout = it->value.pRoutine;
+				DaoInterface_CopyMethod( self->aux->xCtype.clsInter, rout, defs );
+				DaoInterface_CopyMethod( self->aux->xCtype.objInter, rout, defs );
+			}
+		}
+		DMap_Delete( defs );
 		/* Set methods field after it has been setup, for read safety in multithreading: */
 		kernel->methods = methods;
 	}

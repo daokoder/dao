@@ -1883,6 +1883,7 @@ void DaoArray_ResizeVector( DaoArray *self, daoint size )
 }
 void DaoArray_ResizeArray( DaoArray *self, daoint *dims, int D )
 {
+	daoint *dims2 = dims;
 	int i, k;
 	daoint old = self->size;
 	if( D == 1 ){
@@ -1897,6 +1898,9 @@ void DaoArray_ResizeArray( DaoArray *self, daoint *dims, int D )
 		}
 		if( dims[i] != 1 || D ==2 ) k ++;
 	}
+	/* It could be: self->dims == dims; */
+	dims = (daoint*) dao_malloc( D*sizeof(daoint) );
+	for(i=0; i<D; ++i) dims[i] = dims2[i];
 	if( self->dims != dims || self->ndim != k ) DaoArray_SetDimCount( self, k );
 	k = 0;
 	for(i=0; i<D; ++i){
@@ -1913,6 +1917,7 @@ void DaoArray_ResizeArray( DaoArray *self, daoint *dims, int D )
 			self->dims[k] = 1;
 		}
 	}
+	dao_free( dims );
 	DaoArray_FinalizeDimData( self );
 	if( self->size == old ) return;
 	DaoArray_ResizeData( self, self->size, old );

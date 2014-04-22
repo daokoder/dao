@@ -2492,30 +2492,30 @@ TypeNotMatching:
 }
 DaoNone* DaoProcess_PutNone( DaoProcess *self )
 {
-	DaoProcess_SetValue( self, self->activeCode->c, dao_none_value );
+	DaoProcess_PutValue( self, dao_none_value );
 	return (DaoNone*) dao_none_value;
 }
 daoint* DaoProcess_PutInteger( DaoProcess *self, daoint value )
 {
 	DaoInteger tmp = {DAO_INTEGER,0,0,0,0,0};
-	DaoValue *res = DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) & tmp );
-	if( res ==NULL ) return NULL;
+	DaoValue *res = DaoProcess_PutValue( self, (DaoValue*) & tmp );
+	if( res == NULL ) return NULL;
 	res->xInteger.value = value;
 	return & res->xInteger.value;
 }
 float* DaoProcess_PutFloat( DaoProcess *self, float value )
 {
 	DaoFloat tmp = {DAO_FLOAT,0,0,0,0,0.0};
-	DaoValue *res = DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) & tmp );
-	if( res ==NULL ) return NULL;
+	DaoValue *res = DaoProcess_PutValue( self, (DaoValue*) & tmp );
+	if( res == NULL ) return NULL;
 	res->xFloat.value = value;
 	return & res->xFloat.value;
 }
 double* DaoProcess_PutDouble( DaoProcess *self, double value )
 {
 	DaoDouble tmp = {DAO_DOUBLE,0,0,0,0,0.0};
-	DaoValue *res = DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) & tmp );
-	if( res ==NULL ) return NULL;
+	DaoValue *res = DaoProcess_PutValue( self, (DaoValue*) & tmp );
+	if( res == NULL ) return NULL;
 	res->xDouble.value = value;
 	return & res->xDouble.value;
 }
@@ -2524,8 +2524,8 @@ complex16* DaoProcess_PutComplex( DaoProcess *self, complex16 value )
 	DaoComplex tmp = {DAO_COMPLEX,0,0,0,0,{0.0,0.0}};
 	DaoValue *res;
 	tmp.value = value;
-	res = DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) & tmp );
-	if( res ==NULL ) return NULL;
+	res = DaoProcess_PutValue( self, (DaoValue*) & tmp );
+	if( res == NULL ) return NULL;
 	return & res->xComplex.value;
 }
 DString* DaoProcess_PutMBString( DaoProcess *self, const char *mbs )
@@ -2539,8 +2539,8 @@ DString* DaoProcess_PutMBString( DaoProcess *self, const char *mbs )
 		DString_Reset( dest->xString.data, 0 );
 		DString_ToMBS( dest->xString.data );
 	}
-	res = DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) & tmp );
-	if( res ==NULL ) return NULL;
+	res = DaoProcess_PutValue( self, (DaoValue*) & tmp );
+	if( res == NULL ) return NULL;
 	DString_ToMBS( res->xString.data );
 	return res->xString.data;
 }
@@ -2555,8 +2555,8 @@ DString* DaoProcess_PutWCString( DaoProcess *self, const wchar_t *wcs )
 		DString_Reset( dest->xString.data, 0 );
 		DString_ToWCS( dest->xString.data );
 	}
-	res = DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) & tmp );
-	if( res ==NULL ) return NULL;
+	res = DaoProcess_PutValue( self, (DaoValue*) & tmp );
+	if( res == NULL ) return NULL;
 	DString_ToWCS( res->xString.data );
 	return res->xString.data;
 }
@@ -2565,8 +2565,8 @@ DString* DaoProcess_PutString( DaoProcess *self, DString *str )
 	DaoString tmp = {DAO_STRING,0,0,0,0,NULL};
 	DaoValue *res;
 	tmp.data = str;
-	res = DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) & tmp );
-	if( res ==NULL ) return NULL;
+	res = DaoProcess_PutValue( self, (DaoValue*) & tmp );
+	if( res == NULL ) return NULL;
 	return res->xString.data;
 }
 DString* DaoProcess_PutBytes( DaoProcess *self, const char *bytes, daoint N )
@@ -2575,8 +2575,8 @@ DString* DaoProcess_PutBytes( DaoProcess *self, const char *bytes, daoint N )
 	DaoString tmp = {DAO_STRING,0,0,0,0,NULL};
 	DaoValue *res;
 	tmp.data = & str;
-	res = DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) & tmp );
-	if( res ==NULL ) return NULL;
+	res = DaoProcess_PutValue( self, (DaoValue*) & tmp );
+	if( res == NULL ) return NULL;
 	return res->xString.data;
 }
 #ifdef DAO_WITH_NUMARRAY
@@ -2683,7 +2683,7 @@ DaoStream* DaoProcess_PutFile( DaoProcess *self, FILE *file )
 {
 	DaoStream *stream = DaoStream_New();
 	DaoStream_SetFile( stream, file );
-	if( DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*) stream ) ) return stream;
+	if( DaoProcess_PutValue( self, (DaoValue*) stream ) ) return stream;
 	DaoStream_Delete( stream );
 	return NULL;
 }
@@ -2691,14 +2691,14 @@ void DaoCdata_Delete( DaoCdata *self );
 DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type )
 {
 	DaoCdata *cdata = DaoCdata_New( type, data );
-	if( DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*)cdata ) ) return cdata;
+	if( DaoProcess_PutValue( self, (DaoValue*)cdata ) ) return cdata;
 	DaoGC_TryDelete( (DaoValue*) cdata );
 	return NULL;
 }
 DaoCdata* DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type )
 {
 	DaoCdata *cdata = DaoCdata_Wrap( type, data );
-	if( DaoProcess_SetValue( self, self->activeCode->c, (DaoValue*)cdata ) ) return cdata;
+	if( DaoProcess_PutValue( self, (DaoValue*)cdata ) ) return cdata;
 	DaoGC_TryDelete( (DaoValue*) cdata );
 	return NULL;
 }
@@ -3652,6 +3652,33 @@ static int DaoProcess_InitBase( DaoProcess *self, DaoVmCode *vmc, DaoValue *call
 	}
 	return 0;
 }
+static int DaoProcess_TryTailCall( DaoProcess *self, DaoRoutine *rout, DaoValue *O, DaoVmCode *vmc )
+{
+	/* no tail call optimization when there is deferred code blocks: */
+	if( (vmc->b & DAO_CALL_TAIL) && self->defers->size == self->topFrame->deferBase ){
+		int async = vmc->b & DAO_CALL_ASYNC;
+		DaoObject *root = NULL;
+		switch( O ? O->type : 0 ){
+		case DAO_CDATA   :
+		case DAO_CSTRUCT :
+			if( O->xCstruct.object ) root = O->xCstruct.object->rootObject;
+			break;
+		case DAO_OBJECT  : root = O->xObject.rootObject; break;
+		}
+		if( root ) async |= root->isAsync;
+		/* No tail call optimization for possible asynchronous calls: */
+		/* No tail call optimization in constructors etc.: */
+		/* (self->topFrame->state>>1): get rid of the DVM_FRAME_RUNNING flag: */
+		if( async == 0 && (self->topFrame->state>>1) == 0 && daoConfig.optimize ){
+			/* No optimization if the tail call has a return type different from the current: */
+			if( rout->routType->aux == self->activeRoutine->routType->aux ){
+				DaoProcess_PopFrame( self );
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
 static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 		DaoValue *O, DaoValue *P[], int N, DaoVmCode *vmc, int noasync )
 {
@@ -3681,27 +3708,7 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 			return;
 		}
 	}
-	/* no tail call optimization when there is deferred code blocks: */
-	if( (vmc->b & DAO_CALL_TAIL) && self->defers->size == self->topFrame->deferBase ){
-		int async = vmc->b & DAO_CALL_ASYNC;
-		DaoObject *root = NULL;
-		switch( O ? O->type : 0 ){
-		case DAO_CDATA   :
-		case DAO_CSTRUCT :
-			if( O->xCstruct.object ) root = O->xCstruct.object->rootObject;
-			break;
-		case DAO_OBJECT  : root = O->xObject.rootObject; break;
-		}
-		if( root ) async |= root->isAsync;
-		/* No tail call optimization for possible asynchronous calls: */
-		/* No tail call optimization in constructors etc.: */
-		/* (self->topFrame->state>>1): get rid of the DVM_FRAME_RUNNING flag: */
-		if( async == 0 && (self->topFrame->state>>1) == 0 && daoConfig.optimize ){
-			/* No optimization if the tail call has a return type different from the current: */
-			if( rout->routType->aux == self->activeRoutine->routType->aux )
-				DaoProcess_PopFrame( self );
-		}
-	}
+	if( noasync == 0 ) DaoProcess_TryTailCall( self, rout, O, vmc );
 	DaoProcess_PushRoutine( self, rout, DaoValue_CastObject( O ) );//, code );
 	if( noasync ) return;
 #ifdef DAO_WITH_CONCURRENT
@@ -3956,7 +3963,7 @@ static int DaoProcess_FastPassParams( DaoProcess *self, DaoValue *params[], int 
 }
 void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 {
-	int status, ret;
+	int i, status, ret;
 	int mode = vmc->b;
 	int npar = vmc->b & 0xff;
 	int mcall = vmc->code == DVM_MCALL;
@@ -3971,6 +3978,14 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 	self->activeCode = vmc;
 	if( (mode & DAO_CALL_FAST) && caller->xRoutine.overloads == NULL ){
 		rout = (DaoRoutine*) caller;
+		params = self->activeValues + vmc->a + 1;
+		if( DaoProcess_TryTailCall( self, rout, NULL, vmc ) ){
+			for(i=0; i<npar; ++i){
+				GC_IncRC( params[i] );
+				parbuf[i] = params[i];
+			}
+			params = parbuf;
+		}
 		if( rout->pFunc ){
 			DaoStackFrame *frame = DaoProcess_PushFrame( self, rout->parCount );
 			DaoValue **values = self->stackValues + frame->stackBase;
@@ -3978,7 +3993,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			frame->routine = rout;
 			frame->active = frame->prev->active;
 			self->status = DAO_PROCESS_STACKED;
-			ret = DaoProcess_FastPassParams( self, self->activeValues + vmc->a + 1, npar );
+			ret = DaoProcess_FastPassParams( self, params, npar );
 			if( ret == 0 ) goto FastCallError;
 			if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 			DaoProcess_CallFunction( self, rout, values, rout->parCount );
@@ -3990,7 +4005,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			frame->active = frame;
 			self->status = DAO_PROCESS_STACKED;
 			DaoProcess_InitTopFrame( self, rout, NULL );
-			ret = DaoProcess_FastPassParams( self, self->activeValues + vmc->a + 1, npar );
+			ret = DaoProcess_FastPassParams( self, params, npar );
 			if( ret == 0 ) goto FastCallError;
 			if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 		}

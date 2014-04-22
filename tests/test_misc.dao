@@ -95,7 +95,7 @@ TestTailCall( 5 )
 @[test(code_03)]
 # If broken, it will print multiple "Called by:  TestTailCall()"
 @[test(code_03)]
-{{Exception::Error}} [^%n]* %n
+{{Exception}} [^%n]* %n
 {{Raised by:}} [^%n]* %n
 {{Called by:}} [^%n]* %s*
 @[test(code_03)]

@@ -2485,7 +2485,7 @@ static void dao_FakeList_SetItem( DaoProcess *_proc, DaoValue *_p[], int _n )
 
 
 
-static void DaoBuiltIn_Warn( DaoProcess *proc, DaoValue *p[], int n )
+static void DaoMETH_Warn( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoType *type = DaoException_GetType( DAO_WARNING );
 	DaoException *self = (DaoException*)DaoException_New( type );
@@ -2495,20 +2495,20 @@ static void DaoBuiltIn_Warn( DaoProcess *proc, DaoValue *p[], int n )
 	DaoException_Print( self, stream );
 	DaoException_Delete( self );
 }
-static void DaoBuiltIn_Panic( DaoProcess *proc, DaoValue *p[], int n )
+static void DaoMETH_Panic( DaoProcess *proc, DaoValue *p[], int n )
 {
-	DaoType *type = DaoException_GetType( DAO_ERROR );
+	DaoType *type = DaoException_GetType( DAO_EXCEPTION );
 	DaoException *self = (DaoException*) DaoValue_CastCstruct( p[0], type );
 	DaoObject *object = DaoValue_CastObject( p[0] );
 	if( self == NULL && object != NULL ){
-		self = (DaoException*) DaoObject_CastCdata( object, type );
+		self = (DaoException*) DaoObject_CastToBase( object, type );
 	}
 	if( self == NULL ) self = (DaoException*)DaoException_New( type );
 	DaoException_SetData( self, p[0] );
 	DaoException_Init( self, proc, NULL );
 	DArray_Append( proc->exceptions, object ? (void*)object : (void*)self );
 }
-static void DaoBuiltIn_Recover( DaoProcess *proc, DaoValue *p[], int n )
+static void DaoMETH_Recover( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoStackFrame *frame = proc->topFrame->prev; /* caller frame */
@@ -2519,7 +2519,7 @@ static void DaoBuiltIn_Recover( DaoProcess *proc, DaoValue *p[], int n )
 		DArray_PopBack( proc->exceptions );
 	}
 }
-static void DaoBuiltIn_Recover2( DaoProcess *proc, DaoValue *p[], int n )
+static void DaoMETH_Recover2( DaoProcess *proc, DaoValue *p[], int n )
 {
 	daoint i;
 	DaoValue *ret = NULL;
@@ -2542,7 +2542,7 @@ static void DaoBuiltIn_Recover2( DaoProcess *proc, DaoValue *p[], int n )
 	}
 	DaoProcess_PutValue( proc, ret ? ret : dao_none_value );
 }
-static void DaoBuiltIn_Frame( DaoProcess *proc, DaoValue *p[], int n )
+static void DaoMETH_Frame( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoValue *retvalue = NULL;
 	DaoValue *defvalue = n ? p[0] : NULL;
@@ -2566,22 +2566,22 @@ static void DaoBuiltIn_Frame( DaoProcess *proc, DaoValue *p[], int n )
 		DaoProcess_PutValue( proc, retvalue );
 	}
 }
-static void DaoBuiltIn_Test( DaoProcess *proc, DaoValue *p[], int n )
+static void DaoMETH_Test( DaoProcess *proc, DaoValue *p[], int n )
 {
 	printf( "%i\n", p[0]->type );
 }
 
 DaoFuncItem dao_builtin_methods[] =
 {
-	{ DaoBuiltIn_Warn,      "warn( message : string )" },
-	{ DaoBuiltIn_Panic,     "panic( value : any )" },
-	{ DaoBuiltIn_Recover,   "recover( ) => list<any>" },
-	{ DaoBuiltIn_Recover2,  "recover( eclass : class<Exception> ) => any" },
-	{ DaoBuiltIn_Frame,     "frame() [=>@T] => @T" },
-	{ DaoBuiltIn_Frame,     "frame( default_value :@T ) [=>@T] => @T" },
+	{ DaoMETH_Warn,      "warn( message : string )" },
+	{ DaoMETH_Panic,     "panic( value : any )" },
+	{ DaoMETH_Recover,   "recover( ) => list<any>" },
+	{ DaoMETH_Recover2,  "recover( eclass : interface<class<Exception>> ) => interface<Exception>|none" },
+	{ DaoMETH_Frame,     "frame() [=>@T] => @T" },
+	{ DaoMETH_Frame,     "frame( default_value :@T ) [=>@T] => @T" },
 #if DEBUG
-	{ DaoBuiltIn_Test,      "__test1__( ... )" },
-	{ DaoBuiltIn_Test,      "__test2__( ... : int|string )" },
+	{ DaoMETH_Test,      "__test1__( ... )" },
+	{ DaoMETH_Test,      "__test2__( ... : int|string )" },
 #endif
 	{ NULL, NULL }
 };

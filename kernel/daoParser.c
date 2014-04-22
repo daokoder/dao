@@ -1919,8 +1919,19 @@ WrongType:
 			if( count2 != 1 ) goto InvalidTypeForm;
 			type = types->items.pType[ count ];
 			DArray_Erase( types, count, count2 );
-			if( type == NULL || type->tid != DAO_OBJECT ) goto InvalidTypeForm;
-			return type->aux->xClass.inter->abtype;
+			if( type == NULL ) goto InvalidTypeForm;
+			switch( type->tid ){
+			case DAO_CLASS :
+				return type->aux->xClass.clsInter->abtype;
+			case DAO_OBJECT :
+				return type->aux->xClass.objInter->abtype;
+			case DAO_CTYPE :
+				return type->aux->xCtype.clsInter->abtype;
+			case DAO_CSTRUCT :
+			case DAO_CDATA :
+				return type->aux->xCtype.objInter->abtype;
+			}
+			goto InvalidTypeForm;
 		default : break;
 		}
 		if( tid != DAO_TUPLE && tid != DAO_ROUTINE && tid != DAO_CODEBLOCK ){
@@ -3083,7 +3094,7 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 		int t = tokens[start]->name;
 		if( (t != DTOK_IDENTIFIER && t < DKEY_ABS) || t > DKEY_TANH ) goto ErrorInterfaceDefinition;
 		interName = & tokens[start]->string;
-		inter = DaoInterface_New( myNS, interName->mbs );
+		inter = DaoInterface_New( interName->mbs );
 		if( routine != myNS->mainRoutine ) ns = NULL;
 		value = (DaoValue*) inter;
 		DaoParser_AddToScope( self, interName, value, inter->abtype, storeType, line );
@@ -3235,7 +3246,8 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			int pm = self->permission;
 			DaoByteBlock *block = self->byteBlock;
 			DaoByteBlock *classbk = DaoByteBlock_AddClassBlock( block, klass, pm );
-			DaoByteBlock *interbk = DaoByteBlock_AddInterfaceBlock( block, klass->inter, pm );
+#warning"clsInter"
+			DaoByteBlock *interbk = DaoByteBlock_AddInterfaceBlock( block, klass->objInter, pm );
 			DaoByteBlock_InsertBlockIndex( interbk, interbk->begin, classbk );
 		}
 

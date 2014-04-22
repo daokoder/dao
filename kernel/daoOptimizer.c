@@ -5188,9 +5188,10 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					checkfast = DVM_CALL && ((vmc->b & 0xff00) & ~DAO_CALL_TAIL) == 0;
 					checkfast &= at->tid == DAO_ROUTINE && argc >= rout2->parCount;
 					checkfast &= rout2->routHost == NULL;
-					checkfast &= rout2->overloads == NULL && rout2->specialized == NULL;
+					checkfast &= rout2 == rout;
 					checkfast &= rout2->body != NULL || rout2->pFunc != NULL; /* not curry; */
 					checkfast &= (vmc->code == DVM_CALL) == !(rout2->routType->attrib & DAO_TYPE_SELF);
+					vmc->b &= ~DAO_CALL_FAST;
 					if( checkfast ){
 						int fast = 1;
 						for(k=0; fast && k<argc; ++k) fast &= tp[k]->tid != DAO_PAR_NAMED;
@@ -5235,8 +5236,8 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 							// b = test( a );
 							//
 							// The function call may be resolved at compiling time as test(x),
-							// which returns a string. But a runtime, the function call will
-							// be resolved as test(x:int), which return an integer.
+							// which returns a string. But at runnning time, the function call
+							// will be resolved as test(x:int), which return an integer.
 							// Such discrepancy need to be solved here:
 							 */
 							DArray_Clear( self->array );
@@ -5258,7 +5259,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 							}
 							if( self->array->size > 1 ){
 								ctchecked = 1;
-								ct = dao_type_any; /* XXX variant type? */
+								ct = dao_type_any; /* XXX return variant type? */
 							}
 						}
 					}
@@ -5298,6 +5299,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 							 */
 							body->specialized = 0;
 							DRoutines_Add( orig->specialized, rout );
+							vmc->b &= ~DAO_CALL_FAST;
 
 							/* rout may has only been declared */
 							/* forward declared routine may have an empty routine body: */

@@ -806,7 +806,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs, DaoDataCa
 		DaoValue_CopyX( S, D, cache );
 		return 1;
 	case DAO_THT :
-		if( T->aux ) return DaoValue_Move4( S, D, (DaoType*) T->aux, defs, cache );
+		if( T->aux ) return DaoValue_Move5( S, D, (DaoType*) T->aux, defs, cache );
 		DaoValue_CopyX( S, D, cache );
 		return 1;
 	case DAO_ANY :

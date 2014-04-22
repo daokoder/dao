@@ -1743,6 +1743,8 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 				DaoGC_ScanCdata( cdata, DAO_GC_DEC );
 			}else{
 				cycRefCountDecrement( (DaoValue*) value->xCtype.cdtype );
+				cycRefCountDecrement( (DaoValue*) value->xCtype.clsInter );
+				cycRefCountDecrement( (DaoValue*) value->xCtype.objInter );
 			}
 			break;
 		}
@@ -1789,7 +1791,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			DaoInterface *inter = (DaoInterface*)value;
 			cycRefCountDecrements( inter->supers );
 			cycRefCountDecrement( (DaoValue*) inter->abtype );
-			cycRefCountDecrement( (DaoValue*) inter->nspace );
+			cycRefCountDecrement( (DaoValue*) inter->model );
 			count += DaoGC_ScanMap( inter->methods, DAO_GC_DEC, 0, 1 );
 			count += inter->supers->size + inter->methods->size;
 			break;
@@ -1938,6 +1940,8 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 				DaoGC_ScanCdata( cdata, DAO_GC_INC );
 			}else{
 				cycRefCountIncrement( (DaoValue*) value->xCtype.cdtype );
+				cycRefCountIncrement( (DaoValue*) value->xCtype.clsInter );
+				cycRefCountIncrement( (DaoValue*) value->xCtype.objInter );
 			}
 			break;
 		}
@@ -1986,7 +1990,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			DaoGC_ScanMap( inter->methods, DAO_GC_INC, 0, 1 );
 			cycRefCountIncrements( inter->supers );
 			cycRefCountIncrement( (DaoValue*) inter->abtype );
-			cycRefCountIncrement( (DaoValue*) inter->nspace );
+			cycRefCountIncrement( (DaoValue*) inter->model );
 			count += inter->supers->size + inter->methods->size;
 			break;
 		}
@@ -2136,6 +2140,8 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 				DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
 			}else{
 				directRefCountDecrement( (DaoValue**) & value->xCtype.cdtype );
+				directRefCountDecrement( (DaoValue**) & value->xCtype.clsInter );
+				directRefCountDecrement( (DaoValue**) & value->xCtype.objInter );
 			}
 			break;
 		}
@@ -2189,7 +2195,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			count += DaoGC_ScanMap( inter->methods, DAO_GC_BREAK, 0, 1 );
 			directRefCountDecrements( inter->supers );
 			directRefCountDecrement( (DaoValue**) & inter->abtype );
-			directRefCountDecrement( (DaoValue**) & inter->nspace );
+			directRefCountDecrement( (DaoValue**) & inter->model );
 			break;
 		}
 	case DAO_NAMESPACE :

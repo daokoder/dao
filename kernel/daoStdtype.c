@@ -3682,10 +3682,31 @@ DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype )
 	self->type = DAO_CTYPE;
 	return self;
 }
+void DaoCtype_InitInterface( DaoCtype *self )
+{
+	DaoInterface *clsInter = DaoInterface_New( self->cdtype->name->mbs );
+	DaoInterface *objInter = DaoInterface_New( self->cdtype->name->mbs );
+	DString_SetMBS( clsInter->abtype->name, "interface<class<" );
+	DString_SetMBS( objInter->abtype->name, "interface<" );
+	DString_Append( clsInter->abtype->name, self->cdtype->name );
+	DString_Append( objInter->abtype->name, self->cdtype->name );
+	DString_AppendMBS( clsInter->abtype->name, ">>" );
+	DString_AppendChar( objInter->abtype->name, '>' );
+	GC_ShiftRC( clsInter, self->clsInter );
+	GC_ShiftRC( objInter, self->objInter );
+	GC_ShiftRC( self->ctype, clsInter->model );
+	GC_ShiftRC( self->cdtype, objInter->model );
+	self->clsInter = clsInter;
+	self->objInter = objInter;
+	clsInter->model = self->ctype;
+	objInter->model = self->cdtype;
+}
 void DaoCtype_Delete( DaoCtype *self )
 {
 	DaoCstruct_Free( (DaoCstruct*) self );
 	GC_DecRC( self->cdtype );
+	GC_DecRC( self->clsInter );
+	GC_DecRC( self->objInter );
 	dao_free( self );
 }
 
@@ -3735,6 +3756,7 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer )
 	cdata->ctype = cdata_type;
 	ctype_type->typer = typer;
 	cdata_type->typer = typer;
+	DaoCtype_InitInterface( ctype );
 
 	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
 		DaoTypeBase *sup = typer->supers[i];

@@ -2161,9 +2161,10 @@ static void DaoByteCoder_DecodeInterface( DaoByteCoder *self, DaoByteBlock *bloc
 		inter = (DaoInterface*) name->value;
 	}else if( name->value->type == DAO_CLASS ){
 		DaoClass *klass = (DaoClass*) name->value;
-		inter = klass->inter;
+		inter = klass->objInter;
+#warning "clsInter"
 	}else{
-		inter = DaoInterface_New( self->nspace, name->value->xString.data->mbs );
+		inter = DaoInterface_New( name->value->xString.data->mbs );
 		DaoByteCoder_AddToScope( self, block, inter->abtype->name, (DaoValue*) inter );
 	}
 
