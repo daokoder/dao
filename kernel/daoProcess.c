@@ -4009,8 +4009,14 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			if( ret == 0 ) goto FastCallError;
 			if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 		}
+		if( params == parbuf ){
+			for(i=0; i<npar; ++i) GC_DecRC( params[i] );
+		}
 		return;
 FastCallError:
+		if( params == parbuf ){
+			for(i=0; i<npar; ++i) GC_DecRC( params[i] );
+		}
 		DaoProcess_PopFrame( self );
 		DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "null instance" );
 		return;

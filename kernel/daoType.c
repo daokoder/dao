@@ -1371,7 +1371,6 @@ static int DaoRoutine_IsCompatible( DaoRoutine *self, DaoType *type, DMap *binds
 			k = i;
 		}
 	}
-			fflush( stdout );
 	return (k >= 0);
 }
 int DaoInterface_CheckBind( DArray *methods, DaoType *type, DMap *binds )
@@ -1389,6 +1388,7 @@ int DaoInterface_CheckBind( DArray *methods, DaoType *type, DMap *binds )
 				rout2 = (DaoRoutine*) DaoClass_GetConst( klass, id );
 				if( rout2->type != DAO_ROUTINE ) return 0;
 			}
+			/*printf( "AAA: %s %s\n", rout->routType->name->mbs,rout2->routType->name->mbs);*/
 			if( DaoRoutine_IsCompatible( rout2, rout->routType, binds ) ==0 ) return 0;
 		}
 	}else if( type->tid == DAO_INTERFACE ){
@@ -1481,48 +1481,76 @@ void DaoInterface_DeriveMethods( DaoInterface *self )
 	}
 	self->derived = 1;
 }
+static int DaoInterface_CopyRoutine( DaoInterface *self, DaoRoutine *rout, DMap *deftypes )
+{
+	DaoRoutine *meth;
+	DaoType *tp, *model = self->model;
+	DaoValue *aux = model ? model->aux : NULL;
+	daoint j, typeinter = model && (model->tid == DAO_CLASS || model->tid == DAO_CTYPE);
+
+	if( rout->attribs & DAO_ROUT_DECORATOR ) return 1;
+	if( typeinter ){
+		if( rout->attribs & DAO_ROUT_PARSELF ) return 1;
+	}else{
+		if( rout->attribs & DAO_ROUT_INITOR ) return 1;
+	}
+
+	DMap_Reset( deftypes );
+	if( model && model->tid == DAO_CLASS ){
+		DMap_Insert( deftypes, aux->xClass.clsType, aux->xClass.clsInter->abtype );
+		DMap_Insert( deftypes, aux->xClass.objType, aux->xClass.objInter->abtype );
+	}else if( model && model->tid == DAO_CTYPE ){
+		DMap_Insert( deftypes, aux->xCtype.ctype, aux->xCtype.clsInter->abtype );
+		DMap_Insert( deftypes, aux->xCtype.cdtype, aux->xCtype.objInter->abtype );
+	}else{
+		DMap_Insert( deftypes, rout->routHost, self->abtype );
+	}
+	aux = rout->routHost->aux;
+	if( rout->routHost->tid == DAO_OBJECT ){
+		DMap_Insert( deftypes, aux->xClass.clsType, aux->xClass.clsInter->abtype );
+		DMap_Insert( deftypes, aux->xClass.objType, aux->xClass.objInter->abtype );
+	}else if( rout->routHost->tid == DAO_CSTRUCT || rout->routHost->tid == DAO_CDATA ){
+		DMap_Insert( deftypes, aux->xCtype.ctype, aux->xCtype.clsInter->abtype );
+		DMap_Insert( deftypes, aux->xCtype.cdtype, aux->xCtype.objInter->abtype );
+	}
+
+	tp = DaoType_DefineTypes( rout->routType, rout->nameSpace, deftypes );
+	if( tp == NULL ) return 0;
+	meth = DaoRoutine_New( rout->nameSpace, self->abtype, 0 );
+	meth->attribs = rout->attribs;
+	DString_Assign( meth->routName, rout->routName );
+	if( rout->attribs & DAO_ROUT_INITOR ){
+		DString_Assign( meth->routName, self->abtype->name );
+	}
+	GC_ShiftRC( tp, meth->routType );
+	meth->routType = tp;
+	DaoMethods_Insert( self->methods, meth, meth->nameSpace, meth->routHost );
+	return 1;
+}
 int DaoInterface_CopyMethod( DaoInterface *self, DaoRoutine *rout, DMap *deftypes )
 {
 	DaoRoutine *meth;
 	DaoType *tp, *model = self->model;
+	DaoValue *aux = model ? model->aux : NULL;
 	daoint j, typeinter = model && (model->tid == DAO_CLASS || model->tid == DAO_CTYPE);
 
 	DMap_Reset( deftypes );
-	DMap_Insert( deftypes, rout->routHost, self->abtype );
+	if( model && model->tid == DAO_CLASS ){
+		DMap_Insert( deftypes, aux->xClass.clsType, aux->xClass.clsInter->abtype );
+		DMap_Insert( deftypes, aux->xClass.objType, aux->xClass.objInter->abtype );
+	}else if( model && model->tid == DAO_CTYPE ){
+		DMap_Insert( deftypes, aux->xCtype.ctype, aux->xCtype.clsInter->abtype );
+		DMap_Insert( deftypes, aux->xCtype.cdtype, aux->xCtype.objInter->abtype );
+	}else{
+		DMap_Insert( deftypes, rout->routHost, self->abtype );
+	}
 
 	if( rout->overloads == NULL ){
-		if( typeinter ){
-			/* TODO: handle constructor; */
-			if( rout->attribs & (DAO_ROUT_PARSELF|DAO_ROUT_INITOR) ) return 1;
-		}else{
-			if( rout->attribs & DAO_ROUT_INITOR ) return 1;
-		}
-		tp = DaoType_DefineTypes( rout->routType, rout->nameSpace, deftypes );
-		if( tp == NULL ) return 0;
-		meth = DaoRoutine_New( rout->nameSpace, self->abtype, 0 );
-		meth->attribs = rout->attribs;
-		DString_Assign( meth->routName, rout->routName );
-		GC_ShiftRC( tp, meth->routType );
-		meth->routType = tp;
-		DaoMethods_Insert( self->methods, meth, meth->nameSpace, meth->routHost );
+		return DaoInterface_CopyRoutine( self, rout, deftypes );
 	}else{
 		for(j=0; j<rout->overloads->routines->size; ++j){
 			DaoRoutine *rout2 = rout->overloads->routines->items.pRoutine[j];
-			if( rout2->attribs & DAO_ROUT_DECORATOR ) continue;
-			if( typeinter ){
-				/* TODO: handle constructor; */
-				if( rout2->attribs & (DAO_ROUT_PARSELF|DAO_ROUT_INITOR) ) continue;
-			}else{
-				if( rout2->attribs & DAO_ROUT_INITOR ) continue;
-			}
-			tp = DaoType_DefineTypes( rout2->routType, rout2->nameSpace, deftypes );
-			if( tp == NULL ) return 0;
-			meth = DaoRoutine_New( rout2->nameSpace, self->abtype, 0 );
-			meth->attribs = rout2->attribs;
-			DString_Assign( meth->routName, rout->routName );
-			GC_ShiftRC( tp, meth->routType );
-			meth->routType = tp;
-			DaoMethods_Insert( self->methods, meth, meth->nameSpace, meth->routHost );
+			if( DaoInterface_CopyRoutine( self, rout2, deftypes ) == 0 ) return 0;
 		}
 	}
 	return 1;

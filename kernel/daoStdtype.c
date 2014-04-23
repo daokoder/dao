@@ -3827,17 +3827,24 @@ static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n );
 
 static DaoFuncItem dao_Exception_Meths[] =
 {
+	/*
+	// No constructors, so that interface of user-defined exception type
+	// can match to interface<class<Exception>>!
+	// See also the build method recover().
+	*/
+#if 0
+	{ Dao_Exception_New,   "Exception( info = '' )=>Exception" },
+	{ Dao_Exception_New22, "Exception( data : any )=>Exception" },
+#endif
 	{ Dao_Exception_Get_name, ".name( self : Exception )=>string" },
 	{ Dao_Exception_Set_name, ".name=( self : Exception, name : string)" },
 	{ Dao_Exception_Get_info, ".info( self : Exception )=>string" },
 	{ Dao_Exception_Set_info, ".info=( self : Exception, info : string)" },
 	{ Dao_Exception_Get_data, ".data( self : Exception )=>any" },
 	{ Dao_Exception_Set_data, ".data=( self : Exception, data : any)" },
-	{ Dao_Exception_New,   "Exception( info = '' )=>Exception" },
-	{ Dao_Exception_New22, "Exception( data : any )=>Exception" },
 	/* for testing or demonstration */
 	{ Dao_Exception_Get_info, "serialize( self : Exception )=>string" },
-	//XXX { Dao_Exception_Get_info, "cast( self : Exception, @T<string> )=>@T" },
+	{ Dao_Exception_Get_info, "operator cast( self : Exception )=>string" },
 #ifdef DEBUG
 	{ Dao_Exception_Getf, ".( self : Exception, name : string )=>any" },
 	{ Dao_Exception_Setf, ".=( self : Exception, name : string, value : any)" },

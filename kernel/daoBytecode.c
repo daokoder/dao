@@ -791,22 +791,26 @@ DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value )
 	if( newBlock ) return newBlock;
 	switch( value->type ){
 	default :
-		DaoByteCoder_Error2( self->coder, NULL, "Unencoded value (type id=%i)!", value->type );
+		DaoByteCoder_Error2( self->coder, NULL, "Unencoded value (type id = %i)!", value->type );
+		break;
+	case DAO_INTERFACE :
+		chs = value->xInterface.abtype->name->mbs;
+		DaoByteCoder_Error3( self->coder, NULL, "Unencoded interface type (name = %s)!", chs );
 		break;
 	case DAO_CLASS :
 		chs = value->xClass.className->mbs;
-		DaoByteCoder_Error3( self->coder, NULL, "Unencoded class (name=%s)!", chs );
+		DaoByteCoder_Error3( self->coder, NULL, "Unencoded class (name = %s)!", chs );
 		break;
 	case DAO_CTYPE :
 	case DAO_CDATA :
 		chs = value->xCtype.ctype->name->mbs;
-		DaoByteCoder_Error3( self->coder, NULL, "Unencoded cdata type (name=%s)!", chs );
+		DaoByteCoder_Error3( self->coder, NULL, "Unencoded cdata type (name = %s)!", chs );
 		break;
 	case DAO_ROUTINE :
 		chs = value->xRoutine.routName->mbs;
-		DaoByteCoder_Error3( self->coder, NULL, "Unencoded routine (name=%s)!", chs );
+		DaoByteCoder_Error3( self->coder, NULL, "Unencoded routine (name = %s)!", chs );
 		chs = value->xRoutine.routType->name->mbs;
-		DaoByteCoder_Error3( self->coder, NULL, "Unencoded routine (type=%s)!", chs );
+		DaoByteCoder_Error3( self->coder, NULL, "Unencoded routine (type = %s)!", chs );
 		break;
 	case DAO_NONE : return DaoByteBlock_AddBlock( self, value, DAO_ASM_VALUE );
 	case DAO_INTEGER : return DaoByteBlock_EncodeInteger( self, value->xInteger.value );
@@ -966,6 +970,7 @@ DaoByteBlock* DaoByteBlock_AddClassBlock( DaoByteBlock *self, DaoClass *klass, i
 DaoByteBlock* DaoByteBlock_AddInterfaceBlock( DaoByteBlock *self, DaoInterface *inter, int pm )
 {
 	daoint i, j;
+	DaoByteBlock *modbk = DaoByteBlock_EncodeType( self, inter->model );
 	DaoByteBlock *decl = DaoByteBlock_FindObjectBlock( self, (DaoValue*) inter );
 	DaoByteBlock *name = DaoByteBlock_EncodeString( self, inter->abtype->name );
 	DaoByteBlock *block = DaoByteBlock_AddBlock( self, (DaoValue*) inter, DAO_ASM_INTERFACE );
@@ -976,9 +981,14 @@ DaoByteBlock* DaoByteBlock_AddInterfaceBlock( DaoByteBlock *self, DaoInterface *
 	}
 	DaoByteCoder_EncodeUInt16( block->begin+2, inter->supers->size );
 	block->end[7] = pm;
-	DaoByteBlock *data = DaoByteBlock_NewBlock( block, DAO_ASM_BASES );
-	DaoByteBlock_EncodeValues2( self, inter->supers );
-	DaoByteBlock_AddBlockIndexData( data, 4, inter->supers->size );
+	if( inter->model ){
+		if( modbk == NULL ) DaoByteCoder_Error( self->coder, NULL, "Model type not found!" );
+		DaoByteBlock_InsertBlockIndex( block, block->begin, modbk );
+	}else{
+		DaoByteBlock *data = DaoByteBlock_NewBlock( block, DAO_ASM_BASES );
+		DaoByteBlock_EncodeValues2( self, inter->supers );
+		DaoByteBlock_AddBlockIndexData( data, 4, inter->supers->size );
+	}
 	return block;
 }
 
@@ -2159,10 +2169,15 @@ static void DaoByteCoder_DecodeInterface( DaoByteCoder *self, DaoByteBlock *bloc
 	if( self->error ) return;
 	if( name->value->type == DAO_INTERFACE ){
 		inter = (DaoInterface*) name->value;
-	}else if( name->value->type == DAO_CLASS ){
-		DaoClass *klass = (DaoClass*) name->value;
-		inter = klass->objInter;
-#warning "clsInter"
+	}else if( name->value->type == DAO_TYPE ){
+		DaoType *type = (DaoType*) name->value;
+		switch( type->tid ){
+		case DAO_CLASS   : inter = type->aux->xClass.clsInter; break;
+		case DAO_OBJECT  : inter = type->aux->xClass.objInter; break;
+		case DAO_CTYPE   : inter = type->aux->xCtype.clsInter; break;
+		case DAO_CSTRUCT :
+		case DAO_CDATA   : inter = type->aux->xCtype.objInter; break;
+		}
 	}else{
 		inter = DaoInterface_New( name->value->xString.data->mbs );
 		DaoByteCoder_AddToScope( self, block, inter->abtype->name, (DaoValue*) inter );
@@ -3201,10 +3216,10 @@ void DaoByteCoder_PrintBlock( DaoByteCoder *self, DaoByteBlock *block, int space
 				DaoStream_PrintTag( stream, DAO_ASM_END, spaces );
 				if( C ){
 					float f = DaoByteCoder_DecodeFloat( self, block->end );
-					DaoStream_PrintDouble( stream, "%12g;\n", f );
+					DaoStream_PrintDouble( stream, "%12g", f );
 					if( !(C%2) ){
 						f = DaoByteCoder_DecodeFloat( self, block->end+4 );
-						DaoStream_PrintDouble( stream, "%12g;\n", f );
+						DaoStream_PrintDouble( stream, ", %12g", f );
 					}
 				}
 			}else{

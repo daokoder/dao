@@ -30,7 +30,7 @@ v = (array<int>)t;
 
 io.writeln( a, b, c, v )
 
-e = Exception( 'testing' );
+e = Exception::Error( 'testing' );
 io.writeln( (string)e );
 
 # a = (int)e; # error

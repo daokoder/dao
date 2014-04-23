@@ -1926,9 +1926,17 @@ WrongType:
 			case DAO_OBJECT :
 				return type->aux->xClass.objInter->abtype;
 			case DAO_CTYPE :
+				if( self->byteBlock ){
+					DaoInterface *inter = type->aux->xCtype.clsInter;
+					DaoByteBlock_AddInterfaceBlock( self->byteBlock, inter, DAO_DATA_PUBLIC );
+				}
 				return type->aux->xCtype.clsInter->abtype;
 			case DAO_CSTRUCT :
 			case DAO_CDATA :
+				if( self->byteBlock ){
+					DaoInterface *inter = type->aux->xCtype.objInter;
+					DaoByteBlock_AddInterfaceBlock( self->byteBlock, inter, DAO_DATA_PUBLIC );
+				}
 				return type->aux->xCtype.objInter->abtype;
 			}
 			goto InvalidTypeForm;
@@ -3120,17 +3128,15 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 		/* interface AB : NS::BB, CC{ } */
 		unsigned char sep = DTOK_COLON;
 		while( tokens[start]->name == sep ){
-			ename = & tokens[start+1]->string;
-			start = DaoParser_FindScopedConstant( self, & value, start+1 );
+			DaoType *sutype = DaoParser_ParseType( self, start+1, to, & start, NULL );
 			if( start < 0 ) goto ErrorInterfaceBase;
-			ename = & tokens[start]->string;
-			start ++;
-			if( value == NULL || value->type != DAO_INTERFACE ){
+			ename = & tokens[start-1]->string;
+			if( sutype == NULL || sutype->tid != DAO_INTERFACE ){
 				ec = DAO_SYMBOL_NEED_INTERFACE;
 				goto ErrorInterfaceBase;
 			}
 			/* Add a reference to its super interfaces: */
-			DArray_Append( inter->supers, value );
+			DArray_Append( inter->supers, sutype->aux );
 			sep = DTOK_COMMA;
 		}
 	}
@@ -3244,11 +3250,9 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 
 		if( self->byteBlock ){
 			int pm = self->permission;
-			DaoByteBlock *block = self->byteBlock;
-			DaoByteBlock *classbk = DaoByteBlock_AddClassBlock( block, klass, pm );
-#warning"clsInter"
-			DaoByteBlock *interbk = DaoByteBlock_AddInterfaceBlock( block, klass->objInter, pm );
-			DaoByteBlock_InsertBlockIndex( interbk, interbk->begin, classbk );
+			DaoByteBlock_AddClassBlock( self->byteBlock, klass, pm );
+			DaoByteBlock_AddInterfaceBlock( self->byteBlock, klass->clsInter, pm );
+			DaoByteBlock_AddInterfaceBlock( self->byteBlock, klass->objInter, pm );
 		}
 
 		if( start+1 <= to ){
@@ -3335,18 +3339,16 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 
 	if( tokens[start]->name == DTOK_COLON ){
 		/* class AA : NS::BB { } */
-		DaoClass *super = NULL;
-		start = DaoParser_FindScopedConstant( self, & value, start+1 );
-		if( start <0 ) goto ErrorClassDefinition;
-		ename = & tokens[start]->string;
-		if( value == NULL || (value->type != DAO_CLASS && value->type != DAO_CTYPE) ){
+		DaoValue *super = NULL;
+		DaoType *sutype = DaoParser_ParseType( self, start+1, to, & start, NULL );
+		if( start < 0 ) goto ErrorClassDefinition;
+		ename = & tokens[start-1]->string;
+		if( sutype == NULL || sutype->tid < DAO_OBJECT || sutype->tid > DAO_CDATA ){
 			ec = DAO_SYMBOL_NEED_CLASS_CTYPE;
-			if( value == NULL || value->type == 0 || value->type == DAO_STRING )
-				ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
+			if( sutype == NULL ) ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
 			goto ErrorClassDefinition;
 		}
-		super = & value->xClass;
-		start ++;
+		super = sutype->aux;
 
 		if( tokens[start]->name == DTOK_LB ) goto ErrorClassDefinition; /* old syntax; */
 		if( tokens[start]->name == DTOK_COMMA ) goto ErrorClassDefinition; /* old syntax; */
@@ -3355,7 +3357,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			goto ErrorClassDefinition;
 		}
 		/* Add a reference to its super classes: */
-		DaoClass_AddSuperClass( klass, (DaoValue*) super );
+		DaoClass_AddSuperClass( klass, super );
 	}/* end parsing super classes */
 	if( tokens[start]->name == DKEY_FOR ){
 		ec = DAO_INVALID_DECO_PATTERN;
@@ -3808,6 +3810,7 @@ InvalidMultiAssignment: DArray_Delete( inodes ); return 0;
 			DaoRoutine *decfunc = NULL;
 			DaoList *declist = NULL;
 			DArray *cid = DaoParser_GetArray( self );
+			DString *name = & tokens[start]->string;
 			empty_decos = 0;
 			reg = DaoParser_GetRegister( self, tokens[start] );
 			if( reg < 0 ) goto DecoratorError;
@@ -3837,7 +3840,20 @@ InvalidMultiAssignment: DArray_Delete( inodes ); return 0;
 				start = rb;
 			}
 			if( self->byteBlock ){
-				DaoByteBlock_EncodeValue( self->byteBlock, (DaoValue*) decfunc );
+				DaoByteBlock *eval, *block = self->byteBlock;
+				DaoValue *value =(DaoValue*) decfunc;
+				int opcode = 0;
+				switch( LOOKUP_ST( reg ) ){
+				case DAO_CLASS_CONSTANT  : opcode = DVM_GETCK; break;
+				case DAO_GLOBAL_CONSTANT : opcode = DVM_GETCG; break;
+				}
+				if( opcode != 0 && DaoByteBlock_FindObjectBlock( block, value ) == NULL ){
+					DaoByteBlock *namebk = DaoByteBlock_EncodeString( block, name );
+					eval = DaoByteBlock_AddEvalBlock( block, value, opcode, 1, NULL );
+					DaoByteBlock_InsertBlockIndex( eval, eval->end, namebk );
+				}
+				GC_ShiftRC( dao_type_list_any, declist->ctype );
+				declist->ctype = dao_type_list_any;
 				DaoByteBlock_EncodeValue( self->byteBlock, (DaoValue*) declist );
 			}
 			DArray_PushFront( self->decoFuncs2, decfunc );

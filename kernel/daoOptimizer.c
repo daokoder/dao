@@ -4219,6 +4219,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				if( k == DAO_MT_SUB && at != ct ){
 					/* L = { 1.5, 2.5 }; L = { 1, 2 }; L[0] = 3.5 */
 					vmc->code = DVM_CAST;
+					vmc->b = DaoRoutine_AddConstant( self->routine, (DaoValue*) types[opc] );
 					if( at->tid && at->tid <= DAO_COMPLEX && types[opc]->tid == DAO_COMPLEX )
 						vmc->code = DVM_MOVE_CI + (at->tid - DAO_INTEGER);
 					break;
@@ -5141,6 +5142,11 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					rout = DaoType_FindFunctionMBS( at, "()" );
 					if( rout == NULL ) goto ErrorTyping;
 					bt = at;
+				}else if( at->tid == DAO_INTERFACE ){
+					DaoInterface *inter = (DaoInterface*) at->aux;
+					DNode *it = DMap_Find( inter->methods, inter->abtype->name );
+					if( it == NULL ) goto ErrorTyping;
+					rout = it->value.pRoutine;
 				}else if( at->tid != DAO_ROUTINE ){
 					goto ErrorTyping;
 				}

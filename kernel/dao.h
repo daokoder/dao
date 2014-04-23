@@ -121,9 +121,9 @@ enum DaoProcessStatus
 {
 	DAO_PROCESS_FINISHED ,  /* finished normally */
 	DAO_PROCESS_ABORTED ,   /* execution aborted */
-	DAO_PROCESS_SUSPENDED , /* suspended, by coroutine.yield() */
+	DAO_PROCESS_SUSPENDED , /* suspended, by future::wait() etc. */
 	DAO_PROCESS_RUNNING ,   /* currently running */
-	DAO_PROCESS_STACKED     /* new context is pushed onto the stack of the process */
+	DAO_PROCESS_STACKED     /* new frame on the process stack */
 };
 enum DaoNamespaceOption
 {
@@ -185,7 +185,7 @@ enum DaoExceptionType
 
 /*
 // define an integer type with size equal to the size of pointers
-// under both 32-bits and 64-bits systems.
+// on both 32-bits and 64-bits systems.
 */
 typedef ptrdiff_t       daoint;
 typedef unsigned char   uchar_t;
