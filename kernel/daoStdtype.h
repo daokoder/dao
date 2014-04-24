@@ -185,8 +185,7 @@ DAO_DLL int DaoTuple_GetIndex( DaoTuple *self, DString *name );
 
 
 /*
-// DaoNameValue is not data type for general use, it is mainly used for
-// passing named parameters and fields:
+// Mainly used for passing named parameters and fields:
 */
 struct DaoNameValue
 {
@@ -253,9 +252,6 @@ struct DaoException
 {
 	DAO_CSTRUCT_COMMON;
 
-	int         fromLine;
-	int         toLine;
-	DaoRoutine *routine;
 	DArray     *callers;
 	DArray     *lines;
 

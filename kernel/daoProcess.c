@@ -981,7 +981,7 @@ int DaoProcess_Execute( DaoProcess *self )
 
 		&& LAB_TEST_I , && LAB_TEST_F , && LAB_TEST_D ,
 		&& LAB_MATH_I , && LAB_MATH_F , && LAB_MATH_D ,
-		&& LAB_ISA_ST 
+		&& LAB_CAST_NV , && LAB_ISA_ST 
 	};
 #endif
 
@@ -1241,21 +1241,26 @@ CallEntry:
 			DaoProcess_DoGetField( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( SETVH ){
+			self->activeCode = vmc;
 			abtp = dataVH[ vmc->c ]->activeTypes[ vmc->b ];
 			if( DaoProcess_Move( self, locVars[vmc->a], dataVH[ vmc->c ]->activeValues + vmc->b, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVS ){
+			self->activeCode = vmc;
 			variable = svariables[ vmc->b ];
 			if( DaoProcess_Move( self, locVars[vmc->a], & variable->value, variable->dtype ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVO ){
+			self->activeCode = vmc;
 			abtp = typeVO->items.pVar[ vmc->b ]->dtype;
 			if( DaoProcess_Move( self, locVars[vmc->a], dataVO + vmc->b, abtp ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVK ){
+			self->activeCode = vmc;
 			variable = host->variables->items.pVar[ vmc->b ];
 			if( DaoProcess_Move( self, locVars[vmc->a], & variable->value, variable->dtype ) ==0 ) goto CheckException;
 		}OPNEXT() OPCASE( SETVG ){
+			self->activeCode = vmc;
 			variable = here->variables->items.pVar[ vmc->b ];
 			if( DaoProcess_Move( self, locVars[vmc->a], & variable->value, variable->dtype ) ==0 )
 				goto CheckException;
@@ -1282,6 +1287,7 @@ CallEntry:
 			DaoProcess_DoCast( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( MOVE ){
+			self->activeCode = vmc;
 			DaoProcess_Move( self, locVars[ vmc->a ], & locVars[ vmc->c ], locTypes[vmc->c] );
 			goto CheckException;
 		}OPNEXT()
@@ -1975,6 +1981,7 @@ CallEntry:
 			id = IntegerOperand( vmc->b );
 			abtp = NULL;
 			if( id <0 || id >= tuple->size ) goto RaiseErrorIndexOutOfRange;
+			self->activeCode = vmc;
 			abtp = tuple->ctype->nested->items.pType[id];
 			if( abtp->tid == DAO_PAR_NAMED ) abtp = & abtp->aux->xType;
 			if( DaoProcess_Move( self, locVars[vmc->a], tuple->items + id, abtp ) ==0 )
@@ -2169,6 +2176,11 @@ CallEntry:
 			object = (DaoObject*) locVars[ vmc->c ];
 			if( object->isNull ) goto AccessNullInstance;
 			object->objValues[ vmc->b ]->xComplex.value = ComplexOperand( vmc->a );
+		}OPNEXT()
+		OPCASE( CAST_NV ){
+			vA = locVars[vmc->a]->xNameValue.value;
+			GC_ShiftRC( vA, locVars[vmc->c] );
+			locVars[vmc->c] = vA;
 		}OPNEXT()
 		OPCASE( ISA_ST ){
 			vA = locVars[vmc->a];
@@ -2961,6 +2973,7 @@ void DaoProcess_BindNameValue( DaoProcess *self, DaoVmCode *vmc )
 			DaoNamespace *ns = self->activeNamespace;
 			DaoValue *tp = (DaoValue*) DaoNamespace_GetType( ns, dB );
 			type = DaoNamespace_MakeType( ns, S->data->mbs, DAO_PAR_NAMED, tp, NULL, 0 );
+			type = DaoNamespace_MakeType( ns, "var", DAO_PAR_NAMED, NULL, & type, 1 );
 		}
 		nameva = DaoNameValue_New( S->data, NULL );
 		nameva->ctype = type;
@@ -3496,6 +3509,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "operate on none object" );
 		return;
 	}
+	if( va->type == DAO_PAR_NAMED ) va = va->xNameValue.value;
 	if( ct == NULL || ct->tid == DAO_UDT || ct->tid == DAO_ANY ) goto FastCasting;
 	if( va->type == ct->tid && ct->tid <= DAO_STRING ) goto FastCasting;
 
@@ -3979,13 +3993,11 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 	if( (mode & DAO_CALL_FAST) && caller->xRoutine.overloads == NULL ){
 		rout = (DaoRoutine*) caller;
 		params = self->activeValues + vmc->a + 1;
-		if( DaoProcess_TryTailCall( self, rout, NULL, vmc ) ){
-			for(i=0; i<npar; ++i){
-				GC_IncRC( params[i] );
-				parbuf[i] = params[i];
-			}
-			params = parbuf;
+		for(i=0; i<npar; ++i){
+			GC_IncRC( params[i] );
+			parbuf[i] = params[i];
 		}
+		DaoProcess_TryTailCall( self, rout, NULL, vmc );
 		if( rout->pFunc ){
 			DaoStackFrame *frame = DaoProcess_PushFrame( self, rout->parCount );
 			DaoValue **values = self->stackValues + frame->stackBase;
@@ -3993,7 +4005,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			frame->routine = rout;
 			frame->active = frame->prev->active;
 			self->status = DAO_PROCESS_STACKED;
-			ret = DaoProcess_FastPassParams( self, params, npar );
+			ret = DaoProcess_FastPassParams( self, parbuf, npar );
 			if( ret == 0 ) goto FastCallError;
 			if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 			DaoProcess_CallFunction( self, rout, values, rout->parCount );
@@ -4005,18 +4017,14 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			frame->active = frame;
 			self->status = DAO_PROCESS_STACKED;
 			DaoProcess_InitTopFrame( self, rout, NULL );
-			ret = DaoProcess_FastPassParams( self, params, npar );
+			ret = DaoProcess_FastPassParams( self, parbuf, npar );
 			if( ret == 0 ) goto FastCallError;
 			if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 		}
-		if( params == parbuf ){
-			for(i=0; i<npar; ++i) GC_DecRC( params[i] );
-		}
+		for(i=0; i<npar; ++i) GC_DecRC( parbuf[i] );
 		return;
 FastCallError:
-		if( params == parbuf ){
-			for(i=0; i<npar; ++i) GC_DecRC( params[i] );
-		}
+		for(i=0; i<npar; ++i) GC_DecRC( parbuf[i] );
 		DaoProcess_PopFrame( self );
 		DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "null instance" );
 		return;
@@ -6153,16 +6161,6 @@ static DaoException* DaoProcess_RaiseExceptionEx( DaoProcess *self, DaoType *ety
 	DaoType *warning = DaoException_GetType( DAO_WARNING );
 	DaoStream *stream = self->vmSpace->errorStream;
 	DaoException *except;
-
-#ifdef DEBUG
-	if( self->topFrame->routine->body ){
-		DaoVmCode *vmc = self->activeCode;
-		int i = vmc - self->topFrame->codes;
-		if( self->topFrame->routine != self->activeRoutine ) i = self->topFrame->entry;
-		if( i >= 0 && i < self->topFrame->routine->body->annotCodes->size )
-			DaoVmCodeX_Print( *self->topFrame->routine->body->annotCodes->items.pVmc[i], NULL, NULL );
-	}
-#endif
 
 	if( self->activeRoutine == NULL ) return NULL; // TODO: Error infor;
 

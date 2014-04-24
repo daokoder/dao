@@ -1374,7 +1374,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 		DString_Append( pname, tt->name );
 		DString_AppendMBS( pname, "=>" );
 		DString_Append( pname, retype->name );
-		tt = DaoType_New( "", DAO_PAR_NAMED, (DaoValue*) tt, NULL );
 		DArray_Append( NS->auxData, (void*) tt );
 		DArray_Append( nested, (void*) tt );
 		DaoRoutine_AddConstant( routine, NULL );
@@ -1940,9 +1939,13 @@ WrongType:
 				return type->aux->xCtype.objInter->abtype;
 			}
 			goto InvalidTypeForm;
+		case DKEY_VAR  :
+			tid = DAO_PAR_NAMED;
+			if( count2 != 1 ) goto InvalidTypeForm;
+			break;
 		default : break;
 		}
-		if( tid != DAO_TUPLE && tid != DAO_ROUTINE && tid != DAO_CODEBLOCK ){
+		if( tid != DAO_TUPLE && tid != DAO_ROUTINE && tid != DAO_PAR_NAMED && tid != DAO_CODEBLOCK ){
 			for(i=count; i<types->size; ++i){
 				DaoType *tp = types->items.pType[i];
 				if( tp->tid >= DAO_PAR_NAMED && tp->tid <= DAO_PAR_VALIST ){
@@ -5754,7 +5757,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 	if( etype == DKEY_TUPLE || btype == DTOK_LB ){
 		/* ( a, b ) */
 		if( tp && tp->tid != DAO_TUPLE ) goto ParsingError;
-		enode = DaoParser_ParseExpressionList2( self, DTOK_COMMA, NULL, cid, DAO_EXPRLIST_TUPLE );
+		enode = DaoParser_ParseExpressionList2( self, DTOK_COMMA, NULL, cid, 0 );
 		if( enode.reg < 0 || self->curToken != end ) goto ParsingError;
 		regC = DaoParser_PushRegister( self );
 		enumcode = DVM_TUPLE;
@@ -5791,7 +5794,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 		/* arithmetic progression: [ 1 : 2 : 10 ]; [ 1 : 10 ] */
 		if( tp && (enumcode == DVM_LIST && tp->tid != DAO_LIST) ) goto ParsingError;
 		if( tp && (enumcode == DVM_VECTOR && tp->tid != DAO_ARRAY) ) goto ParsingError;
-		enode = DaoParser_ParseExpressionList2( self, DTOK_COLON, NULL, cid, enumcode == DVM_VECTOR );
+		enode = DaoParser_ParseExpressionList2( self, DTOK_COLON, NULL, cid, enumcode == DVM_VECTOR ? DAO_EXPRLIST_ARRAY : 0 );
 		if( enode.reg < 0 || self->curToken != end ) goto ParsingError;
 		isempty = lb > rb;
 		if( enode.reg < 0 || enode.count < 2 || enode.count > 3 ){
@@ -5806,7 +5809,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 		/* [a,b,c] */
 		if( tp && (enumcode == DVM_LIST && tp->tid != DAO_LIST) ) goto ParsingError;
 		if( tp && (enumcode == DVM_VECTOR && tp->tid != DAO_ARRAY) ) goto ParsingError;
-		enode = DaoParser_ParseExpressionList2( self, DTOK_COMMA, NULL, cid, enumcode == DVM_VECTOR );
+		enode = DaoParser_ParseExpressionList2( self, DTOK_COMMA, NULL, cid, enumcode == DVM_VECTOR ? DAO_EXPRLIST_ARRAY : 0 );
 		if( enode.reg < 0 || self->curToken != end ) goto ParsingError;
 		isempty = lb > rb;
 		regC = DaoParser_PushRegister( self );
@@ -5950,11 +5953,6 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 		DaoString ds = {DAO_STRING,0,0,0,1,NULL};
 		DaoValue *value = (DaoValue*) & ds;
 		DString *field = & tokens[start]->string;
-
-		if( !(eltype & DAO_EXPRLIST_TUPLE) ){
-			DaoParser_Error2( self, DAO_INVALID_EXPRESSION, start, 2, 0 );
-			return error;
-		}
 
 		ds.data = field;
 		self->curToken += 2;
@@ -6162,7 +6160,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 				}
 				self->curToken += 1;
 				cid = DaoParser_GetArray( self );
-				enode = DaoParser_ParseExpressionList2( self, DTOK_COMMA, inode, cid, DAO_EXPRLIST_TUPLE );
+				enode = DaoParser_ParseExpressionList2( self, DTOK_COMMA, inode, cid, 0 );
 				if( DaoParser_CurrentTokenName( self ) == DTOK_DOTS ){
 					mode |= DAO_CALL_EXPAR;
 					self->curToken += 1;
@@ -6409,7 +6407,7 @@ InvalidFunctional:
 					}
 					self->curToken += 1;
 					cid = DaoParser_GetArray( self );
-					enode = DaoParser_ParseExpressionList2( self, DTOK_COMMA, extra, cid, DAO_EXPRLIST_TUPLE );
+					enode = DaoParser_ParseExpressionList2( self, DTOK_COMMA, extra, cid, 0 );
 					if( enode.reg < 0 || self->curToken != rb ) return enode;
 
 					regLast = DaoParser_PushRegister( self );

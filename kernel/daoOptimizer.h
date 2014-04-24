@@ -126,7 +126,7 @@ struct DaoInode
 	unsigned short  middle;  /* the middle token, relative to "first" */
 	unsigned short  last;    /* the last token, relative to "first" */
 
-	unsigned short  index;   /* index of the instruction */
+	unsigned int  index;   /* index of the instruction */
 
 	DaoInode *jumpTrue;
 	DaoInode *jumpFalse;

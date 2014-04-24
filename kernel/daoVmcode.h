@@ -185,8 +185,9 @@ enum DaoOpcode
 	DVM_MOVE_CD ,
 	DVM_MOVE_CC , /* complex = complex */
 	DVM_MOVE_SS , /* string = string */
-	DVM_MOVE_PP , /* C = A; C and A are of the same non-primitive type, A must not be constant; */
+	DVM_MOVE_PP , /* C = A; C and A are of the same non-primitive type, A must not be const; */
 	DVM_MOVE_XX , /* C = A; C and A are of the same type, or C is of any type; */
+
 	DVM_NOT_I ,
 	DVM_NOT_F ,
 	DVM_NOT_D ,
@@ -366,6 +367,8 @@ enum DaoOpcode
 	DVM_MATH_I ,
 	DVM_MATH_F ,
 	DVM_MATH_D ,
+
+	DVM_CAST_NV , /* casting the value of a namevalue; */
 
 	DVM_ISA_ST , /* check against simple types: int, float, double, complex, long, string; */
 

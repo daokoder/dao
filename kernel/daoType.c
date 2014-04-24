@@ -282,12 +282,7 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 		GC_IncRC( extra );
 	}
 	DString_SetMBS( self->name, name );
-	if( (tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT) && extra && extra->type == DAO_TYPE ){
-		self->fname = DString_New(1);
-		DString_SetMBS( self->fname, name );
-		DString_AppendChar( self->name, (tid == DAO_PAR_NAMED) ? ':' : '=' );
-		DString_Append( self->name, self->aux->xType.name );
-	}
+	if( tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ) self->fname = DString_New(1);
 	if( nest ){
 		self->nested = DArray_New(D_VALUE);
 		DArray_Assign( self->nested, nest );
@@ -427,7 +422,9 @@ static int DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *bin
 	int p1 = self->tid == DAO_PAR_NAMED || self->tid == DAO_PAR_DEFAULT;
 	int p2 = type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_DEFAULT;
 	int m = 0;
-	if( p1 && p2 && ! DString_EQ( self->fname, type->fname ) ) return DAO_MT_NOT;
+	if( p1 && p2 && type->fname->size && ! DString_EQ( self->fname, type->fname ) ){
+		return DAO_MT_NOT;
+	}
 	if( p1 || self->tid == DAO_PAR_VALIST ) ext1 = & self->aux->xType;
 	if( p2 || type->tid == DAO_PAR_VALIST ) ext2 = & type->aux->xType;
 
@@ -928,8 +925,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		return DaoType_MatchTo( tp, self->nested->items.pType[0], defs );
 	case DAO_PAR_NAMED :
 	case DAO_PAR_DEFAULT :
-		if( value->xNameValue.ctype == self ) return DAO_MT_EQ;
-		return 0;
+		return DaoType_MatchTo( value->xNameValue.ctype, self, defs );
 	}
 	return (self->tid == value->type) ? DAO_MT_EQ : DAO_MT_NOT;
 }

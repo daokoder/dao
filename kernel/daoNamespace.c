@@ -1688,10 +1688,23 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	}
 	tp = DaoNamespace_FindType( self, mbs );
 	if( tp == NULL ){
-		if( tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ) DString_SetMBS( mbs, name );
 		tp = DaoType_New( mbs->mbs, tid, pb, nstd );
 		tp->attrib |= attrib;
 		if( attrib & DAO_TYPE_VARIADIC ) tp->variadic = 1;
+		if( tid == DAO_PAR_NAMED && N > 0 ){
+			DaoType *it = nest[0];
+			DaoValue *aux = (DaoValue*) it;
+			DString *fname = NULL;
+			if( it->tid == DAO_PAR_NAMED && DString_FindMBS( it->name, "var<", 0 ) != 0 ){
+				aux = it->aux;
+				fname = it->fname;
+			}
+			if( fname ) DString_Assign( tp->fname, fname );
+			GC_ShiftRC( aux, tp->aux );
+			tp->aux = aux;
+		}else if( tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ){
+			DString_SetMBS( tp->fname, name );
+		}
 		tp = DaoNamespace_AddType( self, tp->name, tp );
 	}
 Finalizing:

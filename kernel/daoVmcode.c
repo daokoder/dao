@@ -341,6 +341,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "MATH_I",     DVM_MATH_I,     DAO_CODE_UNARY2,  1 },
 	{ "MATH_F",     DVM_MATH_F,     DAO_CODE_UNARY2,  1 },
 	{ "MATH_D",     DVM_MATH_D,     DAO_CODE_UNARY2,  1 },
+	{ "CAST_NV",    DVM_CAST_NV,    DAO_CODE_MOVE,    0 },
 	{ "ISA_ST",     DVM_ISA_ST,     DAO_CODE_BINARY,  0 },
 	{ "???",        DVM_UNUSED,     DAO_CODE_NOP,     0 },
 

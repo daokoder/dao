@@ -2652,6 +2652,7 @@ static DaoInode* DaoInferencer_InsertNode( DaoInferencer *self, DaoInode *inode,
 {
 	DaoInode *next = inode;
 	DaoInode *prev = inode->prev;
+	int i;
 
 	inode = DaoInode_New();
 	*(DaoVmCodeX*)inode = *(DaoVmCodeX*)next;
@@ -2659,6 +2660,7 @@ static DaoInode* DaoInferencer_InsertNode( DaoInferencer *self, DaoInode *inode,
 	if( addreg ){
 		inode->c = self->types->size;
 		DArray_Append( self->types, type );
+		DString_AppendChar( self->inited, '\0' );
 	}
 	if( prev ){
 		prev->next = inode;
@@ -2666,6 +2668,13 @@ static DaoInode* DaoInferencer_InsertNode( DaoInferencer *self, DaoInode *inode,
 	}
 	inode->next = next;
 	next->prev = inode;
+	for(i=0; i<self->inodes->size; ++i){
+		if( next == self->inodes->items.pInode[i] ){
+			DArray_Insert( self->inodes, inode, i );
+			DArray_Insert( self->consts, NULL, i );
+			break;
+		}
+	}
 	/* For proper setting up the jumps: */
 	if( next->extra == NULL ) next->extra = inode;
 	return inode;
@@ -2742,7 +2751,7 @@ static void DaoInferencer_WriteErrorHeader( DaoInferencer *self )
 	self->error = 1;
 	if( self->silent ) return;
 
-	vmc = routine->body->annotCodes->items.pVmc[self->currentIndex];
+	vmc = self->inodes->items.pVmc[self->currentIndex];
 	sprintf( char200, "%s:%i,%i,%i", DaoVmCode_GetOpcodeName( vmc->code ), vmc->a, vmc->b, vmc->c );
 
 	DaoStream_WriteMBS( stream, "[[ERROR]] in file \"" );
@@ -2897,8 +2906,9 @@ static int DaoType_IsNone( DaoType *self )
 	if( self->tid == DAO_VALTYPE ) return self->value && self->value->type == DAO_NONE;
 	return 0;
 }
-static DaoType* DaoType_GetVariantUsable( DaoType *self )
+static DaoType* DaoType_GetAutoCastType( DaoType *self )
 {
+	if( self->tid == DAO_PAR_NAMED ) return (DaoType*) self->aux;
 	if( self->tid != DAO_VARIANT ) return NULL;
 	if( self->nested->size == 1 ){
 		DaoType *T = self->nested->items.pType[0];
@@ -2969,16 +2979,22 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	catype = DaoNamespace_MakeType( NS, "array", DAO_ARRAY, NULL, & dao_type_complex, 1 );
 
 	for(i=1; i<=DAO_MAX_SECTDEPTH; i++) typeVH[i] = types;
+	for(i=0; i<N; i++) inodes[i]->index = N | (1<<16); /* for return ranges (rettypes); */
 
-	DArray_Append( rettypes, IntToPointer( N ) );
+	DArray_Append( rettypes, inodes[N-1] );
 	DArray_Append( rettypes, NULL );
 	DArray_Append( rettypes, routine->routType->aux );
 	DArray_Append( rettypes, routine->routType->aux );
 	for(i=0; i<N; i++){
+		inodes = self->inodes->items.pInode;
+		consts = self->consts->items.pValue;
 		types = self->types->items.pType;
+		inited = self->inited->mbs;
+		N = self->inodes->size;
 		M = self->types->size;
 		self->currentIndex = i;
 		inode = inodes[i];
+		inode->index = i;
 		vmc = (DaoVmCodeX*) inode;
 		code = vmc->code;
 		opa = vmc->a;  opb = vmc->b;  opc = vmc->c;
@@ -2989,9 +3005,13 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		middle = first + vmc->middle;
 		last = middle + vmc->last;
 
-		if( i >= rettypes->items.pInt[ rettypes->size - 4 ] ){
-			DArray_Erase( rettypes, rettypes->size - 4, -1 );
-			DArray_PopBack( self->typeMaps );
+		if( rettypes->size > 4 ){
+			DaoInode *range = rettypes->items.pInode[rettypes->size - 4];
+			while( range->extra ) range = range->extra;
+			if( i >= range->index ){
+				DArray_Erase( rettypes, rettypes->size - 4, -1 );
+				DArray_PopBack( self->typeMaps );
+			}
 		}
 		DMap_Reset( defs );
 		DMap_Assign( defs, (DMap*)DArray_Back( self->typeMaps ) );
@@ -3071,39 +3091,43 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		}
 
 		switch( K ){
+		case DAO_CODE_MOVE :
+			if( code == DVM_LOAD ){
+				tt = DaoType_GetAutoCastType( at );
+				if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->a, tt );
+			}
+			break;
 		case DAO_CODE_GETF :
 		case DAO_CODE_GETI :
 		case DAO_CODE_UNARY :
 		case DAO_CODE_GETM :
 		case DAO_CODE_ENUM2 :
 		case DAO_CODE_CALL :
-			tt = DaoType_GetVariantUsable( at );
+			tt = DaoType_GetAutoCastType( at );
 			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->a, tt );
 			break;
 		case DAO_CODE_UNARY2 :
-			tt = DaoType_GetVariantUsable( bt );
+			tt = DaoType_GetAutoCastType( bt );
 			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->b, tt );
 			break;
 		case DAO_CODE_SETF :
 		case DAO_CODE_SETI :
 		case DAO_CODE_SETM :
-			tt = DaoType_GetVariantUsable( ct );
+			tt = DaoType_GetAutoCastType( ct );
 			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->c, tt );
 			break;
 		case DAO_CODE_BINARY :
 			if( code == DVM_EQ || code == DVM_NE ) break;
-			tt = DaoType_GetVariantUsable( at );
+			tt = DaoType_GetAutoCastType( at );
 			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->a, tt );
-			tt = DaoType_GetVariantUsable( bt );
+			tt = DaoType_GetAutoCastType( bt );
 			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->b, tt );
 			break;
 		}
-		M = self->types->size;
-		types = self->types->items.pType;
-		opa = vmc->a;  opb = vmc->b;  opc = vmc->c;
-		at = opa < M ? types[opa] : NULL;
-		bt = opb < M ? types[opb] : NULL;
-		ct = opc < M ? types[opc] : NULL;
+		if( self->inodes->size != N ){
+			i--;
+			continue;
+		}
 
 		switch( code ){
 		case DVM_NOP :
@@ -4149,16 +4173,20 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}
 		case DVM_CAST :
 			if( routConsts->items.pValue[opb]->type != DAO_TYPE ) goto ErrorTyping;
-			at = (DaoType*) routConsts->items.pValue[opb];
-			DaoInferencer_UpdateType( self, opc, at );
-			AssertTypeMatching( at, types[opc], defs );
+			bt = (DaoType*) routConsts->items.pValue[opb];
+			DaoInferencer_UpdateType( self, opc, bt );
+			AssertTypeMatching( bt, types[opc], defs );
 			at = types[opa];
 			ct = types[opc];
 			if( typed_code ){
-				if( at->realnum && ct->realnum )
+				if( at->realnum && ct->realnum ){
 					vmc->code = DVM_MOVE_II + 3*(ct->tid - DAO_INTEGER) + at->tid - DAO_INTEGER;
-				else if( at->tid == DAO_COMPLEX && ct->tid == DAO_COMPLEX )
+				}else if( at->tid == DAO_COMPLEX && ct->tid == DAO_COMPLEX ){
 					vmc->code = DVM_MOVE_CC;
+				}else if( at->tid == DAO_PAR_NAMED && at->aux->xType.tid == ct->tid ){
+					if( DaoType_MatchTo( (DaoType*) at->aux, ct, NULL ) == DAO_MT_EQ )
+						vmc->code = DVM_CAST_NV;
+				}
 			}
 			break;
 		case DVM_LOAD :
@@ -4180,14 +4208,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				   if( types[opc] ) printf( "c: %s\n", types[opc]->name->mbs );
 				   printf( "%i  %i\n", DAO_MT_SUB, k );
 				 */
-
-#if 0
-				if( consts[opa] && consts[opa]->type == DAO_ROUTREE && types[opc] && types[opc]->tid ==DAO_ROUTINE){
-					/* a : routine<a:number,...> = overloaded_function; */
-					//XXX rout = DRoutines_GetByType( (DaoRoutine*)consts[opa].v.routine, types[opc] );
-					//if( rout == NULL ) goto NotMatch;
-				}
-#endif
 
 				if( at->tid == DAO_UDT || at->tid == DAO_ANY ){
 					/* less strict checking */
@@ -5362,7 +5382,7 @@ TryPushBlockReturnType:
 						DaoInferencer_UpdateType( self, k, tt );
 					}
 					tt = DaoType_DefineTypes( (DaoType*)cbtype->aux, NS, defs2 );
-					DArray_Append( rettypes, IntToPointer( inodes[i+1+nop]->b ) );
+					DArray_Append( rettypes, inodes[inodes[i+1+nop]->b] );
 					DArray_Append( rettypes, inode ); /* type at "opc" to be redefined; */
 					DArray_Append( rettypes, tt );
 					DArray_Append( rettypes, tt );
@@ -5371,7 +5391,7 @@ TryPushBlockReturnType:
 					if( NoCheckingType( types[opc] ) == 0 ){
 						printf( "Unused code section at line %i!\n", vmc->line );
 					}
-					DArray_Append( rettypes, IntToPointer( inodes[i+1+nop]->b ) );
+					DArray_Append( rettypes, inodes[inodes[i+1+nop]->b] );
 					DArray_Append( rettypes, inode );
 					DArray_Append( rettypes, NULL );
 					DArray_Append( rettypes, NULL );
@@ -5484,7 +5504,7 @@ TryPushBlockReturnType:
 					if( ct && ! (routine->attribs & DAO_ROUT_INITOR) ) goto ErrorTyping;
 				}else{
 					at = types[opa];
-					if( at ==NULL ) goto ErrorTyping;
+					if( at == NULL ) goto ErrorTyping;
 					if( vmc->b >1 )
 						at = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, NULL, types+opa, vmc->b);
 
@@ -6018,6 +6038,10 @@ TryPushBlockReturnType:
 			break;
 #endif
 		default : break;
+		}
+		if( self->inodes->size != N ){
+			i--;
+			continue;
 		}
 	}
 	DaoInferencer_Finalize( self );
