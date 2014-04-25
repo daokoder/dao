@@ -731,12 +731,15 @@ Done:
 }
 void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[], int n )
 {
-	daoint m = self->factory->size;
+	int m = self->factory->size;
 	int opc = self->activeCode->c;
 	int cur = self->returned;
+	int optype = DaoVmCode_GetOpcodeType( self->activeCode );
+	int ret = (optype >= DAO_CODE_GETC) & (optype <= DAO_CODE_GETM);
+	ret |= (optype >= DAO_CODE_MOVE) & (optype <= DAO_CODE_YIELD);
 	self->returned = 0xffff;
 	func->pFunc( self, p, n );
-	if( self->returned == 0xffff ) DaoProcess_SetValue( self, opc, dao_none_value );
+	if( ret && self->returned == 0xffff ) DaoProcess_SetValue( self, opc, dao_none_value );
 	if( self->factory->size > m ) DArray_Erase( self->factory, m, -1 );
 	self->returned = cur;
 }

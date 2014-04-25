@@ -488,13 +488,6 @@ enum DaoCodeType
 	DAO_CODE_JUMP
 };
 
-enum DaoOperandType
-{
-	DAO_OPERAND_N , /* None; */
-	DAO_OPERAND_A ,
-	DAO_OPERAND_B ,
-	DAO_OPERAND_C
-};
 
 struct DaoVmCode
 {

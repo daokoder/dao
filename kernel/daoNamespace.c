@@ -1705,6 +1705,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		}else if( tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ){
 			DString_SetMBS( tp->fname, name );
 		}
+		DaoType_CheckAttributes( tp );
 		tp = DaoNamespace_AddType( self, tp->name, tp );
 	}
 Finalizing:

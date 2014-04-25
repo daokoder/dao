@@ -57,10 +57,6 @@ struct DaoClass
 	DArray  *mixinBases;   /* <DaoClass*>: direct mixin classes; */
 	DArray  *allBases;     /* <DaoClass/DaoCData*>: mixin or parent classes; */
 
-	//DArray  *baseClass;    /* <DaoClass/DaoCData*>: mixin or super classes; */
-	//DArray  *superClass;   /* <DaoClass/DaoCData*>: direct super classes; */
-	//DArray  *mixinClass;   /* <DaoClass*>: direct mixin classes; */
-
 	DArray  *mixins;  /* <DaoClass*>: mixin classes; */
 	DVector *ranges;  /* <ushort_t>: ranges of the fields of the mixin classes; */
 	DVector *offsets; /* <ushort_t>: offsets of the fields from parent classes; */
@@ -84,7 +80,7 @@ struct DaoClass
 	DMap  *ovldRoutMap; /* <DString*,DaoRoutine*> */
 
 	DaoRoutine  *classRoutine; /* Default class constructor. */
-	DaoRoutine  *classRoutines; /* All explicitly defined constructors; GC handled in constants; */
+	DaoRoutine  *classRoutines; /* All explicit constructors; GC handled in constants; */
 
 	DString  *className;
 

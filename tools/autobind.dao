@@ -889,13 +889,13 @@ enum PatternType{
 	pat_struct, pat_struct2, pat_enum, pat_typedef, pat_enum2, pat_usercst, pat_funct
 };
 
-routine ExtractPatterns( self :string, pattern :string, ptype :PatternType )
+routine ExtractPatterns( source :string, pattern :string, ptype :PatternType )
 {
 	blank = ';'[0];
-	return self.scan( pattern ){ [start,end,state]
+	return source.scan( pattern ){ [start,end,state]
 		if( state == $unmatched ) return none;
-		codes = self[ start : end ];
-		self[ start : end ] = blank;
+		codes = source[ start : end ];
+		source[ start : end ] = blank;
 		return (ptype, start, codes );
 	}
 }
@@ -913,13 +913,13 @@ routine ParseCode( source : string, snamespace='', lang='', fname : string='', i
 
 	blank = ';'[0];
 	allpats : list<tuple<PatternType,int,string>> = {};
-	allpats += source.ExtractPatterns( pat_struct, $pat_struct );
-	allpats += source.ExtractPatterns( pat_struct2, $pat_struct2 );
-	allpats += source.ExtractPatterns( pat_enum, $pat_enum );
-	allpats += source.ExtractPatterns( pat_typedef, $pat_typedef );
-	allpats += source.ExtractPatterns( pat_enum2, $pat_enum2 );
-	allpats += source.ExtractPatterns( pat_usercst, $pat_usercst );
-	allpats += source.ExtractPatterns( pat_funct, $pat_funct );
+	allpats += ExtractPatterns( source, pat_struct, $pat_struct );
+	allpats += ExtractPatterns( source, pat_struct2, $pat_struct2 );
+	allpats += ExtractPatterns( source, pat_enum, $pat_enum );
+	allpats += ExtractPatterns( source, pat_typedef, $pat_typedef );
+	allpats += ExtractPatterns( source, pat_enum2, $pat_enum2 );
+	allpats += ExtractPatterns( source, pat_usercst, $pat_usercst );
+	allpats += ExtractPatterns( source, pat_funct, $pat_funct );
 
 	source.change( ';%s*;[;%s]+', ';' );
 

@@ -376,7 +376,6 @@ uchar_t DaoVmCode_CheckPermutable( int code )
 uchar_t DaoVmCode_GetOpcodeType( DaoVmCode *self )
 {
 	int code = self->code;
-	//if( code == DVM_ITER && self->b ) return DAO_CODE_ENUM;
 	if( code >= 0 && code <= DVM_UNUSED ) return dao_code_infolist[ code ].type;
 	return DAO_CODE_NOP;
 }
