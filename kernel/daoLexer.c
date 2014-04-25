@@ -349,7 +349,8 @@ enum
 
 enum
 {
-	TOK_RESTART , /* emit token, and change to states[TOKEN_START][ char ] */
+	TOK_RESTART ,  /* emit token, and restart a new token; */
+	TOK_RESTART2 , /* emit token, and restart a new token of a single char; */
 	TOK_START ,
 	TOK_DIGITS_0 ,
 	TOK_DIGITS_0X ,
@@ -441,7 +442,8 @@ static unsigned char daoSpaceType[128] = {0};
 static unsigned char daoLexTable[ TOK_ERROR ][128] = { { TOK_ERROR + 1 } };
 static unsigned char daoTokenMap[ TOK_ERROR ] =
 {
-	DTOK_NONE , /* emit token, and change to states[TOKEN_START][ char ] */
+	DTOK_NONE ,
+	DTOK_NONE ,
 	DTOK_NONE ,
 	DTOK_DIGITS_DEC ,
 	DTOK_NONE ,
@@ -624,6 +626,7 @@ void DaoInitLexTable()
 			daoLexTable[ TOK_DIGITS_0X ][ j ] = TOK_ERROR;
 		}
 	}
+
 	daoLexTable[ TOK_START ][ (unsigned) '(' ] = TOK_END_LB;
 	daoLexTable[ TOK_START ][ (unsigned) ')' ] = TOK_END_RB;
 	daoLexTable[ TOK_START ][ (unsigned) '{' ] = TOK_END_LCB;
@@ -661,9 +664,9 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) 'C' ] = TOK_NUMBER_IMG;
 	daoLexTable[ TOK_NUMBER_DEC ][ (unsigned) 'C' ] = TOK_NUMBER_IMG;
 	daoLexTable[ TOK_NUMBER_SCI ][ (unsigned) 'C' ] = TOK_NUMBER_IMG;
-	daoLexTable[ TOK_IDENTIFIER ][ (unsigned) '.' ] = TOK_RESTART;
-	daoLexTable[ TOK_ID_INITYPE ][ (unsigned) '.' ] = TOK_RESTART;
-	daoLexTable[ TOK_ID_SYMBOL ][ (unsigned) '.' ] = TOK_RESTART;
+	daoLexTable[ TOK_IDENTIFIER ][ (unsigned) '.' ] = TOK_RESTART2;
+	daoLexTable[ TOK_ID_INITYPE ][ (unsigned) '.' ] = TOK_RESTART2;
+	daoLexTable[ TOK_ID_SYMBOL ][ (unsigned) '.' ] = TOK_RESTART2;
 	daoLexTable[ TOK_OP_SHARP ][ (unsigned) '{' ] = TOK_COMT_OPEN;
 	daoLexTable[ TOK_OP_SHARP ][ (unsigned) '}' ] = TOK_COMT_CLOSE;
 	daoLexTable[ TOK_START ][ (unsigned) '\\' ] = TOK_OP_ESC;
@@ -890,7 +893,12 @@ int DaoToken_Check( const char *src, int size, int *length )
 		}else{
 			old = state;
 			if( ch >=0 ){
-				state = daoLexTable[ state ][ (int)ch ];
+				if( old == TOK_RESTART2 ){
+					old = daoLexTable[ TOK_START ][ (int) src[it-1] ];
+					state = TOK_RESTART;
+				}else{
+					state = daoLexTable[ state ][ (int)ch ];
+				}
 			}else if( state <= TOK_START ){
 				state = TOK_RESTART;
 			}else if( state != TOK_IDENTIFIER && state != TOK_STRING_MBS
@@ -903,7 +911,7 @@ int DaoToken_Check( const char *src, int size, int *length )
 				if( type == DTOK_NONE && isspace( src[0] ) )
 					type = daoSpaceType[ (int)src[0] ];
 				break;
-			}else if( state == TOK_RESTART ){
+			}else if( state == TOK_RESTART || state == TOK_RESTART2 ){
 				if( it ){
 					it --;
 					type = daoTokenMap[old];
@@ -1117,7 +1125,12 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 		}else if( lexenv == LEX_ENV_NORMAL ){
 			old = state;
 			if( ch >=0 ){
-				state = daoLexTable[ state ][ (int)ch ];
+				if( old == TOK_RESTART2 ){
+					old = daoLexTable[ TOK_START ][ (int) src[it-1] ];
+					state = TOK_RESTART;
+				}else{
+					state = daoLexTable[ state ][ (int)ch ];
+				}
 			}else if( state <= TOK_START ){
 				state = TOK_RESTART;
 			}else if( state != TOK_IDENTIFIER && state != TOK_STRING_MBS
@@ -1138,7 +1151,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 				/* may be a token before the line break; */
 				DString_Clear( literal );
 				state = TOK_START;
-			}else if( state == TOK_RESTART ){
+			}else if( state == TOK_RESTART || state == TOK_RESTART2 ){
 				if( literal->size ){
 					if( old == TOK_IDENTIFIER ){
 						token->name = dao_key_hash( literal->mbs, literal->size );
@@ -1159,11 +1172,8 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 					token->cpos = cpos;
 				}
 				DString_AppendChar( literal, ch );
-				if( ch >=0 )
-					state = daoLexTable[ TOK_START ][ (int)ch ];
-				else
-					state = TOK_IDENTIFIER;
-
+				if( state != TOK_RESTART2 )
+					state = ch >=0 ? daoLexTable[ TOK_START ][ (int)ch ] : TOK_IDENTIFIER;
 			}else if( state == TOK_COMT_OPEN ){
 				DString_AppendChar( literal, ch );
 				lexenv = LEX_ENV_COMMENT;

@@ -3159,6 +3159,7 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 	daoint id;
 	DaoValue *B = dao_none_value;
 	DaoValue *A = self->activeValues[ vmc->a ];
+	DaoInteger di = {DAO_INTEGER,0,0,0,0,0};
 	DaoType *ct = self->activeTypes[ vmc->c ];
 	DaoTypeCore *tc = DaoValue_GetTyper( A )->core;
 
@@ -3167,8 +3168,23 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "on none object" );
 		return;
 	}
-	if( vmc->code == DVM_GETI ) B = self->activeValues[ vmc->b ];
-	if( A->type == DAO_LIST && (B->type >= DAO_INTEGER && B->type <= DAO_DOUBLE ) ){
+	if( vmc->code == DVM_GETI ){
+		B = self->activeValues[ vmc->b ];
+	}else if( vmc->code == DVM_GETDI ){
+		di.value = vmc->b;
+		B = (DaoValue*) & di;
+	}
+	if( vmc->code == DVM_GETDI && A->type == DAO_PAR_NAMED ){
+		if( vmc->b == 0 ){
+			DaoProcess_PutString( self, A->xNameValue.name );
+		}else if( vmc->b == 1 ){
+			GC_ShiftRC( A->xNameValue.value, self->activeValues[ vmc->c ] );
+			self->activeValues[ vmc->c ] = A->xNameValue.value;
+		}else{
+			DaoProcess_RaiseException( self, DAO_ERROR, "index out of range" );
+			return;
+		}
+	}else if( A->type == DAO_LIST && (B->type >= DAO_INTEGER && B->type <= DAO_DOUBLE ) ){
 		DaoList *list = & A->xList;
 		id = DaoValue_GetInteger( B );
 		if( id < 0 ) id += list->items.size;
@@ -3208,10 +3224,7 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 	}else if( vmc->code == DVM_GETI ){
 		tc->GetItem( A, self, self->activeValues + vmc->b, 1 );
 	}else if( vmc->code == DVM_GETDI ){
-		DaoInteger iv = {DAO_INTEGER,0,0,0,1,0};
-		DaoValue *piv = (DaoValue*) (DaoInteger*) & iv;
-		iv.value = vmc->b;
-		tc->GetItem( A, self, & piv, 1 );
+		tc->GetItem( A, self, & B, 1 );
 	}else if( vmc->code == DVM_GETMI || (vmc->code >= DVM_GETMI_AII && vmc->code <= DVM_GETMI_ACI) ){
 		tc->GetItem( A, self, self->activeValues + vmc->a + 1, vmc->b );
 	}
@@ -3237,6 +3250,7 @@ void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoValue *A, *B = dao_none_value, *C = self->activeValues[ vmc->c ];
 	DaoTypeCore *tc = DaoValue_GetTyper( C )->core;
+	DaoInteger di = {DAO_INTEGER,0,0,0,0,0};
 	daoint id, rc = 0;
 
 	self->activeCode = vmc;
@@ -3246,8 +3260,21 @@ void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 		return;
 	}
 
-	if( vmc->code == DVM_SETI ) B = self->activeValues[ vmc->b ];
-	if( C->type == DAO_LIST && B->type == DAO_INTEGER ){
+	if( vmc->code == DVM_SETI ){
+		B = self->activeValues[ vmc->b ];
+	}else if( vmc->code == DVM_SETDI ){
+		di.value = vmc->b;
+		B = (DaoValue*) & di;
+	}
+	if( vmc->code == DVM_SETDI && C->type == DAO_PAR_NAMED ){
+		if( vmc->b == 1 ){
+			DaoNameValue *nameva = (DaoNameValue*) C;
+			DaoValue_Move( A, & nameva->value, (DaoType*) nameva->ctype->aux );
+		}else{
+			DaoProcess_RaiseException( self, DAO_ERROR, "index out of range" );
+			return;
+		}
+	}else if( C->type == DAO_LIST && B->type == DAO_INTEGER ){
 		rc = DaoList_SetItem( & C->xList, A, B->xInteger.value );
 	}else if( C->type == DAO_LIST && B->type == DAO_FLOAT ){
 		rc = DaoList_SetItem( & C->xList, A, (int) B->xFloat.value );
@@ -3279,11 +3306,8 @@ void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 #endif
 	}else if( vmc->code == DVM_SETI ){
 		tc->SetItem( C, self, self->activeValues + vmc->b, 1, A );
-	}else if( vmc->code == DVM_GETDI ){
-		DaoInteger iv = {DAO_INTEGER,0,0,0,1,0};
-		DaoValue *piv = (DaoValue*) (DaoInteger*) & iv;
-		iv.value = vmc->b;
-		tc->SetItem( C, self, & piv, 1, A );
+	}else if( vmc->code == DVM_SETDI ){
+		tc->SetItem( C, self, & B, 1, A );
 	}else if( vmc->code == DVM_SETMI || (vmc->code >= DVM_SETMI_AIII && vmc->code <= DVM_SETMI_ACIC) ){
 		tc->SetItem( C, self, self->activeValues + vmc->c + 1, vmc->b, A );
 	}
@@ -6360,15 +6384,11 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 	case DVM_TUPLE :
 		DaoProcess_DoTuple( self, vmc ); break;
 	case DVM_GETI :
+	case DVM_GETDI :
 	case DVM_GETMI :
 		DaoProcess_DoGetItem( self, vmc ); break;
 	case DVM_GETF :
 		DaoProcess_DoGetConstField( self, vmc ); break;
-	case DVM_SETI :
-	case DVM_SETMI :
-		DaoProcess_DoSetItem( self, vmc ); break;
-	case DVM_SETF :
-		DaoProcess_DoSetField( self, vmc ); break;
 	case DVM_LIST :
 		DaoProcess_DoList( self, vmc ); break;
 	case DVM_MAP :

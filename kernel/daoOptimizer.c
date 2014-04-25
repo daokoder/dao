@@ -2660,6 +2660,7 @@ static DaoInode* DaoInferencer_InsertNode( DaoInferencer *self, DaoInode *inode,
 	if( addreg ){
 		inode->c = self->types->size;
 		DArray_Append( self->types, type );
+		DArray_Append( self->consts, NULL );
 		DString_AppendChar( self->inited, '\0' );
 	}
 	if( prev ){
@@ -2671,7 +2672,6 @@ static DaoInode* DaoInferencer_InsertNode( DaoInferencer *self, DaoInode *inode,
 	for(i=0; i<self->inodes->size; ++i){
 		if( next == self->inodes->items.pInode[i] ){
 			DArray_Insert( self->inodes, inode, i );
-			DArray_Insert( self->consts, NULL, i );
 			break;
 		}
 	}
@@ -3103,6 +3103,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DAO_CODE_GETM :
 		case DAO_CODE_ENUM2 :
 		case DAO_CODE_CALL :
+			if( code == DVM_GETDI && at->tid == DAO_PAR_NAMED ) break;
 			tt = DaoType_GetAutoCastType( at );
 			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->a, tt );
 			break;
@@ -3113,6 +3114,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DAO_CODE_SETF :
 		case DAO_CODE_SETI :
 		case DAO_CODE_SETM :
+			if( code == DVM_SETDI && ct->tid == DAO_PAR_NAMED ) break;
 			tt = DaoType_GetAutoCastType( ct );
 			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->c, tt );
 			break;
@@ -3262,6 +3264,8 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}else if( NoCheckingType( at ) || NoCheckingType( bt ) ){
 				/* allow less strict typing: */
 				ct = dao_type_udf;
+			}else if( at->tid == DAO_PAR_NAMED && code == DVM_GETDI ){
+				ct = opb ? (DaoType*) at->aux : dao_type_string;
 			}else if( at->tid == DAO_INTEGER ){
 				ct = dao_type_int;
 				if( bt->tid > DAO_DOUBLE ) return DaoInferencer_ErrorInvalidIndex( self );
@@ -3884,6 +3888,10 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					}else if( bt->tid != DAO_UDT && bt->tid != DAO_ANY ){
 						goto InvIndex;
 					}
+					break;
+				case DAO_PAR_NAMED :
+					if( opb != 1 ) goto InvIndex;
+					AssertTypeMatching( at, (DaoType*) ct->aux, defs );
 					break;
 				case DAO_CLASS :
 				case DAO_OBJECT :

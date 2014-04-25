@@ -40,9 +40,34 @@
 
 #include"dao_macro.h"
 
+enum DaoMacroErrors
+{
+	DAO_CTW_INV_MAC_DEFINE = DAO_CTW_END,
+	DAO_CTW_INV_MAC_FIRSTOK ,
+	DAO_CTW_INV_MAC_OPEN ,
+	DAO_CTW_INV_MAC_VARIABLE ,
+	DAO_CTW_INV_MAC_REPEAT ,
+	DAO_CTW_INV_MAC_SPECTOK ,
+	DAO_CTW_INV_MAC_INDENT ,
+	DAO_CTW_REDEF_MAC_MARKER ,
+	DAO_CTW_UNDEF_MAC_MARKER
+};
+
+static const char* const daoMacroErrorInfo[] =
+{
+	"invalid syntax definition",
+	"invalid first token in macro defintion",
+	"invalid macro group opening",
+	"unknown macro variable type",
+	"unknown macro repeat type",
+	"unknown special token in the macro",
+	"invalid indentation marker in the macro",
+	"re-definition of special marker",
+	"undefine macro marker",
+	""
+};
+
 /* functions defined in daoParser.c */
-extern void DaoParser_Warn2( DaoParser *self, int code, int start, int end );
-extern void DaoParser_Warn( DaoParser *self, int code, DString *ext );
 extern void DaoParser_Error( DaoParser *self, int code, DString *ext );
 extern void DaoParser_Error2( DaoParser *self, int code, int m, int n, int single_line );
 extern void DaoParser_Error3( DaoParser *self, int code, int m );
@@ -53,6 +78,31 @@ extern int DaoParser_FindOpenToken( DaoParser *self, uchar_t tok, int start, int
 extern int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop );
 
 static void DaoNamespace_AddMacro( DaoNamespace *self, DString *lang, DString *name, DaoMacro *macro );
+
+static void DaoParser_UpdateError( DaoParser *self )
+{
+	DaoToken *token;
+	if( self->elexer->tokens->size == 0 ) return;
+	token = self->elexer->tokens->items.pToken[ self->elexer->tokens->size - 1 ];
+	if( token->name < DAO_CTW_END ) return;
+	DString_InsertMBS( & token->string, " -- ", 0, 0, -1 );
+	DString_InsertMBS( & token->string, daoMacroErrorInfo[token->name-DAO_CTW_END], 0, 0, -1 );
+}
+static void DaoParser_ErrorX( DaoParser *self, int code, DString *ext )
+{
+	DaoParser_Error( self, code, ext );
+	DaoParser_UpdateError( self );
+}
+static void DaoParser_ErrorX2( DaoParser *self, int code, int m, int n, int single_line )
+{
+	DaoParser_ErrorX2( self, code, m, n, single_line );
+	DaoParser_UpdateError( self );
+}
+static void DaoParser_ErrorX3( DaoParser *self, int code, int m )
+{
+	DaoParser_ErrorX3( self, code, m );
+	DaoParser_UpdateError( self );
+}
 
 
 DaoType *daox_type_macro = NULL;
@@ -77,8 +127,8 @@ static int DaoParser_CheckNameToken( DaoParser *self, int start, int to, int eco
 {
 	DaoToken **tokens = self->tokens->items.pToken;
 	if( start >to || tokens[start]->type != DTOK_IDENTIFIER ){
-		DaoParser_Error( self, DAO_TOKEN_NEED_NAME, & tokens[start]->string );
-		DaoParser_Error2( self, ecode, estart, start, 1 );
+		DaoParser_ErrorX( self, DAO_TOKEN_NEED_NAME, & tokens[start]->string );
+		DaoParser_ErrorX2( self, ecode, estart, start, 1 );
 		return 0;
 	}
 	return 1;
@@ -205,11 +255,11 @@ ErrorUnPaired:
 	if( self->vmSpace ){
 		DString_SetMBS( self->mbs, lw );
 		if( k ==0 ){
-			DaoParser_Error( self, DAO_TOKEN_NOT_FOUND, self->mbs );
+			DaoParser_ErrorX( self, DAO_TOKEN_NOT_FOUND, self->mbs );
 		}else{
 			DString_AppendChar( self->mbs, ' ' );
 			DString_AppendMBS( self->mbs, rw );
-			DaoParser_Error( self, DAO_TOKENS_NOT_PAIRED, self->mbs );
+			DaoParser_ErrorX( self, DAO_TOKENS_NOT_PAIRED, self->mbs );
 		}
 	}
 	return -100;
@@ -256,7 +306,7 @@ static int DaoParser_MakeMacroGroup( DaoParser *self, DMacroGroup *group, DMacro
 				break;
 			default :
 				rb = -1;
-				DaoParser_Error( self, DAO_CTW_INV_MAC_OPEN, & tok->string );
+				DaoParser_ErrorX( self, DAO_CTW_INV_MAC_OPEN, & tok->string );
 				break;
 			}
 			if( rb <0 ) return 0;
@@ -307,7 +357,7 @@ static int DaoParser_MakeMacroGroup( DaoParser *self, DMacroGroup *group, DMacro
 			}else if( DString_FindMBS( & tok->string, "BL", 0 ) == 1 ){
 				unit->type = DMACRO_BL;
 			}else{
-				DaoParser_Error( self, DAO_CTW_INV_MAC_SPECTOK, & tok->string );
+				DaoParser_ErrorX( self, DAO_CTW_INV_MAC_SPECTOK, & tok->string );
 				return 0;
 			}
 			if( vars != NULL ){
@@ -462,11 +512,11 @@ int DaoParser_ParseMacro( DaoParser *self, int start )
 	if( toks[start+1]->type != DTOK_LCB ){
 		lang = & toks[start+1]->string;
 		if( toks[start+1]->type != DTOK_IDENTIFIER ){
-			DaoParser_Error( self, DAO_TOKEN_NEED_NAME, lang );
+			DaoParser_ErrorX( self, DAO_TOKEN_NEED_NAME, lang );
 			return -1;
 		}
 		if( lang->size == 3 && strcmp( lang->mbs, "dao" ) == 0 ){
-			DaoParser_Error( self, DAO_TOKEN_NEED_NAME, lang );
+			DaoParser_ErrorX( self, DAO_TOKEN_NEED_NAME, lang );
 			return -1;
 		}
 		start += 1;
@@ -477,7 +527,7 @@ int DaoParser_ParseMacro( DaoParser *self, int start )
 	rb1 = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, -1 );
 	if( rb1 <0 || rb1 +3 >= N ) return -1;
 	if( toks[rb1+1]->name != DKEY_AS || toks[rb1+2]->name != DTOK_LCB ){
-		DaoParser_Error( self, DAO_CTW_INV_MAC_DEFINE, NULL );
+		DaoParser_ErrorX( self, DAO_CTW_INV_MAC_DEFINE, NULL );
 		return -1;
 	}
 	rb2 = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, rb1 + 1, -1 );
@@ -496,12 +546,12 @@ int DaoParser_ParseMacro( DaoParser *self, int start )
 	if( macro->macroMatch->units->size == 0 ) goto Error;
 	first = (DMacroUnit*) macro->macroMatch->units->items.pVoid[0];
 	if( first->type != DMACRO_TOK ){
-		DaoParser_Error( self, DAO_CTW_INV_MAC_FIRSTOK, & toks[i]->string );
+		DaoParser_ErrorX( self, DAO_CTW_INV_MAC_FIRSTOK, & toks[i]->string );
 		goto Error;
 	}
 	for(it=DMap_First(markers); it; it=DMap_Next(markers,it)){
 		if( it->value.pInt > 1 ){
-			DaoParser_Error( self, DAO_CTW_REDEF_MAC_MARKER, it->key.pString );
+			DaoParser_ErrorX( self, DAO_CTW_REDEF_MAC_MARKER, it->key.pString );
 			goto Error;
 		}
 	}
@@ -882,7 +932,7 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
 
 			kwnode = MAP_Find( tokMap, & unit->marker->string );
 			if( kwnode ==NULL ){
-				DaoParser_Error( self, DAO_CTW_UNDEF_MAC_MARKER, & unit->marker->string );
+				DaoParser_ErrorX( self, DAO_CTW_UNDEF_MAC_MARKER, & unit->marker->string );
 				goto Failed;
 			}
 			node = (DMacroNode*) kwnode->value.pVoid;
@@ -1356,7 +1406,7 @@ int DaoMacro_Preprocess( DaoParser *self )
 			   printf( "macro : %s %i\n", tokens[start+2]->string->mbs, right );
 			 */
 			if( right <0 ){
-				DaoParser_Error3( self, DAO_CTW_INV_MAC_DEFINE, start );
+				DaoParser_ErrorX3( self, DAO_CTW_INV_MAC_DEFINE, start );
 				return 0;
 			}
 			if( cons ) DaoParser_MakeCodes( self, start, right+1, ns->inputs );

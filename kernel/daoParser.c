@@ -607,8 +607,10 @@ void DaoParser_PrintInformation( DaoParser *self, DArray *infolist, const char *
 			DaoStream_WriteMBS( stream, "  At line " );
 			DaoStream_WriteInt( stream, tok->line );
 			DaoStream_WriteMBS( stream, " : " );
-			DaoStream_WriteMBS( stream, getCtInfo( tok->name ) );
-			if( tok->string.size ) DaoStream_WriteMBS( stream, " --- " );
+			if( tok->name < DAO_CTW_END ){
+				DaoStream_WriteMBS( stream, getCtInfo( tok->name ) );
+				if( tok->string.size ) DaoStream_WriteMBS( stream, " --- " );
+			}
 		}
 		if( tok->name == DAO_EVAL_EXCEPTION ){
 			DaoStream_WriteMBS( stream, "\n" );
@@ -6468,11 +6470,34 @@ InvalidFunctional:
 			{
 				int opb, opa = result.reg;
 				self->curToken += 1;
+				name = & tokens[self->curToken]->string;
+				if( tokens[self->curToken]->type == DTOK_DIGITS_DEC ){
+					daoint id = strtol( name->mbs, 0, 0 );
+					if( id > 0xffff ){
+						DaoParser_Error( self, DAO_INVALID_INDEX, name );
+						return error;
+					}
+					if( result.konst ){
+						DaoInteger di = {DAO_INTEGER,0,0,0,0};
+						DaoValue *obj = DaoParser_GetVariable( self, result.konst );
+						DaoValue *b = (DaoValue*) & di;
+						di.value = id;
+						regLast = DaoParser_MakeArithConst( self, DVM_GETDI, obj, b, & cst, back, regcount );
+						result.konst = cst;
+					}
+					if( result.konst == 0 ){
+						regLast = DaoParser_PushRegister( self );
+						DaoParser_AddCode( self, DVM_GETDI, opa, id, regLast, postart, start, start+1 );
+					}
+					result.reg = regLast;
+					result.last = result.update = self->vmcLast;
+					self->curToken += 1;
+					break;
+				}
 				if( DaoParser_CurrentTokenType( self ) != DTOK_IDENTIFIER ){
 					DaoParser_Error2( self, DAO_INVALID_EXPRESSION, start, 1, 0 );
 					return error;
 				}
-				name = & tokens[self->curToken]->string;
 				if( result.konst ){
 					DaoValue *obj = DaoParser_GetVariable( self, result.konst );
 					daostr.data = name;
@@ -6480,8 +6505,8 @@ InvalidFunctional:
 					result.konst = cst;
 				}
 				if( result.konst == 0 ){
-					opb = DaoParser_AddFieldConst( self, name );
 					regLast = DaoParser_PushRegister( self );
+					opb = DaoParser_AddFieldConst( self, name );
 					DaoParser_AddCode( self, DVM_GETF, opa, opb, regLast, postart, start, start+1 );
 					if( getx ) self->vmcLast->extra = getx;
 				}
@@ -7113,8 +7138,9 @@ int DaoParser_MakeArithConst( DaoParser *self, ushort_t code, DaoValue *a, DaoVa
 	proc = DaoNamespace_ReserveFoldingOperands( self->nameSpace, 3 );
 	if( code == DVM_NAMEVA ) vmc.a = DaoRoutine_AddConstant( proc->activeRoutine, a );
 	if( code == DVM_GETF ) vmc.b = DaoRoutine_AddConstant( proc->activeRoutine, b );
-	DaoValue_Copy( a, & proc->activeValues[1] );
-	DaoValue_Copy( b, & proc->activeValues[2] );
+	if( code == DVM_GETDI ) vmc.b = b->xInteger.value;
+	if( a ) DaoValue_Copy( a, & proc->activeValues[1] );
+	if( b ) DaoValue_Copy( b, & proc->activeValues[2] );
 	GC_DecRC( proc->activeTypes[0] );
 	proc->activeTypes[0] = NULL;
 	proc->activeCode = & vmc;
