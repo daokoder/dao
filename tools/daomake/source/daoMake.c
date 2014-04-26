@@ -63,6 +63,8 @@
 #define DAOMAKE_PLATFORM  "macosx"
 #elif defined( FREEBSD )
 #define DAOMAKE_PLATFORM  "freebsd"
+#elif defined( OPENBSD )
+#define DAOMAKE_PLATFORM  "openbsd"
 #elif defined( MINIX )
 #define DAOMAKE_PLATFORM  "minix"
 #elif defined( BEOS )
@@ -2998,6 +3000,10 @@ static void DAOMAKE_IsFreeBSD( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DAOMAKE_IsPlatform( proc, "FREEBSD" );
 }
+static void DAOMAKE_IsOpenBSD( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DAOMAKE_IsPlatform( proc, "OPENBSD" );
+}
 static void DAOMAKE_IsMinix( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DAOMAKE_IsPlatform( proc, "MINIX" );
@@ -3058,6 +3064,7 @@ static DaoFuncItem DaoMakeMeths[] =
 	{ DAOMAKE_IsMacOSX,    "IsMacOSX() => int" },
 	{ DAOMAKE_IsBSD,       "IsBSD() => int" },
 	{ DAOMAKE_IsFreeBSD,   "IsFreeBSD() => int" },
+	{ DAOMAKE_IsOpenBSD,   "IsOpenBSD() => int" },
 	{ DAOMAKE_IsMinix,     "IsMinix() => int" },
 	{ DAOMAKE_IsBeOS,      "IsBeOS() => int" },
 	{ DAOMAKE_IsHaiku,     "IsHaiku() => int" },
