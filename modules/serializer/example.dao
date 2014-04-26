@@ -50,6 +50,7 @@ class MyException : Exception::Error
 {
 	#use Exception;
 	routine MyException( info = '' ) : Exception::Error( info ){}
+	routine typename(){ return 'MyException' } # To override typename() from Exception;
 }
 
 e2 = MyException( 'serialization test2' );

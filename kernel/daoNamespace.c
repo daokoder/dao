@@ -1623,8 +1623,11 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		if( n || tid != DAO_VARIANT ) DString_AppendChar( mbs, '<' );
 		for(i=0; i<N; i++){
 			DaoType *it = nest[i];
-			if( tid == DAO_TUPLE && it->tid == DAO_PAR_DEFAULT )
+			if( tid == DAO_TUPLE && it->tid == DAO_PAR_DEFAULT ){
 				it = DaoNamespace_MakeType( self, it->fname->mbs, DAO_PAR_NAMED, it->aux, NULL, 0 );
+			}else if( it->tid == DAO_PAR_NAMED && DString_FindMBS( it->name, "var<", 0 ) == 0 ){
+				it = it->nested->items.pType[0];
+			}
 
 			if( i ) DString_AppendChar( mbs, tid == DAO_VARIANT ? '|' : ',' );
 			DString_Append( mbs, it->name );
@@ -1734,7 +1737,6 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 		if( i >0 ) DString_AppendMBS( abtp->name, "," );
 		tp = tp2 = routype->nested->items.pType[i];
 		if( tp && (tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT) ){
-			ch = tp->name->mbs[tp->fname->size];
 			tp2 = & tp->aux->xType;
 		}
 		if( tp2 && (tp2->tid == DAO_UDT || tp2->tid == DAO_THT) ){
@@ -1742,6 +1744,9 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 				tp2 = DaoNamespace_GetType( self, vals[i] );
 			}else if( types && types[i] ){
 				tp2 = types[i];
+			}
+			if( tp2 && (tp2->tid == DAO_PAR_NAMED || tp2->tid == DAO_PAR_DEFAULT) ){
+				tp2 = & tp2->aux->xType;
 			}
 		}
 		/* XXX typing DString_AppendMBS( abtp->name, tp ? tp->name->mbs : "..." ); */

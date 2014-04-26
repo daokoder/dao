@@ -1594,7 +1594,7 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Replace, "replace( self :string, str1 :string, str2 :string, index=0 )=>int" },
 	{ DaoSTR_Replace2, "replace( self :string, table : map<string,string>, max=0 )" },
 	{ DaoSTR_Expand,  "expand( self :string, keys :map<string,string>, spec='$', keep=1 )=>string" },
-	{ DaoSTR_Expand,  "expand( self :string, keys :tuple, spec='$', keep=1 )=>string" },
+	{ DaoSTR_Expand,  "expand( self :string, keys :tuple<...:int|float|double|string>, spec='$', keep=1 )=>string" },
 	{ DaoSTR_Split, "split( self :string, sep='', quote='', rm=1 )=>list<string>" },
 	{ DaoSTR_Fetch, "fetch( self :string, pt :string, group=0, start=0, end=0 )=>string" },
 	{ DaoSTR_Match, "match( self :string, pt :string, group=0, start=0, end=0 )=>tuple<start:int,end:int>|none" },
@@ -3812,7 +3812,6 @@ void DaoException_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *
 }
 
 static void Dao_Exception_Get_name( DaoProcess *proc, DaoValue *p[], int n );
-static void Dao_Exception_Set_name( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Get_info( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Set_info( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Get_data( DaoProcess *proc, DaoValue *p[], int n );
@@ -3834,12 +3833,12 @@ static DaoFuncItem dao_Exception_Meths[] =
 	{ Dao_Exception_New22, "Exception( data : any )=>Exception" },
 #endif
 	{ Dao_Exception_Get_name, ".name( self : Exception )=>string" },
-	{ Dao_Exception_Set_name, ".name=( self : Exception, name : string)" },
 	{ Dao_Exception_Get_info, ".info( self : Exception )=>string" },
 	{ Dao_Exception_Set_info, ".info=( self : Exception, info : string)" },
 	{ Dao_Exception_Get_data, ".data( self : Exception )=>any" },
 	{ Dao_Exception_Set_data, ".data=( self : Exception, data : any)" },
 	/* for testing or demonstration */
+	{ Dao_Exception_Get_name, "typename( self : Exception )=>string" },
 	{ Dao_Exception_Get_info, "serialize( self : Exception )=>string" },
 	{ Dao_Exception_Get_info, "operator cast( self : Exception )=>string" },
 #ifdef DEBUG
@@ -3859,12 +3858,6 @@ static void Dao_Exception_Get_name( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoException* self = (DaoException*) p[0];
 	DaoProcess_PutString( proc, self->name );
-}
-static void Dao_Exception_Set_name( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoException* self = (DaoException*) p[0];
-	DString *name = p[1]->xString.data;
-	DString_Assign( self->name, name );
 }
 static void Dao_Exception_Get_info( DaoProcess *proc, DaoValue *p[], int n )
 {

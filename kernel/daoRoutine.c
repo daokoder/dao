@@ -901,26 +901,3 @@ DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *o, DaoValue *p[], in
 }
 
 
-static DParamNode* DParamNode_BestNextByType( DParamNode *self, DaoType *par )
-{
-	DParamNode *param;
-	if( par->tid == DAO_PAR_NAMED || par->tid == DAO_PAR_DEFAULT ) par = & par->aux->xType;
-	for(param=self->first; param; param=param->next){
-		if( param->type == par ) return param;
-	}
-	return NULL;
-}
-static DaoRoutine* DParamNode_LookupByType2( DParamNode *self, DaoType *types[], int n )
-{
-	DParamNode *param = NULL;
-	if( n == 0 ){
-		if( self->routine ) return self->routine; /* a leaf */
-		for(param=self->first; param; param=param->next){
-			if( param->type == NULL ) return param->routine; /* a leaf */
-		}
-		return NULL;
-	}
-	param = DParamNode_BestNextByType( self, types[0] );
-	if( param == NULL ) return NULL;
-	return DParamNode_LookupByType2( param, types+1, n-1 );
-}

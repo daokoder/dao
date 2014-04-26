@@ -2097,16 +2097,6 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 		}
 		if( ito >= ndef || tp ==NULL )  goto FinishError;
 		abtp = routType->nested->items.pType[ito];
-		if( abtp->tid == DAO_PAR_NAMED || abtp->tid == DAO_PAR_DEFAULT ){
-			if( tp->tid == DAO_PAR_NAMED ){
-				if( DString_EQ( abtp->fname, tp->fname ) == 0 ) goto FinishError;
-			}
-			abtp = (DaoType*) abtp->aux;
-		}
-		if( tp->tid == DAO_PAR_NAMED ){
-			tp = (DaoType*) tp->aux;
-			if( tp == NULL ) goto FinishError;
-		}
 		parpass[ito] = DaoType_MatchTo( tp, abtp, defs );
 
 #if 0
@@ -2542,12 +2532,11 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 			goto FinishError;
 		}
 		abtp = routType->nested->items.pType[ito];
-		if( abtp->tid == DAO_PAR_NAMED || abtp->tid == DAO_PAR_DEFAULT ) abtp = & abtp->aux->xType;
 		parpass[ito] = DaoType_MatchTo( tp, abtp, defs );
 
-#if 0
 		printf( "%p %s %p %s\n", tp->aux, tp->name->mbs, abtp->aux, abtp->name->mbs );
 		printf( "%i:  %i\n", ito, parpass[ito] );
+#if 0
 #endif
 
 		if( parpass[ito] == 0 ){
@@ -5234,6 +5223,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 							DaoType *argt = tp[k];
 							if( part->tid >= DAO_PAR_NAMED && part->tid <= DAO_PAR_VALIST ){
 								part = (DaoType*) part->aux;
+								fast &= part->tid != DAO_PAR_NAMED;
 							}
 							if( part->tid == DAO_ANY ) continue;
 							fast &= DaoType_MatchTo( argt, part, NULL ) >= DAO_MT_EQ;

@@ -33,6 +33,7 @@
 #include"daoValue.h"
 #include"daoParser.h"
 #include"daoNamespace.h"
+#include"daoVmspace.h"
 #include"daoGC.h"
 #include"dao_serializer.h"
 
@@ -152,7 +153,7 @@ static void DaoSerializeComplex( complex16 value, DString *serial )
 	DaoSerializeDouble( value.imag, serial );
 }
 
-static int DaoValue_Serialize2( DaoValue*, DString*, DaoNamespace*, DaoProcess*, DaoType*, DString*, DMap* );
+static int DaoValue_Serialize2( DaoValue*, DString*, DaoNamespace*, DaoProcess*, DString*, DString*, DMap* );
 
 static void DString_Serialize( DString *self, DString *serial, DString *buf )
 {
@@ -204,7 +205,7 @@ static int DaoList_Serialize( DaoList *self, DString *serial, DaoNamespace *ns, 
 		if( type == NULL ) it = DaoNamespace_GetType( ns, self->items.items.pValue[i] );
 		if( i ) DString_AppendChar( serial, ',' );
 		if( it == NULL && type && type->tid >= DAO_ARRAY ) DString_AppendChar( serial, '{' );
-		rc &= DaoValue_Serialize2( self->items.items.pValue[i], serial, ns, proc, it, buf, omap );
+		rc &= DaoValue_Serialize2( self->items.items.pValue[i], serial, ns, proc, it?it->name:NULL, buf, omap );
 		if( it == NULL && type && type->tid >= DAO_ARRAY ) DString_AppendChar( serial, '}' );
 	}
 	return rc;
@@ -226,9 +227,9 @@ static int DaoMap_Serialize( DaoMap *self, DString *serial, DaoNamespace *ns, Da
 		if( keytype == NULL ) kt = DaoNamespace_GetType( ns, node->key.pValue );
 		if( valtype == NULL ) vt = DaoNamespace_GetType( ns, node->value.pValue );
 		if( (i++) ) DString_AppendChar( serial, ',' );
-		rc &= DaoValue_Serialize2( node->key.pValue, serial, ns, proc, kt, buf, omap );
+		rc &= DaoValue_Serialize2( node->key.pValue, serial, ns, proc, kt?kt->name:NULL, buf, omap );
 		DString_AppendMBS( serial, sep );
-		rc &= DaoValue_Serialize2( node->value.pValue, serial, ns, proc, vt, buf, omap );
+		rc &= DaoValue_Serialize2( node->value.pValue, serial, ns, proc, vt?vt->name:NULL, buf, omap );
 	}
 	return rc;
 }
@@ -244,34 +245,93 @@ static int DaoTuple_Serialize( DaoTuple *self, DString *serial, DaoNamespace *ns
 		if( type && (type->tid == 0 || type->tid >= DAO_ENUM)) type = NULL;
 		if( type == NULL ) it = DaoNamespace_GetType( ns, self->items[i] );
 		if( i ) DString_AppendChar( serial, ',' );
-		rc &= DaoValue_Serialize2( self->items[i], serial, ns, proc, it, buf, omap );
+		rc &= DaoValue_Serialize2( self->items[i], serial, ns, proc, it?it->name:NULL, buf, omap );
 	}
 	return rc;
 }
 static int DaoObject_Serialize( DaoObject *self, DString *serial, DaoNamespace *ns, DaoProcess *proc, DString *buf, DMap *omap )
 {
-	DaoType *type;
-	DaoValue *value = NULL;
+	DString *tname = NULL;
+	DaoType *type = NULL;
+	DaoValue *ret = NULL;
+	DaoValue *value1 = NULL;
+	DaoValue *value2 = NULL;
 	DaoValue *selfpar = (DaoValue*) self;
-	DString name = DString_WrapMBS( "serialize" );
-	int errcode = DaoObject_GetData( self, & name, & value, NULL );
-	if( errcode || value == NULL || value->type != DAO_ROUTINE ) return 0;
-	if( DaoProcess_Call( proc, (DaoRoutine*)value, selfpar, NULL, 0 ) ) return 0;
+	DString name1 = DString_WrapMBS( "typename" );
+	DString name2 = DString_WrapMBS( "serialize" );
+	int errcode1 = DaoObject_GetData( self, & name1, & value1, NULL );
+	int errcode2 = DaoObject_GetData( self, & name2, & value2, NULL );
+	char chs[64];
+	if( errcode2 || value2 == NULL || value2->type != DAO_ROUTINE ) return 0;
+	if( errcode1 == 0 && value1 != NULL && value1->type == DAO_ROUTINE ){
+		if( DaoProcess_Call( proc, (DaoRoutine*)value1, selfpar, NULL, 0 ) ) return 0;
+		ret = proc->stackValues[0];
+		if( ret->type == DAO_STRING ) tname = DString_Copy( ret->xString.data );
+	}
+	if( DaoProcess_Call( proc, (DaoRoutine*)value2, selfpar, NULL, 0 ) ){
+		if( tname ) DString_Delete( tname );
+		return 0;
+	}
+	if( tname == NULL ) tname = self->defClass->className;
 	type = DaoNamespace_GetType( ns, proc->stackValues[0] );
-	DaoValue_Serialize2( proc->stackValues[0], serial, ns, proc, type, buf, omap );
+
+	DString_Append( serial, tname );
+	DString_AppendChar( serial, '{' );
+	DMap_Insert( omap, self, self );
+	sprintf( chs, "(%p)", self );
+	DString_AppendMBS( serial, chs );
+
+	DaoValue_Serialize2( proc->stackValues[0], serial, ns, proc, type?type->name:NULL, buf, omap );
+	DString_AppendChar( serial, '}' );
+	if( tname != NULL && tname != self->defClass->className ) DString_Delete( tname );
 	return 1;
 }
 static int DaoCdata_Serialize( DaoCdata *self, DString *serial, DaoNamespace *ns, DaoProcess *proc, DString *buf, DMap *omap )
 {
-	DaoType *type;
-	DaoRoutine *meth = DaoType_FindFunctionMBS( self->ctype, "serialize" );
-	if( meth == NULL ) return 0;
-	if( DaoProcess_Call( proc, meth, (DaoValue*)self, NULL, 0 ) ) return 0;
+	DString *tname = NULL;
+	DaoType *type = NULL;
+	DaoValue *ret = NULL;
+	DaoRoutine *meth1 = DaoType_FindFunctionMBS( self->ctype, "typename" );
+	DaoRoutine *meth2 = DaoType_FindFunctionMBS( self->ctype, "serialize" );
+	char chs[64];
+	if( meth2 == NULL ) return 0;
+	if( meth1 != NULL ){
+		if( DaoProcess_Call( proc, meth1, (DaoValue*)self, NULL, 0 ) ) return 0;
+		ret = proc->stackValues[0];
+		if( ret->type == DAO_STRING ) tname = DString_Copy( ret->xString.data );
+	}
+	if( DaoProcess_Call( proc, meth2, (DaoValue*)self, NULL, 0 ) ){
+		if( tname ) DString_Delete( tname );
+		return 0;
+	}
+	if( tname == NULL ) tname = self->ctype->name;
 	type = DaoNamespace_GetType( ns, proc->stackValues[0] );
-	DaoValue_Serialize2( proc->stackValues[0], serial, ns, proc, type, buf, omap );
+
+	DString_Append( serial, tname );
+	DString_AppendChar( serial, '{' );
+	DMap_Insert( omap, self, self );
+	sprintf( chs, "(%p)", self );
+	DString_AppendMBS( serial, chs );
+
+	DaoValue_Serialize2( proc->stackValues[0], serial, ns, proc, type?type->name:NULL, buf, omap );
+	DString_AppendChar( serial, '}' );
+	if( tname != NULL && tname != self->ctype->name ) DString_Delete( tname );
 	return 1;
 }
-int DaoValue_Serialize2( DaoValue *self, DString *serial, DaoNamespace *ns, DaoProcess *proc, DaoType *type, DString *buf, DMap *omap )
+int DaoValue_Serialize3( DaoValue *self, DString *serial, DaoNamespace *ns, DaoProcess *proc, DString *tname, DString *buf, DMap *omap )
+{
+	switch( self->type ){
+	case DAO_OBJECT :
+		if( proc == NULL ) break;
+		return DaoObject_Serialize( & self->xObject, serial, ns, proc, buf, omap );
+	case DAO_CDATA :
+	case DAO_CSTRUCT :
+		if( proc == NULL ) break;
+		return DaoCdata_Serialize( & self->xCdata, serial, ns, proc, buf, omap );
+	}
+	return 0;
+}
+int DaoValue_Serialize2( DaoValue *self, DString *serial, DaoNamespace *ns, DaoProcess *proc, DString *tname, DString *buf, DMap *omap )
 {
 	int rc = 1;
 	char chs[64];
@@ -280,8 +340,14 @@ int DaoValue_Serialize2( DaoValue *self, DString *serial, DaoNamespace *ns, DaoP
 		DString_AppendMBS( serial, chs );
 		return 1;
 	}
-	if( type ){
-		DString_Append( serial, type->name );
+	switch( self->type ){
+	case DAO_OBJECT :
+	case DAO_CDATA :
+	case DAO_CSTRUCT :
+		return DaoValue_Serialize3( self, serial, ns, proc, tname, buf, omap );
+	}
+	if( tname ){
+		DString_Append( serial, tname );
 		DString_AppendChar( serial, '{' );
 	}
 	switch( self->type ){
@@ -311,9 +377,6 @@ int DaoValue_Serialize2( DaoValue *self, DString *serial, DaoNamespace *ns, DaoP
 	case DAO_LIST :
 	case DAO_MAP :
 	case DAO_TUPLE :
-	case DAO_OBJECT :
-	case DAO_CDATA :
-	case DAO_CSTRUCT :
 		DMap_Insert( omap, self, self );
 		sprintf( chs, "(%p)", self );
 		DString_AppendMBS( serial, chs );
@@ -327,15 +390,6 @@ int DaoValue_Serialize2( DaoValue *self, DString *serial, DaoNamespace *ns, DaoP
 		case DAO_TUPLE :
 			rc = DaoTuple_Serialize( & self->xTuple, serial, ns, proc, buf, omap );
 			break;
-		case DAO_OBJECT :
-			if( proc == NULL ) break;
-			rc = DaoObject_Serialize( & self->xObject, serial, ns, proc, buf, omap );
-			break;
-		case DAO_CDATA :
-		case DAO_CSTRUCT :
-			if( proc == NULL ) break;
-			rc = DaoCdata_Serialize( & self->xCdata, serial, ns, proc, buf, omap );
-			break;
 		}
 		break;
 	default :
@@ -343,7 +397,7 @@ int DaoValue_Serialize2( DaoValue *self, DString *serial, DaoNamespace *ns, DaoP
 		rc = 0;
 		break;
 	}
-	if( type ) DString_AppendChar( serial, '}' );
+	if( tname ) DString_AppendChar( serial, '}' );
 	return rc;
 }
 int DaoValue_Serialize( DaoValue *self, DString *serial, DaoNamespace *ns, DaoProcess *proc )
@@ -354,7 +408,7 @@ int DaoValue_Serialize( DaoValue *self, DString *serial, DaoNamespace *ns, DaoPr
 	int rc;
 	DString_Clear( serial );
 	DString_ToMBS( serial );
-	rc = DaoValue_Serialize2( self, serial, ns, proc, type, buf, omap );
+	rc = DaoValue_Serialize2( self, serial, ns, proc, type?type->name:NULL, buf, omap );
 	DString_Delete( buf );
 	DMap_Delete( omap );
 	return rc;
@@ -650,7 +704,8 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 */
 int DaoValue_Deserialize( DaoValue **self, DString *serial, DaoNamespace *ns, DaoProcess *proc )
 {
-	DaoParser *parser = DaoParser_New();
+	DaoRoutine *routine = NULL;
+	DaoParser *parser = DaoVmSpace_AcquireParser( ns->vmSpace );
 	DArray *types = DArray_New(0);
 	DMap *omap = DMap_New(0,0);
 	int rc;
@@ -662,9 +717,14 @@ int DaoValue_Deserialize( DaoValue **self, DString *serial, DaoNamespace *ns, Da
 	if( parser->tokens->size == 0 ) goto Failed;
 
 	DArray_PushFront( types, NULL );
+	routine = DaoRoutine_New( ns, NULL, 1 );
+	GC_IncRC( routine );
+	parser->routine = routine;
 	rc = DaoParser_Deserialize( parser, 0, parser->tokens->size-1, self, types, ns, proc, omap );
 	if( *self ) DaoProcess_CacheValue( proc, *self );
-	DaoParser_Delete( parser );
+	parser->routine = NULL;
+	GC_DecRC( routine );
+	DaoVmSpace_ReleaseParser( ns->vmSpace, parser );
 	DArray_Delete( types );
 	DMap_Delete( omap );
 	return rc;
@@ -730,7 +790,7 @@ void DaoNamespace_Backup( DaoNamespace *self, DaoProcess *proc, FILE *fout, int 
 }
 void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin )
 {
-	DaoParser *parser = DaoParser_New();
+	DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	DString *line = DString_New(1);
 	DArray *types = DArray_New(0);
 	DArray *tokens = parser->tokens;
@@ -799,7 +859,7 @@ void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin )
 	DMap_Delete( omap );
 	DString_Delete( line );
 	DArray_Delete( types );
-	DaoParser_Delete( parser );
+	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 }
 
 static void AUX_Serialize( DaoProcess *proc, DaoValue *p[], int N )

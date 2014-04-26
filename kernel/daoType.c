@@ -427,6 +427,8 @@ static int DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *bin
 	}
 	if( p1 || self->tid == DAO_PAR_VALIST ) ext1 = & self->aux->xType;
 	if( p2 || type->tid == DAO_PAR_VALIST ) ext2 = & type->aux->xType;
+	/* To avoid matching: type to name:var<type> etc. */
+	if( (ext1->tid == DAO_PAR_NAMED) != (ext2->tid == DAO_PAR_NAMED) ) return 0;
 
 	m = DaoType_Match( ext1, ext2, defs, binds );
 	/*
