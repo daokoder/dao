@@ -194,7 +194,7 @@ static int DString_Break( DString *self, int start, int width )
 	if( iswspace( wcs[i-1] ) || iswspace( wcs[i] ) ) goto Return;
 	while( i > start && wcs[i-1] < 256 && iswspace( wcs[i-1] ) == 0 ) i -= 1;
 Return:
-	if( i == start ) i += 1; /* Just in case the input is messed up. */
+	if( i == start && width > 0 ) i += 1; /* Just in case the input is messed up. */
 	return i;
 }
 
