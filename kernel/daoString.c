@@ -398,7 +398,12 @@ static void DMBString_AppendWCS( DString *self, const wchar_t *chs, daoint len )
 		memset( & state, 0, sizeof(mbstate_t) );
 		smin = wcsrtombs( dst, (const wchar_t**)& chs, self->bufSize - self->size, & state );
 		if( smin > 0 ){
+#ifdef WIN32
+			/* On Windows, wcsrtombs() returns the number converted char from the source! */
+			self->size += strlen( dst );
+#else
 			self->size += smin;
+#endif
 		}else if( chs != NULL ){
 			chs += 1;
 		}
@@ -435,7 +440,12 @@ static void DWCString_AppendMBS( DString *self, const char *chs, daoint len )
 		memset( & state, 0, sizeof(mbstate_t) );
 		smin = mbsrtowcs( dst, (const char**)& chs, self->bufSize - self->size, & state );
 		if( smin > 0 ){
+#ifdef WIN32
+			/* On Windows, mbsrtowcs() returns the number converted char from the source! */
+			self->size += wcslen( dst );
+#else
 			self->size += smin;
+#endif
 		}else if( chs != NULL ){
 			chs += 1;
 		}

@@ -189,10 +189,12 @@ static int DString_Break( DString *self, int start, int width )
 		k += 1 + (wcs[i] >= 256);
 		if( k >= width ) break;
 	}
-	if( i >= self->size ) return i;
-	if( i == 0 || wcs[i-1] >= 256 || wcs[i] >= 256 ) return i;
-	if( iswspace( wcs[i-1] ) || iswspace( wcs[i] ) ) return i;
+	if( i >= self->size ) goto Return;
+	if( i == 0 || wcs[i-1] >= 256 || wcs[i] >= 256 ) goto Return;
+	if( iswspace( wcs[i-1] ) || iswspace( wcs[i] ) ) goto Return;
 	while( i > start && wcs[i-1] < 256 && iswspace( wcs[i-1] ) == 0 ) i -= 1;
+Return:
+	if( i == start ) i += 1; /* Just in case the input is messed up. */
 	return i;
 }
 
@@ -1757,29 +1759,6 @@ static void PrintMethod( DaoProcess *proc, DaoRoutine *meth )
 	DaoProcess_Print( proc, meth->routType->name->mbs );
 	DaoProcess_Print( proc, "\n" );
 }
-static void DaoNS_GetAuxMethods( DaoNamespace *ns, DaoValue *p, DArray *methods )
-{
-	daoint i;
-	for(i=0; i<ns->constants->size; i++){
-		DaoValue *meth = ns->constants->items.pConst[i]->value;
-		if( meth == NULL || meth->type != DAO_ROUTINE ) continue;
-		if( meth->type == DAO_ROUTINE && meth->xRoutine.overloads ){
-			DRoutines *routs = meth->xRoutine.overloads;
-			if( routs->mtree == NULL ) continue;
-			for(i=0; i<routs->routines->size; i++){
-				DaoRoutine *rout = routs->routines->items.pRoutine[i];
-				DaoType *type = rout->routType->nested->items.pType[0];
-				if( DaoType_MatchValue( (DaoType*) type->aux, p, NULL ) ==0 ) continue;
-				DArray_PushBack( methods, rout );
-			}
-		}else if( meth->xRoutine.attribs & DAO_ROUT_PARSELF ){
-			DaoType *type = meth->xRoutine.routType->nested->items.pType[0];
-			if( DaoType_MatchValue( (DaoType*) type->aux, p, NULL ) ==0 ) continue;
-			DArray_PushBack( methods, meth );
-		}
-	}
-	for(i=1; i<ns->namespaces->size; i++) DaoNS_GetAuxMethods( ns->namespaces->items.pNS[i], p, methods );
-}
 static void HELP_List( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoNamespace *ns = proc->activeNamespace;
@@ -1790,25 +1769,6 @@ static void HELP_List( DaoProcess *proc, DaoValue *p[], int N )
 	DNode *it;
 	int etype = p[1]->xEnum.value;
 	int i, j, methCount;
-
-	if( etype == 2 ){
-		array = DArray_New(0);
-		hash = DHash_New(0,0);
-		DaoProcess_Print( proc, "==============================================\n" );
-		DaoProcess_Print( proc, "Auxiliar methods for type: " );
-		DaoProcess_Print( proc, type->name->mbs );
-		DaoProcess_Print( proc, "\n==============================================\n" );
-		DaoNS_GetAuxMethods( ns, p[0], array );
-		for(i=0; i<array->size; i++){
-			DaoRoutine *rout = array->items.pRoutine[i];
-			if( DMap_Find( hash, rout ) ) continue;
-			DMap_Insert( hash, rout, NULL );
-			PrintMethod( proc, rout );
-		}
-		DArray_Delete( array );
-		DMap_Delete( hash );
-		return;
-	}
 
 	if( type == NULL ) return;
 	DaoType_FindValue( type, type->name ); /* To ensure it has been setup; */
@@ -2140,7 +2100,7 @@ static DaoFuncItem helpMeths[]=
 	{ HELP_Search,    "search( keywords :string )" },
 	{ HELP_Search2,   "search( object :any, keywords :string )" },
 	{ HELP_Load,      "load( help_file :string )" },
-	{ HELP_List,      "list( object :any, type :enum<values,methods,auxmeths>=$methods )" },
+	{ HELP_List,      "list( object :any, type :enum<values,methods>=$methods )" },
 	{ HELP_SetLang,   "set_language( lang :string )" },
 	{ HELP_SetTempl,  "set_template( tpl :string, ttype :enum<notice> )" },
 	{ HELP_Export,    "export( root = '', dir = '', format :enum<html> = $html, run = 0 )" },
