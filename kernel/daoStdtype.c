@@ -4329,15 +4329,15 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 			DaoStream_WriteMBS( ss, "." );
 		}
 		DaoStream_WriteString( ss, rout->routName );
-		DaoStream_WriteMBS( ss, "(), at instruction " );
-		DaoStream_WriteInt( ss, self->lines->items.pInt[i] & 0xff );
-		DaoStream_WriteMBS( ss, " in line " );
-		DaoStream_WriteInt( ss, self->lines->items.pInt[i] >> 16 );
-
+		DaoStream_WriteMBS( ss, "()," );
 		if( rout->subtype == DAO_ROUTINE ){
+			DaoStream_WriteMBS( ss, " at instruction " );
+			DaoStream_WriteInt( ss, self->lines->items.pInt[i] & 0xff );
+			DaoStream_WriteMBS( ss, " in line " );
+			DaoStream_WriteInt( ss, self->lines->items.pInt[i] >> 16 );
 			DaoStream_WriteMBS( ss, " in file \"" );
 		}else{
-			DaoStream_WriteMBS( ss, "from namespace \"" );
+			DaoStream_WriteMBS( ss, " from namespace \"" );
 		}
 		DaoStream_WriteString( ss, rout->nameSpace->name );
 		DaoStream_WriteMBS( ss, "\";\n" );

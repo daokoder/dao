@@ -5714,12 +5714,9 @@ TryPushBlockReturnType:
 			if( code == DVM_MOVE_PP ){
 				if( consts[opc] ) goto InvOper;
 				if( at->tid && (at->tid < DAO_ARRAY || at->tid > DAO_TYPE) ) goto NotMatch;
-				/* if( DaoInferencer_UpdateType( self, opc, at ) != at ) goto NotMatch; */
-				DaoInferencer_UpdateType( self, opc, at );
-				if( DaoType_MatchTo( types[opc], at, NULL ) != DAO_MT_EQ ) goto NotMatch;
-			}else if( types[opc] == NULL || types[opc]->tid != DAO_ANY ){
-				/* if( DaoInferencer_UpdateType( self, opc, at ) != at ) goto NotMatch; */
-				DaoInferencer_UpdateType( self, opc, at );
+			}
+			DaoInferencer_UpdateType( self, opc, at );
+			if( types[opc]->tid != DAO_ANY ){
 				if( DaoType_MatchTo( types[opc], at, NULL ) != DAO_MT_EQ ) goto NotMatch;
 			}
 			if( opb ){

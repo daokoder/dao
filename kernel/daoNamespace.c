@@ -746,10 +746,9 @@ static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, 
 	if( DaoNS_ParseType( self, typer->name, ctype_type, cdata_type, 1 ) == DAO_DT_FAILED ){
 		GC_IncRC( ctype_type );
 		GC_DecRC( ctype_type );
-		printf( "type wrapping failed: %s\n", typer->name );
+		printf( "type wrapping failed: %s from %s\n", typer->name, self->name->mbs );
 		return NULL;
 	}
-	//printf( "type wrapping: %s\n", typer->name );
 	return cdata_type;
 }
 DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque )
@@ -1262,13 +1261,25 @@ static void DaoNS_ImportRoutine( DaoNamespace *self, DString *name, DaoRoutine *
 		DaoNamespace_AddConst( self, name, (DaoValue*)routine, pm );
 	}else if( LOOKUP_ST( search->value.pInt ) == DAO_GLOBAL_CONSTANT ){
 		DaoRoutine *routine2 = (DaoRoutine*) DaoNamespace_GetConst( self, search->value.pInt );
+		DaoRoutine **routines = & routine;
+		int i, num = 1;
 		if( routine2->type != DAO_ROUTINE ) return;
 		if( routine == routine2 ) return;
+		if( routine->overloads ){
+			routines = routine->overloads->routines->items.pRoutine;
+			num = routine->overloads->routines->size;
+		}
 		if( routine2->overloads ){
-			DRoutines_Add( routine2->overloads, routine );
+			for(i=0; i<num; ++i){
+				DaoRoutine *rout = routines[i];
+				DRoutines_Add( routine2->overloads, rout );
+			}
 		}else{
 			DaoRoutine *routs = DaoRoutines_New( self, NULL, routine );
-			DRoutines_Add( routs->overloads, routine2 );
+			for(i=0; i<num; ++i){
+				DaoRoutine *rout = routines[i];
+				DRoutines_Add( routs->overloads, routine2 );
+			}
 			DaoValue_MarkConst( (DaoValue*) routine2 );
 			/* Add individual entry for the existing function: */
 			DArray_Append( self->constants, DaoConstant_New( (DaoValue*) routine2 ) );

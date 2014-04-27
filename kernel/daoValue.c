@@ -474,7 +474,13 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoDataCach
 		}
 		return self; /* unreachable; */
 	}else if( self->type == DAO_ENUM ){
-		return (DaoValue*) DaoEnum_Copy( & self->xEnum, tp );
+		switch( tp ? tp->tid : 0 ){
+		case DAO_INTEGER : return (DaoValue*) DaoInteger_New( self->xEnum.value );
+		case DAO_FLOAT   : return (DaoValue*) DaoFloat_New( self->xEnum.value );
+		case DAO_DOUBLE  : return (DaoValue*) DaoDouble_New( self->xEnum.value );
+		case DAO_ENUM : return (DaoValue*) DaoEnum_Copy( & self->xEnum, tp );
+		}
+		return (DaoValue*) DaoEnum_Copy( & self->xEnum, NULL );
 	}else if( tp && tp->tid >= DAO_INTEGER && tp->tid <= DAO_DOUBLE ){
 		DaoValue *value = cache ? DaoDataCache_MakeValue( cache, tp->tid ) : NULL;
 		switch( value == NULL ? tp->tid : 0 ){

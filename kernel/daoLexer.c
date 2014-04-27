@@ -1018,8 +1018,10 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 	// from the system encoding:
 	*/
 	if( strstr( locale, "UTF-8" ) == NULL && DString_FromUTF8( source, & src2 ) ){
-		src = source->mbs;
-		srcSize = strlen( src );
+		if( daoConfig.mbs == 0 ){
+			src = source->mbs;
+			srcSize = strlen( src );
+		}
 	}
 
 	DString_SetSharing( literal, 0 );

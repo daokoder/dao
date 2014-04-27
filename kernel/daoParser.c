@@ -6296,9 +6296,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 					self->vmcLast->c = DVM_SECT;
 				}else{
 					int first = self->vmcLast->first;
-					opa = self->vmcValue ? self->vmcValue->c : 0;
-					opb = self->vmcValue != NULL;
-					DaoParser_AddCode( self, DVM_RETURN, opa, opb, DVM_SECT, first, 0, rb );
+					DaoParser_AddCode( self, DVM_RETURN, 0, 0, DVM_SECT, first, 0, rb );
 				}
 				self->isFunctional = isFunctional;
 
