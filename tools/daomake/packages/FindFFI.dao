@@ -1,6 +1,6 @@
 
 header_hints = { "." }
-if( DaoMake::IsMacOSX() ){
+if( DaoMake::IsPlatform( "MACOSX" ) ){
 	header_hints.append( "/usr/local/Cellar/libffi/include" )
 }
 header_path = DaoMake::FindFile( "ffi.h", header_hints )

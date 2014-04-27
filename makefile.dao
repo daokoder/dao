@@ -59,7 +59,7 @@ daovm_bundle_resources = DaoMake::Option( "BUNDLE-RESOURCES", "" )
 
 daovm_full_static = DaoMake::Option( "FULL-STATIC", $OFF )
 
-if( DaoMake::IsMinix() or daovm_make_javascript == $ON ) daovm_with_thread = $OFF;
+if( DaoMake::IsPlatform( "MINIX" ) or daovm_make_javascript == $ON ) daovm_with_thread = $OFF;
 if( daovm_full_static == $ON ){
 	daovm_with_thread = $OFF;
 	daovm_with_readline = $OFF;
@@ -207,7 +207,7 @@ daovm_partial_static = DaoMake::Option( "STATIC", $OFF );
 # Do not build statically linked executable on Windows, because the modules
 # must link against dao.dll, so the executable should also link against it.
 #
-if( DaoMake::IsWin32() ) daovm_partial_static = $OFF;
+if( DaoMake::IsPlatform( "WIN32" ) ) daovm_partial_static = $OFF;
 
 
 if( daovm_partial_static == $ON ){
@@ -226,17 +226,17 @@ if( daovm_partial_static == $ON ){
 #
 ###########################################################################
 
-if( DaoMake::IsUnix() ){
+if( DaoMake::IsPlatform( "UNIX" ) ){
 	daovm.AddDefinition( "UNIX" )
-	if( DaoMake::IsMacOSX() ) daovm.AddDefinition( "MAC_OSX" )
+	if( DaoMake::IsPlatform( "MACOSX" ) ) daovm.AddDefinition( "MAC_OSX" )
 	daovm.AddCompilingFlag( "-fPIC" )
 	daovm.AddLinkingFlag( "-lm" )
-	if( DaoMake::IsLinux() ) daovm.AddLinkingFlag( "-ldl" )
+	if( DaoMake::IsPlatform( "LINUX" ) ) daovm.AddLinkingFlag( "-ldl" )
 	if( daovm_with_thread == $ON ) daovm.AddLinkingFlag( "-lpthread" )
-}else if( DaoMake::IsWin32() ){
+}else if( DaoMake::IsPlatform( "WIN32" ) ){
 	daovm.AddDefinition( "WIN32" )
-	if( DaoMake::IsMinGW() ) daovm.AddLinkingFlag( "-lwinmm" )
-}else if( DaoMake::IsHaiku() ){
+	if( DaoMake::IsPlatform( "MINGW" ) ) daovm.AddLinkingFlag( "-lwinmm" )
+}else if( DaoMake::IsPlatform( "HAIKU" ) ){
 	daovm.AddDefinition( "UNIX" )
 	# Note:
 	# pthread is automatically linked as part of:

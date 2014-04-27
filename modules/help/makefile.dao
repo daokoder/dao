@@ -6,7 +6,7 @@ daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 if( daovm == none ) return
 
 project.UseImportLibrary( daovm, "dao" )
-if( DaoMake::IsMinix() ) project.AddDefinition( "MINIX" )
+if( DaoMake::IsPlatform( "MINIX" ) ) project.AddDefinition( "MINIX" )
 
 project_objs = project.AddObjects( { "dao_help.c" } )
 project_dll  = project.AddSharedLibrary( "dao_help", project_objs )

@@ -63,6 +63,8 @@
 #define DAOMAKE_PLATFORM  "macosx"
 #elif defined( FREEBSD )
 #define DAOMAKE_PLATFORM  "freebsd"
+#elif defined( OPENBSD )
+#define DAOMAKE_PLATFORM  "openbsd"
 #elif defined( MINIX )
 #define DAOMAKE_PLATFORM  "minix"
 #elif defined( BEOS )
@@ -2972,52 +2974,11 @@ static void DAOMAKE_Platform( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutString( proc, daomake_platform );
 }
-static void DAOMAKE_IsPlatform( DaoProcess *proc, const char *name )
+static void DAOMAKE_IsPlatform( DaoProcess *proc, DaoValue *p[], int N)
 {
-	DString *value = DaoMake_GetSettingValue( name );
+	DString *platform = p[0]->xString.data;
+	DString *value = DaoMake_GetSettingValue( DString_GetMBS( platform ) );
 	DaoProcess_PutInteger( proc, value != NULL );
-}
-
-static void DAOMAKE_IsUnix( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DAOMAKE_IsPlatform( proc, "UNIX" );
-}
-static void DAOMAKE_IsLinux( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DAOMAKE_IsPlatform( proc, "LINUX" );
-}
-static void DAOMAKE_IsMacOSX( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DAOMAKE_IsPlatform( proc, "MACOSX" );
-}
-static void DAOMAKE_IsBSD( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DAOMAKE_IsPlatform( proc, "BSD" );
-}
-static void DAOMAKE_IsFreeBSD( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DAOMAKE_IsPlatform( proc, "FREEBSD" );
-}
-static void DAOMAKE_IsMinix( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DAOMAKE_IsPlatform( proc, "MINIX" );
-}
-static void DAOMAKE_IsBeOS( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DAOMAKE_IsPlatform( proc, "BEOS" );
-}
-static void DAOMAKE_IsHaiku( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DAOMAKE_IsPlatform( proc, "HAIKU" );
-}
-
-static void DAOMAKE_IsWin32( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DAOMAKE_IsPlatform( proc, "WIN32" );
-}
-static void DAOMAKE_IsMinGW( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DAOMAKE_IsPlatform( proc, "MINGW" );
 }
 static void DAOMAKE_Is64Bit( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -3042,7 +3003,6 @@ static DaoFuncItem DaoMakeMeths[] =
 	{ DAOMAKE_BinaryPath,  "BinaryPath() => string" },
 
 	{ DAOMAKE_MakePath,    "MakePath( base : string, sub : string ) => string" },
-
 	{ DAOMAKE_MakeRpath,   "MakeRpath( path : string, ... : string ) => string" },
 
 	{ DAOMAKE_BuildMode,   "BuildMode() => enum<RELEASE,DEBUG,PROFILE>" },
@@ -3053,18 +3013,7 @@ static DaoFuncItem DaoMakeMeths[] =
 	{ DAOMAKE_IsDir,       "IsDir( path : string ) => int" },
 
 	{ DAOMAKE_Platform,    "Platform() => string" },
-	{ DAOMAKE_IsUnix,      "IsUnix() => int" },
-	{ DAOMAKE_IsLinux,     "IsLinux() => int" },
-	{ DAOMAKE_IsMacOSX,    "IsMacOSX() => int" },
-	{ DAOMAKE_IsBSD,       "IsBSD() => int" },
-	{ DAOMAKE_IsFreeBSD,   "IsFreeBSD() => int" },
-	{ DAOMAKE_IsMinix,     "IsMinix() => int" },
-	{ DAOMAKE_IsBeOS,      "IsBeOS() => int" },
-	{ DAOMAKE_IsHaiku,     "IsHaiku() => int" },
-
-	{ DAOMAKE_IsWin32,     "IsWin32() => int" },
-	{ DAOMAKE_IsMinGW,     "IsMinGW() => int" },
-
+	{ DAOMAKE_IsPlatform,  "IsPlatform( platform : string ) => int" },
 	{ DAOMAKE_Is64Bit,     "Is64Bit() => int" },
 	{ NULL, NULL }
 };

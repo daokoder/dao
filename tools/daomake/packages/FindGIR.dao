@@ -1,6 +1,6 @@
 
 header_hints = { "." }
-if( DaoMake::IsMacOSX() ){
+if( DaoMake::IsPlatform( "MACOSX" ) ){
 	header_hints.append( "/usr/local/Cellar/gobject-introspection/include" )
 }
 header_path = DaoMake::FindFile( "girepository.h", header_hints )

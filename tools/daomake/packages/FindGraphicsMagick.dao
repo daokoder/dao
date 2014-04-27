@@ -1,5 +1,5 @@
 
-if( DaoMake::IsUnix() ){
+if( DaoMake::IsPlatform( "UNIX" ) ){
 	cflags = DaoMake::Shell( "GraphicsMagick-config --cflags" )
 	lflags = DaoMake::Shell( "GraphicsMagick-config --ldflags" )
 	libs = DaoMake::Shell( "GraphicsMagick-config --libs" )

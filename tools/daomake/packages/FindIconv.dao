@@ -9,7 +9,7 @@ int main(void){
 }
 @[cxx]
 
-if( DaoMake::IsUnix() ){
+if( DaoMake::IsPlatform( "UNIX" ) ){
 	header_path  = DaoMake::FindFile( "iconv.h" )
 	if( header_path == "" ) return;
 

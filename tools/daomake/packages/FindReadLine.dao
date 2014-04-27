@@ -9,7 +9,7 @@ int main(void){
 }
 @[cxx]
 
-if( DaoMake::IsUnix() ){
+if( DaoMake::IsPlatform( "UNIX" ) ){
 	header_path  = DaoMake::FindFile( "readline/readline.h" )
 	header_path2 = DaoMake::FindFile( "readline/history.h" )
 	if( header_path == "" or header_path2 == "" ) return;

@@ -1,5 +1,5 @@
 
-if( DaoMake::IsUnix() ){
+if( DaoMake::IsPlatform( "UNIX" ) ){
 	cflags = DaoMake::Shell( "sdl2-config --cflags" )
 	lflags = ""; #DaoMake::Shell( "sdl2-config --ldflags" )
 	libs = ""; #DaoMake::Shell( "sdl2-config --libs" )

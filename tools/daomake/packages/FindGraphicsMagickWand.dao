@@ -1,5 +1,5 @@
 
-if( DaoMake::IsUnix() ){
+if( DaoMake::IsPlatform( "UNIX" ) ){
 	cflags = DaoMake::Shell( "GraphicsMagickWand-config --cflags" )
 	lflags = DaoMake::Shell( "GraphicsMagickWand-config --ldflags" )
 	libs = DaoMake::Shell( "GraphicsMagickWand-config --libs" )
