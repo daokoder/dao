@@ -63,7 +63,6 @@ void DaoxProtobject_Delete( DaoxProtobject *self )
 DaoValue* DaoxProtobject_GetField( DaoxProtobject *self, DString *field )
 {
 	DNode *it;
-	DString_ToMBS( field );
 	it = DMap_Find( self->fields, field );
 	if( it ) return it->value.pValue;
 	if( self->proto ) return DaoxProtobject_GetField( self->proto, field );
@@ -116,7 +115,6 @@ static void PROTOBJ_SetField( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxProtobject *self = (DaoxProtobject*) p[0];
 	DString *field = DaoValue_TryGetString( p[1] );
-	DString_ToMBS( field );
 	DMap_Insert( self->fields, field, p[2] );
 }
 

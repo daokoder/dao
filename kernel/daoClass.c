@@ -51,10 +51,10 @@ static void DaoClass_GetField( DaoValue *self0, DaoProcess *proc, DString *name 
 	DaoValue *value = NULL;
 	int rc = DaoClass_GetData( self, name, & value, host );
 	if( rc ){
-		DString_SetMBS( mbs, DString_GetMBS( self->className ) );
-		DString_AppendMBS( mbs, "." );
+		DString_SetChars( mbs, DString_GetData( self->className ) );
+		DString_AppendChars( mbs, "." );
 		DString_Append( mbs, name );
-		DaoProcess_RaiseException( proc, rc, mbs->mbs );
+		DaoProcess_RaiseException( proc, rc, mbs->bytes );
 	}else{
 		DaoProcess_PutReference( proc, value );
 	}
@@ -171,43 +171,43 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 
 	if( self->classRoutine ) return;
 
-	self->clsInter = DaoInterface_New( name->mbs );
-	self->objInter = DaoInterface_New( name->mbs );
-	DString_SetMBS( self->clsInter->abtype->name, "interface<class<" );
-	DString_SetMBS( self->objInter->abtype->name, "interface<" );
+	self->clsInter = DaoInterface_New( name->bytes );
+	self->objInter = DaoInterface_New( name->bytes );
+	DString_SetChars( self->clsInter->abtype->name, "interface<class<" );
+	DString_SetChars( self->objInter->abtype->name, "interface<" );
 	DString_Append( self->clsInter->abtype->name, name );
 	DString_Append( self->objInter->abtype->name, name );
-	DString_AppendMBS( self->clsInter->abtype->name, ">>" );
+	DString_AppendChars( self->clsInter->abtype->name, ">>" );
 	DString_AppendChar( self->objInter->abtype->name, '>' );
 	DaoClass_AddReference( self, self->clsInter );
 	DaoClass_AddReference( self, self->objInter );
 
-	self->objType = DaoType_New( name->mbs, DAO_OBJECT, (DaoValue*)self, NULL );
-	self->clsType = DaoType_New( name->mbs, DAO_CLASS, (DaoValue*) self, NULL );
+	self->objType = DaoType_New( name->bytes, DAO_OBJECT, (DaoValue*)self, NULL );
+	self->clsType = DaoType_New( name->bytes, DAO_CLASS, (DaoValue*) self, NULL );
 	GC_IncRC( self->clsType );
 	GC_IncRC( self->clsType );
 	GC_IncRC( self->objType );
 	self->clsInter->model = self->clsType;
 	self->objInter->model = self->objType;
-	DString_InsertMBS( self->clsType->name, "class<", 0, 0, 0 );
+	DString_InsertChars( self->clsType->name, "class<", 0, 0, 0 );
 	DString_AppendChar( self->clsType->name, '>' );
 
 	str = DString_New(1);
-	DString_SetMBS( str, "self" );
+	DString_SetChars( str, "self" );
 	DaoClass_AddObjectVar( self, str, NULL, self->objType, DAO_DATA_PRIVATE );
 	DString_Assign( self->className, name );
 	DaoClass_AddType( self, name, self->objType );
 
 	rout = DaoRoutine_New( ns, self->objType, 1 );
 	DString_Assign( rout->routName, name );
-	DString_AppendMBS( rout->routName, "::" );
+	DString_AppendChars( rout->routName, "::" );
 	DString_Append( rout->routName, name );
 	self->classRoutine = rout; /* XXX class<name> */
 	GC_IncRC( rout );
 
 	rout->routType = DaoType_New( "routine<=>", DAO_ROUTINE, (DaoValue*)self->objType, NULL );
 	DString_Append( rout->routType->name, name );
-	DString_AppendMBS( rout->routType->name, ">" );
+	DString_AppendChars( rout->routType->name, ">" );
 	GC_IncRC( rout->routType );
 	rout->attribs |= DAO_ROUT_INITOR;
 
@@ -351,18 +351,18 @@ static DString* DaoClass_GetDataName( DaoClass *self, int st, int id )
 }
 static int DaoRoutine_GetFieldIndex( DaoRoutine *self, DString *name )
 {
-	DString none = DString_WrapMBS( "" );
+	DString none = DString_WrapChars( "" );
 	DaoString str = {DAO_STRING,0,0,0,0,NULL};
 	DaoString *s = & str;
 	daoint i;
 	if( name == NULL ) name = & none;
-	for(i=0; i<self->routConsts->items.size; ++i){
+	for(i=0; i<self->routConsts->value->size; ++i){
 		DaoValue *item = DaoList_GetItem( self->routConsts, i );
 		DString *field = DaoValue_TryGetString( item );
 		if( field == NULL ) continue;
 		if( DString_EQ( field, name ) ) return i;
 	}
-	str.data = name;
+	str.value = name;
 	return DaoRoutine_AddConstant( self, (DaoValue*) s );
 }
 static void DaoRoutine_OriginalHost( void *p ){}
@@ -451,7 +451,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 	DMap_Insert( deftypes, mixin->objType, self->objType );
 
 #if 0
-	printf( "MixIn: %s %p %i\n", mixin->className->mbs, mixin, mixin->cstDataName->size );
+	printf( "MixIn: %s %p %i\n", mixin->className->bytes, mixin, mixin->cstDataName->size );
 #endif
 
 	/* Add the own constants of the mixin to the host class: */
@@ -479,7 +479,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 			DMap_Insert( rout->body->aux, DaoRoutine_OriginalHost, original2 );
 			bl = bl && DaoRoutine_Finalize( rout, self->objType, deftypes );
 #if 0
-			printf( "%2i:  %s  %s\n", i, rout->routName->mbs, rout->routType->name->mbs );
+			printf( "%2i:  %s  %s\n", i, rout->routName->bytes, rout->routType->name->bytes );
 #endif
 
 			/*
@@ -878,7 +878,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 
 		if( typer->numItems ){
 			for(j=0; typer->numItems[j].name!=NULL; j++){
-				DString name = DString_WrapMBS( typer->numItems[j].name );
+				DString name = DString_WrapChars( typer->numItems[j].name );
 				it = DMap_Find( values, & name );
 				if( it == NULL ) continue;
 				if( DMap_Find( self->lookupTable, it->key.pString ) ) continue;
@@ -912,9 +912,9 @@ int DaoClass_DeriveClassData( DaoClass *self )
 	for(j=0; j<self->constants->size; ++j){
 		DaoValue *value = self->constants->items.pConst[j]->value;
 		DaoRoutine *routine = (DaoRoutine*) value;
-		printf( "%3i: %3i %s\n", j, value->type, self->cstDataName->items.pString[j]->mbs );
+		printf( "%3i: %3i %s\n", j, value->type, self->cstDataName->items.pString[j]->bytes );
 		if( value->type != DAO_ROUTINE ) continue;
-		printf( "%3i: %3i %s\n", j, value->type, routine->routName->mbs );
+		printf( "%3i: %3i %s\n", j, value->type, routine->routName->bytes );
 		if( routine->overloads ){
 			DArray *routs = routine->overloads->routines;
 			for(k=0; k<routs->size; ++k){
@@ -925,7 +925,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 		}
 	}
 	for(it=DMap_First(self->lookupTable); it; it=DMap_Next(self->lookupTable,it)){
-		printf( "%s %i\n", it->key.pString->mbs, it->value.pInt );
+		printf( "%s %i\n", it->key.pString->bytes, it->value.pInt );
 		if( LOOKUP_ST( it->value.pInt ) != DAO_CLASS_CONSTANT ) continue;
 		DaoValue *value = DaoClass_GetConst( self, it->value.pInt );
 		printf( "%i\n", value->type );
@@ -1007,7 +1007,7 @@ int DArray_MatchAffix( DArray *self, DString *name )
 			if( DString_Find( name, & tmp, 0 ) != 0 ) continue;
 		}
 		if( pos < pat->size-1 ){
-			tmp = DString_WrapMBS( pat->mbs + pos + 1 );
+			tmp = DString_WrapChars( pat->bytes + pos + 1 );
 			if( DString_RFind( name, & tmp, -1 ) != (name->size - 1) ) continue;
 		}
 		return 1;
@@ -1130,10 +1130,10 @@ void DaoClass_ResetAttributes( DaoClass *self )
 	}
 	if( autoinitor ) self->attribs |= DAO_CLS_AUTO_INITOR;
 #if 0
-	printf( "%s %i\n", self->className->mbs, autoinitor );
+	printf( "%s %i\n", self->className->bytes, autoinitor );
 #endif
 	for(i=DVM_NOT; i<=DVM_BITRIT; i++){
-		DString_SetMBS( mbs, daoBitBoolArithOpers[i-DVM_NOT] );
+		DString_SetChars( mbs, daoBitBoolArithOpers[i-DVM_NOT] );
 		node = DMap_Find( self->lookupTable, mbs );
 		if( node == NULL ) continue;
 		if( LOOKUP_ST( node->value.pInt ) != DAO_CLASS_CONSTANT ) continue;
@@ -1415,9 +1415,9 @@ DaoRoutine* DaoClass_GetOverloadedRoutine( DaoClass *self, DString *signature )
 void DaoClass_PrintCode( DaoClass *self, DaoStream *stream )
 {
 	daoint i;
-	DaoStream_WriteMBS( stream, "class " );
+	DaoStream_WriteChars( stream, "class " );
 	DaoStream_WriteString( stream, self->className );
-	DaoStream_WriteMBS( stream, ":\n" );
+	DaoStream_WriteChars( stream, ":\n" );
 	for(i=0; i<self->constants->size; ++i){
 		DaoValue *cst = self->constants->items.pConst[i]->value;
 		if( cst->type != DAO_ROUTINE || cst->xRoutine.body == NULL ) continue;
@@ -1428,7 +1428,7 @@ void DaoClass_PrintCode( DaoClass *self, DaoStream *stream )
 DaoRoutine* DaoClass_FindOperator( DaoClass *self, const char *oper, DaoClass *scoped )
 {
 	DaoValue *V = NULL;
-	DString name = DString_WrapMBS( oper );
+	DString name = DString_WrapChars( oper );
 	DaoClass_GetData( self, & name, & V, scoped );
 	if( V == NULL || V->type != DAO_ROUTINE ) return NULL;
 	return (DaoRoutine*) V;

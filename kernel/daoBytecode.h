@@ -98,7 +98,7 @@
 //
 //
 // string:
-// ASM_VALUE(1B): DAO_STRING(1B), MBS/WCS(1B), SizeMod16(1B), Bytes(5B);
+// ASM_VALUE(1B): DAO_STRING(1B), SizeMod16(1B), Bytes(6B);
 //   ASM_DATA(1B); Bytes(8B);
 // ASM_END(1B): Bytes(8B);
 //

@@ -223,7 +223,7 @@ struct DaoMakeProject
 	DMap     *signatures;
 	uint_t    signature;
 
-	DString  *mbs;
+	DString  *string;
 	DArray   *strings;
 	uint_t    usedStrings;
 
@@ -369,10 +369,10 @@ DaoMakeProject* DaoMakeProject_New()
 	self->signatures = DMap_New(D_STRING,D_STRING);
 	self->signature = 4;
 
-	self->mbs = DString_New(1);
+	self->string = DString_New(1);
 	self->strings = DArray_New(D_STRING);
 	self->usedStrings = 0;
-	DArray_Append( self->strings, self->mbs );
+	DArray_Append( self->strings, self->string );
 
 	self->mapStringInt = DMap_New(D_STRING,0);
 	return self;
@@ -407,7 +407,7 @@ void DaoMakeProject_Delete( DaoMakeProject *self )
 	DMap_Delete( self->signatures );
 	DArray_Delete( self->targetRules );
 
-	DString_Delete( self->mbs );
+	DString_Delete( self->string );
 	DArray_Delete( self->strings );
 	DMap_Delete( self->mapStringInt );
 	dao_free( self );
@@ -421,11 +421,11 @@ static void MD5_Append( DString *md5, uint32_t h )
 	const char *hex = "0123456789abcdef";
 	uint32_t k;
 	DString_Reserve( md5, md5->size + 8 );
-	k = (h>> 0)&0xff;  md5->mbs[md5->size++] = hex[k>>4];  md5->mbs[md5->size++] = hex[k&0xf];
-	k = (h>> 8)&0xff;  md5->mbs[md5->size++] = hex[k>>4];  md5->mbs[md5->size++] = hex[k&0xf];
-	k = (h>>16)&0xff;  md5->mbs[md5->size++] = hex[k>>4];  md5->mbs[md5->size++] = hex[k&0xf];
-	k = (h>>24)&0xff;  md5->mbs[md5->size++] = hex[k>>4];  md5->mbs[md5->size++] = hex[k&0xf];
-	md5->mbs[md5->size] = '\0';
+	k = (h>> 0)&0xff;  md5->bytes[md5->size++] = hex[k>>4];  md5->bytes[md5->size++] = hex[k&0xf];
+	k = (h>> 8)&0xff;  md5->bytes[md5->size++] = hex[k>>4];  md5->bytes[md5->size++] = hex[k&0xf];
+	k = (h>>16)&0xff;  md5->bytes[md5->size++] = hex[k>>4];  md5->bytes[md5->size++] = hex[k&0xf];
+	k = (h>>24)&0xff;  md5->bytes[md5->size++] = hex[k>>4];  md5->bytes[md5->size++] = hex[k&0xf];
+	md5->bytes[md5->size] = '\0';
 }
 static void MD5_Update( uint32_t H[4], uint32_t W[16], uint32_t K[64] )
 {
@@ -494,13 +494,7 @@ void DString_MD5( DString *self, DString *md5 )
 	uint32_t K[64], W[16];
 	int32_t size = self->size;
 	int32_t chunks = self->size / 64;
-	uint8_t *data = (uint8_t*) self->mbs;
-
-	if( self->wcs ){
-		data = (uint8_t*) self->wcs;
-		size *= sizeof(wchar_t);
-		chunks = size / 64;
-	}
+	uint8_t *data = (uint8_t*) self->bytes;
 
 	for(i=0; i<64; i++) K[i] = (uint32_t) floor( fabs( sin(i+1) ) * twop32 );
 	for(i=0; i<chunks; i++){
@@ -514,15 +508,14 @@ void DString_MD5( DString *self, DString *md5 )
 		}
 		MD5_Update( H, W, K );
 	}
-	DString_ToMBS( padding );
 	DString_Reserve( padding, 128 );
 	padding->size = 64;
 	m = size - chunks*64;
-	if( m ) memcpy( padding->mbs, data + chunks*64, m*sizeof(char) );
+	if( m ) memcpy( padding->bytes, data + chunks*64, m*sizeof(char) );
 	if( m + 8 > 64 ) padding->size = 128;
 	chunks = padding->size / 64;
 
-	data = (uint8_t*) padding->mbs;
+	data = (uint8_t*) padding->bytes;
 	data[m] = 1<<7; // first bit 1 followed by bit 0s;
 	for(i=m+1; i<padding->size-8; i++) data[i] = 0;
 	n = size * 8;
@@ -554,35 +547,17 @@ void DString_MD5( DString *self, DString *md5 )
 }
 static void DString_AppendGap( DString *self )
 {
-	if( self->mbs ){
-		char *mbs = self->mbs;
-		daoint size = self->size;
-		while( size >= 2 && isspace( mbs[size-2] ) && isspace( mbs[size-1] ) ) size -= 1;
-		self->mbs[size] = '\0';
-		self->size = size;
-		if( size && isspace( mbs[size-1] ) == 0 ) DString_AppendChar( self, ' ' );
-	}else{
-		wchar_t *wcs = self->wcs;
-		daoint size = self->size;
-		while( size >= 2 && iswspace( wcs[size-2] ) && iswspace( wcs[size-1] ) ) size -= 1;
-		self->wcs[size] = '\0';
-		self->size = size;
-		if( size && iswspace( wcs[size-1] ) == 0 ) DString_AppendWChar( self, L' ' );
-	}
+	char *mbs = self->bytes;
+	daoint size = self->size;
+	while( size >= 2 && isspace( mbs[size-2] ) && isspace( mbs[size-1] ) ) size -= 1;
+	self->bytes[size] = '\0';
+	self->size = size;
+	if( size && isspace( mbs[size-1] ) == 0 ) DString_AppendChar( self, ' ' );
 }
 static int DString_CommonPrefixLength( DString *self, DString *other )
 {
 	daoint i = 0;
-	if( other->mbs ){
-		if( self->mbs == NULL ) DString_ToMBS( self );
-	}else if( self->wcs == NULL ){
-		DString_ToWCS( self );
-	}
-	if( self->mbs ){
-		while( i < self->size && i < other->size && self->mbs[i] == other->mbs[i] ) i += 1;
-	}else{
-		while( i < self->size && i < other->size && self->wcs[i] == other->wcs[i] ) i += 1;
-	}
+	while( i < self->size && i < other->size && self->bytes[i] == other->bytes[i] ) i += 1;
 	return i;
 }
 
@@ -590,7 +565,7 @@ static int DString_CommonPrefixLength( DString *self, DString *other )
 
 DString* DaoMake_GetSettingValue( const char *key )
 {
-	DaoValue *value = DaoMap_GetValueMBS( daomake_settings, key );
+	DaoValue *value = DaoMap_GetValueChars( daomake_settings, key );
 	if( value == NULL ) return NULL;
 	return DaoValue_TryGetString( value );
 }
@@ -634,7 +609,7 @@ DString* DaoMake_FindFile( DString *file, DaoList *hints )
 		DString_Append( fname, path );
 		DString_AppendPathSep( fname );
 		DString_Append( fname, file );
-		if( DaoMake_IsFile( fname->mbs ) ){
+		if( DaoMake_IsFile( fname->bytes ) ){
 			res = path;
 			break;
 		}
@@ -651,33 +626,32 @@ void DaoMake_MakeOutOfSourcePath( DString *path, int isfile )
 	DString_Insert( path, binpath, 0, daomake_main_source_path->size, binpath->size );
 
 	while( k < path->size ){
-		while( k < path->size && path->mbs[k] != '/' ) k += 1;
+		while( k < path->size && path->bytes[k] != '/' ) k += 1;
 		if( k == path->size ) break;
-		path->mbs[k] = '\0';
-		if( DaoMake_IsDir( path->mbs ) == 0 && DaoMake_IsFile( path->mbs ) == 0 ){
-			DaoMake_MakeDir( path->mbs );
+		path->bytes[k] = '\0';
+		if( DaoMake_IsDir( path->bytes ) == 0 && DaoMake_IsFile( path->bytes ) == 0 ){
+			DaoMake_MakeDir( path->bytes );
 		}
-		path->mbs[k] = '/';
+		path->bytes[k] = '/';
 		k += 1;
 	}
 	if( isfile ) return;
-	if( DaoMake_IsDir( path->mbs ) == 0 && DaoMake_IsFile( path->mbs ) == 0 ){
-		DaoMake_MakeDir( path->mbs );
+	if( DaoMake_IsDir( path->bytes ) == 0 && DaoMake_IsFile( path->bytes ) == 0 ){
+		DaoMake_MakeDir( path->bytes );
 	}
 }
 void Dao_MakePath( DString *base, DString *path );
 void DaoMake_MakePath( DString *base, DString *path )
 {
-	DString_ToMBS( path );
 	if( path->size == 0 ) return;
 #ifdef WIN32
-	if( path->size >= 2 && isalpha( path->mbs[0] ) && path->mbs[1] == ':' ) goto Finalize;
+	if( path->size >= 2 && isalpha( path->bytes[0] ) && path->bytes[1] == ':' ) goto Finalize;
 #else
-	if( path->mbs[0] == '/' ) goto Finalize;
+	if( path->bytes[0] == '/' ) goto Finalize;
 #endif
 	Dao_MakePath( base, path );
 Finalize:
-	if( DaoMake_IsDir( path->mbs ) ) DString_AppendPathSep( path );
+	if( DaoMake_IsDir( path->bytes ) ) DString_AppendPathSep( path );
 }
 void DaoMakeProject_MakeSourcePath( DaoMakeProject *self, DString *path )
 {
@@ -691,19 +665,17 @@ void DaoMakeProject_MakeRelativePath( DString *current, DString *path )
 {
 	daoint i = 0;
 	current = DString_Copy( current );
-	DString_ToMBS( current );
-	DString_ToMBS( path );
 	DString_AppendPathSep( current );
-	while( i < current->size && i < path->size && current->mbs[i] == path->mbs[i] ) i += 1;
+	while( i < current->size && i < path->size && current->bytes[i] == path->bytes[i] ) i += 1;
 	if( i == 0 ) goto Finalize;
-	while( i >= 0 && path->mbs[i] != '/' ) i -= 1;
+	while( i >= 0 && path->bytes[i] != '/' ) i -= 1;
 	if( i <= 0 ) goto Finalize;
 	DString_Erase( current, 0, i + 1 );
 	DString_Erase( path, 0, i + 1 );
 	i = 0;
 	while( i < current->size ){
-		while( current->mbs[i] != '/' ) i += 1;
-		DString_InsertMBS( path, "../", 0, 0, 0 );
+		while( current->bytes[i] != '/' ) i += 1;
+		DString_InsertChars( path, "../", 0, 0, 0 );
 		i += 1;
 	}
 	if( path->size == 0 ) DString_AppendChar( path, '.' );
@@ -717,7 +689,7 @@ Finalize:
 static void DString_AppendDefinition( DString *defs, DString *key, DString *value )
 {
 	DString_AppendGap( defs );
-	DString_AppendMBS( defs, "-D" );
+	DString_AppendChars( defs, "-D" );
 	DString_Append( defs, key );
 	if( value->size ){
 		DString_AppendChar( defs, '=' );
@@ -747,7 +719,7 @@ void DaoMakeUnit_MakeIncludePathsEx( DaoMakeUnit *self, DString *cflags, DString
 		DaoMakeProject_MakeSourcePath( self->project, path );
 		if( refpath ) DaoMakeProject_MakeRelativePath( refpath, path );
 		DString_AppendGap( cflags );
-		DString_AppendMBS( cflags, "-I" );
+		DString_AppendChars( cflags, "-I" );
 		DString_Append( cflags, path );
 	}
 	DString_Delete( path );
@@ -769,7 +741,7 @@ void DaoMakeUnit_MakeLinkingPathsEx( DaoMakeUnit *self, DString *lflags, DString
 		DString_Append( lflags, path );
 		if( refpath ) DaoMakeProject_MakeRelativePath( refpath, path );
 		DString_AppendGap( lflags );
-		DString_AppendMBS( lflags, "-L" );
+		DString_AppendChars( lflags, "-L" );
 		DString_Append( lflags, path );
 	}
 	DString_Delete( path );
@@ -868,7 +840,7 @@ DString* DaoMakeProject_GetBufferString( DaoMakeProject *self )
 DString* DaoMakeProject_SubMD5( DaoMakeProject *self, DString *data )
 {
 	DNode *it;
-	DString *md5 = self->mbs;
+	DString *md5 = self->string;
 	DString_MD5( data, md5 );
 	DString_ToUpper( md5 );
 	DString_Reset( md5, self->signature );
@@ -888,7 +860,7 @@ DString* DaoMakeProject_MakeHeaderMacro( DaoMakeProject *self, DaoMakeObjects *o
 	DString *file = DaoMakeProject_GetBufferString( self );
 	DString *files = DaoMakeProject_GetBufferString( self );
 	DString *macro = DaoMakeProject_GetBufferString( self );
-	DString *md5 = self->mbs;
+	DString *md5 = self->string;
 	DNode *it;
 	daoint i;
 
@@ -904,7 +876,7 @@ DString* DaoMakeProject_MakeHeaderMacro( DaoMakeProject *self, DaoMakeObjects *o
 	md5 = DaoMakeProject_SubMD5( self, files );
 
 	DString_Reset( macro, 0 );
-	DString_AppendMBS( macro, "HEADERS_" );
+	DString_AppendChars( macro, "HEADERS_" );
 	DString_Append( macro, md5 );
 
 	it = DMap_Find( self->headerMacros, macro );
@@ -914,7 +886,7 @@ DString* DaoMakeProject_MakeHeaderMacro( DaoMakeProject *self, DaoMakeObjects *o
 	}
 
 	it = DMap_Insert( self->headerMacros, macro, macro );
-	DString_AppendMBS( it->value.pString, " = " );
+	DString_AppendChars( it->value.pString, " = " );
 	DString_Append( it->value.pString, files );
 
 	self->usedStrings -= 2;
@@ -928,7 +900,7 @@ DString* DaoMakeProject_MakeSimpleMacro( DaoMakeProject *self, DMap *macros, DSt
 	DNode *it;
 
 	DString_Reset( name, 0 );
-	DString_AppendMBS( name, prefix );
+	DString_AppendChars( name, prefix );
 	DString_AppendChar( name, '_' );
 	DString_Append( name, md5 );
 
@@ -939,7 +911,7 @@ DString* DaoMakeProject_MakeSimpleMacro( DaoMakeProject *self, DMap *macros, DSt
 	}
 
 	it = DMap_Insert( macros, name, name );
-	DString_AppendMBS( it->value.pString, " =" );
+	DString_AppendChars( it->value.pString, " =" );
 	DString_Append( it->value.pString, value );
 	self->usedStrings -= 1;
 	return it->key.pString;
@@ -959,18 +931,16 @@ DString* DaoMakeProject_MakeAFlagsMacro( DaoMakeProject *self, DString *flags )
 
 const char* DaoMakeProject_GetFileExtension( DString *file )
 {
-	daoint pos;
-	DString_ToMBS( file );
-	pos = DString_RFindChar( file, '.', -1 );
-	if( pos == MAXSIZE ) return "";
-	return file->mbs + pos;
+	daoint pos = DString_RFindChar( file, '.', -1 );
+	if( pos == DAO_NULLPOS ) return "";
+	return file->bytes + pos;
 }
 DString* DaoMakeProject_GetProgramMacro( DaoMap *map, DString *file )
 {
 	DaoValue *value;
 	const char *ext = DaoMakeProject_GetFileExtension( file );
 	if( ext == NULL ) return NULL;
-	value = DaoMap_GetValueMBS( map, ext );
+	value = DaoMap_GetValueChars( map, ext );
 	if( value == NULL ) return NULL;
 	return DaoValue_TryGetString( value );
 }
@@ -996,7 +966,7 @@ DString* DaoMakeProject_MakeObjectRule( DaoMakeProject *self, DaoMakeTarget *tar
 	DString *signature = DaoMakeProject_GetBufferString( self );
 	DString *assembler = DaoMakeProject_GetLanguageAssembler( source );
 	DString *compiler = DaoMakeProject_GetLanguageCompiler( source );
-	DString *md5 = self->mbs;
+	DString *md5 = self->string;
 	DString *mode;
 	DNode *it;
 	daoint pos;
@@ -1032,12 +1002,12 @@ DString* DaoMakeProject_MakeObjectRule( DaoMakeProject *self, DaoMakeTarget *tar
 	DString_Reset( signature, 0 );
 	DString_Append( signature, source );
 	pos = DString_RFindChar( signature, '/', -1 );
-	if( pos != MAXSIZE ) DString_Erase( signature, 0, pos + 1 );
-	DString_InsertMBS( signature, "DaoMake.Objs/", 0, 0, 0 );
+	if( pos != DAO_NULLPOS ) DString_Erase( signature, 0, pos + 1 );
+	DString_InsertChars( signature, "DaoMake.Objs/", 0, 0, 0 );
 	DString_AppendChar( signature, '.' );
 	DString_Append( signature, md5 );
-	if( target->ttype == DAOMAKE_JAVASCRIPT ) DString_AppendMBS( signature, ".ll" );
-	DString_AppendMBS( signature, ".o" );
+	if( target->ttype == DAOMAKE_JAVASCRIPT ) DString_AppendChars( signature, ".ll" );
+	DString_AppendChars( signature, ".o" );
 
 	it = DMap_Find( self->objectRules, signature );
 	if( it ){
@@ -1046,30 +1016,30 @@ DString* DaoMakeProject_MakeObjectRule( DaoMakeProject *self, DaoMakeTarget *tar
 	}
 
 	it = DMap_Insert( self->objectRules, signature, signature );
-	DString_AppendMBS( it->value.pString, ": " );
+	DString_AppendChars( it->value.pString, ": " );
 	DString_Append( it->value.pString, source2 );
-	DString_AppendMBS( it->value.pString, " $(" );
+	DString_AppendChars( it->value.pString, " $(" );
 	DString_Append( it->value.pString, DaoMakeProject_MakeHeaderMacro( self, objects ) );
-	DString_AppendMBS( it->value.pString, ")\n\t$(" );
-	if( target->ttype == DAOMAKE_JAVASCRIPT ) DString_AppendMBS( it->value.pString, "EM" );
+	DString_AppendChars( it->value.pString, ")\n\t$(" );
+	if( target->ttype == DAOMAKE_JAVASCRIPT ) DString_AppendChars( it->value.pString, "EM" );
 	if( assembler ){
 		DString_Append( it->value.pString, assembler );
 		/* #include main appear in .S file: */
-		DString_AppendMBS( it->value.pString, ") $(" );
+		DString_AppendChars( it->value.pString, ") $(" );
 		DString_Append( it->value.pString, DaoMakeProject_MakeAFlagsMacro( self, cflags ) );
-		DString_AppendMBS( it->value.pString, ") -c " );
+		DString_AppendChars( it->value.pString, ") -c " );
 	}else{
 		if( compiler ){
 			DString_Append( it->value.pString, compiler );
 		}else{
-			DString_AppendMBS( it->value.pString, "CC" );
+			DString_AppendChars( it->value.pString, "CC" );
 		}
-		DString_AppendMBS( it->value.pString, ") $(" );
+		DString_AppendChars( it->value.pString, ") $(" );
 		DString_Append( it->value.pString, DaoMakeProject_MakeCFlagsMacro( self, cflags ) );
-		DString_AppendMBS( it->value.pString, ") -c " );
+		DString_AppendChars( it->value.pString, ") -c " );
 	}
 	DString_Append( it->value.pString, source2 );
-	DString_AppendMBS( it->value.pString, " -o " );
+	DString_AppendChars( it->value.pString, " -o " );
 	DString_Append( it->value.pString, signature );
 
 	self->usedStrings -= 4;
@@ -1103,7 +1073,7 @@ void DaoMakeTarget_MakeName( DaoMakeTarget *self, DString *name )
 	if( prefix ) DString_Append( name, prefix );
 	DString_Append( name, self->name );
 	if( suffix ) DString_Append( name, suffix );
-	if( self->ttype == DAOMAKE_JAVASCRIPT ) DString_AppendMBS( name, ".js" );
+	if( self->ttype == DAOMAKE_JAVASCRIPT ) DString_AppendChars( name, ".js" );
 }
 void DaoMakeProject_MakeDependency( DaoMakeProject *self, DaoMakeTarget *target, DString *deps )
 {
@@ -1137,14 +1107,13 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 	DaoMakeProject_MakeDependency( self, target, deps );
 	DString_Reset( rule, 0 );
 	DString_Append( rule, tname );
-	DString_AppendMBS( rule, ": " );
+	DString_AppendChars( rule, ": " );
 	DString_Append( rule, deps );
 	DString_AppendGap( rule );
 
 	if( target->ttype >= DAOMAKE_COMMAND ){
 		DString *dir = DaoMakeProject_GetBufferString( self );
-		DString_ToMBS( dir );
-		DString_AppendMBS( rule, "\n" );
+		DString_AppendChars( rule, "\n" );
 		for(i=0; i<target->commands->size; ++i){
 			DString *cmd = target->commands->items.pString[i];
 			if( target->ttype == DAOMAKE_DIRECTORY ){
@@ -1157,10 +1126,10 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 			if( target->ttype == DAOMAKE_COMMAND ){
 				DString_Append( rule, cmd );
 			}else if( target->ttype == DAOMAKE_DIRECTORY ){
-				DString_AppendMBS( rule, "cd " );
+				DString_AppendChars( rule, "cd " );
 				DString_Append( rule, cmd );
-				DString_AppendMBS( rule, " && $(MAKE) -f Makefile" );
-				DString_AppendMBS( rule, daomake_makefile_suffix );
+				DString_AppendChars( rule, " && $(MAKE) -f Makefile" );
+				DString_AppendChars( rule, daomake_makefile_suffix );
 			}
 			DString_AppendChar( rule, '\n' );
 		}
@@ -1174,12 +1143,12 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 			DString *md5, *test = target->tests->items.pString[i];
 			md5 = DaoMakeProject_SubMD5( self, test );
 			DString_Reset( signature, 0 );
-			DString_AppendMBS( signature, daomake_objects_dir );
+			DString_AppendChars( signature, daomake_objects_dir );
 			DString_AppendPathSep( signature);
 			DString_Append( signature, test );
 			DString_AppendChar( signature, '.' );
 			DString_Append( signature, md5 );
-			DString_AppendMBS( signature, ".test" );
+			DString_AppendChars( signature, ".test" );
 
 			DString_AppendGap( objs );
 			DString_Append( objs, signature );
@@ -1192,9 +1161,9 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 			if( daomake_out_of_source ) DaoMakeProject_MakeSourcePath( self, rule );
 
 			it = DMap_Insert( self->testRules, signature, signature );
-			DString_AppendMBS( it->value.pString, ": " );
+			DString_AppendChars( it->value.pString, ": " );
 			DString_Append( it->value.pString, rule );
-			DString_AppendMBS( it->value.pString, " $(DAOTEST)\n\t-$(DAOTEST) " );
+			DString_AppendChars( it->value.pString, " $(DAOTEST)\n\t-$(DAOTEST) " );
 			DString_Append( it->value.pString, rule );
 			DString_AppendGap( it->value.pString );
 			DString_Append( it->value.pString, daomake_test_tool_option );
@@ -1204,16 +1173,16 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 		DString_Reset( lflag, 0 );
 		DString_Append( lflag, target->name );
 		DString_ToUpper( lflag );
-		macro = DaoMakeProject_MakeSimpleMacro( self, self->testsMacros, objs, lflag->mbs );
+		macro = DaoMakeProject_MakeSimpleMacro( self, self->testsMacros, objs, lflag->bytes );
 
 		DString_Reset( target->testMacro, 0 );
 		DString_Append( target->testMacro, macro );
 
 		DString_Reset( rule, 0 );
 		DString_Append( rule, target->name );
-		DString_AppendMBS( rule, ": $(" );
+		DString_AppendChars( rule, ": $(" );
 		DString_Append( rule, macro );
-		DString_AppendMBS( rule, ")" );
+		DString_AppendChars( rule, ")" );
 
 		DArray_Append( self->targetRules, target->name );
 		DArray_Append( self->targetRules, rule );
@@ -1241,7 +1210,7 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 			daoint pos, start = 0;
 			pos = DString_FindChar( linkers, ';', start );
 			while( start < linkers->size ){
-				if( pos == MAXSIZE ) pos = linkers->size;
+				if( pos == DAO_NULLPOS ) pos = linkers->size;
 				DString_SubString( linkers, linker, start, pos - start );
 				it = DMap_Find( self->mapStringInt, linker );
 				if( it == NULL ) it = DMap_Insert( self->mapStringInt, linker, 0 );
@@ -1254,17 +1223,17 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 		DaoMakeUnit_MakeLinkingFlags( & objects->base, lflags );
 
 		DString_AppendGap( objs );
-		DString_AppendMBS( objs, "$(" );
+		DString_AppendChars( objs, "$(" );
 		DString_Append( objs, objmacro );
 		DString_AppendChar( objs, ')' );
 	}
 	DString_Append( rule, objs );
 	if( target->ttype == DAOMAKE_STATICLIB ){
 		DString *arc = DaoMake_GetSettingValue( "AR" );
-		DString_AppendMBS( rule, "\n\t" );
-		DString_AppendMBS( rule, "-@$(DAOMAKE) remove " );
+		DString_AppendChars( rule, "\n\t" );
+		DString_AppendChars( rule, "-@$(DAOMAKE) remove " );
 		DString_Append( rule, tname );
-		DString_AppendMBS( rule, "\n\t" );
+		DString_AppendChars( rule, "\n\t" );
 
 		if( arc ) DString_Append( rule, arc );
 		DString_AppendGap( rule );
@@ -1304,22 +1273,22 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 			}
 		}
 		macro = DaoMakeProject_MakeLFlagsMacro( self, lflags );
-		DString_AppendMBS( rule, "\n\t$(" );
-		if( target->ttype == DAOMAKE_JAVASCRIPT ) DString_AppendMBS( rule, "EM" );
+		DString_AppendChars( rule, "\n\t$(" );
+		if( target->ttype == DAOMAKE_JAVASCRIPT ) DString_AppendChars( rule, "EM" );
 		if( lk && lk->value.pInt == objCount ){
 			DString_Append( rule, lk->key.pString );
 		}else{
-			DString_AppendMBS( rule, "CC" );
+			DString_AppendChars( rule, "CC" );
 		}
-		DString_AppendMBS( rule, ") " );
+		DString_AppendChars( rule, ") " );
 
 		DString_Append( rule, objs );
 
-		DString_AppendMBS( rule, " $(" );
+		DString_AppendChars( rule, " $(" );
 		DString_Append( rule, macro );
-		DString_AppendMBS( rule, ") " );
+		DString_AppendChars( rule, ") " );
 
-		DString_AppendMBS( rule, " -o " );
+		DString_AppendChars( rule, " -o " );
 		DString_Append( rule, tname );
 	}
 
@@ -1333,28 +1302,27 @@ void DaoMakeProject_MakeInstallPath( DaoMakeProject *self, DString *path, DStrin
 {
 	DString *sub;
 
-	if( DaoMake_IsDir( path->mbs ) ) return;
+	if( DaoMake_IsDir( path->bytes ) ) return;
 	if( DMap_Find( mapPaths, path ) ) return;
 	DMap_Insert( mapPaths, path, 0 );
 
 	sub = DaoMakeProject_GetBufferString( self );
 	DString_Reset( sub, 0 );
-	DString_ToMBS( sub );
 	DString_Append( sub, path );
-	if( sub->size && sub->mbs[sub->size-1] == '/' ) sub->size --;
-	while( sub->size && sub->mbs[sub->size-1] != '/' ) sub->size --;
-	if( sub->size && sub->mbs[sub->size-1] == '/' ) sub->size --;
-	sub->mbs[sub->size] = '\0';
+	if( sub->size && sub->bytes[sub->size-1] == '/' ) sub->size --;
+	while( sub->size && sub->bytes[sub->size-1] != '/' ) sub->size --;
+	if( sub->size && sub->bytes[sub->size-1] == '/' ) sub->size --;
+	sub->bytes[sub->size] = '\0';
 
-	if( sub->size && DaoMake_IsDir( sub->mbs ) == 0 ){
+	if( sub->size && DaoMake_IsDir( sub->bytes ) == 0 ){
 		DaoMakeProject_MakeInstallPath( self, sub, install, uninstall, mapPaths, 0 );
 	}
-	DString_AppendMBS( install, "\t$(DAOMAKE) mkdir2 " );
+	DString_AppendChars( install, "\t$(DAOMAKE) mkdir2 " );
 	DString_Append( install, path );
 	DString_AppendChar( install, '\n' );
 
 	if( top ){
-		DString_AppendMBS( uninstall, "\t$(DAOMAKE) remove " );
+		DString_AppendChars( uninstall, "\t$(DAOMAKE) remove " );
 		DString_Append( uninstall, path );
 		DString_AppendChar( uninstall, '\n' );
 	}
@@ -1363,7 +1331,7 @@ void DaoMakeProject_MakeInstallPath( DaoMakeProject *self, DString *path, DStrin
 }
 void DaoMakeProject_MakeCopy( DaoMakeProject *self, DString *src, DString *dest, DString *output )
 {
-	DString_AppendMBS( output, "\t$(DAOMAKE) copy " );
+	DString_AppendChars( output, "\t$(DAOMAKE) copy " );
 	DString_Append( output, src );
 	DString_AppendChar( output, ' ' );
 	DString_Append( output, dest );
@@ -1371,17 +1339,15 @@ void DaoMakeProject_MakeCopy( DaoMakeProject *self, DString *src, DString *dest,
 }
 void DaoMakeProject_MakeRemove( DaoMakeProject *self, DString *file, DString *path, DString *output )
 {
-	DString_ToMBS( path );
-	DString_AppendMBS( output, "\t$(DAOMAKE) remove " );
+	DString_AppendChars( output, "\t$(DAOMAKE) remove " );
 	DString_Append( output, path );
 	if( file ){
 		daoint pos;
 		char *file2;
-		DString_ToMBS( file );
 		pos = DString_RFindChar( file, '/', -1 );
-		file2 = pos == MAXSIZE ? file->mbs : file->mbs + pos + 1;
+		file2 = pos == DAO_NULLPOS ? file->bytes : file->bytes + pos + 1;
 		DString_AppendPathSep( output );
-		DString_AppendMBS( output, file2 );
+		DString_AppendChars( output, file2 );
 	}
 	DString_AppendChar( output, '\n' );
 }
@@ -1398,12 +1364,12 @@ void DaoMakeProject_MakeDirectoryMake( DaoMakeProject *self, DString *makefile, 
 			DString_Append( dir, subdir );
 			DaoMakeProject_MakeSourcePath( self, dir );
 			if( DMap_Find( daomake_makefile_paths, dir ) == NULL ) continue;
-			DString_AppendMBS( makefile, "\tcd " );
+			DString_AppendChars( makefile, "\tcd " );
 			DString_Append( makefile, subdir );
-			DString_AppendMBS( makefile, " && $(MAKE) -f Makefile" );
-			DString_AppendMBS( makefile, daomake_makefile_suffix );
+			DString_AppendChars( makefile, " && $(MAKE) -f Makefile" );
+			DString_AppendChars( makefile, daomake_makefile_suffix );
 			DString_AppendChar( makefile, ' ' );
-			DString_AppendMBS( makefile, mktarget );
+			DString_AppendChars( makefile, mktarget );
 			DString_AppendChar( makefile, '\n' );
 		}
 	}
@@ -1429,7 +1395,7 @@ void DaoMakeProject_MakeInstallation( DaoMakeProject *self, DString *makefile )
 		}else{
 			DaoMakeTarget_MakeName( target, tname );
 		}
-		if( DaoMake_IsDir( path->mbs ) == 0 ){
+		if( DaoMake_IsDir( path->bytes ) == 0 ){
 			DaoMakeProject_MakeInstallPath( self, path, install, uninstall, mapPaths, 1 );
 		}else{
 			DaoMakeProject_MakeRemove( self, tname, path, uninstall );
@@ -1441,14 +1407,14 @@ void DaoMakeProject_MakeInstallation( DaoMakeProject *self, DString *makefile )
 	self->usedStrings -= 4;
 	DaoMakeProject_MakeDirectoryMake( self, install, "install" );
 	DaoMakeProject_MakeDirectoryMake( self, uninstall, "uninstall" );
-	DString_AppendMBS( makefile, "install:\n" );
+	DString_AppendChars( makefile, "install:\n" );
 	DString_Append( makefile, install );
-	DString_AppendMBS( makefile, "\n\n" );
+	DString_AppendChars( makefile, "\n\n" );
 
-	DString_AppendMBS( makefile, "uninstall:\n" );
+	DString_AppendChars( makefile, "uninstall:\n" );
 	DString_Append( makefile, uninstall );
-	DString_AppendMBS( makefile, "\n\n" );
-	DString_AppendMBS( makefile, ".PHONY: install uninstall\n\n" );
+	DString_AppendChars( makefile, "\n\n" );
+	DString_AppendChars( makefile, ".PHONY: install uninstall\n\n" );
 }
 void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 {
@@ -1483,7 +1449,7 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 			DString_AppendGap( all );
 			DString_Append( all, ruleName );
 			DString_Trim( ruleName );
-			if( target->ttype == DAOMAKE_COMMAND && DString_MatchMBS( ruleName, "%W", NULL, NULL ) ==0 ){
+			if( target->ttype == DAOMAKE_COMMAND && DString_Match( ruleName, "%W", NULL, NULL ) ==0 ){
 				DString_AppendGap( phony );
 				DString_Append( phony, ruleName );
 			}else if( target->ttype >= DAOMAKE_DIRECTORY ){
@@ -1491,43 +1457,43 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 				DString_Append( phony, ruleName );
 			}
 		}
-		DString_AppendMBS( makefile, "all: " );
+		DString_AppendChars( makefile, "all: " );
 		DString_Append( makefile, all );
 		if( ismain && daomake_test_count && daomake_build_mode ){
 			DString_AppendGap( makefile );
-			DString_AppendMBS( makefile, "test" );
+			DString_AppendChars( makefile, "test" );
 		}
-		DString_AppendMBS( makefile, "\n\n" );
+		DString_AppendChars( makefile, "\n\n" );
 
-		DString_AppendMBS( makefile, ".PHONY: test\n" );
-		DString_AppendMBS( makefile, "test: " );
+		DString_AppendChars( makefile, ".PHONY: test\n" );
+		DString_AppendChars( makefile, "test: " );
 		DString_Append( makefile, all );
 		DString_AppendGap( makefile );
 		DString_Append( makefile, test );
 
 		DString_AppendGap( makefile );
-		DString_AppendMBS( makefile, "subtest" );
+		DString_AppendChars( makefile, "subtest" );
 		DString_AppendGap( makefile );
 		if( ismain && daomake_test_count ){
-			DString_AppendMBS( makefile, "testsum" );
+			DString_AppendChars( makefile, "testsum" );
 		}
-		DString_AppendMBS( makefile, "\n\n" );
+		DString_AppendChars( makefile, "\n\n" );
 		if( phony->size ){
-			DString_AppendMBS( makefile, ".PHONY: " );
+			DString_AppendChars( makefile, ".PHONY: " );
 			DString_Append( makefile, phony );
 			DString_AppendChar( makefile, '\n' );
 		}
 		self->usedStrings -= 4;
 	}
 
-	DString_AppendMBS( makefile, "\nDAOMAKE = " );
+	DString_AppendChars( makefile, "\nDAOMAKE = " );
 	DString_Append( makefile, vmSpace->daoBinPath );
 	DString_AppendPathSep( makefile );
-	DString_AppendMBS( makefile, "daomake\n\n" );
+	DString_AppendChars( makefile, "daomake\n\n" );
 
 	for(i=0; i<self->variables->size; i+=2){
 		DString_Append( makefile, self->variables->items.pString[i] );
-		DString_AppendMBS( makefile, " =" );
+		DString_AppendChars( makefile, " =" );
 		DString_Append( makefile, self->variables->items.pString[i+1] );
 		DString_AppendChar( makefile, '\n' );
 	}
@@ -1541,103 +1507,103 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 
 	for(it=DMap_First(self->aflagsMacros); it; it=DMap_Next(self->aflagsMacros,it)){
 		DString_Append( makefile, it->value.pString );
-		DString_AppendMBS( makefile, "\n\n" );
+		DString_AppendChars( makefile, "\n\n" );
 	}
 	DString_AppendChar( makefile, '\n' );
 
 	for(it=DMap_First(self->cflagsMacros); it; it=DMap_Next(self->cflagsMacros,it)){
 		DString_Append( makefile, it->value.pString );
-		DString_AppendMBS( makefile, "\n\n" );
+		DString_AppendChars( makefile, "\n\n" );
 	}
 	DString_AppendChar( makefile, '\n' );
 
 	for(it=DMap_First(self->lflagsMacros); it; it=DMap_Next(self->lflagsMacros,it)){
 		DString_Append( makefile, it->value.pString );
-		DString_AppendMBS( makefile, "\n\n" );
+		DString_AppendChars( makefile, "\n\n" );
 	}
 	DString_AppendChar( makefile, '\n' );
 
 	for(it=DMap_First(self->objectRules); it; it=DMap_Next(self->objectRules,it)){
 		DString_Append( makefile, it->value.pString );
-		DString_AppendMBS( makefile, "\n\n" );
+		DString_AppendChars( makefile, "\n\n" );
 	}
 	DString_AppendChar( makefile, '\n' );
 
 	for(it=DMap_First(self->objectsMacros); it; it=DMap_Next(self->objectsMacros,it)){
 		DString_Append( makefile, it->value.pString );
-		DString_AppendMBS( makefile, "\n\n" );
+		DString_AppendChars( makefile, "\n\n" );
 	}
 
 	if( self->testRules->size ){
 		DString *suffix = DaoMake_GetSettingValue( daomake_suffix_keys[ DAOMAKE_EXECUTABLE ] );
-		DString_AppendMBS( makefile, "DAOTEST = " );
+		DString_AppendChars( makefile, "DAOTEST = " );
 		DString_Append( makefile, daomake_test_tool );
 		DString_Append( makefile, suffix );
-		DString_AppendMBS( makefile, "\n\n" );
+		DString_AppendChars( makefile, "\n\n" );
 	}
 
 	for(it=DMap_First(self->testRules); it; it=DMap_Next(self->testRules,it)){
 		DString_Append( makefile, it->value.pString );
-		DString_AppendMBS( makefile, "\n\n" );
+		DString_AppendChars( makefile, "\n\n" );
 	}
 	DString_AppendChar( makefile, '\n' );
 
 	for(it=DMap_First(self->testsMacros); it; it=DMap_Next(self->testsMacros,it)){
 		DString_Append( makefile, it->value.pString );
-		DString_AppendMBS( makefile, "\n\n" );
+		DString_AppendChars( makefile, "\n\n" );
 	}
 
 	for(i=0; i<self->targetRules->size; i+=2){
 		DString_Append( makefile, self->targetRules->items.pString[i+1] );
-		DString_AppendMBS( makefile, "\n\n" );
+		DString_AppendChars( makefile, "\n\n" );
 	}
 
-	DString_AppendMBS( makefile, "subtest:\n" );
+	DString_AppendChars( makefile, "subtest:\n" );
 	DaoMakeProject_MakeDirectoryMake( self, makefile, "test" );
 	DString_AppendChar( makefile, '\n' );
-	DString_AppendMBS( makefile, ".PHONY: subtest\n\n" );
+	DString_AppendChars( makefile, ".PHONY: subtest\n\n" );
 
-	DString_AppendMBS( makefile, "TESTSUM =" );
+	DString_AppendChars( makefile, "TESTSUM =" );
 	DString_Append( makefile, vmSpace->startPath );
 	DString_AppendPathSep( makefile );
-	DString_AppendMBS( makefile, daomake_test_sumfile );
-	DString_AppendMBS( makefile, "\n\n" );
+	DString_AppendChars( makefile, daomake_test_sumfile );
+	DString_AppendChars( makefile, "\n\n" );
 
-	DString_AppendMBS( makefile, "testsum:\n" );
+	DString_AppendChars( makefile, "testsum:\n" );
 	if( ismain ){
-		DString_AppendMBS( makefile, "\t@$(DAOMAKE) echo \"Summarizing test results ...\"\n" );
-		DString_AppendMBS( makefile, "\t-@$(DAOMAKE) remove " );
-		DString_AppendMBS( makefile, " $(TESTSUM)\n" );
+		DString_AppendChars( makefile, "\t@$(DAOMAKE) echo \"Summarizing test results ...\"\n" );
+		DString_AppendChars( makefile, "\t-@$(DAOMAKE) remove " );
+		DString_AppendChars( makefile, " $(TESTSUM)\n" );
 	}
 	for(i=0; i<self->targets->size; ++i){
 		DaoMakeTarget *target = (DaoMakeTarget*) self->targets->items.pVoid[i];
 		if( target->ttype != DAOMAKE_TESTING ) continue;
 
-		DString_AppendMBS( makefile, "\t@$(DAOTEST) --sum $(" );
+		DString_AppendChars( makefile, "\t@$(DAOTEST) --sum $(" );
 		DString_Append( makefile, target->testMacro );
-		DString_AppendMBS( makefile, ") --log $(TESTSUM) --group " );
+		DString_AppendChars( makefile, ") --log $(TESTSUM) --group " );
 		DString_Append( makefile, target->name );
-		DString_AppendMBS( makefile, "\n" );
+		DString_AppendChars( makefile, "\n" );
 	}
 	DaoMakeProject_MakeDirectoryMake( self, makefile, "testsum" );
-	if( ismain ) DString_AppendMBS( makefile, "\t@$(DAOMAKE) cat $(TESTSUM)\n" );
+	if( ismain ) DString_AppendChars( makefile, "\t@$(DAOMAKE) cat $(TESTSUM)\n" );
 	DString_AppendChar( makefile, '\n' );
-	DString_AppendMBS( makefile, ".PHONY: testsum\n\n" );
+	DString_AppendChars( makefile, ".PHONY: testsum\n\n" );
 
 	DaoMakeProject_MakeInstallation( self, makefile );
 
-	DString_AppendMBS( makefile, "clean:\n\t" );
+	DString_AppendChars( makefile, "clean:\n\t" );
 	if( self->objectsMacros->size + self->testsMacros->size ){
-		DString_AppendMBS( makefile, "$(DAOMAKE) remove" );
+		DString_AppendChars( makefile, "$(DAOMAKE) remove" );
 		for(it=DMap_First(self->objectsMacros); it; it=DMap_Next(self->objectsMacros,it)){
 			DString_AppendGap( makefile );
-			DString_AppendMBS( makefile, "$(" );
+			DString_AppendChars( makefile, "$(" );
 			DString_Append( makefile, it->key.pString );
 			DString_AppendChar( makefile, ')' );
 		}
 		for(it=DMap_First(self->testsMacros); it; it=DMap_Next(self->testsMacros,it)){
 			DString_AppendGap( makefile );
-			DString_AppendMBS( makefile, "$(" );
+			DString_AppendChars( makefile, "$(" );
 			DString_Append( makefile, it->key.pString );
 			DString_AppendChar( makefile, ')' );
 		}
@@ -1645,17 +1611,17 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 	}
 	DaoMakeProject_MakeDirectoryMake( self, makefile, "clean" );
 	DString_AppendChar( makefile, '\n' );
-	DString_AppendMBS( makefile, ".PHONY: clean\n\n" );
+	DString_AppendChars( makefile, ".PHONY: clean\n\n" );
 
-	DString_AppendMBS( makefile, "distclean:\n\t" );
+	DString_AppendChars( makefile, "distclean:\n\t" );
 	if( self->objectsMacros->size + self->testsMacros->size ){
-		DString_AppendMBS( makefile, "$(DAOMAKE) remove " );
-		DString_AppendMBS( makefile, daomake_objects_dir );
+		DString_AppendChars( makefile, "$(DAOMAKE) remove " );
+		DString_AppendChars( makefile, daomake_objects_dir );
 		DString_AppendChar( makefile, '\n' );
 	}
 	DaoMakeProject_MakeDirectoryMake( self, makefile, "distclean" );
 	DString_AppendChar( makefile, '\n' );
-	DString_AppendMBS( makefile, ".PHONY: distclean\n\n" );
+	DString_AppendChars( makefile, ".PHONY: distclean\n\n" );
 
 	/* Regenerate if there was MD5 signature conflict: */
 	if( self->signature != sig ) DaoMakeProject_MakeFile( self, makefile );
@@ -1686,8 +1652,7 @@ static void DaoMakeTarget_MakeExport( DaoMakeTarget *self, DString *cflags, DStr
 		// 2. "file" is a directory, which contains one of the used header files;
 		*/
 		if( DMap_Find( headers, file ) == NULL ){
-			DString_ToMBS( file );
-			if( DaoMake_IsDir( file->mbs ) == 0 ) continue;
+			if( DaoMake_IsDir( file->bytes ) == 0 ) continue;
 			/* Check if the directory contains one of the header files: */
 			for(it=DMap_First(headers); it; it=DMap_Next(headers,it)){
 				if( DString_Find( it->key.pString, file, 0 ) == 0 ) break;
@@ -1699,26 +1664,26 @@ static void DaoMakeTarget_MakeExport( DaoMakeTarget *self, DString *cflags, DStr
 		DString_Append( path, dest );
 		DaoMakeProject_MakeSourcePath( project, path );
 		DString_Append( key, self->name );
-		DString_AppendMBS( key, "::::" );
+		DString_AppendChars( key, "::::" );
 		DString_Append( key, path );
 		if( DMap_Find( incdirs, key ) ) continue;
 		DMap_Insert( incdirs, key, 0 );
 		DString_AppendGap( cflags );
-		DString_AppendMBS( cflags, "-I" );
+		DString_AppendChars( cflags, "-I" );
 		DString_Append( cflags, path );
 	}
 	DString_Reset( key, 0 );
 	DString_Append( key, self->name );
-	DString_AppendMBS( key, "::::" );
+	DString_AppendChars( key, "::::" );
 	DString_Append( key, self->install );
 	if( DMap_Find( lnkdirs, key ) == NULL ){
 		DMap_Insert( lnkdirs, key, 0 );
 		DString_AppendGap( lflags );
-		DString_AppendMBS( lflags, "-L" );
+		DString_AppendChars( lflags, "-L" );
 		DString_Append( lflags, self->install );
 	}
 	if( self->ttype == DAOMAKE_SHAREDLIB ){
-		DString_AppendMBS( shlibs, "-l" );
+		DString_AppendChars( shlibs, "-l" );
 		DString_Append( shlibs, self->name );
 	}else if( self->ttype == DAOMAKE_STATICLIB ){
 		DString_AppendGap( stlibs );
@@ -1734,13 +1699,13 @@ void DString_AppendVerbatim( DString *self, DString *text, DString *md5 )
 	DString_MD5( text, md5 );
 	DString_Reset( md5, 8 );
 	DString_ToUpper( md5 );
-	DString_AppendMBS( self, "@[" );
+	DString_AppendChars( self, "@[" );
 	DString_Append( self, md5 );
-	DString_AppendMBS( self, "]" );
+	DString_AppendChars( self, "]" );
 	DString_Append( self, text );
-	DString_AppendMBS( self, "@[" );
+	DString_AppendChars( self, "@[" );
 	DString_Append( self, md5 );
-	DString_AppendMBS( self, "]" );
+	DString_AppendChars( self, "]" );
 }
 
 typedef struct DaoMakeProjMaps DaoMakeProjMaps;
@@ -1844,52 +1809,52 @@ static void DaoMakeProject_MakeExports( DaoMakeProject *self, DaoMakeProjMaps *p
 }
 static void DaoMakeProject_WriteExports( DaoMakeProject *self, DaoMakeProjMaps *promaps, DString *output, int tab )
 {
-	DString *md5 = self->mbs;
+	DString *md5 = self->string;
 	DNode *itCFlags = DMap_First( promaps->mapCFlags );
 	DNode *itLFlags = DMap_First( promaps->mapLFlags );
 	DNode *itShlibs = DMap_First( promaps->mapShlibs );
 	DNode *itStlibs = DMap_First( promaps->mapStlibs );
 	for(; itCFlags; ){
 		DString_AppendRepeatedChars( output, '\t', tab );
-		DString_AppendMBS( output, "cflags_" );
+		DString_AppendChars( output, "cflags_" );
 		DString_Append( output, itCFlags->key.pString );
-		DString_AppendMBS( output, " = " );
+		DString_AppendChars( output, " = " );
 		DString_AppendVerbatim( output, itCFlags->value.pString, md5 );
-		DString_AppendMBS( output, "\n" );
+		DString_AppendChars( output, "\n" );
 
 		DString_AppendRepeatedChars( output, '\t', tab );
-		DString_AppendMBS( output, "lflags_" );
+		DString_AppendChars( output, "lflags_" );
 		DString_Append( output, itLFlags->key.pString );
-		DString_AppendMBS( output, " = " );
+		DString_AppendChars( output, " = " );
 		DString_AppendVerbatim( output, itLFlags->value.pString, md5 );
-		DString_AppendMBS( output, "\n" );
+		DString_AppendChars( output, "\n" );
 
 		DString_AppendRepeatedChars( output, '\t', tab );
-		DString_AppendMBS( output, "shlibs_" );
+		DString_AppendChars( output, "shlibs_" );
 		DString_Append( output, itShlibs->key.pString );
-		DString_AppendMBS( output, " = " );
+		DString_AppendChars( output, " = " );
 		DString_AppendVerbatim( output, itShlibs->value.pString, md5 );
-		DString_AppendMBS( output, "\n" );
+		DString_AppendChars( output, "\n" );
 
 		DString_AppendRepeatedChars( output, '\t', tab );
-		DString_AppendMBS( output, "stlibs_" );
+		DString_AppendChars( output, "stlibs_" );
 		DString_Append( output, itStlibs->key.pString );
-		DString_AppendMBS( output, " = " );
+		DString_AppendChars( output, " = " );
 		DString_AppendVerbatim( output, itStlibs->value.pString, md5 );
-		DString_AppendMBS( output, "\n" );
+		DString_AppendChars( output, "\n" );
 
 		DString_AppendRepeatedChars( output, '\t', tab );
-		DString_AppendMBS( output, "project.ExportLibrary( \"" );
+		DString_AppendChars( output, "project.ExportLibrary( \"" );
 		DString_Append( output, itCFlags->key.pString );
-		DString_AppendMBS( output, "\", cflags_" );
+		DString_AppendChars( output, "\", cflags_" );
 		DString_Append( output, itCFlags->key.pString );
-		DString_AppendMBS( output, ", lflags_" );
+		DString_AppendChars( output, ", lflags_" );
 		DString_Append( output, itCFlags->key.pString );
-		DString_AppendMBS( output, ", shlibs_" );
+		DString_AppendChars( output, ", shlibs_" );
 		DString_Append( output, itCFlags->key.pString );
-		DString_AppendMBS( output, ", stlibs_" );
+		DString_AppendChars( output, ", stlibs_" );
 		DString_Append( output, itCFlags->key.pString );
-		DString_AppendMBS( output, " )\n" );
+		DString_AppendChars( output, " )\n" );
 
 		itCFlags = DMap_Next( promaps->mapCFlags, itCFlags );
 		itLFlags = DMap_Next( promaps->mapLFlags, itLFlags );
@@ -1976,18 +1941,18 @@ void DaoMakeProject_MakeFindPackageForBuild( DaoMakeProject *self, DString *outp
 			DString *key = empty;
 			DString_Reset( key, 0 );
 			DString_Append( key, tar->name );
-			DString_AppendMBS( key, "::::" );
+			DString_AppendChars( key, "::::" );
 			DString_Append( key, tar->base.project->binaryPath );
 			if( DMap_Find( lnkdirs, key ) == NULL ){
 				DMap_Insert( lnkdirs, key, 0 );
 				DString *rpath = DaoMake_GetSettingValue( "DLL-RPATH" );
 				DString_Append( shlibs, rpath );
 				DString_Append( shlibs, tar->base.project->binaryPath );
-				DString_AppendMBS( shlibs, " -L" );
+				DString_AppendChars( shlibs, " -L" );
 				DString_Append( shlibs, tar->base.project->binaryPath );
 			}
 			DString_Reset( empty, 0 );
-			DString_AppendMBS( shlibs, " -l" );
+			DString_AppendChars( shlibs, " -l" );
 			DString_Append( shlibs, tar->name );
 		}else if( tar->ttype == DAOMAKE_STATICLIB ){
 			DaoMakeTarget_MakeName( tar, stlibs );
@@ -2017,20 +1982,19 @@ void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output, int 
 	DString *find1 = DaoMakeProject_GetBufferString( self );
 	DString *find2 = DaoMakeProject_GetBufferString( self );
 	DaoValue **installs = self->installs->items.pValue;
-	DString *md5 = self->mbs;
+	DString *md5 = self->string;
 	daoint i;
 
 	DString_Append( filePath, self->sourcePath );
 	DString_AppendPathSep( filePath );
-	DString_AppendMBS( filePath, "Find" );
+	DString_AppendChars( filePath, "Find" );
 	DString_Append( filePath, self->projectName );
-	DString_AppendMBS( filePath, ".dao" );
+	DString_AppendChars( filePath, ".dao" );
 
 	for(i=0; i<self->installs->size; i+=2){
 		DString *dest = DaoValue_TryGetString( installs[i+1] );
 		DString *file = DaoValue_TryGetString( installs[i] );
 		if( file == NULL ) continue;
-		DString_ToMBS( file );
 		if( DString_EQ( file, filePath ) ){
 			DString_Append( installPath, dest );
 			break;
@@ -2038,9 +2002,9 @@ void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output, int 
 	}
 
 	DString_Reset( output, 0 );
-	DString_AppendMBS( output, "project = DaoMake::Project( \"" );
+	DString_AppendChars( output, "project = DaoMake::Project( \"" );
 	DString_Append( output, self->projectName );
-	DString_AppendMBS( output, "\" )\n" );
+	DString_AppendChars( output, "\" )\n" );
 
 	if( installPath->size == 0 || caching ){
 		DaoMakeProject_MakeFindPackageForBuild( self, find1, 0 );
@@ -2052,13 +2016,13 @@ void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output, int 
 	DaoMakeProject_MakeFindPackageForInstall( self, find1, 1 );
 	DaoMakeProject_MakeFindPackageForBuild( self, find2, 1 );
 
-	DString_AppendMBS( output, "if( project.SourcePath() == " );
+	DString_AppendChars( output, "if( project.SourcePath() == " );
 	DString_AppendVerbatim( output, installPath, md5 );
-	DString_AppendMBS( output, " ){\n" );
+	DString_AppendChars( output, " ){\n" );
 	DString_Append( output, find1 );
-	DString_AppendMBS( output, "}else{\n" );
+	DString_AppendChars( output, "}else{\n" );
 	DString_Append( output, find2 );
-	DString_AppendMBS( output, "}" );
+	DString_AppendChars( output, "}" );
 	self->usedStrings -= 4;
 	if( find1->size + find2->size == 0 ) DString_Reset( output, 0 );
 }
@@ -2150,7 +2114,7 @@ static void DaoMakeUnit_UseLibrary( DaoMakeUnit *self, DaoMakeProject *pro, DStr
 	daoint i;
 
 	if( self == (DaoMakeUnit*) pro ){
-		fprintf( stderr, "\nWARNING: project %s uses library from itself!\n\n", pro->projectName->mbs );
+		fprintf( stderr, "\nWARNING: project %s uses library from itself!\n\n", pro->projectName->bytes );
 		return;
 	}
 
@@ -2173,7 +2137,7 @@ static void DaoMakeUnit_UseLibrary( DaoMakeUnit *self, DaoMakeProject *pro, DStr
 		if( ttype == DAOMAKE_SHAREDLIB ){
 			DArray_PushBack( self->linkingPaths, tar->base.project->binaryPath );
 			name = (DString*) DArray_PushBack( self->linkingFlags, name );
-			DString_InsertMBS( name, "-l", 0, 0, 0 );
+			DString_InsertChars( name, "-l", 0, 0, 0 );
 		}else if( ttype == DAOMAKE_STATICLIB ){
 			DString *prefix = DaoMake_GetSettingValue( daomake_prefix_keys[ ttype ] );
 			DString *suffix = DaoMake_GetSettingValue( daomake_suffix_keys[ ttype ] );
@@ -2264,31 +2228,31 @@ static void UNIT_UseStaticLib( DaoProcess *proc, DaoValue *p[], int N )
 static void UNIT_MakeDefinitions( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
-	DString *res = DaoProcess_PutMBString( proc, "" );
+	DString *res = DaoProcess_PutChars( proc, "" );
 	DaoMakeUnit_MakeDefinitions( self, res );
 }
 static void UNIT_MakeIncludePaths( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
-	DString *res = DaoProcess_PutMBString( proc, "" );
+	DString *res = DaoProcess_PutChars( proc, "" );
 	DaoMakeUnit_MakeIncludePaths( self, res );
 }
 static void UNIT_MakeLinkingPaths( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
-	DString *res = DaoProcess_PutMBString( proc, "" );
+	DString *res = DaoProcess_PutChars( proc, "" );
 	DaoMakeUnit_MakeLinkingPaths( self, res );
 }
 static void UNIT_MakeCompilingFlags( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
-	DString *res = DaoProcess_PutMBString( proc, "" );
+	DString *res = DaoProcess_PutChars( proc, "" );
 	DaoMakeUnit_MakeCompilingFlags( self, res );
 }
 static void UNIT_MakeLinkingFlags( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
-	DString *res = DaoProcess_PutMBString( proc, "" );
+	DString *res = DaoProcess_PutChars( proc, "" );
 	DaoMakeUnit_MakeLinkingFlags( self, res );
 }
 static DaoFuncItem DaoMakeUnitMeths[]=
@@ -2349,7 +2313,7 @@ DaoTypeBase DaoMakeObjects_Typer =
 static void TARGET_Name( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
-	DString *res = DaoProcess_PutMBString( proc, "" );
+	DString *res = DaoProcess_PutChars( proc, "" );
 	DaoMakeTarget_MakeName( self, res );
 }
 static void TARGET_AddObjects( DaoProcess *proc, DaoValue *p[], int N )
@@ -2401,14 +2365,14 @@ static void TARGET_EnableDynamicLinking( DaoProcess *proc, DaoValue *p[], int N 
 static void TARGET_SetPath( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
-	DString *dest = p[1]->xString.data;
+	DString *dest = p[1]->xString.value;
 	DString_Assign( self->path, dest );
 }
 static void TARGET_Install( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoNamespace *ns = proc->activeNamespace;
 	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
-	DString *dest = p[1]->xString.data;
+	DString *dest = p[1]->xString.value;
 	DString_Assign( self->install, dest );
 	DaoMake_MakePath( ns->path, self->install );
 }
@@ -2460,11 +2424,7 @@ static void PROJECT_New( DaoProcess *proc, DaoValue *p[], int N )
 	if( daomake_out_of_source ){
 		DString_Insert( self->binaryPath, binRoot, 0, srcRoot->size, binRoot->size );
 	}
-	if( name->mbs ){
-		DaoMap_InsertMBS( daomake_projects, name->mbs, (DaoValue*) self );
-	}else{
-		DaoMap_InsertWCS( daomake_projects, name->wcs, (DaoValue*) self );
-	}
+	DaoMap_InsertChars( daomake_projects, name->bytes, (DaoValue*) self );
 }
 static void PROJECT_AddOBJ( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2555,17 +2515,17 @@ static void PROJECT_AddDIR( DaoProcess *proc, DaoValue *p[], int N )
 		DString *path = DaoValue_TryGetString( p[i] );
 		DString_Append( file, path );
 		DString_AppendPathSep( file );
-		DString_AppendMBS( file, "makefile.dao" );
-		ns = DaoVmSpace_Load( proc->vmSpace, file->mbs );
+		DString_AppendChars( file, "makefile.dao" );
+		ns = DaoVmSpace_Load( proc->vmSpace, file->bytes );
 		if( ns == NULL ) continue;
 		DArray_Append( target->commands, path );
 
-		DString_SetMBS( file, daomake_objects_dir );
+		DString_SetChars( file, daomake_objects_dir );
 		DaoMake_MakePath( ns->path, file );
 		if( daomake_out_of_source ){
 			DaoMake_MakeOutOfSourcePath( file, 0 );
 		}else{
-			DaoMake_MakeDir( file->mbs );
+			DaoMake_MakeDir( file->bytes );
 		}
 	}
 	DaoProcess_PutValue( proc, (DaoValue*) target );
@@ -2614,7 +2574,7 @@ static void PROJECT_InstallFiles( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMakeProject *self = (DaoMakeProject*) p[0];
 	DaoList *list = (DaoList*) p[2];
 	int i, size = DaoList_Size( list );
-	DaoMake_MakePath( ns->path, p[1]->xString.data );
+	DaoMake_MakePath( ns->path, p[1]->xString.value );
 	for(i=0; i<size; ++i){
 		DaoValue *it = DaoList_GetItem( list, i );
 		DArray_Append( self->installs, it );
@@ -2659,7 +2619,7 @@ static void PROJECT_GetPath( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeProject *self = (DaoMakeProject*) p[0];
 	DString *name = DaoValue_TryGetString( p[1] );
-	DString *res = DaoProcess_PutMBString( proc, "" );
+	DString *res = DaoProcess_PutChars( proc, "" );
 	DNode *it = DMap_Find( self->exportPaths, name );
 	if( it ) DString_Assign( res, it->value.pString );
 }
@@ -2725,32 +2685,32 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 	size_t otime, ctime;
 	FILE *fout = NULL;
 
-	DString_AppendMBS( message, "Package \"" );
+	DString_AppendChars( message, "Package \"" );
 	DString_Append( message, name );
-	DString_AppendMBS( message, "\" not found!" );
+	DString_AppendChars( message, "\" not found!" );
 
-	DString_SetMBS( original, "packages/Find" );
+	DString_SetChars( original, "packages/Find" );
 	DString_Append( original, name);
-	DString_AppendMBS( original, ".dao" );
+	DString_AppendChars( original, ".dao" );
 
 	DString_AppendPathSep( cache );
-	DString_AppendMBS( cache, "CacheFind" );
+	DString_AppendChars( cache, "CacheFind" );
 	DString_Append( cache, name);
-	DString_AppendMBS( cache, ".dao" );
+	DString_AppendChars( cache, ".dao" );
 	DaoMake_MakeOutOfSourcePath( cache, 1 );
 
 	if( DaoVmSpace_CompleteModuleName( vmSpace, cache, DAO_MODULE_DAO ) == DAO_MODULE_NONE ) reset = 1;
 	DaoVmSpace_CompleteModuleName( vmSpace, original, DAO_MODULE_DAO );
-	otime = Dao_FileChangedTime( original->mbs );
-	ctime = Dao_FileChangedTime( cache->mbs );
+	otime = Dao_FileChangedTime( original->bytes );
+	ctime = Dao_FileChangedTime( cache->bytes );
 	if( otime > ctime ) reset = 1;
 
 	if( project == NULL && reset == 0 ){
-		if( DaoVmSpace_Load( vmSpace, cache->mbs ) ){
+		if( DaoVmSpace_Load( vmSpace, cache->bytes ) ){
 			project = DaoMap_GetValue( daomake_projects, p[0] );
 			if( project == NULL ){
 				if( p[1]->xEnum.value ){
-					DaoProcess_RaiseException( proc, DAO_ERROR, message->mbs );
+					DaoProcess_RaiseException( proc, DAO_ERROR, message->bytes );
 				}
 				project = dao_none_value;
 			}
@@ -2762,18 +2722,18 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	}
 	if( project == NULL ){
-		if( DaoVmSpace_Load( vmSpace, original->mbs ) )fout = fopen( cache->mbs, "w+" );
+		if( DaoVmSpace_Load( vmSpace, original->bytes ) )fout = fopen( cache->bytes, "w+" );
 	}
 	project = DaoMap_GetValue( daomake_projects, p[0] );
 	if( project == NULL ){
 		if( p[1]->xEnum.value ){
-			DaoProcess_RaiseException( proc, DAO_ERROR, message->mbs );
+			DaoProcess_RaiseException( proc, DAO_ERROR, message->bytes );
 		}
 		project = dao_none_value;
 	}else{
 		DaoMakeProject *proj = (DaoMakeProject*) project;
 		DaoMakeProject_MakeFindPackage( proj, cache, 1 );
-		if( fout ) fprintf( fout, "%s", cache->mbs );
+		if( fout ) fprintf( fout, "%s", cache->bytes );
 	}
 	if( fout ) fclose( fout );
 	DaoProcess_PutValue( proc, project );
@@ -2786,7 +2746,7 @@ static void DAOMAKE_FindFile( DaoProcess *proc, DaoValue *p[], int N )
 	DString *file = DaoValue_TryGetString( p[0] );
 	DaoList *hints = (DaoList*) p[1];
 	DString *path = DaoMake_FindFile( file, hints );
-	DString *res = DaoProcess_PutMBString( proc, "" );
+	DString *res = DaoProcess_PutChars( proc, "" );
 	if( path == NULL ) path = DaoMake_FindFile( file, daomake_includes );
 	if( path ) DString_Assign( res, path );
 }
@@ -2809,17 +2769,17 @@ static void DAOMAKE_TestCompile( DaoProcess *proc, DaoValue *p[], int N )
 	command = DString_New(1);
 	source = DString_New(1);
 	output = DString_New(1);
-	DString_AppendMBS( command, cxx ? "c++ " : "cc " );
+	DString_AppendChars( command, cxx ? "c++ " : "cc " );
 	if( cflag->size ){
 		DString_Append( command, cflag );
-		DString_AppendMBS( command, " " );
+		DString_AppendChars( command, " " );
 	}
 	pos1 = command->size;
-	DString_AppendMBS( command, "-o " );
+	DString_AppendChars( command, "-o " );
 	pos2 = command->size;
 	if( lflag->size ){
 		DString_Append( command, lflag );
-		DString_AppendMBS( command, " " );
+		DString_AppendChars( command, " " );
 	}
 	pos3 = command->size;
 
@@ -2827,13 +2787,13 @@ static void DAOMAKE_TestCompile( DaoProcess *proc, DaoValue *p[], int N )
 	DString_MD5( command, md5 );
 	DString_Reset( md5, 12 );
 
-	DString_AppendMBS( source, daomake_objects_dir );
-	DString_AppendMBS( source, "/source_" );
+	DString_AppendChars( source, daomake_objects_dir );
+	DString_AppendChars( source, "/source_" );
 	DString_Append( source, md5 );
-	DString_AppendMBS( source, cxx ? ".cxx" : ".c" );
+	DString_AppendChars( source, cxx ? ".cxx" : ".c" );
 
-	DString_AppendMBS( output, daomake_objects_dir );
-	DString_AppendMBS( output, "/binary_" );
+	DString_AppendChars( output, daomake_objects_dir );
+	DString_AppendChars( output, "/binary_" );
 	DString_Append( output, md5 );
 
 	DaoMake_MakePath( daomake_main_source_path, source );
@@ -2844,7 +2804,7 @@ static void DAOMAKE_TestCompile( DaoProcess *proc, DaoValue *p[], int N )
 	}
 
 	DString_Delete( md5 );
-	if( DaoMake_IsFile( output->mbs ) ){
+	if( DaoMake_IsFile( output->bytes ) ){
 		DString_Delete( command );
 		DString_Delete( source );
 		DString_Delete( output );
@@ -2853,24 +2813,24 @@ static void DAOMAKE_TestCompile( DaoProcess *proc, DaoValue *p[], int N )
 	}
 
 	DString_Erase( command, pos3, -1 );
-	DString_InsertMBS( command, " ", pos2, 0, -1 );
+	DString_InsertChars( command, " ", pos2, 0, -1 );
 	DString_Insert( command, output, pos2, 0, 0 );
-	DString_InsertMBS( command, " ", pos1, 0, -1 );
+	DString_InsertChars( command, " ", pos1, 0, -1 );
 	DString_Insert( command, source, pos1, 0, -1 );
 
-	printf( "Checking: %s\n", command->mbs );
-	file = fopen( source->mbs, "w+" );
+	printf( "Checking: %s\n", command->bytes );
+	file = fopen( source->bytes, "w+" );
 	DaoFile_WriteString( file, code );
 	fclose( file );
 
 	DString_Assign( source, output );
-	DString_SetMBS( output, daomake_objects_dir );
-	DString_AppendMBS( output, "/null" );
-	DString_AppendMBS( command, " &> " );
+	DString_SetChars( output, daomake_objects_dir );
+	DString_AppendChars( output, "/null" );
+	DString_AppendChars( command, " &> " );
 	DString_Append( command, output );
 
-	system( command->mbs );
-	*res = DaoMake_IsFile( source->mbs );
+	system( command->bytes );
+	*res = DaoMake_IsFile( source->bytes );
 	DString_Delete( command );
 	DString_Delete( source );
 	DString_Delete( output );
@@ -2894,36 +2854,34 @@ static void DAOMAKE_OptionSTR( DaoProcess *proc, DaoValue *p[], int N )
 static void DAOMAKE_Suffix( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoNamespace *ns = proc->activeNamespace;
-	DaoProcess_PutMBString( proc, daomake_makefile_suffix );
+	DaoProcess_PutChars( proc, daomake_makefile_suffix );
 }
 static void DAOMAKE_IsFile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *path = DaoValue_TryGetString( p[0] );
-	DString_ToMBS( path );
 	DaoMake_MakePath( proc->activeNamespace->path, path );
-	DaoProcess_PutInteger( proc, DaoMake_IsFile( path->mbs ) );
+	DaoProcess_PutInteger( proc, DaoMake_IsFile( path->bytes ) );
 }
 static void DAOMAKE_IsDir( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *path = DaoValue_TryGetString( p[0] );
-	DString_ToMBS( path );
 	DaoMake_MakePath( proc->activeNamespace->path, path );
-	DaoProcess_PutInteger( proc, DaoMake_IsDir( path->mbs ) );
+	DaoProcess_PutInteger( proc, DaoMake_IsDir( path->bytes ) );
 }
 static void DAOMAKE_Shell( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString *res = DaoProcess_PutMBString( proc, "" );
+	DString *res = DaoProcess_PutChars( proc, "" );
 	DString *cmd = DaoValue_TryGetString( p[0] );
-	FILE *fin = popen( DString_GetMBS( cmd ), "r" );
+	FILE *fin = popen( DString_GetData( cmd ), "r" );
 	DaoFile_ReadAll( fin, res, 0 );
 	pclose( fin );
 }
 static void DAOMAKE_GetEnv( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString *res = DaoProcess_PutMBString( proc, "" );
+	DString *res = DaoProcess_PutChars( proc, "" );
 	DString *name = DaoValue_TryGetString( p[0] );
-	char *value = getenv( DString_GetMBS( name ) );
-	if( value ) DString_SetMBS( res, value );
+	char *value = getenv( DString_GetData( name ) );
+	if( value ) DString_SetChars( res, value );
 }
 static void DAOMAKE_SourcePath( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2943,7 +2901,7 @@ static void DAOMAKE_MakePath( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DAOMAKE_MakeRpath( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString *flag = DaoProcess_PutMBString( proc, "" );
+	DString *flag = DaoProcess_PutChars( proc, "" );
 	DString *rpath = DaoMake_GetSettingValue( "DLL-RPATH" );
 	int i;
 	for(i=0; i<N; ++i){
@@ -2963,7 +2921,7 @@ static void DAOMAKE_SetTestTool( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *tool = DaoValue_TryGetString( p[0] );
 	DString *option = DaoValue_TryGetString( p[1] );
-	DString_ToMBS( tool );
+
 	DaoMake_MakePath( proc->activeNamespace->path, tool );
 	DString_Reset( daomake_test_tool, 0 );
 	DString_Reset( daomake_test_tool_option, 0 );
@@ -2976,8 +2934,8 @@ static void DAOMAKE_Platform( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DAOMAKE_IsPlatform( DaoProcess *proc, DaoValue *p[], int N)
 {
-	DString *platform = p[0]->xString.data;
-	DString *value = DaoMake_GetSettingValue( DString_GetMBS( platform ) );
+	DString *platform = p[0]->xString.value;
+	DString *value = DaoMake_GetSettingValue( DString_GetData( platform ) );
 	DaoProcess_PutInteger( proc, value != NULL );
 }
 static void DAOMAKE_Is64Bit( DaoProcess *proc, DaoValue *p[], int N )
@@ -3026,11 +2984,11 @@ static void DaoMap_AddKeyValues( DaoMap *self, const char *const keyvalues[] )
 	for(i=0; keyvalues[i]; i+=2){
 		DaoString key = { DAO_STRING,0,0,0,1,NULL};
 		DaoString value = { DAO_STRING,0,0,0,1,NULL};
-		DString sk = DString_WrapMBS( keyvalues[i] );
-		DString sv = DString_WrapMBS( keyvalues[i+1] );
-		key.data = & sk;
-		value.data = & sv;
-		DMap_Insert( self->items, & key, & value );
+		DString sk = DString_WrapChars( keyvalues[i] );
+		DString sv = DString_WrapChars( keyvalues[i+1] );
+		key.value = & sk;
+		value.value = & sv;
+		DMap_Insert( self->value, & key, & value );
 	}
 }
 
@@ -3068,21 +3026,21 @@ int DaoMake_RemoveDirectory( const char *path )
 	src = DString_New(1);
 
 #ifdef WIN32
-	DString_AppendMBS( src, path );
-	if( src->size && src->mbs[src->size-1] == '/' || src->mbs[src->size-1] == '\\' ){
-		DString_AppendMBS( src, "*" );
+	DString_AppendChars( src, path );
+	if( src->size && src->bytes[src->size-1] == '/' || src->bytes[src->size-1] == '\\' ){
+		DString_AppendChars( src, "*" );
 	}else{
-		DString_AppendMBS( src, "/*" );
+		DString_AppendChars( src, "/*" );
 	}
-	handle = _findfirst( src->mbs, & finfo );
+	handle = _findfirst( src->bytes, & finfo );
 	if( handle != -1 ){
 		do {
 			if( strcmp( finfo.name, "." ) && strcmp( finfo.name, ".." ) ){
 				DString_Reset( src, 0 );
-				DString_AppendMBS( src, path );
+				DString_AppendChars( src, path );
 				DString_AppendPathSep( src );
-				DString_AppendMBS( src, finfo.name );
-				DaoMake_RemovePath( src->mbs );
+				DString_AppendChars( src, finfo.name );
+				DaoMake_RemovePath( src->bytes );
 			}
 		} while( !_findnext( handle, &finfo ) );
 		_findclose( handle );
@@ -3094,10 +3052,10 @@ int DaoMake_RemoveDirectory( const char *path )
 		while( ( finfo = readdir( handle ) ) ){
 			if( strcmp( finfo->d_name, "." ) && strcmp( finfo->d_name, ".." ) ){
 				DString_Reset( src, 0 );
-				DString_AppendMBS( src, path );
+				DString_AppendChars( src, path );
 				DString_AppendPathSep( src );
-				DString_AppendMBS( src, finfo->d_name );
-				DaoMake_RemovePath( src->mbs );
+				DString_AppendChars( src, finfo->d_name );
+				DaoMake_RemovePath( src->bytes );
 			}
 		}
 		closedir( handle );
@@ -3129,29 +3087,29 @@ int DaoMake_CopyFile( const char *from, const char *to, int update )
 	if( DaoMake_IsFile( from ) == 0 ) return 1;
 
 	dest = DString_New(1);
-	DString_SetMBS( dest, to );
-	if( DaoMake_IsDir( dest->mbs ) ){
+	DString_SetChars( dest, to );
+	if( DaoMake_IsDir( dest->bytes ) ){
 		char *sep = strrchr( from, '/' );
 		DString_AppendPathSep( dest );
 		if( sep == NULL ){
-			DString_AppendMBS( dest, from );
+			DString_AppendChars( dest, from );
 		}else{
-			DString_AppendMBS( dest, sep + 1 );
+			DString_AppendChars( dest, sep + 1 );
 		}
 	}
-	if( update && Dao_FileChangedTime( from ) <= Dao_FileChangedTime( dest->mbs ) ){
+	if( update && Dao_FileChangedTime( from ) <= Dao_FileChangedTime( dest->bytes ) ){
 		DString_Delete( dest );
 		return 0;
 	}
 	fin = fopen( from, "rb" );
-	fout = fopen( dest->mbs, "w+b" );
+	fout = fopen( dest->bytes, "w+b" );
 	if( fin == NULL || fout == NULL ){
 		if( fin ) fclose( fin );
 		if( fout ) fclose( fout );
 		DString_Delete( dest );
 		return 1;
 	}
-	if( stat( from, & info ) == 0 ) chmod( dest->mbs, info.st_mode );
+	if( stat( from, & info ) == 0 ) chmod( dest->bytes, info.st_mode );
 	DaoFile_ReadAll( fin, dest, 1 );
 	DaoFile_WriteString( fout, dest );
 	fclose( fout );
@@ -3182,41 +3140,41 @@ int DaoMake_CopyDirectory( const char *from, const char *to, int update )
 
 	src = DString_New(1);
 	dest = DString_New(1);
-	DString_SetMBS( src, from );
-	DString_SetMBS( dest, to );
-	if( DaoMake_IsFile( dest->mbs ) ){
+	DString_SetChars( src, from );
+	DString_SetChars( dest, to );
+	if( DaoMake_IsFile( dest->bytes ) ){
 		DString_Delete( src );
 		DString_Delete( dest );
 		return 1;
 	}
 	DString_AppendPathSep( dest );
-	if( DaoMake_IsDir( dest->mbs ) == 0 ){
+	if( DaoMake_IsDir( dest->bytes ) == 0 ){
 		/* Copy to a new folder: */
-		DaoMake_MakeDir( dest->mbs );
+		DaoMake_MakeDir( dest->bytes );
 	}else{
 		/* Copy under an existing folder: */
-		int lastsep = src->size && src->mbs[src->size-1] == '/';
+		int lastsep = src->size && src->bytes[src->size-1] == '/';
 		int pos = DString_RFindChar( src, '/', src->size - 1 - lastsep );
 		if( pos > 0 ){
-			DString_AppendMBS( dest, src->mbs + pos + 1 );
+			DString_AppendChars( dest, src->bytes + pos + 1 );
 		}else{
-			DString_AppendMBS( dest, from );
+			DString_AppendChars( dest, from );
 		}
-		if( DaoMake_IsDir( dest->mbs ) == 0 ) DaoMake_MakeDir( dest->mbs );
+		if( DaoMake_IsDir( dest->bytes ) == 0 ) DaoMake_MakeDir( dest->bytes );
 	}
 
 #ifdef WIN32
 	DString_AppendPathSep( src );
-	DString_AppendMBS( src, "*" );
-	handle = _findfirst( src->mbs, & finfo );
+	DString_AppendChars( src, "*" );
+	handle = _findfirst( src->bytes, & finfo );
 	if( handle != -1 ){
 		do {
 			if( strcmp( finfo.name, "." ) && strcmp( finfo.name, ".." ) ){
 				DString_Reset( src, 0 );
-				DString_AppendMBS( src, from );
+				DString_AppendChars( src, from );
 				DString_AppendPathSep( src );
-				DString_AppendMBS( src, finfo.name );
-				DaoMake_CopyPathFile( src->mbs, dest->mbs, update );
+				DString_AppendChars( src, finfo.name );
+				DaoMake_CopyPathFile( src->bytes, dest->bytes, update );
 			}
 		} while( !_findnext( handle, &finfo ) );
 		_findclose( handle );
@@ -3228,10 +3186,10 @@ int DaoMake_CopyDirectory( const char *from, const char *to, int update )
 		while( ( finfo = readdir( handle ) ) ){
 			if( strcmp( finfo->d_name, "." ) && strcmp( finfo->d_name, ".." ) ){
 				DString_Reset( src, 0 );
-				DString_AppendMBS( src, from );
+				DString_AppendChars( src, from );
 				DString_AppendPathSep( src );
-				DString_AppendMBS( src, finfo->d_name );
-				DaoMake_CopyPathFile( src->mbs, dest->mbs, update );
+				DString_AppendChars( src, finfo->d_name );
+				DaoMake_CopyPathFile( src->bytes, dest->bytes, update );
 			}
 		}
 		closedir( handle );
@@ -3328,8 +3286,8 @@ int main( int argc, char *argv[] )
 	vmSpace = DaoInit( argv[0] );
 	daomake_current_path = DString_New(1);
 	DString_Reset( daomake_current_path, 1024 );
-	getcwd( daomake_current_path->mbs, 1024 );
-	DString_Reset( daomake_current_path, strlen( daomake_current_path->mbs ) );
+	getcwd( daomake_current_path->bytes, 1024 );
+	DString_Reset( daomake_current_path, strlen( daomake_current_path->bytes ) );
 
 	/* Utility subcommands: */
 	if( argc > 1 ){
@@ -3338,7 +3296,7 @@ int main( int argc, char *argv[] )
 				fin = fopen( argv[i], "rb" );
 				if( fin == NULL ) continue;
 				DaoFile_ReadAll( fin, makefile, 1 );
-				printf( "%s\n", makefile->mbs );
+				printf( "%s\n", makefile->bytes );
 			}
 			return 0;
 		}else if( strcmp( argv[1], "echo" ) == 0 ){
@@ -3371,7 +3329,7 @@ int main( int argc, char *argv[] )
 			if( argc <= 2 ) return 1;
 			DArray_PushFront( vmSpace->nameLoading, vmSpace->pathWorking );
 			DArray_PushFront( vmSpace->pathLoading, vmSpace->pathWorking );
-			DString_SetMBS( vmSpace->mainNamespace->name, "command line codes" );
+			DString_SetChars( vmSpace->mainNamespace->name, "command line codes" );
 			if( DaoProcess_Compile( vmp, ns, argv[2] ) ==0 ) return 0;
 			rout = ns->mainRoutines->items.pRoutine[ ns->mainRoutines->size-1 ];
 			return DaoProcess_Call( vmp, rout, NULL, NULL, 0 );
@@ -3382,7 +3340,7 @@ int main( int argc, char *argv[] )
 	daomake_boolean_options = DMap_New(D_STRING,0);
 	daomake_string_options = DMap_New(D_STRING,D_STRING);
 	daomake_cmdline_defines = DMap_New(D_STRING,0);
-	DString_SetMBS( makefile, "makefile.dao" );
+	DString_SetChars( makefile, "makefile.dao" );
 	for(i=1; i<argc; i++){
 		char *arg = argv[i];
 		if( strcmp( arg, "--platform" ) == 0 ){
@@ -3401,11 +3359,11 @@ int main( int argc, char *argv[] )
 				goto ErrorInvalidArgValue;
 			}
 		}else if( strstr( arg, "--option-" ) == arg ){
-			DString key = DString_WrapMBS( arg + 9 );
+			DString key = DString_WrapChars( arg + 9 );
 			DString value;
 			daoint bl = -1;
 			if( (i + 1) == argc ) goto ErrorMissingArgValue;
-			value = DString_WrapMBS( argv[++i] );
+			value = DString_WrapChars( argv[++i] );
 			DMap_Insert( daomake_string_options, & key, & value );
 			if( strcmp( argv[i], "FALSE" ) ==0 || strcmp( argv[i], "false" ) ==0 ){
 				bl = 0;
@@ -3422,11 +3380,11 @@ int main( int argc, char *argv[] )
 			}
 			if( bl >= 0 ) DMap_Insert( daomake_boolean_options, & key, (void*)bl );
 		}else if( strstr( arg, "--define-" ) == arg ){
-			DString key = DString_WrapMBS( arg + 9 );
+			DString key = DString_WrapChars( arg + 9 );
 			DString value;
 			daoint bl = -1;
 			if( (i + 1) == argc ) goto ErrorMissingArgValue;
-			value = DString_WrapMBS( argv[++i] );
+			value = DString_WrapChars( argv[++i] );
 			DMap_Insert( daomake_cmdline_defines, & key, & value );
 		}else if( strcmp( arg, "--suffix" ) == 0 ){
 			if( (i + 1) == argc ) goto ErrorMissingArgValue;
@@ -3440,17 +3398,17 @@ int main( int argc, char *argv[] )
 			fprintf( stderr, "Error: unknown argument \"%s\"!\n", arg );
 			return 1;
 		}else if( (i + 1) == argc ){
-			DString_SetMBS( makefile, argv[i] );
-			if( DaoMake_IsDir( makefile->mbs ) ){
+			DString_SetChars( makefile, argv[i] );
+			if( DaoMake_IsDir( makefile->bytes ) ){
 				DString *file = DString_New(1);
 				const char *names[] = { "makefile", "Makefile", "make", "Make" };
 				DString_AppendPathSep( makefile );
 				for(k=0; k<4; ++k){
 					DString_Reset( file, 0 );
 					DString_Append( file, makefile );
-					DString_AppendMBS( file, names[k] );
-					DString_AppendMBS( file, ".dao" );
-					if( DaoMake_IsFile( file->mbs ) ){
+					DString_AppendChars( file, names[k] );
+					DString_AppendChars( file, ".dao" );
+					if( DaoMake_IsFile( file->bytes ) ){
 						DString_Assign( makefile, file );
 						break;
 					}
@@ -3501,22 +3459,22 @@ ErrorInvalidArgValue:
 	DaoMap_AddKeyValues( daomake_linkers, daomake_lang_linkers );
 
 	name = DString_New(1);
-	DaoVmSpace_AddPath( vmSpace, vmSpace->daoBinPath->mbs );
-	DString_SetMBS( name, ".." );
+	DaoVmSpace_AddPath( vmSpace, vmSpace->daoBinPath->bytes );
+	DString_SetChars( name, ".." );
 	Dao_MakePath( vmSpace->daoBinPath, name );
-	DaoVmSpace_AddPath( vmSpace, name->mbs );
+	DaoVmSpace_AddPath( vmSpace, name->bytes );
 #ifdef UNIX
-	DString_SetMBS( name, "../shared/daomake" );
+	DString_SetChars( name, "../shared/daomake" );
 	Dao_MakePath( vmSpace->daoBinPath, name );
-	DaoVmSpace_AddPath( vmSpace, name->mbs );
+	DaoVmSpace_AddPath( vmSpace, name->bytes );
 #endif
 	if( platform && *platform ){
 		DaoNamespace *pns;
-		DString_SetMBS( daomake_platform, platform );
-		DString_SetMBS( name, "platforms/" );
-		DString_AppendMBS( name, platform );
-		DString_AppendMBS( name, ".dao" );
-		pns = DaoVmSpace_Load( vmSpace, name->mbs );
+		DString_SetChars( daomake_platform, platform );
+		DString_SetChars( name, "platforms/" );
+		DString_AppendChars( name, platform );
+		DString_AppendChars( name, ".dao" );
+		pns = DaoVmSpace_Load( vmSpace, name->bytes );
 		if( pns == NULL ){
 			fprintf( stderr, "Error: invalid platform \"%s\"!\n", platform );
 			return 1;
@@ -3525,26 +3483,26 @@ ErrorInvalidArgValue:
 
 	DaoMake_MakePath( vmSpace->startPath, makefile );
 	DString_Append( srcdir, makefile );
-	while( srcdir->size && srcdir->mbs[srcdir->size-1] != '/' ) srcdir->size -= 1;
-	srcdir->mbs[srcdir->size] = '\0';
+	while( srcdir->size && srcdir->bytes[srcdir->size-1] != '/' ) srcdir->size -= 1;
+	srcdir->bytes[srcdir->size] = '\0';
 
 	daomake_out_of_source = DString_EQ( srcdir, vmSpace->startPath ) == 0;
 	daomake_main_source_path = srcdir;
 	daomake_test_tool = DString_New(1);
 	daomake_test_tool_option = DString_New(1);
-	DString_SetMBS( daomake_test_tool, "daotest" );
-	DString_SetMBS( daomake_test_tool_option, "--log" );
+	DString_SetChars( daomake_test_tool, "daotest" );
+	DString_SetChars( daomake_test_tool_option, "--log" );
 
-	DString_SetMBS( name, daomake_objects_dir );
+	DString_SetChars( name, daomake_objects_dir );
 	DaoMake_MakePath( daomake_main_source_path, name );
 	if( daomake_out_of_source ){
 		DaoMake_MakeOutOfSourcePath( name, 0 );
 	}else{
-		DaoMake_MakeDir( name->mbs );
+		DaoMake_MakeDir( name->bytes );
 	}
 
 	/* Start execution. */
-	k = ! DaoVmSpace_RunMain( vmSpace, makefile->mbs );
+	k = ! DaoVmSpace_RunMain( vmSpace, makefile->bytes );
 
 	source = DString_New(1);
 	for(it=DaoMap_First(daomake_projects); it; it=DaoMap_Next(daomake_projects,it)){
@@ -3559,20 +3517,20 @@ ErrorInvalidArgValue:
 		DString_Reset( name, 0 );
 		DString_Append( name, project->sourcePath );
 		DString_AppendPathSep( name );
-		DString_AppendMBS( name, "Makefile" );
-		DString_AppendMBS( name, daomake_makefile_suffix );
+		DString_AppendChars( name, "Makefile" );
+		DString_AppendChars( name, daomake_makefile_suffix );
 		DaoMake_MakeOutOfSourcePath( name, 1 );
 		if( daomake_reset_cache == 0 ){
-			fin = fopen( name->mbs, "r" );
+			fin = fopen( name->bytes, "r" );
 			if( fin ){
 				DaoFile_ReadAll( fin, source, 1 );
-				if( DString_FindMBS( source, "# Generated by DaoMake:", 0 ) != 0 ){
-					fprintf( stderr, daomake_error_makefile_existing, name->mbs );
+				if( DString_FindChars( source, "# Generated by DaoMake:", 0 ) != 0 ){
+					fprintf( stderr, daomake_error_makefile_existing, name->bytes );
 					return 1;
 				}
 			}
 		}
-		fout = fopen( name->mbs, "w+" );
+		fout = fopen( name->bytes, "w+" );
 		fprintf( fout, "# Generated by DaoMake: DO NOT EDIT!\n" );
 		fprintf( fout, "# Targeting platform %s.\n\n", platform ? platform : "none" );
 		DaoMakeProject_MakeFile( project, source );
@@ -3586,12 +3544,12 @@ ErrorInvalidArgValue:
 		DString_Reset( name, 0 );
 		DString_Append( name, project->sourcePath );
 		DString_AppendPathSep( name );
-		DString_AppendMBS( name, "Find" );
+		DString_AppendChars( name, "Find" );
 		DString_Append( name, project->projectName );
-		DString_AppendMBS( name, ".dao" );
+		DString_AppendChars( name, ".dao" );
 		DaoMake_MakeOutOfSourcePath( name, 1 );
 
-		fout = fopen( name->mbs, "w+" );
+		fout = fopen( name->bytes, "w+" );
 		fprintf( fout, "# Generated by DaoMake: DO NOT EDIT!\n" );
 		DaoFile_WriteString( fout, source );
 		fclose( fout );

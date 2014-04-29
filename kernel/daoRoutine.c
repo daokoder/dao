@@ -116,7 +116,7 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int cst, int cbo
 		DaoList *list = DaoList_New();
 		GC_ShiftRC( list, self->routConsts );
 		self->routConsts = list;
-		DArray_Assign( & self->routConsts->items, & from->routConsts->items );
+		DArray_Assign( self->routConsts->value, from->routConsts->value );
 	}else{
 		GC_ShiftRC( from->routConsts, self->routConsts );
 		self->routConsts = from->routConsts;
@@ -152,7 +152,7 @@ int DaoRoutine_IsWrapper( DaoRoutine *self )
 }
 int DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value )
 {
-	DArray *consts = & self->routConsts->items;
+	DArray *consts = self->routConsts->value;
 	DArray_Append( consts, value );
 	DaoValue_MarkConst( consts->items.pValue[consts->size-1] );
 	return consts->size-1;
@@ -191,8 +191,8 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int
 		}
 	}
 	/*
-	   if( strcmp( rout->routName->mbs, "expand" ) ==0 )
-	   printf( "%i, %p, parlist = %s; npar = %i; ndef = %i, %i\n", i, rout, rout->routType->name->mbs, npar, ndef, selfChecked );
+	   if( strcmp( rout->routName->bytes, "expand" ) ==0 )
+	   printf( "%i, %p, parlist = %s; npar = %i; ndef = %i, %i\n", i, rout, rout->routType->name->bytes, npar, ndef, selfChecked );
 	 */
 	if( (npar | ndef) ==0 ) return 1;
 	if( npar > ndef ) return 0;
@@ -218,7 +218,7 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int
 		}
 		parpass[ito] = DaoType_MatchValue2( (DaoType*) abtp->aux, val, defs );
 		/*
-		   printf( "%i:  %i  %s\n", parpass[ito], abtp->tid, abtp->name->mbs );
+		   printf( "%i:  %i  %s\n", parpass[ito], abtp->tid, abtp->name->bytes );
 		 */
 		if( parpass[ito] == 0 ) goto NotMatched;
 	}
@@ -346,10 +346,10 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 	DNode *it;
 	int i, n;
 #if 0
-	printf( "DaoRoutine_MapTypes() %s\n", self->routName->mbs );
+	printf( "DaoRoutine_MapTypes() %s\n", self->routName->bytes );
 	for(it=DMap_First(deftypes); it; it=DMap_Next(deftypes,it) ){
 		printf( "%16p -> %p\n", it->key.pType, it->value.pType );
-		printf( "%16s -> %s\n", it->key.pType->name->mbs, it->value.pType->name->mbs );
+		printf( "%16s -> %s\n", it->key.pType->name->bytes, it->value.pType->name->bytes );
 	}
 #endif
 	for(it=DMap_First(self->body->localVarType); it; it=DMap_Next(self->body->localVarType,it) ){
@@ -397,9 +397,9 @@ DAO_DLL void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DSt
 	name = DaoVmCode_GetOpcodeName( vmc.code );
 	sprintf( buffer1, "%5i :  ", i);
 	if( self->body->source ) DaoLexer_AnnotateCode( self->body->source, vmc, output, 24 );
-	sprintf( buffer2, fmt, name, vmc.a, vmc.b, vmc.c, vmc.line, output->mbs );
-	DString_SetMBS( output, buffer1 );
-	DString_AppendMBS( output, buffer2 );
+	sprintf( buffer2, fmt, name, vmc.a, vmc.b, vmc.c, vmc.line, output->bytes );
+	DString_SetChars( output, buffer1 );
+	DString_AppendChars( output, buffer2 );
 }
 void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 {
@@ -407,24 +407,24 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 	DString *annot;
 	int j, n;
 
-	DaoStream_WriteMBS( stream, sep1 );
-	DaoStream_WriteMBS( stream, "routine " );
+	DaoStream_WriteChars( stream, sep1 );
+	DaoStream_WriteChars( stream, "routine " );
 	DaoStream_WriteString( stream, self->routName );
-	DaoStream_WriteMBS( stream, "():\n" );
-	DaoStream_WriteMBS( stream, "type: " );
+	DaoStream_WriteChars( stream, "():\n" );
+	DaoStream_WriteChars( stream, "type: " );
 	DaoStream_WriteString( stream, self->routType->name );
 	if( self->body ){
-		DaoStream_WriteMBS( stream, "\nNumber of register:\n" );
+		DaoStream_WriteChars( stream, "\nNumber of register:\n" );
 		DaoStream_WriteInt( stream, self->body->regCount );
 	}
-	DaoStream_WriteMBS( stream, "\n" );
+	DaoStream_WriteChars( stream, "\n" );
 	if( self->body == NULL ) return;
 
-	DaoStream_WriteMBS( stream, sep1 );
-	DaoStream_WriteMBS( stream, "Virtual Machine Code:\n\n" );
-	DaoStream_WriteMBS( stream, daoRoutineCodeHeader );
+	DaoStream_WriteChars( stream, sep1 );
+	DaoStream_WriteChars( stream, "Virtual Machine Code:\n\n" );
+	DaoStream_WriteChars( stream, daoRoutineCodeHeader );
 
-	DaoStream_WriteMBS( stream, sep2 );
+	DaoStream_WriteChars( stream, sep2 );
 	annot = DString_New(1);
 	vmCodes = self->body->annotCodes->items.pVmc;
 	for(j=0,n=self->body->annotCodes->size; j<n; j++){
@@ -438,7 +438,7 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 		DaoRoutine_FormatCode( self, j, *vmCodes[j], annot );
 		DaoStream_WriteString( stream, annot );
 	}
-	DaoStream_WriteMBS( stream, sep2 );
+	DaoStream_WriteChars( stream, sep2 );
 	DString_Delete( annot );
 }
 
@@ -545,7 +545,7 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 
 	if( routine->routType == NULL ) return NULL;
 	/* If the name is not set yet, set it: */
-	self->attribs |= DString_FindChar( routine->routType->name, '@', 0 ) != MAXSIZE;
+	self->attribs |= DString_FindChar( routine->routType->name, '@', 0 ) != DAO_NULLPOS;
 	DMutex_Lock( & mutex_routines_update );
 	if( routine->routType->attrib & DAO_TYPE_SELF ){
 		if( self->mtree == NULL ) self->mtree = DParamNode_New();

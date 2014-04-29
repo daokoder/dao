@@ -1103,7 +1103,7 @@ static void DaoxBigInt_PrintBits( DaoxBigInt *self, DString *s )
 	daoint i = self->size;
 	int j;
 	if( s == NULL ) s = DString_New(1);
-	DString_SetMBS( s, "0" );
+	DString_SetChars( s, "0" );
 	if( i ==0 ) goto Finish;
 	DString_Clear( s );
 
@@ -1114,9 +1114,9 @@ static void DaoxBigInt_PrintBits( DaoxBigInt *self, DString *s )
 		}
 	}
 Finish:
-	DString_AppendMBS( s, "L2" );
+	DString_AppendChars( s, "L2" );
 	if( s2 == NULL ){
-		printf( "%s\n", s->mbs );
+		printf( "%s\n", s->bytes );
 		DString_Delete(s);
 	}
 }
@@ -1132,7 +1132,7 @@ void DaoxBigInt_Print( DaoxBigInt *self, DString *s )
 	}
 	while(i >0 && self->data[i-1] ==0 ) i--;
 	if( s == NULL ) s = DString_New(1);
-	DString_SetMBS( s, "0L" );
+	DString_SetChars( s, "0L" );
 	if( i ==0 ) goto Finish;
 	DString_Clear( s );
 	if( self->sign <0 ) DString_AppendChar( s, '-' );
@@ -1148,10 +1148,10 @@ Finish:
 	if( self->base != 10 ){
 		char buf[20];
 		sprintf( buf, "%i", self->base );
-		DString_AppendMBS( s, buf );
+		DString_AppendChars( s, buf );
 	}
 	if( s2 == NULL ){
-		printf( "%s\n", s->mbs );
+		printf( "%s\n", s->bytes );
 		DString_Delete(s);
 	}
 }
@@ -1236,17 +1236,16 @@ char DaoxBigInt_FromString( DaoxBigInt *self, DString *s )
 	int base = 10;
 
 	DaoxBigInt_Clear( self );
-	DString_ToMBS( s );
 	self->base = 10;
 	n = s->size;
-	mbs = s->mbs;
+	mbs = s->bytes;
 	if( n == 0 ) return 0;
 	memset( table, 0, 256 );
 	for(i='0'; i<='9'; i++) table[i] = i - ('0'-1);
 	for(i='a'; i<='f'; i++) table[i] = i - ('a'-1) + 10;
 	for(i='A'; i<='F'; i++) table[i] = i - ('A'-1) + 10;
 	pl = DString_FindChar(s, 'L', 0);
-	if( pl != MAXSIZE ){
+	if( pl != DAO_NULLPOS ){
 		/* if( mbs[pl+1] == '0' ) return 0; */
 		if( (pl+3) < n ) return 'L';
 		if( (pl+1) < n && ! isdigit( mbs[pl+1] ) ) return 'L';
@@ -1294,7 +1293,7 @@ void DaoxBigInt_FromValue( DaoxBigInt *self, DaoValue *value )
 	case DAO_INTEGER : DaoxBigInt_FromInteger( self, value->xInteger.value ); break;
 	case DAO_FLOAT   : DaoxBigInt_FromDouble ( self, value->xFloat.value   ); break;
 	case DAO_DOUBLE  : DaoxBigInt_FromDouble ( self, value->xDouble.value  ); break;
-	case DAO_STRING  : DaoxBigInt_FromString ( self, value->xString.data   ); break;
+	case DAO_STRING  : DaoxBigInt_FromString ( self, value->xString.value   ); break;
 	}
 }
 
@@ -1416,7 +1415,7 @@ static void BIGINT_New2( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxBigInt *self = DaoxBigInt_New();
 	DaoProcess_PutValue( proc, (DaoValue*) self );
-	DaoxBigInt_FromString( self, p[0]->xString.data );
+	DaoxBigInt_FromString( self, p[0]->xString.value );
 	self->base = p[1]->xInteger.value;
 }
 static void BIGINT_New3( DaoProcess *proc, DaoValue *p[], int N )
@@ -1940,7 +1939,7 @@ static void BIGINT_CastToInt( DaoProcess *proc, DaoValue *p[], int n )
 static void BIGINT_CastToString( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoxBigInt *self = (DaoxBigInt*) p[0];
-	DString *res = DaoProcess_PutMBString( proc, "" );
+	DString *res = DaoProcess_PutChars( proc, "" );
 	DaoxBigInt_Print( self, res );
 }
 static void BIGINT_PRINT( DaoProcess *proc, DaoValue *p[], int n )

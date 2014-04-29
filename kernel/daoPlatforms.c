@@ -34,7 +34,7 @@
 void Dao_NormalizePathSep( DString *path )
 {
 #ifdef WIN32
-	DString_ChangeMBS( path, "\\", "/", 0 );
+	DString_Change( path, "\\", "/", 0 );
 #endif
 }
 
@@ -211,7 +211,7 @@ static int SetCharColor( DaoStream *stream, int color, const char *csi )
 		snprintf( buf, sizeof( buf ), CSI_RESET );
 	else
 		snprintf( buf, sizeof( buf ), csi, color );
-	DaoStream_WriteMBS( stream, buf );
+	DaoStream_WriteChars( stream, buf );
 	return 254;
 }
 static int SetCharForeground( DaoStream *stream, int color )

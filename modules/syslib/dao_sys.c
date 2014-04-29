@@ -58,7 +58,7 @@ static void SYS_Ctime( DaoProcess *proc, DaoValue *p[], int N )
 	struct tm *ctime;
 	time_t t = (time_t)p[0]->xInteger.value;
 	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
-	DaoValue **items = tuple->items;
+	DaoValue **items = tuple->values;
 	if( t == 0 ) t = time(NULL);
 	ctime = gmtime( & t );
 	items[0]->xInteger.value = ctime->tm_year + 1900;
@@ -74,14 +74,14 @@ static int addStringFromMap( DaoValue *self, DString *S, DaoMap *sym, const char
 	DNode *node;
 
 	if( S==NULL || sym==NULL ) return 0;
-	DString_SetMBS( self->xString.data, key );
-	node = DMap_Find( sym->items, & self );
+	DString_SetChars( self->xString.value, key );
+	node = DMap_Find( sym->value, & self );
 	if( node ){
 		DaoList *list = & node->value.pValue->xList;
-		if( list->type == DAO_LIST && list->items.size > id ){
-			DaoValue *p = list->items.items.pValue[ id ];
+		if( list->type == DAO_LIST && list->value->size > id ){
+			DaoValue *p = list->value->items.pValue[ id ];
 			if( p->type == DAO_STRING ){
-				DString_Append( S, p->xString.data );
+				DString_Append( S, p->xString.value );
 				return 1;
 			}
 		}
@@ -92,8 +92,8 @@ static void SYS_Ctimef( DaoProcess *proc, DaoValue *p[], int N )
 {
 	int  i;
 	int halfday = 0;
-	const int size = p[1]->xString.data->size;
-	const char *format = DString_GetMBS( p[1]->xString.data );
+	const int size = p[1]->xString.value->size;
+	const char *format = DString_GetData( p[1]->xString.value );
 	char buf[100];
 	char *p1 = buf+1;
 	char *p2;
@@ -109,9 +109,9 @@ static void SYS_Ctimef( DaoProcess *proc, DaoValue *p[], int N )
 
 	if( N > 1 ){
 		sym = (DaoMap*)p[2];
-		if( sym->items->size == 0 ) sym = NULL;
+		if( sym->value->size == 0 ) sym = NULL;
 	}
-	S = DaoProcess_PutMBString( proc, "" );
+	S = DaoProcess_PutChars( proc, "" );
 
 	for( i=0; i+1<size; i++ ){
 		if( format[i] == '%' && ( format[i+1] == 'a' || format[i+1] == 'A' ) ){
@@ -186,7 +186,7 @@ static void SYS_Ctimef( DaoProcess *proc, DaoValue *p[], int N )
 				break;
 			default : break;
 			}
-			if( p2 ) DString_AppendMBS( S, p2 );
+			if( p2 ) DString_AppendChars( S, p2 );
 			i ++;
 		}else{
 			DString_AppendChar( S, format[i] );
@@ -228,7 +228,7 @@ static void SYS_Exit( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void SYS_Shell( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoProcess_PutInteger( proc, system( DString_GetMBS( p[0]->xString.data ) ) );
+	DaoProcess_PutInteger( proc, system( DString_GetData( p[0]->xString.value ) ) );
 }
 static void SYS_Popen( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -239,10 +239,10 @@ static void SYS_Popen( DaoProcess *proc, DaoValue *p[], int N )
 	stream = DaoStream_New();
 	stream->attribs |= DAO_IO_PIPE;
 	fname = stream->fname;
-	DString_Assign( fname, p[0]->xString.data );
+	DString_Assign( fname, p[0]->xString.value );
 	if( DString_Size( fname ) >0 ){
-		mode = DString_GetMBS( p[1]->xString.data );
-		stream->file = popen( DString_GetMBS( fname ), mode );
+		mode = DString_GetData( p[1]->xString.value );
+		stream->file = popen( DString_GetData( fname ), mode );
 		if( stream->file == NULL ){
 			DaoProcess_RaiseException( proc, DAO_ERROR, "error opening pipe" );
 		}
@@ -269,7 +269,7 @@ static void SYS_Time2( DaoProcess *proc, DaoValue *p[], int N )
 	/* extern long timezone; */
 	/* extern int daylight; // not on WIN32 */
 	struct tm ctime;
-	DaoValue **tup = p[0]->xTuple.items;
+	DaoValue **tup = p[0]->xTuple.values;
 	memset( & ctime, 0, sizeof( struct tm ) );
 	ctime.tm_year = tup[0]->xInteger.value - 1900;
 	ctime.tm_mon = tup[1]->xInteger.value - 1;
@@ -292,9 +292,9 @@ static void SYS_SetLocale( DaoProcess *proc, DaoValue *p[], int N )
 	case 4: category = LC_NUMERIC; break;
 	case 5: category = LC_TIME; break;
 	}
-	old = setlocale( category, N == 1 ? NULL : DString_GetMBS( p[1]->xString.data ) );
+	old = setlocale( category, N == 1 ? NULL : DString_GetData( p[1]->xString.value ) );
 	if ( old )
-		DaoProcess_PutMBString( proc, old );
+		DaoProcess_PutChars( proc, old );
 	else
 		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid locale" );
 }
@@ -304,13 +304,13 @@ static void SYS_Clock( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void SYS_GetEnv( DaoProcess *proc, DaoValue *p[], int N )
 {
-	char *evar = getenv( DString_GetMBS( p[0]->xString.data ) );
-	DaoProcess_PutMBString( proc, evar? evar : "" );
+	char *evar = getenv( DString_GetData( p[0]->xString.value ) );
+	DaoProcess_PutChars( proc, evar? evar : "" );
 }
 static void SYS_PutEnv( DaoProcess *proc, DaoValue *p[], int N )
 {
-	char *name = DString_GetMBS( p[0]->xString.data );
-	char *value = DString_GetMBS( p[1]->xString.data );
+	char *name = DString_GetData( p[0]->xString.value );
+	char *value = DString_GetData( p[1]->xString.value );
 	char *buf = malloc( strlen( name ) + strlen( value ) + 2 );
 	if( !buf ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "memory allocation failed" );
@@ -326,8 +326,8 @@ static void SYS_EnvVars( DaoProcess *proc, DaoValue *p[], int N )
 {
 #define LOCAL_BUF_SIZE 256
 	DaoMap *map = DaoProcess_PutMap( proc, 0 );
-	DaoValue *vk = (DaoValue*) DaoProcess_NewMBString( proc, NULL, 0 );
-	DaoValue *vv = (DaoValue*) DaoProcess_NewMBString( proc, NULL, 0 );
+	DaoValue *vk = (DaoValue*) DaoProcess_NewChars( proc, NULL, 0 );
+	DaoValue *vv = (DaoValue*) DaoProcess_NewChars( proc, NULL, 0 );
 	DString *key = DaoString_Get( DaoValue_CastString( vk ) );
 	DString *value = DaoString_Get( DaoValue_CastString( vv ) );
 	char **envs = environ;
@@ -340,7 +340,7 @@ static void SYS_EnvVars( DaoProcess *proc, DaoValue *p[], int N )
 		while( *c != '=' ){
 			if( nc >= LOCAL_BUF_SIZE ){
 				buffer[ nc ] = 0;
-				DString_AppendMBS( key, buffer );
+				DString_AppendChars( key, buffer );
 				nc = 0;
 			}
 			buffer[ nc ] = *c;
@@ -348,9 +348,9 @@ static void SYS_EnvVars( DaoProcess *proc, DaoValue *p[], int N )
 			c ++;
 		}
 		buffer[ nc ] = 0;
-		DString_AppendMBS( key, buffer );
+		DString_AppendChars( key, buffer );
 		c ++;
-		DString_AppendMBS( value, c );
+		DString_AppendChars( value, c );
 		DaoMap_Insert( map, vk, vv );
 		DString_Clear( key );
 		DString_Clear( value );
@@ -420,27 +420,16 @@ static void DaoBUF_CopyData( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoBUF_GetString( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	DString *str = DaoProcess_PutMBString( proc, "" );
-	if( p[1]->xEnum.value == 0 ){
-		DString_Resize( str, self->size );
-		memcpy( str->mbs, self->buffer.pVoid, self->size );
-	}else{
-		DString_ToWCS( str );
-		DString_Resize( str, self->size / sizeof( wchar_t ) );
-		memcpy( str->wcs, self->buffer.pVoid, str->size * sizeof( wchar_t ) );
-	}
+	DString *str = DaoProcess_PutChars( proc, "" );
+	DString_Resize( str, self->size );
+	memcpy( str->bytes, self->buffer.pVoid, self->size );
 }
 static void DaoBUF_SetString( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
-	DString *str = p[1]->xString.data;
-	if( str->mbs ){
-		Dao_Buffer_Resize( self, str->size );
-		memcpy( self->buffer.pVoid, str->mbs, str->size );
-	}else{
-		Dao_Buffer_Resize( self, str->size * sizeof(wchar_t) );
-		memcpy( self->buffer.pVoid, str->wcs, str->size * sizeof(wchar_t) );
-	}
+	DString *str = p[1]->xString.value;
+	Dao_Buffer_Resize( self, str->size );
+	memcpy( self->buffer.pVoid, str->bytes, str->size );
 }
 static int DaoBUF_CheckRange( Dao_Buffer *self, int i, int m, DaoProcess *proc )
 {
@@ -529,7 +518,7 @@ static DaoFuncItem bufferMeths[]=
 	{ DaoBUF_Size,      "size( self :buffer )=>int" },
 	{ DaoBUF_Resize,    "resize( self :buffer, size :int )" },
 	{ DaoBUF_CopyData,  "copydata( self :buffer, buf :buffer )" },
-	{ DaoBUF_GetString, "getstring( self :buffer, stype :enum<mbs, wcs> = $mbs )=>string" },
+	{ DaoBUF_GetString, "getstring( self :buffer )=>string" },
 	{ DaoBUF_SetString, "setstring( self :buffer, str : string )" },
 	{ DaoBUF_GetByte,   "getbyte( self :buffer, index :int, stype :enum<signed,unsigned> = $signed )=>int" },
 	{ DaoBUF_GetShort,  "getshort( self :buffer, index :int, stype :enum<signed,unsigned> = $signed )=>int" },

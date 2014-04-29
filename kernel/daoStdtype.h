@@ -82,7 +82,7 @@ struct DaoString
 {
 	DAO_VALUE_CORE;
 
-	DString  *data;
+	DString  *value;
 };
 DAO_DLL DaoString* DaoString_Copy( DaoString *self );
 DAO_DLL void DaoString_Delete( DaoString *self );
@@ -127,7 +127,7 @@ struct DaoList
 {
 	DAO_GENERIC_COMMON;
 
-	DArray    items;
+	DArray  *value;
 };
 
 DAO_DLL DaoList* DaoList_New();
@@ -145,7 +145,7 @@ struct DaoMap
 {
 	DAO_GENERIC_COMMON;
 
-	DMap     *items;
+	DMap  *value;
 };
 
 DAO_DLL DaoMap* DaoMap_New( unsigned int hashing );
@@ -158,7 +158,7 @@ DAO_DLL int DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value );
 DAO_DLL void DaoMap_Erase( DaoMap *self, DaoValue *key );
 
 
-#define DAO_TUPLE_ITEMS 2
+#define DAO_TUPLE_MINSIZE 2
 /*
 // 2 is used instead of 1, for two reasons:
 // A. most often used tuples have at least two items;
@@ -174,7 +174,7 @@ struct DaoTuple
 	ushort_t    size;
 	ushort_t    cap;
 	DaoType    *ctype;
-	DaoValue   *items[DAO_TUPLE_ITEMS]; /* the actual number of items is in ::size; */
+	DaoValue   *values[DAO_TUPLE_MINSIZE]; /* the actual number of items is in ::size; */
 };
 
 DAO_DLL DaoTuple* DaoTuple_Create( DaoType *type, int size, int init );

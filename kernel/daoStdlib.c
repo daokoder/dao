@@ -49,7 +49,7 @@
 
 static void STD_Path( DaoProcess *proc, DaoValue *p[], int N )
 {
-	char *path = DString_GetMBS( p[0]->xString.data );
+	char *path = DString_GetData( p[0]->xString.value );
 	switch( p[1]->xEnum.value ){
 	case 0 : DaoVmSpace_SetPath( proc->vmSpace, path ); break;
 	case 1 : DaoVmSpace_AddPath( proc->vmSpace, path ); break;
@@ -58,7 +58,7 @@ static void STD_Path( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void STD_Compile( DaoProcess *proc, DaoValue *p[], int N )
 {
-	char *source = DaoValue_TryGetMBString( p[0] );
+	char *source = DaoValue_TryGetChars( p[0] );
 	DaoNamespace *ns = DaoValue_CastNamespace( p[1] );
 	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
 	if( ns == NULL ) ns = proc->activeNamespace;
@@ -75,7 +75,7 @@ static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 	DaoNamespace *ns = proc->activeNamespace;
 	DaoStream *prevStream = proc->stdioStream;
 	DaoStream *redirect = (DaoStream*) p[1];
-	char *source = DaoValue_TryGetMBString( p[0] );
+	char *source = DaoValue_TryGetChars( p[0] );
 	if( redirect != prevStream ){
 		GC_ShiftRC( redirect, proc->stdioStream );
 		proc->stdioStream = redirect;
@@ -90,15 +90,15 @@ static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString *name = p[0]->xString.data;
+	DaoNamespace *ns;
+	DaoVmSpace *vms = proc->vmSpace;
+	DString *name = p[0]->xString.value;
 	int import = p[1]->xInteger.value;
 	int runim = p[2]->xInteger.value;
 	int res = 0;
-	DaoVmSpace *vms = proc->vmSpace;
-	DaoNamespace *ns;
-	DString_ToMBS( name );
+
 	DArray_PushFront( vms->pathLoading, proc->activeNamespace->path );
-	ns = DaoVmSpace_LoadEx( vms, DString_GetMBS( name ), runim );
+	ns = DaoVmSpace_LoadEx( vms, DString_GetData( name ), runim );
 	DaoProcess_PutValue( proc, (DaoValue*) ns );
 	if( ns == NULL ) DaoProcess_RaiseException( proc, DAO_ERROR, "loading failed" );
 	DArray_PopFront( vms->pathLoading );
@@ -108,7 +108,7 @@ int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname, DString *source );
 static void STD_Resource( DaoProcess *proc, DaoValue *p[], int N )
 {
 	FILE *fin;
-	DString *file = DString_Copy( p[0]->xString.data );
+	DString *file = DString_Copy( p[0]->xString.value );
 	if( DaoVmSpace_SearchResource( proc->vmSpace, file ) == 0 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR, "resource file not found" );
 		DString_Delete( file );
@@ -132,20 +132,20 @@ DAO_DLL void Dao_AboutVar( DaoNamespace *ns, DaoValue *var, DString *str )
 	if( abtp ){
 		if( var->type == DAO_ROUTINE ){
 			DString_Append( str, var->xRoutine.routName );
-			DString_AppendMBS( str, "{" );
+			DString_AppendChars( str, "{" );
 			DString_Append( str, abtp->name );
-			DString_AppendMBS( str, "}" );
+			DString_AppendChars( str, "}" );
 		}else{
 			DString_Append( str, abtp->name );
 		}
 		sprintf( buf, "[%p]", var );
-		DString_AppendMBS( str, buf );
+		DString_AppendChars( str, buf );
 		if( var->type == DAO_CDATA ){
 			sprintf( buf, "(%p)", var->xCdata.data );
-			DString_AppendMBS( str, buf );
+			DString_AppendChars( str, buf );
 		}
 	}else{
-		DString_AppendMBS( str, "NULL" );
+		DString_AppendChars( str, "NULL" );
 	}
 }
 static void Dao_AboutVars( DaoNamespace *ns, DaoValue *par[], int N, DString *str )
@@ -154,12 +154,12 @@ static void Dao_AboutVars( DaoNamespace *ns, DaoValue *par[], int N, DString *st
 	DString_Clear( str );
 	for( i=0; i<N; i++ ){
 		Dao_AboutVar( ns, par[i], str );
-		if( i+1<N ) DString_AppendMBS( str, " " );
+		if( i+1<N ) DString_AppendChars( str, " " );
 	}
 }
 static void STD_About( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString *str = DaoProcess_PutMBString( proc, "" );
+	DString *str = DaoProcess_PutChars( proc, "" );
 	Dao_AboutVars( proc->activeNamespace, p, N, str );
 }
 static void STD_Callable( DaoProcess *proc, DaoValue *p[], int N )
@@ -179,7 +179,7 @@ static void STD_Callable( DaoProcess *proc, DaoValue *p[], int N )
 		{
 			DaoObject *object = & p0->xObject;
 			DString *mbs = DString_New(1);
-			DString_SetMBS( mbs, "()" );
+			DString_SetChars( mbs, "()" );
 			DaoObject_GetData( object, mbs, & p0, proc->activeObject );
 			DString_Delete( mbs );
 			if( p0 && p0->type == DAO_ROUTINE ) *res = 1;
@@ -188,13 +188,13 @@ static void STD_Callable( DaoProcess *proc, DaoValue *p[], int N )
 	case DAO_CTYPE :
 		{
 			DaoType *type = p0->xCdata.ctype;
-			*res = DaoType_FindFunctionMBS( type, type->typer->name ) != NULL;
+			*res = DaoType_FindFunctionChars( type, type->typer->name ) != NULL;
 			break;
 		}
 	case DAO_CDATA :
 	case DAO_CSTRUCT :
 		{
-			*res = DaoType_FindFunctionMBS( p0->xCdata.ctype, "()" ) != NULL;
+			*res = DaoType_FindFunctionChars( p0->xCdata.ctype, "()" ) != NULL;
 			break;
 		}
 	default : break;
@@ -212,9 +212,9 @@ void DaoProcess_Trace( DaoProcess *self, int depth )
 
 		DaoStream_SetColor( stream, "white", "green" );
 		DaoStream_WriteString( stream, routine->routName );
-		DaoStream_WriteMBS( stream, "()" );
+		DaoStream_WriteChars( stream, "()" );
 		DaoStream_SetColor( stream, NULL, NULL );
-		DaoStream_WriteMBS( stream, ": " );
+		DaoStream_WriteChars( stream, ": " );
 		DaoStream_SetColor( stream, "green", NULL );
 		if( routine->routType ) DaoStream_WriteString( stream, routine->routType->name );
 		DaoStream_SetColor( stream, NULL, NULL );
@@ -222,16 +222,16 @@ void DaoProcess_Trace( DaoProcess *self, int depth )
 		if( frame->routine->body ){
 			k = (i==1) ? (int)( self->activeCode - frame->codes ) : frame->entry;
 			if( k >= 0 && k < frame->routine->body->annotCodes->size ){
-				DaoStream_WriteMBS( stream, ", instruction " );
+				DaoStream_WriteChars( stream, ", instruction " );
 				DaoStream_WriteInt( stream, k );
-				DaoStream_WriteMBS( stream, " at line " );
+				DaoStream_WriteChars( stream, " at line " );
 				DaoStream_WriteInt( stream, frame->routine->body->annotCodes->items.pVmc[k]->line );
 			}
 		}
 
-		DaoStream_WriteMBS( stream, " in " );
+		DaoStream_WriteChars( stream, " in " );
 		DaoStream_WriteString( stream, routine->nameSpace->name );
-		DaoStream_WriteMBS( stream, ";" );
+		DaoStream_WriteChars( stream, ";" );
 		DaoStream_WriteNewLine( stream );
 		frame = frame->prev;
 	}
@@ -253,7 +253,7 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 	if( N > 0 ){
 		Dao_AboutVars( proc->activeNamespace, p, N, input );
 		DaoStream_WriteString( stream, input );
-		DaoStream_WriteMBS( stream, "\n" );
+		DaoStream_WriteChars( stream, "\n" );
 		DString_Delete( input );
 		return;
 	}
@@ -262,7 +262,7 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void STD_Error( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoProcess_RaiseException( proc, DAO_ERROR, DString_GetMBS( p[0]->xString.data ) );
+	DaoProcess_RaiseException( proc, DAO_ERROR, DString_GetData( p[0]->xString.value ) );
 }
 static void STD_Gcmax( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -282,7 +282,7 @@ static void STD_SubType( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void STD_Warn( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoProcess_RaiseException( proc, DAO_WARNING, DString_GetMBS( p[0]->xString.data ) );
+	DaoProcess_RaiseException( proc, DAO_WARNING, DString_GetData( p[0]->xString.value ) );
 }
 
 #ifndef CHANGESET_ID
@@ -294,9 +294,9 @@ const char *const dao_version = "Dao " DAO_VERSION " (" CHANGESET_ID ", " __DATE
 static void STD_Version( DaoProcess *proc, DaoValue *p[], int N )
 {
 	if( p[0]->xInteger.value ){
-		DaoProcess_PutMBString( proc, dao_version );
+		DaoProcess_PutChars( proc, dao_version );
 	}else{
-		DaoProcess_PutMBString( proc, DAO_VERSION );
+		DaoProcess_PutChars( proc, DAO_VERSION );
 	}
 }
 
@@ -330,11 +330,10 @@ static void STD_String( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *index = (DaoValue*)(void*)&idint;
-	DString *string = DaoProcess_PutMBString( proc, "" );
+	DString *string = DaoProcess_PutChars( proc, "" );
 	daoint i, entry, size = p[0]->xInteger.value;
 	DaoVmCode *sect;
 
-	if( p[1]->xEnum.value ) DString_ToWCS( string );
 	if( size < 0 ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "Invalid parameter value" );
 		return;
@@ -494,7 +493,7 @@ static void STD_Map( DaoProcess *proc, DaoValue *p[], int N )
 		if( proc->status == DAO_PROCESS_ABORTED ) break;
 		res = proc->stackValues[0];
 		if( res->type == DAO_TUPLE && res->xTuple.size == 2 )
-			DaoMap_Insert( map, res->xTuple.items[0], res->xTuple.items[1] );
+			DaoMap_Insert( map, res->xTuple.values[0], res->xTuple.values[1] );
 	}
 	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
@@ -519,7 +518,7 @@ DaoFuncItem dao_std_methods[] =
 	{ STD_Version,   "version( verbose=0 )=>string" },
 
 	{ STD_Iterate,  "iterate( times :int )[index:int]" },
-	{ STD_String,   "string( size :int, type :enum<mbs,wcs>=$mbs )[index:int =>int] =>string" },
+	{ STD_String,   "string( size :int )[index:int =>int] =>string" },
 	{ STD_Array,    "array( D1 :int, D2 =0, D3 =0 )[I:int, J:int, K:int =>@V<@T<int|float|double|complex>|array<@T>>] =>array<@T>" },
 	{ STD_List,     "list( size :int )[index:int =>@T] =>list<@T>" },
 	{ STD_List,     "list( size :int, init :@T )[index:int, prev:@T =>@T] =>list<@T>" },

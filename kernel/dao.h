@@ -29,8 +29,6 @@
 #ifndef __DAO_H__
 #define __DAO_H__
 
-#include<wctype.h>
-#include<wchar.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include<stddef.h>
@@ -418,8 +416,7 @@ DAO_DLL daoint    DaoValue_TryGetInteger( DaoValue *self );
 DAO_DLL float     DaoValue_TryGetFloat( DaoValue *self );
 DAO_DLL double    DaoValue_TryGetDouble( DaoValue *self );
 DAO_DLL complex16 DaoValue_TryGetComplex( DaoValue *self );
-DAO_DLL char*     DaoValue_TryGetMBString( DaoValue *self );
-DAO_DLL wchar_t*  DaoValue_TryGetWCString( DaoValue *self );
+DAO_DLL char*     DaoValue_TryGetChars( DaoValue *self );
 DAO_DLL DString*  DaoValue_TryGetString( DaoValue *self );
 DAO_DLL int       DaoValue_TryGetEnum( DaoValue *self );
 DAO_DLL void*     DaoValue_TryGetArray( DaoValue *self );
@@ -462,15 +459,13 @@ DAO_DLL void DaoValue_ClearAll( DaoValue *v[], int n );
 //
 // DString_New() creates a new multi-byte string (MBS) or wide-character string;
 */
-DAO_DLL DString* DString_New( int mbs );
-DAO_DLL DString* DString_NewMBS( const char *mbs );
-DAO_DLL DString* DString_NewWCS( const wchar_t *wcs );
+DAO_DLL DString* DString_New();
+DAO_DLL DString* DString_NewChars( const char *mbs );
 
 DAO_DLL DString* DString_Copy( DString *self );
 DAO_DLL void DString_Delete( DString *self );
 DAO_DLL daoint DString_Size( DString *self );
 DAO_DLL void DString_Clear( DString *self );
-DAO_DLL int  DString_IsMBS( DString *self );
 
 /*
 // DString_Reset() reset the size of the string to "size",
@@ -485,28 +480,19 @@ DAO_DLL void DString_Reset( DString *self, daoint size );
 DAO_DLL void DString_Resize( DString *self, daoint size );
 
 /*
-// DString_SetMBS() and DString_SetWCS() replace the data of the string
+// DString_SetChars() replace the data of the string
 // with data specified by null-terminated C string.
 */
-DAO_DLL void DString_SetMBS( DString *self, const char *chs );
-DAO_DLL void DString_SetWCS( DString *self, const wchar_t *chs );
+DAO_DLL void DString_SetChars( DString *self, const char *chs );
 
 /*
-// DString_SetDataMBS() and DString_SetDataWCS() replace the data of string
-// with data specified by (wide) character array with "n" characters.
+// DString_SetBytes() replace the data of string with data specified
+// by character array with "n" characters.
 // If "n" is negative, the character array is assumed to be null-terminated.
 */
-DAO_DLL void DString_SetDataMBS( DString *self, const char *data, daoint n );
-DAO_DLL void DString_SetDataWCS( DString *self, const wchar_t *data, daoint n );
+DAO_DLL void DString_SetBytes( DString *self, const char *data, daoint n );
 
-/*
-// DString_ToMBS() and DString_ToWCS() convert the string to the requested
-// character type.
-*/
-DAO_DLL void DString_ToMBS( DString *self );
-DAO_DLL void DString_ToWCS( DString *self );
-DAO_DLL char* DString_GetMBS( DString *self );
-DAO_DLL wchar_t* DString_GetWCS( DString *self );
+DAO_DLL char* DString_GetData( DString *self );
 DAO_DLL void DString_Chop( DString *self );
 DAO_DLL void DString_Trim( DString *self );
 
@@ -523,21 +509,17 @@ DAO_DLL void DString_Erase( DString *self, daoint start, daoint n );
 // If "m" is negative, all characters starting from "i" will be erased.
 */
 DAO_DLL void DString_Insert( DString *self, DString *s, daoint i, daoint m, daoint n );
-DAO_DLL void DString_InsertMBS( DString *self, const char *s, daoint i, daoint m, daoint n );
-DAO_DLL void DString_InsertWCS( DString *self, const wchar_t *s, daoint i, daoint m, daoint n );
+DAO_DLL void DString_InsertChars( DString *self, const char *s, daoint i, daoint m, daoint n );
 DAO_DLL void DString_InsertChar( DString *self, const char ch, daoint at );
 DAO_DLL void DString_Append( DString *self, DString *chs );
 DAO_DLL void DString_AppendChar( DString *self, const char ch );
-DAO_DLL void DString_AppendWChar( DString *self, const wchar_t ch );
-DAO_DLL void DString_AppendMBS( DString *self, const char *chs );
-DAO_DLL void DString_AppendWCS( DString *self, const wchar_t *chs );
+DAO_DLL void DString_AppendWChar( DString *self, size_t ch );
+DAO_DLL void DString_AppendChars( DString *self, const char *chs );
 
 /*
-// DString_AppendDataMBS() and DString_AppendDataWCS() append "count" number
-// of MBS or WCS characters to "self".
+// DString_AppendBytes() append "count" number of MBS characters to "self".
 */
-DAO_DLL void DString_AppendDataMBS( DString *self, const char *data, daoint count );
-DAO_DLL void DString_AppendDataWCS( DString *self, const wchar_t *data,daoint count );
+DAO_DLL void DString_AppendBytes( DString *self, const char *data, daoint count );
 
 /*
 // DString_SubString() retrieves a substring starting from "from" with "count" characters.
@@ -546,11 +528,10 @@ DAO_DLL void DString_AppendDataWCS( DString *self, const wchar_t *data,daoint co
 DAO_DLL void DString_SubString( DString *self, DString *sub, daoint from, daoint count );
 
 DAO_DLL daoint DString_Find( DString *self, DString *chs, daoint start );
-DAO_DLL daoint DString_FindMBS( DString *self, const char *ch, daoint start );
+DAO_DLL daoint DString_FindChars( DString *self, const char *ch, daoint start );
 DAO_DLL daoint DString_FindChar( DString *self, char ch, daoint start );
-DAO_DLL daoint DString_FindWChar( DString *self, wchar_t ch, daoint start );
 DAO_DLL daoint DString_RFind( DString *self, DString *chs, daoint start );
-DAO_DLL daoint DString_RFindMBS( DString *self, const char *ch, daoint start );
+DAO_DLL daoint DString_RFindChars( DString *self, const char *ch, daoint start );
 DAO_DLL daoint DString_RFindChar( DString *self, char ch, daoint start );
 DAO_DLL void DString_Assign( DString *left, DString *right );
 DAO_DLL int DString_Compare( DString *left, DString *right );
@@ -573,20 +554,17 @@ DAO_DLL DaoComplex* DaoComplex_New2( double real, double imag );
 DAO_DLL complex16   DaoComplex_Get( DaoComplex *self );
 DAO_DLL void        DaoComplex_Set( DaoComplex *self, complex16 value );
 
-DAO_DLL DaoString*  DaoString_New( int mbs );
-DAO_DLL DaoString*  DaoString_NewMBS( const char *mbs );
-DAO_DLL DaoString*  DaoString_NewWCS( const wchar_t *wcs );
+DAO_DLL DaoString*  DaoString_New();
+DAO_DLL DaoString*  DaoString_NewChars( const char *mbs );
 DAO_DLL DaoString*  DaoString_NewBytes( const char *bytes, daoint n );
 
 DAO_DLL daoint  DaoString_Size( DaoString *self );
 
 DAO_DLL DString*  DaoString_Get( DaoString *self );
-DAO_DLL const char*  DaoString_GetMBS( DaoString *self );
-DAO_DLL const wchar_t* DaoString_GetWCS( DaoString *self );
+DAO_DLL const char* DaoString_GetChars( DaoString *self );
 
 DAO_DLL void  DaoString_Set( DaoString *self, DString *str );
-DAO_DLL void  DaoString_SetMBS( DaoString *self, const char *mbs );
-DAO_DLL void  DaoString_SetWCS( DaoString *self, const wchar_t *wcs );
+DAO_DLL void  DaoString_SetChars( DaoString *self, const char *mbs );
 DAO_DLL void  DaoString_SetBytes( DaoString *self, const char *bytes, daoint n );
 
 DAO_DLL DaoEnum* DaoEnum_New( DaoType *type, int value );
@@ -630,16 +608,13 @@ DAO_DLL daoint DaoMap_Size( DaoMap *self );
 // Return 1 if key not matching, and 2 if value not matching:
 */
 DAO_DLL int  DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value );
-DAO_DLL int  DaoMap_InsertMBS( DaoMap *self, const char *key, DaoValue *value );
-DAO_DLL int  DaoMap_InsertWCS( DaoMap *self, const wchar_t *key, DaoValue *value );
+DAO_DLL int  DaoMap_InsertChars( DaoMap *self, const char *key, DaoValue *value );
 
 DAO_DLL void DaoMap_Erase( DaoMap *self, DaoValue *key );
-DAO_DLL void DaoMap_EraseMBS( DaoMap *self, const char *key );
-DAO_DLL void DaoMap_EraseWCS( DaoMap *self, const wchar_t *key );
+DAO_DLL void DaoMap_EraseChars( DaoMap *self, const char *key );
 DAO_DLL void DaoMap_Clear( DaoMap *self );
 DAO_DLL DaoValue* DaoMap_GetValue( DaoMap *self, DaoValue *key  );
-DAO_DLL DaoValue* DaoMap_GetValueMBS( DaoMap *self, const char *key  );
-DAO_DLL DaoValue* DaoMap_GetValueWCS( DaoMap *self, const wchar_t *key  );
+DAO_DLL DaoValue* DaoMap_GetValueChars( DaoMap *self, const char *key  );
 
 
 
@@ -788,8 +763,7 @@ DAO_DLL void DaoStream_WriteChar( DaoStream *self, char val );
 DAO_DLL void DaoStream_WriteInt( DaoStream *self, daoint val );
 DAO_DLL void DaoStream_WriteFloat( DaoStream *self, double val );
 DAO_DLL void DaoStream_WriteString( DaoStream *self, DString *val );
-DAO_DLL void DaoStream_WriteMBS( DaoStream *self, const char *val );
-DAO_DLL void DaoStream_WriteWCS( DaoStream *self, const wchar_t *val );
+DAO_DLL void DaoStream_WriteChars( DaoStream *self, const char *val );
 DAO_DLL void DaoStream_WritePointer( DaoStream *self, void *val );
 DAO_DLL void DaoStream_SetFile( DaoStream *self, FILE *fd );
 DAO_DLL FILE* DaoStream_GetFile( DaoStream *self );
@@ -826,7 +800,7 @@ DAO_DLL int DaoProcess_Call( DaoProcess *s, DaoRoutine *f, DaoValue *o, DaoValue
 DAO_DLL void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream );
 DAO_DLL DaoValue* DaoProcess_GetReturned( DaoProcess *self );
 DAO_DLL DaoType*  DaoProcess_GetReturnType( DaoProcess *self );
-DAO_DLL DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt, int mbs );
+DAO_DLL DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt );
 DAO_DLL DaoException* DaoProcess_RaiseException( DaoProcess *self, int type, const char *info );
 DAO_DLL DaoException* DaoProcess_InvokeException( DaoProcess *self, const char *type, const char *info, DaoValue *data );
 
@@ -852,8 +826,7 @@ DAO_DLL daoint*    DaoProcess_PutInteger( DaoProcess *self, daoint value );
 DAO_DLL float*     DaoProcess_PutFloat( DaoProcess *self, float value );
 DAO_DLL double*    DaoProcess_PutDouble( DaoProcess *self, double value );
 DAO_DLL complex16* DaoProcess_PutComplex( DaoProcess *self, complex16 value );
-DAO_DLL DString*   DaoProcess_PutMBString( DaoProcess *self, const char *mbs );
-DAO_DLL DString*   DaoProcess_PutWCString( DaoProcess *self, const wchar_t *wcs );
+DAO_DLL DString*   DaoProcess_PutChars( DaoProcess *self, const char *mbs );
 DAO_DLL DString*   DaoProcess_PutString( DaoProcess *self, DString *str );
 DAO_DLL DString*   DaoProcess_PutBytes( DaoProcess *self, const char *bytes, daoint N );
 DAO_DLL DaoEnum*   DaoProcess_PutEnum( DaoProcess *self, const char *symbols );
@@ -895,7 +868,7 @@ DAO_DLL DaoArray*  DaoProcess_PutVectorC( DaoProcess *self, complex16 *array, da
 //
 // Example:
 //   DaoProcess_NewInteger( proc, 123 );
-//   DaoProcess_NewMBString( proc, "abc", -1 );
+//   DaoProcess_NewChars( proc, "abc", -1 );
 //   DaoProcess_PutTuple( proc, -2 );
 // This will put a tuple of (123, 'abc').
 */
@@ -1021,8 +994,7 @@ DAO_DLL DaoString*  DaoProcess_NewString( DaoProcess *self, int mbs );
 /*
 // Negative "n" indicates a null-terminated string:
 */
-DAO_DLL DaoString*  DaoProcess_NewMBString( DaoProcess *self, const char *s, daoint n );
-DAO_DLL DaoString*  DaoProcess_NewWCString( DaoProcess *self, const wchar_t *s, daoint n );
+DAO_DLL DaoString*  DaoProcess_NewChars( DaoProcess *self, const char *s, daoint n );
 DAO_DLL DaoEnum*    DaoProcess_NewEnum( DaoProcess *self, DaoType *type, int value );
 DAO_DLL DaoTuple*   DaoProcess_NewTuple( DaoProcess *self, int count );
 DAO_DLL DaoList*    DaoProcess_NewList( DaoProcess *self );

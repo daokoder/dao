@@ -61,7 +61,6 @@ struct DaoRegex
 	short  count; /* total number of items; or free space in the buffer as input; */
 	short  config;
 	short  attrib;
-	short  mbs;
 	short  group;
 	short  indexed;
 	void  *wordbuf;

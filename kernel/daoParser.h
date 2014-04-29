@@ -144,8 +144,8 @@ struct DaoParser
 
 	/* members for convenience */
 	DaoEnum   *denum;
-	DString   *mbs;
-	DString   *mbs2;
+	DString   *string;
+	DString   *string2;
 	DString   *str;
 	DMap      *lvm; /* <DString*,int>, for localVarMap; */
 	DArray    *toks;

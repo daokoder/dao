@@ -175,7 +175,7 @@ static void DaoType_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
 	denum->value = node->value.pInt;
 	return;
 ErrorNotExist:
-	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, DString_GetMBS( name ) );
+	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, DString_GetData( name ) );
 }
 static void DaoType_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
 {
@@ -216,11 +216,11 @@ void DaoType_CheckAttributes( DaoType *self )
 
 	self->realnum = self->tid >= DAO_INTEGER && self->tid <= DAO_DOUBLE;
 	self->attrib &= ~(DAO_TYPE_SPEC|DAO_TYPE_UNDEF);
-	if( DString_FindChar( self->name, '@', 0 ) != MAXSIZE ) self->attrib |= DAO_TYPE_SPEC;
-	if( DString_FindChar( self->name, '?', 0 ) != MAXSIZE ) self->attrib |= DAO_TYPE_UNDEF;
+	if( DString_FindChar( self->name, '@', 0 ) != DAO_NULLPOS ) self->attrib |= DAO_TYPE_SPEC;
+	if( DString_FindChar( self->name, '?', 0 ) != DAO_NULLPOS ) self->attrib |= DAO_TYPE_UNDEF;
 
 	if( (self->tid == DAO_PAR_NAMED || self->tid == DAO_PAR_DEFAULT) ){
-		if( self->fname != NULL && strcmp( self->fname->mbs, "self" ) == 0 )
+		if( self->fname != NULL && strcmp( self->fname->bytes, "self" ) == 0 )
 			self->attrib |= DAO_TYPE_SELFNAMED;
 	}
 
@@ -281,7 +281,7 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 		self->aux = extra;
 		GC_IncRC( extra );
 	}
-	DString_SetMBS( self->name, name );
+	DString_SetChars( self->name, name );
 	if( tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ) self->fname = DString_New(1);
 	if( nest ){
 		self->nested = DArray_New(D_VALUE);
@@ -334,11 +334,11 @@ void DaoType_InitDefault( DaoType *self )
 			if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_DEFAULT ){
 				it = (DaoType*) it->aux;
 			}else if( it->tid == DAO_PAR_VALIST ){
-				DaoValue_Copy( dao_none_value, & value->xTuple.items[i] );
+				DaoValue_Copy( dao_none_value, & value->xTuple.values[i] );
 				continue;
 			}
 			DaoType_InitDefault( it );
-			DaoValue_Copy( it->value, & value->xTuple.items[i] );
+			DaoValue_Copy( it->value, & value->xTuple.values[i] );
 		}
 		break;
 	case DAO_VARIANT :
@@ -432,7 +432,7 @@ static int DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *bin
 
 	m = DaoType_Match( ext1, ext2, defs, binds );
 	/*
-	   printf( "m = %i:  %s  %s\n", m, ext1->name->mbs, ext2->name->mbs );
+	   printf( "m = %i:  %s  %s\n", m, ext1->name->bytes, ext2->name->bytes );
 	 */
 	if( host == DAO_TUPLE && m == DAO_MT_EQ ){
 		if( self->tid != DAO_PAR_NAMED && type->tid == DAO_PAR_NAMED ) return DAO_MT_SUB;
@@ -522,7 +522,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	mt = dao_type_matrix[self->tid][type->tid];
 	/*
 	printf( "here: %i  %i  %i, %s  %s,  %p\n", mt, self->tid, type->tid,
-			self->name->mbs, type->name->mbs, defs );
+			self->name->bytes, type->name->bytes, defs );
 	 */
 	if( mt == DAO_MT_THT ){
 		if( self && self->tid == DAO_THT ){
@@ -600,7 +600,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			it2 = type->nested->items.pType[i];
 			tid = it2->tid;
 			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
-			/* printf( "%i %s %s\n", k, it1->name->mbs, it2->name->mbs ); */
+			/* printf( "%i %s %s\n", k, it1->name->bytes, it2->name->bytes ); */
 			if( defs && defs->size == ndefs ){
 				/*
 				// No unassociated type holders involved in the matching,
@@ -629,7 +629,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			it2 = type->nested->items.pType[i];
 			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
 			if( k > DAO_MT_SIM && it1->tid != it2->tid ) k = DAO_MT_SIM; /*name:type to type;*/
-			/* printf( "%i %s %s\n", k, it1->name->mbs, it2->name->mbs ); */
+			/* printf( "%i %s %s\n", k, it1->name->bytes, it2->name->bytes ); */
 			if( k == DAO_MT_NOT ) return k;
 			if( k < mt ) mt = k;
 		}
@@ -639,7 +639,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			it1 = self->nested->items.pType[i];
 			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
 			if( k > DAO_MT_SIM && it1->tid != it2->tid ) k = DAO_MT_SIM; /*name:type to type;*/
-			/* printf( "%i %s %s\n", k, it1->name->mbs, it2->name->mbs ); */
+			/* printf( "%i %s %s\n", k, it1->name->bytes, it2->name->bytes ); */
 			if( k == DAO_MT_NOT ) return k;
 			if( k < mt ) mt = k;
 		}
@@ -662,7 +662,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			}
 		}
 		if( type->overloads ) return 0;
-		if( self->name->mbs[0] != type->name->mbs[0] ) return 0; /* @routine */
+		if( self->name->bytes[0] != type->name->bytes[0] ) return 0; /* @routine */
 		if( type->aux == NULL ) return DAO_MT_SIM; /* match to "routine"; */
 		if( self->nested->size < type->nested->size ) return DAO_MT_NOT;
 		if( (self->cbtype == NULL) != (type->cbtype == NULL) ) return 0;
@@ -678,7 +678,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			it2 = type->nested->items.pType[i];
 			k = DaoType_MatchPar( it1, it2, defs, binds, DAO_ROUTINE );
 			/*
-			   printf( "%2i  %2i:  %s  %s\n", i, k, it1->name->mbs, it2->name->mbs );
+			   printf( "%2i  %2i:  %s  %s\n", i, k, it1->name->bytes, it2->name->bytes );
 			 */
 			if( k == DAO_MT_NOT ) return k;
 			if( k < mt ) mt = k;
@@ -732,7 +732,7 @@ int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 
 	mt = DaoType_MatchToX( self, type, defs, binds );
 #if 0
-	printf( "mt = %i %s %s\n", mt, self->name->mbs, type->name->mbs );
+	printf( "mt = %i %s %s\n", mt, self->name->bytes, type->name->bytes );
 	if( mt ==0 && binds ){
 		printf( "%p  %p\n", pvoid[0], pvoid[1] );
 		printf( "%i %p\n", binds->size, DMap_Find( binds, pvoid ) );
@@ -828,7 +828,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( tp == NULL || tp == dao_type_list_empty )
-			return value->xList.items.size == 0 ? DAO_MT_EMPTY : DAO_MT_NOT;
+			return value->xList.value->size == 0 ? DAO_MT_EMPTY : DAO_MT_NOT;
 		return DaoType_MatchTo( tp, self, defs );
 	case DAO_MAP :
 		tp = value->xMap.ctype;
@@ -836,7 +836,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( tp == NULL || tp == dao_type_map_empty )
-			return value->xMap.items->size == 0 ? DAO_MT_EMPTY : DAO_MT_NOT;
+			return value->xMap.value->size == 0 ? DAO_MT_EMPTY : DAO_MT_NOT;
 		return DaoType_MatchTo( tp, self, defs );
 	case DAO_TUPLE :
 		tp = value->xTuple.ctype;
@@ -855,19 +855,19 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			// the tuple may be assigned to a context value before
 			// its values are set properly!
 			*/
-			if( value->xTuple.items[i] == NULL ) continue;
+			if( value->xTuple.values[i] == NULL ) continue;
 			if( tp->tid == DAO_UDT || tp->tid == DAO_ANY || tp->tid == DAO_THT ) continue;
 
-			mt = DaoType_MatchValue( tp, value->xTuple.items[i], defs );
+			mt = DaoType_MatchValue( tp, value->xTuple.values[i], defs );
 			if( mt < DAO_MT_SIM ) return 0;
 		}
 		tp = self->nested->items.pType[self->nested->size-1];
 		if( tp->tid == DAO_PAR_VALIST ) tp = (DaoType*) tp->aux;
 		for(i=self->nested->size-(self->variadic!=0),n=value->xTuple.size; i<n; ++i){
-			if( value->xTuple.items[i] == NULL ) continue;
+			if( value->xTuple.values[i] == NULL ) continue;
 			if( tp->tid == DAO_UDT || tp->tid == DAO_ANY || tp->tid == DAO_THT ) continue;
 
-			mt = DaoType_MatchValue( tp, value->xTuple.items[i], defs );
+			mt = DaoType_MatchValue( tp, value->xTuple.values[i], defs );
 			if( mt < DAO_MT_SIM ) return 0;
 		}
 		if( value->xTuple.ctype == NULL ) return DAO_MT_EQ;
@@ -1076,17 +1076,17 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	}
 	if( self->fname ) copy->fname = DString_Copy( self->fname );
 	if( self->nested ){
-		int m = DString_MatchMBS( self->name, "^ %@? %w+ %< ", NULL, NULL );
+		int m = DString_Match( self->name, "^ %@? %w+ %< ", NULL, NULL );
 		char sep = self->tid == DAO_VARIANT ? '|' : ',';
 		if( copy->nested == NULL ) copy->nested = DArray_New(D_VALUE);
 		if( self->tid == DAO_CODEBLOCK ){
 			DString_AppendChar( copy->name, '[' );
 		}else if( self->tid != DAO_VARIANT && m ){
-			DString_AppendChar( copy->name, self->name->mbs[0] ); /* @routine<> */
+			DString_AppendChar( copy->name, self->name->bytes[0] ); /* @routine<> */
 			for(i=1,n=self->name->size; i<n; i++){
-				char ch = self->name->mbs[i];
+				char ch = self->name->bytes[i];
 				if( ch != '_' && !isalnum( ch ) ) break;
-				DString_AppendChar( copy->name, self->name->mbs[i] );
+				DString_AppendChar( copy->name, self->name->bytes[i] );
 			}
 			DString_AppendChar( copy->name, '<' );
 		}
@@ -1115,7 +1115,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 			if( copy->aux ==NULL ) goto DefFailed;
 			GC_IncRC( copy->aux );
 			if( self->tid != DAO_VARIANT && (m || self->tid == DAO_CODEBLOCK) ){
-				DString_AppendMBS( copy->name, "=>" );
+				DString_AppendChars( copy->name, "=>" );
 				DString_Append( copy->name, copy->aux->xType.name );
 			}
 		}
@@ -1161,9 +1161,9 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	DaoType_CheckAttributes( copy );
 	node = DMap_Find( ns->abstypes, copy->name );
 #if 0
-	if( strstr( copy->name->mbs, "map<" ) == copy->name->mbs ){
-		printf( "%s  %p  %p\n", copy->name->mbs, copy, node );
-		printf( "%s  %s  %p  %p\n", self->name->mbs, copy->name->mbs, copy, node );
+	if( strstr( copy->name->bytes, "map<" ) == copy->name->bytes ){
+		printf( "%s  %p  %p\n", copy->name->bytes, copy, node );
+		printf( "%s  %s  %p  %p\n", self->name->bytes, copy->name->bytes, copy, node );
 		print_trace();
 	}
 #endif
@@ -1289,9 +1289,9 @@ DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 	if( node ) return node->value.pRoutine;
 	return NULL;
 }
-DaoRoutine* DaoType_FindFunctionMBS( DaoType *self, const char *name )
+DaoRoutine* DaoType_FindFunctionChars( DaoType *self, const char *name )
 {
-	DString mbs = DString_WrapMBS( name );
+	DString mbs = DString_WrapChars( name );
 	return DaoType_FindFunction( self, & mbs );
 }
 DaoValue* DaoType_FindValue( DaoType *self, DString *name )
@@ -1362,7 +1362,7 @@ static int DaoRoutine_IsCompatible( DaoRoutine *self, DaoType *type, DMap *binds
 		rout = self->overloads->routines->items.pRoutine[i];
 		j = DaoType_Match( rout->routType, type, NULL, binds );
 		/*
-		   printf( "%3i %3i: %3i  %s  %s\n",n,i,j,rout->routType->name->mbs,type->name->mbs );
+		   printf( "%3i %3i: %3i  %s  %s\n",n,i,j,rout->routType->name->bytes,type->name->bytes );
 		 */
 		if( j && j >= max ){
 			max = j;
@@ -1386,7 +1386,7 @@ int DaoInterface_CheckBind( DArray *methods, DaoType *type, DMap *binds )
 				rout2 = (DaoRoutine*) DaoClass_GetConst( klass, id );
 				if( rout2->type != DAO_ROUTINE ) return 0;
 			}
-			/*printf( "AAA: %s %s\n", rout->routType->name->mbs,rout2->routType->name->mbs);*/
+			/*printf( "AAA: %s %s\n", rout->routType->name->bytes,rout2->routType->name->bytes);*/
 			if( DaoRoutine_IsCompatible( rout2, rout->routType, binds ) ==0 ) return 0;
 		}
 	}else if( type->tid == DAO_INTERFACE ){
@@ -1566,14 +1566,14 @@ DAO_DLL void DMap_SortMethods( DMap *hash, DArray *methods )
 			for(i=0,n=one->routines->size; i<n; i++){
 				DaoRoutine *rout = one->routines->items.pRoutine[i];
 				DString_Assign( name, rout->routName );
-				DString_AppendMBS( name, " " );
+				DString_AppendChars( name, " " );
 				DString_Append( name, rout->routType->name );
 				DMap_Insert( map, name, (void*)rout );
 			}
 		}else{
 			DaoRoutine *rout = it->value.pRoutine;
 			DString_Assign( name, rout->routName );
-			DString_AppendMBS( name, " " );
+			DString_AppendChars( name, " " );
 			DString_Append( name, rout->routType->name );
 			DMap_Insert( map, name, (void*)rout );
 		}
@@ -1618,13 +1618,13 @@ static void DaoCdata_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 		DaoValue *pars = (DaoValue*) & str;
 		int error, npar = 0;
 
-		str.data = name;
-		DString_SetMBS( proc->mbstring, "." );
+		str.value = name;
+		DString_SetChars( proc->mbstring, "." );
 		DString_Append( proc->mbstring, name );
 		func = DaoType_FindFunction( type, proc->mbstring );
 		if( func == NULL ){
 			npar = 1;
-			DString_SetMBS( proc->mbstring, "." );
+			DString_SetChars( proc->mbstring, "." );
 			func = DaoType_FindFunction( type, proc->mbstring );
 		}
 		if( func == NULL ){
@@ -1646,21 +1646,21 @@ static void DaoCdata_SetField( DaoValue *self, DaoProcess *proc, DString *name, 
 	DaoString str = {DAO_STRING,0,0,0,1,NULL};
 	DaoType *type = self->xCdata.ctype;
 
-	str.data = name;
+	str.value = name;
 	pars[0] = pars[1] = value;
 
-	DString_SetMBS( proc->mbstring, "." );
+	DString_SetChars( proc->mbstring, "." );
 	DString_Append( proc->mbstring, name );
-	DString_AppendMBS( proc->mbstring, "=" );
+	DString_AppendChars( proc->mbstring, "=" );
 	func = DaoType_FindFunction( type, proc->mbstring );
 	if( func == NULL ){
 		pars[0] = (DaoValue*) & str;
 		npar = 2;
-		DString_SetMBS( proc->mbstring, ".=" );
+		DString_SetChars( proc->mbstring, ".=" );
 		func = DaoType_FindFunction( type, proc->mbstring );
 	}
 	if( func == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
+		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->bytes );
 		return;
 	}
 	DaoProcess_PushCallable( proc, func, self, pars, npar );
@@ -1671,7 +1671,7 @@ static void DaoCdata_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid 
 	DaoType *type = self->ctype;
 	DaoRoutine *func = NULL;
 
-	func = DaoType_FindFunctionMBS( type, "[]" );
+	func = DaoType_FindFunctionChars( type, "[]" );
 	if( func == NULL ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
@@ -1684,7 +1684,7 @@ static void DaoCdata_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid,
 	DaoRoutine *func = NULL;
 	DaoValue *p[2];
 
-	DString_SetMBS( proc->mbstring, "[]=" );
+	DString_SetChars( proc->mbstring, "[]=" );
 	func = DaoType_FindFunction( type, proc->mbstring );
 	if( func == NULL ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
@@ -1702,7 +1702,7 @@ static void DaoCdata_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[],
 		DaoCdata_GetItem1( self, proc, ids[0] );
 		return;
 	}
-	func = DaoType_FindFunctionMBS( type, "[]" );
+	func = DaoType_FindFunctionChars( type, "[]" );
 	if( func == NULL ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
@@ -1718,7 +1718,7 @@ static void DaoCdata_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[],
 		DaoCdata_SetItem1( self, proc, ids[0], value );
 		return;
 	}
-	func = DaoType_FindFunctionMBS( type, "[]=" );
+	func = DaoType_FindFunctionChars( type, "[]=" );
 	if( func == NULL ){
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
 		return;
@@ -1738,26 +1738,26 @@ static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream
 
 	if( self0 == self->ctype->value ){
 		DaoStream_WriteString( stream, self->ctype->name );
-		DaoStream_WriteMBS( stream, "[default]" );
+		DaoStream_WriteChars( stream, "[default]" );
 		return;
 	}
 	if( cycData != NULL && DMap_Find( cycData, self ) != NULL ){
 		DaoStream_WriteString( stream, self->ctype->name );
-		DaoStream_WriteMBS( stream, buf );
+		DaoStream_WriteChars( stream, buf );
 		return;
 	}
 	if( cycData ) MAP_Insert( cycData, self, self );
 
-	meth = DaoType_FindFunctionMBS( self->ctype, "__PRINT__" );
+	meth = DaoType_FindFunctionChars( self->ctype, "__PRINT__" );
 	if( meth && DaoProcess_Call( proc, meth, NULL, &self0, 1 ) == 0 ) return;
 
 	DaoValue_Clear( & proc->stackValues[0] );
-	meth = DaoType_FindFunctionMBS( self->ctype, "serialize" );
+	meth = DaoType_FindFunctionChars( self->ctype, "serialize" );
 	if( meth && DaoProcess_Call( proc, meth, NULL, &self0, 1 ) == 0 ){
 		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
 	}else{
 		DaoStream_WriteString( stream, self->ctype->name );
-		DaoStream_WriteMBS( stream, buf );
+		DaoStream_WriteChars( stream, buf );
 	}
 }
 
@@ -1986,7 +1986,7 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 	}
 
 	pos = DString_FindChar( sptype->name, '<', 0 );
-	if( pos != MAXSIZE ) DString_Erase( sptype->name, pos, -1 );
+	if( pos != DAO_NULLPOS ) DString_Erase( sptype->name, pos, -1 );
 	DString_AppendChar( sptype->name, '<' );
 	for(i=0; i<count; i++){
 		if( i ) DString_AppendChar( sptype->name, ',' );
@@ -2041,14 +2041,14 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 
 	/* Specialized type will be initialized with the same kernel as the template type.
 	 * Upon method accessing, a new kernel will be created with specialized methods. */
-	sptype = DaoType_New( self->name->mbs, self->tid, NULL, NULL );
+	sptype = DaoType_New( self->name->bytes, self->tid, NULL, NULL );
 	GC_ShiftRC( self->kernel, sptype->kernel );
 	sptype->tid = self->tid;
 	sptype->kernel = self->kernel;
 	sptype->nested = DArray_New(D_VALUE);
 
 	pos = DString_FindChar( sptype->name, '<', 0 );
-	if( pos != MAXSIZE ) DString_Erase( sptype->name, pos, -1 );
+	if( pos != DAO_NULLPOS ) DString_Erase( sptype->name, pos, -1 );
 	DString_AppendChar( sptype->name, '<' );
 	for(i=0; i<count; i++){
 		if( i ) DString_AppendChar( sptype->name, ',' );
@@ -2064,7 +2064,7 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 	DTypeSpecTree_Add( sptree, sptype->nested->items.pType, sptype->nested->size, sptype );
 
 #if 0
-	printf( "DaoGenericType_Specialize: %s %s %p\n", self->name->mbs, sptype->name->mbs, sptype );
+	printf( "DaoGenericType_Specialize: %s %s %p\n", self->name->bytes, sptype->name->bytes, sptype );
 #endif
 
 	/* May need to get rid of the attributes for type holders: */
@@ -2114,7 +2114,7 @@ void DaoType_SpecializeMethods( DaoType *self )
 	daoint i, k;
 
 #if 0
-	printf( "DaoType_SpecializeMethods: %s\n", self->name->mbs );
+	printf( "DaoType_SpecializeMethods: %s\n", self->name->bytes );
 #endif
 
 	if( self == original ) return;

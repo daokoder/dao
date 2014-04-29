@@ -41,31 +41,31 @@
 
 static void DaoComplex_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 {
-	if( strcmp( name->mbs, "real" ) == 0 ){
+	if( strcmp( name->bytes, "real" ) == 0 ){
 		DaoProcess_PutDouble( proc, self->xComplex.value.real );
-	}else if( strcmp( name->mbs, "imag" ) == 0 ){
+	}else if( strcmp( name->bytes, "imag" ) == 0 ){
 		DaoProcess_PutDouble( proc, self->xComplex.value.imag );
 	}else{
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
+		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->bytes );
 	}
 }
 static void DaoComplex_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
 {
-	if( strcmp( name->mbs, "real" ) == 0 ){
+	if( strcmp( name->bytes, "real" ) == 0 ){
 		self->xComplex.value.real = DaoValue_GetDouble( value );
-	}else if( strcmp( name->mbs, "imag" ) == 0 ){
+	}else if( strcmp( name->bytes, "imag" ) == 0 ){
 		self->xComplex.value.imag = DaoValue_GetDouble( value );
 	}else{
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
+		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->bytes );
 	}
 }
 static void DaoComplex_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
 	complex16 p = self->xComplex.value;
 	DaoStream_WriteFloat( stream, p.real );
-	if( p.imag >= -0.0 ) DaoStream_WriteMBS( stream, "+" );
+	if( p.imag >= -0.0 ) DaoStream_WriteChars( stream, "+" );
 	DaoStream_WriteFloat( stream, p.imag );
-	DaoStream_WriteMBS( stream, "$" );
+	DaoStream_WriteChars( stream, "$" );
 }
 static DaoTypeCore comCore =
 {
@@ -346,7 +346,7 @@ static void MakeSlice( DaoProcess *proc, DaoValue *pid, daoint N, DVector *slice
 		}
 	case DAO_TUPLE :
 		{
-			DaoValue **data = pid->xTuple.items;
+			DaoValue **data = pid->xTuple.values;
 			if( data[0]->type == DAO_INTEGER && data[1]->type == DAO_INTEGER ){
 				if( pid->xTuple.ctype == dao_type_for_iterator ){
 					rc = SliceRange2( slices, N, data[1]->xInteger.value, 1 );
@@ -557,7 +557,7 @@ static void DaoArray_Print( DaoValue *value, DaoProcess *proc, DaoStream *stream
 static void DaoArray_GetItem1( DaoValue *value, DaoProcess *proc, DaoValue *pid )
 {
 	DaoArray *na, *self = & value->xArray;
-	/* if( self->ctype ) printf( "DaoArray_GetItem: %s\n", self->ctype->name->mbs ); */
+	/* if( self->ctype ) printf( "DaoArray_GetItem: %s\n", self->ctype->name->bytes ); */
 
 	if( pid->type >= DAO_INTEGER && pid->type <= DAO_DOUBLE ){
 		daoint id = DaoValue_GetInteger( pid );
@@ -575,7 +575,7 @@ static void DaoArray_GetItem1( DaoValue *value, DaoProcess *proc, DaoValue *pid 
 		}
 		return;
 	}else if( pid->type == DAO_TUPLE && pid->xTuple.ctype == dao_type_for_iterator ){
-		DaoValue **data = pid->xTuple.items;
+		DaoValue **data = pid->xTuple.values;
 		daoint id = data[1]->xInteger.value;
 		if( data[1]->type != DAO_INTEGER || id < 0 || id >= self->size ){
 			DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, "index out of range" );
@@ -830,9 +830,9 @@ static void DaoArray_PrintElement( DaoArray *self, DaoStream *stream, daoint i )
 		break;
 	case DAO_COMPLEX :
 		DaoStream_WriteFloat( stream, self->data.c[i].real );
-		if( self->data.c[i].imag >= -0.0 ) DaoStream_WriteMBS( stream, "+" );
+		if( self->data.c[i].imag >= -0.0 ) DaoStream_WriteChars( stream, "+" );
 		DaoStream_WriteFloat( stream, self->data.c[i].imag );
-		DaoStream_WriteMBS( stream, "$" );
+		DaoStream_WriteChars( stream, "$" );
 		break;
 	default : break;
 	}
@@ -847,12 +847,12 @@ static void DaoArray_Print( DaoValue *value, DaoProcess *proc, DaoStream *stream
 	if( self->ndim ==2 && ( dims[0] ==1 || dims[1] ==1 ) ){
 		/* For vectors: */
 		const char *sep = (dims[0] >1 && dims[1] ==1) ? "; " : ", ";
-		DaoStream_WriteMBS( stream, "[ " );
+		DaoStream_WriteChars( stream, "[ " );
 		for(i=0; i<self->size; i++){
 			DaoArray_PrintElement( self, stream, i );
-			if( i+1 < self->size ) DaoStream_WriteMBS( stream, sep );
+			if( i+1 < self->size ) DaoStream_WriteChars( stream, sep );
 		}
-		DaoStream_WriteMBS( stream, " ]" );
+		DaoStream_WriteChars( stream, " ]" );
 	}else{
 		DArray *tmpArray = DArray_New(0);
 		DArray_Resize( tmpArray, self->ndim, 0 );
@@ -865,17 +865,17 @@ static void DaoArray_Print( DaoValue *value, DaoProcess *proc, DaoStream *stream
 				tmp[j] = res;
 			}
 			if( tmp[self->ndim-1] ==0 ){
-				DaoStream_WriteMBS( stream, "row[" );
+				DaoStream_WriteChars( stream, "row[" );
 				for(j=0; j+1<self->ndim; j++){
 					DaoStream_WriteFormatedInt( stream, (int)tmp[j], "%i" );
-					DaoStream_WriteMBS( stream, "," );
+					DaoStream_WriteChars( stream, "," );
 				}
-				DaoStream_WriteMBS( stream, ":]:\t" );
+				DaoStream_WriteChars( stream, ":]:\t" );
 			}
 			DaoArray_PrintElement( self, stream, i );
-			if( i+1 < self->size ) DaoStream_WriteMBS( stream, "\t" );
+			if( i+1 < self->size ) DaoStream_WriteChars( stream, "\t" );
 			if( tmp[self->ndim-1] +1 == dims[self->ndim-1] )
-				DaoStream_WriteMBS( stream, "\n" );
+				DaoStream_WriteChars( stream, "\n" );
 		}
 		DArray_Delete( tmpArray );
 	}
@@ -1040,12 +1040,12 @@ static void DaoARRAY_max( DaoProcess *proc, DaoValue *par[], int N )
 		}
 		if( cmp || imax < 0 ) imax = j;
 	}
-	tuple->items[1]->xInteger.value = imax;
+	tuple->values[1]->xInteger.value = imax;
 	if( imax < 0 ) return;
 	switch( array->etype ){
-	case DAO_INTEGER : tuple->items[0]->xInteger.value = array->data.i[imax]; break;
-	case DAO_FLOAT  : tuple->items[0]->xFloat.value = array->data.f[imax]; break;
-	case DAO_DOUBLE : tuple->items[0]->xDouble.value = array->data.d[imax]; break;
+	case DAO_INTEGER : tuple->values[0]->xInteger.value = array->data.i[imax]; break;
+	case DAO_FLOAT  : tuple->values[0]->xFloat.value = array->data.f[imax]; break;
+	case DAO_DOUBLE : tuple->values[0]->xDouble.value = array->data.d[imax]; break;
 	default : break;
 	}
 }
@@ -1073,12 +1073,12 @@ static void DaoARRAY_min( DaoProcess *proc, DaoValue *par[], int N )
 		}
 		if( cmp || imin < 0 ) imin = j;
 	}
-	tuple->items[1]->xInteger.value = imin;
+	tuple->values[1]->xInteger.value = imin;
 	if( imin < 0 ) return;
 	switch( array->etype ){
-	case DAO_INTEGER : tuple->items[0]->xInteger.value = array->data.i[imin]; break;
-	case DAO_FLOAT  : tuple->items[0]->xFloat.value = array->data.f[imin]; break;
-	case DAO_DOUBLE : tuple->items[0]->xDouble.value = array->data.d[imin]; break;
+	case DAO_INTEGER : tuple->values[0]->xInteger.value = array->data.i[imin]; break;
+	case DAO_FLOAT  : tuple->values[0]->xFloat.value = array->data.f[imin]; break;
+	case DAO_DOUBLE : tuple->values[0]->xDouble.value = array->data.d[imin]; break;
 	default : break;
 	}
 }

@@ -38,18 +38,17 @@
 
 static void AUX_Tokenize( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString *source = p[0]->xString.data;
+	DString *source = p[0]->xString.value;
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoLexer *lexer = DaoLexer_New();
 	DArray *tokens = lexer->tokens;
 	int i, rc = 0;
-	DString_ToMBS( source );
-	rc = DaoLexer_Tokenize( lexer, source->mbs, DAO_LEX_COMMENT|DAO_LEX_SPACE );
+	rc = DaoLexer_Tokenize( lexer, source->bytes, DAO_LEX_COMMENT|DAO_LEX_SPACE );
 	if( rc ){
 		DaoString *str = DaoString_New(1);
 		for(i=0; i<tokens->size; i++){
-			DString_Assign( str->data, & tokens->items.pToken[i]->string );
-			DArray_Append( & list->items, (DaoValue*) str );
+			DString_Assign( str->value, & tokens->items.pToken[i]->string );
+			DArray_Append( list->value, (DaoValue*) str );
 		}
 		DaoString_Delete( str );
 	}
@@ -57,10 +56,9 @@ static void AUX_Tokenize( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void AUX_Log( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString *info = p[0]->xString.data;
+	DString *info = p[0]->xString.value;
 	FILE *fout = fopen( "dao.log", "a" );
-	DString_ToMBS( info );
-	fprintf( fout, "%s\n", info->mbs );
+	fprintf( fout, "%s\n", info->bytes );
 	fclose( fout );
 }
 static void AUX_Test( DaoProcess *proc, DaoValue *p[], int N )

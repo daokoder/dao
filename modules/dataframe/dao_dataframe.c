@@ -107,7 +107,7 @@ void DaoxDataColumn_Reset( DaoxDataColumn *self, daoint size )
 		DVector_Reserve( self->cells, size );
 		for(i=self->cells->size; i<size; ++i){
 			if( datatype == DAO_STRING ){
-				DString_Init( self->cells->data.strings + i, 0 );
+				DString_Init( self->cells->data.strings + i );
 				DString *s = & self->cells->data.strings[i];
 			}else if( datatype == 0 ){
 				self->cells->data.values[i] = NULL;
@@ -168,7 +168,7 @@ DaoValue* DaoxDataColumn_GetCell( DaoxDataColumn *self, daoint i, DaoValue *valu
 	case DAO_FLOAT   : value->xFloat.value   = self->cells->data.floats[i];  break;
 	case DAO_DOUBLE  : value->xDouble.value  = self->cells->data.doubles[i]; break;
 	case DAO_COMPLEX : value->xComplex.value = self->cells->data.complexes[i]; break;
-	case DAO_STRING  : value->xString.data   = & self->cells->data.strings[i]; break;
+	case DAO_STRING  : value->xString.value   = & self->cells->data.strings[i]; break;
 	default : value = self->cells->data.values[i]; break;
 	}
 	return value;
@@ -348,7 +348,7 @@ void DaoxDataFrame_AddLabelGroup( DaoxDataFrame *self, int dim )
 }
 void DaoxDataFrame_AddLabel( DaoxDataFrame *self, int dim, const char *lab, daoint idx )
 {
-	DString slab = DString_WrapMBS( lab );
+	DString slab = DString_WrapChars( lab );
 	DMap *labmap = NULL;
 	if( dim < 0 || dim >= 3 ) return;
 	if( idx < 0 || idx >= self->dims[dim] ) return;
@@ -358,7 +358,7 @@ void DaoxDataFrame_AddLabel( DaoxDataFrame *self, int dim, const char *lab, daoi
 }
 daoint DaoxDataFrame_GetIndex( DaoxDataFrame *self, int dim, const char *label )
 {
-	DString slab = DString_WrapMBS( label );
+	DString slab = DString_WrapChars( label );
 	DMap *labmap = NULL;
 	DNode *it;
 	if( dim < 0 || dim >= 3 ) return -1;
@@ -381,7 +381,7 @@ void DaoxDataFrame_AddLabels( DaoxDataFrame *self, int dim, DMap *labels )
 		daoint idx = it->value.pInt;
 		if( labels->keytype == D_VALUE ){
 			if( it->key.pValue->type != DAO_STRING ) continue;
-			lab2 = it->key.pValue->xString.data;
+			lab2 = it->key.pValue->xString.value;
 		}
 		if( labels->valtype == D_VALUE ){
 			if( it->value.pValue->type != DAO_INTEGER ) continue;
@@ -390,7 +390,7 @@ void DaoxDataFrame_AddLabels( DaoxDataFrame *self, int dim, DMap *labels )
 		if( idx < 0 ) continue;
 		DString_Reset( lab, 0 );
 		DString_Append( lab, lab2 );
-		DaoxDataFrame_AddLabel( self, dim, lab->mbs, idx );
+		DaoxDataFrame_AddLabel( self, dim, lab->bytes, idx );
 	}
 	DString_Delete( lab );
 }
@@ -478,7 +478,7 @@ static void DaoxDataFrame_SliceFrom( DaoxDataFrame *self, DaoxDataFrame *orig, D
 			for(it=DMap_First(labmap); it; it=DMap_Next(labmap,it)){
 				daoint id = maps[d][it->value.pInt];
 				if( id < 0 ) continue;
-				DaoxDataFrame_AddLabel( self, d, it->key.pString->mbs, id );
+				DaoxDataFrame_AddLabel( self, d, it->key.pString->bytes, id );
 			}
 		}
 	}
@@ -556,7 +556,7 @@ static void MakeSlice( DaoProcess *proc, DaoValue *pid, daoint N, DVector *slice
 		}
 	case DAO_TUPLE :
 		{
-			DaoValue **data = pid->xTuple.items;
+			DaoValue **data = pid->xTuple.values;
 			if( data[0]->type == DAO_INTEGER && data[1]->type == DAO_INTEGER ){
 				from = data[0]->xInteger.value;
 				to   = data[1]->xInteger.value;
@@ -924,7 +924,7 @@ static int DaoxDataFrame_UpdateByFrame( DaoxDataFrame *self, DaoxDataFrame *df, 
 				DaoValue *dest = DaoxDataColumn_GetCell( coldes, iddes, & value2 );
 				DaoValue *val = DaoxDataColumn_GetCell( colsrc, idsrc, & value );
 				if( val->type == dest->type && val->type == DAO_STRING ){
-					DString_Assign( dest->xString.data, val->xString.data );
+					DString_Assign( dest->xString.value, val->xString.value );
 					continue;
 				}else if( DaoValue_Update( dest, val, opcode ) ){
 					return DAOX_DF_WRONG_VALUE;
@@ -996,7 +996,7 @@ static void FRAME_UseLabels( DaoProcess *proc, DaoValue *p[], int N )
 static void FRAME_AddLabels( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
-	DaoxDataFrame_AddLabels( self, p[1]->xEnum.value, p[2]->xMap.items );
+	DaoxDataFrame_AddLabels( self, p[1]->xEnum.value, p[2]->xMap.value );
 }
 static void FRAME_AddLabel( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1004,16 +1004,14 @@ static void FRAME_AddLabel( DaoProcess *proc, DaoValue *p[], int N )
 	DString *lab = DaoValue_TryGetString( p[2] );
 	daoint dim = p[1]->xEnum.value;
 	daoint idx = p[3]->xInteger.value;
-	DString_ToMBS( lab );
-	DaoxDataFrame_AddLabel( self, dim, lab->mbs, idx );
+	DaoxDataFrame_AddLabel( self, dim, lab->bytes, idx );
 }
 static void FRAME_GetIndex( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
 	DString *lab = DaoValue_TryGetString( p[2] );
 	daoint idx, dim = p[1]->xEnum.value;
-	DString_ToMBS( lab );
-	idx = DaoxDataFrame_GetIndex( self, dim, lab->mbs );
+	idx = DaoxDataFrame_GetIndex( self, dim, lab->bytes );
 	DaoProcess_PutInteger( proc, idx );
 }
 static void FRAME_AddArrayCol( DaoProcess *proc, DaoValue *p[], int N )
@@ -1033,8 +1031,7 @@ static void FRAME_AddArrayCol( DaoProcess *proc, DaoValue *p[], int N )
 	self->dims[1] += 1;
 
 	if( lab->size ){
-		DString_ToMBS( lab );
-		DaoxDataFrame_AddLabel( self, DAOX_DF_COL, lab->mbs, self->dims[1]-1 );
+		DaoxDataFrame_AddLabel( self, DAOX_DF_COL, lab->bytes, self->dims[1]-1 );
 	}
 
 	if( M > array->size ) M = array->size;
@@ -1066,14 +1063,13 @@ static void FRAME_AddListCol( DaoProcess *proc, DaoValue *p[], int N )
 	self->dims[1] += 1;
 
 	if( lab->size ){
-		DString_ToMBS( lab );
-		DaoxDataFrame_AddLabel( self, DAOX_DF_COL, lab->mbs, self->dims[1]-1 );
+		DaoxDataFrame_AddLabel( self, DAOX_DF_COL, lab->bytes, self->dims[1]-1 );
 	}
 
-	if( M > list->items.size ) M = list->items.size;
-	for(i=0; i<M; ++i) DaoxDataColumn_SetCell( col, i, list->items.items.pValue[i] );
+	if( M > list->value->size ) M = list->value->size;
+	for(i=0; i<M; ++i) DaoxDataColumn_SetCell( col, i, list->value->items.pValue[i] );
 	M = self->dims[0] * self->dims[2];
-	for(i=list->items.size; i<M; ++i) DaoxDataColumn_SetCell( col, i, NULL );
+	for(i=list->value->size; i<M; ++i) DaoxDataColumn_SetCell( col, i, NULL );
 }
 
 
@@ -1090,8 +1086,7 @@ static daoint DaoxDF_MakeIndex( DaoxDataFrame *self, int dim, DaoValue *value, D
 	if( value->type >= DAO_INTEGER && value->type <= DAO_DOUBLE ){
 		idx = DaoValue_GetInteger( value );
 	}else if( value->type == DAO_STRING ){
-		DString_ToMBS( value->xString.data );
-		idx = DaoxDataFrame_GetIndex( self, dim, value->xString.data->mbs );
+		idx = DaoxDataFrame_GetIndex( self, dim, value->xString.value->bytes );
 	}else if( value->type == DAO_NONE && self->dims[2] == 1 ){
 		idx = 0;
 	}
@@ -1215,18 +1210,18 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 	M = DaoSlice_GetSize( self->slices, 1 );
 	K = DaoSlice_GetSize( self->slices, 2 );
 	DString_Reset( label, 100 + 4*sizeof(void*) + log10(1+N+M+K) );
-	sprintf( label->mbs, "\nDataFrame[%p]", self );
-	DaoStream_WriteMBS( stream, label->mbs );
+	sprintf( label->bytes, "\nDataFrame[%p]", self );
+	DaoStream_WriteChars( stream, label->bytes );
 	if( original != self ){
-		sprintf( label->mbs, " (Slices from DataFrame[%p])", original );
-		DaoStream_WriteMBS( stream, label->mbs );
+		sprintf( label->bytes, " (Slices from DataFrame[%p])", original );
+		DaoStream_WriteChars( stream, label->bytes );
 	}
-	sprintf( label->mbs, "\nDimensions: Rows=%" DAO_INT_FORMAT ";", N );
-	DaoStream_WriteMBS( stream, label->mbs );
-	sprintf( label->mbs, " Cols=%" DAO_INT_FORMAT ";", M );
-	DaoStream_WriteMBS( stream, label->mbs );
-	sprintf( label->mbs, " Deps=%" DAO_INT_FORMAT ";\n", K );
-	DaoStream_WriteMBS( stream, label->mbs );
+	sprintf( label->bytes, "\nDimensions: Rows=%" DAO_INT_FORMAT ";", N );
+	DaoStream_WriteChars( stream, label->bytes );
+	sprintf( label->bytes, " Cols=%" DAO_INT_FORMAT ";", M );
+	DaoStream_WriteChars( stream, label->bytes );
+	sprintf( label->bytes, " Deps=%" DAO_INT_FORMAT ";\n", K );
+	DaoStream_WriteChars( stream, label->bytes );
 
 	idwidth = 1 + (int)log10(N+1);
 	for(i=0; i<N; ++i){
@@ -1332,17 +1327,17 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 
 	for(k=0; k<K; ++k){
 		daoint kk = DaoSlice_GetIndex( self->slices, 2, k );
-		DaoStream_WriteMBS( stream, "Depth: " );
+		DaoStream_WriteChars( stream, "Depth: " );
 		DaoStream_WriteInt( stream, kk );
-		DaoStream_WriteMBS( stream, ";" );
-		if( original->labels[DAOX_DF_DEP]->size ) DaoStream_WriteMBS( stream, "\nLabels:" );
+		DaoStream_WriteChars( stream, ";" );
+		if( original->labels[DAOX_DF_DEP]->size ) DaoStream_WriteChars( stream, "\nLabels:" );
 		for(g=0; g<original->labels[DAOX_DF_DEP]->size; ++g){
 			DaoxDataFrame_GetLabel( original, DAOX_DF_DEP, g, kk, label );
-			DaoStream_WriteMBS( stream, " " );
+			DaoStream_WriteChars( stream, " " );
 			DaoStream_WriteString( stream, label );
-			DaoStream_WriteMBS( stream, ";" );
+			DaoStream_WriteChars( stream, ";" );
 		}
-		DaoStream_WriteMBS( stream, "\n" );
+		DaoStream_WriteChars( stream, "\n" );
 		for(j=0; j<M; j=J){
 			int idigits, width2, width = idwidth+1;
 			daoint maxidx = 0;
@@ -1362,8 +1357,8 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 			if( J == j ) J += 1;
 
 			sprintf( buf, "from %" DAO_INT_FORMAT " to %" DAO_INT_FORMAT ":\n", j, J-1 );
-			DaoStream_WriteMBS( stream, j == 0 ? "| Columns " : "> Columns " );
-			DaoStream_WriteMBS( stream, buf );
+			DaoStream_WriteChars( stream, j == 0 ? "| Columns " : "> Columns " );
+			DaoStream_WriteChars( stream, buf );
 
 			for(s=j; s<J; ++s){
 				daoint jj = DaoSlice_GetIndex( self->slices, 1, s );
@@ -1375,7 +1370,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 				int R = 1;
 				sprintf( fmt, "%%-%is", width );
 				sprintf( buf, fmt, j == 0 ? "|" : ">" );
-				DaoStream_WriteMBS( stream, buf );
+				DaoStream_WriteChars( stream, buf );
 				for(s=1; s<(idigits-g); ++s) R *= 10;
 				for(s=j; s<J; ++s){
 					daoint jj = DaoSlice_GetIndex( self->slices, 1, s );
@@ -1389,17 +1384,17 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 					}
 					snprintf( buf, width+1, fmt, d );
 					DaoStream_SetColor( stream, "white", (s%2) ? "yellow" : "cyan" );
-					DaoStream_WriteMBS( stream, "  " );
-					DaoStream_WriteMBS( stream, buf );
+					DaoStream_WriteChars( stream, "  " );
+					DaoStream_WriteChars( stream, buf );
 					DaoStream_SetColor( stream, NULL, NULL );
 				}
-				DaoStream_WriteMBS( stream, "\n" );
+				DaoStream_WriteChars( stream, "\n" );
 			}
 
 			for(g=0; g<original->labels[DAOX_DF_COL]->size; ++g){
 				sprintf( fmt, "%%-%is", width );
 				sprintf( buf, fmt, j == 0 ? "|" : ">" );
-				DaoStream_WriteMBS( stream, buf );
+				DaoStream_WriteChars( stream, buf );
 				for(s=j; s<J; ++s){
 					daoint jj = DaoSlice_GetIndex( self->slices, 1, s );
 					int width = clabwidth->data.ints[s];
@@ -1411,39 +1406,39 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 					}
 					DaoxDataFrame_GetLabel( original, DAOX_DF_COL, g, jj, label );
 					if( label->size > width ) DString_Reset( label, width );
-					snprintf( buf, width+1, fmt, label->mbs );
+					snprintf( buf, width+1, fmt, label->bytes );
 					DaoStream_SetColor( stream, "blue", (s%2) ? "yellow" : "cyan" );
-					DaoStream_WriteMBS( stream, "  " );
-					DaoStream_WriteMBS( stream, buf );
+					DaoStream_WriteChars( stream, "  " );
+					DaoStream_WriteChars( stream, buf );
 					DaoStream_SetColor( stream, NULL, NULL );
 				}
-				DaoStream_WriteMBS( stream, "\n" );
+				DaoStream_WriteChars( stream, "\n" );
 			}
-			DaoStream_WriteMBS( stream, j == 0 ? "|" : ">" );
-			while( --width2 ) DaoStream_WriteMBS( stream, "-" );
-			DaoStream_WriteMBS( stream, J < M ? ">" : "|" );
-			DaoStream_WriteMBS( stream, "\n" );
+			DaoStream_WriteChars( stream, j == 0 ? "|" : ">" );
+			while( --width2 ) DaoStream_WriteChars( stream, "-" );
+			DaoStream_WriteChars( stream, J < M ? ">" : "|" );
+			DaoStream_WriteChars( stream, "\n" );
 			for(i=0; i<N; ++i){
 				daoint ii = DaoSlice_GetIndex( self->slices, 0, i );
 				sprintf( buf, idfmt, ii );
 				DaoStream_SetColor( stream, "white", (i%2) ? "yellow" : "cyan" );
-				DaoStream_WriteMBS( stream, buf );
+				DaoStream_WriteChars( stream, buf );
 				DaoStream_SetColor( stream, NULL, NULL );
 				for(g=0; g<original->labels[DAOX_DF_ROW]->size; ++g){
 					int width = rlabwidth->data.ints[g];
 					DaoxDataFrame_GetLabel( original, DAOX_DF_ROW, g, ii, label );
 					if( label->size > width ) DString_Reset( label, width );
 					DaoStream_SetColor( stream, "white", (i%2) ? "yellow" : "cyan" );
-					if( g ) DaoStream_WriteMBS( stream, "," );
+					if( g ) DaoStream_WriteChars( stream, "," );
 					DaoStream_SetColor( stream, NULL, NULL );
 					sprintf( fmt, "%%-%is", width );
-					snprintf( buf, width+1, fmt, label->mbs );
+					snprintf( buf, width+1, fmt, label->bytes );
 					DaoStream_SetColor( stream, "blue", (i%2) ? "yellow" : "cyan" );
-					DaoStream_WriteMBS( stream, buf );
+					DaoStream_WriteChars( stream, buf );
 					DaoStream_SetColor( stream, NULL, NULL );
 				}
 				DaoStream_SetColor( stream, "white", (i%2) ? "yellow" : "cyan" );
-				DaoStream_WriteMBS( stream, g > 0 ? ": " : " " );
+				DaoStream_WriteChars( stream, g > 0 ? ": " : " " );
 				DaoStream_SetColor( stream, NULL, NULL );
 				for(s=j; s<J; ++s){
 					int scifmt = scifmts->data.ints[s];
@@ -1453,7 +1448,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 					DaoxDataColumn *col = (DaoxDataColumn*) original->columns->items.pVoid[jj];
 					DaoValue *value = DaoxDataColumn_GetCell( col, i, & valueBuffer );
 
-					DaoStream_WriteMBS( stream, "  " );
+					DaoStream_WriteChars( stream, "  " );
 					if( value == NULL ){
 						sprintf( fmt, "%%-%is", width );
 						snprintf( buf, width+1, fmt, " " );
@@ -1485,16 +1480,16 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 						DString_Reset( label, 0 );
 						DString_Append( label, sstream->streamString );
 						if( label->size > width ) DString_Reset( label, width );
-						DString_ChangeMBS( label, "%t", "\\t", 0 );
-						DString_ChangeMBS( label, "%n", "\\n", 0 );
+						DString_Change( label, "%t", "\\t", 0 );
+						DString_Change( label, "%n", "\\n", 0 );
 						sprintf( fmt, "%%-%is", width );
-						snprintf( buf, width+1, fmt, label->mbs );
+						snprintf( buf, width+1, fmt, label->bytes );
 					}
-					DaoStream_WriteMBS( stream, buf );
+					DaoStream_WriteChars( stream, buf );
 				}
-				DaoStream_WriteMBS( stream, "\n" );
+				DaoStream_WriteChars( stream, "\n" );
 			}
-			DaoStream_WriteMBS( stream, "\n" );
+			DaoStream_WriteChars( stream, "\n" );
 		}
 	}
 	DaoStream_Delete( sstream );
@@ -1635,7 +1630,7 @@ static void FRAME_RowsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, in
 			for(j=0; j<M; ++j){
 				daoint jj = DaoSlice_GetIndex( self->slices, 1, j );
 				DaoxDataColumn *column = (DaoxDataColumn*) original->columns->items.pVoid[jj];
-				DaoxDataColumn_SetCell( column, kk*N+ii, tuple->items[j] );
+				DaoxDataColumn_SetCell( column, kk*N+ii, tuple->values[j] );
 			}
 		}
 	}
@@ -1703,7 +1698,7 @@ static void FRAME_ColsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, in
 			if( func == 0 ) continue;
 			for(i=0; i<N; ++i){
 				daoint ii = DaoSlice_GetIndex( self->slices, 0, i );
-				DaoxDataColumn_SetCell( column, kk*N+ii, list->items.items.pValue[i] );
+				DaoxDataColumn_SetCell( column, kk*N+ii, list->value->items.pValue[i] );
 			}
 		}
 	}

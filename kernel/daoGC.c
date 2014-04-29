@@ -99,11 +99,11 @@ static void DaoGC_PrintProfile( DArray *idleList, DArray *workList )
 static void DaoGC_PrintValueInfo( DaoValue *value )
 {
 	if( value->type == DAO_TYPE ){
-		printf( "type: %s %i %p\t", value->xType.name->mbs, value->xType.tid, value );
+		printf( "type: %s %i %p\t", value->xType.name->bytes, value->xType.tid, value );
 	}else if( value->type == DAO_CDATA || value->type == DAO_CSTRUCT || value->type == DAO_CTYPE ){
-		printf( "cdata: %s\t", value->xCdata.ctype->name->mbs );
+		printf( "cdata: %s\t", value->xCdata.ctype->name->bytes );
 	}else if( value->type == DAO_CLASS ){
-		printf( "class: %s\t", value->xClass.className->mbs );
+		printf( "class: %s\t", value->xClass.className->bytes );
 	}else if( value->type == DAO_TYPEKERNEL ){
 		printf( "tkernal: %s\t", ((DaoTypeKernel*)value)->typer->name );
 	}
@@ -246,9 +246,9 @@ void DaoDataCache_Cache( DaoDataCache *self, DaoValue *value )
 		if( tup->size ){
 			int i, n;
 			for(i=0,n=tup->size; i<n; i++){
-				if( tup->items[i] ){
-					DaoGC_DecRC2( tup->items[i] );
-					tup->items[i] = NULL;
+				if( tup->values[i] ){
+					DaoGC_DecRC2( tup->values[i] );
+					tup->values[i] = NULL;
 				}
 			}
 			tup->size = 0;
@@ -265,7 +265,7 @@ void DaoDataCache_Cache( DaoDataCache *self, DaoValue *value )
 	}
 	switch( value->type ){
 	case DAO_STRING :
-		DString_Clear( value->xString.data );
+		DString_Clear( value->xString.value );
 		break;
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY  :
@@ -374,13 +374,13 @@ NewValue:
 }
 static int DaoTuple_ComputeExtraSpace( DaoType *type, int size )
 {
-	int ext = size > DAO_TUPLE_ITEMS ? size - DAO_TUPLE_ITEMS : 0;
+	int ext = size > DAO_TUPLE_MINSIZE ? size - DAO_TUPLE_MINSIZE : 0;
 
 	if( type ){
 		DaoType **types = type->nested->items.pType;
 		int M = type->nested->size;
 		int N = size > M ? size : M;
-		int it = N > DAO_TUPLE_ITEMS ? N - DAO_TUPLE_ITEMS : 0;
+		int it = N > DAO_TUPLE_MINSIZE ? N - DAO_TUPLE_MINSIZE : 0;
 		ext = it * sizeof(DaoValue*) + type->rntcount * sizeof(DaoDouble);
 		if( type->variadic ){
 			int vt = types[M-1]->aux->xType.tid;
@@ -395,7 +395,7 @@ static DaoTuple* DaoTuple_Create2( DaoType *type, int size )
 	int ext = DaoTuple_ComputeExtraSpace( type, size );
 	DaoTuple *self = (DaoTuple*) dao_malloc( sizeof(DaoTuple) + ext*sizeof(DaoValue*) );
 	DaoValue_Init( self, DAO_TUPLE );
-	memset( self->items, 0, size * sizeof(DaoValue*) );
+	memset( self->values, 0, size * sizeof(DaoValue*) );
 	GC_IncRC( type );
 	self->ctype = type;
 	self->size = size;
@@ -406,7 +406,7 @@ static void DaoDataCache_InitTuple( DaoDataCache *self, DaoTuple *tuple )
 {
 	int i, M = tuple->ctype->nested->size;
 	DaoType **types = tuple->ctype->nested->items.pType;
-	DaoDouble *buffer = (DaoDouble*)(tuple->items + tuple->size);
+	DaoDouble *buffer = (DaoDouble*)(tuple->values + tuple->size);
 	for(i=0; i<tuple->size; ++i){
 		DaoType *it = i < M ? types[i] : types[M-1];
 		DaoValue *value = NULL;
@@ -421,8 +421,8 @@ static void DaoDataCache_InitTuple( DaoDataCache *self, DaoTuple *tuple )
 		}else if( it->tid == DAO_ENUM ){
 			value = (DaoValue*) DaoDataCache_MakeEnum( self, it );
 		}
-		GC_ShiftRC( value, tuple->items[i] );
-		tuple->items[i] = value;
+		GC_ShiftRC( value, tuple->values[i] );
+		tuple->values[i] = value;
 	}
 }
 DaoTuple* DaoDataCache_MakeTuple( DaoDataCache *self, DaoType *type, int size, int init )
@@ -653,9 +653,9 @@ static int DaoGC_DecRC2( DaoValue *p )
 			if( p->xTuple.ctype && p->xTuple.ctype->noncyclic ){
 				DaoTuple *tuple = & p->xTuple;
 				for(i=0,n=tuple->size; i<n; i++){
-					if( tuple->items[i] ){
-						DaoGC_DecRC2( tuple->items[i] );
-						tuple->items[i] = NULL;
+					if( tuple->values[i] ){
+						DaoGC_DecRC2( tuple->values[i] );
+						tuple->values[i] = NULL;
 					}
 				}
 				tuple->size = 0;
@@ -663,7 +663,7 @@ static int DaoGC_DecRC2( DaoValue *p )
 			break;
 		case DAO_LIST : // TODO same for map
 			if( p->xList.ctype && p->xList.ctype->noncyclic ){
-				DArray *array = & p->xList.items;
+				DArray *array = p->xList.value;
 				DaoValue **items = array->items.pValue;
 				for(i=0,n=array->size; i<n; i++) if( items[i] ) DaoGC_DecRC2( items[i] );
 				array->size = 0;
@@ -1700,7 +1700,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			DaoTuple *tuple = (DaoTuple*) value;
 			cycRefCountDecrement( (DaoValue*) tuple->ctype );
 			if( tuple->ctype == NULL || tuple->ctype->noncyclic ==0 ){
-				DaoGC_CycRefCountDecrements( tuple->items, tuple->size );
+				DaoGC_CycRefCountDecrements( tuple->values, tuple->size );
 				count += tuple->size;
 			}
 			break;
@@ -1710,8 +1710,8 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			DaoList *list = (DaoList*) value;
 			cycRefCountDecrement( (DaoValue*) list->ctype );
 			if( list->ctype == NULL || list->ctype->noncyclic ==0 ){
-				cycRefCountDecrements( & list->items );
-				count += list->items.size;
+				cycRefCountDecrements( list->value );
+				count += list->value->size;
 			}
 			break;
 		}
@@ -1719,7 +1719,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 		{
 			DaoMap *map = (DaoMap*) value;
 			cycRefCountDecrement( (DaoValue*) map->ctype );
-			count += DaoGC_ScanMap( map->items, DAO_GC_DEC, 1, 1 );
+			count += DaoGC_ScanMap( map->value, DAO_GC_DEC, 1, 1 );
 			break;
 		}
 	case DAO_OBJECT :
@@ -1897,7 +1897,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			DaoTuple *tuple= (DaoTuple*) value;
 			cycRefCountIncrement( (DaoValue*) tuple->ctype );
 			if( tuple->ctype == NULL || tuple->ctype->noncyclic ==0 ){
-				DaoGC_CycRefCountIncrements( tuple->items, tuple->size );
+				DaoGC_CycRefCountIncrements( tuple->values, tuple->size );
 				count += tuple->size;
 			}
 			break;
@@ -1907,8 +1907,8 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			DaoList *list= (DaoList*) value;
 			cycRefCountIncrement( (DaoValue*) list->ctype );
 			if( list->ctype == NULL || list->ctype->noncyclic ==0 ){
-				cycRefCountIncrements( & list->items );
-				count += list->items.size;
+				cycRefCountIncrements( list->value );
+				count += list->value->size;
 			}
 			break;
 		}
@@ -1916,7 +1916,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 		{
 			DaoMap *map = (DaoMap*)value;
 			cycRefCountIncrement( (DaoValue*) map->ctype );
-			count += DaoGC_ScanMap( map->items, DAO_GC_INC, 1, 1 );
+			count += DaoGC_ScanMap( map->value, DAO_GC_INC, 1, 1 );
 			break;
 		}
 	case DAO_OBJECT :
@@ -2095,22 +2095,22 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			DaoTuple *tuple = (DaoTuple*) value;
 			count += tuple->size;
 			directRefCountDecrement( (DaoValue**) & tuple->ctype );
-			DaoGC_RefCountDecrements( tuple->items, tuple->size );
+			DaoGC_RefCountDecrements( tuple->values, tuple->size );
 			tuple->size = 0;
 			break;
 		}
 	case DAO_LIST :
 		{
 			DaoList *list = (DaoList*) value;
-			count += list->items.size;
-			directRefCountDecrements( & list->items );
+			count += list->value->size;
+			directRefCountDecrements( list->value );
 			directRefCountDecrement( (DaoValue**) & list->ctype );
 			break;
 		}
 	case DAO_MAP :
 		{
 			DaoMap *map = (DaoMap*) value;
-			count += DaoGC_ScanMap( map->items, DAO_GC_BREAK, 1, 1 );
+			count += DaoGC_ScanMap( map->value, DAO_GC_BREAK, 1, 1 );
 			directRefCountDecrement( (DaoValue**) & map->ctype );
 			break;
 		}

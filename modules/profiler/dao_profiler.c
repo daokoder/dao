@@ -126,7 +126,7 @@ static void DaoProfiler_EnterFrame( DaoProfiler *self, DaoProcess *proc, DaoStac
 {
 	DaoComplex *tmdata;
 	if( frame->routine == NULL ) return;
-	//printf( "DaoProfiler_EnterFrame: %-20s %s\n", frame->routine->routName->mbs, start ? "start":"" );
+	//printf( "DaoProfiler_EnterFrame: %-20s %s\n", frame->routine->routName->bytes, start ? "start":"" );
 
 	tmdata = DaoProcess_GetTimeData( proc, frame );
 	if( start ) tmdata->value.real = 0.0;
@@ -137,7 +137,7 @@ static void DaoProfiler_LeaveFrame( DaoProfiler *self, DaoProcess *proc, DaoStac
 	double time;
 	DaoComplex *tmdata;
 	if( frame->routine == NULL ) return;
-	//printf( "DaoProfiler_LeaveFrame: %-20s %s\n", frame->routine->routName->mbs, end?"end":"" );
+	//printf( "DaoProfiler_LeaveFrame: %-20s %s\n", frame->routine->routName->bytes, end?"end":"" );
 
 	time = dao_clock();
 	tmdata = DaoProcess_GetTimeData( proc, frame );
@@ -178,9 +178,8 @@ const char *row_format2 = "%-32s: %24s, %9i, %8.2f\n";
 
 static void DString_PartialAppend( DString *self, DString *other, int max )
 {
-	DString_ToMBS( other );
 	if( other->size > max ){
-		DString_AppendDataMBS( self, other->mbs, max-1-!isalnum(other->mbs[max-2]) );
+		DString_AppendBytes( self, other->bytes, max-1-!isalnum(other->bytes[max-2]) );
 		DString_AppendChar( self, '~' );
 	}else{
 		DString_Append( self, other );
@@ -207,37 +206,37 @@ void DaoRoutine_MakeName( DaoRoutine *self, DString *name, int max1, int max2, i
 	if( hostName && ! DString_EQ( self->routName, hostName ) ){
 		if( hostName->size + self->routName->size < (max1-2) ){
 			DString_Append( name, hostName );
-			DString_AppendMBS( name, "::" );
+			DString_AppendChars( name, "::" );
 			DString_Append( name, self->routName );
 		}else{
 			DString_PartialAppend( name, hostName, max1/2-1 );
-			DString_AppendMBS( name, "::" );
+			DString_AppendChars( name, "::" );
 			DString_PartialAppend( name, self->routName, max1/2-1 );
 		}
 	}else{
 		DString_PartialAppend( name, self->routName, max1 );
 	}
 	if( max3 == 0 ){
-		DString_AppendMBS( name, "()" );
+		DString_AppendChars( name, "()" );
 		return;
 	}
-	DString_AppendMBS( name, "( " );
+	DString_AppendChars( name, "( " );
 	if( N == M+1 ){
 		DaoType *type = routType->nested->items.pType[M];
 		DString_PartialAppend( name, type->name, 2*max2 );
 	}else{
 		for(i=M; i<N; ++i){
 			DaoType *type = routType->nested->items.pType[i];
-			if( i > M ) DString_AppendMBS( name, ", " );
+			if( i > M ) DString_AppendChars( name, ", " );
 			if( i < M + max3 ){
 				DString_PartialAppend( name, type->name, max2 );
 			}else{
-				DString_AppendMBS( name, "~~" );
+				DString_AppendChars( name, "~~" );
 				break;
 			}
 		}
 	}
-	DString_AppendMBS( name, " )" );
+	DString_AppendChars( name, " )" );
 }
 
 void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream )
@@ -262,27 +261,27 @@ void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream )
 		DMap_Insert( summary, & com, it );
 	}
 
-	DaoStream_WriteMBS( stream, "\n" );
-	DaoStream_WriteMBS( stream, delimiter );
-	DaoStream_WriteMBS( stream, delimiter2 );
+	DaoStream_WriteChars( stream, "\n" );
+	DaoStream_WriteChars( stream, delimiter );
+	DaoStream_WriteChars( stream, delimiter2 );
 	snprintf( buf, sizeof(buf), header_format, "Routine", "#Calls", "CPU Time" );
-	DaoStream_WriteMBS( stream, buf );
-	DaoStream_WriteMBS( stream, delimiter2 );
+	DaoStream_WriteChars( stream, buf );
+	DaoStream_WriteChars( stream, delimiter2 );
 	for(count=max,it=DMap_First(summary); it; it=DMap_Next(summary,it),--count){
 		DNode *it2 = (DNode*) it->value.pVoid;
 		complex16 data = it->key.pValue->xComplex.value;
 		DaoRoutine *callee = (DaoRoutine*) it2->key.pValue;
 		DaoRoutine_MakeName( callee, name1, 28, 10, 2 );
-		snprintf( buf, sizeof(buf), row_format, name1->mbs, (int) -data.imag, -data.real );
-		DaoStream_WriteMBS( stream, buf );
+		snprintf( buf, sizeof(buf), row_format, name1->bytes, (int) -data.imag, -data.real );
+		DaoStream_WriteChars( stream, buf );
 		if( count == 0 ) break;
 	}
 
-	DaoStream_WriteMBS( stream, "\n" );
-	DaoStream_WriteMBS( stream, delimiter3 );
+	DaoStream_WriteChars( stream, "\n" );
+	DaoStream_WriteChars( stream, delimiter3 );
 	snprintf( buf, sizeof(buf), header_format2, "Routine", "Caller", "#Calls", "CPU Time" );
-	DaoStream_WriteMBS( stream, buf );
-	DaoStream_WriteMBS( stream, delimiter3 );
+	DaoStream_WriteChars( stream, buf );
+	DaoStream_WriteChars( stream, delimiter3 );
 	for(count=max,it=DMap_First(summary); it; it=DMap_Next(summary,it),--count){
 		DNode *it2 = (DNode*) it->value.pVoid;
 		DaoRoutine *callee = (DaoRoutine*) it2->key.pValue;
@@ -303,8 +302,8 @@ void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream )
 			complex16 data = it2->key.pValue->xComplex.value;
 			DString_Reset( name2, 0 );
 			if( caller ) DaoRoutine_MakeName( caller, name2, 22, 0, 0 );
-			snprintf( buf, sizeof(buf), row_format2, name1->mbs, name2->mbs, (int) -data.imag, -data.real );
-			DaoStream_WriteMBS( stream, buf );
+			snprintf( buf, sizeof(buf), row_format2, name1->bytes, name2->bytes, (int) -data.imag, -data.real );
+			DaoStream_WriteChars( stream, buf );
 			DString_Reset( name1, 0 );
 		}
 		if( count == 0 ) break;

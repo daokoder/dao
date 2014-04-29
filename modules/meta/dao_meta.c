@@ -101,7 +101,7 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 			value = (DaoValue*) rout;
 			k = DaoRoutine_Finalize( rout, self->objType, deftypes );
 #if 0
-			printf( "%i %p:  %s  %s\n", i, rout, rout->routName->mbs, rout->routType->name->mbs );
+			printf( "%i %p:  %s  %s\n", i, rout, rout->routName->bytes, rout->routType->name->bytes );
 #endif
 			if( rout->attribs & DAO_ROUT_INITOR ){
 				DRoutines_Add( self->classRoutines->overloads, rout );
@@ -243,7 +243,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	DaoList *fields = NULL;
 	DaoList *methods = NULL;
 	DString *name = NULL;
-	DaoValue **data = tuple->items;
+	DaoValue **data = tuple->values;
 	DMap *keys = tuple->ctype->mapNames;
 	DMap *deftypes = DMap_New(0,0);
 	DMap *pm_map = DMap_New(D_STRING,0);
@@ -260,14 +260,14 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	stEnum.etype = dao_storage_enum;
 
 	DaoProcess_SetValue( self, vmc->c, (DaoValue*) klass );
-	//printf( "%s\n", tuple->ctype->name->mbs );
-	if( iclass && routine->routConsts->items.items.pValue[iclass-1]->type == DAO_CLASS ){
-		proto = & routine->routConsts->items.items.pValue[iclass-1]->xClass;
+	//printf( "%s\n", tuple->ctype->name->bytes );
+	if( iclass && routine->routConsts->value->items.pValue[iclass-1]->type == DAO_CLASS ){
+		proto = & routine->routConsts->value->items.pValue[iclass-1]->xClass;
 		ns2 = proto->classRoutine->nameSpace;
 	}
 
 	/* extract parameters */
-	if( tuple->size && data[0]->type == DAO_STRING ) name = data[0]->xString.data;
+	if( tuple->size && data[0]->type == DAO_STRING ) name = data[0]->xString.value;
 	if( parents ==NULL && parents2 == NULL && tuple->size >1 ){
 		if( data[1]->type == DAO_LIST ) parents = & data[1]->xList;
 		if( data[1]->type == DAO_MAP ) parents2 = & data[1]->xMap;
@@ -277,7 +277,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 
 	if( name == NULL || name->size ==0 ){
 		sprintf( buf, "AnonymousClass%p", klass );
-		DString_SetMBS( klass->className, buf );
+		DString_SetChars( klass->className, buf );
 		DaoClass_SetName( klass, klass->className, ns2 );
 	}else{
 		DaoClass_SetName( klass, name, ns2 );
@@ -320,7 +320,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 					continue;
 				}
 				DArray_Append( routines, newRout );
-				if( strcmp( newRout->routName->mbs, "@class" ) ==0 ){
+				if( strcmp( newRout->routName->bytes, "@class" ) ==0 ){
 					node = DMap_Find( proto->lookupTable, newRout->routName );
 					DString_Assign( newRout->routName, klass->className );
 					st = LOOKUP_ST( node->value.pInt );
@@ -353,8 +353,8 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 
 	/* add parents from parameters */
 	if( parents ){
-		for(i=0,n=parents->items.size; i<n; i++){
-			DaoClass_AddSuperClass( klass, parents->items.items.pValue[i] );
+		for(i=0,n=parents->value->size; i<n; i++){
+			DaoClass_AddSuperClass( klass, parents->value->items.pValue[i] );
 		}
 	}else if( parents2 ){
 		for(it=DMap_First(parents2->items);it;it=DMap_Next(parents2->items,it)){
@@ -366,8 +366,8 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	}
 	DaoClass_DeriveClassData( klass );
 	if( fields ){ /* add fields from parameters */
-		for(i=0,n=fields->items.size; i<n; i++){
-			DaoValue *fieldv = fields->items.items.pValue[i];
+		for(i=0,n=fields->value->size; i<n; i++){
+			DaoValue *fieldv = fields->value->items.pValue[i];
 			DaoType *type = NULL;
 			DaoValue *value = NULL;
 
@@ -378,7 +378,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 			pm = DAO_DATA_PUBLIC;
 
 			name = NULL;
-			if( size && data[0]->type == DAO_STRING ) name = data[0]->xString.data;
+			if( size && data[0]->type == DAO_STRING ) name = data[0]->xString.value;
 			if( size > 1 && data[1]->type ){
 				value = data[1];
 				type = fieldv->xTuple.ctype->nested->items.pType[1];
@@ -394,7 +394,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 				if( DaoEnum_SetValue( & pmEnum, & data[3]->xEnum, NULL ) ==0) goto InvalidField;
 				pm = permissions[ pmEnum.value ];
 			}
-			/* printf( "%s %i %i\n", name->mbs, st, pm ); */
+			/* printf( "%s %i %i\n", name->bytes, st, pm ); */
 			switch( st ){
 			case DAO_OBJECT_VARIABLE: DaoClass_AddObjectVar( klass, name, value, type, pm ); break;
 			case DAO_CLASS_VARIABLE : DaoClass_AddGlobalVar( klass, name, value, type, pm ); break;
@@ -407,8 +407,8 @@ InvalidField:
 		}
 	}
 	if( methods ){ /* add methods from parameters */
-		for(i=0,n=methods->items.size; i<n; i++){
-			DaoValue *methodv = methods->items.items.pValue[i];
+		for(i=0,n=methods->value->size; i<n; i++){
+			DaoValue *methodv = methods->value->items.pValue[i];
 			DaoRoutine *newRout;
 			DaoValue *method = NULL;
 			DaoValue *dest;
@@ -419,7 +419,7 @@ InvalidField:
 			pm = DAO_DATA_PUBLIC;
 
 			name = NULL;
-			if( size && data[0]->type == DAO_STRING ) name = data[0]->xString.data;
+			if( size && data[0]->type == DAO_STRING ) name = data[0]->xString.value;
 			if( size > 1 && data[1]->type == DAO_ROUTINE ) method = data[1];
 			if( name == NULL || method == NULL ) continue;
 			if( size > 2 && data[2]->type == DAO_ENUM ){
@@ -487,7 +487,7 @@ static void META_NS( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void META_Name( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString *str = DaoProcess_PutMBString( proc, "" );
+	DString *str = DaoProcess_PutChars( proc, "" );
 	switch( p[0]->type ){
 	case DAO_ROUTINE :
 		DString_Assign( str, p[0]->xRoutine.routName );
@@ -534,7 +534,7 @@ static void META_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue *vabtp = NULL;
 	DaoString name = {DAO_STRING,0,0,0,0,NULL};
 	int restri = p[1]->xInteger.value;
-	name.data = DString_New(1);
+	name.value = DString_New(1);
 	if( p[0]->type == DAO_CLASS || p[0]->type == DAO_OBJECT ){
 		klass = & p[0]->xClass;
 		if( p[0]->type == DAO_OBJECT ){
@@ -550,7 +550,7 @@ static void META_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 		data = ns->constants;
 	}else{
 		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
-		DString_Delete( name.data );
+		DString_Delete( name.value );
 		return;
 	}
 	if( index == NULL ) return;
@@ -564,12 +564,12 @@ static void META_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 		GC_IncRC( tp );
 		value = data->items.pConst[ id ]->value;
 		vabtp = (DaoValue*) DaoNamespace_GetType( here, value );
-		DaoValue_Copy( value, tuple->items );
-		DaoValue_Copy( vabtp, tuple->items + 1 );
-		DString_Assign( name.data, node->key.pString );
+		DaoValue_Copy( value, tuple->values );
+		DaoValue_Copy( vabtp, tuple->values + 1 );
+		DString_Assign( name.value, node->key.pString );
 		DaoMap_Insert( map, (DaoValue*) & name, (DaoValue*) & tuple );
 	}
-	DString_Delete( name.data );
+	DString_Delete( name.value );
 }
 static void META_Var1( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -585,7 +585,7 @@ static void META_Var1( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue *vabtp = NULL;
 	DaoString name = {DAO_STRING,0,0,0,0,NULL};
 	int restri = p[1]->xInteger.value;
-	name.data = DString_New(1);
+	name.value = DString_New(1);
 	if( p[0]->type == DAO_CLASS || p[0]->type == DAO_OBJECT ){
 		klass = & p[0]->xClass;
 		if( p[0]->type == DAO_OBJECT ){
@@ -599,7 +599,7 @@ static void META_Var1( DaoProcess *proc, DaoValue *p[], int N )
 		//index = ns->varIndex; XXX
 	}else{
 		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
-		DString_Delete( name.data );
+		DString_Delete( name.value );
 		return;
 	}
 	if( index == NULL ) return;
@@ -632,12 +632,12 @@ static void META_Var1( DaoProcess *proc, DaoValue *p[], int N )
 			value = var->value;
 			vabtp = (DaoValue*) var->dtype;
 		}
-		DaoValue_Copy( value, tuple->items );
-		DaoValue_Copy( vabtp, tuple->items + 1 );
-		DString_Assign( name.data, node->key.pString );
+		DaoValue_Copy( value, tuple->values );
+		DaoValue_Copy( vabtp, tuple->values + 1 );
+		DString_Assign( name.value, node->key.pString );
 		DaoMap_Insert( map, (DaoValue*) & name, (DaoValue*) & tuple );
 	}
-	DString_Delete( name.data );
+	DString_Delete( name.value );
 }
 static void META_Cst2( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -645,7 +645,7 @@ static void META_Cst2( DaoProcess *proc, DaoValue *p[], int N )
 	DaoNamespace *ns = proc->activeNamespace;
 	DaoClass *klass = NULL;
 	DNode *node;
-	DString *name = p[1]->xString.data;
+	DString *name = p[1]->xString.value;
 	DaoValue *type = NULL;
 	DaoValue **value = NULL;
 	if( p[0]->type == DAO_CLASS || p[0]->type == DAO_OBJECT ){
@@ -667,8 +667,8 @@ static void META_Cst2( DaoProcess *proc, DaoValue *p[], int N )
 	}else{
 		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
 	}
-	DaoValue_Copy( *value, tuple->items );
-	DaoValue_Copy( type, tuple->items + 1 );
+	DaoValue_Copy( *value, tuple->values );
+	DaoValue_Copy( type, tuple->values + 1 );
 	DaoProcess_PutValue( proc, (DaoValue*) tuple );
 	if( N >2 ){
 		DaoType *tp = DaoNamespace_GetType( ns, p[2] );
@@ -687,7 +687,7 @@ static void META_Var2( DaoProcess *proc, DaoValue *p[], int N )
 	DaoNamespace *ns = proc->activeNamespace;
 	DaoClass *klass = NULL;
 	DNode *node;
-	DString *name = p[1]->xString.data;
+	DString *name = p[1]->xString.value;
 	DaoValue *type = NULL;
 	DaoValue **value = NULL;
 	if( p[0]->type == DAO_CLASS || p[0]->type == DAO_OBJECT ){
@@ -721,8 +721,8 @@ static void META_Var2( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
 		return;
 	}
-	DaoValue_Copy( *value, tuple->items );
-	DaoValue_Copy( type, tuple->items + 1 );
+	DaoValue_Copy( *value, tuple->values );
+	DaoValue_Copy( type, tuple->values + 1 );
 	DaoProcess_PutValue( proc, (DaoValue*) tuple );
 	if( N >2 ){
 		DaoType *tp = DaoNamespace_GetType( ns, p[2] );
@@ -785,26 +785,25 @@ static void META_Isa( DaoProcess *proc, DaoValue *p[], int N )
 			*res = DaoType_ChildOf( p[0]->xCdata.ctype, p[1]->xCdata.ctype );
 		}
 	}else if( p[1]->type == DAO_STRING ){
-		DString *tname = p[1]->xString.data;
-		DString_ToMBS( tname );
-		if( strcmp( tname->mbs, "class" ) ==0 ){
+		DString *tname = p[1]->xString.value;
+		if( strcmp( tname->bytes, "class" ) ==0 ){
 			if( p[0]->type == DAO_CLASS  ) *res = 1;
-		}else if( strcmp( tname->mbs, "object" ) ==0 ){
+		}else if( strcmp( tname->bytes, "object" ) ==0 ){
 			if( p[0]->type == DAO_OBJECT  ) *res = 1;
-		}else if( strcmp( tname->mbs, "routine" ) ==0 ){
+		}else if( strcmp( tname->bytes, "routine" ) ==0 ){
 			if( p[0]->type == DAO_ROUTINE  ) *res = 1;
-		}else if( strcmp( tname->mbs, "namespace" ) ==0 ){
+		}else if( strcmp( tname->bytes, "namespace" ) ==0 ){
 			if( p[0]->type == DAO_NAMESPACE  ) *res = 1;
-		}else if( strcmp( tname->mbs, "tuple" ) ==0 ){
+		}else if( strcmp( tname->bytes, "tuple" ) ==0 ){
 			if( p[0]->type == DAO_TUPLE  ) *res = 1;
-		}else if( strcmp( tname->mbs, "list" ) ==0 ){
+		}else if( strcmp( tname->bytes, "list" ) ==0 ){
 			if( p[0]->type == DAO_LIST  ) *res = 1;
-		}else if( strcmp( tname->mbs, "map" ) ==0 ){
+		}else if( strcmp( tname->bytes, "map" ) ==0 ){
 			if( p[0]->type == DAO_MAP  ) *res = 1;
-		}else if( strcmp( tname->mbs, "array" ) ==0 ){
+		}else if( strcmp( tname->bytes, "array" ) ==0 ){
 			if( p[0]->type == DAO_ARRAY  ) *res = 1;
 		}else{
-			DaoType *tp = DaoParser_ParseTypeName( tname->mbs, ns, 0 );
+			DaoType *tp = DaoParser_ParseTypeName( tname->bytes, ns, 0 );
 			if( tp && DaoType_MatchValue( tp, p[0], NULL ) ) *res = 1;
 		}
 	}else{
@@ -831,7 +830,7 @@ static void META_Param( DaoProcess *proc, DaoValue *p[], int N )
 	DaoString str = {DAO_STRING,0,0,0,0,NULL};
 	DaoInteger num = {DAO_INTEGER,0,0,0,0,1};
 	int i, i3 = 3;
-	str.data = mbs;
+	str.value = mbs;
 	for(i=0; i<routine->parCount; i++){
 		if( i >= routype->nested->size ) break;
 		tuple = DaoTuple_New( 4 );
@@ -839,10 +838,10 @@ static void META_Param( DaoProcess *proc, DaoValue *p[], int N )
 		GC_IncRC( itp );
 		num.value = 0;
 		if( nested[i]->tid == DAO_PAR_DEFAULT ) num.value = 1;
-		DaoValue_Copy( (DaoValue*) & str, & tuple->items[0] );
-		DaoValue_Copy( (DaoValue*) nested[i], & tuple->items[1] );
-		DaoValue_Copy( (DaoValue*) & num, & tuple->items[2] );
-		DaoValue_Copy( routine->routConsts->items.items.pValue[i], & tuple->items[i3] );
+		DaoValue_Copy( (DaoValue*) & str, & tuple->values[0] );
+		DaoValue_Copy( (DaoValue*) nested[i], & tuple->values[1] );
+		DaoValue_Copy( (DaoValue*) & num, & tuple->values[2] );
+		DaoValue_Copy( routine->routConsts->value->items.pValue[i], & tuple->values[i3] );
 		DaoList_Append( list, (DaoValue*) tuple );
 	}
 	DString_Delete( mbs );
@@ -850,7 +849,7 @@ static void META_Param( DaoProcess *proc, DaoValue *p[], int N )
 		node = DMap_First( routype->mapNames );
 		for( ; node !=NULL; node = DMap_Next( routype->mapNames, node ) ){
 			i = node->value.pInt;
-			mbs = list->items.items.pValue[i]->xTuple.items[0]->xString.data;
+			mbs = list->value->items.pValue[i]->xTuple.values[0]->xString.value;
 			DString_Assign( mbs, node->key.pString );
 		}
 	}
@@ -903,8 +902,8 @@ static void META_Trace( DaoProcess *proc, DaoValue *p[], int N )
 		vRoutType = (DaoValue*) frame->context->routine->routType;
 		inst.value = (depth==1) ? (int)( proc->activeCode - proc->codes ) : frame->entry;
 		line.value = frame->context->routine->annotCodes->items.pVmc[inst.value]->line;
-		routName.data = frame->context->routine->routName;
-		nsName.data = frame->context->nameSpace->name;
+		routName.value = frame->context->routine->routName;
+		nsName.value = frame->context->nameSpace->name;
 
 		/* Put all the informations into a tuple which we append to the list. */
 		/* Tuple type: tuple<rout_name:string,rout_type:any,line:int,namespace:string> */

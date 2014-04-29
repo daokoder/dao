@@ -74,13 +74,13 @@ static void DNS_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
 	}
 	return;
 FieldNotExist:
-	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
+	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->bytes );
 	return;
 FieldNoPermit:
-	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTPERMIT, name->mbs );
+	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTPERMIT, name->bytes );
 	return;
 InvalidField:
-	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD, name->mbs );
+	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD, name->bytes );
 }
 static void DNS_SetField( DaoValue *self0, DaoProcess *proc, DString *name, DaoValue *value )
 {
@@ -99,16 +99,16 @@ static void DNS_SetField( DaoValue *self0, DaoProcess *proc, DString *name, DaoV
 	if( DaoValue_Move( value, & dest->value, dest->dtype ) ==0 ) goto TypeNotMatching;
 	return;
 FieldNotExist:
-	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->mbs );
+	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->bytes );
 	return;
 FieldNoPermit:
-	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTPERMIT, name->mbs );
+	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTPERMIT, name->bytes );
 	return;
 TypeNotMatching:
 	DaoProcess_RaiseException( proc, DAO_ERROR_TYPE, "not matching" );
 	return;
 InvalidField:
-	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD, name->mbs );
+	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD, name->bytes );
 }
 static void DNS_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
 {
@@ -129,11 +129,11 @@ static DaoTypeCore nsCore =
 DaoNamespace* DaoNamespace_GetNamespace( DaoNamespace *self, const char *name )
 {
 	DaoNamespace *ns;
-	DString mbs = DString_WrapMBS( name );
+	DString mbs = DString_WrapChars( name );
 	ns = DaoNamespace_FindNamespace( self, & mbs );
 	if( ns == NULL ){
 		ns = DaoNamespace_New( self->vmSpace, name );
-		DString_InsertMBS( ns->name, "::", 0, 0, -1 );
+		DString_InsertChars( ns->name, "::", 0, 0, -1 );
 		DString_Insert( ns->name, self->name, 0, 0, -1 );
 		DArray_Append( ns->namespaces, self );
 		DaoNamespace_AddConst( self, & mbs, (DaoValue*)ns, DAO_DATA_PUBLIC );
@@ -144,7 +144,7 @@ DaoNamespace* DaoNamespace_GetNamespace( DaoNamespace *self, const char *name )
 void DaoNamespace_AddValue( DaoNamespace *self, const char *s, DaoValue *v, const char *t )
 {
 	DaoType *abtp = NULL;
-	DString name = DString_WrapMBS( s );
+	DString name = DString_WrapChars( s );
 	if( t && strlen( t ) >0 ){
 		DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
 		parser->nameSpace = self;
@@ -156,7 +156,7 @@ void DaoNamespace_AddValue( DaoNamespace *self, const char *s, DaoValue *v, cons
 }
 DaoValue* DaoNamespace_FindData( DaoNamespace *self, const char *name )
 {
-	DString s = DString_WrapMBS( name );
+	DString s = DString_WrapChars( name );
 	return DaoNamespace_GetData( self, & s );
 }
 void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumItem *items )
@@ -166,7 +166,7 @@ void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumItem *items )
 	int i = 0;
 	memset( value, 0, sizeof(DaoValue) );
 	while( items[i].name != NULL ){
-		DString name = DString_WrapMBS( items[i].name );
+		DString name = DString_WrapChars( items[i].name );
 		switch( items[i].type ){
 		case DAO_INTEGER : value->xInteger.value = (int) items[i].value; break;
 		case DAO_FLOAT   : value->xFloat.value = (float) items[i].value; break;
@@ -180,7 +180,7 @@ void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumItem *items )
 }
 void DaoNamespace_AddConstValue( DaoNamespace *self, const char *name, DaoValue *value )
 {
-	DString s = DString_WrapMBS( name );
+	DString s = DString_WrapChars( name );
 	DaoNamespace_AddConst( self, & s, value, DAO_DATA_PUBLIC );
 }
 static void DaoTypeBase_Parents( DaoTypeBase *typer, DArray *parents )
@@ -222,7 +222,7 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 		DArray_Append( self->auxData, typer->core->kernel );
 	}
 	if( typer->core->kernel->values == NULL ){
-		DString defname = DString_WrapMBS( "default" );
+		DString defname = DString_WrapChars( "default" );
 		DaoValue buf = {0};
 		DaoValue *value = (DaoValue*) & buf;
 		DaoType *abtype = typer->core->kernel->abtype;
@@ -231,7 +231,7 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 		values = DHash_New( D_STRING, D_VALUE );
 		if( abtype && abtype->value ) DMap_Insert( values, & defname, abtype->value );
 		for(i=0; i<valCount; i++){
-			DString name = DString_WrapMBS( typer->numItems[i].name );
+			DString name = DString_WrapChars( typer->numItems[i].name );
 			double dv = typer->numItems[i].value;
 			value->type = typer->numItems[i].type;
 			switch( value->type ){
@@ -249,7 +249,7 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 			supValues = sup->core->kernel->values;
 			if( sup->numItems == NULL ) continue;
 			for(j=0; sup->numItems[j].name!=NULL; j++){
-				DString name = DString_WrapMBS( sup->numItems[j].name );
+				DString name = DString_WrapChars( sup->numItems[j].name );
 				it = DMap_Find( supValues, & name );
 				if( it && DMap_Find( values, & name ) == NULL )
 					DMap_Insert( values, it->key.pVoid, it->value.pVoid );
@@ -400,7 +400,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 
 		assert( DAO_ROUT_MAIN < (1<<DVM_NOT) );
 		for(i=DVM_NOT; i<=DVM_BITRIT; i++){
-			DString_SetMBS( name1, daoBitBoolArithOpers[i-DVM_NOT] );
+			DString_SetChars( name1, daoBitBoolArithOpers[i-DVM_NOT] );
 			if( DMap_Find( methods, name1 ) == NULL ) continue;
 			typer->core->kernel->attribs |= DAO_OPER_OVERLOADED;
 			break;
@@ -626,7 +626,7 @@ Finalize:
 	if( sptree == NULL && ret == DAO_DT_UNSCOPED ){
 		if( string == NULL ){
 			string = DString_New(1);
-			DString_SetMBS( string, name );
+			DString_SetChars( string, name );
 		}
 		DaoNamespace_AddType( self, string, type2 );
 		DaoNamespace_AddTypeConstant( self, string, type );
@@ -649,8 +649,8 @@ DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const cha
 {
 	DaoNamespace *ns;
 	DaoType *tp, *tp2;
-	DString name = DString_WrapMBS( old );
-	DString alias = DString_WrapMBS( type );
+	DString name = DString_WrapChars( old );
+	DString alias = DString_WrapChars( type );
 	DNode *node;
 	int i;
 	/* printf( "DaoNamespace_TypeDefine: %s %s\n", old, type ); */
@@ -691,7 +691,7 @@ DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const cha
 	tp2 = tp;
 	if( tp->tid && tp->tid <= DAO_TUPLE ){
 		tp = DaoType_Copy( tp );
-		DString_SetMBS( tp->name, type );
+		DString_SetChars( tp->name, type );
 	}
 	if( DaoNS_ParseType( self, type, tp, tp, tp != tp2 ) == DAO_DT_FAILED ){
 		printf( "type aliasing failed: %s to %s\n", old, type );
@@ -746,7 +746,7 @@ static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, 
 	if( DaoNS_ParseType( self, typer->name, ctype_type, cdata_type, 1 ) == DAO_DT_FAILED ){
 		GC_IncRC( ctype_type );
 		GC_DecRC( ctype_type );
-		printf( "type wrapping failed: %s from %s\n", typer->name, self->name->mbs );
+		printf( "type wrapping failed: %s from %s\n", typer->name, self->name->bytes );
 		return NULL;
 	}
 	return cdata_type;
@@ -896,14 +896,14 @@ int DaoNamespace_Load( DaoNamespace *self, const char *fname )
 	FILE *fin = fopen( fname, "r" );
 	int ret;
 	if( ! fin ){
-		DaoStream_WriteMBS( vms->errorStream, "ERROR: can not open file \"" );
-		DaoStream_WriteMBS( vms->errorStream, fname );
-		DaoStream_WriteMBS( vms->errorStream, "\".\n" );
+		DaoStream_WriteChars( vms->errorStream, "ERROR: can not open file \"" );
+		DaoStream_WriteChars( vms->errorStream, fname );
+		DaoStream_WriteChars( vms->errorStream, "\".\n" );
 		return 0;
 	}
 	src = DString_New(1);
 	DaoFile_ReadAll( fin, src, 1 );
-	ret = DaoProcess_Eval( self->vmSpace->mainProcess, self, src->mbs );
+	ret = DaoProcess_Eval( self->vmSpace->mainProcess, self, src->bytes );
 	DString_Delete( src );
 	return ret;
 }
@@ -953,13 +953,13 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 
 	DArray_Append( self->auxData, self->argParams );
 
-	DString_SetMBS( self->lang, "dao" );
+	DString_SetChars( self->lang, "dao" );
 	DArray_Append( self->namespaces, self );
 
 	DaoNamespace_SetName( self, nsname );
 	DaoNamespace_AddConst( self, self->name, (DaoValue*) self, DAO_DATA_PUBLIC );
 
-	DString_SetMBS( name, "none" );
+	DString_SetChars( name, "none" );
 	DaoNamespace_AddConst( self, name, dao_none_value, DAO_DATA_PUBLIC );
 
 	DArray_Append( self->constants, DaoConstant_New( dao_none_value ) ); /* reserved for main */
@@ -982,7 +982,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 }
 void DaoNamespace_Delete( DaoNamespace *self )
 {
-	/* printf( "DaoNamespace_Delete  %s\n", self->name->mbs ); */
+	/* printf( "DaoNamespace_Delete  %s\n", self->name->bytes ); */
 
 	DMap_Delete( self->lookupTable );
 	DArray_Delete( self->constants );
@@ -1026,13 +1026,13 @@ void DaoNamespace_InitConstEvalData( DaoNamespace *self )
 void DaoNamespace_SetName( DaoNamespace *self, const char *name )
 {
 	daoint i;
-	DString_SetMBS( self->name, name );
+	DString_SetChars( self->name, name );
 	i = DString_RFindChar( self->name, '/', -1 );
-	if( i != MAXSIZE ){
-		DString_SetMBS( self->file, name + i + 1 );
-		DString_SetDataMBS( self->path, name, i + 1 );
+	if( i != DAO_NULLPOS ){
+		DString_SetChars( self->file, name + i + 1 );
+		DString_SetBytes( self->path, name, i + 1 );
 		i = DString_RFindChar( self->name, '.', -1 );
-		if( i != MAXSIZE ) DString_SetMBS( self->lang, self->name->mbs + i + 1 );
+		if( i != DAO_NULLPOS ) DString_SetChars( self->lang, self->name->bytes + i + 1 );
 	}else{
 		DString_Clear( self->file );
 		DString_Clear( self->path );
@@ -1347,7 +1347,7 @@ int DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent )
 
 void DaoNamespace_AddCodeInliner( DaoNamespace *self, const char *name, DaoCodeInliner fp )
 {
-	DString mbs = DString_WrapMBS( name );
+	DString mbs = DString_WrapChars( name );
 	DMap_Insert( self->codeInliners, & mbs, (void*)fp );
 }
 DaoCodeInliner DaoNamespace_FindCodeInliner( DaoNamespace *self, DString *name )
@@ -1383,9 +1383,9 @@ DaoType* DaoNamespace_FindType( DaoNamespace *self, DString *name )
 	}
 	return NULL;
 }
-DaoType* DaoNamespace_FindTypeMBS( DaoNamespace *self, const char *name )
+DaoType* DaoNamespace_FindTypeChars( DaoNamespace *self, const char *name )
 {
-	DString name2 = DString_WrapMBS( name );
+	DString name2 = DString_WrapChars( name );
 	return DaoNamespace_FindType( self, & name2 );
 }
 DaoType* DaoNamespace_ParseType( DaoNamespace *self, const char *name )
@@ -1395,7 +1395,7 @@ DaoType* DaoNamespace_ParseType( DaoNamespace *self, const char *name )
 DaoType* DaoNamespace_AddType( DaoNamespace *self, DString *name, DaoType *type )
 {
 	DNode *node;
-	if( DString_FindChar( type->name, '@', 0 ) == MAXSIZE ){
+	if( DString_FindChar( type->name, '@', 0 ) == DAO_NULLPOS ){
 		DMutex_Lock( & mutex_type_map );
 		node = MAP_Find( self->abstypes, name );
 		if( node == NULL ){
@@ -1502,54 +1502,54 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 	}
 
 	if( p->type == DAO_LIST ){
-		if( list->items.size == 0 ) return dao_type_list_empty;
+		if( list->value->size == 0 ) return dao_type_list_empty;
 		return DaoNamespace_MakeType( self, "list", DAO_LIST, NULL, NULL, 0 );
 	}else if( p->type == DAO_MAP ){
-		if( map->items->size == 0 ) return dao_type_map_empty;
+		if( map->value->size == 0 ) return dao_type_map_empty;
 		return DaoNamespace_MakeType( self, "map", DAO_MAP, NULL, NULL, 0 );
 	}
 
 	mbs = DString_New(1);
 	if( p->type <= DAO_TUPLE ){
-		DString_SetMBS( mbs, coreTypeNames[p->type] );
+		DString_SetChars( mbs, coreTypeNames[p->type] );
 		if( p->type == DAO_TUPLE ){
-			DString_SetMBS( mbs, "tuple<" );
+			DString_SetChars( mbs, "tuple<" );
 			nested = DArray_New(0);
 			for(i=0; i<tuple->size; i++){
-				itp = DaoNamespace_GetType( self, tuple->items[i] );
+				itp = DaoNamespace_GetType( self, tuple->values[i] );
 				DArray_Append( nested, itp );
 				DString_Append( mbs, itp->name );
-				if( i+1 < tuple->size ) DString_AppendMBS( mbs, "," );
+				if( i+1 < tuple->size ) DString_AppendChars( mbs, "," );
 			}
-			DString_AppendMBS( mbs, ">" );
+			DString_AppendChars( mbs, ">" );
 #ifdef DAO_WITH_NUMARRAY
 		}else if( p->type == DAO_ARRAY ){
 			nested = DArray_New(0);
 			if( array->size ==0 ){
-				DString_AppendMBS( mbs, "<?>" );
+				DString_AppendChars( mbs, "<?>" );
 				DArray_Append( nested, dao_type_udf );
 			}else if( array->etype == DAO_INTEGER ){
 				itp = DaoNamespace_MakeType( self, "int", DAO_INTEGER, 0,0,0 );
-				DString_AppendMBS( mbs, "<int>" );
+				DString_AppendChars( mbs, "<int>" );
 				DArray_Append( nested, itp );
 			}else if( array->etype == DAO_FLOAT ){
 				itp = DaoNamespace_MakeType( self, "float", DAO_FLOAT, 0,0,0 );
-				DString_AppendMBS( mbs, "<float>" );
+				DString_AppendChars( mbs, "<float>" );
 				DArray_Append( nested, itp );
 			}else if( array->etype == DAO_DOUBLE ){
 				itp = DaoNamespace_MakeType( self, "double", DAO_DOUBLE, 0,0,0 );
-				DString_AppendMBS( mbs, "<double>" );
+				DString_AppendChars( mbs, "<double>" );
 				DArray_Append( nested, itp );
 			}else{
 				itp = DaoNamespace_MakeType( self, "complex", DAO_COMPLEX, 0,0,0 );
-				DString_AppendMBS( mbs, "<complex>" );
+				DString_AppendChars( mbs, "<complex>" );
 				DArray_Append( nested, itp );
 			}
 #endif
 		}
 		abtp = DaoNamespace_FindType( self, mbs );
 		if( abtp == NULL ){
-			abtp = DaoType_New( mbs->mbs, tid, NULL, nested );
+			abtp = DaoType_New( mbs->bytes, tid, NULL, nested );
 			if( p->type && p->type < DAO_ARRAY ){
 				simpleTypes[ p->type ] = abtp;
 				GC_IncRC( abtp );
@@ -1557,19 +1557,19 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 			abtp = DaoNamespace_AddType( self, abtp->name, abtp );
 		}
 	}else if( p->type == DAO_TYPE ){
-		DString_SetMBS( mbs, "type<" );
+		DString_SetChars( mbs, "type<" );
 		nested = DArray_New(0);
 		DArray_Append( nested, itp );
 		DString_Append( mbs, itp->name );
-		DString_AppendMBS( mbs, ">" );
+		DString_AppendChars( mbs, ">" );
 		abtp = DaoNamespace_FindType( self, mbs );
 		if( abtp == NULL ){
-			abtp = DaoType_New( mbs->mbs, p->type, NULL, nested );
+			abtp = DaoType_New( mbs->bytes, p->type, NULL, nested );
 			abtp = DaoNamespace_AddType( self, abtp->name, abtp );
 		}
 	}else{
 		typer = DaoValue_GetTyper( p );
-		DString_SetMBS( mbs, typer->name );
+		DString_SetChars( mbs, typer->name );
 		abtp = DaoNamespace_FindType( self, mbs );
 		if( abtp == NULL ){
 			abtp = DaoType_New( typer->name, p->type, NULL, NULL );
@@ -1627,7 +1627,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 
 	mbs = DString_New(1);
 	DString_Reserve( mbs, 128 );
-	DString_SetMBS( mbs, name );
+	DString_SetChars( mbs, name );
 	if( tid == DAO_CODEBLOCK ) DString_Clear( mbs );
 	if( N > 0 || tid == DAO_CODEBLOCK ){
 		nstd = DArray_New(0);
@@ -1635,8 +1635,8 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		for(i=0; i<N; i++){
 			DaoType *it = nest[i];
 			if( tid == DAO_TUPLE && it->tid == DAO_PAR_DEFAULT ){
-				it = DaoNamespace_MakeType( self, it->fname->mbs, DAO_PAR_NAMED, it->aux, NULL, 0 );
-			}else if( it->tid == DAO_PAR_NAMED && DString_FindMBS( it->name, "var<", 0 ) == 0 ){
+				it = DaoNamespace_MakeType( self, it->fname->bytes, DAO_PAR_NAMED, it->aux, NULL, 0 );
+			}else if( it->tid == DAO_PAR_NAMED && DString_FindChars( it->name, "var<", 0 ) == 0 ){
 				it = it->nested->items.pType[0];
 			}
 
@@ -1646,24 +1646,24 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		}
 		if( attrib & DAO_TYPE_VARIADIC ){
 			if( N ) DString_AppendChar( mbs, ',' );
-			DString_AppendMBS( mbs, "..." );
+			DString_AppendChars( mbs, "..." );
 		}
 		if( (tid == DAO_ROUTINE || tid == DAO_CODEBLOCK) && pb && pb->type == DAO_TYPE ){
-			DString_AppendMBS( mbs, "=>" );
+			DString_AppendChars( mbs, "=>" );
 			DString_Append( mbs, ((DaoType*)pb)->name );
 		}
 		if( n || tid != DAO_VARIANT ) DString_AppendChar( mbs, '>' );
 	}else if( tid == DAO_LIST || tid == DAO_ARRAY ){
 		nstd = DArray_New(0);
-		DString_AppendMBS( mbs, "<any>" );
+		DString_AppendChars( mbs, "<any>" );
 		DArray_Append( nstd, any );
 	}else if( tid == DAO_MAP ){
 		nstd = DArray_New(0);
-		DString_AppendMBS( mbs, "<any,any>" );
+		DString_AppendChars( mbs, "<any,any>" );
 		DArray_Append( nstd, any );
 		DArray_Append( nstd, any );
 	}else if( tid == DAO_TUPLE ){
-		DString_AppendMBS( mbs, "<...>" );
+		DString_AppendChars( mbs, "<...>" );
 		attrib |= DAO_TYPE_VARIADIC;
 	}else if( tid == DAO_CLASS && pb ){
 		/*
@@ -1681,35 +1681,35 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		goto Finalizing;
 	}else if( (tid == DAO_ROUTINE || tid == DAO_CODEBLOCK) && pb && pb->type == DAO_TYPE ){
 		DString_AppendChar( mbs, '<' );
-		DString_AppendMBS( mbs, "=>" );
+		DString_AppendChars( mbs, "=>" );
 		DString_Append( mbs, ((DaoType*)pb)->name );
 		DString_AppendChar( mbs, '>' );
 	}else if( tid == DAO_PAR_NAMED ){
-		DString_AppendMBS( mbs, ":" );
+		DString_AppendChars( mbs, ":" );
 		if( pb->type == DAO_TYPE ) DString_Append( mbs, ((DaoType*)pb)->name );
 	}else if( tid == DAO_PAR_DEFAULT ){
-		DString_AppendMBS( mbs, "=" );
+		DString_AppendChars( mbs, "=" );
 		if( pb->type == DAO_TYPE ) DString_Append( mbs, ((DaoType*)pb)->name );
 	}else if( tid == DAO_PAR_VALIST ){
 		if( pb && pb->type == DAO_TYPE ){
-			DString_AppendMBS( mbs, ":" );
+			DString_AppendChars( mbs, ":" );
 			DString_Append( mbs, ((DaoType*)pb)->name );
 		}
 	}
 	if( tid == DAO_CODEBLOCK ){
-		mbs->mbs[0] = '[';
-		mbs->mbs[mbs->size-1] = ']';
+		mbs->bytes[0] = '[';
+		mbs->bytes[mbs->size-1] = ']';
 	}
 	tp = DaoNamespace_FindType( self, mbs );
 	if( tp == NULL ){
-		tp = DaoType_New( mbs->mbs, tid, pb, nstd );
+		tp = DaoType_New( mbs->bytes, tid, pb, nstd );
 		tp->attrib |= attrib;
 		if( attrib & DAO_TYPE_VARIADIC ) tp->variadic = 1;
 		if( tid == DAO_PAR_NAMED && N > 0 ){
 			DaoType *it = nest[0];
 			DaoValue *aux = (DaoValue*) it;
 			DString *fname = NULL;
-			if( it->tid == DAO_PAR_NAMED && DString_FindMBS( it->name, "var<", 0 ) != 0 ){
+			if( it->tid == DAO_PAR_NAMED && DString_FindChars( it->name, "var<", 0 ) != 0 ){
 				aux = it->aux;
 				fname = it->fname;
 			}
@@ -1717,7 +1717,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 			GC_ShiftRC( aux, tp->aux );
 			tp->aux = aux;
 		}else if( tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ){
-			DString_SetMBS( tp->fname, name );
+			DString_SetChars( tp->fname, name );
 		}
 		DaoType_CheckAttributes( tp );
 		tp = DaoNamespace_AddType( self, tp->name, tp );
@@ -1742,10 +1742,10 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 		abtp->mapNames = DMap_Copy( routype->mapNames );
 	}
 
-	if( routype->name->mbs[0] == '@' ) DString_AppendChar( abtp->name, '@' );
-	DString_AppendMBS( abtp->name, "routine<" );
+	if( routype->name->bytes[0] == '@' ) DString_AppendChar( abtp->name, '@' );
+	DString_AppendChars( abtp->name, "routine<" );
 	for(i=0; i<routype->nested->size; i++){
-		if( i >0 ) DString_AppendMBS( abtp->name, "," );
+		if( i >0 ) DString_AppendChars( abtp->name, "," );
 		tp = tp2 = routype->nested->items.pType[i];
 		if( tp && (tp->tid == DAO_PAR_NAMED || tp->tid == DAO_PAR_DEFAULT) ){
 			tp2 = & tp->aux->xType;
@@ -1760,19 +1760,19 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 				tp2 = & tp2->aux->xType;
 			}
 		}
-		/* XXX typing DString_AppendMBS( abtp->name, tp ? tp->name->mbs : "..." ); */
+		/* XXX typing DString_AppendChars( abtp->name, tp ? tp->name->bytes : "..." ); */
 		if( tp2 != tp && tp2 != & tp->aux->xType ){
-			tp = DaoType_New( tp->fname->mbs, tp->tid, (DaoValue*) tp2, NULL );
+			tp = DaoType_New( tp->fname->bytes, tp->tid, (DaoValue*) tp2, NULL );
 		}
 		DString_Append( abtp->name, tp->name );
 		DArray_Append( abtp->nested, tp );
 	}
 	tp = retp ? retp : & routype->aux->xType;
 	if( tp ){
-		DString_AppendMBS( abtp->name, "=>" );
+		DString_AppendChars( abtp->name, "=>" );
 		DString_Append( abtp->name, tp->name );
 	}
-	DString_AppendMBS( abtp->name, ">" );
+	DString_AppendChars( abtp->name, ">" );
 	GC_ShiftRC( tp, abtp->aux );
 	abtp->aux = (DaoValue*) tp;
 	if( routype->cbtype ){
@@ -1844,8 +1844,8 @@ DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols )
 	int n = strlen( symbols );
 	int i, k = 0, t1 = 0, t2 = 0;
 
-	DString_SetMBS( name, "enum<" );
-	DString_AppendMBS( name, symbols );
+	DString_SetChars( name, "enum<" );
+	DString_AppendChars( name, symbols );
 	DString_AppendChar( name, '>' );
 	type = DaoNamespace_FindType( self, name );
 	if( type ){
@@ -1853,7 +1853,7 @@ DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols )
 		return type;
 	}
 	key = DString_New(1);
-	type = DaoType_New( name->mbs, DAO_ENUM, NULL, NULL );
+	type = DaoType_New( name->bytes, DAO_ENUM, NULL, NULL );
 	type->mapNames = DMap_New(D_STRING,0);
 	for(i=0; i<n; i++){
 		char sym = symbols[i];
@@ -1892,8 +1892,8 @@ DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 		DString_InsertChar( name, '\'', 0 );
 		DString_AppendChar( name, '\'' );
 	}
-	if( name->size ==0 && value->type ==0 ) DString_SetMBS( name, "none" );
-	type = DaoNamespace_MakeType( self->vmSpace->nsInternal, name->mbs, DAO_VALTYPE, 0,0,0 );
+	if( name->size ==0 && value->type ==0 ) DString_SetChars( name, "none" );
+	type = DaoNamespace_MakeType( self->vmSpace->nsInternal, name->bytes, DAO_VALTYPE, 0,0,0 );
 	DaoValue_Copy( value, & type->aux );
 	DString_Delete( name );
 	return type;
@@ -1922,8 +1922,8 @@ DaoTuple* DaoNamespace_MakePair( DaoNamespace *self, DaoValue *first, DaoValue *
 	DaoType *type2 = DaoNamespace_MakeValueType( self, second );
 	tuple->ctype = DaoNamespace_MakePairType( self, type1, type2 );
 	GC_IncRC( tuple->ctype );
-	DaoValue_Copy( first, & tuple->items[0] );
-	DaoValue_Copy( second, & tuple->items[1] );
+	DaoValue_Copy( first, & tuple->values[0] );
+	DaoValue_Copy( second, & tuple->values[1] );
 	tuple->subtype = DAO_PAIR;
 	return tuple;
 }

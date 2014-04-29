@@ -505,8 +505,8 @@ static void DaoMT_RunListFunctional( void *p )
 	DaoList *list2 = (DaoList*) self->result;
 	DaoProcess *clone = self->clone;
 	DaoVmCode *sect = self->sect;
-	DaoValue **items = list->items.items.pValue;
-	daoint i, n = list->items.size;
+	DaoValue **items = list->value->items.pValue;
+	daoint i, n = list->value->size;
 
 	DaoMT_InitProcess( self->proto, clone );
 	tidint.value = self->first;
@@ -551,7 +551,7 @@ static void DaoMT_RunMapFunctional( void *p )
 	DaoMT_InitProcess( self->proto, clone );
 	tidint.value = self->first;
 	type = type && type->nested->size > 1 ? type->nested->items.pType[1] : NULL;
-	for(node=DMap_First( map->items ); node; node=DMap_Next(map->items, node) ){
+	for(node=DMap_First( map->value ); node; node=DMap_Next(map->value, node) ){
 		if( (i++) % self->step != self->first ) continue;
 		if( sect->b >0 ) DaoProcess_SetValue( clone, sect->a, node->key.pValue );
 		if( sect->b >1 ) DaoProcess_SetValue( clone, sect->a+1, node->value.pValue );
@@ -696,9 +696,9 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 	if( threads <= 0 ) threads = 2;
 	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
 	if( list ){
-		DArray_Clear( & list->items );
-		if( param->type == DAO_LIST ) DArray_Resize( & list->items, param->xList.items.size, NULL );
-		if( param->type == DAO_MAP ) DArray_Resize( & list->items, param->xMap.items->size, NULL );
+		DArray_Clear( list->value );
+		if( param->type == DAO_LIST ) DArray_Resize( list->value, param->xList.value->size, NULL );
+		if( param->type == DAO_MAP ) DArray_Resize( list->value, param->xMap.value->size, NULL );
 #ifdef DAO_WITH_NUMARRAY
 	}else if( array && F == DVM_FUNCT_MAP ){
 		DaoArray_GetSliceShape( (DaoArray*) param, & array->dims, & array->ndim );
@@ -743,15 +743,15 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 	if( F == DVM_FUNCT_FIND ){
 		DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
 		if( param->type == DAO_LIST && index != -1 ){
-			DaoValue **items = param->xList.items.items.pValue;
-			GC_ShiftRC( items[index], tuple->items[1] );
-			tuple->items[1] = items[index];
-			tuple->items[0]->xInteger.value = index;
+			DaoValue **items = param->xList.value->items.pValue;
+			GC_ShiftRC( items[index], tuple->values[1] );
+			tuple->values[1] = items[index];
+			tuple->values[0]->xInteger.value = index;
 		}else if( param->type == DAO_MAP && node ){
-			GC_ShiftRC( node->key.pValue, tuple->items[0] );
-			GC_ShiftRC( node->value.pValue, tuple->items[1] );
-			tuple->items[0] = node->key.pValue;
-			tuple->items[1] = node->value.pValue;
+			GC_ShiftRC( node->key.pValue, tuple->values[0] );
+			GC_ShiftRC( node->value.pValue, tuple->values[1] );
+			tuple->values[0] = node->key.pValue;
+			tuple->values[1] = node->value.pValue;
 		}
 	}
 	if( status ) DaoProcess_RaiseException( proc, DAO_ERROR, "code section execution failed!" );

@@ -62,8 +62,8 @@ typedef struct DaoOptimizer  DaoOptimizer;
 typedef struct DaoDataCache  DaoDataCache;
 
 
-#define STRCMP( x, y ) strcmp( (x)->mbs, y )
-#define TOKCMP( x, y ) strcmp( (x)->string.mbs, y )
+#define STRCMP( x, y ) strcmp( (x)->bytes, y )
+#define TOKCMP( x, y ) strcmp( (x)->string.bytes, y )
 
 /*
 // Bit structure of the lookup index:

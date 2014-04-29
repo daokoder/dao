@@ -303,7 +303,7 @@ static int DaoTaskEvent_CheckSelect( DaoTaskEvent *self )
 		}
 		if( move ) break;
 	}
-	if( self->selects->items->size == closed ) move = 1;
+	if( self->selects->value->size == closed ) move = 1;
 	return move;
 }
 static void DaoCallServer_ActivateEvents()
@@ -319,7 +319,7 @@ static void DaoCallServer_ActivateEvents()
 #ifdef DEBUG
 	sprintf( message, "WARNING: try activating events (%i,%i,%i,%i)!\n", server->total,
 			server->idle, (int)server->events->size, (int)server->events2->size );
-	DaoStream_WriteMBS( mainVmSpace->errorStream, message );
+	DaoStream_WriteChars( mainVmSpace->errorStream, message );
 #endif
 	for(i=0; i<server->events2->size; ++i){
 		DaoTaskEvent *event = (DaoTaskEvent*) server->events2->items.pVoid[i];
@@ -353,7 +353,7 @@ static void DaoCallServer_ActivateEvents()
 	DCondVar_Signal( & server->condv );
 	if( count == 0 ){
 		DaoStream *stream = mainVmSpace->errorStream;
-		DaoStream_WriteMBS( stream, "ERROR: All tasklets are suspended - deadlock!\n" );
+		DaoStream_WriteChars( stream, "ERROR: All tasklets are suspended - deadlock!\n" );
 		exit(1);
 	}
 }
@@ -563,8 +563,8 @@ static int DaoCallServer_CheckEvent( DaoTaskEvent *event, DaoFuture *fut, DaoCha
 		break;
 	case DAO_EVENT_WAIT_SELECT :
 		if( event->selects == NULL ) break;
-		if( fut  ) move |= DMap_Find( event->selects->items, fut ) != NULL;
-		if( chan ) move |= DMap_Find( event->selects->items, chan ) != NULL;
+		if( fut  ) move |= DMap_Find( event->selects->value, fut ) != NULL;
+		if( chan ) move |= DMap_Find( event->selects->value, chan ) != NULL;
 		//move = DaoTaskEvent_CheckSelect( event );
 		break;
 	default: break;
@@ -714,7 +714,7 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 				}
 			}
 			if( selected == NULL ) selected = (DaoValue*) closed;
-			if( event->state == DAO_EVENT_WAIT && event->selects->items->size ){
+			if( event->state == DAO_EVENT_WAIT && event->selects->value->size ){
 				if( selected == NULL ) goto MoveToWaiting;
 			}
 
@@ -722,7 +722,7 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 			GC_ShiftRC( selected, event->selected );
 			event->message = message;
 			event->selected = selected;
-			event->auxiliary = event->selects->items->size == 0;
+			event->auxiliary = event->selects->value->size == 0;
 			event->type = DAO_EVENT_RESUME_TASKLET;
 			/* change status to not finished: */
 			if( chselect != NULL || futselect != NULL ) event->auxiliary = 0;
@@ -735,7 +735,7 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 			}
 			if( futselect != NULL || closed != NULL ){
 				void *key = futselect ? (void*)futselect : (void*)closed;
-				DMap_Erase( event->selects->items, key );
+				DMap_Erase( event->selects->value, key );
 			}
 			break;
 		default: break;
@@ -950,17 +950,17 @@ static DaoValue* DaoValue_DeepCopy( DaoValue *self )
 		DaoList *copy = DaoList_New();
 		GC_ShiftRC( list->ctype, copy->ctype );
 		copy->ctype = list->ctype;
-		for(i=0; i<list->items.size; ++i){
-			DaoValue *value = DaoValue_DeepCopy( list->items.items.pValue[i] );
+		for(i=0; i<list->value->size; ++i){
+			DaoValue *value = DaoValue_DeepCopy( list->value->items.pValue[i] );
 			DaoList_Append( copy, value );
 		}
 		return (DaoValue*) copy;
 	}else if( self->type == DAO_MAP ){
 		DaoMap *map = (DaoMap*) self;
-		DaoMap *copy = DaoMap_New( map->items->hashing );
+		DaoMap *copy = DaoMap_New( map->value->hashing );
 		GC_ShiftRC( map->ctype, copy->ctype );
 		copy->ctype = map->ctype;
-		for(it=DMap_First(map->items); it; it=DMap_Next(map->items,it)){
+		for(it=DMap_First(map->value); it; it=DMap_Next(map->value,it)){
 			DaoValue *key = DaoValue_DeepCopy( it->key.pValue );
 			DaoValue *value = DaoValue_DeepCopy( it->value.pValue );
 			DaoMap_Insert( copy, key, value );
@@ -972,7 +972,7 @@ static DaoValue* DaoValue_DeepCopy( DaoValue *self )
 		GC_ShiftRC( tuple->ctype, copy->ctype );
 		copy->ctype = tuple->ctype;
 		for(i=0; i<tuple->size; ++i){
-			DaoValue *value = DaoValue_DeepCopy( tuple->items[i] );
+			DaoValue *value = DaoValue_DeepCopy( tuple->values[i] );
 			DaoTuple_SetItem( copy, value, i );
 		}
 		return (DaoValue*) copy;
@@ -995,10 +995,10 @@ static void CHANNEL_New( DaoProcess *proc, DaoValue *par[], int N )
 	CHANNEL_SetCap( self, par[0], proc );
 	if( DaoType_CheckPrimitiveType( retype->nested->items.pType[0] ) == 0 ){
 		DString *s = DString_New(1);
-		DString_AppendMBS( s, "data type " );
+		DString_AppendChars( s, "data type " );
 		DString_Append( s, retype->nested->items.pType[0]->name );
-		DString_AppendMBS( s, " is not supported for channel" );
-		DaoProcess_RaiseException( proc, DAO_ERROR, s->mbs );
+		DString_AppendChars( s, " is not supported for channel" );
+		DaoProcess_RaiseException( proc, DAO_ERROR, s->bytes );
 		DString_Delete( s );
 	}
 	DaoProcess_PutValue( proc, (DaoValue*) self );

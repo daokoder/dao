@@ -133,17 +133,12 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max, u
 	case DAO_COMPLEX :
 		data = & self->xComplex.value;  len = sizeof(complex16);  break;
 	case DAO_ENUM  :
-		data = self->xEnum.etype->name->mbs; /* XXX */
+		data = self->xEnum.etype->name->bytes; /* XXX */
 		len = self->xEnum.etype->name->size;
 		break;
 	case DAO_STRING  :
-		if( self->xString.data->mbs ){
-			data = self->xString.data->mbs;
-			len = self->xString.data->size;
-		}else{
-			data = self->xString.data->wcs;
-			len = self->xString.data->size * sizeof(wchar_t);
-		}
+		data = self->xString.value->bytes;
+		len = self->xString.value->size;
 		break;
 	case DAO_ARRAY :
 		data = self->xArray.data.p;
@@ -158,7 +153,7 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max, u
 		break;
 	case DAO_TUPLE :
 		for(i=0; i<self->xTuple.size; i++){
-			id = DaoValue_Hash( self->xTuple.items[i], buf, id, max, seed );
+			id = DaoValue_Hash( self->xTuple.values[i], buf, id, max, seed );
 			if( id >= max ) break;
 		}
 		break;
@@ -187,13 +182,7 @@ static int DHash_HashIndex( DMap *self, void *key )
 	case D_STRING :
 		s = (DString*)key;
 		m = s->size;
-		data = NULL;
-		if( s->mbs ){
-			data = s->mbs;
-		}else{
-			data = s->wcs;
-			m *= sizeof(wchar_t);
-		}
+		data = s->bytes;
 		id = MurmurHash3( data, m, self->hashing ) % T;
 		break;
 	case D_VALUE :
@@ -729,11 +718,11 @@ static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
 			DaoValue *skv1 = (DaoValue*) k1;
 			DaoValue *skv2 = (DaoValue*) k2;
 			if( skv1->type == DAO_STRING ){
-				s1 = skv1->xString.data;
-				s2 = skv2->xString.data;
+				s1 = skv1->xString.value;
+				s2 = skv2->xString.value;
 			}
 		}
-		if( s1 != NULL && (s1->mbs == NULL) != (s2->mbs == NULL) ) cmp = s1->mbs ? 1 : -1;
+		if( s1 != NULL && (s1->bytes == NULL) != (s2->bytes == NULL) ) cmp = s1->bytes ? 1 : -1;
 	}
 	return cmp;
 }
