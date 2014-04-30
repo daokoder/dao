@@ -1428,7 +1428,7 @@ static DaoFuncItem stringMeths[] =
 
 	{ DaoSTR_Tolower, "tolower( self :string ) =>string" },
 	{ DaoSTR_Toupper, "toupper( self :string ) =>string" },
-	{ DaoSTR_Reverse, "reverse( self :string, unit :enum<byte,char> ) =>string" },
+	{ DaoSTR_Reverse, "reverse( self :string, unit :enum<byte,char> = $char ) =>string" },
 
 	{ DaoSTR_Iterate,   "iterate( self :string )[char :int, index :int]" },
 	{ DaoSTR_Count,  "count( self :string )[char :int, index :int =>int]=>int" },

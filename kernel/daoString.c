@@ -845,12 +845,12 @@ void DString_Reverse( DString *self, int utf8 )
 	daoint size = self->size;
 	daoint i, front = 0, back = size - 1;
 	daoint start = 0, end = 2*size;
-	uchar_t *source = (uchar_t*) self->bytes;
-	uchar_t *dest;
+	uchar_t *source, *dest;
 
 	if( size <= 1 ) return;
 	if( self->sharing ) DString_Detach( self, self->size );
 
+	source = (uchar_t*) self->bytes;
 	if( utf8 == 0 ){
 		uchar_t *front = source;
 		uchar_t *back = source + size - 1;
@@ -868,8 +868,8 @@ void DString_Reverse( DString *self, int utf8 )
 	DString_Reserve( aux, 2*size );
 	dest = (uchar_t*) aux->bytes;
 	while( front < back ){
-		daoint pos1 = DString_LocateChar( self, front, 1 ); /* next; */
-		daoint pos2 = DString_LocateChar( self, back, 0 );  /* current; */
+		daoint pos1 = DString_LocateCurrentChar( self, front );
+		daoint pos2 = DString_LocateCurrentChar( self, back );
 		if( pos1 == DAO_NULLPOS ){
 			dest[--end] = source[front++];
 		}else{
