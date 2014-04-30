@@ -324,44 +324,6 @@ void DString_AppendChar( DString *self, const char ch )
 	self->bytes[ self->size ] = 0;
 }
 
-#define FormU8Trail( ch, shift )  (((ch >> 6*shift) & 0x3F) | (0x1 << 7))
-
-void DString_AppendWChar( DString *self, size_t ch )
-{
-	DString_Reserve( self, self->size + 6 );
-
-	if( ch < 0x80 ){  /* 0xxxxxxx */
-		self->bytes[self->size++] = ch;
-	}else if( ch < 0x800 ){  /* 110xxxxx 10xxxxxx */
-		self->bytes[self->size++] = (char)((ch >> 6) + (0x3 << 6));
-		self->bytes[self->size++] = FormU8Trail( ch, 0 );
-	}else if( ch < 0x10000 ){   /* 1110xxxx 10xxxxxx 10xxxxxx */
-		self->bytes[self->size++] = (char)((ch >> 12) + (0x7 << 5));
-		self->bytes[self->size++] = FormU8Trail( ch, 1 );
-		self->bytes[self->size++] = FormU8Trail( ch, 0 );
-	}else if( ch < 0x200000 ){  /* 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx */
-		self->bytes[self->size++] = (char)((ch >> 18) + (0xF << 4));
-		self->bytes[self->size++] = FormU8Trail( ch, 2 );
-		self->bytes[self->size++] = FormU8Trail( ch, 1 );
-		self->bytes[self->size++] = FormU8Trail( ch, 0 );
-	}else if( ch < 0x4000000 ){  /* 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx */
-		self->bytes[self->size++] = (char)((ch >> 24) | (0x1F << 3));
-		self->bytes[self->size++] = FormU8Trail( ch, 3 );
-		self->bytes[self->size++] = FormU8Trail( ch, 2 );
-		self->bytes[self->size++] = FormU8Trail( ch, 1 );
-		self->bytes[self->size++] = FormU8Trail( ch, 0 );
-	}else if( ch < 0x8000000 ){  /* 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx */
-		self->bytes[self->size++] = (char)((ch >> 30) | (0x3F << 2));
-		self->bytes[self->size++] = FormU8Trail( ch, 4 );
-		self->bytes[self->size++] = FormU8Trail( ch, 3 );
-		self->bytes[self->size++] = FormU8Trail( ch, 2 );
-		self->bytes[self->size++] = FormU8Trail( ch, 1 );
-		self->bytes[self->size++] = FormU8Trail( ch, 0 );
-	}else{
-		/* XXX */
-	}
-	self->bytes[self->size] = 0;
-}
 
 void DString_SetBytes( DString *self, const char *bytes, daoint count )
 {
@@ -584,129 +546,6 @@ void DString_Trim( DString *self )
 		DString_Erase( self, 0, i );
 	}
 }
-daoint DString_CheckUTF8( DString *self )
-{
-	daoint i = 0, m, size = self->size;
-	daoint total = 0;
-	daoint valid = 0;
-	unsigned char *mbs;
-
-	mbs = (unsigned char*) self->bytes;
-	while( i < size ){
-		unsigned char ch = mbs[i++];
-		m = utf8_markers[ ch ];
-		total += 1;
-		if( m == 1 || (ch <= 0x7f && ! isprint( ch )) ) continue; /*invalid encoding*/
-		while( m > 0 && i < size && utf8_markers[ mbs[i] ] == 1 ) i += 1, m -= 1;
-		valid += m <= 1;
-	}
-	if( valid >= 0.95 * total ) return total;
-	return 0;
-}
-void DString_ChopUtf8( DString *self )
-{
-	daoint i, k;
-	unsigned char *chs;
-
-	DString_Detach( self, self->size );
-	DString_Chop( self );
-
-	if( DString_CheckUTF8( self ) && self->bytes && self->size ){
-		chs = (unsigned char*) self->bytes;
-		i = self->size - 1;
-		k = utf8_markers[ chs[i] ];
-		if( k ==1 ){
-			while( i && utf8_markers[ chs[i] ] ==1 ) i --;
-			k = utf8_markers[ chs[i] ];
-			if( k == 0 ){
-				chs[k+1] = 0;
-				self->size = k+1;
-			}else if( (self->size - i) != k ){
-				if( (self->size - i) < k ){
-					chs[i] = 0;
-					self->size = i;
-				}else{
-					chs[i+k] = 0;
-					self->size = i + k;
-				}
-			}
-		}else if( k !=0 ){
-			chs[i] = 0;
-			self->size --;
-		}
-	}
-}
-void DString_Reverse( DString *self )
-{
-	DString *front, *back;
-	daoint m, utf8 = DString_CheckUTF8( self );
-	daoint i, k, gi, gj, size = self->size;
-	daoint half = size / 2;
-	daoint j;
-	unsigned char ch, *mbs;
-	if( size <= 1 ) return;
-	if( self->sharing ) DString_Detach( self, self->size );
-	if( utf8 == 0 ){
-		for(i=0; i<half; i++){
-			char c = self->bytes[i];
-			self->bytes[i] = self->bytes[size-1-i];
-			self->bytes[size-1-i] = c;
-		}
-		return;
-	}
-	front = DString_New();
-	back = DString_New();
-	mbs = (unsigned char*) self->bytes;
-	i = 0;
-	j = size - 1;
-	gi = gj = 0;
-	while( utf8 > 1 ){
-		if( front->size ==0 ){ /* get valid multibytes from front */
-			daoint i2 = 0;
-			gi += 1;
-			ch = mbs[i++];
-			m = utf8_markers[ ch ];
-			DString_InsertChar( front, ch, 0 );
-			while( m > 1 && i < size && utf8_markers[ mbs[i] ] == 1 ){
-				DString_InsertChar( front, self->bytes[i], ++i2 );
-				gi += 1;
-				i += 1;
-				m -= 1;
-			}
-		}
-		if( back->size ==0 ){ /* get valid multibytes from back */
-			daoint j2 = j;
-			k = 1;
-			while( k < 7 && j >= 0 && utf8_markers[ mbs[j] ] == 1 ) j -= 1, k += 1;
-			m = utf8_markers[ mbs[j] ];
-			if( m && m != k ){
-				DString_AppendChar( back, mbs[j2] );
-				gj += 1;
-				j = j2 - 1;
-			}else{
-				DString_AppendBytes( back, (char*)mbs+j, k );
-				gj += k;
-				j -= 1;
-			}
-		}
-		if( back->size <= gi ){ /* enough space reserved for back mulitbytes */
-			strncpy( self->bytes + i - gi, back->bytes, back->size );
-			gi -= back->size;
-			back->size = 0;
-			utf8 -= 1;
-		}
-		if( front->size <= gj ){ /* enough space reserved for front mulitbytes */
-			strncpy( self->bytes + j + 1 + (gj - front->size), front->bytes, front->size );
-			gj -= front->size;
-			front->size = 0;
-			utf8 -= 1;
-		}
-	}
-	DString_Append( back, front );
-	if( back->size && gi ) strncpy( self->bytes + i - gi, back->bytes, back->size );
-	DString_Delete( front );
-	DString_Delete( back );
-}
 daoint DString_FindReplace( DString *self, DString *str1, DString *str2, daoint index )
 {
 	daoint pos, prev = -1, from = 0, count = 0;
@@ -856,8 +695,69 @@ void DString_AppendPathSep( DString *self )
 }
 
 
-#define IsU8Trail( ch )          ((uchar_t)ch >> 6 == 0x2)
-#define GetU8Trail( ch, shift )  (((uint_t)ch & 0x3F) << 6*shift)
+
+/*
+// UTF-8 Encoding Information:
+// High 4 Bits: Encoding Schemes (0: ASCII; 1: Trailing; 2-7: Leading);
+// Low  4 Bits: Encoding Lengths (Char Size: Byte number for a code point);
+*/
+const char utf8_markers[128] =
+{
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, /* 00>>1 - 0F>>1 */
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, /* 10>>1 - 1F>>1 */
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, /* 20>>1 - 2F>>1 */
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, /* 30>>1 - 3F>>1 */
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, /* 40>>1 - 4F>>1 */
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, /* 50>>1 - 5F>>1 */
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, /* 60>>1 - 6F>>1 */
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, /* 70>>1 - 7F>>1 */
+	0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, /* 80>>1 - 8F>>1 */
+	0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, /* 90>>1 - 9F>>1 */
+	0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, /* A0>>1 - AF>>1 */
+	0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, /* B0>>1 - BF>>1 */
+	0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, /* C0>>1 - CF>>1 */
+	0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, /* D0>>1 - DF>>1 */
+	0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, /* E0>>1 - EF>>1 */
+	0x44, 0x44, 0x44, 0x44, 0x55, 0x55, 0x66, 0x77  /* F0>>1 - FF>>1 */
+};
+
+#define IsU8Trail( ch )           (((ch) >> 6) == 0x2)
+#define IsU8Trail2( c1, c2 )      (((((c1)>>6)<<2)|((c2)>>6)) == 0xA)
+#define IsU8Trail3( c1, c2, c3 )  (((((c1)>>6)<<4)|(((c2)>>6)<<2)|((c3)>>6)) == 0x2A)
+#define GetU8Trail( ch, shift )   (((uint_t)(ch) & 0x3F) << 6*shift)
+#define FormU8Trail( ch, shift )  ((((ch) >> 6*(shift)) & 0x3F) | (0x1 << 7))
+
+#define U8CodeType( ch )          (utf8_markers[(ch)>>1]>>4)
+#define U8CharSize( ch )          (utf8_markers[(ch)>>1]&0xF)
+
+int DString_UTF8CharSize( uchar_t ch )
+{
+	return U8CharSize( ch );
+}
+
+void DString_AppendWChar( DString *self, size_t ch )
+{
+	DString_Reserve( self, self->size + 6 );
+
+	if( ch >= 0x2000000 ) ch = 0xFFFD; /* replacement character; */
+
+	if( ch < 0x80 ){  /* 0xxxxxxx */
+		self->bytes[self->size++] = ch;
+	}else if( ch < 0x800 ){  /* 110xxxxx 10xxxxxx */
+		self->bytes[self->size++] = (char)((ch >> 6) + (0x3 << 6));
+		self->bytes[self->size++] = FormU8Trail( ch, 0 );
+	}else if( ch < 0x10000 ){   /* 1110xxxx 10xxxxxx 10xxxxxx */
+		self->bytes[self->size++] = (char)((ch >> 12) + (0x7 << 5));
+		self->bytes[self->size++] = FormU8Trail( ch, 1 );
+		self->bytes[self->size++] = FormU8Trail( ch, 0 );
+	}else if( ch < 0x200000 ){  /* 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx */
+		self->bytes[self->size++] = (char)((ch >> 18) + (0xF << 4));
+		self->bytes[self->size++] = FormU8Trail( ch, 2 );
+		self->bytes[self->size++] = FormU8Trail( ch, 1 );
+		self->bytes[self->size++] = FormU8Trail( ch, 0 );
+	}
+	self->bytes[self->size] = 0;
+}
 
 static daoint DString_LocateCurrentChar( DString *self, daoint start )
 {
@@ -866,7 +766,7 @@ static daoint DString_LocateCurrentChar( DString *self, daoint start )
 	if( (*bytes >> 7) == 0 ) return start;
 	while( pos >= 0 && IsU8Trail( *bytes ) ) bytes--, pos--;
 	if( pos < 0 ) return DAO_NULLPOS;
-	k = utf8_markers[ *bytes ] - 1;
+	k = U8CharSize( *bytes ) - 1;
 	if( k <= 0 ) return DAO_NULLPOS; /* not a leading byte; */
 	next = pos + k;
 	if( next < start ) return DAO_NULLPOS; /* too many continuation bytes; */
@@ -875,7 +775,7 @@ static daoint DString_LocateCurrentChar( DString *self, daoint start )
 	for(k=start+1; k<=next; ++k, ++bytes) if( IsU8Trail( *bytes ) == 0 ) return DAO_NULLPOS;
 	return pos;
 }
-static int utf8_lens[] = { 1, 1, 2, 3, 4, 5, 6, 7 };
+
 daoint DString_LocateChar( DString *self, daoint start, daoint count )
 {
 	uchar_t *bytes = (uchar_t*) self->bytes;
@@ -888,7 +788,7 @@ daoint DString_LocateChar( DString *self, daoint start, daoint count )
 	}
 	while( count > 0 ){  /* forward location: */
 		if( pos == DAO_NULLPOS ) return DAO_NULLPOS;
-		pos += utf8_lens[ utf8_markers[ bytes[pos] ] ];
+		pos += U8CharSize( bytes[pos] );
 		if( pos >= self->size ) return DAO_NULLPOS;
 		pos = DString_LocateCurrentChar( self, pos );
 		count -= 1;
@@ -896,12 +796,108 @@ daoint DString_LocateChar( DString *self, daoint start, daoint count )
 	return pos;
 }
 
+/*
+// A string is considered valid if the number of valid UTF-8 bytes
+// is greater or equal to 10 times the number of invalid bytes.
+*/
+int DString_CheckUTF8( DString *self )
+{
+	uchar_t *chs = (uchar_t*) self->bytes;
+	uchar_t *end = chs + self->size;
+	daoint valid = 0, invalid = 0;
+
+	while( chs < end ){
+		uchar_t ch = *chs;
+		int len = U8CharSize( ch );
+		if( (chs + len) > end ) goto InvalidByte;
+		switch( U8CodeType( ch ) ){
+		case 0 : break;
+		case 1 : goto InvalidByte;
+		case 2 : if( IsU8Trail( chs[1] ) ) break; goto InvalidByte;
+		case 3 : if( IsU8Trail2( chs[1], chs[2] ) ) break; goto InvalidByte;
+		case 4 : if( IsU8Trail3( chs[1], chs[2], chs[3] ) ) break; goto InvalidByte;
+		default: goto InvalidByte;
+		}
+		valid += len;
+		chs += len;
+		continue;
+InvalidByte:
+		invalid += 1;
+		chs += 1;
+	}
+	return valid >= 10*invalid;
+}
+
+void DString_ChopUTF8( DString *self )
+{
+	DString_Detach( self, self->size );
+	DString_Chop( self );
+
+	if( self->size == 0 || DString_CheckUTF8( self ) == 0 ) return;
+	while( self->size && DString_LocateCurrentChar( self, self->size - 1 ) == DAO_NULLPOS ){
+		self->size -= 1;
+		self->bytes[self->size] = '\0';
+	}
+}
+void DString_Reverse( DString *self, int utf8 )
+{
+	DString *aux;
+	daoint size = self->size;
+	daoint i, front = 0, back = size - 1;
+	daoint start = 0, end = 2*size;
+	uchar_t *source = (uchar_t*) self->bytes;
+	uchar_t *dest;
+
+	if( size <= 1 ) return;
+	if( self->sharing ) DString_Detach( self, self->size );
+
+	if( utf8 == 0 ){
+		uchar_t *front = source;
+		uchar_t *back = source + size - 1;
+		while( front < back ){
+			uchar_t ch = *front;
+			*front = *back;
+			*back = ch;
+			front ++;
+			back --;
+		}
+		return;
+	}
+
+	aux = DString_New();
+	DString_Reserve( aux, 2*size );
+	dest = (uchar_t*) aux->bytes;
+	while( front < back ){
+		daoint pos1 = DString_LocateChar( self, front, 1 ); /* next; */
+		daoint pos2 = DString_LocateChar( self, back, 0 );  /* current; */
+		if( pos1 == DAO_NULLPOS ){
+			dest[--end] = source[front++];
+		}else{
+			int len = U8CharSize( source[pos1] );
+			memcpy( dest + end - len, source + pos1, len*sizeof(uchar_t) );
+			front += len;
+			end -= len;
+		}
+		if( pos2 == DAO_NULLPOS ){
+			dest[start++] = source[back--];
+		}else{
+			int len = U8CharSize( source[pos2] );
+			memcpy( dest + start, source + pos2, len*sizeof(uchar_t) );
+			start += len;
+			back -= len;
+		}
+	}
+	memcpy( source, dest, start*sizeof(uchar_t) );
+	memcpy( source+start, dest+end, (self->size - start)*sizeof(uchar_t) );
+	DString_Delete( aux );
+}
+
 int DString_DecodeUTF8( DString *self, DVector *wcs )
 {
 	uint_t *wch;
 	wchar_t *wch1, *wch2;
-	char *chs = self->bytes;
-	char *end = chs + self->size;
+	uchar_t *chs = (uchar_t*) self->bytes;
+	uchar_t *end = chs + self->size;
 	int ret = 1;
 
 	if( wcs->stride != sizeof(wchar_t) && wcs->stride != 4 ) return 0;
@@ -913,46 +909,28 @@ int DString_DecodeUTF8( DString *self, DVector *wcs )
 		if( ch>>7 == 0 ){ /* 0xxxxxxx */
 			chs += 1;
         }else if ( ch>>5 == 0x6 ){ /* 110xxxxx 10xxxxxx */
-			if( (chs+1) >= end || ! IsU8Trail( chs[1] ) ) goto HandleInvalidByte;
+			if( (chs+1) >= end || ! IsU8Trail( chs[1] ) ) goto InvalidByte;
 			cp = ((uint_t)(ch&0x1F) << 6) + GetU8Trail( chs[1], 0 );
 			chs += 2;
         }else if ( ch>>4 == 0xE ){ /* 1110xxxx 10xxxxxx 10xxxxxx */
-			if( (chs+2) >= end || ! IsU8Trail( chs[1] ) ) goto HandleInvalidByte;
-			if( ! IsU8Trail( chs[2] ) ) goto HandleInvalidByte;
+			if( (chs+2) >= end || ! IsU8Trail2( chs[1], chs[2] ) ) goto InvalidByte;
 			cp = ((uint_t)(ch&0xF) << 12) + GetU8Trail( chs[1], 1 ) + GetU8Trail( chs[2], 0 );
 			chs += 3;
         }else if ( ch>>3 == 0x1E ){ /* 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx */
-			if( (chs+3) >= end || ! IsU8Trail( chs[1] ) ) goto HandleInvalidByte;
-			if( ! IsU8Trail( chs[2] ) || ! IsU8Trail( chs[3] ) ) goto HandleInvalidByte;
+			if( (chs+3) >= end || ! IsU8Trail3( chs[1], chs[2], chs[3] ) ) goto InvalidByte;
 			cp = ((uint_t)(ch&0x7) << 18) + GetU8Trail( chs[1], 2 ) + GetU8Trail( chs[2], 1 );
 			cp += GetU8Trail( chs[3], 0 );
             chs += 4;
-		}else if( ch>>2 == 0x3E ){ /* 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx */
-			/* XXX */
-			if( (chs+4) >= end || ! IsU8Trail( chs[1] ) ) goto HandleInvalidByte;
-			if( ! IsU8Trail( chs[2] ) || ! IsU8Trail( chs[3] ) ) goto HandleInvalidByte;
-			if( ! IsU8Trail( chs[4] ) ) goto HandleInvalidByte;
-			cp = ((uint_t)(ch&0x3) << 24) + GetU8Trail( chs[1], 3 ) + GetU8Trail( chs[2], 2 );
-			cp += GetU8Trail( chs[3], 1 ) + GetU8Trail( chs[4], 0 );
-            chs += 5;
-		}else if( ch>>1 == 0x7E ){ /* 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx */
-			/* XXX */
-			if( (chs+5) >= end || ! IsU8Trail( chs[1] ) ) goto HandleInvalidByte;
-			if( ! IsU8Trail( chs[2] ) || ! IsU8Trail( chs[3] ) ) goto HandleInvalidByte;
-			if( ! IsU8Trail( chs[4] ) || ! IsU8Trail( chs[5] ) ) goto HandleInvalidByte;
-			cp = ((uint_t)(ch&0x1) << 30) + GetU8Trail( chs[1], 4 ) + GetU8Trail( chs[2], 3 );
-			cp += GetU8Trail( chs[3], 2 ) + GetU8Trail( chs[4], 1 ) + GetU8Trail( chs[5], 0 );
-            chs += 6;
-        }else{
-			goto HandleInvalidByte;
+		}else{
+			goto InvalidByte;
 		}
-        if( wcs->stride == 4 ){ /* utf-32 */
+        if( wcs->stride == 4 ){ /* UTF-32 */
 			wch = (uint_t*) DVector_Push( wcs );
 			*wch = cp;
-        }else if( cp <= 0xFFFF ){ /* utf-16, bmp */
+        }else if( cp <= 0xFFFF ){ /* UTF-16, BMP */
 			wch1 = (wchar_t*) DVector_Push( wcs );
 			*wch1 = cp;
-		}else{ /* utf-16, surrogates */
+		}else{ /* UTF-16, surrogates */
 			cp -= 0x10000;
 			wch1 = (wchar_t*) DVector_Push( wcs );
 			wch2 = (wchar_t*) DVector_Push( wcs );
@@ -960,13 +938,16 @@ int DString_DecodeUTF8( DString *self, DVector *wcs )
 			*wch2 = (cp & 0x3FF) + 0xDC00;
 		}
 		continue;
-HandleInvalidByte: /* XXX */
-		ret = 0;
+InvalidByte:
+		if( wcs->stride == 4 ){ /* UTF-32 */
+			wch = (uint_t*) DVector_Push( wcs );
+			*wch = 0xFFFD; /* replacement character; */
+		}else{
+			wch1 = (wchar_t*) DVector_Push( wcs );
+			*wch1 = 0xFFFD; /* replacement character; */
+		}
 		chs += 1;
-#if 0
-		wch = DVector_Push( wcs );
-		*wch = cp;
-#endif
+		ret = 0;
 	}
 	return ret;
 }

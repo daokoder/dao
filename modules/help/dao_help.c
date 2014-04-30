@@ -180,7 +180,6 @@ static void DaoxHelpBlock_Delete( DaoxHelpBlock *self )
 	DString_Delete( self->text );
 	dao_free( self );
 }
-static int utf8_lens[] = { 1, 1, 2, 3, 4, 5, 6, 7 };
 static int DString_Break( DString *self, int start, int width )
 {
 	uchar_t *bytes = (uchar_t*) self->bytes;
@@ -189,7 +188,7 @@ static int DString_Break( DString *self, int start, int width )
 	int count = width;
 	while( (count--) > 0 ){
 		if( pos == DAO_NULLPOS ) goto Return;
-		pos += utf8_lens[ utf8_markers[ bytes[pos] ] ];
+		pos += DString_UTF8CharSize( bytes[pos] );
 		last = pos;
 		if( pos >= self->size ) goto Return;
 		pos = DString_LocateChar( self, pos, 0 );

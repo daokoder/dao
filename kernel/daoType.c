@@ -78,8 +78,6 @@ void DaoType_Init()
 		for(j=DAO_INTEGER; j<=DAO_DOUBLE; j++)
 			dao_type_matrix[i][j] = DAO_MT_SIM;
 	}
-	dao_type_matrix[DAO_ENUM][DAO_STRING] = DAO_MT_SUB;
-	dao_type_matrix[DAO_STRING][DAO_ENUM] = DAO_MT_SUB;
 	dao_type_matrix[DAO_INTEGER][DAO_ENUM] = DAO_MT_SUB;
 	for(i=0; i<END_EXTRA_TYPES; i++) dao_type_matrix[i][i] = DAO_MT_EQ;
 	for(i=0; i<END_EXTRA_TYPES; i++){

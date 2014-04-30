@@ -849,7 +849,7 @@ static void DaoSTR_Erase( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoSTR_Chop( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.value;
-	DString_ChopUtf8( self );
+	DString_ChopUTF8( self );
 	DaoProcess_PutReference( proc, p[0] );
 }
 static void DaoSTR_Trim( DaoProcess *proc, DaoValue *p[], int N )
@@ -1033,29 +1033,14 @@ static void DaoSTR_Split( DaoProcess *proc, DaoValue *p[], int N )
 	daoint posQuote = DString_Find( self, quote, last );
 	daoint posQuote2 = -1;
 	if( N ==1 || DString_Size( delm ) ==0 ){
-		unsigned char *mbs = (unsigned char*) self->bytes;
+		uchar_t *bytes = (unsigned char*) self->bytes;
 		daoint i = 0;
-		daoint j, k;
 		while( i < size ){
-			k = utf8_markers[ mbs[i] ];
-			if( k ==0 || k ==7 ){
-				DString_SetBytes( str, (char*)mbs + i, 1 );
-				DArray_Append( list->value, value );
-				i ++;
-			}else if( k ==1 ){
-				k = i;
-				while( i < size && utf8_markers[ mbs[i] ] ==1 ) i ++;
-				DString_SetBytes( str, (char*)mbs + k, i-k );
-				DArray_Append( list->value, value );
-			}else{
-				for( j=1; j<k; j++ ){
-					if( i + j >= size ) break;
-					if( utf8_markers[ mbs[i+j] ] != 1 ) break;
-				}
-				DString_SetBytes( str, (char*)mbs + i, j );
-				DArray_Append( list->value, value );
-				i += j;
-			}
+			daoint pos = DString_LocateChar( self, i, 0 );
+			int w = pos == DAO_NULLPOS ? 1 : DString_UTF8CharSize( bytes[i] );
+			DString_SetBytes( str, (char*) bytes + i, w );
+			DArray_Append( list->value, value );
+			i += w;
 		}
 		DaoString_Delete( (DaoString*) value );
 		return;
@@ -1319,7 +1304,7 @@ static void DaoSTR_Convert( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoSTR_Reverse( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.value;
-	DString_Reverse( self );
+	DString_Reverse( self, p[1]->xEnum.value );
 	DaoProcess_PutReference( proc, p[0] );
 }
 static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int funct )
@@ -1443,7 +1428,7 @@ static DaoFuncItem stringMeths[] =
 
 	{ DaoSTR_Tolower, "tolower( self :string ) =>string" },
 	{ DaoSTR_Toupper, "toupper( self :string ) =>string" },
-	{ DaoSTR_Reverse, "reverse( self :string ) =>string" },
+	{ DaoSTR_Reverse, "reverse( self :string, unit :enum<byte,char> ) =>string" },
 
 	{ DaoSTR_Iterate,   "iterate( self :string )[char :int, index :int]" },
 	{ DaoSTR_Count,  "count( self :string )[char :int, index :int =>int]=>int" },

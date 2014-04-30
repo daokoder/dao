@@ -422,6 +422,4 @@ extern const char *const daoBitBoolArithOpers2[];
 DAO_DLL const char *daoRoutineCodeHeader;
 DAO_DLL const char *daoRoutineCodeFormat;
 
-extern const char utf8_markers[256];
-
 #endif

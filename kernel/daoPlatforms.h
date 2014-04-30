@@ -50,8 +50,9 @@
 
 #  include <windows.h>
 
-#  define stat _stat
-#  define fstat _fstat
+// 2014-04-30: no more needed;
+//#  define stat _stat
+//#  define fstat _fstat
 
 #  ifndef fileno
 #    define fileno _fileno
