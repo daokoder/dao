@@ -53,7 +53,7 @@ DaoRoutine* DaoRoutine_New( DaoNamespace *nspace, DaoType *host, int body )
 	DaoValue_Init( self, DAO_ROUTINE );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->subtype = body ? DAO_ROUTINE : DAO_CFUNCTION;
-	self->routName = DString_New(1);
+	self->routName = DString_New();
 	self->routConsts = DaoList_New();
 	self->nameSpace = nspace;
 	self->routHost = host;
@@ -425,7 +425,7 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 	DaoStream_WriteChars( stream, daoRoutineCodeHeader );
 
 	DaoStream_WriteChars( stream, sep2 );
-	annot = DString_New(1);
+	annot = DString_New();
 	vmCodes = self->body->annotCodes->items.pVmc;
 	for(j=0,n=self->body->annotCodes->size; j<n; j++){
 		DaoVmCode vmc = self->body->vmCodes->data.codes[j];

@@ -167,7 +167,7 @@ DaoParser* DaoParser_New()
 	self->levelBase = 0;
 	self->lexLevel = 0;
 
-	self->fileName = DString_New(1);
+	self->fileName = DString_New();
 	self->lexer = DaoLexer_New();
 	self->tokens = self->lexer->tokens;
 
@@ -198,10 +198,10 @@ DaoParser* DaoParser_New()
 	self->integerOne = -1;
 	self->imaginaryOne = -1;
 
-	self->routName = DString_New(1);
-	self->string = DString_New(1);
-	self->string2 = DString_New(1);
-	self->str = DString_New(1);
+	self->routName = DString_New();
+	self->string = DString_New();
+	self->string2 = DString_New();
+	self->str = DString_New();
 	self->denum = DaoEnum_New(NULL,0);
 
 	self->toks = DArray_New(0);
@@ -1985,7 +1985,7 @@ WrongType:
 	}else if( tokname > 0 && tokname < 100 ){
 		DaoCdata *cdata = & dao_default_cdata;
 		DaoValue *pbasic = tok->name == DKEY_CDATA ? (DaoValue*) cdata : NULL;
-		DString *name = DString_New(1);
+		DString *name = DString_New();
 		DString_AppendChars( name, "dao::" );
 		DString_Append( name, & tok->string );
 		type = DaoNamespace_MakeType( ns, name->bytes, tokname, pbasic, 0,0 );
@@ -2586,7 +2586,7 @@ static int DaoParser_UseConstructor( DaoParser *self, DaoRoutine *rout, int t1, 
 	DaoRoutine *classRoutines = host->classRoutines;
 	DaoType *hostType = host->objType;
 	DString *s1 = DString_Copy( rout->routType->name );
-	DString *s2 = DString_New(1);
+	DString *s2 = DString_New();
 	int i, k = DString_Find( s1, rout->routType->aux->xType.name, 0 );
 	if( k != DAO_NULLPOS ) DString_Erase( s1, k, -1 );
 	for(i=0; i<classRoutines->overloads->routines->size; i++){

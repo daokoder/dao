@@ -310,7 +310,7 @@ NewValue:
 	case DAO_FLOAT   : value = (DaoValue*) DaoFloat_New(0.0); break;
 	case DAO_DOUBLE  : value = (DaoValue*) DaoDouble_New(0.0); break;
 	case DAO_COMPLEX : value = (DaoValue*) DaoComplex_New2(0.0,0.0); break;
-	case DAO_STRING  : value = (DaoValue*) DaoString_New(1); break;
+	case DAO_STRING  : value = (DaoValue*) DaoString_New(); break;
 	}
 	return value;
 }

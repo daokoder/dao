@@ -306,8 +306,8 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		DMap *deftypes = DHash_New(0,0);
 
 		methods = DHash_New( D_STRING, D_VALUE );
-		name1 = DString_New(1);
-		name2 = DString_New(1);
+		name1 = DString_New();
+		name2 = DString_New();
 		DaoNamespace_InitConstEvalData( self );
 
 		/*
@@ -530,7 +530,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 
 	types = DArray_New(0);
 	defts = DArray_New(0);
-	string = DString_New(1);
+	string = DString_New();
 	DArray_Clear( parser->errors );
 	DaoParser_ParseTemplateParams( parser, k+2, n, types, defts, NULL );
 	if( parser->errors->size ) goto Error;
@@ -625,7 +625,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 Finalize:
 	if( sptree == NULL && ret == DAO_DT_UNSCOPED ){
 		if( string == NULL ){
-			string = DString_New(1);
+			string = DString_New();
 			DString_SetChars( string, name );
 		}
 		DaoNamespace_AddType( self, string, type2 );
@@ -901,7 +901,7 @@ int DaoNamespace_Load( DaoNamespace *self, const char *fname )
 		DaoStream_WriteChars( vms->errorStream, "\".\n" );
 		return 0;
 	}
-	src = DString_New(1);
+	src = DString_New();
 	DaoFile_ReadAll( fin, src, 1 );
 	ret = DaoProcess_Eval( self->vmSpace->mainProcess, self, src->bytes );
 	DString_Delete( src );
@@ -926,7 +926,7 @@ DaoTypeBase nsTyper=
 DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 {
 	DaoValue *value;
-	DString *name = DString_New(1);
+	DString *name = DString_New();
 	DaoNamespace *self = (DaoNamespace*) dao_calloc( 1, sizeof(DaoNamespace) );
 	DaoValue_Init( self, DAO_NAMESPACE );
 	self->trait |= DAO_VALUE_DELAYGC;
@@ -944,11 +944,11 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->codeInliners = DHash_New(D_STRING,0);
 	self->tokenFilters = DArray_New(0);
 	self->argParams = DaoList_New();
-	self->file = DString_New(1);
-	self->path = DString_New(1);
-	self->name = DString_New(1);
-	self->lang = DString_New(1);
-	self->inputs = DString_New(1);
+	self->file = DString_New();
+	self->path = DString_New();
+	self->name = DString_New();
+	self->lang = DString_New();
+	self->inputs = DString_New();
 	self->sources = DArray_New(D_ARRAY);
 
 	DArray_Append( self->auxData, self->argParams );
@@ -1509,7 +1509,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		return DaoNamespace_MakeType( self, "map", DAO_MAP, NULL, NULL, 0 );
 	}
 
-	mbs = DString_New(1);
+	mbs = DString_New();
 	if( p->type <= DAO_TUPLE ){
 		DString_SetChars( mbs, coreTypeNames[p->type] );
 		if( p->type == DAO_TUPLE ){
@@ -1625,7 +1625,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		return pb->xCtype.cdtype;
 	}
 
-	mbs = DString_New(1);
+	mbs = DString_New();
 	DString_Reserve( mbs, 128 );
 	DString_SetChars( mbs, name );
 	if( tid == DAO_CODEBLOCK ) DString_Clear( mbs );
@@ -1840,7 +1840,7 @@ Error:
 DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols )
 {
 	DaoType *type;
-	DString *key, *name = DString_New(1);
+	DString *key, *name = DString_New();
 	int n = strlen( symbols );
 	int i, k = 0, t1 = 0, t2 = 0;
 
@@ -1852,7 +1852,7 @@ DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols )
 		DString_Delete( name );
 		return type;
 	}
-	key = DString_New(1);
+	key = DString_New();
 	type = DaoType_New( name->bytes, DAO_ENUM, NULL, NULL );
 	type->mapNames = DMap_New(D_STRING,0);
 	for(i=0; i<n; i++){
@@ -1886,7 +1886,7 @@ DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 	DaoType *type;
 	DString *name;
 	if( value == NULL || value->type >= DAO_ARRAY ) return NULL;
-	name = DString_New(1);
+	name = DString_New();
 	DaoValue_GetString( value, name );
 	if( value->type == DAO_STRING ){
 		DString_InsertChar( name, '\'', 0 );

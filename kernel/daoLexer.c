@@ -995,7 +995,7 @@ void DaoLexer_Append( DaoLexer *self, int name, int line, const char *data )
 int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 {
 	DString src2 = DString_WrapChars( src );
-	DString *source = DString_New(1);
+	DString *source = DString_New();
 	DVector *lexenvs = DVector_New( sizeof(int) );
 	DaoToken *token = DaoToken_New();
 	DString *literal = & token->string;
@@ -1014,14 +1014,13 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 	int i, m = 4;
 
 	/*
-	// The source may be encoded in UTF-8, which might be different
-	// from the system encoding:
+	// Check if the source is in UTF-8, if not, convert it to UTF-8
+	// while assuming it is using the system encoding:
 	*/
-	if( strstr( locale, "UTF-8" ) == NULL && DString_FromUTF8( source, & src2 ) ){
-		if( daoConfig.mbs == 0 ){
-			src = source->bytes;
-			srcSize = strlen( src );
-		}
+	if( DString_CheckUTF8( source ) == 0 ){
+		DString_ExportUTF8( & src2, source );
+		src = source->bytes;
+		srcSize = source->size;
 	}
 
 	DString_SetSharing( literal, 0 );

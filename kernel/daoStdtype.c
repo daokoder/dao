@@ -401,7 +401,7 @@ int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols )
 
 	if( self->subtype == DAO_ENUM_SYM ) return 0;
 	
-	names = DString_New(1);
+	names = DString_New();
 	DString_SetChars( names, symbols );
 	for(i=0,n=names->size; i<n; i++) if( names->bytes[i] == '$' ) names->bytes[i] = 0;
 	i = 0;
@@ -558,7 +558,7 @@ void DaoValue_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
 	DaoValue *p = DaoType_FindValue( type, name );
 	if( p == NULL ){
-		DString *mbs = DString_New(1);
+		DString *mbs = DString_New();
 		DString_Append( mbs, name );
 		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, DString_GetData( mbs ) );
 		DString_Delete( mbs );
@@ -893,8 +893,8 @@ static void DaoSTR_Replace2( DaoProcess *proc, DaoValue *p[], int N )
 	for( ; node != NULL; node = DMap_Next(par, node) )
 		DMap_Insert( words, node->key.pValue->xString.value, node->value.pValue->xString.value );
 
-	key = DString_New(1);
-	res = DString_New(1);
+	key = DString_New();
+	res = DString_New();
 	for(node=DMap_First(words); node !=NULL; node = DMap_Next(words, node) ){
 		MAP_Insert( sizemap, node->key.pString->size, 0 );
 	}
@@ -1306,25 +1306,13 @@ static void DaoSTR_Type( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutEnum( proc, ( p[0]->xString.value->bytes != NULL )? "mbs" : "wcs" );
 }
 
-/*
-// MBS to MBS and WCS to WCS do nothing;
-// When WCS is converted into MBS, MBS will use system encoding;
-// When MBS is converted into WCS, MBS is assumed to use either UTF-8 or system encoding;
-*/
 static void DaoSTR_Convert( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.value;
 	if( p[1]->xEnum.value == 0 ){
-#warning"DString_ToChars"
-		//DString_ToChars( self );
+		if( DString_CheckUTF8( self ) != 0 ) DString_ToLocal( self );
 	}else{
-		char *locale = setlocale( LC_CTYPE, NULL );
-		if( self->bytes != NULL && strstr( locale, "UTF-8" ) == NULL ){
-			DString *string = DString_New();
-			if( DString_FromUTF8( string, self ) ) DString_Assign( self, string );
-			DString_Delete( string );
-		}
-		//DString_ToWCS( self );
+		if( DString_CheckUTF8( self ) == 0 ) DString_ToUTF8( self );
 	}
 	DaoProcess_PutReference( proc, p[0] );
 }
@@ -1427,7 +1415,7 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Size,    "size( self :string )=>int" },
 	{ DaoSTR_Resize,  "resize( self :string, size :int )" },
 	{ DaoSTR_Type,    "type( self :string )=>enum<mbs, wcs>" },
-	{ DaoSTR_Convert, "convert( self :string, to :enum<mbs, wcs> ) =>string" },
+	{ DaoSTR_Convert, "convert( self :string, to :enum<local,utf8> ) =>string" },
 	{ DaoSTR_Insert,  "insert( self :string, str :string, index=0, remove=0, copy=0 )" },
 	{ DaoSTR_Clear,   "clear( self :string )" },
 	{ DaoSTR_Erase,   "erase( self :string, start=0, n=-1 )" },
@@ -2012,7 +2000,7 @@ static void DaoLIST_Join( DaoProcess *proc, DaoValue *p[], int N )
 	DaoList *self = & p[0]->xList;
 	DaoValue **data = self->value->items.pValue;
 	DString *sep = p[1]->xString.value;
-	DString *buf = DString_New( 1 );
+	DString *buf = DString_New();
 	DString *res;
 	daoint size = 0, i;
 	int digits, mbs = 1;
@@ -3095,7 +3083,7 @@ static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 		if( start >= self->size || end >= self->size ) goto InvIndex;
 		if( first->type > DAO_DOUBLE || second->type > DAO_DOUBLE ) goto InvIndex;
 		if( first->type == DAO_NONE && second->type == DAO_NONE ){
-#warning "=================="
+#warning "================== TODO"
 			// XXX
 		}else{
 			if( type->tid != DAO_TUPLE ) type = dao_type_tuple;
@@ -3602,8 +3590,8 @@ DaoException* DaoException_New( DaoType *type )
 	DaoCstruct_Init( (DaoCstruct*)self, type );
 	self->callers = DArray_New(D_VALUE);
 	self->lines = DArray_New(0);
-	self->name = DString_New(1);
-	self->info = DString_New(1);
+	self->name = DString_New();
+	self->info = DString_New();
 	self->edata = NULL;
 	DaoException_InitByType( self, type );
 	return self;

@@ -28,6 +28,7 @@
 
 #include <math.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "daoBytecode.h"
 #include "daoOptimizer.h"
@@ -132,7 +133,7 @@ DaoByteCoder* DaoByteCoder_New( DaoVmSpace *vms )
 	self->iblocks = DArray_New(0);
 	self->indices = DArray_New(0);
 	self->routines = DArray_New(0);
-	self->path = DString_New(1);
+	self->path = DString_New();
 	self->intSize = sizeof(daoint);
 	self->vmspace = vms;
 	for(i=0; i<DAO_ASM_INVALID; ++i){
@@ -1441,7 +1442,7 @@ void DaoByteCoder_EncodeToString( DaoByteCoder *self, DString *output )
 	DaoByteCoder_Finalize( self );
 	DaoByteCoder_MergeData( self, self->top );
 	if( dao_bytecode_encrypt != NULL ){
-		DString *dstring = DString_New(1);
+		DString *dstring = DString_New();
 		DaoByteBlock_EncodeToString( self->top, dstring );
 		dao_bytecode_encrypt( dstring, 0 );
 		DString_Append( output, dstring );
@@ -1453,7 +1454,7 @@ void DaoByteCoder_EncodeToString( DaoByteCoder *self, DString *output )
 
 void DaoByteCoder_EncodeHeader( DaoByteCoder *self, const char *fname, DString *output )
 {
-	DString *path = DString_New(1);
+	DString *path = DString_New();
 	uchar_t bytes2[2];
 	uchar_t bytes4[4];
 
@@ -1520,7 +1521,7 @@ int DaoByteCoder_Decode( DaoByteCoder *self, DString *input )
 	codes += i + 5;
 
 	if( fmtclass == 1 && dao_bytecode_decrypt != NULL ){
-		dstring = DString_New(1);
+		dstring = DString_New();
 		DString_SetBytes( dstring, (char*)codes, end - codes );
 		dao_bytecode_decrypt( dstring, 0 );
 		codes = (uchar_t*) dstring->bytes;
@@ -1925,7 +1926,7 @@ static void DaoByteCoder_DecodeCopyValue( DaoByteCoder *self, DaoByteBlock *bloc
 }
 static void DaoByteCoder_DecodeType( DaoByteCoder *self, DaoByteBlock *block )
 {
-	DString *sname = DString_New(1);
+	DString *sname = DString_New();
 	DaoType *type, **itypes;
 	DaoByteBlock *name, *aux, *cbtype;
 	DaoByteBlock *pb2, *pb = block->first;
@@ -2908,7 +2909,7 @@ static void DaoByteCoder_DecodeVerbatim( DaoByteCoder *self, DaoByteBlock *block
 		DaoByteCoder_Error( self, block, tag->bytes );
 		return;
 	}
-	output = DString_New(1);
+	output = DString_New();
 	if( (*inliner)( self->nspace, mode, text, output, D ) ){
 		DaoByteCoder_Error( self, NULL, "code inlining failed:" );
 		DaoByteCoder_Error( self, block, output->bytes );

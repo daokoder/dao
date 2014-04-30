@@ -336,7 +336,7 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 		DaoStream_WriteChars( stream, "C" );
 		break;
 	case DAO_ENUM  :
-		name = DString_New(1);
+		name = DString_New();
 		DaoEnum_MakeName( & self->xEnum, name );
 		DaoStream_WriteChars( stream, name->bytes );
 		DaoStream_WriteChars( stream, "(" );
@@ -1111,7 +1111,7 @@ DaoString* DaoProcess_NewString( DaoProcess *self, int mbs )
 }
 DaoString* DaoProcess_NewChars( DaoProcess *self, const char *s, daoint n )
 {
-	DaoString *res = DaoString_New(1);
+	DaoString *res = DaoString_New();
 	if( s ) DString_SetBytes( res->value, s, n );
 	DaoProcess_CacheValue( self, (DaoValue*) res );
 	return res;

@@ -231,8 +231,8 @@ int main( int argc, char **argv )
 	k = idsrc;
 	if( k < 0 ) k = argc;
 
-	opts = DString_New(1);
-	args  = DString_New(1);
+	opts = DString_New();
+	args  = DString_New();
 	for(i=1; i<k; i++ ){
 		DString_AppendChars( opts, argv[i] );
 		DString_AppendChar( opts, '\1' );

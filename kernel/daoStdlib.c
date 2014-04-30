@@ -178,7 +178,7 @@ static void STD_Callable( DaoProcess *proc, DaoValue *p[], int N )
 	case DAO_OBJECT :
 		{
 			DaoObject *object = & p0->xObject;
-			DString *mbs = DString_New(1);
+			DString *mbs = DString_New();
 			DString_SetChars( mbs, "()" );
 			DaoObject_GetData( object, mbs, & p0, proc->activeObject );
 			DString_Delete( mbs );
@@ -244,7 +244,7 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 	DaoStream *stream = proc->vmSpace->stdioStream;
 	DString *input;
 	if( ! (proc->vmSpace->options & DAO_OPTION_DEBUG ) ) return;
-	input = DString_New(1);
+	input = DString_New();
 	if( N > 0 && DaoValue_CastCstruct( p[0], dao_type_stream ) ){
 		stream = (DaoStream*)p[0];
 		p ++;

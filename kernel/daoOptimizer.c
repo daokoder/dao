@@ -265,7 +265,7 @@ static void DaoOptimizer_Print( DaoOptimizer *self )
 	DaoRoutine *routine = self->routine;
 	DaoStream *stream = routine->nameSpace->vmSpace->stdioStream;
 	DaoVmCodeX **vmCodes = routine->body->annotCodes->items.pVmc;
-	DString *annot = DString_New(1);
+	DString *annot = DString_New();
 	daoint i, j, k, m, n;
 
 	DaoStream_WriteChars( stream, "============================================================\n" );
@@ -1911,7 +1911,7 @@ DaoInferencer* DaoInferencer_New()
 	self->inodes = DArray_New(0);
 	self->consts = DArray_New(D_VALUE);
 	self->types = DArray_New(D_VALUE);
-	self->inited = DString_New(1);
+	self->inited = DString_New();
 	self->rettypes = DArray_New(0);
 	self->typeMaps = DArray_New(D_MAP);
 	self->errors = DArray_New(0);
@@ -1920,7 +1920,7 @@ DaoInferencer* DaoInferencer_New()
 	self->defs = DHash_New(0,0);
 	self->defs2 = DHash_New(0,0);
 	self->defs3 = DHash_New(0,0);
-	self->mbstring = DString_New(1);
+	self->mbstring = DString_New();
 	return self;
 }
 void DaoInferencer_Reset( DaoInferencer *self )
@@ -2412,7 +2412,7 @@ static DaoType* DaoCheckBinArith( DaoRoutine *self, DaoVmCodeX *vmc,
 }
 static DString* AppendError( DArray *errors, DaoValue *rout, size_t type )
 {
-	DString *s = DString_New(1);
+	DString *s = DString_New();
 	DArray_Append( errors, rout );
 	DArray_Append( errors, s );
 	DString_AppendChars( s, DaoTypingErrorString[ type ] );
@@ -2589,7 +2589,7 @@ DaoRoutine* DaoValue_Check( DaoRoutine *self, DaoType *selftype, DaoType *ts[], 
 
 void DaoPrintCallError( DArray *errors, DaoStream *stream )
 {
-	DString *mbs = DString_New(1);
+	DString *mbs = DString_New();
 	int i, k, n;
 	for(i=0,n=errors->size; i<n; i+=2){
 		DaoType *routType = errors->items.pType[i];
@@ -2771,7 +2771,7 @@ static void DaoInferencer_WriteErrorGeneral( DaoInferencer *self, int error )
 	if( self->silent ) return;
 	sprintf( char50, "  At line %i : ", vmc->line );
 
-	mbs = DString_New(1);
+	mbs = DString_New();
 	DaoStream_WriteChars( stream, char50 );
 	DaoStream_WriteChars( stream, DaoTypingErrorString[error] );
 	DaoStream_WriteChars( stream, " --- \" " );
@@ -2800,7 +2800,7 @@ static void DaoInferencer_WriteErrorSpecific( DaoInferencer *self, int error )
 	self->error = 1;
 	if( self->silent ) return;
 
-	mbs = DString_New(1);
+	mbs = DString_New();
 	DaoStream_WriteChars( stream, char50 );
 	DaoStream_WriteChars( stream, DaoTypingErrorString[error] );
 	DaoStream_WriteChars( stream, " --- \" " );
@@ -6060,7 +6060,7 @@ ErrorTyping: return DaoInferencer_Error( self, DTE_TYPE_NOT_MATCHING );
 }
 static void DaoRoutine_ReduceLocalConsts( DaoRoutine *self )
 {
-	DaoList *list = DaoList_New( self->routConsts->ctype );
+	DaoList *list = DaoList_New();
 	DaoList *old = self->routConsts;
 	DMap *used = DMap_New(0,0);
 	DNode *it;

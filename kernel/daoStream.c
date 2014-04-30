@@ -114,7 +114,7 @@ static void DaoIO_Writeln2( DaoProcess *proc, DaoValue *p[], int N )
 // but 'type' can only be:
 //   c, d, i, o, u, x/X : for integer;
 //   e/E, f/F, g/G : for float and double;
-//   s : for string;
+//   s/S : for string, s for local encoding, S for UTF-8;
 //   p : for any type, write address;
 //   a : automatic, for any type, write in the default format;
 // Namely the standard ones except 'n', and plus 'a'.
@@ -138,9 +138,9 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 		return;
 	}
 	cycData = DMap_New(0,0);
-	fmt2 = DString_New(1);
-	fgcolor = DString_New(1);
-	bgcolor = DString_New(1);
+	fmt2 = DString_New();
+	fgcolor = DString_New();
+	bgcolor = DString_New();
 	format = DString_Copy( p[0]->xString.value );
 	s = format->bytes;
 	end = s + format->size;
@@ -205,7 +205,13 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 			if( value->type == DAO_NONE || value->type > DAO_DOUBLE ) goto WrongParameter;
 			DaoStream_WriteFloat( self, DaoValue_GetDouble( value ) );
 		}else if( F == 's' && value->type == DAO_STRING ){
-			DaoStream_WriteString( self, value->xString.value );
+			DString *str = value->xString.value;
+			if( DString_CheckUTF8( str ) != 0 ) DString_ToLocal( str );
+			DaoStream_WriteString( self, str );
+		}else if( F == 'S' && value->type == DAO_STRING ){
+			DString *str = value->xString.value;
+			if( DString_CheckUTF8( str ) == 0 ) DString_ToUTF8( str );
+			DaoStream_WriteString( self, str );
 		}else if( F == 'p' ){
 			DaoStream_WritePointer( self, value );
 		}else if( F == 'a' ){
@@ -493,7 +499,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 	fin = DaoIO_OpenFile( proc, p[0]->xString.value, "r", 0 );
 	if( fin == NULL ) return;
 	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
-		line = DaoString_New(1);
+		line = DaoString_New();
 		while( DaoFile_ReadLine( fin, line->value ) ){
 			if( chop ) DString_Chop( line->value );
 			DaoList_Append( list, (DaoValue*) line );
@@ -529,7 +535,7 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 	int chop = p[2]->xInteger.value;
 
 	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
-		line = DaoString_New(1);
+		line = DaoString_New();
 		while( (i++) < count && DaoStream_ReadLine( self, line->value ) ){
 			if( chop ) DString_Chop( line->value );
 			DaoList_Append( list, (DaoValue*) line );
@@ -653,8 +659,8 @@ DaoStream* DaoStream_New()
 	DaoStream *self = (DaoStream*) dao_calloc( 1, sizeof(DaoStream) );
 	DaoCstruct_Init( (DaoCstruct*) self, dao_type_stream );
 	self->type = DAO_CSTRUCT; /* dao_type_stream may still be null in DaoVmSpace_New(); */
-	self->streamString = DString_New(1);
-	self->fname = DString_New(1);
+	self->streamString = DString_New();
+	self->fname = DString_New();
 	self->mode = DAO_IO_READ | DAO_IO_WRITE;
 	return self;
 }
@@ -689,7 +695,7 @@ void DaoStream_WriteChar( DaoStream *self, char val )
 {
 	const char *format = "%c";
 	if( self->redirect && self->redirect->StdioWrite ){
-		DString *mbs = DString_New(1);
+		DString *mbs = DString_New();
 		DString_AppendChar( mbs, val );
 		self->redirect->StdioWrite( self->redirect, mbs );
 		DString_Delete( mbs );
@@ -705,7 +711,7 @@ void DaoStream_WriteFormatedInt( DaoStream *self, daoint val, const char *format
 {
 	char buffer[100];
 	if( self->redirect && self->redirect->StdioWrite ){
-		DString *mbs = DString_New(1);
+		DString *mbs = DString_New();
 		sprintf( buffer, format, val );
 		DString_SetChars( mbs, buffer );
 		self->redirect->StdioWrite( self->redirect, mbs );
@@ -736,7 +742,7 @@ void DaoStream_WriteFloat( DaoStream *self, double val )
 	}
 	if( format == NULL ) format = "%f";
 	if( self->redirect && self->redirect->StdioWrite ){
-		DString *mbs = DString_New(1);
+		DString *mbs = DString_New();
 		sprintf( buffer, format, val );
 		DString_SetChars( mbs, buffer );
 		self->redirect->StdioWrite( self->redirect, mbs );
@@ -755,7 +761,7 @@ void DaoStream_WriteChars( DaoStream *self, const char *val )
 	const char *format = self->format;
 	if( format == NULL ) format = "%s";
 	if( self->redirect && self->redirect->StdioWrite ){
-		DString *mbs = DString_New(1);
+		DString *mbs = DString_New();
 		DString_SetChars( mbs, val );
 		self->redirect->StdioWrite( self->redirect, mbs );
 		DString_Delete( mbs );
@@ -772,7 +778,7 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 	int i;
 	const char *data = val->bytes;
 	if( self->redirect && self->redirect->StdioWrite ){
-		DString *mbs = DString_New(1);
+		DString *mbs = DString_New();
 		DString_SetBytes( mbs, data, val->size );
 		self->redirect->StdioWrite( self->redirect, mbs );
 		DString_Delete( mbs );
@@ -798,7 +804,7 @@ void DaoStream_WritePointer( DaoStream *self, void *val )
 	char buffer[100];
 	if( format == NULL ) format = "%p";
 	if( self->redirect && self->redirect->StdioWrite ){
-		DString *mbs = DString_New(1);
+		DString *mbs = DString_New();
 		sprintf( buffer, format, val );
 		DString_SetChars( mbs, buffer );
 		self->redirect->StdioWrite( self->redirect, mbs );

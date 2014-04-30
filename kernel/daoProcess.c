@@ -4350,7 +4350,7 @@ void DaoProcess_DoAPList(  DaoProcess *self, DaoVmCode *vmc )
 			if( stepValue->type == DAO_STRING ){
 				step = stepValue->xString.value;
 			}else{
-				step = buf = DString_New( value->bytes != NULL );
+				step = buf = DString_New();
 				DaoValue_GetString( stepValue, buf );
 			}
 			one = DString_Copy( value );
@@ -6180,7 +6180,7 @@ DaoException* DaoProcess_InvokeException( DaoProcess *self, const char *type, co
 }
 void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, const char *op )
 {
-	DString *details = DString_New(1);
+	DString *details = DString_New();
 	if( from == NULL ) from = dao_type_udf;
 	if( to == NULL ) to = dao_type_udf;
 	DString_AppendChars( details, op );

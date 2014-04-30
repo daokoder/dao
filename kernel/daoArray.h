@@ -113,6 +113,8 @@ struct DVector
 		daoint     *daoints;
 		float      *floats;
 		double     *doubles;
+		uint_t     *uints;
+		wchar_t    *wchars;
 		ushort_t   *ushorts;
 		complex16  *complexes;
 		DString    *strings;

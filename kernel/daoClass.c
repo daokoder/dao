@@ -47,7 +47,7 @@ static void DaoClass_GetField( DaoValue *self0, DaoProcess *proc, DString *name 
 	DaoType *type = proc->activeRoutine->routHost;
 	DaoClass *host = tid == DAO_OBJECT ? & type->aux->xClass : NULL;
 	DaoClass *self = & self0->xClass;
-	DString *mbs = DString_New(1);
+	DString *mbs = DString_New();
 	DaoValue *value = NULL;
 	int rc = DaoClass_GetData( self, name, & value, host );
 	if( rc ){
@@ -103,7 +103,7 @@ DaoClass* DaoClass_New()
 	DaoClass *self = (DaoClass*) dao_calloc( 1, sizeof(DaoClass) );
 	DaoValue_Init( self, DAO_CLASS );
 	self->trait |= DAO_VALUE_DELAYGC;
-	self->className = DString_New(1);
+	self->className = DString_New();
 
 	self->lookupTable = DHash_New(D_STRING,0);
 	self->ovldRoutMap = DHash_New(D_STRING,0);
@@ -192,7 +192,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 	DString_InsertChars( self->clsType->name, "class<", 0, 0, 0 );
 	DString_AppendChar( self->clsType->name, '>' );
 
-	str = DString_New(1);
+	str = DString_New();
 	DString_SetChars( str, "self" );
 	DaoClass_AddObjectVar( self, str, NULL, self->objType, DAO_DATA_PRIVATE );
 	DString_Assign( self->className, name );
@@ -805,7 +805,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 
 	if( DaoCass_DeriveMixinData( self ) == 0 ) return 0;
 
-	mbs = DString_New(1);
+	mbs = DString_New();
 	mf = DaoMethodFields_New();
 
 	if( self->clsType->bases == NULL ) self->clsType->bases = DArray_New(D_VALUE);
@@ -947,7 +947,7 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 
 	self->objDefCount = self->objDataName->size;
 	offset = self->objDataName->size;
-	mbs = DString_New(1);
+	mbs = DString_New();
 
 	parents = DArray_New(0);
 	offsets = DArray_New(0);
@@ -1111,7 +1111,7 @@ void DaoClass_MakeInterface( DaoClass *self )
 void DaoClass_ResetAttributes( DaoClass *self )
 {
 	DNode *node;
-	DString *mbs = DString_New(1);
+	DString *mbs = DString_New();
 	int i, k, id, autoinitor = self->parent == NULL;
 
 	DaoObject_Init( & self->objType->value->xObject, NULL, 0 );

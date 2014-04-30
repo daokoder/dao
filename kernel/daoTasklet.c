@@ -994,7 +994,7 @@ static void CHANNEL_New( DaoProcess *proc, DaoValue *par[], int N )
 	DaoChannel *self = DaoChannel_New( retype, 0 );
 	CHANNEL_SetCap( self, par[0], proc );
 	if( DaoType_CheckPrimitiveType( retype->nested->items.pType[0] ) == 0 ){
-		DString *s = DString_New(1);
+		DString *s = DString_New();
 		DString_AppendChars( s, "data type " );
 		DString_Append( s, retype->nested->items.pType[0]->name );
 		DString_AppendChars( s, " is not supported for channel" );

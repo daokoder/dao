@@ -115,6 +115,10 @@ DAO_DLL DString DString_WrapChars( const char *mbs );
 DAO_DLL void DString_AppendPathSep( DString *self );
 
 DAO_DLL daoint DString_LocateChar( DString *self, daoint start, daoint count );
-DAO_DLL int DString_FromUTF8( DString *self, DString *utf8 );
+DAO_DLL int DString_DecodeUTF8( DString *self, DVector *codepoints );
+DAO_DLL int DString_ImportUTF8( DString *self, DString *utf8 );
+DAO_DLL int DString_ExportUTF8( DString *self, DString *utf8 );
+DAO_DLL int DString_ToLocal( DString *self );
+DAO_DLL int DString_ToUTF8( DString *self );
 
 #endif

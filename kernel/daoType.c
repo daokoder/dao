@@ -234,7 +234,7 @@ void DaoType_CheckAttributes( DaoType *self )
 		}
 	}else if( self->tid == DAO_THT ){
 		daoint pos = DString_FindChar( self->name, '<', 0 );
-		if( self->fname == NULL ) self->fname = DString_New(1);
+		if( self->fname == NULL ) self->fname = DString_New();
 		DString_Assign( self->fname, self->name );
 		if( pos >= 0 ) DString_Erase( self->fname, pos, -1 );
 	}
@@ -270,7 +270,7 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 	DaoValue_Init( self, DAO_TYPE );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->tid = tid;
-	self->name = DString_New(1);
+	self->name = DString_New();
 	self->typer = typer;
 	if( typer->core ){
 		self->kernel = typer->core->kernel;
@@ -282,7 +282,7 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 		GC_IncRC( extra );
 	}
 	DString_SetChars( self->name, name );
-	if( tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ) self->fname = DString_New(1);
+	if( tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ) self->fname = DString_New();
 	if( nest ){
 		self->nested = DArray_New(D_VALUE);
 		DArray_Assign( self->nested, nest );
@@ -355,7 +355,7 @@ void DaoType_InitDefault( DaoType *self )
 	case DAO_FLOAT  : value = (DaoValue*) DaoFloat_New(0.0); break;
 	case DAO_DOUBLE : value = (DaoValue*) DaoDouble_New(0.0); break;
 	case DAO_COMPLEX : value = (DaoValue*) DaoComplex_New(com); break;
-	case DAO_STRING : value = (DaoValue*) DaoString_New(1); break;
+	case DAO_STRING : value = (DaoValue*) DaoString_New(); break;
 	case DAO_ENUM : value = (DaoValue*) DaoEnum_New( self, 0 ); break;
 	}
 	GC_ShiftRC( value, self->value );
@@ -1557,7 +1557,7 @@ int DaoInterface_CopyMethod( DaoInterface *self, DaoRoutine *rout, DMap *deftype
 DAO_DLL void DMap_SortMethods( DMap *hash, DArray *methods )
 {
 	DMap *map = DMap_New(D_STRING,0);
-	DString *name = DString_New(1);
+	DString *name = DString_New();
 	DNode *it;
 	daoint i, n;
 	for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
