@@ -40,6 +40,95 @@ DMutex  mutex_string_sharing;
 #endif
 
 
+typedef struct DCounter DCounter;
+
+struct DCounter
+{
+	daoint  width : 4;             /* char width; */
+	daoint  count : DAOINT_BITS-4; /* char count with this width; */
+	daoint  chars;                 /* char index for this counter; */
+	daoint  bytes;                 /* byte index for this counter; */
+};
+
+struct DStringAux
+{
+	DCounter  *counters;  /* counter list; */
+	daoint     visit;     /* index of the last visited counter; */
+	daoint     chars;     /* total number of chars in the string; */
+	daoint     size;      /* counter number; */
+	daoint     cap;       /* buffer size; */
+};
+
+static DStringAux* DStringAux_New()
+{
+	DStringAux *self = (DStringAux*) dao_calloc(1,sizeof(DStringAux));
+	return self;
+}
+static void DStringAux_Delete( DStringAux *self )
+{
+	if( self->counters ) dao_free( self->counters );
+	dao_free( self );
+}
+static void DStringAux_Update( DStringAux *self, DString *string )
+{
+	daoint size = 0;
+	DCounter dummy = {7, 0, 0, 0};
+	DCounter *last = & dummy;
+	uchar_t *bytes = (unsigned char*) string->bytes;
+	daoint i = 0;
+
+	self->size = 0;
+	self->chars = 0;
+	self->visit = 0;
+	while( i < string->size ){
+		daoint pos = DString_LocateChar( string, i, 0 );
+		int width = pos == DAO_NULLPOS ? 1 : DString_UTF8CharSize( bytes[i] );
+		if( width == last->width ){
+			last->count += 1;
+		}else{
+			daoint chars = last->chars + last->count;
+			daoint bytes = last->bytes + last->count * last->width;
+			if( size == self->cap ){
+				self->cap += 1.25 * self->cap + 5;
+				self->counters = (DCounter*) dao_realloc( self->counters, self->cap*sizeof(DCounter) );
+			}
+			last = self->counters + (size++);
+			last->width = width;
+			last->count = 1;
+			last->chars = chars;
+			last->bytes = bytes;
+		}
+		self->chars += 1;
+		i += width;
+	}
+	self->size = size; /* set after done, for thread safety; */
+
+#if 0
+	printf( "counters: %i;  chars: %i;  bytes: %i\n", (int) size, self->chars, string->size );
+	for(i=0; i<self->size; ++i){
+		DCounter *c = self->counters + i;
+		printf( "%5i: %2i %5i %5i %5i\n", i, c->width, c->count, c->chars, c->bytes );
+	}
+#endif
+}
+static daoint DStringAux_GetByteIndex( DStringAux *self, DString *string, daoint chindex )
+{
+	uchar_t *bytes = (uchar_t*) string->bytes;
+	DCounter *start = self->counters;
+	DCounter *visit = start + self->visit;
+	DCounter *end = start + self->size;
+
+	if( chindex < 0 ) chindex += self->chars;
+	if( chindex < 0 || chindex >= self->chars ) return DAO_NULLPOS;
+	while( visit >= start && chindex < visit->chars ) visit -= 1;
+	while( visit < end && chindex > visit->chars + visit->count ) visit += 1;
+	if( visit < start || visit >= end ) return DAO_NULLPOS;
+	self->visit = visit - start;
+	return visit->bytes + visit->width * (chindex - visit->chars);
+}
+
+
+
 //static
 int dao_string[4] = {1,0,0,0};
 
@@ -51,6 +140,7 @@ void DString_Init( DString *self )
 	self->sharing = 1;
 	self->size = 0;
 	self->bufSize = 0;
+	self->aux = NULL;
 }
 DString* DString_New()
 {
@@ -68,6 +158,8 @@ DString* DString_NewChars( const char *mbs )
 void DString_DeleteData( DString *self )
 {
 	int *data = (int*)self->bytes - self->sharing;
+
+	if( self->aux ) DStringAux_Delete( self->aux );
 
 	if( data == NULL || data == dao_string ) return;
 
@@ -98,6 +190,8 @@ void DString_Detach( DString *self, int bufsize )
 {
 	daoint size;
 	int *data2, *data = (int*)self->bytes - self->sharing;
+
+	if( self->aux ) self->aux->size = 0;
 	if( self->sharing == 0 ) return;
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & mutex_string_sharing );
@@ -186,7 +280,8 @@ void DString_Reserve( DString *self, daoint size )
 {
 	int *data = (int*)self->bytes - self->sharing;
 	daoint bufsize = size >= self->bufSize ? (1.2*size + 4) : self->bufSize;
-	if( self->sharing ) DString_Detach( self, bufsize );
+
+	DString_Detach( self, bufsize );
 	if( size <= self->bufSize ) return;
 	self->bufSize = bufsize;
 	DString_Realloc( self, self->bufSize );
@@ -195,14 +290,14 @@ void DString_ToLower( DString *self )
 {
 	daoint i;
 	char *bytes;
-	if( self->sharing ) DString_Detach( self, self->size );
+	DString_Detach( self, self->size );
 	for(i=0,bytes=self->bytes; i<self->size; i++, bytes++) *bytes = tolower( *bytes );
 }
 void DString_ToUpper( DString *self )
 {
 	daoint i;
 	char *bytes;
-	if( self->sharing ) DString_Detach( self, self->size );
+	DString_Detach( self, self->size );
 	for(i=0,bytes=self->bytes; i<self->size; i++, bytes++) *bytes = toupper( *bytes );
 }
 daoint DString_Size( DString *self )
@@ -213,7 +308,7 @@ daoint DString_Size( DString *self )
 void DString_Reset( DString *self, daoint size )
 {
 	if( size <= self->bufSize ){
-		if( self->sharing ) DString_Detach( self, self->bufSize );
+		DString_Detach( self, self->bufSize );
 		self->size = size;
 		self->bytes[size] = '\0';
 		return;
@@ -224,7 +319,7 @@ void DString_Resize( DString *self, daoint size )
 {
 	daoint i;
 
-	if( self->sharing ) DString_Detach( self, size );
+	DString_Detach( self, size );
 	if( size == self->size && size <= self->bufSize && 2*size >= self->bufSize ) return;
 
 	if( size > self->bufSize || 2*size < self->bufSize ){
@@ -240,7 +335,7 @@ void DString_Clear( DString *self )
 {
 	int share = self->sharing;
 	if( ((int*)self->bytes - self->sharing) == dao_string ) return;
-	if( self->sharing ) DString_Detach( self, 0 );
+	DString_Detach( self, 0 );
 	DString_DeleteData( self );
 	DString_Init( self );
 	DString_SetSharing( self, share );
@@ -257,8 +352,7 @@ void DString_Erase( DString *self, daoint start, daoint n )
 		return;
 	}
 
-	if( self->sharing ) DString_Detach( self, self->size );
-
+	DString_Detach( self, self->size );
 	for( i=start; i<start+rest; i++ ) self->bytes[i] = self->bytes[i+n];
 	self->bytes[start+rest] = 0;
 	self->size -= n;
@@ -276,7 +370,7 @@ void DString_InsertChars( DString *self, const char* chs, daoint at, daoint rm, 
 	if( at > self->size ) at = self->size;
 	if( rm < 0 ) rm = self->size;
 	if( rm + at > self->size ) rm = self->size - at;
-	if( self->sharing ) DString_Detach( self, self->size + cp - rm );
+	DString_Detach( self, self->size + cp - rm );
 	if( cp < rm ){
 		for( i=at+cp; i<self->size+cp-rm; i++) self->bytes[i] = self->bytes[i+rm-cp];
 		DString_Reserve( self, self->size + cp - rm );
@@ -453,6 +547,7 @@ void DString_Assign( DString *self, DString *chs )
 #ifdef DAO_WITH_THREAD
 		DMutex_Lock( & mutex_string_sharing );
 #endif
+		if( self->aux ) self->aux->size = 0;
 		if( self->sharing && chs->sharing ){
 			if( data1 != dao_string ){
 				data1[0] -= 1;
@@ -518,7 +613,7 @@ void DString_Add( DString *self, DString *left, DString *right )
 void DString_Chop( DString *self )
 {
 	if( self->size == 0 ) return;
-	if( self->sharing ) DString_Detach( self, self->size );
+	DString_Detach( self, self->size );
 	if( self->bytes ){
 		if( self->bytes[ self->size-1 ] == EOF  ) self->bytes[ --self->size ] = 0;
 		if( self->bytes[ self->size-1 ] == '\n' ) self->bytes[ --self->size ] = 0;
@@ -528,7 +623,7 @@ void DString_Chop( DString *self )
 void DString_Trim( DString *self )
 {
 	int i, ch;
-	if( self->sharing ) DString_Detach( self, self->size );
+	DString_Detach( self, self->size );
 	if( self->bytes ){
 		while( self->size > 0 ){
 			ch = self->bytes[ self->size-1 ];
@@ -718,7 +813,7 @@ const char utf8_markers[128] =
 	0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, /* C0>>1 - CF>>1 */
 	0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, /* D0>>1 - DF>>1 */
 	0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x33, /* E0>>1 - EF>>1 */
-	0x44, 0x44, 0x44, 0x44, 0x55, 0x55, 0x66, 0x77  /* F0>>1 - FF>>1 */
+	0x44, 0x44, 0x44, 0x44, 0x51, 0x51, 0x61, 0x71  /* F0>>1 - FF>>1 */
 };
 
 #define IsU8Trail( ch )           (((ch) >> 6) == 0x2)
@@ -763,16 +858,21 @@ static daoint DString_LocateCurrentChar( DString *self, daoint start )
 {
 	uchar_t *bytes = (uchar_t*) self->bytes + start;
 	daoint k, next, pos = start;
+
 	if( (*bytes >> 7) == 0 ) return start;
+
 	while( pos >= 0 && IsU8Trail( *bytes ) ) bytes--, pos--;
 	if( pos < 0 ) return DAO_NULLPOS;
-	k = U8CharSize( *bytes ) - 1;
-	if( k <= 0 ) return DAO_NULLPOS; /* not a leading byte; */
-	next = pos + k;
-	if( next < start ) return DAO_NULLPOS; /* too many continuation bytes; */
-	if( next >= self->size ) return DAO_NULLPOS; /* not enough continuation bytes; */
+
+	k = U8CodeType( *bytes );
+	if( k < 2 || k > 4 ) return DAO_NULLPOS; /* not a leading byte; */
+
+	next = pos + U8CharSize( *bytes );
+	if( next <= start ) return DAO_NULLPOS; /* too many continuation bytes; */
+	if( next > self->size ) return DAO_NULLPOS; /* not enough continuation bytes; */
+
 	bytes = (uchar_t*) self->bytes + start + 1;
-	for(k=start+1; k<=next; ++k, ++bytes) if( IsU8Trail( *bytes ) == 0 ) return DAO_NULLPOS;
+	for(k=start+1; k<next; ++k, ++bytes) if( IsU8Trail( *bytes ) == 0 ) return DAO_NULLPOS;
 	return pos;
 }
 
@@ -794,6 +894,21 @@ daoint DString_LocateChar( DString *self, daoint start, daoint count )
 		count -= 1;
 	}
 	return pos;
+}
+daoint DString_GetByteIndex( DString *self, daoint chindex )
+{
+	if( self->size == 0 ) return DAO_NULLPOS;
+	if( self->aux == NULL || self->aux->size == 0 ){
+#       ifdef DAO_WITH_THREAD
+		DMutex_Lock( & mutex_string_sharing );
+#       endif
+		if( self->aux == NULL ) self->aux = DStringAux_New();
+		if( self->aux->size == 0 ) DStringAux_Update( self->aux, self );
+#       ifdef DAO_WITH_THREAD
+		DMutex_Unlock( & mutex_string_sharing );
+#       endif
+	}
+	return DStringAux_GetByteIndex( self->aux, self, chindex );
 }
 
 /*
@@ -848,7 +963,7 @@ void DString_Reverse( DString *self, int utf8 )
 	uchar_t *source, *dest;
 
 	if( size <= 1 ) return;
-	if( self->sharing ) DString_Detach( self, self->size );
+	DString_Detach( self, self->size );
 
 	source = (uchar_t*) self->bytes;
 	if( utf8 == 0 ){

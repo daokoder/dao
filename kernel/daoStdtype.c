@@ -1394,6 +1394,13 @@ static void DaoSTR_Apply( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoSTR_Functional( proc, p, N, DVM_FUNCT_APPLY );
 }
+static void DaoSTR_CharAt( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *self = p[0]->xString.value;
+	daoint index = p[1]->xInteger.value;
+	daoint pos = DString_GetByteIndex( self, index );
+	DaoProcess_PutInteger( proc, pos );
+}
 
 static DaoFuncItem stringMeths[] =
 {
@@ -1436,6 +1443,8 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Select, "select( self :string )[char :int, index :int =>int]=>string" },
 	{ DaoSTR_Index,  "index( self :string )[char :int, index :int =>int]=>list<int>" },
 	{ DaoSTR_Apply,  "apply( self :string )[char :int, index :int =>int]=>string" },
+
+	{ DaoSTR_CharAt, "char( self :string, index :int ) =>int" }, /* for testing */
 	{ NULL, NULL }
 };
 

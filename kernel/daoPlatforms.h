@@ -35,12 +35,6 @@
 
 #ifdef WIN32
 
-/* Get rid of the effects of UNICODE: */
-#  ifdef UNICODE
-#    undef UNICODE
-#  endif /* UNICODE */
-
-
 #  define DAO_DIR "C:\\dao"
 #  define DAO_DLL_PREFIX ""
 #  define DAO_DLL_SUFFIX ".dll"

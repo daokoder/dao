@@ -30,18 +30,21 @@
 #define DAO_STRING_H
 
 #include<limits.h>
+#include"daoBase.h"
 
 #define DAO_NULLPOS ((daoint)(-1))
+#define DAOINT_BITS CHAR_BIT*sizeof(daoint)
 
-#include"daoBase.h"
+typedef struct DStringAux DStringAux;
 
 struct DString
 {
-	char    *bytes;
-	daoint   size     : CHAR_BIT*sizeof(daoint)-1;
-	size_t   detached : 1;
-	daoint   bufSize  : CHAR_BIT*sizeof(daoint)-1;
-	size_t   sharing  : 1;
+	char        *bytes;
+	daoint       size     : DAOINT_BITS-1;
+	size_t       detached : 1;
+	daoint       bufSize  : DAOINT_BITS-1;
+	size_t       sharing  : 1;
+	DStringAux  *aux;
 };
 
 DAO_DLL DString* DString_New();
@@ -112,6 +115,7 @@ DAO_DLL DString DString_WrapChars( const char *mbs );
 DAO_DLL void DString_AppendPathSep( DString *self );
 
 DAO_DLL daoint DString_LocateChar( DString *self, daoint start, daoint count );
+DAO_DLL daoint DString_GetByteIndex( DString *self, daoint chindex );
 DAO_DLL void DString_ChopUTF8( DString *self );
 DAO_DLL int DString_UTF8CharSize( uchar_t ch );
 DAO_DLL int DString_CheckUTF8( DString *self );

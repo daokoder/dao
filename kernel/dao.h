@@ -49,11 +49,6 @@
 
 #ifdef WIN32
 
-/* Get rid of the effects of UNICODE: */
-#  ifdef UNICODE
-#    undef UNICODE
-#  endif /* UNICODE */
-
 #  define DAO_DLL_EXPORT __declspec(dllexport)
 #  define DAO_DLL_IMPORT __declspec(dllimport)
 
