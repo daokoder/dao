@@ -67,6 +67,7 @@ enum DaoTokNames
 	DTOK_COMMA , /* , */
 	DTOK_COLON , /* : */
 	DTOK_COLON2 , /* :: */
+	DTOK_CASSN , /* := */
 	DTOK_ADD , /* + */
 	DTOK_SUB , /* - */
 	DTOK_MUL , /* * */

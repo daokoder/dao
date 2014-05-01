@@ -1286,10 +1286,6 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PopFrame( proc );
 }
 
-static void DaoSTR_Type( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoProcess_PutEnum( proc, ( p[0]->xString.value->bytes != NULL )? "mbs" : "wcs" );
-}
 
 static void DaoSTR_Convert( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1404,9 +1400,8 @@ static void DaoSTR_CharAt( DaoProcess *proc, DaoValue *p[], int N )
 
 static DaoFuncItem stringMeths[] =
 {
-	{ DaoSTR_Size,    "size( self :string )=>int" },
+	{ DaoSTR_Size,    "size( self ::string )=>int" },
 	{ DaoSTR_Resize,  "resize( self :string, size :int )" },
-	{ DaoSTR_Type,    "type( self :string )=>enum<mbs, wcs>" },
 	{ DaoSTR_Convert, "convert( self :string, to :enum<local,utf8> ) =>string" },
 	{ DaoSTR_Insert,  "insert( self :string, str :string, index=0, remove=0, copy=0 )" },
 	{ DaoSTR_Clear,   "clear( self :string )" },
@@ -1414,19 +1409,19 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Chop,    "chop( self :string ) =>string" },
 	{ DaoSTR_Trim,    "trim( self :string ) =>string" },
 	/* return -1, if not found. */
-	{ DaoSTR_Find,    "find( self :string, str :string, from=0, reverse=0 )=>int" },
+	{ DaoSTR_Find,    "find( self ::string, str ::string, from=0, reverse=0 )=>int" },
 	/* replace index-th occurrence: =0: replace all; >0: from begin; <0: from end. */
 	/* return number of occurrence replaced. */
-	{ DaoSTR_Replace, "replace( self :string, str1 :string, str2 :string, index=0 )=>int" },
-	{ DaoSTR_Replace2, "replace( self :string, table : map<string,string>, max=0 )" },
-	{ DaoSTR_Expand,  "expand( self :string, keys :map<string,string>, spec='$', keep=1 )=>string" },
-	{ DaoSTR_Expand,  "expand( self :string, keys :tuple<...:int|float|double|string>, spec='$', keep=1 )=>string" },
-	{ DaoSTR_Split, "split( self :string, sep='', quote='', rm=1 )=>list<string>" },
-	{ DaoSTR_Fetch, "fetch( self :string, pt :string, group=0, start=0, end=0 )=>string" },
-	{ DaoSTR_Match, "match( self :string, pt :string, group=0, start=0, end=0 )=>tuple<start:int,end:int>|none" },
-	{ DaoSTR_Change, "change( self :string, pt :string, s :string, index=0, start=0, end=0 )=>int" },
-	{ DaoSTR_Capture, "capture( self :string, pt :string, start=0, end=0 )=>list<string>" },
-	{ DaoSTR_Extract, "extract( self :string, pt :string, mtype :enum<both,matched,unmatched>=$matched )=>list<string>" },
+	{ DaoSTR_Replace, "replace( self :string, str1 ::string, str2 ::string, index=0 )=>int" },
+	{ DaoSTR_Replace2, "replace( self :string, table ::map<string,string>, max=0 )" },
+	{ DaoSTR_Expand,  "expand( self ::string, keys ::map<string,string>, spec='$', keep=1 )=>string" },
+	{ DaoSTR_Expand,  "expand( self ::string, keys ::tuple<...:int|float|double|string>, spec='$', keep=1 )=>string" },
+	{ DaoSTR_Split, "split( self ::string, sep='', quote='', rm=1 )=>list<string>" },
+	{ DaoSTR_Fetch, "fetch( self ::string, pt ::string, group=0, start=0, end=0 )=>string" },
+	{ DaoSTR_Match, "match( self ::string, pt ::string, group=0, start=0, end=0 )=>tuple<start:int,end:int>|none" },
+	{ DaoSTR_Change, "change( self :string, pt ::string, s ::string, index=0, start=0, end=0 )=>int" },
+	{ DaoSTR_Capture, "capture( self ::string, pt ::string, start=0, end=0 )=>list<string>" },
+	{ DaoSTR_Extract, "extract( self ::string, pt ::string, mtype :enum<both,matched,unmatched>=$matched )=>list<string>" },
 	/*
 	// Use "none|@V" for the code section return, so that if "return none" is used first,
 	// it will not be specialized to "none|none", which is the case for "@V|none".
@@ -2252,18 +2247,18 @@ static DaoFuncItem listMeths[] =
 {
 	{ DaoLIST_Insert,   "insert( self :list<@T>, item : @T, pos=0 )" },
 	{ DaoLIST_Clear,    "clear( self :list<@T> )" },
-	{ DaoLIST_Size,     "size( self :list<@T> )=>int" },
+	{ DaoLIST_Size,     "size( self ::list<@T> )=>int" },
 	{ DaoLIST_Resize,   "resize( self :list<@T<int|float|double|complex|string|enum>>, size :int )" },
 	{ DaoLIST_Resize2,  "resize( self :list<@T>, value :@T, size :int )" },
-	{ DaoLIST_Max,      "max( self :list<@T<int|float|double|complex|string|enum>> )=>tuple<@T,int>" },
-	{ DaoLIST_Min,      "min( self :list<@T<int|float|double|complex|string|enum>> )=>tuple<@T,int>" },
-	{ DaoLIST_Sum,      "sum( self :list<@T<int|float|double|complex|string|enum>> )=>@T" },
-	{ DaoLIST_Join,     "join( self :list<@T<int|float|double|complex|string|enum>>, separator='' )=>string" },
+	{ DaoLIST_Max,      "max( self ::list<@T<int|float|double|complex|string|enum>> )=>tuple<@T,int>" },
+	{ DaoLIST_Min,      "min( self ::list<@T<int|float|double|complex|string|enum>> )=>tuple<@T,int>" },
+	{ DaoLIST_Sum,      "sum( self ::list<@T<int|float|double|complex|string|enum>> )=>@T" },
+	{ DaoLIST_Join,     "join( self ::list<@T<int|float|double|complex|string|enum>>, separator='' )=>string" },
 	{ DaoLIST_PushBack, "append( self :list<@T>, item :@T )" },
 	{ DaoLIST_Push,     "push( self :list<@T>, item :@T, to :enum<front, back> = $back )" },
 	{ DaoLIST_Pop,      "pop( self :list<@T>, from :enum<front, back> = $back ) => @T" },
-	{ DaoLIST_Front,    "front( self :list<@T> )=>@T" },
-	{ DaoLIST_Top,      "back( self :list<@T> )=>@T" },
+	{ DaoLIST_Front,    "front( self ::list<@T> )=>@T" },
+	{ DaoLIST_Top,      "back( self ::list<@T> )=>@T" },
 	{ DaoLIST_Rank,     "rank( self :list<@T>, order :enum<ascend, descend>=$ascend, k=0 )=>list<int>" },
 	{ DaoLIST_Reverse,  "reverse( self :list<@T> )=>list<@T>" },
 
@@ -2842,15 +2837,15 @@ static DaoFuncItem mapMeths[] =
 	{ DaoMAP_Erase,  "erase( self :map<@K,@V>, from :@K )" },
 	{ DaoMAP_Erase,  "erase( self :map<@K,@V>, from :@K, to :@K )" },
 	{ DaoMAP_Insert, "insert( self :map<@K,@V>, key :@K, value :@V )" },
-	{ DaoMAP_Find,   "find( self :map<@K,@V>, key :@K, type :enum<le,eq,ge>=$eq )=>tuple<key:@K,value:@V>|none" },
-	{ DaoMAP_Key,    "keys( self :map<@K,@V> )=>list<@K>" },
-	{ DaoMAP_Key,    "keys( self :map<@K,@V>, from :@K )=>list<@K>" },
-	{ DaoMAP_Key,    "keys( self :map<@K,@V>, from :@K, to :@K )=>list<@K>" },
-	{ DaoMAP_Value,  "values( self :map<@K,@V> )=>list<@V>" },
-	{ DaoMAP_Value,  "values( self :map<@K,@V>, from :@K )=>list<@V>" },
-	{ DaoMAP_Value,  "values( self :map<@K,@V>, from :@K, to :@K )=>list<@V>" },
-	{ DaoMAP_Has,    "has( self :map<@K,@V>, key :@K )=>int" },
-	{ DaoMAP_Size,   "size( self :map<@K,@V> )=>int" },
+	{ DaoMAP_Find,   "find( self ::map<@K,@V>, key ::@K, type :enum<le,eq,ge>=$eq )=>tuple<key:@K,value:@V>|none" },
+	{ DaoMAP_Key,    "keys( self ::map<@K,@V> )=>list<@K>" },
+	{ DaoMAP_Key,    "keys( self ::map<@K,@V>, from :@K )=>list<@K>" },
+	{ DaoMAP_Key,    "keys( self ::map<@K,@V>, from :@K, to :@K )=>list<@K>" },
+	{ DaoMAP_Value,  "values( self ::map<@K,@V> )=>list<@V>" },
+	{ DaoMAP_Value,  "values( self ::map<@K,@V>, from ::@K )=>list<@V>" },
+	{ DaoMAP_Value,  "values( self ::map<@K,@V>, from ::@K, to ::@K )=>list<@V>" },
+	{ DaoMAP_Has,    "has( self ::map<@K,@V>, key ::@K )=>int" },
+	{ DaoMAP_Size,   "size( self ::map<@K,@V> )=>int" },
 
 	{ DaoMAP_Iterate,   "iterate( self :map<@K,@V> )[key :@K, value :@V]" },
 	{ DaoMAP_Count,  "count( self :map<@K,@V> )[key :@K, value :@V =>int] =>int" },

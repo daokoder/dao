@@ -501,17 +501,17 @@ static void STD_Map( DaoProcess *proc, DaoValue *p[], int N )
 
 DaoFuncItem dao_std_methods[] =
 {
-	{ STD_Path,      "path( path :string, action :enum<set,add,remove>=$add )" },
-	{ STD_Compile,   "compile( source :string, ns :any= none ) => tuple<ns:any,main:routine>" },
-	{ STD_Eval,      "eval( source :string, st=io::stdio )=>any" },
-	{ STD_Load,      "load( file :string, import=1, runim=0 )=>any" },
-	{ STD_Resource,  "resource( path :string )=>string" },
+	{ STD_Path,      "path( path ::string, action :enum<set,add,remove>=$add )" },
+	{ STD_Compile,   "compile( source ::string, ns :any=none ) => tuple<ns:any,main:routine>" },
+	{ STD_Eval,      "eval( source ::string, st=io::stdio )=>any" },
+	{ STD_Load,      "load( file ::string, import=1, runim=0 )=>any" },
+	{ STD_Resource,  "resource( path ::string )=>string" },
 	{ STD_Argv,      "argv() => list<any>" },
 	{ STD_About,     "about( ... :: any )=>string" },
 	{ STD_Callable,  "callable( object )=>int" },
 	{ STD_Debug,     "debug( ... )" },
-	{ STD_Warn,      "warn( info :string )" },
-	{ STD_Error,     "error( info :string )" },
+	{ STD_Warn,      "warn( info ::string )" },
+	{ STD_Error,     "error( info ::string )" },
 	{ STD_Gcmax,     "gcmax( limit=0 )=>int" },/*by default, return the current value;*/
 	{ STD_Gcmin,     "gcmin( limit=0 )=>int" },
 	{ STD_SubType,   "subtype( obj1, obj2 )=>int" },

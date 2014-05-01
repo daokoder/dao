@@ -704,6 +704,13 @@ static DaoRoutine* DParamNode_LookupByType( DParamNode *self, DaoType *types[], 
 		if( partype->tid == DAO_PAR_NAMED && (tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT) ){
 			if( DString_EQ( partype->fname, param->type2->fname ) == 0 ) continue;
 		}
+		if( param->type2->attrib & DAO_TYPE_SELFNAMED ){
+			/*
+			// self parameter will be passed by reference, const self argument
+			// should not be passed to non-const self parameter;
+			*/
+			if( partype->constant && param->type->constant == 0 ) continue;
+		}
 		if( defs && clear ) DMap_Reset( defs );
 		m = DaoType_MatchTo( partype, type, defs );
 		if( m == 0 ) continue;
@@ -795,6 +802,7 @@ static DaoRoutine* DRoutines_LookupByType2( DRoutines *self, DaoType *selftype, 
 			DaoRoutine *rout2 = NULL;
 			for(param=self->mtree->first; param; param=param->next){
 				if( param->type == NULL ) continue;
+				if( selftype->constant && param->type->constant == 0 ) continue;
 				if( defs ) DMap_Reset( defs );
 				m = DaoType_MatchTo( selftype, param->type, defs );
 				if( strict && m < DAO_MT_ANY ) continue;

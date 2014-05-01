@@ -1375,21 +1375,21 @@ static void DaoARRAY_Reduce( DaoProcess *proc, DaoValue *p[], int npar )
 }
 static DaoFuncItem numarMeths[] =
 {
-	{ DaoARRAY_Dim,       "dim( self :array<@T>, i : int )=>int" },
-	{ DaoARRAY_Dim,       "dim( self :array<@T> )=>array<int>" },
-	{ DaoARRAY_Index,     "index( self :array<@T>, i : int )=>array<int>" },
-	{ DaoARRAY_Size,      "size( self :array<@T> )=>int" },
+	{ DaoARRAY_Dim,       "dim( self ::array<@T>, i : int )=>int" },
+	{ DaoARRAY_Dim,       "dim( self ::array<@T> )=>array<int>" },
+	{ DaoARRAY_Index,     "index( self ::array<@T>, i : int )=>array<int>" },
+	{ DaoARRAY_Size,      "size( self ::array<@T> )=>int" },
 	{ DaoARRAY_Resize,    "resize( self :array<@T>, dims :array<int> )" },
 	{ DaoARRAY_Reshape,   "reshape( self :array<@T>, dims :array<int> )" },
 
 	{ DaoARRAY_Permute,   "permute( self :array<@T>, dims :array<int> )" },
 	{ DaoARRAY_Transpose, "transpose( self :array )" },
-	{ DaoARRAY_max,       "max( self :array<@T<int|float|double>> )=>tuple<@T,int>" },
-	{ DaoARRAY_min,       "min( self :array<@T<int|float|double>> )=>tuple<@T,int>" },
-	{ DaoARRAY_sum,       "sum( self :array<@T> )=>@T" },
-	{ DaoARRAY_varn,      "varn( self :array<@T<int|float|double>> )=>double" },
+	{ DaoARRAY_max,       "max( self ::array<@T<int|float|double>> )=>tuple<@T,int>" },
+	{ DaoARRAY_min,       "min( self ::array<@T<int|float|double>> )=>tuple<@T,int>" },
+	{ DaoARRAY_sum,       "sum( self ::array<@T> )=>@T" },
+	{ DaoARRAY_varn,      "varn( self ::array<@T<int|float|double>> )=>double" },
 	{ DaoARRAY_Reverse,   "reverse( self :array<@T> )=>array<@T>" },
-	{ DaoARRAY_rank,  "rank( self :array<@T>, order :enum<ascend,descend>=$ascend, k=0 )=>array<int>" },
+	{ DaoARRAY_rank,  "rank( self ::array<@T>, order :enum<ascend,descend>=$ascend, k=0 )=>array<int>" },
 	{ DaoARRAY_sort,  "sort( self :array<@T>, order :enum<ascend,descend>=$ascend, k=0 )=>array<@T>" },
 
 	{ DaoARRAY_Map,    "map( self :array<@T> )[item:@T,I:int,J:int,K:int,L:int,M:int=>@T2]=>array<@T2>" },

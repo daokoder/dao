@@ -1080,7 +1080,6 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	DString_Reserve( copy->name, 128 );
 	DArray_Append( ns->auxData, copy );
 	DMap_Insert( defs, self, copy );
-	if( copy->constant ) DString_AppendChars( copy->name, "const<" );
 	if( self->mapNames ){
 		if( copy->mapNames ) DMap_Delete( copy->mapNames );
 		copy->mapNames = DMap_Copy( self->mapNames );
@@ -1110,11 +1109,14 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		}
 		if( self->tid == DAO_CTYPE || self->tid == DAO_CDATA || self->tid == DAO_CSTRUCT
 				|| self->tid == DAO_LIST || self->tid == DAO_MAP ){
+			int cst = self->constant;
 			if( self->typer->core->kernel->sptree ){
 				DaoType *sptype = self->typer->core->kernel->abtype;
 				if( self->tid == DAO_CTYPE ) sptype = sptype->aux->xCtype.ctype;
 				sptype = DaoType_Specialize( sptype, copy->nested->items.pType, copy->nested->size );
 				if( sptype ){
+					DaoNamespace *nspace = self->kernel->nspace;
+					if( cst ) sptype = DaoNamespace_MakeConstType( nspace, sptype );
 					DMap_Erase2( defs, copy );
 					return sptype;
 				}
@@ -2051,6 +2053,7 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 	DaoType *sptype;
 	DaoTypeKernel *kernel;
 	DTypeSpecTree *sptree;
+	daoint cst = self->constant;
 	daoint i, pos;
 
 	assert( self->tid == DAO_LIST || self->tid == DAO_MAP );
@@ -2128,6 +2131,15 @@ static void DaoType_InitTypeDefines( DaoType *self, DaoRoutine *method, DMap *de
 		DaoType_MatchTo( self->nested->items.pType[i], type->nested->items.pType[i], defs );
 	}
 }
+static void DaoType_SpecMethod( DaoType *self, DaoRoutine *method, DMap *methods, DMap *defs )
+{
+	DaoNamespace *nspace = self->kernel->nspace;
+	DaoRoutine *rout = DaoRoutine_Copy( method, 1, 0, 0 );
+	if( method->attribs & DAO_ROUT_INITOR ) DString_Assign( rout->routName, self->name );
+	DaoType_InitTypeDefines( self, rout, defs );
+	DaoRoutine_Finalize( rout, self, defs );
+	DaoMethods_Insert( methods, rout, nspace, self );
+}
 
 void DaoType_SpecializeMethods( DaoType *self )
 {
@@ -2140,6 +2152,7 @@ void DaoType_SpecializeMethods( DaoType *self )
 	printf( "DaoType_SpecializeMethods: %s\n", self->name->bytes );
 #endif
 
+	if( self->constant ) self = self->vartype;
 	if( self == original ) return;
 	if( self->kernel != original->kernel ) return;
 	if( original->kernel == NULL || original->kernel->methods == NULL ) return;
@@ -2199,20 +2212,10 @@ void DaoType_SpecializeMethods( DaoType *self )
 				for(i=0; i<routine->overloads->routines->size; i++){
 					rout = rout2 = routine->overloads->routines->items.pRoutine[i];
 					if( rout->routHost->aux != original->aux ) continue;
-					rout = DaoRoutine_Copy( rout, 1, 0, 0 );
-					if( rout2->attribs & DAO_ROUT_INITOR )
-						DString_Assign( rout->routName, self->name );
-					DaoType_InitTypeDefines( self, rout, defs );
-					DaoRoutine_Finalize( rout, self, defs );
-					DaoMethods_Insert( methods, rout, nspace, self );
+					DaoType_SpecMethod( self, rout, methods, defs );
 				}
 			}else{
-				rout = DaoRoutine_Copy( routine, 1, 0, 0 );
-				if( routine->attribs & DAO_ROUT_INITOR )
-					DString_Assign( rout->routName, self->name );
-					DaoType_InitTypeDefines( self, rout, defs );
-				DaoRoutine_Finalize( rout, self, defs );
-				DaoMethods_Insert( methods, rout, nspace, self );
+				DaoType_SpecMethod( self, routine, methods, defs );
 			}
 		}
 

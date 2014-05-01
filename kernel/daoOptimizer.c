@@ -2056,13 +2056,13 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 	}
 
 #if 0
-	   printf( "=====================================\n" );
-	   for( j=0; j<npar; j++){
-	   DaoType *tp = tps[j];
-	   if( tp != NULL ) printf( "tp[ %i ]: %s\n", j, tp->name->bytes );
-	   }
-	   printf( "%s %i %i\n", routType->name->bytes, ndef, npar );
-	   if( selftype ) printf( "%i\n", routType->name->bytes, ndef, npar, selftype );
+	printf( "=====================================\n" );
+	for( j=0; j<npar; j++){
+		DaoType *tp = tps[j];
+		if( tp != NULL ) printf( "tp[ %i ]: %s\n", j, tp->name->bytes );
+	}
+	printf( "%s %i %i\n", routType->name->bytes, ndef, npar );
+	if( selftype ) printf( "%i\n", routType->name->bytes, ndef, npar, selftype );
 #endif
 
 	if( code == DVM_MCALL && ! (routType->attrib & DAO_TYPE_SELF) ){
@@ -2071,14 +2071,19 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 	}else if( selftype && (routType->attrib & DAO_TYPE_SELF) && code != DVM_MCALL ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		abtp = & partypes[0]->aux->xType;
+		/*
+		// self object will be passed by reference,
+		// so constant cannot be passed to non-const type
+		*/
 		selfMatch = DaoType_MatchTo( selftype, abtp, defs );
 		if( selfMatch ){
+			if( selftype->constant && abtp->constant == 0 ) goto FinishError;
 			selfChecked = 1;
 			parpass[0] = selfMatch;
 		}
 	}
 	if( npar == ndef && ndef == 0 ) goto FinishOK;
-	if( npar > ndef && (size == 0 || partypes[size-1]->tid != DAO_PAR_VALIST ) ){
+	if( (npar+selfChecked) > ndef && (size == 0 || partypes[size-1]->tid != DAO_PAR_VALIST ) ){
 		goto FinishError;
 	}
 
@@ -2086,17 +2091,18 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 	for(ifrom=0; ifrom<npar; ifrom++){
 		DaoType *tp = tps[ifrom];
 		ito = ifrom + selfChecked;
-		if( ito >= ndef ) goto FinishError;
-		if( partypes[ito]->tid == DAO_PAR_VALIST ){
-			DaoType *vlt = (DaoType*) partypes[ito]->aux;
+		abtp = partypes[ito];
+		if( abtp->tid == DAO_PAR_VALIST ){
+			DaoType *vlt = (DaoType*) abtp->aux;
 			for(; ifrom<npar; ifrom++, ito++){
 				parpass[ito] = 1;
 				if( vlt && DaoType_MatchTo( tp, vlt, defs ) == 0 ) goto FinishError;
 			}
 			break;
+		}else if( (abtp->attrib & DAO_TYPE_SELFNAMED) && abtp->aux->xType.constant == 0 ){
+			if( tp->constant != 0 ) goto FinishError;
 		}
-		if( ito >= ndef || tp ==NULL )  goto FinishError;
-		abtp = routType->nested->items.pType[ito];
+		if( tp == NULL )  goto FinishError;
 		parpass[ito] = DaoType_MatchTo( tp, abtp, defs );
 
 #if 0
@@ -2430,6 +2436,7 @@ static void DString_AppendTypeError( DString *self, DaoType *from, DaoType *to )
 void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routType, DaoType *selftype, DaoType *ts[], int np, int codemode, DArray *errors )
 {
 	DNode *node;
+	DString *s;
 	DMap *defs = DHash_New(0,0);
 	DaoType *abtp, **partypes = routType->nested->items.pType;
 	DaoValue *routobj = rout ? (DaoValue*)rout : (DaoValue*)routType;
@@ -2480,10 +2487,16 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 		if( selfMatch ){
 			selfChecked = 1;
 			parpass[0] = selfMatch;
+			if( selftype->constant && abtp->constant == 0 ){
+				DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );
+				abtp = DaoType_DefineTypes( abtp, ns, defs );
+				DString_AppendTypeError( s, selftype, abtp );
+				goto FinishError;
+			}
 		}
 	}
 	if( npar == ndef && ndef == 0 ) goto FinishOK;
-	if( npar > ndef && (size == 0 || partypes[size-1]->tid != DAO_PAR_VALIST ) ){
+	if( (npar+selfChecked) > ndef && (size == 0 || partypes[size-1]->tid != DAO_PAR_VALIST ) ){
 		DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_NUMBER );
 		DString_AppendChars( s, "too many parameters \";\n" );
 		goto FinishError;
@@ -2492,9 +2505,10 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 	for( j=selfChecked; j<ndef; j++) parpass[j] = 0;
 	for(ifrom=0; ifrom<npar; ifrom++){
 		DaoType *tp = ts[ifrom];
+		DaoType *abtp = partypes[ito];
 		ito = ifrom + selfChecked;
-		if( ito < ndef && partypes[ito]->tid == DAO_PAR_VALIST ){
-			DaoType *vlt = (DaoType*) partypes[ito]->aux;
+		if( abtp->tid == DAO_PAR_VALIST ){
+			DaoType *vlt = (DaoType*) abtp->aux;
 			for(; ifrom<npar; ifrom++){
 				tp = ts[ifrom];
 				parpass[ifrom+selfChecked] = vlt ? DaoType_MatchTo( tp, vlt, defs ) : 1;
@@ -2506,6 +2520,8 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 				}
 			}
 			break;
+		}else if( (abtp->attrib & DAO_TYPE_SELFNAMED) && abtp->aux->xType.constant == 0 ){
+			if( tp->constant != 0 ) goto WrongParamType;
 		}
 		if( tp == NULL ){
 			DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );
@@ -2522,7 +2538,7 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 			}
 			tp = & tp->aux->xType;
 		}
-		if( tp ==NULL ){
+		if( tp == NULL ){
 			DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );
 			DString_AppendChars( s, "unknown parameter type \";\n" );
 			goto FinishError;
@@ -2538,15 +2554,13 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 		printf( "%p %s %p %s\n", tp->aux, tp->name->bytes, abtp->aux, abtp->name->bytes );
 		printf( "%i:  %i\n", ito, parpass[ito] );
 #endif
+		if( parpass[ito] ) continue;
 
-		if( parpass[ito] == 0 ){
-			DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );
-			tp = ts[ifrom];
-			abtp = routType->nested->items.pType[ito];
-			abtp = DaoType_DefineTypes( abtp, ns, defs );
-			DString_AppendTypeError( s, tp, abtp );
-			goto FinishError;
-		}
+WrongParamType:
+		s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );
+		abtp = DaoType_DefineTypes( abtp, ns, defs );
+		DString_AppendTypeError( s, tp, abtp );
+		goto FinishError;
 	}
 	for(ito=0; ito<ndef; ito++){
 		i = partypes[ito]->tid;
