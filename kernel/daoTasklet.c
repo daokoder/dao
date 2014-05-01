@@ -92,7 +92,7 @@ DaoChannel* DaoChannel_New( DaoType *type, int dtype )
 	DaoChannel *self = (DaoChannel*) dao_calloc( 1, sizeof(DaoChannel) );
 	if( dtype ) type = DaoType_Specialize( dao_type_channel, & type, type != NULL );
 	DaoCstruct_Init( (DaoCstruct*) self, type );
-	self->buffer = DArray_New(D_VALUE);
+	self->buffer = DArray_New( DAO_DATA_VALUE );
 	return self;
 }
 
@@ -200,7 +200,7 @@ static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 	self->parameters = DArray_New(0);
 	self->events = DArray_New(0);
 	self->events2 = DArray_New(0);
-	self->waitings = DMap_New(D_VALUE,0);
+	self->waitings = DMap_New( DAO_DATA_VALUE, 0 );
 	self->pending = DHash_New(0,0);
 	self->active = DHash_New(0,0);
 	self->caches = DArray_New(0);

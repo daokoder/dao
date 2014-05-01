@@ -135,8 +135,8 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->vmSpace = vms;
 	self->status = DAO_PROCESS_SUSPENDED;
-	self->exceptions = DArray_New(D_VALUE);
-	self->defers = DArray_New(D_VALUE);
+	self->exceptions = DArray_New( DAO_DATA_VALUE );
+	self->defers = DArray_New( DAO_DATA_VALUE );
 
 	self->firstFrame = self->topFrame = DaoStackFrame_New();
 	self->firstFrame->active = self->firstFrame;
@@ -146,7 +146,7 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->stackSize = self->stackTop = 1 + DAO_MAX_PARAM;
 	self->stackValues = (DaoValue**)dao_calloc( self->stackSize, sizeof(DaoValue*) );
 	self->paramValues = self->stackValues + 1;
-	self->factory = DArray_New(D_VALUE);
+	self->factory = DArray_New( DAO_DATA_VALUE );
 
 	self->mbstring = DString_New();
 	self->pauseType = 0;
@@ -2998,7 +2998,7 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 			if( i >0 ) DString_AppendChars( ct->name, "," );
 			if( tp->tid == DAO_PAR_NAMED ){
 				DaoNameValue *nameva = & val->xNameValue;
-				if( ct->mapNames == NULL ) ct->mapNames = DMap_New(D_STRING,0);
+				if( ct->mapNames == NULL ) ct->mapNames = DMap_New( DAO_DATA_STRING, 0 );
 				MAP_Insert( ct->mapNames, nameva->name, i );
 				DString_Append( ct->name, nameva->name );
 				DString_AppendChars( ct->name, ":" );
@@ -6483,7 +6483,7 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src )
 	}
 	regexCaches = (DMap*) DaoProcess_GetAuxData( self, DaoProcess_FreeRegexCaches );
 	if( regexCaches == NULL ){
-		regexCaches = DHash_New(D_STRING,0);
+		regexCaches = DHash_New( DAO_DATA_STRING, 0 );
 		DaoProcess_SetAuxData( self, DaoProcess_FreeRegexCaches, regexCaches );
 	}
 	node = DMap_Find( regexCaches, src );

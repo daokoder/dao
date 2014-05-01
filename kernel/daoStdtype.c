@@ -602,54 +602,13 @@ static void DaoNumber_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream
 	case DAO_DOUBLE  : DaoStream_WriteFloat( stream, self->xDouble.value ); break;
 	}
 }
-static void DaoNumber_GetItem1( DaoValue *self, DaoProcess *proc, DaoValue *pid )
-{
-	daoint bits = DaoValue_GetInteger( self );
-	daoint size = 8*sizeof(daoint);
-	daoint start, end;
-	int idtype;
-	DArray *ids = MakeIndex( proc, pid, size, & start, & end, & idtype );
-	daoint *res = DaoProcess_PutInteger( proc, 0 );
-	switch( idtype ){
-	case IDX_EMPTY : break;
-	case IDX_NULL : *res = bits; break;
-	case IDX_SINGLE : *res = ( bits >> start ) & 0x1; break;
-	case IDX_MULTIPLE : DArray_Delete( ids ); /* fall through */
-	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
-	}
-}
-static void DaoNumber_SetItem1( DaoValue *self, DaoProcess *proc, DaoValue *pid, DaoValue *value )
-{
-	daoint bits = DaoValue_GetInteger( self );
-	daoint val = DaoValue_GetInteger( value );
-	daoint size = 8*sizeof(daoint);
-	daoint start, end;
-	int idtype;
-	DArray *ids = MakeIndex( proc, pid, size, & start, & end, & idtype );
-	switch( idtype ){
-	case IDX_EMPTY : break;
-	case IDX_NULL : bits = val; break;
-	case IDX_SINGLE : bits |= ( ( val != 0 ) & 0x1 ) << start; break;
-	case IDX_MULTIPLE : DArray_Delete( ids ); /* fall through */
-	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
-	}
-	self->xInteger.value = bits;
-}
 static void DaoNumber_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N )
 {
-	switch( N ){
-	case 0 : DaoNumber_GetItem1( self, proc, NULL ); break;
-	case 1 : DaoNumber_GetItem1( self, proc, ids[0] ); break;
-	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
-	}
+	DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
 }
 static void DaoNumber_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
 {
-	switch( N ){
-	case 0 : DaoNumber_SetItem1( self, proc, NULL, value ); break;
-	case 1 : DaoNumber_SetItem1( self, proc, ids[0], value ); break;
-	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
-	}
+	DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
 }
 
 static DaoTypeCore numberCore=
@@ -884,7 +843,7 @@ static void DaoSTR_Replace2( DaoProcess *proc, DaoValue *p[], int N )
 	DString *res, *key;
 	DString *self = p[0]->xString.value;
 	DMap *par = p[1]->xMap.value;
-	DMap *words = DMap_New(D_STRING,D_STRING);
+	DMap *words = DMap_New( DAO_DATA_STRING, DAO_DATA_STRING );
 	DMap *sizemap = DMap_New(0,0);
 	DNode *node = DMap_First( par );
 	DArray *sizes = DArray_New(0);
@@ -940,7 +899,6 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 	DNode *node = NULL;
 	daoint keep = p[3]->xInteger.value;
 	daoint i, pos1, pos2, prev = 0;
-	wchar_t spec1;
 	char spec2;
 	int replace;
 	int ch;
@@ -949,12 +907,11 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 		return;
 	}
 	if(  p[1]->type == DAO_TUPLE ){
-		if( tup->ctype ){
-			keys = tup->ctype->mapNames;
-		}else{
+		if( tup->ctype == NULL ){
 			DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid tuple" );
 			return;
 		}
+		keys = tup->ctype->mapNames;
 	}else{
 		tup = NULL;
 		keys = p[1]->xMap.value;
@@ -979,11 +936,7 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 			}
 			if( replace ){
 				DString_SubString( self, key->value, pos1+2, pos2-pos1-2 );
-				if( tup ){
-					node = DMap_Find( keys, key->value );
-				}else{
-					node = DMap_Find( keys, key );
-				}
+				node = DMap_Find( keys, tup ? key->value : (void*)key );
 				if( node ){
 					if( tup ){
 						i = node->value.pInt;
@@ -2385,8 +2338,8 @@ DaoList* DaoList_New()
 {
 	DaoList *self = (DaoList*) dao_calloc( 1, sizeof(DaoList) );
 	DaoValue_Init( self, DAO_LIST );
-	self->value = DArray_New(D_VALUE);
-	self->value->type = D_VALUE;
+	self->value = DArray_New( DAO_DATA_VALUE );
+	self->value->type = DAO_DATA_VALUE;
 	self->ctype = NULL;
 	return self;
 }
@@ -2914,7 +2867,7 @@ DaoMap* DaoMap_New( unsigned int hashing )
 {
 	DaoMap *self = (DaoMap*) dao_malloc( sizeof( DaoMap ) );
 	DaoValue_Init( self, DAO_MAP );
-	self->value = hashing ? DHash_New( D_VALUE, D_VALUE ) : DMap_New( D_VALUE, D_VALUE );
+	self->value = hashing ? DHash_New( DAO_DATA_VALUE, DAO_DATA_VALUE ) : DMap_New( DAO_DATA_VALUE, DAO_DATA_VALUE );
 	self->ctype = NULL;
 	if( hashing == 2 ){
 		self->value->hashing = rand();
@@ -3564,8 +3517,8 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer )
 			printf( "parent type is not wrapped (successfully): %s\n", typer->name );
 			return NULL;
 		}
-		if( ctype_type->bases == NULL ) ctype_type->bases = DArray_New(D_VALUE);
-		if( cdata_type->bases == NULL ) cdata_type->bases = DArray_New(D_VALUE);
+		if( ctype_type->bases == NULL ) ctype_type->bases = DArray_New( DAO_DATA_VALUE );
+		if( cdata_type->bases == NULL ) cdata_type->bases = DArray_New( DAO_DATA_VALUE );
 		DArray_Append( ctype_type->bases, sup->core->kernel->abtype->aux->xCdata.ctype );
 		DArray_Append( cdata_type->bases, sup->core->kernel->abtype );
 	}
@@ -3580,7 +3533,7 @@ DaoException* DaoException_New( DaoType *type )
 {
 	DaoException *self = (DaoException*) dao_malloc( sizeof(DaoException) );
 	DaoCstruct_Init( (DaoCstruct*)self, type );
-	self->callers = DArray_New(D_VALUE);
+	self->callers = DArray_New( DAO_DATA_VALUE );
 	self->lines = DArray_New(0);
 	self->name = DString_New();
 	self->info = DString_New();

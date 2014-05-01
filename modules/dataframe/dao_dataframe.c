@@ -225,10 +225,10 @@ DaoxDataFrame* DaoxDataFrame_New()
 	for(i=0; i<3; ++i){
 		self->dims[i] = 0;
 		self->groups[i] = 0;
-		self->labels[i] = DArray_New(D_MAP);
+		self->labels[i] = DArray_New( DAO_DATA_MAP );
 	}
-	self->columns = DArray_New(D_VALUE);
-	self->caches = DArray_New(D_VALUE);
+	self->columns = DArray_New( DAO_DATA_VALUE );
+	self->caches = DArray_New( DAO_DATA_VALUE );
 	self->original = NULL;
 	self->slices = NULL;
 	return self;
@@ -339,7 +339,7 @@ void DaoxDataFrame_UseLabels( DaoxDataFrame *self, int dim, int group )
 void DaoxDataFrame_AddLabelGroup( DaoxDataFrame *self, int dim )
 {
 	if( dim >=0 && dim < 3 ){
-		DMap *labmap = DHash_New(D_STRING,0);
+		DMap *labmap = DHash_New( DAO_DATA_STRING, 0 );
 		DArray *labels = self->labels[dim];
 		self->groups[dim] = labels->size;
 		DArray_Append( labels, labmap );
@@ -372,18 +372,18 @@ void DaoxDataFrame_AddLabels( DaoxDataFrame *self, int dim, DMap *labels )
 {
 	DString *lab;
 	DNode *it;
-	if( labels->keytype != D_STRING && labels->keytype != D_VALUE ) return;
-	if( labels->valtype != 0 && labels->valtype != D_VALUE ) return;
+	if( labels->keytype != DAO_DATA_STRING && labels->keytype != DAO_DATA_VALUE ) return;
+	if( labels->valtype != 0 && labels->valtype != DAO_DATA_VALUE ) return;
 	lab = DString_New(1);
 	DaoxDataFrame_AddLabelGroup( self, dim );
 	for(it=DMap_First(labels); it; it=DMap_Next(labels,it)){
 		DString *lab2 = it->key.pString;
 		daoint idx = it->value.pInt;
-		if( labels->keytype == D_VALUE ){
+		if( labels->keytype == DAO_DATA_VALUE ){
 			if( it->key.pValue->type != DAO_STRING ) continue;
 			lab2 = it->key.pValue->xString.value;
 		}
-		if( labels->valtype == D_VALUE ){
+		if( labels->valtype == DAO_DATA_VALUE ){
 			if( it->value.pValue->type != DAO_INTEGER ) continue;
 			idx = it->value.pValue->xInteger.value;
 		}

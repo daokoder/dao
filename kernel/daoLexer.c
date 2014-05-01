@@ -946,7 +946,7 @@ int DaoToken_Check( const char *src, int size, int *length )
 DaoLexer* DaoLexer_New()
 {
 	DaoLexer *self = (DaoLexer*) dao_malloc( sizeof(DaoLexer) );
-	self->tokens = DArray_New(D_TOKEN);
+	self->tokens = DArray_New( DAO_DATA_TOKEN );
 	self->tokbuf = DArray_New(0);
 	return self;
 }

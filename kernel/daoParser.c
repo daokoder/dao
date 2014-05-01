@@ -171,22 +171,22 @@ DaoParser* DaoParser_New()
 	self->lexer = DaoLexer_New();
 	self->tokens = self->lexer->tokens;
 
-	self->vmCodes = DArray_New(D_VMCODE);
+	self->vmCodes = DArray_New( DAO_DATA_VMCODE );
 	self->vmcBase = DaoInode_New();
 	self->vmcFirst = self->vmcLast = self->vmcBase;
 	self->vmcBase->code = DVM_UNUSED;
 	self->vmcFree = NULL;
 
-	self->allConsts = DHash_New(D_STRING,0);
+	self->allConsts = DHash_New( DAO_DATA_STRING, 0 );
 
-	self->initTypes = DMap_New(D_STRING,D_VALUE);
+	self->initTypes = DMap_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 
 	self->scopeOpenings = DArray_New(0);
 	self->scopeClosings = DArray_New(0);
 	self->decoFuncs   = DArray_New(0);
 	self->decoFuncs2  = DArray_New(0);
-	self->decoParams  = DArray_New(D_VALUE);
-	self->decoParams2 = DArray_New(D_VALUE);
+	self->decoParams  = DArray_New( DAO_DATA_VALUE );
+	self->decoParams2 = DArray_New( DAO_DATA_VALUE );
 
 	self->elexer = DaoLexer_New();
 	self->wlexer = DaoLexer_New();
@@ -205,11 +205,11 @@ DaoParser* DaoParser_New()
 	self->denum = DaoEnum_New(NULL,0);
 
 	self->toks = DArray_New(0);
-	self->lvm = DMap_New(D_STRING,0);
-	self->arrays = DArray_New(D_ARRAY);
-	self->strings = DArray_New(D_STRING);
-	self->localDataMaps = DArray_New(D_MAP);
-	self->switchMaps = DArray_New(D_MAP);
+	self->lvm = DMap_New( DAO_DATA_STRING, 0 );
+	self->arrays = DArray_New( DAO_DATA_ARRAY );
+	self->strings = DArray_New( DAO_DATA_STRING );
+	self->localDataMaps = DArray_New( DAO_DATA_MAP );
+	self->switchMaps = DArray_New( DAO_DATA_MAP );
 	self->enumTypes = DArray_New(0);
 	self->routCompilable = DArray_New(0);
 	self->routReInferable = DArray_New(0);
@@ -1433,7 +1433,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 		DaoRoutineBody *body = routine->body;
 		ec = DAO_INVALID_DECO_PATTERN;
 		if( !(routine->attribs & DAO_ROUT_DECORATOR) ) goto ErrorRoutine;
-		if( body->decoTargets == NULL ) body->decoTargets = DArray_New(D_STRING);
+		if( body->decoTargets == NULL ) body->decoTargets = DArray_New( DAO_DATA_STRING );
 		right = DaoParser_ParseDecoTargets( self, right+1, size-1, body->decoTargets );
 		if( right < 0 ) goto ErrorRoutine;
 		ec = 0;
@@ -1723,7 +1723,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 	char c;
 
 	type = DaoType_New( "enum<", DAO_ENUM, NULL, NULL );
-	type->mapNames = DMap_New(D_STRING,0);
+	type->mapNames = DMap_New( DAO_DATA_STRING, 0 );
 	DString_Reserve( type->name, 128 );
 	for(k=start; k<=end; k++){
 		tok = tokens[k];
@@ -1935,7 +1935,7 @@ WrongType:
 			case DAO_CTYPE :
 				if( self->byteBlock ){
 					DaoInterface *inter = type->aux->xCtype.clsInter;
-					DaoByteBlock_AddInterfaceBlock( self->byteBlock, inter, DAO_DATA_PUBLIC );
+					DaoByteBlock_AddInterfaceBlock( self->byteBlock, inter, DAO_PERM_PUBLIC );
 				}
 				type = type->aux->xCtype.clsInter->abtype;
 				goto DoneGenericType;
@@ -1943,7 +1943,7 @@ WrongType:
 			case DAO_CDATA :
 				if( self->byteBlock ){
 					DaoInterface *inter = type->aux->xCtype.objInter;
-					DaoByteBlock_AddInterfaceBlock( self->byteBlock, inter, DAO_DATA_PUBLIC );
+					DaoByteBlock_AddInterfaceBlock( self->byteBlock, inter, DAO_PERM_PUBLIC );
 				}
 				type = type->aux->xCtype.objInter->abtype;
 				goto DoneGenericType;
@@ -3047,8 +3047,8 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 
 		value = (DaoValue*) rout;
 		switch( perm ){
-		case DAO_DATA_PRIVATE   : rout->attribs |= DAO_ROUT_PRIVATE; break;
-		case DAO_DATA_PROTECTED : rout->attribs |= DAO_ROUT_PROTECTED; break;
+		case DAO_PERM_PRIVATE   : rout->attribs |= DAO_ROUT_PRIVATE; break;
+		case DAO_PERM_PROTECTED : rout->attribs |= DAO_ROUT_PROTECTED; break;
 		}
 		if( self->isClassBody ){
 			DaoClass_AddOverloadedRoutine( klass, mbs, rout );
@@ -3381,7 +3381,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( tokens[start]->name == DKEY_FOR ){
 		ec = DAO_INVALID_DECO_PATTERN;
 		if( klass->className->bytes[0] != '@' ) goto ErrorClassDefinition;
-		if( klass->decoTargets == NULL ) klass->decoTargets = DArray_New(D_STRING);
+		if( klass->decoTargets == NULL ) klass->decoTargets = DArray_New( DAO_DATA_STRING );
 		start = DaoParser_ParseDecoTargets( self, start+1, to, klass->decoTargets );
 		if( start < 0 ) goto ErrorClassDefinition;
 		ec = 0;
@@ -3429,7 +3429,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		if( it1 == NULL || it2 == NULL ) continue;
 		pm1 = LOOKUP_PM( it1->value.pInt );
 		pm2 = LOOKUP_PM( it2->value.pInt );
-		if( pm1 <= pm2 || pm2 != DAO_DATA_PRIVATE ){
+		if( pm1 <= pm2 || pm2 != DAO_PERM_PRIVATE ){
 			self->curLine = value->xRoutine.defLine;
 			DaoParser_Warn( self, DAO_WARN_GET_SETTER, mbs );
 		}
@@ -3444,10 +3444,10 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DArray_Clear( parser->tokens );
 		DaoParser_AddDefaultInitializer( parser, klass, 0 );
 		error |= DaoParser_ParseRoutine( parser ) == 0;
-		DaoClass_AddConst( klass, ctorname, (DaoValue*)klass->classRoutine, DAO_DATA_PUBLIC );
+		DaoClass_AddConst( klass, ctorname, (DaoValue*)klass->classRoutine, DAO_PERM_PUBLIC );
 		if( parser->byteBlock ){
 			DaoByteBlock *bk = parser->byteBlock;
-			bk = DaoByteBlock_AddRoutineBlock( bk, klass->classRoutine, DAO_DATA_PUBLIC );
+			bk = DaoByteBlock_AddRoutineBlock( bk, klass->classRoutine, DAO_PERM_PUBLIC );
 			DaoByteCoder_FinalizeRoutineBlock( self->byteCoder, bk );
 		}
 	}
@@ -3496,7 +3496,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 	}
 
 	abtp = DaoType_New( "enum<", DAO_ENUM, NULL, NULL );
-	abtp->mapNames = DMap_New(D_STRING,0);
+	abtp->mapNames = DMap_New( DAO_DATA_STRING, 0 );
 	comma = DaoParser_FindOpenToken( self, DTOK_COMMA, start+2, -1, 0 );
 	semco = DaoParser_FindOpenToken( self, DTOK_SEMCO, start+2, -1, 0 );
 	if( comma >=0 && semco >=0 ){
@@ -3637,7 +3637,7 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 	DString *mbs = self->string;
 	DaoValue *value;
 
-	self->permission = DAO_DATA_PUBLIC;
+	self->permission = DAO_PERM_PUBLIC;
 
 	if( from ==0 && (to+1) == self->tokens->size ){
 		for(i=0; i<self->tokens->size; i++) tokens[i]->index = i;
@@ -3684,9 +3684,9 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 		}
 		if( self->enumTypes->size ) DArray_Clear( self->enumTypes );
 		errorStart = start;
-		if( ! self->isClassBody ) self->permission = DAO_DATA_PUBLIC;
+		if( ! self->isClassBody ) self->permission = DAO_PERM_PUBLIC;
 		if( tki >= DKEY_PRIVATE && tki <= DKEY_PUBLIC ){
-			self->permission = tki - DKEY_PRIVATE + DAO_DATA_PRIVATE;
+			self->permission = tki - DKEY_PRIVATE + DAO_PERM_PRIVATE;
 			start += 1;
 			if( start <= to && tokens[start]->name == DTOK_COLON ) start += 1;
 			if( start > to ) break;
@@ -4032,7 +4032,7 @@ DecoratorError:
 			if( reg1 < 0 ) return 0;
 			self->curToken = rb + 1;
 			if( DaoParser_CheckTokenType( self, DTOK_LCB, "{" ) ==0 ) return 0;
-			switchMap = DMap_New(D_VALUE,0);
+			switchMap = DMap_New( DAO_DATA_VALUE, 0 );
 			closing = DaoParser_AddCode( self, DVM_LABEL, 0, 1, DVM_SWITCH, start, 0,0 );
 			opening = DaoParser_AddScope( self, DVM_BRANCH, closing );
 			DaoParser_AddCode( self, DVM_SWITCH, reg1, self->switchMaps->size, 0, start,0,rb );
@@ -5474,7 +5474,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		DaoType *type = DaoNamespace_FindType( ns, str );
 		if( type == NULL ){
 			type = DaoType_New( str->bytes, DAO_ENUM, NULL, NULL );
-			type->mapNames = DMap_New(D_STRING,0);
+			type->mapNames = DMap_New( DAO_DATA_STRING, 0 );
 			type->subtype = DAO_ENUM_SYM;
 			DString_Assign( self->string, str );
 			DString_Erase( self->string, 0, 1 );

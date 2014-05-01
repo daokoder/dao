@@ -213,12 +213,12 @@ DaoOptimizer* DaoOptimizer_New()
 	self->array2 = DArray_New(0); /* DArray<DaoCnode*> */
 	self->array3 = DArray_New(0); /* DArray<DaoCnode*> */
 	self->nodeCache  = DArray_New(0); /* DArray<DaoCnode*> */
-	self->arrayCache = DArray_New(D_ARRAY); /* DArray<DArray<DaoCnode*>> */
+	self->arrayCache = DArray_New( DAO_DATA_ARRAY ); /* DArray<DArray<DaoCnode*>> */
 	self->nodes = DArray_New(0);  /* DArray<DaoCnode*> */
 	self->enodes = DArray_New(0);  /* DArray<DaoCnode*> */
 	self->uses  = DArray_New(0);  /* DArray<DArray<DaoCnode*>> */
 	self->refers  = DArray_New(0);  /* DArray<daoint> */
-	self->exprs = DHash_New(D_VMCODE,0); /* DMap<DaoVmCode*,int> */
+	self->exprs = DHash_New( DAO_DATA_VMCODE, 0 ); /* DMap<DaoVmCode*,int> */
 	self->inits = DHash_New(0,0);   /* DMap<DaoCnode*,int> */
 	self->finals = DHash_New(0,0);  /* DMap<DaoCnode*,int> */
 	self->tmp = DHash_New(0,0);
@@ -1079,7 +1079,7 @@ static void DaoRoutine_UpdateCodes( DaoRoutine *self )
 static void DaoRoutine_UpdateRegister( DaoRoutine *self, DArray *mapping )
 {
 	DNode *it;
-	DArray *array = DArray_New(D_VALUE);
+	DArray *array = DArray_New( DAO_DATA_VALUE );
 	DMap *localVarType2 = DMap_New(0,0);
 	DMap *localVarType = self->body->localVarType;
 	DaoType **types = self->body->regType->items.pType;
@@ -1497,7 +1497,7 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 {
 	DNode *it, *it2, *it3, *it4;
 	DMap *same, *one = DHash_New(0,0);
-	DMap *sets = DHash_New(0,D_MAP);
+	DMap *sets = DHash_New(0,DAO_DATA_MAP);
 	DMap *livemap = DMap_New(0,0);
 	DMap *actives = DMap_New(0,0);
 	DMap *offsets = DMap_New(0,0);
@@ -1909,11 +1909,11 @@ DaoInferencer* DaoInferencer_New()
 {
 	DaoInferencer *self = (DaoInferencer*) dao_calloc( 1, sizeof(DaoInferencer) );
 	self->inodes = DArray_New(0);
-	self->consts = DArray_New(D_VALUE);
-	self->types = DArray_New(D_VALUE);
+	self->consts = DArray_New( DAO_DATA_VALUE );
+	self->types = DArray_New( DAO_DATA_VALUE );
 	self->inited = DString_New();
 	self->rettypes = DArray_New(0);
-	self->typeMaps = DArray_New(D_MAP);
+	self->typeMaps = DArray_New( DAO_DATA_MAP );
 	self->errors = DArray_New(0);
 	self->array = DArray_New(0);
 	self->array2 = DArray_New(0);
@@ -3297,8 +3297,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}else if( at->tid == DAO_PAR_NAMED && code == DVM_GETDI ){
 				ct = opb ? (DaoType*) at->aux : dao_type_string;
 			}else if( at->tid == DAO_INTEGER ){
-				ct = dao_type_int;
-				if( bt->tid > DAO_DOUBLE ) return DaoInferencer_ErrorInvalidIndex( self );
+				goto InvIndex;
 			}else if( at->tid == DAO_STRING ){
 				ct = at;
 				if( bt->realnum ){
@@ -4928,7 +4927,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				DaoInode *front = inodes[i];
 				DaoInode *back = inodes[i+opc+1];
 				DaoEnum denum = {DAO_ENUM,0,0,0,0,0,0,NULL};
-				DMap *jumps = DMap_New(D_VALUE,0);
+				DMap *jumps = DMap_New( DAO_DATA_VALUE, 0 );
 				DNode *it, *find;
 				int max=0, min=0;
 				denum.etype = at;
@@ -6259,7 +6258,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	if( oldfn == NULL ) return NULL;
 
 	newfn = DaoRoutine_Copy( decorator, 1, 1, 1 );
-	added = DArray_New(D_VMCODE);
+	added = DArray_New( DAO_DATA_VMCODE );
 	regmap = DArray_New(0);
 
 	DArray_Resize( regmap, decorator->body->regCount + oldfn->parCount, 0 );

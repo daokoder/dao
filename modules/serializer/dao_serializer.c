@@ -644,7 +644,7 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 			if( map->value->size == 0 ){
 				if( tokens[i]->name == DTOK_COLON ){
 					DMap_Delete( map->value );
-					map->value = DHash_New( D_VALUE, D_VALUE );
+					map->value = DHash_New( DAO_DATA_VALUE, DAO_DATA_VALUE );
 				}
 			}
 			if( tokens[i]->name == DTOK_COLON || tokens[i]->name == DTOK_FIELD ) i += 1;
@@ -756,9 +756,9 @@ static void NS_Backup( DaoNamespace *self, DaoProcess *proc, FILE *fout, int lim
 		if( DaoValue_Serialize( value, serial, self, proc ) ==0 ) continue;
 		prefix->size = 0;
 		switch( pm ){
-		case DAO_DATA_PRIVATE   : DString_AppendChars( prefix, "private " ); break;
-		case DAO_DATA_PROTECTED : DString_AppendChars( prefix, "protected " ); break;
-		case DAO_DATA_PUBLIC    : DString_AppendChars( prefix, "public " ); break;
+		case DAO_PERM_PRIVATE   : DString_AppendChars( prefix, "private " ); break;
+		case DAO_PERM_PROTECTED : DString_AppendChars( prefix, "protected " ); break;
+		case DAO_PERM_PUBLIC    : DString_AppendChars( prefix, "public " ); break;
 		}
 		switch( st ){
 		case DAO_GLOBAL_CONSTANT : DString_AppendChars( prefix, "const " ); break;
@@ -800,7 +800,7 @@ void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin )
 	while( DaoFile_ReadLine( fin, line ) ){
 		DaoValue *value = NULL;
 		int st = DAO_GLOBAL_VARIABLE;
-		int pm = DAO_DATA_PRIVATE;
+		int pm = DAO_PERM_PRIVATE;
 		int i, n, start = 0;
 		char *mbs;
 
@@ -824,9 +824,9 @@ void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin )
 			continue;
 		}
 		switch( tokens->items.pToken[start]->name ){
-		case DKEY_PRIVATE   : pm = DAO_DATA_PRIVATE;   start += 1; break;
-		case DKEY_PROTECTED : pm = DAO_DATA_PROTECTED; start += 1; break;
-		case DKEY_PUBLIC    : pm = DAO_DATA_PUBLIC;    start += 1; break;
+		case DKEY_PRIVATE   : pm = DAO_PERM_PRIVATE;   start += 1; break;
+		case DKEY_PROTECTED : pm = DAO_PERM_PROTECTED; start += 1; break;
+		case DKEY_PUBLIC    : pm = DAO_PERM_PUBLIC;    start += 1; break;
 		}
 		if( start >= tokens->size ) continue;
 		switch( tokens->items.pToken[start]->name ){

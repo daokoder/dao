@@ -70,20 +70,20 @@ enum DaoSubTypes
 	END_SUB_TYPES
 };
 
-enum DaoBasicStruct
+enum DaoContainerDataTypes
 {
-	D_NULL ,
-	D_VALUE ,   /* garbage collectable items, managed by the container; */
-	D_VALUE2 ,  /* the same as D_VALUE,  except more strict comparing as map/hash keys; */
-	D_VALUE3 ,  /* the same as D_VALUE2, except more strict comparing as map/hash keys; */
-	D_VMCODE ,
-	D_VMCODE2 , /* for DMap, compare code and operands only; */
-	D_TOKEN ,   /* for DArray only; */
-	D_STRING ,
-	D_VECTOR ,
-	D_ARRAY ,
-	D_MAP ,
-	D_VOID2 /* a pair of pointer; */
+	DAO_DATA_NULL ,
+	DAO_DATA_VALUE ,   /* garbage collectable items, managed by the container; */
+	DAO_DATA_VALUE2 ,  /* same as DAO_DATA_VALUE, except more strict comparing as map keys; */
+	DAO_DATA_VALUE3 ,  /* same as DAO_DATA_VALUE2,except more strict comparing as map keys; */
+	DAO_DATA_VMCODE ,
+	DAO_DATA_VMCODE2 , /* for DMap, compare code and operands only; */
+	DAO_DATA_TOKEN ,   /* for DArray only; */
+	DAO_DATA_STRING ,
+	DAO_DATA_VECTOR ,
+	DAO_DATA_ARRAY ,
+	DAO_DATA_MAP ,
+	DAO_DATA_VOID2 /* a pair of pointer; */
 };
 
 
@@ -186,11 +186,11 @@ enum DaoProcessPauseType
 	DAO_PAUSE_COROUTINE_YIELD   /* coroutine; */
 };
 
-enum DaoDataPermission
+enum DaoFieldPermission
 {
-	DAO_DATA_PRIVATE = 1,
-	DAO_DATA_PROTECTED ,
-	DAO_DATA_PUBLIC
+	DAO_PERM_PRIVATE = 1,
+	DAO_PERM_PROTECTED ,
+	DAO_PERM_PUBLIC
 };
 enum DaoClassAttrib
 {
@@ -218,8 +218,8 @@ enum DaoRoutineAttrib
 
 enum DaoGlobalConstOffset
 {
-	DVR_NSC_NONE = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, DAO_DATA_PUBLIC, 0, 1 ) ,
-	DVR_NSC_MAIN = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, DAO_DATA_PUBLIC, 0, 2 )
+	DVR_NSC_NONE = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, DAO_PERM_PUBLIC, 0, 1 ) ,
+	DVR_NSC_MAIN = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, DAO_PERM_PUBLIC, 0, 2 )
 };
 enum DaoGlobalVarOffset
 {

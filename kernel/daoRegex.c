@@ -1056,7 +1056,7 @@ int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target,
 	DaoString matched = {DAO_STRING,0,0,0,0,NULL};
 	DString *tmp = DString_New();
 	DString *replace = DString_New();
-	DArray *array = DArray_New(D_VALUE);
+	DArray *array = DArray_New( DAO_DATA_VALUE );
 
 	if( self == NULL || source->size == 0 ) goto DoNothing;
 

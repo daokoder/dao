@@ -214,7 +214,7 @@ static DaoxStream* DaoxStream_New( DaoStream *stream, DaoProcess *proc )
 	DString ssubsect2 = DString_WrapChars( "subsubsection" );
 	DaoxStream *self = (DaoxStream*) calloc( 1, sizeof(DaoxStream) );
 
-	self->mtypes = DHash_New(D_STRING,0);
+	self->mtypes = DHash_New( DAO_DATA_STRING, 0 );
 	self->regex = DaoRegex_New( & spat );
 	self->process = proc;
 	self->stream = stream;
@@ -948,8 +948,8 @@ static int DaoxStream_WriteList( DaoxStream *self, DString *text, int offset, in
 static void DaoxStream_WriteTable( DaoxStream *self, DString *text, int offset, int width, int islist, int listdep )
 {
 	DVector *widths = DVector_New(sizeof(int));
-	DArray *rows = DArray_New(D_ARRAY);
-	DArray *row = DArray_New(D_STRING);
+	DArray *rows = DArray_New( DAO_DATA_ARRAY );
+	DArray *row = DArray_New( DAO_DATA_STRING );
 	DString *cell = DString_New();
 	daoint newline, next, start = 0;
 	daoint i, j, k, m;
@@ -1312,7 +1312,7 @@ static DaoxHelpEntry* DaoxHelpEntry_New( DString *name )
 	self->author = NULL;
 	self->license = NULL;
 	self->name = DString_Copy( name );
-	self->nested = DMap_New(D_STRING,0);
+	self->nested = DMap_New( DAO_DATA_STRING, 0 );
 	self->nested2 = DArray_New(0);
 	self->first = self->last = NULL;
 	self->parent = NULL;
@@ -1594,7 +1594,7 @@ static void DaoxHelpEntry_Print( DaoxHelpEntry *self, DaoxStream *stream, DaoPro
 static DaoxHelp* DaoxHelp_New()
 {
 	DaoxHelp *self = (DaoxHelp*) dao_malloc( sizeof(DaoxHelp) );
-	self->entries = DMap_New(D_STRING,0);
+	self->entries = DMap_New( DAO_DATA_STRING, 0 );
 	self->current = NULL;
 	self->nspace = NULL;
 	return self;
@@ -1615,10 +1615,10 @@ static DaoxHelper* DaoxHelper_New()
 	DaoCstruct_Init( (DaoCstruct*) self, daox_type_helper );
 	self->helps = DHash_New(0,0);
 	self->tree = DaoxHelpEntry_New( & name );
-	self->entries = DMap_New(D_STRING,0);
-	self->nslist = DArray_New(D_VALUE);
+	self->entries = DMap_New( DAO_DATA_STRING, 0 );
+	self->nslist = DArray_New( DAO_DATA_VALUE );
 	self->notice = DString_New();
-	self->cxxKeywords = DMap_New(D_STRING,0);
+	self->cxxKeywords = DMap_New( DAO_DATA_STRING, 0 );
 	DString_SetChars( self->notice, "By $(author). Released under the $(license).\n" );
 	for(i=0; i<100; i++){
 		DIntStringPair pair =  daox_help_cxx_keywords[i];

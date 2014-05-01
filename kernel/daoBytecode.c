@@ -125,8 +125,8 @@ DaoByteCoder* DaoByteCoder_New( DaoVmSpace *vms )
 	char buf[64];
 	DString *format = DString_New();
 	DaoByteCoder *self = (DaoByteCoder*) dao_calloc(1,sizeof(DaoByteCoder));
-	self->valueDataBlocks  = DHash_New(D_VALUE2,0);
-	self->valueObjectBlocks = DHash_New(D_VALUE3,0);
+	self->valueDataBlocks  = DHash_New( DAO_DATA_VALUE2, 0 );
+	self->valueObjectBlocks = DHash_New( DAO_DATA_VALUE3, 0 );
 	self->caches = DArray_New(0);
 	self->stack = DArray_New(0);
 	self->lines = DArray_New(0);
@@ -273,7 +273,7 @@ DaoByteBlock* DaoByteBlock_FindOrCopyBlock( DaoByteBlock *self, DaoValue *value 
 	block = DaoByteBlock_FindDataBlock( self, value );
 	if( block == NULL ) return NULL;
 	newbk = DaoByteBlock_NewBlock( self, DAO_ASM_COPY );
-	if( self->valueObjectBlocks == NULL ) self->valueObjectBlocks = DHash_New(D_VALUE3,0);
+	if( self->valueObjectBlocks == NULL ) self->valueObjectBlocks = DHash_New( DAO_DATA_VALUE3, 0 );
 	DaoByteBlock_SetValue( newbk, value );
 	DMap_Insert( self->coder->valueObjectBlocks, value, newbk );
 	DMap_Insert( self->valueObjectBlocks, value, newbk );
@@ -283,8 +283,8 @@ DaoByteBlock* DaoByteBlock_FindOrCopyBlock( DaoByteBlock *self, DaoValue *value 
 DaoByteBlock* DaoByteBlock_AddBlock( DaoByteBlock *self, DaoValue *value, int type )
 {
 	DaoByteBlock *block = DaoByteBlock_NewBlock( self, type );
-	if( self->valueDataBlocks == NULL ) self->valueDataBlocks = DHash_New(D_VALUE2,0);
-	if( self->valueObjectBlocks == NULL ) self->valueObjectBlocks = DHash_New(D_VALUE3,0);
+	if( self->valueDataBlocks == NULL ) self->valueDataBlocks = DHash_New( DAO_DATA_VALUE2, 0 );
+	if( self->valueObjectBlocks == NULL ) self->valueObjectBlocks = DHash_New( DAO_DATA_VALUE3, 0 );
 	DaoByteBlock_SetValue( block, value );
 	DMap_Insert( self->coder->valueDataBlocks, value, block );
 	DMap_Insert( self->coder->valueObjectBlocks, value, block );
@@ -2085,7 +2085,7 @@ static void DaoByteCoder_DecodeEnum( DaoByteCoder *self, DaoByteBlock *block )
 		return;
 	}
 	type = DaoType_New( name->bytes, DAO_ENUM, NULL, NULL );
-	type->mapNames = DMap_New(D_STRING,0);
+	type->mapNames = DMap_New( DAO_DATA_STRING, 0 );
 	type->subtid = B;
 	DaoByteCoder_CheckDataBlocks( self, block );
 	for(pb=block->first; pb; pb=pb->next){
@@ -2138,7 +2138,7 @@ static void DaoByteCoder_DecodePatterns( DaoByteCoder *self, DaoByteBlock *block
 	if( self->error ) return;
 	if( block->parent->type == DAO_ASM_CLASS ){
 		DaoClass *klass = DaoValue_CastClass( block->parent->value );
-		if( klass->decoTargets == NULL ) klass->decoTargets = DArray_New(D_STRING);
+		if( klass->decoTargets == NULL ) klass->decoTargets = DArray_New( DAO_DATA_STRING );
 		for(i=D; i<self->ivalues->size; ++i){
 			DString *pat = self->ivalues->items.pValue[i]->xString.value;
 			DArray_Append( klass->decoTargets, pat );
@@ -2146,7 +2146,7 @@ static void DaoByteCoder_DecodePatterns( DaoByteCoder *self, DaoByteBlock *block
 	}else if( block->parent->type == DAO_ASM_ROUTINE ){
 		DaoRoutine *routine = DaoValue_CastRoutine( block->parent->value );
 		DaoRoutineBody *body = routine->body;
-		if( body->decoTargets == NULL ) body->decoTargets = DArray_New(D_STRING);
+		if( body->decoTargets == NULL ) body->decoTargets = DArray_New( DAO_DATA_STRING );
 		for(i=D; i<self->ivalues->size; ++i){
 			DString *pat = self->ivalues->items.pValue[i]->xString.value;
 			DArray_Append( routine->body->decoTargets, pat );
@@ -2232,7 +2232,7 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 {
 	DaoVmCodeX *vmc2, *vmc = NULL;
 	DMap *current, *outer = DHash_New(0,0);
-	DArray *outers = DArray_New(D_MAP);
+	DArray *outers = DArray_New( DAO_DATA_MAP );
 	DaoInferencer *inferencer;
 	DaoRoutine *routine = (DaoRoutine*) block->value;
 	int regCount = routine->body->regCount;

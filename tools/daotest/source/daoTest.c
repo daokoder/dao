@@ -204,7 +204,7 @@ int main( int argc, char **argv )
 		DaoNamespace_AddCodeInliner( ns, "test", dao_test_inliner );
 
 		string = DString_New(1);
-		dao_tests = DArray_New(D_STRING);
+		dao_tests = DArray_New(DAO_DATA_STRING);
 		ns = DaoVmSpace_Load( vmSpace, argv[i] );
 		if( ns == NULL ){
 			mfails += 1;

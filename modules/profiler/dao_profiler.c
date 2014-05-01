@@ -49,8 +49,8 @@ static void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream );
 DaoxProfiler* DaoxProfiler_New()
 {
 	DaoxProfiler *self = (DaoxProfiler*) dao_calloc(1,sizeof(DaoxProfiler));
-	self->profile = DHash_New(0,D_MAP);
-	self->one = DHash_New(0,D_VALUE);
+	self->profile = DHash_New( 0, DAO_DATA_MAP );
+	self->one = DHash_New( 0, DAO_DATA_VALUE );
 	self->base.EnterFrame = DaoProfiler_EnterFrame;
 	self->base.LeaveFrame = DaoProfiler_LeaveFrame;
 	self->base.Report = DaoProfiler_Report;
@@ -109,7 +109,7 @@ static DMap* DaoProcess_GetTimeMap( DaoProcess *self )
 {
 	DMap *mapTime = (DMap*) DaoProcess_GetAuxData( self, DMap_DeleteTimeMap );
 	if( mapTime ) return mapTime;
-	mapTime = DHash_New(0,D_VALUE);
+	mapTime = DHash_New( 0, DAO_DATA_VALUE );
 	DaoProcess_SetAuxData( self, DMap_DeleteTimeMap, mapTime );
 	return mapTime;
 }
@@ -243,8 +243,8 @@ void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream )
 {
 	DaoComplex com = {DAO_COMPLEX,0,0,0,1,{0.0,0.0}};
 	DaoxProfiler *self = (DaoxProfiler*) self0;
-	DMap *summary = DMap_New(D_VALUE,0);
-	DMap *summary2 = DMap_New(D_VALUE,0);
+	DMap *summary = DMap_New( DAO_DATA_VALUE, 0 );
+	DMap *summary2 = DMap_New( DAO_DATA_VALUE, 0 );
 	DString *name1 = DString_New(1);
 	DString *name2 = DString_New(1);
 	DNode *it, *it2;

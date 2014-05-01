@@ -164,7 +164,7 @@ DMacroUnit* DMacroUnit_New()
 {
 	DMacroUnit *self = (DMacroUnit*) dao_malloc( sizeof(DMacroUnit) );
 	self->type = DMACRO_TOK;
-	self->stops = DArray_New(D_TOKEN);
+	self->stops = DArray_New( DAO_DATA_TOKEN );
 	self->marker = DaoToken_New();
 	return self;
 }
@@ -182,8 +182,8 @@ DMacroGroup* DMacroGroup_New()
 	self->repeat = DMACRO_ONE;
 	self->cpos = 0;
 	self->units = DArray_New(0);
-	self->stops = DArray_New(D_TOKEN);
-	self->variables = DArray_New(D_TOKEN);
+	self->stops = DArray_New( DAO_DATA_TOKEN );
+	self->variables = DArray_New( DAO_DATA_TOKEN );
 	self->parent = NULL;
 	return self;
 }
@@ -209,7 +209,7 @@ DaoMacro* DaoMacro_New()
 {
 	DaoMacro *self = (DaoMacro*) dao_malloc( sizeof(DaoMacro) );
 	DaoCstruct_Init( (DaoCstruct*) self, daox_type_macro );
-	self->keyListApply = DArray_New(D_STRING);
+	self->keyListApply = DArray_New( DAO_DATA_STRING );
 	self->macroList = DArray_New(0);
 	self->firstMacro = self;
 	self->macroMatch = DMacroGroup_New();
@@ -538,7 +538,7 @@ int DaoParser_ParseMacro( DaoParser *self, int start )
 	 */
 
 	macro = DaoMacro_New();
-	markers = DMap_New(D_STRING,0);
+	markers = DMap_New( DAO_DATA_STRING, 0 );
 
 	if( DaoParser_MakeMacroGroup( self, macro->macroMatch, macro->macroMatch, start+2, rb1, markers, NULL ) ==0 ){
 		goto Error;
@@ -565,7 +565,7 @@ int DaoParser_ParseMacro( DaoParser *self, int start )
 		DArray_Append( macro->keyListApply, it->key.pString );
 	}
 
-	stops = DArray_New(D_TOKEN);
+	stops = DArray_New( DAO_DATA_TOKEN );
 	DMacroGroup_SetStop( macro->macroMatch, stops );
 	DMacroGroup_FindVariables( macro->macroMatch );
 	DArray_Clear( stops );
@@ -598,7 +598,7 @@ DMacroNode* DMacroNode_New( short leaf, short level )
 	self->isLeaf = leaf;
 	self->level = level;
 	self->nodes = DArray_New(0);
-	self->leaves = DArray_New(D_TOKEN);
+	self->leaves = DArray_New( DAO_DATA_TOKEN );
 	self->parent = NULL;
 	self->group = NULL;
 	return self;
@@ -894,7 +894,7 @@ static int DaoParser_MacroApply( DaoParser *self, DArray *tokens,
 	DMacroUnit  *unit;
 	DMacroGroup *grp;
 	DMacroNode *node, *node2;
-	DArray *toks = DArray_New(D_TOKEN);
+	DArray *toks = DArray_New( DAO_DATA_TOKEN );
 	DaoToken *tk = DaoToken_New();
 	DaoToken *tt = NULL;
 	DNode  *kwnode = NULL;
@@ -1037,10 +1037,10 @@ int DaoParser_MacroTransform( DaoParser *self, DaoMacro *macro, int start, int t
 {
 	DNode *it;
 	DString *mbs = DString_New(1);
-	DArray *toks = DArray_New(D_TOKEN);
+	DArray *toks = DArray_New( DAO_DATA_TOKEN );
 	DArray *all = DArray_New(0);
-	DMap *tokMap = DMap_New(D_STRING,0);
-	DMap *used = DMap_New(0,D_MAP);
+	DMap *tokMap = DMap_New( DAO_DATA_STRING, 0 );
+	DMap *used = DMap_New( 0, DAO_DATA_MAP );
 	int j, p0, lev = 0, adjust=0;
 	char buf[20];
 	daoint i;

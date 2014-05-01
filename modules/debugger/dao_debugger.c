@@ -59,7 +59,7 @@ DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *
 	int i;
 	if( ! (proc->vmSpace->options & DAO_OPTION_DEBUG ) ) return;
 	input = DString_New(1);
-	tokens = DArray_New(D_STRING);
+	tokens = DArray_New(DAO_DATA_STRING);
 	cycData = DMap_New(0,0);
 	if( stream == NULL ) stream = proc->vmSpace->stdioStream;
 	while( proc->vmSpace->stopit == 0 ){

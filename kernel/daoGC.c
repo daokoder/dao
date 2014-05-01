@@ -1020,7 +1020,7 @@ static void DaoGC_UnlockData()
 int DaoGC_LockArray( DArray *array )
 {
 	if( gcWorker.concurrent == 0 ) return 0;
-	if( array->type != D_VALUE ) return 0;
+	if( array->type != DAO_DATA_VALUE ) return 0;
 	array->mutating = 1;
 	if( gcWorker.scanning != array ) return 0;
 	/* real locking, only if the GC is scanning the array: */
@@ -1035,7 +1035,7 @@ void DaoGC_UnlockArray( DArray *array, int locked )
 int DaoGC_LockMap( DMap *map )
 {
 	if( gcWorker.concurrent == 0 ) return 0;
-	if( map->keytype != D_VALUE && map->valtype != D_VALUE ) return 0;
+	if( map->keytype != DAO_DATA_VALUE && map->valtype != DAO_DATA_VALUE ) return 0;
 	map->mutating = 1;
 	if( gcWorker.scanning != map ) return 0;
 	/* real locking, only if the GC is scanning the map: */
@@ -1050,7 +1050,7 @@ void DaoGC_UnlockMap( DMap *map, int locked )
 static void DaoGC_ScanArray( DArray *array, int action )
 {
 	if( array == NULL || array->size == 0 ) return;
-	if( array->type != 0 && array->type != D_VALUE ) return;
+	if( array->type != 0 && array->type != DAO_DATA_VALUE ) return;
 	switch( action ){
 	case DAO_GC_DEC : cycRefCountDecrements( array ); break;
 	case DAO_GC_INC : cycRefCountIncrements( array ); break;
@@ -1070,8 +1070,8 @@ static int DaoGC_ScanMap( DMap *map, int action, int gckey, int gcvalue )
 	int count = 0;
 	DNode *it;
 	if( map == NULL || map->size == 0 ) return 0;
-	gckey &= map->keytype == 0 || map->keytype == D_VALUE;
-	gcvalue &= map->valtype == 0 || map->valtype == D_VALUE;
+	gckey &= map->keytype == 0 || map->keytype == DAO_DATA_VALUE;
+	gcvalue &= map->valtype == 0 || map->valtype == DAO_DATA_VALUE;
 	if( action != DAO_GC_BREAK ){ /* if action == DAO_GC_BREAK, no mutator can access this map: */
 		gcWorker.scanning = map;
 		while( map->mutating );
@@ -1083,8 +1083,8 @@ static int DaoGC_ScanMap( DMap *map, int action, int gckey, int gcvalue )
 		count += gckey + gcvalue;
 	}
 	if( action == DAO_GC_BREAK ){
-		if( map->keytype == D_VALUE ) map->keytype = 0;
-		if( map->valtype == D_VALUE ) map->valtype = 0;
+		if( map->keytype == DAO_DATA_VALUE ) map->keytype = 0;
+		if( map->valtype == DAO_DATA_VALUE ) map->valtype = 0;
 		DMap_Clear( map );
 	}else{
 		DaoGC_UnlockData();

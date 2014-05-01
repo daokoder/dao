@@ -186,7 +186,7 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 			}
 			MAP_Insert( deftypes, self->typeHolders->items.pVoid[i], type );
 		}
-		klass->objType->nested = DArray_New(D_VALUE);
+		klass->objType->nested = DArray_New(DAO_DATA_VALUE);
 		DArray_Assign( klass->objType->nested, types );
 		if( DaoClass_CopyField( klass, self, deftypes ) == 0 ){
 			DString_Delete( name );
@@ -199,7 +199,7 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 		if( holders ){
 			klass->typeHolders = DArray_New(0);
 			klass->typeDefaults = DArray_New(0);
-			klass->instanceClasses = DMap_New(D_STRING,0);
+			klass->instanceClasses = DMap_New(DAO_DATA_STRING,0);
 			DMap_Insert( klass->instanceClasses, klass->className, klass );
 			for(i=0; i<types->size; i++){
 				DArray_Append( klass->typeHolders, types->items.pType[i] );
@@ -220,7 +220,7 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 static int storages[3] = { DAO_CLASS_CONSTANT, DAO_CLASS_VARIABLE, DAO_OBJECT_VARIABLE };
 
 /* access enum<private,protected,public> */
-static int permissions[3] = { DAO_DATA_PRIVATE, DAO_DATA_PROTECTED, DAO_DATA_PUBLIC };
+static int permissions[3] = { DAO_PERM_PRIVATE, DAO_PERM_PROTECTED, DAO_PERM_PUBLIC };
 
 /* a = class( name, parents, fields, methods ){ proto_class_body }
  * (1) parents: optional, list<class> or map<string,class>
@@ -246,8 +246,8 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue **data = tuple->values;
 	DMap *keys = tuple->ctype->mapNames;
 	DMap *deftypes = DMap_New(0,0);
-	DMap *pm_map = DMap_New(D_STRING,0);
-	DMap *st_map = DMap_New(D_STRING,0);
+	DMap *pm_map = DMap_New(DAO_DATA_STRING,0);
+	DMap *st_map = DMap_New(DAO_DATA_STRING,0);
 	DArray *routines = DArray_New(0);
 	DNode *it, *node;
 	DaoEnum pmEnum = {DAO_ENUM,0,0,0,0,0,0,NULL};
@@ -375,7 +375,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 			data = fieldv->xTuple.items;
 			size = fieldv->xTuple.size;
 			st = DAO_OBJECT_VARIABLE;
-			pm = DAO_DATA_PUBLIC;
+			pm = DAO_PERM_PUBLIC;
 
 			name = NULL;
 			if( size && data[0]->type == DAO_STRING ) name = data[0]->xString.value;
@@ -416,7 +416,7 @@ InvalidField:
 			if( DaoType_MatchValue( dao_dynclass_method, methodv, NULL ) == 0) continue;//XXX
 			data = methodv->xTuple.items;
 			size = methodv->xTuple.size;
-			pm = DAO_DATA_PUBLIC;
+			pm = DAO_PERM_PUBLIC;
 
 			name = NULL;
 			if( size && data[0]->type == DAO_STRING ) name = data[0]->xString.value;
@@ -557,7 +557,7 @@ static void META_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 	node = DMap_First( index );
 	for( ; node != NULL; node = DMap_Next( index, node ) ){
 		size_t id = node->value.pInt;
-		if( restri && lookup && LOOKUP_PM( id ) != DAO_DATA_PUBLIC ) continue;
+		if( restri && lookup && LOOKUP_PM( id ) != DAO_PERM_PUBLIC ) continue;
 		if( lookup ) id = LOOKUP_ID( id );
 		tuple = DaoTuple_New( 2 );
 		tuple->ctype = tp;
@@ -606,7 +606,7 @@ static void META_Var1( DaoProcess *proc, DaoValue *p[], int N )
 	node = DMap_First( index );
 	for( ; node != NULL; node = DMap_Next( index, node ) ){
 		size_t st = 0, id = node->value.pInt;
-		if( restri && lookup && LOOKUP_PM( id ) != DAO_DATA_PUBLIC ) continue;
+		if( restri && lookup && LOOKUP_PM( id ) != DAO_PERM_PUBLIC ) continue;
 		if( lookup ){
 			st = LOOKUP_ST( id );
 			id = LOOKUP_ID( id );

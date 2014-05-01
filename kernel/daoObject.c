@@ -343,7 +343,7 @@ int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject
 	up = LOOKUP_UP( node->value.pInt );
 	id = LOOKUP_ID( node->value.pInt );
 	if( self == null && st == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_NOTPERMIT;
-	access = othis == self || pm == DAO_DATA_PUBLIC || (child && pm >= DAO_DATA_PROTECTED);
+	access = othis == self || pm == DAO_PERM_PUBLIC || (child && pm >= DAO_PERM_PROTECTED);
 	if( access == 0 ) return DAO_ERROR_FIELD_NOTPERMIT;
 	if( st == DAO_OBJECT_VARIABLE ){
 		if( id <0 ) return DAO_ERROR_FIELD_NOTPERMIT;
@@ -378,7 +378,7 @@ int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObjec
 	up = LOOKUP_UP( node->value.pInt );
 	id = LOOKUP_ID( node->value.pInt );
 	if( self == null && st == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_NOTPERMIT;
-	access = othis == self || pm == DAO_DATA_PUBLIC || (child && pm >= DAO_DATA_PROTECTED);
+	access = othis == self || pm == DAO_PERM_PUBLIC || (child && pm >= DAO_PERM_PROTECTED);
 	if( access == 0 ) return DAO_ERROR_FIELD_NOTPERMIT;
 	switch( st ){
 	case DAO_OBJECT_VARIABLE : p = self->objValues[id]; break;

@@ -249,12 +249,12 @@ DaoRoutineBody* DaoRoutineBody_New()
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->source = NULL;
 	self->vmCodes = DVector_New( sizeof(DaoVmCode) );
-	self->regType = DArray_New(D_VALUE);
-	self->svariables = DArray_New(D_VALUE);
-	self->defLocals = DArray_New(D_TOKEN);
-	self->annotCodes = DArray_New(D_VMCODE);
+	self->regType = DArray_New( DAO_DATA_VALUE );
+	self->svariables = DArray_New( DAO_DATA_VALUE );
+	self->defLocals = DArray_New( DAO_DATA_TOKEN );
+	self->annotCodes = DArray_New( DAO_DATA_VMCODE );
 	self->localVarType = DMap_New(0,0);
-	self->abstypes = DMap_New(D_STRING,D_VALUE);
+	self->abstypes = DMap_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 	self->simpleVariables = DArray_New(0);
 	self->codeStart = self->codeEnd = 0;
 	self->aux = DMap_New(0,0);
@@ -318,7 +318,7 @@ int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes )
 	int i, n;
 	DaoRoutineBody *body = self->body;
 	if( body == NULL ) return 0;
-	if( vmCodes == NULL || vmCodes->type != D_VMCODE ) return 0;
+	if( vmCodes == NULL || vmCodes->type != DAO_DATA_VMCODE ) return 0;
 	DArray_Swap( body->annotCodes, vmCodes );
 	vmCodes = body->annotCodes;
 	DVector_Resize( body->vmCodes, vmCodes->size );
@@ -466,7 +466,7 @@ DRoutines* DRoutines_New()
 	self->tree = NULL;
 	self->mtree = NULL;
 	self->routines = DArray_New(0);
-	self->array = DArray_New(D_VALUE);
+	self->array = DArray_New( DAO_DATA_VALUE );
 	self->array2 = DArray_New(0);
 	return self;
 }

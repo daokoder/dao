@@ -50,7 +50,7 @@ DaoxProtobject* DaoxProtobject_New()
 	int i;
 	DaoxProtobject *self = (DaoxProtobject*) dao_calloc( 1, sizeof(DaoxProtobject) );
 	DaoCstruct_Init( (DaoCstruct*) self, daox_type_protobject );
-	self->fields = DHash_New(D_STRING,D_VALUE);
+	self->fields = DHash_New(DAO_DATA_STRING,DAO_DATA_VALUE);
 	self->proto = NULL;
 	return self;
 }

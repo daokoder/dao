@@ -270,13 +270,13 @@ void DaoMakeUnit_Init( DaoMakeUnit *self, DaoType *type )
 {
 	DaoCstruct_Init( (DaoCstruct*)self, type );
 	self->project = NULL;
-	self->definitions = DArray_New(D_STRING);
-	self->includePaths = DArray_New(D_STRING);
-	self->linkingPaths = DArray_New(D_STRING);
-	self->assemblingFlags = DArray_New(D_STRING);
-	self->compilingFlags = DArray_New(D_STRING);
-	self->linkingFlags = DArray_New(D_STRING);
-	self->staticLibNames = DArray_New(D_STRING);
+	self->definitions = DArray_New(DAO_DATA_STRING);
+	self->includePaths = DArray_New(DAO_DATA_STRING);
+	self->linkingPaths = DArray_New(DAO_DATA_STRING);
+	self->assemblingFlags = DArray_New(DAO_DATA_STRING);
+	self->compilingFlags = DArray_New(DAO_DATA_STRING);
+	self->linkingFlags = DArray_New(DAO_DATA_STRING);
+	self->staticLibNames = DArray_New(DAO_DATA_STRING);
 }
 void DaoMakeUnit_Free( DaoMakeUnit *self )
 {
@@ -294,8 +294,8 @@ DaoMakeObjects* DaoMakeObjects_New()
 {
 	DaoMakeObjects *self = (DaoMakeObjects*) dao_calloc( 1, sizeof(DaoMakeObjects) );
 	DaoMakeUnit_Init( (DaoMakeUnit*) & self->base, daomake_type_objects );
-	self->headers = DArray_New(D_STRING);
-	self->sources = DArray_New(D_STRING);
+	self->headers = DArray_New(DAO_DATA_STRING);
+	self->sources = DArray_New(DAO_DATA_STRING);
 	return self;
 }
 void DaoMakeObjects_Delete( DaoMakeObjects *self )
@@ -310,10 +310,10 @@ DaoMakeTarget* DaoMakeTarget_New()
 	DaoMakeTarget *self = (DaoMakeTarget*) dao_calloc( 1, sizeof(DaoMakeTarget) );
 	DaoMakeUnit_Init( (DaoMakeUnit*) & self->base, daomake_type_target );
 	self->name = DString_New(1);
-	self->objects = DArray_New(D_VALUE);
-	self->tests   = DArray_New(D_STRING);
-	self->commands = DArray_New(D_STRING);
-	self->depends = DArray_New(D_VALUE);
+	self->objects = DArray_New(DAO_DATA_VALUE);
+	self->tests   = DArray_New(DAO_DATA_STRING);
+	self->commands = DArray_New(DAO_DATA_STRING);
+	self->depends = DArray_New(DAO_DATA_VALUE);
 	self->extradeps = DString_New(1);
 	self->testMacro = DString_New(1);
 	self->path = DString_New(1);
@@ -346,35 +346,35 @@ DaoMakeProject* DaoMakeProject_New()
 	self->binaryPath = DString_New(1);
 	self->projectName = DString_New(1);
 
-	self->targets = DArray_New(D_VALUE);
-	self->variables = DArray_New(D_STRING);
-	self->installs = DArray_New(D_VALUE);
-	self->tests = DMap_New(D_STRING,D_ARRAY);
+	self->targets = DArray_New(DAO_DATA_VALUE);
+	self->variables = DArray_New(DAO_DATA_STRING);
+	self->installs = DArray_New(DAO_DATA_VALUE);
+	self->tests = DMap_New(DAO_DATA_STRING,DAO_DATA_ARRAY);
 
-	self->exportPaths = DMap_New(D_STRING,D_STRING);
-	self->exportCFlags = DMap_New(D_STRING,D_STRING);
-	self->exportLFlags = DMap_New(D_STRING,D_STRING);
-	self->exportShlibs = DMap_New(D_STRING,D_STRING);
-	self->exportStlibs = DMap_New(D_STRING,D_STRING);
+	self->exportPaths = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	self->exportCFlags = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	self->exportLFlags = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	self->exportShlibs = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	self->exportStlibs = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
 
-	self->headerMacros = DMap_New(D_STRING,D_STRING);
-	self->aflagsMacros = DMap_New(D_STRING,D_STRING);
-	self->cflagsMacros = DMap_New(D_STRING,D_STRING);
-	self->lflagsMacros = DMap_New(D_STRING,D_STRING);
-	self->objectRules = DMap_New(D_STRING,D_STRING);
-	self->objectsMacros = DMap_New(D_STRING,D_STRING);
-	self->testRules = DMap_New(D_STRING,D_STRING);
-	self->testsMacros = DMap_New(D_STRING,D_STRING);
-	self->targetRules = DArray_New(D_STRING);
-	self->signatures = DMap_New(D_STRING,D_STRING);
+	self->headerMacros = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	self->aflagsMacros = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	self->cflagsMacros = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	self->lflagsMacros = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	self->objectRules = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	self->objectsMacros = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	self->testRules = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	self->testsMacros = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	self->targetRules = DArray_New(DAO_DATA_STRING);
+	self->signatures = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
 	self->signature = 4;
 
 	self->string = DString_New(1);
-	self->strings = DArray_New(D_STRING);
+	self->strings = DArray_New(DAO_DATA_STRING);
 	self->usedStrings = 0;
 	DArray_Append( self->strings, self->string );
 
-	self->mapStringInt = DMap_New(D_STRING,0);
+	self->mapStringInt = DMap_New(DAO_DATA_STRING,0);
 	return self;
 }
 void DaoMakeProject_Delete( DaoMakeProject *self )
@@ -1381,7 +1381,7 @@ void DaoMakeProject_MakeInstallation( DaoMakeProject *self, DString *makefile )
 	DString *install = DaoMakeProject_GetBufferString( self );
 	DString *uninstall = DaoMakeProject_GetBufferString( self );
 	DString *file = DaoMakeProject_GetBufferString( self );
-	DMap *mapPaths = DMap_New(D_STRING,0);
+	DMap *mapPaths = DMap_New(DAO_DATA_STRING,0);
 	daoint i;
 
 	for(i=0; i<self->installs->size; i+=2){
@@ -1633,7 +1633,7 @@ static void DaoMakeTarget_MakeExport( DaoMakeTarget *self, DString *cflags, DStr
 	DaoValue **installs = project->installs->items.pValue;
 	DString *path = DaoMakeProject_GetBufferString( project );
 	DString *key = DaoMakeProject_GetBufferString( project );
-	DMap *headers = DMap_New(D_STRING,0);
+	DMap *headers = DMap_New(DAO_DATA_STRING,0);
 	DNode *it;
 	daoint i, j;
 	for(i=0; i<self->objects->size; ++i){
@@ -1720,10 +1720,10 @@ struct DaoMakeProjMaps
 DaoMakeProjMaps* DaoMakeProjMaps_New()
 {
 	DaoMakeProjMaps *self = (DaoMakeProjMaps*) dao_malloc(sizeof(DaoMakeProjMaps));
-	self->mapCFlags = DMap_New(D_STRING,D_STRING);
-	self->mapLFlags = DMap_New(D_STRING,D_STRING);
-	self->mapShlibs = DMap_New(D_STRING,D_STRING);
-	self->mapStlibs = DMap_New(D_STRING,D_STRING);
+	self->mapCFlags = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	self->mapLFlags = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	self->mapShlibs = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	self->mapStlibs = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
 	return self;
 }
 void DaoMakeProjMaps_Delete( DaoMakeProjMaps *self )
@@ -1875,8 +1875,8 @@ void DaoMakeProject_MakeFindPackageForInstall( DaoMakeProject *self, DString *ou
 	DString *proLFlags = DaoMakeProject_GetBufferString( self );
 	DaoValue **installs = self->installs->items.pValue;
 	DaoMakeProjMaps *promaps = DaoMakeProjMaps_New();
-	DMap *incdirs = DMap_New(D_STRING,0);
-	DMap *lnkdirs = DMap_New(D_STRING,0);
+	DMap *incdirs = DMap_New(DAO_DATA_STRING,0);
+	DMap *lnkdirs = DMap_New(DAO_DATA_STRING,0);
 	daoint i;
 
 	DaoMakeUnit_MakeDefinitions( & self->base, proCFlags );
@@ -1920,8 +1920,8 @@ void DaoMakeProject_MakeFindPackageForBuild( DaoMakeProject *self, DString *outp
 	DString *proLFlags = DaoMakeProject_GetBufferString( self );
 	DaoValue **installs = self->installs->items.pValue;
 	DaoMakeProjMaps *promaps = DaoMakeProjMaps_New();
-	DMap *incdirs = DMap_New(D_STRING,0);
-	DMap *lnkdirs = DMap_New(D_STRING,0);
+	DMap *incdirs = DMap_New(DAO_DATA_STRING,0);
+	DMap *lnkdirs = DMap_New(DAO_DATA_STRING,0);
 	daoint i;
 
 	DaoMakeUnit_MakeCompilingFlags( & self->base, proCFlags );
@@ -2170,7 +2170,7 @@ static void DaoMakeUnit_UseLibrary( DaoMakeUnit *self, DaoMakeProject *pro, DStr
 }
 static void DaoMakeUnit_UseAllLibraries( DaoMakeUnit *self, DaoMakeProject *pro, int ttype, int import )
 {
-	DMap *names = DMap_New(D_STRING,0);
+	DMap *names = DMap_New(DAO_DATA_STRING,0);
 	DNode *it;
 	daoint i;
 
@@ -3336,10 +3336,10 @@ int main( int argc, char *argv[] )
 		}
 	}
 
-	daomake_makefile_paths = DMap_New(D_STRING,0);
-	daomake_boolean_options = DMap_New(D_STRING,0);
-	daomake_string_options = DMap_New(D_STRING,D_STRING);
-	daomake_cmdline_defines = DMap_New(D_STRING,0);
+	daomake_makefile_paths = DMap_New(DAO_DATA_STRING,0);
+	daomake_boolean_options = DMap_New(DAO_DATA_STRING,0);
+	daomake_string_options = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	daomake_cmdline_defines = DMap_New(DAO_DATA_STRING,0);
 	DString_SetChars( makefile, "makefile.dao" );
 	for(i=1; i<argc; i++){
 		char *arg = argv[i];
@@ -3441,8 +3441,8 @@ ErrorInvalidArgValue:
 	DaoGC_IncRC( (DaoValue*) daomake_includes );
 
 	nspace = DaoVmSpace_GetNamespace( vmSpace, "DaoMake" );
-	DaoNamespace_AddConst( vmSpace->nsInternal, nspace->name, (DaoValue*) nspace, DAO_DATA_PUBLIC );
-	DaoNamespace_AddConst( vmSpace->mainNamespace, nspace->name, (DaoValue*) nspace, DAO_DATA_PUBLIC );
+	DaoNamespace_AddConst( vmSpace->nsInternal, nspace->name, (DaoValue*) nspace, DAO_PERM_PUBLIC );
+	DaoNamespace_AddConst( vmSpace->mainNamespace, nspace->name, (DaoValue*) nspace, DAO_PERM_PUBLIC );
 	daomake_type_unit    = DaoNamespace_WrapType( nspace, & DaoMakeUnit_Typer, 0 );
 	daomake_type_objects = DaoNamespace_WrapType( nspace, & DaoMakeObjects_Typer, 0 );
 	daomake_type_target  = DaoNamespace_WrapType( nspace, & DaoMakeTarget_Typer, 0 );

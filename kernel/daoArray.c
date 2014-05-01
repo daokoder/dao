@@ -109,13 +109,13 @@ static void* DArray_CopyItem( DArray *self, void *item )
 	DaoValue *v;
 	if( item == NULL ) return NULL;
 	switch( self->type ){
-	case D_VALUE  : v = DaoValue_SimpleCopy( (DaoValue*) item ); GC_IncRC( v ); return v;
-	case D_VMCODE : return DaoVmCodeX_Copy( (DaoVmCodeX*) item );
-	case D_TOKEN  : return DaoToken_Copy( (DaoToken*) item );
-	case D_STRING : return DString_Copy( (DString*) item );
-	case D_VECTOR : return DVector_Copy( (DVector*) item );
-	case D_ARRAY  : return DArray_Copy( (DArray*) item );
-	case D_MAP    : return DMap_Copy( (DMap*) item );
+	case DAO_DATA_VALUE  : v = DaoValue_SimpleCopy( (DaoValue*) item ); GC_IncRC( v ); return v;
+	case DAO_DATA_VMCODE : return DaoVmCodeX_Copy( (DaoVmCodeX*) item );
+	case DAO_DATA_TOKEN  : return DaoToken_Copy( (DaoToken*) item );
+	case DAO_DATA_STRING : return DString_Copy( (DString*) item );
+	case DAO_DATA_VECTOR : return DVector_Copy( (DVector*) item );
+	case DAO_DATA_ARRAY  : return DArray_Copy( (DArray*) item );
+	case DAO_DATA_MAP    : return DMap_Copy( (DMap*) item );
 	default : break;
 	}
 	return item;
@@ -123,13 +123,13 @@ static void* DArray_CopyItem( DArray *self, void *item )
 static void DArray_DeleteItem( DArray *self, void *item )
 {
 	switch( self->type ){
-	case D_VALUE  : GC_DecRC( item ); break;
-	case D_VMCODE : DaoVmCodeX_Delete( (DaoVmCodeX*) item ); break;
-	case D_TOKEN  : DaoToken_Delete( (DaoToken*) item ); break;
-	case D_STRING : DString_Delete( (DString*) item ); break;
-	case D_VECTOR : DVector_Delete( (DVector*) item ); break;
-	case D_ARRAY  : DArray_Delete( (DArray*) item ); break;
-	case D_MAP    : DMap_Delete( (DMap*) item ); break;
+	case DAO_DATA_VALUE  : GC_DecRC( item ); break;
+	case DAO_DATA_VMCODE : DaoVmCodeX_Delete( (DaoVmCodeX*) item ); break;
+	case DAO_DATA_TOKEN  : DaoToken_Delete( (DaoToken*) item ); break;
+	case DAO_DATA_STRING : DString_Delete( (DString*) item ); break;
+	case DAO_DATA_VECTOR : DVector_Delete( (DVector*) item ); break;
+	case DAO_DATA_ARRAY  : DArray_Delete( (DArray*) item ); break;
+	case DAO_DATA_MAP    : DMap_Delete( (DMap*) item ); break;
 	default : break;
 	}
 }
@@ -137,13 +137,13 @@ static void DArray_DeleteItems( DArray *self, daoint M, daoint N )
 {
 	daoint i;
 	switch( self->type ){
-	case D_VALUE  : for(i=M; i<N; i++) GC_DecRC( self->items.pValue[i] ); break;
-	case D_VMCODE : for(i=M; i<N; i++) DaoVmCodeX_Delete( self->items.pVmc[i] ); break;
-	case D_TOKEN  : for(i=M; i<N; i++) DaoToken_Delete( self->items.pToken[i] ); break;
-	case D_STRING : for(i=M; i<N; i++) DString_Delete( self->items.pString[i] ); break;
-	case D_VECTOR : for(i=M; i<N; i++) DVector_Delete( self->items.pVector[i] ); break;
-	case D_ARRAY  : for(i=M; i<N; i++) DArray_Delete( self->items.pArray[i] ); break;
-	case D_MAP    : for(i=M; i<N; i++) DMap_Delete( self->items.pMap[i] ); break;
+	case DAO_DATA_VALUE  : for(i=M; i<N; i++) GC_DecRC( self->items.pValue[i] ); break;
+	case DAO_DATA_VMCODE : for(i=M; i<N; i++) DaoVmCodeX_Delete( self->items.pVmc[i] ); break;
+	case DAO_DATA_TOKEN  : for(i=M; i<N; i++) DaoToken_Delete( self->items.pToken[i] ); break;
+	case DAO_DATA_STRING : for(i=M; i<N; i++) DString_Delete( self->items.pString[i] ); break;
+	case DAO_DATA_VECTOR : for(i=M; i<N; i++) DVector_Delete( self->items.pVector[i] ); break;
+	case DAO_DATA_ARRAY  : for(i=M; i<N; i++) DArray_Delete( self->items.pArray[i] ); break;
+	case DAO_DATA_MAP    : for(i=M; i<N; i++) DMap_Delete( self->items.pMap[i] ); break;
 	default : break;
 	}
 }
@@ -157,7 +157,7 @@ void DArray_Resize( DArray *self, daoint size, void *val )
 
 	if( self->offset ){
 		daoint min = size > self->size ? self->size : size;
-		int locked = self->type == D_VALUE ? DaoGC_LockArray( self ) : 0;
+		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		memmove( buf, self->items.pVoid, min*sizeof(void*) );
 		self->items.pVoid = buf;
 		self->offset = 0;
@@ -166,7 +166,7 @@ void DArray_Resize( DArray *self, daoint size, void *val )
 	/* When resize() is called, probably this is the intended size,
 	 * not to be changed frequently. */
 	if( size >= self->bufsize || size < self->bufsize /2 ){
-		int locked = self->type == D_VALUE ? DaoGC_LockArray( self ) : 0;
+		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		self->bufsize = size;
 		self->items.pVoid = (void**) dao_realloc( buf, self->bufsize*sizeof(void*) );
 		DaoGC_UnlockArray( self, locked );
@@ -198,7 +198,7 @@ DArray* DArray_Copy( DArray *self )
 void DArray_Assign( DArray *left, DArray *right )
 {
 	daoint i;
-	assert( left->type == right->type || (left->type == D_VALUE && right->type == 0) );
+	assert( left->type == right->type || (left->type == DAO_DATA_VALUE && right->type == 0) );
 
 	if( left == right ) return;
 	if( right->size == 0 ){
@@ -220,7 +220,7 @@ void DArray_Swap( DArray *left, DArray *right )
 	size_t tmpOffset = left->offset;
 	void **tmpItem = left->items.pVoid;
 	assert( left->type == right->type );
-	assert( left->type != D_VALUE );
+	assert( left->type != DAO_DATA_VALUE );
 	left->size = right->size;
 	left->offset = right->offset;
 	left->bufsize = right->bufsize;
@@ -242,7 +242,7 @@ void DArray_Insert( DArray *self, void *val, daoint id )
 		return;
 	}
 	if( (daoint)(self->offset + self->size + 1) >= self->bufsize ){
-		int locked = self->type == D_VALUE ? DaoGC_LockArray( self ) : 0;
+		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		if( self->offset > 0 ) memmove( buf, self->items.pVoid, self->size*sizeof(void*) );
 		self->bufsize += self->bufsize/5 + 5;
 		self->items.pVoid = (void**) dao_realloc( buf, (self->bufsize+1)*sizeof(void*) );
@@ -250,7 +250,7 @@ void DArray_Insert( DArray *self, void *val, daoint id )
 		DaoGC_UnlockArray( self, locked );
 	}
 	if( self->type && val != NULL ){
-		int locked = self->type == D_VALUE ? DaoGC_LockArray( self ) : 0;
+		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		for( i=self->size; i>id; i-- ) self->items.pVoid[i] = self->items.pVoid[i-1];
 		DaoGC_UnlockArray( self, locked );
 		self->items.pVoid[ id ] = DArray_CopyItem( self, val );
@@ -266,7 +266,7 @@ void DArray_InsertArray( DArray *self, daoint at, DArray *array, daoint id, daoi
 	void **objs = array->items.pVoid;
 	daoint i;
 	assert( self->type == array->type );
-	assert( self->type != D_VALUE );
+	assert( self->type != DAO_DATA_VALUE );
 	if( n < 0 ) n = array->size;
 	n += id;
 	if( n > array->size ) n = array->size;
@@ -317,7 +317,7 @@ void DArray_Erase( DArray *self, daoint start, daoint n )
 
 	DArray_DeleteItems( self, start, start+n );
 	rest = self->size - start - n;
-	locked = self->type == D_VALUE ? DaoGC_LockArray( self ) : 0;
+	locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 	memmove( self->items.pVoid + start, self->items.pVoid + start + n, rest * sizeof(void*) );
 	self->size -= n;
 	if( self->size < 0.5*self->bufsize && self->size + 10 < self->bufsize ){
@@ -338,7 +338,7 @@ void* DArray_PushFront( DArray *self, void *val )
 	}else{
 		size_t moffset = 0xffff;
 		size_t offset = self->bufsize/5 + 5;
-		int locked = self->type == D_VALUE ? DaoGC_LockArray( self ) : 0;
+		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		self->offset = offset < moffset ? offset : moffset;
 		self->bufsize += self->offset;
 		buf = (void**) dao_realloc( buf, (self->bufsize+1)*sizeof(void*) );
@@ -366,13 +366,13 @@ void* DArray_PopFront( DArray *self )
 	if( self->type ) DArray_DeleteItem( self, self->items.pVoid[0] );
 	self->items.pVoid ++;
 	if( self->offset >= moffset ){
-		int locked = self->type == D_VALUE ? DaoGC_LockArray( self ) : 0;
+		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		self->offset /= 2;
 		memmove( buf + self->offset, self->items.pVoid, self->size*sizeof(void*) );
 		self->items.pVoid = buf + self->offset;
 		DaoGC_UnlockArray( self, locked );
 	}else if( self->size < 0.5 * self->bufsize && self->size + 10 < self->bufsize ){
-		int locked = self->type == D_VALUE ? DaoGC_LockArray( self ) : 0;
+		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		if( self->offset < 0.1 * self->bufsize ){ /* shrink from back */
 			self->bufsize = 0.6 * self->bufsize + 1;
 		}else{ /* shrink from front */
@@ -390,7 +390,7 @@ void* DArray_PushBack( DArray *self, void *val )
 {
 	void **buf = self->items.pVoid - self->offset;
 	if( (daoint)(self->offset + self->size + 1) >= self->bufsize ){
-		int locked = self->type == D_VALUE ? DaoGC_LockArray( self ) : 0;
+		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		self->bufsize += self->bufsize/5 + 5;
 		buf = (void**) dao_realloc( buf, (self->bufsize+1)*sizeof(void*) );
 		self->items.pVoid = buf + self->offset;
@@ -412,7 +412,7 @@ void* DArray_PopBack( DArray *self )
 	ret = self->items.pVoid[ self->size ];
 	if( self->type ) DArray_DeleteItem( self, self->items.pVoid[ self->size ] );
 	if( self->size < 0.5 * self->bufsize && self->size + 10 < self->bufsize ){
-		int locked = self->type == D_VALUE ? DaoGC_LockArray( self ) : 0;
+		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		if( self->offset < 0.1 * self->bufsize ){ /* shrink from back */
 			self->bufsize = 0.6 * self->bufsize + 1;
 		}else{ /* shrink from front */
