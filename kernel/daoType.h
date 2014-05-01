@@ -89,7 +89,8 @@ struct DaoType
 	uchar_t   realnum   : 1; /* for type of int/float/double */
 	uchar_t   noncyclic : 1; /* this type representing non-cyclic data */
 	uchar_t   overloads : 1; /* overloaded routines */
-	uchar_t   unused    : 4;
+	uchar_t   constant  : 1;
+	uchar_t   unused    : 3;
 	uchar_t   rntcount  : 4; /* real number type count */
 	uchar_t   ffitype   : 4; /* for modules using ffi */
 	DString  *name; /* type name */
@@ -108,9 +109,9 @@ struct DaoType
 	// aux can be the constant value in a constant value type.
 	*/
 	DaoValue  *aux;
-	DaoValue  *value; /* default value for the type; */
-
-	DaoType  *cbtype; /* extra type for code block; */
+	DaoValue  *value;   /* default value for the type; */
+	DaoType   *vartype; /* original variable type for a const type; */
+	DaoType   *cbtype;  /* extra type for code block; */
 
 	DaoTypeKernel  *kernel; /* type kernel of built-in or C types; */
 	DaoTypeBase    *typer;

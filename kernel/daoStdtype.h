@@ -239,6 +239,7 @@ struct DaoCtype
 {
 	DAO_CSTRUCT_COMMON;
 
+	DString      *name;
 	DaoType      *cdtype;
 	DaoInterface *clsInter;
 	DaoInterface *objInter;

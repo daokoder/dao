@@ -3481,6 +3481,8 @@ DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype )
 	GC_IncRC( cdtype );
 	self->cdtype = cdtype;
 	self->type = DAO_CTYPE;
+	self->name = DString_New();
+	if( cdtype ) DString_Assign( self->name, cdtype->name );
 	return self;
 }
 void DaoCtype_InitInterface( DaoCtype *self )
@@ -3540,6 +3542,7 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer )
 	DaoType *ctype_type;
 	int i;
 
+	DString_SetChars( ctype->name, typer->name );
 	ctype->subtype = DAO_CDATA_PTR;
 	cdata->subtype = DAO_CDATA_PTR;
 	ctype->trait |= DAO_VALUE_NOCOPY;

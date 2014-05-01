@@ -152,6 +152,7 @@ void DaoType_Delete( DaoType *self )
 	GC_DecRC( self->value );
 	GC_DecRC( self->kernel );
 	GC_DecRC( self->cbtype );
+	GC_DecRC( self->vartype );
 	DString_Delete( self->name );
 	if( self->fname ) DString_Delete( self->fname );
 	if( self->nested ) DArray_Delete( self->nested );
@@ -367,6 +368,7 @@ DaoType* DaoType_Copy( DaoType *other )
 	memcpy( self, other, sizeof(DaoType) );
 	DaoValue_Init( self, DAO_TYPE ); /* to reset gc fields */
 	self->trait |= DAO_VALUE_DELAYGC;
+	self->vartype = NULL;
 	self->nested = NULL;
 	self->bases = NULL;
 	self->name = DString_Copy( other->name );
@@ -517,6 +519,11 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 
 	if( self == NULL || type == NULL ) return DAO_MT_NOT;
 	if( self == type ) return DAO_MT_EQ;
+
+	/* some types such routine type for verloaded routines rely on comparing type pointer: */
+	if( self->constant ) self = self->vartype;
+	if( type->constant ) type = type->vartype;
+
 	mt = dao_type_matrix[self->tid][type->tid];
 	/*
 	printf( "here: %i  %i  %i, %s  %s,  %p\n", mt, self->tid, type->tid,
@@ -766,6 +773,10 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case (DAO_DOUBLE  << 8) | DAO_INTEGER : return DAO_MT_SIM;
 	case (DAO_DOUBLE  << 8) | DAO_FLOAT   : return DAO_MT_SIM;
 	}
+
+	/* some types such routine type for verloaded routines rely on comparing type pointer: */
+	if( self->constant ) self = self->vartype;
+
 	switch( self->tid ){
 	case DAO_UDT :
 	case DAO_THT :
@@ -1063,11 +1074,13 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	copy->typer = self->typer;
 	copy->subtid = self->subtid;
 	copy->attrib = self->attrib;
+	copy->constant = self->constant;
 	copy->overloads = self->overloads;
 	copy->trait |= DAO_VALUE_DELAYGC;
 	DString_Reserve( copy->name, 128 );
 	DArray_Append( ns->auxData, copy );
 	DMap_Insert( defs, self, copy );
+	if( copy->constant ) DString_AppendChars( copy->name, "const<" );
 	if( self->mapNames ){
 		if( copy->mapNames ) DMap_Delete( copy->mapNames );
 		copy->mapNames = DMap_Copy( self->mapNames );
@@ -1138,6 +1151,11 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		}
 		GC_IncRC( copy->aux );
 	}
+	if( copy->vartype == NULL && self->vartype != NULL ){
+		copy->vartype = DaoType_DefineTypes( self->vartype, ns, defs );
+		if( copy->vartype ==NULL ) goto DefFailed;
+		GC_IncRC( copy->vartype );
+	}
 	if( copy->cbtype == NULL && self->cbtype != NULL ){
 		copy->cbtype = DaoType_DefineTypes( self->cbtype, ns, defs );
 		if( copy->cbtype ==NULL ) goto DefFailed;
@@ -1156,6 +1174,12 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	}else if( self->nested == NULL ){
 		DString_Assign( copy->name, self->name );
 	}
+	if( copy->constant ){
+		DString_SetChars( copy->name, "const<" );
+		DString_Append( copy->name, copy->vartype->name );
+		DString_AppendChars( copy->name, ">" );
+	}
+
 	DaoType_CheckAttributes( copy );
 	node = DMap_Find( ns->abstypes, copy->name );
 #if 0
@@ -2018,6 +2042,7 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 	/* May need to get rid of the attributes for type holders: */
 	DaoType_CheckAttributes( sptype );
 	DaoType_CheckAttributes( sptype2 );
+	DString_Assign( sptype->aux->xCtype.name, sptype->name );
 	if( tid == DAO_CTYPE ) return sptype2;
 	return sptype;
 }

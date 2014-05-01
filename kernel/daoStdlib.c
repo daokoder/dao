@@ -507,7 +507,7 @@ DaoFuncItem dao_std_methods[] =
 	{ STD_Load,      "load( file :string, import=1, runim=0 )=>any" },
 	{ STD_Resource,  "resource( path :string )=>string" },
 	{ STD_Argv,      "argv() => list<any>" },
-	{ STD_About,     "about( ... )=>string" },
+	{ STD_About,     "about( ... :: any )=>string" },
 	{ STD_Callable,  "callable( object )=>int" },
 	{ STD_Debug,     "debug( ... )" },
 	{ STD_Warn,      "warn( info :string )" },

@@ -35,7 +35,7 @@ enum DaoOpcode
 {
 	DVM_NOP = 0, /* no operation, the VM assumes maximum one NOP between two effective codes; */
 	DVM_DATA ,  /* create primitive data: A: type<=DAO_COMPLEX, B: value, C: register; */
-	DVM_GETCL , /* get local const: C = A::B; A=0; B, index of the constant; */
+	DVM_GETCL , /* get local const: C = A::B; B, constant index; A: 0, implicit; 1: explicit; */
 	DVM_GETCK , /* get class const: C = A::B; current class, A=0; parent class: A>=1; */
 	DVM_GETCG , /* get global const: C = A::B; current namespace, A=0; loaded: A>=1; */
 	DVM_GETVH , /* get host variable from code section: C = A::B; A, outer level; */

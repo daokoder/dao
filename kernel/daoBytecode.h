@@ -171,6 +171,9 @@
 // type of a value:
 // ASM_TYPEOF(1B): Value-Index(2B), Zeros(6B);
 //
+// const type:
+// ASM_TYPECST(1B): Type-Index(2B), Zeros(6B);
+//
 // type alias:
 // ASM_TYPEDEF(1B): Name-Index(2B), Type-Index(2B), Zeros(4B);
 //
@@ -212,15 +215,6 @@
 //
 // Note 1: the nested types are zero Type-Index terminated;
 // Note 2: "Aux-Index" could be index to returned type or class block etc;
-//
-//
-// type alias:
-// ASM_TYPE(1B): Name-Index(2B), Type-Index(2B), Zeros(4B);
-//
-//
-// typeof:
-// ASM_TYPE(1B): Value-Index(2B), Zeros(6B);
-//
 //
 // value:
 // See above;
@@ -324,130 +318,6 @@
 //    automatically generate a unique one;
 //
 //##########################################################################
-//
-// load web.cgi
-//
-// enum Bool{ False, True }
-// use enum Bool
-//
-// static abc = random_string( 100 )
-// global index = 123 + %abc
-// global address : tuple<number:int,string,Bool> = ( 123, 'Main St.', $False )
-// 
-// class Klass
-// {
-//   const name = "abc"; 
-//   var index = 123;
-//   static state = 456;
-//   routine Method( a:int ){
-//   }
-// }
-//
-// const kname = Klass::name
-// global klass = Klass()
-// 
-// routine Func()
-// {
-//     name = index
-// }
-//
-//##########################################################################
-//
-// 32-Bytes Header;
-//
-// ASM_ROUTINE: 0, 0, 0;
-//
-//   ASM_VALUE: DAO_STRING, 0, 7;
-//   ASM_END: "web/cgi";
-//
-//   ASM_LOAD: 1 ("web/cgi"), 0;
-//
-//   ASM_VALUE: DAO_STRING, 0, 4;
-//   ASM_END: "Bool";
-//
-//   ASM_VALUE: DAO_STRING, 0, 5;
-//   ASM_END: "False";
-//
-//   ASM_VALUE: DAO_STRING, 0, 4;
-//   ASM_END: "True";
-//
-//   ASM_ENUM: 3 ("Bool"), 0, 2;
-//     ASM_DATA: 2 ("False"), 0 (int32);
-//   ASM_END: 1 ("True"), 1 (int32);
-//
-//   ASM_USE: DAO_ENUM, 1 ("Bool"), 0;
-//
-//   ASM_VALUE: DAO_STRING, 0, 13;
-//     ASM_DATA: "random_s";
-//   ASM_END: "tring";
-//
-//   ASM_VALUE: DAO_INTEGER, 0, 13;
-//   ASM_END: 10, 0;
-//
-//   ASM_EVAL: CALL, 2, 2, 1;
-//   ASM_END: 0;
-//
-//   ASM_VALUE: DAO_STRING, 0, 3;
-//   ASM_END: "abc";
-//
-//   ASM_STATIC: 1 ("abc"), 2, 0;
-//
-//   ASM_TYPE: 0, DAO_INTEGER, 0, 0;
-//   ASM_END: 0;
-//
-//   ASM_VALUE: DAO_STRING, 0, 6;
-//   ASM_END: "number";
-//
-//   ASM_TYPE: 0, DAO_PAR_NAMED, 1 ("number"), 0;
-//   ASM_END: 2 (int), 0;
-//
-//   ASM_TYPE: 0, DAO_STRING, 0, 0;
-//   ASM_END: 0;
-//
-//   ASM_VALUE: DAO_STRING, 0, 30;
-//     ASM_DATA: "tuple<nu";
-//     ASM_DATA: "mber:int";
-//     ASM_DATA: ",string,";
-//   ASM_VALUE: ",Bool>";
-//
-//   ASM_TYPE: 1, DAO_TUPLE, 0, 0;
-//   ASM_END: 3, 2, 10, 0;
-//
-//   ASM_VALUE: DAO_INTEGER, 0;
-//   ASM_END: 123, 0;
-//
-//   ASM_VALUE: DAO_STRING, 0, 8;
-//   ASM_END: "Main St.";
-//
-//   ASM_VALUE: DAO_ENUM, 15 ("False"), 0;
-//   ASM_VALUE: 0;
-//
-//   ASM_VALUE: DAO_TUPLE, 4, 3;
-//   ASM_END: 3, 2, 1, 0;
-//
-//   ASM_VALUE: DAO_STRING, 0, 7;
-//   ASM_END: "address";
-//
-//   ASM_GLOBAL: 1 ("address"), 2, 4;
-//
-//
-//   ASM_CLASS: "Klass", 0;
-//     ASM_CONST: "name", 9 (block), 0;
-//     ASM_VAR: "index", 
-//   ASM_END: 0;
-//
-//   ASM_CONSTS: # local constants;
-//   ASM_END: 0;
-//
-//   ASM_TYPES: # explicit types for local variables;
-//   ASM_END: 0;
-//
-//   ASM_CODE:
-//   ASM_END: 0;
-//
-// ASM_END: 0, 0, 0;
-//
-//##########################################################################
 */
 enum DaoAuxOpcode
 {
@@ -455,6 +325,7 @@ enum DaoAuxOpcode
 	DAO_ASM_COPY      ,
 	DAO_ASM_TYPEOF    ,
 	DAO_ASM_TYPEDEF   ,
+	DAO_ASM_TYPECST   ,
 	DAO_ASM_ROUTINE   ,
 	DAO_ASM_CLASS     ,
 	DAO_ASM_INTERFACE ,

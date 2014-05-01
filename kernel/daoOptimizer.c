@@ -2534,9 +2534,9 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 		abtp = routType->nested->items.pType[ito];
 		parpass[ito] = DaoType_MatchTo( tp, abtp, defs );
 
+#if 0
 		printf( "%p %s %p %s\n", tp->aux, tp->name->bytes, abtp->aux, abtp->name->bytes );
 		printf( "%i:  %i\n", ito, parpass[ito] );
-#if 0
 #endif
 
 		if( parpass[ito] == 0 ){
@@ -2707,7 +2707,7 @@ static void DaoInferencer_Finalize( DaoInferencer *self )
 	DaoRoutine_SetupSimpleVars( self->routine );
 	body->specialized = 1;
 }
-static DaoType* DaoInferencer_UpdateType( DaoInferencer *self, int id, DaoType *type )
+static DaoType* DaoInferencer_UpdateTypeX( DaoInferencer *self, int id, DaoType *type, int c )
 {
 	DaoNamespace *NS = self->routine->nameSpace;
 	DaoType **types = self->types->items.pType;
@@ -2725,10 +2725,21 @@ static DaoType* DaoInferencer_UpdateType( DaoInferencer *self, int id, DaoType *
 	*/
 	if( types[id] != NULL ) return types[id];
 
+	/* If c == 0, the de-const type should be used: */
+	if( type->constant && c == 0 ) type = type->vartype;
+
 	if( type->attrib & DAO_TYPE_SPEC ) type = DaoType_DefineTypes( type, NS, defs );
 	GC_ShiftRC( type, types[id] );
 	types[id] = type;
 	return types[id];
+}
+static DaoType* DaoInferencer_UpdateType( DaoInferencer *self, int id, DaoType *type )
+{
+	return DaoInferencer_UpdateTypeX( self, id, type, 1 );
+}
+static DaoType* DaoInferencer_UpdateVarType( DaoInferencer *self, int id, DaoType *type )
+{
+	return DaoInferencer_UpdateTypeX( self, id, type, 0 );
 }
 static void DaoInferencer_WriteErrorHeader( DaoInferencer *self )
 {
@@ -3011,8 +3022,10 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 #endif
 
 		K = DaoVmCode_GetOpcodeType( (DaoVmCode*) inode );
-		/* No need to check for operands in expression list,
-		// they must have been checked by other instructions. */
+		/*
+		// No need to check for operands in expression list,
+		// they must have been checked by other instructions.
+		*/
 		switch( K ){
 		case DAO_CODE_GETU :
 			if( inode->a != 0 ) AssertInitialized( inode->b, 0, middle, middle );
@@ -3073,10 +3086,13 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		}
 		if( K && K < DAO_CODE_EXPLIST && K != DAO_CODE_SETG && K != DAO_CODE_SETU ){
 			if( K != DAO_CODE_SETM ) inited[inode->c] = 1;
-			if( consts[inode->c] && K == DAO_CODE_SETF ){
-				k = consts[inode->c]->type;
-				if( k != DAO_CLASS && k != DAO_NAMESPACE ) goto ModifyConstant;
-			}else if( consts[inode->c] && K > DAO_CODE_GETG ) goto ModifyConstant;
+			if( K != DAO_CODE_MOVE ){
+				if( ct != NULL && ct->constant != 0 && K == DAO_CODE_SETF ){
+					if( ct->tid != DAO_CLASS && ct->tid != DAO_NAMESPACE ) goto ModifyConstant;
+				}else if( ct != NULL && ct->constant != 0 && K > DAO_CODE_GETG ){
+					goto ModifyConstant;
+				}
+			}
 		}
 
 		switch( K ){
@@ -3154,6 +3170,16 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			case DVM_GETCG : value = NS->constants->items.pConst[opb]->value; break;
 			}
 			at = DaoNamespace_GetType( NS, value );
+			if( at->constant == 0 && (code != DVM_GETCL || opa != 0) ){
+				/*
+				// Do not produce constant type for implicit constant.
+				// Consider: a = "something"; a += "else";
+				// Also code such as: DVM_GETCL: 0, 2, 3;
+				// could have been added by routine decoration.
+				// They should be const type.
+				*/
+				at = DaoNamespace_MakeConstType( NS, at );
+			}
 			DaoInferencer_UpdateType( self, opc, at );
 			/*
 			   printf( "at %i %i %p, %p\n", at->tid, types[opc]->tid, at, types[opc] );
@@ -3180,11 +3206,12 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}
 			if( at == NULL ) at = dao_type_udf;
 			DaoInferencer_UpdateType( self, opc, at );
-			/*
-			   printf( "%s\n", at->name->bytes );
-			   printf( "%p %p\n", at, types[opc] );
-			   printf( "%s %s\n", at->name->bytes, types[opc]->name->bytes );
-			 */
+
+#if 0
+			printf( "%s\n", at->name->bytes );
+			printf( "%p %p\n", at, types[opc] );
+			printf( "%s %s\n", at->name->bytes, types[opc]->name->bytes );
+#endif
 			AssertTypeMatching( at, types[opc], defs );
 			if( typed_code && at->tid >= DAO_INTEGER && at->tid <= DAO_COMPLEX ){
 				vmc->code = DVM_GETVH_I + 4*(code-DVM_GETVH) + (at->tid - DAO_INTEGER);
@@ -3398,8 +3425,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 						if( k >= at->nested->size ) goto InvIndex;
 						ct = at->nested->items.pType[ k ];
 						if( ct->tid == DAO_PAR_NAMED ) ct = & ct->aux->xType;
-						DaoInferencer_UpdateType( self, opc, ct );
-						if( typed_code && ct == types[opc] && k <= 0xffff ){
+						if( typed_code && k <= 0xffff ){
 							vmc->b = k;
 							if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_COMPLEX ){
 								vmc->code = DVM_GETF_TI + ( ct->tid - DAO_INTEGER );
@@ -3468,12 +3494,12 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				goto WrongContainer;
 			}
 			if( ct == NULL ) goto InvKey;
+			if( at->constant && ct->constant == 0 ) ct = DaoNamespace_MakeConstType( NS, ct );
 			DaoInferencer_UpdateType( self, opc, ct );
 			AssertTypeMatching( ct, types[opc], defs );
 			break;
 		case DVM_GETMI :
 			{
-				value = consts[opa] ? dao_none_value : NULL;
 				ct = at;
 				meth = NULL;
 				DString_SetChars( mbs, "[]" );
@@ -3492,11 +3518,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 						if( tid < min ) min = tid;
 					}
 					if( min == DAO_NONE || max > DAO_DOUBLE ) ct = at;
-					DaoInferencer_UpdateType( self, opc, ct );
-					ct = types[opc];
-					if( type->tid && type->tid <= DAO_COMPLEX && ct->tid && ct->tid <= DAO_COMPLEX ){
+					if( ct->tid && ct->tid <= DAO_COMPLEX ){
 						if( min >= DAO_INTEGER && max <= DAO_DOUBLE ){
-							inode->code = DVM_GETMI_AII + (type->tid - DAO_INTEGER);
+							inode->code = DVM_GETMI_AII + (ct->tid - DAO_INTEGER);
 							if( max > DAO_INTEGER ){
 								inode2 = DaoInferencer_InsertNode( self, inode, DVM_MOVE_PP, 1, at );
 								inode2->a = inode->a;
@@ -3506,7 +3530,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 									DaoInferencer_InsertMove( self, inode, & op, types[j+opa], dao_type_int );
 								}
 							}
-							if( type->tid != ct->tid ) DaoInferencer_InsertMove2( self, inode, type, ct );
 						}
 					}
 				}else if( at->tid == DAO_MAP ){
@@ -3537,6 +3560,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					if( rout == NULL ) goto InvIndex;
 					ct = & rout->routType->aux->xType;
 				}
+				if( at->constant && ct->constant == 0 ) ct = DaoNamespace_MakeConstType( NS, ct );
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
 				break;
@@ -3557,12 +3581,10 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					ct = dao_type_udf;
 				}else if( at->tid == DAO_COMPLEX ){
 					if( strcmp( str->bytes, "real" ) && strcmp( str->bytes, "imag" ) ) goto NotExist;
-					ct = DaoInferencer_UpdateType( self, opc, dao_type_double );
-					if( ct->realnum && optimize_xetf ){
+					ct = dao_type_double;
+					if( optimize_xetf ){
 						inode->code = DVM_GETF_CX;
 						inode->b = strcmp( str->bytes, "imag" ) == 0;
-						if( ct->tid != DAO_DOUBLE )
-							DaoInferencer_InsertMove2( self, inode, dao_type_double, ct );
 					}
 				}else if( at->tid == DAO_TYPE ){
 					self->type_source = at;
@@ -3616,6 +3638,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 							if( rout == NULL ) goto NotMatch;
 							ct = & rout->routType->aux->xType;
 							getter = 1;
+							if( at->constant && ct->constant == 0 ){
+								ct = DaoNamespace_MakeConstType( NS, ct );
+							}
 							DaoInferencer_UpdateType( self, opc, ct );
 							AssertTypeMatching( ct, types[opc], defs );
 						}
@@ -3668,8 +3693,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					if( k <0 || k >= (int)at->nested->size ) goto NotExist;
 					ct = at->nested->items.pType[ k ];
 					if( ct->tid == DAO_PAR_NAMED ) ct = & ct->aux->xType;
-					DaoInferencer_UpdateType( self, opc, ct );
-					if( typed_code && optimize_xetf && notide && ct == types[opc] && k < 0xffff ){
+					if( typed_code && optimize_xetf && notide && k < 0xffff ){
 						if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_COMPLEX ){
 							vmc->code = DVM_GETF_TI + ( ct->tid - DAO_INTEGER );
 							vmc->b = k;
@@ -3727,6 +3751,10 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					DaoType_ResetTypeHolders( selftype, defs );
 					DaoType_MatchTo( at, selftype, defs );
 					//ct = DaoType_DefineTypes( ct, NS, defs );
+				}
+				if( at->constant && ct->constant == 0 ){
+					if( at->tid != DAO_CLASS && at->tid != DAO_NAMESPACE )
+						ct = DaoNamespace_MakeConstType( NS, ct );
 				}
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
@@ -4199,12 +4227,12 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				k = DaoType_MatchTo( at, types[opc], defs );
 				ct = types[opc];
 
-				/*
-				   DaoVmCodeX_Print( *vmc, NULL );
-				   if( types[opa] ) printf( "a: %s\n", types[opa]->name->bytes );
-				   if( types[opc] ) printf( "c: %s\n", types[opc]->name->bytes );
-				   printf( "%i  %i\n", DAO_MT_SUB, k );
-				 */
+#if 0
+				DaoVmCodeX_Print( *vmc, NULL, NULL );
+				if( at ) printf( "a: %s %i\n", at->name->bytes, at->constant );
+				if( ct ) printf( "c: %s %i\n", ct->name->bytes, ct->constant );
+				printf( "%i  %i\n", DAO_MT_SUB, k );
+#endif
 
 				if( at->tid == DAO_UDT || at->tid == DAO_ANY ){
 					/* less strict checking */
@@ -4268,11 +4296,11 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DVM_AND : case DVM_OR :
 			{
 				ct = NULL;
-				/*
-				   if( types[opa] ) printf( "a: %s\n", types[opa]->name->bytes );
-				   if( types[opb] ) printf( "b: %s\n", types[opb]->name->bytes );
-				   if( types[opc] ) printf( "c: %s\n", types[opc]->name->bytes );
-				 */
+#if 0
+				if( types[opa] ) printf( "a: %s\n", types[opa]->name->bytes );
+				if( types[opb] ) printf( "b: %s\n", types[opb]->name->bytes );
+				if( types[opc] ) printf( "c: %s\n", types[opc]->name->bytes );
+#endif
 				if( NoCheckingType( at ) || NoCheckingType( bt ) ){
 					ct = dao_type_udf;
 				}else if( at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
@@ -4338,7 +4366,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				}else{
 					goto InvOper;
 				}
-				DaoInferencer_UpdateType( self, opc, ct );
+				DaoInferencer_UpdateVarType( self, opc, ct );
 				/* allow less strict typing: */
 				if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ) continue;
 				AssertTypeMatching( ct, types[opc], defs );
@@ -4396,7 +4424,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				}else if( code != DVM_EQ && code != DVM_NE ){
 					goto InvOper;
 				}
-				DaoInferencer_UpdateType( self, opc, ct );
+				DaoInferencer_UpdateVarType( self, opc, ct );
 				/* allow less strict typing: */
 				if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ) continue;
 				AssertTypeMatching( ct, types[opc], defs );
@@ -4448,7 +4476,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				ct = DaoCheckBinArith( routine, vmc, at, NULL, types[opc], hostClass, mbs );
 				if( ct == NULL ) ct = dao_type_int;
 			}
-			DaoInferencer_UpdateType( self, opc, ct );
+			DaoInferencer_UpdateVarType( self, opc, ct );
 			AssertTypeMatching( ct, types[opc], defs );
 			if( NoCheckingType( at ) ) continue;
 			if( at->realnum ){
@@ -4462,7 +4490,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			goto InvOper;
 			break;
 		case DVM_MINUS :
-			ct = DaoInferencer_UpdateType( self, opc, at );
+			ct = DaoInferencer_UpdateVarType( self, opc, at );
 			if( at->tid == DAO_OBJECT || at->tid == DAO_CDATA
 					|| at->tid == DAO_CSTRUCT || at->tid == DAO_INTERFACE ){
 				ct = DaoCheckBinArith( routine, vmc, at, NULL, types[opc], hostClass, mbs );
@@ -4483,7 +4511,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			break;
 		case DVM_TILDE :
 			{
-				ct = DaoInferencer_UpdateType( self, opc, at );
+				ct = DaoInferencer_UpdateVarType( self, opc, at );
 				if( NoCheckingType( at ) ) continue;
 				AssertTypeMatching( at, ct, defs );
 				if( typed_code && at->realnum && ct->realnum ){
@@ -4518,16 +4546,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DVM_BITLFT : case DVM_BITRIT :
 			{
 				ct = NULL;
-				if( at->tid == DAO_LIST ){
-					if( code != DVM_BITLFT && code != DVM_BITRIT ) goto InvOper;
-					ct = at;
-					at = at->nested->items.pType[0];
-					AssertTypeMatching( bt, at, defs );
-					if( at->tid == DAO_UDT && bt->tid != DAO_UDT ){
-						at = DaoNamespace_MakeType( NS, "list", DAO_LIST, NULL, & bt, at!=NULL );
-						DaoInferencer_UpdateType( self, opa, at );
-					}
-				}else if( NoCheckingType( at ) || NoCheckingType( bt ) ){
+				if( NoCheckingType( at ) || NoCheckingType( bt ) ){
 					ct = dao_type_udf;
 				}else if( at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
 						|| at->tid == DAO_CDATA || bt->tid == DAO_CDATA
@@ -4548,7 +4567,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					goto InvOper;
 				}
 				if( at->realnum && bt->realnum ) ct = dao_type_int;
-				DaoInferencer_UpdateType( self, opc, ct );
+				DaoInferencer_UpdateVarType( self, opc, ct );
 				/* allow less strict typing: */
 				if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ) continue;
 				AssertTypeMatching( ct, types[opc], defs );
@@ -4568,7 +4587,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}
 		case DVM_SAME :
 			{
-				DaoInferencer_UpdateType( self, opc, dao_type_int );
+				DaoInferencer_UpdateVarType( self, opc, dao_type_int );
 				if( NoCheckingType( at ) || NoCheckingType( bt ) ) continue;
 				AssertTypeMatching( dao_type_int, types[opc], defs );
 				if( at->tid != bt->tid && types[opc]->tid == DAO_INTEGER ){
@@ -4579,7 +4598,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}
 		case DVM_ISA :
 			{
-				DaoInferencer_UpdateType( self, opc, dao_type_int );
+				DaoInferencer_UpdateVarType( self, opc, dao_type_int );
 				if( NoCheckingType( bt ) ) continue;
 				if( bt->tid == DAO_CTYPE || bt->tid == DAO_CLASS ){
 					AssertTypeMatching( dao_type_int, types[opc], defs );
@@ -4609,7 +4628,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}
 		case DVM_NAMEVA :
 			{
-				ct = DaoNamespace_MakeType( NS, routConsts->items.pValue[opa]->xString.value->bytes,
+				ct = DaoNamespace_MakeType2( NS, routConsts->items.pValue[opa]->xString.value->bytes,
 						DAO_PAR_NAMED, (DaoValue*) types[opb], 0, 0 );
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
@@ -4630,7 +4649,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					tp = routine->routType->nested->items.pType;
 					ct = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, tp, k );
 				}else{
-					ct = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, types + opa, opb );
+					ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, 0, types + opa, opb );
 				}
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
@@ -4726,9 +4745,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 						ct = dao_type_array_empty;
 					}
 				}else if( code == DVM_LIST || code == DVM_APLIST ){
-					ct = DaoNamespace_MakeType( NS, "list", DAO_LIST, NULL, &at, at!=NULL );
+					ct = DaoNamespace_MakeType2( NS, "list", DAO_LIST, NULL, &at, at!=NULL );
 				}else if( at && at->tid >=DAO_INTEGER && at->tid <= DAO_COMPLEX ){
-					ct = DaoNamespace_MakeType( NS, "array", DAO_ARRAY, NULL, &at, 1 );
+					ct = DaoNamespace_MakeType2( NS, "array", DAO_ARRAY, NULL, &at, 1 );
 				}else if( at && at->tid == DAO_ARRAY ){
 					ct = at;
 				}else if( NoCheckingType( at ) ){
@@ -4769,7 +4788,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				}
 				if( ts[0] ==NULL ) ts[0] = opb ? dao_type_any : dao_type_udf;
 				if( ts[1] ==NULL ) ts[1] = opb ? dao_type_any : dao_type_udf;
-				ct = DaoNamespace_MakeType( NS, "map", DAO_MAP, NULL, ts, 2 );
+				ct = DaoNamespace_MakeType2( NS, "map", DAO_MAP, NULL, ts, 2 );
 				if( opb == 0 ) ct = dao_type_map_empty;
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
@@ -4784,7 +4803,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				for( j=0; j<k; j++){
 					if( DaoType_MatchTo( types[opa+j], at, defs )==0 ) goto ErrorTyping;
 				}
-				ct = DaoNamespace_MakeType( NS, "array", DAO_ARRAY,NULL,&at, at!=NULL );
+				ct = DaoNamespace_MakeType2( NS, "array", DAO_ARRAY,NULL,&at, at!=NULL );
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
 				break;
@@ -5034,27 +5053,27 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			K = bt->realnum ? DVM_MATH_I + (bt->tid - DAO_INTEGER) : DVM_MATH;
 			if( opa == DVM_MATH_RAND ){
 				if( bt->tid == DAO_COMPLEX ) goto InvParam;
-				DaoInferencer_UpdateType( self, opc, ct );
+				DaoInferencer_UpdateVarType( self, opc, ct );
 				if( bt->realnum && types[opc]->tid == bt->tid ) code = K;
 			}else if( opa <= DVM_MATH_FLOOR ){
-				DaoInferencer_UpdateType( self, opc, ct );
+				DaoInferencer_UpdateVarType( self, opc, ct );
 				if( bt->tid <= DAO_COMPLEX && types[opc]->tid == bt->tid ) code = K;
 			}else if( opa == DVM_MATH_ABS ){
 				if( bt->tid == DAO_COMPLEX ) ct = dao_type_double; /* return double; */
-				DaoInferencer_UpdateType( self, opc, ct );
+				DaoInferencer_UpdateVarType( self, opc, ct );
 				if( bt->tid == DAO_COMPLEX && types[opc]->tid == DAO_DOUBLE ) code = K;
 				if( bt->realnum && types[opc]->tid == bt->tid ) code = K;
 			}else if( opa <= DVM_MATH_REAL ){
 				if( bt->tid != DAO_COMPLEX && !(bt->tid & DAO_ANY) ) goto InvParam;
 				ct = dao_type_double; /* return double; */
-				DaoInferencer_UpdateType( self, opc, ct );
+				DaoInferencer_UpdateVarType( self, opc, ct );
 				if( bt->tid == DAO_COMPLEX && types[opc]->tid == DAO_DOUBLE ) code = K;
 			}else if( bt->tid == DAO_INTEGER || bt->tid == DAO_FLOAT ){
 				ct = dao_type_float; /* return float; */
-				DaoInferencer_UpdateType( self, opc, ct );
+				DaoInferencer_UpdateVarType( self, opc, ct );
 				if( types[opc]->tid == DAO_FLOAT ) code = K;
 			}else{
-				DaoInferencer_UpdateType( self, opc, ct );
+				DaoInferencer_UpdateVarType( self, opc, ct );
 				if( bt->tid <= DAO_COMPLEX && types[opc]->tid == bt->tid ) code = K;
 			}
 			AssertTypeMatching( ct, types[opc], defs );
@@ -5140,7 +5159,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					}
 					ct = at->aux->xClass.objType;
 				}else if( at->tid == DAO_CTYPE ){
-					rout = DaoType_FindFunction( at, at->name );
+					rout = DaoType_FindFunction( at, at->aux->xCtype.name );
 					if( rout == NULL ) goto ErrorTyping;
 				}else if( consts[opa] && consts[opa]->type == DAO_ROUTINE ){
 					rout = (DaoRoutine*) consts[opa];
@@ -5418,12 +5437,14 @@ TryPushBlockReturnType:
 				}else{
 					DaoType *uptype = types[opa+1+j];
 					DaoVariable *var = closure->body->svariables->items.pVar[ idata->b - DAO_MAX_PARAM ];
+					if( uptype->constant ) uptype = uptype->vartype;
 					GC_ShiftRC( uptype, var->dtype );
 					var->dtype = uptype;
 				}
 			}
 			if( closure->attribs & DAO_ROUT_PASSRET ){
 				DaoType *retype = (DaoType*) routine->routType->aux;
+				if( retype->constant ) retype = retype->vartype;
 				GC_ShiftRC( retype, closure->body->svariables->items.pVar[0]->dtype );
 				closure->body->svariables->items.pVar[0]->dtype = retype;
 			}
@@ -5477,8 +5498,8 @@ TryPushBlockReturnType:
 					}
 					tt = routine->routType->cbtype;
 					tp = tt->nested->items.pType;
-					at = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, NULL, types+opa, vmc->b);
-					ct = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, NULL, tp, tt->nested->size );
+					at = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, types+opa, vmc->b);
+					ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, tp, tt->nested->size );
 					if( DaoType_MatchTo( at, ct, defs2 ) == 0 ) goto ErrorTyping;
 					ct = (DaoType*) routine->routType->cbtype->aux;
 					if( ct == NULL ) ct = dao_type_none;
@@ -5504,7 +5525,7 @@ TryPushBlockReturnType:
 					at = types[opa];
 					if( at == NULL ) goto ErrorTyping;
 					if( vmc->b >1 )
-						at = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, NULL, types+opa, vmc->b);
+						at = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, types+opa, vmc->b);
 
 					if( ct && DaoType_MatchTo( at, ct, defs2 ) == 0 ) goto ErrorTyping;
 					/* XXX */
@@ -5686,22 +5707,27 @@ TryPushBlockReturnType:
 			break;
 		case DVM_NOT_I : case DVM_NOT_F : case DVM_NOT_D :
 		case DVM_MINUS_I : case DVM_MINUS_F : case DVM_MINUS_D :
-			DaoInferencer_UpdateType( self, opc, at );
+			DaoInferencer_UpdateVarType( self, opc, at );
 			TT1 = TT3 = DAO_INTEGER + (code - DVM_NOT_I) % 3;
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( types[opc], TT3 );
 			break;
 		case DVM_TILDE_I :
-			DaoInferencer_UpdateType( self, opc, at );
+			DaoInferencer_UpdateVarType( self, opc, at );
 			AssertTypeIdMatching( at, DAO_INTEGER );
 			AssertTypeIdMatching( types[opc], DAO_INTEGER );
 			break;
 		case DVM_TILDE_C :
-			DaoInferencer_UpdateType( self, opc, at );
+			DaoInferencer_UpdateVarType( self, opc, at );
 			AssertTypeIdMatching( at, DAO_COMPLEX );
 			AssertTypeIdMatching( types[opc], DAO_COMPLEX );
 			break;
 		case DVM_MINUS_C :
+			DaoInferencer_UpdateVarType( self, opc, at );
+			TT1 = TT3 = code == DVM_MOVE_SS ? DAO_STRING : DAO_COMPLEX;
+			AssertTypeIdMatching( at, TT1 );
+			AssertTypeIdMatching( types[opc], TT3 );
+			break;
 		case DVM_MOVE_CC :
 		case DVM_MOVE_SS :
 			DaoInferencer_UpdateType( self, opc, at );
@@ -5729,7 +5755,7 @@ TryPushBlockReturnType:
 		case DVM_LT_III  : case DVM_LE_III  : case DVM_EQ_III : case DVM_NE_III :
 		case DVM_BITAND_III  : case DVM_BITOR_III  : case DVM_BITXOR_III :
 		case DVM_BITLFT_III  : case DVM_BITRIT_III  :
-			DaoInferencer_UpdateType( self, opc, dao_type_int );
+			DaoInferencer_UpdateVarType( self, opc, dao_type_int );
 			AssertTypeIdMatching( at, DAO_INTEGER );
 			AssertTypeIdMatching( bt, DAO_INTEGER );
 			AssertTypeIdMatching( types[opc], DAO_INTEGER );
@@ -5738,7 +5764,7 @@ TryPushBlockReturnType:
 		case DVM_MOD_FFF : case DVM_POW_FFF : case DVM_AND_FFF : case DVM_OR_FFF  :
 		case DVM_LT_IFF  : case DVM_LE_IFF  : case DVM_EQ_IFF : case DVM_NE_IFF :
 			ct = (code < DVM_LT_IFF) ? dao_type_float : dao_type_int;
-			DaoInferencer_UpdateType( self, opc, ct );
+			DaoInferencer_UpdateVarType( self, opc, ct );
 			AssertTypeIdMatching( at, DAO_FLOAT );
 			AssertTypeIdMatching( bt, DAO_FLOAT );
 			AssertTypeIdMatching( types[opc], ct->tid );
@@ -5747,7 +5773,7 @@ TryPushBlockReturnType:
 		case DVM_MOD_DDD : case DVM_POW_DDD : case DVM_AND_DDD : case DVM_OR_DDD  :
 		case DVM_LT_IDD  : case DVM_LE_IDD  : case DVM_EQ_IDD : case DVM_NE_IDD :
 			ct = (code < DVM_LT_IDD) ? dao_type_double : dao_type_int;
-			DaoInferencer_UpdateType( self, opc, ct );
+			DaoInferencer_UpdateVarType( self, opc, ct );
 			AssertTypeIdMatching( at, DAO_DOUBLE );
 			AssertTypeIdMatching( bt, DAO_DOUBLE );
 			AssertTypeIdMatching( types[opc], ct->tid );
@@ -5755,7 +5781,7 @@ TryPushBlockReturnType:
 		case DVM_ADD_CCC : case DVM_SUB_CCC : case DVM_MUL_CCC : case DVM_DIV_CCC :
 		case DVM_EQ_ICC : case DVM_NE_ICC :
 			ct = code >= DVM_EQ_ICC ? dao_type_complex : dao_type_int;
-			DaoInferencer_UpdateType( self, opc, ct );
+			DaoInferencer_UpdateVarType( self, opc, ct );
 			AssertTypeIdMatching( at, DAO_COMPLEX );
 			AssertTypeIdMatching( bt, DAO_COMPLEX );
 			AssertTypeIdMatching( types[opc], ct->tid );
@@ -5763,7 +5789,7 @@ TryPushBlockReturnType:
 		case DVM_ADD_SSS : case DVM_LT_ISS : case DVM_LE_ISS :
 		case DVM_EQ_ISS : case DVM_NE_ISS :
 			ct = code == DVM_ADD_SSS ? self->typeString : dao_type_int;
-			DaoInferencer_UpdateType( self, opc, ct );
+			DaoInferencer_UpdateVarType( self, opc, ct );
 			AssertTypeIdMatching( at, DAO_STRING );
 			AssertTypeIdMatching( bt, DAO_STRING );
 			AssertTypeIdMatching( types[opc], ct->tid );
@@ -6244,9 +6270,9 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		if( i == 0 ){
 			/*
 			// This should be the function to be called from inside of the new function.
-			// If the new function does not override the old one, the old function will be called;
-			// Otherwise, the function bodies of the old and the new will be swapped,
-			// and the new function will be called.
+			// If the new function does not override the old one, the old function will
+			// be called; Otherwise, the function bodies of the old and the new will be
+			// swapped, and the new function will be called.
 			*/
 			pv = (DaoValue*)(ip ? newfn : oldfn);
 		}
@@ -6255,6 +6281,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		DArray_PushBack( added, annotCodes->items.pVoid[0] );
 		vmc = added->items.pVmc[added->size-1];
 		vmc->code = DVM_GETCL;
+		vmc->a = 0;
 		vmc->b = DaoRoutine_AddConstant( newfn, pv );
 		vmc->c = k++;
 	}
@@ -6266,6 +6293,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		DArray_PushBack( added, annotCodes->items.pVoid[0] );
 		vmc = added->items.pVmc[added->size-1];
 		vmc->code = DVM_GETCL;
+		vmc->a = 0;
 		vmc->b = DaoRoutine_AddConstant( newfn, decorator->routConsts->value->items.pValue[i] );
 		vmc->c = i;
 	}

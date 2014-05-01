@@ -1727,6 +1727,22 @@ Finalizing:
 	if( nstd ) DArray_Delete( nstd );
 	return tp;
 }
+DaoType* DaoNamespace_MakeType2( DaoNamespace *self, const char *name,
+		uint_t tid, DaoValue *pb, DaoType *nest[], int N )
+{
+	DaoType **nest2 = (DaoType**) dao_calloc( N, sizeof(DaoType*) );
+	DaoType *type, *aux = DaoValue_CastType( pb );
+	int i;
+	if( aux && aux->constant ) aux = aux->vartype;
+	for(i=0; i<N; ++i){
+		DaoType *type = nest[i];
+		if( type && type->constant ) type = type->vartype;
+		nest2[i] = type;
+	}
+	type = DaoNamespace_MakeType( self, name, tid, (DaoValue*) aux, nest2, N );
+	dao_free( nest2 );
+	return type;
+}
 DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 		DaoValue *vals[], DaoType *types[], DaoType *retp )
 {
@@ -1881,6 +1897,24 @@ DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols )
 	DString_Delete( key );
 	return (t1&t2) ==0 ? type : NULL;
 }
+DaoType* DaoNamespace_MakeConstType( DaoNamespace *self, DaoType *type )
+{
+	DaoType *tp;
+	DString *name = DString_New();
+	DString_AppendChars( name, "const<" );
+	DString_Append( name, type->name );
+	DString_AppendChar( name, '>' );
+	tp = DaoNamespace_FindType( self, name );
+	if( tp == NULL ){
+		tp = DaoType_Copy( type );
+		DString_Assign( tp->name, name );
+		GC_ShiftRC( type, tp->vartype );
+		tp->vartype = type;
+		tp->constant = 1;
+	}
+	DString_Delete( name );
+	return tp;
+}
 DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 {
 	DaoType *type;
@@ -1904,6 +1938,8 @@ DaoType* DaoNamespace_MakePairType( DaoNamespace *self, DaoType *first, DaoType 
 	DaoType *noneType = DaoNamespace_MakeValueType( self, dao_none_value );
 	if( first == NULL ) first = noneType;
 	if( second == NULL ) second = noneType;
+	if( first->constant ) first = first->vartype;
+	if( second->constant ) second = second->vartype;
 	types[0] = DaoNamespace_MakeType( self, "first", DAO_PAR_NAMED, (DaoValue*)first, 0, 0 );
 	types[1] = DaoNamespace_MakeType( self, "second", DAO_PAR_NAMED, (DaoValue*)second, 0, 0 );
 	return DaoNamespace_MakeType( self, "tuple", DAO_TUPLE, NULL, types, 2 );

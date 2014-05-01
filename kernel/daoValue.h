@@ -63,7 +63,7 @@ DAO_DLL void DaoVariable_Delete( DaoVariable *self );
 
 DAO_DLL void DaoConstant_Set( DaoConstant *self, DaoValue *value );
 DAO_DLL int  DaoVariable_Set( DaoVariable *self, DaoValue *value, DaoType *type );
-DAO_DLL void  DaoVariable_SetType( DaoVariable *self, DaoType *type );
+DAO_DLL void DaoVariable_SetType( DaoVariable *self, DaoType *type );
 
 
 
@@ -123,7 +123,7 @@ DAO_DLL void DaoValue_Clear( DaoValue **self );
 DAO_DLL int DaoValue_Compare( DaoValue *left, DaoValue *right );
 
 DAO_DLL void DaoValue_Copy( DaoValue *src, DaoValue **dest );
-DAO_DLL void DaoValue_CopyX( DaoValue *src, DaoValue **dest, DaoDataCache *cache );
+DAO_DLL void DaoValue_CopyX( DaoValue *src, DaoValue **dest, DaoType *cst, DaoDataCache *cache );
 DAO_DLL int DaoValue_Move( DaoValue *src, DaoValue **dest, DaoType *destype );
 DAO_DLL int DaoValue_MoveX( DaoValue *S, DaoValue **D, DaoType *T, DaoDataCache *cache );
 DAO_DLL int DaoValue_Move2( DaoValue *src, DaoValue **dest, DaoType *destype, DMap *defs, DaoDataCache *cache );

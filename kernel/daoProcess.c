@@ -1275,9 +1275,11 @@ CallEntry:
 			goto CheckException;
 		}OPNEXT() OPCASE( LOAD ){
 			if( (vA = locVars[ vmc->a ]) ){
-				/* mt.run(3)::{ mt.critical::{} }: the inner functional will be compiled
-				 * as a LOAD and RETURN, but the inner functional will not return anything,
-				 * so the first operand of LOAD will be NULL! */
+				/*
+				// mt.run(3){ mt.critical{} }: the inner functional will be compiled as
+				// a LOAD and RETURN, but the inner functional will not return anything,
+				// so the first operand of LOAD will be NULL!
+				*/
 				if( (vA->xBase.trait & DAO_VALUE_CONST) == 0 ){
 					GC_ShiftRC( vA, locVars[ vmc->c ] );
 					locVars[ vmc->c ] = vA;
@@ -1782,7 +1784,7 @@ CallEntry:
 			case DAO_CDATA  : if( value->xCdata.data == NULL ) value = NULL; break;
 			}
 			if( value == NULL ) goto RaiseErrorNullObject;
-			DaoValue_CopyX( value, locVars + vmc->c, self->cache );
+			DaoValue_CopyX( value, locVars + vmc->c, locTypes[vmc->c], self->cache );
 		}OPNEXT() OPCASE( MINUS_C ){
 			acom = ComplexOperand( vmc->a );
 			vC = locVars[ vmc->c ];
@@ -3354,7 +3356,7 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 	}else if( vmc->b > 1 ){
 		DaoTuple *tuple = DaoDataCache_MakeTuple( self->cache, NULL, vmc->b, 0 );
 		retValue = (DaoValue*) tuple;
-		for(i=0; i<vmc->b; i++) DaoValue_CopyX( src[i], tuple->values + i, self->cache );
+		for(i=0; i<vmc->b; i++) DaoValue_CopyX( src[i], tuple->values + i, NULL, self->cache );
 	}
 	if( retValue == NULL ){
 		int cmdline = self->vmSpace->evalCmdline;
@@ -3935,7 +3937,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 InvalidParameter:
 	DaoProcess_ShowCallError( self, rout2, selfpar, params, npar, codemode );
 }
-static int DaoProcess_FastPassParams( DaoProcess *self, DaoValue *params[], int npar )
+static int DaoProcess_FastPassParams( DaoProcess *self, DaoType *partypes[], DaoValue *params[], int npar )
 {
 	int i;
 	DaoValue **dests = self->stackValues + self->topFrame->stackBase;
@@ -3971,7 +3973,7 @@ static int DaoProcess_FastPassParams( DaoProcess *self, DaoValue *params[], int 
 			GC_ShiftRC( param, dests[i] );
 			dests[i] = param;
 		}else{
-			DaoValue_CopyX( param, dests + i, self->cache );
+			DaoValue_CopyX( param, dests + i, partypes[i], self->cache );
 		}
 	}
 	return 1;
@@ -3992,6 +3994,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 
 	self->activeCode = vmc;
 	if( (mode & DAO_CALL_FAST) && caller->xRoutine.overloads == NULL ){
+		DaoType **partypes = caller->xRoutine.routType->nested->items.pType;
 		rout = (DaoRoutine*) caller;
 		params = self->activeValues + vmc->a + 1;
 		for(i=0; i<npar; ++i){
@@ -4006,7 +4009,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			frame->routine = rout;
 			frame->active = frame->prev->active;
 			self->status = DAO_PROCESS_STACKED;
-			ret = DaoProcess_FastPassParams( self, parbuf, npar );
+			ret = DaoProcess_FastPassParams( self, partypes, parbuf, npar );
 			if( ret == 0 ) goto FastCallError;
 			if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 			DaoProcess_CallFunction( self, rout, values, rout->parCount );
@@ -4018,7 +4021,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			frame->active = frame;
 			self->status = DAO_PROCESS_STACKED;
 			DaoProcess_InitTopFrame( self, rout, NULL );
-			ret = DaoProcess_FastPassParams( self, parbuf, npar );
+			ret = DaoProcess_FastPassParams( self, partypes, parbuf, npar );
 			if( ret == 0 ) goto FastCallError;
 			if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 		}
@@ -5551,23 +5554,6 @@ void DaoProcess_DoBitShift( DaoProcess *self, DaoVmCode *vmc )
 			DaoProcess_PutFloat( self, inum );
 		}else{
 			DaoProcess_PutInteger( self, inum );
-		}
-	}else if( A->type ==DAO_LIST && (vmc->code ==DVM_BITLFT || vmc->code ==DVM_BITRIT) ){
-		DaoList *list = & self->activeValues[ vmc->a ]->xList;
-		self->activeCode = vmc;
-		if( DaoProcess_SetValue( self, vmc->c, A ) ==0 ) return;
-		if( vmc->code ==DVM_BITLFT ){
-			DaoType *abtp = list->ctype;
-			if( abtp && abtp->nested->size ){
-				abtp = abtp->nested->items.pType[0];
-				if( DaoType_MatchValue( abtp, B, NULL ) ==0 ) return; /* XXX information */
-			}
-			DaoList_PushBack( list, B );
-		}else{
-			if( list->value->size ==0 ) return; /* XXX information */
-			B = list->value->items.pValue[list->value->size-1];
-			if( DaoProcess_SetValue( self, vmc->b, B ) ==0 ) return;
-			DArray_PopBack( list->value );
 		}
 	}else if( A->type == DAO_OBJECT || A->type == DAO_CDATA || A->type == DAO_CSTRUCT ){
 		DaoValue *C = self->activeValues[ vmc->c ];

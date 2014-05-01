@@ -602,6 +602,10 @@ static void DaoValue_Delete( DaoValue *self )
 		DaoCtype_Delete( (DaoCtype*) self );
 	}else if( self->type == DAO_ROUTBODY ){
 		DaoRoutineBody_Delete( (DaoRoutineBody*) self );
+	}else if( self->type == DAO_CONSTANT ){
+		DaoConstant_Delete( (DaoConstant*)  self);
+	}else if( self->type == DAO_VARIABLE ){
+		DaoVariable_Delete( (DaoVariable*)  self);
 	}else if( self->type < DAO_ENUM ){
 		DaoGC_DeleteSimpleData( self );
 	}else{
@@ -1815,6 +1819,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			cycRefCountDecrement( abtp->value );
 			cycRefCountDecrement( (DaoValue*) abtp->kernel );
 			cycRefCountDecrement( (DaoValue*) abtp->cbtype );
+			cycRefCountDecrement( (DaoValue*) abtp->vartype );
 			cycRefCountDecrements( abtp->nested );
 			cycRefCountDecrements( abtp->bases );
 			count += DaoGC_ScanMap( abtp->interfaces, DAO_GC_DEC, 0, 1 );
@@ -2013,6 +2018,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			cycRefCountIncrement( abtp->value );
 			cycRefCountIncrement( (DaoValue*) abtp->kernel );
 			cycRefCountIncrement( (DaoValue*) abtp->cbtype );
+			cycRefCountIncrement( (DaoValue*) abtp->vartype );
 			cycRefCountIncrements( abtp->nested );
 			cycRefCountIncrements( abtp->bases );
 			count += DaoGC_ScanMap( abtp->interfaces, DAO_GC_INC, 0, 1 );
@@ -2219,6 +2225,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			directRefCountDecrement( (DaoValue**) & abtp->value );
 			directRefCountDecrement( (DaoValue**) & abtp->kernel );
 			directRefCountDecrement( (DaoValue**) & abtp->cbtype );
+			directRefCountDecrement( (DaoValue**) & abtp->vartype );
 			count += DaoGC_ScanMap( abtp->interfaces, DAO_GC_BREAK, 0, 1 );
 			break;
 		}
