@@ -1692,9 +1692,6 @@ DaoTypeBase numarTyper =
 	(FuncPtrDel) DaoArray_Delete, NULL
 };
 
-#ifdef DEBUG
-static int array_count = 0;
-#endif
 
 DaoArray* DaoArray_New( int etype )
 {
@@ -1703,21 +1700,21 @@ DaoArray* DaoArray_New( int etype )
 	self->etype = etype;
 	self->owner = 1;
 	DaoArray_ResizeVector( self, 0 );
-#ifdef DEBUG
-	array_count ++;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
 #endif
 	return self;
 }
 void DaoArray_Delete( DaoArray *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	if( self->dims ) dao_free( self->dims );
 	if( self->owner && self->data.p ) dao_free( self->data.p );
 	if( self->slices ) DVector_Delete( self->slices );
 	if( self->original ) GC_DecRC( self->original );
 	dao_free( self );
-#ifdef DEBUG
-	array_count --;
-#endif
 }
 void DaoArray_UseData( DaoArray *self, void *data )
 {

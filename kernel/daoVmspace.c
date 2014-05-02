@@ -619,6 +619,9 @@ DaoVmSpace* DaoVmSpace_New()
 
 	if( mainVmSpace ) DaoNamespace_AddParent( self->nsInternal, mainVmSpace->nsInternal );
 
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 void DaoVmSpace_DeleteData( DaoVmSpace *self )
@@ -668,6 +671,9 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 }
 void DaoVmSpace_Delete( DaoVmSpace *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	if( self->stdioStream ) DaoVmSpace_DeleteData( self );
 	DMap_Delete( self->nsModules );
 #ifdef DAO_WITH_THREAD
@@ -2806,6 +2812,9 @@ void DaoQuit()
 	}
 #endif
 	DaoVmSpace_Delete( mainVmSpace );
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_PrintProfile( NULL, NULL );
+#endif
 	DMap_Delete( dao_cdata_bindings );
 	dao_cdata_bindings = NULL;
 	dao_type_stream = NULL;

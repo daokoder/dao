@@ -72,28 +72,6 @@ void print_trace( const char *info )
 }
 #endif
 
-extern int ObjectProfile[100];
-extern int daoCountMBS;
-extern int daoCountArray;
-
-#ifdef DAO_GC_PROF
-static void DaoGC_PrintProfile( DArray *idleList, DArray *workList )
-{
-	int i;
-#warning "-------------------- DAO_GC_PROF is turned on."
-	printf("heap[idle] = %zi;\theap[work] = %zi\n", idleList->bufsize, workList->bufsize );
-	printf("=======================================\n");
-	//printf( "mbs count = %i\n", daoCountMBS );
-	printf( "array count = %i\n", daoCountArray );
-	for(i=0; i<100; i++){
-		if( ObjectProfile[i] != 0 ){
-			printf( "type = %3zi; rest = %5i\n", i, ObjectProfile[i] );
-		}
-	}
-}
-#else
-#define DaoGC_PrintProfile(x,y)
-#endif
 
 #if DEBUG
 static void DaoGC_PrintValueInfo( DaoValue *value )
@@ -237,9 +215,6 @@ void DaoDataCache_Cache( DaoDataCache *self, DaoValue *value )
 		DaoTuple *tup = (DaoTuple*) value;
 		daoint limit = 100 * (DAO_TUPLE_LIMIT - tup->cap);
 		if( tup->cap >= DAO_TUPLE_LIMIT || self->tuples[tup->cap]->size > limit ) {
-#ifdef DAO_GC_PROF
-			ObjectProfile[tup->type] -= 1;
-#endif
 			DaoTuple_Delete( tup );
 			return;
 		}
@@ -400,6 +375,9 @@ static DaoTuple* DaoTuple_Create2( DaoType *type, int size )
 	self->ctype = type;
 	self->size = size;
 	self->cap = ext;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 static void DaoDataCache_InitTuple( DaoDataCache *self, DaoTuple *tuple )
@@ -450,6 +428,69 @@ NewValue:
 	}
 	return tuple;
 }
+
+
+#ifdef DAO_USE_GC_LOGGER
+typedef struct DaoObjectLogger DaoObjectLogger;
+
+struct DaoObjectLogger
+{
+	daoint *newCounts;
+	daoint *delCounts;
+	daoint  allCounts[END_EXTRA_TYPES];
+	daoint  newCounts1[END_EXTRA_TYPES];
+	daoint  newCounts2[END_EXTRA_TYPES];
+	daoint  delCounts1[END_EXTRA_TYPES];
+	daoint  delCounts2[END_EXTRA_TYPES];
+};
+
+DaoObjectLogger dao_object_logger = { NULL, NULL };
+
+void DaoObjectLogger_LogNew( int type )
+{
+	if( dao_object_logger.newCounts ) dao_object_logger.newCounts[type] += 1;
+}
+void DaoObjectLogger_LogDelete( int type )
+{
+	if( dao_object_logger.delCounts ) dao_object_logger.delCounts[type] += 1;
+}
+void DaoObjectLogger_PrintProfile( DArray *idleList, DArray *workList )
+{
+	int i;
+	printf("=======================================\n");
+	if( idleList || workList ){
+		printf("heap[idle] = %zi;\theap[work] = %zi\n", idleList->size, workList->size );
+		printf("---------------------------------------\n");
+	}
+	for(i=0; i<END_EXTRA_TYPES; ++i){
+		daoint N = dao_object_logger.newCounts[i];
+		daoint D = dao_object_logger.delCounts[i];
+		daoint A = dao_object_logger.allCounts[i] + N - D;
+		dao_object_logger.allCounts[i] = A;
+		if( N != 0 || D != 0 || A != 0 ){
+			printf( "Type = %3zi;  Newed = %5i;  Deleted = %5i;  All = %12i\n", i, N, D, A );
+		}
+	}
+}
+void DaoObjectLogger_SwitchBuffer()
+{
+	if( dao_object_logger.newCounts == NULL ){
+		memset( dao_object_logger.allCounts, 0, END_EXTRA_TYPES*sizeof(daoint) );
+	}
+	if( dao_object_logger.newCounts == dao_object_logger.newCounts1 ){
+		dao_object_logger.newCounts = dao_object_logger.newCounts2;
+		dao_object_logger.delCounts = dao_object_logger.delCounts2;
+	}else{
+		dao_object_logger.newCounts = dao_object_logger.newCounts1;
+		dao_object_logger.delCounts = dao_object_logger.delCounts1;
+	}
+	memset( dao_object_logger.newCounts, 0, END_EXTRA_TYPES*sizeof(daoint) );
+	memset( dao_object_logger.delCounts, 0, END_EXTRA_TYPES*sizeof(daoint) );
+}
+#else
+void DaoObjectLogger_PrintProfile( DArray *idleList, DArray *workList ){}
+void DaoObjectLogger_SwitchBuffer(){}
+#endif
 
 
 typedef struct DaoGarbageCollector  DaoGarbageCollector;
@@ -553,6 +594,7 @@ void DaoGC_Init()
 }
 void DaoGC_Start()
 {
+	DaoObjectLogger_SwitchBuffer();
 	DaoGC_Init();
 }
 void DaoCGC_Start()
@@ -583,6 +625,9 @@ static void DaoGC_DeleteSimpleData( DaoValue *value )
 	case DAO_FLOAT :
 	case DAO_DOUBLE :
 	case DAO_COMPLEX :
+#ifdef DAO_USE_GC_LOGGER
+		DaoObjectLogger_LogDelete( value->type );
+#endif
 		dao_free( value );
 		break;
 	case DAO_STRING :
@@ -593,9 +638,6 @@ static void DaoGC_DeleteSimpleData( DaoValue *value )
 }
 static void DaoValue_Delete( DaoValue *self )
 {
-#ifdef DAO_GC_PROF
-	ObjectProfile[self->type] -= 1;
-#endif
 	if( self->type == DAO_CDATA ){
 		DaoCdata_Delete( (DaoCdata*) self );
 	}else if( self->type == DAO_CTYPE ){
@@ -700,7 +742,8 @@ void DaoGC_Finish()
 		DaoIGC_Finish();
 	}
 
-	DaoGC_PrintProfile( gcWorker.idleList, gcWorker.workList );
+	DaoObjectLogger_PrintProfile( gcWorker.idleList, gcWorker.workList );
+	DaoObjectLogger_SwitchBuffer();
 	DaoDataCache_Release( gcWorker.cache );
 	for(i=0; i<gcWorker.caches->size; ++i){
 		DaoDataCache *cache = (DaoDataCache*) gcWorker.caches->items.pVoid[i];
@@ -709,7 +752,8 @@ void DaoGC_Finish()
 #endif
 		DaoDataCache_Delete( cache );
 	}
-	DaoGC_PrintProfile( gcWorker.idleList, gcWorker.workList );
+	DaoObjectLogger_PrintProfile( gcWorker.idleList, gcWorker.workList );
+	DaoObjectLogger_SwitchBuffer();
 
 #ifdef DAO_WITH_THREAD
 	if( gcWorker.concurrent ){
@@ -1117,15 +1161,6 @@ static void DaoGC_ScanCdata( DaoCdata *cdata, int action )
 
 #ifdef DAO_WITH_THREAD
 
-void GC_Lock()
-{
-	if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.generic_lock );
-}
-void GC_Unlock()
-{
-	if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.generic_lock );
-}
-
 /* Concurrent Garbage Collector */
 
 
@@ -1302,14 +1337,11 @@ static void DaoCGC_FreeGarbage()
 		}
 		DArray_PushBack2( gcWorker.freeList, value );
 	}
-	DaoGC_PrintProfile( idleList, workList );
+	DaoObjectLogger_PrintProfile( gcWorker.idleList, gcWorker.workList );
+	DaoObjectLogger_SwitchBuffer();
 	workList->size = 0;
 }
 
-#else
-
-void GC_Lock(){}
-void GC_Unlock(){}
 
 #endif
 
@@ -1567,7 +1599,8 @@ void DaoIGC_FreeGarbage()
 	}
 	for(i=0; i<gcWorker.auxList2->size; i++) gcWorker.auxList2->items.pValue[i]->xGC.alive = 0;
 	gcWorker.auxList2->size = 0;
-	DaoGC_PrintProfile( idleList, workList );
+	DaoObjectLogger_PrintProfile( idleList, workList );
+	DaoObjectLogger_SwitchBuffer();
 }
 void cycRefCountDecrement( DaoValue *value )
 {
@@ -2270,3 +2303,5 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 	}
 	return count;
 }
+
+

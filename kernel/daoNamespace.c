@@ -837,9 +837,10 @@ DaoRoutine* DaoNamespace_MakeFunction( DaoNamespace *self, const char *proto, Da
 	if( parser == NULL ){
 		DaoNamespace_InitConstEvalData( self );
 		parser = DaoVmSpace_AcquireParser( self->vmSpace );
+		defparser = DaoVmSpace_AcquireParser( self->vmSpace );
 		parser->vmSpace = self->vmSpace;
 		parser->nameSpace = self;
-		parser->defParser = defparser = DaoVmSpace_AcquireParser( self->vmSpace );
+		parser->defParser = defparser;
 		defparser->vmSpace = self->vmSpace;
 		defparser->nameSpace = self;
 		defparser->routine = self->constEvalRoutine;
@@ -868,14 +869,15 @@ DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fptr, co
 
 int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items )
 {
-	DaoParser *defparser, *parser = DaoVmSpace_AcquireParser( self->vmSpace );
+	DaoParser *defparser = DaoVmSpace_AcquireParser( self->vmSpace );
+	DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	DaoRoutine *func;
 	int i = 0;
 	int ec = 0;
 	DaoNamespace_InitConstEvalData( self );
 	parser->vmSpace = self->vmSpace;
 	parser->nameSpace = self;
-	parser->defParser = defparser = DaoVmSpace_AcquireParser( self->vmSpace );
+	parser->defParser = defparser;
 	defparser->vmSpace = self->vmSpace;
 	defparser->nameSpace = self;
 	defparser->routine = self->constEvalRoutine;
@@ -978,12 +980,18 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	}
 	DString_Delete( name );
 	self->cstUser = self->constants->size;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 void DaoNamespace_Delete( DaoNamespace *self )
 {
 	/* printf( "DaoNamespace_Delete  %s\n", self->name->bytes ); */
 
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	DMap_Delete( self->lookupTable );
 	DArray_Delete( self->constants );
 	DArray_Delete( self->variables );
@@ -1911,6 +1919,12 @@ DaoType* DaoNamespace_MakeConstType( DaoNamespace *self, DaoType *type )
 		GC_ShiftRC( type, tp->vartype );
 		tp->vartype = type;
 		tp->constant = 1;
+		if( type->tid != DAO_NAMESPACE && (type->tid != DAO_ROUTINE || type->overloads==0) ){
+			/* Beware of const<namespace> and const<routine>: */
+			DaoNamespace_AddType( self, name, tp );
+		}else{
+			DArray_Append( self->auxData, type );
+		}
 	}
 	DString_Delete( name );
 	return tp;

@@ -64,6 +64,9 @@ DaoRoutine* DaoRoutine_New( DaoNamespace *nspace, DaoType *host, int body )
 		self->body = DaoRoutineBody_New();
 		GC_IncRC( self->body );
 	}
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *init )
@@ -136,6 +139,9 @@ DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int cst, int body, int stat )
 }
 void DaoRoutine_Delete( DaoRoutine *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	GC_DecRC( self->routHost );
 	GC_DecRC( self->routType );
 	GC_DecRC( self->routConsts );
@@ -143,6 +149,7 @@ void DaoRoutine_Delete( DaoRoutine *self )
 	DString_Delete( self->routName );
 	if( self->overloads ) DRoutines_Delete( self->overloads );
 	if( self->specialized ) DRoutines_Delete( self->specialized );
+	if( self->original ) GC_DecRC( self->original );
 	if( self->body ) GC_DecRC( self->body );
 	dao_free( self );
 }
@@ -260,10 +267,16 @@ DaoRoutineBody* DaoRoutineBody_New()
 	self->aux = DMap_New(0,0);
 	self->jitData = NULL;
 	self->specialized = 0;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 void DaoRoutineBody_Delete( DaoRoutineBody *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	DVector_Delete( self->vmCodes );
 	DArray_Delete( self->simpleVariables );
 	DArray_Delete( self->regType );

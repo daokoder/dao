@@ -73,7 +73,7 @@ int daoCountArray = 0;
 
 DArray* DArray_New( short type )
 {
-#ifdef DAO_GC_PROF
+#ifdef DAO_USE_GC_LOGGER
 	daoCountArray ++;
 #endif
 	DArray *self = (DArray*)dao_malloc( sizeof(DArray) );
@@ -86,7 +86,7 @@ DArray* DArray_New( short type )
 }
 void DArray_Delete( DArray *self )
 {
-#ifdef DAO_GC_PROF
+#ifdef DAO_USE_GC_LOGGER
 	daoCountArray --;
 #endif
 	DArray_Clear( self );

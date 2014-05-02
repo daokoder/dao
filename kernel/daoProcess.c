@@ -151,6 +151,9 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->mbstring = DString_New();
 	self->pauseType = 0;
 	self->active = 0;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 
@@ -158,6 +161,9 @@ void DaoProcess_Delete( DaoProcess *self )
 {
 	DaoStackFrame *frame = self->firstFrame;
 	daoint i;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	while( frame ){
 		DaoStackFrame *p = frame;
 		if( frame->object ) GC_DecRC( frame->object );
@@ -6223,7 +6229,7 @@ static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc )
 		if( type && type->tid == DAO_ENUM && type->mapNames ){
 			DNode *node = DMap_Find( type->mapNames, name );
 			if( node ){
-				DaoEnum_SetType( denum, type );
+				denum->etype = type;
 				denum->value = node->value.pInt;
 				C = (DaoValue*) denum;
 			}

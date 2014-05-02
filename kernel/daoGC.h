@@ -31,6 +31,13 @@
 
 #include"daoType.h"
 
+
+#ifdef DAO_USE_GC_LOGGER
+DAO_DLL void DaoObjectLogger_LogNew( int type );
+DAO_DLL void DaoObjectLogger_LogDelete( int type );
+DAO_DLL void DaoObjectLogger_PrintProfile( DArray *idleList, DArray *workList );
+#endif
+
 DAO_DLL int DaoGC_Min( int n /*=-1*/ );
 DAO_DLL int DaoGC_Max( int n /*=-1*/ );
 
@@ -54,8 +61,6 @@ DAO_DLL void DaoGC_DecRCs( DArray *dbases );
 DaoGC_ShiftRC( (DaoValue*)(up), (DaoValue*)(down) )
 
 
-DAO_DLL void GC_Lock();
-DAO_DLL void GC_Unlock();
 
 /*
 // DaoGC_LockArray() and DaoGC_LockMap() are used to ensure the concurrent GC

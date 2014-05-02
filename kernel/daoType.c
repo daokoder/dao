@@ -148,6 +148,9 @@ void DaoType_Delete( DaoType *self )
 		GC_DecRC( self );
 		return;
 	}
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	GC_DecRC( self->aux );
 	GC_DecRC( self->value );
 	GC_DecRC( self->kernel );
@@ -295,6 +298,9 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 	}
 	DaoType_CheckAttributes( self );
 	DaoType_InitDefault( self );
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 void DaoType_InitDefault( DaoType *self )
@@ -383,6 +389,9 @@ DaoType* DaoType_Copy( DaoType *other )
 	GC_IncRC( other->value );
 	GC_IncRC( other->kernel );
 	GC_IncRC( other->cbtype );
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 void DaoType_MapNames( DaoType *self )
@@ -1349,6 +1358,9 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 /* interface implementations */
 void DaoInterface_Delete( DaoInterface *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	GC_DecRC( self->abtype );
 	GC_DecRC( self->model );
 	DArray_Delete( self->supers );
@@ -1371,6 +1383,9 @@ DaoInterface* DaoInterface_New( const char *name )
 	self->methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 	self->abtype = DaoType_New( name, DAO_INTERFACE, (DaoValue*)self, NULL );
 	GC_IncRC( self->abtype );
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 static int DaoRoutine_IsCompatible( DaoRoutine *self, DaoType *type, DMap *binds )
@@ -1616,6 +1631,7 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds )
 	if( inter == NULL ) return DAO_MT_NOT;
 	if( inter->model != NULL ){
 		DaoType *model = inter->model;
+		/* Auto interfaces can only be matched by the original type and its derived ones: */
 		if( DaoType_MatchToParent( self, model, NULL ) < DAO_MT_SUB ) return DAO_MT_NOT;
 		if( model->tid == DAO_CSTRUCT || model->tid == DAO_CDATA ){
 			DaoTypeCore *core = model->kernel->core;
@@ -1787,6 +1803,9 @@ static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream
 
 void DaoTypeKernel_Delete( DaoTypeKernel *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	/* self->core may no longer be valid, but self->typer->core always is: */
 	if( self->typer->core ) self->typer->core->kernel = NULL;
 	if( self->core == (DaoTypeCore*)(self + 1) ){
@@ -1823,6 +1842,9 @@ DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer )
 		self->core->Print = DaoCdata_Print;
 	}
 	if( self->core->kernel == NULL ) self->core->kernel = self;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 

@@ -58,9 +58,6 @@ void DaoValue_Init( void *value, char type )
 	self->subtype = self->trait = self->marks = 0;
 	self->refCount = 0;
 	if( type >= DAO_ENUM ) ((DaoValue*)self)->xGC.cycRefCount = 0;
-#ifdef DAO_GC_PROF
-	if( type < 100 )  ObjectProfile[(int)type] ++;
-#endif
 }
 
 DaoNone* DaoNone_New()
@@ -68,6 +65,9 @@ DaoNone* DaoNone_New()
 	DaoNone *self = (DaoNone*) dao_malloc( sizeof(DaoNone) );
 	memset( self, 0, sizeof(DaoNone) );
 	self->type = DAO_NONE;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 DaoInteger* DaoInteger_New( daoint value )
@@ -75,6 +75,9 @@ DaoInteger* DaoInteger_New( daoint value )
 	DaoInteger *self = (DaoInteger*) dao_malloc( sizeof(DaoInteger) );
 	DaoValue_Init( self, DAO_INTEGER );
 	self->value = value;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 daoint DaoInteger_Get( DaoInteger *self )
@@ -91,6 +94,9 @@ DaoFloat* DaoFloat_New( float value )
 	DaoFloat *self = (DaoFloat*) dao_malloc( sizeof(DaoFloat) );
 	DaoValue_Init( self, DAO_FLOAT );
 	self->value = value;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 float DaoFloat_Get( DaoFloat *self )
@@ -107,6 +113,9 @@ DaoDouble* DaoDouble_New( double value )
 	DaoDouble *self = (DaoDouble*) dao_malloc( sizeof(DaoDouble) );
 	DaoValue_Init( self, DAO_DOUBLE );
 	self->value = value;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 double DaoDouble_Get( DaoDouble *self )
@@ -123,6 +132,9 @@ DaoComplex* DaoComplex_New( complex16 value )
 	DaoComplex *self = (DaoComplex*) dao_malloc( sizeof(DaoComplex) );
 	DaoValue_Init( self, DAO_COMPLEX );
 	self->value = value;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 DaoComplex* DaoComplex_New2( double real, double imag )
@@ -131,6 +143,9 @@ DaoComplex* DaoComplex_New2( double real, double imag )
 	DaoValue_Init( self, DAO_COMPLEX );
 	self->value.real = real;
 	self->value.imag = imag;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 complex16  DaoComplex_Get( DaoComplex *self )
@@ -148,6 +163,9 @@ DaoString* DaoString_New()
 	DaoString *self = (DaoString*) dao_malloc( sizeof(DaoString) );
 	DaoValue_Init( self, DAO_STRING );
 	self->value = DString_New();
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 DaoString* DaoString_NewChars( const char *mbs )
@@ -167,10 +185,16 @@ DaoString* DaoString_Copy( DaoString *self )
 	DaoString *copy = (DaoString*) dao_malloc( sizeof(DaoString) );
 	DaoValue_Init( copy, DAO_STRING );
 	copy->value = DString_Copy( self->value );
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( copy->type );
+#endif
 	return copy;
 }
 void DaoString_Delete( DaoString *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	DString_Delete( self->value );
 	dao_free( self );
 }
@@ -350,6 +374,9 @@ DaoEnum* DaoEnum_New( DaoType *type, int value )
 	self->value = value;
 	self->etype = type;
 	if( type ) GC_IncRC( type );
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 DaoEnum* DaoEnum_Copy( DaoEnum *self, DaoType *type )
@@ -364,6 +391,9 @@ DaoEnum* DaoEnum_Copy( DaoEnum *self, DaoType *type )
 }
 void DaoEnum_Delete( DaoEnum *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	if( self->etype ) GC_DecRC( self->etype );
 	dao_free( self );
 }
@@ -621,9 +651,17 @@ static DaoTypeCore numberCore=
 	DaoNumber_Print
 };
 
+static void DaoNumer_Delete( DaoValue *self )
+{
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
+	dao_free( self );
+}
+
 DaoTypeBase numberTyper=
 {
-	"double", & numberCore, NULL, NULL, {0}, {0}, dao_free, NULL
+	"double", & numberCore, NULL, NULL, {0}, {0}, (FuncPtrDel) DaoNumer_Delete, NULL
 };
 
 /**/
@@ -2341,10 +2379,16 @@ DaoList* DaoList_New()
 	self->value = DArray_New( DAO_DATA_VALUE );
 	self->value->type = DAO_DATA_VALUE;
 	self->ctype = NULL;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 void DaoList_Delete( DaoList *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	GC_DecRC( self->ctype );
 	DaoList_Clear( self );
 	DArray_Delete( self->value );
@@ -2874,10 +2918,16 @@ DaoMap* DaoMap_New( unsigned int hashing )
 	}else if( hashing > 2 ){
 		self->value->hashing = hashing;
 	}
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 void DaoMap_Delete( DaoMap *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	GC_DecRC( self->ctype );
 	DaoMap_Clear( self );
 	DMap_Delete( self->value );
@@ -3102,6 +3152,9 @@ DaoTuple* DaoTuple_New( int size )
 	self->size = size;
 	self->cap = size;
 	self->ctype = NULL;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 #if 0
@@ -3144,6 +3197,9 @@ DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 	self->cap = extra / sizeof(DaoValue*);
 	self->size = size;
 	self->ctype = type;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	if( init == 0 ) return self;
 	for(i=0; i<size; i++){
 		DaoType *it = i < M ? types[i] : types[M-1];
@@ -3168,6 +3224,9 @@ DaoTuple* DaoTuple_Copy( DaoTuple *self, DaoType *type )
 void DaoTuple_Delete( DaoTuple *self )
 {
 	int i;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	for(i=0; i<self->size; i++) GC_DecRC( self->values[i] );
 	GC_DecRC( self->ctype );
 	dao_free( self );
@@ -3220,6 +3279,9 @@ DaoValue* DaoTuple_GetItem( DaoTuple *self, int pos )
 
 void DaoNameValue_Delete( DaoNameValue *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	DString_Delete( self->name );
 	DaoValue_Clear( & self->value );
 	GC_DecRC( self->ctype );
@@ -3255,6 +3317,9 @@ DaoNameValue* DaoNameValue_New( DString *name, DaoValue *value )
 	self->ctype = NULL;
 	self->value = NULL;
 	DaoValue_Copy( value, & self->value );
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 
@@ -3337,6 +3402,9 @@ DaoCdata* DaoCdata_New( DaoType *type, void *data )
 	self->subtype = DAO_CDATA_CXX;
 	self->data = data;
 	if( data ) DaoCdataBindings_Insert( data, self );
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 DaoCdata* DaoCdata_Wrap( DaoType *type, void *data )
@@ -3354,6 +3422,9 @@ void DaoCdata_Delete( DaoCdata *self )
 		DaoCtype_Delete( (DaoCtype*) self );
 		return;
 	}
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	DaoCdata_DeleteData( self );
 	dao_free( self );
 }
@@ -3431,6 +3502,9 @@ DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype )
 	self->type = DAO_CTYPE;
 	self->name = DString_New();
 	if( cdtype ) DString_Assign( self->name, cdtype->name );
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 void DaoCtype_InitInterface( DaoCtype *self )
@@ -3454,6 +3528,9 @@ void DaoCtype_InitInterface( DaoCtype *self )
 }
 void DaoCtype_Delete( DaoCtype *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	DaoCstruct_Free( (DaoCstruct*) self );
 	GC_DecRC( self->cdtype );
 	GC_DecRC( self->clsInter );
@@ -3539,10 +3616,16 @@ DaoException* DaoException_New( DaoType *type )
 	self->info = DString_New();
 	self->edata = NULL;
 	DaoException_InitByType( self, type );
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 void DaoException_Delete( DaoException *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	DaoCstruct_Free( (DaoCstruct*)self );
 	GC_DecRC( self->edata );
 	DString_Delete( self->name );

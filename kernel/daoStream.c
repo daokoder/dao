@@ -35,6 +35,7 @@
 #include"daoNumtype.h"
 #include"daoNamespace.h"
 #include"daoValue.h"
+#include"daoGC.h"
 
 
 void DaoStream_Flush( DaoStream *self )
@@ -662,6 +663,9 @@ DaoStream* DaoStream_New()
 	self->streamString = DString_New();
 	self->fname = DString_New();
 	self->mode = DAO_IO_READ | DAO_IO_WRITE;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 void DaoStream_Close( DaoStream *self )
@@ -678,6 +682,9 @@ void DaoStream_Close( DaoStream *self )
 }
 void DaoStream_Delete( DaoStream *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	DaoStream_Close( self );
 	DString_Delete( self->fname );
 	DString_Delete( self->streamString );

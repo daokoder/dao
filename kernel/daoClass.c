@@ -129,10 +129,16 @@ DaoClass* DaoClass_New()
 	self->objMixinStart = self->objMixinEnd = self->objMixinEnd2 = 0;
 	self->cstParentStart = self->cstParentEnd = 0;
 	self->glbParentStart = self->glbParentEnd = 0;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 void DaoClass_Delete( DaoClass *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	GC_DecRC( self->clsType );
 	DMap_Delete( self->abstypes );
 	DMap_Delete( self->lookupTable );

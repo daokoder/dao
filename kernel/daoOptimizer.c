@@ -3601,6 +3601,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					}
 				}else if( at->tid == DAO_TYPE ){
 					self->type_source = at;
+					at = at->nested->items.pType[0];
 					if( at->tid == DAO_ENUM && at->mapNames ){
 						if( DMap_Find( at->mapNames, str ) == NULL ) goto NotExist;
 						ct = at;

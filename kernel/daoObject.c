@@ -184,6 +184,9 @@ DaoObject* DaoObject_Allocate( DaoClass *klass, int value_count )
 	self->valueCount = value_count;
 	self->objValues = (DaoValue**) (self + 1);
 	memset( self->objValues, 0, value_count*sizeof(DaoValue*) );
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( self->type );
+#endif
 	return self;
 }
 DaoObject* DaoObject_New( DaoClass *klass )
@@ -243,6 +246,9 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 void DaoObject_Delete( DaoObject *self )
 {
 	int i;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( self->type );
+#endif
 	GC_DecRC( self->defClass );
 	GC_DecRC( self->parent );
 	if( self->isRoot ){
