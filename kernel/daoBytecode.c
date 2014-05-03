@@ -2477,11 +2477,11 @@ static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block 
 	DaoByteCoder_DecodeChunk2222( block->end, & A, & B, & C, & D );
 	routine->body->regCount = A;
 
-	if( block->first == NULL ) return; /* Declaration only; */
-
 	/* Set proper namespace: */
 	GC_ShiftRC( self->nspace, routine->nameSpace );
 	routine->nameSpace = self->nspace;
+
+	if( block->first == NULL ) return; /* Declaration only; */
 
 	for(pb=block->first; pb; pb = pb->next){
 		DaoByteCoder_DecodeBlock( self, pb );

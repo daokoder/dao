@@ -48,7 +48,7 @@
 // Byte       # minor version number, 0x0;
 // Byte       # Carriage Return (CR), 0x0D;
 // Byte       # Line Feed (LF), 0x0A;
-// Byte       # format class, 0x0 for the official one;
+// Byte       # format class: 0x0, official; 0x1, encrypted;
 // Byte       # size of integer type, default 0x4;
 // Byte[4]    # format hash (rotating hash of the ASM tags and VM opcodes);
 // Byte[16]   # 16 reserved bytes;
