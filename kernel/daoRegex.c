@@ -507,7 +507,7 @@ static const int sizewch = sizeof(wchar_t);
 static int InitRegex( DaoRegex *self, DString *ds )
 {
 	DaoRgxItem *patt;
-	void *spatt = (void*)ds->bytes;
+	void *spatt = (void*)ds->chars;
 	daoint i, j, max =0, end = ds->size;
 	int fixed = 1;
 	self->indexed = self->count = self->group = self->config = self->attrib = 0;
@@ -519,7 +519,7 @@ static int InitRegex( DaoRegex *self, DString *ds )
 #if DEBUG
 	if( self->count * sizeof(DaoRgxItem) > (size_t)self->itemlen ){
 		printf( "error: allocated memory is not enough for the pattern.\n" );
-		printf( "%s\n", ds->bytes );
+		printf( "%s\n", ds->chars );
 		exit(0);
 	}
 #endif
@@ -920,7 +920,7 @@ int DaoRegex_CheckSize( DString *src )
 {
 	int n = src->size;
 	int m = DString_BalancedChar( src, '|', 0,0, '%', 0, n, 1 ) + 4; /* (|||) */
-	int size = sizepat + (n+m) * sizeitm + n * (src->bytes ? 1 : sizewch) + 4;
+	int size = sizepat + (n+m) * sizeitm + n * (src->chars ? 1 : sizewch) + 4;
 	return ALIGN( size );
 }
 int DaoRegex_CheckSizeChars( const char *src )
@@ -940,7 +940,7 @@ void DaoRegex_Init( DaoRegex *self, DString *src )
 	self->items = (DaoRgxItem*)(((char*)self) + sizepat);
 	self->wordbuf = ((char*)self) + sizepat + (n+m) * sizeitm;
 	self->itemlen = (n+m) * sizeitm;
-	self->wordlen = n * (src->bytes ? 1 : sizewch) + 1;
+	self->wordlen = n * (src->chars ? 1 : sizewch) + 1;
 	InitRegex( self, src );
 }
 
@@ -991,7 +991,7 @@ void DaoRegex_Copy( DaoRegex *self, DaoRegex *src )
 }
 int DaoRegex_Match( DaoRegex *self, DString *src, daoint *start, daoint *end )
 {
-	return DaoRegex_Search( self, 0,0, src->bytes, src->size, start, end, 0 );
+	return DaoRegex_Search( self, 0,0, src->chars, src->size, start, end, 0 );
 }
 
 int DaoRegex_SubMatch( DaoRegex *self, int gid, daoint *start, daoint *end )
@@ -1027,8 +1027,8 @@ static void Dao_ParseTarget( DString *target, DArray *parts, DaoValue *sval )
 	int ch, ch2;
 	DString_Clear( tmp );
 	for(i=0; i<n; i++){
-		ch = target->bytes[i];
-		ch2 = target->bytes[i+1];
+		ch = target->chars[i];
+		ch2 = target->chars[i+1];
 		if( ch == '%' && isdigit( ch2 ) ){
 			DArray_PushBack( parts, sval );
 			DString_Clear( tmp );

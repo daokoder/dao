@@ -162,13 +162,13 @@ static void DString_Serialize( DString *self, DString *serial, DString *buf )
 
 	DString_Clear( buf );
 	DString_Append( buf, self );
-	mbs = (unsigned char*) buf->bytes;
-	DString_AppendChar( serial, self->bytes ? '\'' : '\"' );
+	mbs = (unsigned char*) buf->chars;
+	DString_AppendChar( serial, self->chars ? '\'' : '\"' );
 	for(i=0; i<buf->size; i++){
 		DString_AppendChar( serial, hex_digits[ mbs[i] / 16 ] );
 		DString_AppendChar( serial, hex_digits[ mbs[i] % 16 ] );
 	}
-	DString_AppendChar( serial, self->bytes ? '\'' : '\"' );
+	DString_AppendChar( serial, self->chars ? '\'' : '\"' );
 }
 static void DaoArray_Serialize( DaoArray *self, DString *serial, DString *buf )
 {
@@ -472,7 +472,7 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 	if( tokens[start]->type == DTOK_AT && tok2 == DTOK_LCB ){
 		int rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
 		if( rb < 0 ) return next;
-		sscanf( tokens[start+2]->string.bytes, "%p", & key );
+		sscanf( tokens[start+2]->string.chars, "%p", & key );
 		node = DMap_Find( omap, key );
 		if( node ) DaoValue_Copy( node->value.pValue, value2 );
 		return rb + 1;
@@ -483,7 +483,7 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 			DString_Append( mbs, & tokens[start]->string );
 			start += 1;
 		}
-		type = DaoNamespace_MakeType( ns, mbs->bytes, DAO_ENUM, NULL, NULL, 0 );
+		type = DaoNamespace_MakeType( ns, mbs->chars, DAO_ENUM, NULL, NULL, 0 );
 		DString_Delete( mbs );
 		if( type == NULL ) return start;
 		if( tokens[start]->name != DTOK_LCB ) return start;
@@ -526,14 +526,14 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 	if( tokens[start]->name == DTOK_LB ){
 		int rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
 		if( rb < 0 ) return next;
-		sscanf( tokens[start+1]->string.bytes, "%p", & key );
+		sscanf( tokens[start+1]->string.chars, "%p", & key );
 		DMap_Insert( omap, key, *value2 );
 		start = rb + 1;
 	}
-	str = tokens[start]->string.bytes;
+	str = tokens[start]->string.chars;
 #if 0
-	printf( "type: %s %s\n", type->name->bytes, str );
-	for(i=start; i<=end; i++) printf( "%s ", tokens[i]->string.bytes ); printf( "\n" );
+	printf( "type: %s %s\n", type->name->chars, str );
+	for(i=start; i<=end; i++) printf( "%s ", tokens[i]->string.chars ); printf( "\n" );
 #endif
 	value = *value2;
 	switch( type->tid ){
@@ -561,7 +561,7 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 			start += 1;
 			if( start + 1 > end ) return start+1;
 		}
-		value->xComplex.value.imag = DaoDecodeDouble( tokens[start+1]->string.bytes );
+		value->xComplex.value.imag = DaoDecodeDouble( tokens[start+1]->string.chars );
 		if( minus ) value->xComplex.value.imag = - value->xComplex.value.imag;
 		next = start + 2;
 		break;
@@ -586,7 +586,7 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 		n = 1;
 		for(i=start+1; i<k; i++){
 			if( tokens[i]->name == DTOK_COMMA ) continue;
-			n *= strtol( tokens[i]->string.bytes, 0, 0 );
+			n *= strtol( tokens[i]->string.chars, 0, 0 );
 		}
 		if( n < 0 ) return next;
 		if( it1 == NULL || it1->tid == 0 || it1->tid > DAO_COMPLEX ) return next;
@@ -594,7 +594,7 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 		dims = DArray_New(0);
 		for(i=start+1; i<k; i++){
 			if( tokens[i]->name == DTOK_COMMA ) continue;
-			j = strtol( tokens[i]->string.bytes, 0, 0 );
+			j = strtol( tokens[i]->string.chars, 0, 0 );
 			DArray_Append( dims, (size_t) j );
 		}
 		n = dims->size;
@@ -765,7 +765,7 @@ static void NS_Backup( DaoNamespace *self, DaoProcess *proc, FILE *fout, int lim
 		case DAO_GLOBAL_VARIABLE : DString_AppendChars( prefix, "var " ); break;
 		}
 		if( max && prefix->size + name->size + serial->size + 4 > max ) continue;
-		fprintf( fout, "%s%s = %s\n", prefix->bytes, name->bytes, serial->bytes );
+		fprintf( fout, "%s%s = %s\n", prefix->chars, name->chars, serial->chars );
 	}
 	DString_Delete( prefix );
 	DString_Delete( serial );
@@ -776,7 +776,7 @@ void DaoNamespace_Backup( DaoNamespace *self, DaoProcess *proc, FILE *fout, int 
 	NS_Backup( self, proc, fout, limit, DAO_GLOBAL_CONSTANT );
 	if( self->inputs->size ){ /* essential statements and definitions */
 		static const char *digits = "ABCDEFGHIJKLMNOP";
-		unsigned char *mbs = (unsigned char*) self->inputs->bytes;
+		unsigned char *mbs = (unsigned char*) self->inputs->chars;
 		fprintf( fout, "inputs { " );
 		for(i=0; i<self->inputs->size; i++){
 			fprintf( fout, "%c%c", digits[ mbs[i] / 16 ], digits[ mbs[i] % 16 ] );
@@ -804,14 +804,14 @@ void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin )
 		int i, n, start = 0;
 		char *mbs;
 
-		DaoParser_LexCode( parser, line->bytes, 0 );
+		DaoParser_LexCode( parser, line->chars, 0 );
 		if( tokens->size == 0 ) continue;
 		name = & tokens->items.pToken[start]->string;
-		if( name->size == 6 && strcmp( name->bytes, "inputs" ) == 0 ){
+		if( name->size == 6 && strcmp( name->chars, "inputs" ) == 0 ){
 			if( tokens->size < 3 ) continue;
 			DString_Clear( line );
 			n = tokens->items.pToken[start+2]->string.size;
-			mbs = tokens->items.pToken[start+2]->string.bytes;
+			mbs = tokens->items.pToken[start+2]->string.chars;
 			for(i=0; i<n; i++){
 				char c1 = mbs[i];
 				char c2 = mbs[i+1];
@@ -819,8 +819,8 @@ void DaoNamespace_Restore( DaoNamespace *self, DaoProcess *proc, FILE *fin )
 				DString_AppendChar( line, (char)((c1-'A')*16 + (c2-'A')) );
 				i += 1;
 			}
-			/* printf( "%s\n", line->bytes ); */
-			DaoProcess_Eval( proc, self, line->bytes );
+			/* printf( "%s\n", line->chars ); */
+			DaoProcess_Eval( proc, self, line->chars );
 			continue;
 		}
 		switch( tokens->items.pToken[start]->name ){

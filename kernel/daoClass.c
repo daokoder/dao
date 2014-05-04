@@ -54,7 +54,7 @@ static void DaoClass_GetField( DaoValue *self0, DaoProcess *proc, DString *name 
 		DString_SetChars( mbs, DString_GetData( self->className ) );
 		DString_AppendChars( mbs, "." );
 		DString_Append( mbs, name );
-		DaoProcess_RaiseException( proc, rc, mbs->bytes );
+		DaoProcess_RaiseException( proc, rc, mbs->chars );
 	}else{
 		DaoProcess_PutReference( proc, value );
 	}
@@ -177,8 +177,8 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 
 	if( self->classRoutine ) return;
 
-	self->clsInter = DaoInterface_New( name->bytes );
-	self->objInter = DaoInterface_New( name->bytes );
+	self->clsInter = DaoInterface_New( name->chars );
+	self->objInter = DaoInterface_New( name->chars );
 	DString_SetChars( self->clsInter->abtype->name, "interface<class<" );
 	DString_SetChars( self->objInter->abtype->name, "interface<" );
 	DString_Append( self->clsInter->abtype->name, name );
@@ -188,8 +188,8 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 	DaoClass_AddReference( self, self->clsInter );
 	DaoClass_AddReference( self, self->objInter );
 
-	self->objType = DaoType_New( name->bytes, DAO_OBJECT, (DaoValue*)self, NULL );
-	self->clsType = DaoType_New( name->bytes, DAO_CLASS, (DaoValue*) self, NULL );
+	self->objType = DaoType_New( name->chars, DAO_OBJECT, (DaoValue*)self, NULL );
+	self->clsType = DaoType_New( name->chars, DAO_CLASS, (DaoValue*) self, NULL );
 	GC_IncRC( self->clsType );
 	GC_IncRC( self->clsType );
 	GC_IncRC( self->objType );
@@ -457,7 +457,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 	DMap_Insert( deftypes, mixin->objType, self->objType );
 
 #if 0
-	printf( "MixIn: %s %p %i\n", mixin->className->bytes, mixin, mixin->cstDataName->size );
+	printf( "MixIn: %s %p %i\n", mixin->className->chars, mixin, mixin->cstDataName->size );
 #endif
 
 	/* Add the own constants of the mixin to the host class: */
@@ -485,7 +485,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 			DMap_Insert( rout->body->aux, DaoRoutine_OriginalHost, original2 );
 			bl = bl && DaoRoutine_Finalize( rout, self->objType, deftypes );
 #if 0
-			printf( "%2i:  %s  %s\n", i, rout->routName->bytes, rout->routType->name->bytes );
+			printf( "%2i:  %s  %s\n", i, rout->routName->chars, rout->routType->name->chars );
 #endif
 
 			/*
@@ -918,9 +918,9 @@ int DaoClass_DeriveClassData( DaoClass *self )
 	for(j=0; j<self->constants->size; ++j){
 		DaoValue *value = self->constants->items.pConst[j]->value;
 		DaoRoutine *routine = (DaoRoutine*) value;
-		printf( "%3i: %3i %s\n", j, value->type, self->cstDataName->items.pString[j]->bytes );
+		printf( "%3i: %3i %s\n", j, value->type, self->cstDataName->items.pString[j]->chars );
 		if( value->type != DAO_ROUTINE ) continue;
-		printf( "%3i: %3i %s\n", j, value->type, routine->routName->bytes );
+		printf( "%3i: %3i %s\n", j, value->type, routine->routName->chars );
 		if( routine->overloads ){
 			DArray *routs = routine->overloads->routines;
 			for(k=0; k<routs->size; ++k){
@@ -931,7 +931,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 		}
 	}
 	for(it=DMap_First(self->lookupTable); it; it=DMap_Next(self->lookupTable,it)){
-		printf( "%s %i\n", it->key.pString->bytes, it->value.pInt );
+		printf( "%s %i\n", it->key.pString->chars, it->value.pInt );
 		if( LOOKUP_ST( it->value.pInt ) != DAO_CLASS_CONSTANT ) continue;
 		DaoValue *value = DaoClass_GetConst( self, it->value.pInt );
 		printf( "%i\n", value->type );
@@ -1013,7 +1013,7 @@ int DArray_MatchAffix( DArray *self, DString *name )
 			if( DString_Find( name, & tmp, 0 ) != 0 ) continue;
 		}
 		if( pos < pat->size-1 ){
-			tmp = DString_WrapChars( pat->bytes + pos + 1 );
+			tmp = DString_WrapChars( pat->chars + pos + 1 );
 			if( DString_RFind( name, & tmp, -1 ) != (name->size - 1) ) continue;
 		}
 		return 1;
@@ -1136,7 +1136,7 @@ void DaoClass_ResetAttributes( DaoClass *self )
 	}
 	if( autoinitor ) self->attribs |= DAO_CLS_AUTO_INITOR;
 #if 0
-	printf( "%s %i\n", self->className->bytes, autoinitor );
+	printf( "%s %i\n", self->className->chars, autoinitor );
 #endif
 	for(i=DVM_NOT; i<=DVM_BITRIT; i++){
 		DString_SetChars( mbs, daoBitBoolArithOpers[i-DVM_NOT] );

@@ -83,8 +83,8 @@ static int dao_test_inliner( DaoNamespace *NS, DString *mode, DString *VT, DStri
 	}
 
 	DString_Reset( out, 0 );
-	DString_SetBytes( out, VT->bytes + rb + 1, VT->size - 2*(rb + 1) );
-	while( start < out->size && isspace( out->bytes[start] ) ) start += 1;
+	DString_SetBytes( out, VT->chars + rb + 1, VT->size - 2*(rb + 1) );
+	while( start < out->size && isspace( out->chars[start] ) ) start += 1;
 
 	DArray_Append( dao_tests, out );
 
@@ -108,7 +108,7 @@ void GetCounts( DString *text, int *mps, int *mfs, int *ps, int *fs )
 {
 	char *p;
 	DString_Change( text, last_line_pattern, "%2 %3 %4 %5", 0 );
-	*mps = strtoll( text->bytes, & p, 10 );
+	*mps = strtoll( text->chars, & p, 10 );
 	*mfs = strtoll( p + 1, & p, 10 );
 	*ps = strtoll( p + 1, & p, 10 );
 	*fs = strtoll( p + 1, & p, 10 );
@@ -157,7 +157,7 @@ int main( int argc, char **argv )
 		}else{
 			logfile = fopen( argv[logopt+1], "w+b" );
 		}
-		fprintf( logfile, "%s", summary->bytes );
+		fprintf( logfile, "%s", summary->chars );
 		DString_Reset( summary, 0 );
 		for(i=2; i<logopt; ++i){
 			daoint start = 0, end;
@@ -186,7 +186,7 @@ int main( int argc, char **argv )
 		mfails += mfails2;
 		passes += passes2;
 		fails += fails2;
-		fprintf( logfile, "%s\n", summary->bytes );
+		fprintf( logfile, "%s\n", summary->chars );
 		fprintf( logfile, last_line_format2, mpasses, mfails, passes, fails );
 		fclose( logfile );
 		DString_Delete( string );
@@ -229,7 +229,7 @@ int main( int argc, char **argv )
 				stream->output = output;
 				DString_Reset( output, 0 );
 				DaoNamespace_AddParent( ns2, ns );
-				DaoProcess_Eval( proc, ns2, codes->bytes );
+				DaoProcess_Eval( proc, ns2, codes->chars );
 				DString_Trim( output );
 				DString_Trim( result );
 				if( output->size == 0 && result->size != 0 ){
@@ -240,7 +240,7 @@ int main( int argc, char **argv )
 					stream->output = output2;
 					DString_Reset( output2, 0 );
 					DaoNamespace_AddParent( ns3, ns );
-					DaoProcess_Eval( proc2, ns3, result->bytes );
+					DaoProcess_Eval( proc2, ns3, result->chars );
 					cmp = DaoValue_Compare( proc->stackValues[0], proc2->stackValues[0] );
 					DaoVmSpace_ReleaseProcess( vmSpace, proc2 );
 					DaoGC_TryDelete( (DaoValue*) ns3 );
@@ -263,9 +263,9 @@ int main( int argc, char **argv )
 					FILE *log = logfile ? logfile : stderr;
 					if( output->size > 500 ) DString_Reset( output, 500 );
 					fprintf( log, "\n#############################################\n" );
-					fprintf( log, "\nFAILED: %s, line %s:\n", argv[i], id->bytes );
-					fprintf( log, "OUTPUT:\n\n%s\n\n", output->bytes );
-					fprintf( log, "EXPECTED:\n\n%s\n\n\n", result->bytes );
+					fprintf( log, "\nFAILED: %s, line %s:\n", argv[i], id->chars );
+					fprintf( log, "OUTPUT:\n\n%s\n\n", output->chars );
+					fprintf( log, "EXPECTED:\n\n%s\n\n\n", result->chars );
 					fflush( log );
 				}
 				DaoGC_TryDelete( (DaoValue*) ns2 );

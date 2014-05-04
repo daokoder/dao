@@ -433,11 +433,11 @@ int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols )
 	
 	names = DString_New();
 	DString_SetChars( names, symbols );
-	for(i=0,n=names->size; i<n; i++) if( names->bytes[i] == '$' ) names->bytes[i] = 0;
+	for(i=0,n=names->size; i<n; i++) if( names->chars[i] == '$' ) names->chars[i] = 0;
 	i = 0;
-	if( names->bytes[0] == '\0' ) i += 1;
+	if( names->chars[0] == '\0' ) i += 1;
 	do{ /* for multiple symbols */
-		DString name = DString_WrapChars( names->bytes + i );
+		DString name = DString_WrapChars( names->chars + i );
 		DNode *node = DMap_Find( self->etype->mapNames, &name );
 		if( node ){
 			if( ! k ) first = node->value.pInt;
@@ -687,7 +687,7 @@ static void DaoString_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	case IDX_SINGLE :
 		{
 			daoint *num = DaoProcess_PutInteger( proc, 0 );
-			*num = self->bytes[start];
+			*num = self->chars[start];
 			break;
 		}
 	case IDX_FROM :
@@ -705,7 +705,7 @@ static void DaoString_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	case IDX_MULTIPLE :
 		{
 			daoint *ip = ids->items.pInt;
-			char *data = self->bytes;
+			char *data = self->chars;
 			res = DaoProcess_PutChars( proc, "" );
 			DString_Clear( res );
 			for(i=0,n=ids->size; i<n; i++) DString_AppendChar( res, data[ ip[i] ] );
@@ -727,11 +727,11 @@ static void DaoString_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 		daoint i, n, id = value->xInteger.value;
 		if( idtype == IDX_MULTIPLE ){
 			daoint *ip = ids->items.pInt;
-			for(i=0,n=ids->size; i<n; i++) self->bytes[ ip[i] ] = id;
+			for(i=0,n=ids->size; i<n; i++) self->chars[ ip[i] ] = id;
 			DArray_Delete( ids );
 			return;
 		}
-		for(i=start; i<=end; i++) self->bytes[i] = id;
+		for(i=start; i<=end; i++) self->chars[i] = id;
 	}else if( value->type == DAO_STRING ){
 		DString *str = value->xString.value;
 		switch( idtype ){
@@ -742,7 +742,7 @@ static void DaoString_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 			break;
 		case IDX_SINGLE :
 			{
-				self->bytes[start] = str->bytes[0];
+				self->chars[start] = str->chars[0];
 				break;
 			}
 		case IDX_FROM :
@@ -915,7 +915,7 @@ static void DaoSTR_Replace2( DaoProcess *proc, DaoValue *p[], int N )
 			DString_Append( res, val );
 			i += key->size;
 		}else{
-			DString_AppendChar( res, self->bytes[i] );
+			DString_AppendChar( res, self->chars[i] );
 			i ++;
 		}
 	}
@@ -958,15 +958,15 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 	res = DaoProcess_PutChars( proc, "" );
 	key = DaoString_New();
 	sub = DString_New();
-	spec2 = spec->bytes[0];
+	spec2 = spec->chars[0];
 	pos1 = DString_FindChar( self, spec2, prev );
 	while( pos1 != DAO_NULLPOS ){
 		pos2 = DString_FindChar( self, ')', pos1 );
 		replace = 0;
-		if( pos2 != DAO_NULLPOS && self->bytes[pos1+1] == '(' ){
+		if( pos2 != DAO_NULLPOS && self->chars[pos1+1] == '(' ){
 			replace = 1;
 			for(i=pos1+2; i<pos2; i++){
-				ch = self->bytes[i];
+				ch = self->chars[i];
 				if( ch != '-' && ch != '_' && ! isalnum( ch ) ){
 					replace = 0;
 					break;
@@ -1024,7 +1024,7 @@ static void DaoSTR_Split( DaoProcess *proc, DaoValue *p[], int N )
 	daoint posQuote = DString_Find( self, quote, last );
 	daoint posQuote2 = -1;
 	if( N ==1 || DString_Size( delm ) ==0 ){
-		uchar_t *bytes = (unsigned char*) self->bytes;
+		uchar_t *bytes = (unsigned char*) self->chars;
 		daoint i = 0;
 		while( i < size ){
 			daoint pos = DString_LocateChar( self, i, 0 );
@@ -1326,7 +1326,7 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 	DaoProcess_AcquireCV( proc );
 	for(i=0; i<N; i++){
 		idint.value = i;
-		chint.value = data->bytes[i];
+		chint.value = data->chars[i];
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, chr );
 		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, index );
 		proc->topFrame->entry = entry;
@@ -1339,7 +1339,7 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 			break;
 		case DVM_FUNCT_SELECT :
 			if( ! DaoValue_IsZero( res ) ){
-				DString_AppendChar( string, data->bytes[i] );
+				DString_AppendChar( string, data->chars[i] );
 			}
 			break;
 		case DVM_FUNCT_INDEX :
@@ -1350,7 +1350,7 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 			break;
 		case DVM_FUNCT_APPLY :
 			k = DaoValue_GetInteger( res );
-			data->bytes[i] = k;
+			data->chars[i] = k;
 			break;
 		}
 	}
@@ -1987,7 +1987,7 @@ static void DaoLIST_Join( DaoProcess *proc, DaoValue *p[], int N )
 	for( i = 0; i < self->value->size; i++ ){
 		switch( data[i]->type ){
 		case DAO_STRING:
-			if( data[i]->xString.value->bytes == NULL ) mbs = 0;
+			if( data[i]->xString.value->chars == NULL ) mbs = 0;
 			size += data[i]->xString.value->size;
 			break;
 		case DAO_INTEGER:
@@ -3513,8 +3513,8 @@ DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype )
 }
 void DaoCtype_InitInterface( DaoCtype *self )
 {
-	DaoInterface *clsInter = DaoInterface_New( self->cdtype->name->bytes );
-	DaoInterface *objInter = DaoInterface_New( self->cdtype->name->bytes );
+	DaoInterface *clsInter = DaoInterface_New( self->cdtype->name->chars );
+	DaoInterface *objInter = DaoInterface_New( self->cdtype->name->chars );
 	DString_SetChars( clsInter->abtype->name, "interface<class<" );
 	DString_SetChars( objInter->abtype->name, "interface<" );
 	DString_Append( clsInter->abtype->name, self->cdtype->name );
@@ -4097,7 +4097,7 @@ static void DaoType_WriteMainName( DaoType *self, DaoStream *stream )
 	DString *name = self->name;
 	daoint i, n = DString_FindChar( name, '<', 0 );
 	if( n == DAO_NULLPOS ) n = name->size;
-	for(i=0; i<n; i++) DaoStream_WriteChar( stream, name->bytes[i] );
+	for(i=0; i<n; i++) DaoStream_WriteChar( stream, name->chars[i] );
 }
 static void DString_Format( DString *self, int width, int head )
 {
@@ -4113,7 +4113,7 @@ static void DString_Format( DString *self, int width, int head )
 	while( n > k ){
 		i = k * (n / k) + head;
 		j = 0;
-		while( (i+j) < self->size && isspace( self->bytes[i+j] ) ) j += 1;
+		while( (i+j) < self->size && isspace( self->chars[i+j] ) ) j += 1;
 		DString_InsertChars( self, buffer, i, j, head+1 );
 		n = i - head - 1;
 	}

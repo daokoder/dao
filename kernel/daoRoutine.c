@@ -198,8 +198,8 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int
 		}
 	}
 	/*
-	   if( strcmp( rout->routName->bytes, "expand" ) ==0 )
-	   printf( "%i, %p, parlist = %s; npar = %i; ndef = %i, %i\n", i, rout, rout->routType->name->bytes, npar, ndef, selfChecked );
+	   if( strcmp( rout->routName->chars, "expand" ) ==0 )
+	   printf( "%i, %p, parlist = %s; npar = %i; ndef = %i, %i\n", i, rout, rout->routType->name->chars, npar, ndef, selfChecked );
 	 */
 	if( (npar | ndef) ==0 ) return 1;
 	if( npar > ndef ) return 0;
@@ -225,7 +225,7 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int
 		}
 		parpass[ito] = DaoType_MatchValue2( (DaoType*) abtp->aux, val, defs );
 		/*
-		   printf( "%i:  %i  %s\n", parpass[ito], abtp->tid, abtp->name->bytes );
+		   printf( "%i:  %i  %s\n", parpass[ito], abtp->tid, abtp->name->chars );
 		 */
 		if( parpass[ito] == 0 ) goto NotMatched;
 	}
@@ -359,10 +359,10 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 	DNode *it;
 	int i, n;
 #if 0
-	printf( "DaoRoutine_MapTypes() %s\n", self->routName->bytes );
+	printf( "DaoRoutine_MapTypes() %s\n", self->routName->chars );
 	for(it=DMap_First(deftypes); it; it=DMap_Next(deftypes,it) ){
 		printf( "%16p -> %p\n", it->key.pType, it->value.pType );
-		printf( "%16s -> %s\n", it->key.pType->name->bytes, it->value.pType->name->bytes );
+		printf( "%16s -> %s\n", it->key.pType->name->chars, it->value.pType->name->chars );
 	}
 #endif
 	for(it=DMap_First(self->body->localVarType); it; it=DMap_Next(self->body->localVarType,it) ){
@@ -410,7 +410,7 @@ DAO_DLL void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DSt
 	name = DaoVmCode_GetOpcodeName( vmc.code );
 	sprintf( buffer1, "%5i :  ", i);
 	if( self->body->source ) DaoLexer_AnnotateCode( self->body->source, vmc, output, 24 );
-	sprintf( buffer2, fmt, name, vmc.a, vmc.b, vmc.c, vmc.line, output->bytes );
+	sprintf( buffer2, fmt, name, vmc.a, vmc.b, vmc.c, vmc.line, output->chars );
 	DString_SetChars( output, buffer1 );
 	DString_AppendChars( output, buffer2 );
 }

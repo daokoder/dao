@@ -182,7 +182,7 @@ static void DaoxHelpBlock_Delete( DaoxHelpBlock *self )
 }
 static int DString_Break( DString *self, int start, int width )
 {
-	uchar_t *bytes = (uchar_t*) self->bytes;
+	uchar_t *bytes = (uchar_t*) self->chars;
 	daoint pos = DString_LocateChar( self, start, 0 );
 	daoint last = start;
 	int count = width;
@@ -303,7 +303,7 @@ static void DaoxStream_WriteMBS( DaoxStream *self, const char *mbs )
 static void DaoxStream_WriteString( DaoxStream *self, DString *text )
 {
 	if( self->offset && isalnum( self->last ) ){
-		if( isalnum( text->bytes[0] ) ) DaoxStream_WriteChar( self, ' ' );
+		if( isalnum( text->chars[0] ) ) DaoxStream_WriteChar( self, ' ' );
 	}
 	if( self->output ){
 		DString_Append( self->output, text );
@@ -311,7 +311,7 @@ static void DaoxStream_WriteString( DaoxStream *self, DString *text )
 		DaoStream_WriteString( self->stream, text );
 	}
 	self->offset += text->size;
-	if( text->size ) self->last = text->bytes[text->size-1];
+	if( text->size ) self->last = text->chars[text->size-1];
 }
 static void DaoxStream_WriteInteger( DaoxStream *self, int i )
 {
@@ -357,7 +357,7 @@ static void DaoxStream_WriteParagraph( DaoxStream *self, DString *text, int offs
 		//DString_Chop( line );
 		DaoxStream_WriteString( self, line );
 	}
-	//if( text->size && text->bytes[text->size-1] == '\n' ) DaoxStream_WriteNewLine( self, "" );
+	//if( text->size && text->chars[text->size-1] == '\n' ) DaoxStream_WriteNewLine( self, "" );
 	DString_Delete( line );
 }
 static void DaoxStream_WriteText( DaoxStream *self, DString *text, int offset, int width )
@@ -375,7 +375,7 @@ static void DaoxStream_WriteText( DaoxStream *self, DString *text, int offset, i
 		DString_SubString( text, paragraph, last, pos - last );
 		DaoxStream_WriteParagraph( self, paragraph, offset, width );
 		last = pos + 1;
-		while( last < text->size && text->bytes[last] == '\n' ) last += 1;
+		while( last < text->size && text->chars[last] == '\n' ) last += 1;
 		if( last > (pos + 1) ) DaoxStream_WriteNewLine( self, "" );
 		if( last > (pos + 2) ) DaoxStream_WriteNewLine( self, "" );
 		pos = DString_FindChar( text, '\n', last );
@@ -404,15 +404,15 @@ static void DaoxStream_WriteEntryName( DaoxStream *self, DString *name )
 	if( self->output ){
 		if( self->fmtHTML ){
 			DString_AppendChars( self->output, "<a href=\"" );
-			DString_AppendChars( self->output, name->bytes );
+			DString_AppendChars( self->output, name->chars );
 			DString_AppendChars( self->output, ".html\">" );
-			DString_AppendChars( self->output, name->bytes );
+			DString_AppendChars( self->output, name->chars );
 			DString_AppendChars( self->output, "</a>" );
 		}else{
-			DString_AppendChars( self->output, name->bytes );
+			DString_AppendChars( self->output, name->chars );
 		}
 		self->offset += name->size;
-		self->last = name->bytes[name->size-1];
+		self->last = name->chars[name->size-1];
 	}else{
 		DaoxStream_SetColor( self, "blue", NULL );
 		DaoxStream_WriteString( self, name );
@@ -436,15 +436,15 @@ static void DaoxStream_WriteEntryName2( DaoxStream *self, DString *name )
 		if( start ) DString_AppendChar( self->output, '.' );
 		DString_SubString( name, mbs, 0, end );
 		DString_AppendChars( self->output, "<a href=\"" );
-		DString_AppendChars( self->output, mbs->bytes );
+		DString_AppendChars( self->output, mbs->chars );
 		DString_AppendChars( self->output, ".html\">" );
 		DString_SubString( name, mbs, start, end - start );
-		DString_AppendChars( self->output, mbs->bytes );
+		DString_AppendChars( self->output, mbs->chars );
 		DString_AppendChars( self->output, "</a>" );
 		start = end + 1;
 	}
 	self->offset += 4 + name->size;
-	self->last = name->bytes[name->size-1];
+	self->last = name->chars[name->size-1];
 }
 static void DaoxStream_WriteLink( DaoxStream *self, DString *link, int offset, int width )
 {
@@ -459,18 +459,18 @@ static void DaoxStream_WriteLink( DaoxStream *self, DString *link, int offset, i
 	if( self->output ){
 		if( self->fmtHTML ){
 			DString_AppendChars( self->output, "<a href=\"" );
-			DString_AppendChars( self->output, addr->bytes );
+			DString_AppendChars( self->output, addr->chars );
 			DString_AppendChars( self->output, "\">" );
-			DString_AppendChars( self->output, name->bytes );
+			DString_AppendChars( self->output, name->chars );
 			DString_AppendChars( self->output, "</a>" );
 		}else{
-			DString_AppendChars( self->output, name->bytes );
+			DString_AppendChars( self->output, name->chars );
 			DaoxStream_WriteChar( self, '(' );
 			DaoxStream_WriteString( self, addr );
 			DaoxStream_WriteChar( self, ')' );
 		}
 		self->offset += name->size;
-		self->last = name->bytes[name->size-1];
+		self->last = name->chars[name->size-1];
 	}else{
 		DaoxStream_SetColor( self, "blue", NULL );
 		DaoxStream_WriteString( self, name );
@@ -588,7 +588,7 @@ int DaoxHelp_TokenizeCodes( DaoxLexInfo *info, DaoLexer *lexer, const char *sour
 			printf( "%5i:  %s\n\n\n\n", n, src );
 			break;
 		}
-		ds.bytes = (char*)src;
+		ds.chars = (char*)src;
 		ds.size = n;
 		one->type = one->name = DTOK_COMMENT;
 		DString_Reset( & one->string, 0 );
@@ -611,7 +611,7 @@ int DaoxHelp_TokenizeCodes( DaoxLexInfo *info, DaoLexer *lexer, const char *sour
 				one->type = one->name = DTOK_CMT_OPEN;
 			}else{
 				k += NBC1;
-				DString_SetBytes( & one->string, ds.bytes, k );
+				DString_SetBytes( & one->string, ds.chars, k );
 				src += k;
 				n -= k;
 			}
@@ -622,7 +622,7 @@ int DaoxHelp_TokenizeCodes( DaoxLexInfo *info, DaoLexer *lexer, const char *sour
 				one->type = one->name = DTOK_CMT_OPEN;
 			}else{
 				k += NBC2;
-				DString_SetBytes( & one->string, ds.bytes, k );
+				DString_SetBytes( & one->string, ds.chars, k );
 				src += k;
 				n -= k;
 			}
@@ -669,7 +669,7 @@ int DaoxHelp_TokenizeCodes( DaoxLexInfo *info, DaoLexer *lexer, const char *sour
 		one->type = one->name = DaoToken_Check( src, n, & k );
 		DString_SetBytes( & one->string, src, k );
 		DaoLexer_AppendToken( lexer, one );
-		//printf( "n = %3i,  %3i,  %3i ======= %s\n", n, k, one->type, mbs->bytes );
+		//printf( "n = %3i,  %3i,  %3i ======= %s\n", n, k, one->type, mbs->chars );
 		if( n < k ){
 			printf( "n = %i,  %i,  %i=======%s\n", n, k, one->type, src );
 		}
@@ -714,24 +714,24 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 	}
 	DString_Trim( code );
 
-	if( lang && strcmp( lang->bytes, "cxx" ) == 0 ){
-		DaoxHelp_TokenizeCodes( & daox_help_cxx_lexinfo, lexer, code->bytes );
+	if( lang && strcmp( lang->chars, "cxx" ) == 0 ){
+		DaoxHelp_TokenizeCodes( & daox_help_cxx_lexinfo, lexer, code->chars );
 		for(i=0; i<tokens->size; i++){
 			DaoToken *tok = tokens->items.pToken[i];
 			DNode *it = DMap_Find( daox_helper->cxxKeywords, & tok->string );
 			if( it ) tok->name = it->value.pInt;
 		}
 	}else{
-		DaoLexer_Tokenize( lexer, code->bytes, DAO_LEX_COMMENT|DAO_LEX_SPACE );
-		if( lang && strcmp( lang->bytes, "dao" ) == 0 ){
+		DaoLexer_Tokenize( lexer, code->chars, DAO_LEX_COMMENT|DAO_LEX_SPACE );
+		if( lang && strcmp( lang->chars, "dao" ) == 0 ){
 			for(i=0; i<tokens->size; i++){
 				DaoToken *tok = tokens->items.pToken[i];
-				const char *ts = tok->string.bytes;
+				const char *ts = tok->string.chars;
 				if( tok->type != DTOK_IDENTIFIER ) continue;
 				if( strcmp( ts, "panic" ) == 0 )   tok->name = DKEY_RAND;
 				if( strcmp( ts, "recover" ) == 0 ) tok->name = DKEY_RAND;
 			}
-		}else if( lang && strcmp( lang->bytes, "syntax" ) == 0 ){
+		}else if( lang && strcmp( lang->chars, "syntax" ) == 0 ){
 			for(i=0; i<tokens->size; i++){
 				DaoToken *tok = tokens->items.pToken[i];
 				switch( tok->type ){
@@ -747,10 +747,10 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 					break;
 				}
 			}
-		}else if( lang && strcmp( lang->bytes, "test" ) == 0 ){
+		}else if( lang && strcmp( lang->chars, "test" ) == 0 ){
 			for(i=0; i<tokens->size; i++){
 				DaoToken *tok = tokens->items.pToken[i];
-				const char *ts = tok->string.bytes;
+				const char *ts = tok->string.chars;
 				if( tok->type != DTOK_IDENTIFIER ) continue;
 				if( strcmp( ts, "__result__" ) == 0 ) tok->name = DTOK_COMMENT;
 				if( strcmp( ts, "__answer__" ) == 0 ) tok->name = DTOK_COMMENT;
@@ -928,7 +928,7 @@ static int DaoxStream_WriteList( DaoxStream *self, DString *text, int offset, in
 			if( item->size ){
 				DString_Erase( item, 0, 2 );
 				for(i=0; i<offset; i++) DaoxStream_WriteChar( self, ' ' );
-				i = DaoxStream_WriteItemID( self, delim->bytes[delim->size-1], itemid ++ );
+				i = DaoxStream_WriteItemID( self, delim->chars[delim->size-1], itemid ++ );
 				fails += DaoxStream_WriteBlock( self, item, offset+i, width, 0, listdep );
 			}
 			/* print newline for items except the last one: */
@@ -1004,7 +1004,7 @@ static void DaoxStream_WriteTable( DaoxStream *self, DString *text, int offset, 
 			int right = 0;
 			if( hash2 || amd2 ){
 				DString_Erase( cell, 0, 2 );
-				right = cell->size && isspace( cell->bytes[0] );
+				right = cell->size && isspace( cell->chars[0] );
 				DString_Trim( cell );
 			}
 			if( hash2 ){
@@ -1070,7 +1070,7 @@ static int DaoxStream_DoTest( DaoxStream *self, DString *code )
 	prevStdout = DaoVmSpace_SetUserStdio( vmspace, (DaoUserStream*) & stdoutStream );
 	prevStderr = DaoVmSpace_SetUserStdError( vmspace, (DaoUserStream*) & stderrStream  );
 
-	DaoProcess_Eval( self->process, nspace, code->bytes );
+	DaoProcess_Eval( self->process, nspace, code->chars );
 
 	DaoVmSpace_SetUserStdio( vmspace, prevStdout );
 	DaoVmSpace_SetUserStdError( vmspace, prevStderr  );
@@ -1150,21 +1150,21 @@ static int DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, i
 			DString_Clear( mode );
 			if( lb != DAO_NULLPOS ){
 				daoint rb = DString_FindChar( text, ')', start );
-				DString_SetBytes( cap, text->bytes + start + 2, lb - start - 2 );
-				DString_SetBytes( mode, text->bytes + lb + 1, rb - lb - 1 );
+				DString_SetBytes( cap, text->chars + start + 2, lb - start - 2 );
+				DString_SetBytes( mode, text->chars + lb + 1, rb - lb - 1 );
 				DString_Trim( mode );
 			}else{
 				daoint rb = DString_FindChar( text, ']', start );
-				DString_SetBytes( cap, text->bytes + start + 2, rb - start - 2 );
+				DString_SetBytes( cap, text->chars + start + 2, rb - start - 2 );
 			}
 			DString_Trim( cap );
-			//printf( "%s\n", cap->bytes );
+			//printf( "%s\n", cap->chars );
 			it = DMap_Find( self->mtypes, cap );
 			mtype = DAOX_HELP_NONE;
 			if( it ) mtype = it->value.pInt;
 			if( mtype == DAOX_HELP_CODE ){
 				DaoxStream_PrintCode( self, part, mode, offset, width );
-				if( self->process && strcmp( mode->bytes, "test" ) == 0 ){
+				if( self->process && strcmp( mode->chars, "test" ) == 0 ){
 					fails += DaoxStream_DoTest( self, part );
 				}
 			}else if( mtype >= DAOX_HELP_SECTION && mtype <= DAOX_HELP_SUBSECT2 ){
@@ -1247,7 +1247,7 @@ static int DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, i
 				DString_Trim( bgcolor );
 				//if( islist ) DString_Trim( part );
 				if( self->offset && isspace( self->last ) == 0 ) DaoxStream_WriteChar( self, ' ' );
-				DaoxStream_SetColor( self, fgcolor->bytes, bgcolor->bytes );
+				DaoxStream_SetColor( self, fgcolor->chars, bgcolor->chars );
 				DaoxStream_WriteText( self, part, offset, width );
 				DaoxStream_SetColor( self, NULL, NULL );
 			}
@@ -1290,10 +1290,10 @@ static void DaoxHelpBlock_Print( DaoxHelpBlock *self, DaoxStream *stream, DaoPro
 		self->entry->failedTests += fails;
 	}else if( self->type == DAOX_HELP_CODE ){
 		DaoxStream_PrintCode( stream, self->text, self->lang, 0, screen );
-		if( proc && (self->lang == NULL || strcmp( self->lang->bytes, "dao" ) == 0) ){
+		if( proc && (self->lang == NULL || strcmp( self->lang->chars, "dao" ) == 0) ){
 			DaoxStream_WriteMBS( stream, "\n" );
 			DaoxStream_SetColor( stream, NULL, dao_colors[DAOX_YELLOW] );
-			DaoProcess_Eval( proc, self->entry->help->nspace, self->text->bytes );
+			DaoProcess_Eval( proc, self->entry->help->nspace, self->text->chars );
 			DaoxStream_SetColor( stream, NULL, NULL );
 		}
 	}
@@ -1427,16 +1427,16 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 	}
 
 	DString_Resize( line, offset );
-	memset( line->bytes, ' ', line->size*sizeof(char) );
-	for(i=0; i<offsets->size; i++) line->bytes[ offsets->items.pInt[i] ] = '|';
+	memset( line->chars, ' ', line->size*sizeof(char) );
+	for(i=0; i<offsets->size; i++) line->chars[ offsets->items.pInt[i] ] = '|';
 	if( root == 0 ) DString_AppendChars( line, "|--" );
 	DaoxStream_SetColor( stream, NULL, NULL );
 	DaoxStream_WriteString( stream, line );
 
 	count = line->size;
-	DString_AppendChars( line, self->name->bytes + self->name->size - len );
+	DString_AppendChars( line, self->name->chars + self->name->size - len );
 	DaoxStream_SetColor( stream, dao_colors[DAOX_GREEN], NULL );
-	DaoxStream_WriteMBS( stream, line->bytes + count );
+	DaoxStream_WriteMBS( stream, line->chars + count );
 	DaoxStream_SetColor( stream, NULL, NULL );
 
 	count = line->size;
@@ -1444,7 +1444,7 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 	DString_AppendChar( line, '|' );
 	DString_AppendChars( line, " " );
 	DaoxStream_SetColor( stream, NULL, NULL );
-	DaoxStream_WriteMBS( stream, line->bytes + count );
+	DaoxStream_WriteMBS( stream, line->chars + count );
 
 	count = line->size;
 	if( self->title ){
@@ -1478,9 +1478,9 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 					start = 0;
 				}
 				if( last )
-					memset( line->bytes + offset, ' ', (width + extra)*sizeof(char) );
+					memset( line->chars + offset, ' ', (width + extra)*sizeof(char) );
 				else
-					memset( line->bytes + offset + 1, ' ', (width + extra - 1)*sizeof(char) );
+					memset( line->chars + offset + 1, ' ', (width + extra - 1)*sizeof(char) );
 				for(; start < title->size; start=next){
 					start = DString_Break( title, start, 0 );
 					next = DString_Break( title, start, TW );
@@ -1521,7 +1521,7 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 		DaoxHelpEntry_PrintTree( entry, stream, offsets, offset+width+extra, len, 0, last, depth+1, hlerror );
 	}
 	if( last ){
-		memset( line->bytes + offset, ' ', (width + extra + 1)*sizeof(char) );
+		memset( line->chars + offset, ' ', (width + extra + 1)*sizeof(char) );
 		DaoxStream_WriteString( stream, line );
 		DaoxStream_WriteChar( stream, '\n' );
 	}
@@ -1537,9 +1537,9 @@ static void DaoxHelpEntry_Print( DaoxHelpEntry *self, DaoxStream *stream, DaoPro
 	stream->offset = 0;
 	if( self->author ){
 		DString *notice = DString_Copy( daox_helper->notice );
-		DString_Change( notice, "%$%( %s* author %s* %)", self->author->bytes, 0 );
+		DString_Change( notice, "%$%( %s* author %s* %)", self->author->chars, 0 );
 		if( self->license ){
-			DString_Change( notice, "%$%( %s* license %s* %)", self->license->bytes, 0 );
+			DString_Change( notice, "%$%( %s* license %s* %)", self->license->chars, 0 );
 		}else{
 			DString_Change( notice, "%$%( %s* license %s* %)", "Unspecified License", 0 );
 		}
@@ -1696,17 +1696,17 @@ static void DaoxHelper_Load( DaoxHelper *self, const char *lang )
 	DString_SetChars( fname, "help_" );
 	DString_AppendChars( fname, lang );
 	DString_AppendChars( fname, "/help_dao" );
-	DaoVmSpace_Load( dao_vmspace, fname->bytes );
+	DaoVmSpace_Load( dao_vmspace, fname->chars );
 
 	DString_SetChars( fname, "help_" );
 	DString_AppendChars( fname, lang );
 	DString_AppendChars( fname, "/help_daovm" );
-	DaoVmSpace_Load( dao_vmspace, fname->bytes );
+	DaoVmSpace_Load( dao_vmspace, fname->chars );
 
 	DString_SetChars( fname, "help_" );
 	DString_AppendChars( fname, lang );
 	DString_AppendChars( fname, "/help_help" );
-	mod = DaoVmSpace_Load( dao_vmspace, fname->bytes );
+	mod = DaoVmSpace_Load( dao_vmspace, fname->chars );
 	if( mod ){
 		DaoValue *value = DaoNamespace_FindData( mod, "help_message" );
 		if( value ) DaoNamespace_AddValue( dao_help_namespace, "help_message", value, NULL );
@@ -1715,17 +1715,17 @@ static void DaoxHelper_Load( DaoxHelper *self, const char *lang )
 	DString_SetChars( fname, "help_" );
 	DString_AppendChars( fname, lang );
 	DString_AppendChars( fname, "/help_tool" );
-	DaoVmSpace_Load( dao_vmspace, fname->bytes );
+	DaoVmSpace_Load( dao_vmspace, fname->chars );
 
 	DString_SetChars( fname, "help_" );
 	DString_AppendChars( fname, lang );
 	DString_AppendChars( fname, "/help_module" );
-	DaoVmSpace_Load( dao_vmspace, fname->bytes );
+	DaoVmSpace_Load( dao_vmspace, fname->chars );
 
 	DString_SetChars( fname, "help_" );
 	DString_AppendChars( fname, lang );
 	DString_AppendChars( fname, "/help_misc" );
-	DaoVmSpace_Load( dao_vmspace, fname->bytes );
+	DaoVmSpace_Load( dao_vmspace, fname->chars );
 
 	DString_Delete( fname );
 }
@@ -1743,10 +1743,10 @@ static void DaoProcess_Print( DaoProcess *self, const char *chs )
 static void PrintMethod( DaoProcess *proc, DaoRoutine *meth )
 {
 	int j;
-	DaoProcess_Print( proc, meth->routName->bytes );
+	DaoProcess_Print( proc, meth->routName->chars );
 	DaoProcess_Print( proc, ": " );
 	for(j=meth->routName->size; j<20; j++) DaoProcess_Print( proc, " " );
-	DaoProcess_Print( proc, meth->routType->name->bytes );
+	DaoProcess_Print( proc, meth->routType->name->chars );
 	DaoProcess_Print( proc, "\n" );
 }
 static void HELP_List( DaoProcess *proc, DaoValue *p[], int N )
@@ -1768,12 +1768,12 @@ static void HELP_List( DaoProcess *proc, DaoValue *p[], int N )
 	if( etype == 0 ){
 		DaoProcess_Print( proc, "==============================================\n" );
 		DaoProcess_Print( proc, "Constant values for type: " );
-		DaoProcess_Print( proc, type->name->bytes );
+		DaoProcess_Print( proc, type->name->chars );
 		DaoProcess_Print( proc, "\n==============================================\n" );
 		hash = type->kernel->values;
 		if( type->kernel->values ){
 			for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
-				DaoProcess_Print( proc, it->key.pString->bytes );
+				DaoProcess_Print( proc, it->key.pString->chars );
 				DaoProcess_Print( proc, "\n" );
 			}
 		}
@@ -1782,7 +1782,7 @@ static void HELP_List( DaoProcess *proc, DaoValue *p[], int N )
 
 	DaoProcess_Print( proc, "==============================================\n" );
 	DaoProcess_Print( proc, "Methods for type: " );
-	DaoProcess_Print( proc, type->name->bytes );
+	DaoProcess_Print( proc, type->name->chars );
 	DaoProcess_Print( proc, "\n==============================================\n" );
 
 	array = DArray_New(0);
@@ -1834,7 +1834,7 @@ static DaoxHelp* HELP_GetHelp( DaoProcess *proc, DString *entry_name )
 		DString_SetChars( name2, "help_" );
 		DString_Append( name2, name );
 		DString_Change( name2, "%W", "_", 0 );
-		NS = DaoVmSpace_Load( proc->vmSpace, name2->bytes );
+		NS = DaoVmSpace_Load( proc->vmSpace, name2->chars );
 		if( NS ) break;
 		pos = DString_RFindChar( name, '.', -1 );
 		if( pos < 0 ) break;
@@ -1996,7 +1996,7 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 {
 	daoint i;
 	FILE *fout;
-	const char *title = self->title ? self->title->bytes : "";
+	const char *title = self->title ? self->title->chars : "";
 	DString *fname = DString_Copy( dir );
 
 	if( dir->size ) DString_AppendChar( fname, '/' );
@@ -2014,7 +2014,7 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 		DaoxHelpEntry_PrintTree( self, stream, NULL, 0, self->name->size, 1,1,1,0 );
 	}
 	DString_AppendChars( stream->output, "\n</pre>\n" );
-	fout = fopen( fname->bytes, "w+" );
+	fout = fopen( fname->chars, "w+" );
 	if( fout == NULL ) fout = stdout;
 	fprintf( fout, "<!DOCTYPE html><html><head>\n<title>Dao Help: %s</title>\n", title );
 	fprintf( fout, "<meta charset=\"utf-8\"/>\n</head>\n<body>" );
@@ -2030,7 +2030,7 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 	if( self->failedTests ){
 		DaoxHelpEntry_PrintTree( self, stream, NULL, 0, self->name->size, 1,1,1,1 );
 	}
-	fout = fopen( fname->bytes, "a+" );
+	fout = fopen( fname->chars, "a+" );
 	if( fout == NULL ) fout = stdout;
 	fprintf( fout, "\n<pre style=\"font-weight:500\">\n" );
 	DaoFile_WriteString( fout, stream->output );
@@ -2105,7 +2105,7 @@ static DString* dao_verbatim_content( DString *VT )
 {
 	DString *content = DString_New();
 	daoint rb = DString_FindChar( VT, ']', 0 );
-	DString_SetBytes( content, VT->bytes + rb + 1, VT->size - 2*(rb + 1) );
+	DString_SetBytes( content, VT->chars + rb + 1, VT->size - 2*(rb + 1) );
 	DString_Trim( content );
 	return content;
 }
@@ -2113,7 +2113,7 @@ static DString* dao_verbatim_code( DString *VT )
 {
 	DString *content = DString_New();
 	daoint rb = DString_FindChar( VT, ']', 0 );
-	DString_SetBytes( content, VT->bytes + rb + 1, VT->size - 2*(rb + 1) );
+	DString_SetBytes( content, VT->chars + rb + 1, VT->size - 2*(rb + 1) );
 	return content;
 }
 static int dao_string_delete( DString *string, int retc )
@@ -2129,7 +2129,7 @@ static int dao_help_name( DaoNamespace *NS, DString *mode, DString *verbatim, DS
 	DString_Change( name, "%s+", " ", 0 );
 	help = DaoxHelper_Get( daox_helper, NS, name );
 	if( help == NULL ) return dao_string_delete( name, 1 );
-	//printf( "dao_help_name: %s\n", name->bytes );
+	//printf( "dao_help_name: %s\n", name->chars );
 	it = DMap_Find( help->entries, name );
 	if( it == NULL ){
 		DaoxHelpEntry *entry = DaoxHelper_GetEntry( daox_helper, help, NS, name );
@@ -2142,7 +2142,7 @@ static int dao_help_title( DaoNamespace *NS, DString *mode, DString *verbatim, D
 {
 	DString *title = dao_verbatim_content( verbatim );
 	DaoxHelp *help = DaoxHelper_Get( daox_helper, NS, NULL );
-	//printf( "%s\n", title->bytes );
+	//printf( "%s\n", title->chars );
 	if( help == NULL || help->current == NULL ) return dao_string_delete( title, 1 );
 	DString_Change( title, "%s+", " ", 0 );
 	if( help->current->title == NULL ) help->current->title = DString_New();
@@ -2153,9 +2153,9 @@ static int dao_help_text( DaoNamespace *NS, DString *mode, DString *verbatim, DS
 {
 	DString *text = dao_verbatim_content( verbatim );
 	DaoxHelp *help = DaoxHelper_Get( daox_helper, NS, NULL );
-	//printf( "%s\n", text->bytes );
+	//printf( "%s\n", text->chars );
 	if( help == NULL || help->current == NULL ) return dao_string_delete( text, 1 );
-	//printf( "%s %p %p\n", text->bytes, help->nspace, NS );
+	//printf( "%s %p %p\n", text->chars, help->nspace, NS );
 	DaoxHelpEntry_AppendText( help->current, NS, text );
 	return dao_string_delete( text, 0 );
 }
@@ -2163,7 +2163,7 @@ static int dao_help_code( DaoNamespace *NS, DString *mode, DString *verbatim, DS
 {
 	DString *code = dao_verbatim_code( verbatim );
 	DaoxHelp *help = DaoxHelper_Get( daox_helper, NS, NULL );
-	//printf( "%s\n", code->bytes );
+	//printf( "%s\n", code->chars );
 	if( help == NULL || help->current == NULL ) return dao_string_delete( code, 1 );
 	DaoxHelpEntry_AppendCode( help->current, NS, code, NULL );
 	return dao_string_delete( code, 0 );
@@ -2172,7 +2172,7 @@ static int dao_help_author( DaoNamespace *NS, DString *mode, DString *verbatim, 
 {
 	DString *code = dao_verbatim_content( verbatim );
 	DaoxHelp *help = DaoxHelper_Get( daox_helper, NS, NULL );
-	//printf( "%s\n", code->bytes );
+	//printf( "%s\n", code->chars );
 	if( help == NULL || help->current == NULL ) return dao_string_delete( code, 1 );
 	if( help->current->author == NULL ) help->current->author = DString_New();
 	DString_Assign( help->current->author, code );
@@ -2182,7 +2182,7 @@ static int dao_help_license( DaoNamespace *NS, DString *mode, DString *verbatim,
 {
 	DString *code = dao_verbatim_content( verbatim );
 	DaoxHelp *help = DaoxHelper_Get( daox_helper, NS, NULL );
-	//printf( "%s\n", code->bytes );
+	//printf( "%s\n", code->chars );
 	if( help == NULL || help->current == NULL ) return dao_string_delete( code, 1 );
 	if( help->current->license == NULL ) help->current->license = DString_New();
 	DString_Assign( help->current->license, code );

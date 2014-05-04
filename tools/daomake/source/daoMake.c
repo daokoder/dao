@@ -421,11 +421,19 @@ static void MD5_Append( DString *md5, uint32_t h )
 	const char *hex = "0123456789abcdef";
 	uint32_t k;
 	DString_Reserve( md5, md5->size + 8 );
-	k = (h>> 0)&0xff;  md5->bytes[md5->size++] = hex[k>>4];  md5->bytes[md5->size++] = hex[k&0xf];
-	k = (h>> 8)&0xff;  md5->bytes[md5->size++] = hex[k>>4];  md5->bytes[md5->size++] = hex[k&0xf];
-	k = (h>>16)&0xff;  md5->bytes[md5->size++] = hex[k>>4];  md5->bytes[md5->size++] = hex[k&0xf];
-	k = (h>>24)&0xff;  md5->bytes[md5->size++] = hex[k>>4];  md5->bytes[md5->size++] = hex[k&0xf];
-	md5->bytes[md5->size] = '\0';
+	k = (h>> 0)&0xff;
+	md5->chars[md5->size++] = hex[k>>4];
+	md5->chars[md5->size++] = hex[k&0xf];
+	k = (h>> 8)&0xff;
+	md5->chars[md5->size++] = hex[k>>4];
+	md5->chars[md5->size++] = hex[k&0xf];
+	k = (h>>16)&0xff;
+	md5->chars[md5->size++] = hex[k>>4];
+	md5->chars[md5->size++] = hex[k&0xf];
+	k = (h>>24)&0xff;
+	md5->chars[md5->size++] = hex[k>>4];
+	md5->chars[md5->size++] = hex[k&0xf];
+	md5->chars[md5->size] = '\0';
 }
 static void MD5_Update( uint32_t H[4], uint32_t W[16], uint32_t K[64] )
 {
@@ -494,7 +502,7 @@ void DString_MD5( DString *self, DString *md5 )
 	uint32_t K[64], W[16];
 	int32_t size = self->size;
 	int32_t chunks = self->size / 64;
-	uint8_t *data = (uint8_t*) self->bytes;
+	uint8_t *data = (uint8_t*) self->chars;
 
 	for(i=0; i<64; i++) K[i] = (uint32_t) floor( fabs( sin(i+1) ) * twop32 );
 	for(i=0; i<chunks; i++){
@@ -511,11 +519,11 @@ void DString_MD5( DString *self, DString *md5 )
 	DString_Reserve( padding, 128 );
 	padding->size = 64;
 	m = size - chunks*64;
-	if( m ) memcpy( padding->bytes, data + chunks*64, m*sizeof(char) );
+	if( m ) memcpy( padding->chars, data + chunks*64, m*sizeof(char) );
 	if( m + 8 > 64 ) padding->size = 128;
 	chunks = padding->size / 64;
 
-	data = (uint8_t*) padding->bytes;
+	data = (uint8_t*) padding->chars;
 	data[m] = 1<<7; // first bit 1 followed by bit 0s;
 	for(i=m+1; i<padding->size-8; i++) data[i] = 0;
 	n = size * 8;
@@ -547,17 +555,17 @@ void DString_MD5( DString *self, DString *md5 )
 }
 static void DString_AppendGap( DString *self )
 {
-	char *mbs = self->bytes;
+	char *mbs = self->chars;
 	daoint size = self->size;
 	while( size >= 2 && isspace( mbs[size-2] ) && isspace( mbs[size-1] ) ) size -= 1;
-	self->bytes[size] = '\0';
+	self->chars[size] = '\0';
 	self->size = size;
 	if( size && isspace( mbs[size-1] ) == 0 ) DString_AppendChar( self, ' ' );
 }
 static int DString_CommonPrefixLength( DString *self, DString *other )
 {
 	daoint i = 0;
-	while( i < self->size && i < other->size && self->bytes[i] == other->bytes[i] ) i += 1;
+	while( i < self->size && i < other->size && self->chars[i] == other->chars[i] ) i += 1;
 	return i;
 }
 
@@ -609,7 +617,7 @@ DString* DaoMake_FindFile( DString *file, DaoList *hints )
 		DString_Append( fname, path );
 		DString_AppendPathSep( fname );
 		DString_Append( fname, file );
-		if( DaoMake_IsFile( fname->bytes ) ){
+		if( DaoMake_IsFile( fname->chars ) ){
 			res = path;
 			break;
 		}
@@ -626,18 +634,18 @@ void DaoMake_MakeOutOfSourcePath( DString *path, int isfile )
 	DString_Insert( path, binpath, 0, daomake_main_source_path->size, binpath->size );
 
 	while( k < path->size ){
-		while( k < path->size && path->bytes[k] != '/' ) k += 1;
+		while( k < path->size && path->chars[k] != '/' ) k += 1;
 		if( k == path->size ) break;
-		path->bytes[k] = '\0';
-		if( DaoMake_IsDir( path->bytes ) == 0 && DaoMake_IsFile( path->bytes ) == 0 ){
-			DaoMake_MakeDir( path->bytes );
+		path->chars[k] = '\0';
+		if( DaoMake_IsDir( path->chars ) == 0 && DaoMake_IsFile( path->chars ) == 0 ){
+			DaoMake_MakeDir( path->chars );
 		}
-		path->bytes[k] = '/';
+		path->chars[k] = '/';
 		k += 1;
 	}
 	if( isfile ) return;
-	if( DaoMake_IsDir( path->bytes ) == 0 && DaoMake_IsFile( path->bytes ) == 0 ){
-		DaoMake_MakeDir( path->bytes );
+	if( DaoMake_IsDir( path->chars ) == 0 && DaoMake_IsFile( path->chars ) == 0 ){
+		DaoMake_MakeDir( path->chars );
 	}
 }
 void Dao_MakePath( DString *base, DString *path );
@@ -645,13 +653,13 @@ void DaoMake_MakePath( DString *base, DString *path )
 {
 	if( path->size == 0 ) return;
 #ifdef WIN32
-	if( path->size >= 2 && isalpha( path->bytes[0] ) && path->bytes[1] == ':' ) goto Finalize;
+	if( path->size >= 2 && isalpha( path->chars[0] ) && path->chars[1] == ':' ) goto Finalize;
 #else
-	if( path->bytes[0] == '/' ) goto Finalize;
+	if( path->chars[0] == '/' ) goto Finalize;
 #endif
 	Dao_MakePath( base, path );
 Finalize:
-	if( DaoMake_IsDir( path->bytes ) ) DString_AppendPathSep( path );
+	if( DaoMake_IsDir( path->chars ) ) DString_AppendPathSep( path );
 }
 void DaoMakeProject_MakeSourcePath( DaoMakeProject *self, DString *path )
 {
@@ -666,15 +674,15 @@ void DaoMakeProject_MakeRelativePath( DString *current, DString *path )
 	daoint i = 0;
 	current = DString_Copy( current );
 	DString_AppendPathSep( current );
-	while( i < current->size && i < path->size && current->bytes[i] == path->bytes[i] ) i += 1;
+	while( i < current->size && i < path->size && current->chars[i] == path->chars[i] ) i += 1;
 	if( i == 0 ) goto Finalize;
-	while( i >= 0 && path->bytes[i] != '/' ) i -= 1;
+	while( i >= 0 && path->chars[i] != '/' ) i -= 1;
 	if( i <= 0 ) goto Finalize;
 	DString_Erase( current, 0, i + 1 );
 	DString_Erase( path, 0, i + 1 );
 	i = 0;
 	while( i < current->size ){
-		while( current->bytes[i] != '/' ) i += 1;
+		while( current->chars[i] != '/' ) i += 1;
 		DString_InsertChars( path, "../", 0, 0, 0 );
 		i += 1;
 	}
@@ -933,7 +941,7 @@ const char* DaoMakeProject_GetFileExtension( DString *file )
 {
 	daoint pos = DString_RFindChar( file, '.', -1 );
 	if( pos == DAO_NULLPOS ) return "";
-	return file->bytes + pos;
+	return file->chars + pos;
 }
 DString* DaoMakeProject_GetProgramMacro( DaoMap *map, DString *file )
 {
@@ -1173,7 +1181,7 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 		DString_Reset( lflag, 0 );
 		DString_Append( lflag, target->name );
 		DString_ToUpper( lflag );
-		macro = DaoMakeProject_MakeSimpleMacro( self, self->testsMacros, objs, lflag->bytes );
+		macro = DaoMakeProject_MakeSimpleMacro( self, self->testsMacros, objs, lflag->chars );
 
 		DString_Reset( target->testMacro, 0 );
 		DString_Append( target->testMacro, macro );
@@ -1302,19 +1310,19 @@ void DaoMakeProject_MakeInstallPath( DaoMakeProject *self, DString *path, DStrin
 {
 	DString *sub;
 
-	if( DaoMake_IsDir( path->bytes ) ) return;
+	if( DaoMake_IsDir( path->chars ) ) return;
 	if( DMap_Find( mapPaths, path ) ) return;
 	DMap_Insert( mapPaths, path, 0 );
 
 	sub = DaoMakeProject_GetBufferString( self );
 	DString_Reset( sub, 0 );
 	DString_Append( sub, path );
-	if( sub->size && sub->bytes[sub->size-1] == '/' ) sub->size --;
-	while( sub->size && sub->bytes[sub->size-1] != '/' ) sub->size --;
-	if( sub->size && sub->bytes[sub->size-1] == '/' ) sub->size --;
-	sub->bytes[sub->size] = '\0';
+	if( sub->size && sub->chars[sub->size-1] == '/' ) sub->size --;
+	while( sub->size && sub->chars[sub->size-1] != '/' ) sub->size --;
+	if( sub->size && sub->chars[sub->size-1] == '/' ) sub->size --;
+	sub->chars[sub->size] = '\0';
 
-	if( sub->size && DaoMake_IsDir( sub->bytes ) == 0 ){
+	if( sub->size && DaoMake_IsDir( sub->chars ) == 0 ){
 		DaoMakeProject_MakeInstallPath( self, sub, install, uninstall, mapPaths, 0 );
 	}
 	DString_AppendChars( install, "\t$(DAOMAKE) mkdir2 " );
@@ -1345,7 +1353,7 @@ void DaoMakeProject_MakeRemove( DaoMakeProject *self, DString *file, DString *pa
 		daoint pos;
 		char *file2;
 		pos = DString_RFindChar( file, '/', -1 );
-		file2 = pos == DAO_NULLPOS ? file->bytes : file->bytes + pos + 1;
+		file2 = pos == DAO_NULLPOS ? file->chars : file->chars + pos + 1;
 		DString_AppendPathSep( output );
 		DString_AppendChars( output, file2 );
 	}
@@ -1395,7 +1403,7 @@ void DaoMakeProject_MakeInstallation( DaoMakeProject *self, DString *makefile )
 		}else{
 			DaoMakeTarget_MakeName( target, tname );
 		}
-		if( DaoMake_IsDir( path->bytes ) == 0 ){
+		if( DaoMake_IsDir( path->chars ) == 0 ){
 			DaoMakeProject_MakeInstallPath( self, path, install, uninstall, mapPaths, 1 );
 		}else{
 			DaoMakeProject_MakeRemove( self, tname, path, uninstall );
@@ -1652,7 +1660,7 @@ static void DaoMakeTarget_MakeExport( DaoMakeTarget *self, DString *cflags, DStr
 		// 2. "file" is a directory, which contains one of the used header files;
 		*/
 		if( DMap_Find( headers, file ) == NULL ){
-			if( DaoMake_IsDir( file->bytes ) == 0 ) continue;
+			if( DaoMake_IsDir( file->chars ) == 0 ) continue;
 			/* Check if the directory contains one of the header files: */
 			for(it=DMap_First(headers); it; it=DMap_Next(headers,it)){
 				if( DString_Find( it->key.pString, file, 0 ) == 0 ) break;
@@ -2114,7 +2122,7 @@ static void DaoMakeUnit_UseLibrary( DaoMakeUnit *self, DaoMakeProject *pro, DStr
 	daoint i;
 
 	if( self == (DaoMakeUnit*) pro ){
-		fprintf( stderr, "\nWARNING: project %s uses library from itself!\n\n", pro->projectName->bytes );
+		fprintf( stderr, "\nWARNING: project %s uses library from itself!\n\n", pro->projectName->chars );
 		return;
 	}
 
@@ -2424,7 +2432,7 @@ static void PROJECT_New( DaoProcess *proc, DaoValue *p[], int N )
 	if( daomake_out_of_source ){
 		DString_Insert( self->binaryPath, binRoot, 0, srcRoot->size, binRoot->size );
 	}
-	DaoMap_InsertChars( daomake_projects, name->bytes, (DaoValue*) self );
+	DaoMap_InsertChars( daomake_projects, name->chars, (DaoValue*) self );
 }
 static void PROJECT_AddOBJ( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2516,7 +2524,7 @@ static void PROJECT_AddDIR( DaoProcess *proc, DaoValue *p[], int N )
 		DString_Append( file, path );
 		DString_AppendPathSep( file );
 		DString_AppendChars( file, "makefile.dao" );
-		ns = DaoVmSpace_Load( proc->vmSpace, file->bytes );
+		ns = DaoVmSpace_Load( proc->vmSpace, file->chars );
 		if( ns == NULL ) continue;
 		DArray_Append( target->commands, path );
 
@@ -2525,7 +2533,7 @@ static void PROJECT_AddDIR( DaoProcess *proc, DaoValue *p[], int N )
 		if( daomake_out_of_source ){
 			DaoMake_MakeOutOfSourcePath( file, 0 );
 		}else{
-			DaoMake_MakeDir( file->bytes );
+			DaoMake_MakeDir( file->chars );
 		}
 	}
 	DaoProcess_PutValue( proc, (DaoValue*) target );
@@ -2701,16 +2709,16 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 
 	if( DaoVmSpace_CompleteModuleName( vmSpace, cache, DAO_MODULE_DAO ) == DAO_MODULE_NONE ) reset = 1;
 	DaoVmSpace_CompleteModuleName( vmSpace, original, DAO_MODULE_DAO );
-	otime = Dao_FileChangedTime( original->bytes );
-	ctime = Dao_FileChangedTime( cache->bytes );
+	otime = Dao_FileChangedTime( original->chars );
+	ctime = Dao_FileChangedTime( cache->chars );
 	if( otime > ctime ) reset = 1;
 
 	if( project == NULL && reset == 0 ){
-		if( DaoVmSpace_Load( vmSpace, cache->bytes ) ){
+		if( DaoVmSpace_Load( vmSpace, cache->chars ) ){
 			project = DaoMap_GetValue( daomake_projects, p[0] );
 			if( project == NULL ){
 				if( p[1]->xEnum.value ){
-					DaoProcess_RaiseException( proc, DAO_ERROR, message->bytes );
+					DaoProcess_RaiseException( proc, DAO_ERROR, message->chars );
 				}
 				project = dao_none_value;
 			}
@@ -2722,18 +2730,18 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	}
 	if( project == NULL ){
-		if( DaoVmSpace_Load( vmSpace, original->bytes ) )fout = fopen( cache->bytes, "w+" );
+		if( DaoVmSpace_Load( vmSpace, original->chars ) )fout = fopen( cache->chars, "w+" );
 	}
 	project = DaoMap_GetValue( daomake_projects, p[0] );
 	if( project == NULL ){
 		if( p[1]->xEnum.value ){
-			DaoProcess_RaiseException( proc, DAO_ERROR, message->bytes );
+			DaoProcess_RaiseException( proc, DAO_ERROR, message->chars );
 		}
 		project = dao_none_value;
 	}else{
 		DaoMakeProject *proj = (DaoMakeProject*) project;
 		DaoMakeProject_MakeFindPackage( proj, cache, 1 );
-		if( fout ) fprintf( fout, "%s", cache->bytes );
+		if( fout ) fprintf( fout, "%s", cache->chars );
 	}
 	if( fout ) fclose( fout );
 	DaoProcess_PutValue( proc, project );
@@ -2804,7 +2812,7 @@ static void DAOMAKE_TestCompile( DaoProcess *proc, DaoValue *p[], int N )
 	}
 
 	DString_Delete( md5 );
-	if( DaoMake_IsFile( output->bytes ) ){
+	if( DaoMake_IsFile( output->chars ) ){
 		DString_Delete( command );
 		DString_Delete( source );
 		DString_Delete( output );
@@ -2818,8 +2826,8 @@ static void DAOMAKE_TestCompile( DaoProcess *proc, DaoValue *p[], int N )
 	DString_InsertChars( command, " ", pos1, 0, -1 );
 	DString_Insert( command, source, pos1, 0, -1 );
 
-	printf( "Checking: %s\n", command->bytes );
-	file = fopen( source->bytes, "w+" );
+	printf( "Checking: %s\n", command->chars );
+	file = fopen( source->chars, "w+" );
 	DaoFile_WriteString( file, code );
 	fclose( file );
 
@@ -2829,8 +2837,8 @@ static void DAOMAKE_TestCompile( DaoProcess *proc, DaoValue *p[], int N )
 	DString_AppendChars( command, " &> " );
 	DString_Append( command, output );
 
-	system( command->bytes );
-	*res = DaoMake_IsFile( source->bytes );
+	system( command->chars );
+	*res = DaoMake_IsFile( source->chars );
 	DString_Delete( command );
 	DString_Delete( source );
 	DString_Delete( output );
@@ -2860,13 +2868,13 @@ static void DAOMAKE_IsFile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *path = DaoValue_TryGetString( p[0] );
 	DaoMake_MakePath( proc->activeNamespace->path, path );
-	DaoProcess_PutInteger( proc, DaoMake_IsFile( path->bytes ) );
+	DaoProcess_PutInteger( proc, DaoMake_IsFile( path->chars ) );
 }
 static void DAOMAKE_IsDir( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *path = DaoValue_TryGetString( p[0] );
 	DaoMake_MakePath( proc->activeNamespace->path, path );
-	DaoProcess_PutInteger( proc, DaoMake_IsDir( path->bytes ) );
+	DaoProcess_PutInteger( proc, DaoMake_IsDir( path->chars ) );
 }
 static void DAOMAKE_Shell( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -3027,12 +3035,12 @@ int DaoMake_RemoveDirectory( const char *path )
 
 #ifdef WIN32
 	DString_AppendChars( src, path );
-	if( src->size && src->bytes[src->size-1] == '/' || src->bytes[src->size-1] == '\\' ){
+	if( src->size && src->chars[src->size-1] == '/' || src->chars[src->size-1] == '\\' ){
 		DString_AppendChars( src, "*" );
 	}else{
 		DString_AppendChars( src, "/*" );
 	}
-	handle = _findfirst( src->bytes, & finfo );
+	handle = _findfirst( src->chars, & finfo );
 	if( handle != -1 ){
 		do {
 			if( strcmp( finfo.name, "." ) && strcmp( finfo.name, ".." ) ){
@@ -3040,7 +3048,7 @@ int DaoMake_RemoveDirectory( const char *path )
 				DString_AppendChars( src, path );
 				DString_AppendPathSep( src );
 				DString_AppendChars( src, finfo.name );
-				DaoMake_RemovePath( src->bytes );
+				DaoMake_RemovePath( src->chars );
 			}
 		} while( !_findnext( handle, &finfo ) );
 		_findclose( handle );
@@ -3055,7 +3063,7 @@ int DaoMake_RemoveDirectory( const char *path )
 				DString_AppendChars( src, path );
 				DString_AppendPathSep( src );
 				DString_AppendChars( src, finfo->d_name );
-				DaoMake_RemovePath( src->bytes );
+				DaoMake_RemovePath( src->chars );
 			}
 		}
 		closedir( handle );
@@ -3088,7 +3096,7 @@ int DaoMake_CopyFile( const char *from, const char *to, int update )
 
 	dest = DString_New(1);
 	DString_SetChars( dest, to );
-	if( DaoMake_IsDir( dest->bytes ) ){
+	if( DaoMake_IsDir( dest->chars ) ){
 		char *sep = strrchr( from, '/' );
 		DString_AppendPathSep( dest );
 		if( sep == NULL ){
@@ -3097,19 +3105,19 @@ int DaoMake_CopyFile( const char *from, const char *to, int update )
 			DString_AppendChars( dest, sep + 1 );
 		}
 	}
-	if( update && Dao_FileChangedTime( from ) <= Dao_FileChangedTime( dest->bytes ) ){
+	if( update && Dao_FileChangedTime( from ) <= Dao_FileChangedTime( dest->chars ) ){
 		DString_Delete( dest );
 		return 0;
 	}
 	fin = fopen( from, "rb" );
-	fout = fopen( dest->bytes, "w+b" );
+	fout = fopen( dest->chars, "w+b" );
 	if( fin == NULL || fout == NULL ){
 		if( fin ) fclose( fin );
 		if( fout ) fclose( fout );
 		DString_Delete( dest );
 		return 1;
 	}
-	if( stat( from, & info ) == 0 ) chmod( dest->bytes, info.st_mode );
+	if( stat( from, & info ) == 0 ) chmod( dest->chars, info.st_mode );
 	DaoFile_ReadAll( fin, dest, 1 );
 	DaoFile_WriteString( fout, dest );
 	fclose( fout );
@@ -3142,31 +3150,31 @@ int DaoMake_CopyDirectory( const char *from, const char *to, int update )
 	dest = DString_New(1);
 	DString_SetChars( src, from );
 	DString_SetChars( dest, to );
-	if( DaoMake_IsFile( dest->bytes ) ){
+	if( DaoMake_IsFile( dest->chars ) ){
 		DString_Delete( src );
 		DString_Delete( dest );
 		return 1;
 	}
 	DString_AppendPathSep( dest );
-	if( DaoMake_IsDir( dest->bytes ) == 0 ){
+	if( DaoMake_IsDir( dest->chars ) == 0 ){
 		/* Copy to a new folder: */
-		DaoMake_MakeDir( dest->bytes );
+		DaoMake_MakeDir( dest->chars );
 	}else{
 		/* Copy under an existing folder: */
-		int lastsep = src->size && src->bytes[src->size-1] == '/';
+		int lastsep = src->size && src->chars[src->size-1] == '/';
 		int pos = DString_RFindChar( src, '/', src->size - 1 - lastsep );
 		if( pos > 0 ){
-			DString_AppendChars( dest, src->bytes + pos + 1 );
+			DString_AppendChars( dest, src->chars + pos + 1 );
 		}else{
 			DString_AppendChars( dest, from );
 		}
-		if( DaoMake_IsDir( dest->bytes ) == 0 ) DaoMake_MakeDir( dest->bytes );
+		if( DaoMake_IsDir( dest->chars ) == 0 ) DaoMake_MakeDir( dest->chars );
 	}
 
 #ifdef WIN32
 	DString_AppendPathSep( src );
 	DString_AppendChars( src, "*" );
-	handle = _findfirst( src->bytes, & finfo );
+	handle = _findfirst( src->chars, & finfo );
 	if( handle != -1 ){
 		do {
 			if( strcmp( finfo.name, "." ) && strcmp( finfo.name, ".." ) ){
@@ -3174,7 +3182,7 @@ int DaoMake_CopyDirectory( const char *from, const char *to, int update )
 				DString_AppendChars( src, from );
 				DString_AppendPathSep( src );
 				DString_AppendChars( src, finfo.name );
-				DaoMake_CopyPathFile( src->bytes, dest->bytes, update );
+				DaoMake_CopyPathFile( src->chars, dest->chars, update );
 			}
 		} while( !_findnext( handle, &finfo ) );
 		_findclose( handle );
@@ -3189,7 +3197,7 @@ int DaoMake_CopyDirectory( const char *from, const char *to, int update )
 				DString_AppendChars( src, from );
 				DString_AppendPathSep( src );
 				DString_AppendChars( src, finfo->d_name );
-				DaoMake_CopyPathFile( src->bytes, dest->bytes, update );
+				DaoMake_CopyPathFile( src->chars, dest->chars, update );
 			}
 		}
 		closedir( handle );
@@ -3286,8 +3294,8 @@ int main( int argc, char *argv[] )
 	vmSpace = DaoInit( argv[0] );
 	daomake_current_path = DString_New(1);
 	DString_Reset( daomake_current_path, 1024 );
-	getcwd( daomake_current_path->bytes, 1024 );
-	DString_Reset( daomake_current_path, strlen( daomake_current_path->bytes ) );
+	getcwd( daomake_current_path->chars, 1024 );
+	DString_Reset( daomake_current_path, strlen( daomake_current_path->chars ) );
 
 	/* Utility subcommands: */
 	if( argc > 1 ){
@@ -3296,7 +3304,7 @@ int main( int argc, char *argv[] )
 				fin = fopen( argv[i], "rb" );
 				if( fin == NULL ) continue;
 				DaoFile_ReadAll( fin, makefile, 1 );
-				printf( "%s\n", makefile->bytes );
+				printf( "%s\n", makefile->chars );
 			}
 			return 0;
 		}else if( strcmp( argv[1], "echo" ) == 0 ){
@@ -3399,7 +3407,7 @@ int main( int argc, char *argv[] )
 			return 1;
 		}else if( (i + 1) == argc ){
 			DString_SetChars( makefile, argv[i] );
-			if( DaoMake_IsDir( makefile->bytes ) ){
+			if( DaoMake_IsDir( makefile->chars ) ){
 				DString *file = DString_New(1);
 				const char *names[] = { "makefile", "Makefile", "make", "Make" };
 				DString_AppendPathSep( makefile );
@@ -3408,7 +3416,7 @@ int main( int argc, char *argv[] )
 					DString_Append( file, makefile );
 					DString_AppendChars( file, names[k] );
 					DString_AppendChars( file, ".dao" );
-					if( DaoMake_IsFile( file->bytes ) ){
+					if( DaoMake_IsFile( file->chars ) ){
 						DString_Assign( makefile, file );
 						break;
 					}
@@ -3459,14 +3467,14 @@ ErrorInvalidArgValue:
 	DaoMap_AddKeyValues( daomake_linkers, daomake_lang_linkers );
 
 	name = DString_New(1);
-	DaoVmSpace_AddPath( vmSpace, vmSpace->daoBinPath->bytes );
+	DaoVmSpace_AddPath( vmSpace, vmSpace->daoBinPath->chars );
 	DString_SetChars( name, ".." );
 	Dao_MakePath( vmSpace->daoBinPath, name );
-	DaoVmSpace_AddPath( vmSpace, name->bytes );
+	DaoVmSpace_AddPath( vmSpace, name->chars );
 #ifdef UNIX
 	DString_SetChars( name, "../shared/daomake" );
 	Dao_MakePath( vmSpace->daoBinPath, name );
-	DaoVmSpace_AddPath( vmSpace, name->bytes );
+	DaoVmSpace_AddPath( vmSpace, name->chars );
 #endif
 	if( platform && *platform ){
 		DaoNamespace *pns;
@@ -3474,7 +3482,7 @@ ErrorInvalidArgValue:
 		DString_SetChars( name, "platforms/" );
 		DString_AppendChars( name, platform );
 		DString_AppendChars( name, ".dao" );
-		pns = DaoVmSpace_Load( vmSpace, name->bytes );
+		pns = DaoVmSpace_Load( vmSpace, name->chars );
 		if( pns == NULL ){
 			fprintf( stderr, "Error: invalid platform \"%s\"!\n", platform );
 			return 1;
@@ -3483,8 +3491,8 @@ ErrorInvalidArgValue:
 
 	DaoMake_MakePath( vmSpace->startPath, makefile );
 	DString_Append( srcdir, makefile );
-	while( srcdir->size && srcdir->bytes[srcdir->size-1] != '/' ) srcdir->size -= 1;
-	srcdir->bytes[srcdir->size] = '\0';
+	while( srcdir->size && srcdir->chars[srcdir->size-1] != '/' ) srcdir->size -= 1;
+	srcdir->chars[srcdir->size] = '\0';
 
 	daomake_out_of_source = DString_EQ( srcdir, vmSpace->startPath ) == 0;
 	daomake_main_source_path = srcdir;
@@ -3498,11 +3506,11 @@ ErrorInvalidArgValue:
 	if( daomake_out_of_source ){
 		DaoMake_MakeOutOfSourcePath( name, 0 );
 	}else{
-		DaoMake_MakeDir( name->bytes );
+		DaoMake_MakeDir( name->chars );
 	}
 
 	/* Start execution. */
-	k = ! DaoVmSpace_RunMain( vmSpace, makefile->bytes );
+	k = ! DaoVmSpace_RunMain( vmSpace, makefile->chars );
 
 	source = DString_New(1);
 	for(it=DaoMap_First(daomake_projects); it; it=DaoMap_Next(daomake_projects,it)){
@@ -3521,16 +3529,16 @@ ErrorInvalidArgValue:
 		DString_AppendChars( name, daomake_makefile_suffix );
 		DaoMake_MakeOutOfSourcePath( name, 1 );
 		if( daomake_reset_cache == 0 ){
-			fin = fopen( name->bytes, "r" );
+			fin = fopen( name->chars, "r" );
 			if( fin ){
 				DaoFile_ReadAll( fin, source, 1 );
 				if( DString_FindChars( source, "# Generated by DaoMake:", 0 ) != 0 ){
-					fprintf( stderr, daomake_error_makefile_existing, name->bytes );
+					fprintf( stderr, daomake_error_makefile_existing, name->chars );
 					return 1;
 				}
 			}
 		}
-		fout = fopen( name->bytes, "w+" );
+		fout = fopen( name->chars, "w+" );
 		fprintf( fout, "# Generated by DaoMake: DO NOT EDIT!\n" );
 		fprintf( fout, "# Targeting platform %s.\n\n", platform ? platform : "none" );
 		DaoMakeProject_MakeFile( project, source );
@@ -3549,7 +3557,7 @@ ErrorInvalidArgValue:
 		DString_AppendChars( name, ".dao" );
 		DaoMake_MakeOutOfSourcePath( name, 1 );
 
-		fout = fopen( name->bytes, "w+" );
+		fout = fopen( name->chars, "w+" );
 		fprintf( fout, "# Generated by DaoMake: DO NOT EDIT!\n" );
 		DaoFile_WriteString( fout, source );
 		fclose( fout );

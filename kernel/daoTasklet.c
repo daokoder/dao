@@ -998,7 +998,7 @@ static void CHANNEL_New( DaoProcess *proc, DaoValue *par[], int N )
 		DString_AppendChars( s, "data type " );
 		DString_Append( s, retype->nested->items.pType[0]->name );
 		DString_AppendChars( s, " is not supported for channel" );
-		DaoProcess_RaiseException( proc, DAO_ERROR, s->bytes );
+		DaoProcess_RaiseException( proc, DAO_ERROR, s->chars );
 		DString_Delete( s );
 	}
 	DaoProcess_PutValue( proc, (DaoValue*) self );

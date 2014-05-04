@@ -41,22 +41,22 @@
 
 static void DaoComplex_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 {
-	if( strcmp( name->bytes, "real" ) == 0 ){
+	if( strcmp( name->chars, "real" ) == 0 ){
 		DaoProcess_PutDouble( proc, self->xComplex.value.real );
-	}else if( strcmp( name->bytes, "imag" ) == 0 ){
+	}else if( strcmp( name->chars, "imag" ) == 0 ){
 		DaoProcess_PutDouble( proc, self->xComplex.value.imag );
 	}else{
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->bytes );
+		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->chars );
 	}
 }
 static void DaoComplex_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
 {
-	if( strcmp( name->bytes, "real" ) == 0 ){
+	if( strcmp( name->chars, "real" ) == 0 ){
 		self->xComplex.value.real = DaoValue_GetDouble( value );
-	}else if( strcmp( name->bytes, "imag" ) == 0 ){
+	}else if( strcmp( name->chars, "imag" ) == 0 ){
 		self->xComplex.value.imag = DaoValue_GetDouble( value );
 	}else{
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->bytes );
+		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->chars );
 	}
 }
 static void DaoComplex_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
@@ -557,7 +557,7 @@ static void DaoArray_Print( DaoValue *value, DaoProcess *proc, DaoStream *stream
 static void DaoArray_GetItem1( DaoValue *value, DaoProcess *proc, DaoValue *pid )
 {
 	DaoArray *na, *self = & value->xArray;
-	/* if( self->ctype ) printf( "DaoArray_GetItem: %s\n", self->ctype->name->bytes ); */
+	/* if( self->ctype ) printf( "DaoArray_GetItem: %s\n", self->ctype->name->chars ); */
 
 	if( pid->type >= DAO_INTEGER && pid->type <= DAO_DOUBLE ){
 		daoint id = DaoValue_GetInteger( pid );

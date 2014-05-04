@@ -43,7 +43,7 @@ static void AUX_Tokenize( DaoProcess *proc, DaoValue *p[], int N )
 	DaoLexer *lexer = DaoLexer_New();
 	DArray *tokens = lexer->tokens;
 	int i, rc = 0;
-	rc = DaoLexer_Tokenize( lexer, source->bytes, DAO_LEX_COMMENT|DAO_LEX_SPACE );
+	rc = DaoLexer_Tokenize( lexer, source->chars, DAO_LEX_COMMENT|DAO_LEX_SPACE );
 	if( rc ){
 		DaoString *str = DaoString_New(1);
 		for(i=0; i<tokens->size; i++){
@@ -58,7 +58,7 @@ static void AUX_Log( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *info = p[0]->xString.value;
 	FILE *fout = fopen( "dao.log", "a" );
-	fprintf( fout, "%s\n", info->bytes );
+	fprintf( fout, "%s\n", info->chars );
 	fclose( fout );
 }
 static void AUX_Test( DaoProcess *proc, DaoValue *p[], int N )

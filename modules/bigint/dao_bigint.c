@@ -1116,7 +1116,7 @@ static void DaoxBigInt_PrintBits( DaoxBigInt *self, DString *s )
 Finish:
 	DString_AppendChars( s, "L2" );
 	if( s2 == NULL ){
-		printf( "%s\n", s->bytes );
+		printf( "%s\n", s->chars );
 		DString_Delete(s);
 	}
 }
@@ -1151,7 +1151,7 @@ Finish:
 		DString_AppendChars( s, buf );
 	}
 	if( s2 == NULL ){
-		printf( "%s\n", s->bytes );
+		printf( "%s\n", s->chars );
 		DString_Delete(s);
 	}
 }
@@ -1238,7 +1238,7 @@ char DaoxBigInt_FromString( DaoxBigInt *self, DString *s )
 	DaoxBigInt_Clear( self );
 	self->base = 10;
 	n = s->size;
-	mbs = s->bytes;
+	mbs = s->chars;
 	if( n == 0 ) return 0;
 	memset( table, 0, 256 );
 	for(i='0'; i<='9'; i++) table[i] = i - ('0'-1);

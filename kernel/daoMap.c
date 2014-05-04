@@ -133,11 +133,11 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max, u
 	case DAO_COMPLEX :
 		data = & self->xComplex.value;  len = sizeof(complex16);  break;
 	case DAO_ENUM  :
-		data = self->xEnum.etype->name->bytes; /* XXX */
+		data = self->xEnum.etype->name->chars; /* XXX */
 		len = self->xEnum.etype->name->size;
 		break;
 	case DAO_STRING  :
-		data = self->xString.value->bytes;
+		data = self->xString.value->chars;
 		len = self->xString.value->size;
 		break;
 	case DAO_ARRAY :
@@ -182,7 +182,7 @@ static int DHash_HashIndex( DMap *self, void *key )
 	case DAO_DATA_STRING :
 		s = (DString*)key;
 		m = s->size;
-		data = s->bytes;
+		data = s->chars;
 		id = MurmurHash3( data, m, self->hashing ) % T;
 		break;
 	case DAO_DATA_VALUE :
@@ -726,7 +726,7 @@ static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
 				s2 = skv2->xString.value;
 			}
 		}
-		if( s1 != NULL && (s1->bytes == NULL) != (s2->bytes == NULL) ) cmp = s1->bytes ? 1 : -1;
+		if( s1 != NULL && (s1->chars == NULL) != (s2->chars == NULL) ) cmp = s1->chars ? 1 : -1;
 	}
 	return cmp;
 }

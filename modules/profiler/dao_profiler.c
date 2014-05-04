@@ -126,7 +126,7 @@ static void DaoProfiler_EnterFrame( DaoProfiler *self, DaoProcess *proc, DaoStac
 {
 	DaoComplex *tmdata;
 	if( frame->routine == NULL ) return;
-	//printf( "DaoProfiler_EnterFrame: %-20s %s\n", frame->routine->routName->bytes, start ? "start":"" );
+	//printf( "DaoProfiler_EnterFrame: %-20s %s\n", frame->routine->routName->chars, start ? "start":"" );
 
 	tmdata = DaoProcess_GetTimeData( proc, frame );
 	if( start ) tmdata->value.real = 0.0;
@@ -137,7 +137,7 @@ static void DaoProfiler_LeaveFrame( DaoProfiler *self, DaoProcess *proc, DaoStac
 	double time;
 	DaoComplex *tmdata;
 	if( frame->routine == NULL ) return;
-	//printf( "DaoProfiler_LeaveFrame: %-20s %s\n", frame->routine->routName->bytes, end?"end":"" );
+	//printf( "DaoProfiler_LeaveFrame: %-20s %s\n", frame->routine->routName->chars, end?"end":"" );
 
 	time = dao_clock();
 	tmdata = DaoProcess_GetTimeData( proc, frame );
@@ -179,7 +179,7 @@ const char *row_format2 = "%-32s: %24s, %9i, %8.2f\n";
 static void DString_PartialAppend( DString *self, DString *other, int max )
 {
 	if( other->size > max ){
-		DString_AppendBytes( self, other->bytes, max-1-!isalnum(other->bytes[max-2]) );
+		DString_AppendBytes( self, other->chars, max-1-!isalnum(other->chars[max-2]) );
 		DString_AppendChar( self, '~' );
 	}else{
 		DString_Append( self, other );
@@ -272,7 +272,7 @@ void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream )
 		complex16 data = it->key.pValue->xComplex.value;
 		DaoRoutine *callee = (DaoRoutine*) it2->key.pValue;
 		DaoRoutine_MakeName( callee, name1, 28, 10, 2 );
-		snprintf( buf, sizeof(buf), row_format, name1->bytes, (int) -data.imag, -data.real );
+		snprintf( buf, sizeof(buf), row_format, name1->chars, (int) -data.imag, -data.real );
 		DaoStream_WriteChars( stream, buf );
 		if( count == 0 ) break;
 	}
@@ -302,7 +302,7 @@ void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream )
 			complex16 data = it2->key.pValue->xComplex.value;
 			DString_Reset( name2, 0 );
 			if( caller ) DaoRoutine_MakeName( caller, name2, 22, 0, 0 );
-			snprintf( buf, sizeof(buf), row_format2, name1->bytes, name2->bytes, (int) -data.imag, -data.real );
+			snprintf( buf, sizeof(buf), row_format2, name1->chars, name2->chars, (int) -data.imag, -data.real );
 			DaoStream_WriteChars( stream, buf );
 			DString_Reset( name1, 0 );
 		}

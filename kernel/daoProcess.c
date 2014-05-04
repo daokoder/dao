@@ -365,8 +365,8 @@ void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *o
 		if( object == NULL && firstParam != NULL ) object = (DaoObject*)firstParam;
 		if( object ) object = (DaoObject*)DaoObject_CastToBase( object->rootObject, routHost );
 #if 0
-		printf( "%s %s\n", routine->routName->bytes, routine->routType->name->bytes );
-		printf( "%s\n", routHost->name->bytes );
+		printf( "%s %s\n", routine->routName->chars, routine->routType->name->chars );
+		printf( "%s\n", routHost->name->chars );
 #endif
 #ifdef DEBUG
 		assert( object && object != (DaoObject*)object->defClass->objType->value );
@@ -426,10 +426,10 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 	int selfChecked = 0;
 #if 0
 	int i;
-	printf( "%s: %i %i %i\n", routine->routName->bytes, ndef, np, obj ? obj->type : 0 );
+	printf( "%s: %i %i %i\n", routine->routName->chars, ndef, np, obj ? obj->type : 0 );
 	for(i=0; i<npar; i++){
 		tp = DaoNamespace_GetType( routine->nameSpace, p[i] );
-		printf( "%i  %s\n", i, tp->name->bytes );
+		printf( "%i  %s\n", i, tp->name->chars );
 	}
 #endif
 
@@ -437,7 +437,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 	if( need_spec ){
 		defs = DHash_New(0,0);
 		if( hostype && routine->routHost && (routine->routHost->attrib & DAO_TYPE_SPEC) ){
-			//XXX printf( "%s %s\n", hostype->name->bytes, routine->routHost->name->bytes );
+			//XXX printf( "%s %s\n", hostype->name->chars, routine->routHost->name->chars );
 			/* Init type specialization mapping for static methods: */
 			DaoType_MatchTo( hostype, routine->routHost, defs );
 		}
@@ -482,7 +482,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 		}
 	}
 	/*
-	   printf( "%s, rout = %s; ndef = %i; npar = %i, %i\n", routine->routName->bytes, routine->routType->name->bytes, ndef, npar, selfChecked );
+	   printf( "%s, rout = %s; ndef = %i; npar = %i, %i\n", routine->routName->chars, routine->routType->name->chars, ndef, npar, selfChecked );
 	 */
 	if( npar > ndef ) goto ReturnZero;
 	if( (npar|ndef) ==0 ){
@@ -1063,11 +1063,11 @@ CallEntry:
 
 #if 0
 	if( ROUT_HOST_TID( routine ) == DAO_OBJECT )
-		printf("class name = %s\n", routine->routHost->aux->xClass.className->bytes);
-	printf("routine name = %s\n", routine->routName->bytes);
+		printf("class name = %s\n", routine->routHost->aux->xClass.className->chars);
+	printf("routine name = %s\n", routine->routName->chars);
 	printf("number of instruction: %i\n", routine->body->vmCodes->size );
 	printf("entry instruction: %i\n", self->topFrame->entry );
-	if( routine->routType ) printf("routine type = %s\n", routine->routType->name->bytes);
+	if( routine->routType ) printf("routine type = %s\n", routine->routType->name->chars);
 #endif
 
 	if( vmSpace->stopit ) goto FinishProcess;
@@ -1091,7 +1091,7 @@ CallEntry:
 			DString_SetChars( self->mbstring, "Not implemented function, " );
 			DString_Append( self->mbstring, routine->routName );
 			DString_AppendChars( self->mbstring, "()" );
-			DaoProcess_RaiseException( self, DAO_ERROR, self->mbstring->bytes );
+			DaoProcess_RaiseException( self, DAO_ERROR, self->mbstring->chars );
 			goto FinishProcess;
 		}
 		goto FinishCall;
@@ -1830,7 +1830,7 @@ CallEntry:
 			id = IntegerOperand( vmc->b );
 			if( id <0 ) id += str->size;
 			if( id <0 || id >= str->size ) goto RaiseErrorIndexOutOfRange;
-			IntegerOperand( vmc->c ) = str->bytes[id];
+			IntegerOperand( vmc->c ) = str->chars[id];
 		}OPNEXT() OPCASE( SETI_SII ){
 			str = locVars[ vmc->c ]->xString.value;
 			id = IntegerOperand( vmc->b );
@@ -1838,7 +1838,7 @@ CallEntry:
 			if( id <0 ) id += str->size;
 			if( id <0 || id >= str->size ) goto RaiseErrorIndexOutOfRange;
 			DString_Detach( str, str->size );
-			str->bytes[id] = inum;
+			str->chars[id] = inum;
 		}OPNEXT() OPCASE( GETI_LI ){
 			list = & locVars[ vmc->a ]->xList;
 			id = IntegerOperand( vmc->b );
@@ -2957,7 +2957,7 @@ void DaoProcess_BindNameValue( DaoProcess *self, DaoVmCode *vmc )
 		if( type == NULL ){
 			DaoNamespace *ns = self->activeNamespace;
 			DaoValue *tp = (DaoValue*) DaoNamespace_GetType( ns, dB );
-			type = DaoNamespace_MakeType( ns, S->value->bytes, DAO_PAR_NAMED, tp, NULL, 0 );
+			type = DaoNamespace_MakeType( ns, S->value->chars, DAO_PAR_NAMED, tp, NULL, 0 );
 			type = DaoNamespace_MakeType( ns, "var", DAO_PAR_NAMED, NULL, & type, 1 );
 		}
 		nameva = DaoNameValue_New( S->value, NULL );
@@ -3376,7 +3376,7 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 	return retValue;
 InvalidReturn:
 #if 0
-	fprintf( stderr, "retValue = %p %i %p %s\n", retValue, retValue->type, type, type->name->bytes );
+	fprintf( stderr, "retValue = %p %i %p %s\n", retValue, retValue->type, type, type->name->chars );
 #endif
 	DaoProcess_RaiseException( self, DAO_ERROR_VALUE, "invalid returned value" );
 	return NULL;
@@ -3600,7 +3600,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		mt = DaoInterface_BindTo( & ct->aux->xInterface, at, NULL );
 	}
 	mt = DaoType_MatchValue( ct, va, NULL );
-	/* printf( "mt = %i, ct = %s\n", mt, ct->name->bytes ); */
+	/* printf( "mt = %i, ct = %s\n", mt, ct->name->chars ); */
 	if( mt == DAO_MT_EQ || (mt && ct->tid == DAO_INTERFACE) ){
 		DaoValue_Copy( va, vc2 );
 		return;
@@ -3763,7 +3763,7 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 #if 0
 	if( caller->type == DAO_CTYPE ){
 		DaoType *retype = caller->xCtype.cdtype;
-		printf( ">>>>>>>>>>>>> %s %s\n", retype->name->bytes, caller->xCdata.ctype->name->bytes );
+		printf( ">>>>>>>>>>>>> %s %s\n", retype->name->chars, caller->xCdata.ctype->name->chars );
 		GC_ShiftRC( retype, self->topFrame->retype );
 		self->topFrame->retype = retype;
 	}
@@ -4116,7 +4116,7 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 			DaoRoutine *meth = DaoType_FindFunction( type, name );
 			if( meth ) rc = DaoProcess_Call( self, meth, va, &vc, 1 );
 		}
-		if( rc ) DaoProcess_RaiseException( self, DAO_ERROR_FIELD_NOTEXIST, name->bytes );
+		if( rc ) DaoProcess_RaiseException( self, DAO_ERROR_FIELD_NOTEXIST, name->chars );
 	}
 	dao_free( index );
 }
@@ -5434,7 +5434,7 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 	if( A->type == DAO_INTEGER && B->type == DAO_STRING ){
 		daoint bv = A->xInteger.value;
 		daoint size = B->xString.value->size;
-		char *mbs = B->xString.value->bytes;
+		char *mbs = B->xString.value->chars;
 		for(i=0; i<size; i++){
 			if( mbs[i] == bv ){
 				*C = 1;
@@ -5643,14 +5643,14 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 
 	if( dA->type != DAO_STRING || tid == DAO_NONE || tid > DAO_COMPLEX ) return 0;
 
-	DString_SetBytes( mbs, dA->xString.value->bytes, dA->xString.value->size );
+	DString_SetBytes( mbs, dA->xString.value->chars, dA->xString.value->size );
 	DString_Trim( mbs );
 	if( mbs->size ==0 ) return 0;
 
 	parser = DaoVmSpace_AcquireParser( proc->vmSpace );
 	lexer = parser->lexer;
 
-	DaoLexer_Tokenize( lexer, mbs->bytes, DAO_LEX_COMMENT|DAO_LEX_SPACE );
+	DaoLexer_Tokenize( lexer, mbs->chars, DAO_LEX_COMMENT|DAO_LEX_SPACE );
 	tokens = lexer->tokens->items.pToken;
 
 	if( lexer->tokens->size == 0 ) goto ReturnFalse;
@@ -5665,27 +5665,27 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 	case DAO_INTEGER :
 		if( tok->name < DTOK_DIGITS_DEC || tok->name > DTOK_DOUBLE_DEC ) goto ReturnFalse;
 		if( sizeof(daoint) == 4 ){
-			dC->xInteger.value = strtol( tok->string.bytes, 0, 0 );
+			dC->xInteger.value = strtol( tok->string.chars, 0, 0 );
 		}else{
-			dC->xInteger.value = strtoll( tok->string.bytes, 0, 0 );
+			dC->xInteger.value = strtoll( tok->string.chars, 0, 0 );
 		}
 		if( sign <0 ) dC->xInteger.value = - dC->xInteger.value;
 		break;
 	case DAO_FLOAT :
 		if( tok->name < DTOK_DIGITS_DEC || tok->name > DTOK_NUMBER_SCI ) goto ReturnFalse;
-		dC->xFloat.value = strtod( tok->string.bytes, 0 );
+		dC->xFloat.value = strtod( tok->string.chars, 0 );
 		if( sign <0 ) dC->xFloat.value = - dC->xFloat.value;
 		break;
 	case DAO_DOUBLE :
 		if( tok->name < DTOK_DIGITS_DEC || tok->name > DTOK_NUMBER_SCI ) goto ReturnFalse;
-		dC->xDouble.value = strtod( tok->string.bytes, 0 );
+		dC->xDouble.value = strtod( tok->string.chars, 0 );
 		if( sign <0 ) dC->xDouble.value = - dC->xDouble.value;
 		break;
 	case DAO_COMPLEX :
 		dC->xComplex.value.real = 0.0;
 		dC->xComplex.value.imag = 0.0;
 		if( tok->name >= DTOK_DIGITS_DEC && tok->name <= DTOK_NUMBER_SCI ){
-			dC->xComplex.value.real = strtod( tok->string.bytes, 0 );
+			dC->xComplex.value.real = strtod( tok->string.chars, 0 );
 			if( sign <0 ) dC->xComplex.value.real = - dC->xComplex.value.real;
 
 			if( tokid >= lexer->tokens->size ) goto ReturnTrue;
@@ -5699,7 +5699,7 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 			tok = tokens[tokid++];
 		}
 		if( tok->name != DTOK_NUMBER_IMG ) goto ReturnFalse;
-		dC->xComplex.value.imag = strtod( tok->string.bytes, 0 );
+		dC->xComplex.value.imag = strtod( tok->string.chars, 0 );
 		if( sign <0 ) dC->xComplex.value.imag = - dC->xComplex.value.imag;
 		break;
 	}
@@ -5813,7 +5813,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			array = DaoProcess_PrepareArray( proc, dC, tp->tid );
 			DaoArray_ResizeVector( array, str->size );
 			for(i=0,n=str->size; i<n; i++){
-				wchar_t ch = str->bytes[i];
+				wchar_t ch = str->chars[i];
 				switch( tp->tid ){
 				case DAO_INTEGER : array->data.i[i] = ch; break;
 				case DAO_FLOAT   : array->data.f[i]  = ch; break;
@@ -5879,7 +5879,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			DArray_Resize( list->value, DString_Size( str ), tp->value );
 			data = list->value->items.pValue;
 			for(i=0,n=str->size; i<n; i++){
-				wchar_t ch = str->bytes[i];
+				wchar_t ch = str->chars[i];
 				switch( tp->tid ){
 				case DAO_INTEGER : data[i]->xInteger.value = ch; break;
 				case DAO_FLOAT   : data[i]->xFloat.value = ch; break;
@@ -6047,7 +6047,7 @@ void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *sel
 	ss->attribs |= DAO_IO_STRING;
 	DaoPrintCallError( errors, ss );
 	DArray_Delete( errors );
-	DaoProcess_RaiseException( self, DAO_ERROR_PARAM, ss->streamString->bytes );
+	DaoProcess_RaiseException( self, DAO_ERROR_PARAM, ss->streamString->chars );
 	DaoStream_Delete( ss );
 }
 
@@ -6119,7 +6119,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 #if 0
 	DaoRoutine_PrintCode( proto, self->vmSpace->stdioStream );
 	DaoRoutine_PrintCode( closure, self->vmSpace->stdioStream );
-	printf( "%s\n", closure->routType->name->bytes );
+	printf( "%s\n", closure->routType->name->chars );
 #endif
 }
 
@@ -6181,7 +6181,7 @@ void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, co
 	DString_AppendChars( details, "\' to \'" );
 	DString_Append( details,  to->name );
 	DString_AppendChars( details, "\'." );
-	DaoProcess_RaiseException( self, DAO_ERROR_TYPE, details->bytes );
+	DaoProcess_RaiseException( self, DAO_ERROR_TYPE, details->chars );
 	DString_Delete( details );
 }
 

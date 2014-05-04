@@ -143,7 +143,7 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 	fgcolor = DString_New();
 	bgcolor = DString_New();
 	format = DString_Copy( p[0]->xString.value );
-	s = format->bytes;
+	s = format->chars;
 	end = s + format->size;
 	for(; s<end; s++){
 		if( *s != '%' ){
@@ -181,13 +181,13 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 			fmt = s;
 			while( isalnum( *s ) ) s += 1;
 			DString_SetBytes( fgcolor, fmt, s - fmt );
-			if( fgcolor->size ) fg = fgcolor->bytes;
+			if( fgcolor->size ) fg = fgcolor->chars;
 			if( *s == ':' ){
 				s += 1;
 				fmt = s;
 				while( isalnum( *s ) ) s += 1;
 				DString_SetBytes( bgcolor, fmt, s - fmt );
-				if( bgcolor->size ) bg = bgcolor->bytes;
+				if( bgcolor->size ) bg = bgcolor->chars;
 			}
 			if( *s != ']' ) goto WrongColor;
 		}else{
@@ -196,10 +196,10 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 		if( fg || bg ){
 			if( DaoStream_SetColor( self, fg, bg ) == 0 ) goto WrongColor;
 		}
-		self->format = fmt2->bytes;
+		self->format = fmt2->chars;
 		if( F == 'c' || F == 'd' || F == 'i' || F == 'o' || F == 'x' || F == 'X' ){
 			if( sizeof(daoint) != 4 ) DString_InsertChar( fmt2, DAO_INT_FORMAT[0], fmt2->size-1 );
-			self->format = fmt2->bytes;
+			self->format = fmt2->chars;
 			if( value->type == DAO_NONE || value->type > DAO_DOUBLE ) goto WrongParameter;
 			DaoStream_WriteInt( self, DaoValue_GetInteger( value ) );
 		}else if( toupper( F ) == 'E' || toupper( F ) == 'F' || toupper( F ) == 'G' ){
@@ -235,7 +235,7 @@ WrongColor:
 WrongParameter:
 		self->format = NULL;
 		if( fg || bg ) DaoStream_SetColor( self, NULL, NULL );
-		sprintf( message, "%i-th parameter has wrong type for format \"%s\"!", id, fmt2->bytes );
+		sprintf( message, "%i-th parameter has wrong type for format \"%s\"!", id, fmt2->chars );
 		DaoProcess_RaiseException( proc, DAO_WARNING, message );
 	}
 	DString_Delete( fgcolor );
@@ -288,12 +288,12 @@ static void DaoIO_Read( DaoProcess *proc, DaoValue *p[], int N )
 		if( self->file ) fd = self->file;
 		if( count >0 ){
 			DString_Resize( ds, count );
-			DString_Resize( ds, fread( ds->bytes, 1, count, fd ) );
+			DString_Resize( ds, fread( ds->chars, 1, count, fd ) );
 		}else{
 			struct stat info;
 			fstat( fileno( fd ), &info );
 			DString_Resize( ds, info.st_size - ftell( fd )/2 );
-			DString_Resize( ds, fread( ds->bytes, 1, ds->size, fd ) );
+			DString_Resize( ds, fread( ds->chars, 1, ds->size, fd ) );
 		}
 		if( fd == stdin ) fseek( stdin, 0, SEEK_END );
 	}else{
@@ -311,8 +311,8 @@ extern void Dao_MakePath( DString *base, DString *path );
 static void DaoIO_MakePath( DaoProcess *proc, DString *path )
 {
 	if( path->size ==0 ) return;
-	if( path->bytes[0] != ':' ) return;
-	if( path->bytes[1] == ':' ){
+	if( path->chars[0] != ':' ) return;
+	if( path->chars[1] == ':' ){
 		DString_Erase( path, 0, 2 );
 		Dao_MakePath( proc->activeNamespace->path, path );
 		return;
@@ -327,7 +327,7 @@ static FILE* DaoIO_OpenFile( DaoProcess *proc, DString *name, const char *mode, 
 	FILE *fin;
 
 	DaoIO_MakePath( proc, fname );
-	fin = fopen( fname->bytes, mode );
+	fin = fopen( fname->chars, mode );
 	DString_Delete( fname );
 	if( fin == NULL && silent == 0 ){
 		snprintf( buf, IO_BUF_SIZE, "error opening file: %s", DString_GetData( name ) );
@@ -353,7 +353,7 @@ static void DaoIO_ReadFile( DaoProcess *proc, DaoValue *p[], int N )
 		if( fin == NULL ) return;
 		fstat( fileno( fin ), &info );
 		DString_Resize( res, info.st_size );
-		DString_Resize( res, fread( res->bytes, 1, res->size, fin ) );
+		DString_Resize( res, fread( res->chars, 1, res->size, fin ) );
 		fclose( fin );
 	}
 }
@@ -586,7 +586,7 @@ static void DaoIO_WriteLines( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_Execute( proc );
 		if( proc->status == DAO_PROCESS_ABORTED ) break;
 		string = proc->stackValues[0]->xString.value;
-		fprintf( fout, "%s", string->bytes );
+		fprintf( fout, "%s", string->chars );
 	}
 	DaoProcess_PopFrame( proc );
 }
@@ -780,7 +780,7 @@ void DaoStream_WriteChars( DaoStream *self, const char *val )
 void DaoStream_WriteString( DaoStream *self, DString *val )
 {
 	int i;
-	const char *data = val->bytes;
+	const char *data = val->chars;
 	if( self->redirect && self->redirect->StdioWrite ){
 		DString *mbs = DString_New();
 		DString_SetBytes( mbs, data, val->size );
@@ -896,7 +896,7 @@ void DaoFile_WriteString( FILE* file, DString *str )
 {
 	daoint pos = 0;
 	while( 1 ){
-		fprintf( file, "%s", str->bytes + pos );
+		fprintf( file, "%s", str->chars + pos );
 		pos = DString_FindChar( str, '\0', pos );
 		if( pos == DAO_NULLPOS ) break;
 		fprintf( file, "%c", 0 );

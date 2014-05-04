@@ -101,7 +101,7 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 			value = (DaoValue*) rout;
 			k = DaoRoutine_Finalize( rout, self->objType, deftypes );
 #if 0
-			printf( "%i %p:  %s  %s\n", i, rout, rout->routName->bytes, rout->routType->name->bytes );
+			printf( "%i %p:  %s  %s\n", i, rout, rout->routName->chars, rout->routType->name->chars );
 #endif
 			if( rout->attribs & DAO_ROUT_INITOR ){
 				DRoutines_Add( self->classRoutines->overloads, rout );
@@ -260,7 +260,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	stEnum.etype = dao_storage_enum;
 
 	DaoProcess_SetValue( self, vmc->c, (DaoValue*) klass );
-	//printf( "%s\n", tuple->ctype->name->bytes );
+	//printf( "%s\n", tuple->ctype->name->chars );
 	if( iclass && routine->routConsts->value->items.pValue[iclass-1]->type == DAO_CLASS ){
 		proto = & routine->routConsts->value->items.pValue[iclass-1]->xClass;
 		ns2 = proto->classRoutine->nameSpace;
@@ -320,7 +320,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 					continue;
 				}
 				DArray_Append( routines, newRout );
-				if( strcmp( newRout->routName->bytes, "@class" ) ==0 ){
+				if( strcmp( newRout->routName->chars, "@class" ) ==0 ){
 					node = DMap_Find( proto->lookupTable, newRout->routName );
 					DString_Assign( newRout->routName, klass->className );
 					st = LOOKUP_ST( node->value.pInt );
@@ -394,7 +394,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 				if( DaoEnum_SetValue( & pmEnum, & data[3]->xEnum, NULL ) ==0) goto InvalidField;
 				pm = permissions[ pmEnum.value ];
 			}
-			/* printf( "%s %i %i\n", name->bytes, st, pm ); */
+			/* printf( "%s %i %i\n", name->chars, st, pm ); */
 			switch( st ){
 			case DAO_OBJECT_VARIABLE: DaoClass_AddObjectVar( klass, name, value, type, pm ); break;
 			case DAO_CLASS_VARIABLE : DaoClass_AddGlobalVar( klass, name, value, type, pm ); break;
@@ -786,24 +786,24 @@ static void META_Isa( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	}else if( p[1]->type == DAO_STRING ){
 		DString *tname = p[1]->xString.value;
-		if( strcmp( tname->bytes, "class" ) ==0 ){
+		if( strcmp( tname->chars, "class" ) ==0 ){
 			if( p[0]->type == DAO_CLASS  ) *res = 1;
-		}else if( strcmp( tname->bytes, "object" ) ==0 ){
+		}else if( strcmp( tname->chars, "object" ) ==0 ){
 			if( p[0]->type == DAO_OBJECT  ) *res = 1;
-		}else if( strcmp( tname->bytes, "routine" ) ==0 ){
+		}else if( strcmp( tname->chars, "routine" ) ==0 ){
 			if( p[0]->type == DAO_ROUTINE  ) *res = 1;
-		}else if( strcmp( tname->bytes, "namespace" ) ==0 ){
+		}else if( strcmp( tname->chars, "namespace" ) ==0 ){
 			if( p[0]->type == DAO_NAMESPACE  ) *res = 1;
-		}else if( strcmp( tname->bytes, "tuple" ) ==0 ){
+		}else if( strcmp( tname->chars, "tuple" ) ==0 ){
 			if( p[0]->type == DAO_TUPLE  ) *res = 1;
-		}else if( strcmp( tname->bytes, "list" ) ==0 ){
+		}else if( strcmp( tname->chars, "list" ) ==0 ){
 			if( p[0]->type == DAO_LIST  ) *res = 1;
-		}else if( strcmp( tname->bytes, "map" ) ==0 ){
+		}else if( strcmp( tname->chars, "map" ) ==0 ){
 			if( p[0]->type == DAO_MAP  ) *res = 1;
-		}else if( strcmp( tname->bytes, "array" ) ==0 ){
+		}else if( strcmp( tname->chars, "array" ) ==0 ){
 			if( p[0]->type == DAO_ARRAY  ) *res = 1;
 		}else{
-			DaoType *tp = DaoParser_ParseTypeName( tname->bytes, ns, 0 );
+			DaoType *tp = DaoParser_ParseTypeName( tname->chars, ns, 0 );
 			if( tp && DaoType_MatchValue( tp, p[0], NULL ) ) *res = 1;
 		}
 	}else{

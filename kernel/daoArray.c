@@ -512,7 +512,7 @@ void DVector_Reset( DVector *self, daoint size )
 
 void* DVector_Get( DVector *self, daoint i )
 {
-	return self->data.bytes + i * self->stride;
+	return self->data.chars + i * self->stride;
 }
 
 void DVector_Assign( DVector *left, DVector *right )
@@ -531,7 +531,7 @@ void* DVector_Insert( DVector *self, daoint i, daoint n )
 
 	DVector_Reserve( self, self->size + n );
 
-	data = self->data.bytes + i * self->stride;
+	data = self->data.chars + i * self->stride;
 	memmove( data + n*self->stride, data, (self->size - i) *self->stride );
 
 	self->size += n;
@@ -541,19 +541,19 @@ void* DVector_Push( DVector *self )
 {
 	DVector_Reserve( self, self->size + 1 );
 	self->size += 1;
-	return self->data.bytes + (self->size - 1) * self->stride;
+	return self->data.chars + (self->size - 1) * self->stride;
 }
 void* DVector_Pop( DVector *self )
 {
 	if( self->capacity > (2*self->size + 1) ) DVector_Reserve( self, self->size + 1 );
 	if( self->size == 0 ) return NULL;
 	self->size -= 1;
-	return self->data.bytes + self->size * self->stride;
+	return self->data.chars + self->size * self->stride;
 }
 void* DVector_Back( DVector *self )
 {
 	if( self->size == 0 ) return NULL;
-	return self->data.bytes + (self->size - 1) * self->stride;
+	return self->data.chars + (self->size - 1) * self->stride;
 }
 void DVector_Erase( DVector *self, daoint i, daoint n )
 {
@@ -565,7 +565,7 @@ void DVector_Erase( DVector *self, daoint i, daoint n )
 
 	if( (i + n) >= self->size ) n = self->size - i;
 
-	dest = self->data.bytes + i*self->stride;
+	dest = self->data.chars + i*self->stride;
 	src = dest + n*self->stride;
 	memmove( dest, src, (self->size - i - n)*self->stride );
 	self->size -= n;

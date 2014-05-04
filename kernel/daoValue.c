@@ -130,19 +130,19 @@ int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
 	DNode *N = NULL;
 	DMap *ML = L->etype->mapNames;
 	DMap *MR = R->etype->mapNames;
-	char SL = L->etype->name->bytes[0];
-	char SR = R->etype->name->bytes[0];
+	char SL = L->etype->name->chars[0];
+	char SR = R->etype->name->chars[0];
 	if( L->etype == R->etype ){
 		return L->value == R->value ? 0 : (L->value < R->value ? -1 : 1);
 	}else if( L->subtype == DAO_ENUM_SYM && R->subtype == DAO_ENUM_SYM ){
 		return DString_Compare( L->etype->name, R->etype->name );
 	}else if( L->subtype == DAO_ENUM_SYM ){
 		E = *R;
-		if( DaoEnum_SetSymbols( & E, L->etype->name->bytes ) == 0 ) goto CompareAddress;
+		if( DaoEnum_SetSymbols( & E, L->etype->name->chars ) == 0 ) goto CompareAddress;
 		return E.value == R->value ? 0 : (E.value < R->value ? -1 : 1);
 	}else if( R->subtype == DAO_ENUM_SYM ){
 		E = *L;
-		if( DaoEnum_SetSymbols( & E, R->etype->name->bytes ) == 0 ) goto CompareAddress;
+		if( DaoEnum_SetSymbols( & E, R->etype->name->chars ) == 0 ) goto CompareAddress;
 		return L->value == E.value ? 0 : (L->value < E.value ? -1 : 1);
 	}
 CompareAddress:
@@ -261,11 +261,11 @@ int DaoValue_IsZero( DaoValue *self )
 }
 static daoint DString_ToInteger( DString *self )
 {
-		return strtoll( self->bytes, NULL, 0 );
+		return strtoll( self->chars, NULL, 0 );
 }
 double DString_ToDouble( DString *self )
 {
-	return strtod( self->bytes, 0 );
+	return strtod( self->chars, 0 );
 }
 daoint DaoValue_GetInteger( DaoValue *self )
 {
@@ -314,7 +314,7 @@ static void DaoValue_BasicPrint( DaoValue *self, DaoProcess *proc, DaoStream *st
 	if( self->type == DAO_NONE ) return;
 	if( self->type == DAO_TYPE ){
 		DaoStream_WriteChars( stream, "<" );
-		DaoStream_WriteChars( stream, self->xType.name->bytes );
+		DaoStream_WriteChars( stream, self->xType.name->chars );
 		DaoStream_WriteChars( stream, ">" );
 	}
 	DaoStream_WriteChars( stream, "_" );
@@ -350,7 +350,7 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 	case DAO_ENUM  :
 		name = DString_New();
 		DaoEnum_MakeName( & self->xEnum, name );
-		DaoStream_WriteChars( stream, name->bytes );
+		DaoStream_WriteChars( stream, name->chars );
 		DaoStream_WriteChars( stream, "(" );
 		DaoStream_WriteInt( stream, self->xEnum.value );
 		DaoStream_WriteChars( stream, ")" );
@@ -779,11 +779,11 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 #if 0
 	if( tm ==0 ){
 		printf( "T = %p; S = %p, type = %i %i\n", T, S, S->type, DAO_ROUTINE );
-		printf( "T: %s %i %i\n", T->name->bytes, T->tid, tm );
-		if( S->type == DAO_LIST ) printf( "%s\n", S->xList.ctype->name->bytes );
+		printf( "T: %s %i %i\n", T->name->chars, T->tid, tm );
+		if( S->type == DAO_LIST ) printf( "%s\n", S->xList.ctype->name->chars );
 		if( S->type == DAO_TUPLE ) printf( "%p\n", S->xTuple.ctype );
 	}
-	printf( "S->type = %p %s %i\n", S, T->name->bytes, tm );
+	printf( "S->type = %p %s %i\n", S, T->name->chars, tm );
 #endif
 	if( tm == 0 ) return 0;
 	/*

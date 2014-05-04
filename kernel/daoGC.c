@@ -44,8 +44,8 @@
 #include"daoValue.h"
 
 
-#define DAO_TRACE_ADDRESS ((DaoValue*)0x1003f9f40)
 #ifdef DAO_TRACE_ADDRESS
+#define DAO_TRACE_ADDRESS ((DaoValue*)0x1003f9f40)
 void DaoGC_TraceValue( DaoValue *value )
 {
 	if( value == DAO_TRACE_ADDRESS ){
@@ -91,17 +91,17 @@ void print_trace( const char *info )
 static void DaoGC_PrintValueInfo( DaoValue *value )
 {
 	if( value->type == DAO_TYPE ){
-		printf( "type: %s %i %p\t", value->xType.name->bytes, value->xType.tid, value );
+		printf( "type: %s %i %p\t", value->xType.name->chars, value->xType.tid, value );
 	}else if( value->type == DAO_CDATA || value->type == DAO_CSTRUCT || value->type == DAO_CTYPE ){
-		printf( "cdata: %s\t", value->xCdata.ctype->name->bytes );
+		printf( "cdata: %s\t", value->xCdata.ctype->name->chars );
 	}else if( value->type == DAO_CLASS ){
-		printf( "class: %s\t", value->xClass.className->bytes );
+		printf( "class: %s\t", value->xClass.className->chars );
 	}else if( value->type == DAO_TYPEKERNEL ){
 		printf( "tkernal: %s\t", ((DaoTypeKernel*)value)->typer->name );
 	}else if( value->type == DAO_ROUTINE ){
-		printf( "routine: %s %s\n", value->xRoutine.routName->bytes, value->xRoutine.routType->name->bytes );
+		printf( "routine: %s %s\n", value->xRoutine.routName->chars, value->xRoutine.routType->name->chars );
 	}else if( value->type == DAO_OBJECT ){
-		printf( "object: %s\n", value->xObject.defClass->className->bytes );
+		printf( "object: %s\n", value->xObject.defClass->className->chars );
 	}
 	printf( "%16p %2i %i %i\n", value, value->type, value->xGC.refCount, value->xGC.cycRefCount );
 }

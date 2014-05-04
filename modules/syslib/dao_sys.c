@@ -422,14 +422,14 @@ static void DaoBUF_GetString( DaoProcess *proc, DaoValue *p[], int N )
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
 	DString *str = DaoProcess_PutChars( proc, "" );
 	DString_Resize( str, self->size );
-	memcpy( str->bytes, self->buffer.pVoid, self->size );
+	memcpy( str->chars, self->buffer.pVoid, self->size );
 }
 static void DaoBUF_SetString( DaoProcess *proc, DaoValue *p[], int N )
 {
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
 	DString *str = p[1]->xString.value;
 	Dao_Buffer_Resize( self, str->size );
-	memcpy( self->buffer.pVoid, str->bytes, str->size );
+	memcpy( self->buffer.pVoid, str->chars, str->size );
 }
 static int DaoBUF_CheckRange( Dao_Buffer *self, int i, int m, DaoProcess *proc )
 {

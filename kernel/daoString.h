@@ -39,7 +39,7 @@ typedef struct DStringAux DStringAux;
 
 struct DString
 {
-	char        *bytes;
+	char        *chars;
 	daoint       size     : DAOINT_BITS-1;
 	size_t       detached : 1;
 	daoint       bufSize  : DAOINT_BITS-1;
