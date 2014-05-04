@@ -50,7 +50,7 @@ DaoConstant* DaoConstant_New( DaoValue *value )
 	DaoValue_Init( self, DAO_CONSTANT );
 	DaoValue_Copy( value, & self->value );
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -62,7 +62,7 @@ DaoVariable* DaoVariable_New( DaoValue *value, DaoType *type )
 	self->dtype = type;
 	GC_IncRC( type );
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -70,7 +70,7 @@ DaoVariable* DaoVariable_New( DaoValue *value, DaoType *type )
 void DaoConstant_Delete( DaoConstant *self )
 {
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	GC_DecRC( self->value );
 	dao_free( self );
@@ -78,7 +78,7 @@ void DaoConstant_Delete( DaoConstant *self )
 void DaoVariable_Delete( DaoVariable *self )
 {
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	GC_DecRC( self->value );
 	GC_DecRC( self->dtype );

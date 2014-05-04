@@ -1701,14 +1701,14 @@ DaoArray* DaoArray_New( int etype )
 	self->owner = 1;
 	DaoArray_ResizeVector( self, 0 );
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
 void DaoArray_Delete( DaoArray *self )
 {
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	if( self->dims ) dao_free( self->dims );
 	if( self->owner && self->data.p ) dao_free( self->data.p );

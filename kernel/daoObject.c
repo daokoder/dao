@@ -185,7 +185,7 @@ DaoObject* DaoObject_Allocate( DaoClass *klass, int value_count )
 	self->objValues = (DaoValue**) (self + 1);
 	memset( self->objValues, 0, value_count*sizeof(DaoValue*) );
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -207,7 +207,7 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 		self->rootObject = that;
 		self->objValues = that->objValues + offset;
 	}else if( self->rootObject == NULL ){
-		GC_IncRC( self );
+		GC_ShiftRC( self, self->rootObject );
 		self->rootObject = self;
 		if( self->isNull ){ /* no value space is allocated for null object yet! */
 			self->valueCount = klass->objDataName->size;
@@ -224,11 +224,11 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 			sup->isRoot = 0;
 			DaoObject_Init( sup, self->rootObject, offset );
 		}
-		GC_IncRC( sup );
+		GC_ShiftRC( sup, self->parent );
 		self->parent = (DaoValue*)sup;
 	}
+	GC_ShiftRC( self, self->objValues[0] );
 	self->objValues[0] = (DaoValue*) self;
-	GC_IncRC( self );
 	if( self->isRoot == 0 ) return;
 	for(i=1; i<klass->instvars->size; i++){
 		DaoVariable *var = klass->instvars->items.pVar[i];
@@ -247,7 +247,7 @@ void DaoObject_Delete( DaoObject *self )
 {
 	int i;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	GC_DecRC( self->defClass );
 	GC_DecRC( self->parent );

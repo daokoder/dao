@@ -66,7 +66,7 @@ DaoNone* DaoNone_New()
 	memset( self, 0, sizeof(DaoNone) );
 	self->type = DAO_NONE;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -76,7 +76,7 @@ DaoInteger* DaoInteger_New( daoint value )
 	DaoValue_Init( self, DAO_INTEGER );
 	self->value = value;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -95,7 +95,7 @@ DaoFloat* DaoFloat_New( float value )
 	DaoValue_Init( self, DAO_FLOAT );
 	self->value = value;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -114,7 +114,7 @@ DaoDouble* DaoDouble_New( double value )
 	DaoValue_Init( self, DAO_DOUBLE );
 	self->value = value;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -133,7 +133,7 @@ DaoComplex* DaoComplex_New( complex16 value )
 	DaoValue_Init( self, DAO_COMPLEX );
 	self->value = value;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -144,7 +144,7 @@ DaoComplex* DaoComplex_New2( double real, double imag )
 	self->value.real = real;
 	self->value.imag = imag;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -164,7 +164,7 @@ DaoString* DaoString_New()
 	DaoValue_Init( self, DAO_STRING );
 	self->value = DString_New();
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -186,14 +186,14 @@ DaoString* DaoString_Copy( DaoString *self )
 	DaoValue_Init( copy, DAO_STRING );
 	copy->value = DString_Copy( self->value );
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( copy->type );
+	DaoObjectLogger_LogNew( (DaoValue*) copy );
 #endif
 	return copy;
 }
 void DaoString_Delete( DaoString *self )
 {
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	DString_Delete( self->value );
 	dao_free( self );
@@ -375,7 +375,7 @@ DaoEnum* DaoEnum_New( DaoType *type, int value )
 	self->etype = type;
 	if( type ) GC_IncRC( type );
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -392,7 +392,7 @@ DaoEnum* DaoEnum_Copy( DaoEnum *self, DaoType *type )
 void DaoEnum_Delete( DaoEnum *self )
 {
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	if( self->etype ) GC_DecRC( self->etype );
 	dao_free( self );
@@ -654,7 +654,7 @@ static DaoTypeCore numberCore=
 static void DaoNumer_Delete( DaoValue *self )
 {
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	dao_free( self );
 }
@@ -2380,14 +2380,14 @@ DaoList* DaoList_New()
 	self->value->type = DAO_DATA_VALUE;
 	self->ctype = NULL;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
 void DaoList_Delete( DaoList *self )
 {
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	GC_DecRC( self->ctype );
 	DaoList_Clear( self );
@@ -2919,14 +2919,14 @@ DaoMap* DaoMap_New( unsigned int hashing )
 		self->value->hashing = hashing;
 	}
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
 void DaoMap_Delete( DaoMap *self )
 {
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	GC_DecRC( self->ctype );
 	DaoMap_Clear( self );
@@ -3153,7 +3153,7 @@ DaoTuple* DaoTuple_New( int size )
 	self->cap = size;
 	self->ctype = NULL;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -3198,7 +3198,7 @@ DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 	self->size = size;
 	self->ctype = type;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	if( init == 0 ) return self;
 	for(i=0; i<size; i++){
@@ -3225,7 +3225,7 @@ void DaoTuple_Delete( DaoTuple *self )
 {
 	int i;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	for(i=0; i<self->size; i++) GC_DecRC( self->values[i] );
 	GC_DecRC( self->ctype );
@@ -3280,7 +3280,7 @@ DaoValue* DaoTuple_GetItem( DaoTuple *self, int pos )
 void DaoNameValue_Delete( DaoNameValue *self )
 {
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	DString_Delete( self->name );
 	DaoValue_Clear( & self->value );
@@ -3318,7 +3318,7 @@ DaoNameValue* DaoNameValue_New( DString *name, DaoValue *value )
 	self->value = NULL;
 	DaoValue_Copy( value, & self->value );
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -3379,15 +3379,22 @@ static void DaoCdataBindings_Erase( void *data )
 /**/
 void DaoCstruct_Init( DaoCstruct *self, DaoType *type )
 {
+	DaoType *intype = type;
 	if( type == NULL ) type = dao_default_cdata.ctype;
 	DaoValue_Init( self, type ? type->tid : DAO_CDATA );
 	self->object = NULL;
 	self->ctype = type;
 	if( self->ctype ) GC_IncRC( self->ctype );
+#ifdef DAO_USE_GC_LOGGER
+	if( intype != NULL ) DaoObjectLogger_LogNew( (DaoValue*) self );
+#endif
 
 }
 void DaoCstruct_Free( DaoCstruct *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
+#endif
 	if( self->ctype && !(self->trait & DAO_VALUE_BROKEN) ) GC_DecRC( self->ctype );
 	if( self->object ) GC_DecRC( self->object );
 	self->object = NULL;
@@ -3403,7 +3410,7 @@ DaoCdata* DaoCdata_New( DaoType *type, void *data )
 	self->data = data;
 	if( data ) DaoCdataBindings_Insert( data, self );
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	if( type == NULL ) DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -3422,9 +3429,6 @@ void DaoCdata_Delete( DaoCdata *self )
 		DaoCtype_Delete( (DaoCtype*) self );
 		return;
 	}
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
-#endif
 	DaoCdata_DeleteData( self );
 	dao_free( self );
 }
@@ -3503,7 +3507,7 @@ DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype )
 	self->name = DString_New();
 	if( cdtype ) DString_Assign( self->name, cdtype->name );
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	if( cttype == NULL ) DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -3528,9 +3532,6 @@ void DaoCtype_InitInterface( DaoCtype *self )
 }
 void DaoCtype_Delete( DaoCtype *self )
 {
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
-#endif
 	DaoCstruct_Free( (DaoCstruct*) self );
 	GC_DecRC( self->cdtype );
 	GC_DecRC( self->clsInter );
@@ -3616,16 +3617,10 @@ DaoException* DaoException_New( DaoType *type )
 	self->info = DString_New();
 	self->edata = NULL;
 	DaoException_InitByType( self, type );
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
-#endif
 	return self;
 }
 void DaoException_Delete( DaoException *self )
 {
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
-#endif
 	DaoCstruct_Free( (DaoCstruct*)self );
 	GC_DecRC( self->edata );
 	DString_Delete( self->name );
@@ -3752,7 +3747,7 @@ DaoTypeBase dao_ExceptionNone_Typer =
 {
 	"Exception::None", NULL, NULL, dao_ExceptionNone_Meths,
 	{ & dao_Exception_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_ExceptionAny_Meths[] =
@@ -3765,7 +3760,7 @@ DaoTypeBase dao_ExceptionAny_Typer =
 {
 	"Exception::Any", NULL, NULL, dao_ExceptionAny_Meths,
 	{ & dao_Exception_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_ExceptionWarning_Meths[] =
@@ -3778,7 +3773,7 @@ DaoTypeBase dao_ExceptionWarning_Typer =
 {
 	"Exception::Warning", NULL, NULL, dao_ExceptionWarning_Meths,
 	{ & dao_Exception_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_ExceptionError_Meths[] =
@@ -3791,7 +3786,7 @@ DaoTypeBase dao_ExceptionError_Typer =
 {
 	"Exception::Error", NULL, NULL, dao_ExceptionError_Meths,
 	{ & dao_Exception_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_ErrorField_Meths[] =
@@ -3804,7 +3799,7 @@ DaoTypeBase dao_ErrorField_Typer =
 {
 	"Exception::Error::Field", NULL, NULL, dao_ErrorField_Meths,
 	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_NotExist_Meths[] =
@@ -3817,7 +3812,7 @@ DaoTypeBase dao_FieldNotExist_Typer =
 {
 	"Exception::Error::Field::NotExist", NULL, NULL, dao_NotExist_Meths,
 	{ & dao_ErrorField_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_FieldNotPermit_Meths[] =
@@ -3830,7 +3825,7 @@ DaoTypeBase dao_FieldNotPermit_Typer =
 {
 	"Exception::Error::Field::NotPermit", NULL, NULL, dao_FieldNotPermit_Meths,
 	{ & dao_ErrorField_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_ErrorFloat_Meths[] =
@@ -3843,7 +3838,7 @@ DaoTypeBase dao_ErrorFloat_Typer =
 {
 	"Exception::Error::Float", NULL, NULL, dao_ErrorFloat_Meths,
 	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_FloatDivByZero_Meths[] =
@@ -3856,7 +3851,7 @@ DaoTypeBase dao_FloatDivByZero_Typer =
 {
 	"Exception::Error::Float::DivByZero", NULL, NULL, dao_FloatDivByZero_Meths,
 	{ & dao_ErrorFloat_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_FloatOverFlow_Meths[] =
@@ -3869,7 +3864,7 @@ DaoTypeBase dao_FloatOverFlow_Typer =
 {
 	"Exception::Error::Float::OverFlow", NULL, NULL, dao_FloatOverFlow_Meths,
 	{ & dao_ErrorFloat_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_FloatUnderFlow_Meths[] =
@@ -3882,7 +3877,7 @@ DaoTypeBase dao_FloatUnderFlow_Typer =
 {
 	"Exception::Error::Float::UnderFlow", NULL, NULL, dao_FloatUnderFlow_Meths,
 	{ & dao_ErrorFloat_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_ErrorIndex_Meths[] =
@@ -3895,7 +3890,7 @@ DaoTypeBase dao_ErrorIndex_Typer =
 {
 	"Exception::Error::Index", NULL, NULL, dao_ErrorIndex_Meths,
 	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_IndexOutOfRange_Meths[] =
@@ -3908,7 +3903,7 @@ DaoTypeBase dao_IndexOutOfRange_Typer =
 {
 	"Exception::Error::Index::OutOfRange", NULL, NULL, dao_IndexOutOfRange_Meths,
 	{ & dao_ErrorIndex_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_ErrorKey_Meths[] =
@@ -3921,14 +3916,14 @@ DaoTypeBase dao_ErrorKey_Typer =
 {
 	"Exception::Error::Key", NULL, NULL, dao_ErrorKey_Meths,
 	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 DaoTypeBase dao_KeyNotExist_Typer =
 {
 	"Exception::Error::Key::NotExist", NULL, NULL, dao_NotExist_Meths,
 	{ & dao_ErrorKey_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_ErrorParam_Meths[] =
@@ -3941,7 +3936,7 @@ DaoTypeBase dao_ErrorParam_Typer =
 {
 	"Exception::Error::Param", NULL, NULL, dao_ErrorParam_Meths,
 	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_Syntax_Meths[] =
@@ -3954,13 +3949,13 @@ DaoTypeBase dao_WarningSyntax_Typer =
 {
 	"Exception::Warning::Syntax", NULL, NULL, dao_Syntax_Meths,
 	{ & dao_ExceptionWarning_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 DaoTypeBase dao_ErrorSyntax_Typer =
 {
 	"Exception::Error::Syntax", NULL, NULL, dao_Syntax_Meths,
 	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_ErrorType_Meths[] =
@@ -3973,7 +3968,7 @@ DaoTypeBase dao_ErrorType_Typer =
 {
 	"Exception::Error::Type", NULL, NULL, dao_ErrorType_Meths,
 	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 static DaoFuncItem dao_Value_Meths[] =
@@ -3986,13 +3981,13 @@ DaoTypeBase dao_WarningValue_Typer =
 {
 	"Exception::Warning::Value", NULL, NULL, dao_Value_Meths,
 	{ & dao_ExceptionWarning_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 DaoTypeBase dao_ErrorValue_Typer =
 {
 	"Exception::Error::Value", NULL, NULL, dao_Value_Meths,
 	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, NULL
+	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
 void DaoException_Setup( DaoNamespace *ns )

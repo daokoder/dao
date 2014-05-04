@@ -749,6 +749,7 @@ static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, 
 		printf( "type wrapping failed: %s from %s\n", typer->name, self->name->bytes );
 		return NULL;
 	}
+	DString_SetChars( cdata_type->aux->xCtype.name, cdata_type->name->bytes );
 	return cdata_type;
 }
 DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque )
@@ -981,7 +982,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DString_Delete( name );
 	self->cstUser = self->constants->size;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -990,7 +991,7 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	/* printf( "DaoNamespace_Delete  %s\n", self->name->bytes ); */
 
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	DMap_Delete( self->lookupTable );
 	DArray_Delete( self->constants );

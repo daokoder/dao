@@ -149,7 +149,7 @@ void DaoType_Delete( DaoType *self )
 		return;
 	}
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	GC_DecRC( self->aux );
 	GC_DecRC( self->value );
@@ -299,7 +299,7 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 	DaoType_CheckAttributes( self );
 	DaoType_InitDefault( self );
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -390,7 +390,7 @@ DaoType* DaoType_Copy( DaoType *other )
 	GC_IncRC( other->kernel );
 	GC_IncRC( other->cbtype );
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -1359,7 +1359,7 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 void DaoInterface_Delete( DaoInterface *self )
 {
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	GC_DecRC( self->abtype );
 	GC_DecRC( self->model );
@@ -1384,7 +1384,7 @@ DaoInterface* DaoInterface_New( const char *name )
 	self->abtype = DaoType_New( name, DAO_INTERFACE, (DaoValue*)self, NULL );
 	GC_IncRC( self->abtype );
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -1804,7 +1804,7 @@ static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream
 void DaoTypeKernel_Delete( DaoTypeKernel *self )
 {
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	/* self->core may no longer be valid, but self->typer->core always is: */
 	if( self->typer->core ) self->typer->core->kernel = NULL;
@@ -1843,7 +1843,7 @@ DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer )
 	}
 	if( self->core->kernel == NULL ) self->core->kernel = self;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }

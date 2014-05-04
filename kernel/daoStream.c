@@ -664,7 +664,7 @@ DaoStream* DaoStream_New()
 	self->fname = DString_New();
 	self->mode = DAO_IO_READ | DAO_IO_WRITE;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	if( dao_type_stream == NULL ) DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -682,9 +682,6 @@ void DaoStream_Close( DaoStream *self )
 }
 void DaoStream_Delete( DaoStream *self )
 {
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
-#endif
 	DaoStream_Close( self );
 	DString_Delete( self->fname );
 	DString_Delete( self->streamString );

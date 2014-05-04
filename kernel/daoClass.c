@@ -130,14 +130,14 @@ DaoClass* DaoClass_New()
 	self->cstParentStart = self->cstParentEnd = 0;
 	self->glbParentStart = self->glbParentEnd = 0;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
 void DaoClass_Delete( DaoClass *self )
 {
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	GC_DecRC( self->clsType );
 	DMap_Delete( self->abstypes );

@@ -152,7 +152,7 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->pauseType = 0;
 	self->active = 0;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -162,7 +162,7 @@ void DaoProcess_Delete( DaoProcess *self )
 	DaoStackFrame *frame = self->firstFrame;
 	daoint i;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	while( frame ){
 		DaoStackFrame *p = frame;
@@ -3904,21 +3904,21 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 			DaoProcess_PrepareCall( self, rout, caller, params, npar, vmc, 0 );
 		}
 	}else if( caller->type == DAO_CTYPE ){
-		DaoType *type = caller->xCdata.ctype;
-		rout = rout2 = DaoType_FindFunction( type, type->name );
+		DaoType *type = caller->xCtype.ctype;
+		rout = rout2 = DaoType_FindFunction( type, caller->xCtype.name );
 		if( rout == NULL ){
 			DaoProcess_RaiseException( self, DAO_ERROR_TYPE, "C type not callable" );
 			return;
 		}
 		rout = DaoRoutine_ResolveX( rout, selfpar, params, npar, codemode );
 		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
-		DaoProcess_DoCxxCall( self, vmc, caller->xCdata.ctype, rout, selfpar, params, npar, 1 );
+		DaoProcess_DoCxxCall( self, vmc, caller->xCtype.ctype, rout, selfpar, params, npar, 1 );
 		if( self->exceptions->size ) return;
 
 		sup = DaoProcess_InitBase( self, vmc, caller );
 		//printf( "sup = %i\n", sup );
 		if( caller->type == DAO_CTYPE && sup ){
-			DaoCdata *cdata = & self->activeValues[ vmc->c ]->xCdata;
+			DaoCstruct *cdata = (DaoCstruct*) self->activeValues[ vmc->c ];
 			if( cdata && (cdata->type == DAO_CDATA || cdata->type == DAO_CSTRUCT) ){
 				//printf( "%p %p %p\n", cdata, cdata->object, self->activeObject->rootObject );
 				GC_ShiftRC( cdata, self->activeObject->parent );

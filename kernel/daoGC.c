@@ -29,6 +29,8 @@
 #include<assert.h>
 #include<string.h>
 #include<math.h>
+#include<time.h>
+
 #include"daoGC.h"
 #include"daoMap.h"
 #include"daoClass.h"
@@ -41,6 +43,18 @@
 #include"daoThread.h"
 #include"daoValue.h"
 
+
+#define DAO_TRACE_ADDRESS ((DaoValue*)0x1003f9f40)
+#ifdef DAO_TRACE_ADDRESS
+void DaoGC_TraceValue( DaoValue *value )
+{
+	if( value == DAO_TRACE_ADDRESS ){
+		int uninitialized; /* for valgrind; */
+		uninitialized += time(NULL);
+		if( uninitialized % 1000 == 0 ) printf( "%i\n", uninitialized );
+	}
+}
+#endif
 
 #if defined(DEBUG) && defined(UNIX)
 #if 0
@@ -84,8 +98,12 @@ static void DaoGC_PrintValueInfo( DaoValue *value )
 		printf( "class: %s\t", value->xClass.className->bytes );
 	}else if( value->type == DAO_TYPEKERNEL ){
 		printf( "tkernal: %s\t", ((DaoTypeKernel*)value)->typer->name );
+	}else if( value->type == DAO_ROUTINE ){
+		printf( "routine: %s %s\n", value->xRoutine.routName->bytes, value->xRoutine.routType->name->bytes );
+	}else if( value->type == DAO_OBJECT ){
+		printf( "object: %s\n", value->xObject.defClass->className->bytes );
 	}
-	printf( "%p %i %i\n", value, value->xGC.refCount, value->xGC.cycRefCount );
+	printf( "%16p %2i %i %i\n", value, value->type, value->xGC.refCount, value->xGC.cycRefCount );
 }
 #else
 #define DaoGC_PrintValueInfo( value )
@@ -376,7 +394,7 @@ static DaoTuple* DaoTuple_Create2( DaoType *type, int size )
 	self->size = size;
 	self->cap = ext;
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -435,41 +453,56 @@ typedef struct DaoObjectLogger DaoObjectLogger;
 
 struct DaoObjectLogger
 {
-	daoint *newCounts;
-	daoint *delCounts;
-	daoint  allCounts[END_EXTRA_TYPES];
-	daoint  newCounts1[END_EXTRA_TYPES];
-	daoint  newCounts2[END_EXTRA_TYPES];
-	daoint  delCounts1[END_EXTRA_TYPES];
-	daoint  delCounts2[END_EXTRA_TYPES];
+	DMap    *allObjects;
+	daoint  *newCounts;
+	daoint  *delCounts;
+	daoint   allCounts[END_EXTRA_TYPES];
+	daoint   newCounts1[END_EXTRA_TYPES];
+	daoint   newCounts2[END_EXTRA_TYPES];
+	daoint   delCounts1[END_EXTRA_TYPES];
+	daoint   delCounts2[END_EXTRA_TYPES];
+	DArray  *cdataValues;
+	DArray  *cdataArrays;
+	DArray  *cdataMaps;
+	DArray  *objects;
 };
 
-DaoObjectLogger dao_object_logger = { NULL, NULL };
+DaoObjectLogger dao_object_logger = { NULL, NULL, NULL };
 
-void DaoObjectLogger_LogNew( int type )
+void DaoObjectLogger_SwitchBuffer();
+
+void DaoObjectLogger_Init()
 {
-	if( dao_object_logger.newCounts ) dao_object_logger.newCounts[type] += 1;
+	dao_object_logger.allObjects = DHash_New(0,0);
+	DaoObjectLogger_SwitchBuffer();
 }
-void DaoObjectLogger_LogDelete( int type )
+void DaoObjectLogger_LogNew( DaoValue *object )
 {
-	if( dao_object_logger.delCounts ) dao_object_logger.delCounts[type] += 1;
+	if( dao_object_logger.allObjects == NULL ) return;
+	dao_object_logger.newCounts[ object->type ] += 1;
+	DMap_Insert( dao_object_logger.allObjects, object, object );
 }
-void DaoObjectLogger_PrintProfile( DArray *idleList, DArray *workList )
+void DaoObjectLogger_LogDelete( DaoValue *object )
+{
+	if( dao_object_logger.allObjects == NULL ) return;
+	dao_object_logger.delCounts[ object->type ] += 1;
+	DMap_Erase( dao_object_logger.allObjects, object );
+}
+#ifdef WIN32
+const char *format = "Type = %3Ii;  Newed = %5Ii;  Deleted = %5Ii;  All = %12Ii\n";
+#else
+const char *format = "Type = %3ti;  Newed = %5ti;  Deleted = %5ti;  All = %12ti\n";
+#endif
+void DaoObjectLogger_PrintProfile()
 {
 	int i;
 	printf("=======================================\n");
-	if( idleList || workList ){
-		printf("heap[idle] = %zi;\theap[work] = %zi\n", idleList->size, workList->size );
-		printf("---------------------------------------\n");
-	}
 	for(i=0; i<END_EXTRA_TYPES; ++i){
 		daoint N = dao_object_logger.newCounts[i];
 		daoint D = dao_object_logger.delCounts[i];
 		daoint A = dao_object_logger.allCounts[i] + N - D;
 		dao_object_logger.allCounts[i] = A;
-		if( N != 0 || D != 0 || A != 0 ){
-			printf( "Type = %3zi;  Newed = %5i;  Deleted = %5i;  All = %12i\n", i, N, D, A );
-		}
+		if( N != 0 || D != 0 || A != 0 ) printf( format, i, N, D, A );
 	}
 }
 void DaoObjectLogger_SwitchBuffer()
@@ -487,8 +520,273 @@ void DaoObjectLogger_SwitchBuffer()
 	memset( dao_object_logger.newCounts, 0, END_EXTRA_TYPES*sizeof(daoint) );
 	memset( dao_object_logger.delCounts, 0, END_EXTRA_TYPES*sizeof(daoint) );
 }
+static void DaoObjectLogger_ScanValue( DaoValue *object )
+{
+	DMap *objmap = dao_object_logger.allObjects;
+	DNode *it = DMap_Find( objmap, object );
+	if( object == NULL || object == dao_none_value ) return;
+	object->xBase.refCount --;
+	if( it != NULL ) return;
+	DArray_Append( dao_object_logger.objects, object );
+}
+static void DaoObjectLogger_ScanValues( DaoValue **values, daoint size )
+{
+	DMap *objmap = dao_object_logger.allObjects;
+	daoint i;
+	for(i=0; i<size; ++i) DaoObjectLogger_ScanValue( values[i] );
+}
+static void DaoObjectLogger_ScanArray( DArray *list )
+{
+	if( list == NULL ) return;
+	DaoObjectLogger_ScanValues( list->items.pValue, list->size );
+}
+static void DaoObjectLogger_ScanMap( DMap *map, int gckey, int gcval )
+{
+	DMap *objmap = dao_object_logger.allObjects;
+	DNode *it;
+	if( map == NULL || map->size == 0 ) return;
+	gckey &= map->keytype == 0 || map->keytype == DAO_DATA_VALUE;
+	gcval &= map->valtype == 0 || map->valtype == DAO_DATA_VALUE;
+	for(it = DMap_First(map); it != NULL; it = DMap_Next(map, it) ){
+		if( gckey ) DaoObjectLogger_ScanValue( it->key.pValue );
+		if( gcval ) DaoObjectLogger_ScanValue( it->value.pValue );
+	}
+}
+static void DaoObjectLogger_ScanCdata( DaoCdata *cdata )
+{
+	DaoTypeBase *typer = cdata->ctype ? cdata->ctype->typer : NULL;
+	DArray *cvalues = dao_object_logger.cdataValues;
+	DArray *carrays = dao_object_logger.cdataArrays;
+	DArray *cmaps = dao_object_logger.cdataMaps;
+	daoint i, n;
+
+	if( cdata->type == DAO_CTYPE || cdata->subtype == DAO_CDATA_PTR ) return;
+	if( typer == NULL || typer->GetGCFields == NULL ) return;
+	cvalues->size = carrays->size = cmaps->size = 0;
+	if( cdata->type == DAO_CSTRUCT ){
+		typer->GetGCFields( cdata, cvalues, carrays, cmaps, 0 );
+	}else if( cdata->data ){
+		typer->GetGCFields( cdata->data, cvalues, carrays, cmaps, 0 );
+	}else{
+		return;
+	}
+	DaoObjectLogger_ScanArray( cvalues );
+	for(i=0,n=carrays->size; i<n; i++) DaoObjectLogger_ScanArray( carrays->items.pArray[i] );
+	for(i=0,n=cmaps->size; i<n; i++) DaoObjectLogger_ScanMap( cmaps->items.pMap[i], 1, 1 );
+}
+void DaoObjectLogger_Quit()
+{
+	daoint i;
+	DNode *it;
+	DMap *objmap = dao_object_logger.allObjects;
+	DArray *objects = DArray_New(0);
+	DArray *cvalues = DArray_New(0);
+	DArray *carrays = DArray_New(0);
+	DArray *cmaps = DArray_New(0);
+
+	dao_object_logger.objects = objects;
+	dao_object_logger.cdataValues = cvalues;
+	dao_object_logger.cdataArrays = carrays;
+	dao_object_logger.cdataMaps = cmaps;
+	DaoObjectLogger_PrintProfile();
+
+	for(it=DMap_First(objmap); it; it=DMap_Next(objmap, it)){
+		DaoValue *object = it->key.pValue;
+		DArray_Append( objects, object );
+	}
+	for(i=0; i<objects->size; ++i){
+		DaoValue *value = objects->items.pValue[i];
+		switch( value->type ){
+		case DAO_ENUM :
+			{
+				DaoEnum *en = (DaoEnum*) value;
+				DaoObjectLogger_ScanValue( (DaoValue*) en->etype );
+				break;
+			}
+		case DAO_CONSTANT :
+			{
+				DaoObjectLogger_ScanValue( value->xConst.value );
+				break;
+			}
+		case DAO_VARIABLE :
+			{
+				DaoObjectLogger_ScanValue( value->xVar.value );
+				DaoObjectLogger_ScanValue( (DaoValue*) value->xVar.dtype );
+				break;
+			}
+		case DAO_PAR_NAMED :
+			{
+				DaoObjectLogger_ScanValue( value->xNameValue.value );
+				DaoObjectLogger_ScanValue( (DaoValue*) value->xNameValue.ctype );
+				break;
+			}
+#ifdef DAO_WITH_NUMARRAY
+		case DAO_ARRAY :
+			{
+				DaoArray *array = (DaoArray*) value;
+				DaoObjectLogger_ScanValue( (DaoValue*) array->original );
+				break;
+			}
+#endif
+		case DAO_TUPLE :
+			{
+				DaoTuple *tuple = (DaoTuple*) value;
+				DaoObjectLogger_ScanValue( (DaoValue*) tuple->ctype );
+				DaoObjectLogger_ScanValues( tuple->values, tuple->size );
+				break;
+			}
+		case DAO_LIST :
+			{
+				DaoList *list = (DaoList*) value;
+				DaoObjectLogger_ScanValue( (DaoValue*) list->ctype );
+				DaoObjectLogger_ScanArray( list->value );
+				break;
+			}
+		case DAO_MAP :
+			{
+				DaoMap *map = (DaoMap*) value;
+				DaoObjectLogger_ScanValue( (DaoValue*) map->ctype );
+				DaoObjectLogger_ScanMap( map->value, 1, 1 );
+				break;
+			}
+		case DAO_OBJECT :
+			{
+				DaoObject *obj = (DaoObject*) value;
+				if( obj->isRoot ){
+					DaoObjectLogger_ScanValues( obj->objValues, obj->valueCount );
+				}
+				DaoObjectLogger_ScanValue( (DaoValue*) obj->parent );
+				DaoObjectLogger_ScanValue( (DaoValue*) obj->rootObject );
+				DaoObjectLogger_ScanValue( (DaoValue*) obj->defClass );
+				break;
+			}
+		case DAO_CSTRUCT : case DAO_CDATA : case DAO_CTYPE :
+			{
+				DaoCdata *cdata = (DaoCdata*) value;
+				DaoObjectLogger_ScanValue( (DaoValue*) cdata->object );
+				DaoObjectLogger_ScanValue( (DaoValue*) cdata->ctype );
+				if( value->type == DAO_CDATA || value->type == DAO_CSTRUCT ){
+					DaoObjectLogger_ScanCdata( cdata );
+				}else{
+					DaoObjectLogger_ScanValue( (DaoValue*) value->xCtype.cdtype );
+					DaoObjectLogger_ScanValue( (DaoValue*) value->xCtype.clsInter );
+					DaoObjectLogger_ScanValue( (DaoValue*) value->xCtype.objInter );
+				}
+				break;
+			}
+		case DAO_ROUTINE :
+			{
+				DaoRoutine *rout = (DaoRoutine*)value;
+				DaoObjectLogger_ScanValue( (DaoValue*) rout->routType );
+				DaoObjectLogger_ScanValue( (DaoValue*) rout->routHost );
+				DaoObjectLogger_ScanValue( (DaoValue*) rout->nameSpace );
+				DaoObjectLogger_ScanValue( (DaoValue*) rout->original );
+				DaoObjectLogger_ScanValue( (DaoValue*) rout->routConsts );
+				DaoObjectLogger_ScanValue( (DaoValue*) rout->body );
+				if( rout->overloads ) DaoObjectLogger_ScanArray( rout->overloads->array );
+				if( rout->specialized ) DaoObjectLogger_ScanArray( rout->specialized->array );
+				break;
+			}
+		case DAO_ROUTBODY :
+			{
+				DaoRoutineBody *rout = (DaoRoutineBody*)value;
+				DaoObjectLogger_ScanArray( rout->regType );
+				DaoObjectLogger_ScanArray( rout->svariables );
+				DaoObjectLogger_ScanMap( rout->abstypes, 0, 1 );
+				break;
+			}
+		case DAO_CLASS :
+			{
+				DaoClass *klass = (DaoClass*)value;
+				DaoObjectLogger_ScanMap( klass->abstypes, 0, 1 );
+				DaoObjectLogger_ScanValue( (DaoValue*) klass->clsType );
+				DaoObjectLogger_ScanValue( (DaoValue*) klass->classRoutine );
+				DaoObjectLogger_ScanArray( klass->constants );
+				DaoObjectLogger_ScanArray( klass->variables );
+				DaoObjectLogger_ScanArray( klass->instvars );
+				DaoObjectLogger_ScanArray( klass->allBases );
+				DaoObjectLogger_ScanArray( klass->references );
+				break;
+			}
+		case DAO_INTERFACE :
+			{
+				DaoInterface *inter = (DaoInterface*)value;
+				DaoObjectLogger_ScanArray( inter->supers );
+				DaoObjectLogger_ScanValue( (DaoValue*) inter->abtype );
+				DaoObjectLogger_ScanValue( (DaoValue*) inter->model );
+				break;
+			}
+		case DAO_NAMESPACE :
+			{
+				DaoNamespace *ns = (DaoNamespace*) value;
+				DaoObjectLogger_ScanArray( ns->constants );
+				DaoObjectLogger_ScanArray( ns->variables );
+				DaoObjectLogger_ScanArray( ns->auxData );
+				DaoObjectLogger_ScanArray( ns->mainRoutines );
+				DaoObjectLogger_ScanMap( ns->abstypes, 0, 1 );
+				break;
+			}
+		case DAO_TYPE :
+			{
+				DaoType *abtp = (DaoType*) value;
+				DaoObjectLogger_ScanValue( abtp->aux );
+				DaoObjectLogger_ScanValue( abtp->value );
+				DaoObjectLogger_ScanValue( (DaoValue*) abtp->kernel );
+				DaoObjectLogger_ScanValue( (DaoValue*) abtp->cbtype );
+				DaoObjectLogger_ScanValue( (DaoValue*) abtp->vartype );
+				DaoObjectLogger_ScanArray( abtp->nested );
+				DaoObjectLogger_ScanArray( abtp->bases );
+				DaoObjectLogger_ScanMap( abtp->interfaces, 1, 0 );
+				break;
+			}
+		case DAO_TYPEKERNEL :
+			{
+				DaoTypeKernel *kernel = (DaoTypeKernel*) value;
+				DaoObjectLogger_ScanValue( (DaoValue*) kernel->abtype );
+				DaoObjectLogger_ScanValue( (DaoValue*) kernel->nspace );
+				DaoObjectLogger_ScanMap( kernel->values, 0, 1 );
+				DaoObjectLogger_ScanMap( kernel->methods, 0, 1 );
+				if( kernel->sptree ){
+					DaoObjectLogger_ScanArray( kernel->sptree->holders );
+					DaoObjectLogger_ScanArray( kernel->sptree->defaults );
+					DaoObjectLogger_ScanArray( kernel->sptree->sptypes );
+				}
+				break;
+			}
+		case DAO_PROCESS :
+			{
+				DaoProcess *vmp = (DaoProcess*) value;
+				DaoStackFrame *frame = vmp->firstFrame;
+				DaoObjectLogger_ScanValue( (DaoValue*) vmp->future );
+				DaoObjectLogger_ScanArray( vmp->exceptions );
+				DaoObjectLogger_ScanArray( vmp->defers );
+				DaoObjectLogger_ScanArray( vmp->factory );
+				DaoObjectLogger_ScanValues( vmp->stackValues, vmp->stackSize );
+				while( frame ){
+					DaoObjectLogger_ScanValue( (DaoValue*) frame->routine );
+					DaoObjectLogger_ScanValue( (DaoValue*) frame->object );
+					DaoObjectLogger_ScanValue( (DaoValue*) frame->retype );
+					frame = frame->next;
+				}
+				break;
+			}
+		default: break;
+		}
+	}
+	for(i=0; i<objects->size; ++i){
+		DaoValue *value = objects->items.pValue[i];
+		if( value->xBase.refCount != 0 ){
+			DaoGC_PrintValueInfo( value );
+		}
+	}
+	DMap_Delete( dao_object_logger.allObjects );
+	DArray_Delete( objects );
+	DArray_Delete( cvalues );
+	DArray_Delete( carrays );
+	DArray_Delete( cmaps );
+}
 #else
-void DaoObjectLogger_PrintProfile( DArray *idleList, DArray *workList ){}
+void DaoObjectLogger_PrintProfile(){}
 void DaoObjectLogger_SwitchBuffer(){}
 #endif
 
@@ -594,7 +892,6 @@ void DaoGC_Init()
 }
 void DaoGC_Start()
 {
-	DaoObjectLogger_SwitchBuffer();
 	DaoGC_Init();
 }
 void DaoCGC_Start()
@@ -626,7 +923,7 @@ static void DaoGC_DeleteSimpleData( DaoValue *value )
 	case DAO_DOUBLE :
 	case DAO_COMPLEX :
 #ifdef DAO_USE_GC_LOGGER
-		DaoObjectLogger_LogDelete( value->type );
+		DaoObjectLogger_LogDelete( value );
 #endif
 		dao_free( value );
 		break;
@@ -673,6 +970,9 @@ static int DaoGC_DecRC2( DaoValue *p )
 {
 	daoint i, n;
 	p->xGC.refCount --;
+#ifdef DAO_TRACE_ADDRESS
+	DaoGC_TraceValue( p );
+#endif
 	if( p->xGC.refCount == 0 ){
 		switch( p->xGC.type ){
 		case DAO_NONE :
@@ -742,7 +1042,7 @@ void DaoGC_Finish()
 		DaoIGC_Finish();
 	}
 
-	DaoObjectLogger_PrintProfile( gcWorker.idleList, gcWorker.workList );
+	DaoObjectLogger_PrintProfile();
 	DaoObjectLogger_SwitchBuffer();
 	DaoDataCache_Release( gcWorker.cache );
 	for(i=0; i<gcWorker.caches->size; ++i){
@@ -752,7 +1052,7 @@ void DaoGC_Finish()
 #endif
 		DaoDataCache_Delete( cache );
 	}
-	DaoObjectLogger_PrintProfile( gcWorker.idleList, gcWorker.workList );
+	DaoObjectLogger_PrintProfile();
 	DaoObjectLogger_SwitchBuffer();
 
 #ifdef DAO_WITH_THREAD
@@ -855,8 +1155,8 @@ void DaoDataCache_Release( DaoDataCache *self )
 
 void DaoGC_IncRC( DaoValue *value )
 {
-#if 0
-	if( value == 0x49be70 ) free(123);
+#ifdef DAO_TRACE_ADDRESS
+	DaoGC_TraceValue( value );
 #endif
 	if( value == NULL ) return;
 	if( value->type >= DAO_ENUM ) value->xGC.cycRefCount ++;
@@ -884,8 +1184,9 @@ void DaoGC_DecRC( DaoValue *value )
 void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
 {
 	if( up == down ) return;
-#if 0
-	if( up == 0x49be70 ) free(123);
+#ifdef DAO_TRACE_ADDRESS
+	DaoGC_TraceValue( up );
+	DaoGC_TraceValue( down );
 #endif
 	if( up && up->type >= DAO_ENUM ) up->xGC.cycRefCount ++;
 	if( gcWorker.concurrent ){
@@ -1337,7 +1638,7 @@ static void DaoCGC_FreeGarbage()
 		}
 		DArray_PushBack2( gcWorker.freeList, value );
 	}
-	DaoObjectLogger_PrintProfile( gcWorker.idleList, gcWorker.workList );
+	DaoObjectLogger_PrintProfile();
 	DaoObjectLogger_SwitchBuffer();
 	workList->size = 0;
 }
@@ -1599,7 +1900,7 @@ void DaoIGC_FreeGarbage()
 	}
 	for(i=0; i<gcWorker.auxList2->size; i++) gcWorker.auxList2->items.pValue[i]->xGC.alive = 0;
 	gcWorker.auxList2->size = 0;
-	DaoObjectLogger_PrintProfile( idleList, workList );
+	DaoObjectLogger_PrintProfile();
 	DaoObjectLogger_SwitchBuffer();
 }
 void cycRefCountDecrement( DaoValue *value )

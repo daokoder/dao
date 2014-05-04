@@ -93,9 +93,6 @@ DaoChannel* DaoChannel_New( DaoType *type, int dtype )
 	if( dtype ) type = DaoType_Specialize( dao_type_channel, & type, type != NULL );
 	DaoCstruct_Init( (DaoCstruct*) self, type );
 	self->buffer = DArray_New( DAO_DATA_VALUE );
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
-#endif
 	return self;
 }
 
@@ -110,9 +107,6 @@ DaoFuture* DaoFuture_New( DaoType *type, int vatype )
 	GC_IncRC( dao_none_value );
 	self->state = DAO_CALL_PAUSED;
 	self->value = dao_none_value;
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
-#endif
 	return self;
 }
 
@@ -1112,9 +1106,6 @@ static DaoFuncItem channelMeths[] =
 };
 static void DaoChannel_Delete( DaoChannel *self )
 {
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
-#endif
 	DaoCstruct_Free( (DaoCstruct*) self );
 	DArray_Delete( self->buffer );
 	dao_free( self );
@@ -1166,9 +1157,6 @@ static DaoFuncItem futureMeths[] =
 };
 static void DaoFuture_Delete( DaoFuture *self )
 {
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
-#endif
 	DaoCstruct_Free( (DaoCstruct*) self );
 	GC_DecRC( self->value );
 	GC_DecRC( self->actor );

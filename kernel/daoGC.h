@@ -33,9 +33,11 @@
 
 
 #ifdef DAO_USE_GC_LOGGER
-DAO_DLL void DaoObjectLogger_LogNew( int type );
-DAO_DLL void DaoObjectLogger_LogDelete( int type );
-DAO_DLL void DaoObjectLogger_PrintProfile( DArray *idleList, DArray *workList );
+DAO_DLL void DaoObjectLogger_Init();
+DAO_DLL void DaoObjectLogger_Quit();
+DAO_DLL void DaoObjectLogger_LogNew( DaoValue *object );
+DAO_DLL void DaoObjectLogger_LogDelete( DaoValue *object );
+DAO_DLL void DaoObjectLogger_PrintProfile();
 #endif
 
 DAO_DLL int DaoGC_Min( int n /*=-1*/ );

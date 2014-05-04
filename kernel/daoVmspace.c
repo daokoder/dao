@@ -602,7 +602,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->nsInternal = NULL; /* need to be set for DaoNamespace_New() */
 	self->nsInternal = DaoNamespace_New( self, "dao" );
 	self->nsInternal->vmSpace = self;
-	self->nsInternal->refCount += 1;
+	GC_IncRC( self->nsInternal );
 	DMap_Insert( self->nsModules, self->nsInternal->name, self->nsInternal );
 	DArray_PushFront( self->loadedModules, self->nsInternal );
 
@@ -610,9 +610,9 @@ DaoVmSpace* DaoVmSpace_New()
 
 	self->mainNamespace = DaoNamespace_New( self, "MainNamespace" );
 	self->mainNamespace->vmSpace = self;
-	self->mainNamespace->refCount ++;
-	self->stdioStream->refCount += 1;
-	self->errorStream->refCount += 1;
+	GC_IncRC( self->mainNamespace );
+	GC_IncRC( self->stdioStream );
+	GC_IncRC( self->errorStream );
 
 	self->mainProcess = DaoProcess_New( self );
 	GC_IncRC( self->mainProcess );
@@ -620,7 +620,7 @@ DaoVmSpace* DaoVmSpace_New()
 	if( mainVmSpace ) DaoNamespace_AddParent( self->nsInternal, mainVmSpace->nsInternal );
 
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( self->type );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
@@ -672,7 +672,7 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 void DaoVmSpace_Delete( DaoVmSpace *self )
 {
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( self->type );
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	if( self->stdioStream ) DaoVmSpace_DeleteData( self );
 	DMap_Delete( self->nsModules );
@@ -2425,8 +2425,10 @@ static void DaoMETH_Panic( DaoProcess *proc, DaoValue *p[], int n )
 	if( self == NULL && object != NULL ){
 		self = (DaoException*) DaoObject_CastToBase( object, type );
 	}
-	if( self == NULL ) self = (DaoException*)DaoException_New( type );
-	DaoException_SetData( self, p[0] );
+	if( self == NULL ){
+		self = (DaoException*)DaoException_New( type );
+		DaoException_SetData( self, p[0] );
+	}
 	DaoException_Init( self, proc, NULL );
 	DArray_Append( proc->exceptions, object ? (void*)object : (void*)self );
 }
@@ -2637,6 +2639,9 @@ DaoVmSpace* DaoInit( const char *command )
 #endif
 
 	DaoGC_Start();
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_Init();
+#endif
 
 #if 0
 #warning"-------------using concurrent GC by default!"
@@ -2813,7 +2818,7 @@ void DaoQuit()
 #endif
 	DaoVmSpace_Delete( mainVmSpace );
 #ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_PrintProfile( NULL, NULL );
+	DaoObjectLogger_Quit();
 #endif
 	DMap_Delete( dao_cdata_bindings );
 	dao_cdata_bindings = NULL;
