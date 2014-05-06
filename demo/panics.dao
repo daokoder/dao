@@ -16,9 +16,9 @@ routine Test()
 {
 	defer { io.writeln( 'first defer:', recover() ) }
 	defer { io.writeln( 'second defer:', recover() ) }
-	io.writeln( 'Test(): before panic;' )
-	panic( 123 )
-	io.writeln( 'Test(): after panic;' )
+	io.writeln( 'Test(): before error;' )
+	error( 'some error' )
+	io.writeln( 'Test(): after error;' )
 }
 
 Test()
@@ -27,13 +27,13 @@ routine Test2()
 {
 	rout = routine(){
 		defer { io.writeln( 'recovering:', recover() ) }
-		io.writeln( 'closure: before panic;' )
-		panic(456)
-		io.writeln( 'closure: after panic;' )
+		io.writeln( 'closure: before error;' )
+		error( 'some other error' )
+		io.writeln( 'closure: after error;' )
 	}
-	io.writeln( 'Test2(): before panic;' )
+	io.writeln( 'Test2(): before error;' )
 	rout()
-	io.writeln( 'Test2(): after panic;' )
+	io.writeln( 'Test2(): after error;' )
 }
 
 Test2()
@@ -51,9 +51,9 @@ routine Test3()
 		io.writeln( 'recovering from', recover( MyError ) )
 	}
 
-	io.writeln( 'Test3(): before panic;' )
-	panic( MyError() );
-	io.writeln( 'Test3(): after panic;' )
+	io.writeln( 'Test3(): before error;' )
+	error( MyError() );
+	io.writeln( 'Test3(): after error;' )
 }
 
 Test3()

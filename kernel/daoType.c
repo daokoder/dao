@@ -62,6 +62,7 @@ DaoType *dao_type_map_template = NULL;
 DaoType *dao_type_map_empty = NULL;
 DaoType *dao_type_map_any = NULL;
 DaoType *dao_type_routine = NULL;
+DaoType *dao_type_exception = NULL;
 DaoType *dao_type_for_iterator = NULL;
 DaoType *dao_array_types[DAO_COMPLEX+1] = {0};
 
@@ -177,7 +178,7 @@ static void DaoType_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
 	denum->value = node->value.pInt;
 	return;
 ErrorNotExist:
-	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, DString_GetData( name ) );
+	DaoProcess_RaiseError( proc, "Field::NotExist", DString_GetData( name ) );
 }
 static void DaoType_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
 {
@@ -194,7 +195,7 @@ static void DaoType_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 		}
 	}
 ErrorNotExist:
-	DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not valid" );
+	DaoProcess_RaiseError( proc, "Index", "not valid" );
 }
 static DaoTypeCore typeCore=
 {
@@ -1668,11 +1669,11 @@ static void DaoCdata_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 			func = DaoType_FindFunction( type, proc->mbstring );
 		}
 		if( func == NULL ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "not exist" );
+			DaoProcess_RaiseError( proc, "Field::NotExist", "not exist" );
 			return;
 		}
 		if( (error = DaoProcess_PushCallable( proc, func, self, & pars, npar )) != 0 ){
-			DaoProcess_RaiseException( proc, error, "invalid field access" );
+			DaoProcess_RaiseException( proc, daoExceptionName[error], NULL, NULL );
 		}
 	}else{
 		DaoProcess_PutValue( proc, p );
@@ -1700,7 +1701,7 @@ static void DaoCdata_SetField( DaoValue *self, DaoProcess *proc, DString *name, 
 		func = DaoType_FindFunction( type, proc->mbstring );
 	}
 	if( func == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->chars );
+		DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
 		return;
 	}
 	DaoProcess_PushCallable( proc, func, self, pars, npar );
@@ -1713,7 +1714,7 @@ static void DaoCdata_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid 
 
 	func = DaoType_FindFunctionChars( type, "[]" );
 	if( func == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
+		DaoProcess_RaiseError( proc, "Field::NotExist", "" );
 		return;
 	}
 	DaoProcess_PushCallable( proc, func, self0, & pid, 1 );
@@ -1727,7 +1728,7 @@ static void DaoCdata_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid,
 	DString_SetChars( proc->mbstring, "[]=" );
 	func = DaoType_FindFunction( type, proc->mbstring );
 	if( func == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
+		DaoProcess_RaiseError( proc, "Field::NotExist", "" );
 		return;
 	}
 	p[0] = value;
@@ -1744,7 +1745,7 @@ static void DaoCdata_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[],
 	}
 	func = DaoType_FindFunctionChars( type, "[]" );
 	if( func == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
+		DaoProcess_RaiseError( proc, "Field::NotExist", "" );
 		return;
 	}
 	DaoProcess_PushCallable( proc, func, self, ids, N );
@@ -1760,7 +1761,7 @@ static void DaoCdata_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[],
 	}
 	func = DaoType_FindFunctionChars( type, "[]=" );
 	if( func == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "" );
+		DaoProcess_RaiseError( proc, "Field::NotExist", "" );
 		return;
 	}
 	memcpy( p+1, ids, N*sizeof(DaoValue*) );
@@ -1814,7 +1815,10 @@ void DaoTypeKernel_Delete( DaoTypeKernel *self )
 	if( self->values ) DMap_Delete( self->values );
 	if( self->methods ) DMap_Delete( self->methods );
 	if( self->sptree ) DTypeSpecTree_Delete( self->sptree );
-	if( self->attribs & DAO_TYPER_FREE ) dao_free( self->typer );
+	if( self->attribs & DAO_TYPER_FREE ){
+		dao_free( (char*)self->typer->name );
+		dao_free( self->typer );
+	}
 	dao_free( self );
 }
 

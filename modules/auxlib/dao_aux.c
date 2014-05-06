@@ -63,8 +63,7 @@ static void AUX_Log( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void AUX_Test( DaoProcess *proc, DaoValue *p[], int N )
 {
-	void *pp = DaoProcess_InvokeException( proc, "std::MyException", "just a test", NULL );
-	printf( "AUX_Test: %p\n", pp );
+	DaoProcess_RaiseException( proc, "Exception::Error::SomeError", "just a test", NULL );
 }
 
 static DaoFuncItem auxMeths[]=
@@ -81,9 +80,6 @@ DAO_DLL int DaoAux_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	ns = DaoVmSpace_GetNamespace( vmSpace, "std" );
 	DaoNamespace_WrapFunctions( ns, auxMeths );
-#ifdef DEBUG
-	DaoNamespace_MakeExceptionType( ns, "MyException", 1 ); /* in std namespace; */
-#endif
 	return 0;
 }
 

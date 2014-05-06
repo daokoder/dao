@@ -1307,11 +1307,11 @@ static void DaoLong_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 	int w = base_bits[self->base];
 	int digit = 0;
 	if( w == 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "need power 2 radix" );
+		DaoProcess_RaiseError( proc, "Index", "need power 2 radix" );
 		return;
 	}
 	if( id <0 || id*w >= n*LONG_BITS ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "out of range" );
+		DaoProcess_RaiseError( proc, "Index", "out of range" );
 		return;
 	}
 	if( self->base == 2 ){
@@ -1322,7 +1322,7 @@ static void DaoLong_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 			int digit2 = self->data[m] >> (id*w - m*LONG_BITS);
 			digit = digit2 & base_masks[self->base];
 			if( m+1 >= n && digit2 ==0 )
-				DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "out of range" );
+				DaoProcess_RaiseError( proc, "Index", "out of range" );
 		}else{
 			int d = (self->data[m+1]<<LONG_BITS) | self->data[m];
 			digit = (d>>(id*w - m*LONG_BITS)) & base_masks[self->base];
@@ -1339,14 +1339,14 @@ static void DaoLong_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, 
 	int w = base_bits[self->base];
 	DaoxBigInt_Detach( self );
 	if( w == 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "need power 2 radix" );
+		DaoProcess_RaiseError( proc, "Index", "need power 2 radix" );
 		return;
 	}
 	if( pid->type && (id <0 || id*w >= n*LONG_BITS) ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "out of range" );
+		DaoProcess_RaiseError( proc, "Index", "out of range" );
 		return;
 	}else if( digit <0 || digit >= self->base ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "digit value out of range" );
+		DaoProcess_RaiseError( proc, NULL, "digit value out of range" );
 		return;
 	}
 	if( pid->type == 0 ){
@@ -1368,7 +1368,7 @@ static void DaoLong_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, 
 				self->data[m] &= ~(base_masks[self->base]<<shift);
 				self->data[m] |= digit<<shift;
 				if( m+1 >= n && digit2 ==0 )
-					DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "out of range" );
+					DaoProcess_RaiseError( proc, "Index", "out of range" );
 			}else{
 				int d = (self->data[m+1]<<LONG_BITS) | self->data[m];
 				d &= ~(base_masks[self->base]<<shift);
@@ -1384,7 +1384,7 @@ static void DaoLong_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], 
 	switch( N ){
 	case 0 : DaoLong_GetItem1( self, proc, dao_none_value ); break;
 	case 1 : DaoLong_GetItem1( self, proc, ids[0] ); break;
-	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
+	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
 static void DaoLong_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
@@ -1392,7 +1392,7 @@ static void DaoLong_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], 
 	switch( N ){
 	case 0 : DaoLong_SetItem1( self, proc, dao_none_value, value ); break;
 	case 1 : DaoLong_SetItem1( self, proc, ids[0], value ); break;
-	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
+	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
 static DaoTypeCore bigintCore=
@@ -1439,7 +1439,7 @@ static void BIGINT_SETI( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoProcess_LongDiv ( DaoProcess *self, DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, DaoxBigInt *r )
 {
 	if( x->size ==0 || (x->size ==1 && x->data[0] ==0) ){
-		DaoProcess_RaiseException( self, DAO_ERROR_FLOAT_DIVBYZERO, "" );
+		DaoProcess_RaiseError( self, "Float::DivByZero", "" );
 		return;
 	}
 	DaoxBigInt_Div( z, x, y, r );

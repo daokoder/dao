@@ -74,13 +74,13 @@ static void DNS_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
 	}
 	return;
 FieldNotExist:
-	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->chars );
+	DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
 	return;
 FieldNoPermit:
-	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTPERMIT, name->chars );
+	DaoProcess_RaiseError( proc, "Field::NotPermit", name->chars );
 	return;
 InvalidField:
-	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD, name->chars );
+	DaoProcess_RaiseError( proc, "Field", name->chars );
 }
 static void DNS_SetField( DaoValue *self0, DaoProcess *proc, DString *name, DaoValue *value )
 {
@@ -99,16 +99,16 @@ static void DNS_SetField( DaoValue *self0, DaoProcess *proc, DString *name, DaoV
 	if( DaoValue_Move( value, & dest->value, dest->dtype ) ==0 ) goto TypeNotMatching;
 	return;
 FieldNotExist:
-	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->chars );
+	DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
 	return;
 FieldNoPermit:
-	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTPERMIT, name->chars );
+	DaoProcess_RaiseError( proc, "Field::NotPermit", name->chars );
 	return;
 TypeNotMatching:
-	DaoProcess_RaiseException( proc, DAO_ERROR_TYPE, "not matching" );
+	DaoProcess_RaiseError( proc, "Type", "not matching" );
 	return;
 InvalidField:
-	DaoProcess_RaiseException( proc, DAO_ERROR_FIELD, name->chars );
+	DaoProcess_RaiseError( proc, "Field", name->chars );
 }
 static void DNS_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
 {
@@ -721,18 +721,6 @@ static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeBase *typ
 	return ctype_type;
 }
 
-DaoType* DaoNamespace_MakeExceptionType( DaoNamespace *self, const char *name, int fatal )
-{
-	DaoType *type, *parent = DaoException_GetType( fatal ? DAO_ERROR : DAO_WARNING );
-	DaoTypeBase *typer = (DaoTypeBase*) dao_calloc( 1, sizeof(DaoTypeBase) );
-	typer->name = name;
-	typer->supers[0] = parent->typer;
-	typer->Delete = parent->typer->Delete;
-	typer->GetGCFields = parent->typer->GetGCFields;
-	type = DaoNamespace_WrapType( self, typer, 0 );
-	type->kernel->attribs |= DAO_TYPER_FREE;
-	return type;
-}
 static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, int opaque )
 {
 	DaoType *ctype_type, *cdata_type;
@@ -967,8 +955,8 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 
 	DArray_Append( self->constants, DaoConstant_New( dao_none_value ) ); /* reserved for main */
 
-	if( vms && vms->nsInternal ){
-		DaoNamespace *ns = vms->nsInternal;
+	if( vms && vms->daoNamespace ){
+		DaoNamespace *ns = vms->daoNamespace;
 		DaoNamespace_AddConst( self, ns->name, (DaoValue*)ns, DAO_PERM_PUBLIC );
 		DArray_Append( self->namespaces, ns );
 		DaoNamespace_UpdateLookupTable( self );
@@ -1604,8 +1592,8 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	int i, n = strlen( name );
 	int attrib = tid >> 16;
 
-	if( (tid & DAO_ANY) && self != self->vmSpace->nsInternal ){
-		return DaoNamespace_MakeType( self->vmSpace->nsInternal, name, tid, pb, nest, N );
+	if( (tid & DAO_ANY) && self != self->vmSpace->daoNamespace ){
+		return DaoNamespace_MakeType( self->vmSpace->daoNamespace, name, tid, pb, nest, N );
 	}
 
 	tid = tid & 0xffff;
@@ -1942,7 +1930,7 @@ DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 		DString_AppendChar( name, '\'' );
 	}
 	if( name->size ==0 && value->type ==0 ) DString_SetChars( name, "none" );
-	type = DaoNamespace_MakeType( self->vmSpace->nsInternal, name->chars, DAO_VALTYPE, 0,0,0 );
+	type = DaoNamespace_MakeType( self->vmSpace->daoNamespace, name->chars, DAO_VALTYPE, 0,0,0 );
 	DaoValue_Copy( value, & type->aux );
 	DString_Delete( name );
 	return type;

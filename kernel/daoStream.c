@@ -53,7 +53,7 @@ static void DaoIO_Write0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int 
 	DMap *cycData;
 	int i;
 	if( (self->attribs & (DAO_IO_FILE | DAO_IO_PIPE)) && self->file == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "stream is not open!" );
+		DaoProcess_RaiseError( proc, NULL, "stream is not open!" );
 		return;
 	}
 	cycData = DMap_New(0,0);
@@ -64,7 +64,7 @@ static void DaoIO_Write( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
 	if( ( self->mode & DAO_IO_WRITE ) == 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "stream is not writable" );
+		DaoProcess_RaiseError( proc, NULL, "stream is not writable" );
 		return;
 	}
 	DaoIO_Write0( self, proc, p+1, N-1 );
@@ -80,7 +80,7 @@ static void DaoIO_Writeln0( DaoStream *self, DaoProcess *proc, DaoValue *p[], in
 	DMap *cycData;
 	int i;
 	if( (self->attribs & (DAO_IO_FILE | DAO_IO_PIPE)) && self->file == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "stream is not open!" );
+		DaoProcess_RaiseError( proc, NULL, "stream is not open!" );
 		return;
 	}
 	cycData = DMap_New(0,0);
@@ -95,7 +95,7 @@ static void DaoIO_Writeln( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
 	if( ( self->mode & DAO_IO_WRITE ) == 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "stream is not writable" );
+		DaoProcess_RaiseError( proc, NULL, "stream is not writable" );
 		return;
 	}
 	DaoIO_Writeln0( self, proc, p+1, N-1 );
@@ -135,7 +135,7 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 	char F, *s, *end, *fg, *bg, *fmt, message[100];
 	int k, id = 0;
 	if( (self->attribs & (DAO_IO_FILE | DAO_IO_PIPE)) && self->file == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "stream is not open!" );
+		DaoProcess_RaiseError( proc, NULL, "stream is not open!" );
 		return;
 	}
 	cycData = DMap_New(0,0);
@@ -170,7 +170,7 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 		}
 		DString_SetBytes( fmt2, fmt, s - fmt + 1 );
 		if( strchr( convs, *s ) == NULL ){
-			DaoProcess_RaiseException( proc, DAO_WARNING, "invalid format conversion" );
+			DaoProcess_RaiseWarning( proc, NULL, "invalid format conversion" );
 			continue;
 		}
 		F = *s;
@@ -226,17 +226,17 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 		continue;
 NullParameter:
 		sprintf( message, "%i-th parameter is null!", id );
-		DaoProcess_RaiseException( proc, DAO_WARNING, message );
+		DaoProcess_RaiseWarning( proc, NULL, message );
 		continue;
 WrongColor:
 		sprintf( message, "%i-th parameter has wrong color format!", id );
-		DaoProcess_RaiseException( proc, DAO_WARNING, message );
+		DaoProcess_RaiseWarning( proc, NULL, message );
 		continue;
 WrongParameter:
 		self->format = NULL;
 		if( fg || bg ) DaoStream_SetColor( self, NULL, NULL );
 		sprintf( message, "%i-th parameter has wrong type for format \"%s\"!", id, fmt2->chars );
-		DaoProcess_RaiseException( proc, DAO_WARNING, message );
+		DaoProcess_RaiseWarning( proc, NULL, message );
 	}
 	DString_Delete( fgcolor );
 	DString_Delete( bgcolor );
@@ -248,7 +248,7 @@ static void DaoIO_Writef( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
 	if( ( self->mode & DAO_IO_WRITE ) == 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "stream is not writable" );
+		DaoProcess_RaiseError( proc, NULL, "stream is not writable" );
 		return;
 	}
 	DaoIO_Writef0( self, proc, p+1, N-1 );
@@ -273,11 +273,11 @@ static void DaoIO_Read( DaoProcess *proc, DaoValue *p[], int N )
 	if( N >0 ) self = & p[0]->xStream;
 	if( N >1 ) count = p[1]->xInteger.value;
 	if( (self->attribs & (DAO_IO_FILE | DAO_IO_PIPE)) && self->file == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "stream is not open!" );
+		DaoProcess_RaiseError( proc, NULL, "stream is not open!" );
 		return;
 	}
 	if( ( self->mode & DAO_IO_READ ) == 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "stream is not readable" );
+		DaoProcess_RaiseError( proc, NULL, "stream is not readable" );
 		return;
 	}
 	if( self->file == NULL && self->redirect && self->redirect->StdioRead ){
@@ -331,7 +331,7 @@ static FILE* DaoIO_OpenFile( DaoProcess *proc, DString *name, const char *mode, 
 	DString_Delete( fname );
 	if( fin == NULL && silent == 0 ){
 		snprintf( buf, IO_BUF_SIZE, "error opening file: %s", DString_GetData( name ) );
-		DaoProcess_RaiseException( proc, DAO_ERROR, buf );
+		DaoProcess_RaiseError( proc, NULL, buf );
 		return NULL;
 	}
 	return fin;
@@ -366,7 +366,7 @@ static void DaoIO_Open( DaoProcess *proc, DaoValue *p[], int N )
 	if( N==0 ){
 		stream->file = tmpfile();
 		if( stream->file <= 0 ){
-			DaoProcess_RaiseException( proc, DAO_ERROR, "failed to create temporary file" );
+			DaoProcess_RaiseError( proc, NULL, "failed to create temporary file" );
 			return;
 		}
 	}else{
@@ -502,7 +502,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
 		line = DaoString_New();
 		while( DaoFile_ReadLine( fin, line->value ) ){
-			if( chop ) DString_Chop( line->value );
+			if( chop ) DString_Chop( line->value, 0 );
 			DaoList_Append( list, (DaoValue*) line );
 		}
 		DaoString_Delete( line );
@@ -513,7 +513,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 		line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
 		DaoProcess_AcquireCV( proc );
 		while( DaoFile_ReadLine( fin, line->value ) ){
-			if( chop ) DString_Chop( line->value );
+			if( chop ) DString_Chop( line->value, 0 );
 			proc->topFrame->entry = entry;
 			DaoProcess_Execute( proc );
 			if( proc->status == DAO_PROCESS_ABORTED ) break;
@@ -538,7 +538,7 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
 		line = DaoString_New();
 		while( (i++) < count && DaoStream_ReadLine( self, line->value ) ){
-			if( chop ) DString_Chop( line->value );
+			if( chop ) DString_Chop( line->value, 0 );
 			DaoList_Append( list, (DaoValue*) line );
 		}
 		DaoString_Delete( line );
@@ -550,7 +550,7 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 		line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
 		DaoProcess_AcquireCV( proc );
 		while( (i++) < count && DaoStream_ReadLine( self, line->value ) ){
-			if( chop ) DString_Chop( line->value );
+			if( chop ) DString_Chop( line->value, 0 );
 			proc->topFrame->entry = entry;
 			DaoProcess_Execute( proc );
 			if( proc->status == DAO_PROCESS_ABORTED ) break;
@@ -560,35 +560,6 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_ReleaseCV( proc );
 		DaoProcess_PopFrame( proc );
 	}
-}
-static void DaoIO_WriteLines( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *string;
-	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
-	DaoValue *res, *index = (DaoValue*)(void*)&idint;
-	daoint i, entry, lines = p[1]->xInteger.value;
-	FILE *fout = stdout;
-	DaoVmCode *sect;
-
-	if( p[0]->type == DAO_STRING ){
-		fout = DaoIO_OpenFile( proc, p[0]->xString.value, "w+", 0 );
-		if( fout == NULL ) return;
-	}else{
-		if( p[0]->xStream.file ) fout = p[0]->xStream.file;
-	}
-	sect = DaoProcess_InitCodeSection( proc );
-	if( sect == NULL ) return;
-	entry = proc->topFrame->entry;
-	for(i=0; i<lines; i++){
-		idint.value = i;
-		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
-		proc->topFrame->entry = entry;
-		DaoProcess_Execute( proc );
-		if( proc->status == DAO_PROCESS_ABORTED ) break;
-		string = proc->stackValues[0]->xString.value;
-		fprintf( fout, "%s", string->chars );
-	}
-	DaoProcess_PopFrame( proc );
 }
 
 DaoFuncItem dao_io_methods[] =
@@ -631,9 +602,6 @@ static DaoFuncItem streamMeths[] =
 	{ DaoIO_GetItem,   "[]( self :stream, iter : for_iterator )=>string" },
 
 	{ DaoIO_ReadLines2, "readlines( self :stream, numline=0, chop=0 )[line:string=>none|@T]=>list<@T>" },
-	// Not particularly useful, may be removed!
-	{ DaoIO_WriteLines, "writelines( self :stream, lines :int)[line:int =>string]" },
-	{ DaoIO_WriteLines, "writelines( file :string, lines :int)[line:int =>string]" },
 	{ NULL, NULL }
 };
 

@@ -46,7 +46,7 @@ static void DaoComplex_GetField( DaoValue *self, DaoProcess *proc, DString *name
 	}else if( strcmp( name->chars, "imag" ) == 0 ){
 		DaoProcess_PutDouble( proc, self->xComplex.value.imag );
 	}else{
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->chars );
+		DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
 	}
 }
 static void DaoComplex_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
@@ -56,7 +56,7 @@ static void DaoComplex_SetField( DaoValue *self, DaoProcess *proc, DString *name
 	}else if( strcmp( name->chars, "imag" ) == 0 ){
 		self->xComplex.value.imag = DaoValue_GetDouble( value );
 	}else{
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, name->chars );
+		DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
 	}
 }
 static void DaoComplex_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
@@ -366,14 +366,14 @@ static void MakeSlice( DaoProcess *proc, DaoValue *pid, daoint N, DVector *slice
 				to = DaoValue_GetInteger( data[1] );
 				rc = SliceRange( slices, N, 0, to );
 			}else{
-				DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "need number" );
+				DaoProcess_RaiseError( proc, "Index", "need number" );
 			}
 			break;
 		}
 	default: rc = 0; break;
 	}
 	if( slices->size == size ) SliceRange2( slices, N, 0, N );
-	if( rc == 0 ) DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, "" );
+	if( rc == 0 ) DaoProcess_RaiseError( proc, "Index::Range", "" );
 }
 static daoint DaoArray_IndexFromSlice( DaoArray *self, DVector *slices, daoint sid )
 /* sid: plain index in the slicesd array */
@@ -563,7 +563,7 @@ static void DaoArray_GetItem1( DaoValue *value, DaoProcess *proc, DaoValue *pid 
 		daoint id = DaoValue_GetInteger( pid );
 		if( id < 0 ) id += self->size;
 		if( id < 0 || id >= self->size ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, "" );
+			DaoProcess_RaiseError( proc, "Index::Range", "" );
 			return;
 		}
 		switch( self->etype ){
@@ -578,7 +578,7 @@ static void DaoArray_GetItem1( DaoValue *value, DaoProcess *proc, DaoValue *pid 
 		DaoValue **data = pid->xTuple.values;
 		daoint id = data[1]->xInteger.value;
 		if( data[1]->type != DAO_INTEGER || id < 0 || id >= self->size ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, "index out of range" );
+			DaoProcess_RaiseError( proc, "Index::Range", "index out of range" );
 			return;
 		}
 		switch( self->etype ){
@@ -694,14 +694,14 @@ void DaoArray_SetItem1( DaoValue *va, DaoProcess *proc, DaoValue *pid, DaoValue 
 		}else if( value->type == DAO_ARRAY ){
 			DaoArray_ArrayArith( self, self, (DaoArray*) value, DVM_MOVE, proc );
 		}else{
-			DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "" );
+			DaoProcess_RaiseError( proc, "Value", "" );
 		}
 		return;
 	}else if( pid->type >= DAO_INTEGER && pid->type <= DAO_DOUBLE && value->type <= DAO_COMPLEX ){
 		daoint id = DaoValue_GetInteger( pid );
 		if( id < 0 ) id += self->size;
 		if( id < 0 || id >= self->size ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, "" );
+			DaoProcess_RaiseError( proc, "Index::Range", "" );
 			return;
 		}
 		DaoArray_SetValue( self, id, value );
@@ -748,7 +748,7 @@ static void DaoArray_GetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[]
 			}
 		}
 		if( idFlat >= self->size ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, "index out of range" );
+			DaoProcess_RaiseError( proc, "Index::Range", "index out of range" );
 			return;
 		}
 		if( allNumbers ){
@@ -798,7 +798,7 @@ static void DaoArray_SetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[]
 			}
 		}
 		if( idFlat >= self->size ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, "index out of range" );
+			DaoProcess_RaiseError( proc, "Index::Range", "index out of range" );
 			return;
 		}
 		if( allNumbers ){
@@ -912,7 +912,7 @@ static void DaoARRAY_Dim( DaoProcess *proc, DaoValue *par[], int N )
 		i = par[1]->xInteger.value;
 		if( i <0 || i >= self->slices->size ){
 			*num = -1;
-			DaoProcess_RaiseException( proc, DAO_WARNING, "no such dimension" );
+			DaoProcess_RaiseWarning( proc, NULL, "no such dimension" );
 		}else{
 			*num = self->slices->data.daoints[2*i+1];
 		}
@@ -921,7 +921,7 @@ static void DaoARRAY_Dim( DaoProcess *proc, DaoValue *par[], int N )
 		i = par[1]->xInteger.value;
 		if( i <0 || i >= self->ndim ){
 			*num = -1;
-			DaoProcess_RaiseException( proc, DAO_WARNING, "no such dimension" );
+			DaoProcess_RaiseWarning( proc, NULL, "no such dimension" );
 		}else{
 			*num = self->dims[i];
 		}
@@ -946,7 +946,7 @@ static void DaoARRAY_Resize( DaoProcess *proc, DaoValue *par[], int N )
 	DaoArray_Sliced( nad );
 
 	if( nad->etype == DAO_COMPLEX ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid dimension" );
+		DaoProcess_RaiseError( proc, "Param", "invalid dimension" );
 		return;
 	}
 	ad = DVector_New( sizeof(daoint) );
@@ -973,7 +973,7 @@ static void DaoARRAY_Reshape( DaoProcess *proc, DaoValue *par[], int N )
 	DaoArray_Sliced( nad );
 
 	if( nad->etype == DAO_COMPLEX ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid dimension" );
+		DaoProcess_RaiseError( proc, "Param", "invalid dimension" );
 		return;
 	}
 	ad = DVector_New( sizeof(daoint) );
@@ -986,7 +986,7 @@ static void DaoARRAY_Reshape( DaoProcess *proc, DaoValue *par[], int N )
 	}
 	if( self->owner && self->size != size ){
 		DVector_Delete( ad );
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid dimension" );
+		DaoProcess_RaiseError( proc, "Param", "invalid dimension" );
 		return;
 	}
 	DaoArray_SetDimCount( self, ad->size );
@@ -1313,7 +1313,7 @@ static void DaoARRAY_Permute( DaoProcess *proc, DaoValue *par[], int npar )
 	if( res ==0 ) goto RaiseException;
 	return;
 RaiseException:
-	DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid parameter for permute()" );
+	DaoProcess_RaiseError( proc, "Param", "invalid parameter for permute()" );
 }
 static void DaoARRAY_Transpose( DaoProcess *proc, DaoValue *par[], int npar )
 {
@@ -1960,7 +1960,7 @@ int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, D
 	ac.real = af;
 	if( A->type == DAO_COMPLEX ) ac = A->xComplex.value;
 	if( N < 0 ){
-		if( proc ) DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "not matched shape" );
+		if( proc ) DaoProcess_RaiseError( proc, "Value", "not matched shape" );
 		return 0;
 	}
 	if( array_b->etype == DAO_INTEGER && A->type == DAO_INTEGER ){
@@ -2070,7 +2070,7 @@ int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, D
 	bc.real = bf;
 	if( B->type == DAO_COMPLEX ) bc = B->xComplex.value;
 	if( N < 0 ){
-		if( proc ) DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "not matched shape" );
+		if( proc ) DaoProcess_RaiseError( proc, "Value", "not matched shape" );
 		return 0;
 	}
 	if( array_a->etype == DAO_INTEGER && B->type == DAO_INTEGER ){
@@ -2182,7 +2182,7 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 	double va, vb;
 
 	if( N < 0 || (C->original && M != N) ){
-		if( proc ) DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "not matched shape" );
+		if( proc ) DaoProcess_RaiseError( proc, "Value", "not matched shape" );
 		return 0;
 	}
 	if( op == DVM_MOVE && C->original != NULL && C->original == B->original ){

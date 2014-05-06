@@ -573,14 +573,14 @@ static void MakeSlice( DaoProcess *proc, DaoValue *pid, daoint N, DVector *slice
 			}else if( data[0]->type == DAO_STRING && data[1]->type == DAO_NONE ){
 			}else if( data[0]->type == DAO_NONE && data[1]->type == DAO_STRING ){
 			}else{
-				DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "need number" );
+				DaoProcess_RaiseError( proc, "Index", "need number" );
 			}
 			break;
 		}
 	default: break;
 	}
 	if( slice->size < 2 ) SliceRange2( slice, N, 0, N );
-	if( rc == 0 ) DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, "" );
+	if( rc == 0 ) DaoProcess_RaiseError( proc, "Index::Range", "" );
 }
 static void DaoxDataFrame_MakeFullSlice( DaoxDataFrame *self, DVector *slices )
 {
@@ -615,7 +615,7 @@ static int DaoDataFrame_MakeSlice( DaoxDataFrame *self, DaoProcess *proc, DaoVal
 
 	DaoxDataFrame_MakeFullSlice( self, slices );
 	if( N > D ){
-		DaoProcess_RaiseException( proc, DAO_WARNING, "too many indices" );
+		DaoProcess_RaiseWarning( proc, NULL, "too many indices" );
 		N = D;
 	}
 	DVector_Reset( slices, 0 );
@@ -1091,7 +1091,7 @@ static daoint DaoxDF_MakeIndex( DaoxDataFrame *self, int dim, DaoValue *value, D
 		idx = 0;
 	}
 	if( idx < 0 || idx >= self->dims[dim] ){
-		DaoProcess_RaiseException( p, DAO_ERROR_INDEX_OUTOFRANGE, "" );
+		DaoProcess_RaiseError( p, "Index::Range", "" );
 		return -1;
 	}
 	return idx;
@@ -1154,9 +1154,9 @@ static void FRAME_SETMI( DaoProcess *proc, DaoValue *p[], int N )
 		}else{
 		}
 		if( rc == DAOX_DF_WRONG_SHAP ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "Invalid shape" );
+			DaoProcess_RaiseError( proc, "Index", "Invalid shape" );
 		}else if( rc == DAOX_DF_WRONG_VALUE ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "Invalid value" );
+			DaoProcess_RaiseError( proc, "Value", "Invalid value" );
 		}
 	}
 }
@@ -1768,9 +1768,9 @@ static void FRAME_UpdateArray( DaoProcess *proc, DaoValue *P[], int N, int oper 
 {
 	int rc = DaoxDataFrame_UpdateByArray( (DaoxDataFrame*) P[0], (DaoArray*) P[1], oper );
 	if( rc == DAOX_DF_WRONG_SHAP ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "Invalid shape" );
+		DaoProcess_RaiseError( proc, "Index", "Invalid shape" );
 	}else if( rc == DAOX_DF_WRONG_VALUE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "Invalid value" );
+		DaoProcess_RaiseError( proc, "Value", "Invalid value" );
 	}
 }
 static void FRAME_AddArray( DaoProcess *proc, DaoValue *P[], int N )

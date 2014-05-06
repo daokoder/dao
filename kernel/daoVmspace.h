@@ -77,8 +77,8 @@ struct DaoVmSpace
 	*/
 	DaoNamespace  *mainNamespace;
 
-	/* for some internal scripts and predefined objects or types */
-	DaoNamespace  *nsInternal;
+	/* for standard objects or types etc.: */
+	DaoNamespace  *daoNamespace;
 
 	DaoStream  *stdioStream;
 	DaoStream  *errorStream;
@@ -171,6 +171,8 @@ DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
 
 DAO_DLL const char*const DaoVmSpace_GetCopyNotice();
 DAO_DLL DaoTypeBase* DaoVmSpace_GetTyper( short type );
+
+DAO_DLL DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name );
 
 DAO_DLL DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self );
 DAO_DLL DaoByteCoder* DaoVmSpace_AcquireByteCoder( DaoVmSpace *self );

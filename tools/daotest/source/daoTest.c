@@ -230,8 +230,8 @@ int main( int argc, char **argv )
 				DString_Reset( output, 0 );
 				DaoNamespace_AddParent( ns2, ns );
 				DaoProcess_Eval( proc, ns2, codes->chars );
-				DString_Trim( output );
-				DString_Trim( result );
+				DString_Trim( output, 1, 1, 0 );
+				DString_Trim( result, 1, 1, 0 );
 				if( output->size == 0 && result->size != 0 ){
 					/* If there is no output, check the lasted evaluated value: */
 					DaoProcess *proc2 = DaoVmSpace_AcquireProcess( vmSpace );

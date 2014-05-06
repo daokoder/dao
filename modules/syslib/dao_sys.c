@@ -204,7 +204,7 @@ static void SYS_Sleep( DaoProcess *proc, DaoValue *p[], int N )
 
 	double s = p[0]->xFloat.value;
 	if( s < 0 ){
-		DaoProcess_RaiseException( proc, DAO_WARNING_VALUE, "expecting positive value" );
+		DaoProcess_RaiseWarning( proc, "Value", "expecting positive value" );
 		return;
 	}
 #ifdef DAO_WITH_THREAD
@@ -244,7 +244,7 @@ static void SYS_Popen( DaoProcess *proc, DaoValue *p[], int N )
 		mode = DString_GetData( p[1]->xString.value );
 		stream->file = popen( DString_GetData( fname ), mode );
 		if( stream->file == NULL ){
-			DaoProcess_RaiseException( proc, DAO_ERROR, "error opening pipe" );
+			DaoProcess_RaiseError( proc, NULL, "error opening pipe" );
 		}
 		stream->mode = 0;
 		if( strstr( mode, "+" ) )
@@ -256,7 +256,7 @@ static void SYS_Popen( DaoProcess *proc, DaoValue *p[], int N )
 				stream->mode |= DAO_IO_WRITE;
 		}
 	}else{
-		DaoProcess_RaiseException( proc, DAO_ERROR, "empty command line" );
+		DaoProcess_RaiseError( proc, NULL, "empty command line" );
 	}
 	DaoProcess_PutValue( proc, (DaoValue*)stream );
 }
@@ -296,7 +296,7 @@ static void SYS_SetLocale( DaoProcess *proc, DaoValue *p[], int N )
 	if ( old )
 		DaoProcess_PutChars( proc, old );
 	else
-		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid locale" );
+		DaoProcess_RaiseError( proc, NULL, "invalid locale" );
 }
 static void SYS_Clock( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -313,12 +313,12 @@ static void SYS_PutEnv( DaoProcess *proc, DaoValue *p[], int N )
 	char *value = DString_GetData( p[1]->xString.value );
 	char *buf = malloc( strlen( name ) + strlen( value ) + 2 );
 	if( !buf ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "memory allocation failed" );
+		DaoProcess_RaiseError( proc, NULL, "memory allocation failed" );
 		return;
 	}
 	sprintf( buf, "%s=%s", name, value );
 	if( putenv( buf ) ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "error putting environment variable" );
+		DaoProcess_RaiseError( proc, NULL, "error putting environment variable" );
 		free( buf );
 	}
 }
@@ -386,7 +386,7 @@ static void DaoBUF_New( DaoProcess *proc, DaoValue *p[], int N )
 	Dao_Buffer *self = Dao_Buffer_New( size >= 0 ? size : 0 );
 	DaoProcess_PutValue( proc, (DaoValue*) self );
 	if( size < 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "negative buffer size" );
+		DaoProcess_RaiseError( proc, NULL, "negative buffer size" );
 		return;
 	}
 }
@@ -400,7 +400,7 @@ static void DaoBUF_Resize( DaoProcess *proc, DaoValue *p[], int N )
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
 	daoint size = p[1]->xInteger.value;
 	if( size < 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "negative buffer size" );
+		DaoProcess_RaiseError( proc, NULL, "negative buffer size" );
 		return;
 	}
 	Dao_Buffer_Resize( self, size );
@@ -410,7 +410,7 @@ static void DaoBUF_CopyData( DaoProcess *proc, DaoValue *p[], int N )
 	Dao_Buffer *self = (Dao_Buffer*) p[0];
 	Dao_Buffer *other = (Dao_Buffer*) p[1];
 	if( other->bufsize == 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid value" );
+		DaoProcess_RaiseError( proc, "Param", "invalid value" );
 		return;
 	}
 	if( self->bufsize < other->size ) Dao_Buffer_Resize( self, other->size );
@@ -434,7 +434,7 @@ static void DaoBUF_SetString( DaoProcess *proc, DaoValue *p[], int N )
 static int DaoBUF_CheckRange( Dao_Buffer *self, int i, int m, DaoProcess *proc )
 {
 	if( i*m >=0 && i*m < self->size ) return 0;
-	DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, "" );
+	DaoProcess_RaiseError( proc, "Index::Range", "" );
 	return 1;
 }
 static void DaoBUF_GetByte( DaoProcess *proc, DaoValue *p[], int N )

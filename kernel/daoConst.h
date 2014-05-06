@@ -226,6 +226,35 @@ enum DaoGlobalVarOffset
 	DVR_NSV_EXCEPTIONS
 };
 
+enum DaoExceptionType
+{
+	DAO_EXCEPTION = 0,
+	DAO_WARNING ,
+	DAO_ERROR ,
+
+	DAO_ERROR_FIELD ,
+	DAO_ERROR_FIELD_NOTEXIST ,
+	DAO_ERROR_FIELD_NOTPERMIT ,
+	DAO_ERROR_FLOAT ,
+	DAO_ERROR_FLOAT_DIVBYZERO ,
+	DAO_ERROR_FLOAT_OVERFLOW ,
+	DAO_ERROR_FLOAT_UNDERFLOW ,
+	DAO_ERROR_INDEX ,
+	DAO_ERROR_INDEX_OUTOFRANGE ,
+	DAO_ERROR_KEY ,
+	DAO_ERROR_KEY_NOTEXIST ,
+	DAO_ERROR_PARAM ,
+	DAO_ERROR_SYNTAX ,
+	DAO_ERROR_TYPE ,
+	DAO_ERROR_VALUE ,
+	DAO_ERROR_FILE ,
+
+	DAO_WARNING_SYNTAX ,
+	DAO_WARNING_VALUE ,
+
+	ENDOF_BASIC_EXCEPT
+};
+
 enum DaoArithOperType{
 
 	DAO_OPER_REGEX_EQ  =0,
@@ -406,13 +435,7 @@ enum DaoCtInfoId
 extern const char* getCtInfo( int tp );
 extern const char* getRtInfo( int tp );
 
-typedef struct DaoExceptionTripple
-{
-	int         code;
-	const char *name;
-	const char *info;
-}DaoExceptionTripple;
-
+extern const char* const daoExceptionName[];
 extern const char* const daoExceptionInfo[];
 
 extern const char* const coreTypeNames[];

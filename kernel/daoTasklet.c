@@ -986,7 +986,7 @@ static void CHANNEL_SetCap( DaoChannel *self, DaoValue *value, DaoProcess *proc 
 	self->cap = value->xInteger.value;
 	if( self->cap > 0 ) return;
 	self->cap = 1;
-	DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "channel capacity must be greater than 0" );
+	DaoProcess_RaiseError( proc, "Param", "channel capacity must be greater than 0" );
 }
 static void CHANNEL_New( DaoProcess *proc, DaoValue *par[], int N )
 {
@@ -998,7 +998,7 @@ static void CHANNEL_New( DaoProcess *proc, DaoValue *par[], int N )
 		DString_AppendChars( s, "data type " );
 		DString_Append( s, retype->nested->items.pType[0]->name );
 		DString_AppendChars( s, " is not supported for channel" );
-		DaoProcess_RaiseException( proc, DAO_ERROR, s->chars );
+		DaoProcess_RaiseError( proc, NULL, s->chars );
 		DString_Delete( s );
 	}
 	DaoProcess_PutValue( proc, (DaoValue*) self );
@@ -1031,7 +1031,7 @@ static void CHANNEL_Cap( DaoProcess *proc, DaoValue *par[], int N )
 static int DaoProcess_CheckCB( DaoProcess *self, const char *message )
 {
 	if( self->depth == 0 ) return 0;
-	DaoProcess_RaiseException( self, DAO_ERROR, message );
+	DaoProcess_RaiseError( self, NULL, message );
 	return 1;
 }
 static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
@@ -1044,13 +1044,13 @@ static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
 	DaoProcess_PutInteger( proc, 1 );
 	if( DaoProcess_CheckCB( proc, "cannot send/block inside code section method" ) ) return;
 	if( self->cap <= 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "channel is closed" );
+		DaoProcess_RaiseError( proc, "Param", "channel is closed" );
 		return;
 	}
 
 	data = DaoValue_DeepCopy( par[1] );
 	if( data == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid data for the channel" );
+		DaoProcess_RaiseError( proc, "Param", "invalid data for the channel" );
 		return;
 	}
 
@@ -1209,7 +1209,7 @@ void DaoMT_Select( DaoProcess *proc, DaoValue *par[], int n )
 		int isfut = DaoValue_CheckCtype( value, dao_type_future );
 		int ischan = DaoValue_CheckCtype( value, dao_type_channel );
 		if( isfut == 0 && ischan == 0 ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid type selection" );
+			DaoProcess_RaiseError( proc, "Param", "invalid type selection" );
 			return;
 		}
 	}

@@ -40,6 +40,7 @@
 #include"daoValue.h"
 
 void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int code );
+
 int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc,
 		DString *name, DaoValue *P[], int N, int ignore_return, int execute )
 {
@@ -78,7 +79,7 @@ static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *strea
 	DaoValue_Clear( & proc->stackValues[0] );
 	ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, NULL,0,1,1 );
 	if( ec && ec != DAO_ERROR_FIELD_NOTEXIST ){
-		DaoProcess_RaiseException( proc, ec, DString_GetData( proc->mbstring ) );
+		DaoProcess_RaiseException( proc, daoExceptionName[ec], proc->mbstring->chars, NULL );
 	}else if( ec == DAO_ERROR_FIELD_NOTEXIST || proc->stackValues[0] == NULL ){
 		DaoStream_WriteString( stream, self->defClass->className );
 		DaoStream_WriteChars( stream, buf );
@@ -106,7 +107,7 @@ static void DaoObject_Core_GetField( DaoValue *self0, DaoProcess *proc, DString 
 	}else{
 		DaoProcess_PutReference( proc, value );
 	}
-	if( rc ) DaoProcess_RaiseException( proc, rc, DString_GetData( name ) );
+	if( rc ) DaoProcess_RaiseException( proc, daoExceptionName[rc], name->chars, NULL );
 }
 static void DaoObject_Core_SetField( DaoValue *self0, DaoProcess *proc, DString *name, DaoValue *value )
 {
@@ -130,11 +131,7 @@ static void DaoObject_Core_SetField( DaoValue *self0, DaoProcess *proc, DString 
 		}
 		if( ec == DAO_ERROR_FIELD_NOTEXIST ) ec = ec2;
 	}
-	if( ec == DAO_ERROR ){
-		DaoProcess_RaiseException( proc, ec, "cannot modify default class instance" );
-	}else{
-		DaoProcess_RaiseException( proc, ec, DString_GetData( name ) );
-	}
+	if( ec ) DaoProcess_RaiseException( proc, daoExceptionName[ec], name->chars, NULL );
 }
 static void DaoObject_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
 {
@@ -142,7 +139,7 @@ static void DaoObject_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[
 	int rc = 0;
 	DString_SetChars( proc->mbstring, "[]" );
 	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, ids, N,0,0 );
-	if( rc ) DaoProcess_RaiseException( proc, rc, DString_GetData( proc->mbstring ) );
+	if( rc ) DaoProcess_RaiseException( proc, daoExceptionName[rc], proc->mbstring->chars, NULL );
 }
 static void DaoObject_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
 {
@@ -153,7 +150,7 @@ static void DaoObject_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[
 	ps[0] = value;
 	DString_SetChars( proc->mbstring, "[]=" );
 	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, ps, N+1,1,0 );
-	if( rc ) DaoProcess_RaiseException( proc, rc, DString_GetData( proc->mbstring ) );
+	if( rc ) DaoProcess_RaiseException( proc, daoExceptionName[rc], proc->mbstring->chars, NULL );
 }
 
 static DaoTypeCore objCore =

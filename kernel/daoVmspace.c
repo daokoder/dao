@@ -59,11 +59,9 @@ DaoConfig daoConfig =
 {
 	1, /*cpu*/
 	0, /*jit*/
-	1, /*typedcode*/
 	1, /*optimize*/
 	0, /*iscgi*/
 	8, /*tabspace*/
-	0  /*chindent*/
 };
 
 DaoVmSpace *mainVmSpace = NULL;
@@ -599,14 +597,14 @@ DaoVmSpace* DaoVmSpace_New()
 	DCondVar_Init( & self->condvWait );
 #endif
 
-	self->nsInternal = NULL; /* need to be set for DaoNamespace_New() */
-	self->nsInternal = DaoNamespace_New( self, "dao" );
-	self->nsInternal->vmSpace = self;
-	GC_IncRC( self->nsInternal );
-	DMap_Insert( self->nsModules, self->nsInternal->name, self->nsInternal );
-	DArray_PushFront( self->loadedModules, self->nsInternal );
+	self->daoNamespace = NULL; /* need to be set for DaoNamespace_New() */
+	self->daoNamespace = DaoNamespace_New( self, "dao" );
+	self->daoNamespace->vmSpace = self;
+	GC_IncRC( self->daoNamespace );
+	DMap_Insert( self->nsModules, self->daoNamespace->name, self->daoNamespace );
+	DArray_PushFront( self->loadedModules, self->daoNamespace );
 
-	DaoNamespace_AddCodeInliner( self->nsInternal, "test", dao_default_test_inliner );
+	DaoNamespace_AddCodeInliner( self->daoNamespace, "test", dao_default_test_inliner );
 
 	self->mainNamespace = DaoNamespace_New( self, "MainNamespace" );
 	self->mainNamespace->vmSpace = self;
@@ -617,7 +615,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->mainProcess = DaoProcess_New( self );
 	GC_IncRC( self->mainProcess );
 
-	if( mainVmSpace ) DaoNamespace_AddParent( self->nsInternal, mainVmSpace->nsInternal );
+	if( mainVmSpace ) DaoNamespace_AddParent( self->daoNamespace, mainVmSpace->daoNamespace );
 
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
@@ -639,7 +637,7 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	for(it=DMap_First(self->allOptimizers); it; it=DMap_Next(self->allOptimizers,it)){
 		DaoOptimizer_Delete( (DaoOptimizer*) it->key.pVoid );
 	}
-	GC_DecRC( self->nsInternal );
+	GC_DecRC( self->daoNamespace );
 	GC_DecRC( self->mainNamespace );
 	GC_DecRC( self->stdioStream );
 	GC_DecRC( self->errorStream );
@@ -836,7 +834,6 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 				case 'j' : self->options |= DAO_OPTION_JIT;
 						   daoConfig.jit = 1;
 						   break;
-				case 'T' : daoConfig.typedcode = 0; break;
 				case 'e' : self->evalCmdline = 1;
 						   DString_Clear( self->mainSource );
 						   break;
@@ -1250,7 +1247,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 				DString_AppendChar( input, '\n' );
 				dao_free( chs );
 				if( CheckCodeCompletion( input, lexer ) ){
-					DString_Trim( input );
+					DString_Trim( input, 1, 1, 0 );
 					if( input->size && self->AddHistory ) self->AddHistory( input->chars );
 					break;
 				}
@@ -1271,7 +1268,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 				ch = getchar();
 			}
 			if( ch == EOF ) clearerr( stdin );
-			DString_Trim( input );
+			DString_Trim( input, 1, 1, 0 );
 		}
 		if( input->size == 0 ) continue;
 		self->stopit = 0;
@@ -2353,9 +2350,6 @@ static void DaoConfigure_FromFile( const char *name )
 			}else if( strcmp( tk1->string.chars, "jit" )==0 ){
 				if( yes <0 ) goto InvalidConfigValue;
 				daoConfig.jit = yes;
-			}else if( strcmp( tk1->string.chars, "typedcode" )==0 ){
-				if( yes <0 ) goto InvalidConfigValue;
-				daoConfig.typedcode = yes;
 			}else if( strcmp( tk1->string.chars, "optimize" )==0 ){
 				if( yes <0 ) goto InvalidConfigValue;
 				daoConfig.optimize = yes;
@@ -2409,28 +2403,39 @@ static void DaoConfigure()
 
 static void DaoMETH_Warn( DaoProcess *proc, DaoValue *p[], int n )
 {
-	DaoType *type = DaoException_GetType( DAO_WARNING );
-	DaoException *self = (DaoException*)DaoException_New( type );
+	DaoType *type = DaoVmSpace_MakeExceptionType( proc->vmSpace, "Exception::Warning" );
+	DaoException *exception = (DaoException*)DaoException_New( type );
 	DaoStream *stream = proc->stdioStream ? proc->stdioStream : proc->vmSpace->stdioStream;
-	DString_Assign( self->info, p[0]->xString.value );
-	DaoException_Init( self, proc, NULL );
-	DaoException_Print( self, stream );
-	DaoException_Delete( self );
+	DaoException_Init( exception, proc, p[0]->xString.value->chars, NULL );
+	DaoException_Print( exception, stream );
+	DaoException_Delete( exception );
 }
-static void DaoMETH_Panic( DaoProcess *proc, DaoValue *p[], int n )
+static void DaoMETH_Error( DaoProcess *proc, DaoValue *p[], int n )
 {
-	DaoType *type = DaoException_GetType( DAO_EXCEPTION );
-	DaoException *self = (DaoException*) DaoValue_CastCstruct( p[0], type );
-	DaoObject *object = DaoValue_CastObject( p[0] );
-	if( self == NULL && object != NULL ){
-		self = (DaoException*) DaoObject_CastToBase( object, type );
+	DaoType *etype = DaoVmSpace_MakeExceptionType( proc->vmSpace, "Exception::Error" );
+	DaoException *exception = DaoException_New( etype );
+
+	DaoException_Init( exception, proc, p[0]->xString.value->chars, NULL );
+	DArray_Append( proc->exceptions, exception );
+}
+static void DaoMETH_Error2( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DArray_Append( proc->exceptions, p[0] );
+}
+static void DaoMETH_Error3( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoType *etype = NULL;
+	DaoString *name = DaoValue_CastString( p[0] );
+	DaoException *exception;
+
+	if( name != NULL ){
+		etype = DaoVmSpace_MakeExceptionType( proc->vmSpace, name->value->chars );
+	}else{
+		etype = p[0]->xCtype.cdtype;
 	}
-	if( self == NULL ){
-		self = (DaoException*)DaoException_New( type );
-		DaoException_SetData( self, p[0] );
-	}
-	DaoException_Init( self, proc, NULL );
-	DArray_Append( proc->exceptions, object ? (void*)object : (void*)self );
+	exception = DaoException_New( etype );
+	DaoException_Init( exception, proc, p[1]->xString.value->chars, p[2] );
+	DArray_Append( proc->exceptions, exception );
 }
 static void DaoMETH_Recover( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -2451,6 +2456,12 @@ static void DaoMETH_Recover2( DaoProcess *proc, DaoValue *p[], int n )
 	DaoStackFrame *frame = proc->topFrame->prev; /* caller frame */
 
 	if( frame == NULL || frame->prev == NULL || frame->prev == proc->firstFrame ) return;
+	if( type->type == DAO_STRING ){
+		DString *name = type->xString.value;
+		type = (DaoValue*) DaoVmSpace_MakeExceptionType( proc->vmSpace, name->chars );
+		if( type == NULL ) return; /* no exception (none should be expected); */
+		type = type->xType.aux;
+	}
 	for(i=proc->exceptions->size-1; i>=frame->prev->exceptBase; --i){
 		DaoValue *value = proc->exceptions->items.pValue[i];
 		DaoObject *object = DaoValue_CastObject( value );
@@ -2497,12 +2508,67 @@ static void DaoMETH_Test( DaoProcess *proc, DaoValue *p[], int n )
 
 DaoFuncItem dao_builtin_methods[] =
 {
-	{ DaoMETH_Warn,      "warn( message : string )" },
-	{ DaoMETH_Panic,     "panic( value : any )" },
-	{ DaoMETH_Recover,   "recover( ) => list<any>" },
-	{ DaoMETH_Recover2,  "recover( eclass : interface<class<Exception>> ) => interface<Exception>|none" },
-	{ DaoMETH_Frame,     "frame() [=>@T] => @T" },
-	{ DaoMETH_Frame,     "frame( default_value :@T ) [=>@T] => @T" },
+	{ DaoMETH_Warn,
+		"warn( info :: string )"
+		/*
+		// Raise a warning with message "info".
+		*/
+	},
+	{ DaoMETH_Error,
+		"error( info :: string )"
+		/*
+		// Raise an error with message "info";
+		// The exception for the error will be an instance of Exception::Error.
+		*/
+	},
+	{ DaoMETH_Error2,
+		"error( exception :: interface<Exception> )"
+		/*
+		// Raise an error with pre-created exception object.
+		// Here type "interface<Exception>" represents instance of any type derived
+		// from "Exception", and the instance is passed in without casting.
+		*/
+	},
+	{ DaoMETH_Error3,
+		"error( eclass :: string|interface<class<Exception>>, info :: string, data : any = none )"
+		/*
+		// Raise an error of type "eclass" with message "info", and associate "data"
+		// to the error.
+		//
+		// "eclass" can be any exception type object, but it can also be a name such
+		// as "Exception::Error::Index" to identify the exception type. Exception type
+		// identified by name doesn't need to be defined, as long as it is started with
+		// "Exception::". In such cases, new exception types will be created properly!
+		// The same name then can be used in recover() to screen the exceptions.
+		//
+		// Here type "interface<class<Exception>>" represents any type derived from
+		// "Exception".
+		*/
+	},
+	{ DaoMETH_Recover,
+		"recover( ) => list<interface<Exception>>"
+		/*
+		//
+		*/
+	},
+	{ DaoMETH_Recover2,
+		"recover( eclass :: string|interface<class<Exception>> ) => interface<Exception>|none"
+		/*
+		//
+		*/
+	},
+	{ DaoMETH_Frame,
+		"frame() [=>@T] => @T"
+		/*
+		//
+		*/
+	},
+	{ DaoMETH_Frame,
+		"frame( default_value :@T ) [=>@T] => @T"
+		/*
+		//
+		*/
+	},
 #if DEBUG
 	{ DaoMETH_Test,      "__test1__( ... )" },
 	{ DaoMETH_Test,      "__test2__( ... : int|string )" },
@@ -2690,7 +2756,7 @@ DaoVmSpace* DaoInit( const char *command )
 		mbs->chars[ mbs->size ] = 0;
 	}
 
-	ns = vms->nsInternal;
+	ns = vms->daoNamespace;
 
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_udf );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_routine );
@@ -2720,11 +2786,11 @@ DaoVmSpace* DaoInit( const char *command )
 
 
 #ifdef DAO_WITH_NUMARRAY
-	DaoNamespace_SetupType( vms->nsInternal, & numarTyper );
+	DaoNamespace_SetupType( vms->daoNamespace, & numarTyper );
 #endif
 
-	DaoNamespace_SetupType( vms->nsInternal, & stringTyper );
-	DaoNamespace_SetupType( vms->nsInternal, & comTyper );
+	DaoNamespace_SetupType( vms->daoNamespace, & stringTyper );
+	DaoNamespace_SetupType( vms->daoNamespace, & comTyper );
 	dao_type_list_template = DaoNamespace_WrapGenericType( ns, & listTyper, DAO_LIST );
 	dao_type_map_template = DaoNamespace_WrapGenericType( ns, & mapTyper, DAO_MAP );
 
@@ -2752,10 +2818,10 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_AddConstValue( ns2, "stdio",  (DaoValue*) vms->stdioStream );
 	DaoNamespace_AddConstValue( ns2, "stderr", (DaoValue*) vms->errorStream );
 
-	dao_default_cdata.ctype = DaoNamespace_WrapType( vms->nsInternal, & defaultCdataTyper, 1 );
+	dao_default_cdata.ctype = DaoNamespace_WrapType( vms->daoNamespace, & defaultCdataTyper, 1 );
 	GC_IncRC( dao_default_cdata.ctype );
 
-	DaoException_Setup( vms->nsInternal );
+	dao_type_exception = DaoException_Setup( vms->daoNamespace );
 
 #ifdef DAO_WITH_CONCURRENT
 	ns2 = DaoVmSpace_GetNamespace( vms, "mt" );
@@ -2764,7 +2830,7 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_future  = DaoNamespace_WrapType( ns2, & futureTyper, 0 );
 	DaoNamespace_WrapFunctions( ns2, dao_mt_methods );
 #endif
-	DaoNamespace_SetupType( vms->nsInternal, & vmpTyper );
+	DaoNamespace_SetupType( vms->daoNamespace, & vmpTyper );
 
 	ns2 = DaoVmSpace_GetNamespace( vms, "std" );
 	DaoNamespace_AddConstValue( ns, "std", (DaoValue*) ns2 );
@@ -2772,7 +2838,7 @@ DaoVmSpace* DaoInit( const char *command )
 
 	DaoNamespace_WrapFunctions( ns, dao_builtin_methods );
 
-	DaoNamespace_AddParent( vms->mainNamespace, vms->nsInternal );
+	DaoNamespace_AddParent( vms->mainNamespace, vms->daoNamespace );
 
 	DaoVmSpace_InitPath( vms );
 
@@ -2863,3 +2929,41 @@ DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname )
 	return ns;
 }
 
+
+DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
+{
+	DaoTypeBase *typer;
+	DaoValue *value;
+	DaoType *type, *parent = NULL;
+	DString *basename, sub;
+	daoint offset = 0;
+
+	if( strcmp( name, "Exception" ) == 0 ) return  dao_type_exception;
+
+	basename = DString_NewChars( name );
+	offset = DString_RFindChars( basename, "::", -1 );
+	if( offset != DAO_NULLPOS ){
+		DString_Erase( basename, offset - 1, -1 );
+		parent = DaoVmSpace_MakeExceptionType( self, basename->chars );
+		offset += 1;
+	}
+	DString_Delete( basename );
+	if( parent == NULL ) return NULL;
+
+	sub = DString_WrapChars( name + offset );
+	value = DaoType_FindValueOnly( parent, & sub );
+	if( value != NULL ){
+		if( value->type == DAO_CTYPE ) return value->xCtype.cdtype;
+		return NULL;
+	}
+
+	typer = (DaoTypeBase*) dao_calloc( 1, sizeof(DaoTypeBase) );
+	typer->name = (char*) dao_malloc( strlen(name) * sizeof(char) );
+	strcpy( (char*) typer->name, name );
+	typer->supers[0] = parent->typer;
+	typer->Delete = parent->typer->Delete;
+	typer->GetGCFields = parent->typer->GetGCFields;
+	type = DaoNamespace_WrapType( self->daoNamespace, typer, 0 );
+	type->kernel->attribs |= DAO_TYPER_FREE;
+	return type;
+}

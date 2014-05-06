@@ -232,7 +232,6 @@ enum{
 	IDX_TO,
 	IDX_PAIR,
 	IDX_ALL,
-	IDX_MULTIPLE,
 	IDX_NONUMINDEX,
 	IDX_OUTOFRANGE
 };
@@ -243,7 +242,6 @@ static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *s
 	daoint i, n, n1, n2;
 	DaoValue **items;
 	DaoValue *first, *second;
-	DArray *array = NULL;
 
 	*idtype = IDX_NULL;
 	*start = 0;
@@ -316,30 +314,12 @@ static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *s
 			*idtype = IDX_FROM;
 		}
 		break;
-	case DAO_LIST:
-		*idtype = IDX_MULTIPLE;
-		items = index->xList.value->items.pValue;
-		array = DArray_New(0);
-		DArray_Resize( array, index->xList.value->size, 0 );
-		for( i=0,n=array->size; i<n; i++ ){
-			if( ! DaoValue_IsNumber( items[i] ) ){
-				*idtype = IDX_NONUMINDEX;
-				break;
-			}
-			n1 = DaoValue_GetInteger( items[i] );
-			if( n1 <0 ) n1 += N;
-			if( n1 <0 || n1 >= N ) *idtype = IDX_OUTOFRANGE;
-			array->items.pInt[i] = n1;
-		}
-		if( *idtype != IDX_MULTIPLE ){
-			DArray_Delete( array );
-			break;
-		}
-		return array;
 	default : break;
 	}
-	if( *idtype == IDX_NONUMINDEX ) DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "need number" );
-	if( *idtype == IDX_OUTOFRANGE ) DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, "" );
+	switch( *idtype ){
+	case IDX_NONUMINDEX : DaoProcess_RaiseError( proc, "Index", "need number" ); break;
+	case IDX_OUTOFRANGE : DaoProcess_RaiseError( proc, "Index::Range", NULL ); break;
+	}
 	return NULL;
 }
 
@@ -590,7 +570,7 @@ void DaoValue_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 	if( p == NULL ){
 		DString *mbs = DString_New();
 		DString_Append( mbs, name );
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, DString_GetData( mbs ) );
+		DaoProcess_RaiseError( proc, "Field::NonExist", DString_GetData( mbs ) );
 		DString_Delete( mbs );
 		return;
 	}
@@ -604,7 +584,7 @@ void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N 
 	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
 	DaoRoutine *func = DaoType_FindFunctionChars( type, "[]" );
 	if( func == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "[]" );
+		DaoProcess_RaiseError( proc, "Field::NonExist", "[]" );
 		return;
 	}
 	DaoProcess_PushCallable( proc, func, self, pid, N );
@@ -617,7 +597,7 @@ void DaoValue_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N,
 	memcpy( p+1, pid, N*sizeof(DaoValue*) );
 	p[0] = value;
 	if( func == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "[]=" );
+		DaoProcess_RaiseError( proc, "Field::NonExist", "[]=" );
 		return;
 	}
 	DaoProcess_PushCallable( proc, func, self, p, N+1 );
@@ -634,11 +614,11 @@ static void DaoNumber_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream
 }
 static void DaoNumber_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N )
 {
-	DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
+	DaoProcess_RaiseError( proc, "Index", "not supported" );
 }
 static void DaoNumber_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
 {
-	DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
+	DaoProcess_RaiseError( proc, "Index", "not supported" );
 }
 
 static DaoTypeCore numberCore=
@@ -702,16 +682,6 @@ static void DaoString_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	case IDX_ALL :
 		DString_SubString( self, res, 0, -1 );
 		break;
-	case IDX_MULTIPLE :
-		{
-			daoint *ip = ids->items.pInt;
-			char *data = self->chars;
-			res = DaoProcess_PutChars( proc, "" );
-			DString_Clear( res );
-			for(i=0,n=ids->size; i<n; i++) DString_AppendChar( res, data[ ip[i] ] );
-			DArray_Delete( ids );
-		}
-		break;
 	default : break;
 	}
 }
@@ -725,12 +695,6 @@ static void DaoString_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	DString_Detach( self, self->size );
 	if( value->type >= DAO_INTEGER && value->type <= DAO_DOUBLE ){
 		daoint i, n, id = value->xInteger.value;
-		if( idtype == IDX_MULTIPLE ){
-			daoint *ip = ids->items.pInt;
-			for(i=0,n=ids->size; i<n; i++) self->chars[ ip[i] ] = id;
-			DArray_Delete( ids );
-			return;
-		}
 		for(i=start; i<=end; i++) self->chars[i] = id;
 	}else if( value->type == DAO_STRING ){
 		DString *str = value->xString.value;
@@ -757,9 +721,6 @@ static void DaoString_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 		case IDX_ALL :
 			DString_Assign( self, str );
 			break;
-		case IDX_MULTIPLE :
-			DArray_Delete( ids );
-			DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
 		default : break;
 		}
 	}
@@ -769,7 +730,7 @@ static void DaoString_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[]
 	switch( N ){
 	case 0 : DaoString_GetItem1( self, proc, NULL ); break;
 	case 1 : DaoString_GetItem1( self, proc, ids[0] ); break;
-	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
+	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
 static void DaoString_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
@@ -777,7 +738,7 @@ static void DaoString_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[]
 	switch( N ){
 	case 0 : DaoString_SetItem1( self, proc, NULL, value ); break;
 	case 1 : DaoString_SetItem1( self, proc, ids[0], value ); break;
-	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
+	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
 static DaoTypeCore stringCore=
@@ -796,11 +757,7 @@ static void DaoSTR_Size( DaoProcess *proc, DaoValue *p[], int N )
 }
 static daoint DaoSTR_CheckParam( DaoProcess *proc, daoint i )
 {
-	if( i < 0 ){
-		char buffer[100];
-		sprintf( buffer, "invalid parameter with value %" DAO_INT_FORMAT "\n", i );
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, buffer );
-	}
+	if( i < 0 ) DaoProcess_RaiseError( proc, "Param", NULL );
 	return i;
 }
 static daoint DaoSTR_CheckIndex( DString *self, DaoProcess *proc, daoint index, int one_past_last )
@@ -808,9 +765,7 @@ static daoint DaoSTR_CheckIndex( DString *self, DaoProcess *proc, daoint index, 
 	daoint id = index;
 	if( id < 0 ) id = self->size + id;
 	if( id < 0 || id > (self->size - 1 + one_past_last) ){
-		char buffer[100];
-		sprintf( buffer, "index out of range with value %" DAO_INT_FORMAT "\n", index );
-		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, buffer );
+		DaoProcess_RaiseError( proc, "Index::Range", NULL );
 		return -1;
 	}
 	return id;
@@ -846,12 +801,16 @@ static void DaoSTR_Erase( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoSTR_Chop( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.value;
-	DString_ChopUTF8( self );
+	daoint utf8 = p[1]->xInteger.value;
+	DString_Chop( self, utf8 );
 	DaoProcess_PutReference( proc, p[0] );
 }
 static void DaoSTR_Trim( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString_Trim( p[0]->xString.value );
+	daoint head = p[1]->xInteger.value;
+	daoint tail = p[2]->xInteger.value;
+	daoint utf8 = p[3]->xInteger.value;
+	DString_Trim( p[0]->xString.value, head, tail, utf8 );
 	DaoProcess_PutReference( proc, p[0] );
 }
 static void DaoSTR_Find( DaoProcess *proc, DaoValue *p[], int N )
@@ -876,61 +835,10 @@ static void DaoSTR_Replace( DaoProcess *proc, DaoValue *p[], int N )
 	daoint count = DString_FindReplace( self, str1, str2, index );
 	DaoProcess_PutInteger( proc, count );
 }
-static void DaoSTR_Replace2( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *res, *key;
-	DString *self = p[0]->xString.value;
-	DMap *par = p[1]->xMap.value;
-	DMap *words = DMap_New( DAO_DATA_STRING, DAO_DATA_STRING );
-	DMap *sizemap = DMap_New(0,0);
-	DNode *node = DMap_First( par );
-	DArray *sizes = DArray_New(0);
-	daoint max = p[2]->xInteger.value;
-	daoint i, j, k, n = self->size;
-	for( ; node != NULL; node = DMap_Next(par, node) )
-		DMap_Insert( words, node->key.pValue->xString.value, node->value.pValue->xString.value );
-
-	key = DString_New();
-	res = DString_New();
-	for(node=DMap_First(words); node !=NULL; node = DMap_Next(words, node) ){
-		MAP_Insert( sizemap, node->key.pString->size, 0 );
-	}
-	for(node=DMap_First(sizemap); node !=NULL; node = DMap_Next(sizemap, node) )
-		DArray_Append( sizes, node->key.pInt );
-	i = 0;
-	while( i < n ){
-		DString *val = NULL;
-		for(j=0; j<sizes->size; j++){
-			k = sizes->items.pInt[j];
-			if( i+k > n ) break;
-			DString_SubString( self, key, i, k );
-			node = DMap_FindGE( words, key );
-			if( node == NULL ) break;
-			if( DString_EQ( node->key.pString, key ) ){
-				val = node->value.pString;
-				if( max ==0 ) break;
-			}
-		}
-		if( val ){
-			DString_Append( res, val );
-			i += key->size;
-		}else{
-			DString_AppendChar( res, self->chars[i] );
-			i ++;
-		}
-	}
-	DString_Assign( self, res );
-	DString_Delete( key );
-	DString_Delete( res );
-	DArray_Delete( sizes );
-	DMap_Delete( words );
-	DMap_Delete( sizemap );
-}
 static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DMap    *keys = NULL;
+	DMap    *keys = p[1]->xMap.value;
 	DaoString *key = NULL;
-	DaoTuple *tup = & p[1]->xTuple;
 	DString *self = p[0]->xString.value;
 	DString *spec = p[2]->xString.value;
 	DString *res = NULL, *val = NULL, *sub = NULL;
@@ -940,19 +848,10 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 	char spec2;
 	int replace;
 	int ch;
+
 	if( DString_Size( spec ) ==0 ){
 		DaoProcess_PutString( proc, self );
 		return;
-	}
-	if(  p[1]->type == DAO_TUPLE ){
-		if( tup->ctype == NULL ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "invalid tuple" );
-			return;
-		}
-		keys = tup->ctype->mapNames;
-	}else{
-		tup = NULL;
-		keys = p[1]->xMap.value;
 	}
 
 	res = DaoProcess_PutChars( proc, "" );
@@ -974,15 +873,9 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 			}
 			if( replace ){
 				DString_SubString( self, key->value, pos1+2, pos2-pos1-2 );
-				node = DMap_Find( keys, tup ? key->value : (void*)key );
+				node = DMap_Find( keys, key );
 				if( node ){
-					if( tup ){
-						i = node->value.pInt;
-						DaoValue_GetString( tup->values[i], key->value );
-						val = key->value;
-					}else{
-						val = node->value.pValue->xString.value;
-					}
+					val = node->value.pValue->xString.value;
 				}else if( keep ){
 					replace = 0;
 				}else{
@@ -1067,16 +960,6 @@ static void DaoSTR_Split( DaoProcess *proc, DaoValue *p[], int N )
 		DString_SubString( self, str, last, size-last );
 	DArray_Append( list->value, value );
 	DaoString_Delete( (DaoString*) value );
-}
-static void DaoSTR_Tolower( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString_ToLower( p[0]->xString.value );
-	DaoProcess_PutReference( proc, p[0] );
-}
-static void DaoSTR_Toupper( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString_ToUpper( p[0]->xString.value );
-	DaoProcess_PutReference( proc, p[0] );
 }
 static void DaoSTR_Fetch( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1226,7 +1109,7 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 	if( to < 0 ) to += self->size;
 	if( to == 0 ) to = DString_Size( self ) - 1;
 	if( (patt == NULL) | (from < 0) | (to < 0) ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "Invalid parameter value" );
+		DaoProcess_RaiseError( proc, "Param", NULL );
 		return;
 	}
 
@@ -1281,17 +1164,12 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoSTR_Convert( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.value;
-	if( p[1]->xEnum.value == 0 ){
-		if( DString_CheckUTF8( self ) != 0 ) DString_ToLocal( self );
-	}else{
-		if( DString_CheckUTF8( self ) == 0 ) DString_ToUTF8( self );
+	switch( p[1]->xEnum.value ){
+	case 0 : if( DString_CheckUTF8( self ) != 0 ) DString_ToLocal( self ); break; /* local */
+	case 1 : if( DString_CheckUTF8( self ) == 0 ) DString_ToUTF8( self ); break; /* utf8 */
+	case 2 : DString_ToLower( p[0]->xString.value ); break; /* lower */
+	case 3 : DString_ToUpper( p[0]->xString.value ); break; /* upper */
 	}
-	DaoProcess_PutReference( proc, p[0] );
-}
-static void DaoSTR_Reverse( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *self = p[0]->xString.value;
-	DString_Reverse( self, p[1]->xEnum.value );
 	DaoProcess_PutReference( proc, p[0] );
 }
 static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int funct )
@@ -1318,7 +1196,6 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 		DString_Reserve( string, self->value->size );
 		break;
 	case DVM_FUNCT_SELECT : string = DaoProcess_PutChars( proc, "" ); break;
-	case DVM_FUNCT_INDEX : list = DaoProcess_PutList( proc ); break;
 	case DVM_FUNCT_COUNT : count = DaoProcess_PutInteger( proc, 0 ); break;
 	}
 	if( sect == NULL ) return;
@@ -1341,9 +1218,6 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 			if( ! DaoValue_IsZero( res ) ){
 				DString_AppendChar( string, data->chars[i] );
 			}
-			break;
-		case DVM_FUNCT_INDEX :
-			if( ! DaoValue_IsZero( res ) ) DaoList_Append( list, index );
 			break;
 		case DVM_FUNCT_COUNT :
 			*count += ! DaoValue_IsZero( res );
@@ -1373,10 +1247,6 @@ static void DaoSTR_Select( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoSTR_Functional( proc, p, N, DVM_FUNCT_SELECT );
 }
-static void DaoSTR_Index( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoSTR_Functional( proc, p, N, DVM_FUNCT_INDEX );
-}
 static void DaoSTR_Apply( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoSTR_Functional( proc, p, N, DVM_FUNCT_APPLY );
@@ -1391,46 +1261,178 @@ static void DaoSTR_CharAt( DaoProcess *proc, DaoValue *p[], int N )
 
 static DaoFuncItem stringMeths[] =
 {
-	{ DaoSTR_Size,    "size( self ::string )=>int" },
-	{ DaoSTR_Resize,  "resize( self :string, size :int )" },
-	{ DaoSTR_Convert, "convert( self :string, to :enum<local,utf8> ) =>string" },
-	{ DaoSTR_Insert,  "insert( self :string, str :string, index=0, remove=0, copy=0 )" },
-	{ DaoSTR_Clear,   "clear( self :string )" },
-	{ DaoSTR_Erase,   "erase( self :string, start=0, n=-1 )" },
-	{ DaoSTR_Chop,    "chop( self :string ) =>string" },
-	{ DaoSTR_Trim,    "trim( self :string ) =>string" },
-	/* return -1, if not found. */
-	{ DaoSTR_Find,    "find( self ::string, str ::string, from=0, reverse=0 )=>int" },
-	/* replace index-th occurrence: =0: replace all; >0: from begin; <0: from end. */
-	/* return number of occurrence replaced. */
-	{ DaoSTR_Replace, "replace( self :string, str1 ::string, str2 ::string, index=0 )=>int" },
-	{ DaoSTR_Replace2, "replace( self :string, table ::map<string,string>, max=0 )" },
-	{ DaoSTR_Expand,  "expand( self ::string, keys ::map<string,string>, spec='$', keep=1 )=>string" },
-	{ DaoSTR_Expand,  "expand( self ::string, keys ::tuple<...:int|float|double|string>, spec='$', keep=1 )=>string" },
-	{ DaoSTR_Split, "split( self ::string, sep='', quote='', rm=1 )=>list<string>" },
-	{ DaoSTR_Fetch, "fetch( self ::string, pt ::string, group=0, start=0, end=0 )=>string" },
-	{ DaoSTR_Match, "match( self ::string, pt ::string, group=0, start=0, end=0 )=>tuple<start:int,end:int>|none" },
-	{ DaoSTR_Change, "change( self :string, pt ::string, s ::string, index=0, start=0, end=0 )=>int" },
-	{ DaoSTR_Capture, "capture( self ::string, pt ::string, start=0, end=0 )=>list<string>" },
-	{ DaoSTR_Extract, "extract( self ::string, pt ::string, mtype :enum<both,matched,unmatched>=$matched )=>list<string>" },
+	{ DaoSTR_Size,
+		"size( self :: string ) => int"
+		/*
+		// Return the number of bytes in the string.
+		*/
+	},
+	{ DaoSTR_Resize,
+		"resize( self : string, size : int )"
+		/*
+		// Resize the string to a string of "size" bytes.
+		*/
+	},
+	{ DaoSTR_Convert,
+		"convert( self : string, to : enum<local,utf8,lower,upper> ) => string"
+		/*
+		// Convert the string:
+		// -- To local encoding if the string is encoded in UTF-8;
+		// -- To UTF-8 encoding if the string is not encoded in UTF-8;
+		// -- To lower cases;
+		// -- To upper cases;
+		*/
+	},
+	{ DaoSTR_Insert,
+		"insert( self : string, str : string, at = 0, remove = 0, copy = 0 )"
+		/*
+		//
+		*/
+	},
+	{ DaoSTR_Clear,
+		"clear( self : string )"
+		/*
+		//
+		*/
+	},
+	{ DaoSTR_Erase,
+		"erase( self : string, start = 0, n = -1 )"
+		/*
+		//
+		*/
+	},
+	{ DaoSTR_Chop,
+		"chop( self : string, utf8 = 0 ) => string"
+		/*
+		// Chop EOF, '\n' and/or '\r' off the end of the string;
+		// -- EOF  is first checked and removed if found;
+		// -- '\n' is then checked and removed if found;
+		// -- '\r' is last checked and removed if found;
+		// If "utf8" is not zero, all bytes that do not constitute a
+		// valid UTF-8 encoding sequence are removed from the end.
+		*/
+	},
+	{ DaoSTR_Trim,
+		"trim( self : string, where : enum<head,tail,both>, utf8 = 0 ) => string"
+		/*
+		// Trim whitespaces from the head and/or the tail of the string;
+		// If "utf8" is not zero, all bytes that do not constitute a
+		// valid UTF-8 encoding sequence are trimmed as well.
+		*/
+	},
+	{ DaoSTR_Find,
+		"find( self :: string, str :: string, from = 0, reverse = 0 ) => int"
+		/*
+		// Find the first occurrence of "str" in this string, searching from "from";
+		// If "reverse" is zero, search forward, otherwise backward;
+		// Return -1, if "str" is not found; Otherwise,
+		// Return the index of the first byte of the found substring for forward searching;
+		// Return the index of the last byte of the found substring for backward searching;
+		*/
+	},
+	{ DaoSTR_Replace,
+		"replace( self : string, str1 :: string, str2 :: string, index = 0 ) => int"
+		/*
+		// Replace the substring "str1" in "self" to "str2";
+		// Replace all occurrences of "str1" to "str2" if "index" is zero;
+		// Otherwise, replace only the "index"-th occurrence;
+		// Positive "index" is counted forwardly;
+		// Negative "index" is counted backwardly;
+		*/
+	},
+	{ DaoSTR_Expand,
+		"expand( self :: string, keys :: map<string,string>, spec = '$', keep = 1 ) => string"
+		/*
+		//
+		*/
+	},
+	{ DaoSTR_Split,
+		"split( self :: string, sep = '', quote = '', rm = 1 ) => list<string>"
+		/*
+		//
+		*/
+	},
+	{ DaoSTR_Fetch,
+		"fetch( self :: string, pt :: string, group = 0, start = 0, end = 0 ) => string"
+		/*
+		//
+		*/
+	},
+	{ DaoSTR_Match,
+		"match( self :: string, pt :: string, group = 0, start = 0, end = 0 )"
+			"=> tuple<start:int,end:int>|none"
+		/*
+		//
+		*/
+	},
+	{ DaoSTR_Change,
+		"change( self : string, pt :: string, s :: string, index = 0, start = 0, end = 0 )"
+			"=> int"
+		/*
+		//
+		*/
+	},
+	{ DaoSTR_Capture,
+		"capture( self :: string, pt :: string, start = 0, end = 0 ) => list<string>"
+		/*
+		//
+		*/
+	},
+	{ DaoSTR_Extract,
+		"extract( self :: string, pt :: string, mtype : enum<both,matched,unmatched> = $matched )"
+			"=> list<string>"
+		/*
+		//
+		*/
+	},
 	/*
 	// Use "none|@V" for the code section return, so that if "return none" is used first,
 	// it will not be specialized to "none|none", which is the case for "@V|none".
 	*/
-	{ DaoSTR_Scan, "scan( self :string, pt :string, from=0, to=0 )[start:int,end:int,state:enum<unmatched,matched>=>none|@V] => list<@V>" },
+	{ DaoSTR_Scan,
+		"scan( self : string, pt : string, from = 0, to = 0 )"
+			"[start :int, end :int, state :enum<unmatched,matched> => none|@V]"
+			"=> list<@V>"
+		/*
+		//
+		*/
+	},
 
-	{ DaoSTR_Tolower, "tolower( self :string ) =>string" },
-	{ DaoSTR_Toupper, "toupper( self :string ) =>string" },
-	{ DaoSTR_Reverse, "reverse( self :string, unit :enum<byte,char> = $char ) =>string" },
+	{ DaoSTR_Iterate,
+		"iterate( self : string )[char :int, index :int]"
+		/*
+		//
+		*/
+	},
+	{ DaoSTR_Count,
+		"count( self : string )[char :int, index :int => int] => int"
+		/*
+		//
+		*/
+	},
+	{ DaoSTR_Map,
+		"map( self : string )[char :int, index :int => int] => string"
+		/*
+		//
+		*/
+	},
+	{ DaoSTR_Select,
+		"select( self : string )[char :int, index :int => int] => string"
+		/*
+		//
+		*/
+	},
+	{ DaoSTR_Apply,
+		"apply( self :string )[char :int, index :int =>int]=>string"
+		/*
+		//
+		*/
+	},
 
-	{ DaoSTR_Iterate,   "iterate( self :string )[char :int, index :int]" },
-	{ DaoSTR_Count,  "count( self :string )[char :int, index :int =>int]=>int" },
-	{ DaoSTR_Map,    "map( self :string )[char :int, index :int =>int]=>string" },
-	{ DaoSTR_Select, "select( self :string )[char :int, index :int =>int]=>string" },
-	{ DaoSTR_Index,  "index( self :string )[char :int, index :int =>int]=>list<int>" },
-	{ DaoSTR_Apply,  "apply( self :string )[char :int, index :int =>int]=>string" },
-
-	{ DaoSTR_CharAt, "char( self :string, index :int ) =>int" }, /* for testing */
+	/* for testing */
+	{ DaoSTR_CharAt,
+		"char( self : string, index : int ) => int"
+	},
 	{ NULL, NULL }
 };
 
@@ -1514,13 +1516,6 @@ static void DaoListCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *p
 		res = DaoList_Copy( self, NULL );
 		DaoProcess_PutValue( proc, (DaoValue*) res );
 		break;
-	case IDX_MULTIPLE :
-		res = DaoProcess_PutList( proc );
-		DArray_Resize( res->value, ids->size, NULL );
-		for(i=0,n=ids->size; i<n; i++ )
-			DaoList_SetItem( res, self->value->items.pValue[ ids->items.pInt[i] ], i );
-		DArray_Delete( ids );
-		break;
 	default : break;
 	}
 }
@@ -1558,20 +1553,16 @@ static void DaoListCore_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *p
 	case IDX_ALL :
 		for( i=0,n=self->value->size; i<n; i++ ) rc |= DaoList_SetItem( self, value, i );
 		break;
-	case IDX_MULTIPLE :
-		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
-		DArray_Delete( ids );
-		break;
 	default : break;
 	}
-	if( rc ) DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "value type" );
+	if( rc ) DaoProcess_RaiseError( proc, "Value", "Invalid value type" );
 }
 static void DaoListCore_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N )
 {
 	switch( N ){
 	case 0 : DaoListCore_GetItem1( self, proc, NULL ); break;
 	case 1 : DaoListCore_GetItem1( self, proc, ids[0] ); break;
-	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
+	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
 static void DaoListCore_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
@@ -1579,7 +1570,7 @@ static void DaoListCore_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids
 	switch( N ){
 	case 0 : DaoListCore_SetItem1( self, proc, NULL, value ); break;
 	case 1 : DaoListCore_SetItem1( self, proc, ids[0], value ); break;
-	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
+	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
 static DaoTypeCore listCore=
@@ -1604,14 +1595,11 @@ static void DaoLIST_Insert( DaoProcess *proc, DaoValue *p[], int N )
 	daoint size = self->value->size;
 	daoint pos = DaoList_MakeIndex( self, p[2]->xInteger.value, 1 );
 	if( pos == -1 ){
-		char buffer[100];
-		sprintf( buffer, "with value %" DAO_INT_FORMAT "\n", p[2]->xInteger.value );
-		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, buffer );
+		DaoProcess_RaiseError( proc, "Index::Range", NULL );
 		return;
 	}
 	DaoList_Insert( self, p[1], pos );
-	if( size == self->value->size )
-		DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "value type" );
+	if( size == self->value->size ) DaoProcess_RaiseError( proc, "Value", "value type" );
 }
 static void DaoLIST_Erase( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1664,12 +1652,12 @@ static int DaoList_CheckType( DaoList *self, DaoProcess *proc )
 	type = data[0]->type;
 	for(i=1; i<self->value->size; i++){
 		if( type != data[i]->type ){
-			DaoProcess_RaiseException( proc, DAO_WARNING, "need list of same type of elements" );
+			DaoProcess_RaiseWarning( proc, NULL, "need list of same type of elements" );
 			return 0;
 		}
 	}
 	if( type < DAO_INTEGER || type >= DAO_ARRAY ){
-		DaoProcess_RaiseException( proc, DAO_WARNING, "need list of primitive data" );
+		DaoProcess_RaiseWarning( proc, NULL, "need list of primitive data" );
 		return 0;
 	}
 	return type;
@@ -1786,14 +1774,13 @@ static void DaoLIST_Push( DaoProcess *proc, DaoValue *p[], int N )
 		DaoList_PushFront( self, p[1] );
 	else
 		DaoList_Append( self, p[1] );
-	if( size == self->value->size )
-		DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "value type" );
+	if( size == self->value->size ) DaoProcess_RaiseError( proc, "Value", "value type" );
 }
 static void DaoLIST_Pop( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoList *self = & p[0]->xList;
 	if( self->value->size == 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "list is empty" );
+		DaoProcess_RaiseError( proc, "Value", "list is empty" );
 		return;
 	}
 	if ( p[1]->xEnum.value == 0 ){
@@ -1810,14 +1797,14 @@ static void DaoLIST_PushBack( DaoProcess *proc, DaoValue *p[], int N )
 	daoint size = self->value->size;
 	DaoList_Append( self, p[1] );
 	if( size == self->value->size )
-		DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "value type" );
+		DaoProcess_RaiseError( proc, "Value", "value type" );
 }
 static void DaoLIST_Front( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoList *self = & p[0]->xList;
 	if( self->value->size == 0 ){
 		DaoProcess_PutValue( proc, dao_none_value );
-		DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "list is empty" );
+		DaoProcess_RaiseError( proc, "Value", "list is empty" );
 		return;
 	}
 	DaoProcess_PutReference( proc, self->value->items.pValue[0] );
@@ -1827,7 +1814,7 @@ static void DaoLIST_Top( DaoProcess *proc, DaoValue *p[], int N )
 	DaoList *self = & p[0]->xList;
 	if( self->value->size == 0 ){
 		DaoProcess_PutValue( proc, dao_none_value );
-		DaoProcess_RaiseException( proc, DAO_ERROR_VALUE, "list is empty" );
+		DaoProcess_RaiseError( proc, "Value", "list is empty" );
 		return;
 	}
 	DaoProcess_PutReference( proc, self->value->items.pValue[ self->value->size -1 ] );
@@ -1848,8 +1835,8 @@ static void PartialQuickSort( DaoProcess *proc, int entry, int r0, int r1,
 		DaoValue **data, daoint first, daoint last, daoint part )
 {
 	daoint lower=first+1, upper=last;
-	DaoValue *val;
-	DaoValue *pivot;
+	DaoValue *val, *pivot;
+
 	if( first >= last ) return;
 	val = data[first];
 	data[first] = data[ (first+last)/2 ];
@@ -1874,30 +1861,24 @@ static void PartialQuickSort( DaoProcess *proc, int entry, int r0, int r1,
 	if( upper >= part ) return;
 	if( upper+1 < last ) PartialQuickSort( proc, entry, r0, r1, data, upper+1, last, part );
 }
-typedef struct IndexValue IndexValue;
-struct IndexValue
-{
-	daoint     index;
-	DaoValue  *value;
-};
-static void QuickSort( IndexValue *data, daoint first, daoint last, daoint part, int asc )
+static void QuickSort( DaoValue *data[], daoint first, daoint last, daoint part, int asc )
 {
 	daoint lower=first+1, upper=last;
-	IndexValue val;
-	DaoValue *pivot;
+	DaoValue *val, *pivot;
+
 	if( first >= last ) return;
 	val = data[first];
 	data[first] = data[ (first+last)/2 ];
 	data[ (first+last)/2 ] = val;
-	pivot = data[ first ].value;
+	pivot = data[ first ];
 
 	while( lower <= upper ){
 		if( asc ){
-			while( lower < last && DaoValue_Compare( data[lower].value, pivot ) <0 ) lower ++;
-			while( upper > first && DaoValue_Compare( pivot, data[upper].value ) <0 ) upper --;
+			while( lower < last && DaoValue_Compare( data[lower], pivot ) <0 ) lower ++;
+			while( upper > first && DaoValue_Compare( pivot, data[upper] ) <0 ) upper --;
 		}else{
-			while( lower < last && DaoValue_Compare( data[lower].value, pivot ) >0 ) lower ++;
-			while( upper > first && DaoValue_Compare( pivot, data[upper].value ) >0 ) upper --;
+			while( lower < last && DaoValue_Compare( data[lower], pivot ) >0 ) lower ++;
+			while( upper > first && DaoValue_Compare( pivot, data[upper] ) >0 ) upper --;
 		}
 		if( lower < upper ){
 			val = data[lower];
@@ -1914,38 +1895,12 @@ static void QuickSort( IndexValue *data, daoint first, daoint last, daoint part,
 	if( upper >= part ) return;
 	if( upper+1 < last ) QuickSort( data, upper+1, last, part, asc );
 }
-static void DaoLIST_Rank( DaoProcess *proc, DaoValue *p[], int npar)
-{
-	DaoList *list = & p[0]->xList;
-	DaoList *res = DaoProcess_PutList( proc );
-	DaoValue **items = list->value->items.pValue;
-	DaoValue **ids;
-	IndexValue *data;
-	daoint part = p[2]->xInteger.value;
-	daoint i, N;
-
-	N = list->value->size;
-	DArray_Resize( res->value, N, p[2] ); /* init to be integers */
-	ids = res->value->items.pValue;
-	for(i=0; i<N; i++) ids[i]->xInteger.value = i;
-	if( N < 2 ) return;
-	if( part ==0 ) part = N;
-	data = (IndexValue*) dao_malloc( N * sizeof( IndexValue ) );
-	for(i=0; i<N; i++){
-		data[i].index = i;
-		data[i].value = items[i];
-	}
-	QuickSort( data, 0, N-1, part, p[1]->xEnum.value == 0 );
-	for(i=0; i<N; i++) ids[i]->xInteger.value = data[i].index;
-	dao_free( data );
-}
 static void DaoLIST_Sort( DaoProcess *proc, DaoValue *p[], int npar )
 {
 	DaoList *list = & p[0]->xList;
 	DaoValue **items = list->value->items.pValue;
 	daoint part = p[1 + (p[1]->type== DAO_ENUM)]->xInteger.value;
 	DaoStackFrame *frame;
-	IndexValue *data;
 	daoint i, N;
 
 	DaoProcess_PutReference( proc, p[0] );
@@ -1958,22 +1913,14 @@ static void DaoLIST_Sort( DaoProcess *proc, DaoValue *p[], int npar )
 		int entry = proc->topFrame->entry;
 		DaoVmCode *vmc = proc->topFrame->codes + entry - 1;
 		if( vmc->b < 2 ){
-			DaoProcess_RaiseException( proc, DAO_ERROR, "Two few code section parameters" );
+			DaoProcess_RaiseError( proc, NULL, "Two few code section parameters" );
 			return;
 		}
 		PartialQuickSort( proc, entry, vmc->a, vmc->a + 1, items, 0, N-1, part );
 		DaoProcess_PopFrame( proc );
 		return;
 	}
-
-	data = (IndexValue*) dao_malloc( N * sizeof( IndexValue ) );
-	for(i=0; i<N; i++){
-		data[i].index = i;
-		data[i].value = items[i];
-	}
-	QuickSort( data, 0, N-1, part, p[1]->xEnum.value == 0 );
-	for(i=0; i<N; i++) items[i] = data[i].value;
-	dao_free( data );
+	QuickSort( items, 0, N-1, part, p[1]->xEnum.value == 0 );
 }
 static void DaoLIST_Join( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2006,7 +1953,7 @@ static void DaoLIST_Join( DaoProcess *proc, DaoValue *p[], int N )
 			size += 1;
 			break;
 		default:
-			DaoProcess_RaiseException( proc, DAO_ERROR, "Incompatible list type (expected numeric or string)" );
+			DaoProcess_RaiseError( proc, NULL, "Incompatible list type (expected numeric or string)" );
 			return;
 		}
 	}
@@ -2021,23 +1968,10 @@ static void DaoLIST_Join( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	DString_Delete( buf );
 }
-static void DaoLIST_Reverse( DaoProcess *proc, DaoValue *p[], int npar )
-{
-	DaoList *list = & p[0]->xList;
-	DaoValue **items = list->value->items.pValue;
-	daoint i = 0, N = list->value->size;
-
-	DaoProcess_PutReference( proc, p[0] );
-	for(i=0; i<N/2; i++){
-		DaoValue *tmp = items[N-i-1];
-		items[N-i-1] = items[i];
-		items[i] = tmp;
-	}
-}
 static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, int funct )
 {
 	daoint *count = NULL;
-	int direction = funct == DVM_FUNCT_COUNT ? 0 : p[1]->xEnum.value;
+	int direction = p[1]->xEnum.value;
 	DaoList *list = & p[0]->xList;
 	DaoList *list2 = NULL;
 	DaoTuple *tuple = NULL;
@@ -2050,8 +1984,6 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 	switch( funct ){
 	case DVM_FUNCT_MAP :
 	case DVM_FUNCT_SELECT :
-	case DVM_FUNCT_INDEX : list2 = DaoProcess_PutList( proc ); break;
-	case DVM_FUNCT_COUNT : count = DaoProcess_PutInteger( proc, 0 ); break;
 	case DVM_FUNCT_APPLY : DaoProcess_PutReference( proc, p[0] ); break;
 	case DVM_FUNCT_FIND : DaoProcess_PutValue( proc, dao_none_value ); break;
 	}
@@ -2070,8 +2002,6 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 		switch( funct ){
 		case DVM_FUNCT_MAP : DaoList_Append( list2, res ); break;
 		case DVM_FUNCT_SELECT : if( res->xInteger.value ) DaoList_Append( list2, items[i] ); break;
-		case DVM_FUNCT_INDEX : if( res->xInteger.value ) DaoList_Append( list2, index ); break;
-		case DVM_FUNCT_COUNT : *count += res->xInteger.value != 0; break;
 		case DVM_FUNCT_APPLY : DaoList_SetItem( list, res, i ); break;
 		}
 		if( funct == DVM_FUNCT_FIND && res->xInteger.value ){
@@ -2099,14 +2029,6 @@ static void DaoLIST_Find( DaoProcess *proc, DaoValue *p[], int npar )
 static void DaoLIST_Select( DaoProcess *proc, DaoValue *p[], int npar )
 {
 	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_SELECT );
-}
-static void DaoLIST_Index( DaoProcess *proc, DaoValue *p[], int npar )
-{
-	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_INDEX );
-}
-static void DaoLIST_Count( DaoProcess *proc, DaoValue *p[], int npar )
-{
-	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_COUNT );
 }
 static void DaoLIST_Iterate( DaoProcess *proc, DaoValue *p[], int npar )
 {
@@ -2236,37 +2158,173 @@ static void DaoLIST_Map2( DaoProcess *proc, DaoValue *p[], int npar )
 }
 static DaoFuncItem listMeths[] =
 {
-	{ DaoLIST_Insert,   "insert( self :list<@T>, item : @T, pos=0 )" },
-	{ DaoLIST_Clear,    "clear( self :list<@T> )" },
-	{ DaoLIST_Size,     "size( self ::list<@T> )=>int" },
-	{ DaoLIST_Resize,   "resize( self :list<@T<int|float|double|complex|string|enum>>, size :int )" },
-	{ DaoLIST_Resize2,  "resize( self :list<@T>, value :@T, size :int )" },
-	{ DaoLIST_Max,      "max( self ::list<@T<int|float|double|complex|string|enum>> )=>tuple<@T,int>" },
-	{ DaoLIST_Min,      "min( self ::list<@T<int|float|double|complex|string|enum>> )=>tuple<@T,int>" },
-	{ DaoLIST_Sum,      "sum( self ::list<@T<int|float|double|complex|string|enum>> )=>@T" },
-	{ DaoLIST_Join,     "join( self ::list<@T<int|float|double|complex|string|enum>>, separator='' )=>string" },
-	{ DaoLIST_PushBack, "append( self :list<@T>, item :@T )" },
-	{ DaoLIST_Push,     "push( self :list<@T>, item :@T, to :enum<front, back> = $back )" },
-	{ DaoLIST_Pop,      "pop( self :list<@T>, from :enum<front, back> = $back ) => @T" },
-	{ DaoLIST_Front,    "front( self ::list<@T> )=>@T" },
-	{ DaoLIST_Top,      "back( self ::list<@T> )=>@T" },
-	{ DaoLIST_Rank,     "rank( self :list<@T>, order :enum<ascend, descend>=$ascend, k=0 )=>list<int>" },
-	{ DaoLIST_Reverse,  "reverse( self :list<@T> )=>list<@T>" },
+	{ DaoLIST_Insert,
+		"insert( self : list<@T>, item : @T, pos = 0 )"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Clear,
+		"clear( self : list<@T> )"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Size,
+		"size( self :: list<@T> )=>int"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Resize,
+		"resize( self : list<@T<int|float|double|complex|string|enum>>, size : int )"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Resize2,
+		"resize( self : list<@T>, value : @T, size : int )"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Max,
+		"max( self :: list<@T<int|float|double|complex|string|enum>> ) => tuple<@T,int>"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Min,
+		"min( self :: list<@T<int|float|double|complex|string|enum>> ) => tuple<@T,int>"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Sum,
+		"sum( self :: list<@T<int|float|double|complex|string|enum>> ) => @T"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Join,
+		"join( self :: list<@T<int|float|double|complex|string|enum>>, separator = '' )"
+			"=> string"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_PushBack,
+		"append( self : list<@T>, item : @T )"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Push,
+		"push( self : list<@T>, item : @T, to : enum<front, back> = $back )"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Pop,
+		"pop( self : list<@T>, from : enum<front, back> = $back ) => @T"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Front,
+		"front( self :: list<@T> ) => @T"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Top,
+		"back( self ::list<@T> ) => @T"
+		/*
+		//
+		*/
+	},
 
-	{ DaoLIST_Erase,    "erase( self :list<@T>, start=0, n=1 )" },
-	{ DaoLIST_Erase2,   "erase( self :list<@T>, mode :enum<all,first,last> )[item:@T,index:int=>int]=>int" },
-	{ DaoLIST_Map,      "map( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>@V]=>list<@V>" },
-	{ DaoLIST_Map2,     "map( self :list<@T>, other :list<@S>, direction :enum<forward,backward>=$forward )[item:@T,item2:@S,index:int=>@V]=>list<@V>" },
-	{ DaoLIST_Reduce1,  "reduce( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,value:@T,index:int=>@T]=>@T|none" },
-	{ DaoLIST_Reduce2,  "reduce( self :list<@T>, init :@V, direction :enum<forward,backward>=$forward )[item:@T,value:@V,index:int=>@V]=>@V" },
-	{ DaoLIST_Select,   "select( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>list<@T>" },
-	{ DaoLIST_Find,     "find( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>tuple<index:int,value:@T>|none" },
-	{ DaoLIST_Index,    "index( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>int]=>list<int>" },
-	{ DaoLIST_Count,    "count( self :list<@T> )[item:@T,index:int=>int]=>int" },
-	{ DaoLIST_Iterate,  "iterate( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int]" },
-	{ DaoLIST_Sort,     "sort( self :list<@T>, order :enum<ascend,descend>=$ascend, k=0 )=>list<@T>" },
-	{ DaoLIST_Sort,     "sort( self :list<@T>, k=0 )[X:@T,Y:@T=>int]=>list<@T>" },
-	{ DaoLIST_Apply,    "apply( self :list<@T>, direction :enum<forward,backward>=$forward )[item:@T,index:int=>@T]=>list<@T>" },
+	{ DaoLIST_Erase,
+		"erase( self : list<@T>, start = 0, n = 1 )"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Erase2,
+		"erase( self : list<@T>, mode : enum<all,first,last> )"
+			"[item :@T, index :int => int] => int"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Map,
+		"map( self : list<@T>, direction : enum<forward,backward> = $forward )"
+			"[item :@T, index :int => @V] => list<@V>"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Map2,
+		"map( self : list<@T>, other : list<@S>, direction : enum<forward,backward> = $forward )"
+			"[item :@T,item2 :@S,index :int => @V] => list<@V>"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Reduce1,
+		"reduce( self : list<@T>, direction : enum<forward,backward> = $forward )"
+			"[item :@T, value :@T, index :int => @T] => @T|none"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Reduce2,
+		"reduce( self : list<@T>, init : @V, direction : enum<forward,backward> = $forward )"
+			"[item :@T, value :@V, index :int => @V] => @V"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Select,
+		"select( self :list<@T>, direction :enum<forward,backward>=$forward )"
+			"[item:@T,index:int=>int]=>list<@T>"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Find,
+		"find( self :list<@T>, direction :enum<forward,backward>=$forward )"
+			"[item:@T,index:int=>int]=>tuple<index:int,value:@T>|none"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Iterate,
+		"iterate( self :list<@T>, direction :enum<forward,backward>=$forward )"
+			"[item:@T,index:int]"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Sort,
+		"sort( self :list<@T>, order :enum<ascend,descend>=$ascend, k=0 )=>list<@T>"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Sort,
+		"sort( self :list<@T>, k=0 )[X:@T,Y:@T=>int]=>list<@T>"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Apply,
+		"apply( self :list<@T>, direction :enum<forward,backward>=$forward )"
+			"[item:@T,index:int=>@T]=>list<@T>"
+		/*
+		//
+		*/
+	},
 	{ NULL, NULL }
 };
 
@@ -2474,7 +2532,7 @@ static void DaoMap_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 	}else{
 		DNode *node = MAP_Find( self->value, pid );
 		if( node ==NULL ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_KEY, NULL );
+			DaoProcess_RaiseError( proc, "Key", NULL );
 			return;
 		}
 		DaoProcess_PutReference( proc, node->value.pValue );
@@ -2486,9 +2544,9 @@ static void DaoMap_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, D
 	DaoMap *self = & self0->xMap;
 	int c = DaoMap_Insert( self, pid, value );
 	if( c == 1 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_TYPE, "key not matching" );
+		DaoProcess_RaiseError( proc, "Type", "key not matching" );
 	}else if( c == 2 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_TYPE, "value not matching" );
+		DaoProcess_RaiseError( proc, "Type", "value not matching" );
 	}
 }
 static void DaoMap_GetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
@@ -2509,7 +2567,7 @@ static void DaoMap_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], i
 	case 0 : DaoMap_GetItem1( self, proc, dao_none_value ); break;
 	case 1 : DaoMap_GetItem1( self, proc, ids[0] ); break;
 	case 2 : DaoMap_GetItem2( self, proc, ids, N ); break;
-	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
+	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
 static void DaoMap_SetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
@@ -2529,12 +2587,12 @@ static void DaoMap_SetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 	}
 	if( tp ){
 		if( tp->nested->size != 2 || tp->nested->items.pType[1] == NULL ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_TYPE, "invalid map" );
+			DaoProcess_RaiseError( proc, "Type", "invalid map" );
 			return;
 		}
 		tp2 = tp->nested->items.pType[1];
 		if( DaoType_MatchValue( tp2, value, NULL ) ==0 )
-			DaoProcess_RaiseException( proc, DAO_ERROR_TYPE, "value not matching" );
+			DaoProcess_RaiseError( proc, "Type", "value not matching" );
 	}
 	if( ids[0]->type ) node1 = MAP_FindGE( self->value, ids[0] );
 	if( ids[1]->type ) node2 = MAP_FindLE( self->value, ids[1] );
@@ -2548,7 +2606,7 @@ static void DaoMap_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], i
 	case 0 : DaoMap_SetItem1( self, proc, dao_none_value, value ); break;
 	case 1 : DaoMap_SetItem1( self, proc, ids[0], value ); break;
 	case 2 : DaoMap_SetItem2( self, proc, ids, N, value ); break;
-	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
+	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
 static DaoTypeCore mapCore =
@@ -2619,9 +2677,9 @@ static void DaoMAP_Insert( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMap *self = & p[0]->xMap;
 	int c = DaoMap_Insert( self, p[1], p[2] );
 	if( c ==1 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_TYPE, "key not matching" );
+		DaoProcess_RaiseError( proc, "Type", "key not matching" );
 	}else if( c ==2 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_TYPE, "value not matching" );
+		DaoProcess_RaiseError( proc, "Type", "value not matching" );
 	}
 }
 static void DaoMAP_Find( DaoProcess *proc, DaoValue *p[], int N )
@@ -2827,31 +2885,139 @@ static void DaoMAP_Apply( DaoProcess *proc, DaoValue *p[], int N )
 }
 static DaoFuncItem mapMeths[] =
 {
-	{ DaoMAP_Clear,  "clear( self :map<@K,@V> )" },
-	{ DaoMAP_Reset,  "reset( self :map<@K,@V> )" },
-	{ DaoMAP_Reset,  "reset( self :map<@K,@V>, hashing :enum<none,default,random> )" },
-	{ DaoMAP_Erase,  "erase( self :map<@K,@V> )" },
-	{ DaoMAP_Erase,  "erase( self :map<@K,@V>, from :@K )" },
-	{ DaoMAP_Erase,  "erase( self :map<@K,@V>, from :@K, to :@K )" },
-	{ DaoMAP_Insert, "insert( self :map<@K,@V>, key :@K, value :@V )" },
-	{ DaoMAP_Find,   "find( self ::map<@K,@V>, key ::@K, type :enum<le,eq,ge>=$eq )=>tuple<key:@K,value:@V>|none" },
-	{ DaoMAP_Key,    "keys( self ::map<@K,@V> )=>list<@K>" },
-	{ DaoMAP_Key,    "keys( self ::map<@K,@V>, from :@K )=>list<@K>" },
-	{ DaoMAP_Key,    "keys( self ::map<@K,@V>, from :@K, to :@K )=>list<@K>" },
-	{ DaoMAP_Value,  "values( self ::map<@K,@V> )=>list<@V>" },
-	{ DaoMAP_Value,  "values( self ::map<@K,@V>, from ::@K )=>list<@V>" },
-	{ DaoMAP_Value,  "values( self ::map<@K,@V>, from ::@K, to ::@K )=>list<@V>" },
-	{ DaoMAP_Has,    "has( self ::map<@K,@V>, key ::@K )=>int" },
-	{ DaoMAP_Size,   "size( self ::map<@K,@V> )=>int" },
+	{ DaoMAP_Clear,
+		"clear( self :map<@K,@V> )"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Reset,
+		"reset( self :map<@K,@V> )"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Reset,
+		"reset( self :map<@K,@V>, hashing :enum<none,default,random> )"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Erase,
+		"erase( self :map<@K,@V>, from :@K )"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Erase,
+		"erase( self :map<@K,@V>, from :@K, to :@K )"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Insert,
+		"insert( self :map<@K,@V>, key :@K, value :@V )"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Find,
+		"find( self ::map<@K,@V>, key ::@K, type :enum<le,eq,ge>=$eq )=>tuple<key:@K,value:@V>|none"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Key,
+		"keys( self ::map<@K,@V> )=>list<@K>"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Key,
+		"keys( self ::map<@K,@V>, from :@K )=>list<@K>"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Key,
+		"keys( self ::map<@K,@V>, from :@K, to :@K )=>list<@K>"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Value,
+		"values( self ::map<@K,@V> )=>list<@V>"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Value,
+		"values( self ::map<@K,@V>, from ::@K )=>list<@V>"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Value,
+		"values( self ::map<@K,@V>, from ::@K, to ::@K )=>list<@V>"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Size,
+		"size( self ::map<@K,@V> )=>int"
+		/*
+		//
+		*/
+	},
 
-	{ DaoMAP_Iterate,   "iterate( self :map<@K,@V> )[key :@K, value :@V]" },
-	{ DaoMAP_Count,  "count( self :map<@K,@V> )[key :@K, value :@V =>int] =>int" },
-	{ DaoMAP_Keys,   "keys( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@K>" },
-	{ DaoMAP_Values, "values( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@V>" },
-	{ DaoMAP_Select, "select( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<tuple<key:@K,value:@V>>" },
-	{ DaoMAP_Find2,  "find( self :map<@K,@V> )[key :@K, value :@V =>int] =>tuple<key:@K,value:@V>|none" },
-	{ DaoMAP_Map,    "map( self :map<@K,@V> )[key :@K, value :@V =>@T] =>list<@T>" },
-	{ DaoMAP_Apply,  "apply( self :map<@K,@V> )[key :@K, value :@V =>@V] =>map<@K,@V>" },
+	{ DaoMAP_Iterate,
+		"iterate( self :map<@K,@V> )[key :@K, value :@V]"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Count,
+		"count( self :map<@K,@V> )[key :@K, value :@V =>int] =>int"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Keys,
+		"keys( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@K>"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Values,
+		"values( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@V>"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Select,
+		"select( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<tuple<key:@K,value:@V>>"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Find2,
+		"find( self :map<@K,@V> )[key :@K, value :@V =>int] =>tuple<key:@K,value:@V>|none"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Map,
+		"map( self :map<@K,@V> )[key :@K, value :@V =>@T] =>list<@T>"
+		/*
+		//
+		*/
+	},
+	{ DaoMAP_Apply,
+		"apply( self :map<@K,@V> )[key :@K, value :@V =>@V] =>map<@K,@V>"
+		/*
+		//
+		*/
+	},
 	{ NULL, NULL }
 };
 
@@ -3014,7 +3180,7 @@ static int DaoTuple_GetIndexE( DaoTuple *self, DaoProcess *proc, DString *name )
 {
 	int id = DaoTuple_GetIndex( self, name );
 	if( id <0 || id >= self->size ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD_NOTEXIST, "invalid tuple" );
+		DaoProcess_RaiseError( proc, "Field::NonExist", "invalid tuple" );
 		return -1;
 	}
 	return id;
@@ -3035,7 +3201,7 @@ static void DaoTupleCore_SetField( DaoValue *self0, DaoProcess *proc, DString *n
 	t = type[id];
 	if( t->tid == DAO_PAR_NAMED ) t = & t->aux->xType;
 	if( DaoValue_Move( value, self->values + id, t ) ==0)
-		DaoProcess_RaiseException( proc, DAO_ERROR, "type not matching" );
+		DaoProcess_RaiseError( proc, "Type", "type not matching" );
 }
 DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int init );
 static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
@@ -3087,9 +3253,9 @@ static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 		}
 		return;
 InvIndex:
-		DaoProcess_RaiseException( proc, DAO_ERROR_INDEX_OUTOFRANGE, "" );
+		DaoProcess_RaiseError( proc, "Index::Range", NULL );
 	}
-	if( ec ) DaoProcess_RaiseException( proc, ec, "" );
+	if( ec ) DaoProcess_RaiseException( proc, daoExceptionName[ec], NULL, NULL );
 }
 static void DaoTupleCore_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, DaoValue *value )
 {
@@ -3108,14 +3274,14 @@ static void DaoTupleCore_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 	}else{
 		ec = DAO_ERROR_INDEX;
 	}
-	if( ec ) DaoProcess_RaiseException( proc, ec, "" );
+	if( ec ) DaoProcess_RaiseException( proc, daoExceptionName[ec], NULL, NULL );
 }
 static void DaoTupleCore_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N )
 {
 	switch( N ){
 	case 0 : DaoTupleCore_GetItem1( self, proc, dao_none_value ); break;
 	case 1 : DaoTupleCore_GetItem1( self, proc, ids[0] ); break;
-	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
+	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
 static void DaoTupleCore_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
@@ -3123,7 +3289,7 @@ static void DaoTupleCore_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *id
 	switch( N ){
 	case 0 : DaoTupleCore_SetItem1( self, proc, dao_none_value, value ); break;
 	case 1 : DaoTupleCore_SetItem1( self, proc, ids[0], value ); break;
-	default : DaoProcess_RaiseException( proc, DAO_ERROR_INDEX, "not supported" );
+	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
 static void DaoTupleCore_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
@@ -3613,17 +3779,15 @@ DaoException* DaoException_New( DaoType *type )
 	DaoCstruct_Init( (DaoCstruct*)self, type );
 	self->callers = DArray_New( DAO_DATA_VALUE );
 	self->lines = DArray_New(0);
-	self->name = DString_New();
 	self->info = DString_New();
-	self->edata = NULL;
+	self->data = NULL;
 	DaoException_InitByType( self, type );
 	return self;
 }
 void DaoException_Delete( DaoException *self )
 {
 	DaoCstruct_Free( (DaoCstruct*)self );
-	GC_DecRC( self->edata );
-	DString_Delete( self->name );
+	GC_DecRC( self->data );
 	DString_Delete( self->info );
 	DArray_Delete( self->callers );
 	DArray_Delete( self->lines );
@@ -3631,14 +3795,14 @@ void DaoException_Delete( DaoException *self )
 }
 void DaoException_SetData( DaoException *self, DaoValue *data )
 {
-	DaoValue_Move( data, & self->edata, NULL );
+	DaoValue_Move( data, & self->data, NULL );
 }
 void DaoException_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *maps, int remove )
 {
 	DaoException *self = (DaoException*) p;
-	if( self->edata ) DArray_Append( values, self->edata );
+	if( self->data ) DArray_Append( values, self->data );
 	if( self->callers->size ) DArray_Append( arrays, self->callers );
-	if( remove ) self->edata = NULL;
+	if( remove ) self->data = NULL;
 }
 
 static void Dao_Exception_Get_name( DaoProcess *proc, DaoValue *p[], int n );
@@ -3656,7 +3820,7 @@ static DaoFuncItem dao_Exception_Meths[] =
 	/*
 	// No constructors, so that interface of user-defined exception type
 	// can match to interface<class<Exception>>!
-	// See also the build method recover().
+	// See also the built-in method recover().
 	*/
 #if 0
 	{ Dao_Exception_New,   "Exception( info = '' )=>Exception" },
@@ -3687,7 +3851,7 @@ DaoTypeBase dao_Exception_Typer =
 static void Dao_Exception_Get_name( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoException* self = (DaoException*) p[0];
-	DaoProcess_PutString( proc, self->name );
+	DaoProcess_PutChars( proc, self->ctype->typer->name );
 }
 static void Dao_Exception_Get_info( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -3702,12 +3866,12 @@ static void Dao_Exception_Set_info( DaoProcess *proc, DaoValue *p[], int n )
 static void Dao_Exception_Get_data( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoException* self = (DaoException*) p[0];
-	DaoProcess_PutValue( proc, self->edata );
+	DaoProcess_PutValue( proc, self->data );
 }
 static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoException* self = (DaoException*) p[0];
-	DaoValue_Move( p[1], & self->edata, NULL );
+	DaoValue_Move( p[1], & self->data, NULL );
 }
 #ifdef DEBUG
 static void Dao_Exception_Getf( DaoProcess *proc, DaoValue *p[], int n )
@@ -3737,31 +3901,6 @@ static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n )
 	DaoProcess_PutValue( proc, (DaoValue*)self );
 }
 
-static DaoFuncItem dao_ExceptionNone_Meths[] =
-{
-	{ Dao_Exception_New, "None( info = '' )=>None" },
-	{ Dao_Exception_New22, "None( data : any )=>None" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_ExceptionNone_Typer =
-{
-	"Exception::None", NULL, NULL, dao_ExceptionNone_Meths,
-	{ & dao_Exception_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static DaoFuncItem dao_ExceptionAny_Meths[] =
-{
-	{ Dao_Exception_New, "Any( info = '' )=>Any" },
-	{ Dao_Exception_New22, "Any( data : any )=>Any" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_ExceptionAny_Typer =
-{
-	"Exception::Any", NULL, NULL, dao_ExceptionAny_Meths,
-	{ & dao_Exception_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
 
 static DaoFuncItem dao_ExceptionWarning_Meths[] =
 {
@@ -3789,293 +3928,47 @@ DaoTypeBase dao_ExceptionError_Typer =
 	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
-static DaoFuncItem dao_ErrorField_Meths[] =
-{
-	{ Dao_Exception_New, "Field( info = '' )=>Field" },
-	{ Dao_Exception_New22, "Field( data : any )=>Field" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_ErrorField_Typer =
-{
-	"Exception::Error::Field", NULL, NULL, dao_ErrorField_Meths,
-	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static DaoFuncItem dao_NotExist_Meths[] =
-{
-	{ Dao_Exception_New, "NotExist( info = '' )=>NotExist" },
-	{ Dao_Exception_New22, "NotExist( data : any )=>NotExist" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_FieldNotExist_Typer =
-{
-	"Exception::Error::Field::NotExist", NULL, NULL, dao_NotExist_Meths,
-	{ & dao_ErrorField_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static DaoFuncItem dao_FieldNotPermit_Meths[] =
-{
-	{ Dao_Exception_New, "NotPermit( info = '' )=>NotPermit" },
-	{ Dao_Exception_New22, "NotPermit( data : any )=>NotPermit" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_FieldNotPermit_Typer =
-{
-	"Exception::Error::Field::NotPermit", NULL, NULL, dao_FieldNotPermit_Meths,
-	{ & dao_ErrorField_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static DaoFuncItem dao_ErrorFloat_Meths[] =
-{
-	{ Dao_Exception_New, "Float( info = '' )=>Float" },
-	{ Dao_Exception_New22, "Float( data : any )=>Float" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_ErrorFloat_Typer =
-{
-	"Exception::Error::Float", NULL, NULL, dao_ErrorFloat_Meths,
-	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static DaoFuncItem dao_FloatDivByZero_Meths[] =
-{
-	{ Dao_Exception_New, "DivByZero( info = '' )=>DivByZero" },
-	{ Dao_Exception_New22, "DivByZero( data : any )=>DivByZero" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_FloatDivByZero_Typer =
-{
-	"Exception::Error::Float::DivByZero", NULL, NULL, dao_FloatDivByZero_Meths,
-	{ & dao_ErrorFloat_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static DaoFuncItem dao_FloatOverFlow_Meths[] =
-{
-	{ Dao_Exception_New, "OverFlow( info = '' )=>OverFlow" },
-	{ Dao_Exception_New22, "OverFlow( data : any )=>OverFlow" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_FloatOverFlow_Typer =
-{
-	"Exception::Error::Float::OverFlow", NULL, NULL, dao_FloatOverFlow_Meths,
-	{ & dao_ErrorFloat_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static DaoFuncItem dao_FloatUnderFlow_Meths[] =
-{
-	{ Dao_Exception_New, "UnderFlow( info = '' )=>UnderFlow" },
-	{ Dao_Exception_New22, "UnderFlow( data : any )=>UnderFlow" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_FloatUnderFlow_Typer =
-{
-	"Exception::Error::Float::UnderFlow", NULL, NULL, dao_FloatUnderFlow_Meths,
-	{ & dao_ErrorFloat_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static DaoFuncItem dao_ErrorIndex_Meths[] =
-{
-	{ Dao_Exception_New, "Index( info = '' )=>Index" },
-	{ Dao_Exception_New22, "Index( data : any )=>Index" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_ErrorIndex_Typer =
-{
-	"Exception::Error::Index", NULL, NULL, dao_ErrorIndex_Meths,
-	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static DaoFuncItem dao_IndexOutOfRange_Meths[] =
-{
-	{ Dao_Exception_New, "OutOfRange( info = '' )=>OutOfRange" },
-	{ Dao_Exception_New22, "OutOfRange( data : any )=>OutOfRange" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_IndexOutOfRange_Typer =
-{
-	"Exception::Error::Index::OutOfRange", NULL, NULL, dao_IndexOutOfRange_Meths,
-	{ & dao_ErrorIndex_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static DaoFuncItem dao_ErrorKey_Meths[] =
-{
-	{ Dao_Exception_New, "Key( info = '' )=>Key" },
-	{ Dao_Exception_New22, "Key( data : any )=>Key" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_ErrorKey_Typer =
-{
-	"Exception::Error::Key", NULL, NULL, dao_ErrorKey_Meths,
-	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-DaoTypeBase dao_KeyNotExist_Typer =
-{
-	"Exception::Error::Key::NotExist", NULL, NULL, dao_NotExist_Meths,
-	{ & dao_ErrorKey_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static DaoFuncItem dao_ErrorParam_Meths[] =
-{
-	{ Dao_Exception_New, "Param( info = '' )=>Param" },
-	{ Dao_Exception_New22, "Param( data : any )=>Param" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_ErrorParam_Typer =
-{
-	"Exception::Error::Param", NULL, NULL, dao_ErrorParam_Meths,
-	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static DaoFuncItem dao_Syntax_Meths[] =
-{
-	{ Dao_Exception_New, "Syntax( info = '' )=>Syntax" },
-	{ Dao_Exception_New22, "Syntax( data : any )=>Syntax" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_WarningSyntax_Typer =
-{
-	"Exception::Warning::Syntax", NULL, NULL, dao_Syntax_Meths,
-	{ & dao_ExceptionWarning_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-DaoTypeBase dao_ErrorSyntax_Typer =
-{
-	"Exception::Error::Syntax", NULL, NULL, dao_Syntax_Meths,
-	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static DaoFuncItem dao_ErrorType_Meths[] =
-{
-	{ Dao_Exception_New, "Type( info = '' )=>Type" },
-	{ Dao_Exception_New22, "Type( data : any )=>Type" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_ErrorType_Typer =
-{
-	"Exception::Error::Type", NULL, NULL, dao_ErrorType_Meths,
-	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static DaoFuncItem dao_Value_Meths[] =
-{
-	{ Dao_Exception_New, "Value( info = '' )=>Value" },
-	{ Dao_Exception_New22, "Value( data : any )=>Value" },
-	{ NULL, NULL }
-};
-DaoTypeBase dao_WarningValue_Typer =
-{
-	"Exception::Warning::Value", NULL, NULL, dao_Value_Meths,
-	{ & dao_ExceptionWarning_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-DaoTypeBase dao_ErrorValue_Typer =
-{
-	"Exception::Error::Value", NULL, NULL, dao_Value_Meths,
-	{ & dao_ExceptionError_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-void DaoException_Setup( DaoNamespace *ns )
+DaoType* DaoException_Setup( DaoNamespace *ns )
 {
 	DaoNamespace_WrapType( ns, & dao_Exception_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_ExceptionNone_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_ExceptionAny_Typer, 0 );
 	DaoNamespace_WrapType( ns, & dao_ExceptionWarning_Typer, 0 );
 	DaoNamespace_WrapType( ns, & dao_ExceptionError_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_ErrorField_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_FieldNotExist_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_FieldNotPermit_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_ErrorFloat_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_FloatDivByZero_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_FloatOverFlow_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_FloatUnderFlow_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_ErrorIndex_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_IndexOutOfRange_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_ErrorKey_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_KeyNotExist_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_ErrorParam_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_WarningSyntax_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_ErrorSyntax_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_WarningValue_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_ErrorValue_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_ErrorType_Typer, 0 );
-}
-DaoType* DaoException_GetType( int type )
-{
-	switch( type ){
-	case DAO_EXCEPTION : return dao_Exception_Typer.core->kernel->abtype;
-	case DAO_EXCEPTION_NONE : return dao_ExceptionNone_Typer.core->kernel->abtype;
-	case DAO_EXCEPTION_ANY : return dao_ExceptionAny_Typer.core->kernel->abtype;
-	case DAO_WARNING : return dao_ExceptionWarning_Typer.core->kernel->abtype;
-	case DAO_ERROR : return dao_ExceptionError_Typer.core->kernel->abtype;
-	case DAO_ERROR_FIELD : return dao_ErrorField_Typer.core->kernel->abtype;
-	case DAO_ERROR_FIELD_NOTEXIST : return dao_FieldNotExist_Typer.core->kernel->abtype;
-	case DAO_ERROR_FIELD_NOTPERMIT : return dao_FieldNotPermit_Typer.core->kernel->abtype;
-	case DAO_ERROR_FLOAT : return dao_ErrorFloat_Typer.core->kernel->abtype;
-	case DAO_ERROR_FLOAT_DIVBYZERO : return dao_FloatDivByZero_Typer.core->kernel->abtype;
-	case DAO_ERROR_FLOAT_OVERFLOW : return dao_FloatOverFlow_Typer.core->kernel->abtype;
-	case DAO_ERROR_FLOAT_UNDERFLOW : return dao_FloatUnderFlow_Typer.core->kernel->abtype;
-	case DAO_ERROR_INDEX : return dao_ErrorIndex_Typer.core->kernel->abtype;
-	case DAO_ERROR_INDEX_OUTOFRANGE : return dao_IndexOutOfRange_Typer.core->kernel->abtype;
-	case DAO_ERROR_KEY : return dao_ErrorKey_Typer.core->kernel->abtype;
-	case DAO_ERROR_KEY_NOTEXIST : return dao_KeyNotExist_Typer.core->kernel->abtype;
-	case DAO_ERROR_PARAM : return dao_ErrorParam_Typer.core->kernel->abtype;
-	case DAO_ERROR_SYNTAX : return dao_ErrorSyntax_Typer.core->kernel->abtype;
-	case DAO_ERROR_TYPE : return dao_ErrorType_Typer.core->kernel->abtype;
-	case DAO_ERROR_VALUE : return dao_ErrorValue_Typer.core->kernel->abtype;
-	case DAO_WARNING_SYNTAX : return dao_WarningSyntax_Typer.core->kernel->abtype;
-	case DAO_WARNING_VALUE : return dao_WarningValue_Typer.core->kernel->abtype;
-	default : break;
-	}
 	return dao_Exception_Typer.core->kernel->abtype;
+}
+const char* DaoException_GetName( int id )
+{
+	if( id < 0 || id >= ENDOF_BASIC_EXCEPT ) return "NotAnException";
+	return daoExceptionName[id];
 }
 void DaoException_InitByType( DaoException *self, DaoType *type )
 {
 	int i;
-	DString_SetChars( self->name, type->typer->name );
 	for(i=DAO_EXCEPTION; i<ENDOF_BASIC_EXCEPT; i++){
-		if( type == DaoException_GetType( i ) ){
+		if( strcmp( type->typer->name, daoExceptionName[i] ) == 0 ){
 			DString_SetChars( self->info, daoExceptionInfo[i] );
 			return;
 		}
 	}
 }
 
-void DaoException_Init( DaoException *self, DaoProcess *proc, const char *value )
+void DaoException_Init( DaoException *self, DaoProcess *proc, const char *info, DaoValue *dat )
 {
 	DaoVmCodeX **annotCodes;
 	DaoVmCode *vmc = proc->activeCode;
 	DaoRoutine *rout = proc->activeRoutine;
-	DaoType *efloat = DaoException_GetType( DAO_ERROR_FLOAT );
 	DaoStackFrame *frame = proc->topFrame->prev;
 	int line, id = (int) (vmc - proc->topFrame->active->codes);
 
 	if( rout == NULL ) return;
-	annotCodes = rout->body->annotCodes->items.pVmc;
 
 	line = rout->defLine;
+	annotCodes = rout->body->annotCodes->items.pVmc;
 	if( vmc && rout->body->vmCodes->size ) line = annotCodes[id]->line;
-	if( value && value[0] != 0 ){
-		DaoValue *s = (DaoValue*) DaoString_New();
-		DString_SetChars( s->xString.value, value );
-		GC_ShiftRC( s, self->edata );
-		self->edata = s;
-	}
+
+	if( info && info[0] != 0 ) DString_SetChars( self->info, info );
+	GC_ShiftRC( dat, self->data );
+	self->data = dat;
+
 	DArray_Clear( self->callers );
 	DArray_Clear( self->lines );
 	DArray_Append( self->callers, proc->topFrame->routine );
@@ -4126,25 +4019,15 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 	ss->attribs |= DAO_IO_STRING;
 
 	DaoStream_WriteChars( ss, "[[" );
-	DaoStream_WriteString( ss, self->name );
+	DaoStream_WriteChars( ss, self->ctype->typer->name );
 	DaoStream_WriteChars( ss, "]] --- " );
 	h = sstring->size;
 	if( h > 40 ) h = 40;
 	DaoStream_WriteString( ss, self->info );
-	DaoStream_WriteChars( ss, ":" );
-	DaoStream_WriteNewLine( ss );
+	DaoStream_WriteChars( ss, ":\n" );
 	DString_Format( sstring, w, h );
 	DaoStream_WriteString( stream, sstring );
 	DString_Clear( sstring );
-
-	if( self->edata && self->edata->type == DAO_STRING ){
-		DaoStream_WriteString( ss, self->edata->xString.value );
-		if( DString_RFindChar( sstring, '\n', -1 ) != sstring->size-1 )
-			DaoStream_WriteNewLine( ss );
-		DaoStream_WriteString( stream, sstring );
-		DString_Clear( sstring );
-		DaoStream_WriteChars( ss, "--\n" );
-	}
 
 	for(i=0; i<n; i++){
 		DaoRoutine *rout = self->callers->items.pRoutine[i];

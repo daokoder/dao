@@ -414,7 +414,7 @@ void DaoInitThread()
 static int DaoMT_PushSectionFrame( DaoProcess *proc )
 {
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "code section not found!" );
+		DaoProcess_RaiseError( proc, NULL, "code section not found!" );
 		return 0;
 	}
 	return 1;
@@ -754,7 +754,7 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 			tuple->values[1] = node->value.pValue;
 		}
 	}
-	if( status ) DaoProcess_RaiseException( proc, DAO_ERROR, "code section execution failed!" );
+	if( status ) DaoProcess_RaiseError( proc, NULL, "code section execution failed!" );
 	DMutex_Destroy( & mutex );
 	DCondVar_Destroy( & condv );
 	dao_free( tasks );

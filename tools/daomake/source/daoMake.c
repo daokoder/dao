@@ -1456,7 +1456,7 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 			}
 			DString_AppendGap( all );
 			DString_Append( all, ruleName );
-			DString_Trim( ruleName );
+			DString_Trim( ruleName, 1, 1, 0 );
 			if( target->ttype == DAOMAKE_COMMAND && DString_Match( ruleName, "%W", NULL, NULL ) ==0 ){
 				DString_AppendGap( phony );
 				DString_Append( phony, ruleName );
@@ -2467,7 +2467,7 @@ static void PROJECT_AddDLL( DaoProcess *proc, DaoValue *p[], int N )
 static void PROJECT_AddARC( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *arc = DaoMake_GetSettingValue( "AR" );
-	if( arc == NULL ) DaoProcess_RaiseException( proc, DAO_ERROR, "The platform does not support static library!" );
+	if( arc == NULL ) DaoProcess_RaiseError( proc, NULL, "The platform does not support static library!" );
 	PROJECT_AddTarget( proc, p, N, DAOMAKE_STATICLIB );
 }
 static void PROJECT_AddJS( DaoProcess *proc, DaoValue *p[], int N )
@@ -2718,7 +2718,7 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 			project = DaoMap_GetValue( daomake_projects, p[0] );
 			if( project == NULL ){
 				if( p[1]->xEnum.value ){
-					DaoProcess_RaiseException( proc, DAO_ERROR, message->chars );
+					DaoProcess_RaiseError( proc, NULL, message->chars );
 				}
 				project = dao_none_value;
 			}
@@ -2735,7 +2735,7 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 	project = DaoMap_GetValue( daomake_projects, p[0] );
 	if( project == NULL ){
 		if( p[1]->xEnum.value ){
-			DaoProcess_RaiseException( proc, DAO_ERROR, message->chars );
+			DaoProcess_RaiseError( proc, NULL, message->chars );
 		}
 		project = dao_none_value;
 	}else{
@@ -2768,9 +2768,9 @@ static void DAOMAKE_TestCompile( DaoProcess *proc, DaoValue *p[], int N )
 	daoint *res = DaoProcess_PutInteger( proc, 0 );
 	FILE *file;
 
-	DString_Trim( cflag );
-	DString_Trim( lflag );
-	DString_Trim( code );
+	DString_Trim( cflag, 1, 1, 0 );
+	DString_Trim( lflag, 1, 1, 0 );
+	DString_Trim( code, 1, 1, 0 );
 	if( code->size == 0 ) return;
 
 	md5 = DString_New(1);
@@ -3449,7 +3449,7 @@ ErrorInvalidArgValue:
 	DaoGC_IncRC( (DaoValue*) daomake_includes );
 
 	nspace = DaoVmSpace_GetNamespace( vmSpace, "DaoMake" );
-	DaoNamespace_AddConst( vmSpace->nsInternal, nspace->name, (DaoValue*) nspace, DAO_PERM_PUBLIC );
+	DaoNamespace_AddConst( vmSpace->daoNamespace, nspace->name, (DaoValue*) nspace, DAO_PERM_PUBLIC );
 	DaoNamespace_AddConst( vmSpace->mainNamespace, nspace->name, (DaoValue*) nspace, DAO_PERM_PUBLIC );
 	daomake_type_unit    = DaoNamespace_WrapType( nspace, & DaoMakeUnit_Typer, 0 );
 	daomake_type_objects = DaoNamespace_WrapType( nspace, & DaoMakeObjects_Typer, 0 );

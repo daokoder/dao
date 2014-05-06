@@ -335,7 +335,7 @@ static void LONG_Sqrt( DaoProcess *proc, DaoValue *p[], int N )
 	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
 	DaoValue **items = tuple->items;
 	if( z->sign <0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "need positive long integer" );
+		DaoProcess_RaiseError( proc, NULL, "need positive long integer" );
 		return;
 	}
 	DLong_Sqrt( z, items[0]->xLong.value, items[1]->xLong.value );

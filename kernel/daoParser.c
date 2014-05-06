@@ -652,71 +652,13 @@ static void DaoParser_StatementError( DaoParser *self, DaoParser *parser, int co
 	}
 }
 
-#define MAX_INDENT_STEP 16
 int DaoParser_LexCode( DaoParser *self, const char *src, int replace )
 {
-	DVector *indstack = NULL, *indents = NULL, *lines = NULL;
-	DString *mbs = self->string;
-	DaoToken *t, *t2;
-	int counts[MAX_INDENT_STEP];
-	int i, j, k, flags = replace ? DAO_LEX_ESCAPE : 0;
+	int flags = replace ? DAO_LEX_ESCAPE : 0;
 
-	flags |= DAO_LEX_COMMENT;
 	self->lineCount = DaoLexer_Tokenize( self->lexer, src, flags );
-	if( self->lineCount ==0 ) return 0;
-	if( daoConfig.chindent ){
-		indents = DVector_New( sizeof(int) );
-		lines = DVector_New( sizeof(int) );
-		indstack = DVector_New( sizeof(int) );
-		DVector_PushInt( indstack, 1 );
-		DVector_PushInt( indstack, 1 );
-	}
-	memset( counts, 0, MAX_INDENT_STEP*sizeof(int) );
-	for(i=0; i<self->tokens->size; i++ ){
-		t = self->tokens->items.pToken[i];
-		if( daoConfig.chindent && t->name != DTOK_COMMENT ){
-			if( i ==0 || t->line != self->tokens->items.pToken[i-1]->line ){
-				while( indstack->size && t->cpos < indstack->data.ints[indstack->size-1] ){
-					indstack->size -= 1;
-				}
-				if( indstack->size && t->cpos > indstack->data.ints[indstack->size-1] ){
-					DVector_PushInt( indstack, t->cpos );
-				}
-				k = t->cpos - indstack->data.ints[ indstack->size - 2 ];
-				if( k >= 16 ) k = 16;
-				if( k >0 ) counts[k-1] += 1;
-				if( k >0 ){
-					DVector_PushInt( indents, k );
-					DVector_PushInt( lines, t->line );
-				}
-			}
-		}
-		if( t->name == DTOK_COMMENT ){
-			DArray_Erase( self->tokens, i, 1 );
-			i --;
-		}
-	}
-	if( daoConfig.chindent ){
-		k = 0;
-		for(j=1; j<=MAX_INDENT_STEP; j++){
-			/*
-			   printf( "j = %i:  %3i\n", j, counts[j-1] );
-			 */
-			if( counts[j-1] >= k ){
-				k = counts[j-1];
-				self->indent = j;
-			}
-		}
-		for(i=0; i<indents->size; i++){
-			if( indents->data.ints[i] % self->indent ){
-				printf( "Warning: improper indentation of %i spaces at line: %i.\n",
-						indents->data.ints[i], lines->data.ints[i] );
-			}
-		}
-		DVector_Delete( indstack );
-		DVector_Delete( indents );
-		DVector_Delete( lines );
-	}
+	if( self->lineCount == 0 ) return 0;
+
 #if 0
 	for(i=0; i<self->tokens->size; i++){
 		DaoToken *tk = self->tokens->items.pToken[i];
@@ -1585,7 +1527,7 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 	if( i > 0 && i < 100 ){
 		/* Always compile unscoped builtin type names as builtin types: */
 		DaoValue *pbasic = token->name == DKEY_CDATA ? cdata->ctype->aux : NULL;
-		type = DaoNamespace_MakeType( self->vmSpace->nsInternal, name->chars, i, pbasic, 0,0 );
+		type = DaoNamespace_MakeType( self->vmSpace->daoNamespace, name->chars, i, pbasic, 0,0 );
 		if( type->tid == DAO_TUPLE ) type->variadic = 1; /* "tuple" is variadic; */
 		return type;
 	}else if( token->name == DTOK_ID_THTYPE ){
@@ -1853,7 +1795,7 @@ WrongType:
 		if( strcmp( tokens[start]->string.chars, "dao" ) ==0 ){
 			daons = 1;
 			start += 2;
-			ns = self->vmSpace->nsInternal;
+			ns = self->vmSpace->daoNamespace;
 			tok = tokens[start];
 			if( tok->name > DKEY_USE ) tokname = dao_keywords[ tok->name - DKEY_USE ].value;
 			if( tok->type != DTOK_IDENTIFIER ) goto InvalidTypeName;
@@ -2464,13 +2406,13 @@ static int DaoParser_HandleVerbatim( DaoParser *self, int start )
 			daoint rb = DString_FindChar( verbatim, ')', 0 );
 			DString_SetBytes( self->string, verbatim->chars + 2 + wcs, lb - 2 - wcs );
 			DString_SetBytes( self->string2, verbatim->chars + lb + 1, rb - lb - 1 );
-			DString_Trim( self->string2 );
+			DString_Trim( self->string2, 1, 1, 0 );
 		}else{
 			daoint rb = DString_FindChar( verbatim, ']', 0 );
 			DString_SetBytes( self->string, verbatim->chars + 2 + wcs, rb - 2 - wcs );
 			DString_Clear( self->string2 );
 		}
-		DString_Trim( self->string );
+		DString_Trim( self->string, 1, 1, 0 );
 		inliner = DaoNamespace_FindCodeInliner( ns, self->string );
 		if( inliner == NULL ){
 			if( lb != DAO_NULLPOS )
@@ -5628,11 +5570,6 @@ ErrorParsing:
 	GC_DecRC( rout );
 	return -1;
 }
-static int DaoParser_ClassExpression( DaoParser *self, int start )
-{
-	DaoParser_Error( self, DAO_CTW_OBSOLETE_SYNTAX, NULL );
-	return -1;
-}
 
 int DaoParser_MakeArithTree( DaoParser *self, int start, int end, int *cst )
 {
@@ -6036,11 +5973,6 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 			return error;
 		}
 		result.reg = regLast = DaoParser_ExpClosure( self, start );
-		result.first = last->next;
-		result.last = result.update = self->vmcLast;
-		start = self->curToken;
-	}else if( tki == DKEY_CLASS ){
-		result.reg = regLast = DaoParser_ClassExpression( self, start );
 		result.first = last->next;
 		result.last = result.update = self->vmcLast;
 		start = self->curToken;

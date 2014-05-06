@@ -158,11 +158,32 @@ const char* getRtInfo( int tp )
 	return "";
 }
 
+const char* const daoExceptionName[] =
+{
+	"Exception" ,
+	"Exception::Warning" ,
+	"Exception::Error" ,
+	"Exception::Error::Field" ,
+	"Exception::Error::Field::NotExist" ,
+	"Exception::Error::Field::NotPermit" ,
+	"Exception::Error::Float" ,
+	"Exception::Error::Float::DivByZero" ,
+	"Exception::Error::Float::OverFlow" ,
+	"Exception::Error::Float::UnderFlow" ,
+	"Exception::Error::Index" ,
+	"Exception::Error::Index::Range" ,
+	"Exception::Error::Key" ,
+	"Exception::Error::Key::NotExist" ,
+	"Exception::Error::Param" ,
+	"Exception::Error::Syntax" ,
+	"Exception::Error::Type" ,
+	"Exception::Error::Value" ,
+	"Exception::Warning::Syntax" ,
+	"Exception::Warning::Value"
+};
 const char* const daoExceptionInfo[] =
 {
 	"certain exception" ,
-	"none exception" ,
-	"any or none exception" ,
 	"certain warning" ,
 	"certain error" ,
 	"invalid field accessing" ,

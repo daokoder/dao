@@ -234,7 +234,14 @@ DAO_DLL DaoTypeBase defaultCdataTyper;
 DAO_DLL DaoCdata dao_default_cdata;
 
 
-/* In analog to DaoClass, a DaoCtype is created for each cdata type: */
+/*
+// DaoCtype is the class struct for C/C++ types:
+//
+// Each C/C++ type is principly represented by three objects:
+// -- A class object:  DaoCtype;
+// -- A class type:    DaoType (DaoCtype::ctype);
+// -- A instance type: DaoType (DaoCtype::cdtype);
+*/
 struct DaoCtype
 {
 	DAO_CSTRUCT_COMMON;
@@ -255,21 +262,19 @@ struct DaoException
 
 	DArray     *callers;
 	DArray     *lines;
-
-	DString    *name;
 	DString    *info;
-	DaoValue   *edata;
+	DaoValue   *data;
 };
 
 DaoException* DaoException_New( DaoType *type );
 void DaoException_Delete( DaoException *self );
 void DaoException_SetData( DaoException *self, DaoValue *data );
 
-void DaoException_Setup( DaoNamespace *ns );
-void DaoException_Init( DaoException *self, DaoProcess *proc, const char *value );
+DaoType* DaoException_Setup( DaoNamespace *ns );
+void DaoException_Init( DaoException *self, DaoProcess *proc, const char *info, DaoValue *dat );
 void DaoException_Print( DaoException *self, DaoStream *stream );
 
-DaoType* DaoException_GetType( int type );
+DAO_DLL const char* DaoException_GetName( int id );
 
 
 #endif

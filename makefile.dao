@@ -404,7 +404,7 @@ daovm.GenerateFinder( $TRUE );
 ###########################################################################
 
 if( daovm_bundle_program.size() ){
-	mode = ((string) DaoMake::BuildMode())[1:].tolower()
+	mode = ((string) DaoMake::BuildMode())[1:].convert( $lower )
 	daos = daovm_bundle_program + '.dao'
 	darc = daovm_bundle_program + '.dar.c'
 	daomake_args  = '--platform ' + DaoMake::Platform() + ' --mode ' + mode;

@@ -431,6 +431,7 @@ static DaoCdata* DaoCdata_MakeObject( DaoCdata *self, DaoValue *param, DaoProces
 {
 	DaoValue *value;
 	DaoRoutine *routine = DaoType_FindFunction( self->ctype, self->ctype->name );
+	printf( "%p %s\n", routine, self->ctype->name->chars );
 	if( DaoProcess_PushCallable( proc, routine, NULL, & param, 1 ) ) return NULL;
 	proc->topFrame->active = proc->firstFrame;
 	DaoProcess_SetActiveFrame( proc, proc->firstFrame ); /* return value in stackValues[0] */
@@ -869,6 +870,7 @@ static void AUX_Deserialize( DaoProcess *proc, DaoValue *p[], int N )
 	int top = proc->factory->size;
 	DaoValue *value = NULL;
 	DaoValue_Deserialize( & value, p[0]->xString.value, proc->activeNamespace, proc );
+	if( value == NULL ) DaoProcess_RaiseError( proc, NULL, "deserialization failed" );
 	DaoProcess_PutValue( proc, value );
 	DaoProcess_PopValues( proc, proc->factory->size - top );
 	GC_DecRC( value );
@@ -877,7 +879,7 @@ static void AUX_Backup( DaoProcess *proc, DaoValue *p[], int N )
 {
 	FILE *fout = fopen( DString_GetData( p[0]->xString.value ), "w+" );
 	if( fout == NULL ){
-		DaoProcess_RaiseException( proc,DAO_ERROR_FILE, DString_GetData( p[0]->xString.value ) );
+		DaoProcess_RaiseError( proc, "File", DString_GetData( p[0]->xString.value ) );
 		return;
 	}
 	DaoNamespace_Backup( proc->activeNamespace, proc, fout, p[1]->xInteger.value );
@@ -887,7 +889,7 @@ static void AUX_Restore( DaoProcess *proc, DaoValue *p[], int N )
 {
 	FILE *fin = fopen( DString_GetData( p[0]->xString.value ), "r" );
 	if( fin == NULL ){
-		DaoProcess_RaiseException( proc,DAO_ERROR_FILE, DString_GetData( p[0]->xString.value ) );
+		DaoProcess_RaiseError( proc, "File", DString_GetData( p[0]->xString.value ) );
 		return;
 	}
 	DaoNamespace_Restore( proc->activeNamespace, proc, fin );

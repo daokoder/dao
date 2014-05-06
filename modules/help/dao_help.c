@@ -353,7 +353,7 @@ static void DaoxStream_WriteParagraph( DaoxStream *self, DString *text, int offs
 			next = DString_Break( text, start, width - self->offset );
 		}
 		DString_SubString( text, line, start, next - start );
-		if( self->offset == offset ) DString_Trim( line );
+		if( self->offset == offset ) DString_Trim( line, 1, 1, 0 );
 		//DString_Chop( line );
 		DaoxStream_WriteString( self, line );
 	}
@@ -712,7 +712,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 	}else if( isspace( self->last ) == 0 ){
 		DaoxStream_WriteChar( self, ' ' );
 	}
-	DString_Trim( code );
+	DString_Trim( code, 1, 1, 0 );
 
 	if( lang && strcmp( lang->chars, "cxx" ) == 0 ){
 		DaoxHelp_TokenizeCodes( & daox_help_cxx_lexinfo, lexer, code->chars );
@@ -954,7 +954,7 @@ static void DaoxStream_WriteTable( DaoxStream *self, DString *text, int offset, 
 	daoint newline, next, start = 0;
 	daoint i, j, k, m;
 
-	DString_Trim( text );
+	DString_Trim( text, 1, 1, 0 );
 	while( start < text->size ){
 		DArray_Clear( row );
 		newline = DString_FindChar( text, '\n', start );
@@ -967,7 +967,7 @@ static void DaoxStream_WriteTable( DaoxStream *self, DString *text, int offset, 
 			next = hash2 < amd2 ? hash2 : amd2;
 			if( next > newline ) next = newline;
 			DString_SubString( text, cell, start, next - start );
-			DString_Trim( cell );
+			DString_Trim( cell, 1, 1, 0 );
 			DArray_Append( row, cell );
 			start = next;
 		}
@@ -1005,7 +1005,7 @@ static void DaoxStream_WriteTable( DaoxStream *self, DString *text, int offset, 
 			if( hash2 || amd2 ){
 				DString_Erase( cell, 0, 2 );
 				right = cell->size && isspace( cell->chars[0] );
-				DString_Trim( cell );
+				DString_Trim( cell, 1, 1, 0 );
 			}
 			if( hash2 ){
 				if( i && j ){
@@ -1152,12 +1152,12 @@ static int DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, i
 				daoint rb = DString_FindChar( text, ')', start );
 				DString_SetBytes( cap, text->chars + start + 2, lb - start - 2 );
 				DString_SetBytes( mode, text->chars + lb + 1, rb - lb - 1 );
-				DString_Trim( mode );
+				DString_Trim( mode, 1, 1, 0 );
 			}else{
 				daoint rb = DString_FindChar( text, ']', start );
 				DString_SetBytes( cap, text->chars + start + 2, rb - start - 2 );
 			}
-			DString_Trim( cap );
+			DString_Trim( cap, 1, 1, 0 );
 			//printf( "%s\n", cap->chars );
 			it = DMap_Find( self->mtypes, cap );
 			mtype = DAOX_HELP_NONE;
@@ -1243,8 +1243,8 @@ static int DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, i
 					DString_SubString( cap, fgcolor, 0, pos );
 					DString_SubString( cap, bgcolor, pos + 1, cap->size );
 				}
-				DString_Trim( fgcolor );
-				DString_Trim( bgcolor );
+				DString_Trim( fgcolor, 1, 1, 0 );
+				DString_Trim( bgcolor, 1, 1, 0 );
 				//if( islist ) DString_Trim( part );
 				if( self->offset && isspace( self->last ) == 0 ) DaoxStream_WriteChar( self, ' ' );
 				DaoxStream_SetColor( self, fgcolor->chars, bgcolor->chars );
@@ -1472,7 +1472,7 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 				int start = DString_Break( title, 0, TW - (self->name->size + 2) );
 				if( start >= 0 ){
 					DString_SubString( title, chunk, 0, start );
-					DString_Trim( chunk );
+					DString_Trim( chunk, 1, 1, 0 );
 					DaoxStream_WriteString( stream, chunk );
 				}else{
 					start = 0;
@@ -1485,7 +1485,7 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 					start = DString_Break( title, start, 0 );
 					next = DString_Break( title, start, TW );
 					DString_SubString( title, chunk, start, next - start );
-					DString_Trim( chunk );
+					DString_Trim( chunk, 1, 1, 0 );
 					DaoxStream_WriteChar( stream, '\n' );
 					DaoxStream_WriteString( stream, line );
 					DaoxStream_WriteString( stream, chunk );
@@ -2106,7 +2106,7 @@ static DString* dao_verbatim_content( DString *VT )
 	DString *content = DString_New();
 	daoint rb = DString_FindChar( VT, ']', 0 );
 	DString_SetBytes( content, VT->chars + rb + 1, VT->size - 2*(rb + 1) );
-	DString_Trim( content );
+	DString_Trim( content, 1, 1, 0 );
 	return content;
 }
 static DString* dao_verbatim_code( DString *VT )
@@ -2186,7 +2186,7 @@ static int dao_help_license( DaoNamespace *NS, DString *mode, DString *verbatim,
 	if( help == NULL || help->current == NULL ) return dao_string_delete( code, 1 );
 	if( help->current->license == NULL ) help->current->license = DString_New();
 	DString_Assign( help->current->license, code );
-	DString_Trim( help->current->license );
+	DString_Trim( help->current->license, 1, 1, 0 );
 	return dao_string_delete( code, 0 );
 }
 

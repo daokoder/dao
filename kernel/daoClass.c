@@ -54,7 +54,7 @@ static void DaoClass_GetField( DaoValue *self0, DaoProcess *proc, DString *name 
 		DString_SetChars( mbs, DString_GetData( self->className ) );
 		DString_AppendChars( mbs, "." );
 		DString_Append( mbs, name );
-		DaoProcess_RaiseException( proc, rc, mbs->chars );
+		DaoProcess_RaiseException( proc, daoExceptionName[rc], mbs->chars, NULL );
 	}else{
 		DaoProcess_PutReference( proc, value );
 	}
@@ -69,10 +69,10 @@ static void DaoClass_SetField( DaoValue *self0, DaoProcess *proc, DString *name,
 		int id = LOOKUP_ID( node->value.pInt );
 		DaoVariable *dt = self->variables->items.pVar[id];
 		if( DaoValue_Move( value, & dt->value, dt->dtype ) ==0 )
-			DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "not matched" );
+			DaoProcess_RaiseError( proc, "Param", "not matched" );
 	}else{
 		/* XXX permission */
-		DaoProcess_RaiseException( proc, DAO_ERROR_FIELD, "not exist" );
+		DaoProcess_RaiseError( proc, "Field", "not exist" );
 	}
 }
 static void DaoClass_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )

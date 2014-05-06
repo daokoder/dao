@@ -86,11 +86,9 @@ struct DaoConfig
 {
 	short cpu;  /* number of CPU */
 	short jit;  /* enable JIT compiling */
-	short typedcode; /* enable typed VM codes */
 	short optimize;  /* enable optimization */
 	short iscgi;     /* is CGI script */
 	short tabspace;  /* number of spaces counted for a tab */
-	short chindent;  /* check indentation */
 };
 
 extern DaoConfig daoConfig;

@@ -144,36 +144,6 @@ enum DaoOptions
 	*/
 	DAO_OPTION_IDE = (1<<31)
 };
-enum DaoExceptionType
-{
-	DAO_EXCEPTION = 0,
-	DAO_EXCEPTION_NONE ,
-	DAO_EXCEPTION_ANY ,
-	DAO_WARNING ,
-	DAO_ERROR ,
-
-	DAO_ERROR_FIELD ,
-	DAO_ERROR_FIELD_NOTEXIST ,
-	DAO_ERROR_FIELD_NOTPERMIT ,
-	DAO_ERROR_FLOAT ,
-	DAO_ERROR_FLOAT_DIVBYZERO ,
-	DAO_ERROR_FLOAT_OVERFLOW ,
-	DAO_ERROR_FLOAT_UNDERFLOW ,
-	DAO_ERROR_INDEX ,
-	DAO_ERROR_INDEX_OUTOFRANGE ,
-	DAO_ERROR_KEY ,
-	DAO_ERROR_KEY_NOTEXIST ,
-	DAO_ERROR_PARAM ,
-	DAO_ERROR_SYNTAX ,
-	DAO_ERROR_TYPE ,
-	DAO_ERROR_VALUE ,
-	DAO_ERROR_FILE ,
-
-	DAO_WARNING_SYNTAX ,
-	DAO_WARNING_VALUE ,
-
-	ENDOF_BASIC_EXCEPT
-};
 
 
 /*
@@ -488,8 +458,8 @@ DAO_DLL void DString_SetChars( DString *self, const char *chs );
 DAO_DLL void DString_SetBytes( DString *self, const char *data, daoint n );
 
 DAO_DLL char* DString_GetData( DString *self );
-DAO_DLL void DString_Chop( DString *self );
-DAO_DLL void DString_Trim( DString *self );
+DAO_DLL void DString_Chop( DString *self, int utf8 );
+DAO_DLL void DString_Trim( DString *self, int head, int tail, int utf8 );
 
 /*
 // DString_Erase() erases "n" characters starting from "start".
@@ -796,8 +766,9 @@ DAO_DLL void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream );
 DAO_DLL DaoValue* DaoProcess_GetReturned( DaoProcess *self );
 DAO_DLL DaoType*  DaoProcess_GetReturnType( DaoProcess *self );
 DAO_DLL DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt );
-DAO_DLL DaoException* DaoProcess_RaiseException( DaoProcess *self, int type, const char *info );
-DAO_DLL DaoException* DaoProcess_InvokeException( DaoProcess *self, const char *type, const char *info, DaoValue *data );
+DAO_DLL void DaoProcess_RaiseException( DaoProcess *self, const char *type, const char *info, DaoValue *data );
+DAO_DLL void DaoProcess_RaiseWarning( DaoProcess *self, const char *type, const char *info );
+DAO_DLL void DaoProcess_RaiseError( DaoProcess *self, const char *type, const char *info );
 
 /*
 // The following functions can be called within a wrapped C function to create
@@ -898,7 +869,6 @@ DAO_DLL void DaoNamespace_AddConstValue( DaoNamespace *self, const char *name, D
 DAO_DLL void DaoNamespace_AddValue( DaoNamespace *self, const char *name, DaoValue *d, const char *type);
 DAO_DLL DaoValue* DaoNamespace_FindData( DaoNamespace *self, const char *name );
 DAO_DLL DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const char *type );
-DAO_DLL DaoType* DaoNamespace_MakeExceptionType( DaoNamespace *self, const char *name, int fatal );
 DAO_DLL DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque );
 DAO_DLL DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fp, const char *proto );
 DAO_DLL int DaoNamespace_TypeDefines( DaoNamespace *self, const char *alias[] );

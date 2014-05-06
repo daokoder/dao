@@ -100,7 +100,7 @@ static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 	DArray_PushFront( vms->pathLoading, proc->activeNamespace->path );
 	ns = DaoVmSpace_LoadEx( vms, DString_GetData( name ), runim );
 	DaoProcess_PutValue( proc, (DaoValue*) ns );
-	if( ns == NULL ) DaoProcess_RaiseException( proc, DAO_ERROR, "loading failed" );
+	if( ns == NULL ) DaoProcess_RaiseError( proc, NULL, "loading failed" );
 	DArray_PopFront( vms->pathLoading );
 	if( import && ns ) DaoNamespace_AddParent( proc->activeNamespace, ns );
 }
@@ -110,19 +110,13 @@ static void STD_Resource( DaoProcess *proc, DaoValue *p[], int N )
 	FILE *fin;
 	DString *file = DString_Copy( p[0]->xString.value );
 	if( DaoVmSpace_SearchResource( proc->vmSpace, file ) == 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR, "resource file not found" );
+		DaoProcess_RaiseError( proc, NULL, "resource file not found" );
 		DString_Delete( file );
 		return;
 	}
 	DaoVmSpace_ReadSource( proc->vmSpace, file, file );
 	DaoProcess_PutString( proc, file );
 	DString_Delete( file );
-}
-static void STD_Argv( DaoProcess *proc, DaoValue *p[], int N )
-{
-	int i;
-	DaoList *list = DaoProcess_PutList( proc );
-	for(i=0; i<proc->topFrame->parCount; i++) DaoList_Append( list, proc->activeValues[i] );
 }
 /* modules/debugger */
 DAO_DLL void Dao_AboutVar( DaoNamespace *ns, DaoValue *var, DString *str )
@@ -161,44 +155,6 @@ static void STD_About( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *str = DaoProcess_PutChars( proc, "" );
 	Dao_AboutVars( proc->activeNamespace, p, N, str );
-}
-static void STD_Callable( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoValue *p0 = p[0];
-	daoint *res = DaoProcess_PutInteger( proc, 0 );
-	if( p0 == NULL || p0->type == 0 ){
-		*res = 0;
-		return;
-	}
-	switch( p0->type ){
-	case DAO_CLASS :
-	case DAO_ROUTINE :
-		*res = 1;
-		break;
-	case DAO_OBJECT :
-		{
-			DaoObject *object = & p0->xObject;
-			DString *mbs = DString_New();
-			DString_SetChars( mbs, "()" );
-			DaoObject_GetData( object, mbs, & p0, proc->activeObject );
-			DString_Delete( mbs );
-			if( p0 && p0->type == DAO_ROUTINE ) *res = 1;
-			break;
-		}
-	case DAO_CTYPE :
-		{
-			DaoType *type = p0->xCdata.ctype;
-			*res = DaoType_FindFunctionChars( type, type->typer->name ) != NULL;
-			break;
-		}
-	case DAO_CDATA :
-	case DAO_CSTRUCT :
-		{
-			*res = DaoType_FindFunctionChars( p0->xCdata.ctype, "()" ) != NULL;
-			break;
-		}
-	default : break;
-	}
 }
 
 void DaoProcess_Trace( DaoProcess *self, int depth )
@@ -260,30 +216,6 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 	DString_Delete( input );
 	if( debugger && debugger->Debug ) debugger->Debug( debugger, proc, stream );
 }
-static void STD_Error( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoProcess_RaiseException( proc, DAO_ERROR, DString_GetData( p[0]->xString.value ) );
-}
-static void STD_Gcmax( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoProcess_PutInteger( proc, DaoGC_Max( -1 ) );
-	if( N == 1 ) DaoGC_Max( (int)p[0]->xInteger.value );
-}
-static void STD_Gcmin( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoProcess_PutInteger( proc, DaoGC_Min( -1 ) );
-	if( N == 1 ) DaoGC_Min( (int)p[0]->xInteger.value );
-}
-static void STD_SubType( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoType *tp1 = DaoNamespace_GetType( proc->activeNamespace, p[0] );
-	DaoType *tp2 = DaoNamespace_GetType( proc->activeNamespace, p[1] );
-	DaoProcess_PutInteger( proc, DaoType_MatchTo( tp1, tp2, NULL ) );
-}
-static void STD_Warn( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoProcess_RaiseException( proc, DAO_WARNING, DString_GetData( p[0]->xString.value ) );
-}
 
 #ifndef CHANGESET_ID
 #define CHANGESET_ID "Undefined"
@@ -309,7 +241,7 @@ static void STD_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 	DaoVmCode *sect;
 
 	if( times < 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "Invalid parameter value" );
+		DaoProcess_RaiseError( proc, "Param", "Invalid parameter value" );
 		return;
 	}
 	sect = DaoProcess_InitCodeSection( proc );
@@ -335,7 +267,7 @@ static void STD_String( DaoProcess *proc, DaoValue *p[], int N )
 	DaoVmCode *sect;
 
 	if( size < 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "Invalid parameter value" );
+		DaoProcess_RaiseError( proc, "Param", "Invalid parameter value" );
 		return;
 	}
 	if( size == 0 ) return;
@@ -370,13 +302,13 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 	for(i=0; i<N; i++){
 		daoint d = p[i]->xInteger.value;
 		if( d < 0 ){
-			DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, NULL );
+			DaoProcess_RaiseError( proc, "Param", NULL );
 			break;
 		}
 		size *= d;
 	}
 	if( size < 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "Invalid parameter value" );
+		DaoProcess_RaiseError( proc, "Param", "Invalid parameter value" );
 		return;
 	}
 	if( size == 0 ) return;
@@ -410,7 +342,7 @@ static void STD_Array( DaoProcess *proc, DaoValue *p[], int N )
 		if( res->type == DAO_ARRAY ){
 			sub = (DaoArray*) res;
 			if( first == NULL || DaoArray_MatchShape( sub, first ) == 0 ){
-				DaoProcess_RaiseException( proc, DAO_ERROR, "inconsistent elements or subarrays" );
+				DaoProcess_RaiseError( proc, NULL, "inconsistent elements or subarrays" );
 				break;
 			}
 			k = i * sub->size;
@@ -447,7 +379,7 @@ static void STD_List( DaoProcess *proc, DaoValue *p[], int N )
 
 	if( fold ) DaoList_Append( list, res );
 	if( size < 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "Invalid parameter value" );
+		DaoProcess_RaiseError( proc, "Param", "Invalid parameter value" );
 		return;
 	}
 	if( size == 0 ) return;
@@ -477,7 +409,7 @@ static void STD_Map( DaoProcess *proc, DaoValue *p[], int N )
 	DaoVmCode *sect;
 
 	if( size < 0 ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "Invalid parameter value" );
+		DaoProcess_RaiseError( proc, "Param", "Invalid parameter value" );
 		return;
 	}
 	if( size == 0 ) return;
@@ -506,15 +438,8 @@ DaoFuncItem dao_std_methods[] =
 	{ STD_Eval,      "eval( source ::string, st=io::stdio )=>any" },
 	{ STD_Load,      "load( file ::string, import=1, runim=0 )=>any" },
 	{ STD_Resource,  "resource( path ::string )=>string" },
-	{ STD_Argv,      "argv() => list<any>" },
 	{ STD_About,     "about( ... :: any )=>string" },
-	{ STD_Callable,  "callable( object )=>int" },
 	{ STD_Debug,     "debug( ... )" },
-	{ STD_Warn,      "warn( info ::string )" },
-	{ STD_Error,     "error( info ::string )" },
-	{ STD_Gcmax,     "gcmax( limit=0 )=>int" },/*by default, return the current value;*/
-	{ STD_Gcmin,     "gcmin( limit=0 )=>int" },
-	{ STD_SubType,   "subtype( obj1, obj2 )=>int" },
 	{ STD_Version,   "version( verbose=0 )=>string" },
 
 	{ STD_Iterate,  "iterate( times :int )[index:int]" },

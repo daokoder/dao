@@ -56,13 +56,11 @@ DAO_DLL void DString_Detach( DString *self, int bufsize );
 DAO_DLL void DString_SetSharing( DString *self, int sharing );
 
 DAO_DLL char* DString_GetData( DString *self );
-
 DAO_DLL void DString_SetChars( DString *self, const char *chs );
 DAO_DLL void DString_SetBytes( DString *self, const char *bytes, daoint count );
 
 DAO_DLL void DString_ToLower( DString *self );
 DAO_DLL void DString_ToUpper( DString *self );
-DAO_DLL void DString_Reverse( DString *self, int utf8 );
 
 DAO_DLL daoint DString_Size( DString *self );
 DAO_DLL void DString_Reset( DString *self, daoint size );
@@ -76,7 +74,6 @@ DAO_DLL void DString_InsertChars( DString *self, const char *chs, daoint at, dao
 DAO_DLL void DString_InsertChar( DString *self, const char ch, daoint at );
 DAO_DLL void DString_Append( DString *self, DString *chs );
 DAO_DLL void DString_AppendChar( DString *self, const char ch );
-DAO_DLL void DString_AppendWChar( DString *self, size_t ch );
 DAO_DLL void DString_AppendChars( DString *self, const char *chs );
 DAO_DLL void DString_AppendBytes( DString *self, const char *chs, daoint n );
 
@@ -102,8 +99,6 @@ DAO_DLL int  DString_Compare( DString *left, DString *right );
 DAO_DLL int  DString_EQ( DString *left, DString *right );
 
 DAO_DLL void DString_Add( DString *self, DString *left, DString *right );
-DAO_DLL void DString_Trim( DString *self );
-DAO_DLL void DString_Chop( DString *self );
 
 DAO_DLL daoint DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0,
 		uint_t esc0, daoint start, daoint end, int countonly );
@@ -116,7 +111,9 @@ DAO_DLL void DString_AppendPathSep( DString *self );
 
 DAO_DLL daoint DString_LocateChar( DString *self, daoint start, daoint count );
 DAO_DLL daoint DString_GetByteIndex( DString *self, daoint chindex );
-DAO_DLL void DString_ChopUTF8( DString *self );
+DAO_DLL void DString_AppendWChar( DString *self, size_t ch );
+DAO_DLL void DString_Chop( DString *self, int utf8 );
+DAO_DLL void DString_Trim( DString *self, int head, int tail, int utf8 );
 DAO_DLL int DString_UTF8CharSize( uchar_t ch );
 DAO_DLL int DString_CheckUTF8( DString *self );
 DAO_DLL int DString_DecodeUTF8( DString *self, DVector *codepoints );
@@ -124,5 +121,6 @@ DAO_DLL int DString_ImportUTF8( DString *self, DString *utf8 );
 DAO_DLL int DString_ExportUTF8( DString *self, DString *utf8 );
 DAO_DLL int DString_ToLocal( DString *self );
 DAO_DLL int DString_ToUTF8( DString *self );
+
 
 #endif

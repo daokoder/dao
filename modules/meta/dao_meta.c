@@ -316,7 +316,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 			if( value->type == DAO_ROUTINE && value->xRoutine.routHost == proto->objType ){
 				newRout = & value->xRoutine;
 				if( DaoRoutine_Finalize( newRout, klass->objType, deftypes ) == 0){
-					DaoProcess_RaiseException( self, DAO_ERROR, "method creation failed" );
+					DaoProcess_RaiseError( self, NULL, "method creation failed" );
 					continue;
 				}
 				DArray_Append( routines, newRout );
@@ -403,7 +403,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 			}
 			continue;
 InvalidField:
-			DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "" );
+			DaoProcess_RaiseError( self, "Param", "" );
 		}
 	}
 	if( methods ){ /* add methods from parameters */
@@ -430,7 +430,7 @@ InvalidField:
 			newRout = & method->xRoutine;
 			if( ROUT_HOST_TID( newRout ) !=0 ) continue;
 			if( DaoRoutine_Finalize( newRout, klass->objType, deftypes ) == 0){
-				DaoProcess_RaiseException( self, DAO_ERROR, "method creation failed" );
+				DaoProcess_RaiseError( self, NULL, "method creation failed" );
 				continue; // XXX
 			}
 			DArray_Append( routines, newRout );
@@ -453,12 +453,12 @@ InvalidField:
 			}
 			continue;
 InvalidMethod:
-			DaoProcess_RaiseException( self, DAO_ERROR_PARAM, "" );
+			DaoProcess_RaiseError( self, "Param", "" );
 		}
 	}
 	for(i=0,n=routines->size; i<n; i++){
 		if( DaoRoutine_DoTypeInference( routines->items.pRoutine[i], 0 ) == 0 ){
-			DaoProcess_RaiseException( self, DAO_ERROR, "method creation failed" );
+			DaoProcess_RaiseError( self, NULL, "method creation failed" );
 			// XXX
 		}
 	}
@@ -549,7 +549,7 @@ static void META_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 		//index = ns->cstIndex; XXX
 		data = ns->constants;
 	}else{
-		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
+		DaoProcess_RaiseError( proc, NULL, "invalid parameter" );
 		DString_Delete( name.value );
 		return;
 	}
@@ -598,7 +598,7 @@ static void META_Var1( DaoProcess *proc, DaoValue *p[], int N )
 		ns = & p[0]->xNamespace;
 		//index = ns->varIndex; XXX
 	}else{
-		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
+		DaoProcess_RaiseError( proc, NULL, "invalid parameter" );
 		DString_Delete( name.value );
 		return;
 	}
@@ -665,7 +665,7 @@ static void META_Cst2( DaoProcess *proc, DaoValue *p[], int N )
 			type = (DaoValue*) DaoNamespace_GetType( ns, *value );
 		}
 	}else{
-		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
+		DaoProcess_RaiseError( proc, NULL, "invalid parameter" );
 	}
 	DaoValue_Copy( *value, tuple->values );
 	DaoValue_Copy( type, tuple->values + 1 );
@@ -674,7 +674,7 @@ static void META_Cst2( DaoProcess *proc, DaoValue *p[], int N )
 		DaoType *tp = DaoNamespace_GetType( ns, p[2] );
 		if( type ){
 			if( DaoType_MatchTo( tp, (DaoType*) type, NULL ) ==0 ){
-				DaoProcess_RaiseException( proc, DAO_ERROR, "type not matched" );
+				DaoProcess_RaiseError( proc, NULL, "type not matched" );
 				return;
 			}
 		}
@@ -705,7 +705,7 @@ static void META_Var2( DaoProcess *proc, DaoValue *p[], int N )
 			value = object->objValues + LOOKUP_ID( node->value.pInt );
 			type = (DaoValue*) klass->instvars->items.pVar[ LOOKUP_ID( node->value.pInt ) ]->dtype;
 		}else{
-			DaoProcess_RaiseException( proc, DAO_ERROR, "invalid field" );
+			DaoProcess_RaiseError( proc, NULL, "invalid field" );
 			return;
 		}
 	}else if( p[0]->type == DAO_NAMESPACE ){
@@ -718,7 +718,7 @@ static void META_Var2( DaoProcess *proc, DaoValue *p[], int N )
 			type = (DaoValue*) var->dtype;
 		}
 	}else{
-		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
+		DaoProcess_RaiseError( proc, NULL, "invalid parameter" );
 		return;
 	}
 	DaoValue_Copy( *value, tuple->values );
@@ -728,7 +728,7 @@ static void META_Var2( DaoProcess *proc, DaoValue *p[], int N )
 		DaoType *tp = DaoNamespace_GetType( ns, p[2] );
 		if( type ){
 			if( DaoType_MatchTo( tp, (DaoType*) type, NULL ) ==0 ){
-				DaoProcess_RaiseException( proc, DAO_ERROR, "type not matched" );
+				DaoProcess_RaiseError( proc, NULL, "type not matched" );
 				return;
 			}
 		}
@@ -744,7 +744,7 @@ static void META_Routine( DaoProcess *proc, DaoValue *p[], int N )
 		DaoRoutine *rout = & p[0]->xRoutine;
 		list = DaoProcess_PutList( proc );
 		if( p[0]->type != DAO_ROUTINE ){
-			DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
+			DaoProcess_RaiseError( proc, NULL, "invalid parameter" );
 			return;
 		}
 		if( rout->overloads ){
@@ -807,7 +807,7 @@ static void META_Isa( DaoProcess *proc, DaoValue *p[], int N )
 			if( tp && DaoType_MatchValue( tp, p[0], NULL ) ) *res = 1;
 		}
 	}else{
-		DaoProcess_RaiseException( proc, DAO_ERROR, "invalid parameter" );
+		DaoProcess_RaiseError( proc, NULL, "invalid parameter" );
 	}
 }
 static void META_Self( DaoProcess *proc, DaoValue *p[], int N )

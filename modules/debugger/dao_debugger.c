@@ -67,7 +67,7 @@ DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *
 			chs = proc->vmSpace->ReadLine( "(debug) " );
 			if( chs ){
 				DString_SetChars( input, chs );
-				DString_Trim( input );
+				DString_Trim( input, 1, 1, 0 );
 				if( input->size && proc->vmSpace->AddHistory )
 					proc->vmSpace->AddHistory( chs );
 				dao_free( chs );

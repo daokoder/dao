@@ -610,37 +610,6 @@ void DString_Add( DString *self, DString *left, DString *right )
 	DString_Assign( self, left );
 	DString_Append( self, right );
 }
-void DString_Chop( DString *self )
-{
-	if( self->size == 0 ) return;
-	DString_Detach( self, self->size );
-	if( self->chars ){
-		if( self->chars[ self->size-1 ] == EOF  ) self->chars[ --self->size ] = 0;
-		if( self->chars[ self->size-1 ] == '\n' ) self->chars[ --self->size ] = 0;
-		if( self->chars[ self->size-1 ] == '\r' ) self->chars[ --self->size ] = 0;
-	}
-}
-void DString_Trim( DString *self )
-{
-	int i, ch;
-	DString_Detach( self, self->size );
-	if( self->chars ){
-		while( self->size > 0 ){
-			ch = self->chars[ self->size-1 ];
-			if( ch == EOF || isspace( ch ) ){
-				self->size --;
-				self->chars[ self->size ] = 0;
-			}else{
-				break;
-			}
-		}
-		for( i=0; i < self->size; i++ ){
-			ch = self->chars[i];
-			if( ch != EOF && ! isspace( ch ) ) break;
-		}
-		DString_Erase( self, 0, i );
-	}
-}
 daoint DString_FindReplace( DString *self, DString *str1, DString *str2, daoint index )
 {
 	daoint pos, prev = -1, from = 0, count = 0;
@@ -731,35 +700,32 @@ daoint DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0
 {
 	daoint size = self->size;
 	daoint i, count = 0;
-	if( self->chars ){
-		char *src = self->chars;
-		char chr = (char) ch0;
-		char lch = (char) lch0;
-		char rch = (char) rch0;
-		char esc = (char) esc0;
-		char c;
-		int bc = 0;
-		if( ch0 >= 128 || start >= size ) return DAO_NULLPOS;
-		if( end > size ) end = size;
-		for(i=start; i<end; i++){
-			c = src[i];
-			if( c == esc ){
-				i ++;
-				continue;
-			}
-			if( c == chr && bc ==0 ){
-				if( countonly )
-					count ++;
-				else return i;
-			}
-			if( c == lch ){
-				bc ++;
-			}else if( c == rch ){
-				bc --;
-				if( bc <0 ) return DAO_NULLPOS;
-			}
+	char *src = self->chars;
+	char chr = (char) ch0;
+	char lch = (char) lch0;
+	char rch = (char) rch0;
+	char esc = (char) esc0;
+	char c;
+	int bc = 0;
+	if( ch0 >= 128 || start >= size ) return DAO_NULLPOS;
+	if( end > size ) end = size;
+	for(i=start; i<end; i++){
+		c = src[i];
+		if( c == esc ){
+			i ++;
+			continue;
 		}
-	}else{
+		if( c == chr && bc ==0 ){
+			if( countonly )
+				count ++;
+			else return i;
+		}
+		if( c == lch ){
+			bc ++;
+		}else if( c == rch ){
+			bc --;
+			if( bc <0 ) return DAO_NULLPOS;
+		}
 	}
 	if( countonly ) return count;
 	return DAO_NULLPOS;
@@ -795,7 +761,7 @@ void DString_AppendPathSep( DString *self )
 // UTF-8 Encoding Information:
 // High 4 Bits: Encoding Schemes (0: ASCII; 1: Trailing; 2-7: Leading);
 // Low  4 Bits: Encoding Lengths (Char Size: Byte number for a code point);
-*/
+ */
 const char utf8_markers[128] =
 {
 	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, /* 00>>1 - 0F>>1 */
@@ -943,68 +909,54 @@ InvalidByte:
 	return valid >= 10*invalid;
 }
 
-void DString_ChopUTF8( DString *self )
+void DString_Chop( DString *self, int utf8 )
 {
+	if( self->size == 0 ) return;
 	DString_Detach( self, self->size );
-	DString_Chop( self );
 
-	if( self->size == 0 || DString_CheckUTF8( self ) == 0 ) return;
+	if( self->size && self->chars[ self->size-1 ] == EOF  ) self->chars[ --self->size ] = 0;
+	if( self->size && self->chars[ self->size-1 ] == '\n' ) self->chars[ --self->size ] = 0;
+	if( self->size && self->chars[ self->size-1 ] == '\r' ) self->chars[ --self->size ] = 0;
+
+	if( self->size == 0 || utf8 == 0 ) return;
 	while( self->size && DString_LocateCurrentChar( self, self->size - 1 ) == DAO_NULLPOS ){
 		self->size -= 1;
 		self->chars[self->size] = '\0';
 	}
 }
-void DString_Reverse( DString *self, int utf8 )
+void DString_Trim( DString *self, int head, int tail, int utf8 )
 {
-	DString *aux;
-	daoint size = self->size;
-	daoint i, front = 0, back = size - 1;
-	daoint start = 0, end = 2*size;
-	uchar_t *source, *dest;
+	int i, ch;
 
-	if( size <= 1 ) return;
+	if( self->size == 0 ) return;
+	if( head == 0 && tail == 0 ) return;
 	DString_Detach( self, self->size );
 
-	source = (uchar_t*) self->chars;
-	if( utf8 == 0 ){
-		uchar_t *front = source;
-		uchar_t *back = source + size - 1;
-		while( front < back ){
-			uchar_t ch = *front;
-			*front = *back;
-			*back = ch;
-			front ++;
-			back --;
+	if( head ){
+		for(i=0; i<self->size; ++i){
+			ch = self->chars[i];
+			if( ch != EOF && ! isspace( ch ) ) break;
 		}
-		return;
-	}
-
-	aux = DString_New();
-	DString_Reserve( aux, 2*size );
-	dest = (uchar_t*) aux->chars;
-	while( front < back ){
-		daoint pos1 = DString_LocateCurrentChar( self, front );
-		daoint pos2 = DString_LocateCurrentChar( self, back );
-		if( pos1 == DAO_NULLPOS ){
-			dest[--end] = source[front++];
-		}else{
-			int len = U8CharSize( source[pos1] );
-			memcpy( dest + end - len, source + pos1, len*sizeof(uchar_t) );
-			front += len;
-			end -= len;
-		}
-		if( pos2 == DAO_NULLPOS ){
-			dest[start++] = source[back--];
-		}else{
-			int len = U8CharSize( source[pos2] );
-			memcpy( dest + start, source + pos2, len*sizeof(uchar_t) );
-			start += len;
-			back -= len;
+		DString_Erase( self, 0, i );
+		if( utf8 ){
+			for(i=0; i<self->size; ++i){
+				ch = self->chars[i];
+				if( DString_LocateCurrentChar( self, 0 ) == 0 ) break;
+			}
+			if( i ) DString_Erase( self, 0, i );
 		}
 	}
-	memcpy( source, dest, start*sizeof(uchar_t) );
-	memcpy( source+start, dest+end, (self->size - start)*sizeof(uchar_t) );
-	DString_Delete( aux );
+	if( tail ){
+		while( self->size > 0 ){
+			ch = self->chars[ self->size-1 ];
+			if( ch != EOF && ! isspace( ch ) ) break;
+			self->chars[--self->size] = 0;
+		}
+		if( utf8 == 0 ) return;
+		while( self->size && DString_LocateCurrentChar( self, self->size-1 ) == DAO_NULLPOS ){
+			self->chars[--self->size] = 0;
+		}
+	}
 }
 
 int DString_DecodeUTF8( DString *self, DVector *wcs )

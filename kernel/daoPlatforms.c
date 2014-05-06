@@ -253,6 +253,6 @@ int DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolo
 
 #else
 
-void DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor ){}
+int DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor ){ return 0; }
 
 #endif

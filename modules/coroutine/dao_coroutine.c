@@ -83,7 +83,7 @@ int DaoProcess_Resume( DaoProcess *self, DaoValue *par[], int N, DaoProcess *ret
 		if( rout ) rout = DaoProcess_PassParams( self, rout, NULL, NULL, par, N, DVM_CALL );
 		self->paramValues = self->stackValues + 1;
 		if( rout == NULL ){
-			DaoProcess_RaiseException( ret, DAO_ERROR, "invalid parameters." );
+			DaoProcess_RaiseError( ret, NULL, "invalid parameters." );
 			return 0;
 		}
 	}
@@ -109,13 +109,13 @@ static void COROUT_Start( DaoProcess *proc, DaoValue *par[], int N )
 	DaoRoutine *rout;
 	int i, passed = 0;
 	if( val == NULL || val->type != DAO_ROUTINE ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_TYPE, NULL );
+		DaoProcess_RaiseError( proc, "Type", NULL );
 		return;
 	}
 	rout = DaoRoutine_ResolveX( (DaoRoutine*)val, par[0], par+2, N-2, DVM_CALL );
 	if( rout ) rout = DaoProcess_PassParams( proc, rout, self->ctype, par[0], par+2, N-2, DVM_CALL );
 	if( rout == NULL || rout->body == NULL ){
-		DaoProcess_RaiseException( proc, DAO_ERROR_PARAM, "not matched" );
+		DaoProcess_RaiseError( proc, "Param", "not matched" );
 		return;
 	}
 	if( self->process == NULL ){
@@ -134,34 +134,34 @@ static void COROUT_Start( DaoProcess *proc, DaoValue *par[], int N )
 	DaoProcess_Execute( vmProc );
 	DaoProcess_PutValue( proc, vmProc->stackValues[0] );
 	if( vmProc->status == DAO_PROCESS_ABORTED )
-		DaoProcess_RaiseException( proc, DAO_ERROR, "coroutine execution is aborted." );
+		DaoProcess_RaiseError( proc, NULL, "coroutine execution is aborted." );
 }
 static void COROUT_Resume( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxCoroutine *self = (DaoxCoroutine*) p[0];
 	DaoProcess *sp = self->process;
 	if( self->process == proc ){
-		DaoProcess_RaiseException( proc, DAO_WARNING, "coroutine can only resume in alien process." );
+		DaoProcess_RaiseWarning( proc, NULL, "coroutine can only resume in alien process." );
 		return;
 	}
 	if( sp->status != DAO_PROCESS_SUSPENDED || sp->pauseType != DAO_PAUSE_COROUTINE_YIELD ){
-		DaoProcess_RaiseException( proc, DAO_WARNING, "coroutine cannot be resumed." );
+		DaoProcess_RaiseWarning( proc, NULL, "coroutine cannot be resumed." );
 		return;
 	}
 	DaoProcess_Resume( self->process, p+1, N-1, proc );
 	if( sp->status == DAO_PROCESS_SUSPENDED && sp->pauseType != DAO_PAUSE_COROUTINE_YIELD ){
-		DaoProcess_RaiseException( proc, DAO_WARNING, "coroutine is not suspended properly." );
+		DaoProcess_RaiseWarning( proc, NULL, "coroutine is not suspended properly." );
 		return;
 	}
 	if( self->process->status == DAO_PROCESS_ABORTED )
-		DaoProcess_RaiseException( proc, DAO_ERROR, "coroutine execution is aborted." );
+		DaoProcess_RaiseError( proc, NULL, "coroutine execution is aborted." );
 }
 static void COROUT_Yield( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxCoroutine *self = (DaoxCoroutine*) p[0];
 	DaoValue *value = N > 1 ? p[1] : DaoValue_MakeNone();
 	if( self->process != proc ){
-		DaoProcess_RaiseException( proc, DAO_WARNING, "coroutine cannot yield in alien process." );
+		DaoProcess_RaiseWarning( proc, NULL, "coroutine cannot yield in alien process." );
 		return;
 	}
 	GC_ShiftRC( value, proc->stackValues[0] );
