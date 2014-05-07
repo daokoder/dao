@@ -586,7 +586,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		return mt;
 	}else if( type->tid == DAO_VALTYPE ){
 		if( self->tid != DAO_VALTYPE ) return DaoType_MatchValue( self, type->aux, defs );
-		if( DaoValue_Compare( self->aux, type->aux ) ==0 ) return DAO_MT_EQ + 1;
+		if( DaoValue_Compare( self->aux, type->aux ) ==0 ) return DAO_MT_EXACT;
 		return DAO_MT_NOT;
 	}
 	mt = DAO_MT_EQ;

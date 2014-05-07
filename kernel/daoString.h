@@ -35,7 +35,16 @@
 #define DAO_NULLPOS ((daoint)(-1))
 #define DAOINT_BITS CHAR_BIT*sizeof(daoint)
 
+typedef struct DCharState DCharState;
 typedef struct DStringAux DStringAux;
+
+struct DCharState
+{
+	uchar_t  type;   /* char type: 0, invalid; 1, ASCII; 2-4, UTF-8; */
+	uchar_t  width;  /* number of bytes in the sequence (1-4); */
+	uint_t   value;  /* unicode codepoint or byte value; */
+};
+
 
 struct DString
 {
@@ -100,8 +109,8 @@ DAO_DLL int  DString_EQ( DString *left, DString *right );
 
 DAO_DLL void DString_Add( DString *self, DString *left, DString *right );
 
-DAO_DLL daoint DString_BalancedChar( DString *self, uint_t ch0, uint_t lch0, uint_t rch0,
-		uint_t esc0, daoint start, daoint end, int countonly );
+DAO_DLL daoint DString_BalancedChar( DString *self, char ch, char lch, char rch,
+		char esc, daoint start, daoint end, int countonly );
 
 DAO_DLL DString DString_WrapBytes( const char *mbs, int n );
 DAO_DLL DString DString_WrapChars( const char *mbs );
@@ -109,6 +118,7 @@ DAO_DLL DString DString_WrapChars( const char *mbs );
 
 DAO_DLL void DString_AppendPathSep( DString *self );
 
+DAO_DLL DCharState DString_DecodeChar( char *start, char *end );
 DAO_DLL daoint DString_LocateChar( DString *self, daoint start, daoint count );
 DAO_DLL daoint DString_GetByteIndex( DString *self, daoint chindex );
 DAO_DLL void DString_AppendWChar( DString *self, size_t ch );

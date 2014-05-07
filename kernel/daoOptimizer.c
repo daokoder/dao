@@ -3516,6 +3516,13 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				}else if( NoCheckingType( at ) ){
 					/* allow less strict typing: */
 					ct = dao_type_udf;
+				}else if( at->tid == DAO_STRING ){
+					if( opb > 2 ) goto InvIndex;
+					if( types[opa+1]->tid == DAO_NONE ) goto InvIndex;
+					if( types[opa+1]->tid > DAO_DOUBLE ) goto InvIndex;
+					if( types[opa+2]->tid != DAO_NONE ) goto InvIndex;
+					ct = at;
+					if( types[opa+2]->tid != DAO_NONE ) ct = dao_type_int;
 				}else if( at->tid == DAO_ARRAY ){
 					int max = DAO_NONE, min = DAO_COMPLEX;
 					ct = type = at->nested->items.pType[0];
@@ -3540,14 +3547,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 							}
 						}
 					}
-				}else if( at->tid == DAO_MAP ){
-					DaoType *t0 = at->nested->items.pType[0];
-					int check1 = NoCheckingType( types[opa+1] ) == 0;
-					int check2 = NoCheckingType( types[opa+2] ) == 0;
-					if( types[opa+1]->tid == DAO_VALTYPE ) check1 = types[opa+1]->aux->type;
-					if( types[opa+2]->tid == DAO_VALTYPE ) check2 = types[opa+2]->aux->type;
-					if( check1 && DaoType_MatchTo( types[opa+1], t0, defs ) ==0 ) goto InvKey;
-					if( check2 && DaoType_MatchTo( types[opa+2], t0, defs ) ==0 ) goto InvKey;
 				}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
 					meth = DaoClass_FindOperator( & at->aux->xClass, "[]", hostClass );
 					if( meth == NULL ) goto WrongContainer;

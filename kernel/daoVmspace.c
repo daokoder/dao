@@ -2958,7 +2958,7 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 	}
 
 	typer = (DaoTypeBase*) dao_calloc( 1, sizeof(DaoTypeBase) );
-	typer->name = (char*) dao_malloc( strlen(name) * sizeof(char) );
+	typer->name = (char*) dao_malloc( (strlen(name)+1) * sizeof(char) );
 	strcpy( (char*) typer->name, name );
 	typer->supers[0] = parent->typer;
 	typer->Delete = parent->typer->Delete;

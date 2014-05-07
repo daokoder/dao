@@ -5432,15 +5432,6 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		}
 		varReg = LOOKUP_BIND_LC( node->value.pInt );
 		*cst = varReg;
-	}else if( tki == DTOK_COLON ){
-		if( (node = MAP_Find( self->allConsts, str )) == NULL ){
-			DaoTuple *tuple = DaoNamespace_MakePair( ns, dao_none_value, dao_none_value );
-			tuple->trait = 0;
-			node = MAP_Insert( self->allConsts, str, routine->routConsts->value->size );
-			DaoRoutine_AddConstant( routine, (DaoValue*) tuple );
-		}
-		varReg = LOOKUP_BIND_LC( node->value.pInt );
-		*cst = varReg;
 	}else{
 		*cst = 0;
 		DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, str );
@@ -6798,7 +6789,7 @@ InvalidExpression:
 static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int eltype, int warn )
 {
 	int start = self->curToken;
-	DaoEnode LHS = { -1, 0, 1, NULL, NULL, NULL, NULL };
+	DaoEnode RHS, LHS = { -1, 0, 1, NULL, NULL, NULL, NULL };
 	DaoToken **tokens = self->tokens->items.pToken;
 
 #if 0
@@ -6808,14 +6799,18 @@ static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int eltyp
 #endif
 	if( DaoParser_CurrentTokenType( self ) == DTOK_COLON ){
 		/* : e , */
+		if( !(eltype & DAO_EXPRLIST_SLICE) ) goto Done;
+		self->curToken += 1; /* eat the operator */
 		LHS = DaoParser_NoneValue( self );
-		if( !(eltype & DAO_EXPRLIST_SLICE) ) LHS.reg = -1;
+		RHS = DaoParser_ParseUnary( self, stop, 0 );
+		if( RHS.reg < 0 ) goto Done; /* :, equivalent to none in slicing; */
 	}else{
 		LHS = DaoParser_ParseUnary( self, stop, eltype );
 	}
 	if( LHS.reg >= 0 && DaoParser_GetOperPrecedence( self ) >= 0 ){
 		LHS = DaoParser_ParseOperator( self, LHS, 0, stop, eltype, warn );
 	}
+Done:
 	if( LHS.reg < 0 ){
 		if( self->curToken < self->tokens->size && DaoParser_CurrentTokenType( self ) < DTOK_COMMENT ){
 			DString *tok = & self->tokens->items.pToken[ self->curToken ]->string;

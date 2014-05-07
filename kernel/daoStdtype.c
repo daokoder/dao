@@ -685,6 +685,16 @@ static void DaoString_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	default : break;
 	}
 }
+static void DaoString_GetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *pid1, DaoValue *pid2 )
+{
+	DString *self = self0->xString.value;
+	daoint i, j, valid;
+
+	valid = pid1->type > DAO_NONE && pid1->type <= DAO_DOUBLE && pid2->type == DAO_NONE;
+	if( valid == 0 ) DaoProcess_RaiseError( proc, "Index", NULL );
+
+	i = DaoValue_GetInteger( pid1 );
+}
 static void DaoString_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, DaoValue *value )
 {
 	DString *self = self0->xString.value;
@@ -730,6 +740,7 @@ static void DaoString_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[]
 	switch( N ){
 	case 0 : DaoString_GetItem1( self, proc, NULL ); break;
 	case 1 : DaoString_GetItem1( self, proc, ids[0] ); break;
+	case 2 : DaoString_GetItem2( self, proc, ids[0], ids[1] ); break;
 	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
@@ -902,20 +913,16 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoSTR_Split( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString *self = p[0]->xString.value;
-	DString *delm = p[1]->xString.value;
-	DString *quote = p[2]->xString.value;
-	int rm = (int)p[3]->xInteger.value;
 	DaoList *list = DaoProcess_PutList( proc );
 	DaoValue *value = (DaoValue*) DaoString_New();
+	DString *self = p[0]->xString.value;
+	DString *delm = p[1]->xString.value;
 	DString *str = value->xString.value;
 	daoint dlen = DString_Size( delm );
-	daoint qlen = DString_Size( quote );
 	daoint size = DString_Size( self );
 	daoint last = 0;
 	daoint posDelm = DString_Find( self, delm, last );
-	daoint posQuote = DString_Find( self, quote, last );
-	daoint posQuote2 = -1;
+
 	if( N ==1 || DString_Size( delm ) ==0 ){
 		uchar_t *bytes = (unsigned char*) self->chars;
 		daoint i = 0;
@@ -929,35 +936,14 @@ static void DaoSTR_Split( DaoProcess *proc, DaoValue *p[], int N )
 		DaoString_Delete( (DaoString*) value );
 		return;
 	}
-	if( posDelm != DAO_NULLPOS && posQuote != DAO_NULLPOS && posQuote < posDelm ){
-		posQuote2 = DString_Find( self, quote, posQuote+qlen );
-		if( posQuote2 != DAO_NULLPOS && posQuote2 > posDelm )
-			posDelm = DString_Find( self, delm, posQuote2 );
-	}
 	while( posDelm != DAO_NULLPOS ){
-		if( rm && posQuote == last && posQuote2 == posDelm-qlen )
-			DString_SubString( self, str, last+qlen, posDelm-last-2*qlen );
-		else
-			DString_SubString( self, str, last, posDelm-last );
-		/* if( last !=0 || posDelm !=0 ) */
+		DString_SubString( self, str, last, posDelm-last );
 		DArray_Append( list->value, value );
 
 		last = posDelm + dlen;
 		posDelm = DString_Find( self, delm, last );
-		posQuote = DString_Find( self, quote, last );
-		posQuote2 = -1;
-		if( posDelm != DAO_NULLPOS && posQuote != DAO_NULLPOS && posQuote < posDelm ){
-			posQuote2 = DString_Find( self, quote, posQuote+qlen );
-			if( posQuote2 != DAO_NULLPOS && posQuote2 > posDelm )
-				posDelm = DString_Find( self, delm, posQuote2 );
-		}
 	}
-	if( posQuote != DAO_NULLPOS && posQuote < size )
-		posQuote2 = DString_Find( self, quote, posQuote+qlen );
-	if( rm && posQuote == last && posQuote2 == size-qlen )
-		DString_SubString( self, str, last+qlen, size-last-2*qlen );
-	else
-		DString_SubString( self, str, last, size-last );
+	DString_SubString( self, str, last, size-last );
 	DArray_Append( list->value, value );
 	DaoString_Delete( (DaoString*) value );
 }
@@ -1184,26 +1170,30 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 	DaoValue *chr = (DaoValue*)(void*)&chint;
 	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
 	DString *data = self->value;
+	daoint unit = p[1]->xEnum.value;
 	daoint entry, i, n, N = data->size;
-	wchar_t k;
+	char *chars = data->chars, *end = chars + N;
+	DCharState state = { 1, 1, 0 };
+
 	switch( funct ){
-	case DVM_FUNCT_APPLY :
-		DString_Detach( self->value, self->value->size );
-		DaoProcess_PutReference( proc, p[0] );
-		break;
 	case DVM_FUNCT_MAP :
 		string = DaoProcess_PutChars( proc, "" );
 		DString_Reserve( string, self->value->size );
 		break;
-	case DVM_FUNCT_SELECT : string = DaoProcess_PutChars( proc, "" ); break;
-	case DVM_FUNCT_COUNT : count = DaoProcess_PutInteger( proc, 0 ); break;
 	}
 	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
 	DaoProcess_AcquireCV( proc );
-	for(i=0; i<N; i++){
+	for(i=0; i<N; ){
+		if( unit ){
+			state = DString_DecodeChar( chars, end );
+		}else{
+			state.value = data->chars[i];
+		}
+		chars += state.width;
+		i += state.width;
 		idint.value = i;
-		chint.value = data->chars[i];
+		chint.value = state.value;
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, chr );
 		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, index );
 		proc->topFrame->entry = entry;
@@ -1214,18 +1204,6 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 		case DVM_FUNCT_MAP :
 			DString_AppendWChar( string, DaoValue_GetInteger( res ) );
 			break;
-		case DVM_FUNCT_SELECT :
-			if( ! DaoValue_IsZero( res ) ){
-				DString_AppendChar( string, data->chars[i] );
-			}
-			break;
-		case DVM_FUNCT_COUNT :
-			*count += ! DaoValue_IsZero( res );
-			break;
-		case DVM_FUNCT_APPLY :
-			k = DaoValue_GetInteger( res );
-			data->chars[i] = k;
-			break;
 		}
 	}
 	DaoProcess_ReleaseCV( proc );
@@ -1235,21 +1213,9 @@ static void DaoSTR_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoSTR_Functional( proc, p, N, DVM_FUNCT_ITERATE );
 }
-static void DaoSTR_Count( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoSTR_Functional( proc, p, N, DVM_FUNCT_COUNT );
-}
 static void DaoSTR_Map( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoSTR_Functional( proc, p, N, DVM_FUNCT_MAP );
-}
-static void DaoSTR_Select( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoSTR_Functional( proc, p, N, DVM_FUNCT_SELECT );
-}
-static void DaoSTR_Apply( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoSTR_Functional( proc, p, N, DVM_FUNCT_APPLY );
 }
 static void DaoSTR_CharAt( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1286,19 +1252,20 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Insert,
 		"insert( self : string, str : string, at = 0, remove = 0, copy = 0 )"
 		/*
-		//
+		// Insert "copy" bytes from the head of "str" to this string at position
+		// "at" with "remove" bytes removed from this string starting from "at".
 		*/
 	},
 	{ DaoSTR_Clear,
 		"clear( self : string )"
 		/*
-		//
+		// Clear the string;
 		*/
 	},
 	{ DaoSTR_Erase,
-		"erase( self : string, start = 0, n = -1 )"
+		"erase( self : string, start = 0, count = -1 )"
 		/*
-		//
+		// Erase "count" bytes starting from "start" position.
 		*/
 	},
 	{ DaoSTR_Chop,
@@ -1321,7 +1288,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Find,
-		"find( self :: string, str :: string, from = 0, reverse = 0 ) => int"
+		"find( self :: string, str : string, from = 0, reverse = 0 ) => int"
 		/*
 		// Find the first occurrence of "str" in this string, searching from "from";
 		// If "reverse" is zero, search forward, otherwise backward;
@@ -1331,7 +1298,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Replace,
-		"replace( self : string, str1 :: string, str2 :: string, index = 0 ) => int"
+		"replace( self : string, str1 : string, str2 : string, index = 0 ) => int"
 		/*
 		// Replace the substring "str1" in "self" to "str2";
 		// Replace all occurrences of "str1" to "str2" if "index" is zero;
@@ -1341,91 +1308,108 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Expand,
-		"expand( self :: string, keys :: map<string,string>, spec = '$', keep = 1 ) => string"
+		"expand( self :: string, subs :: map<string,string>, spec = '$', keep = 1 ) => string"
 		/*
-		//
+		// Expand this string into a new string with substrings from the keys
+		// of "subs" substituted with the corresponding values of "subs".
+		// If "spec" is not an empty string, each key has to be occurred inside
+		// a pair of parenthesis preceded with "spec", and the "spec", the
+		// parenthesis and the key are together substituted by the corresponding
+		// value from "subs"; If "spec" is not empty and "keep" is zero, "spec(key)"
+		// that contain substrings not found in the keys of "subs" are removed;
+		// Otherwise kept.
 		*/
 	},
 	{ DaoSTR_Split,
-		"split( self :: string, sep = '', quote = '', rm = 1 ) => list<string>"
+		"split( self :: string, sep = '' ) => list<string>"
 		/*
-		//
+		// Split the string by seperator "sep", and return the tokens as a list.
+		// If "sep" is empty, split at character boundaries assuming UTF-8 encoding.
 		*/
 	},
 	{ DaoSTR_Fetch,
-		"fetch( self :: string, pt :: string, group = 0, start = 0, end = 0 ) => string"
+		"fetch( self :: string, pattern : string, group = 0, start = 0, end = -1 ) => string"
 		/*
-		//
+		// Fetch the substring that matches the "group"-th group of pattern "pattern".
+		// Only the region between "start" and "end" is searched.
+		// Negative index starts from the end of the string.
 		*/
 	},
 	{ DaoSTR_Match,
-		"match( self :: string, pt :: string, group = 0, start = 0, end = 0 )"
+		"match( self :: string, pattern : string, group = 0, start = 0, end = -1 )"
 			"=> tuple<start:int,end:int>|none"
 		/*
-		//
+		// Match part of this string to pattern "pattern".
+		// If matched, the indexes of the first and the last byte of the matched
+		// substring will be returned as a tuple. If not matched, "none" is returned.
+		// Parameter "start" and "end" have the same meaning as in string::fetch().
 		*/
 	},
 	{ DaoSTR_Change,
-		"change( self : string, pt :: string, s :: string, index = 0, start = 0, end = 0 )"
-			"=> int"
+		"change( self : string, pattern : string, target : string, index = 0, "
+			"start = 0, end = -1 ) => int"
 		/*
-		//
+		// Change the part(s) of the string that match pattern "pattern" to "target".
+		// The target string "target" can contain back references from pattern "pattern".
+		// If "index" is zero, all matched parts are changed; otherwise, only
+		// the "index" match is changed.
+		// Parameter "start" and "end" have the same meaning as in string::fetch().
 		*/
 	},
 	{ DaoSTR_Capture,
-		"capture( self :: string, pt :: string, start = 0, end = 0 ) => list<string>"
+		"capture( self :: string, pattern : string, start = 0, end = -1 ) => list<string>"
 		/*
-		//
+		// Match pattern "pattern" to the string, and capture all the substrings that
+		// match to each of the groups of "pattern". Note that the pattern groups are
+		// indexed starting from one, and zero index is reserved for the whole pattern.
+		// The strings in the returned list correspond to the groups that have the
+		// same index as that of the strings in the list.
+		// Parameter "start" and "end" have the same meaning as in string::fetch().
 		*/
 	},
 	{ DaoSTR_Extract,
-		"extract( self :: string, pt :: string, mtype : enum<both,matched,unmatched> = $matched )"
-			"=> list<string>"
+		"extract( self :: string, pattern : string, "
+			"mtype : enum<both,matched,unmatched> = $matched ) => list<string>"
 		/*
-		//
+		// Extract the substrings that match to, or are between the matched ones,
+		// or both, and return them as a list.
 		*/
 	},
-	/*
-	// Use "none|@V" for the code section return, so that if "return none" is used first,
-	// it will not be specialized to "none|none", which is the case for "@V|none".
-	*/
 	{ DaoSTR_Scan,
-		"scan( self : string, pt : string, from = 0, to = 0 )"
+		"scan( self : string, pattern : string, start = 0, end = -1 )"
 			"[start :int, end :int, state :enum<unmatched,matched> => none|@V]"
 			"=> list<@V>"
 		/*
-		//
+		// Scan the string with pattern "pattern", and invoke the attached code
+		// section for each matched substring and substrings between matches.
+		// The start and end index as well as the state of matching or not matching
+		// can be passed to the code section.
+		// Parameter "start" and "end" have the same meaning as in string::fetch().
+		// 
+		// Use "none|@V" for the code section return, so that if "return none" is used first,
+		// it will not be specialized to "none|none", which is the case for "@V|none".
 		*/
 	},
 
 	{ DaoSTR_Iterate,
-		"iterate( self : string )[char :int, index :int]"
+		"iterate( self : string, unit : enum<byte,char> = $byte )[char :int, index :int]"
 		/*
-		//
-		*/
-	},
-	{ DaoSTR_Count,
-		"count( self : string )[char :int, index :int => int] => int"
-		/*
-		//
+		// Iterate over each unit of the string.
+		// If "unit" is "$byte", iterate per byte;
+		// If "unit" is "$char", iterate per character; Assuming UTF-8 encoding;
+		// Each byte that is not part of a valid UTF-8 encoding unit is iterated once.
+		// For the code section parameters, the first will hold the byte value or
+		// character codepoint for each iteration, and the second will be the byte
+		// location in the string.
 		*/
 	},
 	{ DaoSTR_Map,
-		"map( self : string )[char :int, index :int => int] => string"
+		"map( self : string, unit : enum<byte,char> = $byte )"
+			"[char :int, index :int => int] => string"
 		/*
-		//
-		*/
-	},
-	{ DaoSTR_Select,
-		"select( self : string )[char :int, index :int => int] => string"
-		/*
-		//
-		*/
-	},
-	{ DaoSTR_Apply,
-		"apply( self :string )[char :int, index :int =>int]=>string"
-		/*
-		//
+		// Map each unit of the string to a new value and return a new string form
+		// from the mapped values.
+		// The parameters have the same meaning as in "iterate()";
 		*/
 	},
 
@@ -1922,52 +1906,6 @@ static void DaoLIST_Sort( DaoProcess *proc, DaoValue *p[], int npar )
 	}
 	QuickSort( items, 0, N-1, part, p[1]->xEnum.value == 0 );
 }
-static void DaoLIST_Join( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoList *self = & p[0]->xList;
-	DaoValue **data = self->value->items.pValue;
-	DString *sep = p[1]->xString.value;
-	DString *buf = DString_New();
-	DString *res;
-	daoint size = 0, i;
-	int digits, mbs = 1;
-	for( i = 0; i < self->value->size; i++ ){
-		switch( data[i]->type ){
-		case DAO_STRING:
-			if( data[i]->xString.value->chars == NULL ) mbs = 0;
-			size += data[i]->xString.value->size;
-			break;
-		case DAO_INTEGER:
-			size += ( data[i]->xInteger.value < 0 ) ? 2 : 1;
-			break;
-		case DAO_FLOAT:
-			size += ( data[i]->xFloat.value < 0 ) ? 2 : 1;
-			break;
-		case DAO_DOUBLE:
-			size += ( data[i]->xDouble.value < 0 ) ? 2 : 1;
-			break;
-		case DAO_COMPLEX:
-			size += ( data[i]->xComplex.value.real < 0 ) ? 5 : 4;
-			break;
-		case DAO_ENUM :
-			size += 1;
-			break;
-		default:
-			DaoProcess_RaiseError( proc, NULL, "Incompatible list type (expected numeric or string)" );
-			return;
-		}
-	}
-	res = DaoProcess_PutChars( proc, "" );
-	if( self->value->size != 0 ){
-		DString_Reserve( res, size + ( self->value->size - 1 ) * sep->size );
-		for( i = 0; i < self->value->size - 1; i++ ){
-			DString_Append( res, DaoValue_GetString( self->value->items.pValue[i], buf ) );
-			if( sep->size != 0 ) DString_Append( res, sep );
-		}
-		DString_Append( res, DaoValue_GetString( self->value->items.pValue[i], buf ) );
-	}
-	DString_Delete( buf );
-}
 static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, int funct )
 {
 	daoint *count = NULL;
@@ -2202,13 +2140,6 @@ static DaoFuncItem listMeths[] =
 	},
 	{ DaoLIST_Sum,
 		"sum( self :: list<@T<int|float|double|complex|string|enum>> ) => @T"
-		/*
-		//
-		*/
-	},
-	{ DaoLIST_Join,
-		"join( self :: list<@T<int|float|double|complex|string|enum>>, separator = '' )"
-			"=> string"
 		/*
 		//
 		*/
@@ -2566,8 +2497,7 @@ static void DaoMap_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], i
 	switch( N ){
 	case 0 : DaoMap_GetItem1( self, proc, dao_none_value ); break;
 	case 1 : DaoMap_GetItem1( self, proc, ids[0] ); break;
-	case 2 : DaoMap_GetItem2( self, proc, ids, N ); break;
-	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
+	default : DaoProcess_RaiseError( proc, "Index", "multi-indexing not supported" );
 	}
 }
 static void DaoMap_SetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
@@ -2792,7 +2722,6 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 	case DVM_FUNCT_SELECT :
 	case DVM_FUNCT_KEYS :
 	case DVM_FUNCT_VALUES : list = DaoProcess_PutList( proc ); break;
-	case DVM_FUNCT_COUNT : count = DaoProcess_PutInteger( proc, 0 ); break;
 	case DVM_FUNCT_APPLY : DaoProcess_PutReference( proc, p[0] ); break;
 	case DVM_FUNCT_FIND : DaoProcess_PutValue( proc, dao_none_value ); break;
 	}
@@ -2822,7 +2751,6 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 		case DVM_FUNCT_VALUES :
 			if( res->xInteger.value ) DaoList_Append( list, node->value.pValue );
 			break;
-		case DVM_FUNCT_COUNT : *count += res->xInteger.value != 0; break;
 		case DVM_FUNCT_APPLY : DaoValue_Move( res, & node->value.pValue, type ); break;
 		case DVM_FUNCT_MAP : DaoList_Append( list, res ); break;
 		}
@@ -2844,10 +2772,6 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 static void DaoMAP_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMAP_Functional( proc, p, N, DVM_FUNCT_ITERATE );
-}
-static void DaoMAP_Count( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoMAP_Functional( proc, p, N, DVM_FUNCT_COUNT );
 }
 static void DaoMAP_Keys( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2972,12 +2896,6 @@ static DaoFuncItem mapMeths[] =
 
 	{ DaoMAP_Iterate,
 		"iterate( self :map<@K,@V> )[key :@K, value :@V]"
-		/*
-		//
-		*/
-	},
-	{ DaoMAP_Count,
-		"count( self :map<@K,@V> )[key :@K, value :@V =>int] =>int"
 		/*
 		//
 		*/

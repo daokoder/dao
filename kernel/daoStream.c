@@ -113,8 +113,9 @@ static void DaoIO_Writeln2( DaoProcess *proc, DaoValue *p[], int N )
 //
 // Where 'flags', 'width' and 'precision' will conform to the C format,
 // but 'type' can only be:
-//   c, d, i, o, u, x/X : for integer;
+//   d, i, o, u, x/X : for integer;
 //   e/E, f/F, g/G : for float and double;
+//   c/C : for character, c for local encoding, S for UTF-8;
 //   s/S : for string, s for local encoding, S for UTF-8;
 //   p : for any type, write address;
 //   a : automatic, for any type, write in the default format;
@@ -131,13 +132,14 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 	DMap *cycData;
 	DString *format, *fmt2;
 	DString *fgcolor, *bgcolor;
-	const char *convs = "aspcdiouxXfFeEgG";
+	const char *convs = "asSpcCdiouxXfFeEgG";
 	char F, *s, *end, *fg, *bg, *fmt, message[100];
 	int k, id = 0;
 	if( (self->attribs & (DAO_IO_FILE | DAO_IO_PIPE)) && self->file == NULL ){
 		DaoProcess_RaiseError( proc, NULL, "stream is not open!" );
 		return;
 	}
+	/* TODO: move these variable to DaoStream for efficiency? */
 	cycData = DMap_New(0,0);
 	fmt2 = DString_New();
 	fgcolor = DString_New();
@@ -197,7 +199,14 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 			if( DaoStream_SetColor( self, fg, bg ) == 0 ) goto WrongColor;
 		}
 		self->format = fmt2->chars;
-		if( F == 'c' || F == 'd' || F == 'i' || F == 'o' || F == 'x' || F == 'X' ){
+		if( F == 'c' || F == 'C' ){
+			if( value->type != DAO_INTEGER ) goto WrongParameter;
+			DString_Reset( fmt2, 0 );
+			DString_AppendWChar( fmt2, value->xInteger.value );
+			self->format = "%s";
+			if( F == 'c' ) DString_ToLocal( fmt2 );
+			DaoStream_WriteString( self, fmt2 );
+		}else if( F == 'd' || F == 'i' || F == 'o' || F == 'x' || F == 'X' ){
 			if( sizeof(daoint) != 4 ) DString_InsertChar( fmt2, DAO_INT_FORMAT[0], fmt2->size-1 );
 			self->format = fmt2->chars;
 			if( value->type == DAO_NONE || value->type > DAO_DOUBLE ) goto WrongParameter;
@@ -379,9 +388,9 @@ static void DaoIO_Open( DaoProcess *proc, DaoValue *p[], int N )
 			stream->file = DaoIO_OpenFile( proc, stream->fname, mode, 0 );
 		}
 		stream->mode = 0;
-		if( strstr( mode, "+" ) )
+		if( strstr( mode, "+" ) ){
 			stream->mode = DAO_IO_WRITE | DAO_IO_READ;
-		else{
+		}else{
 			if( strstr( mode, "r" ) )
 				stream->mode |= DAO_IO_READ;
 			if( strstr( mode, "w" ) || strstr( mode, "a" ) )
@@ -486,58 +495,16 @@ static void DaoIO_Mode( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutEnum( proc, buf );
 }
 
-static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *fname;
-	DaoValue *res;
-	DaoString *line;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
-	DaoList *list = DaoProcess_PutList( proc );
-	int chop = p[1]->xInteger.value;
-	char buf[IO_BUF_SIZE];
-	FILE *fin;
-
-	fin = DaoIO_OpenFile( proc, p[0]->xString.value, "r", 0 );
-	if( fin == NULL ) return;
-	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
-		line = DaoString_New();
-		while( DaoFile_ReadLine( fin, line->value ) ){
-			if( chop ) DString_Chop( line->value, 0 );
-			DaoList_Append( list, (DaoValue*) line );
-		}
-		DaoString_Delete( line );
-	}else{
-		ushort_t entry = proc->topFrame->entry;
-		DaoString tmp = {DAO_STRING,0,0,0,1,NULL};
-		tmp.value = p[0]->xString.value;
-		line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
-		DaoProcess_AcquireCV( proc );
-		while( DaoFile_ReadLine( fin, line->value ) ){
-			if( chop ) DString_Chop( line->value, 0 );
-			proc->topFrame->entry = entry;
-			DaoProcess_Execute( proc );
-			if( proc->status == DAO_PROCESS_ABORTED ) break;
-			res = proc->stackValues[0];
-			if( res && res->type != DAO_NONE ) DaoList_Append( list, res );
-		}
-		DaoProcess_ReleaseCV( proc );
-		DaoProcess_PopFrame( proc );
-	}
-	fclose( fin );
-}
-static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
+static void DaoStream_ReadLines( DaoStream *self, DaoList *list, DaoProcess *proc, int count, int chop )
 {
 	DaoValue *res;
 	DaoString *line;
 	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
-	DaoList *list = DaoProcess_PutList( proc );
-	DaoStream *self = & p[0]->xStream;
-	daoint i = 0, count = p[1]->xInteger.value;
-	int chop = p[2]->xInteger.value;
+	daoint i = 0;
 
 	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
 		line = DaoString_New();
-		while( (i++) < count && DaoStream_ReadLine( self, line->value ) ){
+		while( (count == 0 || (i++) < count) && DaoStream_ReadLine( self, line->value ) ){
 			if( chop ) DString_Chop( line->value, 0 );
 			DaoList_Append( list, (DaoValue*) line );
 		}
@@ -549,7 +516,7 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 		tmp.value = & tmp2;
 		line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
 		DaoProcess_AcquireCV( proc );
-		while( (i++) < count && DaoStream_ReadLine( self, line->value ) ){
+		while( (count == 0 || (i++) < count) && DaoStream_ReadLine( self, line->value ) ){
 			if( chop ) DString_Chop( line->value, 0 );
 			proc->topFrame->entry = entry;
 			DaoProcess_Execute( proc );
@@ -560,6 +527,28 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_ReleaseCV( proc );
 		DaoProcess_PopFrame( proc );
 	}
+}
+static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoStream *stream;
+	DaoList *list = DaoProcess_PutList( proc );
+	FILE *fin = DaoIO_OpenFile( proc, p[0]->xString.value, "r", 0 );
+	int chop = p[1]->xInteger.value;
+
+	if( fin == NULL ) return;
+
+	stream = DaoStream_New();
+	stream->file = fin;
+	DaoStream_ReadLines( stream, list, proc, 0, chop );
+	DaoStream_Delete( stream );
+	fclose( fin );
+}
+static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoList *list = DaoProcess_PutList( proc );
+	int count = p[1]->xInteger.value;
+	int chop = p[2]->xInteger.value;
+	DaoStream_ReadLines( (DaoStream*) p[0], list, proc, count, chop );
 }
 
 DaoFuncItem dao_io_methods[] =

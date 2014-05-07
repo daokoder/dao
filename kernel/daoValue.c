@@ -461,6 +461,7 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 
 	if( self == NULL ) return dao_none_value;
 	if( (tp == NULL || tp->tid == self->type) && self->type < DAO_ENUM ){
+		if( cst && cst->constant ) return self;
 		if( cache ){
 			DaoValue *value = DaoDataCache_MakeValue( cache, self->type );
 			switch( self->type ){
