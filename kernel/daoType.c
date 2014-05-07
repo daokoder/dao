@@ -87,12 +87,9 @@ void DaoType_Init()
 		dao_type_matrix[DAO_PAR_NAMED][i] = DAO_MT_EXACT+2;
 		dao_type_matrix[DAO_PAR_DEFAULT][i] = DAO_MT_EXACT+2;
 
-		dao_type_matrix[DAO_VALTYPE][i] = DAO_MT_EXACT+1;
-		dao_type_matrix[i][DAO_VALTYPE] = DAO_MT_EXACT+1;
 		dao_type_matrix[DAO_VARIANT][i] = DAO_MT_EXACT+1;
 		dao_type_matrix[i][DAO_VARIANT] = DAO_MT_EXACT+1;
 	}
-	dao_type_matrix[DAO_VALTYPE][DAO_VALTYPE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_VARIANT][DAO_VARIANT] = DAO_MT_EXACT+1;
 
 	for(i=0; i<END_EXTRA_TYPES; ++i){
@@ -244,6 +241,8 @@ void DaoType_CheckAttributes( DaoType *self )
 	if( self->aux && self->aux->type == DAO_TYPE ){
 		if( self->aux->xType.attrib & DAO_TYPE_SPEC ) self->attrib |= DAO_TYPE_SPEC;
 		self->noncyclic &= self->aux->xType.noncyclic;
+	}else if( self->aux && self->aux->type < DAO_ARRAY ){
+		self->valtype = 1;
 	}
 	if( self->nested ){
 		for(i=0; i<self->nested->size; i++){
@@ -356,7 +355,6 @@ void DaoType_InitDefault( DaoType *self )
 	case DAO_THT :
 	case DAO_ROUTINE :
 	case DAO_INTERFACE : value = dao_none_value; break;
-	case DAO_VALTYPE : value = self->aux; break;
 	case DAO_INTEGER : value = (DaoValue*) DaoInteger_New(0); break;
 	case DAO_FLOAT  : value = (DaoValue*) DaoFloat_New(0.0); break;
 	case DAO_DOUBLE : value = (DaoValue*) DaoDouble_New(0.0); break;
@@ -534,6 +532,16 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	if( self->constant ) self = self->vartype;
 	if( type->constant ) type = type->vartype;
 
+	if( type->valtype ){
+		if( self->valtype == 0 ) return DaoType_MatchValue( self, type->aux, defs );
+		if( DaoValue_Compare( self->aux, type->aux ) ==0 ) return DAO_MT_EXACT;
+		return DAO_MT_NOT;
+	}else if( self->valtype ){
+		if( type->valtype == 0 ) return DaoType_MatchValue( type, self->aux, defs );
+		if( DaoValue_Compare( self->aux, type->aux ) ==0 ) return DAO_MT_EXACT;
+		return DAO_MT_NOT;
+	}
+
 	mt = dao_type_matrix[self->tid][type->tid];
 	/*
 	printf( "here: %i  %i  %i, %s  %s,  %p\n", mt, self->tid, type->tid,
@@ -584,10 +592,6 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			if( mt == DAO_MT_EQ ) break;
 		}
 		return mt;
-	}else if( type->tid == DAO_VALTYPE ){
-		if( self->tid != DAO_VALTYPE ) return DaoType_MatchValue( self, type->aux, defs );
-		if( DaoValue_Compare( self->aux, type->aux ) ==0 ) return DAO_MT_EXACT;
-		return DAO_MT_NOT;
 	}
 	mt = DAO_MT_EQ;
 	switch( self->tid ){
@@ -714,10 +718,6 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	case DAO_CSTRUCT :
 		if( self->aux == type->aux ) return DAO_MT_EQ; /* for aliased type; */
 		return DaoType_MatchToParent( self, type, defs );
-	case DAO_VALTYPE :
-		if( type->tid != DAO_VALTYPE ) return DaoType_MatchValue( type, self->aux, defs );
-		if( DaoValue_Compare( self->aux, type->aux ) ==0 ) return DAO_MT_EXACT;
-		return DAO_MT_NOT;
 	case DAO_VARIANT :
 		mt = DAO_MT_EQ;
 		mt3 = DAO_MT_NOT;
@@ -770,6 +770,12 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	daoint i, n, mt, mt2, it1 = 0, it2 = 0;
 
 	if( (self == NULL) | (value == NULL) ) return DAO_MT_NOT;
+
+	if( self->valtype ){
+		if( DaoValue_Compare( self->aux, value ) ==0 ) return DAO_MT_EXACT;
+		return DAO_MT_NOT;
+	}
+
 	switch( (self->tid << 8) | value->type ){
 	case (DAO_INTEGER << 8) | DAO_INTEGER : return DAO_MT_EQ;
 	case (DAO_FLOAT   << 8) | DAO_FLOAT   : return DAO_MT_EQ;
@@ -806,9 +812,6 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			if( mt == DAO_MT_EQ ) break;
 		}
 		return mt;
-	case DAO_VALTYPE :
-		if( DaoValue_Compare( self->aux, value ) ==0 ) return DAO_MT_EXACT;
-		return DAO_MT_NOT;
 	case DAO_ANY : return DAO_MT_ANY;
 	}
 	mt = dao_type_matrix[value->type][self->tid];

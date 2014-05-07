@@ -89,8 +89,9 @@ struct DaoType
 	uchar_t   realnum   : 1; /* for type of int/float/double */
 	uchar_t   noncyclic : 1; /* this type representing non-cyclic data */
 	uchar_t   overloads : 1; /* overloaded routines */
-	uchar_t   constant  : 1;
-	uchar_t   unused    : 3;
+	uchar_t   constant  : 1; /* a const type */
+	uchar_t   valtype   : 1; /* a value type */
+	uchar_t   unused    : 2;
 	uchar_t   rntcount  : 4; /* real number type count */
 	uchar_t   ffitype   : 4; /* for modules using ffi */
 	DString  *name; /* type name */

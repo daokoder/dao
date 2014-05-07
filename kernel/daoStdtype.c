@@ -657,43 +657,47 @@ static void DaoString_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	int idtype;
 	DArray *ids = MakeIndex( proc, pid, size, & start, & end, & idtype );
 	DString *res = NULL;
-	if( idtype != IDX_SINGLE ) res = DaoProcess_PutChars( proc, "" );
+	daoint *num = NULL;
+
+	if( idtype == IDX_SINGLE ){
+		num = DaoProcess_PutInteger( proc, 0 );
+	}else{
+		res = DaoProcess_PutChars( proc, "" );
+	}
 	switch( idtype ){
-	case IDX_EMPTY :
-		break;
-	case IDX_NULL :
-		DString_Assign( res, self );
-		break;
-	case IDX_SINGLE :
-		{
-			daoint *num = DaoProcess_PutInteger( proc, 0 );
-			*num = self->chars[start];
-			break;
-		}
-	case IDX_FROM :
-		DString_SubString( self, res, start, -1 );
-		break;
-	case IDX_TO :
-		DString_SubString( self, res, 0, end+1 );
-		break;
-	case IDX_PAIR :
-		DString_SubString( self, res, start, end-start+1 );
-		break;
-	case IDX_ALL :
-		DString_SubString( self, res, 0, -1 );
-		break;
+	case IDX_EMPTY  : break;
+	case IDX_NULL   : DString_Assign( res, self ); break;
+	case IDX_SINGLE : *num = self->chars[start]; break;
+	case IDX_FROM   : DString_SubString( self, res, start, -1 ); break;
+	case IDX_TO     : DString_SubString( self, res, 0, end+1 ); break;
+	case IDX_PAIR   : DString_SubString( self, res, start, end-start+1 ); break;
+	case IDX_ALL    : DString_SubString( self, res, 0, -1 ); break;
 	default : break;
 	}
 }
 static void DaoString_GetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *pid1, DaoValue *pid2 )
 {
 	DString *self = self0->xString.value;
+	DString *res = DaoProcess_PutChars( proc, "" );
 	daoint i, j, valid;
 
 	valid = pid1->type > DAO_NONE && pid1->type <= DAO_DOUBLE && pid2->type == DAO_NONE;
-	if( valid == 0 ) DaoProcess_RaiseError( proc, "Index", NULL );
-
+	if( valid == 0 ){
+		DaoProcess_RaiseError( proc, "Index", NULL );
+		return;
+	}
 	i = DaoValue_GetInteger( pid1 );
+	if( i < 0 ) i += self->size;
+	if( i < 0 || i >= self->size ){
+		DaoProcess_RaiseError( proc, "Index::Range", NULL );
+		return;
+	}
+	j = DString_LocateChar( self, i, 0 );
+	if( i != j ){
+		DaoProcess_RaiseError( proc, "Index", NULL );
+		return;
+	}
+	DString_SetBytes( res, self->chars + i, DString_UTF8CharSize( self->chars[i] ) );
 }
 static void DaoString_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, DaoValue *value )
 {
@@ -709,28 +713,13 @@ static void DaoString_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	}else if( value->type == DAO_STRING ){
 		DString *str = value->xString.value;
 		switch( idtype ){
-		case IDX_EMPTY :
-			break;
-		case IDX_NULL :
-			DString_Assign( self, str );
-			break;
-		case IDX_SINGLE :
-			{
-				self->chars[start] = str->chars[0];
-				break;
-			}
-		case IDX_FROM :
-			DString_Replace( self, str, start, -1 );
-			break;
-		case IDX_TO :
-			DString_Replace( self, str, 0, end+1 );
-			break;
-		case IDX_PAIR :
-			DString_Replace( self, str, start, end-start+1 );
-			break;
-		case IDX_ALL :
-			DString_Assign( self, str );
-			break;
+		case IDX_EMPTY  : break;
+		case IDX_NULL   : DString_Assign( self, str ); break;
+		case IDX_SINGLE : self->chars[start] = str->chars[0]; break;
+		case IDX_FROM   : DString_Replace( self, str, start, -1 ); break;
+		case IDX_TO     : DString_Replace( self, str, 0, end+1 ); break;
+		case IDX_PAIR   : DString_Replace( self, str, start, end-start+1 ); break;
+		case IDX_ALL    : DString_Assign( self, str ); break;
 		default : break;
 		}
 	}
@@ -1921,7 +1910,7 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 	int popped = 0;
 	switch( funct ){
 	case DVM_FUNCT_MAP :
-	case DVM_FUNCT_SELECT :
+	case DVM_FUNCT_SELECT : list2 = DaoProcess_PutList( proc ); break;
 	case DVM_FUNCT_APPLY : DaoProcess_PutReference( proc, p[0] ); break;
 	case DVM_FUNCT_FIND : DaoProcess_PutValue( proc, dao_none_value ); break;
 	}

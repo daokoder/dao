@@ -6788,7 +6788,7 @@ InvalidExpression:
 }
 static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int eltype, int warn )
 {
-	int start = self->curToken;
+	int tt, start = self->curToken;
 	DaoEnode RHS, LHS = { -1, 0, 1, NULL, NULL, NULL, NULL };
 	DaoToken **tokens = self->tokens->items.pToken;
 
@@ -6800,10 +6800,14 @@ static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int eltyp
 	if( DaoParser_CurrentTokenType( self ) == DTOK_COLON ){
 		/* : e , */
 		if( !(eltype & DAO_EXPRLIST_SLICE) ) goto Done;
-		self->curToken += 1; /* eat the operator */
 		LHS = DaoParser_NoneValue( self );
-		RHS = DaoParser_ParseUnary( self, stop, 0 );
-		if( RHS.reg < 0 ) goto Done; /* :, equivalent to none in slicing; */
+
+		tt = DaoParser_NextTokenType( self );
+		if( tt == DTOK_COMMA || tt == DTOK_SEMCO || tt == DTOK_RSB ){
+			/* : in slicing, equivalent to none: */
+			self->curToken += 1;
+			goto Done;
+		}
 	}else{
 		LHS = DaoParser_ParseUnary( self, stop, eltype );
 	}

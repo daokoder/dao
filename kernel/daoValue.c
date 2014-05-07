@@ -820,6 +820,11 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		DaoValue_CopyX( S, D, C, cache );
 		return 1;
 	}
+	if( T->valtype ){
+		if( DaoValue_Compare( S, T->aux ) !=0 ) return 0;
+		DaoValue_CopyX( S, D, C, cache );
+		return 1;
+	}
 	switch( T->tid ){
 	case DAO_UDT :
 		DaoValue_CopyX( S, D, C, cache );
@@ -831,10 +836,6 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	case DAO_ANY :
 		DaoValue_CopyX( S, D, C, cache );
 		DaoValue_SetType( *D, T );
-		return 1;
-	case DAO_VALTYPE :
-		if( DaoValue_Compare( S, T->aux ) !=0 ) return 0;
-		DaoValue_CopyX( S, D, C, cache );
 		return 1;
 	case DAO_VARIANT :
 		return DaoValue_MoveVariant( S, D, T, C, cache );

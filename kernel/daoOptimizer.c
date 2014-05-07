@@ -2901,24 +2901,13 @@ static int DaoInferencer_ErrorInvalidIndex( DaoInferencer *self )
 
 static int DaoInferencer_AssertPairNumberType( DaoInferencer *self, DaoType *type )
 {
-	int k;
 	DaoType *itp = type->nested->items.pType[0];
 	if( itp->tid == DAO_PAR_NAMED ) itp = & itp->aux->xType;
-	k = itp->tid;
-	if( k == DAO_VALTYPE ) k = itp->aux->type;
-	if( k > DAO_DOUBLE && ! NoCheckingType(itp) ) return 0;
+	if( itp->tid > DAO_DOUBLE && ! NoCheckingType(itp) ) return 0;
 	itp = type->nested->items.pType[1];
 	if( itp->tid == DAO_PAR_NAMED ) itp = & itp->aux->xType;
-	k = itp->tid;
-	if( k == DAO_VALTYPE ) k = itp->aux->type;
-	if( k > DAO_DOUBLE && ! NoCheckingType(itp) ) return 0;
+	if( itp->tid > DAO_DOUBLE && ! NoCheckingType(itp) ) return 0;
 	return 1;
-}
-static int DaoType_IsNone( DaoType *self )
-{
-	if( self->tid == DAO_NONE ) return 1;
-	if( self->tid == DAO_VALTYPE ) return self->value && self->value->type == DAO_NONE;
-	return 0;
 }
 static DaoType* DaoType_GetAutoCastType( DaoType *self )
 {
@@ -2926,12 +2915,12 @@ static DaoType* DaoType_GetAutoCastType( DaoType *self )
 	if( self->tid != DAO_VARIANT ) return NULL;
 	if( self->nested->size == 1 ){
 		DaoType *T = self->nested->items.pType[0];
-		if( !DaoType_IsNone(T) && !(T->tid & DAO_ANY) ) return T;
+		if( T->tid != DAO_NONE && !(T->tid & DAO_ANY) ) return T;
 	}else if( self->nested->size == 2 ){
 		DaoType *T1 = self->nested->items.pType[0];
 		DaoType *T2 = self->nested->items.pType[1];
-		if( DaoType_IsNone(T1) && !DaoType_IsNone(T2) && !(T2->tid & DAO_ANY) ) return T2;
-		if( DaoType_IsNone(T2) && !DaoType_IsNone(T1) && !(T1->tid & DAO_ANY) ) return T1;
+		if( T1->tid == DAO_NONE && T2->tid != DAO_NONE && !(T2->tid & DAO_ANY) ) return T2;
+		if( T2->tid == DAO_NONE && T1->tid != DAO_NONE && !(T1->tid & DAO_ANY) ) return T1;
 	}
 	return NULL;
 }
@@ -3284,7 +3273,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			ct = NULL;
 			k = at->tid != DAO_CLASS && at->tid != DAO_OBJECT;
 			k = k && at->tid != DAO_CDATA && at->tid != DAO_CSTRUCT;
-			if( value && value->type == 0 && k && bt->tid == DAO_VALTYPE ){ /* a[] */
+			if( bt->tid == DAO_NONE && bt->valtype ){ /* a[] or a[:] */
 				ct = at;
 			}else if( NoCheckingType( at ) || NoCheckingType( bt ) ){
 				/* allow less strict typing: */
@@ -3363,8 +3352,8 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					if( bt->nested->size != 2 ) goto InvKey;
 					start = kts[0]->tid == DAO_PAR_NAMED ? (DaoType*) kts[0]->aux : kts[0];
 					end   = kts[1]->tid == DAO_PAR_NAMED ? (DaoType*) kts[1]->aux : kts[1];
-					openStart = start->tid == DAO_VALTYPE && start->aux->type == DAO_NONE;
-					openEnd   = end->tid == DAO_VALTYPE   && end->aux->type == DAO_NONE;
+					openStart = start->tid == DAO_NONE && start->valtype;
+					openEnd   = end->tid == DAO_NONE   && end->valtype;
 					if( !openStart && DaoType_MatchTo( start, t0, defs ) == 0 ) goto InvKey;
 					if( !openEnd && DaoType_MatchTo( end, t0, defs ) == 0 ) goto InvKey;
 					ct = at;
@@ -3528,7 +3517,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					ct = type = at->nested->items.pType[0];
 					for(j=1; j<=opb; j++){
 						int tid = types[j+opa]->tid;
-						if( tid == DAO_VALTYPE ) tid = types[j+opa]->aux->type;
 						if( tid > max ) max = tid;
 						if( tid < min ) min = tid;
 					}
@@ -3547,6 +3535,8 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 							}
 						}
 					}
+				}else if( at->tid == DAO_MAP ){
+					goto InvIndex;
 				}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
 					meth = DaoClass_FindOperator( & at->aux->xClass, "[]", hostClass );
 					if( meth == NULL ) goto WrongContainer;
@@ -3960,7 +3950,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					type = ct->nested->items.pType[0];
 					for(j=1; j<=opb; j++){
 						int tid = types[j+opc]->tid;
-						if( tid == DAO_VALTYPE ) tid = types[j+opc]->aux->type;
 						if( tid > max ) max = tid;
 						if( tid < min ) min = tid;
 					}
@@ -3983,15 +3972,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 						}
 					}
 				}else if( at->tid == DAO_MAP ){
-					DaoType *t0 = at->nested->items.pType[0];
-					DaoType *t1 = at->nested->items.pType[1];
-					int check1 = NoCheckingType( types[opc+1] ) == 0;
-					int check2 = NoCheckingType( types[opc+2] ) == 0;
-					if( types[opc+1]->tid == DAO_VALTYPE ) check1 = types[opc+1]->aux->type;
-					if( types[opc+2]->tid == DAO_VALTYPE ) check2 = types[opc+2]->aux->type;
-					if( check1 && DaoType_MatchTo( types[opc+1], t0, defs ) ==0 ) goto InvKey;
-					if( check2 && DaoType_MatchTo( types[opc+2], t0, defs ) ==0 ) goto InvKey;
-					AssertTypeMatching( at, t1, defs );
+					goto InvIndex;
 				}else if( ct->tid == DAO_CLASS || ct->tid == DAO_OBJECT ){
 					meth = DaoClass_FindOperator( & ct->aux->xClass, "[]=", hostClass );
 					if( meth == NULL ) goto WrongContainer;

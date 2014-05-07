@@ -52,8 +52,6 @@ enum DaoExtraTypes
 	DAO_PAR_DEFAULT , /* name=type */
 	DAO_PAR_VALIST , /* ... */
 
-	DAO_VALTYPE , /* value type type */
-
 	/* bit (1<<6) to indicate inexact checking: */
 	DAO_ANY = (1<<6)|0, /* any type */
 	DAO_THT = (1<<6)|1, /* type holder type */

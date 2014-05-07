@@ -72,11 +72,12 @@ class FakeImage
 # instead of writing operator methods with all the combinations
 # such as tuple<int,int>, tuple<int,none>, ...
 # one can use disjoint union to simplify this.
-	operator[]( i : int, js : tuple<int|none,int|none> )=>array<int>
+	operator[]( i : int, js : none|tuple<int|none,int|none> )=>array<int>
 	{
 # one can simply return image[i,js], but the following is for demonstration purpose:
 		j1 = 0;
 		j2 = image.dim(1) - 1;
+		if( js == none ) return image[i,:];
 		if( js[0] != none ) j1 = (int) js[0];
 		if( js[1] != none ) j2 = (int) js[1];
 		return image[i,j1:j2];

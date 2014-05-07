@@ -1413,7 +1413,7 @@ void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *t
 	if( id >=0 && LOOKUP_UP(id) ) return;
 	if( tp->aux && (tp->tid >= DAO_OBJECT && tp->tid <= DAO_CTYPE) ){
 		DaoNamespace_AddConst( self, name, tp->aux, DAO_PERM_PUBLIC );
-	}else if( tp->tid != DAO_VALTYPE && tp->tid != DAO_THT ){
+	}else if( tp->tid != DAO_THT ){
 		DaoNamespace_AddConst( self, name, (DaoValue*) tp, DAO_PERM_PUBLIC );
 	}
 }
@@ -1930,8 +1930,20 @@ DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 		DString_AppendChar( name, '\'' );
 	}
 	if( name->size ==0 && value->type ==0 ) DString_SetChars( name, "none" );
-	type = DaoNamespace_MakeType( self->vmSpace->daoNamespace, name->chars, DAO_VALTYPE, 0,0,0 );
-	DaoValue_Copy( value, & type->aux );
+	type = DaoNamespace_FindType( self, name );
+	if( type == NULL ){
+		if( value->type == DAO_NONE ){
+			type = DaoType_New( "none", DAO_NONE, NULL, NULL );
+		}else{
+			type = DaoNamespace_GetType( self, value );
+			type = DaoType_Copy( type );
+			DString_Assign( type->name, name );
+		}
+		GC_ShiftRC( value, type->aux );
+		type->aux = value;
+		type->valtype = 1;
+		DaoNamespace_AddType( self, name, type );
+	}
 	DString_Delete( name );
 	return type;
 }

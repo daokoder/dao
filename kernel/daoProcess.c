@@ -3362,8 +3362,7 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		int opt1 = self->vmSpace->options & DAO_OPTION_INTERUN;
 		int opt2 = self->activeNamespace->options & DAO_NS_AUTO_GLOBAL;
 		int retnull = type == NULL || type->tid == DAO_NONE || type->tid == DAO_UDT;
-		int retnull2 = type && type->tid == DAO_VALTYPE && type->value->type == DAO_NONE;
-		if( retnull || retnull2 || cmdline || (opt1 && opt2) ) retValue = dao_none_value;
+		if( retnull || cmdline || (opt1 && opt2) ) retValue = dao_none_value;
 	}
 	if( DaoValue_MoveX( retValue, dest, type, self->cache ) ==0 ) goto InvalidReturn;
 	return retValue;
@@ -5715,6 +5714,10 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		if( ConvertStringToNumber( proc, dA, dC ) ==0 ) goto FailConversion;
 		return dC;
 	}
+	if( ct->valtype ){
+		if( DaoValue_Compare( ct->aux, dA ) != 0 ) goto FailConversion;
+		return dA;
+	}
 	switch( ct->tid ){
 	case DAO_INTEGER :
 		dC->xInteger.value = DaoValue_GetInteger( dA );
@@ -5964,10 +5967,6 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			dC = DaoObject_CastToBase( & dA->xObject, ct );
 		}
 		if( dC == NULL ) goto FailConversion;
-		break;
-	case DAO_VALTYPE :
-		if( DaoValue_Compare( ct->aux, dA ) != 0 ) goto FailConversion;
-		dC = dA;
 		break;
 	case DAO_VARIANT :
 		dC = dA;
