@@ -62,12 +62,12 @@ enum DaoTokNames
 	DTOK_RCB , /* } */
 	DTOK_LSB , /* [ */
 	DTOK_RSB , /* ] */
-	DTOK_ASSN ,  /* = */
 	DTOK_DOT ,   /* . */
 	DTOK_COMMA , /* , */
 	DTOK_COLON , /* : */
 	DTOK_COLON2 , /* :: */
 	DTOK_CASSN , /* := */
+	DTOK_ASSN ,  /* = */
 	DTOK_ADD , /* + */
 	DTOK_SUB , /* - */
 	DTOK_MUL , /* * */

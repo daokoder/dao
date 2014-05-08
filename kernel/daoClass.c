@@ -1125,8 +1125,6 @@ void DaoClass_ResetAttributes( DaoClass *self )
 	DaoValue_MarkConst( self->objType->value );
 	DaoValue_MarkConst( self->constants->items.pConst[1]->value ); /* ::default */
 
-	DaoClass_MakeInterface( self );
-
 	for(i=0; autoinitor && (i<self->classRoutines->overloads->routines->size); i++){
 		DaoRoutine *rout = self->classRoutines->overloads->routines->items.pRoutine[i];
 		if( rout == self->classRoutine ) continue;

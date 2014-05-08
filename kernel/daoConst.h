@@ -104,17 +104,17 @@ enum DaoContainerDataTypes
 */
 enum DaoTypeMatchState
 {
-	DAO_MT_NOT     , /* Type not matching; */
-	DAO_MT_LOOSE   , /* Loose matching not covered by the following cases; */
-	DAO_MT_THTX    , /* Loose matching of a type holder type (THT) to any other type; */
-	DAO_MT_ANYX    , /* Loose matching of the "any" type to any other type; */
-	DAO_MT_EMPTY   , /* Loose matching of an empty container value to a container type; */
-	DAO_MT_ANY     , /* Matching of any type to the "any" type; */
-	DAO_MT_SUB     , /* Matching of a sub type to a parent type; */
-	DAO_MT_SIM     , /* Matching of a type to a compatible type (eg, int to float); */
-	DAO_MT_THT     , /* Matching of any type to a type holder type; */
-	DAO_MT_EQ      , /* Type precisely matching; */
-	DAO_MT_EXACT     /* Type and value precisely matching; */
+	DAO_MT_NOT   = 0  , /* Type not matching; */
+	DAO_MT_LOOSE = 10 , /* Loose matching not covered by the following cases; */
+	DAO_MT_THTX  = 20 , /* Loose matching of a type holder type (THT) to any other type; */
+	DAO_MT_ANYX  = 30 , /* Loose matching of the "any" type to any other type; */
+	DAO_MT_EMPTY = 40 , /* Loose matching of an empty container value to a container type; */
+	DAO_MT_ANY   = 50 , /* Matching of any type to the "any" type; */
+	DAO_MT_SUB   = 60 , /* Matching of a sub type to a parent type; */
+	DAO_MT_SIM   = 70 , /* Matching of a type to a compatible type (eg, int to float); */
+	DAO_MT_THT   = 80 , /* Matching of any type to a type holder type; */
+	DAO_MT_EQ    = 90 , /* Type precisely matching; */
+	DAO_MT_EXACT = 100  /* Type and value precisely matching; */
 };
 
 enum DaoVarDeclaration

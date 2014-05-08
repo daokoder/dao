@@ -5081,7 +5081,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				if( code == DVM_CALL && self->tidHost == DAO_OBJECT ) bt = hostClass->objType;
 
 #if 0
-				DaoVmCodeX_Print( *vmc, NULL );
+				DaoVmCodeX_Print( *vmc, NULL, NULL );
 				printf( "call: %s %i\n", types[opa]->name->chars, types[opa]->tid );
 				if(bt) printf( "self: %s\n", bt->name->chars );
 #endif

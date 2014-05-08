@@ -528,9 +528,16 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	if( self == NULL || type == NULL ) return DAO_MT_NOT;
 	if( self == type ) return DAO_MT_EQ;
 
-	/* some types such routine type for verloaded routines rely on comparing type pointer: */
-	if( self->constant ) self = self->vartype;
-	if( type->constant ) type = type->vartype;
+	/* some types such routine type for overloaded routines rely on comparing type pointer: */
+	if( self->constant && type->constant ){
+		return DaoType_MatchToX( self->vartype, type->vartype, defs, binds );
+	}else if( self->constant || type->constant ){
+		if( self->constant ) self = self->vartype;
+		if( type->constant ) type = type->vartype;
+		mt = DaoType_MatchToX( self, type, defs, binds );
+		if( mt >= DAO_MT_NOT ) mt -= 1; /* slightly reduce the score; */
+		return mt;
+	}
 
 	if( type->valtype ){
 		if( self->valtype == 0 ) return DaoType_MatchValue( self, type->aux, defs );
@@ -2155,7 +2162,7 @@ static void DaoType_InitTypeDefines( DaoType *self, DaoRoutine *method, DMap *de
 	type = (DaoType*) type->nested->items.pType[0]->aux; /* self:type */
 
 	if( type->nested->size != self->nested->size ) return;
-	DMap_Insert( defs, type, self );
+	if( type->constant == self->constant ) DMap_Insert( defs, type, self );
 	for(i=0; i<self->nested->size; i++){
 		DaoType_MatchTo( self->nested->items.pType[i], type->nested->items.pType[i], defs );
 	}

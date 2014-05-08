@@ -1366,7 +1366,7 @@ static DaoFuncItem stringMeths[] =
 	},
 	{ DaoSTR_Scan,
 		"scan( self : string, pattern : string, start = 0, end = -1 )"
-			"[start :int, end :int, state :enum<unmatched,matched> => none|@V]"
+			"[start : int, end : int, state : enum<unmatched,matched> => none|@V]"
 			"=> list<@V>"
 		/*
 		// Scan the string with pattern "pattern", and invoke the attached code
@@ -1394,7 +1394,7 @@ static DaoFuncItem stringMeths[] =
 	},
 	{ DaoSTR_Map,
 		"map( self : string, unit : enum<byte,char> = $byte )"
-			"[char :int, index :int => int] => string"
+			"[char : int, index : int => int] => string"
 		/*
 		// Map each unit of the string to a new value and return a new string form
 		// from the mapped values.
@@ -2172,75 +2172,80 @@ static DaoFuncItem listMeths[] =
 	},
 	{ DaoLIST_Erase2,
 		"erase( self : list<@T>, mode : enum<all,first,last> )"
-			"[item :@T, index :int => int] => int"
+			"[item : @T, index : int => int] => int"
 		/*
 		//
 		*/
 	},
 	{ DaoLIST_Map,
-		"map( self : list<@T>, direction : enum<forward,backward> = $forward )"
-			"[item :@T, index :int => @V] => list<@V>"
+		"map( self :: list<@T>, direction : enum<forward,backward> = $forward )"
+			"[item :: @T, index : int => @V] => list<@V>"
 		/*
 		//
 		*/
 	},
 	{ DaoLIST_Map2,
-		"map( self : list<@T>, other : list<@S>, direction : enum<forward,backward> = $forward )"
-			"[item :@T,item2 :@S,index :int => @V] => list<@V>"
+		"map( self :: list<@T>, other :: list<@S>, "
+			"direction : enum<forward,backward> = $forward )"
+			"[item :: @T, item2 :: @S, index : int => @V] => list<@V>"
 		/*
 		//
 		*/
 	},
 	{ DaoLIST_Reduce1,
-		"reduce( self : list<@T>, direction : enum<forward,backward> = $forward )"
-			"[item :@T, value :@T, index :int => @T] => @T|none"
+		"reduce( self :: list<@T>, direction : enum<forward,backward> = $forward )"
+			"[item :: @T, value : @T, index : int => @T] => @T|none"
 		/*
 		//
 		*/
 	},
 	{ DaoLIST_Reduce2,
-		"reduce( self : list<@T>, init : @V, direction : enum<forward,backward> = $forward )"
-			"[item :@T, value :@V, index :int => @V] => @V"
+		"reduce( self :: list<@T>, init : @V, direction : enum<forward,backward> = $forward )"
+			"[item :: @T, value : @V, index : int => @V] => @V"
 		/*
 		//
 		*/
 	},
 	{ DaoLIST_Select,
-		"select( self :list<@T>, direction :enum<forward,backward>=$forward )"
-			"[item:@T,index:int=>int]=>list<@T>"
+		"select( self :: list<@T>, direction : enum<forward,backward> = $forward )"
+			"[item :: @T, index : int => int] => list<@T>"
 		/*
 		//
 		*/
 	},
 	{ DaoLIST_Find,
-		"find( self :list<@T>, direction :enum<forward,backward>=$forward )"
-			"[item:@T,index:int=>int]=>tuple<index:int,value:@T>|none"
+		"find( self :: list<@T>, direction : enum<forward,backward> = $forward )"
+			"[item :: @T, index : int => int] => tuple<index:int,value:@T> | none"
 		/*
 		//
 		*/
 	},
 	{ DaoLIST_Iterate,
-		"iterate( self :list<@T>, direction :enum<forward,backward>=$forward )"
-			"[item:@T,index:int]"
+		"iterate( self : list<@T>, direction : enum<forward,backward> = $forward )"
+			"[item : @T, index : int]"
+		/*
+		//
+		*/
+	},
+	{ DaoLIST_Iterate,
+		"iterate( self :: list<@T>, direction : enum<forward,backward> = $forward )"
+			"[item :: @T, index : int]"
+	},
+	{ DaoLIST_Sort,
+		"sort( self : list<@T>, order : enum<ascend,descend> = $ascend, k = 0 ) => list<@T>"
 		/*
 		//
 		*/
 	},
 	{ DaoLIST_Sort,
-		"sort( self :list<@T>, order :enum<ascend,descend>=$ascend, k=0 )=>list<@T>"
-		/*
-		//
-		*/
-	},
-	{ DaoLIST_Sort,
-		"sort( self :list<@T>, k=0 )[X:@T,Y:@T=>int]=>list<@T>"
+		"sort( self : list<@T>, k = 0 )[X : @T, Y : @T => int] => list<@T>"
 		/*
 		//
 		*/
 	},
 	{ DaoLIST_Apply,
-		"apply( self :list<@T>, direction :enum<forward,backward>=$forward )"
-			"[item:@T,index:int=>@T]=>list<@T>"
+		"apply( self : list<@T>, direction : enum<forward,backward> = $forward )"
+			"[item :@T, index :int => @T] => list<@T>"
 		/*
 		//
 		*/
@@ -2859,68 +2864,68 @@ static DaoFuncItem mapMeths[] =
 		*/
 	},
 	{ DaoMAP_Value,
-		"values( self ::map<@K,@V> )=>list<@V>"
+		"values( self :: map<@K,@V> ) => list<@V>"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Value,
-		"values( self ::map<@K,@V>, from ::@K )=>list<@V>"
+		"values( self :: map<@K,@V>, from :: @K ) => list<@V>"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Value,
-		"values( self ::map<@K,@V>, from ::@K, to ::@K )=>list<@V>"
+		"values( self :: map<@K,@V>, from :: @K, to :: @K ) => list<@V>"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Size,
-		"size( self ::map<@K,@V> )=>int"
+		"size( self :: map<@K,@V> ) => int"
 		/*
 		//
 		*/
 	},
 
 	{ DaoMAP_Iterate,
-		"iterate( self :map<@K,@V> )[key :@K, value :@V]"
+		"iterate( self :: map<@K,@V> )[key :: @K, value :: @V]"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Keys,
-		"keys( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@K>"
+		"keys( self :: map<@K,@V> )[key :: @K, value :: @V =>int] =>list<@K>"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Values,
-		"values( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@V>"
+		"values( self :: map<@K,@V> )[key :: @K, value :: @V =>int] =>list<@V>"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Select,
-		"select( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<tuple<key:@K,value:@V>>"
+		"select( self :: map<@K,@V> )[key :: @K, value :: @V =>int] =>list<tuple<key:@K,value:@V>>"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Find2,
-		"find( self :map<@K,@V> )[key :@K, value :@V =>int] =>tuple<key:@K,value:@V>|none"
+		"find( self :: map<@K,@V> )[key :: @K, value :: @V =>int] =>tuple<key:@K,value:@V>|none"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Map,
-		"map( self :map<@K,@V> )[key :@K, value :@V =>@T] =>list<@T>"
+		"map( self :: map<@K,@V> )[key :: @K, value :: @V =>@T] =>list<@T>"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Apply,
-		"apply( self :map<@K,@V> )[key :@K, value :@V =>@V] =>map<@K,@V>"
+		"apply( self : map<@K,@V> )[key : @K, value : @V =>@V] =>map<@K,@V>"
 		/*
 		//
 		*/

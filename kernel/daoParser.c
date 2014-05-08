@@ -1569,8 +1569,8 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *
 	while( i <= end ){
 		DaoType *type = NULL;
 		DString *name = NULL;
-		int tid = DAO_NONE;
-		int t = (i+1 <= end) ? tokens[i+1]->type : 0;
+		int tid = DAO_NONE, t = tokens[i]->type;
+		int t2 = (i+1 <= end) ? tokens[i+1]->type : 0;
 
 		if( i == start && tokens[i]->type == DTOK_FIELD ) goto ReturnType;
 		if( tokens[i]->type >= DTOK_ID_SYMBOL && tokens[i]->type <= DTOK_WCS ){
@@ -1578,17 +1578,24 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *
 			i += 1;
 		}else if( tokens[i]->type == DTOK_DOTS ){
 			i += 1;
-			if( tokens[i]->type == DTOK_COLON )
+			if( tokens[i]->type == DTOK_COLON || tokens[i]->type == DTOK_COLON2 ){
+				int cst = tokens[i]->type == DTOK_COLON2;
 				type = DaoParser_ParseType( self, i+1, end, & i, types );
+				if( type == NULL ) goto InvalidTypeForm;
+				if( cst ) type = DaoNamespace_MakeConstType( ns, type );
+			}
 			type = DaoNamespace_MakeType( ns, "...", DAO_PAR_VALIST, (DaoValue*) type, NULL, 0 );
 		}else{
-			if( tokens[i]->type == DTOK_IDENTIFIER && (t == DTOK_COLON || t == DTOK_ASSN) ){
+			int cst = 0;
+			if( t == DTOK_IDENTIFIER && (t2 >= DTOK_COLON && t2 <= DTOK_ASSN) ){
 				name = & tokens[i]->string;
-				tid = (t == DTOK_COLON) ? DAO_PAR_NAMED : DAO_PAR_DEFAULT;
+				tid = (t2 == DTOK_COLON || t2 == DTOK_COLON2) ? DAO_PAR_NAMED : DAO_PAR_DEFAULT;
+				cst = t2 == DTOK_COLON2 || t2 == DTOK_CASSN;
 				if( i + 2 > end ) goto InvalidTypeForm;
 				i = i + 2;
 			}
 			type = DaoParser_ParseType( self, i, end, & i, types );
+			if( cst ) type = DaoNamespace_MakeConstType( ns, type );
 		}
 		if( type == NULL ) return NULL;
 		if( name ) type = DaoNamespace_MakeType( ns, name->chars, tid, (DaoValue*)type, NULL,0 );
@@ -3393,6 +3400,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			DaoByteCoder_FinalizeRoutineBlock( self->byteCoder, bk );
 		}
 	}
+	DaoClass_MakeInterface( klass );
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	DaoClass_UpdateMixinConstructors( klass );
 	if( error ) return -1;
