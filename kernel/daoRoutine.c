@@ -520,8 +520,6 @@ static DParamNode* DParamNode_Add( DParamNode *self, DaoRoutine *routine, int pi
 	}
 	partype = routine->routType->nested->items.pType[pid];
 	for(it=self->first; it; it=it->next){
-		/* distinguish name:type and name:const<type>: */
-		if( partype && it->type && partype->aux->xType.constant != it->type->constant) continue;
 		if( DaoType_MatchTo( partype, it->type2, NULL ) >= DAO_MT_EQ ){
 			return DParamNode_Add( it, routine, pid + 1 );
 		}

@@ -52,7 +52,7 @@ enum DaoTokNames
 	DTOK_VERBATIM ,
 	DTOK_MBS , /* MBS */
 	DTOK_WCS , /* WCS */
-	DTOK_BLANK , /*  */
+	DTOK_SPACE , /*  */
 	DTOK_TAB ,   /* \t */
 	DTOK_NEWLN , /* \n */
 	DTOK_SEMCO , /* ; */

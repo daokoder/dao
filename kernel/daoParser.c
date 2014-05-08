@@ -81,7 +81,7 @@ DAO_DLL int DaoParser_GetOperPrecedence( DaoParser *self );
 DAO_DLL int DaoParser_CurrentTokenType( DaoParser *self );
 DAO_DLL int DaoParser_CurrentTokenName( DaoParser *self );
 DAO_DLL int DaoParser_NextTokenType( DaoParser *self );
-DAO_DLL  int DaoParser_NextTokenName( DaoParser *self );
+DAO_DLL int DaoParser_NextTokenName( DaoParser *self );
 
 static int DaoParser_CheckTokenType( DaoParser *self, int tok, const char *str );
 static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype );
@@ -5614,7 +5614,7 @@ int DaoParser_GetOperPrecedence( DaoParser *self )
 				DString_Insert( & t2->string, & t1->string, 0, 0, 1 );
 				t1->string.chars[0] = '\0';
 				t1->string.size = 0;
-				t1->type = t1->name = DTOK_BLANK;
+				t1->type = t1->name = DTOK_SPACE;
 				t2->type = t2->name = newtok;
 				t2->cpos = t1->cpos;
 				self->curToken += 1;
@@ -5624,7 +5624,7 @@ int DaoParser_GetOperPrecedence( DaoParser *self )
 			DString_Insert( & t2->string, & t1->string, 0, 0, 4 );
 			t1->string.chars[0] = '\0';
 			t1->string.size = 0;
-			t1->type = t1->name = DTOK_BLANK;
+			t1->type = t1->name = DTOK_SPACE;
 			t2->type = t2->name = DTOK_NOTIN;
 			t2->cpos = t1->cpos;
 			self->curToken += 1;

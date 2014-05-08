@@ -2324,7 +2324,7 @@ static void DaoConfigure_FromFile( const char *name )
 	i = 0;
 	while( i < tokens->size ){
 		tk1 = tokens->items.pToken[i];
-		/* printf( "%s\n", tk1->string->chars ); */
+		/* printf( "%s\n", tk1->string.chars ); */
 		if( tk1->type == DTOK_IDENTIFIER ){
 			if( i+2 >= tokens->size ) goto InvalidConfig;
 			if( tokens->items.pToken[i+1]->type != DTOK_ASSN ) goto InvalidConfig;

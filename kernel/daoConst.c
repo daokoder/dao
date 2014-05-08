@@ -178,6 +178,7 @@ const char* const daoExceptionName[] =
 	"Exception::Error::Syntax" ,
 	"Exception::Error::Type" ,
 	"Exception::Error::Value" ,
+	"Exception::Error::File" ,
 	"Exception::Warning::Syntax" ,
 	"Exception::Warning::Value"
 };

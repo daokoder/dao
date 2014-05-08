@@ -2504,9 +2504,9 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 
 	for( j=selfChecked; j<ndef; j++) parpass[j] = 0;
 	for(ifrom=0; ifrom<npar; ifrom++){
-		DaoType *tp = ts[ifrom];
-		DaoType *abtp = partypes[ito];
+		DaoType *abtp, *tp = ts[ifrom];
 		ito = ifrom + selfChecked;
+		abtp = partypes[ito];
 		if( abtp->tid == DAO_PAR_VALIST ){
 			DaoType *vlt = (DaoType*) abtp->aux;
 			for(; ifrom<npar; ifrom++){

@@ -1269,7 +1269,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Trim,
-		"trim( self : string, where : enum<head,tail,both>, utf8 = 0 ) => string"
+		"trim( self : string, where : enum<head,tail,both> = $both, utf8 = 0 ) => string"
 		/*
 		// Trim whitespaces from the head and/or the tail of the string;
 		// If "utf8" is not zero, all bytes that do not constitute a
@@ -2840,7 +2840,7 @@ static DaoFuncItem mapMeths[] =
 		*/
 	},
 	{ DaoMAP_Find,
-		"find( self ::map<@K,@V>, key ::@K, type :enum<le,eq,ge>=$eq )=>tuple<key:@K,value:@V>|none"
+		"find( self ::map<@K,@V>, key ::@K, type :enum<LE,EQ,GE>=$EQ )=>tuple<key:@K,value:@V>|none"
 		/*
 		//
 		*/
