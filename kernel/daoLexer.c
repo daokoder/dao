@@ -29,7 +29,6 @@
 #include"stdlib.h"
 #include"stdio.h"
 #include"string.h"
-#include"locale.h"
 #include"ctype.h"
 
 #include"daoConst.h"
@@ -987,18 +986,15 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 	DVector *lexenvs = DVector_New( sizeof(int) );
 	DaoToken *token = DaoToken_New();
 	DString *literal = & token->string;
-	char *locale = setlocale( LC_CTYPE, NULL );
 	char ch, *ss, hex[11] = "0x00000000";
 	int replace = flags & DAO_LEX_ESCAPE;
 	int comment = flags & DAO_LEX_COMMENT;
 	int space = flags & DAO_LEX_SPACE;
 	int srcSize = strlen( src );
-	int old=0, state = TOK_START;
+	int old = 0, state = TOK_START;
 	int lexenv = DAO_LEX_CODE;
-	int line = 1;
-	int cpos = 0;
-	int ret = 1;
-	int it = 0;
+	int cpos = 0, line = 1;
+	int ret = 1, it = 0;
 	int i, m = 4;
 
 	/*

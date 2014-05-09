@@ -118,9 +118,9 @@ DAO_DLL void DaoEnum_Delete( DaoEnum *self );
 DAO_DLL void DaoEnum_MakeName( DaoEnum *self, DString *name );
 DAO_DLL void DaoEnum_SetType( DaoEnum *self, DaoType *type );
 DAO_DLL int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols );
-DAO_DLL int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other, DString *enames );
-DAO_DLL int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other, DString *enames );
-DAO_DLL int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other, DString *enames );
+DAO_DLL int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other );
+DAO_DLL int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other );
+DAO_DLL int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other );
 
 
 struct DaoList

@@ -3536,7 +3536,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 	}
 	if( ct->tid == DAO_ENUM && va->type == DAO_ENUM ){
 		DaoEnum_SetType( & vc->xEnum, ct );
-		if( DaoEnum_SetValue( & vc->xEnum, & va->xEnum, NULL ) ==0 ) goto FailConversion;
+		if( DaoEnum_SetValue( & vc->xEnum, & va->xEnum ) ==0 ) goto FailConversion;
 		return;
 	}else if( ct->tid == DAO_ENUM && va->type == DAO_INTEGER ){
 		if( ct->subtid == DAO_ENUM_BOOL ){
@@ -5084,18 +5084,27 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		DaoEnum *denum = & A->xEnum;
 		int rc = 0;
 		if( A->xEnum.subtype == DAO_ENUM_SYM && B->xEnum.subtype == DAO_ENUM_SYM ){
-			DaoProcess_RaiseError( self, "Type", "not combinable enum" );
+			DaoNamespace *NS = self->activeNamespace;
+			denum = DaoProcess_GetEnum( self, vmc );
+			DString_Assign( self->mbstring, ta->name );
+			DString_Change( self->mbstring, "enum%< (.*) %>", "%1", 0 );
+			DString_Append( self->mbstring, tb->name );
+			if( denum->etype == NULL ){ /* Can happen in constant evaluation: */
+				DaoType *tp = DaoNamespace_MakeEnumType( NS, self->mbstring->chars );
+				DaoEnum_SetType( denum, tp );
+			}
+			DaoEnum_SetSymbols( denum, self->mbstring->chars );
 			return;
 		}
 		if( vmc->c != vmc->a ){
 			denum = DaoProcess_GetEnum( self, vmc );
 			if( denum->etype == NULL ) DaoEnum_SetType( denum, A->xEnum.etype );
-			DaoEnum_SetValue( denum, & A->xEnum, NULL );
+			DaoEnum_SetValue( denum, & A->xEnum );
 		}
 		if( vmc->code == DVM_ADD ){
-			rc = DaoEnum_AddValue( denum, & B->xEnum, NULL );
+			rc = DaoEnum_AddValue( denum, & B->xEnum );
 		}else{
-			rc = DaoEnum_RemoveValue( denum, & B->xEnum, NULL );
+			rc = DaoEnum_RemoveValue( denum, & B->xEnum );
 		}
 		if( rc == 0 ){
 			if( denum->subtype != DAO_ENUM_FLAG )
@@ -6198,6 +6207,7 @@ static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc )
 			if( node ){
 				denum->etype = type;
 				denum->value = node->value.pInt;
+				denum->subtype = type->subtid;
 				C = (DaoValue*) denum;
 			}
 		}

@@ -365,7 +365,7 @@ DaoEnum* DaoEnum_Copy( DaoEnum *self, DaoType *type )
 	copy->subtype = self->subtype;
 	if( self->etype != type && type ){
 		DaoEnum_SetType( copy, type );
-		DaoEnum_SetValue( copy, self, NULL );
+		DaoEnum_SetValue( copy, self );
 	}
 	return copy;
 }
@@ -409,8 +409,6 @@ int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols )
 	int notfound = 0;
 	int i, n, k = 0;
 
-	if( self->subtype == DAO_ENUM_SYM ) return 0;
-	
 	names = DString_New();
 	DString_SetChars( names, symbols );
 	for(i=0,n=names->size; i<n; i++) if( names->chars[i] == '$' ) names->chars[i] = 0;
@@ -427,21 +425,22 @@ int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols )
 			notfound = 1;
 		}
 		i += name.size + 1;
-	}while( i < names->size );
+	} while( i < names->size );
 	DString_Delete( names );
 	if( k == 0 ) return 0;
-	if( self->subtype != DAO_ENUM_FLAG && k > 1 ){
+	if( (self->subtype == DAO_ENUM_STATE || self->subtype == DAO_ENUM_BOOL) && k > 1 ){
 		self->value = first;
 		return 0;
 	}
 	self->value = value;
 	return notfound == 0;
 }
-int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other, DString *enames )
+int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other )
 {
 	DMap *selfNames = self->etype->mapNames;
 	DMap *otherNames = other->etype->mapNames;
 	DNode *node, *search;
+	int ret = 0;
 
 	if( self->etype == other->etype ){
 		self->value = other->value;
@@ -450,41 +449,29 @@ int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other, DString *enames )
 	if( self->subtype == DAO_ENUM_SYM ) return 0;
 
 	self->value = 0;
-	if( self->subtype == DAO_ENUM_FLAG && other->subtype == DAO_ENUM_FLAG ){
-		for(node=DMap_First(otherNames); node; node=DMap_Next(otherNames,node)){
-			if( !(node->value.pInt & other->value) ) continue;
-			search = DMap_Find( selfNames, node->key.pVoid );
-			if( search == NULL ) return 0;
-			self->value |= search->value.pInt;
-		}
-	}else if( self->subtype == DAO_ENUM_FLAG ){
+	if( other->subtype == DAO_ENUM_STATE || other->subtype == DAO_ENUM_BOOL ){
 		for(node=DMap_First(otherNames); node; node=DMap_Next(otherNames,node)){
 			if( node->value.pInt != other->value ) continue;
 			search = DMap_Find( selfNames, node->key.pVoid );
 			if( search == NULL ) return 0;
 			self->value |= search->value.pInt;
+			ret += 1;
 		}
-	}else if( other->subtype == DAO_ENUM_FLAG ){
-		for(node=DMap_First(otherNames); node; node=DMap_Next(otherNames,node)){
-			if( !(node->value.pInt & other->value) ) continue;
-			search = DMap_Find( selfNames, node->key.pVoid );
-			if( search == NULL ) return 0;
-			self->value = search->value.pInt;
-			break;
-		}
-		return node && (node->value.pInt == other->value);
+		/* State or bool enums are supposed to have only one symbol; */
+		ret = ret == 1;
 	}else{
 		for(node=DMap_First(otherNames); node; node=DMap_Next(otherNames,node)){
-			if( node->value.pInt != other->value ) continue;
+			if( !(node->value.pInt & other->value) ) continue;
 			search = DMap_Find( selfNames, node->key.pVoid );
 			if( search == NULL ) return 0;
-			self->value = search->value.pInt;
-			break;
+			self->value |= search->value.pInt;
+			ret += 1;
 		}
+		if( self->subtype == DAO_ENUM_STATE || self->subtype == DAO_ENUM_BOOL ) ret = ret==1;
 	}
-	return other->subtype == DAO_ENUM_SYM;
+	return ret;
 }
-int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other, DString *enames )
+int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other )
 {
 	DMap *selfNames = self->etype->mapNames;
 	DMap *otherNames = other->etype->mapNames;
@@ -509,7 +496,7 @@ int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other, DString *enames )
 	}
 	return other->subtype == DAO_ENUM_SYM;
 }
-int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other, DString *enames )
+int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other )
 {
 	DMap *selfNames = self->etype->mapNames;
 	DMap *otherNames = other->etype->mapNames;

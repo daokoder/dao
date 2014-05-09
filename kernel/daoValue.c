@@ -573,7 +573,7 @@ void DaoValue_CopyX( DaoValue *src, DaoValue **dest, DaoType *cst, DaoDataCache 
 	switch( src->type ){
 	case DAO_ENUM    :
 		DaoEnum_SetType( & dest2->xEnum, src->xEnum.etype );
-		DaoEnum_SetValue( & dest2->xEnum, & src->xEnum, NULL );
+		DaoEnum_SetValue( & dest2->xEnum, & src->xEnum );
 		break;
 	case DAO_INTEGER : dest2->xInteger.value = src->xInteger.value; break;
 	case DAO_FLOAT   : dest2->xFloat.value = src->xFloat.value; break;
@@ -853,7 +853,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		break;
 	case (DAO_ENUM<<8)|DAO_ENUM :
 		DaoEnum_SetType( & D2->xEnum, T );
-		DaoEnum_SetValue( & D2->xEnum, & S->xEnum, NULL );
+		DaoEnum_SetValue( & D2->xEnum, & S->xEnum );
 		break;
 	case (DAO_INTEGER<<8)|DAO_INTEGER : D2->xInteger.value = S->xInteger.value; break;
 	case (DAO_INTEGER<<8)|DAO_FLOAT   : D2->xFloat.value   = S->xInteger.value; break;

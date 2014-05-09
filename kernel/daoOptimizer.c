@@ -4314,9 +4314,13 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 							break;
 						}
 						if( code != DVM_ADD && code != DVM_SUB ) goto InvOper;
-						if( at->subtid == DAO_ENUM_SYM ){
-							if( bt->subtid == DAO_ENUM_SYM ) goto InvOper;
-							ct = bt;
+						if( at->subtid == DAO_ENUM_SYM && bt->subtid == DAO_ENUM_SYM ){
+							DString_Assign( self->mbstring, at->name );
+							DString_Change( self->mbstring, "enum%< (.*) %>", "%1", 0 );
+							DString_Append( self->mbstring, bt->name );
+							ct = DaoNamespace_MakeEnumType( NS, self->mbstring->chars );
+						}else if( at->subtid != DAO_ENUM_FLAG ){
+							goto InvOper;
 						}
 						break;
 					case DAO_ARRAY :
@@ -4892,7 +4896,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				denum.subtype = at->subtid;
 				for(k=1; k<=opc; k++){
 					DaoValue *cc = routConsts->items.pValue[ inodes[i+k]->a ];
-					if( DaoEnum_SetValue( & denum, & cc->xEnum, NULL ) == 0 ){
+					if( DaoEnum_SetValue( & denum, & cc->xEnum ) == 0 ){
 						self->currentIndex = i + k;
 						DMap_Delete( jumps );
 						return DaoInferencer_ErrorTypeNotMatching( self, cc->xEnum.etype, at );

@@ -1868,23 +1868,26 @@ DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols )
 	key = DString_New();
 	type = DaoType_New( name->chars, DAO_ENUM, NULL, NULL );
 	type->mapNames = DMap_New( DAO_DATA_STRING, 0 );
+	if( symbols[0] == '$' ) type->subtid = DAO_ENUM_SYM;
 	for(i=0; i<n; i++){
 		char sym = symbols[i];
+		if( i == 0 && symbols[0] == '$' ) continue;
 		if( sym == ',' ){
 			MAP_Insert( type->mapNames, key, k );
 			DString_Clear( key );
 			k += 1;
 			t1 = 1;
-		}else if( sym == ';' ){
+		}else if( sym == ';' || sym == '$' ){
 			MAP_Insert( type->mapNames, key, 1<<k );
 			DString_Clear( key );
 			k += 1;
-			t2 = 1;
+			t2 = sym;
 		}else{
 			DString_AppendChar( key, sym );
 		}
 	}
 	if( t2 ){
+		if( t2 == ';' ) type->subtid = DAO_ENUM_FLAG;
 		MAP_Insert( type->mapNames, key, 1<<k );
 	}else{
 		MAP_Insert( type->mapNames, key, k );
@@ -1892,7 +1895,7 @@ DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols )
 	DaoNamespace_AddType( self, name, type );
 	DString_Delete( name );
 	DString_Delete( key );
-	return (t1&t2) ==0 ? type : NULL;
+	return t1 != 0 && t2 != 0 ? NULL : type;
 }
 DaoType* DaoNamespace_MakeConstType( DaoNamespace *self, DaoType *type )
 {

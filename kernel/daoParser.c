@@ -5428,12 +5428,12 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 			type->subtype = DAO_ENUM_SYM;
 			DString_Assign( self->string, str );
 			DString_Erase( self->string, 0, 1 );
-			DMap_Insert( type->mapNames, self->string, (void*)0 );
+			DMap_Insert( type->mapNames, self->string, (void*)1 );
 			DaoNamespace_AddType( ns, str, type );
 		}
 		if( (node = MAP_Find( self->allConsts, str )) == NULL ){
 			value = (DaoValue*) self->denum;
-			self->denum->value = 0;
+			self->denum->value = 1;
 			DaoEnum_SetType( self->denum, type );
 			node = MAP_Insert( self->allConsts, str, routine->routConsts->value->size );
 			DaoRoutine_AddConstant( routine, (DaoValue*) self->denum );
