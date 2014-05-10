@@ -852,7 +852,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		count = process->exceptions->size;
 		future->state = DAO_CALL_RUNNING;
 		DaoProcess_InterceptReturnValue( process );
-		DaoProcess_Execute( process );
+		DaoProcess_Start( process );
 		if( process->exceptions->size > count ) DaoProcess_PrintException( process, NULL, 1 );
 
 		if( future->actor ){
@@ -1028,12 +1028,6 @@ static void CHANNEL_Cap( DaoProcess *proc, DaoValue *par[], int N )
 	DCondVar_Signal( & daoCallServer->condv );
 	DMutex_Unlock( & daoCallServer->mutex );
 }
-static int DaoProcess_CheckCB( DaoProcess *self, const char *message )
-{
-	if( self->depth == 0 ) return 0;
-	DaoProcess_RaiseError( self, NULL, message );
-	return 1;
-}
 static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoValue *data;
@@ -1042,7 +1036,6 @@ static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
 	float timeout = par[2]->xFloat.value;
 
 	DaoProcess_PutInteger( proc, 1 );
-	if( DaoProcess_CheckCB( proc, "cannot send/block inside code section method" ) ) return;
 	if( self->cap <= 0 ){
 		DaoProcess_RaiseError( proc, "Param", "channel is closed" );
 		return;
@@ -1076,8 +1069,6 @@ static void CHANNEL_Receive( DaoProcess *proc, DaoValue *par[], int N )
 	DaoFuture *future = DaoProcess_GetInitFuture( proc );
 	DaoChannel *self = (DaoChannel*) par[0];
 	float timeout = par[1]->xFloat.value;
-
-	if( DaoProcess_CheckCB( proc, "cannot receive/block inside code section method" ) ) return;
 
 	event = DaoCallServer_MakeEvent();
 	DaoTaskEvent_Init( event, DAO_EVENT_WAIT_RECEIVING, DAO_EVENT_WAIT, future, self );
@@ -1133,7 +1124,6 @@ static void FUTURE_Value( DaoProcess *proc, DaoValue *par[], int N )
 		DaoProcess_PutValue( proc, self->value );
 		return;
 	}
-	if( DaoProcess_CheckCB( proc, "cannot block inside code section method" ) ) return;
 	proc->status = DAO_PROCESS_SUSPENDED;
 	proc->pauseType = DAO_PAUSE_FUTURE_VALUE;
 	DaoCallServer_AddWait( proc, self, -1 );
@@ -1143,7 +1133,6 @@ static void FUTURE_Wait( DaoProcess *proc, DaoValue *par[], int N )
 	DaoFuture *self = (DaoFuture*) par[0];
 	float timeout = par[1]->xFloat.value;
 	DaoProcess_PutInteger( proc, self->state == DAO_CALL_FINISHED );
-	if( DaoProcess_CheckCB( proc, "cannot block inside code section method" ) ) return;
 	if( self->state == DAO_CALL_FINISHED || timeout == 0 ) return;
 	proc->status = DAO_PROCESS_SUSPENDED;
 	proc->pauseType = DAO_PAUSE_FUTURE_WAIT;
@@ -1201,8 +1190,6 @@ void DaoMT_Select( DaoProcess *proc, DaoValue *par[], int n )
 	DaoFuture *future = DaoProcess_GetInitFuture( proc );
 	DaoMap *selects = (DaoMap*) par[0];
 	float timeout = par[1]->xFloat.value;
-
-	if( DaoProcess_CheckCB( proc, "cannot select/block inside code section method" ) ) return;
 
 	for(it=DaoMap_First(selects); it; it=DaoMap_Next(selects,it)){
 		DaoValue *value = it->key.pValue;

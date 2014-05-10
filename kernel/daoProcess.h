@@ -68,29 +68,29 @@ struct DaoStackFrame
 };
 
 /*
-   The stack structure of a Dao virtual machine process:
-
-   1. The call/stack frames are organized into a linked list structure;
-
-   2. The first frame is auxialiary frame that contains one stack value,
-   which will be used to hold the returned value of the process (when the
-   DVM_RETURN instruction is executed while the_current_frame->returning==-1);
-
-   3. The stack values are stored in a dynamic array which can grow when
-   a new frame is pushed into the stack;
-
-   4. When the value stack grows, it must have extra space that can hold
-   the maximum number of parameters (namely, @stackSize > @stackTop + DAO_MAX_PARAM);
-
-   5. When a Dao function or C function is called, the parameters must be
-   passed to the stack values starting from @stackTop, then a new frame can
-   be push. In this way, it will avoid of the problem of invalidating some of
-   the pointers when the stack is growed;
-
-   6. After the value stack is expanded, the expanded part should be set to zero;
-   the rest should be kept intact. The values from @stackTop to @stackSize can be
-   collected when it is convenient, not each time when a frame is popped off.
- */
+// The stack structure of a Dao virtual machine process:
+//
+// 1. The call/stack frames are organized into a linked list structure;
+//
+// 2. The first frame is an auxialiary frame that contains one stack value,
+//    which will be used to hold the returned value of the process (when the
+//    DVM_RETURN instruction is executed while the_current_frame->returning==-1);
+//
+// 3. The stack values are stored in a dynamic array which can grow when
+//    a new frame is pushed into the stack;
+//
+// 4. When the value stack grows, it must have extra space that can hold
+//    the maximum number of parameters (namely, @stackSize > @stackTop + DAO_MAX_PARAM);
+//
+// 5. When a Dao function or C function is called, the parameters must be
+//    passed to the stack values starting from @stackTop, then a new frame can
+//    be push. In this way, it will avoid of the problem of invalidating some of
+//    the pointers when the stack is growed;
+//
+// 6. After the value stack is expanded, the expanded part should be set to zero;
+//    the rest should be kept intact. The values from @stackTop to @stackSize can be
+//    collected when it is convenient, not each time when a frame is popped off.
+*/
 
 struct DaoProcess
 {
@@ -116,7 +116,6 @@ struct DaoProcess
 	uchar_t         pauseType;
 	uchar_t         status;
 	uchar_t         active;
-	ushort_t        depth;
 	ushort_t        returned;
 
 	DaoFuture      *future;
@@ -161,13 +160,18 @@ DAO_DLL int DaoProcess_Call( DaoProcess *self, DaoRoutine *f, DaoValue *o, DaoVa
 
 DAO_DLL void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[], int n );
 
-/* Execute from the top of the calling stack */
+/*
+// Execute from the top of the calling stack.
+// Return immediately when the process is suspended.
+*/
+DAO_DLL int DaoProcess_Start( DaoProcess *self );
+/*
+// Execute from the top of the calling stack.
+// This function will block when the process become suspended,
+// and block until the suspending state changes.
+*/
 DAO_DLL int DaoProcess_Execute( DaoProcess *self );
 
-/* Acquire and release the condition variable: */
-DAO_DLL void DaoProcess_AcquireCV( DaoProcess *self );
-DAO_DLL void DaoProcess_ReleaseCV( DaoProcess *self );
-DAO_DLL void DaoProcess_Suspend( DaoProcess *self, int type );
 
 DAO_DLL int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer );
 DAO_DLL DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value );

@@ -1081,7 +1081,6 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 	denum.etype = DaoNamespace_MakeEnumType( proc->activeNamespace, "unmatched,matched" );
 	denum.subtype = DAO_ENUM_STATE;
 	entry = proc->topFrame->entry;
-	DaoProcess_AcquireCV( proc );
 
 	start = offset = from;
 	end = to;
@@ -1118,7 +1117,6 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 		start = offset = end + 1;
 		end = to;
 	}
-	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 }
 
@@ -1159,7 +1157,6 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 	}
 	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
-	DaoProcess_AcquireCV( proc );
 	for(i=0; i<N; ){
 		if( unit ){
 			state = DString_DecodeChar( chars, end );
@@ -1182,7 +1179,6 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 			break;
 		}
 	}
-	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 }
 static void DaoSTR_Iterate( DaoProcess *proc, DaoValue *p[], int N )
@@ -1908,7 +1904,6 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 	}
 	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
-	DaoProcess_AcquireCV( proc );
 	for(j=0; j<N; j++){
 		i = direction ? N-1-j : j;
 		idint.value = i;
@@ -1935,7 +1930,6 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 			break;
 		}
 	}
-	DaoProcess_ReleaseCV( proc );
 	if( popped == 0 ) DaoProcess_PopFrame( proc );
 }
 static void DaoLIST_Collect( DaoProcess *proc, DaoValue *p[], int npar )
@@ -1978,7 +1972,6 @@ static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar, int which
 	sect = DaoProcess_InitCodeSection( proc );
 	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
-	DaoProcess_AcquireCV( proc );
 	for(j=first; j<N; j++){
 		i = D ? N-1-j : j;
 		idint.value = i;
@@ -1990,7 +1983,6 @@ static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar, int which
 		if( proc->status == DAO_PROCESS_ABORTED ) break;
 		res = proc->stackValues[0];
 	}
-	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 	DaoProcess_SetActiveFrame( proc, proc->topFrame );
 	DaoProcess_PutValue( proc, res );
@@ -2032,7 +2024,6 @@ static void DaoLIST_Functional2( DaoProcess *proc, DaoValue *p[], int npar, int 
 	if( sect == NULL ) return;
 	if( N > list2->value->size ) N = list2->value->size;
 	entry = proc->topFrame->entry;
-	DaoProcess_AcquireCV( proc );
 	for(j=0; j<N; j++){
 		i = direction ? N-1-j : j;
 		idint.value = i;
@@ -2053,7 +2044,6 @@ static void DaoLIST_Functional2( DaoProcess *proc, DaoValue *p[], int npar, int 
 			break;
 		}
 	}
-	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 }
 static void DaoLIST_Collect2( DaoProcess *proc, DaoValue *p[], int npar )
@@ -2077,7 +2067,6 @@ static void DaoLIST_Associate( DaoProcess *proc, DaoValue *p[], int npar )
 	daoint i, N = list->value->size;
 
 	if( sect == NULL ) return;
-	DaoProcess_AcquireCV( proc );
 	for(i=0; i<N; i++){
 		idint.value = i;
 		if( sect->b > 0 ) DaoProcess_SetValue( proc, sect->a, items[i] );
@@ -2089,7 +2078,6 @@ static void DaoLIST_Associate( DaoProcess *proc, DaoValue *p[], int npar )
 		if( res->type == DAO_NONE ) continue;
 		DaoMap_Insert( map, res->xTuple.values[0], res->xTuple.values[1] );
 	}
-	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 }
 static DaoFuncItem listMeths[] =
@@ -2759,7 +2747,6 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
 	type = type && type->nested->size > 1 ? type->nested->items.pType[1] : NULL;
-	DaoProcess_AcquireCV( proc );
 	for(node=DMap_First(self->value); node; node=DMap_Next(self->value,node)){
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, node->key.pValue );
 		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, node->value.pValue );
@@ -2788,7 +2775,6 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 			break;
 		}
 	}
-	DaoProcess_ReleaseCV( proc );
 	if( popped == 0 ) DaoProcess_PopFrame( proc );
 }
 static void DaoMAP_Iterate( DaoProcess *proc, DaoValue *p[], int N )

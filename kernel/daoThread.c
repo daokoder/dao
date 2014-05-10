@@ -649,7 +649,6 @@ static void DaoMT_RunFunctional( void *p )
 {
 	DaoTaskData *self = (DaoTaskData*)p;
 	DaoProcess *clone = self->clone;
-	DaoProcess_AcquireCV( clone );
 	switch( self->param->type ){
 	case DAO_INTEGER : DaoMT_RunIterateFunctional( p ); break;
 	case DAO_LIST  : DaoMT_RunListFunctional( p ); break;
@@ -658,7 +657,6 @@ static void DaoMT_RunFunctional( void *p )
 	case DAO_ARRAY : DaoMT_RunArrayFunctional( p ); break;
 #endif
 	}
-	DaoProcess_ReleaseCV( clone );
 	self->status |= clone->status != DAO_PROCESS_FINISHED;
 	DMutex_Lock( self->mutex );
 	*self->joined += 1;
@@ -763,7 +761,7 @@ static void DaoMT_Start0( void *p )
 {
 	DaoProcess *proc = (DaoProcess*)p;
 	int count = proc->exceptions->size;
-	DaoProcess_Execute( proc );
+	DaoProcess_Start( proc );
 	DaoProcess_ReturnFutureValue( proc, proc->future );
 	if( proc->exceptions->size > count ) DaoProcess_PrintException( proc, NULL, 1 );
 	if( proc->future->state == DAO_CALL_FINISHED ){

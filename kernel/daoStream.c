@@ -515,7 +515,6 @@ static void DaoStream_ReadLines( DaoStream *self, DaoList *list, DaoProcess *pro
 		DString tmp2 = DString_WrapChars( "" );
 		tmp.value = & tmp2;
 		line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
-		DaoProcess_AcquireCV( proc );
 		while( (count == 0 || (i++) < count) && DaoStream_ReadLine( self, line->value ) ){
 			if( chop ) DString_Chop( line->value, 0 );
 			proc->topFrame->entry = entry;
@@ -524,7 +523,6 @@ static void DaoStream_ReadLines( DaoStream *self, DaoList *list, DaoProcess *pro
 			res = proc->stackValues[0];
 			if( res && res->type != DAO_NONE ) DaoList_Append( list, res );
 		}
-		DaoProcess_ReleaseCV( proc );
 		DaoProcess_PopFrame( proc );
 	}
 }

@@ -1667,15 +1667,6 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		DaoProcess_PushRoutine( vmp, mainRoutine, NULL );
 		DaoProcess_Execute( vmp );
 	}
-#ifdef DAO_WITH_CONCURRENT
-	if( vmp->status >= DAO_PROCESS_SUSPENDED ){
-		if( DaoCallServer_GetThreadCount() == 0 ) DaoCallServer_AddThread( NULL, NULL );
-		DMutex_Lock( & self->mutexLoad );
-		while( vmp->status >= DAO_PROCESS_SUSPENDED )
-			DCondVar_TimedWait( & self->condvWait, & self->mutexLoad, 0.01 );
-		DMutex_Unlock( & self->mutexLoad );
-	}
-#endif
 	/* check and execute explicitly defined main() routine  */
 	ps = ns->argParams->value->items.pValue;
 	N = ns->argParams->value->size;
@@ -1865,15 +1856,6 @@ ExecuteImplicitMain :
 		DaoVmSpace_Unlock( self );
 		DaoProcess_PushRoutine( process, ns->mainRoutine, NULL );
 		DaoProcess_Execute( process );
-#ifdef DAO_WITH_CONCURRENT
-		if( process->status >= DAO_PROCESS_SUSPENDED ){
-			if( DaoCallServer_GetThreadCount() == 0 ) DaoCallServer_AddThread( NULL, NULL );
-			DMutex_Lock( & self->mutexLoad );
-			while( process->status >= DAO_PROCESS_SUSPENDED )
-				DCondVar_TimedWait( & self->condvWait, & self->mutexLoad, 0.01 );
-			DMutex_Unlock( & self->mutexLoad );
-		}
-#endif
 		status = process->status;
 		DaoVmSpace_ReleaseProcess( self, process );
 		DaoVmSpace_Lock( self );
@@ -2485,11 +2467,9 @@ static void DaoMETH_Frame( DaoProcess *proc, DaoValue *p[], int n )
 	int ecount;
 
 	if( sect == NULL ) return;
-	DaoProcess_AcquireCV( proc );
 	ecount = proc->exceptions->size;
 	DaoProcess_Execute( proc );
 	retvalue = proc->stackValues[0];
-	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 	DaoProcess_SetActiveFrame( proc, proc->topFrame );
 	if( proc->exceptions->size > ecount ){

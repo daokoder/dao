@@ -1532,7 +1532,6 @@ static void FRAME_CellsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, i
 	K = DaoSlice_GetSize( self->slices, 2 );
 
 	entry = proc->topFrame->entry;
-	DaoProcess_AcquireCV( proc );
 	for(k=0; k<K; ++k){
 		daoint kk = DaoSlice_GetIndex( self->slices, 2, k );
 		depidx->value = kk;
@@ -1559,7 +1558,6 @@ static void FRAME_CellsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, i
 			}
 		}
 	}
-	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 }
 static void FRAME_RowsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, int func )
@@ -1607,7 +1605,6 @@ static void FRAME_RowsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, in
 	GC_IncRC( tuple );
 
 	entry = proc->topFrame->entry;
-	DaoProcess_AcquireCV( proc );
 	for(k=0; k<K; ++k){
 		daoint kk = DaoSlice_GetIndex( self->slices, 2, k );
 		depidx->value = kk;
@@ -1634,7 +1631,6 @@ static void FRAME_RowsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, in
 			}
 		}
 	}
-	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 	GC_DecRC( tuple );
 }
@@ -1672,7 +1668,6 @@ static void FRAME_ColsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, in
 	GC_IncRC( list );
 
 	entry = proc->topFrame->entry;
-	DaoProcess_AcquireCV( proc );
 	for(k=0; k<K; ++k){
 		daoint kk = DaoSlice_GetIndex( self->slices, 2, k );
 		depidx->value = kk;
@@ -1702,7 +1697,6 @@ static void FRAME_ColsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, in
 			}
 		}
 	}
-	DaoProcess_ReleaseCV( proc );
 	DaoProcess_PopFrame( proc );
 	GC_DecRC( list );
 }

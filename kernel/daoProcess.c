@@ -640,10 +640,6 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 	int nop = self->activeCode[1].code == DVM_NOP;
 	int returning = -1;
 
-	if( self->depth >= 1000 ){
-		DaoProcess_RaiseError( self, NULL, "Too deep nested code section method calls!" );
-		return NULL;
-	}
 	if( frame == NULL ) return NULL;
 	if( self->topFrame->routine->body ){
 		self->topFrame->entry = 1 + self->activeCode - self->topFrame->codes;
@@ -746,14 +742,6 @@ DaoValue* DaoProcess_GetReturned( DaoProcess *self )
 {
 	return self->stackValues[0];
 }
-void DaoProcess_AcquireCV( DaoProcess *self )
-{
-	self->depth += 1;
-}
-void DaoProcess_ReleaseCV( DaoProcess *self )
-{
-	self->depth -= 1;
-}
 static void DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
 {
 	DaoVariable *variable = NULL;
@@ -816,7 +804,7 @@ int DaoCallServer_MarkActiveProcess( DaoProcess *process, int active );
 #endif
 #endif
 
-int DaoProcess_Execute( DaoProcess *self )
+int DaoProcess_Start( DaoProcess *self )
 {
 	DaoJitCallData jitCallData = {NULL};
 	DaoStackFrame *rollback = NULL;
@@ -2370,6 +2358,7 @@ ReturnFalse:
 
 ReturnTrue:
 	if( self->topFrame == self->firstFrame && self == vmSpace->mainProcess ){
+		int status = self->status;
 		print = (vmSpace->options & DAO_OPTION_INTERUN) && (here->options & DAO_NS_AUTO_GLOBAL);
 		if( (print || vmSpace->evalCmdline) && self->stackValues[0] ){
 			/* Need one extra frame to ensure this part is not executed again,
@@ -2380,6 +2369,7 @@ ReturnTrue:
 			DaoStream_WriteNewLine( vmSpace->stdioStream );
 			DaoProcess_PopFrame( self );
 		}
+		self->status = status;
 	}
 #ifdef DAO_WITH_CONCURRENT
 	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
@@ -2389,6 +2379,28 @@ ReturnTrue:
 	DaoGC_TryInvoke();
 	return 1;
 }
+int DaoProcess_Execute( DaoProcess *self )
+{
+	int ret = DaoProcess_Start( self );
+#ifdef DAO_WITH_CONCURRENT
+	if( self->status >= DAO_PROCESS_SUSPENDED ){
+		DMutex mutex;
+		DCondVar condv;
+		DMutex_Init( & mutex );
+		DCondVar_Init( & condv );
+		if( DaoCallServer_GetThreadCount() == 0 ) DaoCallServer_AddThread( NULL, NULL );
+		DMutex_Lock( & mutex );
+		while( self->status >= DAO_PROCESS_SUSPENDED )
+			DCondVar_TimedWait( & condv, & mutex, 0.01 );
+		DMutex_Unlock( & mutex );
+		DMutex_Destroy( & mutex );
+		DCondVar_Destroy( & condv );
+	}
+#endif
+	if( self->status == DAO_PROCESS_ABORTED ) ret = 0;
+	return ret;
+}
+
 DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoVmCode *mid;
