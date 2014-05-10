@@ -1087,6 +1087,11 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	if( node ){
 		if( node->value.pType == self ) return self;
 		return DaoType_DefineTypes( node->value.pType, ns, defs );
+	}else if( self->constant ){
+		copy = DaoType_DefineTypes( self->vartype, ns, defs );
+		copy = DaoNamespace_MakeConstType( ns, copy );
+		DMap_Insert( defs, self, copy );
+		return copy;
 	}else if( self->tid & DAO_ANY ){
 		return self;
 	}else if( self->tid == DAO_CLASS ){ /* e.g., class<Item<@T>> */
