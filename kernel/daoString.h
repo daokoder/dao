@@ -131,6 +131,7 @@ DAO_DLL int DString_ImportUTF8( DString *self, DString *utf8 );
 DAO_DLL int DString_ExportUTF8( DString *self, DString *utf8 );
 DAO_DLL int DString_ToLocal( DString *self );
 DAO_DLL int DString_ToUTF8( DString *self );
+DAO_DLL int DString_CompareUTF8( DString *left, DString *right );
 
 
 #endif

@@ -1046,7 +1046,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	DString *pname = NULL;
 	DString *mbs = NULL;
 	int size = self->tokens->size;
-	int i, j, k, right;
+	int i, j, k, right, cstmeth = 0;
 	int line = 0; /* XXX number of super classes */
 	int e1=start, e2=size-1, ec = 0;
 	int isMeth, notStatic, notConstr;
@@ -1111,8 +1111,18 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	notStatic = (routine->attribs & DAO_ROUT_STATIC) ==0;
 	notConstr = hostname && DString_EQ( routine->routName, hostname ) == 0;
 	if( self->isClassBody && notConstr == 0 ) routine->attribs |= DAO_ROUT_INITOR;
+	if( right+1 < size && tokens[right+1]->name == DKEY_CONST ){
+		if( (inter == NULL && klass == 0) || notStatic == 0 || notConstr == 0 ){
+			DaoParser_Error( self, DAO_TOKEN_NOT_EXPECTED, & tokens[right+1]->string );
+			return -1;
+		}
+		routine->attribs |= DAO_ROUT_CONST;
+		cstmeth = 1;
+	}
 	if( (isMeth || inter) && tokens[start+1]->name != DKEY_SELF && notStatic && notConstr ){
-		type = DaoNamespace_MakeType( NS, "self", DAO_PAR_NAMED, (DaoValue*)hostype, NULL, 0 );
+		type = hostype;
+		if( cstmeth ) type = DaoNamespace_MakeConstType( NS, type );
+		type = DaoNamespace_MakeType( NS, "self", DAO_PAR_NAMED, (DaoValue*)type, NULL, 0 );
 		DArray_Append( nested, (void*) type ); /* self parameter type */
 		DaoRoutine_AddConstant( routine, NULL ); /* no default parameter; */
 		DString_AppendChars( pname, type->name->chars );
@@ -1276,9 +1286,9 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	}
 	if( routine->parCount > DAO_MAX_PARAM ) goto ErrorTooManyParams;
 
-
 	e1 = right + 1;
 	e2 = size - 1;
+	if( right+1 < size && tokens[right+1]->name == DKEY_CONST ) right += 1;
 	if( right+1 < size && tokens[right+1]->name == DTOK_LSB ){
 		cbtype = DaoParser_ParseCodeBlockType( self, right+1, & start );
 		if( cbtype == NULL ) goto ErrorInvalidTypeForm;

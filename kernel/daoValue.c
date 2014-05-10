@@ -135,7 +135,7 @@ int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
 	if( L->etype == R->etype ){
 		return L->value == R->value ? 0 : (L->value < R->value ? -1 : 1);
 	}else if( L->subtype == DAO_ENUM_SYM && R->subtype == DAO_ENUM_SYM ){
-		return DString_Compare( L->etype->name, R->etype->name );
+		return DString_CompareUTF8( L->etype->name, R->etype->name );
 	}else if( L->subtype == DAO_ENUM_SYM ){
 		E = *R;
 		if( DaoEnum_SetSymbols( & E, L->etype->name->chars ) == 0 ) goto CompareAddress;
@@ -233,7 +233,7 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	case DAO_FLOAT   : return number_compare( left->xFloat.value, right->xFloat.value );
 	case DAO_DOUBLE  : return number_compare( left->xDouble.value, right->xDouble.value );
 	case DAO_COMPLEX : return DaoComplex_Compare( & left->xComplex, & right->xComplex );
-	case DAO_STRING  : return DString_Compare( left->xString.value, right->xString.value );
+	case DAO_STRING  : return DString_CompareUTF8( left->xString.value, right->xString.value );
 	case DAO_ENUM    : return DaoEnum_Compare( & left->xEnum, & right->xEnum );
 	case DAO_TUPLE   : return DaoTuple_Compare( & left->xTuple, & right->xTuple );
 	case DAO_LIST    : return DaoList_Compare( & left->xList, & right->xList );

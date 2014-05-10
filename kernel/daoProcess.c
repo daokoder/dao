@@ -1732,10 +1732,10 @@ CallEntry:
 			}
 		}OPNEXT() OPCASE( LT_ISS ){
 			vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
-			IntegerOperand( vmc->c ) = DString_Compare( vA->xString.value, vB->xString.value ) <0;
+			IntegerOperand( vmc->c ) = DString_CompareUTF8( vA->xString.value, vB->xString.value ) <0;
 		}OPNEXT() OPCASE( LE_ISS ){
 			vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
-			IntegerOperand( vmc->c ) = DString_Compare( vA->xString.value, vB->xString.value ) <=0;
+			IntegerOperand( vmc->c ) = DString_CompareUTF8( vA->xString.value, vB->xString.value ) <=0;
 		}OPNEXT() OPCASE( EQ_ISS ){
 			vA = locVars[ vmc->a ];  vB = locVars[ vmc->b ];
 			IntegerOperand( vmc->c ) = DString_Compare( vA->xString.value, vB->xString.value ) ==0;
@@ -5221,8 +5221,8 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		switch( vmc->code ){
 		case DVM_AND: C = DString_Size( A->xString.value ) ? B : A; break;
 		case DVM_OR:  C = DString_Size( A->xString.value ) ? A : B; break;
-		case DVM_LT:  D = DString_Compare( A->xString.value, B->xString.value )<0; break;
-		case DVM_LE:  D = DString_Compare( A->xString.value, B->xString.value )<=0; break;
+		case DVM_LT:  D = DString_CompareUTF8( A->xString.value, B->xString.value )<0; break;
+		case DVM_LE:  D = DString_CompareUTF8( A->xString.value, B->xString.value )<=0; break;
 		case DVM_EQ:  D = DString_Compare( A->xString.value, B->xString.value )==0; break;
 		case DVM_NE:  D = DString_Compare( A->xString.value, B->xString.value )!=0; break;
 		default: break;

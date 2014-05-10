@@ -199,16 +199,17 @@ enum DaoClassAttrib
 enum DaoRoutineAttrib
 {
 	DAO_ROUT_PARSELF   = 1,       /* need self parameter */
-	DAO_ROUT_STATIC    = (1<<1),  /* static function */
-	DAO_ROUT_PRIVATE   = (1<<2),  /* private method */
-	DAO_ROUT_PROTECTED = (1<<3),  /* protected method */
-	DAO_ROUT_DEFERRED  = (1<<4),  /* deferred closure */
-	DAO_ROUT_PASSRET   = (1<<5),  /* pass returned value to deferred closure */
-	DAO_ROUT_CODESECT  = (1<<6),  /* code section routine */
-	DAO_ROUT_DECORATOR = (1<<7),  /* function decorator */
-	DAO_ROUT_INITOR    = (1<<8),  /* class constructor */
-	DAO_ROUT_MAIN      = (1<<9),  /* main function */
-	DAO_ROUT_REUSABLE  = (1<<10)  /* stack data for the routine is reusable */
+	DAO_ROUT_CONST     = (1<<1),  /* const method */
+	DAO_ROUT_STATIC    = (1<<2),  /* static function */
+	DAO_ROUT_PRIVATE   = (1<<3),  /* private method */
+	DAO_ROUT_PROTECTED = (1<<4),  /* protected method */
+	DAO_ROUT_DEFERRED  = (1<<5),  /* deferred closure */
+	DAO_ROUT_PASSRET   = (1<<6),  /* pass returned value to deferred closure */
+	DAO_ROUT_CODESECT  = (1<<7),  /* code section routine */
+	DAO_ROUT_DECORATOR = (1<<8),  /* function decorator */
+	DAO_ROUT_INITOR    = (1<<9),  /* class constructor */
+	DAO_ROUT_MAIN      = (1<<10), /* main function */
+	DAO_ROUT_REUSABLE  = (1<<11)  /* stack data for the routine is reusable */
 };
 
 #define DAO_TYPER_FREE       (DAO_ROUT_REUSABLE<<1)

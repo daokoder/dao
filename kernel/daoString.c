@@ -986,6 +986,36 @@ void DString_Trim( DString *self, int head, int tail, int utf8 )
 	}
 }
 
+int DString_CompareUTF8( DString *self, DString *chs )
+{
+	char *chs1 = self->chars;
+	char *chs2 = chs->chars;
+	daoint i1, c1 = 0, n1 = self->size;
+	daoint i2, c2 = 0, n2 = chs->size;
+	DCharState state1 = { 1, 1, 0 };
+	DCharState state2 = { 1, 1, 0 };
+
+	if( self->chars == chs->chars ) return 0;
+	for(i1=0,i2=0; i1<n1 && i2<n2; c1+=1, c2+=1, i1+=state1.width, i2+=state2.width){
+		state1 = DString_DecodeChar( chs1 + i1, chs1 + n1 );
+		state2 = DString_DecodeChar( chs2 + i2, chs2 + n2 );
+		if( state1.value < state2.value ){
+			return -1;
+		}else if( state1.value > state2.value ){
+			return 1;
+		}
+	}
+	for(; i1<n1; c1+=1, i1+=state1.width) state1 = DString_DecodeChar( chs1 + i1, chs1 + n1 );
+	for(; i2<n2; c2+=2, i2+=state2.width) state2 = DString_DecodeChar( chs2 + i2, chs2 + n2 );
+	if( c1 < c2 ){
+		return -1;
+	}else if( c1 > c2 ){
+		return 1;
+	}
+	return 0;
+}
+
+
 int DString_DecodeUTF8( DString *self, DVector *wcs )
 {
 	uint_t *wch;

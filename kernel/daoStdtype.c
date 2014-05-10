@@ -2024,10 +2024,6 @@ static void DaoLIST_Functional2( DaoProcess *proc, DaoValue *p[], int npar, int 
 		list3 = DaoProcess_PutList( proc );
 		break;
 	case DVM_FUNCT_ASSOCIATE :
-		if( p[1]->type == DAO_NONE ){
-			list2 = list;
-			items2 = list2->value->items.pValue;
-		}
 		map = DaoProcess_PutMap( proc, hashing );
 		direction = 0;
 		break;
@@ -2064,9 +2060,37 @@ static void DaoLIST_Collect2( DaoProcess *proc, DaoValue *p[], int npar )
 {
 	DaoLIST_Functional2( proc, p, npar, DVM_FUNCT_COLLECT );
 }
-static void DaoLIST_Associate( DaoProcess *proc, DaoValue *p[], int npar )
+static void DaoLIST_Associate2( DaoProcess *proc, DaoValue *p[], int npar )
 {
 	DaoLIST_Functional2( proc, p, npar, DVM_FUNCT_ASSOCIATE );
+}
+static void DaoLIST_Associate( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	DaoValue *res = NULL;
+	DaoList *list = & p[0]->xList;
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue **items = list->value->items.pValue;
+	DaoValue *index = (DaoValue*)(void*)&idint;
+	DaoMap *map = DaoProcess_PutMap( proc, p[1]->xInteger.value );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
+	daoint entry = proc->topFrame->entry;
+	daoint i, N = list->value->size;
+
+	if( sect == NULL ) return;
+	DaoProcess_AcquireCV( proc );
+	for(i=0; i<N; i++){
+		idint.value = i;
+		if( sect->b > 0 ) DaoProcess_SetValue( proc, sect->a, items[i] );
+		if( sect->b > 1 ) DaoProcess_SetValue( proc, sect->a+1, index );
+		proc->topFrame->entry = entry;
+		DaoProcess_Execute( proc );
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
+		res = proc->stackValues[0];
+		if( res->type == DAO_NONE ) continue;
+		DaoMap_Insert( map, res->xTuple.values[0], res->xTuple.values[1] );
+	}
+	DaoProcess_ReleaseCV( proc );
+	DaoProcess_PopFrame( proc );
 }
 static DaoFuncItem listMeths[] =
 {
@@ -2182,14 +2206,14 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Associate,
-		"associate( self :: list<@T>, other :: none|list<@S> = none, hashing = 0 )"
-			"[item :: @T, item2 :: @S, index : int => none|tuple<@K,@V>] => map<@K,@V>"
+		"associate( self :: list<@T>, hashing = 0 )"
+			"[item :: @T, index : int => none|tuple<@K,@V>] => map<@K,@V>"
 		/*
-		// Iterate over this list and optionally another list and evaluate the
-		// code section on the item value (s) and index. The code section may
-		// return none value, or a pair of key and value as a tuple. These keys
-		// and values from the code section will produce a map/hash (associative
-		// array) which will be returned by the method.
+		// Iterate over this list and evaluate the code section on the item
+		// value(s) and index. The code section may return none value, or a
+		// pair of key and value as a tuple. These keys and values from the
+		// code section will produce a map/hash (associative array) which will
+		// be returned by the method.
 		//
 		// The last optional parameter "hashing" may take the following values:
 		// -- Zero: indicating the resulting map will be ordered by keys;
@@ -2199,6 +2223,13 @@ static DaoFuncItem listMeths[] =
 		//          random hashing seed;
 		// -- Else: indicating the resulting map will be a hash map with this
 		//          "hashing" value as the hashing seed;
+		*/
+	},
+	{ DaoLIST_Associate2,
+		"associate( self :: list<@T>, other :: list<@S>, hashing = 0 )"
+			"[item :: @T, item2 :: @S, index : int => none|tuple<@K,@V>] => map<@K,@V>"
+		/*
+		// The same as above method except this method iterate over two lists.
 		*/
 	},
 	{ DaoLIST_Reduce1,

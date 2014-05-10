@@ -692,7 +692,7 @@ static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
 {
 	daoint cmp = 0;
 	switch( self->keytype ){
-	case DAO_DATA_STRING : cmp = DString_Compare( (DString*) k1, (DString*) k2 );     break;
+	case DAO_DATA_STRING : cmp = DString_Compare( (DString*) k1, (DString*) k2 ); break;
 	case DAO_DATA_VALUE  : cmp = DaoValue_Compare( (DaoValue*) k1, (DaoValue*) k2 );  break;
 	case DAO_DATA_VALUE2 : cmp = DaoValue_Compare2( (DaoValue*) k1, (DaoValue*) k2 ); break;
 	case DAO_DATA_VALUE3 : cmp = DaoValue_Compare3( (DaoValue*) k1, (DaoValue*) k2 ); break;

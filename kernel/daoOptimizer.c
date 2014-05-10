@@ -2970,6 +2970,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	daoint i, n, N = routine->body->annotCodes->size;
 	daoint j, k, m, J, K, M = routine->body->regCount;
 	char codetype, *inited = self->inited->chars;
+	int constmeth = routine->attribs & DAO_ROUT_CONST;
 	int code, opa, opb, opc, first, middle, last;
 	int TT1, TT2, TT3, TT4, TT5, TT6;
 
@@ -3094,6 +3095,11 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				}
 			}
 		}
+		if( constmeth ){
+			if( code == DVM_SETVO || (code >= DVM_SETVO_II && code <= DVM_SETVO_CC ) ){
+				goto ModifyConstant;
+			}
+		}
 
 		switch( K ){
 		case DAO_CODE_MOVE :
@@ -3205,6 +3211,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			case DVM_GETVG : at = NS->variables->items.pVar[opb]->dtype; break;
 			}
 			if( at == NULL ) at = dao_type_udf;
+			if( constmeth && code == DVM_GETVO && at->constant == 0 ){
+				at = DaoNamespace_MakeConstType( NS, at );
+			}
 			DaoInferencer_UpdateType( self, opc, at );
 
 #if 0
