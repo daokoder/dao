@@ -87,7 +87,7 @@ int DaoProcess_Resume( DaoProcess *self, DaoValue *par[], int N, DaoProcess *ret
 			return 0;
 		}
 	}
-	DaoProcess_Execute( self );
+	DaoProcess_Start( self );
 	DaoProcess_PutValue( ret, self->stackValues[0] );
 	return 1;
 }
@@ -131,7 +131,7 @@ static void COROUT_Start( DaoProcess *proc, DaoValue *par[], int N )
 	}
 	vmProc->status = DAO_PROCESS_SUSPENDED;
 	vmProc->pauseType = DAO_PAUSE_COROUTINE_YIELD;
-	DaoProcess_Execute( vmProc );
+	DaoProcess_Start( vmProc );
 	DaoProcess_PutValue( proc, vmProc->stackValues[0] );
 	if( vmProc->status == DAO_PROCESS_ABORTED )
 		DaoProcess_RaiseError( proc, NULL, "coroutine execution is aborted." );

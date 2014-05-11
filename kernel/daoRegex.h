@@ -54,7 +54,7 @@ struct DaoRgxItem
 
 struct DaoRegex
 {
-	void   *source;
+	char   *source;
 	daoint  start;
 	daoint  end;
 	DaoRgxItem *items;
@@ -63,7 +63,7 @@ struct DaoRegex
 	short  attrib;
 	short  group;
 	short  indexed;
-	void  *wordbuf;
+	char  *wordbuf;
 	int    itemlen; /* in bytes */
 	int    wordlen; /* in bytes */
 	int    length;

@@ -47,6 +47,7 @@ enum {
 	PAT_STOP ,
 	PAT_START ,
 	PAT_END ,
+	PAT_WBORDER ,
 	PAT_SPLIT ,
 	PAT_JOIN ,
 	PAT_BACKREF ,
@@ -79,7 +80,7 @@ static void PrintRegex( DaoRegex *self, DaoRgxItem *pat )
 		ch1[0] = (char)pat->type;
 		value = ch1;
 	}else if( pat->type == PAT_SET || pat->type == PAT_WORD || pat->type == PAT_PAIR ){
-		value = ((char*) self->wordbuf) + pat->word;
+		value = self->wordbuf + pat->word;
 	}
 	j = pat->word;
 	i = pat->length;
@@ -96,7 +97,7 @@ static void SetWord( DaoRegex *self, DaoRgxItem *word, short m, wchar_t ch )
 		word->length = 0;
 		word->word = m;
 	}
-	mbs = ((char*) self->wordbuf) + word->word;
+	mbs = self->wordbuf + word->word;
 	mbs[ word->length ] = (char) ch;
 	mbs[ ++ word->length ] = 0;
 }
@@ -227,12 +228,15 @@ static int MakeRegex( DaoRegex *self, DString *ds, void *spatt,
 	DaoRgxItem *patt, *patt2, *split=NULL, *patts = self->items;
 	DaoRgxItem word = { PAT_NONE };
 	DaoRgxItem set = { PAT_NONE };
-	int chi, chi2;
+	DCharState st = { 0, 1, 0 };
+	DCharState st2 = { 0, 1, 0 };
 	char *buf, *mbs = (char*) spatt;
 	int i, j, k, count=0, repeat=0, refgroup=0;
 	short type, gid = self->indexed >0 ? self->indexed + 1E4 : self->group;
-	daoint pos, pos2;
 	int alts = DString_BalancedChar( ds, '|', '(', ')', '%', start, end, 1 );
+	daoint pos, pos2;
+	int chi, chi2;
+
 	if( alts >0 || grouping >0 ){
 		split = PushRegex( self, PAT_SPLIT );
 		split->gid = gid;
@@ -257,6 +261,7 @@ static int MakeRegex( DaoRegex *self, DString *ds, void *spatt,
 			switch( chi ){
 			case 's': case 'S': case 'k': case 'K': case 'p': case 'P':
 			case 'c': case 'C': case 'a': case 'A': case 'w': case 'W':
+			case 'e': case 'E': case 'o': case 'O':
 			case 'd': case 'D': case 'x': case 'X':
 				type = chi;
 				break;
@@ -277,15 +282,17 @@ static int MakeRegex( DaoRegex *self, DString *ds, void *spatt,
 			case 'b':
 				type = PAT_NONE;
 				if( i+3 < end ){
-					chi = mbs[i+2];
-					chi2 = mbs[i+3];
-					if( ! isspace( chi ) && ! isspace( chi2 ) ){
+					st = DString_DecodeChar( mbs + i + 2, mbs + end );
+					st2 = DString_DecodeChar( mbs + i + 2 + st.width, mbs + end );
+					chi = st.value;
+					chi2 = st2.value;
+					if( ! iswspace( chi ) && ! iswspace( chi2 ) ){
 						set.type = type = PAT_PAIR;
 						set.word = i + 1;
-						set.length = 2;
-						buf = ((char*)self->wordbuf) + set.word;
-						buf[0] = chi;  buf[1] = chi2;
-						i += 2;
+						set.length = st.width + st2.width;
+						buf = self->wordbuf + set.word;
+						memcpy( buf, mbs + i + 2, set.length * sizeof(char) );
+						i += set.length;
 					}
 				}
 				break;
@@ -366,7 +373,7 @@ static int MakeRegex( DaoRegex *self, DString *ds, void *spatt,
 				set.type = PAT_SET;
 				set.length = pos - i - 1;
 				set.word = i + 1;
-				buf = ((char*)self->wordbuf) + set.word;
+				buf = self->wordbuf + set.word;
 				memcpy( buf, mbs + i + 1, set.length * sizeof(char) );
 				buf[ set.length ] = 0;
 				i = pos;
@@ -420,6 +427,8 @@ static int MakeRegex( DaoRegex *self, DString *ds, void *spatt,
 			type = PAT_START;
 		}else if( chi == '$' ){
 			type = PAT_END;
+		}else if( chi == '&' ){
+			type = PAT_WBORDER;
 		}else{
 			type = PAT_NONE;
 			switch( chi ){
@@ -529,7 +538,7 @@ static int InitRegex( DaoRegex *self, DString *ds )
 		if( patt->type == PAT_SPLIT && patt->gid > max ) max = patt->gid;
 		if( patt->min != patt->max ) fixed = 0;
 		if( (patt->type == PAT_SET || patt->type == PAT_WORD) && (patt->config & PAT_CONFIG_CASEINS) ){
-			char *w = ((char*)self->wordbuf) + patt->word;
+			char *w = self->wordbuf + patt->word;
 			for(j=0; j<patt->length; j++) w[j] = tolower( w[j] );
 		}
 	}
@@ -550,7 +559,7 @@ static int InitRegex( DaoRegex *self, DString *ds )
 	}
 	if( fixed ) self->attrib |= PAT_ALL_FIXED;
 	memmove( self->items + self->count, self->wordbuf, self->wordlen );
-	self->wordbuf = self->items + self->count;
+	self->wordbuf = (char*)(self->items + self->count);
 	self->itemlen = self->count * sizeitm;
 	self->length = sizepat + self->itemlen + self->wordlen;
 	self->length = ALIGN( self->length );
@@ -564,8 +573,8 @@ static int MatchWord( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 	short i;
 	char *w, *s;
 	if( pos + patt->length > self->end ) return 0;
-	w = ((char*)self->wordbuf) + patt->word;
-	s = ((char*) self->source) + pos;
+	w = self->wordbuf + patt->word;
+	s = self->source + pos;
 	if( patt->config & PAT_CONFIG_CASEINS ){
 		/* word is in lowercase */
 		for(i=0; i<patt->length; i++) if( tolower( s[i] ) != w[i] ) return 0;
@@ -577,44 +586,52 @@ static int MatchWord( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 }
 static int MatchSet( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 {
-	void *src = self->source;
-	char *mbs = ((char*)self->wordbuf) + patt->word;
-	wchar_t ch, chi, chi2, chi3;
+	DCharState ch = { 1, 1, 0 };
+	DCharState chi = ch, chi2 = ch, chi3 = ch;
+	char *chars = self->wordbuf + patt->word;
+	char *end = chars + patt->length;
+	char *src = self->source;
 	int blmatch = 1;
 	int matched = 0;
 	short i;
+
 	patt->offset = 0;
 	if( pos >= self->end ) return 0;
-	ch = ((char*)src)[pos];
-	if( patt->config & PAT_CONFIG_CASEINS ) ch = tolower( ch );
-	patt->offset = 1;
-	for(i=0; i<patt->length; i++){
-		chi3 = 0;
-		chi = mbs[i];
-		chi2 = mbs[i+1];
-		if( i+2 < patt->length ) chi3 = mbs[i+2];
-		if( i ==0 && chi == '^' ){
+
+	ch = DString_DecodeChar( src + pos, src + self->end + 1 );
+	if( patt->config & PAT_CONFIG_CASEINS ) ch.value = towlower( ch.value );
+	patt->offset = ch.width;
+	for(i=0; i<patt->length; ){
+		chi3.type = 0;
+		chi3.width = 0;
+		chi3.value = 0;
+		chi = DString_DecodeChar( chars + i, end );
+		chi2 = DString_DecodeChar( chars + i + 1, end );
+		if( i+2 < patt->length ) chi3 = DString_DecodeChar( chars + i + 2, end );
+		if( i == 0 && chi.value == '^' ){
 			blmatch = 0;
-		}else if( chi == '%' ){
-			i ++;
-			switch( chi2 ){
+		}else if( chi.value == '%' ){
+			i += chi2.width;
+			switch( chi2.value ){
 			case 's': case 'S': case 'k': case 'K': case 'p': case 'P':
 			case 'c': case 'C': case 'a': case 'A': case 'w': case 'W':
+			case 'e': case 'E': case 'o': case 'O':
 			case 'd': case 'D': case 'x': case 'X':
-				patt->type = chi2;
+				patt->type = chi2.value;
 				matched = (MatchOne( self, patt, pos ) !=0);
 				patt->type = PAT_SET;
 				break;
-			case 't' : matched = (ch == L'\t'); break;
-			case 'n' : matched = (ch == L'\n'); break;
-			default  : matched = (ch == chi2); break;
+			case 't' : matched = (ch.value == '\t'); break;
+			case 'n' : matched = (ch.value == '\n'); break;
+			default  : matched = (ch.value == chi2.value); break;
 			}
-		}else if( isalnum( chi ) && chi2 == '-' && isalnum( chi3 ) ){
-			i += 2;
-			matched = ( ch >= chi && ch <= chi3 );
+		}else if( chi3.type && iswalnum(chi.value) && chi2.value == '-' && iswalnum(chi3.value) ){
+			i += chi2.width + chi3.width;
+			matched = ( ch.value >= chi.value && ch.value <= chi3.value );
 		}else{
-			matched = (chi == ch);
+			matched = (chi.value == ch.value);
 		}
+		i += chi.width;
 		if( matched ) break;
 	}
 	if( matched == blmatch ) return 1;
@@ -651,8 +668,8 @@ static int MatchBackRef( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 
 	if( pos + (gp2 - gp1) > end ) return 0;
 	n = gp2 - gp1;
-	s = ((char*)self->source) + pos;
-	s2 = ((char*)self->source) + gp1;
+	s = self->source + pos;
+	s2 = self->source + gp1;
 	if( self->config & PAT_CONFIG_CASEINS ){
 		for(i=0; i<n; i++) if( tolower( s[i] ) != tolower( s2[i] ) ) return 0;
 	}else{
@@ -666,20 +683,29 @@ static int DaoRegex_Search( DaoRegex *self, DaoRgxItem *patts, int npatt,
 
 static int MatchPair( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 {
-	char lc, rc, c, *s;
+	DCharState st, st2;
+	uint_t lc, rc, c;
+	char *ps = self->wordbuf + patt->word;
+	char *start = self->source + pos;
+	char *end = self->source + self->end;
 	daoint n = self->end - pos;
 	daoint count, i=0;
-	int nocase = ( patt->config & PAT_CONFIG_CASEINS );
+	int nocase = (patt->config & PAT_CONFIG_CASEINS);
+
 	if( pos + 2 > self->end ) return 0;
 
-	lc = ((char*)self->wordbuf)[patt->word];
-	rc = ((char*)self->wordbuf)[patt->word+1];
-	s = ((char*) self->source) + pos;
+	st = DString_DecodeChar( ps, ps + patt->length );
+	st2 = DString_DecodeChar( ps + st.width, ps + patt->length );
+	lc = st.value;
+	rc = st2.value;
+
 	count = 0;
-	c = nocase ? tolower( *s ) : *s;
+	st = DString_DecodeChar( start, end );
+	c = nocase ? towlower( st.value ) : st.value;
 	if( c != lc ) return 0;
-	for(i=0; i<n; i++){
-		c = nocase ? tolower( s[i] ) : s[i];
+	for(i=0; i<n; i+=st.width){
+		st = DString_DecodeChar( start + i, end );
+		c = nocase ? towlower( st.value ) : st.value;
 		if( c == lc ){
 			count ++;
 		}else if( c == rc ){
@@ -688,7 +714,7 @@ static int MatchPair( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 		}
 	}
 	if( i >= n ) return 0;
-	patt->offset = i + 1;
+	patt->offset = i + st.width;
 	return 1;
 }
 static int CountRegex( DaoRegex *self, DaoRgxItem *patts, int npatt,
@@ -747,15 +773,37 @@ static int MatchPatPair( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 }
 static int MatchOne( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 {
-	char ch;
+	DCharState st = { 0, 1, 0 };
+	DCharState st2 = { 0, 1, 0 };
+	uint_t ch, b1, b2;
+	int i;
+
 	patt->offset = 0;
 	patt->count ++;
 	switch( patt->type ){
+	case PAT_WBORDER : 
+		if( pos == self->start || pos >= self->end ) return 1;
+		for(i=1; i<=4 && (pos-i)>=self->start; ++i){
+			st = DString_DecodeChar( self->source + pos-i, self->source + self->end );
+			if( i == 1 ) st2 = st;
+			if( st.type == i ) break;
+		}
+		if( st.type == 0 ) st = st2;
+		st2 = DString_DecodeChar( self->source + pos, self->source + self->end );
+		ch = st.value;  b1 = ch == '_' || iswalnum(ch) || isideogram(ch) || isphonogram(ch);
+		ch = st2.value; b2 = ch == '_' || iswalnum(ch) || isideogram(ch) || isphonogram(ch);
+		if( b1 != b2 ) return 1;
+		return 0;
+	case PAT_ANY :
+		if( pos >= self->end ) return 0;
+		st = DString_DecodeChar( self->source + pos, self->source + self->end );
+		if( pos + st.width >= self->end ) st.width = 1;
+		patt->offset = st.width;
+		return 1;
 	case PAT_SPLIT:
 	case PAT_BEGIN: case PAT_JOIN: return 1;
 	case PAT_START: return (pos == self->start);
-	case PAT_END : return (pos >= self->end );
-	case PAT_ANY : return (pos < self->end) && (++ patt->offset);
+	case PAT_END : return (pos >= self->end);
 	case PAT_SET  : return MatchSet(  self, patt, pos );
 	case PAT_WORD : return MatchWord( self, patt, pos );
 	case PAT_PAIR : return MatchPair( self, patt, pos );
@@ -764,25 +812,34 @@ static int MatchOne( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 	default : break;
 	}
 	if( pos >= self->end ) return 0;
-	patt->offset = 1;
-	ch = ((char*) self->source)[pos];
+
+	st = DString_DecodeChar( self->source + pos, self->source + self->end );
+	if( st.type == 0 ) return 0;
+
+	patt->offset = st.width;
+	ch = st.value;
+
 	switch( patt->type ){
-	case 'a' : return isalpha( ch );
-	case 's' : return isspace( ch );
-	case 'k' : return iscntrl( ch );
-	case 'p' : return ispunct( ch );
-	case 'd' : return isdigit( ch );
-	case 'x' : return isxdigit( ch );
-	case 'c' : return islower( ch );
-	case 'w' : return ( isalnum( ch ) || ch == '_' );
-	case 'A' : return ! isalpha( ch );
-	case 'S' : return ! isspace( ch );
-	case 'K' : return ! iscntrl( ch );
-	case 'P' : return ! ispunct( ch );
-	case 'D' : return ! isdigit( ch );
-	case 'X' : return ! isxdigit( ch );
-	case 'C' : return isupper( ch );
-	case 'W' : return ! ( isalnum( ch ) || ch == '_' );
+	case 'a' : return iswalpha( ch );
+	case 's' : return iswspace( ch );
+	case 'k' : return iswcntrl( ch );
+	case 'p' : return iswpunct( ch );
+	case 'd' : return iswdigit( ch );
+	case 'x' : return iswxdigit( ch );
+	case 'e' : return isideogram( ch );
+	case 'o' : return isphonogram( ch );
+	case 'w' : return (ch == '_' || iswalnum(ch) || isideogram(ch) || isphonogram(ch));
+	case 'c' : return iswlower( ch );
+	case 'A' : return ! iswalpha( ch );
+	case 'S' : return ! iswspace( ch );
+	case 'K' : return ! iswcntrl( ch );
+	case 'P' : return ! iswpunct( ch );
+	case 'D' : return ! iswdigit( ch );
+	case 'X' : return ! iswxdigit( ch );
+	case 'E' : return ! isideogram( ch );
+	case 'O' : return ! isphonogram( ch );
+	case 'W' : return ! (ch == '_' || iswalnum(ch) || isideogram(ch) || isphonogram(ch));
+	case 'C' : return iswupper( ch );
 	default : return 0;
 	}
 	return 0;
