@@ -267,7 +267,6 @@ DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self )
 #endif
 	if( self->processes->size ){
 		proc = (DaoProcess*) DArray_Back( self->processes );
-		proc->cache = DaoDataCache_Acquire( NULL, 0 );
 		proc->active = 0;
 		DArray_PopBack( self->processes );
 	}else{
@@ -286,10 +285,8 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 #endif
 	if( DMap_Find( self->allProcesses, proc ) ){
 		if( proc->factory ) DArray_Clear( proc->factory );
-		DaoDataCache_Release( proc->cache );
 		GC_DecRC( proc->future );
 		proc->future = NULL;
-		proc->cache = NULL;
 		proc->aux = NULL;
 		DaoProcess_PopFrames( proc, proc->firstFrame );
 		DArray_Clear( proc->exceptions );

@@ -535,7 +535,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( self->constant ) self = self->vartype;
 		if( type->constant ) type = type->vartype;
 		mt = DaoType_MatchToX( self, type, defs, binds );
-		if( mt >= DAO_MT_NOT ) mt -= 1; /* slightly reduce the score; */
+		if( mt > DAO_MT_NOT ) mt -= 1; /* slightly reduce the score; */
 		return mt;
 	}
 
@@ -633,7 +633,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			tid = it2->tid;
 			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
 			/* printf( "%i %s %s\n", k, it1->name->chars, it2->name->chars ); */
-			if( defs && defs->size == ndefs ){
+			if( defs && defs->size && defs->size == ndefs ){
 				/*
 				// No unassociated type holders involved in the matching,
 				// so the matching has to be exact.

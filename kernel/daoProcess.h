@@ -124,7 +124,6 @@ struct DaoProcess
 	DArray         *defers;
 	DArray         *exceptions;
 	DArray         *factory;
-	DaoDataCache   *cache;
 
 	/*
 	// Process auxiliary data (process specific data):

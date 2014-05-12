@@ -59,7 +59,6 @@ typedef struct DaoVariable   DaoVariable;
 
 typedef struct DaoCnode      DaoCnode;
 typedef struct DaoOptimizer  DaoOptimizer;
-typedef struct DaoDataCache  DaoDataCache;
 
 
 /*

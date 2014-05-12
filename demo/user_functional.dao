@@ -15,12 +15,12 @@ Test {
 	return 'abc';
 }
 
-routine Test( alist : list<@T> )[ item :@T, index :int =>int ] =>list<@T>
+routine Test( alist : list<@T> )[ item :@T, index :int => none|int ] =>list<@T>
 {
 	yield( 55, 0 ); # invoke the code section of the caller;
-	io.writeln( alist.select{ X < 33 } );
+	io.writeln( alist.collect{ if( X < 33 ) return X } );
 	# call the list functional method with the caller's code section;
-	return alist.select{ yield(X,Y) };
+	return alist.collect{ yield(X,Y) };
 }
 
 res = Test( {11,22,33,44} ){ X > 22 }

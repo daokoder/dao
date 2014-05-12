@@ -92,29 +92,4 @@ DAO_DLL int DaoGC_LockMap( DMap *map );
 DAO_DLL void DaoGC_UnlockMap( DMap *map, int locked );
 
 
-#define DAO_TUPLE_LIMIT 24
-
-
-typedef struct DCache DCache;
-
-
-struct DaoDataCache
-{
-	daoint  count;
-	daoint  fails;
-	DCache *values[DAO_TUPLE];
-	DCache *tuples[DAO_TUPLE_LIMIT];
-};
-
-DAO_DLL DaoDataCache* DaoDataCache_Acquire( DaoDataCache *self, int caching );
-DAO_DLL void DaoDataCache_Release( DaoDataCache *self );
-
-DAO_DLL void DaoDataCache_Cache( DaoDataCache *self, DaoValue *value );
-DAO_DLL DaoValue* DaoDataCache_MakeValue( DaoDataCache *self, int tid );
-DAO_DLL DaoEnum* DaoDataCache_MakeEnum( DaoDataCache *self, DaoType *type );
-DAO_DLL DaoArray* DaoDataCache_MakeArray( DaoDataCache *self, int numtype );
-DAO_DLL DaoList* DaoDataCache_MakeList( DaoDataCache *self, DaoType *type );
-DAO_DLL DaoMap* DaoDataCache_MakeMap( DaoDataCache *self, DaoType *type, int hashing );
-DAO_DLL DaoTuple* DaoDataCache_MakeTuple( DaoDataCache *self, DaoType *type, int size, int init );
-
 #endif

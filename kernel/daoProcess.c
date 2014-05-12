@@ -167,8 +167,6 @@ void DaoProcess_Delete( DaoProcess *self )
 	for(i=0; i<self->stackSize; i++) GC_DecRC( self->stackValues[i] );
 	if( self->stackValues ) dao_free( self->stackValues );
 	if( self->aux ) DaoAux_Delete( self->aux );
-	DaoDataCache_Release( self->cache );
-	self->cache = NULL;
 
 	DString_Delete( self->mbstring );
 	DArray_Delete( self->exceptions );
@@ -304,16 +302,13 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 		if( value && value->type == tid && value->xGC.refCount == 1 && value->xGC.trait == 0 ) continue;
 		value2 = NULL;
 		switch( tid ){
-		case DAO_NONE :
-			value2 = dao_none_value;
-			break;
-		case DAO_INTEGER :  case DAO_FLOAT :  case DAO_DOUBLE : 
-		case DAO_COMPLEX :  case DAO_STRING :
-			value2 = DaoDataCache_MakeValue( self->cache, tid );
-			break;
-		case DAO_ENUM :
-			value2 = (DaoValue*) DaoDataCache_MakeEnum( self->cache, types[i] );
-			break;
+		case DAO_NONE    : value2 = dao_none_value; break;
+		case DAO_INTEGER : value2 = (DaoValue*) DaoInteger_New(0); break;
+		case DAO_FLOAT   : value2 = (DaoValue*) DaoFloat_New(0.0); break;
+		case DAO_DOUBLE  : value2 = (DaoValue*) DaoDouble_New(0.0); break;
+		case DAO_COMPLEX : value2 = (DaoValue*) DaoComplex_New2(0.0,0.0); break;
+		case DAO_STRING  : value2 = (DaoValue*) DaoString_New(1); break;
+		case DAO_ENUM    : value2 = (DaoValue*) DaoEnum_New( types[i], 0 ); break;
 		}
 		if( value2 == NULL ) continue;
 		GC_ShiftRC( value2, value );
@@ -380,7 +375,7 @@ void DaoProcess_PushFunction( DaoProcess *self, DaoRoutine *routine )
 	DaoProcess_CopyStackParams( self );
 	if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 }
-static int DaoRoutine_PassDefault( DaoRoutine *routine, DaoValue *dest[], int passed, DMap *defs, DaoDataCache *cache )
+static int DaoRoutine_PassDefault( DaoRoutine *routine, DaoValue *dest[], int passed, DMap *defs )
 {
 	DaoType *tp, *routype = routine->routType;
 	DaoType **types = routype->nested->items.pType;
@@ -392,7 +387,7 @@ static int DaoRoutine_PassDefault( DaoRoutine *routine, DaoValue *dest[], int pa
 		if( passed & (1<<i) ) continue;
 		if( m != DAO_PAR_DEFAULT ) return 0;
 		tp = & types[i]->aux->xType;
-		if( DaoValue_Move2( consts[i], & dest[i], tp, defs, cache ) == 0 ) return 0;
+		if( DaoValue_Move2( consts[i], & dest[i], tp, defs ) == 0 ) return 0;
 		if( defs && (tp->tid == DAO_UDT || tp->tid == DAO_THT) ){
 			DaoType *type = DaoNamespace_GetType( routine->nameSpace, consts[i] );
 			if( !(type->attrib & DAO_TYPE_SPEC) ){
@@ -462,7 +457,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 				/* calling C function on Dao object: */
 				obj = DaoObject_CastToBase( (DaoObject*) obj, tp );
 			}
-			if( DaoValue_Move2( obj, & dest[0], tp, defs, self->cache ) ){
+			if( DaoValue_Move2( obj, & dest[0], tp, defs ) ){
 				selfChecked = 1;
 				passed = 1;
 				if( defs && (tp->tid == DAO_UDT || tp->tid == DAO_THT) ){
@@ -490,7 +485,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 			tp = types[ito]->aux ? (DaoType*) types[ito]->aux : dao_type_any;
 			for(; ifrom<npar; ifrom++){
 				ito = ifrom + selfChecked;
-				if( DaoValue_Move2( p[ifrom], & dest[ito], tp, defs, self->cache ) == 0 ) goto ReturnZero;
+				if( DaoValue_Move2( p[ifrom], & dest[ito], tp, defs ) == 0 ) goto ReturnZero;
 				passed |= (size_t)1<<ito;
 			}
 			break;
@@ -514,7 +509,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 				continue;
 			}
 		}
-		if( DaoValue_Move2( val, & dest[ito], tp, defs, self->cache ) == 0 ) goto ReturnZero;
+		if( DaoValue_Move2( val, & dest[ito], tp, defs ) == 0 ) goto ReturnZero;
 		if( defs && (tp->tid == DAO_UDT || tp->tid == DAO_THT) ){
 			DaoType *type = DaoNamespace_GetType( routine->nameSpace, val );
 			if( !(type->attrib & DAO_TYPE_SPEC) ){
@@ -523,7 +518,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 		}
 	}
 	if( (selfChecked + npar) < ndef ){
-		if( DaoRoutine_PassDefault( routine, dest, passed, defs, self->cache ) == 0 ) goto ReturnZero;
+		if( DaoRoutine_PassDefault( routine, dest, passed, defs ) == 0 ) goto ReturnZero;
 	}
 	if( defs && defs->size ){ /* Need specialization */
 		DaoRoutine *original = routine->original ? routine->original : routine;
@@ -1025,12 +1020,6 @@ CallEntry:
 		goto ReturnTrue;
 	}
 	if( self->topFrame->state & DVM_FRAME_FINISHED ) goto FinishCall;
-
-	if( self->cache == NULL || self->cache->fails > 10 ){
-		//printf( "%12p %9i %9i; ", self->cache, self->cache->fails, self->cache->count );
-		self->cache = DaoDataCache_Acquire( self->cache, 0 );
-		//printf( "%12p %9i\n", self->cache, self->cache->count );
-	}
 
 	if( routine->pFunc ){
 		DaoValue **p = self->stackValues + topFrame->stackBase;
@@ -1771,7 +1760,7 @@ CallEntry:
 			case DAO_CDATA  : if( value->xCdata.data == NULL ) value = NULL; break;
 			}
 			if( value == NULL ) goto RaiseErrorNullObject;
-			DaoValue_CopyX( value, locVars + vmc->c, locTypes[vmc->c], self->cache );
+			DaoValue_CopyX( value, locVars + vmc->c, locTypes[vmc->c] );
 		}OPNEXT() OPCASE( MINUS_C ){
 			acom = ComplexOperand( vmc->a );
 			vC = locVars[ vmc->c ];
@@ -2351,8 +2340,6 @@ ReturnFalse:
 	*/
 	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
 #endif
-	DaoDataCache_Release( self->cache );
-	self->cache = NULL;
 	DaoGC_TryInvoke();
 	return 0;
 
@@ -2374,8 +2361,6 @@ ReturnTrue:
 #ifdef DAO_WITH_CONCURRENT
 	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
 #endif
-	DaoDataCache_Release( self->cache );
-	self->cache = NULL;
 	DaoGC_TryInvoke();
 	return 1;
 }
@@ -2473,7 +2458,7 @@ int DaoProcess_Move( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t )
 DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value )
 {
 	DaoType *tp = self->activeTypes[reg];
-	int res = DaoValue_MoveX( value, self->activeValues + reg, tp, self->cache );
+	int res = DaoValue_MoveX( value, self->activeValues + reg, tp );
 	if( res ) return self->activeValues[ reg ];
 	return NULL;
 }
@@ -2503,7 +2488,7 @@ int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer )
 			return 1;
 		}
 	}
-	if( DaoValue_MoveX( refer, value, tp, self->cache ) == 0 ) goto TypeNotMatching;
+	if( DaoValue_MoveX( refer, value, tp ) == 0 ) goto TypeNotMatching;
 	return 0;
 TypeNotMatching:
 	tp2 = DaoNamespace_GetType( self->activeNamespace, refer );
@@ -2771,7 +2756,9 @@ DaoList* DaoProcess_GetListByType( DaoProcess *self, DaoVmCode *vmc, DaoType *tp
 		}
 	}
 	if( tp == NULL || tp->tid != DAO_LIST ) tp = dao_type_list_any;
-	list = DaoDataCache_MakeList( self->cache, tp );
+	list = DaoList_New();
+	GC_ShiftRC( tp, list->ctype );
+	list->ctype = tp;
 	DaoValue_Move( (DaoValue*) list, self->activeValues + vmc->c, tp );
 	return list;
 }
@@ -2806,7 +2793,9 @@ DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc, unsigned int hashi
 		}
 	}
 	if( tp == NULL || tp->tid != DAO_MAP ) tp = dao_type_map_any;
-	map = DaoDataCache_MakeMap( self->cache, tp, hashing );
+	map = DaoMap_New( hashing );
+	GC_ShiftRC( tp, map->ctype );
+	map->ctype = tp;
 	DaoValue_Move( (DaoValue*) map, self->activeValues + vmc->c, tp );
 	return map;
 }
@@ -2839,7 +2828,7 @@ DaoArray* DaoProcess_GetArrayByType( DaoProcess *self, DaoVmCode *vmc, DaoType *
 		dC->xArray.original = NULL;
 		DaoArray_SetNumType( (DaoArray*) dC, type );
 	}else{
-		dC = (DaoValue*) DaoDataCache_MakeArray( self->cache, type );
+		dC = (DaoValue*) DaoArray_New( type );
 		DaoValue_Copy( dC, & self->activeValues[ vmc->c ] );
 	}
 	return & dC->xArray;
@@ -2870,7 +2859,11 @@ DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int in
 			}
 		}
 	}
-	tup = DaoDataCache_MakeTuple( self->cache, type, size, init );
+	if( type ){
+		tup = DaoTuple_Create( type, size, init );
+	}else{
+		tup = DaoTuple_New( size );
+	}
 	GC_ShiftRC( tup, val );
 	self->activeValues[ self->activeCode->c ] = (DaoValue*) tup;
 	return tup;
@@ -2934,7 +2927,7 @@ void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], i
 		}
 		tp = i < M ? types[i] : vlt;
 		if( tp && tp->tid == DAO_PAR_NAMED ) tp = & tp->aux->xType;
-		if( DaoValue_MoveX( val, tuple->values + i, tp, self->cache ) == 0 ){
+		if( DaoValue_MoveX( val, tuple->values + i, tp ) == 0 ){
 			DaoProcess_RaiseError( self, NULL, "invalid tuple enumeration" );
 			return;
 		}
@@ -3350,9 +3343,9 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 			tuple = tup;
 		}else if( type && type->tid == DAO_TUPLE ){
 			if( type->nested->size > vmc->b ) goto InvalidReturn;
-			tuple = DaoDataCache_MakeTuple( self->cache, type, vmc->b, 0 );
+			tuple = DaoTuple_Create( type, vmc->b, 0 );
 		}else{
-			tuple = DaoDataCache_MakeTuple( self->cache, NULL, vmc->b, 0 );
+			tuple = DaoTuple_New( vmc->b );
 		}
 		if( tuple->ctype ){
 			DaoType **TS = tuple->ctype->nested->items.pType;
@@ -3365,9 +3358,9 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		}
 		retValue = (DaoValue*) tuple;
 	}else if( vmc->b > 1 ){
-		DaoTuple *tuple = DaoDataCache_MakeTuple( self->cache, NULL, vmc->b, 0 );
+		DaoTuple *tuple = DaoTuple_New( vmc->b );
 		retValue = (DaoValue*) tuple;
-		for(i=0; i<vmc->b; i++) DaoValue_CopyX( src[i], tuple->values + i, NULL, self->cache );
+		for(i=0; i<vmc->b; i++) DaoValue_CopyX( src[i], tuple->values + i, NULL );
 	}
 	if( retValue == NULL ){
 		int cmdline = self->vmSpace->evalCmdline;
@@ -3376,7 +3369,7 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		int retnull = type == NULL || type->tid == DAO_NONE || type->tid == DAO_UDT;
 		if( retnull || cmdline || (opt1 && opt2) ) retValue = dao_none_value;
 	}
-	if( DaoValue_MoveX( retValue, dest, type, self->cache ) ==0 ) goto InvalidReturn;
+	if( DaoValue_MoveX( retValue, dest, type ) == 0 ) goto InvalidReturn;
 	return retValue;
 InvalidReturn:
 #if 0
@@ -3983,7 +3976,7 @@ static int DaoProcess_FastPassParams( DaoProcess *self, DaoType *partypes[], Dao
 			GC_ShiftRC( param, dests[i] );
 			dests[i] = param;
 		}else{
-			DaoValue_CopyX( param, dests + i, partypes[i], self->cache );
+			DaoValue_CopyX( param, dests + i, partypes[i] );
 		}
 	}
 	return 1;
@@ -4086,8 +4079,7 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 	iter->values[0]->xInteger.value = 0;
 	DaoTuple_SetItem( iter, dao_none_value, 1 );
 
-	index = (DaoInteger*) DaoDataCache_MakeValue( self->cache, DAO_INTEGER );
-	index->value = 0;
+	index = DaoInteger_New(0);
 	GC_IncRC( index );
 	if( va->type == DAO_STRING ){
 		iter->values[0]->xInteger.value = va->xString.value->size >0;
