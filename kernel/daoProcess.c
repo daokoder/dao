@@ -4086,7 +4086,9 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 	iter->values[0]->xInteger.value = 0;
 	DaoTuple_SetItem( iter, dao_none_value, 1 );
 
-	index = DaoInteger_New(0);
+	index = (DaoInteger*) DaoDataCache_MakeValue( self->cache, DAO_INTEGER );
+	index->value = 0;
+	GC_IncRC( index );
 	if( va->type == DAO_STRING ){
 		iter->values[0]->xInteger.value = va->xString.value->size >0;
 		DaoValue_Copy( (DaoValue*) index, iter->values + 1 );
@@ -4122,7 +4124,7 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 		}
 		if( rc ) DaoProcess_RaiseError( self, "Field::NotExist", name->chars );
 	}
-	dao_free( index );
+	GC_DecRC( index );
 }
 static void DaoProcess_TestIter( DaoProcess *self, DaoVmCode *vmc )
 {

@@ -261,8 +261,7 @@ static int MakeRegex( DaoRegex *self, DString *ds, void *spatt,
 			switch( chi ){
 			case 's': case 'S': case 'k': case 'K': case 'p': case 'P':
 			case 'c': case 'C': case 'a': case 'A': case 'w': case 'W':
-			case 'e': case 'E': case 'o': case 'O':
-			case 'd': case 'D': case 'x': case 'X':
+			case 'e': case 'E': case 'd': case 'D': case 'x': case 'X':
 				type = chi;
 				break;
 			case 't':
@@ -615,8 +614,7 @@ static int MatchSet( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 			switch( chi2.value ){
 			case 's': case 'S': case 'k': case 'K': case 'p': case 'P':
 			case 'c': case 'C': case 'a': case 'A': case 'w': case 'W':
-			case 'e': case 'E': case 'o': case 'O':
-			case 'd': case 'D': case 'x': case 'X':
+			case 'e': case 'E': case 'd': case 'D': case 'x': case 'X':
 				patt->type = chi2.value;
 				matched = (MatchOne( self, patt, pos ) !=0);
 				patt->type = PAT_SET;
@@ -771,6 +769,23 @@ static int MatchPatPair( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 	DaoRegex_Search( self, pr, itr, src, end, & m3, & m4, 0 );
 	return 1;
 }
+const uint_t dao_cjk_charts[][2] = 
+{
+	{0x3400, 0x4DBF},   /* Extension A; */
+	{0x4E00, 0x9FFF},   /* Basic Block; */
+	{0xF900, 0xFAFF},   /* Extension F; */
+	{0x20000, 0x2A6DF}, /* Extension B; */
+	{0x29100, 0x2A6DF}, /* Extension B; */
+	{0x2A700, 0x2B73F}, /* Extension C; */
+	{0x2B740, 0x2B81F}, /* Extension D; */
+};
+int dao_cjk( uint_t ch )
+{
+	int i = 0;
+	while( i < 7 && dao_cjk_charts[i][1] < ch ) i += 1;
+	if( i >= 7 || dao_cjk_charts[i][0] > ch ) return 0;
+	return 1;
+}
 static int MatchOne( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 {
 	DCharState st = { 0, 1, 0 };
@@ -790,8 +805,8 @@ static int MatchOne( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 		}
 		if( st.type == 0 ) st = st2;
 		st2 = DString_DecodeChar( self->source + pos, self->source + self->end );
-		ch = st.value;  b1 = ch == '_' || iswalnum(ch) || isideogram(ch) || isphonogram(ch);
-		ch = st2.value; b2 = ch == '_' || iswalnum(ch) || isideogram(ch) || isphonogram(ch);
+		ch = st.value;   b1 = ch == '_' || iswalnum(ch) || dao_cjk(ch);
+		ch = st2.value;  b2 = ch == '_' || iswalnum(ch) || dao_cjk(ch);
 		if( b1 != b2 ) return 1;
 		return 0;
 	case PAT_ANY :
@@ -826,9 +841,8 @@ static int MatchOne( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 	case 'p' : return iswpunct( ch );
 	case 'd' : return iswdigit( ch );
 	case 'x' : return iswxdigit( ch );
-	case 'e' : return isideogram( ch );
-	case 'o' : return isphonogram( ch );
-	case 'w' : return (ch == '_' || iswalnum(ch) || isideogram(ch) || isphonogram(ch));
+	case 'e' : return dao_cjk( ch );
+	case 'w' : return (ch == '_' || iswalnum(ch) || dao_cjk(ch));
 	case 'c' : return iswlower( ch );
 	case 'A' : return ! iswalpha( ch );
 	case 'S' : return ! iswspace( ch );
@@ -836,9 +850,8 @@ static int MatchOne( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 	case 'P' : return ! iswpunct( ch );
 	case 'D' : return ! iswdigit( ch );
 	case 'X' : return ! iswxdigit( ch );
-	case 'E' : return ! isideogram( ch );
-	case 'O' : return ! isphonogram( ch );
-	case 'W' : return ! (ch == '_' || iswalnum(ch) || isideogram(ch) || isphonogram(ch));
+	case 'E' : return ! dao_cjk( ch );
+	case 'W' : return ! (ch == '_' || iswalnum(ch) || dao_cjk(ch));
 	case 'C' : return iswupper( ch );
 	default : return 0;
 	}

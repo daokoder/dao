@@ -3397,6 +3397,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( parser->byteBlock ){
 		DaoByteCoder_EncodeUInt32( parser->byteBlock->begin+4, klass->attribs );
 	}
+	DaoClass_MakeInterface( klass );
 	error = DaoParser_CompileRoutines( parser ) == 0;
 	if( error == 0 && klass->classRoutines->overloads->routines->size == 0 ){
 		DString *ctorname = klass->cstDataName->items.pString[DAO_CLASS_CONST_CSTOR];
@@ -3404,13 +3405,13 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DaoParser_AddDefaultInitializer( parser, klass, 0 );
 		error |= DaoParser_ParseRoutine( parser ) == 0;
 		DaoClass_AddConst( klass, ctorname, (DaoValue*)klass->classRoutine, DAO_PERM_PUBLIC );
+		DaoInterface_CopyMethod( klass->clsInter, klass->classRoutine, NULL );
 		if( parser->byteBlock ){
 			DaoByteBlock *bk = parser->byteBlock;
 			bk = DaoByteBlock_AddRoutineBlock( bk, klass->classRoutine, DAO_PERM_PUBLIC );
 			DaoByteCoder_FinalizeRoutineBlock( self->byteCoder, bk );
 		}
 	}
-	DaoClass_MakeInterface( klass );
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	DaoClass_UpdateMixinConstructors( klass );
 	if( error ) return -1;

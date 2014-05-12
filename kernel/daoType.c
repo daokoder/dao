@@ -1588,11 +1588,14 @@ static int DaoInterface_CopyRoutine( DaoInterface *self, DaoRoutine *rout, DMap 
 }
 int DaoInterface_CopyMethod( DaoInterface *self, DaoRoutine *rout, DMap *deftypes )
 {
+	DMap *old = deftypes;
 	DaoRoutine *meth;
 	DaoType *tp, *model = self->model;
 	DaoValue *aux = model ? model->aux : NULL;
 	daoint j, typeinter = model && (model->tid == DAO_CLASS || model->tid == DAO_CTYPE);
+	int ret = 1;
 
+	if( deftypes == NULL ) deftypes = DHash_New(0,0);
 	DMap_Reset( deftypes );
 	if( model && model->tid == DAO_CLASS ){
 		DMap_Insert( deftypes, aux->xClass.clsType, aux->xClass.clsInter->abtype );
@@ -1605,14 +1608,16 @@ int DaoInterface_CopyMethod( DaoInterface *self, DaoRoutine *rout, DMap *deftype
 	}
 
 	if( rout->overloads == NULL ){
-		return DaoInterface_CopyRoutine( self, rout, deftypes );
+		ret = DaoInterface_CopyRoutine( self, rout, deftypes );
 	}else{
 		for(j=0; j<rout->overloads->routines->size; ++j){
 			DaoRoutine *rout2 = rout->overloads->routines->items.pRoutine[j];
-			if( DaoInterface_CopyRoutine( self, rout2, deftypes ) == 0 ) return 0;
+			ret &= DaoInterface_CopyRoutine( self, rout2, deftypes ) != 0;
+			if( ret == 0 ) break;
 		}
 	}
-	return 1;
+	if( old == NULL ) DMap_Delete( deftypes );
+	return ret;
 }
 
 DAO_DLL void DMap_SortMethods( DMap *hash, DArray *methods )

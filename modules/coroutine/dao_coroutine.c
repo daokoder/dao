@@ -53,6 +53,7 @@ DaoxCoroutine* DaoxCoroutine_New( DaoType *type )
 }
 void DaoxCoroutine_Delete( DaoxCoroutine *self )
 {
+	DaoCstruct_Free( (DaoCstruct*) self );
 	GC_DecRC( self->process );
 	dao_free( self );
 }

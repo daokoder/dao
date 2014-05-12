@@ -400,19 +400,20 @@ static DaoTuple* DaoTuple_Create2( DaoType *type, int size )
 }
 static void DaoDataCache_InitTuple( DaoDataCache *self, DaoTuple *tuple )
 {
-	int i, M = tuple->ctype->nested->size;
+	int i, K = tuple->cap - tuple->size;
+	int M = tuple->ctype->nested->size;
 	DaoType **types = tuple->ctype->nested->items.pType;
 	DaoDouble *buffer = (DaoDouble*)(tuple->values + tuple->size);
 	for(i=0; i<tuple->size; ++i){
 		DaoType *it = i < M ? types[i] : types[M-1];
 		DaoValue *value = NULL;
 		if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_VALIST ) it = & it->aux->xType;
-		if( it->tid >= DAO_INTEGER && it->tid <= DAO_DOUBLE ){
+		if( it->tid >= DAO_INTEGER && it->tid <= DAO_DOUBLE && i < K ){
 			value = (DaoValue*) buffer;
 			buffer->type = it->tid;
 			buffer->refCount = 1;
 			buffer += 1;
-		}else if( it->tid >= DAO_COMPLEX && it->tid < DAO_ENUM ){
+		}else if( it->tid >= DAO_INTEGER && it->tid < DAO_ENUM ){
 			value = DaoDataCache_MakeValue( self, it->tid );
 		}else if( it->tid == DAO_ENUM ){
 			value = (DaoValue*) DaoDataCache_MakeEnum( self, it );
@@ -1539,7 +1540,7 @@ void DaoCGC_CycRefCountDecScan()
 
 	for(i=0; i<workList->size; i++){
 		DaoValue *value = workList->items.pValue[i];
-		if( (value->xBase.trait & delay) | value->xGC.delay ) continue;
+		if( value->xGC.delay ) continue;
 		DaoGC_CycRefCountDecScan( value );
 	}
 }
@@ -1552,7 +1553,7 @@ void DaoCGC_DeregisterModules()
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.alive ) continue;
 		if( value->type == DAO_NAMESPACE ){
-			DaoNamespace *NS= (DaoNamespace*) value;
+			DaoNamespace *NS = (DaoNamespace*) value;
 			DaoVmSpace_Lock( NS->vmSpace );
 			if( NS->cycRefCount == 0 ) DMap_Erase( NS->vmSpace->nsModules, NS->name );
 			DaoVmSpace_Unlock( NS->vmSpace );
@@ -1592,7 +1593,7 @@ int DaoCGC_AliveObjectScan()
 
 	for( i=0; i<auxList->size; i++){
 		DaoValue *value = auxList->items.pValue[i];
-		if( (value->xBase.trait & delay) | value->xGC.delay ) continue;
+		if( value->xGC.delay ) continue;
 		DaoGC_CycRefCountIncScan( value );
 	}
 	return auxList->size;
@@ -1607,7 +1608,7 @@ void DaoCGC_RefCountDecScan()
 	for( i=0; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
-		if( (value->xBase.trait & delay) | value->xGC.delay ) continue;
+		if( value->xGC.delay ) continue;
 
 		DMutex_Lock( & gcWorker.mutex_idle_list );
 		DaoGC_RefCountDecScan( value );
@@ -1754,7 +1755,7 @@ void DaoIGC_CycRefCountDecScan()
 	if( min < gcWorker.gcMin ) min = gcWorker.gcMin;
 	for( ; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
-		if( (value->xBase.trait & delay) | value->xGC.delay ) continue;
+		if( value->xGC.delay ) continue;
 		j += DaoGC_CycRefCountDecScan( value );
 		if( (++j) >= min ) break;
 	}
@@ -1778,7 +1779,7 @@ void DaoIGC_DeregisterModules()
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.alive ) continue;
 		if( value->type == DAO_NAMESPACE ){
-			DaoNamespace *NS= (DaoNamespace*) value;
+			DaoNamespace *NS = (DaoNamespace*) value;
 			DaoVmSpace_Lock( NS->vmSpace );
 			if( NS->cycRefCount == 0 ) DMap_Erase( NS->vmSpace->nsModules, NS->name );
 			DaoVmSpace_Unlock( NS->vmSpace );
@@ -1834,7 +1835,7 @@ int DaoIGC_AliveObjectScan()
 	if( min < gcWorker.gcMin ) min = gcWorker.gcMin;
 	for( ; j<auxList->size; j++){
 		DaoValue *value = auxList->items.pValue[j];
-		if( (value->xBase.trait & delay) | value->xGC.delay ) continue;
+		if( value->xGC.delay ) continue;
 		k += DaoGC_CycRefCountIncScan( value );
 		if( (++k) >= min ) break;
 	}
@@ -1857,7 +1858,7 @@ void DaoIGC_RefCountDecScan()
 	for(; i<workList->size; i++, j++){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
-		if( (value->xBase.trait & delay) | value->xGC.delay ) continue;
+		if( value->xGC.delay ) continue;
 		j += DaoGC_RefCountDecScan( value );
 		if( j >= min ) break;
 	}
@@ -1885,7 +1886,8 @@ void DaoIGC_FreeGarbage()
 		if( value->xGC.refCount !=0 ){
 			printf(" refCount not zero %p %i: %i\n", value, value->type, value->xGC.refCount);
 			DaoGC_PrintValueInfo( value );
-			DArray_PushBack2( gcWorker.idleList, value );
+			value->xGC.delay = 1;
+			DArray_PushBack2( gcWorker.delayList, value );
 			continue;
 		}
 		DArray_PushBack2( gcWorker.freeList, value );
@@ -1911,7 +1913,12 @@ void cycRefCountDecrement( DaoValue *value )
 	if( value == NULL ) return;
 	/* do not scan simple data types, as they cannot from cyclic structure: */
 	if( value->type < DAO_ENUM ) return;
-	if( ! value->xGC.work ){
+	if( (value->xBase.trait & gcWorker.delayMask) && value->xGC.delay == 0 ){
+		DArray_PushBack2( gcWorker.delayList, value );
+		value->xGC.cycRefCount = value->xGC.refCount;
+		value->xGC.delay = 1;
+		return;
+	}else if( ! value->xGC.work ){
 		DArray_PushBack2( gcWorker.workList, value );
 		value->xGC.cycRefCount = value->xGC.refCount;
 		value->xGC.work = 1;

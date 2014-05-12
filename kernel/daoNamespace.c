@@ -1900,25 +1900,20 @@ DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols )
 DaoType* DaoNamespace_MakeConstType( DaoNamespace *self, DaoType *type )
 {
 	DaoType *tp;
-	DString *name = DString_New();
-	DString_AppendChars( name, "const<" );
-	DString_Append( name, type->name );
-	DString_AppendChar( name, '>' );
-	tp = DaoNamespace_FindType( self, name );
-	if( tp == NULL ){
-		tp = DaoType_Copy( type );
-		DString_Assign( tp->name, name );
-		GC_ShiftRC( type, tp->vartype );
-		tp->vartype = type;
-		tp->constant = 1;
-		if( type->tid != DAO_NAMESPACE && (type->tid != DAO_ROUTINE || type->overloads==0) ){
-			/* Beware of const<namespace> and const<routine>: */
-			DaoNamespace_AddType( self, name, tp );
-		}else{
-			DArray_Append( self->auxData, type );
-		}
-	}
-	DString_Delete( name );
+
+	if( type->constant ) return type;
+	if( type->vartype ) return type->vartype;
+
+	tp = DaoType_Copy( type );
+	DString_SetChars( tp->name, "const<" );
+	DString_Append( tp->name, type->name );
+	DString_AppendChar( tp->name, '>' );
+
+	GC_ShiftRC( type, tp->vartype );
+	GC_ShiftRC( tp, type->vartype );
+	type->vartype = tp;
+	tp->vartype = type;
+	tp->constant = 1;
 	return tp;
 }
 DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
