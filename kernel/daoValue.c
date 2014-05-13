@@ -326,7 +326,7 @@ static void DaoValue_BasicPrint( DaoValue *self, DaoProcess *proc, DaoStream *st
 }
 void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
-	DString *name;
+	DString *str, *name;
 	DaoTypeBase *typer;
 	DMap *cd = cycData;
 	if( self == NULL ){
@@ -357,7 +357,11 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 		DString_Delete( name );
 		break;
 	case DAO_STRING  :
-		DaoStream_WriteString( stream, self->xString.value ); break;
+		str = DString_Copy( self->xString.value );
+		if( DString_CheckUTF8( str ) != 0 ) DString_ToLocal( str );
+		DaoStream_WriteString( stream, str );
+		DString_Delete( str );
+		break;
 	default :
 		typer = DaoVmSpace_GetTyper( self->type );
 		if( typer->core->Print == DaoValue_Print ){
@@ -663,7 +667,7 @@ Finalize:
 	for(i=0; i<T; i++){
 		DaoType *it = item_types[i];
 		if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
-		DaoValue_MoveX( data[i], tuple->values+i, it );
+		DaoValue_Move( data[i], tuple->values+i, it );
 	}
 	GC_IncRC( tp );
 	tuple->ctype = tp;
@@ -671,15 +675,55 @@ Finalize:
 	*dest = (DaoValue*) tuple;
 	return 1;
 }
+static int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *defs );
 static int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *defs );
 static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp, DaoType *C )
 {
 	DaoType *itp = NULL;
-	daoint j, k, n, mt = 0;
-	for(j=0,n=tp->nested->size; j<n; j++){
-		k = DaoType_MatchValue( tp->nested->items.pType[j], src, NULL );
+	int n = tp->nested->size;
+	int j, k, mt;
+	if( tp->subtid == DAO_DISJOINT ){
+		for(j=0; j<n; j++){
+			DaoType *itp2 = tp->nested->items.pType[j];
+			if( itp2->tid == src->type ){
+				itp = itp2;
+				break;
+			}
+		}
+		if( itp == NULL ) return 0;
+		switch( src->type ){
+		case DAO_INTEGER :
+		case DAO_FLOAT :
+		case DAO_DOUBLE :
+		case DAO_COMPLEX :
+		case DAO_STRING :
+		case DAO_ENUM :
+			DaoValue_CopyX( src, dest, C );
+			return 1;
+		case DAO_ARRAY :
+			/* TODO */
+			break;
+		case DAO_LIST :
+		case DAO_MAP :
+		case DAO_CSTRUCT :
+		case DAO_CDATA :
+			if( src->xCstruct.ctype == tp ) goto FastMove;
+			break;
+		case DAO_TUPLE :
+			if( src->xTuple.ctype == tp ) goto FastMove;
+			break;
+		}
+		return DaoValue_Move5( src, dest, itp, C, NULL );
+FastMove:
+		GC_ShiftRC( src, *dest );
+		*dest = src;
+		return 1;
+	}
+	for(j=0,mt=0; j<n; j++){
+		DaoType *itp2 = tp->nested->items.pType[j];
+		k = DaoType_MatchValue( itp2, src, NULL );
 		if( k > mt ){
-			itp = tp->nested->items.pType[j];
+			itp = itp2;
 			mt = k;
 			if( mt == DAO_MT_EQ ) break;
 		}
@@ -744,7 +788,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 			S = DaoType_CastToParent( S, T );
 			tm = (S != NULL);
 		}
-	}else if( T->tid == DAO_ROUTINE && T->overloads == 0 && S->type == DAO_ROUTINE && S->xRoutine.overloads ){
+	}else if( T->tid == DAO_ROUTINE && T->subtid != DAO_ROUTINES && S->type == DAO_ROUTINE && S->xRoutine.overloads ){
 		DArray *routines = S->xRoutine.overloads->routines;
 		int i, k, n;
 		/*
@@ -828,9 +872,42 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		return DaoValue_MoveVariant( S, D, T, C );
 	default : break;
 	}
-	if( D2 && D2->xBase.refCount >1 ){
+	if( S->type >= DAO_OBJECT || !(S->xBase.trait & DAO_VALUE_CONST) || T->constant ){
+		int fastmove = 0;
+		switch( T->tid ){
+		case DAO_LIST :
+		case DAO_MAP :
+		case DAO_CSTRUCT :
+		case DAO_CDATA : 
+		case DAO_CTYPE : fastmove = S->xCstruct.ctype == T; break;
+		case DAO_TUPLE : fastmove = S->xTuple.ctype == T; break;
+		case DAO_ROUTINE : fastmove = S->xRoutine.routType == T; break;
+		case DAO_CLASS  : fastmove = S->xClass.clsType == T; break;
+		case DAO_OBJECT : fastmove = S->xObject.defClass->objType == T; break;
+		default : break;
+		}
+		if( fastmove ){
+			GC_ShiftRC( S, D2 );
+			*D = S;
+			return 1;
+		}
+	}
+	if( D2 && D2->xBase.refCount > 1 ){
 		GC_DecRC( D2 );
 		*D = D2 = NULL;
+	}
+	if( D2 && S->type == D2->type && S->type == T->tid && S->type <= DAO_ENUM ){
+		switch( S->type ){
+		case DAO_ENUM    :
+			DaoEnum_SetType( & D2->xEnum, S->xEnum.etype );
+			return DaoEnum_SetValue( & D2->xEnum, & S->xEnum );
+		case DAO_INTEGER : D2->xInteger.value = S->xInteger.value; break;
+		case DAO_FLOAT   : D2->xFloat.value = S->xFloat.value; break;
+		case DAO_DOUBLE  : D2->xDouble.value = S->xDouble.value; break;
+		case DAO_COMPLEX : D2->xComplex.value = S->xComplex.value; break;
+		case DAO_STRING  : DString_Assign( D2->xString.value, S->xString.value ); break;
+		}
+		return 1;
 	}
 	if( D2 == NULL || D2->type != T->tid ) return DaoValue_Move4( S, D, T, C, defs );
 
@@ -855,10 +932,6 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	default : return DaoValue_Move4( S, D, T, C, defs );
 	}
 	return 1;
-}
-int DaoValue_MoveX( DaoValue *S, DaoValue **D, DaoType *T )
-{
-	return DaoValue_Move5( S, D, T, T, NULL );
 }
 int DaoValue_Move( DaoValue *S, DaoValue **D, DaoType *T )
 {

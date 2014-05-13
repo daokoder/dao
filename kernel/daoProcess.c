@@ -62,6 +62,7 @@ static void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoList( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoPair( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc );
+static void DaoProcess_DoTupleSim( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoVector( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoAPList(  DaoProcess *self, DaoVmCode *vmc );
@@ -966,7 +967,11 @@ int DaoProcess_Start( DaoProcess *self )
 
 		&& LAB_TEST_I , && LAB_TEST_F , && LAB_TEST_D ,
 		&& LAB_MATH_I , && LAB_MATH_F , && LAB_MATH_D ,
-		&& LAB_CAST_NV , && LAB_ISA_ST 
+		&& LAB_CAST_I , && LAB_CAST_F , && LAB_CAST_D ,
+		&& LAB_CAST_C , && LAB_CAST_S , 
+		&& LAB_CAST_VE , && LAB_CAST_VX ,
+		&& LAB_CAST_NV , && LAB_ISA_ST ,
+		&& LAB_TUPLE_SIM
 	};
 #endif
 
@@ -1264,7 +1269,6 @@ CallEntry:
 				}
 			}
 		}OPNEXT() OPCASE( CAST ){
-			self->activeCode = vmc;
 			DaoProcess_DoCast( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( MOVE ){
@@ -1338,10 +1342,8 @@ CallEntry:
 		}OPNEXT() OPCASE( NAMEVA ){
 			DaoProcess_BindNameValue( self, vmc );
 		}OPNEXT() OPCASE( PAIR ){
-			self->activeCode = vmc;
 			DaoProcess_DoPair( self, vmc );
 		}OPNEXT() OPCASE( TUPLE ){
-			self->activeCode = vmc;
 			DaoProcess_DoTuple( self, vmc );
 		}OPNEXT() OPCASE( LIST ){
 			self->activeCode = vmc;
@@ -2149,15 +2151,6 @@ CallEntry:
 			object = (DaoObject*) locVars[ vmc->c ];
 			if( object->isNull ) goto AccessNullInstance;
 			object->objValues[ vmc->b ]->xComplex.value = ComplexOperand( vmc->a );
-		}OPNEXT()
-		OPCASE( CAST_NV ){
-			vA = locVars[vmc->a]->xNameValue.value;
-			GC_ShiftRC( vA, locVars[vmc->c] );
-			locVars[vmc->c] = vA;
-		}OPNEXT()
-		OPCASE( ISA_ST ){
-			vA = locVars[vmc->a];
-			locVars[vmc->c]->xInteger.value = vA && vA->type == locVars[vmc->b]->xType.tid;
 		}OPNEXT() OPCASE( TEST_I ){
 			vmc = IntegerOperand( vmc->a ) ? vmc+1 : vmcBase+vmc->b;
 		}OPJUMP() OPCASE( TEST_F ){
@@ -2228,6 +2221,42 @@ CallEntry:
 			case DVM_MATH_TANH : DoubleOperand(vmc->c) = tanh( DoubleOperand(vmc->b) ); break;
 			default : break;
 			}
+		}OPNEXT() OPCASE( CAST_I ) OPCASE( CAST_F ) OPCASE( CAST_D )
+		OPCASE( CAST_C ) OPCASE( CAST_S ) OPCASE( CAST_VE ) {
+			vA = locVars[vmc->a];
+			vC = locVars[vmc->c];
+			if( vA->type == DAO_INTEGER + (vmc->code - DVM_CAST_I) ){
+				switch( vmc->code ){
+				case DVM_CAST_I : vC->xInteger.value = vA->xInteger.value; break;
+				case DVM_CAST_F : vC->xFloat.value   = vA->xFloat.value;   break;
+				case DVM_CAST_D : vC->xDouble.value  = vA->xDouble.value;  break;
+				case DVM_CAST_C : vC->xComplex.value = vA->xComplex.value; break;
+				case DVM_CAST_S : DString_Assign( vC->xString.value, vA->xString.value );break;
+				case DVM_CAST_VE: vC->xEnum.value = vA->xEnum.value; break;
+				}
+			}else{
+				DaoProcess_DoCast( self, vmc );
+				goto CheckException;
+			}
+		}OPNEXT() OPCASE( CAST_VX ){
+			vA = locVars[vmc->a];
+			abtp = locTypes[vmc->c];
+			if( vA->type == abtp->tid ){
+				GC_ShiftRC( vA, locVars[vmc->c] );
+				locVars[vmc->c] = vA;
+			}else{
+				DaoProcess_DoCast( self, vmc );
+				goto CheckException;
+			}
+		}OPNEXT() OPCASE( CAST_NV ){
+			vA = locVars[vmc->a]->xNameValue.value;
+			GC_ShiftRC( vA, locVars[vmc->c] );
+			locVars[vmc->c] = vA;
+		}OPNEXT() OPCASE( ISA_ST ){
+			vA = locVars[vmc->a];
+			locVars[vmc->c]->xInteger.value = vA && vA->type == locVars[vmc->b]->xType.tid;
+		}OPNEXT() OPCASE( TUPLE_SIM ){
+			DaoProcess_DoTupleSim( self, vmc );
 		}OPNEXT()
 		OPDEFAULT()
 		{
@@ -2458,7 +2487,7 @@ int DaoProcess_Move( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t )
 DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value )
 {
 	DaoType *tp = self->activeTypes[reg];
-	int res = DaoValue_MoveX( value, self->activeValues + reg, tp );
+	int res = DaoValue_Move( value, self->activeValues + reg, tp );
 	if( res ) return self->activeValues[ reg ];
 	return NULL;
 }
@@ -2488,7 +2517,7 @@ int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer )
 			return 1;
 		}
 	}
-	if( DaoValue_MoveX( refer, value, tp ) == 0 ) goto TypeNotMatching;
+	if( DaoValue_Move( refer, value, tp ) == 0 ) goto TypeNotMatching;
 	return 0;
 TypeNotMatching:
 	tp2 = DaoNamespace_GetType( self->activeNamespace, refer );
@@ -2927,7 +2956,7 @@ void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], i
 		}
 		tp = i < M ? types[i] : vlt;
 		if( tp && tp->tid == DAO_PAR_NAMED ) tp = & tp->aux->xType;
-		if( DaoValue_MoveX( val, tuple->values + i, tp ) == 0 ){
+		if( DaoValue_Move( val, tuple->values + i, tp ) == 0 ){
 			DaoProcess_RaiseError( self, NULL, "invalid tuple enumeration" );
 			return;
 		}
@@ -3036,6 +3065,24 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 			GC_IncRC( ct );
 		}
 		DaoProcess_MakeTuple( self, tuple, self->activeValues + vmc->a, count );
+	}
+}
+void DaoProcess_DoTupleSim( DaoProcess *self, DaoVmCode *vmc )
+{
+	DaoTuple *tuple;
+	DaoType *ct = self->activeTypes[ vmc->c ];
+	DaoType **types = ct->nested->items.pType;
+	int i, count = vmc->b;
+
+	self->activeCode = vmc;
+	tuple = DaoProcess_GetTuple( self, ct, count, 0 );
+
+	for(i=0; i<count; i++){
+		DaoValue *val = self->activeValues[vmc->a + i];
+		if( DaoValue_Move( val, tuple->values + i, types[i] ) == 0 ){
+			DaoProcess_RaiseError( self, NULL, "invalid tuple enumeration" );
+			return;
+		}
 	}
 }
 void DaoProcess_DoCheckSame( DaoProcess *self, DaoVmCode *vmc )
@@ -3369,7 +3416,7 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		int retnull = type == NULL || type->tid == DAO_NONE || type->tid == DAO_UDT;
 		if( retnull || cmdline || (opt1 && opt2) ) retValue = dao_none_value;
 	}
-	if( DaoValue_MoveX( retValue, dest, type ) == 0 ) goto InvalidReturn;
+	if( DaoValue_Move( retValue, dest, type ) == 0 ) goto InvalidReturn;
 	return retValue;
 InvalidReturn:
 #if 0
@@ -3511,6 +3558,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 	DaoRoutine *meth;
 	DNode *node;
 
+	self->activeCode = vmc;
 	if( va == NULL ){
 		DaoProcess_RaiseError( self, "Value", "operate on none object" );
 		return;
@@ -6193,7 +6241,7 @@ static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *C = NULL, *tmp = NULL;
 	DaoValue *A = self->activeValues[ vmc->a ];
 	DaoType *type = (DaoType*) A;
-	DaoEnum denum2 = {DAO_ENUM,0,0,0,0,0,0,NULL};
+	DaoEnum denum2 = {DAO_ENUM,DAO_ENUM_SYM,0,0,0,0,0,NULL};
 	DaoEnum *denum = & denum2;
 	DaoClass *thisClass = NULL;
 	DaoRoutine *routine = self->activeRoutine;

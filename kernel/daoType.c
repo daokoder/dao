@@ -245,6 +245,7 @@ void DaoType_CheckAttributes( DaoType *self )
 		self->valtype = 1;
 	}
 	if( self->nested ){
+		int j, disjoint = DAO_DISJOINT;
 		for(i=0; i<self->nested->size; i++){
 			DaoType *it = self->nested->items.pType[i];
 			if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
@@ -254,7 +255,18 @@ void DaoType_CheckAttributes( DaoType *self )
 				break;
 			}
 			self->noncyclic &= it->noncyclic;
+			if( self->tid != DAO_VARIANT ) continue;
+			for(j=0; disjoint==1 && j<i; ++j){
+				DaoType *it2 = self->nested->items.pType[j];
+				int mt1 = DaoType_MatchTo( it, it2, NULL );
+				int mt2 = DaoType_MatchTo( it2, it, NULL );
+				if( mt1 || mt2 || it->tid == it2->tid ){
+					disjoint = 1;
+					break;
+				}
+			}
 		}
+		if( self->tid == DAO_VARIANT ) self->subtid = disjoint;
 		if( self->tid == DAO_ROUTINE && self->nested->size ){
 			DaoType *it = self->nested->items.pType[0];
 			if( it->attrib & DAO_TYPE_SELFNAMED ) self->attrib |= DAO_TYPE_SELF;
@@ -677,8 +689,8 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		}
 		break;
 	case DAO_ROUTINE :
-		if( self->overloads ){
-			if( type->overloads ){
+		if( self->subtid == DAO_ROUTINES ){
+			if( type->subtid == DAO_ROUTINES ){
 				return DAO_MT_EQ * (self == type);
 			}else{
 				DaoRoutine *rout;
@@ -693,7 +705,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 				return DaoType_MatchTo( rout->routType, type, defs );
 			}
 		}
-		if( type->overloads ) return 0;
+		if( type->subtid == DAO_ROUTINES ) return 0;
 		if( self->name->chars[0] != type->name->chars[0] ) return 0; /* @routine */
 		if( type->aux == NULL ) return DAO_MT_SIM; /* match to "routine"; */
 		if( self->nested->size < type->nested->size ) return DAO_MT_NOT;
@@ -916,7 +928,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case DAO_ROUTINE :
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( value->xRoutine.overloads ){
-			if( self->overloads ){
+			if( self->subtid == DAO_ROUTINES ){
 				return DAO_MT_EQ * (self == value->xRoutine.routType);
 			}else{
 				DArray *routines = value->xRoutine.overloads->routines;
@@ -1106,7 +1118,6 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	copy->subtid = self->subtid;
 	copy->attrib = self->attrib;
 	copy->constant = self->constant;
-	copy->overloads = self->overloads;
 	copy->trait |= DAO_VALUE_DELAYGC;
 	DString_Reserve( copy->name, 128 );
 	DArray_Append( ns->auxData, copy );

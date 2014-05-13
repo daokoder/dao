@@ -75,7 +75,7 @@ DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *in
 	self->subtype = DAO_ROUTINES;
 	self->overloads = DRoutines_New();
 	self->routType = DaoType_New( "routine", DAO_ROUTINE, (DaoValue*)self, NULL );
-	self->routType->overloads = 1;
+	self->routType->subtid = DAO_ROUTINES;
 	GC_IncRC( self->routType );
 	if( init == NULL ) return self;
 

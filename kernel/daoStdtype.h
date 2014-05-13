@@ -96,14 +96,6 @@ DAO_DLL void DaoString_Delete( DaoString *self );
 // Enum: enum MyEnum{ AA=1, BB=2 }, MyEnum.AA => { 1, type<MyEnum> }
 // Flag: enum MyFlag{ AA=1; BB=2 }, MyFlag.AA + MyFlag.BB => { 1|2, type<MyFlag> }
 */
-enum DaoEnumType
-{
-	DAO_ENUM_SYM ,
-	DAO_ENUM_STATE ,
-	DAO_ENUM_FLAG ,
-	DAO_ENUM_BOOL
-};
-
 struct DaoEnum
 {
 	DAO_VALUE_COMMON;
@@ -171,10 +163,9 @@ struct DaoTuple
 	DAO_VALUE_COMMON;
 
 	/* packed with the previous field in 64-bits system; */
-	ushort_t    size;
-	ushort_t    cap;
-	DaoType    *ctype;
-	DaoValue   *values[DAO_TUPLE_MINSIZE]; /* the actual number of items is in ::size; */
+	int        size;
+	DaoType   *ctype;
+	DaoValue  *values[DAO_TUPLE_MINSIZE]; /* the actual number of items is in ::size; */
 };
 
 DAO_DLL DaoTuple* DaoTuple_Create( DaoType *type, int size, int init );

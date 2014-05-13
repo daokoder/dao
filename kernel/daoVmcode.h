@@ -368,9 +368,18 @@ enum DaoOpcode
 	DVM_MATH_F ,
 	DVM_MATH_D ,
 
-	DVM_CAST_NV , /* casting the value of a namevalue; */
+	DVM_CAST_I ,
+	DVM_CAST_F ,
+	DVM_CAST_D ,
+	DVM_CAST_C ,
+	DVM_CAST_S ,
+	DVM_CAST_VE , /* cast variant to one of its distinct enum types; */
+	DVM_CAST_VX , /* cast variant to one of its distinct and non primitve member types; */
+	DVM_CAST_NV , /* cast a named value to value; */
 
 	DVM_ISA_ST , /* check against simple types: int, float, double, complex, long, string; */
+
+	DVM_TUPLE_SIM ,
 
 	DVM_NULL
 };

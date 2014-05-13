@@ -62,9 +62,14 @@ enum DaoExtraTypes
 
 enum DaoSubTypes
 {
-	DAO_PAIR = END_EXTRA_TYPES,
+	DAO_ENUM_SYM = END_EXTRA_TYPES,
+	DAO_ENUM_STATE ,
+	DAO_ENUM_FLAG ,
+	DAO_ENUM_BOOL ,
+	DAO_PAIR ,
 	DAO_CFUNCTION ,
 	DAO_ROUTINES ,
+	DAO_DISJOINT , /* variant with two distinctive types; */
 	END_SUB_TYPES
 };
 

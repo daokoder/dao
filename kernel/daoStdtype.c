@@ -1063,7 +1063,7 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 	DaoRegex *patt = DaoProcess_MakeRegex( proc, pt );
 	DaoInteger startpos = {DAO_INTEGER,0,0,0,0,0};
 	DaoInteger endpos = {DAO_INTEGER,0,0,0,0,0};
-	DaoEnum denum = {DAO_ENUM,0,0,0,0,0,0,NULL};
+	DaoEnum denum = {DAO_ENUM,DAO_ENUM_SYM,0,0,0,0,0,NULL};
 	DaoValue *res;
 	DaoVmCode *sect;
 
@@ -3198,7 +3198,6 @@ DaoTuple* DaoTuple_New( int size )
 	DaoTuple *self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + extra*sizeof(DaoValue*) );
 	DaoValue_Init( self, DAO_TUPLE );
 	self->size = size;
-	self->cap = size;
 	self->ctype = NULL;
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
@@ -3229,30 +3228,25 @@ DaoTuple* DaoTuple_Create( DaoType *type, int init )
 #else
 DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 {
-	DaoTuple *self;
-	DaoType **types = type->nested->items.pType;
 	int M = type->nested->size;
 	int i, size = N > M ? N : M;
 	int extit = size > DAO_TUPLE_MINSIZE ? size - DAO_TUPLE_MINSIZE : 0;
-	int extra = extit*sizeof(DaoValue*) + type->rntcount*sizeof(DaoDouble);
-	if( type->variadic ){
-		int vt = types[M-1]->aux->xType.tid;
-		if( vt > DAO_NONE && vt <= DAO_DOUBLE ) extra += (N - M + 1)*sizeof(DaoDouble);
-	}
-	self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + extra );
+	DaoTuple *self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + extit*sizeof(DaoValue*) );
+	DaoType **types;
+
 	DaoValue_Init( self, DAO_TUPLE );
 	GC_IncRC( type );
-	self->cap = extra / sizeof(DaoValue*);
 	self->size = size;
 	self->ctype = type;
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	if( init == 0 ) return self;
+	types = type->nested->items.pType;
 	for(i=0; i<size; i++){
 		DaoType *it = i < M ? types[i] : types[M-1];
 		if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_VALIST ) it = & it->aux->xType;
-		if( init && it->tid >= DAO_INTEGER && it->tid <= DAO_ENUM ){
+		if( it->tid >= DAO_INTEGER && it->tid <= DAO_ENUM ){
 			DaoValue_Move( it->value, self->values + i, it );
 		}
 	}

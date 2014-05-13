@@ -341,8 +341,16 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "MATH_I",     DVM_MATH_I,     DAO_CODE_UNARY2,  1 },
 	{ "MATH_F",     DVM_MATH_F,     DAO_CODE_UNARY2,  1 },
 	{ "MATH_D",     DVM_MATH_D,     DAO_CODE_UNARY2,  1 },
+	{ "CAST_I",     DVM_CAST_I,     DAO_CODE_MOVE,    0 },
+	{ "CAST_F",     DVM_CAST_F,     DAO_CODE_MOVE,    0 },
+	{ "CAST_D",     DVM_CAST_D,     DAO_CODE_MOVE,    0 },
+	{ "CAST_C",     DVM_CAST_C,     DAO_CODE_MOVE,    0 },
+	{ "CAST_S",     DVM_CAST_S,     DAO_CODE_MOVE,    0 },
+	{ "CAST_VE",    DVM_CAST_VE,    DAO_CODE_MOVE,    0 },
+	{ "CAST_VX",    DVM_CAST_VX,    DAO_CODE_MOVE,    0 },
 	{ "CAST_NV",    DVM_CAST_NV,    DAO_CODE_MOVE,    0 },
 	{ "ISA_ST",     DVM_ISA_ST,     DAO_CODE_BINARY,  0 },
+	{ "TUPLE_SIM",  DVM_TUPLE_SIM,  DAO_CODE_ENUM,    1 },
 	{ "???",        DVM_UNUSED,     DAO_CODE_NOP,     0 },
 
 	/* for compiling only */

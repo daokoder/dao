@@ -4199,9 +4199,79 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}else if( at->tid == DAO_COMPLEX && ct->tid == DAO_COMPLEX ){
 				vmc->code = DVM_MOVE_CC;
 			}else if( at->tid == DAO_PAR_NAMED && at->aux->xType.tid == ct->tid ){
-				if( DaoType_MatchTo( (DaoType*) at->aux, ct, NULL ) == DAO_MT_EQ )
+				if( DaoType_MatchTo( (DaoType*) at->aux, ct, NULL ) >= DAO_MT_EQ )
 					vmc->code = DVM_CAST_NV;
+			}else if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_STRING ){
+				switch( ct->tid ){
+				case DAO_INTEGER : vmc->code = DVM_CAST_I; break;
+				case DAO_FLOAT   : vmc->code = DVM_CAST_F; break;
+				case DAO_DOUBLE  : vmc->code = DVM_CAST_D; break;
+				case DAO_COMPLEX : vmc->code = DVM_CAST_C; break;
+				case DAO_STRING  : vmc->code = DVM_CAST_S; break;
+				}
+			}else if( at->tid == DAO_VARIANT ){
+				for(j=0,k=0; j<at->nested->size; ++j){
+					int mt = DaoType_MatchTo( at->nested->items.pType[j], ct, defs );
+					k += at->nested->items.pType[j]->tid == ct->tid;
+					if( mt >= DAO_MT_EQ ){
+						if( ct->tid == DAO_ENUM ){
+							vmc->code = DVM_CAST_VE;
+						}else if( ct->tid == DAO_NONE || ct->tid > DAO_ENUM ){
+							vmc->code = DVM_CAST_VX;
+						}
+						break;
+					}
+				}
+				if( vmc->code == DVM_CAST_VE || vmc->code == DVM_CAST_VX ){
+					if( k > 1 ) vmc->code = DVM_CAST; /* not distinctive; */
+				}
 			}
+			break;
+		case DVM_CAST_I :
+		case DVM_CAST_F :
+		case DVM_CAST_D :
+		case DVM_CAST_C :
+		case DVM_CAST_S :
+			if( routConsts->items.pValue[opb]->type != DAO_TYPE ) goto ErrorTyping;
+			bt = (DaoType*) routConsts->items.pValue[opb];
+			DaoInferencer_UpdateType( self, opc, bt );
+			AssertTypeMatching( bt, types[opc], defs );
+			switch( types[opc]->tid ){
+			case DAO_INTEGER : if( vmc->code == DVM_CAST_I ) break; goto ErrorTyping;
+			case DAO_FLOAT   : if( vmc->code == DVM_CAST_F ) break; goto ErrorTyping;
+			case DAO_DOUBLE  : if( vmc->code == DVM_CAST_D ) break; goto ErrorTyping;
+			case DAO_COMPLEX : if( vmc->code == DVM_CAST_C ) break; goto ErrorTyping;
+			case DAO_STRING  : if( vmc->code == DVM_CAST_S ) break; goto ErrorTyping;
+			default : goto ErrorTyping;
+			}
+			break;
+		case DVM_CAST_VE :
+		case DVM_CAST_VX :
+			if( at->tid != DAO_VARIANT ) goto ErrorTyping;
+			if( routConsts->items.pValue[opb]->type != DAO_TYPE ) goto ErrorTyping;
+			bt = (DaoType*) routConsts->items.pValue[opb];
+			DaoInferencer_UpdateType( self, opc, bt );
+			AssertTypeMatching( bt, types[opc], defs );
+			ct = types[opc];
+			for(j=0,k=0; j<at->nested->size; ++j){
+				int mt = DaoType_MatchTo( at->nested->items.pType[j], ct, defs );
+				k += at->nested->items.pType[j]->tid == ct->tid;
+				if( mt >= DAO_MT_EQ ) break;
+			}
+			if( k != 1 ) goto ErrorTyping;
+			switch( ct->tid ){
+			case DAO_ENUM : if( vmc->code == DVM_CAST_VE ) break; goto ErrorTyping;
+			default : if( vmc->code == DVM_CAST_VX ) break; goto ErrorTyping;
+			}
+			break;
+		case DVM_CAST_NV :
+			if( at->tid != DAO_PAR_NAMED ) goto ErrorTyping;
+			if( routConsts->items.pValue[opb]->type != DAO_TYPE ) goto ErrorTyping;
+			bt = (DaoType*) routConsts->items.pValue[opb];
+			DaoInferencer_UpdateType( self, opc, bt );
+			AssertTypeMatching( bt, types[opc], defs );
+			k = DaoType_MatchTo( at->nested->items.pType[j], types[opc], defs );
+			if( k < DAO_MT_EQ ) goto ErrorTyping;
 			break;
 		case DVM_LOAD :
 			DaoInferencer_UpdateType( self, opc, at );
@@ -4634,11 +4704,21 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					ct = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, tp, k );
 				}else{
 					ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, 0, types + opa, opb );
+					for(j=0; j<opb; ++j){
+						tt = types[opa+j];
+						if( tt->tid >= DAO_PAR_NAMED && tt->tid <= DAO_PAR_VALIST ) break;
+					}
+					if( j >= opb ) vmc->code = DVM_TUPLE_SIM;
 				}
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
 				break;
 			}
+		case DVM_TUPLE_SIM :
+			ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, 0, types + opa, opb );
+			DaoInferencer_UpdateType( self, opc, ct );
+			AssertTypeMatching( ct, types[opc], defs );
+			break;
 		case DVM_LIST : case DVM_VECTOR :
 		case DVM_APLIST : case DVM_APVECTOR :
 			{
@@ -4801,7 +4881,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					int wh = 0, mc = 0, call = DVM_CALL + (code - DVM_PACK);
 					DArray *routines;
 					rout = (DaoRoutine*)consts[opa];
-					if( rout == NULL && at->overloads ) rout = (DaoRoutine*) at->aux;
+					if( rout == NULL && at->subtid == DAO_ROUTINES ) rout = (DaoRoutine*) at->aux;
 					routines = (rout && rout->overloads) ? rout->overloads->routines : NULL;
 					self->array->size = 0;
 					for(j=1; j<=opb; j++) DArray_Append( self->array, types[opa+j] );
@@ -4897,7 +4977,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}else if( at->tid == DAO_ENUM && at->subtid != DAO_ENUM_SYM && j == opc ){
 				DaoInode *front = inodes[i];
 				DaoInode *back = inodes[i+opc+1];
-				DaoEnum denum = {DAO_ENUM,0,0,0,0,0,0,NULL};
+				DaoEnum denum = {DAO_ENUM,DAO_ENUM_SYM,0,0,0,0,0,NULL};
 				DMap *jumps = DMap_New( DAO_DATA_VALUE, 0 );
 				DNode *it, *find;
 				int max=0, min=0;
@@ -5168,7 +5248,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				}else if( at->tid != DAO_ROUTINE ){
 					goto ErrorTyping;
 				}
-				if( at->tid == DAO_ROUTINE && at->overloads ) rout = (DaoRoutine*)at->aux;
+				if( at->tid == DAO_ROUTINE && at->subtid == DAO_ROUTINES ) rout = (DaoRoutine*)at->aux;
 				if( rout == NULL && at->aux == NULL ){ /* "routine" type: */
 					/* DAO_CALL_INIT: mandatory passing the implicit self parameter. */
 					if( !(vmc->b & DAO_CALL_INIT) ) vmc->b |= DAO_CALL_NOSELF;
@@ -6092,6 +6172,9 @@ static void DaoRoutine_ReduceLocalConsts( DaoRoutine *self )
 		case DVM_GETCL_D : case DVM_GETCL_C :
 		case DVM_GETF : case DVM_SETF :
 		case DVM_CAST :
+		case DVM_CAST_I : case DVM_CAST_F : case DVM_CAST_D :
+		case DVM_CAST_C : case DVM_CAST_S : case DVM_CAST_VE :
+		case DVM_CAST_VX : case DVM_CAST_NV :
 			it = DMap_Find( used, IntToPointer(vmc->b) );
 			if( it == NULL ) it = DMap_Insert( used, IntToPointer(vmc->b), IntToPointer(id) );
 			vmc->b = vmc2->b = it->value.pInt;

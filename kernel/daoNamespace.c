@@ -1867,6 +1867,7 @@ DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols )
 	}
 	key = DString_New();
 	type = DaoType_New( name->chars, DAO_ENUM, NULL, NULL );
+	type->subtid = DAO_ENUM_STATE;
 	type->mapNames = DMap_New( DAO_DATA_STRING, 0 );
 	if( symbols[0] == '$' ) type->subtid = DAO_ENUM_SYM;
 	for(i=0; i<n; i++){
