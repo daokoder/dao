@@ -215,13 +215,9 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 			if( value->type == DAO_NONE || value->type > DAO_DOUBLE ) goto WrongParameter;
 			DaoStream_WriteFloat( self, DaoValue_GetDouble( value ) );
 		}else if( F == 's' && value->type == DAO_STRING ){
-			DString *str = value->xString.value;
-			if( DString_CheckUTF8( str ) != 0 ) DString_ToLocal( str );
-			DaoStream_WriteString( self, str );
+			DaoStream_WriteLocalString( self, value->xString.value );
 		}else if( F == 'S' && value->type == DAO_STRING ){
-			DString *str = value->xString.value;
-			if( DString_CheckUTF8( str ) == 0 ) DString_ToUTF8( str );
-			DaoStream_WriteString( self, str );
+			DaoStream_WriteString( self, value->xString.value );
 		}else if( F == 'p' ){
 			DaoStream_WritePointer( self, value );
 		}else if( F == 'a' ){
@@ -756,6 +752,13 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 			DaoFile_WriteString( stdout, val );
 		}
 	}
+}
+void DaoStream_WriteLocalString( DaoStream *self, DString *str )
+{
+	str = DString_Copy( str );
+	DString_ToLocal( str );
+	DaoStream_WriteString( self, str );
+	DString_Delete( str );
 }
 void DaoStream_WritePointer( DaoStream *self, void *val )
 {

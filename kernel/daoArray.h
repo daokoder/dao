@@ -103,7 +103,13 @@ DAO_DLL void* DArray_Back( DArray *self );
 
 
 
-
+/*
+// Vector container for different data types/sizes:
+// A typical use:
+//   DVector *vector = DVector_New( sizeof(SomeType) );
+//   SomeType *item = (SomeType*) DVector_Push( vector );
+//   do-something-with-item;
+*/
 struct DVector
 {
 	union {
@@ -123,10 +129,10 @@ struct DVector
 		DaoValue  **values;
 	} data;
 
-	daoint  size;
-	daoint  capacity;
-	short   stride;
-	short   type;
+	daoint  size;      /* Number of data items in the vector; */
+	daoint  capacity;  /* Total number of data items that can be stored in the vector; */
+	short   stride;    /* Data item size in bytes; */
+	short   type;      /* Reserved; */
 };
 
 DAO_DLL DVector* DVector_New( int stride );

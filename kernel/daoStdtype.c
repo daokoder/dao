@@ -237,16 +237,15 @@ enum{
 };
 
 
-static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *start, daoint *end, int *idtype )
+static void MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *start, daoint *end, int *idtype )
 {
-	daoint i, n, n1, n2;
-	DaoValue **items;
+	daoint n1, n2;
 	DaoValue *first, *second;
 
 	*idtype = IDX_NULL;
 	*start = 0;
 	*end = N - 1;
-	if( index == NULL ) return NULL;
+	if( index == NULL ) return;
 
 	switch( index->type ){
 	case DAO_INTEGER :
@@ -320,7 +319,6 @@ static DArray* MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *s
 	case IDX_NONUMINDEX : DaoProcess_RaiseError( proc, "Index", "need number" ); break;
 	case IDX_OUTOFRANGE : DaoProcess_RaiseError( proc, "Index::Range", NULL ); break;
 	}
-	return NULL;
 }
 
 
@@ -528,8 +526,6 @@ DaoTypeBase enumTyper=
 	(FuncPtrDel) DaoEnum_Delete, NULL
 };
 
-extern DaoTypeBase funcTyper;
-static DaoTypeBase ctypeTyper;
 
 DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
 {
@@ -640,12 +636,12 @@ static void DaoString_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 {
 	DString *self = self0->xString.value;
 	daoint size = DString_Size( self );
-	daoint i, n, start, end;
-	int idtype;
-	DArray *ids = MakeIndex( proc, pid, size, & start, & end, & idtype );
+	daoint start, end;
 	DString *res = NULL;
 	daoint *num = NULL;
+	int idtype;
 
+	MakeIndex( proc, pid, size, & start, & end, & idtype );
 	if( idtype == IDX_SINGLE ){
 		num = DaoProcess_PutInteger( proc, 0 );
 	}else{
@@ -692,10 +688,10 @@ static void DaoString_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	daoint size = DString_Size( self );
 	daoint start, end;
 	int idtype;
-	DArray *ids = MakeIndex( proc, pid, size, & start, & end, & idtype );
+	MakeIndex( proc, pid, size, & start, & end, & idtype );
 	DString_Detach( self, self->size );
 	if( value->type >= DAO_INTEGER && value->type <= DAO_DOUBLE ){
-		daoint i, n, id = value->xInteger.value;
+		daoint i, id = value->xInteger.value;
 		for(i=start; i<=end; i++) self->chars[i] = id;
 	}else if( value->type == DAO_STRING ){
 		DString *str = value->xString.value;
@@ -982,7 +978,7 @@ static void DaoSTR_Change( DaoProcess *proc, DaoValue *p[], int N )
 	daoint start = p[4]->xInteger.value;
 	daoint end = p[5]->xInteger.value;
 	daoint index = p[3]->xInteger.value;
-	daoint n, size = self->size;
+	daoint n;
 	if( start < 0 ) start += self->size;
 	if( end < 0 ) end += self->size;
 	if( end == 0 ) end = DString_Size( self ) - 1;
@@ -1124,19 +1120,19 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoSTR_Convert( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.value;
+	int bl = 1;
 	switch( p[1]->xEnum.value ){
-	case 0 : if( DString_CheckUTF8( self ) != 0 ) DString_ToLocal( self ); break; /* local */
-	case 1 : if( DString_CheckUTF8( self ) == 0 ) DString_ToUTF8( self ); break; /* utf8 */
+	case 0 : bl = DString_ToLocal( self ); break; /* local */
+	case 1 : bl = DString_ToUTF8( self ); break; /* utf8 */
 	case 2 : DString_ToLower( p[0]->xString.value ); break; /* lower */
 	case 3 : DString_ToUpper( p[0]->xString.value ); break; /* upper */
 	}
 	DaoProcess_PutReference( proc, p[0] );
+	if( bl == 0 ) DaoProcess_RaiseError( proc, "Value", "Conversion failed" );
 }
 static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int funct )
 {
-	daoint *count = NULL;
 	DString *string = NULL;
-	DaoList *list = NULL;
 	DaoString *self = & p[0]->xString;
 	DaoInteger chint = {DAO_INTEGER,0,0,0,0,0};
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
@@ -1145,7 +1141,7 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
 	DString *data = self->value;
 	daoint unit = p[1]->xEnum.value;
-	daoint entry, i, n, N = data->size;
+	daoint entry, i, N = data->size;
 	char *chars = data->chars, *end = chars + N;
 	DCharState state = { 1, 1, 0 };
 
@@ -1438,7 +1434,7 @@ static void DaoListCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *p
 	daoint e = proc->exceptions->size;
 	daoint i, n, start, end;
 	int idtype;
-	DArray *ids = MakeIndex( proc, pid, size, & start, & end, & idtype );
+	MakeIndex( proc, pid, size, & start, & end, & idtype );
 	if( proc->exceptions->size > e ) return;
 
 	switch( idtype ){
@@ -1481,7 +1477,7 @@ static void DaoListCore_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *p
 	daoint size = self->value->size;
 	daoint i, n, start, end;
 	int idtype, rc = 0;
-	DArray *ids = MakeIndex( proc, pid, size, & start, & end, & idtype );
+	MakeIndex( proc, pid, size, & start, & end, & idtype );
 	if( self->ctype == NULL ){
 		/* a : tuple<string,list<int>> = ('',{});
 		   duplicating the constant to assign to a may not set the ctype properly */
@@ -1863,7 +1859,7 @@ static void DaoLIST_Sort( DaoProcess *proc, DaoValue *p[], int npar )
 	DaoValue **items = list->value->items.pValue;
 	daoint part = p[1 + (p[1]->type== DAO_ENUM)]->xInteger.value;
 	DaoStackFrame *frame;
-	daoint i, N;
+	daoint N;
 
 	DaoProcess_PutReference( proc, p[0] );
 	N = list->value->size;
@@ -1886,7 +1882,6 @@ static void DaoLIST_Sort( DaoProcess *proc, DaoValue *p[], int npar )
 }
 static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, int funct )
 {
-	daoint *count = NULL;
 	int direction = p[1]->xEnum.value;
 	DaoList *list = & p[0]->xList;
 	DaoList *list2 = NULL;
@@ -2715,11 +2710,6 @@ static void DaoMAP_Values( DaoProcess *proc, DaoValue *p[], int N )
 	for(it=DMap_First(self->value); it; it=DMap_Next(self->value,it)){
 		DaoList_Append( list, it->value.pValue );
 	}
-}
-static void DaoMAP_Has( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoMap *self = & p[0]->xMap;
-	DaoProcess_PutInteger( proc, DMap_Find( self->value, p[1] ) != NULL );
 }
 static void DaoMAP_Size( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -3581,11 +3571,6 @@ void DaoCtype_Delete( DaoCtype *self )
 	dao_free( self );
 }
 
-static DaoTypeBase ctypeTyper =
-{
-	"ctype", NULL, NULL, NULL, {0}, {0},
-	(FuncPtrDel)DaoCtype_Delete, NULL
-};
 DaoTypeBase defaultCdataTyper =
 {
 	"cdata", NULL, NULL, NULL, {0}, {0},
@@ -3752,13 +3737,11 @@ static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n )
 #ifdef DEBUG
 static void Dao_Exception_Getf( DaoProcess *proc, DaoValue *p[], int n )
 {
-	DaoException* self = (DaoException*) p[0];
 	DaoProcess_PutValue( proc, dao_none_value );
 	printf( "Get undefined field: %s\n", DaoValue_TryGetChars( p[1] ) );
 }
 static void Dao_Exception_Setf( DaoProcess *proc, DaoValue *p[], int n )
 {
-	DaoException* self = (DaoException*) p[0];
 	printf( "Set undefined field: %s\n", DaoValue_TryGetChars( p[1] ) );
 }
 #endif

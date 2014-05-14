@@ -329,7 +329,7 @@ static int SliceRange2( DVector *slices, daoint N, daoint first, daoint count )
 }
 static void MakeSlice( DaoProcess *proc, DaoValue *pid, daoint N, DVector *slices )
 {
-	daoint j, id, from, to, rc = 1;
+	daoint id, from, to, rc = 1;
 	daoint size = slices->size;
 	if( pid == NULL || pid->type == 0 ){
 		SliceRange2( slices, N, 0, N );
@@ -1250,7 +1250,7 @@ static void DaoARRAY_rank( DaoProcess *proc, DaoValue *par[], int npar )
 	daoint len = DaoArray_GetWorkIntervalSize( self );
 	daoint step = DaoArray_GetWorkStep( self );
 	daoint part = par[2]->xInteger.value;
-	daoint i, j, *ids, *index;
+	daoint i, *ids, *index;
 
 	if( res == NULL ) return;
 	if( size == 0 ) return;
@@ -1283,7 +1283,7 @@ static void DaoARRAY_sort( DaoProcess *proc, DaoValue *par[], int npar )
 	daoint len = DaoArray_GetWorkIntervalSize( self );
 	daoint step = DaoArray_GetWorkStep( self );
 	daoint part = par[2]->xInteger.value;
-	daoint i, j, *index;
+	daoint i, *index;
 
 	DaoProcess_PutValue( proc, par[0] );
 	if( size < 2 ) return;
@@ -1649,7 +1649,7 @@ DefineFunction_DaoArray_SetVector( DaoArray_SetVectorD, double );
 void name( DaoArray *self, type **mat, daoint R, daoint C ) \
 { \
 	daoint dm[2]; \
-	daoint i, j, N = R * C; \
+	daoint i, N = R * C; \
 	dm[0] = R; dm[1] = C; \
 	if( N != self->size ) DaoArray_ResizeData( self, N, self->size ); \
 	DaoArray_Reshape( self, dm, 2 ); \
@@ -1945,8 +1945,6 @@ int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, D
 	DaoArray *array_c = DaoArray_GetWorkArray( C );
 	DaoArrayData *data_b = & array_b->data;
 	DaoArrayData *data_c = & array_c->data;
-	daoint size_b = DaoArray_GetWorkSize( B );
-	daoint size_c = DaoArray_GetWorkSize( C );
 	daoint start_b = DaoArray_GetWorkStart( B );
 	daoint start_c = DaoArray_GetWorkStart( C );
 	daoint len_b = DaoArray_GetWorkIntervalSize( B );
@@ -2054,8 +2052,6 @@ int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, D
 	DaoArray *array_c = DaoArray_GetWorkArray( C );
 	DaoArrayData *data_a = & array_a->data;
 	DaoArrayData *data_c = & array_c->data;
-	daoint size_a = DaoArray_GetWorkSize( A );
-	daoint size_c = DaoArray_GetWorkSize( C );
 	daoint start_a = DaoArray_GetWorkStart( A );
 	daoint start_c = DaoArray_GetWorkStart( C );
 	daoint len_a = DaoArray_GetWorkIntervalSize( A );
@@ -2164,7 +2160,6 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 	DaoArrayData *data_a = & array_a->data;
 	DaoArrayData *data_b = & array_b->data;
 	DaoArrayData *data_c = & array_c->data;
-	daoint size_a = DaoArray_GetWorkSize( A );
 	daoint size_b = DaoArray_GetWorkSize( B );
 	daoint size_c = DaoArray_GetWorkSize( C );
 	daoint start_a = DaoArray_GetWorkStart( A );
@@ -2369,7 +2364,6 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	DaoValue **idval = proc->activeValues + sect->a + 1;
 	DaoValue *elem, *res = NULL;
 	DaoArray *self = DaoArray_GetWorkArray( self2 );
-	daoint size = DaoArray_GetWorkSize( self2 );
 	daoint start = DaoArray_GetWorkStart( self2 );
 	daoint len = DaoArray_GetWorkIntervalSize( self2 );
 	daoint step = DaoArray_GetWorkStep( self2 );

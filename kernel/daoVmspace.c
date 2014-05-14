@@ -149,7 +149,6 @@ extern DaoTypeBase  listTyper;
 extern DaoTypeBase  mapTyper;
 extern DaoTypeBase  streamTyper;
 extern DaoTypeBase  routTyper;
-extern DaoTypeBase  funcTyper;
 extern DaoTypeBase  interTyper;
 extern DaoTypeBase  classTyper;
 extern DaoTypeBase  objTyper;
@@ -227,7 +226,6 @@ int DaoVmSpace_GetOptions( DaoVmSpace *self )
 }
 DaoNamespace* DaoVmSpace_FindNamespace( DaoVmSpace *self, DString *name )
 {
-	daoint i;
 	DNode *node;
 	DaoNamespace *ns = NULL;
 	DaoVmSpace_Lock( self );
@@ -860,29 +858,6 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 	return 1;
 }
 
-static DaoValue* DaoParseNumber( const char *s, DaoValue *value )
-{
-	if( strchr( s, 'e' ) != NULL ){
-		value->type = DAO_FLOAT;
-		value->xFloat.value = strtod( s, 0 );
-	}else if( strchr( s, 'E' ) != NULL ){
-		value->type = DAO_DOUBLE;
-		value->xDouble.value = strtod( s, 0 );
-	}else if( strchr( s, '.' ) != NULL ){
-		int len = strlen( s );
-		if( strstr( s, "00" ) == s + (len-2) ){
-			value->type = DAO_DOUBLE;
-			value->xDouble.value = strtod( s, 0 );
-		}else{
-			value->type = DAO_FLOAT;
-			value->xFloat.value = strtod( s, 0 );
-		}
-	}else{
-		value->type = DAO_INTEGER;
-		value->xInteger.value = strtod( s, 0 );
-	}
-	return value;
-}
 
 static void DaoVmSpace_MakePath( DaoVmSpace *self, DString *path );
 static DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *p, DArray *a, int run );
@@ -946,8 +921,7 @@ static int DaoRoutine_CheckParamTypes( DaoRoutine *self, DaoType *argtypes[], in
 	DaoType  *abtp, **partypes = routType->nested->items.pType;
 	int parpass[DAO_MAX_PARAM];
 	int ndef = self->parCount;
-	int i, j, match = 1;
-	int ifrom, ito;
+	int j, ifrom, ito, match = 1;
 
 	if( argcount == ndef && ndef == 0 ) goto FinishOK;
 	match = 0;
@@ -1001,7 +975,7 @@ static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNam
 	DString *name;
 	DaoRoutine *rout = NULL;
 	DaoRoutine **routs = NULL;
-	int i, j, max = 0, count = 0;
+	int i, max = 0, count = 0;
 
 	types = DArray_New(0);
 	name = DString_New();
@@ -1075,7 +1049,7 @@ static void DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *v
 }
 static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, DArray *argNames, DArray *argValues )
 {
-	DString *str, *val;
+	DString *val;
 	DaoValue sval = {DAO_STRING};
 	DaoNamespace *ns = routine->nameSpace;
 	DaoList *argParams = ns->argParams;
@@ -1224,7 +1198,8 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 	const char *srcRegex = "^ %s* %w+ %. dao .* $";
 	const char *sysRegex = "^ %\\ %s* %w+ %s* .* $";
 	char *chs;
-	int ch, newline = 0;
+	int ch;
+
 	DString_SetChars( self->mainNamespace->name, "interactive codes" );
 	self->mainNamespace->options |= DAO_NS_AUTO_GLOBAL;
 	ns = DaoVmSpace_LinkModule( self, self->mainNamespace, "help" );
@@ -1548,14 +1523,12 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	DaoProcess *vmp = self->mainProcess;
 	DaoStream *io = self->errorStream;
 	DaoRoutine *mainRoutine, *expMain = NULL;
-	DaoRoutine *rout = NULL;
 	DaoValue **ps;
-	DString *name;
 	DArray *argNames;
 	DArray *argValues;
 	size_t tm = 0;
 	daoint N;
-	int i, j, res;
+	int res;
 
 	if( file == NULL || file[0] ==0 || self->evalCmdline ){
 		DArray_PushFront( self->nameLoading, self->pathWorking );
@@ -1771,10 +1744,8 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	DaoRoutine *mainRoutine = NULL;
 	DaoParser *parser = NULL;
 	DaoProcess *process;
-	DString name;
-	DNode *node;
 	daoint nsCount = self->loadedModules->size;
-	int bl, m, poppath = 0;
+	int poppath = 0;
 	size_t tm = 0;
 
 	if( args ){
@@ -2114,7 +2085,6 @@ int DaoVmSpace_SearchPath2( DaoVmSpace *self, DArray *paths, DString *fname, int
 }
 void DaoVmSpace_SearchPath( DaoVmSpace *self, DString *fname, int type, int check )
 {
-	daoint i;
 	char *p;
 	DString *path;
 
@@ -2192,7 +2162,7 @@ void DaoVmSpace_MakePath( DaoVmSpace *self, DString *path )
 }
 void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path )
 {
-	DString *tmp, *pstr;
+	DString *pstr;
 	char *p;
 
 	if( path == NULL || path[0] == '\0' ) return;
@@ -2638,13 +2608,10 @@ DaoVmSpace* DaoVmSpace_MainVmSpace()
 }
 DaoVmSpace* DaoInit( const char *command )
 {
-	DString *mbs, *mbs2;
+	DString *mbs;
 	DaoVmSpace *vms;
 	DaoNamespace *ns, *ns2;
-	DaoType *type, *type1, *type2, *type3, *type4;
-	DaoModuleOnLoad fpter;
-	void *handle;
-	daoint i, n;
+	int i;
 
 	if( mainVmSpace ) return mainVmSpace;
 

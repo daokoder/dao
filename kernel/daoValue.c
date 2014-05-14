@@ -326,7 +326,7 @@ static void DaoValue_BasicPrint( DaoValue *self, DaoProcess *proc, DaoStream *st
 }
 void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
-	DString *str, *name;
+	DString *name;
 	DaoTypeBase *typer;
 	DMap *cd = cycData;
 	if( self == NULL ){
@@ -357,10 +357,7 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 		DString_Delete( name );
 		break;
 	case DAO_STRING  :
-		str = DString_Copy( self->xString.value );
-		if( DString_CheckUTF8( str ) != 0 ) DString_ToLocal( str );
-		DaoStream_WriteString( stream, str );
-		DString_Delete( str );
+		DaoStream_WriteLocalString( stream, self->xString.value );
 		break;
 	default :
 		typer = DaoVmSpace_GetTyper( self->type );
@@ -899,7 +896,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	if( D2 && S->type == D2->type && S->type == T->tid && S->type <= DAO_ENUM ){
 		switch( S->type ){
 		case DAO_ENUM    :
-			DaoEnum_SetType( & D2->xEnum, S->xEnum.etype );
+			DaoEnum_SetType( & D2->xEnum, T );
 			return DaoEnum_SetValue( & D2->xEnum, & S->xEnum );
 		case DAO_INTEGER : D2->xInteger.value = S->xInteger.value; break;
 		case DAO_FLOAT   : D2->xFloat.value = S->xFloat.value; break;

@@ -6387,12 +6387,18 @@ InvalidFunctional:
 							}
 							enode.prev = extra ? extra->prev : back;
 							regLast = DaoParser_MakeEnumConst( self, & enode, cid, regcount );
-							if( regLast >=0 ) result.first = self->vmcLast;
+							if( regLast >=0 ){
+								result.first = self->vmcLast;
+								result.konst = enode.konst;
+							}
+						}else{
+							result.konst = 0;
 						}
+					}else{
+						result.konst = 0;
 					}
 					result.reg = regLast;
 					result.last = result.update = self->vmcLast;
-					result.konst = enode.konst;
 					self->curToken = rb + 1;
 					break;
 				}
