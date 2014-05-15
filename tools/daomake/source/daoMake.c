@@ -59,7 +59,7 @@
 
 #ifdef LINUX
 #define DAOMAKE_PLATFORM  "linux"
-#elif defined( MAC_OSX )
+#elif defined( MACOSX )
 #define DAOMAKE_PLATFORM  "macosx"
 #elif defined( FREEBSD )
 #define DAOMAKE_PLATFORM  "freebsd"
@@ -234,6 +234,7 @@ struct DaoMakeProject
 
 static DaoMap  *daomake_projects = NULL;
 static DaoMap  *daomake_settings = NULL;
+static DaoMap  *daomake_platforms = NULL;
 static DaoMap  *daomake_assemblers = NULL;
 static DaoMap  *daomake_compilers = NULL;
 static DaoMap  *daomake_linkers = NULL;
@@ -577,6 +578,7 @@ DString* DaoMake_GetSettingValue( const char *key )
 	if( value == NULL ) return NULL;
 	return DaoValue_TryGetString( value );
 }
+
 int DaoMake_IsFile( const char *path )
 {
 #ifdef WIN32
@@ -2070,6 +2072,20 @@ static void DArray_ImportStringParameters( DArray *self, DaoValue *p[], int N )
 
 
 
+static void UNIT_AddPlatformDefs( DaoProcess *proc, DaoValue *p[], int N )
+{
+	char buf[30];
+	DNode *it;
+	DString *value = DString_New();
+	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
+	for(it=DaoMap_First(daomake_platforms); it; it=DaoMap_Next(daomake_platforms,it)){
+		int dep = it->value.pValue->xInteger.value;
+		sprintf( buf, "%i", dep );
+		DString_SetChars( value, buf );
+		DArray_Append( self->definitions, it->key.pValue->xString.value );
+		DArray_Append( self->definitions, value );
+	}
+}
 static void UNIT_AddDefinition( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
@@ -2265,6 +2281,7 @@ static void UNIT_MakeLinkingFlags( DaoProcess *proc, DaoValue *p[], int N )
 }
 static DaoFuncItem DaoMakeUnitMeths[]=
 {
+	{ UNIT_AddPlatformDefs,   "AddPlatformDefs( self : Unit )" },
 	{ UNIT_AddDefinition,     "AddDefinition( self : Unit, name : string, value = '' )" },
 	{ UNIT_AddIncludePath,    "AddIncludePath( self : Unit, path : string, ... : string )" },
 	{ UNIT_AddLinkingPath,    "AddLinkingPath( self : Unit, path : string, ... : string )" },
@@ -2943,7 +2960,7 @@ static void DAOMAKE_Platform( DaoProcess *proc, DaoValue *p[], int N )
 static void DAOMAKE_IsPlatform( DaoProcess *proc, DaoValue *p[], int N)
 {
 	DString *platform = p[0]->xString.value;
-	DString *value = DaoMake_GetSettingValue( DString_GetData( platform ) );
+	DaoValue *value = DaoMap_GetValueChars( daomake_platforms, DString_GetData( platform ) );
 	DaoProcess_PutInteger( proc, value != NULL );
 }
 static void DAOMAKE_Is64Bit( DaoProcess *proc, DaoValue *p[], int N )
@@ -3437,12 +3454,14 @@ ErrorInvalidArgValue:
 	daomake_platform = DString_New(1);
 	daomake_projects = DaoMap_New(0);
 	daomake_settings = DaoMap_New(0);
+	daomake_platforms = DaoMap_New(0);
 	daomake_assemblers = DaoMap_New(0);
 	daomake_compilers = DaoMap_New(0);
 	daomake_linkers = DaoMap_New(0);
 	daomake_includes = DaoList_New();
 	DaoGC_IncRC( (DaoValue*) daomake_projects );
 	DaoGC_IncRC( (DaoValue*) daomake_settings );
+	DaoGC_IncRC( (DaoValue*) daomake_platforms );
 	DaoGC_IncRC( (DaoValue*) daomake_assemblers );
 	DaoGC_IncRC( (DaoValue*) daomake_compilers );
 	DaoGC_IncRC( (DaoValue*) daomake_linkers );
@@ -3457,6 +3476,7 @@ ErrorInvalidArgValue:
 	daomake_type_project = DaoNamespace_WrapType( nspace, & DaoMakeProject_Typer, 0 );
 	DaoNamespace_WrapFunctions( nspace, DaoMakeMeths );
 	DaoNamespace_AddValue( nspace, "Settings", (DaoValue*) daomake_settings, "map<string,string>" );
+	DaoNamespace_AddValue( nspace, "Platforms", (DaoValue*) daomake_platforms, "map<string,int>" );
 	DaoNamespace_AddValue( nspace, "Assemblers", (DaoValue*) daomake_assemblers, "map<string,string>" );
 	DaoNamespace_AddValue( nspace, "Compilers", (DaoValue*) daomake_compilers, "map<string,string>" );
 	DaoNamespace_AddValue( nspace, "Linkers", (DaoValue*) daomake_linkers, "map<string,string>" );
@@ -3569,6 +3589,7 @@ ErrorInvalidArgValue:
 
 	DaoGC_DecRC( (DaoValue*) daomake_projects );
 	DaoGC_DecRC( (DaoValue*) daomake_settings );
+	DaoGC_DecRC( (DaoValue*) daomake_platforms );
 	DaoGC_DecRC( (DaoValue*) daomake_compilers );
 	DaoGC_DecRC( (DaoValue*) daomake_linkers );
 	DaoGC_DecRC( (DaoValue*) daomake_includes );

@@ -1730,10 +1730,10 @@ DaoType* DaoNamespace_MakeType2( DaoNamespace *self, const char *name,
 	DaoType **nest2 = (DaoType**) dao_calloc( N, sizeof(DaoType*) );
 	DaoType *type, *aux = DaoValue_CastType( pb );
 	int i;
-	if( aux && aux->constant ) aux = aux->vartype;
+	if( aux && aux->invar ) aux = DaoType_GetBaseType( aux );
 	for(i=0; i<N; ++i){
 		DaoType *type = nest[i];
-		if( type && type->constant ) type = type->vartype;
+		if( type && type->invar ) type = DaoType_GetBaseType( type );
 		nest2[i] = type;
 	}
 	type = DaoNamespace_MakeType( self, name, tid, (DaoValue*) aux, nest2, N );
@@ -1898,25 +1898,6 @@ DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols )
 	DString_Delete( key );
 	return t1 != 0 && t2 != 0 ? NULL : type;
 }
-DaoType* DaoNamespace_MakeConstType( DaoNamespace *self, DaoType *type )
-{
-	DaoType *tp;
-
-	if( type->constant ) return type;
-	if( type->vartype ) return type->vartype;
-
-	tp = DaoType_Copy( type );
-	DString_SetChars( tp->name, "const<" );
-	DString_Append( tp->name, type->name );
-	DString_AppendChar( tp->name, '>' );
-
-	GC_ShiftRC( type, tp->vartype );
-	GC_ShiftRC( tp, type->vartype );
-	type->vartype = tp;
-	tp->vartype = type;
-	tp->constant = 1;
-	return tp;
-}
 DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 {
 	DaoType *type;
@@ -1952,8 +1933,8 @@ DaoType* DaoNamespace_MakePairType( DaoNamespace *self, DaoType *first, DaoType 
 	DaoType *noneType = DaoNamespace_MakeValueType( self, dao_none_value );
 	if( first == NULL ) first = noneType;
 	if( second == NULL ) second = noneType;
-	if( first->constant ) first = first->vartype;
-	if( second->constant ) second = second->vartype;
+	if( first->invar )  first = DaoType_GetBaseType( first );
+	if( second->invar ) second = DaoType_GetBaseType( second );
 	types[0] = DaoNamespace_MakeType( self, "first", DAO_PAR_NAMED, (DaoValue*)first, 0, 0 );
 	types[1] = DaoNamespace_MakeType( self, "second", DAO_PAR_NAMED, (DaoValue*)second, 0, 0 );
 	return DaoNamespace_MakeType( self, "tuple", DAO_TUPLE, NULL, types, 2 );

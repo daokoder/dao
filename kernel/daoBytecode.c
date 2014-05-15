@@ -50,7 +50,7 @@ static const char* const dao_asm_names[] =
 	"ASM_NONE"      ,
 	"ASM_COPY"      ,
 	"ASM_TYPEOF"    ,
-	"ASM_TYPECST"   ,
+	"ASM_TYPEINVAR" ,
 	"ASM_TYPEDEF"   ,
 	"ASM_ROUTINE"   ,
 	"ASM_CLASS"     ,
@@ -848,15 +848,16 @@ DaoByteBlock* DaoByteBlock_EncodeEnumType( DaoByteBlock *self, DaoType *type )
 	DaoByteCoder_Remove( self->coder, newBlock->last, newBlock );
 	return newBlock;
 }
-DaoByteBlock* DaoByteBlock_EncodeConstType( DaoByteBlock *self, DaoType *type )
+static DaoByteBlock* DaoByteBlock_EncodeInvarType( DaoByteBlock *self, DaoType *type )
 {
 	DaoByteBlock *newBlock = DaoByteBlock_FindOrCopyBlock( self, (DaoValue*) type );
-	DaoByteBlock *vatBlock = DaoByteBlock_EncodeType( self, type->vartype );
+	DaoByteBlock *vatBlock = DaoByteBlock_EncodeType( self, DaoType_GetBaseType( type ) );
 	if( newBlock ) return newBlock;
 	if( vatBlock == NULL ) return NULL;
 
-	newBlock = DaoByteBlock_AddBlock( self, (DaoValue*) type, DAO_ASM_TYPECST );
+	newBlock = DaoByteBlock_AddBlock( self, (DaoValue*) type, DAO_ASM_TYPEINVAR );
 	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin, vatBlock );
+	DaoByteCoder_EncodeUInt16( newBlock->begin+2, (type->konst<<1)|(type->invar) );
 	return newBlock;
 }
 DaoByteBlock* DaoByteBlock_EncodeType( DaoByteBlock *self, DaoType *type )
@@ -867,7 +868,7 @@ DaoByteBlock* DaoByteBlock_EncodeType( DaoByteBlock *self, DaoType *type )
 
 	if( type == NULL ) return NULL;
 	if( newBlock ) return newBlock;
-	if( type->constant ) return DaoByteBlock_EncodeConstType( self, type );
+	if( type->invar ) return DaoByteBlock_EncodeInvarType( self, type );
 	if( type->tid == DAO_ENUM ) return DaoByteBlock_EncodeEnumType( self, type );
 	if( type->nested ) size = DaoByteBlock_EncodeValues2( self, type->nested );
 	if( type->aux ) auxBlock = DaoByteBlock_EncodeValue( self, type->aux );
@@ -2017,14 +2018,19 @@ static void DaoByteCoder_DecodeTypeAlias( DaoByteCoder *self, DaoByteBlock *bloc
 	GC_ShiftRC( type, block->value );
 	block->value = (DaoValue*) type;
 }
-static void DaoByteCoder_DecodeConstType( DaoByteCoder *self, DaoByteBlock *block )
+static void DaoByteCoder_DecodeInvarType( DaoByteCoder *self, DaoByteBlock *block )
 {
 	uint_t A = DaoByteCoder_DecodeUInt16( block->begin );
+	uint_t B = DaoByteCoder_DecodeUInt16( block->begin + 2 );
 	DaoByteBlock *typebk = DaoByteCoder_LookupTypeBlock( self, block, A );
 	DaoType *type;
 
 	if( self->error ) return;
-	type = DaoNamespace_MakeConstType( self->nspace, (DaoType*) typebk->value );
+	if( B == 3 ){
+		type = DaoType_GetConstType( (DaoType*) typebk->value );
+	}else{
+		type = DaoType_GetInvarType( (DaoType*) typebk->value );
+	}
 
 	GC_ShiftRC( type, block->value );
 	block->value = (DaoValue*) type;
@@ -2975,7 +2981,7 @@ static void DaoByteCoder_DecodeBlock( DaoByteCoder *self, DaoByteBlock *block )
 	case DAO_ASM_TYPES     : DaoByteCoder_DecodeRoutineTypes( self, block ); break;
 	case DAO_ASM_CODE      : DaoByteCoder_DecodeRoutineCode( self, block ); break;
 	case DAO_ASM_USE       : DaoByteCoder_DecodeUseStmt( self, block ); break;
-	case DAO_ASM_TYPECST   : DaoByteCoder_DecodeConstType( self, block ); break;
+	case DAO_ASM_TYPEINVAR : DaoByteCoder_DecodeInvarType( self, block ); break;
 	case DAO_ASM_TYPEDEF   : DaoByteCoder_DecodeTypeAlias( self, block ); break;
 	case DAO_ASM_TYPEOF    : DaoByteCoder_DecodeTypeOf( self, block ); break;
 	case DAO_ASM_BASES     : DaoByteCoder_DecodeBases( self, block ); break;

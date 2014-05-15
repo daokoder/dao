@@ -547,9 +547,9 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 
 DaoFuncItem dao_io_methods[] =
 {
-	{ DaoIO_Write2,    "write( ... )" },
-	{ DaoIO_Writef2,   "writef( format : string, ... )" },
-	{ DaoIO_Writeln2,  "writeln( ... )" },
+	{ DaoIO_Write2,    "write( ... :: any )" },
+	{ DaoIO_Writef2,   "writef( format : string, ... :: any )" },
+	{ DaoIO_Writeln2,  "writeln( ... :: any )" },
 	{ DaoIO_Read,      "read( )=>string" },
 	{ DaoIO_ReadFile,  "read( file : string, silent=0 )=>string" },
 	{ DaoIO_Open,      "open( )=>stream" },
@@ -566,9 +566,9 @@ static DaoFuncItem streamMeths[] =
 	{ DaoIO_Open,      "stream( )=>stream" },
 	{ DaoIO_Open,      "stream( file :string, mode :string )=>stream" },
 	{ DaoIO_Open,      "stream( fileno :int, mode :string )=>stream" },
-	{ DaoIO_Write,     "write( self :stream, ... )" },
-	{ DaoIO_Writef,    "writef( self :stream, format : string, ... )" },
-	{ DaoIO_Writeln,   "writeln( self :stream, ... )" },
+	{ DaoIO_Write,     "write( self :stream, ... :: any )" },
+	{ DaoIO_Writef,    "writef( self :stream, format : string, ... :: any )" },
+	{ DaoIO_Writeln,   "writeln( self :stream, ... :: any )" },
 	{ DaoIO_Flush,     "flush( self :stream )" },
 	{ DaoIO_Read,      "read( self :stream, count=0 )=>string" },
 	{ DaoIO_Read2,     "read( self :stream, quantity :enum<line, all> )=>string" },

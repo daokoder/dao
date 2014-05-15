@@ -65,7 +65,7 @@ static void DaoSignalHandler( int sig )
 		printf( "\n" );
 #ifdef DAO_USE_READLINE
 		if( rl_end ==0 ) printf( "type \"q\" to quit.\n" );
-#ifndef MAC_OSX
+#ifndef MACOSX
 		rl_replace_line( "", 0 );
 		rl_forced_update_display();
 #else

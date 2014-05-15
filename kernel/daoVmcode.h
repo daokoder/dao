@@ -33,56 +33,56 @@
 
 enum DaoOpcode
 {
-	DVM_NOP = 0, /* no operation, the VM assumes maximum one NOP between two effective codes; */
-	DVM_DATA ,  /* create primitive data: A: type<=DAO_COMPLEX, B: value, C: register; */
-	DVM_GETCL , /* get local const: C = A::B; B, constant index; A: 0, implicit; 1: explicit; */
-	DVM_GETCK , /* get class const: C = A::B; current class, A=0; parent class: A>=1; */
-	DVM_GETCG , /* get global const: C = A::B; current namespace, A=0; loaded: A>=1; */
-	DVM_GETVH , /* get host variable from code section: C = A::B; A, outer level; */
-	DVM_GETVS , /* get static variable or captured up variable from closure; */
-	DVM_GETVO , /* get instance object variables: C = A::B; A=0; */
-	DVM_GETVK , /* get class global variables: C = A::B; A: the same as GETCK; */
-	DVM_GETVG , /* get global variables: C = A::B; A: the same as GETCG; */
-	DVM_GETI ,  /* GET Item(s) : C = A[B]; */
-	DVM_GETDI , /* GET Item(s) : C = A[B], B is the (direct) index; */
-	DVM_GETMI , /* GET Item(s) : C = A[A+1, ..., A+B]; */
-	DVM_GETF ,  /* GET Field : C = A.B */
-	DVM_SETVH , /* set host variable in code section: C::B = A; C, outer level; */
-	DVM_SETVS , /* set static variable or captured up variable from closure; */
-	DVM_SETVO , /* set object variables: C::B = A, C the same as A in DVM_GETVO */
-	DVM_SETVK , /* set class variables: C::B = A, C the same as A in DVM_GETVK */
-	DVM_SETVG , /* set global variables: C::B = A, C the same as A in DVM_GETVG */
-	DVM_SETI ,  /* SET Item(s) : C[B] = A;  */
-	DVM_SETDI , /* SET Item(s) : C[B] = A, B is the (direct) index; */
-	DVM_SETMI , /* SET Item(s) : C[C+1, ..., C+B] = A;  */
-	DVM_SETF ,  /* SET Field : C.B = A */
-	DVM_LOAD , /* put local value A as reference at C; */
-	DVM_CAST , /* cast A to B and store at C, where B is a local const; */
-	DVM_MOVE , /* C = A; if B==0, XXX it is compile from assignment, for typing system only */
-	DVM_NOT ,  /* C = ! A; not */
-	DVM_MINUS , /* C = - A; unary minus; */
-	DVM_TILDE , /* C = ~ A */
-	DVM_SIZE , /* C = % A; size operation; */
-	DVM_ADD ,  /* C = A + B;  */
-	DVM_SUB ,  /* C = A - B;  */
-	DVM_MUL ,  /* C = A * B;  */
-	DVM_DIV ,  /* C = A / B;  */
-	DVM_MOD ,  /* C = A % B;  */
-	DVM_POW ,  /* C = A ** B; */
-	DVM_AND ,  /* C = A && B; */
-	DVM_OR ,   /* C = A || B; */
-	DVM_LT ,   /* C = A <  B; */
-	DVM_LE ,   /* C = A <= B; */
-	DVM_EQ ,   /* C = A == B; */
-	DVM_NE ,   /* C = A != B; */
-	DVM_IN ,   /* C = A in B; */
-	DVM_BITAND , /* C = A & B */
-	DVM_BITOR ,  /* C = A | B */
-	DVM_BITXOR , /* C = A ^ B */
-	DVM_BITLFT , /* C = A << B */
-	DVM_BITRIT , /* C = A >> B */
-	DVM_SAME ,   /* C = A ?= B, same type; A, B, both are data objects or type objects; */
-	DVM_ISA ,    /* C = A ?< B; B, type; A (data) is a B; A (type) is a sub type of B; */
+	DVM_NOP   , /* No operation, Dao VM assumes at most one NOP between two effective codes; */
+	DVM_DATA  , /* Create primitive data:  C = B;  A: data type id;  B: direct value; */
+	DVM_GETCL , /* Get local const:  C = A:::B;  B, index;  A=0, implicit;  A=1, explicit; */
+	DVM_GETCK , /* Get class const:  C = A:::B;  B, index;  A=0; */
+	DVM_GETCG , /* Get global const:  C = A:::B;  B, index;  A=0; */
+	DVM_GETVH , /* Get host variable:  C = A:::B;  B, index;  A, section level; */
+	DVM_GETVS , /* Get static/closure variable:  C = A:::B;  B, index;  A=0; */
+	DVM_GETVO , /* Get instance object variable:  C = A:::B;  B, index;  A=0; */
+	DVM_GETVK , /* Get class static variable:  C = A:::B;  B, index;  A=0; */
+	DVM_GETVG , /* Get global variable:  C = A:::B;  B, index;  A=0; */
+	DVM_GETI  , /* Get item(s):  C = A[B];  A, register;  B, register; */
+	DVM_GETDI , /* Get item(s):  C = A[B];  A, register;  B, direct index; */
+	DVM_GETMI , /* Get item(s):  C = A[A+1, ..., A+B]; */
+	DVM_GETF  , /* Get field:  C = A.B or C = A::B; */
+	DVM_SETVH , /* Set host variable:  C:::B = A;  B, index;  C, section level; */
+	DVM_SETVS , /* Set static/closure variable:  C:::B = A;  B, index;  C=0; */
+	DVM_SETVO , /* Set instance object variable:  C:::B = A;  B, index;  C=0; */
+	DVM_SETVK , /* Set class static variable:  C:::B = A;  B, index;  C=0; */
+	DVM_SETVG , /* Set global variable:  C:::B = A;  C: Bit1, zero; Bit2, decl; Bit3, invar; */
+	DVM_SETI  , /* Set item(s):  C[B] = A; */
+	DVM_SETDI , /* Set item(s):  C[B] = A;  B, direct index; */
+	DVM_SETMI , /* Set item(s):  C[C+1, ..., C+B] = A; */
+	DVM_SETF  , /* Set field:  C.B = A or C::B = A; */
+	DVM_LOAD ,  /* Put local value A as reference at C; */
+	DVM_CAST ,  /* Cast A to B and store at C:  C = (B)A;  B, local const index; */
+	DVM_MOVE ,  /* Move A to C:  C = A;  C: Bit1, explicit; Bit2, decl; Bit3, invar; */
+	DVM_NOT ,   /* Not:  C = ! A; */
+	DVM_MINUS , /* Unary minus:  C = - A; */
+	DVM_TILDE , /* Bitwise not:  C = ~ A */
+	DVM_SIZE ,  /* Size:  C = % A; */
+	DVM_ADD ,   /* Addition:  C = A + B;  */
+	DVM_SUB ,   /* Subtraction:  C = A - B;  */
+	DVM_MUL ,   /* Multiplication:  C = A * B;  */
+	DVM_DIV ,   /* Division:  C = A / B;  */
+	DVM_MOD ,   /* Modulo:  C = A % B;  */
+	DVM_POW ,   /* Power:  C = A ** B; */
+	DVM_AND ,   /* And:  C = A && B; */
+	DVM_OR ,    /* Or:  C = A || B; */
+	DVM_LT ,    /* Less than:  C = A <  B; */
+	DVM_LE ,    /* Less or equal:  C = A <= B; */
+	DVM_EQ ,    /* Equal:  C = A == B; */
+	DVM_NE ,    /* Not equal:  C = A != B; */
+	DVM_IN ,    /* In:  C = A in B; */
+	DVM_BITAND , /* Bit and:  C = A & B */
+	DVM_BITOR ,  /* Bit or:  C = A | B */
+	DVM_BITXOR , /* Bit xor:  C = A ^ B */
+	DVM_BITLFT , /* Bit shift left:  C = A << B */
+	DVM_BITRIT , /* Bit shift right:  C = A >> B */
+	DVM_SAME ,   /* Same: C = A ?= B, same type; A, B, both are data objects or type objects; */
+	DVM_ISA ,    /* Isa: C = A ?< B; B, type; A (data) is a B; A (type) is a sub type of B; */
 	DVM_NAMEVA , /* C = A => B: name A, local constant, value B, local register */
 	DVM_PAIR ,   /* C = A : B; create a pair of index, as a tuple; */
 	DVM_TUPLE ,  /* tuple: C = ( A, A+1, ..., A+B-1 ); B>=2, items can be: name=>value */

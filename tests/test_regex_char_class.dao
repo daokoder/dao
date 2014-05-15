@@ -3,8 +3,8 @@ load CharType;
 
 
 
-global mbs_alnum = ''
-global mbs_alnum_neg = ''
+var mbs_alnum = ''
+var mbs_alnum_neg = ''
 
 for( ch = 1 : 127 ){
 	if( isalnum( ch ) ){
@@ -25,8 +25,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-global mbs_alpha = ''
-global mbs_alpha_neg = ''
+var mbs_alpha = ''
+var mbs_alpha_neg = ''
 
 for( ch = 1 : 127 ){
 	if( isalpha( ch ) ){
@@ -47,8 +47,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-global mbs_blank = ''
-global mbs_blank_neg = ''
+var mbs_blank = ''
+var mbs_blank_neg = ''
 
 for( ch = 1 : 127 ){
 	if( isblank( ch ) ){
@@ -69,8 +69,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-global mbs_cntrl = ''
-global mbs_cntrl_neg = ''
+var mbs_cntrl = ''
+var mbs_cntrl_neg = ''
 
 for( ch = 1 : 127 ){
 	if( iscntrl( ch ) ){
@@ -91,8 +91,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-global mbs_digit = ''
-global mbs_digit_neg = ''
+var mbs_digit = ''
+var mbs_digit_neg = ''
 
 for( ch = 1 : 127 ){
 	if( isdigit( ch ) ){
@@ -113,8 +113,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-global mbs_graph = ''
-global mbs_graph_neg = ''
+var mbs_graph = ''
+var mbs_graph_neg = ''
 
 for( ch = 1 : 127 ){
 	if( isgraph( ch ) ){
@@ -135,8 +135,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-global mbs_lower = ''
-global mbs_lower_neg = ''
+var mbs_lower = ''
+var mbs_lower_neg = ''
 
 for( ch = 1 : 127 ){
 	if( islower( ch ) ){
@@ -157,8 +157,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-global mbs_print = ''
-global mbs_print_neg = ''
+var mbs_print = ''
+var mbs_print_neg = ''
 
 for( ch = 1 : 127 ){
 	if( isprint( ch ) ){
@@ -179,8 +179,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-global mbs_punct = ''
-global mbs_punct_neg = ''
+var mbs_punct = ''
+var mbs_punct_neg = ''
 
 for( ch = 1 : 127 ){
 	if( ispunct( ch ) ){
@@ -201,8 +201,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-global mbs_space = ''
-global mbs_space_neg = ''
+var mbs_space = ''
+var mbs_space_neg = ''
 
 for( ch = 1 : 127 ){
 	if( isspace( ch ) ){
@@ -223,8 +223,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-global mbs_upper = ''
-global mbs_upper_neg = ''
+var mbs_upper = ''
+var mbs_upper_neg = ''
 
 for( ch = 1 : 127 ){
 	if( isupper( ch ) ){
@@ -245,8 +245,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-global mbs_xdigit = ''
-global mbs_xdigit_neg = ''
+var mbs_xdigit = ''
+var mbs_xdigit_neg = ''
 
 for( ch = 1 : 127 ){
 	if( isxdigit( ch ) ){
@@ -267,7 +267,7 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-global mbs_ascii = ''
+var mbs_ascii = ''
 
 for( ch = 1 : 127 ){
 	if( isascii( ch ) ) mbs_ascii += ch

@@ -1,7 +1,7 @@
 
 io.writeln( "DaoMake: using Unix settings!" )
 
-DaoMake::Settings["UNIX"]      = "1"
+DaoMake::Platforms["UNIX"]     = 1
 
 DaoMake::Settings["AR"]        = "ar rcs"
 

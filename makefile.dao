@@ -229,18 +229,20 @@ if( daovm_partial_static == $ON ){
 #
 ###########################################################################
 
+daovm.AddPlatformDefs();
+
 if( DaoMake::IsPlatform( "UNIX" ) ){
-	daovm.AddDefinition( "UNIX" )
-	if( DaoMake::IsPlatform( "MACOSX" ) ) daovm.AddDefinition( "MAC_OSX" )
+#	daovm.AddDefinition( "UNIX" )
+#	if( DaoMake::IsPlatform( "MACOSX" ) ) daovm.AddDefinition( "MACOSX" )
 	daovm.AddCompilingFlag( "-fPIC" )
 	daovm.AddLinkingFlag( "-lm" )
-	if( DaoMake::IsPlatform( "LINUX" ) ) daovm.AddLinkingFlag( "-ldl" )
+#	if( DaoMake::IsPlatform( "LINUX" ) ) daovm.AddLinkingFlag( "-ldl" )
 	if( daovm_with_thread == $ON ) daovm.AddLinkingFlag( "-lpthread" )
 }else if( DaoMake::IsPlatform( "WIN32" ) ){
-	daovm.AddDefinition( "WIN32" )
+#	daovm.AddDefinition( "WIN32" )
 	if( DaoMake::IsPlatform( "MINGW" ) ) daovm.AddLinkingFlag( "-lwinmm" )
 }else if( DaoMake::IsPlatform( "HAIKU" ) ){
-	daovm.AddDefinition( "UNIX" )
+#	daovm.AddDefinition( "UNIX" )
 	# Note:
 	# pthread is automatically linked as part of:
 	# /Haiku/develop/lib/x86/libroot.so.

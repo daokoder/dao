@@ -38,7 +38,7 @@ syn keyword daoStructure	interface class routine sub function operator syntax as
 
 " other keywords
 syn keyword daoStatement	defer return skip break global static const use load public protected private case default try catch retry raise virtual
-syn keyword daoConstant		var none self
+syn keyword daoConstant		var invar none self
 
 " syn match   daoPreProc	  "^\s*$\%(debug\|nodebug\|if\|ifnot\|end\|else\|endinput\)\>"
 

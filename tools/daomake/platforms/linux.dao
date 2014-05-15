@@ -2,4 +2,4 @@ load unix;
 
 io.writeln( "DaoMake: using Linux settings!" )
 
-DaoMake::Settings["LINUX"]      = "1"
+DaoMake::Platforms["LINUX"] = DaoMake::Platforms["UNIX"] + 1

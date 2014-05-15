@@ -1,7 +1,7 @@
 
 io.writeln( "DaoMake: using BeOS settings!" )
 
-DaoMake::Settings["BEOS"]      = "1"
+DaoMake::Platforms["BEOS"]     = 1
 
 DaoMake::Settings["AR"]        = "ar rcs"
 

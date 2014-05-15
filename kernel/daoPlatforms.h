@@ -79,11 +79,11 @@
 
 #  define DAO_DLL_PREFIX "lib"
 
-#  ifdef MAC_OSX
+#  ifdef MACOSX
 #    define DAO_DLL_SUFFIX ".dylib"
 #  else /* UNIX */
 #    define DAO_DLL_SUFFIX ".so"
-#  endif /* MAC_OSX */
+#  endif /* MACOSX */
 
 
 #else /* other system */

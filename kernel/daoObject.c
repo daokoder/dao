@@ -281,7 +281,7 @@ DaoValue* DaoObject_CastToBase( DaoObject *self, DaoType *host )
 {
 	DaoValue *sup = self->parent;
 	if( host == NULL ) return NULL;
-	if( host->constant ) host = host->vartype;
+	host = DaoType_GetBaseType( host );
 	if( self->defClass->objType == host ) return (DaoValue*) self;
 	if( self->parent == NULL ) return NULL;
 	if( sup->type == DAO_OBJECT ){

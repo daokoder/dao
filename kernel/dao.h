@@ -42,9 +42,9 @@
 #endif
 
 
-#if defined(MAC_OSX) && ! defined(UNIX)
+#if defined(MACOSX) && ! defined(UNIX)
 #  define UNIX
-#endif /* MAC_OSX */
+#endif /* MACOSX */
 
 
 #ifdef WIN32

@@ -1104,7 +1104,7 @@ int DString_ToUTF8( DString *self )
 	return 1;
 }
 
-#define MAX_CHAR_PER_WCHAR 7
+#define MAX_CHAR_PER_WCHAR 4
 static void DMBString_AppendWCS( DString *self, const wchar_t *chs, daoint len )
 {
 	daoint i, smin, more = 2;

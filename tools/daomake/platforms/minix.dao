@@ -2,4 +2,4 @@ load unix;
 
 io.writeln( "DaoMake: using Minix settings!" )
 
-DaoMake::Settings["MINIX"]      = "1"
+DaoMake::Platforms["MINIX"] = DaoMake::Platforms["UNIX"] + 1

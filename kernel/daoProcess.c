@@ -4149,8 +4149,8 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 		DNode *node = DMap_First( va->xMap.value );
 		DaoValue **data = iter->values;
 		data[0]->xInteger.value = va->xMap.value->size >0;
-		if( data[1]->type != DAO_CDATA || data[1]->xCdata.ctype != dao_default_cdata.ctype ){
-			DaoCdata *it = DaoCdata_New( dao_default_cdata.ctype, node );
+		if( data[1]->type != DAO_CDATA || data[1]->xCdata.ctype != dao_type_cdata ){
+			DaoCdata *it = DaoCdata_New( dao_type_cdata, node );
 			GC_ShiftRC( it, data[1] );
 			data[1] = (DaoValue*) it;
 		}else{

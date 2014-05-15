@@ -2171,17 +2171,19 @@ static DaoFuncItem listMeths[] =
 	},
 	{ DaoLIST_Collect,
 		"collect( self :: list<@T>, direction : enum<forward,backward> = $forward )"
-			"[item :: @T, index : int => none|@V] => list<@V>"
+			"[item : @T, index : int => none|@V] => list<@V>"
 		/*
 		// Collect the non-"none" values produced by evaluating the code section
 		// on the items of the list.
 		// The iteration direction can be controlled by the "direction" parameter.
+		//
+		// Note: invar<@T> will match to none|@V;
 		*/
 	},
 	{ DaoLIST_Collect2,
 		"collect( self :: list<@T>, other :: list<@S>, "
 			"direction : enum<forward,backward> = $forward )"
-			"[item :: @T, item2 :: @S, index : int => none|@V] => list<@V>"
+			"[item : @T, item2 : @S, index : int => none|@V] => list<@V>"
 		/*
 		// Collect the non-"none" values produced by evaluating the code section
 		// on the items of the two lists.
@@ -2865,7 +2867,7 @@ static DaoFuncItem mapMeths[] =
 		*/
 	},
 	{ DaoMAP_Collect,
-		"collect( self :: map<@K,@V> )[key :: @K, value :: @V => none|@T] => list<@T>"
+		"collect( self :: map<@K,@V> )[key : @K, value : @V => none|@T] => list<@T>"
 		/*
 		//
 		*/
@@ -3412,7 +3414,7 @@ static void DaoCdataBindings_Erase( void *data )
 void DaoCstruct_Init( DaoCstruct *self, DaoType *type )
 {
 	DaoType *intype = type;
-	if( type == NULL ) type = dao_default_cdata.ctype;
+	if( type == NULL ) type = dao_type_cdata;
 	DaoValue_Init( self, type ? type->tid : DAO_CDATA );
 	self->object = NULL;
 	self->ctype = type;
@@ -3576,7 +3578,6 @@ DaoTypeBase defaultCdataTyper =
 	"cdata", NULL, NULL, NULL, {0}, {0},
 	(FuncPtrDel)DaoCdata_Delete, NULL
 };
-DaoCdata dao_default_cdata = {DAO_CDATA,0,DAO_VALUE_CONST,0,1,0,NULL,NULL,NULL};
 
 
 

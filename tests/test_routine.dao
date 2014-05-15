@@ -84,8 +84,8 @@ routine TestVariadicFunction( a : string, ... : int )
 ## With function type only
 ##########################
 
-global TestFunction2 = TestFunction
-global TestVariadicFunction2 = TestVariadicFunction
+var TestFunction2 = TestFunction
+var TestVariadicFunction2 = TestVariadicFunction
 
 # Test default parameter:
 @[test(code_01)]
@@ -155,8 +155,8 @@ global TestVariadicFunction2 = TestVariadicFunction
 ## Dynamic Checking
 ##########################
 
-global TestFunction3 : any = TestFunction
-global TestVariadicFunction3 : any = TestVariadicFunction
+var TestFunction3 : any = TestFunction
+var TestVariadicFunction3 : any = TestVariadicFunction
 
 # Test default parameter:
 @[test(code_01)]

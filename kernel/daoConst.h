@@ -69,7 +69,7 @@ enum DaoSubTypes
 	DAO_PAIR ,
 	DAO_CFUNCTION ,
 	DAO_ROUTINES ,
-	DAO_DISJOINT , /* variant with two distinctive types; */
+	DAO_INVAR ,
 	END_SUB_TYPES
 };
 
@@ -129,6 +129,7 @@ enum DaoVarDeclaration
 	DAO_DECL_GLOBAL     = (1<<2), /* for compiling only */
 	DAO_DECL_STATIC     = (1<<3), /* for compiling only */
 	DAO_DECL_VAR        = (1<<4), /* for compiling only */
+	DAO_DECL_INVAR      = (1<<5), /* for compiling only */
 	DAO_DECL_CONST      = (1<<7)  /* using the highest bit in the trait field */
 };
 enum DaoVarStorage
@@ -204,7 +205,7 @@ enum DaoClassAttrib
 enum DaoRoutineAttrib
 {
 	DAO_ROUT_PARSELF   = 1,       /* need self parameter */
-	DAO_ROUT_CONST     = (1<<1),  /* const method */
+	DAO_ROUT_INVAR     = (1<<1),  /* invariable method */
 	DAO_ROUT_STATIC    = (1<<2),  /* static function */
 	DAO_ROUT_PRIVATE   = (1<<3),  /* private method */
 	DAO_ROUT_PROTECTED = (1<<4),  /* protected method */

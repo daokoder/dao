@@ -2,4 +2,4 @@ load bsd;
 
 io.writeln( "DaoMake: using FreeBSD settings!" )
 
-DaoMake::Settings["FREEBSD"]      = "1"
+DaoMake::Platforms["FREEBSD"]  = DaoMake::Platforms["BSD"] + 1

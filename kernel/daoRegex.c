@@ -30,6 +30,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<ctype.h>
+#include<wctype.h>
 
 #include"daoRegex.h"
 #include"daoValue.h"
@@ -583,6 +584,12 @@ static int MatchWord( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 	patt->offset = patt->length;
 	return 1;
 }
+static DCharState DString_DecodeChar2( char *start, char *end )
+{
+	DCharState state = DString_DecodeChar( start, end );
+	if( sizeof(wint_t) == 2 && state.value > 0xFFFF ) state.value = 0; /* for isw*(); */
+	return state;
+}
 static int MatchSet( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 {
 	DCharState ch = { 1, 1, 0 };
@@ -604,9 +611,9 @@ static int MatchSet( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 		chi3.type = 0;
 		chi3.width = 0;
 		chi3.value = 0;
-		chi = DString_DecodeChar( chars + i, end );
-		chi2 = DString_DecodeChar( chars + i + 1, end );
-		if( i+2 < patt->length ) chi3 = DString_DecodeChar( chars + i + 2, end );
+		chi = DString_DecodeChar2( chars + i, end );
+		chi2 = DString_DecodeChar2( chars + i + 1, end );
+		if( i+2 < patt->length ) chi3 = DString_DecodeChar2( chars + i + 2, end );
 		if( i == 0 && chi.value == '^' ){
 			blmatch = 0;
 		}else if( chi.value == '%' ){
@@ -786,11 +793,23 @@ int dao_cjk( uint_t ch )
 	if( i >= 7 || dao_cjk_charts[i][0] > ch ) return 0;
 	return 1;
 }
+int dao_character( uint_t ch )
+{
+#ifdef BSD
+	return (ch == '_' || iswalnum(ch) || iswideogram(ch) || iswphonogram(ch) );
+#elif defined(LINUX)
+	return (ch == '_' || iswalnum(ch));
+#else
+	uint_t ch2 = ch;
+	if( sizeof(wint_t) == 2 && ch > 0xFFFF ) ch = 0; /* for isw*(); */
+	return (ch == '_' || iswalnum(ch) || dao_cjk(ch2));
+#endif
+}
 static int MatchOne( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 {
 	DCharState st = { 0, 1, 0 };
 	DCharState st2 = { 0, 1, 0 };
-	uint_t ch, b1, b2;
+	uint_t ch, ch2, b1, b2;
 	int i;
 
 	patt->offset = 0;
@@ -805,9 +824,7 @@ static int MatchOne( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 		}
 		if( st.type == 0 ) st = st2;
 		st2 = DString_DecodeChar( self->source + pos, self->source + self->end );
-		ch = st.value;   b1 = ch == '_' || iswalnum(ch) || dao_cjk(ch);
-		ch = st2.value;  b2 = ch == '_' || iswalnum(ch) || dao_cjk(ch);
-		if( b1 != b2 ) return 1;
+		if( dao_character( st.value ) != dao_character( st2.value ) ) return 1;
 		return 0;
 	case PAT_ANY :
 		if( pos >= self->end ) return 0;
@@ -832,7 +849,8 @@ static int MatchOne( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 	if( st.type == 0 ) return 0;
 
 	patt->offset = st.width;
-	ch = st.value;
+	ch = ch2 = st.value;
+	if( sizeof(wint_t) == 2 && ch > 0xFFFF ) ch = 0; /* for isw*(); */
 
 	switch( patt->type ){
 	case 'a' : return iswalpha( ch );
@@ -841,8 +859,8 @@ static int MatchOne( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 	case 'p' : return iswpunct( ch );
 	case 'd' : return iswdigit( ch );
 	case 'x' : return iswxdigit( ch );
-	case 'e' : return dao_cjk( ch );
-	case 'w' : return (ch == '_' || iswalnum(ch) || dao_cjk(ch));
+	case 'e' : return dao_cjk( ch2 );
+	case 'w' : return dao_character( ch2 );
 	case 'c' : return iswlower( ch );
 	case 'A' : return ! iswalpha( ch );
 	case 'S' : return ! iswspace( ch );
@@ -850,8 +868,8 @@ static int MatchOne( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 	case 'P' : return ! iswpunct( ch );
 	case 'D' : return ! iswdigit( ch );
 	case 'X' : return ! iswxdigit( ch );
-	case 'E' : return ! dao_cjk( ch );
-	case 'W' : return ! (ch == '_' || iswalnum(ch) || dao_cjk(ch));
+	case 'E' : return ! dao_cjk( ch2 );
+	case 'W' : return ! dao_character( ch2 );
 	case 'C' : return iswupper( ch );
 	default : return 0;
 	}

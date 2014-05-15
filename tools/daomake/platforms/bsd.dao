@@ -2,4 +2,4 @@ load unix;
 
 io.writeln( "DaoMake: using BSD settings!" )
 
-DaoMake::Settings["BSD"]      = "1"
+DaoMake::Platforms["BSD"]  = DaoMake::Platforms["UNIX"] + 1

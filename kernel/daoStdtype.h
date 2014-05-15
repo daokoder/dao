@@ -221,9 +221,6 @@ struct DaoCdata
 
 DAO_DLL void DaoCdata_Delete( DaoCdata *self );
 
-DAO_DLL DaoTypeBase defaultCdataTyper;
-DAO_DLL DaoCdata dao_default_cdata;
-
 
 /*
 // DaoCtype is the class struct for C/C++ types:

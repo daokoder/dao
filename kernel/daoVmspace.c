@@ -162,6 +162,7 @@ extern DaoTypeBase  abstypeTyper;
 extern DaoTypeBase  rgxMatchTyper;
 extern DaoTypeBase  futureTyper;
 extern DaoTypeBase  channelTyper;
+extern DaoTypeBase  defaultCdataTyper;
 
 extern DaoTypeBase macroTyper;
 extern DaoTypeBase regexTyper;
@@ -204,9 +205,6 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_VMSPACE   :  return & vmsTyper;
 	case DAO_TYPE      :  return & abstypeTyper;
 	case DAO_TYPEKERNEL : return & typeKernelTyper;
-#ifdef DAO_WITH_MACRO
-	case DAO_MACRO     :  return & macroTyper;
-#endif
 	default : break;
 	}
 	return & baseTyper;
@@ -2762,8 +2760,7 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_AddConstValue( ns2, "stdio",  (DaoValue*) vms->stdioStream );
 	DaoNamespace_AddConstValue( ns2, "stderr", (DaoValue*) vms->errorStream );
 
-	dao_default_cdata.ctype = DaoNamespace_WrapType( vms->daoNamespace, & defaultCdataTyper, 1 );
-	GC_IncRC( dao_default_cdata.ctype );
+	dao_type_cdata = DaoNamespace_WrapType( vms->daoNamespace, & defaultCdataTyper, 1 );
 
 	dao_type_exception = DaoException_Setup( vms->daoNamespace );
 
@@ -2810,9 +2807,6 @@ void DaoQuit()
 		DaoProfiler *profiler = mainVmSpace->profiler;
 		if( profiler->Report ) profiler->Report( profiler, mainVmSpace->stdioStream );
 	}
-
-	GC_DecRC( dao_default_cdata.ctype );
-	dao_default_cdata.ctype = NULL;
 
 	DaoVmSpace_DeleteData( mainVmSpace );
 	for(i=0; i<DAO_ARRAY; i++){

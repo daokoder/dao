@@ -1,7 +1,7 @@
 
 io.writeln( "DaoMake: using Win32 settings!" )
 
-DaoMake::Settings["WIN32"]      = "1"
+DaoMake::Platforms["WIN32"]     = 1
 
 DaoMake::Settings["AR"]         = "ar rcs"
 

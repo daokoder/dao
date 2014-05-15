@@ -357,7 +357,11 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 		DString_Delete( name );
 		break;
 	case DAO_STRING  :
-		DaoStream_WriteLocalString( stream, self->xString.value );
+		if( stream->file == stdout || stream->file == stdout ){
+			DaoStream_WriteLocalString( stream, self->xString.value );
+		}else{
+			DaoStream_WriteString( stream, self->xString.value );
+		}
 		break;
 	default :
 		typer = DaoVmSpace_GetTyper( self->type );
@@ -462,7 +466,7 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 
 	if( self == NULL ) return dao_none_value;
 	if( (tp == NULL || tp->tid == self->type) && self->type < DAO_ENUM ){
-		if( cst && cst->constant ) return self;
+		if( cst && cst->invar ) return self;
 		switch( self->type ){
 		case DAO_NONE : return self;
 		case DAO_INTEGER : return (DaoValue*) DaoInteger_New( self->xInteger.value );
@@ -525,7 +529,7 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 	if( force == 0 ){
 		if( self->xBase.trait & DAO_VALUE_NOCOPY ) return self;
 		if( (self->xBase.trait & DAO_VALUE_CONST) == 0 ) return self;
-		if( cst != NULL && cst->constant != 0 ) return self;
+		if( cst != NULL && cst->invar != 0 ) return self;
 	}
 	return DaoValue_CopyContainer( self, tp );
 }
@@ -679,43 +683,6 @@ static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp, Da
 	DaoType *itp = NULL;
 	int n = tp->nested->size;
 	int j, k, mt;
-	if( tp->subtid == DAO_DISJOINT ){
-		for(j=0; j<n; j++){
-			DaoType *itp2 = tp->nested->items.pType[j];
-			if( itp2->tid == src->type ){
-				itp = itp2;
-				break;
-			}
-		}
-		if( itp == NULL ) return 0;
-		switch( src->type ){
-		case DAO_INTEGER :
-		case DAO_FLOAT :
-		case DAO_DOUBLE :
-		case DAO_COMPLEX :
-		case DAO_STRING :
-		case DAO_ENUM :
-			DaoValue_CopyX( src, dest, C );
-			return 1;
-		case DAO_ARRAY :
-			/* TODO */
-			break;
-		case DAO_LIST :
-		case DAO_MAP :
-		case DAO_CSTRUCT :
-		case DAO_CDATA :
-			if( src->xCstruct.ctype == tp ) goto FastMove;
-			break;
-		case DAO_TUPLE :
-			if( src->xTuple.ctype == tp ) goto FastMove;
-			break;
-		}
-		return DaoValue_Move5( src, dest, itp, C, NULL );
-FastMove:
-		GC_ShiftRC( src, *dest );
-		*dest = src;
-		return 1;
-	}
 	for(j=0,mt=0; j<n; j++){
 		DaoType *itp2 = tp->nested->items.pType[j];
 		k = DaoType_MatchValue( itp2, src, NULL );
@@ -869,7 +836,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		return DaoValue_MoveVariant( S, D, T, C );
 	default : break;
 	}
-	if( S->type >= DAO_OBJECT || !(S->xBase.trait & DAO_VALUE_CONST) || T->constant ){
+	if( S->type >= DAO_OBJECT || !(S->xBase.trait & DAO_VALUE_CONST) || T->invar ){
 		int fastmove = 0;
 		switch( T->tid ){
 		case DAO_LIST :

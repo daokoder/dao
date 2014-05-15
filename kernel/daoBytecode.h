@@ -172,7 +172,7 @@
 // ASM_TYPEOF(1B): Value-Index(2B), Zeros(6B);
 //
 // const type:
-// ASM_TYPECST(1B): Type-Index(2B), Zeros(6B);
+// ASM_TYPEINVAR(1B): Type-Index(2B), SubType(2B), Zeros(4B);
 //
 // type alias:
 // ASM_TYPEDEF(1B): Name-Index(2B), Type-Index(2B), Zeros(4B);
@@ -325,7 +325,7 @@ enum DaoAuxOpcode
 	DAO_ASM_COPY      ,
 	DAO_ASM_TYPEOF    ,
 	DAO_ASM_TYPEDEF   ,
-	DAO_ASM_TYPECST   ,
+	DAO_ASM_TYPEINVAR ,
 	DAO_ASM_ROUTINE   ,
 	DAO_ASM_CLASS     ,
 	DAO_ASM_INTERFACE ,

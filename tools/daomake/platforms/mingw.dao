@@ -3,7 +3,7 @@ load win32;
 
 io.writeln( "DaoMake: using MinGW settings!" )
 
-DaoMake::Settings["MINGW"]      = "1"
+DaoMake::Platforms["MINGW"] = DaoMake::Platforms["WIN32"] + 1
 
 #
 # 2013-07-24: -shared-libgcc

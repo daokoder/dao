@@ -40,7 +40,7 @@ class CC : BB
 	routine Virt(){ io.writeln( 'CC::Virt()', self ) }
 }
 
-global c;
+var c;
 
 
 @[test(code_01)]

@@ -1,8 +1,8 @@
-load unix;
+load bsd;
 
 io.writeln( "DaoMake: using MacOSX settings!" )
 
-DaoMake::Settings["MACOSX"]      = "1"
+DaoMake::Platforms["MACOSX"]  = DaoMake::Platforms["BSD"] + 1
 
 DaoMake::Settings["DLL-SUFFIX"]      = ".dylib"
 DaoMake::Settings["DLL-FLAG"]        = "-dynamiclib"

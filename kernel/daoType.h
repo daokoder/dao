@@ -85,12 +85,13 @@ struct DaoType
 	uchar_t   tid;    /* type id; */
 	uchar_t   subtid; /* subtype id; */
 	uchar_t   attrib; /* attributes; */
-	uchar_t   constant  : 1; /* a const type */
+	uchar_t   invar     : 1; /* a invar type; */
+	uchar_t   konst     : 1; /* a const type; ::invar is also set to one; */
 	uchar_t   valtype   : 1; /* a value type */
 	uchar_t   variadic  : 1; /* type for variadic tuple or routine */
 	uchar_t   realnum   : 1; /* for type of int/float/double */
 	uchar_t   noncyclic : 1; /* this type representing non-cyclic data */
-	uchar_t   unused    : 3;
+	uchar_t   unused    : 2;
 	uchar_t   rntcount  : 4; /* real number type count */
 	uchar_t   ffitype   : 4; /* for modules using ffi */
 	DString  *name; /* type name */
@@ -110,7 +111,7 @@ struct DaoType
 	*/
 	DaoValue  *aux;
 	DaoValue  *value;   /* default value for the type; */
-	DaoType   *vartype; /* original variable type for a const type; */
+	DaoType   *tritype; /* base/invar/const type; */
 	DaoType   *cbtype;  /* extra type for code block; */
 
 	DaoTypeKernel  *kernel; /* type kernel of built-in or C types; */
@@ -133,6 +134,7 @@ DAO_DLL DaoType *dao_type_map_template;
 DAO_DLL DaoType *dao_type_map_empty;
 DAO_DLL DaoType *dao_type_map_any;
 DAO_DLL DaoType *dao_type_routine;
+DAO_DLL DaoType *dao_type_cdata;
 DAO_DLL DaoType *dao_type_for_iterator;
 DAO_DLL DaoType *dao_type_exception;
 DAO_DLL DaoType *dao_array_types[DAO_COMPLEX+1];
@@ -144,10 +146,15 @@ DAO_DLL void DaoType_Delete( DaoType *self );
 DAO_DLL void DaoType_InitDefault( DaoType *self );
 DAO_DLL void DaoType_CheckAttributes( DaoType *self );
 
+DAO_DLL DaoType* DaoType_GetBaseType( DaoType *self );
+DAO_DLL DaoType* DaoType_GetConstType( DaoType *self );
+DAO_DLL DaoType* DaoType_GetInvarType( DaoType *self );
+
 /* if "self" match to "type": */
 DAO_DLL int DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs );
 DAO_DLL int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs );
 DAO_DLL int DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs );
+
 /* define @X */
 DAO_DLL DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs );
 DAO_DLL DaoType* DaoType_GetCommonType( int type, int subtype );

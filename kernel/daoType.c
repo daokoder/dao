@@ -62,6 +62,7 @@ DaoType *dao_type_map_template = NULL;
 DaoType *dao_type_map_empty = NULL;
 DaoType *dao_type_map_any = NULL;
 DaoType *dao_type_routine = NULL;
+DaoType *dao_type_cdata = NULL;
 DaoType *dao_type_exception = NULL;
 DaoType *dao_type_for_iterator = NULL;
 DaoType *dao_array_types[DAO_COMPLEX+1] = {0};
@@ -153,7 +154,7 @@ void DaoType_Delete( DaoType *self )
 	GC_DecRC( self->value );
 	GC_DecRC( self->kernel );
 	GC_DecRC( self->cbtype );
-	GC_DecRC( self->vartype );
+	GC_DecRC( self->tritype );
 	DString_Delete( self->name );
 	if( self->fname ) DString_Delete( self->fname );
 	if( self->nested ) DArray_Delete( self->nested );
@@ -245,7 +246,6 @@ void DaoType_CheckAttributes( DaoType *self )
 		self->valtype = 1;
 	}
 	if( self->nested ){
-		int j, disjoint = DAO_DISJOINT;
 		for(i=0; i<self->nested->size; i++){
 			DaoType *it = self->nested->items.pType[i];
 			if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
@@ -255,18 +255,7 @@ void DaoType_CheckAttributes( DaoType *self )
 				break;
 			}
 			self->noncyclic &= it->noncyclic;
-			if( self->tid != DAO_VARIANT ) continue;
-			for(j=0; disjoint==1 && j<i; ++j){
-				DaoType *it2 = self->nested->items.pType[j];
-				int mt1 = DaoType_MatchTo( it, it2, NULL );
-				int mt2 = DaoType_MatchTo( it2, it, NULL );
-				if( mt1 || mt2 || it->tid == it2->tid ){
-					disjoint = 1;
-					break;
-				}
-			}
 		}
-		if( self->tid == DAO_VARIANT ) self->subtid = disjoint;
 		if( self->tid == DAO_ROUTINE && self->nested->size ){
 			DaoType *it = self->nested->items.pType[0];
 			if( it->attrib & DAO_TYPE_SELFNAMED ) self->attrib |= DAO_TYPE_SELF;
@@ -385,7 +374,7 @@ DaoType* DaoType_Copy( DaoType *other )
 	memcpy( self, other, sizeof(DaoType) );
 	DaoValue_Init( self, DAO_TYPE ); /* to reset gc fields */
 	self->trait |= DAO_VALUE_DELAYGC;
-	self->vartype = NULL;
+	self->tritype = NULL;
 	self->nested = NULL;
 	self->bases = NULL;
 	self->name = DString_Copy( other->name );
@@ -431,6 +420,93 @@ DaoType* DaoType_GetVariantItem( DaoType *self, int tid )
 		for(i=0; i<n; i++) if( types[i]->tid == tid ) return types[i];
 	}
 	return NULL;
+}
+static void DaoType_GetTriple( DaoType *self, DaoType **base, DaoType **konst, DaoType **invar )
+{
+	int i;
+	DaoType *types[3] = {NULL, NULL, NULL};
+
+	types[0] = self;
+	if( self->tritype ){
+		types[1] = self->tritype;
+		types[2] = self->tritype->tritype;
+	}
+	for(i=0; i<3; ++i){
+		if( types[i] == NULL ) break;
+		if( types[i]->konst ){
+			*konst = types[i];
+		}else if( types[i]->invar ){
+			*invar = types[i];
+		}else{
+			*base = types[i];
+		}
+	}
+}
+static void DaoType_MakeDoubleOrTriple( DaoType *self, DaoType *other )
+{
+	DaoType *base = NULL, *konst = NULL, *invar = NULL;
+
+	DaoType_GetTriple( self, & base, & konst, & invar );
+	if( other->konst ) konst = other;
+	if( other->invar ) invar = other;
+	if( konst && invar ){
+		if( base->tritype == konst ){
+			GC_ShiftRC( invar, konst->tritype );
+			GC_ShiftRC( base, invar->tritype );
+			konst->tritype = invar;
+			invar->tritype = base;
+		}else{
+			GC_ShiftRC( konst, invar->tritype );
+			GC_ShiftRC( base, konst->tritype );
+			invar->tritype = konst;
+			konst->tritype = base;
+		}
+	}else{
+		GC_ShiftRC( self, other->tritype );
+		GC_ShiftRC( other, self->tritype );
+		self->tritype = other;
+		other->tritype = self;
+	}
+}
+DaoType* DaoType_GetBaseType( DaoType *self )
+{
+	DaoType *base = NULL, *konst = NULL, *invar = NULL;
+
+	DaoType_GetTriple( self, & base, & konst, & invar );
+	return base;
+}
+DaoType* DaoType_GetInvarType( DaoType *self )
+{
+	DaoType *base = NULL, *konst = NULL, *invar = NULL;
+
+	DaoType_GetTriple( self, & base, & konst, & invar );
+	if( invar ) return invar;
+
+	invar = DaoType_Copy( base );
+	DString_SetChars( invar->name, "invar<" );
+	DString_Append( invar->name, base->name );
+	DString_AppendChar( invar->name, '>' );
+
+	DaoType_MakeDoubleOrTriple( base, invar );
+	invar->invar = 1;
+	return invar;
+}
+DaoType* DaoType_GetConstType( DaoType *self )
+{
+	DaoType *base = NULL, *konst = NULL, *invar = NULL;
+
+	DaoType_GetTriple( self, & base, & konst, & invar );
+	if( konst ) return konst;
+
+	konst = DaoType_Copy( base );
+	DString_SetChars( konst->name, "const<" );
+	DString_Append( konst->name, base->name );
+	DString_AppendChar( konst->name, '>' );
+
+	DaoType_MakeDoubleOrTriple( base, konst );
+	konst->konst = 1;
+	konst->invar = 1;
+	return konst;
 }
 
 static int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds );
@@ -479,7 +555,7 @@ static int DaoType_MatchTemplateParams( DaoType *self, DaoType *type, DMap *defs
 			k = DaoType_MatchTo( ts1[i], ts2[i], defs );
 			/*
 			// When matching template types, the template argument types
-			// has to be equal, otherwise there will be a typing problem
+			// have to be equal, otherwise there will be a typing problem
 			// when calling its method.
 			// For example, if mt::channel<int> is allowed to match to
 			// mt::channel<any>, the following call to channel::cap()
@@ -534,18 +610,30 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 {
 	DaoType *it1, *it2;
 	DNode *it, *node = NULL;
-	int tid, mt2, mt3, mt = DAO_MT_NOT;
+	int p1, p2, tid, mt2, mt3, mt = DAO_MT_NOT;
 	daoint i, k, n;
 
 	if( self == NULL || type == NULL ) return DAO_MT_NOT;
 	if( self == type ) return DAO_MT_EQ;
 
 	/* some types such routine type for overloaded routines rely on comparing type pointer: */
-	if( self->constant && type->constant ){
-		return DaoType_MatchToX( self->vartype, type->vartype, defs, binds );
-	}else if( self->constant || type->constant ){
-		if( self->constant ) self = self->vartype;
-		if( type->constant ) type = type->vartype;
+	p1 = self->tid == DAO_PAR_NAMED || self->tid == DAO_PAR_DEFAULT;
+	p2 = type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_DEFAULT;
+	if( p1 || p2 ){
+		return DaoType_MatchPar( self, type, defs, binds, 0 );
+	}else if( self->invar && type->invar ){
+		self = DaoType_GetBaseType( self );
+		type = DaoType_GetBaseType( type );
+		return DaoType_MatchToX( self, type, defs, binds );
+	}else if( self->tid > DAO_ENUM && self->invar && self->konst == 0 && type->invar == 0 ){
+		/*
+		// Invar type cannot match to variable type due to potential modification;
+		// But const type can, because constant will be copied when it is moved.
+		*/
+		return DAO_MT_NOT;
+	}else if( self->invar || type->invar ){
+		if( self->invar ) self = DaoType_GetBaseType( self );
+		if( type->invar ) type = DaoType_GetBaseType( type );
 		mt = DaoType_MatchToX( self, type, defs, binds );
 		if( mt > DAO_MT_NOT ) mt -= 1; /* slightly reduce the score; */
 		return mt;
@@ -816,7 +904,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	}
 
 	/* some types such routine type for verloaded routines rely on comparing type pointer: */
-	if( self->constant ) self = self->vartype;
+	if( self->invar ) self = DaoType_GetBaseType( self );
 
 	switch( self->tid ){
 	case DAO_UDT :
@@ -1098,9 +1186,9 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	if( node ){
 		if( node->value.pType == self ) return self;
 		return DaoType_DefineTypes( node->value.pType, ns, defs );
-	}else if( self->constant ){
-		copy = DaoType_DefineTypes( self->vartype, ns, defs );
-		copy = DaoNamespace_MakeConstType( ns, copy );
+	}else if( self->invar ){
+		copy = DaoType_DefineTypes( DaoType_GetBaseType( self ), ns, defs );
+		copy = self->konst ? DaoType_GetConstType( copy ) : DaoType_GetInvarType( copy );;
 		DMap_Insert( defs, self, copy );
 		return copy;
 	}else if( self->tid & DAO_ANY ){
@@ -1117,7 +1205,8 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	copy->typer = self->typer;
 	copy->subtid = self->subtid;
 	copy->attrib = self->attrib;
-	copy->constant = self->constant;
+	copy->invar = self->invar;
+	copy->konst = self->konst;
 	copy->trait |= DAO_VALUE_DELAYGC;
 	DString_Reserve( copy->name, 128 );
 	DArray_Append( ns->auxData, copy );
@@ -1151,14 +1240,19 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		}
 		if( self->tid == DAO_CTYPE || self->tid == DAO_CDATA || self->tid == DAO_CSTRUCT
 				|| self->tid == DAO_LIST || self->tid == DAO_MAP ){
-			int cst = self->constant;
+			int invar = self->konst;
+			int konst = self->invar;
 			if( self->typer->core->kernel->sptree ){
 				DaoType *sptype = self->typer->core->kernel->abtype;
 				if( self->tid == DAO_CTYPE ) sptype = sptype->aux->xCtype.ctype;
 				sptype = DaoType_Specialize( sptype, copy->nested->items.pType, copy->nested->size );
 				if( sptype ){
 					DaoNamespace *nspace = self->kernel->nspace;
-					if( cst ) sptype = DaoNamespace_MakeConstType( nspace, sptype );
+					if( konst ){
+						sptype = DaoType_GetConstType( sptype );
+					}else if( invar ){
+						sptype = DaoType_GetInvarType( sptype );
+					}
 					DMap_Erase2( defs, copy );
 					return sptype;
 				}
@@ -1195,10 +1289,10 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		}
 		GC_IncRC( copy->aux );
 	}
-	if( copy->vartype == NULL && self->vartype != NULL ){
-		copy->vartype = DaoType_DefineTypes( self->vartype, ns, defs );
-		if( copy->vartype ==NULL ) goto DefFailed;
-		GC_IncRC( copy->vartype );
+	if( copy->tritype == NULL && self->tritype != NULL ){
+		copy->tritype = DaoType_DefineTypes( self->tritype, ns, defs );
+		if( copy->tritype ==NULL ) goto DefFailed;
+		GC_IncRC( copy->tritype );
 	}
 	if( copy->cbtype == NULL && self->cbtype != NULL ){
 		copy->cbtype = DaoType_DefineTypes( self->cbtype, ns, defs );
@@ -1218,9 +1312,10 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	}else if( self->nested == NULL ){
 		DString_Assign( copy->name, self->name );
 	}
-	if( copy->constant ){
-		DString_SetChars( copy->name, "const<" );
-		DString_Append( copy->name, copy->vartype->name );
+	if( copy->invar ){
+		DaoType *base = DaoType_GetBaseType( copy );
+		DString_SetChars( copy->name, copy->konst ? "const<" : "invar<" );
+		DString_Append( copy->name, base->name );
 		DString_AppendChars( copy->name, ">" );
 	}
 
@@ -2116,7 +2211,6 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 	DaoType *sptype;
 	DaoTypeKernel *kernel;
 	DTypeSpecTree *sptree;
-	daoint cst = self->constant;
 	daoint i, pos;
 
 	assert( self->tid == DAO_LIST || self->tid == DAO_MAP );
@@ -2189,7 +2283,9 @@ static void DaoType_InitTypeDefines( DaoType *self, DaoRoutine *method, DMap *de
 	type = (DaoType*) type->nested->items.pType[0]->aux; /* self:type */
 
 	if( type->nested->size != self->nested->size ) return;
-	if( type->constant == self->constant ) DMap_Insert( defs, type, self );
+	if( type->konst == self->konst && type->invar == self->invar ){
+		DMap_Insert( defs, type, self );
+	}
 	for(i=0; i<self->nested->size; i++){
 		DaoType_MatchTo( self->nested->items.pType[i], type->nested->items.pType[i], defs );
 	}
@@ -2216,7 +2312,7 @@ void DaoType_SpecializeMethods( DaoType *self )
 	printf( "DaoType_SpecializeMethods: %s\n", self->name->chars );
 #endif
 
-	if( self->constant ) self = self->vartype;
+	if( self->invar ) self = DaoType_GetBaseType( self );
 	if( self == original ) return;
 	if( self->kernel != original->kernel ) return;
 	if( original->kernel == NULL || original->kernel->methods == NULL ) return;
@@ -2319,7 +2415,7 @@ void DaoType_SpecializeMethods( DaoType *self )
 		DMap_Delete( defs );
 		/* Set methods field after it has been setup, for read safety in multithreading: */
 		kernel->methods = methods;
-		if( intype->constant ){
+		if( intype->invar ){
 			GC_ShiftRC( kernel, intype->kernel );
 			intype->kernel = kernel;
 		}
