@@ -2304,7 +2304,7 @@ static const char*const DaoTypingErrorString[] =
 	"Invalid number of parameter",
 	"Invalid parameter type",
 	"Invalid parameter name",
-	"Constant should not be modified",
+	"Constant or invariable cannot be modified",
 	"Call to un-implemented function"
 };
 

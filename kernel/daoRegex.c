@@ -780,11 +780,11 @@ const uint_t dao_cjk_charts[][2] =
 {
 	{0x3400, 0x4DBF},   /* Extension A; */
 	{0x4E00, 0x9FFF},   /* Basic Block; */
-	{0xF900, 0xFAFF},   /* Extension F; */
+	{0xF900, 0xFAFF},   /* Compatibility; */
 	{0x20000, 0x2A6DF}, /* Extension B; */
-	{0x29100, 0x2A6DF}, /* Extension B; */
 	{0x2A700, 0x2B73F}, /* Extension C; */
 	{0x2B740, 0x2B81F}, /* Extension D; */
+	{0x2F800, 0x2FA1F}, /* Compatibility Supplement; */
 };
 int dao_cjk( uint_t ch )
 {

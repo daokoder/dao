@@ -832,8 +832,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 				fgcolor = DAOX_CYAN;
 			}
 			break;
-		case DKEY_STATIC : case DKEY_GLOBAL :
-		case DKEY_VAR : case DKEY_INVAR : case DKEY_CONST :
+		case DKEY_STATIC : case DKEY_VAR : case DKEY_INVAR : case DKEY_CONST :
 		case DKEY_PRIVATE : case DKEY_PROTECTED : case DKEY_PUBLIC :
 			fgcolor = DAOX_GREEN;
 			break;

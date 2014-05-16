@@ -2153,7 +2153,7 @@ static void DaoMakeUnit_UseLibrary( DaoMakeUnit *self, DaoMakeProject *pro, DStr
 		DaoMakeTarget_MakeLinkingFlagsEx( tar, pro, flags, self->project->binaryPath );
 		DArray_Append( self->linkingFlags, flags );
 
-		if( import && DaoMake_GetSettingValue( "WIN32" ) == NULL ) break;
+		if( import && DaoMap_GetValueChars( daomake_platforms, "WIN32" ) == NULL ) break;
 		if( tar->install->size ){
 			flag = (DString*) DArray_PushBack( self->linkingFlags, rpath );
 			DString_Append( flag, tar->install );
