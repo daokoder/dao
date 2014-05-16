@@ -587,7 +587,7 @@ static int MatchWord( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 static DCharState DString_DecodeChar2( char *start, char *end )
 {
 	DCharState state = DString_DecodeChar( start, end );
-	if( sizeof(wint_t) == 2 && state.value > 0xFFFF ) state.value = 0; /* for isw*(); */
+	if( sizeof(wchar_t) == 2 && state.value > 0xFFFF ) state.value = 0; /* for isw*(); */
 	return state;
 }
 static int MatchSet( DaoRegex *self, DaoRgxItem *patt, daoint pos )
@@ -801,7 +801,7 @@ int dao_character( uint_t ch )
 	return (ch == '_' || iswalnum(ch));
 #else
 	uint_t ch2 = ch;
-	if( sizeof(wint_t) == 2 && ch > 0xFFFF ) ch = 0; /* for isw*(); */
+	if( sizeof(wchar_t) == 2 && ch > 0xFFFF ) ch = 0; /* for isw*(); */
 	return (ch == '_' || iswalnum(ch) || dao_cjk(ch2));
 #endif
 }
@@ -850,7 +850,7 @@ static int MatchOne( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 
 	patt->offset = st.width;
 	ch = ch2 = st.value;
-	if( sizeof(wint_t) == 2 && ch > 0xFFFF ) ch = 0; /* for isw*(); */
+	if( sizeof(wchar_t) == 2 && ch > 0xFFFF ) ch = 0; /* for isw*(); */
 
 	switch( patt->type ){
 	case 'a' : return iswalpha( ch );

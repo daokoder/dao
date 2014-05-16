@@ -308,7 +308,7 @@ static void DaoxStream_WriteString( DaoxStream *self, DString *text )
 	if( self->output ){
 		DString_Append( self->output, text );
 	}else{
-		DaoStream_WriteString( self->stream, text );
+		DaoStream_WriteLocalString( self->stream, text );
 	}
 	self->offset += text->size;
 	if( text->size ) self->last = text->chars[text->size-1];
