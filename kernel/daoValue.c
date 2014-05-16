@@ -357,11 +357,7 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 		DString_Delete( name );
 		break;
 	case DAO_STRING  :
-		if( stream->file == stdout || stream->file == stdout ){
-			DaoStream_WriteLocalString( stream, self->xString.value );
-		}else{
-			DaoStream_WriteString( stream, self->xString.value );
-		}
+		DaoStream_WriteString( stream, self->xString.value );
 		break;
 	default :
 		typer = DaoVmSpace_GetTyper( self->type );

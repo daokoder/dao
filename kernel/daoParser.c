@@ -1160,9 +1160,8 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 		}
 		if( tokens[i]->type == DTOK_IDENTIFIER ){
 			/*
-			   printf( "name = %s; reg = %i\n", tokens[i]->string->chars, module->regCount );
+			   printf( "name = %s; reg = %i\n", tokens[i]->string.chars, module->regCount );
 			 */
-			if( routine->parCount && tokens[i-1]->type == DTOK_IDENTIFIER ) goto ErrorNeedSeparator;
 			if( routine->body ){
 				tk = DArray_Append( routine->body->defLocals, tokens[i] );
 				DaoToken_Set( tk, 1, 0, routine->parCount, NULL );
@@ -1190,27 +1189,24 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 			routine->parCount = DAO_MAX_PARAM;
 			module->regCount = DAO_MAX_PARAM;
 			i += 1;
-			if( tki2 == DTOK_COLON || tki2 == DTOK_COLON2 ){
+			if( tki2 == DTOK_COLON ){
 				if( i+1 >= right || tokens[i+1]->type != DTOK_IDENTIFIER ) goto ErrorNeedType;
 				type = DaoParser_ParseType( self, i+1, right-1, &i, NULL );
 				if( type == NULL ) goto ErrorParamParsing;
-				if( tki2 == DTOK_COLON2 ) type = DaoType_GetInvarType( type );
 			}
 			type = DaoNamespace_MakeType( NS, "...", DAO_PAR_VALIST, (DaoValue*)type, NULL, 0 );
 		}else if( tki == DTOK_ID_THTYPE ){
 			type = DaoParser_ParseType( self, i, right-1, &i, NULL );
 			if( type == NULL ) goto ErrorInvalidParam;
 			type = DaoNamespace_GetType( NS, (DaoValue*) type );
-		}else if( tki2 == DTOK_COLON || tki2 == DTOK_COLON2 || tki2 == DTOK_ASSN || tki2 == DTOK_CASSN ){
+		}else if( tki2 == DTOK_COLON || tki2 == DTOK_ASSN ){
 			i ++;
-			if( tki2 == DTOK_COLON || tki2 == DTOK_COLON2 ){
+			if( tki2 == DTOK_COLON ){
 				if( i+1 >= right || tokens[i+1]->type != DTOK_IDENTIFIER ) goto ErrorNeedType;
 				type = DaoParser_ParseType( self, i+1, right-1, &i, NULL );
 				if( type == NULL ) goto ErrorParamParsing;
-				if( tki2 == DTOK_COLON2 ) type = DaoType_GetInvarType( type );
 			}
-			if( tokens[i]->type == DTOK_ASSN || tokens[i]->type == DTOK_CASSN ){
-				int cstype = tokens[i]->type == DTOK_CASSN;
+			if( tokens[i]->type == DTOK_ASSN ){
 				int reg=1, cst = 0;
 				hasdeft = i;
 				if( i+1 >= right || tokens[i+1]->name == DTOK_COMMA ) goto ErrorNeedDefault;
@@ -1231,7 +1227,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 				if( cst ){
 					dft = DaoParser_GetVariable( self, cst );
 					type_default = DaoNamespace_GetType( NS, dft );
-					if( cstype ) type_default = DaoType_GetInvarType( type_default );
 				}else if( module->uplocs ){
 					int loc = routine->routConsts->value->size;
 					DArray_Append( module->uplocs, reg );
@@ -1589,24 +1584,19 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *
 			i += 1;
 		}else if( tokens[i]->type == DTOK_DOTS ){
 			i += 1;
-			if( tokens[i]->type == DTOK_COLON || tokens[i]->type == DTOK_COLON2 ){
-				int cst = tokens[i]->type == DTOK_COLON2;
+			if( tokens[i]->type == DTOK_COLON ){
 				type = DaoParser_ParseType( self, i+1, end, & i, types );
 				if( type == NULL ) goto InvalidTypeForm;
-				if( cst ) type = DaoType_GetInvarType( type );
 			}
 			type = DaoNamespace_MakeType( ns, "...", DAO_PAR_VALIST, (DaoValue*) type, NULL, 0 );
 		}else{
-			int cst = 0;
-			if( t == DTOK_IDENTIFIER && (t2 >= DTOK_COLON && t2 <= DTOK_ASSN) ){
+			if( t == DTOK_IDENTIFIER && (t2 == DTOK_COLON || t2 == DTOK_ASSN) ){
 				name = & tokens[i]->string;
-				tid = (t2 == DTOK_COLON || t2 == DTOK_COLON2) ? DAO_PAR_NAMED : DAO_PAR_DEFAULT;
-				cst = t2 == DTOK_COLON2 || t2 == DTOK_CASSN;
+				tid = t2 == DTOK_COLON ? DAO_PAR_NAMED : DAO_PAR_DEFAULT;
 				if( i + 2 > end ) goto InvalidTypeForm;
 				i = i + 2;
 			}
 			type = DaoParser_ParseType( self, i, end, & i, types );
-			if( cst ) type = DaoType_GetInvarType( type );
 		}
 		if( type == NULL ) return NULL;
 		if( name ) type = DaoNamespace_MakeType( ns, name->chars, tid, (DaoValue*)type, NULL,0 );

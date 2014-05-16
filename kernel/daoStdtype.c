@@ -1196,19 +1196,19 @@ static void DaoSTR_CharAt( DaoProcess *proc, DaoValue *p[], int N )
 static DaoFuncItem stringMeths[] =
 {
 	{ DaoSTR_Size,
-		"size( self :: string ) => int"
+		"size( invar self: string ) => int"
 		/*
 		// Return the number of bytes in the string.
 		*/
 	},
 	{ DaoSTR_Resize,
-		"resize( self : string, size : int )"
+		"resize( self: string, size: int )"
 		/*
 		// Resize the string to a string of "size" bytes.
 		*/
 	},
 	{ DaoSTR_Convert,
-		"convert( self : string, to : enum<local,utf8,lower,upper> ) => string"
+		"convert( invar self: string, to: enum<local,utf8,lower,upper> ) => string"
 		/*
 		// Convert the string:
 		// -- To local encoding if the string is encoded in UTF-8;
@@ -1218,26 +1218,26 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Insert,
-		"insert( self : string, str : string, at = 0, remove = 0, copy = 0 )"
+		"insert( self: string, str: string, at = 0, remove = 0, copy = 0 )"
 		/*
 		// Insert "copy" bytes from the head of "str" to this string at position
 		// "at" with "remove" bytes removed from this string starting from "at".
 		*/
 	},
 	{ DaoSTR_Clear,
-		"clear( self : string )"
+		"clear( self: string )"
 		/*
 		// Clear the string;
 		*/
 	},
 	{ DaoSTR_Erase,
-		"erase( self : string, start = 0, count = -1 )"
+		"erase( self: string, start = 0, count = -1 )"
 		/*
 		// Erase "count" bytes starting from "start" position.
 		*/
 	},
 	{ DaoSTR_Chop,
-		"chop( self : string, utf8 = 0 ) => string"
+		"chop( self: string, utf8 = 0 ) => string"
 		/*
 		// Chop EOF, '\n' and/or '\r' off the end of the string;
 		// -- EOF  is first checked and removed if found;
@@ -1248,7 +1248,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Trim,
-		"trim( self : string, where : enum<head,tail,both> = $both, utf8 = 0 ) => string"
+		"trim( self: string, where: enum<head,tail,both> = $both, utf8 = 0 ) => string"
 		/*
 		// Trim whitespaces from the head and/or the tail of the string;
 		// If "utf8" is not zero, all bytes that do not constitute a
@@ -1256,7 +1256,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Find,
-		"find( self :: string, str : string, from = 0, reverse = 0 ) => int"
+		"find( invar self: string, str: string, from = 0, reverse = 0 ) => int"
 		/*
 		// Find the first occurrence of "str" in this string, searching from "from";
 		// If "reverse" is zero, search forward, otherwise backward;
@@ -1266,7 +1266,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Replace,
-		"replace( self : string, str1 : string, str2 : string, index = 0 ) => int"
+		"replace( self: string, str1: string, str2: string, index = 0 ) => int"
 		/*
 		// Replace the substring "str1" in "self" to "str2";
 		// Replace all occurrences of "str1" to "str2" if "index" is zero;
@@ -1276,7 +1276,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Expand,
-		"expand( self :: string, subs :: map<string,string>, spec = '$', keep = 1 ) => string"
+		"expand( invar self: string, invar subs: map<string,string>, spec = '$', keep = 1 ) => string"
 		/*
 		// Expand this string into a new string with substrings from the keys
 		// of "subs" substituted with the corresponding values of "subs".
@@ -1289,14 +1289,14 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Split,
-		"split( self :: string, sep = '' ) => list<string>"
+		"split( invar self: string, sep = '' ) => list<string>"
 		/*
 		// Split the string by seperator "sep", and return the tokens as a list.
 		// If "sep" is empty, split at character boundaries assuming UTF-8 encoding.
 		*/
 	},
 	{ DaoSTR_Fetch,
-		"fetch( self :: string, pattern : string, group = 0, start = 0, end = -1 ) => string"
+		"fetch( invar self: string, pattern: string, group = 0, start = 0, end = -1 ) => string"
 		/*
 		// Fetch the substring that matches the "group"-th group of pattern "pattern".
 		// Only the region between "start" and "end" is searched.
@@ -1304,7 +1304,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Match,
-		"match( self :: string, pattern : string, group = 0, start = 0, end = -1 )"
+		"match( invar self: string, pattern: string, group = 0, start = 0, end = -1 )"
 			"=> tuple<start:int,end:int>|none"
 		/*
 		// Match part of this string to pattern "pattern".
@@ -1314,7 +1314,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Change,
-		"change( self : string, pattern : string, target : string, index = 0, "
+		"change( self: string, pattern: string, target: string, index = 0, "
 			"start = 0, end = -1 ) => int"
 		/*
 		// Change the part(s) of the string that match pattern "pattern" to "target".
@@ -1325,7 +1325,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Capture,
-		"capture( self :: string, pattern : string, start = 0, end = -1 ) => list<string>"
+		"capture( invar self: string, pattern: string, start = 0, end = -1 ) => list<string>"
 		/*
 		// Match pattern "pattern" to the string, and capture all the substrings that
 		// match to each of the groups of "pattern". Note that the pattern groups are
@@ -1336,16 +1336,16 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Extract,
-		"extract( self :: string, pattern : string, "
-			"mtype : enum<both,matched,unmatched> = $matched ) => list<string>"
+		"extract( invar self: string, pattern: string, "
+			"mtype: enum<both,matched,unmatched> = $matched ) => list<string>"
 		/*
 		// Extract the substrings that match to, or are between the matched ones,
 		// or both, and return them as a list.
 		*/
 	},
 	{ DaoSTR_Scan,
-		"scan( self : string, pattern : string, start = 0, end = -1 )"
-			"[start : int, end : int, state : enum<unmatched,matched> => none|@V]"
+		"scan( self: string, pattern: string, start = 0, end = -1 )"
+			"[start: int, end: int, state: enum<unmatched,matched> => none|@V]"
 			"=> list<@V>"
 		/*
 		// Scan the string with pattern "pattern", and invoke the attached code
@@ -1360,7 +1360,7 @@ static DaoFuncItem stringMeths[] =
 	},
 
 	{ DaoSTR_Iterate,
-		"iterate( self : string, unit : enum<byte,char> = $byte )[char :int, index :int]"
+		"iterate( self: string, unit: enum<byte,char> = $byte )[char: int, index: int]"
 		/*
 		// Iterate over each unit of the string.
 		// If "unit" is "$byte", iterate per byte;
@@ -1372,8 +1372,8 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Collect,
-		"collect( self : string, unit : enum<byte,char> = $byte )"
-			"[char : int, index : int => none|int] => string"
+		"collect( self: string, unit: enum<byte,char> = $byte )"
+			"[char: int, index: int => none|int] => string"
 		/*
 		// Map each unit of the string to a new value and return a new string form
 		// from the mapped values.
@@ -1383,7 +1383,7 @@ static DaoFuncItem stringMeths[] =
 
 	/* for testing */
 	{ DaoSTR_CharAt,
-		"char( self : string, index : int ) => int"
+		"char( self: string, index: int ) => int"
 	},
 	{ NULL, NULL }
 };
@@ -2078,31 +2078,31 @@ static void DaoLIST_Associate( DaoProcess *proc, DaoValue *p[], int npar )
 static DaoFuncItem listMeths[] =
 {
 	{ DaoLIST_Clear,
-		"clear( self : list<@T> )"
+		"clear( self: list<@T> )"
 		/*
 		// Clear the list.
 		*/
 	},
 	{ DaoLIST_Size,
-		"size( self :: list<@T> )=>int"
+		"size( invar self: list<@T> )=>int"
 		/*
 		// Return the size of the list.
 		*/
 	},
 	{ DaoLIST_Resize,
-		"resize( self : list<@T<int|float|double|complex|string|enum>>, size : int )"
+		"resize( self: list<@T<int|float|double|complex|string|enum>>, size: int )"
 		/*
 		// Resize the list of primitive data to size "size".
 		*/
 	},
 	{ DaoLIST_Resize2,
-		"resize( self : list<@T>, value : @T, size : int )"
+		"resize( self: list<@T>, value: @T, size: int )"
 		/*
 		// Resize the list to size "size", and fill the new items with value "value".
 		*/
 	},
 	{ DaoLIST_Max,
-		"max( self :: list<@T<int|float|double|complex|string|enum>> ) => tuple<@T,int>"
+		"max( invar self: list<@T<int|float|double|complex|string|enum>> ) => tuple<@T,int>"
 		/*
 		// Return the maximum value of the list and its index.
 		// The list has to contain primitive data.
@@ -2111,67 +2111,67 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Min,
-		"min( self :: list<@T<int|float|double|complex|string|enum>> ) => tuple<@T,int>"
+		"min( invar self: list<@T<int|float|double|complex|string|enum>> ) => tuple<@T,int>"
 		/*
 		// Return the minimum value of the list and its index.
 		*/
 	},
 	{ DaoLIST_Sum,
-		"sum( self :: list<@T<int|float|double|complex|string|enum>> ) => @T"
+		"sum( invar self: list<@T<int|float|double|complex|string|enum>> ) => @T"
 		/*
 		// Return the sum of the list.
 		*/
 	},
 	{ DaoLIST_Insert,
-		"insert( self : list<@T>, item : @T, pos = 0 ) => list<@T>"
+		"insert( self: list<@T>, item: @T, pos = 0 ) => list<@T>"
 		/*
 		// Insert iten "item" as position "pos".
 		// Return the self list;
 		*/
 	},
 	{ DaoLIST_Erase,
-		"erase( self : list<@T>, start = 0, count = 1 ) => list<@T>"
+		"erase( self: list<@T>, start = 0, count = 1 ) => list<@T>"
 		/*
 		// Erase from the list "count" items starting from "start".
 		// Return the self list;
 		*/
 	},
 	{ DaoLIST_PushBack,
-		"append( self : list<@T>, item : @T, ... : @T ) => list<@T>"
+		"append( self: list<@T>, item: @T, ... : @T ) => list<@T>"
 		/*
 		// Append an item at the end of the list.
 		// Return the self list;
 		*/
 	},
 	{ DaoLIST_Push,
-		"push( self : list<@T>, item : @T, to : enum<front, back> = $back ) => list<@T>"
+		"push( self: list<@T>, item: @T, to: enum<front, back> = $back ) => list<@T>"
 		/*
 		// Push an item to the list, either at the front or at the back.
 		// Return the self list;
 		*/
 	},
 	{ DaoLIST_Pop,
-		"pop( self : list<@T>, from : enum<front, back> = $back ) => @T"
+		"pop( self: list<@T>, from: enum<front,back> = $back ) => @T"
 		/*
 		// Pop off an item from the list, either from the front or from the end.
 		// Return the self list;
 		*/
 	},
 	{ DaoLIST_Front,
-		"front( self :: list<@T> ) => @T"
+		"front( invar self: list<@T> ) => @T"
 		/*
 		// Get the front item of the list.
 		*/
 	},
 	{ DaoLIST_Back,
-		"back( self ::list<@T> ) => @T"
+		"back( invar self: list<@T> ) => @T"
 		/*
 		// Get the back item of the list.
 		*/
 	},
 	{ DaoLIST_Collect,
-		"collect( self :: list<@T>, direction : enum<forward,backward> = $forward )"
-			"[item : @T, index : int => none|@V] => list<@V>"
+		"collect( invar self: list<@T>, direction: enum<forward,backward> = $forward )"
+			"[item: @T, index: int => none|@V] => list<@V>"
 		/*
 		// Collect the non-"none" values produced by evaluating the code section
 		// on the items of the list.
@@ -2181,9 +2181,9 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Collect2,
-		"collect( self :: list<@T>, other :: list<@S>, "
-			"direction : enum<forward,backward> = $forward )"
-			"[item : @T, item2 : @S, index : int => none|@V] => list<@V>"
+		"collect( invar self: list<@T>, invar other: list<@S>, "
+			"direction: enum<forward,backward> = $forward )"
+			"[item: @T, item2: @S, index: int => none|@V] => list<@V>"
 		/*
 		// Collect the non-"none" values produced by evaluating the code section
 		// on the items of the two lists.
@@ -2191,8 +2191,8 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Associate,
-		"associate( self :: list<@T>, hashing = 0 )"
-			"[item :: @T, index : int => none|tuple<@K,@V>] => map<@K,@V>"
+		"associate( invar self: list<@T>, hashing = 0 )"
+			"[item: invar<@T>, index: int => none|tuple<@K,@V>] => map<@K,@V>"
 		/*
 		// Iterate over this list and evaluate the code section on the item
 		// value(s) and index. The code section may return none value, or a
@@ -2211,15 +2211,16 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Associate2,
-		"associate( self :: list<@T>, other :: list<@S>, hashing = 0 )"
-			"[item :: @T, item2 :: @S, index : int => none|tuple<@K,@V>] => map<@K,@V>"
+		"associate( invar self: list<@T>, invar other: list<@S>, hashing = 0 )"
+			"[item: invar<@T>, item2: invar<@S>, index: int => none|tuple<@K,@V>]"
+			"=> map<@K,@V>"
 		/*
 		// The same as above method except this method iterate over two lists.
 		*/
 	},
 	{ DaoLIST_Reduce1,
-		"reduce( self :: list<@T>, direction : enum<forward,backward> = $forward )"
-			"[item :: @T, value : @T, index : int => @T] => @T|none"
+		"reduce( invar self: list<@T>, direction: enum<forward,backward> = $forward )"
+			"[item: invar<@T>, value: @T, index: int => @T] => @T|none"
 		/*
 		// Reduce (fold) the items of the list.
 		// The process is the following:
@@ -2235,8 +2236,9 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Reduce2,
-		"reduce( self :: list<@T>, init : @V, direction : enum<forward,backward> = $forward )"
-			"[item :: @T, value : @V, index : int => @V] => @V"
+		"reduce( invar self: list<@T>, init: @V,"
+			"direction: enum<forward,backward> = $forward )"
+			"[item: invar<@T>, value: @V, index: int => @V] => @V"
 		/*
 		// Reduce (fold) the items of the list.
 		// The process is essentially the same as the above "reduce()" method,
@@ -2249,8 +2251,8 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Find,
-		"find( self :: list<@T>, direction : enum<forward,backward> = $forward )"
-			"[item :: @T, index : int => int] => tuple<index:int,value:@T> | none"
+		"find( invar self: list<@T>, direction: enum<forward,backward> = $forward )"
+			"[item: invar<@T>, index: int => int] => tuple<index:int,value:@T> | none"
 		/*
 		// Find the first item in the list that meets the condition as expressed
 		// by the code section. A non-zero value of the code section indicates
@@ -2259,16 +2261,16 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Iterate,
-		"iterate( self :: list<@T>, direction : enum<forward,backward> = $forward )"
-			"[item :: @T, index : int]"
+		"iterate( invar self: list<@T>, direction: enum<forward,backward> = $forward )"
+			"[item: invar<@T>, index: int]"
 		/*
 		// Iterate on the list. The direction of iteration can be controlled by
 		// the "direction" paramter.
 		*/
 	},
 	{ DaoLIST_Iterate,
-		"iterate( self : list<@T>, direction : enum<forward,backward> = $forward )"
-			"[item : @T, index : int]"
+		"iterate( self: list<@T>, direction: enum<forward,backward> = $forward )"
+			"[item: @T, index: int]"
 		/*
 		// Iterate on the list. The direction of iteration can be controlled by
 		// the "direction" paramter.
@@ -2277,7 +2279,7 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Sort,
-		"sort( self : list<@T>, order : enum<ascend,descend> = $ascend, part = 0 )"
+		"sort( self: list<@T>, order: enum<ascend,descend> = $ascend, part = 0 )"
 			"=> list<@T>"
 		/*
 		// Sort the list by asceding or descending order. And stops when the
@@ -2288,7 +2290,7 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Sort,
-		"sort( self : list<@T>, part = 0 )[X : @T, Y : @T => int] => list<@T>"
+		"sort( self: list<@T>, part = 0 )[X: @T, Y: @T => int] => list<@T>"
 		/*
 		// Sort the list by ordering as defined by the code section.
 		// During the sorting, two items "X" and "Y" will be passed to the code
@@ -2298,8 +2300,8 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Apply,
-		"apply( self : list<@T>, direction : enum<forward,backward> = $forward )"
-			"[item :@T, index :int => @T] => list<@T>"
+		"apply( self: list<@T>, direction: enum<forward,backward> = $forward )"
+			"[item: @T, index: int => @T] => list<@T>"
 		/*
 		// Apply new values to the items of the list. Each item and its index are
 		// passed to the code section, and values produced by the code section are
@@ -2792,102 +2794,102 @@ static void DaoMAP_Apply( DaoProcess *proc, DaoValue *p[], int N )
 static DaoFuncItem mapMeths[] =
 {
 	{ DaoMAP_Clear,
-		"clear( self : map<@K,@V> )"
+		"clear( self: map<@K,@V> )"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Reset,
-		"reset( self : map<@K,@V> )"
+		"reset( self: map<@K,@V> )"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Reset,
-		"reset( self : map<@K,@V>, hashing : enum<none,auto,random> )"
+		"reset( self: map<@K,@V>, hashing: enum<none,auto,random> )"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Erase,
-		"erase( self : map<@K,@V>, from : @K ) => map<@K,@V>"
+		"erase( self: map<@K,@V>, from: @K ) => map<@K,@V>"
 		/*
 		// Return self map;
 		*/
 	},
 	{ DaoMAP_Erase,
-		"erase( self : map<@K,@V>, from : @K, to : @K ) => map<@K,@V>"
+		"erase( self: map<@K,@V>, from: @K, to: @K ) => map<@K,@V>"
 		/*
 		//
 		// Return self map;
 		*/
 	},
 	{ DaoMAP_Insert,
-		"insert( self : map<@K,@V>, key : @K, value : @V ) => map<@K,@V>"
+		"insert( self: map<@K,@V>, key: @K, value: @V ) => map<@K,@V>"
 		/*
 		//
 		// Return self map;
 		*/
 	},
 	{ DaoMAP_Find,
-		"find( self :: map<@K,@V>, key :: @K, type : enum<LE,EQ,GE> = $EQ )"
+		"find( invar self: map<@K,@V>, invar key: @K, type: enum<LE,EQ,GE> = $EQ )"
 			"=> tuple<key:@K,value:@V> | none"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Keys,
-		"keys( self :: map<@K,@V> ) => list<@K>"
+		"keys( invar self: map<@K,@V> ) => list<@K>"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Values,
-		"values( self :: map<@K,@V> ) => list<@V>"
+		"values( invar self: map<@K,@V> ) => list<@V>"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Size,
-		"size( self :: map<@K,@V> ) => int"
+		"size( invar self: map<@K,@V> ) => int"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Iterate,
-		"iterate( self :: map<@K,@V> )[key :: @K, value :: @V]"
+		"iterate( invar self: map<@K,@V> )[key: invar<@K>, value: invar<@V>]"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Iterate,
-		"iterate( self : map<@K,@V> )[key :: @K, value : @V]"
+		"iterate( self: map<@K,@V> )[key: invar<@K>, value: @V]"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Collect,
-		"collect( self :: map<@K,@V> )[key : @K, value : @V => none|@T] => list<@T>"
+		"collect( invar self: map<@K,@V> )[key: @K, value: @V => none|@T] => list<@T>"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Associate,
-		"associate( self :: map<@K,@V>, hashing = 0 )"
-			"[key :: @K, value :: @V => none|tuple<@K2,@V2>] => map<@K2,@V2>"
+		"associate( invar self: map<@K,@V>, hashing = 0 )"
+			"[key: invar<@K>, value: invar<@V> => none|tuple<@K2,@V2>] => map<@K2,@V2>"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Find2,
-		"find( self :: map<@K,@V> )[key :: @K, value :: @V =>int]"
+		"find( invar self: map<@K,@V> )[key: invar<@K>, value: invar<@V> =>int]"
 			"=> tuple<key:@K,value:@V> | none"
 		/*
 		//
 		*/
 	},
 	{ DaoMAP_Apply,
-		"apply( self : map<@K,@V> )[key : @K, value : @V => @V] => map<@K,@V>"
+		"apply( self: map<@K,@V> )[key: @K, value: @V => @V] => map<@K,@V>"
 		/*
 		//
 		*/
@@ -3686,20 +3688,20 @@ static DaoFuncItem dao_Exception_Meths[] =
 	*/
 #if 0
 	{ Dao_Exception_New,   "Exception( info = '' )=>Exception" },
-	{ Dao_Exception_New22, "Exception( data : any )=>Exception" },
+	{ Dao_Exception_New22, "Exception( data: any )=>Exception" },
 #endif
-	{ Dao_Exception_Get_name, ".name( self : Exception )=>string" },
-	{ Dao_Exception_Get_info, ".info( self : Exception )=>string" },
-	{ Dao_Exception_Set_info, ".info=( self : Exception, info : string)" },
-	{ Dao_Exception_Get_data, ".data( self : Exception )=>any" },
-	{ Dao_Exception_Set_data, ".data=( self : Exception, data : any)" },
+	{ Dao_Exception_Get_name, ".name( self: Exception )=>string" },
+	{ Dao_Exception_Get_info, ".info( self: Exception )=>string" },
+	{ Dao_Exception_Set_info, ".info=( self: Exception, info: string)" },
+	{ Dao_Exception_Get_data, ".data( self: Exception )=>any" },
+	{ Dao_Exception_Set_data, ".data=( self: Exception, data: any)" },
 	/* for testing or demonstration */
-	{ Dao_Exception_Get_name, "typename( self : Exception )=>string" },
-	{ Dao_Exception_Get_info, "serialize( self : Exception )=>string" },
-	{ Dao_Exception_Get_info, "operator cast( self : Exception )=>string" },
+	{ Dao_Exception_Get_name, "typename( self: Exception )=>string" },
+	{ Dao_Exception_Get_info, "serialize( self: Exception )=>string" },
+	{ Dao_Exception_Get_info, "operator cast( self: Exception )=>string" },
 #ifdef DEBUG
-	{ Dao_Exception_Getf, ".( self : Exception, name : string )=>any" },
-	{ Dao_Exception_Setf, ".=( self : Exception, name : string, value : any)" },
+	{ Dao_Exception_Getf, ".( self: Exception, name: string )=>any" },
+	{ Dao_Exception_Setf, ".=( self: Exception, name: string, value: any)" },
 #endif
 	{ NULL, NULL }
 };
@@ -3765,7 +3767,7 @@ static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n )
 static DaoFuncItem dao_ExceptionWarning_Meths[] =
 {
 	{ Dao_Exception_New, "Warning( info = '' )=>Warning" },
-	{ Dao_Exception_New22, "Warning( data : any )=>Warning" },
+	{ Dao_Exception_New22, "Warning( data: any )=>Warning" },
 	{ NULL, NULL }
 };
 DaoTypeBase dao_ExceptionWarning_Typer =
@@ -3778,7 +3780,7 @@ DaoTypeBase dao_ExceptionWarning_Typer =
 static DaoFuncItem dao_ExceptionError_Meths[] =
 {
 	{ Dao_Exception_New, "Error( info = '' )=>Error" },
-	{ Dao_Exception_New22, "Error( data : any )=>Error" },
+	{ Dao_Exception_New22, "Error( data: any )=>Error" },
 	{ NULL, NULL }
 };
 DaoTypeBase dao_ExceptionError_Typer =

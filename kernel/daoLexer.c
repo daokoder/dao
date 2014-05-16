@@ -72,7 +72,6 @@ const char *const dao_oper_tokens[] =
 	"," ,
 	":" ,
 	"::" ,
-	":=" ,
 	"=" ,
 	"+" ,
 	"-" ,
@@ -422,7 +421,6 @@ enum
 	TOK_END_ARROW ,  /* -> */
 	TOK_END_FIELD ,  /* => */
 	TOK_END_COLON2 , /* :: */
-	TOK_END_CASSN , /* := */
 	TOK_EQ_ADD ,  /* += */
 	TOK_EQ_SUB ,  /* -= */
 	TOK_EQ_MUL ,  /* *= */
@@ -516,7 +514,6 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_ARROW ,   /* -> */
 	DTOK_FIELD ,   /* => */
 	DTOK_COLON2 ,  /* :: */
-	DTOK_CASSN ,   /* := */
 	DTOK_ADDASN ,  /* += */
 	DTOK_SUBASN ,  /* -= */
 	DTOK_MULASN ,  /* *= */
@@ -710,7 +707,6 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_OP_OR ][ (unsigned) '|' ] = TOK_END_OR; /* || */
 	daoLexTable[ TOK_START ][ (unsigned) ':' ] = TOK_OP_COLON;
 	daoLexTable[ TOK_OP_COLON ][ (unsigned) ':' ] = TOK_END_COLON2; /* :: */
-	daoLexTable[ TOK_OP_COLON ][ (unsigned) '=' ] = TOK_END_CASSN; /* := */
 	daoLexTable[ TOK_OP_NOT ][ (unsigned) '!' ] = TOK_OP_BANG2;
 	daoLexTable[ TOK_START ][ (unsigned) '%' ] = TOK_OP_MOD;
 	daoLexTable[ TOK_START ][ (unsigned) '!' ] = TOK_OP_NOT;

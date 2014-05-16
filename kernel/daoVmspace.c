@@ -2454,20 +2454,20 @@ static void DaoMETH_Test( DaoProcess *proc, DaoValue *p[], int n )
 DaoFuncItem dao_builtin_methods[] =
 {
 	{ DaoMETH_Warn,
-		"warn( info :: string )"
+		"warn( invar info: string )"
 		/*
 		// Raise a warning with message "info".
 		*/
 	},
 	{ DaoMETH_Error,
-		"error( info :: string )"
+		"error( invar info: string )"
 		/*
 		// Raise an error with message "info";
 		// The exception for the error will be an instance of Exception::Error.
 		*/
 	},
 	{ DaoMETH_Error2,
-		"error( exception :: interface<Exception> )"
+		"error( invar exception: interface<Exception> )"
 		/*
 		// Raise an error with pre-created exception object.
 		// Here type "interface<Exception>" represents instance of any type derived
@@ -2475,7 +2475,8 @@ DaoFuncItem dao_builtin_methods[] =
 		*/
 	},
 	{ DaoMETH_Error3,
-		"error( eclass :: string|interface<class<Exception>>, info :: string, data : any = none )"
+		"error( invar eclass: string|interface<class<Exception>>,"
+							  "invar info: string, data : any = none )"
 		/*
 		// Raise an error of type "eclass" with message "info", and associate "data"
 		// to the error.
@@ -2497,7 +2498,8 @@ DaoFuncItem dao_builtin_methods[] =
 		*/
 	},
 	{ DaoMETH_Recover2,
-		"recover( eclass :: string|interface<class<Exception>> ) => interface<Exception>|none"
+		"recover( invar eclass: string|interface<class<Exception>> )"
+								"=> interface<Exception>|none"
 		/*
 		//
 		*/

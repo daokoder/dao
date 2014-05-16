@@ -115,8 +115,8 @@ static void DaoIO_Writeln2( DaoProcess *proc, DaoValue *p[], int N )
 // but 'type' can only be:
 //   d, i, o, u, x/X : for integer;
 //   e/E, f/F, g/G : for float and double;
-//   c/C : for character, c for local encoding, S for UTF-8;
-//   s/S : for string, s for local encoding, S for UTF-8;
+//   c/C : for character, c for local encoding;
+//   s/S : for string, S for local encoding;
 //   p : for any type, write address;
 //   a : automatic, for any type, write in the default format;
 // Namely the standard ones except 'n', and plus 'a'.
@@ -215,9 +215,9 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 			if( value->type == DAO_NONE || value->type > DAO_DOUBLE ) goto WrongParameter;
 			DaoStream_WriteFloat( self, DaoValue_GetDouble( value ) );
 		}else if( F == 's' && value->type == DAO_STRING ){
-			DaoStream_WriteLocalString( self, value->xString.value );
-		}else if( F == 'S' && value->type == DAO_STRING ){
 			DaoStream_WriteString( self, value->xString.value );
+		}else if( F == 'S' && value->type == DAO_STRING ){
+			DaoStream_WriteLocalString( self, value->xString.value );
 		}else if( F == 'p' ){
 			DaoStream_WritePointer( self, value );
 		}else if( F == 'a' ){
@@ -547,9 +547,9 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 
 DaoFuncItem dao_io_methods[] =
 {
-	{ DaoIO_Write2,    "write( ... :: any )" },
-	{ DaoIO_Writef2,   "writef( format : string, ... :: any )" },
-	{ DaoIO_Writeln2,  "writeln( ... :: any )" },
+	{ DaoIO_Write2,    "write( invar ... : any )" },
+	{ DaoIO_Writef2,   "writef( format : string, invar ... : any )" },
+	{ DaoIO_Writeln2,  "writeln( invar ... : any )" },
 	{ DaoIO_Read,      "read( )=>string" },
 	{ DaoIO_ReadFile,  "read( file : string, silent=0 )=>string" },
 	{ DaoIO_Open,      "open( )=>stream" },
@@ -566,9 +566,9 @@ static DaoFuncItem streamMeths[] =
 	{ DaoIO_Open,      "stream( )=>stream" },
 	{ DaoIO_Open,      "stream( file :string, mode :string )=>stream" },
 	{ DaoIO_Open,      "stream( fileno :int, mode :string )=>stream" },
-	{ DaoIO_Write,     "write( self :stream, ... :: any )" },
-	{ DaoIO_Writef,    "writef( self :stream, format : string, ... :: any )" },
-	{ DaoIO_Writeln,   "writeln( self :stream, ... :: any )" },
+	{ DaoIO_Write,     "write( self :stream, invar ... : any )" },
+	{ DaoIO_Writef,    "writef( self :stream, format : string, invar ... : any )" },
+	{ DaoIO_Writeln,   "writeln( self :stream, invar ... : any )" },
 	{ DaoIO_Flush,     "flush( self :stream )" },
 	{ DaoIO_Read,      "read( self :stream, count=0 )=>string" },
 	{ DaoIO_Read2,     "read( self :stream, quantity :enum<line, all> )=>string" },

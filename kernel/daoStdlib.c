@@ -428,7 +428,7 @@ DaoFuncItem dao_std_methods[] =
 	{ STD_Eval,      "eval( source :string, st=io::stdio )=>any" },
 	{ STD_Load,      "load( file :string, import=1, runim=0 )=>any" },
 	{ STD_Resource,  "resource( path :string )=>string" },
-	{ STD_About,     "about( ... :: any )=>string" },
+	{ STD_About,     "about( invar ... : any )=>string" },
 	{ STD_Debug,     "debug( ... )" },
 	{ STD_Version,   "version( verbose=0 )=>string" },
 
