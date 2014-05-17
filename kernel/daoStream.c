@@ -441,8 +441,10 @@ static void DaoIO_Enable( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
 	int what = p[1]->xEnum.value;
-	switch( what ){
-	case 0 : self->mode |= DAO_STREAM_AUTOCONV; break;
+	if( p[2]->xEnum.value ){
+		self->mode |= DAO_STREAM_AUTOCONV;
+	}else{
+		self->mode &= ~DAO_STREAM_AUTOCONV;
 	}
 }
 static void DaoIO_Seek( DaoProcess *proc, DaoValue *p[], int N )
