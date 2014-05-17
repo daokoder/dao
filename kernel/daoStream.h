@@ -34,15 +34,15 @@
 
 #include"daoType.h"
 
-#define IO_BUF_SIZE  512
 
 enum DaoStreamModes
 {
-	DAO_IO_FILE = 1 ,
-	DAO_IO_PIPE = 2 ,
-	DAO_IO_STRING = 4 ,
-	DAO_IO_READ = 1 ,
-	DAO_IO_WRITE = 2
+	DAO_STREAM_FILE     = 1<<0 ,
+	DAO_STREAM_PIPE     = 1<<1 ,
+	DAO_STREAM_STRING   = 1<<2 ,
+	DAO_STREAM_READABLE = 1<<3 ,
+	DAO_STREAM_WRITABLE = 1<<4 ,
+	DAO_STREAM_AUTOCONV = 1<<5
 };
 
 
@@ -50,12 +50,11 @@ struct DaoStream
 {
 	DAO_CSTRUCT_COMMON;
 
-	char        attribs;
-	char        mode;
+	short       mode;
+	daoint      offset;
 	char       *format;
 	FILE       *file;
 	DString    *streamString;
-	DString    *fname;
 
 	DaoUserStream *redirect;
 };

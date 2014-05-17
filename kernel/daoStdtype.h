@@ -204,13 +204,6 @@ DAO_DLL void DaoCstruct_Free( DaoCstruct *self );
 
 
 /* Opaque C/C++ data: */
-/* DaoCdata sub-types: */
-enum DaoCdataType
-{
-	DAO_CDATA_PTR = 1, /* opaque C/C++ data, not owned by the wrapper */
-	DAO_CDATA_CXX   /* opaque C/C++ data, owned by the wrapper */
-};
-
 struct DaoCdata
 {
 	DAO_CSTRUCT_COMMON;

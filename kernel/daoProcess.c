@@ -6061,7 +6061,7 @@ void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *sel
 	int i;
 	for(i=0; i<np; i++) ts[i] = DaoNamespace_GetType( ns, ps[i] );
 	DaoValue_Check( rout, selftype, ts, np, codemode, errors );
-	ss->attribs |= DAO_IO_STRING;
+	ss->mode |= DAO_STREAM_STRING;
 	DaoPrintCallError( errors, ss );
 	DArray_Delete( errors );
 	DaoProcess_RaiseError( self, "Param", ss->streamString->chars );

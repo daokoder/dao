@@ -1198,7 +1198,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 	char fmt[16];
 	char buf[512];
 
-	sstream->attribs |= DAO_IO_STRING;
+	sstream->mode |= DAO_STREAM_STRING;
 	memset( &valueBuffer, 0, sizeof(DaoValue) );
 	if( stream == NULL ) stream = proc->vmSpace->stdioStream;
 	if( self->original == NULL ){

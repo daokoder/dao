@@ -233,32 +233,29 @@ static void SYS_Shell( DaoProcess *proc, DaoValue *p[], int N )
 static void SYS_Popen( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *stream = NULL;
+	DString *fname = p[0]->xString.value;
 	char *mode;
-	DString *fname;
 
 	stream = DaoStream_New();
-	stream->attribs |= DAO_IO_PIPE;
-	fname = stream->fname;
-	DString_Assign( fname, p[0]->xString.value );
-	if( DString_Size( fname ) >0 ){
-		mode = DString_GetData( p[1]->xString.value );
-		stream->file = popen( DString_GetData( fname ), mode );
-		if( stream->file == NULL ){
-			DaoProcess_RaiseError( proc, NULL, "error opening pipe" );
-		}
-		stream->mode = 0;
-		if( strstr( mode, "+" ) )
-			stream->mode = DAO_IO_WRITE | DAO_IO_READ;
-		else{
-			if( strstr( mode, "r" ) )
-				stream->mode |= DAO_IO_READ;
-			if( strstr( mode, "w" ) || strstr( mode, "a" ) )
-				stream->mode |= DAO_IO_WRITE;
-		}
-	}else{
-		DaoProcess_RaiseError( proc, NULL, "empty command line" );
-	}
+	stream->mode |= DAO_STREAM_PIPE;
 	DaoProcess_PutValue( proc, (DaoValue*)stream );
+	if( DString_Size( fname ) == 0 ){
+		DaoProcess_RaiseError( proc, NULL, "empty command line" );
+		return;
+	}
+	mode = DString_GetData( p[1]->xString.value );
+	stream->file = popen( DString_GetData( fname ), mode );
+	if( stream->file == NULL ){
+		DaoProcess_RaiseError( proc, NULL, "error opening pipe" );
+		return;
+	}
+	stream->mode = 0;
+	if( strstr( mode, "+" ) ){
+		stream->mode = DAO_STREAM_WRITABLE | DAO_STREAM_READABLE;
+	}else{
+		if( strstr( mode, "r" ) ) stream->mode |= DAO_STREAM_READABLE;
+		if( strstr( mode, "w" ) || strstr( mode, "a" ) ) stream->mode |= DAO_STREAM_WRITABLE;
+	}
 }
 static void SYS_Time( DaoProcess *proc, DaoValue *p[], int N )
 {

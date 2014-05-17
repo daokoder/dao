@@ -3878,7 +3878,7 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 	int i, h, w = 100, n = self->callers->size;
 	DaoStream *ss = DaoStream_New();
 	DString *sstring = ss->streamString;
-	ss->attribs |= DAO_IO_STRING;
+	ss->mode |= DAO_STREAM_STRING;
 
 	DaoStream_WriteChars( ss, "[[" );
 	DaoStream_WriteChars( ss, self->ctype->typer->name );

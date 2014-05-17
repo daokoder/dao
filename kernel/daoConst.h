@@ -66,6 +66,8 @@ enum DaoSubTypes
 	DAO_ENUM_STATE ,
 	DAO_ENUM_FLAG ,
 	DAO_ENUM_BOOL ,
+	DAO_CDATA_PTR ,  /* opaque C/C++ data, not owned by the wrapper */
+	DAO_CDATA_CXX ,  /* opaque C/C++ data, owned by the wrapper */
 	DAO_PAIR ,
 	DAO_CFUNCTION ,
 	DAO_ROUTINES ,
