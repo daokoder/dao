@@ -625,13 +625,13 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		self = DaoType_GetBaseType( self );
 		type = DaoType_GetBaseType( type );
 		return DaoType_MatchToX( self, type, defs, binds );
-	}else if( self->tid > DAO_ENUM && self->invar && self->konst == 0 && type->invar == 0 ){
+	}else if( self->invar || type->invar ){
 		/*
 		// Invar type cannot match to variable type due to potential modification;
 		// But const type can, because constant will be copied when it is moved.
 		*/
-		return DAO_MT_NOT;
-	}else if( self->invar || type->invar ){
+		if( self->tid > DAO_ENUM && self->invar && ! self->konst && ! type->invar ) return 0;
+
 		if( self->invar ) self = DaoType_GetBaseType( self );
 		if( type->invar ) type = DaoType_GetBaseType( type );
 		mt = DaoType_MatchToX( self, type, defs, binds );
@@ -788,7 +788,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 				for(i=0,n=routines->size; i<n; i++){
 					if( routines->items.pRoutine[i]->routType == type ) return DAO_MT_EQ;
 				}
-				rout = DaoRoutine_ResolveByType( (DaoRoutine*)self->aux, NULL, tps, np, DVM_CALL );
+				rout = DaoRoutine_Resolve( (DaoRoutine*)self->aux, NULL, NULL, NULL, tps, np, DVM_CALL );
 				if( rout == NULL ) return DAO_MT_NOT;
 				return DaoType_MatchTo( rout->routType, type, defs );
 			}

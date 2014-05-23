@@ -93,8 +93,8 @@ TestVariadicFunction( 'abc', 123 )  # right parameter;
 ## With function type only
 ##########################
 
-global TestFunction2 = TestFunction
-global TestVariadicFunction2 = TestVariadicFunction
+var TestFunction2 = TestFunction
+var TestVariadicFunction2 = TestVariadicFunction
 
 TestFunction2( 'abc' )         # Test default parameter;
 TestFunction2( 'abc', 456.5 )  # implicit conversion;
@@ -113,8 +113,8 @@ TestVariadicFunction2( 'abc', 123 )  # right parameter;
 ## Dynamic Checking
 ##########################
 
-global TestFunction3 : any = TestFunction
-global TestVariadicFunction3 : any = TestVariadicFunction
+var TestFunction3 : any = TestFunction
+var TestVariadicFunction3 : any = TestVariadicFunction
 
 TestFunction3( 'abc' )         # Test default parameter;
 TestFunction3( 'abc', 456.5 )  # implicit conversion;

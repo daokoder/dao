@@ -407,9 +407,8 @@ static void DaoIO_Open( DaoProcess *proc, DaoValue *p[], int N )
 		}else{
 			stream->file = DaoIO_OpenFile( proc, p[0]->xString.value, mode, 0 );
 		}
-		stream->mode = 0;
 		if( strstr( mode, "+" ) ){
-			stream->mode = DAO_STREAM_WRITABLE | DAO_STREAM_READABLE;
+			stream->mode |= DAO_STREAM_WRITABLE | DAO_STREAM_READABLE;
 		}else{
 			if( strstr( mode, "r" ) )
 				stream->mode |= DAO_STREAM_READABLE;

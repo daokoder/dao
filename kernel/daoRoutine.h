@@ -186,8 +186,35 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine );
 void DaoRoutines_Import( DaoRoutine *self, DRoutines *other );
 
 
-/* Resolve overloaded, virtual and specialized function: */
-DAO_DLL DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int n, int code );
-DAO_DLL DaoRoutine* DaoRoutine_ResolveByType( DaoRoutine *self, DaoType *st, DaoType *t[], int n, int code );
+/*
+// Resolve overloaded routines based on parameter values and/or types:
+// -- For overloaded routines, it checks and returns the best routine that is
+//    callable with the given parameter values or types. The best routines is
+//    the routine that produces the highest score based type matching of the
+//    parameters;
+// -- At compiling time, routines are resolved exclusively by parameter types.
+//    So only the parameter types need to be passed to this function;
+// -- At running time, routines can be resolved by both parameter values and types,
+//    Parameter types are needed to handle "invar" parameters, because the invar
+//    type information may not be stored in the values (since it is not thread safe
+//    to tag normal values for invar parameters);
+// -- When both parameter values and types are passed to this function, type
+//    matching is performed on the values, with additional checks on the types
+//    for information that is not available in the values;
+// -- Non-overloaded routine is returned immediately without checking whether
+//    it is callable with the given parameter values and types.
+//    In order to check the routine against the paramter values and types,
+//    use DaoRoutine_ResolveX() instead;
+// -- The "callmode" parameter is a bit combination of the virtual instruction
+//    values for calls (DVM_CALL or DVM_MCALL) and the second argument for the
+//    instruction: DaoVmCode::code|(DaoVmCode::b<<16).
+*/
+DAO_DLL DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode );
+
+/*
+// Resolve overloaded routines and check if the routine is callable with the given
+// parameter values.
+*/
+DAO_DLL DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode );
 
 #endif

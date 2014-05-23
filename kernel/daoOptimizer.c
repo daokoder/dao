@@ -2182,17 +2182,6 @@ DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *routype, DArray *ro
 	return DaoNamespace_MakeType( NS, "routine", DAO_ROUTINE, routype->aux, types, k );
 }
 
-DaoRoutine* DaoRoutine_ResolveByTypeX( DaoRoutine *self, DaoType *st, DaoType *t[], int n, int codemode );
-DaoRoutine* DaoRoutine_ResolveByType( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int codemode )
-{
-	DaoRoutine *rout = DaoRoutine_ResolveByTypeX( self, selftype, ts, np, codemode );
-	if( rout == (DaoRoutine*)self ){ /* parameters not yet checked: */
-		if( DaoRoutine_CheckType( rout->routType, rout->nameSpace, selftype, ts, np, codemode, 0 ) ==0){
-			rout = NULL;
-		}
-	}
-	return rout;
-}
 void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
 void DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype,
 		DaoType *ts[], int np, int code, DMap *defs )
@@ -2263,6 +2252,7 @@ enum DaoTypingErrorCode
 	DTE_TYPE_WRONG_CONTAINER ,
 	DTE_DATA_CANNOT_CREATE ,
 	DTE_CALL_INVALID ,
+	DTE_CALL_NON_INVAR ,
 	DTE_CALL_NOT_PERMIT ,
 	DTE_CALL_WITHOUT_INSTANCE ,
 	DTE_FIELD_NOT_PERMIT ,
@@ -2290,6 +2280,7 @@ static const char*const DaoTypingErrorString[] =
 	"Wrong container type",
 	"Data cannot be created",
 	"Invalid call",
+	"Call non-invar method inside invar method",
 	"Call not permitted",
 	"Calling nonstatic method without instance",
 	"Member not permitted",
@@ -2339,8 +2330,8 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 		if( rout ){
 			rout2 = rout;
 			/* Check the method with self parameter first, then other methods: */
-			rout = DaoRoutine_ResolveByType( rout, ts[1], ts+2, bt!=NULL, DVM_CALL );
-			if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout2, NULL, ts+1, 1+(bt!=NULL), DVM_CALL );
+			rout = DaoRoutine_ResolveX( rout, NULL, ts[1], NULL, ts+2, bt!=NULL, DVM_CALL );
+			if( rout == NULL ) rout = DaoRoutine_ResolveX( rout2, NULL, NULL, NULL, ts+1, 1+(bt!=NULL), DVM_CALL );
 			/* if the operation is used in the overloaded operator, do operation by address */
 			if( boolop && rout == self ) return dao_type_int;
 			if( rout ) return ct;
@@ -2360,12 +2351,12 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 	rout = NULL;
 	if( ct ){ /* Check methods that can take all three parameters: */
 		/* Check the method with self parameter first, then other methods: */
-		rout = DaoRoutine_ResolveByType( rout2, ts[0], ts+1, 1+(bt!=NULL), DVM_CALL );
-		if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout2, NULL, ts, 2+(bt!=NULL), DVM_CALL );
+		rout = DaoRoutine_ResolveX( rout2, NULL, ts[0], NULL, ts+1, 1+(bt!=NULL), DVM_CALL );
+		if( rout == NULL ) rout = DaoRoutine_ResolveX( rout2, NULL, NULL, NULL, ts, 2+(bt!=NULL), DVM_CALL );
 	}
 	/* Check the method with self parameter first, then other methods: */
-	if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout2, ts[1], ts+2, bt!=NULL, DVM_CALL );
-	if( rout == NULL ) rout = DaoRoutine_ResolveByType( rout2, NULL, ts+1, 1+(bt!=NULL), DVM_CALL );
+	if( rout == NULL ) rout = DaoRoutine_ResolveX( rout2, NULL, ts[1], NULL, ts+2, bt!=NULL, DVM_CALL );
+	if( rout == NULL ) rout = DaoRoutine_ResolveX( rout2, NULL, NULL, NULL, ts+1, 1+(bt!=NULL), DVM_CALL );
 	/* if the operation is used in the overloaded operator, do operation by address */
 	if( boolop && rout == self ) return dao_type_int;
 	if( rout ) ct = & rout->routType->aux->xType;
@@ -2549,7 +2540,7 @@ FinishError:
 DaoRoutine* DaoValue_Check( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int codemode, DArray *errors )
 {
 	int i, n;
-	DaoRoutine *rout = DaoRoutine_ResolveByType( self, selftype, ts, np, codemode );
+	DaoRoutine *rout = DaoRoutine_ResolveX( self, NULL, selftype, NULL, ts, np, codemode );
 	if( rout ) return rout;
 	if( self->overloads == NULL ){
 		DaoRoutine_CheckError( self->nameSpace, self, self->routType, selftype, ts, np, codemode, errors );
@@ -4468,10 +4459,13 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 			if( rout->routHost && routine->routHost == NULL ) goto CallNotPermit;
 		}else if( vmc->code == DVM_CALL && routine->routHost ){
 			if( DaoType_ChildOf( routine->routHost, rout->routHost ) ){
-				int att1 = routine->attribs & DAO_ROUT_STATIC;
-				int att2 = rout->attribs & DAO_ROUT_STATIC;
-				int att3 = rout->attribs & DAO_ROUT_INITOR;
-				if( att1 != 0 && att2 == 0 && att3 == 0 ) goto CallWithoutInst;
+				int invarCaller = routine->attribs & DAO_ROUT_INVAR;
+				int staticCaller = routine->attribs & DAO_ROUT_STATIC;
+				int staticCallee = rout->attribs & DAO_ROUT_STATIC;
+				int invarCallee = rout->attribs & DAO_ROUT_INVAR;
+				int initorCallee = rout->attribs & DAO_ROUT_INITOR;
+				if( staticCaller && ! staticCallee && ! initorCallee ) goto CallWithoutInst;
+				if( invarCaller && ! invarCallee ) goto CallNonInvar;
 			}
 		}
 		checkfast = DVM_CALL && ((vmc->b & 0xff00) & ~DAO_CALL_TAIL) == 0;
@@ -4663,6 +4657,7 @@ TryPushBlockReturnType:
 	}
 	return 1;
 InvParam : return DaoInferencer_Error( self, DTE_PARAM_ERROR );
+CallNonInvar : return DaoInferencer_Error( self, DTE_CALL_NON_INVAR );
 CallNotPermit : return DaoInferencer_Error( self, DTE_CALL_NOT_PERMIT );
 CallWithoutInst : return DaoInferencer_Error( self, DTE_CALL_WITHOUT_INSTANCE );
 ErrorTyping: return DaoInferencer_Error( self, DTE_TYPE_NOT_MATCHING );
@@ -6501,7 +6496,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		selfpar = (DaoValue*) obj;
 	}
 
-	decorator = DaoRoutine_Resolve( decorator, selfpar, p, n );
+	decorator = DaoRoutine_ResolveX( decorator, selfpar, NULL, p, NULL, n, 0 );
 	if( decorator == NULL || decorator->type != DAO_ROUTINE ) return NULL;
 
 	nested = decorator->routType->nested;
@@ -6522,7 +6517,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	code = DVM_CALL + (ftype->attrib & DAO_TYPE_SELF);
 	/* ftype->aux is NULL for type "routine": */
 	if( ftype->aux )
-		oldfn = DaoRoutine_ResolveByType( self, NULL, ptypes->items.pType, ptypes->size, code );
+		oldfn = DaoRoutine_ResolveX( self, NULL, NULL, NULL, ptypes->items.pType, ptypes->size, code );
 	if( oldfn == NULL ) return NULL;
 
 	newfn = DaoRoutine_Copy( decorator, 1, 1, 1 );

@@ -694,17 +694,9 @@ DAO_DLL void  DaoArray_SetBuffer( DaoArray *self, void *buffer, daoint size );
 
 
 /*
-// DaoRoutine_Resolve() resolves from overloaded routines to get the best routine that
-// matches the parameter values.
-//
-// Note: if the routine is not overloaded, it is returned without checking.
-//
-// The parameter values are normally specified in an array pointed by "P" with "N" entries.
-// If a non-null value "O" is passed, it will be checked against the "self" parameter of
-// the routine if it has one, and the values in "P" will be checked against the rest of
-// of the parameters.
+// See description in "daoRoutine.h".
 */
-DAO_DLL DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *O, DaoValue *P[], int N );
+DAO_DLL DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode );
 
 /*
 // DaoRoutine_IsWrapper() checks if the routine is a wrapped C function.

@@ -249,9 +249,8 @@ static void SYS_Popen( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseError( proc, NULL, "error opening pipe" );
 		return;
 	}
-	stream->mode = 0;
 	if( strstr( mode, "+" ) ){
-		stream->mode = DAO_STREAM_WRITABLE | DAO_STREAM_READABLE;
+		stream->mode |= DAO_STREAM_WRITABLE | DAO_STREAM_READABLE;
 	}else{
 		if( strstr( mode, "r" ) ) stream->mode |= DAO_STREAM_READABLE;
 		if( strstr( mode, "w" ) || strstr( mode, "a" ) ) stream->mode |= DAO_STREAM_WRITABLE;

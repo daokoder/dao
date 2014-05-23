@@ -2522,7 +2522,7 @@ static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block 
 			decoParam = DaoValue_CastList( B2->value );
 			n = decoParam->value->size;
 			for(j=0; j<n; j++) params[j+1] = decoParam->value->items.pValue[j];
-			decoFunc = DaoRoutine_Resolve( decoFunc, selfpar, params, n+1 );
+			decoFunc = DaoRoutine_ResolveX( decoFunc, selfpar, NULL, params, NULL, n+1, 0 );
 			if( decoFunc == NULL || DaoRoutine_Decorate( routine, decoFunc, params, n+1, 1 ) == NULL ){
 				DaoByteCoder_Error( self, block, "Routine decoration failed!" );
 				return;

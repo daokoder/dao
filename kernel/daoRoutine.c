@@ -164,84 +164,6 @@ int DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value )
 	DaoValue_MarkConst( consts->items.pValue[consts->size-1] );
 	return consts->size-1;
 }
-static int DaoRoutine_Check( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int n, int code )
-{
-	DNode *node;
-	DaoValue **dpar = p;
-	DMap *defs = NULL;
-	DMap *mapNames = self->routType->mapNames;
-	DaoType *abtp, **parType = self->routType->nested->items.pType;
-	int need_self = self->routType->attrib & DAO_TYPE_SELF;
-	int selfChecked = 0, selfMatch = 0;
-	int ndef = self->parCount;
-	int npar = n;
-	int j, ifrom, ito;
-	int parpass[DAO_MAX_PARAM];
-
-	/* func();
-	 * obj.func();
-	 * obj::func();
-	 */
-	if( code == DVM_MCALL && ! (self->routType->attrib & DAO_TYPE_SELF) ){
-		npar --;
-		dpar ++;
-	}else if( obj && need_self && code != DVM_MCALL ){
-		/* class DaoClass : CppClass{ cppmethod(); }
-		 * use io;
-		 * print(..);
-		 */
-		abtp = & parType[0]->aux->xType;
-		selfMatch = DaoType_MatchValue2( abtp, obj, defs );
-		if( selfMatch ){
-			parpass[0] = selfMatch;
-			selfChecked = 1;
-		}
-	}
-	/*
-	   if( strcmp( rout->routName->chars, "expand" ) ==0 )
-	   printf( "%i, %p, parlist = %s; npar = %i; ndef = %i, %i\n", i, rout, rout->routType->name->chars, npar, ndef, selfChecked );
-	 */
-	if( (npar | ndef) ==0 ) return 1;
-	if( npar > ndef ) return 0;
-	defs = DMap_New(0,0);
-	for( j=selfChecked; j<ndef; j++) parpass[j] = 0;
-	for(ifrom=0; ifrom<npar; ifrom++){
-		DaoValue *val = dpar[ifrom];
-		ito = ifrom + selfChecked;
-		if( ito < ndef && parType[ito]->tid == DAO_PAR_VALIST ){
-			DaoType *vltype = (DaoType*) parType[ito]->aux;
-			for(; ifrom<npar; ifrom++){
-				DaoValue *val = dpar[ifrom];
-				if( vltype && DaoType_MatchValue2( vltype, val, defs ) == 0 ) goto NotMatched;
-				parpass[ifrom+selfChecked] = 1;
-			}
-			break;
-		}
-		if( ito >= ndef ) goto NotMatched;
-		abtp = parType[ito];
-		if( val->type == DAO_PAR_NAMED ){
-			if( DString_EQ( val->xNameValue.name, abtp->fname ) == 0 ) goto NotMatched;
-			val = val->xNameValue.value;
-		}
-		parpass[ito] = DaoType_MatchValue2( (DaoType*) abtp->aux, val, defs );
-		/*
-		   printf( "%i:  %i  %s\n", parpass[ito], abtp->tid, abtp->name->chars );
-		 */
-		if( parpass[ito] == 0 ) goto NotMatched;
-	}
-	for(ito=0; ito<ndef; ito++){
-		int m = parType[ito]->tid;
-		if( m == DAO_PAR_VALIST ) break;
-		if( parpass[ito] ) continue;
-		if( m != DAO_PAR_DEFAULT ) goto NotMatched;
-		parpass[ito] = 1;
-	}
-	DMap_Delete( defs );
-	return 1;
-NotMatched:
-	DMap_Delete( defs );
-	return 0;
-}
 
 DaoTypeBase routTyper=
 {
@@ -644,91 +566,79 @@ static DaoRoutine* DParamNode_GetLeaf( DParamNode *self, int *ms, int mode )
 	}
 	return NULL;
 }
-static DaoRoutine* DParamNode_Lookup( DParamNode *self, DaoValue *p[], int n, int mode, int strict, int *ms, DMap *defs, int clear )
+
+
+static int Dao_CheckParameter( DaoType *partype, DaoValue *argvalue, DaoType *argtype, DMap *defs )
 {
-	int i, m, k = 0, max = 0;
-	DaoRoutine *rout = NULL;
-	DaoRoutine *best = NULL;
-	DaoValue *value = NULL;
-	DParamNode *param;
-
-	*ms = 1;
-	if( n == 0 ) return DParamNode_GetLeaf( self, ms, mode );
-
-	if( self->type2 && self->type2->tid == DAO_PAR_VALIST ){
-		*ms = DAO_MT_EQ;
-		for(i=0; i<n; ++i){
-			m = DaoType_MatchValue( self->type, p[i], defs );
-			if( m == 0 ) return NULL;
-			if( m < *ms ) *ms = m;
-		}
-		return DParamNode_GetLeaf( self, & k, mode );
+	int m = 0;
+	if( argvalue && argtype && argtype->tid > DAO_ENUM ){
+		m = DaoType_MatchValue( partype, argvalue, defs );
+		/* See comments in DaoType_MatchToX() regarding invariable: */
+		if( argtype->invar && ! argtype->konst && ! partype->invar ) return 0;
+	}else if( argvalue ){
+		m = DaoType_MatchValue( partype, argvalue, defs );
+	}else if( argtype ){
+		m = DaoType_MatchTo( argtype, partype, defs );
 	}
-
-	value = p[0];
-	for(param=self->first; param; param=param->next){
-		int tid = param->type2 ? param->type2->tid : 0;
-		DaoType *type = param->type;
-		if( type == NULL ) continue;
-		if( value->type == DAO_PAR_NAMED && (tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT) ){
-			if( DString_EQ( value->xNameValue.name, param->type2->fname ) == 0 ) continue;
-		}
-		if( defs && clear ) DMap_Reset( defs );
-		m = DaoType_MatchValue( type, value, defs );
-		if( m == 0 ) continue;
-		if( strict && m < DAO_MT_ANY ) continue;
-		rout = DParamNode_Lookup( param, p+1, n-1, mode, strict, & k, defs, 0 );
-		if( rout == NULL ) continue;
-		m += k;
-		if( m > max ){
-			best = rout;
-			max = m;
-		}
-	}
-	*ms = max;
-	return best;
+	return m;
 }
-static DaoRoutine* DParamNode_LookupByType( DParamNode *self, DaoType *types[], int n, int mode, int strict, int *ms, DMap *defs, int clear )
+
+static DaoRoutine* DParamNode_NewLookup( DParamNode *self, DaoValue *values[], DaoType *types[], int count, int mode, int strict, int *ms, DMap *defs, int clear )
 {
-	int i, m, k = 0, max = 0;
+	int i, m, mt, mt2, k = 0, max = 0;
+	DaoValue **values2 = values ? values + 1 : NULL;
+	DaoType  **types2  = types  ? types  + 1 : NULL;
 	DaoRoutine *rout = NULL;
 	DaoRoutine *best = NULL;
-	DaoType *partype = NULL;
-	DParamNode *param;
+	DaoValue *argvalue = NULL;
+	DaoType *argtype = NULL;
+	DParamNode *parnode;
 
 	*ms = 1;
-	if( n == 0 ) return DParamNode_GetLeaf( self, ms, mode );
-	
+	if( count == 0 ) return DParamNode_GetLeaf( self, ms, mode );
+
 	if( self->type2 && self->type2->tid == DAO_PAR_VALIST ){
 		*ms = DAO_MT_EQ;
-		for(i=0; i<n; ++i){
-			m = DaoType_MatchTo( types[i], self->type, defs );
+		for(i=0; i<count; ++i){
+			argvalue = values ? values[i] : NULL;
+			argtype = types ? types[i] : NULL;
+			m = Dao_CheckParameter( self->type, argvalue, argtype, defs );
 			if( m == 0 ) return NULL;
 			if( m < *ms ) *ms = m;
 		}
 		return DParamNode_GetLeaf( self, & k, mode );
 	}
 
-	partype = types[0];
-	for(param=self->first; param; param=param->next){
-		int tid = param->type2 ? param->type2->tid : 0;
-		DaoType *type = param->type;
+	argvalue = values ? values[0] : NULL;
+	argtype = types ? types[0] : NULL;
+	for(parnode=self->first; parnode; parnode=parnode->next){
+		int tid = parnode->type2 ? parnode->type2->tid : 0;
+		int checkname = tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT;
+		DaoType *type = parnode->type;
 		if( type == NULL ) continue;
-		if( partype->tid == DAO_PAR_NAMED && (tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT) ){
-			if( DString_EQ( partype->fname, param->type2->fname ) == 0 ) continue;
+		if( argvalue && argvalue->type == DAO_PAR_NAMED ){
+			DString *parname = parnode->type2->fname;
+			if( checkname && DString_EQ( argvalue->xNameValue.name, parname ) == 0 ) continue;
+			argvalue = argvalue->xNameValue.value;
 		}
-		if( param->type2->attrib & DAO_TYPE_SELFNAMED ){
+		if( argtype && argtype->tid == DAO_PAR_NAMED ){
+			DString *parname = parnode->type2->fname;
+			if( checkname && DString_EQ( argtype->fname, parname ) == 0 ) continue;
+			argtype = (DaoType*) argtype->aux;
+		}
+		if( parnode->type2 && (parnode->type2->attrib & DAO_TYPE_SELFNAMED) ){
 			/*
 			// self parameter will be passed by reference, const self argument
 			// should not be passed to non-const self parameter;
 			*/
-			if( partype->invar && param->type->invar == 0 ) continue;
+			if( argtype && argtype->invar && parnode->type->invar == 0 ) continue;
 		}
 		if( defs && clear ) DMap_Reset( defs );
-		m = DaoType_MatchTo( partype, type, defs );
+
+		m = Dao_CheckParameter( parnode->type, argvalue, argtype, defs );
 		if( m == 0 ) continue;
 		if( strict && m < DAO_MT_ANY ) continue;
-		rout = DParamNode_LookupByType( param, types+1, n-1, mode, strict, & k, defs, 0 );
+		rout = DParamNode_NewLookup( parnode, values2, types2, count-1, mode, strict, & k, defs, 0 );
 		if( rout == NULL ) continue;
 		m += k;
 		if( m > max ){
@@ -739,186 +649,205 @@ static DaoRoutine* DParamNode_LookupByType( DParamNode *self, DaoType *types[], 
 	*ms = max;
 	return best;
 }
-static DaoRoutine* DRoutines_Lookup2( DRoutines *self, DaoValue *obj, DaoValue *p[], int n, int code, int mode, int strict )
+
+static DaoRoutine* DRoutines_NewLookup2( DRoutines *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode, int strict )
 {
-	int i, k, m, score = 0;
+	int i, k, m, mt, mt2, score = 0;
+	int code = callmode & 0xffff;
+	int mode = callmode >> 16;
 	int mcall = code == DVM_MCALL;
-	DParamNode *param = NULL;
+	DParamNode *parnode = NULL;
 	DaoRoutine *rout = NULL;
 	DMap *defs = NULL;
 	if( self->attribs ) defs = DHash_New(0,0);
-	if( obj && obj->type && mcall ==0 ){
+	if( self->mtree != NULL && (svalue != NULL || stype != NULL) && mcall == 0 ){
+		DaoRoutine *rout2 = NULL;
 		/*
 		// class Klass {
 		//     routine Meth1() { }
 		//     routine Meth2() { Meth1() }
 		// }
-		*/
-		if( self->mtree ){
-			DaoRoutine *rout2 = NULL;
-			for(param=self->mtree->first; param; param=param->next){
-				if( param->type == NULL ) continue;
-				if( defs ) DMap_Reset( defs );
-				m = DaoType_MatchValue( param->type, obj, defs );
-				if( strict && m < DAO_MT_ANY ) continue;
-				if( m == 0 ) continue;
-				rout2 = DParamNode_Lookup( param, p, n, mode, strict, & k, defs, 0 );
-				if( rout2 == NULL ) continue;
-				m += k;
-				if( m > score ){
-					rout = rout2;
-					score = m;
-				}
+		 */
+		for(parnode=self->mtree->first; parnode; parnode=parnode->next){
+			if( parnode->type == NULL ) continue;
+			if( stype != NULL && stype->invar && parnode->type->invar == 0 ) continue;
+
+			m = Dao_CheckParameter( parnode->type, svalue, stype, defs );
+			if( strict && m < DAO_MT_ANY ) continue;
+			if( m == 0 ) continue;
+
+			rout2 = DParamNode_NewLookup( parnode, values, types, count, mode, strict, & k, defs, 0 );
+			if( rout2 == NULL ) continue;
+
+			m += k;
+			if( m > score ){
+				rout = rout2;
+				score = m;
 			}
-			if( rout ) goto Finalize;
 		}
+		if( rout ) goto Finalize;
 	}
 	if( mcall && self->mtree ){
 		/*
 		// object = Klass()
 		// object.Meth1()
 		*/
-		rout = DParamNode_Lookup( self->mtree, p, n, mode, strict, & score, defs, 1 );
+		rout = DParamNode_NewLookup( self->mtree, values, types, count, mode, strict, & score, defs, 1 );
 		if( rout ) goto Finalize;
 	}
-	if( mcall == 0 && obj == NULL && self->mtree ){
+	if( mcall == 0 && svalue == NULL && stype == NULL && self->mtree ){
 		/*
 		// routine test(self: array<int>){}
 		// routine test(self: array<int>, x: int){}
 		// test([1, 2, 3]) 
 		*/
-		rout = DParamNode_Lookup( self->mtree, p, n, mode, strict, & score, defs, 1 );
+		rout = DParamNode_NewLookup( self->mtree, values, types, count, mode, strict, & score, defs, 1 );
 		if( rout ) goto Finalize;
 	}
 	if( self->tree ){
 		if( mcall ){
 			/* obj.function(), where function() is not method of obj: */
-			p += 1;
-			n -= 1;
+			if( values ) values += 1;
+			if( types  ) types += 1;
+			count -= 1;
 		}
-		rout = DParamNode_Lookup( self->tree, p, n, mode, strict, & score, defs, 1 );
+		rout = DParamNode_NewLookup( self->tree, values, types, count, mode, strict, & score, defs, 1 );
 	}
 Finalize:
 	if( defs ) DMap_Delete( defs );
 	return rout;
 }
-static DaoRoutine* DRoutines_LookupByType2( DRoutines *self, DaoType *selftype, DaoType *types[], int n, int code, int mode, int strict )
+static DaoRoutine* DRoutines_NewLookup( DRoutines *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode )
 {
-	int i, k, m, score = 0;
-	int mcall = code == DVM_MCALL;
-	DParamNode *param = NULL;
-	DaoRoutine *rout = NULL;
-	DMap *defs = NULL;
-	if( self->attribs ) defs = DHash_New(0,0);
-	if( selftype && mcall ==0 ){
-		if( self->mtree ){
-			DaoRoutine *rout2 = NULL;
-			for(param=self->mtree->first; param; param=param->next){
-				if( param->type == NULL ) continue;
-				if( selftype->invar && param->type->invar == 0 ) continue;
-				if( defs ) DMap_Reset( defs );
-				m = DaoType_MatchTo( selftype, param->type, defs );
-				if( strict && m < DAO_MT_ANY ) continue;
-				if( m == 0 ) continue;
-				rout2 = DParamNode_LookupByType( param, types, n, mode, strict, & k, defs, 0 );
-				if( rout2 == NULL ) continue;
-				m += k;
-				if( m > score ){
-					rout = rout2;
-					score = m;
-				}
-			}
-			if( rout ) goto Finalize;
-		}
-	}
-	if( mcall && self->mtree ){
-		rout = DParamNode_LookupByType( self->mtree, types, n, mode, strict, & score, defs, 1 );
-		if( rout ) goto Finalize;
-	}
-	if( mcall == 0 && selftype == NULL && self->mtree ){
-		rout = DParamNode_LookupByType( self->mtree, types, n, mode, strict, & score, defs, 1 );
-		if( rout ) goto Finalize;
-	}
-	if( self->tree ){
-		if( mcall ){
-			types += 1;
-			n -= 1;
-		}
-		rout = DParamNode_LookupByType( self->tree, types, n, mode, strict, & score, defs, 1 );
-	}
-Finalize:
-	if( defs ) DMap_Delete( defs );
-	return rout;
+	return DRoutines_NewLookup2( self, svalue, stype, values, types, count, callmode, 0 );
 }
-static DaoRoutine* DRoutines_Lookup( DRoutines *self, DaoValue *obj, DaoValue *p[], int n, int code, int mode )
+
+DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode )
 {
-	return DRoutines_Lookup2( self, obj, p, n, code, mode, 0 );
-}
-static DaoRoutine* DRoutines_LookupByType( DRoutines *self, DaoType *selftype, DaoType *types[], int n, int code, int mode )
-{
-	return DRoutines_LookupByType2( self, selftype, types, n, code, mode, 0 );
-}
-DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *obj, DaoValue *p[], int n, int codemode )
-{
-	DaoRoutine *rout;
-	int code = codemode & 0xffff;
-	int mode = codemode >> 16;
-	int mcall = code == DVM_MCALL;
+	DaoRoutine *rout, *rout2;
 	int b1, b2;
 
 	if( self == NULL ) return NULL;
 	if( self->overloads ){
-		self = DRoutines_Lookup( self->overloads, obj, p, n, code, mode );
+		self = DRoutines_NewLookup( self->overloads, svalue, stype, values, types, count, callmode );
+
 		if( self == NULL ) return NULL;
 	}
 	rout = self;
 	if( rout->specialized ){
 		/* strict checking for specialized routines: */
-		DaoRoutine *rt = DRoutines_Lookup2( rout->specialized, obj, p, n, code, mode, 1 );
+		rout2 = DRoutines_NewLookup2( rout->specialized, svalue, stype, values, types, count, callmode, 1 );
+
 		/*
 		// If the routine has a body, check if it has done specialization.
 		// Only used specialized routine for thread safety to avoid the
 		// situation where the routine is used for execution, but its body
 		// is still undergoing specialization.
 		*/
-		if( rt && (rt->body == NULL || rt->body->specialized) ) rout = rt;
+		if( rout2 && (rout2->body == NULL || rout2->body->specialized) ) rout = rout2;
 	}
-	b1 = (mode & DAO_CALL_BLOCK) != 0;
+	b1 = ((callmode>>16) & DAO_CALL_BLOCK) != 0;
 	b2 = (rout->attribs & DAO_ROUT_CODESECT) != 0;
 	if( b1 != b2 ) return NULL;
 	return (DaoRoutine*) rout;
 }
-DaoRoutine* DaoRoutine_ResolveByTypeX( DaoRoutine *self, DaoType *st, DaoType *t[], int n, int codemode )
+
+static int DaoRoutine_Check( DaoRoutine *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode )
 {
-	int code = codemode & 0xffff;
-	int mode = codemode >> 16;
-	int b1, b2;
-	if( self == NULL ) return NULL;
-	if( self->overloads ){
-		self = DRoutines_LookupByType( self->overloads, st, t, n, code, mode );
-		if( self == NULL ) return NULL;
-	}
-	if( self->specialized ){
-		/* strict checking for specialized routines: */
-		DaoRoutine *rt = DRoutines_LookupByType2( self->specialized, st, t, n, code, mode, 1 );
+	DNode *node;
+	DMap *defs = DMap_New(0,0);
+	DMap *mapNames = self->routType->mapNames;
+	DaoValue *argvalue;
+	DaoType *partype, *argtype;
+	DaoType **partypes = self->routType->nested->items.pType;
+	DaoType **argtypes = types;
+	DaoValue **argvalues = values;
+	int need_self = self->routType->attrib & DAO_TYPE_SELF;
+	int code = callmode & 0xffff;
+	int selfChecked = 0, selfMatch = 0;
+	int parcount = self->parCount;
+	int argcount = count;
+	int j, ok, argindex, parindex;
+	int parpass[DAO_MAX_PARAM];
+
+	/* Call types: func(..), obj.func(..), obj::func(..); */
+	if( code == DVM_MCALL && ! (self->routType->attrib & DAO_TYPE_SELF) ){
+		if( argvalues ) argvalues ++;
+		if( argtypes )  argtypes ++;
+		argcount --;
+	}else if( (svalue != NULL || stype != NULL) && need_self && code != DVM_MCALL ){
 		/*
-		// no need to check for specialization,
-		// because routines returned by this are not used for execution:
+		// class DaoClass : CppClass { cppmethod(); }
+		// use io; writeln(..);
 		*/
-		if( rt ) return rt;
+		partype = (DaoType*) partypes[0]->aux; /* name:type, or name=type; */
+		selfMatch = Dao_CheckParameter( partype, svalue, stype, defs );
+		if( selfMatch ){
+			parpass[0] = selfMatch;
+			selfChecked = 1;
+		}
 	}
-	b1 = (mode & DAO_CALL_BLOCK) != 0;
-	b2 = (self->attribs & DAO_ROUT_CODESECT) != 0;
-	if( b1 != b2 ) return NULL;
-	return self;
+#if 0
+	if( strcmp( rout->routName->chars, "expand" ) ==0 )
+		printf( "%i, %p, parlist = %s; argcount = %i; parcount = %i, %i\n", i, rout, rout->routType->name->chars, argcount, parcount, selfChecked );
+#endif
+
+	if( (argcount | parcount) == 0 ) goto Matched;
+	if( argcount > parcount ) goto NotMatched;
+
+	for(j=selfChecked; j<parcount; ++j) parpass[j] = 0;
+
+	for(argindex=0; argindex<argcount; argindex++){
+		argvalue = argvalues ? argvalues[argindex] : NULL;
+		argtype  = argtypes  ? argtypes[ argindex] : NULL;
+		parindex = argindex + selfChecked;
+		if( parindex >= parcount ) goto NotMatched;
+		partype = partypes[parindex];
+		if( partype->tid == DAO_PAR_VALIST ){
+			partype = (DaoType*) partype->aux;  /* ... or ...:type; */
+			for(; argindex<argcount; argindex++){
+				argvalue = argvalues ? argvalues[argindex] : NULL;
+				argtype  = argtypes  ? argtypes[ argindex] : NULL;
+				ok = Dao_CheckParameter( partype, argvalue, argtype, defs );
+				if( partype && ! ok ) goto NotMatched;
+				parpass[argindex+selfChecked] = 1;
+			}
+			break;
+		}else if( (partype->attrib & DAO_TYPE_SELFNAMED) && partype->aux->xType.invar == 0 ){
+			if( argtype && argtype->invar != 0 ) goto NotMatched;
+		}
+		if( argvalue != NULL && argvalue->type == DAO_PAR_NAMED ){
+			if( DString_EQ( argvalue->xNameValue.name, partype->fname ) == 0 ) goto NotMatched;
+			argvalue = argvalue->xNameValue.value;
+		}
+		parpass[parindex] = Dao_CheckParameter( partype, argvalue, argtype, defs );
+		/*
+		   printf( "%i:  %i  %s\n", parpass[parindex], abtp->tid, abtp->name->chars );
+		 */
+		if( parpass[parindex] == 0 ) goto NotMatched;
+	}
+	for(parindex=0; parindex<parcount; parindex++){
+		int tid = partypes[parindex]->tid;
+		if( tid == DAO_PAR_VALIST ) break;
+		if( parpass[parindex] ) continue;
+		if( tid != DAO_PAR_DEFAULT ) goto NotMatched;
+		parpass[parindex] = 1;
+	}
+Matched:
+	DMap_Delete( defs );
+	return 1;
+NotMatched:
+	DMap_Delete( defs );
+	return 0;
 }
-DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *o, DaoValue *p[], int n )
+
+DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode )
 {
-	DaoRoutine *rout = DaoRoutine_ResolveX( self, o, p, n, DVM_CALL );
-	if( rout == (DaoRoutine*)self ){ /* parameters not yet checked: */
-		if( DaoRoutine_Check( rout, o, p, n, DVM_CALL ) ==0 ) return NULL;
+	DaoRoutine *rout = DaoRoutine_Resolve( self, svalue, stype, values, types, count, callmode );
+	if( rout == self ){ /* parameters not yet checked: */
+		if( DaoRoutine_Check( self, svalue, stype, values, types, count, callmode ) == 0 ){
+			return NULL;
+		}
 	}
 	return rout;
 }
-
-

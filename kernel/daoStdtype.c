@@ -790,9 +790,9 @@ static void DaoSTR_Chop( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoSTR_Trim( DaoProcess *proc, DaoValue *p[], int N )
 {
-	daoint head = p[1]->xInteger.value;
-	daoint tail = p[2]->xInteger.value;
-	daoint utf8 = p[3]->xInteger.value;
+	daoint head = p[1]->xEnum.value & 0x1;
+	daoint tail = p[1]->xEnum.value & 0x2;
+	daoint utf8 = p[2]->xInteger.value;
 	DString_Trim( p[0]->xString.value, head, tail, utf8 );
 	DaoProcess_PutReference( proc, p[0] );
 }
@@ -1248,7 +1248,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Trim,
-		"trim( self: string, where: enum<head,tail,both> = $both, utf8 = 0 ) => string"
+		"trim( self: string, where: enum<head;tail> = $head+$tail, utf8 = 0 ) => string"
 		/*
 		// Trim whitespaces from the head and/or the tail of the string;
 		// If "utf8" is not zero, all bytes that do not constitute a

@@ -2818,7 +2818,7 @@ static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 		DaoList *decoParam = self->decoParams->items.pList[i];
 		n = decoParam->value->size;
 		for(j=0; j<n; j++) params[j+1] = decoParam->value->items.pValue[j];
-		decoFunc = DaoRoutine_Resolve( decoFunc, selfpar, params, n+1 );
+		decoFunc = DaoRoutine_ResolveX( decoFunc, selfpar, NULL, params, NULL, n+1, 0 );
 		if( decoFunc == NULL || DaoRoutine_Decorate( rout, decoFunc, params, n+1, 1 ) == NULL ){
 			DaoParser_Error( self, DAO_INVALID_FUNCTION_DECORATION, rout->routName );
 			return;

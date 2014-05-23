@@ -1060,7 +1060,7 @@ int DaoClass_UseMixinDecorators( DaoClass *self )
 			if( rout->attribs & (DAO_ROUT_CODESECT|DAO_ROUT_DECORATOR) ) continue;
 			if( rout->routHost != self->objType ) continue;
 
-			deco2 = DaoRoutine_Resolve( deco, (DaoValue*) obj, & cst, 1 );
+			deco2 = DaoRoutine_ResolveX( deco, (DaoValue*) obj, NULL, & cst, NULL, 1, 0 );
 			if( deco2 == NULL ) continue;
 			if( DArray_MatchAffix( deco2->body->decoTargets, rout->routName ) == 0 ) continue;
 			bl = bl && DaoRoutine_Decorate( rout, deco2, & cst, 1, 1 ) != NULL;
