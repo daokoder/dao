@@ -105,7 +105,7 @@ static void DaoObject_Core_GetField( DaoValue *self0, DaoProcess *proc, DString 
 			rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, field, &pars,1,0,0 );
 		}
 	}else{
-		DaoProcess_PutReference( proc, value );
+		DaoProcess_PutValue( proc, value );
 	}
 	if( rc ) DaoProcess_RaiseException( proc, daoExceptionName[rc], name->chars, NULL );
 }

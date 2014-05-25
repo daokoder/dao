@@ -2271,6 +2271,26 @@ DaoType* DaoType_Specialize( DaoType *self, DaoType *types[], int count )
 int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
 
 /*
+// For constructors and static methods.
+// Note: types are not checked!
+*/
+static void DaoType_InitHostTypeDefines( DaoType *self, DaoType *type, DMap *defs )
+{
+	int i, N;
+	DMap_Insert( defs, type, self );
+	if( self->aux && type->aux && self->aux->type == DAO_TYPE && type->aux->type == DAO_TYPE ){
+		DaoType_InitHostTypeDefines( (DaoType*) self->aux, (DaoType*) type->aux, defs );
+	}
+	if( self->nested == NULL || type->nested == NULL ) return;
+	N = self->nested->size < type->nested->size ? self->nested->size : type->nested->size;
+	for(i=0; i<N; ++i){
+		DaoType *T1 = self->nested->items.pType[i];
+		DaoType *T2 = type->nested->items.pType[i];
+		DaoType_InitHostTypeDefines( T1, T2, defs );
+	}
+}
+
+/*
 // Init type defines for methods which may have type holders different from
 // those of the host type.
 */
@@ -2279,8 +2299,7 @@ static void DaoType_InitTypeDefines( DaoType *self, DaoRoutine *method, DMap *de
 	DaoType *type = method->routType;
 	daoint i;
 
-	/* For constructors and static methods: */
-	DMap_Insert( defs, self->typer->core->kernel->abtype, self );
+	DaoType_InitHostTypeDefines( self, self->typer->core->kernel->abtype, defs );
 
 	if( !(type->attrib & DAO_TYPE_SELF) ) return;
 	type = (DaoType*) type->nested->items.pType[0]->aux; /* self:type */

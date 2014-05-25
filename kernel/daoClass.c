@@ -56,7 +56,7 @@ static void DaoClass_GetField( DaoValue *self0, DaoProcess *proc, DString *name 
 		DString_Append( mbs, name );
 		DaoProcess_RaiseException( proc, daoExceptionName[rc], mbs->chars, NULL );
 	}else{
-		DaoProcess_PutReference( proc, value );
+		DaoProcess_PutValue( proc, value );
 	}
 	DString_Delete( mbs );
 }

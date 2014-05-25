@@ -1334,7 +1334,7 @@ static void DaoARRAY_Reverse( DaoProcess *proc, DaoValue *p[], int npar )
 	float swf, *df = self->data.f;
 	daoint swi, *di = self->data.i;
 
-	DaoProcess_PutReference( proc, p[0] );
+	DaoProcess_PutValue( proc, p[0] );
 	for(i=0; i<N/2; i++){
 		switch( self->etype ){
 		case DAO_INTEGER : swi = di[i]; di[i] = di[N-1-i]; di[N-1-i] = swi; break;
@@ -2401,7 +2401,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 		break;
 	case DVM_FUNCT_SELECT : list = DaoProcess_PutList( proc ); break;
 	case DVM_FUNCT_COUNT : count = DaoProcess_PutInteger( proc, 0 ); break;
-	case DVM_FUNCT_APPLY : DaoProcess_PutReference( proc, (DaoValue*)self ); break;
+	case DVM_FUNCT_APPLY : DaoProcess_PutValue( proc, (DaoValue*)self ); break;
 	}
 	if( sect == NULL ) return;
 	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;

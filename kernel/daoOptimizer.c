@@ -5551,15 +5551,18 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					k = routine->routType->nested->size;
 					tp = routine->routType->nested->items.pType;
 					ct = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, tp, k );
+					DaoInferencer_UpdateType( self, opc, ct );
 				}else{
 					ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, 0, types + opa, opb );
+					DaoInferencer_UpdateType( self, opc, ct );
 					for(j=0; j<opb; ++j){
+						DaoType *t = types[opc]->nested->items.pType[j];
 						tt = types[opa+j];
+						if( t->tid >= DAO_PAR_NAMED && t->tid <= DAO_PAR_VALIST ) break;
 						if( tt->tid >= DAO_PAR_NAMED && tt->tid <= DAO_PAR_VALIST ) break;
 					}
 					if( j >= opb ) vmc->code = DVM_TUPLE_SIM;
 				}
-				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
 				break;
 			}

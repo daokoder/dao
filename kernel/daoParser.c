@@ -1398,7 +1398,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 		if( right < 0 ) goto ErrorRoutine;
 	}
 	return right;
-ErrorInvalidDecorator: ec = DAO_ROUT_INVALID_DECORATOR; goto ErrorRoutine;
 ErrorUnsupportedOperator: ec = DAO_ROUT_INVALID_OPERATOR; goto ErrorRoutine;
 ErrorConstructorReturn: ec = DAO_ROUT_CONSTRU_RETURN; goto ErrorRoutine;
 ErrorNeedReturnType:  ec = DAO_ROUT_NEED_RETURN_TYPE; goto ErrorRoutine;

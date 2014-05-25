@@ -820,6 +820,7 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *svalue, DaoType *stype,
 			if( DString_EQ( argvalue->xNameValue.name, partype->fname ) == 0 ) goto NotMatched;
 			argvalue = argvalue->xNameValue.value;
 		}
+		partype = (DaoType*) partype->aux;
 		parpass[parindex] = Dao_CheckParameter( partype, argvalue, argtype, defs );
 		/*
 		   printf( "%i:  %i  %s\n", parpass[parindex], abtp->tid, abtp->name->chars );

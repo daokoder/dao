@@ -172,7 +172,6 @@ DAO_DLL int DaoProcess_Start( DaoProcess *self );
 DAO_DLL int DaoProcess_Execute( DaoProcess *self );
 
 
-DAO_DLL int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer );
 DAO_DLL DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value );
 
 DAO_DLL void DaoProcess_PrintException( DaoProcess *self, DaoStream *stream, int clear );

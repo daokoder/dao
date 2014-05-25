@@ -2524,34 +2524,6 @@ DaoValue* DaoProcess_PutValue( DaoProcess *self, DaoValue *value )
 	self->returned = self->activeCode->c;
 	return DaoProcess_SetValue( self, self->activeCode->c, value );
 }
-int DaoProcess_PutReference( DaoProcess *self, DaoValue *refer )
-{
-	int tm, reg = self->activeCode->c;
-	DaoValue **value = & self->activeValues[reg];
-	DaoType *tp2, *tp = self->activeTypes[reg];
-
-	self->returned = self->activeCode->c;
-	if( *value == refer ) return 1;
-	if( !(refer->xBase.trait & DAO_VALUE_CONST) ){
-		if( tp == NULL ){
-			GC_ShiftRC( refer, *value );
-			*value = refer;
-			return 1;
-		}
-		tm = DaoType_MatchValue( tp, refer, NULL );
-		if( tm == DAO_MT_EQ ){
-			GC_ShiftRC( refer, *value );
-			*value = refer;
-			return 1;
-		}
-	}
-	if( DaoValue_Move( refer, value, tp ) == 0 ) goto TypeNotMatching;
-	return 0;
-TypeNotMatching:
-	tp2 = DaoNamespace_GetType( self->activeNamespace, refer );
-	DaoProcess_RaiseTypeError( self, tp2, tp, "referencing" );
-	return 0;
-}
 DaoNone* DaoProcess_PutNone( DaoProcess *self )
 {
 	DaoProcess_PutValue( self, dao_none_value );
@@ -3044,8 +3016,11 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *val;
 	DaoTuple *tuple;
 	DaoType *tp, *ct = self->activeTypes[ vmc->c ];
-	int argstuple = vmc->a == 0 && vmc->b == self->activeRoutine->parCount;
-	int i, count = argstuple ? self->topFrame->parCount : vmc->b;
+	int argcount = self->topFrame->parCount;
+	int parcount = self->activeRoutine->parCount;
+	int parcount2 = argcount < parcount ? parcount : argcount; /* including defaults; */
+	int argstuple = vmc->a == 0 && vmc->b == parcount;
+	int i, count = argstuple ? parcount2 : vmc->b;
 
 	self->activeCode = vmc;
 	tuple = DaoProcess_GetTuple( self, ct && ct->variadic == 0 ? ct : NULL, count, 0 );
@@ -4148,7 +4123,7 @@ FastCallError:
 		}
 		params = parbuf;
 		types = typebuf;
-		npar = n - 1;
+		npar = n;
 	}
 	DaoProcess_DoCall2( self, vmc, caller, selfpar, params, types, npar );
 }
