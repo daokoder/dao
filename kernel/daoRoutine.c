@@ -583,7 +583,7 @@ static int Dao_CheckParameter( DaoType *partype, DaoValue *argvalue, DaoType *ar
 	return m;
 }
 
-static DaoRoutine* DParamNode_NewLookup( DParamNode *self, DaoValue *values[], DaoType *types[], int count, int mode, int strict, int *ms, DMap *defs, int clear )
+static DaoRoutine* DParamNode_Lookup( DParamNode *self, DaoValue *values[], DaoType *types[], int count, int mode, int strict, int *ms, DMap *defs, int clear )
 {
 	int i, m, mt, mt2, k = 0, max = 0;
 	DaoValue **values2 = values ? values + 1 : NULL;
@@ -638,7 +638,7 @@ static DaoRoutine* DParamNode_NewLookup( DParamNode *self, DaoValue *values[], D
 		m = Dao_CheckParameter( parnode->type, argvalue, argtype, defs );
 		if( m == 0 ) continue;
 		if( strict && m < DAO_MT_ANY ) continue;
-		rout = DParamNode_NewLookup( parnode, values2, types2, count-1, mode, strict, & k, defs, 0 );
+		rout = DParamNode_Lookup( parnode, values2, types2, count-1, mode, strict, & k, defs, 0 );
 		if( rout == NULL ) continue;
 		m += k;
 		if( m > max ){
@@ -650,7 +650,7 @@ static DaoRoutine* DParamNode_NewLookup( DParamNode *self, DaoValue *values[], D
 	return best;
 }
 
-static DaoRoutine* DRoutines_NewLookup2( DRoutines *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode, int strict )
+static DaoRoutine* DRoutines_Lookup2( DRoutines *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode, int strict )
 {
 	int i, k, m, mt, mt2, score = 0;
 	int code = callmode & 0xffff;
@@ -676,7 +676,7 @@ static DaoRoutine* DRoutines_NewLookup2( DRoutines *self, DaoValue *svalue, DaoT
 			if( strict && m < DAO_MT_ANY ) continue;
 			if( m == 0 ) continue;
 
-			rout2 = DParamNode_NewLookup( parnode, values, types, count, mode, strict, & k, defs, 0 );
+			rout2 = DParamNode_Lookup( parnode, values, types, count, mode, strict, & k, defs, 0 );
 			if( rout2 == NULL ) continue;
 
 			m += k;
@@ -692,7 +692,7 @@ static DaoRoutine* DRoutines_NewLookup2( DRoutines *self, DaoValue *svalue, DaoT
 		// object = Klass()
 		// object.Meth1()
 		*/
-		rout = DParamNode_NewLookup( self->mtree, values, types, count, mode, strict, & score, defs, 1 );
+		rout = DParamNode_Lookup( self->mtree, values, types, count, mode, strict, & score, defs, 1 );
 		if( rout ) goto Finalize;
 	}
 	if( mcall == 0 && svalue == NULL && stype == NULL && self->mtree ){
@@ -701,7 +701,7 @@ static DaoRoutine* DRoutines_NewLookup2( DRoutines *self, DaoValue *svalue, DaoT
 		// routine test(self: array<int>, x: int){}
 		// test([1, 2, 3]) 
 		*/
-		rout = DParamNode_NewLookup( self->mtree, values, types, count, mode, strict, & score, defs, 1 );
+		rout = DParamNode_Lookup( self->mtree, values, types, count, mode, strict, & score, defs, 1 );
 		if( rout ) goto Finalize;
 	}
 	if( self->tree ){
@@ -711,15 +711,15 @@ static DaoRoutine* DRoutines_NewLookup2( DRoutines *self, DaoValue *svalue, DaoT
 			if( types  ) types += 1;
 			count -= 1;
 		}
-		rout = DParamNode_NewLookup( self->tree, values, types, count, mode, strict, & score, defs, 1 );
+		rout = DParamNode_Lookup( self->tree, values, types, count, mode, strict, & score, defs, 1 );
 	}
 Finalize:
 	if( defs ) DMap_Delete( defs );
 	return rout;
 }
-static DaoRoutine* DRoutines_NewLookup( DRoutines *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode )
+static DaoRoutine* DRoutines_Lookup( DRoutines *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode )
 {
-	return DRoutines_NewLookup2( self, svalue, stype, values, types, count, callmode, 0 );
+	return DRoutines_Lookup2( self, svalue, stype, values, types, count, callmode, 0 );
 }
 
 DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode )
@@ -729,14 +729,14 @@ DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *svalue, DaoType *sty
 
 	if( self == NULL ) return NULL;
 	if( self->overloads ){
-		self = DRoutines_NewLookup( self->overloads, svalue, stype, values, types, count, callmode );
+		self = DRoutines_Lookup( self->overloads, svalue, stype, values, types, count, callmode );
 
 		if( self == NULL ) return NULL;
 	}
 	rout = self;
 	if( rout->specialized ){
 		/* strict checking for specialized routines: */
-		rout2 = DRoutines_NewLookup2( rout->specialized, svalue, stype, values, types, count, callmode, 1 );
+		rout2 = DRoutines_Lookup2( rout->specialized, svalue, stype, values, types, count, callmode, 1 );
 
 		/*
 		// If the routine has a body, check if it has done specialization.

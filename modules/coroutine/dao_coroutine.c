@@ -81,7 +81,7 @@ int DaoProcess_Resume( DaoProcess *self, DaoValue *par[], int N, DaoProcess *ret
 	}else if( N ){ /* TODO */
 		DaoRoutine *rout = self->topFrame->routine;
 		self->paramValues = self->stackValues + self->topFrame->stackBase;
-		if( rout ) rout = DaoProcess_PassParams( self, rout, NULL, NULL, par, N, DVM_CALL );
+		if( rout ) rout = DaoProcess_PassParams( self, rout, NULL, NULL, par, NULL, N, DVM_CALL );
 		self->paramValues = self->stackValues + 1;
 		if( rout == NULL ){
 			DaoProcess_RaiseError( ret, NULL, "invalid parameters." );
@@ -113,8 +113,8 @@ static void COROUT_Start( DaoProcess *proc, DaoValue *par[], int N )
 		DaoProcess_RaiseError( proc, "Type", NULL );
 		return;
 	}
-	rout = DaoRoutine_ResolveX( (DaoRoutine*)val, par[0], par+2, N-2, DVM_CALL );
-	if( rout ) rout = DaoProcess_PassParams( proc, rout, self->ctype, par[0], par+2, N-2, DVM_CALL );
+	rout = DaoRoutine_Resolve( (DaoRoutine*)val, par[0], NULL, par+2, NULL, N-2, DVM_CALL );
+	if( rout ) rout = DaoProcess_PassParams( proc, rout, self->ctype, par[0], par+2, NULL, N-2, DVM_CALL );
 	if( rout == NULL || rout->body == NULL ){
 		DaoProcess_RaiseError( proc, "Param", "not matched" );
 		return;

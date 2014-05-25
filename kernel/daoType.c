@@ -2279,6 +2279,9 @@ static void DaoType_InitTypeDefines( DaoType *self, DaoRoutine *method, DMap *de
 	DaoType *type = method->routType;
 	daoint i;
 
+	/* For constructors and static methods: */
+	DMap_Insert( defs, self->typer->core->kernel->abtype, self );
+
 	if( !(type->attrib & DAO_TYPE_SELF) ) return;
 	type = (DaoType*) type->nested->items.pType[0]->aux; /* self:type */
 
