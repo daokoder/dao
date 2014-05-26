@@ -1212,7 +1212,7 @@ fixing : list<list<string>>={}, lang='', inExtFile=0 )
 	
 	source.change( '[\n]{2,}', '\n\n' );
 	source.change( '%s+[\n]', '\n' );
-	source = source.chop();
+	source = source.trim();
 	source = source + '\n';
 	if( % source ){
 		log_file.writeln( '========= UNPARSED CODES FROM FILE:', file, '=========' );

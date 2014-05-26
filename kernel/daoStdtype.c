@@ -786,6 +786,7 @@ static void DaoSTR_Chop( DaoProcess *proc, DaoValue *p[], int N )
 	DString *self = p[0]->xString.value;
 	daoint utf8 = p[1]->xInteger.value;
 	DString_Chop( self, utf8 );
+	DaoProcess_PutString( proc, self );
 }
 static void DaoSTR_Trim( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -794,6 +795,7 @@ static void DaoSTR_Trim( DaoProcess *proc, DaoValue *p[], int N )
 	daoint tail = p[1]->xEnum.value & 0x2;
 	daoint utf8 = p[2]->xInteger.value;
 	DString_Trim( self, head, tail, utf8 );
+	DaoProcess_PutString( proc, self );
 }
 static void DaoSTR_Find( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -814,8 +816,8 @@ static void DaoSTR_Replace( DaoProcess *proc, DaoValue *p[], int N )
 	DString *str1 = p[1]->xString.value;
 	DString *str2 = p[2]->xString.value;
 	daoint index = p[3]->xInteger.value;
-	daoint count = DString_FindReplace( self, str1, str2, index );
-	DaoProcess_PutInteger( proc, count );
+	DString_FindReplace( self, str1, str2, index );
+	DaoProcess_PutString( proc, self );
 }
 static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -977,13 +979,12 @@ static void DaoSTR_Change( DaoProcess *proc, DaoValue *p[], int N )
 	daoint start = p[4]->xInteger.value;
 	daoint end = p[5]->xInteger.value;
 	daoint index = p[3]->xInteger.value;
-	daoint n;
 	if( start < 0 ) start += self->size;
 	if( end < 0 ) end += self->size;
 	if( end == 0 ) end = DString_Size( self ) - 1;
 	if( (patt == NULL) | (start < 0) | (end < 0) ) return;
-	n = DaoRegex_ChangeExt( patt, self, str, index, & start, & end );
-	DaoProcess_PutInteger( proc, n );
+	DaoRegex_ChangeExt( patt, self, str, index, & start, & end );
+	DaoProcess_PutString( proc, self );
 }
 static void DaoSTR_Capture( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1205,16 +1206,6 @@ static DaoFuncItem stringMeths[] =
 		// Resize the string to a string of "size" bytes.
 		*/
 	},
-	{ DaoSTR_Convert,
-		"convert( invar self: string, to: enum<local,utf8,lower,upper> ) => string"
-		/*
-		// Convert the string:
-		// -- To local encoding if the string is encoded in UTF-8;
-		// -- To UTF-8 encoding if the string is not encoded in UTF-8;
-		// -- To lower cases;
-		// -- To upper cases;
-		*/
-	},
 	{ DaoSTR_Insert,
 		"insert( self: string, str: string, at = 0, remove = 0, copy = 0 )"
 		/*
@@ -1235,7 +1226,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Chop,
-		"chop( self: string, utf8 = 0 )"
+		"chop( self: string, utf8 = 0 ) => string"
 		/*
 		// Chop EOF, '\n' and/or '\r' off the end of the string;
 		// -- EOF  is first checked and removed if found;
@@ -1243,14 +1234,16 @@ static DaoFuncItem stringMeths[] =
 		// -- '\r' is last checked and removed if found;
 		// If "utf8" is not zero, all bytes that do not constitute a
 		// valid UTF-8 encoding sequence are removed from the end.
+		// Returns a shallow copy of the self string.
 		*/
 	},
 	{ DaoSTR_Trim,
-		"trim( self: string, where: enum<head;tail> = $head+$tail, utf8 = 0 )"
+		"trim( self: string, where: enum<head;tail> = $head+$tail, utf8 = 0 ) => string"
 		/*
 		// Trim whitespaces from the head and/or the tail of the string;
 		// If "utf8" is not zero, all bytes that do not constitute a
 		// valid UTF-8 encoding sequence are trimmed as well.
+		// Returns a shallow copy of the self string.
 		*/
 	},
 	{ DaoSTR_Find,
@@ -1263,14 +1256,25 @@ static DaoFuncItem stringMeths[] =
 		// Return the index of the last byte of the found substring for backward searching;
 		*/
 	},
+	{ DaoSTR_Convert,
+		"convert( invar self: string, to: enum<local,utf8,lower,upper> ) => string"
+		/*
+		// Convert the string:
+		// -- To local encoding if the string is encoded in UTF-8;
+		// -- To UTF-8 encoding if the string is not encoded in UTF-8;
+		// -- To lower cases;
+		// -- To upper cases;
+		*/
+	},
 	{ DaoSTR_Replace,
-		"replace( self: string, str1: string, str2: string, index = 0 ) => int"
+		"replace( self: string, str1: string, str2: string, index = 0 ) => string"
 		/*
 		// Replace the substring "str1" in "self" to "str2";
 		// Replace all occurrences of "str1" to "str2" if "index" is zero;
 		// Otherwise, replace only the "index"-th occurrence;
 		// Positive "index" is counted forwardly;
 		// Negative "index" is counted backwardly;
+		// Returns a shallow copy of the self string.
 		*/
 	},
 	{ DaoSTR_Expand,
@@ -1315,13 +1319,14 @@ static DaoFuncItem stringMeths[] =
 	},
 	{ DaoSTR_Change,
 		"change( self: string, pattern: string, target: string, index = 0, "
-			"start = 0, end = -1 ) => int"
+			"start = 0, end = -1 ) => string"
 		/*
 		// Change the part(s) of the string that match pattern "pattern" to "target".
 		// The target string "target" can contain back references from pattern "pattern".
 		// If "index" is zero, all matched parts are changed; otherwise, only
 		// the "index" match is changed.
 		// Parameter "start" and "end" have the same meaning as in string::fetch().
+		// Returns a shallow copy of the self string.
 		*/
 	},
 	{ DaoSTR_Capture,

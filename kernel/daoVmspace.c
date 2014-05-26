@@ -2280,12 +2280,9 @@ static void DaoConfigure_FromFile( const char *name )
 			yes = -1;
 			if( tk2->type >= DTOK_DIGITS_DEC && tk2->type <= DTOK_NUMBER_SCI ){
 				isnum = 1;
-				if( tk2->type <= DTOK_NUMBER_HEX ){
-					isint = 1;
-					number = integer = strtol( tk2->string.chars, NULL, 0 );
-				}else{
-					number = strtod( tk2->string.chars, NULL );
-				}
+				isint = tk2->type <= DTOK_NUMBER_HEX;
+				number = DaoToken_ToDouble( tk2 );
+				integer = number;
 			}else if( tk2->type == DTOK_IDENTIFIER ){
 				if( strcmp( tk2->string.chars, "yes" )==0 ) yes = 1;
 				if( strcmp( tk2->string.chars, "no" )==0 ) yes = 0;

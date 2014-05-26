@@ -810,6 +810,44 @@ void DaoToken_Set( DaoToken *self, int type, int name, int index, const char *s 
 	self->index = index;
 	if( s ) DString_SetChars( & self->string, s );
 }
+daoint DaoToken_ToInteger( DaoToken *self )
+{
+	char *chars = self->string.chars;
+	daoint value = 0;
+	switch( self->name ){
+	case DTOK_SINGLE_DEC : case DTOK_DOUBLE_DEC :
+	case DTOK_NUMBER_DEC : case DTOK_NUMBER_SCI :
+	case DTOK_NUMBER_IMG :
+		value = strtod( chars, NULL );
+		break;
+	case DTOK_DIGITS_DEC :
+		value = sizeof(daoint) == 4 ? strtol(chars, 0, 10) : strtoll(chars, 0, 10);
+		break;
+	case DTOK_NUMBER_HEX :
+		value = sizeof(daoint) == 4 ? strtol(chars, 0, 16) : strtoll(chars, 0, 16);
+		break;
+	}
+	return value;
+}
+double DaoToken_ToDouble( DaoToken *self )
+{
+	char *chars = self->string.chars;
+	double value = 0;
+	switch( self->name ){
+	case DTOK_SINGLE_DEC : case DTOK_DOUBLE_DEC :
+	case DTOK_NUMBER_DEC : case DTOK_NUMBER_SCI :
+	case DTOK_NUMBER_IMG :
+		value = strtod( chars, NULL );
+		break;
+	case DTOK_DIGITS_DEC :
+		value = sizeof(daoint) == 4 ? strtol(chars, 0, 10) : strtoll(chars, 0, 10);
+		break;
+	case DTOK_NUMBER_HEX :
+		value = sizeof(daoint) == 4 ? strtol(chars, 0, 16) : strtoll(chars, 0, 16);
+		break;
+	}
+	return value;
+}
 
 const char* DaoToken_NameToString( unsigned char name )
 {

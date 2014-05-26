@@ -1695,7 +1695,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 			if( c >= DTOK_DIGITS_DEC && c <= DTOK_NUMBER_HEX ){
 				k += 1;
 				set = 1;
-				value = strtoll( tokens[k]->string.chars, 0, 0 );
+				value = DaoToken_ToInteger( tokens[k] );
 			}else break;
 		}
 		if( sep ==0 && (k+1) <= end ){
@@ -5302,19 +5302,17 @@ static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoValue *value
 	daoint pl = 0;
 	if( tok->name == DTOK_SINGLE_DEC ){
 		value->type = DAO_FLOAT;
-		value->xFloat.value = strtod( str, 0 );
+		value->xFloat.value = DaoToken_ToDouble( tok );
 	}else if( tok->name >= DTOK_DOUBLE_DEC && tok->name <= DTOK_NUMBER_SCI ){
 		value->type = DAO_DOUBLE;
-		value->xDouble.value = strtod( str, 0 );
+		value->xDouble.value = DaoToken_ToDouble( tok );
 	}else if( tok->name == DTOK_NUMBER_IMG ){
-		str[tok->string.size-1] = '\0';
 		value->type = DAO_COMPLEX;
 		value->xComplex.value.real = 0;
-		value->xComplex.value.imag = strtod( str, 0 );
-		str[tok->string.size-1] = 'C';
+		value->xComplex.value.imag = DaoToken_ToDouble( tok );
 	}else{
 		value->type = DAO_INTEGER;
-		value->xInteger.value = (sizeof(daoint) == 4) ? strtol( str, 0, 0 ) : strtoll( str, 0, 0 );
+		value->xInteger.value = DaoToken_ToInteger( tok );
 	}
 	return value;
 }
@@ -6396,7 +6394,7 @@ InvalidFunctional:
 				self->curToken += 1;
 				name = & tokens[self->curToken]->string;
 				if( tokens[self->curToken]->type == DTOK_DIGITS_DEC ){
-					daoint id = strtol( name->chars, 0, 0 );
+					daoint id = DaoToken_ToInteger( tokens[self->curToken] );
 					if( id > 0xffff ){
 						DaoParser_Error( self, DAO_INVALID_INDEX, name );
 						return error;

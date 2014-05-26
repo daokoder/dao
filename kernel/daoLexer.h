@@ -233,6 +233,8 @@ DAO_DLL void DaoToken_Delete( DaoToken *self );
 DAO_DLL DaoToken* DaoToken_Copy( DaoToken *self );
 
 DAO_DLL const char* DaoToken_NameToString( unsigned char name );
+DAO_DLL daoint DaoToken_ToInteger( DaoToken *self );
+DAO_DLL double DaoToken_ToDouble( DaoToken *self );
 DAO_DLL int DaoToken_Check( const char *src, int size, int *length );
 DAO_DLL int DaoToken_IsNumber( const char *src, int size );
 DAO_DLL int DaoToken_IsValidName( const char *src, int size );

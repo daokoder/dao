@@ -5672,8 +5672,10 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 	DaoParser *parser;
 	DaoToken *tok, **tokens;
 	DString *mbs = proc->mbstring;
+	double fvalue = 0;
+	daoint ivalue = 0;
 	int tid = dC->type;
-	int tokid = 0;
+	int base, tokid = 0;
 	int ec, sign = 1;
 
 	if( dA->type != DAO_STRING || tid == DAO_NONE || tid > DAO_COMPLEX ) return 0;
@@ -5699,28 +5701,24 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 	switch( tid ){
 	case DAO_INTEGER :
 		if( tok->name < DTOK_DIGITS_DEC || tok->name > DTOK_DOUBLE_DEC ) goto ReturnFalse;
-		if( sizeof(daoint) == 4 ){
-			dC->xInteger.value = strtol( tok->string.chars, 0, 0 );
-		}else{
-			dC->xInteger.value = strtoll( tok->string.chars, 0, 0 );
-		}
+		dC->xInteger.value = DaoToken_ToInteger( tok );
 		if( sign <0 ) dC->xInteger.value = - dC->xInteger.value;
 		break;
 	case DAO_FLOAT :
 		if( tok->name < DTOK_DIGITS_DEC || tok->name > DTOK_NUMBER_SCI ) goto ReturnFalse;
-		dC->xFloat.value = strtod( tok->string.chars, 0 );
+		dC->xFloat.value = DaoToken_ToDouble( tok );
 		if( sign <0 ) dC->xFloat.value = - dC->xFloat.value;
 		break;
 	case DAO_DOUBLE :
 		if( tok->name < DTOK_DIGITS_DEC || tok->name > DTOK_NUMBER_SCI ) goto ReturnFalse;
-		dC->xDouble.value = strtod( tok->string.chars, 0 );
+		dC->xDouble.value = DaoToken_ToDouble( tok );
 		if( sign <0 ) dC->xDouble.value = - dC->xDouble.value;
 		break;
 	case DAO_COMPLEX :
 		dC->xComplex.value.real = 0.0;
 		dC->xComplex.value.imag = 0.0;
 		if( tok->name >= DTOK_DIGITS_DEC && tok->name <= DTOK_NUMBER_SCI ){
-			dC->xComplex.value.real = strtod( tok->string.chars, 0 );
+			dC->xComplex.value.real = DaoToken_ToDouble( tok );
 			if( sign <0 ) dC->xComplex.value.real = - dC->xComplex.value.real;
 
 			if( tokid >= lexer->tokens->size ) goto ReturnTrue;
@@ -5734,7 +5732,7 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 			tok = tokens[tokid++];
 		}
 		if( tok->name != DTOK_NUMBER_IMG ) goto ReturnFalse;
-		dC->xComplex.value.imag = strtod( tok->string.chars, 0 );
+		dC->xComplex.value.imag = DaoToken_ToDouble( tok );
 		if( sign <0 ) dC->xComplex.value.imag = - dC->xComplex.value.imag;
 		break;
 	}

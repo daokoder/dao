@@ -3159,8 +3159,12 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 		goto WrongContainer;
 	}
 	if( ct == NULL ) goto InvKey;
-	if( at->konst && ct->konst == 0 ) ct = DaoType_GetConstType( ct );
-	if( at->invar && ct->invar == 0 ) ct = DaoType_GetInvarType( ct );
+	if( at->tid >= DAO_ARRAY ){
+		if( at->konst && ct->konst == 0 ) ct = DaoType_GetConstType( ct );
+		if( at->invar && ct->invar == 0 ) ct = DaoType_GetInvarType( ct );
+	}else{
+		if( at->invar && ct->invar ) ct = DaoType_GetBaseType( ct );
+	}
 	DaoInferencer_UpdateType( self, opc, ct );
 	AssertTypeMatching( ct, types[opc], defs );
 	return 1;
@@ -3247,8 +3251,12 @@ int DaoInferencer_HandleGetMItem( DaoInferencer *self, DaoInode *inode, DMap *de
 		if( rout == NULL ) goto InvIndex;
 		ct = & rout->routType->aux->xType;
 	}
-	if( at->konst && ct->konst == 0 ) ct = DaoType_GetConstType( ct );
-	if( at->invar && ct->invar == 0 ) ct = DaoType_GetInvarType( ct );
+	if( at->tid >= DAO_ARRAY ){
+		if( at->konst && ct->konst == 0 ) ct = DaoType_GetConstType( ct );
+		if( at->invar && ct->invar == 0 ) ct = DaoType_GetInvarType( ct );
+	}else{
+		if( at->invar && ct->invar ) ct = DaoType_GetBaseType( ct );
+	}
 	DaoInferencer_UpdateType( self, opc, ct );
 	AssertTypeMatching( ct, types[opc], defs );
 	return 1;
