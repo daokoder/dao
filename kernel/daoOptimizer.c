@@ -2425,7 +2425,7 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 
 #if 0
 	printf( "=====================================\n" );
-	printf( "%s\n", self->routName->chars );
+	printf( "%s\n", rout->routName->chars );
 	for( j=0; j<npar; j++){
 		DaoType *tp = ts[j];
 		if( tp != NULL ) printf( "tp[ %i ]: %s\n", j, tp->name->chars );
@@ -2537,7 +2537,7 @@ FinishOK:
 FinishError:
 	DMap_Delete( defs );
 }
-DaoRoutine* DaoValue_Check( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int codemode, DArray *errors )
+DaoRoutine* DaoRoutine_Check( DaoRoutine *self, DaoType *selftype, DaoType *ts[], int np, int codemode, DArray *errors )
 {
 	int i, n;
 	DaoRoutine *rout = DaoRoutine_ResolveX( self, NULL, selftype, NULL, ts, np, codemode );
@@ -2560,7 +2560,7 @@ DaoRoutine* DaoValue_Check( DaoRoutine *self, DaoType *selftype, DaoType *ts[], 
 void DaoPrintCallError( DArray *errors, DaoStream *stream )
 {
 	DString *mbs = DString_New();
-	int i, k, n;
+	int i, j, k, n;
 	for(i=0,n=errors->size; i<n; i+=2){
 		DaoType *routType = errors->items.pType[i];
 		DaoRoutine *rout = NULL;
@@ -2580,8 +2580,12 @@ void DaoPrintCallError( DArray *errors, DaoStream *stream )
 			k = DString_RFindChars( routType->name, "=>", routType->name->size );
 			DString_Assign( mbs, rout->routName );
 			DString_AppendChar( mbs, '(' );
-			DString_AppendBytes( mbs, routType->name->chars + 8, k-9 );
+			for(j=0; j<routType->nested->size; ++j){
+				if( j ) DString_AppendChar( mbs, ',' );
+				DString_Append( mbs, routType->nested->items.pType[j]->name );
+			}
 			DString_AppendChar( mbs, ')' );
+			if( routType->cbtype ) DString_Append( mbs, routType->cbtype->name );
 			if( routType->aux && routType->aux->type == DAO_TYPE ){
 				DString_AppendChars( mbs, "=>" );
 				DString_Append( mbs, routType->aux->xType.name );
@@ -3126,14 +3130,14 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 			goto InvIndex;
 		}
 	}else if( at->tid == DAO_OBJECT && (meth = DaoClass_FindOperator( & at->aux->xClass, "[]", hostClass )) ){
-		rout = DaoValue_Check( meth, at, & bt, 1, DVM_CALL, errors );
+		rout = DaoRoutine_Check( meth, at, & bt, 1, DVM_CALL, errors );
 		if( rout == NULL ) goto InvIndex;
 		ct = & rout->routType->aux->xType;
 	}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
 		DString_SetChars( mbs, "[]" );
 		meth = DaoType_FindFunction( at, mbs );
 		if( meth == NULL ) goto WrongContainer;
-		rout = DaoValue_Check( meth, at, & bt, 1, DVM_CALL, errors );
+		rout = DaoRoutine_Check( meth, at, & bt, 1, DVM_CALL, errors );
 		if( rout == NULL ) goto InvIndex;
 		ct = & rout->routType->aux->xType;
 	}else if( at->tid == DAO_INTERFACE ){
@@ -3141,7 +3145,7 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 		node = DMap_Find( at->aux->xInterface.methods, mbs );
 		if( node == NULL ) goto WrongContainer;
 		meth = node->value.pRoutine;
-		rout = DaoValue_Check( meth, at, & bt, 1, DVM_CALL, errors );
+		rout = DaoRoutine_Check( meth, at, & bt, 1, DVM_CALL, errors );
 		if( rout == NULL ) goto InvIndex;
 		ct = & rout->routType->aux->xType;
 	}else if( at->tid & DAO_ANY ){
@@ -3152,7 +3156,7 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 		DString_SetChars( mbs, "[]" );
 		meth = DaoType_FindFunction( at, mbs );
 		if( meth == NULL ) goto WrongContainer;
-		rout = DaoValue_Check( meth, at, & bt, 1, DVM_CALL, errors );
+		rout = DaoRoutine_Check( meth, at, & bt, 1, DVM_CALL, errors );
 		if( rout == NULL ) goto InvIndex;
 		ct = & rout->routType->aux->xType;
 	}else{
@@ -3247,7 +3251,7 @@ int DaoInferencer_HandleGetMItem( DaoInferencer *self, DaoInode *inode, DMap *de
 	}
 	if( meth ){
 		/* TODO, self type for class? */
-		rout = DaoValue_Check( meth, at, types+opa+1, opb, DVM_CALL, errors );
+		rout = DaoRoutine_Check( meth, at, types+opa+1, opb, DVM_CALL, errors );
 		if( rout == NULL ) goto InvIndex;
 		ct = & rout->routType->aux->xType;
 	}
@@ -3325,7 +3329,7 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 			}
 			if( node == NULL ) goto NotExist;
 			meth = node->value.pRoutine;
-			rout = DaoValue_Check( meth, at, pars, npar, DVM_CALL, errors );
+			rout = DaoRoutine_Check( meth, at, pars, npar, DVM_CALL, errors );
 			if( rout == NULL ) goto NotExist;
 			ct = & rout->routType->aux->xType;
 		}
@@ -3349,7 +3353,7 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 			}
 			if( j == 0 && value && value->type == DAO_ROUTINE ){
 				rout2 = rout = (DaoRoutine*) value;
-				rout = DaoValue_Check( rout, at, pars, npar, DVM_CALL, errors );
+				rout = DaoRoutine_Check( rout, at, pars, npar, DVM_CALL, errors );
 				if( rout == NULL ) goto NotMatch;
 				ct = & rout->routType->aux->xType;
 				getter = 1;
@@ -3451,7 +3455,7 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 				meth = DaoType_FindFunction( at, mbs );
 			}
 			if( meth == NULL ) goto NotExist;
-			rout = DaoValue_Check( meth, at, pars, npar, DVM_CALL, errors );
+			rout = DaoRoutine_Check( meth, at, pars, npar, DVM_CALL, errors );
 			if( rout == NULL ) goto NotMatch;
 			ct = & rout->routType->aux->xType;
 		}
@@ -3654,7 +3658,7 @@ int DaoInferencer_HandleSetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 			for(k=0,K=bt->nested->size; k<K; k++) ts[k+1] = bt->nested->items.pType[k];
 			k = bt->nested->size + 1;
 		}
-		rout = DaoValue_Check( meth, ct, ts, k, DVM_CALL, errors );
+		rout = DaoRoutine_Check( meth, ct, ts, k, DVM_CALL, errors );
 		if( rout == NULL ) goto InvIndex;
 		break;
 	case DAO_CDATA :
@@ -3671,7 +3675,7 @@ int DaoInferencer_HandleSetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 			for(k=0,K=bt->nested->size; k<K; k++) ts[k+1] = bt->nested->items.pType[k];
 			k = bt->nested->size + 1;
 		}
-		rout = DaoValue_Check( meth, ct, ts, k, DVM_CALL, errors );
+		rout = DaoRoutine_Check( meth, ct, ts, k, DVM_CALL, errors );
 		if( rout == NULL ) goto InvIndex;
 		break;
 	default : goto InvIndex;
@@ -3747,7 +3751,7 @@ int DaoInferencer_HandleSetMItem( DaoInferencer *self, DaoInode *inode, DMap *de
 	if( meth ){
 		ts[0] = at;
 		memcpy( ts + 1, types+opc+1, opb*sizeof(DaoType*) );
-		rout = DaoValue_Check( meth, ct, ts, opb+1, DVM_CALL, errors );
+		rout = DaoRoutine_Check( meth, ct, ts, opb+1, DVM_CALL, errors );
 		if( rout == NULL ) goto InvIndex;
 	}
 	return 1;
@@ -3817,7 +3821,7 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 			}
 			if( node == NULL ) goto NotExist;
 			meth = node->value.pRoutine;
-			rout = DaoValue_Check( meth, ct, pars, npar, DVM_CALL, errors );
+			rout = DaoRoutine_Check( meth, ct, pars, npar, DVM_CALL, errors );
 			if( rout == NULL ) goto NotExist;
 			ct = & rout->routType->aux->xType;
 		}
@@ -3846,7 +3850,7 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 			if( j == 0 && value && value->type == DAO_ROUTINE ){
 				meth = (DaoRoutine*) value;
 				setter = 1;
-				rout = DaoValue_Check( meth, ct, pars, npar, DVM_CALL, errors );
+				rout = DaoRoutine_Check( meth, ct, pars, npar, DVM_CALL, errors );
 				if( rout == NULL ) goto NotMatch;
 			}
 		}
@@ -3946,7 +3950,7 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 				meth = DaoType_FindFunction( ct, mbs );
 			}
 			if( meth == NULL ) goto NotMatch;
-			rout = DaoValue_Check( meth, ct, pars, npar, DVM_CALL, errors );
+			rout = DaoRoutine_Check( meth, ct, pars, npar, DVM_CALL, errors );
 			if( rout == NULL ) goto NotMatch;
 			break;
 		}
@@ -3975,7 +3979,7 @@ int DaoInferencer_HandleBinaryArith( DaoInferencer *self, DaoInode *inode, DMap 
 	DaoType *bt = types[opb];
 	DaoType *ct = types[opc];
 
-	catype = DaoNamespace_MakeType( NS, "array", DAO_ARRAY, NULL, & dao_type_complex, 1 );
+	catype = dao_array_types[DAO_COMPLEX];
 	ct = NULL;
 #if 0
 	if( types[opa] ) printf( "a: %s\n", types[opa]->name->chars );
@@ -4185,9 +4189,9 @@ int DaoInferencer_HandleListArrayEnum( DaoInferencer *self, DaoInode *inode, DMa
 			ct = dao_type_array_empty;
 		}
 	}else if( code == DVM_LIST || code == DVM_APLIST ){
-		ct = DaoNamespace_MakeType2( NS, "list", DAO_LIST, NULL, &at, at!=NULL );
+		ct = DaoType_Specialize( dao_type_list_template, & at, at != NULL );
 	}else if( at && at->tid >=DAO_INTEGER && at->tid <= DAO_COMPLEX ){
-		ct = DaoNamespace_MakeType2( NS, "array", DAO_ARRAY, NULL, &at, 1 );
+		ct = DaoType_Specialize( dao_type_array_template, & at, 1 );
 	}else if( at && at->tid == DAO_ARRAY ){
 		ct = at;
 	}else if( NoCheckingType( at ) ){
@@ -4429,6 +4433,10 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		DNode *it = DMap_Find( inter->methods, inter->abtype->name );
 		if( it == NULL ) goto ErrorTyping;
 		rout = it->value.pRoutine;
+	}else if( at->tid == DAO_TYPE ){
+		at = at->nested->items.pType[0];
+		rout = DaoType_FindFunction( at, at->name );
+		if( rout == NULL ) goto ErrorTyping;
 	}else if( at->tid != DAO_ROUTINE ){
 		goto ErrorTyping;
 	}
@@ -4458,7 +4466,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		if( rout->type != DAO_ROUTINE ) goto ErrorTyping;
 		rout2 = rout;
 		/* rout can be DRoutines: */
-		rout = DaoValue_Check( rout, bt, tp, argc, codemode, errors );
+		rout = DaoRoutine_Check( rout, bt, tp, argc, codemode, errors );
 		if( rout == NULL ) goto ErrorTyping;
 		if( rout->attribs & DAO_ROUT_PRIVATE ){
 			if( rout->routHost && rout->routHost != routine->routHost ) goto CallNotPermit;
@@ -4507,7 +4515,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 					DaoType **pts = ft->nested->items.pType;
 					int nn = ft->nested->size;
 					int cc = DVM_CALL + (ft->attrib & DAO_TYPE_SELF);
-					rout = DaoValue_Check( (DaoRoutine*)pp[0], NULL, pts, nn, cc|((int)vmc->b<<16), errors );
+					rout = DaoRoutine_Check( (DaoRoutine*)pp[0], NULL, pts, nn, cc|((int)vmc->b<<16), errors );
 					if( rout == NULL ) goto ErrorTyping;
 				}
 			}
@@ -4832,7 +4840,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	if( self->inodes->size == 0 ) return 1;
 	/* DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream ); */
 
-	catype = DaoNamespace_MakeType( NS, "array", DAO_ARRAY, NULL, & dao_type_complex, 1 );
+	catype = dao_array_types[DAO_COMPLEX];
 
 	for(i=1; i<=DAO_MAX_SECTDEPTH; i++) typeVH[i] = types;
 	for(i=0; i<N; i++) inodes[i]->index = N | (1<<16); /* for return ranges (rettypes); */
@@ -5277,7 +5285,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 						meth = DaoType_FindFunctionChars( ct, "=" );
 					}
 					if( meth ){
-						rout = DaoValue_Check( meth, ct, & at, 1, DVM_CALL, errors );
+						rout = DaoRoutine_Check( meth, ct, & at, 1, DVM_CALL, errors );
 						if( rout == NULL ) goto NotMatch;
 					}else if( k ==0 ){
 						return DaoInferencer_ErrorTypeNotMatching( self, at, types[opc] );
@@ -5627,7 +5635,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				for( j=0; j<k; j++){
 					if( DaoType_MatchTo( types[opa+j], at, defs )==0 ) goto ErrorTyping;
 				}
-				ct = DaoNamespace_MakeType2( NS, "array", DAO_ARRAY,NULL,&at, at!=NULL );
+				ct = DaoType_Specialize( dao_type_array_template, & at, at != NULL );
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
 				break;
@@ -5756,7 +5764,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				}
 				if( skip ) break;
 				if( meth == NULL ) goto NotMatch;
-				rout = DaoValue_Check( meth, at, ts, 1, DVM_CALL, errors );
+				rout = DaoRoutine_Check( meth, at, ts, 1, DVM_CALL, errors );
 				if( rout == NULL ) goto NotMatch;
 				ct = dao_type_for_iterator;
 				DaoInferencer_UpdateType( self, opc, ct );

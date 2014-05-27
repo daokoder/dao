@@ -54,6 +54,7 @@ DaoType *dao_type_double = NULL;
 DaoType *dao_type_complex = NULL;
 DaoType *dao_type_string = NULL;
 DaoType *dao_type_tuple = NULL;
+DaoType *dao_type_array_template = NULL;
 DaoType *dao_type_array_empty = NULL;
 DaoType *dao_type_list_template = NULL;
 DaoType *dao_type_list_empty = NULL;
@@ -1239,20 +1240,12 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 			if( i+1 < (int)self->nested->size ) DString_AppendChar( copy->name, sep );
 		}
 		if( self->tid == DAO_CTYPE || self->tid == DAO_CDATA || self->tid == DAO_CSTRUCT
-				|| self->tid == DAO_LIST || self->tid == DAO_MAP ){
-			int invar = self->konst;
-			int konst = self->invar;
+				|| self->tid == DAO_ARRAY || self->tid == DAO_LIST || self->tid == DAO_MAP ){
 			if( self->typer->core->kernel->sptree ){
 				DaoType *sptype = self->typer->core->kernel->abtype;
 				if( self->tid == DAO_CTYPE ) sptype = sptype->aux->xCtype.ctype;
 				sptype = DaoType_Specialize( sptype, copy->nested->items.pType, copy->nested->size );
 				if( sptype ){
-					DaoNamespace *nspace = self->kernel->nspace;
-					if( konst ){
-						sptype = DaoType_GetConstType( sptype );
-					}else if( invar ){
-						sptype = DaoType_GetInvarType( sptype );
-					}
 					DMap_Erase2( defs, copy );
 					return sptype;
 				}
@@ -1348,7 +1341,14 @@ void DaoType_GetTypeHolders( DaoType *self, DMap *types )
 	daoint i, n;
 	if( self->tid == DAO_THT ){
 		if( types->keytype == DAO_DATA_STRING ){
+			daoint pos = DString_FindChar( self->name, '<', 0 );
 			DMap_Insert( types, self->name, self );
+			if( pos != DAO_NULLPOS ){ /* @T<type1|type2> */
+				DString *name = DString_New();
+				DString_SubString( self->name, name, 0, pos );
+				DMap_Insert( types, name, self );
+				DString_Delete( name );
+			}
 		}else{
 			DMap_Insert( types, self, 0 );
 		}
@@ -1410,7 +1410,7 @@ static void DaoType_TrySpecializeMethods( DaoType *self )
 {
 	DaoTypeCore *core = self->typer->core;
 	switch( self->tid ){
-	case DAO_LIST : case DAO_MAP :
+	case DAO_ARRAY : case DAO_LIST : case DAO_MAP :
 		if( self->kernel == core->kernel ){
 			/* Specialize methods for specialized generic type: */
 			DaoType_SpecializeMethods( self );
@@ -2114,7 +2114,7 @@ int DTypeSpecTree_Test( DTypeSpecTree *self, DaoType *types[], int count )
 		DaoType *par = self->holders->items.pType[i];
 		DaoType *arg = types[i];
 		int mt = DaoType_MatchTo( arg, par, NULL );
-		if( mt >= DAO_MT_SUB && mt <= DAO_MT_SIM ) return 0;
+		if( mt == 0 || (mt >= DAO_MT_SUB && mt <= DAO_MT_SIM) ) return 0;
 	}
 	return 1;
 }
@@ -2213,7 +2213,7 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 	DTypeSpecTree *sptree;
 	daoint i, pos;
 
-	assert( self->tid == DAO_LIST || self->tid == DAO_MAP );
+	assert( self->tid == DAO_ARRAY || self->tid == DAO_LIST || self->tid == DAO_MAP );
 
 	self = self->kernel->abtype;
 
@@ -2256,16 +2256,28 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 }
 DaoType* DaoType_Specialize( DaoType *self, DaoType *types[], int count )
 {
+	int invar = self->konst;
+	int konst = self->invar;
+	DaoType *type = NULL;
+
 	switch( self->tid ){
+	case DAO_ARRAY :
 	case DAO_LIST :
 	case DAO_MAP :
-		return DaoGenericType_Specialize( self, types, count );
+		type = DaoGenericType_Specialize( self, types, count );
+		break;
 	case DAO_CSTRUCT :
 	case DAO_CDATA :
 	case DAO_CTYPE :
-		return DaoCdataType_Specialize( self, types, count );
+		type = DaoCdataType_Specialize( self, types, count );
+		break;
 	}
-	return NULL;
+	if( konst ){
+		type = DaoType_GetConstType( type );
+	}else if( invar ){
+		type = DaoType_GetInvarType( type );
+	}
+	return type;
 }
 
 int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
@@ -2338,7 +2350,7 @@ void DaoType_SpecializeMethods( DaoType *self )
 	if( self == original ) return;
 	if( self->kernel != original->kernel ) return;
 	if( original->kernel == NULL || original->kernel->methods == NULL ) return;
-	assert( self->tid == DAO_CSTRUCT || self->tid == DAO_CDATA || self->tid == DAO_CTYPE || self->tid == DAO_LIST || self->tid == DAO_MAP );
+	assert( self->tid == DAO_CSTRUCT || self->tid == DAO_CDATA || self->tid == DAO_CTYPE || self->tid == DAO_ARRAY || self->tid == DAO_LIST || self->tid == DAO_MAP );
 	if( self->tid == DAO_CTYPE ) self = self->aux->xCtype.cdtype;
 	if( self->bases ){
 		for(i=0; i<self->bases->size; i++){

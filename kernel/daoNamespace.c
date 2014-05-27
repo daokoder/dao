@@ -524,7 +524,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 		return DAO_DT_SCOPED;
 	}
 	ret = k ? DAO_DT_SCOPED : DAO_DT_UNSCOPED;
-	if( type->tid != DAO_CTYPE && type->tid != DAO_LIST && type->tid != DAO_MAP ) goto Error;
+	if( type->tid != DAO_CTYPE && type->tid != DAO_ARRAY && type->tid != DAO_LIST && type->tid != DAO_MAP ) goto Error;
 	if( (value && value->type != DAO_CTYPE) || tokens[k+1]->type != DTOK_LT ) goto Error;
 	if( DaoParser_FindPairToken( parser, DTOK_LT, DTOK_GT, k+1, -1 ) != (int)n ) goto Error;
 
@@ -1600,6 +1600,9 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	if( tid != DAO_ANY ) any = dao_type_any;
 
 	switch( tid ){
+	case DAO_ARRAY :
+		if( dao_type_array_template == NULL ) return NULL; /* Numeric array not enable; */
+		return DaoType_Specialize( dao_type_array_template, nest, N );
 	case DAO_LIST :
 		return DaoType_Specialize( dao_type_list_template, nest, N );
 	case DAO_MAP :

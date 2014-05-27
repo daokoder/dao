@@ -80,7 +80,7 @@ DAO_DLL int DaoRegex_Match( DaoRegex *self, DString *src, daoint *start, daoint 
 DAO_DLL int DaoRegex_SubMatch( DaoRegex *self, int gid, daoint *start, daoint *end );
 
 DAO_DLL int DaoRegex_Change( DaoRegex *self, DString *src, DString *target, int index );
-DAO_DLL int DaoRegex_ChangeExt( DaoRegex *self, DString *source, DString *target,
-		int index, daoint *start2, daoint *end2 );
+DAO_DLL int DaoRegex_ChangeExt( DaoRegex *self, DString *input, DString *output,
+		DString *target, int index, daoint *start2, daoint *end2 );
 
 #endif

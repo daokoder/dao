@@ -2607,7 +2607,7 @@ DaoVmSpace* DaoInit( const char *command )
 {
 	DString *mbs;
 	DaoVmSpace *vms;
-	DaoNamespace *ns, *ns2;
+	DaoNamespace *daons, *ns2;
 	int i;
 
 	if( mainVmSpace ) return mainVmSpace;
@@ -2697,43 +2697,42 @@ DaoVmSpace* DaoInit( const char *command )
 		mbs->chars[ mbs->size ] = 0;
 	}
 
-	ns = vms->daoNamespace;
+	daons = vms->daoNamespace;
 
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_udf );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_routine );
-	DaoNamespace_AddTypeConstant( ns, dao_type_any->name, dao_type_any );
-	DaoNamespace_AddTypeConstant( ns, dao_type_int->name, dao_type_int );
-	DaoNamespace_AddTypeConstant( ns, dao_type_float->name, dao_type_float );
-	DaoNamespace_AddTypeConstant( ns, dao_type_double->name, dao_type_double );
-	DaoNamespace_AddTypeConstant( ns, dao_type_complex->name, dao_type_complex );
-	DaoNamespace_AddTypeConstant( ns, dao_type_string->name, dao_type_string );
+	DaoNamespace_AddTypeConstant( daons, dao_type_any->name, dao_type_any );
+	DaoNamespace_AddTypeConstant( daons, dao_type_int->name, dao_type_int );
+	DaoNamespace_AddTypeConstant( daons, dao_type_float->name, dao_type_float );
+	DaoNamespace_AddTypeConstant( daons, dao_type_double->name, dao_type_double );
+	DaoNamespace_AddTypeConstant( daons, dao_type_complex->name, dao_type_complex );
+	DaoNamespace_AddTypeConstant( daons, dao_type_string->name, dao_type_string );
 
-	dao_type_none = DaoNamespace_MakeValueType( ns, dao_none_value );
-	dao_type_for_iterator = DaoParser_ParseTypeName( "tuple<valid:int,iterator:any>", ns, NULL );
+	dao_type_none = DaoNamespace_MakeValueType( daons, dao_none_value );
+	dao_type_for_iterator = DaoParser_ParseTypeName( "tuple<valid:int,iterator:any>", daons, NULL );
 
 	DString_SetChars( dao_type_for_iterator->name, "for_iterator" );
-	DaoNamespace_AddType( ns, dao_type_for_iterator->name, dao_type_for_iterator );
+	DaoNamespace_AddType( daons, dao_type_for_iterator->name, dao_type_for_iterator );
 
-	dao_type_tuple = DaoParser_ParseTypeName( "tuple<...>", ns, NULL );
+	dao_type_tuple = DaoParser_ParseTypeName( "tuple<...>", daons, NULL );
 
-	dao_array_types[DAO_NONE] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_none, 1 );
-	dao_array_types[DAO_INTEGER] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_int, 1 );
-	dao_array_types[DAO_FLOAT]   = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_float, 1 );
-	dao_array_types[DAO_DOUBLE]  = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_double, 1 );
-	dao_array_types[DAO_COMPLEX] = DaoNamespace_MakeType( ns, "array", DAO_ARRAY, NULL, & dao_type_complex, 1 );
-	dao_type_array_empty = dao_array_types[DAO_NONE];
+	DaoNamespace_TypeDefine( daons, "enum<false:true>", "bool" );
 
-	DaoNamespace_TypeDefine( ns, "enum<false:true>", "bool" );
-
+	DaoNamespace_SetupType( daons, & stringTyper );
+	DaoNamespace_SetupType( daons, & comTyper );
 
 #ifdef DAO_WITH_NUMARRAY
-	DaoNamespace_SetupType( vms->daoNamespace, & numarTyper );
+	dao_type_array_template = DaoNamespace_WrapGenericType( daons, & numarTyper, DAO_ARRAY );
+	dao_type_array_empty = DaoType_Specialize( dao_type_array_template, NULL, 0 );
+	dao_array_types[DAO_NONE] = dao_type_array_empty;
+	dao_array_types[DAO_INTEGER] = DaoType_Specialize( dao_type_array_template, & dao_type_int, 1 );
+	dao_array_types[DAO_FLOAT] = DaoType_Specialize( dao_type_array_template, & dao_type_float, 1 );
+	dao_array_types[DAO_DOUBLE] = DaoType_Specialize( dao_type_array_template, & dao_type_double, 1 );
+	dao_array_types[DAO_COMPLEX] = DaoType_Specialize( dao_type_array_template, & dao_type_complex, 1 );
 #endif
 
-	DaoNamespace_SetupType( vms->daoNamespace, & stringTyper );
-	DaoNamespace_SetupType( vms->daoNamespace, & comTyper );
-	dao_type_list_template = DaoNamespace_WrapGenericType( ns, & listTyper, DAO_LIST );
-	dao_type_map_template = DaoNamespace_WrapGenericType( ns, & mapTyper, DAO_MAP );
+	dao_type_list_template = DaoNamespace_WrapGenericType( daons, & listTyper, DAO_LIST );
+	dao_type_map_template = DaoNamespace_WrapGenericType( daons, & mapTyper, DAO_MAP );
 
 	dao_type_list_any = DaoType_Specialize( dao_type_list_template, NULL, 0 );
 	dao_type_map_any  = DaoType_Specialize( dao_type_map_template, NULL, 0 );
@@ -2749,7 +2748,7 @@ DaoVmSpace* DaoInit( const char *command )
 	stringTyper.core->kernel->abtype = dao_type_string;
 
 	ns2 = DaoVmSpace_GetNamespace( vms, "io" );
-	DaoNamespace_AddConstValue( ns, "io", (DaoValue*) ns2 );
+	DaoNamespace_AddConstValue( daons, "io", (DaoValue*) ns2 );
 	dao_type_stream = DaoNamespace_WrapType( ns2, & streamTyper, 0 );
 	GC_ShiftRC( dao_type_stream, vms->stdioStream->ctype );
 	GC_ShiftRC( dao_type_stream, vms->errorStream->ctype );
@@ -2765,7 +2764,7 @@ DaoVmSpace* DaoInit( const char *command )
 
 #ifdef DAO_WITH_CONCURRENT
 	ns2 = DaoVmSpace_GetNamespace( vms, "mt" );
-	DaoNamespace_AddConstValue( ns, "mt", (DaoValue*) ns2 );
+	DaoNamespace_AddConstValue( daons, "mt", (DaoValue*) ns2 );
 	dao_type_channel = DaoNamespace_WrapType( ns2, & channelTyper, 0 );
 	dao_type_future  = DaoNamespace_WrapType( ns2, & futureTyper, 0 );
 	DaoNamespace_WrapFunctions( ns2, dao_mt_methods );
@@ -2773,10 +2772,10 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_SetupType( vms->daoNamespace, & vmpTyper );
 
 	ns2 = DaoVmSpace_GetNamespace( vms, "std" );
-	DaoNamespace_AddConstValue( ns, "std", (DaoValue*) ns2 );
+	DaoNamespace_AddConstValue( daons, "std", (DaoValue*) ns2 );
 	DaoNamespace_WrapFunctions( ns2, dao_std_methods );
 
-	DaoNamespace_WrapFunctions( ns, dao_builtin_methods );
+	DaoNamespace_WrapFunctions( daons, dao_builtin_methods );
 
 	DaoNamespace_AddParent( vms->mainNamespace, vms->daoNamespace );
 

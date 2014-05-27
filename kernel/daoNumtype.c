@@ -890,6 +890,87 @@ static DaoTypeCore numarrCore =
 	DaoArray_SetItem,
 	DaoArray_Print
 };
+
+daoint DaoArray_MatchShape( DaoArray *self, DaoArray *other );
+static void DaoARRAY_New( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue *res, *index = (DaoValue*)(void*)&idint;
+	DaoArray *array = DaoProcess_PutArray( proc );
+	DaoArray *first = NULL;
+	DaoArray *sub = NULL;
+	daoint i, j, k, entry, size = 1;
+	DaoVmCode *sect;
+
+	/* if multi-dimensional array is disabled, DaoProcess_PutArray() will raise exception. */
+#ifdef DAO_WITH_NUMARRAY
+	for(i=0; i<N; i++){
+		daoint d = p[i]->xInteger.value;
+		if( d < 0 ){
+			DaoProcess_RaiseError( proc, "Param", NULL );
+			break;
+		}
+		size *= d;
+	}
+	if( size < 0 ){
+		DaoProcess_RaiseError( proc, "Param", "Invalid parameter value" );
+		return;
+	}
+	if( size == 0 ) return;
+	sect = DaoProcess_InitCodeSection( proc );
+	if( sect == NULL ) return;
+	entry = proc->topFrame->entry;
+	for(i=0; i<size; i++){
+		idint.value = i;
+		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
+		proc->topFrame->entry = entry;
+		DaoProcess_Execute( proc );
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
+		res = proc->stackValues[0];
+		if( i == 0 ){
+			int D = N;
+			DaoArray_SetDimCount( array, N + (res->type == DAO_ARRAY ? res->xArray.ndim : 0) );
+			for(j=0; j<N; j++) array->dims[j] = p[j]->xInteger.value;
+			if( res->type == DAO_ARRAY ){
+				first = DaoArray_Copy( (DaoArray*) res );
+				if( first->ndim == 2 && (first->dims[0] == 1 || first->dims[1] == 1) ){
+					D += 1;
+					array->dims[N] = first->dims[ first->dims[0] == 1 ];
+				}else{
+					D += first->ndim;
+					memmove( array->dims + N, first->dims, first->ndim*sizeof(daoint) );
+				}
+			}
+			DaoArray_ResizeArray( array, array->dims, D );
+		}
+		if( res->type == DAO_ARRAY ){
+			sub = (DaoArray*) res;
+			if( first == NULL || DaoArray_MatchShape( sub, first ) == 0 ){
+				DaoProcess_RaiseError( proc, NULL, "inconsistent elements or subarrays" );
+				break;
+			}
+			k = i * sub->size;
+			for(j=0; j<sub->size; j++){
+				switch( array->etype ){
+				case DAO_INTEGER : array->data.i[k+j] = DaoArray_GetInteger( sub, j ); break;
+				case DAO_FLOAT   : array->data.f[k+j] = DaoArray_GetFloat( sub, j ); break;
+				case DAO_DOUBLE  : array->data.d[k+j] = DaoArray_GetDouble( sub, j ); break;
+				case DAO_COMPLEX : array->data.c[k+j] = DaoArray_GetComplex( sub, j ); break;
+				}
+			}
+		}else{
+			switch( array->etype ){
+			case DAO_INTEGER : array->data.i[i] = DaoValue_GetInteger( res ); break;
+			case DAO_FLOAT   : array->data.f[i] = DaoValue_GetFloat( res ); break;
+			case DAO_DOUBLE  : array->data.d[i] = DaoValue_GetDouble( res ); break;
+			case DAO_COMPLEX : array->data.c[i] = DaoValue_GetComplex( res ); break;
+			}
+		}
+	}
+	DaoProcess_PopFrame( proc );
+	if( first ) DaoArray_Delete( first );
+#endif
+}
 static void DaoARRAY_Dim( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoArray *self = & par[0]->xArray;
@@ -1375,6 +1456,10 @@ static void DaoARRAY_Reduce( DaoProcess *proc, DaoValue *p[], int npar )
 }
 static DaoFuncItem numarMeths[] =
 {
+	{ DaoARRAY_New,
+		"array<@T<none|int|float|double|complex>=none>( dim1: int, dim2 = 0, dim3 = 0 )"
+			"[I: int, J: int, K: int => @T|array<@T>] => array<@T>"
+	},
 	{ DaoARRAY_Dim,       "dim( invar self: array<@T>, i: int )=>int" },
 	{ DaoARRAY_Dim,       "dim( invar self: array<@T> )=>array<int>" },
 	{ DaoARRAY_Index,     "index( invar self: array<@T>, i: int )=>array<int>" },
@@ -1688,7 +1773,8 @@ void DaoArray_SetBuffer( DaoArray *self, void *buffer, daoint size )
 
 DaoTypeBase numarTyper =
 {
-	"array", & numarrCore, NULL, (DaoFuncItem*) numarMeths, {0}, {0},
+	"array<@T<none|int|float|double|complex>=none>", & numarrCore,
+	NULL, (DaoFuncItem*) numarMeths, {0}, {0},
 	(FuncPtrDel) DaoArray_Delete, NULL
 };
 

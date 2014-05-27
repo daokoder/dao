@@ -86,7 +86,6 @@ DAO_DLL void DString_AppendChar( DString *self, const char ch );
 DAO_DLL void DString_AppendChars( DString *self, const char *chs );
 DAO_DLL void DString_AppendBytes( DString *self, const char *chs, daoint n );
 
-DAO_DLL daoint DString_FindReplace( DString *self, DString *s1, DString *s2, daoint index );
 DAO_DLL void DString_Replace( DString *self, DString *chs, daoint start, daoint rm );
 DAO_DLL void DString_ReplaceChars( DString *self, const char *chs, daoint start, daoint rm );
 DAO_DLL void DString_SubString( DString *self, DString *sub, daoint from, daoint n );

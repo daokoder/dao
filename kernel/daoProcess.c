@@ -3988,6 +3988,16 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		rout = DaoRoutine_Resolve( rout, caller, NULL, params, types, npar, callmode );
 		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
 		DaoProcess_DoCxxCall( self, vmc, NULL, rout, caller, params, types, npar, 0 );
+	}else if( caller->type == DAO_TYPE ){
+		DaoType *type = (DaoType*) caller;
+		rout = rout2 = DaoType_FindFunction( type, type->name );
+		if( rout == NULL ){
+			DaoProcess_RaiseError( self, "Type", "no constructor for the type" );
+			return;
+		}
+		rout = DaoRoutine_Resolve( rout, selfpar, NULL, params, types, npar, callmode );
+		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
+		DaoProcess_DoCxxCall( self, vmc, caller->xCtype.ctype, rout, selfpar, params, types, npar, 1 );
 	}else{
 		DaoProcess_RaiseError( self, "Type", "object not callable" );
 	}
@@ -6064,7 +6074,7 @@ FailConversion :
 	return NULL;
 }
 
-DaoRoutine* DaoValue_Check( DaoRoutine *self, DaoType *selftp, DaoType *ts[], int np, int code, DArray *es );
+DaoRoutine* DaoRoutine_Check( DaoRoutine *self, DaoType *selftp, DaoType *ts[], int np, int code, DArray *es );
 void DaoPrintCallError( DArray *errors, DaoStream *stdio );
 
 void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int callmode )
@@ -6076,7 +6086,7 @@ void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *sel
 	DArray *errors = DArray_New(0);
 	int i;
 	for(i=0; i<np; i++) ts[i] = DaoNamespace_GetType( ns, ps[i] );
-	DaoValue_Check( rout, selftype, ts, np, callmode, errors );
+	DaoRoutine_Check( rout, selftype, ts, np, callmode, errors );
 	ss->mode |= DAO_STREAM_STRING;
 	DaoPrintCallError( errors, ss );
 	DArray_Delete( errors );

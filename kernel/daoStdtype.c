@@ -734,68 +734,67 @@ static DaoTypeCore stringCore=
 	DaoString_Print
 };
 
+static void DaoSTR_New( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *res = DaoProcess_PutChars( proc, "" );
+	daoint i, count = p[0]->xInteger.value;
+	size_t width, ch = p[1]->xInteger.value;
+	char buffer[8];
+
+	DString_AppendWChar( res, ch );
+	width = res->size;
+	memcpy( buffer, res->chars, width );
+	DString_Resize( res, count * width );
+	if( width == 1 ){
+		memset( res->chars, buffer[0], res->size );
+	}else{
+		for(i=0; i<count; ++i) memcpy( res->chars + i * width, buffer, width );
+	}
+}
+static void DaoSTR_New2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue *index = (DaoValue*)(void*)&idint;
+	DString *string = DaoProcess_PutChars( proc, "" );
+	daoint i, entry, size = p[0]->xInteger.value;
+	DaoVmCode *sect;
+
+	if( size < 0 ){
+		DaoProcess_RaiseError( proc, "Param", "Invalid parameter value" );
+		return;
+	}
+	if( size == 0 ) return;
+	sect = DaoProcess_InitCodeSection( proc );
+	if( sect == NULL ) return;
+	entry = proc->topFrame->entry;
+	for(i=0; i<size; i++){
+		idint.value = i;
+		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
+		proc->topFrame->entry = entry;
+		DaoProcess_Execute( proc );
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
+		DString_Append( string, proc->stackValues[0]->xString.value );
+	}
+	DaoProcess_PopFrame( proc );
+}
 static void DaoSTR_Size( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutInteger( proc, p[0]->xString.value->size );
 }
-static daoint DaoSTR_CheckParam( DaoProcess *proc, daoint i )
-{
-	if( i < 0 ) DaoProcess_RaiseError( proc, "Param", NULL );
-	return i;
-}
-static daoint DaoSTR_CheckIndex( DString *self, DaoProcess *proc, daoint index, int one_past_last )
-{
-	daoint id = index;
-	if( id < 0 ) id = self->size + id;
-	if( id < 0 || id > (self->size - 1 + one_past_last) ){
-		DaoProcess_RaiseError( proc, "Index::Range", NULL );
-		return -1;
-	}
-	return id;
-}
-static void DaoSTR_Resize( DaoProcess *proc, DaoValue *p[], int N )
-{
-	if( DaoSTR_CheckParam( proc, p[1]->xInteger.value ) < 0 ) return;
-	DString_Resize( p[0]->xString.value, p[1]->xInteger.value );
-}
 
-static void DaoSTR_Insert( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *self = p[0]->xString.value;
-	DString *str = p[1]->xString.value;
-	daoint at = DaoSTR_CheckIndex( self, proc, p[2]->xInteger.value, 1 /* allow appending */ );
-	daoint rm = DaoSTR_CheckParam( proc, p[3]->xInteger.value );
-	daoint cp = DaoSTR_CheckParam( proc, p[4]->xInteger.value );
-	if( (at < 0) | (rm < 0) | (cp < 0) ) return;
-	DString_Insert( self, str, at, rm, cp );
-}
-static void DaoSTR_Clear( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString_Clear( p[0]->xString.value );
-}
-static void DaoSTR_Erase( DaoProcess *proc, DaoValue *p[], int N )
-{
-	daoint at = DaoSTR_CheckIndex( p[0]->xString.value, proc, p[1]->xInteger.value, 0 );
-	daoint rm = p[2]->xInteger.value;
-	if( at < 0 ) return;
-	if( rm < 0 ) rm = p[0]->xString.value->size - at;
-	DString_Erase( p[0]->xString.value, at, rm );
-}
 static void DaoSTR_Chop( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString *self = p[0]->xString.value;
+	DString *res = DaoProcess_PutString( proc, p[0]->xString.value );
 	daoint utf8 = p[1]->xInteger.value;
-	DString_Chop( self, utf8 );
-	DaoProcess_PutString( proc, self );
+	DString_Chop( res, utf8 );
 }
 static void DaoSTR_Trim( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DString *self = p[0]->xString.value;
+	DString *res = DaoProcess_PutString( proc, p[0]->xString.value );
 	daoint head = p[1]->xEnum.value & 0x1;
 	daoint tail = p[1]->xEnum.value & 0x2;
 	daoint utf8 = p[2]->xInteger.value;
-	DString_Trim( self, head, tail, utf8 );
-	DaoProcess_PutString( proc, self );
+	DString_Trim( res, head, tail, utf8 );
 }
 static void DaoSTR_Find( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -812,12 +811,55 @@ static void DaoSTR_Find( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoSTR_Replace( DaoProcess *proc, DaoValue *p[], int N )
 {
+	DString *res = DaoProcess_PutChars( proc, "" );
 	DString *self = p[0]->xString.value;
 	DString *str1 = p[1]->xString.value;
 	DString *str2 = p[2]->xString.value;
 	daoint index = p[3]->xInteger.value;
-	DString_FindReplace( self, str1, str2, index );
-	DaoProcess_PutString( proc, self );
+	daoint pos, offset = 0, count = 0;
+
+	DString_Reserve( res, self->size + (str2->size - str1->size) );
+	if( index == 0 ){
+		pos = DString_Find( self, str1, offset );
+		if( pos == DAO_NULLPOS ) pos = self->size;
+		while( offset < self->size ){
+			count += pos < self->size;
+			DString_AppendBytes( res, self->chars + offset, pos - offset );
+			if( pos < self->size ) DString_Append( res, str2 );
+			offset = pos + str1->size;
+			pos = DString_Find( self, str1, offset );
+			if( pos == DAO_NULLPOS ) pos = self->size;
+		}
+	}else if( index > 0){
+		pos = DString_Find( self, str1, offset );
+		while( pos != DAO_NULLPOS ){
+			count ++;
+			offset = pos + str1->size;
+			if( count == index ){
+				DString_AppendBytes( res, self->chars, pos );
+				DString_Append( res, str2 );
+				DString_AppendBytes( res, self->chars + offset, self->size - offset  );
+				break;
+			}
+			pos = DString_Find( self, str1, offset );
+		}
+		if( count != index ) DString_Assign( res, self );
+	}else{
+		offset = DAO_NULLPOS;
+		pos = DString_RFind( self, str1, offset );
+		while( pos != DAO_NULLPOS ){
+			count --;
+			offset = pos - str1->size;
+			if( count == index ){
+				DString_AppendBytes( res, self->chars, offset + 1 );
+				DString_Append( res, str2 );
+				DString_AppendBytes( res, self->chars + pos + 1, self->size - pos - 1 );
+				break;
+			}
+			pos = DString_RFind( self, str1, offset );
+		}
+		if( count != index ) DString_Assign( res, self );
+	}
 }
 static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -972,6 +1014,7 @@ Done:
 }
 static void DaoSTR_Change( DaoProcess *proc, DaoValue *p[], int N )
 {
+	DString *res = DaoProcess_PutChars( proc, "" );
 	DString *self = p[0]->xString.value;
 	DString *pt = p[1]->xString.value;
 	DString *str = p[2]->xString.value;
@@ -983,8 +1026,7 @@ static void DaoSTR_Change( DaoProcess *proc, DaoValue *p[], int N )
 	if( end < 0 ) end += self->size;
 	if( end == 0 ) end = DString_Size( self ) - 1;
 	if( (patt == NULL) | (start < 0) | (end < 0) ) return;
-	DaoRegex_ChangeExt( patt, self, str, index, & start, & end );
-	DaoProcess_PutString( proc, self );
+	DaoRegex_ChangeExt( patt, self, res, str, index, & start, & end );
 }
 static void DaoSTR_Capture( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1194,39 +1236,27 @@ static void DaoSTR_CharAt( DaoProcess *proc, DaoValue *p[], int N )
 
 static DaoFuncItem stringMeths[] =
 {
+	{ DaoSTR_New,
+		"string( count: int, char = 0 ) => string"
+		/*
+		// Create and return a string that is composed of "count" of "char".
+		*/
+	},
+	{ DaoSTR_New2,
+		"string( count: int )[index: int => string] => string"
+		/*
+		// Create and return a string that is concatenation of the resulting
+		// strings from the exection of the code section.
+		*/
+	},
 	{ DaoSTR_Size,
 		"size( invar self: string ) => int"
 		/*
 		// Return the number of bytes in the string.
 		*/
 	},
-	{ DaoSTR_Resize,
-		"resize( self: string, size: int )"
-		/*
-		// Resize the string to a string of "size" bytes.
-		*/
-	},
-	{ DaoSTR_Insert,
-		"insert( self: string, str: string, at = 0, remove = 0, copy = 0 )"
-		/*
-		// Insert "copy" bytes from the head of "str" to this string at position
-		// "at" with "remove" bytes removed from this string starting from "at".
-		*/
-	},
-	{ DaoSTR_Clear,
-		"clear( self: string )"
-		/*
-		// Clear the string;
-		*/
-	},
-	{ DaoSTR_Erase,
-		"erase( self: string, start = 0, count = -1 )"
-		/*
-		// Erase "count" bytes starting from "start" position.
-		*/
-	},
 	{ DaoSTR_Chop,
-		"chop( self: string, utf8 = 0 ) => string"
+		"chop( invar self: string, utf8 = 0 ) => string"
 		/*
 		// Chop EOF, '\n' and/or '\r' off the end of the string;
 		// -- EOF  is first checked and removed if found;
@@ -1234,16 +1264,14 @@ static DaoFuncItem stringMeths[] =
 		// -- '\r' is last checked and removed if found;
 		// If "utf8" is not zero, all bytes that do not constitute a
 		// valid UTF-8 encoding sequence are removed from the end.
-		// Returns a shallow copy of the self string.
 		*/
 	},
 	{ DaoSTR_Trim,
-		"trim( self: string, where: enum<head;tail> = $head+$tail, utf8 = 0 ) => string"
+		"trim( invar self: string, where: enum<head;tail> = $head+$tail, utf8 = 0 ) => string"
 		/*
 		// Trim whitespaces from the head and/or the tail of the string;
 		// If "utf8" is not zero, all bytes that do not constitute a
 		// valid UTF-8 encoding sequence are trimmed as well.
-		// Returns a shallow copy of the self string.
 		*/
 	},
 	{ DaoSTR_Find,
@@ -1267,7 +1295,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Replace,
-		"replace( self: string, str1: string, str2: string, index = 0 ) => string"
+		"replace( invar self: string, str1: string, str2: string, index = 0 ) => string"
 		/*
 		// Replace the substring "str1" in "self" to "str2";
 		// Replace all occurrences of "str1" to "str2" if "index" is zero;
@@ -1318,7 +1346,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Change,
-		"change( self: string, pattern: string, target: string, index = 0, "
+		"change( invar self: string, pattern: string, target: string, index = 0, "
 			"start = 0, end = -1 ) => string"
 		/*
 		// Change the part(s) of the string that match pattern "pattern" to "target".
@@ -1388,7 +1416,7 @@ static DaoFuncItem stringMeths[] =
 
 	/* for testing */
 	{ DaoSTR_CharAt,
-		"char( self: string, index: int ) => int"
+		"char( invar self: string, index: int ) => int"
 	},
 	{ NULL, NULL }
 };
@@ -1539,6 +1567,37 @@ static DaoTypeCore listCore=
 	DaoListCore_SetItem,
 	DaoListCore_Print
 };
+
+static void DaoLIST_New( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue *res = p[N==2], *index = (DaoValue*)(void*)&idint;
+	DaoList *list = DaoProcess_PutList( proc );
+	daoint i, entry, size = p[0]->xInteger.value;
+	daoint fold = N == 2;
+	DaoVmCode *sect;
+
+	if( fold ) DaoList_Append( list, res );
+	if( size < 0 ){
+		DaoProcess_RaiseError( proc, "Param", "Invalid parameter value" );
+		return;
+	}
+	if( size == 0 ) return;
+	sect = DaoProcess_InitCodeSection( proc );
+	if( sect == NULL ) return;
+	entry = proc->topFrame->entry;
+	for(i=fold; i<size; i++){
+		idint.value = i;
+		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
+		if( sect->b >1 && N ==2 ) DaoProcess_SetValue( proc, sect->a+1, res );
+		proc->topFrame->entry = entry;
+		DaoProcess_Execute( proc );
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
+		res = proc->stackValues[0];
+		DaoList_Append( list, res );
+	}
+	DaoProcess_PopFrame( proc );
+}
 
 static daoint DaoList_MakeIndex( DaoList *self, daoint index, int one_past_last )
 {
@@ -2082,6 +2141,12 @@ static void DaoLIST_Associate( DaoProcess *proc, DaoValue *p[], int npar )
 }
 static DaoFuncItem listMeths[] =
 {
+	{ DaoLIST_New,
+		"list<@T=any>( count: int )[index: int => @T] => list<@T>"
+	},
+	{ DaoLIST_New,
+		"list<@T=any>( count: int, init: @T )[index: int, prev: @T => @T] => list<@T>"
+	},
 	{ DaoLIST_Clear,
 		"clear( self: list<@T> )"
 		/*
@@ -2607,6 +2672,34 @@ static DaoTypeCore mapCore =
 	DaoMap_Print
 };
 
+static void DaoMAP_New( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
+	DaoValue *res, *index = (DaoValue*)(void*)&idint;
+	DaoMap *map = DaoProcess_PutMap( proc, p[1]->xInteger.value );
+	daoint i, entry, size = p[0]->xInteger.value;
+	DaoVmCode *sect;
+
+	if( size < 0 ){
+		DaoProcess_RaiseError( proc, "Param", "Invalid parameter value" );
+		return;
+	}
+	if( size == 0 ) return;
+	sect = DaoProcess_InitCodeSection( proc );
+	if( sect == NULL ) return;
+	entry = proc->topFrame->entry;
+	for(i=0; i<size; i++){
+		idint.value = i;
+		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
+		proc->topFrame->entry = entry;
+		DaoProcess_Execute( proc );
+		if( proc->status == DAO_PROCESS_ABORTED ) break;
+		res = proc->stackValues[0];
+		if( res->type == DAO_TUPLE && res->xTuple.size == 2 )
+			DaoMap_Insert( map, res->xTuple.values[0], res->xTuple.values[1] );
+	}
+	DaoProcess_PopFrame( proc );
+}
 static void DaoMAP_Clear( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMap_Clear( & p[0]->xMap );
@@ -2798,6 +2891,10 @@ static void DaoMAP_Apply( DaoProcess *proc, DaoValue *p[], int N )
 }
 static DaoFuncItem mapMeths[] =
 {
+	{ DaoMAP_New,
+		"map<@K=any,@V=any>( count: int, hashing = 0 )[index: int => tuple<@K,@V>]"
+			"=> map<@K,@V>"
+	},
 	{ DaoMAP_Clear,
 		"clear( self: map<@K,@V> )"
 		/*

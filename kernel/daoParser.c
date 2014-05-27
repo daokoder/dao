@@ -2008,14 +2008,18 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 {
 	DArray *types = DArray_New(0);
 	DaoCtype *ctype = (DaoCtype*) tpl;
-	DaoType *sptype;
+	DaoType *sptype, *gentype;
+	int errors = self->errors->size;
 
-	if( tpl == NULL || tpl->type != DAO_CTYPE ) goto FailedInstantiation;
+	if( tpl == NULL || (tpl->type != DAO_CTYPE && tpl->type != DAO_TYPE) ){
+		goto FailedInstantiation;
+	}
+	gentype = tpl->type == DAO_CTYPE ? ctype->cdtype : (DaoType*) tpl;
 	DaoParser_ParseTypeItems( self, start, end, types );
-	if( self->errors->size ) goto FailedInstantiation;
-	sptype = DaoType_Specialize( ctype->cdtype, types->items.pType, types->size );
+	if( self->errors->size > errors ) goto FailedInstantiation;
+	sptype = DaoType_Specialize( gentype, types->items.pType, types->size );
 	if( sptype == NULL ) goto FailedInstantiation;
-	if( self->byteBlock ){
+	if( self->byteBlock ){ // XXX
 		DaoType **ts = types->items.pType;
 		DaoByteBlock_EncodeCtype( self->byteBlock, (DaoCtype*) sptype->aux, ctype, ts, types->size );
 		DaoByteBlock_EncodeType( self->byteBlock, sptype );
@@ -2023,7 +2027,7 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 
 DoneInstantiation:
 	DArray_Delete( types );
-	return sptype->aux;
+	return tpl->type == DAO_CTYPE ? sptype->aux : (DaoValue*) sptype;
 FailedInstantiation:
 	DArray_Delete( types );
 	return NULL;
@@ -6441,7 +6445,7 @@ InvalidFunctional:
 		case DTOK_LT :
 			if( result.konst == 0 ) return result;
 			value = DaoParser_GetVariable( self, result.konst );
-			if( value->type != DAO_CLASS && value->type != DAO_CTYPE ) return result;
+			if( value->type != DAO_CTYPE && value->type != DAO_TYPE ) return result;
 			rb = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start, end );
 			if( rb < 0 ) return result;
 			dbase = DaoParse_InstantiateType( self, value, start+1, rb-1 );
