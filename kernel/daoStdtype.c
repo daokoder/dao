@@ -1302,7 +1302,6 @@ static DaoFuncItem stringMeths[] =
 		// Otherwise, replace only the "index"-th occurrence;
 		// Positive "index" is counted forwardly;
 		// Negative "index" is counted backwardly;
-		// Returns a shallow copy of the self string.
 		*/
 	},
 	{ DaoSTR_Expand,
@@ -1814,9 +1813,9 @@ static void DaoLIST_PushBack( DaoProcess *proc, DaoValue *p[], int N )
 {
 	int i;
 	DaoList *self = & p[0]->xList;
-	daoint size = self->value->size;
 	DaoProcess_PutValue( proc, p[0] );
 	for(i=1; i<N; ++i){
+		daoint size = self->value->size;
 		DaoList_Append( self, p[i] );
 		if( size == self->value->size ) DaoProcess_RaiseError( proc, "Value", "value type" );
 	}

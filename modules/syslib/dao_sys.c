@@ -322,8 +322,8 @@ static void SYS_EnvVars( DaoProcess *proc, DaoValue *p[], int N )
 {
 #define LOCAL_BUF_SIZE 256
 	DaoMap *map = DaoProcess_PutMap( proc, 0 );
-	DaoValue *vk = (DaoValue*) DaoProcess_NewChars( proc, NULL, 0 );
-	DaoValue *vv = (DaoValue*) DaoProcess_NewChars( proc, NULL, 0 );
+	DaoValue *vk = (DaoValue*) DaoProcess_NewString( proc, NULL, 0 );
+	DaoValue *vv = (DaoValue*) DaoProcess_NewString( proc, NULL, 0 );
 	DString *key = DaoString_Get( DaoValue_CastString( vk ) );
 	DString *value = DaoString_Get( DaoValue_CastString( vv ) );
 	char **envs = environ;

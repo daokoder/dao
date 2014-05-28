@@ -2680,7 +2680,6 @@ static void DaoInferencer_Finalize( DaoInferencer *self )
 
 	body->regCount = body->regType->size;
 	DaoRoutine_SetupSimpleVars( self->routine );
-	body->specialized = 1;
 }
 static DaoType* DaoInferencer_UpdateTypeX( DaoInferencer *self, int id, DaoType *type, int c )
 {
@@ -4597,19 +4596,27 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 				// Need to add before specializing the body,
 				// to avoid possible infinite recursion:
 				 */
-				routine->body->specialized = 0;
 				DRoutines_Add( orig->specialized, rout );
 				vmc->b &= ~DAO_CALL_FAST;
 
 				/* rout may has only been declared */
 				/* forward declared routine may have an empty routine body: */
 				if( rout->body && rout->body->vmCodes->size ){
+					/* Create a new copy of the routine for specialization: */
+					rout = DaoRoutine_Copy( rout, 0, 1, 0 );
+					GC_ShiftRC( orig, rout->original );
+					rout->original = orig;
 					DMap_Reset( defs3 );
 					DaoType_MatchTo( rout->routType, orig->routType, defs3 );
 					DaoRoutine_MapTypes( rout, defs3 );
 
 					/* to infer returned type */
-					if( DaoRoutine_DoTypeInference( rout, self->silent ) ==0 ) goto InvParam;
+					if( DaoRoutine_DoTypeInference( rout, self->silent ) ==0 ){
+						DaoGC_TryDelete( (DaoValue*) rout );
+						goto InvParam;
+					}
+					/* Replace the previous unspecialized copy with this specialized copy: */
+					DRoutines_Add( orig->specialized, rout );
 				}
 			}
 		}
@@ -5113,6 +5120,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			if( code == DVM_SETVG ){
 				if( !(opc & 0x4) && var->dtype && var->dtype->invar ) goto ModifyConstant;
 				if( (opc >> 1) == 0x3 ) at = DaoType_GetInvarType( at );
+				if( (opc & 0x4) == 0 && at->konst == 1 ) at = DaoType_GetBaseType( at );
 			}else if( code == DVM_SETVO && var->subtype == DAO_INVAR ){
 				if( !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
 				at = DaoType_GetInvarType( at );
@@ -5312,7 +5320,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				}else if( at->tid == DAO_STRING && ct->tid == DAO_STRING ){
 					vmc->code = DVM_MOVE_SS;
 				}else if( at == ct || ct->tid == DAO_ANY ){
-					if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && consts[opa] == NULL ){
+					if( types[opa]->konst ){
+						vmc->code = DVM_MOVE_XX;
+					}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && consts[opa] == NULL ){
 						vmc->code = DVM_MOVE_PP;
 					}else{
 						vmc->code = DVM_MOVE_XX;
@@ -5979,6 +5989,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			var = NS->variables->items.pVar[opb];
 			if( !(opc & 0x4) && var->dtype && var->dtype->invar ) goto ModifyConstant;
 			if( (opc >> 1) == 0x3 ) at = DaoType_GetInvarType( at );
+			if( (opc & 0x4) == 0 && at->konst == 1 ) at = DaoType_GetBaseType( at );
 			if( var->dtype == NULL || var->dtype->tid == DAO_UDT ){
 				DaoVariable_SetType( var, at );
 			}

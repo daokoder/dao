@@ -451,26 +451,17 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 	}else if( svalue && need_self && ! mcall ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		partype = (DaoType*) partypes[0]->aux;
-		if( svalue->type < DAO_ARRAY ){
-			if( partype == NULL || DaoType_MatchValue( partype, svalue, defs ) == DAO_MT_EQ ){
-				GC_ShiftRC( svalue, dest[0] );
-				dest[0] = svalue;
-				selfChecked = 1;
-				passed = 1;
-			}
-		}else{
-			if( svalue->type == DAO_OBJECT && (partype->tid >= DAO_OBJECT || partype->tid <= DAO_CDATA) ){
-				/* calling C function on Dao object: */
-				svalue = DaoObject_CastToBase( (DaoObject*) svalue, partype );
-			}
-			if( DaoValue_Move2( svalue, & dest[0], partype, defs ) ){
-				passed = 1;
-				selfChecked = 1;
-				if( defs && (partype->tid == DAO_UDT || partype->tid == DAO_THT) ){
-					DaoType *type = DaoNamespace_GetType( routine->nameSpace, svalue );
-					if( !(type->attrib & DAO_TYPE_SPEC) ){
-						if( DMap_Find( defs, partype ) == NULL ) DMap_Insert( defs, partype, type );
-					}
+		if( svalue->type == DAO_OBJECT && (partype->tid >= DAO_OBJECT || partype->tid <= DAO_CDATA) ){
+			/* calling C function on Dao object: */
+			svalue = DaoObject_CastToBase( (DaoObject*) svalue, partype );
+		}
+		if( DaoValue_Move2( svalue, & dest[0], partype, defs ) ){
+			passed = 1;
+			selfChecked = 1;
+			if( defs && (partype->tid == DAO_UDT || partype->tid == DAO_THT) ){
+				DaoType *type = DaoNamespace_GetType( routine->nameSpace, svalue );
+				if( !(type->attrib & DAO_TYPE_SPEC) ){
+					if( DMap_Find( defs, partype ) == NULL ) DMap_Insert( defs, partype, type );
 				}
 			}
 		}
@@ -817,6 +808,11 @@ int DaoCallServer_MarkActiveProcess( DaoProcess *process, int active );
 #endif
 
 
+#ifdef DAO_DEBUG_VM
+#define DAO_DEBUG_VM
+#define WITHOUT_DIRECT_THREADING
+#endif
+
 #ifndef WITHOUT_DIRECT_THREADING
 #if !defined( __GNUC__ ) || defined( __STRICT_ANSI__ )
 #define WITHOUT_DIRECT_THREADING
@@ -1027,7 +1023,8 @@ int DaoProcess_Start( DaoProcess *self )
 #define OPDEFAULT() default:
 #define OPEND() vmc++; }
 
-#if 0
+#ifdef DAO_DEBUG_VM
+#undef OPBEGIN
 #define OPBEGIN() for(;;){ printf("%3i:", (i=vmc-vmcBase) ); DaoVmCodeX_Print( *topFrame->routine->body->annotCodes->items.pVmc[i], NULL, NULL ); switch( vmc->code )
 #endif
 
@@ -1074,7 +1071,7 @@ CallEntry:
 	if( vmSpace->stopit ) goto FinishProcess;
 	if( invokehost ) handler->InvokeHost( handler, self );
 
-	if( (vmSpace->options & DAO_OPTION_DEBUG) | (routine->body->mode & DAO_OPTION_DEBUG) )
+	if( (vmSpace->options & DAO_OPTION_DEBUG) | (routine->body->exeMode & DAO_ROUT_MODE_DEBUG) )
 		DaoProcess_AdjustCodes( self, vmSpace->options );
 
 	vmcBase = topFrame->codes;
@@ -4222,13 +4219,13 @@ void DaoProcess_DoList(  DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoNamespace *ns = self->activeNamespace;
 	DaoValue **regValues = self->activeValues;
-	const int bval = vmc->b;
+	DaoList *list = DaoProcess_GetList( self, vmc );
+	DaoType *type = self->activeTypes[vmc->c];
 	const ushort_t opA = vmc->a;
 	int i;
 
-	DaoList *list = DaoProcess_GetList( self, vmc );
-	DArray_Resize( list->value, bval, NULL );
-	if( bval >0 && self->activeTypes[ vmc->c ] ==NULL ){
+	DArray_Resize( list->value, vmc->b, NULL );
+	if( vmc->b > 0 && type ==NULL ){
 		DaoType *abtp = DaoNamespace_GetType( ns, regValues[opA] );
 		DaoType *t = DaoNamespace_MakeType( ns, "list", DAO_LIST, NULL, & abtp, 1 );
 		GC_ShiftRC( t, list->ctype );
@@ -4238,7 +4235,8 @@ void DaoProcess_DoList(  DaoProcess *self, DaoVmCode *vmc )
 		GC_ShiftRC( dao_type_list_any, list->ctype );
 		list->ctype = dao_type_list_any;
 	}
-	for( i=0; i<bval; i++){
+	if( type == dao_type_list_empty ) list->trait |= DAO_VALUE_CONST;
+	for(i=0; i<vmc->b; i++){
 		if( DaoList_SetItem( list, regValues[opA+i], i ) ){
 			DaoProcess_RaiseError( self, "Value", "invalid items" );
 			return;
@@ -4251,8 +4249,10 @@ void DaoProcess_DoVector( DaoProcess *self, DaoVmCode *vmc )
 #ifdef DAO_WITH_NUMARRAY
 	const ushort_t opA = vmc->a;
 	const ushort_t count = vmc->b;
+	DaoType *type = self->activeTypes[vmc->c];
 	DaoArray *array = DaoProcess_GetArray( self, vmc );
 
+	if( type == dao_type_array_empty ) array->trait |= DAO_VALUE_CONST;
 	if( count && array->etype == DAO_NONE ){
 		DaoValue *p = self->activeValues[opA];
 		switch( p->type ){
@@ -4629,8 +4629,10 @@ void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc )
 	const ushort_t bval = vmc->b;
 	DaoNamespace *ns = self->activeNamespace;
 	DaoValue **pp = self->activeValues;
+	DaoType *type = self->activeTypes[vmc->c];
 	DaoMap *map = DaoProcess_GetMap( self, vmc, vmc->code == DVM_HASH );
 
+	if( type == dao_type_map_empty ) map->trait |= DAO_VALUE_CONST;
 	if( bval == 2 && pp[opA]->type ==0 && pp[opA+1]->type ==0 ) return;
 	for( i=0; i<bval-1; i+=2 ){
 		if( (c = DaoMap_Insert( map, pp[opA+i], pp[opA+i+1] ) ) ){
@@ -6438,12 +6440,12 @@ static void DaoProcess_AdjustCodes( DaoProcess *self, int options )
 	DaoRoutine *routine = self->topFrame->routine;
 	DaoVmCode *c = self->topFrame->codes;
 	int i, n = routine->body->vmCodes->size;
-	int mode = routine->body->mode;
+	int mode = routine->body->exeMode;
 	if( options & DAO_OPTION_DEBUG ){
-		routine->body->mode |= DAO_OPTION_DEBUG;
+		routine->body->exeMode |= DAO_ROUT_MODE_DEBUG;
 		if( debugger && debugger->BreakPoints ) debugger->BreakPoints( debugger, routine );
 	}else if( mode & DAO_OPTION_DEBUG ){
-		routine->body->mode &= ~DAO_OPTION_DEBUG;
+		routine->body->exeMode &= ~DAO_ROUT_MODE_DEBUG;
 		for(i=0; i<n; i++) if( c[i].code == DVM_DEBUG ) c[i].code = DVM_NOP;
 	}
 }

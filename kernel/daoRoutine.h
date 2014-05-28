@@ -121,12 +121,10 @@ struct DaoRoutineBody
 	DArray *simpleVariables;
 	DMap   *localVarType; /* DMap<int,DaoType*> local variable types */
 
-	int mode;
-
 	ushort_t  regCount;
+	ushort_t  exeMode;
 	ushort_t  codeStart;
 	ushort_t  codeEnd;
-	ushort_t  specialized;
 
 	DMap *abstypes;
 

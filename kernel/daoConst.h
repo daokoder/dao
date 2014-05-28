@@ -220,6 +220,11 @@ enum DaoRoutineAttrib
 	DAO_ROUT_REUSABLE  = (1<<11)  /* stack data for the routine is reusable */
 };
 
+enum DaoRoutineModes
+{
+	DAO_ROUT_MODE_DEBUG = 1
+};
+
 #define DAO_TYPER_FREE       (DAO_ROUT_REUSABLE<<1)
 #define DAO_OPER_OVERLOADED  (DAO_TYPER_FREE<<1)
 

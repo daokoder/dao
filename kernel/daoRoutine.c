@@ -188,7 +188,6 @@ DaoRoutineBody* DaoRoutineBody_New()
 	self->codeStart = self->codeEnd = 0;
 	self->aux = DMap_New(0,0);
 	self->jitData = NULL;
-	self->specialized = 0;
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
@@ -738,18 +737,20 @@ DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *svalue, DaoType *sty
 		/* strict checking for specialized routines: */
 		rout2 = DRoutines_Lookup2( rout->specialized, svalue, stype, values, types, count, callmode, 1 );
 
-		/*
-		// If the routine has a body, check if it has done specialization.
-		// Only used specialized routine for thread safety to avoid the
-		// situation where the routine is used for execution, but its body
-		// is still undergoing specialization.
-		*/
-		if( rout2 && (rout2->body == NULL || rout2->body->specialized) ) rout = rout2;
+		if( rout2 ) rout = rout2;
 	}
 	b1 = ((callmode>>16) & DAO_CALL_BLOCK) != 0;
 	b2 = (rout->attribs & DAO_ROUT_CODESECT) != 0;
 	if( b1 != b2 ) return NULL;
 	return (DaoRoutine*) rout;
+}
+DaoRoutine* DaoRoutine_ResolveByValue( DaoRoutine *self, DaoValue *svalue, DaoValue *values[], int count )
+{
+	return DaoRoutine_Resolve( self, svalue, NULL, values, NULL, count, 0 );
+}
+DaoRoutine* DaoRoutine_ResolveByteType( DaoRoutine *self, DaoType *stype, DaoType *types[], int count )
+{
+	return DaoRoutine_Resolve( self, NULL, stype, NULL, types, count, 0 );
 }
 
 static int DaoRoutine_Check( DaoRoutine *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode )

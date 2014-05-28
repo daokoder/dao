@@ -697,6 +697,8 @@ DAO_DLL void  DaoArray_SetBuffer( DaoArray *self, void *buffer, daoint size );
 // See description in "daoRoutine.h".
 */
 DAO_DLL DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode );
+DAO_DLL DaoRoutine* DaoRoutine_ResolveByValue( DaoRoutine *self, DaoValue *svalue, DaoValue *values[], int count );
+DAO_DLL DaoRoutine* DaoRoutine_ResolveByteType( DaoRoutine *self, DaoType *stype, DaoType *types[], int count );
 
 /*
 // DaoRoutine_IsWrapper() checks if the routine is a wrapped C function.
@@ -786,8 +788,8 @@ DAO_DLL float*     DaoProcess_PutFloat( DaoProcess *self, float value );
 DAO_DLL double*    DaoProcess_PutDouble( DaoProcess *self, double value );
 DAO_DLL complex16* DaoProcess_PutComplex( DaoProcess *self, complex16 value );
 DAO_DLL DString*   DaoProcess_PutChars( DaoProcess *self, const char *mbs );
-DAO_DLL DString*   DaoProcess_PutString( DaoProcess *self, DString *str );
 DAO_DLL DString*   DaoProcess_PutBytes( DaoProcess *self, const char *bytes, daoint N );
+DAO_DLL DString*   DaoProcess_PutString( DaoProcess *self, DString *str );
 DAO_DLL DaoEnum*   DaoProcess_PutEnum( DaoProcess *self, const char *symbols );
 DAO_DLL DaoArray*  DaoProcess_PutArray( DaoProcess *self );
 DAO_DLL DaoList*   DaoProcess_PutList( DaoProcess *self );
@@ -827,7 +829,7 @@ DAO_DLL DaoArray*  DaoProcess_PutVectorC( DaoProcess *self, complex16 *array, da
 //
 // Example:
 //   DaoProcess_NewInteger( proc, 123 );
-//   DaoProcess_NewChars( proc, "abc", -1 );
+//   DaoProcess_NewString( proc, "abc", -1 );
 //   DaoProcess_PutTuple( proc, -2 );
 // This will put a tuple of (123, 'abc').
 */
@@ -948,11 +950,10 @@ DAO_DLL DaoInteger* DaoProcess_NewInteger( DaoProcess *self, daoint v );
 DAO_DLL DaoFloat*   DaoProcess_NewFloat( DaoProcess *self, float v );
 DAO_DLL DaoDouble*  DaoProcess_NewDouble( DaoProcess *self, double v );
 DAO_DLL DaoComplex* DaoProcess_NewComplex( DaoProcess *self, complex16 v );
-DAO_DLL DaoString*  DaoProcess_NewString( DaoProcess *self, int mbs );
 /*
 // Negative "n" indicates a null-terminated string:
 */
-DAO_DLL DaoString*  DaoProcess_NewChars( DaoProcess *self, const char *s, daoint n );
+DAO_DLL DaoString*  DaoProcess_NewString( DaoProcess *self, const char *s, daoint n );
 DAO_DLL DaoEnum*    DaoProcess_NewEnum( DaoProcess *self, DaoType *type, int value );
 DAO_DLL DaoTuple*   DaoProcess_NewTuple( DaoProcess *self, int count );
 DAO_DLL DaoList*    DaoProcess_NewList( DaoProcess *self );

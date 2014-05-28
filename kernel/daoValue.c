@@ -457,9 +457,6 @@ DaoValue* DaoValue_CopyContainer( DaoValue *self, DaoType *tp )
 */
 DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cst )
 {
-	DaoEnum *e;
-	daoint i, n, force = 0;
-
 	if( self == NULL ) return dao_none_value;
 	if( (tp == NULL || tp->tid == self->type) && self->type < DAO_ENUM ){
 		if( cst && cst->invar ) return self;
@@ -505,28 +502,26 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 		if( sliced ) (*sliced)( self );
 		return self;
 	}
-	switch( tp ? self->type : 0 ){
-	case DAO_LIST  :
-		force = self->xList.ctype == dao_type_list_empty;
-		force &= tp != dao_type_list_empty;
-		break;
-	case DAO_MAP   :
-		force = self->xMap.ctype == dao_type_map_empty;
-		force &= tp != dao_type_map_empty;
-		break;
+	if( tp == NULL ){
+		switch( self->type ){
+		case DAO_LIST  :
+			if( self->xList.ctype == dao_type_list_empty ) tp = dao_type_list_empty;
+			break;
+		case DAO_MAP   :
+			if( self->xMap.ctype == dao_type_map_empty ) tp = dao_type_map_empty;
+			break;
 #ifdef DAO_WITH_NUMARRAY
-	case DAO_ARRAY :
-		force = self->xArray.etype == DAO_NONE;
-		force &= tp != dao_type_array_empty;
-		break;
+		case DAO_ARRAY :
+			if( self->xMap.ctype == dao_type_array_empty ) tp = dao_type_array_empty;
+			break;
 #endif
-	default : break;
+		default : break;
+		}
+		if( tp ) tp = DaoType_GetBaseType( tp );
 	}
-	if( force == 0 ){
-		if( self->xBase.trait & DAO_VALUE_NOCOPY ) return self;
-		if( (self->xBase.trait & DAO_VALUE_CONST) == 0 ) return self;
-		if( cst != NULL && cst->invar != 0 ) return self;
-	}
+	if( self->xBase.trait & DAO_VALUE_NOCOPY ) return self;
+	if( (self->xBase.trait & DAO_VALUE_CONST) == 0 ) return self;
+	if( cst != NULL && cst->invar != 0 ) return self;
 	return DaoValue_CopyContainer( self, tp );
 }
 DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
@@ -1139,13 +1134,7 @@ DaoComplex* DaoProcess_NewComplex( DaoProcess *self, complex16 v )
 	DaoProcess_CacheValue( self, (DaoValue*) res );
 	return res;
 }
-DaoString* DaoProcess_NewString( DaoProcess *self, int mbs )
-{
-	DaoString *res = DaoString_New( mbs );
-	DaoProcess_CacheValue( self, (DaoValue*) res );
-	return res;
-}
-DaoString* DaoProcess_NewChars( DaoProcess *self, const char *s, daoint n )
+DaoString* DaoProcess_NewString( DaoProcess *self, const char *s, daoint n )
 {
 	DaoString *res = DaoString_New();
 	if( s ) DString_SetBytes( res->value, s, n );
