@@ -1018,6 +1018,8 @@ static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNam
 	}
 	if( max == 0 ) rout = NULL;
 	if( rout ) *error = 0;
+	DArray_Delete( types );
+	DString_Delete( name );
 	return rout;
 }
 static void DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *value, DaoValue *sval )

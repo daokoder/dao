@@ -1602,6 +1602,7 @@ static DaoxHelp* DaoxHelp_New()
 static void DaoxHelp_Delete( DaoxHelp *self )
 {
 	/* Do not delete entries here, they are managed by DaoxHelper; */
+	DMap_Delete( self->entries );
 	free( self );
 }
 
@@ -1637,6 +1638,8 @@ static void DaoxHelper_Delete( DaoxHelper *self )
 	for(it=DMap_First(self->helps); it; it=DMap_Next(self->helps,it)){
 		DaoxHelp_Delete( (DaoxHelp*) it->value.pVoid );
 	}
+	DaoxHelpEntry_Delete( self->tree );
+	DMap_Delete( self->entries );
 	DMap_Delete( self->cxxKeywords );
 	DMap_Delete( self->helps );
 	DArray_Delete( self->nslist );
@@ -1683,6 +1686,7 @@ static DaoxHelpEntry* DaoxHelper_GetEntry( DaoxHelper *self, DaoxHelp *help, Dao
 		DArray_Append( entry2->nested2, entry );
 		DMap_Insert( entry2->nested, name2, entry );
 		entry->parent = entry2;
+		DString_Delete( name2 );
 	}
 	DMap_Insert( self->entries, name, entry );
 	return entry;
