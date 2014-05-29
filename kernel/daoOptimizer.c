@@ -4373,18 +4373,20 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		GC_ShiftRC( tt, tp[k] );
 		tp[k] = tt;
 	}
-	m = 1; /* tail call; */
-	for(k=i+1; k<N; k++){
-		DaoInode *ret = inodes[k];
-		if( ret->code == DVM_NOP ) continue;
-		if( ret->code == DVM_RETURN ){
-			m &= ret->c ==0 && (ret->b ==0 || (ret->b ==1 && ret->a == vmc->c));
+	if( ! (routine->attribs & DAO_ROUT_MAIN) ){
+		m = 1; /* tail call; */
+		for(k=i+1; k<N; k++){
+			DaoInode *ret = inodes[k];
+			if( ret->code == DVM_NOP ) continue;
+			if( ret->code == DVM_RETURN ){
+				m &= ret->c ==0 && (ret->b ==0 || (ret->b ==1 && ret->a == vmc->c));
+				break;
+			}
+			m = 0;
 			break;
 		}
-		m = 0;
-		break;
+		if( m ) vmc->b |= DAO_CALL_TAIL;
 	}
-	if( m ) vmc->b |= DAO_CALL_TAIL;
 	if( (vmc->b & DAO_CALL_EXPAR) && argc && tp[argc-1]->tid == DAO_TUPLE ){
 		DArray *its = tp[argc-1]->nested;
 		DArray_Clear( self->array2 );

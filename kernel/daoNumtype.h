@@ -138,6 +138,7 @@ DAO_DLL void DaoArray_Delete( DaoArray *self );
 DAO_DLL void DaoArray_SetDimCount( DaoArray *self, int D );
 DAO_DLL void DaoArray_FinalizeDimData( DaoArray *self );
 
+DAO_DLL void DaoArray_ResizeData( DaoArray *self, daoint size, daoint oldSize );
 DAO_DLL void DaoArray_ResizeVector( DaoArray *self, daoint size );
 DAO_DLL void DaoArray_ResizeArray( DaoArray *self, daoint *dims, int D );
 

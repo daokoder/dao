@@ -1489,7 +1489,6 @@ static DaoFuncItem numarMeths[] =
 };
 
 static int DaoArray_DataTypeSize( DaoArray *self );
-void DaoArray_ResizeData( DaoArray *self, daoint size, daoint oldSize );
 
 int DaoArray_NumType( DaoArray *self )
 {

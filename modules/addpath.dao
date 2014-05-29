@@ -25,3 +25,6 @@ std::path( 'DaoCXX', $add );
 std::path( 'DaoJIT', $add );
 std::path( 'DaoSQL', $add );
 std::path( 'DaoGraphics', $add );
+std::path( 'DaoOpenGL', $add );
+std::path( 'DaoSDL', $add );
+std::path( 'DaoGSL', $add );

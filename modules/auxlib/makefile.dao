@@ -12,8 +12,10 @@ project_dll  = project.AddSharedLibrary( "dao_aux", project_objs )
 project_lib  = project.AddStaticLibrary( "dao_aux", project_objs )
 
 
+auxinc = DaoMake::MakePath( daovm.GetPath( "INC-PATH" ), "modules/auxlib" )
 findpkg = DaoMake::MakePath( project.BinaryPath(), "FindDaoAux.dao" );
 project.GenerateFinder( $TRUE );
+project.Install( auxinc, { "dao_aux.h" } );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_lib );
 project.Install( daovm.GetPath( "INSTALL-PATH" ) + "/shared/daomake/packages/", findpkg );
