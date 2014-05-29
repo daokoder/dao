@@ -1404,8 +1404,8 @@ static int DaoxHelpEntry_GetNameLength( DaoxHelpEntry *self )
 }
 static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DArray *offsets, int offset, int width, int root, int last, int depth, int hlerror )
 {
+	DString *line;
 	DArray *old = offsets;
-	DString *line = DString_New();
 	daoint i, len = DaoxHelpEntry_GetNameLength( self );
 	int extra = root ? 2 : 5;
 	int color, count = 0;
@@ -1426,6 +1426,7 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 		len = self->name->size;
 	}
 
+	line = DString_New();
 	DString_Resize( line, offset );
 	memset( line->chars, ' ', line->size*sizeof(char) );
 	for(i=0; i<offsets->size; i++) line->chars[ offsets->items.pInt[i] ] = '|';
@@ -1526,8 +1527,8 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 		DaoxStream_WriteChar( stream, '\n' );
 	}
 	if( last == 0 ) DArray_PopBack( offsets );
-	DString_Delete( line );
 	if( old == NULL ) DArray_Delete( offsets );
+	DString_Delete( line );
 }
 static void DaoxHelpEntry_Print( DaoxHelpEntry *self, DaoxStream *stream, DaoProcess *proc )
 {

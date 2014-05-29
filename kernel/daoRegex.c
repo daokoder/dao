@@ -1181,9 +1181,9 @@ int DaoRegex_ChangeExt( DaoRegex *self, DString *input, DString *output,
 	}
 	DString_SubString( input, tmp2, last, end - last + 1 );
 	DString_Append( output, tmp2 );
-	DString_Delete( tmp2 );
 DoNothing:
 	DString_Delete( tmp );
+	DString_Delete( tmp2 );
 	DArray_Delete( array );
 	return n;
 }
