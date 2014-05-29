@@ -2091,7 +2091,6 @@ static void DaoByteCoder_DecodeEnum( DaoByteCoder *self, DaoByteBlock *block )
 		return;
 	}
 	type = DaoType_New( name->chars, DAO_ENUM, NULL, NULL );
-	type->mapNames = DMap_New( DAO_DATA_STRING, 0 );
 	type->subtid = B;
 	DaoByteCoder_CheckDataBlocks( self, block );
 	for(pb=block->first; pb; pb=pb->next){

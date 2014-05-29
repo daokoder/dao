@@ -1672,7 +1672,6 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 	char c;
 
 	type = DaoType_New( "enum<", DAO_ENUM, NULL, NULL );
-	type->mapNames = DMap_New( DAO_DATA_STRING, 0 );
 	DString_Reserve( type->name, 128 );
 	for(k=start; k<=end; k++){
 		tok = tokens[k];
@@ -3446,7 +3445,6 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 	}
 
 	abtp = DaoType_New( "enum<", DAO_ENUM, NULL, NULL );
-	abtp->mapNames = DMap_New( DAO_DATA_STRING, 0 );
 	comma = DaoParser_FindOpenToken( self, DTOK_COMMA, start+2, -1, 0 );
 	semco = DaoParser_FindOpenToken( self, DTOK_SEMCO, start+2, -1, 0 );
 	if( comma >=0 && semco >=0 ){
@@ -5396,7 +5394,6 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 		DaoType *type = DaoNamespace_FindType( ns, str );
 		if( type == NULL ){
 			type = DaoType_New( str->chars, DAO_ENUM, NULL, NULL );
-			type->mapNames = DMap_New( DAO_DATA_STRING, 0 );
 			type->subtid = DAO_ENUM_SYM;
 			DString_Assign( self->string, str );
 			DString_Erase( self->string, 0, 1 );

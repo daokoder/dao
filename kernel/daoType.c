@@ -1216,7 +1216,10 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		if( copy->mapNames ) DMap_Delete( copy->mapNames );
 		copy->mapNames = DMap_Copy( self->mapNames );
 	}
-	if( self->fname ) copy->fname = DString_Copy( self->fname );
+	if( self->fname ){
+		if( copy->fname == NULL ) copy->fname = DString_New();
+		DString_Assign( copy->fname, self->fname );
+	}
 	if( self->nested ){
 		int m = DString_Match( self->name, "^ %@? %w+ %< ", NULL, NULL );
 		char sep = self->tid == DAO_VARIANT ? '|' : ',';

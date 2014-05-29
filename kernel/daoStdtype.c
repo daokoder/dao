@@ -3670,6 +3670,7 @@ void DaoCtype_InitInterface( DaoCtype *self )
 void DaoCtype_Delete( DaoCtype *self )
 {
 	DaoCstruct_Free( (DaoCstruct*) self );
+	DString_Delete( self->name );
 	GC_DecRC( self->cdtype );
 	GC_DecRC( self->clsInter );
 	GC_DecRC( self->objInter );
