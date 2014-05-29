@@ -679,7 +679,7 @@ DAO_DLL void  DaoArray_SetBuffer( DaoArray *self, void *buffer, daoint size );
 */
 DAO_DLL DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode );
 DAO_DLL DaoRoutine* DaoRoutine_ResolveByValue( DaoRoutine *self, DaoValue *svalue, DaoValue *values[], int count );
-DAO_DLL DaoRoutine* DaoRoutine_ResolveByteType( DaoRoutine *self, DaoType *stype, DaoType *types[], int count );
+DAO_DLL DaoRoutine* DaoRoutine_ResolveByType( DaoRoutine *self, DaoType *stype, DaoType *types[], int count );
 
 /*
 // DaoRoutine_IsWrapper() checks if the routine is a wrapped C function.

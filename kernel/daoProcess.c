@@ -2925,10 +2925,11 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *val;
 	DaoTuple *tuple;
 	DaoType *tp, *ct = self->activeTypes[ vmc->c ];
+	DaoType *routype = self->activeRoutine->routType;
 	int argcount = self->topFrame->parCount;
-	int parcount = self->activeRoutine->parCount;
+	int parcount = routype->nested->size - routype->variadic;
 	int parcount2 = argcount < parcount ? parcount : argcount; /* including defaults; */
-	int argstuple = vmc->a == 0 && vmc->b == parcount;
+	int argstuple = vmc->a == 0 && vmc->b == self->activeRoutine->parCount;
 	int i, count = argstuple ? parcount2 : vmc->b;
 
 	self->activeCode = vmc;

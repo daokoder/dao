@@ -1174,6 +1174,16 @@ DaoMap* DaoProcess_NewMap( DaoProcess *self, unsigned int hashing )
 	DaoProcess_CacheValue( self, (DaoValue*) res );
 	return res;
 }
+DaoArray* DaoProcess_NewArray( DaoProcess *self, int type )
+{
+#ifdef DAO_WITH_NUMARRAY
+	DaoArray *res = DaoArray_New( type );
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+#else
+	return NULL;
+#endif
+}
 DaoStream* DaoProcess_NewStream( DaoProcess *self, FILE *f )
 {
 	DaoStream *res = DaoStream_New();

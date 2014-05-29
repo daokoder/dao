@@ -2281,24 +2281,24 @@ static void UNIT_MakeLinkingFlags( DaoProcess *proc, DaoValue *p[], int N )
 }
 static DaoFuncItem DaoMakeUnitMeths[]=
 {
-	{ UNIT_AddPlatformDefs,   "AddPlatformDefs( self : Unit )" },
-	{ UNIT_AddDefinition,     "AddDefinition( self : Unit, name : string, value = '' )" },
-	{ UNIT_AddIncludePath,    "AddIncludePath( self : Unit, path : string, ... : string )" },
-	{ UNIT_AddLinkingPath,    "AddLinkingPath( self : Unit, path : string, ... : string )" },
-	{ UNIT_AddAssemblingFlag,  "AddAssemblingFlag( self : Unit, flag : string, ... : string )" },
-	{ UNIT_AddCompilingFlag,  "AddCompilingFlag( self : Unit, flag : string, ... : string )" },
-	{ UNIT_AddLinkingFlag,    "AddLinkingFlag( self : Unit, flag : string, ... : string )" },
-	{ UNIT_AddRpath,          "AddRpath( self : Unit, flag : string, ... : string )" },
+	{ UNIT_AddPlatformDefs,   "AddPlatformDefs( self: Unit )" },
+	{ UNIT_AddDefinition,     "AddDefinition( self: Unit, name: string, value = '' )" },
+	{ UNIT_AddIncludePath,    "AddIncludePath( self: Unit, path: string, ...: string )" },
+	{ UNIT_AddLinkingPath,    "AddLinkingPath( self: Unit, path: string, ...: string )" },
+	{ UNIT_AddAssemblingFlag,  "AddAssemblingFlag( self: Unit, flag: string, ...: string )" },
+	{ UNIT_AddCompilingFlag,  "AddCompilingFlag( self: Unit, flag: string, ...: string )" },
+	{ UNIT_AddLinkingFlag,    "AddLinkingFlag( self: Unit, flag: string, ...: string )" },
+	{ UNIT_AddRpath,          "AddRpath( self: Unit, flag: string, ...: string )" },
 
-	{ UNIT_UseImportLib,  "UseImportLibrary( self : Unit, pro : Project, ... : string )" },
-	{ UNIT_UseSharedLib,  "UseSharedLibrary( self : Unit, pro : Project, ... : string )" },
-	{ UNIT_UseStaticLib,  "UseStaticLibrary( self : Unit, pro : Project, ... : string )" },
+	{ UNIT_UseImportLib,  "UseImportLibrary( self: Unit, pro: Project, ...: string )" },
+	{ UNIT_UseSharedLib,  "UseSharedLibrary( self: Unit, pro: Project, ...: string )" },
+	{ UNIT_UseStaticLib,  "UseStaticLibrary( self: Unit, pro: Project, ...: string )" },
 
-	{ UNIT_MakeDefinitions,     "MakeDefinitions( self : Unit ) => string" },
-	{ UNIT_MakeIncludePaths,    "MakeIncludePaths( self : Unit ) => string" },
-	{ UNIT_MakeLinkingPaths,    "MakeLinkingPaths( self : Unit ) => string" },
-	{ UNIT_MakeCompilingFlags,  "MakeCompilingFlags( self : Unit ) => string" },
-	{ UNIT_MakeLinkingFlags,    "MakeLinkingFlags( self : Unit ) => string" },
+	{ UNIT_MakeDefinitions,     "MakeDefinitions( self: Unit ) => string" },
+	{ UNIT_MakeIncludePaths,    "MakeIncludePaths( self: Unit ) => string" },
+	{ UNIT_MakeLinkingPaths,    "MakeLinkingPaths( self: Unit ) => string" },
+	{ UNIT_MakeCompilingFlags,  "MakeCompilingFlags( self: Unit ) => string" },
+	{ UNIT_MakeLinkingFlags,    "MakeLinkingFlags( self: Unit ) => string" },
 	{ NULL, NULL }
 };
 DaoTypeBase DaoMakeUnit_Typer =
@@ -2321,8 +2321,8 @@ static void OBJECTS_AddSources( DaoProcess *proc, DaoValue *p[], int N )
 }
 static DaoFuncItem DaoMakeObjectsMeths[]=
 {
-	{ OBJECTS_AddHeaders,  "AddHeaders( file : string, ... : string )" },
-	{ OBJECTS_AddSources,  "AddSources( file : string, ... : string )" },
+	{ OBJECTS_AddHeaders,  "AddHeaders( file: string, ...: string )" },
+	{ OBJECTS_AddSources,  "AddSources( file: string, ...: string )" },
 	{ NULL, NULL }
 };
 DaoTypeBase DaoMakeObjects_Typer =
@@ -2403,15 +2403,15 @@ static void TARGET_Install( DaoProcess *proc, DaoValue *p[], int N )
 }
 static DaoFuncItem DaoMakeTargetMeths[]=
 {
-	{ TARGET_Name,  "Name( self : Target ) => string" },
-	{ TARGET_AddObjects,  "AddObjects( self : Target, objects : Objects, ... : Objects )" },
-	{ TARGET_AddCommand,  "AddCommand( self : Target, command : string, ... : string )" },
-	{ TARGET_AddTest,     "AddTest( self : Target, test : string, ... : string )" },
-	{ TARGET_AddDepends,  "AddDependency( self : Target, target : Target, ... : Target )" },
-	{ TARGET_EnableDynamicExporting,  "EnableDynamicExporting( self : Target, bl :enum<FALSE,TRUE> = $TRUE )" },
-	{ TARGET_EnableDynamicLinking,    "EnableDynamicLinking( self : Target, bl :enum<FALSE,TRUE> = $TRUE )" },
-	{ TARGET_SetPath,  "SetTargetPath( self : Target, path : string )" },
-	{ TARGET_Install,  "Install( self : Target, dest : string )" },
+	{ TARGET_Name,  "Name( self: Target ) => string" },
+	{ TARGET_AddObjects,  "AddObjects( self: Target, objects: Objects, ...: Objects )" },
+	{ TARGET_AddCommand,  "AddCommand( self: Target, command: string, ...: string )" },
+	{ TARGET_AddTest,     "AddTest( self: Target, test: string, ...: string )" },
+	{ TARGET_AddDepends,  "AddDependency( self: Target, target: Target, ...: Target )" },
+	{ TARGET_EnableDynamicExporting,  "EnableDynamicExporting( self: Target, bl :enum<FALSE,TRUE> = $TRUE )" },
+	{ TARGET_EnableDynamicLinking,    "EnableDynamicLinking( self: Target, bl :enum<FALSE,TRUE> = $TRUE )" },
+	{ TARGET_SetPath,  "SetTargetPath( self: Target, path: string )" },
+	{ TARGET_Install,  "Install( self: Target, dest: string )" },
 	{ NULL, NULL }
 };
 static void TARGET_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *maps, int rm )
@@ -2632,6 +2632,22 @@ static void PROJECT_ExportLibrary( DaoProcess *proc, DaoValue *p[], int N )
 	DMap_Insert( self->exportShlibs, lib, libs );
 	DMap_Insert( self->exportStlibs, lib, file );
 }
+static void PROJECT_GetFlags( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeProject *self = (DaoMakeProject*) p[0];
+	DString *lib = DaoValue_TryGetString( p[1] );
+	DString *res = DaoProcess_PutChars( proc, "" );
+	DMap *map = NULL;
+	DNode *it;
+	switch( p[2]->xEnum.value ){
+	case 0: map = self->exportCFlags; break;
+	case 1: map = self->exportLFlags; break;
+	case 2: map = self->exportShlibs; break;
+	case 3: map = self->exportStlibs; break;
+	}
+	if( map ) it = DMap_Find( map, lib );
+	if( it ) DString_Assign( res, it->value.pString );
+}
 static void PROJECT_ExportPath( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeProject *self = (DaoMakeProject*) p[0];
@@ -2655,32 +2671,34 @@ static void PROJECT_GenerateFinder( DaoProcess *proc, DaoValue *p[], int N )
 }
 static DaoFuncItem DaoMakeProjectMeths[]=
 {
-	{ PROJECT_New,     "Project( name : string ) => Project" },
+	{ PROJECT_New,     "Project( name: string ) => Project" },
 
-	{ PROJECT_AddOBJ,  "AddObjects( self : Project, sources : list<string>, headers : list<string> = {} ) => Objects" },
-	{ PROJECT_AddEXE,  "AddExecutable( self : Project, name : string, objs : Objects, ... : Objects ) =>Target" },
-	{ PROJECT_AddDLL,  "AddSharedLibrary( self : Project, name : string, objs : Objects, ... : Objects ) =>Target" },
-	{ PROJECT_AddARC,  "AddStaticLibrary( self : Project, name : string, objs : Objects, ... : Objects ) =>Target" },
-	{ PROJECT_AddJS,   "AddJavaScriptLibrary( self : Project, name : string, objs : Objects, ... : Objects ) =>Target" },
-	{ PROJECT_AddTest, "AddTest( self : Project, group : string, test : string, ... : string ) => Target" },
-	{ PROJECT_AddCMD,  "AddCommand( self : Project, name : string, command : string, ... : string ) => Target" },
+	{ PROJECT_AddOBJ,  "AddObjects( self: Project, sources: list<string>, headers: list<string> = {} ) => Objects" },
+	{ PROJECT_AddEXE,  "AddExecutable( self: Project, name: string, objs: Objects, ...: Objects ) =>Target" },
+	{ PROJECT_AddDLL,  "AddSharedLibrary( self: Project, name: string, objs: Objects, ...: Objects ) =>Target" },
+	{ PROJECT_AddARC,  "AddStaticLibrary( self: Project, name: string, objs: Objects, ...: Objects ) =>Target" },
+	{ PROJECT_AddJS,   "AddJavaScriptLibrary( self: Project, name: string, objs: Objects, ...: Objects ) =>Target" },
+	{ PROJECT_AddTest, "AddTest( self: Project, group: string, test: string, ...: string ) => Target" },
+	{ PROJECT_AddCMD,  "AddCommand( self: Project, name: string, command: string, ...: string ) => Target" },
 
-	{ PROJECT_AddDIR,  "AddDirectory( self : Project, name : string, path : string, ... : string ) => Target" },
+	{ PROJECT_AddDIR,  "AddDirectory( self: Project, name: string, path: string, ...: string ) => Target" },
 
-	{ PROJECT_AddVAR,   "AddVariable( self : Project, name : string, value : string )" },
+	{ PROJECT_AddVAR,   "AddVariable( self: Project, name: string, value: string )" },
 
-	{ PROJECT_InstallTarget,  "Install( self : Project, dest : string, target : Target, ... : Target )" },
-	{ PROJECT_InstallFile,    "Install( self : Project, dest : string, file : string, ... : string )" },
-	{ PROJECT_InstallFiles,   "Install( self : Project, dest : string, headers : list<string> )" },
+	{ PROJECT_InstallTarget,  "Install( self: Project, dest: string, target: Target, ...: Target )" },
+	{ PROJECT_InstallFile,    "Install( self: Project, dest: string, file: string, ...: string )" },
+	{ PROJECT_InstallFiles,   "Install( self: Project, dest: string, headers: list<string> )" },
 
-	{ PROJECT_SourcePath,  "SourcePath( self : Project ) => string" },
-	{ PROJECT_BinaryPath,  "BinaryPath( self : Project ) => string" },
+	{ PROJECT_SourcePath,  "SourcePath( self: Project ) => string" },
+	{ PROJECT_BinaryPath,  "BinaryPath( self: Project ) => string" },
 
-	{ PROJECT_ExportLibrary,  "ExportLibrary( self : Project, name : string, cflag : string, lflag : string, shlib = '', stlib = '' )" },
+	{ PROJECT_ExportLibrary,  "ExportLibrary( self: Project, name: string, cflag: string, lflag: string, shlib = '', stlib = '' )" },
 
-	{ PROJECT_ExportPath,    "ExportPath( self : Project, name : string, path : string )" },
-	{ PROJECT_GetPath,       "GetPath( self : Project, name : string ) => string" },
-	{ PROJECT_GenerateFinder,   "GenerateFinder( self : Project, bl : enum<FALSE,TRUE> = $TRUE )" },
+	{ PROJECT_GetFlags,  "GetFlags( self: Project, name: string, kind: enum<cflags,lflags,sharedlibs,staticlibs> ) => string" },
+
+	{ PROJECT_ExportPath,    "ExportPath( self: Project, name: string, path: string )" },
+	{ PROJECT_GetPath,       "GetPath( self: Project, name: string ) => string" },
+	{ PROJECT_GenerateFinder,   "GenerateFinder( self: Project, bl: enum<FALSE,TRUE> = $TRUE )" },
 	{ NULL, NULL }
 };
 static void PROJ_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *maps, int rm )
@@ -2970,33 +2988,33 @@ static void DAOMAKE_Is64Bit( DaoProcess *proc, DaoValue *p[], int N )
 
 static DaoFuncItem DaoMakeMeths[] =
 {
-	{ DAOMAKE_FindPackage, "FindPackage( name : string, opt :enum<OPTIONAL,REQUIRED> = $OPTIONAL ) => Project|none" },
-	{ DAOMAKE_FindFile,    "FindFile( file : string, hints : list<string> = {} ) => string" },
+	{ DAOMAKE_FindPackage, "FindPackage( name: string, opt :enum<OPTIONAL,REQUIRED> = $OPTIONAL ) => Project|none" },
+	{ DAOMAKE_FindFile,    "FindFile( file: string, hints: list<string> = {} ) => string" },
 	{ DAOMAKE_TestCompile, "TestCompile( code :string, lflag='', cflag='', cxx=0 ) => int" },
 
-	{ DAOMAKE_OptionBOOL,  "Option( name : string, value : enum<OFF,ON> ) => enum<OFF,ON>" },
-	{ DAOMAKE_OptionSTR,   "Option( name : string, value = '' ) => string" },
+	{ DAOMAKE_OptionBOOL,  "Option( name: string, value: enum<OFF,ON> ) => enum<OFF,ON>" },
+	{ DAOMAKE_OptionSTR,   "Option( name: string, value = '' ) => string" },
 
 	{ DAOMAKE_Suffix,      "MakefileSuffix() => string" },
 
-	{ DAOMAKE_Shell,       "Shell( command : string ) => string" },
-	{ DAOMAKE_GetEnv,      "GetEnv( name : string ) => string" },
+	{ DAOMAKE_Shell,       "Shell( command: string ) => string" },
+	{ DAOMAKE_GetEnv,      "GetEnv( name: string ) => string" },
 
 	{ DAOMAKE_SourcePath,  "SourcePath() => string" },
 	{ DAOMAKE_BinaryPath,  "BinaryPath() => string" },
 
-	{ DAOMAKE_MakePath,    "MakePath( base : string, sub : string ) => string" },
-	{ DAOMAKE_MakeRpath,   "MakeRpath( path : string, ... : string ) => string" },
+	{ DAOMAKE_MakePath,    "MakePath( base: string, sub: string ) => string" },
+	{ DAOMAKE_MakeRpath,   "MakeRpath( path: string, ...: string ) => string" },
 
 	{ DAOMAKE_BuildMode,   "BuildMode() => enum<RELEASE,DEBUG,PROFILE>" },
 
-	{ DAOMAKE_SetTestTool, "SetTestTool( test : string, log_option = '--log' )" },
+	{ DAOMAKE_SetTestTool, "SetTestTool( test: string, log_option = '--log' )" },
 
-	{ DAOMAKE_IsFile,      "IsFile( path : string ) => int" },
-	{ DAOMAKE_IsDir,       "IsDir( path : string ) => int" },
+	{ DAOMAKE_IsFile,      "IsFile( path: string ) => int" },
+	{ DAOMAKE_IsDir,       "IsDir( path: string ) => int" },
 
 	{ DAOMAKE_Platform,    "Platform() => string" },
-	{ DAOMAKE_IsPlatform,  "IsPlatform( platform : string ) => int" },
+	{ DAOMAKE_IsPlatform,  "IsPlatform( platform: string ) => int" },
 	{ DAOMAKE_Is64Bit,     "Is64Bit() => int" },
 	{ NULL, NULL }
 };

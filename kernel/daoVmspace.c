@@ -1061,7 +1061,7 @@ static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, D
 	DaoList_Clear( argParams );
 
 	memset( set, 0, sizeof(int) );
-	for(i=0; i<routype->nested->size; ++i){
+	for(i=0; i<routype->nested->size - routype->variadic; ++i){
 		DaoList_Append( argParams, routine->routConsts->value->items.pValue[i] );
 		set[i] = 0;
 	}

@@ -748,7 +748,7 @@ DaoRoutine* DaoRoutine_ResolveByValue( DaoRoutine *self, DaoValue *svalue, DaoVa
 {
 	return DaoRoutine_Resolve( self, svalue, NULL, values, NULL, count, 0 );
 }
-DaoRoutine* DaoRoutine_ResolveByteType( DaoRoutine *self, DaoType *stype, DaoType *types[], int count )
+DaoRoutine* DaoRoutine_ResolveByType( DaoRoutine *self, DaoType *stype, DaoType *types[], int count )
 {
 	return DaoRoutine_Resolve( self, NULL, stype, NULL, types, count, 0 );
 }
