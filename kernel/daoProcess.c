@@ -4363,9 +4363,6 @@ void DaoProcess_DoAPList(  DaoProcess *self, DaoVmCode *vmc )
 			if( buf ) DString_Delete( buf );
 			break;
 		}
-	case DAO_ARRAY :
-		/* XXX */
-		break;
 	default: break;
 	}
 SetupType:
@@ -4397,99 +4394,6 @@ void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc )
 	array = DaoProcess_GetArray( self, vmc );
 	if( array->etype == DAO_NONE ) array->etype = initValue->type;
 	DaoArray_ResizeVector( array, num );
-
-	if( initValue->type == DAO_ARRAY ){
-		DaoArray *a0 = (DaoArray*) initValue;
-		DaoArray_SetNumType( array, a0->etype );
-		if( a0->ndim == 2 && (a0->dims[0] == 1 || a0->dims[1] == 1) ){
-			DaoArray_SetDimCount( array, 2 );
-			memmove( array->dims, a0->dims, 2*sizeof(daoint) );
-			array->dims[ a0->dims[0] > 1 ] = num;
-			transvec = a0->dims[0] > 1;
-		}else{
-			DaoArray_SetDimCount( array, a0->ndim + 1 );
-			array->dims[0] = num;
-			memmove( array->dims + 1, a0->dims, a0->ndim*sizeof(daoint) );
-		}
-		DaoArray_ResizeArray( array, array->dims, array->ndim );
-		S = a0->size;
-		N = num * a0->size;
-		if( stepValue && stepValue->type == DAO_ARRAY ){
-			DaoArray *a1 = (DaoArray*) stepValue;
-			const char* const msg[2] = { "invalid step array", "unmatched init and step array" };
-			int d, error = -1;
-			if( a0->etype <= DAO_DOUBLE && a1->etype >= DAO_COMPLEX ){
-				error = 0;
-			}else if( a1->ndim != a0->ndim ){
-				error = 1;
-			}else{
-				for(d=0; d<a0->ndim; d++){
-					if( a0->dims[d] != a1->dims[d] ){
-						error = 1;
-						break;
-					}
-				}
-			}
-			if( error >=0 ){
-				DaoProcess_RaiseError( self, "Value", msg[error] );
-				return;
-			}
-			for(i=0, m = 0, j=0, k = 0; i<N; i++, m=i, j=i%S, k=i/S){
-				if( transvec ) m = j * num + k;
-				switch( a0->etype ){
-				case DAO_INTEGER :
-					if( a1->etype == DAO_INTEGER ){
-						array->data.i[m] = a0->data.i[j] + k*a1->data.i[j];
-					}else{
-						array->data.i[m] = a0->data.i[j] + k*DaoArray_GetDouble( a1, j );
-					}
-					break;
-				case DAO_FLOAT :
-					array->data.f[m] = a0->data.f[j] + k*DaoArray_GetDouble( a1, j );
-					break;
-				case DAO_DOUBLE :
-					array->data.d[m] = a0->data.d[j] + k*DaoArray_GetDouble( a1, j );
-					break;
-				case DAO_COMPLEX :
-					if( a1->etype == DAO_COMPLEX ){
-						array->data.c[m].real = a0->data.c[j].real + k*a1->data.c[j].real;
-						array->data.c[m].imag = a0->data.c[j].imag + k*a1->data.c[j].imag;
-					}else{
-						array->data.c[m].real = a0->data.c[j].real + k*DaoArray_GetDouble( a1, j );
-						array->data.c[m].imag = a0->data.c[j].imag;
-					}
-					break;
-				default : break;
-				}
-			}
-		}else{
-			int istep = stepValue && stepValue->type == DAO_INTEGER;
-			daoint intstep = istep ? stepValue->xInteger.value : 0;
-			complex16 cstep = { 0.0, 0.0 };
-			if( stepValue && stepValue->type > DAO_NONE && stepValue->type <= DAO_COMPLEX ){
-				cstep = DaoValue_GetComplex( stepValue );
-			}
-			for(i=0, m = 0, j=0, k = 0; i<N; i++, m=i, j=i%S, k=i/S){
-				if( transvec ) m = j * num + k;
-				switch( a0->etype ){
-				case DAO_INTEGER :
-					array->data.i[m] = a0->data.i[j] + (istep ? k * intstep : (daoint)(k * step));
-					break;
-				case DAO_FLOAT :
-					array->data.f[m] = a0->data.f[j] + k * step;
-					break;
-				case DAO_DOUBLE :
-					array->data.d[m] = a0->data.d[j] + k * step;
-					break;
-				case DAO_COMPLEX :
-					array->data.c[m].real = a0->data.c[j].real + k * cstep.real;
-					array->data.c[m].imag = a0->data.c[j].imag + k * cstep.imag;
-					break;
-				}
-			}
-		}
-		return;
-	}
 
 	switch( array->etype ){
 	case DAO_INTEGER :
@@ -5572,24 +5476,6 @@ void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_RaiseError( self, "Value", "invalid operands" );
 	}
 }
-#ifdef DAO_WITH_NUMARRAY
-static void DaoArray_ToString( DaoArray *self, DString *str, daoint offset, daoint size )
-{
-	daoint i;
-	DString_Reset( str, 0 );
-	DString_Reserve( str, size * ( (self->etype == DAO_COMPLEX) +1 ) );
-	if( self->etype == DAO_COMPLEX ){
-		for(i=0; i<size; i++){
-			DString_AppendWChar( str, (size_t) self->data.c[offset+i].real );
-			DString_AppendWChar( str, (size_t) self->data.c[offset+i].imag );
-		}
-	}else{
-		for(i=0; i<size; i++){
-			DString_AppendWChar( str, (size_t) DaoArray_GetInteger( self, offset+i ) );
-		}
-	}
-}
-#endif
 /* Set dC->type before calling to instruct this function what type number to convert: */
 int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 {
@@ -5744,81 +5630,30 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		break;
 	case DAO_STRING :
 		if( dA->type == DAO_STRING ) goto Rebind;
-		str = dC->xString.value;
-		if( dA->type < DAO_ARRAY ){
-			DaoValue_GetString( dA, str );
-#ifdef DAO_WITH_NUMARRAY
-		}else if( dA->type == DAO_ARRAY ){
-			array = (DaoArray*) dA;
-			if( array->original && DaoArray_Sliced( array ) == 0 ) goto FailConversion;
-			DaoArray_ToString( array, str, 0, array->size );
-#endif
-		}else if( dA->type == DAO_LIST ){
-			list = & dA->xList;
-			DString_Reset( str, 0 );
-			DString_Reserve( str, list->value->size );
-			for(i=0,n=list->value->size; i<n; i++){
-				itvalue = list->value->items.pValue[i];
-				if( itvalue->type > DAO_DOUBLE ) goto FailConversion;
-				DString_AppendWChar( str, DaoValue_GetInteger( itvalue ) );
-			}
-		}else{
-			goto FailConversion;
-		}
+		if( dA->type >= DAO_ARRAY ) goto FailConversion;
+		DaoValue_GetString( dA, dC->xString.value );
 		break;
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY :
 		if( ct->nested->size >0 ) tp = ct->nested->items.pType[0];
-		if( dA->type == DAO_STRING ){
-			str = dA->xString.value;
-			if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) goto FailConversion;
-			array = DaoProcess_PrepareArray( proc, dC, tp->tid );
-			DaoArray_ResizeVector( array, str->size );
-			for(i=0,n=str->size; i<n; i++){
-				wchar_t ch = str->chars[i];
-				switch( tp->tid ){
-				case DAO_INTEGER : array->data.i[i] = ch; break;
-				case DAO_FLOAT   : array->data.f[i]  = ch; break;
-				case DAO_DOUBLE  : array->data.d[i]  = ch; break;
-				default : break;
-				}
-			}
-		}else if( dA->type == DAO_ARRAY ){
-			if( tp == NULL ) goto Rebind;
-			if( tp->tid & DAO_ANY ) goto Rebind;
-			if( array2->etype == tp->tid ) goto Rebind;
-			if( tp->tid < DAO_INTEGER || tp->tid > DAO_COMPLEX ) goto FailConversion;
-			array2 = & dA->xArray;
-			if( array2->original && DaoArray_Sliced( array2 ) == 0 ) goto FailConversion;
+		if( dA->type != DAO_ARRAY ) goto FailConversion;
+		if( tp == NULL ) goto Rebind;
+		if( tp->tid & DAO_ANY ) goto Rebind;
+		if( array2->etype == tp->tid ) goto Rebind;
+		if( tp->tid < DAO_INTEGER || tp->tid > DAO_COMPLEX ) goto FailConversion;
+		array2 = & dA->xArray;
+		if( array2->original && DaoArray_Sliced( array2 ) == 0 ) goto FailConversion;
 
-			array = DaoProcess_PrepareArray( proc, dC, tp->tid );
-			DaoArray_ResizeArray( array, array2->dims, array2->ndim );
-			for(i=0,size=array2->size; i<size; i++){
-				switch( array->etype ){
-				case DAO_INTEGER : array->data.i[i] = DaoArray_GetInteger( array2, i ); break;
-				case DAO_FLOAT   : array->data.f[i] = DaoArray_GetFloat( array2, i );  break;
-				case DAO_DOUBLE  : array->data.d[i] = DaoArray_GetDouble( array2, i ); break;
-				case DAO_COMPLEX : array->data.c[i] = DaoArray_GetComplex( array2, i ); break;
-				}
+		array = DaoProcess_PrepareArray( proc, dC, tp->tid );
+		DaoArray_ResizeArray( array, array2->dims, array2->ndim );
+		for(i=0,size=array2->size; i<size; i++){
+			switch( array->etype ){
+			case DAO_INTEGER : array->data.i[i] = DaoArray_GetInteger( array2, i ); break;
+			case DAO_FLOAT   : array->data.f[i] = DaoArray_GetFloat( array2, i );  break;
+			case DAO_DOUBLE  : array->data.d[i] = DaoArray_GetDouble( array2, i ); break;
+			case DAO_COMPLEX : array->data.c[i] = DaoArray_GetComplex( array2, i ); break;
 			}
-		}else if( dA->type == DAO_LIST ){
-			list = & dA->xList;
-			size = list->value->size;
-			if( tp == NULL ) goto FailConversion;
-			if( tp->tid == DAO_NONE || tp->tid > DAO_COMPLEX ) goto FailConversion;
-			array = DaoProcess_PrepareArray( proc, dC, tp->tid );
-			DaoArray_ResizeVector( array, size );
-			for(i=0; i<size; i++){
-				itvalue = list->value->items.pValue[i];
-				if( itvalue->type > DAO_COMPLEX ) goto FailConversion;
-				switch( array->etype ){
-				case DAO_INTEGER : array->data.i[i] = DaoValue_GetInteger( itvalue ); break;
-				case DAO_FLOAT   : array->data.f[i] = DaoValue_GetFloat( itvalue );  break;
-				case DAO_DOUBLE  : array->data.d[i] = DaoValue_GetDouble( itvalue ); break;
-				case DAO_COMPLEX : array->data.c[i] = DaoValue_GetComplex( itvalue ); break;
-				}
-			}
-		}else goto FailConversion;
+		}
 		dC = (DaoValue*) array;
 		break;
 #endif
@@ -5835,37 +5670,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			GC_IncRC( ct );
 			dC = (DaoValue*) list;
 		}
-		if( dA->type == DAO_STRING ){
-			str = dA->xString.value;
-			if( tp->tid < DAO_INTEGER || tp->tid > DAO_DOUBLE ) goto FailConversion;
-			DArray_Resize( list->value, DString_Size( str ), tp->value );
-			data = list->value->items.pValue;
-			for(i=0,n=str->size; i<n; i++){
-				wchar_t ch = str->chars[i];
-				switch( tp->tid ){
-				case DAO_INTEGER : data[i]->xInteger.value = ch; break;
-				case DAO_FLOAT   : data[i]->xFloat.value = ch; break;
-				case DAO_DOUBLE  : data[i]->xDouble.value = ch; break;
-				default : break;
-				}
-			}
-#ifdef DAO_WITH_NUMARRAY
-		}else if( dA->type == DAO_ARRAY ){
-			array = (DaoArray*)dA;
-			if( tp->tid < DAO_INTEGER || tp->tid > DAO_COMPLEX ) goto FailConversion;
-			if( array->original && DaoArray_Sliced( array ) == 0 ) goto FailConversion;
-			DArray_Resize( list->value, array->size, tp->value );
-			data = list->value->items.pValue;
-			for(i=0,n=array->size; i<n; i++){
-				switch( tp->tid ){
-				case DAO_INTEGER : data[i]->xInteger.value = DaoArray_GetInteger( array, i ); break;
-				case DAO_FLOAT   : data[i]->xFloat.value = DaoArray_GetFloat( array, i );  break;
-				case DAO_DOUBLE  : data[i]->xDouble.value = DaoArray_GetDouble( array, i ); break;
-				case DAO_COMPLEX : data[i]->xComplex.value = DaoArray_GetComplex( array, i ); break;
-				}
-			}
-#endif
-		}else if( dA->type == DAO_LIST ){
+		if( dA->type == DAO_LIST ){
 			list2 = & dA->xList;
 			DArray_Resize( list->value, list2->value->size, NULL );
 			data = list->value->items.pValue;

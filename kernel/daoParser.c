@@ -2345,68 +2345,12 @@ static int DaoParser_HandleVerbatim( DaoParser *self, int start )
 {
 	DaoNamespace *ns = self->nameSpace;
 	DString *verbatim = & self->tokens->items.pToken[start]->string;
-	int line = self->tokens->items.pToken[start]->line;
 	daoint pstart = 0, pend = verbatim->size-1, wcs = verbatim->chars[1] == '@';
 	const char *pat = "^ @{1,2} %[ %s* %w+ %s* ( %( %s* (|%w+) %s* %) | %])";
+	int line = self->tokens->items.pToken[start]->line;
 
 	self->curLine = line;
-	if( verbatim->chars[2+wcs] == '+' ){ /* string interuptions */
-		DString *body = self->string;
-		DString *delim = self->string2;
-		DString *source = DaoParser_GetString( self );
-		DString *codes = DaoParser_GetString( self );
-		DaoLexer *lexer = DaoLexer_New();
-		DArray *tokens = lexer->tokens;
-		daoint k, m, rb = DString_FindChar( verbatim, ']', 0 );
-
-		DString_Reset( source, 0 );
-		DString_SetBytes( body, verbatim->chars + (rb+1), verbatim->size - 2*(rb+1) );
-		DString_SubString( verbatim, delim, 0, rb + 1 );
-		DString_InsertChar( delim, 'x', 2+wcs );
-		DString_Append( source, delim );
-		for(k=0; k<body->size; k++){
-			char ch = body->chars[k];
-			if( ch == '@' && body->chars[k+1] == '{' ){
-				daoint open = 1, last = k + 2;
-				while( open ){
-					daoint rb2 = DString_FindChar( body, '}', last );
-					if( rb2 < 0 ) return -1; //XXX
-					DString_SubString( body, codes, k+2, rb2 - k - 2 );
-					DaoLexer_Tokenize( lexer, codes->chars, 0 );
-					open = tokens->size && tokens->items.pToken[tokens->size-1]->type <= DTOK_WCS_OPEN;
-					if( open == 0 ){
-						daoint i, n, c1 = 0, c2 = 0, c3 = 0;
-						for(i=0,n=tokens->size; i<n; i++){
-							switch( tokens->items.pToken[i]->type ){
-							case DTOK_LB  : c1 --; break;
-							case DTOK_RB  : c1 ++; break;
-							case DTOK_LCB : c2 --; break;
-							case DTOK_RCB : c2 ++; break;
-							case DTOK_LSB : c3 --; break;
-							case DTOK_RSB : c3 ++; break;
-							}
-						}
-						if( c1 > 0 || c2 > 0 || c3 > 0 ) return -1; //XXX
-						if( c1 < 0 || c2 < 0 || c3 < 0 ) open = 1;
-					}
-					last = rb2 + 1;
-				}
-				DString_Append( source, delim );
-				DString_AppendChars( source, "+(string)(" );
-				DString_Append( source, codes );
-				DString_AppendChars( source, ")+" );
-				DString_Append( source, delim );
-				k += codes->size + 2;
-			}else{
-				DString_AppendChar( source, ch );
-			}
-		}
-		DString_Append( source, delim );
-		DaoLexer_Tokenize( lexer, source->chars, 0 );
-		DArray_Erase( self->tokens, start, 1 );
-		DArray_InsertArray( self->tokens, start, tokens, 0, -1 );
-		DaoLexer_Delete( lexer );
-	}else if( DString_Match( verbatim, pat, & pstart, & pend ) ){ /* code inlining */
+	if( DString_Match( verbatim, pat, & pstart, & pend ) ){ /* code inlining */
 		DaoCodeInliner inliner;
 		daoint lb = DString_FindChar( verbatim, '(', 0 );
 		if( lb > pend ) lb = DAO_NULLPOS;

@@ -4165,14 +4165,11 @@ int DaoInferencer_HandleListArrayEnum( DaoInferencer *self, DaoInode *inode, DMa
 				if( types[opa+1]->realnum == 0 ) goto ErrorTyping;
 			}else if( init == DAO_COMPLEX ){
 				if( step > DAO_COMPLEX ) goto ErrorTyping;
-			}else if( init == DAO_STRING ){
+			}else if( init == DAO_STRING && code == DVM_APLIST ){
 				if( step != DAO_STRING ) goto ErrorTyping;
-			}else if( init == DAO_ARRAY ){
-				if( step > DAO_COMPLEX && step != DAO_ARRAY ) goto ErrorTyping;
 			}else{
 				goto ErrorTyping;
 			}
-			if( vmc->code == DVM_VECTOR && init == DAO_STRING ) goto ErrorTyping;
 		}
 	}else if( opb == 0 && types[opc] != NULL ){
 		if( types[opc]->tid == DAO_LIST ){
@@ -4191,8 +4188,6 @@ int DaoInferencer_HandleListArrayEnum( DaoInferencer *self, DaoInode *inode, DMa
 		ct = DaoType_Specialize( dao_type_list_template, & at, at != NULL );
 	}else if( at && at->tid >=DAO_INTEGER && at->tid <= DAO_COMPLEX ){
 		ct = DaoType_Specialize( dao_type_array_template, & at, 1 );
-	}else if( at && at->tid == DAO_ARRAY ){
-		ct = at;
 	}else if( NoCheckingType( at ) ){
 		ct = dao_type_array_empty; /* specially handled for copying; */
 	}else{

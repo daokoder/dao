@@ -2246,7 +2246,7 @@ static DaoFuncItem listMeths[] =
 		// on the items of the list.
 		// The iteration direction can be controlled by the "direction" parameter.
 		//
-		// Note: invar<@T> will match to none|@V;
+		// Note: invar<@T> will not match to none|@V;
 		*/
 	},
 	{ DaoLIST_Collect2,
