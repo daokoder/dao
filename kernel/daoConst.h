@@ -220,6 +220,12 @@ enum DaoRoutineAttrib
 	DAO_ROUT_REUSABLE  = (1<<11)  /* stack data for the routine is reusable */
 };
 
+enum DaoConstEvalMode
+{
+	DAO_CONST_EVAL_METHDEF  = 1,
+	DAO_CONST_EVAL_GETVALUE = 2
+};
+
 enum DaoRoutineModes
 {
 	DAO_ROUT_MODE_DEBUG = 1

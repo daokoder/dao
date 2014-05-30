@@ -166,6 +166,7 @@ DaoParser* DaoParser_New()
 
 	self->levelBase = 0;
 	self->lexLevel = 0;
+	self->evalMode = 0;
 
 	self->fileName = DString_New();
 	self->lexer = DaoLexer_New();
@@ -277,6 +278,7 @@ void DaoParser_Reset( DaoParser *self )
 {
 	int i;
 	for(i=0; i<=self->lexLevel; ++i) DMap_Reset( self->localDataMaps->items.pMap[i] );
+	self->evalMode = 0;
 	self->autoReturn = 0;
 	self->topAsGlobal = 0;
 	self->isClassBody = 0;
@@ -1443,7 +1445,7 @@ static void DaoParser_ByteEncodeGetConst( DaoParser *self, DString *name )
 	}
 	if( value != NULL && DaoByteBlock_FindObjectBlock( block, value ) == NULL ){
 		DaoByteBlock *namebk = DaoByteBlock_EncodeString( block, name );
-		DaoByteBlock *eval = DaoByteBlock_AddEvalBlock( block, value, opcode, 1, NULL );
+		DaoByteBlock *eval = DaoByteBlock_AddEvalBlock( block, value, opcode, 1, 0, NULL );
 		DaoByteBlock_InsertBlockIndex( eval, eval->end, namebk );
 	}
 }
@@ -2823,9 +2825,12 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		/* For functions define outside the class body: */
 		int oldpos = start + 1;
 		int r1 = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 ); /* parameter list. */
+		int evalMode = self->evalMode;
 		if( r1 < 0 || r1+1 >= self->tokens->size ) goto InvalidDefinition;
 
+		self->evalMode |= DAO_CONST_EVAL_METHDEF;
 		start = DaoParser_FindScopedConstant2( self, & value, start+1, DTOK_LB, 0 );
+		self->evalMode = evalMode;
 		if( start < 0 || value == NULL ){
 			ptok = tokens[ oldpos ];
 			self->curLine = ptok->line;
@@ -3728,7 +3733,7 @@ InvalidMultiAssignment: DArray_Delete( inodes ); return 0;
 				}
 				if( opcode != 0 && DaoByteBlock_FindObjectBlock( block, value ) == NULL ){
 					DaoByteBlock *namebk = DaoByteBlock_EncodeString( block, name );
-					eval = DaoByteBlock_AddEvalBlock( block, value, opcode, 1, NULL );
+					eval = DaoByteBlock_AddEvalBlock( block, value, opcode, 1, 0, NULL );
 					DaoByteBlock_InsertBlockIndex( eval, eval->end, namebk );
 				}
 				GC_ShiftRC( dao_type_list_any, declist->ctype );
@@ -5299,7 +5304,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 			if( value && value->type >= DAO_ENUM ){
 				if( DaoByteBlock_FindObjectBlock( block, value ) == NULL ){
 					DaoByteBlock *name = DaoByteBlock_EncodeString( block, str );
-					eval = DaoByteBlock_AddEvalBlock( block, value, opcode, 1, NULL );
+					eval = DaoByteBlock_AddEvalBlock( block, value, opcode, 1, 0, NULL );
 					DaoByteBlock_InsertBlockIndex( eval, eval->end, name );
 				}
 			}
@@ -6936,12 +6941,12 @@ static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nva
 			DaoByteBlock_EncodeType( coder, proc->activeTypes[0] );
 		}
 	}
-	value = DaoProcess_MakeConst( proc );
+	value = DaoProcess_MakeConst( proc, self->evalMode );
 	if( value != NULL && max > DAO_COMPLEX ){
 		if( max > DAO_ENUM || DaoByteBlock_FindObjectBlock( coder, value ) == NULL ){
 			DaoType* retype = proc->activeTypes[0];
 			int opb = vmc->code == DVM_GETF ? 2 : vmc->b;
-			eval = DaoByteBlock_AddEvalBlock( coder, value, vmc->code, opb, retype );
+			eval = DaoByteBlock_AddEvalBlock( coder, value, vmc->code, opb, self->evalMode, retype );
 			DaoByteBlock_AddBlockIndexData( eval, 0, nvalues );
 		}
 	}

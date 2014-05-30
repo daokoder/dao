@@ -221,7 +221,7 @@
 //
 //
 // evaluation:
-// ASM_EVAL(1B): Opcode(2B), OpB(2B), Type-Index(2B), Zeros(2B);
+// ASM_EVAL(1B): Opcode(2B), OpB(2B), Mode(2B), Type-Index(2B);
 //   ASM_DATA(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 // ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //
@@ -431,7 +431,7 @@ DaoByteBlock* DaoByteBlock_AddBlock( DaoByteBlock *self, DaoValue *value, int ty
 DaoByteBlock* DaoByteBlock_AddRoutineBlock( DaoByteBlock *self, DaoRoutine *routine, int pm );
 DaoByteBlock* DaoByteBlock_AddClassBlock( DaoByteBlock *self, DaoClass *klass, int pm );
 DaoByteBlock* DaoByteBlock_AddInterfaceBlock( DaoByteBlock *self, DaoInterface *inter, int pm );
-DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, int code, int opb, DaoType *type );
+DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, int code, int opb, int mode, DaoType *type );
 
 void DaoByteCoder_FinalizeRoutineBlock( DaoByteCoder *self, DaoByteBlock *block );
 

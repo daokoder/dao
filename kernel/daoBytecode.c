@@ -1015,13 +1015,14 @@ DaoByteBlock* DaoByteBlock_EncodeUseStmt( DaoByteBlock *self, DaoValue *value, i
 	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin + 2, valueBlock );
 	return newBlock;
 }
-DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, int code, int opb, DaoType *type )
+DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, int code, int opb, int mode, DaoType *type )
 {
 	DaoByteBlock *tblock = DaoByteBlock_EncodeType( self, type );
 	DaoByteBlock *block = DaoByteBlock_AddBlock( self, value, DAO_ASM_EVAL );
 	DaoByteCoder_EncodeUInt16( block->begin, code );
 	DaoByteCoder_EncodeUInt16( block->begin+2, opb );
-	DaoByteBlock_InsertBlockIndex( block, block->begin+4, tblock );
+	DaoByteCoder_EncodeUInt16( block->begin+4, mode );
+	DaoByteBlock_InsertBlockIndex( block, block->begin+6, tblock );
 	return block;
 }
 
@@ -2700,10 +2701,11 @@ static void DaoByteCoder_EvaluateValue( DaoByteCoder *self, DaoByteBlock *block 
 	DaoRoutine *routine = DaoValue_CastRoutine( block->parent->value );
 	DaoClass *klass = DaoValue_CastClass( block->parent->value );
 	uint_t idx, offset = self->iblocks->size;
-	int i, count;
+	int i, count, mode;
 
 	vmcode.code = DaoByteCoder_DecodeUInt16( block->begin );
 	vmcode.b = DaoByteCoder_DecodeUInt16( block->begin + 2 );
+	mode = DaoByteCoder_DecodeUInt16( block->begin + 4 );
 	if( vmcode.code == DVM_GETCG || vmcode.code == DVM_GETCK ){
 		int idx = DaoByteCoder_DecodeUInt16( block->end );
 		DaoByteBlock *namebk = DaoByteCoder_LookupStringBlock( self, block, idx );
@@ -2737,7 +2739,7 @@ ConstantNotFound:
 		return;
 	}
 
-	idx = DaoByteCoder_DecodeUInt16( block->begin + 4 );
+	idx = DaoByteCoder_DecodeUInt16( block->begin + 6 );
 	if( idx ){
 		DaoByteBlock *bk = DaoByteCoder_LookupTypeBlock( self, block, idx );
 		if( self->error ) return;
@@ -2778,7 +2780,7 @@ ConstantNotFound:
 		GC_ShiftRC( klass->objType, process->activeRoutine->routHost );
 		process->activeRoutine->routHost = klass->objType;
 	}
-	value = DaoProcess_MakeConst( process );
+	value = DaoProcess_MakeConst( process, mode );
 
 	if( process->exceptions->size ){
 		DaoByteCoder_Error( self, block, "Constant evaluation failed!" );

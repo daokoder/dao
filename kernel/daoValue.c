@@ -974,6 +974,10 @@ DaoObject* DaoValue_CastObject( DaoValue *self )
 DaoCstruct* DaoValue_CastCstruct( DaoValue *self, DaoType *type )
 {
 	if( self == NULL || type == NULL ) return (DaoCstruct*) self;
+	if( self->type == DAO_OBJECT ){
+		self = (DaoValue*) DaoObject_CastCstruct( (DaoObject*) self, type );
+		if( self == NULL ) return NULL;
+	}
 	if( self->type != DAO_CSTRUCT && self->type != DAO_CDATA ) return NULL;
 	if( DaoType_ChildOf( self->xCstruct.ctype, type ) ) return (DaoCstruct*) self;
 	return NULL;
@@ -981,6 +985,10 @@ DaoCstruct* DaoValue_CastCstruct( DaoValue *self, DaoType *type )
 DaoCdata* DaoValue_CastCdata( DaoValue *self, DaoType *type )
 {
 	if( self == NULL || type == NULL ) return (DaoCdata*) self;
+	if( self->type == DAO_OBJECT ){
+		self = (DaoValue*) DaoObject_CastCdata( (DaoObject*) self, type );
+		if( self == NULL ) return NULL;
+	}
 	if( self->type != DAO_CDATA ) return NULL;
 	if( DaoType_ChildOf( self->xCdata.ctype, type ) ) return (DaoCdata*) self;
 	return NULL;
@@ -1064,6 +1072,10 @@ void* DaoValue_TryGetArray( DaoValue *self )
 }
 void* DaoValue_TryCastCdata( DaoValue *self, DaoType *type )
 {
+	if( self->type == DAO_OBJECT ){
+		self = (DaoValue*) DaoObject_CastCdata( (DaoObject*) self, type );
+	}
+	if( self == NULL || self->type != DAO_CDATA ) return NULL;
 	if( self->type != DAO_CDATA ) return NULL;
 	return DaoCdata_CastData( & self->xCdata, type );
 }

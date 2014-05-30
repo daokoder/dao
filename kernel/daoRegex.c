@@ -793,6 +793,11 @@ int dao_cjk( uint_t ch )
 	if( i >= 7 || dao_cjk_charts[i][0] > ch ) return 0;
 	return 1;
 }
+
+#ifdef WITHOUT_WCTYPE_H
+#define iswideogram(c) 0
+#define iswphonogram(c) 0
+#endif
 int dao_character( uint_t ch )
 {
 #ifdef BSD

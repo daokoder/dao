@@ -882,18 +882,13 @@ int DaoClass_DeriveClassData( DaoClass *self )
 		values = kernel->values;
 		methods = kernel->methods;
 
-		if( typer->numItems ){
-			for(j=0; typer->numItems[j].name!=NULL; j++){
-				DString name = DString_WrapChars( typer->numItems[j].name );
-				it = DMap_Find( values, & name );
-				if( it == NULL ) continue;
-				if( DMap_Find( self->lookupTable, it->key.pString ) ) continue;
-				id = self->constants->size;
-				id = LOOKUP_BIND( DAO_CLASS_CONSTANT, DAO_PERM_PUBLIC, 1, id );
-				DMap_Insert( self->lookupTable, it->key.pString, IntToPointer( id ) );
-				DArray_Append( self->cstDataName, it->key.pString );
-				DArray_Append( self->constants, DaoConstant_New( it->value.pValue ) );
-			}
+		for(it=DMap_First(values); it; it=DMap_Next(values, it)){
+			if( DMap_Find( self->lookupTable, it->key.pString ) ) continue;
+			id = self->constants->size;
+			id = LOOKUP_BIND( DAO_CLASS_CONSTANT, DAO_PERM_PUBLIC, 1, id );
+			DMap_Insert( self->lookupTable, it->key.pString, IntToPointer( id ) );
+			DArray_Append( self->cstDataName, it->key.pString );
+			DArray_Append( self->constants, DaoConstant_New( it->value.pValue ) );
 		}
 		for(it=DMap_First( methods ); it; it=DMap_Next( methods, it )){
 			if( DMap_Find( self->lookupTable, it->key.pString ) ) continue;

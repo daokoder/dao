@@ -494,6 +494,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	parser->vmSpace = self->vmSpace;
 	parser->nameSpace = self;
 	parser->routine = self->constEvalRoutine;
+	parser->evalMode |= DAO_CONST_EVAL_GETVALUE;
 	if( ! DaoLexer_Tokenize( parser->lexer, name, 0 ) ) goto Error;
 	if( parser->tokens->size == 0 ) goto Error;
 	tokens = parser->tokens->items.pToken;

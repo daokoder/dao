@@ -132,7 +132,7 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->exceptions = DArray_New( DAO_DATA_VALUE );
 	self->defers = DArray_New( DAO_DATA_VALUE );
 
-	self->firstFrame = self->topFrame = DaoStackFrame_New();
+	self->firstFrame = self->baseFrame = self->topFrame = DaoStackFrame_New();
 	self->firstFrame->active = self->firstFrame;
 	self->firstFrame->types = & dummyType;
 	self->firstFrame->codes = & dummyCode;
@@ -308,7 +308,7 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 		case DAO_FLOAT   : value2 = (DaoValue*) DaoFloat_New(0.0); break;
 		case DAO_DOUBLE  : value2 = (DaoValue*) DaoDouble_New(0.0); break;
 		case DAO_COMPLEX : value2 = (DaoValue*) DaoComplex_New2(0.0,0.0); break;
-		case DAO_STRING  : value2 = (DaoValue*) DaoString_New(1); break;
+		case DAO_STRING  : value2 = (DaoValue*) DaoString_New(); break;
 		case DAO_ENUM    : value2 = (DaoValue*) DaoEnum_New( types[i], 0 ); break;
 		}
 		if( value2 == NULL ) continue;
@@ -822,7 +822,6 @@ int DaoCallServer_MarkActiveProcess( DaoProcess *process, int active );
 int DaoProcess_Start( DaoProcess *self )
 {
 	DaoJitCallData jitCallData = {NULL};
-	DaoStackFrame *rollback = NULL;
 	DaoDebugger *debugger = self->vmSpace->debugger;
 	DaoProfiler *profiler = self->vmSpace->profiler;
 	DaoUserHandler *handler = self->vmSpace->userHandler;
@@ -1032,7 +1031,7 @@ int DaoProcess_Start( DaoProcess *self )
 
 
 	if( self->topFrame == self->firstFrame ) goto ReturnFalse;
-	rollback = self->topFrame->prev;
+	self->baseFrame = self->topFrame->prev;
 	base = self->topFrame;
 	if( self->status == DAO_PROCESS_SUSPENDED ) base = self->firstFrame->next;
 
@@ -2378,7 +2377,7 @@ FinishProcess:
 		DaoProcess_RaiseError( self, NULL, "Execution cancelled" );
 	}
 	if( self->exceptions->size ) DaoProcess_PrintException( self, NULL, 1 );
-	DaoProcess_PopFrames( self, rollback );
+	DaoProcess_PopFrames( self, self->baseFrame );
 	/*if( eventHandler ) eventHandler->mainRoutineExit(); */
 
 AbortProcess:
@@ -3635,27 +3634,29 @@ static int DaoProcess_InitBase( DaoProcess *self, DaoVmCode *vmc, DaoValue *call
 }
 static int DaoProcess_TryTailCall( DaoProcess *self, DaoRoutine *rout, DaoValue *O, DaoVmCode *vmc )
 {
+	int async = vmc->b & DAO_CALL_ASYNC;
+	DaoObject *root = NULL;
+
+	if( !(vmc->b & DAO_CALL_TAIL) || self->topFrame->prev == self->baseFrame ) return 0;
 	/* no tail call optimization when there is deferred code blocks: */
-	if( (vmc->b & DAO_CALL_TAIL) && self->defers->size == self->topFrame->deferBase ){
-		int async = vmc->b & DAO_CALL_ASYNC;
-		DaoObject *root = NULL;
-		switch( O ? O->type : 0 ){
-		case DAO_CDATA   :
-		case DAO_CSTRUCT :
-			if( O->xCstruct.object ) root = O->xCstruct.object->rootObject;
-			break;
-		case DAO_OBJECT  : root = O->xObject.rootObject; break;
-		}
-		if( root ) async |= root->isAsync;
-		/* No tail call optimization for possible asynchronous calls: */
-		/* No tail call optimization in constructors etc.: */
-		/* (self->topFrame->state>>1): get rid of the DVM_FRAME_RUNNING flag: */
-		if( async == 0 && (self->topFrame->state>>1) == 0 && daoConfig.optimize ){
-			/* No optimization if the tail call has a return type different from the current: */
-			if( rout->routType->aux == self->activeRoutine->routType->aux ){
-				DaoProcess_PopFrame( self );
-				return 1;
-			}
+	if( self->defers->size > self->topFrame->deferBase ) return 0;
+
+	switch( O ? O->type : 0 ){
+	case DAO_CDATA   :
+	case DAO_CSTRUCT :
+		if( O->xCstruct.object ) root = O->xCstruct.object->rootObject;
+		break;
+	case DAO_OBJECT  : root = O->xObject.rootObject; break;
+	}
+	if( root ) async |= root->isAsync;
+	/* No tail call optimization for possible asynchronous calls: */
+	/* No tail call optimization in constructors etc.: */
+	/* (self->topFrame->state>>1): get rid of the DVM_FRAME_RUNNING flag: */
+	if( async == 0 && (self->topFrame->state>>1) == 0 && daoConfig.optimize ){
+		/* No optimization if the tail call has a return type different from the current: */
+		if( rout->routType->aux == self->activeRoutine->routType->aux ){
+			DaoProcess_PopFrame( self );
+			return 1;
 		}
 	}
 	return 0;
@@ -5987,7 +5988,7 @@ void DaoProcess_PrintException( DaoProcess *self, DaoStream *stream, int clear )
 }
 
 
-static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc )
+static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc, int mode )
 {
 	DaoValue *C = NULL, *tmp = NULL;
 	DaoValue *A = self->activeValues[ vmc->a ];
@@ -6024,13 +6025,18 @@ static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc )
 		break;
 	case DAO_CLASS :
 		if( routine->routHost ) thisClass = DaoValue_CastClass( routine->routHost->aux );
+		if( mode & DAO_CONST_EVAL_METHDEF ) thisClass = (DaoClass*) A;
 		if( DaoClass_GetData( (DaoClass*) A, name, &tmp, thisClass ) ) goto InvalidConstField;
 		opb = DaoClass_FindConst( & A->xClass, name );
 		if( opb >=0 ) C = DaoClass_GetConst( & A->xClass, opb );
 		break;
 	default :
 		type = DaoNamespace_GetType( self->activeNamespace, A );
-		C = DaoType_FindValue( type, name );
+		if( mode & DAO_CONST_EVAL_GETVALUE ){
+			C = DaoType_FindValueOnly( type, name );
+		}else{
+			C = DaoType_FindValue( type, name );
+		}
 		break;
 	}
 	DaoProcess_PutValue( self, C );
@@ -6039,7 +6045,7 @@ InvalidConstField:
 	DaoProcess_RaiseError( self, "Field", "invalid field" );
 	DaoProcess_PutValue( self, NULL );
 }
-DaoValue* DaoProcess_MakeConst( DaoProcess *self )
+DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 {
 	daoint size;
 	DaoValue *A;
@@ -6118,7 +6124,7 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self )
 	case DVM_GETMI :
 		DaoProcess_DoGetItem( self, vmc ); break;
 	case DVM_GETF :
-		DaoProcess_DoGetConstField( self, vmc ); break;
+		DaoProcess_DoGetConstField( self, vmc, mode ); break;
 	case DVM_LIST :
 		DaoProcess_DoList( self, vmc ); break;
 	case DVM_MAP :

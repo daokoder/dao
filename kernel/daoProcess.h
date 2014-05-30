@@ -98,8 +98,9 @@ struct DaoProcess
 
 	DaoVmSpace     *vmSpace;
 
-	DaoStackFrame  *firstFrame; /* the first frame */
-	DaoStackFrame  *topFrame;   /* top call frame */
+	DaoStackFrame  *firstFrame; /* the first frame; */
+	DaoStackFrame  *baseFrame;  /* the base frame when process started or resumed; */
+	DaoStackFrame  *topFrame;   /* the top call frame; */
 
 	DaoVmCode      *activeCode;
 	DaoRoutine     *activeRoutine;
@@ -178,7 +179,7 @@ DAO_DLL void DaoProcess_PrintException( DaoProcess *self, DaoStream *stream, int
 
 DAO_DLL void DaoProcess_Trace( DaoProcess *self, int depth );
 
-DAO_DLL DaoValue* DaoProcess_MakeConst( DaoProcess *self );
+DAO_DLL DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode );
 
 DAO_DLL void* DaoProcess_GetAuxData( DaoProcess *self, void *key );
 DAO_DLL void* DaoProcess_SetAuxData( DaoProcess *self, void *key, void *value );
