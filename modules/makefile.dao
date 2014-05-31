@@ -51,3 +51,5 @@ if( DaoMake::IsDir( "DaoSDL" ) ) modules.AddDirectory( "SDL", "DaoSDL" );
 if( DaoMake::IsDir( "DaoFLTK" ) ) modules.AddDirectory( "FLTK", "DaoFLTK" );
 
 if( DaoMake::IsDir( "webdao" ) ) modules.AddDirectory( "webdao", "webdao" );
+
+if( DaoMake::IsDir( "DaoGraphicsMagick" ) ) modules.AddDirectory( "Graphics", "DaoGraphicsMagick" );

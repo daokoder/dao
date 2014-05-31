@@ -10,6 +10,7 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 		header_path = DaoMake::FindFile( "gl.h", header_hints )
 	}else{
 		header_path = DaoMake::FindFile( "GL/gl.h", header_hints )
+		if( % header_path ) header_path = DaoMake::MakePath( header_path, "./GL" )
 	}
 	if( header_path == "" ) return;
 
