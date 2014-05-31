@@ -860,6 +860,12 @@ static DaoByteBlock* DaoByteBlock_EncodeInvarType( DaoByteBlock *self, DaoType *
 	DaoByteCoder_EncodeUInt16( newBlock->begin+2, (type->konst<<1)|(type->invar) );
 	return newBlock;
 }
+/*
+// Currently there is no need to encode DaoType::subtid, because the two types
+// that use DaoType::subtid are the enum types and overloaded routine types.
+// But enum types are encoded separately, and overloaded routine types are not
+// declarable types.
+*/
 DaoByteBlock* DaoByteBlock_EncodeType( DaoByteBlock *self, DaoType *type )
 {
 	DaoByteBlock *newBlock = DaoByteBlock_FindOrCopyBlock( self, (DaoValue*) type );

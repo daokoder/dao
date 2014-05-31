@@ -822,6 +822,7 @@ int DaoCallServer_MarkActiveProcess( DaoProcess *process, int active );
 int DaoProcess_Start( DaoProcess *self )
 {
 	DaoJitCallData jitCallData = {NULL};
+	DaoStackFrame *rollback = NULL;
 	DaoDebugger *debugger = self->vmSpace->debugger;
 	DaoProfiler *profiler = self->vmSpace->profiler;
 	DaoUserHandler *handler = self->vmSpace->userHandler;
@@ -1031,7 +1032,7 @@ int DaoProcess_Start( DaoProcess *self )
 
 
 	if( self->topFrame == self->firstFrame ) goto ReturnFalse;
-	self->baseFrame = self->topFrame->prev;
+	rollback = self->topFrame->prev;
 	base = self->topFrame;
 	if( self->status == DAO_PROCESS_SUSPENDED ) base = self->firstFrame->next;
 
@@ -2315,6 +2316,7 @@ RaiseErrorNullObject:
 CheckException:
 
 			locVars = self->activeValues;
+			self->baseFrame = rollback; /* may have been changed; */
 			if( vmSpace->stopit ) goto FinishProcess;
 			if( invokehost ) handler->InvokeHost( handler, self );
 			if( self->exceptions->size > exceptCount ){
@@ -2377,7 +2379,7 @@ FinishProcess:
 		DaoProcess_RaiseError( self, NULL, "Execution cancelled" );
 	}
 	if( self->exceptions->size ) DaoProcess_PrintException( self, NULL, 1 );
-	DaoProcess_PopFrames( self, self->baseFrame );
+	DaoProcess_PopFrames( self, rollback );
 	/*if( eventHandler ) eventHandler->mainRoutineExit(); */
 
 AbortProcess:

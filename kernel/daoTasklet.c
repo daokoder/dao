@@ -1088,11 +1088,11 @@ static void CHANNEL_Receive( DaoProcess *proc, DaoValue *par[], int N )
 static DaoFuncItem channelMeths[] =
 {
 	{ CHANNEL_New,      "channel<@V>( cap = 1 )" },
-	{ CHANNEL_Buffer,   "buffer( self :channel<@V> ) => int" },
-	{ CHANNEL_Cap,      "cap( self :channel<@V> ) => int" },
-	{ CHANNEL_Cap,      "cap( self :channel<@V>, cap :int ) =>int" },
-	{ CHANNEL_Send,     "send( self :channel<@V>, data :@V, timeout :float = -1 ) => int" },
-	{ CHANNEL_Receive,  "receive( self :channel<@V>, timeout :float = -1 ) => tuple<data :@V|none, status :enum<received,timeout,finished>>" },
+	{ CHANNEL_Buffer,   "buffer( self: channel<@V> ) => int" },
+	{ CHANNEL_Cap,      "cap( self: channel<@V> ) => int" },
+	{ CHANNEL_Cap,      "cap( self: channel<@V>, cap: int ) =>int" },
+	{ CHANNEL_Send,     "send( self: channel<@V>, data: @V, timeout: float = -1 ) => int" },
+	{ CHANNEL_Receive,  "receive( self: channel<@V>, timeout: float = -1 ) => tuple<data: @V|none, status: enum<received,timeout,finished>>" },
 	{ NULL, NULL }
 };
 static void DaoChannel_Delete( DaoChannel *self )
@@ -1140,8 +1140,8 @@ static void FUTURE_Wait( DaoProcess *proc, DaoValue *par[], int N )
 }
 static DaoFuncItem futureMeths[] =
 {
-	{ FUTURE_Value,   "value( self : future<@V> )=>@V" },
-	{ FUTURE_Wait,    "wait( self : future<@V>, timeout : float = -1 )=>int" },
+	{ FUTURE_Value,   "value( self: future<@V> )=>@V" },
+	{ FUTURE_Wait,    "wait( self: future<@V>, timeout: float = -1 )=>int" },
 	{ NULL, NULL }
 };
 static void DaoFuture_Delete( DaoFuture *self )

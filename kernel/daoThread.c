@@ -688,7 +688,6 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 			result = (DaoValue*) list;
 		}
 		break;
-	case DVM_FUNCT_APPLY : DaoProcess_PutValue( proc, param ); break;
 	case DVM_FUNCT_FIND : DaoProcess_PutValue( proc, dao_none_value ); break;
 	}
 	if( threads <= 0 ) threads = 2;
@@ -930,24 +929,73 @@ void DaoMT_Select( DaoProcess *proc, DaoValue *p[], int n );
 
 DaoFuncItem dao_mt_methods[] =
 {
-	{ DaoMT_Critical, "critical()[]" },
-	{ DaoMT_Start, "start( when : enum<auto,now> = $auto )[=>@V|none] =>future<@V>" },
-	{ DaoMT_Iterate, "iterate( times :int, threads=2 )[index:int,threadid:int]" },
-	{ DaoMT_Select,  "select( group :map<@T,int>, timeout = -1.0 ) => tuple<selected: none|@T, value :any, status :enum<selected,timeout,finished>>" },
+	{ DaoMT_Critical,
+		"critical()[]"
+	},
+	{ DaoMT_Start,
+		"start( when: enum<auto,now> = $auto ) [ => @V|none] => future<@V>"
+	},
+	{ DaoMT_Iterate,
+		"iterate( times: int, threads = 2 ) [index: int, threadid: int]"
+	},
+	{ DaoMT_Select,
+		"select( invar group: map<@T,int>, timeout = -1.0 )"
+			"=> tuple<selected: none|@T, value: any, status: enum<selected,timeout,finished>>"
+	},
 
-	{ DaoMT_ListIterate, "iterate( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int]" },
-	{ DaoMT_ListMap, "map( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int =>@T2] =>list<@T2>" },
-	{ DaoMT_ListApply, "apply( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int =>@T] =>list<@T>" },
-	{ DaoMT_ListFind, "find( alist :list<@T>, threads=2 )[item:@T,index:int,threadid:int =>int] =>tuple<index:int,item:@T>|none" },
+	{ DaoMT_ListIterate,
+		"iterate( alist: list<@T>, threads = 2 ) [item: @T, index: int, threadid: int]"
+	},
+	{ DaoMT_ListIterate,
+		"iterate( invar alist: list<@T>, threads = 2 )"
+			"[invar item: @T, index: int, threadid: int]"
+	},
+	{ DaoMT_ListMap,
+		"map( invar alist: list<@T>, threads = 2 ) [item: @T, index: int, threadid: int => @V]"
+			"=> list<@V>"
+	},
+	{ DaoMT_ListApply,
+		"apply( alist: list<@T>, threads = 2 ) [item: @T, index: int, threadid: int => @T]"
+	},
+	{ DaoMT_ListFind,
+		"find( invar alist: list<@T>, threads = 2 )"
+			"[invar item: @T, index: int, threadid: int => int]"
+			"=> tuple<index: int, item: @T> | none"
+	},
 
-	{ DaoMT_MapIterate, "iterate( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int]" },
-	{ DaoMT_MapMap, "map( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int =>@T] =>list<@T>" },
-	{ DaoMT_MapApply, "apply( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int =>@V] =>map<@K,@V>" },
-	{ DaoMT_MapFind, "find( amap :map<@K,@V>, threads=2 )[key:@K,value:@V,threadid:int =>int] =>tuple<key:@K,value:@V>|none" },
+	{ DaoMT_MapIterate,
+		"iterate( amap: map<@K,@V>, threads = 2 ) [key: @K, value: @V, threadid: int]"
+	},
+	{ DaoMT_MapIterate,
+		"iterate( invar amap: map<@K,@V>, threads = 2 )"
+			"[invar key: @K, invar value: @V, threadid: int]"
+	},
+	{ DaoMT_MapMap,
+		"map( invar amap: map<@K,@V>, threads = 2 ) [key: @K, value: @V, threadid: int => @T]"
+			"=> list<@T>"
+	},
+	{ DaoMT_MapApply,
+		"apply( amap: map<@K,@V>, threads = 2 ) [key: @K, value: @V, threadid: int => @V]"
+	},
+	{ DaoMT_MapFind,
+		"find( invar amap: map<@K,@V>, threads = 2 )"
+			"[invar key: @K, invar value: @V, threadid: int => int]"
+			"=> tuple<key: @K, value: @V>|none"
+	},
 
-	{ DaoMT_ArrayIterate, "iterate( aarray :array<@T>, threads=2 )[item:@T,I:int,J:int,K:int,L:int,M:int,threadid:int]" },
-	{ DaoMT_ArrayMap, "map( aarray :array<@T>, threads=2 )[item:@T,I:int,J:int,K:int,L:int,M:int,threadid:int =>@T2] =>array<@T2>" },
-	{ DaoMT_ArrayApply, "apply( aarray :array<@T>, threads=2 )[item:@T,I:int,J:int,K:int,L:int,M:int,threadid:int =>@T] =>array<@T>" },
+	{ DaoMT_ArrayIterate,
+		"iterate( invar aarray: array<@T>, threads = 2 )"
+			"[item: @T, I: int, J: int, K: int, L: int, M: int, threadid: int]"
+	},
+	{ DaoMT_ArrayMap,
+		"map( invar aarray: array<@T>, threads = 2 )"
+			"[item: @T, I: int, J: int, K: int, L: int, M: int, threadid: int => @T2]"
+			"=> array<@T2>"
+	},
+	{ DaoMT_ArrayApply,
+		"apply( aarray: array<@T>, threads = 2 )"
+			"[item: @T, I: int, J: int, K: int, L: int, M: int, threadid: int => @T]"
+	},
 	{ NULL, NULL }
 };
 

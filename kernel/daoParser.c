@@ -1578,10 +1578,18 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *
 		DString *name = NULL;
 		int tid = DAO_NONE, t = tokens[i]->type;
 		int t2 = (i+1 <= end) ? tokens[i+1]->type : 0;
+		int invar = 0;
 
 		if( i == start && tokens[i]->type == DTOK_FIELD ) goto ReturnType;
+		if( tokens[i]->name == DKEY_INVAR ){
+			invar = 1;
+			if( (++i) > end ) goto InvalidTypeForm;
+			t = tokens[i]->type;
+			t2 = (i+1 <= end) ? tokens[i+1]->type : 0;
+		}
 		if( tokens[i]->type >= DTOK_ID_SYMBOL && tokens[i]->type <= DTOK_WCS ){
 			type = DaoParser_ParseValueType( self, i );
+			if( invar && type ) type = DaoType_GetInvarType( type );
 			i += 1;
 		}else if( tokens[i]->type == DTOK_DOTS ){
 			i += 1;
@@ -1590,6 +1598,7 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *
 				if( type == NULL ) goto InvalidTypeForm;
 			}
 			type = DaoNamespace_MakeType( ns, "...", DAO_PAR_VALIST, (DaoValue*) type, NULL, 0 );
+			if( invar && type ) type = DaoType_GetInvarType( type );
 		}else{
 			if( t == DTOK_IDENTIFIER && (t2 == DTOK_COLON || t2 == DTOK_ASSN) ){
 				name = & tokens[i]->string;
@@ -1598,9 +1607,12 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *
 				i = i + 2;
 			}
 			type = DaoParser_ParseType( self, i, end, & i, types );
+			if( invar && type ) type = DaoType_GetInvarType( type );
+			if( name ){
+				type = DaoNamespace_MakeType( ns, name->chars, tid, (DaoValue*)type, NULL,0 );
+			}
 		}
 		if( type == NULL ) return NULL;
-		if( name ) type = DaoNamespace_MakeType( ns, name->chars, tid, (DaoValue*)type, NULL,0 );
 		DArray_Append( types, type );
 		if( i > end ) break;
 ReturnType:
@@ -2020,9 +2032,10 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 	if( self->errors->size > errors ) goto FailedInstantiation;
 	sptype = DaoType_Specialize( gentype, types->items.pType, types->size );
 	if( sptype == NULL ) goto FailedInstantiation;
-	if( self->byteBlock ){ // XXX
+	if( self->byteBlock && tpl->type == DAO_CTYPE ){
+		DaoCtype *ctype = (DaoCtype*) sptype->aux;
 		DaoType **ts = types->items.pType;
-		DaoByteBlock_EncodeCtype( self->byteBlock, (DaoCtype*) sptype->aux, ctype, ts, types->size );
+		DaoByteBlock_EncodeCtype( self->byteBlock, ctype, ctype, ts, types->size );
 		DaoByteBlock_EncodeType( self->byteBlock, sptype );
 	}
 
