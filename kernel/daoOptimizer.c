@@ -2091,6 +2091,9 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 			if( tp->invar != 0 ) goto FinishError;
 		}
 		if( tp == NULL )  goto FinishError;
+		if( abtp->tid >= DAO_PAR_NAMED && abtp->tid <= DAO_PAR_VALIST ){
+			abtp = (DaoType*) abtp->aux;
+		}
 		parpass[ito] = DaoType_MatchTo( tp, abtp, defs );
 
 #if 0
@@ -3107,6 +3110,9 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 			int j;
 			if( at->nested->size == 0 ) goto InvIndex;
 			ct = at->nested->items.pType[0];
+			if( ct->tid >= DAO_PAR_NAMED && ct->tid <= DAO_PAR_VALIST ){
+				ct = (DaoType*) ct->aux;
+			}
 			for(j=1; j<at->nested->size; ++j){
 				DaoType *it = at->nested->items.pType[j];
 				if( it->tid >= DAO_PAR_NAMED && it->tid <= DAO_PAR_VALIST ){
@@ -5054,7 +5060,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				// Consider: a = "something"; a += "else";
 				// Also code such as: DVM_GETCL: 0, 2, 3;
 				// could have been added by routine decoration.
-				// They should be const type.
+				// They shouldn't be const type.
 				*/
 				at = DaoType_GetConstType( at );
 			}

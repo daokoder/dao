@@ -1637,8 +1637,6 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 			DaoType *it = nest[i];
 			if( tid == DAO_TUPLE && it->tid == DAO_PAR_DEFAULT ){
 				it = DaoNamespace_MakeType( self, it->fname->chars, DAO_PAR_NAMED, it->aux, NULL, 0 );
-			}else if( it->tid == DAO_PAR_NAMED && DString_FindChars( it->name, "var<", 0 ) == 0 ){
-				it = it->nested->items.pType[0];
 			}
 
 			if( i ) DString_AppendChar( mbs, tid == DAO_VARIANT ? '|' : ',' );

@@ -117,6 +117,7 @@ struct DaoProcess
 	uchar_t         pauseType;
 	uchar_t         status;
 	uchar_t         active;
+	uchar_t         mode;  /* constant evaluation mode; */
 	ushort_t        returned;
 
 	DaoFuture      *future;

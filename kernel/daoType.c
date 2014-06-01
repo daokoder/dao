@@ -621,6 +621,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	p1 = self->tid == DAO_PAR_NAMED || self->tid == DAO_PAR_DEFAULT;
 	p2 = type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_DEFAULT;
 	if( p1 || p2 ){
+		if( p1 != p2 ) return DAO_MT_NOT;
 		return DaoType_MatchPar( self, type, defs, binds, 0 );
 	}else if( self->invar && type->invar ){
 		self = DaoType_GetBaseType( self );
@@ -671,7 +672,6 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	}
 	mt = dao_type_matrix[self->tid][type->tid];
 	if( mt <= DAO_MT_EXACT ) return mt;
-	if( mt == DAO_MT_EXACT+2 ) return DaoType_MatchPar( self, type, defs, binds, 0 );
 
 	if( type->valtype ){
 		if( self->valtype == 0 ) return DaoType_MatchValue( self, type->aux, defs );
@@ -732,7 +732,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			it1 = self->nested->items.pType[i];
 			it2 = type->nested->items.pType[i];
 			tid = it2->tid;
-			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );
+			k = DaoType_MatchToX( it1, it2, defs, binds );
 			/* printf( "%i %s %s\n", k, it1->name->chars, it2->name->chars ); */
 			if( defs && defs->size && defs->size == ndefs ){
 				/*
