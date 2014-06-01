@@ -594,6 +594,7 @@ static int DaoType_MatchToParent( DaoType *self, DaoType *type, DMap *defs )
 	}
 	return mt;
 }
+static int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds );
 static int DaoValue_MatchToParent( DaoValue *object, DaoType *parent, DMap *defs )
 {
 	int mt = DAO_MT_NOT;
@@ -604,6 +605,32 @@ static int DaoValue_MatchToParent( DaoValue *object, DaoType *parent, DMap *defs
 		mt = DaoType_MatchToParent( object->xCdata.ctype, parent, defs );
 	}else if( object->type == DAO_CLASS ){
 		mt = DaoType_MatchToParent( object->xClass.clsType, parent, defs);
+	}
+	return mt;
+}
+static int DaoType_MatchToTypeHolder( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
+{
+	DNode *node = defs ? MAP_Find( defs, type ) : NULL;
+	if( node ){
+		type = node->value.pType;  /* type associated to the type holder; */
+		if( type->tid == DAO_THT || type->tid == DAO_UDT ) return DAO_MT_LOOSE;
+		return DaoType_MatchToX( self, type, defs, binds );
+	}
+	if( type->aux != NULL ){ /* @type_holder<type> */
+		int mt = DaoType_MatchTo( self, (DaoType*) type->aux, defs );
+		if( mt == DAO_MT_NOT ) return DAO_MT_NOT;
+	}
+	if( defs ) MAP_Insert( defs, type, self );
+	return DAO_MT_THT;
+}
+static int DaoType_MatchToVariant( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
+{
+	int i, n, mt = DAO_MT_NOT;
+	for(i=0,n=type->nested->size; i<n; i++){
+		DaoType *it2 = type->nested->items.pType[i];
+		int mt2 = DaoType_MatchToX( self, it2, defs, binds );
+		if( mt2 > mt ) mt = mt2;
+		if( mt == DAO_MT_EQ ) break;
 	}
 	return mt;
 }
@@ -621,8 +648,19 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	p1 = self->tid == DAO_PAR_NAMED || self->tid == DAO_PAR_DEFAULT;
 	p2 = type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_DEFAULT;
 	if( p1 || p2 ){
-		if( p1 != p2 ) return DAO_MT_NOT;
-		return DaoType_MatchPar( self, type, defs, binds, 0 );
+		if( p1 == p2 ){
+			return DaoType_MatchPar( self, type, defs, binds, 0 );
+		}else if( p2 ){
+			return DAO_MT_NOT;
+		}else if( type->tid == DAO_ANY ){
+			return DAO_MT_ANY;
+		}else if( type->tid == DAO_THT ){
+			return DaoType_MatchToTypeHolder( self, type, defs, binds );
+		}else if( type->tid == DAO_VARIANT ){
+			return DaoType_MatchToVariant( self, type, defs, binds );
+		}else{
+			return DAO_MT_NOT;
+		}
 	}else if( self->invar && type->invar ){
 		self = DaoType_GetBaseType( self );
 		type = DaoType_GetBaseType( type );
@@ -653,19 +691,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			if( node ) self = node->value.pType;
 		}
 		if( type && type->tid == DAO_THT ){
-			node = defs ? MAP_Find( defs, type ) : NULL;
-			if( node ){
-				type = node->value.pType;  /* type associated to the type holder; */
-				if( type->tid == DAO_THT || type->tid == DAO_UDT ) return DAO_MT_LOOSE;
-				return DaoType_MatchToX( self, type, defs, binds );
-			}else{
-				if( type->aux != NULL ){ /* @type_holder<type> */
-					mt = DaoType_MatchTo( self, (DaoType*) type->aux, defs );
-					if( mt == DAO_MT_NOT ) return DAO_MT_NOT;
-				}
-				if( defs ) MAP_Insert( defs, type, self );
-				return DAO_MT_THT;
-			}
+			return DaoType_MatchToTypeHolder( self, type, defs, binds );
 		}
 	}else if( type->tid == DAO_INTERFACE ){
 		return DaoType_MatchInterface( self, (DaoInterface*) type->aux, binds );
@@ -692,20 +718,13 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		mt = DAO_MT_EQ;
 		for(i=0,n=self->nested->size; i<n; i++){
 			it2 = self->nested->items.pType[i];
-			mt2 = DaoType_MatchTo( it2, type, defs );
+			mt2 = DaoType_MatchToVariant( it2, type, defs, binds );
 			if( mt2 < mt ) mt = mt2;
 			if( mt == DAO_MT_NOT ) break;
 		}
 		return mt;
 	}else if( type->tid == DAO_VARIANT ){
-		mt = DAO_MT_NOT;
-		for(i=0,n=type->nested->size; i<n; i++){
-			it2 = type->nested->items.pType[i];
-			mt2 = DaoType_MatchTo( self, it2, defs );
-			if( mt2 > mt ) mt = mt2;
-			if( mt == DAO_MT_EQ ) break;
-		}
-		return mt;
+		return DaoType_MatchToVariant( self, type, defs, binds );
 	}
 	mt = DAO_MT_EQ;
 	switch( self->tid ){

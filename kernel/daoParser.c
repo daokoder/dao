@@ -3570,7 +3570,7 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 		i = self->curToken;
 		while( i <= to && tokens[i]->type == DTOK_SEMCO ) i += 1;
 		if( i > to ){
-			if( !(routine->attribs & DAO_ROUT_INITOR) ){
+			if( !(routine->attribs & (DAO_ROUT_INITOR|DAO_ROUT_DEFERRED)) ){
 				DaoParser_AddCode( self, DVM_RETURN, enode.reg, 1, 0, from, 0, to );
 			}
 			return 1;
