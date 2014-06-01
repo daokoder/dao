@@ -1407,7 +1407,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	}
 	return right;
 ErrorUnsupportedOperator: ec = DAO_ROUT_INVALID_OPERATOR; goto ErrorRoutine;
-ErrorConstructorReturn: ec = DAO_ROUT_CONSTRU_RETURN; goto ErrorRoutine;
+ErrorConstructorReturn: ec = DAO_ROUT_INVALID_RETURN; goto ErrorRoutine;
 ErrorNeedReturnType:  ec = DAO_ROUT_NEED_RETURN_TYPE; goto ErrorRoutine;
 ErrorInvalidDecoParam:   ec = DAO_ROUT_INVALID_DECO_PARAM; goto ErrorRoutine;
 ErrorInvalidTypeForm: ec = DAO_INVALID_TYPE_FORM; goto ErrorRoutine;
@@ -4100,6 +4100,10 @@ DecoratorError:
 				DaoParser_AddCode( self, DVM_TUPLE, reg, N, tup, start, 0, end );
 				DaoParser_AddCode( self, DVM_RETURN, tup, 1, 0, start, 0, end );
 			}else{
+				if( N && (routine->attribs & (DAO_ROUT_INITOR|DAO_ROUT_DEFERRED)) ){
+					DaoParser_Error3( self, DAO_ROUT_INVALID_RETURN, errorStart );
+					return 0;
+				}
 				DaoParser_AddCode( self, DVM_RETURN, reg, N, 0, start, 0, end );
 			}
 			if( DaoParser_CompleteScope( self, start-1 ) == 0 ) return 0;

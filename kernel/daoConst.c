@@ -117,7 +117,7 @@ static const char* const daoCtInfo[] =
 	"Invalid decorator definition",
 	"Invalid operator for overloading",
 	"Invalid first parameter name for the decorator",
-	"Constructor cannot return",
+	"Invalid return for the constructor or defer block",
 	"Method need implementation",
 	"Method implementation is redundant",
 	"Method not declared",

@@ -2258,6 +2258,7 @@ enum DaoTypingErrorCode
 	DTE_CALL_NON_INVAR ,
 	DTE_CALL_NOT_PERMIT ,
 	DTE_CALL_WITHOUT_INSTANCE ,
+	DTE_ROUT_INVALID_RETURN ,
 	DTE_FIELD_NOT_PERMIT ,
 	DTE_FIELD_NOT_EXIST ,
 	DTE_FIELD_OF_INSTANCE ,
@@ -2286,6 +2287,7 @@ static const char*const DaoTypingErrorString[] =
 	"Call non-invar method inside invar method",
 	"Call not permitted",
 	"Calling nonstatic method without instance",
+	"Invalid return for the constructor or defer block",
 	"Member not permitted",
 	"Member not exist",
 	"Need class instance",
@@ -4765,6 +4767,9 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 		if( ct && DaoType_MatchValue( ct, dao_none_value, NULL ) ) return 1;
 		if( ct && ! (routine->attribs & DAO_ROUT_INITOR) ) goto ErrorTyping;
 	}else{
+		if( code == DVM_RETURN && (routine->attribs & (DAO_ROUT_INITOR|DAO_ROUT_DEFERRED)) ){
+			goto InvalidReturn;
+		}
 		at = types[opa];
 		if( at == NULL ) goto ErrorTyping;
 		if( vmc->b >1 )
@@ -4818,6 +4823,7 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 	}
 	return 1;
 ErrorTyping: return DaoInferencer_Error( self, DTE_TYPE_NOT_MATCHING );
+InvalidReturn: return DaoInferencer_Error( self, DTE_ROUT_INVALID_RETURN );
 }
 
 int DaoInferencer_DoInference( DaoInferencer *self )
