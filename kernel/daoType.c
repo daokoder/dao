@@ -654,7 +654,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			return DAO_MT_NOT;
 		}else if( type->tid == DAO_ANY ){
 			return DAO_MT_ANY;
-		}else if( type->tid == DAO_THT ){
+		}else if( type->tid == DAO_THT || type->tid == DAO_UDT ){
 			return DaoType_MatchToTypeHolder( self, type, defs, binds );
 		}else if( type->tid == DAO_VARIANT ){
 			return DaoType_MatchToVariant( self, type, defs, binds );
@@ -686,11 +686,11 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			self->name->chars, type->name->chars, defs );
 	 */
 	if( mt == DAO_MT_THT ){
-		if( self && self->tid == DAO_THT ){
+		if( self && (self->tid == DAO_THT || self->tid == DAO_UDT) ){
 			if( defs ) node = MAP_Find( defs, self );
 			if( node ) self = node->value.pType;
 		}
-		if( type && type->tid == DAO_THT ){
+		if( type && (type->tid == DAO_THT || type->tid == DAO_UDT) ){
 			return DaoType_MatchToTypeHolder( self, type, defs, binds );
 		}
 	}else if( type->tid == DAO_INTERFACE ){

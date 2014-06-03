@@ -1059,7 +1059,9 @@ int DaoClass_UseMixinDecorators( DaoClass *self )
 			if( deco2 == NULL ) continue;
 			if( DArray_MatchAffix( deco2->body->decoTargets, rout->routName ) == 0 ) continue;
 			bl = bl && DaoRoutine_Decorate( rout, deco2, & cst, 1, 1 ) != NULL;
+			if( bl == 0 ) break;
 		}
+		if( bl == 0 ) break;
 	}
 #endif
 	return bl;

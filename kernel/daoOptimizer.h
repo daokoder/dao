@@ -169,6 +169,7 @@ struct DaoInferencer
 	DArray      *errors;
 	DArray      *array;
 	DArray      *array2;
+	DArray      *defers;
 
 	DMap        *defs;
 	DMap        *defs2;

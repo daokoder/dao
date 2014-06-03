@@ -62,7 +62,7 @@ struct DaoStackFrame
 	DaoProcess     *outer;
 
 	DaoStackFrame  *active;
-	DaoStackFrame  *sect; /* original frame of a code section frame; */
+	DaoStackFrame  *host; /* host frame of a frame for code section or defer block; */
 	DaoStackFrame  *prev;
 	DaoStackFrame  *next;
 };

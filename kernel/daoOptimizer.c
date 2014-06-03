@@ -1906,6 +1906,7 @@ DaoInferencer* DaoInferencer_New()
 	self->errors = DArray_New(0);
 	self->array = DArray_New(0);
 	self->array2 = DArray_New(0);
+	self->defers = DArray_New(0);
 	self->defs = DHash_New(0,0);
 	self->defs2 = DHash_New(0,0);
 	self->defs3 = DHash_New(0,0);
@@ -1926,6 +1927,7 @@ void DaoInferencer_Reset( DaoInferencer *self )
 	self->errors->size = 0;
 	self->array->size = 0;
 	self->array2->size = 0;
+	self->defers->size = 0;
 	self->error = 0;
 	self->annot_first = 0;
 	self->annot_last = 0;
@@ -1945,6 +1947,7 @@ void DaoInferencer_Delete( DaoInferencer *self )
 	DArray_Delete( self->errors );
 	DArray_Delete( self->array );
 	DArray_Delete( self->array2 );
+	DArray_Delete( self->defers );
 	DString_Delete( self->mbstring );
 	DMap_Delete( self->defs );
 	DMap_Delete( self->defs2 );
@@ -4690,6 +4693,54 @@ CallNotPermit : return DaoInferencer_Error( self, DTE_CALL_NOT_PERMIT );
 CallWithoutInst : return DaoInferencer_Error( self, DTE_CALL_WITHOUT_INSTANCE );
 ErrorTyping: return DaoInferencer_Error( self, DTE_TYPE_NOT_MATCHING );
 }
+int DaoInferencer_HandleClosure( DaoInferencer *self, DaoInode *inode, int i, DMap *defs )
+{
+	int j;
+	int code = inode->code;
+	int opa = inode->a;
+	int opc = inode->c;
+	DMap *defs2 = self->defs2;
+	DArray *rettypes = self->rettypes;
+	DaoType *tt, **tp, **types = self->types->items.pType;
+	DaoValue **pp, **consts = self->consts->items.pValue;
+	DaoInode *inode2, **inodes = self->inodes->items.pInode;
+	DaoNamespace *NS = self->routine->nameSpace;
+	DaoVmCodeX *vmc = (DaoVmCodeX*) inode;
+	DaoRoutine *routine = self->routine;
+	DaoRoutine *closure = (DaoRoutine*) consts[opa];
+	DaoType *at = types[opa];
+	DaoType *ct;
+
+	if( types[opa]->tid != DAO_ROUTINE ) goto ErrorTyping;
+	if( closure->attribs & DAO_ROUT_DEFER_RET ) DArray_Append( self->defers, closure );
+
+	DaoRoutine_DoTypeInference( closure, self->silent );
+
+	self->array->size = 0;
+	DArray_Resize( self->array, closure->parCount, 0 );
+	for(j=0; j<closure->parCount; j+=1){
+		DaoType *partype = closure->routType->nested->items.pType[j];
+		self->array->items.pType[j] = partype;
+	}
+	for(j=0; j<vmc->b; j+=2){
+		DaoInode *idata = inodes[i - vmc->b + j + 1];
+		if( idata->b < DAO_MAX_PARAM ){
+			self->array->items.pType[idata->b] = types[opa+1+j];
+		}else{
+			DaoType *uptype = types[opa+1+j];
+			DaoVariable *var = closure->body->svariables->items.pVar[ idata->b - DAO_MAX_PARAM ];
+			if( uptype->invar ) uptype = DaoType_GetBaseType( uptype );
+			GC_ShiftRC( uptype, var->dtype );
+			var->dtype = uptype;
+		}
+	}
+	at = DaoNamespace_MakeRoutType( NS, at, NULL, self->array->items.pType, NULL );
+
+	DaoInferencer_UpdateType( self, opc, at );
+	AssertTypeMatching( at, types[opc], defs );
+	return 1;
+ErrorTyping: return DaoInferencer_Error( self, DTE_TYPE_NOT_MATCHING );
+}
 int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap *defs )
 {
 	int code = inode->code;
@@ -4767,8 +4818,10 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 		if( ct && DaoType_MatchValue( ct, dao_none_value, NULL ) ) return 1;
 		if( ct && ! (routine->attribs & DAO_ROUT_INITOR) ) goto ErrorTyping;
 	}else{
-		if( code == DVM_RETURN && (routine->attribs & (DAO_ROUT_INITOR|DAO_ROUT_DEFERRED)) ){
-			goto InvalidReturn;
+		if( code == DVM_RETURN && (routine->attribs & DAO_ROUT_INITOR) ){
+			/* goto InvalidReturn; */  /* TODO: not for decorated initor; */
+		}else if( code == DVM_RETURN && (routine->attribs & DAO_ROUT_DEFER) ){
+			if( routine->routType->nested->size == 0 ) goto InvalidReturn;
 		}
 		at = types[opa];
 		if( at == NULL ) goto ErrorTyping;
@@ -5843,40 +5896,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			if( DaoInferencer_HandleCall( self, inode, i, defs ) == 0 ) return 0;
 			break;
 		case DVM_ROUTINE :
-			if( types[opa]->tid != DAO_ROUTINE ) goto ErrorTyping;
-			/* close on types */
-			at = types[opa];
-			closure = (DaoRoutine*) consts[opa];
-			DaoRoutine_DoTypeInference( closure, self->silent );
-
-			self->array->size = 0;
-			DArray_Resize( self->array, closure->parCount, 0 );
-			for(j=0; j<closure->parCount; j+=1){
-				DaoType *partype = closure->routType->nested->items.pType[j];
-				self->array->items.pType[j] = partype;
-			}
-			for(j=0; j<opb; j+=2){
-				DaoInode *idata = inodes[i-opb+j+1];
-				if( idata->b < DAO_MAX_PARAM ){
-					self->array->items.pType[idata->b] = types[opa+1+j];
-				}else{
-					DaoType *uptype = types[opa+1+j];
-					DaoVariable *var = closure->body->svariables->items.pVar[ idata->b - DAO_MAX_PARAM ];
-					if( uptype->invar ) uptype = DaoType_GetBaseType( uptype );
-					GC_ShiftRC( uptype, var->dtype );
-					var->dtype = uptype;
-				}
-			}
-			if( closure->attribs & DAO_ROUT_PASSRET ){
-				DaoType *retype = (DaoType*) routine->routType->aux;
-				if( retype->invar ) retype = DaoType_GetBaseType( retype );
-				GC_ShiftRC( retype, closure->body->svariables->items.pVar[0]->dtype );
-				closure->body->svariables->items.pVar[0]->dtype = retype;
-			}
-			at = DaoNamespace_MakeRoutType( NS, at, NULL, self->array->items.pType, NULL );
-
-			DaoInferencer_UpdateType( self, opc, at );
-			AssertTypeMatching( at, types[opc], defs );
+			if( DaoInferencer_HandleClosure( self, inode, i, defs ) == 0 ) return 0;
 			break;
 
 		case DVM_RETURN :
@@ -6383,6 +6403,16 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			continue;
 		}
 	}
+	for(i=0; i<self->defers->size; ++i){
+		DaoRoutine *closure = self->defers->items.pRoutine[i];
+		DaoType *retype = (DaoType*) routine->routType->aux;
+		DaoType *type = closure->routType;
+		type = DaoNamespace_MakeRoutType( NS, type, NULL, type->nested->items.pType, retype );
+		GC_ShiftRC( type, closure->routType );
+		closure->routType = type;
+		if( DaoRoutine_DoTypeInference( closure, self->silent ) == 0 ) return 0;
+	}
+
 	DaoInferencer_Finalize( self );
 	return 1;
 NotMatch : return DaoInferencer_ErrorTypeNotMatching( self, NULL, NULL );
@@ -6555,8 +6585,16 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	ptypes = ftype->nested;
 	code = DVM_CALL + (ftype->attrib & DAO_TYPE_SELF);
 	/* ftype->aux is NULL for type "routine": */
-	if( ftype->aux )
-		oldfn = DaoRoutine_ResolveX( self, NULL, NULL, NULL, ptypes->items.pType, ptypes->size, code );
+	if( ftype->aux ){
+		DArray *TS = DArray_New(0);
+		for(i=0; i<ptypes->size; ++i){
+			DaoType *T = ptypes->items.pType[i];
+			if( T->tid == DAO_PAR_NAMED || T->tid == DAO_PAR_DEFAULT ) T = (DaoType*) T->aux;
+			DArray_Append( TS, T );
+		}
+		oldfn = DaoRoutine_ResolveX( self, NULL, NULL, NULL, TS->items.pType, TS->size, code );
+		DArray_Delete( TS );
+	}
 	if( oldfn == NULL ) return NULL;
 
 	newfn = DaoRoutine_Copy( decorator, 1, 1, 1 );

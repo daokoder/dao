@@ -468,7 +468,7 @@ static void DaoMT_InitProcess( DaoProcess *proto, DaoProcess *clone )
 	DaoProcess_SetActiveFrame( clone, clone->topFrame );
 	DaoProcess_PushSectionFrame( clone );
 	clone->topFrame->outer = proto;
-	clone->topFrame->sect = proto->topFrame->prev;
+	clone->topFrame->host = proto->topFrame->prev;
 	clone->topFrame->returning = -1;
 }
 static void DaoMT_RunIterateFunctional( void *p )

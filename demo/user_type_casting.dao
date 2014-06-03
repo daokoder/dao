@@ -16,6 +16,7 @@ class Test
 	}
 	operator cast() => array<int> {
 		io.writeln( 'casting to array<int>' );
+		# the follwing no longer supported, should use code section methods instead:
 		return (array<int>) value
 	}
 }

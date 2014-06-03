@@ -206,13 +206,13 @@ enum DaoClassAttrib
 };
 enum DaoRoutineAttrib
 {
-	DAO_ROUT_PARSELF   = 1,       /* need self parameter */
+	DAO_ROUT_PARSELF   = (1<<0),  /* need self parameter */
 	DAO_ROUT_INVAR     = (1<<1),  /* invariable method */
 	DAO_ROUT_STATIC    = (1<<2),  /* static function */
 	DAO_ROUT_PRIVATE   = (1<<3),  /* private method */
 	DAO_ROUT_PROTECTED = (1<<4),  /* protected method */
-	DAO_ROUT_DEFERRED  = (1<<5),  /* deferred closure */
-	DAO_ROUT_PASSRET   = (1<<6),  /* pass returned value to deferred closure */
+	DAO_ROUT_DEFER     = (1<<5),  /* defer block as a closure */
+	DAO_ROUT_DEFER_RET = (1<<6),  /* defer block with explicit return */
 	DAO_ROUT_CODESECT  = (1<<7),  /* code section routine */
 	DAO_ROUT_DECORATOR = (1<<8),  /* function decorator */
 	DAO_ROUT_INITOR    = (1<<9),  /* class constructor */

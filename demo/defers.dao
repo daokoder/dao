@@ -1,39 +1,56 @@
 
-# To ensure a piece of codes to be executed when a function exits
-# normally or exists due to exceptions, they can be placed inside
-# a deferred block: defer { block }.
+# A "defer" block is a block of code that can be executed when
+# a function returns normally or exits due to excpetions. Its
+# execution can be conditional or unconditional with respect
+# to exceptions:
+# -- "defer{block}" or "defer(){block}": unconditional exection,
+#    when a function exits with or without exception;
+# -- "defer(none){block}": conditional execution, only when the
+#    function exits without exception;
+# -- "defer(any){block}": conditional execution, when the function
+#    exit with any exception(s);
+# -- "defer(type){block}": conditional execution, only when the
+#    function exit with exception(s) matching to "type";
+# -- "defer(type as name){block}": the same as "defer(type){block}"
+#    except that the exception object will be accessible by "name".
+# 
+# A defer block is compiled as a closure, so it can access outer
+# scope constants and varaibles in the same way as closures.
+# These outer scope variables are captured at the time the defer
+# block is reached in the normal execution.
 #
-# A deferred block can access outer scope constants and varaibles
-# in the same way as closures. These outer scope variables are
-# captured at the time the deferred block is reached in the normal
-# execution.
+# When a function exits, all the executable defer blocks that have
+# been reached in the normal execution will be executed in the reverse
+# order of being reached. A conditional defer block can be executed
+# multiple times, if there are multiple exceptions that match to its
+# condition type.
 #
-# When a function exits, all the deferred blocks that have been
-# reached in the normal execution will be executed in the reverse
-# order of being reached.
+# A conditional defer may explicitly return a value that matches to
+# the return type of the function. Such defer will remove the exception
+# object from the exception stack (namely disable the exceptioin) that
+# is used to invoke the defer. And the return value of the defer block
+# will be used as the return value of the function. Defer blocks without
+# explicit returns will simply leave the exceptions in the exception
+# stack and allow them to invoke other proper defer blocks or terminate
+# the program.
 #
-# Any deferred block can modify the value returned by the function.
-# In order to do this, one must designate a variable name for the
-# returned value, by placing the name inside a pair brackets after
-# the "defer" keyword, for example: defer (ret) { ret += 1 }.
 
 routine Test()
 {
-	mat = [ 1 : 1000 ];
-
-	# defer (name) {} will pass the returning value of Test()
-	# to the deferred codes, and so that it can be updated:
-	defer (result) {
-		io.writeln( 'deferred 1' )
-		mat.resize( [0] )
-		result += 456
+	defer {
+		io.writeln( 'always executed' )
 	}
-	defer (result) {
-		result += 10000
+	defer( Exception::Error as error ){
+		io.writeln( 'executed with error that will be disabled' )
+		return 999
+	}
+	defer( Exception ){
+		io.writeln( 'executed with exception that will not be disabled' )
 	}
 
 	for( i = 2 : 5 ) defer { io.writeln( 'deferred', i ) }
 
+	error( Exception::Error( 'something' ) )
 	io.writeln( 'returning' );
 	return 123
 }

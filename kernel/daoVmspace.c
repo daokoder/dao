@@ -2383,46 +2383,6 @@ static void DaoMETH_Error3( DaoProcess *proc, DaoValue *p[], int n )
 	DaoException_Init( exception, proc, p[1]->xString.value->chars, p[2] );
 	DArray_Append( proc->exceptions, exception );
 }
-static void DaoMETH_Recover( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoList *list = DaoProcess_PutList( proc );
-	DaoStackFrame *frame = proc->topFrame->prev; /* caller frame */
-	if( frame == NULL || frame->prev == NULL || frame->prev == proc->firstFrame ) return;
-	/* recover() will return a list of exceptions only in the first defer codes: */
-	while( proc->exceptions->size > frame->prev->exceptBase ){
-		DaoList_Append( list, DArray_Back( proc->exceptions ) );
-		DArray_PopBack( proc->exceptions );
-	}
-}
-static void DaoMETH_Recover2( DaoProcess *proc, DaoValue *p[], int n )
-{
-	daoint i;
-	DaoValue *ret = NULL;
-	DaoValue *type = p[0];
-	DaoStackFrame *frame = proc->topFrame->prev; /* caller frame */
-
-	if( frame == NULL || frame->prev == NULL || frame->prev == proc->firstFrame ) return;
-	if( type->type == DAO_STRING ){
-		DString *name = type->xString.value;
-		type = (DaoValue*) DaoVmSpace_MakeExceptionType( proc->vmSpace, name->chars );
-		if( type == NULL ) return; /* no exception (none should be expected); */
-		type = type->xType.aux;
-	}
-	for(i=proc->exceptions->size-1; i>=frame->prev->exceptBase; --i){
-		DaoValue *value = proc->exceptions->items.pValue[i];
-		DaoObject *object = DaoValue_CastObject( value );
-		if( object ){
-			if( DaoClass_ChildOf( object->defClass, type ) ) ret = value;
-		}else if( type->type == DAO_CTYPE ){
-			if( DaoValue_CastCstruct( value, type->xCtype.cdtype ) != NULL ) ret = value;
-		}
-		if( ret ){
-			DArray_Erase( proc->exceptions, i, 1 );
-			break;
-		}
-	}
-	DaoProcess_PutValue( proc, ret ? ret : dao_none_value );
-}
 static void DaoMETH_Frame( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoValue *retvalue = NULL;
@@ -2488,19 +2448,6 @@ DaoFuncItem dao_builtin_methods[] =
 		//
 		// Here type "interface<class<Exception>>" represents any type derived from
 		// "Exception".
-		*/
-	},
-	{ DaoMETH_Recover,
-		"recover( ) => list<interface<Exception>>"
-		/*
-		//
-		*/
-	},
-	{ DaoMETH_Recover2,
-		"recover( invar eclass: string|interface<class<Exception>> )"
-								"=> interface<Exception>|none"
-		/*
-		//
 		*/
 	},
 	{ DaoMETH_Frame,

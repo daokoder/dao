@@ -1,43 +1,43 @@
 
-# The handling of panics is very much like the handling of panics
-# in the Go programming language.
+# The error handling in Dao is based defer blocks which can be executed
+# unconditionally or conditionally with respect to exceptions.
+# Please see the "Defer Blocks" demo for more details.
 #
-# In Dao, a panic or exception can be raised by the built-in function
-# panic() which can take any value as parameter.
+# In Dao, an exception or error can be raised by the built-in function
+# error() which has three overloaded versions. The simplest version can
+# take a string as parameter to become the message of the error.
 #
-# To handle panics, one may need to combine deferred blocks and the
-# built-in function recover(), which may return a list of exceptions.
-# When recover() is called in multiple deferred blocks, only the call
-# to recover() in the lastly executed deferred block will return the
-# exceptions. An exception type can be passed to recover() to request
-# a specific type of exception.
+# To handle an error of certain type, one need to define a defer block
+# with the error type as its parameter. Such that the block will only
+# be executed when an error of that type actually happened. Then the
+# error object will be passed to the defer block for proper handling.
+#
+# If the error can be recovered, one should handle it in the defer block
+# and return a value explicitly. This value will be used as the new return
+# value of the routine where the defer block is defined. With the explicit
+# return value, the error object will be removed, and allow the routine
+# to return normally so that the program can continue to run.
+#
+# Of course, one can also define a defer block for certain errors, and
+# let the errors to propagate by not returning any value explicitly.
+#
 
 routine Test()
 {
-	defer { io.writeln( 'first defer:', recover() ) }
-	defer { io.writeln( 'second defer:', recover() ) }
+	defer ( Exception::Error ){
+		io.writeln( 'Error is handled! And a new value is returned!' )
+		return 456
+	}
+	defer ( Exception::Error ){
+		io.writeln( 'Error is NOT handled!' )
+	}
 	io.writeln( 'Test(): before error;' )
 	error( 'some error' )
 	io.writeln( 'Test(): after error;' )
+	return 123
 }
 
-Test()
-
-routine Test2()
-{
-	rout = routine(){
-		defer { io.writeln( 'recovering:', recover() ) }
-		io.writeln( 'closure: before error;' )
-		error( 'some other error' )
-		io.writeln( 'closure: after error;' )
-	}
-	io.writeln( 'Test2(): before error;' )
-	rout()
-	io.writeln( 'Test2(): after error;' )
-}
-
-Test2()
-
+io.writeln( Test() )
 
 # Example to handle user defined exception type:
 class MyError : Exception::Error
@@ -45,10 +45,11 @@ class MyError : Exception::Error
 	routine serialize(){ return ('MyError', self) }
 }
 
-routine Test3()
+routine Test2()
 {
-	defer {
-		io.writeln( 'recovering from', recover( MyError ) )
+	defer ( MyError as error ) {
+		io.writeln( 'recovering from', error )
+		return none
 	}
 
 	io.writeln( 'Test3(): before error;' )
@@ -56,7 +57,7 @@ routine Test3()
 	io.writeln( 'Test3(): after error;' )
 }
 
-Test3()
+Test2()
 
 
 # To simplify the handling of panics, Dao support a special type
@@ -71,7 +72,7 @@ Test3()
 fout = io::stdio
 
 frame {
-	defer { recover() }
+	defer ( any ) { return none }
 	fout = io.open( "NonExistentFile.txt", 'r+' )
 }
 

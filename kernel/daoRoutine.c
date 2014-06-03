@@ -789,8 +789,7 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *svalue, DaoType *stype,
 		}
 	}
 #if 0
-	if( strcmp( rout->routName->chars, "expand" ) ==0 )
-		printf( "%i, %p, parlist = %s; argcount = %i; parcount = %i, %i\n", i, rout, rout->routType->name->chars, argcount, parcount, selfChecked );
+	printf( "%p, parlist = %s; argcount = %i; parcount = %i, %i\n", self, self->routType->name->chars, argcount, parcount, selfChecked );
 #endif
 
 	if( (argcount | parcount) == 0 ) goto Matched;
@@ -824,7 +823,7 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *svalue, DaoType *stype,
 		partype = (DaoType*) partype->aux;
 		parpass[parindex] = Dao_CheckParameter( partype, argvalue, argtype, defs );
 		/*
-		   printf( "%i:  %i  %s\n", parpass[parindex], abtp->tid, abtp->name->chars );
+		   printf( "%i:  %i  %s\n", parpass[parindex], partype->tid, partype->name->chars );
 		 */
 		if( parpass[parindex] == 0 ) goto NotMatched;
 	}
