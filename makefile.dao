@@ -424,7 +424,7 @@ if( daovm_bundle_program.size() ){
 if( daovm_make_javascript == $ON ){
 	ems_export  = @[]"['_DaoInit','_DaoQuit',@[]
 	ems_export += @[]'_DaoVmSpace_Eval','_DaoVmSpace_StdioStream',@[]
-	ems_export += @[]'_DaoStream_WriteMBS']"@[]
+	ems_export += @[]'_DaoStream_WriteChars']"@[]
 	daovm_js_main = daovm.AddObjects( { "kernel/daoMain.c" }, daovm_kernel_headers );
 	daovm_js = daovm.AddJavaScriptLibrary( "dao", daovm_kernel_objects, daovm_js_main )
 	daovm_js.AddDefinition( "DAO_WITHOUT_DLL" )
