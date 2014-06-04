@@ -2512,10 +2512,6 @@ DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 		mid = vmc + id;
 		cmp = DaoValue_Compare( opa, cst[ mid->a ] );
 		if( cmp ==0 ){
-			if( cst[mid->a]->type== DAO_TUPLE && cst[mid->a]->xTuple.subtype == DAO_PAIR ){
-				while( id > first && DaoValue_Compare( opa, cst[ vmc[id-1].a ] ) ==0 ) id --;
-				mid = vmc + id;
-			}
 			return self->topFrame->codes + mid->b;
 		}else if( cmp <0 ){
 			last = id - 1;

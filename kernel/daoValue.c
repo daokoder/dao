@@ -212,15 +212,6 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	if( left == NULL || right == NULL ) return left < right ? -100 : 100;
 	if( left->type != right->type ){
 		res = left->type < right->type ? -100 : 100;
-		if( right->type == DAO_TUPLE && right->xTuple.subtype == DAO_PAIR ){
-			if( (res = DaoValue_Compare( left, right->xTuple.values[0] )) <= 0 ) return res;
-			if( (res = DaoValue_Compare( left, right->xTuple.values[1] )) >= 0 ) return res;
-			return 0;
-		}else if( left->type == DAO_TUPLE && left->xTuple.subtype == DAO_PAIR ){
-			if( (res = DaoValue_Compare( left->xTuple.values[0], right )) >= 0 ) return res;
-			if( (res = DaoValue_Compare( left->xTuple.values[1], right )) <= 0 ) return res;
-			return 0;
-		}
 		if( left->type < DAO_INTEGER || left->type > DAO_DOUBLE ) return res;
 		if( right->type < DAO_INTEGER || right->type > DAO_DOUBLE ) return res;
 		L = DaoValue_GetDouble( left );

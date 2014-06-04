@@ -360,7 +360,7 @@ demos = {
 	"demo/mixins.dao",
 	"demo/numbers.dao",
 	"demo/object_operator.dao",
-	"demo/panics.dao",
+	"demo/errors.dao",
 	"demo/routines.dao",
 	"demo/strings.dao",
 	"demo/tuples.dao",

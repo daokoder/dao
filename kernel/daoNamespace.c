@@ -1947,18 +1947,6 @@ DaoType* DaoNamespace_MakePairValueType( DaoNamespace *self, DaoValue *first, Da
 	tp2 = DaoNamespace_MakeValueType( self, second );
 	return DaoNamespace_MakePairType( self, tp1, tp2 );
 }
-DaoTuple* DaoNamespace_MakePair( DaoNamespace *self, DaoValue *first, DaoValue *second )
-{
-	DaoTuple *tuple = DaoTuple_New(2);
-	DaoType *type1 = DaoNamespace_MakeValueType( self, first );
-	DaoType *type2 = DaoNamespace_MakeValueType( self, second );
-	tuple->ctype = DaoNamespace_MakePairType( self, type1, type2 );
-	GC_IncRC( tuple->ctype );
-	DaoValue_Copy( first, & tuple->values[0] );
-	DaoValue_Copy( second, & tuple->values[1] );
-	tuple->subtype = DAO_PAIR;
-	return tuple;
-}
 
 DaoNamespace* DaoNamespace_LoadModule( DaoNamespace *self, DString *name )
 {

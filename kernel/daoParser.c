@@ -3967,26 +3967,10 @@ DecoratorError:
 			while( last < colon ){
 				DNode *it;
 				DaoEnode item = {-1,0,0,NULL,NULL,NULL,NULL};
-				int dots = DaoParser_FindOpenToken( self, DTOK_DOTS, last, comma, 0 );
 				int oldcount = self->regCount;
 				back = self->vmcLast;
 				self->curToken = last;
-				if( dots <0 ){
-					item = DaoParser_ParseExpression( self, DTOK_COLON );
-				}else{
-					DaoEnode e1, e2;
-					e1 = DaoParser_ParseExpression( self, DTOK_DOTS );
-					self->curToken += 1; /* skip dots */
-					e2 = DaoParser_ParseExpression( self, DTOK_COLON );
-					if( e1.reg >= 0 && e2.reg >=0 ) item.reg = e1.reg;
-					if( e1.konst && e2.konst ){
-						DaoValue *v1 = DaoParser_GetVariable( self, e1.konst );
-						DaoValue *v2 = DaoParser_GetVariable( self, e2.konst );
-						DaoTuple *tuple = DaoNamespace_MakePair( ns, v1, v2 );
-						item.konst = DaoRoutine_AddConstant( routine, (DaoValue*)tuple );
-						item.konst = LOOKUP_BIND_LC( item.konst );
-					}
-				}
+				item = DaoParser_ParseExpression( self, DTOK_COLON );
 				if( item.reg < 0 ){
 					DaoParser_Error2( self, DAO_CASE_NOT_VALID, start, colon, 1 );
 					return 0;
@@ -4015,15 +3999,6 @@ DecoratorError:
 					DaoValue *key = it->key.pValue;
 					int bl = DaoValue_Compare( value, key ) == 0;
 					bl |= DaoValue_Compare( key, value ) == 0;
-					if( bl == 0 && value->type == DAO_TUPLE && key->type == DAO_TUPLE ){
-						DaoTuple *T1 = (DaoTuple*) value;
-						DaoTuple *T2 = (DaoTuple*) key;
-						if( T1->subtype == DAO_PAIR && T2->subtype == DAO_PAIR ){
-							int le1 = DaoValue_Compare( T1->values[0], T2->values[1] ) <= 0;
-							int le2 = DaoValue_Compare( T2->values[0], T1->values[1] ) <= 0;
-							bl |= le1 && le2;
-						}
-					}
 					if( bl ){
 						DaoParser_Error2( self, DAO_CASE_DUPLICATED, start, colon, 1 );
 						return 0;
@@ -4507,12 +4482,8 @@ static int DaoParser_SetupBranching( DaoParser *self )
 		// the type inference procedure may need to allocate additional registers, or
 		// add additional instructions to handle code specialization or type casting.
 		*/
-		char buf[50];
-		if( id > 0xefff ){
-			sprintf( buf, "instructions (%i)!", id );
-		}else{
-			sprintf( buf, "virtual registers (%i)!", self->regCount );
-		}
+		char buf[100];
+		sprintf( buf, "registers (%i) or instructions (%i)!", self->regCount, id );
 		DString_SetChars( self->string, "too big function with too many " );
 		DString_AppendChars( self->string, buf );
 		DaoParser_Error( self, DAO_CTW_INTERNAL, self->string );

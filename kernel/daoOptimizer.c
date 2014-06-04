@@ -4231,16 +4231,9 @@ int DaoInferencer_HandleSwitch( DaoInferencer *self, DaoInode *inode, int i, DMa
 			if( at->subtid == DAO_ENUM_SYM && bt->subtid == DAO_ENUM_SYM ) continue;
 		}
 		if( DaoType_MatchValue( at, cc, defs ) ==0 ){
-			int matched = 0;
-			if( cc->type == DAO_TUPLE && cc->xBase.subtype == DAO_PAIR ){
-				matched = DaoType_MatchValue( at, cc->xTuple.values[0], defs );
-				matched &= DaoType_MatchValue( at, cc->xTuple.values[1], defs );
-			}
-			if( matched == 0 ){
-				self->currentIndex = i + k;
-				type = DaoNamespace_GetType( NS, cc );
-				return DaoInferencer_ErrorTypeNotMatching( self, type, at );
-			}
+			self->currentIndex = i + k;
+			type = DaoNamespace_GetType( NS, cc );
+			return DaoInferencer_ErrorTypeNotMatching( self, type, at );
 		}
 	}
 	if( consts[opa] && consts[opa]->type ){

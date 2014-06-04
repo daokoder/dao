@@ -52,9 +52,9 @@ routine Test2()
 		return none
 	}
 
-	io.writeln( 'Test3(): before error;' )
+	io.writeln( 'Test2(): before error;' )
 	error( MyError() );
-	io.writeln( 'Test3(): after error;' )
+	io.writeln( 'Test2(): after error;' )
 }
 
 Test2()

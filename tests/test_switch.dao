@@ -37,19 +37,6 @@ case 1,2
 
 
 
-
-@[test(code_01)]
-switch(2){
-case 1 ... 2 : io.writeln( 'case 1...2' )
-case 3 : io.writeln( 'case 3' )
-}
-@[test(code_01)]
-@[test(code_01)]
-case 1...2
-@[test(code_01)]
-
-
-
 @[test(code_01)]
 switch(2){
 case 1, 2 : io.writeln( 'case 1,2' )
