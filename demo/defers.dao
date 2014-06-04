@@ -21,18 +21,15 @@
 #
 # When a function exits, all the executable defer blocks that have
 # been reached in the normal execution will be executed in the reverse
-# order of being reached. A conditional defer block can be executed
-# multiple times, if there are multiple exceptions that match to its
-# condition type.
+# order of being reached. Each conditional defer block can only be
+# activated once by one exception object, and the more recent exception
+# object is checked first if there are multiple exception objects.
 #
-# A conditional defer may explicitly return a value that matches to
-# the return type of the function. Such defer will remove the exception
-# object from the exception stack (namely disable the exceptioin) that
-# is used to invoke the defer. And the return value of the defer block
-# will be used as the return value of the function. Defer blocks without
-# explicit returns will simply leave the exceptions in the exception
-# stack and allow them to invoke other proper defer blocks or terminate
-# the program.
+# An exception object is suppressed once it is used to activate and
+# execute a conditional defer block. Such defer block must return
+# or not return value in the same way as the routine where the defer
+# is defined. The returned value by such defer will by used as the
+# new return value of the routine.
 #
 
 routine Test()
@@ -40,12 +37,16 @@ routine Test()
 	defer {
 		io.writeln( "always executed" )
 	}
-	defer( Exception::Error as error ){
-		io.writeln( "executed with error that will be disabled" )
-		return 999
+	defer( none ){
+		io.writeln( "defer( none )" )
 	}
 	defer( Exception ){
-		io.writeln( "executed with exception that will not be disabled" )
+		io.writeln( "defer( Exception )" )
+		return 888
+	}
+	defer( Exception::Error as error ){
+		io.writeln( "defer( Exception::Error as error )" )
+		return 999
 	}
 
 	for( i = 2 : 5 ) defer { io.writeln( "deferred", i ) }

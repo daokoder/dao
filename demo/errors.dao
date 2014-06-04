@@ -11,15 +11,12 @@
 # with the error type as its parameter. Such that the block will only
 # be executed when an error of that type actually happened. Then the
 # error object will be passed to the defer block for proper handling.
+# The error is suppressed by such defer block to allow program procede
+# normally (after returning to its caller).
 #
 # If the error can be recovered, one should handle it in the defer block
 # and return a value explicitly. This value will be used as the new return
-# value of the routine where the defer block is defined. With the explicit
-# return value, the error object will be removed, and allow the routine
-# to return normally so that the program can continue to run.
-#
-# Of course, one can also define a defer block for certain errors, and
-# let the errors to propagate by not returning any value explicitly.
+# value of the routine where the defer block is defined.
 #
 
 routine Test()
@@ -27,9 +24,6 @@ routine Test()
 	defer ( Exception::Error ){
 		io.writeln( "Error is handled! And a new value is returned!" )
 		return 456
-	}
-	defer ( Exception::Error ){
-		io.writeln( "Error is NOT handled!" )
 	}
 	io.writeln( "Test(): before error;" )
 	error( "some error" )

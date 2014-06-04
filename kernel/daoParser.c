@@ -4078,8 +4078,7 @@ DecoratorError:
 				DaoParser_Error3( self, DAO_ROUT_INVALID_RETURN, errorStart );
 				return 0;
 			}else if( N && (routine->attribs & DAO_ROUT_DEFER) ){
-				if( routine->routType->nested->size ){
-					routine->attribs |= DAO_ROUT_DEFER_RET;
+				if( routine->attribs & DAO_ROUT_DEFER_RET ){
 					DaoParser_AddCode( self, DVM_RETURN, reg, N, 0, start, 0, end );
 				}else{
 					DaoParser_Error3( self, DAO_ROUT_INVALID_RETURN, errorStart );
@@ -5420,8 +5419,14 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 			int pos = 0, rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, offset, end );
 			if( rb != offset + 1 ){
 				const char *parname = "undefined";
+				int compatible;
 				type = DaoParser_ParseType( self, offset + 1, rb-1, & pos, NULL );
 				if( type == NULL ) goto ErrorParsing;
+				compatible = DaoType_MatchTo( type, dao_type_exception, NULL );
+				compatible |= type->tid == DAO_NONE || type->tid == DAO_ANY;
+				if( compatible == 0 ) goto ErrorParsing;
+				/* defer block that may consume exception objects may return value: */
+				if( type->tid != DAO_NONE ) rout->attribs |= DAO_ROUT_DEFER_RET;
 				offset = pos;
 				if( tokens[offset]->name == DKEY_AS ){
 					DString *name = & tokens[offset+1]->string;
@@ -5494,7 +5499,11 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return opc;
 ErrorParsing:
-	DString_SetChars( mbs, "invalid anonymous function" );
+	if( rout->attribs & DAO_ROUT_DEFER ){
+		DString_SetChars( mbs, "invalid defer block" );
+	}else{
+		DString_SetChars( mbs, "invalid anonymous function" );
+	}
 	DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, mbs );
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	GC_IncRC( rout );

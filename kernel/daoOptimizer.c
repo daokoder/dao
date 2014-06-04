@@ -4814,7 +4814,7 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 		if( code == DVM_RETURN && (routine->attribs & DAO_ROUT_INITOR) ){
 			/* goto InvalidReturn; */  /* TODO: not for decorated initor; */
 		}else if( code == DVM_RETURN && (routine->attribs & DAO_ROUT_DEFER) ){
-			if( routine->routType->nested->size == 0 ) goto InvalidReturn;
+			if( !(routine->attribs & DAO_ROUT_DEFER_RET) ) goto InvalidReturn;
 		}
 		at = types[opa];
 		if( at == NULL ) goto ErrorTyping;

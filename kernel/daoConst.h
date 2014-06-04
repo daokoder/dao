@@ -212,7 +212,7 @@ enum DaoRoutineAttrib
 	DAO_ROUT_PRIVATE   = (1<<3),  /* private method */
 	DAO_ROUT_PROTECTED = (1<<4),  /* protected method */
 	DAO_ROUT_DEFER     = (1<<5),  /* defer block as a closure */
-	DAO_ROUT_DEFER_RET = (1<<6),  /* defer block with explicit return */
+	DAO_ROUT_DEFER_RET = (1<<6),  /* defer block that may return values */
 	DAO_ROUT_CODESECT  = (1<<7),  /* code section routine */
 	DAO_ROUT_DECORATOR = (1<<8),  /* function decorator */
 	DAO_ROUT_INITOR    = (1<<9),  /* class constructor */

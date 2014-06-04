@@ -756,75 +756,49 @@ DaoValue* DaoProcess_GetReturned( DaoProcess *self )
 static int DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
 {
 	DaoStackFrame *f, *frame = self->topFrame;
-	DArray *pushes = DArray_New( DAO_DATA_VALUE );
+	daoint deferCount = self->defers->size - frame->deferBase;
+	daoint errorCount = self->exceptions->size - frame->exceptBase;
 	daoint i, j;
 	self->activeCode = NULL;
 	for(i=self->defers->size-1; i>=frame->deferBase; --i){
 		DaoRoutine *rout, *closure = self->defers->items.pRoutine[i];
+		DaoValue *param = NULL;
 		DaoType *type = NULL;
 		if( closure->routType->nested->size ) type = closure->routType->nested->items.pType[0];
 		if( type && type->tid == DAO_PAR_NAMED ) type = (DaoType*) type->aux;
 		if( type == NULL ){
-			DArray_Append( pushes, closure );
-			DArray_Append( pushes, NULL );
 		}else if( type->tid == DAO_NONE ){
-			DArray_Append( pushes, closure );
-			DArray_Append( pushes, NULL );
-		}else if( type->tid & DAO_ANY ){
-			for(j=self->exceptions->size-1; j>=frame->exceptBase; --j){
-				DArray_Append( pushes, closure );
-				DArray_Append( pushes, self->exceptions->items.pValue[j] );
-				if( !(closure->attribs & DAO_ROUT_DEFER_RET) ) continue;
-				GC_DecRC( self->exceptions->items.pValue[j] );
-				self->exceptions->items.pValue[j] = NULL;
-			}
+			if( errorCount ) continue;
+			param = dao_none_value;
 		}else{
 			for(j=self->exceptions->size-1; j>=frame->exceptBase; --j){
-				if( DaoType_MatchValue( type, self->exceptions->items.pValue[j], NULL ) ){
-					DArray_Append( pushes, closure );
-					DArray_Append( pushes, self->exceptions->items.pValue[j] );
-					if( !(closure->attribs & DAO_ROUT_DEFER_RET) ) continue;
-					GC_DecRC( self->exceptions->items.pValue[j] );
-					self->exceptions->items.pValue[j] = NULL;
+				param = self->exceptions->items.pValue[j];
+				if( type->tid == DAO_CSTRUCT ){
+					param = (DaoValue*) DaoValue_CastCstruct( param, type );
+				}else if( type->tid == DAO_OBJECT ){
+					if( param->type == DAO_OBJECT ){
+						param = DaoObject_CastToBase( (DaoObject*) param, type );
+					}else{
+						param = NULL;
+					}
+				}
+				if( param ){
+					DArray_Erase( self->exceptions, j, 1 );
+					break;
 				}
 			}
+			if( param == NULL ) continue;
 		}
+		self->parCount = param != NULL;
+		if( param ) DaoValue_Copy( param, self->paramValues );
+		DArray_Append( self->defers, closure );
+		DaoProcess_PushRoutine( self, closure, NULL );
+		self->topFrame->deferBase -= deferCount;
+		self->topFrame->returning = -1;
+		self->topFrame->host = frame;
 	}
-	DArray_Erase( self->defers, frame->deferBase, -1 );
-	for(i=pushes->size-2; i>=0; i-=2){
-		DaoRoutine *rout, *closure = pushes->items.pRoutine[i];
-		DaoValue *exception = pushes->items.pValue[i+1];
-		DaoType *type = NULL;
-		if( closure->routType->nested->size ) type = closure->routType->nested->items.pType[0];
-		if( type && type->tid == DAO_PAR_NAMED ) type = (DaoType*) type->aux;
-		if( type == NULL ){
-			DArray_Append( self->defers, closure );
-			DaoProcess_PushRoutine( self, closure, NULL );
-			self->topFrame->returning = -1;
-			self->topFrame->host = frame;
-		}else{
-			DaoValue *P = type->tid == DAO_NONE ? dao_none_value : exception;
-			rout = DaoProcess_PassParams( self, closure, NULL, NULL, & P, NULL, 1, DVM_CALL );
-			if( rout == NULL ) continue;
-			DArray_Append( self->defers, closure );
-			DaoProcess_PushRoutine( self, closure, NULL );
-			self->topFrame->returning = -1;
-			self->topFrame->host = frame;
-		}
-	}
-	for(j=frame->exceptBase, i=j; j<self->exceptions->size; ++j){
-		DaoValue *E = self->exceptions->items.pValue[j];
-		if( E != NULL ){
-			if( j != i ){
-				self->exceptions->items.pValue[i] = E;
-				self->exceptions->items.pValue[j] = NULL;
-			}
-			i += 1;
-		}
-	}
-	self->exceptions->size = i;
+	DArray_Erase( self->defers, frame->deferBase, deferCount );
 	for(f=self->topFrame; f!=frame; f=f->prev) f->exceptBase = self->exceptions->size;
-	DArray_Delete( pushes );
 	return self->topFrame != frame;
 }
 
