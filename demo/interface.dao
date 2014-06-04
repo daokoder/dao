@@ -10,7 +10,7 @@ interface AA
 }
 routine Test( o : AA )
 {
-	io.writeln( 'Test( o : AA )', std.about(o) );
+	io.writeln( "Test( o : AA )", std.about(o) );
 	o.Meth( 123 );
 	io.writeln( o[1] );
 	io.writeln( o.name );
@@ -21,7 +21,7 @@ class BB
 {
 	routine Meth( a = 0 ){ io.writeln( a ) }
 	operator[]( index : int ){ return index }
-	operator.name(){ return 'BB' }
+	operator.name(){ return "BB" }
 
 	routine __for_iterator__( iter : for_iterator ){
 		iter.valid = 1;

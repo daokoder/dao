@@ -13,48 +13,48 @@ class Integer
 	routine Integer( v = 0 ){ value = v }
 
 	static operator +( A : Integer, B : int ){
-		io.writeln( 'Integer + int' );
+		io.writeln( "Integer + int" );
 		return Integer( A.value + B );
 	}
 	# no longer supported, now the first operand must be a user type:
 	static operator +( A : int, B : Integer ){
-		io.writeln( 'int + Integer' );
+		io.writeln( "int + Integer" );
 		return Integer( A + B.value );
 	}
 	static operator +( A : Integer, B : Integer ){
-		io.writeln( 'Integer + Integer' );
+		io.writeln( "Integer + Integer" );
 		return Integer( A.value + B.value );
 	}
 	static operator +( C : Integer, A : Integer, B : Integer ){
-		io.writeln( 'Integer = Integer + Integer' );
+		io.writeln( "Integer = Integer + Integer" );
 		C.value = A.value + B.value;
 		return C;
 	}
 	static operator +=( C : Integer, B : Integer ){
-		io.writeln( 'Integer += Integer' );
+		io.writeln( "Integer += Integer" );
 		C.value += B.value;
 		return C;
 	}
 	static operator -( A : Integer ){
-		io.writeln( '- Integer' );
+		io.writeln( "- Integer" );
 		return Integer( - A.value );
 	}
 	static operator -( A : Integer, B : Integer ){
-		io.writeln( 'Integer - Integer' );
+		io.writeln( "Integer - Integer" );
 		return Integer( A.value - B.value );
 	}
 	static operator >( A : Integer, B : Integer ){
-		io.writeln( 'Integer > Integer' );
+		io.writeln( "Integer > Integer" );
 		b = A > B;
 		return Integer( A.value > B.value );
 	}
 	static operator !( C : Integer, A : Integer ){
-		io.writeln( 'operator !( C : Integer, A : Integer )' );
+		io.writeln( "operator !( C : Integer, A : Integer )" );
 		C.value = ! A.value;
 		return C;
 	}
 	static operator !( A : Integer ){
-		io.writeln( 'operator !( A : Integer )' );
+		io.writeln( "operator !( A : Integer )" );
 		return Integer( ! A.value );
 	}
 #{
@@ -85,9 +85,9 @@ io.writeln( n8, n9 );
 
 n9.value = 10;
 n8.value = 20;
-io.writeln( '=======', n8, n9 );
+io.writeln( "=======", n8, n9 );
 for( i = 1 : 2 ) n9 = n8 + n9
-io.writeln( '=======' );
+io.writeln( "=======" );
 n9 += n8
 
 ls = { n8 + n9 }

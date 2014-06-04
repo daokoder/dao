@@ -3,7 +3,7 @@ load sys;
 routine Test()
 {
 	id = 123;
-	name = 'abc';
+	name = "abc";
 	return mt.start {
 		for( i = 1 : 10 ){
 			io.writeln( i );
@@ -21,6 +21,6 @@ t.value(); # join
 Test();
 Test();
 
-io.writeln( 'main thread done!' );
+io.writeln( "main thread done!" );
 
 # All threads are automatically joined before program finishes!

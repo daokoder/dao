@@ -2096,7 +2096,7 @@ static DaoFuncItem helpMeths[]=
 	{ HELP_List,      "list( object :any, type :enum<values,methods>=$methods )" },
 	{ HELP_SetLang,   "set_language( lang :string )" },
 	{ HELP_SetTempl,  "set_template( tpl :string, ttype :enum<notice> )" },
-	{ HELP_Export,    "export( root = '', dir = '', format :enum<html> = $html, run = 0 )" },
+	{ HELP_Export,    "export( root = \"\", dir = \"\", format :enum<html> = $html, run = 0 )" },
 	{ NULL, NULL }
 };
 

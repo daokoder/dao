@@ -78,14 +78,6 @@ Some character conversions are performed on the program source codes
 during the lexical translation.
 
 
-@[subsection]Character Conversion from DBC to SBC@[subsection]
-
-Double Byte Characters (DBC) in the Unicode range 0xff00-0xff5f (exclusive)
-are converted to Single Byte Charactors (SBC).
-Such conversion occurs only outside of comments and string literals.
-This is to allow proper interpretation of operators which are not
-encoded in ASCII.
-
 
 @[subsection]Comments@[subsection]
 
@@ -94,8 +86,6 @@ Dao mainly uses the sharp mark @[green]#@[green] to mark comments.
 -- Single line comment: from @[green]#@[green] to the end of the line;
 -- Multiple line comment: paired with @[green]#{@[green] and @[green]#}@[green];
 @[list]
-Here @[green]#@[green](0x23) and @[green]{@[green](0x7b) could be their DBC version,
-namely, 0x23+0xfee0, and 0x7b+0xfee0.
 Multiple line comments may contain other @[green]#{@[green] and @[green]#}@[green],
 if they are properly paired, namely, they are allowed to be nested.
 
@@ -450,19 +440,19 @@ Constant Primary Expression
 @[subsection]
 
 @[code(syntax)]
-ConstBuiltinMathFuncs ::= 'abs' | 'ceil' | 'floor'
+BuiltinMathFuncsMinusRand ::= 'abs' | 'ceil' | 'floor'
                         | 'real' | 'imag' | 'arg' | 'norm'
                         | 'acos' | 'cos' | 'cosh'
                         | 'asin' | 'sin' | 'sinh'
                         | 'atan' | 'tan' | 'tanh'
-                        | 'exp' | 'log' | 'sqrt'
+                        | 'exp'  | 'log' | 'sqrt'
 
 ConstPrimaryExpression ::= ConstAtomicExpression 
                          | ConstEnumerativeExpression
                          | '(' ConstExpression ')'
                          | ConstPrimaryExpression '::' Identifier
                          | ConstPrimaryExpression '[' [ ConstExpression ] ']'
-                         | ConstBuiltinMathFuncs '(' ConstExpression ')'
+                         | BuiltinMathFuncsMinusRand '(' ConstExpression ')'
 @[code(syntax)]
 
 

@@ -24,11 +24,11 @@
 class @Header
 {
 	static routine @Delimiter( meth(args) : routine ) for ~ {
-		io.writeln( '=======================' )
+		io.writeln( "=======================" )
 		return meth( args, ... )
 	}
 	routine @Delimiter( meth(args) : routine ) for ~ {
-		io.writeln( '-----------------------' )
+		io.writeln( "-----------------------" )
 		return meth( args, ... )
 	}
 }
@@ -37,19 +37,19 @@ class @Decorator
 	var value = 654321
 
 	routine @Test( meth(args) :routine<self:@Decorator> ) for Test {
-		io.writeln( 'Decorator::Test()', value )
+		io.writeln( "Decorator::Test()", value )
 		meth( args, ... );
 	}
 	routine @Prefix( meth(args) :routine<self:@Decorator> ) for Prefix~ {
-		io.writeln( 'Decorator::Prefix()' )
+		io.writeln( "Decorator::Prefix()" )
 		meth( args, ... );
 	}
 	routine @Suffix( meth(args) :routine<self:@Decorator> ) for ~Suffix {
-		io.writeln( 'Decorator::Suffix()' )
+		io.writeln( "Decorator::Suffix()" )
 		meth( args, ... );
 	}
 	routine @Prefix_Suffix( meth(args) :routine<self:@Decorator> ) for Prefix~Suffix {
-		io.writeln( 'Decorator::Prefix_Suffix()' )
+		io.writeln( "Decorator::Prefix_Suffix()" )
 		meth( args, ... );
 	} 
 }
@@ -63,16 +63,16 @@ class @Decorator
 class MyMixin ( @Header, @Decorator )
 {
 	routine Test(){
-		io.writeln( 'MyMixin::Test()' )
+		io.writeln( "MyMixin::Test()" )
 	}
 	routine PrefixTest(){
-		io.writeln( 'MyMixin::PrefixTest()' )
+		io.writeln( "MyMixin::PrefixTest()" )
 	}
 	routine TestSuffix(){
-		io.writeln( 'MyMixin::TestSuffix()' )
+		io.writeln( "MyMixin::TestSuffix()" )
 	}
 	routine PrefixTestSuffix(){
-		io.writeln( 'MyMixin::PrefixTestSuffix()' )
+		io.writeln( "MyMixin::PrefixTestSuffix()" )
 	}
 }
 
@@ -96,13 +96,13 @@ class @AspectForAnyClass for ~  # To be applied to any classes;
 
 	# This is not a decorator!
 	routine @AspectForAnyClass(){
-		io.writeln( 'In @AspectForAnyClass():' );
+		io.writeln( "In @AspectForAnyClass():" );
 		injected = { 1, 2, 3 }
 	}
 
 	# This decorator will also be applied to the default constructors:
 	routine @DecoratorForAnyMethod( meth(args) : routine ) for ~ {
-		io.writeln( 'In @DecoratorForAnyMethod():', std.about(meth) )
+		io.writeln( "In @DecoratorForAnyMethod():", std.about(meth) )
 		io.writeln( injected )
 		return meth( args, ... )
 	}
@@ -112,14 +112,14 @@ class @AspectForAnyClass for ~  # To be applied to any classes;
 class @AspectForMyClasses for My~
 {
 	routine @Method( meth(args) : routine ) for Method~ {
-		io.writeln( 'In @AspectForMyClasses::@Method():', std.about(meth) )
+		io.writeln( "In @AspectForMyClasses::@Method():", std.about(meth) )
 		return meth( args, ... )
 	}
 }
 
 class MyClass
 {
-	routine Method(){ io.writeln( 'MyClass::Method()' ) }
+	routine Method(){ io.writeln( "MyClass::Method()" ) }
 }
 
 k = MyClass()  # Invoke the default constructor of Klass;

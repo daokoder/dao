@@ -1305,7 +1305,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Expand,
-		"expand( invar self: string, invar subs: map<string,string>, spec = '$', keep = 1 )"
+		"expand( invar self: string, invar subs: map<string,string>, spec = \"$\", keep = 1 )"
 			"=> string"
 		/*
 		// Expand this string into a new string with substrings from the keys
@@ -1319,7 +1319,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Split,
-		"split( invar self: string, sep = '' ) => list<string>"
+		"split( invar self: string, sep = \"\" ) => list<string>"
 		/*
 		// Split the string by seperator "sep", and return the tokens as a list.
 		// If "sep" is empty, split at character boundaries assuming UTF-8 encoding.
@@ -3789,7 +3789,7 @@ static DaoFuncItem dao_Exception_Meths[] =
 	// See also the built-in method recover().
 	*/
 #if 0
-	{ Dao_Exception_New,   "Exception( info = '' )=>Exception" },
+	{ Dao_Exception_New,   "Exception( info = \"\" )=>Exception" },
 	{ Dao_Exception_New22, "Exception( data: any )=>Exception" },
 #endif
 	{ Dao_Exception_Get_name, ".name( self: Exception )=>string" },
@@ -3868,7 +3868,7 @@ static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n )
 
 static DaoFuncItem dao_ExceptionWarning_Meths[] =
 {
-	{ Dao_Exception_New, "Warning( info = '' )=>Warning" },
+	{ Dao_Exception_New, "Warning( info = \"\" )=>Warning" },
 	{ Dao_Exception_New22, "Warning( data: any )=>Warning" },
 	{ NULL, NULL }
 };
@@ -3881,7 +3881,7 @@ DaoTypeBase dao_ExceptionWarning_Typer =
 
 static DaoFuncItem dao_ExceptionError_Meths[] =
 {
-	{ Dao_Exception_New, "Error( info = '' )=>Error" },
+	{ Dao_Exception_New, "Error( info = \"\" )=>Error" },
 	{ Dao_Exception_New22, "Error( data: any )=>Error" },
 	{ NULL, NULL }
 };

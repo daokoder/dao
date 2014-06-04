@@ -437,7 +437,7 @@ static void AUX_Test( DaoProcess *proc, DaoValue *p[], int N )
 static DaoFuncItem auxMeths[]=
 {
 	{ AUX_Tokenize,    "tokenize( source :string )=>list<string>" },
-	{ AUX_Log,         "log( info='' )" },
+	{ AUX_Log,         "log( info=\"\" )" },
 #ifdef DEBUG
 	{ AUX_Test,        "__test__()" },
 #endif

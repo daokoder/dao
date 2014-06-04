@@ -2282,7 +2282,7 @@ static void UNIT_MakeLinkingFlags( DaoProcess *proc, DaoValue *p[], int N )
 static DaoFuncItem DaoMakeUnitMeths[]=
 {
 	{ UNIT_AddPlatformDefs,   "AddPlatformDefs( self: Unit )" },
-	{ UNIT_AddDefinition,     "AddDefinition( self: Unit, name: string, value = '' )" },
+	{ UNIT_AddDefinition,     "AddDefinition( self: Unit, name: string, value = \"\" )" },
 	{ UNIT_AddIncludePath,    "AddIncludePath( self: Unit, path: string, ...: string )" },
 	{ UNIT_AddLinkingPath,    "AddLinkingPath( self: Unit, path: string, ...: string )" },
 	{ UNIT_AddAssemblingFlag,  "AddAssemblingFlag( self: Unit, flag: string, ...: string )" },
@@ -2692,7 +2692,7 @@ static DaoFuncItem DaoMakeProjectMeths[]=
 	{ PROJECT_SourcePath,  "SourcePath( self: Project ) => string" },
 	{ PROJECT_BinaryPath,  "BinaryPath( self: Project ) => string" },
 
-	{ PROJECT_ExportLibrary,  "ExportLibrary( self: Project, name: string, cflag: string, lflag: string, shlib = '', stlib = '' )" },
+	{ PROJECT_ExportLibrary,  "ExportLibrary( self: Project, name: string, cflag: string, lflag: string, shlib = \"\", stlib = \"\" )" },
 
 	{ PROJECT_GetFlags,  "GetFlags( self: Project, name: string, kind: enum<cflags,lflags,sharedlibs,staticlibs> ) => string" },
 
@@ -2990,10 +2990,10 @@ static DaoFuncItem DaoMakeMeths[] =
 {
 	{ DAOMAKE_FindPackage, "FindPackage( name: string, opt :enum<OPTIONAL,REQUIRED> = $OPTIONAL ) => Project|none" },
 	{ DAOMAKE_FindFile,    "FindFile( file: string, hints: list<string> = {} ) => string" },
-	{ DAOMAKE_TestCompile, "TestCompile( code :string, lflag='', cflag='', cxx=0 ) => int" },
+	{ DAOMAKE_TestCompile, "TestCompile( code :string, lflag=\"\", cflag=\"\", cxx=0 ) => int" },
 
 	{ DAOMAKE_OptionBOOL,  "Option( name: string, value: enum<OFF,ON> ) => enum<OFF,ON>" },
-	{ DAOMAKE_OptionSTR,   "Option( name: string, value = '' ) => string" },
+	{ DAOMAKE_OptionSTR,   "Option( name: string, value = \"\" ) => string" },
 
 	{ DAOMAKE_Suffix,      "MakefileSuffix() => string" },
 
@@ -3008,7 +3008,7 @@ static DaoFuncItem DaoMakeMeths[] =
 
 	{ DAOMAKE_BuildMode,   "BuildMode() => enum<RELEASE,DEBUG,PROFILE>" },
 
-	{ DAOMAKE_SetTestTool, "SetTestTool( test: string, log_option = '--log' )" },
+	{ DAOMAKE_SetTestTool, "SetTestTool( test: string, log_option = \"--log\" )" },
 
 	{ DAOMAKE_IsFile,      "IsFile( path: string ) => int" },
 	{ DAOMAKE_IsDir,       "IsDir( path: string ) => int" },

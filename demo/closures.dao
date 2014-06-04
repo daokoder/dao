@@ -32,11 +32,11 @@ for( closure in closures ) closure()
 
 routine Test()
 {
-	abc = 'abc'
+	abc = "abc"
 	rout = routine(){
-		io.writeln( 'outer closure', abc )
+		io.writeln( "outer closure", abc )
 		rout = routine(){
-			io.writeln( 'inner closure', abc )
+			io.writeln( "inner closure", abc )
 		}
 		return rout;
 	}

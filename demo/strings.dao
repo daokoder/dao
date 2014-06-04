@@ -1,4 +1,4 @@
-mbs = 'hello'
+mbs = "hello"
 wcs = "道语言"
 
 # verbatim strings:
@@ -21,7 +21,7 @@ lua =
 @[lua]
 local a = 1;
 function Test()
-	io.write( 'Hello' )
+	io.write( "Hello" )
 end
 @[lua]
 

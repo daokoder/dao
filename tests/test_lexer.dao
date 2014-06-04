@@ -119,7 +119,7 @@ Float ::= DecSinglePrecision | SciSinglePrecision
 
 
 @[test(code_03)]
-	io.writef( '%g', 123e-1 )
+	io.writef( "%g", 123e-1 )
 @[test(code_03)]
 @[test(code_03)]
 	12.3
@@ -230,7 +230,7 @@ Double ::= (DecInteger | DecSinglePrecision) 'D' | SciDoublePrecision
 
 
 @[test(code_03)]
-	io.writef( '%g', 123E-1 )
+	io.writef( "%g", 123E-1 )
 @[test(code_03)]
 @[test(code_03)]
 	12.3
@@ -333,7 +333,7 @@ Complex ::= Float 'C'
 
 # Incomplete string:
 @[test(code_03)]
-	'incomplete string
+	"incomplete string
 @[test(code_03)]
 @[test(code_03)]
 	Invalid %s token

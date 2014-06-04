@@ -15,13 +15,13 @@ interface InterAA
 class One
 {
 	routine TestAA( bb : InterBB ){ bb.Show() }
-	routine Show(){ io.writeln( 'One::Show()' ) }
+	routine Show(){ io.writeln( "One::Show()" ) }
 }
 
 class Another
 {
 	routine TestBB( aa : InterAA ){ aa.Show() }
-	routine Show(){ io.writeln( 'Another::Show()' ) }
+	routine Show(){ io.writeln( "Another::Show()" ) }
 }
 
 o = One();

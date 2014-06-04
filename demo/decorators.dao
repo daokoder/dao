@@ -8,9 +8,9 @@
 # decorated by this decorator.
 
 
-io.writeln( '########################' )
-io.writeln( '## Simple Decorator' )
-io.writeln( '########################' )
+io.writeln( "########################" )
+io.writeln( "## Simple Decorator" )
+io.writeln( "########################" )
 
 
 # Here is a simple decorator that can decorate any function.
@@ -19,7 +19,7 @@ io.writeln( '########################' )
 # to hold the parameters that are passed to the function.
 routine @Decorator( func(args) : routine )
 {
-	io.writeln( 'Calling function:', std.about(func) );
+	io.writeln( "Calling function:", std.about(func) );
 	return func( args, ... ); # ... for parameter expanding;
 }
 
@@ -27,19 +27,19 @@ routine @Decorator( func(args) : routine )
 # If the decorator does not take any parameter other than
 # the function to be decorated, the brackets can be omitted:
 @Decorator
-routine Function(){ io.writeln( 'Function()' ); }
+routine Function(){ io.writeln( "Function()" ); }
 
 @Decorator
-routine Function( a : int ){ io.writeln( 'Function(int)', a ); }
+routine Function( a : int ){ io.writeln( "Function(int)", a ); }
 
 Function();
 Function(123);
 
 
 
-io.writeln( '########################' )
-io.writeln( '## Test Decorator' )
-io.writeln( '########################' )
+io.writeln( "########################" )
+io.writeln( "## Test Decorator" )
+io.writeln( "########################" )
 
 
 
@@ -48,28 +48,28 @@ io.writeln( '########################' )
 #
 # For a decorator for testing such as this one, the expected
 # output can be passed as additional parameters to the decorator:
-routine @TestDecorator( func(args) : routine<index:int=>string>, expected = '' )
+routine @TestDecorator( func(args) : routine<index:int=>string>, expected = "" )
 {
 	res = func( args, ... );
 	io.writeln( res );
-	io.writeln( 'Test result:', res == expected ? 'passed' : 'failed' );
+	io.writeln( "Test result:", res == expected ? "passed" : "failed" );
 	return res;
 }
 
-@TestDecorator( 'Hello' )
+@TestDecorator( "Hello" )
 routine Hello( index = 0 )
 {
-	io.writeln( 'Calling Hello(int)' );
-	return 'Hello';
+	io.writeln( "Calling Hello(int)" );
+	return "Hello";
 }
 
 Hello();
 
 
 
-io.writeln( '########################' )
-io.writeln( '## Overloaded Decorator' )
-io.writeln( '########################' )
+io.writeln( "########################" )
+io.writeln( "## Overloaded Decorator" )
+io.writeln( "########################" )
 
 
 
@@ -79,7 +79,7 @@ routine @TestDecorator( func(args) : routine<name:string=>int>, expected = 0 )
 {
 	res = func( args, ... );
 	io.writeln( res );
-	io.writeln( 'Test result:', res == expected ? 'passed' : 'failed' );
+	io.writeln( "Test result:", res == expected ? "passed" : "failed" );
 	return res;
 }
 
@@ -90,54 +90,54 @@ routine @TestDecorator( func(args) : routine<name:string=>int>, expected = 0 )
 @TestDecorator( 123 )
 routine Hello( name : string )
 {
-	io.writeln( 'Calling Hello(string)', name );
+	io.writeln( "Calling Hello(string)", name );
 	return 123;
 }
 
-io.writeln( Hello( 'abc' ) );
+io.writeln( Hello( "abc" ) );
 
 
 
-io.writeln( '################################################' )
-io.writeln( '## Decorators can be used a constant expressioin' )
-io.writeln( '################################################' )
+io.writeln( "################################################" )
+io.writeln( "## Decorators can be used a constant expressioin" )
+io.writeln( "################################################" )
 
 const Hello3 = @Decorator( Hello )
-Hello3( 'def' )
+Hello3( "def" )
 
 
 
-io.writeln( '##########################' )
-io.writeln( '## Running time Decoration' )
-io.writeln( '##########################' )
+io.writeln( "##########################" )
+io.writeln( "## Running time Decoration" )
+io.writeln( "##########################" )
 
 
 routine Hello2( index = 123 )
 {
-	io.writeln( 'Calling Hello2(int)', index );
-	return 'Hello';
+	io.writeln( "Calling Hello2(int)", index );
+	return "Hello";
 }
 # Running time decoration:
-func = @TestDecorator( Hello2, 'Hello' );
-io.writeln( '--------' )
+func = @TestDecorator( Hello2, "Hello" );
+io.writeln( "--------" )
 func(123)
 
 func = @TestDecorator( func );
-io.writeln( '--------' )
+io.writeln( "--------" )
 func(123)
 
 # Decorator can be assigned to variables and applied at running time:
 deco = @Decorator;
 func = deco( func );
 
-io.writeln( '--------' )
+io.writeln( "--------" )
 func(789);
 
 
 
-io.writeln( '##########################' )
-io.writeln( '## Decorator and Class' )
-io.writeln( '##########################' )
+io.writeln( "##########################" )
+io.writeln( "## Decorator and Class" )
+io.writeln( "##########################" )
 
 # Decorators can be applied to class methods as well.
 # Here is a decorator for static methods:
@@ -161,7 +161,7 @@ class Klass
 	# Decorator can also be defined a class method.
 	# Since the first parameter of a decorator must be a routine type,
 	# such decorator method has to be defined as a static method.
-	static routine @ClassDecorator( meth(args) :routine<id:string=>?>, value = 'abc' ){
+	static routine @ClassDecorator( meth(args) :routine<id:string=>?>, value = "abc" ){
 		io.writeln( args, value );
 		args.id = value;
 		return meth( args, ... );
@@ -179,7 +179,7 @@ class Klass
 }
 
 Klass::StaticMeth( 0 );
-Klass::StaticMeth( 'a' );
+Klass::StaticMeth( "a" );
 
 k = Klass();
 k.Meth(1);

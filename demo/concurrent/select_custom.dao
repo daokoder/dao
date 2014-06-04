@@ -5,17 +5,17 @@ chans = { mt::channel<int>(1), mt::channel<string>(1) }
 
 mt.start {
 	index = 0;
-	io.writeln( 'begin producing' )
+	io.writeln( "begin producing" )
 	while( ++index <= N ){
 		if( rand(2) ){
 			io.writeln( "sending integer:", index );
 			chans[0].send( index )
 		}else{
 			io.writeln( "sending string: index_" + (string) index );
-			chans[1].send( 'index_' + (string) index )
+			chans[1].send( "index_" + (string) index )
 		}
 	}
-	io.writeln( 'end producing' )
+	io.writeln( "end producing" )
 	chans[0].cap(0)  # set channel buffer size to zero to close the channel;
 	chans[1].cap(0)
 }
@@ -44,11 +44,11 @@ mt.start {
 	select.cap(0)  # set channel buffer size to zero to close the channel;
 }
 
-io.writeln( 'begin consuming' )
+io.writeln( "begin consuming" )
 while(1){
 	data = select.receive()
 	io.writeln( "received", data );
 	if( data.status == $finished ) break
 }
-io.writeln( 'end consuming' )
+io.writeln( "end consuming" )
 

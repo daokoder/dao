@@ -33,7 +33,7 @@ io.writeln( k.index )
 
 k.Meth()
 k.Meth2()
-k.Meth2( 'abc' )
+k.Meth2( "abc" )
 k.Meth2( 789 )
 
 

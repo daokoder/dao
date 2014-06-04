@@ -25,7 +25,7 @@ Integer    ::= DecInteger | HexInteger
 #}
 
 @[test(code_03)]
-	io.writef( '%g', .5 )
+	io.writef( "%g", .5 )
 @[test(code_03)]
 @[test(code_03)]
 	0.5
@@ -33,7 +33,7 @@ Integer    ::= DecInteger | HexInteger
 
 
 @[test(code_03)]
-	io.writef( '%g', 123. )
+	io.writef( "%g", 123. )
 @[test(code_03)]
 @[test(code_03)]
 	123
@@ -67,7 +67,7 @@ Integer    ::= DecInteger | HexInteger
 
 # Incomplete string:
 @[test(code_03)]
-	'incomplete string
+	"incomplete string
 @[test(code_03)]
 @[test(code_03)]
 	Invalid %s token
@@ -88,7 +88,7 @@ Integer    ::= DecInteger | HexInteger
 @[test(code_03)]
 routine TestTailCall( n = 0 )
 {
-	if( n == 0 ) error( 'test' )
+	if( n == 0 ) error( "test" )
 	TestTailCall( n - 1 )
 }
 TestTailCall( 5 )

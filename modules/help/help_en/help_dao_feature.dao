@@ -125,6 +125,11 @@ Other interesting features:
   Variant type is a combination of two or more types. A variant variable
   can hold a value of any of the combined types.
 
+--@[green]Invariable (immutable variable):@[green]
+
+  Invariable can be declared with the @[green]invar@[green] keyword,
+  as parameters, local variables, global variables and field variables.
+
 --@[green]Coroutine and generator:@[green]
 
   Module support for coroutine makes collaborative multithreading simple,

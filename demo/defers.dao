@@ -38,20 +38,20 @@
 routine Test()
 {
 	defer {
-		io.writeln( 'always executed' )
+		io.writeln( "always executed" )
 	}
 	defer( Exception::Error as error ){
-		io.writeln( 'executed with error that will be disabled' )
+		io.writeln( "executed with error that will be disabled" )
 		return 999
 	}
 	defer( Exception ){
-		io.writeln( 'executed with exception that will not be disabled' )
+		io.writeln( "executed with exception that will not be disabled" )
 	}
 
-	for( i = 2 : 5 ) defer { io.writeln( 'deferred', i ) }
+	for( i = 2 : 5 ) defer { io.writeln( "deferred", i ) }
 
-	error( Exception::Error( 'something' ) )
-	io.writeln( 'returning' );
+	error( Exception::Error( "something" ) )
+	io.writeln( "returning" );
 	return 123
 }
 

@@ -12,15 +12,15 @@ io.writeln( Bool.True )
 
 
 switch( Bool.False ){
-case Bool::False : io.writeln( 'Bool::False' )
-case Bool::True  : io.writeln( 'Bool::True' )
+case Bool::False : io.writeln( "Bool::False" )
+case Bool::True  : io.writeln( "Bool::True" )
 }
 
 # The following will also work without casting,
 # but it will be less efficient:
 switch( (Bool) $True ){
-case Bool::False : io.writeln( 'Bool::False' )
-case Bool::True  : io.writeln( 'Bool::True' )
+case Bool::False : io.writeln( "Bool::False" )
+case Bool::True  : io.writeln( "Bool::True" )
 }
 
 
@@ -49,8 +49,8 @@ card = CardSuit::Spade
 # "card" and switch case constants can be known/inferred
 # at compiling time:
 switch( card ){
-case $Club:    io.writeln( 'Club card' )
-case $Diamond: io.writeln( 'Diamond card' )
-case $Heart:   io.writeln( 'Heart card' )
-case $Spade:   io.writeln( 'Spade card' )
+case $Club:    io.writeln( "Club card" )
+case $Diamond: io.writeln( "Diamond card" )
+case $Heart:   io.writeln( "Heart card" )
+case $Spade:   io.writeln( "Spade card" )
 }

@@ -365,7 +365,7 @@ static int DaoParser_MakeMacroGroup( DaoParser *self, DMacroGroup *group, DMacro
 				if( it == NULL ) it = DMap_Insert( vars, & unit->marker->string, 0 );
 				it->value.pInt += 1;
 			}
-		}else if( tk == DTOK_MBS ){
+		}else if( tk == DTOK_WCS ){
 			DaoLexer_Reset( self->wlexer );
 			DaoLexer_Tokenize( self->wlexer, chs + 1, 0 );
 			if( self->wlexer->tokens->size == 2 ){

@@ -5,17 +5,17 @@ class Test
 
 	# conversion to int:
 	operator cast() => int { # or simply: => int
-		io.writeln( 'casting to int' );
+		io.writeln( "casting to int" );
 		return value.sum();
 	}
 	# conversion to string:
 	#routine cast( @T<string> ) => @T {
 	operator cast() => string {
-		io.writeln( 'casting to string' )
-		return value.reduce(''){ [x, y] y += (string)x }; # convert to string
+		io.writeln( "casting to string" )
+		return value.reduce(""){ [x, y] y += (string)x }; # convert to string
 	}
 	operator cast() => array<int> {
-		io.writeln( 'casting to array<int>' );
+		io.writeln( "casting to array<int>" );
 		# the follwing no longer supported, should use code section methods instead:
 		return (array<int>) value
 	}
@@ -31,7 +31,7 @@ v = (array<int>)t;
 
 io.writeln( a, b, c, v )
 
-e = Exception::Error( 'testing' );
+e = Exception::Error( "testing" );
 io.writeln( (string)e );
 
 # a = (int)e; # error

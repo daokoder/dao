@@ -10,25 +10,25 @@ class AA
 	var    obj = 456;
 	var    obj2 = 789;
 
-	routine AA( i = 0 ){ io.writeln( 'AA::AA( i = 0 )' ); }
+	routine AA( i = 0 ){ io.writeln( "AA::AA( i = 0 )" ); }
 
-	routine Meth(){ io.writeln( 'AA::Meth()' ); return 123; }
-	routine Meth( a ){ io.writeln( 'AA::Meth(a)' ); return 123; }
+	routine Meth(){ io.writeln( "AA::Meth()" ); return 123; }
+	routine Meth( a ){ io.writeln( "AA::Meth(a)" ); return 123; }
 
-	routine Virt(){ io.writeln( 'AA::Virt()' ) }
+	routine Virt(){ io.writeln( "AA::Virt()" ) }
 	routine CallVirt(){ ((Interface)self).Virt() }
 }
 
 class BB : AA
 {
-	const  cst = 'abc';
-	var    obj = 'def';
-	var    obj2 = 'abc';
+	const  cst = "abc";
+	var    obj = "def";
+	var    obj2 = "abc";
 
-	routine BB( i = 0 ){ io.writeln( 'BB::BB( i = 0 )' ); }
+	routine BB( i = 0 ){ io.writeln( "BB::BB( i = 0 )" ); }
 
-	routine Meth(){ io.writeln( 'BB::Meth()' ); return 'abc'; }
-	routine Virt(){ io.writeln( 'BB::Virt()' ) }
+	routine Meth(){ io.writeln( "BB::Meth()" ); return "abc"; }
+	routine Virt(){ io.writeln( "BB::Virt()" ) }
 }
 
 class CC : BB
@@ -37,7 +37,7 @@ class CC : BB
 
 	use routine BB( i = 0 );
 
-	routine Virt(){ io.writeln( 'CC::Virt()', self ) }
+	routine Virt(){ io.writeln( "CC::Virt()", self ) }
 }
 
 var c;
@@ -57,7 +57,7 @@ BB::BB( i = 0 )
 c.cst
 @[test(code_01)]
 @[test(code_01)]
-'abc'
+"abc"
 @[test(code_01)]
 
 
@@ -66,7 +66,7 @@ c.cst
 c.obj
 @[test(code_01)]
 @[test(code_01)]
-'def'
+"def"
 @[test(code_01)]
 
 
@@ -124,7 +124,7 @@ class Base
 }
 class Sub : Base
 {
-	var value = 'abc'
+	var value = "abc"
 }
 Sub()
 @[test(code_01)]
@@ -149,9 +149,9 @@ class Base
 }
 class Sub : Base
 {
-	var value = 'abc'
+	var value = "abc"
 
-	routine Sub( v = 'ABC' ){ value = v }
+	routine Sub( v = "ABC" ){ value = v }
 }
 Sub()
 @[test(code_01)]
@@ -176,9 +176,9 @@ class Base
 }
 class Sub : Base
 {
-	var value = 'abc'
+	var value = "abc"
 
-	routine Sub( v = 'ABC', i = 456 ) : Base( i ) { value = v }
+	routine Sub( v = "ABC", i = 456 ) : Base( i ) { value = v }
 }
 Sub()
 @[test(code_01)]
@@ -203,7 +203,7 @@ class Base
 }
 class Sub : Base
 {
-	var value = 'abc'
+	var value = "abc"
 }
 Sub()
 @[test(code_01)]

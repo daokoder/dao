@@ -30,7 +30,7 @@ and the expected result is not an empty string.
 
 # A positive test that prints "hello world!":
 @[test(second)]
-	io.writeln( 'hello world!' )
+	io.writeln( "hello world!" )
 @[test(second)]
 @[test(second)]
 	hello world!

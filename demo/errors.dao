@@ -25,15 +25,15 @@
 routine Test()
 {
 	defer ( Exception::Error ){
-		io.writeln( 'Error is handled! And a new value is returned!' )
+		io.writeln( "Error is handled! And a new value is returned!" )
 		return 456
 	}
 	defer ( Exception::Error ){
-		io.writeln( 'Error is NOT handled!' )
+		io.writeln( "Error is NOT handled!" )
 	}
-	io.writeln( 'Test(): before error;' )
-	error( 'some error' )
-	io.writeln( 'Test(): after error;' )
+	io.writeln( "Test(): before error;" )
+	error( "some error" )
+	io.writeln( "Test(): after error;" )
 	return 123
 }
 
@@ -42,19 +42,19 @@ io.writeln( Test() )
 # Example to handle user defined exception type:
 class MyError : Exception::Error
 {
-	routine serialize(){ return ('MyError', self) }
+	routine serialize(){ return ("MyError", self) }
 }
 
 routine Test2()
 {
 	defer ( MyError as error ) {
-		io.writeln( 'recovering from', error )
+		io.writeln( "recovering from", error )
 		return none
 	}
 
-	io.writeln( 'Test2(): before error;' )
+	io.writeln( "Test2(): before error;" )
 	error( MyError() );
-	io.writeln( 'Test2(): after error;' )
+	io.writeln( "Test2(): after error;" )
 }
 
 Test2()
@@ -73,20 +73,20 @@ fout = io::stdio
 
 frame {
 	defer ( any ) { return none }
-	fout = io.open( "NonExistentFile.txt", 'r+' )
+	fout = io.open( "NonExistentFile.txt", "r+" )
 }
 
 if( fout != io::stdio ) defer{ fout.close() }
 
-fout.writeln( 'hello' )
+fout.writeln( "hello" )
 
 
 # A simpler way to write the above codes:
-fout = frame( io::stdio ){ io.open( "NonExistentFile.txt", 'r+' ) }
+fout = frame( io::stdio ){ io.open( "NonExistentFile.txt", "r+" ) }
 
 # Or using the assertion operator ??:
-# fout = io.open( "NonExistentFile.txt", 'r+' ) ?? io::stdio
+# fout = io.open( "NonExistentFile.txt", "r+" ) ?? io::stdio
 
 if( fout != io::stdio ) defer{ fout.close() }
 
-fout.writeln( 'hello' )
+fout.writeln( "hello" )

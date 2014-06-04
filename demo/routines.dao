@@ -9,12 +9,12 @@ routine FunctionA( obj, name : string, index = 123 )
 {
 	io.writeln( obj, name, index )
 }
-FunctionA( [], 'abc' )
-FunctionA( {}, 'def', 456 )
+FunctionA( [], "abc" )
+FunctionA( {}, "def", 456 )
 
 # Parameter names can be explicitly specified in function call:
 # Note: the parameters are still required to be in the right order!
-FunctionA( obj => {}, name => 'ghi', index => 789 )
+FunctionA( obj => {}, name => "ghi", index => 789 )
 
 
 #{
@@ -26,7 +26,7 @@ routine FunctionB( name : string, ... )
 {
 	io.writeln( name )
 }
-FunctionB( 'abc' )
+FunctionB( "abc" )
 
 
 #{
@@ -39,7 +39,7 @@ routine FunctionC( name : string, ... as all )
 {
 	io.writeln( name, all )
 }
-FunctionC( 'abc', 123, [1,2] )
+FunctionC( "abc", 123, [1,2] )
 
 
 #{
@@ -50,8 +50,8 @@ routine FunctionD( name : string, ... :int as all )
 {
 	io.writeln( name, all )
 }
-FunctionD( 'abc', 123, 456 )  # OK;
-# FunctionD( 'abc', 123, [1,2] )  # ERROR;
+FunctionD( "abc", 123, 456 )  # OK;
+# FunctionD( "abc", 123, [1,2] )  # ERROR;
 
 
 
@@ -75,17 +75,17 @@ routine TestVariadicFunction( a : string, ... : int as all )
 ## Static Checking
 ########################
 
-TestFunction( 'abc' )         # Test default parameter;
-TestFunction( 'abc', 456.5 )  # implicit conversion;
+TestFunction( "abc" )         # Test default parameter;
+TestFunction( "abc", 456.5 )  # implicit conversion;
 
 # TestFunction()  # ERROR: too few parameters;
-# TestFunction( 'abc', 123, 456 )  # ERROR: too many parameters;
+# TestFunction( "abc", 123, 456 )  # ERROR: too many parameters;
 
-TestVariadicFunction( 'abc' )       # right parameter;
-TestVariadicFunction( 'abc', 123 )  # right parameter;
+TestVariadicFunction( "abc" )       # right parameter;
+TestVariadicFunction( "abc", 123 )  # right parameter;
 
 # TestVariadicFunction( 123 )  # ERROR: wrong first parameter;
-# TestVariadicFunction( 'abc', 'abc' )  # ERROR: wrong second parameter;
+# TestVariadicFunction( "abc", "abc" )  # ERROR: wrong second parameter;
 
 
 ##########################
@@ -96,17 +96,17 @@ TestVariadicFunction( 'abc', 123 )  # right parameter;
 var TestFunction2 = TestFunction
 var TestVariadicFunction2 = TestVariadicFunction
 
-TestFunction2( 'abc' )         # Test default parameter;
-TestFunction2( 'abc', 456.5 )  # implicit conversion;
+TestFunction2( "abc" )         # Test default parameter;
+TestFunction2( "abc", 456.5 )  # implicit conversion;
 
 # TestFunction2()  # ERROR: too few parameters;
-# TestFunction2( 'abc', 123, 456 )  # ERROR: too many parameters;
+# TestFunction2( "abc", 123, 456 )  # ERROR: too many parameters;
 
-TestVariadicFunction2( 'abc' )  # right parameter;
-TestVariadicFunction2( 'abc', 123 )  # right parameter;
+TestVariadicFunction2( "abc" )  # right parameter;
+TestVariadicFunction2( "abc", 123 )  # right parameter;
 
 # TestVariadicFunction2( 123 )  # wrong first parameter;
-# TestVariadicFunction2( 'abc', 'abc' )  # wrong second parameter;
+# TestVariadicFunction2( "abc", "abc" )  # wrong second parameter;
 
 
 ##########################
@@ -116,14 +116,14 @@ TestVariadicFunction2( 'abc', 123 )  # right parameter;
 var TestFunction3 : any = TestFunction
 var TestVariadicFunction3 : any = TestVariadicFunction
 
-TestFunction3( 'abc' )         # Test default parameter;
-TestFunction3( 'abc', 456.5 )  # implicit conversion;
+TestFunction3( "abc" )         # Test default parameter;
+TestFunction3( "abc", 456.5 )  # implicit conversion;
 
 # TestFunction3()  # ERROR: too few parameters;
-# TestFunction3( 'abc', 123, 456 )  # ERROR: too many parameters;
+# TestFunction3( "abc", 123, 456 )  # ERROR: too many parameters;
 
-TestVariadicFunction3( 'abc' )  # right parameter;
-TestVariadicFunction3( 'abc', 123 )  # right parameter;
+TestVariadicFunction3( "abc" )  # right parameter;
+TestVariadicFunction3( "abc", 123 )  # right parameter;
 
 # TestVariadicFunction3( 123 )  # wrong first parameter;
-# TestVariadicFunction3( 'abc', 'abc' )  # wrong second parameter;
+# TestVariadicFunction3( "abc", "abc" )  # wrong second parameter;

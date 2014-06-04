@@ -12,7 +12,7 @@ class ClassOne
 	}
 }
 # Create a class instance:
-object = ClassOne( 'abc' )
+object = ClassOne( "abc" )
 
 
 class Point3D

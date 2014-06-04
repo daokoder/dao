@@ -3,8 +3,8 @@ load CharType;
 
 
 
-var mbs_alnum = ''
-var mbs_alnum_neg = ''
+var mbs_alnum = ""
+var mbs_alnum_neg = ""
 
 for( ch = 1 : 127 ){
 	if( isalnum( ch ) ){
@@ -15,8 +15,8 @@ for( ch = 1 : 127 ){
 }
 
 @[test()]
-m1 = mbs_alnum.match( '[%a%d]+' )
-m2 = mbs_alnum_neg.match( '[^%a%d]+' )
+m1 = mbs_alnum.match( "[%a%d]+" )
+m2 = mbs_alnum_neg.match( "[^%a%d]+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
@@ -25,8 +25,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-var mbs_alpha = ''
-var mbs_alpha_neg = ''
+var mbs_alpha = ""
+var mbs_alpha_neg = ""
 
 for( ch = 1 : 127 ){
 	if( isalpha( ch ) ){
@@ -37,8 +37,8 @@ for( ch = 1 : 127 ){
 }
 
 @[test()]
-m1 = mbs_alpha.match( '%a+' )
-m2 = mbs_alpha_neg.match( '%A+' )
+m1 = mbs_alpha.match( "%a+" )
+m2 = mbs_alpha_neg.match( "%A+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
@@ -47,8 +47,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-var mbs_blank = ''
-var mbs_blank_neg = ''
+var mbs_blank = ""
+var mbs_blank_neg = ""
 
 for( ch = 1 : 127 ){
 	if( isblank( ch ) ){
@@ -59,8 +59,8 @@ for( ch = 1 : 127 ){
 }
 
 @[test()]
-m1 = mbs_blank.match( '[ \t]+' )
-m2 = mbs_blank_neg.match( '[^ \t]+' )
+m1 = mbs_blank.match( "[ \t]+" )
+m2 = mbs_blank_neg.match( "[^ \t]+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
@@ -69,8 +69,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-var mbs_cntrl = ''
-var mbs_cntrl_neg = ''
+var mbs_cntrl = ""
+var mbs_cntrl_neg = ""
 
 for( ch = 1 : 127 ){
 	if( iscntrl( ch ) ){
@@ -81,8 +81,8 @@ for( ch = 1 : 127 ){
 }
 
 @[test()]
-m1 = mbs_cntrl.match( '%k+' )
-m2 = mbs_cntrl_neg.match( '%K+' )
+m1 = mbs_cntrl.match( "%k+" )
+m2 = mbs_cntrl_neg.match( "%K+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
@@ -91,8 +91,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-var mbs_digit = ''
-var mbs_digit_neg = ''
+var mbs_digit = ""
+var mbs_digit_neg = ""
 
 for( ch = 1 : 127 ){
 	if( isdigit( ch ) ){
@@ -103,8 +103,8 @@ for( ch = 1 : 127 ){
 }
 
 @[test()]
-m1 = mbs_digit.match( '%d+' )
-m2 = mbs_digit_neg.match( '%D+' )
+m1 = mbs_digit.match( "%d+" )
+m2 = mbs_digit_neg.match( "%D+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
@@ -113,8 +113,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-var mbs_graph = ''
-var mbs_graph_neg = ''
+var mbs_graph = ""
+var mbs_graph_neg = ""
 
 for( ch = 1 : 127 ){
 	if( isgraph( ch ) ){
@@ -125,8 +125,8 @@ for( ch = 1 : 127 ){
 }
 
 @[test()]
-m1 = mbs_graph.match( '.+' )
-m2 = mbs_graph_neg.match( '.+' )
+m1 = mbs_graph.match( ".+" )
+m2 = mbs_graph_neg.match( ".+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
@@ -135,8 +135,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-var mbs_lower = ''
-var mbs_lower_neg = ''
+var mbs_lower = ""
+var mbs_lower_neg = ""
 
 for( ch = 1 : 127 ){
 	if( islower( ch ) ){
@@ -147,8 +147,8 @@ for( ch = 1 : 127 ){
 }
 
 @[test()]
-m1 = mbs_lower.match( '%c+' )
-m2 = mbs_lower_neg.match( '[^%c]+' )
+m1 = mbs_lower.match( "%c+" )
+m2 = mbs_lower_neg.match( "[^%c]+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
@@ -157,8 +157,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-var mbs_print = ''
-var mbs_print_neg = ''
+var mbs_print = ""
+var mbs_print_neg = ""
 
 for( ch = 1 : 127 ){
 	if( isprint( ch ) ){
@@ -169,8 +169,8 @@ for( ch = 1 : 127 ){
 }
 
 @[test()]
-m1 = mbs_print.match( '.+' )
-m2 = mbs_print_neg.match( '.+' )
+m1 = mbs_print.match( ".+" )
+m2 = mbs_print_neg.match( ".+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
@@ -179,8 +179,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-var mbs_punct = ''
-var mbs_punct_neg = ''
+var mbs_punct = ""
+var mbs_punct_neg = ""
 
 for( ch = 1 : 127 ){
 	if( ispunct( ch ) ){
@@ -191,8 +191,8 @@ for( ch = 1 : 127 ){
 }
 
 @[test()]
-m1 = mbs_punct.match( '%p+' )
-m2 = mbs_punct_neg.match( '%P+' )
+m1 = mbs_punct.match( "%p+" )
+m2 = mbs_punct_neg.match( "%P+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
@@ -201,8 +201,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-var mbs_space = ''
-var mbs_space_neg = ''
+var mbs_space = ""
+var mbs_space_neg = ""
 
 for( ch = 1 : 127 ){
 	if( isspace( ch ) ){
@@ -213,8 +213,8 @@ for( ch = 1 : 127 ){
 }
 
 @[test()]
-m1 = mbs_space.match( '%s+' )
-m2 = mbs_space_neg.match( '%S+' )
+m1 = mbs_space.match( "%s+" )
+m2 = mbs_space_neg.match( "%S+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
@@ -223,8 +223,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-var mbs_upper = ''
-var mbs_upper_neg = ''
+var mbs_upper = ""
+var mbs_upper_neg = ""
 
 for( ch = 1 : 127 ){
 	if( isupper( ch ) ){
@@ -235,8 +235,8 @@ for( ch = 1 : 127 ){
 }
 
 @[test()]
-m1 = mbs_upper.match( '%C+' )
-m2 = mbs_upper_neg.match( '[^%C]+' )
+m1 = mbs_upper.match( "%C+" )
+m2 = mbs_upper_neg.match( "[^%C]+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
@@ -245,8 +245,8 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-var mbs_xdigit = ''
-var mbs_xdigit_neg = ''
+var mbs_xdigit = ""
+var mbs_xdigit_neg = ""
 
 for( ch = 1 : 127 ){
 	if( isxdigit( ch ) ){
@@ -257,8 +257,8 @@ for( ch = 1 : 127 ){
 }
 
 @[test()]
-m1 = mbs_xdigit.match( '%x+' )
-m2 = mbs_xdigit_neg.match( '%X+' )
+m1 = mbs_xdigit.match( "%x+" )
+m2 = mbs_xdigit_neg.match( "%X+" )
 res = ( m1.start, m1.end, m2.start, m2.end )
 @[test()]
 @[test()]
@@ -267,14 +267,14 @@ res = ( m1.start, m1.end, m2.start, m2.end )
 
 
 
-var mbs_ascii = ''
+var mbs_ascii = ""
 
 for( ch = 1 : 127 ){
 	if( isascii( ch ) ) mbs_ascii += ch
 }
 
 @[test()]
-m1 = mbs_ascii.match( '.+' )
+m1 = mbs_ascii.match( ".+" )
 res = ( m1.start, m1.end )
 @[test()]
 @[test()]

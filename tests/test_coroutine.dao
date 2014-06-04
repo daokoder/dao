@@ -1,18 +1,18 @@
 
-routine Foo( a = 0, b = '' )=>[?]
+routine Foo( a = 0, b = "" )=>[?]
 {
-	io.writeln( 'Foo():', a );
-	return yield( 2 * a, 'by Foo()' );
+	io.writeln( "Foo():", a );
+	return yield( 2 * a, "by Foo()" );
 }
 
-routine Bar( a = 0, b = '' )=>[?]
+routine Bar( a = 0, b = "" )=>[?]
 {
-	io.writeln( 'Bar():', a, b );
+	io.writeln( "Bar():", a, b );
 	( r, s ) = Foo( a + 1, b );
-	io.writeln( 'Bar():', r, s );
+	io.writeln( "Bar():", r, s );
 	( r, s ) = yield( a + 100, b );
-	io.writeln( 'Bar():', r, s );
-	return a, 'ended';
+	io.writeln( "Bar():", r, s );
+	return a, "ended";
 }
 
 global co = Bar::( 100, "AA" );
@@ -21,7 +21,7 @@ global co = Bar::( 100, "AA" );
 
 @[test(code_01)]
 
-io.writeln( 'Main: ', co() );
+io.writeln( "Main: ", co() );
 
 @[test(code_01)]
 @[test(code_01)]
@@ -34,7 +34,7 @@ Main:  ( 202, "by Foo()" )
 
 @[test(code_01)]
 
-io.writeln( 'Main: ', co( 200, 'XX' ) );
+io.writeln( "Main: ", co( 200, "XX" ) );
 
 @[test(code_01)]
 @[test(code_01)]
@@ -46,7 +46,7 @@ Main:  ( 200, "AA" )
 
 @[test(code_01)]
 
-io.writeln( 'Main: ', co( 300, 'YY' ) );
+io.writeln( "Main: ", co( 300, "YY" ) );
 
 @[test(code_01)]
 @[test(code_01)]
@@ -59,7 +59,7 @@ Main:  ( 100, "ended" )
 @[test(code_01)]
 
 # coroutine has been finished, the following will rise an exception.
-io.writeln( 'Main: ', co( 400, 'ZZ' ) );
+io.writeln( "Main: ", co( 400, "ZZ" ) );
 
 @[test(code_01)]
 @[test(code_01)]

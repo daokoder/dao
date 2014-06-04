@@ -900,8 +900,8 @@ static DaoFuncItem serializerMeths[]=
 {
 	{ AUX_Serialize,   "serialize( value : any )=>string" },
 	{ AUX_Deserialize, "deserialize( text : string )=>any" },
-	{ AUX_Backup,      "backup( tofile = 'backup.sdo', limit=0 )" },
-	{ AUX_Restore,     "restore( fromfile = 'backup.sdo' )" },
+	{ AUX_Backup,      "backup( tofile = \"backup.sdo\", limit=0 )" },
+	{ AUX_Restore,     "restore( fromfile = \"backup.sdo\" )" },
 	{ NULL, NULL }
 };
 

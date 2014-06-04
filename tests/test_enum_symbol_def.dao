@@ -46,8 +46,8 @@ $True(1)
 
 @[test()]
 switch( Bool.False ){
-case Bool::False : io.writeln( 'Bool::False' )
-case Bool::True  : io.writeln( 'Bool::True' )
+case Bool::False : io.writeln( "Bool::False" )
+case Bool::True  : io.writeln( "Bool::True" )
 }
 @[test()]
 @[test()]
@@ -58,8 +58,8 @@ Bool::False
 
 @[test()]
 switch( (Bool) $True ){
-case Bool::False : io.writeln( 'Bool::False' )
-case Bool::True  : io.writeln( 'Bool::True' )
+case Bool::False : io.writeln( "Bool::False" )
+case Bool::True  : io.writeln( "Bool::True" )
 }
 @[test()]
 @[test()]

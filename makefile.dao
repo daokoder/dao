@@ -334,8 +334,8 @@ daovm_doc = daovm.AddCommand( "./doc/html/en/index.html: Makefile" + DaoMake::Ma
 daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/" );
 daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/en" );
 daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/zh" );
-daovm_doc.AddCommand( "$(DAO) -e \"load help; help::set_language('en'); help::export('','./doc/html/en')\"" );
-daovm_doc.AddCommand( "$(DAO) -e \"load help; help::set_language('zh'); help::export('','./doc/html/zh')\"" );
+daovm_doc.AddCommand( @[]$(DAO) -e "load help; help::set_language(\"en\"); help::export(\"\",\"./doc/html/en\")"@[] );
+daovm_doc.AddCommand( @[]$(DAO) -e "load help; help::set_language(\"zh\"); help::export(\"\",\"./doc/html/zh\")"@[] );
 daovm_doc.AddDependency( daovm_dll );
 
 daovm.Install( daovm_doc_path, "./doc" )
@@ -402,17 +402,17 @@ daovm.GenerateFinder( $TRUE );
 
 if( daovm_bundle_program.size() ){
 	mode = ((string) DaoMake::BuildMode())[1:].convert( $lower )
-	daos = daovm_bundle_program + '.dao'
-	darc = daovm_bundle_program + '.dar.c'
-	daomake_args  = '--platform ' + DaoMake::Platform() + ' --mode ' + mode;
-	daomake_args += ' --option-BUNDLE ' + daovm_bundle_program
-	daomake_args += ' --suffix .bundle bundle.dao'
+	daos = daovm_bundle_program + ".dao"
+	darc = daovm_bundle_program + ".dar.c"
+	daomake_args  = "--platform " + DaoMake::Platform() + " --mode " + mode;
+	daomake_args += " --option-BUNDLE " + daovm_bundle_program
+	daomake_args += " --suffix .bundle bundle.dao"
 
-	archive = daovm.AddCommand( darc + ': ' + daos, './dao -c ' + daos )
-	archive.AddCommand( './dao -a ' + daovm_bundle_program + '.dac' + daovm_bundle_resources )
-	archive.AddCommand( './dao tools/filetools/archive.dao ' + daovm_bundle_program + '.dar' )
-	archive.AddCommand( '$(DAOMAKE) ' + daomake_args )
-	archive.AddCommand( '$(MAKE) -f Makefile.bundle' )
+	archive = daovm.AddCommand( darc + ": " + daos, "./dao -c " + daos )
+	archive.AddCommand( "./dao -a " + daovm_bundle_program + ".dac" + daovm_bundle_resources )
+	archive.AddCommand( "./dao tools/filetools/archive.dao " + daovm_bundle_program + ".dar" )
+	archive.AddCommand( "$(DAOMAKE) " + daomake_args )
+	archive.AddCommand( "$(MAKE) -f Makefile.bundle" )
 }
 
 

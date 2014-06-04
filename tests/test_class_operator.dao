@@ -7,7 +7,7 @@ class Integer
 	routine Integer( val = 0 ){ value = val }
 
 	static operator +( A : Integer, B : Integer ){
-		io.writeln( 'Integer + Integer' );
+		io.writeln( "Integer + Integer" );
 		return Integer( A.value + B.value );
 	}
 }
@@ -32,11 +32,11 @@ class Integer
 	routine Integer( val = 0 ){ value = val }
 
 	static operator +( A : Integer, B : Integer ){
-		io.writeln( 'Integer + Integer' );
+		io.writeln( "Integer + Integer" );
 		return Integer( A.value + B.value );
 	}
 	static operator +( C : Integer, A : Integer, B : Integer ){
-		io.writeln( 'Integer = Integer + Integer' );
+		io.writeln( "Integer = Integer + Integer" );
 		C.value = A.value + B.value;
 		return C;
 	}
@@ -60,8 +60,8 @@ class Integer
 
 	routine Integer( val = 0 ){ value = val }
 
-	operator .val(){ io.writeln( 'get value' ) }
-	operator .val=( v : int ){ value = v; io.writeln( 'set value', 456 ) }
+	operator .val(){ io.writeln( "get value" ) }
+	operator .val=( v : int ){ value = v; io.writeln( "set value", 456 ) }
 }
 I = Integer( 123 )
 v = I.val
@@ -85,8 +85,8 @@ class Integer
 	public
 	routine Integer( val = 0 ){ value = val }
 
-	operator .value(){ io.writeln( 'get value' ) }
-	operator .value=( v : int ){ value = v; io.writeln( 'set value', 456 ) }
+	operator .value(){ io.writeln( "get value" ) }
+	operator .value=( v : int ){ value = v; io.writeln( "set value", 456 ) }
 }
 I = Integer( 123 )
 v = I.value
@@ -108,8 +108,8 @@ class Integer
 
 	routine Integer( val = 0 ){ value = val }
 
-	operator .value(){ io.writeln( 'get value' ) }
-	operator .value=( v : int ){ value = v; io.writeln( 'set value' ) }
+	operator .value(){ io.writeln( "get value" ) }
+	operator .value=( v : int ){ value = v; io.writeln( "set value" ) }
 }
 I = Integer( 123 )
 v = I.value
@@ -132,7 +132,7 @@ class IntList
 	operator []( index : int ){ return ints[index] }
 	operator []=( value :int, index : int ){
 		ints[index] = value
-		io.writeln( 'set item' )
+		io.writeln( "set item" )
 	}
 }
 ilist = IntList()
@@ -153,27 +153,27 @@ set item
 @[test(code_01)]
 class Record
 {
-	var name = '';
+	var name = "";
 
 	operator .Name() {
-		io.writeln( 'Get name:', name )
+		io.writeln( "Get name:", name )
 		return name
 	}
 	operator .Name=( value : string ) {
-		io.writeln( 'Set name:', value )
+		io.writeln( "Set name:", value )
 		name = value
 	}
 
 	operator .( name : string ) {
-		io.writeln( 'Get undefined field:', name )
+		io.writeln( "Get undefined field:", name )
 		return 123
 	}
 	operator .=( name : string, value : any ) {
-		io.writeln( 'Set undefined field:', name, 'with value:', value )
+		io.writeln( "Set undefined field:", name, "with value:", value )
 	}
 }
 record = Record()
-record.Name = 'abc'
+record.Name = "abc"
 name = record.Name
 
 record.index = 123

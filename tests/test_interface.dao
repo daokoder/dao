@@ -39,7 +39,7 @@ routine TestOperatorInterface( inter : OperatorInterface )
 class OperatorClass
 {
 	operator []( index : int ){ return index }
-	operator .name(){ return 'name' }
+	operator .name(){ return "name" }
 }
 
 

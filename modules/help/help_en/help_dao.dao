@@ -51,8 +51,8 @@ Main features:
 --Code section methods as a better alternative to functional methods;
 --Native support for concurrent programming;
 --Concurrent garbage collection;
+--Support closures, anonymous functions;
 --Support typed coroutines and function decorators;
---Support closures, anonymous functions and classes;
 --BNF-like syntax macro for defining customized syntax;
 --Designed and implemented as a register-based virtual machine;
 --Portable implementation using standard C;

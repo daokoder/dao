@@ -15,8 +15,8 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 	if( header_path == "" or header_path2 == "" ) return;
 
 	lflags = "-lreadline";
-	if( DaoMake::TestCompile( code, '-lreadline', '-I.' ) == 0 ){
-		if( DaoMake::TestCompile( code, '-lreadline -lncurses', '-I.' ) == 0 ) return;
+	if( DaoMake::TestCompile( code, "-lreadline", "-I." ) == 0 ){
+		if( DaoMake::TestCompile( code, "-lreadline -lncurses", "-I." ) == 0 ) return;
 		lflags = "-lreadline -lncurses";
 	}
 

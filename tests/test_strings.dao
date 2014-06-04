@@ -1,6 +1,6 @@
 
 @[test(code)]
-io.writeln( 'hello world' )
+io.writeln( "hello world" )
 @[test(code)]
 
 # Expected output is allowed to be pattern:

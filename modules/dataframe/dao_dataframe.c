@@ -1821,8 +1821,8 @@ static DaoFuncItem dataframeMeths[]=
 	{ FRAME_AddLabel,  "AddLabel( self :DataFrame, dim :DataFrame_DimType, label :string, index :int )" },
 	{ FRAME_GetIndex,  "GetIndex( self :DataFrame, dim :DataFrame_DimType, label :string ) => int" },
 
-	{ FRAME_AddArrayCol, "AddColumn( self :DataFrame, data :array<@T>, label :string ='' )" },
-	{ FRAME_AddListCol,  "AddColumn( self :DataFrame, data :list<@T>, label :string ='' )" },
+	{ FRAME_AddArrayCol, "AddColumn( self :DataFrame, data :array<@T>, label :string =\"\" )" },
+	{ FRAME_AddListCol,  "AddColumn( self :DataFrame, data :list<@T>, label :string =\"\" )" },
 
 	{ FRAME_GETMI,
 		"[]( self :DataFrame, i :DataFrame_IndexType, j :DataFrame_IndexType =none, k :DataFrame_IndexType =none ) => any" },
