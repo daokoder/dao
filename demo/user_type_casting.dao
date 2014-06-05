@@ -1,35 +1,38 @@
 
 class Test
 {
-	var value = { 123, 456 };
+	var value = { 123.2, 456.5 };
 
 	# conversion to int:
-	operator cast() => int { # or simply: => int
-		io.writeln( "casting to int" );
+	operator (double) () {
+		io.writeln( "casting to double" );
 		return value.sum();
 	}
 	# conversion to string:
-	#routine cast( @T<string> ) => @T {
-	operator cast() => string {
+	operator (string) () {
 		io.writeln( "casting to string" )
 		return value.reduce(""){ [x, y] y += (string)x }; # convert to string
 	}
-	operator cast() => array<int> {
+	operator (array<int>) () {
 		io.writeln( "casting to array<int>" );
-		# the follwing no longer supported, should use code section methods instead:
-		return (array<int>) value
+		return array<int>( %value ){ [i] value[i] }
+	}
+	operator (tuple<double,double>) () {
+		io.writeln( "casting to tuple<double,double>" );
+		return (value[0], value[1])
 	}
 }
 
 t = Test();
 
 a = (int)t;
-b = (string)t;
-c = (float)t;
-#d = (long)t; # error
+b = (float)t;
+c = (double)t;
+d = (string)t;
 v = (array<int>)t;
+v2 = (tuple<a:int,b:float>)t;
 
-io.writeln( a, b, c, v )
+io.writeln( a, b, c, d, v2, std.about(v2) )
 
 e = Exception::Error( "testing" );
 io.writeln( (string)e );

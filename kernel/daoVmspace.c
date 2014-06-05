@@ -2667,8 +2667,8 @@ DaoVmSpace* DaoInit( const char *command )
 
 	DaoNamespace_TypeDefine( daons, "enum<false:true>", "bool" );
 
-	DaoNamespace_SetupType( daons, & stringTyper );
-	DaoNamespace_SetupType( daons, & comTyper );
+	DaoNamespace_SetupType( daons, & stringTyper, dao_type_string );
+	DaoNamespace_SetupType( daons, & comTyper, dao_type_complex );
 
 #ifdef DAO_WITH_NUMARRAY
 	dao_type_array_template = DaoNamespace_WrapGenericType( daons, & numarTyper, DAO_ARRAY );
@@ -2694,11 +2694,6 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_list_empty );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_map_empty );
 
-	GC_ShiftRC( dao_type_complex, comTyper.core->kernel->abtype );
-	GC_ShiftRC( dao_type_string, stringTyper.core->kernel->abtype );
-	comTyper.core->kernel->abtype = dao_type_complex;
-	stringTyper.core->kernel->abtype = dao_type_string;
-
 	ns2 = DaoVmSpace_GetNamespace( vms, "io" );
 	DaoNamespace_AddConstValue( daons, "io", (DaoValue*) ns2 );
 	dao_type_stream = DaoNamespace_WrapType( ns2, & streamTyper, 0 );
@@ -2721,7 +2716,7 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_future  = DaoNamespace_WrapType( ns2, & futureTyper, 0 );
 	DaoNamespace_WrapFunctions( ns2, dao_mt_methods );
 #endif
-	DaoNamespace_SetupType( vms->daoNamespace, & vmpTyper );
+	DaoNamespace_SetupType( vms->daoNamespace, & vmpTyper, NULL );
 
 	ns2 = DaoVmSpace_GetNamespace( vms, "std" );
 	DaoNamespace_AddConstValue( daons, "std", (DaoValue*) ns2 );

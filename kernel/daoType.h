@@ -172,6 +172,8 @@ DAO_DLL DaoValue* DaoType_CastToDerived( DaoValue *object, DaoType *derived );
 
 DAO_DLL DaoValue* DaoType_FindValue( DaoType *self, DString *name );
 DAO_DLL DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name );
+DAO_DLL DaoRoutine* DaoType_GetInitor( DaoType *self );
+DAO_DLL DaoRoutine* DaoType_GetCastor( DaoType *self );
 DAO_DLL DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name );
 DAO_DLL DaoRoutine* DaoType_FindFunctionChars( DaoType *self, const char *name );
 
@@ -219,6 +221,8 @@ struct DaoTypeKernel
 	DMap          *values;
 	DMap          *methods;
 	DaoType       *abtype; /* the template cdata type for a specialized type; */
+	DaoRoutine    *initors;
+	DaoRoutine    *castors;
 	DTypeSpecTree *sptree;
 	DaoNamespace  *nspace;
 	DaoTypeCore   *core;

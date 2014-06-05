@@ -105,12 +105,12 @@ struct DaoParser
 	char isFunctional;
 	char usingGlobal;
 
-	DaoInterface *hostInter;
-	DaoClass     *hostClass;
-	DaoType      *hostCdata;
-	DaoType      *hostType;
-	DaoParser    *outerParser;
-	DaoParser    *innerParser;
+	DaoType       *hostType;
+	DaoCtype      *hostCtype;
+	DaoClass      *hostClass;
+	DaoInterface  *hostInter;
+	DaoParser     *outerParser;
+	DaoParser     *innerParser;
 
 	DaoByteCoder  *byteCoder;
 	DaoByteBlock  *byteBlock;

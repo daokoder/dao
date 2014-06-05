@@ -323,10 +323,10 @@ void DaoParser_Reset( DaoParser *self )
 	self->nameSpace = NULL;
 	self->defParser = NULL;
 	self->routine = NULL;
-	self->hostInter = NULL;
-	self->hostClass = NULL;
-	self->hostCdata = NULL;
 	self->hostType = NULL;
+	self->hostCtype = NULL;
+	self->hostClass = NULL;
+	self->hostInter = NULL;
 	self->outerParser = NULL;
 	self->innerParser = NULL;
 	self->byteCoder = NULL;
@@ -1040,9 +1040,10 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	DaoInterface *inter = module->hostInter;
 	DaoRoutine *routine = module->routine;
 	DaoClass  *klass = module->hostClass;
-	DaoType  *cdata = module->hostCdata;
+	DaoCtype  *ctype = module->hostCtype;
 	DaoType *hostype = module->hostType;
-	DaoType *type, *type_default, *cbtype = NULL, *retype = NULL;
+	DaoType *type, *type_default, *cast = NULL;
+	DaoType *cbtype = NULL, *retype = NULL;
 	DArray *types = NULL, *nested = NULL;
 	DString *hostname = NULL;
 	DString *pname = NULL;
@@ -1066,16 +1067,21 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	start ++;
 	if( key == DKEY_OPERATOR ){
 		int lb = 0;
-		if( tokens[start-1]->name == DTOK_LB ){ /* operator () */
-			if( tokens[start]->name != DTOK_RB ) goto ErrorUnsupportedOperator;
-			lb = DaoParser_FindOpenToken( self, DTOK_LB, start+1, -1, 1 );
+		if( tokens[start-1]->name == DTOK_LB ){ /* operator () or operator (type) */
+			int rb = start;
+			if( tokens[start]->name != DTOK_RB ){
+				rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start-1, -1 );
+				cast = DaoParser_ParseType( self, start, rb-1, & rb, NULL );
+				if( cast == NULL || tokens[rb]->name != DTOK_RB ) goto ErrorInvalidOperator;
+			}
+			lb = DaoParser_FindOpenToken( self, DTOK_LB, rb+1, -1, 1 );
 		}else if( tokens[start-1]->name == DTOK_LSB ){ /* operator [] */
-			if( tokens[start]->name != DTOK_RSB ) goto ErrorUnsupportedOperator;
+			if( tokens[start]->name != DTOK_RSB ) goto ErrorInvalidOperator;
 			lb = DaoParser_FindOpenToken( self, DTOK_LB, start+1, -1, 1 );
 		}else{
 			lb = DaoParser_FindOpenToken( self, DTOK_LB, start, -1, 1 );
 		}
-		if( lb <0 ) goto ErrorUnsupportedOperator;
+		if( lb <0 ) goto ErrorInvalidOperator;
 		for(i=start; i<lb; i++) DString_Append( routine->routName, & tokens[i]->string );
 		DString_Assign( module->routName, routine->routName );
 		start = lb;
@@ -1094,7 +1100,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 
 	if( inter ) hostname = inter->abtype->name;
 	else if( klass ) hostname = klass->className;
-	else if( cdata ) hostname = cdata->name;
+	else if( ctype ) hostname = ctype->name;
 
 	mbs = DaoParser_GetString( self );
 	pname = DaoParser_GetString( self );
@@ -1311,11 +1317,24 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	self->innerParser = NULL;
 
 	k = pname->size;
+	if( cast != NULL ){
+		DaoType *tt;
+		if( nested->size > selfpar ) goto ErrorTooManyParams;
+		if( retype != NULL ) goto ErrorInvalidReturn;
+		tt = DaoNamespace_GetType( NS, (DaoValue*) cast );
+		DString_AppendChar( pname, ',' );
+		DString_Append( pname, tt->name );
+		DArray_Append( nested, (void*) tt );
+		DArray_Append( NS->auxData, (void*) tt );
+		DaoRoutine_AddConstant( routine, NULL );
+		DaoParser_PushRegister( module );
+		routine->parCount ++;
+	}
 	if( notConstr == 0 ){
 		if( klass && routine->routHost == klass->objType ){
 			retype = klass->objType;
-		}else if( cdata && routine->routHost == cdata ){
-			retype = cdata;
+		}else if( ctype && routine->routHost == ctype->cdtype ){
+			retype = ctype->cdtype;
 		}
 	}
 	if( retype == NULL ){
@@ -1327,22 +1346,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	}
 	DString_AppendChars( pname, "=>" );
 	DString_Append( pname, retype->name );
-	if( key == DKEY_OPERATOR && strcmp( routine->routName->chars, "cast" ) ==0 ){
-		DaoType *tt;
-		if( nested->size > selfpar ) goto ErrorTooManyParams;
-		if( retype == NULL || retype->tid == DAO_UDT ) goto ErrorInvalidReturn;
-		tt = DaoNamespace_GetType( NS, (DaoValue*) retype );
-		DString_Erase( pname, k, -1 );
-		DString_AppendChar( pname, ',' );
-		DString_Append( pname, tt->name );
-		DString_AppendChars( pname, "=>" );
-		DString_Append( pname, retype->name );
-		DArray_Append( NS->auxData, (void*) tt );
-		DArray_Append( nested, (void*) tt );
-		DaoRoutine_AddConstant( routine, NULL );
-		DaoParser_PushRegister( module );
-		routine->parCount ++;
-	}
 	DString_AppendChars( pname, ">" );
 	type = DaoType_New( pname->chars, DAO_ROUTINE, (DaoValue*) retype, nested );
 	DArray_Append( NS->auxData, type );
@@ -1368,6 +1371,31 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	for(j=0; j<nested->size; j++) printf( "%s\n", nested->items.pType[j]->name->chars );
 #endif
 	GC_IncRC( routine->routType );
+
+	/*
+	// The casting methods should be organized into a single overloaded method,
+	// for two reasons:
+	// 1. Searching casting methods by type names may be unreliable;
+	// 2. Casting similar types can be supported in this way; For example,
+	//    if "operator(double)" is defined, casting to "float" will be allowed.
+	*/
+	if( cast != NULL ){
+		routine->attribs |= DAO_ROUT_CASTOR;
+		if( klass ){
+			if( klass->castRoutines == NULL ){
+				klass->castRoutines = DaoRoutines_New( NS, klass->objType, NULL );
+				GC_IncRC( klass->castRoutines );
+			}
+			DRoutines_Add( klass->castRoutines->overloads, routine );
+		}else if( hostype ){
+			if( hostype->kernel->castors == NULL ){
+				hostype->kernel->castors = DaoRoutines_New( NS, hostype, NULL );
+				GC_IncRC( hostype->kernel->castors );
+			}
+			DRoutines_Add( hostype->kernel->castors->overloads, routine );
+		}
+	}
+
 	/*  remove vmcode for consts */
 	DaoParser_ClearCodes( module );
 	/* one parse might be used to compile multiple C functions: */
@@ -1406,7 +1434,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 		if( right < 0 ) goto ErrorRoutine;
 	}
 	return right;
-ErrorUnsupportedOperator: ec = DAO_ROUT_INVALID_OPERATOR; goto ErrorRoutine;
+ErrorInvalidOperator: ec = DAO_ROUT_INVALID_OPERATOR; goto ErrorRoutine;
 ErrorConstructorReturn: ec = DAO_ROUT_INVALID_RETURN; goto ErrorRoutine;
 ErrorNeedReturnType:  ec = DAO_ROUT_NEED_RETURN_TYPE; goto ErrorRoutine;
 ErrorInvalidDecoParam:   ec = DAO_ROUT_INVALID_DECO_PARAM; goto ErrorRoutine;
@@ -1455,13 +1483,13 @@ static void DaoParser_ByteEncodeGetConst( DaoParser *self, DString *name )
 		DaoByteBlock_InsertBlockIndex( eval, eval->end, namebk );
 	}
 }
-static DaoType* DaoType_FindType( DString *name, DaoNamespace *ns, DaoType *ctype, DaoClass *klass, DaoRoutine *rout )
+static DaoType* DaoType_FindType( DString *name, DaoNamespace *ns, DaoCtype *ctype, DaoClass *klass, DaoRoutine *rout )
 {
 	DNode *node = NULL;
 	if( rout && rout->body ) node = MAP_Find( rout->body->abstypes, name );
 	if( node == NULL && klass ) node = MAP_Find( klass->abstypes, name );
-	if( node == NULL && ctype && ctype->kernel && ctype->kernel->values ){
-		node = MAP_Find( ctype->kernel->values, name );
+	if( node == NULL && ctype && ctype->cdtype->kernel && ctype->cdtype->kernel->values ){
+		node = MAP_Find( ctype->cdtype->kernel->values, name );
 		if( node && node->value.pValue->type == DAO_TYPE ) return node->value.pType;
 		node = NULL;
 	}
@@ -1504,7 +1532,7 @@ static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, in
 	default : break;
 	}
 	if( type ) return type;
-	type = DaoType_FindType( name, ns, self->hostCdata, self->hostClass, self->routine );
+	type = DaoType_FindType( name, ns, self->hostCtype, self->hostClass, self->routine );
 	if( type ) return type;
 	if( value == NULL ) return NULL;
 	return DaoNamespace_MakeValueType( ns, value );
@@ -1548,7 +1576,7 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 		type = DaoParser_FindTypeHolder( self, & token->string );
 		if( type ) return type;
 	}
-	type = DaoType_FindType( name, ns, self->hostCdata, klass, routine );
+	type = DaoType_FindType( name, ns, self->hostCtype, klass, routine );
 	if( type && type->tid == DAO_CTYPE ) type = type->kernel->abtype; /* get its cdata type */
 	if( type ) return type;
 	if( i > 0 && i < 100 ){
@@ -2737,7 +2765,7 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 	str = & nameTok->string;
 	start += 2;
 	if( start >to || tokens[start]->type != DTOK_IDENTIFIER ) goto InvalidAliasing;
-	if( DaoType_FindType( str, myNS, self->hostCdata, self->hostClass, routine ) ){
+	if( DaoType_FindType( str, myNS, self->hostCtype, self->hostClass, routine ) ){
 		/* Redundant ??? */
 		DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
 		goto InvalidAliasing;
@@ -4691,9 +4719,9 @@ static int DaoParser_GetRegister2( DaoParser *self, DaoToken *nametok )
 	DNode *node = NULL;
 	int i;
 
-	if( self->hostCdata ){
+	if( self->hostCtype ){
 		/* QStyleOption( version : int = QStyleOption::Version, ... ) */
-		DaoValue *it = DaoType_FindValueOnly( self->hostCdata, name );
+		DaoValue *it = DaoType_FindValueOnly( self->hostType, name );
 		if( it ){
 			i = routine->routConsts->value->size;
 			MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, LOOKUP_BIND_LC(i) );

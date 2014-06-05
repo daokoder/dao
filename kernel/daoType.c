@@ -221,9 +221,11 @@ void DaoType_CheckAttributes( DaoType *self )
 	if( DString_FindChar( self->name, '@', 0 ) != DAO_NULLPOS ) self->attrib |= DAO_TYPE_SPEC;
 	if( DString_FindChar( self->name, '?', 0 ) != DAO_NULLPOS ) self->attrib |= DAO_TYPE_UNDEF;
 
-	if( (self->tid == DAO_PAR_NAMED || self->tid == DAO_PAR_DEFAULT) ){
-		if( self->fname != NULL && strcmp( self->fname->chars, "self" ) == 0 )
+	if( self->tid == DAO_PAR_NAMED || self->tid == DAO_PAR_DEFAULT ){
+		self->attrib |= DAO_TYPE_PARNAMED;
+		if( self->fname != NULL && strcmp( self->fname->chars, "self" ) == 0 ){
 			self->attrib |= DAO_TYPE_SELFNAMED;
+		}
 	}
 
 	self->noncyclic = self->tid <= DAO_TUPLE;
@@ -1448,16 +1450,15 @@ static void DaoType_TrySpecializeMethods( DaoType *self )
 	}
 }
 
-DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
+static void DaoType_TrySetupMethods( DaoType *self )
 {
-	DNode *node;
 	DaoTypeCore *core = self->typer->core;
 	DaoTypeKernel *kernel = self->kernel;
-	if( core->kernel == NULL ) return NULL;
+	if( core->kernel == NULL ) return;
 	if( core->kernel->SetupMethods ){
 		core->kernel->SetupMethods( core->kernel->nspace, self->typer );
 	}
-	if( core->kernel->methods == NULL ) return NULL;
+	if( core->kernel->methods == NULL ) return;
 	DaoType_TrySpecializeMethods( self );
 	if( self->kernel == NULL ){
 		/* The type is created before the setup of the typer structure: */
@@ -1468,6 +1469,25 @@ DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 		}
 		DMutex_Unlock( & mutex_methods_setup );
 	}
+}
+DaoRoutine* DaoType_GetInitor( DaoType *self )
+{
+	DaoType_TrySetupMethods( self );
+	if( self->kernel == NULL ) return NULL;
+	return self->kernel->initors;
+}
+DaoRoutine* DaoType_GetCastor( DaoType *self )
+{
+	DaoType_TrySetupMethods( self );
+	if( self->kernel == NULL ) return NULL;
+	return self->kernel->castors;
+}
+DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
+{
+	DNode *node;
+
+	DaoType_TrySetupMethods( self );
+	if( self->kernel == NULL ) return NULL;
 	node = DMap_Find( self->kernel->methods, name );
 	if( node ) return node->value.pRoutine;
 	return NULL;
@@ -1961,6 +1981,8 @@ void DaoTypeKernel_Delete( DaoTypeKernel *self )
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
+	GC_DecRC( self->initors );
+	GC_DecRC( self->castors );
 	/* self->core may no longer be valid, but self->typer->core always is: */
 	if( self->typer->core ) self->typer->core->kernel = NULL;
 	if( self->core == (DaoTypeCore*)(self + 1) ){
@@ -2346,14 +2368,27 @@ static void DaoType_InitTypeDefines( DaoType *self, DaoRoutine *method, DMap *de
 		DaoType_MatchTo( self->nested->items.pType[i], type->nested->items.pType[i], defs );
 	}
 }
-static void DaoType_SpecMethod( DaoType *self, DaoRoutine *method, DMap *methods, DMap *defs )
+static void DaoType_SpecMethod( DaoType *self, DaoTypeKernel *kernel, DaoRoutine *method, DMap *defs )
 {
 	DaoNamespace *nspace = self->kernel->nspace;
 	DaoRoutine *rout = DaoRoutine_Copy( method, 1, 0, 0 );
-	if( method->attribs & DAO_ROUT_INITOR ) DString_Assign( rout->routName, self->name );
+	if( method->attribs & DAO_ROUT_INITOR ){
+		DString_Assign( rout->routName, self->name );
+		if( kernel->initors == NULL ){
+			kernel->initors = DaoRoutines_New( nspace, self, NULL );
+			GC_IncRC( kernel->initors );
+		}    
+		DRoutines_Add( kernel->initors->overloads, rout );
+	}else if( method->attribs & DAO_ROUT_CASTOR ){
+		if( kernel->castors == NULL ){
+			kernel->castors = DaoRoutines_New( nspace, self, NULL );
+			GC_IncRC( kernel->castors );
+		}    
+		DRoutines_Add( kernel->castors->overloads, rout );
+	}
 	DaoType_InitTypeDefines( self, rout, defs );
 	DaoRoutine_Finalize( rout, self, defs );
-	DaoMethods_Insert( methods, rout, nspace, self );
+	DaoMethods_Insert( kernel->methods, rout, nspace, self );
 }
 
 void DaoType_SpecializeMethods( DaoType *self )
@@ -2396,17 +2431,9 @@ void DaoType_SpecializeMethods( DaoType *self )
 		kernel->attribs = original->kernel->attribs;
 		kernel->nspace = original->kernel->nspace;
 		kernel->abtype = original;
+		kernel->methods = methods;
 		GC_IncRC( kernel->nspace );
 		GC_IncRC( kernel->abtype );
-		if( self->tid == DAO_CSTRUCT || self->tid == DAO_CDATA || self->tid == DAO_CTYPE ){
-			GC_ShiftRC( kernel, self->aux->xCtype.ctype->kernel );
-			GC_ShiftRC( kernel, self->aux->xCtype.cdtype->kernel );
-			self->aux->xCtype.ctype->kernel = kernel;
-			self->aux->xCtype.cdtype->kernel = kernel;
-		}else{
-			GC_ShiftRC( kernel, self->kernel );
-			self->kernel = kernel;
-		}
 
 		/* Required for redefining routHost: */
 		for(i=0; i<self->nested->size; i++){
@@ -2428,10 +2455,10 @@ void DaoType_SpecializeMethods( DaoType *self )
 				for(i=0; i<routine->overloads->routines->size; i++){
 					rout = rout2 = routine->overloads->routines->items.pRoutine[i];
 					if( rout->routHost->aux != original->aux ) continue;
-					DaoType_SpecMethod( self, rout, methods, defs );
+					DaoType_SpecMethod( self, kernel, rout, defs );
 				}
 			}else{
-				DaoType_SpecMethod( self, routine, methods, defs );
+				DaoType_SpecMethod( self, kernel, routine, defs );
 			}
 		}
 
@@ -2469,11 +2496,15 @@ void DaoType_SpecializeMethods( DaoType *self )
 			}
 		}
 		DMap_Delete( defs );
-		/* Set methods field after it has been setup, for read safety in multithreading: */
-		kernel->methods = methods;
-		if( intype->invar ){
-			GC_ShiftRC( kernel, intype->kernel );
-			intype->kernel = kernel;
+		/* Set new kernel after it has been setup, for read safety in multithreading: */
+		if( self->tid == DAO_CSTRUCT || self->tid == DAO_CDATA || self->tid == DAO_CTYPE ){
+			GC_ShiftRC( kernel, self->aux->xCtype.ctype->kernel );
+			GC_ShiftRC( kernel, self->aux->xCtype.cdtype->kernel );
+			self->aux->xCtype.ctype->kernel = kernel;
+			self->aux->xCtype.cdtype->kernel = kernel;
+		}else{
+			GC_ShiftRC( kernel, self->kernel );
+			self->kernel = kernel;
 		}
 	}
 	DMutex_Unlock( & mutex_methods_setup );

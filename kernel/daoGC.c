@@ -411,6 +411,7 @@ void DaoObjectLogger_Quit()
 				DaoClass *klass = (DaoClass*)value;
 				DaoObjectLogger_ScanMap( klass->abstypes, 0, 1 );
 				DaoObjectLogger_ScanValue( (DaoValue*) klass->clsType );
+				DaoObjectLogger_ScanValue( (DaoValue*) klass->castRoutines );
 				DaoObjectLogger_ScanValue( (DaoValue*) klass->classRoutine );
 				DaoObjectLogger_ScanArray( klass->constants );
 				DaoObjectLogger_ScanArray( klass->variables );
@@ -455,6 +456,8 @@ void DaoObjectLogger_Quit()
 				DaoTypeKernel *kernel = (DaoTypeKernel*) value;
 				DaoObjectLogger_ScanValue( (DaoValue*) kernel->abtype );
 				DaoObjectLogger_ScanValue( (DaoValue*) kernel->nspace );
+				DaoObjectLogger_ScanValue( (DaoValue*) kernel->initors );
+				DaoObjectLogger_ScanValue( (DaoValue*) kernel->castors );
 				DaoObjectLogger_ScanMap( kernel->values, 0, 1 );
 				DaoObjectLogger_ScanMap( kernel->methods, 0, 1 );
 				if( kernel->sptree ){
@@ -1734,6 +1737,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			DaoClass *klass = (DaoClass*)value;
 			DaoGC_ScanMap( klass->abstypes, DAO_GC_DEC, 0, 1 );
 			cycRefCountDecrement( (DaoValue*) klass->clsType );
+			cycRefCountDecrement( (DaoValue*) klass->castRoutines );
 			cycRefCountDecrement( (DaoValue*) klass->classRoutine );
 			cycRefCountDecrements( klass->constants );
 			cycRefCountDecrements( klass->variables );
@@ -1784,6 +1788,8 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			DaoTypeKernel *kernel = (DaoTypeKernel*) value;
 			cycRefCountDecrement( (DaoValue*) kernel->abtype );
 			cycRefCountDecrement( (DaoValue*) kernel->nspace );
+			cycRefCountDecrement( (DaoValue*) kernel->initors );
+			cycRefCountDecrement( (DaoValue*) kernel->castors );
 			count += DaoGC_ScanMap( kernel->values, DAO_GC_DEC, 0, 1 );
 			count += DaoGC_ScanMap( kernel->methods, DAO_GC_DEC, 0, 1 );
 			if( kernel->sptree ){
@@ -1933,6 +1939,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			DaoClass *klass = (DaoClass*) value;
 			DaoGC_ScanMap( klass->abstypes, DAO_GC_INC, 0, 1 );
 			cycRefCountIncrement( (DaoValue*) klass->clsType );
+			cycRefCountIncrement( (DaoValue*) klass->castRoutines );
 			cycRefCountIncrement( (DaoValue*) klass->classRoutine );
 			cycRefCountIncrements( klass->constants );
 			cycRefCountIncrements( klass->variables );
@@ -1983,6 +1990,8 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			DaoTypeKernel *kernel = (DaoTypeKernel*) value;
 			cycRefCountIncrement( (DaoValue*) kernel->abtype );
 			cycRefCountIncrement( (DaoValue*) kernel->nspace );
+			cycRefCountIncrement( (DaoValue*) kernel->initors );
+			cycRefCountIncrement( (DaoValue*) kernel->castors );
 			count += DaoGC_ScanMap( kernel->values, DAO_GC_INC, 0, 1 );
 			count += DaoGC_ScanMap( kernel->methods, DAO_GC_INC, 0, 1 );
 			if( kernel->sptree ){
@@ -2140,6 +2149,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			count += klass->allBases->size + klass->references->size + klass->abstypes->size;
 			count += DaoGC_ScanMap( klass->abstypes, DAO_GC_BREAK, 0, 1 );
 			directRefCountDecrement( (DaoValue**) & klass->clsType );
+			directRefCountDecrement( (DaoValue**) & klass->castRoutines );
 			directRefCountDecrement( (DaoValue**) & klass->classRoutine );
 			directRefCountDecrements( klass->constants );
 			directRefCountDecrements( klass->variables );
@@ -2188,6 +2198,8 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			DaoTypeKernel *kernel = (DaoTypeKernel*) value;
 			directRefCountDecrement( (DaoValue**) & kernel->abtype );
 			directRefCountDecrement( (DaoValue**) & kernel->nspace );
+			directRefCountDecrement( (DaoValue**) & kernel->initors );
+			directRefCountDecrement( (DaoValue**) & kernel->castors );
 			count += DaoGC_ScanMap( kernel->values, DAO_GC_BREAK, 0, 1 );
 			count += DaoGC_ScanMap( kernel->methods, DAO_GC_BREAK, 0, 1 );
 			if( kernel->sptree ){

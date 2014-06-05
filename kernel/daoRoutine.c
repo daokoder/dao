@@ -781,7 +781,8 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *svalue, DaoType *stype,
 		// class DaoClass : CppClass { cppmethod(); }
 		// use io; writeln(..);
 		*/
-		partype = (DaoType*) partypes[0]->aux; /* name:type, or name=type; */
+		partype = partypes[0];
+		if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
 		selfMatch = Dao_CheckParameter( partype, svalue, stype, defs );
 		if( selfMatch ){
 			parpass[0] = selfMatch;
@@ -820,7 +821,7 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *svalue, DaoType *stype,
 			if( DString_EQ( argvalue->xNameValue.name, partype->fname ) == 0 ) goto NotMatched;
 			argvalue = argvalue->xNameValue.value;
 		}
-		partype = (DaoType*) partype->aux;
+		if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
 		parpass[parindex] = Dao_CheckParameter( partype, argvalue, argtype, defs );
 		/*
 		   printf( "%i:  %i  %s\n", parpass[parindex], partype->tid, partype->name->chars );

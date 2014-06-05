@@ -81,6 +81,7 @@ struct DaoClass
 
 	DaoRoutine  *classRoutine; /* Default class constructor. */
 	DaoRoutine  *classRoutines; /* All explicit constructors; GC handled in constants; */
+	DaoRoutine  *castRoutines; /* All user defined cast methods; */
 
 	DString  *className;
 

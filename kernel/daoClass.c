@@ -140,6 +140,7 @@ void DaoClass_Delete( DaoClass *self )
 	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	GC_DecRC( self->clsType );
+	GC_DecRC( self->castRoutines );
 	DMap_Delete( self->abstypes );
 	DMap_Delete( self->lookupTable );
 	DMap_Delete( self->ovldRoutMap );

@@ -498,7 +498,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 			if( DString_EQ( argvalue->xNameValue.name, partype->fname ) == 0 ) goto ReturnNull;
 			argvalue = argvalue->xNameValue.value;
 		}
-		partype = (DaoType*) partype->aux;
+		if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
 
 		if( argtype && argvalue->type > DAO_ENUM ){
 			if( argtype->invar && ! argtype->konst && ! partype->invar ) goto ReturnNull;
@@ -3578,8 +3578,9 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 	if( va->type == DAO_OBJECT ){
 		DaoClass *scope = self->activeObject ? self->activeObject->defClass : NULL;
 		DaoValue *tpar = (DaoValue*) ct;
-		meth = DaoClass_FindOperator( va->xObject.defClass, "cast", scope );
-		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) ==0 ) return;
+		meth = va->xObject.defClass->castRoutines;
+		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) == 0 ) return;
+		goto FailConversion;
 	}else if( va->type == DAO_CSTRUCT || va->type == DAO_CDATA ){
 		DaoValue *tpar = (DaoValue*) ct;
 		if( DaoType_MatchTo( va->xCdata.ctype, ct, NULL ) ){ /* up casting: */
@@ -3596,8 +3597,9 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 				goto FastCasting;
 			}
 		}
-		meth = DaoType_FindFunctionChars( va->xCdata.ctype, "cast" );
-		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) ==0 ) return;
+		meth = va->xCdata.ctype->kernel->castors;
+		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) == 0 ) return;
+		goto FailConversion;
 	}
 NormalCasting:
 	va = DaoTypeCast( self, ct, va, vc );
@@ -3881,14 +3883,14 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		}
 	}else if( caller->type == DAO_CTYPE ){
 		DaoType *type = caller->xCtype.ctype;
-		rout = rout2 = DaoType_FindFunction( type, caller->xCtype.name );
+		rout = rout2 = DaoType_GetInitor( type );
 		if( rout == NULL ){
 			DaoProcess_RaiseError( self, "Type", "C type not callable" );
 			return;
 		}
 		rout = DaoRoutine_Resolve( rout, selfpar, NULL, params, types, npar, callmode );
 		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
-		DaoProcess_DoCxxCall( self, vmc, caller->xCtype.ctype, rout, selfpar, params, types, npar, 1 );
+		DaoProcess_DoCxxCall( self, vmc, type, rout, selfpar, params, types, npar, 1 );
 		if( self->exceptions->size ) return;
 
 		sup = DaoProcess_InitBase( self, vmc, caller );
@@ -3914,14 +3916,14 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		DaoProcess_DoCxxCall( self, vmc, NULL, rout, caller, params, types, npar, 0 );
 	}else if( caller->type == DAO_TYPE ){
 		DaoType *type = (DaoType*) caller;
-		rout = rout2 = DaoType_FindFunction( type, type->name );
+		rout = rout2 = DaoType_GetInitor( type );
 		if( rout == NULL ){
 			DaoProcess_RaiseError( self, "Type", "no constructor for the type" );
 			return;
 		}
 		rout = DaoRoutine_Resolve( rout, selfpar, NULL, params, types, npar, callmode );
 		if( rout == NULL /*|| rout->pFunc == NULL*/ ) goto InvalidParameter;
-		DaoProcess_DoCxxCall( self, vmc, caller->xCtype.ctype, rout, selfpar, params, types, npar, 1 );
+		DaoProcess_DoCxxCall( self, vmc, type, rout, selfpar, params, types, npar, 1 );
 	}else{
 		DaoProcess_RaiseError( self, "Type", "object not callable" );
 	}
@@ -3965,7 +3967,9 @@ static int DaoProcess_FastPassParams( DaoProcess *self, DaoType *partypes[], Dao
 			GC_ShiftRC( param, dests[i] );
 			dests[i] = param;
 		}else{
-			DaoValue_CopyX( param, dests + i, partypes[i] );
+			DaoType *partype = partypes[i];
+			if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
+			DaoValue_CopyX( param, dests + i, partype );
 		}
 	}
 	return 1;

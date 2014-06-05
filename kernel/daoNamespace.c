@@ -322,12 +322,13 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		parser = DaoVmSpace_AcquireParser( self->vmSpace );
 		parser->vmSpace = self->vmSpace;
 		parser->nameSpace = self;
-		parser->hostCdata = hostype;
 		parser->hostType = hostype;
+		parser->hostCtype = (DaoCtype*) hostype->aux;
 		parser->defParser = defparser = DaoVmSpace_AcquireParser( self->vmSpace );
 		defparser->vmSpace = self->vmSpace;
 		defparser->nameSpace = self;
-		defparser->hostCdata = hostype;
+		defparser->hostType = hostype;
+		defparser->hostCtype = (DaoCtype*) hostype->aux;
 		defparser->routine = self->constEvalRoutine;
 
 		size = 0;
@@ -349,6 +350,11 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 			cur->pFunc = typer->funcItems[i].fpter;
 			if( hostype && DString_EQ( cur->routName, hostype->name ) ){
 				cur->attribs |= DAO_ROUT_INITOR;
+				if( hostype->kernel->initors == NULL ){
+					hostype->kernel->initors = DaoRoutines_New( self, hostype, NULL );
+					GC_IncRC( hostype->kernel->initors );
+				}
+				DRoutines_Add( hostype->kernel->initors->overloads, cur );
 			}
 			DaoMethods_Insert( methods, cur, self, hostype );
 		}
@@ -772,20 +778,25 @@ DaoType* DaoNamespace_WrapGenericType( DaoNamespace *self, DaoTypeBase *typer, i
 	//printf( "type wrapping: %s\n", typer->name );
 	return cdata_type;
 }
-DaoType* DaoNamespace_SetupType( DaoNamespace *self, DaoTypeBase *typer )
+void DaoNamespace_SetupType( DaoNamespace *self, DaoTypeBase *typer, DaoType *type )
 {
-	if( typer->core == NULL ) return NULL;
+	if( typer->core == NULL ) return;
 	DMutex_Lock( & mutex_values_setup ); // XXX
 	if( typer->core->kernel == NULL ){
 		typer->core->kernel = DaoTypeKernel_New( typer );
+		typer->core->kernel->abtype = type;
 		typer->core->kernel->nspace = self;
 		typer->core->kernel->SetupValues = DaoNamespace_SetupValues;
 		typer->core->kernel->SetupMethods = DaoNamespace_SetupMethods;
-		GC_IncRC( self );
 		DArray_Append( self->auxData, typer->core->kernel );
+		GC_IncRC( self );
+		if( type ){
+			GC_IncRC( type );
+			GC_ShiftRC( typer->core->kernel, type->kernel );
+			type->kernel = typer->core->kernel;
+		}
 	}
 	DMutex_Unlock( & mutex_values_setup );
-	return typer->core->kernel->abtype;
 }
 int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typers[] )
 {
@@ -1823,12 +1834,13 @@ DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *proto, 
 		parser->defParser = defparser = DaoVmSpace_AcquireParser( self->vmSpace );
 		defparser->vmSpace = self->vmSpace;
 		defparser->nameSpace = self;
-		defparser->hostCdata = parser->hostCdata;
+		defparser->hostType = parser->hostType;
+		defparser->hostCtype = parser->hostCtype;
 		defparser->routine = self->constEvalRoutine;
 	}
 
-	GC_IncRC( parser->hostCdata );
-	func->routHost = parser->hostCdata;
+	GC_IncRC( parser->hostType );
+	func->routHost = parser->hostType;
 	if( ! DaoLexer_Tokenize( defparser->lexer, proto, 0 ) ) goto Error;
 	if( defparser->tokens->size < 3 ) goto Error;
 	if( (optok = defparser->tokens->items.pToken[0]->name == DKEY_OPERATOR) == 0 ){

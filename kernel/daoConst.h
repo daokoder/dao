@@ -155,12 +155,13 @@ enum DaoValueTrait
 };
 enum DaoTypeAttribs
 {
-	DAO_TYPE_SPEC = (1<<0),  /* specializable type, with at least one type holder; */
-	DAO_TYPE_UNDEF = (1<<1), /* undefined type, with at least one undefined type; */
-	DAO_TYPE_SELF  = (1<<2), /* routine type that has self parameter; */
-	DAO_TYPE_VARIADIC = (1<<3), /* variadic type (routine or tuple); */
-	DAO_TYPE_SELFNAMED = (1<<4),
-	DAO_TYPE_CODESECT = (1<<5)
+	DAO_TYPE_SPEC      = (1<<0), /* specializable type, with at least one type holder; */
+	DAO_TYPE_UNDEF     = (1<<1), /* undefined type, with at least one undefined type; */
+	DAO_TYPE_SELF      = (1<<2), /* routine type that has self parameter; */
+	DAO_TYPE_VARIADIC  = (1<<3), /* variadic type (routine or tuple); */
+	DAO_TYPE_PARNAMED  = (1<<4), /* name:type or name=type; */
+	DAO_TYPE_SELFNAMED = (1<<5), /* self:type; */
+	DAO_TYPE_CODESECT  = (1<<6)
 };
 enum DaoCaseMode
 {
@@ -215,9 +216,10 @@ enum DaoRoutineAttrib
 	DAO_ROUT_DEFER_RET = (1<<6),  /* defer block that may return values */
 	DAO_ROUT_CODESECT  = (1<<7),  /* code section routine */
 	DAO_ROUT_DECORATOR = (1<<8),  /* function decorator */
-	DAO_ROUT_INITOR    = (1<<9),  /* class constructor */
-	DAO_ROUT_MAIN      = (1<<10), /* main function */
-	DAO_ROUT_REUSABLE  = (1<<11)  /* stack data for the routine is reusable */
+	DAO_ROUT_INITOR    = (1<<9),  /* class/ctype constructor */
+	DAO_ROUT_CASTOR    = (1<<10), /* user defined casting method */
+	DAO_ROUT_MAIN      = (1<<11), /* main function */
+	DAO_ROUT_REUSABLE  = (1<<12)  /* stack data for the routine is reusable */
 };
 
 enum DaoConstEvalMode
