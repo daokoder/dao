@@ -32,9 +32,7 @@ class BB : AA
 
 class CC : BB
 {
-	var    obj2 = 0C;
-
-	use routine BB( i = 0 );
+	var  obj2 = 0C;
 
 	routine Virt(){ io.writeln( "CC::Virt()", self ) }
 }

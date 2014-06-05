@@ -35,8 +35,6 @@ class CC : BB
 {
 	var    obj2 = 0C;
 
-	use routine BB( i = 0 );
-
 	routine Virt(){ io.writeln( "CC::Virt()", self ) }
 }
 
