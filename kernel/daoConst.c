@@ -128,6 +128,7 @@ static const char* const daoCtInfo[] =
 	"Method signature not matching",
 	"Constructor not defined",
 	"Invalid case statement",
+	"Case type not valid",
 	"Case value not constant",
 	"Case values not distinctive",
 	"Duplicated default case",

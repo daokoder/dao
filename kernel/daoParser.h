@@ -76,11 +76,12 @@ struct DaoParser
 
 	/* Stack of symbol tables for each level: */
 	DArray  *lookupTables; /* DArray<DMap<DString*,int>*> */
-	DArray  *switchTables;
-	DArray  *enumTypes; /* DArray<DaoType*> */
+	DArray  *switchTables; /* DArray<DMap<DaoValue*,DaoInode*>> */
+	DArray  *switchNames;  /* DArray<DString*>: (var name, invar name) */
+	DArray  *enumTypes;    /* DArray<DaoType*> */
 
-	DMap  *allConsts; /* DMap<DString*,int>: implicit and explict local constants; */
-	DMap  *initTypes; /* type holders @T from parameters and the up routine */
+	DMap  *allConsts;  /* DMap<DString*,int>: implicit and explict local constants; */
+	DMap  *initTypes;  /* type holders @T from parameters and the up routine */
 
 	short levelBase;
 	short lexLevel;

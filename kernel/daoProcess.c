@@ -2471,6 +2471,18 @@ DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 				return self->topFrame->codes + vmc[ opa->xEnum.value - min + 1 ].b;
 		}
 		return self->topFrame->codes + vmc->b;
+	}else if( vmc[1].c == DAO_CASE_TYPES ){
+		int max = 0;
+		mid = NULL;
+		for(id=1; id<=vmc->c; id++){
+			int mt = DaoType_MatchValue( (DaoType*) cst[vmc[id].a], opa, NULL );
+			if( mt > max ){
+				mid = vmc + id;
+				max = mt;
+			}
+		}
+		if( mid ) return self->topFrame->codes + mid->b;
+		return self->topFrame->codes + vmc->b;
 	}else if( vmc[1].c == DAO_CASE_UNORDERED ){
 		for(id=1; id<=vmc->c; id++){
 			mid = vmc + id;

@@ -1427,7 +1427,7 @@ int DaoMacro_Preprocess( DaoParser *self )
 			DArray_Erase( self->tokens, start, end-start );
 			tokens = self->tokens->items.pToken;
 		}else if( tki == DKEY_USE && tki2 == DKEY_SYNTAX ){
-			if( DaoParser_CheckNameToken( self, start+1, to, DAO_INVALID_USE_STMT, start ) ==0 ) return -1;
+			if( DaoParser_CheckNameToken( self, start+1, to, DAO_INVALID_STATEMENT, start ) ==0 ) return -1;
 			DaoNamespace_ImportMacro( ns, & tokens[start+1]->string );
 			DArray_Erase( self->tokens, start, end-start+1 );
 			tokens = self->tokens->items.pToken;

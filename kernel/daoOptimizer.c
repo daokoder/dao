@@ -2272,6 +2272,7 @@ enum DaoTypingErrorCode
 	DTE_PARAM_WRONG_NUMBER ,
 	DTE_PARAM_WRONG_TYPE ,
 	DTE_PARAM_WRONG_NAME ,
+	DTE_INVALID_TYPE_CASE ,
 	DTE_CONST_WRONG_MODIFYING ,
 	DTE_ROUT_NOT_IMPLEMENTED
 };
@@ -2301,6 +2302,7 @@ static const char*const DaoTypingErrorString[] =
 	"Invalid number of parameter",
 	"Invalid parameter type",
 	"Invalid parameter name",
+	"Invalid type case",
 	"Constant or invariable cannot be modified",
 	"Call to un-implemented function"
 };
@@ -4219,6 +4221,14 @@ int DaoInferencer_HandleSwitch( DaoInferencer *self, DaoInode *inode, int i, DMa
 	DaoVmCodeX *vmc = (DaoVmCodeX*) inode;
 	DaoType *at = types[opa];
 	int j, k;
+
+	if( inodes[i+1]->c == DAO_CASE_TYPES ){
+		for(k=1; k<=opc; k++){
+			DaoType *tt = (DaoType*) routConsts->items.pValue[ inodes[i+k]->a ];
+			if( tt->type != DAO_TYPE ) return DaoInferencer_Error( self, DTE_INVALID_TYPE_CASE );
+		}
+		return 1;
+	}
 
 	j = 0;
 	for(k=1; k<=opc; k++){

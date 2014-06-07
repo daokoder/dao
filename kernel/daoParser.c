@@ -210,6 +210,7 @@ DaoParser* DaoParser_New()
 	self->strings = DArray_New( DAO_DATA_STRING );
 	self->lookupTables = DArray_New( DAO_DATA_MAP );
 	self->switchTables = DArray_New( DAO_DATA_MAP );
+	self->switchNames = DArray_New( DAO_DATA_STRING );
 	self->enumTypes = DArray_New(0);
 	self->routCompilable = DArray_New(0);
 	self->routReInferable = DArray_New(0);
@@ -242,6 +243,7 @@ void DaoParser_Delete( DaoParser *self )
 	DArray_Delete( self->toks );
 	DArray_Delete( self->lookupTables );
 	DArray_Delete( self->switchTables );
+	DArray_Delete( self->switchNames );
 	DArray_Delete( self->enumTypes );
 	DArray_Delete( self->scopeOpenings );
 	DArray_Delete( self->scopeClosings );
@@ -336,6 +338,7 @@ void DaoParser_Reset( DaoParser *self )
 	DArray_Clear( self->decoParams );
 	DArray_Clear( self->decoParams2 );
 	DArray_Clear( self->switchTables );
+	DArray_Clear( self->switchNames );
 	DArray_Clear( self->enumTypes );
 	DArray_Clear( self->vmCodes );
 	DArray_Clear( self->routCompilable );
@@ -387,7 +390,7 @@ static void DaoParser_PopLevel( DaoParser *self )
 	DMap_Reset( self->lookupTables->items.pMap[ self->lexLevel ] );
 	self->lexLevel --;
 }
-DMap* DaoParser_GetCurrentDataMap( DaoParser *self )
+DMap* DaoParser_CurrentSymbolTable( DaoParser *self )
 {
 	return self->lookupTables->items.pMap[ self->lexLevel ];
 }
@@ -1136,7 +1139,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 			MAP_Insert( routine->body->localVarType, module->regCount, type );
 		}
 		DString_SetChars( mbs, "self" );
-		MAP_Insert( DaoParser_GetCurrentDataMap( module ), mbs, module->regCount );
+		MAP_Insert( DaoParser_CurrentSymbolTable( module ), mbs, module->regCount );
 		DaoParser_PushRegister( module );
 		routine->parCount ++;
 		selfpar = 1;
@@ -1173,7 +1176,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 				tk = DArray_Append( routine->body->defLocals, tokens[i] );
 				DaoToken_Set( tk, 1, 0, routine->parCount, NULL );
 			}
-			MAP_Insert( DaoParser_GetCurrentDataMap( module ), tks, module->regCount );
+			MAP_Insert( DaoParser_CurrentSymbolTable( module ), tks, module->regCount );
 			DaoParser_PushRegister( module );
 			routine->parCount ++;
 			if( (routine->attribs & DAO_ROUT_DECORATOR) && i == start + 1 ){
@@ -2232,13 +2235,13 @@ static void DaoParser_SetupSwitch( DaoParser *self, DaoInode *opening )
 	DaoValue *key, **cst = self->routine->routConsts->value->items.pValue;
 	DaoInode *node = opening->jumpTrue;
 	DaoInode *it2, *aux;
-	DMap *map;
+	DMap *table;
 	DNode *iter;
 	int i, min, max, count, direct = 0, casemode = 0;
 	min = max = 0;
 	count = 0;
-	map = self->switchTables->items.pMap[ node->b ];
-	for(iter=DMap_First(map); iter !=NULL; iter=DMap_Next(map, iter) ){
+	table = self->switchTables->items.pMap[ node->b ];
+	for(iter=DMap_First(table); iter !=NULL; iter=DMap_Next(table, iter) ){
 		key = cst[iter->value.pInode->a];
 		if( key->type == DAO_INTEGER ){
 			if( count == 0 ) min = max = key->xInteger.value;
@@ -2247,22 +2250,23 @@ static void DaoParser_SetupSwitch( DaoParser *self, DaoInode *opening )
 			count ++;
 		}
 	}
-	if( count == map->size && count > 0.75 * (max - min) ){
+	if( count == table->size && count > 0.75 * (max - min) ){
 		DaoValue temp = {DAO_INTEGER};
 		key = (DaoValue*) & temp;
 		for(i=min+1; i<max; i++){
 			key->xInteger.value = i;
-			if( DMap_Find( map, key ) ==NULL ) DMap_Insert( map, key, NULL );
+			if( DMap_Find( table, key ) ==NULL ) DMap_Insert( table, key, NULL );
 		}
 		direct = 1;
 	}
-	node->c = map->size;
-	aux = node;
 	casemode = direct ? DAO_CASE_TABLE : DAO_CASE_ORDERED;
-	for(iter=DMap_First(map); iter !=NULL; iter=DMap_Next(map, iter) ){
+	if( node->c ) casemode = DAO_CASE_TYPES;
+	node->c = table->size;
+	aux = node;
+	for(iter=DMap_First(table); iter !=NULL; iter=DMap_Next(table, iter) ){
 		it2 = DaoParser_NewNode( self );
 		it2->code = DVM_CASE;
-		it2->c = casemode; /* mark integer jump table */
+		it2->c = casemode; /* mark case mode; */
 		if( iter->value.pInode ){
 			it2->a = iter->value.pInode->a;
 			it2->jumpTrue = iter->value.pInode;
@@ -2528,7 +2532,7 @@ static int DaoParser_Preprocess( DaoParser *self )
 static int DaoParser_AddToScope( DaoParser *self, DString *name, DaoValue *value, DaoType *abtype, int store )
 {
 	DNode *it;
-	DMap *symtable = DaoParser_GetCurrentDataMap( self );
+	DMap *symtable = DaoParser_CurrentSymbolTable( self );
 	DaoValue *exist = NULL;
 	DaoRoutine *mroutine = NULL;
 	DaoRoutine *routine = self->routine;
@@ -2582,7 +2586,7 @@ static int DaoParser_CheckNameToken( DaoParser *self, int start, int to, int eco
 	DaoToken **tokens = self->tokens->items.pToken;
 	if( start >to || tokens[start]->type != DTOK_IDENTIFIER ){
 		DaoParser_Error( self, DAO_TOKEN_NEED_NAME, & tokens[start]->string );
-		DaoParser_Error2( self, ecode, estart, start, 1 );
+		if( ecode ) DaoParser_Error2( self, ecode, estart, start, 1 );
 		return 0;
 	}
 	return 1;
@@ -2599,7 +2603,7 @@ static int DaoParser_AddConstant( DaoParser *self, DString *name, DaoValue *valu
 		DaoNamespace_AddConst( myNS, name, value, perm );
 	}else{
 		daoint id = routine->routConsts->value->size;
-		MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, LOOKUP_BIND_LC(id) );
+		MAP_Insert( DaoParser_CurrentSymbolTable( self ), name, LOOKUP_BIND_LC(id) );
 		DaoRoutine_AddConstant( routine, value );
 	}
 	/* TODO was defined warning: */
@@ -3422,10 +3426,12 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 	DaoEnode enode = {-1,0,0,NULL,NULL,NULL,NULL};
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoToken *ptok;
-	DMap *switchMap;
+	DMap *switchTable;
+	DString *switchName;
+	int switchType, switchNameType;
 	int regcount = self->regCount;
 	int cons = (vmSpace->options & DAO_OPTION_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
-	int i, k, rb, end, start = from, N = 0;
+	int i, k, lb, rb, end, start = from, N = 0;
 	int reg, reg1, cst = 0, topll = 0;
 	int colon, comma, last, errorStart, needName;
 	int storeType = 0, scopeType = 0;
@@ -3797,22 +3803,65 @@ DecoratorError:
 			start += 1 + DaoParser_AddScope2( self, start+1 );
 			continue;
 		case DKEY_SWITCH :
-			rb = DaoParser_FindOpenToken( self, DTOK_LB, start, -1, 1 );
-			if( rb < 0 ) return 0;
+			switchName = NULL;
+			switchNameType = 0;
+			switchType = 0;
+			lb = DaoParser_FindOpenToken( self, DTOK_LB, start, -1, 1 );
+			if( lb < 0 ) return 0;
 			rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
 			if( rb < 0 ) return 0;
-			reg1 = DaoParser_MakeArithTree( self, start+2, rb-1, & cst );
+			k = start + 2;
+			if( tokens[k]->name == DKEY_VAR || tokens[k]->name == DKEY_INVAR ){
+				if( DaoParser_CheckNameToken( self, k, rb, 0, k ) == 0 ) return 0;
+				switchNameType = tokens[k]->name;
+				switchName = & tokens[k+1]->string;
+				self->curToken = k + 2;
+				if( DaoParser_CheckTokenType( self, DTOK_ASSN, "=" ) ==0 ) return 0;
+				k += 3;
+			}
+			reg1 = DaoParser_MakeArithTree( self, k, rb-1, & cst );
 			if( reg1 < 0 ) return 0;
+			if( tokens[rb+1]->name == DKEY_TYPE ){
+				if( switchName == NULL && (lb+2) == rb ) switchName = & tokens[lb+1]->string;
+				switchType = 1;
+				rb += 1;
+			}
 			self->curToken = rb + 1;
 			if( DaoParser_CheckTokenType( self, DTOK_LCB, "{" ) ==0 ) return 0;
-			switchMap = DMap_New( DAO_DATA_VALUE, 0 );
+
 			closing = DaoParser_AddCode( self, DVM_LABEL, 0, 1, DVM_SWITCH, start, 0,0 );
 			opening = DaoParser_AddScope( self, DVM_BRANCH, closing );
-			DaoParser_AddCode( self, DVM_SWITCH, reg1, self->switchTables->size, 0, start,0,rb );
+
+			k = 0;
+			switchTable = DMap_New( DAO_DATA_VALUE, 0 );
+			if( switchType ){
+				k = self->switchNames->size + 1;
+				DString_Reset( self->string, 0 );
+				DArray_Append( self->switchNames, self->string );
+				DArray_Append( self->switchNames, self->string );
+				if( switchName != NULL ){
+					if( switchNameType == DKEY_VAR ){
+						DString_Assign( self->switchNames->items.pString[k-1], switchName );
+					}else if( switchNameType == DKEY_INVAR ){
+						DString_Assign( self->switchNames->items.pString[k], switchName );
+					}else{
+						DString_Assign( self->switchNames->items.pString[k-1], switchName );
+						DString_Assign( self->switchNames->items.pString[k], switchName );
+					}
+				}
+			}
+			if( switchType == 0 && switchNameType != 0 && switchName != NULL ){
+				int movetype = switchNameType == DKEY_VAR ? (1<<1) : (3<<1);
+				int reg = DaoParser_PushRegister( self );
+				DaoParser_PushLevel( self );
+				MAP_Insert( DaoParser_CurrentSymbolTable( self ), switchName, reg );
+				DaoParser_AddCode( self, DVM_MOVE, reg1, movetype|1, reg, start, 0, 0 );
+			}
+			DaoParser_AddCode( self, DVM_SWITCH, reg1, self->switchTables->size, k, start,0,rb );
 			opening->jumpTrue = self->vmcLast;
 			opening->jumpTrue->jumpFalse = closing;
-			DArray_Append( self->switchTables, switchMap );
-			DMap_Delete( switchMap );
+			DArray_Append( self->switchTables, switchTable );
+			DMap_Delete( switchTable );
 			start = 1 + rb + DaoParser_AddScope2( self, rb+1 );
 			DaoParser_PushLevel( self );
 			continue;
@@ -3844,7 +3893,25 @@ DecoratorError:
 				start += 2;
 				continue;
 			}
-			switchMap = self->switchTables->items.pMap[ opening->jumpTrue->b ];
+			switchTable = self->switchTables->items.pMap[ opening->jumpTrue->b ];
+			switchType = 0;
+			switchNameType = 0;
+			switchName = NULL;
+			if( opening->jumpTrue->c ){
+				int len1 = self->switchNames->items.pString[opening->jumpTrue->c-1]->size;
+				int len2 = self->switchNames->items.pString[opening->jumpTrue->c]->size;
+				switchType = 1;
+				if( len1 && len2 ){
+					switchName = self->switchNames->items.pString[opening->jumpTrue->c];
+					switchNameType = 0;
+				}else if( len1 ){
+					switchName = self->switchNames->items.pString[opening->jumpTrue->c-1];
+					switchNameType = DKEY_VAR;
+				}else if( len2 ){
+					switchName = self->switchNames->items.pString[opening->jumpTrue->c];
+					switchNameType = DKEY_INVAR;
+				}
+			}
 			colon = DaoParser_FindOpenToken( self, DTOK_COLON, start, -1, 1 );
 			comma = DaoParser_FindOpenToken( self, DTOK_COMMA, start, colon, 0 );
 			last = start + 1;
@@ -3853,6 +3920,33 @@ DecoratorError:
 				return 0;
 			}
 			if( comma < 0 ) comma = colon;
+			
+			if( switchType ){
+				DaoType *casetype = DaoParser_ParseType( self, last, colon-1, & k, NULL );
+				DNode *it;
+				int konst;
+				if( casetype == NULL ){
+					DaoParser_Error2( self, DAO_CASE_NOT_TYPE, start, to, 1 );
+					return 0;
+				}
+				if( k != colon ){
+					DaoParser_Error2( self, DAO_CASE_NOT_VALID, start, to, 1 );
+					return 0;
+				}
+				konst = DaoRoutine_AddConstant( routine, (DaoValue*) casetype );
+				DaoParser_AddCode( self, DVM_NOP, konst, 0, 0, last, 0, colon );
+				for(it=DMap_First(switchTable); it; it=DMap_Next(switchTable,it)){
+					DaoType *key = it->key.pType;
+					int bl = DaoType_MatchTo( casetype, key, NULL ) >= DAO_MT_EXACT;
+					bl |= DaoType_MatchTo( key, casetype, NULL ) >= DAO_MT_EXACT;
+					if( bl ){
+						DaoParser_Error2( self, DAO_CASE_DUPLICATED, start, colon, 1 );
+						return 0;
+					}
+				}
+				DMap_Insert( switchTable, casetype, self->vmcLast );
+				last = colon;
+			}
 			while( last < colon ){
 				DNode *it;
 				DaoEnode item = {-1,0,0,NULL,NULL,NULL,NULL};
@@ -3884,7 +3978,7 @@ DecoratorError:
 				DaoParser_PopRegisters( self, self->regCount - oldcount );
 				DaoParser_AddCode( self, DVM_NOP, item.konst, 0, 0, last, 0, colon );
 				value = DaoParser_GetVariable( self, LOOKUP_BIND_LC( item.konst ) );
-				for(it=DMap_First(switchMap); it; it=DMap_Next(switchMap,it)){
+				for(it=DMap_First(switchTable); it; it=DMap_Next(switchTable,it)){
 					DaoValue *key = it->key.pValue;
 					int bl = DaoValue_Compare( value, key ) == 0;
 					bl |= DaoValue_Compare( key, value ) == 0;
@@ -3893,7 +3987,7 @@ DecoratorError:
 						return 0;
 					}
 				}
-				DMap_Insert( switchMap, value, self->vmcLast );
+				DMap_Insert( switchTable, value, self->vmcLast );
 				if( self->curToken == colon ) break;
 				if( tokens[self->curToken]->name != DTOK_COMMA ){
 					DaoParser_Error2( self, DAO_CASE_NOT_VALID, start, colon, 1 );
@@ -3905,6 +3999,12 @@ DecoratorError:
 			}
 			DaoParser_AddCode( self, DVM_UNUSED, 0, 0, 0, start,0,0 );
 			DaoParser_PushLevel( self );
+			if( switchName != NULL ){
+				int movetype = switchNameType == DKEY_VAR ? (1<<1) : (3<<1);
+				int reg = DaoParser_PushRegister( self );
+				MAP_Insert( DaoParser_CurrentSymbolTable( self ), switchName, reg );
+				DaoParser_AddCode( self, DVM_MOVE, reg1, movetype|1, reg, start, 0, 0 );
+			}
 			start = colon + 1;
 			continue;
 		case DKEY_BREAK :
@@ -4094,7 +4194,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	if( explicit_store != 0 || lastok->type == DTOK_COLON ){
 		for(k=nameStart; k<self->toks->size; k++){
 			DString *name = & self->toks->items.pToken[k]->string;
-			DNode *node = MAP_Find( DaoParser_GetCurrentDataMap( self ), name );
+			DNode *node = MAP_Find( DaoParser_CurrentSymbolTable( self ), name );
 			if( node ) DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, name );
 		}
 		if( self->errors->size > errors ) return -1;
@@ -4496,16 +4596,16 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 		DaoParser_Error3( self, DAO_VARIABLE_OUT_OF_CONTEXT, tok->index );
 		return;
 	}
-	if( storeType != 0 && MAP_Find( DaoParser_GetCurrentDataMap( self ), name ) != NULL ){
+	if( storeType != 0 && MAP_Find( DaoParser_CurrentSymbolTable( self ), name ) != NULL ){
 		DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, name );
 		return;
 	}
 
 	if( (storeType & DAO_DECL_VAR) && (storeType & DAO_DECL_LOCAL) ){
-		if( MAP_Find( DaoParser_GetCurrentDataMap( self ), name ) == NULL ){
+		if( MAP_Find( DaoParser_CurrentSymbolTable( self ), name ) == NULL ){
 			int id = self->regCount;
 			if( abtp ) MAP_Insert( self->routine->body->localVarType, id, abtp );
-			MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, id );
+			MAP_Insert( DaoParser_CurrentSymbolTable( self ), name, id );
 			DaoParser_PushRegister( self );
 		}
 	}else if( storeType & DAO_DECL_MEMBER ){
@@ -4544,7 +4644,7 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 	}
 	found = DaoParser_GetRegister( self, tok );
 	if( found >= 0 ){
-		MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, found );
+		MAP_Insert( DaoParser_CurrentSymbolTable( self ), name, found );
 		return;
 	}
 	if( self->errors->size ) return;
@@ -4552,25 +4652,25 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 	if( storeType & DAO_DECL_STATIC ){
 		DaoVariable *var = DaoVariable_New( abtp ? abtp->value : NULL, abtp ? abtp : NULL );
 		int i = LOOKUP_BIND( DAO_STATIC_VARIABLE, 0, 0, routine->body->svariables->size );
-		MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, i );
+		MAP_Insert( DaoParser_CurrentSymbolTable( self ), name, i );
 		DArray_Append( routine->body->svariables, var );
 	}else{
 		int id = 0;
 		if( storeType & DAO_DECL_CONST ){
 			id = routine->routConsts->value->size;
-			MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, LOOKUP_BIND_LC(id) );
+			MAP_Insert( DaoParser_CurrentSymbolTable( self ), name, LOOKUP_BIND_LC(id) );
 			DaoRoutine_AddConstant( routine, dao_none_value );
 		}else{
 			id = self->regCount;
 			if( abtp ) MAP_Insert( self->routine->body->localVarType, id, abtp );
-			MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, id );
+			MAP_Insert( DaoParser_CurrentSymbolTable( self ), name, id );
 			DaoParser_PushRegister( self );
 		}
 		tok = DArray_Append( routine->body->defLocals, tok );
 		DaoToken_Set( tok, !(storeType & DAO_DECL_CONST), self->lexLevel, id, NULL );
 	}
 	found = DaoParser_GetRegister( self, tok );
-	MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, found );
+	MAP_Insert( DaoParser_CurrentSymbolTable( self ), name, found );
 }
 static int DaoParser_GetRegister2( DaoParser *self, DaoToken *nametok )
 {
@@ -4585,7 +4685,7 @@ static int DaoParser_GetRegister2( DaoParser *self, DaoToken *nametok )
 		DaoValue *it = DaoType_FindValueOnly( self->hostType, name );
 		if( it ){
 			i = routine->routConsts->value->size;
-			MAP_Insert( DaoParser_GetCurrentDataMap( self ), name, LOOKUP_BIND_LC(i) );
+			MAP_Insert( DaoParser_CurrentSymbolTable( self ), name, LOOKUP_BIND_LC(i) );
 			DaoRoutine_AddConstant( routine, it );
 			return LOOKUP_BIND_LC( i );
 		}
@@ -4637,7 +4737,7 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 				int id = LOOKUP_ID( i );
 				DaoValue *cst = self->outerParser->routine->routConsts->value->items.pValue[id];
 				i = LOOKUP_BIND_LC( routine->routConsts->value->size );
-				MAP_Insert( DaoParser_GetCurrentDataMap( self ), & nametok->string, i );
+				MAP_Insert( DaoParser_CurrentSymbolTable( self ), & nametok->string, i );
 				DaoRoutine_AddConstant( routine, cst );
 			}else{
 				int tokpos = nametok->index;
@@ -4647,7 +4747,7 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 				DArray_Append( self->uplocs, tokpos );
 				DArray_Append( self->uplocs, tokpos );
 				i = LOOKUP_BIND( DAO_STATIC_VARIABLE, 0, 0, routine->body->svariables->size );
-				MAP_Insert( DaoParser_GetCurrentDataMap( self ), & nametok->string, i );
+				MAP_Insert( DaoParser_CurrentSymbolTable( self ), & nametok->string, i );
 				DArray_Append( routine->body->svariables, DaoVariable_New(NULL,NULL) );
 			}
 			return i;
@@ -4846,7 +4946,7 @@ static int DaoParser_Import( DaoParser *self, DaoNamespace *mod, DNode *it )
 	DaoValue *value = NULL;
 	DaoNamespace *NS = self->nameSpace;
 	DaoRoutine *routine = self->routine;
-	DMap *symtable = DaoParser_GetCurrentDataMap( self );
+	DMap *symtable = DaoParser_CurrentSymbolTable( self );
 	DString *name = it->key.pString;
 	int ret = 0;
 
@@ -4875,7 +4975,7 @@ static int DaoParser_ParseImportStatement( DaoParser *self, int start, int to )
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoNamespace *mod, *NS = self->nameSpace;
 	DaoRoutine *routine = self->routine;
-	DMap *symtable = DaoParser_GetCurrentDataMap( self );
+	DMap *symtable = DaoParser_CurrentSymbolTable( self );
 	int error = DAO_INVALID_IMPORT_STMT;
 	int estart = start;
 	int import = start;
@@ -4889,9 +4989,15 @@ static int DaoParser_ParseImportStatement( DaoParser *self, int start, int to )
 	if( start < 0 || value == NULL || value->type != DAO_NAMESPACE ) goto InvalidImport;
 
 	mod = (DaoNamespace*) value;
-	tok1 = (start+1) <= to ? tokens[start+1]->name : 0;
-	tok2 = (start+2) <= to ? tokens[start+2]->name : 0;
-	if( tok1 == DTOK_DOT && tok2 == DTOK_LCB ){
+	tok1 = (start+1) <= to ? tokens[start+1]->type : 0;
+	tok2 = (start+2) <= to ? tokens[start+2]->type : 0;
+	if( tok1 == DTOK_DOT && tok2 == DTOK_IDENTIFIER ){
+		if( DaoParser_CheckNameToken( self, start+2, to, error, import ) == 0 ) return -1;
+		it = DMap_Find( mod->lookupTable, & tokens[start+2]->string );
+		if( it == NULL ) goto InvalidImport;
+		if( DaoParser_Import( self, mod, it ) == 0 ) goto InvalidImport;
+		start += 2;
+	}else if( tok1 == DTOK_DOT && tok2 == DTOK_LCB ){
 		int i = start + 3;
 		while( i <= to ){
 			int ret = 0;
@@ -4905,6 +5011,8 @@ static int DaoParser_ParseImportStatement( DaoParser *self, int start, int to )
 			i += 2;
 		}
 		start = i+1;
+	}else if( tok1 == DTOK_DOT ){
+		goto InvalidImport;
 	}else if( self->levelBase == 0 ){
 		DaoNamespace_AddParent( NS, mod );
 	}else{
@@ -5426,7 +5534,7 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 						goto ErrorParsing;
 					}
 					type = DaoNamespace_MakeType( NS, name->chars, DAO_PAR_NAMED, (DaoValue*)type, NULL, 0 );
-					MAP_Insert( DaoParser_GetCurrentDataMap(parser), name, parser->regCount );
+					MAP_Insert( DaoParser_CurrentSymbolTable(parser), name, parser->regCount );
 					offset += 1;
 				}
 				DaoRoutine_AddConstant( rout, NULL ); /* no default parameter; */
@@ -6121,7 +6229,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 				sect = DaoParser_AddCode( self, DVM_SECT, self->regCount, 0,0, start+1, 0,0 );
 				label = jump->jumpTrue = DaoParser_AddCode( self, DVM_LABEL, 0,0,0,rb,0,0 );
 				DaoParser_AddScope( self, DVM_LBRA, NULL );
-				varFunctional = DaoParser_GetCurrentDataMap( self );
+				varFunctional = DaoParser_CurrentSymbolTable( self );
 				start += 1;
 				regCount = self->regCount;
 				if( tokens[start]->name == DTOK_LSB ){
