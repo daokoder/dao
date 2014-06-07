@@ -3426,9 +3426,10 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 	DaoEnode enode = {-1,0,0,NULL,NULL,NULL,NULL};
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoToken *ptok;
+	DaoType *casetype;
 	DMap *switchTable;
 	DString *switchName;
-	int switchType, switchNameType;
+	int switchType, switchNameType, caseConst;
 	int regcount = self->regCount;
 	int cons = (vmSpace->options & DAO_OPTION_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
 	int i, k, lb, rb, end, start = from, N = 0;
@@ -3921,10 +3922,12 @@ DecoratorError:
 			}
 			if( comma < 0 ) comma = colon;
 			
+			casetype = NULL;
+			caseConst = 0;
 			if( switchType ){
-				DaoType *casetype = DaoParser_ParseType( self, last, colon-1, & k, NULL );
 				DNode *it;
 				int konst;
+				casetype = DaoParser_ParseType( self, last, colon-1, & k, NULL );
 				if( casetype == NULL ){
 					DaoParser_Error2( self, DAO_CASE_NOT_TYPE, start, to, 1 );
 					return 0;
@@ -3933,8 +3936,8 @@ DecoratorError:
 					DaoParser_Error2( self, DAO_CASE_NOT_VALID, start, to, 1 );
 					return 0;
 				}
-				konst = DaoRoutine_AddConstant( routine, (DaoValue*) casetype );
-				DaoParser_AddCode( self, DVM_NOP, konst, 0, 0, last, 0, colon );
+				caseConst = DaoRoutine_AddConstant( routine, (DaoValue*) casetype );
+				DaoParser_AddCode( self, DVM_NOP, caseConst, 0, 0, last, 0, colon );
 				for(it=DMap_First(switchTable); it; it=DMap_Next(switchTable,it)){
 					DaoType *key = it->key.pType;
 					int bl = DaoType_MatchTo( casetype, key, NULL ) >= DAO_MT_EXACT;
@@ -4003,7 +4006,13 @@ DecoratorError:
 				int movetype = switchNameType == DKEY_VAR ? (1<<1) : (3<<1);
 				int reg = DaoParser_PushRegister( self );
 				MAP_Insert( DaoParser_CurrentSymbolTable( self ), switchName, reg );
-				DaoParser_AddCode( self, DVM_MOVE, reg1, movetype|1, reg, start, 0, 0 );
+				if( casetype ){
+					int reg2 = DaoParser_PushRegister( self );
+					DaoParser_AddCode( self, DVM_CAST, reg1, caseConst, reg2, start, 0, 0 );
+					DaoParser_AddCode( self, DVM_MOVE, reg2, movetype|1, reg, start, 0, 0 );
+				}else{
+					DaoParser_AddCode( self, DVM_MOVE, reg1, movetype|1, reg, start, 0, 0 );
+				}
 			}
 			start = colon + 1;
 			continue;
