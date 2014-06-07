@@ -3232,7 +3232,7 @@ static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 InvIndex:
 		DaoProcess_RaiseError( proc, "Index::Range", NULL );
 	}
-	if( ec ) DaoProcess_RaiseException( proc, daoExceptionName[ec], NULL, NULL );
+	if( ec ) DaoProcess_RaiseException( proc, daoExceptionNames[ec], NULL, NULL );
 }
 static void DaoTupleCore_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, DaoValue *value )
 {
@@ -3251,7 +3251,7 @@ static void DaoTupleCore_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 	}else{
 		ec = DAO_ERROR_INDEX;
 	}
-	if( ec ) DaoProcess_RaiseException( proc, daoExceptionName[ec], NULL, NULL );
+	if( ec ) DaoProcess_RaiseException( proc, daoExceptionNames[ec], NULL, NULL );
 }
 static void DaoTupleCore_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N )
 {
@@ -3745,7 +3745,8 @@ DaoException* DaoException_New( DaoType *type )
 	DaoCstruct_Init( (DaoCstruct*)self, type );
 	self->callers = DArray_New( DAO_DATA_VALUE );
 	self->lines = DArray_New(0);
-	self->info = DString_New();
+	self->title = DString_New();
+	self->summary = DString_New();
 	self->data = NULL;
 	DaoException_InitByType( self, type );
 	return self;
@@ -3754,7 +3755,8 @@ void DaoException_Delete( DaoException *self )
 {
 	DaoCstruct_Free( (DaoCstruct*)self );
 	GC_DecRC( self->data );
-	DString_Delete( self->info );
+	DString_Delete( self->title );
+	DString_Delete( self->summary );
 	DArray_Delete( self->callers );
 	DArray_Delete( self->lines );
 	dao_free( self );
@@ -3772,8 +3774,8 @@ void DaoException_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *
 }
 
 static void Dao_Exception_Get_name( DaoProcess *proc, DaoValue *p[], int n );
-static void Dao_Exception_Get_info( DaoProcess *proc, DaoValue *p[], int n );
-static void Dao_Exception_Set_info( DaoProcess *proc, DaoValue *p[], int n );
+static void Dao_Exception_Get_summary( DaoProcess *proc, DaoValue *p[], int n );
+static void Dao_Exception_Set_summary( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Get_data( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Getf( DaoProcess *proc, DaoValue *p[], int n );
@@ -3789,18 +3791,18 @@ static DaoFuncItem dao_Exception_Meths[] =
 	// See also the built-in method recover().
 	*/
 #if 0
-	{ Dao_Exception_New,   "Exception( info = \"\" )=>Exception" },
+	{ Dao_Exception_New,   "Exception( summary = \"\" )=>Exception" },
 	{ Dao_Exception_New22, "Exception( data: any )=>Exception" },
 #endif
-	{ Dao_Exception_Get_name, ".name( self: Exception )=>string" },
-	{ Dao_Exception_Get_info, ".info( self: Exception )=>string" },
-	{ Dao_Exception_Set_info, ".info=( self: Exception, info: string)" },
-	{ Dao_Exception_Get_data, ".data( self: Exception )=>any" },
-	{ Dao_Exception_Set_data, ".data=( self: Exception, data: any)" },
+	{ Dao_Exception_Get_name,    ".name( self: Exception )=>string" },
+	{ Dao_Exception_Get_summary, ".summary( self: Exception )=>string" },
+	{ Dao_Exception_Set_summary, ".summary=( self: Exception, summary: string)" },
+	{ Dao_Exception_Get_data,    ".data( self: Exception )=>any" },
+	{ Dao_Exception_Set_data,    ".data=( self: Exception, data: any)" },
 	/* for testing or demonstration */
 	{ Dao_Exception_Get_name, "typename( self: Exception )=>string" },
-	{ Dao_Exception_Get_info, "serialize( self: Exception )=>string" },
-	{ Dao_Exception_Get_info, "operator cast( self: Exception )=>string" },
+	{ Dao_Exception_Get_summary, "serialize( self: Exception )=>string" },
+	{ Dao_Exception_Get_summary, "operator cast( self: Exception )=>string" },
 #ifdef DEBUG
 	{ Dao_Exception_Getf, ".( self: Exception, name: string )=>any" },
 	{ Dao_Exception_Setf, ".=( self: Exception, name: string, value: any)" },
@@ -3819,15 +3821,15 @@ static void Dao_Exception_Get_name( DaoProcess *proc, DaoValue *p[], int n )
 	DaoException* self = (DaoException*) p[0];
 	DaoProcess_PutChars( proc, self->ctype->typer->name );
 }
-static void Dao_Exception_Get_info( DaoProcess *proc, DaoValue *p[], int n )
+static void Dao_Exception_Get_summary( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoException* self = (DaoException*) p[0];
-	DaoProcess_PutString( proc, self->info );
+	DaoProcess_PutString( proc, self->summary );
 }
-static void Dao_Exception_Set_info( DaoProcess *proc, DaoValue *p[], int n )
+static void Dao_Exception_Set_summary( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoException* self = (DaoException*) p[0];
-	DString_Assign( self->info, p[1]->xString.value );
+	DString_Assign( self->summary, p[1]->xString.value );
 }
 static void Dao_Exception_Get_data( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -3854,7 +3856,7 @@ static void Dao_Exception_New( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoType *type = proc->topFrame->routine->routHost;
 	DaoException *self = (DaoException*)DaoException_New( type );
-	if( n ) DString_Assign( self->info, p[0]->xString.value );
+	if( n ) DString_Assign( self->summary, p[0]->xString.value );
 	DaoProcess_PutValue( proc, (DaoValue*)self );
 }
 static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n )
@@ -3868,7 +3870,7 @@ static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n )
 
 static DaoFuncItem dao_ExceptionWarning_Meths[] =
 {
-	{ Dao_Exception_New, "Warning( info = \"\" )=>Warning" },
+	{ Dao_Exception_New, "Warning( summary = \"\" )=>Warning" },
 	{ Dao_Exception_New22, "Warning( data: any )=>Warning" },
 	{ NULL, NULL }
 };
@@ -3881,7 +3883,7 @@ DaoTypeBase dao_ExceptionWarning_Typer =
 
 static DaoFuncItem dao_ExceptionError_Meths[] =
 {
-	{ Dao_Exception_New, "Error( info = \"\" )=>Error" },
+	{ Dao_Exception_New, "Error( summary = \"\" )=>Error" },
 	{ Dao_Exception_New22, "Error( data: any )=>Error" },
 	{ NULL, NULL }
 };
@@ -3902,20 +3904,20 @@ DaoType* DaoException_Setup( DaoNamespace *ns )
 const char* DaoException_GetName( int id )
 {
 	if( id < 0 || id >= ENDOF_BASIC_EXCEPT ) return "NotAnException";
-	return daoExceptionName[id];
+	return daoExceptionNames[id];
 }
 void DaoException_InitByType( DaoException *self, DaoType *type )
 {
 	int i;
 	for(i=DAO_EXCEPTION; i<ENDOF_BASIC_EXCEPT; i++){
-		if( strcmp( type->typer->name, daoExceptionName[i] ) == 0 ){
-			DString_SetChars( self->info, daoExceptionInfo[i] );
+		if( strcmp( type->typer->name, daoExceptionNames[i] ) == 0 ){
+			DString_SetChars( self->title, daoExceptionTitles[i] );
 			return;
 		}
 	}
 }
 
-void DaoException_Init( DaoException *self, DaoProcess *proc, const char *info, DaoValue *dat )
+void DaoException_Init( DaoException *self, DaoProcess *proc, const char *summary, DaoValue *dat )
 {
 	DaoVmCodeX **annotCodes;
 	DaoVmCode *vmc = proc->activeCode;
@@ -3929,7 +3931,7 @@ void DaoException_Init( DaoException *self, DaoProcess *proc, const char *info, 
 	annotCodes = rout->body->annotCodes->items.pVmc;
 	if( vmc && rout->body->vmCodes->size ) line = annotCodes[id]->line;
 
-	if( info && info[0] != 0 ) DString_SetChars( self->info, info );
+	if( summary && summary[0] != 0 ) DString_SetChars( self->summary, summary );
 	GC_ShiftRC( dat, self->data );
 	self->data = dat;
 
@@ -3965,14 +3967,13 @@ static void DString_Format( DString *self, int width, int head )
 	memset( buffer, ' ', head+1 );
 	buffer[0] = '\n';
 	buffer[head+1] = '\0';
-	n = self->size - head;
-	if( self->size <= width ) return;
-	while( n > k ){
-		i = k * (n / k) + head;
-		j = 0;
-		while( (i+j) < self->size && isspace( self->chars[i+j] ) ) j += 1;
-		DString_InsertChars( self, buffer, i, j, head+1 );
-		n = i - head - 1;
+	for(i=0,k=0; i<self->size; ++i,++k){
+		if( k >= width ){
+			DString_InsertChars( self, buffer, i, 0, head+1 );
+			k = 0;
+		}else if( self->chars[i] == '\n' ){
+			k = 0;
+		}
 	}
 }
 void DaoException_Print( DaoException *self, DaoStream *stream )
@@ -3987,9 +3988,14 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 	DaoStream_WriteChars( ss, "]] --- " );
 	h = sstring->size;
 	if( h > 40 ) h = 40;
-	DaoStream_WriteString( ss, self->info );
+	DaoStream_WriteString( ss, self->title );
 	DaoStream_WriteChars( ss, ":\n" );
+	DaoStream_WriteString( stream, sstring );
+	DString_Clear( sstring );
+	DaoStream_WriteString( ss, self->summary );
+	DString_Chop( sstring, 1 );
 	DString_Format( sstring, w, h );
+	DaoStream_WriteChars( ss, "\n" );
 	DaoStream_WriteString( stream, sstring );
 	DString_Clear( sstring );
 

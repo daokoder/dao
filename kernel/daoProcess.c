@@ -6223,7 +6223,7 @@ struct DaoRandGenCache
 	int     mtIndex;
 };
 
-DaoRandGenCache* DaoRandGenCache_New()
+static DaoRandGenCache* DaoRandGenCache_New()
 {
 	int i;
 	DaoRandGenCache *self = (DaoRandGenCache*) dao_malloc( sizeof(DaoRandGenCache) );
@@ -6235,11 +6235,11 @@ DaoRandGenCache* DaoRandGenCache_New()
 	}
 	return self;
 }
-void DaoRandGenCache_Delete( DaoRandGenCache *self )
+static void DaoRandGenCache_Delete( DaoRandGenCache *self )
 {
 	free( self );
 }
-void DaoRandGenCache_GenerateMT( DaoRandGenCache *self )
+static void DaoRandGenCache_GenerateMT( DaoRandGenCache *self )
 {
 	uint_t i, *mtnums = self->mtBuffer;
 	for(i=1; i<DAO_MTCOUNT; ++i){
@@ -6248,7 +6248,7 @@ void DaoRandGenCache_GenerateMT( DaoRandGenCache *self )
 		if( y % 2 ) mtnums[i] ^= 0x9908b0df;
 	}
 }
-uint_t DaoRandGenCache_ExtractMT( DaoRandGenCache *self )
+static uint_t DaoRandGenCache_ExtractMT( DaoRandGenCache *self )
 {
 	uint_t y;
 	if( self->mtIndex == 0 ) DaoRandGenCache_GenerateMT( self );

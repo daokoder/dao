@@ -43,7 +43,7 @@ io.writeln( std.about( Test ) );
 Test( AA() )
 Test( BB() )
 
-routine Test2( data : int | float | double | string )
+routine Test2( data: int|float|double|string )
 {
 # get 1-based index of its type in the disjoint union type:
 	switch( data ?< type(int|float|double|string) ){
@@ -55,7 +55,7 @@ routine Test2( data : int | float | double | string )
 }
 
 Test2( 1 );
-Test2( 1.0 );
+Test2( 1.0F );
 Test2( 1.0D );
 Test2( "abc" );
 

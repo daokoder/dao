@@ -1367,7 +1367,20 @@ static void DaoNamespace_ImportMacro( DaoNamespace *self, DString *lang )
 	}
 	DString_Delete( name2 );
 }
-#define DKEY_SYNTAX  DAO_NOKEY2
+#define DKEY_USE     DAO_NOKEY2
+#define DKEY_SYNTAX  (DAO_NOKEY2+1)
+static int DaoMacro_IsKeyword( DaoToken *token, const char *keyword )
+{
+	if( token->name != DTOK_IDENTIFIER ) return 0;
+	return strcmp( token->string.chars, keyword ) == 0;
+}
+static int DaoMacro_GetTokenName( DaoToken *token )
+{
+	if( token->name != DTOK_IDENTIFIER ) return token->name;
+	if( DaoMacro_IsKeyword( token, "use" ) ) return DKEY_USE;
+	if( DaoMacro_IsKeyword( token, "syntax" ) ) return DKEY_SYNTAX;
+	return token->name;
+}
 int DaoMacro_Preprocess( DaoParser *self )
 {
 	DaoNamespace *ns = self->nameSpace;
@@ -1392,15 +1405,9 @@ int DaoMacro_Preprocess( DaoParser *self )
 		printf("At tokPos : %i, %s\n", tokens[start]->index, tokens[ start ]->string->chars );
 #endif
 
-		tki = tokens[start]->name;
-		tki2 = start+1 < self->tokens->size ? tokens[start+1]->name : 0;
-		if( tki == DTOK_IDENTIFIER && strcmp( tokens[start]->string.chars, "syntax" ) == 0 ){
-			tki = DKEY_SYNTAX;
-		}
-		if( tki2 == DTOK_IDENTIFIER && strcmp( tokens[start+1]->string.chars, "syntax" ) == 0 ){
-			tki2 = DKEY_SYNTAX;
-		}
-		if( tki == DKEY_SYNTAX && (start == 0 || tokens[start-1]->name != DKEY_USE) ){
+		tki = DaoMacro_GetTokenName( tokens[start] );
+		tki2 = start+1 < self->tokens->size ? DaoMacro_GetTokenName( tokens[start+1] ) : 0;
+		if( tki == DKEY_SYNTAX && (start == 0 || DaoMacro_GetTokenName( tokens[start-1] ) != DKEY_USE) ){
 			right = DaoParser_ParseMacro( self, start );
 			/*
 			   printf( "macro : %s %i\n", tokens[start+2]->string->chars, right );

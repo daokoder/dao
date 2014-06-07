@@ -86,7 +86,7 @@ static const char* const daoCtInfo[] =
 	"Invalid function decoration",
 	"Invalid parent class",
 	"Invalid mixin class",
-	"Invalid use statement",
+	"Invalid import statement",
 	"Invalid type aliasing",
 	"Invalid interface binding",
 	"Invalid type define",
@@ -158,7 +158,7 @@ const char* getRtInfo( int tp )
 	return "";
 }
 
-const char* const daoExceptionName[] =
+const char* const daoExceptionNames[] =
 {
 	"Exception" ,
 	"Exception::Warning" ,
@@ -182,7 +182,7 @@ const char* const daoExceptionName[] =
 	"Exception::Warning::Syntax" ,
 	"Exception::Warning::Value"
 };
-const char* const daoExceptionInfo[] =
+const char* const daoExceptionTitles[] =
 {
 	"certain exception" ,
 	"certain warning" ,

@@ -1847,7 +1847,7 @@ static void DaoCdata_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 			return;
 		}
 		if( (error = DaoProcess_PushCallable( proc, func, self, & pars, npar )) != 0 ){
-			DaoProcess_RaiseException( proc, daoExceptionName[error], NULL, NULL );
+			DaoProcess_RaiseException( proc, daoExceptionNames[error], NULL, NULL );
 		}
 	}else{
 		DaoProcess_PutValue( proc, p );

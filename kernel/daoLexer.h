@@ -114,8 +114,8 @@ enum DaoTokNames
 enum DaoKeyNames
 {
 	DAO_NOKEY1 = DTOK_NONE2 ,
-	DKEY_USE ,
 	DKEY_LOAD ,
+	DKEY_IMPORT ,
 	DKEY_AS ,
 	DKEY_CLASS ,
 	DKEY_ROUTINE ,

@@ -72,16 +72,6 @@ a = True;
 
 
 @[test()]
-use enum Bool
-a = True
-@[test()]
-@[test()]
-Bool::True
-@[test()]
-
-
-
-@[test()]
 flag = Bool.False + Bool.True
 @[test()]
 @[test()]

@@ -65,28 +65,28 @@ struct DaoParser
 	*/
 	DArray  *vmCodes;
 
-	DaoInode *vmcBase;  /* the node before the ::vmcFirst; */
-	DaoInode *vmcFirst; /* the first instruction node; */
-	DaoInode *vmcLast;  /* the last instruction node; */
-	DaoInode *vmcFree;  /* the first node in the free list; */
+	DaoInode *vmcBase;   /* the node before the ::vmcFirst; */
+	DaoInode *vmcFirst;  /* the first instruction node; */
+	DaoInode *vmcLast;   /* the last instruction node; */
+	DaoInode *vmcFree;   /* the first node in the free list; */
 	DaoInode *vmcValue;  /* the last instruction node; */
-	int vmcCount;
 
-	/* Stack of maps: mapping local variable names to virtual register ids at each level: */
-	DArray  *localDataMaps; /* DArray<DMap<DString*,int>*> */
-	DArray  *switchMaps;
+	int    vmcCount;
+	int    regCount;
+
+	/* Stack of symbol tables for each level: */
+	DArray  *lookupTables; /* DArray<DMap<DString*,int>*> */
+	DArray  *switchTables;
 	DArray  *enumTypes; /* DArray<DaoType*> */
+
+	DMap  *allConsts; /* DMap<DString*,int>: implicit and explict local constants; */
+	DMap  *initTypes; /* type holders @T from parameters and the up routine */
 
 	short levelBase;
 	short lexLevel;
 	short needConst;
 	short evalMode;
 	short numSections;
-
-	DMap  *allConsts; /* DMap<DString*,int>: implicit and explict local constants; */
-
-	int    regCount;
-	DMap  *initTypes; /* type holders @T from parameters and the up routine */
 
 	int noneValue;
 	int integerZero;
@@ -148,7 +148,7 @@ struct DaoParser
 	DString   *string;
 	DString   *string2;
 	DString   *str;
-	DMap      *lvm; /* <DString*,int>, for localVarMap; */
+	DMap      *table; /* <DString*,int>, for lookupTables; */
 	DArray    *toks;
 
 	DArray  *typeItems;
@@ -160,7 +160,6 @@ struct DaoParser
 
 DAO_DLL DaoParser* DaoParser_New();
 DAO_DLL void DaoParser_Delete( DaoParser *self );
-
 DAO_DLL void DaoParser_Reset( DaoParser *self );
 
 DAO_DLL int DaoParser_LexCode( DaoParser *self, const char *source, int replace );
@@ -169,7 +168,6 @@ DAO_DLL int DaoParser_ParseScript( DaoParser *self );
 DAO_DLL int DaoParser_ParseRoutine( DaoParser *self );
 
 DAO_DLL DaoType* DaoParser_ParseTypeName( const char *type, DaoNamespace *ns, DaoClass *cls );
-DAO_DLL int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop/*=-1*/ );
 DAO_DLL DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DArray *types );
 
 #endif

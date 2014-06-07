@@ -391,7 +391,7 @@ enum DaoCtInfoId
 	DAO_INVALID_FUNCTION_DECORATION ,
 	DAO_INVALID_PARENT_CLASS ,
 	DAO_INVALID_MIXIN_CLASS ,
-	DAO_INVALID_USE_STMT ,
+	DAO_INVALID_IMPORT_STMT ,
 	DAO_INVALID_TYPE_ALIAS ,
 	DAO_INVALID_BINDING ,
 	DAO_INVALID_TYPEDEF ,
@@ -456,8 +456,8 @@ enum DaoCtInfoId
 extern const char* getCtInfo( int tp );
 extern const char* getRtInfo( int tp );
 
-extern const char* const daoExceptionName[];
-extern const char* const daoExceptionInfo[];
+extern const char* const daoExceptionNames[];
+extern const char* const daoExceptionTitles[];
 
 extern const char* const coreTypeNames[];
 extern const char *const daoBitBoolArithOpers[];

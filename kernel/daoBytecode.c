@@ -67,7 +67,7 @@ static const char* const dao_asm_names[] =
 	"ASM_CODE"      ,
 	"ASM_END"       ,
 	"ASM_LOAD"      ,
-	"ASM_USE"       ,
+	"ASM_IMPORT"    ,
 	"ASM_VERBATIM"  ,
 	"ASM_CONST"     ,
 	"ASM_STATIC"    ,
@@ -1004,7 +1004,7 @@ DaoByteBlock* DaoByteBlock_AddInterfaceBlock( DaoByteBlock *self, DaoInterface *
 	return block;
 }
 
-DaoByteBlock* DaoByteBlock_EncodeLoadStmt( DaoByteBlock *self, DString *mod, DString *ns )
+DaoByteBlock* DaoByteBlock_EncodeLoad( DaoByteBlock *self, DString *mod, DString *ns )
 {
 	DaoByteBlock *fileBlock = DaoByteBlock_EncodeString( self, mod );
 	DaoByteBlock *nameBlock = ns ? DaoByteBlock_EncodeString( self, ns ) : NULL;
@@ -1013,12 +1013,16 @@ DaoByteBlock* DaoByteBlock_EncodeLoadStmt( DaoByteBlock *self, DString *mod, DSt
 	if( ns ) DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin+2, nameBlock );
 	return newBlock;
 }
-DaoByteBlock* DaoByteBlock_EncodeUseStmt( DaoByteBlock *self, DaoValue *value, int tag )
+DaoByteBlock* DaoByteBlock_EncodeImport( DaoByteBlock *self, DaoValue *mod, DString *names[3] )
 {
-	DaoByteBlock *valueBlock = DaoByteBlock_FindObjectBlock( self, value );
-	DaoByteBlock *newBlock = DaoByteBlock_NewBlock( self, DAO_ASM_USE );
-	DaoByteCoder_EncodeUInt16( newBlock->begin, tag );
-	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin + 2, valueBlock );
+	int i;
+	DaoByteBlock *modBlock = DaoByteBlock_FindObjectBlock( self, mod );
+	DaoByteBlock *newBlock = DaoByteBlock_NewBlock( self, DAO_ASM_IMPORT );
+	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin, modBlock );
+	for(i=0; i<3 && names[i] != NULL; ++i){
+		DaoByteBlock *nameBlock = DaoByteBlock_EncodeString( self, names[i] );
+		DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin + 2*(i+1), nameBlock );
+	}
 	return newBlock;
 }
 DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, int code, int opb, int mode, DaoType *type )
@@ -2067,8 +2071,18 @@ static void DaoByteCoder_AddToScope( DaoByteCoder *self, DaoByteBlock *block, DS
 	}else if( block->parent->type == DAO_ASM_CLASS ){
 		DaoClass *klass = DaoValue_CastClass( block->parent->value );
 		DaoRoutine *rout = DaoValue_CastRoutine( value );
-		if( rout && rout->routHost == klass->objType && (rout->attribs & DAO_ROUT_INITOR) ){
-			DaoClass_AddConst( klass, klass->classRoutine->routName, value, perm );
+		if( rout && rout->routHost == klass->objType ){
+			if( rout->attribs & DAO_ROUT_INITOR ){
+				DaoClass_AddConst( klass, klass->classRoutine->routName, value, perm );
+			}else if( rout->attribs & DAO_ROUT_CASTOR ){
+				if( klass->castRoutines == NULL ){
+					klass->castRoutines = DaoRoutines_New( self->nspace, klass->objType, NULL);
+					GC_IncRC( klass->castRoutines );
+				}
+				DRoutines_Add( klass->castRoutines->overloads, rout );
+			}else{
+				DaoClass_AddConst( klass, name, value, perm );
+			}
 		}else{
 			DaoClass_AddConst( klass, name, value, perm );
 		}
@@ -2882,42 +2896,21 @@ static void DaoByteCoder_LoadModule( DaoByteCoder *self, DaoByteBlock *block )
 		DaoNamespace_AddConst( self->nspace, mod->value->xString.value, (DaoValue*) ns, 0 );
 	}
 }
-static void DaoByteCoder_DecodeUseStmt( DaoByteCoder *self, DaoByteBlock *block )
+static void DaoByteCoder_DecodeImport( DaoByteCoder *self, DaoByteBlock *block )
 {
-	uint_t A = DaoByteCoder_DecodeUInt16( block->begin );
-	uint_t B = DaoByteCoder_DecodeUInt16( block->begin+2 );
-	DaoByteBlock *value = DaoByteCoder_LookupValueBlock( self, block, B );
+	DaoByteBlock *modBlock;
+	uint_t A, B, C, D;
+
+	DaoByteCoder_DecodeChunk2222( block->begin, & A, & B, & C, & D );
+	modBlock = DaoByteCoder_LookupValueBlock( self, block, A );
 
 	if( self->error ) return;
-	if( value->value->type == DAO_NAMESPACE ){
-		DaoNamespace_AddParent( self->nspace, (DaoNamespace*) value->value );
-	}else if( value->value->type == DAO_ROUTINE ){
-		DaoRoutine *routine = (DaoRoutine*) value->value;
-		if( !(routine->attribs & DAO_ROUT_INITOR) ) goto InvalidUseConstructor;
-		if( routine->routHost == NULL ) goto InvalidUseConstructor;
-		if( block->parent->type == DAO_ASM_CLASS ){
-			DaoClass *host = DaoValue_CastClass( block->parent->value );
-			if( host == NULL ) goto InvalidUseConstructor;
-			if( DaoType_ChildOf( host->objType, routine->routHost ) == 0 ) goto InvalidUseConstructor;
-			DRoutines_Add( host->classRoutines->overloads, routine );
-		}else{
-			goto InvalidUseConstructor;
-		}
-		return;
-InvalidUseConstructor:
-		DaoByteCoder_Error( self, block, "Invalid constructor using!" );
-	}else if( value->value->type == DAO_TYPE && value->value->xType.tid == DAO_ENUM ){
-		DaoValue item = {DAO_INTEGER};
-		DaoType *type = (DaoType*) value->value;
-		DNode *it;
-		if( type->mapNames == NULL ) goto InvalidUse;
-		for(it=DMap_First(type->mapNames); it; it=DMap_Next(type->mapNames,it)){
-			item.xInteger.value = it->value.pInt;
-			DaoByteCoder_AddToScope( self, block, it->key.pString, & item );
-		}
-	}else{
-InvalidUse:
+	if( modBlock->value->type != DAO_NAMESPACE ){
 		DaoByteCoder_Error( self, block, "Invalid use statement!" );
+		return;
+	}
+	if( A == 0 ){
+		DaoNamespace_AddParent( self->nspace, (DaoNamespace*) modBlock->value );
 	}
 }
 static void DaoByteCoder_DecodeVerbatim( DaoByteCoder *self, DaoByteBlock *block )
@@ -2987,7 +2980,7 @@ static void DaoByteCoder_DecodeBlock( DaoByteCoder *self, DaoByteBlock *block )
 	case DAO_ASM_CONSTS    : DaoByteCoder_DecodeRoutineConsts( self, block ); break;
 	case DAO_ASM_TYPES     : DaoByteCoder_DecodeRoutineTypes( self, block ); break;
 	case DAO_ASM_CODE      : DaoByteCoder_DecodeRoutineCode( self, block ); break;
-	case DAO_ASM_USE       : DaoByteCoder_DecodeUseStmt( self, block ); break;
+	case DAO_ASM_IMPORT    : DaoByteCoder_DecodeImport( self, block ); break;
 	case DAO_ASM_TYPEINVAR : DaoByteCoder_DecodeInvarType( self, block ); break;
 	case DAO_ASM_TYPEDEF   : DaoByteCoder_DecodeTypeAlias( self, block ); break;
 	case DAO_ASM_TYPEOF    : DaoByteCoder_DecodeTypeOf( self, block ); break;

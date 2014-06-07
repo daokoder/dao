@@ -1095,24 +1095,16 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 		dest = self->constants->items.pConst[id];
 		vdest = dest->value;
 		if( vdest->type != DAO_ROUTINE || value->type != DAO_ROUTINE ) return -1;
-		if( pm > pm2 ) node->value.pInt = LOOKUP_BIND( sto, pm, 0, id );
-		if( vdest->xRoutine.overloads == NULL || vdest->xRoutine.nameSpace != self ){
-			/* Add individual entry for the existing function: */
-			if( vdest->xRoutine.nameSpace == self ) DArray_Append( self->constants, dest );
 
-			mroutine = DaoRoutines_New( self, NULL, (DaoRoutine*) dest->value );
-			dest = DaoConstant_New( (DaoValue*) mroutine );
-			dest->value->xBase.trait |= DAO_VALUE_CONST;
-			GC_ShiftRC( dest, self->constants->items.pConst[id] );
-			self->constants->items.pConst[id] = dest;
-		}
+		/* For different overloadings at different definition poinst: */
+		mroutine = DaoRoutines_New( self, NULL, (DaoRoutine*) vdest );
+		mroutine->trait |= DAO_VALUE_CONST;
+		node->value.pInt = LOOKUP_BIND( sto, pm, 0, self->constants->size );
+		DArray_Append( self->constants, DaoConstant_New( (DaoValue*) mroutine ) );
 		if( value->xRoutine.overloads ){
-			DaoRoutines_Import( (DaoRoutine*) dest->value, value->xRoutine.overloads );
+			DaoRoutines_Import( mroutine, value->xRoutine.overloads );
 		}else{
-			DRoutines_Add( dest->value->xRoutine.overloads, (DaoRoutine*) value );
-			/* Add individual entry for the new function: */
-			DArray_Append( self->constants, DaoConstant_New( value ) );
-			value->xBase.trait |= DAO_VALUE_CONST;
+			DRoutines_Add( mroutine->overloads, (DaoRoutine*) value );
 		}
 		return node->value.pInt;
 	}else{
@@ -1320,13 +1312,11 @@ void DaoNamespace_UpdateLookupTable( DaoNamespace *self )
 			}
 			if( search ) continue;
 			if( st == DAO_GLOBAL_CONSTANT ){
-				DaoValue *value = ns->constants->items.pConst[id]->value;
-				if( value->type == DAO_ROUTINE ){
-					DaoNamespace_AddConst( self, name, value, pm );
+				DaoConstant *cst = ns->constants->items.pConst[id];
+				if( cst->value->type == DAO_ROUTINE ){
+					DaoNamespace_AddConst( self, name, cst->value, pm );
 					continue;
 				}
-			}
-			if( st == DAO_GLOBAL_CONSTANT ){
 				MAP_Insert( self->lookupTable, name, LOOKUP_BIND( st, pm, up+1, self->constants->size ) );
 				DArray_Append( self->constants, ns->constants->items.pConst[id] );
 			}else{

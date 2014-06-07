@@ -30,12 +30,6 @@ bl : Bool = $True
 io.writeln( bl )
 
 
-# Expose the constants of Bool to the current namespace:
-use enum Bool
-ibl = True
-
-
-
 # The following is equivalent to:
 # enum CardSuit { Club, Diamond, Heart, Spade }
 type CardSuit = enum<Club,Diamond,Heart,Spade>

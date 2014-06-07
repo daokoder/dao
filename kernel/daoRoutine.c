@@ -85,16 +85,7 @@ DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *in
 		GC_IncRC( self->nameSpace );
 	}
 	if( init->overloads ){
-		DArray *routs = init->overloads->routines;
-		int i, n = routs->size;
-		for(i=0; i<n; i++){
-			DaoRoutine *routine = routs->items.pRoutine[i];
-			if( routine->attribs & DAO_ROUT_PRIVATE ){
-				if( routine->routHost && routine->routHost != host ) continue;
-				if( routine->routHost == NULL && routine->nameSpace != nspace ) continue;
-			}
-			DRoutines_Add( self->overloads, routine );
-		}
+		DaoRoutines_Import( self, init->overloads );
 	}else{
 		DRoutines_Add( self->overloads, init );
 	}

@@ -102,33 +102,54 @@ static void MATH_tanh( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void MATH_rand( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoProcess_PutDouble( proc, p[0]->xDouble.value * rand() / ( RAND_MAX + 1.0 ) );
+	DaoProcess_PutDouble( proc, p[0]->xDouble.value * DaoProcess_Random( proc ) );
 }
 static void MATH_srand( DaoProcess *proc, DaoValue *p[], int N )
 {
 	srand( (unsigned int)p[0]->xInteger.value );
 	rand();
 }
+
+typedef struct DaoGaussRandCache DaoGaussRandCache;
+struct DaoGaussRandCache
+{
+	int     iset;
+	double  gset;
+};
+static DaoGaussRandCache* DaoGaussRandCache_New()
+{
+	DaoGaussRandCache *self = (DaoGaussRandCache*) dao_calloc( 1, sizeof(DaoGaussRandCache) );
+	return self;
+}
+static void DaoGaussRandCache_Delete( DaoGaussRandCache *self )
+{
+	dao_free( self );
+}
+
 static void MATH_rand_gaussian( DaoProcess *proc, DaoValue *p[], int N )
 {
-	static int iset = 0;
-	static double gset;
 	double fac, rsq, v1, v2;
 	double R = p[0]->xDouble.value;
+	DaoGaussRandCache *cache = (DaoGaussRandCache*) DaoProcess_GetAuxData( proc, DaoGaussRandCache_Delete );
 
-	if( iset ==0 ){
+	if( cache == NULL ){
+		cache = DaoGaussRandCache_New();
+		DaoProcess_SetAuxData( proc, DaoGaussRandCache_Delete, cache );
+	}
+
+	if( cache->iset ==0 ){
 		do{
-			v1 = 2.0 * ( rand() / (RAND_MAX+1.0) ) -1.0;
-			v2 = 2.0 * ( rand() / (RAND_MAX+1.0) ) -1.0;
+			v1 = 2.0 * ( DaoProcess_Random( proc ) ) -1.0;
+			v2 = 2.0 * ( DaoProcess_Random( proc ) ) -1.0;
 			rsq = v1*v1 + v2*v2 ;
 		} while( rsq >= 1.0 || rsq == 0.0 );
 		fac = sqrt( -2.0 * log( rsq ) / rsq );
-		gset = v1*fac;
-		iset = 1;
+		cache->gset = v1*fac;
+		cache->iset = 1;
 		DaoProcess_PutDouble( proc, R*v2*fac );
 	} else {
-		iset = 0;
-		DaoProcess_PutDouble( proc, R*gset );
+		cache->iset = 0;
+		DaoProcess_PutDouble( proc, R*cache->gset );
 	}
 }
 static void MATH_pow( DaoProcess *proc, DaoValue *p[], int N )

@@ -270,14 +270,8 @@
 // load statement:
 // ASM_LOAD(1B): File-Path-Index(2B), Optional-Name-Index(2B), Zeros(4B);
 //
-// use namespace:
-// ASM_USE(1B): DAO_NAMESPACE(2B), Value-Index(2B), Zeros(4B);
-//
-// use enum constants:
-// ASM_USE(1B): DAO_ENUM(2B), Type-Index(2B), Zeros(4B);
-//
-// use constructors:
-// ASM_USE(1B): DAO_ROUTINE(2B), Routine-Index(2B), Zeros(4B);
+// import from namespace/module:
+// ASM_IMPORT(1B): Mod-Index(2B), Name-Index(2B), Name-Index(2B), Name-Index(2B);
 //
 // verbatim:
 // ASM_VERBATIM(1B): Tag-Index(2B), Mode-Index(2B), Text-Index(2B), LineNum(2B);
@@ -341,7 +335,7 @@ enum DaoAuxOpcode
 	DAO_ASM_CODE      ,
 	DAO_ASM_END       ,
 	DAO_ASM_LOAD      ,
-	DAO_ASM_USE       ,
+	DAO_ASM_IMPORT    ,
 	DAO_ASM_VERBATIM  ,
 	DAO_ASM_CONST     ,
 	DAO_ASM_STATIC    ,
@@ -445,8 +439,8 @@ DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value );
 DaoByteBlock* DaoByteBlock_EncodeCtype( DaoByteBlock *self, DaoCtype *ctype, DaoCtype *generic, DaoType **types, int n );
 DaoByteBlock* DaoByteBlock_EncodeTypeAlias( DaoByteBlock *self, DaoType *type, DaoType *aliased, DString *alias );
 DaoByteBlock* DaoByteBlock_EncodeTypeOf( DaoByteBlock *self, DaoType *type, DaoValue *value );
-DaoByteBlock* DaoByteBlock_EncodeLoadStmt( DaoByteBlock *self, DString *mod, DString *ns );
-DaoByteBlock* DaoByteBlock_EncodeUseStmt( DaoByteBlock *self, DaoValue *value, int tag );
+DaoByteBlock* DaoByteBlock_EncodeLoad( DaoByteBlock *self, DString *mod, DString *ns );
+DaoByteBlock* DaoByteBlock_EncodeImport( DaoByteBlock *self, DaoValue *mod, DString *names[3] );
 DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *target );
 DaoByteBlock* DaoByteBlock_EncodeVerbatim( DaoByteBlock *self, DString *tag, DString *mode, DString *text, int line );
 DaoByteBlock* DaoByteBlock_EncodeDecorators( DaoByteBlock *self, DArray *decos, DArray *pars );

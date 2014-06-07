@@ -243,7 +243,8 @@ struct DaoException
 
 	DArray     *callers;
 	DArray     *lines;
-	DString    *info;
+	DString    *title;
+	DString    *summary;
 	DaoValue   *data;
 };
 
