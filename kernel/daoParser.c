@@ -4024,6 +4024,10 @@ DecoratorError:
 				DaoParser_Error3( self, DAO_STATEMENT_OUT_OF_CONTEXT, start );
 				return 0;
 			}
+			if( opening->next->code == DVM_SWITCH ){
+				DaoParser_Error3( self, DAO_STATEMENT_OUT_OF_CONTEXT, start );
+				return 0;
+			}
 			inode->jumpTrue = tki == DKEY_BREAK ? opening->jumpFalse : opening->next;
 			if( inode->jumpTrue->code == DVM_SWITCH ) inode->jumpTrue = inode->jumpTrue->jumpFalse;
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
@@ -5096,6 +5100,7 @@ int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
 			DArray_Append( tuples, reg ); /* item */
 			DArray_Append( tuples, elem ); /* first token */
 			DArray_Append( tuples, semic-1 ); /* last token */
+			DArray_Append( tuples, & tok->string ); /* name */
 
 			elem = semic + 1;
 			semic = DaoParser_FindOpenToken( self, DTOK_SEMCO, elem, rb, 0 );
@@ -5105,7 +5110,7 @@ int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
 		L = tokens[rb]->line;
 		fromCode = self->vmcCount;
 		firstIter = self->regCount;
-		for(k=0, t=tuples->items.pInt; k<tuples->size; k+=4, t+=4){
+		for(k=0, t=tuples->items.pInt; k<tuples->size; k+=5, t+=5){
 			daoint first = t[2], last = t[3];
 			DaoParser_AddCode( self, DVM_ITER, t[0], 0, self->regCount, first, first+1,last );
 			DaoParser_PushRegister( self );
@@ -5115,21 +5120,29 @@ int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
 		opening = DaoParser_AddScope( self, DVM_LOOP, closing );
 
 		reg = DaoParser_PushRegister( self );
-		DaoParser_AddCode( self, DVM_ITER, firstIter, tuples->size/4, reg, start, in, rb );
+		DaoParser_AddCode( self, DVM_ITER, firstIter, tuples->size/5, reg, start, in, rb );
 		DaoParser_AddCode( self, DVM_TEST, reg, fromCode, 0, start, in, rb );
 		opening->jumpTrue = self->vmcLast;
 		self->vmcLast->jumpFalse = closing;
 		reg = DaoParser_PushRegister( self );
 		DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, 0, reg, start, in, rb );
-		for(k=0, t=tuples->items.pInt; k<tuples->size; k+=4, t+=4){
+		for(k=0, t=tuples->items.pInt; k<tuples->size; k+=5, t+=5){
 			daoint first = t[2], last = t[3];
-			daoint iter = firstIter + (k/4);
+			daoint iter = firstIter + (k/5);
 			DaoParser_AddCode( self, DVM_GETI, t[0], iter, self->regCount, first, first+1, last );
-			DaoParser_AddCode( self, DVM_MOVE, self->regCount, movetype, t[1], first, 0, first );
+			DaoParser_AddCode( self, DVM_MOVE, self->regCount, movetype&0x3, t[1], first, 0, first );
 			DaoParser_PushRegister( self );
 		}
 
-		start = rb+1;
+		if( store & DAO_DECL_INVAR ){
+			for(k=0; k<tuples->size; k+=5){
+				DString *name = tuples->items.pString[k+4];
+				int opa = tuples->items.pInt[k+1];
+				int reg = DaoParser_PushRegister( self );
+				MAP_Insert( DaoParser_CurrentSymbolTable( self ), name, reg );
+				DaoParser_AddCode( self, DVM_MOVE, opa, movetype, reg, rb, 0, 0 );
+			}
+		}
 		start = 1 + rb + DaoParser_AddScope2( self, rb+1 );
 		DArray_Delete( tuples );
 		return start;
@@ -5184,7 +5197,7 @@ CleanUp:
 			}
 			if( step < 0 || last <0 ) return -1;
 		}
-		DaoParser_AddCode( self, DVM_MOVE, first, movetype, loc, start+2, eq, colon1-1 );
+		DaoParser_AddCode( self, DVM_MOVE, first, movetype&0x3, loc, start+2, eq, colon1-1 );
 		switch( st ){
 		case DAO_LOCAL_VARIABLE  :
 			if( up ){
@@ -5219,7 +5232,12 @@ CleanUp:
 		opening->jumpTrue = self->vmcLast;
 		self->vmcLast->jumpFalse = closing;
 		DaoParser_PushRegister( self );
-		goto AddScope;
+		if( store & DAO_DECL_INVAR ){
+			int reg = DaoParser_PushRegister( self );
+			MAP_Insert( DaoParser_CurrentSymbolTable( self ), & tok->string, reg );
+			DaoParser_AddCode( self, DVM_MOVE, loc, movetype, reg, rb, 0, 0 );
+		}
+		return 1 + rb + DaoParser_AddScope2( self, rb+1 );
 	}
 	semic1 = DaoParser_FindOpenToken( self, DTOK_SEMCO, start+2, rb, 1 );
 	semic2 = DaoParser_FindOpenToken( self, DTOK_SEMCO, semic1+1, rb, 1 );
