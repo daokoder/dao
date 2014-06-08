@@ -106,7 +106,7 @@ DaoClass* DaoClass_New()
 	self->className = DString_New();
 
 	self->lookupTable = DHash_New( DAO_DATA_STRING, 0 );
-	self->ovldRoutMap = DHash_New( DAO_DATA_STRING, 0 );
+	self->methSignatures = DHash_New( DAO_DATA_STRING, 0 );
 	self->abstypes    = DMap_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 	self->constants   = DArray_New( DAO_DATA_VALUE );
 	self->variables   = DArray_New( DAO_DATA_VALUE );
@@ -143,7 +143,7 @@ void DaoClass_Delete( DaoClass *self )
 	GC_DecRC( self->castRoutines );
 	DMap_Delete( self->abstypes );
 	DMap_Delete( self->lookupTable );
-	DMap_Delete( self->ovldRoutMap );
+	DMap_Delete( self->methSignatures );
 	DArray_Delete( self->constants );
 	DArray_Delete( self->variables );
 	DArray_Delete( self->instvars );
@@ -1406,11 +1406,11 @@ int DaoClass_AddType( DaoClass *self, DString *name, DaoType *tp )
 }
 void DaoClass_AddOverloadedRoutine( DaoClass *self, DString *signature, DaoRoutine *rout )
 {
-	MAP_Insert( self->ovldRoutMap, signature, rout );
+	MAP_Insert( self->methSignatures, signature, rout );
 }
 DaoRoutine* DaoClass_GetOverloadedRoutine( DaoClass *self, DString *signature )
 {
-	DNode *node = MAP_Find( self->ovldRoutMap, signature );
+	DNode *node = MAP_Find( self->methSignatures, signature );
 	if( node ) return (DaoRoutine*) node->value.pValue;
 	return NULL;
 }

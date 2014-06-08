@@ -430,30 +430,7 @@ int DaoParser_ParseTemplateParams( DaoParser *self, int start, int end, DArray *
 DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DArray *types, int *co );
 DaoType* DaoCdata_NewType( DaoTypeBase *typer );
 
-int DaoParser_FindScopedConstant2( DaoParser *self, DaoValue **value, int start, int stop, int type );
-
-static int DaoParser_ParseScopedName( DaoParser *self, DaoValue **scope, DaoValue **value, int start )
-{
-	DaoToken **tokens = self->tokens->items.pToken;
-
-	if( (start+1) >= self->tokens->size || tokens[start+1]->type != DTOK_COLON2 ) return start;
-
-	start = DaoParser_FindScopedConstant2( self, scope, start, DTOK_LCB, DAO_EXPRLIST_SCOPE );
-	if( start < 0 ) return -1;
-
-	if( tokens[++start]->name != DTOK_COLON2 ) goto ErrorWasDefined;
-	if( tokens[++start]->name != DTOK_IDENTIFIER ) goto InvalidName;// XXX
-	if( (start+1) >= self->tokens->size || tokens[start+1]->type != DTOK_COLON2 ) return start;
-
-	DaoParser_Error2( self, DAO_UNDEFINED_SCOPE_NAME, start, start, 0 );
-	return -1;
-ErrorWasDefined:
-	DaoParser_Error2( self, DAO_SYMBOL_WAS_DEFINED, start, start, 0 );
-	return -1;
-InvalidName:
-	DaoParser_Error2( self, DAO_TOKEN_NEED_NAME, start, start+2, 0 );
-	return -1;
-}
+int DaoParser_ParseMaybeScopeConst( DaoParser *self, DaoValue **scope, DaoValue **value, int start, int stop, int type );
 
 static void DaoValue_AddType( DaoValue *self, DString *name, DaoType *type )
 {
@@ -501,12 +478,15 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	parser->nameSpace = self;
 	parser->routine = self->constEvalRoutine;
 	parser->evalMode |= DAO_CONST_EVAL_GETVALUE;
+
 	if( ! DaoLexer_Tokenize( parser->lexer, name, 0 ) ) goto Error;
-	if( parser->tokens->size == 0 ) goto Error;
 	tokens = parser->tokens->items.pToken;
 	n = parser->tokens->size - 1;
+
+	if( parser->tokens->size == 0 ) goto Error;
 	DArray_Clear( parser->errors );
-	if( (k = DaoParser_ParseScopedName( parser, & scope, & value, 0 )) <0 ) goto Error;
+	k = DaoParser_ParseMaybeScopeConst( parser, &scope, &value, 0, 0, DAO_EXPRLIST_SCOPE );
+	if( k < 0 ) goto Error;
 	if( k == 0 && n ==0 ) goto Finalize; /* single identifier name; */
 	if( scope && (tid=scope->type) != DAO_CTYPE && tid != DAO_CLASS && tid != DAO_NAMESPACE ){
 		DaoParser_Error2( parser, DAO_UNDEFINED_SCOPE_NAME, k-2, k-2, 0 );
@@ -1091,10 +1071,10 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 		sto = LOOKUP_ST( node->value.pInt );
 		pm2 = LOOKUP_PM( node->value.pInt );
 		id = LOOKUP_ID( node->value.pInt );
-		if( sto != DAO_GLOBAL_CONSTANT ) return -1;
+		if( sto != DAO_GLOBAL_CONSTANT ) return -DAO_CTW_WAS_DEFINED;
 		dest = self->constants->items.pConst[id];
 		vdest = dest->value;
-		if( vdest->type != DAO_ROUTINE || value->type != DAO_ROUTINE ) return -1;
+		if( vdest->type != DAO_ROUTINE || value->type != DAO_ROUTINE ) return -DAO_CTW_WAS_DEFINED;
 
 		/* For different overloadings at different definition poinst: */
 		mroutine = DaoRoutines_New( self, NULL, (DaoRoutine*) vdest );

@@ -77,7 +77,7 @@ struct DaoClass
 
 	/* Routines with overloading signatures: */
 	/* They are inserted into constants, no refCount updating for this. */
-	DMap  *ovldRoutMap; /* <DString*,DaoRoutine*> */
+	DMap  *methSignatures; /* <DString*,DaoRoutine*> */
 
 	DaoRoutine  *classRoutine; /* Default class constructor. */
 	DaoRoutine  *classRoutines; /* All explicit constructors; GC handled in constants; */

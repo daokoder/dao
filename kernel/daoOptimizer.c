@@ -4583,7 +4583,8 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 
 		k = defs2->size;
 		DaoRoutine_PassParamTypes( rout, bt, tp, argc, code, defs2 );
-		if( rout != routine && defs2->size && (defs2->size > k || rout->routType->aux->xType.tid == DAO_UDT) ){
+		/* rout->body->vmCodes->size is zero for declared but unimplemented routines: */
+		if( rout != routine && defs2->size && (defs2->size > k || rout->routType->aux->xType.tid == DAO_UDT) && (rout->body == NULL || rout->body->vmCodes->size) ){
 			DaoRoutine *orig = rout, *rout2 = rout;
 			if( rout->original ) rout = orig = rout->original;
 

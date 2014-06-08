@@ -1453,7 +1453,6 @@ static void DaoType_TrySpecializeMethods( DaoType *self )
 static void DaoType_TrySetupMethods( DaoType *self )
 {
 	DaoTypeCore *core = self->typer->core;
-	DaoTypeKernel *kernel = self->kernel;
 	if( core->kernel == NULL ) return;
 	if( core->kernel->SetupMethods ){
 		core->kernel->SetupMethods( core->kernel->nspace, self->typer );
@@ -1487,7 +1486,7 @@ DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 	DNode *node;
 
 	DaoType_TrySetupMethods( self );
-	if( self->kernel == NULL ) return NULL;
+	if( self->kernel == NULL || self->kernel->methods == NULL ) return NULL;
 	node = DMap_Find( self->kernel->methods, name );
 	if( node ) return node->value.pRoutine;
 	return NULL;
