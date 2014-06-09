@@ -21,8 +21,8 @@ class Klass
 	var name = 'abc';
 
 	routine Klass( ){ index = 789; }
-	routine Klass( i : int, s : string ){ index = i; name = s; }
-	routine Klass( tup : tuple<int,string> ){index = tup[0]; name = tup[1]; }
+	routine Klass( i: int, s: string ){ index = i; name = s; }
+	routine Klass( tup: tuple<int,string> ){ index = tup[0]; name = tup[1]; }
 	routine serialize(){ return index, name }
 }
 object = Klass( 456, 'def' );

@@ -1,7 +1,7 @@
 load dataframe
 
 # Create a 2D matrix:
-matrix = [ [ -1.0D : -1 : 8] : 1.51 : 16 ]
+matrix = array<double>( 16 ){ [i] [ -1.0D : -1 : 8] + 1.51*i }
 
 # Create a 2D dataframe from the matrix:
 dframe2d = DataFrame( matrix )
@@ -29,8 +29,13 @@ io.writeln( dframe2d )
 # Update one cell:
 dframe2d[0,1] = 1000000.23
 
+col = [0:100:9]
+col.transpose()
+col2 = array<int>(9){ [i] [100*i] }
+io.writeln( col, col2 )
+
 # Update one column:
-dframe2d[1:9,2] += [[0]:100:9]
+dframe2d[1:9,2] += col
 
 # Add the first column to the second:
 dframe2d[:,1] += dframe2d[:,0]
@@ -57,7 +62,7 @@ dframe2d[1:5,:3].ScanColumns { [value,column]
 
 
 # Create a 3D matrix:
-matrix3d = [ matrix : 1 : 3 ]
+matrix3d = array<double>(3){ [i] matrix + i }
 matrix3d.permute( [ 2, 1, 0 ] )
 
 # Create 3D dataframe:

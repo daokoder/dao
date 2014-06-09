@@ -1069,12 +1069,13 @@ routine ParseCode( source : string, snamespace="", lang="", fname : string="", i
 
 		case $pat_usercst :
 			 tks = part.capture( pat_usercst );
-			 if( map_user_types.find( tks[1] ) == none ) skip;
-			 utp = map_user_types[ tks[1] ];
-			 if( % tks[3] ){
-				 constCdataPtr.append( ( snamespace, utp, tks[4], inExtFile ) );
-			 }else{
-				 constCdata.append( ( snamespace, utp, tks[4], inExtFile ) );
+			 if( map_user_types.find( tks[1] ) != none ){
+				 utp = map_user_types[ tks[1] ];
+				 if( % tks[3] ){
+					 constCdataPtr.append( ( snamespace, utp, tks[4], inExtFile ) );
+				 }else{
+					 constCdata.append( ( snamespace, utp, tks[4], inExtFile ) );
+				 }
 			 }
 
 		case $pat_funct :

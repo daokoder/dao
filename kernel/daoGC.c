@@ -45,7 +45,7 @@
 
 
 #ifdef DAO_TRACE_ADDRESS
-#define DAO_TRACE_ADDRESS ((DaoValue*)0x1003f9f40)
+#define DAO_TRACE_ADDRESS ((DaoValue*)0x101249920)
 void DaoGC_TraceValue( DaoValue *value )
 {
 	if( value == DAO_TRACE_ADDRESS ){
@@ -817,11 +817,11 @@ void DaoGC_DecRC( DaoValue *value )
 }
 void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
 {
-	if( up == down ) return;
 #ifdef DAO_TRACE_ADDRESS
 	DaoGC_TraceValue( up );
 	DaoGC_TraceValue( down );
 #endif
+	if( up == down ) return;
 	if( up && up->type >= DAO_ENUM ) up->xGC.cycRefCount ++;
 	if( gcWorker.concurrent ){
 		int bl = 0;
@@ -852,6 +852,9 @@ void DaoGC_TryInvoke()
 
 void DaoGC_IncRC( DaoValue *value )
 {
+#ifdef DAO_TRACE_ADDRESS
+	DaoGC_TraceValue( value );
+#endif
 	if( value ){
 		value->xGC.refCount ++;
 		if( value->type >= DAO_ENUM ) value->xGC.cycRefCount ++;
@@ -865,6 +868,10 @@ void DaoGC_DecRC( DaoValue *value )
 }
 void DaoGC_ShiftRC( DaoValue *up, DaoValue *down )
 {
+#ifdef DAO_TRACE_ADDRESS
+	DaoGC_TraceValue( up );
+	DaoGC_TraceValue( down );
+#endif
 	if( up && up->type >= DAO_ENUM ) up->xGC.cycRefCount ++;
 	if( up ) up->xGC.refCount ++;
 	if( down ){

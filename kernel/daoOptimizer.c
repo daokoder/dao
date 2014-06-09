@@ -1900,6 +1900,7 @@ DaoInferencer* DaoInferencer_New()
 	self->inodes = DArray_New(0);
 	self->consts = DArray_New( DAO_DATA_VALUE );
 	self->types = DArray_New( DAO_DATA_VALUE );
+	self->types2 = DArray_New( DAO_DATA_VALUE );
 	self->inited = DString_New();
 	self->rettypes = DArray_New(0);
 	self->typeMaps = DArray_New( DAO_DATA_MAP );
@@ -1918,6 +1919,7 @@ void DaoInferencer_Reset( DaoInferencer *self )
 	DaoInodes_Clear( self->inodes );
 	DArray_Clear( self->consts );
 	DArray_Clear( self->types );
+	DArray_Clear( self->types2 );
 	DArray_Clear( self->typeMaps );
 	DString_Reset( self->inited, 0 );
 	DMap_Reset( self->defs );
@@ -1941,6 +1943,7 @@ void DaoInferencer_Delete( DaoInferencer *self )
 	DArray_Delete( self->inodes );
 	DArray_Delete( self->consts );
 	DArray_Delete( self->types );
+	DArray_Delete( self->types2 );
 	DString_Delete( self->inited );
 	DArray_Delete( self->rettypes );
 	DArray_Delete( self->typeMaps );
@@ -2103,7 +2106,11 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 #endif
 
 		if( parpass[ito] == 0 ) goto FinishError;
-		if( def ) tps[ifrom] = DaoType_DefineTypes( tps[ifrom], ns, defs );
+		if( def ){
+			DaoType *tp = DaoType_DefineTypes( tps[ifrom], ns, defs );
+			GC_ShiftRC( tp, tps[ifrom] );
+			tps[ifrom] = tp;
+		}
 	}
 	if( passdefault ){
 		for(ito=0; ito<ndef; ito++){
@@ -4396,15 +4403,15 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	}
 	if( (vmc->b & DAO_CALL_EXPAR) && argc && tp[argc-1]->tid == DAO_TUPLE ){
 		DArray *its = tp[argc-1]->nested;
-		DArray_Clear( self->array2 );
-		for(k=0; k<(argc-1); k++) DArray_Append( self->array2, tp[k] );
+		DArray_Clear( self->types2 );
+		for(k=0; k<(argc-1); k++) DArray_Append( self->types2, tp[k] );
 		for(k=0; k<its->size; k++){
 			DaoType *it = its->items.pType[k];
 			if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_DEFAULT ) it = (DaoType*) it->aux;
-			DArray_Append( self->array2, it );
+			DArray_Append( self->types2, it );
 		}
-		tp = self->array2->items.pType;
-		argc = self->array2->size;
+		tp = self->types2->items.pType;
+		argc = self->types2->size;
 	}
 
 	ct = types[opa];

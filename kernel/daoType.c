@@ -2295,6 +2295,11 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 
 	/* May need to get rid of the attributes for type holders: */
 	DaoType_CheckAttributes( sptype );
+	if( sptype->tid == DAO_ARRAY ){
+		GC_DecRC( sptype->value );
+		sptype->value = NULL;
+		DaoType_InitDefault( sptype );
+	}
 	return sptype;
 }
 DaoType* DaoType_Specialize( DaoType *self, DaoType *types[], int count )

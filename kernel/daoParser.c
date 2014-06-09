@@ -1474,16 +1474,16 @@ ErrorImproperDefault: ec = DAO_PARAM_IMPROPER_DEFAULT; goto ErrorParamParsing;
 ErrorInvalidReturn:  ec = DAO_PARAM_INVALID_RETURN; goto ErrorParamParsing;
 ErrorParamParsing:
 ErrorRoutine:
-					 if( ec ){
-						 if( e2 >= size ) e2 = size - 1;
-						 DString_Clear( self->string );
-						 for(i=e1; i<=e2; i++){
-							 DString_Append( self->string, & tokens[i]->string );
-							 if( self->string->size > 20 ) break;
-						 }
-						 DaoParser_Error( self, ec, self->string );
-					 }
-					 return -1;
+	if( ec ){
+		if( e2 >= size ) e2 = size - 1;
+		DString_Clear( self->string );
+		for(i=e1; i<=e2; i++){
+			DString_Append( self->string, & tokens[i]->string );
+			if( self->string->size > 20 ) break;
+		}
+		DaoParser_Error( self, ec, self->string );
+	}
+	return -1;
 }
 
 static void DaoParser_ByteEncodeGetConst( DaoParser *self, DString *name )
@@ -1531,15 +1531,26 @@ static DaoType* DaoParser_ParseValueType( DaoParser *self, int start )
 	value = DaoParser_GetVariable( self, cst );
 	return DaoNamespace_MakeValueType( self->nameSpace, value );
 }
+
+static int type_stop_tokens[] = { DTOK_LB, DTOK_LSB, DTOK_LCB };
+
 static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, int *newpos )
 {
+	DaoType *type = NULL;
+	DaoValue *value = NULL;
 	DaoInode *back = self->vmcLast;
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoNamespace *ns = self->nameSpace;
-	DaoType *type = NULL;
-	DaoValue *value = NULL;
 	DString *name = & tokens[start]->string;
-	int t, k = DaoParser_FindMaybeScopedConst( self, &value, start, 0 );
+	int i, k, t, min = end, stop = tokens[end]->name;
+	for(i=0; i<3; ++i){
+		int pos = DaoParser_FindOpenToken( self, type_stop_tokens[i], start, min, 0 );
+		if( pos >= 0 && pos < min ){
+			stop = type_stop_tokens[i];
+			min = pos;
+		}
+	}
+	k = DaoParser_FindMaybeScopedConst( self, &value, start, stop );
 	if( self->byteBlock && k == start ){
 		DaoParser_ByteEncodeGetConst( self, name );
 	}
@@ -2773,7 +2784,6 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 	DaoRoutine *rout = NULL;
 	DaoParser *parser = NULL;
 	DaoRoutine *declared = NULL;
-	DaoRoutine *newRoutine = NULL;
 	DaoValue *value = NULL, *scope = NULL;
 	DaoClass *klass = NULL;
 	DString *mbs = self->string;
@@ -2826,17 +2836,16 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		rout = (DaoRoutine*) value;
 
 		parser = DaoParser_NewRoutineParser( self, start, stat );
-		newRoutine = parser->routine;
-		GC_ShiftRC( klass->objType, newRoutine->routHost );
-		newRoutine->attribs |= stat;
-		newRoutine->routHost = klass->objType;
+		GC_ShiftRC( klass->objType, parser->routine->routHost );
+		parser->routine->attribs |= stat;
+		parser->routine->routHost = klass->objType;
 		parser->hostType = klass->objType;
 		parser->hostClass = klass;
 		right = DaoParser_ParseSignature( self, parser, tki, start );
 		if( right < 0 ) goto InvalidDefinition;
-		DString_Assign( mbs, newRoutine->routName );
+		DString_Assign( mbs, parser->routine->routName );
 		DString_AppendChar( mbs, ':' );
-		DString_Append( mbs, newRoutine->routType->name );
+		DString_Append( mbs, parser->routine->routType->name );
 		rout = DaoClass_GetOverloadedRoutine( klass, mbs );
 		if( rout == NULL ){
 			DMap *signatures = klass->methSignatures;
@@ -2844,7 +2853,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			int defined = 0;
 			for(; it; it=DMap_Next(signatures,it)){
 				DaoRoutine *meth = (DaoRoutine*) it->value.pValue;
-				if( DString_EQ( meth->routName, newRoutine->routName ) && meth->body ){
+				if( DString_EQ( meth->routName, parser->routine->routName ) && meth->body ){
 					if( meth->body->codeStart ==0 ){
 						self->curLine = meth->defLine;
 						DaoParser_Error( self, DAO_ROUT_DECLARED_SIGNATURE, it->key.pString );
@@ -2866,8 +2875,8 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			DaoParser_Error2( self, DAO_ROUT_REDUNDANT_IMPLEMENTATION, errorStart+1, right, 0 );
 			goto InvalidDefinition;
 		}
+		DaoRoutine_Delete( parser->routine );
 		parser->routine = rout;
-		DaoRoutine_Delete( newRoutine );
 	}else if( self->isClassBody ){
 		klass = self->hostClass;
 		parser = DaoParser_NewRoutineParser( self, start, stat );
@@ -2913,21 +2922,23 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		if( self->lexLevel != 0 ) goto InvalidDefinition; /* TODO: better information; */
 
 		parser = DaoParser_NewRoutineParser( self, start, stat );
-		newRoutine = parser->routine;
 		right = DaoParser_ParseSignature( self, parser, tki, start );
 		if( right < 0 ) goto InvalidDefinition;
 
-		id = DaoNamespace_FindConst( NS, newRoutine->routName );
+		rout = parser->routine;
+		id = DaoNamespace_FindConst( NS, parser->routine->routName );
 		declared = (DaoRoutine*) DaoNamespace_GetConst( NS, id );
-		rout = DaoParser_CheckDeclared( self, newRoutine, declared );
-		if( rout == NULL ) goto InvalidDefinition;
+		if( declared ){
+			rout = DaoParser_CheckDeclared( self, parser->routine, declared );
+			if( rout == NULL ) goto InvalidDefinition;
+		}
 
-		if( rout == newRoutine ){
+		if( rout == parser->routine ){
 			if( strcmp( rout->routName->chars, "main" ) ==0 ) rout->attribs |= DAO_ROUT_MAIN;
 			DaoNamespace_AddConst( NS, rout->routName, (DaoValue*) rout, perm );
 		}else{
+			DaoRoutine_Delete( parser->routine );
 			parser->routine = rout;
-			DaoRoutine_Delete( newRoutine );
 		}
 	}
 	if( stat && rout->routHost == NULL ){
@@ -3467,7 +3478,7 @@ static void DaoParser_CheckStatementSeparation( DaoParser *self, int check, int 
 	switch( tokens[check+1]->name ){
 	case DTOK_RCB : case DTOK_SEMCO : case DKEY_ELSE : break;
 	case DKEY_WHILE : if( close && close->a == DKEY_WHILE ) break; /* else fall through; */
-	default : DaoParser_Warn( self, DAO_WARN_STATEMENT_SEPERATION, NULL ); break;
+	default : DaoParser_Warn( self, DAO_WARN_STATEMENT_SEPARATION, NULL ); break;
 	}
 }
 static int DaoParser_ParseImportStatement( DaoParser *self, int start, int end );

@@ -2656,14 +2656,11 @@ DaoType* DaoProcess_GetCallReturnType( DaoProcess *self, DaoVmCode *vmc, int tid
 {
 	DaoType *type = self->activeTypes[ vmc->c ];
 
+	if( vmc->code == DVM_CALL || vmc->code == DVM_MCALL ){
+		type = (DaoType*) self->topFrame->routine->routType->aux;
+	}
 	if( type == NULL ) return NULL;
 	if( type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, tid );
-	if( type == NULL || !(type->tid & DAO_ANY) ) return type;
-
-	if( vmc->code == DVM_CALL || vmc->code == DVM_MCALL ){
-		DaoRoutine *rout = (DaoRoutine*) self->activeValues[ vmc->a ];
-		if( rout && rout->type == DAO_ROUTINE ) type = (DaoType*) rout->routType->aux;
-	}
 	return type;
 }
 DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc )
@@ -3664,6 +3661,12 @@ static int DaoProcess_TryTailCall( DaoProcess *self, DaoRoutine *rout, DaoValue 
 	int async = vmc->b & DAO_CALL_ASYNC;
 	DaoObject *root = NULL;
 
+	/*
+	// No tail call optimization. Because it is less useful
+	// and more inconvenient to setup properly.
+	*/
+	if( rout->pFunc != NULL ) return 0;
+
 	if( !(vmc->b & DAO_CALL_TAIL) || self->topFrame->prev == self->baseFrame ) return 0;
 	/* no tail call optimization when there is deferred code blocks: */
 	if( self->defers->size > self->topFrame->deferBase ) return 0;
@@ -4012,7 +4015,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 			GC_IncRC( params[i] );
 			parbuf[i] = params[i];
 		}
-		DaoProcess_TryTailCall( self, rout, NULL, vmc );
+		if( rout->pFunc == NULL ) DaoProcess_TryTailCall( self, rout, NULL, vmc );
 		if( rout->pFunc ){
 			DaoStackFrame *frame = DaoProcess_PushFrame( self, rout->parCount );
 			DaoValue **values = self->stackValues + frame->stackBase;

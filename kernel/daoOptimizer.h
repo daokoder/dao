@@ -162,6 +162,7 @@ struct DaoInferencer
 	DArray      *inodes;
 	DArray      *consts;
 	DArray      *types;
+	DArray      *types2;
 	DString     *inited;
 
 	DArray      *rettypes;
