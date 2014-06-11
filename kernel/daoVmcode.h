@@ -39,7 +39,7 @@ enum DaoOpcode
 	DVM_GETCK , /* Get class const:  C = A:::B;  B, index;  A=0; */
 	DVM_GETCG , /* Get global const:  C = A:::B;  B, index;  A=0; */
 	DVM_GETVH , /* Get host variable:  C = A:::B;  B, index;  A, section level; */
-	DVM_GETVS , /* Get static/closure variable:  C = A:::B;  B, index;  A=0; */
+	DVM_GETVS , /* Get closure variable:  C = A:::B;  B, index;  A=0; */
 	DVM_GETVO , /* Get instance object variable:  C = A:::B;  B, index;  A=0; */
 	DVM_GETVK , /* Get class static variable:  C = A:::B;  B, index;  A=0; */
 	DVM_GETVG , /* Get global variable:  C = A:::B;  B, index;  A=0; */
@@ -48,7 +48,7 @@ enum DaoOpcode
 	DVM_GETMI , /* Get item(s):  C = A[A+1, ..., A+B]; */
 	DVM_GETF  , /* Get field:  C = A.B or C = A::B; */
 	DVM_SETVH , /* Set host variable:  C:::B = A;  B, index;  C, section level; */
-	DVM_SETVS , /* Set static/closure variable:  C:::B = A;  B, index;  C=0; */
+	DVM_SETVS , /* Set closure variable:  C:::B = A;  B, index;  C=0; */
 	DVM_SETVO , /* Set instance object variable:  C:::B = A;  B, index;  C=0; */
 	DVM_SETVK , /* Set class static variable:  C:::B = A;  B, index;  C=0; */
 	DVM_SETVG , /* Set global variable:  C:::B = A;  C: Bit1, zero; Bit2, decl; Bit3, invar; */

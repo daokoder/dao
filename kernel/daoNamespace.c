@@ -1034,70 +1034,54 @@ int DaoNamespace_FindConst( DaoNamespace *self, DString *name )
 	if( LOOKUP_ST( node->value.pInt ) != DAO_GLOBAL_CONSTANT ) return -1;
 	return node->value.pInt;
 }
+/* Generate a new lookup name for the existing constant/variable (for bytecode): */
+static void DaoNamespace_RenameLookup( DaoNamespace *self, DNode *node )
+{
+	DString *name = DString_Copy( node->key.pString );
+	char chs[32];
+	sprintf( chs, "[%i]", LOOKUP_ID( node->value.pInt ) );
+	DString_AppendChars( name, chs );
+	MAP_Insert( self->lookupTable, name, node->value.pVoid ) ;
+	DString_Delete( name );
+}
 int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, int pm )
 {
 	DaoValue *vdest;
-	DaoConstant *dest;
+	DaoConstant *cst, *dest;
 	DaoRoutine *mroutine;
 	DNode *node = MAP_Find( self->lookupTable, name );
 	int isrout2, isrout = value->type == DAO_ROUTINE;
-	daoint sto, pm2, up, id = 0;
+	daoint st, pm2, up, id = 0;
 
-	if( node && LOOKUP_UP( node->value.pInt ) ){ /* inherited data: */
-		sto = LOOKUP_ST( node->value.pInt );
-		pm2 = LOOKUP_PM( node->value.pInt );
+	if( node && LOOKUP_ST( node->value.pInt ) == DAO_GLOBAL_CONSTANT ){
+		st = LOOKUP_ST( node->value.pInt );
 		id = LOOKUP_ID( node->value.pInt );
-		if( sto != DAO_GLOBAL_CONSTANT ){ /* override inherited variable: */
-			DMap_EraseNode( self->lookupTable, node );
-			return DaoNamespace_AddConst( self, name, value, pm );
-		}
-		node->value.pInt = LOOKUP_BIND( sto, pm2, 0, id );
-		dest = self->constants->items.pConst[id];
-		if( dest->value->type == DAO_ROUTINE && value->type == DAO_ROUTINE ){
-			/* Add the inherited routine(s) for overloading: */
-			DaoRoutine *routs = DaoRoutines_New( self, NULL, (DaoRoutine*) dest->value );
-			DaoConstant *cst = DaoConstant_New( (DaoValue*) routs );
-			GC_ShiftRC( cst, dest );
-			self->constants->items.pConst[id] = cst;
-			return DaoNamespace_AddConst( self, name, value, pm );
-		}else{
-			/* Add the new constant: */
-			DaoConstant *cst = DaoConstant_New( value );
-			GC_ShiftRC( cst, dest );
-			self->constants->items.pConst[id] = cst;
+		cst = self->constants->items.pConst[id];
+		if( cst->value->type == DAO_ROUTINE && value->type == DAO_ROUTINE ){
+			DaoNamespace_RenameLookup( self, node );
+			/* For different overloadings at different definition points: */
+			mroutine = DaoRoutines_New( self, NULL, (DaoRoutine*) cst->value );
+			mroutine->trait |= DAO_VALUE_CONST;
+			node->value.pInt = LOOKUP_BIND( st, pm, 0, self->constants->size );
+			DArray_Append( self->constants, DaoConstant_New( (DaoValue*) mroutine ) );
+			if( value->xRoutine.overloads ){
+				DaoRoutines_Import( mroutine, value->xRoutine.overloads );
+			}else{
+				DRoutines_Add( mroutine->overloads, (DaoRoutine*) value );
+			}
 			return node->value.pInt;
 		}
-	}else if( node ){
-		sto = LOOKUP_ST( node->value.pInt );
-		pm2 = LOOKUP_PM( node->value.pInt );
-		id = LOOKUP_ID( node->value.pInt );
-		if( sto != DAO_GLOBAL_CONSTANT ) return -DAO_CTW_WAS_DEFINED;
-		dest = self->constants->items.pConst[id];
-		vdest = dest->value;
-		if( vdest->type != DAO_ROUTINE || value->type != DAO_ROUTINE ) return -DAO_CTW_WAS_DEFINED;
-
-		/* For different overloadings at different definition poinst: */
-		mroutine = DaoRoutines_New( self, NULL, (DaoRoutine*) vdest );
-		mroutine->trait |= DAO_VALUE_CONST;
-		node->value.pInt = LOOKUP_BIND( sto, pm, 0, self->constants->size );
-		DArray_Append( self->constants, DaoConstant_New( (DaoValue*) mroutine ) );
-		if( value->xRoutine.overloads ){
-			DaoRoutines_Import( mroutine, value->xRoutine.overloads );
-		}else{
-			DRoutines_Add( mroutine->overloads, (DaoRoutine*) value );
-		}
-		return node->value.pInt;
-	}else{
-		DaoRoutine *rout = (DaoRoutine*) value;
-		if( value->type == DAO_ROUTINE && rout->overloads && rout->nameSpace != self ){
-			mroutine = DaoRoutines_New( self, NULL, rout );
-			value = (DaoValue*) mroutine;
-		}
-		id = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, pm, 0, self->constants->size );
-		MAP_Insert( self->lookupTable, name, id ) ;
-		DArray_Append( self->constants, (dest = DaoConstant_New( value )) );
-		DaoValue_MarkConst( dest->value );
 	}
+	if( node && LOOKUP_UP( node->value.pInt ) ){
+		DaoNamespace_RenameLookup( self, node );
+		node = NULL;
+	}
+	if( node ) return -DAO_CTW_WAS_DEFINED;
+
+	id = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, pm, 0, self->constants->size );
+	MAP_Insert( self->lookupTable, name, id ) ;
+	DArray_Append( self->constants, (dest = DaoConstant_New( value )) );
+	DaoValue_MarkConst( dest->value );
 	return id;
 }
 void DaoNamespace_SetConst( DaoNamespace *self, int index, DaoValue *value )
@@ -1128,8 +1112,8 @@ int DaoNamespace_FindVariable( DaoNamespace *self, DString *name )
 }
 int DaoNamespace_AddVariable( DaoNamespace *self, DString *name, DaoValue *value, DaoType *tp, int pm )
 {
-	DaoType *abtp = DaoNamespace_GetType( self, value );
 	DNode *node = MAP_Find( self->lookupTable, name );
+	DaoType *abtp = DaoNamespace_GetType( self, value );
 	DaoVariable *dest;
 	daoint id = 0;
 
@@ -1137,28 +1121,44 @@ int DaoNamespace_AddVariable( DaoNamespace *self, DString *name, DaoValue *value
 	if( tp && value && DaoType_MatchValue( tp, value, NULL ) ==0 ) return -1;
 	if( tp == NULL ) tp = abtp;
 	if( value == NULL && tp ) value = tp->value;
-	if( node && LOOKUP_UP( node->value.pInt ) ){ /* overriding */
-		DMap_EraseNode( self->lookupTable, node );
-		DaoNamespace_AddVariable( self, name, value, tp, pm );
-		node = MAP_Find( self->lookupTable, name );
-		return node->value.pInt;
-	}else if( node ){
-		id = LOOKUP_ID( node->value.pInt );
-		if( LOOKUP_ST( node->value.pInt ) != DAO_GLOBAL_VARIABLE ) return -1;
-		assert( id < self->variables->size );
-		dest = self->variables->items.pVar[id];
-		if( tp ){
-			GC_ShiftRC( tp, dest->dtype );
-			dest->dtype = tp;
+
+	if( node ){
+		if( LOOKUP_UP( node->value.pInt ) ){ /* overriding */
+			DMap_EraseNode( self->lookupTable, node );
+			DaoNamespace_AddVariable( self, name, value, tp, pm );
+			node = MAP_Find( self->lookupTable, name );
+			return node->value.pInt;
 		}
-		if( DaoValue_Move( value, & dest->value, dest->dtype ) ==0 ) return -1;
-		id = node->value.pInt;
+		return -1;
 	}else{
 		id = LOOKUP_BIND( DAO_GLOBAL_VARIABLE, pm, 0, self->variables->size );
 		MAP_Insert( self->lookupTable, name, id ) ;
 		DArray_Append( self->variables, DaoVariable_New( value, tp ) );
 	}
 	return id;
+}
+int DaoNamespace_AddStaticConst( DaoNamespace *self, DString *name, DaoValue *value, int level )
+{
+	int ret;
+	char suffix[32];
+	sprintf( suffix, "{%i}[%i]", level, (int)self->constants->size );
+	name = DString_Copy( name );
+	DString_AppendChars( name, suffix );
+	/* should always succeed: */
+	ret = DaoNamespace_AddConst( self, name, value, DAO_PERM_NONE );
+	DString_Delete( name );
+	return ret;
+}
+int DaoNamespace_AddStaticVar( DaoNamespace *self, DString *name, DaoValue *var, DaoType *tp, int level )
+{
+	int ret;
+	char suffix[32];
+	sprintf( suffix, "{%i}[%i]", level, (int)self->variables->size );
+	name = DString_Copy( name );
+	DString_AppendChars( name, suffix );
+	ret = DaoNamespace_AddVariable( self, name, var, tp, DAO_PERM_NONE );
+	DString_Delete( name );
+	return ret;
 }
 int DaoNamespace_SetVariable( DaoNamespace *self, int index, DaoValue *value )
 {
@@ -1297,10 +1297,12 @@ void DaoNamespace_UpdateLookupTable( DaoNamespace *self )
 					DaoNamespace_AddConst( self, name, cst->value, pm );
 					continue;
 				}
-				MAP_Insert( self->lookupTable, name, LOOKUP_BIND( st, pm, up+1, self->constants->size ) );
+				k = LOOKUP_BIND( st, pm, up+1, self->constants->size );
+				MAP_Insert( self->lookupTable, name, k );
 				DArray_Append( self->constants, ns->constants->items.pConst[id] );
 			}else{
-				MAP_Insert( self->lookupTable, name, LOOKUP_BIND( st, pm, up+1, self->variables->size ) );
+				k = LOOKUP_BIND( st, pm, up+1, self->variables->size );
+				MAP_Insert( self->lookupTable, name, k );
 				DArray_Append( self->variables, ns->variables->items.pVar[id] );
 			}
 		}

@@ -56,8 +56,8 @@ struct DaoNamespace
 	DArray *definedRoutines; /* for DaoStudio IDE */
 
 	void  *libHandle;
-	int cstUser;
-	int options;
+	int    cstUser;
+	int    options;
 
 	DMap   *localMacros;  /* <DString*,DaoMacro*> */
 	DMap   *globalMacros; /* <DString*,DaoMacro*> */
@@ -65,13 +65,13 @@ struct DaoNamespace
 	DMap   *codeInliners; /* <DString*,DaoCodeInliner> */
 	DArray *tokenFilters; /* <DaoTokenFilter> */
 
-	DString *file;
-	DString *path;
-	DString *name; /* path + file */
-	DString *lang;
-	DString *inputs; /* interactive inputs (load statements and some definitions) */
-	DArray  *sources;
-	size_t   time;
+	DString  *file;
+	DString  *path;
+	DString  *name; /* path + file */
+	DString  *lang;
+	DString  *inputs; /* interactive inputs (load statements and some definitions) */
+	DArray   *sources;
+	size_t    time;
 
 	DaoProcess  *constEvalProcess;
 	DaoRoutine  *constEvalRoutine;
@@ -92,6 +92,9 @@ DAO_DLL int DaoNamespace_AddVariable( DaoNamespace *self, DString *name, DaoValu
 DAO_DLL int DaoNamespace_SetVariable( DaoNamespace *self, int index, DaoValue *var );
 DAO_DLL DaoValue* DaoNamespace_GetVariable( DaoNamespace *self, int i );
 DAO_DLL DaoType* DaoNamespace_GetVariableType( DaoNamespace *self, int i );
+
+DAO_DLL int DaoNamespace_AddStaticConst( DaoNamespace *self, DString *name, DaoValue *value, int level );
+DAO_DLL int DaoNamespace_AddStaticVar( DaoNamespace *self, DString *name, DaoValue *var, DaoType *tp, int level );
 
 DAO_DLL void DaoNamespace_SetData( DaoNamespace *self, DString *name, DaoValue *value );
 DAO_DLL DaoValue* DaoNamespace_GetData( DaoNamespace *self, DString *name );

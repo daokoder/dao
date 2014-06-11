@@ -161,7 +161,7 @@ class Klass
 	# Decorator can also be defined a class method.
 	# Since the first parameter of a decorator must be a routine type,
 	# such decorator method has to be defined as a static method.
-	static routine @ClassDecorator( meth(args) :routine<id:string=>?>, value = "abc" ){
+	static routine @ClassDecorator( meth(args) :routine<id:string=>@X>, value = "abc" ){
 		io.writeln( args, value );
 		args.id = value;
 		return meth( args, ... );

@@ -271,7 +271,8 @@
 // ASM_LOAD(1B): File-Path-Index(2B), Optional-Name-Index(2B), Zeros(4B);
 //
 // import from namespace/module:
-// ASM_IMPORT(1B): Mod-Index(2B), Name-Index(2B), Name-Index(2B), Name-Index(2B);
+// ASM_IMPORT(1B): Mod-Index(2B), Name-Index(2B), Scope(2B), Offset(2B);
+// Notes: ScopeID-Index, colon separated integers as string;
 //
 // verbatim:
 // ASM_VERBATIM(1B): Tag-Index(2B), Mode-Index(2B), Text-Index(2B), LineNum(2B);
@@ -440,7 +441,7 @@ DaoByteBlock* DaoByteBlock_EncodeCtype( DaoByteBlock *self, DaoCtype *ctype, Dao
 DaoByteBlock* DaoByteBlock_EncodeTypeAlias( DaoByteBlock *self, DaoType *type, DaoType *aliased, DString *alias );
 DaoByteBlock* DaoByteBlock_EncodeTypeOf( DaoByteBlock *self, DaoType *type, DaoValue *value );
 DaoByteBlock* DaoByteBlock_EncodeLoad( DaoByteBlock *self, DString *mod, DString *ns );
-DaoByteBlock* DaoByteBlock_EncodeImport( DaoByteBlock *self, DaoValue *mod, DString *names[3] );
+DaoByteBlock* DaoByteBlock_EncodeImport( DaoByteBlock *self, DaoValue *mod, DString *name, int scope, int index );
 DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *target );
 DaoByteBlock* DaoByteBlock_EncodeVerbatim( DaoByteBlock *self, DString *tag, DString *mode, DString *text, int line );
 DaoByteBlock* DaoByteBlock_EncodeDecorators( DaoByteBlock *self, DArray *decos, DArray *pars );

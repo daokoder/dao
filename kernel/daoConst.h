@@ -134,16 +134,18 @@ enum DaoVarDeclaration
 	DAO_DECL_INVAR      = (1<<5), /* for compiling only */
 	DAO_DECL_CONST      = (1<<7)  /* using the highest bit in the trait field */
 };
+
+/* Lowest bit set to 1 for constant storage: */
 enum DaoVarStorage
 {
-	DAO_LOCAL_VARIABLE  = 0,
-	DAO_LOCAL_CONSTANT  = 1, /* lowest bit set to 1 for constant */
-	DAO_STATIC_VARIABLE = 2,
-	DAO_OBJECT_VARIABLE = 4,
-	DAO_CLASS_VARIABLE  = 6,
-	DAO_CLASS_CONSTANT  = 7, /* lowest bit set to 1 for constant */
-	DAO_GLOBAL_VARIABLE = 8,
-	DAO_GLOBAL_CONSTANT = 9  /* lowest bit set to 1 for constant */
+	DAO_LOCAL_VARIABLE   = 0,
+	DAO_LOCAL_CONSTANT   = 1,
+	DAO_CLOSURE_VARIABLE = 2, /* for compiling only; */
+	DAO_OBJECT_VARIABLE  = 4,
+	DAO_CLASS_VARIABLE   = 6,
+	DAO_CLASS_CONSTANT   = 7,
+	DAO_GLOBAL_VARIABLE  = 8,
+	DAO_GLOBAL_CONSTANT  = 9
 };
 
 enum DaoValueTrait
@@ -196,7 +198,8 @@ enum DaoProcessPauseType
 
 enum DaoFieldPermission
 {
-	DAO_PERM_PRIVATE = 1,
+	DAO_PERM_NONE = 0,
+	DAO_PERM_PRIVATE ,
 	DAO_PERM_PROTECTED ,
 	DAO_PERM_PUBLIC
 };

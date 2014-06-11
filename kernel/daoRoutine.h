@@ -107,8 +107,8 @@ struct DaoRoutineBody
 	DVector *vmCodes;
 
 	/* data type for local registers: */
-	DArray *regType;    /* DArray<DaoType*> */
-	DArray *svariables; /* DArray<DaoVariable*> */
+	DArray *regType;   /* DArray<DaoType*> */
+	DArray *upValues;  /* DArray<DaoVariable*> */
 
 	/* VM codes with annotations */
 	DArray *annotCodes; /* DArray<DaoVmCodeX*> */
@@ -119,7 +119,7 @@ struct DaoRoutineBody
 	DArray *decoTargets;
 
 	DArray *simpleVariables;
-	DMap   *localVarType; /* DMap<int,DaoType*> local variable types */
+	DMap   *localVarType;  /* DMap<int,DaoType*> local variable types */
 
 	ushort_t  regCount;
 	ushort_t  exeMode;

@@ -59,9 +59,10 @@ static void STD_Path( DaoProcess *proc, DaoValue *p[], int N )
 static void STD_Compile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	char *source = DaoValue_TryGetChars( p[0] );
-	DaoNamespace *ns = DaoValue_CastNamespace( p[1] );
+	DaoNamespace *ns, *import = DaoValue_CastNamespace( p[1] );
 	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
-	if( ns == NULL ) ns = proc->activeNamespace;
+	ns = DaoNamespace_New( proc->vmSpace, "std::compile" );
+	if( import != NULL ) DaoNamespace_AddParent( ns, import );
 	DaoTuple_SetItem( tuple, (DaoValue*) ns, 0 );
 	if( DaoProcess_Compile( proc, ns, source ) ==0 ){
 		DaoTuple_SetItem( tuple, dao_none_value, 1 );
@@ -232,7 +233,7 @@ static void STD_Version( DaoProcess *proc, DaoValue *p[], int N )
 DaoFuncItem dao_std_methods[] =
 {
 	{ STD_Path,      "path( path: string, action: enum<set,add,remove> = $add )" },
-	{ STD_Compile,   "compile( source: string, ns: any = none ) => tuple<ns:any,main:routine>" },
+	{ STD_Compile,   "compile( source: string, import: any = none ) => tuple<namespace:any,main:routine>" },
 	{ STD_Eval,      "eval( source: string, st = io::stdio ) => any" },
 	{ STD_Load,      "load( file: string, import = 1, runim = 0 ) => any" },
 	{ STD_Resource,  "resource( path: string ) => string" },

@@ -4737,7 +4737,7 @@ int DaoInferencer_HandleClosure( DaoInferencer *self, DaoInode *inode, int i, DM
 			self->array->items.pType[idata->b] = types[opa+1+j];
 		}else{
 			DaoType *uptype = types[opa+1+j];
-			DaoVariable *var = closure->body->svariables->items.pVar[ idata->b - DAO_MAX_PARAM ];
+			DaoVariable *var = closure->body->upValues->items.pVar[ idata->b - DAO_MAX_PARAM ];
 			if( uptype->invar ) uptype = DaoType_GetBaseType( uptype );
 			GC_ShiftRC( uptype, var->dtype );
 			var->dtype = uptype;
@@ -5151,7 +5151,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			at = 0;
 			switch( code ){
 			case DVM_GETVH : at = typeVH[opa][opb]; break;
-			case DVM_GETVS : at = body->svariables->items.pVar[opb]->dtype; break;
+			case DVM_GETVS : at = body->upValues->items.pVar[opb]->dtype; break;
 			case DVM_GETVO : at = hostClass->instvars->items.pVar[opb]->dtype; break;
 			case DVM_GETVK : at = hostClass->variables->items.pVar[opb]->dtype; break;
 			case DVM_GETVG : at = NS->variables->items.pVar[opb]->dtype; break;
@@ -5181,7 +5181,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			type2 = NULL;
 			switch( code ){
 			case DVM_SETVH : type2 = typeVH[opc] + opb; break;
-			case DVM_SETVS : var = body->svariables->items.pVar[opb]; break;
+			case DVM_SETVS : var = body->upValues->items.pVar[opb]; break;
 			case DVM_SETVO : var = hostClass->instvars->items.pVar[opb]; break;
 			case DVM_SETVK : var = hostClass->variables->items.pVar[opb]; break;
 			case DVM_SETVG : var = NS->variables->items.pVar[opb]; break;
@@ -5951,7 +5951,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			break;
 		case DVM_GETVS_I : case DVM_GETVS_F : case DVM_GETVS_D : case DVM_GETVS_C :
 			TT1 = DAO_INTEGER + (code - DVM_GETVS_I);
-			at = body->svariables->items.pVar[opb]->dtype;
+			at = body->upValues->items.pVar[opb]->dtype;
 			ct = DaoInferencer_UpdateType( self, opc, self->basicTypes[TT1] );
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( ct, TT1 );
@@ -5989,7 +5989,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			AssertTypeIdMatching( tp[0], TT1 );
 			break;
 		case DVM_SETVS_II : case DVM_SETVS_FF : case DVM_SETVS_DD : case DVM_SETVS_CC :
-			var = body->svariables->items.pVar[opb];
+			var = body->upValues->items.pVar[opb];
 			if( var->dtype == NULL || var->dtype->tid == DAO_UDT ){
 				DaoVariable_SetType( var, at );
 			}
@@ -6513,6 +6513,8 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	// during decorator application.
 	*/
 	if( retc && ! decorator ) DaoOptimizer_Optimize( optimizer, self );
+	/* Maybe more unreachable code after inference and optimization: */
+	if( ! decorator ) DaoOptimizer_RemoveUnreachableCodes( optimizer, self );
 	/* DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->errorStream ); */
 	DaoVmSpace_ReleaseOptimizer( vmspace, optimizer );
 	return retc;

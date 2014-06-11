@@ -867,7 +867,7 @@ int DaoProcess_Start( DaoProcess *self )
 	DArray   *clsConsts = NULL;
 	DaoProcess *dataVH[DAO_MAX_SECTDEPTH+1] = {0};
 	DaoVariable *variable = NULL;
-	DaoVariable **svariables = NULL;
+	DaoVariable **upValues = NULL;
 	DaoValue  **dataVO = NULL;
 	DaoValue **dataCL = NULL;
 	DaoValue *value, *vA, *vB, *vC = NULL;
@@ -1185,7 +1185,7 @@ CallEntry:
 	locVars = self->activeValues;
 	locTypes = self->activeTypes;
 	dataCL = routine->routConsts->value->items.pValue;
-	svariables = routine->body->svariables->items.pVar;
+	upValues = routine->body->upValues ? routine->body->upValues->items.pVar : NULL;
 	if( routine->body->jitData ){
 		jitCallData.localValues = locVars;
 		jitCallData.localConsts = routine->routConsts->value->items.pValue;
@@ -1256,7 +1256,7 @@ CallEntry:
 			GC_ShiftRC( dataVH[vmc->a]->activeValues[vmc->b], locVars[vmc->c] );
 			locVars[vmc->c] = dataVH[vmc->a]->activeValues[vmc->b];
 		}OPNEXT() OPCASE( GETVS ){
-			value = svariables[vmc->b]->value;
+			value = upValues[vmc->b]->value;
 			GC_ShiftRC( value, locVars[vmc->c] );
 			locVars[vmc->c] = value;
 		}OPNEXT() OPCASE( GETVO ){
@@ -1283,7 +1283,7 @@ CallEntry:
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVS ){
 			self->activeCode = vmc;
-			variable = svariables[vmc->b];
+			variable = upValues[vmc->b];
 			if( DaoProcess_Move( self, locVars[vmc->a], & variable->value, variable->dtype ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVO ){
@@ -1555,13 +1555,13 @@ CallEntry:
 		}OPNEXT() OPCASE( GETVH_C ){
 			locVars[vmc->c]->xComplex.value = dataVH[vmc->a]->activeValues[vmc->b]->xComplex.value;
 		}OPNEXT() OPCASE( GETVS_I ){
-			locVars[vmc->c]->xInteger.value = svariables[vmc->b]->value->xInteger.value;
+			locVars[vmc->c]->xInteger.value = upValues[vmc->b]->value->xInteger.value;
 		}OPNEXT() OPCASE( GETVS_F ){
-			locVars[vmc->c]->xFloat.value = svariables[vmc->b]->value->xFloat.value;
+			locVars[vmc->c]->xFloat.value = upValues[vmc->b]->value->xFloat.value;
 		}OPNEXT() OPCASE( GETVS_D ){
-			locVars[vmc->c]->xDouble.value = svariables[vmc->b]->value->xDouble.value;
+			locVars[vmc->c]->xDouble.value = upValues[vmc->b]->value->xDouble.value;
 		}OPNEXT() OPCASE( GETVS_C ){
-			locVars[vmc->c]->xComplex.value = svariables[vmc->b]->value->xComplex.value;
+			locVars[vmc->c]->xComplex.value = upValues[vmc->b]->value->xComplex.value;
 		}OPNEXT() OPCASE( GETVO_I ){
 			locVars[vmc->c]->xInteger.value = dataVO[vmc->b]->xInteger.value;
 		}OPNEXT() OPCASE( GETVO_F ){
@@ -1595,13 +1595,13 @@ CallEntry:
 		}OPNEXT() OPCASE( SETVH_CC ){
 			dataVH[vmc->c]->activeValues[vmc->b]->xComplex.value = LocalComplex(vmc->a);
 		}OPNEXT() OPCASE( SETVS_II ){
-			svariables[vmc->b]->value->xInteger.value = LocalInt(vmc->a);
+			upValues[vmc->b]->value->xInteger.value = LocalInt(vmc->a);
 		}OPNEXT() OPCASE( SETVS_FF ){
-			svariables[vmc->b]->value->xFloat.value = LocalFloat(vmc->a);
+			upValues[vmc->b]->value->xFloat.value = LocalFloat(vmc->a);
 		}OPNEXT() OPCASE( SETVS_DD ){
-			svariables[vmc->b]->value->xDouble.value = LocalDouble(vmc->a);
+			upValues[vmc->b]->value->xDouble.value = LocalDouble(vmc->a);
 		}OPNEXT() OPCASE( SETVS_CC ){
-			svariables[vmc->b]->value->xComplex.value = LocalComplex(vmc->a);
+			upValues[vmc->b]->value->xComplex.value = LocalComplex(vmc->a);
 		}OPNEXT() OPCASE( SETVO_II ){
 			dataVO[vmc->b]->xInteger.value = LocalInt(vmc->a);
 		}OPNEXT() OPCASE( SETVO_FF ){
@@ -5873,7 +5873,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 			return;
 		}
 	}
-	if( proto->body->svariables->size == 0 && vmc->b == 0 ){
+	if( proto->body->upValues == NULL && vmc->b == 0 ){
 		DaoProcess_SetValue( self, vmc->c, (DaoValue*) proto );
 		if( proto->attribs & DAO_ROUT_DEFER ) DArray_Append( self->defers, proto );
 		return;
@@ -5887,7 +5887,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 		if( k < DAO_MAX_PARAM ){
 			DaoValue_Copy( pp[j], pp2 + k );
 		}else{
-			DaoVariable_Set( closure->body->svariables->items.pVar[k-DAO_MAX_PARAM], pp[j], NULL );
+			DaoVariable_Set( closure->body->upValues->items.pVar[k-DAO_MAX_PARAM], pp[j], NULL );
 		}
 	}
 
@@ -6036,6 +6036,11 @@ static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc )
 		return;
 	}
 	switch( A->type ){
+	case DAO_TUPLE :
+		opb = DaoTuple_GetIndex( (DaoTuple*) A, name );
+		if( opb < 0 ) goto InvalidConstField;
+		C = A->xTuple.values[opb];
+		break;
 	case DAO_TYPE :
 		if( type->tid == DAO_TYPE ) type = type->nested->items.pType[0];
 		if( type && type->tid == DAO_ENUM && type->mapNames ){

@@ -50,10 +50,10 @@ struct DaoParser
 	DString *fileName;
 
 	DaoParser *defParser;
-	int parStart;
-	int parEnd;
 
-	int curToken;
+	int  curToken;
+	int  curLine;
+	int  lineCount;
 
 	DaoLexer  *lexer;
 	DArray    *tokens; /* lexer->tokens; */
@@ -71,8 +71,8 @@ struct DaoParser
 	DaoInode *vmcFree;   /* the first node in the free list; */
 	DaoInode *vmcValue;  /* the last instruction node; */
 
-	int    vmcCount;
-	int    regCount;
+	int  vmcCount;
+	int  regCount;
 
 	/* Stack of symbol tables for each level: */
 	DArray  *lookupTables; /* DArray<DMap<DString*,int>*> */
@@ -83,28 +83,26 @@ struct DaoParser
 	DMap  *allConsts;  /* DMap<DString*,int>: implicit and explict local constants; */
 	DMap  *initTypes;  /* type holders @T from parameters and the up routine */
 
-	short levelBase;
-	short lexLevel;
-	short needConst;
-	short evalMode;
-	short numSections;
+	short  levelBase;
+	short  lexLevel;
+	short  needConst;
+	short  evalMode;
+	short  numSections;
 
-	int noneValue;
-	int integerZero;
-	int integerOne;
-	int imaginaryOne;
+	int  noneValue;
+	int  integerZero;
+	int  integerOne;
+	int  imaginaryOne;
 
 	DaoRoutine *routine;
-	DString    *routName;
 
 	/* if 1, variables not nested in any scope are declared as global */
-	char topAsGlobal;
-	char autoReturn;
-	char isClassBody;
-	char isInterBody;
-	char permission;
-	char isFunctional;
-	char usingGlobal;
+	char  autoReturn;
+	char  isClassBody;
+	char  isInterBody;
+	char  permission;
+	char  isFunctional;
+	char  usingGlobal;
 
 	DaoType       *hostType;
 	DaoCtype      *hostCtype;
@@ -120,11 +118,6 @@ struct DaoParser
 	DaoToken     *argName;
 	DaoToken     *decoArgName;
 
-	int curLine;
-	int lineCount;
-	short indent;
-	short defined;
-	short parsed;
 	DArray *scopeOpenings; /* <DaoInode*> */
 	DArray *scopeClosings; /* <DaoInode*> */
 	DArray *uplocs;
@@ -140,9 +133,6 @@ struct DaoParser
 	DaoLexer  *wlexer;
 	DArray    *errors;
 	DArray    *warnings;
-
-	/* Proto-values for a proto class: upvalue register ids to class member ids */
-	DMap  *protoValues; /* <int,int> */
 
 	/* members for convenience */
 	DaoEnum   *denum;

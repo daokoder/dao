@@ -168,13 +168,13 @@ DaoRoutineBody* DaoRoutineBody_New()
 	DaoValue_Init( self, DAO_ROUTBODY );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->source = NULL;
+	self->upValues = NULL;
 	self->vmCodes = DVector_New( sizeof(DaoVmCode) );
 	self->regType = DArray_New( DAO_DATA_VALUE );
-	self->svariables = DArray_New( DAO_DATA_VALUE );
 	self->defLocals = DArray_New( DAO_DATA_TOKEN );
 	self->annotCodes = DArray_New( DAO_DATA_VMCODE );
 	self->localVarType = DMap_New(0,0);
-	self->abstypes = DMap_New( DAO_DATA_STRING, DAO_DATA_VALUE );
+	self->abstypes = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 	self->simpleVariables = DArray_New(0);
 	self->codeStart = self->codeEnd = 0;
 	self->aux = DMap_New(0,0);
@@ -192,11 +192,11 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 	DVector_Delete( self->vmCodes );
 	DArray_Delete( self->simpleVariables );
 	DArray_Delete( self->regType );
-	DArray_Delete( self->svariables );
 	DArray_Delete( self->defLocals );
 	DArray_Delete( self->annotCodes );
 	DMap_Delete( self->localVarType );
 	DMap_Delete( self->abstypes );
+	if( self->upValues ) DArray_Delete( self->upValues );
 	if( self->decoTargets ) DArray_Delete( self->decoTargets );
 	if( self->revised ) GC_DecRC( self->revised );
 	if( self->aux ) DaoAux_Delete( self->aux );
@@ -222,11 +222,13 @@ void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other, int
 	self->regCount = other->regCount;
 	self->codeStart = other->codeStart;
 	self->codeEnd = other->codeEnd;
-	DArray_Clear( self->svariables );
-	for(i=0; i<other->svariables->size; ++i){
-		DaoVariable *var = other->svariables->items.pVar[i];
+	if( other->upValues == NULL ) return;
+	if( self->upValues == NULL ) self->upValues = DArray_New( DAO_DATA_VALUE );
+	DArray_Clear( self->upValues );
+	for(i=0; i<other->upValues->size; ++i){
+		DaoVariable *var = other->upValues->items.pVar[i];
 		if( copy_stat ) var = DaoVariable_New( var->value, var->dtype );
-		DArray_Append( self->svariables, var );
+		DArray_Append( self->upValues, var );
 	}
 }
 DaoRoutineBody* DaoRoutineBody_Copy( DaoRoutineBody *self, int copy_stat )
@@ -277,12 +279,13 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 		printf( "%16s -> %s\n", it->key.pType->name->chars, it->value.pType->name->chars );
 	}
 #endif
-	for(it=DMap_First(self->body->localVarType); it; it=DMap_Next(self->body->localVarType,it) ){
+	for(it=DMap_First(self->body->localVarType); it; it=DMap_Next(self->body->localVarType,it)){
 		tp = DaoType_DefineTypes( it->value.pType, self->nameSpace, deftypes );
 		it->value.pType = tp;
 	}
-	for(i=0,n=self->body->svariables->size; i<n; ++i){
-		DaoVariable *var = self->body->svariables->items.pVar[i];
+	if( self->body->upValues == NULL ) return;
+	for(i=0,n=self->body->upValues->size; i<n; ++i){
+		DaoVariable *var = self->body->upValues->items.pVar[i];
 		DaoType *type = DaoType_DefineTypes( var->dtype, self->nameSpace, deftypes );
 		GC_ShiftRC( type, var->dtype );
 		var->dtype = type;

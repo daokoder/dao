@@ -1013,16 +1013,15 @@ DaoByteBlock* DaoByteBlock_EncodeLoad( DaoByteBlock *self, DString *mod, DString
 	if( ns ) DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin+2, nameBlock );
 	return newBlock;
 }
-DaoByteBlock* DaoByteBlock_EncodeImport( DaoByteBlock *self, DaoValue *mod, DString *names[3] )
+DaoByteBlock* DaoByteBlock_EncodeImport( DaoByteBlock *self, DaoValue *mod, DString *name, int scope, int index )
 {
-	int i;
 	DaoByteBlock *modBlock = DaoByteBlock_FindObjectBlock( self, mod );
+	DaoByteBlock *nameBlock = name ? DaoByteBlock_EncodeString( self, name ) : NULL;
 	DaoByteBlock *newBlock = DaoByteBlock_NewBlock( self, DAO_ASM_IMPORT );
 	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin, modBlock );
-	for(i=0; i<3 && names[i] != NULL; ++i){
-		DaoByteBlock *nameBlock = DaoByteBlock_EncodeString( self, names[i] );
-		DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin + 2*(i+1), nameBlock );
-	}
+	if( name ) DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin+2, nameBlock );
+	DaoByteCoder_EncodeUInt16( newBlock->begin+4, scope );
+	DaoByteCoder_EncodeUInt16( newBlock->begin+6, index );
 	return newBlock;
 }
 DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, int code, int opb, int mode, DaoType *type )
@@ -1241,6 +1240,7 @@ void DaoByteCoder_FinalizeRoutineBlock( DaoByteCoder *self, DaoByteBlock *block 
 	for(it=DMap_First(nspace->lookupTable); it; it=DMap_Next(nspace->lookupTable,it)){
 		int id = LOOKUP_BIND( LOOKUP_ST(it->value.pInt), 0, 0, LOOKUP_ID(it->value.pInt) );
 		DMap_Insert( id2names, IntToPointer( id ), it->key.pVoid );
+		//printf( "%s %i\n", it->key.pString->chars, LOOKUP_ID(id) );
 	}
 	if( routine->routHost ){
 		DaoClass *klass = (DaoClass*) routine->routHost->aux;
@@ -1284,6 +1284,7 @@ void DaoByteCoder_FinalizeRoutineBlock( DaoByteCoder *self, DaoByteBlock *block 
 	for(i=0; i<routine->body->annotCodes->size; ++i){
 		DaoVmCodeX *vmc = routine->body->annotCodes->items.pVmc[i];
 		int st = 0;
+		//printf( "%4i: ", i );DaoVmCodeX_Print( *vmc, NULL, NULL );
 		switch( vmc->code ){
 #if 0
 		case DVM_GETCK :
@@ -1956,7 +1957,7 @@ static void DaoByteCoder_DecodeType( DaoByteCoder *self, DaoByteBlock *block )
 	DaoByteBlock *name, *aux, *cbtype;
 	DaoByteBlock *pb2, *pb = block->first;
 	uint_t offset = self->ivalues->size;
-	uint_t A, B, C, D, ids[4];
+	uint_t A, B, C, D;
 	int i, count;
 	daoint pos;
 
@@ -2310,7 +2311,8 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 			case DVM_GETVS :
 			case DVM_GETVS_I : case DVM_GETVS_F :
 			case DVM_GETVS_D : case DVM_GETVS_C :
-				if( vmc->b >= routine->body->svariables->size ) goto InvalidInstruction;
+				if( routine->body->upValues == NULL ) goto InvalidInstruction;
+				if( vmc->b >= routine->body->upValues->size ) goto InvalidInstruction;
 			}
 			DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			break;
@@ -2320,7 +2322,8 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 			case DVM_SETVS :
 			case DVM_SETVS_II : case DVM_SETVS_FF :
 			case DVM_SETVS_DD : case DVM_SETVS_CC :
-				if( vmc->b >= routine->body->svariables->size ) goto InvalidInstruction;
+				if( routine->body->upValues == NULL ) goto InvalidInstruction;
+				if( vmc->b >= routine->body->upValues->size ) goto InvalidInstruction;
 			}
 			break;
 		case DAO_CODE_GETF :
@@ -2671,6 +2674,7 @@ static void DaoByteCoder_DecodeRoutineCode( DaoByteCoder *self, DaoByteBlock *bl
 			k += 1;
 		}
 		vmc.line = k <= numlines ? self->lines->items.pInt[offset1+2*(k-1)] : defline;
+		//printf( "%4i: ", i );DaoVmCodeX_Print( vmc, NULL, NULL );
 		switch( vmc.code ){
 #if 0
 		case DVM_GETCK : case DVM_GETVK : case DVM_SETVK :
@@ -2844,7 +2848,10 @@ static void DaoByteCoder_DecodeDeclaration( DaoByteCoder *self, DaoByteBlock *bl
 	}else if( block->parent->type == DAO_ASM_ROUTINE ){
 		DaoRoutine *routine = (DaoRoutine*) block->parent->value;
 		if( block->type == DAO_ASM_STATIC ){
-			DArray_Append( routine->body->svariables, DaoVariable_New(NULL,NULL) );
+			DaoVariable *var = DaoVariable_New( value, type );
+			int i = LOOKUP_BIND( DAO_GLOBAL_VARIABLE, 0, 0, self->nspace->variables->size );
+			MAP_Insert( self->nspace->lookupTable, name, i );
+			DArray_Append( self->nspace->variables, var );
 		}else{
 			goto Error;
 		}
@@ -2896,22 +2903,82 @@ static void DaoByteCoder_LoadModule( DaoByteCoder *self, DaoByteBlock *block )
 		DaoNamespace_AddConst( self->nspace, mod->value->xString.value, (DaoValue*) ns, 0 );
 	}
 }
+static int DaoByteCoder_Import( DaoByteCoder *self, DaoByteBlock *block, DaoNamespace *mod, DNode *it )
+{
+	DaoValue *value = NULL;
+	DaoNamespace *NS = self->nspace;
+	DString *name = it->key.pString;
+	int ret = 0;
+
+	if( block->parent == self->top ){
+	}
+
+	if( LOOKUP_ST( it->value.pInt ) == DAO_GLOBAL_CONSTANT ){
+		value = mod->constants->items.pConst[ LOOKUP_ID(it->value.pInt) ]->value;
+		//ret = DaoParser_AddToScope( self, name, value, NULL, 0 );
+	}else if( block == self->top ){
+		DaoVariable *var = mod->variables->items.pVar[ LOOKUP_ID(it->value.pInt) ];
+		ret = DaoNamespace_AddVariable( NS, name, var->value, var->dtype, DAO_PERM_NONE );
+	}else{
+		//DaoParser_Error( self, DAO_INVALID_IMPORT_VAR, it->key.pString );
+		return 0;
+	}
+	return ret;
+}
 static void DaoByteCoder_DecodeImport( DaoByteCoder *self, DaoByteBlock *block )
 {
-	DaoByteBlock *modBlock;
+	DNode *it;
+	DString *name, *tag;
+	DaoValue *value;
+	DaoVariable *var;
+	DaoNamespace *NS = self->nspace;
+	DaoByteBlock *modBlock, *namebk, *scopebk;
+	DaoNamespace *mod = NULL;
+	int i, st, pm, index = -1;
 	uint_t A, B, C, D;
 
 	DaoByteCoder_DecodeChunk2222( block->begin, & A, & B, & C, & D );
 	modBlock = DaoByteCoder_LookupValueBlock( self, block, A );
 
 	if( self->error ) return;
-	if( modBlock->value->type != DAO_NAMESPACE ){
-		DaoByteCoder_Error( self, block, "Invalid use statement!" );
+	if( block->parent == NULL || block->parent->type != DAO_ASM_ROUTINE ) goto InvalidScope;
+	if( modBlock->value->type != DAO_NAMESPACE ) goto InvalidImport;
+
+	mod = (DaoNamespace*) modBlock->value;
+	if( B == 0 ){
+		if( C != 0 ) goto InvalidImport;
+		DaoNamespace_AddParent( self->nspace, mod );
 		return;
 	}
-	if( A == 0 ){
-		DaoNamespace_AddParent( self->nspace, (DaoNamespace*) modBlock->value );
+	namebk = DaoByteCoder_LookupStringBlock( self, block, B );
+	name = namebk->value->xString.value;
+	it = DMap_Find( mod->lookupTable, name );
+	if( it == NULL || LOOKUP_PM(it->value.pInt) != DAO_PERM_PUBLIC ) goto InvalidImport;
+	st = LOOKUP_ST( it->value.pInt );
+	pm = LOOKUP_PM( it->value.pInt );
+	if( C ){
+		char suffix[32];
+		sprintf( suffix, "{%i}[%i]", C, D );
+		name = DString_Copy( name );
+		DString_AppendChars( name, suffix );
+		pm = DAO_PERM_NONE;
 	}
+	if( st == DAO_GLOBAL_CONSTANT ){
+		value = mod->constants->items.pConst[ LOOKUP_ID(it->value.pInt) ]->value;
+		index = DaoNamespace_AddConst( NS, name, value, pm );
+	}else{
+		var = mod->variables->items.pVar[ LOOKUP_ID(it->value.pInt) ];
+		index = DaoNamespace_AddVariable( NS, name, var->value, var->dtype, pm );
+	}
+	if( name != namebk->value->xString.value ) DString_Delete( name );
+	if( index < 0 ) goto InvalidImport;
+	return;
+
+InvalidScope:
+	DaoByteCoder_Error( self, block, "Invalid scope for importing!" );
+	return;
+InvalidImport:
+	DaoByteCoder_Error( self, block, "Invalid import statement!" );
 }
 static void DaoByteCoder_DecodeVerbatim( DaoByteCoder *self, DaoByteBlock *block )
 {
