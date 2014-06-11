@@ -2082,8 +2082,9 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 	if( sptype == NULL ) goto FailedInstantiation;
 	if( self->byteBlock && tpl->type == DAO_CTYPE ){
 		DaoCtype *ctype = (DaoCtype*) sptype->aux;
+		DaoCtype *gtype = (DaoCtype*) gentype->aux;
 		DaoType **ts = types->items.pType;
-		DaoByteBlock_EncodeCtype( self->byteBlock, ctype, ctype, ts, types->size );
+		DaoByteBlock_EncodeCtype( self->byteBlock, ctype, gtype, ts, types->size );
 		DaoByteBlock_EncodeType( self->byteBlock, sptype );
 	}
 
@@ -6038,7 +6039,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 	tki2 = DaoParser_NextTokenName( self );
 	if( tki2 == stop ) tki2 = 0;
 	if( (start + 2) <= end ) tki3 = tokens[start+2]->type;
-	if( (tki == DTOK_IDENTIFIER || tki == DKEY_SELF || tki >= DKEY_RAND) && tki2 == DTOK_FIELD ){
+	if( (tki == DTOK_IDENTIFIER || tki == DKEY_SELF || tki >= DKEY_RAND) && (tki2 == DTOK_FIELD || (eltype == DAO_EXPRLIST_TUPLE && tki2 == DTOK_ASSN)) ){
 		DaoType *type = self->enumTypes->size ? self->enumTypes->items.pType[0] : NULL;
 		DaoString ds = {DAO_STRING,0,0,0,1,NULL};
 		DaoValue *value = (DaoValue*) & ds;
@@ -6248,7 +6249,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 				}
 				self->curToken += 1;
 				cid = DaoParser_GetArray( self );
-				enode = DaoParser_ParseExpressionList2( self, DTOK_COMMA, inode, cid, 0 );
+				enode = DaoParser_ParseExpressionList2( self, DTOK_COMMA, inode, cid, DAO_EXPRLIST_TUPLE );
 				if( DaoParser_CurrentTokenName( self ) == DTOK_DOTS ){
 					mode |= DAO_CALL_EXPAR;
 					self->curToken += 1;
@@ -6467,65 +6468,9 @@ InvalidFunctional:
 			}
 		case DTOK_COLON2 :
 			{
-				DaoValue *it = NULL;
 				int j, opa = result.reg, opb = -1;
 
 				self->curToken += 1;
-				if( tokens[start+1]->name == DTOK_LCB ){ /* ::{}, data packing */
-					/* dao_class::{ members } enumeration,
-					 * or routine::{ parameters } */
-					DaoInode *inode = self->vmcLast;
-					int code = DVM_PACK;
-					int rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
-					if( rb < 0 ) return error;
-
-					if( result.last && back->code == DVM_LOAD2 ){ /* X.Y */
-						DaoParser_PopRegister( self ); /* opc of GETF will be reallocated; */
-						extra = back->prev;
-						back->code = DVM_LOAD;
-						back->b = 0;
-						code = DVM_MPACK;
-					}else if( result.last &&  DaoVmCode_CheckPermutable( back->code ) ){
-						extra = back;
-					}else{
-						DaoParser_AddCode( self, DVM_LOAD, regLast,0,0/*unset*/, start,0,0 );
-						extra = self->vmcLast;
-					}
-					self->curToken += 1;
-					cid = DaoParser_GetArray( self );
-					enode = DaoParser_ParseExpressionList2( self, DTOK_COMMA, extra, cid, DAO_EXPRLIST_TUPLE );
-					if( enode.reg < 0 || self->curToken != rb ) return enode;
-
-					regLast = DaoParser_PushRegister( self );
-					DaoParser_AddCode( self, code, enode.reg, enode.count-1, regLast, postart, start, rb );
-
-					if( self->needConst && result.konst && enode.konst == (enode.count-1) ){
-						value = DaoParser_GetVariable( self, result.konst );
-						if( code == DVM_PACK && (value == NULL || value->type != DAO_CLASS) ){
-							cid->items.pInt[0] = result.konst;
-							if( extra ){
-								DaoInode *inode = self->vmcLast;
-								inode->last = inode->first + inode->last - extra->first;
-								inode->middle = inode->first - extra->first;
-								inode->first = extra->first;
-							}
-							enode.prev = extra ? extra->prev : back;
-							regLast = DaoParser_MakeEnumConst( self, & enode, cid, regcount );
-							if( regLast >=0 ){
-								result.first = self->vmcLast;
-								result.konst = enode.konst;
-							}
-						}else{
-							result.konst = 0;
-						}
-					}else{
-						result.konst = 0;
-					}
-					result.reg = regLast;
-					result.last = result.update = self->vmcLast;
-					self->curToken = rb + 1;
-					break;
-				}
 
 				if( DaoParser_CurrentTokenType( self ) != DTOK_IDENTIFIER ){
 					if( eltype & DAO_EXPRLIST_SCOPE ){ /* operator Klass::+() { } */
@@ -6590,6 +6535,60 @@ InvalidFunctional:
 					result.reg = regLast;
 					result.last = result.update = self->vmcLast;
 					self->curToken += 1;
+					break;
+				}else if( tokens[start+1]->name == DTOK_LCB ){ /* .{}, data packing */
+					/* dao_class.{ members } enumeration,
+					 * or routine.{ parameters } */
+					DaoInode *inode = self->vmcLast;
+					int code = DVM_PACK;
+					int rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
+					if( rb < 0 ) return error;
+
+					if( result.last && back->code == DVM_LOAD2 ){ /* X.Y */
+						DaoParser_PopRegister( self ); /* opc of GETF will be reallocated; */
+						extra = back->prev;
+						back->code = DVM_LOAD;
+						back->b = 0;
+						code = DVM_MPACK;
+					}else if( result.last &&  DaoVmCode_CheckPermutable( back->code ) ){
+						extra = back;
+					}else{
+						DaoParser_AddCode( self, DVM_LOAD, regLast,0,0/*unset*/, start,0,0 );
+						extra = self->vmcLast;
+					}
+					self->curToken += 1;
+					cid = DaoParser_GetArray( self );
+					enode = DaoParser_ParseExpressionList2( self, DTOK_COMMA, extra, cid, DAO_EXPRLIST_TUPLE );
+					if( enode.reg < 0 || self->curToken != rb ) return enode;
+
+					regLast = DaoParser_PushRegister( self );
+					DaoParser_AddCode( self, code, enode.reg, enode.count-1, regLast, postart, start, rb );
+
+					if( self->needConst && result.konst && enode.konst == (enode.count-1) ){
+						value = DaoParser_GetVariable( self, result.konst );
+						if( code == DVM_PACK && (value == NULL || value->type != DAO_CLASS) ){
+							cid->items.pInt[0] = result.konst;
+							if( extra ){
+								DaoInode *inode = self->vmcLast;
+								inode->last = inode->first + inode->last - extra->first;
+								inode->middle = inode->first - extra->first;
+								inode->first = extra->first;
+							}
+							enode.prev = extra ? extra->prev : back;
+							regLast = DaoParser_MakeEnumConst( self, & enode, cid, regcount );
+							if( regLast >=0 ){
+								result.first = self->vmcLast;
+								result.konst = enode.konst;
+							}
+						}else{
+							result.konst = 0;
+						}
+					}else{
+						result.konst = 0;
+					}
+					result.reg = regLast;
+					result.last = result.update = self->vmcLast;
+					self->curToken = rb + 1;
 					break;
 				}
 				if( DaoParser_CurrentTokenType( self ) != DTOK_IDENTIFIER ){

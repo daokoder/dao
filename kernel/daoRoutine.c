@@ -84,11 +84,7 @@ DaoRoutine* DaoRoutines_New( DaoNamespace *nspace, DaoType *host, DaoRoutine *in
 		self->nameSpace = init->nameSpace;
 		GC_IncRC( self->nameSpace );
 	}
-	if( init->overloads ){
-		DaoRoutines_Import( self, init->overloads );
-	}else{
-		DRoutines_Add( self->overloads, init );
-	}
+	DaoRoutines_Add( self, init );
 	return self;
 }
 void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int cst, int cbody, int stat )
@@ -506,14 +502,18 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 	DMutex_Unlock( & mutex_routines_update );
 	return param->routine;
 }
-void DaoRoutines_Import( DaoRoutine *self, DRoutines *other )
+void DaoRoutines_Add( DaoRoutine *self, DaoRoutine *other )
 {
 	DaoType *host = self->routHost;
 	DaoNamespace *nspace = self->nameSpace;
-	int i, n = other->routines->size;
+	int i;
 	if( self->overloads == NULL ) return;
-	for(i=0; i<n; i++){
-		DaoRoutine *routine = other->routines->items.pRoutine[i];
+	if( other->overloads == NULL ){
+		DRoutines_Add( self->overloads, other );
+		return;
+	}
+	for(i=0; i<other->overloads->routines->size; i++){
+		DaoRoutine *routine = other->overloads->routines->items.pRoutine[i];
 		if( routine->attribs & DAO_ROUT_PRIVATE ){
 			if( routine->routHost && routine->routHost != host ) continue;
 			if( routine->routHost == NULL && routine->nameSpace != nspace ) continue;
@@ -614,7 +614,7 @@ static DaoRoutine* DParamNode_Lookup( DParamNode *self, DaoValue *values[], DaoT
 			if( checkname && DString_EQ( argvalue->xNameValue.name, parname ) == 0 ) continue;
 			argvalue = argvalue->xNameValue.value;
 		}
-		if( argtype && argtype->tid == DAO_PAR_NAMED ){
+		if( argtype && (argtype->attrib & DAO_TYPE_PARNAMED) ){
 			DString *parname = parnode->type2->fname;
 			if( checkname && DString_EQ( argtype->fname, parname ) == 0 ) continue;
 			argtype = (DaoType*) argtype->aux;
@@ -814,6 +814,9 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *svalue, DaoType *stype,
 		if( argvalue != NULL && argvalue->type == DAO_PAR_NAMED ){
 			if( DString_EQ( argvalue->xNameValue.name, partype->fname ) == 0 ) goto NotMatched;
 			argvalue = argvalue->xNameValue.value;
+		}
+		if( argtype != NULL && (argtype->attrib & DAO_TYPE_PARNAMED) ){
+			argtype = (DaoType*) argtype->aux;
 		}
 		if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
 		parpass[parindex] = Dao_CheckParameter( partype, argvalue, argtype, defs );

@@ -605,7 +605,7 @@ attribs=FunctionTrait::FUNC_NONE, snamespace="" )
 	tpname = tks[2];
 	if( tpname.size() ){
 		if( map_user_types.find( tpname ) == none ){
-			utp = UserType::{ name => tpname, input_file => input };
+			utp = UserType.{ name => tpname, input_file => input };
 			map_user_types[ tpname ] = utp;
 		}
 		utp = map_user_types[ tpname ];
@@ -709,7 +709,7 @@ routine UserType::Parse( source="", inExtFile=0 )
 				if( map_user_types.find( old ) != none ){
 					map_user_types[ scoped ] = map_user_types[ old ];
 				}else{
-					utp = UserType::{ name => typer, input_file => input_file };
+					utp = UserType.{ name => typer, input_file => input_file };
 					if( tks[1] == "class" ) utp.isCppClass = 1;
 					utp.name2 = scoped;
 					utp.nested = i;
@@ -944,7 +944,7 @@ routine ParseCode( source : string, snamespace="", lang="", fname : string="", i
 			typename = tks[1];
 			name = tks[3];
 			if( map_user_types.find( name ) == none ){
-				utp = UserType::{ name => name, input_file => fname };
+				utp = UserType.{ name => name, input_file => fname };
 				map_user_types[ name ] = utp;
 			}
 			utp = map_user_types[ name ];
@@ -968,7 +968,7 @@ routine ParseCode( source : string, snamespace="", lang="", fname : string="", i
 				fullname = tks2[2];
 				name2 = fullname.change( ":", "_" );
 				if( map_user_types.find( name2 ) == none ){
-					utp2 = UserType::{ name => name2, fullname=>fullname, input_file => fname };
+					utp2 = UserType.{ name => name2, fullname=>fullname, input_file => fname };
 					map_user_types[ name2 ] = utp2;
 				}
 				utp2 = map_user_types[ name2 ];
@@ -984,7 +984,7 @@ routine ParseCode( source : string, snamespace="", lang="", fname : string="", i
 			alias = tks[3];
 			name = tks[4];
 			if( map_user_types.find( alias ) == none ){
-				utp = UserType::{ name => name, input_file => fname };
+				utp = UserType.{ name => name, input_file => fname };
 				map_user_types[ alias ] = utp;
 			}
 			utp = map_user_types[ alias ];
@@ -1044,7 +1044,7 @@ routine ParseCode( source : string, snamespace="", lang="", fname : string="", i
 				 typedef_ns_types[alias] = map_ns_types[name];
 			 }else if( % snamespace ){
 				 typer = snamespace + "_" + alias;
-				 utp = UserType::{ name => typer, input_file => fname };
+				 utp = UserType.{ name => typer, input_file => fname };
 				 if( tks[1] == "class" ) utp.isCppClass = 1;
 				 utp.name2 = scoped;
 				 utp.fullname = snamespace + "::" + alias;
@@ -1055,7 +1055,7 @@ routine ParseCode( source : string, snamespace="", lang="", fname : string="", i
 			 if( tks[2] == "*" ) pointer_types[ alias ] = name;
 			 if( pointer_types.find( name ) != none ) pointer_types[ alias ] = pointer_types[name];
 			 if( name.match( "(struct|union)" ) != none ){
-				 map_user_types[ name ] = UserType::{ name => alias, input_file => fname };;
+				 map_user_types[ name ] = UserType.{ name => alias, input_file => fname };;
 				 map_user_types[ alias ] = map_user_types[ name ];
 				 if( tks[2] == "*" ) pointer_types[ alias ] = alias;
 			 }
@@ -1714,7 +1714,7 @@ routine Variable::Parse( fname = "" )
 			}
 		}
 		if( user and map_user_types.find( typename ) == none ){
-			utp = UserType::{ name => typename, input_file => fname, source=>source2 };
+			utp = UserType.{ name => typename, input_file => fname, source=>source2 };
 			map_user_types[ typename ] = utp;
 			map_user_types[ "struct " + typename ] = utp;
 			if( utp.name[0:0] == "_" ){
@@ -2734,7 +2734,7 @@ var daoqt_sig_slot_emit =
 routine NewProxyFunctionName( self :coroutine<none,string> )
 {
 	id = BigInt( "10000L16" )
-	while(1) self.yield ("Function_" + (string)(++id));
+	while(1) self.suspend("Function_" + (string)(++id));
 	return "";
 }
 var new_proxy_function_name = coroutine<none,string>();

@@ -1063,12 +1063,8 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 			mroutine = DaoRoutines_New( self, NULL, (DaoRoutine*) cst->value );
 			mroutine->trait |= DAO_VALUE_CONST;
 			node->value.pInt = LOOKUP_BIND( st, pm, 0, self->constants->size );
+			DaoRoutines_Add( mroutine, (DaoRoutine*) value );
 			DArray_Append( self->constants, DaoConstant_New( (DaoValue*) mroutine ) );
-			if( value->xRoutine.overloads ){
-				DaoRoutines_Import( mroutine, value->xRoutine.overloads );
-			}else{
-				DRoutines_Add( mroutine->overloads, (DaoRoutine*) value );
-			}
 			return node->value.pInt;
 		}
 	}

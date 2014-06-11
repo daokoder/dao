@@ -2097,6 +2097,7 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 			if( tp->invar != 0 ) goto FinishError;
 		}
 		if( tp == NULL )  goto FinishError;
+		if( tp->attrib & DAO_TYPE_PARNAMED ) tp = (DaoType*) tp->aux;
 		if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
 		parpass[ito] = DaoType_MatchTo( tp, partype, defs );
 

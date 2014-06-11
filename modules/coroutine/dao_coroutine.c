@@ -157,12 +157,12 @@ static void COROUT_Resume( DaoProcess *proc, DaoValue *p[], int N )
 	if( self->process->status == DAO_PROCESS_ABORTED )
 		DaoProcess_RaiseError( proc, NULL, "coroutine execution is aborted." );
 }
-static void COROUT_Yield( DaoProcess *proc, DaoValue *p[], int N )
+static void COROUT_Suspend( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxCoroutine *self = (DaoxCoroutine*) p[0];
 	DaoValue *value = N > 1 ? p[1] : DaoValue_MakeNone();
 	if( self->process != proc ){
-		DaoProcess_RaiseWarning( proc, NULL, "coroutine cannot yield in alien process." );
+		DaoProcess_RaiseWarning( proc, NULL, "coroutine cannot suspend in alien process." );
 		return;
 	}
 	GC_ShiftRC( value, proc->stackValues[0] );
@@ -187,13 +187,13 @@ static void COROUT_Status( DaoProcess *proc, DaoValue *p[], int N )
 
 static DaoFuncItem coroutineMeths[]=
 {
-	{ COROUT_New,    "coroutine<@RESUME,@YIELD>()" },
-	{ COROUT_Start,  "start( self :coroutine<@RESUME,@YIELD>, rout :routine, ... ) => @YIELD" },
-	{ COROUT_Resume, "resume( self :coroutine<@RESUME,@YIELD> ) => @YIELD" },
-	{ COROUT_Resume, "resume( self :coroutine<@RESUME,@YIELD>, value :@RESUME ) => @YIELD" },
-	{ COROUT_Yield,  "yield( self :coroutine<@RESUME,@YIELD> ) => @RESUME" },
-	{ COROUT_Yield,  "yield( self :coroutine<@RESUME,@YIELD>, value :@YIELD ) => @RESUME" },
-	{ COROUT_Status, "status( self :coroutine<@RESUME,@YIELD> ) => enum<running,suspended,finished,aborted>" },
+	{ COROUT_New,    "coroutine<@RESUME,@SUSPEND>()" },
+	{ COROUT_Start,  "start( self :coroutine<@RESUME,@SUSPEND>, rout :routine, ... ) => @SUSPEND" },
+	{ COROUT_Resume, "resume( self :coroutine<@RESUME,@SUSPEND> ) => @SUSPEND" },
+	{ COROUT_Resume, "resume( self :coroutine<@RESUME,@SUSPEND>, value :@RESUME ) => @SUSPEND" },
+	{ COROUT_Suspend, "suspend( self :coroutine<@RESUME,@SUSPEND> ) => @RESUME" },
+	{ COROUT_Suspend, "suspend( self :coroutine<@RESUME,@SUSPEND>, value :@SUSPEND ) => @RESUME" },
+	{ COROUT_Status, "status( self :coroutine<@RESUME,@SUSPEND> ) => enum<running,suspended,finished,aborted>" },
 	{ NULL, NULL },
 };
 
@@ -206,7 +206,7 @@ static void DaoxCoroutine_GC( void *p, DArray *values, DArray *as, DArray *maps,
 
 DaoTypeBase coroutineTyper =
 {
-	"coroutine<@RESUME,@YIELD>", NULL, NULL, (DaoFuncItem*) coroutineMeths, {0}, {0},
+	"coroutine<@RESUME,@SUSPEND>", NULL, NULL, (DaoFuncItem*) coroutineMeths, {0}, {0},
 	(FuncPtrDel)DaoxCoroutine_Delete, DaoxCoroutine_GC
 };
 

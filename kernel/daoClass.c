@@ -1370,7 +1370,7 @@ int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *data, int s )
 			dest->value = (DaoValue*) routs;
 		}
 		if( data->xRoutine.overloads ){
-			DaoRoutines_Import( (DaoRoutine*) dest->value, data->xRoutine.overloads );
+			DaoRoutines_Add( (DaoRoutine*) dest->value, (DaoRoutine*) data );
 		}else{
 			DaoRoutine *rout = (DaoRoutine*) data;
 			DRoutines_Add( dest->value->xRoutine.overloads, rout );

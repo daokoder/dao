@@ -181,7 +181,7 @@ void DRoutines_Delete( DRoutines *self );
 
 DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine );
 
-void DaoRoutines_Import( DaoRoutine *self, DRoutines *other );
+void DaoRoutines_Add( DaoRoutine *self, DaoRoutine *other );
 
 
 /*
