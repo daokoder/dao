@@ -71,12 +71,10 @@ Lexical Structures
 
 @[text]
 
-Dao programs are written in text encoded in UTF-8, 
-an ASCII (American Standard Code for Information Interchange)
-compatible multi-byte Unicode encoding.
-Some character conversions are performed on the program source codes
-during the lexical translation.
-
+The standard encoding for Dao program source code is UTF-8.
+But the system encoding of the execution environment is also supported,
+and source code in such encoding is automatically converted to UTF-8
+before parsing.
 
 
 @[subsection]Comments@[subsection]
@@ -92,49 +90,10 @@ if they are properly paired, namely, they are allowed to be nested.
 
 @[subsection]Quotation Marks@[subsection]
 
-The basic quotation marks to enclose string literals are the 
-single quotation mark 0x27 and the double quotation mark 0x22.
-Some other marks are also interpreted as quotations,
-they are listed in the following table:
-
-@[list]
--- Single quotation mark: @[green]0x27@[green];
-
-Paired with another single quotation mark;
-
-No conversion;
-
--- Double quotation mark: @[green]0x22@[green];
-
-Paired with another double quotation mark;
-
-No conversion;
-
--- DBC single quotation mark: @[green]0x27+0xfee0@[green];
-
-Paired with another DBC single quotation mark;
-
-Conversion to single quotation mark @[green]0x27@[green];
-
--- DBC double quotation mark: @[green]0x22+0xfee0@[green];
-
-Paired with another DBC double quotation mark;
-
-Conversion to double quotation mark @[green]0x22@[green];
-
--- Left single quotation mark: @[green]0x2018@[green];
-
-Paired with right single quotation mark @[green]0x2019@[green];
-
-Conversion to single quotation mark @[green]0x27@[green];
-
--- Left double quotation mark: @[green]0x201c@[green];
-
-Paired with right double quotation mark @[green]0x201d@[green];
-
-Conversion to double quotation mark @[green]0x22@[green];
-@[list]
-
+Both the single quotation mark (0x27) and the double quotation mark (0x22)
+can be used to quote string literals. They much be used in pairs, and no escape
+is required for one kind of quotation mark inside strings quoted with the other
+kind quotation mark.
 
 
 @[subsection]Keywords@[subsection]
@@ -143,18 +102,18 @@ The following keywords are reserved for the language:
 @[list]
 -- Types:
 @[code(syntax)]
-TypeKeyword ::= type | any | int | float | complex | long | string
-               | enum | array | list | map | tuple | cdata
+TypeKeyword ::= type | any | int | float | complex | string
+               | enum | array | list | map | tuple | 
 @[code(syntax)]
 
 -- Structures:
 @[code(syntax)]
-StructKeyword ::= interface | class | routine | operator | syntax
+StructKeyword ::= interface | class | routine | operator | defer
 @[code(syntax)]
 
 -- Storage/scoping:
 @[code(syntax)]
-StorageKeyword ::= const | global | static | var
+StorageKeyword ::= const | var | invar | static
 @[code(syntax)]
 
 -- Permisions:
@@ -169,13 +128,13 @@ ConstVarKeyword ::= none | self
 
 -- Control statements:
 @[code(syntax)]
-ControlKeyword ::= defer | if | else | for | while | do 
+ControlKeyword ::= if | else | for | while | do 
                   | switch | case | default | break | skip
 @[code(syntax)]
 
 -- Other statements:
 @[code(syntax)]
-OtherStmtKeyword ::= type | use | load | as | return | yield
+OtherStmtKeyword ::= load | import | as | return | yield
 @[code(syntax)]
 
 -- Operators:
@@ -233,9 +192,6 @@ DecInteger ::= DecDigit +
 HexInteger ::= ( '0x' | '0X' ) HexDigit +
 
 Integer ::= DecInteger | HexInteger
-
-LongBase ::= '2' ... '16'
-LongInteger ::= Integer 'L' [ LongBase ]
 @[code(syntax)]
 
 
@@ -276,22 +232,9 @@ SingleQuoteString ::= ' ' ' ValidCharSequence ' ' '
 DoubleQuoteString ::= ' " ' ValidCharSequence ' " '
 @[code(syntax)]
 
-String literal with DBC quotation marks:
-@[code(syntax)]
-DBCSingleQuoteString ::= ' ＇ ' ValidCharSequence ' ＇ '
-DBCDoubleQuoteString ::= ' ＂ ' ValidCharSequence ' ＂ '
-@[code(syntax)]
-
-String literal with Unicode single and double quotation marks:
-@[code(syntax)]
-USingleQuoteString ::= ' ‘ ' ValidCharSequence ' ’ '
-UDoubleQuoteString ::= ' “ ' ValidCharSequence ' ” '
-@[code(syntax)]
-
 Verbatim string literal:
 @[code(syntax)]
-VerbatimMBString ::= '@[' [Delimiter] ']' Characters '@[' [Delimiter] ']'
-VerbatimWCString ::= '@@[' [Delimiter] ']' Characters '@@[' [Delimiter] ']'
+VerbatimString ::= '@[' [Delimiter] ']' Characters '@[' [Delimiter] ']'
 @[code(syntax)]
 Where @[cyan]Delimiter@[cyan] can contain letters, digits, underscores, 
 blank spaces, dots, colons, dashes and assignment marks.
@@ -307,24 +250,17 @@ So the followings are valid string literals:
 ' “ '  # the enclosing mark is ', so " “ can appear without problem
 " ' "
 " ” "
-“ ' ' ”  # the same for other quotations
 ' \' '
 " \" "
 @[code(dao)]
 
 String literal:
 @[code(syntax)]
-MultiByteString ::= SingleQuoteString | DBCSingleQuoteString
-                  | USingleQuoteString | VerbatimMBString
-
-WideCharString ::= DoubleQuoteString | DBCDoubleQuoteString
-                 | UDoubleQuoteString | VerbatimWCString
-
-String ::= MultiByteString + | WideCharString +
+String ::= SingleQuoteString + | DoubleQuoteString + | VerbatimString
 @[code(syntax)]
-Here the repeating marks mean two or more @[green]MultiByteString@[green]
-or @[green]WideCharString@[green] can be placed one after another,
-and they will will be jointed into a single string literal during lexical translation.
+Here the repeating marks mean two or more @[green]SingleQuoteString@[green]
+or @[green]DoubleQuoteString@[green] can be placed one after another,
+and they will will be jointed into a single string literal during preprocessing.
 
 
 @[subsection]Escape Sequences in String Literal@[subsection]
@@ -453,6 +389,7 @@ ConstPrimaryExpression ::= ConstAtomicExpression
                          | ConstPrimaryExpression '::' Identifier
                          | ConstPrimaryExpression '[' [ ConstExpression ] ']'
                          | BuiltinMathFuncsMinusRand '(' ConstExpression ')'
+                         | ConstExpression '(' [ ConstExpressionList ] ')'
 @[code(syntax)]
 
 
@@ -523,10 +460,10 @@ Constant Tuple
 @[subsection]
 
 @[code(syntax)]
-ConstArgumentItem ::= [ Identifier '=>' ] ConstExpression
+ConstArgumentItem ::= [ Identifier '=' ] ConstExpression
 
 ConstTupleEnum1 ::=         '('   ConstArgumentItem ',' ')'
-ConstTupleEnum2 ::=         '('   ConstArgumentItem { ',' ConstArgumentItem } [ ',' ]   ')'
+ConstTupleEnum2 ::=         '('   ConstArgumentItem ( ',' ConstArgumentItem ) + [ ',' ] ')'
 ConstTupleEnum3 ::= 'tuple' '{' [ ConstArgumentItem { ',' ConstArgumentItem } [ ',' ] ] '}'
 
 ConstTuple ::= ConstTupleEnum1 | ConstTupleEnum2 | ConstTupleEnum3
@@ -577,9 +514,8 @@ Special Types
 @[code(syntax)]
 NoneType       ::= [ 'dao' '::' ] 'none'
 AnyType        ::= [ 'dao' '::' ] 'any'
-UndefinedType  ::= '?'
 VariantHolder  ::= TypeHolder '<' VariantType '>'
-SpecialType    ::= NoneType | AnyType | UndefinedType | TypeHolder | VariantHolder
+SpecialType    ::= NoneType | AnyType | TypeHolder | VariantHolder
 @[code(syntax)]
 
 
@@ -589,7 +525,7 @@ Primitive Types
 @[subsection]
 
 @[code(syntax)]
-PrimitiveType ::= 'int' | 'float' | 'double' | 'complex' | 'long' | 'string'
+PrimitiveType ::= 'int' | 'float' | 'double' | 'complex' | 'string'
 @[code(syntax)]
 
 
@@ -602,8 +538,9 @@ SymbolItem ::= Identifier [ '=' Integer ]
 
 SymbolType ::= 'enum' '<' [ SymbolItem { ',' SymbolItem } ] '>'
 FlagType   ::= 'enum' '<' [ SymbolItem { ';' SymbolItem } ] '>'
+BoolType   ::= 'enum' '<' [ SymbolItem  ':' SymbolItem ] '>'
 
-EnumSymbolType ::= 'enum' | SymbolType | FlagType
+EnumSymbolType ::= 'enum' | SymbolType | FlagType | BoolType
 @[code(syntax)]
 
 
@@ -614,7 +551,7 @@ Array Type
 
 @[code(syntax)]
 ArrayNumType ::= 'int' | 'float' | 'double' | 'complex'
-ArrayType ::= 'array' [ '<' ( ArrayNumType | AnyType | UndefinedType | TypeHolder ) '>' ]
+ArrayType ::= 'array' [ '<' ( ArrayNumType | TypeHolder ) '>' ]
 @[code(syntax)]
 
 
@@ -641,7 +578,7 @@ Tuple Type
 @[subsection]
 
 @[code(syntax)]
-TupleItemType ::= [ Identifier ':' ] Type
+TupleItemType ::= [ 'invar' ] [ Identifier ':' ] Type
 TupleType ::= 'tuple' [ '<' TupleItemType { ',' TupleItemType } '>' ]
 @[code(syntax)]
 
@@ -652,8 +589,8 @@ Routine Type
 @[subsection]
 
 @[code(syntax)]
-ParamTypeItem1 ::= 'Identifier' [ ':' Type ]
-ParamTypeItem2 ::= 'Identifier' [ '=' Type ]
+ParamTypeItem1 ::= [ 'invar' ] 'Identifier' [ ':' Type ]
+ParamTypeItem2 ::= [ 'invar' ] 'Identifier' [ '=' Type ]
 ParamTypeList1 ::= ParamTypeItem1 { ',' ParamTypeItem1 } { ',' ParamTypeItem2 } [ ',' '...' ]
 ParamTypeList2 ::= ParamTypeItem2 { ',' ParamTypeItem2 } [ ',' '...' ]
 ParamTypeList  ::= ParamTypeList1 | ParamTypeList2 | '...'
@@ -768,7 +705,7 @@ PrimaryExpression ::= AtomicExpression
                     | PrimaryExpression '(' [ ArgumentList ] ')'
                     | PrimaryExpression '[' [ ExpressionList [ ',' ] ] ']'
                     | PrimaryExpression '{' [ ArgumentList [ ',' ] ] '}'
-                    | PrimaryExpression '::{' [ ArgumentList ] '}'
+                    | PrimaryExpression '.{' [ ArgumentList ] '}'
 @[code(syntax)]
 
 
@@ -787,7 +724,7 @@ Argument List
 @[subsection]
 
 @[code(syntax)]
-ArgumentItem ::= [ Identifier '=>' ] Expression
+ArgumentItem ::= [ Identifier '=' ] Expression
 
 ArgumentList = ArgumentItem { ',' ArgumentItem }
 @[code(syntax)]
@@ -868,13 +805,14 @@ Anonymous Routine
 @[subsection]
 
 @[code(syntax)]
-AnParamItem1 ::= Identifier [ ':' Type ]
-AnParamItem2 ::= Identifier [ ':' Type ] '=' Expression
+AnParamItem1 ::= [ 'invar' ] Identifier [ ':' Type ]
+AnParamItem2 ::= [ 'invar' ] Identifier [ ':' Type ] '=' Expression
+ValistParam  ::= [ 'invar' ] '...' [ ':' Type ]
 
 AnParamList1 ::= AnParamItem1 { ',' AnParamItem1 }
-AnParamList2 ::= AnParamList1 { ',' AnParamItem2 } [ ',' '...' ]
-AnParamList3 ::= AnParamItem2 { ',' AnParamItem2 } [ ',' '...' ]
-AnParamList  ::= ( AnParamList2 | AnParamList3 | '...' ) [ 'as' Identifier ]
+AnParamList2 ::= AnParamList1 { ',' AnParamItem2 } [ ',' ValistParam ]
+AnParamList3 ::= AnParamItem2 { ',' AnParamItem2 } [ ',' ValistParam ]
+AnParamList  ::= ( AnParamList2 | AnParamList3 | ValistParam ) [ 'as' Identifier ]
 
 AnonymousRoutine ::= 'routine' [ '(' [ AnParamList ] ')' ] '{' StatementBlock '}'
 @[code(syntax)]
@@ -925,8 +863,8 @@ Declaration Statements
 @[subsection]
 
 @[code(syntax)]
-ConstStatic    ::= 'const' | 'global' 'const' | 'const' 'global' | 'static'
-VarGlobal      ::= 'var' | 'global'
+ConstStatic    ::= 'const' | 'static'
+VarGlobal      ::= 'var' | 'invar'
 IdentifierList ::= Identifier {',' Identifier }
 
 ConstStaticDecl ::= ConstStatic IdentifierList [ ':' Type ] [ '=' ConstExpression ]
@@ -1007,10 +945,18 @@ Switch-case Statement
 @[subsection]
 
 @[code(syntax)]
-SwitchCaseStmt ::= 'switch' '(' Expression ')' '{'
-                   { 'case' Expression [ ( ',' | '...' ) Expression ] ':' ControlBlock }
+ValueSwitch ::= 'switch' '(' [ ('var' | 'invar') '=' ] Expression ')' '{'
+                   { 'case' ConstExpression [ ( ',' | '...' ) ConstExpression ] ':' 
+				                   ControlBlock }
 				   [ 'default' ':' ControlBlock ]
                    '}'
+
+TypeSwitch ::= 'switch' '(' [ ('var' | 'invar') '=' ] Expression ')' 'type' '{'
+                   { 'case' Type [ ( ',' | '...' ) Type ] ':' ControlBlock }
+				   [ 'default' ':' ControlBlock ]
+                   '}'
+
+SwitchCaseStmt ::= ValueSwitch | TypeSwitch
 @[code(syntax)]
 
 
@@ -1021,19 +967,10 @@ Defer Statement
 @[subsection]
 
 @[code(syntax)]
-DeferStmt ::= 'defer' '{' StatementBlock '}'
+DeferStmt ::= 'defer' [ '(' [ Type ] ')' ] '{' StatementBlock '}'
 @[code(syntax)]
 
 
-
-
-@[subsection]
-Framed Block Statement
-@[subsection]
-
-@[code(syntax)]
-FramedBlock ::= 'frame' [ '(' Expression ')' ] '{' StatementBlock '}'
-@[code(syntax)]
 
 
 
@@ -1050,59 +987,37 @@ TypeAlias ::= 'type' Identifier '=' Type
 
 
 
-@[subsection]
-Use Enum Statement
-@[subsection]
-
-@[code(syntax)]
-UseEnum ::= 'use' 'enum' Identifier
-@[code(syntax)]
-Expose the symbols of the enum symbol type to the current namespace.
-
-
-
-
-@[subsection]
-Use Syntax Statement
-@[subsection]
-
-@[code(syntax)]
-UseSyntax ::= 'use' 'syntax' Identifier
-@[code(syntax)]
-Use the syntax in the current file.
-
-
-
-
-
-@[subsection]
-Use Namespace Statement
-@[subsection]
-
-@[code(syntax)]
-UseNamespace ::= 'use' Identifier
-@[code(syntax)]
-Import the constants and globals from another namespace to the current.
-
-
-
 
 @[subsection]
 Load Statement
 @[subsection]
 
 @[code(syntax)]
-LoadStmt ::= 'load' ( String | { Identifier ('.' | '::') } Identifier ) [ 'as' Identifier ]
+LoadFile ::= 'load' ( String | { Identifier ('.' | '::') } Identifier ) [ 'as' Identifier ]
+LoadResultMod ::= 'load' Identifier '(' [ ConstArgumentItem { ',' ConstArgumentItem } ')'
+
+LoadStmt ::= LoadFile | LoadResultMod
 @[code(syntax)]
 
 
 
 
 
+@[subsection]
+Import Statement
+@[subsection]
 
-@[subsection]
-Load Statement
-@[subsection]
+@[code(syntax)]
+SingleImport ::= 'import' Identifier '.' Identifier
+MultipleImport ::= 'import' Identifier '.' '{' [ IdentifierList ] '}'
+
+ImportStmt ::= SingleImport | MultipleImport
+@[code(syntax)]
+Import the constants and globals from another namespace to the current scope.
+
+
+
+
 
 @[code(syntax)]
 Statement ::= DeclarationStmt
@@ -1113,12 +1028,9 @@ Statement ::= DeclarationStmt
             | DoWhileStmt
             | SwitchCaseStmt
             | DeferStmt
-            | FramedBlock
             | TypeAlias
-            | UseEnum 
-            | UseSyntax
-            | UseNamespace
             | LoadStmt
+            | ImportStmt
 @[code(syntax)]
 
 
@@ -1146,13 +1058,14 @@ Routines (Functions)
 @[text]
 
 @[code(syntax)]
-ParamItem1 ::= Identifier [ ':' Type ]
-ParamItem2 ::= Identifier [ ':' Type ] '=' ConstExpression
+ParamItem1 ::= [ 'invar' ] Identifier [ ':' Type ]
+ParamItem2 ::= [ 'invar' ] Identifier [ ':' Type ] '=' ConstExpression
+ValistParam  ::= [ 'invar' ] '...' [ ':' Type ]
 
 ParamList1 ::= ParamItem1 { ',' ParamItem1 }
-ParamList2 ::= ParamList1 { ',' ParamItem2 } [ ',' '...' ]
-ParamList3 ::= ParamItem2 { ',' ParamItem2 } [ ',' '...' ]
-ParamList  ::= ( ParamList2 | ParamList3 | '...' ) [ 'as' Identifier ]
+ParamList2 ::= ParamList1 { ',' ParamItem2 } [ ',' ValistParam ]
+ParamList3 ::= ParamItem2 { ',' ParamItem2 } [ ',' ValistParam ]
+ParamList  ::= ( ParamList2 | ParamList3 | ValistParam ) [ 'as' Identifier ]
 
 OverloadableOperator ::= Operator | 'cast' | '.' Identifier [ '=' ] | '[' ']' [ '=' ]
 
@@ -1192,7 +1105,7 @@ Class
 
 @[code(syntax)]
 ClassConst ::= 'const' ConstDeclItem { ',' ConstDeclItem }
-ClassVar   ::= ( 'var' | 'static' ) VarDeclItem { ',' VarDeclItem }
+ClassVar   ::= ( 'var' | 'invar' | 'static' ) VarDeclItem { ',' VarDeclItem }
 
 Mixins  ::= '(' [ UserType { ',' UserType } ] ')'
 

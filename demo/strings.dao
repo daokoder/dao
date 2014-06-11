@@ -3,7 +3,6 @@ wcs = "道语言"
 
 # verbatim strings:
 mbs2 = @[] some text @[]
-wcs2 = @@[] some text @@[]
 
 # C++ codes in MBS:
 cpp =
@@ -27,16 +26,15 @@ end
 
 # HTML codes in WCS:
 html =
-@@[html:123456]
+@[html:123456]
 <body>
 <span name="test"></span>
 </body>
-@@[html:123456]
+@[html:123456]
 
 io.writeln( mbs );
 io.writeln( wcs );
 io.writeln( mbs2 );
-io.writeln( wcs2 );
 io.writeln( cpp );
 io.writeln( lua );
 io.writeln( html );

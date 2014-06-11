@@ -80,7 +80,6 @@ enum DaoTokNames
 	DTOK_TILDE , /* ~ */
 	DTOK_DOLLAR , /* $ */
 	DTOK_AT ,     /* @ */
-	DTOK_AT2 ,    /* @@ */
 	DTOK_BANG2,   /* !! */
 	DTOK_POW ,    /* ** */
 	DTOK_AND ,    /* && */

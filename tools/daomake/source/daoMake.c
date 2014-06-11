@@ -2985,6 +2985,10 @@ static void DAOMAKE_Is64Bit( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutInteger( proc, sizeof(void*) == 8 );
 }
+static void DAOMAKE_IsOutOfSource( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoProcess_PutInteger( proc, daomake_out_of_source );
+}
 
 static DaoFuncItem DaoMakeMeths[] =
 {
@@ -3016,6 +3020,8 @@ static DaoFuncItem DaoMakeMeths[] =
 	{ DAOMAKE_Platform,    "Platform() => string" },
 	{ DAOMAKE_IsPlatform,  "IsPlatform( platform: string ) => int" },
 	{ DAOMAKE_Is64Bit,     "Is64Bit() => int" },
+
+	{ DAOMAKE_IsOutOfSource,  "IsOutOfSourceBuild() => int" },
 	{ NULL, NULL }
 };
 

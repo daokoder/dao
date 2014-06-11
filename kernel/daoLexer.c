@@ -86,7 +86,6 @@ const char *const dao_oper_tokens[] =
 	"~" ,
 	"$" ,
 	"@" ,
-	"@@" ,
 	"!!" ,
 	"**" ,
 	"&&" ,
@@ -359,7 +358,7 @@ enum
 	TOK_NUMBER_SCI_ES , /* 1.2e+ */
 	TOK_NUMBER_SCI ,
 	TOK_NUMBER_IMG ,
-	TOK_VERBATIM , /* @[ or @@[ */
+	TOK_VERBATIM , /* @[ */
 	TOK_STRING_MBS ,
 	TOK_STRING_WCS ,
 	TOK_IDENTIFIER , /* a...z, A...Z, _, utf... */
@@ -381,7 +380,6 @@ enum
 	TOK_OP_GT ,
 	TOK_OP_DOT ,
 	TOK_OP_AT , /* @ */
-	TOK_OP_AT2 , /* @@, obsolete */
 	TOK_OP_BANG2 ,
 	TOK_OP_QUEST ,
 	TOK_OP_IMG ,
@@ -474,7 +472,6 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_GT ,
 	DTOK_DOT ,
 	DTOK_AT , /* @ */
-	DTOK_AT2 , /* @@ */
 	DTOK_BANG2 ,
 	DTOK_QUERY ,
 	DTOK_DOLLAR ,
@@ -658,9 +655,7 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_ID_SYMBOL ][ (unsigned) '.' ]  = TOK_RESTART_DOT;
 	daoLexTable[ TOK_START ][ (unsigned) '\\' ] = TOK_OP_ESC;
 	daoLexTable[ TOK_START ][ (unsigned) '@' ] = TOK_OP_AT;
-	daoLexTable[ TOK_OP_AT ][ (unsigned) '@' ] = TOK_OP_AT2;
 	daoLexTable[ TOK_OP_AT ][ (unsigned) '[' ] = TOK_VERBATIM;
-	daoLexTable[ TOK_OP_AT2 ][ (unsigned) '[' ] = TOK_VERBATIM;
 	daoLexTable[ TOK_VERBATIM ][ (unsigned) ' ' ] = TOK_VERBATIM;
 	daoLexTable[ TOK_VERBATIM ][ (unsigned) '.' ] = TOK_VERBATIM;
 	daoLexTable[ TOK_VERBATIM ][ (unsigned) ':' ] = TOK_VERBATIM;

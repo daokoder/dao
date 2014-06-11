@@ -45,7 +45,7 @@ DAOMAKE_ARGS += --option-STATIC $(STATIC)
 DAOMAKE_ARGS += $(RESET) $(OPTIONS)
 
 all:
-	@echo "Please choose a platform!"
+	@echo "Please choose a platform among ($(PLATS))!"
 
 $(PLATS) :
 	cd $(SRCDIR)/tools/daomake/bootstrap && $(MAKE) $@

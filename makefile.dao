@@ -34,6 +34,7 @@ daovm_doc_path = DaoMake::Option( "DOC-PATH", daovm_root_path + "/shared/dao" )
 daovm.ExportPath( "INSTALL-PATH", daovm_root_path );
 daovm.ExportPath( "BIN-PATH", daovm_bin_path );
 daovm.ExportPath( "LIB-PATH", daovm_lib_path );
+daovm.ExportPath( "INC-PATH", daovm_inc_path );
 daovm.ExportPath( "MOD-PATH", daovm_mod_path );
 daovm.ExportPath( "DOC-PATH", daovm_doc_path );
 
