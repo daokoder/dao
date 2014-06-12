@@ -164,9 +164,9 @@ For example, to prepare an integer value and a string value, one can do,
 @[code(cxx)]
 // Prepare an integer and a string:
 DaoInteger *ivalue = DaoProcess_NewInteger( proc, 123 );
-DaoString  *svalue = DaoProcess_NewMBString( proc, "abc", -1 );
+DaoString  *svalue = DaoProcess_NewString( proc, "abc", -1 );
 @[code(cxx)]
-The third parameter of @[green]DaoProcess_NewMBString()@[green]
+The third parameter of @[green]DaoProcess_NewString()@[green]
 is the number of bytes in the C string, and a negative value can be
 used to indicate the C string is NULL terminated.
 
@@ -262,7 +262,7 @@ DaoProcess *proc = DaoVmSpace_AcquireProcess( vmspace );
 
 // Prepare an integer and a string:
 DaoInteger *ivalue = DaoProcess_NewInteger( proc, 123 );
-DaoString  *svalue = DaoProcess_NewMBString( proc, "abc", -1 );
+DaoString  *svalue = DaoProcess_NewString( proc, "abc", -1 );
 // Get the last two values:
 DaoValue **params = DaoProcess_GetLastValues( proc, 2 );
 
@@ -338,15 +338,21 @@ This function can also be named as @[cyan]DaoXXX_OnLoad@[cyan],
 where @[cyan]XXX@[cyan] is the module name that will appear
 in a load statement such as @[code(cxx)]load XXX@[code(cxx)]
 or @[code(cxx)]load path.XXX@[code(cxx)].
+Please note that, here @[cyan]XXX@[cyan] is case sensitive,
+and different cases are checked for it in the following order:
+@[list]
+== All lower case letters: e.g. @[cyan]Daoabc_OnLoad@[cyan];
+== First upper case letter: e.g. @[cyan]DaoAbc_OnLoad@[cyan];
+== All upper case letters: e.g. @[cyan]DaoABC_OnLoad@[cyan];
+@[list]
 
 
 To register functions to a namespace, one can use one of the
 following interface functions of @[green]DaoNamespace@[green],
 @[code(cxx)]
 // Function to register a single function:
-DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self,
-                                       DaoCFunction fp, 
-                                       const char *proto );
+DaoRoutine*
+DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fp, const char *proto );
 
 // Function to register multiple functions:
 int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items );
@@ -386,7 +392,7 @@ option. And you will also need to add the following preprocessor definitions:
 @[list]
 -- On Win32: @[green]WIN32@[green];
 -- On Unix: @[green]UNIX@[green];
--- On Mac OSX: @[green]MAC_OSX@[green];
+-- On Mac OSX: @[green]MACOSX@[green];
 @[list]
 For linking, on Windows you will need to link the module against the Dao library.
 But on the other platforms, you can simply use the following flags,
@@ -394,6 +400,8 @@ But on the other platforms, you can simply use the following flags,
 -- On Unix: @[green]-rdynamic@[green];
 -- On Mac OSX: @[green]-undefined dynamic_lookup@[green];
 @[list]
+If you use DaoMake (@[node]tool.standard.daomake@[node]) to build your modules,
+these will be taken care of automatically.
 
 
 @[section]
@@ -405,7 +413,7 @@ parameters and return a value.
 Suppose we want to create C function with the following Dao function prototype,
 @[code]
 # Dao function prototype
-MyTest( id :int, name :string, extra = 0 ) => float
+MyTest( id: int, name: string, extra = 0 ) => float
 @[code]
 So this function will take an integer parameter, a string parameter and 
 an extra integer parameter with default value. This prototype also indicates
@@ -418,7 +426,7 @@ and to return C data type to Dao,
 void MyTestInC( DaoProcess *proc, DaoValue *param[], int nparam )
 {
 	daoint id = DaoValue_TryGetInteger( param[0] );
-	char *name = DaoValue_TryGetMBString( param[1] );
+	char *name = DaoValue_TryGetChars( param[1] );
 	daoint extra = DaoValue_TryGetInteger( param[2] );
 	printf( "MyTest: %i %s %i\n", id, name, extra );
 	DaoProcess_PutFloat( proc, 0.5*(id + extra) );
@@ -438,7 +446,7 @@ function as the following to completely (and safely) remove the type checking,
 void MyTestInC( DaoProcess *proc, DaoValue *param[], int nparam )
 {
 	daoint id = param[0]->xInteger.value;
-	char *name = DString_GetMBS( param[1]->xString.data );
+	char *name = DString_GetData( param[1]->xString.data );
 	daoint extra = param[2]->xInteger.value;
 	printf( "MyTest: %i %s %i\n", id, name, extra );
 	DaoProcess_PutFloat( proc, 0.5*(id + extra) );
@@ -563,9 +571,8 @@ struct DaoFuncItem
 where the two fields @[cyan]fpter@[cyan] and @[cyan]proto@[cyan]
 should be the same as they would in the parameter list of:
 @[code(cxx)]
-DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self,
-                                       DaoCFunction fp, 
-                                       const char *proto );
+DaoRoutine*
+DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fp, const char *proto );
 @[code(cxx)]
 
 
@@ -669,8 +676,8 @@ static DaoNumItem ClassOneNumbers[] =
 static DaoFuncItem ClassOneMethods[] =
 {
 	// Methods with the same name as the type name are constructors:
-	{ dao_ClassOne_ClassOne,  "ClassOne( v :int )" },
-	{ dao_ClassOne_Method,    "Method( self :ClassOne, s :string ) => int" },
+	{ dao_ClassOne_ClassOne,  "ClassOne( v: int )" },
+	{ dao_ClassOne_Method,    "Method( self: ClassOne, s: string ) => int" },
 	{ NULL, NULL }
 };
 static void ClassOne_Delete( void *self )
@@ -700,7 +707,7 @@ static void dao_ClassOne_Method( DaoProcess *proc, DaoValue *p[], int n )
 	// Get the ClassOne instance:
 	ClassOne *self = (ClassOne*) DaoValue_TryCastCdata( p[0], dao_type_ClassOne );
 	// Get the string parameter:
-	char *s = DaoValue_TryGetMBString( p[1] );
+	char *s = DaoValue_TryGetChars( p[1] );
 	int res = self->Method( s );
 	// Return the integer result:
 	DaoProcess_PutInteger( proc, res );
@@ -725,8 +732,8 @@ For example, for the @[cyan]value@[cyan] member,
 one can added the following to the @[cyan]ClassOneMethods@[cyan] list,
 @[code(cxx)]
 // the getter and setter:
-	{ dao_ClassOne_GETF_value,  ".value( self :ClassOne ) => int" },
-	{ dao_ClassOne_SETF_value,  ".value=( self :ClassOne, value :int )" },
+	{ dao_ClassOne_GETF_value,  ".value( self: ClassOne ) => int" },
+	{ dao_ClassOne_SETF_value,  ".value=( self: ClassOne, value: int )" },
 @[code(cxx)]
 Here the name @[cyan]dao_ClassOne_GETF_value@[cyan] 
 and @[cyan]dao_ClassOne_GETF_value@[cyan] are completely arbitrary.
@@ -950,8 +957,7 @@ daoint    DaoValue_TryGetInteger( DaoValue *self );
 float     DaoValue_TryGetFloat( DaoValue *self );
 double    DaoValue_TryGetDouble( DaoValue *self );
 complex16 DaoValue_TryGetComplex( DaoValue *self );
-char*     DaoValue_TryGetMBString( DaoValue *self );
-wchar_t*  DaoValue_TryGetWCString( DaoValue *self );
+char*     DaoValue_TryGetChars( DaoValue *self );
 DString*  DaoValue_TryGetString( DaoValue *self );
 int       DaoValue_TryGetEnum( DaoValue *self );
 

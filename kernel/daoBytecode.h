@@ -171,7 +171,7 @@
 // type of a value:
 // ASM_TYPEOF(1B): Value-Index(2B), Zeros(6B);
 //
-// const type:
+// const/invar type:
 // ASM_TYPEINVAR(1B): Type-Index(2B), SubType(2B), Zeros(4B);
 //
 // type alias:
@@ -272,7 +272,6 @@
 //
 // import from namespace/module:
 // ASM_IMPORT(1B): Mod-Index(2B), Name-Index(2B), Scope(2B), Offset(2B);
-// Notes: ScopeID-Index, colon separated integers as string;
 //
 // verbatim:
 // ASM_VERBATIM(1B): Tag-Index(2B), Mode-Index(2B), Text-Index(2B), LineNum(2B);

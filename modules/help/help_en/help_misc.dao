@@ -186,7 +186,7 @@ are the correct parameter types for the function.
 
 But in Dao with optional typing, one can write a function in the following way,
 @[code]
-routine SomeFunction( a :float, b :float )
+routine SomeFunction( a: float, b: float )
 {
     return a * b
 }
@@ -233,12 +233,6 @@ so they have to be accessed in the following way,
 bl1 = Boolean::False
 bl2 = Boolean::True
 @[code]
-To use @[green]False@[green] and @[green]True@[green] as integer
-constants as in C++, one may do,
-@[code]
-use enum Boolean
-bl3 = True
-@[code]
 
 
 However, the more convenient way to use this type is to use them as symbols.
@@ -254,8 +248,8 @@ enum EnumRF{ Real, False }
 
 A = $False
 
-B : Boolean = $False
-C : EnumRF  = $False
+B: Boolean = $False
+C: EnumRF  = $False
 @[code]
 Here @[green]A@[green] will hold a free symbol @[green]$False@[green]
 with value @[green]zero@[green].
@@ -391,7 +385,7 @@ can also be applied to decorators as well.
 
 An equivalent Dao decorator for the above Python example is,
 @[code]
-routine @Decorator( func(args) : routine< =>int > )
+routine @Decorator( func(args): routine< =>int > )
 {
     ret = func( args, ... )  # call the original function;
     return ret + 123
@@ -438,7 +432,7 @@ deco( 123 )
 @[code]
 The equivalent in Dao would be,
 @[code]
-routine @Decorator( func(args) : routine )
+routine @Decorator( func(args): routine )
 {
     io.writeln( 'Calling with:', args, ... )
     return func( args, ... )  # call the original function;
@@ -468,23 +462,23 @@ In Dao, one could simply create different decorators for different
 target functions, and overload them with the same name.
 For example,
 @[code]
-routine @Decorator( func(args) : routine<int=>int> )
+routine @Decorator( func(args): routine<int=>int> )
 {
     return func( args, ... ) + 123
 }
-routine @Decorator( func(args) : routine<string=>string> )
+routine @Decorator( func(args): routine<string=>string> )
 {
     return func( args, ... ) + 'abc'
 }
 
 @Decorator  # the first decorator will be applied;
-routine Foo( a : int )
+routine Foo( a: int )
 {
     return a * 100
 }
 
 @Decorator  # the second decorator will be applied;
-routine Foo( a : string )
+routine Foo( a: string )
 {
     return a + '##';
 }
@@ -547,16 +541,22 @@ class Something
 {
     var thing = {}
 
-    routine Something() {  # Not really needed;
-        thing = {}
-    }
     operator .something() {
         return thing
     }
     operator .something=( value ){
         thing = value;
     }
-    # Or alternatively:
+}
+@[code]
+
+Or alternatively in Dao,
+@[code]
+# Dao
+class Something
+{
+    var thing = {}
+
     operator .( name : string ) {
         if( name == "something" ) return thing
         return none;
@@ -592,9 +592,6 @@ class UserDict
 {
     var data = {=>}
 
-    routine UserDict() { # Not really needed;
-        data = {=>}
-    }
     operator []( key ){
         return data[key]
     }
@@ -607,9 +604,13 @@ Please note that in @[green]operator[]=@[green], @[green]item@[green]
 is the first parameter. It is arranged in this way to naturally support
 multiple keys/indices. For example, for a multidimensional array, one may define,
 @[code]
-class UserDict
+class UserMatrix
 {
-    var data = {=>}
+    var data = []
+
+	routine UserArray( N: int, M: int ){
+		data = array<int>(N,M){ [index] index }
+	}
 
     operator []( index1, index2 ){
         return data[ index1, index2 ]
@@ -646,7 +647,7 @@ class MyNumber
         self.value = value
     }
 
-    operator +( other : MyNumber ) {
+    operator +( other: MyNumber ) {
         return MyNumber( value + other.value )
     }
 }
@@ -781,7 +782,7 @@ func main() {
 
 const N = 1000000
 
-routine Producer( chan : mt::channel<int> )
+routine Producer( chan: mt::channel<int> )
 {
     index = 0;
     while( ++index <= N ){
@@ -791,7 +792,7 @@ routine Producer( chan : mt::channel<int> )
     chan.cap(0)  # set channel buffer size to zero to close the channel;
 }
 
-routine Consumer( chan : mt::channel<int> )
+routine Consumer( chan: mt::channel<int> )
 {
     while(1){
         data = chan.receive()  # Or chan.receive( 1.5 ) for a 1.5 second timeout;
@@ -922,7 +923,7 @@ static void dao_MySum( DaoProcess *proc, DaoValue *pars[], int npar )
     /*
     // No need to check parameter types here, they are guaranteed to be
     // two doubles when this function is registered as:
-    //   MySum( x : double, y : double ) => double
+    //   MySum( x: double, y: double ) => double
     //
     // So the parameter values can be retrieved directly if "daoValue.h"
     // has been included, otherwise, one may use "DaoValue_TryGetDouble()".
@@ -935,7 +936,7 @@ static void dao_MySum( DaoProcess *proc, DaoValue *pars[], int npar )
 static const DaoFuncItem myfuncs[] =
 {
     /* A function signature must be provided for each function: */
-    { dao_MySum, "MySum( x : double, y : double ) => double" },
+    { dao_MySum, "MySum( x: double, y: double ) => double" },
     { NULL, NULL }
 };
 

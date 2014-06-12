@@ -172,3 +172,130 @@ if (2 not in st.waitlist())
 
 
 @[text]
+
+
+
+
+
+@[name]
+module.standard.dataframe
+@[name]
+
+@[title]
+Data Frame
+@[title]
+
+
+@[text]
+
+A data frame is a matrix-like data structure that organizes data values into table(s).
+But unlike a matrix, a data frame can contain any types of values, though the values
+of the same column are required to be the same.
+Also, the rows and columns can be attached with arbitrary sets of labels,
+and such labels can be used to retrieve the rows or columns.
+
+
+Dao data frame supports both 2D and 3D data frames. A 2D data frame contains only one
+data table, with data items indexed by row and column indices or labels.
+A 3D data frame contains multiple data tables, where each table is indexed by a depth
+index or multiple depth labels.
+
+
+Here is a simple example to create and print a data frame:
+@[code]
+load DataFrame
+
+matrix = [ [ -1.0D : -1 : 4] : 1.5 : 5 ] 
+dframe = DataFrame( matrix )
+io.writeln( dframe );
+@[code]
+which will print something like the following:
+@[code]
+DataFrame[0x7f82f34a1700]
+Dimensions: Rows=5; Cols=4; Deps=1;
+Depth: 0;
+| Columns from 0 to 3:
+|       0     1     2     3
+|--------------------------|
+0:   -1.0  -2.0  -3.0  -4.0
+1:    0.5  -0.5  -1.5  -2.5
+2:    2.0   1.0   0.0  -1.0
+3:    3.5   2.5   1.5   0.5
+4:    5.0   4.0   3.0   2.0
+@[code]
+
+
+More on data frame creation:
+@[code]
+# Create a 2D matrix:
+matrix = [ [ -1.0D : -1 : 8] : 1.51 : 16 ]
+
+# Create a 2D dataframe from the matrix:
+dframe2d = DataFrame( matrix )
+
+# Create a 3D matrix:
+matrix3d = [ matrix : 1 : 3 ]
+matrix3d.permute( [ 2, 1, 0 ] )
+
+# Create 3D dataframe:
+dframe3d = DataFrame( matrix3d )
+@[code]
+
+
+Attaching labels to data frames:
+@[code]
+# Add row labels:
+dframe2d.AddLabels( $row, { 'RR1' => 0, 'R2' => 1, 'RRRR5' => 5 } )
+dframe2d.AddLabels( $row, { 'RR1' => 0, 'R2' => 1, 'RRRR5' => 6 } )
+
+# Add column labels:
+dframe2d.AddLabels( $column, { 'CC1' => 0, 'C2' => 1, 'CCCCCCCCC3' => 4 } )
+@[code]
+
+
+Adding additional columns:
+@[code]
+# Add string column:
+dframe2d.AddColumn( { 'ABC', 'DEF', 'SSSS', 'Hello\t world!' }, 'String' )
+
+# Add column of arbitrary type:
+dframe2d.AddColumn( { {'ABC'}, {'DEF', 'SSSS'}, 'Hello\n world!' }, 'Any' )
+
+# Add integer column:
+dframe2d.AddColumn( [ 123, 456, 7890], 'Number' )
+@[code]
+
+
+Operation on data frame:
+@[code]
+# Update one cell:
+dframe2d[0,1] = 1000000.23
+
+# Update one column:
+dframe2d[:,2] += [[0]:100:9]
+
+# Add the first column to the second:
+dframe2d[:,1] += dframe2d[:,0]
+@[code]
+
+
+Using code section methods of data frame:
+@[code]
+# Scan cells:
+dframe2d[1:5,:3].ScanCells { [value,row,column]
+	io.writeln( row, column, value )
+}
+
+# Scan rows:
+dframe2d[1:5,:3].ScanRows { [value,row]
+	io.writeln( row, value )
+}
+
+# Scan columns:
+dframe2d[1:5,:3].ScanColumns { [value,column]
+	io.writeln( column, value )
+}
+@[code]
+
+@[text]
+

@@ -66,83 +66,82 @@ VM Instructions
 
 @[text]
 @[code]
-DVM_NOP      # no operation, the VM assumes maximum one NOP between two effective codes;
-DVM_DATA     # create primitive data: A: type<=DAO_COMPLEX, B: value, C: register;
-DVM_GETCL    # get local const: C = A::B; A=0; B, index of the constant;
-DVM_GETCK    # get class const: C = A::B; current class, A=0; parent class: A>=1;
-DVM_GETCG    # get global const: C = A::B; current namespace, A=0; loaded: A>=1;
-DVM_GETVH    # get host variable from code section: C = A::B; A, outer level;
-DVM_GETVS    # get static variable or captured up variable from closure;
-DVM_GETVO    # get instance object variables: C = A::B; A=0;
-DVM_GETVK    # get class global variables: C = A::B; A: the same as GETCK;
-DVM_GETVG    # get global variables: C = A::B; A: the same as GETCG;
-DVM_GETI     # GET Item(s) : C = A[B];
-DVM_GETDI    # GET Item(s) : C = A[B], B is the (direct) index;
-DVM_GETMI    # GET Item(s) : C = A[A+1, ..., A+B];
-DVM_GETF     # GET Field : C = A.B
-DVM_SETVH    # set host variable in code section: C::B = A; C, outer level;
-DVM_SETVS    # set static variable or captured up variable from closure;
-DVM_SETVO    # set object variables: C::B = A, C the same as A in DVM_GETVO
-DVM_SETVK    # set class variables: C::B = A, C the same as A in DVM_GETVK
-DVM_SETVG    # set global variables: C::B = A, C the same as A in DVM_GETVG
-DVM_SETI     # SET Item(s) : C[B] = A;
-DVM_SETDI    # SET Item(s) : C[B] = A, B is the (direct) index;
-DVM_SETMI    # SET Item(s) : C[C+1, ..., C+B] = A;
-DVM_SETF     # SET Field : C.B = A
-DVM_LOAD     # put local value A as reference at C;
-DVM_CAST     # convert A to C if they have different types;
-DVM_MOVE     # C = A; if B==0, XXX it is compile from assignment, for typing system only
-DVM_NOT      # C = ! A; not
-DVM_MINUS    # C = - A; unary minus;
-DVM_TILDE    # C = ~ A
-DVM_SIZE     # C = % A; size operation;
-DVM_ADD      # C = A + B;
-DVM_SUB      # C = A - B;
-DVM_MUL      # C = A * B;
-DVM_DIV      # C = A / B;
-DVM_MOD      # C = A % B;
-DVM_POW      # C = A ** B;
-DVM_AND      # C = A && B;
-DVM_OR       # C = A || B;
-DVM_LT       # C = A <  B;
-DVM_LE       # C = A <= B;
-DVM_EQ       # C = A == B;
-DVM_NE       # C = A != B;
-DVM_IN       # C = A in B;
-DVM_BITAND   # C = A & B
-DVM_BITOR    # C = A | B
-DVM_BITXOR   # C = A ^ B
-DVM_BITLFT   # C = A << B
-DVM_BITRIT   # C = A >> B
-DVM_CHECK    # check type: C = A ?= B; C = A ?< B, where A is data, B is data or type
-DVM_NAMEVA   # C = A => B: name A, local constant, value B, local register
-DVM_PAIR     # C = A : B; create a pair of index, as a tuple;
-DVM_TUPLE    # tuple: C = ( A, A+1, ..., A+B-1 ); B>=2, items can be: name=>value
-DVM_LIST     # list:  C = { A, A+1, ..., A+B-1 };
-DVM_MAP      # map:   C = { A => A+1, ..., A+B-2 => A+B-1 }; if B==0, empty;
-DVM_HASH     # hash:  C = { A -> A+1, ..., A+B-2 -> A+B-1 }; if B==0, empty;
-DVM_VECTOR   # vector: C = [ A, A+1, ..., A+B-1 ];
-DVM_MATRIX   # matrix: C=[A,..,A+c-1;..;A+c*(r-1),..,A+c*r-1]; B=rc;r,c:8-bits each.
-DVM_APLIST   # arithmetic progression list: C = { A : ... : A+B-1 }, B = 2 or 3;
-DVM_APVECTOR # arithmetic progression vector: C = [ A : ... : A+B-1 ], B = 2 or 3;
-DVM_CURRY    # class_or_routine_name: A{ A+1, ..., A+B }
-DVM_MCURRY   # object.method: A{ A+1, ..., A+B }
-DVM_ROUTINE  # create a function, possibly with closure
-DVM_CLASS    # C = class{}, A,A+1,..A+B: A, tuple, A+1, proto class, A+2,.. proto values
-DVM_GOTO     # go to B;
-DVM_SWITCH   # A: variable, B: location of default codes, C: number of cases
-DVM_CASE     # A: constant of the case, B: location of the case codes, C: case mode
-DVM_ITER     # create an iterator at C for A if B==0, else test an array of iterators;
-DVM_TEST     # if A, go to the next one; else, goto B-th instruction;
-DVM_MATH     # C = A( B ); A: sin,cos,...; B: double,complex
-DVM_CALL     # function call: C = A( A+1, A+2, ..., A+B ); If B==0, no parameters;
-DVM_MCALL    # method call: x.y(...), pass x as the first parameter;
-DVM_RETURN   # return A,A+1,..,A+B-1; B==0: no returns; C==1: return from functional;
-DVM_YIELD    # yield A, A+1,.., A+B-1; return data at C when resumed;
-DVM_EVAL     # evaluate a code section: C=@@(A){}, if B==1, otherwise, C=@@{};
-DVM_SECT     # code section label, parameters: A,A+1,...,A+B-1; C #explicit parameters;
-DVM_JITC     # run Just-In-Time compiled Code A, and skip the next B instructions;
-DVM_DEBUG    # prompt to debugging mode;
+DVM_NOP       # No operation, Dao VM assumes at most one NOP between two effective codes;
+DVM_DATA      # Create primitive data:  C = B;  A: data type id;  B: direct value;
+DVM_GETCL     # Get local const:  C = A:::B;  B, index;  A=0, implicit;  A=1, explicit;
+DVM_GETCK     # Get class const:  C = A:::B;  B, index;  A=0;
+DVM_GETCG     # Get global const:  C = A:::B;  B, index;  A=0;
+DVM_GETVH     # Get host variable:  C = A:::B;  B, index;  A, section level;
+DVM_GETVS     # Get closure variable:  C = A:::B;  B, index;  A=0;
+DVM_GETVO     # Get instance object variable:  C = A:::B;  B, index;  A=0;
+DVM_GETVK     # Get class static variable:  C = A:::B;  B, index;  A=0;
+DVM_GETVG     # Get global variable:  C = A:::B;  B, index;  A=0;
+DVM_GETI      # Get item(s):  C = A[B];  A, register;  B, register;
+DVM_GETDI     # Get item(s):  C = A[B];  A, register;  B, direct index;
+DVM_GETMI     # Get item(s):  C = A[A+1, ..., A+B];
+DVM_GETF      # Get field:  C = A.B or C = A::B;
+DVM_SETVH     # Set host variable:  C:::B = A;  B, index;  C, section level;
+DVM_SETVS     # Set closure variable:  C:::B = A;  B, index;  C=0;
+DVM_SETVO     # Set instance object variable:  C:::B = A;  B, index;  C=0;
+DVM_SETVK     # Set class static variable:  C:::B = A;  B, index;  C=0;
+DVM_SETVG     # Set global variable:  C:::B = A;  C: Bit1, zero; Bit2, decl; Bit3, invar;
+DVM_SETI      # Set item(s):  C[B] = A;
+DVM_SETDI     # Set item(s):  C[B] = A;  B, direct index;
+DVM_SETMI     # Set item(s):  C[C+1, ..., C+B] = A;
+DVM_SETF      # Set field:  C.B = A or C::B = A;
+DVM_LOAD      # Put local value A as reference at C;
+DVM_CAST      # Cast A to B and store at C:  C = (B)A;  B, local const index;
+DVM_MOVE      # Move A to C:  C = A;  C: Bit1, explicit; Bit2, decl; Bit3, invar;
+DVM_NOT       # Not:  C = ! A;
+DVM_MINUS     # Unary minus:  C = - A;
+DVM_TILDE     # Bitwise not:  C = ~ A
+DVM_SIZE      # Size:  C = % A;
+DVM_ADD       # Addition:  C = A + B;
+DVM_SUB       # Subtraction:  C = A - B;
+DVM_MUL       # Multiplication:  C = A * B;
+DVM_DIV       # Division:  C = A / B;
+DVM_MOD       # Modulo:  C = A % B;
+DVM_POW       # Power:  C = A ** B;
+DVM_AND       # And:  C = A && B;
+DVM_OR        # Or:  C = A || B;
+DVM_LT        # Less than:  C = A <  B;
+DVM_LE        # Less or equal:  C = A <= B;
+DVM_EQ        # Equal:  C = A == B;
+DVM_NE        # Not equal:  C = A != B;
+DVM_IN        # In:  C = A in B;
+DVM_BITAND    # Bit and:  C = A & B
+DVM_BITOR     # Bit or:  C = A | B
+DVM_BITXOR    # Bit xor:  C = A ^ B
+DVM_BITLFT    # Bit shift left:  C = A << B
+DVM_BITRIT    # Bit shift right:  C = A >> B
+DVM_SAME      # Same: C = A ?= B, same type; A, B, both are data objects or type objects;
+DVM_ISA       # Isa: C = A ?< B; B, type; A (data) is a B; A (type) is a sub type of B;
+DVM_NAMEVA    # C = A => B: name A, local constant, value B, local register
+DVM_PAIR      # C = A : B; create a pair of index, as a tuple;
+DVM_TUPLE     # tuple: C = ( A, A+1, ..., A+B-1 ); B>=2, items can be: name=>value
+DVM_LIST      # list: C = { A, A+1, ..., A+B-1 };
+DVM_MAP       # map:  C = { A => A+1, ..., A+B-2 => A+B-1 }; if B==0, empty;
+DVM_HASH      # hash: C = { A -> A+1, ..., A+B-2 -> A+B-1 }; if B==0, empty;
+DVM_VECTOR    # vector: C = [ A, A+1, ..., A+B-1 ];
+DVM_MATRIX    # matrix: C=[A,..,A+c-1;..;A+c*(r-1),..,A+c*r-1]; B=rc;r,c:8-bits each.
+DVM_APLIST    # arithmetic progression list: C = { A : ... : A+B-1 }, B = 2 or 3;
+DVM_APVECTOR  # arithmetic progression vector: C = [ A : ... : A+B-1 ], B = 2 or 3;
+DVM_PACK      # packing: A::{ A+1, ..., A+B }; A, routine, class or type object;
+DVM_MPACK     # packing: (A+1).A::{ A+2, ..., A+B }; (A+1).A, routine, class or type;
+DVM_ROUTINE   # create a function, possibly with closure
+DVM_GOTO      # go to B;
+DVM_SWITCH    # A: variable, B: location of default block, C: number of cases
+DVM_CASE      # A: constant of the case, B: location of the case block, C: case mode
+DVM_ITER      # create an iterator at C for A if B==0, else test an array of iterators;
+DVM_TEST      # if A, go to the next one; else, goto B-th instruction;
+DVM_MATH      # C = A( B ); A: sin,cos,...; B: double,complex
+DVM_CALL      # function call: C = A( A+1, A+2, ..., A+B ); If B==0, no parameters;
+DVM_MCALL     # method call: x.y(...), pass x as the first parameter;
+DVM_RETURN    # return A,A+1,..,A+B-1; B==0: no returns; C==1: return from functional;
+DVM_YIELD     # yield A, A+1,.., A+B-1; return data at C when resumed;
+DVM_SECT      # code section label, parameters: A,A+1,...,A+B-1; C, ID|(#explicit params);
+DVM_JITC      # run Just-In-Time compiled Code A, and skip the next B instructions;
+DVM_DEBUG     # prompt to debugging mode;
 @[code]
 @[text]
 
@@ -238,33 +237,34 @@ The remaining 8 bytes are used to store data.
 
 There are the following type of chunks:
 @[code]
-ASM_COPY
-ASM_TYPEOF
-ASM_TYPEDEF
-ASM_ROUTINE
-ASM_CLASS
-ASM_INTERFACE
-ASM_ENUM
-ASM_TYPE
-ASM_VALUE
-ASM_EVAL
-ASM_BASES
-ASM_DECOS
-ASM_PATTERNS
-ASM_CONSTS
-ASM_TYPES
-ASM_CODE
-ASM_END
-ASM_LOAD
-ASM_USE
-ASM_VERBATIM
-ASM_CONST
-ASM_STATIC
-ASM_GLOBAL
-ASM_VAR
-ASM_DATA
-ASM_DATA2
-ASM_SEEK
+ASM_COPY      #
+ASM_TYPEOF    #
+ASM_TYPEDEF   #
+ASM_TYPEINVAR #
+ASM_ROUTINE   #
+ASM_CLASS     #
+ASM_INTERFACE #
+ASM_ENUM      #
+ASM_TYPE      #
+ASM_VALUE     #
+ASM_EVAL      #
+ASM_BASES     #
+ASM_DECOS     #
+ASM_PATTERNS  #
+ASM_CONSTS    #
+ASM_TYPES     #
+ASM_CODE      #
+ASM_END       #
+ASM_LOAD      #
+ASM_IMPORT    #
+ASM_VERBATIM  #
+ASM_CONST     #
+ASM_STATIC    #
+ASM_GLOBAL    #
+ASM_VAR       #
+ASM_DATA      #
+ASM_DATA2     #
+ASM_SEEK      #
 @[code]
 
 
@@ -298,14 +298,8 @@ ASM_VALUE(1B): DAO_COMPLEX(1B), Zeros(7B);
 ASM_END(1B): Imag(8B);
 
 
-long:
-ASM_VALUE(1B): DAO_LONG(1B), Base(1B), Sign(1B), SizeMod16(1B), Digits(4B);
-  ASM_DATA(1B); Digits (8B);
-ASM_END(1B): Digits(8B);
-
-
 string:
-ASM_VALUE(1B): DAO_STRING(1B), MBS/WCS(1B), SizeMod16(1B), Bytes(5B);
+ASM_VALUE(1B): DAO_STRING(1B), SizeMod16(1B), Bytes(6B);
   ASM_DATA(1B); Bytes(8B);
 ASM_END(1B): Bytes(8B);
 
@@ -387,6 +381,9 @@ ASM_COPY(1B): Value-Index(2B), Zeros(6B);
 type of a value:
 ASM_TYPEOF(1B): Value-Index(2B), Zeros(6B);
 
+const/invar type:
+ASM_TYPEINVAR(1B): Type-Index(2B), SubType(2B), Zeros(4B);
+
 type alias:
 ASM_TYPEDEF(1B): Name-Index(2B), Type-Index(2B), Zeros(4B);
 @[code]
@@ -430,14 +427,6 @@ ASM_END(1B): Type-Index(2B) X 4;
 
 Note 1: the nested types are zero Type-Index terminated;
 Note 2: "Aux-Index" could be index to returned type or class block etc;
-
-
-type alias:
-ASM_TYPE(1B): Name-Index(2B), Type-Index(2B), Zeros(4B);
-
-
-typeof:
-ASM_TYPE(1B): Value-Index(2B), Zeros(6B);
 
 
 value:
@@ -496,14 +485,8 @@ Statement:
 load statement:
 ASM_LOAD(1B): File-Path-Index(2B), Optional-Name-Index(2B), Zeros(4B);
 
-use namespace:
-ASM_USE(1B): DAO_NAMESPACE(2B), Value-Index(2B), Zeros(4B);
-
-use enum constants:
-ASM_USE(1B): DAO_ENUM(2B), Type-Index(2B), Zeros(4B);
-
-use constructors:
-ASM_USE(1B): DAO_ROUTINE(2B), Routine-Index(2B), Zeros(4B);
+import from namespace/module:
+ASM_IMPORT(1B): Mod-Index(2B), Name-Index(2B), Scope(2B), Offset(2B);
 
 verbatim:
 ASM_VERBATIM(1B): Tag-Index(2B), Mode-Index(2B), Text-Index(2B), LineNum(2B);
@@ -536,21 +519,21 @@ io.writeln( 'Hello Dao!' );
 
 Output disassembled bytecode:
 @[code]
-ASM_ROUTINE: 0, 0, 0, 512;
-    ASM_VALUE: DAO_STRING, 0, 2, 'io';
+ASM_ROUTINE: 0, 0, 0, 0;
+    ASM_VALUE: DAO_STRING, 2, 'io';
     ASM_END: '';
 
     ASM_EVAL: GETCG, 1, 0, 0;
     ASM_END:      1,     0,     0,     0;
 
-    ASM_VALUE: DAO_STRING, 0, 7, 'write';
-    ASM_END: 'ln';
+    ASM_VALUE: DAO_STRING, 7, 'writel';
+    ASM_END: 'n';
 
     ASM_EVAL: GETF, 2, 0, 0;
     ASM_END:      2,     1,     0,     0;
 
-    ASM_VALUE: DAO_STRING, 0, 10, 'Hello';
-    ASM_END: ' Dao!';
+    ASM_VALUE: DAO_STRING, 10, 'Hello ';
+    ASM_END: 'Dao!';
 
     ASM_CONSTS:      2,     2,     1,     0;
     ASM_END:         0,     0,     0,     0;
@@ -563,15 +546,17 @@ ASM_ROUTINE: 0, 0, 0, 512;
         ASM_DATA:    GETCL      ,     0,     0,     1;
         ASM_DATA:    LOAD       ,     0,     0,     2;
         ASM_DATA:    GETCL      ,     0,     1,     3;
-        ASM_DATA:    MCALL      ,     1, 16386,     4;
-    ASM_END:         RETURN     ,     0,     0,     0;
+        ASM_DATA:    MCALL      ,     1,     2,     4;
+    ASM_END:         RETURN     ,     4,     1,     0;
 ASM_END:  ;
 @[code]
 
 
 Input code:
 @[code]
-load web.cgi
+load web.cgi as cgi
+
+import cgi.random_string
 
 enum Bool
 {
@@ -579,11 +564,9 @@ enum Bool
 	True
 }
 
-use enum Bool
-
 static abc = random_string( 100 )
 
-global index = 123 + %abc
+var index = 123 + %abc
 
 class Klass
 {
@@ -604,152 +587,174 @@ klass = Klass()
 
 Output disassembled bytecode:
 @[code]
-ASM_ROUTINE: 0, 0, 0, 1536;
-    ASM_VALUE: DAO_STRING, 0, 7, 'web/c';
-    ASM_END: 'gi';
+ASM_ROUTINE: 0, 0, 0, 0;
+    ASM_VALUE: DAO_STRING, 7, 'web/cg';
+    ASM_END: 'i';
 
-    ASM_LOAD:     1,     0,     0,     0;
-
-    ASM_VALUE: DAO_STRING, 0, 4, 'Bool';
+    ASM_VALUE: DAO_STRING, 3, 'cgi';
     ASM_END: '';
 
-    ASM_VALUE: DAO_STRING, 0, 5, 'False';
-    ASM_END: '';
-
-    ASM_VALUE: DAO_STRING, 0, 4, 'True';
-    ASM_END: '';
-
-    ASM_VALUE: DAO_STRING, 0, 0, 'enum<';
-        ASM_DATA: 'False,Tr';
-    ASM_END: 'ue>';
-
-    ASM_ENUM: 1, 0, 2;
-        ASM_DATA: 3, 0;
-    ASM_END: 2, 1;
-
-    ASM_TYPEDEF:     5,     1,     0,     0;
-
-    ASM_USE:     7,     1,     0,     0;
-
-    ASM_VALUE: DAO_STRING, 0, 13, 'rando';
-    ASM_END: 'm_string';
+    ASM_LOAD:     2,     1,     0,     0;
 
     ASM_EVAL: GETCG, 1, 0, 0;
     ASM_END:      1,     0,     0,     0;
 
+    ASM_VALUE: DAO_STRING, 13, 'random';
+    ASM_END: '_string';
+
+    ASM_IMPORT:     2,     1,     0,    28;
+
+    ASM_VALUE: DAO_STRING, 4, 'Bool';
+    ASM_END: '';
+
+    ASM_VALUE: DAO_STRING, 5, 'False';
+    ASM_END: '';
+
+    ASM_VALUE: DAO_STRING, 4, 'True';
+    ASM_END: '';
+
+    ASM_VALUE: DAO_STRING, 0, 'enum<F';
+        ASM_DATA: 'alse,Tru';
+    ASM_END: 'e>';
+
+    ASM_ENUM: 1, 68, 2;
+        ASM_DATA: 3, 0;
+    ASM_END: 2, 1;
+
+    ASM_TYPEINVAR:     5,     1,     0,     0;
+
+    ASM_EVAL: GETCG, 1, 0, 0;
+    ASM_END:      7,     0,     0,     0;
+
     ASM_VALUE: DAO_INTEGER;
     ASM_END:  100 ;
 
-    ASM_VALUE: DAO_STRING, 0, 1, '?';
+    ASM_VALUE: DAO_STRING, 1, '?';
     ASM_END: '';
 
     ASM_TYPE:      1,    66,     0,     0;
     ASM_END:       0,     0,     0,     0;
 
-    ASM_EVAL: CALL, 1, 1, 0;
+    ASM_EVAL: CALL, 1, 0, 1;
     ASM_END:      4,     3,     0,     0;
 
     ASM_TYPEOF:     1,     0,     0,     0;
 
-    ASM_VALUE: DAO_STRING, 0, 3, 'abc';
+    ASM_VALUE: DAO_STRING, 3, 'abc';
     ASM_END: '';
 
-    ASM_STATIC:     1,     3,     2,     0;
+    ASM_GLOBAL:     1,     3,     2,     3;
 
-    ASM_VALUE: DAO_STRING, 0, 5, 'index';
+    ASM_VALUE: DAO_STRING, 5, 'index';
     ASM_END: '';
 
     ASM_GLOBAL:     1,     0,     5,     3;
 
-    ASM_VALUE: DAO_STRING, 0, 5, 'Klass';
+    ASM_VALUE: DAO_STRING, 5, 'Klass';
     ASM_END: '';
 
     ASM_CLASS: 1, 0, 0, 0;
     ASM_END:  ;
 
-    ASM_VALUE: DAO_STRING, 0, 0, 'inter';
-        ASM_DATA: 'face<Kla';
-    ASM_END: 'ss>';
+    ASM_VALUE: DAO_STRING, 12, 'class<';
+    ASM_END: 'Klass>';
+
+    ASM_TYPE:      1,    14,     2,     0;
+    ASM_END:       0,     0,     0,     0;
+
+    ASM_VALUE: DAO_STRING, 7, 'interf';
+        ASM_DATA: 'ace<clas';
+        ASM_DATA: 's<Klass>';
+    ASM_END: '>';
 
     ASM_INTERFACE: 2, 0, 0, 0;
-        ASM_BASES:      0,     0,     0,     0;
-        ASM_END:        0,     0,     0,     0;
     ASM_END:  ;
 
-    ASM_CLASS: 3, 0, 0, 1;
+    ASM_TYPE:      6,    11,     5,     0;
+    ASM_END:       0,     0,     0,     0;
+
+    ASM_VALUE: DAO_STRING, 0, 'interf';
+        ASM_DATA: 'ace<Klas';
+    ASM_END: 's>';
+
+    ASM_INTERFACE: 2, 0, 0, 0;
+    ASM_END:  ;
+
+    ASM_CLASS: 8, 0, 0, 1;
         ASM_BASES:      0,     0,     0,     0;
         ASM_END:        0,     0,     0,     0;
 
-        ASM_VALUE: DAO_STRING, 0, 4, 'name';
+        ASM_VALUE: DAO_STRING, 4, 'name';
         ASM_END: '';
 
-        ASM_VALUE: DAO_STRING, 1, 3, "a";
-        ASM_END: "bb";
-
-        ASM_CONST:     2,     1,     0,     3;
+        ASM_CONST:     1,    13,     0,     3;
 
         ASM_VALUE: DAO_INTEGER;
         ASM_END:  123 ;
 
-        ASM_VALUE: DAO_STRING, 0, 3, 'int';
+        ASM_VALUE: DAO_STRING, 3, 'int';
         ASM_END: '';
 
         ASM_TYPE:      1,     1,     0,     0;
         ASM_END:       0,     0,     0,     0;
 
-        ASM_VAR:    11,     3,     1,     3;
+        ASM_VAR:    15,     3,     1,     3;
 
-        ASM_TYPE:     10,    12,     6,     0;
+        ASM_VALUE: DAO_STRING, 10, 'self:K';
+        ASM_END: 'lass';
+
+        ASM_TYPE:      1,    28,     9,     0;
         ASM_END:       0,     0,     0,     0;
 
-        ASM_VALUE: DAO_STRING, 0, 10, 'self:';
-        ASM_END: 'Klass';
-
-        ASM_TYPE:      1,    30,     2,     0;
-        ASM_END:       0,     0,     0,     0;
-
-        ASM_VALUE: DAO_STRING, 0, 5, 'a:int';
+        ASM_VALUE: DAO_STRING, 5, 'a:int';
         ASM_END: '';
 
-        ASM_TYPE:      1,    30,     5,     0;
+        ASM_TYPE:      1,    28,     4,     0;
         ASM_END:       0,     0,     0,     0;
 
-        ASM_VALUE: DAO_STRING, 0, 12, 'routi';
-            ASM_DATA: 'ne<self:';
-            ASM_DATA: 'Klass,a:';
-        ASM_END: 'int=>?>';
-
-        ASM_TYPE:      1,    18,    21,     0;
-        ASM_END:       4,     2,     0,     0;
-
-        ASM_VALUE: DAO_STRING, 0, 6, 'Metho';
+        ASM_VALUE: DAO_STRING, 7, '@Metho';
         ASM_END: 'd';
 
-        ASM_ROUTINE: 1, 2, 8, 1;
+        ASM_TYPE:      1,    65,     0,     0;
+        ASM_END:       0,     0,     0,     0;
+
+        ASM_VALUE: DAO_STRING, 2, 'routin';
+            ASM_DATA: 'e<self:K';
+            ASM_DATA: 'lass,a:i';
+            ASM_DATA: 'nt=>@Met';
+        ASM_END: 'hod>';
+
+        ASM_TYPE:      1,    17,     2,     0;
+        ASM_END:       6,     4,     0,     0;
+
+        ASM_VALUE: DAO_STRING, 6, 'Method';
+        ASM_END: '';
+
+        ASM_ROUTINE: 1, 2, 17, 1;
         ASM_END:  ;
 
-        ASM_ROUTINE: 1, 3, 9, 1;
+        ASM_ROUTINE: 1, 3, 18, 1;
             ASM_CONSTS:      2,     0,     0,     0;
             ASM_END:         0,     0,     0,     0;
 
-            ASM_TYPES:      2,     0,     0,     8;
-            ASM_END:        1,    11,     0,     0;
+            ASM_TYPES:      2,     0,     0,    10;
+            ASM_END:        1,    12,     0,     0;
 
             ASM_CODE:      1,     1,     0,     1;
             ASM_END:         RETURN     ,     0,     0,     0;
         ASM_END:  ;
 
-        ASM_VALUE: DAO_STRING, 0, 0, 'routi';
-            ASM_DATA: 'ne<=>Kla';
-        ASM_END: 'ss>';
+        ASM_VALUE: DAO_STRING, 0, 'routin';
+            ASM_DATA: 'e<=>Klas';
+        ASM_END: 's>';
 
-        ASM_TYPE:      1,    18,    11,     0;
+        ASM_TYPE:      1,    17,    20,     0;
         ASM_END:       0,     0,     0,     0;
 
-        ASM_VALUE: DAO_STRING, 0, 12, 'Klass';
-        ASM_END: '::Klass';
+        ASM_VALUE: DAO_STRING, 12, 'Klass:';
+        ASM_END: ':Klass';
 
-        ASM_ROUTINE: 1, 2, 13, 256;
+        ASM_ROUTINE: 1, 2, 22, 512;
             ASM_CONSTS:      0,     0,     0,     0;
             ASM_END:         0,     0,     0,     0;
 
@@ -761,13 +766,20 @@ ASM_ROUTINE: 0, 0, 0, 1536;
         ASM_END:  ;
     ASM_END:  ;
 
-    ASM_VALUE: DAO_STRING, 0, 12, 'routi';
-    ASM_END: 'ne<=>?>';
+    ASM_VALUE: DAO_STRING, 5, '@Func';
+    ASM_END: '';
 
-    ASM_TYPE:      1,    18,    30,     0;
+    ASM_TYPE:      1,    65,     0,     0;
     ASM_END:       0,     0,     0,     0;
 
-    ASM_VALUE: DAO_STRING, 0, 4, 'Func';
+    ASM_VALUE: DAO_STRING, 0, 'routin';
+        ASM_DATA: 'e<=>@Fun';
+    ASM_END: 'c>';
+
+    ASM_TYPE:      1,    17,     2,     0;
+    ASM_END:       0,     0,     0,     0;
+
+    ASM_VALUE: DAO_STRING, 4, 'Func';
     ASM_END: '';
 
     ASM_ROUTINE: 1, 2, 0, 0;
@@ -778,28 +790,28 @@ ASM_ROUTINE: 0, 0, 0, 1536;
         ASM_END:        0,     0,     0,     0;
 
         ASM_CODE:      3,     1,    26,     3;
-            ASM_DATA:    GETVG      ,     0,    29,     0;
-            ASM_DATA:    MOVE_XX    ,     0,     0,     1;
+            ASM_DATA:    GETVG      ,     0,    36,     0;
+            ASM_DATA:    MOVE_XX    ,     0,     3,     1;
         ASM_END:         RETURN     ,     0,     0,     0;
     ASM_END:  ;
 
-    ASM_CONSTS:      1,    24,     0,     0;
+    ASM_CONSTS:      0,     0,     0,     0;
     ASM_END:         0,     0,     0,     0;
 
     ASM_TYPES:      0,     0,     0,     0;
     ASM_END:        0,     0,     0,     0;
 
-    ASM_CODE:     10,     3,     9,     1;
-        ASM_DATA:      4,     5,    16,     4;
-        ASM_DATA:    GETCG      ,     0,    43,     0;
+    ASM_CODE:     10,     3,     3,     1;
+        ASM_DATA:     10,     5,    16,     4;
+        ASM_DATA:    GETCG      ,     0,    52,     0;
         ASM_DATA:    DATA_I     ,     1,   123,     1;
-        ASM_DATA:    GETVS      ,     0,     0,     2;
+        ASM_DATA:    GETVG      ,     0,    37,     2;
         ASM_DATA:    SIZE       ,     2,     0,     3;
         ASM_DATA:    ADD_III    ,     1,     3,     4;
-        ASM_DATA:    SETVG_II   ,     4,     7,     0;
-        ASM_DATA:    GETCL      ,     0,     0,     5;
+        ASM_DATA:    SETVG_II   ,     4,    36,     2;
+        ASM_DATA:    GETCG      ,     0,    35,     5;
         ASM_DATA:    CALL       ,     5,     0,     6;
-        ASM_DATA:    MOVE_PP    ,     6,     0,     7;
+        ASM_DATA:    MOVE_PP    ,     6,     3,     7;
     ASM_END:         RETURN     ,     0,     0,     0;
 ASM_END:  ;
 @[code]

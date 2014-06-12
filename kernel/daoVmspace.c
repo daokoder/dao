@@ -2457,7 +2457,7 @@ DaoFuncItem dao_builtin_methods[] =
 		*/
 	},
 	{ DaoMETH_Frame,
-		"frame( default_value :@T ) [=>@T] => @T"
+		"frame( default_value: @T ) [=>@T] => @T"
 		/*
 		//
 		*/

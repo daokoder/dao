@@ -79,7 +79,7 @@ before parsing.
 
 @[subsection]Comments@[subsection]
 
-Dao mainly uses the sharp mark @[green]#@[green] to mark comments.
+Dao uses the number sign @[green]#@[green] to mark comments.
 @[list]
 -- Single line comment: from @[green]#@[green] to the end of the line;
 -- Multiple line comment: paired with @[green]#{@[green] and @[green]#}@[green];
@@ -91,9 +91,9 @@ if they are properly paired, namely, they are allowed to be nested.
 @[subsection]Quotation Marks@[subsection]
 
 Both the single quotation mark (0x27) and the double quotation mark (0x22)
-can be used to quote string literals. They much be used in pairs, and no escape
+can be used to quote string literals. They must be used in pairs, and no escape
 is required for one kind of quotation mark inside strings quoted with the other
-kind quotation mark.
+kind quotation marks.
 
 
 @[subsection]Keywords@[subsection]
@@ -103,12 +103,12 @@ The following keywords are reserved for the language:
 -- Types:
 @[code(syntax)]
 TypeKeyword ::= type | any | int | float | complex | string
-               | enum | array | list | map | tuple | 
+               | enum | array | list | map | tuple
 @[code(syntax)]
 
 -- Structures:
 @[code(syntax)]
-StructKeyword ::= interface | class | routine | operator | defer
+StructKeyword ::= interface | class | routine | operator
 @[code(syntax)]
 
 -- Storage/scoping:
@@ -130,11 +130,12 @@ ConstVarKeyword ::= none | self
 @[code(syntax)]
 ControlKeyword ::= if | else | for | while | do 
                   | switch | case | default | break | skip
+				  | defer | return | yield
 @[code(syntax)]
 
 -- Other statements:
 @[code(syntax)]
-OtherStmtKeyword ::= load | import | as | return | yield
+OtherStmtKeyword ::= load | import | as
 @[code(syntax)]
 
 -- Operators:
@@ -247,9 +248,7 @@ the enclosing quotation marks may only appear inside the sequence as escaped cha
 So the followings are valid string literals:
 @[code(dao)]
 ' " '
-' “ '  # the enclosing mark is ', so " “ can appear without problem
 " ' "
-" ” "
 ' \' '
 " \" "
 @[code(dao)]
@@ -1104,12 +1103,12 @@ Class
 @[text]
 
 @[code(syntax)]
-ClassConst ::= 'const' ConstDeclItem { ',' ConstDeclItem }
-ClassVar   ::= ( 'var' | 'invar' | 'static' ) VarDeclItem { ',' VarDeclItem }
+ClassConstField ::= 'const' Identifier '=' ConstExpression
+ClassVarField   ::= ( 'var' | 'invar' | 'static' ) Identifier [ '=' ConstExpression ]
 
 Mixins  ::= '(' [ UserType { ',' UserType } ] ')'
 
-ClassBody ::= { ClassConst | ClassVar | Routine }
+ClassBody ::= { ClassConstField | ClassVarField | Routine }
 
 Class ::= 'class' { Identifier '::' } Identifier [ Mixins ] [ ':' UserType ]
               '{' [ ClassBody ] '}'

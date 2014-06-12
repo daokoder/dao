@@ -822,7 +822,6 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		case DTOK_COMMA : case DTOK_SEMCO :
 			if( println == 0 ) fgcolor = DAOX_BLACK;
 			break;
-		case DTOK_AT2 :
 		case DKEY_LOAD : case DKEY_IMPORT : case DKEY_AS :
 		case DKEY_AND : case DKEY_OR : case DKEY_NOT :
 			if( self->fmtHTML ){
