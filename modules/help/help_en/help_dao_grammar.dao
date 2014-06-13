@@ -9,6 +9,12 @@ dao.grammar
 Dao Grammar Specifications
 @[title]
 
+@[text]
+This documentation includes the specifications for the grammar of Dao.
+It is mainly for advanced users and language specialists who want to 
+go into the details of the language.
+@[text]
+
 
 ################################################################################
 ################################################################################

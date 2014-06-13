@@ -4,8 +4,8 @@
 load help;
 
 load help_dao_feature;
-load help_dao_tutorial;
-load help_dao_grammar;
+load help_dao_guide;
+load help_dao_data;
 load help_dao_type;
 load help_dao_operator;
 load help_dao_control;
@@ -14,6 +14,7 @@ load help_dao_class;
 load help_dao_concurrent;
 load help_dao_builtin;
 load help_dao_module;
+load help_dao_grammar;
 
 @[name]
 dao

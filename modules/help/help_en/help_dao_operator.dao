@@ -18,8 +18,19 @@ can be used for different data types.
 
 Please note, in the following operators that involve one or more arrays,
 those operators are done in element-wise.
+@[text]
 
-@[subsection]Arithmetic Operators@[subsection]
+
+
+@[name]
+dao.operator.arithmetic
+@[name]
+
+@[title]
+Arithmetic Operators
+@[title]
+
+@[text]
 @[code]
 # Binary operators:
 (int|float|double|complex|long|array) +  (int|float|double|complex|long|array) # Addtion;
@@ -37,7 +48,19 @@ those operators are done in element-wise.
 @[code]
 
 
-@[subsection]Comparison Operators@[subsection]
+@[text]
+
+
+
+@[name]
+dao.operator.comparison
+@[name]
+
+@[title]
+Comparison Operators
+@[title]
+
+@[text]
 @[code]
 (int|float|double|long) == (int|float|double|long) # Equal to;
 (int|float|double|long) != (int|float|double|long) # Not equal to;
@@ -65,7 +88,19 @@ string >= string # No less than;
 @[code]
 
 
-@[subsection]Logic Operators@[subsection]
+@[text]
+
+
+
+@[name]
+dao.operator.logic
+@[name]
+
+@[title]
+Logic Operators
+@[title]
+
+@[text]
 @[code]
 !   (int|float|double|long) # Logic negation (NOT);
 not (int|float|double|long) # Logic negation (NOT);
@@ -100,8 +135,19 @@ can simplify coding for some cases.
 
 
 
+@[text]
 
-@[subsection]Bitwise Operators@[subsection]
+
+
+@[name]
+dao.operator.bitwise
+@[name]
+
+@[title]
+Bitwise Operators
+@[title]
+
+@[text]
 @[code]
 ~ (int|float|double|complex|long) # Bitwise NOT;
 
@@ -115,9 +161,22 @@ can simplify coding for some cases.
 Please note, non-integer operands are converted to integers.
 
 
-@[subsection]
-Compound assignment operators
-@[subsection]
+@[text]
+
+
+
+@[name]
+dao.operator.assignment
+@[name]
+
+@[title]
+Assignment Operators
+@[title]
+
+@[text]
+
+@[subsection]Compound Assignment Operators@[subsection]
+
 @[code]
 (int|float|double) += (int|float|double) # Addition assignment;
 (int|float|double) -= (int|float|double) # Subtraction assignment;
@@ -158,8 +217,43 @@ array<complex> /= (int|float|double|complex|array) # Division assignment;
 array<complex> %= (int|float|double|complex|array) # Modulo assignment
 @[code]
 
+@[subsection]Multiple Assignment:@[subsection]
+
+@[code]
+( C, A, B, ... ) = ( A, B, C, ... )
+( A, B ) = func();
+@[code]
+the expression in the right side should yield a list or tuple,
+and each of the elements in the tuple/list is assigned accordingly to
+each of the variables in the left side.
+Extra elements are ignored.
+
+@[text]
 
 
+
+@[name]
+dao.operator.typecast
+@[name]
+
+@[title]
+Type Casting Operators
+@[title]
+
+@[text]
+@[text]
+
+
+
+@[name]
+dao.operator.misc
+@[name]
+
+@[title]
+Miscellaneous Operators
+@[title]
+
+@[text]
 @[subsection]
 String operators
 @[subsection]
@@ -197,16 +291,6 @@ is returned.
 
 
 
-@[subsection]Multiple Assignment:@[subsection]
-
-@[code]
-( C, A, B, ... ) = ( A, B, C, ... )
-( A, B ) = func();
-@[code]
-the expression in the right side should yield a list or tuple,
-and each of the elements in the tuple/list is assigned accordingly to
-each of the variables in the left side.
-Extra elements are ignored.
 
 
 @[subsection]
@@ -244,4 +328,17 @@ any    not in map     # Test if a key is not in a map;
 any    not in tuple   # Test if a value is not in a tuple;
 @[code]
 
+@[text]
+
+
+
+@[name]
+dao.operator.overloading
+@[name]
+
+@[title]
+Operator Overloading
+@[title]
+
+@[text]
 @[text]

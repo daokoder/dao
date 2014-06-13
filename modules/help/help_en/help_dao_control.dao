@@ -8,19 +8,39 @@ dao.control
 Control Structures
 @[title]
 
+@[text]
+
+Control structures are essential for a program to do complex work.
+Dao supports the common controls such as:
+@[green]if-else@[green], @[green]for@[green], @[green]while@[green],
+@[green]do-while@[green], @[green]switch-case@[green], 
+@[green]break@[green] and @[green]skip@[green] etc.
+
+@[text]
+
+
+
+
+
 @[name]
 dao.control.if-else
 @[name]
 
 @[title]
-If-else Conditional Control
+If-Else Conditional Control
 @[title]
 
 @[text]
 
+The @[green]if-else@[green] control allows the program to branch
+and execute different blocks of codes, based on the results
+of the condition expressions.
+
+
 @[subsection]
 Definition
 @[subsection]
+
 @[code(syntax)]
 ControlBlock ::= Statement | '{' [ StatementBlock ] '}'
 
@@ -28,6 +48,102 @@ IfElseStmt ::= 'if' '(' [ LocalVarDeclaration ';' ] Expression ')' ControlBlock
                { 'else' 'if' '(' [ LocalVarDeclaration ';' ] Expression  ')' ControlBlock }
 			   [ 'else' ControlBlock ]
 @[code(syntax)]
+
+
+@[subsection]
+Use Cases
+@[subsection]
+
+
+@[subsubsection]
+Single Statement
+@[subsubsection]
+This is the simplest use case of "if".
+@[code]
+if( condition ) statement
+@[code]
+Where the "statement" is executed only if the "condition" evaluated to
+a value that can pass the condition test (such as nonzero values).
+
+
+
+@[subsubsection]
+Single Block 
+@[subsubsection]
+If multiple statements need to be executed if the "if" test is true,
+a pair of braces can be used to group these statements into a block.
+Of course, such block can also nest other blocks.
+@[code]
+if( condition ) {
+	block
+}
+@[code]
+
+
+@[subsubsection]
+Else Statement or Block
+@[subsubsection]
+If there is another statement or block should be executed when the condition
+test failed, one can add the "else" clause to the if statement.
+@[code]
+if( condition )
+	statement1
+else
+	statement2
+
+if( condition ) {
+	block1
+} else {
+	block2
+}
+@[code]
+Please note that, the braces are needed only if the block constains more than
+a single statement.
+
+
+@[subsubsection]
+Multiple Conditions and Blocks
+@[subsubsection]
+
+If there are multiple conditions to be tested for multiple statements or blocks,
+the "if else" clause can be used.
+@[code]
+if( condition1 ){
+   block1;
+}else if( condition2 ){
+   block2;
+}else{
+   block3;
+}
+@[code]
+
+If @[cyan]condition1@[cyan] is true, @[cyan]block1@[cyan] is executed;
+otherwise, if @[cyan]condition2@[cyan] is true, @[cyan]block2@[cyan] is executed;
+otherwise, @[cyan]block3@[cyan] is executed; zero or more @[green]else if@[green]
+and zero or one @[green]else@[green] statement can be used.
+
+
+@[subsubsection]
+Optional Declaration
+@[subsubsection]
+Before each condition expression, there can be an optional variable declaration.
+@[code]
+if( declaration; condition ) {
+	block
+}
+@[code]
+
+For example,
+@[code]
+if( rnd = rand(100); rnd > 50 ) io.writeln( "random number is >50" );
+if( var rnd = rand(100); rnd > 50 ) io.writeln( "random number is >50" );
+@[code]
+
+
+@[subsection]
+Examples
+@[subsection]
+
 
 @[code(dao)]
 a = 5
@@ -63,6 +179,13 @@ For Looping Control
 
 @[text]
 
+Dao supports three different styles of for loops:
+@[list]
+-- Three-expression for loop (C style);
+-- Arithmetic-progression for loop;
+-- For-in loop;
+@[list]
+
 @[subsection]
 Definition
 @[subsection]
@@ -70,10 +193,10 @@ Definition
 CFor  ::= 'for' '(' [ LocalVarDeclaration ] ';' [ Expression ] ';' [ ExpressionList ] ')'
               ControlBlock
 
-APFor ::= 'for' '(' [ 'var' ] Identifier '=' Expression ':' [ Expression ':' ] Expression ')'
+APFor ::= 'for' '(' ['var'|'invar'] Identifier '=' Expression ':' [Expression ':'] Expression ')'
               ControlBlock
 
-ForIn ::= 'for' '(' [ 'var' ] Identifier 'in' Expression {';' Identifier 'in' Expression} ')'
+ForIn ::= 'for' '(' ['var'|'invar'] Identifier 'in' Expression {';' Identifier 'in' Expression} ')'
               ControlBlock
 
 ForStmt ::= APFor | CFor | ForIn
@@ -152,7 +275,7 @@ dao.control.do-while
 @[name]
 
 @[title]
-Do-while Looping Control
+Do-While Looping Control
 @[title]
 
 @[text]
@@ -188,7 +311,7 @@ dao.control.switch-case
 @[name]
 
 @[title]
-Switch-case Control
+Switch-Case Control
 @[title]
 
 @[text]

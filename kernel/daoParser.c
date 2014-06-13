@@ -4168,6 +4168,7 @@ static int DaoParser_SetInitValue( DaoParser *self, DaoVariable *var, DaoValue *
 	DaoNamespace *ns = self->nameSpace;
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoType *tp1 = var->dtype;
+	if( value != NULL && type == NULL ) type = DaoNamespace_GetType( ns, value );
 	if( tp1 == NULL && type != NULL ){
 		GC_IncRC( type );
 		var->dtype = tp1 = type;
@@ -4685,7 +4686,7 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 					DaoClass_AddConst( klass, name, dao_none_value, perm );
 				}else if( storeType & DAO_DECL_STATIC ){
 					DaoClass_AddGlobalVar( klass, name, NULL, abtp, perm );
-				}else if( storeType & DAO_DECL_VAR ){
+				}else if( storeType & (DAO_DECL_VAR|DAO_DECL_INVAR) ){
 					DaoVariable *var;
 					DaoClass_AddObjectVar( klass, name, dao_none_value, abtp, perm );
 					var = (DaoVariable*) DArray_Back( klass->instvars );

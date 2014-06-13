@@ -1264,7 +1264,7 @@ int DaoClass_AddObjectVar( DaoClass *self, DString *name, DaoValue *deft, DaoTyp
 	int id;
 	DNode *node = MAP_Find( self->lookupTable, name );
 	if( node && LOOKUP_UP( node->value.pInt ) == 0 ) return -DAO_CTW_WAS_DEFINED;
-	if( deft == NULL && t ) deft = t->value;
+	if( deft == NULL && t != NULL ) deft = t->value;
 
 	id = self->objDataName->size;
 	if( id != 0 ){ /* not self; */
