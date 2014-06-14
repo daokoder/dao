@@ -5,12 +5,19 @@ dao.guide
 @[name]
 
 @[title]
-Quick Guide
+The Simple and Quick Guide
 @[title]
 
 @[text]
 
-This quick guide will cover some basics of Dao programming.
+This simple and quick guide will cover some basics of Dao programming.
+
+
+@[section]
+Basics
+@[section]
+
+
 We will start with the traditional @[green]hello world@[green] example.
 
 
@@ -20,7 +27,7 @@ Hello World!
 
 To simply write "Hello world!" to the screen, one can use,
 @[code]
-io.write( 'Hello world!' )
+io.write( "Hello world!" )
 @[code]
 In this simple example, the built-in @[green]io@[green] module is used
 to access the IO functionalities of the module.
@@ -80,11 +87,10 @@ the help files and print out the following information,
 If you are reading this tutorial from a webpage, and want to access it from
 the interactive command line, you can simple run,
 @[code]
-(dao) help( 'dao.tutorial.basics' )
+(dao) help( 'dao.guide' )
 @[code]
 
 Such online helps come in two languages: English and Chinese.
-Currently the English version is more complete.
 To choose the language,
 @[code]
 help::set_language("en");  # choose english;
@@ -215,35 +221,29 @@ Please read @[node]dao.type@[node] for more information.
 
 
 
-@[subsection]
+@[section]
 Data Types
-@[subsection]
+@[section]
 
 Dao supports a good number of data types to facilitate programming.
 These include several number types, enum symbol, string, numeric array,
 tuple, list and map etc. types. 
 
 
-@[subsubsection]
+@[subsection]
 Numbers
-@[subsubsection]
+@[subsection]
 
 Dao has native supports for the following number types:
 @[green]int@[green], @[green]float@[green], @[green]double@[green],
 and @[green]complex@[green].
 Integer and floating point numbers can be expressed
 in the same ways as in most other languages.
-Floating point numbers in Dao are parsed as double precision numbers by default.
-To explicitly express a single (double) precision floating point number,
-it is necessary to append a suffix @[green]F@[green] (@[green]D@[green])
-to a normally expressed number.
-
-
-The imaginary part of a @[green]complex@[green] number can be expressed as an 
-@[green]int@[green] or @[green]float@[green] number with a @[green]C@[green] suffix.
-A general @[green]complex@[green] number can be expressed by combining
-an integer or a floating point number as the real part and an imginary part,
-which are both stored as double precision floating point numbers.
+Floating point numbers are stored in double precision by default.
+To use single precision floating point numbers, the number literals
+should be suffixed with @[green]F@[green] (@[green]D@[green] for explicit double precision).
+Number literals suffixed with @[green]C@[green] represent the imaginary
+parts of double precision complex numbers.
 
 
 Examples,
@@ -259,7 +259,6 @@ C1 = 123C    # Double precision complex number with 0.0 real part and 123 imag p
 C2 = 456.6C  # Double precision complex number;
 @[code]
 
-
 These types support most of the common operators that are meaningful for them.
 For example, all the basic arithmetic operators such as:
 @[green]+@[green] (addition, unary plus), @[green]-@[green] (subtraction, unary minus),
@@ -271,6 +270,7 @@ I1 = 123 + 456
 I2 = 789 % 123
 F1 = 123.5 ** 3
 D1 = 789.5D / 123
+C1 = 12.3 + 45.6C
 @[code]
 
 Please see @[node]dao.type.int@[node], @[node]dao.type.float@[node],
@@ -278,11 +278,12 @@ Please see @[node]dao.type.int@[node], @[node]dao.type.float@[node],
 for more information.
 
 
-@[subsubsection]
+@[subsection]
 Enum Symbols
-@[subsubsection]
+@[subsection]
 
 An @[green]enum@[green] defines a set of symbols with associated integer values.
+It is particularly useful to represent states and flags.
 @[code]
 enum MyEnum
 {
@@ -306,23 +307,22 @@ Such symbols are often used in conjunction with normal enum types.
 enum E1 { AA=1, BB=2 }
 enum E2 { AA=10, BB=20 }
 
-var e1 : E1 = $AA
-var e2 : E2 = $AA
+var e1: E1 = $AA
+var e2: E2 = $AA
 
 io.writeln( e1 )  # Output: $AA(1)
 io.writeln( e2 )  # Output: $AA(10)
 @[code]
 Here symbol "$AA" is assigned to both "e1" and "e2", and the symbol
 get interpreted properly according the types of "e1" and "e2".
-So a symbol is a like a "polymorphic" enum: it can be used freely without
-being fixed to a particular enum type, but its actually value will
-depend on the type of the variable that holds it.
+So what a symbol represents actually depends on the variable type
+to which is assigned.
 
 
 Another way to use enum types is to use the enum type names:
 @[code]
-var e1 : enum<AA,BB> = $AA
-var e2 : enum<AA=10,BB=20> = $BB
+var e1: enum<AA,BB> = $AA
+var e2: enum<AA=10,BB=20> = $BB
 @[code]
 
 There are different types of enum types to support different operations.
@@ -331,36 +331,33 @@ Please see @[node]dao.type.enum@[node] for more information.
 
 
 
-@[subsubsection]
+@[subsection]
 Strings
-@[subsubsection]
+@[subsection]
 
-In Dao, a string can be expressed as a sequence of characters enclosed by
-a pair of single qutotation marks or a pair of double quotation marks.
-The characters placed between the quotation marks must be formated according
-some rules (such as escaping quotation marks and other special characters
-and using numeric encodings of characters etc.).
-Please see @[node]dao.type.string@[node] for more information.
+A Dao string is simply a sequence of bytes, which can contain arbitrary data.
+But when processed as text, it is usually assumed to be encoded in UTF-8.
+Strings can be expressed as string literals quoted with double or single
+quotation marks.
 @[code]
-mbs = 'str'
-wcs = "道语言"
-mbs2 = 'It\'s green'
-wcs2 = "\u9053\u8bed\u8a00" # the same as wcs: "道语言";
+S1 = 'Something'
+S2 = "道语言"
+S3 = 'It\'s green'
+S4 = "\u9053\u8bed\u8a00" # the same as S2: "道语言";
 @[code]
+Inside string lieterals, some characters need to be escaped with backslashes.
+Some others such as @[green]\u@[green] are used to instruct Dao parser to
+interprete the following byte sequences specially.
 
 
 To use strings as it is written without special treatment of the characters,
 they can be expressed as @[green]verbatim@[green] string, which are quoted with
-a pair of identical compound marks in the forms of @[green]@[]@[green]
-and @[green]@@[]@[green].
+a pair of identical compound marks in the forms of @[green]@[]@[green].
 Any number of letters, digits, underscores, blank spaces, dots, 
 colons, dashes and assignment marks can be placed in between the squared brackets
 to make sure the marks will not appear inside the string.
-The difference between using @[green]@[]@[green] and @[green]@@[]@[green]
-is the same as the difference between using single quotation marks and double quotation marks.
-Please see @[node]dao.type.string@[node] for more information.
 @[code]
-# C++ codes in MBS:
+# C++ codes as verbatim string:
 cpp =
 @[cpp x]
 class AA
@@ -369,61 +366,40 @@ class AA
 };
 struct BB{};
 @[cpp x]
-
-
-# Lua codes in WCS:
-lua =
-@@[lua]
-local a = 1;
-function Test()
-	io.write( 'Hello' )
-end
-@@[lua]
 @[code]
 
 The content of a string can be accessed or altered using sub-indexing or slicing:
 @[code]
-str = 'ABCDEFGHIJK';
+str = "ABCDEFGHIJK";
 
 io.writeln( str[1] )    # the second character;
 io.writeln( str[:4] )   # the substring from the start to the 4th character;
-io.writeln(  str[6:] )  # the substring from the 6th character to the end;
-io.writeln(  str[3:8] ) # the substring from the 3rd to the 8th character;
+io.writeln( str[6:] )   # the substring from the 6th character to the end;
+io.writeln( str[3:8] )  # the substring from the 3rd to the 8th character;
 
-# Set single character:
-str[1] = 'X';
-str[1] = 'X'[0];
-
-# Set a substring:
-str[2:5] = '1234'   # str = 'AB1234GHIJK'
-str[2:5] = '123456' # str = 'AB123456GHIJK'
-str[2:5] = '12'     # str = 'AB12GHIJK'
-
-# Using negative index:
-io.writeln( str[-1] )    # the last character;
-io.writeln( str[-2:] )   # the last two characters;
+str[1] = "X";        # Change a single byte: str = "AXCDEFGHIJK";
+str[2:5] = "123456"  # Change a substring: str = "AB123456GHIJK";
 @[code]
 
 String can be concaternated using @[green]+@[green] or @[green]+=@[green],
 @[code]
-str = 'ABCDEFGHIJK';
+str = "ABCDEFGHIJK";
 
-str2 = str + '123'  # str2 = ABCDEFGHIJK123
-
-# Append a string:
-str += '123' # str = ABCDEFGHIJK123
-
-# Append a character:
-str += 88    # str = ABCDEFGHIJK123X
+str2 = str + "123"  # str2 = ABCDEFGHIJK123
+str += "123" # Append a string: str = ABCDEFGHIJK123
+str += 88    # Append a character: str = ABCDEFGHIJK123X
 @[code]
 
+The string type supports a number of builtin methods for handling its data.
+Among these methods, there are also string pattern matching methods.
+Please read @[node]dao.type.string@[node] for more information.
 
 
 
 
-@[subsubsection]
+@[subsection]
 Numeric Arrays
-@[subsubsection]
+@[subsection]
 
 Dao has built-in support for multi-dimensional numeric arrays.
 Such arrays can be defined by using the squared brackets
@@ -434,15 +410,14 @@ a start value, a step value and the number of steps.
 If the step value is omitted, it will be assumed to be zero.
 
 @[code]
-vec1 = [1, 2, 3]  # array<int> vector, or 1x3 matrix;
-vec2 = [1.0; 2; 3]  # array<float> 3x1 matrix, or transposed vector;
-mat1 = [1D, 2; 3, 4]  # array<double> 2x2 matrix;
-mat2 = [ [1, 2], [3, 4] ]  # 2x2 matrix
-mat3 = [ [1, 2, 3] : 5 ]   # 5x3 matrix;
-mat4 = array{ 1, 2; 3, 4 }  # 2x2 matrix
+vec1 = [1, 2, 3]            # array<int> vector, or 1x3 matrix;
+vec2 = [1.0; 2; 3]          # array<float> 3x1 matrix, or transposed vector;
+mat1 = [1D, 2; 3, 4]        # array<double> 2x2 matrix;
+mat2 = [ [1, 2], [3, 4] ]   # 2x2 matrix
+mat3 = array{ 1, 2; 3, 4 }  # 2x2 matrix
 @[code]
 
-Like string, array support sub-indexing, slicing and negative indices:
+Like string, array support sub-indexing and slicing:
 @[code]
 mat = [ 1, 2, 3; 4, 5, 6; 7, 8, 9 ];  # 3x3 matrix;
 
@@ -465,9 +440,9 @@ Please see @[node]dao.type.array@[node] for more information.
 
 
 
-@[subsubsection]
+@[subsection]
 Lists
-@[subsubsection]
+@[subsection]
 
 List can be created in similar ways as array, by enumerating elements or specifying
 an arithmetic progression, but using @[green]{}@[green] or @[green]list{}@[green]
@@ -480,18 +455,13 @@ list3 = { 1 : 2 : 5 }  # list<int>
 
 list4 = { 'abc', 'def' }  # list<string>
 list5 = { 123, 'abc' }    # list<any>
-
-list6 = list{ 'a' : 3 }    # { 'a', 'a', 'a' }
-list7 = { 'a' : 'b' : 3 }  # { 'a', 'ab', 'abb' }
 @[code]
 
-List also supports sub-indexing, slicing and negative indices:
+List also supports sub-indexing and slicing:
 @[code]
 alist = { 0, 1, 2, 3, 4, 5 }
 
 item = alist[1]
-item = alist[-2]
-
 sublist = alist[2:4]
 
 alist[3]  = 10
@@ -502,13 +472,15 @@ alist[4] += 10
 
 
 
-@[subsubsection]
+@[subsection]
 Maps and Hash Maps (Associative Arrays)
-@[subsubsection]
+@[subsection]
 
 A map or hash map organizes a set of key/value pairs into a structure
 for efficient lookup. The keys in a map are ordered, while the keys
 in a hash map are unordered.
+
+
 A map can be created using @[green]{key=>value...}@[green] or
 @[green]map{key=>value...}@[green]. Replacing the @[green]=>@[green]
 with colon @[green]->@[green] will create hash maps.
@@ -535,16 +507,14 @@ submap = amap[ 'abc' : 'def' ];
 
 
 
-@[subsubsection]
+@[subsection]
 Tuples
-@[subsubsection]
+@[subsection]
 
-Tuple is a very handy type, which can be used to hold a fixed number of items,
-with type information recorded for each of them.
-In a tuple, each item can have a name, which can be used to access
-the item as field.
+Tuple is a data type that can store a fixed number of items with individual
+type annotation for each item. Each item may optionally have a field name.
 They can be created in similar ways as creating lists and maps,
-but use @[green]()@[green] instead.
+but using @[green]()@[green] instead.
 @[code]
 tup1 = ( 123, 'abc' )               # tuple with unnamed items;
 tup2 = ( index => 123, 'abc' )      # the first item is named as "index";
@@ -566,27 +536,564 @@ tup2 = tup[:1]  # ( index => 123, 'abc' )
 
 
 
+@[section]
+Control Constructs
+@[section]
+
+The logic of a program is mostly expressed with constrol constructs.
+Dao supports the commonly used controls such as:
+@[green]if-else@[green], @[green]for@[green], @[green]while@[green],
+@[green]do-while@[green], @[green]switch-case@[green], 
+@[green]break@[green] and @[green]skip@[green] etc.
+
+
 @[subsection]
-Control Structures
+If-Else
 @[subsection]
+
+The @[green]if-else@[green] control allows the program to branch
+and execute different blocks of codes, based on the results
+of the condition expressions.
+
+
+When the execution reachs an @[green]if-else@[green] block,
+the condition in the @[green]if()@[green] clause will be tested first,
+if the test is successful, the block associated with the @[green]if@[green] clause
+will be execute. Otherwise the next @[green]if else()@[green] clauses
+(if any) will be tested one by one, until one succeeds the test,
+then the block of the succeeded @[green]if else()@[green] clause will be executed.
+If none of the conditions suceeds and 
+there is an @[green]else@[green] clause,
+its block will be executed instead.
+@[code]
+if( rand(10) > 7 ){
+	io.writeln( "greater than 7" )
+}else if( rand(10) > 5 ){
+	io.writeln( "greater than 5" )
+}else if( rand(10) > 3 ){
+	io.writeln( "greater than 3" )
+}else{
+	io.writeln( "not greater than 3" )
+}
+@[code]
+
+Before each condition expression, there can be an optional expression
+or variable declaration, for example,
+@[code]
+if( rnd = rand(100); rnd > 50 ) io.writeln( "random number:", rnd );
+@[code]
+
+
+
 
 
 
 @[subsection]
+For
+@[subsection]
+
+Dao supports three different styles of for loops:
+@[list]
+-- For-in loop;
+-- Arithmetic-progression (range) for loop;
+-- Three-expression for loop (C style);
+@[list]
+
+
+For-in loop can normally used to iterate over the items of a container object.
+It is probably most useful with list.
+@[code]
+numbers = { 1, 2, 3, 4, 5 }
+for( num in numbers ) io.writeln( num )
+@[code]
+
+
+A range for loop uses an arithmetic progression condition to control the loop.
+The arithmetic progression condition usually consists of an initial value,
+an optional step value and a stopping value.
+@[code]
+for( index = 1 : 2 : 10 ) {
+	io.writeln( index )
+}
+for( index = 1 : 10 ) {  # step value = 1;
+	io.writeln( index )
+}
+@[code]
+The loops will start with "index=1", and with each loop cycle, "index" is increased
+by two or one, when "index" become greater than 10, the loop will stop.
+
+
+C-style for loop is the most flexible for loop construct.
+@[code]
+for( init; condition; step ){
+   block;
+}
+@[code]
+The execution sequence of @[green]for@[green] statement is the following:
+@[list]
+== execute initial expression @[cyan]init@[cyan], and goto 3;
+== execute @[cyan]step@[cyan];
+== evaluate the condition expression @[cyan]condition@[cyan];
+== check the value of @[cyan]condition@[cyan]: if true, goto 5; otherwise, goto 6;
+== execute @[cyan]block@[cyan], and goto 2;
+== stop looping; and start to execute the statements after the loop body.
+@[list]
+
+
+Example,
+@[code(dao)]
+for(i=0; i<3; ++i){
+   io.writeln( i );
+}
+@[code(dao)]
+
+
+
+
+
+@[subsection]
+While
+@[subsection]
+
+When a condition is true, @[green]repeatedly@[green] execute a block of codes:
+@[code]
+while( expr ){
+   block;
+}
+@[code]
+
+If @[cyan]expr@[cyan] is true, @[cyan]block@[cyan] is executed and repeated 
+until @[cyan]expr@[cyan] becomes false,
+namely, while @[cyan]expr@[cyan] is true, execute @[cyan]block@[cyan].
+
+@[code]
+i = 0;
+while( i < 5 ){
+   io.writeln( i );
+   i += 1;
+}
+@[code]
+
+Before the condition expression, there can be an optional expression
+or variable declaration, for example,
+@[code]
+while( rnd = rand(100); rnd > 50 ) io.writeln( "random number is >50" );
+@[code]
+
+
+
+
+
+
+@[subsection]
+Do-While
+@[subsection]
+
+@[code]
+do{
+	block;
+} while ( condition )
+@[code]
+Execute @[cyan]block@[cyan], and then repeat executing it when the @[cyan]condition@[cyan] is true.
+
+
+
+
+
+@[subsection]
+Switch-Case
+@[subsection]
+
+Switch-case control provides a convenient way to branch the code and choose a block of code to
+execute based on the value of a object.
+@[code]
+switch( value ){
+   case C_1 : block_1
+   case C_2 : block_2
+   case C_3 : block_3
+   ...
+   default: block0
+}
+@[code]
+If the @[cyan]value@[cyan] equals to @[cyan]C_i@[cyan], @[cyan]block_i@[cyan] will be executed. Here @[cyan]C_i@[cyan] must be a constant,
+but they can be of different types, that means, you can mix numbers and strings as case values.
+Unlike in C/C++, no @[green]break@[green] statement is required to get out of the @[green]switch@[green].
+
+
+If you want to execute the same block of codes for different case values, you just need to
+organize them together in the following way:
+@[code]
+switch( value ){
+   case C1, C2, C3 :
+      block3
+   ...
+   default: block0
+}
+@[code]
+Namely, Dao allows one case entry to have multiple values.
+In this way, @[cyan]block3@[cyan] will be executed for case values @[cyan]C1,C2@[cyan] and @[cyan]C3@[cyan].
+As a simple example,
+@[code(dao)]
+a = "a";
+switch( a ){
+  case 1, "a" : io.write("case 1 or a");
+  default :  io.write("case default");
+}
+@[code(dao)]
+
+
+
+
+
+@[subsection]
+Break and Skip
+@[subsection]
+
+@[green]break@[green] can be used to exit a loop, and @[green]skip@[green] can be used 
+to skip the rest part of script and start the next cycle of a loop.
+@[green]skip@[green] is equivalent to @[green]continue@[green] in C/C++.
+
+@[code] 
+for( i=0; i<5; ++i ){
+	io.writeln( i ); 
+	if( i == 3 ) break;
+}
+@[code]
+
+
+
+
+
+@[section]
 Routines (Functions)
-@[subsection]
+@[section]
+
+Routine (function) is a relative independent block of code that can be
+repeatedly executed by invoking it when and where it is needed.
+It can accept parameters to changes its behaviour.
+It may also return results to its caller.
 
 
 
 @[subsection]
+Definition
+@[subsection]
+
+Dao routines are declared with keyword @[green]routine@[green]
+For example,
+@[code(dao)]
+routine func( first, second )
+{
+   first += 10;
+   second += "test";
+   return first, second; # return more than one results.
+}
+
+(ret1, ret2) = func( 111, "AAA" );
+ret3 = func( ret1, ret2 );
+@[code(dao)]
+defines a function that can take two parameters as inputs,
+and return two values as outputs.
+
+
+
+@[subsection]Named Parameter@[subsection]
+
+In Dao the function parameters are named, and parameter values can be passed in by name:
+@[code]
+func( first = 123, second = "ABC" );
+@[code]
+
+
+
+@[subsection]Parameter Type and Default Value@[subsection]
+
+Routine parameters can have type annotations, and a default value can
+also be specified for a parameter.
+@[code]
+routine MyRout( name: string, index = 0 )
+{
+   io.writeln( "NAME  = ", name )
+   io.writeln( "INDEX = ", index )
+}
+@[code]
+Here @[cyan]name@[cyan] is annotated as type string, and @[cyan]index@[cyan]
+is specified as an integer with default value 0.
+Any parameter after a parameter with default value must have default values as well.
+
+
+
+@[subsection]Routine Overloading@[subsection]
+
+Routine overloading by parameter types is also supported in Dao,
+which means that multiple routines can be defined with the same name,
+but different parameter signatures.
+@[code]
+routine MyRout( index: int, name = "ABC" )
+{
+   io.writeln( "INDEX = ", index )
+   io.writeln( "NAME  = ", name )
+}
+
+MyRout( "DAO", 123 ) # invoke the first MyRout()
+MyRout( 456, "script" ) # invoke the second MyRout()
+@[code]
+
+
+
+@[subsection]Anonymous Routine and Closure@[subsection]
+
+Dao supports routines as first class objects.
+So they can be created as anonymous routines or closures,
+and used just like other objects.
+
+
+
+The syntax to create anonymous routine or closure is nearly identical to
+the definition of a normal function, except the following differences:
+@[list]
+== No need for a function name;
+== Default parameter values do not need to be constant;
+== Its function body may access the local variables of the outer function;
+@[list]
+
+When such function accesses local variables from its outer/upper scope,
+it is created as a closure, otherwise as an anonymous function.
+
+
+Here is a simple example,
+@[code]
+abc = "ABC";
+
+rout = routine( x, y: string, z = abc + abc ){
+    abc += y;
+    io.writeln( "lambda ", abc )
+    io.writeln( "lambda ", y )
+    io.writeln( "lambda ", z )
+}
+rout( 123, "XXX" );
+io.writeln( abc )  # Output: ABCXXX
+@[code]
+
+For code section routines and decorators,
+please see @[node]dao.routine.section@[node] and @[node]dao.routine.decorator@[node].
+For coroutine and generator, please see @[node]module.core.coroutine@[node].
+
+
+
+
+@[section]
 Classes
-@[subsection]
+@[section]
+
+
+Class is a user-defined data structure that supports data abstraction, encapsulation,
+polymorphism and inheritance etc.
+It is commonly used to do Object-Oriented Programming (OOP).
+
+
+@[subsection]Class Definition@[subsection]
+
+A @[green]class@[green] data strucutre is defined by composing data fields
+and member methods in a meaningful way that defines the states and behaviours
+for the instances of the class.
+Dao class supports four types of fields:
+@[list]
+--@[green]constant@[green]: declared with keyword @[green]const@[green];
+--@[green]static variable@[green]: declared with keyword @[green]static@[green];
+--@[green]instance variable@[green]: declared with keyword @[green]var@[green];
+--@[green]instance invariable@[green]: declared with keyword @[green]invar@[green];
+@[list]
+Such fields can be declared with or without explicit types,
+and with or without default initialization values,
+in the same way as specifying types and/or default values for function parameters.
+For example, the following can be used for instance variables,
+@[code]
+var variable;
+var variable = init_value;
+var variable: typename;
+var variable: typename = init_value;
+@[code]
+
+Class methods must be declared with keyword @[green]routine@[green] 
+for constructors and normal methods, or keyword @[green]operator@[green]
+	for operator overloading.
+
+
+The visibilities of class fields and methods can be restricted by three permission keywords:
+@[list]
+--@[green]public@[green]: publically accessible without restriction;
+--@[green]protected@[green]: accessible from the class and its derived classes;
+--@[green]private@[green]: only accessible from the class;
+@[list]
+
+Here is a simple class,
+@[code]
+class ClassOne
+{
+	var index = 0;
+	var name  : string
+	var words : list<string> = {}
+
+	routine ClassOne( name :string, index = 0 ){
+		self.name = name;
+		self.index = index;
+	}
+}
+@[code]
+
+Within class methods, the special variable @[green]self@[green] represents the current class
+instance. Class methods may be declared inside class body and defined outside
+in the same way as in C++, but in Dao, one should make sure that, the parameter list
+must be exactly the same in the places for declaration and definition.
 
 
 
-@[subsection]
-Error Handling
-@[subsection]
+
+@[subsection]Class Instance@[subsection]
+
+Class constructors are the methods that have name the same as the class name.
+A class instance can be created by invoking a constructor of the class 
+in the same way as a function call,
+@[code]
+object = ClassOne( 'abc' )
+@[code]
+Note that, the constructors are not used to create class instances,
+instead, an instance is created before, and then the constructor is called
+after to initialize the instance.
+
+
+For a class without parent classes and without constructors, 
+its instances may also be created by enumerating the members of the class,
+@[code]
+class Point3D
+{
+	var x = 0D;
+	var y = 0D;
+	var z = 0D;
+}
+point = Point3D.{ 1, 2, 3 };
+@[code]
+The names of instance variables may also be specified in enumeration,
+@[code]
+point = Point3D.{ y = 2, x = 1, z = 3 };
+@[code]
+
+
+
+
+
+@[subsection]Methods and Properties@[subsection]
+
+There are three typical types of methods for Dao classes: static method,
+instance method and invariable/const instance method.
+Static methods can be invoked without class instance objects, so they cannot
+access instance variables. The other two types of methods requires class instances
+to invoke. Instance methods can modify the instance variables, but invariable
+methods cannot. Invariable methods can be declared by specifying "invar" after
+the brackets for the parameters.
+@[code(dao)]
+class ClassTwo
+{
+	private
+
+	static state = 0
+	var    value = 0
+
+	public
+
+	static routine Stat() {
+		state += 1      # OK!
+		state += value  # Error! Cannot access "value"!
+	}
+	routine Meth() {
+		state += 1  # OK!
+		value += 2  # OK!
+	}
+	routine InvarMeth() invar {
+		state += value  # OK! Can access "value"!
+		value += 2      # Error! Cannot modify "value"!
+	}
+}
+@[code(dao)]
+
+In order to provide access to the variables such as "value" in the above example,
+one can define ordinary methods such @[cyan]GetValue()@[cyan] and @[cyan]SetValue()@[cyan].
+But the better way is to use properties.
+A property is a method that provides access to a field in a way
+that syntatically looks like direct access.
+In Dao, this can be done by overloading name specific operators such as
+@[green].Name@[green] and @[green].Name=@[green]. For example,
+@[code(dao)]
+class MyNumber
+{
+	private
+	var value = 0;
+
+	public
+	routine MyNumber( init = 0 ){
+		value = init;
+	}
+
+	operator .value(){ return value }
+	operator .value=( newval: int ) {
+		value = newval;
+		io.writeln( "value is set" )
+	}
+}
+
+num = MyNumber( 123 )
+num.value = 456
+io.writeln( num.value )
+@[code(dao)]
+
+
+
+
+
+@[subsection]Inheritance@[subsection]
+@[code]
+class ColorRBG
+{
+	var red   = 0.0;
+	var green = 0.0;
+	var blue  = 0.0;
+
+	routine ColorRBG( R = 0.0, G = 0.0, B = 0.0 ){
+		red = R;
+		green = G;
+		blue = B;
+	}
+}
+
+yellow = ColorRBG( 1, 1, 0 ); # create an instance.
+@[code]
+The following will define a derived class of @[cyan]ColorRBG@[cyan],
+@[code]
+class ColorRGBA : ColorRBG
+{
+	var alpha = 0.0; # alpha component for tranparency.
+
+	routine ColorRGBA( R = 0.0, G = 0.0, B = 0.0, A = 0.0 ) : ColorRBG( R, G, B ){
+		alpha = A;
+	}
+}
+
+magenta = ColorRGBA( 1, 0, 1, 0 ); # not tranparent.
+magenta.alpha = 0.5; # change to half tranparency.
+@[code]
+
+In the definition of derived class,
+the parent class @[cyan]ColorRBG@[cyan] should be put after the derived class 
+and be separated with @[green]:@[green]. 
+The constructor parameters for derived class
+can be passed to parent classes in the way as shown in the example.
+
+
+There are several more advanced features based on class,
+please see @[node]dao.class@[node] for more information.
+
+
 
 
 @[text]

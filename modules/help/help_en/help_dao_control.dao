@@ -5,12 +5,12 @@ dao.control
 @[name]
 
 @[title]
-Control Structures
+Control Constructs
 @[title]
 
 @[text]
 
-Control structures are essential for a program to do complex work.
+Control constructs are essential for a program to do complex work.
 Dao supports the common controls such as:
 @[green]if-else@[green], @[green]for@[green], @[green]while@[green],
 @[green]do-while@[green], @[green]switch-case@[green], 

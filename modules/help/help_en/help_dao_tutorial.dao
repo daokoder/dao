@@ -1,7 +1,7 @@
 load help;
 
 @[name]
-dao.guide
+dao.tutorial
 @[name]
 
 @[title]
@@ -1378,6 +1378,7 @@ Class supports three types of fields:
 --@[green]constant@[green]: declared with keyword @[green]const@[green];
 --@[green]static variable@[green]: declared with keyword @[green]static@[green];
 --@[green]instance variable@[green]: declared with keyword @[green]var@[green];
+--@[green]instance invariable@[green]: declared with keyword @[green]invar@[green];
 @[list]
 Such fields can be declared with or without explicit types,
 and with or without default or initialization values,
@@ -1448,14 +1449,14 @@ class Point3D
 	var y = 0D;
 	var z = 0D;
 }
-point = Point3D::{ 1, 2, 3 };
+point = Point3D.{ 1, 2, 3 };
 @[code]
 The names of instance variables may also be specified in enumeration,
 @[code]
-point = Point3D::{
-	y => 2,
-	x => 1,
-	z => 3,
+point = Point3D.{
+	y = 2,
+	x = 1,
+	z = 3,
 };
 @[code]
 
