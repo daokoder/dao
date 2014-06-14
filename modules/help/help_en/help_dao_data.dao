@@ -18,7 +18,7 @@ static variables, global variables and invariables.
 ##const      &&Global Constant    &&Local Constant    &&Class Constant
 ##var        &&Global Variable    &&Local Variable    &&Class Instance Variable
 ##invar      &&Global Invariable  &&Local Invariable  &&Class Instance Invariable
-##static     &&Static variable    &&Static Variable   &&Class Static Variable
+##static     &&Static Variable    &&Static Variable   &&Class Static Variable
 @[table]
 @[text]
 

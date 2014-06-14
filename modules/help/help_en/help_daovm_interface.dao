@@ -64,7 +64,7 @@ If you have a main script file and all you need to do is to run the file,
 you can simply call:
 
 @[code(cxx)]
-// Load "myscript.dao":
+// Load and execute "myscript.dao":
 DaoVmSpace_Load( vmspace, "myscript.dao" );
 @[code(cxx)]
 

@@ -4,6 +4,7 @@
 load help;
 
 load help_dao_guide;
+load help_dao_data;
 load help_dao_type;
 load help_dao_operator;
 load help_dao_control;

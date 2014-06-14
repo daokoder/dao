@@ -180,12 +180,42 @@ static void DaoxHelpBlock_Delete( DaoxHelpBlock *self )
 	DString_Delete( self->text );
 	dao_free( self );
 }
+static uint_t dao_cjk_charts[][2] = 
+{
+	{0x3400, 0x4DBF},   /* Extension A; */
+	{0x4E00, 0x9FFF},   /* Basic Block; */
+	{0xF900, 0xFAFF},   /* Compatibility; */
+	{0x20000, 0x2A6DF}, /* Extension B; */
+	{0x2A700, 0x2B73F}, /* Extension C; */
+	{0x2B740, 0x2B81F}, /* Extension D; */
+	{0x2F800, 0x2FA1F}, /* Compatibility Supplement; */
+};
+static int dao_cjk( uint_t ch )
+{
+	int i = 0;
+	while( i < 7 && dao_cjk_charts[i][1] < ch ) i += 1;
+	if( i >= 7 || dao_cjk_charts[i][0] > ch ) return 0;
+	return 1;
+}
 static int DString_Break( DString *self, int start, int width )
 {
+	char *chars = self->chars + start;
+	char *stop = self->chars + self->size;
+	int offset = start;
+	int count = width;
+
+	do {
+		DCharState state = DString_DecodeChar( chars, stop );
+		count -= 1 + (dao_cjk( state.value ) != 0);
+		offset += state.width;
+		chars += state.width;
+	} while( count > 0 && offset < self->size );
+	return offset;
+
+#if 0
 	uchar_t *bytes = (uchar_t*) self->chars;
 	daoint pos = DString_LocateChar( self, start, 0 );
 	daoint last = start;
-	int count = width;
 	while( (count--) > 0 ){
 		if( pos == DAO_NULLPOS ) goto Return;
 		pos += DString_UTF8CharSize( bytes[pos] );
@@ -197,6 +227,7 @@ Return:
 	/* Just in case the input is messed up. */
 	if( last <= start && width > 0 ) last = start + 1;
 	return last;
+#endif
 }
 
 static DaoxStream* DaoxStream_New( DaoStream *stream, DaoProcess *proc )
@@ -340,25 +371,25 @@ static int DaoxStream_WriteItemID( DaoxStream *self, char type, int id )
 }
 static void DaoxStream_WriteParagraph( DaoxStream *self, DString *text, int offset, int width )
 {
-	DString *line = DString_New();
+	char *stop = text->chars + text->size;
 	daoint start, next;
-	int i;
-	for(start=next=0; start<text->size; start=next){
+	char chars[8];
+	int i, j;
+
+	for(i=0; i<text->size; ){
+		DCharState state = DString_DecodeChar( text->chars + i, stop );
 		while( self->offset < offset ) DaoxStream_WriteChar( self, ' ' );
-		start = DString_Break( text, start, 0 );
-		next = DString_Break( text, start, width - self->offset );
-		if( (next - start) <= 0 ){
-			DaoxStream_WriteNewLine( self, "" );
-			while( self->offset < offset ) DaoxStream_WriteChar( self, ' ' );
-			next = DString_Break( text, start, width - self->offset );
+		memcpy( chars, text->chars + i, state.width );
+		chars[state.width] = 0;
+		if( self->output ){
+			DString_AppendChars( self->output, chars );
+		}else{
+			DaoStream_WriteChars( self->stream, chars );
 		}
-		DString_SubString( text, line, start, next - start );
-		if( self->offset == offset ) DString_Trim( line, 1, 1, 0 );
-		//DString_Chop( line );
-		DaoxStream_WriteString( self, line );
+		self->offset += 1 + (dao_cjk(state.value) != 0);
+		if( self->offset >= width ) DaoxStream_WriteNewLine( self, "" );
+		i += state.width;
 	}
-	//if( text->size && text->chars[text->size-1] == '\n' ) DaoxStream_WriteNewLine( self, "" );
-	DString_Delete( line );
 }
 static void DaoxStream_WriteText( DaoxStream *self, DString *text, int offset, int width )
 {

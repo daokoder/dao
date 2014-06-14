@@ -113,17 +113,17 @@ io.write( "Hello World!" #{ 代码中注释 #} );
 常量，变量和定变量
 @[subsection]
 
-道支持显式地申明常量，局域变量，静态变量，全局变量和定变量(Invariable)。
-常量可由关键词@[green]const@[green]申明：
+道支持显式地声明常量，局域变量，静态变量，全局变量和定变量(Invariable)。
+常量可由关键词@[green]const@[green]声明：
 @[code]
 const DEFAULT_INDEX = 123
 const DEFAULT_NAME  = 'abc'
 @[code]
-常量只能由常量表达式来初始化。顶层作用域申明的常量将是全局常量。
+常量只能由常量表达式来初始化。顶层作用域声明的常量将是全局常量。
 
 
-关键词@[green]var@[green]可用来申明局域或全局变量。
-同样顶层作用域申明的变量将是全局变量，其他的将是局域变量。
+关键词@[green]var@[green]可用来声明局域或全局变量。
+同样顶层作用域声明的变量将是全局变量，其他的将是局域变量。
 @[code]
 var current_index = 456    # 全局变量;
 var current_name  = 'def'  # 全局变量;
@@ -133,7 +133,7 @@ if( current_index ) {
 @[code]
 
 在每个可以使用@[green]var@[green]的地方，@[green]invar@[green]也可被使用，
-以申明局域，全局或成员定变量。
+以声明局域，全局或成员定变量。
 定变量是一种特殊的变量，它的值一旦被初始化就不能被修改了。
 @[code]
 var   varlist = { 123 }
@@ -144,8 +144,8 @@ invlist.append( 456 )  # 错误!
 详情请参看@[node]dao.data.invar@[node]。
 
 
-另一种变量是使用关键词@[green]static@[green]申明的静态变量。
-非类成员的静态变量实际上是个仅在其申明的作用域（局域）可见的全局变量。
+另一种变量是使用关键词@[green]static@[green]声明的静态变量。
+非类成员的静态变量实际上是个仅在其声明的作用域（局域）可见的全局变量。
 因此，函数里的静态变量是保存在函数之外，且每次函数运行时所访问的静态变量
 都是同一个变量。静态变量必须用常量来初始化。
 
@@ -333,13 +333,13 @@ struct BB{};
 @[code]
 str = "ABCDEFGHIJK";
 
-io.writeln( str[1] )    # the second character;
-io.writeln( str[:4] )   # the substring from the start to the 4th character;
-io.writeln( str[6:] )   # the substring from the 6th character to the end;
-io.writeln( str[3:8] )  # the substring from the 3rd to the 8th character;
+io.writeln( str[1] )    # 第二个字符;
+io.writeln( str[:4] )   # 前五个字符;
+io.writeln( str[6:] )   # 从第六个开始后面所有字符;
+io.writeln( str[3:8] )  # 从第三个到第八个字符;
 
-str[1] = "X";        # Change a single byte: str = "AXCDEFGHIJK";
-str[2:5] = "123456"  # Change a substring: str = "AB123456GHIJK";
+str[1] = "X";        # 修改单个字符: str = "AXCDEFGHIJK";
+str[2:5] = "123456"  # 修改子字符串: str = "AB123456GHIJK";
 @[code]
 
 字符串也可通过@[green]+@[green]或@[green]+=@[green]连接：
@@ -347,8 +347,8 @@ str[2:5] = "123456"  # Change a substring: str = "AB123456GHIJK";
 str = "ABCDEFGHIJK";
 
 str2 = str + "123"  # str2 = ABCDEFGHIJK123
-str += "123" # Append a string: str = ABCDEFGHIJK123
-str += 88    # Append a character: str = ABCDEFGHIJK123X
+str += "123" # 从后面添加字符串: str = ABCDEFGHIJK123
+str += 88    # 从后面添加字符: str = ABCDEFGHIJK123X
 @[code]
 
 道字符串类型还支持一系列方法以方便处理字符串数据。
@@ -362,52 +362,47 @@ str += 88    # Append a character: str = ABCDEFGHIJK123X
 数值数组
 @[subsection]
 
-Dao has built-in support for multi-dimensional numeric arrays.
-Such arrays can be defined by using the squared brackets
-@[green][]@[green] or @[green]array{}@[green].
-Using such constructs, one can either enumerate all the elements
-as a vector/matrix, or specify an arithmetic progression with
-a start value, a step value and the number of steps.
-If the step value is omitted, it will be assumed to be zero.
-
+道对多维数值数组有原生的支持。这种数组可使用方括号@[green][]@[green]
+或者打括号前加@[green]array@[green]关键字即@[green]array{}@[green]构造。
+这种构造可以要么枚举向量或矩阵里的所有的元素或定义一个
+算术级数（使用初始值，增量值，级数长度）生成这些元素。
 @[code]
-vec1 = [1, 2, 3]            # array<int> vector, or 1x3 matrix;
-vec2 = [1.0; 2; 3]          # array<float> 3x1 matrix, or transposed vector;
-mat1 = [1D, 2; 3, 4]        # array<double> 2x2 matrix;
-mat2 = [ [1, 2], [3, 4] ]   # 2x2 matrix
-mat3 = array{ 1, 2; 3, 4 }  # 2x2 matrix
+vec1 = [1, 2, 3]            # array<int> 向量, 即 1x3 矩阵;
+vec2 = [1.0; 2; 3]          # array<float> 3x1 矩阵, 即转置向量;
+mat1 = [1D, 2; 3, 4]        # array<double> 2x2 矩阵;
+mat2 = [ [1, 2], [3, 4] ]   # 2x2 矩阵
+mat3 = array{ 1, 2; 3, 4 }  # 2x2 矩阵
 @[code]
 
-Like string, array support sub-indexing and slicing:
+类似字符串，数值数组的元素可通过下标访问或修改：
 @[code]
-mat = [ 1, 2, 3; 4, 5, 6; 7, 8, 9 ];  # 3x3 matrix;
+mat = [ 1, 2, 3; 4, 5, 6; 7, 8, 9 ];  # 3x3 矩阵;
 
-rowvec = mat[1,:]  # the second row;
-colvec = mat[:,1]  # the second column;
+rowvec = mat[1,:]  # 第二行;
+colvec = mat[:,1]  # 第二列;
 
-submat1 = mat[:1,:]  # the first two rows;
-submat2 = mat[:,1:]  # the last two columns;
-submat3 = mat[:1,1:] # intersection between the first two rows and the last two columns;
+submat1 = mat[:1,:]  # 头两行;
+submat2 = mat[:,1:]  # 头两列;
+submat3 = mat[:1,1:] # 头两行和尾两列交叉部分子矩阵;
 
-mat[0,:]  = [11, 22, 33]  # set the first row to [11, 22, 33];
-mat[:,1] += [11, 22, 33]  # add [11, 22, 33] to the second column;
-mat[:,1] += 100           # add 100 to the second column;
+mat[0,:]  = [11, 22, 33]  # 将首行设置为 [11, 22, 33];
+mat[:,1] += [11, 22, 33]  # 将 [11, 22, 33] 加到第二例;
+mat[:,1] += 100           # 将 100 加到第二例;
 
-mat[:1,1:] += [10, 20; 30, 40]  # add [10, 20; 30, 40] to sub-matrix of mat;
+mat[:1,1:] += [10, 20; 30, 40]  # 将 [10, 20; 30, 40] 加到下标表示的子矩阵;
 @[code]
 
-Please see @[node]dao.type.array@[node] for more information.
+详情请参看@[node]dao.type.array@[node]。
 
 
 
 
 @[subsection]
-Lists
+列表
 @[subsection]
 
-List can be created in similar ways as array, by enumerating elements or specifying
-an arithmetic progression, but using @[green]{}@[green] or @[green]list{}@[green]
-instead of @[green][]@[green] or @[green]array{}@[green].
+类似数组， 列表也可以通过元素枚举或以算术级数生成的方式来创建。
+只不过列表需要用@[green]{}@[green]或@[green]list{}@[green]创建。
 
 @[code]
 list1 = { 1, 2, 3 }    # list<int>
@@ -418,7 +413,7 @@ list4 = { 'abc', 'def' }  # list<string>
 list5 = { 123, 'abc' }    # list<any>
 @[code]
 
-List also supports sub-indexing and slicing:
+列表元素也可通过下标访问或修改：
 @[code]
 alist = { 0, 1, 2, 3, 4, 5 }
 
@@ -434,18 +429,18 @@ alist[4] += 10
 
 
 @[subsection]
-Maps and Hash Maps (Associative Arrays)
+关联表（字典）
 @[subsection]
 
-A map or hash map organizes a set of key/value pairs into a structure
-for efficient lookup. The keys in a map are ordered, while the keys
-in a hash map are unordered.
+关联表（字典）是一种将键与值以成对的方式组织成适当的数据结构以便高效地进行键值查找。
+可以将键以有序的方式历遍的是有序关联表，否则是无序关联表。无需的关联表一般是基于
+哈希表，可以支持比有序表更高效的键查找。
 
 
-A map can be created using @[green]{key=>value...}@[green] or
-@[green]map{key=>value...}@[green]. Replacing the @[green]=>@[green]
-with colon @[green]->@[green] will create hash maps.
-Map and hash map can be used in identical ways.
+道语言里，有序关联表的创建使用@[green]{key=>value...}@[green]
+或@[green]map{key=>value...}@[green]；
+而无序关联表则使用@[green]{key->value...}@[green]或
+@[green]map{key->value...}@[green]。
 @[code]
 amap  = { 'abc' => 123, 'def' => 456 }
 ahash = { 'abc' -> 123, 'def' -> 456 }
@@ -454,8 +449,7 @@ amap  = map{ 'abc' => 123, 'def' => 456 }
 ahash = map{ 'abc' -> 123, 'def' -> 456 }
 @[code]
 
-Sub-scripting and slicing are also supported for map to access value(s)
-through key(s).
+关联表的下标访问与列表类似，只不过这里下标是键：
 @[code]
 amap = { 'abc' => 123, 'def' => 456, 'ghi' => 789 }
 
@@ -469,21 +463,20 @@ submap = amap[ 'abc' : 'def' ];
 
 
 @[subsection]
-Tuples
+元组
 @[subsection]
 
-Tuple is a data type that can store a fixed number of items with individual
-type annotation for each item. Each item may optionally have a field name.
-They can be created in similar ways as creating lists and maps,
-but using @[green]()@[green] instead.
+元组是一种储存固定数目元素的数据结构。并且元组里的每个元素支持单独的类型标注。
+另外，还可给元组里每个元素指定一个成员名。
+它的创建方式类似关联表，只不过要用@[green]()@[green]或@[green]tuple{}@[green]。
 @[code]
-tup1 = ( 123, 'abc' )               # tuple with unnamed items;
-tup2 = ( index => 123, 'abc' )      # the first item is named as "index";
-tup3 = tuple{ 123, name => 'abc' }  # the second item is named as "name";
+tup1 = ( 123, 'abc' )               # 无成员名的元组;
+tup2 = ( index => 123, 'abc' )      # 第一个元素的成员名为"index";
+tup3 = tuple{ 123, name => 'abc' }  # 第二个元素的成员名为"name";
 @[code]
 
-Each item of a tuple can be accessed using its index or field (item name).
-New tuples can be created from other tuples by slicing.
+元组里的每个元素都可通过下标访问或修改。有成员名的元素也可通过成员名访问。
+对元组进行下标切片将产生新的元组。
 @[code]
 tup = ( index => 123, 'abc', [1,2,3] )
 
@@ -498,34 +491,29 @@ tup2 = tup[:1]  # ( index => 123, 'abc' )
 
 
 @[section]
-Control Constructs
+控制结构
 @[section]
 
-The logic of a program is mostly expressed with constrol constructs.
-Dao supports the commonly used controls such as:
+程序的逻辑主要是通过控制结构来表示。道语言支持以下常用的控制结构：
 @[green]if-else@[green], @[green]for@[green], @[green]while@[green],
 @[green]do-while@[green], @[green]switch-case@[green], 
-@[green]break@[green] and @[green]skip@[green] etc.
+@[green]break@[green] 和 @[green]skip@[green] 等。
 
 
 @[subsection]
-If-Else
+If-Else条件控制
 @[subsection]
 
-The @[green]if-else@[green] control allows the program to branch
-and execute different blocks of codes, based on the results
-of the condition expressions.
+条件控制@[green]if-else@[green]允许程序根据条件表达式的值进行分支，
+并执行不同的代码块。
 
 
-When the execution reachs an @[green]if-else@[green] block,
-the condition in the @[green]if()@[green] clause will be tested first,
-if the test is successful, the block associated with the @[green]if@[green] clause
-will be execute. Otherwise the next @[green]if else()@[green] clauses
-(if any) will be tested one by one, until one succeeds the test,
-then the block of the succeeded @[green]if else()@[green] clause will be executed.
-If none of the conditions suceeds and 
-there is an @[green]else@[green] clause,
-its block will be executed instead.
+当程序执行到条件控制时，@[green]if()@[green]里的条件表达式的值将被测试，
+如果测试通过，这个@[green]if()@[green]下面的代码块将被执行。
+否则后面的@[green]else if()@[green]（如果有的话）语句里的条件表达式将被
+逐个测试，直到有一个成功通过测试，那么那个通过测试的@[green]else if()@[green]
+语句下面的代码块将被执行。如果没有条件表达式通过测试，并且有这个条件控制里有
+@[green]else@[green]语句，这个语句下面的代码块将被执行。
 @[code]
 if( rand(10) > 7 ){
 	io.writeln( "greater than 7" )
@@ -538,8 +526,7 @@ if( rand(10) > 7 ){
 }
 @[code]
 
-Before each condition expression, there can be an optional expression
-or variable declaration, for example,
+在条件表达式之前可以有类似局部变量的表达式。
 @[code]
 if( rnd = rand(100); rnd > 50 ) io.writeln( "random number:", rnd );
 @[code]
@@ -550,7 +537,7 @@ if( rnd = rand(100); rnd > 50 ) io.writeln( "random number:", rnd );
 
 
 @[subsection]
-For
+For循环控制
 @[subsection]
 
 Dao supports three different styles of for loops:
@@ -613,7 +600,7 @@ for(i=0; i<3; ++i){
 
 
 @[subsection]
-While
+While循环控制
 @[subsection]
 
 @[green]while@[green] is a simple looping construct that executes a block
@@ -640,7 +627,7 @@ while( i < 5 ){
 
 
 @[subsection]
-Do-While
+Do-While循环控制
 @[subsection]
 
 @[code]
@@ -656,7 +643,7 @@ as long as the @[cyan]condition@[cyan] is true.
 
 
 @[subsection]
-Switch-Case
+Switch-Case控制
 @[subsection]
 
 Switch-case control provides a convenient way to branch the code and choose a block of code to
@@ -723,32 +710,28 @@ for( i=0; i<5; ++i ){
 Routines (Functions)
 @[section]
 
-Routine (function) is a relative independent block of code that can be
-repeatedly executed by invoking it when and where it is needed.
-It can accept parameters to changes its behaviour.
-It may also return results to its caller.
-
+函数是一相对独立的代码块，可在需要的地方和时候反复调用。
+它可以接受参数以改变函数的行为。
+它也可将结果返回给它的调用者。
 
 
 @[subsection]
-Definition
+定义
 @[subsection]
 
-Dao routines are declared with keyword @[green]routine@[green]
-For example,
+道函数可由关键字@[green]routine@[green]定义。例如：
 @[code(dao)]
 routine func( first, second )
 {
    first += 10;
    second += "test";
-   return first, second; # return more than one results.
+   return first, second; # 返回多个值;
 }
 
 (ret1, ret2) = func( 111, "AAA" );
 ret3 = func( ret1, ret2 );
 @[code(dao)]
-defines a function that can take two parameters as inputs,
-and return two values as outputs.
+这里定义了一个可带两个参数作为输入，并返回两个值作为输出。
 
 
 
@@ -761,10 +744,9 @@ func( first = 123, second = "ABC" );
 
 
 
-@[subsection]Parameter Type and Default Value@[subsection]
+@[subsection]参数类型与缺省值@[subsection]
 
-Routine parameters can have type annotations, and a default value can
-also be specified for a parameter.
+道函数的参数可以有类型标注，也可以有缺省值：
 @[code]
 routine MyRout( name: string, index = 0 )
 {
@@ -772,17 +754,16 @@ routine MyRout( name: string, index = 0 )
    io.writeln( "INDEX = ", index )
 }
 @[code]
-Here @[cyan]name@[cyan] is annotated as type string, and @[cyan]index@[cyan]
-is specified as an integer with default value 0.
-Any parameter after a parameter with default value must have default values as well.
+这里参数@[cyan]name@[cyan]的类型被声明为字符串，
+参数@[cyan]index@[cyan]的缺省值被声明为零（它的类型也就被自动声明为整型）。
+任何带缺省值的参数后面的参数必须都带缺省值。
 
 
 
-@[subsection]Routine Overloading@[subsection]
+@[subsection]函数重载@[subsection]
 
-Routine overloading by parameter types is also supported in Dao,
-which means that multiple routines can be defined with the same name,
-but different parameter signatures.
+道语言里，函数可按参数类型进行重载。也就是可对于拥有不同参数类型的函数
+使用同样的名称，函数调用时，道虚拟机根据调用中的参数选择正确的函数来运行。
 @[code]
 routine MyRout( index: int, name = "ABC" )
 {
@@ -790,8 +771,8 @@ routine MyRout( index: int, name = "ABC" )
    io.writeln( "NAME  = ", name )
 }
 
-MyRout( "DAO", 123 ) # invoke the first MyRout()
-MyRout( 456, "script" ) # invoke the second MyRout()
+MyRout( "DAO", 123 )     # 调用上例中的MyRout()
+MyRout( 456, "script" )  # 调用此例中的MyRout()
 @[code]
 
 

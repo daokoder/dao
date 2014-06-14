@@ -546,7 +546,7 @@ Dao supports the commonly used controls such as:
 
 
 @[subsection]
-If-Else
+If-Else Conditional Construct
 @[subsection]
 
 The @[green]if-else@[green] control allows the program to branch
@@ -557,9 +557,9 @@ of the condition expressions.
 When the execution reachs an @[green]if-else@[green] block,
 the condition in the @[green]if()@[green] clause will be tested first,
 if the test is successful, the block associated with the @[green]if@[green] clause
-will be execute. Otherwise the next @[green]if else()@[green] clauses
+will be execute. Otherwise the next @[green]else if()@[green] clauses
 (if any) will be tested one by one, until one succeeds the test,
-then the block of the succeeded @[green]if else()@[green] clause will be executed.
+then the block of the succeeded @[green]else if()@[green] clause will be executed.
 If none of the conditions suceeds and 
 there is an @[green]else@[green] clause,
 its block will be executed instead.
@@ -587,7 +587,7 @@ if( rnd = rand(100); rnd > 50 ) io.writeln( "random number:", rnd );
 
 
 @[subsection]
-For
+For Looping Construct
 @[subsection]
 
 Dao supports three different styles of for loops:
@@ -650,7 +650,7 @@ for(i=0; i<3; ++i){
 
 
 @[subsection]
-While
+While Looping Construct
 @[subsection]
 
 @[green]while@[green] is a simple looping construct that executes a block
@@ -677,7 +677,7 @@ while( i < 5 ){
 
 
 @[subsection]
-Do-While
+Do-While Looping Construct
 @[subsection]
 
 @[code]
@@ -693,7 +693,7 @@ as long as the @[cyan]condition@[cyan] is true.
 
 
 @[subsection]
-Switch-Case
+Switch-Case Construct
 @[subsection]
 
 Switch-case control provides a convenient way to branch the code and choose a block of code to
