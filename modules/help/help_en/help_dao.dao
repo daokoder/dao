@@ -5,6 +5,7 @@ load help;
 
 load help_dao_feature;
 load help_dao_guide;
+load help_dao_tutorial;
 load help_dao_data;
 load help_dao_type;
 load help_dao_operator;
