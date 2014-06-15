@@ -348,7 +348,6 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "CAST_S",     DVM_CAST_S,     DAO_CODE_MOVE,    0 },
 	{ "CAST_VE",    DVM_CAST_VE,    DAO_CODE_MOVE,    0 },
 	{ "CAST_VX",    DVM_CAST_VX,    DAO_CODE_MOVE,    0 },
-	{ "CAST_NV",    DVM_CAST_NV,    DAO_CODE_MOVE,    0 },
 	{ "ISA_ST",     DVM_ISA_ST,     DAO_CODE_BINARY,  0 },
 	{ "TUPLE_SIM",  DVM_TUPLE_SIM,  DAO_CODE_ENUM,    1 },
 	{ "???",        DVM_UNUSED,     DAO_CODE_NOP,     0 },

@@ -606,19 +606,8 @@ static DaoRoutine* DParamNode_Lookup( DParamNode *self, DaoValue *values[], DaoT
 	argtype = types ? types[0] : NULL;
 	for(parnode=self->first; parnode; parnode=parnode->next){
 		int tid = parnode->type2 ? parnode->type2->tid : 0;
-		int checkname = tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT;
 		DaoType *type = parnode->type;
 		if( type == NULL ) continue;
-		if( argvalue && argvalue->type == DAO_PAR_NAMED ){
-			DString *parname = parnode->type2->fname;
-			if( checkname && DString_EQ( argvalue->xNameValue.name, parname ) == 0 ) continue;
-			argvalue = argvalue->xNameValue.value;
-		}
-		if( argtype && (argtype->attrib & DAO_TYPE_PARNAMED) ){
-			DString *parname = parnode->type2->fname;
-			if( checkname && DString_EQ( argtype->fname, parname ) == 0 ) continue;
-			argtype = (DaoType*) argtype->aux;
-		}
 		if( parnode->type2 && (parnode->type2->attrib & DAO_TYPE_SELFNAMED) ){
 			/*
 			// self parameter will be passed by reference, const self argument
@@ -810,13 +799,6 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *svalue, DaoType *stype,
 			break;
 		}else if( (partype->attrib & DAO_TYPE_SELFNAMED) && partype->aux->xType.invar == 0 ){
 			if( argtype && argtype->invar != 0 ) goto NotMatched;
-		}
-		if( argvalue != NULL && argvalue->type == DAO_PAR_NAMED ){
-			if( DString_EQ( argvalue->xNameValue.name, partype->fname ) == 0 ) goto NotMatched;
-			argvalue = argvalue->xNameValue.value;
-		}
-		if( argtype != NULL && (argtype->attrib & DAO_TYPE_PARNAMED) ){
-			argtype = (DaoType*) argtype->aux;
 		}
 		if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
 		parpass[parindex] = Dao_CheckParameter( partype, argvalue, argtype, defs );

@@ -128,6 +128,7 @@ DAO_DLL DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value
 DAO_DLL DaoType* DaoNamespace_MakePairType( DaoNamespace *self, DaoType *first, DaoType *second );
 DAO_DLL DaoType* DaoNamespace_MakePairValueType( DaoNamespace *self, DaoValue *first, DaoValue *second );
 
+DAO_DLL DaoType* DaoNamespace_MakeSymbolType( DaoNamespace *self, const char *symbol );
 DAO_DLL DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols );
 
 DAO_DLL int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer );

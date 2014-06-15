@@ -83,7 +83,7 @@ enum DaoOpcode
 	DVM_BITRIT , /* Bit shift right:  C = A >> B */
 	DVM_SAME ,   /* Same: C = A ?= B, same type; A, B, both are data objects or type objects; */
 	DVM_ISA ,    /* Isa: C = A ?< B; B, type; A (data) is a B; A (type) is a sub type of B; */
-	DVM_NAMEVA , /* C = A => B: name A, local constant, value B, local register */
+	DVM_NAMEVA , /* C = (A = B): name A, local constant, value B, local register */
 	DVM_PAIR ,   /* C = A : B; create a pair of index, as a tuple; */
 	DVM_TUPLE ,  /* tuple: C = ( A, A+1, ..., A+B-1 ); B>=2, items can be: name=>value */
 	DVM_LIST ,   /* list: C = { A, A+1, ..., A+B-1 }; */
@@ -375,7 +375,6 @@ enum DaoOpcode
 	DVM_CAST_S ,
 	DVM_CAST_VE , /* cast variant to one of its distinct enum types; */
 	DVM_CAST_VX , /* cast variant to one of its distinct and non primitve member types; */
-	DVM_CAST_NV , /* cast a named value to value; */
 
 	DVM_ISA_ST , /* check against simple types: int, float, double, complex, long, string; */
 

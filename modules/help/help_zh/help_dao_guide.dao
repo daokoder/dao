@@ -75,16 +75,16 @@ $$ dao
   或者运行"help('help')"来获得此帮助系统的详细信息。
 @[code] 
 如果你查看的是此帮助的网页版，你可以使用一下命令在交互模式下查此帮助:
-@[code]
-(dao) help( 'dao.guide' )
-@[code]
+@[code(dao)]
+(dao) help( "dao.guide" )
+@[code(dao)]
 
 这些在线帮助有两个语言版本：中文和英文。
 选择语言请使用：
-@[code]
+@[code(dao)]
 (dao) help::set_language("zh")  # 选择中文；
 (dao) help::set_language("en")  # 选择英文；
-@[code]
+@[code(dao)]
 
 
 

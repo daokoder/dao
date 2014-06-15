@@ -2237,13 +2237,7 @@ void DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype,
 		tp = tps[ifrom];
 		if( tp == NULL || ito >= ndef ) break;
 		partype = parType[ito];
-		if( partype->attrib & DAO_TYPE_PARNAMED ){
-			if( tp->tid == DAO_PAR_NAMED ){
-				if( DString_EQ( partype->fname, tp->fname ) == 0 ) break;
-			}
-			partype = (DaoType*) partype->aux;
-		}
-		if( tp->tid == DAO_PAR_NAMED ) tp = (DaoType*) tp->aux;
+		if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
 		if( tp == NULL || partype == NULL )  break;
 		DaoType_MatchTo( tp, partype, defs );
 	}
@@ -2499,16 +2493,6 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 			DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );
 			DString_AppendChars( s, "unknown parameter type \";\n" );
 			goto FinishError;
-		}
-		if( tp->tid == DAO_PAR_NAMED ){
-			node = DMap_Find( routType->mapNames, tp->fname );
-			if( node == NULL || node->value.pInt != ito ){
-				DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_NAME );
-				DString_Append( s, tp->fname );
-				DString_AppendChars( s, " \";\n" );
-				goto FinishError;
-			}
-			tp = & tp->aux->xType;
 		}
 		if( tp == NULL ){
 			DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );
@@ -2887,7 +2871,6 @@ static int DaoInferencer_AssertPairNumberType( DaoInferencer *self, DaoType *typ
 }
 static DaoType* DaoType_GetAutoCastType2( DaoType *self )
 {
-	if( self->tid == DAO_PAR_NAMED ) return (DaoType*) self->aux;
 	if( self->tid != DAO_VARIANT ) return NULL;
 	if( self->nested->size == 1 ){
 		DaoType *T = self->nested->items.pType[0];
@@ -3658,10 +3641,6 @@ int DaoInferencer_HandleSetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 		}else if( bt->tid != DAO_UDT && bt->tid != DAO_ANY ){
 			goto InvIndex;
 		}
-		break;
-	case DAO_PAR_NAMED :
-		if( opb != 1 ) goto InvIndex;
-		AssertTypeMatching( at, (DaoType*) ct->aux, defs );
 		break;
 	case DAO_CLASS :
 	case DAO_OBJECT :
@@ -4509,7 +4488,6 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		vmc->b &= ~DAO_CALL_FAST;
 		if( checkfast ){
 			int fast = 1;
-			for(k=0; fast && k<argc; ++k) fast &= tp[k]->tid != DAO_PAR_NAMED;
 			for(k=0; fast && k<rout2->routType->nested->size; ++k){
 				DaoType *part = rout2->routType->nested->items.pType[k];
 				DaoType *argt = tp[k];
@@ -5061,7 +5039,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DAO_CODE_GETM :
 		case DAO_CODE_ENUM2 :
 		case DAO_CODE_CALL :
-			if( code == DVM_GETDI && at->tid == DAO_PAR_NAMED ) break;
 			tt = DaoType_GetAutoCastType( at );
 			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->a, tt );
 			break;
@@ -5072,7 +5049,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DAO_CODE_SETF :
 		case DAO_CODE_SETI :
 		case DAO_CODE_SETM :
-			if( code == DVM_SETDI && ct->tid == DAO_PAR_NAMED ) break;
 			tt = DaoType_GetAutoCastType( ct );
 			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->c, tt );
 			break;
@@ -5254,9 +5230,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				vmc->code = DVM_MOVE_II + 3*(ct->tid - DAO_INTEGER) + at->tid - DAO_INTEGER;
 			}else if( at->tid == DAO_COMPLEX && ct->tid == DAO_COMPLEX ){
 				vmc->code = DVM_MOVE_CC;
-			}else if( at->tid == DAO_PAR_NAMED && at->aux->xType.tid == ct->tid ){
-				if( DaoType_MatchTo( (DaoType*) at->aux, ct, NULL ) >= DAO_MT_EQ )
-					vmc->code = DVM_CAST_NV;
 			}else if( ct->tid >= DAO_INTEGER && ct->tid <= DAO_STRING ){
 				switch( ct->tid ){
 				case DAO_INTEGER : vmc->code = DVM_CAST_I; break;
@@ -5319,15 +5292,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			case DAO_ENUM : if( vmc->code == DVM_CAST_VE ) break; goto ErrorTyping;
 			default : if( vmc->code == DVM_CAST_VX ) break; goto ErrorTyping;
 			}
-			break;
-		case DVM_CAST_NV :
-			if( at->tid != DAO_PAR_NAMED ) goto ErrorTyping;
-			if( routConsts->items.pValue[opb]->type != DAO_TYPE ) goto ErrorTyping;
-			bt = (DaoType*) routConsts->items.pValue[opb];
-			DaoInferencer_UpdateType( self, opc, bt );
-			AssertTypeMatching( bt, types[opc], defs );
-			k = DaoType_MatchTo( at->nested->items.pType[j], types[opc], defs );
-			if( k < DAO_MT_EQ ) goto ErrorTyping;
 			break;
 		case DVM_LOAD :
 			DaoInferencer_UpdateType( self, opc, at );
@@ -6464,7 +6428,7 @@ static void DaoRoutine_ReduceLocalConsts( DaoRoutine *self )
 		case DVM_CAST :
 		case DVM_CAST_I : case DVM_CAST_F : case DVM_CAST_D :
 		case DVM_CAST_C : case DVM_CAST_S : case DVM_CAST_VE :
-		case DVM_CAST_VX : case DVM_CAST_NV :
+		case DVM_CAST_VX :
 			it = DMap_Find( used, IntToPointer(vmc->b) );
 			if( it == NULL ) it = DMap_Insert( used, IntToPointer(vmc->b), IntToPointer(id) );
 			vmc->b = vmc2->b = it->value.pInt;

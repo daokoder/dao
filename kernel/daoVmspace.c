@@ -1022,30 +1022,53 @@ static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNam
 	DString_Delete( name );
 	return rout;
 }
-static void DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *value, DaoValue *sval )
+static DaoValue* DaoVmSpace_MakeNameArgument( DaoNamespace *NS, DString *name, DaoValue *argv )
+{
+	DaoEnum *em;
+	DaoTuple *tuple;
+	DaoType *type, *types[2];
+	DString *symbol = DString_New();
+	DString_AppendChar( symbol, '$' );
+	DString_Append( symbol, name );
+	type = DaoNamespace_MakeSymbolType( NS, symbol->chars );
+	em = DaoEnum_New( type, 1 );
+	types[0] = type;
+	types[1] = dao_type_string;
+	type = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, NULL, types, 2 );
+	tuple = DaoTuple_Create( type, 2, 0 );
+	DaoTuple_SetItem( tuple, (DaoValue*) em, 0 );
+	DaoTuple_SetItem( tuple, argv, 1 );
+	DaoGC_TryDelete( (DaoValue*) em );
+	return (DaoValue*) tuple;
+}
+static int DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *name, DaoValue *string, DaoNamespace *NS )
 {
 	DaoValue ival = {DAO_INTEGER};
 	DaoValue fval = {DAO_FLOAT};
 	DaoValue dval = {DAO_DOUBLE};
+	DaoValue *argv;
 
 	switch( type->tid ){
 	case DAO_INTEGER :
-		ival.xInteger.value = strtoll( value->chars, 0, 0 );
+		ival.xInteger.value = strtoll( string->xString.value->chars, 0, 0 );
 		DaoList_SetItem( self, & ival, i );
 		break;
 	case DAO_FLOAT :
-		fval.xFloat.value = strtod( value->chars, 0 );
+		fval.xFloat.value = strtod( string->xString.value->chars, 0 );
 		DaoList_SetItem( self, & fval, i );
 		break;
 	case DAO_DOUBLE :
-		dval.xDouble.value = strtod( value->chars, 0 );
+		dval.xDouble.value = strtod( string->xString.value->chars, 0 );
 		DaoList_SetItem( self, & dval, i );
 		break;
 	default :
-		DString_Assign( sval->xString.value, value );
-		DaoList_SetItem( self, sval, i );
+		argv = string;
+		if( name && name->size ) argv = DaoVmSpace_MakeNameArgument( NS, name, argv );
+		if( type && DaoType_MatchValue( type, argv, NULL ) == 0 ) return 0;
+		DaoList_SetItem( self, argv, i );
 		break;
 	}
+	return 1;
 }
 static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, DArray *argNames, DArray *argValues )
 {
@@ -1068,35 +1091,30 @@ static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, D
 		set[i] = 0;
 	}
 	for(i=0; i<argNames->size; ++i){
+		DaoValue *argv = & sval;
 		DString *name = argNames->items.pString[i];
 		DString *value = argValues->items.pString[i];
 		int ito = i;
 		type = routype->nested->items.pType[ito];
+		DString_Assign( val, value );
 		if( type->tid == DAO_PAR_VALIST ){
+			DaoType *type2 = (DaoType*) type->aux;
 			for(j=i; j<argNames->size; ++j){
-				DaoValue *argv = & sval;
 				name = argNames->items.pString[j];
 				value = argValues->items.pString[j];
 				DString_Assign( val, value );
-				if( type->aux ){
-					DaoList_SetArgument( argParams, j, (DaoType*) type->aux, value, & sval );
-					continue;
+				if( DaoList_SetArgument( argParams, j, type2, name, argv, ns ) == 0 ){
+					goto InvalidArgument;
 				}
-				if( name->size ){
-					DaoNameValue *nameva = DaoNameValue_New( name, argv );
-					DaoValue *st = (DaoValue*) dao_type_string;
-					type = DaoNamespace_MakeType( ns, name->chars, DAO_PAR_NAMED, st, NULL, 0 );
-					nameva->ctype = type;
-					GC_IncRC( nameva->ctype );
-					argv = (DaoValue*) nameva;
-				}
-				DaoList_SetItem( argParams, argv, j );
 			}
 			break;
 		}
 		if( name->size ){
 			DNode *node = DMap_Find( routype->mapNames, name );
-			if( node ) ito = node->value.pInt;
+			if( node ){
+				ito = node->value.pInt;
+				name = NULL;
+			}
 		}
 		if( ito >= routype->nested->size ){
 			DaoStream_WriteChars( self->errorStream, "redundant argument" );
@@ -1108,10 +1126,14 @@ static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, D
 			goto Failed;
 		}
 		set[ito] = 1;
-		DaoList_SetArgument( argParams, ito, type, value, & sval );
+		if( DaoList_SetArgument( argParams, ito, type, name, argv, ns ) == 0 ){
+			goto InvalidArgument;
+		}
 	}
 	DString_Delete( val );
 	return 1;
+InvalidArgument:
+	DaoStream_WriteChars( self->errorStream, "invalid argument" );
 Failed:
 	DString_Delete( val );
 	return 0;
@@ -1603,6 +1625,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		DString name = DString_WrapChars( "main" );
 		int error = 0, id = DaoNamespace_FindConst( ns, & name );
 		DaoValue *cst = DaoNamespace_GetConst( ns, id );
+		/* TODO: Improve by trying to parse the arguments according to EACH main()! */
 		expMain = DaoVmSpace_FindExplicitMain( ns, argNames, argValues, & error );
 		if( expMain ){
 			res = DaoVmSpace_ConvertArguments( self, expMain, argNames, argValues );

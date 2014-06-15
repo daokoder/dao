@@ -1,7 +1,7 @@
 
 tup01 = ( 123, "abc" )  # tuple with unnamed items;
-tup02 = ( index => 123, "abc" )  # first item is named as "index";
-tup03 = tuple{ 123, name => "abc" }
+tup02 = ( index = 123, "abc" )  # first item is named as "index";
+tup03 = tuple{ 123, name = "abc" }
 
 io.writeln( tup01, tup02, tup03 )
 

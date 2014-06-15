@@ -229,8 +229,7 @@ enum DaoRoutineAttrib
 enum DaoConstEvalMode
 {
 	DAO_CONST_EVAL_METHDEF  = 1,
-	DAO_CONST_EVAL_GETVALUE = 2,
-	DAO_CONST_EVAL_FIELD = 4
+	DAO_CONST_EVAL_GETVALUE = 2
 };
 
 enum DaoRoutineModes

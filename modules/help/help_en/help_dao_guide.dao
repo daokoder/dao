@@ -86,16 +86,16 @@ the help files and print out the following information,
 @[code] 
 If you are reading this tutorial from a webpage, and want to access it from
 the interactive command line, you can simple run,
-@[code]
-(dao) help( 'dao.guide' )
-@[code]
+@[code(dao)]
+(dao) help( "dao.guide" )
+@[code(dao)]
 
 Such online helps come in two languages: English and Chinese.
 To choose the language,
-@[code]
+@[code(dao)]
 (dao) help::set_language("en");  # choose english;
 (dao) help::set_language("zh");  # choose chinese;
-@[code]
+@[code(dao)]
 
 
 @[subsection]

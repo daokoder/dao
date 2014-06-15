@@ -145,7 +145,6 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->mbstring = DString_New();
 	self->pauseType = 0;
 	self->active = 0;
-	self->mode = 0;
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
@@ -436,14 +435,6 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 			DaoType_MatchTo( hostype, routine->routHost, defs );
 		}
 	}
-	/* Check for explicit self parameter: */
-	if( argcount && argvalues[0]->type == DAO_PAR_NAMED ){
-		DaoNameValue *nameva = (DaoNameValue*) argvalues[0];
-		if( nameva->ctype->attrib & DAO_TYPE_SELFNAMED ){
-			svalue = NULL;
-			mcall = 1;
-		}
-	}
 
 	if( mcall && ! need_self ){
 		argcount --;
@@ -493,10 +484,6 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 				passed |= (size_t)1<<parindex;
 			}
 			break;
-		}
-		if( argvalue->type == DAO_PAR_NAMED ){
-			if( DString_EQ( argvalue->xNameValue.name, partype->fname ) == 0 ) goto ReturnNull;
-			argvalue = argvalue->xNameValue.value;
 		}
 		if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
 
@@ -1017,7 +1004,7 @@ int DaoProcess_Start( DaoProcess *self )
 		&& LAB_CAST_I , && LAB_CAST_F , && LAB_CAST_D ,
 		&& LAB_CAST_C , && LAB_CAST_S , 
 		&& LAB_CAST_VE , && LAB_CAST_VX ,
-		&& LAB_CAST_NV , && LAB_ISA_ST ,
+		&& LAB_ISA_ST ,
 		&& LAB_TUPLE_SIM
 	};
 #endif
@@ -1056,7 +1043,6 @@ int DaoProcess_Start( DaoProcess *self )
 #endif
 
 
-	self->mode = 0;
 	if( self->topFrame == self->firstFrame ) goto ReturnFalse;
 	rollback = self->topFrame->prev;
 	base = self->topFrame;
@@ -2297,10 +2283,6 @@ CallEntry:
 				DaoProcess_DoCast( self, vmc );
 				goto CheckException;
 			}
-		}OPNEXT() OPCASE( CAST_NV ){
-			vA = locVars[vmc->a]->xNameValue.value;
-			GC_ShiftRC( vA, locVars[vmc->c] );
-			locVars[vmc->c] = vA;
 		}OPNEXT() OPCASE( ISA_ST ){
 			vA = locVars[vmc->a];
 			locVars[vmc->c]->xInteger.value = vA && vA->type == locVars[vmc->b]->xType.tid;
@@ -2908,9 +2890,6 @@ void DaoProcess_BindNameValue( DaoProcess *self, DaoVmCode *vmc )
 			DaoNamespace *ns = self->activeNamespace;
 			DaoValue *tp = (DaoValue*) DaoNamespace_GetType( ns, dB );
 			type = DaoNamespace_MakeType( ns, S->value->chars, DAO_PAR_NAMED, tp, NULL, 0 );
-			if( !(self->mode & DAO_CONST_EVAL_FIELD) ){
-				type = DaoNamespace_MakeType( ns, "var", DAO_PAR_NAMED, NULL, & type, 1 );
-			}
 		}
 		nameva = DaoNameValue_New( S->value, NULL );
 		nameva->ctype = type;
@@ -3706,13 +3685,6 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 	if( need_self && rout->routHost && rout->routHost->tid == DAO_OBJECT ){
 		if( O == NULL && N && P[0]->type == DAO_OBJECT ) O = P[0];
 		if( O ) O = DaoObject_CastToBase( O->xObject.rootObject, rout->routHost );
-		if( O == NULL && N && P[0]->type == DAO_PAR_NAMED ){ /* Check explicit self parameter: */
-			DaoNameValue *nameva = (DaoNameValue*)P[0];
-			if( nameva->value && nameva->value->type == DAO_OBJECT )
-				if( nameva->ctype->attrib & DAO_TYPE_SELFNAMED ){
-					O = DaoObject_CastToBase( nameva->value->xObject.rootObject, rout->routHost );
-				}
-		}
 		if( O == NULL ){
 			DaoProcess_RaiseError( self, NULL, "self object is null" );
 			return;
@@ -6018,7 +5990,7 @@ void DaoProcess_PrintException( DaoProcess *self, DaoStream *stream, int clear )
 }
 
 
-static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc )
+static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc, int mode )
 {
 	DaoValue *C = NULL, *tmp = NULL;
 	DaoValue *A = self->activeValues[ vmc->a ];
@@ -6060,14 +6032,14 @@ static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc )
 		break;
 	case DAO_CLASS :
 		if( routine->routHost ) thisClass = DaoValue_CastClass( routine->routHost->aux );
-		if( self->mode & DAO_CONST_EVAL_METHDEF ) thisClass = (DaoClass*) A;
+		if( mode & DAO_CONST_EVAL_METHDEF ) thisClass = (DaoClass*) A;
 		if( DaoClass_GetData( (DaoClass*) A, name, &tmp, thisClass ) ) goto InvalidConstField;
 		opb = DaoClass_FindConst( & A->xClass, name );
 		if( opb >=0 ) C = DaoClass_GetConst( & A->xClass, opb );
 		break;
 	default :
 		type = DaoNamespace_GetType( self->activeNamespace, A );
-		if( self->mode & DAO_CONST_EVAL_GETVALUE ){
+		if( mode & DAO_CONST_EVAL_GETVALUE ){
 			C = DaoType_FindValueOnly( type, name );
 		}else{
 			C = DaoType_FindValue( type, name );
@@ -6087,7 +6059,6 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 	DaoVmCodeX vmcx = {0,0,0,0,0,0,0,0,0};
 	DaoVmCode *vmc = self->activeCode;
 
-	self->mode = mode;
 	self->activeValues = self->stackValues;
 	DVector_Clear( self->activeRoutine->body->vmCodes );
 	DVector_PushCode( self->activeRoutine->body->vmCodes, *vmc );
@@ -6160,7 +6131,7 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 	case DVM_GETMI :
 		DaoProcess_DoGetItem( self, vmc ); break;
 	case DVM_GETF :
-		DaoProcess_DoGetConstField( self, vmc ); break;
+		DaoProcess_DoGetConstField( self, vmc, mode ); break;
 	case DVM_LIST :
 		DaoProcess_DoList( self, vmc ); break;
 	case DVM_MAP :

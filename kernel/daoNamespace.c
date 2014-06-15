@@ -1831,6 +1831,18 @@ Error:
 	DaoRoutine_Delete( func );
 	return NULL;
 }
+DaoType* DaoNamespace_MakeSymbolType( DaoNamespace *self, const char *symbol )
+{
+	DString sym = DString_WrapChars( symbol );
+	DString name = DString_WrapChars( symbol + 1 );
+	DaoType *type = DaoNamespace_FindType( self, & sym );
+	if( type || symbol[0] != '$' ) return type;
+	type = DaoType_New( symbol, DAO_ENUM, NULL, NULL );
+	type->subtid = DAO_ENUM_SYM;
+	DMap_Insert( type->mapNames, & name, (void*)1 );
+	DaoNamespace_AddType( self, & sym, type );
+	return type;
+}
 /* symbols should be comma or semicolon delimited string */
 DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols )
 {
