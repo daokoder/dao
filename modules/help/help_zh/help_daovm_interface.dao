@@ -232,31 +232,31 @@ DaoProcess_PopValues( proc, 2 );
 @[subsection]
 
 @[code(cxx)]
-// Load "myscript.dao" and obtain the namespace object:
+// 载入 "myscript.dao" 并获得命名空间对象:
 DaoNamespace *nspace = DaoVmSpace_Load( vmspace, "myscript.dao" );
-// Find an object named "myfunction":
+// 查找名为 "myfunction"的对象:
 DaoValue *value = DaoNamespace_FindData( nspace, "myfunction" );
-// Try to cast it to a function object:
+// 尝试转换为函数对象:
 DaoRoutine *myfunc = DaoValue_CastRoutine( value );
 
-// Acquire a process object:
+// 获得进程对象:
 DaoProcess *proc = DaoVmSpace_AcquireProcess( vmspace );
 
-// Prepare an integer and a string:
+// 准备一个整数对象和字符串对象:
 DaoInteger *ivalue = DaoProcess_NewInteger( proc, 123 );
 DaoString  *svalue = DaoProcess_NewString( proc, "abc", -1 );
-// Get the last two values:
+// 以数组的形式获得这两个对象:
 DaoValue **params = DaoProcess_GetLastValues( proc, 2 );
 
-// Call the function:
+// 调用函数:
 DaoProcess_Call( proc, myfunc, NULL, params, 2 );
 
-// Obtain the returned value:
+// 获取函数的返回值:
 DaoValue *retvalue = DaoProcess_GetReturned( proc );
-// Get the integer return value
+// 获取返回的整数值:
 daoint retint = DaoValue_TryGetInteger( retvalue );
 
-// Release the process:
+// 释放进程对象:
 DaoVmSpace_ReleaseProcess( vmspace, proc );
 @[code(cxx)]
 

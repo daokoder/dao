@@ -276,8 +276,8 @@ enum E2 { AA=10, BB=20 }
 var e1: E1 = $AA
 var e2: E2 = $AA
 
-io.writeln( e1 )  # Output: $AA(1)
-io.writeln( e2 )  # Output: $AA(10)
+io.writeln( e1 )  # 输出: $AA(1)
+io.writeln( e2 )  # 输出: $AA(10)
 @[code]
 尽管是同一个符号，"$AA"在分别赋给"e1"和"e2"时，被自动地做了不同的处理。
 在赋给"e1"时，"$AA"以等同E1::AA处理，而在赋给"e1"时，"$AA"以等同E2::AA处理。
@@ -540,55 +540,54 @@ if( rnd = rand(100); rnd > 50 ) io.writeln( "random number:", rnd );
 For循环控制
 @[subsection]
 
-Dao supports three different styles of for loops:
+道语言支持以下几种for循环结构：
 @[list]
--- For-in loop;
--- Arithmetic-progression (range) for loop;
--- Three-expression for loop (C style);
+-- For-in 循环;
+-- 区间 for 循环;
+-- C风格三表达式 for 循环;
 @[list]
 
 
-For-in loop can normally used to iterate over the items of a container object.
-It is probably most useful with list.
+For-in 循环通常被用于历遍容器类型对象里的元素。
+最常用的就是历遍列表里的元素。
 @[code]
 numbers = { 1, 2, 3, 4, 5 }
 for( num in numbers ) io.writeln( num )
 @[code]
 
 
-A range for loop uses an arithmetic progression condition to control the loop.
-The arithmetic progression condition usually consists of an initial value,
-an optional step value and a stopping value.
+一个区间for循环依据指定区间开始值，结束值和可选的步长值来控制循环的执行。
 @[code]
-for( index = 1 : 2 : 10 ) {
+for( index = 1 : 2 : 10 ) { # step value = 2;
 	io.writeln( index )
 }
 for( index = 1 : 10 ) {  # step value = 1;
 	io.writeln( index )
 }
 @[code]
-The loops will start with "index=1", and with each loop cycle, "index" is increased
-by two or one, when "index" become greater than 10, the loop will stop.
+这两循环都将从"index=1"开始循环，每次循环，"index"的值都被加2或者1，
+循环被重复直到"index"的值大于10才终止。
 
 
-C-style for loop is the most flexible for loop construct.
+C风格的for循环是最灵活的循环结构。
 @[code]
 for( init; condition; step ){
    block;
 }
 @[code]
-The execution sequence of @[green]for@[green] statement is the following:
+这种for循环的基本运行逻辑或步骤如下:
 @[list]
-== execute initial expression @[cyan]init@[cyan], and goto 3;
-== execute @[cyan]step@[cyan];
-== evaluate the condition expression @[cyan]condition@[cyan];
-== check the value of @[cyan]condition@[cyan]: if true, goto 5; otherwise, goto 6;
-== execute @[cyan]block@[cyan], and goto 2;
-== stop looping; and start to execute the statements after the loop body.
+== 执行初始表达式@[cyan]init@[cyan];
+== 检查条件表达式@[cyan]condition@[cyan];
+== 如果检查结果为真，执行下一步，否则退出循环;
+== 执行代码块@[cyan]block@[cyan];
+== 执行表达式@[cyan]step@[cyan]，并前往步骤2;
 @[list]
+The detailed steps may depends on the implementation
+but the basic execution logic is the same.
 
 
-Example,
+例子：
 @[code(dao)]
 for(i=0; i<3; ++i){
    io.writeln( i );
@@ -603,16 +602,15 @@ for(i=0; i<3; ++i){
 While循环控制
 @[subsection]
 
-@[green]while@[green] is a simple looping construct that executes a block
-of code repeatedly as long as its condition is true.
+@[green]while@[green]是个简单的循环控制结构，它将重复执行一代码块，
+直到它的循环条件表达式的值变假。
 @[code]
 while( expression ){
    block;
 }
 @[code]
-If @[cyan]expression@[cyan] is true, @[cyan]block@[cyan] is executed and repeated 
-until @[cyan]expression@[cyan] becomes false,
-namely, while @[cyan]expression@[cyan] is true, execute @[cyan]block@[cyan].
+如果@[cyan]expression@[cyan]的值为真，执行或重复执行@[cyan]block@[cyan]
+直到@[cyan]expression@[cyan]的值变假。
 
 @[code]
 i = 0;
@@ -635,8 +633,8 @@ do {
 	block;
 } while ( condition )
 @[code]
-Execute @[cyan]block@[cyan], and then repeat executing it
-as long as the @[cyan]condition@[cyan] is true.
+执行代码块@[cyan]block@[cyan]，然后只要条件表达式@[cyan]condition@[cyan]
+的值为真，重复执行@[cyan]block@[cyan]。
 
 
 
@@ -646,8 +644,7 @@ as long as the @[cyan]condition@[cyan] is true.
 Switch-Case控制
 @[subsection]
 
-Switch-case control provides a convenient way to branch the code and choose a block of code to
-execute based on the value of a object.
+Switch-case控制结构提供了一个方便的方式实现按照条件跳转执行特定代码。
 @[code]
 switch( value ){
 case C_1 : block_1
@@ -657,13 +654,13 @@ case C_3 : block_3
 default: block0
 }
 @[code]
-If the @[cyan]value@[cyan] equals to @[cyan]C_i@[cyan], @[cyan]block_i@[cyan] will be executed. Here @[cyan]C_i@[cyan] must be a constant,
-but they can be of different types, that means, you can mix numbers and strings as case values.
-Unlike in C/C++, no @[green]break@[green] statement is required to get out of the @[green]switch@[green].
+这里如果@[cyan]value@[cyan]等于@[cyan]C_i@[cyan]，那么代码块@[cyan]block_i@[cyan]将被执行；
+这里@[cyan]C_i@[cyan]必须是常量，但它们不需要是同样的类型。
+与C/C++不同，这里每个@[cyan]case@[cyan]的代码块被执行后都将自动跳出Switch-case结构，
+不需要用到@[green]break@[green]语句。
 
 
-If you want to execute the same block of codes for different case values, you just need to
-organize them together in the following way:
+如果你需要针对不同的case值执行同样的代码块，你可以将这些值放在一个case里：
 @[code]
 switch( value ){
 case C1, C2, C3 :
@@ -672,9 +669,7 @@ case C1, C2, C3 :
 default: block0
 }
 @[code]
-Namely, Dao allows one case entry to have multiple values.
-In this way, @[cyan]block3@[cyan] will be executed for case values @[cyan]C1,C2@[cyan] and @[cyan]C3@[cyan].
-As a simple example,
+这里是个简单的例子：
 @[code(dao)]
 a = "a";
 switch( a ){
@@ -688,12 +683,12 @@ default :  io.write("case default");
 
 
 @[subsection]
-Break and Skip
+Break 和 Skip
 @[subsection]
 
-@[green]break@[green] can be used to exit a loop, and @[green]skip@[green] can be used 
-to skip the rest part of script and start the next cycle of a loop.
-@[green]skip@[green] is equivalent to @[green]continue@[green] in C/C++.
+@[green]break@[green]可用来跳出循环，而@[green]skip@[green]则可用来跳过
+一个循环里它后面的剩余部分，直接到下一步循环。
+@[green]skip@[green]跟C/C++里的@[green]continue@[green]等价。
 
 @[code] 
 for( i=0; i<5; ++i ){
@@ -707,7 +702,7 @@ for( i=0; i<5; ++i ){
 
 
 @[section]
-Routines (Functions)
+函数
 @[section]
 
 函数是一相对独立的代码块，可在需要的地方和时候反复调用。
@@ -777,27 +772,23 @@ MyRout( 456, "script" )  # 调用此例中的MyRout()
 
 
 
-@[subsection]Anonymous Routine and Closure@[subsection]
+@[subsection]匿名函数和函数闭包@[subsection]
 
-Dao supports routines as first class objects.
-So they can be created as anonymous routines or closures,
-and used just like other objects.
-
+道语言里函数是基本类型。因此它们可在运行时创建并跟其他对象一样使用。
+运行时创建的函数是匿名函数或函数闭包。
 
 
-The syntax to create anonymous routine or closure is nearly identical to
-the definition of a normal function, except the following differences:
+创建匿名函数或函数闭包的语法跟普通函数几乎等同，只有以下几点比较特殊：
 @[list]
-== No need for a function name;
-== Default parameter values do not need to be constant;
-== Its function body may access the local variables of the outer function;
+== 无函数名；
+== 参数缺省值不必是常量；
+== 它可以使用外部函数的局部变量；
 @[list]
+如果一个被创建的函数需要访问外部局部变量，那么这个函数将以函数闭包的形式
+创建，否则以匿名函数的方式创建。
 
-When such function accesses local variables from its outer/upper scope,
-it is created as a closure, otherwise as an anonymous function.
 
-
-Here is a simple example,
+下面是个简单的例子：
 @[code]
 abc = "ABC";
 
@@ -808,62 +799,59 @@ rout = routine( x, y: string, z = abc + abc ){
     io.writeln( "lambda ", z )
 }
 rout( 123, "XXX" );
-io.writeln( abc )  # Output: ABCXXX
+io.writeln( abc )  # 输出: ABCXXX
 @[code]
 
-For code section routines and decorators,
-please see @[node]dao.routine.section@[node] and @[node]dao.routine.decorator@[node].
-For coroutine and generator, please see @[node]module.core.coroutine@[node].
+要了解代码块方法(code section method)或函数修饰器(decorator)，
+请参看@[node]dao.routine.section@[node]和@[node]dao.routine.decorator@[node]。
+要了解协程(coroutine)和产生器(generator)，请参看@[node]module.core.coroutine@[node]。
 
 
 
 
 @[section]
-Classes
+类
 @[section]
 
 
-Class is a user-defined data structure that supports data abstraction, encapsulation,
-polymorphism and inheritance etc.
-It is commonly used to do Object-Oriented Programming (OOP).
+类是一用户定义的数据结构，此数据结构支持数据抽象，封装，多态和继承等。
+它通常被用来作面向对象的编程。
 
 
-@[subsection]Class Definition@[subsection]
+@[subsection]类定义@[subsection]
 
-A @[green]class@[green] data strucutre is defined by composing data fields
-and member methods in a meaningful way that defines the states and behaviours
-for the instances of the class.
-Dao class supports four types of fields:
+一个类的定义主要由数据成员和方法成员构成。
+这些数据成员和方法成员定义了这个类的实力对象的状态和行为。
+道语言类支持以下几种数据成员：
 @[list]
---@[green]constant@[green]: declared with keyword @[green]const@[green];
---@[green]static variable@[green]: declared with keyword @[green]static@[green];
---@[green]instance variable@[green]: declared with keyword @[green]var@[green];
---@[green]instance invariable@[green]: declared with keyword @[green]invar@[green];
+--@[green]常量@[green]: 以@[green]const@[green]关键词声明；
+--@[green]静态变量@[green]: 以@[green]static@[green]关键词声明；
+--@[green]实例变量@[green]: 以@[green]var@[green]关键词声明；
+--@[green]实例定变量@[green]: 以@[green]invar@[green]关键词声明；
 @[list]
-Such fields can be declared with or without explicit types,
-and with or without default initialization values,
-in the same way as specifying types and/or default values for function parameters.
-For example, the following can be used for instance variables,
+这些数据成员的声明可以有也可以没有类型标注，还可以有也可以没有初始化值。
+这些类型标注和初始值声明跟函数的类型标注和缺省参数声明完全一样。
+例如，下面的方式都可用来声明实例变量成员：
 @[code]
-var variable;
-var variable = init_value;
-var variable: typename;
-var variable: typename = init_value;
+var 变量;
+var 变量 = 初始值;
+var 变量: 类型名;
+var 变量: 类型名 = 初始值;
 @[code]
 
-Class methods must be declared with keyword @[green]routine@[green] 
-for constructors and normal methods, or keyword @[green]operator@[green]
-	for operator overloading.
+
+类的构造方法和普通成员方法必须使用@[green]routine@[green]关键词声明。
+重载操作符的方法则必须使用@[green]operator@[green]关键词声明。
 
 
-The visibilities of class fields and methods can be restricted by three permission keywords:
+类成员的可访问性可由三个权限关键词声明：
 @[list]
---@[green]public@[green]: publically accessible without restriction;
---@[green]protected@[green]: accessible from the class and its derived classes;
---@[green]private@[green]: only accessible from the class;
+--@[green]public@[green]: 公共，无限制访问;
+--@[green]protected@[green]: 保护，仅可从本类和子类访问;
+--@[green]private@[green]: 私有，仅可从本类访问;
 @[list]
 
-Here is a simple class,
+这里是个简单的例子，
 @[code]
 class ClassOne
 {
@@ -878,29 +866,26 @@ class ClassOne
 }
 @[code]
 
-Within class methods, the special variable @[green]self@[green] represents the current class
-instance. Class methods may be declared inside class body and defined outside
-in the same way as in C++, but in Dao, one should make sure that, the parameter list
-must be exactly the same in the places for declaration and definition.
+在非静态类方法里，特殊变量@[green]self@[green]代表当前类实例对象。
+另外类似C++，类方法可以在类定义体里声明，然后在类外部实现。
+这种情况下，方法的原型在声明处和定义处必须完全一样。
 
 
 
 
-@[subsection]Class Instance@[subsection]
+@[subsection]类实例@[subsection]
 
-Class constructors are the methods that have name the same as the class name.
-A class instance can be created by invoking a constructor of the class 
-in the same way as a function call,
+类方法里与类同名的方法即为类构造方法。
+类实例可由调用类构造方法产生。类构造方法的调用与普通函数调用完全一样。
 @[code]
 object = ClassOne( 'abc' )
 @[code]
-Note that, the constructors are not used to create class instances,
-instead, an instance is created before, and then the constructor is called
-after to initialize the instance.
+值得注意的是，类构造方法并不构造类实例，类实例实际上是在构造方法调用
+开始之时就已产生，构造方法实际上是用来初始化该对象。
 
 
-For a class without parent classes and without constructors, 
-its instances may also be created by enumerating the members of the class,
+对于没有基类和构造方法的类，它的实例还可通过枚举它成员数据值的
+方式构造。
 @[code]
 class Point3D
 {
@@ -910,7 +895,7 @@ class Point3D
 }
 point = Point3D.{ 1, 2, 3 };
 @[code]
-The names of instance variables may also be specified in enumeration,
+这种方式里，成员数据的名称也可被指定：
 @[code]
 point = Point3D.{ y = 2, x = 1, z = 3 };
 @[code]
@@ -919,15 +904,13 @@ point = Point3D.{ y = 2, x = 1, z = 3 };
 
 
 
-@[subsection]Methods and Properties@[subsection]
+@[subsection]方法和属性@[subsection]
 
-There are three typical types of methods for Dao classes: static method,
-instance method and invariable/const instance method.
-Static methods can be invoked without class instance objects, so they cannot
-access instance variables. The other two types of methods requires class instances
-to invoke. Instance methods can modify the instance variables, but invariable
-methods cannot. Invariable methods can be declared by specifying "invar" after
-the brackets for the parameters.
+类支持三种典型的方法：静态方法，实例方法和实例常方法。
+静态方法可直接通过类对象调用，因此这类方法里不能使用类实例成员变量。
+其他两种方法都需要通过类实例调用。实例方法可访问和修改实例成员变量，
+但实例常方法仅可以访问，而不能修改实例成员变量。
+实例常方法可通过在参数列表括号后加"invar"关键词来声明。
 @[code(dao)]
 class ClassTwo
 {
@@ -939,27 +922,25 @@ class ClassTwo
 	public
 
 	static routine Stat() {
-		state += 1      # OK!
-		state += value  # Error! Cannot access "value"!
+		state += 1      # 对!
+		state += value  # 错! 不能访问实例成员变量"value"!
 	}
 	routine Meth() {
-		state += 1  # OK!
-		value += 2  # OK!
+		state += 1  # 对!
+		value += 2  # 对!
 	}
 	routine InvarMeth() invar {
-		state += value  # OK! Can access "value"!
-		value += 2      # Error! Cannot modify "value"!
+		state += value  # 对! 可以访问实例成员变量"value"!
+		value += 2      # 错! 但不可以修改"value"!
 	}
 }
 @[code(dao)]
 
-In order to provide access to the variables such as "value" in the above example,
-one can define ordinary methods such @[cyan]GetValue()@[cyan] and @[cyan]SetValue()@[cyan].
-But the better way is to use properties.
-A property is a method that provides access to a field in a way
-that syntatically looks like direct access.
-In Dao, this can be done by overloading name specific operators such as
-@[green].Name@[green] and @[green].Name=@[green]. For example,
+为了提供对上例中"value"变量的访问，@[cyan]GetValue()@[cyan]和@[cyan]SetValue()@[cyan]
+这样的方法可以被提供。但更好的方式是使用属性方法。
+使用属性方法访问保护或私有变量，可以在语法层面变得跟直接访问公共变量一样方便。
+在道语言里，这可由重载象@[green].Name@[green]和@[green].Name=@[green]这样的操作符来实现。
+例如：
 @[code(dao)]
 class MyNumber
 {
@@ -987,7 +968,7 @@ io.writeln( num.value )
 
 
 
-@[subsection]Inheritance@[subsection]
+@[subsection]继承@[subsection]
 @[code]
 class ColorRBG
 {
@@ -1004,7 +985,7 @@ class ColorRBG
 
 yellow = ColorRBG( 1, 1, 0 ); # create an instance.
 @[code]
-The following will define a derived class of @[cyan]ColorRBG@[cyan],
+下面将定义一个派生类：
 @[code]
 class ColorRGBA : ColorRBG
 {
@@ -1019,15 +1000,12 @@ magenta = ColorRGBA( 1, 0, 1, 0 ); # not tranparent.
 magenta.alpha = 0.5; # change to half tranparency.
 @[code]
 
-In the definition of derived class,
-the parent class @[cyan]ColorRBG@[cyan] should be put after the derived class 
-and be separated with @[green]:@[green]. 
-The constructor parameters for derived class
-can be passed to parent classes in the way as shown in the example.
+在定义派生类时，基类@[cyan]ColorRBG@[cyan]必须放在派生类名后面，
+并用冒号分开。
+在定义派生类的构造方法时，方法的参数可按例中传递给基类的构造方法。
 
 
-There are several more advanced features based on class,
-please see @[node]dao.class@[node] for more information.
+道类还支持其他一些比较高级的特性，详情请参看@[node]dao.class@[node]。
 
 
 

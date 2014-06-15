@@ -593,7 +593,7 @@ For Looping Construct
 Dao supports three different styles of for loops:
 @[list]
 -- For-in loop;
--- Arithmetic-progression (range) for loop;
+-- Range for loop;
 -- Three-expression for loop (C style);
 @[list]
 
@@ -610,7 +610,7 @@ A range for loop uses an arithmetic progression condition to control the loop.
 The arithmetic progression condition usually consists of an initial value,
 an optional step value and a stopping value.
 @[code]
-for( index = 1 : 2 : 10 ) {
+for( index = 1 : 2 : 10 ) { # step value = 2;
 	io.writeln( index )
 }
 for( index = 1 : 10 ) {  # step value = 1;
@@ -627,15 +627,16 @@ for( init; condition; step ){
    block;
 }
 @[code]
-The execution sequence of @[green]for@[green] statement is the following:
+The essential execution logic or steps of @[green]for@[green] statement is the following,
 @[list]
-== execute initial expression @[cyan]init@[cyan], and goto 3;
-== execute @[cyan]step@[cyan];
-== evaluate the condition expression @[cyan]condition@[cyan];
-== check the value of @[cyan]condition@[cyan]: if true, goto 5; otherwise, goto 6;
-== execute @[cyan]block@[cyan], and goto 2;
-== stop looping; and start to execute the statements after the loop body.
+== Execute the initial expression @[cyan]init@[cyan];
+== Check the condition expression @[cyan]condition@[cyan];
+== If true continue to the next step, otherwise exit the loop;
+== Execute the code block @[cyan]block@[cyan];
+== Execute the step expression @[cyan]step@[cyan] and go to 2;
 @[list]
+The detailed steps may depends on the implementation
+but the basic execution logic is the same.
 
 
 Example,
@@ -712,8 +713,8 @@ but they can be of different types, that means, you can mix numbers and strings 
 Unlike in C/C++, no @[green]break@[green] statement is required to get out of the @[green]switch@[green].
 
 
-If you want to execute the same block of codes for different case values, you just need to
-organize them together in the following way:
+If you want to execute the same block of codes for different case values,
+you just need to put them together in the same case:
 @[code]
 switch( value ){
 case C1, C2, C3 :
@@ -722,8 +723,6 @@ case C1, C2, C3 :
 default: block0
 }
 @[code]
-Namely, Dao allows one case entry to have multiple values.
-In this way, @[cyan]block3@[cyan] will be executed for case values @[cyan]C1,C2@[cyan] and @[cyan]C3@[cyan].
 As a simple example,
 @[code(dao)]
 a = "a";
@@ -907,9 +906,9 @@ var variable: typename;
 var variable: typename = init_value;
 @[code]
 
-Class methods must be declared with keyword @[green]routine@[green] 
-for constructors and normal methods, or keyword @[green]operator@[green]
-	for operator overloading.
+Class constructors and ordinary methods must be declared with
+keyword @[green]routine@[green].
+Methods for overloading operators must use keyword @[green]operator@[green]. 
 
 
 The visibilities of class fields and methods can be restricted by three permission keywords:
