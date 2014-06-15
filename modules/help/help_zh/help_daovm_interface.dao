@@ -62,186 +62,173 @@ DaoVmSpace_SetOptions( vmspace, DAO_EXEC_DEBUG );
 // 载入并执行 "myscript.dao":
 DaoVmSpace_Load( vmspace, "myscript.dao" );
 @[code(cxx)]
+顶层作用域的代码将被执行。
 
 @[subsection]
 退出道环境
 @[subsection]
 
-After you are done with Dao, you may call the following function
-to make sure, Dao is properly finalized (waiting for unjoined threads
-to finish and the garbage collector to finish, and deallocating
-some internal data structures etc.).
+在你用完道虚拟机后，你可以调用以下函数来正确地终止道虚拟机并退出道环境。
+调用这个这个函数将会等待未完成的线程结束，也会等待垃圾回收器回收完垃圾对象，
+并且释放一些内部数据结构等。
 @[code(cxx)]
-// Finalize (or Quit) Dao:
+// 退出 Dao:
 DaoQuit();
 @[code(cxx)]
 
 @[subsection]
-Putting These Codes Together
+将这些代码放在一起
 @[subsection]
 
-Putting these codes together, embedding Dao can be as simple as,
+将这些代码放在一起，嵌入道就如下面的例子简单：
 @[code(cxx)]
-// Initialize Dao:
+// 初始化 Dao:
 DaoVmSpace *vmspace = DaoInit( NULL );
-// Load "myscript.dao":
+// 载入运行 "myscript.dao":
 DaoVmSpace_Load( vmspace, "myscript.dao" );
-// Finalize (or Quit) Dao:
+// 退出 Dao:
 DaoQuit();
 @[code(cxx)]
 
 
 @[section]
-A Slightly More Advanced Example
+一个稍微高级点的例子
 @[section]
 
-In Dao, each single script file is represented by one namespace object.
-And each namespace object has access to the public global constants and 
-variables defined in the files that this file has loaded.
-To do anything interesting, one must obtain the namespace object
-for the file of interest.
+在道里，每个代码文件在编译后都会被表示为一个命名空间对象，
+它存有这个文件里的和一些它载入的文件里的全局常量和变量等。
+要做任何实际的事情，你一般都要用到这个命名空间对象。
 
 
 @[subsection]
-Obtaining The Namespace Object
+获得命名空间对象
 @[subsection]
 
-Following the above example, if you want to call a function defined
-in "myscript.dao" (or in the files it has loaded), you can simple
-store the returned namespace object in a variable,
+接着上面的例子，如果你想要调用"myscript.dao"里的某个函数，
+你可以先保存DaoVmSpace_Load()所返回的命名空间对象：
 @[code(cxx)]
-// Load "myscript.dao" and obtain the namespace object:
+// 载入 "myscript.dao" 并获得命名空间对象:
 DaoNamespace *nspace = DaoVmSpace_Load( vmspace, "myscript.dao" );
 @[code(cxx)]
 
 
 @[subsection]
-Obtaining The Function Object
+获取函数对象
 @[subsection]
 
-To find the function you want to call,
+要找到你想调用的函数，使用如下代码：
 @[code(cxx)]
-// Find an object named "myfunction":
+// 查找名为 "myfunction" 的对象:
 DaoValue *value = DaoNamespace_FindData( nspace, "myfunction" );
-// Try to cast it to a function object:
+// 尝试将它转换为函数对象:
 DaoRoutine *myfunc = DaoValue_CastRoutine( value );
 @[code(cxx)]
-If "myfunction" is indeed a function, @[cyan]myfunc@[cyan] will not be NULL.
+如果"myfunction"确实是个函数对象，@[cyan]myfunc@[cyan]将不会是空指针。
 
 
 @[subsection]
-Obtaining A Process Object
+获得虚拟机进程对象
 @[subsection]
 
-Now to call the function, you will need another type of object:
-@[green]DaoProcess@[green], which represents a virtual machine process
-and is responsible for executing scripts.
-You can directly call @[green]DaoProcess_New()@[green] to create a new
-process object, but normally the better to get a process object is to
-acquire it from a @[green]DaoVmSpace@[green] object:
+道程序都是以虚拟机进程的方式在道虚拟机上运行。
+因此若要调用前面的函数，你将需要一个虚拟机进程对象@[green]DaoProcess@[green]。
+这种对象可由直接调用@[green]DaoProcess_New()@[green]生成，
+但是更好的方式是从@[green]DaoVmSpace@[green]对象获得，
+这种方式更经济，更方便管理。
 @[code(cxx)]
-// Acquire a process object:
+// 获得虚拟机进程对象:
 DaoProcess *proc = DaoVmSpace_AcquireProcess( vmspace );
 @[code(cxx)]
 
 @[subsection]
-Prepare Parameter Values
+准备参数值
 @[subsection]
 
-Now suppose the function "myfunction" needs to take an integer as its first
-parameter and a string as the second. To call it, we will need to prepare
-parameters that can be passed to this function.
-The simplest way to do this is to use the data "factory" methods that
-are associated with the process type @[green]DaoProcess@[green].
-Such methods are normally begin with @[green]DaoProcess_New@[green].
-For example, to prepare an integer value and a string value, one can do,
-
+现在假定函数"myfunction"需要一个整数作为第一个参数和一个字符串作为第二个参数。
+为了调用它，我们将需要先准备好一个道整数对象和一个道字符串对象。
+这些对象都可通过它们相应的分配器函数生成，但是更好的方式则是使用
+@[green]DaoProcess@[green]类型的“工厂”方法产生。
+这些方法一般以@[green]DaoProcess_New@[green]开头。
+例如，生成道整数对象和道字符串对象，我们可以用：
 @[code(cxx)]
-// Prepare an integer and a string:
+// 准备道整数对象和道字符串对象:
 DaoInteger *ivalue = DaoProcess_NewInteger( proc, 123 );
 DaoString  *svalue = DaoProcess_NewString( proc, "abc", -1 );
 @[code(cxx)]
-The third parameter of @[green]DaoProcess_NewString()@[green]
-is the number of bytes in the C string, and a negative value can be
-used to indicate the C string is NULL terminated.
+The third parameter of 
+@[green]DaoProcess_NewString()@[green]的第三个参数是前面C字符串的长度，
+如果为负值，该字符串是以NULL作为结束标识。
 
 
-To use these two new values in the parameter list to call "myfunction",
-you can do,
+这些对象必须放在数组里才能传递给"myfunction"函数：
 @[code(cxx)]
 DaoValue *params[2];
 params[0] = (DaoValue*) ivalue;
 params[1] = (DaoValue*) svalue;
 @[code(cxx)]
-Or you can simply do,
-
+因为这些对象是有@[green]DaoProcess@[green]的方法生成的，
+你也可以通过下面的以数组得方式获得这些对象：
 @[code(cxx)]
-// Get the last two values:
+// 获取最后产生的两个对象:
 DaoValue **params = DaoProcess_GetLastValues( proc, 2 );
 @[code(cxx)]
-which will return last created two values in an array.
 
 
 @[subsection]
-Call The Function
+调用道函数
 @[subsection]
 
-Now we are ready to call the function we obtained before with
-the prepared values,
+现在我们已经可以用准备好的参数调用前面获得的函数了：
 @[code(cxx)]
-// Call the function:
+// 调用函数:
 DaoProcess_Call( proc, myfunc, NULL, params, 2 );
 @[code(cxx)]
-For class methods, a class instance object can be passed to this function
-as the third parameter, or it can be passed as the first value of 
-@[cyan]params@[cyan].
-Please note that, this function can handle overloaded functions automatically!
-So you do not need to do anything for that.
-This function will return zero on success, or other values with errors.
+对于类方法，一个类实例对象可作为该函数的第三个参数传入。
+不过它也可作为@[cyan]params@[cyan]数组的第一个元素传入。
+值得注意的是这个函数能处理重载过的函数，因此你不需要为此做任何事
+（当然还是要传入正确的参数对象）。
+没有错误的情况下，这个函数将返回零，否则返回一个表示错误的整数。
 
 
 @[subsection]
-Retrieve The Returned Value
+获得函数的返回值
 @[subsection]
 
-If the function returns a value, you can obtain it by,
+如果上面的函数有返回值，该返回值可通过下面的函数获得：
 @[code(cxx)]
-// Obtain the returned value:
+// 获得函数的返回值:
 DaoValue *retvalue = DaoProcess_GetReturned( proc );
 @[code(cxx)]
-If the returned value is supposed to be of certain type,
-you can cast it to that type by using one of the 
-@[green]DaoValue_CastXXX()@[green] functions,
-or directly convert it to a proper C type by using one of the
-@[green]DaoValue_TryGetXXX()@[green] functions.
-For example, if "myfunction" returns an integer,
-you can get it by,
+如果函数只返回某个特定类型的值，那么你可用@[green]DaoValue_CastXXX()@[green]
+之类的函数将获得的值转换到该类型。
+你也可以使用@[green]DaoValue_TryGetXXX()@[green]将它直接转换到相应的C类型。
+例如，如果"myfunction"返回整数，你可通过下面的方式获得。
 @[code(cxx)]
-// Get the integer return value
+// 获得返回的整数:
 daoint retint = DaoValue_TryGetInteger( retvalue );
 @[code(cxx)]
 
 @[subsection]
-Release The Process Object
+释放虚拟进程对象
 @[subsection]
 
-After you have done with the process object, you can release it
-back the @[green]DaoVmSpace@[green] object,
+当你使用完一个虚拟进程对象后，你需要释放它。
+最好的方式是将它是放回@[green]DaoVmSpace@[green]对象，以便重用。
 @[code(cxx)]
-// Release the process:
+// 释放虚拟进程对象:
 DaoVmSpace_ReleaseProcess( vmspace, proc );
 @[code(cxx)]
-But if you want to use a process object frequently,
-you may simply retain it until you no longer need it.
-Then you may also need to the follow function to release the cached values
+但如果你需要频繁地使用一个虚拟进程对象，
+你可以保留它直到最后不需要的时候。
+不过这样的话，就有必要释放前面准备的参数了：
 @[code(cxx)]
-// Pop the cached values:
+// 释放缓存的参数:
 DaoProcess_PopValues( proc, 2 );
 @[code(cxx)]
 
 
 @[subsection]
-Putting These Codes Together
+将这些代码放在一起
 @[subsection]
 
 @[code(cxx)]
