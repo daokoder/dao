@@ -732,6 +732,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	switch( self->tid ){
 	case DAO_ENUM :
 		if( self == type ) return DAO_MT_EQ;
+		if( type->subtid == DAO_ENUM_ANY ) return DAO_MT_SIM;
 		if( DString_EQ( self->name, type->name ) ) return DAO_MT_SIM;
 		if( self->subtid != type->subtid && self->subtid != DAO_ENUM_SYM ) return 0;
 		for(it=DMap_First(self->mapNames); it; it=DMap_Next(self->mapNames, it )){
@@ -960,6 +961,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case DAO_ENUM :
 		other = & value->xEnum;
 		if( self == value->xEnum.etype ) return DAO_MT_EQ;
+		if( self->subtid == DAO_ENUM_ANY ) return DAO_MT_SIM;
 		if( dinterface ) return DaoType_MatchInterface( value->xEnum.etype, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( self->subtid != other->subtype && other->subtype != DAO_ENUM_SYM ) return 0;

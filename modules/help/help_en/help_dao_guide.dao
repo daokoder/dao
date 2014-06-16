@@ -788,15 +788,6 @@ and return two values as outputs.
 
 
 
-@[subsection]Named Parameter@[subsection]
-
-In Dao the function parameters are named, and parameter values can be passed in by name:
-@[code]
-func( first = 123, second = "ABC" );
-@[code]
-
-
-
 @[subsection]Parameter Type and Default Value@[subsection]
 
 Routine parameters can have type annotations, and a default value can

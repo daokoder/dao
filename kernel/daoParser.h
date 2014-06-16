@@ -75,8 +75,9 @@ struct DaoParser
 	int  vmcCount;
 	int  regCount;
 
-	/* Stack of symbol tables for each level: */
-	DArray  *lookupTables; /* DArray<DMap<DString*,int>*> */
+	DArray  *scopeOpenings; /* <DaoInode*> */
+	DArray  *scopeClosings; /* <DaoInode*> */
+	DArray  *lookupTables; /* DArray<DMap<DString*,int>*>: lookup table for each level; */
 	DArray  *switchTables; /* DArray<DMap<DaoValue*,DaoInode*>> */
 	DArray  *switchNames;  /* DArray<DString*>: (var name, invar name) */
 	DArray  *enumTypes;    /* DArray<DaoType*> */
@@ -119,8 +120,6 @@ struct DaoParser
 	DaoToken     *argName;
 	DaoToken     *decoArgName;
 
-	DArray *scopeOpenings; /* <DaoInode*> */
-	DArray *scopeClosings; /* <DaoInode*> */
 	DArray *uplocs;
 	DArray *outers;
 	DArray *decoFuncs;

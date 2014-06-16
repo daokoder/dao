@@ -12,54 +12,47 @@ Routine
 
 @[text]
 
-Routine is a block of codes, once defined, can be used in different places
-at different time repeatedly. It can accept parameters to changes its
-behaviour. It may also return results to its callee.
+Routine (function) is a relative independent block of code that can be
+repeatedly executed by invoking it when and where it is needed.
+It can accept parameters to changes its behaviour.
+It may also return results to its caller.
+In Dao, the term routine and function can be used interchangably.
 
+
+@[subsection]
+Definition
+@[subsection]
 
 Dao routines are declared with keyword @[green]routine@[green]
-or @[green]function@[green] or @[green]sub@[green] 
-(which are exactly equivalent to @[green]routine@[green]),
-
+For example,
 @[code(dao)]
-routine func( a, b )
+routine func( first, second )
 {
-   io.writeln( a, b );
-   a = 10;
-   b = "test";
-   return a, b; # return more than one results.
+   first += 10;
+   second += "test";
+   return first, second; # return more than one results.
 }
 
-r1, r2;
-( r1, r2 ) = func( 111, "AAA" );
-r3 = func( r1, r2 );
-io.writeln( "r1 = ", r1 );
-io.writeln( "r2 = ", r2 );
-io.writeln( "r3 = ", r3 );
+(ret1, ret2) = func( 111, "AAA" );
+ret3 = func( ret1, ret2 );
 @[code(dao)]
-
-
-
-@[subsection]Named Parameter@[subsection]
-
-In Dao the function parameters are named, and parameter values can be passed in by name:
-@[code]
-func( b => 123, a => "ABC" );
-@[code]
+defines a function that can take two parameters as inputs,
+and return two values as outputs.
 
 
 
 @[subsection]Parameter Type and Default Value@[subsection]
 
-It is also possible to specify the type or the default value of a parameter.
+Routine parameters can have type annotations, and a default value can
+also be specified for a parameter.
 @[code]
-routine MyRout( name : string, index = 0 )
+routine MyRout( name: string, index = 0 )
 {
    io.writeln( "NAME  = ", name )
    io.writeln( "INDEX = ", index )
 }
 @[code]
-Here @[cyan]name@[cyan] is specified as string, and @[cyan]index@[cyan]
+Here @[cyan]name@[cyan] is annotated as type string, and @[cyan]index@[cyan]
 is specified as an integer with default value 0.
 Any parameter after a parameter with default value must have default values as well.
 If a routine is called with wrong type of parameters,
@@ -74,7 +67,7 @@ Routine overloading by parameter types is also supported in Dao,
 which means that multiple routines can be defined with the same name,
 but different parameter signatures.
 @[code]
-routine MyRout( index : int, name = "ABC" )
+routine MyRout( index: int, name = "ABC" )
 {
    io.writeln( "INDEX = ", index )
    io.writeln( "NAME  = ", name )
@@ -86,7 +79,8 @@ MyRout( 456, "script" ) # invoke the second MyRout()
 
 
 
-For coroutines, please see @[node]module.core.coroutine@[node].
+
+
 
 
 @[text]
@@ -96,50 +90,101 @@ For coroutines, please see @[node]module.core.coroutine@[node].
 
 
 @[name]
-dao.routine.anonymous
+dao.routine.closure
 @[name]
 
 @[title]
-Anonymous Routine
+Anonymous Routine and Closure
 @[title]
 
 
 @[text]
 
-@[subsection]Routine As First Class Object@[subsection]
+Dao supports routines as first class objects.
+So they can be created at running time and used just like other objects.
+They may be created as anonymous routines or closures,
+depending on how they are declared.
 
-Dao also support first class functions / routines. They can be created in the following way:
+
+The syntax to declare an anonymous routine or closure is nearly identical to
+the definition of a normal function, except the following differences:
+@[list]
+-- No need for a function name;
+-- Default parameter values do not need to be constant;
+-- Its function body may access the local variables of the outer function;
+@[list]
+
+
+Here is a simple anonymous function,
 @[code]
-foo = routine( x, y : TYPE, z = DEFAULT )
+rout = routine( name: string, value = 0 ){
+	io.writeln( name, value )
+	return name.size() + value
+}
+rout( "abc", 123 )
+@[code]
+The only difference of this declaration from normal function declaration is
+the lacking of function name here. 
+
+
+Here is another simple anonymous function that has non-constant default parameter,
+@[code]
+var max = 100
+rout = routine( start: int, offset = rand(max) ){
+	return start + offset
+}
+rout( 123 )
+@[code]
+When non-constant expression is used as the default parameter,
+this expression is evaluated right before the creation of the anonymous routine.
+So here, the default value for parameter "offset" is a random integer
+generated right before the creation of the anonymous routine.
+
+
+In the above two examples, the created routines do not access the local
+variables of the outer routines. So they are created as ordinary anonymous
+routines instead of closures.
+Here is another example where a local variable of the outer routine is accessed,
+@[code]
+routine MakeClosure( start: int )
 {
-   codes;
+	return routine( offset: int ){
+		return start + offset
+	}
 }
+rout = MakeClosure( 100 );
+rout( 123 )
 @[code]
-The definition of such functions is identical to the normal function definition, except
-the following differences:
-@[list]
-==there is no need for a function name, but the created function must be assigned to a variable;
-==the default value expressions for parameters do not necessary to be constant expressions,
-they are evaluated at running time when the function is created;
-==the function body may contain variables defined in the "upper" function that creates it;
-depending on the type of the "upper" variable, its copy (for simple types) 
-or reference will be used by the created function.
-@[list]
+Due to the access of local variable "start" of "MakeClosure()",
+the created routine "rout" will be a closure.
+When a closure is created, it will store the accessed outer scope local variables
+as up values in the created routine. For primitive type variables, their current
+value will be copied to the closure's up values; for other types, only their
+references are copied.
+Once a closure is created, it can work without the original context where it was created.
 
 
-Here is an example,
+The main difference between an anonymous function and a closure
+is whether it accesses the local variable of the outer function.
+This difference leads to another important difference in what happens
+when an expression for running time routine creation is executed.
+If the expression should produce a closure, a @[green]new@[green] routine
+with captured up values is always created;
+but if the expression should produce an ordinary anonymous routine,
+the @[green]same@[green] might be returned.
+For example, the following "MakeRoutine()" function will alway return the
+same routine object,
 @[code]
-a = "ABC";
-
-rout = routine( x, y : string, z = a+a ){
-    a += "_abc";
-    io.writeln( "lambda ", a )
-    io.writeln( "lambda ", y )
-    io.writeln( "lambda ", z )
+routine MakeRoutine()
+{
+	return routine( value: double ){
+		return value * value
+	}
 }
-
-rout( 1, "XXX" );
+rout = MakeRoutine();
+rout( 123 )
 @[code]
+
 
 @[text]
 

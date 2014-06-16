@@ -29,72 +29,130 @@ GNU Free Documentation License
 
 @[text]
 Dao supports optional/hybrid typing that allows variables to be declared
-with or without type names. When a variable is declared without type name,
-its type will be automatically inferred at compiling time if possible.
-If a variable has an explicitly declared type or a successfully inferred type,
+with or without type annotations.
+When a variable is declared without type annotation, its type will be automatically
+inferred at compiling time based on some type dedcution rules if possible.
+If a variable has an explicit type annotation or a successfully inferred type,
 static type checking will be carried out on this variable at compiling time,
 otherwise, it will be checked at running time.
 
 
-The most basic inference is based on assignment,
-so the simplest way to declare a variable to have certain type without explicitly
-specifying it is by assigning a value of the desired type to the variable at 
-the declaration, for example @[code]id = 0@[code] will decalare @[code]id@[code]
-as an integer, which is equivalent to @[code]id :int = 0@[code].
+@[section]Type Annotation@[section]
 
-
-@[section]Explicit Type Declaration@[section]
-
-The type of a variable can be declared explicitly in the following form:
+Type annotations in Dao are usually placed after the variable, parameter or field names
+with a colon separating the names and the annotation.
 @[code]
-variable : type
-variable : type = value
-@[code]
-The same form can also be used in function parameter list:
+name: type
+name: type = value
 
-@[code]
-routine MyFunction( name : string, index : int = 1 ) { ... }
+routine MyFunction( name: string, index: int = 1 ) { ... }
+
+class Klass
+{
+	var name: type = value
+}
 @[code]
 
 
-Multiple variables can be declared once with the same type and initial value:
+Multiple variables can be declared at once with the same type and initial value:
 @[code]
-variable1, variable2 : type
-variable1, variable2 : type = value
+name1, name2 : type
+name1, name2 : type = value
 @[code]
 
 
-@[section]Outline of Dao Types@[section]
+@[section]Data Types@[section]
 
 Dao supports a rich set of types to allow writing expressive codes.
 
 
 @[subsection]Basic Types@[subsection]
+
 The basic types are the following:
-@[list]
---@[green]int@[green] : integer type;
---@[green]float@[green] : single precision floating point number;
---@[green]double@[green] : double precision floating point number;
---@[green]complex@[green] : complex number (double precision for each part);
---@[green]long@[green]   : arbitrary precision integer;
---@[green]string@[green] : string type;
---@[green]enum@[green] : enum type;
-@[list]
-Please see @[green]dao.type.typename@[green] for details.
+
+@[table]
+##Type Name  ##Type Description
+##none     &&none value type
+##int      &&integer type
+##float    &&single precision floating point number type
+##double   &&double precision floating point number type
+##complex  &&complex number type
+##string   &&string type
+##enum     &&enum symbol type
+@[table]
+Though @[code]enum@[code] is a basic type, its type names may vary
+and include symbol names that are associated with the enum types.
+Examples,
+@[code]
+var name: string
+var state: enum<off,on> = $on
+@[code]
 
 
-@[subsection]Builtin Aggregated Types@[subsection]
-Dao has builtin support for some essential aggregated types including:
-@[list]
---@[green]array@[green] : multi-dimensional numeric array;
---@[green]tuple@[green] : tuple type;
---@[green]list@[green] : list container;
---@[green]map@[green] : map or hash map container;
-@[list]
-Please see @[green]dao.type.typename@[green] for details.
+@[subsection]Aggregated Types@[subsection]
+
+The essential aggregated types in Dao are the followings:
+
+@[table]
+##Type Name  ##Type Description
+##array < ElementType >            &&numeric array type
+##tuple < ItemTypesOrNamesTypes >  &&tuple type
+##list  < ItemType >               &&list type
+##map   < KeyType, ValueType >     &&map type
+@[table]
+These are template-like types that can take type arguments.
+The type arguments usually indicate what types of values the aggregated types may contain.
+For example,
+@[code]
+array<int>         # Array that may contain integers;
+list<string>       # List that may contain strings;
+map<string,int>    # Map that may contain pairs of string and int;
+tuple<string,int>  # Tuple that may contain one string and one integer;
+
+# The following is a tuple type with named items:
+# The first item is named "name" and has type "string";
+# The second item is named "index" and has type "int";
+tuple<name:string,index:int>
+@[code]
+
+
+Examples of type annotations with these types,
+@[code]
+var vector: array<int> = [ 1, 2, 3 ]
+var tuple1: tuple<string,int> = ( "abc", 123 )
+var tuple2: tuple<name:string,index:int> = ( 'abc', 123 )
+var names:  list<string> = { "Joe" }
+var table:  map<string,int> = { "abc" => 123 }
+@[code]
+
+
+@[subsection]Type Holder Types@[subsection]
+
+Type holder types are type names with a @[green]@@[green] prefix.
+They represent to-be-defined types, the same type holder represents the same type
+within a local context (a single composite type or a function prototype etc).
+They are usually used in template-like types as place holders for type arguments,
+and in the routine signatures of the methods of those types.
+This way, both the types and their methods are made generic,
+and can be instantiated (specialized) for particular argument types.
+
+
+For example, the list template type is declared as @[code]list<@T=any>@[code],
+where @[code]any@[code] is the default argument type for the list type.
+This means @[code]list<>@[code] will be equivalent to
+@[code]list<any>@[code].
+One of the list methods is the following,
+@[code]
+append( self: list<@T>, item: @T, ... : @T ) => list<@T>
+@[code]
+Within this routine signature, all @[green]@T@[green] represent the same type.
+So this method means, for a list of type @[green]list<@T>@[green]
+(@[green]@T@[green] is @[green]string@[green] for example),
+only items of type @[green]@T@[green] (@[green]string@[green]) can be appended to the list.
 
 
 @[subsection]Other Types@[subsection]
+
 Dao also supports a number of other types such as:
 @[list]
 --Routine or function types (see @[green]dao.routine@[green] for details);
@@ -123,8 +181,8 @@ Dao also supports a number of other types such as:
 
 As its name suggests, it represents any type, so any value can match to this type.
 
-
---@[green]?@[green]:
+@[comment]
+@[green]?@[green]:
 
 This special type name represents undefined types. Function parameters that 
 have neither type annotations nor default values are automatically assigned with
@@ -134,7 +192,7 @@ when more type information is available, for example, at function call point
 (compile time or runtime), parameters passed to a function call can provide 
 concrete types to specialize the function (namely, specializing parameter types, 
 local variable types and virtual machine instructions).
-
+@[comment]
 
 --Type holder:
 

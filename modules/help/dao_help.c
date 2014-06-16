@@ -293,6 +293,20 @@ static void DaoxStream_SetColor( DaoxStream *self, const char *fg, const char *b
 		}
 	}
 }
+static int DaoxStream_PrintLength( DaoxStream *self, DString *text )
+{
+	char *stop = text->chars + text->size;
+	float len = 0, factor = 1;
+	int i;
+
+	if( self->output && self->fmtHTML ) factor = 0.8;
+	for(i=0; i<text->size; ){
+		DCharState state = DString_DecodeChar( text->chars + i, stop );
+		len += 1 + factor * (dao_cjk(state.value) != 0);
+		i += state.width;
+	}
+	return len;
+}
 static void DaoxStream_WriteNewLine( DaoxStream *self, const char *text )
 {
 	if( self->output ){
@@ -303,7 +317,7 @@ static void DaoxStream_WriteNewLine( DaoxStream *self, const char *text )
 		DaoStream_WriteChar( self->stream, '\n' );
 	}
 	self->offset = 0;
-	self->last = 0;
+	self->last = ' ';
 }
 static void DaoxStream_WriteChar( DaoxStream *self, char ch )
 {
@@ -337,11 +351,17 @@ static void DaoxStream_WriteString( DaoxStream *self, DString *text )
 		if( isalnum( text->chars[0] ) ) DaoxStream_WriteChar( self, ' ' );
 	}
 	if( self->output ){
-		DString_Append( self->output, text );
+		DString *text2 = DString_Copy( text );
+		if( self->fmtHTML ){
+			DString_Change( text2, "%<", "&lt;", 0 );
+			DString_Change( text2, "%>", "&gt;", 0 );
+		}
+		DString_Append( self->output, text2 );
+		DString_Delete( text2 );
 	}else{
 		DaoStream_WriteLocalString( self->stream, text );
 	}
-	self->offset += text->size;
+	self->offset += DaoxStream_PrintLength( self, text );
 	if( text->size ) self->last = text->chars[text->size-1];
 }
 static void DaoxStream_WriteInteger( DaoxStream *self, int i )
@@ -372,7 +392,6 @@ static int DaoxStream_WriteItemID( DaoxStream *self, char type, int id )
 static void DaoxStream_WriteParagraph( DaoxStream *self, DString *text, int offset, int width )
 {
 	char *stop = text->chars + text->size;
-	daoint start, next;
 	char chars[8];
 	int i, j;
 
@@ -381,12 +400,16 @@ static void DaoxStream_WriteParagraph( DaoxStream *self, DString *text, int offs
 		while( self->offset < offset ) DaoxStream_WriteChar( self, ' ' );
 		memcpy( chars, text->chars + i, state.width );
 		chars[state.width] = 0;
-		if( self->output ){
-			DString_AppendChars( self->output, chars );
+		if( self->offset == offset && isspace( state.value ) ){
+			/* Skip leading space; */
 		}else{
-			DaoStream_WriteChars( self->stream, chars );
+			if( self->output ){
+				DString_AppendChars( self->output, chars );
+			}else{
+				DaoStream_WriteChars( self->stream, chars );
+			}
+			self->offset += 1 + (dao_cjk(state.value) != 0);
 		}
-		self->offset += 1 + (dao_cjk(state.value) != 0);
 		if( self->offset >= width ) DaoxStream_WriteNewLine( self, "" );
 		i += state.width;
 	}
@@ -982,7 +1005,7 @@ static void DaoxStream_WriteTable( DaoxStream *self, DString *text, int offset, 
 	DArray *row = DArray_New( DAO_DATA_STRING );
 	DString *cell = DString_New();
 	daoint newline, next, start = 0;
-	daoint i, j, k, m;
+	daoint i, j, k, m, tableWidth = 0;
 
 	DString_Trim( text, 1, 1, 0 );
 	while( start < text->size ){
@@ -1019,14 +1042,24 @@ static void DaoxStream_WriteTable( DaoxStream *self, DString *text, int offset, 
 			DString *cell = rows->items.pArray[i]->items.pString[j];
 			int hash2 = DString_FindChars( cell, "##", 0 ) == 0;
 			int amd2  = DString_FindChars( cell, "&&", 0 ) == 0;
-			int width = cell->size - ((hash2||amd2) ? 2 : 0);
+			int width = DaoxStream_PrintLength( self, cell ) - ((hash2||amd2) ? 2 : 0);
 			if( width > widths->data.ints[j] ) widths->data.ints[j] = width;
 		}
 	}
+	tableWidth = 2;
+	for(j=0; j<widths->size; ++j) tableWidth += widths->data.ints[j] + 2;
+	while( self->offset < offset ) DaoxStream_WriteChar( self, ' ' );
+	DaoxStream_SetColor( self, "white", "cyan" );
+	for(j=0; j<tableWidth; ++j) DaoxStream_WriteChar( self, ' ' );
+	DaoxStream_SetColor( self, NULL, NULL );
+	DaoxStream_WriteNewLine( self, "" );
 	for(i=0; i<rows->size; ++i){
 		m = rows->items.pArray[i]->size;
 		if( m > widths->size ) m = widths->size;
 		while( self->offset < offset ) DaoxStream_WriteChar( self, ' ' );
+		DaoxStream_SetColor( self, "white", "cyan" );
+		DaoxStream_WriteChar( self, ' ' );
+		DaoxStream_SetColor( self, NULL, NULL );
 		for(j=0; j<m; ++j){
 			DString *cell = rows->items.pArray[i]->items.pString[j];
 			int hash2 = DString_FindChars( cell, "##", 0 ) == 0;
@@ -1048,15 +1081,22 @@ static void DaoxStream_WriteTable( DaoxStream *self, DString *text, int offset, 
 			}
 			DaoxStream_WriteChar( self, ' ' );
 			if( right == 0 ) DaoxStream_WriteString( self, cell );
-			for(k=cell->size; k<widths->data.ints[j]; ++k){
+			for(k=DaoxStream_PrintLength( self,cell); k<widths->data.ints[j]; ++k){
 				DaoxStream_WriteChar( self, ' ' );
 			}
 			if( right ) DaoxStream_WriteString( self, cell );
 			DaoxStream_WriteChar( self, ' ' );
 			if( hash2 ) DaoxStream_SetColor( self, NULL, NULL );
 		}
+		DaoxStream_SetColor( self, "white", "cyan" );
+		DaoxStream_WriteChar( self, ' ' );
+		DaoxStream_SetColor( self, NULL, NULL );
 		DaoxStream_WriteNewLine( self, "" );
 	}
+	DaoxStream_SetColor( self, "white", "cyan" );
+	for(j=0; j<tableWidth; ++j) DaoxStream_WriteChar( self, ' ' );
+	DaoxStream_SetColor( self, NULL, NULL );
+	DaoxStream_WriteNewLine( self, "" );
 	DArray_Delete( rows );
 	DArray_Delete( row );
 	DString_Delete( cell );

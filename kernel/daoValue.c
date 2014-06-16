@@ -462,10 +462,12 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 		return self; /* unreachable; */
 	}else if( self->type == DAO_ENUM ){
 		switch( tp ? tp->tid : 0 ){
+		case DAO_ENUM :
+			if( tp->subtid == DAO_ENUM_ANY ) tp = NULL;
+			return (DaoValue*) DaoEnum_Copy( & self->xEnum, tp );
 		case DAO_INTEGER : return (DaoValue*) DaoInteger_New( self->xEnum.value );
 		case DAO_FLOAT   : return (DaoValue*) DaoFloat_New( self->xEnum.value );
 		case DAO_DOUBLE  : return (DaoValue*) DaoDouble_New( self->xEnum.value );
-		case DAO_ENUM : return (DaoValue*) DaoEnum_Copy( & self->xEnum, tp );
 		}
 		return (DaoValue*) DaoEnum_Copy( & self->xEnum, NULL );
 	}else if( tp && tp->tid >= DAO_INTEGER && tp->tid <= DAO_DOUBLE ){
@@ -845,7 +847,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	if( D2 && S->type == D2->type && S->type == T->tid && S->type <= DAO_ENUM ){
 		switch( S->type ){
 		case DAO_ENUM    :
-			DaoEnum_SetType( & D2->xEnum, T );
+			DaoEnum_SetType( & D2->xEnum, T->subtid == DAO_ENUM_ANY ? S->xEnum.etype : T );
 			return DaoEnum_SetValue( & D2->xEnum, & S->xEnum );
 		case DAO_INTEGER : D2->xInteger.value = S->xInteger.value; break;
 		case DAO_FLOAT   : D2->xFloat.value = S->xFloat.value; break;
@@ -862,7 +864,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		DString_Assign( D2->xString.value, S->xString.value );
 		break;
 	case (DAO_ENUM<<8)|DAO_ENUM :
-		DaoEnum_SetType( & D2->xEnum, T );
+		DaoEnum_SetType( & D2->xEnum, T->subtid == DAO_ENUM_ANY ? S->xEnum.etype : T );
 		DaoEnum_SetValue( & D2->xEnum, & S->xEnum );
 		break;
 	case (DAO_INTEGER<<8)|DAO_INTEGER : D2->xInteger.value = S->xInteger.value; break;

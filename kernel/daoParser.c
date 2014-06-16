@@ -238,12 +238,12 @@ void DaoParser_Delete( DaoParser *self )
 	DArray_Delete( self->decoParams );
 	DArray_Delete( self->decoParams2 );
 	DArray_Delete( self->toks );
+	DArray_Delete( self->scopeOpenings );
+	DArray_Delete( self->scopeClosings );
 	DArray_Delete( self->lookupTables );
 	DArray_Delete( self->switchTables );
 	DArray_Delete( self->switchNames );
 	DArray_Delete( self->enumTypes );
-	DArray_Delete( self->scopeOpenings );
-	DArray_Delete( self->scopeClosings );
 	DArray_Delete( self->vmCodes );
 	DArray_Delete( self->strings );
 	DArray_Delete( self->arrays );
@@ -1588,6 +1588,7 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 		/* Always compile unscoped builtin type names as builtin types: */
 		type = DaoNamespace_MakeType( self->vmSpace->daoNamespace, name->chars, i, NULL, 0,0 );
 		if( type->tid == DAO_TUPLE ) type->variadic = 1; /* "tuple" is variadic; */
+		if( type->tid == DAO_ENUM ) type->subtid = DAO_ENUM_ANY; /* "enum"; */
 		return type;
 	}else if( token->name == DTOK_ID_THTYPE ){
 		type = DaoParser_FindTypeHolder( self, & token->string );

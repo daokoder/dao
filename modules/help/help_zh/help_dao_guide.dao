@@ -730,15 +730,6 @@ ret3 = func( ret1, ret2 );
 
 
 
-@[subsection]Named Parameter@[subsection]
-
-In Dao the function parameters are named, and parameter values can be passed in by name:
-@[code]
-func( first = 123, second = "ABC" );
-@[code]
-
-
-
 @[subsection]参数类型与缺省值@[subsection]
 
 道函数的参数可以有类型标注，也可以有缺省值：
