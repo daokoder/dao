@@ -14,7 +14,7 @@ FunctionA( {}, "def", 456 )
 
 # Parameter names can be explicitly specified in function call:
 # Note: the parameters are still required to be in the right order!
-FunctionA( obj => {}, name => "ghi", index => 789 )
+FunctionA( obj = {}, name = "ghi", index = 789 )
 
 
 #{

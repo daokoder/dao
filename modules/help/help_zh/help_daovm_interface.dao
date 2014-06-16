@@ -273,28 +273,27 @@ daovm.interface.extending
 @[name]
 
 @[title]
-Extending Dao VM
+扩展道虚拟机
 @[title]
 
 @[text]
 
-In the help entry @[node]daovm.interface.embedding@[node], it has been 
-demonstrated that embedding Dao is extremely simple.
-Here we will demonstrate that extending Dao is also extremely simple.
-Since Dao supports explicit type specification in function parameter lists,
-you will not need to write a lot of boilerplate codes to check and 
-convert function parameters from Dao data types to C/C++ data types.
-This means writing wrapping functions (Dao-callable C functions) 
-is significantly simpler than writing wrapping functions
-for other languages such as Python or even Lua.
+帮助条文@[node]daovm.interface.embedding@[node]里的演示表明道虚拟机的嵌入方式极其简单。
+这里将演示道虚拟机的扩展方式也极其简单。
+因为道语言支持函数参数的类型标注，它可以省去你写很多样板代码和参数类型检查代码的麻烦。
+也就是说，给道语言封装C/C++函数要比给其他如Python和Lua之类的语言封装C/C++函数要简单很多。
 
 
 @[section]
-The First Simple Extending Module
+第一个扩展模块例子
 @[section]
 
-All Dao-callable C functions must have prototype similar to the following
-example,
+
+@[subsection]
+扩展函数原型
+@[subsection]
+
+所有可被道调用的函数都必须使用类似下面的原型：
 @[code(cxx)]
 void MyCFunction( DaoProcess *proc, DaoValue *param[], int nparam )
 {
@@ -302,60 +301,68 @@ void MyCFunction( DaoProcess *proc, DaoValue *param[], int nparam )
 }
 @[code(cxx)]
 
-Each Dao extending module must provide an entry function,
+
+@[subsection]
+模块入口函数
+@[subsection]
+
+每个道模块都必须提供一个入口函数。下面这个"DaoOnLoad()"是个基本的入口函数名，
+后面将会介绍入口函数名也可以包括模块名。
 @[code(cxx)]
 // Entry function for each C/C++ module:
 int DaoOnLoad( DaoVmSpace *vmspace, DaoNamespace *ns );
 @[code(cxx)]
-This function will be called automatically to allow the module
-to register its functions and types etc.
-The first parameter is the @[green]DaoVmSpace@[green] instance
-which is responsible for loading and managing the module.
-And the second parameter is the namespace object that will
-represent this module, so all the functions and types etc.
-should be registered to this namespace.
+这个函数将在模块载入时被调用，以便模块注册它的函数和类型等。
+此函数的第一个参数是一个虚拟机空间@[green]DaoVmSpace@[green]对象。
+此对象负责模块的载入和管理。
+第二个参数是自动生成的命名空间对象，此对象将代表此模块，因此这个模块的
+函数和类型等都应该注册到此命名空间。
 
 
-This function can also be named as @[cyan]DaoXXX_OnLoad@[cyan],
-where @[cyan]XXX@[cyan] is the module name that will appear
-in a load statement such as @[code(cxx)]load XXX@[code(cxx)]
-or @[code(cxx)]load path.XXX@[code(cxx)].
-Please note that, here @[cyan]XXX@[cyan] is case sensitive,
-and different cases are checked for it in the following order:
+如前面提到的，模块入口函数的名称可以包括模块的名称。
+假如模块的名字以@[code(cxx)]load abc@[code(cxx)]或@[code(cxx)]load path.abc@[code(cxx)]
+的方式出现在模块载入语句中，那么该名称可以如下方式出现在入口函数名中
+（并且搜索方式也如下）：
 @[list]
-== All lower case letters: e.g. @[cyan]Daoabc_OnLoad@[cyan];
-== First upper case letter: e.g. @[cyan]DaoAbc_OnLoad@[cyan];
-== All upper case letters: e.g. @[cyan]DaoABC_OnLoad@[cyan];
+== 全小写字母: 例如 @[cyan]Daoabc_OnLoad@[cyan];
+== 首大写字母: 例如 @[cyan]DaoAbc_OnLoad@[cyan];
+== 全大写字母: 例如 @[cyan]DaoABC_OnLoad@[cyan];
 @[list]
 
 
-To register functions to a namespace, one can use one of the
-following interface functions of @[green]DaoNamespace@[green],
+@[subsection]
+函数注册
+@[subsection]
+
+下面的函数可用来将一个函数注册到命名空间@[green]DaoNamespace@[green]对象：
 @[code(cxx)]
-// Function to register a single function:
+// 注册单个函数:
 DaoRoutine*
 DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fp, const char *proto );
 
-// Function to register multiple functions:
+// 注册多个函数:
 int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items );
 @[code(cxx)]
-We will come to the second function later.
-For the first function, the first parameter is the namespace to which
-the function is registering to; the second is the function pointer to
-the function that needs to be registered (@[cyan]MyCFunction@[cyan] in this case);
-and the last parameter is the Dao function prototype for the registered function.
+我们将在这里仅介绍第一个函数，第二个函数将在后面的小节里介绍。
+这两个函数的第一个参数都是命名空间@[green]DaoNamespace@[green]对象，
+函数将被注册到此对象里。第一个函数的第二个参数是函数指针类型@[green]DaoCFunction@[green]，
+它的原型跟我们前面准备的函数@[cyan]MyCFunction@[cyan]一致；
+第三个参数则是被注册函数在那个命名空间里的名称和原型。
 
 
-So you can register the above function @[cyan]MyCFunction@[cyan] as the following,
+下面将把上面的函数@[cyan]MyCFunction@[cyan]以"HelloDao()"注册到命名空间"nspace"里：
 @[code(cxx)]
-// Register function:
+// 注册函数:
 DaoNamespace_WrapFunction( nspace, MyCFunction, "HelloDao()" );
 @[code(cxx)]
-So that this function can be called in Dao by name @[cyan]HelloDao@[cyan]
-without any parameter.
+那么这个函数将在道里可以一@[cyan]HelloDao@[cyan]不带任何参数调用。
 
 
-To sum it up, the simplest Dao extending module could be the following,
+@[subsection]
+总结
+@[subsection]
+
+把上面的放在一起将够成一个最简单的道扩展模块：
 @[code(cxx)]
 #include "dao.h"
 #include "stdio.h"
@@ -369,85 +376,84 @@ int DaoOnLoad( DaoVmSpace *vmspace, DaoNamespace *nspace )
 	return 0;
 }
 @[code(cxx)]
-To compile it, you will need to add the Dao header file path to your compiling
-option. And you will also need to add the following preprocessor definitions:
+要编译这些代码，你将需要把道的头文件路径加到你的编译选项里。
+并且你还需要声明以下预处理器定义：
 @[list]
--- On Win32: @[green]WIN32@[green];
--- On Unix: @[green]UNIX@[green];
--- On Mac OSX: @[green]MACOSX@[green];
+-- Win32 上: @[green]WIN32@[green];
+-- Unix 上: @[green]UNIX@[green];
+-- MacOSX 上: @[green]MACOSX@[green];
 @[list]
+在Windows上链接时，你还需要将道库链接到你的模块里。
+在其他平台上加如下链接标识就可以了：
 For linking, on Windows you will need to link the module against the Dao library.
 But on the other platforms, you can simply use the following flags,
 @[list]
--- On Unix: @[green]-rdynamic@[green];
--- On Mac OSX: @[green]-undefined dynamic_lookup@[green];
+-- Unix 上: @[green]-rdynamic@[green];
+-- MacOSX 上: @[green]-undefined dynamic_lookup@[green];
 @[list]
-If you use DaoMake (@[node]tool.standard.daomake@[node]) to build your modules,
-these will be taken care of automatically.
+如果你使用DaoMake (@[node]tool.standard.daomake@[node]) 编译你的模块，
+这些都将被自动处理好。
 
 
 @[section]
-The Second Simple Extending Module
+第二个函数封装例子
 @[section]
 
-Now we will demonstrate how to create a function that can accept
-parameters and return a value.
-Suppose we want to create C function with the following Dao function prototype,
+现在我们将展示如何封装可接受参数和可返回值的函数。
+假定我们需要封装以下C函数
 @[code]
-# Dao function prototype
+float Test( int id, const char *name, int extra );
+@[code]
+并给最后的"extra"参数支持一个缺省值。
+那么我们将需要封装的函数以下面的原型注册到道里：
+@[code]
+# 道函数原型
 MyTest( id: int, name: string, extra = 0 ) => float
 @[code]
-So this function will take an integer parameter, a string parameter and 
-an extra integer parameter with default value. This prototype also indicates
-that it will return a float.
+这样，此函数将可以接受一个整数和一个字符串作为参数，以及另一个整数作为额外的参数。
+这个函数原型也表示此函数将返回一个单精度浮点数。
 
 
-In the C function, it is very easy to convert Dao data type to C data type,
-and to return C data type to Dao,
+在C封装函数里，将道数据类型转换到C数据类型的方式很简单，并且把C数据返回给道
+的方式也很简单：
+@[code(cxx)]
+void MyTestInC( DaoProcess *proc, DaoValue *param[], int nparam )
+{
+	daoint id = param[0]->xInteger.value;
+	char *name = param[1]->xString.value->chars;
+	daoint extra = param[2]->xInteger.value;
+	DaoProcess_PutFloat( proc, Test( id, name, extra ) );
+}
+@[code(cxx)]
+正如你所看到的，你不需要检查参数个数或类型，就可以直接得到参数的数据。
+当道程序调用这个函数时，它保证将有正确类型的参数值传递给这个函数。
+
+
+但为了使用上述数据转换方式，你将需要在你的模块源文件里包含其他道虚拟机的头文件
+（如@[green]daoValue.h@[green]）。
+并且你还需要对道语言的内部标准数据结构有所了解。
+如果你只想使用单一的@[green]dao.h@[green]头文件，你将需要使用那些
+@[cyan]DaoValue_TryGetXXX()@[cyan]函数。这些函数将以很小的额外开销
+作最少的类型检查，并返回适当的C数据。
 @[code(cxx)]
 void MyTestInC( DaoProcess *proc, DaoValue *param[], int nparam )
 {
 	daoint id = DaoValue_TryGetInteger( param[0] );
 	char *name = DaoValue_TryGetChars( param[1] );
 	daoint extra = DaoValue_TryGetInteger( param[2] );
-	printf( "MyTest: %i %s %i\n", id, name, extra );
-	DaoProcess_PutFloat( proc, 0.5*(id + extra) );
+	DaoProcess_PutFloat( proc, Test( id, name, extra ) );
 }
 @[code(cxx)]
-As you can see, there are no boilerplate codes to check the number of parameters
-or the type of parameters.
-When the execution reaches the function body of @[cyan]MyTestInC()@[cyan],
-it is guaranteed that all the parameter values are available with correct types.
+如果你是以合适的道函数原型注册了这个函数，那些@[cyan]DaoValue_TryGetXXX()@[cyan]
+里的类型检查都将成功，获得的都是正确的数据。
+函数@[cyan]DaoProcess_PutFloat()@[cyan] 是用来从C封装函数里返回一个单精度浮点数
+给道程序。这个浮点数将被放在到虚拟进程上合适的地方。
+详情请看以下小节。
 
 
-Actually the @[cyan]DaoValue_TryGetXXX()@[cyan] methods did check the value type,
-but in this case, they will always succeed. So if you include the header file
-@[green]daoValue.h@[green] in your source file, you can simple write the 
-function as the following to completely (and safely) remove the type checking,
+现在这个函数可被注册为：
 @[code(cxx)]
-void MyTestInC( DaoProcess *proc, DaoValue *param[], int nparam )
-{
-	daoint id = param[0]->xInteger.value;
-	char *name = DString_GetData( param[1]->xString.data );
-	daoint extra = param[2]->xInteger.value;
-	printf( "MyTest: %i %s %i\n", id, name, extra );
-	DaoProcess_PutFloat( proc, 0.5*(id + extra) );
-}
-@[code(cxx)]
-But the downside of this is that you need to be familiar with the internal Dao
-data structures.
-
-
-These @[cyan]DaoValue_TryGetXXX()@[cyan] functions will convert the Dao values
-to the requested C values.
-And @[cyan]DaoProcess_PutFloat()@[cyan] will put a float value at proper location
-as the returned value of the C function.
-Please see the following section(s) for more details.
-
-
-Now this function can be registered as:
-@[code(cxx)]
-// Register a function with parameters and returned value:
+// 注册一个带参数和返回值的函数:
 DaoNamespace_WrapFunction( nspace, MyTestInC, "MyTest(id:int,name:string,extra=0)=>float" );
 @[code(cxx)]
 
@@ -456,9 +462,14 @@ DaoNamespace_WrapFunction( nspace, MyTestInC, "MyTest(id:int,name:string,extra=0
 
 
 @[section]
-Basic wrapping C/C++ type
+C/C++类型的基本封装
 @[section]
 
+有两种使用C/C++类型来扩展道的方式。一种是不透明类型封装，
+这是封装已有的C/C++类型的标准方式。
+另一种是定义用户定制的C类型。
+
+第一种主要是用在封装已有的C/C++类型。
 There are two ways to extend Dao with user defined C/C++ types.
 One is to wrap it around by a @[green]DaoCdata@[green] object,
 and access it as an opaque pointer.
