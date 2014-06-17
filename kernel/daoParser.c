@@ -4447,7 +4447,18 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					if( block ){
 						DaoByteBlock_DeclareGlobal( block, name, var->value, var->dtype, pm );
 					}
-				}else if( cst && (explicit_store & DAO_DECL_STATIC) ){
+				}else{
+					int mode = (1<<1)|(((store & DAO_DECL_INVAR) != 0)<<2);
+					DaoParser_AddCode( self, DVM_SETVG, reg, id, mode, first, mid, end );
+					self->usingGlobal = 1;
+					if( explicit_store && block ){
+						DaoVariable *var = ns->variables->items.pVar[id];
+						DaoByteBlock_DeclareGlobal( block, name, NULL, var->dtype, pm );
+					}
+				}
+				break;
+			case DAO_STATIC_VARIABLE :
+				if( cst && (explicit_store & DAO_DECL_STATIC) ){
 					DaoVariable *var = ns->variables->items.pVar[id];
 					if( DaoParser_SetInitValue( self, var, value, abtp, start, end ) == 0 ){
 						return -1;
@@ -4456,16 +4467,10 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					if( block ){
 						DaoByteBlock_DeclareStatic( block, name, var->value, var->dtype, pm );
 					}
-				}else{
-					int mode = (1<<1)|(((store & DAO_DECL_INVAR) != 0)<<2);
-					DaoParser_AddCode( self, DVM_SETVG, reg, id, mode, first, mid, end );
-					self->usingGlobal = 1;
-					if( block && explicit_store && (store & DAO_DECL_GLOBAL) ){
-						DaoVariable *var = ns->variables->items.pVar[id];
-						DaoByteBlock_DeclareGlobal( block, name, NULL, var->dtype, pm );
-					}else if( block && (explicit_store & DAO_DECL_STATIC) ){
-						DaoByteBlock_DeclareStatic( block, name, NULL, extype, pm );
-					}
+				}else if( reg >= 0 ){
+					DaoParser_AddCode( self, DVM_SETVG, reg, id, (1<<1), first, mid, end );
+				}else if( explicit_store && block ){
+					DaoByteBlock_DeclareStatic( block, name, NULL, extype, pm );
 				}
 				break;
 			default :
@@ -4707,7 +4712,9 @@ void DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, D
 	}else if( storeType & DAO_DECL_STATIC ){
 		DaoValue *value = abtp ? abtp->value : NULL;
 		int id = DaoNamespace_AddStaticVar( nameSpace, name, value, abtp, self->lexLevel );
+		id = (id & ~(DAO_GLOBAL_VARIABLE<<24)) | (DAO_STATIC_VARIABLE<<24);
 		MAP_Insert( DaoParser_CurrentSymbolTable( self ), name, id );
+		routine->body->hasStatic = 1;
 	}
 	found = DaoParser_GetRegister( self, tok );
 	if( found >= 0 ){
@@ -4783,8 +4790,9 @@ static int DaoParser_GetRegister2( DaoParser *self, DaoToken *nametok )
 int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 {
 	int loc = DaoParser_GetRegister2( self, nametok );
+	int out = LOOKUP_ST(loc) > DAO_LOCAL_CONSTANT && LOOKUP_ST(loc) < DAO_CLOSURE_VARIABLE;
 	/* Search up-value if, name look up failed, or the name is not local: */
-	if( self->outerParser != NULL && (loc < 0 || LOOKUP_ST(loc) > DAO_CLOSURE_VARIABLE) ){
+	if( self->outerParser != NULL && (loc < 0 || out) ){
 		DaoRoutine *routine = self->routine;
 		int i = DaoParser_GetRegister( self->outerParser, nametok );
 		int st = LOOKUP_ST( i );
@@ -4792,7 +4800,7 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 		// Use up-value if, name look up failed, or the up-value is local;
 		// namely local data of the outer scope preceeds the global data;
 		 */
-		if( i >=0 && (loc < 0 || st <= DAO_CLOSURE_VARIABLE) ){
+		if( i >=0 && (loc < 0 || st <= DAO_LOCAL_CONSTANT) ){
 			if( st == DAO_LOCAL_CONSTANT ){
 				int id = LOOKUP_ID( i );
 				DaoValue *cst = self->outerParser->routine->routConsts->value->items.pValue[id];
@@ -4846,6 +4854,7 @@ DaoValue* DaoParser_GetVariable( DaoParser *self, int reg )
 	case DAO_CLASS_CONSTANT  : val = klass->constants->items.pConst[id]->value; break;
 	case DAO_GLOBAL_VARIABLE : val = ns->variables->items.pVar[id]->value; break;
 	case DAO_GLOBAL_CONSTANT : val = ns->constants->items.pConst[id]->value; break;
+	case DAO_STATIC_VARIABLE : val = ns->variables->items.pVar[id]->value; break;
 	default : break;
 	}
 	return val;
@@ -4870,12 +4879,13 @@ int DaoParser_GetNormRegister( DaoParser *self, int reg, int exp, int first, int
 		code = DVM_GETCL;
 		up = exp;
 		break;
-	case DAO_CLOSURE_VARIABLE : code = DVM_GETVS; break;
 	case DAO_OBJECT_VARIABLE  : code = DVM_GETVO; break;
 	case DAO_CLASS_VARIABLE   : code = DVM_GETVK; break;
 	case DAO_CLASS_CONSTANT   : code = DVM_GETCK; break;
 	case DAO_GLOBAL_VARIABLE  : code = DVM_GETVG; break;
 	case DAO_GLOBAL_CONSTANT  : code = DVM_GETCG; break;
+	case DAO_STATIC_VARIABLE  : code = DVM_GETVG; up = 1; break;
+	case DAO_CLOSURE_VARIABLE : code = DVM_GETVS; break;
 	default : break;
 	}
 	self->usingGlobal |= code == DVM_GETVG;
@@ -5034,7 +5044,9 @@ static int DaoParser_Import( DaoParser *self, DaoNamespace *mod, DString *name )
 	}else{
 		DaoVariable *var = mod->variables->items.pVar[ LOOKUP_ID(it->value.pInt) ];
 		ret = DaoNamespace_AddStaticVar( NS, name, var->value, var->dtype, level );
+		ret = (ret & ~(DAO_GLOBAL_VARIABLE<<24)) | (DAO_STATIC_VARIABLE<<24);
 		MAP_Insert( symtable, name, ret );
+		self->routine->body->hasStatic = 1;
 	}
 	if( ret < 0 ) goto ErrorSymbolDefined;
 	return ret;
@@ -5272,6 +5284,7 @@ CleanUp:
 		case DAO_OBJECT_VARIABLE : set = DVM_SETVO; break;
 		case DAO_CLASS_VARIABLE  : set = DVM_SETVK; break;
 		case DAO_GLOBAL_VARIABLE : set = DVM_SETVG; break;
+		case DAO_STATIC_VARIABLE : set = DVM_SETVG; break;
 		}
 		self->usingGlobal |= set == DVM_SETVG;
 		if( set ) DaoParser_AddCode( self, set, loc, id, up, start+2, eq, colon1 );

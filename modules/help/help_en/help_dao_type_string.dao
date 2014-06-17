@@ -9,21 +9,22 @@ String Type
 @[title]
 
 @[text]
-@[green]string@[green] is a primitive data type representing a sequence of characters,
-which can be either single-byte characters or wide characters.
-Strings with single-byte characters are normally declared with string literals that
-are quoted with single quotation marks.
-And strings with wide characters are declared with string literals that are quoted
-with double qutotation marks. 
+
+@[green]string@[green] is a primitive data type that represents a sequence of bytes.
+Dao strings are @[green]not@[green] null-terminated, so they are effectively byte 
+arrays that can be used to store any sequences of bytes.
+But when processed as text, it is usually assumed to be encoded in UTF-8.
+Strings can be expressed as string literals quoted with double or single
+quotation marks.
 
 
 @[subsection]Basic Definition@[subsection]
 
 @[code(syntax)]
-ByteCharacterString ::= "'" Characters "'"
-WideCharacterString ::= '"' Characters '"'
+SingleQuoteString ::= ' ' ' ValidCharSequence ' ' '
+DoubleQuoteString ::= ' " ' ValidCharSequence ' " '
 @[code(syntax)]
-where @[green]Characters@[green] can be anything but the quotation marks
+where @[green]ValidCharSequence@[green] can be anything but the quotation marks
 without backslash escapes. Any characters in a string can be preceded with
 a escape backslash to specify a charater represented by:
 @[list]
@@ -41,26 +42,6 @@ and a line break by @[green]\n@[green] and a carriage return by @[green]\r@[gree
 Any other character escaped by a backslash literally represents that character itself.
 
 
-Besides the basic quotation marks, a few other quotation marks can
-also be used to enclose string literals.
-These include the Double Byte Characters (DBC) quotation marks
-(0x27+0xfee0 for single quotation mark and 0x22+0xfee0 for double quotation mark),
-the left and right single quotation marks (0x2018, 0x2019),
-and the left and right double quotation marks (0x201c, 0x201d).
-
-
-Dao strings are @[green]not@[green] null-terminated, so they are effectively byte 
-or character arrays that can be used to store any sequences of bytes or characters.
-When a string of single-byte characters is used to store text, 
-it is interpreted as Multi-Bytes String (MBS).
-Similarly a string of wide characters is interpreted as Wide Character String (WCS)
-for storing text.
-For convenience, we will simply use Multi-Bytes String (MBS) and 
-Wide Character String (WCS) to refer to the two types of strings.
-
-
-These two types of strings can be mixed together, one can be converted to               the other automatically when necessary. But it is better to use one of 
-them consistently to avoid unnecesary conversions.
 
 
 @[subsection]Verbatim String@[subsection]
@@ -68,17 +49,12 @@ them consistently to avoid unnecesary conversions.
 A verbatim string is a string that can contain anything
 without interpreting escape characters.
 @[code(syntax)]
-VerbatimMBString ::= '@[' [Delimiter] ']' Characters '@[' [Delimiter] ']'
-VerbatimWCString ::= '@@[' [Delimiter] ']' Characters '@@[' [Delimiter] ']'
+VerbatimString ::= '@[' [Delimiter] ']' Characters '@[' [Delimiter] ']'
 @[code(syntax)]
 Where @[cyan]Delimiter@[cyan] can contain letters, digits, underscores, 
 blank spaces, dots, colons, dashes and assignment marks.
 It must be unique such that @[green]'@[' [Delimiter] ']'@[green]
-or @[green]'@@[' [Delimiter] ']'@[green] does not appear in the string content.
-If @[green]@[]@[green] is used to enclose a verbatim string, this string
-will be stored as multi-byte string.
-And if @[green]@@[]@[green] is used to enclose a verbatim string, this string
-will be stored as wide character string.
+does not appear in the string content.
 
 
 @[subsection]Examples@[subsection]
@@ -91,9 +67,8 @@ wcs2 = "\u9053\u8bed\u8a00" # the same as wcs;
 
 # verbatim strings:
 mbs = @[] some text @[]
-wcs = @@[] some text @@[]
 
-# C++ codes in MBS:
+# C++ codes in verbatim string:
 cpp =
 @[cpp x]
 class AA
@@ -104,7 +79,7 @@ struct BB{};
 @[cpp x]
 
 
-# Lua codes in MBS:
+# Lua codes in verbatim string:
 lua =
 @[lua]
 local a = 1;
@@ -113,13 +88,13 @@ function Test()
 end
 @[lua]
 
-# HTML codes in WCS:
+# HTML codes in verbatim string:
 html =
-@@[html:123456]
+@[html:123456]
 <body>
 <span name="test"></span>
 </body>
-@@[html:123456]
+@[html:123456]
 @[code]
 
 @[text]
@@ -142,452 +117,378 @@ Dao string methods
 @[title]
 
 @[text]
+
+Here is the full list of string methods:
 @[code]
-chop( self :string )
-clear( self :string )
-convert( self :string, to :enum<mbs, wcs> ) => string
-erase( self :string, start = 0, n = -1 )
-find( self :string, str : string, from = 0, reverse = 0 ) => int
-insert( self :string, str : string, index = 0 )
-replace( self :string, str1 : string, str2 : string, index = 0 )
-replace( self :string, str1 : string, table : map<string,string>, max=0 )
-expand( self :string, keys :map<string,string>, spec='$', keep=1 )
-expand( self :string, keys : tuple, spec='$', keep=1 )
-resize( self :string, size : int )
-size( self :string ) => int
-split( self :string, sep : string, quote="", rm=1 ) => list<string>
-tolower( self :string ) => string
-toupper( self :string ) => string
-trim( self :string ) => string
-type( self :string ) => enum<mbs, wcs>
+string( count: int, char = 0 ) => string
+string( count: int )[index: int => string] => string
+size( invar self: string ) => int
+chop( invar self: string, utf8 = 0 ) => string
+trim( invar self: string, where: enum<head;tail> = $head+$tail, utf8 = 0 ) => string
+find( invar self: string, str: string, from = 0, reverse = 0 ) => int
+convert( invar self: string, to: enum<local,utf8,lower,upper> ) => string
+replace( invar self: string, str1: string, str2: string, index = 0 ) => string
+expand( invar self: string, invar subs: map<string,string>, spec = "$", keep = 1 )
+	=> string
+split( invar self: string, sep = "" ) => list<string>
+iterate( invar self: string, unit: enum<byte,char> = $byte )[char: int, index: int]
+collect( invar self: string, unit: enum<byte,char> = $byte )
+	[char: int, index: int => none|int] => string
+fetch( invar self: string, pattern: string, group = 0, start = 0, end = -1 )
+	=> string
+match( invar self: string, pattern: string, group = 0, start = 0, end = -1 )
+	=> tuple<start:int,end:int>|none
+change( invar self: string, pattern: string, target: string, index = 0, 
+	start = 0, end = -1 ) => string
+capture( invar self: string, pattern: string, start = 0, end = -1 ) => list<string>
+extract( invar self: string, pattern: string, 
+	mtype: enum<both,matched,unmatched> = $matched ) => list<string>
+scan( invar self: string, pattern: string, start = 0, end = -1 )
+	[start: int, end: int, state: enum<unmatched,matched> => none|@V]
+	=> list<@V>
 @[code]
 
-See the subentries listed below for details.
+
+@[subsection]
+Initialization Methods
+@[subsection]
+
+In addition to creating string by using string literals,
+the following to initialization methods are provided for
+convenient and flexible construction of strings.
+@[code]
+string( count: int, char = 0 ) => string
+string( count: int )[index: int => string] => string
+@[code]
+
+
+@[subsubsection]
+string(count:int,char=0)=>string
+@[subsubsection]
+@[code]
+string( count: int, char = 0 ) => string
+@[code]
+Create and return a string that is composed of "count" of "char".
+
+
+Examples,
+@[code]
+S1 = string( 5, 'S'[0] )   # SSSSS
+S2 = string( 3, 0x9053 )   # 道道道
+@[code]
+
+
+@[subsubsection]
+string(count:int)[index:int=>string]=>string
+@[subsubsection]
+@[code]
+string( count: int )[index: int => string] => string
+@[code]
+Create and return a string that is concatenation of the resulting
+strings from the exection of the code section.
+
+
+Examples,
+@[code]
+S1 = string( 5 ){ "S" }       # SSSSS
+S2 = string( 2 ){ "道语言" }  # 道语言道语言
+S3 = string( 6 ){ [index] (string) index }  # 012345
+@[code]
+
+
+@[subsection]
+Methods
+@[subsection]
+
+The following string methods are provided for convenient manipulation of strings.
+@[code]
+size( invar self: string ) => int
+chop( invar self: string, utf8 = 0 ) => string
+trim( invar self: string, where: enum<head;tail> = $head+$tail, utf8 = 0 ) => string
+find( invar self: string, str: string, from = 0, reverse = 0 ) => int
+convert( invar self: string, to: enum<local,utf8,lower,upper> ) => string
+replace( invar self: string, str1: string, str2: string, index = 0 ) => string
+expand( invar self: string, invar subs: map<string,string>, spec = "$", keep = 1 )
+	=> string
+split( invar self: string, sep = "" ) => list<string>
+iterate( invar self: string, unit: enum<byte,char> = $byte )[char: int, index: int]
+collect( invar self: string, unit: enum<byte,char> = $byte )
+	[char: int, index: int => none|int] => string
+@[code]
+
+
+@[subsubsection]
+size(invar self:string)=>int
+@[subsubsection]
+@[code]
+size( invar self: string ) => int
+@[code]
+Return the number of bytes in the string.
+
+
+Examples,
+@[code]
+S = "ABCDE"
+len1 = S.size()
+len2 = "XYZ".size()
+@[code]
+
+For efficiency, you might consider to use the size operator @[code]%@[code],
+@[code]%S@[code] gives the length of the string.
+
+
+@[subsubsection]
+chop(invar self:string,utf8=0)=>string
+@[subsubsection]
+@[code]
+chop( invar self: string, utf8 = 0 ) => string
+@[code]
+Chop EOF, '\n' and/or '\r' off the end of the string;
+
+-- EOF  is first checked and removed if found;
+
+-- '\n' is then checked and removed if found;
+
+-- '\r' is last checked and removed if found;
+
+If "utf8" is not zero, all bytes that do not constitute a
+valid UTF-8 encoding sequence are removed from the end.
+
+
+Examples,
+@[code]
+S1 = "line\n"
+S2 = S1.chop()
+
+S3 = "道语言"[:7]
+S4 = S3.chop( 1 )  # 道语
+@[code]
+
+
+@[subsubsection]
+trim(invarself:string,where:enum<head;tail>=$head+$tail,utf8=0)=>string
+@[subsubsection]
+@[code]
+trim( invar self: string, where: enum<head;tail> = $head+$tail, utf8 = 0 ) => string
+@[code]
+Trim whitespaces from the head and/or the tail of the string;
+
+If "utf8" is not zero, all bytes that do not constitute a
+valid UTF-8 encoding sequence are trimmed as well.
+
+
+Examples,
+@[code]
+S1 = "\tline\n"
+S2 = S1.trim()         # "line"
+S3 = S1.trim( $head )  # "line\n"
+
+S4 = "\t道语言"[:7]
+S5 = S4.trim()            # "道语??"
+S6 = S4.trim( $tail, 1 )  # "\t道语"
+@[code]
+
+
+@[subsubsection]
+find(invar self:string,str:string,from=0,reverse=0)=>int
+@[subsubsection]
+@[code]
+find( invar self: string, str: string, from = 0, reverse = 0 ) => int
+@[code]
+Find the first occurrence of "str" in this string, searching from "from";
+
+If "reverse" is zero, search forward, otherwise backward;
+
+Return -1, if "str" is not found; Otherwise,
+
+Return the index of the first byte of the found substring for forward searching;
+
+Return the index of the last byte of the found substring for backward searching;
+
+
+Examples,
+@[code]
+S1 = "dao programming language and dao virtual machine"
+P1 = S1.find( "dao" )         # Find the first "dao";
+P2 = S2.find( "dao", -1, 1 )  # Find the last "dao";
+@[code]
+
+
+@[subsubsection]
+convert(invar self:string,to:enum<local,utf8,lower,upper>)=>string
+@[subsubsection]
+@[code]
+convert( invar self: string, to: enum<local,utf8,lower,upper> ) => string
+@[code]
+Convert the string:
+
+-- To local encoding if the string is encoded in UTF-8;
+
+-- To UTF-8 encoding if the string is not encoded in UTF-8;
+
+-- To lower cases;
+
+-- To upper cases;
+
+
+Examples,
+@[code]
+S1 = "Dao Language"
+S2 = S1.convert( $upper )  # DAO LANGUAGE
+S3 = S1.convert( $lower )  # dao language
+@[code]
+
+
+@[subsubsection]
+replace(invar self:string,str1:string,str2:string,index=0)=>string
+@[subsubsection]
+@[code]
+replace( invar self: string, str1: string, str2: string, index = 0 ) => string
+@[code]
+Replace the substring "str1" in "self" to "str2";
+
+Replace all occurrences of "str1" to "str2" if "index" is zero;
+
+Otherwise, replace only the "index"-th occurrence;
+
+Positive "index" is counted forwardly;
+
+Negative "index" is counted backwardly;
+
+
+Examples,
+@[code]
+S1 = "dao programming language and dao virtual machine"
+S2 = S1.replace( "dao", "fast", 1 )   # replace the first "dao" with "fast";
+S3 = S1.replace( "dao", "fast", -1 )  # replace the last  "dao" with "fast";
+S4 = S1.replace( "dao", "fast", 0 )   # replace all "dao" with "fast";
+@[code]
+
+
+@[subsubsection]
+expand(invar self:string,invar subs:map<string,string>,spec="$",keep=1)=>...
+@[subsubsection]
+@[code]
+expand( invar self: string, invar subs: map<string,string>, spec = "$", keep = 1 )
+	=> string
+@[code]
+Expand this string into a new string with substrings from the keys
+of "subs" substituted with the corresponding values of "subs".
+
+If "spec" is not an empty string, each key has to be occurred inside
+a pair of parenthesis preceded with "spec", and the "spec", the
+parenthesis and the key are together substituted by the corresponding
+value from "subs";
+
+If "spec" is not empty and "keep" is zero, "spec(key)"
+that contain substrings not found in the keys of "subs" are removed;
+Otherwise kept.
+
+
+Examples,
+@[code]
+S1 = '<a href="@(url)">@(name)</a>'
+keyvalues = { "url" => "http://daovm.net", "name" => "Dao Website" }
+S2 = S1.expand( keyvalues, "@" )  # <a href="http://daovm.net">Dao Website</a>
+@[code]
+
+
+@[subsubsection]
+split(invar self:string,sep="")=>list<string>
+@[subsubsection]
+@[code]
+split( invar self: string, sep = "" ) => list<string>
+@[code]
+Split the string by seperator "sep", and return the tokens as a list.
+
+If "sep" is empty, split at character boundaries assuming UTF-8 encoding.
+
+
+Examples,
+@[code]
+S1 = "dao::io::stdio"
+L1 = S1.split( "::" )  # { "dao", "io", "stdio" }
+
+S2 = "道语言"
+L2 = S2.split()  # { "道", "语", "言" }
+@[code]
+
+
+@[subsubsection]
+iterate(invar self:string,unit:enum<byte,char>=$byte)[char:int,index:int]
+@[subsubsection]
+@[code]
+iterate( invar self: string, unit: enum<byte,char> = $byte )[char: int, index: int]
+@[code]
+Iterate over each unit of the string.
+
+If "unit" is "$byte", iterate per byte;
+
+If "unit" is "$char", iterate per character; Assuming UTF-8 encoding;
+
+Each byte that is not part of a valid UTF-8 encoding unit is iterated once.
+
+For the code section parameters, the first will hold the byte value or
+character codepoint for each iteration, and the second will be the byte
+location in the string.
+
+
+Examples,
+@[code]
+@[code]
+
+
+@[subsubsection]
+collect(invar self:string,unit:enum<byte,char>=$byte)[...]=>string
+@[subsubsection]
+@[code]
+collect( invar self: string, unit: enum<byte,char> = $byte )
+	[char: int, index: int => none|int] => string
+@[code]
+Map each unit of the string to a new value and return a new string form
+from the mapped values.
+
+The parameters have the same meaning as in "iterate()";
+
+
+Examples,
+@[code]
+@[code]
+
+
+
+
+
+@[subsection]
+Pattern Matching Methods
+@[subsection]
+
+Please see @[node]dao.type.string.pattern@[node] for more information.
+
+
+
+@[code]
+fetch( invar self: string, pattern: string, group = 0, start = 0, end = -1 )
+	=> string
+match( invar self: string, pattern: string, group = 0, start = 0, end = -1 )
+	=> tuple<start:int,end:int>|none
+change( invar self: string, pattern: string, target: string, index = 0, 
+	start = 0, end = -1 ) => string
+capture( invar self: string, pattern: string, start = 0, end = -1 ) => list<string>
+extract( invar self: string, pattern: string, 
+	mtype: enum<both,matched,unmatched> = $matched ) => list<string>
+scan( invar self: string, pattern: string, start = 0, end = -1 )
+	[start: int, end: int, state: enum<unmatched,matched> => none|@V]
+	=> list<@V>
+@[code]
+
 
 @[text]
 
 
-@[name]
-dao.type.string.method.chop
-@[name]
 
-@[title]
-chop( self :string )
-@[title]
 
-@[text]
-@[code]
-chop( self :string )
-@[code]
-Chop off @[cyan]EOF@[cyan], @[cyan]\n@[cyan] and @[cyan]\r@[cyan]
-from the end of a string.
-If the string is a MBS and contains at least 95% bytes with valid UTF-8 encodings,
-the string is assume to be a UTF-8 string, and any bytes at the end with
-invalid UTF-8 encodings are chopped off as well.
-@[text]
 
-@[name]
-dao.type.string.method.erase
-@[name]
-
-@[title]
-erase( self :string )
-@[title]
-
-@[text]
-@[code]
-erase( self :string, start = 0, n = -1 )
-@[code]
-Erase @[cyan]n@[cyan] characters starting from index @[cyan]start@[cyan].
-If @[cyan]n=-1@[cyan], erase all the rest.
-
-@[text]
-
-@[name]
-dao.type.string.method.find
-@[name]
-
-@[title]
-find( self :string )
-@[title]
-
-@[text]
-@[code]
-find( self :string, str : string, from = 0, reverse = 0 ) => int
-@[code]
-Find substring @[cyan]str@[cyan], starting from @[cyan]from@[cyan];
-search backward if @[cyan]reverse@[cyan] is true.
-Return the index of the first occurrence of @[cyan]str@[cyan] if found,
-otherwise return -1.
-
-@[text]
-
-@[name]
-dao.type.string.method.insert
-@[name]
-
-@[title]
-insert( self :string )
-@[title]
-
-@[text]
-@[code]
-insert( self :string, str : string, index = 0, remove = 0, copy = 0 )
-@[code]
-Insert substring @[cyan]str@[cyan] at @[cyan]index@[cyan].
-If @[cyan]remove@[cyan] is greater than zero, @[cyan]remove@[cyan] characters
-are removed from the insertion point. And if @[cyan]copy@[cyan] is greater
-than zero, only @[cyan]copy@[cyan] characters are copied to the insertion point.
-
-@[text]
-
-@[name]
-dao.type.string.method.replace
-@[name]
-
-@[title]
-replace( self :string )
-@[title]
-
-@[text]
-@[code]
-replace( self :string, str1 :string, str2 :string, index = 0 )
-@[code]
-Replace the @[cyan]index@[cyan]-th occurrence of substring @[cyan]str1@[cyan] 
-to substring @[cyan]str2@[cyan];
-the index starts from 1, which means the first, and 0 means all.
-
-@[code]
-replace( self :string, table :map<string,string>, max = 0 )
-@[code]
-Replace the occurrence of the keys of @[cyan]table@[cyan] by the corresponding values.
-If @[cyan]max@[cyan] is zero, replace the shorter key first, otherwise,
-replace the longer first.
-
-@[text]
-
-@[name]
-dao.type.string.method.expand
-@[name]
-
-@[title]
-expand( self :string )
-@[title]
-
-@[text]
-@[code]
-expand( self :string, keys :map<string,string>, spec = '$', keep = 1 ) => string
-@[code]
-If the string contains place holders in form of @[cyan]$(name)@[cyan],
-where @[cyan]$@[cyan] is the special character passed in by @[cyan]spec@[cyan],
-this method will expand or fill at each place holder by the value string
-from @[cyan]keys@[cyan] with key equal to the name of the place holder.
-
-
-If @[cyan]keep@[cyan] is zero, place holders with names not found in @[cyan]keys@[cyan]
-will be replaced by empty string, namely, removing the place holders;
-otherwise the are kept.
-
-@[code(dao)]
-tpl = 'The quick brown $(A) jumps over the lazy $(B)';
-str = tpl.expand( { 'A' => 'fox', 'B' => 'dog' } );
-io.writeln( str );
-@[code(dao)]
-
-@[text]
-
-@[name]
-dao.type.string.method.expand
-@[name]
-
-@[title]
-expand( self :string )
-@[title]
-
-@[text]
-@[code]
-expand( self :string, keys :tuple, spec = '$', keep = 1 ) => string
-@[code]
-If the string contains place holders in form of @[cyan]$(name)@[cyan],
-where @[cyan]$@[cyan] is the special character passed in by @[cyan]spec@[cyan],
-this method will expand or fill at each place holder by the item value string
-from @[cyan]keys@[cyan] with item field name equal to the name of the place holder.
-
-If @[cyan]keep@[cyan] is zero, place holders with names not found in @[cyan]keys@[cyan]
-will be replaced by empty string, namely, removing the place holders;
-otherwise the are kept.
-
-@[code(dao)]
-tpl = 'The quick brown $(A) jumps over the lazy $(B)';
-str = tpl.expand( ( A => 'fox', B => 'dog' ) );
-io.writeln( str );
-@[code(dao)]
-
-@[text]
-
-@[name]
-dao.type.string.method.resize
-@[name]
-
-@[title]
-resize( self :string )
-@[title]
-
-@[text]
-@[code]
-resize( self :string, size :int )
-@[code]
-Resize the string to length @[cyan]@[cyan], and the extended part are filled with blank space.
-
-@[text]
-
-@[name]
-dao.type.string.method.size
-@[name]
-
-@[title]
-size( self :string )
-@[title]
-
-@[text]
-@[code]
-size( self :string ) => int
-@[code]
-Return the length of a string.
-
-@[text]
-
-@[name]
-dao.type.string.method.split
-@[name]
-
-@[title]
-split( self :string )
-@[title]
-
-@[text]
-@[code]
-split( self :string, sep :string, quote = '', quote = '', rm = 1 ) => list<string>
-@[code]
-Split the string by seperator @[cyan]sep@[cyan], and return the tokens as a list. 
-Quotation symbols may also be specified by @[cyan]quote@[cyan]
-to avoid breaking the string inside a pair of quotes. 
-If the quotations symbols appear in the
-begin and end of a token and @[cyan]rm@[cyan] is true, they are removed.
-The seperators are not included in the result list.
-
-@[text]
-
-#{
-@[name]
-dao.type.string.method.tokenize
-@[name]
-
-@[title]
-tokenize( self :string )
-@[title]
-
-@[text]
-@[code]
-tokenize( self :string, seps : string, quotes="", backslash=0 ) => list<string>
-@[code]
-Tokenize the string by a set of separators. 
-Each character in @[cyan]seps@[cyan] is treated as a separator.
-Quotation symbols may also be specified to avoid breaking the string inside a pair of quotes.
-If @[cyan]backslash@[cyan] is true, the separators and quotes preceded by a backslash are considered as normal characters.
-The separators, quotes and backslashes are not removed from the result tokens.
-If @[cyan]simplify@[cyan] is true, the blank spaces are removed from the beginning and end of
-each token, and then empty tokens are remove from the resulting list.
-
-@[text]
-
-
-@[name]
-dao.type.string.method.tonumber
-@[name]
-
-@[title]
-tonumber( self :string )
-@[title]
-
-@[text]
-@[code]
-tonumber( self :string, base=10 ) => double
-@[code]
-Convert the string to a number with base equal to @[cyan]base@[cyan].
-
-@[text]
-#}
-
-
-@[name]
-dao.type.string.method.tolower
-@[name]
-
-@[title]
-tolower( self :string )
-@[title]
-
-@[text]
-@[code]
-tolower( self :string ) => string
-@[code]
-Convert the string to lower case.
-Return @[cyan]self@[cyan] string.
-
-@[text]
-
-@[name]
-dao.type.string.method.toupper
-@[name]
-
-@[title]
-toupper( self :string )
-@[title]
-
-@[text]
-@[code]
-toupper( self :string ) => string
-@[code]
-Convert the string to upper case.
-Return @[cyan]self@[cyan] string.
-@[text]
-
-
-
-################################################################################
-################################################################################
-########
-######## Functional Methods
-########
-################################################################################
-################################################################################
-
-@[name]
-dao.type.string.functional
-@[name]
-
-@[title]
-Dao String Functional Methods
-@[title]
-
-@[text]
-
-@[code]
-iterate( self :string )[char :int, index :int]
-count( self :string )[char :int, index :int =>int] => int
-map( self :string )[char :int, index :int =>int] => string
-select( self :string )[char :int, index :int =>int] => string
-index( self :string )[char :int, index :int =>int] => list<int>
-apply( self :string )[char :int, index :int =>int] => string
-@[code]
-
-See the subentries listed below for details.
-
-@[text]
-
-
-
-@[name]
-dao.type.string.functional.iterate
-@[name]
-
-@[title]
-iterate( self :string )
-@[title]
-
-@[text]
-@[code]
-iterate( self :string ) => string
-@[code]
-Convert the string to upper case.
-Return @[cyan]self@[cyan] string.
-@[text]
-
-
-@[name]
-dao.type.string.functional.count
-@[name]
-
-@[title]
-count( self :string )
-@[title]
-
-@[text]
-@[code]
-count( self :string ) => string
-@[code]
-Convert the string to upper case.
-Return @[cyan]self@[cyan] string.
-@[text]
-
-
-@[name]
-dao.type.string.functional.map
-@[name]
-
-@[title]
-map( self :string )
-@[title]
-
-@[text]
-@[code]
-map( self :string ) => string
-@[code]
-Convert the string to upper case.
-Return @[cyan]self@[cyan] string.
-@[text]
-
-
-@[name]
-dao.type.string.functional.select
-@[name]
-
-@[title]
-select( self :string )
-@[title]
-
-@[text]
-@[code]
-select( self :string ) => string
-@[code]
-Convert the string to upper case.
-Return @[cyan]self@[cyan] string.
-@[text]
-
-
-@[name]
-dao.type.string.functional.index
-@[name]
-
-@[title]
-index( self :string )
-@[title]
-
-@[text]
-@[code]
-index( self :string ) => string
-@[code]
-Convert the string to upper case.
-Return @[cyan]self@[cyan] string.
-@[text]
-
-
-@[name]
-dao.type.string.functional.apply
-@[name]
-
-@[title]
-apply( self :string )
-@[title]
-
-@[text]
-@[code]
-apply( self :string ) => string
-@[code]
-Convert the string to upper case.
-Return @[cyan]self@[cyan] string.
-@[text]
 
 
 

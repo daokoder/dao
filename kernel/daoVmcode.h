@@ -42,7 +42,7 @@ enum DaoOpcode
 	DVM_GETVS , /* Get closure variable:  C = A:::B;  B, index;  A=0; */
 	DVM_GETVO , /* Get instance object variable:  C = A:::B;  B, index;  A=0; */
 	DVM_GETVK , /* Get class static variable:  C = A:::B;  B, index;  A=0; */
-	DVM_GETVG , /* Get global variable:  C = A:::B;  B, index;  A=0; */
+	DVM_GETVG , /* Get global/static variable:  C = A:::B;  B, index;  A=0/1; */
 	DVM_GETI  , /* Get item(s):  C = A[B];  A, register;  B, register; */
 	DVM_GETDI , /* Get item(s):  C = A[B];  A, register;  B, direct index; */
 	DVM_GETMI , /* Get item(s):  C = A[A+1, ..., A+B]; */
@@ -51,14 +51,14 @@ enum DaoOpcode
 	DVM_SETVS , /* Set closure variable:  C:::B = A;  B, index;  C=0; */
 	DVM_SETVO , /* Set instance object variable:  C:::B = A;  B, index;  C=0; */
 	DVM_SETVK , /* Set class static variable:  C:::B = A;  B, index;  C=0; */
-	DVM_SETVG , /* Set global variable:  C:::B = A;  C: Bit1, zero; Bit2, decl; Bit3, invar; */
+	DVM_SETVG , /* Set global/static variable:  C:::B = A;  C: C1, 0/1; C2, decl; C3, invar; */
 	DVM_SETI  , /* Set item(s):  C[B] = A; */
 	DVM_SETDI , /* Set item(s):  C[B] = A;  B, direct index; */
 	DVM_SETMI , /* Set item(s):  C[C+1, ..., C+B] = A; */
 	DVM_SETF  , /* Set field:  C.B = A or C::B = A; */
 	DVM_LOAD ,  /* Put local value A as reference at C; */
 	DVM_CAST ,  /* Cast A to B and store at C:  C = (B)A;  B, local const index; */
-	DVM_MOVE ,  /* Move A to C:  C = A;  C: Bit1, explicit; Bit2, decl; Bit3, invar; */
+	DVM_MOVE ,  /* Move A to C:  C = A;  B: B1, explicit; B2, decl; B3, invar; */
 	DVM_NOT ,   /* Not:  C = ! A; */
 	DVM_MINUS , /* Unary minus:  C = - A; */
 	DVM_TILDE , /* Bitwise not:  C = ~ A */

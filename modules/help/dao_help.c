@@ -404,7 +404,13 @@ static void DaoxStream_WriteParagraph( DaoxStream *self, DString *text, int offs
 			/* Skip leading space; */
 		}else{
 			if( self->output ){
-				DString_AppendChars( self->output, chars );
+				if( self->fmtHTML && state.value == '<' ){
+					DString_AppendChars( self->output, "&lt;" );
+				}else if( self->fmtHTML && state.value == '>' ){
+					DString_AppendChars( self->output, "&gt;" );
+				}else{
+					DString_AppendChars( self->output, chars );
+				}
 			}else{
 				DaoStream_WriteChars( self->stream, chars );
 			}

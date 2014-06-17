@@ -122,7 +122,8 @@ struct DaoRoutineBody
 	DMap   *localVarType;  /* DMap<int,DaoType*> local variable types */
 
 	ushort_t  regCount;
-	ushort_t  exeMode;
+	uchar_t   exeMode;
+	uchar_t   hasStatic;
 	ushort_t  codeStart;
 	ushort_t  codeEnd;
 

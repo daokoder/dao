@@ -171,8 +171,8 @@ when an expression for running time routine creation is executed.
 If the expression should produce a closure, a @[green]new@[green] routine
 with captured up values is always created;
 but if the expression should produce an ordinary anonymous routine,
-the @[green]same@[green] might be returned.
-For example, the following "MakeRoutine()" function will alway return the
+the @[green]same@[green] routine might be returned.
+For example, the following "MakeRoutine()" function will always return the
 same routine object,
 @[code]
 routine MakeRoutine()
@@ -181,8 +181,22 @@ routine MakeRoutine()
 		return value * value
 	}
 }
-rout = MakeRoutine();
-rout( 123 )
+io.writeln( MakeRoutine(), MakeRoutine() )
+@[code]
+This happens when the anonymous function has no static variables.
+If it has, a new routine is always created just like
+new routines are always created for closures.
+For example, the following "MakeRoutine()" function will always
+return a new routine object,
+@[code]
+routine MakeRoutine()
+{
+	return routine( value: double ){
+		static dummy = 123
+		return value * value
+	}
+}
+io.writeln( MakeRoutine(), MakeRoutine() )
 @[code]
 
 

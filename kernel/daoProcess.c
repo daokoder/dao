@@ -5831,12 +5831,23 @@ static void DaoProcess_MapTypes( DaoProcess *self, DMap *deftypes )
 		MAP_Insert( deftypes, it->value.pType->nested->items.pType[0], V );
 	}
 }
-
+static int DaoNamespace_CopyStaticVar( DaoNamespace *self, int id, DMap *map )
+{
+	DNode *it = MAP_Find( map, id );
+	if( it == NULL ){
+		DaoVariable *var = self->variables->items.pVar[id];
+		var = DaoVariable_New( var->value, var->dtype );
+		DArray_Append( self->variables, var );
+		it = MAP_Insert( map, id, self->variables->size-1 );
+	}
+	return it->value.pInt;
+}
 void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoType *tp;
 	DaoValue **pp2, **pp = self->activeValues + vmc->a + 1;
 	DaoRoutine *closure, *proto = (DaoRoutine*) self->activeValues[vmc->a];
+	DaoNamespace *NS = proto->nameSpace;
 	DMap *deftypes;
 	int i, j, k, m, K;
 	if( proto->body->vmCodes->size ==0 && proto->body->annotCodes->size ){
@@ -5845,7 +5856,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 			return;
 		}
 	}
-	if( proto->body->upValues == NULL && vmc->b == 0 ){
+	if( vmc->b == 0 && proto->body->upValues == NULL && proto->body->hasStatic == 0 ){
 		DaoProcess_SetValue( self, vmc->c, (DaoValue*) proto );
 		if( proto->attribs & DAO_ROUT_DEFER ) DArray_Append( self->defers, proto );
 		return;
@@ -5881,12 +5892,35 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	if( DaoRoutine_SetVmCodes2( closure, proto->body->vmCodes ) ==0 ){
 		DaoProcess_RaiseError( self, NULL, "function creation failed" );
 	}
+	if( proto->body->hasStatic ){
+		DMap *updated = DMap_New(0,0);
+		DNode *it;
+		for(i=0; i<closure->body->vmCodes->size; ++i){
+			DaoVmCodeX *vmcx = closure->body->annotCodes->items.pVmc[i];
+			DaoVmCode *vmc = closure->body->vmCodes->data.codes + i;
+			switch( vmc->code ){
+			case DVM_GETVG :
+			case DVM_GETVG_I : case DVM_GETVG_F :
+			case DVM_GETVG_D : case DVM_GETVG_C :
+				if( vmc->a == 0 ) break;
+				vmc->b = vmcx->b = DaoNamespace_CopyStaticVar( NS, vmc->b, updated );
+				break;
+			case DVM_SETVG :
+			case DVM_SETVG_II : case DVM_SETVG_FF :
+			case DVM_SETVG_DD : case DVM_SETVG_CC :
+				if( (vmc->c & 1) == 0 ) break;
+				vmc->b = vmcx->b = DaoNamespace_CopyStaticVar( NS, vmc->b, updated );
+				break;
+			}
+		}
+		DMap_Delete( updated );
+	}
 	if( proto->attribs & DAO_ROUT_DEFER ) DArray_Append( self->defers, closure );
 #if 0
 	DaoRoutine_PrintCode( proto, self->vmSpace->stdioStream );
+#endif
 	DaoRoutine_PrintCode( closure, self->vmSpace->stdioStream );
 	printf( "%s\n", closure->routType->name->chars );
-#endif
 }
 
 
