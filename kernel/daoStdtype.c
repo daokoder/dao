@@ -1331,7 +1331,7 @@ static DaoFuncItem stringMeths[] =
 		/*
 		// Fetch the substring that matches the "group"-th group of pattern "pattern".
 		// Only the region between "start" and "end" is searched.
-		// Negative index starts from the end of the string.
+		// Negative index starts from the last byte of the string.
 		*/
 	},
 	{ DaoSTR_Match,

@@ -225,7 +225,7 @@ Code Section Methods
 Code section/block method is an alternative to functional methods
 in other languages such as Python. Dao code section is syntactically
 very similar to the code block in Ruby. Unlike Ruby code blocks 
-which are compiled as closure and passed as parameter
+which are compiled as closure and passed as an implicit parameter
 (so it's essentially a syntax sugar), Dao code section is really
 a code section in its host function, no closure is created a runtime. 
 When needed, the method locate the code section in the host function 
@@ -249,13 +249,13 @@ the code section to return.
 
 Code section method can be called in the following way:
 @[code]
-returned = meth_name( meth_params )::{
+returned = meth_name( meth_params ) {
 	code_block
 }
 @[code]
 If there is no method parameter, it can be simply written as:
 @[code]
-returned = meth_name::{
+returned = meth_name {
 	code_block
 }
 @[code]
@@ -263,7 +263,7 @@ By default, the code section receives the parameters passed in by the method
 through implicitly defined variables named @[green]X@[green] and @[green]Y@[green].
 User can choose to use more meaningful names by,
 @[code]
-returned = meth_name::{ [index, item]
+returned = meth_name { [index, item]
 	code_block
 }
 @[code]
@@ -283,14 +283,14 @@ So this @[green]sort()@[green] can be use in the following ways,
 numlist = { 11, 44, 21, 32, 56, 67, 25 }
 
 # Sort all by ascend order:
-numlist.sort::{ X < Y }
+numlist.sort { X < Y }
 
 # Sort by descend order until the largest 3 items are sorted:
-numlist.sort( 3 )::{ X > Y }
+numlist.sort( 3 ) { X > Y }
 # Now the first 3 items of the list is the largest 3 items;
 
 tuplist = { ( 2, 'ghi' ), ( 1, 'def' ), ( 2, 'abc' ), ( 1, 'abc' ) }
-tuplist.sort::{
+tuplist.sort {
 	# First sort by the first items of the tuples;
 	if( X[0] != Y[0] ) return X[0] < Y[0];
 	# Then sort by the second items;
@@ -315,7 +315,7 @@ routine Test() [X :int => string] => string
 	return s;
 }
 
-Test::{
+Test {
 	io.writeln( 'In code section:', X );
 	return 'abc';
 }
@@ -335,11 +335,6 @@ Function Decorator
 @[title]
 
 @[text]
-
-@[red]
-Note: this feature is only functional in the online demos
-and the latest devel release.
-@[red]
 
 
 Decorators are a special type of functions that can be used to

@@ -62,6 +62,7 @@ A character class is used to identify a set of characters.
 --@[green]%d@[green] : all digits;
 --@[green]%x@[green] : all hexadecimal digits;
 --@[green]%c@[green] : all lower case characters;
+--@[green]%e@[green] : all CJK (Chinese, Japanese, Korean) characters;
 --@[green]%w@[green] : all alphabetic characters, digists and character @[green]_@[green];
 --@[green]%A@[green] : non alphabetic characters, complement of @[green]%a@[green];
 --@[green]%S@[green] : non white space characters, complement of @[green]%s@[green];
@@ -70,6 +71,7 @@ A character class is used to identify a set of characters.
 --@[green]%D@[green] : non digits, complement of @[green]%d@[green];
 --@[green]%X@[green] : non hexadecimal digits, complement of @[green]%x@[green];
 --@[green]%C@[green] : upper case characters;
+--@[green]%E@[green] : non CJK (Chinese, Japanese, Korean) characters;
 --@[green]%W@[green] : complement of @[green]%w@[green];
 --@[green]%x@[green] : represents character @[green]x@[green], where @[green]x@[green] is
 any non-alphanumeric character; @[green]x@[green] may also be an alphabetic 
@@ -187,11 +189,15 @@ Fetch the substring that matches the "group"-th group of pattern "pattern".
 
 Only the region between "start" and "end" is searched.
 
-Negative index starts from the end of the string.
+Negative index starts from the last byte of the string.
 
 
 Examples,
 @[code]
+S1 = "ABC123DEF456GHI"
+S2 = S1.fetch( "%d+" )          # S2 = "123"
+S3 = S1.fetch( "%d+(%a+)", 1 )  # S3 = "DEF"
+S4 = S1.fetch( "%d+", 0, 6 )    # S4 = "456"
 @[code]
 
 
@@ -212,6 +218,11 @@ Parameter "start" and "end" have the same meaning as in string::fetch().
 
 Examples,
 @[code]
+S1 = "ABC123DEF(456)GHI"
+M2 = S1.match( "%d+" )          # M2 = (start=3,end=5); substring: "123"
+M3 = S1.match( "%b()" )         # M3 = (start=9,end=13); substring: "(456)"
+M4 = S1.match( "%b{}" )         # M4 = none;
+M5 = S1.match( "%d+(%a+)", 1 )  # M5 = (start=6,end=8); substring: "DEF"
 @[code]
 
 
@@ -236,6 +247,9 @@ Returns a shallow copy of the self string.
 
 Examples,
 @[code]
+S1 = "ABC123DEF456GHI"
+S2 = S.change( "%d+", ";" )          # S2 = "ABC;DEF;GHI"
+S3 = S.change( "(%d+)", "<%1>", 1 )  # S3 = "ABC<123>DEF456GHI"
 @[code]
 
 
@@ -259,6 +273,9 @@ Parameter "start" and "end" have the same meaning as in string::fetch().
 
 Examples,
 @[code]
+S1 = "ABC123DEF456GHI"
+L1 = S1.capture( "%d+" )        # L1 = { "123" }
+L2 = S1.capture( "%d+ (%a+)" )  # L2 = { "123DEF", "DEF" }
 @[code]
 
 
@@ -275,6 +292,9 @@ or both, and return them as a list.
 
 Examples,
 @[code]
+S1 = "ABC123DEF456GHI"
+L1 = S1.extract( "%d+" )   # L1 = { "123", "456" }
+L2 = S2.extract( "%d+", $unmatched )  # L2 = { "ABC", "DEF", "GHI" }
 @[code]
 
 
@@ -301,6 +321,14 @@ it will not be specialized to "none|none", which is the case for "@V|none".
 
 Examples,
 @[code]
+S1 = "ABC123DEF"
+S1.scan( "%d+" ) { [start, end, state]
+	io.writeln( start, end, S1[start:end], state )
+}
+# Output:
+# 0 2 ABC $unmatched(0)
+# 3 5 123 $matched(1)
+# 6 8 DEF $unmatched(0)
 @[code]
 
 

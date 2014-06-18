@@ -95,7 +95,7 @@ The essential aggregated types in Dao are the followings:
 
 @[table]
 ##Type Name  ##Type Description
-##array < ElementType >            &&numeric array type
+##array < ElementType >            &&array type
 ##tuple < ItemTypesOrNamesTypes >  &&tuple type
 ##list  < ItemType >               &&list type
 ##map   < KeyType, ValueType >     &&map type
@@ -126,6 +126,7 @@ var table:  map<string,int> = { "abc" => 123 }
 @[code]
 
 
+
 @[subsection]Type Holder Types@[subsection]
 
 Type holder types are type names with a @[green]@@[green] prefix.
@@ -151,38 +152,152 @@ So this method means, for a list of type @[green]list<@T>@[green]
 only items of type @[green]@T@[green] (@[green]string@[green]) can be appended to the list.
 
 
-@[subsection]Other Types@[subsection]
+Here is a simpler example,
+@[code]
+tuple<@T,@T>
+@[code]
+represents a tuple type whose two items must have the same type.
 
-Dao also supports a number of other types such as:
+
+
+@[subsection]Any Type@[subsection]
+
+Special type @[code]any@[code] cab be used to represent any type.
+Declaring a variable with @[code]any@[code] type will effectively disable
+compiling time type checking on the variable!
+
+
+
+@[subsection]Value Type@[subsection]
+
+Another special type in Dao is the value type, which, in addition to define
+type traits and information like the ordinary types, also defines a constant value.
+When a value or another value type is checked against a value type,
+not only the types should match, but also the values as well.
+
+
+The @[code]none@[code] is supported as a value type,
+it is designed this mainly because, @[code]none@[code] only has one unique value.
+The @[code]none@[code] can be used any where like an ordinary type,
+but it is mostly used in variant types to indicate a variable or parameter
+may also hold a @[code]none@[code] value (see the next subsection).
+
+
+Other value types cannot be used every where like ordinary types,
+they mainly appear as type arguments in composite types.
+For example,
+@[code]
+tuple<1,2>
+@[code]
+represents a tuple type whose first item must be @[code]1@[code] and its second
+must be @[code]2@[code]!
+Such value types are mainly useful when dealing with C++ template types.
+
+
+@[subsection]Variant Type@[subsection]
+
+A variant type is a type that can represent multiple alternative types.
+A variant type is declared by joining these alternative types using 
+@[green]|@[green] as the delimiter.
+A variable of a variant type can hold value of any of the alternative types.
+For example,
+@[code]
+intstr : int|string = 123
+intstr = 'abc'
+@[code]
+
+In Dao, only variables of @[code]none@[code] type or unspecific types such as
+@[code]any@[code] and undefined type holder types can hold @[code]none@[code] value.
+But some times, some variables may need to or be known to hold either
+a @[code]none@[code] value
+or a value of a specific type, to allow this in the type checking,
+one needs use @[code]some_type|none @[code] for these variables.
+For example,
+@[code]
+routine FindWord( source: string, word: string ) => int|none
+{
+	pos = source.find( word )
+	if( pos < 0 ) return none
+	return pos
+}
+
+pos = FindWord( "dao language", "dao" )  # pos = 0
+pos = FindWord( "dao language", "lua" )  # pos = none
+@[code]
+Please see @[node]dao.type.variant@[node] for more information.
+
+
+
+@[subsection]Routine (Function) Types@[subsection]
+
+Routine (function) types are composed of keyword @[code]routine@[code] with other types,
+they are usually automatically generated for routines from their declarations.
+For example,
+@[code]
+routine Test( name: string, value = 123 )
+{
+	return value * 10;
+}
+io.writeln( std.about(Test) )
+# Output: Test{routine<name:string,value=int=>int>}[0x7f9ef1c50340]
+@[code]
+In the output @[code]routine<name:string,value=int=>int>@[code]
+is the automatically created type for the routine @[code]Test@[code].
+Here,
 @[list]
---Routine or function types (see @[green]dao.routine@[green] for details);
-
---Wrapped C/C++ types (see @[green]dao.c-interface@[green] for details);
-
---User defined Dao class types (see @[green]dao.class@[green] for details);
-
---Abstract interface types (see @[green]dao.???@[green] for details);
-
---@[green]stream@[green] type for standard Input/Output and file Input/Output
-(see @[green]dao.type.stream@[green] for details);
-
---Types for concurrent programming such @[green]future@[green], @[green]mutex@[green],
-@[green]condition@[green] and @[green]semaphore@[green] 
-(see @[green]dao.concurrent@[green] for details);
-
---Exception types (essentially wrapped C types).
+--@[code]name:string@[code] : type information for the first parameter;
+it means the first parameter is named @[code]name@[code] and has type @[code]string@[code].
+--@[code]value=int@[code] : type information for the second parameter;
+it means that the second parameter is named @[code]value@[code],
+and it has type @[code]int@[code] and a defualt parameter value;
+--@[code]=>int@[code] : (inferred) type information for the returned value;
 @[list]
 
 
-@[subsection]Special Types@[subsection]
+For code section routines, their type names have additional parts.
+For example, one of the list sorting method is a code section method
+with the following signature (prototype),
+@[code]
+sort( self: list<@T>, part = 0 )[X: @T, Y: @T => int] => list<@T>
+@[code]
+Its type name is,
+@[code]
+routine<self:list<@T>,part=int=>list<@T>>[X:@T,Y:@T=>int]
+@[code]
+Here @[code][X:@T,Y:@T=>int]@[code] is the additional part with respect to
+types for normal routines, and means that the code section may take two
+parameters of type @[code]@T@[code] and is expected produce an integer
+from evaluating the code section.
 
-@[list]
---@[green]any@[green]:
 
-As its name suggests, it represents any type, so any value can match to this type.
+Of course, the routine types can also be declared explicitly.
+So one can annotation a variable with the following routine type name:
+@[code]
+var myfunc: routine<p1:string,p2=int=>int>
+@[code]
+
+
+
+
+@[subsection]Generic Types@[subsection]
+
+The standard aggregated types such as list and maps etc. in Dao are supported
+as builtin generic types.
+Such support is also extended to user defined types, but such generic types
+can only be defined in C modules.
+The use of such types is exactly the same way as the standard generic types.
+
+
+One typical example for such generic types is the future value type
+@[code]mt::future<@V>@[code].
+Though @[code]future@[code] is a builtin type, user can define customized types
+in exactly the same way as defining @[code]future@[code].
+Please see @[node]daovm.interface.extending@[node] for the techniques of defining such types.
+
+
+
 
 @[comment]
-@[green]?@[green]:
 
 This special type name represents undefined types. Function parameters that 
 have neither type annotations nor default values are automatically assigned with
@@ -193,36 +308,6 @@ when more type information is available, for example, at function call point
 concrete types to specialize the function (namely, specializing parameter types, 
 local variable types and virtual machine instructions).
 @[comment]
-
---Type holder:
-
-Type holders are type names with a @[green]@@[green] prefix.
-It also represents to-be-defined types, the same type holder represents the same type
-in a local context (a single composite type or a function prototype etc).
-For example,
-
-@[code]
-tuple<@T,@T>
-@[code]
-represents a tuple type whose two items must have the same type.
-
-@[code]
-routine Func( a :@T, b :@T )
-@[code]
-declares a function that can only accept two parameters of the same type.
-
-
---Value type:
-
-Constant values of basic types can also be used as types in a composite type.
-For example,
-
-@[code]
-tuple<1,2>
-@[code]
-represents a tuple type whose first item must be @[green]1@[green] and its second
-must be @[green]2@[green]!
-Such types are mainly useful when dealing with C++ template types.
 
 
 @[subsection]Type Aliasing@[subsection]

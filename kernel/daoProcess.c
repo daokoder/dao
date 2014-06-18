@@ -5918,9 +5918,9 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	if( proto->attribs & DAO_ROUT_DEFER ) DArray_Append( self->defers, closure );
 #if 0
 	DaoRoutine_PrintCode( proto, self->vmSpace->stdioStream );
-#endif
 	DaoRoutine_PrintCode( closure, self->vmSpace->stdioStream );
 	printf( "%s\n", closure->routType->name->chars );
+#endif
 }
 
 

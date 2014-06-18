@@ -316,6 +316,7 @@
 enum DaoAuxOpcode
 {
 	DAO_ASM_NONE      ,
+	DAO_ASM_LOAD      ,
 	DAO_ASM_COPY      ,
 	DAO_ASM_TYPEOF    ,
 	DAO_ASM_TYPEDEF   ,
@@ -334,7 +335,6 @@ enum DaoAuxOpcode
 	DAO_ASM_TYPES     ,
 	DAO_ASM_CODE      ,
 	DAO_ASM_END       ,
-	DAO_ASM_LOAD      ,
 	DAO_ASM_IMPORT    ,
 	DAO_ASM_VERBATIM  ,
 	DAO_ASM_CONST     ,
@@ -439,7 +439,7 @@ DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value );
 DaoByteBlock* DaoByteBlock_EncodeCtype( DaoByteBlock *self, DaoCtype *ctype, DaoCtype *generic, DaoType **types, int n );
 DaoByteBlock* DaoByteBlock_EncodeTypeAlias( DaoByteBlock *self, DaoType *type, DaoType *aliased, DString *alias );
 DaoByteBlock* DaoByteBlock_EncodeTypeOf( DaoByteBlock *self, DaoType *type, DaoValue *value );
-DaoByteBlock* DaoByteBlock_EncodeLoad( DaoByteBlock *self, DString *mod, DString *ns );
+DaoByteBlock* DaoByteBlock_EncodeLoad( DaoByteBlock *self, DaoNamespace *mod, DString *modname, DString *asname );
 DaoByteBlock* DaoByteBlock_EncodeImport( DaoByteBlock *self, DaoValue *mod, DString *name, int scope, int index );
 DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *target );
 DaoByteBlock* DaoByteBlock_EncodeVerbatim( DaoByteBlock *self, DString *tag, DString *mode, DString *text, int line );

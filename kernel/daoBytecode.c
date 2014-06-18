@@ -48,6 +48,7 @@ DaoByteCodeDecrypt dao_bytecode_decrypt = NULL;
 static const char* const dao_asm_names[] =
 {
 	"ASM_NONE"      ,
+	"ASM_LOAD"      ,
 	"ASM_COPY"      ,
 	"ASM_TYPEOF"    ,
 	"ASM_TYPEINVAR" ,
@@ -66,7 +67,6 @@ static const char* const dao_asm_names[] =
 	"ASM_TYPES"     ,
 	"ASM_CODE"      ,
 	"ASM_END"       ,
-	"ASM_LOAD"      ,
 	"ASM_IMPORT"    ,
 	"ASM_VERBATIM"  ,
 	"ASM_CONST"     ,
@@ -1004,13 +1004,13 @@ DaoByteBlock* DaoByteBlock_AddInterfaceBlock( DaoByteBlock *self, DaoInterface *
 	return block;
 }
 
-DaoByteBlock* DaoByteBlock_EncodeLoad( DaoByteBlock *self, DString *mod, DString *ns )
+DaoByteBlock* DaoByteBlock_EncodeLoad( DaoByteBlock *self, DaoNamespace *mod, DString *modname, DString *asname )
 {
-	DaoByteBlock *fileBlock = DaoByteBlock_EncodeString( self, mod );
-	DaoByteBlock *nameBlock = ns ? DaoByteBlock_EncodeString( self, ns ) : NULL;
-	DaoByteBlock *newBlock = DaoByteBlock_NewBlock( self, DAO_ASM_LOAD );
+	DaoByteBlock *fileBlock = DaoByteBlock_EncodeString( self, modname );
+	DaoByteBlock *nameBlock = asname ? DaoByteBlock_EncodeString( self, asname ) : NULL;
+	DaoByteBlock *newBlock = DaoByteBlock_AddBlock( self, (DaoValue*) mod, DAO_ASM_LOAD );
 	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin, fileBlock );
-	if( ns ) DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin+2, nameBlock );
+	if( asname ) DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin+2, nameBlock );
 	return newBlock;
 }
 DaoByteBlock* DaoByteBlock_EncodeImport( DaoByteBlock *self, DaoValue *mod, DString *name, int scope, int index )
@@ -2895,6 +2895,9 @@ static void DaoByteCoder_LoadModule( DaoByteCoder *self, DaoByteBlock *block )
 	DString_Delete( spath );
 	if( self->error ) return;
 
+	GC_ShiftRC( ns, block->value );
+	block->value = (DaoValue*) ns;
+
 	if( mod == NULL ){
 		if( DaoNamespace_AddParent( self->nspace, ns ) == 0 ){
 			DaoByteCoder_Error( self, block, "Cyclic loading!" );
@@ -2902,28 +2905,6 @@ static void DaoByteCoder_LoadModule( DaoByteCoder *self, DaoByteBlock *block )
 	}else{
 		DaoNamespace_AddConst( self->nspace, mod->value->xString.value, (DaoValue*) ns, 0 );
 	}
-}
-static int DaoByteCoder_Import( DaoByteCoder *self, DaoByteBlock *block, DaoNamespace *mod, DNode *it )
-{
-	DaoValue *value = NULL;
-	DaoNamespace *NS = self->nspace;
-	DString *name = it->key.pString;
-	int ret = 0;
-
-	if( block->parent == self->top ){
-	}
-
-	if( LOOKUP_ST( it->value.pInt ) == DAO_GLOBAL_CONSTANT ){
-		value = mod->constants->items.pConst[ LOOKUP_ID(it->value.pInt) ]->value;
-		//ret = DaoParser_AddToScope( self, name, value, NULL, 0 );
-	}else if( block == self->top ){
-		DaoVariable *var = mod->variables->items.pVar[ LOOKUP_ID(it->value.pInt) ];
-		ret = DaoNamespace_AddVariable( NS, name, var->value, var->dtype, DAO_PERM_NONE );
-	}else{
-		//DaoParser_Error( self, DAO_INVALID_IMPORT_VAR, it->key.pString );
-		return 0;
-	}
-	return ret;
 }
 static void DaoByteCoder_DecodeImport( DaoByteCoder *self, DaoByteBlock *block )
 {

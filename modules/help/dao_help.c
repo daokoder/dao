@@ -1214,7 +1214,7 @@ static void DaoxStream_WriteSectionName( DaoxStream *self, DString *name, int mt
 	DaoxStream_WriteMBS( self, " " );
 	if( mtype == DAOX_HELP_SECTION ){
 		DaoxStream_SetColor( self, NULL, NULL );
-		DaoxStream_SetColor( self, dao_colors[DAOX_WHITE], dao_colors[DAOX_GREEN] );
+		DaoxStream_SetColor( self, dao_colors[textcolor], dao_colors[bgcolorid] );
 		DaoxStream_WriteMBS( self, "   " );
 	}
 	DaoxStream_SetColor( self, NULL, NULL );
@@ -1272,6 +1272,7 @@ static int DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, i
 				}
 			}else if( mtype >= DAOX_HELP_SECTION && mtype <= DAOX_HELP_SUBSECT2 ){
 				int bgcolorid = DAOX_BLACK;
+				int numcolor = DAOX_RED;
 				switch( mtype ){
 				case DAOX_HELP_SECTION :
 					self->section += 1;
@@ -1287,13 +1288,14 @@ static int DaoxStream_WriteBlock( DaoxStream *self, DString *text, int offset, i
 				case DAOX_HELP_SUBSECT2 :
 					self->subsect2 += 1;
 					bgcolorid = DAOX_YELLOW;
+					numcolor = DAOX_BLUE;
 					break;
 				}
 				if( self->offset ) DaoxStream_WriteNewLine( self, "" );
 				if( mtype == DAOX_HELP_SECTION ){
 					DaoxStream_WriteSectionName( self, part, mtype, width, bgcolorid, bgcolorid, bgcolorid, bgcolorid );
 				}
-				DaoxStream_WriteSectionName( self, part, mtype, width, DAOX_RED, DAOX_WHITE, DAOX_BLUE, bgcolorid );
+				DaoxStream_WriteSectionName( self, part, mtype, width, numcolor, DAOX_WHITE, DAOX_BLUE, bgcolorid );
 				if( mtype == DAOX_HELP_SECTION ){
 					DaoxStream_WriteSectionName( self, part, mtype, width, bgcolorid, bgcolorid, bgcolorid, bgcolorid );
 				}

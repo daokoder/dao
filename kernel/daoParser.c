@@ -3460,7 +3460,8 @@ static void DaoParser_CheckStatementSeparation( DaoParser *self, int check, int 
 	default : DaoParser_Warn( self, DAO_WARN_STATEMENT_SEPARATION, NULL ); break;
 	}
 }
-static int DaoParser_ParseImportStatement( DaoParser *self, int start, int end );
+static int DaoParser_ImportSymbols( DaoParser *self, DaoNamespace *mod, int start, int to, int level );
+static int DaoParser_ParseImportStatement( DaoParser *self, int start, int end, int full );
 static int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, int st );
 static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 {
@@ -3721,7 +3722,7 @@ DecoratorError:
 			if( cons ) DaoParser_MakeCodes( self, start, to, ns->inputs );
 			continue;
 		}else if( tki == DKEY_IMPORT ){
-			start = DaoParser_ParseImportStatement( self, start, to );
+			start = DaoParser_ParseImportStatement( self, start, to, 0 );
 			if( start <0 ) return 0;
 			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
 			continue;
@@ -4974,9 +4975,6 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	}
 
 	if( mod == NULL ){
-		if( self->byteBlock ){
-			DaoByteBlock_EncodeLoad( self->byteBlock, self->string, modname );
-		}
 		if( (mod = DaoNamespace_FindNamespace(nameSpace, self->string)) == NULL ){
 			mod = DaoVmSpace_LoadModule( vmSpace, self->string );
 			if( mod == NULL && modname == NULL ){
@@ -4994,12 +4992,31 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		if( vmSpace->stopit ) code = DAO_CTW_LOAD_CANCELLED;
 		goto ErrorLoad;
 	}
+	if( self->byteBlock ){
+		DaoByteBlock_EncodeLoad( self->byteBlock, mod, self->string, modname );
+	}
 	if( modname == NULL ){
 		cyclic = (DaoNamespace_AddParent( nameSpace, mod ) == 0);
 	}else{
 		DaoNamespace_AddConst( nameSpace, modname, (DaoValue*) mod, perm );
 	}
 	if( cyclic ) DaoParser_Warn( self, DAO_LOAD_CYCLIC, NULL );
+
+	if( i <= end && tokens[i]->name == DKEY_IMPORT && tokens[i]->line == tokens[i-1]->line ){
+		do {
+			if( (i+1) > end ) goto ErrorLoad;
+			if( tokens[i+1]->name == DTOK_IDENTIFIER ){
+				i = DaoParser_ParseImportStatement( self, i+1, end, 1 );
+				if( i < 0 ) goto ErrorLoad;
+			}else if( tokens[i+1]->name == DTOK_LCB ){
+				i = DaoParser_ImportSymbols( self, mod, i+1, end, 0 );
+				if( i < 0 ) goto ErrorLoad;
+				i += 1;
+			}else{
+				goto ErrorLoad;
+			}
+		} while( i <= end && tokens[i]->name == DTOK_COMMA );
+	}
 
 	/*
 	   printf("ns=%p; mod=%p; myns=%p\n", ns, mod, nameSpace);
@@ -5054,7 +5071,28 @@ ErrorSymbolDefined:
 	DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, name );
 	return -1;
 }
-static int DaoParser_ParseImportStatement( DaoParser *self, int start, int to )
+static int DaoParser_ImportSymbols( DaoParser *self, DaoNamespace *mod, int start, int to, int level )
+{
+	DaoToken **tokens = self->tokens->items.pToken;
+	int error = DAO_INVALID_IMPORT_STMT;
+	int id, i = start + 1;
+	while( i <= to ){
+		int ret = 0;
+		if( DaoParser_CheckNameToken( self, i, to, error, i ) == 0 ) return -1;
+		id = DaoParser_Import( self, mod, & tokens[i]->string );
+		if( id < 0 || i >= to ) return -1;
+		if( self->byteBlock ){
+			DString *name = & tokens[i]->string;
+			id = LOOKUP_ID( id );
+			DaoByteBlock_EncodeImport( self->byteBlock, (DaoValue*)mod, name, level, id );
+		}
+		if( tokens[i+1]->name == DTOK_RCB ) break;
+		if( tokens[i+1]->name != DTOK_COMMA || (i+2) > to ) return -1;
+		i += 2;
+	}
+	return i + 1;
+}
+static int DaoParser_ParseImportStatement( DaoParser *self, int start, int to, int full )
 {
 	DaoValue *value = NULL;
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -5067,17 +5105,25 @@ static int DaoParser_ParseImportStatement( DaoParser *self, int start, int to )
 	int import = start;
 	int i, id, tok;
 
-	start ++;
+	start += tokens[start]->name == DKEY_IMPORT;
 	if( DaoParser_CheckNameToken( self, start, to, error, import ) == 0 ) return -1;
 	if( self->isClassBody || self->isInterBody ) goto InvalidImport;
 
 	start = DaoParser_FindMaybeScopedConst( self, & value, start, DTOK_DOT );
 	if( start < 0 || value == NULL || value->type != DAO_NAMESPACE ) goto InvalidImport;
-	if( (start+2) > to || tokens[start+1]->type != DTOK_DOT ) goto InvalidImport;
+
+	mod = (DaoNamespace*) value;
+	if( (start+2) > to || tokens[start+1]->type != DTOK_DOT ){
+		if( full == 0 ) goto InvalidImport;
+		DaoNamespace_AddParent( NS, mod );
+		if( self->byteBlock ){
+			DaoByteBlock_EncodeImport( self->byteBlock, (DaoValue*) mod, NULL, 0, 0 );
+		}
+		return start+1;
+	}
 
 	start += 2;
 	tok = tokens[start]->type;
-	mod = (DaoNamespace*) value;
 	if( tok == DTOK_IDENTIFIER ){
 		if( DaoParser_CheckNameToken( self, start, to, error, import ) == 0 ) return -1;
 		id = DaoParser_Import( self, mod, & tokens[start]->string );
@@ -5088,23 +5134,8 @@ static int DaoParser_ParseImportStatement( DaoParser *self, int start, int to )
 			DaoByteBlock_EncodeImport( self->byteBlock, value, name, level, LOOKUP_ID(id) );
 		}
 	}else if( tok == DTOK_LCB ){
-		i = start + 3;
-		while( i <= to ){
-			int ret = 0;
-			if( DaoParser_CheckNameToken( self, i, to, error, import ) == 0 ) return -1;
-			id = DaoParser_Import( self, mod, & tokens[i]->string );
-			if( id < 0 ) goto InvalidImport;
-			if( i >= to ) goto InvalidImport;
-			if( self->byteBlock ){
-				DString *name = & tokens[i]->string;
-				id = LOOKUP_ID( id );
-				DaoByteBlock_EncodeImport( self->byteBlock, value, name, level, id );
-			}
-			if( tokens[i+1]->name == DTOK_RCB ) break;
-			if( tokens[i+1]->name != DTOK_COMMA || (i+2) > to ) goto InvalidImport;
-			i += 2;
-		}
-		start = i+1;
+		start = DaoParser_ImportSymbols( self, mod, start, to, level );
+		if( start < 0 ) goto InvalidImport;
 	}else{
 		goto InvalidImport;
 	}
