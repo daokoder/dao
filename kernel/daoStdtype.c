@@ -3648,32 +3648,11 @@ DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype )
 #endif
 	return self;
 }
-void DaoCtype_InitInterface( DaoCtype *self )
-{
-	DaoInterface *clsInter = DaoInterface_New( self->cdtype->name->chars );
-	DaoInterface *objInter = DaoInterface_New( self->cdtype->name->chars );
-	DString_SetChars( clsInter->abtype->name, "interface<class<" );
-	DString_SetChars( objInter->abtype->name, "interface<" );
-	DString_Append( clsInter->abtype->name, self->cdtype->name );
-	DString_Append( objInter->abtype->name, self->cdtype->name );
-	DString_AppendChars( clsInter->abtype->name, ">>" );
-	DString_AppendChar( objInter->abtype->name, '>' );
-	GC_ShiftRC( clsInter, self->clsInter );
-	GC_ShiftRC( objInter, self->objInter );
-	GC_ShiftRC( self->ctype, clsInter->model );
-	GC_ShiftRC( self->cdtype, objInter->model );
-	self->clsInter = clsInter;
-	self->objInter = objInter;
-	clsInter->model = self->ctype;
-	objInter->model = self->cdtype;
-}
 void DaoCtype_Delete( DaoCtype *self )
 {
 	DaoCstruct_Free( (DaoCstruct*) self );
 	DString_Delete( self->name );
 	GC_DecRC( self->cdtype );
-	GC_DecRC( self->clsInter );
-	GC_DecRC( self->objInter );
 	dao_free( self );
 }
 
@@ -3718,7 +3697,6 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer )
 	cdata->ctype = cdata_type;
 	ctype_type->typer = typer;
 	cdata_type->typer = typer;
-	DaoCtype_InitInterface( ctype );
 
 	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
 		DaoTypeBase *sup = typer->supers[i];
@@ -3787,7 +3765,7 @@ static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n );
 static DaoFuncItem dao_Exception_Meths[] =
 {
 	{ Dao_Exception_Define,
-		"Define( name: string, info: string ) => interface<class<Exception>>"
+		"Define( name: string, info: string ) => class<Exception>"
 	},
 
 	/*
@@ -3884,15 +3862,9 @@ static void Dao_Exception_Define( DaoProcess *proc, DaoValue *p[], int N )
 }
 
 
-static DaoFuncItem dao_ExceptionWarning_Meths[] =
-{
-	{ Dao_Exception_New, "Warning( summary = \"\" )=>Warning" },
-	{ Dao_Exception_New22, "Warning( data: any )=>Warning" },
-	{ NULL, NULL }
-};
 DaoTypeBase dao_ExceptionWarning_Typer =
 {
-	"Exception::Warning", NULL, NULL, dao_ExceptionWarning_Meths,
+	"Exception::Warning", NULL, NULL, NULL,
 	{ & dao_Exception_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };

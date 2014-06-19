@@ -303,7 +303,6 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 	if( typer->core->kernel->methods == NULL ){
 		DaoType *hostype = typer->core->kernel->abtype;
 		DMap *methods2 = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
-		DMap *deftypes = DHash_New(0,0);
 
 		methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 		name1 = DString_New();
@@ -387,22 +386,6 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		DArray_Delete( parents );
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 		DaoVmSpace_ReleaseParser( self->vmSpace, defparser );
-
-		if( hostype && hostype->aux ){ /* may be builtin generic types such as list<@T> */
-			DaoInterface *clsInter = hostype->aux->xCtype.clsInter;
-			DaoInterface *objInter = hostype->aux->xCtype.objInter;
-			for(i=0; i<DAO_MAX_CDATA_SUPER && typer->supers[i] != NULL; ++i){
-				DaoType *abtype = typer->supers[i]->core->kernel->abtype;
-				DArray_Append( clsInter->supers, abtype->aux->xCtype.clsInter );
-				DArray_Append( objInter->supers, abtype->aux->xCtype.objInter );
-			}
-			for(it=DMap_First(methods); it; it=DMap_Next(methods, it)){
-				DaoRoutine *rout = it->value.pRoutine;
-				DaoInterface_CopyMethod( clsInter, rout, deftypes );
-				DaoInterface_CopyMethod( objInter, rout, deftypes );
-			}
-		}
-		DMap_Delete( deftypes );
 
 		assert( DAO_ROUT_MAIN < (1<<DVM_NOT) );
 		for(i=DVM_NOT; i<=DVM_BITRIT; i++){

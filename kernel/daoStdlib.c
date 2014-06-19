@@ -250,7 +250,8 @@ static void DaoSTD_Error( DaoProcess *proc, DaoValue *p[], int n )
 }
 static void DaoSTD_Error2( DaoProcess *proc, DaoValue *p[], int n )
 {
-	DArray_Append( proc->exceptions, p[0] );
+	DaoException *error = (DaoException*) p[0];
+	DArray_Append( proc->exceptions, error->object ? (void*)error->object : (void*)error );
 }
 static void DaoSTD_Error3( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -280,13 +281,19 @@ static void DaoSTD_Exec( DaoProcess *proc, DaoValue *p[], int n )
 static void DaoSTD_Try( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
-	int ecount = proc->exceptions->size;
+	int i, ecount = proc->exceptions->size;
 
 	if( sect == NULL ) return;
 	DaoProcess_Execute( proc );
 	DaoProcess_PopFrame( proc );
 	DaoProcess_SetActiveFrame( proc, proc->topFrame );
-	if( proc->exceptions->size > ecount ){
+	if( proc->exceptions->size > (ecount+1) ){
+		DaoList *list = DaoProcess_PutList( proc );
+		for(i=ecount; i<proc->exceptions->size; ++i){
+			DaoList_Append( list, proc->exceptions->items.pValue[i] );
+		}
+		DArray_Erase( proc->exceptions, ecount, -1 );
+	}else if( proc->exceptions->size > ecount ){
 		DaoProcess_PutValue( proc, proc->exceptions->items.pValue[proc->exceptions->size-1] );
 		DArray_PopBack( proc->exceptions );
 	}else{
@@ -323,22 +330,16 @@ DaoFuncItem dao_std_methods[] =
 		*/
 	},
 	{ DaoSTD_Error2,
-		"error( invar exception: interface<Error> )"
+		"error( invar errorObject: Error )"
 		/*
 		// Raise an error with pre-created exception object.
-		// Here type "interface<Error>" represents instance of any type derived
-		// from "Exception", and the instance is passed in without casting.
 		*/
 	},
 	{ DaoSTD_Error3,
-		"error( invar eclass: interface<class<Error>>, info: string, data: any = none )"
+		"error( invar errorType: class<Error>, info: string, data: any = none )"
 		/*
 		// Raise an error of type "eclass" with message "info", and associate "data"
 		// to the error.
-		//
-		// Here type "interface<class<Error>>" represents any type derived from
-		// "Exception". This is used to prevent a derived expressioin from being casted
-		// to the base type.
 		*/
 	},
 	{ DaoSTD_Exec,
@@ -348,13 +349,13 @@ DaoFuncItem dao_std_methods[] =
 		*/
 	},
 	{ DaoSTD_Exec,
-		"exec( default_value: @T ) [=>@T] => @T"
+		"exec( defaultValue: @T ) [=>@T] => @T"
 		/*
 		//
 		*/
 	},
 	{ DaoSTD_Try,
-		"try() [=>@T] => interface<Error>|@T"
+		"try() [=>@T] => list<Error>|Error|@T"
 		/*
 		//
 		*/

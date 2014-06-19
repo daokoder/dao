@@ -229,8 +229,6 @@ struct DaoCtype
 
 	DString      *name;
 	DaoType      *cdtype;
-	DaoInterface *clsInter;
-	DaoInterface *objInter;
 };
 DAO_DLL DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype );
 DAO_DLL void DaoCtype_Delete( DaoCtype *self );

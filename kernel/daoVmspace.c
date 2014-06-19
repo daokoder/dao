@@ -2716,6 +2716,8 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 	daoint offset = 0;
 
 	if( strcmp( name, "Exception" ) == 0 ) return  dao_type_exception;
+	if( strcmp( name, "Warning" ) == 0 ) return  dao_type_warning;
+	if( strcmp( name, "Error" ) == 0 ) return  dao_type_error;
 
 	basename = DString_NewChars( name );
 	offset = DString_RFindChars( basename, "::", -1 );

@@ -380,8 +380,6 @@ void DaoObjectLogger_Quit()
 					DaoObjectLogger_ScanCdata( cdata );
 				}else{
 					DaoObjectLogger_ScanValue( (DaoValue*) value->xCtype.cdtype );
-					DaoObjectLogger_ScanValue( (DaoValue*) value->xCtype.clsInter );
-					DaoObjectLogger_ScanValue( (DaoValue*) value->xCtype.objInter );
 				}
 				break;
 			}
@@ -1711,8 +1709,6 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 				DaoGC_ScanCdata( cdata, DAO_GC_DEC );
 			}else{
 				cycRefCountDecrement( (DaoValue*) value->xCtype.cdtype );
-				cycRefCountDecrement( (DaoValue*) value->xCtype.clsInter );
-				cycRefCountDecrement( (DaoValue*) value->xCtype.objInter );
 			}
 			break;
 		}
@@ -1912,8 +1908,6 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 				DaoGC_ScanCdata( cdata, DAO_GC_INC );
 			}else{
 				cycRefCountIncrement( (DaoValue*) value->xCtype.cdtype );
-				cycRefCountIncrement( (DaoValue*) value->xCtype.clsInter );
-				cycRefCountIncrement( (DaoValue*) value->xCtype.objInter );
 			}
 			break;
 		}
@@ -2116,8 +2110,6 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 				DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
 			}else{
 				directRefCountDecrement( (DaoValue**) & value->xCtype.cdtype );
-				directRefCountDecrement( (DaoValue**) & value->xCtype.clsInter );
-				directRefCountDecrement( (DaoValue**) & value->xCtype.objInter );
 			}
 			break;
 		}

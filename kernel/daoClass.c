@@ -1088,10 +1088,7 @@ void DaoClass_MakeInterface( DaoClass *self )
 			DArray_Append( clsInter->abtype->bases, self->parent->xClass.clsInter->abtype );
 			DArray_Append( objInter->abtype->bases, self->parent->xClass.objInter->abtype );
 		}else if( self->parent && self->parent->type == DAO_CTYPE ){
-			DArray_Append( clsInter->supers, self->parent->xCtype.clsInter );
-			DArray_Append( objInter->supers, self->parent->xCtype.objInter );
-			DArray_Append( clsInter->abtype->bases, self->parent->xCtype.clsInter->abtype );
-			DArray_Append( objInter->abtype->bases, self->parent->xCtype.objInter->abtype );
+			/* Not supported. */
 		}
 	}
 

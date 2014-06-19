@@ -1709,9 +1709,6 @@ static int DaoInterface_CopyRoutine( DaoInterface *self, DaoRoutine *rout, DMap 
 	if( model && model->tid == DAO_CLASS ){
 		DMap_Insert( deftypes, aux->xClass.clsType, aux->xClass.clsInter->abtype );
 		DMap_Insert( deftypes, aux->xClass.objType, aux->xClass.objInter->abtype );
-	}else if( model && model->tid == DAO_CTYPE ){
-		DMap_Insert( deftypes, aux->xCtype.ctype, aux->xCtype.clsInter->abtype );
-		DMap_Insert( deftypes, aux->xCtype.cdtype, aux->xCtype.objInter->abtype );
 	}else{
 		DMap_Insert( deftypes, rout->routHost, self->abtype );
 	}
@@ -1719,9 +1716,6 @@ static int DaoInterface_CopyRoutine( DaoInterface *self, DaoRoutine *rout, DMap 
 	if( rout->routHost->tid == DAO_OBJECT ){
 		DMap_Insert( deftypes, aux->xClass.clsType, aux->xClass.clsInter->abtype );
 		DMap_Insert( deftypes, aux->xClass.objType, aux->xClass.objInter->abtype );
-	}else if( rout->routHost->tid == DAO_CSTRUCT || rout->routHost->tid == DAO_CDATA ){
-		DMap_Insert( deftypes, aux->xCtype.ctype, aux->xCtype.clsInter->abtype );
-		DMap_Insert( deftypes, aux->xCtype.cdtype, aux->xCtype.objInter->abtype );
 	}
 
 	tp = DaoType_DefineTypes( rout->routType, rout->nameSpace, deftypes );
@@ -1751,9 +1745,6 @@ int DaoInterface_CopyMethod( DaoInterface *self, DaoRoutine *rout, DMap *deftype
 	if( model && model->tid == DAO_CLASS ){
 		DMap_Insert( deftypes, aux->xClass.clsType, aux->xClass.clsInter->abtype );
 		DMap_Insert( deftypes, aux->xClass.objType, aux->xClass.objInter->abtype );
-	}else if( model && model->tid == DAO_CTYPE ){
-		DMap_Insert( deftypes, aux->xCtype.ctype, aux->xCtype.clsInter->abtype );
-		DMap_Insert( deftypes, aux->xCtype.cdtype, aux->xCtype.objInter->abtype );
 	}else{
 		DMap_Insert( deftypes, rout->routHost, self->abtype );
 	}
@@ -2421,8 +2412,6 @@ void DaoType_SpecializeMethods( DaoType *self )
 		for(i=0; i<self->bases->size; i++){
 			DaoType *base = self->bases->items.pType[i];
 			DaoType_SpecializeMethods( base );
-			DArray_Append( self->aux->xCtype.clsInter->supers, base->aux->xCtype.clsInter );
-			DArray_Append( self->aux->xCtype.objInter->supers, base->aux->xCtype.objInter );
 		}
 	}
 	if( original->kernel->sptree == NULL ) return;
@@ -2495,14 +2484,6 @@ void DaoType_SpecializeMethods( DaoType *self )
 			}
 		}
 		DArray_Delete( parents );
-		DMap_Reset( defs );
-		if( self->aux ){ /* may be builtin generic types such as list<@T> */
-			for(it=DMap_First(methods); it; it=DMap_Next(methods, it)){
-				DaoRoutine *rout = it->value.pRoutine;
-				DaoInterface_CopyMethod( self->aux->xCtype.clsInter, rout, defs );
-				DaoInterface_CopyMethod( self->aux->xCtype.objInter, rout, defs );
-			}
-		}
 		DMap_Delete( defs );
 		/* Set new kernel after it has been setup, for read safety in multithreading: */
 		if( self->tid == DAO_CSTRUCT || self->tid == DAO_CDATA || self->tid == DAO_CTYPE ){

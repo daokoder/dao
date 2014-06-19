@@ -2199,9 +2199,6 @@ static void DaoByteCoder_DecodeInterface( DaoByteCoder *self, DaoByteBlock *bloc
 		switch( type->tid ){
 		case DAO_CLASS   : inter = type->aux->xClass.clsInter; break;
 		case DAO_OBJECT  : inter = type->aux->xClass.objInter; break;
-		case DAO_CTYPE   : inter = type->aux->xCtype.clsInter; break;
-		case DAO_CSTRUCT :
-		case DAO_CDATA   : inter = type->aux->xCtype.objInter; break;
 		}
 	}else{
 		inter = DaoInterface_New( name->value->xString.value->chars );

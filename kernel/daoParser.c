@@ -1945,21 +1945,6 @@ WrongType:
 			case DAO_OBJECT :
 				type = type->aux->xClass.objInter->abtype;
 				goto DoneGenericType;
-			case DAO_CTYPE :
-				if( self->byteBlock ){
-					DaoInterface *inter = type->aux->xCtype.clsInter;
-					DaoByteBlock_AddInterfaceBlock( self->byteBlock, inter, DAO_PERM_PUBLIC );
-				}
-				type = type->aux->xCtype.clsInter->abtype;
-				goto DoneGenericType;
-			case DAO_CSTRUCT :
-			case DAO_CDATA :
-				if( self->byteBlock ){
-					DaoInterface *inter = type->aux->xCtype.objInter;
-					DaoByteBlock_AddInterfaceBlock( self->byteBlock, inter, DAO_PERM_PUBLIC );
-				}
-				type = type->aux->xCtype.objInter->abtype;
-				goto DoneGenericType;
 			}
 			goto InvalidTypeForm;
 		case DKEY_INVAR :
