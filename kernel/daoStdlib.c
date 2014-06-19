@@ -47,7 +47,19 @@
 #include"daoTasklet.h"
 #include"daoValue.h"
 
-static void STD_Path( DaoProcess *proc, DaoValue *p[], int N )
+#ifndef CHANGESET_ID
+#define CHANGESET_ID "Undefined"
+#endif
+
+const char *const dao_version = "Dao " DAO_VERSION " (" CHANGESET_ID ", " __DATE__ ")";
+
+static void DaoSTD_Version( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoProcess_PutChars( proc, p[0]->xInteger.value ? dao_version : DAO_VERSION );
+}
+
+
+static void DaoSTD_Path( DaoProcess *proc, DaoValue *p[], int N )
 {
 	char *path = DString_GetData( p[0]->xString.value );
 	switch( p[1]->xEnum.value ){
@@ -56,7 +68,7 @@ static void STD_Path( DaoProcess *proc, DaoValue *p[], int N )
 	case 2 : DaoVmSpace_DelPath( proc->vmSpace, path ); break;
 	}
 }
-static void STD_Compile( DaoProcess *proc, DaoValue *p[], int N )
+static void DaoSTD_Compile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	char *source = DaoValue_TryGetChars( p[0] );
 	DaoNamespace *ns, *import = DaoValue_CastNamespace( p[1] );
@@ -70,7 +82,7 @@ static void STD_Compile( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	DaoTuple_SetItem( tuple, ns->mainRoutines->items.pValue[ ns->mainRoutines->size-1 ], 1 );
 }
-static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
+static void DaoSTD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoVmSpace *vms = proc->vmSpace;
 	DaoNamespace *ns = proc->activeNamespace;
@@ -89,7 +101,7 @@ static void STD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 		proc->stdioStream = prevStream;
 	}
 }
-static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
+static void DaoSTD_Load( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoNamespace *ns;
 	DaoVmSpace *vms = proc->vmSpace;
@@ -106,7 +118,7 @@ static void STD_Load( DaoProcess *proc, DaoValue *p[], int N )
 	if( import && ns ) DaoNamespace_AddParent( proc->activeNamespace, ns );
 }
 int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname, DString *source );
-static void STD_Resource( DaoProcess *proc, DaoValue *p[], int N )
+static void DaoSTD_Resource( DaoProcess *proc, DaoValue *p[], int N )
 {
 	FILE *fin;
 	DString *file = DString_Copy( p[0]->xString.value );
@@ -152,7 +164,7 @@ static void Dao_AboutVars( DaoNamespace *ns, DaoValue *par[], int N, DString *st
 		if( i+1<N ) DString_AppendChars( str, " " );
 	}
 }
-static void STD_About( DaoProcess *proc, DaoValue *p[], int N )
+static void DaoSTD_About( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *str = DaoProcess_PutChars( proc, "" );
 	Dao_AboutVars( proc->activeNamespace, p, N, str );
@@ -194,7 +206,7 @@ void DaoProcess_Trace( DaoProcess *self, int depth )
 	}
 }
 
-void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
+void DaoSTD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoDebugger *debugger = proc->vmSpace->debugger;
 	DaoRoutine *routine = proc->activeRoutine;
@@ -218,28 +230,139 @@ void STD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 	if( debugger && debugger->Debug ) debugger->Debug( debugger, proc, stream );
 }
 
-#ifndef CHANGESET_ID
-#define CHANGESET_ID "Undefined"
-#endif
 
-const char *const dao_version = "Dao " DAO_VERSION " (" CHANGESET_ID ", " __DATE__ ")";
-
-static void STD_Version( DaoProcess *proc, DaoValue *p[], int N )
+static void DaoSTD_Warn( DaoProcess *proc, DaoValue *p[], int n )
 {
-	DaoProcess_PutChars( proc, p[0]->xInteger.value ? dao_version : DAO_VERSION );
+	DaoType *type = DaoVmSpace_MakeExceptionType( proc->vmSpace, "Exception::Warning" );
+	DaoException *exception = (DaoException*)DaoException_New( type );
+	DaoStream *stream = proc->stdioStream ? proc->stdioStream : proc->vmSpace->stdioStream;
+	DaoException_Init( exception, proc, p[0]->xString.value->chars, NULL );
+	DaoException_Print( exception, stream );
+	DaoException_Delete( exception );
 }
+static void DaoSTD_Error( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoType *etype = DaoVmSpace_MakeExceptionType( proc->vmSpace, "Exception::Error" );
+	DaoException *exception = DaoException_New( etype );
 
+	DaoException_Init( exception, proc, p[0]->xString.value->chars, NULL );
+	DArray_Append( proc->exceptions, exception );
+}
+static void DaoSTD_Error2( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DArray_Append( proc->exceptions, p[0] );
+}
+static void DaoSTD_Error3( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoType *etype = p[0]->xCtype.cdtype;
+	DaoException *exception = DaoException_New( etype );
+	DaoException_Init( exception, proc, p[1]->xString.value->chars, p[2] );
+	DArray_Append( proc->exceptions, exception );
+}
+static void DaoSTD_Exec( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
+	int ecount = proc->exceptions->size;
+
+	if( sect == NULL ) return;
+	DaoProcess_Execute( proc );
+	DaoProcess_PopFrame( proc );
+	DaoProcess_SetActiveFrame( proc, proc->topFrame );
+	if( proc->exceptions->size > ecount ){
+		if( n > 0 ){
+			DaoProcess_PutValue( proc, p[0] );
+			DArray_Erase( proc->exceptions, ecount, -1 );
+		}
+	}else{
+		DaoProcess_PutValue( proc, proc->stackValues[0] );
+	}
+}
+static void DaoSTD_Try( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
+	int ecount = proc->exceptions->size;
+
+	if( sect == NULL ) return;
+	DaoProcess_Execute( proc );
+	DaoProcess_PopFrame( proc );
+	DaoProcess_SetActiveFrame( proc, proc->topFrame );
+	if( proc->exceptions->size > ecount ){
+		DaoProcess_PutValue( proc, proc->exceptions->items.pValue[proc->exceptions->size-1] );
+		DArray_PopBack( proc->exceptions );
+	}else{
+		DaoProcess_PutValue( proc, proc->stackValues[0] );
+	}
+}
+static void DaoSTD_Test( DaoProcess *proc, DaoValue *p[], int n )
+{
+	printf( "%i\n", p[0]->type );
+}
 
 DaoFuncItem dao_std_methods[] =
 {
-	{ STD_Path,      "path( path: string, action: enum<set,add,remove> = $add )" },
-	{ STD_Compile,   "compile( source: string, import: any = none ) => tuple<namespace:any,main:routine>" },
-	{ STD_Eval,      "eval( source: string, st = io::stdio ) => any" },
-	{ STD_Load,      "load( file: string, import = 1, runim = 0 ) => any" },
-	{ STD_Resource,  "resource( path: string ) => string" },
-	{ STD_About,     "about( invar ... : any ) => string" },
-	{ STD_Debug,     "debug( invar ... : any )" },
-	{ STD_Version,   "version( verbose = 0 ) => string" },
+	{ DaoSTD_Version,   "version( verbose = 0 ) => string" },
+	{ DaoSTD_Path,      "path( path: string, action: enum<set,add,remove> = $add )" },
+	{ DaoSTD_Compile,   "compile( source: string, import: any = none ) => tuple<namespace:any,main:routine>" },
+	{ DaoSTD_Eval,      "eval( source: string, st = io::stdio ) => any" },
+	{ DaoSTD_Load,      "load( file: string, import = 1, runim = 0 ) => any" },
+	{ DaoSTD_Resource,  "resource( path: string ) => string" },
+	{ DaoSTD_About,     "about( invar ... : any ) => string" },
+	{ DaoSTD_Debug,     "debug( invar ... : any )" },
+
+	{ DaoSTD_Warn,
+		"warn( invar info: string )"
+		/*
+		// Raise a warning with message "info".
+		*/
+	},
+	{ DaoSTD_Error,
+		"error( invar info: string )"
+		/*
+		// Raise an error with message "info";
+		// The exception for the error will be an instance of Exception::Error.
+		*/
+	},
+	{ DaoSTD_Error2,
+		"error( invar exception: interface<Error> )"
+		/*
+		// Raise an error with pre-created exception object.
+		// Here type "interface<Error>" represents instance of any type derived
+		// from "Exception", and the instance is passed in without casting.
+		*/
+	},
+	{ DaoSTD_Error3,
+		"error( invar eclass: interface<class<Error>>, info: string, data: any = none )"
+		/*
+		// Raise an error of type "eclass" with message "info", and associate "data"
+		// to the error.
+		//
+		// Here type "interface<class<Error>>" represents any type derived from
+		// "Exception". This is used to prevent a derived expressioin from being casted
+		// to the base type.
+		*/
+	},
+	{ DaoSTD_Exec,
+		"exec() [=>@T] => @T"
+		/*
+		//
+		*/
+	},
+	{ DaoSTD_Exec,
+		"exec( default_value: @T ) [=>@T] => @T"
+		/*
+		//
+		*/
+	},
+	{ DaoSTD_Try,
+		"try() [=>@T] => interface<Error>|@T"
+		/*
+		//
+		*/
+	},
+#if DEBUG
+	{ DaoSTD_Test,      "__test1__( ... )" },
+	{ DaoSTD_Test,      "__test2__( ... : int|string )" },
+#endif
 	{ NULL, NULL }
 };
 

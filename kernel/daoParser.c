@@ -5657,7 +5657,7 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 				int compatible;
 				type = DaoParser_ParseType( self, offset + 1, rb-1, & pos, NULL );
 				if( type == NULL ) goto ErrorParsing;
-				compatible = DaoType_MatchTo( type, dao_type_exception, NULL );
+				compatible = DaoType_MatchTo( type, dao_type_error, NULL );
 				compatible |= type->tid == DAO_NONE || type->tid == DAO_ANY;
 				if( compatible == 0 ) goto ErrorParsing;
 				/* defer block that may consume exception objects may return value: */

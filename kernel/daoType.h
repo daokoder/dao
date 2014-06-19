@@ -138,6 +138,8 @@ DAO_DLL DaoType *dao_type_routine;
 DAO_DLL DaoType *dao_type_cdata;
 DAO_DLL DaoType *dao_type_for_iterator;
 DAO_DLL DaoType *dao_type_exception;
+DAO_DLL DaoType *dao_type_warning;
+DAO_DLL DaoType *dao_type_error;
 DAO_DLL DaoType *dao_array_types[DAO_COMPLEX+1];
 
 DAO_DLL DaoType* DaoType_New( const char *name, int tid, DaoValue *pb, DArray *nest );

@@ -2369,134 +2369,7 @@ static void DaoConfigure()
 }
 
 
-
-static void DaoMETH_Warn( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoType *type = DaoVmSpace_MakeExceptionType( proc->vmSpace, "Exception::Warning" );
-	DaoException *exception = (DaoException*)DaoException_New( type );
-	DaoStream *stream = proc->stdioStream ? proc->stdioStream : proc->vmSpace->stdioStream;
-	DaoException_Init( exception, proc, p[0]->xString.value->chars, NULL );
-	DaoException_Print( exception, stream );
-	DaoException_Delete( exception );
-}
-static void DaoMETH_Error( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoType *etype = DaoVmSpace_MakeExceptionType( proc->vmSpace, "Exception::Error" );
-	DaoException *exception = DaoException_New( etype );
-
-	DaoException_Init( exception, proc, p[0]->xString.value->chars, NULL );
-	DArray_Append( proc->exceptions, exception );
-}
-static void DaoMETH_Error2( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DArray_Append( proc->exceptions, p[0] );
-}
-static void DaoMETH_Error3( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoType *etype = NULL;
-	DaoString *name = DaoValue_CastString( p[0] );
-	DaoException *exception;
-
-	if( name != NULL ){
-		etype = DaoVmSpace_MakeExceptionType( proc->vmSpace, name->value->chars );
-	}else{
-		etype = p[0]->xCtype.cdtype;
-	}
-	exception = DaoException_New( etype );
-	DaoException_Init( exception, proc, p[1]->xString.value->chars, p[2] );
-	DArray_Append( proc->exceptions, exception );
-}
-static void DaoMETH_Frame( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoValue *retvalue = NULL;
-	DaoValue *defvalue = n ? p[0] : NULL;
-	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
-	int ecount;
-
-	if( sect == NULL ) return;
-	ecount = proc->exceptions->size;
-	DaoProcess_Execute( proc );
-	retvalue = proc->stackValues[0];
-	DaoProcess_PopFrame( proc );
-	DaoProcess_SetActiveFrame( proc, proc->topFrame );
-	if( proc->exceptions->size > ecount ){
-		if( n > 0 ){
-			DaoProcess_PutValue( proc, defvalue );
-			DArray_Erase( proc->exceptions, ecount, -1 );
-		}
-	}else{
-		DaoProcess_PutValue( proc, retvalue );
-	}
-}
-static void DaoMETH_Test( DaoProcess *proc, DaoValue *p[], int n )
-{
-	printf( "%i\n", p[0]->type );
-}
-
-DaoFuncItem dao_builtin_methods[] =
-{
-	{ DaoMETH_Warn,
-		"warn( invar info: string )"
-		/*
-		// Raise a warning with message "info".
-		*/
-	},
-	{ DaoMETH_Error,
-		"error( invar info: string )"
-		/*
-		// Raise an error with message "info";
-		// The exception for the error will be an instance of Exception::Error.
-		*/
-	},
-	{ DaoMETH_Error2,
-		"error( invar exception: interface<Exception> )"
-		/*
-		// Raise an error with pre-created exception object.
-		// Here type "interface<Exception>" represents instance of any type derived
-		// from "Exception", and the instance is passed in without casting.
-		*/
-	},
-	{ DaoMETH_Error3,
-		"error( invar eclass: string|interface<class<Exception>>,"
-							  "invar info: string, data : any = none )"
-		/*
-		// Raise an error of type "eclass" with message "info", and associate "data"
-		// to the error.
-		//
-		// "eclass" can be any exception type object, but it can also be a name such
-		// as "Exception::Error::Index" to identify the exception type. Exception type
-		// identified by name doesn't need to be defined, as long as it is started with
-		// "Exception::". In such cases, new exception types will be created properly!
-		// The same name then can be used in recover() to screen the exceptions.
-		//
-		// Here type "interface<class<Exception>>" represents any type derived from
-		// "Exception".
-		*/
-	},
-	{ DaoMETH_Frame,
-		"frame() [=>@T] => @T"
-		/*
-		//
-		*/
-	},
-	{ DaoMETH_Frame,
-		"frame( default_value: @T ) [=>@T] => @T"
-		/*
-		//
-		*/
-	},
-#if DEBUG
-	{ DaoMETH_Test,      "__test1__( ... )" },
-	{ DaoMETH_Test,      "__test2__( ... : int|string )" },
-#endif
-	{ NULL, NULL }
-};
-
-
-
 extern void DaoType_Init();
-
-
 
 
 #ifdef DAO_WITH_THREAD
@@ -2730,7 +2603,7 @@ DaoVmSpace* DaoInit( const char *command )
 
 	dao_type_cdata = DaoNamespace_WrapType( vms->daoNamespace, & defaultCdataTyper, 1 );
 
-	dao_type_exception = DaoException_Setup( vms->daoNamespace );
+	DaoException_Setup( vms->daoNamespace );
 
 #ifdef DAO_WITH_CONCURRENT
 	ns2 = DaoVmSpace_GetNamespace( vms, "mt" );
@@ -2744,8 +2617,6 @@ DaoVmSpace* DaoInit( const char *command )
 	ns2 = DaoVmSpace_GetNamespace( vms, "std" );
 	DaoNamespace_AddConstValue( daons, "std", (DaoValue*) ns2 );
 	DaoNamespace_WrapFunctions( ns2, dao_std_methods );
-
-	DaoNamespace_WrapFunctions( daons, dao_builtin_methods );
 
 	DaoNamespace_AddParent( vms->mainNamespace, vms->daoNamespace );
 

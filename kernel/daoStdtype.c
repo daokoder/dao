@@ -3773,6 +3773,7 @@ void DaoException_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *
 	if( remove ) self->data = NULL;
 }
 
+static void Dao_Exception_Define( DaoProcess *proc, DaoValue *p[], int N );
 static void Dao_Exception_Get_name( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Get_summary( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Set_summary( DaoProcess *proc, DaoValue *p[], int n );
@@ -3785,6 +3786,10 @@ static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n );
 
 static DaoFuncItem dao_Exception_Meths[] =
 {
+	{ Dao_Exception_Define,
+		"Define( name: string, info: string ) => interface<class<Exception>>"
+	},
+
 	/*
 	// No constructors, so that interface of user-defined exception type
 	// can match to interface<class<Exception>>!
@@ -3866,6 +3871,17 @@ static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n )
 	DaoException_SetData( self, p[0] );
 	DaoProcess_PutValue( proc, (DaoValue*)self );
 }
+static void Dao_Exception_Define( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *name = p[0]->xString.value;
+	DString *info = p[1]->xString.value;
+	DaoType *etype = DaoVmSpace_MakeExceptionType( proc->vmSpace, name->chars );
+	if( etype == 0 ){
+		DaoProcess_RaiseError( proc, "Param", "Invalid exception name" );
+		return;
+	}
+	DaoProcess_PutValue( proc, (DaoValue*) etype->aux );
+}
 
 
 static DaoFuncItem dao_ExceptionWarning_Meths[] =
@@ -3894,12 +3910,15 @@ DaoTypeBase dao_ExceptionError_Typer =
 	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
 
-DaoType* DaoException_Setup( DaoNamespace *ns )
+void DaoException_Setup( DaoNamespace *ns )
 {
-	DaoNamespace_WrapType( ns, & dao_Exception_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_ExceptionWarning_Typer, 0 );
-	DaoNamespace_WrapType( ns, & dao_ExceptionError_Typer, 0 );
-	return dao_Exception_Typer.core->kernel->abtype;
+	dao_type_exception = DaoNamespace_WrapType( ns, & dao_Exception_Typer, 0 );
+	dao_type_warning = DaoNamespace_WrapType( ns, & dao_ExceptionWarning_Typer, 0 );
+	dao_type_error = DaoNamespace_WrapType( ns, & dao_ExceptionError_Typer, 0 );
+	DaoNamespace_AddType( ns, dao_type_warning->name, dao_type_warning );
+	DaoNamespace_AddType( ns, dao_type_error->name, dao_type_error );
+	DaoNamespace_AddTypeConstant( ns, dao_type_warning->name, dao_type_warning );
+	DaoNamespace_AddTypeConstant( ns, dao_type_error->name, dao_type_error );
 }
 const char* DaoException_GetName( int id )
 {

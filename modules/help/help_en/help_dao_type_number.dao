@@ -16,7 +16,8 @@ Integer Type
 @[text]
 
 @[green]int@[green] is the built-in primitive data type for integers.
-By default, its size is the same as the pointer size on the platform.
+By default, its size is the same as the pointer size on the platform,
+namely 4 bytes on 32 bits machines and 8 bytes on 64 bits machine.
 
 
 @[subsection]Definition@[subsection]
@@ -33,7 +34,7 @@ Integer    ::= DecInteger | HexInteger
 @[code]
 A = 123
 B = 0x123a
-C :int = 789
+C: int = 789
 @[code]
 @[text]
 

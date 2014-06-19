@@ -5926,7 +5926,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 
 
 
-void STD_Debug( DaoProcess *proc, DaoValue *p[], int N );
+void DaoSTD_Debug( DaoProcess *proc, DaoValue *p[], int N );
 
 static DaoException* DaoProcess_RaiseExceptionEx( DaoProcess *self, DaoType *etype, const char *info )
 {
@@ -5951,7 +5951,7 @@ static DaoException* DaoProcess_RaiseExceptionEx( DaoProcess *self, DaoType *ety
 		if( self->vmSpace->stopit ==0 ){
 			DaoProcess_Trace( self, 10 );
 			DaoProcess_PrintException( self, NULL, 0 );
-			STD_Debug( self, NULL, 0 );
+			DaoSTD_Debug( self, NULL, 0 );
 		}
 	}
 	return except;

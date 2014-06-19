@@ -288,7 +288,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 	daoint i, k, size;
 
 	assert( typer->core != NULL );
-	if( typer->funcItems == NULL ) return 0;
+	if( typer->funcItems == NULL && typer->supers[0] == NULL ) return 0;
 	if( typer->core->kernel && typer->core->kernel->methods != NULL ) return 1;
 	typer->core->kernel->SetupMethods = NULL;
 	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){

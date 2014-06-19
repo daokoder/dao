@@ -3,8 +3,8 @@
 # unconditionally or conditionally with respect to exceptions.
 # Please see the "Defer Blocks" demo for more details.
 #
-# In Dao, an exception or error can be raised by the built-in function
-# error() which has three overloaded versions. The simplest version can
+# In Dao, an exception or error can be raised by the standard method
+# std.error() which has three overloaded versions. The simplest version can
 # take a string as parameter to become the message of the error.
 #
 # To handle an error of certain type, one need to define a defer block
@@ -26,7 +26,7 @@ routine Test()
 		return 456
 	}
 	io.writeln( "Test(): before error;" )
-	error( "some error" )
+	std.error( "some error" )
 	io.writeln( "Test(): after error;" )
 	return 123
 }
@@ -47,7 +47,7 @@ routine Test2()
 	}
 
 	io.writeln( "Test2(): before error;" )
-	error( MyError() );
+	std.error( MyError() );
 	io.writeln( "Test2(): after error;" )
 }
 
@@ -57,15 +57,15 @@ Test2()
 # To simplify the handling of panics, Dao support a special type
 # of code blocks that are executed in new stack frames. Such blocks
 # can be defined in the following ways:
-#     frame { block }
-#     frame ( value ) { block }
+#     std.exec { block }
+#     std.exec ( value ) { block }
 # which are expressions that may return values. In the second case,
 # if the "block" raises an exception, the default "value" is returned
 # instead, and the exception is suppressed.
 
 fout = io::stdio
 
-frame {
+std.exec {
 	defer ( any ) { return none }
 	fout = io.open( "NonExistentFile.txt", "r+" )
 }
@@ -76,7 +76,7 @@ fout.writeln( "hello" )
 
 
 # A simpler way to write the above codes:
-fout = frame( io::stdio ){ io.open( "NonExistentFile.txt", "r+" ) }
+fout = std.exec( io::stdio ){ io.open( "NonExistentFile.txt", "r+" ) }
 
 # Or using the assertion operator ??:
 # fout = io.open( "NonExistentFile.txt", "r+" ) ?? io::stdio

@@ -65,6 +65,8 @@ DaoType *dao_type_map_any = NULL;
 DaoType *dao_type_routine = NULL;
 DaoType *dao_type_cdata = NULL;
 DaoType *dao_type_exception = NULL;
+DaoType *dao_type_warning = NULL;
+DaoType *dao_type_error = NULL;
 DaoType *dao_type_for_iterator = NULL;
 DaoType *dao_array_types[DAO_COMPLEX+1] = {0};
 
