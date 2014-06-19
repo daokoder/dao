@@ -1,4 +1,9 @@
 
+interface VirtMeth
+{
+	routine Virt()
+}
+
 class AA
 {
 	static glb = 1;
@@ -13,7 +18,7 @@ class AA
 
 	routine Virt(){ io.writeln( "AA::Virt()" ) }
 	routine CallVirt(){
-		((interface<AA>)self).Virt()
+		((VirtMeth)self).Virt()
 	}
 }
 

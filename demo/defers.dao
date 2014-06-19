@@ -40,18 +40,14 @@ routine Test()
 	defer( none ){
 		io.writeln( "defer( none )" )
 	}
-	defer( Exception ){
-		io.writeln( "defer( Exception )" )
-		return 888
-	}
-	defer( Exception::Error as error ){
+	defer( Error as error ){
 		io.writeln( "defer( Exception::Error as error )" )
 		return 999
 	}
 
 	for( i = 2 : 5 ) defer { io.writeln( "deferred", i ) }
 
-	error( Exception::Error( "something" ) )
+	std.error( Error( "something" ) )
 	io.writeln( "returning" );
 	return 123
 }

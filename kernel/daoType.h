@@ -185,7 +185,6 @@ struct DaoInterface
 {
 	DAO_VALUE_COMMON;
 
-	DaoType       *model;   /* type (class/ctype) on which this interface was built; */
 	DaoType       *abtype;  /* type object of this interface; */
 	DArray        *supers;  /* parent interfaces; */
 	DMap          *methods; /* DHash<DString*,DaoRoutine*>; */
@@ -198,7 +197,6 @@ DaoInterface* DaoInterface_New( const char *name );
 int DaoInterface_Bind( DArray *pairs, DArray *fails );
 int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds );
 void DaoInterface_DeriveMethods( DaoInterface *self );
-int DaoInterface_CopyMethod( DaoInterface *self, DaoRoutine *rout, DMap *defs );
 
 void DMap_SortMethods( DMap *hash, DArray *methods );
 

@@ -21,7 +21,7 @@
 
 routine Test()
 {
-	defer ( Exception::Error ){
+	defer ( Error ){
 		io.writeln( "Error is handled! And a new value is returned!" )
 		return 456
 	}
@@ -34,7 +34,7 @@ routine Test()
 io.writeln( Test() )
 
 # Example to handle user defined exception type:
-class MyError : Exception::Error
+class MyError : Error
 {
 	routine serialize(){ return ("MyError", self) }
 }

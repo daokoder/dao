@@ -121,8 +121,6 @@ DaoClass* DaoClass_New()
 	self->ranges  = DVector_New(sizeof(ushort_t));
 	self->offsets = DVector_New(sizeof(ushort_t));
 	self->references  = DArray_New( DAO_DATA_VALUE );
-	self->clsInter = NULL;
-	self->objInter = NULL;
 
 	self->cstMixinStart = self->cstMixinEnd = self->cstMixinEnd2 = 0;
 	self->glbMixinStart = self->glbMixinEnd = self->glbMixinEnd2 = 0;
@@ -178,24 +176,9 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 
 	if( self->classRoutine ) return;
 
-	self->clsInter = DaoInterface_New( name->chars );
-	self->objInter = DaoInterface_New( name->chars );
-	DString_SetChars( self->clsInter->abtype->name, "interface<class<" );
-	DString_SetChars( self->objInter->abtype->name, "interface<" );
-	DString_Append( self->clsInter->abtype->name, name );
-	DString_Append( self->objInter->abtype->name, name );
-	DString_AppendChars( self->clsInter->abtype->name, ">>" );
-	DString_AppendChar( self->objInter->abtype->name, '>' );
-	DaoClass_AddReference( self, self->clsInter );
-	DaoClass_AddReference( self, self->objInter );
-
 	self->objType = DaoType_New( name->chars, DAO_OBJECT, (DaoValue*)self, NULL );
 	self->clsType = DaoType_New( name->chars, DAO_CLASS, (DaoValue*) self, NULL );
 	GC_IncRC( self->clsType );
-	GC_IncRC( self->clsType );
-	GC_IncRC( self->objType );
-	self->clsInter->model = self->clsType;
-	self->objInter->model = self->objType;
 	DString_InsertChars( self->clsType->name, "class<", 0, 0, 0 );
 	DString_AppendChar( self->clsType->name, '>' );
 
@@ -1066,48 +1049,6 @@ int DaoClass_UseMixinDecorators( DaoClass *self )
 	}
 #endif
 	return bl;
-}
-void DaoClass_MakeInterface( DaoClass *self )
-{
-	daoint i, j;
-	DaoType *tp;
-	DaoRoutine *meth;
-	DaoInterface *clsInter = self->clsInter;
-	DaoInterface *objInter = self->objInter;
-	DMap *deftypes = DHash_New(0,0);
-
-	DArray_Clear( self->objInter->supers );
-	DMap_Clear( self->objInter->methods );
-
-	if( self->parent ){
-		if( clsInter->abtype->bases == NULL ) clsInter->abtype->bases = DArray_New( DAO_DATA_VALUE );
-		if( objInter->abtype->bases == NULL ) objInter->abtype->bases = DArray_New( DAO_DATA_VALUE );
-		if( self->parent && self->parent->type == DAO_CLASS ){
-			DArray_Append( clsInter->supers, self->parent->xClass.clsInter );
-			DArray_Append( objInter->supers, self->parent->xClass.objInter );
-			DArray_Append( clsInter->abtype->bases, self->parent->xClass.clsInter->abtype );
-			DArray_Append( objInter->abtype->bases, self->parent->xClass.objInter->abtype );
-		}else if( self->parent && self->parent->type == DAO_CTYPE ){
-			/* Not supported. */
-		}
-	}
-
-	for(i=0; i<self->cstDataName->size; ++i){
-		DString *name = self->cstDataName->items.pString[i];
-		DaoValue *value = self->constants->items.pConst[i]->value;
-		DaoRoutine *rout = (DaoRoutine*) value;
-		DNode *it;
-
-		if( value->type != DAO_ROUTINE ) continue;
-		if( value->xRoutine.attribs & DAO_ROUT_DECORATOR ) continue;
-
-		it = MAP_Find( self->lookupTable, rout->routName );
-		if( it == NULL || LOOKUP_PM( it->value.pInt ) != DAO_PERM_PUBLIC ) continue;
-
-		DaoInterface_CopyMethod( self->clsInter, rout, deftypes ); /* TODO: handle error; */
-		DaoInterface_CopyMethod( self->objInter, rout, deftypes ); /* TODO: handle error; */
-	}
-	DMap_Delete( deftypes );
 }
 void DaoClass_ResetAttributes( DaoClass *self )
 {

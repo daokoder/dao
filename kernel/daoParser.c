@@ -1179,6 +1179,9 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 				tk = DArray_Append( routine->body->defLocals, tokens[i] );
 				DaoToken_Set( tk, 1, 0, routine->parCount, NULL );
 			}
+			if( nested->size == 0 && strcmp( tks->chars, "self" ) == 0 ){
+				routine->attribs |= DAO_ROUT_PARSELF;
+			}
 			MAP_Insert( DaoParser_CurrentSymbolTable( module ), tks, module->regCount );
 			DaoParser_PushRegister( module );
 			routine->parCount ++;
@@ -1931,20 +1934,6 @@ WrongType:
 			case DAO_CDATA :
 			case DAO_CSTRUCT : type = type->aux->xCtype.ctype;  goto DoneGenericType;
 			case DAO_OBJECT : type = type->aux->xClass.clsType; goto DoneGenericType;
-			}
-			goto InvalidTypeForm;
-		case DKEY_INTERFACE :
-			if( count2 != 1 ) goto InvalidTypeForm;
-			type = types->items.pType[ count ];
-			DArray_Erase( types, count, count2 );
-			if( type == NULL ) goto InvalidTypeForm;
-			switch( type->tid ){
-			case DAO_CLASS :
-				type = type->aux->xClass.clsInter->abtype;
-				goto DoneGenericType;
-			case DAO_OBJECT :
-				type = type->aux->xClass.objInter->abtype;
-				goto DoneGenericType;
 			}
 			goto InvalidTypeForm;
 		case DKEY_INVAR :
@@ -3107,8 +3096,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		if( self->byteBlock ){
 			int pm = self->permission;
 			DaoByteBlock_AddClassBlock( self->byteBlock, klass, pm );
-			DaoByteBlock_AddInterfaceBlock( self->byteBlock, klass->clsInter, pm );
-			DaoByteBlock_AddInterfaceBlock( self->byteBlock, klass->objInter, pm );
 		}
 
 		if( start+1 <= to ){
@@ -3271,7 +3258,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( parser->byteBlock ){
 		DaoByteCoder_EncodeUInt32( parser->byteBlock->begin+4, klass->attribs );
 	}
-	DaoClass_MakeInterface( klass );
 	error = DaoParser_CompileRoutines( parser ) == 0;
 	if( error == 0 && klass->classRoutines->overloads->routines->size == 0 ){
 		DString *ctorname = klass->cstDataName->items.pString[DAO_CLASS_CONST_CSTOR];
@@ -3279,7 +3265,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DaoParser_AddDefaultInitializer( parser, klass, 0 );
 		error |= DaoParser_ParseRoutine( parser ) == 0;
 		DaoClass_AddConst( klass, ctorname, (DaoValue*)klass->classRoutine, DAO_PERM_PUBLIC );
-		DaoInterface_CopyMethod( klass->clsInter, klass->classRoutine, NULL );
 		if( parser->byteBlock ){
 			DaoByteBlock *bk = parser->byteBlock;
 			bk = DaoByteBlock_AddRoutineBlock( bk, klass->classRoutine, DAO_PERM_PUBLIC );

@@ -12,10 +12,6 @@ routine FunctionA( obj, name : string, index = 123 )
 FunctionA( [], "abc" )
 FunctionA( {}, "def", 456 )
 
-# Parameter names can be explicitly specified in function call:
-# Note: the parameters are still required to be in the right order!
-FunctionA( obj = {}, name = "ghi", index = 789 )
-
 
 #{
 # If "..." is used as the last parameter in a function definition,

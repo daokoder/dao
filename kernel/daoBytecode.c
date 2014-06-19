@@ -982,7 +982,6 @@ DaoByteBlock* DaoByteBlock_AddClassBlock( DaoByteBlock *self, DaoClass *klass, i
 DaoByteBlock* DaoByteBlock_AddInterfaceBlock( DaoByteBlock *self, DaoInterface *inter, int pm )
 {
 	daoint i, j;
-	DaoByteBlock *modbk = DaoByteBlock_EncodeType( self, inter->model );
 	DaoByteBlock *decl = DaoByteBlock_FindObjectBlock( self, (DaoValue*) inter );
 	DaoByteBlock *name = DaoByteBlock_EncodeString( self, inter->abtype->name );
 	DaoByteBlock *block = DaoByteBlock_AddBlock( self, (DaoValue*) inter, DAO_ASM_INTERFACE );
@@ -993,14 +992,9 @@ DaoByteBlock* DaoByteBlock_AddInterfaceBlock( DaoByteBlock *self, DaoInterface *
 	}
 	DaoByteCoder_EncodeUInt16( block->begin+2, inter->supers->size );
 	block->end[7] = pm;
-	if( inter->model ){
-		if( modbk == NULL ) DaoByteCoder_Error( self->coder, NULL, "Model type not found!" );
-		DaoByteBlock_InsertBlockIndex( block, block->begin, modbk );
-	}else{
-		DaoByteBlock *data = DaoByteBlock_NewBlock( block, DAO_ASM_BASES );
-		DaoByteBlock_EncodeValues2( self, inter->supers );
-		DaoByteBlock_AddBlockIndexData( data, 4, inter->supers->size );
-	}
+	DaoByteBlock *data = DaoByteBlock_NewBlock( block, DAO_ASM_BASES );
+	DaoByteBlock_EncodeValues2( self, inter->supers );
+	DaoByteBlock_AddBlockIndexData( data, 4, inter->supers->size );
 	return block;
 }
 
@@ -2194,12 +2188,6 @@ static void DaoByteCoder_DecodeInterface( DaoByteCoder *self, DaoByteBlock *bloc
 	if( self->error ) return;
 	if( name->value->type == DAO_INTERFACE ){
 		inter = (DaoInterface*) name->value;
-	}else if( name->value->type == DAO_TYPE ){
-		DaoType *type = (DaoType*) name->value;
-		switch( type->tid ){
-		case DAO_CLASS   : inter = type->aux->xClass.clsInter; break;
-		case DAO_OBJECT  : inter = type->aux->xClass.objInter; break;
-		}
 	}else{
 		inter = DaoInterface_New( name->value->xString.value->chars );
 		DaoByteCoder_AddToScope( self, block, inter->abtype->name, (DaoValue*) inter );

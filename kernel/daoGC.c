@@ -423,7 +423,6 @@ void DaoObjectLogger_Quit()
 				DaoInterface *inter = (DaoInterface*)value;
 				DaoObjectLogger_ScanArray( inter->supers );
 				DaoObjectLogger_ScanValue( (DaoValue*) inter->abtype );
-				DaoObjectLogger_ScanValue( (DaoValue*) inter->model );
 				break;
 			}
 		case DAO_NAMESPACE :
@@ -1756,7 +1755,6 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			DaoInterface *inter = (DaoInterface*)value;
 			cycRefCountDecrements( inter->supers );
 			cycRefCountDecrement( (DaoValue*) inter->abtype );
-			cycRefCountDecrement( (DaoValue*) inter->model );
 			count += DaoGC_ScanMap( inter->methods, DAO_GC_DEC, 0, 1 );
 			count += inter->supers->size + inter->methods->size;
 			break;
@@ -1957,7 +1955,6 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			DaoGC_ScanMap( inter->methods, DAO_GC_INC, 0, 1 );
 			cycRefCountIncrements( inter->supers );
 			cycRefCountIncrement( (DaoValue*) inter->abtype );
-			cycRefCountIncrement( (DaoValue*) inter->model );
 			count += inter->supers->size + inter->methods->size;
 			break;
 		}
@@ -2164,7 +2161,6 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			count += DaoGC_ScanMap( inter->methods, DAO_GC_BREAK, 0, 1 );
 			directRefCountDecrements( inter->supers );
 			directRefCountDecrement( (DaoValue**) & inter->abtype );
-			directRefCountDecrement( (DaoValue**) & inter->model );
 			break;
 		}
 	case DAO_NAMESPACE :

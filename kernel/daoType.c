@@ -1535,7 +1535,6 @@ void DaoInterface_Delete( DaoInterface *self )
 	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	GC_DecRC( self->abtype );
-	GC_DecRC( self->model );
 	DArray_Delete( self->supers );
 	DMap_Delete( self->methods );
 	dao_free( self );
@@ -1691,76 +1690,6 @@ void DaoInterface_DeriveMethods( DaoInterface *self )
 	}
 	self->derived = 1;
 }
-static int DaoInterface_CopyRoutine( DaoInterface *self, DaoRoutine *rout, DMap *deftypes )
-{
-	DaoRoutine *meth;
-	DaoType *tp, *model = self->model;
-	DaoValue *aux = model ? model->aux : NULL;
-	daoint j, typeinter = model && (model->tid == DAO_CLASS || model->tid == DAO_CTYPE);
-
-	if( rout->attribs & DAO_ROUT_DECORATOR ) return 1;
-	if( typeinter ){
-		if( rout->attribs & DAO_ROUT_PARSELF ) return 1;
-	}else{
-		if( rout->attribs & DAO_ROUT_INITOR ) return 1;
-	}
-
-	DMap_Reset( deftypes );
-	if( model && model->tid == DAO_CLASS ){
-		DMap_Insert( deftypes, aux->xClass.clsType, aux->xClass.clsInter->abtype );
-		DMap_Insert( deftypes, aux->xClass.objType, aux->xClass.objInter->abtype );
-	}else{
-		DMap_Insert( deftypes, rout->routHost, self->abtype );
-	}
-	aux = rout->routHost->aux;
-	if( rout->routHost->tid == DAO_OBJECT ){
-		DMap_Insert( deftypes, aux->xClass.clsType, aux->xClass.clsInter->abtype );
-		DMap_Insert( deftypes, aux->xClass.objType, aux->xClass.objInter->abtype );
-	}
-
-	tp = DaoType_DefineTypes( rout->routType, rout->nameSpace, deftypes );
-	if( tp == NULL ) return 0;
-	meth = DaoRoutine_New( rout->nameSpace, self->abtype, 0 );
-	meth->attribs = rout->attribs;
-	DString_Assign( meth->routName, rout->routName );
-	if( rout->attribs & DAO_ROUT_INITOR ){
-		DString_Assign( meth->routName, self->abtype->name );
-	}
-	GC_ShiftRC( tp, meth->routType );
-	meth->routType = tp;
-	DaoMethods_Insert( self->methods, meth, meth->nameSpace, meth->routHost );
-	return 1;
-}
-int DaoInterface_CopyMethod( DaoInterface *self, DaoRoutine *rout, DMap *deftypes )
-{
-	DMap *old = deftypes;
-	DaoRoutine *meth;
-	DaoType *tp, *model = self->model;
-	DaoValue *aux = model ? model->aux : NULL;
-	daoint j, typeinter = model && (model->tid == DAO_CLASS || model->tid == DAO_CTYPE);
-	int ret = 1;
-
-	if( deftypes == NULL ) deftypes = DHash_New(0,0);
-	DMap_Reset( deftypes );
-	if( model && model->tid == DAO_CLASS ){
-		DMap_Insert( deftypes, aux->xClass.clsType, aux->xClass.clsInter->abtype );
-		DMap_Insert( deftypes, aux->xClass.objType, aux->xClass.objInter->abtype );
-	}else{
-		DMap_Insert( deftypes, rout->routHost, self->abtype );
-	}
-
-	if( rout->overloads == NULL ){
-		ret = DaoInterface_CopyRoutine( self, rout, deftypes );
-	}else{
-		for(j=0; j<rout->overloads->routines->size; ++j){
-			DaoRoutine *rout2 = rout->overloads->routines->items.pRoutine[j];
-			ret &= DaoInterface_CopyRoutine( self, rout2, deftypes ) != 0;
-			if( ret == 0 ) break;
-		}
-	}
-	if( old == NULL ) DMap_Delete( deftypes );
-	return ret;
-}
 
 DAO_DLL void DMap_SortMethods( DMap *hash, DArray *methods )
 {
@@ -1798,18 +1727,6 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds )
 	DNode *it;
 	daoint i;
 	if( inter == NULL ) return DAO_MT_NOT;
-	if( inter->model != NULL ){
-		DaoType *model = inter->model;
-		/* Auto interfaces can only be matched by the original type and its derived ones: */
-		if( DaoType_MatchToParent( self, model, NULL ) < DAO_MT_SUB ) return DAO_MT_NOT;
-		if( model->tid == DAO_CSTRUCT || model->tid == DAO_CDATA ){
-			DaoTypeCore *core = model->kernel->core;
-			if( inter->model->kernel->SetupMethods ){
-				model->kernel->SetupMethods( model->kernel->nspace, model->typer );
-			}
-			DaoType_TrySpecializeMethods( model );
-		}
-	}
 	if( inters == NULL ) return DAO_MT_SUB * DaoInterface_BindTo( inter, self, binds );
 	if( (it = DMap_Find( inters, inter )) ) return it->value.pVoid ? DAO_MT_SUB : DAO_MT_NOT;
 	return DAO_MT_SUB * DaoInterface_BindTo( inter, self, binds );
