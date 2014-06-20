@@ -1,0 +1,339 @@
+load help
+
+@[name]
+dao.defer-error
+@[name]
+
+@[title]
+Defer Block and Error Handling
+@[title]
+
+
+@[text]
+
+
+The error handling in Dao is based defer blocks which can be executed
+unconditionally or conditionally with respect to exceptions.
+
+
+@[subsection]
+Defer Block
+@[subsection]
+
+A @[code]defer@[code] block is a block of code that can be executed when
+a function returns normally or exits due to excpetions. Its
+execution can be conditional or unconditional with respect
+to exceptions:
+@[list]
+-- @[code]defer{block}@[code] or @[code]defer(){block}@[code]: unconditional exection,
+   when a function exits with or without exception;
+
+-- @[code]defer(none){block}@[code]: conditional execution, only when the
+   function exits without exception;
+
+-- @[code]defer(any){block}@[code]: conditional execution, when the function
+   exit with any exception(s);
+
+-- @[code]defer(type){block}@[code]: conditional execution, only when the
+   function exit with exception(s) matching to @[code]type@[code];
+
+-- @[code]defer(type as name){block}@[code]: the same as @[code]defer(type){block}@[code]
+   except that the exception object will be accessible by @[code]name@[code] in the block.
+@[list]
+
+Unconditional defer blocks are mostly useful to do cleanups that need to be done
+regardless whether and what errors might happen in the surrounding function.
+And the defer blocks that are conditional on @[code]none@[code] might be useful
+to support transactional like operations to perform certain operations only when
+no error happens.
+And the other conditional defer blocks are mainly useful for error handling.
+
+
+A defer block is compiled as a closure, so it can access outer
+scope constants and variables in the same way as closures.
+These outer scope variables are captured at the time the defer
+block is reached in the normal execution.
+When a function exits, all the executable defer blocks that have
+been reached in the normal execution will be executed in the reverse
+order of being reached.
+
+
+
+@[code]
+routine Test()
+{
+	defer {
+		io.writeln( "always executed" )
+	}
+	defer( none ){
+		io.writeln( "defer( none )" )
+	}
+
+	for( i = 2 : 5 ) defer { io.writeln( "deferred", i ) }
+
+	io.writeln( "returning" );
+	return 123
+}
+
+io.writeln( Test() )
+@[code]
+
+
+
+@[subsection]
+Error Handling
+@[subsection]
+
+
+The main way to handle errors in Dao is to use conditional defer blocks.
+Different conditional defer blocks can be defined for different error types.
+Each conditional defer block can only be activated once by one exception object,
+and the more recent exception object is checked first if there are multiple exception objects.
+
+
+To handle an error of certain type, one need to define a defer block
+with the error type as its parameter. Such that the block will only
+be executed when an error of that type actually happened. Then the
+error object will be passed to the defer block for proper handling.
+The error is suppressed by such defer block to allow program procede
+normally (after returning to its caller).
+
+
+Such defer block must return or not return value in the same way as
+the routine where the defer is defined.
+The returned value by such defer will by used as the new return value of the routine.
+
+
+Example,
+@[code]
+routine Test()
+{
+	defer ( Error ){
+		io.writeln( "Error is handled! And a new value is returned!" )
+		return 456
+	}
+	io.writeln( "Test(): before error;" )
+	std.error( "some error" )
+	io.writeln( "Test(): after error;" )
+	return 123
+}
+io.writeln( Test() )
+@[code]
+Here the standard method @[code]std.error()@[code] is used to raise a generic error.
+This method has three overloaded forms, and the simplest version can
+take a string as parameter to become the message of the error as shown in the example.
+Various errors can also be raised by the Dao runtime for standard operations and methods.
+
+
+
+@[subsection]
+Error Types
+@[subsection]
+
+The @[code]Error@[code] type used in the above example represents a generel error type.
+It is also the base type from which all error types are derived.
+The @[code]Error@[code] itself is derived from the The @[code]Exception@[code] type,
+which stores the essential information about an exception type.
+Such information includes general name, error message, error data, source file path,
+line number and function call stack trace.
+
+
+The followings are the standard exception types:
+@[code]
+Exception                # General exception
+Warning                  # General warning
+Error                    # General error
+Error::Field             # Invalid field
+Error::Field::NotExist   # Field not exist
+Error::Field::NotPermit  # Field not permit
+Error::Float             # Floating point error
+Error::Float::DivByZero  # Division by zero
+Error::Float::OverFlow   # Floating point overflow
+Error::Float::UnderFlow  # Floating point underflow
+Error::Index             # Invalid index
+Error::Index::Range      # Index out of range
+Error::Key               # Invalid key
+Error::Key::NotExist     # Key not exist
+Error::Param             # Invalid parameter(s)
+Error::Syntax            # Invalid syntax
+Error::Type              # Invalid type
+Error::Value             # Invalid value
+Error::File              # File error
+@[code]
+Note that, @[code]Warning@[code] and @[code]Error@[code] are also registered
+in the global scope, so they can be directly used without @[code]Exception::@[code] scoping.
+Among these exception types, only @[code]Exception@[code], @[code]Warning@[code]
+and @[code]Error@[code] are @[green]pre-defined@[green], and the rest are only
+@[green]pre-declared@[green].
+Only the pre-defined exception types can be directly used in Dao code.
+Other error types need to be explicitly defined using the @[code]Exception::Define()@[code]
+method in the following way,
+@[code]
+const IndexError  = Exception::Define( "Error::Index" )
+@[code]
+This is a constant expression which will be evaluated during parsing
+so that the defined type can be used right after this line of code.
+The evaluation of this method call will create a new error type named @[code]Index@[code]
+that is derived from @[code]Error@[code].
+This new error type will be created a C data type and scoped / registered
+inside the @[code]Error@[code] type.
+The scoped name passed to the @[code]Exception::Define()@[code] as the first parameter
+will serve as a unique string ID for the new error type, and the future error type definition
+using the same string will return the same error type.
+
+
+Cutomized error type can be defined either by defining a Dao class that is derived from
+the @[code]Error@[code] type, or by defining a C type using the above method,
+@[code]
+const MyErrorType = Exception::Define( "Error::MyError", "General information" )
+@[code]
+Here the second parameter is the general information that is associated to the error type.
+Defining pre-declared error types need no such parameter, as it will be set internally.
+Defining a new error type this way as a C data type has the advantage of convenience
+and implicity.
+
+
+Now the newly defined error type can be used in two ways, by either using the new
+constant value retuned by @[code]Exception::Define()@[code], or by using the cannonical
+name @[code]Error::MyError@[code],
+@[code]
+defer( MyErrorType ) { ... }
+defer( Error::MyError ) { ... }
+@[code]
+
+
+Here is another example of defining a new error type by subclassing from @[code]Error@[code],
+@[code]
+class MyError : Error
+{
+	routine serialize(){ return ('MyError', self) }
+}
+@[code]
+
+
+
+
+@[subsection]
+Raising Warning and Error
+@[subsection]
+
+In Dao code, an warning can be raised simply with the standard method
+@[code]std.error()@[code],
+@[code]
+warn( info: string )
+@[code]
+
+
+Those pre-declared standard error types can be automatically defined by the
+Dao runtime when needed.
+
+
+
+The handling of exceptions in Dao is very much like
+the handling of panics in the Go programming language.
+The basic idea is to implement exception handling codes in a function
+as deferred code block (see the @[green]Deferred Block@[green] subsection
+in @[node]dao.tutorial.controls@[node] for more information about this),
+which will be automatically executed when the function exists.
+
+
+In the deferred block, the built-in function @[green]recover()@[green] can be used
+to recover a list of exceptions, and handle them properly.
+Then the execution of the caller of function which defines the
+deferred blok will be resumed normally.
+@[code(dao)]
+
+routine Test()
+{
+	defer { io.writeln( 'recovering:', recover() ) }
+	io.writeln( 'Test(): before panic;' )
+	panic( 123 )
+	io.writeln( 'Test(): after panic;' )
+}
+
+io.writeln( 'Before Test();' )
+Test()
+io.writeln( 'After Test();' )
+@[code(dao)]
+In this example, the built-in function @[green]panic()@[green]
+is used to raise an exception. This function can take any value as a parameter.
+If the parameter is an exception object, this exception will be raised;
+otherwise, an generic exception object will be created to hold the parameter value,
+and then the created exception object will be raised.
+
+
+
+
+Each function can define multiple deferred blocks, but only the call
+to @[green]recover()@[green] in the lastly executed deferred block
+will return the exceptions.
+
+
+An exception type can be passed to @[green]recover()@[green]
+to request a specific type of exception.
+@[code(dao)]
+# Example to handle user defined exception type:
+class MyError : Exception::Error
+{
+	routine serialize(){ return ('MyError', self) }
+}
+
+routine Test()
+{
+	defer {
+		io.writeln( 'recovering from', recover( MyError ) )
+	}
+
+	io.writeln( 'Test(): before panic;' )
+	panic( MyError() );
+	io.writeln( 'Test(): after panic;' )
+}
+Test()
+@[code(dao)]
+
+
+As mentioned above, the normal execution will be resumed by
+the caller of the function that handles the exceptions in its deferred blocks.
+In order to resume the normal execution right after handling of exceptions,
+a special type of code blocks can be used to "host" the deferred blocks,
+@[code(dao)]
+frame { block }
+frame ( value ) { block }
+@[code(dao)]
+These kinds of blocks are executed in new stack frames,
+and when these blocks are finished and the frames are removed from the stack,
+deferred blocks encounted in these blocks will be automatically executed
+in the same way as the deferred blocks defined in normal functions.
+If the exceptions are recovered in these deferred blocks,
+the normal execution will be resumed right after these 
+@[green]frame{}@[green] blocks,
+@[code(dao)]
+fout = io::stdio
+
+frame {
+	defer { recover() }
+	fout = io.open( "NonExistentFile.txt", 'r+' )
+}
+
+if( fout != io::stdio ) defer{ fout.close() }
+
+fout.writeln( 'hello' )
+@[code(dao)]
+
+Such @[green]frame{}@[green] blocks are actually expressions that may return values.
+The only difference between @[green]frame{block}@[green] and 
+@[green]frame(value){block}@[green] is that,
+in the second case, if the @[cyan]block@[cyan] raises an exception,
+the default @[cyan]value@[cyan] is returned instead, 
+and the exception is suppressed.
+This can make codes such as shown in the above example simpler,
+@[code(dao)]
+fout = frame( io::stdio ){ io.open( "NonExistentFile.txt", 'r+' ) }
+if( fout != io::stdio ) defer{ fout.close() }
+fout.writeln( 'hello' )
+@[code(dao)]
+
+
+
+
+@[text]

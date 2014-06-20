@@ -197,38 +197,6 @@ static int dao_cjk( uint_t ch )
 	if( i >= 7 || dao_cjk_charts[i][0] > ch ) return 0;
 	return 1;
 }
-static int DString_Break( DString *self, int start, int width )
-{
-	char *chars = self->chars + start;
-	char *stop = self->chars + self->size;
-	int offset = start;
-	int count = width;
-
-	do {
-		DCharState state = DString_DecodeChar( chars, stop );
-		count -= 1 + (dao_cjk( state.value ) != 0);
-		offset += state.width;
-		chars += state.width;
-	} while( count > 0 && offset < self->size );
-	return offset;
-
-#if 0
-	uchar_t *bytes = (uchar_t*) self->chars;
-	daoint pos = DString_LocateChar( self, start, 0 );
-	daoint last = start;
-	while( (count--) > 0 ){
-		if( pos == DAO_NULLPOS ) goto Return;
-		pos += DString_UTF8CharSize( bytes[pos] );
-		last = pos;
-		if( pos >= self->size ) goto Return;
-		pos = DString_LocateChar( self, pos, 0 );
-	}
-Return:
-	/* Just in case the input is messed up. */
-	if( last <= start && width > 0 ) last = start + 1;
-	return last;
-#endif
-}
 
 static DaoxStream* DaoxStream_New( DaoStream *stream, DaoProcess *proc )
 {
@@ -769,8 +737,6 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		DaoxStream_WriteMBS( self, "     " );
 		DaoxStream_SetColor( self, NULL, NULL );
 		DaoxStream_WriteNewLine( self, "" );
-	}else if( isspace( self->last ) == 0 ){
-		DaoxStream_WriteChar( self, ' ' );
 	}
 	DString_Trim( code, 1, 1, 0 );
 
@@ -1490,7 +1456,7 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 #if defined(UNIX) && !defined(MINIX)
 	struct winsize ws;
 	ioctl( STDOUT_FILENO, TIOCGWINSZ, &ws );
-	screen = ws.ws_col - 1;
+	screen = ws.ws_col;
 #endif
 
 	if( stream->fmtHTML ) screen += 20;
@@ -1545,27 +1511,41 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 			if( (title->size + self->name->size + 2) < TW ){
 				DaoxStream_WriteString( stream, title );
 			}else{
-				int next = 0;
-				int start = DString_Break( title, 0, TW - (self->name->size + 2) );
-				if( start >= 0 ){
-					DString_SubString( title, chunk, 0, start );
-					DString_Trim( chunk, 1, 1, 0 );
-					DaoxStream_WriteString( stream, chunk );
-				}else{
-					start = 0;
-				}
+				char *stop = title->chars + title->size;
+				char chars[8];
+				int locOffset = 0;
+
+				TW -= self->name->size + 2;
 				if( last )
 					memset( line->chars + offset, ' ', (width + extra)*sizeof(char) );
 				else
 					memset( line->chars + offset + 1, ' ', (width + extra - 1)*sizeof(char) );
-				for(; start < title->size; start=next){
-					start = DString_Break( title, start, 0 );
-					next = DString_Break( title, start, TW );
-					DString_SubString( title, chunk, start, next - start );
-					DString_Trim( chunk, 1, 1, 0 );
-					DaoxStream_WriteChar( stream, '\n' );
-					DaoxStream_WriteString( stream, line );
-					DaoxStream_WriteString( stream, chunk );
+				for(i=0; i<title->size; ){
+					DCharState state = DString_DecodeChar( title->chars + i, stop );
+					memcpy( chars, title->chars + i, state.width );
+					chars[state.width] = 0;
+					if( locOffset == 0 && isspace( state.value ) ){
+						/* Skip leading space; */
+					}else{
+						if( stream->output ){
+							if( stream->fmtHTML && state.value == '<' ){
+								DString_AppendChars( stream->output, "&lt;" );
+							}else if( stream->fmtHTML && state.value == '>' ){
+								DString_AppendChars( stream->output, "&gt;" );
+							}else{
+								DString_AppendChars( stream->output, chars );
+							}
+						}else{
+							DaoStream_WriteChars( stream->stream, chars );
+						}
+						locOffset += 1 + (dao_cjk(state.value) != 0);
+					}
+					i += state.width;
+					if( locOffset >= TW && i < title->size ){
+						locOffset = 0;
+						DaoxStream_WriteNewLine( stream, "" );
+						DaoxStream_WriteString( stream, line );
+					}
 				}
 			}
 			if( stream->fmtHTML ){

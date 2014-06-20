@@ -227,8 +227,9 @@ struct DaoCtype
 {
 	DAO_CSTRUCT_COMMON;
 
-	DString      *name;
 	DaoType      *cdtype;
+	DString      *name;
+	DString      *info;
 };
 DAO_DLL DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype );
 DAO_DLL void DaoCtype_Delete( DaoCtype *self );
@@ -241,8 +242,7 @@ struct DaoException
 
 	DArray     *callers;
 	DArray     *lines;
-	DString    *title;
-	DString    *summary;
+	DString    *info;
 	DaoValue   *data;
 };
 
@@ -253,8 +253,6 @@ void DaoException_SetData( DaoException *self, DaoValue *data );
 void DaoException_Setup( DaoNamespace *ns );
 void DaoException_Init( DaoException *self, DaoProcess *proc, const char *info, DaoValue *dat );
 void DaoException_Print( DaoException *self, DaoStream *stream );
-
-DAO_DLL const char* DaoException_GetName( int id );
 
 
 #endif

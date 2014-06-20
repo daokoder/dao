@@ -317,13 +317,13 @@ DaoFuncItem dao_std_methods[] =
 	{ DaoSTD_Debug,     "debug( invar ... : any )" },
 
 	{ DaoSTD_Warn,
-		"warn( invar info: string )"
+		"warn( info: string )"
 		/*
 		// Raise a warning with message "info".
 		*/
 	},
 	{ DaoSTD_Error,
-		"error( invar info: string )"
+		"error( info: string )"
 		/*
 		// Raise an error with message "info";
 		// The exception for the error will be an instance of Exception::Error.

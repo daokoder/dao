@@ -15,7 +15,7 @@
 #    except that the exception object will be accessible by "name".
 # 
 # A defer block is compiled as a closure, so it can access outer
-# scope constants and varaibles in the same way as closures.
+# scope constants and variables in the same way as closures.
 # These outer scope variables are captured at the time the defer
 # block is reached in the normal execution.
 #

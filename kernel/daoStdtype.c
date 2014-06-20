@@ -3642,6 +3642,7 @@ DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype )
 	self->cdtype = cdtype;
 	self->type = DAO_CTYPE;
 	self->name = DString_New();
+	self->info = DString_New();
 	if( cdtype ) DString_Assign( self->name, cdtype->name );
 #ifdef DAO_USE_GC_LOGGER
 	if( cttype == NULL ) DaoObjectLogger_LogNew( (DaoValue*) self );
@@ -3652,6 +3653,7 @@ void DaoCtype_Delete( DaoCtype *self )
 {
 	DaoCstruct_Free( (DaoCstruct*) self );
 	DString_Delete( self->name );
+	DString_Delete( self->info );
 	GC_DecRC( self->cdtype );
 	dao_free( self );
 }
@@ -3715,26 +3717,21 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer )
 
 
 
-static void DaoException_InitByType( DaoException *self, DaoType *type );
-
 DaoException* DaoException_New( DaoType *type )
 {
 	DaoException *self = (DaoException*) dao_malloc( sizeof(DaoException) );
 	DaoCstruct_Init( (DaoCstruct*)self, type );
 	self->callers = DArray_New( DAO_DATA_VALUE );
 	self->lines = DArray_New(0);
-	self->title = DString_New();
-	self->summary = DString_New();
+	self->info = DString_New();
 	self->data = NULL;
-	DaoException_InitByType( self, type );
 	return self;
 }
 void DaoException_Delete( DaoException *self )
 {
 	DaoCstruct_Free( (DaoCstruct*)self );
 	GC_DecRC( self->data );
-	DString_Delete( self->title );
-	DString_Delete( self->summary );
+	DString_Delete( self->info );
 	DArray_Delete( self->callers );
 	DArray_Delete( self->lines );
 	dao_free( self );
@@ -3765,7 +3762,7 @@ static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n );
 static DaoFuncItem dao_Exception_Meths[] =
 {
 	{ Dao_Exception_Define,
-		"Define( name: string, info: string ) => class<Exception>"
+		"Define( name: string, info = '' ) => class<Exception>"
 	},
 
 	/*
@@ -3807,12 +3804,12 @@ static void Dao_Exception_Get_name( DaoProcess *proc, DaoValue *p[], int n )
 static void Dao_Exception_Get_summary( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoException* self = (DaoException*) p[0];
-	DaoProcess_PutString( proc, self->summary );
+	DaoProcess_PutString( proc, self->info );
 }
 static void Dao_Exception_Set_summary( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoException* self = (DaoException*) p[0];
-	DString_Assign( self->summary, p[1]->xString.value );
+	DString_Assign( self->info, p[1]->xString.value );
 }
 static void Dao_Exception_Get_data( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -3839,7 +3836,7 @@ static void Dao_Exception_New( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoType *type = proc->topFrame->routine->routHost;
 	DaoException *self = (DaoException*)DaoException_New( type );
-	if( n ) DString_Assign( self->summary, p[0]->xString.value );
+	if( n ) DString_Assign( self->info, p[0]->xString.value );
 	DaoProcess_PutValue( proc, (DaoValue*)self );
 }
 static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n )
@@ -3858,6 +3855,7 @@ static void Dao_Exception_Define( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseError( proc, "Param", "Invalid exception name" );
 		return;
 	}
+	if( info->size ) DString_Assign( etype->aux->xCtype.info, info );
 	DaoProcess_PutValue( proc, (DaoValue*) etype->aux );
 }
 
@@ -3891,21 +3889,9 @@ void DaoException_Setup( DaoNamespace *ns )
 	DaoNamespace_AddType( ns, dao_type_error->name, dao_type_error );
 	DaoNamespace_AddTypeConstant( ns, dao_type_warning->name, dao_type_warning );
 	DaoNamespace_AddTypeConstant( ns, dao_type_error->name, dao_type_error );
-}
-const char* DaoException_GetName( int id )
-{
-	if( id < 0 || id >= ENDOF_BASIC_EXCEPT ) return "NotAnException";
-	return daoExceptionNames[id];
-}
-void DaoException_InitByType( DaoException *self, DaoType *type )
-{
-	int i;
-	for(i=DAO_EXCEPTION; i<ENDOF_BASIC_EXCEPT; i++){
-		if( strcmp( type->typer->name, daoExceptionNames[i] ) == 0 ){
-			DString_SetChars( self->title, daoExceptionTitles[i] );
-			return;
-		}
-	}
+	DString_SetChars( dao_type_exception->aux->xCtype.info, daoExceptionTitles[0] );
+	DString_SetChars( dao_type_warning->aux->xCtype.info, daoExceptionTitles[1] );
+	DString_SetChars( dao_type_error->aux->xCtype.info, daoExceptionTitles[2] );
 }
 
 void DaoException_Init( DaoException *self, DaoProcess *proc, const char *summary, DaoValue *dat )
@@ -3922,7 +3908,7 @@ void DaoException_Init( DaoException *self, DaoProcess *proc, const char *summar
 	annotCodes = rout->body->annotCodes->items.pVmc;
 	if( vmc && rout->body->vmCodes->size ) line = annotCodes[id]->line;
 
-	if( summary && summary[0] != 0 ) DString_SetChars( self->summary, summary );
+	if( summary && summary[0] != 0 ) DString_SetChars( self->info, summary );
 	GC_ShiftRC( dat, self->data );
 	self->data = dat;
 
@@ -3979,11 +3965,11 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 	DaoStream_WriteChars( ss, "]] --- " );
 	h = sstring->size;
 	if( h > 40 ) h = 40;
-	DaoStream_WriteString( ss, self->title );
+	DaoStream_WriteString( ss, self->ctype->aux->xCtype.info );
 	DaoStream_WriteChars( ss, ":\n" );
 	DaoStream_WriteString( stream, sstring );
 	DString_Clear( sstring );
-	DaoStream_WriteString( ss, self->summary );
+	DaoStream_WriteString( ss, self->info );
 	DString_Chop( sstring, 1 );
 	DString_Format( sstring, w, h );
 	DaoStream_WriteChars( ss, "\n" );

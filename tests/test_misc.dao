@@ -88,7 +88,7 @@ Integer    ::= DecInteger | HexInteger
 @[test(code_03)]
 routine TestTailCall( n = 0 )
 {
-	if( n == 0 ) error( "test" )
+	if( n == 0 ) std.error( "test" )
 	TestTailCall( n - 1 )
 }
 TestTailCall( 5 )

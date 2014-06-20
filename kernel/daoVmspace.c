@@ -2713,7 +2713,7 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 	DaoValue *value;
 	DaoType *type, *parent = NULL;
 	DString *basename, sub;
-	daoint offset = 0;
+	daoint i, offset = 0;
 
 	if( strcmp( name, "Exception" ) == 0 ) return  dao_type_exception;
 	if( strcmp( name, "Warning" ) == 0 ) return  dao_type_warning;
@@ -2744,5 +2744,12 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 	typer->GetGCFields = parent->typer->GetGCFields;
 	type = DaoNamespace_WrapType( self->daoNamespace, typer, 0 );
 	type->kernel->attribs |= DAO_TYPER_FREE;
+
+	for(i=DAO_EXCEPTION; i<ENDOF_BASIC_EXCEPT; i++){
+		if( strcmp( typer->name, daoExceptionNames[i] ) == 0 ){
+			DString_SetChars( type->aux->xCtype.info, daoExceptionTitles[i] );
+			break;
+		}
+	}
 	return type;
 }

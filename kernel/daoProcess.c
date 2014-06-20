@@ -5930,7 +5930,7 @@ void DaoSTD_Debug( DaoProcess *proc, DaoValue *p[], int N );
 
 static DaoException* DaoProcess_RaiseExceptionEx( DaoProcess *self, DaoType *etype, const char *info )
 {
-	DaoType *warning = DaoVmSpace_MakeExceptionType( self->vmSpace, "Exception::Warning" );
+	DaoType *warning = dao_type_warning;
 	DaoStream *stream = self->vmSpace->errorStream;
 	DaoException *except;
 
@@ -5968,15 +5968,14 @@ static void DaoProcess_RaiseEx( DaoProcess *self, const char *type, const char *
 {
 	int ecount = self->exceptions->size;
 	DString *name = DString_New();
-	DString_SetChars( name, err ? "Exception::Error" : "Exception::Warning" );
+	DString_SetChars( name, err ? "Error" : "Warning" );
 	if( type != NULL && strlen( type ) != 0 ){
 		DString_AppendChars( name, "::" );
 		DString_AppendChars( name, type );
 	}
 	DaoProcess_RaiseException( self, name->chars, info, NULL );
 	if( self->exceptions->size == ecount ){
-		const char *info2 = "invalid exception type name";
-		DaoProcess_RaiseException( self, "Exception::Error::Param", info2 , NULL );
+		DaoProcess_RaiseError( self, "Param", "invalid exception type name" );
 	}
 	DString_Delete( name );
 }
@@ -6005,7 +6004,7 @@ void DaoProcess_RaiseTypeError( DaoProcess *self, DaoType *from, DaoType *to, co
 
 void DaoProcess_PrintException( DaoProcess *self, DaoStream *stream, int clear )
 {
-	DaoType *extype = DaoVmSpace_MakeExceptionType( self->vmSpace, "Exception" );
+	DaoType *extype = dao_type_exception;
 	DaoValue **excobjs = self->exceptions->items.pValue;
 	int i, n;
 

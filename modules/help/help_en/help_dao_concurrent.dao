@@ -135,11 +135,11 @@ mt.iterate( {1,2,3,4,5,6}, 3 ) { io.writeln( X ) }
 ################################################################################
 ################################################################################
 @[name]
-dao.concurrent.asyncall
+dao.concurrent.async-call
 @[name]
 
 @[title]
-Asynchronous Function Call
+Asynchronous Call
 @[title]
 
 @[text]
@@ -176,7 +176,7 @@ just like a @[link]monitor@@http://en.wikipedia.org/wiki/Monitor_(synchronizatio
 ################################################################################
 ################################################################################
 @[name]
-dao.concurrent.asyncobject
+dao.concurrent.async-object
 @[name]
 
 @[title]
