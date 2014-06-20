@@ -428,8 +428,8 @@ if( daovm_make_javascript == $ON ){
 	ems_export += @[]'_DaoStream_WriteChars']"@[]
 	daovm_js_main = daovm.AddObjects( { "kernel/daoMain.c" }, daovm_kernel_headers );
 	daovm_js = daovm.AddJavaScriptLibrary( "dao", daovm_kernel_objects, daovm_js_main )
+	daovm_js.AddDefinition( "DAO_BUILD_JS_TARGET" )
 	daovm_js.AddDefinition( "DAO_WITHOUT_DLL" )
-	daovm_js.AddDefinition( "DAO_MBSTRING_ONLY" )
 	daovm_js.AddDefinition( "WITHOUT_WCTYPE_H" )
 	daovm_js.AddDefinition( "WITHOUT_DIRECT_THREADING" )
 	daovm_js.AddLinkingFlag( "-s EXPORTED_FUNCTIONS=" + ems_export )

@@ -4729,7 +4729,7 @@ int DaoInferencer_HandleClosure( DaoInferencer *self, DaoInode *inode, int i, DM
 	return 1;
 ErrorTyping: return DaoInferencer_Error( self, DTE_TYPE_NOT_MATCHING );
 }
-int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap *defs )
+int DaoInferencer_HandleReturnYield( DaoInferencer *self, DaoInode *inode, DMap *defs )
 {
 	int code = inode->code;
 	int opa = inode->a;
@@ -5875,7 +5875,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 
 		case DVM_RETURN :
 		case DVM_YIELD :
-			if( DaoInferencer_HandleYieldReturn( self, inode, defs ) == 0 ) return 0;
+			if( DaoInferencer_HandleReturnYield( self, inode, defs ) == 0 ) return 0;
 			break;
 
 		case DVM_DATA_I : case DVM_DATA_F : case DVM_DATA_D : case DVM_DATA_C :

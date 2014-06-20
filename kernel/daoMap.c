@@ -896,7 +896,7 @@ unsigned int MurmurHash3( const void *key, int len, unsigned int seed )
 	const int nblocks = len / 4;
 	const uchar_t *data = (const uchar_t*)key;
 	const uchar_t *tail = (const uchar_t*)(data + nblocks*4);
-	const uint_t *blocks = (const uint_t *)(data + nblocks*4);
+	const uint_t *blocks = (const uint_t*)(data + nblocks*4);
 	const uint_t c1 = 0xcc9e2d51;
 	const uint_t c2 = 0x1b873593;
 	uint_t h1 = seed;

@@ -2451,6 +2451,7 @@ DaoVmSpace* DaoVmSpace_MainVmSpace()
 DaoVmSpace* DaoInit( const char *command )
 {
 	DString *mbs;
+	DaoType *type;
 	DaoVmSpace *vms;
 	DaoNamespace *daons, *ns2;
 	int i;
@@ -2507,7 +2508,8 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_double = DaoType_New( "double", DAO_DOUBLE, NULL, NULL );
 	dao_type_complex = DaoType_New( "complex", DAO_COMPLEX, NULL, NULL );
 	dao_type_string = DaoType_New( "string", DAO_STRING, NULL, NULL );
-	dao_type_routine = DaoType_New( "routine<=>?>", DAO_ROUTINE, (DaoValue*)dao_type_udf, NULL );
+	type = DaoType_GetInvarType( dao_type_udf );
+	dao_type_routine = DaoType_New( "routine<=>invar<?>>", DAO_ROUTINE, (DaoValue*)type, NULL );
 
 	mainVmSpace = vms = DaoVmSpace_New();
 
