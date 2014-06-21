@@ -85,19 +85,20 @@ struct DaoType
 	uchar_t   tid;    /* type id; */
 	uchar_t   subtid; /* subtype id; */
 	uchar_t   attrib; /* attributes; */
-	uchar_t   invar     : 1; /* a invar type; */
-	uchar_t   konst     : 1; /* a const type; ::invar is also set to one; */
-	uchar_t   valtype   : 1; /* a value type */
+	uchar_t   invar     : 1; /* invar type; */
+	uchar_t   konst     : 1; /* const type; ::invar is also set to one; */
+	uchar_t   vartht    : 1; /* var type holder type; */
+	uchar_t   valtype   : 1; /* value type */
 	uchar_t   variadic  : 1; /* type for variadic tuple or routine */
 	uchar_t   realnum   : 1; /* for type of int/float/double */
 	uchar_t   noncyclic : 1; /* this type representing non-cyclic data */
-	uchar_t   unused    : 2;
+	uchar_t   unused    : 1;
 	uchar_t   rntcount  : 4; /* real number type count */
 	uchar_t   ffitype   : 4; /* for modules using ffi */
-	DString  *name; /* type name */
-	DString  *fname; /* field name, or parameter name */
+	DString  *name;   /* type name */
+	DString  *fname;  /* field name, or parameter name */
 	DArray   *nested; /* type items */
-	DArray   *bases; /* base types */
+	DArray   *bases;  /* base types */
 	DMap     *mapNames;
 	DMap     *interfaces;
 
@@ -110,9 +111,9 @@ struct DaoType
 	// aux can be the constant value in a constant value type.
 	*/
 	DaoValue  *aux;
-	DaoValue  *value;   /* default value for the type; */
-	DaoType   *tritype; /* base/invar/const type; */
-	DaoType   *cbtype;  /* extra type for code block; */
+	DaoValue  *value;    /* default value for the type; */
+	DaoType   *quadtype; /* base/const/invar/vartht type; */
+	DaoType   *cbtype;   /* extra type for code block; */
 
 	DaoTypeKernel  *kernel; /* type kernel of built-in or C types; */
 	DaoTypeBase    *typer;
@@ -152,6 +153,7 @@ DAO_DLL void DaoType_CheckAttributes( DaoType *self );
 DAO_DLL DaoType* DaoType_GetBaseType( DaoType *self );
 DAO_DLL DaoType* DaoType_GetConstType( DaoType *self );
 DAO_DLL DaoType* DaoType_GetInvarType( DaoType *self );
+DAO_DLL DaoType* DaoType_GetVarTHType( DaoType *self );
 
 /* if "self" match to "type": */
 DAO_DLL int DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs );

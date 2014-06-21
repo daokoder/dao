@@ -76,7 +76,8 @@ where @[green]DecInteger@[green] is defined @[node]dao.type.int@[node].
 A = .12F
 B = 12.F
 C = 12.5F
-D = 2e-3F
+D = 2e-3
+E = 2e-3F
 @[code]
 @[text]
 
@@ -146,7 +147,7 @@ precision floating point numbers.
 
 @[subsection]Definition@[subsection]
 @[code(syntax)]
-Complex ::= [ Float ] 'C'
+Complex ::= ( DecInteger | DecNumber | SciNumber ) 'C'
 @[code(syntax)]
 
 @[green]complex@[green] has two fields @[green]real@[green] and @[green]imag@[green],

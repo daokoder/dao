@@ -803,7 +803,8 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *svalue, DaoType *stype,
 		if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
 		parpass[parindex] = Dao_CheckParameter( partype, argvalue, argtype, defs );
 		/*
-		   printf( "%i:  %i  %s\n", parpass[parindex], partype->tid, partype->name->chars );
+		   printf( "%i:  %i  %s  %s\n", parpass[parindex], partype->tid, partype->name->chars,
+		   argtype ? argtype->name->chars : "" );
 		 */
 		if( parpass[parindex] == 0 ) goto NotMatched;
 	}

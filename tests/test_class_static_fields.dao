@@ -21,7 +21,7 @@ Klass
 class Klass
 {
 	var id = 123
-	static routine Klass(){ id = 1 }
+	static routine Klass(){ id += 1 }
 }
 obj = Klass()
 @[test(code_01)]
@@ -36,7 +36,7 @@ obj = Klass()
 class Klass
 {
 	var id = 123
-	static routine StaticMethod(){ id = 1 }
+	static routine StaticMethod(){ id += 1 }
 }
 obj = Klass::StaticMethod()
 @[test(code_01)]

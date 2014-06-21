@@ -442,7 +442,7 @@ void DaoObjectLogger_Quit()
 				DaoObjectLogger_ScanValue( abtp->value );
 				DaoObjectLogger_ScanValue( (DaoValue*) abtp->kernel );
 				DaoObjectLogger_ScanValue( (DaoValue*) abtp->cbtype );
-				DaoObjectLogger_ScanValue( (DaoValue*) abtp->tritype );
+				DaoObjectLogger_ScanValue( (DaoValue*) abtp->quadtype );
 				DaoObjectLogger_ScanArray( abtp->nested );
 				DaoObjectLogger_ScanArray( abtp->bases );
 				DaoObjectLogger_ScanMap( abtp->interfaces, 1, 0 );
@@ -1778,7 +1778,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			cycRefCountDecrement( abtp->value );
 			cycRefCountDecrement( (DaoValue*) abtp->kernel );
 			cycRefCountDecrement( (DaoValue*) abtp->cbtype );
-			cycRefCountDecrement( (DaoValue*) abtp->tritype );
+			cycRefCountDecrement( (DaoValue*) abtp->quadtype );
 			cycRefCountDecrements( abtp->nested );
 			cycRefCountDecrements( abtp->bases );
 			count += DaoGC_ScanMap( abtp->interfaces, DAO_GC_DEC, 1, 0 );
@@ -1977,7 +1977,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			cycRefCountIncrement( abtp->value );
 			cycRefCountIncrement( (DaoValue*) abtp->kernel );
 			cycRefCountIncrement( (DaoValue*) abtp->cbtype );
-			cycRefCountIncrement( (DaoValue*) abtp->tritype );
+			cycRefCountIncrement( (DaoValue*) abtp->quadtype );
 			cycRefCountIncrements( abtp->nested );
 			cycRefCountIncrements( abtp->bases );
 			count += DaoGC_ScanMap( abtp->interfaces, DAO_GC_INC, 1, 0 );
@@ -2184,7 +2184,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			directRefCountDecrement( (DaoValue**) & abtp->value );
 			directRefCountDecrement( (DaoValue**) & abtp->kernel );
 			directRefCountDecrement( (DaoValue**) & abtp->cbtype );
-			directRefCountDecrement( (DaoValue**) & abtp->tritype );
+			directRefCountDecrement( (DaoValue**) & abtp->quadtype );
 			count += DaoGC_ScanMap( abtp->interfaces, DAO_GC_BREAK, 1, 0 );
 			break;
 		}

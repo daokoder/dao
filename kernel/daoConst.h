@@ -50,7 +50,7 @@ enum DaoExtraTypes
 
 	DAO_PAR_NAMED ,   /* name:type */
 	DAO_PAR_DEFAULT , /* name=type */
-	DAO_PAR_VALIST , /* ... */
+	DAO_PAR_VALIST ,  /* ... */
 
 	/* bit (1<<6) to indicate inexact checking: */
 	DAO_ANY = (1<<6)|0, /* any type */
@@ -95,19 +95,19 @@ enum DaoContainerDataTypes
 
 /*
 // Dao type matching states:
-// ** These states give scores to each type of type matching.
+// -- These states give scores to each type of type matching.
 //    Useful for resolving overloaded routines;
-// ** For loose matching, the state with smaller score is used in case
+// -- For loose matching, the state with smaller score is used in case
 //    that multiple states can be assigned to the same matching.
 //    For example, matching a type holder type "@T" to "any" should give
 //    DAO_MT_THTX instead of DAO_MT_ANY;
-// ** Undefined types are treated as type holder types.
+// -- Undefined types are treated as type holder types.
 //    They simply hold some types that are not successfully inferred;
-// ** DAO_MT_THT should have higher score than DAO_MT_SUB and DAO_MT_SIM.
+// -- DAO_MT_THT should have higher score than DAO_MT_SUB and DAO_MT_SIM.
 //    Because DAO_MT_THT means starting a type association for the type
 //    holder type, and should be considered more or less as precise as
 //    DAO_MT_EQ;
-// ** DAO_MT_EXACT is more precise than DAO_MT_EQ, as it means not only
+// -- DAO_MT_EXACT is more precise than DAO_MT_EQ, as it means not only
 //    type matching but also value matching.
 */
 enum DaoTypeMatchState

@@ -1213,7 +1213,7 @@ int DaoClass_AddObjectVar( DaoClass *self, DString *name, DaoValue *deft, DaoTyp
 	DArray_Append( self->objDataName, (void*)name );
 	DArray_Append( self->instvars, DaoVariable_New( deft, t ) );
 	DaoValue_MarkConst( self->instvars->items.pVar[ id ]->value );
-	return id;
+	return LOOKUP_BIND( DAO_OBJECT_VARIABLE, s, 0, id );
 }
 static void DaoClass_AddConst3( DaoClass *self, DString *name, DaoValue *data )
 {

@@ -2451,9 +2451,9 @@ DaoVmSpace* DaoVmSpace_MainVmSpace()
 DaoVmSpace* DaoInit( const char *command )
 {
 	DString *mbs;
-	DaoType *type;
 	DaoVmSpace *vms;
 	DaoNamespace *daons, *ns2;
+	DaoType *type, *tht;
 	int i;
 
 	if( mainVmSpace ) return mainVmSpace;
@@ -2508,8 +2508,8 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_double = DaoType_New( "double", DAO_DOUBLE, NULL, NULL );
 	dao_type_complex = DaoType_New( "complex", DAO_COMPLEX, NULL, NULL );
 	dao_type_string = DaoType_New( "string", DAO_STRING, NULL, NULL );
-	type = DaoType_GetInvarType( dao_type_udf );
-	dao_type_routine = DaoType_New( "routine<=>invar<?>>", DAO_ROUTINE, (DaoValue*)type, NULL );
+	tht = DaoType_New( "@X", DAO_THT, NULL, NULL );
+	dao_type_routine = DaoType_New( "routine<=>@X>", DAO_ROUTINE, (DaoValue*)tht, NULL );
 
 	mainVmSpace = vms = DaoVmSpace_New();
 
@@ -2546,6 +2546,7 @@ DaoVmSpace* DaoInit( const char *command )
 
 	daons = vms->daoNamespace;
 
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) tht );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_udf );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_routine );
 	DaoNamespace_AddTypeConstant( daons, dao_type_any->name, dao_type_any );
@@ -2585,6 +2586,9 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_list_any = DaoType_Specialize( dao_type_list_template, NULL, 0 );
 	dao_type_map_any  = DaoType_Specialize( dao_type_map_template, NULL, 0 );
 
+	/*
+	// These types should not be accessible by developers using type annotation.
+	*/
 	dao_type_list_empty = DaoType_Copy( dao_type_list_any );
 	dao_type_map_empty = DaoType_Copy( dao_type_map_any );
 	dao_type_list_empty = DaoType_GetConstType( dao_type_list_empty );

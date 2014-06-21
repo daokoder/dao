@@ -5011,7 +5011,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				if( ct != NULL && ct->invar != 0 && K == DAO_CODE_SETF ){
 					if( ct->tid != DAO_CLASS && ct->tid != DAO_NAMESPACE ) goto ModifyConstant;
 				}else if( ct != NULL && ct->invar != 0 && K > DAO_CODE_GETG ){
-					goto ModifyConstant;
+					if( (code < DVM_PAIR || code > DVM_MPACK) && code != DVM_TUPLE_SIM ){
+						goto ModifyConstant;
+					}
 				}
 			}
 		}

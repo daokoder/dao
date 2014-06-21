@@ -250,10 +250,11 @@ Examples,
 I1 = 123     # Base-10 integer;
 I2 = 0xabc   # Base-16 integer;
 F1 = 456.7F  # Single precision with suffix "F";
-F2 = 123e4   # Single precision with lower case "e";
+F2 = 123e4F  # Single precision with suffix "F";
 D1 = 123D    # Double precision with suffix "D";
 D2 = 456.7   # Double precision by default; Or: 456.7D;
-D3 = 123E4   # Double precision with upper case "E";
+D3 = 123e4   # Double precision by default;
+D4 = 123E4   # Double precision by default;
 C1 = 123C    # Double precision complex number with 0.0 real part and 123 imag part;
 C2 = 456.6C  # Double precision complex number;
 @[code]
