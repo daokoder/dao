@@ -443,10 +443,6 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 	}else if( svalue && need_self && ! mcall ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		partype = (DaoType*) partypes[0]->aux;
-		if( svalue->type == DAO_OBJECT && partype->tid >= DAO_OBJECT && partype->tid <= DAO_CDATA ){
-			/* calling C function on Dao object: */
-			svalue = DaoObject_CastToBase( (DaoObject*) svalue, partype );
-		}
 		if( DaoValue_Move2( svalue, & dest[0], partype, defs ) ){
 			passed = 1;
 			selfChecked = 1;

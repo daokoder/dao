@@ -1128,13 +1128,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	notStatic = (routine->attribs & DAO_ROUT_STATIC) ==0;
 	notConstr = hostname && DString_EQ( routine->routName, hostname ) == 0;
 	if( self->isClassBody && notConstr == 0 ) routine->attribs |= DAO_ROUT_INITOR;
-	if( right+1 < size && tokens[right+1]->name == DKEY_INVAR ){
-		if( (inter == NULL && klass == 0) || notStatic == 0 || notConstr == 0 ){
-			DaoParser_Error( self, DAO_TOKEN_NOT_EXPECTED, & tokens[right+1]->string );
-			return -1;
-		}
-		routine->attribs |= DAO_ROUT_INVAR;
-	}
 	if( (isMeth || inter) && tokens[start+1]->name != DKEY_SELF && notStatic && notConstr ){
 		type = hostype;
 		if( routine->attribs & DAO_ROUT_INVAR ) type = DaoType_GetInvarType( type );
@@ -1313,7 +1306,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 
 	e1 = right + 1;
 	e2 = size - 1;
-	if( right+1 < size && tokens[right+1]->name == DKEY_INVAR ) right += 1;
 	if( right+1 < size && tokens[right+1]->name == DTOK_LSB ){
 		cbtype = DaoParser_ParseCodeBlockType( self, right+1, & start );
 		if( cbtype == NULL ) goto ErrorInvalidTypeForm;
@@ -2760,6 +2752,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 	if( start > from ){
 		int ttkk = tokens[start-1]->name;
 		if( ttkk == DKEY_STATIC ) stat = DAO_ROUT_STATIC;
+		if( ttkk == DKEY_INVAR ) stat = DAO_ROUT_INVAR;
 	}
 	start += 1;
 	if( start+2 > to ) goto InvalidDefinition;
@@ -3463,8 +3456,8 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 	int reg, reg1, cst = 0, topll = 0;
 	int colon, comma, last, errorStart, needName;
 	int storeType = 0, scopeType = 0;
-	int empty_decos = 0;
-	unsigned char tki, tki2;
+	int reset_decos = 0;
+	unsigned char tkt, tki, tki2;
 
 	DaoInode *back = self->vmcLast;
 	DaoInode *inode, *opening, *closing;
@@ -3512,7 +3505,7 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 #endif
 		if( self->warnings->size ) DaoParser_PrintWarnings( self );
 		if( self->errors->size ) return 0;
-		if( empty_decos && self->decoFuncs2->size ){
+		if( reset_decos && self->decoFuncs2->size ){
 			DArray_Clear( self->decoFuncs2 );
 			DArray_Clear( self->decoParams2 );
 		}
@@ -3619,15 +3612,9 @@ InvalidMultiAssignment: DArray_Delete( inodes ); return 0;
 		}
 
 		tki = tokens[start]->name;
+		tkt = tokens[start]->type;
 		tki2 = start+1 <= to ? tokens[start+1]->name : 0;
-		if( needName && (ptok->type != DTOK_IDENTIFIER || (tki != DKEY_ENUM
-						&& tki > DAO_NOKEY1 && tki < DKEY_ABS )) ){
-			if( tki < DKEY_ROUTINE || tki > DKEY_OPERATOR || storeType != DAO_DECL_STATIC ){
-				DaoParser_Error( self, DAO_TOKEN_NEED_NAME, & tokens[start]->string );
-				DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
-				return 0;
-			}
-		}
+
 		if( tki == DTOK_ID_THTYPE ){
 #ifdef DAO_WITH_DECORATOR
 			DaoInode *back = self->vmcLast;
@@ -3635,7 +3622,7 @@ InvalidMultiAssignment: DArray_Delete( inodes ); return 0;
 			DaoList *declist = NULL;
 			DArray *cid = DaoParser_GetArray( self );
 			DString *name = & tokens[start]->string;
-			empty_decos = 0;
+			reset_decos = 0;
 			reg = DaoParser_GetRegister( self, tokens[start] );
 			if( reg < 0 ) goto DecoratorError;
 			if( LOOKUP_ISCST( reg ) == 0 ) goto DecoratorError;
@@ -3694,7 +3681,32 @@ DecoratorError:
 			return 0;
 #endif
 		}
-		empty_decos = 1;
+
+		reset_decos = 1;
+
+		/* parsing routine definition */
+		if( (tki == DKEY_ROUTINE && tki2 != DTOK_LB) || tki == DKEY_OPERATOR ){
+			if( storeType == DAO_DECL_CONST || storeType == DAO_DECL_VAR ){
+				DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
+				return 0;
+			}
+			start = DaoParser_ParseRoutineDefinition( self, start, from, to, storeType );
+			if( start <0 ) return 0;
+			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
+			continue;
+		}else if( tki == DKEY_ENUM && (tki2 == DTOK_LCB || tki2 == DTOK_IDENTIFIER) ){
+			start = DaoParser_ParseEnumDefinition( self, start, to, storeType );
+			if( start <0 ) return 0;
+			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
+			continue;
+		}
+
+		if( needName && (tkt != DTOK_IDENTIFIER || (tki > DAO_NOKEY1 && tki < DKEY_ABS)) ){
+			DaoParser_Error( self, DAO_TOKEN_NEED_NAME, & tokens[start]->string );
+			DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
+			return 0;
+		}
+
 		if( tki == DTOK_SEMCO ){
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			start ++;
@@ -3711,19 +3723,6 @@ DecoratorError:
 			continue;
 		}else if( tki == DKEY_TYPE ){
 			start = DaoParser_ParseTypeAliasing( self, start, to );
-			if( start <0 ) return 0;
-			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
-			continue;
-		}else if( tki == DKEY_ENUM && (tki2 == DTOK_LCB || tki2 == DTOK_IDENTIFIER) ){
-			start = DaoParser_ParseEnumDefinition( self, start, to, storeType );
-			if( start <0 ) return 0;
-			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
-			continue;
-		}
-
-		/* parsing routine definition */
-		if( (tki == DKEY_ROUTINE && tki2 != DTOK_LB) || tki == DKEY_OPERATOR ){
-			start = DaoParser_ParseRoutineDefinition( self, start, from, to, storeType );
 			if( start <0 ) return 0;
 			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
 			continue;

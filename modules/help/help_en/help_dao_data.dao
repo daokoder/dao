@@ -216,7 +216,7 @@ class Klass
 	routine Modify() {
 		value += 456
 	}
-	routine Method() invar {
+	invar routine Method() {
 		Modify()      # Error!
 		value += 456  # Error!
 		return value + 456

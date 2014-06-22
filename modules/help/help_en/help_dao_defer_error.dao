@@ -217,11 +217,14 @@ class MyError : Error
 Raising Warning and Error
 @[subsection]
 
-In Dao code, an warning can be raised simply with the standard method
+In Dao code, an warning can be raised simply with the standard method,
 @[code]std.error()@[code],
 @[code]
 warn( info: string )
 @[code]
+This will print the error message right away along with file name and file number
+where the warning is issued. It also prints the call stack trace for this call
+to provide some information about the context where the warning happens.
 
 
 Those pre-declared standard error types can be automatically defined by the
