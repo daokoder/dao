@@ -292,6 +292,15 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 	daoint *id = body->simpleVariables->items.pInt;
 	daoint *end = id + body->simpleVariables->size;
 
+	if( object && routine->routHost ){
+		object = (DaoObject*)DaoObject_CastToBase( object->rootObject, routine->routHost );
+#ifdef DEBUG
+		assert( object && object != (DaoObject*)object->defClass->objType->value );
+#endif
+		GC_ShiftRC( object, frame->object );
+		frame->object = object;
+	}
+
 	if( routine == frame->routine ) return;
 	GC_ShiftRC( routine, frame->routine );
 	frame->routine = routine;
@@ -340,29 +349,35 @@ static void DaoProcess_CopyStackParams( DaoProcess *self )
 }
 void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *object )
 {
-	DaoType *routHost = routine->routHost;
-	DaoStackFrame *frame = DaoProcess_PushFrame( self, routine->body->regCount );
+	DaoStackFrame *frame;
 	DaoProfiler *profiler = self->vmSpace->profiler;
 
+	if( routine->routHost && object == NULL ){
+		if( routine->routHost->tid == DAO_OBJECT && !(routine->attribs & DAO_ROUT_STATIC) ){
+			DaoValue *firstpar = self->parCount ? self->paramValues[0] : NULL;
+			if( firstpar && firstpar->type == DAO_OBJECT ) object = (DaoObject*)firstpar;
+#if 0
+			printf( "%s %s\n", routine->routName->chars, routine->routType->name->chars );
+			printf( "%s\n", routine->routHost->name->chars );
+#endif
+		}
+	}
+
+	if( routine->attribs & DAO_ROUT_INTERFACE ){
+		DaoObject *that = object->rootObject;
+		DMap *vtable = that->defClass->interMethods;
+		DNode *it = vtable ? DMap_Find( vtable, routine ) : NULL;
+		if( it && it->value.pRoutine != routine ){
+			routine = it->value.pRoutine;
+			object = that;
+		}
+	}
+
+	frame = DaoProcess_PushFrame( self, routine->body->regCount );
 	DaoProcess_InitTopFrame( self, routine, object );
 	frame->active = frame;
 	self->status = DAO_PROCESS_STACKED;
 	DaoProcess_CopyStackParams( self );
-	if( routHost && routHost->tid == DAO_OBJECT && !(routine->attribs & DAO_ROUT_STATIC) ){
-		DaoValue *firstParam = frame->parCount ? self->paramValues[0] : NULL;
-		if( firstParam && firstParam->type != DAO_OBJECT ) firstParam = NULL;
-		if( object == NULL && firstParam != NULL ) object = (DaoObject*)firstParam;
-		if( object ) object = (DaoObject*)DaoObject_CastToBase( object->rootObject, routHost );
-#if 0
-		printf( "%s %s\n", routine->routName->chars, routine->routType->name->chars );
-		printf( "%s\n", routHost->name->chars );
-#endif
-#ifdef DEBUG
-		assert( object && object != (DaoObject*)object->defClass->objType->value );
-#endif
-		GC_ShiftRC( object, frame->object );
-		frame->object = object;
-	}
 	if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 }
 void DaoProcess_PushFunction( DaoProcess *self, DaoRoutine *routine )
@@ -3560,11 +3575,17 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		return;
 	}
 	if( va->type == DAO_OBJECT ){
-		DaoClass *scope = self->activeObject ? self->activeObject->defClass : NULL;
-		DaoValue *tpar = (DaoValue*) ct;
-		meth = va->xObject.defClass->castRoutines;
-		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) == 0 ) return;
-		goto FailConversion;
+		DaoValue *value = DaoObject_CastToBase( (DaoObject*) va, ct );
+		if( value ){
+			va = value;
+			goto FastCasting;
+		}else{
+			DaoClass *scope = self->activeObject ? self->activeObject->defClass : NULL;
+			DaoValue *tpar = (DaoValue*) ct;
+			meth = va->xObject.defClass->castRoutines;
+			if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) == 0 ) return;
+			goto FailConversion;
+		}
 	}else if( va->type == DAO_CSTRUCT || va->type == DAO_CDATA ){
 		DaoValue *tpar = (DaoValue*) ct;
 		if( DaoType_MatchTo( va->xCdata.ctype, ct, NULL ) ){ /* up casting: */

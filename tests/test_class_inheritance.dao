@@ -1,8 +1,4 @@
 
-interface Interface
-{
-	 routine Virt()
-}
 
 class AA
 {
@@ -15,8 +11,8 @@ class AA
 	routine Meth(){ io.writeln( "AA::Meth()" ); return 123; }
 	routine Meth( a ){ io.writeln( "AA::Meth(a)" ); return 123; }
 
-	routine Virt(){ io.writeln( "AA::Virt()" ) }
-	routine CallVirt(){ ((Interface)self).Virt() }
+	interface routine Virt(){ io.writeln( "AA::Virt()" ) }
+	routine CallVirt(){ Virt() }
 }
 
 class BB : AA
@@ -102,7 +98,7 @@ AA::Meth(a)
 c.CallVirt();
 @[test(code_01)]
 @[test(code_01)]
-CC::Virt()
+BB::Virt()
 @[test(code_01)]
 
 

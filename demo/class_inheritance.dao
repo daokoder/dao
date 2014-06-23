@@ -1,8 +1,4 @@
 
-interface VirtMeth
-{
-	routine Virt()
-}
 
 class AA
 {
@@ -16,9 +12,9 @@ class AA
 
 	routine AA( i = 0 ){ io.writeln( "AA::AA( i = 0 )" ); }
 
-	routine Virt(){ io.writeln( "AA::Virt()" ) }
+	interface routine Virt(){ io.writeln( "AA::Virt()" ) }
 	routine CallVirt(){
-		((VirtMeth)self).Virt()
+		Virt()
 	}
 }
 
@@ -52,3 +48,5 @@ io.writeln( c.Meth() == 123 ? "ok" : "error" );
 io.writeln( c.Meth(1) );
 
 c.CallVirt();
+a: AA = c
+a.Virt()

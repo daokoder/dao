@@ -2734,7 +2734,7 @@ static DaoRoutine* DaoParser_CheckDeclared( DaoParser *self, DaoRoutine *newrout
 // With this example, the problem of supporting normal routines nested in other
 // routines can be clearly seen. Anonymous routine and closure have no such issues.
  */
-static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int from, int to, int store )
+static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int from, int to, int attribs )
 {
 	DaoToken *ptok, **tokens = self->tokens->items.pToken;
 	DaoNamespace *NS = self->nameSpace;
@@ -2747,13 +2747,9 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 	DString *mbs2 = self->string2;
 	int perm = self->permission;
 	int tki = tokens[start]->name;
-	int k, id, stat = 0, right = -1;
+	int k, id, right = -1;
 	int errorStart = start;
-	if( start > from ){
-		int ttkk = tokens[start-1]->name;
-		if( ttkk == DKEY_STATIC ) stat = DAO_ROUT_STATIC;
-		if( ttkk == DKEY_INVAR ) stat = DAO_ROUT_INVAR;
-	}
+
 	start += 1;
 	if( start+2 > to ) goto InvalidDefinition;
 	if( tokens[start+1]->name == DTOK_COLON2 ){
@@ -2793,9 +2789,9 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		}
 		rout = (DaoRoutine*) value;
 
-		parser = DaoParser_NewRoutineParser( self, start, stat );
+		parser = DaoParser_NewRoutineParser( self, start, attribs );
 		GC_ShiftRC( klass->objType, parser->routine->routHost );
-		parser->routine->attribs |= stat;
+		parser->routine->attribs |= attribs;
 		parser->routine->routHost = klass->objType;
 		parser->hostType = klass->objType;
 		parser->hostClass = klass;
@@ -2837,7 +2833,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		parser->routine = rout;
 	}else if( self->isClassBody ){
 		klass = self->hostClass;
-		parser = DaoParser_NewRoutineParser( self, start, stat );
+		parser = DaoParser_NewRoutineParser( self, start, attribs );
 		rout = parser->routine;
 		right = DaoParser_ParseSignature( self, parser, tki, start );
 		if( right < 0 ) goto InvalidDefinition;
@@ -2867,7 +2863,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			parser->routine = rout;
 		}
 	}else if( self->isInterBody ){
-		parser = DaoParser_NewRoutineParser( self, start, stat );
+		parser = DaoParser_NewRoutineParser( self, start, attribs );
 		rout = parser->routine;
 		right = DaoParser_ParseSignature( self, parser, tki, start );
 		if( right < 0 ) goto InvalidDefinition;
@@ -2879,7 +2875,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		/* Nested normal routine not allowed: */
 		if( self->lexLevel != 0 ) goto InvalidDefinition; /* TODO: better information; */
 
-		parser = DaoParser_NewRoutineParser( self, start, stat );
+		parser = DaoParser_NewRoutineParser( self, start, attribs );
 		right = DaoParser_ParseSignature( self, parser, tki, start );
 		if( right < 0 ) goto InvalidDefinition;
 
@@ -2899,8 +2895,8 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			parser->routine = rout;
 		}
 	}
-	if( stat && rout->routHost == NULL ){
-		int efrom = errorStart - (stat != 0);
+	if( attribs && rout->routHost == NULL ){
+		int efrom = errorStart - (attribs != 0);  /* XXX */
 		DaoParser_Error2( self, DAO_INVALID_STORAGE, efrom, errorStart+1, 0 );
 		goto InvalidDefinition;
 	}
@@ -3276,6 +3272,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	}
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	DaoClass_UpdateMixinConstructors( klass );
+	DaoClass_UpdateVirtualMethods( klass );
 	if( error ) return -1;
 
 	if( self->byteBlock == NULL ){
@@ -3684,13 +3681,34 @@ DecoratorError:
 
 		reset_decos = 1;
 
-		/* parsing routine definition */
+		/*
+		// Parsing routine definition:
+		// Note: routine(){...}();
+		// It is allowed to define and call immediately an anonymous function.
+		*/
 		if( (tki == DKEY_ROUTINE && tki2 != DTOK_LB) || tki == DKEY_OPERATOR ){
-			if( storeType == DAO_DECL_CONST || storeType == DAO_DECL_VAR ){
-				DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
+			int attribs = 0;
+			switch( storeType ){
+			case DAO_DECL_VAR:
+			case DAO_DECL_CONST :
+				DaoParser_Error3( self, DAO_INVALID_FUNCTION_DEFINITION, errorStart );
+				return 0;
+			case DAO_DECL_STATIC : attribs = DAO_ROUT_STATIC; break;
+			case DAO_DECL_INVAR  : attribs = DAO_ROUT_INVAR;  break;
+			}
+			start = DaoParser_ParseRoutineDefinition( self, start, from, to, attribs );
+			if( start <0 ) return 0;
+			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
+			continue;
+		}else if( tki == DKEY_INTERFACE && tki2 == DKEY_ROUTINE ){
+			int attribs = DAO_ROUT_INTERFACE;
+			if( storeType == DAO_DECL_INVAR ){
+				attribs |= DAO_ROUT_INVAR;
+			}else if( storeType ){
+				DaoParser_Error3( self, DAO_INVALID_FUNCTION_DEFINITION, errorStart );
 				return 0;
 			}
-			start = DaoParser_ParseRoutineDefinition( self, start, from, to, storeType );
+			start = DaoParser_ParseRoutineDefinition( self, start+1, from, to, attribs );
 			if( start <0 ) return 0;
 			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
 			continue;

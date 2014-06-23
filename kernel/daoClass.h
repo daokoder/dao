@@ -79,6 +79,8 @@ struct DaoClass
 	/* They are inserted into constants, no refCount updating for this. */
 	DMap  *methSignatures; /* <DString*,DaoRoutine*> */
 
+	DMap  *interMethods; /* <DaoRoutine*,DaoRoutine*> */
+
 	DaoRoutine  *classRoutine; /* Default class constructor. */
 	DaoRoutine  *classRoutines; /* All explicit constructors; GC handled in constants; */
 	DaoRoutine  *castRoutines; /* All user defined cast methods; */
@@ -114,6 +116,7 @@ DAO_DLL void DaoClass_UpdateMixinConstructors( DaoClass *self );
 DAO_DLL void DaoClass_ResetAttributes( DaoClass *self );
 DAO_DLL void DaoClass_MakeInterface( DaoClass *self );
 DAO_DLL int DaoClass_UseMixinDecorators( DaoClass *self );
+DAO_DLL void DaoClass_UpdateVirtualMethods( DaoClass *self );
 
 DAO_DLL int  DaoClass_ChildOf( DaoClass *self, DaoValue *super );
 DAO_DLL void DaoClass_AddMixinClass( DaoClass *self, DaoClass *mixin );

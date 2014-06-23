@@ -213,19 +213,20 @@ enum DaoClassAttrib
 };
 enum DaoRoutineAttrib
 {
-	DAO_ROUT_PARSELF   = (1<<0),  /* need self parameter */
-	DAO_ROUT_INVAR     = (1<<1),  /* invariable method */
-	DAO_ROUT_STATIC    = (1<<2),  /* static function */
-	DAO_ROUT_PRIVATE   = (1<<3),  /* private method */
-	DAO_ROUT_PROTECTED = (1<<4),  /* protected method */
-	DAO_ROUT_DEFER     = (1<<5),  /* defer block as a closure */
-	DAO_ROUT_DEFER_RET = (1<<6),  /* defer block that may return values */
-	DAO_ROUT_CODESECT  = (1<<7),  /* code section routine */
-	DAO_ROUT_DECORATOR = (1<<8),  /* function decorator */
-	DAO_ROUT_INITOR    = (1<<9),  /* class/ctype constructor */
-	DAO_ROUT_CASTOR    = (1<<10), /* user defined casting method */
-	DAO_ROUT_MAIN      = (1<<11), /* main function */
-	DAO_ROUT_REUSABLE  = (1<<12)  /* stack data for the routine is reusable */
+	DAO_ROUT_PARSELF   = (1<<0),   /* need self parameter */
+	DAO_ROUT_INVAR     = (1<<1),   /* invariable method */
+	DAO_ROUT_STATIC    = (1<<2),   /* static function */
+	DAO_ROUT_INTERFACE = (1<<3),   /* interface function */
+	DAO_ROUT_DEFER     = (1<<4),   /* defer block as a closure */
+	DAO_ROUT_DEFER_RET = (1<<5),   /* defer block that may return values */
+	DAO_ROUT_CODESECT  = (1<<6),   /* code section routine */
+	DAO_ROUT_DECORATOR = (1<<7),   /* function decorator */
+	DAO_ROUT_INITOR    = (1<<8),   /* class/ctype constructor */
+	DAO_ROUT_CASTOR    = (1<<9),   /* user defined casting method */
+	DAO_ROUT_MAIN      = (1<<10),  /* main function */
+	DAO_ROUT_PRIVATE   = (1<<11),  /* private method */
+	DAO_ROUT_PROTECTED = (1<<12),  /* protected method */
+	DAO_ROUT_REUSABLE  = (1<<13)   /* stack data for the routine is reusable */
 };
 
 enum DaoConstEvalMode

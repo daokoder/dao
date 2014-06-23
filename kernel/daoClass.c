@@ -154,6 +154,7 @@ void DaoClass_Delete( DaoClass *self )
 	DVector_Delete( self->ranges );
 	DVector_Delete( self->offsets );
 	DArray_Delete( self->references );
+	if( self->interMethods ) DMap_Delete( self->interMethods );
 	if( self->decoTargets ) DArray_Delete( self->decoTargets );
 
 	DString_Delete( self->className );
@@ -1351,6 +1352,76 @@ DaoRoutine* DaoClass_GetOverloadedRoutine( DaoClass *self, DString *signature )
 	DNode *node = MAP_Find( self->methSignatures, signature );
 	if( node ) return (DaoRoutine*) node->value.pValue;
 	return NULL;
+}
+void DaoClass_UpdateVirtualMethods( DaoClass *self )
+{
+	DNode *it;
+	int i, j;
+
+	if( self->interMethods ) return;
+
+	for(i=0; i<self->allBases->size; ++i){
+		DaoClass *base = self->allBases->items.pClass[i];
+		if( base->type != DAO_CLASS ) continue;
+		if( base->interMethods == NULL ) continue;
+
+		if( self->interMethods == NULL ) self->interMethods = DHash_New(0,0);
+		for(it=DMap_First(base->interMethods); it; it=DMap_Next(base->interMethods,it)){
+			DMap_Insert( self->interMethods, it->key.pVoid, it->value.pVoid );
+		}
+	}
+	for(i=0; i<self->constants->size; ++i){
+		DaoValue *value = self->constants->items.pConst[i]->value;
+		DaoRoutine *ometh = (DaoRoutine*) value;
+		if( value->type != DAO_ROUTINE ) continue;
+		if( ometh->routHost != self->objType ) continue;
+		if( ometh->attribs & (DAO_ROUT_INITOR | DAO_ROUT_STATIC) ) continue;
+		if( ometh->attribs & DAO_ROUT_INTERFACE ){
+			if( self->interMethods == NULL ) self->interMethods = DHash_New(0,0);
+			DMap_Insert( self->interMethods, ometh, ometh );
+		}
+		for(it=DMap_First(self->interMethods); it; it=DMap_Next(self->interMethods,it)){
+			DaoRoutine *imeth = it->key.pRoutine;
+			DaoType *otype = ometh->routType;
+			DaoType *itype = imeth->routType;
+
+			/* Interface method of this class: */
+			if( imeth->routHost == self->objType ) continue;
+
+			/*
+			// It was overridden by a non-interface method which means further
+			// overriding is no longer allowed:
+			*/
+			if( !(it->value.pRoutine->attribs & DAO_ROUT_INTERFACE) ) continue;
+			
+			if( otype->nested->size != itype->nested->size ) continue;
+			if( ! DString_EQ( imeth->routName, ometh->routName ) ) continue;
+
+			/* Type names must match (type matching may be insufficiently precise): */
+			if( ! DString_EQ( itype->aux->xType.name, otype->aux->xType.name ) ) continue;
+			
+			/*
+			// The return types of the overriding methods must match to that of the
+			// interface methods, so that the return values of the overriding methods
+			// can be passed properly:
+			*/
+			if( DaoType_MatchTo( (DaoType*)otype->aux, (DaoType*)itype->aux, NULL ) == 0 ){
+				continue;
+			}
+			for(j=1; j<otype->nested->size; ++j){
+				DaoType *optype = otype->nested->items.pType[i];
+				DaoType *iptype = itype->nested->items.pType[i];
+				if( ! DString_EQ( iptype->name, optype->name ) ) break;
+				/*
+				// The parameter types of the interface methods must match to that of
+				// the overriding methods, so that the parameters intended for the
+				// interface methods can be passed properly to the overriding methods:
+				*/
+				if( DaoType_MatchTo( iptype, optype, NULL ) == 0 ) break;
+			}
+			if( j >= otype->nested->size ) it->value.pRoutine = ometh;
+		}
+	}
 }
 void DaoClass_PrintCode( DaoClass *self, DaoStream *stream )
 {
