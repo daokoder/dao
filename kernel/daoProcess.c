@@ -54,6 +54,7 @@ extern DMutex mutex_routine_specialize2;
 struct DaoJIT dao_jit = { NULL, NULL, NULL, NULL };
 
 
+DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int init );
 static DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc );
 static DaoList* DaoProcess_GetList( DaoProcess *self, DaoVmCode *vmc );
 static DaoMap* DaoProcess_GetMap( DaoProcess *self, DaoVmCode *vmc, unsigned int hashing );
@@ -271,6 +272,7 @@ void DaoProcess_PopFrame( DaoProcess *self )
 	self->topFrame->object = NULL;
 	if( self->topFrame->state & DVM_FRAME_SECT ){
 		self->topFrame = self->topFrame->prev;
+		if( self->topFrame ) DaoProcess_SetActiveFrame( self, self->topFrame->active );
 		return;
 	}
 	if( att & DAO_ROUT_DEFER ) DArray_PopBack( self->defers );
@@ -1140,7 +1142,9 @@ CallEntry:
 
 	if( self->status == DAO_PROCESS_SUSPENDED &&
 			(vmc->code == DVM_CALL || vmc->code == DVM_MCALL || vmc->code == DVM_YIELD) ){
+		DaoType *type = self->activeTypes[vmc->c];
 		DaoFuture *future = self->future;
+		DaoRoutine *meth;
 		DaoTuple *tuple;
 		int finished;
 		if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 0 );
@@ -1158,12 +1162,27 @@ CallEntry:
 			DaoProcess_PutInteger( self, future->timeout == 0 );
 			break;
 		case DAO_PAUSE_CHANNEL_RECEIVE :
-			tuple = DaoProcess_PutTuple( self, 0 );
+			/*
+			// Do not use DaoProcess_PutTuple(), because it will use
+			// self->topFrame->routine->routType->aux
+			// to obtain the returning tuple type.
+			// That is valid only during the call when "self->topFrame" is still
+			// for the callee.
+			*/
+			if( type->tid != DAO_TUPLE ){
+				meth = (DaoRoutine*) self->activeValues[ vmc->a ];
+				type = (DaoType*) meth->routType->aux;
+			}
+			tuple = DaoProcess_GetTuple( self, type, type->nested->size, 1 );
 			DaoTuple_SetItem( tuple, future->message ? future->message : dao_none_value, 0 );
 			tuple->values[1]->xEnum.value = future->aux1 ? 2 : future->timeout != 0;
 			break;
 		case DAO_PAUSE_CHANFUT_SELECT :
-			tuple = DaoProcess_PutTuple( self, 0 );
+			if( type->tid != DAO_TUPLE ){
+				meth = (DaoRoutine*) self->activeValues[ vmc->a ];
+				type = (DaoType*) meth->routType->aux;
+			}
+			tuple = DaoProcess_GetTuple( self, type, type->nested->size, 1 );
 			DaoTuple_SetItem( tuple, future->selected ? future->selected : dao_none_value, 0 );
 			DaoTuple_SetItem( tuple, future->message ? future->message : dao_none_value, 1 );
 			tuple->values[2]->xEnum.value = future->aux1 ? 2 : future->timeout != 0;

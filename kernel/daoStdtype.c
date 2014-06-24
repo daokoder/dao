@@ -1980,7 +1980,6 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 		if( funct == DVM_FUNCT_FIND && res->xInteger.value ){
 			popped = 1;
 			DaoProcess_PopFrame( proc );
-			DaoProcess_SetActiveFrame( proc, proc->topFrame );
 			tuple = DaoProcess_PutTuple( proc, 0 );
 			GC_ShiftRC( items[i], tuple->values[1] );
 			tuple->values[1] = items[i];
@@ -2042,7 +2041,6 @@ static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar, int which
 		res = proc->stackValues[0];
 	}
 	DaoProcess_PopFrame( proc );
-	DaoProcess_SetActiveFrame( proc, proc->topFrame );
 	DaoProcess_PutValue( proc, res );
 }
 static void DaoLIST_Reduce1( DaoProcess *proc, DaoValue *p[], int npar )
@@ -2857,7 +2855,6 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 		if( funct == DVM_FUNCT_FIND && res->xInteger.value ){
 			popped = 1;
 			DaoProcess_PopFrame( proc );
-			DaoProcess_SetActiveFrame( proc, proc->topFrame );
 			tuple = DaoProcess_PutTuple( proc, 0 );
 			GC_ShiftRC( node->key.pValue, tuple->values[0] );
 			GC_ShiftRC( node->value.pValue, tuple->values[1] );

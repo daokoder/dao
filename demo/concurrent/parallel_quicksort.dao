@@ -45,7 +45,7 @@ routine QuickSort( data: array<int>, first: int, last: int )
 }
 
 a = [ 1, 3, 5, 4, 2, 6, 9, 7 ]
-a = std.array( 2000000 ){ rand( 10000000 ) }
+a = array<int>( 2000000 ){ rand( 10000000 ) }
 
 QuickSort( a, 0, a.size()-1 );
 

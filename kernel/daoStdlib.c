@@ -268,7 +268,6 @@ static void DaoSTD_Exec( DaoProcess *proc, DaoValue *p[], int n )
 	if( sect == NULL ) return;
 	DaoProcess_Execute( proc );
 	DaoProcess_PopFrame( proc );
-	DaoProcess_SetActiveFrame( proc, proc->topFrame );
 	if( proc->exceptions->size > ecount ){
 		if( n > 0 ){
 			DaoProcess_PutValue( proc, p[0] );
@@ -286,7 +285,6 @@ static void DaoSTD_Try( DaoProcess *proc, DaoValue *p[], int n )
 	if( sect == NULL ) return;
 	DaoProcess_Execute( proc );
 	DaoProcess_PopFrame( proc );
-	DaoProcess_SetActiveFrame( proc, proc->topFrame );
 	if( proc->exceptions->size > (ecount+1) ){
 		DaoList *list = DaoProcess_PutList( proc );
 		for(i=ecount; i<proc->exceptions->size; ++i){

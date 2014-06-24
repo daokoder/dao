@@ -411,14 +411,6 @@ void DaoInitThread()
 #ifdef DAO_WITH_CONCURRENT
 /* mt module: */
 
-static int DaoMT_PushSectionFrame( DaoProcess *proc )
-{
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ){
-		DaoProcess_RaiseError( proc, NULL, "code section not found!" );
-		return 0;
-	}
-	return 1;
-}
 
 typedef struct DaoTaskData DaoTaskData;
 struct DaoTaskData
@@ -465,7 +457,6 @@ static void DaoMT_InitProcess( DaoProcess *proto, DaoProcess *clone )
 	DaoProcess_PushRoutine( clone, proto->activeRoutine, proto->activeObject );
 	clone->activeCode = proto->activeCode;
 	DaoProcess_PushFunction( clone, proto->topFrame->routine );
-	DaoProcess_SetActiveFrame( clone, clone->topFrame );
 	DaoProcess_PushSectionFrame( clone );
 	clone->topFrame->outer = proto;
 	clone->topFrame->host = proto->topFrame->prev;
@@ -673,7 +664,7 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 	DaoValue *result = NULL;
 	DaoList *list = NULL;
 	DaoArray *array = NULL;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoVmCode *sect = NULL;
 	int i, entry, threads = P[1]->xInteger.value;
 	daoint index = -1, status = 0, joined = 0;
 	DNode *node = NULL;
@@ -691,7 +682,8 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 	case DVM_FUNCT_FIND : DaoProcess_PutValue( proc, dao_none_value ); break;
 	}
 	if( threads <= 0 ) threads = 2;
-	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
+	sect = DaoProcess_InitCodeSection( proc );
+	if( sect == NULL ) return;
 	if( list ){
 		DArray_Clear( list->value );
 		if( param->type == DAO_LIST ) DArray_Resize( list->value, param->xList.value->size, NULL );
@@ -771,20 +763,19 @@ static void DaoMT_Start0( void *p )
 static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoProcess *clone;
-	DaoVmCode *vmc, *end;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoVmCode *vmc, *end, *sect;
 	DaoType *type = DaoProcess_GetReturnType( proc );
 	DaoFuture *future = DaoFuture_New( type, 0 );
 	int entry, nop = proc->activeCode[1].code == DVM_NOP;
 
 	DaoProcess_PutValue( proc, (DaoValue*) future );
-	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
+	sect = DaoProcess_InitCodeSection( proc );
+	if( sect == NULL ) return;
 
 	entry = proc->topFrame->entry;
 	end = proc->activeRoutine->body->vmCodes->data.codes + proc->activeCode[nop+1].b;
 	clone = DaoVmSpace_AcquireProcess( proc->vmSpace );
 	DaoProcess_PopFrame( proc );
-	DaoProcess_SetActiveFrame( proc, proc->topFrame );
 	DaoMT_InitProcess( proc, clone );
 	clone->topFrame->entry = entry;
 	/*
@@ -898,10 +889,10 @@ static void DaoMT_Critical( DaoProcess *proc, DaoValue *p[], int n )
 	void *key;
 	DNode *it;
 	DMap *cache = (DMap*) DaoProcess_GetAuxData( proc, cache );
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
 	DaoRoutine *routine = proc->activeRoutine;
 
-	if( sect == NULL || DaoMT_PushSectionFrame( proc ) == 0 ) return;
+	if( sect == NULL ) return;
 
 	/* Get the original routine, if this one is a specialized copy: */
 	while( routine->original ) routine = routine->original;

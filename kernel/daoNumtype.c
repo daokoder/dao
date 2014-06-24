@@ -2411,9 +2411,6 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 		}
 	}
 	DaoProcess_PopFrame( proc );
-	if( funct == DVM_FUNCT_FOLD ){
-		DaoProcess_SetActiveFrame( proc, proc->topFrame );
-		DaoProcess_PutValue( proc, res );
-	}
+	if( funct == DVM_FUNCT_FOLD ) DaoProcess_PutValue( proc, res );
 }
 #endif /* DAO_WITH_NUMARRAY */
