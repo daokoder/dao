@@ -328,13 +328,13 @@ DaoFuncItem dao_std_methods[] =
 		*/
 	},
 	{ DaoSTD_Error2,
-		"error( invar errorObject: Error )"
+		"error( errorObject: Error )"
 		/*
 		// Raise an error with pre-created exception object.
 		*/
 	},
 	{ DaoSTD_Error3,
-		"error( invar errorType: class<Error>, info: string, data: any = none )"
+		"error( errorType: class<Error>, info: string, data: any = none )"
 		/*
 		// Raise an error of type "eclass" with message "info", and associate "data"
 		// to the error.

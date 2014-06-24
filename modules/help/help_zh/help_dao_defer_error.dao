@@ -5,59 +5,47 @@ dao.defer-error
 @[name]
 
 @[title]
-Defer Block and Error Handling
+延迟代码块和错误处理
 @[title]
 
 
 @[text]
 
 
-The error handling in Dao is based defer blocks which can be executed
-unconditionally or conditionally with respect to exceptions.
+道语言里的错误处理是基于延迟代码块(defer blocks)。
+延迟代码块可基于错误或例外有条件或无条件执行。
 
 
 @[subsection]
-Defer Block
+延迟代码块(Defer Blocks)
 @[subsection]
 
-A @[code]defer@[code] block is a block of code that can be executed when
-a function returns normally or exits due to excpetions. Its
-execution can be conditional or unconditional with respect
-to exceptions:
+延迟代码块是一种在函数正常退出或因错误退出时执行的代码块。
+延迟代码块的有条件或无条件执行是基于有无错误和什么错误：
 @[list]
--- @[code]defer{block}@[code] or @[code]defer(){block}@[code]: unconditional exection,
-   when a function exits with or without exception;
+-- @[code]defer{block}@[code] or @[code]defer(){block}@[code]: 无条件执行，
+   不管函数以何种形式退出；
 
--- @[code]defer(none){block}@[code]: conditional execution, only when the
-   function exits without exception;
+-- @[code]defer(none){block}@[code]: 有条件执行，仅当函数正常退出时；
 
--- @[code]defer(any){block}@[code]: conditional execution, when the function
-   exit with any exception(s);
+-- @[code]defer(any){block}@[code]: 有条件执行，当函数因任何错误退出时；
 
--- @[code]defer(type){block}@[code]: conditional execution, only when the
-   function exit with exception(s) matching to @[code]type@[code];
+-- @[code]defer(type){block}@[code]: 有条件执行，
+   仅当导致函数退出的错误跟@[code]type@[code]匹配时；
 
--- @[code]defer(type as name){block}@[code]: the same as @[code]defer(type){block}@[code]
-   except that the exception object will be accessible by @[code]name@[code] in the block.
+-- @[code]defer(type as name){block}@[code]: 跟@[code]defer(type){block}@[code]一样，
+   并且在代码块里，错误对象将可以用变量名@[code]name@[code]访问。
 @[list]
 
-Unconditional defer blocks are mostly useful to do cleanups that need to be done
-regardless whether and what errors might happen in the surrounding function.
-And the defer blocks that are conditional on @[code]none@[code] might be useful
-to support transactional like operations to perform certain operations only when
-no error happens.
-And the other conditional defer blocks are mainly useful for error handling.
+无条件延迟代码块的最主要用途是函数退出时的善后处理。
+这种善后处理将被无条件地执行，而不管函数是以何种方式退出。
+无错误条件延迟代码块@[code]defer(none)@[code]，则可用于实现原子事务处理。
+其他错误条件延迟代码块则主要用于错误处理。
 
 
-A defer block is compiled as a closure, so it can access outer
-scope constants and variables in the same way as closures.
-These outer scope variables are captured at the time the defer
-block is reached in the normal execution.
-When a function exits, all the executable defer blocks that have
-been reached in the normal execution will be executed in the reverse
-order of being reached.
-
-
+延迟代码块是以函数闭包编译和执行的。也就是说这种代码块可以访问外层局部变量，
+将在运行时生成可获得这些变量当前值的闭包。只不过这些闭包将在函数退出是自动
+执行。所有可执行延迟代码块将以被创建顺序的相反顺序执行。
 
 @[code]
 routine Test()
@@ -81,30 +69,30 @@ io.writeln( Test() )
 
 
 @[subsection]
-Error Handling
+错误处理
 @[subsection]
 
 
-The main way to handle errors in Dao is to use conditional defer blocks.
-Different conditional defer blocks can be defined for different error types.
-Each conditional defer block can only be activated once by one exception object,
-and the more recent exception object is checked first if there are multiple exception objects.
+道里面错误处理的主要方式是基于有条件的延迟代码块。
+一个函数里可为不同的错误类型定义不同的延迟代码块。
+每个有条件的延迟代码块只能被一个错误对象激活运行。
+当有多个错误时，每个代码块将从最新的错误到最老的错
+误检查是否可被其中的一个错误激活。
 
 
-To handle an error of certain type, one need to define a defer block
-with the error type as its parameter. Such that the block will only
-be executed when an error of that type actually happened. Then the
-error object will be passed to the defer block for proper handling.
-The error is suppressed by such defer block to allow program procede
-normally (after returning to its caller).
+为了处理某个特定的错误类型，那么一个以该类型为条件参数的
+延迟代码块必须被定义。这样这个代码块将可以被该类型的错误
+激活运行。并且激活此代码块的错误将被消除，允许程序再从处理
+错误的函数的调用处继续执行。
 
 
-Such defer block must return or not return value in the same way as
-the routine where the defer is defined.
-The returned value by such defer will by used as the new return value of the routine.
+这种处理错误的延迟代码块的返回值类型必须跟定义它的函数一致。
+因为当这种延迟代码块被执行时，该函数还没执行到正常返回，
+所以返回值还没设定。这种延迟代码块是唯一可以在错误发生后
+设定合适的返回值的地方。
 
 
-Example,
+例子：
 @[code]
 routine Test()
 {
@@ -119,26 +107,24 @@ routine Test()
 }
 io.writeln( Test() )
 @[code]
-Here the standard method @[code]std.error()@[code] is used to raise a generic error.
-This method has three overloaded forms, and the simplest version can
-take a string as parameter to become the message of the error as shown in the example.
-Various errors can also be raised by the Dao runtime for standard operations and methods.
+这里使用了标准方法@[code]std.error()@[code]来抛出错误。
+这个方法有三个重载版本，这里用的是最简单的一个。
+它将以它的参数字符串为错误信息创建一个通用错误对象。
+道定义一些标准的错误类型以报告一些标准操作和方法所可能抛出的错误。
 
 
 
 @[subsection]
-Error Types
+错误类型
 @[subsection]
 
-The @[code]Error@[code] type used in the above example represents a generel error type.
-It is also the base type from which all error types are derived.
-The @[code]Error@[code] itself is derived from the The @[code]Exception@[code] type,
-which stores the essential information about an exception type.
-Such information includes general name, error message, error data, source file path,
-line number and function call stack trace.
+上例所用@[code]Error@[code]类型是一个通用错误类型。它也是其他错误类型的基类。
+@[code]Error@[code]类型本身则是从例外类型@[code]Exception@[code]派生出来。
+这个例外类型可保存所有跟它相关的信息，诸如，错误的通用名，错误消息，错误数据，
+源文件名，行号和函数调用栈等。
 
 
-The followings are the standard exception types:
+以下是标准的道例外类型：
 @[code]
 Exception                # General exception
 Warning                  # General warning
@@ -304,7 +290,7 @@ std.exec(defaultValue:@T)[=>@T]=>@T
 This method can be used whenever an expression or a block of code may either suceed
 and return the result, or fail and return a pre-defined default value.
 The passed in @[code]defaultValue@[code] will be returned only if the code section
-fails with exception. And in such case, the exception will be suppressed automatically.
+fails with exception. And in such case, the exception will be surpressed automatically.
 This method will allow simplifying the above example into the following,
 @[code(dao)]
 fout = std.exec( io::stdio ){ io.open( "NonExistentFile.txt", 'r+' ) }

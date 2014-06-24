@@ -10,6 +10,7 @@ load help_dao_operator;
 load help_dao_control;
 load help_dao_routine;
 load help_dao_class;
+load help_dao_defer_error;
 load help_dao_concurrent;
 load help_dao_macro;
 load help_dao_module;
