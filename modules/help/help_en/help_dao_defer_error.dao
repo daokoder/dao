@@ -190,7 +190,7 @@ const MyErrorType = Exception::Define( "Error::MyError", "General information" )
 Here the second parameter is the general information that is associated to the error type.
 Defining pre-declared error types need no such parameter, as it will be set internally.
 Defining a new error type this way as a C data type has the advantage of convenience
-and implicity.
+and simplicity.
 
 
 Now the newly defined error type can be used in two ways, by either using the new
@@ -250,8 +250,11 @@ std.error( errorObject: Error )
 std.error( errorType: class<Error>, info: string, data: any = none )
 @[code]
 The former will allow raising a pre-created error object.
-The second will create an error on-the-fly as an instance of the error type
+The later will create an error on-the-fly as an instance of the error type
 @[code]errorType@[code] with message @[code]info@[code] and data @[code]data@[code].
+It worthes noticing that errors of error types defined by @[code]Exception::Define()@[code]
+can only be raised by the later method, because types defined this way have no
+constructors.
 
 
 

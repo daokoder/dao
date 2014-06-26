@@ -146,49 +146,47 @@ Error::Type              # Invalid type
 Error::Value             # Invalid value
 Error::File              # File error
 @[code]
-Note that, @[code]Warning@[code] and @[code]Error@[code] are also registered
-in the global scope, so they can be directly used without @[code]Exception::@[code] scoping.
-Among these exception types, only @[code]Exception@[code], @[code]Warning@[code]
-and @[code]Error@[code] are @[green]pre-defined@[green], and the rest are only
-@[green]pre-declared@[green].
-Only the pre-defined exception types can be directly used in Dao code.
-Other error types need to be explicitly defined using the @[code]Exception::Define()@[code]
-method in the following way,
+值得注意的是，@[code]Warning@[code]和@[code]Error@[code]也被声明在全局命名空间，
+这样它们就可不用@[code]Exception::@[code]前缀而直接使用。
+在这些例外类型中，就@[code]Exception@[code]，@[code]Warning@[code]
+和@[code]Error@[code]被预先定义了，其他的仅被预先声明了。
+只有预先定义的例外类型可被直接使用。其他类型则需要使用@[code]Exception::Define()@[code]
+如下显示定义才能使用：
 @[code]
 const IndexError  = Exception::Define( "Error::Index" )
 @[code]
-This is a constant expression which will be evaluated during parsing
-so that the defined type can be used right after this line of code.
-The evaluation of this method call will create a new error type named @[code]Index@[code]
-that is derived from @[code]Error@[code].
-This new error type will be created a C data type and scoped / registered
-inside the @[code]Error@[code] type.
-The scoped name passed to the @[code]Exception::Define()@[code] as the first parameter
-will serve as a unique string ID for the new error type, and the future error type definition
-using the same string will return the same error type.
+等号右边的表达式将作为常量表达式在编译时求值，这样这行代码之后的代码将可直接使用
+@[code]Error::Index@[code]类型。
+这里@[code]Exception::Define()@[code]将定义一个名为@[code]Index@[code]的错误类型。
+这个新类型将@[code]Error@[code]派生，并在@[code]Error@[code]里注册为@[code]Error@[code]
+的一个成员类型。
+这样定义的类型将以C数据类型的方式定义生成，并拥有一个独一无二的标志@[code]Error::Index@[code]。
+也就是在任何地方使用@[code]Exception::Define( "Error::Index" )@[code]
+定义的@[code]Error::Index@[code]都将是同一个类型。
 
 
-Cutomized error type can be defined either by defining a Dao class that is derived from
-the @[code]Error@[code] type, or by defining a C type using the above method,
+上面这种错误类型的定义方式不仅局限于定义那些预先声明的错误类型。
+它也用来定义任意错误类型：
 @[code]
 const MyErrorType = Exception::Define( "Error::MyError", "General information" )
 @[code]
-Here the second parameter is the general information that is associated to the error type.
-Defining pre-declared error types need no such parameter, as it will be set internally.
-Defining a new error type this way as a C data type has the advantage of convenience
-and implicity.
+这里的第二个参数将作为这种错误类型的通用信息被关联到这个新错误类型上。
+定义那些预先声明的错误类型不需要这第二个参数，因为它们的标准错误信息也已经
+被预先声明。
+这种错误定义的方式的主要好处是方便简单。但它也有个缺点，也就是这种方式定义的
+类型没有构造方法，因此要抛出这种类型的错误，必须使用一个特定重载版本的
+@[code]std.error()@[code]，详情请看后面。
 
 
-Now the newly defined error type can be used in two ways, by either using the new
-constant value retuned by @[code]Exception::Define()@[code], or by using the cannonical
-name @[code]Error::MyError@[code],
+现在这个新定义的错误类型可用两种方式使用：一种是使用@[code]Exception::Define()@[code]
+放回的类型；另一种是它的标准名@[code]Error::MyError@[code]：
 @[code]
 defer( MyErrorType ) { ... }
 defer( Error::MyError ) { ... }
 @[code]
 
 
-Here is another example of defining a new error type by subclassing from @[code]Error@[code],
+另一种定义用户错误类型的方式是从@[code]Error@[code]类型派生道类：
 @[code]
 class MyError : Error
 {
@@ -200,52 +198,52 @@ class MyError : Error
 
 
 @[subsection]
-Raising Warning and Error
+抛出警告和错误
 @[subsection]
 
-In Dao code, a warning can be raised simply with the standard method
+在道代码中，警告可用标准方法@[code]std.warning()@[code]抛出：
 @[code]std.warning()@[code],
 @[code]
 std.warn( info: string )
 @[code]
-This will print the warning message right away along with file name and file number
-where the warning is issued. It also prints the call stack trace for this call
-to provide some information about the context where the warning happens.
+这个方法将立即打印包含此方法的调用位置（文件名和行号）和函数调用栈信息的警告消息。
+这些信息提供了此错误发生的环境的基本信息。
 
 
-An error can be similarily raised with the standard method
-@[code]std.error()@[code],
+错误也可用类似方法@[code]std.error()@[code]抛出：
 @[code]
 std.error( info: string )
 @[code]
-In Dao, raising an error will cause the current routine to exit immediately,
-and to start to execute the defer blocks if the routine has created any.
-If one of the defer blocks has handled the error, the execution will be
-resume in its caller. Otherwise its caller will also exit with extra
-execution of its defer blocks as well. This will be repeated until
-either the error is handled and the normal execution is resumed,
-or there is no more caller. In this case, the error will be printed
-with a list of call trace including function names, file names and line numbers.
+道里面，抛出错误将导致当前执行函数立即退出，并开始尝试执行此函数所创建的延迟代码块。
+如果此函数定义了处理此类型错误的延迟代码块，那么这个代码块被执行之后，
+程序的正常执行将从此函数的调用处继续。否则，此函数的调用者也将退出，
+并且它的延迟代码块也将被尝试执行。这个过程将被重复直到，有一个函数
+定义了处理此错误的延迟代码块，这种情况下，程序的正常执行将从这个函数的调用处继续。
+如果没有函数定义了处理此错误的延迟代码块，程序将被终止，此错误的信息
+将被打印错来。跟警告类似，此信息包括了@[code]std.error()@[code]的调用位置（文件名和行号）
+和函数调用栈信息。
 
 
-There are three variants of the standard error method.
-The above one is the first and simplest one.
-The other two are the following:
+这个@[code]std.error()@[code]方法有三个不同的重载版本。
+上面用到的是其中最简单的一个，其他两个如下：
 @[code]
 std.error( errorObject: Error )
 std.error( errorType: class<Error>, info: string, data: any = none )
 @[code]
-The former will allow raising a pre-created error object.
-The second will create an error on-the-fly as an instance of the error type
-@[code]errorType@[code] with message @[code]info@[code] and data @[code]data@[code].
+前者可以用来抛出一个预先创建的错误对象。
+后者则即时创建一个错误对象，这个错误对象将是错误类型@[code]errorType@[code]
+的一个实例，并把@[code]info@[code]作为错误消息和@[code]data@[code]数据数据保存。
+值得注意的是通过@[code]Exception::Define()@[code]定义的错误类型的错误只能
+通过最后面这个方法抛出，因为这样定义的错误类型没有构造方法。
 
 
 
 @[subsection]
-Methods Related to Error Handling
+和错误处理相关的方法
 @[subsection]
 
-There are three standard methods that are related to error handling.
+道语言的标准方法里还包括了另外三个和错误处理相关的方法。
+它们就是：
 @[code]
 std.exec() [=>@T] => @T
 std.exec( defaultValue: @T ) [=>@T] => @T
@@ -258,16 +256,14 @@ std.exec()[=>@T]=>@T
 @[subsubsection]
 
 
-As mentioned above, the normal execution will be resumed by
-the caller of the function that handles the exceptions in its defer blocks.
-In order to resume the normal execution right after handling of exceptions,
-a special type of code blocks can be used to "host" the defer blocks,
+正如前面提到的，当错误被处理后，程序的正常运行将从定义处理该错误的延迟代码块
+的函数的调用者那里开始继续。如果要想程序在离错误发生处最近的地方处理错误
+并继续正常执行，那么下面的方法将可以用来做到这一点。
 @[code(dao)]
 std.exec() [=>@T] => @T
 @[code(dao)]
-Since code sections are executed in new stack frames.
-Handling errors inside such code section will allow the program
-to resume right after the code section calls.
+代码块方法将在新的函数调用帧里执行，在这个方法的代码块里使用处理错误的
+延迟代码块将允许错误被处理后，程序从此方法后面继续执行。
 
 @[code(dao)]
 fout = io::stdio
@@ -287,6 +283,11 @@ fout.writeln( 'hello' )
 std.exec(defaultValue:@T)[=>@T]=>@T
 @[subsubsection]
 
+有时候，有些表达式可以被预知的抛出错误，而这错误并不影响程序的执行，
+因为这些表达式有合理的缺省值可以在错误发生后使用。
+
+
+可以简单地被处理掉
 This method can be used whenever an expression or a block of code may either suceed
 and return the result, or fail and return a pre-defined default value.
 The passed in @[code]defaultValue@[code] will be returned only if the code section
