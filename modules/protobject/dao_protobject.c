@@ -101,8 +101,7 @@ static void PROTOBJ_SetProto( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseError( proc, NULL, "cyclic prototypes" );
 		return;
 	}
-	DaoGC_ShiftRC( (DaoValue*) pro, (DaoValue*) self->proto );
-	self->proto = pro;
+	GC_Assign( & self->proto, (DaoValue*) pro );
 }
 static void PROTOBJ_GetField( DaoProcess *proc, DaoValue *p[], int N )
 {

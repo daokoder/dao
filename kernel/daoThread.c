@@ -733,14 +733,11 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
 		if( param->type == DAO_LIST && index != -1 ){
 			DaoValue **items = param->xList.value->items.pValue;
-			GC_ShiftRC( items[index], tuple->values[1] );
-			tuple->values[1] = items[index];
+			GC_Assign( & tuple->values[1], items[index] );
 			tuple->values[0]->xInteger.value = index;
 		}else if( param->type == DAO_MAP && node ){
-			GC_ShiftRC( node->key.pValue, tuple->values[0] );
-			GC_ShiftRC( node->value.pValue, tuple->values[1] );
-			tuple->values[0] = node->key.pValue;
-			tuple->values[1] = node->value.pValue;
+			GC_Assign( & tuple->values[0], node->key.pValue );
+			GC_Assign( & tuple->values[1], node->value.pValue );
 		}
 	}
 	if( status ) DaoProcess_RaiseError( proc, NULL, "code section execution failed!" );
@@ -785,8 +782,7 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 	clone->topFrame->outer = clone;
 	future->process = clone;
 	GC_IncRC( clone );
-	GC_ShiftRC( future, clone->future );
-	clone->future = future;
+	GC_Assign( & clone->future, future );
 	future->state = DAO_CALL_RUNNING;
 
 	for(vmc=sect; vmc!=end; vmc++){
@@ -888,7 +884,7 @@ static void DaoMT_Critical( DaoProcess *proc, DaoValue *p[], int n )
 {
 	void *key;
 	DNode *it;
-	DMap *cache = (DMap*) DaoProcess_GetAuxData( proc, cache );
+	DMap *cache = (DMap*) DaoProcess_GetAuxData( proc, DaoMT_ProcMutexCache );
 	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
 	DaoRoutine *routine = proc->activeRoutine;
 

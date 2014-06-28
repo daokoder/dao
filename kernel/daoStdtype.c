@@ -394,8 +394,7 @@ void DaoEnum_MakeName( DaoEnum *self, DString *name )
 void DaoEnum_SetType( DaoEnum *self, DaoType *type )
 {
 	if( self->etype == type ) return;
-	GC_ShiftRC( type, self->etype );
-	self->etype = type;
+	GC_Assign( & self->etype, type );
 	self->subtype = type->subtid;
 	self->value = type->mapNames->root->value.pInt;
 }
@@ -1981,8 +1980,7 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 			popped = 1;
 			DaoProcess_PopFrame( proc );
 			tuple = DaoProcess_PutTuple( proc, 0 );
-			GC_ShiftRC( items[i], tuple->values[1] );
-			tuple->values[1] = items[i];
+			GC_Assign( & tuple->values[1], items[i] );
 			tuple->values[0]->xInteger.value = j;
 			break;
 		}
@@ -2856,10 +2854,8 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 			popped = 1;
 			DaoProcess_PopFrame( proc );
 			tuple = DaoProcess_PutTuple( proc, 0 );
-			GC_ShiftRC( node->key.pValue, tuple->values[0] );
-			GC_ShiftRC( node->value.pValue, tuple->values[1] );
-			tuple->values[0] = node->key.pValue;
-			tuple->values[1] = node->value.pValue;
+			GC_Assign( & tuple->values[0], node->key.pValue );
+			GC_Assign( & tuple->values[1], node->value.pValue );
 			break;
 		}
 	}
@@ -3221,8 +3217,7 @@ static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 			if( type->tid != DAO_TUPLE ) type = dao_type_tuple;
 			end = second->type == DAO_NONE ? self->size : end + 1;
 			tuple = DaoProcess_GetTuple( proc, NULL, end - start, 0 );
-			GC_ShiftRC( type, tuple->ctype );
-			tuple->ctype = type;
+			GC_Assign( & tuple->ctype, type );
 			for(i=start; i<end; i++) DaoTuple_SetItem( tuple, self->values[i], i-start );
 		}
 		return;
@@ -3591,8 +3586,7 @@ int DaoCdata_OwnData( DaoCdata *self )
 void DaoCdata_SetType( DaoCdata *self, DaoType *type )
 {
 	if( type == NULL ) return;
-	GC_ShiftRC( type, self->ctype );
-	self->ctype = type;
+	GC_Assign( & self->ctype, type );
 }
 void DaoCdata_SetData( DaoCdata *self, void *data )
 {
@@ -3688,12 +3682,9 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer )
 	cdata_type = DaoType_New( typer->name, DAO_CDATA, (DaoValue*)ctype, NULL );
 	GC_IncRC( cdata );
 	cdata_type->value = (DaoValue*) cdata;
-	GC_ShiftRC( cdata_type, ctype->cdtype );
-	GC_ShiftRC( ctype_type, ctype->ctype );
-	GC_ShiftRC( cdata_type, cdata->ctype );
-	ctype->cdtype = cdata_type;
-	ctype->ctype = ctype_type;
-	cdata->ctype = cdata_type;
+	GC_Assign( & ctype->cdtype, cdata_type );
+	GC_Assign( & ctype->ctype, ctype_type );
+	GC_Assign( & cdata->ctype, cdata_type );
 	ctype_type->typer = typer;
 	cdata_type->typer = typer;
 
@@ -3906,8 +3897,7 @@ void DaoException_Init( DaoException *self, DaoProcess *proc, const char *summar
 	if( vmc && rout->body->vmCodes->size ) line = annotCodes[id]->line;
 
 	if( summary && summary[0] != 0 ) DString_SetChars( self->info, summary );
-	GC_ShiftRC( dat, self->data );
-	self->data = dat;
+	GC_Assign( & self->data, dat );
 
 	DArray_Clear( self->callers );
 	DArray_Clear( self->lines );

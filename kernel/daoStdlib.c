@@ -89,17 +89,10 @@ static void DaoSTD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 	DaoStream *prevStream = proc->stdioStream;
 	DaoStream *redirect = (DaoStream*) p[1];
 	char *source = DaoValue_TryGetChars( p[0] );
-	if( redirect != prevStream ){
-		GC_ShiftRC( redirect, proc->stdioStream );
-		proc->stdioStream = redirect;
-	}
-
+	if( redirect != prevStream ) GC_Assign( & proc->stdioStream, redirect );
 	DaoProcess_Eval( proc, ns, source );
 	DaoProcess_PutValue( proc, proc->stackValues[0] );
-	if( redirect != prevStream ){
-		GC_ShiftRC( prevStream, proc->stdioStream );
-		proc->stdioStream = prevStream;
-	}
+	if( redirect != prevStream ) GC_Assign( & proc->stdioStream, prevStream );
 }
 static void DaoSTD_Load( DaoProcess *proc, DaoValue *p[], int N )
 {

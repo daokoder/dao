@@ -125,8 +125,7 @@ void DaoxDataColumn_SetType( DaoxDataColumn *self, DaoType *type )
 	datatype = DaoType_GetDataType( type );
 	datasize = DaoType_GetDataSize( type );
 
-	GC_ShiftRC( type, self->vatype );
-	self->vatype = type;
+	GC_Assign( & self->vatype, type );
 	self->cells->capacity = (self->cells->capacity * self->cells->stride) / datasize;
 	self->cells->stride = datasize;
 	self->cells->type = datatype;
@@ -150,8 +149,7 @@ void DaoxDataColumn_SetCell( DaoxDataColumn *self, daoint i, DaoValue *value )
 	}
 	switch( self->vatype->tid ){
 	default :
-		GC_ShiftRC( value, self->cells->data.values[i] );
-		self->cells->data.values[i] = value;
+		GC_Assign( & self->cells->data.values[i], value );
 		break;
 	case DAO_INTEGER : self->cells->data.daoints[i]   = DaoValue_GetInteger( value ); break;
 	case DAO_FLOAT   : self->cells->data.floats[i]    = DaoValue_GetFloat( value );  break;
@@ -1118,8 +1116,7 @@ static void FRAME_GETMI( DaoProcess *proc, DaoValue *p[], int N )
 		df = DaoProcess_MakeReturnDataFrame( proc );
 		DaoxDataFrame_PrepareSlices( df );
 		DaoDataFrame_MakeSlice( self, proc, p+1, N-1, df->slices );
-		GC_ShiftRC( self, df->original );
-		df->original = self;
+		GC_Assign( & df->original, self );
 		DaoProcess_PutValue( proc, (DaoValue*) df );
 	}
 }
@@ -1677,8 +1674,7 @@ static void FRAME_ColsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, in
 			DaoType *type = DaoNamespace_MakeType( ns, "list", DAO_LIST, NULL, & column->vatype, 1 );
 			colidx->value = jj;
 			DaoList_Clear( list );
-			GC_ShiftRC( type, list->ctype );
-			list->ctype = type;
+			GC_Assign( & list->ctype, type );
 			for(i=0; i<N; ++i){
 				daoint ii = DaoSlice_GetIndex( self->slices, 0, i );
 				DaoValue *cell = DaoxDataColumn_GetCell( column, kk*N+ii, & value );

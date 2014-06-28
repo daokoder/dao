@@ -1089,8 +1089,7 @@ static void DaoRoutine_UpdateRegister( DaoRoutine *self, DArray *mapping )
 	for(i=0; i<M; i++){
 		k = regmap[i];
 		if( k >= m ) continue;
-		GC_ShiftRC( types[i], array->items.pType[k] );
-		array->items.pType[k] = types[i];
+		GC_Assign( & array->items.pType[k], types[i] );
 		if( (it = MAP_Find( localVarType, i )) ) MAP_Insert( localVarType2, k, it->value.pVoid );
 	}
 	self->body->regCount = array->size;
@@ -2109,8 +2108,7 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 		if( parpass[ito] == 0 ) goto FinishError;
 		if( def ){
 			DaoType *tp = DaoType_DefineTypes( tps[ifrom], ns, defs );
-			GC_ShiftRC( tp, tps[ifrom] );
-			tps[ifrom] = tp;
+			GC_Assign( & tps[ifrom], tp );
 		}
 	}
 	if( passdefault ){
@@ -2703,8 +2701,7 @@ static DaoType* DaoInferencer_UpdateTypeX( DaoInferencer *self, int id, DaoType 
 	if( type->invar && c == 0 ) type = DaoType_GetBaseType( type );
 
 	if( type->attrib & DAO_TYPE_SPEC ) type = DaoType_DefineTypes( type, NS, defs );
-	GC_ShiftRC( type, types[id] );
-	types[id] = type;
+	GC_Assign( & types[id], type );
 	return types[id];
 }
 static DaoType* DaoInferencer_UpdateType( DaoInferencer *self, int id, DaoType *type )
@@ -3377,8 +3374,7 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		if( type2 == NULL ){
 			DaoClass_GetData( klass, str, & value, hostClass );
 			ct = DaoNamespace_GetType( NS, value );
-			GC_ShiftRC( value, consts[opc] );
-			consts[opc] = value;
+			GC_Assign( & consts[opc], value );
 		}else{
 			ct = *type2;
 		}
@@ -3439,12 +3435,10 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		if( value && value->type == DAO_ROUTINE ){
 			DaoRoutine *func = (DaoRoutine*) value;
 			ct = func->routType;
-			GC_ShiftRC( value, consts[opc] );
-			consts[opc] = value;
+			GC_Assign( & consts[opc], value );
 		}else if( value ){
 			ct = DaoNamespace_GetType( NS, value );
-			GC_ShiftRC( value, consts[opc] );
-			consts[opc] = value;
+			GC_Assign( & consts[opc], value );
 		}else{
 			DString_SetChars( mbs, "." );
 			DString_Append( mbs, str );
@@ -3860,8 +3854,7 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		if( setter ) break;
 		if( type2 == NULL ) goto NotPermit;
 		if( *type2 == NULL || (*type2)->tid == DAO_UDT ){
-			GC_ShiftRC( types[opa], *type2 );
-			*type2 = types[opa];
+			GC_Assign( type2, types[opa] );
 		}
 		AssertTypeMatching( types[opa], *type2, defs );
 		j = DaoClass_GetDataIndex( klass, str );
@@ -4364,8 +4357,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	tp = types+opa+1;
 	for(k=0; k<argc; k++){
 		tt = DaoType_DefineTypes( tp[k], NS, defs );
-		GC_ShiftRC( tt, tp[k] );
-		tp[k] = tt;
+		GC_Assign( & tp[k], tt );
 	}
 	if( ! (routine->attribs & DAO_ROUT_MAIN) ){
 		m = 1; /* tail call; */
@@ -4586,8 +4578,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 				if( orig->specialized == NULL ) orig->specialized = DRoutines_New();
 				DMutex_Unlock( & mutex_routine_specialize );
 
-				GC_ShiftRC( orig, rout->original );
-				rout->original = orig;
+				GC_Assign( & rout->original, orig );
 				/*
 				// Need to add before specializing the body,
 				// to avoid possible infinite recursion:
@@ -4600,8 +4591,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 				if( rout->body && rout->body->vmCodes->size ){
 					/* Create a new copy of the routine for specialization: */
 					rout = DaoRoutine_Copy( rout, 0, 1, 0 );
-					GC_ShiftRC( orig, rout->original );
-					rout->original = orig;
+					GC_Assign( & rout->original, orig );
 					DMap_Reset( defs3 );
 					DaoType_MatchTo( rout->routType, orig->routType, defs3 );
 					DaoRoutine_MapTypes( rout, defs3 );
@@ -4718,8 +4708,7 @@ int DaoInferencer_HandleClosure( DaoInferencer *self, DaoInode *inode, int i, DM
 			DaoType *uptype = types[opa+1+j];
 			DaoVariable *var = closure->body->upValues->items.pVar[ idata->b - DAO_MAX_PARAM ];
 			if( uptype->invar ) uptype = DaoType_GetBaseType( uptype );
-			GC_ShiftRC( uptype, var->dtype );
-			var->dtype = uptype;
+			GC_Assign( & var->dtype, uptype );
 		}
 	}
 	at = DaoNamespace_MakeRoutType( NS, at, NULL, self->array->items.pType, NULL );
@@ -4799,8 +4788,7 @@ int DaoInferencer_HandleReturnYield( DaoInferencer *self, DaoInode *inode, DMap 
 			ct = DaoNamespace_MakeValueType( NS, dao_none_value );
 			rettypes->items.pType[ rettypes->size - 1 ] = ct;
 			ct = DaoNamespace_MakeRoutType( NS, routine->routType, NULL, NULL, ct );
-			GC_ShiftRC( ct, routine->routType );
-			routine->routType = ct;
+			GC_Assign( & routine->routType, ct );
 			return 1;
 		}
 		if( ct && DaoType_MatchValue( ct, dao_none_value, NULL ) ) return 1;
@@ -4823,8 +4811,7 @@ int DaoInferencer_HandleReturnYield( DaoInferencer *self, DaoInode *inode, DMap 
 				DaoType *ct3 = DaoType_DefineTypes( ct, NS, defs2 );
 				if( ct3 != NULL && ct3 != ct ){
 					tt = DaoNamespace_MakeRoutType( NS, routine->routType, NULL, NULL, ct3 );
-					GC_ShiftRC( tt, routine->routType );
-					routine->routType = tt;
+					GC_Assign( & routine->routType, tt );
 
 					ct = (DaoType*)routine->routType->aux;
 					rettypes->items.pType[ rettypes->size - 1 ] = ct;
@@ -5086,8 +5073,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			case DAO_FLOAT : value = (DaoValue*) DaoFloat_New( opb ); break;
 			case DAO_DOUBLE : value = (DaoValue*) DaoDouble_New( opb ); break;
 			}
-			GC_ShiftRC( value, consts[opc] );
-			consts[opc] = value;
+			GC_Assign( & consts[opc], value );
 			if( at->tid >= DAO_INTEGER && at->tid <= DAO_COMPLEX ){
 				vmc->code = DVM_DATA_I + (at->tid - DAO_INTEGER);
 			}
@@ -5116,8 +5102,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			   printf( "at %i %i %p, %p\n", at->tid, types[opc]->tid, at, types[opc] );
 			 */
 			AssertTypeMatching( at, types[opc], defs );
-			GC_ShiftRC( value, consts[opc] );
-			consts[opc] = value;
+			GC_Assign( & consts[opc], value );
 			if( at->tid >= DAO_INTEGER && at->tid <= DAO_COMPLEX ){
 				vmc->code = DVM_GETCL_I + 4*(code-DVM_GETCL) + (at->tid - DAO_INTEGER);
 			}
@@ -5176,8 +5161,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				at = DaoType_GetInvarType( at );
 			}
 			if( type2 && ( *type2 == NULL || (*type2)->tid == DAO_UDT ) ){
-				GC_ShiftRC( at, *type2 );
-				*type2 = at;
+				GC_Assign( type2, at );
 			}
 			/* less strict checking */
 			if( types[opa]->tid & DAO_ANY ) break;
@@ -5947,8 +5931,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DVM_SETVH_II : case DVM_SETVH_FF : case DVM_SETVH_DD : case DVM_SETVH_CC :
 			tp = typeVH[opc] + opb;
 			if( *tp == NULL || (*tp)->tid == DAO_UDT ){
-				GC_ShiftRC( types[opa], *tp );
-				*tp = types[opa];
+				GC_Assign( tp, types[opa] );
 			}
 			TT1 = DAO_INTEGER + (code - DVM_SETVH_II);
 			AssertTypeMatching( types[opa], *tp, defs );
@@ -6060,10 +6043,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			if( types[opc]->tid != DAO_ANY ){
 				if( DaoType_MatchTo( types[opc], at, NULL ) != DAO_MT_EQ ) goto NotMatch;
 			}
-			if( opb ){
-				GC_ShiftRC( consts[opa], consts[opc] );
-				consts[opc] = consts[opa];
-			}
+			if( opb ) GC_Assign( & consts[opc], consts[opa] );
 			break;
 		case DVM_ADD_III : case DVM_SUB_III : case DVM_MUL_III : case DVM_DIV_III :
 		case DVM_MOD_III : case DVM_POW_III : case DVM_AND_III : case DVM_OR_III  :
@@ -6281,8 +6261,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			AssertTypeMatching( ct, types[opc], defs );
 			if( code == DVM_GETF_OC ){
 				value = klass->constants->items.pConst[opb]->value;
-				GC_ShiftRC( value, consts[opc] );
-				consts[opc] = value;
+				GC_Assign( & consts[opc], value );
 				break;
 			}
 			if( ct->tid != (DAO_INTEGER + code - DVM_GETF_OCI) ) goto NotMatch;
@@ -6384,8 +6363,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		DaoType *retype = (DaoType*) routine->routType->aux;
 		DaoType *type = closure->routType;
 		type = DaoNamespace_MakeRoutType( NS, type, NULL, type->nested->items.pType, retype );
-		GC_ShiftRC( type, closure->routType );
-		closure->routType = type;
+		GC_Assign( & closure->routType, type );
 		if( DaoRoutine_DoTypeInference( closure, self->silent ) == 0 ) return 0;
 	}
 
@@ -6450,8 +6428,7 @@ static void DaoRoutine_ReduceLocalConsts( DaoRoutine *self )
 		DaoValue_Copy( src[0], dest );
 		DaoValue_MarkConst( dest[0] );
 	}
-	GC_ShiftRC( list, self->routConsts );
-	self->routConsts = list;
+	GC_Assign( & self->routConsts, list );
 	DMap_Delete( used );
 }
 int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
@@ -6586,10 +6563,8 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	DArray_Resize( newfn->body->regType, newfn->body->regCount + oldfn->parCount, NULL );
 	for(i=0,m=oldfn->routType->nested->size; i<m; i++){
 		DaoType *T = oldfn->routType->nested->items.pType[i];
-		DaoType *T2 = newfn->body->regType->items.pType[i + newfn->body->regCount];
 		if( T->tid == DAO_PAR_NAMED || T->tid == DAO_PAR_DEFAULT ) T = (DaoType*) T->aux;
-		GC_ShiftRC( T, T2 );
-		newfn->body->regType->items.pType[i + newfn->body->regCount] = T;
+		GC_Assign( & newfn->body->regType->items.pType[i + newfn->body->regCount], T );
 		/* DArray_Append( newfn->body->defLocals, oldfn->body->defLocals->items.pToken[i] ); */
 	}
 	newfn->body->regCount += oldfn->parCount;
@@ -6647,8 +6622,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		newfn->body->vmCodes->data.codes[i] = *(DaoVmCode*) vmc;
 	}
 
-	GC_ShiftRC( oldfn->routType, newfn->routType );
-	newfn->routType = oldfn->routType;
+	GC_Assign( & newfn->routType, oldfn->routType );
 	newfn->parCount = oldfn->parCount;
 	newfn->attribs = oldfn->attribs;
 	DString_Assign( newfn->routName, oldfn->routName );

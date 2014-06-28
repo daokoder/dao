@@ -168,13 +168,13 @@ void DaoProcess_Delete( DaoProcess *self )
 	}
 	for(i=0; i<self->stackSize; i++) GC_DecRC( self->stackValues[i] );
 	if( self->stackValues ) dao_free( self->stackValues );
-	if( self->aux ) DaoAux_Delete( self->aux );
 
 	DString_Delete( self->mbstring );
 	DArray_Delete( self->exceptions );
 	DArray_Delete( self->defers );
 	if( self->future ) GC_DecRC( self->future );
 	if( self->factory ) DArray_Delete( self->factory );
+	if( self->aux ) DaoAux_Delete( self->aux );
 	dao_free( self );
 }
 
@@ -299,13 +299,11 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 #ifdef DEBUG
 		assert( object && object != (DaoObject*)object->defClass->objType->value );
 #endif
-		GC_ShiftRC( object, frame->object );
-		frame->object = object;
+		GC_Assign( & frame->object, object );
 	}
 
 	if( routine == frame->routine ) return;
-	GC_ShiftRC( routine, frame->routine );
-	frame->routine = routine;
+	GC_Assign( & frame->routine, routine );
 	frame->codes = body->vmCodes->data.codes;
 	frame->types = types;
 	for(; id != end; id++){
@@ -323,8 +321,7 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 		case DAO_ENUM    : value2 = (DaoValue*) DaoEnum_New( types[i], 0 ); break;
 		}
 		if( value2 == NULL ) continue;
-		GC_ShiftRC( value2, value );
-		values[i] = value2;
+		GC_Assign( & values[i], value2 );
 	}
 }
 void DaoProcess_SetActiveFrame( DaoProcess *self, DaoStackFrame *frame )
@@ -387,9 +384,8 @@ void DaoProcess_PushFunction( DaoProcess *self, DaoRoutine *routine )
 	DaoProfiler *profiler = self->vmSpace->profiler;
 	DaoStackFrame *frame = DaoProcess_PushFrame( self, routine->parCount );
 	frame->active = frame->prev->active;
-	GC_ShiftRC( routine, frame->routine );
-	frame->routine = routine;
 	self->status = DAO_PROCESS_STACKED;
+	GC_Assign( & frame->routine, routine );
 	DaoProcess_CopyStackParams( self );
 	if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 1 );
 }
@@ -507,8 +503,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 		passed |= (size_t)1<<parindex;
 		if( need_self && parindex == 0 ){
 			if( DaoType_MatchValue( partype, argvalue, defs ) == DAO_MT_EQ ){
-				GC_ShiftRC( argvalue, dest[parindex] );
-				dest[parindex] = argvalue;
+				GC_Assign( & dest[parindex], argvalue );
 				continue;
 			}
 		}
@@ -553,8 +548,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 			if( original->specialized == NULL ) original->specialized = DRoutines_New();
 			DMutex_Unlock( & mutex_routine_specialize );
 
-			GC_ShiftRC( original, routine->original );
-			routine->original = original;
+			GC_Assign( & routine->original, original );
 			DRoutines_Add( original->specialized, routine );
 		}
 	}
@@ -660,10 +654,8 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 	next->entry = frame->entry + 2 + nop;
 	next->state = DVM_FRAME_SECT | DVM_FRAME_KEEP;
 
-	GC_ShiftRC( frame->object, next->object );
-	GC_ShiftRC( frame->routine, next->routine );
-	next->routine = frame->routine;
-	next->object = frame->object;
+	GC_Assign( & next->object, frame->object );
+	GC_Assign( & next->routine, frame->routine );
 	next->parCount = frame->parCount;
 	next->stackBase = frame->stackBase;
 	next->types = frame->types;
@@ -1234,15 +1226,13 @@ CallEntry:
 			if( vmSpace->stopit ) goto FinishProcess;
 		}OPNEXT() OPCASE( DATA ){
 			if( vmc->a == DAO_NONE ){
-				GC_ShiftRC( dao_none_value, locVars[vmc->c] );
-				locVars[vmc->c] = dao_none_value;
+				GC_Assign( & locVars[vmc->c], dao_none_value );
 			}else{
 				value = locVars[vmc->c];
 				if( value == NULL || value->type != vmc->a ){
-					DaoValue *tmp = (DaoValue*) DaoComplex_New(czero);
-					tmp->type = vmc->a;
-					GC_ShiftRC( tmp, value );
-					locVars[vmc->c] = value = tmp;
+					value = (DaoValue*) DaoComplex_New(czero);
+					value->type = vmc->a;
+					GC_Assign( & locVars[vmc->c], value );
 				}
 				switch( vmc->a ){
 				case DAO_COMPLEX :
@@ -1258,34 +1248,27 @@ CallEntry:
 		}OPNEXT() OPCASE( GETCL ){
 			/* All GETX instructions assume the C regisgter is an intermediate register! */
 			value = dataCL[vmc->b];
-			GC_ShiftRC( value, locVars[vmc->c] );
-			locVars[vmc->c] = value;
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( GETCK ){
 			value = clsConsts->items.pConst[vmc->b]->value;
-			GC_ShiftRC( value, locVars[vmc->c] );
-			locVars[vmc->c] = value;
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( GETCG ){
 			value = glbConsts->items.pConst[vmc->b]->value;
-			GC_ShiftRC( value, locVars[vmc->c] );
-			locVars[vmc->c] = value;
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( GETVH ){
-			GC_ShiftRC( dataVH[vmc->a]->activeValues[vmc->b], locVars[vmc->c] );
-			locVars[vmc->c] = dataVH[vmc->a]->activeValues[vmc->b];
+			value = dataVH[vmc->a]->activeValues[vmc->b];
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( GETVS ){
 			value = upValues[vmc->b]->value;
-			GC_ShiftRC( value, locVars[vmc->c] );
-			locVars[vmc->c] = value;
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( GETVO ){
-			GC_ShiftRC( dataVO[vmc->b], locVars[vmc->c] );
-			locVars[vmc->c] = dataVO[vmc->b];
+			GC_Assign( & locVars[vmc->c], dataVO[vmc->b] );
 		}OPNEXT() OPCASE( GETVK ){
 			value = clsVars->items.pVar[vmc->b]->value;
-			GC_ShiftRC( value, locVars[vmc->c] );
-			locVars[vmc->c] = value;
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( GETVG ){
 			value = glbVars->items.pVar[vmc->b]->value;
-			GC_ShiftRC( value, locVars[vmc->c] );
-			locVars[vmc->c] = value;
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( GETI ) OPCASE( GETDI ) OPCASE( GETMI ){
 			DaoProcess_DoGetItem( self, vmc );
 			goto CheckException;
@@ -1330,8 +1313,7 @@ CallEntry:
 				// so the first operand of LOAD will be NULL!
 				*/
 				if( (vA->xBase.trait & DAO_VALUE_CONST) == 0 ){
-					GC_ShiftRC( vA, locVars[vmc->c] );
-					locVars[vmc->c] = vA;
+					GC_Assign( & locVars[vmc->c], vA );
 				}else{
 					DaoValue_Copy( vA, & locVars[vmc->c] );
 				}
@@ -1818,8 +1800,7 @@ CallEntry:
 			case DAO_CDATA  : if( value->xCdata.data == NULL ) value = NULL; break;
 			}
 			if( value == NULL ) goto RaiseErrorNullObject;
-			GC_ShiftRC( value, locVars[vmc->c] );
-			locVars[vmc->c] = value;
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( MOVE_XX ){
 			value = locVars[vmc->a];
 			switch( value->type ){
@@ -1884,8 +1865,7 @@ CallEntry:
 			/* All GETX instructions assume the C regisgter is an intermediate register! */
 			/* So no type checking is necessary here! */
 			value = list->value->items.pValue[id];
-			GC_ShiftRC( value, locVars[vmc->c] );
-			locVars[vmc->c] = value;
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( SETI_LI ){
 			list = & locVars[vmc->c]->xList;
 			id = LocalInt(vmc->b);
@@ -1905,8 +1885,7 @@ CallEntry:
 			vA = list->value->items.pValue[id];
 			switch( vmc->code ){
 			case DVM_GETI_LSI :
-				GC_ShiftRC( vA, locVars[vmc->c] );
-				locVars[vmc->c] = vA;
+				GC_Assign( & locVars[vmc->c], vA );
 				break;
 			case DVM_GETI_LII : locVars[vmc->c]->xInteger.value = vA->xInteger.value; break;
 			case DVM_GETI_LFI : locVars[vmc->c]->xFloat.value = vA->xFloat.value; break;
@@ -2014,8 +1993,7 @@ CallEntry:
 			id = LocalInt(vmc->b);
 			if( id <0 || id >= tuple->size ) goto RaiseErrorIndexOutOfRange;
 			value = tuple->values[id];
-			GC_ShiftRC( value, locVars[vmc->c] );
-			locVars[vmc->c] = value;
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( SETI_TI ){
 			tuple = & locVars[vmc->c]->xTuple;
 			id = LocalInt(vmc->b);
@@ -2047,8 +2025,7 @@ CallEntry:
 		}OPNEXT() OPCASE( GETF_TX ){
 			tuple = & locVars[vmc->a]->xTuple;
 			value = tuple->values[vmc->b];
-			GC_ShiftRC( value, locVars[vmc->c] );
-			locVars[vmc->c] = value;
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( SETF_TII ){
 			tuple = & locVars[vmc->c]->xTuple;
 			tuple->values[vmc->b]->xInteger.value = LocalInt(vmc->a);
@@ -2068,9 +2045,7 @@ CallEntry:
 		}OPNEXT() OPCASE( SETF_TPP ){
 			tuple = & locVars[vmc->c]->xTuple;
 			value = locVars[vmc->a];
-			vC2 = tuple->values + vmc->b;
-			GC_ShiftRC( value, *vC2 );
-			*vC2 = value;
+			GC_Assign( & tuple->values[vmc->b], value );
 		}OPNEXT() OPCASE( SETF_TXX ){
 			tuple = & locVars[vmc->c]->xTuple;
 			DaoValue_Copy( locVars[vmc->a], tuple->values + vmc->b );
@@ -2082,26 +2057,21 @@ CallEntry:
 			RI[vmc->b] = locVars[vmc->a]->xDouble.value;
 		}OPNEXT() OPCASE( GETF_KC ){
 			value = locVars[vmc->a]->xClass.constants->items.pConst[vmc->b]->value;
-			GC_ShiftRC( value, locVars[vmc->c] );
-			locVars[vmc->c] = value;
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( GETF_KG ){
 			value = locVars[vmc->a]->xClass.variables->items.pVar[vmc->b]->value;
-			GC_ShiftRC( value, locVars[vmc->c] );
-			locVars[vmc->c] = value;
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( GETF_OC ){
 			value = locVars[vmc->a]->xObject.defClass->constants->items.pConst[vmc->b]->value;
-			GC_ShiftRC( value, locVars[vmc->c] );
-			locVars[vmc->c] = value;
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( GETF_OG ){
 			value = locVars[vmc->a]->xObject.defClass->variables->items.pVar[vmc->b]->value;
-			GC_ShiftRC( value, locVars[vmc->c] );
-			locVars[vmc->c] = value;
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( GETF_OV ){
 			object = & locVars[vmc->a]->xObject;
 			if( object->isNull ) goto AccessNullInstance;
 			value = object->objValues[vmc->b];
-			GC_ShiftRC( value, locVars[vmc->c] );
-			locVars[vmc->c] = value;
+			GC_Assign( & locVars[vmc->c], value );
 		}OPNEXT() OPCASE( GETF_KCI ){
 			value = locVars[vmc->a]->xClass.constants->items.pConst[vmc->b]->value;
 			locVars[vmc->c]->xInteger.value = value->xInteger.value;
@@ -2307,8 +2277,7 @@ CallEntry:
 			vA = locVars[vmc->a];
 			abtp = locTypes[vmc->c];
 			if( vA->type == abtp->tid ){
-				GC_ShiftRC( vA, locVars[vmc->c] );
-				locVars[vmc->c] = vA;
+				GC_Assign( & locVars[vmc->c], vA );
 			}else{
 				DaoProcess_DoCast( self, vmc );
 				goto CheckException;
@@ -2688,8 +2657,7 @@ DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc )
 		return & dC->xEnum;
 	}
 	dC = (DaoValue*) DaoEnum_New( tp, 0 );
-	GC_ShiftRC( dC, self->activeValues[ vmc->c ] );
-	self->activeValues[ vmc->c ] = dC;
+	GC_Assign( & self->activeValues[vmc->c], dC );
 	return & dC->xEnum;
 }
 DaoEnum* DaoProcess_PutEnum( DaoProcess *self, const char *symbols )
@@ -2721,8 +2689,7 @@ DaoList* DaoProcess_GetListByType( DaoProcess *self, DaoVmCode *vmc, DaoType *tp
 	}
 	if( tp == NULL || tp->tid != DAO_LIST ) tp = dao_type_list_any;
 	list = DaoList_New();
-	GC_ShiftRC( tp, list->ctype );
-	list->ctype = tp;
+	GC_Assign( & list->ctype, tp );
 	DaoValue_Move( (DaoValue*) list, self->activeValues + vmc->c, tp );
 	return list;
 }
@@ -2758,8 +2725,7 @@ DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc, unsigned int hashi
 	}
 	if( tp == NULL || tp->tid != DAO_MAP ) tp = dao_type_map_any;
 	map = DaoMap_New( hashing );
-	GC_ShiftRC( tp, map->ctype );
-	map->ctype = tp;
+	GC_Assign( & map->ctype, tp );
 	DaoValue_Move( (DaoValue*) map, self->activeValues + vmc->c, tp );
 	return map;
 }
@@ -2828,8 +2794,7 @@ DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int in
 	}else{
 		tup = DaoTuple_New( size );
 	}
-	GC_ShiftRC( tup, val );
-	self->activeValues[ self->activeCode->c ] = (DaoValue*) tup;
+	GC_Assign( & self->activeValues[ self->activeCode->c ], tup );
 	return tup;
 }
 DaoTuple* DaoProcess_PutTuple( DaoProcess *self, int size )
@@ -2861,8 +2826,7 @@ DaoType* DaoProcess_GetReturnType( DaoProcess *self )
 		if( frame->routine ) type = (DaoType*) frame->routine->routType->aux;
 	}
 	if( type == NULL ) type = self->activeTypes[ self->activeCode->c ];
-	GC_ShiftRC( type, frame->retype );
-	frame->retype = type;
+	GC_Assign( & frame->retype, type );
 	return type;
 }
 
@@ -2994,8 +2958,7 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 		tuple->ctype = ct;
 		GC_IncRC( ct );
 	}else if( argstuple ){
-		GC_ShiftRC( ct, tuple->ctype );
-		tuple->ctype = ct;
+		GC_Assign( & tuple->ctype, ct );
 		for(i=0; i<count; i++) DaoTuple_SetItem( tuple, self->activeValues[vmc->a + i], i );
 	}else{
 		if( tuple->ctype == NULL ){
@@ -3146,8 +3109,7 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 		if( vmc->b == 0 ){
 			DaoProcess_PutString( self, A->xNameValue.name );
 		}else if( vmc->b == 1 ){
-			GC_ShiftRC( A->xNameValue.value, self->activeValues[ vmc->c ] );
-			self->activeValues[ vmc->c ] = A->xNameValue.value;
+			GC_Assign( & self->activeValues[ vmc->c ], A->xNameValue.value );
 		}else{
 			DaoProcess_RaiseError( self, "Index", "index out of range" );
 			return;
@@ -3157,8 +3119,7 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 		id = DaoValue_GetInteger( B );
 		if( id < 0 ) id += list->value->size;
 		if( id >=0 && id < list->value->size ){
-			GC_ShiftRC( list->value->items.pValue[id], self->activeValues[ vmc->c ] );
-			self->activeValues[ vmc->c ] = list->value->items.pValue[id];
+			GC_Assign( & self->activeValues[ vmc->c ], list->value->items.pValue[id] );
 		}else{
 			DaoProcess_RaiseError( self, "Index", "index out of range" );
 			return;
@@ -3526,9 +3487,8 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 	}
 
 	if( ct->tid == DAO_ENUM && (vc == NULL || vc->type != DAO_ENUM) ){
-		DaoEnum *E = DaoEnum_New( NULL, 0 );
-		GC_ShiftRC( E, vc );
-		*vc2 = vc = (DaoValue*) E;
+		vc = (DaoValue*) DaoEnum_New( NULL, 0 );
+		GC_Assign( vc2, vc );
 	}
 	if( ct->tid == DAO_ENUM && va->type == DAO_ENUM ){
 		DaoEnum_SetType( & vc->xEnum, ct );
@@ -3632,8 +3592,7 @@ NormalCasting:
 	if( va == NULL || va->type == 0 ) goto FailConversion;
 	return;
 FastCasting:
-	GC_ShiftRC( va, vc );
-	*vc2 = va;
+	GC_Assign( vc2, va );
 	return;
 FailConversion :
 	at = DaoNamespace_GetType( self->activeNamespace, self->activeValues[ vmc->a ] );
@@ -3763,8 +3722,7 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 	if( caller->type == DAO_CTYPE ){
 		DaoType *retype = caller->xCtype.cdtype;
 		printf( ">>>>>>>>>>>>> %s %s\n", retype->name->chars, caller->xCdata.ctype->name->chars );
-		GC_ShiftRC( retype, self->topFrame->retype );
-		self->topFrame->retype = retype;
+		GC_Assign( & self->topFrame->retype, retype );
 	}
 #endif
 	DaoProcess_CallFunction( self, func, self->stackValues + self->topFrame->stackBase, self->parCount );
@@ -3809,8 +3767,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		if( ret && (ret->type == DAO_CDATA || ret->type == DAO_CSTRUCT) ){
 			DaoCdata *cdata = & self->stackValues[0]->xCdata;
 			DaoObject_SetParentCdata( othis, cdata );
-			GC_ShiftRC( othis, cdata->object );
-			cdata->object = othis;
+			GC_Assign( & cdata->object, othis );
 		}
 		DaoProcess_PutValue( self, (DaoValue*) othis );
 	}else{
@@ -3887,8 +3844,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 	}else if( caller->type == DAO_CLASS ){
 		DaoProcess_DoNewCall( self, vmc, & caller->xClass, selfpar, params, types, npar );
 		if( self->topFrame != topFrame ){
-			GC_ShiftRC( caller->xClass.objType, self->topFrame->retype );
-			self->topFrame->retype = caller->xClass.objType;
+			GC_Assign( & self->topFrame->retype, caller->xClass.objType );
 		}
 	}else if( caller->type == DAO_OBJECT ){
 		DaoClass *host = self->activeObject ? self->activeObject->defClass : NULL;
@@ -3922,10 +3878,8 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 			DaoCstruct *cdata = (DaoCstruct*) self->activeValues[ vmc->c ];
 			if( cdata && (cdata->type == DAO_CDATA || cdata->type == DAO_CSTRUCT) ){
 				//printf( "%p %p %p\n", cdata, cdata->object, self->activeObject->rootObject );
-				GC_ShiftRC( cdata, self->activeObject->parent );
-				self->activeObject->parent = (DaoValue*) cdata;
-				GC_ShiftRC( self->activeObject->rootObject, cdata->object );
-				cdata->object = self->activeObject->rootObject;
+				GC_Assign( & self->activeObject->parent, cdata );
+				GC_Assign( & cdata->object, self->activeObject->rootObject );
 			}
 		}
 	}else if( caller->type == DAO_CDATA || caller->type == DAO_CSTRUCT ){
@@ -3978,8 +3932,7 @@ static int DaoProcess_FastPassParams( DaoProcess *self, DaoType *partypes[], Dao
 				DString_Assign( dests[i]->xString.value, param->xString.value );
 				break;
 			default :
-				GC_ShiftRC( param, dests[i] );
-				dests[i] = param;
+				GC_Assign( & dests[i], param );
 				break;
 			}
 		}else if( param->type >= DAO_ARRAY ){
@@ -3987,8 +3940,7 @@ static int DaoProcess_FastPassParams( DaoProcess *self, DaoType *partypes[], Dao
 			case DAO_OBJECT : if( param->xObject.isNull ) return 0; break;
 			case DAO_CDATA  : if( param->xCdata.data == NULL ) return 0; break;
 			}
-			GC_ShiftRC( param, dests[i] );
-			dests[i] = param;
+			GC_Assign( & dests[i], param );
 		}else{
 			DaoType *partype = partypes[i];
 			if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
@@ -4027,8 +3979,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 		if( rout->pFunc ){
 			DaoStackFrame *frame = DaoProcess_PushFrame( self, rout->parCount );
 			DaoValue **values = self->stackValues + frame->stackBase;
-			GC_ShiftRC( rout, frame->routine );
-			frame->routine = rout;
+			GC_Assign( & frame->routine, rout );
 			frame->active = frame->prev->active;
 			self->status = DAO_PROCESS_STACKED;
 			ret = DaoProcess_FastPassParams( self, partypes, parbuf, npar );
@@ -4130,8 +4081,7 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 		data[0]->xInteger.value = va->xMap.value->size >0;
 		if( data[1]->type != DAO_CDATA || data[1]->xCdata.ctype != dao_type_cdata ){
 			DaoCdata *it = DaoCdata_New( dao_type_cdata, node );
-			GC_ShiftRC( it, data[1] );
-			data[1] = (DaoValue*) it;
+			GC_Assign( & data[1], it );
 		}else{
 			data[1]->xCdata.data = node;
 		}
@@ -4182,12 +4132,10 @@ void DaoProcess_DoList(  DaoProcess *self, DaoVmCode *vmc )
 	if( vmc->b > 0 && type ==NULL ){
 		DaoType *abtp = DaoNamespace_GetType( ns, regValues[opA] );
 		DaoType *t = DaoNamespace_MakeType( ns, "list", DAO_LIST, NULL, & abtp, 1 );
-		GC_ShiftRC( t, list->ctype );
-		list->ctype = t;
+		GC_Assign( & list->ctype, t );
 	}
 	if( vmc->b && list->ctype == dao_type_list_empty ){
-		GC_ShiftRC( dao_type_list_any, list->ctype );
-		list->ctype = dao_type_list_any;
+		GC_Assign( & list->ctype, dao_type_list_any );
 	}
 	if( type == dao_type_list_empty ) list->trait |= DAO_VALUE_CONST;
 	for(i=0; i<vmc->b; i++){
@@ -4411,8 +4359,7 @@ SetupType:
 		DaoNamespace *ns = self->activeNamespace;
 		DaoType *et = DaoNamespace_GetType( ns, initValue );
 		DaoType *tp = DaoNamespace_MakeType( ns, "list", DAO_LIST, NULL, & et, et !=NULL );
-		GC_ShiftRC( tp, list->ctype );
-		list->ctype = tp;
+		GC_Assign( & list->ctype, tp );
 	}
 }
 void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc )
@@ -4515,8 +4462,7 @@ void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc )
 			if( tp[0] ==any && tp[1] ==any ) break;
 		}
 		t = DaoNamespace_MakeType( ns, "map", DAO_MAP, NULL, tp, 2 );
-		GC_ShiftRC( t, map->ctype );
-		map->ctype = t;
+		GC_Assign( & map->ctype, t );
 	}
 }
 void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc )
@@ -5911,14 +5857,12 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	}
 
 	tp = DaoNamespace_MakeRoutType( self->activeNamespace, closure->routType, pp2, NULL, NULL);
-	GC_ShiftRC( tp, closure->routType );
-	closure->routType = tp;
+	GC_Assign( & closure->routType, tp );
 
 	deftypes = DMap_New(0,0);
 	DaoProcess_MapTypes( self, deftypes );
 	tp = DaoType_DefineTypes( closure->routType, closure->nameSpace, deftypes );
-	GC_ShiftRC( tp, closure->routType );
-	closure->routType = tp;
+	GC_Assign( & closure->routType, tp );
 	DaoRoutine_MapTypes( closure, deftypes );
 	DMap_Delete( deftypes );
 
@@ -6252,8 +6196,7 @@ static void DaoProcess_AdjustCodes( DaoProcess *self, int options )
 
 void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream )
 {
-	GC_ShiftRC( stream, self->stdioStream );
-	self->stdioStream = stream;
+	GC_Assign( & self->stdioStream, stream );
 }
 
 void* DaoProcess_GetAuxData( DaoProcess *self, void *key )

@@ -90,16 +90,12 @@ void DaoConstant_Set( DaoConstant *self, DaoValue *value )
 }
 int DaoVariable_Set( DaoVariable *self, DaoValue *value, DaoType *type )
 {
-	if( type ){
-		GC_ShiftRC( type, self->dtype );
-		self->dtype = type;
-	}
+	if( type ) GC_Assign( & self->dtype, type );
 	return DaoValue_Move( value, & self->value, self->dtype );
 }
 void DaoVariable_SetType( DaoVariable *self, DaoType *type )
 {
-	GC_ShiftRC( type, self->dtype );
-	self->dtype = type;
+	GC_Assign( & self->dtype, type );
 	if( self->value == NULL || self->value->type != type->value->type ){
 		GC_DecRC( self->value );
 		self->value = DaoValue_SimpleCopy( type->value );
@@ -542,8 +538,7 @@ void DaoValue_CopyX( DaoValue *src, DaoValue **dest, DaoType *cst )
 	}
 	if( src->type != dest2->type || src->type > DAO_ENUM ){
 		src = DaoValue_SimpleCopyWithTypeX( src, NULL, cst );
-		GC_ShiftRC( src, dest2 );
-		*dest = src;
+		GC_Assign( dest, src );
 		return;
 	}
 	switch( src->type ){
@@ -582,22 +577,19 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 		/* v : any = {}, v->ctype should be list<any> */
 		if( tp->tid == DAO_ANY ) tp = dao_type_list_any;
 		if( to->xList.ctype && !(to->xList.ctype->attrib & DAO_TYPE_UNDEF) ) break;
-		GC_ShiftRC( tp, to->xList.ctype );
-		to->xList.ctype = tp;
+		GC_Assign( & to->xList.ctype, tp );
 		break;
 	case DAO_MAP :
 		if( tp->tid == DAO_ANY ) tp = dao_type_map_any;
 		if( to->xMap.ctype && !(to->xMap.ctype->attrib & DAO_TYPE_UNDEF) ) break;
-		GC_ShiftRC( tp, to->xMap.ctype );
-		to->xMap.ctype = tp;
+		GC_Assign( & to->xMap.ctype, tp );
 		break;
 	case DAO_TUPLE :
 		tp2 = to->xTuple.ctype;
 		if( tp->tid == DAO_ANY ) break;
 		if( tp->nested->size ==0 ) break; /* not to the generic tuple type */
 		if( tp2 == NULL || tp2->mapNames == NULL || tp2->mapNames->size ==0 ){
-			GC_ShiftRC( tp, to->xTuple.ctype );
-			to->xTuple.ctype = tp;
+			GC_Assign( & to->xTuple.ctype, tp );
 			break;
 		}
 		if( tp->mapNames == NULL || tp->mapNames->size ) break;
@@ -605,8 +597,7 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 			if( DMap_Find( tp->mapNames, it->key.pVoid ) == NULL ) break;
 		}
 		if( it ) break;
-		GC_ShiftRC( tp, to->xTuple.ctype );
-		to->xTuple.ctype = tp;
+		GC_Assign( & to->xTuple.ctype, tp );
 		break;
 	default : break;
 	}
@@ -656,8 +647,7 @@ Finalize:
 	}
 	GC_IncRC( tp );
 	tuple->ctype = tp;
-	GC_ShiftRC( tuple, *dest );
-	*dest = (DaoValue*) tuple;
+	GC_Assign( dest, tuple );
 	return 1;
 }
 static int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *defs );
@@ -695,8 +685,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	case (DAO_COMPLEX << 8) | DAO_COMPLEX :
 	case (DAO_STRING  << 8) | DAO_STRING  :
 		S = DaoValue_SimpleCopyWithTypeX( S, T, C );
-		GC_ShiftRC( S, *D );
-		*D = S;
+		GC_Assign( D, S );
 		return 1;
 	}
 	switch( S->type ){
@@ -715,9 +704,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		case (DAO_OBJECT<<8)|DAO_OBJECT : ST = S->xObject.defClass->objType; break;
 		}
 		if( ST == T ){
-			DaoValue *D2 = *D;
-			GC_ShiftRC( S, D2 );
-			*D = S;
+			GC_Assign( D, S );
 			return 1;
 		}
 	}
@@ -777,8 +764,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	// the matching do not necessary to be exact.
 	*/
 	S = DaoValue_SimpleCopyWithTypeX( S, T, C );
-	GC_ShiftRC( S, *D );
-	*D = S;
+	GC_Assign( D, S );
 	if( S->type == DAO_TUPLE && S->xTuple.ctype != T && tm == DAO_MT_SIM ){
 		return DaoValue_TryCastTuple( S, D, T );
 	}else if( T && T->tid == S->type && !(T->attrib & DAO_TYPE_SPEC) ){
@@ -835,8 +821,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		default : break;
 		}
 		if( fastmove ){
-			GC_ShiftRC( S, D2 );
-			*D = S;
+			GC_Assign( D, S );
 			return 1;
 		}
 	}

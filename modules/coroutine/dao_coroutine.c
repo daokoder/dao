@@ -165,8 +165,7 @@ static void COROUT_Suspend( DaoProcess *proc, DaoValue *p[], int N )
 		DaoProcess_RaiseWarning( proc, NULL, "coroutine cannot suspend in alien process." );
 		return;
 	}
-	GC_ShiftRC( value, proc->stackValues[0] );
-	proc->stackValues[0] = value;
+	GC_Assign( & proc->stackValues[0], value );
 	proc->status = DAO_PROCESS_SUSPENDED;
 	proc->pauseType = DAO_PAUSE_COROUTINE_YIELD;
 }

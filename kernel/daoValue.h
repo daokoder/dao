@@ -122,6 +122,7 @@ DAO_DLL void DaoValue_Clear( DaoValue **self );
 
 DAO_DLL int DaoValue_Compare( DaoValue *left, DaoValue *right );
 
+DAO_DLL void DaoValue_Assign( DaoValue *src, DaoValue **dest );
 DAO_DLL void DaoValue_Copy( DaoValue *src, DaoValue **dest );
 DAO_DLL void DaoValue_CopyX( DaoValue *src, DaoValue **dest, DaoType *cst );
 DAO_DLL int DaoValue_Move( DaoValue *src, DaoValue **dest, DaoType *destype );

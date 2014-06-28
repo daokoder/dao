@@ -95,27 +95,21 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int cst, int cbo
 	self->parCount = from->parCount;
 	self->defLine = from->defLine;
 	self->pFunc = from->pFunc;
-	GC_ShiftRC( from->routHost, self->routHost );
-	GC_ShiftRC( from->routType, self->routType );
-	GC_ShiftRC( from->nameSpace, self->nameSpace );
-	self->routHost = from->routHost;
-	self->routType = from->routType;
-	self->nameSpace = from->nameSpace;
+	GC_Assign( & self->routHost, from->routHost );
+	GC_Assign( & self->routType, from->routType );
+	GC_Assign( & self->nameSpace, from->nameSpace );
 	DString_Assign( self->routName, from->routName );
 	if( cst ){
 		DaoList *list = DaoList_New();
-		GC_ShiftRC( list, self->routConsts );
-		self->routConsts = list;
+		GC_Assign( & self->routConsts, list );
 		DArray_Assign( self->routConsts->value, from->routConsts->value );
 	}else{
-		GC_ShiftRC( from->routConsts, self->routConsts );
-		self->routConsts = from->routConsts;
+		GC_Assign( & self->routConsts, from->routConsts );
 	}
 	if( from->body ){
 		DaoRoutineBody *body = from->body;
 		if( cbody ) body = DaoRoutineBody_Copy( body, stat );
-		GC_ShiftRC( body, self->body );
-		self->body = body;
+		GC_Assign( & self->body, body );
 	}
 }
 DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int cst, int body, int stat )
@@ -283,20 +277,15 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 	for(i=0,n=self->body->upValues->size; i<n; ++i){
 		DaoVariable *var = self->body->upValues->items.pVar[i];
 		DaoType *type = DaoType_DefineTypes( var->dtype, self->nameSpace, deftypes );
-		GC_ShiftRC( type, var->dtype );
-		var->dtype = type;
+		GC_Assign( & var->dtype, type );
 	}
 }
 int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes )
 {
 	DaoType *tp = DaoType_DefineTypes( self->routType, self->nameSpace, deftypes );
 	if( tp == NULL ) return 0;
-	GC_ShiftRC( tp, self->routType );
-	self->routType = tp;
-	if( host ){
-		GC_ShiftRC( host, self->routHost );
-		self->routHost = host;
-	}
+	GC_Assign( & self->routType, tp );
+	if( host ) GC_Assign( & self->routHost, host );
 	if( self->body == NULL ) return 1;
 	DaoRoutine_MapTypes( self, deftypes );
 	return 1;

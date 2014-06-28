@@ -606,8 +606,7 @@ static void DaoArray_GetItem1( DaoValue *value, DaoProcess *proc, DaoValue *pid 
 	}
 	na = DaoProcess_PutArray( proc );
 	DaoArray_SetNumType( na, self->etype );
-	GC_ShiftRC( self, na->original );
-	na->original = self;
+	GC_Assign( & na->original, self );
 	DaoArray_MakeSlice( self, proc, & pid, 1, na );
 }
 int DaoArray_CopyArray( DaoArray *self, DaoArray *other )
@@ -778,8 +777,7 @@ static void DaoArray_GetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[]
 	}
 	na = DaoProcess_PutArray( proc );
 	DaoArray_SetNumType( na, self->etype );
-	GC_ShiftRC( self, na->original );
-	na->original = self;
+	GC_Assign( & na->original, self );
 	DaoArray_MakeSlice( self, proc, ids, N, na );
 }
 static void DaoArray_SetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )

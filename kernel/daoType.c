@@ -368,8 +368,7 @@ void DaoType_InitDefault( DaoType *self )
 	case DAO_STRING : value = (DaoValue*) DaoString_New(); break;
 	case DAO_ENUM : value = (DaoValue*) DaoEnum_New( self, 0 ); break;
 	}
-	GC_ShiftRC( value, self->value );
-	self->value = value;
+	GC_Assign( & self->value, value );
 	if( value ) value->xBase.trait |= DAO_VALUE_CONST;
 }
 DaoType* DaoType_Copy( DaoType *other )
@@ -476,8 +475,7 @@ static void DaoType_RelinkQuadTypes( DaoType *self, DaoType *other )
 	for(i=0; i<count; ++i){
 		cur = types[i];
 		next = types[(i+1)%count];
-		GC_ShiftRC( next, cur->quadtype );
-		cur->quadtype = next;
+		GC_Assign( & cur->quadtype, next );
 	}
 	for(i=0; i<count; ++i) GC_DecRC( types[i] );
 }
@@ -1270,8 +1268,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	}
 
 	copy = DaoType_New( "", self->tid, NULL, NULL );
-	GC_ShiftRC( self->kernel, copy->kernel );
-	copy->kernel = self->kernel;
+	GC_Assign( & copy->kernel, self->kernel );
 	copy->typer = self->typer;
 	copy->subtid = self->subtid;
 	copy->attrib = self->attrib;
@@ -2150,10 +2147,8 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 	 * Upon method accessing, a new kernel will be created with specialized methods. */
 	sptype = DaoCdata_NewType( self->typer );
 	sptype2 = sptype->aux->xCtype.ctype;
-	GC_ShiftRC( self->kernel, sptype->kernel );
-	GC_ShiftRC( self->kernel, sptype2->kernel );
-	sptype->kernel = self->kernel;
-	sptype2->kernel = self->kernel;
+	GC_Assign( & sptype->kernel, self->kernel );
+	GC_Assign( & sptype2->kernel, self->kernel );
 	sptype->nested = DArray_New( DAO_DATA_VALUE );
 	if( self->tid == DAO_CTYPE ){
 		sptype->tid = self->aux->xCtype.cdtype->tid;
@@ -2219,9 +2214,8 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 	/* Specialized type will be initialized with the same kernel as the template type.
 	 * Upon method accessing, a new kernel will be created with specialized methods. */
 	sptype = DaoType_New( self->name->chars, self->tid, NULL, NULL );
-	GC_ShiftRC( self->kernel, sptype->kernel );
+	GC_Assign( & sptype->kernel, self->kernel );
 	sptype->tid = self->tid;
-	sptype->kernel = self->kernel;
 	sptype->nested = DArray_New( DAO_DATA_VALUE );
 
 	pos = DString_FindChar( sptype->name, '<', 0 );
@@ -2446,13 +2440,10 @@ void DaoType_SpecializeMethods( DaoType *self )
 		DMap_Delete( defs );
 		/* Set new kernel after it has been setup, for read safety in multithreading: */
 		if( self->tid == DAO_CSTRUCT || self->tid == DAO_CDATA || self->tid == DAO_CTYPE ){
-			GC_ShiftRC( kernel, self->aux->xCtype.ctype->kernel );
-			GC_ShiftRC( kernel, self->aux->xCtype.cdtype->kernel );
-			self->aux->xCtype.ctype->kernel = kernel;
-			self->aux->xCtype.cdtype->kernel = kernel;
+			GC_Assign( & self->aux->xCtype.ctype->kernel, kernel );
+			GC_Assign( & self->aux->xCtype.cdtype->kernel, kernel );
 		}else{
-			GC_ShiftRC( kernel, self->kernel );
-			self->kernel = kernel;
+			GC_Assign( & self->kernel, kernel );
 		}
 	}
 	DMutex_Unlock( & mutex_methods_setup );

@@ -51,16 +51,14 @@ DAO_DLL void DaoCGC_Start();
 
 DAO_DLL void DaoGC_IncRC( DaoValue *dbase );
 DAO_DLL void DaoGC_DecRC( DaoValue *dbase );
-DAO_DLL void DaoGC_ShiftRC( DaoValue *up, DaoValue *down );
+DAO_DLL void DaoGC_Assign( DaoValue **dest, DaoValue *src );
 
 DAO_DLL void DaoGC_IncRCs( DArray *dbases );
 DAO_DLL void DaoGC_DecRCs( DArray *dbases );
 
 #define GC_IncRC( p )        DaoGC_IncRC( (DaoValue*)(p) )
 #define GC_DecRC( p )        DaoGC_DecRC( (DaoValue*)(p) )
-#define GC_ShiftRC(up,down) \
-	if( (DaoValue*)(up) != (DaoValue*)(down) )\
-DaoGC_ShiftRC( (DaoValue*)(up), (DaoValue*)(down) )
+#define GC_Assign(dest,src)  DaoGC_Assign( (DaoValue**)(dest), (DaoValue*)(src) );
 
 
 
@@ -72,7 +70,7 @@ DaoGC_ShiftRC( (DaoValue*)(up), (DaoValue*)(down) )
 // or its item pointers are being moved, or tree structure (in the case of map)
 // is being mutated.
 //
-// Modification of array/map with GC_IncRC(), GC_DecRC() and GC_ShiftRC(),
+// Modification of array/map with GC_IncRC(), GC_DecRC() and GC_Assign(),
 // does not need such protection, because when these GC_XyzRC() methods are
 // used, the concurrent GC is able to handle the concurrent modification
 // of array/map properly.

@@ -263,8 +263,7 @@ static void DaoByteBlock_SetValue( DaoByteBlock *self, DaoValue *value )
 		DaoValue_Copy( value, & self->value );
 		return;
 	}
-	GC_ShiftRC( value, self->value );
-	self->value = value;
+	GC_Assign( & self->value, value );
 }
 DaoByteBlock* DaoByteBlock_FindOrCopyBlock( DaoByteBlock *self, DaoValue *value )
 {
@@ -1848,10 +1847,7 @@ static void DaoByteCoder_DecodeValue( DaoByteCoder *self, DaoByteBlock *block )
 		if( self->error ) break;
 		list = DaoList_New();
 		value = (DaoValue*) list;
-		if( A ){
-			GC_ShiftRC( pb2->value, list->ctype );
-			list->ctype = (DaoType*) pb2->value;
-		}
+		if( A ) GC_Assign( & list->ctype, pb2->value );
 		D = self->iblocks->size;
 		DaoByteBlock_GetAllBlocks( self, block, 0, B, 1 );
 		if( self->error ) break;
@@ -1869,10 +1865,7 @@ static void DaoByteCoder_DecodeValue( DaoByteCoder *self, DaoByteBlock *block )
 		if( self->error ) break;
 		map = DaoMap_New( B );
 		value = (DaoValue*) map;
-		if( A ){
-			GC_ShiftRC( pb2->value, map->ctype );
-			map->ctype = (DaoType*) pb2->value;
-		}
+		if( A ) GC_Assign( & map->ctype, pb2->value );
 		D = self->iblocks->size;
 		DaoByteBlock_GetAllBlocks( self, block, 0, -1, 1 );
 		if( self->error ) break;
@@ -1932,8 +1925,7 @@ static void DaoByteCoder_DecodeValue( DaoByteCoder *self, DaoByteBlock *block )
 	default :
 		DaoByteCoder_Error2( self, block, "Decoding not supported for value: %i!", tid );
 	}
-	GC_ShiftRC( value, block->value );
-	block->value = value;
+	GC_Assign( & block->value, value );
 	//printf( "%p %p\n", block, value );
 }
 static void DaoByteCoder_DecodeCopyValue( DaoByteCoder *self, DaoByteBlock *block )
@@ -1989,15 +1981,13 @@ static void DaoByteCoder_DecodeType( DaoByteCoder *self, DaoByteBlock *block )
 		}else{
 			type = DaoType_Copy( type );
 			DString_Assign( type->name, sname );
-			GC_ShiftRC( cbtype->value, type->cbtype );
-			type->cbtype = (DaoType*) cbtype->value;
+			GC_Assign( & type->cbtype, cbtype->value );
 			DaoType_CheckAttributes( type );
 			DaoNamespace_AddType( self->nspace, type->name, type );
 		}
 	}
 Finalize1:
-	GC_ShiftRC( type, block->value );
-	block->value = (DaoValue*) type;
+	GC_Assign( & block->value, type );
 Finalize2:
 	DString_Delete( sname );
 	DArray_Erase( self->ivalues, offset, -1 );
@@ -2021,8 +2011,7 @@ static void DaoByteCoder_DecodeTypeAlias( DaoByteCoder *self, DaoByteBlock *bloc
 	DaoNamespace_AddType( self->nspace, type->name, type );
 	DaoNamespace_AddTypeConstant( self->nspace, type->name, type );
 
-	GC_ShiftRC( type, block->value );
-	block->value = (DaoValue*) type;
+	GC_Assign( & block->value, type );
 }
 static void DaoByteCoder_DecodeInvarType( DaoByteCoder *self, DaoByteBlock *block )
 {
@@ -2038,8 +2027,7 @@ static void DaoByteCoder_DecodeInvarType( DaoByteCoder *self, DaoByteBlock *bloc
 		type = DaoType_GetInvarType( (DaoType*) typebk->value );
 	}
 
-	GC_ShiftRC( type, block->value );
-	block->value = (DaoValue*) type;
+	GC_Assign( & block->value, type );
 }
 static void DaoByteCoder_DecodeTypeOf( DaoByteCoder *self, DaoByteBlock *block )
 {
@@ -2050,8 +2038,7 @@ static void DaoByteCoder_DecodeTypeOf( DaoByteCoder *self, DaoByteBlock *block )
 	if( self->error ) return;
 	type = DaoNamespace_GetType( self->nspace, valuebk->value );
 
-	GC_ShiftRC( type, block->value );
-	block->value = (DaoValue*) type;
+	GC_Assign( & block->value, type );
 }
 static void DaoByteCoder_AddToScope( DaoByteCoder *self, DaoByteBlock *block, DString *name, DaoValue *value )
 {
@@ -2102,8 +2089,7 @@ static void DaoByteCoder_DecodeEnum( DaoByteCoder *self, DaoByteBlock *block )
 	name = namebk->value->xString.value;
 	type = DaoNamespace_FindType( self->nspace, name );
 	if( type ){
-		GC_ShiftRC( type, block->value );
-		block->value = (DaoValue*) type;
+		GC_Assign( & block->value, type );
 		return;
 	}
 	type = DaoType_New( name->chars, DAO_ENUM, NULL, NULL );
@@ -2126,8 +2112,7 @@ static void DaoByteCoder_DecodeEnum( DaoByteCoder *self, DaoByteBlock *block )
 	DaoType_CheckAttributes( type );
 	DaoNamespace_AddType( self->nspace, type->name, type );
 Finalize:
-	GC_ShiftRC( type, block->value );
-	block->value = (DaoValue*) type;
+	GC_Assign( & block->value, type );
 }
 static void DaoByteCoder_DecodeBases( DaoByteCoder *self, DaoByteBlock *block )
 {
@@ -2193,8 +2178,7 @@ static void DaoByteCoder_DecodeInterface( DaoByteCoder *self, DaoByteBlock *bloc
 		DaoByteCoder_AddToScope( self, block, inter->abtype->name, (DaoValue*) inter );
 	}
 
-	GC_ShiftRC( inter, block->value );
-	block->value = (DaoValue*) inter;
+	GC_Assign( & block->value, inter );
 
 	if( self->error ) return;
 	while( pb ){
@@ -2222,8 +2206,7 @@ static void DaoByteCoder_DecodeClass( DaoByteCoder *self, DaoByteBlock *block )
 		DaoByteCoder_AddToScope( self, block, klass->className, (DaoValue*) klass );
 	}
 
-	GC_ShiftRC( klass, block->value );
-	block->value = (DaoValue*) klass;
+	GC_Assign( & block->value, klass );
 	if( self->error ) return;
 	if( block->first == NULL ) return; /* Declaration only; */
 
@@ -2458,25 +2441,21 @@ static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block 
 		return;
 	}
 
-	GC_ShiftRC( routine, block->value );
-	block->value = (DaoValue*) routine;
+	GC_Assign( & block->value, routine );
 	routine->attribs = D;
 	if( B ){
 		type = DaoByteCoder_LookupTypeBlock( self, block, B );
 		if( self->error ) return;
-		GC_ShiftRC( type->value, routine->routType );
-		routine->routType = (DaoType*) type->value;
+		GC_Assign( & routine->routType, type->value );
 		routine->parCount = routine->routType->nested->size;
 		if( routine->routType->variadic ) routine->parCount = DAO_MAX_PARAM;
 	}else{
-		GC_ShiftRC( dao_type_routine, routine->routType );
-		routine->routType = (DaoType*) dao_type_routine;
+		GC_Assign( & routine->routType, dao_type_routine );
 	}
 	if( C ){
 		host = DaoByteCoder_LookupTypeBlock( self, block, C );
 		if( self->error ) return;
-		GC_ShiftRC( host->value, routine->routHost );
-		routine->routHost = (DaoType*) host->value;
+		GC_Assign( & routine->routHost, host->value );
 	}
 	if( block->parent && block->parent->type == DAO_ASM_CLASS && block->first != NULL ){
 		DaoClass *klass = (DaoClass*) block->parent->value;
@@ -2493,8 +2472,7 @@ static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block 
 	routine->body->regCount = A;
 
 	/* Set proper namespace: */
-	GC_ShiftRC( self->nspace, routine->nameSpace );
-	routine->nameSpace = self->nspace;
+	GC_Assign( & routine->nameSpace, self->nspace );
 
 	if( block->first == NULL ) return; /* Declaration only; */
 
@@ -2780,15 +2758,12 @@ ConstantNotFound:
 		DaoValue *value = block->value ? block->value : dao_none_value;
 		DaoValue_Copy( value, & process->activeValues[i+1] );
 	}
-	GC_ShiftRC( retype, process->activeTypes[0] );
-	process->activeTypes[0] = retype;
+	GC_Assign( & process->activeTypes[0], retype );
 	process->activeCode = & vmcode;
 	if( routine && routine->routHost ){
-		GC_ShiftRC( routine->routHost, process->activeRoutine->routHost );
-		process->activeRoutine->routHost = routine->routHost;
+		GC_Assign( & process->activeRoutine->routHost, routine->routHost );
 	}else if( klass ){
-		GC_ShiftRC( klass->objType, process->activeRoutine->routHost );
-		process->activeRoutine->routHost = klass->objType;
+		GC_Assign( & process->activeRoutine->routHost, klass->objType );
 	}
 	value = DaoProcess_MakeConst( process, mode );
 
@@ -2803,8 +2778,7 @@ Done:
 	//DaoByteCoder_PrintBlock( self, block, 0, 0 );
 	//printf( "here: %p\n", value );
 	DArray_Erase( self->iblocks, offset, -1 );
-	GC_ShiftRC( value, block->value );
-	block->value = value;
+	GC_Assign( & block->value, value );
 }
 static void DaoByteCoder_DecodeDeclaration( DaoByteCoder *self, DaoByteBlock *block )
 {
@@ -2881,8 +2855,7 @@ static void DaoByteCoder_LoadModule( DaoByteCoder *self, DaoByteBlock *block )
 	DString_Delete( spath );
 	if( self->error ) return;
 
-	GC_ShiftRC( ns, block->value );
-	block->value = (DaoValue*) ns;
+	GC_Assign( & block->value, ns );
 
 	if( mod == NULL ){
 		if( DaoNamespace_AddParent( self->nspace, ns ) == 0 ){
@@ -2994,8 +2967,7 @@ static void DaoByteCoder_DecodeBlock( DaoByteCoder *self, DaoByteBlock *block )
 		A = DaoByteCoder_DecodeUInt16( block->begin );
 		bk = DaoByteCoder_LookupValueBlock( self, block, A );
 		if( self->error ) return;
-		GC_ShiftRC( bk->value, block->value );
-		block->value = bk->value;
+		GC_Assign( & block->value, bk->value );
 		break;
 	case DAO_ASM_CONST     :
 	case DAO_ASM_VAR       :

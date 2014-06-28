@@ -281,6 +281,7 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 #endif
 	if( DMap_Find( self->allProcesses, proc ) ){
 		if( proc->factory ) DArray_Clear( proc->factory );
+		if( proc->aux ) DaoAux_Delete( proc->aux );
 		GC_DecRC( proc->future );
 		proc->future = NULL;
 		proc->aux = NULL;
@@ -479,8 +480,8 @@ DaoUserStream* DaoVmSpace_SetUserStdio( DaoVmSpace *self, DaoUserStream *stream 
 DaoUserStream* DaoVmSpace_SetUserStdError( DaoVmSpace *self, DaoUserStream *stream )
 {
 	if( self->errorStream == self->stdioStream ){
-		self->errorStream = DaoStream_New();
-		GC_ShiftRC( self->errorStream, self->stdioStream );
+		DaoStream *stream = DaoStream_New();
+		GC_Assign( & self->errorStream, stream );
 	}
 	return DaoStream_SetUserStream( self->errorStream, stream );
 }
@@ -2599,10 +2600,8 @@ DaoVmSpace* DaoInit( const char *command )
 	ns2 = DaoVmSpace_GetNamespace( vms, "io" );
 	DaoNamespace_AddConstValue( daons, "io", (DaoValue*) ns2 );
 	dao_type_stream = DaoNamespace_WrapType( ns2, & streamTyper, 0 );
-	GC_ShiftRC( dao_type_stream, vms->stdioStream->ctype );
-	GC_ShiftRC( dao_type_stream, vms->errorStream->ctype );
-	vms->stdioStream->ctype = dao_type_stream;
-	vms->errorStream->ctype = dao_type_stream;
+	GC_Assign( & vms->stdioStream->ctype, dao_type_stream );
+	GC_Assign( & vms->errorStream->ctype, dao_type_stream );
 	DaoNamespace_WrapFunctions( ns2, dao_io_methods );
 	DaoNamespace_AddConstValue( ns2, "stdio",  (DaoValue*) vms->stdioStream );
 	DaoNamespace_AddConstValue( ns2, "stderr", (DaoValue*) vms->errorStream );

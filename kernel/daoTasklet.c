@@ -77,12 +77,10 @@ void DaoTaskEvent_Delete( DaoTaskEvent *self )
 }
 void DaoTaskEvent_Init( DaoTaskEvent *self, int T, int S, DaoFuture *F, DaoChannel *C )
 {
-	GC_ShiftRC( F, self->future );
-	GC_ShiftRC( C, self->channel );
+	GC_Assign( & self->future, F );
+	GC_Assign( & self->channel, C );
 	self->type = T;
 	self->state = S;
-	self->future = F;
-	self->channel = C;
 }
 
 
@@ -451,8 +449,7 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 	future->actor = caller->topFrame->object;
 	GC_IncRC( future->actor );
 
-	GC_ShiftRC( future, callee->future );
-	callee->future = future;
+	GC_Assign( & callee->future, future );
 	future->process = callee;
 	GC_IncRC( future->process );
 
@@ -536,8 +533,7 @@ void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout )
 	DaoCallServer *server = DaoCallServer_TryInit( mainVmSpace );;
 	DaoFuture *future = DaoProcess_GetInitFuture( wait );
 
-	GC_ShiftRC( pre, future->precond );
-	future->precond = pre;
+	GC_Assign( & future->precond, pre );
 	future->state = DAO_CALL_PAUSED;
 
 	event = DaoCallServer_MakeEvent();
@@ -680,8 +676,7 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 			}else{
 				message = channel->buffer->items.pValue[0];
 			}
-			GC_ShiftRC( message, event->message );
-			event->message = message;
+			GC_Assign( & event->message, message );
 			event->auxiliary = channel->cap <= 0 && channel->buffer->size == 0;
 			event->type = DAO_EVENT_RESUME_TASKLET;
 			DArray_PopFront( channel->buffer );
@@ -719,10 +714,8 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 				if( selected == NULL ) goto MoveToWaiting;
 			}
 
-			GC_ShiftRC( message, event->message );
-			GC_ShiftRC( selected, event->selected );
-			event->message = message;
-			event->selected = selected;
+			GC_Assign( & event->message, message );
+			GC_Assign( & event->selected, selected );
 			event->auxiliary = event->selects->value->size == 0;
 			event->type = DAO_EVENT_RESUME_TASKLET;
 			/* change status to not finished: */
@@ -761,10 +754,8 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 			future->process->active = 1;
 		}
 
-		GC_ShiftRC( event->message, future->message );
-		GC_ShiftRC( event->selected, future->selected );
-		future->message = event->message;
-		future->selected = event->selected;
+		GC_Assign( & future->message, event->message );
+		GC_Assign( & future->selected, event->selected );
 		future->aux1 = event->auxiliary;
 		future->timeout = event->timeout;
 
@@ -949,8 +940,7 @@ static DaoValue* DaoValue_DeepCopy( DaoValue *self )
 	if( self->type == DAO_LIST ){
 		DaoList *list = (DaoList*) self;
 		DaoList *copy = DaoList_New();
-		GC_ShiftRC( list->ctype, copy->ctype );
-		copy->ctype = list->ctype;
+		GC_Assign( & copy->ctype, list->ctype );
 		for(i=0; i<list->value->size; ++i){
 			DaoValue *value = DaoValue_DeepCopy( list->value->items.pValue[i] );
 			DaoList_Append( copy, value );
@@ -959,8 +949,7 @@ static DaoValue* DaoValue_DeepCopy( DaoValue *self )
 	}else if( self->type == DAO_MAP ){
 		DaoMap *map = (DaoMap*) self;
 		DaoMap *copy = DaoMap_New( map->value->hashing );
-		GC_ShiftRC( map->ctype, copy->ctype );
-		copy->ctype = map->ctype;
+		GC_Assign( & copy->ctype, map->ctype );
 		for(it=DMap_First(map->value); it; it=DMap_Next(map->value,it)){
 			DaoValue *key = DaoValue_DeepCopy( it->key.pValue );
 			DaoValue *value = DaoValue_DeepCopy( it->value.pValue );
@@ -970,8 +959,7 @@ static DaoValue* DaoValue_DeepCopy( DaoValue *self )
 	}else if( self->type == DAO_TUPLE ){
 		DaoTuple *tuple = (DaoTuple*) self;
 		DaoTuple *copy = DaoTuple_New( tuple->size );
-		GC_ShiftRC( tuple->ctype, copy->ctype );
-		copy->ctype = tuple->ctype;
+		GC_Assign( & copy->ctype, tuple->ctype );
 		for(i=0; i<tuple->size; ++i){
 			DaoValue *value = DaoValue_DeepCopy( tuple->values[i] );
 			DaoTuple_SetItem( copy, value, i );
@@ -1204,8 +1192,7 @@ void DaoMT_Select( DaoProcess *proc, DaoValue *par[], int n )
 
 	event = DaoCallServer_MakeEvent();
 	DaoTaskEvent_Init( event, DAO_EVENT_WAIT_SELECT, DAO_EVENT_WAIT, future, NULL );
-	GC_ShiftRC( selects, event->selects );
-	event->selects = selects;
+	GC_Assign( & event->selects, selects );
 	proc->status = DAO_PROCESS_SUSPENDED;
 	proc->pauseType = DAO_PAUSE_CHANFUT_SELECT;
 	DaoCallServer_AddTimedWait( proc, event, timeout );

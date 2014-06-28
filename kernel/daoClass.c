@@ -1305,8 +1305,7 @@ int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *data, int s )
 			routs->trait |= DAO_VALUE_CONST;
 			/* Add individual entry for the existing function: */
 			if( value->xRoutine.routHost == self->objType ) DaoClass_AddConst3( self, name, value );
-			GC_ShiftRC( routs, dest->value );
-			dest->value = (DaoValue*) routs;
+			GC_Assign( & dest->value, routs );
 		}
 		if( data->xRoutine.overloads ){
 			DaoRoutines_Add( (DaoRoutine*) dest->value, (DaoRoutine*) data );

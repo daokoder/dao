@@ -200,12 +200,10 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 	daoint i;
 
 	if( that ){
-		GC_ShiftRC( that, self->rootObject );
-		self->rootObject = that;
+		GC_Assign( & self->rootObject, that );
 		self->objValues = that->objValues + offset;
 	}else if( self->rootObject == NULL ){
-		GC_ShiftRC( self, self->rootObject );
-		self->rootObject = self;
+		GC_Assign( & self->rootObject, self );
 		if( self->isNull ){ /* no value space is allocated for null object yet! */
 			self->valueCount = klass->objDataName->size;
 			self->objValues = (DaoValue**) dao_calloc( self->valueCount, sizeof(DaoValue*) );
@@ -221,11 +219,9 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 			sup->isRoot = 0;
 			DaoObject_Init( sup, self->rootObject, offset );
 		}
-		GC_ShiftRC( sup, self->parent );
-		self->parent = (DaoValue*)sup;
+		GC_Assign( & self->parent, sup );
 	}
-	GC_ShiftRC( self, self->objValues[0] );
-	self->objValues[0] = (DaoValue*) self;
+	GC_Assign( & self->objValues[0], self );
 	if( self->isRoot == 0 ) return;
 	for(i=1; i<klass->instvars->size; i++){
 		DaoVariable *var = klass->instvars->items.pVar[i];
@@ -305,8 +301,7 @@ void DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent )
 	}else if( sup->type == DAO_CTYPE ){
 		DaoCdata *cdata = (DaoCdata*)sup;
 		if( DaoType_ChildOf( cdata->ctype, parent->ctype ) ){
-			GC_ShiftRC( parent, self->parent );
-			self->parent = (DaoValue*) parent;
+			GC_Assign( & self->parent, parent );
 		}
 	}
 }

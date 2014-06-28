@@ -420,8 +420,7 @@ static DaoObject* DaoClass_MakeObject( DaoClass *self, DaoValue *param, DaoProce
 	DaoObject *object = DaoObject_New( self );
 	DaoProcess_CacheValue( proc, (DaoValue*) object );
 	if( DaoProcess_PushCallable( proc, self->classRoutines, (DaoValue*)object, & param, 1 ) ==0 ){
-		GC_ShiftRC( object, proc->topFrame->object );
-		proc->topFrame->object = object;
+		GC_Assign( & proc->topFrame->object, object );
 		proc->topFrame->returning = -1;
 		if( DaoProcess_Execute( proc ) ) return object;
 	}

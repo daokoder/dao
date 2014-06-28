@@ -280,8 +280,7 @@ void DaoMethods_Insert( DMap *methods, DaoRoutine *rout, DaoNamespace *ns, DaoTy
 	}else{
 		DaoRoutine *mroutine = DaoRoutines_New( ns, host, node->value.pRoutine );
 		DRoutines_Add( mroutine->overloads, rout );
-		GC_ShiftRC( mroutine, node->value.pValue );
-		node->value.pVoid = mroutine;
+		GC_Assign( & node->value.pValue, mroutine );
 	}
 }
 int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
@@ -444,8 +443,7 @@ static void DaoValue_AddType( DaoValue *self, DString *name, DaoType *type )
 	case DAO_NAMESPACE :
 		if( type->typer->core && type->typer->core->kernel ){
 			/* For properly parsing methods (self of types and default values): */
-			GC_ShiftRC( self, type->typer->core->kernel->nspace );
-			type->typer->core->kernel->nspace = (DaoNamespace*) self;
+			GC_Assign( & type->typer->core->kernel->nspace, self );
 		}
 		DaoNamespace_AddType( & self->xNamespace, name, type2 );
 		DaoNamespace_AddTypeConstant( & self->xNamespace, name, type );
@@ -691,10 +689,8 @@ static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeBase *typ
 	kernel->nspace = self;
 	kernel->abtype = cdata_type;
 	cdata_type->tid = opaque ? DAO_CDATA : DAO_CSTRUCT;
-	GC_ShiftRC( kernel, ctype_type->kernel );
-	GC_ShiftRC( kernel, cdata_type->kernel );
-	ctype_type->kernel = kernel;
-	cdata_type->kernel = kernel;
+	GC_Assign( & ctype_type->kernel, kernel );
+	GC_Assign( & cdata_type->kernel, kernel );
 	typer->core = kernel->core;
 	return ctype_type;
 }
@@ -736,8 +732,7 @@ DaoType* DaoNamespace_WrapGenericType( DaoNamespace *self, DaoTypeBase *typer, i
 	GC_IncRC( cdata_type );
 	kernel->nspace = self;
 	kernel->abtype = cdata_type;
-	GC_ShiftRC( kernel, cdata_type->kernel );
-	cdata_type->kernel = kernel;
+	GC_Assign( & cdata_type->kernel, kernel );
 	typer->core = kernel->core;
 	typer->core->kernel->SetupValues = DaoNamespace_SetupValues;
 	typer->core->kernel->SetupMethods = DaoNamespace_SetupMethods;
@@ -763,8 +758,7 @@ void DaoNamespace_SetupType( DaoNamespace *self, DaoTypeBase *typer, DaoType *ty
 		GC_IncRC( self );
 		if( type ){
 			GC_IncRC( type );
-			GC_ShiftRC( typer->core->kernel, type->kernel );
-			type->kernel = typer->core->kernel;
+			GC_Assign( & type->kernel, typer->core->kernel );
 		}
 	}
 	DMutex_Unlock( & mutex_values_setup );
@@ -1683,8 +1677,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 				fname = it->fname;
 			}
 			if( fname ) DString_Assign( tp->fname, fname );
-			GC_ShiftRC( aux, tp->aux );
-			tp->aux = aux;
+			GC_Assign( & tp->aux, aux );
 		}else if( tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ){
 			DString_SetChars( tp->fname, name );
 		}
@@ -1758,14 +1751,12 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 		DString_Append( abtp->name, tp->name );
 	}
 	DString_AppendChars( abtp->name, ">" );
-	GC_ShiftRC( tp, abtp->aux );
-	abtp->aux = (DaoValue*) tp;
+	GC_Assign( & abtp->aux, tp );
 	if( routype->cbtype ){
 		DMap *defs = DHash_New(0,0);
 		DaoType_MatchTo( abtp, routype, defs );
 		tp = DaoType_DefineTypes( routype->cbtype, self, defs );
-		GC_ShiftRC( tp, abtp->cbtype );
-		abtp->cbtype = tp;
+		GC_Assign( & abtp->cbtype, tp );
 		DMap_Delete( defs );
 		DString_Append( abtp->name, abtp->cbtype->name );
 	}
@@ -1903,8 +1894,7 @@ DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 			type = DaoType_Copy( type );
 			DString_Assign( type->name, name );
 		}
-		GC_ShiftRC( value, type->aux );
-		type->aux = value;
+		GC_Assign( & type->aux, value );
 		type->valtype = 1;
 		DaoNamespace_AddType( self, name, type );
 	}
