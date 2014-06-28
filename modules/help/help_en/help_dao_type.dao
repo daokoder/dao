@@ -333,36 +333,65 @@ dao.type.variant
 @[name]
 
 @[title]
-Variant or Disjoint Union Type
+Variant (Disjoint Union) Type
 @[title]
 
 @[text]
 
 A variant type is a type that can represent multiple alternative types.
 A variant type is declared by joining these alternative types using 
-@[green]|@[green] as the delimiter.
+@[code]|@[code] as the delimiter.
 A variable of a variant type can hold value of any of the alternative types.
 For example,
 @[code]
 intstr : int|string = 123
 intstr = 'abc'
 @[code]
-Please note that a variant type does not support the operations of
+Please note that a variant type normally does not support the operations of
 the alternative types. It must be casted to the real type of the value
 before using the operations of the real type.
-To find out the real type of the value, one can use 
-the type-of operator @[green]?<@[green], which will return 1-based
-index of the real type in the list of alternative types:
+The simplest way to check the value type of a variant type variable
+is to use the type-swith construct:
 @[code]
-switch( intstr ?< type(int|string) ){
-case 1 : io.writeln( (int) intstr * 1000 )
-case 2 : io.writeln( (string) intstr + 'abcdefg' )
+switch( intstr ) type {
+case int    : io.writeln( intstr * 1000 )
+case string : io.writeln( intstr + 'abcdefg' )
+}
+@[code]
+Here in each type case, the variable can be used as the corresponding type
+without explicit casting.
+
+
+However, if a variant is compose of only two types and one of them is a
+@[code]none@[code] type, the variant can be used directly as the other
+type without explicity casting:
+@[code]
+routine Test( maybelist: list<int>|none )
+{
+	if( maybelist == none ) return
+	maybelist.append( 123 )  # No explicit casting;
 }
 @[code]
 
 
+The above mentioned type-switch construct has a couple of variants:
 @[code]
-intstring : list<int|string> = {};
+switch( var name = expression ) type {
+...
+}
+switch( invar name = expression ) type {
+...
+}
+@[code]
+Both will declare a variable name that can only be used inside the switch block.
+But the later one will be declared as an invariable which cannot be modified
+inside the switch block.
+
+
+
+More examples:
+@[code]
+intstring: list<int|string> = {};
 
 intstring.append( 123 );
 intstring.append( 'abc' );
@@ -371,8 +400,6 @@ intstring.append( 'abc' );
 
 io.writeln( intstring, intstring[0], intstring[1] );
 @[code]
-
-
 
 
 @[code]
@@ -389,7 +416,7 @@ class BB
 	routine Size()=>int{ return 20 }
 }
 
-routine Test( object : AA | BB | HasSizeMethod )
+routine Test( object: AA|BB|HasSizeMethod )
 {
 # casting to an interface will invoke automatic binding:
 	object2 = (HasSizeMethod) object;
@@ -401,19 +428,18 @@ io.writeln( std.about( Test ) );
 Test( AA() )
 Test( BB() )
 
-routine Test2( data : int | float | double | string )
+routine Test2( data: int|float|double|string )
 {
-# get 1-based index of its type in the disjoint union type:
-	switch( data ?< type(int|float|double|string) ){
-	case 1 : io.writeln( 'handling int' );
-	case 2 : io.writeln( 'handling float' );
-	case 3 : io.writeln( 'handling double' );
-	case 4 : io.writeln( 'handling string' );
+	switch( data ) type {
+	case int    : io.writeln( 'handling int' );
+	case float  : io.writeln( 'handling float' );
+	case double : io.writeln( 'handling double' );
+	case string : io.writeln( 'handling string' );
 	}
 }
 
 Test2( 1 );
-Test2( 1.0 );
+Test2( 1.0F );
 Test2( 1.0D );
 Test2( 'abc' );
 @[code]
@@ -426,16 +452,16 @@ class FakeImage
 {
 	var image = [1,2,3,4;5,6,7,8;11,12,13,14;15,16,17,18];
 
-# instead of writing operator methods with all the combinations
-# such as tuple<int,int>, tuple<int,none>, ...
-# one can use disjoint union to simplify this.
-	operator[]( i : int, js : tuple<int|none,int|none> )=>array<int>
+    # instead of writing operator methods with all the combinations
+    # such as tuple<int,int>, tuple<int,none>, ...
+    # one can use disjoint union to simplify this.
+	operator[]( i: int, js: tuple<int|none,int|none> )=>array<int>
 	{
-# one can simply return image[i,js], but the following is for demonstration purpose:
+        # one can simply return image[i,js], but the following is for demonstration purpose:
 		j1 = 0;
 		j2 = image.dim(1) - 1;
-		if( js[0] != none ) j1 = (int) js[0];
-		if( js[1] != none ) j2 = (int) js[1];
+		if( js[0] != none ) j1 = js[0];
+		if( js[1] != none ) j2 = js[1];
 		return image[i,j1:j2];
 	}
 }

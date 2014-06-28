@@ -1124,7 +1124,7 @@ CallEntry:
 		topFrame->deferBase = self->defers->size;
 		topFrame->exceptBase = self->exceptions->size;
 		if( (routine->attribs & (DAO_ROUT_PRIVATE|DAO_ROUT_PROTECTED)) && topFrame->prev ){
-			uchar_t priv = routine->attribs & DAO_ROUT_PRIVATE;
+			ushort_t priv = routine->attribs & DAO_ROUT_PRIVATE;
 			if( routine->routHost ){
 				DaoObject *obj = topFrame->prev->object;
 				//TODO: permission check before tail call optimization!

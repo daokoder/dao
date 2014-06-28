@@ -687,7 +687,7 @@ static int DaoGC_DecRC2( DaoValue *p )
 		case DAO_DOUBLE :
 		case DAO_COMPLEX :
 		case DAO_STRING :
-#if 1
+#if 0
 			if( gcWorker.concurrent ){
 				DArray_PushBack2( gcWorker.idleList2, p );
 			}else{

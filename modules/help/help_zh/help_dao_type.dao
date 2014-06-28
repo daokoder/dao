@@ -16,3 +16,452 @@ dao.type
 数据类型和类型标注
 @[title]
 
+@[text]
+
+道语言支持可选（混合）类型系统，允许声明带或者不带类型标注的变量。
+当一个变量的声明不带类型标注时，它的类型一般可根据一些规则被自动地推导出来。
+对于有类型标注或能被推导出类型的变量，编译时的静态类型检查将被执行，
+否则类型检查将回推迟到运行时执行。
+
+
+@[section]类型标注@[section]
+
+道里面的类型标注都是放在变量名，参数名或成员域名后面，
+并用冒号与名称分开：
+@[code]
+名称: 类型
+名称: 类型 = 值
+
+routine MyFunction( 名称: string, index: int = 1 ) { ... }
+
+class Klass
+{
+	var 名称: 类型 = 值
+}
+@[code]
+
+
+多个变量可被同时声名有同样的类型和初始值：
+@[code]
+名称1, 名称2 : 类型
+名称1, 名称2 : 类型 = 值
+@[code]
+
+
+@[section]数据类型@[section]
+
+道支持丰富的数据类型，以便方便的开发程序。
+
+
+@[subsection]基本类型@[subsection]
+
+下表中所列的是基本道语言基本数据类型：
+
+@[table]
+##类型名   ##类型描述
+##none     &&空值类型
+##int      &&整数类型
+##float    &&单精度浮点数类型
+##double   &&双精度浮点数类型
+##complex  &&双精度复数类型
+##string   &&字符串类型
+##enum     &&枚举符号类型
+@[table]
+尽管@[code]enum@[code]是一个基本类型，它的类型名可变，并可包括它所含的符号名称。
+例如：
+@[code]
+var name: string
+var state: enum<off,on> = $on
+@[code]
+
+
+@[subsection]复合类型@[subsection]
+
+下表所列为道语言里的关键复合类型：
+
+@[table]
+##类型名   ##类型描述
+##array < 元素类型 >              &&数组类型
+##tuple < 元素类型或名字加类型 >  &&元组类型
+##list  < 元素类型 >              &&列表类型
+##map   < 键类型, 值类型 >        &&关联表类型
+@[table]
+这些模板类型可有类型参数，这些类型参数通常表示这些复合类型所能装的元素类型。
+例如：
+@[code]
+array<int>         # 可装整数的数值数组;
+list<string>       # 可装字符串的列表;
+map<string,int>    # 可装键为字符串类型值为整型的关联表;
+tuple<string,int>  # 可装一个字符串和一个整数的元组;
+
+# 下面的这个元组类型可装带名字的元素：
+# 它的第一个元素是名为"name"字符串类型；
+# 它的第二个元素是名为"index"整数类型；
+tuple<name:string,index:int>
+@[code]
+
+
+下面是一些用这些类型做类型标注的例子：
+@[code]
+var vector: array<int> = [ 1, 2, 3 ]
+var tuple1: tuple<string,int> = ( "abc", 123 )
+var tuple2: tuple<name:string,index:int> = ( 'abc', 123 )
+var names:  list<string> = { "Joe" }
+var table:  map<string,int> = { "abc" => 123 }
+@[code]
+
+
+
+@[subsection]占位符类型@[subsection]
+
+占位符类型的类型名都以@[code]@@[code]前缀开头，表示待定义的类型。
+在一个局部环境中（如单个复合类型和函数原型等），同名的占位符类型表示同一个类型。
+它们通常被作为类参数用在类模板类型里，或这些类型的方法原型里。
+这样这些类型和它们的方法都变得通用化，并可正对特定的类型参数特例化。
+
+
+例如，列表类型就被声明为@[code]list<@T=any>@[code]。
+这里@[code]any@[code]是列表的缺省类型参数。
+这意味着无参数的@[code]list<>@[code]类型将等同于@[code]list<any>@[code]类型。
+列表的一个方法的原型如下：
+@[code]
+append( self: list<@T>, item: @T, ... : @T ) => list<@T>
+@[code]
+在这个原型里，所有占位符类型@[green]@T@[green]都表示同一个类型。
+这意味着对于类型@[green]list<@T>@[green](以@[green]@T@[green]为@[green]string@[green]
+作为例子)，这个方法只能将类型为@[green]@T@[green] (@[green]string@[green])
+的值附加到@[green]list<@T>@[green]类型的列表里。
+
+
+这里是个更简单的例子：
+@[code]
+tuple<@T,@T>
+@[code]
+这表示这个元组类型只能装两个同类型的值。
+
+
+
+@[subsection]任意类型@[subsection]
+
+特殊类型@[code]any@[code]可用来表示任意类型。
+将一个变量声明为@[code]any@[code]类型将有效地将这个变量的静态类型检查禁止。
+
+
+
+@[subsection]值类型@[subsection]
+
+道里面的另一个特殊类型是值类型。这种类型除了定义普通类型的类型信息，
+它还定义了一个特定的常数值。当一个值匹配到此类型时，不但要类型匹配，
+而且还要值匹配。
+
+
+前面提到的空值类型@[code]none@[code]既被定义为一个值类型，
+一般只有空值@[code]none@[code]本身能匹配到这个类型。
+不过为了方便起见，封装空指针的C类型也能匹配到这个空值类型。
+空值类型可象其它类型一样在任意地方使用，但它最通常的用途是用在
+多样(variant)类型里，表示这个类型的变量或参数可以是空值。
+
+
+其它的值类型不能象普通类型那样用在任意地方，
+它们主要是用作复合类型的类型参数。例如：
+@[code]
+tuple<1,2>
+@[code]
+表示一个第一个参数只能装整数@[code]1@[code]和第二个参数只能装整数@[code]2@[code]
+的元组类型。
+值类型的这种用法主要是对于封装C++模板类型有用。
+
+
+@[subsection]多样(Variant)类型@[subsection]
+
+多样(variant)类型是一种表示多个可能类型的类型。
+这种类型的声明是通过将多个类型用分隔符@[code]|@[code]连起来声明。
+被标注为多样类型的变量可保存这个多样类型所表示的任意一种可能类型的值。
+例如：
+@[code]
+intstr : int|string = 123
+intstr = 'abc'
+@[code]
+
+在道里，只有被标注为空值类型@[code]none@[code]或未定义的占位符类型或任意类型
+的变量能保存空值。但有时已知有些其它特定类型变量的值可能为空值，
+为了让道的类型系统能处理这种情况而不报错，这些变量的类型必须被标注为
+包含@[code]none@[code]的多样类型。
+例如：
+@[code]
+routine FindWord( source: string, word: string ) => int|none
+{
+	pos = source.find( word )
+	if( pos < 0 ) return none
+	return pos
+}
+
+pos = FindWord( "dao language", "dao" )  # pos = 0
+pos = FindWord( "dao language", "lua" )  # pos = none
+@[code]
+详情请参看@[node]dao.type.variant@[node]。
+
+
+
+@[subsection]函数类型@[subsection]
+
+Routine (function) types are composed of keyword @[code]routine@[code] with other types,
+they are usually automatically generated for routines from their declarations.
+For example,
+@[code]
+routine Test( name: string, value = 123 )
+{
+	return value * 10;
+}
+io.writeln( std.about(Test) )
+# Output: Test{routine<name:string,value=int=>int>}[0x7f9ef1c50340]
+@[code]
+In the output @[code]routine<name:string,value=int=>int>@[code]
+is the automatically created type for the routine @[code]Test@[code].
+Here,
+@[list]
+--@[code]name:string@[code] : type information for the first parameter;
+it means the first parameter is named @[code]name@[code] and has type @[code]string@[code].
+--@[code]value=int@[code] : type information for the second parameter;
+it means that the second parameter is named @[code]value@[code],
+and it has type @[code]int@[code] and a defualt parameter value;
+--@[code]=>int@[code] : (inferred) type information for the returned value;
+@[list]
+
+
+For code section routines, their type names have additional parts.
+For example, one of the list sorting method is a code section method
+with the following signature (prototype),
+@[code]
+sort( self: list<@T>, part = 0 )[X: @T, Y: @T => int] => list<@T>
+@[code]
+Its type name is,
+@[code]
+routine<self:list<@T>,part=int=>list<@T>>[X:@T,Y:@T=>int]
+@[code]
+Here @[code][X:@T,Y:@T=>int]@[code] is the additional part with respect to
+types for normal routines, and means that the code section may take two
+parameters of type @[code]@T@[code] and is expected produce an integer
+from evaluating the code section.
+
+
+Of course, the routine types can also be declared explicitly.
+So one can annotation a variable with the following routine type name:
+@[code]
+var myfunc: routine<p1:string,p2=int=>int>
+@[code]
+
+
+
+
+@[subsection]Generic Types@[subsection]
+
+The standard aggregated types such as list and maps etc. in Dao are supported
+as builtin generic types.
+Such support is also extended to user defined types, but such generic types
+can only be defined in C modules.
+The use of such types is exactly the same way as the standard generic types.
+
+
+One typical example for such generic types is the future value type
+@[code]mt::future<@V>@[code].
+Though @[code]future@[code] is a builtin type, user can define customized types
+in exactly the same way as defining @[code]future@[code].
+Please see @[node]daovm.interface.extending@[node] for the techniques of defining such types.
+
+
+
+
+@[comment]
+
+This special type name represents undefined types. Function parameters that 
+have neither type annotations nor default values are automatically assigned with
+this type. Some variables whose types cannot be successfully inferred are also
+assigned with this type. This type can be specialized to a more specific type
+when more type information is available, for example, at function call point 
+(compile time or runtime), parameters passed to a function call can provide 
+concrete types to specialize the function (namely, specializing parameter types, 
+local variable types and virtual machine instructions).
+@[comment]
+
+
+@[subsection]Type Aliasing@[subsection]
+
+Type alias can be defined using the following syntax:
+
+@[code]
+#TypeAliasing ::= 'type' Identifier '=' Type
+type alias = another_type
+@[code]
+For example,
+@[code]
+type StringList = list<string>
+type Point3D    = tuple<x:float,y:float,z:float>
+@[code]
+
+@[text]
+
+
+
+@[name]
+dao.type.variant
+@[name]
+
+@[title]
+Variant (Disjoint Union) Type
+@[title]
+
+@[text]
+
+A variant type is a type that can represent multiple alternative types.
+A variant type is declared by joining these alternative types using 
+@[code]|@[code] as the delimiter.
+A variable of a variant type can hold value of any of the alternative types.
+For example,
+@[code]
+intstr : int|string = 123
+intstr = 'abc'
+@[code]
+Please note that a variant type normally does not support the operations of
+the alternative types. It must be casted to the real type of the value
+before using the operations of the real type.
+The simplest way to check the value type of a variant type variable
+is to use the type-swith construct:
+@[code]
+switch( intstr ) type {
+case int    : io.writeln( intstr * 1000 )
+case string : io.writeln( intstr + 'abcdefg' )
+}
+@[code]
+Here in each type case, the variable can be used as the corresponding type
+without explicit casting.
+
+
+However, if a variant is compose of only two types and one of them is a
+@[code]none@[code] type, the variant can be used directly as the other
+type without explicity casting:
+@[code]
+routine Test( maybelist: list<int>|none )
+{
+	if( maybelist == none ) return
+	maybelist.append( 123 )  # No explicit casting;
+}
+@[code]
+
+
+The above mentioned type-switch construct has a couple of variants:
+@[code]
+switch( var name = expression ) type {
+...
+}
+switch( invar name = expression ) type {
+...
+}
+@[code]
+Both will declare a variable name that can only be used inside the switch block.
+But the later one will be declared as an invariable which cannot be modified
+inside the switch block.
+
+
+
+More examples:
+@[code]
+intstring: list<int|string> = {};
+
+intstring.append( 123 );
+intstring.append( 'abc' );
+
+#intstring.append( {} ); # typing error
+
+io.writeln( intstring, intstring[0], intstring[1] );
+@[code]
+
+
+@[code]
+interface HasSizeMethod
+{
+	routine Size()=>int;
+}
+class AA
+{
+	routine Size()=>int{ return 10 }
+}
+class BB
+{
+	routine Size()=>int{ return 20 }
+}
+
+routine Test( object: AA|BB|HasSizeMethod )
+{
+# casting to an interface will invoke automatic binding:
+	object2 = (HasSizeMethod) object;
+	io.writeln( object2.Size() )
+}
+
+io.writeln( std.about( Test ) );
+
+Test( AA() )
+Test( BB() )
+
+routine Test2( data: int|float|double|string )
+{
+	switch( data ) type {
+	case int    : io.writeln( 'handling int' );
+	case float  : io.writeln( 'handling float' );
+	case double : io.writeln( 'handling double' );
+	case string : io.writeln( 'handling string' );
+	}
+}
+
+Test2( 1 );
+Test2( 1.0F );
+Test2( 1.0D );
+Test2( 'abc' );
+@[code]
+
+
+
+
+@[code]
+class FakeImage
+{
+	var image = [1,2,3,4;5,6,7,8;11,12,13,14;15,16,17,18];
+
+    # instead of writing operator methods with all the combinations
+    # such as tuple<int,int>, tuple<int,none>, ...
+    # one can use disjoint union to simplify this.
+	operator[]( i: int, js: tuple<int|none,int|none> )=>array<int>
+	{
+        # one can simply return image[i,js], but the following is for demonstration purpose:
+		j1 = 0;
+		j2 = image.dim(1) - 1;
+		if( js[0] != none ) j1 = js[0];
+		if( js[1] != none ) j2 = js[1];
+		return image[i,j1:j2];
+	}
+}
+
+image = FakeImage();
+io.writeln( image[1,1:] );
+io.writeln( image[2,:1] );
+@[code]
+
+
+
+
+@[code]
+routine Sum( alist : list<@T<int|string>> ) => @T
+{
+#	reflect.trace();
+	return alist.sum();
+}
+
+s = Sum( { 1, 2, 3 } );
+#s += 'a'; # typing error
+io.writeln( s );
+
+s2 = Sum( { 'a', 'b', 'c' } );
+io.writeln( s2 );
+@[code]
+@[text]
+

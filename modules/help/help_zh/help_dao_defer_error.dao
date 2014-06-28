@@ -284,15 +284,11 @@ std.exec(defaultValue:@T)[=>@T]=>@T
 @[subsubsection]
 
 有时候，有些表达式可以被预知的抛出错误，而这错误并不影响程序的执行，
-因为这些表达式有合理的缺省值可以在错误发生后使用。
-
-
-可以简单地被处理掉
-This method can be used whenever an expression or a block of code may either suceed
-and return the result, or fail and return a pre-defined default value.
-The passed in @[code]defaultValue@[code] will be returned only if the code section
-fails with exception. And in such case, the exception will be surpressed automatically.
-This method will allow simplifying the above example into the following,
+因为这些表达式有合理的缺省值可以在错误发生后替代使用。
+一个简单的情形就是，程序运行的某些信息既可输出到文件，
+也可输出到标准输出。如果相关文件存在就输出到该文件，
+否则输出到标准输出。这其实就是上例所作的，那些代码可使用
+本方法作如下简化：
 @[code(dao)]
 fout = std.exec( io::stdio ){ io.open( "NonExistentFile.txt", 'r+' ) }
 if( fout != io::stdio ) defer{ fout.close() }
@@ -305,8 +301,7 @@ fout.writeln( 'hello' )
 std.try()[=>@T]=>list<Error>|Error|@T
 @[subsubsection]
 
-This method is similar to the above one, but instead of returning a predefined default value,
-it will return the error object(s) if the code section failed with error(s).
+这个方法跟上面的类似，只不过这不返回缺省值，而是将发生的错误放回。
 
 
 @[text]

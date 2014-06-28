@@ -222,6 +222,7 @@ static void DaoCallServer_Delete( DaoCallServer *self )
 	DArray_Delete( self->parameters );
 	DArray_Delete( self->events );
 	DArray_Delete( self->events2 );
+	DArray_Delete( self->caches );
 	DMap_Delete( self->waitings );
 	DMap_Delete( self->pending );
 	DMap_Delete( self->active );
