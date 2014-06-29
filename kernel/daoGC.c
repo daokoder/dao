@@ -780,15 +780,6 @@ void DaoGC_Finish()
 }
 
 
-void DaoGC_Assign( DaoValue **dest, DaoValue *src )
-{
-	DaoValue *value = *dest;
-	if( src == value ) return;
-	GC_IncRC( src );
-	*dest = src;
-	GC_DecRC( value );
-}
-
 
 
 #ifdef DAO_WITH_THREAD
@@ -822,6 +813,28 @@ void DaoGC_DecRC( DaoValue *value )
 	}
 	if( DaoGC_DecRC2( value ) ) DaoIGC_TryInvoke();
 }
+void DaoGC_Assign( DaoValue **dest, DaoValue *src )
+{
+	DaoValue *value = *dest;
+	if( src == value ) return;
+#ifdef DAO_TRACE_ADDRESS
+	DaoGC_TraceValue( src );
+#endif
+	if( src && src->type >= DAO_ENUM ) src->xGC.cycRefCount ++;
+	if( gcWorker.concurrent ){
+		int bl;
+		DMutex_Lock( & gcWorker.mutex_idle_list );
+		if( src ) src->xGC.refCount ++;
+		bl = value ? DaoGC_DecRC2( value ) : 0;
+		*dest = src;
+		DMutex_Unlock( & gcWorker.mutex_idle_list );
+		if( bl ) DaoCGC_TryBlock();
+		return;
+	}
+	if( src ) src->xGC.refCount ++;
+	*dest = src;
+	if( value && DaoGC_DecRC2( value ) ) DaoIGC_TryInvoke();
+}
 void DaoGC_TryInvoke()
 {
 	if( gcWorker.concurrent ){
@@ -850,6 +863,20 @@ void DaoGC_DecRC( DaoValue *value )
 	if( value ){
 		if( DaoGC_DecRC2( value ) ) DaoIGC_TryInvoke();
 	}
+}
+void DaoGC_Assign( DaoValue **dest, DaoValue *src )
+{
+	DaoValue *value = *dest;
+	if( src == value ) return;
+#ifdef DAO_TRACE_ADDRESS
+	DaoGC_TraceValue( src );
+#endif
+	if( src ){
+		src->xGC.refCount ++;
+		if( src->type >= DAO_ENUM ) src->xGC.cycRefCount ++;
+	}
+	*dest = src;
+	if( value && DaoGC_DecRC2( value ) ) DaoIGC_TryInvoke();
 }
 void DaoGC_TryInvoke()
 {
