@@ -76,7 +76,8 @@ struct DMap
 	uint_t   hashing;  /* hashing seed; */
 	uchar_t  keytype;  /* key type; */
 	uchar_t  valtype;  /* value type; */
-	uchar_t  mutating;
+
+	volatile uchar_t  mutating;
 };
 
 DAO_DLL DMap* DMap_New( short kt, short vt );

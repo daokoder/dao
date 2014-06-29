@@ -72,7 +72,8 @@ struct DArray
 	daoint    bufsize;
 	ushort_t  offset;
 	uchar_t   type; /* can be 0 (for integers or pointers), or, D_STRING, D_ARRAY, etc. */
-	uchar_t   mutating;
+
+	volatile uchar_t   mutating;
 };
 
 DAO_DLL DArray* DArray_New( short type );
