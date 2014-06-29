@@ -6523,6 +6523,8 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	decorator = DaoRoutine_ResolveX( decorator, selfpar, NULL, p, NULL, n, 0 );
 	if( decorator == NULL || decorator->type != DAO_ROUTINE ) return NULL;
 
+	if( (oldfn->attribs & DAO_ROUT_INVAR) && !(decorator->attribs & DAO_ROUT_INVAR) ) return NULL;
+
 	nested = decorator->routType->nested;
 	decotypes = nested->items.pType;
 	decolen = nested->size;

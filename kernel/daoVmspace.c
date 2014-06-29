@@ -2509,7 +2509,7 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_double = DaoType_New( "double", DAO_DOUBLE, NULL, NULL );
 	dao_type_complex = DaoType_New( "complex", DAO_COMPLEX, NULL, NULL );
 	dao_type_string = DaoType_New( "string", DAO_STRING, NULL, NULL );
-	tht = DaoType_New( "@X", DAO_THT, NULL, NULL );
+	dao_type_tht = tht = DaoType_New( "@X", DAO_THT, NULL, NULL );
 	dao_type_routine = DaoType_New( "routine<=>@X>", DAO_ROUTINE, (DaoValue*)tht, NULL );
 
 	mainVmSpace = vms = DaoVmSpace_New();
@@ -2547,8 +2547,8 @@ DaoVmSpace* DaoInit( const char *command )
 
 	daons = vms->daoNamespace;
 
-	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) tht );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_udf );
+	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_tht );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_routine );
 	DaoNamespace_AddTypeConstant( daons, dao_type_any->name, dao_type_any );
 	DaoNamespace_AddTypeConstant( daons, dao_type_int->name, dao_type_int );

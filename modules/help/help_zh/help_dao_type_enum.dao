@@ -8,7 +8,94 @@ dao.type.enum
 枚举符号类型
 @[title]
 
-@[name]
-dao.type.enum.init
-@[name]
+@[text]
+
+
+@[green]enum@[green] is a type hybriding C++ enum and Ruby symbol types
+to offer the advantages of both types.
+It can be used as enumerated constant in C++ or as symbol in Ruby.
+
+
+@[subsection]Definition@[subsection]
+@[code(syntax)]
+EnumEntry ::= Identifier [ = ConstExpr ]
+
+Enum1 ::= 'enum' Identifier '{' EnumEntry { ',' EnumEntry } '}'
+Enum2 ::= 'enum' Identifier '{' EnumEntry { ';' EnumEntry } '}'
+
+Enum ::= Enum1 | Enum2
+
+EnumType1 ::= 'enum' '<' EnumEntry { ',' EnumEntry } '>'
+EnumType2 ::= 'enum' '<' EnumEntry { ';' EnumEntry } '>'
+
+EnumType ::= EnumType1 | EnumType2
+@[code(syntax)]
+The only difference between @[cyan]Enum1@[cyan] and @[cyan]Enum2@[cyan],
+@[cyan]EnumType1@[cyan] and @[cyan]EnumType2@[cyan] is the comma and semicolon.
+When comma(s) are used, the enum items are not combinable; 
+but when semicolon(s) are used, they can be combined as flags.
+
+
+@[subsection]Examples@[subsection]
+
+Enum types can be declared in the same way as C++ enum:
+@[code]
+enum MyEnum
+{
+	AA,
+	BB,
+	CC
+}
+@[code]
+Then it can be used in the following way:
+@[code]
+e1 = MyEnum::BB   # with constant folding;
+e2 = MyEnum.BB    # without constant folding;
+e3 : MyEnum = $BB # with auto conversion;
+@[code]
+All @[cyan]e1@[cyan], @[cyan]e2@[cyan] and @[cyan]e3@[cyan] will be 
+an enum value with integer value equal to 1 and string symbol equal to "BB".
+The last is equivalent to:
+@[code]
+# Use enum type on the fly:
+e3 : enum<AA,BB,CC> = $BB
+@[code]
+
+
+Enum values can be used in switch-case statements, which can be optimized
+to table lookup, if the enums are explicitly typed or can be inferred.
+For example,
+@[code]
+switch( (any)e1 ){
+case MyEnum::AA : ...
+case MyEnum::BB : ...
+case MyEnum::CC : ...
+}
+
+switch( e1 ){
+case $AA : ...
+case $BB : ...
+case $CC : ...
+}
+@[code]
+Both will be optimized into table lookup, because the case values have
+well defined types (the cases in the second example have types inferred from
+the expression in @[cyan]switch()@[cyan] ).
+But not the following example,
+@[code]
+switch( (any)e1 ){
+case $AA : ...
+case $BB : ...
+case $CC : ...
+}
+@[code]
+because the value type of the expression inside switch() is not well defined,
+so the symbols in the cases are not well typed.
+
+
+Enum can be very useful function parameter list. For example, if you want
+a parameter can only accept three different values representing red, 
+green and blue, you can simply use @[code]color :enum<red,green,blue>@[code]!
+
+@[text]
 

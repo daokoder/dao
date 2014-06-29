@@ -120,6 +120,7 @@ struct DaoType
 };
 DAO_DLL DaoType *dao_type_none;
 DAO_DLL DaoType *dao_type_udf;
+DAO_DLL DaoType *dao_type_tht;
 DAO_DLL DaoType *dao_type_any;
 DAO_DLL DaoType *dao_type_int;
 DAO_DLL DaoType *dao_type_float;

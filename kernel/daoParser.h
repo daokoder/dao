@@ -105,6 +105,8 @@ struct DaoParser
 	char  permission;
 	char  isFunctional;
 	char  usingGlobal;
+	char  invarArg;
+	char  invarDecoArg;
 
 	DaoType       *hostType;
 	DaoCtype      *hostCtype;

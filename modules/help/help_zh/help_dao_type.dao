@@ -205,9 +205,9 @@ pos = FindWord( "dao language", "lua" )  # pos = none
 
 @[subsection]函数类型@[subsection]
 
-Routine (function) types are composed of keyword @[code]routine@[code] with other types,
-they are usually automatically generated for routines from their declarations.
-For example,
+函数类型由关键词@[code]routine@[code]和其它类型构成。
+这种类型一般由函数和方法的声明自动生成。
+例如：
 @[code]
 routine Test( name: string, value = 123 )
 {
@@ -216,37 +216,33 @@ routine Test( name: string, value = 123 )
 io.writeln( std.about(Test) )
 # Output: Test{routine<name:string,value=int=>int>}[0x7f9ef1c50340]
 @[code]
-In the output @[code]routine<name:string,value=int=>int>@[code]
-is the automatically created type for the routine @[code]Test@[code].
-Here,
+输出里的@[code]routine<name:string,value=int=>int>@[code]
+就是为@[code]Test@[code]函数自动生成的函数类型名。
+这里：
 @[list]
---@[code]name:string@[code] : type information for the first parameter;
-it means the first parameter is named @[code]name@[code] and has type @[code]string@[code].
---@[code]value=int@[code] : type information for the second parameter;
-it means that the second parameter is named @[code]value@[code],
-and it has type @[code]int@[code] and a defualt parameter value;
---@[code]=>int@[code] : (inferred) type information for the returned value;
+--@[code]name:string@[code] : 第一个参数的类型信息，表示第一个参数名为@[code]name@[code]，
+且是字符串@[code]string@[code]类型；
+--@[code]value=int@[code] : 第二个参数的类型信息，表示第二个参数名为@[code]value@[code]，
+且是整数@[code]int@[code]类型，并且带有一个缺省参数值；
+--@[code]=>int@[code] : 被推导出的返回参数类型；
 @[list]
 
 
-For code section routines, their type names have additional parts.
-For example, one of the list sorting method is a code section method
-with the following signature (prototype),
+对于代码块方法，它们的类型名有额外的部分。
+例如，列表类型的代码块排序方法有如下原型：
 @[code]
 sort( self: list<@T>, part = 0 )[X: @T, Y: @T => int] => list<@T>
 @[code]
-Its type name is,
+它的类型名为：
 @[code]
 routine<self:list<@T>,part=int=>list<@T>>[X:@T,Y:@T=>int]
 @[code]
-Here @[code][X:@T,Y:@T=>int]@[code] is the additional part with respect to
-types for normal routines, and means that the code section may take two
-parameters of type @[code]@T@[code] and is expected produce an integer
-from evaluating the code section.
+这里@[code][X:@T,Y:@T=>int]@[code]相对于普通函数类型的额外部分。
+它表示这个方法的代码块可以使用两个类型为@[code]@T@[code]的参数，
+并且应该产生一个整数作为代码块的返回结果。
 
 
-Of course, the routine types can also be declared explicitly.
-So one can annotation a variable with the following routine type name:
+当然函数类型也可被显示声明。例如变量就可按以下方式被标注为一个函数类型：
 @[code]
 var myfunc: routine<p1:string,p2=int=>int>
 @[code]
@@ -254,20 +250,19 @@ var myfunc: routine<p1:string,p2=int=>int>
 
 
 
-@[subsection]Generic Types@[subsection]
+@[subsection]泛型类型@[subsection]
 
-The standard aggregated types such as list and maps etc. in Dao are supported
-as builtin generic types.
-Such support is also extended to user defined types, but such generic types
-can only be defined in C modules.
-The use of such types is exactly the same way as the standard generic types.
+道语言里的如列表和关联表等标准复合（容器）类型被作为泛型支持。
+这种泛型支持也能被用户定义类型使用。
+不过这种泛型类型只能在C模块里以由C实现的用户类型定义。
+这种用户定义的类型，其定义方式和使用方式于内置的标准泛型类型
+基本一直。
 
 
-One typical example for such generic types is the future value type
-@[code]mt::future<@V>@[code].
-Though @[code]future@[code] is a builtin type, user can define customized types
-in exactly the same way as defining @[code]future@[code].
-Please see @[node]daovm.interface.extending@[node] for the techniques of defining such types.
+这种泛型类型的一个典型例子就是未来值类型@[code]mt::future<@V>@[code]。
+尽管@[code]future@[code]是一个内置的类型，但用户可以以同样的方式定义
+其它泛型类型。
+详情请参看@[node]daovm.interface.extending@[node]里关于定义用户类型的技术。
 
 
 
@@ -285,10 +280,9 @@ local variable types and virtual machine instructions).
 @[comment]
 
 
-@[subsection]Type Aliasing@[subsection]
+@[subsection]类型别名@[subsection]
 
-Type alias can be defined using the following syntax:
-
+道里面用户可以按以下语法给每个可显示声明的类型定义别名：
 @[code]
 #TypeAliasing ::= 'type' Identifier '=' Type
 type alias = another_type
@@ -308,48 +302,45 @@ dao.type.variant
 @[name]
 
 @[title]
-Variant (Disjoint Union) Type
+多样(Variant)类型
 @[title]
 
 @[text]
 
-A variant type is a type that can represent multiple alternative types.
-A variant type is declared by joining these alternative types using 
-@[code]|@[code] as the delimiter.
-A variable of a variant type can hold value of any of the alternative types.
-For example,
+一个多样(Variant或Disjoint Union)类型可用来标注一个变量的多个可能类型。
+多样类型的表示由多个类型名通过@[code]|@[code]组合起来。
+一个多样类型的变量可保存其任意一种可能类型的值。
+例如：
 @[code]
 intstr : int|string = 123
 intstr = 'abc'
 @[code]
-Please note that a variant type normally does not support the operations of
-the alternative types. It must be casted to the real type of the value
-before using the operations of the real type.
-The simplest way to check the value type of a variant type variable
-is to use the type-swith construct:
+值得注意的是多样类型通常不支持它的可能类型的运算操作。它必须作适当的转换
+才能用它真实类型的运算操作。
+要检查一个值的类型，并根据不同的类型作不同的操作，最简单的办法是使用
+基于类型的@[code]switch-case@[code]：
 @[code]
 switch( intstr ) type {
 case int    : io.writeln( intstr * 1000 )
 case string : io.writeln( intstr + 'abcdefg' )
 }
 @[code]
-Here in each type case, the variable can be used as the corresponding type
-without explicit casting.
+这里每个类型项的代码块里，变量@[code]intstr@[code]可直接按相应的类型使用
+而不作显式的转换。
 
 
-However, if a variant is compose of only two types and one of them is a
-@[code]none@[code] type, the variant can be used directly as the other
-type without explicity casting:
+不过，当一个多样类型仅有两个类型组成，并且其中之一为空值@[code]none@[code]类型，
+那么这个多样类型可直接作另一类型使用而不需显式转换。
 @[code]
 routine Test( maybelist: list<int>|none )
 {
 	if( maybelist == none ) return
-	maybelist.append( 123 )  # No explicit casting;
+	maybelist.append( 123 )  # 用作list<int>，无显式转换;
 }
 @[code]
 
 
-The above mentioned type-switch construct has a couple of variants:
+上面提到的类型switch有两个变体：
 @[code]
 switch( var name = expression ) type {
 ...
@@ -358,13 +349,11 @@ switch( invar name = expression ) type {
 ...
 }
 @[code]
-Both will declare a variable name that can only be used inside the switch block.
-But the later one will be declared as an invariable which cannot be modified
-inside the switch block.
+这俩都将声明一个仅在switch块里可用的变量名。
+不过后者声明的是一个定变量，可防止该变量在switch块被修改。
 
 
-
-More examples:
+更多例子：
 @[code]
 intstring: list<int|string> = {};
 

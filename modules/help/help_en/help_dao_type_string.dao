@@ -14,18 +14,18 @@ String Type
 Dao strings are @[green]not@[green] null-terminated, so they are effectively byte 
 arrays that can be used to store any sequences of bytes.
 But when processed as text, it is usually assumed to be encoded in UTF-8.
-Strings can be expressed as string literals quoted with double or single
-quotation marks.
 
 
 @[subsection]Basic Definition@[subsection]
 
+Strings can be expressed as string literals quoted with double or single
+quotation marks.
 @[code(syntax)]
 SingleQuoteString ::= ' ' ' ValidCharSequence ' ' '
 DoubleQuoteString ::= ' " ' ValidCharSequence ' " '
 @[code(syntax)]
 where @[green]ValidCharSequence@[green] can be anything but the quotation marks
-without backslash escapes. Any characters in a string can be preceded with
+without backslash escapes. Any character in a string can be preceded with
 a escape backslash to specify a charater represented by:
 @[list]
 -- Single decimal digit: @[green]\d@[green];
@@ -33,10 +33,11 @@ a escape backslash to specify a charater represented by:
 -- Hexidecial value with upto 2 digits prefixed by @[green]x@[green]:
    @[green]\xhh@[green];
 -- Hexidecial value with upto 4 digits prefixed by @[green]u@[green]:
-   @[green]\xhhhh@[green];
+   @[green]\uhhhh@[green];
 -- Hexidecial value with upto 8 digits prefixed by @[green]U@[green]:
-   @[green]\xhhhhhhhh@[green];
+   @[green]\Uhhhhhhhh@[green];
 @[list]
+Here, these numbers will be interpreted as ASCII codes or UTF-8 codepoints.
 With backslash escapes, a tab can also be represtend by @[green]\t@[green],
 and a line break by @[green]\n@[green] and a carriage return by @[green]\r@[green].
 Any other character escaped by a backslash literally represents that character itself.

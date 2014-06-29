@@ -46,6 +46,7 @@
 
 
 DaoType *dao_type_udf = NULL;
+DaoType *dao_type_tht = NULL;
 DaoType *dao_type_none = NULL;
 DaoType *dao_type_any = NULL;
 DaoType *dao_type_int = NULL;
@@ -284,7 +285,8 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 		self->kernel = typer->core->kernel;
 		GC_IncRC( self->kernel );
 	}
-	if( extra == NULL && tid == DAO_PAR_VALIST ) extra = (DaoValue*) dao_type_any;
+	/* Use dao_type_tht, for allowing to match invar types: */
+	if( extra == NULL && tid == DAO_PAR_VALIST ) extra = (DaoValue*) dao_type_tht;
 	if( extra ){
 		self->aux = extra;
 		GC_IncRC( extra );
@@ -829,6 +831,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		}
 		/* Compare variadic part of the tuple: */
 		it2 = type->nested->items.pType[type->nested->size-1];
+		if( it2->tid == DAO_PAR_VALIST ) it2 = (DaoType*) it2->aux;
 		for(i=type->nested->size-(type->variadic!=0),n=self->nested->size-(self->variadic!=0); i<n; ++i){
 			it1 = self->nested->items.pType[i];
 			k = DaoType_MatchPar( it1, it2, defs, binds, type->tid );

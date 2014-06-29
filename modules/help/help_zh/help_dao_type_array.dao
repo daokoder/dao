@@ -1,33 +1,244 @@
 load help;
 
+
 @[name]
 dao.type.array
 @[name]
 
 @[title]
-多维数值数组
+数值数组类型
 @[title]
 
-@[name]
-dao.type.array.init
-@[name]
+@[text]
+Multi-dimentional numeric array is supported by Dao as @[green]array@[green] type.
+
+
+@[subsection]Definition@[subsection]
+@[code(syntax)]
+# Elements Enumeration:
+VectorEnumeration  ::= '[' ExpressionList ']'
+MatrixEnumeration  ::= '[' ExpressionList { ';' ExpressionList } ']'
+VectorEnumeration2 ::= 'array' '{' ExpressionList '}'
+MatrixEnumeration2 ::= 'array' '{' ExpressionList { ';' ExpressionList } '}'
+
+# Elements of Arithmetic Progression sequence: count ~ start [ ~ step ]
+ArrayByArithProg  ::= '[' Expression ':' [ Expression ':' ] Expression ']'
+ArrayByArithProg2 ::= 'array' '{' Expression ':' [ Expression ':' ] Expression '}'
+
+Array ::= VectorEnumeration | MatrixEnumeration | ArrayByArithProg
+          | VectorEnumeration2 | MatrixEnumeration2 | ArrayByArithProg2
+@[code(syntax)]
+Please note that @[green]VectorEnumeration@[green] or @[green]VectorEnumeration2@[green]
+can still create a matrix or a multi-dimensional array, 
+if the @[green]ExpressionList@[green] produces a list of arrays.
+
+
+Four numeric types are supported by the @[green]array@[green] type:
+@[green]int@[green], @[green]float@[green], @[green]double@[green]
+and @[green]complex@[green]. When an array is created by enumeration without 
+explicit type declaration, its numeric type is inferred from the first expression 
+of the expression list, if the enumeration is not empty; otherwise, 
+@[green]double@[green] will be used as the numeric type.
+
+
+Dao supports a number of built-in operations for array. For arithmetic operations, 
+they are always supported element-wise operations. 
+
+
+@[subsection]Examples@[subsection]
+@[code]
+vec1 = [1, 2, 3]            # array<int> vector, or 1x3 matrix;
+vec2 = [1F; 2; 3]           # array<float> 3x1 matrix, or transposed vector;
+mat1 = [1.0, 2; 3, 4]       # array<double> 2x2 matrix;
+mat2 = [ [1, 2], [3, 4] ]   # 2x2 matrix
+mat3 = array{ 1, 2; 3, 4 }  # 2x2 matrix
+mat4 = array<int>(5){ [1, 2, 3] }  # 5x3 matrix;
+@[code]
+
+@[text]
+
 
 @[name]
 dao.type.array.method
 @[name]
 
-@[name]
-dao.type.array.method.dim
-@[name]
-
 @[title]
-Array method dim()
+Array methods
 @[title]
 
-@[name]
-dao.type.array.method.index
-@[name]
+@[text]
 
-@[title]
-Array method index()
-@[title]
+Currently Dao array type supports the following methods:
+@[code]
+array<@T<none|int|float|double|complex>=none>( dim1: int, dim2 = 0, dim3 = 0 )
+	[I: int, J: int, K: int => @T|array<@T>] => array<@T>
+dim( invar self: array<@T>, i: int ) => int
+dims( invar self: array<@T> ) => array<int>
+index( invar self: array<@T>, i: int ) => array<int>
+size( invar self: array<@T> ) => int
+resize( self: array<@T>, invar dims: array<int> )
+reshape( self: array<@T>, invar dims: array<int> )
+permute( self: array<@T>, invar dims: array<int> )
+transpose( self: array<@T> )
+max( invar self: array<@T<int|float|double>> ) => tuple<@T,int>
+min( invar self: array<@T<int|float|double>> ) => tuple<@T,int>
+sum( invar self: array<@T> ) => @T
+sort( self: array<@T>, order: enum<ascend,descend> = $ascend, part = 0 )
+	=> array<@T>
+map( invar self: array<@T> )
+	[item: @T, I: int, J: int, K: int, L: int, M: int => @V] => array<@V>
+reduce( invar self: array<@T> )
+	[item: @T, res: @T, I: int, J: int, K: int, L: int, M: int => @T] => @T
+reduce( invar self: array<@T>, init: @V )
+	[item: @T, res: @V, I: int, J: int, K: int, L: int, M: int => @V] => @V
+collect( invar self: array<@T> )
+	[item: @T, I: int, J: int, K: int, L: int, M: int => none|@V] => list<@V>
+iterate( invar self: array<@T> )
+	[item: @T, I: int, J: int, K: int, L: int, M: int]
+apply( self: array<@T> )
+	[item: @T, I: int, J: int, K: int, L: int, M: int => @T] => array<@T>
+@[code]
+
+
+@[subsection]
+Methods
+@[subsection]
+
+@[subsubsection]
+dim(invar self:array<@T>,i:int)=>int
+@[subsubsection]
+@[code]
+dim( invar self: array<@T>, i: int ) => int
+@[code]
+
+@[subsubsection]
+dims(invar self:array<@T>)=>array<int>
+@[subsubsection]
+@[code]
+dims( invar self: array<@T> ) => array<int>
+@[code]
+
+@[subsubsection]
+index(invar self:array<@T>,i:int)=>array<int>
+@[subsubsection]
+@[code]
+index( invar self: array<@T>, i: int ) => array<int>
+@[code]
+
+@[subsubsection]
+size(invar self:array<@T>)=>int
+@[subsubsection]
+@[code]
+size( invar self: array<@T> ) => int
+@[code]
+
+@[subsubsection]
+resize(self:array<@T>,invar dims:array<int>)
+@[subsubsection]
+@[code]
+resize( self: array<@T>, invar dims: array<int> )
+@[code]
+
+@[subsubsection]
+reshape(self:array<@T>,invar dims:array<int>)
+@[subsubsection]
+@[code]
+reshape( self: array<@T>, invar dims: array<int> )
+@[code]
+
+@[subsubsection]
+permute(self:array<@T>,invar dims:array<int>)
+@[subsubsection]
+@[code]
+permute( self: array<@T>, invar dims: array<int> )
+@[code]
+
+@[subsubsection]
+transpose(self:array<@T>)
+@[subsubsection]
+@[code]
+transpose( self: array<@T> )
+@[code]
+
+@[subsubsection]
+max(invar self:array<@T<int|float|double>>)=>tuple<@T,int>
+@[subsubsection]
+@[code]
+max( invar self: array<@T<int|float|double>> ) => tuple<@T,int>
+@[code]
+
+@[subsubsection]
+min(invar self:array<@T<int|float|double>>)=>tuple<@T,int>
+@[subsubsection]
+@[code]
+min( invar self: array<@T<int|float|double>> ) => tuple<@T,int>
+@[code]
+
+@[subsubsection]
+sum(invar self:array<@T>)=>@T
+@[subsubsection]
+@[code]
+sum( invar self: array<@T> ) => @T
+@[code]
+
+@[subsubsection]
+sort(self:array<@T>,order:enum<ascend,descend>=$ascend,part=0)=>array<@T>
+@[subsubsection]
+@[code]
+sort( self: array<@T>, order: enum<ascend,descend> = $ascend, part = 0 )
+	=> array<@T>
+@[code]
+
+@[subsubsection]
+map(invar self:array<@T>)[item:@T,I:int,J:int,K:int,...=>@V]=>array<@V>
+@[subsubsection]
+@[code]
+map( invar self: array<@T> )
+	[item: @T, I: int, J: int, K: int, L: int, M: int => @V] => array<@V>
+@[code]
+
+@[subsubsection]
+reduce(invar self:array<@T>)[item:@T,res:@T,I:int,J:int,K:int,...=>@T]=>@T
+@[subsubsection]
+@[code]
+reduce( invar self: array<@T> )
+	[item: @T, res: @T, I: int, J: int, K: int, L: int, M: int => @T] => @T
+@[code]
+
+@[subsubsection]
+reduce(invar self:array<@T>,init:@V)[item:@T,res:@V,I:int,J:int,...=>@V]=>@V
+@[subsubsection]
+@[code]
+reduce( invar self: array<@T>, init: @V )
+	[item: @T, res: @V, I: int, J: int, K: int, L: int, M: int => @V] => @V
+@[code]
+
+@[subsubsection]
+collect(invar self:array<@T>)[item:@T,I:int,J:int,...=>none|@V]=>list<@V>
+@[subsubsection]
+@[code]
+collect( invar self: array<@T> )
+	[item: @T, I: int, J: int, K: int, L: int, M: int => none|@V] => list<@V>
+@[code]
+
+@[subsubsection]
+iterate(invar self:array<@T>)[item:@T,I:int,J:int,K:int,...]
+@[subsubsection]
+@[code]
+iterate( invar self: array<@T> )
+	[item: @T, I: int, J: int, K: int, L: int, M: int]
+@[code]
+
+@[subsubsection]
+apply(self:array<@T>)[item:@T,I:int,J:int,K:int,...=>@T]=>array<@T>
+@[subsubsection]
+@[code]
+apply( self: array<@T> )
+	[item: @T, I: int, J: int, K: int, L: int, M: int => @T] => array<@T>
+@[code]
+
+
+
+@[text]
+
+

@@ -1184,8 +1184,13 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 			DaoParser_PushRegister( module );
 			routine->parCount ++;
 			if( (routine->attribs & DAO_ROUT_DECORATOR) && i == start + 1 ){
+				module->invarDecoArg = 0;
 				if( i+3 >= right ) goto ErrorInvalidDecoParam;
 				if( tokens[i+1]->name != DTOK_LB ) goto ErrorInvalidDecoParam;
+				if( tokens[i+2]->name == DKEY_INVAR ){
+					module->invarDecoArg = 1;
+					i += 1;
+				}
 				if( tokens[i+2]->name != DTOK_IDENTIFIER ) goto ErrorInvalidDecoParam;
 				if( tokens[i+3]->name != DTOK_RB ) goto ErrorInvalidDecoParam;
 				module->decoArgName = DaoToken_Copy( tokens[i+2] );
@@ -1291,6 +1296,11 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 
 		if( i >= right ) break;
 		if( tokens[i]->name == DKEY_AS ){
+			module->invarArg = 0;
+			if( (i+1) < right && tokens[i+1]->name == DKEY_INVAR ){
+				module->invarArg = 1;
+				i += 1;
+			}
 			if( (i+1) >= right || tokens[i+1]->type != DTOK_IDENTIFIER ) goto ErrorParamParsing;
 			if( module->argName ) goto ErrorParamParsing; // TODO: error, duplicate "as";
 			module->argName = DaoToken_Copy( tokens[i+1] );
@@ -3270,15 +3280,17 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( error ) return -1;
 
 	if( self->byteBlock == NULL ){
-		if( DaoClass_UseMixinDecorators( klass ) == 0 ) goto ErrorClassDefinition;
+		if( DaoClass_UseMixinDecorators( klass ) == 0 ){
+			DaoParser_Error( self, DAO_INVALID_FUNCTION_DECORATION, NULL );
+			goto ErrorClassDefinition;
+		}
 	}
 
 	return right + 1;
 ErrorClassDefinition:
 	if( parser ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	if( ec ) DaoParser_Error( self, ec, ename );
-	ec = DAO_INVALID_CLASS_DEFINITION;
-	DaoParser_Error2( self, ec, errorStart, to, 0 );
+	DaoParser_Error2( self, DAO_INVALID_CLASS_DEFINITION, errorStart, to, 0 );
 	return -1;
 }
 static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, int storeType )
@@ -4596,6 +4608,8 @@ int DaoParser_ParseRoutine( DaoParser *self )
 		np = ft->nested->size;
 		//if( np && ft->nested->items.pType[np-1]->tid == DAO_PAR_VALIST ) np -= 1;
 		tt = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, ft->nested->items.pType, np );
+		if( self->invarDecoArg ) tt = DaoType_GetInvarType( tt );
+		printf( "tt = %s\n", tt->name->chars );
 		if( DaoParser_DeclareVariable( self, self->decoArgName, 0, tt ) < 0 ) return 0;
 	}
 	if( self->argName ){
@@ -4604,6 +4618,7 @@ int DaoParser_ParseRoutine( DaoParser *self )
 		//if( np && partypes->items.pType[np-1]->tid == DAO_PAR_VALIST ) np -= 1;
 		tt = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, partypes->items.pType, np );
 		id = self->regCount;
+		if( self->invarArg ) tt = DaoType_GetInvarType( tt );
 		if( DaoParser_DeclareVariable( self, self->argName, 0, tt ) < 0 ) return 0;
 		DaoParser_AddCode( self, DVM_TUPLE, 0, routine->parCount, id, 0,0,0 );
 	}
