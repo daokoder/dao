@@ -11,12 +11,12 @@ dao.type.enum
 @[text]
 
 
-@[green]enum@[green] is a type hybriding C++ enum and Ruby symbol types
-to offer the advantages of both types.
-It can be used as enumerated constant in C++ or as symbol in Ruby.
+枚举类型@[green]enum@[green]定义了一组名称符号，其中每个符号表示一个特定的整数值。
+这种类型可用于表示一组状态或标识。
+道语言还支持了一种称作符号特殊的枚举类型，使得枚举类型的使用变得极为方便。
 
 
-@[subsection]Definition@[subsection]
+@[subsection]定义@[subsection]
 @[code(syntax)]
 EnumEntry ::= Identifier [ = ConstExpr ]
 
@@ -29,42 +29,138 @@ EnumType1 ::= 'enum' '<' EnumEntry { ',' EnumEntry } '>'
 EnumType2 ::= 'enum' '<' EnumEntry { ';' EnumEntry } '>'
 
 EnumType ::= EnumType1 | EnumType2
+
+Symbol ::= '$' Identifier
 @[code(syntax)]
-The only difference between @[cyan]Enum1@[cyan] and @[cyan]Enum2@[cyan],
-@[cyan]EnumType1@[cyan] and @[cyan]EnumType2@[cyan] is the comma and semicolon.
-When comma(s) are used, the enum items are not combinable; 
-but when semicolon(s) are used, they can be combined as flags.
+@[cyan]Enum1@[cyan](@[cyan]EnumType1@[cyan])的定义与
+@[cyan]Enum2@[cyan](@[cyan]EnumType2@[cyan])的定义的唯一区别就是
+前者使用了逗号，而后者使用了分号。
+这样的结果是，以逗号定义的枚举类型，它们的符号不可组合；
+而以分号定义的枚举类型，它们的符号则可以组合。
+为了方便起见，符号可以组合的枚举类型将被称作标识枚举，
+而符号不可组合的枚举类型将被称作状态枚举。
 
 
-@[subsection]Examples@[subsection]
+@[subsection]状态枚举@[subsection]
 
-Enum types can be declared in the same way as C++ enum:
+下面是个简单的状态枚举类型。这个定义使用了类似C++里的语法：
 @[code]
 enum MyEnum
 {
-	AA,
-	BB,
-	CC
+	AA    ,  # 0
+	BB = 3,  # 3
+	CC       # 4
 }
 @[code]
-Then it can be used in the following way:
+跟C++里一样，状态枚举里的第一个符号如果没有显式赋值，那么它将被自动地赋为零。
+其它未被赋值的符号，它们的值将自动地从它们前面符号的值加一获得。
+
+
+这些符号只能通过相应的枚举类型来访问，
+应为它们并没有出现在当前的命名空间。
 @[code]
-e1 = MyEnum::BB   # with constant folding;
-e2 = MyEnum.BB    # without constant folding;
-e3 : MyEnum = $BB # with auto conversion;
+a = MyEnum::AA  # Or: MyEnum.AA;
 @[code]
-All @[cyan]e1@[cyan], @[cyan]e2@[cyan] and @[cyan]e3@[cyan] will be 
-an enum value with integer value equal to 1 and string symbol equal to "BB".
-The last is equivalent to:
+因为@[code]MyEnum@[code]的符号不可组合，变量@[code]e@[code]将只能取
+@[code]MyEnum@[code]的一个值或符号。
+
+
+@[subsection]符号枚举@[subsection]
+
+为了方便起见，符号枚举将先于标识枚举被介绍。
+道语言里，可直接使用的枚举符号是由普通的标识符前加货币符号@[green]$@[green]构成。
+它们通常是与枚举类型一起使用才有特定的意义。
 @[code]
-# Use enum type on the fly:
-e3 : enum<AA,BB,CC> = $BB
+enum E1 { AA=1, BB=2 }
+enum E2 { AA=10, BB=20 }
+
+var e1: E1 = $AA
+var e2: E2 = $AA
+
+io.writeln( e1 )  # 输出: $AA(1)
+io.writeln( e2 )  # 输出: $AA(10)
+@[code]
+尽管是同一个符号，"$AA"在分别赋给"e1"和"e2"时，被自动地做了不同的处理。
+在赋给"e1"时，"$AA"以等同E1::AA处理，而在赋给"e1"时，"$AA"以等同E2::AA处理。
+因此符号所表达的东西将取决于它被用作的枚举类型。
+
+
+@[subsection]标识枚举@[subsection]
+
+标识枚举的定义和状态枚举的定义语法上基本一致，只不过标识枚需要使用分号而不是逗号。
+@[code]
+enum MyEnum
+{
+	AA    ;  # 0
+	BB = 3;  # 3
+	CC       # 6
+}
+@[code]
+除了语法的差异，标识枚举对未显式赋值的符号的处理也不一样。
+这里，标识枚举里的第一个符号如果没有显式赋值，那么它将被自动地赋为一。
+其它未被赋值的符号，它们的值将自动地从它们前面符号的值按比特位左移一位获得。
+值得注意的是，枚举类型里的符号可以被任意赋值，因此，这将取决于用户给它们赋
+有意义的值。
+
+
+作为标识枚举类型，它们的符号可被自由组合，因此它们可有效地用作标识：
+@[code]
+enum Orientation
+{
+	East ,
+	West ,
+	South ,
+	North
+}
+orientation = Orientation::East + Orientation::South
+io.writeln( orientation )  # Output: $East$South(5)
 @[code]
 
 
-Enum values can be used in switch-case statements, which can be optimized
-to table lookup, if the enums are explicitly typed or can be inferred.
-For example,
+
+@[subsection]枚举类型名@[subsection]
+
+
+使用枚举类型的另一种方式是使用枚举类型的类型名：
+@[code]
+var s1: enum<AA,BB> = $AA
+var s2: enum<AA=10,BB=20> = $BB
+var f1: enum<AA;BB;CC> = $AA + $BB
+@[code]
+类似地，状态枚举和标识枚举的类型名的主要差异是使用逗号或分号。
+
+
+这种枚举类型名在函数参数里使用非常方便。例如：
+@[code]
+routine MySearch( values: list<int>, direction: enum<forward,backward> )
+{
+	    ... 
+}
+values = { 1, 2, 3 } 
+result = MySearch( values, $forward )
+@[code]
+
+
+除了状态枚举和标识枚举外，通过枚举类型名，用户还可定义一种类似布尔类型的
+枚举类型。例如：
+@[code]
+type MyBool = enum<False:True>
+b1:MyBool = $False
+b2:MyBool = $True
+b3 = b1 || b2
+b4 = b1 && b2
+io.writeln( b3, b4 )  # Output: $True(1) $False(0)
+@[code]
+
+
+
+@[subsection]Switch-Case里使用枚举类型@[subsection]
+
+
+枚举类型可有效地用在Switch-Case里。
+只要case项里的常量在编译时有确定（显式声明的或推导的）的枚举类型，
+这样的Switch-Case通常可以被优化为简单的跳转表。
+例如：
 @[code]
 switch( (any)e1 ){
 case MyEnum::AA : ...
@@ -78,10 +174,9 @@ case $BB : ...
 case $CC : ...
 }
 @[code]
-Both will be optimized into table lookup, because the case values have
-well defined types (the cases in the second example have types inferred from
-the expression in @[cyan]switch()@[cyan] ).
-But not the following example,
+这两个Switch-Case都将被优化为跳转表，因为前者的Case项都有明确的枚举类型。
+而后者的则可通过变量@[code]e@[code]的类型来推导出。
+但下例则不能作此优化：
 @[code]
 switch( (any)e1 ){
 case $AA : ...
@@ -89,13 +184,9 @@ case $BB : ...
 case $CC : ...
 }
 @[code]
-because the value type of the expression inside switch() is not well defined,
-so the symbols in the cases are not well typed.
+因为@[code]switch()@[code]里的表达式没有明确的类型，
+Case项里的符号也没有明确的美剧类型。
 
-
-Enum can be very useful function parameter list. For example, if you want
-a parameter can only accept three different values representing red, 
-green and blue, you can simply use @[code]color :enum<red,green,blue>@[code]!
 
 @[text]
 

@@ -4609,7 +4609,6 @@ int DaoParser_ParseRoutine( DaoParser *self )
 		//if( np && ft->nested->items.pType[np-1]->tid == DAO_PAR_VALIST ) np -= 1;
 		tt = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, ft->nested->items.pType, np );
 		if( self->invarDecoArg ) tt = DaoType_GetInvarType( tt );
-		printf( "tt = %s\n", tt->name->chars );
 		if( DaoParser_DeclareVariable( self, self->decoArgName, 0, tt ) < 0 ) return 0;
 	}
 	if( self->argName ){

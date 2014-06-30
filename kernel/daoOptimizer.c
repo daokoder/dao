@@ -1637,7 +1637,7 @@ static void DaoOptimizer_Optimize( DaoOptimizer *self, DaoRoutine *routine )
 {
 	DaoType *type, **types = routine->body->regType->items.pType;
 	DaoVmSpace *vms = routine->nameSpace->vmSpace;
-	daoint i, k, notide = ! (vms->options & DAO_OPTION_IDE);
+	daoint i, k;
 
 	if( daoConfig.optimize == 0 ) return;
 
@@ -1657,13 +1657,6 @@ static void DaoOptimizer_Optimize( DaoOptimizer *self, DaoRoutine *routine )
 	DaoOptimizer_ReduceRegister( self, routine );
 
 	/* DaoOptimizer_LinkDU( self, routine ); */
-
-	if( notide && daoConfig.jit && dao_jit.Compile ){
-		/* LLVMContext provides no locking guarantees: */
-		DMutex_Lock( & mutex_routine_specialize );
-		dao_jit.Compile( routine, self );
-		DMutex_Unlock( & mutex_routine_specialize );
-	}
 }
 
 
@@ -6437,6 +6430,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	DaoOptimizer *optimizer;
 	DaoVmSpace *vmspace = self->nameSpace->vmSpace;
 	int retc, decorator = self->attribs & DAO_ROUT_DECORATOR;
+	int notide = ! (vmspace->options & DAO_OPTION_IDE);
 
 	DaoRoutine_ReduceLocalConsts( self );
 
@@ -6459,6 +6453,14 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	if( retc && ! decorator ) DaoOptimizer_Optimize( optimizer, self );
 	/* Maybe more unreachable code after inference and optimization: */
 	if( ! decorator ) DaoOptimizer_RemoveUnreachableCodes( optimizer, self );
+
+	if( notide && daoConfig.jit && dao_jit.Compile ){
+		/* LLVMContext provides no locking guarantees: */
+		DMutex_Lock( & mutex_routine_specialize );
+		dao_jit.Compile( self, optimizer );
+		DMutex_Unlock( & mutex_routine_specialize );
+	}
+
 	/* DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->errorStream ); */
 	DaoVmSpace_ReleaseOptimizer( vmspace, optimizer );
 	return retc;

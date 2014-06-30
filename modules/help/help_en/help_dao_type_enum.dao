@@ -11,9 +11,10 @@ Enum or Symbol Type
 @[text]
 
 
-@[green]enum@[green] is a type hybriding C++ enum and Ruby symbol types
-to offer the advantages of both types.
-It can be used as enumerated constant in C++ or as symbol in Ruby.
+@[code]enum@[code] is a type that defines a set of symbols with associated integer values.
+It can be used to represent states and flags.
+A special type of @[code]enum@[code] called @[code]symbol@[code] is also supported to
+make the use of enum extremely convenient.
 
 
 @[subsection]Definition@[subsection]
@@ -29,16 +30,142 @@ EnumType1 ::= 'enum' '<' EnumEntry { ',' EnumEntry } '>'
 EnumType2 ::= 'enum' '<' EnumEntry { ';' EnumEntry } '>'
 
 EnumType ::= EnumType1 | EnumType2
+
+Symbol ::= '$' Identifier
 @[code(syntax)]
-The only difference between @[cyan]Enum1@[cyan] and @[cyan]Enum2@[cyan],
-@[cyan]EnumType1@[cyan] and @[cyan]EnumType2@[cyan] is the comma and semicolon.
-When comma(s) are used, the enum items are not combinable; 
+The only difference between @[cyan]Enum1@[cyan] (@[cyan]EnumType1@[cyan])
+and @[cyan]Enum2@[cyan] (@[cyan]EnumType2@[cyan]) is the comma and semicolon.
+When comma(s) are used, the enum symbols are not combinable; 
 but when semicolon(s) are used, they can be combined as flags.
+For convenience, the enums with combinable symbols may be referred to as
+@[green]flag enums@[green], and those with non-combinable symbols as
+@[green]state enums@[green].
 
 
-@[subsection]Examples@[subsection]
+@[subsection]State Enum@[subsection]
 
-Enum types can be declared in the same way as C++ enum:
+Here is a simple example of state enum defined with C++ like syntax,
+@[code]
+enum MyEnum
+{
+	AA    ,  # 0
+	BB = 3,  # 3
+	CC       # 4
+}
+@[code]
+Like in C++, the first symbol will be automatically associated with zero integer,
+if its value is not specified explicitly, and for other symbols with unspecified values,
+their values will be simply increased by one from the values of their preceding symbols.
+
+
+These symbols are not exposed to the current namespace.
+So they have to be accessed as fields of the enum type,
+@[code]
+e = MyEnum::AA  # Or: MyEnum.AA;
+@[code]
+Since @[code]MyEnum@[code] is a state enum, so the variable @[code]e@[code]
+can only take one value (symbol) of @[code]MyEnum@[code].
+
+
+@[subsection]Symbol Enum@[subsection]
+
+For convenience, symbol enums will be introduced before the flag enums.
+A symbol is composed of a dollar sign @[code]$@[code] prefix with an ordinary identifier.
+Such symbols can be used freely, but it becomes meaningful only when it is associated
+with a normal enum. For example,
+@[code]
+enum E1 { AA=1, BB=2 }
+enum E2 { AA=10, BB=20 }
+
+var e1: E1 = $AA
+var e2: E2 = $AA
+
+io.writeln( e1 )  # Output: $AA(1)
+io.writeln( e2 )  # Output: $AA(10)
+@[code]
+Here symbol @[code]$AA@[code] is assigned to both @[code]e1@[code]
+and @[code]e2@[code], and the symbol get interpreted properly according
+the types of @[code]e1@[code] and @[code]e2@[code].
+So what a symbol represents actually depends on what enum type it become associated to.
+Note a symbol can be associated to any number of compatible enum types.
+
+
+@[subsection]Flag Enum@[subsection]
+
+The definition of flag enums is almost the same as the definition of state enums,
+except that semi-colons should be used in place of commas.
+@[code]
+enum MyEnum
+{
+	AA    ;  # 0
+	BB = 3;  # 3
+	CC       # 6
+}
+@[code]
+Besides the syntatical difference of commas and semi-colons, the unspecified values
+are also handled differently. Here the first symbol will be assigned with one,
+if not specified explicitly, and for other symbols with unspecified values,
+their values will be simply left-shifted by one bit from the values of their preceding symbols.
+It also worthes noticing that the symbol values can be specified arbitrarily,
+so it is up to the users to assign meaningful values to them.
+
+
+As combinable enums, their symbols can be comibined freely, so they can be effectively
+used as flags:
+@[code]
+enum Orientation
+{
+	East ,
+	West ,
+	South ,
+	North
+}
+orientation = Orientation::East + Orientation::South
+io.writeln( orientation )  # Output: $East$South(5)
+@[code]
+
+
+@[subsection]Enum Type Name@[subsection]
+
+
+Another way to use enum types is to use the enum type names:
+@[code]
+var s1: enum<AA,BB> = $AA
+var s2: enum<AA=10,BB=20> = $BB
+var f1: enum<AA;BB;CC> = $AA + $BB
+@[code]
+Similarly, state enums and flag enums are distinguished by commas and semi-colons.
+
+
+Such type names are particularly handy for routine parameters. For example,
+@[code]
+routine MySearch( values: list<int>, direction: enum<forward,backward> )
+{
+	...
+}
+values = { 1, 2, 3 }
+result = MySearch( values, $forward )
+@[code]
+
+
+In addition to use commas or semi-colons, a colon can also be used in a two-symbol
+enum type names to create a boolean-like type:
+@[code]
+type MyBool = enum<False:True>
+b1:MyBool = $False
+b2:MyBool = $True
+b3 = b1 || b2
+b4 = b1 && b2
+io.writeln( b3, b4 )  # Output: $True(1) $False(0)
+@[code]
+
+
+@[subsection]Enum in Switch-Case@[subsection]
+
+Enum types can be used effectively the switch-case constructs,
+which can be optimized to table lookup, if the enums are explicitly typed
+or can be inferred.
+For example,
 @[code]
 enum MyEnum
 {
@@ -46,26 +173,7 @@ enum MyEnum
 	BB,
 	CC
 }
-@[code]
-Then it can be used in the following way:
-@[code]
-e1 = MyEnum::BB   # with constant folding;
-e2 = MyEnum.BB    # without constant folding;
-e3 : MyEnum = $BB # with auto conversion;
-@[code]
-All @[cyan]e1@[cyan], @[cyan]e2@[cyan] and @[cyan]e3@[cyan] will be 
-an enum value with integer value equal to 1 and string symbol equal to "BB".
-The last is equivalent to:
-@[code]
-# Use enum type on the fly:
-e3 : enum<AA,BB,CC> = $BB
-@[code]
 
-
-Enum values can be used in switch-case statements, which can be optimized
-to table lookup, if the enums are explicitly typed or can be inferred.
-For example,
-@[code]
 switch( (any)e1 ){
 case MyEnum::AA : ...
 case MyEnum::BB : ...
@@ -92,10 +200,6 @@ case $CC : ...
 because the value type of the expression inside switch() is not well defined,
 so the symbols in the cases are not well typed.
 
-
-Enum can be very useful function parameter list. For example, if you want
-a parameter can only accept three different values representing red, 
-green and blue, you can simply use @[code]color :enum<red,green,blue>@[code]!
 
 @[text]
 
