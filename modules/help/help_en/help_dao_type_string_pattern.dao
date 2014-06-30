@@ -31,22 +31,6 @@ namely sub-strings that match that pattern.
 A number of operations can be performed on the resulting sub-strings,
 including extraction, replacing and splitting etc.
 
-@[comment]
-The internal representation (the patterns and searching algorithm) of a
-regex uses both MulitBytes Strings and Wide Charactor Strings,
-when a regex is applied to a MBS or a WCS, the corresponding representation
-is used to match the string. So to improve the regex matching efficiency,
-it\'s better to represent text in MBS with single quotation if most of the
-symbols can be encoded in single byte, and represent text in WCS with
-double quotation if most of the symbols require more than one byte to encode.
-@[comment]
-
-Starting from the latest release, the functionalities of regex
-can be accessed by string methods.
-The previous perl-style regex has been removed 
-(as a way to simplify the language and implementation).
-The syntax of the new regex is similar to that of Lua,
-but most of the character class names are different.
 
 
 @[subsection]Character Class@[subsection]
@@ -234,15 +218,14 @@ change( invar self: string, pattern: string, target: string, index = 0,
 	start = 0, end = -1 ) => string
 @[code]
 Change the part(s) of the string that match pattern "pattern" to "target".
+And return a new string.
 
 The target string "target" can contain back references from pattern "pattern".
 
 If "index" is zero, all matched parts are changed; otherwise, only
-the "index" match is changed.
+the "index"-th match is changed.
 
 Parameter "start" and "end" have the same meaning as in string::fetch().
-
-Returns a shallow copy of the self string.
 
 
 Examples,
@@ -260,13 +243,11 @@ capture(invar self:string,pattern:string,start=0,end=-1)=>list<string>
 capture( invar self: string, pattern: string, start = 0, end = -1 ) => list<string>
 @[code]
 Match pattern "pattern" to the string, and capture all the substrings that
-match to each of the groups of "pattern".
+match to each of the groups of "pattern". Return these substrings as a list,
+and in this list, the i-th string corresponds to the i-th pattern group.
 
 Note that the pattern groups are indexed starting from one,
 and zero index is reserved for the whole pattern.
-
-The strings in the returned list correspond to the groups that have the
-same index as that of the strings in the list.
 
 Parameter "start" and "end" have the same meaning as in string::fetch().
 
@@ -313,10 +294,6 @@ The start and end index as well as the state of matching or not matching
 can be passed to the code section.
 
 Parameter "start" and "end" have the same meaning as in string::fetch().
-
-
-Use "none|@V" for the code section return, so that if "return none" is used first,
-it will not be specialized to "none|none", which is the case for "@V|none".
 
 
 Examples,

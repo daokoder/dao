@@ -484,4 +484,4 @@ scan( invar self: string, pattern: string, start = 0, end = -1 )
 
 
 
-#load help_dao_type_string_pattern;
+load help_dao_type_string_pattern;

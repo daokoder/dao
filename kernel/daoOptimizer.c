@@ -1246,7 +1246,7 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 	DArray *types = routine->body->regType;
 	DArray *annotCodes = routine->body->annotCodes;
 	DaoCnode *node, *node2, **nodes;
-	daoint i, j, N = annotCodes->size;
+	daoint i, j, k, N = annotCodes->size;
 	daoint M = routine->body->regCount;
 	int reg, tid, fixed1, fixed2, sametype;
 
@@ -1314,6 +1314,9 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 				continue;
 			}
 		}
+		k = DaoVmCode_GetOpcodeType( (DaoVmCode*) vmc );
+		/* Adding moves for these will just increase the codes, so skip it: */
+		if( k == DAO_CODE_MOVE || k == DAO_CODE_GETC ) continue;
 
 		reg = types->size;
 		tid = types->items.pType[vmc->c]->tid;
