@@ -363,7 +363,7 @@ Decorator for Any Functions
 
 If a decorator will be used to decorate any functions,
 the routine type for the first parameter of the decorator
-can be declared as the most generic function type @[green]routine@[green]
+can be declared as the most generic function type @[green]routine@[green].
 
 
 Here is a simple decorator that can decorate any function.

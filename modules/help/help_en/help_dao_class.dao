@@ -10,9 +10,14 @@ Class for Object-Oriented Programming
 
 
 @[text]
-A @[green]class@[green] is a user-defined data structure consisting data fields and
-member methods, which define the states and behaviours for the instances of the class.
-It is one of the basic building blocks for object-orient programming.
+
+Class is a user-defined data structure that supports data abstraction, encapsulation,
+polymorphism and inheritance etc.
+A class data strucutre is defined by composing data fields
+and member methods in a meaningful way that defines the states and behaviours
+for the instances of the class.
+It is commonly used to do Object-Oriented Programming (OOP).
+
 @[text]
 
 
@@ -28,7 +33,8 @@ Definition
 
 
 @[text]
-Classes are defined using the @[green]class@[green] keyword, followed
+
+Classes are defined using the @[code]class@[code] keyword, followed
 by a class name and base/parent classes if any, and then the class body.
 The following is the simplest class:
 @[code]
@@ -43,15 +49,16 @@ of the class or its instance.
 
 
 @[subsection]
-Member Data Field
+Member Data and Method
 @[subsection]
 
 
 Class supports three types data of fields:
 @[list]
---@[green]constant@[green]: declared with keyword @[green]const@[green];
---@[green]static variable@[green]: declared with keyword @[green]static@[green];
---@[green]instance variable@[green]: declared with keyword @[green]var@[green];
+--@[code]constant@[code]: declared with keyword @[code]const@[code];
+--@[code]static variable@[code]: declared with keyword @[code]static@[code];
+--@[code]instance variable@[code]: declared with keyword @[code]var@[code];
+--@[code]instance invariable@[code]: declared with keyword @[code]invar@[code];
 @[list]
 Such fields can be declared with or without explicit types,
 and with or without default or initialization values,
@@ -65,26 +72,28 @@ var variable : typename = init_value;
 @[code]
 
 
-@[subsection]
-Member Method Field
-@[subsection]
-
 Dao class supports multiple type of member methods such as
 constructor, static method, instance method and
 methods for overloaded operators.
-
-
-Class methods must be declared with keyword @[green]routine@[green] 
-(or its alias keywords @[green]function@[green] or @[green]sub@[green])
-for constructors and normal methods, or keyword @[green]operator@[green]
+Class methods must be declared with keyword @[code]routine@[code] 
+for constructors and normal methods, or keyword @[code]operator@[code]
 for operator overloading.
+Example,
+@[code]
+class Klass
+{
+	var value = 123
+
+	routine AddValue( val: int ){ value += val }
+}
+@[code]
 
 
 The access of class fields and methods can be restricted by three permission keywords:
 @[list]
---@[green]public@[green]: publically accessible without restriction;
---@[green]protected@[green]: accessible from the class and its derived classes;
---@[green]private@[green]: only accessible from the class;
+--@[code]public@[code]: publically accessible without restriction;
+--@[code]protected@[code]: accessible from the class and its derived classes;
+--@[code]private@[code]: only accessible from the class;
 @[list]
 
 
@@ -112,12 +121,12 @@ There are two ways to create instances of such simple classes:
    @[code]
 -- Enumerate the values of the instance variables:
    @[code]
-   obj = Contact{ 'Mike', '123 Main Street' }
+   obj = Contact.{ 'Mike', '123 Main Street' }
    @[code]
    Field names can be specified for the values, so that these values can appear
    in arbitrary order:
    @[code]
-   obj = Contact{ address => '123 Main Street', name => 'Mike' }
+   obj = Contact.{ address = '123 Main Street', name = 'Mike' }
    @[code]
    Please note, only simple classes without base classes and explicit constructors
    can use this kind of instance construction.
@@ -151,7 +160,7 @@ class Contact
 }
 @[code]
 Now calling the constructor is the only way to create 
-an instance of @[green]Contact@[green]:
+an instance of @[code]Contact@[code]:
 @[code]
 obj = Contact( 'Mike', '123 Main Street' )
 @[code]
@@ -183,8 +192,8 @@ class Contact
 Static Method
 @[subsection]
 
-Static methods can be defined by specifying the @[green]static@[green] keyword
-before the @[green]routine@[green] keyword.
+Static methods can be defined by specifying the @[code]static@[code] keyword
+before the @[code]routine@[code] keyword.
 Such method can be invoked without class instance, for this, they are not allowed
 to use class instance variables.
 @[code]
@@ -216,7 +225,7 @@ Inheritance
 
 @[text]
 
-In Dao, new classes can be derived from existing classes (and/or C data types)
+In Dao, new classes can be derived from existing classes (or C data types)
 to inherit their functionalities and to establish is-a relationship between objects.
 When a class A is derived from another class B, class A is usually referred to as
 a child, or derived, or sub- class, and the class B is ussually referred to as
@@ -225,8 +234,6 @@ a parent or base class.
 
 To derive one class from another, the base class must be placed after
 the class name of the derived one separated by a colon.
-<red>(Since 2013-10-20, classic multiple inheritance is no longer support.
-Now mixins are the preferred way to do similar things.)</red>
 
 
 Here is a simple example,
@@ -252,7 +259,7 @@ When defining a constructor of a derived class, the constructor of a base
 class can be called explicitly, by placing the call right after
 the constructor signature of the derived on separated by a colon.
 The call to a base constructor can only accept the parameters 
-(or the @[green]self@[green] variable) of 
+(or the @[code]self@[code] variable) of 
 the constructor of the derived class.
 @[code]
 class Sub : Base
@@ -420,7 +427,9 @@ Mixin Class
 @[text]
 
 
-Classes to be used as mixin bases (components) can be specified in
+Definition of new classes may also include other classes that will be used
+as components and merged (mixed) into the new classes.
+The component (mixin base) classes can be specified in
 a pair of brackets following the class name.
 Only classes without parent classes can be used as mixin bases.
 
@@ -477,7 +486,7 @@ Class Decorator
 @[text]
 
 
-Class decorators are classes (prefixed with @[green]@@[green])
+Class decorators are classes (prefixed with @[code]@@[code])
 that can be used modify other classes.
 The modification is done by using such class as a mixin base class
 to inject (combine) its members into the modified class, and by
@@ -490,22 +499,22 @@ specified decoration targets are automatically applied. Such targets
 are expressed as prefix and suffix rules which can be expressed in
 the following ways:
 @[list]
--- @[green]Prefix~@[green] : a prefix pattern.
+-- @[code]Prefix~@[code] : a prefix pattern.
 
    The decorator will be auto applied to methods that have names
    with such prefix;
 
--- @[green]~Suffix@[green] : a suffix pattern.
+-- @[code]~Suffix@[code] : a suffix pattern.
 
    The decorator will be auto applied to methods that have names
    with such suffix;
 
--- @[green]Prefix~Suffix@[green] : a prefix and suffix pattern.
+-- @[code]Prefix~Suffix@[code] : a prefix and suffix pattern.
 
    The decorator will be auto applied to methods that have names
    with such prefix and suffix;
 
--- @[green]~@[green] : an empty prefix and suffix pattern.
+-- @[code]~@[code] : an empty prefix and suffix pattern.
 
    The decorator will be auto applied to any methods.
 @[list]
@@ -689,8 +698,8 @@ routine PrintSize( object: HasSize )
 	io.writeln( object.size() )
 }
 @[code]
-Then this function can be called upon types such as @[green]string@[green],
-@[green]list@[green] or @[green]map@[green] etc.
+Then this function can be called upon types such as @[code]string@[code],
+@[code]list@[code] or @[code]map@[code] etc.
 @[code]
 PrintSize( 'hello world' )
 PrintSize( { 1, 2, 3 } );

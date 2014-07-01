@@ -107,9 +107,9 @@ enum MyEnum
 @[code]
 enum Orientation
 {
-	East ,
-	West ,
-	South ,
+	East ;
+	West ;
+	South ;
 	North
 }
 orientation = Orientation::East + Orientation::South

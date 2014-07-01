@@ -228,7 +228,7 @@ static const unsigned char asso_values[] =
 };
 
 /*
-// io.read('daoLexer.h').extract('DKEY_%w+').collect{X[5:].convert($lower)}.iterate{io.writeln(X)}
+// io.read('kernel/daoLexer.h').extract('DKEY_%w+').iterate{io.writeln(X[5:].convert($lower))}
 //
 //  s/""/{0,""}/g
 //  s/"\(\w\+\)"/{DKEY_\U\1,\L"\1"}/g

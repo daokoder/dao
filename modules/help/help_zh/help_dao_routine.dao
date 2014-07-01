@@ -305,13 +305,13 @@ dao.routine.decorator
 @[name]
 
 @[title]
-修饰函数
+修饰器函数
 @[title]
 
 @[text]
 
 
-修饰函数是另一种特殊的函数。这种函数可通过修饰其它函数来增强其功能。
+修饰器函数是另一种特殊的函数。这种函数可通过修饰其它函数来增强其功能。
 这种函数的修饰方式既可修改原函数，也可返回新的函数。
 
 
@@ -319,49 +319,42 @@ dao.routine.decorator
 其他方式都将生成新的修改后的函数。
 
 
-修饰函数的定义跟普通函数的定义基本一样。不过它的函数名需要带@[code]@@[code]前缀，
-且其第一个参数必须是一函数类型。此函数类型将决定该修饰函数可以修饰哪些类型的函数。
-另外，第一个参数还需附带一个变量名，以表示
-
-A decorator is almost identical to a noraml function except that it
-must be declared with a name prefixed with @, and the first parameter
-must be a routine type, which determines which type of routines can be
-decorated by this decorator.
-A variable to hold the parameters that will be passed to the function,
-must also be declared inside a pair of brackets right after the name of the first parameter.
+修饰器函数的定义跟普通函数的定义基本一样。不过它的函数名需要带@[code]@@[code]前缀，
+且其第一个参数必须是一函数类型。此函数类型将决定该修饰器函数可以修饰哪些类型的函数。
+另外，第一个参数还需附带一个变量名，以表示修饰后的函数被调用时的参数。
 
 
 @[subsection]
-Decorator for Any Functions
+可修饰任意函数的修饰器函数
 @[subsection]
 
-If a decorator will be used to decorate any functions,
-the routine type for the first parameter of the decorator
-can be declared as the most generic function type @[green]routine@[green]
+要定一个可修饰任意函数的修饰器函数，它的第一参数里的函数类型必须
+最通用的函数类型@[code]routine@[code]。
 
 
-Here is a simple decorator that can decorate any function.
+这里是一个这样的简单的修饰器函数：
 @[code]
-routine @Decorator( func(args) : routine )
+routine @Decorator( func(args): routine )
 {
 	io.writeln( 'Calling function:', std.about(func) );
-	return func( args, ... ); # ... for parameter expanding;
+	return func( args, ... ); # ... 参数扩展;
 }
 @[code]
 
 
-Decorators can be applied at the places where functions are defined.
+在函数定义的地方修饰函数：
 @[code]
 @Decorator()
 routine Function(){ io.writeln( 'Function()' ); }
 @[code]
+修饰器函数的第二个及其后面的参数需放在@[code]@Decorator()@[code]的括号里。
+被它修饰的函数将总作为第一个参数传递给它。
 
 
-If the decorator does not take any parameter other than
-the function to be decorated, the brackets can be omitted:
+如果修饰器函数不带除被修饰的函数之外的参数，它后面的括号可省略：
 @[code]
 @Decorator
-routine Function( a : int ){ io.writeln( 'Function(int)', a ); }
+routine Function( a: int ){ io.writeln( 'Function(int)', a ); }
 
 Function();
 Function(123);
@@ -370,24 +363,21 @@ Function(123);
 
 
 @[subsection]
-Decorator for Specific Function Type
+修饰某些特定函数类型的修饰器函数
 @[subsection]
 
-A decorator can be defined such that it can only be applied to 
-a specific type of functions, if the type of such functions is
-specified as the first parameter of the decorator.
+修饰器函数也可被定义为只能修饰某些特定函数类型的修饰器函数。
+要这样定义，仅需将其第一个参数里函数类型表达为所能修饰的函数类型即可。
 
 
-Here is a deocrator that can only be applied to functions that
-accepts an integer as parameter and returns a string.
-For a decorator for testing such as this one, the expected
-output can be passed as additional parameters to the decorator:
+下面定义的修饰器函数只能被用来修饰以整型为参数和字符串类型为返回值的函数。
+这个修饰器函数还定义了额外的参数，用来表示被修饰函数所期望的返回值。
 @[code]
-routine @TestDecorator( func(args) : routine<index:int=>string>, expected = '' )
+routine @TestDecorator( func(args): routine<index:int=>string>, expected = '' )
 {
 	res = func( args, ... );
 	io.writeln( res );
-	io.writeln( 'Test result:', res == expected ? 'passed' : 'failed' );
+	io.writeln( 'Test result:', res == expected ? 'passed': 'failed' );
 	return res;
 }
 
@@ -404,16 +394,15 @@ Hello();
 
 
 @[subsection]
-Overloaded Decorator
+修饰器函数的重载
 @[subsection]
 
-Decorators can be overloaded just like the normal functions.
+修饰器函数可以象普通函数那样根据参数进行重载。
 
 
-Here is an overloaded deocrator that can only be applied to functions
-that accepts a string as parameter and returns an integer.
+下面是一个重载的修饰器函数，它只能用来修饰以字符串类型为参数且以整型为返回值的函数：
 @[code]
-routine @TestDecorator( func(args) : routine<name:string=>int>, expected = 0 )
+routine @TestDecorator( func(args): routine<name:string=>int>, expected = 0 )
 {
 	res = func( args, ... );
 	io.writeln( res );
@@ -424,11 +413,11 @@ routine @TestDecorator( func(args) : routine<name:string=>int>, expected = 0 )
 
 
 
-# Decorators can be chained:
+# 多个修饰器函数可以连起来用:
 @[code]
 @Decorator
 @TestDecorator( 123 )
-routine Hello( name : string )
+routine Hello( name: string )
 {
 	io.writeln( 'Calling Hello(string)', name );
 	return 123;
@@ -440,47 +429,42 @@ io.writeln( Hello( 'abc' ) );
 
 
 @[subsection]
-Decorator in Expression
+表达式里的函数修饰
 @[subsection]
 
-Decorator can be used in the same way as normal functions,
-namely calling a decorator like a normal function,
-and pass the function to be decorated and other values
-as parameters to the decorator.
+修饰器函数可以按普通函数一样的方式用在表达式里。
+也就是允许象调用普通函数那样调用修饰器函数，
+并将被修饰函数和其他值以参数的形式传递给修饰器函数。
 @[code]
 anotherHello = @Decorator( Hello )
 @[code]
-Using decorator in this way will produce a modified copy of the function.
+这种方式修饰函数将产生新的修饰后的函数。
 
 
-If all the parameters passed to a decorator called in constant form
-(namely not used through a varaible), this expression of calling the decorator
-is a constant expression and can be evaluated at compiling time.
+如果所有传递给修饰器函数的参数都为常量，那么这个函数修饰表达式
+可在编译时求值。
 @[code]
 const Hello3 = @Decorator( Hello )
 Hello3( 'def' )
 @[code]
 
-This feature can be exploited to create modified copies of existing functions
-that are imported or loaded from other modules, and use the same function names.
+这个特性可用来修改从其他模块载入的函数，并使用同样的函数名。
 @[code]
-load MyModule  # MyFunction is defined in this module;
+load MyModule  # 假定这个模块定义MyFunction()函数;
 
-# Create a modified copy and use the same name:
+# 用函数修饰创建一个同名的新函数:
 const MyFunction = @MyDecorator( MyFunction )
 @[code]
 
 
-
-When a decorator is called in non-constant expression,
-the decoration will be done at running time,
+在非常量表达式里修饰函数，函数的修饰将在运行时进行：
 @[code]
 routine Hello2( index = 123 )
 {
 	io.writeln( 'Calling Hello2(int)', index );
 	return 'Hello';
 }
-# Running time decoration:
+# 运行时函数修饰:
 func = @TestDecorator( Hello2, 'Hello' );
 io.writeln( '--------' )
 func(123)
@@ -491,8 +475,7 @@ func(123)
 @[code]
 
 
-Just like normal functions, decorators can be assigned to variables
-and used at running time:
+也同普通函数一样，修饰器函数也可被赋与变量并在运行时使用。
 @[code]
 deco = @Decorator;
 func = deco( func );
@@ -504,16 +487,15 @@ func(789);
 
 
 @[subsection]
-Decorator for Class Method
+可修饰类成员方法的修饰器函数
 @[subsection]
 
-Decorators can be applied to class methods.
-Such decorators can be defined outside of the class
-as well as inside the class as a class member.
+修饰器函数也可用来修饰类成员方法。
+这种修饰器函数即可定义在类外面，也可定义在类里面。
 
 
-If the routine type of the first parameter of a decorator does not
-contain a self parameter, this decorator can be applied to static methods,
+如果修饰器函数的被修饰函数类型部包括@[code]self@[code]参数，
+那么它可被用来修饰类静态方法：
 @[code]
 routine @StaticDecorator( meth(args) :routine<id:int=>int>, value = 123 )
 {
@@ -522,7 +504,7 @@ routine @StaticDecorator( meth(args) :routine<id:int=>int>, value = 123 )
 	return meth( args, ... );
 }
 @[code]
-Otherwise, it can be applied to instance methods,
+否则它可用来修饰类实例方法：
 @[code]
 routine @MethodDecorator( meth(args) :routine<self:@T,id:int=>int>, value = 123 )
 {
@@ -533,9 +515,8 @@ routine @MethodDecorator( meth(args) :routine<self:@T,id:int=>int>, value = 123 
 @[code]
 
 
-When a decorator is defined as a class method,
-it must be declared as a static method, 
-because its first parameter must be a routine type,
+当修饰器函数被定义在类里时，它必须被声明为静态方法。
+因为它的第一个参数必须是被修饰函数类型。
 @[code]
 class Klass
 {
@@ -545,7 +526,6 @@ class Klass
 		return meth( args, ... );
 	}
 
-	# Decorator can be applied to class methods:
 	@StaticDecorator( 456 )
 	static routine StaticMeth( id :int ){ io.writeln( id ); return id }
 
