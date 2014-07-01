@@ -562,25 +562,24 @@ dao.class.aspect
 
 在道语言里，一个修饰器类可以有效地用作面向方面(Aspect)编程里一个方面(Aspect)。
 这只需要定义一个自动应用修饰器类的目标模式。
-这种模式可按定义修饰器方法的应用目标模式一样的方式定义。
+这种带自动应用目标模式的修饰器类即为方面类。
 
 
-
-The fields of such class will be automatically injected to
-normal classes selected according to the affix rules, and
-the decorators defined in such aspect class are automatically
-applied to the methods (selected according to the same affix
-rules) of the normal classes.
+这种类将按照其模式自动地作为组合类加入到匹配的目标类里。
+结果就是这种类的成员将被自动地加入到目标类里，
+并且它所定义的带目标模式的修饰器方法也将自动地应用到目标类里
+相应的方法上。
 
 
-To avoid unintentional application of aspects, a class can only be modified
-by aspects that are accessible at the definition point of the class.
-Furthermore, only aspects defined in the same file as the class
-or in the directly loaded file will be automatically applied.
+为了避免意外的方面类应用，一个普通类只有在定义时才可能被方面类所修改，
+并且只能被定义处可见的方面类修改。更进一步，只有同一个文件里定义的，
+或直接载入的文件里定义的方面类才可在当前类里定义。
 
 
+方面类的自动应用目标模式跟修饰器方法的定义方式一样：
 @[code]
-class @AspectForAnyClass for ~  # To be applied to any classes;
+# 可应用到所有类的方面类：
+class @AspectForAnyClass for ~
 {
     var injected = {}
 
@@ -598,6 +597,7 @@ class @AspectForAnyClass for ~  # To be applied to any classes;
     }
 }
 
+# 只可应用到类名带My前缀的类的方面类：
 # For classes with names prefixed with My:
 class @AspectForMyClasses for My~
 {
@@ -612,7 +612,7 @@ class MyClass
     routine Method(){ io.writeln( 'MyClass::Method()' ) }
 }
 
-k = MyClass()  # Invoke the default constructor of Klass;
+k = MyClass()  # 调用MyClass的缺省构造方法;
 k.Method()
 @[code]
 

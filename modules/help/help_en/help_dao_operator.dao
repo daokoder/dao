@@ -33,18 +33,18 @@ Arithmetic Operators
 @[text]
 @[code]
 # Binary operators:
-(int|float|double|complex|long|array) +  (int|float|double|complex|long|array) # Addtion;
-(int|float|double|complex|long|array) -  (int|float|double|complex|long|array) # Subtraction;
-(int|float|double|complex|long|array) *  (int|float|double|complex|long|array) # Multiplication;
-(int|float|double|complex|long|array) /  (int|float|double|complex|long|array) # Division;
-(int|float|double|complex|long|array) %  (int|float|double|complex|long|array) # Modulo;
-(int|float|double|complex|long|array) ** (int|float|double|complex|long|array) # Power;
+(int|float|double|complex|array) +  (int|float|double|complex|array) # Addtion;
+(int|float|double|complex|array) -  (int|float|double|complex|array) # Subtraction;
+(int|float|double|complex|array) *  (int|float|double|complex|array) # Multiplication;
+(int|float|double|complex|array) /  (int|float|double|complex|array) # Division;
+(int|float|double|complex|array) %  (int|float|double|complex|array) # Modulo;
+(int|float|double|complex|array) ** (int|float|double|complex|array) # Power;
 
 #Unary operators:
-+  (int|float|double|complex|long|array) # Unary plus;
--  (int|float|double|complex|long|array) # Unary minus;
-++ (int|float|double|complex|long|array) # Increment;
--- (int|float|double|complex|long|array) # Decrement;
++  (int|float|double|complex|array) # Unary plus;
+-  (int|float|double|complex|array) # Unary minus;
+++ (int|float|double|complex|array) # Increment;
+-- (int|float|double|complex|array) # Decrement;
 @[code]
 
 
@@ -62,12 +62,12 @@ Comparison Operators
 
 @[text]
 @[code]
-(int|float|double|long) == (int|float|double|long) # Equal to;
-(int|float|double|long) != (int|float|double|long) # Not equal to;
-(int|float|double|long) <  (int|float|double|long) # Less than;
-(int|float|double|long) >  (int|float|double|long) # Greater than;
-(int|float|double|long) <= (int|float|double|long) # No greater than;
-(int|float|double|long) >= (int|float|double|long) # No less than;
+(int|float|double) == (int|float|double) # Equal to;
+(int|float|double) != (int|float|double) # Not equal to;
+(int|float|double) <  (int|float|double) # Less than;
+(int|float|double) >  (int|float|double) # Greater than;
+(int|float|double) <= (int|float|double) # No greater than;
+(int|float|double) >= (int|float|double) # No less than;
 
 complex == complex # Equal to;
 complex != complex # Not equal to;
@@ -102,13 +102,13 @@ Logic Operators
 
 @[text]
 @[code]
-!   (int|float|double|long) # Logic negation (NOT);
-not (int|float|double|long) # Logic negation (NOT);
+!   (int|float|double) # Logic negation (NOT);
+not (int|float|double) # Logic negation (NOT);
 
-(int|float|double|long) &&  (int|float|double|long) # Logic AND;
-(int|float|double|long) and (int|float|double|long) # Logic AND;
-(int|float|double|long) ||  (int|float|double|long) # Logic OR;
-(int|float|double|long) or  (int|float|double|long) # Logic OR;
+(int|float|double) &&  (int|float|double) # Logic AND;
+(int|float|double) and (int|float|double) # Logic AND;
+(int|float|double) ||  (int|float|double) # Logic OR;
+(int|float|double) or  (int|float|double) # Logic OR;
 @[code]
 Note:
 And the @[green]and@[green] and @[green]or@[green] operator behave in the same way as
@@ -149,14 +149,14 @@ Bitwise Operators
 
 @[text]
 @[code]
-~ (int|float|double|complex|long) # Bitwise NOT;
+~ (int|float|double|complex) # Bitwise NOT;
 
-(int|float|double|long) & (int|float|double|long) # Bitwise AND;
-(int|float|double|long) | (int|float|double|long) # Bitwise OR;
-(int|float|double|long) ^ (int|float|double|long) # Bitwise XOR;
+(int|float|double) & (int|float|double) # Bitwise AND;
+(int|float|double) | (int|float|double) # Bitwise OR;
+(int|float|double) ^ (int|float|double) # Bitwise XOR;
 
-(int|float|double|long) << (int|float|double) # Bitwise left shift;
-(int|float|double|long) >> (int|float|double) # Bitwise right shift;
+(int|float|double) << (int|float|double) # Bitwise left shift;
+(int|float|double) >> (int|float|double) # Bitwise right shift;
 @[code]
 Please note, non-integer operands are converted to integers.
 
@@ -187,16 +187,6 @@ Assignment Operators
 (int|float|double) &= (int|float|double) # Bitwise AND assignment;
 (int|float|double) |= (int|float|double) # Bitwise OR assignment;
 (int|float|double) ^= (int|float|double) # Bitwise XOR assignment;
-
-long += (int|float|double|long) # Addition assignment;
-long -= (int|float|double|long) # Subtraction assignment;
-long *= (int|float|double|long) # Multiplication assignment;
-long /= (int|float|double|long) # Division assignment;
-long %= (int|float|double|long) # Modulo assignment
-
-long &= (int|float|double|long) # Bitwise AND assignment;
-long |= (int|float|double|long) # Bitwise OR assignment;
-long ^= (int|float|double|long) # Bitwise XOR assignment;
 
 array(<int>|<float>|<double>) += (int|float|double) # Addition assignment;
 array(<int>|<float>|<double>) -= (int|float|double) # Subtraction assignment;
@@ -304,7 +294,6 @@ Miscellaneous operators
 % float    # Data type size: 4 for single precision;
 % double   # Data type size: 8 for double precision;
 % complex  # Data type size: 16 (double precision for both parts);
-% long     # Number of digits in base 256;
 % string   # Number of characters;
 % array    # Number of elements;
 % list     # Number of items;
