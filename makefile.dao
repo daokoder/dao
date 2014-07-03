@@ -260,7 +260,7 @@ if( daovm_with_readline == $ON ){
 	#    daomake executable directory;
 	#
 	readline = DaoMake::FindPackage( "ReadLine" )
-	if( readline ){
+	if( readline != none ){
 		#
 		# The definition passed only to the compiling flags for compiling
 		# "daovm_main_object".

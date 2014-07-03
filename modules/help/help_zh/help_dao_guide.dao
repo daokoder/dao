@@ -94,8 +94,8 @@ $$ dao
 
 给自己的代码加注释通常是个好习惯。
 道语言支持单行和多行注释。
-单行注释以@[green]#@[green]开始，直到行末；
-多行注释以@[green]#{@[green]开始，@[green]#}@[green]结束。
+单行注释以@[code]#@[code]开始，直到行末；
+多行注释以@[code]#{@[code]开始，@[code]#}@[code]结束。
 例如：
 @[code]
 # 这个是单行注释例子：
@@ -114,7 +114,7 @@ io.write( "Hello World!" #{ 代码中注释 #} );
 @[subsection]
 
 道支持显式地声明常量，局域变量，静态变量，全局变量和定变量(Invariable)。
-常量可由关键词@[green]const@[green]声明：
+常量可由关键词@[code]const@[code]声明：
 @[code]
 const DEFAULT_INDEX = 123
 const DEFAULT_NAME  = 'abc'
@@ -122,7 +122,7 @@ const DEFAULT_NAME  = 'abc'
 常量只能由常量表达式来初始化。顶层作用域声明的常量将是全局常量。
 
 
-关键词@[green]var@[green]可用来声明局域或全局变量。
+关键词@[code]var@[code]可用来声明局域或全局变量。
 同样顶层作用域声明的变量将是全局变量，其他的将是局域变量。
 @[code]
 var current_index = 456    # 全局变量;
@@ -132,7 +132,7 @@ if( current_index ) {
 }
 @[code]
 
-在每个可以使用@[green]var@[green]的地方，@[green]invar@[green]也可被使用，
+在每个可以使用@[code]var@[code]的地方，@[code]invar@[code]也可被使用，
 以声明局域，全局或成员定变量。
 定变量是一种特殊的变量，它的值一旦被初始化就不能被修改了。
 @[code]
@@ -144,7 +144,7 @@ invlist.append( 456 )  # 错误!
 详情请参看@[node]dao.data.invar@[node]。
 
 
-另一种变量是使用关键词@[green]static@[green]声明的静态变量。
+另一种变量是使用关键词@[code]static@[code]声明的静态变量。
 非类成员的静态变量实际上是个仅在其声明的作用域（局域）可见的全局变量。
 因此，函数里的静态变量是保存在函数之外，且每次函数运行时所访问的静态变量
 都是同一个变量。静态变量必须用常量来初始化。
@@ -152,7 +152,7 @@ invlist.append( 456 )  # 错误!
 
 如果没有上述关键词来限定，以@[code]name=expression@[code]形式声明的新量
 都将是局域变量。如果该变量已被声明，该命令语句会将该变量重新赋值。
-要避免这样，关键词@[green]var@[green]必须被显式地使用。
+要避免这样，关键词@[code]var@[code]必须被显式地使用。
 @[code]
 var index = 789
 for( i = 1 : 3 ){
@@ -207,13 +207,13 @@ var   varlist: list<int>
 数字类型
 @[subsection]
 
-道对以下数字类型有原生支持：@[green]int@[green]，@[green]float@[green]，
-@[green]double@[green]和@[green]complex@[green]。
+道对以下数字类型有原生支持：@[code]int@[code]，@[code]float@[code]，
+@[code]double@[code]和@[code]complex@[code]。
 道里面，整数和浮点数的表示方式跟其他语言类似。
 值得注意的是，道里面浮点数是以双精度处理的。
-要使用单精度浮点数，数字后面必须带有@[green]F@[green]后缀
-（双精度使用@[green]D@[green]后缀）。
-带@[green]C@[green]后缀的数字表示复数的纯虚部。
+要使用单精度浮点数，数字后面必须带有@[code]F@[code]后缀
+（双精度使用@[code]D@[code]后缀）。
+带@[code]C@[code]后缀的数字表示复数的纯虚部。
 
 
 例子：
@@ -231,8 +231,8 @@ C2 = 456.6C  # 双精度复数，实部0.0，虚部456.6;
 @[code]
 
 这些数字类型支持大部通常的运算符。例如以下算术运算符都被支持：
-@[green]+@[green] (加法，正号), @[green]-@[green] (减法，负号),
-@[green]*@[green] (乘法) 和@[green]/@[green] (除法)等。
+@[code]+@[code] (加法，正号), @[code]-@[code] (减法，负号),
+@[code]*@[code] (乘法) 和@[code]/@[code] (除法)等。
 @[code]
 I1 = 123 + 456
 I2 = 789 % 123
@@ -250,7 +250,7 @@ C1 = 12.3 + 45.6C
 枚举符号
 @[subsection]
 
-一个枚举类型@[green]enum@[green]定义了一组名称符号，其中每个符号表示一个特定的整数值。
+一个枚举类型@[code]enum@[code]定义了一组名称符号，其中每个符号表示一个特定的整数值。
 这个类型对于表示一组状态或标识特别有用。
 @[code]
 enum MyEnum
@@ -268,7 +268,7 @@ a = MyEnum::AA  # Or: MyEnum.AA;
 
 
 但是，道语言里支持一种称作符号特殊的枚举类型。这种符号是由
-普通的标识符前加货币符号@[green]$@[green]构成。
+普通的标识符前加货币符号@[code]$@[code]构成。
 它们通常是与枚举类型一起使用。
 @[code]
 enum E1 { AA=1, BB=2 }
@@ -311,11 +311,11 @@ S3 = 'It\'s green'
 S4 = "\u9053\u8bed\u8a00" # the same as S2: "道语言";
 @[code]
 在字符串常量里，有些字符必须使用反斜杠以转义符的方式表示。
-其他的如@[green]\u@[green]则将跟着的数字转义为特定的字符。
+其他的如@[code]\u@[code]则将跟着的数字转义为特定的字符。
 
 
-如果要使用字符串常量而不处理转义字符，此字符串常量必须用@[green]verbatim@[green]
-字符串表示。这类字符串由一对相同的以@[green]@[]@[green]形式出现的组合字符标记
+如果要使用字符串常量而不处理转义字符，此字符串常量必须用@[code]verbatim@[code]
+字符串表示。这类字符串由一对相同的以@[code]@[]@[code]形式出现的组合字符标记
 引用。此方括号之间可包括任意多的字母，数字，下划线，空白字符，点，冒号，减号
 和等号，以保证这个组合字符标记不出现在字符穿内容之中。
 @[code]
@@ -343,7 +343,7 @@ str[1] = "X";        # 修改单个字符: str = "AXCDEFGHIJK";
 str[2:5] = "123456"  # 修改子字符串: str = "AB123456GHIJK";
 @[code]
 
-字符串也可通过@[green]+@[green]或@[green]+=@[green]连接：
+字符串也可通过@[code]+@[code]或@[code]+=@[code]连接：
 @[code]
 str = "ABCDEFGHIJK";
 
@@ -363,8 +363,8 @@ str += 88    # 从后面添加字符: str = ABCDEFGHIJK123X
 数值数组
 @[subsection]
 
-道对多维数值数组有原生的支持。这种数组可使用方括号@[green][]@[green]
-或者打括号前加@[green]array@[green]关键字即@[green]array{}@[green]构造。
+道对多维数值数组有原生的支持。这种数组可使用方括号@[code][]@[code]
+或者打括号前加@[code]array@[code]关键字即@[code]array{}@[code]构造。
 这种构造可以要么枚举向量或矩阵里的所有的元素或定义一个
 算术级数（使用初始值，增量值，级数长度）生成这些元素。
 @[code]
@@ -403,7 +403,7 @@ mat[:1,1:] += [10, 20; 30, 40]  # 将 [10, 20; 30, 40] 加到下标表示的子�
 @[subsection]
 
 类似数组， 列表也可以通过元素枚举或以算术级数生成的方式来创建。
-只不过列表需要用@[green]{}@[green]或@[green]list{}@[green]创建。
+只不过列表需要用@[code]{}@[code]或@[code]list{}@[code]创建。
 
 @[code]
 list1 = { 1, 2, 3 }    # list<int>
@@ -438,10 +438,10 @@ alist[4] += 10
 哈希表，可以支持比有序表更高效的键查找。
 
 
-道语言里，有序关联表的创建使用@[green]{key=>value...}@[green]
-或@[green]map{key=>value...}@[green]；
-而无序关联表则使用@[green]{key->value...}@[green]或
-@[green]map{key->value...}@[green]。
+道语言里，有序关联表的创建使用@[code]{key=>value...}@[code]
+或@[code]map{key=>value...}@[code]；
+而无序关联表则使用@[code]{key->value...}@[code]或
+@[code]map{key->value...}@[code]。
 @[code]
 amap  = { 'abc' => 123, 'def' => 456 }
 ahash = { 'abc' -> 123, 'def' -> 456 }
@@ -469,7 +469,7 @@ submap = amap[ 'abc' : 'def' ];
 
 元组是一种储存固定数目元素的数据结构。并且元组里的每个元素支持单独的类型标注。
 另外，还可给元组里每个元素指定一个成员名。
-它的创建方式类似关联表，只不过要用@[green]()@[green]或@[green]tuple{}@[green]。
+它的创建方式类似关联表，只不过要用@[code]()@[code]或@[code]tuple{}@[code]。
 @[code]
 tup1 = ( 123, 'abc' )               # 无成员名的元组;
 tup2 = ( index => 123, 'abc' )      # 第一个元素的成员名为"index";
@@ -509,12 +509,12 @@ If-Else条件控制
 并执行不同的代码块。
 
 
-当程序执行到条件控制时，@[green]if()@[green]里的条件表达式的值将被测试，
-如果测试通过，这个@[green]if()@[green]下面的代码块将被执行。
-否则后面的@[green]else if()@[green]（如果有的话）语句里的条件表达式将被
-逐个测试，直到有一个成功通过测试，那么那个通过测试的@[green]else if()@[green]
+当程序执行到条件控制时，@[code]if()@[code]里的条件表达式的值将被测试，
+如果测试通过，这个@[code]if()@[code]下面的代码块将被执行。
+否则后面的@[code]else if()@[code]（如果有的话）语句里的条件表达式将被
+逐个测试，直到有一个成功通过测试，那么那个通过测试的@[code]else if()@[code]
 语句下面的代码块将被执行。如果没有条件表达式通过测试，并且有这个条件控制里有
-@[green]else@[green]语句，这个语句下面的代码块将被执行。
+@[code]else@[code]语句，这个语句下面的代码块将被执行。
 @[code]
 if( rand(10) > 7 ){
 	io.writeln( "greater than 7" )
@@ -578,11 +578,11 @@ for( init; condition; step ){
 @[code]
 这种for循环的基本运行逻辑或步骤如下:
 @[list]
-== 执行初始表达式@[cyan]init@[cyan];
-== 检查条件表达式@[cyan]condition@[cyan];
+== 执行初始表达式@[code]init@[code];
+== 检查条件表达式@[code]condition@[code];
 == 如果检查结果为真，执行下一步，否则退出循环;
-== 执行代码块@[cyan]block@[cyan];
-== 执行表达式@[cyan]step@[cyan]，并前往步骤2;
+== 执行代码块@[code]block@[code];
+== 执行表达式@[code]step@[code]，并前往步骤2;
 @[list]
 The detailed steps may depends on the implementation
 but the basic execution logic is the same.
@@ -603,15 +603,15 @@ for(i=0; i<3; ++i){
 While循环控制
 @[subsection]
 
-@[green]while@[green]是个简单的循环控制结构，它将重复执行一代码块，
+@[code]while@[code]是个简单的循环控制结构，它将重复执行一代码块，
 直到它的循环条件表达式的值变假。
 @[code]
 while( expression ){
    block;
 }
 @[code]
-如果@[cyan]expression@[cyan]的值为真，执行或重复执行@[cyan]block@[cyan]
-直到@[cyan]expression@[cyan]的值变假。
+如果@[code]expression@[code]的值为真，执行或重复执行@[code]block@[code]
+直到@[code]expression@[code]的值变假。
 
 @[code]
 i = 0;
@@ -634,8 +634,8 @@ do {
 	block;
 } while ( condition )
 @[code]
-执行代码块@[cyan]block@[cyan]，然后只要条件表达式@[cyan]condition@[cyan]
-的值为真，重复执行@[cyan]block@[cyan]。
+执行代码块@[code]block@[code]，然后只要条件表达式@[code]condition@[code]
+的值为真，重复执行@[code]block@[code]。
 
 
 
@@ -645,9 +645,10 @@ do {
 Switch-Case控制
 @[subsection]
 
-Switch-case控制结构提供了一个方便的方式实现按照条件跳转执行特定代码。
+Switch-case控制可以根据一个表达式多个可能的值选择不同的代码块进行执行。
+它提供了一种方便的分支执行方式。
 @[code]
-switch( value ){
+switch( expresssion ){
 case C_1 : block_1
 case C_2 : block_2
 case C_3 : block_3
@@ -655,15 +656,16 @@ case C_3 : block_3
 default: block0
 }
 @[code]
-这里如果@[cyan]value@[cyan]等于@[cyan]C_i@[cyan]，那么代码块@[cyan]block_i@[cyan]将被执行；
-这里@[cyan]C_i@[cyan]必须是常量，但它们不需要是同样的类型。
-与C/C++不同，这里每个@[cyan]case@[cyan]的代码块被执行后都将自动跳出Switch-case结构，
-不需要用到@[green]break@[green]语句。
+这里如果@[code]expresssion@[code]的值等于@[code]C_i@[code]，
+那么代码块@[code]block_i@[code]将被执行；
+这里@[code]C_i@[code]必须是常量，但它们不需要是同样的类型。
+与C/C++不同，这里每个@[code]case@[code]的代码块被执行后都将自动跳出Switch-case结构，
+不需要用到@[code]break@[code]语句。
 
 
 如果你需要针对不同的case值执行同样的代码块，你可以将这些值放在一个case里：
 @[code]
-switch( value ){
+switch( expresssion ){
 case C1, C2, C3 :
     block3
 ...
@@ -687,9 +689,9 @@ default :  io.write("case default");
 Break 和 Skip
 @[subsection]
 
-@[green]break@[green]可用来跳出循环，而@[green]skip@[green]则可用来跳过
+@[code]break@[code]可用来跳出循环，而@[code]skip@[code]则可用来跳过
 一个循环里它后面的剩余部分，直接到下一步循环。
-@[green]skip@[green]跟C/C++里的@[green]continue@[green]等价。
+@[code]skip@[code]跟C/C++里的@[code]continue@[code]等价。
 
 @[code] 
 for( i=0; i<5; ++i ){
@@ -715,7 +717,7 @@ for( i=0; i<5; ++i ){
 定义
 @[subsection]
 
-道函数可由关键字@[green]routine@[green]定义。例如：
+道函数可由关键字@[code]routine@[code]定义。例如：
 @[code(dao)]
 routine func( first, second )
 {
@@ -741,8 +743,8 @@ routine MyRout( name: string, index = 0 )
    io.writeln( "INDEX = ", index )
 }
 @[code]
-这里参数@[cyan]name@[cyan]的类型被声明为字符串，
-参数@[cyan]index@[cyan]的缺省值被声明为零（它的类型也就被自动声明为整型）。
+这里参数@[code]name@[code]的类型被声明为字符串，
+参数@[code]index@[code]的缺省值被声明为零（它的类型也就被自动声明为整型）。
 任何带缺省值的参数后面的参数必须都带缺省值。
 
 
@@ -816,10 +818,10 @@ io.writeln( abc )  # 输出: ABCXXX
 这些数据成员和方法成员定义了这个类的实力对象的状态和行为。
 道语言类支持以下几种数据成员：
 @[list]
---@[green]常量@[green]: 以@[green]const@[green]关键词声明；
---@[green]静态变量@[green]: 以@[green]static@[green]关键词声明；
---@[green]实例变量@[green]: 以@[green]var@[green]关键词声明；
---@[green]实例定变量@[green]: 以@[green]invar@[green]关键词声明；
+--@[code]常量@[code]: 以@[code]const@[code]关键词声明；
+--@[code]静态变量@[code]: 以@[code]static@[code]关键词声明；
+--@[code]实例变量@[code]: 以@[code]var@[code]关键词声明；
+--@[code]实例定变量@[code]: 以@[code]invar@[code]关键词声明；
 @[list]
 这些数据成员的声明可以有也可以没有类型标注，还可以有也可以没有初始化值。
 这些类型标注和初始值声明跟函数的类型标注和缺省参数声明完全一样。
@@ -832,15 +834,15 @@ var 变量: 类型名 = 初始值;
 @[code]
 
 
-类的构造方法和普通成员方法必须使用@[green]routine@[green]关键词声明。
-重载操作符的方法则必须使用@[green]operator@[green]关键词声明。
+类的构造方法和普通成员方法必须使用@[code]routine@[code]关键词声明。
+重载操作符的方法则必须使用@[code]operator@[code]关键词声明。
 
 
 类成员的可访问性可由三个权限关键词声明：
 @[list]
---@[green]public@[green]: 公共，无限制访问;
---@[green]protected@[green]: 保护，仅可从本类和子类访问;
---@[green]private@[green]: 私有，仅可从本类访问;
+--@[code]public@[code]: 公共，无限制访问;
+--@[code]protected@[code]: 保护，仅可从本类和子类访问;
+--@[code]private@[code]: 私有，仅可从本类访问;
 @[list]
 
 这里是个简单的例子，
@@ -858,7 +860,7 @@ class ClassOne
 }
 @[code]
 
-在非静态类方法里，特殊变量@[green]self@[green]代表当前类实例对象。
+在非静态类方法里，特殊变量@[code]self@[code]代表当前类实例对象。
 另外类似C++，类方法可以在类定义体里声明，然后在类外部实现。
 这种情况下，方法的原型在声明处和定义处必须完全一样。
 
@@ -928,10 +930,10 @@ class ClassTwo
 }
 @[code(dao)]
 
-为了提供对上例中"value"变量的访问，@[cyan]GetValue()@[cyan]和@[cyan]SetValue()@[cyan]
+为了提供对上例中"value"变量的访问，@[code]GetValue()@[code]和@[code]SetValue()@[code]
 这样的方法可以被提供。但更好的方式是使用属性方法。
 使用属性方法访问保护或私有变量，可以在语法层面变得跟直接访问公共变量一样方便。
-在道语言里，这可由重载象@[green].Name@[green]和@[green].Name=@[green]这样的操作符来实现。
+在道语言里，这可由重载象@[code].Name@[code]和@[code].Name=@[code]这样的操作符来实现。
 例如：
 @[code(dao)]
 class MyNumber
@@ -992,7 +994,7 @@ magenta = ColorRGBA( 1, 0, 1, 0 ); # not tranparent.
 magenta.alpha = 0.5; # change to half tranparency.
 @[code]
 
-在定义派生类时，基类@[cyan]ColorRBG@[cyan]必须放在派生类名后面，
+在定义派生类时，基类@[code]ColorRBG@[code]必须放在派生类名后面，
 并用冒号分开。
 在定义派生类的构造方法时，方法的参数可按例中传递给基类的构造方法。
 

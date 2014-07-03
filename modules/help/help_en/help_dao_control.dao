@@ -58,19 +58,22 @@ Use Cases
 @[subsubsection]
 Single Statement
 @[subsubsection]
-This is the simplest use case of "if".
+
+This is the simplest use case of @[code]if@[code].
+It generally looks like the following:
 @[code]
 if( condition ) statement
 @[code]
-Where the "statement" is executed only if the "condition" evaluated to
-a value that can pass the condition test (such as nonzero values).
+Where the @[code]statement@[code] is executed only if the @[code]condition@[code]
+evaluated to true (non-zero number or enum value).
 
 
 
 @[subsubsection]
 Single Block 
 @[subsubsection]
-If multiple statements need to be executed if the "if" test is true,
+
+If multiple statements need to be executed if the @[code]if@[code] test is true,
 a pair of braces can be used to group these statements into a block.
 Of course, such block can also nest other blocks.
 @[code]
@@ -83,8 +86,9 @@ if( condition ) {
 @[subsubsection]
 Else Statement or Block
 @[subsubsection]
+
 If there is another statement or block should be executed when the condition
-test failed, one can add the "else" clause to the if statement.
+test failed, one can add the @[code]else@[code] clause to the if statement.
 @[code]
 if( condition )
 	statement1
@@ -106,7 +110,7 @@ Multiple Conditions and Blocks
 @[subsubsection]
 
 If there are multiple conditions to be tested for multiple statements or blocks,
-the "if else" clause can be used.
+the @[code]else if@[code] clause can be used.
 @[code]
 if( condition1 ){
    block1;
@@ -117,15 +121,16 @@ if( condition1 ){
 }
 @[code]
 
-If @[cyan]condition1@[cyan] is true, @[cyan]block1@[cyan] is executed;
-otherwise, if @[cyan]condition2@[cyan] is true, @[cyan]block2@[cyan] is executed;
-otherwise, @[cyan]block3@[cyan] is executed; zero or more @[green]else if@[green]
-and zero or one @[green]else@[green] statement can be used.
+If @[code]condition1@[code] is true, @[code]block1@[code] is executed;
+otherwise, if @[code]condition2@[code] is true, @[code]block2@[code] is executed;
+otherwise, @[code]block3@[code] is executed; zero or more @[code]else if@[code]
+and zero or one @[code]else@[code] statement can be used.
 
 
 @[subsubsection]
 Optional Declaration
 @[subsubsection]
+
 Before each condition expression, there can be an optional variable declaration.
 @[code]
 if( declaration; condition ) {
@@ -141,7 +146,7 @@ if( var rnd = rand(100); rnd > 50 ) io.writeln( "random number is >50" );
 
 
 @[subsection]
-Examples
+More Examples
 @[subsection]
 
 
@@ -181,57 +186,112 @@ For Looping Control
 
 Dao supports three different styles of for loops:
 @[list]
--- Three-expression for loop (C style);
--- Arithmetic-progression for loop;
 -- For-in loop;
+-- Range for loop;
+-- C style for loop;
 @[list]
 
 @[subsection]
 Definition
 @[subsection]
 @[code(syntax)]
-CFor  ::= 'for' '(' [ LocalVarDeclaration ] ';' [ Expression ] ';' [ ExpressionList ] ')'
-              ControlBlock
-
-APFor ::= 'for' '(' ['var'|'invar'] Identifier '=' Expression ':' [Expression ':'] Expression ')'
-              ControlBlock
-
 ForIn ::= 'for' '(' ['var'|'invar'] Identifier 'in' Expression {';' Identifier 'in' Expression} ')'
               ControlBlock
 
-ForStmt ::= APFor | CFor | ForIn
+RangeFor ::= 'for' '(' ['var'|'invar'] Identifier '=' Expression ':' [Expression ':'] Expression ')'
+              ControlBlock
+
+CFor  ::= 'for' '(' [ LocalVarDeclaration ] ';' [ Expression ] ';' [ ExpressionList ] ')'
+              ControlBlock
+
+ForStmt ::= ForIn | RangeFor | CFor
 @[code(syntax)]
 
 
-C-style for loops:
+@[subsection]
+For-In
+@[subsection]
+
+For-in loop can normally used to iterate over the items of a container object.
+
+
+It is probably most useful with list,
+@[code]
+numbers = { 1, 2, 3, 4, 5 }
+for( num in numbers ) io.writeln( num )
+@[code]
+
+
+For-in loop can also be used with map or hash map,
+@[code]
+mapping = { 'AA'=>11, 'BB'=>22, 'CC'=>33 }
+for( pair in mapping ) io.writeln( pair )
+@[code]
+When iterating over a map or hash map, the iteration variable (@[code]pair@[code])
+will store each pair of key and value as a tuple.
+
+
+In a single for-in loop, multiple @[code]in@[code] expressions can be used
+to iterate over multiple objects simutaneously,
+@[code]
+numbers = { 1, 2, 3, 4, 5 }
+mapping = { 'AA'=>11, 'BB'=>22, 'CC'=>33 }
+for( num in numbers; pair in mapping ) io.writeln( num, pair )
+@[code]
+
+
+@[subsection]
+Range For
+@[subsection]
+
+A range for loop uses an arithmetic progression condition to control the loop.
+The arithmetic progression condition usually consists of an initial value,
+an optional step value and a stopping value.
+@[code]
+for( index = 1 : 2 : 10 ) { # step value = 2;
+	io.writeln( index )
+}
+for( index = 1 : 10 ) {  # step value = 1;
+	io.writeln( index )
+}
+@[code]
+The loops will start with @[code]index=1@[code], and with each loop cycle, 
+@[code]index@[code] is increased by two or one,
+when @[code]index@[code] become greater than 10, the loop will stop.
+
+
+
+@[subsection]
+C Style For
+@[subsection]
+
+C-style for loop is the most flexible for loop construct.
+It generally looks like the following:
+@[code]
+for( init; condition; step ){
+   block;
+}
+@[code]
+The essential execution logic or steps of @[green]for@[green] statement is the following,
+@[list]
+== Execute the initial expression @[code]init@[code];
+== Check the condition expression @[code]condition@[code];
+== If true continue to the next step, otherwise exit the loop;
+== Execute the code block @[code]block@[code];
+== Execute the step expression @[code]step@[code] and go to 2;
+@[list]
+The detailed steps may depends on the implementation
+but the basic execution logic is the same.
+
+
+Example,
 @[code(dao)]
-for( i = 0;  i < 10;  ++i ) io.writeln( i );
-
-for( var i = 0;  i < 10;  ++i ) io.writeln( i );
-
-for( var i, j = 0;  i < 10;  ++i, j+=2 ) io.writeln( i, j );
-
-for( i, j = 0, k = 3;  i < 10;  ++i, j+=2 ) io.writeln( i, j, k );
-@[code(dao)]
-
-
-Arithmetic progression for loops:
-@[code(dao)]
-for( i = 1 : 10 ) io.writeln( i )
-
-for( var i = 1 : 10 ) io.writeln( i )
-@[code(dao)]
-
-
-For-in loops:
-@[code(dao)]
-m = { 'def' => 123, 'cdf' => 789, 'abc' => 345 }
-
-for( kv in m ) io.writeln( kv )
-
-for( k in m.keys(); v in m.values() ) io.writeln( kv )
-
-for( var k in m.keys(); v in m.values() ) io.writeln( kv )
+for(i=0; i<3; ++i){
+   io.writeln( i );
+}
+for(var i, j=0; i<10; ++i, j+=2){
+	io.writeln( i, j );
+}
 @[code(dao)]
 
 
@@ -251,6 +311,11 @@ While Looping Control
 
 @[text]
 
+@[green]while@[green] is a simple looping construct that
+executes a block if the looping condition is true,
+and repeats the execution as long as the condition is true.
+
+
 @[subsection]
 Definition
 @[subsection]
@@ -258,10 +323,28 @@ Definition
 WhileStmt ::= 'while' '(' [ LocalVarDeclaration ';' ] Expression ')' ControlBlock
 @[code(syntax)]
 
-@[code(dao)]
-i = 0
-while( i < 10 ) i += 1
-@[code(dao)]
+A while loop generally looks like the following:
+@[code]
+while( expression ){
+   block;
+}
+@[code]
+If @[code]expression@[code] is true, @[code]block@[code] is executed and repeated 
+until @[code]expression@[code] becomes false,
+namely, while @[code]expression@[code] is true, execute @[code]block@[code].
+
+
+@[subsection]
+Examples
+@[subsection]
+
+@[code]
+i = 0;
+while( i < 5 ){
+   io.writeln( i );
+   i += 1;
+}
+@[code]
 
 
 @[text]
@@ -280,12 +363,31 @@ Do-While Looping Control
 
 @[text]
 
+
+@[green]Do-while@[green] is a simple looping construct that
+executes a block and repeats the execution until its looping condition become false.
+
+
 @[subsection]
 Definition
 @[subsection]
 @[code(syntax)]
 DoWhileStmt ::= 'do' ControlBlock 'while' '(' Expression ')'
 @[code(syntax)]
+
+A do-while loop generally looks like the following:
+@[code]
+do {
+	block;
+} while ( condition )
+@[code]
+It executes @[code]block@[code], and then repeat executing it
+until the @[code]condition@[code] become false.
+
+
+@[subsection]
+Examples
+@[subsection]
 
 @[code(dao)]
 i = 0
@@ -316,6 +418,11 @@ Switch-Case Control
 
 @[text]
 
+
+Switch-case control provides a convenient way to branch the code and choose a block of code to
+execute based on the value of a object.
+
+
 @[subsection]
 Definition
 @[subsection]
@@ -325,18 +432,42 @@ SwitchCaseStmt ::= 'switch' '(' Expression ')' '{'
 				   [ 'default' ':' ControlBlock ]
                    '}'
 @[code(syntax)]
-@[comment]
-ConstExpressioin for case
-@[comment]
 
+A switch-case statement generally looks like the following:
+@[code]
+switch( expresssion ){
+case C_1 : block_1
+case C_2 : block_2
+case C_3 : block_3
+...
+default: block0
+}
+@[code]
+If the @[code]expresssion@[code] equals to @[code]C_i@[code],
+@[code]block_i@[code] will be executed. Here @[code]C_i@[code] must be a constant,
+but they can be of different types, that means, you can mix numbers and strings as case values.
+Unlike in C/C++, no @[green]break@[green] statement is required to get out of the @[green]switch@[green].
+
+
+If you want to execute the same block of codes for different case values,
+you just need to put them together in the same case:
+@[code]
+switch( expresssion ){
+case C1, C2, C3 :
+    block3
+...
+default: block0
+}
+@[code]
+As a simple example,
 @[code(dao)]
-switch( 2 ){
-case 0 : io.writeln( 'case 0' )
-case 1 : io.writeln( 'case 1' )
-case 2 : io.writeln( 'case 2' )
-default: io.writeln( 'default' )
+a = "a";
+switch( a ){
+case 1, "a" : io.write("case 1 or a");
+default :  io.write("case default");
 }
 @[code(dao)]
+
 
 
 @[text]

@@ -583,13 +583,13 @@ class @AspectForAnyClass for ~
 {
     var injected = {}
 
-	# This is not a decorator!
+	# 这个是构造方法，不是修饰器方法!
     routine @AspectForAnyClass(){
         io.writeln( 'In @AspectForAnyClass():' );
         injected = { 1, 2, 3 }
     }
 
-    # This decorator will also be applied to the default constructors:
+    # 这个修饰器方法也将被用到缺省的构造方法上: 
     routine @DecoratorForAnyMethod( meth(args) : routine ) for ~ {
         io.writeln( 'In @DecoratorForAnyMethod():', std.about(meth) )
         io.writeln( injected )
@@ -598,7 +598,6 @@ class @AspectForAnyClass for ~
 }
 
 # 只可应用到类名带My前缀的类的方面类：
-# For classes with names prefixed with My:
 class @AspectForMyClasses for My~
 {
     routine @Method( meth(args) : routine ) for Method~ {

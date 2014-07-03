@@ -910,16 +910,16 @@ For Loop Statement
 @[subsection]
 
 @[code(syntax)]
-CFor  ::= 'for' '(' [ LocalVarDeclaration ] ';' [ Expression ] ';' [ ExpressionList ] ')'
-              ControlBlock
-
-APFor ::= 'for' '(' [ 'var' ] Identifier '=' Expression ':' [ Expression ':' ] Expression ')'
-              ControlBlock
-
 ForIn ::= 'for' '(' [ 'var' ] Identifier 'in' Expression {';' Identifier 'in' Expression} ')'
               ControlBlock
 
-ForStmt ::= APFor | CFor | ForIn
+RangeFor ::= 'for' '(' [ 'var' ] Identifier '=' Expression ':' [ Expression ':' ] Expression ')'
+              ControlBlock
+
+CFor  ::= 'for' '(' [ LocalVarDeclaration ] ';' [ Expression ] ';' [ ExpressionList ] ')'
+              ControlBlock
+
+ForStmt ::= ForIn | RangeFor | CFor
 @[code(syntax)]
 
 

@@ -2,7 +2,7 @@ load help;
 
 
 @[name]
-dao.macro
+module.core.macro
 @[name]
 
 @[title]

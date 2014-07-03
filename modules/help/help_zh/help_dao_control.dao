@@ -5,45 +5,464 @@ dao.control
 @[name]
 
 @[title]
-Control Structures
+控制结构
 @[title]
+
+
+@[text]
+
+控制结构对于支持程序做复杂的工作极其重要，因为它们决定了程序的逻辑结构和行为。
+道语言支持以下常见的控制结构：
+@[green]if-else@[green], @[green]for@[green], @[green]while@[green],
+@[green]do-while@[green], @[green]switch-case@[green], 
+@[green]break@[green] 和 @[green]skip@[green] 等。
+
+@[text]
+
+
+
+
 
 @[name]
 dao.control.if-else
 @[name]
 
 @[title]
-If-else Conditional Control
+If-Else条件控制
 @[title]
 
-@[name]
-dao.control.switch-case
-@[name]
+@[text]
 
-@[title]
-Switch-case Control
-@[title]
+@[green]If-else@[green] 控制程序的分支运行，它可以根据条件表达式的不同值
+选择执行不同的代码块。
+
+
+@[subsection]
+定义
+@[subsection]
+@[code(syntax)]
+ControlBlock ::= Statement | '{' [ StatementBlock ] '}'
+
+IfElseStmt ::= 'if' '(' [ LocalVarDeclaration ';' ] Expression ')' ControlBlock
+               { 'else' 'if' '(' [ LocalVarDeclaration ';' ] Expression  ')' ControlBlock }
+			   [ 'else' ControlBlock ]
+@[code(syntax)]
+
+
+@[subsection]
+用法
+@[subsection]
+
+
+@[subsubsection]
+单个语句
+@[subsubsection]
+
+这大概是@[code]if@[code]语句的最简单用法。
+这种用法基本如下：
+@[code]
+if( condition ) statement
+@[code]
+这里仅当@[code]condition@[code]被求值为真（非零数字或枚举值），
+@[code]statement@[code]才被执行。
+
+
+
+@[subsubsection]
+单个代码块
+@[subsubsection]
+
+如果需要在@[code]if@[code]的条件测试为真是执行多个命令语句，
+一对大括号可用来将这些语句组织为一个代码块。
+当然这样的代码块也可嵌套地包括其他代码块。
+@[code]
+if( condition ) {
+	block
+}
+@[code]
+
+
+@[subsubsection]
+带Else分支的语句或代码块
+@[subsubsection]
+
+如果需要在@[code]if@[code]的条件测试为假时执行另一个语句或代码块，
+@[code]else@[code]分支语句可用来做到这一点。
+@[code]
+if( condition )
+	statement1
+else
+	statement2
+
+if( condition ) {
+	block1
+} else {
+	block2
+}
+@[code]
+
+
+@[subsubsection]
+多个条件语句和代码块
+@[subsubsection]
+
+如果有多个条件且要对他们逐一做测试并决定是否执行与之对应的语句和代码块，
+那么@[code]else if@[code]语句可被用上。
+@[code]
+if( condition1 ){
+   block1;
+}else if( condition2 ){
+   block2;
+}else{
+   block3;
+}
+@[code]
+
+如果条件@[code]condition1@[code]为真，那么代码块@[code]block1@[code]将被执行；
+否则如果条件@[code]condition2@[code]为真，那么代码块@[code]block2@[code]将被执行；
+再否则代码块@[code]block3@[code]将被执行。零个或多个@[code]else if@[code]语句，
+以及零个或一个@[code]else@[code]语句可以在一个@[code]if else@[code]结构里使用。
+
+
+@[subsubsection]
+在条件表达式前声明变量
+@[subsubsection]
+
+在每个条件表达式前都可以做声明变量：
+@[code]
+if( declaration; condition ) {
+	block
+}
+@[code]
+
+For example,
+@[code]
+if( rnd = rand(100); rnd > 50 ) io.writeln( "random number is >50" );
+if( var rnd = rand(100); rnd > 50 ) io.writeln( "random number is >50" );
+@[code]
+
+
+@[subsection]
+更多例子
+@[subsection]
+
+
+@[code(dao)]
+a = 5
+if( a > 1 ) io.writeln( 'a > 1' )
+
+if( a > 2 )
+	io.writeln( 'a > 2' )
+else
+	io.writeln( 'a <= 2' )
+
+if( a < 3 )
+	io.writeln( 'a < 3' )
+else if( a < 4 )
+	io.writeln( 'a < 4' )
+else
+	io.writeln( 'a >= 4' )
+@[code(dao)]
+
+
+@[text]
+
+
+
+
 
 @[name]
 dao.control.for
 @[name]
 
 @[title]
-For Looping Control
+For循环控制
 @[title]
+
+@[text]
+
+道语言支持以下几种for循环控制：
+@[list]
+-- For-in 循环;
+-- 区间 for 循环;
+-- C 风格 for 循环;
+@[list]
+
+@[subsection]
+定义
+@[subsection]
+@[code(syntax)]
+ForIn ::= 'for' '(' ['var'|'invar'] Identifier 'in' Expression {';' Identifier 'in' Expression} ')'
+              ControlBlock
+
+RangeFor ::= 'for' '(' ['var'|'invar'] Identifier '=' Expression ':' [Expression ':'] Expression ')'
+              ControlBlock
+
+CFor  ::= 'for' '(' [ LocalVarDeclaration ] ';' [ Expression ] ';' [ ExpressionList ] ')'
+              ControlBlock
+
+ForStmt ::= ForIn | RangeFor | CFor
+@[code(syntax)]
+
+
+@[subsection]
+For-In
+@[subsection]
+
+For-in循环通常可用来历遍容器类对象里的元素。
+
+
+它最常用于历遍列表的元素：
+@[code]
+numbers = { 1, 2, 3, 4, 5 }
+for( num in numbers ) io.writeln( num )
+@[code]
+
+
+For-in 循环也可用来历遍关联表的键值：
+@[code]
+mapping = { 'AA'=>11, 'BB'=>22, 'CC'=>33 }
+for( pair in mapping ) io.writeln( pair )
+@[code]
+这里的循环变量@[code]pair@[code]将以元组的形式表示关联表里的一对键值。
+
+
+在同一个for-in 循环，多个@[code]in@[code]表达式可用来同时历遍多个容器类对象：
+@[code]
+numbers = { 1, 2, 3, 4, 5 }
+mapping = { 'AA'=>11, 'BB'=>22, 'CC'=>33 }
+for( num in numbers; pair in mapping ) io.writeln( num, pair )
+@[code]
+
+
+@[subsection]
+区间For循环
+@[subsection]
+
+区间For循环使用算术级数确定一个循环的循环方式。
+这种算术级数的定义由一初始值，一可选的步长值和一终止值构成。
+@[code]
+for( index = 1 : 2 : 10 ) { # 步长值 = 2;
+	io.writeln( index )
+}
+for( index = 1 : 10 ) {  # 步长值 = 1;
+	io.writeln( index )
+}
+@[code]
+这里的循环由@[code]index=1@[code]开始，然后每个循环周期里，
+循环变量@[code]index@[code]的值都加二或者一，
+当其值大于10时，循环将终止。
+
+
+
+@[subsection]
+C风格For循环
+@[subsection]
+
+C风格For循环是一个非常灵活的循环结构。
+它的基本用法如下：
+@[code]
+for( init; condition; step ){
+   block;
+}
+@[code]
+这种循环执行步骤的关键逻辑顺序如下：
+@[list]
+== 执行初始表达式@[code]init@[code];
+== 检查条件表达式@[code]condition@[code];
+== 如果检查结果为真，执行下一步，否则退出循环;
+== 执行代码块@[code]block@[code];
+== 执行步长表达式@[code]step@[code]，然后跳到第二步;
+@[list]
+这种循环的具体执行步骤将取决于实现，
+但其逻辑步骤不变。
+
+
+例子：
+@[code(dao)]
+for(i=0; i<3; ++i){
+   io.writeln( i );
+}
+for(var i, j=0; i<10; ++i, j+=2){
+	io.writeln( i, j );
+}
+@[code(dao)]
+
+
+@[text]
+
+
+
+
 
 @[name]
 dao.control.while
 @[name]
 
 @[title]
-While Looping Control
+While循环控制
 @[title]
+
+@[text]
+
+@[code]while@[code]循环是一种简单的循环结构，
+如果它的循环条件表达式的值为真，它将执行一个命令语句或代码块，
+并且只要该表达式的值为真，
+它将重复执行该命令语句或代码块。
+
+
+@[subsection]
+定义
+@[subsection]
+@[code(syntax)]
+WhileStmt ::= 'while' '(' [ LocalVarDeclaration ';' ] Expression ')' ControlBlock
+@[code(syntax)]
+
+@[code]while@[code]循环的基本用法如下：
+@[code]
+while( expression ){
+   block;
+}
+@[code]
+如果循环条件表达式@[code]expression@[code]的值为真，
+代码块@[code]block@[code]将被执行并重复，知道@[code]expression@[code]的值变假。
+也就是当(while)表达式@[code]expression@[code]的值为真时，执行代码块@[code]block@[code]。
+
+
+@[subsection]
+例子
+@[subsection]
+
+@[code]
+i = 0;
+while( i < 5 ){
+   io.writeln( i );
+   i += 1;
+}
+@[code]
+
+
+@[text]
+
+
+
+
 
 @[name]
 dao.control.do-while
 @[name]
 
 @[title]
-Do-while Looping Control
+Do-While循环控制
 @[title]
+
+@[text]
+
+
+@[green]Do-while@[green]是一个简单的循环控制，它将执行并重复执行
+一命令语句或代码块，知道它的循环条件表达式的值变假。
+
+
+@[subsection]
+Definition
+@[subsection]
+@[code(syntax)]
+DoWhileStmt ::= 'do' ControlBlock 'while' '(' Expression ')'
+@[code(syntax)]
+
+@[green]Do-while@[green]循环的基本用法如下：
+@[code]
+do {
+	block;
+} while ( condition )
+@[code]
+它将执行@[code]block@[code]，然后重复执行@[code]block@[code]，
+直到@[code]condition@[code]的值变假。
+
+
+@[subsection]
+例子
+@[subsection]
+
+@[code(dao)]
+i = 0
+do
+	i += 1
+while( i < 10 )
+
+do {
+	i += 1
+	io.writeln( i )
+} while( i < 15 )
+@[code(dao)]
+
+
+@[text]
+
+
+
+
+
+@[name]
+dao.control.switch-case
+@[name]
+
+@[title]
+Switch-Case控制
+@[title]
+
+@[text]
+
+
+Switch-case控制可以根据一个表达式多个可能的值选择不同的代码块进行执行。
+它提供了一种方便的分支执行方式。
+
+
+@[subsection]
+Definition
+@[subsection]
+@[code(syntax)]
+SwitchCaseStmt ::= 'switch' '(' Expression ')' '{'
+                   { 'case' Expression [ ( ',' | '...' ) Expression ] ':' ControlBlock }
+				   [ 'default' ':' ControlBlock ]
+                   '}'
+@[code(syntax)]
+
+Switch-case的基本用法如下：
+@[code]
+switch( expresssion ){
+case C_1 : block_1
+case C_2 : block_2
+case C_3 : block_3
+...
+default: block0
+}
+@[code]
+这里如果@[code]expresssion@[code]的值等于@[code]C_i@[code]，
+那么代码块@[code]block_i@[code]将被执行；
+这里@[code]C_i@[code]必须是常量，但它们不需要是同样的类型。
+与C/C++不同，这里每个@[code]case@[code]的代码块被执行后都将自动跳出Switch-case结构，
+不需要用到@[code]break@[code]语句。
+
+
+如果你需要针对不同的case值执行同样的代码块，你可以将这些值放在一个case里：
+@[code]
+switch( expresssion ){
+case C1, C2, C3 :
+    block3
+...
+default: block0
+}
+@[code]
+这里是个简单的例子：
+@[code(dao)]
+a = "a";
+switch( a ){
+case 1, "a" : io.write("case 1 or a");
+default :  io.write("case default");
+}
+@[code(dao)]
+
+
+
+@[text]

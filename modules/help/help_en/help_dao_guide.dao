@@ -104,11 +104,11 @@ Commenting Codes
 
 It is always a good idea to comment your codes.
 Dao supports both single line comments and multiple line comments.
-A single comment starts at a @[green]#@[green] 
-(not followed by a left curly bracket @[green]{@[green]),
+A single comment starts at a @[code]#@[code] 
+(not followed by a left curly bracket @[code]{@[code]),
 and ends at the end of the current line.
 And a multiple line comment (or just part of a single line)
-opens by @[green]#{@[green] and closes by @[green]#}@[green].
+opens by @[code]#{@[code] and closes by @[code]#}@[code].
 For example,
 @[code]
 # This is a simple demo:
@@ -126,7 +126,7 @@ Constants, Variables and Invariables
 
 Dao supports the explicit declaration of constants, local variables,
 static variables, global variables and invariables.
-Constants are declared with keyword @[green]const@[green],
+Constants are declared with keyword @[code]const@[code],
 @[code]
 const DEFAULT_INDEX = 123
 const DEFAULT_NAME  = 'abc'
@@ -135,7 +135,7 @@ Constants can only be initialized with constant expression.
 Constants that are declared at the top lexical scope are global constants.
 
 
-Keyword @[green]var@[green] can be used to declare local and global variables.
+Keyword @[code]var@[code] can be used to declare local and global variables.
 If used at the top lexical scope, it will declare global variables,
 otherwise the declared variables will be local.
 @[code]
@@ -146,7 +146,7 @@ if( current_index ) {
 }
 @[code]
 
-In every places where @[green]var@[green] can be used, @[green]invar@[green]
+In every places where @[code]var@[code] can be used, @[code]invar@[code]
 can be used as well, to declare local, global or member invariables.
 Invariables are special kind of variables that cannot be modified once initialized.
 @[code]
@@ -159,7 +159,7 @@ Please see @[node]dao.data.invar@[node] for more information.
 
 
 Another type of variable is the static variable which can be declared with
-the @[green]static@[green] keyword. Outside class body, a static variable
+the @[code]static@[code] keyword. Outside class body, a static variable
 is a global variable with strictly local visibility within its declaration
 scope. So if a routine with static variables is executed multiple times,
 all the executions will access the same static variables.
@@ -170,7 +170,7 @@ Without the above specifiers, newly declared symbols in the form of
 @[code]name=expression@[code] will be automatically declared as local variables. 
 But if the symbol was defined as variable, such statements will simply
 reinitialize the existing variable.
-To avoid this, one must the keyword @[green]var@[green] to explicitly
+To avoid this, one must the keyword @[code]var@[code] to explicitly
 declare the variable as local,
 @[code]
 var index = 789
@@ -234,14 +234,14 @@ Numbers
 @[subsection]
 
 Dao has native supports for the following number types:
-@[green]int@[green], @[green]float@[green], @[green]double@[green]
-and @[green]complex@[green].
+@[code]int@[code], @[code]float@[code], @[code]double@[code]
+and @[code]complex@[code].
 Integer and floating point numbers can be expressed
 in the same ways as in most other languages.
 Floating point numbers are stored in double precision by default.
 To use single precision floating point numbers, the number literals
-should be suffixed with @[green]F@[green] (@[green]D@[green] for explicit double precision).
-Number literals suffixed with @[green]C@[green] represent the imaginary
+should be suffixed with @[code]F@[code] (@[code]D@[code] for explicit double precision).
+Number literals suffixed with @[code]C@[code] represent the imaginary
 parts of double precision complex numbers.
 
 
@@ -261,8 +261,8 @@ C2 = 456.6C  # Double precision complex number;
 
 These types support most of the common operators that are meaningful for them.
 For example, all the basic arithmetic operators such as:
-@[green]+@[green] (addition, unary plus), @[green]-@[green] (subtraction, unary minus),
-@[green]*@[green] (multiplication) and @[green]/@[green] (division).
+@[code]+@[code] (addition, unary plus), @[code]-@[code] (subtraction, unary minus),
+@[code]*@[code] (multiplication) and @[code]/@[code] (division).
 are supported.
 @[code]
 I1 = 123 + 456
@@ -281,7 +281,7 @@ for more information.
 Enum Symbols
 @[subsection]
 
-An @[green]enum@[green] defines a set of symbols with associated integer values.
+An @[code]enum@[code] defines a set of symbols with associated integer values.
 It is particularly useful to represent states and flags.
 @[code]
 enum MyEnum
@@ -298,9 +298,9 @@ a = MyEnum::AA  # Or: MyEnum.AA;
 @[code]
 
 
-There is a special type of enum called @[green]symbol@[green],
+There is a special type of enum called @[code]symbol@[code],
 which appears as an ordinary identifier prefixed with 
-a dollar sign @[green]$@[green].
+a dollar sign @[code]$@[code].
 Such symbols are often used in conjunction with normal enum types.
 @[code]
 enum E1 { AA=1, BB=2 }
@@ -345,13 +345,13 @@ S3 = 'It\'s green'
 S4 = "\u9053\u8bed\u8a00" # the same as S2: "道语言";
 @[code]
 Inside string lieterals, some characters need to be escaped with backslashes.
-Some others such as @[green]\u@[green] are used to instruct Dao parser to
+Some others such as @[code]\u@[code] are used to instruct Dao parser to
 interprete the following byte sequences specially.
 
 
 To use strings as it is written without special treatment of the characters,
-they can be expressed as @[green]verbatim@[green] string, which are quoted with
-a pair of identical compound marks in the forms of @[green]@[]@[green].
+they can be expressed as @[code]verbatim@[code] string, which are quoted with
+a pair of identical compound marks in the forms of @[code]@[]@[code].
 Any number of letters, digits, underscores, blank spaces, dots, 
 colons, dashes and assignment marks can be placed in between the squared brackets
 to make sure the marks will not appear inside the string.
@@ -380,7 +380,7 @@ str[1] = "X";        # Change a single byte: str = "AXCDEFGHIJK";
 str[2:5] = "123456"  # Change a substring: str = "AB123456GHIJK";
 @[code]
 
-String can be concaternated using @[green]+@[green] or @[green]+=@[green],
+String can be concaternated using @[code]+@[code] or @[code]+=@[code],
 @[code]
 str = "ABCDEFGHIJK";
 
@@ -402,7 +402,7 @@ Numeric Arrays
 
 Dao has built-in support for multi-dimensional numeric arrays.
 Such arrays can be defined by using the squared brackets
-@[green][]@[green] or @[green]array{}@[green].
+@[code][]@[code] or @[code]array{}@[code].
 Using such constructs, one can either enumerate all the elements
 as a vector/matrix, or specify an arithmetic progression with
 a start value, a step value and the number of steps.
@@ -444,8 +444,8 @@ Lists
 @[subsection]
 
 List can be created in similar ways as array, by enumerating elements or specifying
-an arithmetic progression, but using @[green]{}@[green] or @[green]list{}@[green]
-instead of @[green][]@[green] or @[green]array{}@[green].
+an arithmetic progression, but using @[code]{}@[code] or @[code]list{}@[code]
+instead of @[code][]@[code] or @[code]array{}@[code].
 
 @[code]
 list1 = { 1, 2, 3 }    # list<int>
@@ -480,9 +480,9 @@ for efficient lookup. The keys in a map are ordered, while the keys
 in a hash map are unordered.
 
 
-A map can be created using @[green]{key=>value...}@[green] or
-@[green]map{key=>value...}@[green]. Replacing the @[green]=>@[green]
-with colon @[green]->@[green] will create hash maps.
+A map can be created using @[code]{key=>value...}@[code] or
+@[code]map{key=>value...}@[code]. Replacing the @[code]=>@[code]
+with colon @[code]->@[code] will create hash maps.
 Map and hash map can be used in identical ways.
 @[code]
 amap  = { 'abc' => 123, 'def' => 456 }
@@ -513,7 +513,7 @@ Tuples
 Tuple is a data type that can store a fixed number of items with individual
 type annotation for each item. Each item may optionally have a field name.
 They can be created in similar ways as creating lists and maps,
-but using @[green]()@[green] instead.
+but using @[code]()@[code] instead.
 @[code]
 tup1 = ( 123, 'abc' )               # tuple with unnamed items;
 tup2 = ( index => 123, 'abc' )      # the first item is named as "index";
@@ -556,13 +556,13 @@ of the condition expressions.
 
 
 When the execution reachs an @[green]if-else@[green] block,
-the condition in the @[green]if()@[green] clause will be tested first,
-if the test is successful, the block associated with the @[green]if@[green] clause
-will be execute. Otherwise the next @[green]else if()@[green] clauses
+the condition in the @[code]if()@[code] clause will be tested first,
+if the test is successful, the block associated with the @[code]if@[code] clause
+will be execute. Otherwise the next @[code]else if()@[code] clauses
 (if any) will be tested one by one, until one succeeds the test,
-then the block of the succeeded @[green]else if()@[green] clause will be executed.
+then the block of the succeeded @[code]else if()@[code] clause will be executed.
 If none of the conditions suceeds and 
-there is an @[green]else@[green] clause,
+there is an @[code]else@[code] clause,
 its block will be executed instead.
 @[code]
 if( rand(10) > 7 ){
@@ -595,7 +595,7 @@ Dao supports three different styles of for loops:
 @[list]
 -- For-in loop;
 -- Range for loop;
--- Three-expression for loop (C style);
+-- C style for loop;
 @[list]
 
 
@@ -628,13 +628,13 @@ for( init; condition; step ){
    block;
 }
 @[code]
-The essential execution logic or steps of @[green]for@[green] statement is the following,
+The essential execution logic or steps of @[code]for@[code] statement is the following,
 @[list]
-== Execute the initial expression @[cyan]init@[cyan];
-== Check the condition expression @[cyan]condition@[cyan];
+== Execute the initial expression @[code]init@[code];
+== Check the condition expression @[code]condition@[code];
 == If true continue to the next step, otherwise exit the loop;
-== Execute the code block @[cyan]block@[cyan];
-== Execute the step expression @[cyan]step@[cyan] and go to 2;
+== Execute the code block @[code]block@[code];
+== Execute the step expression @[code]step@[code] and go to 2;
 @[list]
 The detailed steps may depends on the implementation
 but the basic execution logic is the same.
@@ -655,16 +655,17 @@ for(i=0; i<3; ++i){
 While Looping Construct
 @[subsection]
 
-@[green]while@[green] is a simple looping construct that executes a block
-of code repeatedly as long as its condition is true.
+@[code]while@[code] is a simple looping construct that
+executes a block if the looping condition is true,
+and repeats the execution as long as the condition is true.
 @[code]
 while( expression ){
    block;
 }
 @[code]
-If @[cyan]expression@[cyan] is true, @[cyan]block@[cyan] is executed and repeated 
-until @[cyan]expression@[cyan] becomes false,
-namely, while @[cyan]expression@[cyan] is true, execute @[cyan]block@[cyan].
+If @[code]expression@[code] is true, @[code]block@[code] is executed and repeated 
+until @[code]expression@[code] becomes false,
+namely, while @[code]expression@[code] is true, execute @[code]block@[code].
 
 @[code]
 i = 0;
@@ -682,13 +683,16 @@ while( i < 5 ){
 Do-While Looping Construct
 @[subsection]
 
+@[code]Do-while@[code] is a simple looping construct that
+executes a block and repeats the execution until its looping condition become false.
+
 @[code]
 do {
 	block;
 } while ( condition )
 @[code]
-Execute @[cyan]block@[cyan], and then repeat executing it
-as long as the @[cyan]condition@[cyan] is true.
+Execute @[code]block@[code], and then repeat executing it
+until the @[code]condition@[code] become false.
 
 
 
@@ -699,9 +703,9 @@ Switch-Case Construct
 @[subsection]
 
 Switch-case control provides a convenient way to branch the code and choose a block of code to
-execute based on the value of a object.
+execute based on the value of an expression.
 @[code]
-switch( value ){
+switch( expresssion ){
 case C_1 : block_1
 case C_2 : block_2
 case C_3 : block_3
@@ -709,15 +713,16 @@ case C_3 : block_3
 default: block0
 }
 @[code]
-If the @[cyan]value@[cyan] equals to @[cyan]C_i@[cyan], @[cyan]block_i@[cyan] will be executed. Here @[cyan]C_i@[cyan] must be a constant,
+If the value of @[code]expresssion@[code] equals to @[code]C_i@[code], 
+@[code]block_i@[code] will be executed. Here @[code]C_i@[code] must be a constant,
 but they can be of different types, that means, you can mix numbers and strings as case values.
-Unlike in C/C++, no @[green]break@[green] statement is required to get out of the @[green]switch@[green].
+Unlike in C/C++, no @[code]break@[code] statement is required to get out of the @[code]switch@[code].
 
 
 If you want to execute the same block of codes for different case values,
 you just need to put them together in the same case:
 @[code]
-switch( value ){
+switch( expresssion ){
 case C1, C2, C3 :
     block3
 ...
@@ -741,9 +746,9 @@ default :  io.write("case default");
 Break and Skip
 @[subsection]
 
-@[green]break@[green] can be used to exit a loop, and @[green]skip@[green] can be used 
+@[code]break@[code] can be used to exit a loop, and @[code]skip@[code] can be used 
 to skip the rest part of script and start the next cycle of a loop.
-@[green]skip@[green] is equivalent to @[green]continue@[green] in C/C++.
+@[code]skip@[code] is equivalent to @[code]continue@[code] in C/C++.
 
 @[code] 
 for( i=0; i<5; ++i ){
@@ -771,7 +776,7 @@ It may also return results to its caller.
 Definition
 @[subsection]
 
-Dao routines are declared with keyword @[green]routine@[green]
+Dao routines are declared with keyword @[code]routine@[code]
 For example,
 @[code(dao)]
 routine func( first, second )
@@ -800,7 +805,7 @@ routine MyRout( name: string, index = 0 )
    io.writeln( "INDEX = ", index )
 }
 @[code]
-Here @[cyan]name@[cyan] is annotated as type string, and @[cyan]index@[cyan]
+Here @[code]name@[code] is annotated as type string, and @[code]index@[code]
 is specified as an integer with default value 0.
 Any parameter after a parameter with default value must have default values as well.
 
@@ -877,15 +882,15 @@ It is commonly used to do Object-Oriented Programming (OOP).
 
 @[subsection]Class Definition@[subsection]
 
-A @[green]class@[green] data strucutre is defined by composing data fields
+A @[code]class@[code] data strucutre is defined by composing data fields
 and member methods in a meaningful way that defines the states and behaviours
 for the instances of the class.
 Dao class supports four types of fields:
 @[list]
---@[green]constant@[green]: declared with keyword @[green]const@[green];
---@[green]static variable@[green]: declared with keyword @[green]static@[green];
---@[green]instance variable@[green]: declared with keyword @[green]var@[green];
---@[green]instance invariable@[green]: declared with keyword @[green]invar@[green];
+--@[code]constant@[code]: declared with keyword @[code]const@[code];
+--@[code]static variable@[code]: declared with keyword @[code]static@[code];
+--@[code]instance variable@[code]: declared with keyword @[code]var@[code];
+--@[code]instance invariable@[code]: declared with keyword @[code]invar@[code];
 @[list]
 Such fields can be declared with or without explicit types,
 and with or without default initialization values,
@@ -899,15 +904,15 @@ var variable: typename = init_value;
 @[code]
 
 Class constructors and ordinary methods must be declared with
-keyword @[green]routine@[green].
-Methods for overloading operators must use keyword @[green]operator@[green]. 
+keyword @[code]routine@[code].
+Methods for overloading operators must use keyword @[code]operator@[code]. 
 
 
 The visibilities of class fields and methods can be restricted by three permission keywords:
 @[list]
---@[green]public@[green]: publically accessible without restriction;
---@[green]protected@[green]: accessible from the class and its derived classes;
---@[green]private@[green]: only accessible from the class;
+--@[code]public@[code]: publically accessible without restriction;
+--@[code]protected@[code]: accessible from the class and its derived classes;
+--@[code]private@[code]: only accessible from the class;
 @[list]
 
 Here is a simple class,
@@ -925,7 +930,7 @@ class ClassOne
 }
 @[code]
 
-Within class methods, the special variable @[green]self@[green] represents the current class
+Within class methods, the special variable @[code]self@[code] represents the current class
 instance. Class methods may be declared inside class body and defined outside
 in the same way as in C++, but in Dao, one should make sure that, the parameter list
 must be exactly the same in the places for declaration and definition.
@@ -1001,12 +1006,12 @@ class ClassTwo
 @[code(dao)]
 
 In order to provide access to the variables such as "value" in the above example,
-one can define ordinary methods such @[cyan]GetValue()@[cyan] and @[cyan]SetValue()@[cyan].
+one can define ordinary methods such @[code]GetValue()@[code] and @[code]SetValue()@[code].
 But the better way is to use properties.
 A property is a method that provides access to a field in a way
 that syntatically looks like direct access.
 In Dao, this can be done by overloading name specific operators such as
-@[green].Name@[green] and @[green].Name=@[green]. For example,
+@[code].Name@[code] and @[code].Name=@[code]. For example,
 @[code(dao)]
 class MyNumber
 {
@@ -1051,7 +1056,7 @@ class ColorRBG
 
 yellow = ColorRBG( 1, 1, 0 ); # create an instance.
 @[code]
-The following will define a derived class of @[cyan]ColorRBG@[cyan],
+The following will define a derived class of @[code]ColorRBG@[code],
 @[code]
 class ColorRGBA : ColorRBG
 {
@@ -1067,8 +1072,8 @@ magenta.alpha = 0.5; # change to half tranparency.
 @[code]
 
 In the definition of derived class,
-the parent class @[cyan]ColorRBG@[cyan] should be put after the derived class 
-and be separated with @[green]:@[green]. 
+the parent class @[code]ColorRBG@[code] should be put after the derived class 
+and be separated with @[code]:@[code]. 
 The constructor parameters for derived class
 can be passed to parent classes in the way as shown in the example.
 

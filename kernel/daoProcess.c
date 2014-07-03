@@ -1434,18 +1434,8 @@ CallEntry:
 				vmc = vA->xFloat.value ? vmc+1 : vmcBase + vmc->b; break;
 			case DAO_DOUBLE  :
 				vmc = vA->xDouble.value ? vmc+1 : vmcBase + vmc->b; break;
-			case DAO_COMPLEX :
-				vmc = (vA->xComplex.value.real || vA->xComplex.value.imag) ? vmc+1 : vmcBase + vmc->b;
-				break;
 			case DAO_ENUM  :
 				vmc = vA->xEnum.value ? vmc+1 : vmcBase + vmc->b;
-				break;
-			case DAO_CTYPE :
-			case DAO_CSTRUCT :
-				vmc += 1;
-				break;
-			case DAO_CDATA :
-				vmc = vA->xCdata.data ? vmc+1 : vmcBase + vmc->b;
 				break;
 			default :
 				goto RaiseErrorInvalidOperation;
