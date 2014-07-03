@@ -441,8 +441,10 @@ void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )
 	type = future->ctype;
 	type = type && type->nested->size ? type->nested->items.pType[0] : NULL;
 	switch( self->status ){
-	case DAO_PROCESS_FINISHED :
 	case DAO_PROCESS_ABORTED :
+		future->state = DAO_CALL_ABORTED;
+		break;
+	case DAO_PROCESS_FINISHED :
 		DaoValue_Move( self->stackValues[0], & future->value, type );
 		future->state = DAO_CALL_FINISHED;
 		break;

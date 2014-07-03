@@ -1144,6 +1144,10 @@ CallEntry:
 		case DAO_PAUSE_NONE :
 			break;
 		case DAO_PAUSE_FUTURE_VALUE :
+			/*
+			// No need to check abortion of the precondition tasklet.
+			// If it happened, this one should not have been activated.
+			*/
 			finished = future->precond->state == DAO_CALL_FINISHED;
 			DaoProcess_PutValue( self, finished ? future->precond->value : dao_none_value );
 			break;
