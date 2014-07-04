@@ -85,9 +85,9 @@ struct DaoType
 	uchar_t   tid;    /* type id; */
 	uchar_t   subtid; /* subtype id; */
 	uchar_t   attrib; /* attributes; */
-	uchar_t   invar     : 1; /* invar type; */
 	uchar_t   konst     : 1; /* const type; ::invar is also set to one; */
-	uchar_t   vartht    : 1; /* var type holder type; */
+	uchar_t   invar     : 1; /* invar type; */
+	uchar_t   var       : 1; /* var type; */
 	uchar_t   valtype   : 1; /* value type */
 	uchar_t   variadic  : 1; /* type for variadic tuple or routine */
 	uchar_t   realnum   : 1; /* for type of int/float/double */
@@ -112,7 +112,7 @@ struct DaoType
 	*/
 	DaoValue  *aux;
 	DaoValue  *value;    /* default value for the type; */
-	DaoType   *quadtype; /* base/const/invar/vartht type; */
+	DaoType   *quadtype; /* base/const/invar/var type; */
 	DaoType   *cbtype;   /* extra type for code block; */
 
 	DaoTypeKernel  *kernel; /* type kernel of built-in or C types; */
@@ -154,7 +154,7 @@ DAO_DLL void DaoType_CheckAttributes( DaoType *self );
 DAO_DLL DaoType* DaoType_GetBaseType( DaoType *self );
 DAO_DLL DaoType* DaoType_GetConstType( DaoType *self );
 DAO_DLL DaoType* DaoType_GetInvarType( DaoType *self );
-DAO_DLL DaoType* DaoType_GetVarTHType( DaoType *self );
+DAO_DLL DaoType* DaoType_GetVarType( DaoType *self );
 
 /* if "self" match to "type": */
 DAO_DLL int DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs );

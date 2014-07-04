@@ -285,8 +285,7 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DArray *nest )
 		self->kernel = typer->core->kernel;
 		GC_IncRC( self->kernel );
 	}
-	/* Use dao_type_tht, for allowing to match invar types: */
-	if( extra == NULL && tid == DAO_PAR_VALIST ) extra = (DaoValue*) dao_type_tht;
+	if( extra == NULL && tid == DAO_PAR_VALIST ) extra = (DaoValue*) dao_type_any;
 	if( extra ){
 		self->aux = extra;
 		GC_IncRC( extra );
@@ -451,7 +450,7 @@ static void DaoType_GetQuadTypes( DaoType *self, DaoType *quads[4] )
 			quads[1] = types[i];
 		}else if( types[i]->invar ){
 			quads[2] = types[i];
-		}else if( types[i]->vartht ){
+		}else if( types[i]->var ){
 			quads[3] = types[i];
 		}else{
 			quads[0] = types[i];
@@ -466,7 +465,7 @@ static void DaoType_RelinkQuadTypes( DaoType *self, DaoType *other )
 	DaoType_GetQuadTypes( self, quads );
 	if( other->konst )  quads[1] = other;
 	if( other->invar )  quads[2] = other;
-	if( other->vartht ) quads[3] = other;
+	if( other->var ) quads[3] = other;
 
 	for(i=0; i<4; ++i){
 		if( quads[i] ){
@@ -522,9 +521,9 @@ DaoType* DaoType_GetInvarType( DaoType *self )
 	DaoType_RelinkQuadTypes( base, invar );
 	return invar;
 }
-DaoType* DaoType_GetVarTHType( DaoType *self )
+DaoType* DaoType_GetVarType( DaoType *self )
 {
-	DaoType *base, *vartht, *quads[4] = {NULL};
+	DaoType *base, *var, *quads[4] = {NULL};
 
 
 	DaoType_GetQuadTypes( self, quads );
@@ -532,14 +531,14 @@ DaoType* DaoType_GetVarTHType( DaoType *self )
 	if( self->tid != DAO_THT ) return quads[0];  /* base type; */
 
 	base = quads[0];
-	vartht = DaoType_Copy( base );
-	DString_SetChars( vartht->name, "var<" );
-	DString_Append( vartht->name, base->name );
-	DString_AppendChar( vartht->name, '>' );
+	var = DaoType_Copy( base );
+	DString_SetChars( var->name, "var<" );
+	DString_Append( var->name, base->name );
+	DString_AppendChar( var->name, '>' );
 
-	vartht->vartht = 1;
-	DaoType_RelinkQuadTypes( base, vartht );
-	return vartht;
+	var->var = 1;
+	DaoType_RelinkQuadTypes( base, var );
+	return var;
 }
 
 static int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds );
@@ -712,7 +711,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		// But const type can, because constant will be copied when it is moved.
 		*/
 		if( self->tid > DAO_ENUM && self->invar && ! self->konst && ! type->invar ){
-			if( type->tid != DAO_THT || type->vartht ) return 0;
+			if( (type->tid != DAO_ANY && type->tid != DAO_THT) || type->var ) return 0;
 		}
 
 		if( self->invar ) self = DaoType_GetBaseType( self );
@@ -1257,9 +1256,9 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		copy = self->konst ? DaoType_GetConstType( copy ) : DaoType_GetInvarType( copy );;
 		DMap_Insert( defs, self, copy );
 		return copy;
-	}else if( self->vartht ){
+	}else if( self->var ){
 		copy = DaoType_DefineTypes( DaoType_GetBaseType( self ), ns, defs );
-		copy = DaoType_GetVarTHType( copy );
+		copy = DaoType_GetVarType( copy );
 		DMap_Insert( defs, self, copy );
 		return copy;
 	}else if( self->tid & DAO_ANY ){
@@ -1277,7 +1276,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	copy->attrib = self->attrib;
 	copy->konst = self->konst;
 	copy->invar = self->invar;
-	copy->vartht = self->vartht;
+	copy->var = self->var;
 	copy->trait |= DAO_VALUE_DELAYGC;
 	DString_Reserve( copy->name, 128 );
 	DArray_Append( ns->auxData, copy );
@@ -2254,7 +2253,7 @@ DaoType* DaoType_Specialize( DaoType *self, DaoType *types[], int count )
 {
 	int konst = self->konst;
 	int invar = self->invar;
-	int vartht = self->vartht;
+	int var = self->var;
 	DaoType *type = NULL;
 
 	switch( self->tid ){
@@ -2273,8 +2272,8 @@ DaoType* DaoType_Specialize( DaoType *self, DaoType *types[], int count )
 		type = DaoType_GetConstType( type );
 	}else if( invar ){
 		type = DaoType_GetInvarType( type );
-	}else if( vartht ){
-		type = DaoType_GetVarTHType( type );
+	}else if( var ){
+		type = DaoType_GetVarType( type );
 	}
 	return type;
 }

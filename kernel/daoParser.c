@@ -1944,7 +1944,7 @@ WrongType:
 		case DKEY_VAR :
 			if( count2 != 1 ) goto InvalidTypeForm;
 			type = types->items.pType[ count ];
-			type = DaoType_GetVarTHType( type );
+			type = DaoType_GetVarType( type );
 			goto DoneGenericType;
 		case DKEY_INVAR :
 			if( count2 != 1 ) goto InvalidTypeForm;
@@ -4340,7 +4340,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	if( store & DAO_DECL_VAR ){
 		if( abtp == NULL ){
 			abtp = DaoParser_MakeVarTypeHolder( self );
-			abtp = DaoType_GetVarTHType( abtp );
+			abtp = DaoType_GetVarType( abtp );
 		}
 		if( abtp->invar ){
 			DaoParser_Error3( self, DAO_TYPE_NOT_MATCHING, errorStart );
