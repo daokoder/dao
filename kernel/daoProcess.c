@@ -4952,9 +4952,6 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		}
 		DaoArray_ArrayArith( nc, na, nb, vmc->code, self );
 #endif
-	}else if( A->type ==DAO_STRING && B->type ==DAO_INTEGER && vmc->code ==DVM_ADD
-			 && vmc->a == vmc->c ){
-		DString_AppendWChar( A->xString.value, (size_t) B->xInteger.value );
 	}else if( A->type ==DAO_STRING && B->type ==DAO_STRING && vmc->code ==DVM_ADD ){
 		if( vmc->a == vmc->c ){
 			DString_Append( A->xString.value, B->xString.value );

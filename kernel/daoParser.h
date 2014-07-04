@@ -107,6 +107,7 @@ struct DaoParser
 	char  usingGlobal;
 	char  invarArg;
 	char  invarDecoArg;
+	char  nsDefined;
 
 	DaoType       *hostType;
 	DaoCtype      *hostCtype;
@@ -130,6 +131,9 @@ struct DaoParser
 	DArray *decoParams2;
 	DArray *routCompilable; /* list of defined routines with bodies */
 	DArray *routReInferable;
+
+	DArray    *nsDefines;
+	DaoLexer  *nsSymbols;
 
 	DaoLexer  *elexer;
 	DaoLexer  *wlexer;

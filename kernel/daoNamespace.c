@@ -885,7 +885,7 @@ int DaoNamespace_GetOptions( DaoNamespace *self )
 }
 
 
-DaoTypeBase nsTyper=
+DaoTypeBase nsTyper =
 {
 	"namespace", & nsCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoNamespace_Delete, NULL
@@ -1060,7 +1060,7 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 	if( node ) return -DAO_CTW_WAS_DEFINED;
 
 	id = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, pm, 0, self->constants->size );
-	MAP_Insert( self->lookupTable, name, id ) ;
+	MAP_Insert( self->lookupTable, name, id );
 	DArray_Append( self->constants, (dest = DaoConstant_New( value )) );
 	DaoValue_MarkConst( dest->value );
 	return id;

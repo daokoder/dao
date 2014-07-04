@@ -4029,8 +4029,6 @@ int DaoInferencer_HandleBinaryArith( DaoInferencer *self, DaoInode *inode, DMap 
 		ct = bt;
 	}else if( (at->tid ==DAO_COMPLEX || at->tid ==DAO_ARRAY) && bt->realnum ){
 		ct = at;
-	}else if( at->tid ==DAO_STRING && bt->tid ==DAO_INTEGER && opa==opc  ){
-		ct = at;
 	}else if( ( at->tid ==DAO_COMPLEX && bt->tid ==DAO_ARRAY )
 			|| ( at->tid ==DAO_ARRAY && bt->tid ==DAO_COMPLEX ) ){
 		ct = catype;

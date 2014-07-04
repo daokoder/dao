@@ -188,6 +188,8 @@ DaoParser* DaoParser_New()
 	self->decoFuncs2  = DArray_New(0);
 	self->decoParams  = DArray_New( DAO_DATA_VALUE );
 	self->decoParams2 = DArray_New( DAO_DATA_VALUE );
+	self->nsDefines = NULL;
+	self->nsSymbols = NULL;
 
 	self->elexer = DaoLexer_New();
 	self->wlexer = DaoLexer_New();
@@ -254,6 +256,8 @@ void DaoParser_Delete( DaoParser *self )
 	DaoLexer_Delete( self->lexer );
 	DaoLexer_Delete( self->elexer );
 	DaoLexer_Delete( self->wlexer );
+	if( self->nsDefines ) DArray_Delete( self->nsDefines );
+	if( self->nsSymbols ) DaoLexer_Delete( self->nsSymbols );
 	if( self->argName ) DaoToken_Delete( self->argName );
 	if( self->decoArgName ) DaoToken_Delete( self->decoArgName );
 	if( self->uplocs ) DArray_Delete( self->uplocs );
@@ -339,6 +343,9 @@ void DaoParser_Reset( DaoParser *self )
 	DaoLexer_Reset( self->elexer );
 	DaoLexer_Reset( self->wlexer );
 
+	self->nsDefined = 0;
+	if( self->nsDefines ) self->nsDefines->size = 0;
+	if( self->nsSymbols ) DaoLexer_Reset( self->nsSymbols );
 	if( self->uplocs ) DArray_Clear( self->uplocs );
 	if( self->outers ) DArray_Clear( self->outers );
 	if( self->allConsts ) DMap_Reset( self->allConsts );
@@ -2496,6 +2503,7 @@ static int DaoParser_Preprocess( DaoParser *self )
 			if( start < 0 ) return 0;
 			tokens = self->tokens->items.pToken;
 		}else{
+			if( tki == DKEY_NAMESPACE ) self->nsDefined = 1;
 			start ++;
 		}
 	}
@@ -3070,7 +3078,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	DaoToken *tokName;
 	DString *str, *mbs = DaoParser_GetString( self );
 	DString *className, *ename = NULL;
-	DArray *holders, *defaults;
 	daoint begin, line = self->curLine;
 	daoint i, k, rb, right, error = 0;
 	int errorStart = start;
@@ -3438,6 +3445,7 @@ static void DaoParser_CheckStatementSeparation( DaoParser *self, int check, int 
 }
 static int DaoParser_ImportSymbols( DaoParser *self, DaoNamespace *mod, int start, int to, int level );
 static int DaoParser_ParseImportStatement( DaoParser *self, int start, int end, int full );
+static int DaoParser_ParseNamespaceStatement( DaoParser *self, int start, int end );
 static int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, int st );
 static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 {
@@ -3514,8 +3522,15 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 		}
 		if( self->enumTypes->size ) DArray_Clear( self->enumTypes );
 		errorStart = start;
-		if( ! self->isClassBody ) self->permission = DAO_PERM_PUBLIC;
+		if( ! self->isClassBody ){
+			self->permission = DAO_PERM_PUBLIC;
+			if( self->nsDefined ) self->permission = DAO_PERM_PRIVATE;
+		}
 		if( tki >= DKEY_PRIVATE && tki <= DKEY_PUBLIC ){
+			if( ! self->isClassBody ){
+				DaoParser_Error3( self, DAO_STATEMENT_OUT_OF_CONTEXT, start );
+				return 0;
+			}
 			self->permission = tki - DKEY_PRIVATE + DAO_PERM_PRIVATE;
 			start += 1;
 			if( start <= to && tokens[start]->name == DTOK_COLON ) start += 1;
@@ -3741,6 +3756,11 @@ DecoratorError:
 			continue;
 		}else if( tki == DKEY_IMPORT ){
 			start = DaoParser_ParseImportStatement( self, start, to, 0 );
+			if( start <0 ) return 0;
+			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
+			continue;
+		}else if( tki == DKEY_NAMESPACE ){
+			start = DaoParser_ParseNamespaceStatement( self, start, to );
 			if( start <0 ) return 0;
 			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
 			continue;
@@ -4591,7 +4611,7 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	DaoNamespace *NS = self->nameSpace;
 	DaoRoutine *routine = self->routine;
 	const int tokCount = self->tokens->size;
-	int id, np, offset = 0, defLine = routine->defLine;
+	int i, j, id, np, offset = 0, defLine = routine->defLine;
 
 	GC_Assign( & routine->nameSpace, NS );
 	self->returnType = (DaoType*) routine->routType->aux;
@@ -4634,6 +4654,33 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	routine->defLine = defLine;
 
 	if( self->errors->size ) return 0;
+	if( self->nsDefines && self->nsDefines->size ){
+		for(i=0; i<self->nsDefines->size; i+=3){
+			DaoNamespace *defns = self->nsDefines->items.pNS[i];
+			int start = self->nsDefines->items.pInt[i+1];
+			int end = self->nsDefines->items.pInt[i+2];
+			for(j=start; j<end; ++j){
+				DaoToken *token = self->nsSymbols->tokens->items.pToken[j];
+				DNode *it1 = DMap_Find( NS->lookupTable, & token->string );
+				DNode *it2 = DMap_Find( defns->lookupTable, & token->string );
+				int st = LOOKUP_ST( it1->value.pInt );
+				int id = LOOKUP_ID( it1->value.pInt );
+				int lookup, count = 0;
+				self->curLine = token->line;
+				if( it1 == NULL || it2 != NULL ) return 0;
+				if( st == DAO_GLOBAL_CONSTANT ){
+					count = defns->constants->size;
+					DArray_Append( defns->constants, NS->constants->items.pVoid[id] );
+				}else{
+					count = defns->variables->size;
+					DArray_Append( defns->variables, NS->variables->items.pVoid[id] );
+				}
+				lookup = LOOKUP_BIND( st, DAO_PERM_PUBLIC, 0, count );
+				MAP_Insert( defns->lookupTable, & token->string, lookup );
+				printf( "here: %s %s\n", defns->name->chars, token->string.chars );
+			}
+		}
+	}
 	if( DaoParser_PostParsing( self ) == 0 ) return 0;
 #ifdef DAO_WITH_DECORATOR
 	DaoParser_DecorateRoutine( self, routine );
@@ -5153,6 +5200,88 @@ static int DaoParser_ParseImportStatement( DaoParser *self, int start, int to, i
 	return start + 1;
 InvalidImport:
 	DaoParser_Error3( self, DAO_INVALID_IMPORT_STMT, estart );
+	return -1;
+}
+int DaoParser_ParseNamespaceStatement( DaoParser *self, int start, int end )
+{
+	DaoToken **tokens = self->tokens->items.pToken;
+	DaoNamespace *NS = self->nameSpace;
+	DaoNamespace *defNS = NULL;
+	DaoValue *scope = NULL, *value = NULL;
+	DString *spaceName, *ename = NULL;
+	daoint i, k, rb, right, error = 0;
+	int errorStart = start;
+	int perm = self->permission;
+
+	if( start+1 > end ) goto InvalidNamespace;
+	if( (self->levelBase + self->lexLevel) != 0 ) goto InvalidNamespace;
+
+	start = DaoParser_ParseScopedConstOrName( self, & scope, & value, start+1, 0 );
+	if( start <0 ) goto InvalidNamespace;
+
+	ename = & tokens[start]->string;
+	if( value == NULL || value->type == 0 ){
+		DString *name = & tokens[start]->string;
+		int tok = tokens[start]->name;
+		if( tok != DTOK_IDENTIFIER && tok < DKEY_ABS ) goto InvalidNamespace;
+		if( scope && scope->type != DAO_NAMESPACE ) goto InvalidNamespace;
+
+		self->permission = DAO_PERM_PUBLIC;
+		defNS = DaoNamespace_New( NS->vmSpace, name->chars );
+		value = (DaoValue*) defNS;
+		if( scope ){
+			DaoNamespace_AddConst( (DaoNamespace*) scope, name, value, DAO_PERM_PUBLIC );
+		}else{
+			DaoParser_AddToScope( self, name, value, NULL, 0 );
+		}
+		self->permission = perm;
+
+		if( self->byteBlock ){
+#warning"namespace"
+			//int pm = self->permission;
+			//DaoByteBlock_AddClassBlock( self->byteBlock, klass, pm );
+		}
+	}else{
+		if( value->type != DAO_NAMESPACE ) goto InvalidNamespace;
+		defNS = (DaoNamespace*) value;
+	}
+	if( tokens[++start]->type != DTOK_LCB ) goto InvalidNamespace;
+	rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
+	if( rb < 0 ) goto InvalidNamespace;
+	
+	if( self->nsDefines == NULL ){
+		self->nsDefines = DArray_New(0);
+		self->nsSymbols = DaoLexer_New();
+	}
+	DArray_Append( self->nsDefines, defNS );
+	DArray_Append( self->nsDefines, self->nsSymbols->tokens->size );
+	DArray_Append( self->nsDefines, self->nsSymbols->tokens->size );
+	start += 1;
+	while( start < rb ){
+		int ret = 0;
+		if( DaoParser_CheckNameToken( self, start, rb, error, start ) == 0 ){
+			goto InvalidNamespace;
+		}
+		DaoLexer_AppendToken( self->nsSymbols, tokens[start] );
+		if( self->byteBlock ){
+			//DString *name = & tokens[i]->string;
+			//id = LOOKUP_ID( id );
+			//DaoByteBlock_EncodeImport( self->byteBlock, (DaoValue*)mod, name, level, id );
+		}
+		if( tokens[start+1]->name == DTOK_RCB ) break;
+		if( tokens[start+1]->name != DTOK_COMMA || (start+2) > rb ) goto InvalidNamespace;
+		start += 2;
+	}
+	self->nsDefines->items.pInt[self->nsDefines->size-1] = self->nsSymbols->tokens->size;
+	return rb + 1;
+
+SymbolWasDefined:
+	DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, ename );
+	goto InvalidNamespace;
+InvalidSymbolName:
+	goto InvalidNamespace;
+InvalidNamespace:
+	DaoParser_Error2( self, DAO_INVALID_CLASS_DEFINITION, errorStart, end, 0 );
 	return -1;
 }
 

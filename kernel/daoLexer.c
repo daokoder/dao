@@ -126,6 +126,7 @@ DIntStringPair dao_keywords[] =
 	{ DAO_ROUTINE, "routine" } , /* for typing */
 	{ 100, "operator" } ,
 	{ 100, "interface" } ,
+	{ DAO_NAMESPACE, "namespace" } ,
 	{ 0, "self" } ,
 	{ DAO_TYPE, "type" } ,
 	{ DAO_ANY, "any" } ,
@@ -190,7 +191,7 @@ DIntStringPair dao_keywords[] =
 /* by gperf */
 enum
 {
-	TOTAL_KEYWORDS = 65,
+	TOTAL_KEYWORDS = 66,
 	MIN_WORD_LENGTH = 2,
 	MAX_WORD_LENGTH = 9,
 	MIN_HASH_VALUE = 2,
@@ -250,7 +251,8 @@ static DIntStringPair wordlist[] =
 	{0,""},
 	{DKEY_DO,"do"},
 	{DKEY_OPERATOR,"operator"},
-	{0,""}, {0,""}, {0,""},
+	{DKEY_NAMESPACE,"namespace"},
+	{0,""}, {0,""},
 	{DKEY_PRIVATE,"private"},
 	{DKEY_AND,"and"},
 	{DKEY_RAND,"rand"},
