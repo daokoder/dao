@@ -17,11 +17,11 @@ A tasklet is much cheaper than a native thread, because only active tasklets
 are attached to native threads for execution.
 
 
-Dao provides two main features for concurrent programming:
-one is the multithreading module @[green]mt@[green];
-the other is the asynchronous class.
-Dao also provides communication channels for tasklets 
-to communicate and synchronize with each other by channels.
+Dao provides several features for concurrent programming such as:
+multi-threading module @[code]mt@[code] with parallelized code section methods,
+asynchronous function call, asynchronous class instance and communication channels.
+Support for conventional multi-threaded programming is all supported by an external module.
+
 @[text]
 
 
@@ -39,11 +39,8 @@ Multithreading Module
 
 @[text]
 
-The multithreading module @[green]mt@[green] offers methods 
-for creating tasklets and synchronization constructs such as
-mutex, condition variable, semaphore and as well as channels.
-This module also provides a list of parallelized methods that
-can make some typical parallelization tasks straightforward.
+The multithreading module @[code]mt@[code] offers methods for creating tasklets
+and parallelizing some typical parallelization tasks over standard container types.
 
 
 @[subsection]
@@ -51,7 +48,7 @@ Starting Tasklet
 @[subsection]
 
 The simplest way to start a tasklet is to use the functional method
-@[green]mt.start@[green] to run an expression or a block of codes:
+@[code]mt.start@[code] to run an expression or a block of codes:
 @[code]
 a = 123
 fut = mt.start { a*a }
@@ -61,7 +58,7 @@ fut2 = mt.start {
 @[code]
 This functional method is implemented as a code section (code block as in Ruby)
 method, and can take a block of code as an additional implicit parameter.
-@[green]mt.start@[green] returns the created tasklet in the form of a future value.
+@[code]mt.start@[code] returns the created tasklet in the form of a future value.
 The created tasklet may be executed by a reused thread from the internal
 thread pool or by a newly created thread.
 
@@ -84,33 +81,33 @@ Its value can be obtained by,
 value = fut.value()
 @[code]
 which will block the current tasklet and wait for the completion of the tasklet
-represented by @[cyan]fut@[cyan].
+represented by @[code]fut@[code].
 
 
 
 @[subsection]
-Using Parallelized Code Block Methods
+Parallelized Code Block Methods
 @[subsection]
 
 However, the simplest way to do parallel programming is to use the
-parallelized functional methods of @[green]mt@[green], which provides
+parallelized functional methods of @[code]mt@[code], which provides
 the following parallelized functional methods,
 @[list]
--- @[green]iterate()@[green]:
+-- @[code]iterate()@[code]:
 
    Iterate a predefined number of times, or iterate over a list, map or array,
    and execute the code block on each of the items;
 
--- @[green]map()@[green]
+-- @[code]map()@[code]
 
    Map a list, map or array to another list, map or array, using the values
    returned by the code block;
 
--- @[green]apply()@[green]
+-- @[code]apply()@[code]
 
    Apply the values returned by the code block to a list, map or array;
 
--- @[green]find()@[green]
+-- @[code]find()@[code]
 
    Find the first item in a list or map the satisfy the condition as
    tested by the code block.
@@ -122,6 +119,23 @@ mt.iterate( 10 ) { io.writeln( X ) }
 mt.iterate( {1,2,3,4,5,6}, 3 ) { io.writeln( X ) }
 @[code]
 
+
+
+@[subsection]
+Other Methods
+@[subsection]
+
+The @[code]mt@[code] module also supports a few other methods:
+@[list]
+--@[code] select( group: list<@T>, timeout = -1.0 ) => tuple<selected: none|@T, value: any, status: enum<selected,timeout,finished>> @[code]
+
+Select on a group of channels or future values, wait with a timeout for data become available from any of the channels. It returns a tuple with the following possible values:
+ @[list(sub)]
+ -- @[code](channel|future, data, $selected)@[code];
+ -- @[code](none, none, $timeout)@[code];
+ -- @[code](none, none, $finished)@[code];
+ @[list(sub)] 
+@[list]
 
 @[text]
 
@@ -149,7 +163,7 @@ as a tasklet, and return immediately a future value that can be use to block on
 the tasklet and wait for its completion.
 
 
-Any standard function call followed by @[green]!!@[green] will start an AFC.
+Any standard function call followed by @[code]!!@[code] will start an AFC.
 @[code]
 routine MyFunction( n = 10 )
 {
@@ -217,13 +231,13 @@ class Account
 	routine Account( init = 0 ){
 		balance = init
 	}
-	routine Withdraw( amount : int ) => enum<false,true>
+	routine Withdraw( amount: int ) => enum<false,true>
 	{
 		if ( balance < amount ) return $false
 		balance -= amount
 		return $true
 	}
-	routine Deposit( amount : int ) => int
+	routine Deposit( amount: int ) => int
 	{
 		balance += amount
 		return balance
@@ -246,7 +260,7 @@ io.writeln( 'Balance in account1:', acount1.Balance().value() )
 io.writeln( 'Balance in account2:', acount2.Balance().value() )
 @[code]
 
-Like calling @[green]mt.start()@[green], calling a method on an asynchronous
+Like calling @[code]mt.start()@[code], calling a method on an asynchronous
 object will return a future value, which can be used to check the
 status of the asynchronous call.
 
@@ -271,30 +285,30 @@ Communication Channel
 
 @[text]
 
-Tasklets (represented by future values) created from @[green]mt::start@[green],
+Tasklets (represented by future values) created from @[code]mt::start@[code],
 asynchronous function call and the methods of asynchronous object 
 can be assigned to native threads to run concurrently.
 Tasklets can communicate and synchronize with each other using 
-@[green]communication channels@[green].
+@[code]communication channels@[code].
 
 
-The @[green]channel@[green] type is implemented as a customized C data type
+The @[code]channel@[code] type is implemented as a customized C data type
 that supports template-like type arguments. So to construct a channel that 
 can send and receive integers, one can use,
 @[code]
 chan = mt::channel<int>()
 @[code]
-Here @[magenta]channel@[magenta] is prefixed with @[magenta]mt::@[magenta],
-because @[green]channel@[green] is defined in the built-in @[green]mt@[green]
+Here @[code]channel@[code] is prefixed with @[code]mt::@[code],
+because @[code]channel@[code] is defined in the built-in @[code]mt@[code]
 multi-threading module.
 
 
-The type argument @[magenta]int@[magenta] indicates this channel can only
+The type argument @[code]int@[code] indicates this channel can only
 be used to transmit integers. Currently, only primitive types 
-(@[green]int@[green], @[green]float@[green], @[green]double@[green], 
-@[green]complex@[green], @[green]string@[green], @[green]enum@[green]) 
-plus @[green]array@[green] types, and their composition through 
-@[green]list@[green], @[green]map@[green] and @[green]tuple@[green] 
+(@[code]int@[code], @[code]float@[code], @[code]double@[code], 
+@[code]complex@[code], @[code]string@[code], @[code]enum@[code]) 
+plus @[code]array@[code] types, and their composition through 
+@[code]list@[code], @[code]map@[code] and @[code]tuple@[code] 
 types are supported for channels. 
 
 
@@ -309,45 +323,34 @@ an optional parameter, which is one by default.
 
 The channel type has a number of methods which include:
 @[list]
---@[code(dao)]buffer( self :channel<@V> ) => int@[code(dao)]
+--@[code]buffer( self: channel<@V> ) => int@[code]
 
 It returns the number of unprocessed data items in the channel buffer.
 
---@[code(dao)] cap( self :channel<@V> ) => int @[code(dao)]
+--@[code] cap( self: channel<@V> ) => int @[code]
 
 Return the channel capacity.
 
---@[code(dao)] cap( self :channel<@V>, cap :int ) => int @[code(dao)]
+--@[code] cap( self: channel<@V>, cap: int ) => int @[code]
 
 Set the channel capacity and returns the previous one. Set the capacity to zero to prevent it from receiving further data, and effectively close it when its buffer become empty.
 
---@[code(dao)] send( self :channel<@V>, data :@V, timeout :float = -1 ) => int @[code(dao)]
+--@[code] send( self: channel<@V>, data: @V, timeout: float = -1 ) => int @[code]
 
 Send a data item with a timeout. A negative timeout parameter means infinite waiting. It return 1 upon timeout, 0 otherwise.
 
---@[code(dao)] receive( self :channel<@V>, timeout :float = -1 ) => tuple<data :@V|none, status :enum<received,timeout,finished>> @[code(dao)]
+--@[code] receive( self: channel<@V>, timeout: float = -1 ) => tuple<data: @V|none, status: enum<received,timeout,finished>> @[code]
 
 Receive a data item with a timeout. A negative timeout parameter means infinite waiting. It returns a tuple with the following possible values:
  @[list(sub)]
- -- (data, $received);
- -- (none, $timeout);
- -- (none, $finished);
+ -- @[code](data, $received)@[code];
+ -- @[code](none, $timeout)@[code];
+ -- @[code](none, $finished)@[code];
  @[list(sub)] 
-
---@[code(dao)] select( group :list<@T>, timeout = -1.0 ) => tuple<selected: none|@T, value :any, status :enum<selected,timeout,finished>> @[code(dao)]
-
-Select on a group of channels, wait with a timeout for data become available from any of the channels. It returns a tuple with the following possible values:
- @[list(sub)]
- -- (channel, data, $selected);
- -- (none, none, $timeout);
- -- (none, none, $finished);
- @[list(sub)] 
-As the signature indicates, this is a static method.
-
 @[list]
 
 Here is a simple example, where integers are sent through one channel and strings through another, and these integers and strings are received using the select method:
-@[code(dao)]
+@[code]
 load sys
 
 chans = { mt::channel<int>(1), mt::channel<string>(1) }
@@ -370,10 +373,10 @@ mt.start {
 }
 
 while( 1 ){
-    data = mt::channel::select( chans, 0.2 )
+    data = mt::select( chans, 0.2 )
     io.writeln( "received:", data );
     if( data.status == $finished ) break
 }
-@[code(dao)]
+@[code]
 
 @[text]
