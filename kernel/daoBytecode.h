@@ -171,11 +171,14 @@
 // type of a value:
 // ASM_TYPEOF(1B): Value-Index(2B), Zeros(6B);
 //
-// const/invar type:
-// ASM_TYPEINVAR(1B): Type-Index(2B), SubType(2B), Zeros(4B);
+// const/invar/var type:
+// ASM_AUXTYPE(1B): Type-Index(2B), SubType(2B), Zeros(4B);
 //
 // type alias:
 // ASM_TYPEDEF(1B): Name-Index(2B), Type-Index(2B), Zeros(4B);
+//
+// namespace:
+// ASM_NAMESPACE(1B): Name/Def-Index(2B), ScopeNS-Index(2B), Zeros(4B);
 //
 //
 //#########
@@ -270,6 +273,9 @@
 // load statement:
 // ASM_LOAD(1B): File-Path-Index(2B), Optional-Name-Index(2B), Zeros(4B);
 //
+// export to namespace:
+// ASM_EXPORT(1B): NS-Index(2B), Name-Index(2B), Name-Index(2B), Name-Index(2B);
+//
 // import from namespace/module:
 // ASM_IMPORT(1B): Mod-Index(2B), Name-Index(2B), Scope(2B), Offset(2B);
 //
@@ -320,7 +326,8 @@ enum DaoAuxOpcode
 	DAO_ASM_COPY      ,
 	DAO_ASM_TYPEOF    ,
 	DAO_ASM_TYPEDEF   ,
-	DAO_ASM_TYPEINVAR ,
+	DAO_ASM_AUXTYPE ,
+	DAO_ASM_NAMESPACE ,
 	DAO_ASM_ROUTINE   ,
 	DAO_ASM_CLASS     ,
 	DAO_ASM_INTERFACE ,
@@ -335,6 +342,7 @@ enum DaoAuxOpcode
 	DAO_ASM_TYPES     ,
 	DAO_ASM_CODE      ,
 	DAO_ASM_END       ,
+	DAO_ASM_EXPORT    ,
 	DAO_ASM_IMPORT    ,
 	DAO_ASM_VERBATIM  ,
 	DAO_ASM_CONST     ,
@@ -422,6 +430,7 @@ DaoByteBlock* DaoByteBlock_NewBlock( DaoByteBlock *self, int type );
 DaoByteBlock* DaoByteBlock_FindObjectBlock( DaoByteBlock *self, DaoValue *value );
 DaoByteBlock* DaoByteBlock_AddBlock( DaoByteBlock *self, DaoValue *value, int type );
 
+DaoByteBlock* DaoByteBlock_AddNamespace( DaoByteBlock *self, DaoNamespace *ns, DString *name, DaoNamespace *defOrScope );
 DaoByteBlock* DaoByteBlock_AddRoutineBlock( DaoByteBlock *self, DaoRoutine *routine, int pm );
 DaoByteBlock* DaoByteBlock_AddClassBlock( DaoByteBlock *self, DaoClass *klass, int pm );
 DaoByteBlock* DaoByteBlock_AddInterfaceBlock( DaoByteBlock *self, DaoInterface *inter, int pm );
@@ -440,6 +449,7 @@ DaoByteBlock* DaoByteBlock_EncodeCtype( DaoByteBlock *self, DaoCtype *ctype, Dao
 DaoByteBlock* DaoByteBlock_EncodeTypeAlias( DaoByteBlock *self, DaoType *type, DaoType *aliased, DString *alias );
 DaoByteBlock* DaoByteBlock_EncodeTypeOf( DaoByteBlock *self, DaoType *type, DaoValue *value );
 DaoByteBlock* DaoByteBlock_EncodeLoad( DaoByteBlock *self, DaoNamespace *mod, DString *modname, DString *asname );
+DaoByteBlock* DaoByteBlock_EncodeExport( DaoByteBlock *self, DaoNamespace *ns, DString *names[3] );
 DaoByteBlock* DaoByteBlock_EncodeImport( DaoByteBlock *self, DaoValue *mod, DString *name, int scope, int index );
 DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *target );
 DaoByteBlock* DaoByteBlock_EncodeVerbatim( DaoByteBlock *self, DString *tag, DString *mode, DString *text, int line );

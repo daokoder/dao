@@ -4611,7 +4611,7 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	DaoNamespace *NS = self->nameSpace;
 	DaoRoutine *routine = self->routine;
 	const int tokCount = self->tokens->size;
-	int i, j, id, np, offset = 0, defLine = routine->defLine;
+	int i, j, k, id, np, offset = 0, defLine = routine->defLine;
 
 	GC_Assign( & routine->nameSpace, NS );
 	self->returnType = (DaoType*) routine->routType->aux;
@@ -4656,18 +4656,24 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	if( self->errors->size ) return 0;
 	if( self->nsDefines && self->nsDefines->size ){
 		for(i=0; i<self->nsDefines->size; i+=3){
+			DString *names[3] = {NULL, NULL, NULL};
 			DaoNamespace *defns = self->nsDefines->items.pNS[i];
 			int start = self->nsDefines->items.pInt[i+1];
 			int end = self->nsDefines->items.pInt[i+2];
-			for(j=start; j<end; ++j){
+			for(j=start,k=0; j<end; ++j){
 				DaoToken *token = self->nsSymbols->tokens->items.pToken[j];
-				DNode *it1 = DMap_Find( NS->lookupTable, & token->string );
-				DNode *it2 = DMap_Find( defns->lookupTable, & token->string );
-				int st = LOOKUP_ST( it1->value.pInt );
-				int id = LOOKUP_ID( it1->value.pInt );
-				int lookup, count = 0;
+				DString *symbol = & token->string;
+				DNode *it1 = DMap_Find( NS->lookupTable, symbol );
+				DNode *it2 = DMap_Find( defns->lookupTable, symbol );
+				int st, id, lookup, count = 0;
 				self->curLine = token->line;
-				if( it1 == NULL || it2 != NULL ) return 0;
+				if( it1 == NULL || it2 != NULL ){
+					if( it1 == NULL ) DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, symbol );
+					if( it2 != NULL ) DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, symbol );
+					return 0;
+				}
+				st = LOOKUP_ST( it1->value.pInt );
+				id = LOOKUP_ID( it1->value.pInt );
 				if( st == DAO_GLOBAL_CONSTANT ){
 					count = defns->constants->size;
 					DArray_Append( defns->constants, NS->constants->items.pVoid[id] );
@@ -4676,8 +4682,15 @@ int DaoParser_ParseRoutine( DaoParser *self )
 					DArray_Append( defns->variables, NS->variables->items.pVoid[id] );
 				}
 				lookup = LOOKUP_BIND( st, DAO_PERM_PUBLIC, 0, count );
-				MAP_Insert( defns->lookupTable, & token->string, lookup );
-				printf( "here: %s %s\n", defns->name->chars, token->string.chars );
+				MAP_Insert( defns->lookupTable, symbol, lookup );
+				if( self->byteBlock ){
+					names[k++] = symbol;
+					if( k == 3 || (j+1) == end ){
+						DaoByteBlock_EncodeExport( self->byteBlock, defns, names );
+						names[0] = names[1] = names[2] = NULL;
+						k = 0;
+					}
+				}
 			}
 		}
 	}
@@ -4993,6 +5006,8 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	DString_Clear( self->string );
 
 	if( i > end ) goto ErrorLoad;
+	if( (self->levelBase + self->lexLevel) != 0 ) goto ErrorLoad;
+
 	tki = tokens[i]->name;
 	if( tki == DTOK_MBS || tki == DTOK_WCS ){
 		DString_SubString( & tokens[i]->string, self->string, 1, tokens[i]->string.size-2 );
@@ -5226,24 +5241,20 @@ int DaoParser_ParseNamespaceStatement( DaoParser *self, int start, int end )
 		if( tok != DTOK_IDENTIFIER && tok < DKEY_ABS ) goto InvalidNamespace;
 		if( scope && scope->type != DAO_NAMESPACE ) goto InvalidNamespace;
 
-		self->permission = DAO_PERM_PUBLIC;
 		defNS = DaoNamespace_New( NS->vmSpace, name->chars );
 		value = (DaoValue*) defNS;
 		if( scope ){
 			DaoNamespace_AddConst( (DaoNamespace*) scope, name, value, DAO_PERM_PUBLIC );
 		}else{
-			DaoParser_AddToScope( self, name, value, NULL, 0 );
+			DaoNamespace_AddConst( NS, name, value, DAO_PERM_PUBLIC );
 		}
-		self->permission = perm;
-
 		if( self->byteBlock ){
-#warning"namespace"
-			//int pm = self->permission;
-			//DaoByteBlock_AddClassBlock( self->byteBlock, klass, pm );
+			DaoByteBlock_AddNamespace( self->byteBlock, defNS, name, (DaoNamespace*) scope );
 		}
 	}else{
 		if( value->type != DAO_NAMESPACE ) goto InvalidNamespace;
 		defNS = (DaoNamespace*) value;
+		if( self->byteBlock ) DaoByteBlock_AddNamespace( self->byteBlock, defNS, NULL, defNS );
 	}
 	if( tokens[++start]->type != DTOK_LCB ) goto InvalidNamespace;
 	rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
@@ -5263,11 +5274,6 @@ int DaoParser_ParseNamespaceStatement( DaoParser *self, int start, int end )
 			goto InvalidNamespace;
 		}
 		DaoLexer_AppendToken( self->nsSymbols, tokens[start] );
-		if( self->byteBlock ){
-			//DString *name = & tokens[i]->string;
-			//id = LOOKUP_ID( id );
-			//DaoByteBlock_EncodeImport( self->byteBlock, (DaoValue*)mod, name, level, id );
-		}
 		if( tokens[start+1]->name == DTOK_RCB ) break;
 		if( tokens[start+1]->name != DTOK_COMMA || (start+2) > rb ) goto InvalidNamespace;
 		start += 2;
