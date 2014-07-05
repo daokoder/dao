@@ -130,8 +130,8 @@ struct DaoChannel
 {
 	DAO_CSTRUCT_COMMON;
 
-	daoint       cap;     /* capacity limit of the channel; */
-	DArray      *buffer;  /* DArray<DaoValue*>; */
+	daoint   cap;     /* capacity limit of the channel; */
+	DList   *buffer;  /* DList<DaoValue*>; */
 };
 
 

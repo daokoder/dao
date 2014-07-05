@@ -32,7 +32,7 @@
 #include"daoBase.h"
 #include"daoConst.h"
 #include"daoString.h"
-#include"daoArray.h"
+#include"daoList.h"
 #include"daoMap.h"
 #include"daoType.h"
 
@@ -43,17 +43,17 @@ struct DaoNamespace
 
 	DaoVmSpace *vmSpace;
 
-	DMap    *lookupTable; /* <DString*,size_t> */
-	DArray  *namespaces;  /* <DaoNamespace*> */
-	DArray  *constants;   /* <DaoConstant*>, global constants; */
-	DArray  *variables;   /* <DaoVariable*>, global variables; */
-	DArray  *auxData;     /* mainly for GC */
+	DMap   *lookupTable; /* <DString*,size_t> */
+	DList  *namespaces;  /* <DaoNamespace*> */
+	DList  *constants;   /* <DaoConstant*>, global constants; */
+	DList  *variables;   /* <DaoVariable*>, global variables; */
+	DList  *auxData;     /* mainly for GC */
 
 	DaoRoutine *mainRoutine;
 	DaoList    *argParams;
 
-	DArray *mainRoutines; /* stdlib.eval() */
-	DArray *definedRoutines; /* for DaoStudio IDE */
+	DList *mainRoutines; /* stdlib.eval() */
+	DList *definedRoutines; /* for DaoStudio IDE */
 
 	void  *libHandle;
 	int    cstUser;
@@ -63,14 +63,14 @@ struct DaoNamespace
 	DMap   *globalMacros; /* <DString*,DaoMacro*> */
 	DMap   *abstypes;     /* <DString*,DaoType*> */
 	DMap   *codeInliners; /* <DString*,DaoCodeInliner> */
-	DArray *tokenFilters; /* <DaoTokenFilter> */
+	DList  *tokenFilters; /* <DaoTokenFilter> */
 
 	DString  *file;
 	DString  *path;
 	DString  *name; /* path + file */
 	DString  *lang;
 	DString  *inputs; /* interactive inputs (load statements and some definitions) */
-	DArray   *sources;
+	DList    *sources;
 	size_t    time;
 
 	DaoProcess  *constEvalProcess;

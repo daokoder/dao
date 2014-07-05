@@ -84,10 +84,10 @@ enum DaoContainerDataTypes
 	DAO_DATA_VALUE3 ,  /* same as DAO_DATA_VALUE2,except more strict comparing as map keys; */
 	DAO_DATA_VMCODE ,
 	DAO_DATA_VMCODE2 , /* for DMap, compare code and operands only; */
-	DAO_DATA_TOKEN ,   /* for DArray only; */
+	DAO_DATA_TOKEN ,   /* for DList only; */
 	DAO_DATA_STRING ,
 	DAO_DATA_VECTOR ,
-	DAO_DATA_ARRAY ,
+	DAO_DATA_LIST ,
 	DAO_DATA_MAP ,
 	DAO_DATA_VOID2 /* a pair of pointer; */
 };

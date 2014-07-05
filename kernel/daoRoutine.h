@@ -89,8 +89,8 @@ DAO_DLL void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int copy
 DAO_DLL void DaoRoutine_Delete( DaoRoutine *self );
 DAO_DLL int  DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value );
 
-DAO_DLL int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes );
-DAO_DLL void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns );
+DAO_DLL int DaoRoutine_SetVmCodes( DaoRoutine *self, DList *vmCodes );
+DAO_DLL void DaoRoutine_SetSource( DaoRoutine *self, DList *tokens, DaoNamespace *ns );
 
 DAO_DLL void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output );
 DAO_DLL void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );
@@ -104,21 +104,21 @@ struct DaoRoutineBody
 	DAO_VALUE_COMMON;
 
 	/* virtual machine codes: */
-	DVector *vmCodes;
+	DArray *vmCodes;
 
 	/* data type for local registers: */
-	DArray *regType;   /* DArray<DaoType*> */
-	DArray *upValues;  /* DArray<DaoVariable*> */
+	DList *regType;   /* DList<DaoType*> */
+	DList *upValues;  /* DList<DaoVariable*> */
 
 	/* VM codes with annotations */
-	DArray *annotCodes; /* DArray<DaoVmCodeX*> */
+	DList *annotCodes; /* DList<DaoVmCodeX*> */
 
 	/* definition of local constants and variables: */
-	DArray *defLocals; /* DArray<DaoToken*> */
-	DArray *source; /* DArray<DaoToken*> */
-	DArray *decoTargets;
+	DList *defLocals; /* DList<DaoToken*> */
+	DList *source; /* DList<DaoToken*> */
+	DList *decoTargets;
 
-	DArray *simpleVariables;
+	DList *simpleVariables;
 	DMap   *localVarType;  /* DMap<int,DaoType*> local variable types */
 
 	ushort_t  regCount;
@@ -172,9 +172,9 @@ struct DRoutines
 	unsigned int   attribs;
 	DParamNode    *tree;
 	DParamNode    *mtree;    /* for routines with self parameter */
-	DArray        *routines; /* list of overloaded routines on both trees */
-	DArray        *array;    /* list of all added routines (may not be on the trees) */
-	DArray        *array2;
+	DList        *routines; /* list of overloaded routines on both trees */
+	DList        *array;    /* list of all added routines (may not be on the trees) */
+	DList        *array2;
 };
 
 DRoutines* DRoutines_New();

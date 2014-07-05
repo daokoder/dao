@@ -33,6 +33,10 @@
 
 #define HASH_SEED  0xda0
 
+#ifndef DAO_MAP_ITEM_TYPES
+#define DAO_MAP_ITEM_TYPES
+#endif
+
 typedef enum{ KEY_EQ=0, KEY_LE, KEY_GE } KeySearchType;
 
 typedef union
@@ -40,7 +44,7 @@ typedef union
 	daoint       pInt;
 	void        *pVoid;
 	DString     *pString;
-	DArray      *pArray;
+	DList      *pArray;
 	DMap        *pMap;
 	DaoValue    *pValue;
 	DaoInteger  *pInteger;
@@ -49,6 +53,7 @@ typedef union
 	DaoType     *pType;
 	DaoInode    *pInode;
 	DaoCnode    *pCnode;
+	DAO_MAP_ITEM_TYPES
 }DNodeData;
 
 struct DNode

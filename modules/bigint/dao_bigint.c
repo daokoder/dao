@@ -101,48 +101,48 @@ DAO_DLL daoint DaoxBigInt_NormCount( DaoxBigInt *self );
 
 struct DaoxBigIntBuffer
 {
-	DArray *coms;
-	DArray *ints;
+	DList *coms;
+	DList *ints;
 };
 static DaoxBigIntBuffer* DaoxBigIntBuffer_New()
 {
 	DaoxBigIntBuffer *self = (DaoxBigIntBuffer*) dao_malloc( sizeof(DaoxBigIntBuffer) );
-	self->coms = DArray_New(0);
-	self->ints = DArray_New(0);
+	self->coms = DList_New(0);
+	self->ints = DList_New(0);
 	return self;
 }
 static void DaoxBigIntBuffer_Delete( DaoxBigIntBuffer *self )
 {
 	int i;
 	for(i=0; i<self->coms->size; ++i){
-		DVector_Delete( (DVector*) self->coms->items.pVoid[i] );
+		DArray_Delete( (DArray*) self->coms->items.pVoid[i] );
 	}
 	for(i=0; i<self->ints->size; ++i){
 		DaoxBigInt_Delete( (DaoxBigInt*) self->ints->items.pVoid[i] );
 	}
-	DArray_Delete( self->coms );
-	DArray_Delete( self->ints );
+	DList_Delete( self->coms );
+	DList_Delete( self->ints );
 	dao_free( self );
 }
-static DVector* DaoxBigIntBuffer_NewVector( DaoxBigIntBuffer *self )
+static DArray* DaoxBigIntBuffer_NewVector( DaoxBigIntBuffer *self )
 {
-	DVector *vec;
-	if( self->coms->size ) return (DVector*) DArray_PopBack( self->coms );
-	return DVector_New( sizeof(complex16) );
+	DArray *vec;
+	if( self->coms->size ) return (DArray*) DList_PopBack( self->coms );
+	return DArray_New( sizeof(complex16) );
 }
 static DaoxBigInt* DaoxBigIntBuffer_NewBigInt( DaoxBigIntBuffer *self )
 {
 	DaoxBigInt *bigint;
-	if( self->ints->size ) return (DaoxBigInt*) DArray_PopBack( self->ints );
+	if( self->ints->size ) return (DaoxBigInt*) DList_PopBack( self->ints );
 	return DaoxBigInt_New();
 }
-static void DaoxBigIntBuffer_FreeVector( DaoxBigIntBuffer *self, DVector *vec )
+static void DaoxBigIntBuffer_FreeVector( DaoxBigIntBuffer *self, DArray *vec )
 {
-	DArray_Append( self->coms, vec );
+	DList_Append( self->coms, vec );
 }
 static void DaoxBigIntBuffer_FreeBigInt( DaoxBigIntBuffer *self, DaoxBigInt *bigint )
 {
-	DArray_Append( self->ints, bigint );
+	DList_Append( self->ints, bigint );
 }
 
 
@@ -633,8 +633,8 @@ static void LongZ1( DaoxBigInt *z1, DaoxBigInt *z0, DaoxBigInt *z2 )
 }
 static void DaoxBigInt_UMulFFT( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, DaoxBigIntBuffer *buffer )
 {
-	DVector *vx = DaoxBigIntBuffer_NewVector( buffer );
-	DVector *vy = DaoxBigIntBuffer_NewVector( buffer );
+	DArray *vx = DaoxBigIntBuffer_NewVector( buffer );
+	DArray *vy = DaoxBigIntBuffer_NewVector( buffer );
 	complex16 *cx, *cy;
 	uchar_t *dx = x->data;
 	uchar_t *dy = y->data;
@@ -646,7 +646,7 @@ static void DaoxBigInt_UMulFFT( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, Dao
 	int mc = 0;
 	while( (nc>>1) < max ) nc <<= 1, mc ++;
 	/* printf( "nc = %i, mc = %i, max = %i\n", nc, mc, max ); */
-	DVector_Reserve( vx, nc );
+	DArray_Reserve( vx, nc );
 	cx = cy = vx->data.complexes;
 	memset( cx, 0, nc*sizeof(complex16) );
 	for(i=0; i<nx; i++) cx[i].real = dx[i];
@@ -654,7 +654,7 @@ static void DaoxBigInt_UMulFFT( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, Dao
 	if( x == y ){
 		cy = cx;
 	}else{
-		DVector_Reserve( vy, nc );
+		DArray_Reserve( vy, nc );
 		cy = vy->data.complexes;
 		memset( cy, 0, nc*sizeof(complex16) );
 		for(i=0; i<ny; i++) cy[i].real = dy[i];

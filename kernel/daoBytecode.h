@@ -402,14 +402,14 @@ struct DaoByteCoder
 	DMap  *valueDataBlocks;   /* hash<DaoValue*,DaoByteBlock*>; Same data to same block; */
 	DMap  *valueObjectBlocks; /* hash<DaoValue*,DaoByteBlock*>; Same object to same block; */
 
-	DArray  *stack;    /* list<DaoByteBlock*> */
-	DArray  *caches;   /* list<DaoByteBlock*> */
-	DArray  *lines;    /* list<daoint> */
-	DArray  *iblocks;  /* list<DaoByteBlock*> */
-	DArray  *ivalues;  /* list<DaoValue*> */
-	DArray  *indices;  /* list<daoint> */
+	DList  *stack;    /* list<DaoByteBlock*> */
+	DList  *caches;   /* list<DaoByteBlock*> */
+	DList  *lines;    /* list<daoint> */
+	DList  *iblocks;  /* list<DaoByteBlock*> */
+	DList  *ivalues;  /* list<DaoValue*> */
+	DList  *indices;  /* list<daoint> */
 
-	DArray  *routines;
+	DList  *routines;
 
 	DaoNamespace  *nspace;
 	DaoVmSpace    *vmspace;
@@ -453,7 +453,7 @@ DaoByteBlock* DaoByteBlock_EncodeExport( DaoByteBlock *self, DaoNamespace *ns, D
 DaoByteBlock* DaoByteBlock_EncodeImport( DaoByteBlock *self, DaoValue *mod, DString *name, int scope, int index );
 DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *target );
 DaoByteBlock* DaoByteBlock_EncodeVerbatim( DaoByteBlock *self, DString *tag, DString *mode, DString *text, int line );
-DaoByteBlock* DaoByteBlock_EncodeDecorators( DaoByteBlock *self, DArray *decos, DArray *pars );
+DaoByteBlock* DaoByteBlock_EncodeDecorators( DaoByteBlock *self, DList *decos, DList *pars );
 
 DaoByteBlock* DaoByteBlock_DeclareConst( DaoByteBlock *self, DString *name, DaoValue *value, int perm );
 DaoByteBlock* DaoByteBlock_DeclareVar( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int perm );
@@ -472,7 +472,7 @@ DaoByteBlock* DaoByteBlock_EncodeList( DaoByteBlock *self, DaoList *value );
 DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value );
 
 void DaoByteBlock_EncodeValues( DaoByteBlock *self, DaoValue **values, int count );
-int DaoByteBlock_EncodeValues2( DaoByteBlock *self, DArray *values );
+int DaoByteBlock_EncodeValues2( DaoByteBlock *self, DList *values );
 void DaoByteBlock_AddBlockIndexData( DaoByteBlock *self, int head, int size );
 
 void DaoByteCoder_EncodeHeader( DaoByteCoder *self, const char *fname, DString *output );

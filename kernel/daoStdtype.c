@@ -944,7 +944,7 @@ static void DaoSTR_Split( DaoProcess *proc, DaoValue *p[], int N )
 			daoint pos = DString_LocateChar( self, i, 0 );
 			int w = pos == DAO_NULLPOS ? 1 : DString_UTF8CharSize( bytes[i] );
 			DString_SetBytes( str, (char*) bytes + i, w );
-			DArray_Append( list->value, value );
+			DList_Append( list->value, value );
 			i += w;
 		}
 		DaoString_Delete( (DaoString*) value );
@@ -952,13 +952,13 @@ static void DaoSTR_Split( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	while( posDelm != DAO_NULLPOS ){
 		DString_SubString( self, str, last, posDelm-last );
-		DArray_Append( list->value, value );
+		DList_Append( list->value, value );
 
 		last = posDelm + dlen;
 		posDelm = DString_Find( self, delm, last );
 	}
 	DString_SubString( self, str, last, size-last );
-	DArray_Append( list->value, value );
+	DList_Append( list->value, value );
 	DaoString_Delete( (DaoString*) value );
 }
 static void DaoSTR_Fetch( DaoProcess *proc, DaoValue *p[], int N )
@@ -1049,7 +1049,7 @@ static void DaoSTR_Capture( DaoProcess *proc, DaoValue *p[], int N )
 		if( DaoRegex_SubMatch( patt, gid, & start, & end ) ){
 			DString_SubString( self, subs->value, start, end-start+1 );
 		}
-		DArray_Append( list->value, (DaoValue*) subs );
+		DList_Append( list->value, (DaoValue*) subs );
 	}
 	DaoString_Delete( subs );
 }
@@ -1481,18 +1481,18 @@ static void DaoListCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *p
 	case IDX_FROM :
 		res = DaoProcess_PutList( proc );
 		if( start >= self->value->size ) break;
-		DArray_Resize( res->value, self->value->size - start, NULL );
+		DList_Resize( res->value, self->value->size - start, NULL );
 		for(i=start,n=self->value->size; i<n; i++)
 			DaoList_SetItem( res, self->value->items.pValue[i], i-start );
 		break;
 	case IDX_TO :
 		res = DaoProcess_PutList( proc );
-		DArray_Resize( res->value, end +1, NULL );
+		DList_Resize( res->value, end +1, NULL );
 		for(i=0; i<=end; i++) DaoList_SetItem( res, self->value->items.pValue[i], i );
 		break;
 	case IDX_PAIR :
 		res = DaoProcess_PutList( proc );
-		DArray_Resize( res->value, end - start + 1, NULL );
+		DList_Resize( res->value, end - start + 1, NULL );
 		for(i=start; i<=end; i++) DaoList_SetItem( res, self->value->items.pValue[i], i-start );
 		break;
 	case IDX_ALL :
@@ -1622,7 +1622,7 @@ static void DaoLIST_Erase( DaoProcess *proc, DaoValue *p[], int N )
 	daoint start = p[1]->xInteger.value;
 	daoint n = p[2]->xInteger.value;
 	DaoProcess_PutValue( proc, p[0] );
-	DArray_Erase( self->value, start, n );
+	DList_Erase( self->value, start, n );
 }
 static void DaoLIST_Clear( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1641,7 +1641,7 @@ static void DaoLIST_Resize( DaoProcess *proc, DaoValue *p[], int N )
 	daoint size = p[1]->xInteger.value;
 	if( self->ctype && self->ctype->nested->size )
 		fill = self->ctype->nested->items.pType[0]->value;
-	DArray_Resize( self->value, size, fill );
+	DList_Resize( self->value, size, fill );
 }
 static void DaoLIST_Resize2( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -1657,7 +1657,7 @@ static void DaoLIST_Resize2( DaoProcess *proc, DaoValue *p[], int N )
 		fill->xBase.trait |= DAO_VALUE_CONST; /* force copying; */
 		DaoGC_IncRC( fill );
 	}
-	DArray_Resize( self->value, size, fill );
+	DList_Resize( self->value, size, fill );
 	if( fill != p[1] ) DaoGC_DecRC( fill );
 }
 static int DaoList_CheckType( DaoList *self, DaoProcess *proc )
@@ -2434,7 +2434,7 @@ int DaoList_Insert( DaoList *self, DaoValue *item, daoint pos )
 		GC_DecRC( temp );
 		return 1;
 	}
-	DArray_Insert( self->value, NULL, pos );
+	DList_Insert( self->value, NULL, pos );
 	self->value->items.pValue[ pos ] = temp;
 	return 0;
 }
@@ -2446,7 +2446,7 @@ int DaoList_PushFront( DaoList *self, DaoValue *item )
 		GC_DecRC( temp );
 		return 1;
 	}
-	DArray_PushFront( self->value, NULL );
+	DList_PushFront( self->value, NULL );
 	self->value->items.pValue[ 0 ] = temp;
 	return 0;
 }
@@ -2458,19 +2458,19 @@ int DaoList_PushBack( DaoList *self, DaoValue *item )
 		GC_DecRC( temp );
 		return 1;
 	}
-	DArray_PushBack( self->value, NULL );
+	DList_PushBack( self->value, NULL );
 	self->value->items.pValue[ self->value->size - 1 ] = temp;
 	return 0;
 }
 void DaoList_PopFront( DaoList *self )
 {
 	if( self->value->size ==0 ) return;
-	DArray_PopFront( self->value );
+	DList_PopFront( self->value );
 }
 void DaoList_PopBack( DaoList *self )
 {
 	if( self->value->size ==0 ) return;
-	DArray_PopBack( self->value );
+	DList_PopBack( self->value );
 }
 
 DaoTypeBase listTyper=
@@ -2483,7 +2483,7 @@ DaoList* DaoList_New()
 {
 	DaoList *self = (DaoList*) dao_calloc( 1, sizeof(DaoList) );
 	DaoValue_Init( self, DAO_LIST );
-	self->value = DArray_New( DAO_DATA_VALUE );
+	self->value = DList_New( DAO_DATA_VALUE );
 	self->value->type = DAO_DATA_VALUE;
 	self->ctype = NULL;
 #ifdef DAO_USE_GC_LOGGER
@@ -2498,12 +2498,12 @@ void DaoList_Delete( DaoList *self )
 #endif
 	GC_DecRC( self->ctype );
 	DaoList_Clear( self );
-	DArray_Delete( self->value );
+	DList_Delete( self->value );
 	dao_free( self );
 }
 void DaoList_Clear( DaoList *self )
 {
-	DArray_Clear( self->value );
+	DList_Clear( self->value );
 }
 int DaoList_Append( DaoList *self, DaoValue *value )
 {
@@ -2512,7 +2512,7 @@ int DaoList_Append( DaoList *self, DaoValue *value )
 void DaoList_Erase( DaoList *self, daoint pos )
 {
 	if( pos >= self->value->size ) return;
-	DArray_Erase( self->value, pos, 1 );
+	DList_Erase( self->value, pos, 1 );
 }
 DaoList* DaoList_Copy( DaoList *self, DaoType *type )
 {
@@ -2521,7 +2521,7 @@ DaoList* DaoList_Copy( DaoList *self, DaoType *type )
 	/* no detailed checking of type matching, must be ensured by caller */
 	copy->ctype = (type && type->tid == DAO_LIST) ? type : self->ctype;
 	GC_IncRC( copy->ctype );
-	DArray_Resize( copy->value, self->value->size, NULL );
+	DList_Resize( copy->value, self->value->size, NULL );
 	for(i=0; i<self->value->size; i++)
 		DaoList_SetItem( copy, self->value->items.pValue[i], i );
 	return copy;
@@ -2724,7 +2724,7 @@ static void DaoMAP_Erase( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DMap *self = p[0]->xMap.value;
 	DNode *ml, *mg;
-	DArray *keys;
+	DList *keys;
 	DaoProcess_PutValue( proc, p[0] );
 	N --;
 	switch( N ){
@@ -2738,13 +2738,13 @@ static void DaoMAP_Erase( DaoProcess *proc, DaoValue *p[], int N )
 		ml = MAP_FindLE( self, p[2] );
 		if( mg ==NULL || ml ==NULL ) return;
 		ml = DMap_Next( self, ml );
-		keys = DArray_New(0);
-		for(; mg != ml; mg=DMap_Next(self, mg)) DArray_Append( keys, mg->key.pVoid );
+		keys = DList_New(0);
+		for(; mg != ml; mg=DMap_Next(self, mg)) DList_Append( keys, mg->key.pVoid );
 		while( keys->size ){
 			MAP_Erase( self, keys->items.pVoid[0] );
-			DArray_PopFront( keys );
+			DList_PopFront( keys );
 		}
-		DArray_Delete( keys );
+		DList_Delete( keys );
 		break;
 	default : break;
 	}
@@ -3695,10 +3695,10 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer )
 			printf( "parent type is not wrapped (successfully): %s\n", typer->name );
 			return NULL;
 		}
-		if( ctype_type->bases == NULL ) ctype_type->bases = DArray_New( DAO_DATA_VALUE );
-		if( cdata_type->bases == NULL ) cdata_type->bases = DArray_New( DAO_DATA_VALUE );
-		DArray_Append( ctype_type->bases, sup->core->kernel->abtype->aux->xCdata.ctype );
-		DArray_Append( cdata_type->bases, sup->core->kernel->abtype );
+		if( ctype_type->bases == NULL ) ctype_type->bases = DList_New( DAO_DATA_VALUE );
+		if( cdata_type->bases == NULL ) cdata_type->bases = DList_New( DAO_DATA_VALUE );
+		DList_Append( ctype_type->bases, sup->core->kernel->abtype->aux->xCdata.ctype );
+		DList_Append( cdata_type->bases, sup->core->kernel->abtype );
 	}
 	return cdata_type;
 }
@@ -3709,8 +3709,8 @@ DaoException* DaoException_New( DaoType *type )
 {
 	DaoException *self = (DaoException*) dao_malloc( sizeof(DaoException) );
 	DaoCstruct_Init( (DaoCstruct*)self, type );
-	self->callers = DArray_New( DAO_DATA_VALUE );
-	self->lines = DArray_New(0);
+	self->callers = DList_New( DAO_DATA_VALUE );
+	self->lines = DList_New(0);
 	self->info = DString_New();
 	self->data = NULL;
 	return self;
@@ -3720,19 +3720,19 @@ void DaoException_Delete( DaoException *self )
 	DaoCstruct_Free( (DaoCstruct*)self );
 	GC_DecRC( self->data );
 	DString_Delete( self->info );
-	DArray_Delete( self->callers );
-	DArray_Delete( self->lines );
+	DList_Delete( self->callers );
+	DList_Delete( self->lines );
 	dao_free( self );
 }
 void DaoException_SetData( DaoException *self, DaoValue *data )
 {
 	DaoValue_Move( data, & self->data, NULL );
 }
-void DaoException_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *maps, int remove )
+void DaoException_GetGCFields( void *p, DList *values, DList *arrays, DList *maps, int remove )
 {
 	DaoException *self = (DaoException*) p;
-	if( self->data ) DArray_Append( values, self->data );
-	if( self->callers->size ) DArray_Append( arrays, self->callers );
+	if( self->data ) DList_Append( values, self->data );
+	if( self->callers->size ) DList_Append( arrays, self->callers );
 	if( remove ) self->data = NULL;
 }
 
@@ -3899,18 +3899,18 @@ void DaoException_Init( DaoException *self, DaoProcess *proc, const char *summar
 	if( summary && summary[0] != 0 ) DString_SetChars( self->info, summary );
 	GC_Assign( & self->data, dat );
 
-	DArray_Clear( self->callers );
-	DArray_Clear( self->lines );
-	DArray_Append( self->callers, proc->topFrame->routine );
-	DArray_Append( self->lines, (daoint) (line<<16)|id );
+	DList_Clear( self->callers );
+	DList_Clear( self->lines );
+	DList_Append( self->callers, proc->topFrame->routine );
+	DList_Append( self->lines, (daoint) (line<<16)|id );
 	while( frame && frame->routine ){
 		DaoRoutineBody *body = frame->routine->body;
 		if( self->callers->size >= 5 ) break;
 		if( frame->entry ){
 			/* deferred anonymous function may have been pushed but not executed: */
 			line = body ? body->annotCodes->items.pVmc[ frame->entry - 1 ]->line : 0;
-			DArray_Append( self->callers, frame->routine );
-			DArray_Append( self->lines, (daoint) (line<<16)|(frame->entry - 1) );
+			DList_Append( self->callers, frame->routine );
+			DList_Append( self->lines, (daoint) (line<<16)|(frame->entry - 1) );
 		}
 		frame = frame->prev;
 	}

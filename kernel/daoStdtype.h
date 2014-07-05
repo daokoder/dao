@@ -32,7 +32,7 @@
 #include"daoConst.h"
 #include"daoBase.h"
 #include"daoString.h"
-#include"daoArray.h"
+#include"daoList.h"
 #include"daoMap.h"
 
 #define DAO_VALUE_CORE      uchar_t type, subtype, trait, marks; int refCount
@@ -119,7 +119,7 @@ struct DaoList
 {
 	DAO_GENERIC_COMMON;
 
-	DArray  *value;
+	DList  *value;
 };
 
 DAO_DLL DaoList* DaoList_New();
@@ -240,8 +240,8 @@ struct DaoException
 {
 	DAO_CSTRUCT_COMMON;
 
-	DArray     *callers;
-	DArray     *lines;
+	DList     *callers;
+	DList     *lines;
 	DString    *info;
 	DaoValue   *data;
 };

@@ -130,8 +130,8 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->vmSpace = vms;
 	self->status = DAO_PROCESS_SUSPENDED;
-	self->exceptions = DArray_New( DAO_DATA_VALUE );
-	self->defers = DArray_New( DAO_DATA_VALUE );
+	self->exceptions = DList_New( DAO_DATA_VALUE );
+	self->defers = DList_New( DAO_DATA_VALUE );
 
 	self->firstFrame = self->baseFrame = self->topFrame = DaoStackFrame_New();
 	self->firstFrame->active = self->firstFrame;
@@ -141,7 +141,7 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->stackSize = self->stackTop = 1 + DAO_MAX_PARAM;
 	self->stackValues = (DaoValue**)dao_calloc( self->stackSize, sizeof(DaoValue*) );
 	self->paramValues = self->stackValues + 1;
-	self->factory = DArray_New( DAO_DATA_VALUE );
+	self->factory = DList_New( DAO_DATA_VALUE );
 
 	self->mbstring = DString_New();
 	self->pauseType = 0;
@@ -170,10 +170,10 @@ void DaoProcess_Delete( DaoProcess *self )
 	if( self->stackValues ) dao_free( self->stackValues );
 
 	DString_Delete( self->mbstring );
-	DArray_Delete( self->exceptions );
-	DArray_Delete( self->defers );
+	DList_Delete( self->exceptions );
+	DList_Delete( self->defers );
 	if( self->future ) GC_DecRC( self->future );
-	if( self->factory ) DArray_Delete( self->factory );
+	if( self->factory ) DList_Delete( self->factory );
 	if( self->aux ) DaoAux_Delete( self->aux );
 	dao_free( self );
 }
@@ -275,7 +275,7 @@ void DaoProcess_PopFrame( DaoProcess *self )
 		if( self->topFrame ) DaoProcess_SetActiveFrame( self, self->topFrame->active );
 		return;
 	}
-	if( att & DAO_ROUT_DEFER ) DArray_PopBack( self->defers );
+	if( att & DAO_ROUT_DEFER ) DList_PopBack( self->defers );
 	self->status = DAO_PROCESS_RUNNING;
 	self->stackTop = self->topFrame->stackBase;
 	self->topFrame = self->topFrame->prev;
@@ -738,7 +738,7 @@ void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[],
 	self->returned = 0xffff;
 	func->pFunc( self, p, n );
 	if( ret && self->returned == 0xffff ) DaoProcess_SetValue( self, opc, dao_none_value );
-	if( self->factory->size > m ) DArray_Erase( self->factory, m, -1 );
+	if( self->factory->size > m ) DList_Erase( self->factory, m, -1 );
 	self->returned = cur;
 }
 DaoValue* DaoProcess_GetReturned( DaoProcess *self )
@@ -775,7 +775,7 @@ static int DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
 					}
 				}
 				if( param ){
-					DArray_Erase( self->exceptions, j, 1 );
+					DList_Erase( self->exceptions, j, 1 );
 					break;
 				}
 			}
@@ -783,13 +783,13 @@ static int DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
 		}
 		self->parCount = param != NULL;
 		if( param ) DaoValue_Copy( param, self->paramValues );
-		DArray_Append( self->defers, closure );
+		DList_Append( self->defers, closure );
 		DaoProcess_PushRoutine( self, closure, NULL );
 		self->topFrame->deferBase -= deferCount;
 		self->topFrame->returning = -1;
 		self->topFrame->host = frame;
 	}
-	DArray_Erase( self->defers, frame->deferBase, deferCount );
+	DList_Erase( self->defers, frame->deferBase, deferCount );
 	for(f=self->topFrame; f!=frame; f=f->prev) f->exceptBase = self->exceptions->size;
 	return self->topFrame != frame;
 }
@@ -815,7 +815,6 @@ static daoint DaoArray_ComputeIndex( DaoArray *self, DaoValue *ivalues[], int co
 #define LocalDouble( i )  locVars[i]->xDouble.value
 #define LocalComplex( i ) locVars[i]->xComplex.value
 
-#define ArrayArrayValue( array, up, id ) array->items.pArray[ up ]->items.pValue[ id ]
 
 static int DaoProcess_Move( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t );
 static void DaoProcess_AdjustCodes( DaoProcess *self, int options );
@@ -852,11 +851,11 @@ int DaoProcess_Start( DaoProcess *self )
 	DaoObject *othis = NULL;
 	DaoObject *object = NULL;
 	DaoArray *array;
-	DArray   *typeVO = NULL;
-	DArray   *glbVars = NULL;
-	DArray   *clsVars = NULL;
-	DArray   *glbConsts = NULL;
-	DArray   *clsConsts = NULL;
+	DList   *typeVO = NULL;
+	DList   *glbVars = NULL;
+	DList   *clsVars = NULL;
+	DList   *glbConsts = NULL;
+	DList   *clsConsts = NULL;
 	DaoProcess *dataVH[DAO_MAX_SECTDEPTH+1] = {0};
 	DaoVariable *variable = NULL;
 	DaoVariable **upValues = NULL;
@@ -2358,7 +2357,7 @@ CallNotPermitted:
 FinishProcess:
 
 	if( vmSpace->stopit ){
-		DArray_Clear( self->exceptions );
+		DList_Clear( self->exceptions );
 		DaoProcess_RaiseError( self, NULL, "Execution cancelled" );
 	}
 	if( self->exceptions->size ) DaoProcess_PrintException( self, NULL, 1 );
@@ -2808,7 +2807,7 @@ DaoTuple* DaoProcess_PutTuple( DaoProcess *self, int size )
 	if( size > 0 ) return tuple;
 	if( M < size ) return NULL;
 	for(i=0; i<N; i++) DaoTuple_SetItem( tuple, values[M-N+i], i );
-	DArray_Erase( self->factory, M - size, -1 );
+	DList_Erase( self->factory, M - size, -1 );
 	return tuple;
 }
 DaoType* DaoProcess_GetReturnType( DaoProcess *self )
@@ -2936,7 +2935,7 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 			}else{
 				DString_Append( ct->name, tp->name );
 			}
-			DArray_Append( ct->nested, tp );
+			DList_Append( ct->nested, tp );
 			DaoTuple_SetItem( tuple, val, i );
 		}
 		DString_AppendChars( ct->name, ">" );
@@ -3787,7 +3786,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 	int callmode = code | (vmc->b<<16);
 	DaoStackFrame *topFrame = self->topFrame;
 	DaoRoutine *rout, *rout2;
-	DArray *array, *bindings;
+	DList *array, *bindings;
 
 	if( caller->type == DAO_ROUTINE ){
 		rout = (DaoRoutine*) caller;
@@ -3802,12 +3801,12 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 				return;
 			}
 			if( rout->original->routType->attrib & DAO_TYPE_SELF ) vmc2.code = DVM_MCALL;
-			array = DArray_New(0);
+			array = DList_New(0);
 			bindings = rout->routConsts->value;
-			for(i=0; i<bindings->size; i++) DArray_Append( array, bindings->items.pValue[i] );
-			for(i=0; i<npar; i++) DArray_Append( array, params[i] );
+			for(i=0; i<bindings->size; i++) DList_Append( array, bindings->items.pValue[i] );
+			for(i=0; i<npar; i++) DList_Append( array, params[i] );
 			DaoProcess_DoCall2( self, & vmc2, caller, NULL, array->items.pValue, NULL, array->size );
-			DArray_Delete( array );
+			DList_Delete( array );
 			return;
 		}
 		/* No need to pass implicit self type, invar method will be checked separately */
@@ -4010,7 +4009,7 @@ FastCallError:
 	if( (mode & DAO_CALL_EXPAR) && npar > mcall && params[npar-1]->type == DAO_TUPLE ){
 		DaoTuple *tup = & params[npar-1]->xTuple;
 		DaoType **itypes = tup->ctype->nested->items.pType;
-		DArray *ts = tup->ctype->nested;
+		DList *ts = tup->ctype->nested;
 		int i, m, n = 0;
 		/* Handle explicit "self" argument: */
 		if( ts->size && (itypes[0]->attrib & DAO_TYPE_SELFNAMED) ) selfpar = NULL;
@@ -4122,7 +4121,7 @@ void DaoProcess_DoList(  DaoProcess *self, DaoVmCode *vmc )
 	const ushort_t opA = vmc->a;
 	int i;
 
-	DArray_Resize( list->value, vmc->b, NULL );
+	DList_Resize( list->value, vmc->b, NULL );
 	if( vmc->b > 0 && type ==NULL ){
 		DaoType *abtp = DaoNamespace_GetType( ns, regValues[opA] );
 		DaoType *t = DaoNamespace_MakeType( ns, "list", DAO_LIST, NULL, & abtp, 1 );
@@ -4288,7 +4287,7 @@ void DaoProcess_DoAPList(  DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_RaiseError( self, "Value", "need a number or string as first value" );
 		return;
 	}
-	DArray_Resize( list->value, num, initValue );
+	DList_Resize( list->value, num, initValue );
 	if( num == 0 || stepValue == NULL ) goto SetupType;
 
 	items = list->value->items.pValue;
@@ -4502,7 +4501,7 @@ void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc )
 #endif
 }
 
-DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *T, DArray *RS, DArray *TS, int C, int *W, int *M );
+DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *T, DList *RS, DList *TS, int C, int *W, int *M );
 
 void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 {
@@ -4567,10 +4566,10 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 			DaoRoutine *routine = (DaoRoutine*) p;
 			DaoType *routype = routine->routType;
 			DaoList *bindings = NULL;
-			DArray *routines = NULL;
-			DArray *partypes = DArray_New(0);
+			DList *routines = NULL;
+			DList *partypes = DList_New(0);
 
-			for(i=0; i<opb; i++) DArray_Append( partypes, DaoNamespace_GetType( NS, values[i] ) );
+			for(i=0; i<opb; i++) DList_Append( partypes, DaoNamespace_GetType( NS, values[i] ) );
 
 			if( routine->overloads ){
 				routines = routine->overloads->routines;
@@ -4580,7 +4579,7 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 			}
 			parout->routType = DaoRoutine_PartialCheck( NS, routype, routines, partypes, call, & wh, & mc );
 			GC_IncRC( parout->routType );
-			DArray_Delete( partypes );
+			DList_Delete( partypes );
 			if( mc > 1 ){
 				DaoRoutine_Delete( parout );
 				DaoProcess_RaiseError( self, NULL,
@@ -4597,10 +4596,10 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 				parout->original = routine;
 			}
 			GC_IncRC( parout->original );
-			if( bindings ) DArray_Assign( parout->routConsts->value, bindings->value );
+			if( bindings ) DList_Assign( parout->routConsts->value, bindings->value );
 			/* skip the self value if the routine needs none: */
 			i = vmc->code == DVM_MPACK && (parout->original->routType->attrib & DAO_TYPE_SELF) == 0;
-			for(; i<opb; i++) DArray_Append( parout->routConsts->value, values[i] );
+			for(; i<opb; i++) DList_Append( parout->routConsts->value, values[i] );
 			DaoProcess_SetValue( self, vmc->c, (DaoValue*) parout );
 			break;
 		}
@@ -4657,7 +4656,7 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 #endif
 			case DAO_LIST :
 				list = DaoProcess_GetListByType( self, vmc, type );
-				DArray_Resize( list->value, opb, NULL );
+				DList_Resize( list->value, opb, NULL );
 				for(i=0; i<opb; ++i){
 					if( DaoList_SetItem( list, values[i], i ) ){
 						DaoProcess_RaiseError( self, "Value", "invalid items" );
@@ -5312,7 +5311,7 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 			}
 		}
 	}else if( B->type == DAO_LIST ){
-		DArray *items = B->xList.value;
+		DList *items = B->xList.value;
 		DaoType *ta = DaoNamespace_GetType( self->activeNamespace, A );
 		if( ta && B->xList.ctype && B->xList.ctype->nested->size ){
 			DaoType *tb = B->xList.ctype->nested->items.pType[0];
@@ -5650,7 +5649,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		}
 		if( dA->type == DAO_LIST ){
 			list2 = & dA->xList;
-			DArray_Resize( list->value, list2->value->size, NULL );
+			DList_Resize( list->value, list2->value->size, NULL );
 			data = list->value->items.pValue;
 			data2 = list2->value->items.pValue;
 			for(i=0,n=list2->value->size; i<n; i++ ){
@@ -5660,7 +5659,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			}
 		}else if( dA->type == DAO_TUPLE ){
 			tuple2 = (DaoTuple*) dA;
-			DArray_Resize( list->value, tuple2->size, NULL );
+			DList_Resize( list->value, tuple2->size, NULL );
 			data = list->value->items.pValue;
 			data2 = tuple2->values;
 			for(i=0,n=tuple2->size; i<n; i++ ){
@@ -5772,8 +5771,8 @@ FailConversion :
 	return NULL;
 }
 
-DaoRoutine* DaoRoutine_Check( DaoRoutine *self, DaoType *selftp, DaoType *ts[], int np, int code, DArray *es );
-void DaoPrintCallError( DArray *errors, DaoStream *stdio );
+DaoRoutine* DaoRoutine_Check( DaoRoutine *self, DaoType *selftp, DaoType *ts[], int np, int code, DList *es );
+void DaoPrintCallError( DList *errors, DaoStream *stdio );
 
 void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int callmode )
 {
@@ -5781,18 +5780,18 @@ void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *sel
 	DaoNamespace *ns = self->activeNamespace;
 	DaoType *selftype = selfobj ? DaoNamespace_GetType( ns, selfobj ) : NULL;
 	DaoType *ts[DAO_MAX_PARAM];
-	DArray *errors = DArray_New(0);
+	DList *errors = DList_New(0);
 	int i;
 	for(i=0; i<np; i++) ts[i] = DaoNamespace_GetType( ns, ps[i] );
 	DaoRoutine_Check( rout, selftype, ts, np, callmode, errors );
 	ss->mode |= DAO_STREAM_STRING;
 	DaoPrintCallError( errors, ss );
-	DArray_Delete( errors );
+	DList_Delete( errors );
 	DaoProcess_RaiseError( self, "Param", ss->streamString->chars );
 	DaoStream_Delete( ss );
 }
 
-int DaoRoutine_SetVmCodes2( DaoRoutine *self, DVector *vmCodes );
+int DaoRoutine_SetVmCodes2( DaoRoutine *self, DArray *vmCodes );
 
 static void DaoProcess_MapTypes( DaoProcess *self, DMap *deftypes )
 {
@@ -5810,7 +5809,7 @@ static int DaoNamespace_CopyStaticVar( DaoNamespace *self, int id, DMap *map )
 	if( it == NULL ){
 		DaoVariable *var = self->variables->items.pVar[id];
 		var = DaoVariable_New( var->value, var->dtype );
-		DArray_Append( self->variables, var );
+		DList_Append( self->variables, var );
 		it = MAP_Insert( map, id, self->variables->size-1 );
 	}
 	return it->value.pInt;
@@ -5831,7 +5830,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	}
 	if( vmc->b == 0 && proto->body->upValues == NULL && proto->body->hasStatic == 0 ){
 		DaoProcess_SetValue( self, vmc->c, (DaoValue*) proto );
-		if( proto->attribs & DAO_ROUT_DEFER ) DArray_Append( self->defers, proto );
+		if( proto->attribs & DAO_ROUT_DEFER ) DList_Append( self->defers, proto );
 		return;
 	}
 
@@ -5859,7 +5858,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 
 	/* It's necessary to put it in "self" process in any case, so that it can be GC'ed: */
 	DaoProcess_SetValue( self, vmc->c, (DaoValue*) closure );
-	DArray_Assign( closure->body->annotCodes, proto->body->annotCodes );
+	DList_Assign( closure->body->annotCodes, proto->body->annotCodes );
 	if( DaoRoutine_SetVmCodes2( closure, proto->body->vmCodes ) ==0 ){
 		DaoProcess_RaiseError( self, NULL, "function creation failed" );
 	}
@@ -5886,7 +5885,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 		}
 		DMap_Delete( updated );
 	}
-	if( proto->attribs & DAO_ROUT_DEFER ) DArray_Append( self->defers, closure );
+	if( proto->attribs & DAO_ROUT_DEFER ) DList_Append( self->defers, closure );
 #if 0
 	DaoRoutine_PrintCode( proto, self->vmSpace->stdioStream );
 	DaoRoutine_PrintCode( closure, self->vmSpace->stdioStream );
@@ -5917,7 +5916,7 @@ static DaoException* DaoProcess_RaiseExceptionEx( DaoProcess *self, DaoType *ety
 	}
 	except = DaoException_New( etype );
 	DaoException_Init( except, self, info, NULL );
-	DArray_Append( self->exceptions, (DaoValue*) except );
+	DList_Append( self->exceptions, (DaoValue*) except );
 	if( (self->vmSpace->options & DAO_OPTION_DEBUG) ){
 		if( self->vmSpace->stopit ==0 ){
 			DaoProcess_Trace( self, 10 );
@@ -5990,7 +5989,7 @@ void DaoProcess_PrintException( DaoProcess *self, DaoStream *stream, int clear )
 		if( except == NULL ) continue;
 		DaoException_Print( except, stream );
 	}
-	if( clear ) DArray_Clear( self->exceptions );
+	if( clear ) DList_Clear( self->exceptions );
 }
 
 
@@ -6064,10 +6063,10 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 	DaoVmCode *vmc = self->activeCode;
 
 	self->activeValues = self->stackValues;
-	DVector_Clear( self->activeRoutine->body->vmCodes );
-	DVector_PushCode( self->activeRoutine->body->vmCodes, *vmc );
+	DArray_Clear( self->activeRoutine->body->vmCodes );
+	DArray_PushCode( self->activeRoutine->body->vmCodes, *vmc );
 	if( self->activeRoutine->body->annotCodes->size == 0 )
-		DArray_Append( self->activeRoutine->body->annotCodes, & vmcx );
+		DList_Append( self->activeRoutine->body->annotCodes, & vmcx );
 
 	/*
 	// DaoProcess_PopFrame() and DaoProcess_SetActiveFrame() will be called
@@ -6165,7 +6164,7 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 	if( self->exceptions->size >0 ) return NULL;
 
 	/* avoid GC */
-	/* DArray_Clear( self->regArray ); */
+	/* DList_Clear( self->regArray ); */
 	return self->stackValues[ vmc->c ];
 }
 

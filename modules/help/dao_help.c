@@ -108,7 +108,7 @@ struct DaoxHelpEntry
 	DaoNamespace   *nspace;
 	DaoxHelp       *help;
 	DaoxHelpEntry  *parent;
-	DArray         *nested2;
+	DList         *nested2;
 	DMap           *nested;
 
 	DString        *name;
@@ -136,7 +136,7 @@ struct DaoxHelper
 	DMap           *trees;
 	DMap           *entries;
 	DMap           *helps;
-	DArray         *nslist;
+	DList         *nslist;
 	DString        *notice;
 	DMap           *cxxKeywords;
 };
@@ -712,7 +712,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 {
 	DString *string = DString_New();
 	DaoLexer *lexer = DaoLexer_New();
-	DArray *tokens = lexer->tokens;
+	DList *tokens = lexer->tokens;
 	const char *bgcolor = NULL; /* "yellow"; */
 	const char *defaultColor = NULL;
 	daoint start = 0, end = code->size-1;
@@ -972,16 +972,16 @@ static int DaoxStream_WriteList( DaoxStream *self, DString *text, int offset, in
 }
 static void DaoxStream_WriteTable( DaoxStream *self, DString *text, int offset, int width, int islist, int listdep )
 {
-	DVector *widths = DVector_New(sizeof(int));
-	DArray *rows = DArray_New( DAO_DATA_ARRAY );
-	DArray *row = DArray_New( DAO_DATA_STRING );
+	DArray *widths = DArray_New(sizeof(int));
+	DList *rows = DList_New( DAO_DATA_LIST );
+	DList *row = DList_New( DAO_DATA_STRING );
 	DString *cell = DString_New();
 	daoint newline, next, start = 0;
 	daoint i, j, k, m, tableWidth = 0;
 
 	DString_Trim( text, 1, 1, 0 );
 	while( start < text->size ){
-		DArray_Clear( row );
+		DList_Clear( row );
 		newline = DString_FindChar( text, '\n', start );
 		if( newline < 0 ) newline = text->size;
 		while( start < newline ){
@@ -993,25 +993,25 @@ static void DaoxStream_WriteTable( DaoxStream *self, DString *text, int offset, 
 			if( next > newline ) next = newline;
 			DString_SubString( text, cell, start, next - start );
 			DString_Trim( cell, 1, 1, 0 );
-			DArray_Append( row, cell );
+			DList_Append( row, cell );
 			start = next;
 		}
-		DArray_Append( rows, row );
+		DList_Append( rows, row );
 		start = newline + 1;
 	}
-	if( rows->size == 0 || rows->items.pArray[0]->size == 0 ){
-		DArray_Delete( rows );
-		DArray_Delete( row );
+	if( rows->size == 0 || rows->items.pList[0]->size == 0 ){
+		DList_Delete( rows );
+		DList_Delete( row );
 		DString_Delete( cell );
 		return;
 	}
-	DVector_Resize( widths, rows->items.pArray[0]->size );
+	DArray_Resize( widths, rows->items.pList[0]->size );
 	for(i=0; i<widths->size; ++i) widths->data.ints[i] = 0;
 	for(i=0; i<rows->size; ++i){
-		m = rows->items.pArray[i]->size;
+		m = rows->items.pList[i]->size;
 		if( m > widths->size ) m = widths->size;
 		for(j=0; j<m; ++j){
-			DString *cell = rows->items.pArray[i]->items.pString[j];
+			DString *cell = rows->items.pList[i]->items.pString[j];
 			int hash2 = DString_FindChars( cell, "##", 0 ) == 0;
 			int amd2  = DString_FindChars( cell, "&&", 0 ) == 0;
 			int width = DaoxStream_PrintLength( self, cell ) - ((hash2||amd2) ? 2 : 0);
@@ -1026,14 +1026,14 @@ static void DaoxStream_WriteTable( DaoxStream *self, DString *text, int offset, 
 	DaoxStream_SetColor( self, NULL, NULL );
 	DaoxStream_WriteNewLine( self, "" );
 	for(i=0; i<rows->size; ++i){
-		m = rows->items.pArray[i]->size;
+		m = rows->items.pList[i]->size;
 		if( m > widths->size ) m = widths->size;
 		while( self->offset < offset ) DaoxStream_WriteChar( self, ' ' );
 		DaoxStream_SetColor( self, "white", "cyan" );
 		DaoxStream_WriteChar( self, ' ' );
 		DaoxStream_SetColor( self, NULL, NULL );
 		for(j=0; j<m; ++j){
-			DString *cell = rows->items.pArray[i]->items.pString[j];
+			DString *cell = rows->items.pList[i]->items.pString[j];
 			int hash2 = DString_FindChars( cell, "##", 0 ) == 0;
 			int amd2  = DString_FindChars( cell, "&&", 0 ) == 0;
 			int right = 0;
@@ -1069,8 +1069,8 @@ static void DaoxStream_WriteTable( DaoxStream *self, DString *text, int offset, 
 	for(j=0; j<tableWidth; ++j) DaoxStream_WriteChar( self, ' ' );
 	DaoxStream_SetColor( self, NULL, NULL );
 	DaoxStream_WriteNewLine( self, "" );
-	DArray_Delete( rows );
-	DArray_Delete( row );
+	DList_Delete( rows );
+	DList_Delete( row );
 	DString_Delete( cell );
 }
 
@@ -1355,7 +1355,7 @@ static DaoxHelpEntry* DaoxHelpEntry_New( DString *name )
 	self->license = NULL;
 	self->name = DString_Copy( name );
 	self->nested = DMap_New( DAO_DATA_STRING, 0 );
-	self->nested2 = DArray_New(0);
+	self->nested2 = DList_New(0);
 	self->first = self->last = NULL;
 	self->parent = NULL;
 	self->size = 0;
@@ -1369,7 +1369,7 @@ static void DaoxHelpEntry_Delete( DaoxHelpEntry *self )
 	if( self->author ) DString_Delete( self->author );
 	if( self->license ) DString_Delete( self->license );
 	DString_Delete( self->name );
-	DArray_Delete( self->nested2 );
+	DList_Delete( self->nested2 );
 	DMap_Delete( self->nested );
 	dao_free( self );
 }
@@ -1444,10 +1444,10 @@ static int DaoxHelpEntry_GetNameLength( DaoxHelpEntry *self )
 	if( pos == DAO_NULLPOS ) return self->name->size;
 	return self->name->size - 1 - pos;
 }
-static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DArray *offsets, int offset, int width, int root, int last, int depth, int hlerror )
+static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DList *offsets, int offset, int width, int root, int last, int depth, int hlerror )
 {
 	DString *line;
-	DArray *old = offsets;
+	DList *old = offsets;
 	daoint i, len = DaoxHelpEntry_GetNameLength( self );
 	int extra = root ? 2 : 5;
 	int color, count = 0;
@@ -1464,7 +1464,7 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 	if( hlerror && self->failedTests == 0 ) return;
 
 	if( offsets == NULL ){
-		offsets = DArray_New(0);
+		offsets = DList_New(0);
 		len = self->name->size;
 	}
 
@@ -1565,7 +1565,7 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 		}
 	}
 	DaoxStream_WriteChar( stream, '\n' );
-	if( last == 0 ) DArray_Append( offsets, offset );
+	if( last == 0 ) DList_Append( offsets, offset );
 	len = 0;
 	for(i=0; i<self->nested2->size; i++){
 		DaoxHelpEntry *entry = (DaoxHelpEntry*) self->nested2->items.pVoid[i];
@@ -1582,8 +1582,8 @@ static void DaoxHelpEntry_PrintTree( DaoxHelpEntry *self, DaoxStream *stream, DA
 		DaoxStream_WriteString( stream, line );
 		DaoxStream_WriteChar( stream, '\n' );
 	}
-	if( last == 0 ) DArray_PopBack( offsets );
-	if( old == NULL ) DArray_Delete( offsets );
+	if( last == 0 ) DList_PopBack( offsets );
+	if( old == NULL ) DList_Delete( offsets );
 	DString_Delete( line );
 }
 static void DaoxHelpEntry_Print( DaoxHelpEntry *self, DaoxStream *stream, DaoProcess *proc )
@@ -1674,7 +1674,7 @@ static DaoxHelper* DaoxHelper_New()
 	self->helps = DHash_New(0,0);
 	self->tree = DaoxHelpEntry_New( & name );
 	self->entries = DMap_New( DAO_DATA_STRING, 0 );
-	self->nslist = DArray_New( DAO_DATA_VALUE );
+	self->nslist = DList_New( DAO_DATA_VALUE );
 	self->notice = DString_New();
 	self->cxxKeywords = DMap_New( DAO_DATA_STRING, 0 );
 	DString_SetChars( self->notice, "By $(author). Released under the $(license).\n" );
@@ -1699,15 +1699,15 @@ static void DaoxHelper_Delete( DaoxHelper *self )
 	DMap_Delete( self->entries );
 	DMap_Delete( self->cxxKeywords );
 	DMap_Delete( self->helps );
-	DArray_Delete( self->nslist );
+	DList_Delete( self->nslist );
 	DString_Delete( self->notice );
 	DaoCstruct_Free( (DaoCstruct*) self );
 	free( self );
 }
-static void DaoxHelper_GetGCFields( void *p, DArray *v, DArray *arrays, DArray *m, int rm )
+static void DaoxHelper_GetGCFields( void *p, DList *v, DList *arrays, DList *m, int rm )
 {
 	DaoxHelper *self = (DaoxHelper*) p;
-	DArray_Append( arrays, self->nslist );
+	DList_Append( arrays, self->nslist );
 }
 
 static DaoxHelp* DaoxHelper_Get( DaoxHelper *self, DaoNamespace *NS, DString *name )
@@ -1718,7 +1718,7 @@ static DaoxHelp* DaoxHelper_Get( DaoxHelper *self, DaoNamespace *NS, DString *na
 	help = DaoxHelp_New();
 	help->nspace = NS;
 	DMap_Insert( self->helps, NS, help );
-	DArray_Append( self->nslist, NS );
+	DList_Append( self->nslist, NS );
 	return help;
 }
 static DaoxHelpEntry* DaoxHelper_GetEntry( DaoxHelper *self, DaoxHelp *help, DaoNamespace *NS, DString *name )
@@ -1732,7 +1732,7 @@ static DaoxHelpEntry* DaoxHelper_GetEntry( DaoxHelper *self, DaoxHelp *help, Dao
 	if( entry->nspace == NULL ) entry->nspace = NS;
 	entry->help = help;
 	if( pos == DAO_NULLPOS ){
-		DArray_Append( self->tree->nested2, entry );
+		DList_Append( self->tree->nested2, entry );
 		DMap_Insert( self->tree->nested, name, entry );
 		entry->parent = self->tree;
 	}else{
@@ -1740,7 +1740,7 @@ static DaoxHelpEntry* DaoxHelper_GetEntry( DaoxHelper *self, DaoxHelp *help, Dao
 		DString_Erase( name2, pos, -1 );
 		entry2 = DaoxHelper_GetEntry( self, help, NS, name2 );
 		DString_SubString( name, name2, pos + 1, -1 );
-		DArray_Append( entry2->nested2, entry );
+		DList_Append( entry2->nested2, entry );
 		DMap_Insert( entry2->nested, name2, entry );
 		entry->parent = entry2;
 		DString_Delete( name2 );
@@ -1815,7 +1815,7 @@ static void HELP_List( DaoProcess *proc, DaoValue *p[], int N )
 	DaoNamespace *ns = proc->activeNamespace;
 	DaoType *type = DaoNamespace_GetType( ns, p[0] );
 	DaoRoutine **meths;
-	DArray *array;
+	DList *array;
 	DMap *hash;
 	DNode *it;
 	int etype = p[1]->xEnum.value;
@@ -1846,14 +1846,14 @@ static void HELP_List( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_Print( proc, type->name->chars );
 	DaoProcess_Print( proc, "\n==============================================\n" );
 
-	array = DArray_New(0);
+	array = DList_New(0);
 	if( type->kernel->methods ) DMap_SortMethods( type->kernel->methods, array );
 	meths = array->items.pRoutine;
 	methCount = array->size;
 	if( type->kernel->methods ){
 		for(i=0; i<methCount; i++ ) PrintMethod( proc, (DaoRoutine*)meths[i] );
 	}
-	DArray_Delete( array );
+	DList_Delete( array );
 }
 static void HELP_ErrorNoHelp( DaoProcess *proc, DString *entry_name )
 {

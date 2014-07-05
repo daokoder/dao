@@ -230,7 +230,7 @@ DaoNamespace* DaoVmSpace_FindNamespace( DaoVmSpace *self, DString *name )
 	node = DMap_Find( self->nsModules, name );
 	if( node ){
 		ns = (DaoNamespace*) node->value.pValue;
-		DArray_PushFront( self->loadedModules, ns );
+		DList_PushFront( self->loadedModules, ns );
 	}
 	DaoVmSpace_Unlock( self );
 	return ns;
@@ -243,7 +243,7 @@ DaoNamespace* DaoVmSpace_GetNamespace( DaoVmSpace *self, const char *name )
 	ns = DaoNamespace_New( self, name );
 	DaoVmSpace_Lock( self );
 	DMap_Insert( self->nsModules, & str, ns );
-	DArray_PushFront( self->loadedModules, ns );
+	DList_PushFront( self->loadedModules, ns );
 	DaoVmSpace_Unlock( self );
 	return ns;
 }
@@ -262,9 +262,9 @@ DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self )
 	DMutex_Lock( & self->mutexProc );
 #endif
 	if( self->processes->size ){
-		proc = (DaoProcess*) DArray_Back( self->processes );
+		proc = (DaoProcess*) DList_Back( self->processes );
 		proc->active = 0;
-		DArray_PopBack( self->processes );
+		DList_PopBack( self->processes );
 	}else{
 		proc = DaoProcess_New( self );
 		DMap_Insert( self->allProcesses, proc, 0 );
@@ -280,14 +280,14 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 	DMutex_Lock( & self->mutexProc );
 #endif
 	if( DMap_Find( self->allProcesses, proc ) ){
-		if( proc->factory ) DArray_Clear( proc->factory );
+		if( proc->factory ) DList_Clear( proc->factory );
 		if( proc->aux ) DaoAux_Delete( proc->aux );
 		GC_DecRC( proc->future );
 		proc->future = NULL;
 		proc->aux = NULL;
 		DaoProcess_PopFrames( proc, proc->firstFrame );
-		DArray_Clear( proc->exceptions );
-		DArray_PushBack( self->processes, proc );
+		DList_Clear( proc->exceptions );
+		DList_PushBack( self->processes, proc );
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->mutexProc );
@@ -314,8 +314,8 @@ DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )
 	DMutex_Lock( & self->mutexMisc );
 #endif
 	if( self->parsers->size ){
-		parser = (DaoParser*) DArray_Back( self->parsers );
-		DArray_PopBack( self->parsers );
+		parser = (DaoParser*) DList_Back( self->parsers );
+		DList_PopBack( self->parsers );
 	}else{
 		parser = DaoParser_New();
 		parser->vmSpace = self;
@@ -337,7 +337,7 @@ void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser )
 	DMutex_Lock( & self->mutexMisc );
 #endif
 	if( DMap_Find( self->allParsers, parser ) ){
-		DArray_PushBack( self->parsers, parser );
+		DList_PushBack( self->parsers, parser );
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->mutexMisc );
@@ -357,8 +357,8 @@ DaoByteCoder* DaoVmSpace_AcquireByteCoder( DaoVmSpace *self )
 	DMutex_Lock( & self->mutexMisc );
 #endif
 	if( self->byteCoders->size ){
-		byteCoder = (DaoByteCoder*) DArray_Back( self->byteCoders );
-		DArray_PopBack( self->byteCoders );
+		byteCoder = (DaoByteCoder*) DList_Back( self->byteCoders );
+		DList_PopBack( self->byteCoders );
 	}else{
 		byteCoder = DaoByteCoder_New( self );
 		//byteCoder->vmSpace = self;
@@ -380,7 +380,7 @@ void DaoVmSpace_ReleaseByteCoder( DaoVmSpace *self, DaoByteCoder *byteCoder )
 	DMutex_Lock( & self->mutexMisc );
 #endif
 	if( DMap_Find( self->allByteCoders, byteCoder ) ){
-		DArray_PushBack( self->byteCoders, byteCoder );
+		DList_PushBack( self->byteCoders, byteCoder );
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->mutexMisc );
@@ -398,8 +398,8 @@ DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self )
 	DMutex_Lock( & self->mutexMisc );
 #endif
 	if( self->inferencers->size ){
-		inferencer = (DaoInferencer*) DArray_Back( self->inferencers );
-		DArray_PopBack( self->inferencers );
+		inferencer = (DaoInferencer*) DList_Back( self->inferencers );
+		DList_PopBack( self->inferencers );
 	}else{
 		inferencer = DaoInferencer_New();
 		DMap_Insert( self->allInferencers, inferencer, 0 );
@@ -420,7 +420,7 @@ void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *inferencer )
 	DMutex_Lock( & self->mutexMisc );
 #endif
 	if( DMap_Find( self->allInferencers, inferencer ) ){
-		DArray_PushBack( self->inferencers, inferencer );
+		DList_PushBack( self->inferencers, inferencer );
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->mutexMisc );
@@ -438,8 +438,8 @@ DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self )
 	DMutex_Lock( & self->mutexMisc );
 #endif
 	if( self->optimizers->size ){
-		optimizer = (DaoOptimizer*) DArray_Back( self->optimizers );
-		DArray_PopBack( self->optimizers );
+		optimizer = (DaoOptimizer*) DList_Back( self->optimizers );
+		DList_PopBack( self->optimizers );
 	}else{
 		optimizer = DaoOptimizer_New();
 		DMap_Insert( self->allOptimizers, optimizer, 0 );
@@ -459,7 +459,7 @@ void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *optimizer )
 	DMutex_Lock( & self->mutexMisc );
 #endif
 	if( DMap_Find( self->allOptimizers, optimizer ) ){
-		DArray_PushBack( self->optimizers, optimizer );
+		DList_PushBack( self->optimizers, optimizer );
 	}
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->mutexMisc );
@@ -567,22 +567,22 @@ DaoVmSpace* DaoVmSpace_New()
 	self->vmodules = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsModules = DHash_New( DAO_DATA_STRING, 0 );
 	self->pathWorking = DString_New();
-	self->nameLoading = DArray_New( DAO_DATA_STRING );
-	self->pathLoading = DArray_New( DAO_DATA_STRING );
-	self->pathSearching = DArray_New( DAO_DATA_STRING );
-	self->virtualPaths = DArray_New( DAO_DATA_STRING );
-	self->sourceArchive = DArray_New( DAO_DATA_STRING );
-	self->processes = DArray_New(0);
-	self->parsers = DArray_New(0);
-	self->byteCoders = DArray_New(0);
-	self->inferencers = DArray_New(0);
-	self->optimizers = DArray_New(0);
+	self->nameLoading = DList_New( DAO_DATA_STRING );
+	self->pathLoading = DList_New( DAO_DATA_STRING );
+	self->pathSearching = DList_New( DAO_DATA_STRING );
+	self->virtualPaths = DList_New( DAO_DATA_STRING );
+	self->sourceArchive = DList_New( DAO_DATA_STRING );
+	self->processes = DList_New(0);
+	self->parsers = DList_New(0);
+	self->byteCoders = DList_New(0);
+	self->inferencers = DList_New(0);
+	self->optimizers = DList_New(0);
 	self->allProcesses = DMap_New( DAO_DATA_VALUE, 0 );
 	self->allParsers = DMap_New(0,0);
 	self->allByteCoders = DMap_New(0,0);
 	self->allInferencers = DMap_New(0,0);
 	self->allOptimizers = DMap_New(0,0);
-	self->loadedModules = DArray_New( DAO_DATA_VALUE );
+	self->loadedModules = DList_New( DAO_DATA_VALUE );
 
 #ifdef DAO_WITH_THREAD
 	DMutex_Init( & self->mutexLoad );
@@ -596,7 +596,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->daoNamespace->vmSpace = self;
 	GC_IncRC( self->daoNamespace );
 	DMap_Insert( self->nsModules, self->daoNamespace->name, self->daoNamespace );
-	DArray_PushFront( self->loadedModules, self->daoNamespace );
+	DList_PushFront( self->loadedModules, self->daoNamespace );
 
 	DaoNamespace_AddCodeInliner( self->daoNamespace, "test", dao_default_test_inliner );
 
@@ -639,17 +639,17 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DString_Delete( self->startPath );
 	DString_Delete( self->mainSource );
 	DString_Delete( self->pathWorking );
-	DArray_Delete( self->nameLoading );
-	DArray_Delete( self->pathLoading );
-	DArray_Delete( self->pathSearching );
-	DArray_Delete( self->virtualPaths );
-	DArray_Delete( self->processes );
-	DArray_Delete( self->loadedModules );
-	DArray_Delete( self->sourceArchive );
-	DArray_Delete( self->parsers );
-	DArray_Delete( self->byteCoders );
-	DArray_Delete( self->inferencers );
-	DArray_Delete( self->optimizers );
+	DList_Delete( self->nameLoading );
+	DList_Delete( self->pathLoading );
+	DList_Delete( self->pathSearching );
+	DList_Delete( self->virtualPaths );
+	DList_Delete( self->processes );
+	DList_Delete( self->loadedModules );
+	DList_Delete( self->sourceArchive );
+	DList_Delete( self->parsers );
+	DList_Delete( self->byteCoders );
+	DList_Delete( self->inferencers );
+	DList_Delete( self->optimizers );
 	DMap_Delete( self->vfiles );
 	DMap_Delete( self->vmodules );
 	DMap_Delete( self->allProcesses );
@@ -659,7 +659,7 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DMap_Delete( self->allOptimizers );
 	GC_DecRC( self->mainProcess );
 	self->stdioStream = NULL;
-	if( self->preloadModules ) DArray_Delete( self->preloadModules );
+	if( self->preloadModules ) DList_Delete( self->preloadModules );
 }
 void DaoVmSpace_Delete( DaoVmSpace *self )
 {
@@ -703,24 +703,24 @@ int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname, DString *source )
 	return 0;
 }
 /* modules/debugger */
-DAO_DLL void SplitByWhiteSpaces( const char *chs, DArray *tokens )
+DAO_DLL void SplitByWhiteSpaces( const char *chs, DList *tokens )
 {
 	DString temp = DString_WrapChars( chs );
 	DString *tok = DString_New();
 	DString *str = & temp;
 	daoint i, j, k=0, size = str->size;
-	DArray_Clear( tokens );
+	DList_Clear( tokens );
 	if( (j=DString_FindChar( str, '\1', k )) != DAO_NULLPOS ){
 		while( (j=DString_FindChar( str, '\1', k )) != DAO_NULLPOS ){
 			if( j > k ){
 				DString_SubString( str, tok, k, j-k );
-				DArray_Append( tokens, tok );
+				DList_Append( tokens, tok );
 			}
 			k = j + 1;
 		}
 		if( k < str->size ){
 			DString_SubString( str, tok, k, str->size-k );
-			DArray_Append( tokens, tok );
+			DList_Append( tokens, tok );
 		}
 		DString_Delete( tok );
 		return;
@@ -732,14 +732,14 @@ DAO_DLL void SplitByWhiteSpaces( const char *chs, DArray *tokens )
 			continue;
 		}else if( isspace( chs[i] ) ){
 			if( tok->size > 0 ){
-				DArray_Append( tokens, tok );
+				DList_Append( tokens, tok );
 				DString_Clear( tok );
 			}
 			continue;
 		}
 		DString_AppendChar( tok, chs[i] );
 	}
-	if( tok->size > 0 ) DArray_Append( tokens, tok );
+	if( tok->size > 0 ) DList_Append( tokens, tok );
 	DString_Delete( tok );
 }
 
@@ -750,7 +750,7 @@ int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module );
 int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 {
 	DString *str = DString_New();
-	DArray *array = DArray_New( DAO_DATA_STRING );
+	DList *array = DList_New( DAO_DATA_STRING );
 	DaoNamespace *ns;
 	daoint i, j;
 
@@ -791,10 +791,10 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 			}else if( strstr( token->chars, "--path=" ) == token->chars ){
 				DaoVmSpace_AddPath( self, token->chars + 7 );
 			}else if( strstr( token->chars, "--module=" ) == token->chars ){
-				if( self->preloadModules == NULL ) self->preloadModules = DArray_New( DAO_DATA_VALUE );
+				if( self->preloadModules == NULL ) self->preloadModules = DList_New( DAO_DATA_VALUE );
 				if( (ns = DaoVmSpace_Load( self, token->chars + 9 )) ){
-					DArray_Append( self->preloadModules, ns );
-					DArray_Append( self->mainNamespace->namespaces, ns );
+					DList_Append( self->preloadModules, ns );
+					DList_Append( self->mainNamespace->namespaces, ns );
 					DaoNamespace_UpdateLookupTable( self->mainNamespace );
 				}else{
 					DaoStream_WriteChars( self->errorStream, "Preloading failed for module: " );
@@ -850,7 +850,7 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 	}
 	if( self->options & DAO_OPTION_DEBUG ) daoConfig.optimize = 0;
 	DString_Delete( str );
-	DArray_Delete( array );
+	DList_Delete( array );
 	if( daoConfig.jit && dao_jit.Compile == NULL ) DaoVmSpace_TryInitJIT( self, NULL );
 	if( self->options & DAO_OPTION_PROFILE ) DaoVmSpace_TryInitProfiler( self, NULL );
 	if( self->options & DAO_OPTION_DEBUG ) DaoVmSpace_TryInitDebugger( self, NULL );
@@ -859,21 +859,21 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 
 
 static void DaoVmSpace_MakePath( DaoVmSpace *self, DString *path );
-static DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *p, DArray *a, int run );
+static DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *p, DList *a, int run );
 static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath );
 
 static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
-		const char *file, DArray *args, DArray *argNames, DArray *argValues )
+		const char *file, DList *args, DList *argNames, DList *argValues )
 {
 	DString *str = DString_New();
 	DString *key = DString_New();
 	DString *val = DString_New();
-	DArray *array = args;
+	DList *array = args;
 	daoint i, tk, offset = 0;
 	int eq = 0;
 
 	if( array == NULL && file ){
-		array = DArray_New( DAO_DATA_STRING );
+		array = DList_New( DAO_DATA_STRING );
 		SplitByWhiteSpaces( file, array );
 		DString_Assign( ns->name, array->items.pString[0] );
 	}
@@ -893,22 +893,22 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 		if( tk == DTOK_IDENTIFIER && s->chars[eq+offset] == '=' ){
 			DString_SubString( s, key, offset, eq );
 			DString_SubString( s, val, eq+offset+1, s->size-offset-eq );
-			DArray_Append( argNames, key );
-			DArray_Append( argValues, val );
+			DList_Append( argNames, key );
+			DList_Append( argValues, val );
 		}else if( tk == DTOK_IDENTIFIER && offset && i < array->size ){
 			DString_SubString( s, key, offset, s->size-offset );
 			DString_Assign( val, array->items.pString[i] );
-			DArray_Append( argNames, key );
-			DArray_Append( argValues, val );
+			DList_Append( argNames, key );
+			DList_Append( argValues, val );
 			i += 1;
 		}else{
 			DString_Clear( key );
 			DString_Assign( val, s );
-			DArray_Append( argNames, key );
-			DArray_Append( argValues, s );
+			DList_Append( argNames, key );
+			DList_Append( argValues, s );
 		}
 	}
-	if( args == NULL ) DArray_Delete( array );
+	if( args == NULL ) DList_Delete( array );
 	DString_Delete( key );
 	DString_Delete( val );
 	DString_Delete( str );
@@ -968,15 +968,15 @@ FinishError:
 	DMap_Delete( defs );
 	return match;
 }
-static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNames, DArray *argValues, int *error )
+static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DList *argNames, DList *argValues, int *error )
 {
-	DArray *types;
+	DList *types;
 	DString *name;
 	DaoRoutine *rout = NULL;
 	DaoRoutine **routs = NULL;
 	int i, max = 0, count = 0;
 
-	types = DArray_New(0);
+	types = DList_New(0);
 	name = DString_New();
 
 	*error = DAO_ERROR;
@@ -987,7 +987,7 @@ static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNam
 		if( value->type == DAO_ROUTINE ) rout = & value->xRoutine;
 	}
 	if( rout == NULL ){
-		DArray_Delete( types );
+		DList_Delete( types );
 		DString_Delete( name );
 		return NULL;
 	}
@@ -1000,7 +1000,7 @@ static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNam
 			DString *S = argNames->items.pString[i];
 			type = DaoNamespace_MakeType( ns, S->chars, DAO_PAR_NAMED, (DaoValue*)type, NULL, 0 );
 		}
-		DArray_Append( types, type );
+		DList_Append( types, type );
 	}
 	*error = DAO_ERROR_PARAM;
 	if( rout->overloads ){
@@ -1019,7 +1019,7 @@ static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DArray *argNam
 	}
 	if( max == 0 ) rout = NULL;
 	if( rout ) *error = 0;
-	DArray_Delete( types );
+	DList_Delete( types );
 	DString_Delete( name );
 	return rout;
 }
@@ -1071,7 +1071,7 @@ static int DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *na
 	}
 	return 1;
 }
-static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, DArray *argNames, DArray *argValues )
+static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, DList *argNames, DList *argValues )
 {
 	DString *val;
 	DaoValue sval = {DAO_STRING};
@@ -1142,7 +1142,7 @@ Failed:
 
 DaoNamespace* DaoVmSpace_LoadEx( DaoVmSpace *self, const char *file, int run )
 {
-	DArray *args = DArray_New( DAO_DATA_STRING );
+	DList *args = DList_New( DAO_DATA_STRING );
 	DString *path = DString_New();
 	DaoNamespace *ns = NULL;
 
@@ -1155,7 +1155,7 @@ DaoNamespace* DaoVmSpace_LoadEx( DaoVmSpace *self, const char *file, int run )
 	case DAO_MODULE_ANY : ns = DaoVmSpace_LoadDaoModuleExt( self, path, args, run ); break; /* any suffix */
 	default : break;
 	}
-	DArray_Delete( args );
+	DList_Delete( args );
 	DString_Delete( path );
 	if( ns == NULL ) return 0;
 	return ns;
@@ -1177,7 +1177,7 @@ DaoNamespace* DaoVmSpace_LinkModule( DaoVmSpace *self, DaoNamespace *ns, const c
 
 static int CheckCodeCompletion( DString *source, DaoLexer *lexer )
 {
-	DArray *tokens = lexer->tokens;
+	DList *tokens = lexer->tokens;
 	int i, bcount, cbcount, sbcount, tki = 0, completed = 1;
 
 	DaoLexer_Tokenize( lexer, source->chars, DAO_LEX_COMMENT|DAO_LEX_SPACE );
@@ -1425,7 +1425,7 @@ int DaoDecodeUInt32( const char *data )
 	const uchar_t *p = (const uchar_t*) data;
 	return (p[0]<<24) + (p[1]<<16) + (p[2]<<8) + p[3];
 }
-static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DArray *argValues )
+static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 {
 	FILE *fin, *fout;
 	int i, count = 1;
@@ -1547,15 +1547,15 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	DaoStream *io = self->errorStream;
 	DaoRoutine *mainRoutine, *expMain = NULL;
 	DaoValue **ps;
-	DArray *argNames;
-	DArray *argValues;
+	DList *argNames;
+	DList *argValues;
 	size_t tm = 0;
 	daoint N;
 	int res;
 
 	if( file == NULL || file[0] ==0 || self->evalCmdline ){
-		DArray_PushFront( self->nameLoading, self->pathWorking );
-		DArray_PushFront( self->pathLoading, self->pathWorking );
+		DList_PushFront( self->nameLoading, self->pathWorking );
+		DList_PushFront( self->pathLoading, self->pathWorking );
 		if( self->evalCmdline ){
 			DaoRoutine *rout;
 			DString_SetChars( self->mainNamespace->name, "command line codes" );
@@ -1570,13 +1570,13 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 			DaoVmSpace_Interun( self, NULL );
 		return 1;
 	}
-	argNames = DArray_New( DAO_DATA_STRING );
-	argValues = DArray_New( DAO_DATA_STRING );
+	argNames = DList_New( DAO_DATA_STRING );
+	argValues = DList_New( DAO_DATA_STRING );
 	DaoVmSpace_ParseArguments( self, ns, file, NULL, argNames, argValues );
 	DaoVmSpace_AddPath( self, ns->path->chars );
-	DArray_PushFront( self->nameLoading, ns->name );
-	DArray_PushFront( self->pathLoading, ns->path );
-	DArray_PushFront( self->loadedModules, ns );
+	DList_PushFront( self->nameLoading, ns->name );
+	DList_PushFront( self->pathLoading, ns->path );
+	DList_PushFront( self->loadedModules, ns );
 	if( DMap_Find( self->nsModules, ns->name ) == NULL ){
 		MAP_Insert( self->nsModules, ns->name, ns );
 	}
@@ -1592,8 +1592,8 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		DString_Delete( archive );
 	}
 	if( self->options & DAO_OPTION_ARCHIVE ){
-		DArray_Append( self->sourceArchive, ns->name );
-		DArray_Append( self->sourceArchive, self->mainSource );
+		DList_Append( self->sourceArchive, ns->name );
+		DList_Append( self->sourceArchive, self->mainSource );
 	}
 	if( self->mainSource->chars[0] == DAO_BC_SIGNATURE[0] ){
 		DaoByteCoder *byteCoder = DaoVmSpace_AcquireByteCoder( self );
@@ -1638,19 +1638,19 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 			DaoStream_WriteChars( io, "ERROR: invalid command line arguments.\n" );
 		}
 	}
-	DArray_Delete( argNames );
+	DList_Delete( argNames );
 
 	if( res == 0 ){
-		DArray_Delete( argValues );
+		DList_Delete( argValues );
 		return 0;
 	}
 
 	if( self->options & DAO_OPTION_ARCHIVE ){
 		DaoVmSpace_SaveArchive( self, argValues );
-		DArray_Delete( argValues );
+		DList_Delete( argValues );
 		return 1;
 	}
-	DArray_Delete( argValues );
+	DList_Delete( argValues );
 	if( self->options & DAO_OPTION_COMP_BC ) return 1;
 
 	mainRoutine = ns->mainRoutine;
@@ -1747,8 +1747,8 @@ int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int types )
 static void DaoVmSpace_PopLoadingNamePath( DaoVmSpace *self, int path )
 {
 	DaoVmSpace_Lock( self );
-	if( path ) DArray_PopFront( self->pathLoading );
-	DArray_PopFront( self->nameLoading );
+	if( path ) DList_PopFront( self->pathLoading );
+	DList_PopFront( self->nameLoading );
 	DaoVmSpace_Unlock( self );
 }
 /*
@@ -1760,10 +1760,10 @@ static void DaoVmSpace_PopLoadingNamePath( DaoVmSpace *self, int path )
 //   (1) its implicit main is executed, IF run != 0; (mainly for IDE)
 //   (2) its explicit main that matches with "args" will be executed.
 */
-DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DArray *args, int run )
+DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DList *args, int run )
 {
 	DString *source = NULL;
-	DArray *argNames = NULL, *argValues = NULL;
+	DList *argNames = NULL, *argValues = NULL;
 	DaoNamespace *ns = NULL, *ns2 = NULL;
 	DaoRoutine *mainRoutine = NULL;
 	DaoParser *parser = NULL;
@@ -1773,8 +1773,8 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	size_t tm = 0;
 
 	if( args ){
-		argNames = DArray_New( DAO_DATA_STRING );
-		argValues = DArray_New( DAO_DATA_STRING );
+		argNames = DList_New( DAO_DATA_STRING );
+		argValues = DList_New( DAO_DATA_STRING );
 	}
 
 	ns = ns2 = DaoVmSpace_FindNamespace( self, libpath );
@@ -1791,8 +1791,8 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	if( ! DaoVmSpace_ReadSource( self, libpath, source ) ) goto LoadingFailed;
 
 	if( self->options & DAO_OPTION_ARCHIVE ){
-		DArray_Append( self->sourceArchive, libpath );
-		DArray_Append( self->sourceArchive, source );
+		DList_Append( self->sourceArchive, libpath );
+		DList_Append( self->sourceArchive, source );
 	}
 
 	/*
@@ -1803,10 +1803,10 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	if( args ) DaoVmSpace_ParseArguments( self, ns, NULL, args, argNames, argValues );
 
 	DaoVmSpace_Lock( self );
-	DArray_PushFront( self->loadedModules, ns );
+	DList_PushFront( self->loadedModules, ns );
 	MAP_Insert( self->nsModules, libpath, ns );
-	DArray_PushFront( self->nameLoading, ns->name );
-	if( ns->path->size ) DArray_PushFront( self->pathLoading, ns->path );
+	DList_PushFront( self->nameLoading, ns->name );
+	if( ns->path->size ) DList_PushFront( self->pathLoading, ns->path );
 	DaoVmSpace_Unlock( self );
 	poppath = ns->path->size;
 
@@ -1843,16 +1843,16 @@ ExecuteImplicitMain :
 		int status;
 		process = DaoVmSpace_AcquireProcess( self );
 		DaoVmSpace_Lock( self );
-		DArray_PushFront( self->nameLoading, ns->path );
-		DArray_PushFront( self->pathLoading, ns->path );
+		DList_PushFront( self->nameLoading, ns->path );
+		DList_PushFront( self->pathLoading, ns->path );
 		DaoVmSpace_Unlock( self );
 		DaoProcess_PushRoutine( process, ns->mainRoutine, NULL );
 		DaoProcess_Execute( process );
 		status = process->status;
 		DaoVmSpace_ReleaseProcess( self, process );
 		DaoVmSpace_Lock( self );
-		DArray_PopFront( self->nameLoading );
-		DArray_PopFront( self->pathLoading );
+		DList_PopFront( self->nameLoading );
+		DList_PopFront( self->pathLoading );
 		DaoVmSpace_Unlock( self );
 		if( status == DAO_PROCESS_ABORTED ) goto LoadingFailed;
 	}
@@ -1882,12 +1882,12 @@ ExecuteExplicitMain :
 	DaoVmSpace_PopLoadingNamePath( self, poppath );
 	if( self->loadedModules->size > (nsCount+1) ){
 		DaoVmSpace_Lock( self );
-		DArray_Erase( self->loadedModules, 0, self->loadedModules->size - (nsCount+1) );
+		DList_Erase( self->loadedModules, 0, self->loadedModules->size - (nsCount+1) );
 		DaoVmSpace_Unlock( self );
 	}
 	if( source ) DString_Delete( source );
-	if( argNames ) DArray_Delete( argNames );
-	if( argValues ) DArray_Delete( argValues );
+	if( argNames ) DList_Delete( argNames );
+	if( argValues ) DList_Delete( argValues );
 	return ns;
 InvalidArgument:
 	DaoStream_WriteChars( self->errorStream, "ERROR: invalid arguments for the explicit main().\n" );
@@ -1895,12 +1895,12 @@ LoadingFailed :
 	DaoVmSpace_PopLoadingNamePath( self, poppath );
 	if( self->loadedModules->size > nsCount ){
 		DaoVmSpace_Lock( self );
-		DArray_Erase( self->loadedModules, 0, self->loadedModules->size - nsCount );
+		DList_Erase( self->loadedModules, 0, self->loadedModules->size - nsCount );
 		DaoVmSpace_Unlock( self );
 	}
 	if( source ) DString_Delete( source );
-	if( argNames ) DArray_Delete( argNames );
-	if( argValues ) DArray_Delete( argValues );
+	if( argNames ) DList_Delete( argNames );
+	if( argValues ) DList_Delete( argValues );
 	if( parser ) DaoVmSpace_ReleaseParser( self, parser );
 	return 0;
 }
@@ -1966,13 +1966,13 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	if( self->options & DAO_OPTION_ARCHIVE ){
 		if( name == NULL ) name = DString_New();
 		if( funpter == NULL ) DString_Clear( name );
-		DArray_Append( self->sourceArchive, libpath );
-		DArray_Append( self->sourceArchive, name );
+		DList_Append( self->sourceArchive, libpath );
+		DList_Append( self->sourceArchive, name );
 	}
 	if( name ) DString_Delete( name );
 
 	DaoVmSpace_Lock( self );
-	DArray_PushFront( self->loadedModules, ns );
+	DList_PushFront( self->loadedModules, ns );
 	MAP_Insert( self->nsModules, libpath, ns );
 	DaoVmSpace_Unlock( self );
 
@@ -1983,27 +1983,27 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	if( funpter == NULL ) return ns;
 
 	DaoVmSpace_Lock( self );
-	DArray_PushFront( self->nameLoading, ns->name );
-	if( ns->path->size ) DArray_PushFront( self->pathLoading, ns->path );
+	DList_PushFront( self->nameLoading, ns->name );
+	if( ns->path->size ) DList_PushFront( self->pathLoading, ns->path );
 	DaoVmSpace_Unlock( self );
 
 	retc = (*funpter)( self, ns );
 
 	DaoVmSpace_Lock( self );
-	if( ns->path->size ) DArray_PopFront( self->pathLoading );
-	DArray_PopFront( self->nameLoading );
+	if( ns->path->size ) DList_PopFront( self->pathLoading );
+	DList_PopFront( self->nameLoading );
 	DaoVmSpace_Unlock( self );
 	if( retc ){
 		DaoVmSpace_Lock( self );
 		MAP_Erase( self->nsModules, ns->name );
-		DArray_Erase( self->loadedModules, 0, self->loadedModules->size - nsCount );
+		DList_Erase( self->loadedModules, 0, self->loadedModules->size - nsCount );
 		DaoVmSpace_Unlock( self );
 		return NULL;
 	}
 	DaoNamespace_UpdateLookupTable( ns );
 	if( self->loadedModules->size > (nsCount+1) ){
 		DaoVmSpace_Lock( self );
-		DArray_Erase( self->loadedModules, 0, self->loadedModules->size - (nsCount+1) );
+		DList_Erase( self->loadedModules, 0, self->loadedModules->size - (nsCount+1) );
 		DaoVmSpace_Unlock( self );
 	}
 	return ns;
@@ -2032,7 +2032,7 @@ void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, DaoVModule *module )
 	}
 	pos = DString_RFindChar( fname, '/', -1 );
 	DString_Erase( fname, pos, -1 );
-	DArray_PushFront( self->virtualPaths, fname );
+	DList_PushFront( self->virtualPaths, fname );
 	DString_Delete( fname );
 	DString_Delete( source );
 }
@@ -2087,7 +2087,7 @@ int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname )
 	DString_Delete( path );
 	return 0;
 }
-int DaoVmSpace_SearchPath2( DaoVmSpace *self, DArray *paths, DString *fname, int type )
+int DaoVmSpace_SearchPath2( DaoVmSpace *self, DList *paths, DString *fname, int type )
 {
 	DString *path = DString_New();
 	daoint i;
@@ -2205,7 +2205,7 @@ void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path )
 			if( DString_FindChars( pstr, "modules/auxlib", 0 ) == len ) self->hasAuxlibPath = 1;
 			if( DString_FindChars( pstr, "modules/syslib", 0 ) == len ) self->hasSyslibPath = 1;
 		}
-		DArray_PushFront( self->pathSearching, pstr );
+		DList_PushFront( self->pathSearching, pstr );
 		DString_AppendChars( pstr, "/addpath.dao" );
 		if( TestFile( self, pstr ) ){
 			/* the namespace may have got no chance to reduce its reference count: */
@@ -2256,7 +2256,7 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path )
 				}
 			}
 		}
-		DArray_Erase( self->pathSearching, id, 1 );
+		DList_Erase( self->pathSearching, id, 1 );
 		DString_Delete( pathDao );
 	}
 	DString_Delete( pstr );
@@ -2284,7 +2284,7 @@ static void DaoConfigure_FromFile( const char *name )
 	FILE *fin = fopen( name, "r" );
 	DaoToken *tk1, *tk2;
 	DaoLexer *lexer;
-	DArray *tokens;
+	DList *tokens;
 	DString *mbs;
 	if( fin == NULL ) return;
 	mbs = DString_New();

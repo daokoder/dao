@@ -57,14 +57,14 @@ struct DaoParser
 	int  lineCount;
 
 	DaoLexer  *lexer;
-	DArray    *tokens; /* lexer->tokens; */
+	DList     *tokens; /* lexer->tokens; */
 
 	/*
-	// DArray<DaoVmCodeX*>: need to be store as pointers, because in code generation,
+	// DList<DaoVmCodeX*>: need to be store as pointers, because in code generation,
 	// it may be necessary to modify previously generated codes, for this,
 	// it is much easier to use pointers.
 	*/
-	DArray  *vmCodes;
+	DList  *vmCodes;
 
 	DaoInode *vmcBase;   /* the node before the ::vmcFirst; */
 	DaoInode *vmcFirst;  /* the first instruction node; */
@@ -75,12 +75,12 @@ struct DaoParser
 	int  vmcCount;
 	int  regCount;
 
-	DArray  *scopeOpenings; /* <DaoInode*> */
-	DArray  *scopeClosings; /* <DaoInode*> */
-	DArray  *lookupTables; /* DArray<DMap<DString*,int>*>: lookup table for each level; */
-	DArray  *switchTables; /* DArray<DMap<DaoValue*,DaoInode*>> */
-	DArray  *switchNames;  /* DArray<DString*>: (var name, invar name) */
-	DArray  *enumTypes;    /* DArray<DaoType*> */
+	DList  *scopeOpenings; /* <DaoInode*> */
+	DList  *scopeClosings; /* <DaoInode*> */
+	DList  *lookupTables; /* DList<DMap<DString*,int>*>: lookup table for each level; */
+	DList  *switchTables; /* DList<DMap<DaoValue*,DaoInode*>> */
+	DList  *switchNames;  /* DList<DString*>: (var name, invar name) */
+	DList  *enumTypes;    /* DList<DaoType*> */
 
 	DMap  *allConsts;  /* DMap<DString*,int>: implicit and explict local constants; */
 	DMap  *initTypes;  /* type holders @T from parameters and the up routine */
@@ -123,22 +123,22 @@ struct DaoParser
 	DaoToken     *argName;
 	DaoToken     *decoArgName;
 
-	DArray *uplocs;
-	DArray *outers;
-	DArray *decoFuncs;
-	DArray *decoFuncs2;
-	DArray *decoParams;
-	DArray *decoParams2;
-	DArray *routCompilable; /* list of defined routines with bodies */
-	DArray *routReInferable;
+	DList *uplocs;
+	DList *outers;
+	DList *decoFuncs;
+	DList *decoFuncs2;
+	DList *decoParams;
+	DList *decoParams2;
+	DList *routCompilable; /* list of defined routines with bodies */
+	DList *routReInferable;
 
-	DArray    *nsDefines;
+	DList     *nsDefines;
 	DaoLexer  *nsSymbols;
 
 	DaoLexer  *elexer;
 	DaoLexer  *wlexer;
-	DArray    *errors;
-	DArray    *warnings;
+	DList     *errors;
+	DList     *warnings;
 
 	/* members for convenience */
 	DaoEnum   *denum;
@@ -146,13 +146,13 @@ struct DaoParser
 	DString   *string2;
 	DString   *str;
 	DMap      *table; /* <DString*,int>, for lookupTables; */
-	DArray    *toks;
+	DList     *toks;
 
-	DArray  *typeItems;
-	DArray  *strings;
-	DArray  *arrays;
-	uint_t   usedString;
-	uint_t   usedArray;
+	DList  *typeItems;
+	DList  *strings;
+	DList  *lists;
+	uint_t  usedString;
+	uint_t  usedList;
 };
 
 DAO_DLL DaoParser* DaoParser_New();
@@ -165,6 +165,6 @@ DAO_DLL int DaoParser_ParseScript( DaoParser *self );
 DAO_DLL int DaoParser_ParseRoutine( DaoParser *self );
 
 DAO_DLL DaoType* DaoParser_ParseTypeName( const char *type, DaoNamespace *ns, DaoClass *cls );
-DAO_DLL DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DArray *types );
+DAO_DLL DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DList *types );
 
 #endif

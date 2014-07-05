@@ -155,10 +155,10 @@ typedef unsigned char   uchar_t;
 typedef unsigned short  ushort_t;
 typedef unsigned int    uint_t;
 
-typedef struct DString     DString;
-typedef struct DArray      DArray;
-typedef struct DNode       DNode;
-typedef struct DMap        DMap;
+typedef struct DString  DString;
+typedef struct DList    DList;
+typedef struct DNode    DNode;
+typedef struct DMap     DMap;
 
 typedef struct DaoTypeCore     DaoTypeCore;
 typedef struct DaoTypeBase     DaoTypeBase;
@@ -278,11 +278,11 @@ struct DaoTypeBase
 	/*
 	// Get garbage collectable fields (Dao data types with refCount by the type):
 	// Dao data types should be pushed into "values";
-	// DArray holding Dao data types should be pushed into "arrays";
+	// DList holding Dao data types should be pushed into "lists";
 	// DMap holding Dao data types should be pushed into "maps";
 	// When "remove" != 0, references to data that are pushed to "values" should be broken;
 	*/
-	void  (*GetGCFields)( void *self, DArray *values, DArray *arrays, DArray *maps, int remove );
+	void  (*GetGCFields)( void *self, DList *values, DList *lists, DList *maps, int remove );
 };
 
 struct DaoUserStream

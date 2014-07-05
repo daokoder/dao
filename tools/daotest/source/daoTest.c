@@ -62,7 +62,7 @@ static void DaoTestStream_Write( DaoTestStream *self, DString *output )
 
 
 
-static DArray  *dao_tests = NULL;
+static DList  *dao_tests = NULL;
 static DaoVmSpace *vmSpace = NULL;
 
 static void DString_AppendInteger( DString *self, int i )
@@ -79,14 +79,14 @@ static int dao_test_inliner( DaoNamespace *NS, DString *mode, DString *VT, DStri
 	if( (dao_tests->size % 3) == 0 ){
 		DString_Reset( out, 0 );
 		DString_AppendInteger( out, line );
-		DArray_Append( dao_tests, out );
+		DList_Append( dao_tests, out );
 	}
 
 	DString_Reset( out, 0 );
 	DString_SetBytes( out, VT->chars + rb + 1, VT->size - 2*(rb + 1) );
 	while( start < out->size && isspace( out->chars[start] ) ) start += 1;
 
-	DArray_Append( dao_tests, out );
+	DList_Append( dao_tests, out );
 
 	DString_Reset( out, 0 );
 	DString_AppendChar( out, ' ' );
@@ -204,7 +204,7 @@ int main( int argc, char **argv )
 		DaoNamespace_AddCodeInliner( ns, "test", dao_test_inliner );
 
 		string = DString_New(1);
-		dao_tests = DArray_New(DAO_DATA_STRING);
+		dao_tests = DList_New(DAO_DATA_STRING);
 		ns = DaoVmSpace_Load( vmSpace, argv[i] );
 		if( ns == NULL ){
 			mfails += 1;
@@ -279,7 +279,7 @@ int main( int argc, char **argv )
 			mfails += fail != 0;
 		}
 		DString_Delete( string );
-		DArray_Delete( dao_tests );
+		DList_Delete( dao_tests );
 		DaoQuit();
 	}
 

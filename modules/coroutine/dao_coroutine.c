@@ -196,10 +196,10 @@ static DaoFuncItem coroutineMeths[]=
 	{ NULL, NULL },
 };
 
-static void DaoxCoroutine_GC( void *p, DArray *values, DArray *as, DArray *maps, int remove )
+static void DaoxCoroutine_GC( void *p, DList *values, DList *as, DList *maps, int remove )
 {
 	DaoxCoroutine *self = (DaoxCoroutine*) p;
-	DArray_Append( values, self->process );
+	DList_Append( values, self->process );
 	if( remove ) self->process = NULL;
 }
 

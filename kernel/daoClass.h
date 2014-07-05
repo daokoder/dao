@@ -44,22 +44,22 @@ struct DaoClass
 
 	/* Holding class consts and routines - class data: */
 	/* For both this class and its parents: */
-	DArray  *constants; /* <DaoConstant*>, constants; */
-	DArray  *variables; /* <DaoVariable*>, static variables; */
-	DArray  *instvars;  /* <DaoVariable*>, instance variable types and default values; */
+	DList  *constants; /* <DaoConstant*>, constants; */
+	DList  *variables; /* <DaoVariable*>, static variables; */
+	DList  *instvars;  /* <DaoVariable*>, instance variable types and default values; */
 
-	DArray  *cstDataName;  /* <DString*>: keep track field declaration order: */
-	DArray  *glbDataName;  /* <DString*>: keep track field declaration order: */
-	DArray  *objDataName;  /* <DString*>: keep tracking field declaration order: */
+	DList  *cstDataName;  /* <DString*>: keep track field declaration order: */
+	DList  *glbDataName;  /* <DString*>: keep track field declaration order: */
+	DList  *objDataName;  /* <DString*>: keep tracking field declaration order: */
 
 	DaoValue  *parent;     /* DaoClass or DaoCData; */
 
-	DArray  *mixinBases;   /* <DaoClass*>: direct mixin classes; */
-	DArray  *allBases;     /* <DaoClass/DaoCData*>: mixin or parent classes; */
+	DList   *mixinBases;   /* <DaoClass*>: direct mixin classes; */
+	DList   *allBases;     /* <DaoClass/DaoCData*>: mixin or parent classes; */
 
-	DArray  *mixins;  /* <DaoClass*>: mixin classes; */
-	DVector *ranges;  /* <ushort_t>: ranges of the fields of the mixin classes; */
-	DVector *offsets; /* <ushort_t>: offsets of the fields from parent classes; */
+	DList   *mixins;  /* <DaoClass*>: mixin classes; */
+	DArray *ranges;  /* <ushort_t>: ranges of the fields of the mixin classes; */
+	DArray *offsets; /* <ushort_t>: offsets of the fields from parent classes; */
 
 	ushort_t  cstMixinStart;
 	ushort_t  glbMixinStart;
@@ -91,10 +91,10 @@ struct DaoClass
 	DaoType  *objType; /* GC handled in constants; */
 	DMap     *abstypes;
 
-	DArray *decoTargets;
+	DList *decoTargets;
 
 	/* for GC */
-	DArray *references;
+	DList *references;
 
 	uint_t    attribs;
 	ushort_t  objDefCount;

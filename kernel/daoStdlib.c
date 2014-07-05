@@ -103,11 +103,11 @@ static void DaoSTD_Load( DaoProcess *proc, DaoValue *p[], int N )
 	int runim = p[2]->xInteger.value;
 	int res = 0;
 
-	DArray_PushFront( vms->pathLoading, proc->activeNamespace->path );
+	DList_PushFront( vms->pathLoading, proc->activeNamespace->path );
 	ns = DaoVmSpace_LoadEx( vms, DString_GetData( name ), runim );
 	DaoProcess_PutValue( proc, (DaoValue*) ns );
 	if( ns == NULL ) DaoProcess_RaiseError( proc, NULL, "loading failed" );
-	DArray_PopFront( vms->pathLoading );
+	DList_PopFront( vms->pathLoading );
 	if( import && ns ) DaoNamespace_AddParent( proc->activeNamespace, ns );
 }
 int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname, DString *source );
@@ -239,19 +239,19 @@ static void DaoSTD_Error( DaoProcess *proc, DaoValue *p[], int n )
 	DaoException *exception = DaoException_New( etype );
 
 	DaoException_Init( exception, proc, p[0]->xString.value->chars, NULL );
-	DArray_Append( proc->exceptions, exception );
+	DList_Append( proc->exceptions, exception );
 }
 static void DaoSTD_Error2( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoException *error = (DaoException*) p[0];
-	DArray_Append( proc->exceptions, error->object ? (void*)error->object : (void*)error );
+	DList_Append( proc->exceptions, error->object ? (void*)error->object : (void*)error );
 }
 static void DaoSTD_Error3( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoType *etype = p[0]->xCtype.cdtype;
 	DaoException *exception = DaoException_New( etype );
 	DaoException_Init( exception, proc, p[1]->xString.value->chars, p[2] );
-	DArray_Append( proc->exceptions, exception );
+	DList_Append( proc->exceptions, exception );
 }
 static void DaoSTD_Exec( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -264,7 +264,7 @@ static void DaoSTD_Exec( DaoProcess *proc, DaoValue *p[], int n )
 	if( proc->exceptions->size > ecount ){
 		if( n > 0 ){
 			DaoProcess_PutValue( proc, p[0] );
-			DArray_Erase( proc->exceptions, ecount, -1 );
+			DList_Erase( proc->exceptions, ecount, -1 );
 		}
 	}else{
 		DaoProcess_PutValue( proc, proc->stackValues[0] );
@@ -283,10 +283,10 @@ static void DaoSTD_Try( DaoProcess *proc, DaoValue *p[], int n )
 		for(i=ecount; i<proc->exceptions->size; ++i){
 			DaoList_Append( list, proc->exceptions->items.pValue[i] );
 		}
-		DArray_Erase( proc->exceptions, ecount, -1 );
+		DList_Erase( proc->exceptions, ecount, -1 );
 	}else if( proc->exceptions->size > ecount ){
 		DaoProcess_PutValue( proc, proc->exceptions->items.pValue[proc->exceptions->size-1] );
-		DArray_PopBack( proc->exceptions );
+		DList_PopBack( proc->exceptions );
 	}else{
 		DaoProcess_PutValue( proc, proc->stackValues[0] );
 	}

@@ -33,7 +33,7 @@
 
 #include"daoConst.h"
 #include"daoMap.h"
-#include"daoArray.h"
+#include"daoList.h"
 #include"daoString.h"
 #include"daoNumtype.h"
 #include"daoValue.h"
@@ -171,7 +171,7 @@ static int DHash_HashIndex( DMap *self, void *key )
 {
 #define HASH_MAX  32
 	DString *s;
-	DArray *array;
+	DList *array;
 	unsigned int buf[HASH_MAX];
 	unsigned int T = self->tsize;
 	unsigned id = 0;
@@ -195,8 +195,8 @@ static int DHash_HashIndex( DMap *self, void *key )
 			id = MurmurHash3( buf, m*sizeof(unsigned int), self->hashing ) % T;
 		}
 		break;
-	case DAO_DATA_ARRAY :
-		array = (DArray*)key;
+	case DAO_DATA_LIST :
+		array = (DList*)key;
 		m = array->size * sizeof(void*);
 		id = MurmurHash3( array->items.pVoid, m, self->hashing ) % T;
 		break;
@@ -312,7 +312,7 @@ static void DMap_CopyItem( void **dest, void *item, short type )
 	if( *dest == NULL ){
 		switch( type ){
 		case DAO_DATA_STRING : *dest = DString_Copy( (DString*) item ); break;
-		case DAO_DATA_ARRAY  : *dest = DArray_Copy( (DArray*) item ); break;
+		case DAO_DATA_LIST  : *dest = DList_Copy( (DList*) item ); break;
 		case DAO_DATA_MAP    : *dest = DMap_Copy( (DMap*) item ); break;
 		case DAO_DATA_VALUE  :
 		case DAO_DATA_VALUE2 :
@@ -323,7 +323,7 @@ static void DMap_CopyItem( void **dest, void *item, short type )
 	}else{
 		switch( type ){
 		case DAO_DATA_STRING : DString_Assign( (DString*)(*dest), (DString*) item ); break;
-		case DAO_DATA_ARRAY  : DArray_Assign( (DArray*)(*dest), (DArray*) item ); break;
+		case DAO_DATA_LIST  : DList_Assign( (DList*)(*dest), (DList*) item ); break;
 		case DAO_DATA_MAP    : DMap_Assign( (DMap*)(*dest), (DMap*) item ); break;
 		case DAO_DATA_VALUE  :
 		case DAO_DATA_VALUE2 :
@@ -337,7 +337,7 @@ static void DMap_DeleteItem( void *item, short type )
 {
 	switch( type ){
 	case DAO_DATA_STRING : DString_Delete( (DString*) item ); break;
-	case DAO_DATA_ARRAY  : DArray_Delete( (DArray*) item ); break;
+	case DAO_DATA_LIST  : DList_Delete( (DList*) item ); break;
 	case DAO_DATA_MAP    : DMap_Delete( (DMap*) item ); break;
 	case DAO_DATA_VALUE  :
 	case DAO_DATA_VALUE2 :
@@ -630,7 +630,7 @@ void DMap_EraseNode( DMap *self, DNode *node )
 		DaoGC_UnlockMap( self, locked );
 	}
 }
-static daoint DArray_Compare( DArray *k1, DArray *k2 )
+static daoint DList_Compare( DList *k1, DList *k2 )
 {
 	daoint i = 0, n = k1->size;
 	daoint *v1 = k1->items.pInt;
@@ -696,7 +696,7 @@ static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
 	case DAO_DATA_VALUE  : cmp = DaoValue_Compare( (DaoValue*) k1, (DaoValue*) k2 );  break;
 	case DAO_DATA_VALUE2 : cmp = DaoValue_Compare2( (DaoValue*) k1, (DaoValue*) k2 ); break;
 	case DAO_DATA_VALUE3 : cmp = DaoValue_Compare3( (DaoValue*) k1, (DaoValue*) k2 ); break;
-	case DAO_DATA_ARRAY  : cmp = DArray_Compare( (DArray*) k1, (DArray*) k2 );        break;
+	case DAO_DATA_LIST  : cmp = DList_Compare( (DList*) k1, (DList*) k2 );        break;
 	case DAO_DATA_VOID2  : cmp = DVoid2_Compare( (void**) k1, (void**) k2 );          break;
 	case DAO_DATA_VMCODE : cmp = DaoVmCode_Compare( (DaoVmCode*) k1, (DaoVmCode*) k2 );  break;
 	case DAO_DATA_VMCODE2: cmp = DaoVmCode_Compare2( (DaoVmCode*) k1, (DaoVmCode*) k2 ); break;

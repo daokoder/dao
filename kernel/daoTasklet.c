@@ -90,7 +90,7 @@ DaoChannel* DaoChannel_New( DaoType *type, int dtype )
 	DaoChannel *self = (DaoChannel*) dao_calloc( 1, sizeof(DaoChannel) );
 	if( dtype ) type = DaoType_Specialize( dao_type_channel, & type, type != NULL );
 	DaoCstruct_Init( (DaoCstruct*) self, type );
-	self->buffer = DArray_New( DAO_DATA_VALUE );
+	self->buffer = DList_New( DAO_DATA_VALUE );
 	return self;
 }
 
@@ -148,17 +148,17 @@ struct DaoCallServer
 	int idle;
 	int stopped;
 
-	DArray  *threads;
+	DList  *threads;
 
-	DArray  *functions;  /* list of DThreadTask function pointers */
-	DArray  *parameters; /* list of void* */
-	DArray  *events;     /* list of DaoTaskEvent* */
-	DArray  *events2;    /* list of DaoTaskEvent* */
+	DList  *functions;  /* list of DThreadTask function pointers */
+	DList  *parameters; /* list of void* */
+	DList  *events;     /* list of DaoTaskEvent* */
+	DList  *events2;    /* list of DaoTaskEvent* */
 	DMap    *waitings;   /* timed waiting: <DaoComplex,DaoTaskEvent*> */
 	DMap    *active;     /* map of DaoObject* or DaoProcess* keys */
 	DMap    *pending;    /* map of pointers from ::parameters, ::events and ::events2 */
 
-	DArray  *caches;
+	DList  *caches;
 
 	DaoComplex   timestamp;  /* (time,index); */
 	DaoVmSpace  *vmspace;
@@ -193,15 +193,15 @@ static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 	self->total = 0;
 	self->idle = 0;
 	self->stopped = 0;
-	self->threads = DArray_New(0);
-	self->functions = DArray_New(0);
-	self->parameters = DArray_New(0);
-	self->events = DArray_New(0);
-	self->events2 = DArray_New(0);
+	self->threads = DList_New(0);
+	self->functions = DList_New(0);
+	self->parameters = DList_New(0);
+	self->events = DList_New(0);
+	self->events2 = DList_New(0);
 	self->waitings = DMap_New( DAO_DATA_VALUE, 0 );
 	self->pending = DHash_New(0,0);
 	self->active = DHash_New(0,0);
-	self->caches = DArray_New(0);
+	self->caches = DList_New(0);
 	self->vmspace = vms;
 	self->timestamp = com;
 	return self;
@@ -215,12 +215,12 @@ static void DaoCallServer_Delete( DaoCallServer *self )
 	for(i=0; i<self->caches->size; ++i){
 		DaoTaskEvent_Delete( (DaoTaskEvent*) self->caches->items.pVoid[i] );
 	}
-	DArray_Delete( self->threads );
-	DArray_Delete( self->functions );
-	DArray_Delete( self->parameters );
-	DArray_Delete( self->events );
-	DArray_Delete( self->events2 );
-	DArray_Delete( self->caches );
+	DList_Delete( self->threads );
+	DList_Delete( self->functions );
+	DList_Delete( self->parameters );
+	DList_Delete( self->events );
+	DList_Delete( self->events2 );
+	DList_Delete( self->caches );
 	DMap_Delete( self->waitings );
 	DMap_Delete( self->pending );
 	DMap_Delete( self->active );
@@ -250,7 +250,7 @@ static DaoTaskEvent* DaoCallServer_MakeEvent()
 	DaoTaskEvent *event;
 	DaoCallServer *server = daoCallServer;
 	DMutex_Lock( & server->mutex );
-	event = (DaoTaskEvent*) DArray_PopBack( server->caches );
+	event = (DaoTaskEvent*) DList_PopBack( server->caches );
 	if( event == NULL ) event = DaoTaskEvent_New();
 	DMutex_Unlock( & server->mutex );
 	return event;
@@ -260,7 +260,7 @@ static void DaoCallServer_CacheEvent( DaoTaskEvent *event )
 {
 	DaoCallServer *server = daoCallServer;
 	DaoTaskEvent_Reset( event );
-	DArray_PushBack( server->caches, event );
+	DList_PushBack( server->caches, event );
 }
 int DaoCallServer_GetThreadCount()
 {
@@ -274,7 +274,7 @@ void DaoCallServer_AddThread( DThreadTask func, void *param )
 	calth = DaoCallThread_New( func, param );
 	DMutex_Lock( & daoCallServer->mutex );
 	daoCallServer->total += 1;
-	DArray_Append( daoCallServer->threads, calth );
+	DList_Append( daoCallServer->threads, calth );
 	DMutex_Unlock( & daoCallServer->mutex );
 	DThread_Start( & calth->thread, (DThreadTask) DaoCallThread_Run, calth );
 }
@@ -343,8 +343,8 @@ static void DaoCallServer_ActivateEvents()
 		default: break;
 		}
 		if( move ){
-			DArray_Append( server->events, event );
-			DArray_Erase( server->events2, i, 1 );
+			DList_Append( server->events, event );
+			DList_Erase( server->events2, i, 1 );
 			count += 1;
 			i -= 1;
 		}
@@ -391,7 +391,7 @@ static void DaoCallServer_Timer( void *p )
 				event->state = DAO_EVENT_RESUME;
 				event->timeout = 1;
 				event->expiring = MIN_TIME;
-				DArray_Append( server->events, node->value.pVoid );
+				DList_Append( server->events, node->value.pVoid );
 				DMap_EraseNode( server->waitings, node );
 			}
 		}
@@ -408,8 +408,8 @@ void DaoCallServer_AddTask( DThreadTask func, void *param, int now )
 	DMutex_Lock( & server->mutex );
 	if( server->idle > server->parameters->size || now == 0 ){
 		scheduled = 1;
-		DArray_Append( server->functions, func );
-		DArray_Append( server->parameters, param );
+		DList_Append( server->functions, func );
+		DList_Append( server->parameters, param );
 		DMap_Insert( server->pending, param, NULL );
 		DCondVar_Signal( & server->condv );
 	}
@@ -423,7 +423,7 @@ void DaoCallServer_AddTask( DThreadTask func, void *param, int now )
 static void DaoCallServer_AddEvent( DaoTaskEvent *event )
 {
 	DaoCallServer *server = daoCallServer;
-	DArray_Append( server->events, event );
+	DList_Append( server->events, event );
 	DMap_Insert( server->pending, event, NULL );
 }
 static void DaoCallServer_Add( DaoTaskEvent *event )
@@ -581,8 +581,8 @@ void DaoChannel_ActivateEvent( DaoChannel *self, int type )
 		DaoTaskEvent *event = (DaoTaskEvent*) server->events2->items.pVoid[i];
 		if( event->type != type ) continue;
 		if( DaoCallServer_CheckEvent( event, NULL, self ) ){
-			DArray_Append( server->events, event );
-			DArray_Erase( server->events2, i, 1 );
+			DList_Append( server->events, event );
+			DList_Erase( server->events2, i, 1 );
 			return;
 		}
 	}
@@ -590,7 +590,7 @@ void DaoChannel_ActivateEvent( DaoChannel *self, int type )
 		DaoTaskEvent *event = (DaoTaskEvent*) node->value.pValue;
 		if( event->type != type ) continue;
 		if( DaoCallServer_CheckEvent( event, NULL, self ) ){
-			DArray_Append( server->events, event );
+			DList_Append( server->events, event );
 			DMap_EraseNode( server->waitings, node );
 			return;
 		}
@@ -602,7 +602,7 @@ void DaoChannel_ActivateEvent( DaoChannel *self, int type )
 void DaoFuture_ActivateEvent( DaoFuture *self )
 {
 	DaoCallServer *server = daoCallServer;
-	DArray *array = DArray_New(0);
+	DList *array = DList_New(0);
 	DNode *node;
 	daoint i;
 
@@ -611,8 +611,8 @@ void DaoFuture_ActivateEvent( DaoFuture *self )
 		DaoTaskEvent *event = (DaoTaskEvent*) server->events2->items.pVoid[i];
 		if( DaoCallServer_CheckEvent( event, self, NULL ) ){
 			event->state = DAO_EVENT_RESUME;
-			DArray_Append( server->events, event );
-			DArray_Erase( server->events2, i, 1 );
+			DList_Append( server->events, event );
+			DList_Erase( server->events2, i, 1 );
 			i -= 1;
 		}
 	}
@@ -621,20 +621,20 @@ void DaoFuture_ActivateEvent( DaoFuture *self )
 		/* remove from timed waiting list: */
 		if( DaoCallServer_CheckEvent( event, self, NULL ) ){
 			event->state = DAO_EVENT_RESUME;
-			DArray_Append( server->events, event );
-			DArray_Append( array, node->key.pVoid );
+			DList_Append( server->events, event );
+			DList_Append( array, node->key.pVoid );
 		}
 	}
 	for(i=0; i<array->size; i++) DMap_Erase( server->waitings, array->items.pVoid[i] );
 	DCondVar_Signal( & server->condv );
 	DMutex_Unlock( & server->mutex );
-	DArray_Delete( array );
+	DList_Delete( array );
 }
 static DaoFuture* DaoCallServer_GetNextFuture()
 {
 	DaoCallServer *server = daoCallServer;
 	DaoFuture *first, *future, *precond;
-	DArray *events = server->events;
+	DList *events = server->events;
 	DMap *pending = server->pending;
 	DMap *active = server->active;
 	DNode *it;
@@ -679,7 +679,7 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 			GC_Assign( & event->message, message );
 			event->auxiliary = channel->cap <= 0 && channel->buffer->size == 0;
 			event->type = DAO_EVENT_RESUME_TASKLET;
-			DArray_PopFront( channel->buffer );
+			DList_PopFront( channel->buffer );
 			if( channel->buffer->size < channel->cap )
 				DaoChannel_ActivateEvent( channel, DAO_EVENT_WAIT_SENDING );
 			if( channel->buffer->size )
@@ -721,7 +721,7 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 			/* change status to not finished: */
 			if( chselect != NULL || futselect != NULL ) event->auxiliary = 0;
 			if( chselect ){
-				DArray_PopFront( chselect->buffer );
+				DList_PopFront( chselect->buffer );
 				if( chselect->buffer->size < chselect->cap )
 					DaoChannel_ActivateEvent( chselect, DAO_EVENT_WAIT_SENDING );
 				if( chselect->buffer->size )
@@ -743,7 +743,7 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 			}
 		}
 		if( future->process && DMap_Find( active, future->process ) ) continue;
-		DArray_Erase( events, i, 1 );
+		DList_Erase( events, i, 1 );
 		DMap_Erase( pending, event );
 		if( actor ){
 			void *value = actor->rootObject->isAsync ? future : NULL;
@@ -770,9 +770,9 @@ MoveToWaiting:
 			DMap_Insert( server->waitings, & com, event );
 			DCondVar_Signal( & server->condv2 );
 		}else{
-			DArray_Append( server->events2, event );
+			DList_Append( server->events2, event );
 		}
-		DArray_Erase( server->events, i, 1 );
+		DList_Erase( server->events, i, 1 );
 		i -= 1;
 	}
 	return NULL;
@@ -809,8 +809,8 @@ static void DaoCallThread_Run( DaoCallThread *self )
 			DMap_Insert( server->active, param, NULL );
 			function = (DThreadTask) server->functions->items.pVoid[i];
 			parameter = param;
-			DArray_Erase( server->functions, i, 1 );
-			DArray_Erase( server->parameters, i, 1 );
+			DList_Erase( server->functions, i, 1 );
+			DList_Erase( server->parameters, i, 1 );
 			DMap_Erase( server->pending, parameter );
 			server->idle -= 1;
 			break;
@@ -1038,7 +1038,7 @@ static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
 
 	//printf( "CHANNEL_Send: %p\n", event );
 	DMutex_Lock( & daoCallServer->mutex );
-	DArray_Append( self->buffer, data );
+	DList_Append( self->buffer, data );
 	DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_RECEIVING );
 	DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_SELECT );
 	DCondVar_Signal( & daoCallServer->condv );
@@ -1087,13 +1087,13 @@ static DaoFuncItem channelMeths[] =
 static void DaoChannel_Delete( DaoChannel *self )
 {
 	DaoCstruct_Free( (DaoCstruct*) self );
-	DArray_Delete( self->buffer );
+	DList_Delete( self->buffer );
 	dao_free( self );
 }
-static void DaoChannel_GetGCFields( void *p, DArray *vs, DArray *arrays, DArray *ms, int rm )
+static void DaoChannel_GetGCFields( void *p, DList *vs, DList *arrays, DList *ms, int rm )
 {
 	DaoChannel *self = (DaoChannel*) p;
-	DArray_Append( arrays, self->buffer );
+	DList_Append( arrays, self->buffer );
 }
 
 DaoTypeBase channelTyper =
@@ -1144,15 +1144,15 @@ static void DaoFuture_Delete( DaoFuture *self )
 	GC_DecRC( self->precond );
 	dao_free( self );
 }
-static void DaoFuture_GetGCFields( void *p, DArray *values, DArray *arrays, DArray *maps, int remove )
+static void DaoFuture_GetGCFields( void *p, DList *values, DList *arrays, DList *maps, int remove )
 {
 	DaoFuture *self = (DaoFuture*) p;
-	if( self->value ) DArray_Append( values, self->value );
-	if( self->actor ) DArray_Append( values, self->actor );
-	if( self->message ) DArray_Append( values, self->message );
-	if( self->selected ) DArray_Append( values, self->selected );
-	if( self->process ) DArray_Append( values, self->process );
-	if( self->precond ) DArray_Append( values, self->precond );
+	if( self->value ) DList_Append( values, self->value );
+	if( self->actor ) DList_Append( values, self->actor );
+	if( self->message ) DList_Append( values, self->message );
+	if( self->selected ) DList_Append( values, self->selected );
+	if( self->process ) DList_Append( values, self->process );
+	if( self->precond ) DList_Append( values, self->precond );
 	if( remove ){
 		self->value = NULL;
 		self->actor = NULL;

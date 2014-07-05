@@ -102,7 +102,7 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int cst, int cbo
 	if( cst ){
 		DaoList *list = DaoList_New();
 		GC_Assign( & self->routConsts, list );
-		DArray_Assign( self->routConsts->value, from->routConsts->value );
+		DList_Assign( self->routConsts->value, from->routConsts->value );
 	}else{
 		GC_Assign( & self->routConsts, from->routConsts );
 	}
@@ -140,8 +140,8 @@ int DaoRoutine_IsWrapper( DaoRoutine *self )
 }
 int DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value )
 {
-	DArray *consts = self->routConsts->value;
-	DArray_Append( consts, value );
+	DList *consts = self->routConsts->value;
+	DList_Append( consts, value );
 	DaoValue_MarkConst( consts->items.pValue[consts->size-1] );
 	return consts->size-1;
 }
@@ -159,13 +159,13 @@ DaoRoutineBody* DaoRoutineBody_New()
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->source = NULL;
 	self->upValues = NULL;
-	self->vmCodes = DVector_New( sizeof(DaoVmCode) );
-	self->regType = DArray_New( DAO_DATA_VALUE );
-	self->defLocals = DArray_New( DAO_DATA_TOKEN );
-	self->annotCodes = DArray_New( DAO_DATA_VMCODE );
+	self->vmCodes = DArray_New( sizeof(DaoVmCode) );
+	self->regType = DList_New( DAO_DATA_VALUE );
+	self->defLocals = DList_New( DAO_DATA_TOKEN );
+	self->annotCodes = DList_New( DAO_DATA_VMCODE );
 	self->localVarType = DMap_New(0,0);
 	self->abstypes = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
-	self->simpleVariables = DArray_New(0);
+	self->simpleVariables = DList_New(0);
 	self->codeStart = self->codeEnd = 0;
 	self->aux = DMap_New(0,0);
 	self->jitData = NULL;
@@ -179,15 +179,15 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
-	DVector_Delete( self->vmCodes );
-	DArray_Delete( self->simpleVariables );
-	DArray_Delete( self->regType );
-	DArray_Delete( self->defLocals );
-	DArray_Delete( self->annotCodes );
+	DArray_Delete( self->vmCodes );
+	DList_Delete( self->simpleVariables );
+	DList_Delete( self->regType );
+	DList_Delete( self->defLocals );
+	DList_Delete( self->annotCodes );
 	DMap_Delete( self->localVarType );
 	DMap_Delete( self->abstypes );
-	if( self->upValues ) DArray_Delete( self->upValues );
-	if( self->decoTargets ) DArray_Delete( self->decoTargets );
+	if( self->upValues ) DList_Delete( self->upValues );
+	if( self->decoTargets ) DList_Delete( self->decoTargets );
 	if( self->revised ) GC_DecRC( self->revised );
 	if( self->aux ) DaoAux_Delete( self->aux );
 	if( dao_jit.Free && self->jitData ) dao_jit.Free( self->jitData );
@@ -197,28 +197,28 @@ void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other, int
 {
 	int i;
 	DMap_Delete( self->localVarType );
-	DArray_Delete( self->annotCodes );
+	DList_Delete( self->annotCodes );
 	self->source = other->source;
-	self->annotCodes = DArray_Copy( other->annotCodes );
+	self->annotCodes = DList_Copy( other->annotCodes );
 	self->localVarType = DMap_Copy( other->localVarType );
 	if( self->decoTargets ){
-		DArray_Delete( self->decoTargets );
+		DList_Delete( self->decoTargets );
 		self->decoTargets = NULL;
 	}
-	if( other->decoTargets ) self->decoTargets = DArray_Copy( other->decoTargets );
-	DVector_Assign( self->vmCodes, other->vmCodes );
-	DArray_Assign( self->regType, other->regType );
-	DArray_Assign( self->simpleVariables, other->simpleVariables );
+	if( other->decoTargets ) self->decoTargets = DList_Copy( other->decoTargets );
+	DArray_Assign( self->vmCodes, other->vmCodes );
+	DList_Assign( self->regType, other->regType );
+	DList_Assign( self->simpleVariables, other->simpleVariables );
 	self->regCount = other->regCount;
 	self->codeStart = other->codeStart;
 	self->codeEnd = other->codeEnd;
 	if( other->upValues == NULL ) return;
-	if( self->upValues == NULL ) self->upValues = DArray_New( DAO_DATA_VALUE );
-	DArray_Clear( self->upValues );
+	if( self->upValues == NULL ) self->upValues = DList_New( DAO_DATA_VALUE );
+	DList_Clear( self->upValues );
 	for(i=0; i<other->upValues->size; ++i){
 		DaoVariable *var = other->upValues->items.pVar[i];
 		if( copy_stat ) var = DaoVariable_New( var->value, var->dtype );
-		DArray_Append( self->upValues, var );
+		DList_Append( self->upValues, var );
 	}
 }
 DaoRoutineBody* DaoRoutineBody_Copy( DaoRoutineBody *self, int copy_stat )
@@ -230,30 +230,30 @@ DaoRoutineBody* DaoRoutineBody_Copy( DaoRoutineBody *self, int copy_stat )
 
 extern void DaoRoutine_JitCompile( DaoRoutine *self );
 
-int DaoRoutine_SetVmCodes( DaoRoutine *self, DArray *vmCodes )
+int DaoRoutine_SetVmCodes( DaoRoutine *self, DList *vmCodes )
 {
 	int i, n;
 	DaoRoutineBody *body = self->body;
 	if( body == NULL ) return 0;
 	if( vmCodes == NULL || vmCodes->type != DAO_DATA_VMCODE ) return 0;
-	DArray_Swap( body->annotCodes, vmCodes );
+	DList_Swap( body->annotCodes, vmCodes );
 	vmCodes = body->annotCodes;
-	DVector_Resize( body->vmCodes, vmCodes->size );
+	DArray_Resize( body->vmCodes, vmCodes->size );
 	for(i=0,n=vmCodes->size; i<n; i++){
 		body->vmCodes->data.codes[i] = *(DaoVmCode*) vmCodes->items.pVmc[i];
 	}
 	return DaoRoutine_DoTypeInference( self, 0 );
 }
-int DaoRoutine_SetVmCodes2( DaoRoutine *self, DVector *vmCodes )
+int DaoRoutine_SetVmCodes2( DaoRoutine *self, DArray *vmCodes )
 {
-	DVector_Assign( self->body->vmCodes, vmCodes );
+	DArray_Assign( self->body->vmCodes, vmCodes );
 	return DaoRoutine_DoTypeInference( self, 0 );
 }
 
-void DaoRoutine_SetSource( DaoRoutine *self, DArray *tokens, DaoNamespace *ns )
+void DaoRoutine_SetSource( DaoRoutine *self, DList *tokens, DaoNamespace *ns )
 {
-	DArray_Append( ns->sources, tokens );
-	self->body->source = (DArray*) DArray_Back( ns->sources );
+	DList_Append( ns->sources, tokens );
+	self->body->source = (DList*) DList_Back( ns->sources );
 }
 
 
@@ -378,18 +378,18 @@ DRoutines* DRoutines_New()
 	DRoutines *self = (DRoutines*) dao_calloc( 1, sizeof(DRoutines) );
 	self->tree = NULL;
 	self->mtree = NULL;
-	self->routines = DArray_New(0);
-	self->array = DArray_New( DAO_DATA_VALUE );
-	self->array2 = DArray_New(0);
+	self->routines = DList_New(0);
+	self->array = DList_New( DAO_DATA_VALUE );
+	self->array2 = DList_New(0);
 	return self;
 }
 void DRoutines_Delete( DRoutines *self )
 {
 	if( self->tree ) DParamNode_Delete( self->tree );
 	if( self->mtree ) DParamNode_Delete( self->mtree );
-	DArray_Delete( self->routines );
-	DArray_Delete( self->array );
-	DArray_Delete( self->array2 );
+	DList_Delete( self->routines );
+	DList_Delete( self->array );
+	DList_Delete( self->array2 );
 	dao_free( self );
 }
 
@@ -444,17 +444,17 @@ static DParamNode* DParamNode_Add( DParamNode *self, DaoRoutine *routine, int pi
 	}
 	return it;
 }
-static void DParamNode_ExportRoutine( DParamNode *self, DArray *routines )
+static void DParamNode_ExportRoutine( DParamNode *self, DList *routines )
 {
 	DParamNode *it;
-	if( self->routine ) DArray_PushFront( routines, self->routine );
+	if( self->routine ) DList_PushFront( routines, self->routine );
 	for(it=self->first; it; it=it->next) DParamNode_ExportRoutine( it, routines );
 }
 DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 {
 	int i, n, bl = 0;
 	DParamNode *param = NULL;
-	DArray *routs;
+	DList *routs;
 
 	if( routine->routType == NULL ) return NULL;
 	/* If the name is not set yet, set it: */
@@ -479,7 +479,7 @@ DaoRoutine* DRoutines_Add( DRoutines *self, DaoRoutine *routine )
 	// To avoid memory leaking, the one not added to the tree should also
 	// be appended to "array", so that it can be properly garbage collected.
 	*/
-	DArray_Append( self->array, routine );
+	DList_Append( self->array, routine );
 
 	self->array2->size = 0;
 	if( self->mtree ) DParamNode_ExportRoutine( self->mtree, self->array2 );

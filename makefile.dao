@@ -96,12 +96,12 @@ if( % changeset ) daovm.AddDefinition( "CHANGESET_ID", "\\\"FOS." + changeset[:1
 daovm_kernel_headers =
 {
 	"kernel/dao.h" ,
-	"kernel/daoArray.h" ,
 	"kernel/daoBase.h" ,
 	"kernel/daoClass.h" ,
 	"kernel/daoConst.h" ,
 	"kernel/daoGC.h" ,
 	"kernel/daoLexer.h" ,
+	"kernel/daoList.h" ,
 	"kernel/daoMap.h" ,
 	"kernel/daoNamespace.h" ,
 	"kernel/daoNumtype.h" ,
@@ -127,11 +127,11 @@ daovm_kernel_headers =
 
 daovm_kernel_sources =
 {
-	"kernel/daoArray.c" ,
 	"kernel/daoClass.c" ,
 	"kernel/daoConst.c" ,
 	"kernel/daoGC.c" ,
 	"kernel/daoLexer.c" ,
+	"kernel/daoList.c" ,
 	"kernel/daoMap.c" ,
 	"kernel/daoNamespace.c" ,
 	"kernel/daoNumtype.c" ,

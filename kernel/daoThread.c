@@ -234,14 +234,14 @@ int DMutex_TryLock( DMutex *self )
 
 void DCondVar_Init( DCondVar *self )
 {
-	self->thdWaiting = DArray_New(0);
+	self->thdWaiting = DList_New(0);
 	DMutex_Init( & self->thdMutex );
 	/* manual reset, when signaled, all waiting threads will be waked up: */
 	self->myCondVar = CreateEvent( NULL, TRUE, FALSE, NULL );
 }
 void DCondVar_Destroy( DCondVar *self )
 {
-	DArray_Delete( self->thdWaiting );
+	DList_Delete( self->thdWaiting );
 	DMutex_Destroy( & self->thdMutex );
 	CloseHandle( self->myCondVar );
 }
@@ -251,7 +251,7 @@ void DCondVar_Wait( DCondVar *self, DMutex *mtx )
 	DThreadData *p = (DThreadData*)TlsGetValue( thdSpecKey );
 
 	DMutex_Lock( & self->thdMutex );
-	DArray_PushBack( self->thdWaiting, (void*) p->thdObject );
+	DList_PushBack( self->thdWaiting, (void*) p->thdObject );
 	DMutex_Unlock( & self->thdMutex );
 
 	if( mtx ) DMutex_Unlock( mtx );
@@ -267,7 +267,7 @@ int DCondVar_TimedWait( DCondVar *self, DMutex *mtx, double seconds )
 	DThreadData *p = (DThreadData*)TlsGetValue( thdSpecKey );
 
 	DMutex_Lock( & self->thdMutex );
-	DArray_PushBack( self->thdWaiting, (void*) p->thdObject );
+	DList_PushBack( self->thdWaiting, (void*) p->thdObject );
 	DMutex_Unlock( & self->thdMutex );
 
 	if( mtx ) DMutex_Unlock( mtx );
@@ -285,7 +285,7 @@ void DCondVar_Signal( DCondVar *self )
 	if( self->thdWaiting->size > 0 ){
 		thread = (DThread*) self->thdWaiting->items.pVoid[0];
 		SetEvent( thread->condv.myCondVar );
-		DArray_PopFront( self->thdWaiting );
+		DList_PopFront( self->thdWaiting );
 	}
 	DMutex_Unlock( & self->thdMutex );
 
@@ -299,7 +299,7 @@ void DCondVar_BroadCast( DCondVar *self )
 		thread = (DThread*) self->thdWaiting->items.pVoid[i];
 		SetEvent( thread->condv.myCondVar );
 	}
-	DArray_Clear( self->thdWaiting );
+	DList_Clear( self->thdWaiting );
 	DMutex_Unlock( & self->thdMutex );
 }
 
@@ -572,7 +572,7 @@ static void DaoMT_RunMapFunctional( void *p )
 
 #ifdef DAO_WITH_NUMARRAY
 void DaoArray_GetSliceShape( DaoArray *self, daoint **dims, short *ndim );
-int DaoArray_IndexFromSlice( DaoArray *self, DArray *slice, daoint sid );
+int DaoArray_IndexFromSlice( DaoArray *self, DList *slice, daoint sid );
 DaoValue* DaoArray_GetValue( DaoArray *self, daoint i, DaoValue *res );
 void DaoArray_SetValue( DaoArray *self, daoint i, DaoValue *value );
 
@@ -687,9 +687,9 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 	sect = DaoProcess_InitCodeSection( proc );
 	if( sect == NULL ) return;
 	if( list ){
-		DArray_Clear( list->value );
-		if( param->type == DAO_LIST ) DArray_Resize( list->value, param->xList.value->size, NULL );
-		if( param->type == DAO_MAP ) DArray_Resize( list->value, param->xMap.value->size, NULL );
+		DList_Clear( list->value );
+		if( param->type == DAO_LIST ) DList_Resize( list->value, param->xList.value->size, NULL );
+		if( param->type == DAO_MAP ) DList_Resize( list->value, param->xMap.value->size, NULL );
 #ifdef DAO_WITH_NUMARRAY
 	}else if( array && F == DVM_FUNCT_MAP ){
 		DaoArray_GetSliceShape( (DaoArray*) param, & array->dims, & array->ndim );

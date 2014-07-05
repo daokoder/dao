@@ -131,11 +131,11 @@ static DaoFuncItem protobjectMeths[]=
 	{ NULL, NULL },
 };
 
-static void DaoxProtobject_GC( void *p, DArray *values, DArray *as, DArray *maps, int remove )
+static void DaoxProtobject_GC( void *p, DList *values, DList *as, DList *maps, int remove )
 {
 	DaoxProtobject *self = (DaoxProtobject*) p;
-	DArray_Append( values, self->proto );
-	DArray_Append( maps, self->fields );
+	DList_Append( values, self->proto );
+	DList_Append( maps, self->fields );
 	if( remove ) self->proto = NULL;
 }
 

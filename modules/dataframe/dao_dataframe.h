@@ -48,7 +48,7 @@ struct DaoxDataColumn
 	DAO_CSTRUCT_COMMON;
 
 	DaoType  *vatype;  // type of the cells;
-	DVector  *cells;   // DVector<daoint|float|double|complex|DString | DaoValue* >
+	DArray   *cells;   // DArray<daoint|float|double|complex|DString | DaoValue* >
 };
 
 DAO_DLL DaoType *daox_type_datacolumn;
@@ -70,12 +70,12 @@ struct DaoxDataFrame
 
 	daoint   dims[3];    // number of rows;
 	uint_t   groups[3];  // active label group for each dim;
-	DArray  *labels[3];  // DArray<DMap<DString*>*>
-	DArray  *columns;    // DArray<DaoxDataColumn*>
-	DArray  *caches;     // DArray<DaoxDataColumn*>
+	DList   *labels[3];  // DList<DMap<DString*>*>
+	DList   *columns;    // DList<DaoxDataColumn*>
+	DList   *caches;     // DList<DaoxDataColumn*>
 
 	DaoxDataFrame  *original;  // the original dataframe;
-	DVector        *slices;    // see comments in daoNumtype.h;
+	DArray         *slices;    // see comments in daoNumtype.h;
 };
 
 DAO_DLL DaoType *daox_type_dataframe;

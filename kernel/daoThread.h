@@ -84,7 +84,7 @@ struct DCondVar
 #ifdef WIN32
 	DMutex thdMutex;
 	/* manual-reset, auto-reset and an auxilary holder. */
-	DArray *thdWaiting;
+	DList *thdWaiting;
 #endif
 };
 DAO_DLL void DCondVar_Init( DCondVar *self );

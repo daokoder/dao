@@ -56,14 +56,14 @@ struct DaoCnode
 	ushort_t  lvalue2;    /* C operand for SETF, SETI, SETDI, SETMI instructions; */
 	ushort_t  exprid;     /* expression id; 0xffff for none; */
 
-	DArray   *ins;   /* in nodes in the flow graph; */
-	DArray   *outs;  /* out nodes in the flow graph; */
-	DArray   *kills; /* expressions that are killed by this one; */
+	DList   *ins;   /* in nodes in the flow graph; */
+	DList   *outs;  /* out nodes in the flow graph; */
+	DList   *kills; /* expressions that are killed by this one; */
 
-	DArray   *defs; /* definitions for this use node; */
-	DArray   *uses; /* uses for this definition node; */
+	DList   *defs; /* definitions for this use node; */
+	DList   *uses; /* uses for this definition node; */
 
-	DArray   *list; /* sorted list for the analysis results; */
+	DList   *list; /* sorted list for the analysis results; */
 };
 
 DAO_DLL void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *code );
@@ -81,21 +81,21 @@ struct DaoOptimizer
 	AnalysisInit    init;
 	AnalysisUpdate  update;
 
-	DArray  *nodes;  /* all nodes (labels); */
-	DArray  *enodes; /* expression nodes (labels); */
-	DArray  *uses;   /* nodes that use a variable; */
-	DArray  *refers; /* variables: 0, non-reference; 1, reference; */
+	DList  *nodes;  /* all nodes (labels); */
+	DList  *enodes; /* expression nodes (labels); */
+	DList  *uses;   /* nodes that use a variable; */
+	DList  *refers; /* variables: 0, non-reference; 1, reference; */
 
 	DMap    *exprs;   /* all expressions; */
 	DMap    *inits;   /* init nodes; */
 	DMap    *finals;  /* final nodes; */
 
 	DMap    *tmp;
-	DArray  *array;
-	DArray  *array2;
-	DArray  *array3;
-	DArray  *nodeCache;
-	DArray  *arrayCache;
+	DList  *array;
+	DList  *array2;
+	DList  *array3;
+	DList  *nodeCache;
+	DList  *arrayCache;
 };
 
 DAO_DLL DaoOptimizer* DaoOptimizer_New();
@@ -138,10 +138,10 @@ struct DaoInode
 
 DaoInode* DaoInode_New();
 
-void DaoInodes_Clear( DArray *inodes );
+void DaoInodes_Clear( DList *inodes );
 
-void DaoRoutine_CodesToInodes( DaoRoutine *self, DArray *inodes );
-void DaoRoutine_CodesFromInodes( DaoRoutine *self, DArray *inodes );
+void DaoRoutine_CodesToInodes( DaoRoutine *self, DList *inodes );
+void DaoRoutine_CodesFromInodes( DaoRoutine *self, DList *inodes );
 void DaoRoutine_SetupSimpleVars( DaoRoutine *self );
 
 
@@ -159,18 +159,18 @@ struct DaoInferencer
 	DaoRoutine  *routine;
 	DaoClass    *hostClass;
 
-	DArray      *inodes;
-	DArray      *consts;
-	DArray      *types;
-	DArray      *types2;
+	DList      *inodes;
+	DList      *consts;
+	DList      *types;
+	DList      *types2;
 	DString     *inited;
 
-	DArray      *rettypes;
-	DArray      *typeMaps;
-	DArray      *errors;
-	DArray      *array;
-	DArray      *array2;
-	DArray      *defers;
+	DList      *rettypes;
+	DList      *typeMaps;
+	DList      *errors;
+	DList      *array;
+	DList      *array2;
+	DList      *defers;
 
 	DMap        *defs;
 	DMap        *defs2;

@@ -931,7 +931,7 @@ int DString_CompareUTF8( DString *self, DString *chs )
 }
 
 
-int DString_DecodeUTF8( DString *self, DVector *wcs )
+int DString_DecodeUTF8( DString *self, DArray *wcs )
 {
 	uint_t *wch;
 	wchar_t *wch1, *wch2;
@@ -941,31 +941,31 @@ int DString_DecodeUTF8( DString *self, DVector *wcs )
 
 	if( wcs->stride != sizeof(wchar_t) && wcs->stride != 4 ) return 0;
 
-	DVector_Reserve( wcs, self->size + 1 );
+	DArray_Reserve( wcs, self->size + 1 );
 	while( chs < end ){
 		DCharState state = DString_DecodeChar( chs, end );
 		if( state.type == 0 ) goto InvalidByte;
 		chs += state.width;
         if( wcs->stride == 4 ){ /* UTF-32 */
-			wch = (uint_t*) DVector_Push( wcs );
+			wch = (uint_t*) DArray_Push( wcs );
 			*wch = state.value;
         }else if( state.value <= 0xFFFF ){ /* UTF-16, BMP */
-			wch1 = (wchar_t*) DVector_Push( wcs );
+			wch1 = (wchar_t*) DArray_Push( wcs );
 			*wch1 = state.value;
 		}else{ /* UTF-16, surrogates */
 			state.value -= 0x10000;
-			wch1 = (wchar_t*) DVector_Push( wcs );
-			wch2 = (wchar_t*) DVector_Push( wcs );
+			wch1 = (wchar_t*) DArray_Push( wcs );
+			wch2 = (wchar_t*) DArray_Push( wcs );
 			*wch1 = (state.value >> 10) + 0xD800;
 			*wch2 = (state.value & 0x3FF) + 0xDC00;
 		}
 		continue;
 InvalidByte:
 		if( wcs->stride == 4 ){ /* UTF-32 */
-			wch = (uint_t*) DVector_Push( wcs );
+			wch = (uint_t*) DArray_Push( wcs );
 			*wch = 0xFFFD; /* replacement character; */
 		}else{
-			wch1 = (wchar_t*) DVector_Push( wcs );
+			wch1 = (wchar_t*) DArray_Push( wcs );
 			*wch1 = 0xFFFD; /* replacement character; */
 		}
 		chs += 1;
@@ -976,21 +976,21 @@ InvalidByte:
 }
 
 static void DMBString_AppendWCS( DString *self, const wchar_t *chs, daoint len );
-static void DWCString_AppendMBS( DVector *self, const char *chs, daoint len );
+static void DWCString_AppendMBS( DArray *self, const char *chs, daoint len );
 
 int DString_ImportUTF8( DString *self, DString *utf8 )
 {
-	DVector *wcs = DVector_New( sizeof(wchar_t) );
+	DArray *wcs = DArray_New( sizeof(wchar_t) );
 	int ret = DString_DecodeUTF8( utf8, wcs );
 	DMBString_AppendWCS( self, (const wchar_t*) wcs->data.base, wcs->size );
-	DVector_Delete( wcs );
+	DArray_Delete( wcs );
 	return ret;
 }
 int DString_ExportUTF8( DString *self, DString *utf8 )
 {
 	wchar_t *wchs;
 	daoint i;
-	DVector *wcs = DVector_New( sizeof(wchar_t) );
+	DArray *wcs = DArray_New( sizeof(wchar_t) );
 	DWCString_AppendMBS( wcs, self->chars, self->size );
 	DString_Reserve( utf8, utf8->size + 3*wcs->size );
 	wchs = wcs->data.wchars;
@@ -999,18 +999,18 @@ int DString_ExportUTF8( DString *self, DString *utf8 )
 }
 int DString_ToLocal( DString *self )
 {
-	DVector *wcs = DVector_New( sizeof(wchar_t) );
+	DArray *wcs = DArray_New( sizeof(wchar_t) );
 	int ret = DString_DecodeUTF8( self, wcs );
 	DString_Reset( self, 0 );
 	DMBString_AppendWCS( self, wcs->data.wchars, wcs->size );
-	DVector_Delete( wcs );
+	DArray_Delete( wcs );
 	return ret;
 }
 int DString_ToUTF8( DString *self )
 {
 	wchar_t *wchs;
 	daoint i;
-	DVector *wcs = DVector_New( sizeof(wchar_t) );
+	DArray *wcs = DArray_New( sizeof(wchar_t) );
 	DWCString_AppendMBS( wcs, self->chars, self->size );
 	DString_Reset( self, 0 );
 	DString_Reserve( self, 3*wcs->size );
@@ -1056,22 +1056,22 @@ static void DMBString_AppendWCS( DString *self, const wchar_t *chs, daoint len )
 	self->chars[ self->size ] = 0;
 	DString_Reset( self, self->size );
 }
-static void DWCString_AppendMBS( DVector *self, const char *chs, daoint len )
+static void DWCString_AppendMBS( DArray *self, const char *chs, daoint len )
 {
 	const char *end = chs + len;
 	mbstate_t state;
 	daoint smin;
 
-	DVector_Reset( self, 0 );
+	DArray_Reset( self, 0 );
 	if( self->stride < sizeof(wchar_t) ) return;
 	if( len == 0 || chs == NULL ) return;
 
-	DVector_Reserve( self, len + 2 );
+	DArray_Reserve( self, len + 2 );
 	while( chs < end ){
 		const char *next = chs;
 		wchar_t *dst = self->data.wchars + self->size;
 		if( *chs == '\0' ){
-			wchar_t *wch = (wchar_t*) DVector_Push( self );
+			wchar_t *wch = (wchar_t*) DArray_Push( self );
 			*wch = L'\0';
 			chs += 1;
 			continue;

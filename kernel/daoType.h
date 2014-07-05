@@ -32,7 +32,7 @@
 #include"daoBase.h"
 #include"daoConst.h"
 #include"daoString.h"
-#include"daoArray.h"
+#include"daoList.h"
 #include"daoMap.h"
 #include"daoStdtype.h"
 
@@ -97,8 +97,8 @@ struct DaoType
 	uchar_t   ffitype   : 4; /* for modules using ffi */
 	DString  *name;   /* type name */
 	DString  *fname;  /* field name, or parameter name */
-	DArray   *nested; /* type items */
-	DArray   *bases;  /* base types */
+	DList    *nested; /* type items */
+	DList    *bases;  /* base types */
 	DMap     *mapNames;
 	DMap     *interfaces;
 
@@ -144,7 +144,7 @@ DAO_DLL DaoType *dao_type_warning;
 DAO_DLL DaoType *dao_type_error;
 DAO_DLL DaoType *dao_array_types[DAO_COMPLEX+1];
 
-DAO_DLL DaoType* DaoType_New( const char *name, int tid, DaoValue *pb, DArray *nest );
+DAO_DLL DaoType* DaoType_New( const char *name, int tid, DaoValue *pb, DList *nest );
 DAO_DLL DaoType* DaoType_Copy( DaoType *self );
 DAO_DLL void DaoType_Delete( DaoType *self );
 
@@ -188,20 +188,20 @@ struct DaoInterface
 {
 	DAO_VALUE_COMMON;
 
-	DaoType       *abtype;  /* type object of this interface; */
-	DArray        *supers;  /* parent interfaces; */
-	DMap          *methods; /* DHash<DString*,DaoRoutine*>; */
+	DaoType  *abtype;  /* type object of this interface; */
+	DList    *supers;  /* parent interfaces; */
+	DMap     *methods; /* DHash<DString*,DaoRoutine*>; */
 
 	short derived;
 };
 
 DaoInterface* DaoInterface_New( const char *name );
 
-int DaoInterface_Bind( DArray *pairs, DArray *fails );
+int DaoInterface_Bind( DList *pairs, DList *fails );
 int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds );
 void DaoInterface_DeriveMethods( DaoInterface *self );
 
-void DMap_SortMethods( DMap *hash, DArray *methods );
+void DMap_SortMethods( DMap *hash, DList *methods );
 
 int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds );
 
@@ -288,9 +288,9 @@ struct DTypeSpecTree
 {
 	DTypeParam  *root;
 
-	DArray  *holders;  /* type holders; */
-	DArray  *defaults; /* default types; */
-	DArray  *sptypes;  /* for GC; */
+	DList  *holders;  /* type holders; */
+	DList  *defaults; /* default types; */
+	DList  *sptypes;  /* for GC; */
 };
 
 DTypeSpecTree* DTypeSpecTree_New();

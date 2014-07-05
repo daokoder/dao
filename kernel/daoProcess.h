@@ -122,9 +122,9 @@ struct DaoProcess
 	DaoFuture      *future;
 	DaoStream      *stdioStream;
 
-	DArray         *defers;
-	DArray         *exceptions;
-	DArray         *factory;
+	DList          *defers;
+	DList          *exceptions;
+	DList          *factory;
 
 	/*
 	// Process auxiliary data (process specific data):

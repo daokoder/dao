@@ -89,24 +89,24 @@ struct DaoVmSpace
 	DMap    *allInferencers;
 	DMap    *allOptimizers;
 
-	DArray  *processes;
-	DArray  *parsers;
-	DArray  *byteCoders;
-	DArray  *inferencers;
-	DArray  *optimizers;
+	DList   *processes;
+	DList   *parsers;
+	DList   *byteCoders;
+	DList   *inferencers;
+	DList   *optimizers;
 
 	DString *daoBinPath;
 	DString *startPath;
 	DString *mainSource;
 	DString *pathWorking;
-	DArray  *nameLoading;
-	DArray  *pathLoading;
-	DArray  *pathSearching; /* <DString*> */
-	DArray  *virtualPaths;  /* <DString*> */
+	DList   *nameLoading;
+	DList   *pathLoading;
+	DList   *pathSearching; /* <DString*> */
+	DList   *virtualPaths;  /* <DString*> */
 
-	DArray  *preloadModules;
-	DArray  *loadedModules;
-	DArray  *sourceArchive;
+	DList   *preloadModules;
+	DList   *loadedModules;
+	DList   *sourceArchive;
 
 	int options;
 	char stopit;

@@ -53,8 +53,8 @@ DAO_DLL void DaoGC_IncRC( DaoValue *dbase );
 DAO_DLL void DaoGC_DecRC( DaoValue *dbase );
 DAO_DLL void DaoGC_Assign( DaoValue **dest, DaoValue *src );
 
-DAO_DLL void DaoGC_IncRCs( DArray *dbases );
-DAO_DLL void DaoGC_DecRCs( DArray *dbases );
+DAO_DLL void DaoGC_IncRCs( DList *dbases );
+DAO_DLL void DaoGC_DecRCs( DList *dbases );
 
 #define GC_IncRC( p )        DaoGC_IncRC( (DaoValue*)(p) )
 #define GC_DecRC( p )        DaoGC_DecRC( (DaoValue*)(p) )
@@ -75,7 +75,7 @@ DAO_DLL void DaoGC_DecRCs( DArray *dbases );
 // used, the concurrent GC is able to handle the concurrent modification
 // of array/map properly.
 //
-// Both DArray and DMap have a "mutating" field, which is set to non-zero,
+// Both DList and DMap have a "mutating" field, which is set to non-zero,
 // when DaoGC_LockArray() or DaoGC_LockMap() is called. But they do real locking
 // only if the array/map is being scanned by the concurrent GC.
 // In the GC part, when it observes that the "mutating" field of an array/map
@@ -83,8 +83,8 @@ DAO_DLL void DaoGC_DecRCs( DArray *dbases );
 // It always does real locking so that the mutator can block by locking.
 */
 
-DAO_DLL int DaoGC_LockArray( DArray *array );
-DAO_DLL void DaoGC_UnlockArray( DArray *array, int locked );
+DAO_DLL int DaoGC_LockArray( DList *array );
+DAO_DLL void DaoGC_UnlockArray( DList *array, int locked );
 
 DAO_DLL int DaoGC_LockMap( DMap *map );
 DAO_DLL void DaoGC_UnlockMap( DMap *map, int locked );

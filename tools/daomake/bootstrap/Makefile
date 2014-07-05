@@ -10,7 +10,7 @@ LFLAGS = $(SYSLIBS)
 
 HEADERS = $(DAO_SRC_DIR)/dao.h $(DAO_SRC_DIR)/daoBase.h $(DAO_SRC_DIR)/daoGC.h \
 		  $(DAO_SRC_DIR)/daoObject.h $(DAO_SRC_DIR)/daoRoutine.h \
-		  $(DAO_SRC_DIR)/daoThread.h $(DAO_SRC_DIR)/daoArray.h \
+		  $(DAO_SRC_DIR)/daoThread.h $(DAO_SRC_DIR)/daoList.h \
 		  $(DAO_SRC_DIR)/daoLexer.h $(DAO_SRC_DIR)/daoOptimizer.h \
 		  $(DAO_SRC_DIR)/daoStdlib.h $(DAO_SRC_DIR)/daoType.h \
 		  $(DAO_SRC_DIR)/daoParser.h $(DAO_SRC_DIR)/daoStdtype.h \
@@ -26,8 +26,8 @@ HEADERS = $(DAO_SRC_DIR)/dao.h $(DAO_SRC_DIR)/daoBase.h $(DAO_SRC_DIR)/daoGC.h \
 
 first: all
 
-daoArray.o: $(HEADERS) $(DAO_SRC_DIR)/daoArray.c 
-	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoArray.c -o daoArray.o
+daoList.o: $(HEADERS) $(DAO_SRC_DIR)/daoList.c 
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoList.c -o daoList.o
 
 daoMap.o: $(HEADERS) $(DAO_SRC_DIR)/daoMap.c
 	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoMap.c -o daoMap.o
@@ -109,7 +109,7 @@ daoMake.o: $(HEADERS) ../source/daoMake.c
 
 
 OBJECTS = daoConst.o daoVmcode.o \
-		  daoString.o daoArray.o daoMap.o \
+		  daoString.o daoList.o daoMap.o \
 		  daoValue.o daoStdtype.o daoNumtype.o \
 		  daoRoutine.o daoClass.o daoObject.o \
 		  daoProcess.o daoNamespace.o daoVmspace.o \

@@ -40,8 +40,8 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 {
 	DaoNamespace *ns = other->classRoutine->nameSpace;
 	DaoType *tp;
-	DArray *offsets = DArray_New(0);
-	DArray *routines = DArray_New(0);
+	DList *offsets = DList_New(0);
+	DList *routines = DList_New(0);
 	DNode *it;
 	int i, k, st, up, id;
 
@@ -49,12 +49,12 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 		DaoValue *sup = other->superClass->items.pValue[i];
 		if( sup->type == DAO_CLASS && sup->xClass.typeHolders ){
 			tp = DaoType_DefineTypes( sup->xClass.objType, ns, deftypes );
-			DArray_Append( self->superClass, tp->aux );
+			DList_Append( self->superClass, tp->aux );
 		}else if( sup->type == DAO_CTYPE && sup->xCtype.ctype->typer->core->kernel->sptree ){
 			tp = DaoType_DefineTypes( sup->xCtype.ctype, ns, deftypes );
-			DArray_Append( self->superClass, tp->aux );
+			DList_Append( self->superClass, tp->aux );
 		}else{
-			DArray_Append( self->superClass, sup );
+			DList_Append( self->superClass, sup );
 		}
 	}
 
@@ -71,27 +71,27 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 		DMap_Insert( self->lookupTable, it->key.pVoid, it->value.pVoid );
 	}
 	for(i=self->objDataName->size; i<other->objDataName->size; i++)
-		DArray_Append( self->objDataName, other->objDataName->items.pString[i] );
+		DList_Append( self->objDataName, other->objDataName->items.pString[i] );
 	for(i=self->cstDataName->size; i<other->cstDataName->size; i++)
-		DArray_Append( self->cstDataName, other->cstDataName->items.pString[i] );
+		DList_Append( self->cstDataName, other->cstDataName->items.pString[i] );
 	for(i=self->glbDataName->size; i<other->glbDataName->size; i++)
-		DArray_Append( self->glbDataName, other->glbDataName->items.pString[i] );
+		DList_Append( self->glbDataName, other->glbDataName->items.pString[i] );
 	for(i=self->variables->size; i<other->variables->size; i++){
 		DaoVariable *var = other->variables->items.pVar[i];
 		var = DaoVariable_New( var->value, DaoType_DefineTypes( var->dtype, ns, deftypes ) );
-		DArray_Append( self->variables, var );
+		DList_Append( self->variables, var );
 	}
 	for(i=self->instvars->size; i<other->instvars->size; i++){
 		DaoVariable *var = other->instvars->items.pVar[i];
 		var = DaoVariable_New( var->value, DaoType_DefineTypes( var->dtype, ns, deftypes ) );
-		DArray_Append( self->instvars, var );
+		DList_Append( self->instvars, var );
 		/* TODO fail checking */
 	}
 	for(i=self->constants->size; i<other->constants->size; i++){
 		DaoValue *value = other->constants->items.pConst[i]->value;
 		DaoRoutine *rout = & value->xRoutine;
 		if( value->type != DAO_ROUTINE || rout->routHost != other->objType ){
-			DArray_Append( self->constants, DaoConstant_New( value ) );
+			DList_Append( self->constants, DaoConstant_New( value ) );
 			DaoValue_Update( & self->constants->items.pConst[i]->value, ns, deftypes );
 			continue;
 		}
@@ -115,33 +115,33 @@ int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes )
 						DRoutines_Add( v->xRoutine.overloads, rout );
 				}
 			}
-			DArray_Append( self->constants, DaoConstant_New( value ) );
-			DArray_Append( routines, rout );
+			DList_Append( self->constants, DaoConstant_New( value ) );
+			DList_Append( routines, rout );
 			if( k == 0 ) goto Failed;
 			continue;
 		}else{
 			/* No need to added the overloaded routines now; */
 			/* Each of them has an entry in constants, and will be handled later: */
 			DaoRoutine *routs = DaoRoutines_New( ns, self->objType, NULL );
-			DArray_Append( self->constants, DaoConstant_New( (DaoValue*) routs ) );
+			DList_Append( self->constants, DaoConstant_New( (DaoValue*) routs ) );
 			continue;
 		}
-		DArray_Append( self->constants, DaoConstant_New( value ) );
+		DList_Append( self->constants, DaoConstant_New( value ) );
 		DaoValue_Update( & self->constants->items.pConst[i]->value, ns, deftypes );
 	}
 	for(i=0; i<routines->size; i++){
 		if( DaoRoutine_DoTypeInference( routines->items.pRoutine[i], 0 ) == 0 ) goto Failed;
 	}
-	DArray_Delete( offsets );
-	DArray_Delete( routines );
+	DList_Delete( offsets );
+	DList_Delete( routines );
 	DaoRoutine_Finalize( self->classRoutine, self->objType, deftypes );
 	return DaoRoutine_DoTypeInference( self->classRoutine, 0 );
 Failed:
-	DArray_Delete( offsets );
-	DArray_Delete( routines );
+	DList_Delete( offsets );
+	DList_Delete( routines );
 	return 0;
 }
-DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
+DaoClass* DaoClass_Instantiate( DaoClass *self, DList *types )
 {
 	DaoClass *klass = NULL;
 	DaoType *type;
@@ -154,7 +154,7 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 	while( types->size < self->typeHolders->size ){
 		type = self->typeDefaults->items.pType[ types->size ];
 		if( type == NULL ) type = self->typeHolders->items.pType[ types->size ];
-		DArray_Append( types, type );
+		DList_Append( types, type );
 	}
 	name = DString_New(1);
 	DString_Append( name, self->className );
@@ -186,8 +186,8 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 			}
 			MAP_Insert( deftypes, self->typeHolders->items.pVoid[i], type );
 		}
-		klass->objType->nested = DArray_New(DAO_DATA_VALUE);
-		DArray_Assign( klass->objType->nested, types );
+		klass->objType->nested = DList_New(DAO_DATA_VALUE);
+		DList_Assign( klass->objType->nested, types );
 		if( DaoClass_CopyField( klass, self, deftypes ) == 0 ){
 			DString_Delete( name );
 			return NULL;
@@ -197,13 +197,13 @@ DaoClass* DaoClass_Instantiate( DaoClass *self, DArray *types )
 		DaoClass_ResetAttributes( klass );
 		DMap_Delete( deftypes );
 		if( holders ){
-			klass->typeHolders = DArray_New(0);
-			klass->typeDefaults = DArray_New(0);
+			klass->typeHolders = DList_New(0);
+			klass->typeDefaults = DList_New(0);
 			klass->instanceClasses = DMap_New(DAO_DATA_STRING,0);
 			DMap_Insert( klass->instanceClasses, klass->className, klass );
 			for(i=0; i<types->size; i++){
-				DArray_Append( klass->typeHolders, types->items.pType[i] );
-				DArray_Append( klass->typeDefaults, NULL );
+				DList_Append( klass->typeHolders, types->items.pType[i] );
+				DList_Append( klass->typeDefaults, NULL );
 			}
 			for(i=0; i<klass->typeHolders->size; i++){
 				DaoClass_AddReference( klass, klass->typeHolders->items.pType[i] );
@@ -248,7 +248,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 	DMap *deftypes = DMap_New(0,0);
 	DMap *pm_map = DMap_New(DAO_DATA_STRING,0);
 	DMap *st_map = DMap_New(DAO_DATA_STRING,0);
-	DArray *routines = DArray_New(0);
+	DList *routines = DList_New(0);
 	DNode *it, *node;
 	DaoEnum pmEnum = {DAO_ENUM,0,0,0,0,0,0,NULL};
 	DaoEnum stEnum = {DAO_ENUM,0,0,0,0,0,0,NULL};
@@ -319,7 +319,7 @@ void DaoProcess_MakeClass( DaoProcess *self, DaoVmCode *vmc )
 					DaoProcess_RaiseError( self, NULL, "method creation failed" );
 					continue;
 				}
-				DArray_Append( routines, newRout );
+				DList_Append( routines, newRout );
 				if( strcmp( newRout->routName->chars, "@class" ) ==0 ){
 					node = DMap_Find( proto->lookupTable, newRout->routName );
 					DString_Assign( newRout->routName, klass->className );
@@ -433,7 +433,7 @@ InvalidField:
 				DaoProcess_RaiseError( self, NULL, "method creation failed" );
 				continue; // XXX
 			}
-			DArray_Append( routines, newRout );
+			DList_Append( routines, newRout );
 			DString_Assign( newRout->routName, name );
 			if( DString_EQ( newRout->routName, klass->className ) ){
 				DRoutines_Add( klass->classRoutines->overloads, newRout );
@@ -464,7 +464,7 @@ InvalidMethod:
 	}
 	DaoClass_DeriveObjectData( klass );
 	DaoClass_ResetAttributes( klass );
-	DArray_Delete( routines );
+	DList_Delete( routines );
 	DMap_Delete( deftypes );
 	DMap_Delete( pm_map );
 	DMap_Delete( st_map );
@@ -528,7 +528,7 @@ static void META_Cst1( DaoProcess *proc, DaoValue *p[], int N )
 	DaoType *tp = map->ctype->nested->items.pType[1];
 	DaoNamespace *ns, *here = proc->activeNamespace;
 	DMap *index = NULL, *lookup = NULL;
-	DArray *data;
+	DList *data;
 	DNode *node;
 	DaoValue *value;
 	DaoValue *vabtp = NULL;

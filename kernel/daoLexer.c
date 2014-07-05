@@ -955,16 +955,16 @@ int DaoToken_Check( const char *src, int size, int *length )
 DaoLexer* DaoLexer_New()
 {
 	DaoLexer *self = (DaoLexer*) dao_malloc( sizeof(DaoLexer) );
-	self->tokens = DArray_New( DAO_DATA_TOKEN );
-	self->tokbuf = DArray_New(0);
+	self->tokens = DList_New( DAO_DATA_TOKEN );
+	self->tokbuf = DList_New(0);
 	return self;
 }
 void DaoLexer_Delete( DaoLexer *self )
 {
 	daoint i;
 	for(i=0; i<self->tokbuf->size; ++i) DaoToken_Delete( self->tokbuf->items.pToken[i] );
-	DArray_Delete( self->tokens );
-	DArray_Delete( self->tokbuf );
+	DList_Delete( self->tokens );
+	DList_Delete( self->tokbuf );
 	dao_free( self );
 }
 
@@ -975,7 +975,7 @@ void DaoLexer_Reset( DaoLexer *self )
 		/* No copying of tokens: */
 		DaoToken *token = self->tokens->items.pToken[i];
 		if( token->string.size > 64 ) DString_Clear( & token->string );
-		DArray_Append( self->tokbuf, token );
+		DList_Append( self->tokbuf, token );
 	}
 	self->tokens->size = 0;
 }
@@ -983,13 +983,13 @@ void DaoLexer_AppendToken( DaoLexer *self, DaoToken *token )
 {
 	DaoToken *tok;
 	if( self->tokbuf->size == 0 ){
-		DArray_Append( self->tokens, token );
+		DList_Append( self->tokens, token );
 		return;
 	}
-	tok = (DaoToken*) DArray_Back( self->tokbuf );
+	tok = (DaoToken*) DList_Back( self->tokbuf );
 	self->tokbuf->size -= 1;
 	DaoToken_Assign( tok, token );
-	DArray_Append( self->tokens, NULL );  /* avoid copying; */
+	DList_Append( self->tokens, NULL );  /* avoid copying; */
 	self->tokens->items.pToken[self->tokens->size-1] = tok;
 }
 void DaoLexer_Append( DaoLexer *self, int name, int line, const char *data )
@@ -1008,7 +1008,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 {
 	DString src2 = DString_WrapChars( src );
 	DString *source = DString_New();
-	DVector *lexenvs = DVector_New( sizeof(int) );
+	DArray *lexenvs = DArray_New( sizeof(int) );
 	DaoToken *token = DaoToken_New();
 	DString *literal = & token->string;
 	char ch, *ss, hex[11] = "0x00000000";
@@ -1035,7 +1035,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 	DString_SetSharing( literal, 0 );
 	DaoLexer_Reset( self );
 
-	DVector_PushInt( lexenvs, DAO_LEX_CODE );
+	DArray_PushInt( lexenvs, DAO_LEX_CODE );
 	it = 0;
 	token->cpos = 0;
 	while( it < srcSize ){
@@ -1191,7 +1191,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 				}else if( state == TOK_RESTART_HASH ){
 					state = TOK_RESTART_HASH;
 					lexenv = DAO_LEX_COMMENT_LINE;
-					DVector_PushInt( lexenvs, DAO_LEX_COMMENT_LINE );
+					DArray_PushInt( lexenvs, DAO_LEX_COMMENT_LINE );
 				}
 				token->cpos = cpos;
 			}else{
@@ -1202,7 +1202,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 			if( state == TOK_RESTART_HASH && ch == '{' ){
 				lexenv = lexenvs->data.ints[lexenvs->size-1] = DAO_LEX_COMMENT_BLOCK;
 			}else if( ch == '\n' ){
-				DVector_Pop( lexenvs );
+				DArray_Pop( lexenvs );
 				lexenv = lexenvs->data.ints[lexenvs->size-1];
 				token->type = token->name = DTOK_COMMENT;
 				if( comment ) DaoLexer_AppendToken( self, token );
@@ -1215,10 +1215,10 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 				state = TOK_RESTART_HASH;
 			}else if( ch == '{' && state == TOK_RESTART_HASH ){
 				state = TOK_COMT_OPEN;
-				DVector_PushInt( lexenvs, DAO_LEX_COMMENT_BLOCK );
+				DArray_PushInt( lexenvs, DAO_LEX_COMMENT_BLOCK );
 			}else if( ch == '}' && state == TOK_RESTART_HASH ){
 				state = TOK_COMT_CLOSE;
-				DVector_Pop( lexenvs );
+				DArray_Pop( lexenvs );
 				lexenv = lexenvs->data.ints[lexenvs->size-1];
 				if( lexenv != DAO_LEX_COMMENT_BLOCK ){
 					token->type = token->name = DTOK_COMMENT;
@@ -1257,7 +1257,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 		}
 	}
 	DaoToken_Delete( token );
-	DVector_Delete( lexenvs );
+	DArray_Delete( lexenvs );
 	DString_Delete( source );
 #if 0
 	for(i=0; i<self->tokens->size; i++){
@@ -1268,7 +1268,7 @@ int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags )
 	return ret ? line : 0;
 }
 
-void DaoLexer_AnnotateCode( DArray *self, DaoVmCodeX vmc, DString *annot, int max )
+void DaoLexer_AnnotateCode( DList *self, DaoVmCodeX vmc, DString *annot, int max )
 {
 	DaoToken *t1, *t2, **tokens;
 	daoint i, k, len, pos, m = max/(vmc.middle + vmc.last + 2);

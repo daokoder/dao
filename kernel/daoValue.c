@@ -724,7 +724,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 			tm = (S != NULL);
 		}
 	}else if( T->tid == DAO_ROUTINE && T->subtid != DAO_ROUTINES && S->type == DAO_ROUTINE && S->xRoutine.overloads ){
-		DArray *routines = S->xRoutine.overloads->routines;
+		DList *routines = S->xRoutine.overloads->routines;
 		int i, k, n;
 		/*
 		// Do not use DaoRoutine_ResolveByType( S, ... )
@@ -1075,7 +1075,7 @@ void DaoValue_ClearAll( DaoValue *v[], int n )
 
 void DaoProcess_CacheValue( DaoProcess *self, DaoValue *value )
 {
-	DArray_Append( self->factory, NULL );
+	DList_Append( self->factory, NULL );
 	GC_IncRC( value );
 	self->factory->items.pValue[ self->factory->size - 1 ] = value;
 }
@@ -1083,9 +1083,9 @@ void DaoProcess_PopValues( DaoProcess *self, int N )
 {
 	if( N < 0 ) return;
 	if( N >= (int)self->factory->size ){
-		DArray_Clear( self->factory );
+		DList_Clear( self->factory );
 	}else{
-		DArray_Erase( self->factory, self->factory->size - N, N );
+		DList_Erase( self->factory, self->factory->size - N, N );
 	}
 }
 DaoValue** DaoProcess_GetLastValues( DaoProcess *self, int N )

@@ -247,8 +247,8 @@ typedef struct DaoLexer  DaoLexer;
 
 struct DaoLexer
 {
-	DArray  *tokens;
-	DArray  *tokbuf;
+	DList  *tokens;
+	DList  *tokbuf;
 };
 DAO_DLL DaoLexer* DaoLexer_New();
 DAO_DLL void DaoLexer_Delete( DaoLexer *self );
@@ -259,8 +259,8 @@ DAO_DLL int DaoLexer_Tokenize( DaoLexer *self, const char *src, int flags );
 DAO_DLL void DaoLexer_AppendToken( DaoLexer *self, DaoToken *token );
 DAO_DLL void DaoLexer_Append( DaoLexer *self, int name, int line, const char *data );
 
-DAO_DLL void DaoLexer_AnnotateCode( DArray *tokens, DaoVmCodeX vmc, DString *annot, int max );
+DAO_DLL void DaoLexer_AnnotateCode( DList *tokens, DaoVmCodeX vmc, DString *annot, int max );
 
-DAO_DLL DaoToken*  DVector_PushToken( DVector *self, DaoToken token );
+DAO_DLL DaoToken*  DArray_PushToken( DArray *self, DaoToken token );
 
 #endif

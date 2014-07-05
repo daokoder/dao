@@ -110,7 +110,7 @@ struct DaoArray
 	DaoArrayData data;
 
 	DaoArray *original; /* original array for an array slicing; */
-	DVector  *slices;
+	DArray  *slices;
 	/*
 	// ::slices structure:
 	// The first 2*ndim values: slice in each dimension;

@@ -1112,7 +1112,7 @@ int DaoRegex_SubMatch( DaoRegex *self, int gid, daoint *start, daoint *end )
 	*end = gp2;
 	return 1;
 }
-static void Dao_ParseTarget( DString *target, DArray *parts, DaoValue *sval )
+static void Dao_ParseTarget( DString *target, DList *parts, DaoValue *sval )
 {
 	DString *tmp = sval->xString.value;
 	DaoInteger ival = {DAO_INTEGER,0,0,0,0,0};
@@ -1123,10 +1123,10 @@ static void Dao_ParseTarget( DString *target, DArray *parts, DaoValue *sval )
 		ch = target->chars[i];
 		ch2 = target->chars[i+1];
 		if( ch == '%' && isdigit( ch2 ) ){
-			DArray_PushBack( parts, sval );
+			DList_PushBack( parts, sval );
 			DString_Clear( tmp );
 			ival.value = ch2 - '0';
-			DArray_PushBack( parts, (DaoValue*) & ival );
+			DList_PushBack( parts, (DaoValue*) & ival );
 			i ++;
 		}else if( ch == '%' ){
 			if( i+1 < n ){
@@ -1137,7 +1137,7 @@ static void Dao_ParseTarget( DString *target, DArray *parts, DaoValue *sval )
 			DString_AppendChar( tmp, (char)ch );
 		}
 	}
-	DArray_PushBack( parts, sval );
+	DList_PushBack( parts, sval );
 }
 int DaoRegex_ChangeExt( DaoRegex *self, DString *input, DString *output,
 		DString *target, int index, daoint *start2, daoint *end2 )
@@ -1147,7 +1147,7 @@ int DaoRegex_ChangeExt( DaoRegex *self, DString *input, DString *output,
 	daoint i, n=0, p1=start, p2=end, p3, last;
 	DaoValue *value = NULL;
 	DaoString matched = {DAO_STRING,0,0,0,0,NULL};
-	DArray *array = DArray_New( DAO_DATA_VALUE );
+	DList *array = DList_New( DAO_DATA_VALUE );
 	DString *tmp = DString_New();
 	DString *tmp2 = DString_New();
 
@@ -1189,7 +1189,7 @@ int DaoRegex_ChangeExt( DaoRegex *self, DString *input, DString *output,
 DoNothing:
 	DString_Delete( tmp );
 	DString_Delete( tmp2 );
-	DArray_Delete( array );
+	DList_Delete( array );
 	return n;
 }
 int DaoRegex_Change( DaoRegex *self, DString *source, DString *target, int index )

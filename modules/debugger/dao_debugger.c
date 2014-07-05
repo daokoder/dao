@@ -33,7 +33,7 @@
 #include "daoNamespace.h"
 #include "daoVmspace.h"
 
-extern void SplitByWhiteSpaces( const char *str, DArray *tokens );
+extern void SplitByWhiteSpaces( const char *str, DList *tokens );
 extern void Dao_AboutVar( DaoNamespace *ns, DaoValue *var, DString *str );
 
 static const char *const sep =
@@ -53,13 +53,13 @@ DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *
 {
 	DaoRoutine *routine = proc->activeRoutine;
 	DString *input;
-	DArray *tokens;
+	DList *tokens;
 	DMap   *cycData;
 	char *chs, *cmd;
 	int i;
 	if( ! (proc->vmSpace->options & DAO_OPTION_DEBUG ) ) return;
 	input = DString_New(1);
-	tokens = DArray_New(DAO_DATA_STRING);
+	tokens = DList_New(DAO_DATA_STRING);
 	cycData = DMap_New(0,0);
 	if( stream == NULL ) stream = proc->vmSpace->stdioStream;
 	while( proc->vmSpace->stopit == 0 ){
@@ -154,7 +154,7 @@ DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *
 		}
 	}
 	DString_Delete( input );
-	DArray_Delete( tokens );
+	DList_Delete( tokens );
 }
 
 static DaoDebugger debugger = { NULL, NULL };

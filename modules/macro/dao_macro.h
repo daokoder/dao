@@ -62,7 +62,7 @@ struct DMacroUnit
 	uchar_t     type;
 	uchar_t     dummy1;
 	uchar_t     dummy2;
-	DArray     *stops;
+	DList      *stops;
 	DaoToken   *marker;
 };
 
@@ -73,9 +73,9 @@ struct DMacroGroup
 	uchar_t       type;
 	uchar_t       repeat;
 	uchar_t       cpos;
-	DArray       *stops;
-	DArray       *units; /* DArray<DMacroUnit*> */
-	DArray       *variables; /* DArray<DaoToken*> */
+	DList        *stops;
+	DList        *units; /* DList<DMacroUnit*> */
+	DList        *variables; /* DList<DaoToken*> */
 	DMacroGroup  *parent;
 };
 
@@ -86,9 +86,9 @@ struct DaoMacro
 	DMacroGroup  *macroMatch;
 	DMacroGroup  *macroApply;
 
-	DArray       *keyListApply;
+	DList        *keyListApply;
 
-	DArray       *macroList; /* overloaded macros */
+	DList        *macroList; /* overloaded macros */
 	DaoMacro     *firstMacro;
 };
 
