@@ -381,7 +381,7 @@ void DaoEnum_MakeName( DaoEnum *self, DString *name )
 	DNode *node;
 	DString_Clear( name );
 	mapNames = self->etype->mapNames;
-	for(node=DMap_First(mapNames);node;node=DMap_Next(mapNames,node)){
+	for(node=DMap_First(mapNames); node; node=DMap_Next(mapNames,node)){
 		if( self->subtype == DAO_ENUM_FLAG || self->subtype == DAO_ENUM_SYM ){
 			if( !(node->value.pInt & self->value) ) continue;
 		}else if( node->value.pInt != self->value ){

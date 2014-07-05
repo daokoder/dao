@@ -685,8 +685,8 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	}
 
 	/* some types such routine type for overloaded routines rely on comparing type pointer: */
-	p1 = self->tid == DAO_PAR_NAMED || self->tid == DAO_PAR_DEFAULT;
-	p2 = type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_DEFAULT;
+	p1 = self->tid >= DAO_PAR_NAMED && self->tid <= DAO_PAR_VALIST;
+	p2 = type->tid >= DAO_PAR_NAMED && type->tid <= DAO_PAR_VALIST;
 	if( p1 || p2 ){
 		if( p1 == p2 ){
 			return DaoType_MatchPar( self, type, defs, binds, 0 );

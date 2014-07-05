@@ -1795,7 +1795,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 		if( sep != tok->type ) break;
 	}
 	switch( sep ){
-	default : type->subtid = DAO_ENUM_SYM; break;
+	default : type->subtid = DAO_ENUM_STATE; break;
 	case DTOK_COMMA : type->subtid = DAO_ENUM_STATE; break;
 	case DTOK_SEMCO : type->subtid = DAO_ENUM_FLAG;  break;
 	case DTOK_COLON : type->subtid = DAO_ENUM_BOOL;  break;
