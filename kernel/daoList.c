@@ -113,7 +113,7 @@ static void* DList_CopyItem( DList *self, void *item )
 	case DAO_DATA_VMCODE : return DaoVmCodeX_Copy( (DaoVmCodeX*) item );
 	case DAO_DATA_TOKEN  : return DaoToken_Copy( (DaoToken*) item );
 	case DAO_DATA_STRING : return DString_Copy( (DString*) item );
-	case DAO_DATA_VECTOR : return DArray_Copy( (DArray*) item );
+	case DAO_DATA_ARRAY  : return DArray_Copy( (DArray*) item );
 	case DAO_DATA_LIST   : return DList_Copy( (DList*) item );
 	case DAO_DATA_MAP    : return DMap_Copy( (DMap*) item );
 	default : break;
@@ -127,7 +127,7 @@ static void DList_DeleteItem( DList *self, void *item )
 	case DAO_DATA_VMCODE : DaoVmCodeX_Delete( (DaoVmCodeX*) item ); break;
 	case DAO_DATA_TOKEN  : DaoToken_Delete( (DaoToken*) item ); break;
 	case DAO_DATA_STRING : DString_Delete( (DString*) item ); break;
-	case DAO_DATA_VECTOR : DArray_Delete( (DArray*) item ); break;
+	case DAO_DATA_ARRAY  : DArray_Delete( (DArray*) item ); break;
 	case DAO_DATA_LIST   : DList_Delete( (DList*) item ); break;
 	case DAO_DATA_MAP    : DMap_Delete( (DMap*) item ); break;
 	default : break;
@@ -141,7 +141,7 @@ static void DList_DeleteItems( DList *self, daoint M, daoint N )
 	case DAO_DATA_VMCODE : for(i=M; i<N; i++) DaoVmCodeX_Delete( self->items.pVmc[i] ); break;
 	case DAO_DATA_TOKEN  : for(i=M; i<N; i++) DaoToken_Delete( self->items.pToken[i] ); break;
 	case DAO_DATA_STRING : for(i=M; i<N; i++) DString_Delete( self->items.pString[i] ); break;
-	case DAO_DATA_VECTOR : for(i=M; i<N; i++) DArray_Delete( self->items.pVector[i] ); break;
+	case DAO_DATA_ARRAY  : for(i=M; i<N; i++) DArray_Delete( self->items.pArray[i] ); break;
 	case DAO_DATA_LIST   : for(i=M; i<N; i++) DList_Delete( self->items.pList[i] ); break;
 	case DAO_DATA_MAP    : for(i=M; i<N; i++) DMap_Delete( self->items.pMap[i] ); break;
 	default : break;

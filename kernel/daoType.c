@@ -1046,6 +1046,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( value->xTuple.size < self->nested->size ) return DAO_MT_NOT;
 		if( value->xTuple.size > self->nested->size && self->variadic ==0 ) return DAO_MT_NOT;
 
+		mt = DAO_MT_EQ;
 		for(i=0,n=self->nested->size-(self->variadic!=0); i<n; i++){
 			tp = self->nested->items.pType[i];
 			if( tp->tid == DAO_PAR_NAMED ) tp = & tp->aux->xType;
@@ -1058,8 +1059,9 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			if( value->xTuple.values[i] == NULL ) continue;
 			if( tp->tid == DAO_UDT || tp->tid == DAO_ANY || tp->tid == DAO_THT ) continue;
 
-			mt = DaoType_MatchValue( tp, value->xTuple.values[i], defs );
-			if( mt < DAO_MT_SIM ) return 0;
+			mt2 = DaoType_MatchValue( tp, value->xTuple.values[i], defs );
+			if( mt2 < DAO_MT_SIM ) return 0;
+			if( mt2 < mt ) mt = mt2;
 		}
 		tp = self->nested->items.pType[self->nested->size-1];
 		if( tp->tid == DAO_PAR_VALIST ) tp = (DaoType*) tp->aux;
@@ -1067,8 +1069,9 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			if( value->xTuple.values[i] == NULL ) continue;
 			if( tp->tid == DAO_UDT || tp->tid == DAO_ANY || tp->tid == DAO_THT ) continue;
 
-			mt = DaoType_MatchValue( tp, value->xTuple.values[i], defs );
-			if( mt < DAO_MT_SIM ) return 0;
+			mt2 = DaoType_MatchValue( tp, value->xTuple.values[i], defs );
+			if( mt2 < DAO_MT_SIM ) return 0;
+			if( mt2 < mt ) mt = mt2;
 		}
 		if( value->xTuple.ctype == NULL ) return DAO_MT_EQ;
 		names = self->mapNames;
@@ -1077,7 +1080,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			DNode *search = DMap_Find( tp->mapNames, node->key.pVoid );
 			if( search == NULL || search->value.pInt != node->value.pInt ) return DAO_MT_SIM;
 		}
-		return DAO_MT_EQ;
+		return mt;
 	case DAO_ROUTINE :
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( value->xRoutine.overloads ){

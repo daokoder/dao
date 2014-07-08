@@ -6199,7 +6199,12 @@ void* DaoProcess_GetAuxData( DaoProcess *self, void *key )
 }
 void* DaoProcess_SetAuxData( DaoProcess *self, void *key, void *value )
 {
-	if( self->aux == NULL ) self->aux = DMap_New(0,0);
+	void *prev = DaoProcess_GetAuxData( self, key );
+	if( prev != NULL ){
+		typedef void (*aux_delete)(void*);
+		aux_delete del = (aux_delete) key;
+		(*del)( prev );
+	}
 	DMap_Insert( self->aux, key, value );
 	return value;
 }

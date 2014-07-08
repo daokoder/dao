@@ -36,6 +36,10 @@
 #define DAO_LIST_ITEM_TYPES
 #endif
 
+#ifndef DAO_ARRAY_ITEM_TYPES
+#define DAO_ARRAY_ITEM_TYPES
+#endif
+
 /* Array of pointers or integers: */
 struct DList
 {
@@ -44,6 +48,7 @@ struct DList
 		void         **pVoid;
 
 		DaoValue     **pValue;
+		DaoTuple     **pTuple;
 		DaoClass     **pClass;
 		DaoObject    **pObject;
 		DaoInterface **pInter;
@@ -56,7 +61,7 @@ struct DList
 		DaoNamespace **pNS;
 
 		DString      **pString;
-		DArray      **pVector;
+		DArray       **pArray;
 		DList        **pList;
 		DMap         **pMap;
 		DaoInode     **pInode;
@@ -128,6 +133,8 @@ struct DArray
 		DaoToken   *tokens;
 		DaoVmCode  *codes;
 		DaoValue  **values;
+
+		DAO_ARRAY_ITEM_TYPES
 	} data;
 
 	daoint  size;      /* Number of data items in the vector; */

@@ -86,7 +86,7 @@ enum DaoContainerDataTypes
 	DAO_DATA_VMCODE2 , /* for DMap, compare code and operands only; */
 	DAO_DATA_TOKEN ,   /* for DList only; */
 	DAO_DATA_STRING ,
-	DAO_DATA_VECTOR ,
+	DAO_DATA_ARRAY ,
 	DAO_DATA_LIST ,
 	DAO_DATA_MAP ,
 	DAO_DATA_VOID2 /* a pair of pointer; */
