@@ -179,6 +179,9 @@ static int DHash_HashIndex( DMap *self, void *key )
 	int m;
 
 	switch( self->keytype ){
+	case DAO_DATA_COMPLEX :
+		id = MurmurHash3( key, 2*sizeof(double), self->hashing ) % T;
+		break;
 	case DAO_DATA_STRING :
 		s = (DString*)key;
 		m = s->size;
@@ -306,13 +309,21 @@ static void DMap_SwapNode( DMap *self, DNode *node, DNode *extreme )
 	node->key.pVoid = key;
 	node->value.pVoid = value;
 }
+static complex16* complex16_new( complex16 *other )
+{
+	complex16 *res = (complex16*) dao_malloc( sizeof(complex16) );
+	res->real = other->real;
+	res->imag = other->imag;
+	return res;
+}
 static void DMap_CopyItem( void **dest, void *item, short type )
 {
 	int n = 2*sizeof(void*);
 	if( *dest == NULL ){
 		switch( type ){
+		case DAO_DATA_COMPLEX : *dest =  complex16_new( (complex16*) item ); break;
 		case DAO_DATA_STRING : *dest = DString_Copy( (DString*) item ); break;
-		case DAO_DATA_LIST  : *dest = DList_Copy( (DList*) item ); break;
+		case DAO_DATA_LIST   : *dest = DList_Copy( (DList*) item ); break;
 		case DAO_DATA_MAP    : *dest = DMap_Copy( (DMap*) item ); break;
 		case DAO_DATA_VALUE  :
 		case DAO_DATA_VALUE2 :
@@ -322,8 +333,9 @@ static void DMap_CopyItem( void **dest, void *item, short type )
 		}
 	}else{
 		switch( type ){
+		case DAO_DATA_COMPLEX : *(complex16*) (*dest) = *(complex16*) item; break;
 		case DAO_DATA_STRING : DString_Assign( (DString*)(*dest), (DString*) item ); break;
-		case DAO_DATA_LIST  : DList_Assign( (DList*)(*dest), (DList*) item ); break;
+		case DAO_DATA_LIST   : DList_Assign( (DList*)(*dest), (DList*) item ); break;
 		case DAO_DATA_MAP    : DMap_Assign( (DMap*)(*dest), (DMap*) item ); break;
 		case DAO_DATA_VALUE  :
 		case DAO_DATA_VALUE2 :
@@ -336,8 +348,9 @@ static void DMap_CopyItem( void **dest, void *item, short type )
 static void DMap_DeleteItem( void *item, short type )
 {
 	switch( type ){
+	case DAO_DATA_COMPLEX : dao_free( item ); break;
 	case DAO_DATA_STRING : DString_Delete( (DString*) item ); break;
-	case DAO_DATA_LIST  : DList_Delete( (DList*) item ); break;
+	case DAO_DATA_LIST   : DList_Delete( (DList*) item ); break;
 	case DAO_DATA_MAP    : DMap_Delete( (DMap*) item ); break;
 	case DAO_DATA_VALUE  :
 	case DAO_DATA_VALUE2 :

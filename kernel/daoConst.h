@@ -85,6 +85,7 @@ enum DaoContainerDataTypes
 	DAO_DATA_VMCODE ,
 	DAO_DATA_VMCODE2 , /* for DMap, compare code and operands only; */
 	DAO_DATA_TOKEN ,   /* for DList only; */
+	DAO_DATA_COMPLEX ,
 	DAO_DATA_STRING ,
 	DAO_DATA_ARRAY ,
 	DAO_DATA_LIST ,

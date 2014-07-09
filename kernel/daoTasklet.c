@@ -154,13 +154,13 @@ struct DaoCallServer
 	DList  *parameters; /* list of void* */
 	DList  *events;     /* list of DaoTaskEvent* */
 	DList  *events2;    /* list of DaoTaskEvent* */
-	DMap    *waitings;   /* timed waiting: <DaoComplex,DaoTaskEvent*> */
-	DMap    *active;     /* map of DaoObject* or DaoProcess* keys */
-	DMap    *pending;    /* map of pointers from ::parameters, ::events and ::events2 */
+	DMap   *waitings;   /* timed waiting: <complex16,DaoTaskEvent*> */
+	DMap   *active;     /* map of DaoObject* or DaoProcess* keys */
+	DMap   *pending;    /* map of pointers from ::parameters, ::events and ::events2 */
 
 	DList  *caches;
 
-	DaoComplex   timestamp;  /* (time,index); */
+	complex16    timestamp;  /* (time,index); */
 	DaoVmSpace  *vmspace;
 };
 static DaoCallServer *daoCallServer = NULL;
@@ -182,7 +182,6 @@ static void DaoCallThread_Delete( DaoCallThread *self )
 }
 static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 {
-	DaoComplex com = {DAO_COMPLEX,0,0,0,1,{0.0,0.0}};
 	DaoCallServer *self = (DaoCallServer*)dao_malloc( sizeof(DaoCallServer) );
 	DMutex_Init( & self->mutex );
 	DCondVar_Init( & self->condv );
@@ -198,12 +197,13 @@ static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 	self->parameters = DList_New(0);
 	self->events = DList_New(0);
 	self->events2 = DList_New(0);
-	self->waitings = DMap_New( DAO_DATA_VALUE, 0 );
+	self->waitings = DMap_New( DAO_DATA_COMPLEX, 0 );
 	self->pending = DHash_New(0,0);
 	self->active = DHash_New(0,0);
 	self->caches = DList_New(0);
 	self->vmspace = vms;
-	self->timestamp = com;
+	self->timestamp.real = 0.0;
+	self->timestamp.imag = 0.0;
 	return self;
 }
 static void DaoCallServer_Delete( DaoCallServer *self )
@@ -374,7 +374,7 @@ static void DaoCallServer_Timer( void *p )
 		}
 		if( server->waitings->size ){
 			DNode *node = DMap_First( server->waitings );
-			time = node->key.pValue->xComplex.value.real;
+			time = node->key.pComplex->real;
 			time -= Dao_GetCurrentTime();
 			/* wait the right amount of time for the closest arriving timeout: */
 			if( time > 0 ) DCondVar_TimedWait( & server->condv2, & server->mutex, time );
@@ -386,7 +386,7 @@ static void DaoCallServer_Timer( void *p )
 		if( server->waitings->size ){ /* a new wait timed out: */
 			DNode *node = DMap_First( server->waitings );
 			time = Dao_GetCurrentTime();
-			if( node->key.pValue->xComplex.value.real < time ){
+			if( node->key.pComplex->real < time ){
 				DaoTaskEvent *event = (DaoTaskEvent*) node->value.pVoid;
 				event->state = DAO_EVENT_RESUME;
 				event->timeout = 1;
@@ -514,9 +514,9 @@ void DaoCallServer_AddTimedWait( DaoProcess *wait, DaoTaskEvent *event, double t
 
 	DMutex_Lock( & server->mutex );
 	if( timeout >= 1E-27 ){
-		server->timestamp.value.real = timeout + Dao_GetCurrentTime();
-		server->timestamp.value.imag += 1;
-		event->expiring = server->timestamp.value.real;
+		server->timestamp.real = timeout + Dao_GetCurrentTime();
+		server->timestamp.imag += 1;
+		event->expiring = server->timestamp.real;
 		DMap_Insert( server->waitings, & server->timestamp, event );
 		DMap_Insert( server->pending, event, NULL );
 		DCondVar_Signal( & server->condv2 );
@@ -765,8 +765,8 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 MoveToWaiting:
 		if( event->expiring >= 0.0 && event->expiring < MIN_TIME ) continue;
 		if( event->expiring >= MIN_TIME ){
-			DaoComplex com = {DAO_COMPLEX,0,0,0,1,{0.0,0.0}};
-			com.value.real = event->expiring;
+			complex16 com = {0.0,0.0};
+			com.real = event->expiring;
 			DMap_Insert( server->waitings, & com, event );
 			DCondVar_Signal( & server->condv2 );
 		}else{
