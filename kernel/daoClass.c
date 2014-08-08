@@ -813,8 +813,8 @@ int DaoClass_DeriveClassData( DaoClass *self )
 		DaoClass *klass = (DaoClass*) self->parent;
 		DList_Append( self->clsType->bases, klass->clsType );
 		DList_Append( self->objType->bases, klass->objType );
-		DList_AppendArray( self->cstDataName, klass->cstDataName );
-		DList_AppendArray( self->glbDataName, klass->glbDataName );
+		DList_AppendList( self->cstDataName, klass->cstDataName );
+		DList_AppendList( self->glbDataName, klass->glbDataName );
 		for(j=0; j<klass->constants->size; ++j){
 			DaoValue *cst = klass->constants->items.pConst[j]->value;
 			DList_Append( self->constants, klass->constants->items.pVoid[j] );

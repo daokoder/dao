@@ -6620,7 +6620,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		k = DaoVmCode_GetOpcodeType( (DaoVmCode*) vmc );
 		if( k == DAO_CODE_BRANCH || k == DAO_CODE_JUMP ) vmc->b += added->size;
 	}
-	DList_InsertArray( annotCodes, 0, added, 0, added->size );
+	DList_InsertList( annotCodes, 0, added, 0, added->size );
 	DArray_Resize( newfn->body->vmCodes, annotCodes->size );
 	for(i=0,m=annotCodes->size; i<m; i++){
 		vmc = annotCodes->items.pVmc[i];

@@ -2075,7 +2075,7 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 		DaoxHelpEntry_PrintTree( self, stream, NULL, 0, self->name->size, 1,1,1,0 );
 	}
 	DString_AppendChars( stream->output, "\n</pre>\n" );
-	fout = fopen( fname->chars, "w+" );
+	fout = Dao_OpenFile( fname->chars, "w+" );
 	if( fout == NULL ) fout = stdout;
 	fprintf( fout, "<!DOCTYPE html><html><head>\n<title>Dao Help: %s</title>\n", title );
 	fprintf( fout, "<meta charset=\"utf-8\"/>\n</head>\n<body>" );
@@ -2091,7 +2091,7 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 	if( self->failedTests ){
 		DaoxHelpEntry_PrintTree( self, stream, NULL, 0, self->name->size, 1,1,1,1 );
 	}
-	fout = fopen( fname->chars, "a+" );
+	fout = Dao_OpenFile( fname->chars, "a+" );
 	if( fout == NULL ) fout = stdout;
 	fprintf( fout, "\n<pre style=\"font-weight:500\">\n" );
 	DaoFile_WriteString( fout, stream->output );

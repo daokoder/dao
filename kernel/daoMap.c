@@ -676,7 +676,7 @@ extern int DaoArray_Compare( DaoArray *x, DaoArray *y );
 extern int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt );
 extern int DaoList_Compare( DaoList *list1, DaoList *list2 );
 
-int DaoValue_Compare2( DaoValue *left, DaoValue *right )
+static int DaoValue_Compare2( DaoValue *left, DaoValue *right )
 {
 	if( left == right ) return 0;
 	if( left == NULL || right == NULL ) return left < right ? -100 : 100;
@@ -693,7 +693,7 @@ int DaoValue_Compare2( DaoValue *left, DaoValue *right )
 	if( left->type <= DAO_STRING ) return DaoValue_Compare( left, right );
 	return left < right ? -100 : 100;
 }
-int DaoValue_Compare3( DaoValue *left, DaoValue *right )
+static int DaoValue_Compare3( DaoValue *left, DaoValue *right )
 {
 	if( left == right ) return 0;
 	if( left == NULL || right == NULL ) return left < right ? -100 : 100;
@@ -701,10 +701,17 @@ int DaoValue_Compare3( DaoValue *left, DaoValue *right )
 	if( left->type <= DAO_STRING ) return DaoValue_Compare( left, right );
 	return left < right ? -100 : 100;
 }
+static int complex16_compare( complex16 *left, complex16 *right )
+{
+	if( left->real != right->real ) return left->real < right->real ? -1 : 1;
+	if( left->imag != right->imag ) return left->imag < right->imag ? -1 : 1;
+	return 0;
+}
 static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
 {
 	daoint cmp = 0;
 	switch( self->keytype ){
+	case DAO_DATA_COMPLEX : cmp = complex16_compare( (complex16*) k1, (complex16*) k2 ); break;
 	case DAO_DATA_STRING : cmp = DString_Compare( (DString*) k1, (DString*) k2 ); break;
 	case DAO_DATA_VALUE  : cmp = DaoValue_Compare( (DaoValue*) k1, (DaoValue*) k2 );  break;
 	case DAO_DATA_VALUE2 : cmp = DaoValue_Compare2( (DaoValue*) k1, (DaoValue*) k2 ); break;

@@ -260,17 +260,17 @@ void DList_Insert( DList *self, void *val, daoint id )
 	}
 	self->size++;
 }
-void DList_InsertArray( DList *self, daoint at, DList *array, daoint id, daoint n )
+void DList_InsertList( DList *self, daoint at, DList *list, daoint id, daoint n )
 {
 	void **buf = self->items.pVoid - self->offset;
-	void **objs = array->items.pVoid;
+	void **objs = list->items.pVoid;
 	daoint i;
-	assert( self->type == array->type );
+	assert( self->type == list->type );
 	assert( self->type != DAO_DATA_VALUE );
-	if( n < 0 ) n = array->size;
+	if( n < 0 ) n = list->size;
 	n += id;
-	if( n > array->size ) n = array->size;
-	if( n ==0 || id >= array->size ) return;
+	if( n > list->size ) n = list->size;
+	if( n ==0 || id >= list->size ) return;
 	if( (daoint)(self->offset + self->size + n-id) >= self->bufsize ){
 		if( self->offset > 0 ) memmove( buf, self->items.pVoid, self->size*sizeof(void*) );
 		self->bufsize += self->bufsize/5 + 1 + ( n - id );
@@ -294,9 +294,9 @@ void DList_InsertArray( DList *self, daoint at, DList *array, daoint id, daoint 
 	}
 	self->size += (n-id);
 }
-void DList_AppendArray( DList *self, DList *array )
+void DList_AppendList( DList *self, DList *list )
 {
-	DList_InsertArray( self, self->size, array, 0, array->size );
+	DList_InsertList( self, self->size, list, 0, list->size );
 }
 void DList_Erase( DList *self, daoint start, daoint n )
 {

@@ -696,7 +696,7 @@ int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname, DString *source )
 		DString_Assign( source, node->value.pString );
 		return 1;
 	}
-	if( DaoFile_ReadAll( fopen( fname->chars, "r" ), source, 1 ) ) return 1;
+	if( DaoFile_ReadAll( Dao_OpenFile( fname->chars, "r" ), source, 1 ) ) return 1;
 	DaoStream_WriteChars( self->errorStream, "ERROR: can not open file \"" );
 	DaoStream_WriteChars( self->errorStream, fname->chars );
 	DaoStream_WriteChars( self->errorStream, "\".\n" );
@@ -1118,12 +1118,12 @@ static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, D
 			}
 		}
 		if( ito >= routype->nested->size ){
-			DaoStream_WriteChars( self->errorStream, "redundant argument" );
+			DaoStream_WriteChars( self->errorStream, "redundant argument\n" );
 			goto Failed;
 		}
 		type = (DaoType*) routype->nested->items.pType[ito]->aux;
 		if( set[ito] ){
-			DaoStream_WriteChars( self->errorStream, "duplicated argument" );
+			DaoStream_WriteChars( self->errorStream, "duplicated argument\n" );
 			goto Failed;
 		}
 		set[ito] = 1;
@@ -1131,10 +1131,17 @@ static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, D
 			goto InvalidArgument;
 		}
 	}
+	for(i=0; i<routype->nested->size - routype->variadic; ++i){
+		DaoType *partype = routine->routType->nested->items.pType[i];
+		if( set[i] == 0 && partype->tid != DAO_PAR_DEFAULT ){
+			DaoStream_WriteChars( self->errorStream, "incomplete argument\n" );
+			goto Failed;
+		}
+	}
 	DString_Delete( val );
 	return 1;
 InvalidArgument:
-	DaoStream_WriteChars( self->errorStream, "invalid argument" );
+	DaoStream_WriteChars( self->errorStream, "invalid argument\n" );
 Failed:
 	DString_Delete( val );
 	return 0;
@@ -1380,7 +1387,7 @@ void DaoVmSpace_SaveByteCodes( DaoVmSpace *self, DaoByteCoder *coder, DaoNamespa
 	DString_Append( fname, ns->name );
 	if( fname->size > ns->lang->size ) fname->size -= ns->lang->size;
 	DString_AppendChars( fname, "dac" );
-	fout = fopen( fname->chars, "w+" );
+	fout = Dao_OpenFile( fname->chars, "w+" );
 
 	DaoByteCoder_EncodeHeader( coder, ns->name->chars, output );
 	DaoByteCoder_EncodeToString( coder, output );
@@ -1442,7 +1449,7 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 	DaoStream_WriteString( self->stdioStream, archive );
 	DaoStream_WriteChars( self->stdioStream, "\n" );
 
-	fout = fopen( archive->chars, "w+" );
+	fout = Dao_OpenFile( archive->chars, "w+" );
 	archive->size = 0;
 
 	count = self->sourceArchive->size/2;
@@ -1465,7 +1472,7 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 		DString *file = argValues->items.pString[i];
 		DString_Assign( data, file );
 		Dao_MakePath( self->pathWorking, data );
-		fin = fopen( data->chars, "r" );
+		fin = Dao_OpenFile( data->chars, "r" );
 		if( fin == NULL ){
 			DaoStream_WriteChars( self->errorStream, "WARNING: can not open resource file \"" );
 			DaoStream_WriteChars( self->errorStream, data->chars );
@@ -2281,7 +2288,7 @@ static void DaoConfigure_FromFile( const char *name )
 {
 	double number;
 	int i, ch, isnum, isint, integer=0, yes;
-	FILE *fin = fopen( name, "r" );
+	FILE *fin = Dao_OpenFile( name, "r" );
 	DaoToken *tk1, *tk2;
 	DaoLexer *lexer;
 	DList *tokens;

@@ -3174,13 +3174,19 @@ static void DaoTupleCore_SetField( DaoValue *self0, DaoProcess *proc, DString *n
 		DaoProcess_RaiseError( proc, "Type", "type not matching" );
 }
 DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int init );
+static void DaoTupleCore_GetCopy( DaoTuple *self, DaoProcess *proc )
+{
+	DaoTuple *tuple = DaoProcess_GetTuple( proc, self->ctype, self->size, 1 );
+	int i;
+	for(i=0; i<self->size; i++) DaoTuple_SetItem( tuple, self->values[i], i );
+}
 static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 {
 	DaoTuple *self = & self0->xTuple;
 	int ec = DAO_ERROR_INDEX;
 	if( pid->type == DAO_NONE ){
 		ec = 0;
-		/* return a copy. TODO */
+		DaoTupleCore_GetCopy( self, proc );
 	}else if( pid->type >= DAO_INTEGER && pid->type <= DAO_DOUBLE ){
 		int id = DaoValue_GetInteger( pid );
 		if( id >=0 && id < self->size ){
@@ -3211,8 +3217,7 @@ static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 		if( start >= self->size || end >= self->size ) goto InvIndex;
 		if( first->type > DAO_DOUBLE || second->type > DAO_DOUBLE ) goto InvIndex;
 		if( first->type == DAO_NONE && second->type == DAO_NONE ){
-#warning "================== TODO"
-			// XXX
+			DaoTupleCore_GetCopy( self, proc );
 		}else{
 			if( type->tid != DAO_TUPLE ) type = dao_type_tuple;
 			end = second->type == DAO_NONE ? self->size : end + 1;

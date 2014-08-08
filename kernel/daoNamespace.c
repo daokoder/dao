@@ -861,7 +861,7 @@ int DaoNamespace_Load( DaoNamespace *self, const char *fname )
 {
 	DString *src;
 	DaoVmSpace *vms = self->vmSpace;
-	FILE *fin = fopen( fname, "r" );
+	FILE *fin = Dao_OpenFile( fname, "r" );
 	int ret;
 	if( ! fin ){
 		DaoStream_WriteChars( vms->errorStream, "ERROR: can not open file \"" );

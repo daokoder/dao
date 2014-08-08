@@ -957,7 +957,7 @@ static int DaoParser_MacroApply( DaoParser *self, DList *tokens,
 				   DMacroNode_Print( node2 );
 				   printf( "\n" );
 				 */
-				DList_InsertArray( tokens, tokens->size, node2->leaves, 0, -1 );
+				DList_InsertList( tokens, tokens->size, node2->leaves, 0, -1 );
 				DMap_Insert( check, node2, NULL );
 				/* DList_Clear( node2->leaves ); */
 			}else{
@@ -977,27 +977,27 @@ static int DaoParser_MacroApply( DaoParser *self, DList *tokens,
 				repeated = (j>0);
 				if( j >=0 ){
 					gid = i;
-					DList_InsertArray( tokens, tokens->size, toks, 0, -1 );
+					DList_InsertList( tokens, tokens->size, toks, 0, -1 );
 				}
 				break;
 			case DMACRO_ZERO_OR_ONE :
 				gid = i;
 				repeated = (j>0);
 				if( j >=0 ){
-					DList_InsertArray( tokens, tokens->size, toks, 0, -1 );
+					DList_InsertList( tokens, tokens->size, toks, 0, -1 );
 				}
 				break;
 			case DMACRO_ZERO_OR_MORE :
 				gid = i;
 				repeated = (j>0);
 				if( j >=0 ){
-					DList_InsertArray( tokens, tokens->size, toks, 0, -1 );
+					DList_InsertList( tokens, tokens->size, toks, 0, -1 );
 				}
 				while( j >0 ){
 					DList_Clear( toks );
 					j = DaoParser_MacroApply( self, toks, grp, tokMap, used, level, tag, pos0, adjust );
 					if( j >0 ){
-						DList_InsertArray( tokens, tokens->size, toks, 0, -1 );
+						DList_InsertList( tokens, tokens->size, toks, 0, -1 );
 					}
 				}
 				break;
@@ -1005,7 +1005,7 @@ static int DaoParser_MacroApply( DaoParser *self, DList *tokens,
 				if( j <0 && group->type != DMACRO_ALT ) goto Failed;
 				repeated = (j>0);
 				if( j >=0 ){
-					DList_InsertArray( tokens, tokens->size, toks, 0, -1 );
+					DList_InsertList( tokens, tokens->size, toks, 0, -1 );
 				}
 
 				while( j >0 ){
@@ -1013,7 +1013,7 @@ static int DaoParser_MacroApply( DaoParser *self, DList *tokens,
 					DList_Clear( toks );
 					j = DaoParser_MacroApply( self, toks, grp, tokMap, used, level, tag, pos0, adjust );
 					if( j >0 ){
-						DList_InsertArray( tokens, tokens->size, toks, 0, -1 );
+						DList_InsertList( tokens, tokens->size, toks, 0, -1 );
 					}
 				}
 				break;
@@ -1071,7 +1071,7 @@ int DaoParser_MacroTransform( DaoParser *self, DaoMacro *macro, int start, int t
 	   printf( "\n" );
 	 */
 	DList_Erase( self->tokens, start, j-start );
-	DList_InsertArray( self->tokens, start, toks, 0, -1 );
+	DList_InsertList( self->tokens, start, toks, 0, -1 );
 	/*
 	   for(i=0; i<toks->size; i++){
 	   DList_Insert( self->tokStr, (void*)toks->items.pString[i], start+i );

@@ -96,14 +96,17 @@
 #endif /* WIN32 */
 
 
-#include <time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include<time.h>
+#include<sys/types.h>
+#include<sys/stat.h>
+#include<stdio.h>
+#include<wchar.h>
 
 
 DAO_DLL void Dao_NormalizePathSep( DString *path );
 DAO_DLL int Dao_IsFile( const char *file );
 DAO_DLL int Dao_IsDir( const char *file );
+DAO_DLL FILE* Dao_OpenFile( const char *file, const char *mode );
 
 DAO_DLL size_t Dao_FileChangedTime( const char *file );
 

@@ -31,6 +31,39 @@
 #include "daoStream.h"
 
 
+FILE* Dao_OpenFile( const char *file, const char *mode )
+{
+#if WIN32
+	DString file2 = DString_WrapChars( file );
+	DString mode2 = DString_WrapChars( mode );
+	DArray *file3 = DArray_New( sizeof(wchar_t) );
+	DArray *mode3 = DArray_New( sizeof(wchar_t) );
+	FILE *pfile;
+	DString_DecodeUTF8( & file2, file3 );
+	DString_DecodeUTF8( & mode2, mode3 );
+	pfile = _wfopen( file3->data.wchars, mode3->data.wchars );
+	DArray_Delete( file3 );
+	DArray_Delete( mode3 );
+	return pfile;
+#else
+	return fopen( file, mode );
+#endif
+}
+int Dao_FileStat( const char *path, struct stat *buf )
+{
+#if WIN32
+	DString path2 = DString_WrapChars( path );
+	DArray *path3 = DArray_New( sizeof(wchar_t) );
+	int ret;
+	ret = _wstat( path3->data.wchars, buf );
+	DArray_Delete( path3 );
+	return ret;
+#else
+	return stat( path, buf );
+#endif
+}
+
+
 void Dao_NormalizePathSep( DString *path )
 {
 #ifdef WIN32
@@ -106,13 +139,13 @@ void* Dao_GetSymbolAddress( void *handle, const char *name )
 size_t Dao_FileChangedTime( const char *file )
 {
 	struct stat st;
-	if( stat( file, &st ) ==0 ) return (size_t) st.st_mtime;
+	if( Dao_FileStat( file, &st ) ==0 ) return (size_t) st.st_mtime;
 	return 0;
 }
 int Dao_IsFile( const char *file )
 {
 	struct stat st;
-	if( stat( file, &st ) ) return 0;
+	if( Dao_FileStat( file, &st ) ) return 0;
 #if WIN32
 	return (st.st_mode & _S_IFDIR) == 0;
 #else
@@ -122,7 +155,7 @@ int Dao_IsFile( const char *file )
 int Dao_IsDir( const char *file )
 {
 	struct stat st;
-	if( stat( file, &st ) ) return 0;
+	if( Dao_FileStat( file, &st ) ) return 0;
 #if WIN32
 	return (st.st_mode & _S_IFDIR) != 0;
 #else

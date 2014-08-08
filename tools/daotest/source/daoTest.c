@@ -147,7 +147,7 @@ int main( int argc, char **argv )
 		string = DString_New(1);
 		summary = DString_New(1);
 		info = DString_New(1);
-		logfile = fopen( argv[logopt+1], "r+b" );
+		logfile = Dao_OpenFile( argv[logopt+1], "r+b" );
 		if( logfile ){
 			DaoFile_ReadAll( logfile, string, 0 );
 			DString_Assign( summary, string );
@@ -155,14 +155,14 @@ int main( int argc, char **argv )
 			GetCounts( string, & mpasses, & mfails, & passes, & fails );
 			fseek( logfile, 0, SEEK_SET );
 		}else{
-			logfile = fopen( argv[logopt+1], "w+b" );
+			logfile = Dao_OpenFile( argv[logopt+1], "w+b" );
 		}
 		fprintf( logfile, "%s", summary->chars );
 		DString_Reset( summary, 0 );
 		for(i=2; i<logopt; ++i){
 			daoint start = 0, end;
 			int mps, ps, mfs, fs;
-			fin = fopen( argv[i], "rb" );
+			fin = Dao_OpenFile( argv[i], "rb" );
 			if( fin == NULL ) continue;
 			DaoFile_ReadAll( fin, string, 1 );
 			DString_Assign( info, string );
@@ -196,7 +196,7 @@ int main( int argc, char **argv )
 		return 0;
 	}
 
-	if( (logopt+1) < argc ) logfile = fopen( argv[logopt+1], "w+b" );
+	if( (logopt+1) < argc ) logfile = Dao_OpenFile( argv[logopt+1], "w+b" );
 	for(i=1; i<logopt; ++i){
 		vmSpace = DaoInit( argv[0] );
 

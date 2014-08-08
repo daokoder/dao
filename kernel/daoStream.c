@@ -352,7 +352,7 @@ static FILE* DaoIO_OpenFile( DaoProcess *proc, DString *name, const char *mode, 
 	FILE *fin;
 
 	DaoIO_MakePath( proc, fname );
-	fin = fopen( fname->chars, mode );
+	fin = Dao_OpenFile( fname->chars, mode );
 	DString_Delete( fname );
 	if( fin == NULL && silent == 0 ){
 		snprintf( buf, IO_BUF_SIZE, "error opening file: %s", DString_GetData( name ) );

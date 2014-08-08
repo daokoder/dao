@@ -2439,7 +2439,7 @@ static int DaoParser_HandleVerbatim( DaoParser *self, int start )
 			DaoLexer *lexer = DaoLexer_New();
 			DList *tokens = lexer->tokens;
 			DaoLexer_Tokenize( lexer, self->string->chars, 0 );
-			DList_InsertArray( self->tokens, start, tokens, 0, -1 );
+			DList_InsertList( self->tokens, start, tokens, 0, -1 );
 			DaoLexer_Delete( lexer );
 		}
 	}else{
@@ -3025,13 +3025,13 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 
 	if( DaoParser_ParseCodes( parser, 0, parser->tokens->size-1 )==0 ){
 		if( DString_EQ( self->fileName, parser->fileName ) )
-			DList_InsertArray( self->errors, self->errors->size, parser->errors, 0, -1 );
+			DList_InsertList( self->errors, self->errors->size, parser->errors, 0, -1 );
 		else
 			DaoParser_PrintError( parser, 0, 0, NULL );
 		goto ErrorInterfaceDefinition;
 	}
 	if( parser->vmcLast != parser->vmcBase ){
-		DList_InsertArray( self->errors, self->errors->size, parser->errors, 0, -1 );
+		DList_InsertList( self->errors, self->errors->size, parser->errors, 0, -1 );
 		DaoParser_StatementError( self, parser, DAO_STATEMENT_IN_INTERFACE );
 		goto ErrorInterfaceDefinition;
 	}
@@ -3233,7 +3233,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	for(i=begin+1; i<right; i++) DaoLexer_AppendToken( parser->lexer, tokens[i] );
 	if( DaoParser_ParseCodes( parser, 0, parser->tokens->size-1 )==0 ){
 		if( DString_EQ( self->fileName, parser->fileName ) )
-			DList_InsertArray( self->errors, self->errors->size, parser->errors, 0, -1 );
+			DList_InsertList( self->errors, self->errors->size, parser->errors, 0, -1 );
 		else
 			DaoParser_PrintError( parser, 0, 0, NULL );
 		goto ErrorClassDefinition;
@@ -3243,7 +3243,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 #if 0
 		DaoParser_PrintCodes( parser );
 #endif
-		DList_InsertArray( self->errors, self->errors->size, parser->errors, 0, -1 );
+		DList_InsertList( self->errors, self->errors->size, parser->errors, 0, -1 );
 		DaoParser_StatementError( self, parser, DAO_STATEMENT_IN_CLASS );
 		goto ErrorClassDefinition;
 	}
