@@ -1505,20 +1505,6 @@ static void DaoParser_ByteEncodeGetConst( DaoParser *self, DString *name )
 		DaoByteBlock_InsertBlockIndex( eval, eval->end, namebk );
 	}
 }
-static DaoType* DaoType_FindType( DString *name, DaoNamespace *ns, DaoCtype *ctype, DaoClass *klass, DaoRoutine *rout )
-{
-	DNode *node = NULL;
-	if( rout && rout->body ) node = MAP_Find( rout->body->abstypes, name );
-	if( node == NULL && klass ) node = MAP_Find( klass->abstypes, name );
-	if( node == NULL && ctype && ctype->cdtype->kernel && ctype->cdtype->kernel->values ){
-		node = MAP_Find( ctype->cdtype->kernel->values, name );
-		if( node && node->value.pValue->type == DAO_TYPE ) return node->value.pType;
-		node = NULL;
-	}
-	if( node ) return node->value.pType;
-	if( ns ) return DaoNamespace_FindType( ns, name );
-	return NULL;
-}
 static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst );
 static DaoType* DaoParser_ParseValueType( DaoParser *self, int start )
 {
@@ -1565,8 +1551,6 @@ static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, in
 	default : break;
 	}
 	if( type ) return type;
-	type = DaoType_FindType( name, ns, self->hostCtype, self->hostClass, self->routine );
-	if( type ) return type;
 	if( value == NULL ) return NULL;
 	return DaoNamespace_MakeValueType( ns, value );
 }
@@ -1610,9 +1594,6 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 		type = DaoParser_FindTypeHolder( self, & token->string );
 		if( type ) return type;
 	}
-	type = DaoType_FindType( name, ns, self->hostCtype, klass, routine );
-	if( type && type->tid == DAO_CTYPE ) type = type->kernel->abtype; /* get its cdata type */
-	if( type ) return type;
 	if( i > 0 && i < 100 ){
 		type = DaoNamespace_MakeType( ns, name->chars, i, NULL, 0,0 );
 	}else if( token->name == DKEY_NONE ){
@@ -2543,12 +2524,10 @@ static int DaoParser_AddToScope( DaoParser *self, DString *name, DaoValue *value
 		if( abtype ) DaoNamespace_AddType( NS, name, abtype );
 		ret = DaoNamespace_AddConst( NS, name, value, perm );
 	}else if( self->isClassBody && self->hostClass ){
-		if( abtype ) DaoClass_AddType( self->hostClass, name, abtype );
 		ret = DaoClass_AddConst( self->hostClass, name, value, perm );
 	}else{
 		DMap *symtable = DaoParser_CurrentSymbolTable( self );
 		if( MAP_Find( symtable, name ) != NULL ) goto SymbolWasDefined;
-		if( abtype ) MAP_Insert( routine->body->abstypes, name, abtype );
 		MAP_Insert( symtable, name, LOOKUP_BIND_LC( size ) );
 		ret = DaoRoutine_AddConstant( routine, value );
 	}
@@ -2605,11 +2584,6 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 	str = & nameTok->string;
 	start += 2;
 	if( start >to || tokens[start]->type != DTOK_IDENTIFIER ) goto InvalidAliasing;
-	if( DaoType_FindType( str, NS, self->hostCtype, self->hostClass, routine ) ){
-		/* Redundant ??? */
-		DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
-		goto InvalidAliasing;
-	}
 	if( DaoParser_GetRegister( self, nameTok ) >= 0 ){
 		DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
 		goto InvalidAliasing;
@@ -2618,11 +2592,19 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 	if( type == NULL ) goto InvalidAliasing;
 	type = DaoType_Copy( type );
 	DString_Assign( type->name, str );
-	/*  XXX typedef in routine or class */
-	DaoNamespace_AddType( NS, str, type );
-	DaoNamespace_AddTypeConstant( NS, str, type );
+	if( (self->levelBase + self->lexLevel) == 0 ){
+		DaoNamespace_AddType( NS, str, type );
+		DaoNamespace_AddTypeConstant( NS, str, type );
+	}else if( self->isClassBody ){
+		DaoClass_AddConst( self->hostClass, str, (DaoValue*) type, self->permission );
+	}else{
+		DMap *table = DaoParser_CurrentSymbolTable( self );
+		int id = LOOKUP_BIND_LC( routine->routConsts->value->size );
+		MAP_Insert( table, str, id );
+		DaoRoutine_AddConstant( routine, (DaoValue*) type );
+	}
 	if( self->byteBlock ){
-		DaoByteBlock_EncodeTypeAlias( self->byteBlock, old, type, str );
+		DaoByteBlock_EncodeTypeAlias( self->byteBlock, old, type, str, self->permission );
 	}
 	return start;
 InvalidAliasing:
@@ -3401,7 +3383,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 		DaoNamespace_AddType( self->nameSpace, abtp2->name, abtp2 );
 		DaoParser_AddConstant( self, abtp2->name, (DaoValue*) abtp2, tokens[enumkey] );
 		if( self->byteBlock ){
-			DaoByteBlock_EncodeTypeAlias( self->byteBlock, old, abtp2, alias );
+			DaoByteBlock_EncodeTypeAlias( self->byteBlock, old, abtp2, alias, DAO_PERM_PUBLIC );
 		}
 	}
 	return rb + 1;

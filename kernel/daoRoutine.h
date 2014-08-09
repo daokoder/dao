@@ -127,8 +127,6 @@ struct DaoRoutineBody
 	ushort_t  codeStart;
 	ushort_t  codeEnd;
 
-	DMap *abstypes;
-
 	DMap   *aux;
 
 	DaoRoutine  *revised; /* to support edit & continue */

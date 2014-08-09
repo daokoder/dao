@@ -286,19 +286,44 @@ void DString_Reserve( DString *self, daoint size )
 	self->bufSize = bufsize;
 	DString_Realloc( self, self->bufSize );
 }
+int DString_IsASCII( DString *self );
 void DString_ToLower( DString *self )
 {
 	daoint i;
 	char *bytes;
+	DArray *wcs;
+
 	DString_Detach( self, self->size );
-	for(i=0,bytes=self->chars; i<self->size; i++, bytes++) *bytes = tolower( *bytes );
+	if( DString_IsASCII( self ) ){
+		for(i=0,bytes=self->chars; i<self->size; i++, bytes++) *bytes = tolower( *bytes );
+		return;
+	}
+	wcs = DArray_New( sizeof(wchar_t) );
+	DString_DecodeUTF8( self, wcs );
+	self->size = 0;
+	for(i=0; i<wcs->size; ++i){
+		DString_AppendWChar( self, towlower( wcs->data.wchars[i] ) );
+	}
+	DArray_Delete( wcs );
 }
 void DString_ToUpper( DString *self )
 {
 	daoint i;
 	char *bytes;
+	DArray *wcs;
+
 	DString_Detach( self, self->size );
-	for(i=0,bytes=self->chars; i<self->size; i++, bytes++) *bytes = toupper( *bytes );
+	if( DString_IsASCII( self ) ){
+		for(i=0,bytes=self->chars; i<self->size; i++, bytes++) *bytes = toupper( *bytes );
+		return;
+	}
+	wcs = DArray_New( sizeof(wchar_t) );
+	DString_DecodeUTF8( self, wcs );
+	self->size = 0;
+	for(i=0; i<wcs->size; ++i){
+		DString_AppendWChar( self, towupper( wcs->data.wchars[i] ) );
+	}
+	DArray_Delete( wcs );
 }
 daoint DString_Size( DString *self )
 {
@@ -794,6 +819,16 @@ daoint DString_GetByteIndex( DString *self, daoint chindex )
 #       endif
 	}
 	return DStringAux_GetByteIndex( self->aux, self, chindex );
+}
+
+int DString_IsASCII( DString *self )
+{
+	daoint i, count = 0;
+	char *bytes;
+	for(i=0,bytes=self->chars; i<self->size; ++i, ++bytes){
+		if( U8CodeType( *bytes ) != 1 ) return 0;
+	}
+	return 1;
 }
 
 /*

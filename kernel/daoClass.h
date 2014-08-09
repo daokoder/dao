@@ -40,7 +40,7 @@ struct DaoClass
 
 	/* Holding index of class members, including data from its parents: */
 	/* negative index indicates an inaccessible private member from a parent? XXX */
-	DMap    *lookupTable; /* <DString*,size_t> */
+	DMap   *lookupTable; /* <DString*,size_t> */
 
 	/* Holding class consts and routines - class data: */
 	/* For both this class and its parents: */
@@ -89,7 +89,6 @@ struct DaoClass
 
 	DaoType  *clsType;
 	DaoType  *objType; /* GC handled in constants; */
-	DMap     *abstypes;
 
 	DList *decoTargets;
 
@@ -134,8 +133,6 @@ DAO_DLL int DaoClass_GetDataIndex( DaoClass *self, DString *name );
 DAO_DLL int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *value, int pm );
 DAO_DLL int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DaoValue *val, DaoType *tp, int pm );
 DAO_DLL int DaoClass_AddObjectVar( DaoClass *self, DString *name, DaoValue *val, DaoType *tp, int pm );
-
-DAO_DLL int DaoClass_AddType( DaoClass *self, DString *name, DaoType *tp );
 
 DAO_DLL void DaoClass_AddOverloadedRoutine( DaoClass *self, DString *signature, DaoRoutine *rout );
 DAO_DLL DaoRoutine* DaoClass_GetOverloadedRoutine( DaoClass *self, DString *signature );

@@ -890,7 +890,7 @@ DaoByteBlock* DaoByteBlock_EncodeType( DaoByteBlock *self, DaoType *type )
 	DaoByteBlock_AddBlockIndexData( newBlock, 0, size );
 	return newBlock;
 }
-DaoByteBlock* DaoByteBlock_EncodeTypeAlias( DaoByteBlock *self, DaoType *type, DaoType *aliased, DString *alias )
+DaoByteBlock* DaoByteBlock_EncodeTypeAlias( DaoByteBlock *self, DaoType *type, DaoType *aliased, DString *alias, int perm )
 {
 	DaoByteBlock *newBlock = NULL;
 	DaoByteBlock *nameBlock = DaoByteBlock_EncodeString( self, alias );
@@ -905,6 +905,7 @@ DaoByteBlock* DaoByteBlock_EncodeTypeAlias( DaoByteBlock *self, DaoType *type, D
 	}
 	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin+0, nameBlock );
 	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin+2, typeBlock );
+	DaoByteCoder_EncodeUInt16( newBlock->begin+4, perm );
 	return newBlock;
 }
 DaoByteBlock* DaoByteBlock_EncodeTypeOf( DaoByteBlock *self, DaoType *type, DaoValue *value )
@@ -2025,6 +2026,7 @@ static void DaoByteCoder_DecodeTypeAlias( DaoByteCoder *self, DaoByteBlock *bloc
 {
 	uint_t A = DaoByteCoder_DecodeUInt16( block->begin );
 	uint_t B = DaoByteCoder_DecodeUInt16( block->begin+2 );
+	uint_t C = DaoByteCoder_DecodeUInt16( block->begin+4 );
 	DaoByteBlock *namebk = DaoByteCoder_LookupStringBlock( self, block, A );
 	DaoByteBlock *typebk = DaoByteCoder_LookupTypeBlock( self, block, B );
 	DString *name;
@@ -2037,8 +2039,13 @@ static void DaoByteCoder_DecodeTypeAlias( DaoByteCoder *self, DaoByteBlock *bloc
 
 	type = DaoType_Copy( type );
 	DString_Assign( type->name, name );
-	DaoNamespace_AddType( self->nspace, type->name, type );
-	DaoNamespace_AddTypeConstant( self->nspace, type->name, type );
+	if( block->parent == self->top ){
+		DaoNamespace_AddType( self->nspace, type->name, type );
+		DaoNamespace_AddTypeConstant( self->nspace, type->name, type );
+	}else if( block->parent->type == DAO_ASM_CLASS ){
+		DaoClass *klass = DaoValue_CastClass( block->parent->value );
+		DaoClass_AddConst( klass, type->name, (DaoValue*) type, C );
+	}
 
 	GC_Assign( & block->value, type );
 }

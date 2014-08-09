@@ -164,7 +164,6 @@ DaoRoutineBody* DaoRoutineBody_New()
 	self->defLocals = DList_New( DAO_DATA_TOKEN );
 	self->annotCodes = DList_New( DAO_DATA_VMCODE );
 	self->localVarType = DMap_New(0,0);
-	self->abstypes = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 	self->simpleVariables = DList_New(0);
 	self->codeStart = self->codeEnd = 0;
 	self->aux = DMap_New(0,0);
@@ -185,7 +184,6 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 	DList_Delete( self->defLocals );
 	DList_Delete( self->annotCodes );
 	DMap_Delete( self->localVarType );
-	DMap_Delete( self->abstypes );
 	if( self->upValues ) DList_Delete( self->upValues );
 	if( self->decoTargets ) DList_Delete( self->decoTargets );
 	if( self->revised ) GC_DecRC( self->revised );

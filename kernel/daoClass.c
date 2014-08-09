@@ -107,7 +107,6 @@ DaoClass* DaoClass_New()
 
 	self->lookupTable = DHash_New( DAO_DATA_STRING, 0 );
 	self->methSignatures = DHash_New( DAO_DATA_STRING, 0 );
-	self->abstypes    = DMap_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 	self->constants   = DList_New( DAO_DATA_VALUE );
 	self->variables   = DList_New( DAO_DATA_VALUE );
 	self->instvars    = DList_New( DAO_DATA_VALUE );
@@ -139,7 +138,6 @@ void DaoClass_Delete( DaoClass *self )
 #endif
 	GC_DecRC( self->clsType );
 	GC_DecRC( self->castRoutines );
-	DMap_Delete( self->abstypes );
 	DMap_Delete( self->lookupTable );
 	DMap_Delete( self->methSignatures );
 	DList_Delete( self->constants );
@@ -187,7 +185,6 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 	DString_SetChars( str, "self" );
 	DaoClass_AddObjectVar( self, str, NULL, self->objType, DAO_PERM_PRIVATE );
 	DString_Assign( self->className, name );
-	DaoClass_AddType( self, name, self->objType );
 
 	rout = DaoRoutine_New( ns, self->objType, 1 );
 	DString_Assign( rout->routName, name );
@@ -1335,12 +1332,6 @@ int DaoClass_AddGlobalVar( DaoClass *self, DString *name, DaoValue *data, DaoTyp
 	if( data && DaoValue_Move( data, & self->variables->items.pVar[size]->value, t ) ==0 )
 		return -DAO_TYPE_NOT_MATCHING;
 	return id;
-}
-int DaoClass_AddType( DaoClass *self, DString *name, DaoType *tp )
-{
-	DNode *node = MAP_Find( self->abstypes, name );
-	if( node == NULL ) MAP_Insert( self->abstypes, name, tp );
-	return 1;
 }
 void DaoClass_AddOverloadedRoutine( DaoClass *self, DString *signature, DaoRoutine *rout )
 {

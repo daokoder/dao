@@ -437,7 +437,6 @@ static void DaoValue_AddType( DaoValue *self, DString *name, DaoType *type )
 		DMap_Insert( core->kernel->values, name, cst );
 		break;
 	case DAO_CLASS :
-		DaoClass_AddType( & self->xClass, name, type2 );
 		DaoClass_AddConst( & self->xClass, name, cst, DAO_PERM_PUBLIC );
 		break;
 	case DAO_NAMESPACE :
