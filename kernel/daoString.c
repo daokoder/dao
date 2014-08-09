@@ -472,7 +472,7 @@ static daoint DMBString_RFind( DString *self, daoint S, const char* chs, daoint 
 	if( S >= self->size ) S = self->size-1;
 	if( (S+1) < M || M > self->size ) return DAO_NULLPOS;
 	for( i=S; i>=M-1; i--){
-		int found = memcmp( self->chars + i - M + 1, chs, M );
+		int found = memcmp( self->chars + i - M + 1, chs, M ) == 0;
 		if( found ) return i;
 	}
 	return DAO_NULLPOS;

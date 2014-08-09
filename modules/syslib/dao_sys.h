@@ -30,30 +30,5 @@
 
 #include"daoStdtype.h"
 
-typedef struct Dao_Buffer Dao_Buffer;
-
-struct Dao_Buffer
-{
-	DAO_CSTRUCT_COMMON;
-
-	union {
-		void           *pVoid;
-		signed   char  *pSChar;
-		unsigned char  *pUChar;
-		signed   short *pSShort;
-		unsigned short *pUShort;
-		signed   int   *pSInt;
-		unsigned int   *pUInt;
-		float          *pFloat;
-		double         *pDouble;
-	} buffer;
-	size_t  size;
-	size_t  bufsize;
-};
-
-DAO_DLL Dao_Buffer* Dao_Buffer_New( size_t size );
-DAO_DLL Dao_Buffer* Dao_Buffer_CastFromValue( DaoValue *value );
-DAO_DLL void Dao_Buffer_Resize( Dao_Buffer *self, size_t size );
-DAO_DLL void Dao_Buffer_Delete( Dao_Buffer *self );
 
 #endif

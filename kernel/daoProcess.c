@@ -5944,7 +5944,7 @@ static void DaoProcess_RaiseEx( DaoProcess *self, const char *type, const char *
 		DString_AppendChars( name, type );
 	}
 	DaoProcess_RaiseException( self, name->chars, info, NULL );
-	if( self->exceptions->size == ecount ){
+	if( err != 0 && self->exceptions->size == ecount ){
 		DaoProcess_RaiseError( self, "Param", "invalid exception type name" );
 	}
 	DString_Delete( name );
