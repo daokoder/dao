@@ -4082,7 +4082,7 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 		iter->values[0]->xInteger.value = va->xTuple.size >0;
 		DaoValue_Copy( (DaoValue*) index, iter->values + 1 );
 	}else{
-		DString_SetChars( name, "__for_iterator__" );
+		DString_SetChars( name, "for" );
 		if( va->type == DAO_OBJECT ){
 			rc = DaoObject_InvokeMethod( & va->xObject, NULL, self, name, & vc, 1, 1, 0 );
 		}else{

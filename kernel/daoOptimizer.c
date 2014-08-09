@@ -5757,7 +5757,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
 				if( NoCheckingType( at ) ) break;
-				DString_SetChars( mbs, "__for_iterator__" );
+				DString_SetChars( mbs, "for" );
 				switch( at->tid ){
 				case DAO_STRING :
 				case DAO_ARRAY :

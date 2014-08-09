@@ -5,7 +5,7 @@ interface AA
 	operator[]( index : int )=>int;
 	operator.name()=>string;
 
-	routine __for_iterator__( iter : for_iterator );
+	operator for( iter : for_iterator );
 	operator[]( iter : for_iterator )=>int;
 }
 routine Test( o : AA )
@@ -23,7 +23,7 @@ class BB
 	operator[]( index : int ){ return index }
 	operator.name(){ return "BB" }
 
-	routine __for_iterator__( iter : for_iterator ){
+	operator for( iter : for_iterator ){
 		iter.valid = 1;
 		iter.iterator = 0;
 	}

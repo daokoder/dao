@@ -2569,6 +2569,7 @@ DaoVmSpace* DaoInit( const char *command )
 
 	DString_SetChars( dao_type_for_iterator->name, "for_iterator" );
 	DaoNamespace_AddType( daons, dao_type_for_iterator->name, dao_type_for_iterator );
+	DaoNamespace_AddTypeConstant( daons, dao_type_for_iterator->name, dao_type_for_iterator );
 
 	dao_type_tuple = DaoParser_ParseTypeName( "tuple<...>", daons, NULL );
 
