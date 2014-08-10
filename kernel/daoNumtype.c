@@ -1378,68 +1378,142 @@ static DaoFuncItem numarMeths[] =
 	},
 	{ DaoARRAY_Dim,
 		"dim( invar self: array<@T>, i: int ) => int"
+		/*
+		// Get the i-th dimension.
+		*/
 	},
 	{ DaoARRAY_Dims,
 		"dims( invar self: array<@T> ) => array<int>"
+		/*
+		// Get all the dimensions.
+		*/
 	},
 	{ DaoARRAY_Index,
 		"index( invar self: array<@T>, i: int ) => array<int>"
+		/*
+		// Convert an one-dimensional index to a multi-dimensional index.
+		*/
 	},
 	{ DaoARRAY_Size,
 		"size( invar self: array<@T> ) => int"
+		/*
+		// Get the total number of elements in the array.
+		*/
 	},
 	{ DaoARRAY_Resize,
 		"resize( self: array<@T>, invar dims: array<int> )"
+		/*
+		// Resize the array such that the size in each dimension is the same as specified
+		// in "dims".
+		*/
 	},
 	{ DaoARRAY_Reshape,
 		"reshape( self: array<@T>, invar dims: array<int> )"
+		/*
+		// Reshape the array such that the size in each dimension is the same as specified
+		// in "dims".
+		*/
 	},
 
 	{ DaoARRAY_Permute,
 		"permute( self: array<@T>, invar dims: array<int> )"
+		/*
+		// Permute the elements of the array such that an element located by
+		// its original index in the original array is moved to the location
+		// as specified by its permuted index in the permuted array.
+		*/
 	},
 	{ DaoARRAY_Transpose,
 		"transpose( self: array<@T> )"
+		/*
+		// Transpose a matrix.
+		*/
 	},
 
 	{ DaoARRAY_max,
 		"max( invar self: array<@T<int|float|double>> ) => tuple<@T,int>"
+		/*
+		// Get the maximum element in the array.
+		*/
 	},
 	{ DaoARRAY_min,
 		"min( invar self: array<@T<int|float|double>> ) => tuple<@T,int>"
+		/*
+		// Get the minimum element in the array.
+		*/
 	},
 	{ DaoARRAY_sum,
 		"sum( invar self: array<@T> ) => @T"
+		/*
+		// Get the sum of the elements in the array.
+		*/
 	},
 
 	{ DaoARRAY_sort,
 		"sort( self: array<@T>, order: enum<ascend,descend> = $ascend, part = 0 )"
 			"=> array<@T>"
+		/*
+		// Sort the elements in the array in ascend or descend order.
+		// If "part" is not zero, the array is partially sorted such that
+		// the first "part" elements in the sorted array are
+		// the "part" maximum or minimum elements in right order.
+		*/
 	},
 
 	{ DaoARRAY_Map,
 		"map( invar self: array<@T> )"
 			"[item: @T, I: int, J: int, K: int, L: int, M: int => @V] => array<@V>"
+		/*
+		// Map the array to a new array such that each element in the original array
+		// is mapped to a new value in the new array according to code section.
+		// The value of the elements can be passed to the code section as the first
+		// parameter of the code section, and the multi-dimensional index can be
+		// passed as the remaining parameters.
+		*/
 	},
 	{ DaoARRAY_Reduce,
 		"reduce( invar self: array<@T> )"
 			"[item: @T, res: @T, I: int, J: int, K: int, L: int, M: int => @T] => @T"
+		/*
+		// Reduce/fold the elements in the array according to the evaluation result
+		// of the code section.
+		// The first element will be used as the initial result, and be passed to
+		// the code section as the second paramter. The returned value of the code
+		// section will become the new result.
+		*/
 	},
 	{ DaoARRAY_Reduce,
 		"reduce( invar self: array<@T>, init: @V )"
 			"[item: @T, res: @V, I: int, J: int, K: int, L: int, M: int => @V] => @V"
+		/*
+		// Reduce/fold the elements in the array according the evaluation result
+		// of the code section.
+		// It is the same as the previous method, except that the initial result
+		// is specified as an additional parameter to the method.
+		*/
 	},
 	{ DaoARRAY_Collect,
 		"collect( invar self: array<@T> )"
 			"[item: @T, I: int, J: int, K: int, L: int, M: int => none|@V] => list<@V>"
+		/*
+		// Iterate over the array, and execute the code section for each element,
+		// then collect the non "none" values to produce and return a list.
+		*/
 	},
 	{ DaoARRAY_Iterate,
 		"iterate( invar self: array<@T> )"
 			"[item: @T, I: int, J: int, K: int, L: int, M: int]"
+		/*
+		// Iterate over the array, and execute the code section for each element.
+		*/
 	},
 	{ DaoARRAY_Apply,
 		"apply( self: array<@T> )"
 			"[item: @T, I: int, J: int, K: int, L: int, M: int => @T] => array<@T>"
+		/*
+		// Iterate over the array, and execute the code section for each element.
+		// And substitute the elements with the values returned by the code section.
+		*/
 	},
 	{ NULL, NULL }
 };

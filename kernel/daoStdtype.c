@@ -2890,102 +2890,125 @@ static DaoFuncItem mapMeths[] =
 	{ DaoMAP_Clear,
 		"clear( self: map<@K,@V> )"
 		/*
-		//
+		// Delete all the key-value pairs from the map.
 		*/
 	},
 	{ DaoMAP_Reset,
 		"reset( self: map<@K,@V> )"
 		/*
-		//
+		// Remove all the key-value pairs from the map. And cache the key-value
+		// nodes internally for more efficient insertion later.
 		*/
 	},
 	{ DaoMAP_Reset,
 		"reset( self: map<@K,@V>, hashing: enum<none,auto,random> )"
 		/*
-		//
+		// Reset the map in the same way as the above method.
+		// And additionally it may change the map from ordered (hashing=none)
+		// to unordered (hashing=auto/random), or unordered to ordered map.
+		// A default hashing seed will be used for "auto", and a random
+		// hashing seed will be used for "random".
 		*/
 	},
 	{ DaoMAP_Erase,
 		"erase( self: map<@K,@V>, from: @K ) => map<@K,@V>"
 		/*
-		// Return self map;
+		// Erase a key and its corresponding value from the map.
+		// Return self map.
 		*/
 	},
 	{ DaoMAP_Erase,
 		"erase( self: map<@K,@V>, from: @K, to: @K ) => map<@K,@V>"
 		/*
-		//
-		// Return self map;
+		// Erase keys in the inclusive range between "from" and "to",
+		// and their corresponding values from the map.
+		// Return self map.
 		*/
 	},
 	{ DaoMAP_Insert,
 		"insert( self: map<@K,@V>, key: @K, value: @V ) => map<@K,@V>"
 		/*
-		//
-		// Return self map;
+		// Insert a new key-value pair to the map.
+		// Return self map.
 		*/
 	},
 	{ DaoMAP_Find,
-		"find( invar self: map<@K,@V>, invar key: @K, type: enum<LE,EQ,GE> = $EQ )"
+		"find( invar self: map<@K,@V>, invar key: @K, comparison: enum<LE,EQ,GE> = $EQ )"
 			"=> tuple<key:@K,value:@V> | none"
 		/*
-		//
+		// Find the key-value pair that corresponds to "key".
+		// According to the "comparison" parameter:
+		// 1. "$LE": the key must be less than or equal to the found one;
+		// 2. "$EQ": the key must equal to the found one;
+		// 3. "$GE": the key must be greater than or equal to the found one;
 		*/
 	},
 	{ DaoMAP_Keys,
 		"keys( invar self: map<@K,@V> ) => list<@K>"
 		/*
-		//
+		// Return the keys of the map as a list.
 		*/
 	},
 	{ DaoMAP_Values,
 		"values( invar self: map<@K,@V> ) => list<@V>"
 		/*
-		//
+		// Return the values of the map as a list.
 		*/
 	},
 	{ DaoMAP_Size,
 		"size( invar self: map<@K,@V> ) => int"
 		/*
-		//
+		// Return the number of key-value pairs in map.
 		*/
 	},
 	{ DaoMAP_Iterate,
 		"iterate( invar self: map<@K,@V> )[key: invar<@K>, value: invar<@V>]"
 		/*
-		//
+		// Iterate over the map, and execute the associated code section
+		// for each key-value pair.
 		*/
 	},
 	{ DaoMAP_Iterate,
 		"iterate( self: map<@K,@V> )[key: invar<@K>, value: @V]"
 		/*
-		//
+		// Iterate over the map, and execute the associated code section
+		// for each key-value pair.
 		*/
 	},
 	{ DaoMAP_Collect,
 		"collect( invar self: map<@K,@V> )[key: @K, value: @V => none|@T] => list<@T>"
 		/*
-		//
+		// Iterate over the map, and execute the associated code section
+		// for each key-value pair.
+		// Return a list of non-none values collected from the code section results.
 		*/
 	},
 	{ DaoMAP_Associate,
 		"associate( invar self: map<@K,@V>, hashing = 0 )"
 			"[key: invar<@K>, value: invar<@V> => none|tuple<@K2,@V2>] => map<@K2,@V2>"
 		/*
-		//
+		// Iterate over the map, and execute the associated code section
+		// for each key-value pair.
+		// Return a new map that is constructed from the new key-value pairs returned
+		// from the code section evaluation.
 		*/
 	},
 	{ DaoMAP_Find2,
 		"find( invar self: map<@K,@V> )[key: invar<@K>, value: invar<@V> =>int]"
 			"=> tuple<key:@K,value:@V> | none"
 		/*
-		//
+		// Find the first key-value pair that meets the condition as expressed
+		// by the code section. A non-zero integer result from the code section
+		// means the condition is satisfied.
 		*/
 	},
 	{ DaoMAP_Apply,
 		"apply( self: map<@K,@V> )[key: @K, value: @V => @V] => map<@K,@V>"
 		/*
-		//
+		// Iterate over the map, and execute the associated code section
+		// for each key-value pair.
+		// Then update the value of each pair with the value returned by
+		// the code section.
 		*/
 	},
 	{ NULL, NULL }
@@ -3320,7 +3343,7 @@ DaoTuple* DaoTuple_Create( DaoType *type, int init )
 #else
 DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 {
-	int M = type->nested->size;
+	int M = type->nested->size - type->variadic;
 	int i, size = N > M ? N : M;
 	int extit = size > DAO_TUPLE_MINSIZE ? size - DAO_TUPLE_MINSIZE : 0;
 	DaoTuple *self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + extit*sizeof(DaoValue*) );

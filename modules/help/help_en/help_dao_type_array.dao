@@ -38,7 +38,7 @@ Four numeric types are supported by the @[green]array@[green] type:
 and @[green]complex@[green]. When an array is created by enumeration without 
 explicit type declaration, its numeric type is inferred from the first expression 
 of the expression list, if the enumeration is not empty; otherwise, 
-@[green]double@[green] will be used as the numeric type.
+@[green]float@[green] will be used as the numeric type.
 
 
 Dao supports a number of built-in operations for array. For arithmetic operations, 
@@ -110,6 +110,7 @@ dim(invar self:array<@T>,i:int)=>int
 @[code]
 dim( invar self: array<@T>, i: int ) => int
 @[code]
+Get the i-th dimension.
 
 @[subsubsection]
 dims(invar self:array<@T>)=>array<int>
@@ -117,6 +118,7 @@ dims(invar self:array<@T>)=>array<int>
 @[code]
 dims( invar self: array<@T> ) => array<int>
 @[code]
+Get all the dimensions.
 
 @[subsubsection]
 index(invar self:array<@T>,i:int)=>array<int>
@@ -124,6 +126,7 @@ index(invar self:array<@T>,i:int)=>array<int>
 @[code]
 index( invar self: array<@T>, i: int ) => array<int>
 @[code]
+Convert an one-dimensional index to a multi-dimensional index.
 
 @[subsubsection]
 size(invar self:array<@T>)=>int
@@ -131,6 +134,7 @@ size(invar self:array<@T>)=>int
 @[code]
 size( invar self: array<@T> ) => int
 @[code]
+Get the total number of elements in the array.
 
 @[subsubsection]
 resize(self:array<@T>,invar dims:array<int>)
@@ -138,6 +142,8 @@ resize(self:array<@T>,invar dims:array<int>)
 @[code]
 resize( self: array<@T>, invar dims: array<int> )
 @[code]
+Resize the array such that the size in each dimension is the same as specified
+in @[code]dims@[code].
 
 @[subsubsection]
 reshape(self:array<@T>,invar dims:array<int>)
@@ -145,6 +151,8 @@ reshape(self:array<@T>,invar dims:array<int>)
 @[code]
 reshape( self: array<@T>, invar dims: array<int> )
 @[code]
+Reshape the array such that the size in each dimension is the same as specified
+in @[code]dims@[code].
 
 @[subsubsection]
 permute(self:array<@T>,invar dims:array<int>)
@@ -152,6 +160,9 @@ permute(self:array<@T>,invar dims:array<int>)
 @[code]
 permute( self: array<@T>, invar dims: array<int> )
 @[code]
+Permute the elements of the array such that an element located by its original index
+in the original array is moved to the location as specified by its permuted index
+in the permuted array.
 
 @[subsubsection]
 transpose(self:array<@T>)
@@ -159,6 +170,7 @@ transpose(self:array<@T>)
 @[code]
 transpose( self: array<@T> )
 @[code]
+Transpose a matrix.
 
 @[subsubsection]
 max(invar self:array<@T<int|float|double>>)=>tuple<@T,int>
@@ -166,6 +178,7 @@ max(invar self:array<@T<int|float|double>>)=>tuple<@T,int>
 @[code]
 max( invar self: array<@T<int|float|double>> ) => tuple<@T,int>
 @[code]
+Get the maximum element in the array.
 
 @[subsubsection]
 min(invar self:array<@T<int|float|double>>)=>tuple<@T,int>
@@ -173,6 +186,7 @@ min(invar self:array<@T<int|float|double>>)=>tuple<@T,int>
 @[code]
 min( invar self: array<@T<int|float|double>> ) => tuple<@T,int>
 @[code]
+Get the minimum element in the array.
 
 @[subsubsection]
 sum(invar self:array<@T>)=>@T
@@ -180,6 +194,7 @@ sum(invar self:array<@T>)=>@T
 @[code]
 sum( invar self: array<@T> ) => @T
 @[code]
+Get the sum of the elements in the array.
 
 @[subsubsection]
 sort(self:array<@T>,order:enum<ascend,descend>=$ascend,part=0)=>array<@T>
@@ -188,6 +203,10 @@ sort(self:array<@T>,order:enum<ascend,descend>=$ascend,part=0)=>array<@T>
 sort( self: array<@T>, order: enum<ascend,descend> = $ascend, part = 0 )
 	=> array<@T>
 @[code]
+Sort the elements in the array in ascend or descend order.
+If @[code]part@[code] is not zero, the array is partially sorted such that
+the first @[code]part@[code] elements in the sorted array are
+the @[code]part@[code] maximum or minimum elements in right order.
 
 @[subsubsection]
 map(invar self:array<@T>)[item:@T,I:int,J:int,K:int,...=>@V]=>array<@V>
@@ -196,6 +215,10 @@ map(invar self:array<@T>)[item:@T,I:int,J:int,K:int,...=>@V]=>array<@V>
 map( invar self: array<@T> )
 	[item: @T, I: int, J: int, K: int, L: int, M: int => @V] => array<@V>
 @[code]
+Map the array to a new array such that each element in the original array
+is mapped to a new value in the new array according to the code section evaluation.
+The value of the elements can be passed to the code section as the first parameter
+of the code section, and the multi-dimensional index can be passed as the remaining parameters.
 
 @[subsubsection]
 reduce(invar self:array<@T>)[item:@T,res:@T,I:int,J:int,K:int,...=>@T]=>@T
@@ -204,6 +227,11 @@ reduce(invar self:array<@T>)[item:@T,res:@T,I:int,J:int,K:int,...=>@T]=>@T
 reduce( invar self: array<@T> )
 	[item: @T, res: @T, I: int, J: int, K: int, L: int, M: int => @T] => @T
 @[code]
+Reduce/fold the elements in the array according to the evaluation result of the code
+section.
+The first element will be used as the initial result, and be passed to the code
+section as the second paramter. The returned value of the code section will become
+the new result.
 
 @[subsubsection]
 reduce(invar self:array<@T>,init:@V)[item:@T,res:@V,I:int,J:int,...=>@V]=>@V
@@ -212,6 +240,10 @@ reduce(invar self:array<@T>,init:@V)[item:@T,res:@V,I:int,J:int,...=>@V]=>@V
 reduce( invar self: array<@T>, init: @V )
 	[item: @T, res: @V, I: int, J: int, K: int, L: int, M: int => @V] => @V
 @[code]
+Reduce/fold the elements in the array according the evaluation result of the code
+section.
+It is the same as the previous method, except that the initial result is specified
+as an additional parameter to the method.
 
 @[subsubsection]
 collect(invar self:array<@T>)[item:@T,I:int,J:int,...=>none|@V]=>list<@V>
@@ -220,6 +252,8 @@ collect(invar self:array<@T>)[item:@T,I:int,J:int,...=>none|@V]=>list<@V>
 collect( invar self: array<@T> )
 	[item: @T, I: int, J: int, K: int, L: int, M: int => none|@V] => list<@V>
 @[code]
+Iterate over the array, and execute the code section for each element,
+then collect the non @[code]none@[code] values to produce and return a list.
 
 @[subsubsection]
 iterate(invar self:array<@T>)[item:@T,I:int,J:int,K:int,...]
@@ -228,6 +262,7 @@ iterate(invar self:array<@T>)[item:@T,I:int,J:int,K:int,...]
 iterate( invar self: array<@T> )
 	[item: @T, I: int, J: int, K: int, L: int, M: int]
 @[code]
+Iterate over the array, and execute the code section for each element.
 
 @[subsubsection]
 apply(self:array<@T>)[item:@T,I:int,J:int,K:int,...=>@T]=>array<@T>
@@ -236,6 +271,8 @@ apply(self:array<@T>)[item:@T,I:int,J:int,K:int,...=>@T]=>array<@T>
 apply( self: array<@T> )
 	[item: @T, I: int, J: int, K: int, L: int, M: int => @T] => array<@T>
 @[code]
+Iterate over the array, and execute the code section for each element.
+And substitute the elements with the values returned by the code section.
 
 
 

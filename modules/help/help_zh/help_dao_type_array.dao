@@ -10,10 +10,11 @@ dao.type.array
 @[title]
 
 @[text]
-Multi-dimentional numeric array is supported by Dao as @[green]array@[green] type.
+
+道语言里@[code]array@[code]类型表示多维数值数组。
 
 
-@[subsection]Definition@[subsection]
+@[subsection]定义@[subsection]
 @[code(syntax)]
 # Elements Enumeration:
 VectorEnumeration  ::= '[' ExpressionList ']'
@@ -28,24 +29,22 @@ ArrayByArithProg2 ::= 'array' '{' Expression ':' [ Expression ':' ] Expression '
 Array ::= VectorEnumeration | MatrixEnumeration | ArrayByArithProg
           | VectorEnumeration2 | MatrixEnumeration2 | ArrayByArithProg2
 @[code(syntax)]
-Please note that @[green]VectorEnumeration@[green] or @[green]VectorEnumeration2@[green]
-can still create a matrix or a multi-dimensional array, 
-if the @[green]ExpressionList@[green] produces a list of arrays.
+值得注意的是@[code]VectorEnumeration@[code]或@[code]VectorEnumeration2@[code]
+可以创建矩阵或多维数组，如果表达式列表@[code]ExpressionList@[code]的每个表达式
+产生一个数组。
 
 
-Four numeric types are supported by the @[green]array@[green] type:
-@[green]int@[green], @[green]float@[green], @[green]double@[green]
-and @[green]complex@[green]. When an array is created by enumeration without 
-explicit type declaration, its numeric type is inferred from the first expression 
-of the expression list, if the enumeration is not empty; otherwise, 
-@[green]double@[green] will be used as the numeric type.
+@[code]array@[code]类型支持四种数值类型：@[code]int@[code], @[code]float@[code],
+@[code]double@[code]和@[code]complex@[code]。
+当一个数组以移枚举方式创建，在它的变量没有类型标注的情况下，
+数组的数值类型将从枚举表达式列表推导出。如果表达式列表为空，
+该数组的数值类型将为@[code]float@[code]。
 
 
-Dao supports a number of built-in operations for array. For arithmetic operations, 
-they are always supported element-wise operations. 
+道数值数组支持多种运算或操作。值得注意的是，它的算数运算都是基于单个元素间的运算。
 
 
-@[subsection]Examples@[subsection]
+@[subsection]例子@[subsection]
 @[code]
 vec1 = [1, 2, 3]            # array<int> vector, or 1x3 matrix;
 vec2 = [1F; 2; 3]           # array<float> 3x1 matrix, or transposed vector;
@@ -68,7 +67,7 @@ Array methods
 
 @[text]
 
-Currently Dao array type supports the following methods:
+道数值数组类型目前支持以下方法：
 @[code]
 array<@T<none|int|float|double|complex>=none>( dim1: int, dim2 = 0, dim3 = 0 )
 	[I: int, J: int, K: int => @T|array<@T>] => array<@T>

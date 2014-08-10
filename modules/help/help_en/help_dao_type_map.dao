@@ -84,30 +84,210 @@ for( keyvalue in hash1 ) io.writeln( keyvalue )
 dao.type.map.method
 @[name]
 
+@[title]
+Methods
+@[title]
+
 @[text]
 @[code]
-clear( self :map<any,any> )
-reset( self :map<any,any> )
-reset( self :map<any,any>, hashing :enum<none,default,random> )
-erase( self :map<any,any> )
-erase( self :map<@K,@V>, from :@K )
-erase( self :map<@K,@V>, from :@K, to :@K )
-insert( self :map<@K,@V>, key :@K, value :@V )
-find( self :map<@K,@V>, key :@K, type :enum<le,eq,ge>=$eq )=>tuple<key:@K,value:@V>|none
-keys( self :map<@K,any>, from :@K )=>list<@K>
-keys( self :map<@K,any>, from :@K, to :@K )=>list<@K>
-values( self :map<@K,@V>, from :@K )=>list<@V>
-values( self :map<@K,@V>, from :@K, to :@K )=>list<@V>
-has( self :map<@K,any>, key :@K )=>int
-size( self :map<any,any> )=>int
-
-iterate( self :map<@K,@V> )[key :@K, value :@V]
-count( self :map<@K,@V> )[key :@K, value :@V =>int] =>int
-keys( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@K>
-values( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<@V>
-select( self :map<@K,@V> )[key :@K, value :@V =>int] =>list<tuple<key:@K,value:@V>>
-find( self :map<@K,@V> )[key :@K, value :@V =>int] =>tuple<key:@K,value:@V>|none
-map( self :map<@K,@V> )[key :@K, value :@V =>@T] =>list<@T>
-apply( self :map<@K,@V> )[key :@K, value :@V =>@V] =>map<@K,@V>
+map<@K=any,@V=any>( count: int, hashing = 0 )[index: int => tuple<@K,@V>]
+	=> map<@K,@V>
+clear( self: map<@K,@V> )
+reset( self: map<@K,@V> )
+reset( self: map<@K,@V>, hashing: enum<none,auto,random> )
+erase( self: map<@K,@V>, from: @K ) => map<@K,@V>
+erase( self: map<@K,@V>, from: @K, to: @K ) => map<@K,@V>
+insert( self: map<@K,@V>, key: @K, value: @V ) => map<@K,@V>
+find( invar self: map<@K,@V>, invar key: @K, comparison: enum<LE,EQ,GE> = $EQ )
+	=> tuple<key:@K,value:@V> | none
+keys( invar self: map<@K,@V> ) => list<@K>
+values( invar self: map<@K,@V> ) => list<@V>
+size( invar self: map<@K,@V> ) => int
+iterate( invar self: map<@K,@V> )[key: invar<@K>, value: invar<@V>]
+iterate( self: map<@K,@V> )[key: invar<@K>, value: @V]
+collect( invar self: map<@K,@V> )[key: @K, value: @V => none|@T] => list<@T>
+associate( invar self: map<@K,@V>, hashing = 0 )
+	[key: invar<@K>, value: invar<@V> => none|tuple<@K2,@V2>] => map<@K2,@V2>
+find( invar self: map<@K,@V> )[key: invar<@K>, value: invar<@V> =>int]
+	=> tuple<key:@K,value:@V> | none
+apply( self: map<@K,@V> )[key: @K, value: @V => @V] => map<@K,@V>
 @[code]
+
+
+@[subsection]
+Methods
+@[subsection]
+
+
+@[subsubsection]
+clear(self:map<@K,@V>)
+@[subsubsection]
+@[code]
+clear( self: map<@K,@V> )
+@[code]
+Delete all the key-value pairs from the map.
+
+
+@[subsubsection]
+reset(self:map<@K,@V>)
+@[subsubsection]
+@[code]
+reset( self: map<@K,@V> )
+@[code]
+Remove all the key-value pairs from the map. And cache the key-value
+nodes internally for more efficient insertion later.
+
+
+@[subsubsection]
+reset(self:map<@K,@V>,hashing:enum<none,auto,random>)
+@[subsubsection]
+@[code]
+reset( self: map<@K,@V>, hashing: enum<none,auto,random> )
+@[code]
+Reset the map in the same way as the above method.
+And additionally it may change the map from ordered (hashing=none)
+to unordered (hashing=auto/random), or unordered to ordered map.
+A default hashing seed will be used for "auto", and a random
+hashing seed will be used for "random".
+
+
+@[subsubsection]
+erase(self:map<@K,@V>,from:@K)=>map<@K,@V>
+@[subsubsection]
+@[code]
+erase( self: map<@K,@V>, from: @K ) => map<@K,@V>
+@[code]
+Erase a key and its corresponding value from the map.
+Return self map.
+
+
+@[subsubsection]
+erase(self:map<@K,@V>,from:@K,to:@K)=>map<@K,@V>
+@[subsubsection]
+@[code]
+erase( self: map<@K,@V>, from: @K, to: @K ) => map<@K,@V>
+@[code]
+Erase keys in the inclusive range between "from" and "to",
+and their corresponding values from the map.
+Return self map.
+
+
+@[subsubsection]
+insert(self:map<@K,@V>,key:@K,value:@V)=>map<@K,@V>
+@[subsubsection]
+@[code]
+insert( self: map<@K,@V>, key: @K, value: @V ) => map<@K,@V>
+@[code]
+Insert a new key-value pair to the map.
+Return self map.
+
+
+@[subsubsection]
+find(invar self:map<@K,@V>,invar key:@K,...)=>tuple<key:@K,value:@V>|none
+@[subsubsection]
+@[code]
+find( invar self: map<@K,@V>, invar key: @K, comparison: enum<LE,EQ,GE> = $EQ )
+	=> tuple<key:@K,value:@V> | none
+@[code]
+Find the key-value pair that corresponds to "key".
+According to the "comparison" parameter:
+1. "$LE": the key must be less than or equal to the found one;
+2. "$EQ": the key must equal to the found one;
+3. "$GE": the key must be greater than or equal to the found one;
+
+
+@[subsubsection]
+keys(invar self:map<@K,@V>)=>list<@K>
+@[subsubsection]
+@[code]
+keys( invar self: map<@K,@V> ) => list<@K>
+@[code]
+Return the keys of the map as a list.
+
+
+@[subsubsection]
+values(invar self:map<@K,@V>)=>list<@V>
+@[subsubsection]
+@[code]
+values( invar self: map<@K,@V> ) => list<@V>
+@[code]
+Return the values of the map as a list.
+
+
+@[subsubsection]
+size(invar self:map<@K,@V>)=>int
+@[subsubsection]
+@[code]
+size( invar self: map<@K,@V> ) => int
+@[code]
+Return the number of key-value pairs in map.
+
+
+@[subsubsection]
+iterate(invar self:map<@K,@V>)[key:invar<@K>,value:invar<@V>]
+@[subsubsection]
+@[code]
+iterate( invar self: map<@K,@V> )[key: invar<@K>, value: invar<@V>]
+@[code]
+Iterate over the map, and execute the associated code section
+for each key-value pair.
+
+
+@[subsubsection]
+iterate(self:map<@K,@V>)[key:invar<@K>,value:@V]
+@[subsubsection]
+@[code]
+iterate( self: map<@K,@V> )[key: invar<@K>, value: @V]
+@[code]
+Iterate over the map, and execute the associated code section
+for each key-value pair.
+
+
+@[subsubsection]
+collect(invar self:map<@K,@V>)[key:@K,value:@V=>none|@T]=>list<@T>
+@[subsubsection]
+@[code]
+collect( invar self: map<@K,@V> )[key: @K, value: @V => none|@T] => list<@T>
+@[code]
+Iterate over the map, and execute the associated code section
+for each key-value pair.
+Return a list of non-none values collected from the code section results.
+
+
+@[subsubsection]
+associate(invar self:map<@K,@V>,hashing=0)[...=>none|tuple<@K2,@V2>]=>map<@K2,@V2>
+@[subsubsection]
+@[code]
+associate( invar self: map<@K,@V>, hashing = 0 )
+[key: invar<@K>, value: invar<@V> => none|tuple<@K2,@V2>] => map<@K2,@V2>
+@[code]
+Iterate over the map, and execute the associated code section
+for each key-value pair.
+Return a new map that is constructed from the new key-value pairs returned
+from the code section evaluation.
+
+
+@[subsubsection]
+find(invar self:map<@K,@V>)[...]=>tuple<key:@K,value:@V>|none
+@[subsubsection]
+@[code]
+find( invar self: map<@K,@V> )[key: invar<@K>, value: invar<@V> =>int]
+=> tuple<key:@K,value:@V> | none
+@[code]
+Find the first key-value pair that meets the condition as expressed
+by the code section. A non-zero integer result from the code section
+means the condition is satisfied.
+
+
+@[subsubsection]
+apply(self:map<@K,@V>)[key:@K,value:@V=>@V]=>map<@K,@V>
+@[subsubsection]
+@[code]
+apply( self: map<@K,@V> )[key: @K, value: @V => @V] => map<@K,@V>
+@[code]
+Iterate over the map, and execute the associated code section
+for each key-value pair.
+Then update the value of each pair with the value returned by
+the code section.
+
 @[text]
