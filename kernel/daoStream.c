@@ -274,13 +274,13 @@ static void DaoIO_Read( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = proc->stdioStream;
 	DString *ds = DaoProcess_PutChars( proc, "" );
-	int amount = -1; /* amount=-2: all; amount=-1: line; amount>=0: bytes; */
+	int ch, amount = -1; /* amount=-2: all; amount=-1: line; amount>=0: bytes; */
 	FILE *fin = stdin;
 
 	if( self == NULL ) self = proc->vmSpace->stdioStream;
 	if( N > 0 ){
 		self = (DaoStream*) p[0];
-		fin = self->file;
+		if( self->file ) fin = self->file;
 		amount = -2;
 	}
 	if( (self->mode & DAO_STREAM_READABLE) == 0 ){
@@ -314,11 +314,7 @@ static void DaoIO_Read( DaoProcess *proc, DaoValue *p[], int N )
 			DString_SubString( self->streamString, ds, self->offset, -1 );
 			self->offset += ds->size;
 		}else{
-			struct stat info;
-			fstat( fileno( fin ), &info );
-			DString_Resize( ds, info.st_size - ftell( fin )/2 );
-			DString_Resize( ds, fread( ds->chars, 1, ds->size, fin ) );
-			if( fin == stdin ) fseek( stdin, 0, SEEK_END );
+			while( (ch = getc(fin)) != '\n' ) DString_AppendWChar( ds, ch );
 		}
 	}else{
 		DaoStream_ReadLine( self, ds );

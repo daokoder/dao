@@ -372,13 +372,11 @@ static DaoFuncItem sysMeths[]=
 	{ NULL, NULL }
 };
 
-DaoTypeBase modSysCoreTyper = { "sys", NULL, NULL, sysMeths, {0}, {0}, NULL, NULL };
-
 
 
 DAO_DLL int DaoSys_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	ns = DaoVmSpace_GetNamespace( vmSpace, "sys" );
+	ns = DaoNamespace_GetNamespace( ns, "sys" );
 	DaoNamespace_WrapFunctions( ns, sysMeths );
 	return 0;
 }

@@ -57,7 +57,7 @@ name
 
 interface IteratorInterface
 {
-	routine __for_iterator__( iter : for_iterator );
+	operator for( iter : for_iterator );
 	operator []( iter : for_iterator )=>int;
 }
 
@@ -68,7 +68,7 @@ routine TestIteratorInterface( inter : IteratorInterface )
 
 class IteratorClass
 {
-	routine __for_iterator__( iter : for_iterator ){
+	operator for( iter : for_iterator ){
 		iter.valid = 1;
 		iter.iterator = 0;
 	}

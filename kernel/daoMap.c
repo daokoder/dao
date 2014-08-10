@@ -722,16 +722,6 @@ static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
 	case DAO_DATA_VMCODE2: cmp = DaoVmCode_Compare2( (DaoVmCode*) k1, (DaoVmCode*) k2 ); break;
 	default : cmp = (daoint)k1 - (daoint)k2; break;
 	}
-	/*
-	// Note:
-	// A MBS string and WCS string of the same content may be hashed into
-	// different values, so there is no guarantee that they will be considered
-	// equivalent when they are used as keys in hash maps.
-	//
-	// Because of this, it should always better to consider MBS keys are different
-	// from WCS keys in HASH maps, to avoid the pitfalls that some keys are considered
-	// equivalent between MBS and WCS, while others are not.
-	*/
 	if( self->hashing && cmp == 0 ){
 		DString *s1 = NULL;
 		DString *s2 = NULL;
