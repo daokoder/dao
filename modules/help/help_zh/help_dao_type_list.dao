@@ -5,13 +5,418 @@ dao.type.list
 @[name]
 
 @[title]
-List Container Type
+列表类型
 @[title]
 
-@[name]
-dao.type.list.init
-@[name]
+@[text]
+道语言里，列表类型@[code]list@[code]是一种通用容器类型，
+它可用来装任何数据。
+
+
+@[subsection]定义@[subsection]
+@[code(syntax)]
+ListEnumeration ::= [ 'list' ] '{' ExpressionList '}'
+
+# Items of Arithmetic Progression sequence: count ~ start [ ~ step ]
+ListByArithProg ::= [ 'list' ] '{' Expression ':' [ Expression ':' ] Expression '}'
+
+List ::= ListEnumeration | ListByArithProg
+@[code(syntax)]
+当一个列表以枚举的方式创建，且没有显式类型标注信息，
+那么它的类型将通过枚举的表达式的类型推导出。
+如果枚举表达式列表为空，@[code]list<any>@[code]将用作该列表的类型。
+
+
+@[subsection]例子@[subsection]
+@[code]
+list1 = { 1, 2, 3 }    # list<int>
+list2 = { 1.0, 2, 3 }  # list<float>
+list3 = { 1 : 5 }      # list<int>
+list4 = list{ 1 : 2 : 5 }  # list<int>
+@[code]
+
+@[text]
+
 
 @[name]
 dao.type.list.method
 @[name]
+
+@[title]
+列表方法
+@[title]
+
+@[text]
+@[code]
+list<@T=any>( count: int )[index: int => @T] => list<@T>
+list<@T=any>( count: int, init: @T )[index: int, prev: @T => @T] => list<@T>
+
+clear( self: list<@T> )
+size( invar self: list<@T> )=>int
+resize( self: list<@T<int|float|double|complex|string|enum>>, size: int )
+resize( self: list<@T>, value: @T, size: int )
+
+max( invar self: list<@T<int|float|double|complex|string|enum>> ) => tuple<@T,int>
+min( invar self: list<@T<int|float|double|complex|string|enum>> ) => tuple<@T,int>
+sum( invar self: list<@T<int|float|double|complex|string|enum>> ) => @T
+
+insert( self: list<@T>, item: @T, pos = 0 ) => list<@T>
+erase( self: list<@T>, start = 0, count = 1 ) => list<@T>
+append( self: list<@T>, item: @T, ... : @T ) => list<@T>
+push( self: list<@T>, item: @T, to: enum<front, back> = $back ) => list<@T>
+pop( self: list<@T>, from: enum<front,back> = $back ) => @T
+front( invar self: list<@T> ) => @T
+back( invar self: list<@T> ) => @T
+
+collect( invar self: list<@T>, direction: enum<forward,backward> = $forward )
+	[item: @T, index: int => none|@V] => list<@V>
+collect( invar self: list<@T>, invar other: list<@S>, 
+	direction: enum<forward,backward> = $forward )
+	[item: @T, item2: @S, index: int => none|@V] => list<@V>
+associate( invar self: list<@T>, hashing = 0 )
+	[item: invar<@T>, index: int => none|tuple<@K,@V>] => map<@K,@V>
+associate( invar self: list<@T>, invar other: list<@S>, hashing = 0 )
+	[item: invar<@T>, item2: invar<@S>, index: int => none|tuple<@K,@V>]
+	=> map<@K,@V>
+reduce( invar self: list<@T>, direction: enum<forward,backward> = $forward )
+	[item: invar<@T>, value: @T, index: int => @T] => @T|none
+reduce( invar self: list<@T>, init: @V,
+	direction: enum<forward,backward> = $forward )
+	[item: invar<@T>, value: @V, index: int => @V] => @V
+find( invar self: list<@T>, direction: enum<forward,backward> = $forward )
+	[item: invar<@T>, index: int => int] => tuple<index:int,value:@T> | none
+iterate( invar self: list<@T>, direction: enum<forward,backward> = $forward )
+	[item: invar<@T>, index: int]
+iterate( self: list<@T>, direction: enum<forward,backward> = $forward )
+	[item: @T, index: int]
+
+sort( self: list<@T>, order: enum<ascend,descend> = $ascend, part = 0 ) => list<@T>
+sort( self: list<@T>, part = 0 )[X: @T, Y: @T => int] => list<@T>
+apply( self: list<@T>, direction: enum<forward,backward> = $forward )
+	[item: @T, index: int => @T] => list<@T>
+@[code]
+
+
+
+@[subsection]
+Methods
+@[subsection]
+
+
+@[subsubsection]
+list<@T=any>(count:int)[index:int=>@T]=>list<@T>
+@[subsubsection]
+@[code]
+list<@T=any>( count: int )[index: int => @T] => list<@T>
+@[code]
+
+
+@[subsubsection]
+list<@T=any>(count:int,init:@T)[index:int,prev:@T=>@T]=>list<@T>
+@[subsubsection]
+@[code]
+list<@T=any>( count: int, init: @T )[index: int, prev: @T => @T] => list<@T>
+@[code]
+
+
+@[subsubsection]
+clear(self:list<@T>)
+@[subsubsection]
+@[code]
+clear( self: list<@T> )
+@[code]
+清空列表里的元素。
+
+
+@[subsubsection]
+size(invar self:list<@T>)=>int
+@[subsubsection]
+@[code]
+size( invar self: list<@T> )=>int
+@[code]
+返回列表的长度。
+
+
+@[subsubsection]
+resize(self:list<@T<int|float|double|complex|string|enum>>,size:int)
+@[subsubsection]
+@[code]
+resize( self: list<@T<int|float|double|complex|string|enum>>, size: int )
+@[code]
+将列表改变成长度为"size"。
+此方法仅适用于元素类型为基本类型的列表。
+
+
+@[subsubsection]
+resize(self:list<@T>,value:@T,size:int)
+@[subsubsection]
+@[code]
+resize( self: list<@T>, value: @T, size: int )
+@[code]
+将列表改变成长度为"size"，并使用"value"作为新元素值。
+
+
+@[subsubsection]
+max(invar self:list<@T<int|float|double|complex|string|enum>>)=>tuple<@T,int>
+@[subsubsection]
+@[code]
+max( invar self: list<@T<int|float|double|complex|string|enum>> ) => tuple<@T,int>
+@[code]
+返回列表里的最大值及其下标。
+只有元素类型为基本类型的列表才能用此方法。
+如果元素类型为复数，复数大小的比较将先比较其实部，再比较其虚部。
+
+
+@[subsubsection]
+min(invar self:list<@T<int|float|double|complex|string|enum>>)=>tuple<@T,int>
+@[subsubsection]
+@[code]
+min( invar self: list<@T<int|float|double|complex|string|enum>> ) => tuple<@T,int>
+@[code]
+返回列表里的最小值及其下标。
+
+
+@[subsubsection]
+sum(invar self:list<@T<int|float|double|complex|string|enum>>)=>@T
+@[subsubsection]
+@[code]
+sum( invar self: list<@T<int|float|double|complex|string|enum>> ) => @T
+@[code]
+返回列表元素的和。
+
+
+@[subsubsection]
+insert(self:list<@T>,item:@T,pos=0)=>list<@T>
+@[subsubsection]
+@[code]
+insert( self: list<@T>, item: @T, pos = 0 ) => list<@T>
+@[code]
+将值"item"插入列表里下标"pos"所指的位置。
+返回该列表本身。
+
+
+@[subsubsection]
+erase(self:list<@T>,start=0,count=1)=>list<@T>
+@[subsubsection]
+@[code]
+erase( self: list<@T>, start = 0, count = 1 ) => list<@T>
+@[code]
+从列表的"start"位置开始删除"count"个元素。
+返回该列表本身。
+
+
+@[subsubsection]
+append(self:list<@T>,item:@T,...:@T)=>list<@T>
+@[subsubsection]
+@[code]
+append( self: list<@T>, item: @T, ... : @T ) => list<@T>
+@[code]
+将元素附加到列表尾部。
+返回该列表本身。
+
+
+@[subsubsection]
+push(self:list<@T>,item:@T,to:enum<front,back>=$back)=>list<@T>
+@[subsubsection]
+@[code]
+push( self: list<@T>, item: @T, to: enum<front, back> = $back ) => list<@T>
+@[code]
+将元素推入列表首部或尾部。
+返回该列表本身。
+
+
+@[subsubsection]
+pop(self:list<@T>,from:enum<front,back>=$back)=>@T
+@[subsubsection]
+@[code]
+pop( self: list<@T>, from: enum<front,back> = $back ) => @T
+@[code]
+将元素从列表的首部或尾部删除。
+返回删除的元素。
+
+
+@[subsubsection]
+front(invar self:list<@T>)=>@T
+@[subsubsection]
+@[code]
+front( invar self: list<@T> ) => @T
+@[code]
+返回列表最前面的元素。
+
+
+@[subsubsection]
+back(invar self:list<@T>)=>@T
+@[subsubsection]
+@[code]
+back( invar self: list<@T> ) => @T
+@[code]
+返回列表最后面的元素。
+
+
+@[subsubsection]
+collect(invar self:list<@T>,direction:enum...)[...=>none|@V]=>list<@V>
+@[subsubsection]
+@[code]
+collect( invar self: list<@T>, direction: enum<forward,backward> = $forward )
+	[item: @T, index: int => none|@V] => list<@V>
+@[code]
+历遍列表并对其每个元素执行相应的代码块。
+代码块返回的非@[code]none@[code]值将用来构造一个新的类表并返回。
+
+历遍方向由"direction"参数控制。
+
+
+@[subsubsection]
+collect(invar self:list<@T>,invar other:list<@S>,...)[...=>none|@V]=>list<@V>
+@[subsubsection]
+@[code]
+collect( invar self: list<@T>, invar other: list<@S>, 
+	direction: enum<forward,backward> = $forward )
+	[item: @T, item2: @S, index: int => none|@V] => list<@V>
+@[code]
+同时历遍两个列表并对其对应的元素执行相应的代码块。
+代码块返回的非@[code]none@[code]值将用来构造一个新的类表并返回。
+
+历遍方向由"direction"参数控制。
+
+
+@[subsubsection]
+associate(invar self:list<@T>,hashing=0)[...=>none|tuple<@K,@V>]=>map<@K,@V>
+@[subsubsection]
+@[code]
+associate( invar self: list<@T>, hashing = 0 )
+	[item: invar<@T>, index: int => none|tuple<@K,@V>] => map<@K,@V>
+@[code]
+历遍列表并对其每个元素执行相应的代码块。
+该代码块既可返回一个空值@[code]none@[code]，也可放回一个键值元组。
+这些返回的键值元组将用来构造并返回一个新的关联表。
+
+此方法的最后的可选参数"hashing"可取如下值：
+
+-- 零: 表示被构造的关联表将是有序的；
+
+-- 一: 表示被构造的关联表将是一个带缺省哈希种子的哈希表；
+
+-- 二: 表示被构造的关联表将是一个带随机哈希种子的哈希表；
+
+-- 其他整数: 表示被构造的关联表将是一个哈希表，并以
+         "hashing"为哈希种子;
+
+
+@[subsubsection]
+associate(invar self:list<@T>,invar other:list<@S>,hashing=0)[...]=>map<@K,@V>
+@[subsubsection]
+@[code]
+associate( invar self: list<@T>, invar other: list<@S>, hashing = 0 )
+	[item: invar<@T>, item2: invar<@S>, index: int => none|tuple<@K,@V>]
+	=> map<@K,@V>
+@[code]
+与上述方法一样，只不过此方法同时历遍两个列表。
+
+
+@[subsubsection]
+reduce(invar self:list<@T>,direction:enum...)[...=>@T]=>@T|none
+@[subsubsection]
+@[code]
+reduce( invar self: list<@T>, direction: enum<forward,backward> = $forward )
+	[item: invar<@T>, value: @T, index: int => @T] => @T|none
+@[code]
+化简列表里的元素。
+
+其基本过程如下：
+
+1. 取列表的第一元素为初始当前值；
+
+2. 从第二个元素开始，每个元素的值和当前值都被传入相应的代码块，
+   代码块执行后返回的值将变成新的当前值；
+
+3. 当所有元素都被处理后，最后的当前值将被返回。
+
+历遍方向由"direction"参数控制。
+如果列表为空，空值@[code]none@[code]将被返回。
+
+
+@[subsubsection]
+reduce(invar self:list<@T>,init:@V,direction:enum...)[...=>@V]=>@V
+@[subsubsection]
+@[code]
+reduce( invar self: list<@T>, init: @V, direction: enum<forward,backward>
+	= $forward ) [item: invar<@T>, value: @V, index: int => @V] => @V
+@[code]
+化简列表里的元素。
+
+其基本过程与上面的方法基本一直。只不过这里初始当前值是由方法参数指定，
+并且历遍是从列表的第一元素开始。而且当前值的类型也不必和列表元素的类型一致。
+
+
+@[subsubsection]
+find(invar self:list<@T>,direction:...)[...]=>tuple<index:int,value:@T>|none
+@[subsubsection]
+@[code]
+find( invar self: list<@T>, direction: enum<forward,backward> = $forward )
+	[item: invar<@T>, index: int => int] => tuple<index:int,value:@T> | none
+@[code]
+查找列表里第一个满足代码块所表示的条件。
+代码块返回非零整数表示条件满足。
+历遍方向由"direction"参数控制。
+
+
+@[subsubsection]
+iterate(invar self:list<@T>,direction:enum...)[item:invar<@T>,index:int]
+@[subsubsection]
+@[code]
+iterate( invar self: list<@T>, direction: enum<forward,backward> = $forward )
+	[item: invar<@T>, index: int]
+@[code]
+历遍列表并对其每个元素执行代码块。
+历遍方向由"direction"参数控制。
+
+
+@[subsubsection]
+iterate(self:list<@T>,direction:enum...)[item:@T,index:int]
+@[subsubsection]
+@[code]
+iterate( self: list<@T>, direction: enum<forward,backward> = $forward )
+	[item: @T, index: int]
+@[code]
+历遍列表并对其每个元素执行代码块。
+历遍方向由"direction"参数控制。
+此方法与前面方法的不同之处在于前面的方法只能历遍常量列表。
+
+
+@[subsubsection]
+sort(self:list<@T>,order:enum<ascend,descend>=$ascend,part=0)=>list<@T>
+@[subsubsection]
+@[code]
+sort( self: list<@T>, order: enum<ascend,descend> = $ascend, part = 0 )
+	=> list<@T>
+@[code]
+按升序或降序排序列表。如果"part"参数非零，排序将只把最大的（降序）或最小
+的（升序）"part"个元素正确排好即可。
+
+
+@[subsubsection]
+sort(self:list<@T>,part=0)[X:@T,Y:@T=>int]=>list<@T>
+@[subsubsection]
+@[code]
+sort( self: list<@T>, part = 0 )[X: @T, Y: @T => int] => list<@T>
+@[code]
+排序列表。列表元素的大小关系将由代码块确定。
+排序时，列表中的两个元素将被传递给代码块作比较，
+如果代码块的结果为非零值，这将表示作为第一个参数的元素
+小于作为第二个参数的元素。
+参数"part"的含义与上面的方法一致。
+
+
+@[subsubsection]
+apply(self:list<@T>,direction:enum...)[item:@T,index:int=>@T]=>list<@T>
+@[subsubsection]
+@[code]
+apply( self: list<@T>, direction: enum<forward,backward> = $forward )
+	[item: @T, index: int => @T] => list<@T>
+@[code]
+历遍列表并对其每个元素执行代码块。
+然后将该元素的值替换为代码块的结果值。
+历遍方向由"direction"参数控制。
+
+@[text]

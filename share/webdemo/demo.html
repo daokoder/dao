@@ -1,0 +1,132 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
+<head>
+  <title>
+  Dao Online Demo!
+  </title>
+  <meta charset="utf-8" />
+  <link rel="SHORTCUT ICON" href="/images/favicon.ico">
+  <style type="text/css" media="screen">
+	#submit-button
+	{
+		font-size:13pt;
+		background:#DDD;
+		cursor: pointer;
+		border: solid 1px;
+		padding:4px 10px 5px;
+		text-decoration:none;
+		text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+		text-align:center;
+		display:inline-block;
+		line-height:1;
+		-moz-border-radius: 7px;
+		-webkit-border-radius: 7px;
+		-moz-box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+		-webkit-box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+	}
+    #editor-container {
+      margin: 1ex 0;
+      height: 360pt;
+      width: 98%;
+    }
+    #editor {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    #terminal-container {
+      margin: 1ex 0;
+      height: 360pt;
+      width: 98%;
+    }
+    #terminal {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+  </style>
+  <script src="jquery-1.9.1.min.js"></script>
+  <script src="demo_events.js"></script>
+  <script src="dao.js"></script>
+  <script src="/javascripts/plusone.js"></script>
+</head>
+
+<body>
+  <div id="code-form">
+  	<table width="100%">
+	<tr><td width="60%">
+    <b>Select a demo</b>
+	<select id="select-demo">
+	<option value="hello.dao">Hello Dao!</option>
+	<option value="numbers.dao">Numbers</option>
+	<option value="strings.dao">Strings</option>
+	<option value="verbatim.dao">Verbatim Strings</option>
+	<option value="enums.dao">Enum Symbols</option>
+	<option value="arrays.dao">Numeric Arrays</option>
+	<option value="lists.dao">Lists</option>
+	<option value="maps.dao">Maps</option>
+	<option value="tuples.dao">Tuples</option>
+	<option value="disjoint_union.dao">Variant Types</option>
+	<option value="routines.dao">Routines (Functions)</option>
+	<option value="classes.dao">Classes</option>
+	<option value="interface.dao">Interfaces</option>
+	<option value="mixins.dao">Mixins</option>
+	<option value="decorators.dao">Routine Decorators</option>
+	<option value="aspects.dao">Class Decorators and Aspects</option>
+	<option value="closures.dao">Closures</option>
+	<option value="defers.dao">Defer Blocks</option>
+	<option value="errors.dao">Error Handling</option>
+	<!-- option value="macros.dao">Syntax Macro</option -->
+	</select>
+	<td width="20%"><a href="http://daovm.net/help/en/" target="view_window">Help</a>
+	<td width="20%">
+	<!-- Place this tag where you want the badge to render-->
+	<a href="https://plus.google.com/116928024969122793495/?prsrc=3" style="text-decoration: none;"><img src="https://ssl.gstatic.com/images/icons/gplus-32.png" width="32" height="25" style="border: 0; margin-right: 8px;"/></a>
+	<!-- Place this tag where you want the +1 button to render -->
+	<g:plusone></g:plusone>
+    <tr><td><b>Or enter some Dao codes, and then</b>:
+	<input type='button' value='Submit' id='submit-button'/>
+	</table>
+  	<table width="100%">
+	<tr>
+    <td width="60%"><div id="editor-container">
+      <div id="editor"></div>
+    </div>
+    <td width="40%"><div id="terminal-container">
+	  <div id="terminal"></div>
+	<tr>
+	<td><input type='button' value='Duplicate Demo' id='duplicate-demo'/>
+	<td><input type="checkbox" id=checkKeepHistory>Keep Output History</input>
+    </div>
+	</table>
+  </div>
+  </div>
+  <script src="src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+  <script>
+    var editor = ace.edit("editor");
+    editor.setTheme("ace/theme/monokai");
+    editor.getSession().setMode("ace/mode/ruby");
+  </script>
+  <script src="src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+  <script>
+    var terminal = ace.edit("terminal");
+	terminal.setReadOnly(true);
+    terminal.setTheme("ace/theme/twilight");
+    terminal.getSession().setMode("ace/mode/text");
+  </script>
+  <hr>
+  <table width="100%">
+  <tr><td width="99%">
+    <ul>
+	<li> This JavaScript version of Dao virtual machine was compiled from C to JavaScript
+		using <a href="http://emscripten.org">Emscripten</a>;
+	<li> It supports almost all features except concurrent programming and module loading;
+	<li> The skeleton of this page is partially adapted from <a href="https://github.com/xxuejie/mruby-web-irb">https://github.com/xxuejie/mruby-web-irb</a>.
+    </ul>
+  <td width="1%">
+	<a href="http://www2.clustrmaps.com/counter/maps.php?url=http://daovm.net" id="clustrMapsLink"><img width="0px" height="0px" src="http://www2.clustrmaps.com/counter/index2.php?url=http://daovm.net" style="border:0px;" alt="Visitor Map" title="Locations of visitors to this page" id="clustrMapsImg" onerror="this.onerror=null; this.src='http://clustrmaps.com/images/clustrmaps-back-soon.jpg'; document.getElementById('clustrMapsLink').href='http://clustrmaps.com';" /></a>
+  </table>
+</body>
+</html>
+
