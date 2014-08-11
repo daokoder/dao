@@ -913,116 +913,6 @@ static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
 	DString_Delete( val );
 	DString_Delete( str );
 }
-static int DaoRoutine_CheckParamTypes( DaoRoutine *self, DaoType *argtypes[], int argcount )
-{
-	DMap *defs = DMap_New(0,0);
-	DaoType *routType = self->routType;
-	DaoType  *abtp, **partypes = routType->nested->items.pType;
-	int parpass[DAO_MAX_PARAM];
-	int ndef = self->parCount;
-	int j, ifrom, ito, match = 1;
-
-	if( argcount == ndef && ndef == 0 ) goto FinishOK;
-	match = 0;
-
-	for(j=0; j<ndef; j++) parpass[j] = 0;
-	for(ifrom=0; ifrom<argcount; ifrom++){
-		DaoType *tp = argtypes[ifrom];
-		ito = ifrom;
-		if( ito >= ndef ) goto FinishError;
-		if( partypes[ito]->tid == DAO_PAR_VALIST ){
-			DaoType *vlt = (DaoType*) partypes[ito]->aux;
-			for(; ifrom<argcount; ifrom++, ito++){
-				parpass[ito] = 1;
-				if( vlt && DaoType_MatchTo( tp, vlt, defs ) == 0 ) goto FinishError;
-			}
-			break;
-		}
-		if( tp == NULL ) goto FinishError;
-		if( tp->tid == DAO_PAR_NAMED ){
-			DNode *node = DMap_Find( routType->mapNames, tp->fname );
-			if( node == NULL ) goto FinishError;
-			ito = node->value.pInt;
-			tp = & tp->aux->xType;
-		}
-		if( ito >= ndef || tp ==NULL )  goto FinishError;
-		abtp = routType->nested->items.pType[ito];
-		if( abtp->tid == DAO_PAR_NAMED || abtp->tid == DAO_PAR_DEFAULT ) abtp = & abtp->aux->xType;
-		parpass[ito] = DaoType_MatchTo( tp, abtp, defs );
-		if( parpass[ito] == 0 ) goto FinishError;
-	}
-	for(ito=0; ito<ndef; ito++){
-		if( parpass[ito] || partypes[ito]->tid == DAO_PAR_VALIST ) break;
-		if( partypes[ito]->tid != DAO_PAR_DEFAULT ) goto FinishError;
-		parpass[ito] = 1;
-	}
-	match = DAO_MT_EQ;
-	for(j=0; j<argcount; j++) if( match > parpass[j] ) match = parpass[j];
-
-#if 0
-	printf( "%s %i %i %i\n", routType->name->chars, match, ndef, argcount );
-#endif
-
-FinishOK:
-FinishError:
-	DMap_Delete( defs );
-	return match;
-}
-static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DList *argNames, DList *argValues, int *error )
-{
-	DList *types;
-	DString *name;
-	DaoRoutine *rout = NULL;
-	DaoRoutine **routs = NULL;
-	int i, max = 0, count = 0;
-
-	types = DList_New(0);
-	name = DString_New();
-
-	*error = DAO_ERROR;
-	DString_SetChars( name, "main" );
-	i = DaoNamespace_FindConst( ns, name );
-	if( i >=0 ){
-		DaoValue *value = DaoNamespace_GetConst( ns, i );
-		if( value->type == DAO_ROUTINE ) rout = & value->xRoutine;
-	}
-	if( rout == NULL ){
-		DList_Delete( types );
-		DString_Delete( name );
-		return NULL;
-	}
-	for( i=0; i<argNames->size; i++ ){
-		DaoType *type = dao_type_string;
-		char *chars = argValues->items.pString[i]->chars;
-		if( chars[0] == '+' || chars[0] == '-' ) chars ++;
-		if( DaoToken_IsNumber( chars, 0 ) ) type = dao_type_double;
-		if( argNames->items.pString[i]->size ){
-			DString *S = argNames->items.pString[i];
-			type = DaoNamespace_MakeType( ns, S->chars, DAO_PAR_NAMED, (DaoValue*)type, NULL, 0 );
-		}
-		DList_Append( types, type );
-	}
-	*error = DAO_ERROR_PARAM;
-	if( rout->overloads ){
-		routs = rout->overloads->routines->items.pRoutine;
-		count = rout->overloads->routines->size;
-	}else{
-		routs = & rout;
-		count = 1;
-	}
-	for(i=0; i<count; ++i){
-		int s = DaoRoutine_CheckParamTypes( routs[i], types->items.pType, types->size );
-		if( s > max ){
-			rout = routs[i];
-			max = s;
-		}
-	}
-	if( max == 0 ) rout = NULL;
-	if( rout ) *error = 0;
-	DList_Delete( types );
-	DString_Delete( name );
-	return rout;
-}
 static DaoValue* DaoVmSpace_MakeNameArgument( DaoNamespace *NS, DString *name, DaoValue *argv )
 {
 	DaoEnum *em;
@@ -1071,7 +961,7 @@ static int DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *na
 	}
 	return 1;
 }
-static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, DList *argNames, DList *argValues )
+static int DaoVmSpace_ConvertArguments( DaoRoutine *routine, DList *argNames, DList *argValues )
 {
 	DString *val;
 	DaoValue sval = {DAO_STRING};
@@ -1080,13 +970,12 @@ static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, D
 	DaoType *routype = routine->routType;
 	DaoType *type;
 	int set[2*DAO_MAX_PARAM];
-	int i, j;
+	int i, j, score = 1;
 
 	val = DString_New();
 	sval.xString.value = val;
 	DaoList_Clear( argParams );
 
-	memset( set, 0, sizeof(int) );
 	for(i=0; i<routype->nested->size - routype->variadic; ++i){
 		DaoList_Append( argParams, routine->routConsts->value->items.pValue[i] );
 		set[i] = 0;
@@ -1104,9 +993,11 @@ static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, D
 				name = argNames->items.pString[j];
 				value = argValues->items.pString[j];
 				DString_Assign( val, value );
+				DaoList_Append( argParams, NULL );
 				if( DaoList_SetArgument( argParams, j, type2, name, argv, ns ) == 0 ){
 					goto InvalidArgument;
 				}
+				score += 1;
 			}
 			break;
 		}
@@ -1117,34 +1008,63 @@ static int DaoVmSpace_ConvertArguments( DaoVmSpace *self, DaoRoutine *routine, D
 				name = NULL;
 			}
 		}
-		if( ito >= routype->nested->size ){
-			DaoStream_WriteChars( self->errorStream, "redundant argument\n" );
-			goto Failed;
-		}
+		if( ito >= routype->nested->size ) goto InvalidArgument;
 		type = (DaoType*) routype->nested->items.pType[ito]->aux;
-		if( set[ito] ){
-			DaoStream_WriteChars( self->errorStream, "duplicated argument\n" );
-			goto Failed;
-		}
+		if( set[ito] ) goto InvalidArgument;
 		set[ito] = 1;
 		if( DaoList_SetArgument( argParams, ito, type, name, argv, ns ) == 0 ){
 			goto InvalidArgument;
 		}
+		score += 10;
 	}
 	for(i=0; i<routype->nested->size - routype->variadic; ++i){
 		DaoType *partype = routine->routType->nested->items.pType[i];
-		if( set[i] == 0 && partype->tid != DAO_PAR_DEFAULT ){
-			DaoStream_WriteChars( self->errorStream, "incomplete argument\n" );
-			goto Failed;
-		}
+		if( set[i] == 0 && partype->tid != DAO_PAR_DEFAULT ) goto InvalidArgument;
 	}
 	DString_Delete( val );
-	return 1;
+	return score;
 InvalidArgument:
-	DaoStream_WriteChars( self->errorStream, "invalid argument\n" );
-Failed:
 	DString_Delete( val );
 	return 0;
+}
+static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DList *argNames, DList *argValues, int *error )
+{
+	DString *name;
+	DaoRoutine *rout = NULL;
+	DaoRoutine **routs = NULL;
+	int i, max = 0, count = 0;
+
+	name = DString_New();
+
+	*error = 0;
+	DString_SetChars( name, "main" );
+	i = DaoNamespace_FindConst( ns, name );
+	if( i >= 0 ) rout = DaoValue_CastRoutine( DaoNamespace_GetConst( ns, i ) );
+	if( rout == NULL ){
+		DString_Delete( name );
+		return NULL;
+	}
+	if( rout->overloads ){
+		routs = rout->overloads->routines->items.pRoutine;
+		count = rout->overloads->routines->size;
+	}else{
+		routs = & rout;
+		count = 1;
+	}
+	for(i=0; i<count; ++i){
+		int s = DaoVmSpace_ConvertArguments( routs[i], argNames, argValues );
+		if( s > max ){
+			rout = routs[i];
+			max = s;
+		}
+	}
+	if( rout ){
+		DaoVmSpace_ConvertArguments( rout, argNames, argValues );
+	}else{
+		*error = 1;
+	}
+	DString_Delete( name );
+	return rout;
 }
 
 DaoNamespace* DaoVmSpace_LoadEx( DaoVmSpace *self, const char *file, int run )
@@ -1631,16 +1551,9 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	}
 	if( res && !(self->options & DAO_OPTION_ARCHIVE) ){
 		DString name = DString_WrapChars( "main" );
-		int error = 0, id = DaoNamespace_FindConst( ns, & name );
-		DaoValue *cst = DaoNamespace_GetConst( ns, id );
-		/* TODO: Improve by trying to parse the arguments according to EACH main()! */
+		int error = 0;
 		expMain = DaoVmSpace_FindExplicitMain( ns, argNames, argValues, & error );
-		if( expMain ){
-			res = DaoVmSpace_ConvertArguments( self, expMain, argNames, argValues );
-		}else if( (cst && cst->type == DAO_ROUTINE) || argValues->size ){
-			res = 0;
-		}
-		if( res == 0 ){
+		if( error ){
 			DaoVmSpace_PrintCode( self );
 			DaoStream_WriteChars( io, "ERROR: invalid command line arguments.\n" );
 		}
@@ -1870,12 +1783,7 @@ ExecuteExplicitMain :
 	if( args ){
 		int error = 0;
 		mainRoutine = DaoVmSpace_FindExplicitMain( ns, argNames, argValues, & error );
-		if( mainRoutine ){
-			if( DaoVmSpace_ConvertArguments( self, mainRoutine, argNames, argValues ) == 0 )
-				goto InvalidArgument;
-		}else if( error == DAO_ERROR_PARAM ){
-			goto InvalidArgument;
-		}
+		if( error ) goto InvalidArgument;
 	}
 	if( mainRoutine != NULL ){
 		int ret, N = ns->argParams->value->size;

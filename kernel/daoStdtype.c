@@ -3343,8 +3343,8 @@ DaoTuple* DaoTuple_Create( DaoType *type, int init )
 #else
 DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 {
-	int M = type->nested->size - type->variadic;
-	int i, size = N > M ? N : M;
+	int M = type->nested->size;
+	int i, size = N > (M - type->variadic) ? N : (M - type->variadic);
 	int extit = size > DAO_TUPLE_MINSIZE ? size - DAO_TUPLE_MINSIZE : 0;
 	DaoTuple *self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + extit*sizeof(DaoValue*) );
 	DaoType **types;
@@ -3356,7 +3356,7 @@ DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
-	if( init == 0 ) return self;
+	if( init == 0 || M == 0 ) return self;
 	types = type->nested->items.pType;
 	for(i=0; i<size; i++){
 		DaoType *it = i < M ? types[i] : types[M-1];
