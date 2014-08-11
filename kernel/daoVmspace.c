@@ -934,6 +934,7 @@ static DaoValue* DaoVmSpace_MakeNameArgument( DaoNamespace *NS, DString *name, D
 }
 static int DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *name, DaoValue *string, DaoNamespace *NS )
 {
+	int isnum = DaoToken_IsNumber( string->xString.value->chars, string->xString.value->size );
 	DaoValue ival = {DAO_INTEGER};
 	DaoValue fval = {DAO_FLOAT};
 	DaoValue dval = {DAO_DOUBLE};
@@ -943,15 +944,15 @@ static int DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *na
 	case DAO_INTEGER :
 		ival.xInteger.value = strtoll( string->xString.value->chars, 0, 0 );
 		DaoList_SetItem( self, & ival, i );
-		break;
+		return 10 * isnum;
 	case DAO_FLOAT :
 		fval.xFloat.value = strtod( string->xString.value->chars, 0 );
 		DaoList_SetItem( self, & fval, i );
-		break;
+		return 10 * isnum;
 	case DAO_DOUBLE :
 		dval.xDouble.value = strtod( string->xString.value->chars, 0 );
 		DaoList_SetItem( self, & dval, i );
-		break;
+		return 10 * isnum;
 	default :
 		argv = string;
 		if( name && name->size ) argv = DaoVmSpace_MakeNameArgument( NS, name, argv );
@@ -970,7 +971,7 @@ static int DaoVmSpace_ConvertArguments( DaoRoutine *routine, DList *argNames, DL
 	DaoType *routype = routine->routType;
 	DaoType *type;
 	int set[2*DAO_MAX_PARAM];
-	int i, j, score = 1;
+	int i, j, s, score = 1;
 
 	val = DString_New();
 	sval.xString.value = val;
@@ -994,10 +995,9 @@ static int DaoVmSpace_ConvertArguments( DaoRoutine *routine, DList *argNames, DL
 				value = argValues->items.pString[j];
 				DString_Assign( val, value );
 				DaoList_Append( argParams, NULL );
-				if( DaoList_SetArgument( argParams, j, type2, name, argv, ns ) == 0 ){
-					goto InvalidArgument;
-				}
-				score += 1;
+				s = DaoList_SetArgument( argParams, j, type2, name, argv, ns );
+				if( s == 0 ) goto InvalidArgument;
+				score += s;
 			}
 			break;
 		}
@@ -1011,11 +1011,9 @@ static int DaoVmSpace_ConvertArguments( DaoRoutine *routine, DList *argNames, DL
 		if( ito >= routype->nested->size ) goto InvalidArgument;
 		type = (DaoType*) routype->nested->items.pType[ito]->aux;
 		if( set[ito] ) goto InvalidArgument;
-		set[ito] = 1;
-		if( DaoList_SetArgument( argParams, ito, type, name, argv, ns ) == 0 ){
-			goto InvalidArgument;
-		}
-		score += 10;
+		set[ito] = DaoList_SetArgument( argParams, ito, type, name, argv, ns );
+		if( set[ito] == 0 ) goto InvalidArgument;
+		score += 10 * set[ito];
 	}
 	for(i=0; i<routype->nested->size - routype->variadic; ++i){
 		DaoType *partype = routine->routType->nested->items.pType[i];

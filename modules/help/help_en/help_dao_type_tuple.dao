@@ -16,8 +16,8 @@ have a field name.
 
 @[subsection]Definition@[subsection]
 @[code(syntax)]
-TupleEnum ::= '(' [ Identifier '=>' ] Expression { ',' [ Identifier '=>' ] Expression } ')'
-TupleEnum2 ::= 'tuple' '{' [ Identifier '=>' ] Expression { ',' [ Identifier '=>' ] Expression } '}'
+TupleEnum ::= '(' [ Identifier '=' ] Expression { ',' [ Identifier '=' ] Expression } ')'
+TupleEnum2 ::= 'tuple' '{' [ Identifier '=' ] Expression { ',' [ Identifier '=' ] Expression } '}'
 
 Tuple ::= TupleEnum | TupleEnum2
 @[code(syntax)]
@@ -26,8 +26,8 @@ Tuple ::= TupleEnum | TupleEnum2
 @[subsection]Examples@[subsection]
 @[code(test)]
 tup1 = ( 123, 'abc' )  # tuple with unnamed items;
-tup2 = ( index => 123, 'abc' )  # first item is named as "index";
-tup3 = tuple{ 123, name => 'abc' }
+tup2 = ( index = 123, 'abc' )  # first item is named as "index";
+tup3 = tuple{ 123, name = 'abc' }
 
 global __result__ = tup3
 global __answer__ = ( 123, 'abc' );

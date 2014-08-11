@@ -5,10 +5,54 @@ dao.type.tuple
 @[name]
 
 @[title]
-Tuple Type
+元组类型
 @[title]
 
-@[name]
-dao.type.tuple.init
-@[name]
+@[text]
+
+一个元组@[code]tuple@[code]是一个定长的可包含不同类型元素的数组。
+元组类型名可包括每个元素的类型信息，而且还可给每个元素定义一个成员名称。
+
+
+@[subsection]定义@[subsection]
+@[code(syntax)]
+TupleEnum ::= '(' [ Identifier '=' ] Expression { ',' [ Identifier '=' ] Expression } ')'
+TupleEnum2 ::= 'tuple' '{' [ Identifier '=' ] Expression { ',' [ Identifier '=' ] Expression } '}'
+
+Tuple ::= TupleEnum | TupleEnum2
+@[code(syntax)]
+
+
+@[subsection]例子@[subsection]
+@[code(test)]
+tup1 = ( 123, 'abc' )          # 无成员名的元组;
+tup2 = ( index = 123, 'abc' )  # 第一个元素的成员名为"index";
+tup3 = tuple{ 123, name = 'abc' }
+
+global __result__ = tup3
+global __answer__ = ( 123, 'abc' );
+@[code(test)]
+
+
+@[subsection]元组类型名@[subsection]
+
+元组的类型名比数值数组，列表和关联表的要复杂些。
+它的基本形式如下：
+@[code]
+AnyTuple ::= 'tuple' [ '<' [ '...' ] '>' ]
+TupleItemType ::= [ Identifier ':' ] Type
+NonEmptyTupleType ::= 'tuple' '<' TupleItemType ( ',' TupleItemType )* [ '...' ] '>'
+TupleType ::= AnyTuple | NonEmptyTupleType
+@[code]
+如果元组类型的最后那个元素类型为@[code]...@[code]，那么它表示一个不定长度的元组类型。
+它表示一个元组除了包括一些固定的元素外，还可包括一些数目不定的额外元素。
+值得注意的是，每个元组对象还是定长的，而不定长度的元组类型只是表示它可匹配多个长度的元组。
+
+@[subsection]例子@[subsection]
+@[code]
+tup1 :tuple<int,int> = (1, 2)
+tup2 :tuple<index:int,name:string> = (123, 'abc')
+tup3 :tuple<int,int,...> = (1, 2, 3, 'abc')
+@[code]
+@[text]
 

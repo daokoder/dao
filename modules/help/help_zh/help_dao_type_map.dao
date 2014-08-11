@@ -5,13 +5,270 @@ dao.type.map
 @[name]
 
 @[title]
-Map or Hash Map Container Type
+关联表类型
 @[title]
 
-@[name]
-dao.type.map.init
-@[name]
+@[text]
+
+道语言使用单个类型@[code]map@[code]来表示有序关联表和无序关联表（哈希表）。
+有序关联表中的键值可按键的顺序访问。
+关联表可以枚举的方式创建。如果键与值之间使用@[code]=>@[code]，被创建的关联表将是
+有序的，而使用@[code]->@[code]则创建哈希表。
+
+
+@[subsection]定义@[subsection]
+@[code(syntax)]
+MapKeyValueList ::= Expression => Expression { ',' Expression => Expression }
+HashKeyValueList ::= Expression : Expression { ',' Expression : Expression }
+
+MapEnumeration  ::= [ 'map' ] '{' MapKeyValueList '}'
+HashEnumeration ::= [ 'map' ] '{' HashKeyValueList '}'
+
+Map ::= MapEnumeration | HashEnumeration
+@[code(syntax)]
+
+
+例子：
+@[code]
+# 使用=>创建有序关联表：
+map1  = { 'EE' => 5, 'BB' => 2, 'CC' => 3, 'AA' => 1 }
+
+# 使用->创建无序关联表：
+hash1 = { 'EE' -> 5, 'BB' -> 2, 'CC' -> 3, 'AA' -> 1 }
+
+# 用键访问值：
+io.writeln( map1['BB'] )
+io.writeln( hash1['CC'] )
+
+# 关联表切片：
+io.writeln( map1[ 'AA' : 'CC' ] )
+io.writeln( map1[ 'BB' : ] )
+io.writeln( map1[ : 'CC' ] )
+
+# 关联表大小，键和值：
+io.writeln( %hash1 )         # 大小;
+io.writeln( map2.size() )    # 大小;
+io.writeln( map2.keys() )    # 所有键;
+io.writeln( map2.values() )  # 所有值;
+
+# 定义关联表的替代方式：
+map2  = map{ 'ABC' => 123, 'DEF' => 456 }
+hash2 = map{ 'ABC' -> 123, 'DEF' -> 456 }
+
+# 历遍关联表里的键值元素：
+for( keyvalue in map1 ) io.writeln( keyvalue )
+for( keyvalue in hash1 ) io.writeln( keyvalue )
+@[code]
+
+
+@[text]
+
+
 
 @[name]
 dao.type.map.method
 @[name]
+
+@[title]
+关联表方法
+@[title]
+
+@[text]
+@[code]
+map<@K=any,@V=any>( count: int, hashing = 0 )[index: int => tuple<@K,@V>]
+	=> map<@K,@V>
+clear( self: map<@K,@V> )
+reset( self: map<@K,@V> )
+reset( self: map<@K,@V>, hashing: enum<none,auto,random> )
+erase( self: map<@K,@V>, from: @K ) => map<@K,@V>
+erase( self: map<@K,@V>, from: @K, to: @K ) => map<@K,@V>
+insert( self: map<@K,@V>, key: @K, value: @V ) => map<@K,@V>
+find( invar self: map<@K,@V>, invar key: @K, comparison: enum<LE,EQ,GE> = $EQ )
+	=> tuple<key:@K,value:@V> | none
+keys( invar self: map<@K,@V> ) => list<@K>
+values( invar self: map<@K,@V> ) => list<@V>
+size( invar self: map<@K,@V> ) => int
+iterate( invar self: map<@K,@V> )[key: invar<@K>, value: invar<@V>]
+iterate( self: map<@K,@V> )[key: invar<@K>, value: @V]
+collect( invar self: map<@K,@V> )[key: @K, value: @V => none|@T] => list<@T>
+associate( invar self: map<@K,@V>, hashing = 0 )
+	[key: invar<@K>, value: invar<@V> => none|tuple<@K2,@V2>] => map<@K2,@V2>
+find( invar self: map<@K,@V> )[key: invar<@K>, value: invar<@V> =>int]
+	=> tuple<key:@K,value:@V> | none
+apply( self: map<@K,@V> )[key: @K, value: @V => @V] => map<@K,@V>
+@[code]
+
+
+@[subsection]
+方法
+@[subsection]
+
+
+@[subsubsection]
+clear(self:map<@K,@V>)
+@[subsubsection]
+@[code]
+clear( self: map<@K,@V> )
+@[code]
+删除关联表里的所有键值对。
+
+
+@[subsubsection]
+reset(self:map<@K,@V>)
+@[subsubsection]
+@[code]
+reset( self: map<@K,@V> )
+@[code]
+清空关联表里的所有键值对。并将其内部键值节点缓存起来，
+以便支持跟快速的键值插入。
+
+
+@[subsubsection]
+reset(self:map<@K,@V>,hashing:enum<none,auto,random>)
+@[subsubsection]
+@[code]
+reset( self: map<@K,@V>, hashing: enum<none,auto,random> )
+@[code]
+如上方法重置关联表。并且此方法可改变该关联表的存储方式，
+即从有序改为无序，或无序改为有序。当改成无序关联表示，
+还可指定哈希种子的产生方式：
+@[code]hashing=auto@[code]，使用缺省哈希种子；
+@[code]hashing=random@[code]，使用随机哈希种子。
+
+
+@[subsubsection]
+erase(self:map<@K,@V>,from:@K)=>map<@K,@V>
+@[subsubsection]
+@[code]
+erase( self: map<@K,@V>, from: @K ) => map<@K,@V>
+@[code]
+将一个键及其关联的值从关联表里删除。
+返回该列表本身。
+
+
+@[subsubsection]
+erase(self:map<@K,@V>,from:@K,to:@K)=>map<@K,@V>
+@[subsubsection]
+@[code]
+erase( self: map<@K,@V>, from: @K, to: @K ) => map<@K,@V>
+@[code]
+将封闭区间"from"和"to"之间的所有键及其值从关联表里删除。
+返回该列表本身。
+
+
+@[subsubsection]
+insert(self:map<@K,@V>,key:@K,value:@V)=>map<@K,@V>
+@[subsubsection]
+@[code]
+insert( self: map<@K,@V>, key: @K, value: @V ) => map<@K,@V>
+@[code]
+将新的键值对插入到关联表。
+返回该列表本身。
+
+
+@[subsubsection]
+find(invar self:map<@K,@V>,invar key:@K,...)=>tuple<key:@K,value:@V>|none
+@[subsubsection]
+@[code]
+find( invar self: map<@K,@V>, invar key: @K, comparison: enum<LE,EQ,GE> = $EQ )
+	=> tuple<key:@K,value:@V> | none
+@[code]
+查找与键"key"象对应的键值。
+对应方式由"comparison"参数指定：
+
+1. "$LE": 参数键必须小于或等于查找的键;
+
+2. "$EQ": 参数键必须等于查找的键;
+
+3. "$GE": 参数键必须大于或等于查找的键;
+
+
+@[subsubsection]
+keys(invar self:map<@K,@V>)=>list<@K>
+@[subsubsection]
+@[code]
+keys( invar self: map<@K,@V> ) => list<@K>
+@[code]
+返回关联表里的所有键。
+
+
+@[subsubsection]
+values(invar self:map<@K,@V>)=>list<@V>
+@[subsubsection]
+@[code]
+values( invar self: map<@K,@V> ) => list<@V>
+@[code]
+返回关联表里的所有值。
+
+
+@[subsubsection]
+size(invar self:map<@K,@V>)=>int
+@[subsubsection]
+@[code]
+size( invar self: map<@K,@V> ) => int
+@[code]
+返回关联表里的键值对个数。
+
+
+@[subsubsection]
+iterate(invar self:map<@K,@V>)[key:invar<@K>,value:invar<@V>]
+@[subsubsection]
+@[code]
+iterate( invar self: map<@K,@V> )[key: invar<@K>, value: invar<@V>]
+@[code]
+历遍关联表，并对其中每对键值执行相应的代码块。
+
+
+@[subsubsection]
+iterate(self:map<@K,@V>)[key:invar<@K>,value:@V]
+@[subsubsection]
+@[code]
+iterate( self: map<@K,@V> )[key: invar<@K>, value: @V]
+@[code]
+历遍关联表，并对其中每对键值执行相应的代码块。
+
+
+@[subsubsection]
+collect(invar self:map<@K,@V>)[key:@K,value:@V=>none|@T]=>list<@T>
+@[subsubsection]
+@[code]
+collect( invar self: map<@K,@V> )[key: @K, value: @V => none|@T] => list<@T>
+@[code]
+历遍关联表，并对其中每对键值执行相应的代码块。
+然会将代码块所返回的非空值以列表的形式返回。
+
+
+@[subsubsection]
+associate(invar self:map<@K,@V>,hashing=0)[...=>none|tuple<@K2,@V2>]=>map<@K2,@V2>
+@[subsubsection]
+@[code]
+associate( invar self: map<@K,@V>, hashing = 0 )
+[key: invar<@K>, value: invar<@V> => none|tuple<@K2,@V2>] => map<@K2,@V2>
+@[code]
+历遍关联表，并对其中每对键值执行相应的代码块。
+然后返回一个新的关联表，这个关联表将包含代码块所返回的新键值对。
+这里的"hashing"参数的意义与@[code]list::associate()@[code]方法里的
+"hashing"参数意义一致。
+
+
+@[subsubsection]
+find(invar self:map<@K,@V>)[...]=>tuple<key:@K,value:@V>|none
+@[subsubsection]
+@[code]
+find( invar self: map<@K,@V> )[key: invar<@K>, value: invar<@V> =>int]
+=> tuple<key:@K,value:@V> | none
+@[code]
+查找第一对满足代码块所定义的条件的键值对。
+代码块的非零返回值表示条件满足。
+
+
+@[subsubsection]
+apply(self:map<@K,@V>)[key:@K,value:@V=>@V]=>map<@K,@V>
+@[subsubsection]
+@[code]
+apply( self: map<@K,@V> )[key: @K, value: @V => @V] => map<@K,@V>
+@[code]
+历遍关联表，并对其中每对键值执行相应的代码块。
+然后将键值对里的值替换为代码块所返回的值。
+
+@[text]

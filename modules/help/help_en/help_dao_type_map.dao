@@ -9,15 +9,15 @@ Map or Hash Map Container Type
 @[title]
 
 @[text]
-Dao supports map and hash map as a  single type @[green]map@[green].
+Dao supports map and hash map as a single type @[code]map@[code].
 A map contains ordered keys, while a hash map contains unordered keys.
 They can be created by enumeration in almost the identical way, except that
-@[green]=>@[green] is used for map and @[green]:@[green] is used for hash map.
+@[code]=>@[code] is used for map and @[code]->@[code] is used for hash map.
 
 @[subsection]Definition@[subsection]
 @[code(syntax)]
 MapKeyValueList ::= Expression => Expression { ',' Expression => Expression }
-HashKeyValueList ::= Expression : Expression { ',' Expression : Expression }
+HashKeyValueList ::= Expression -> Expression { ',' Expression -> Expression }
 
 MapEnumeration  ::= [ 'map' ] '{' MapKeyValueList '}'
 HashEnumeration ::= [ 'map' ] '{' HashKeyValueList '}'
@@ -26,51 +26,34 @@ Map ::= MapEnumeration | HashEnumeration
 @[code(syntax)]
 
 
-A map is created using "=>",
+Examples,
 @[code]
+# A map is created using "=>",
 map1  = { 'EE' => 5, 'BB' => 2, 'CC' => 3, 'AA' => 1 }
-@[code]
 
-
-A hash map is created using "->",
-@[code]
+#A hash map is created using "->",
 hash1 = { 'EE' -> 5, 'BB' -> 2, 'CC' -> 3, 'AA' -> 1 }
-@[code]
 
-
-Get value by key,
-@[code]
+#Get value by key,
 io.writeln( map1['BB'] )
 io.writeln( hash1['CC'] )
-@[code]
 
-
-Get sub map/hash by slicing,
-@[code]
+#Get sub map/hash by slicing,
 io.writeln( map1[ 'AA' : 'CC' ] )
 io.writeln( map1[ 'BB' : ] )
 io.writeln( map1[ : 'CC' ] )
-@[code]
 
-
-Get size, keys and values,
-@[code]
+# Get size, keys and values,
 io.writeln( %hash1 )         # get size;
 io.writeln( map2.size() )    # get size;
 io.writeln( map2.keys() )    # get keys;
 io.writeln( map2.values() )  # get values;
-@[code]
 
-
-Alternative way to define map/hash,
-@[code]
+# Alternative way to define map/hash,
 map2  = map{ 'ABC' => 123, 'DEF' => 456 }
 hash2 = map{ 'ABC' -> 123, 'DEF' -> 456 }
-@[code]
 
-
-Iterate over maps,
-@[code]
+# Iterate over maps,
 for( keyvalue in map1 ) io.writeln( keyvalue )
 for( keyvalue in hash1 ) io.writeln( keyvalue )
 @[code]
@@ -191,8 +174,11 @@ find( invar self: map<@K,@V>, invar key: @K, comparison: enum<LE,EQ,GE> = $EQ )
 @[code]
 Find the key-value pair that corresponds to "key".
 According to the "comparison" parameter:
+
 1. "$LE": the key must be less than or equal to the found one;
+
 2. "$EQ": the key must equal to the found one;
+
 3. "$GE": the key must be greater than or equal to the found one;
 
 
