@@ -188,7 +188,7 @@
 // routine:
 // ASM_ROUTINE(1B): Name-Index(2B), Type-Index(2B), Host-Index(2B), Attrib(2B);
 //   ...
-// ASM_END: RegCount(2B), Zeros(4B), DefaultConstructor(1B), Permission(1B);
+// ASM_END: RegCount(2B), UpValCount(2B), Zeros(2B), DefaultConstructor(1B), Permission(1B);
 //
 //
 // class:
@@ -455,9 +455,10 @@ DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *tar
 DaoByteBlock* DaoByteBlock_EncodeVerbatim( DaoByteBlock *self, DString *tag, DString *mode, DString *text, int line );
 DaoByteBlock* DaoByteBlock_EncodeDecorators( DaoByteBlock *self, DList *decos, DList *pars );
 
+DaoByteBlock* DaoByteBlock_Declare( DaoByteBlock *self, int tag, DString *name, DaoValue *value, DaoType *type, int perm );
 DaoByteBlock* DaoByteBlock_DeclareConst( DaoByteBlock *self, DString *name, DaoValue *value, int perm );
 DaoByteBlock* DaoByteBlock_DeclareVar( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int perm );
-DaoByteBlock* DaoByteBlock_DeclareStatic( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int perm );
+DaoByteBlock* DaoByteBlock_DeclareStatic( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int level, int id );
 DaoByteBlock* DaoByteBlock_DeclareGlobal( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int perm );
 
 DaoByteBlock* DaoByteBlock_EncodeInteger( DaoByteBlock *self, daoint value );

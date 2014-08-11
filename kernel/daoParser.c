@@ -4436,7 +4436,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					DaoVariable_Set( var, value, DaoNamespace_GetType( ns, value ) );
 					remove = 1;
 					if( block ){
-						DaoByteBlock_DeclareStatic( block, name, var->value, var->dtype, pm );
+						DaoByteBlock_Declare( block, DAO_ASM_STATIC, name, var->value, var->dtype, pm );
 					}
 				}else if( ! self->isClassBody ){
 					if( reg < 0 ) continue;
@@ -4448,7 +4448,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					DaoParser_Error2( self, DAO_TYPE_NO_DEFAULT, errorStart, start, 0 );
 					return -1;
 				}else if( block ){
-					DaoByteBlock_DeclareStatic( block, name, NULL, extype, pm );
+					DaoByteBlock_Declare( block, DAO_ASM_STATIC, name, NULL, extype, pm );
 				}
 				break;
 			case DAO_GLOBAL_VARIABLE :
@@ -4485,12 +4485,12 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 					}
 					remove = 1;
 					if( block ){
-						DaoByteBlock_DeclareStatic( block, name, var->value, var->dtype, pm );
+						DaoByteBlock_DeclareStatic( block, name, var->value, var->dtype, self->lexLevel, id );
 					}
 				}else if( reg >= 0 ){
 					DaoParser_AddCode( self, DVM_SETVG, reg, id, (1<<1), first, mid, end );
 				}else if( explicit_store && block ){
-					DaoByteBlock_DeclareStatic( block, name, NULL, extype, pm );
+					DaoByteBlock_DeclareStatic( block, name, NULL, extype, self->lexLevel, id );
 				}
 				break;
 			default :
@@ -5769,10 +5769,6 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	}
 	DList_Append( NS->definedRoutines, rout );
 
-	if( self->byteBlock ){
-		parser->byteCoder = self->byteCoder;
-		parser->byteBlock = DaoByteBlock_AddRoutineBlock( self->byteBlock, parser->routine, 0 );
-	}
 	if( tokens[start]->name == DKEY_DEFER ){
 		DaoType *type = NULL;
 		int offset = start + 1;
@@ -5823,6 +5819,10 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 	}else{
 		goto ErrorParsing;
 	}
+	if( self->byteBlock ){
+		parser->byteCoder = self->byteCoder;
+		parser->byteBlock = DaoByteBlock_AddRoutineBlock( self->byteBlock, parser->routine, 0 );
+	}
 	offset = rb - parser->tokens->size;
 
 	/* Routine name may have been changed by DaoParser_ParseSignature() */
@@ -5846,9 +5846,6 @@ static int DaoParser_ExpClosure( DaoParser *self, int start )
 		int last = uplocs->items.pInt[i+3] + offset;
 		DaoParser_AddCode( self, DVM_MOVE, up, 0, regCall+1+i/2, first, 0, last );
 		DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, loc, regCall+2+i/2, first, 0, last );
-		if( parser->byteBlock ){
-			DaoByteBlock_DeclareStatic( parser->byteBlock, NULL, NULL, NULL, 0 );
-		}
 	}
 	DaoParser_PushRegisters( self, uplocs->size/2 );
 

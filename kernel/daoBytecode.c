@@ -1069,7 +1069,7 @@ DaoByteBlock* DaoByteBlock_DeclareConst( DaoByteBlock *self, DString *name, DaoV
 	newBlock->begin[7] = perm;
 	return newBlock;
 }
-DaoByteBlock* DaoByteBlock_Declarearation( DaoByteBlock *self, int tag, DString *name, DaoValue *value, DaoType *type, int perm )
+DaoByteBlock* DaoByteBlock_Declare( DaoByteBlock *self, int tag, DString *name, DaoValue *value, DaoType *type, int perm )
 {
 	DaoByteBlock *nameBlock = name ? DaoByteBlock_EncodeString( self, name ) : NULL;
 	DaoByteBlock *valueBlock = DaoByteBlock_EncodeValue( self, value );
@@ -1084,15 +1084,22 @@ DaoByteBlock* DaoByteBlock_Declarearation( DaoByteBlock *self, int tag, DString 
 }
 DaoByteBlock* DaoByteBlock_DeclareVar( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int perm )
 {
-	return DaoByteBlock_Declarearation( self, DAO_ASM_VAR, name, value, type, perm );
+	return DaoByteBlock_Declare( self, DAO_ASM_VAR, name, value, type, perm );
 }
-DaoByteBlock* DaoByteBlock_DeclareStatic( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int perm )
+DaoByteBlock* DaoByteBlock_DeclareStatic( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int level, int id )
 {
-	return DaoByteBlock_Declarearation( self, DAO_ASM_STATIC, name, value, type, perm );
+	DaoByteBlock *block;
+	char suffix[32];
+	sprintf( suffix, "{%i}[%i]", level, id );
+	name = DString_Copy( name );
+	DString_AppendChars( name, suffix );
+	block = DaoByteBlock_Declare( self, DAO_ASM_STATIC, name, value, type, DAO_PERM_NONE );
+	DString_Delete( name );
+	return block;
 }
 DaoByteBlock* DaoByteBlock_DeclareGlobal( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int perm )
 {
-	return DaoByteBlock_Declarearation( self, DAO_ASM_GLOBAL, name, value, type, perm );
+	return DaoByteBlock_Declare( self, DAO_ASM_GLOBAL, name, value, type, perm );
 }
 DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *target )
 {
@@ -1222,6 +1229,9 @@ void DaoByteCoder_FinalizeRoutineBlock( DaoByteCoder *self, DaoByteBlock *block 
 	nspace = routine->nameSpace;
 	DaoByteCoder_EncodeUInt16( block->begin+6, routine->attribs );
 	DaoByteCoder_EncodeUInt16( block->end, routine->body->regCount );
+	if( routine->body->upValues ){
+		DaoByteCoder_EncodeUInt16( block->end + 2, routine->body->upValues->size );
+	}
 	if( routine->routHost && routine->routHost->tid == DAO_OBJECT ){
 		/* Default constructor; */
 		block->end[6] = routine == routine->routHost->aux->xClass.classRoutine;
@@ -2511,6 +2521,14 @@ static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block 
 
 	DaoByteCoder_DecodeChunk2222( block->end, & A, & B, & C, & D );
 	routine->body->regCount = A;
+	if( B ){
+		if( routine->body->upValues == NULL ){
+			routine->body->upValues = DList_New( DAO_DATA_VALUE );
+		}
+		while( routine->body->upValues->size < B ){
+			DList_Append( routine->body->upValues, DaoVariable_New(NULL,NULL) );
+		}
+	}
 
 	/* Set proper namespace: */
 	GC_Assign( & routine->nameSpace, self->nspace );
@@ -2835,7 +2853,7 @@ static void DaoByteCoder_DecodeDeclaration( DaoByteCoder *self, DaoByteBlock *bl
 	DaoType *type = type0 ? (DaoType*) type0->value : NULL;
 	DString *name = name0 ? name0->value->xString.value : NULL;
 
-	//DaoByteCoder_PrintBlock( self, block, 0 );
+	//DaoByteCoder_PrintBlock( self, block, 0, 0 );
 	if( block->parent == self->top || global == 1 ){
 		switch( block->type ){
 		case DAO_ASM_CONST   :
