@@ -82,6 +82,7 @@ static const char* const daoCtInfo[] =
 	"Invalid enum definition",
 	"Invalid class definition",
 	"Invalid function definition",
+	"Invalid namespace definition",
 	"Invalid interface definition",
 	"Invalid function decoration",
 	"Invalid parent class",

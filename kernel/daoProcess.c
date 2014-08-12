@@ -3682,7 +3682,7 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 		}
 	}
 	if( noasync == 0 ) DaoProcess_TryTailCall( self, rout, O, vmc );
-	DaoProcess_PushRoutine( self, rout, DaoValue_CastObject( O ) );//, code );
+	DaoProcess_PushRoutine( self, rout, DaoValue_CastObject( O ) );
 	if( noasync ) return;
 #ifdef DAO_WITH_CONCURRENT
 	DaoProcess_TryAsynCall( self, vmc );

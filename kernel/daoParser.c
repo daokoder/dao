@@ -96,7 +96,7 @@ static DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btyp
 DaoProcess* DaoNamespace_ReserveFoldingOperands( DaoNamespace *self, int N );
 static int DaoParser_MakeEnumConst( DaoParser *self, DaoEnode *enode, DList *cid, int regcount );
 static int DaoParser_MakeArithConst( DaoParser *self, ushort_t, DaoValue*, DaoValue*, int*, DaoInode*, int );
-static int DaoParser_ExpClosure( DaoParser *self, int start );
+static int DaoParser_ParseClosure( DaoParser *self, int start );
 static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nvalues );
 
 
@@ -4099,7 +4099,7 @@ DecoratorError:
 			start += 1;
 			continue;
 		case DKEY_DEFER :
-			reg = DaoParser_ExpClosure( self, start );
+			reg = DaoParser_ParseClosure( self, start );
 			if( reg < 0 ) return 0;
 			start = self->curToken;
 			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
@@ -5269,7 +5269,7 @@ SymbolWasDefined:
 InvalidSymbolName:
 	goto InvalidNamespace;
 InvalidNamespace:
-	DaoParser_Error2( self, DAO_INVALID_CLASS_DEFINITION, errorStart, end, 0 );
+	DaoParser_Error2( self, DAO_INVALID_NAMESPACE_DEFINITION, errorStart, end, 0 );
 	return -1;
 }
 
@@ -5739,7 +5739,7 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 	return DaoParser_GetNormRegister( self, varReg, exp, start, 0, start );
 }
 
-static int DaoParser_ExpClosure( DaoParser *self, int start )
+static int DaoParser_ParseClosure( DaoParser *self, int start )
 {
 	char name[100];
 	daoint offset, regCall, opc, rb = 0;
@@ -6312,7 +6312,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 			DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, self->string );
 			return error;
 		}
-		result.reg = regLast = DaoParser_ExpClosure( self, start );
+		result.reg = regLast = DaoParser_ParseClosure( self, start );
 		result.first = last->next;
 		result.last = result.update = self->vmcLast;
 		start = self->curToken;
