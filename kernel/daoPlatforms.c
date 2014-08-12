@@ -55,6 +55,7 @@ int Dao_FileStat( const char *path, struct stat *buf )
 	DString path2 = DString_WrapChars( path );
 	DArray *path3 = DArray_New( sizeof(wchar_t) );
 	int ret;
+	DString_DecodeUTF8( & path2, path3 );
 	ret = _wstat( path3->data.wchars, buf );
 	DArray_Delete( path3 );
 	return ret;
