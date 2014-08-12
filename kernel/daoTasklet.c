@@ -446,18 +446,20 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 	int i, count = caller->topFrame->parCount;
 
 	if( caller->activeCode->b & DAO_CALL_BLOCK ){
-		DaoValue **activeValues = caller->activeValues;
+		DaoValue **calleeValues, **callerValues = caller->activeValues;
 		DaoStackFrame *callerFrame = caller->topFrame->prev;
-		DaoVmCode *sect = DaoGetSectionCode( caller->activeCode );
-		DaoVmCode *vmc, *end;
+		DaoVmCode *vmc, *end, *sect;
 		if( caller->topFrame->routine->body ){
 			DaoProcess_PushRoutine( callee, callerFrame->routine, callerFrame->object );
-			activeValues = caller->stackValues + callerFrame->stackBase;
+			callerValues = caller->stackValues + callerFrame->stackBase;
 		}else{
 			DaoProcess_PushRoutine( callee, caller->activeRoutine, caller->activeObject );
 		}
+		calleeValues = callee->stackValues + callee->topFrame->stackBase;
 		callee->activeCode = caller->activeCode;
-		end = callerFrame->routine->body->vmCodes->data.codes + callerFrame->entry + 1;
+		vmc = callerFrame->routine->body->vmCodes->data.codes + callerFrame->entry - 1;
+		end = callerFrame->routine->body->vmCodes->data.codes + vmc[1].b;
+		sect = DaoGetSectionCode( vmc );
 		for(vmc=sect; vmc!=end; vmc++){
 			int i = -1, code = vmc->code;
 			if( code == DVM_GETVH || (code >= DVM_GETVH_I && code <= DVM_GETVH_C) ){
@@ -465,7 +467,7 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 			}else if( code == DVM_SETVH || (code >= DVM_SETVH_II && code <= DVM_SETVH_CC) ){
 				i = vmc->b;
 			}
-			if( i >= 0 ) DaoValue_Move( activeValues[i], & callee->activeValues[i], NULL );
+			if( i >= 0 ) DaoValue_Move( callerValues[i], & calleeValues[i], NULL );
 		}
 	}
 
