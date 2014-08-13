@@ -519,7 +519,7 @@ struct DaoTypeBase
 	void  (*Delete)( void *self );
 
 	/* Get garbage collectable fields (Dao data types with refCount by the type): */
-	void  (*GetGCFields)( void *self, DArray *values, DArray *arrays, DArray *maps, int remove );
+	void  (*GetGCFields)( void *self, DList *values, DList *lists, DList *maps, int remove );
 };
 @[code(cxx)]
 This structure defines the set of type information needed to create a corresponding Dao type.
@@ -620,8 +620,8 @@ The main purpose of this function is to expose the references retained by the C/
 type to Dao garbage collector.
 In this function, the pointers of Dao data that are directly referenced by the C/C++ type
 should be pushed to the @[cyan]values@[cyan] parameters; and for Dao data that are
-referenced through @[green]DArray@[green] structures, these @[green]DArray@[green] structures
-should be pushed into the @[cyan]arrays@[cyan]; and for those that are referenced
+referenced through @[green]DList@[green] structures, these @[green]DList@[green] structures
+should be pushed into the @[cyan]lists@[cyan]; and for those that are referenced
 through @[green]DMap@[green] structures, these @[green]DMap@[green] structures
 should be pushed into the @[cyan]maps@[cyan].
 
@@ -632,7 +632,7 @@ if it is no longer reachable from the program.
 It is also called before the object is deallocated by the GC,
 this time the @[cyan]remove@[cyan] parameter is set to one,
 and in this case, the @[green]GetGCFields@[green] must break the references that
-are pushed into the @[cyan]values@[cyan], @[cyan]arrays@[cyan] and @[cyan]maps@[cyan] arrays.
+are pushed into the @[cyan]values@[cyan], @[cyan]lists@[cyan] and @[cyan]maps@[cyan] lists.
 This is necessary, because some of the objects referenced by the C/C++ object
 can be deallocated by the GC, breaking references to them will avoid posible double deletion.
 
@@ -871,11 +871,11 @@ Now we will define a function that can be set to the @[cyan]GetGCFields@[cyan]
 field of the type information structure of @[cyan]ClassTwo@[cyan].
 @[code(cxx)]
 static void Dao_ClassTwo_GetGCFields( void *self0,
-		DArray *values, DArray *arrays, DArray *maps, int remove )
+		DList *values, DList *lists, DList *maps, int remove )
 {
 	Dao_ClassTwo *self = (Dao_ClassTwo*) self0;
 	if( self->dao_cdata == NULL ) return;
-	DArray_Append( values, self->dao_cdata );
+	DList_Append( values, self->dao_cdata );
 	if( remove ){
 		// If this object cannot be deallocated because some other C/C++ objects
 		// are using it, here is the right place to set the wrapped pointer (namely

@@ -5154,7 +5154,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				if( !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
 				at = DaoType_GetInvarType( at );
 			}
-			if( type2 && ( *type2 == NULL || (*type2)->tid == DAO_UDT ) ){
+			if( type2 && (*type2 == NULL || (*type2)->tid == DAO_UDT || (*type2)->tid == DAO_THT) ){
 				GC_Assign( type2, at );
 			}
 			/* less strict checking */
