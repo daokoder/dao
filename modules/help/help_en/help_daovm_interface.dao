@@ -33,20 +33,20 @@ Initializing Dao Runtime
 @[subsection]
 
 Before doing anything with Dao as a library, one must call
-@[green]DaoInit()@[green] to initialize it first:
+@[code]DaoInit()@[code] to initialize it first:
 
 @[code(cxx)]
 // Initialize Dao:
 DaoVmSpace *vmspace = DaoInit( NULL );
 @[code(cxx)]
-This function will return a @[green]DaoVmSpace@[green] object,
+This function will return a @[code]DaoVmSpace@[code] object,
 which can be used to load Dao scripts or modules.
-It can optionally take a @[cyan]char*@[cyan] parameter,
+It can optionally take a @[code]char*@[code] parameter,
 which is assumed to be the path and name of the application,
 and is used to add additional searching paths.
 
 @[comment]
-Before you start to use the @[green]DaoVmSpace@[green] object
+Before you start to use the @[code]DaoVmSpace@[code] object
 to run Dao scripts or load Dao modules, you may set some options
 in the object, e.g:
 @[code(cxx)]
@@ -58,7 +58,7 @@ DaoVmSpace_SetOptions( vmspace, DAO_EXEC_DEBUG );
 Load A Script File
 @[subsection]
 
-Once you have a @[green]DaoVmSpace@[green] object, you can start
+Once you have a @[code]DaoVmSpace@[code] object, you can start
 to run Dao scripts or load Dao modules using this object.
 If you have a main script file and all you need to do is to run the file,
 you can simply call:
@@ -131,7 +131,7 @@ DaoValue *value = DaoNamespace_FindData( nspace, "myfunction" );
 // Try to cast it to a function object:
 DaoRoutine *myfunc = DaoValue_CastRoutine( value );
 @[code(cxx)]
-If "myfunction" is indeed a function, @[cyan]myfunc@[cyan] will not be NULL.
+If "myfunction" is indeed a function, @[code]myfunc@[code] will not be NULL.
 
 
 @[subsection]
@@ -139,11 +139,11 @@ Obtaining A Process Object
 @[subsection]
 
 Now to call the function, you will need another type of object:
-@[green]DaoProcess@[green], which represents a virtual machine process
+@[code]DaoProcess@[code], which represents a virtual machine process
 and is responsible for executing scripts.
-You can directly call @[green]DaoProcess_New()@[green] to create a new
+You can directly call @[code]DaoProcess_New()@[code] to create a new
 process object, but normally the better to get a process object is to
-acquire it from a @[green]DaoVmSpace@[green] object:
+acquire it from a @[code]DaoVmSpace@[code] object:
 @[code(cxx)]
 // Acquire a process object:
 DaoProcess *proc = DaoVmSpace_AcquireProcess( vmspace );
@@ -157,8 +157,8 @@ Now suppose the function "myfunction" needs to take an integer as its first
 parameter and a string as the second. To call it, we will need to prepare
 parameters that can be passed to this function.
 The simplest way to do this is to use the data "factory" methods that
-are associated with the process type @[green]DaoProcess@[green].
-Such methods are normally begin with @[green]DaoProcess_New@[green].
+are associated with the process type @[code]DaoProcess@[code].
+Such methods are normally begin with @[code]DaoProcess_New@[code].
 For example, to prepare an integer value and a string value, one can do,
 
 @[code(cxx)]
@@ -166,7 +166,7 @@ For example, to prepare an integer value and a string value, one can do,
 DaoInteger *ivalue = DaoProcess_NewInteger( proc, 123 );
 DaoString  *svalue = DaoProcess_NewString( proc, "abc", -1 );
 @[code(cxx)]
-The third parameter of @[green]DaoProcess_NewString()@[green]
+The third parameter of @[code]DaoProcess_NewString()@[code]
 is the number of bytes in the C string, and a negative value can be
 used to indicate the C string is NULL terminated.
 
@@ -199,7 +199,7 @@ DaoProcess_Call( proc, myfunc, NULL, params, 2 );
 @[code(cxx)]
 For class methods, a class instance object can be passed to this function
 as the third parameter, or it can be passed as the first value of 
-@[cyan]params@[cyan].
+@[code]params@[code].
 Please note that, this function can handle overloaded functions automatically!
 So you do not need to do anything for that.
 This function will return zero on success, or other values with errors.
@@ -216,9 +216,9 @@ DaoValue *retvalue = DaoProcess_GetReturned( proc );
 @[code(cxx)]
 If the returned value is supposed to be of certain type,
 you can cast it to that type by using one of the 
-@[green]DaoValue_CastXXX()@[green] functions,
+@[code]DaoValue_CastXXX()@[code] functions,
 or directly convert it to a proper C type by using one of the
-@[green]DaoValue_TryGetXXX()@[green] functions.
+@[code]DaoValue_TryGetXXX()@[code] functions.
 For example, if "myfunction" returns an integer,
 you can get it by,
 @[code(cxx)]
@@ -231,7 +231,7 @@ Release The Process Object
 @[subsection]
 
 After you have done with the process object, you can release it
-back the @[green]DaoVmSpace@[green] object,
+back the @[code]DaoVmSpace@[code] object,
 @[code(cxx)]
 // Release the process:
 DaoVmSpace_ReleaseProcess( vmspace, proc );
@@ -339,7 +339,7 @@ int DaoOnLoad( DaoVmSpace *vmspace, DaoNamespace *ns );
 @[code(cxx)]
 This function will be called automatically to allow the module
 to register its functions and types etc.
-The first parameter is the @[green]DaoVmSpace@[green] instance
+The first parameter is the @[code]DaoVmSpace@[code] instance
 which is responsible for loading and managing the module.
 And the second parameter is the namespace object that will
 represent this module, so all the functions and types etc.
@@ -352,9 +352,9 @@ Suppose the module name is "abc" and may appear in load statements as
 the module name can appear in the entry function name in the following forms
 and is also searched in this order:
 @[list]
-== All lower case letters: e.g. @[cyan]Daoabc_OnLoad@[cyan];
-== First upper case letter: e.g. @[cyan]DaoAbc_OnLoad@[cyan];
-== All upper case letters: e.g. @[cyan]DaoABC_OnLoad@[cyan];
+== All lower case letters: e.g. @[code]Daoabc_OnLoad@[code];
+== First upper case letter: e.g. @[code]DaoAbc_OnLoad@[code];
+== All upper case letters: e.g. @[code]DaoABC_OnLoad@[code];
 @[list]
 
 
@@ -363,7 +363,7 @@ Function Registeration
 @[subsection]
 
 To register functions to a namespace, one can use one of the
-following interface functions of @[green]DaoNamespace@[green],
+following interface functions of @[code]DaoNamespace@[code],
 @[code(cxx)]
 // Function to register a single function:
 DaoRoutine*
@@ -375,16 +375,16 @@ int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items );
 We will come to the second function later.
 For the first function, the first parameter is the namespace to which
 the function is registering to; the second is the function pointer to
-the function that needs to be registered (@[cyan]MyCFunction@[cyan] in this case);
+the function that needs to be registered (@[code]MyCFunction@[code] in this case);
 and the last parameter is the Dao function prototype for the registered function.
 
 
-So you can register the above function @[cyan]MyCFunction@[cyan] as the following,
+So you can register the above function @[code]MyCFunction@[code] as the following,
 @[code(cxx)]
 // Register function:
 DaoNamespace_WrapFunction( nspace, MyCFunction, "HelloDao()" );
 @[code(cxx)]
-So that this function can be called in Dao by name @[cyan]HelloDao@[cyan]
+So that this function can be called in Dao by name @[code]HelloDao@[code]
 without any parameter.
 
 
@@ -409,15 +409,15 @@ int DaoOnLoad( DaoVmSpace *vmspace, DaoNamespace *nspace )
 To compile it, you will need to add the Dao header file path to your compiling
 option. And you will also need to add the following preprocessor definitions:
 @[list]
--- On Win32: @[green]WIN32@[green];
--- On Unix: @[green]UNIX@[green];
--- On Mac OSX: @[green]MACOSX@[green];
+-- On Win32: @[code]WIN32@[code];
+-- On Unix: @[code]UNIX@[code];
+-- On Mac OSX: @[code]MACOSX@[code];
 @[list]
 For linking, on Windows you will need to link the module against the Dao library.
 But on the other platforms, you can simply use the following flags,
 @[list]
--- On Unix: @[green]-rdynamic@[green];
--- On Mac OSX: @[green]-undefined dynamic_lookup@[green];
+-- On Unix: @[code]-rdynamic@[code];
+-- On Mac OSX: @[code]-undefined dynamic_lookup@[code];
 @[list]
 If you use DaoMake (@[node]tool.standard.daomake@[node]) to build your modules,
 these will be taken care of automatically.
@@ -462,11 +462,11 @@ it is guaranteed to pass parameter values with correct types to the function.
 
 
 But to convert the data in the above way, you may need to include extra header files
-such as @[green]daoValue.h@[green] in your module source file.
+such as @[code]daoValue.h@[code] in your module source file.
 And you may also need to be familiar with the standard Dao data type structures
 (it is simple actually).
-If you only want to use the APIs from the @[green]dao.h@[green] header file,
-you may need to used those @[cyan]DaoValue_TryGetXXX()@[cyan] functions which
+If you only want to use the APIs from the @[code]dao.h@[code] header file,
+you may need to used those @[code]DaoValue_TryGetXXX()@[code] functions which
 do some mininum data type checking with little overheads and return the proper C data.
 @[code(cxx)]
 void MyTestInC( DaoProcess *proc, DaoValue *param[], int nparam )
@@ -479,7 +479,7 @@ void MyTestInC( DaoProcess *proc, DaoValue *param[], int nparam )
 @[code(cxx)]
 If you register the function with proper Dao function prototype,
 the type checking will always succeed and correct data will always be obtained.
-The @[cyan]DaoProcess_PutFloat()@[cyan] is for returning a float value
+The @[code]DaoProcess_PutFloat()@[code] is for returning a float value
 at a proper location as the returned value of the C function.
 Please see the following section(s) for more details.
 
@@ -499,12 +499,12 @@ Basic wrapping C/C++ type
 @[section]
 
 There are two ways to extend Dao with user defined C/C++ types.
-One is to wrap it around by a @[green]DaoCdata@[green] object,
+One is to wrap it around by a @[code]DaoCdata@[code] object,
 and access it as an opaque pointer.
 This is the standard way to wrap existing C/C++ types.
 The other is to define a customized C type, and use it in the same way as the first.
 A customized C type is a C structure sharing the same header fields as
-@[green]DaoCdata@[green], which can make sharing types between Dao and C simpler
+@[code]DaoCdata@[code], which can make sharing types between Dao and C simpler
 (especially for garbage collection).
 Wrapped C/C++ types and customized C types can be added to Dao in almost the identical way,
 so I will introduce the wrapped types first, and then the customized types should be very
@@ -521,13 +521,13 @@ with a type information structure through,
 DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque );
 int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typer[] );
 @[code(cxx)]
-The @[cyan]opaque@[cyan] parameter must be set to 1 for wrapped types,
+The @[code]opaque@[code] parameter must be set to 1 for wrapped types,
 and 0 for customized types.
 
 
 @[subsubsection]Structure definition@[subsubsection]
 
-Here @[green]DaoTypeBase@[green] is defined as the following,
+Here @[code]DaoTypeBase@[code] is defined as the following,
 @[code(cxx)]
 /* Type information structure for creating Dao types for C/C++ types: */
 struct DaoTypeBase
@@ -557,7 +557,7 @@ The second field is reserved for internal use for storing wrapped member constan
 
 @[subsubsection]Member constant numbers and methods@[subsubsection]
 
-The third field @[green]numItems@[green] can be used to specify a list of member constant numbers,
+The third field @[code]numItems@[code] can be used to specify a list of member constant numbers,
 which are defined in an array of the following structure:
 @[code(cxx)]
 struct DaoNumItem
@@ -567,8 +567,8 @@ struct DaoNumItem
 	double      value;  /* number value; */
 };
 @[code(cxx)]
-The number type should be one of @[green]DAO_INTEGER@[green], @[green]DAO_FLOAT@[green]
-and @[green]DAO_DOUBLE@[green]. The array should be terminated with a item with null name:
+The number type should be one of @[code]DAO_INTEGER@[code], @[code]DAO_FLOAT@[code]
+and @[code]DAO_DOUBLE@[code]. The array should be terminated with a item with null name:
 @[code(cxx)]
 static DaoNumItem myTypeNumbers[] =
 {
@@ -580,7 +580,7 @@ static DaoNumItem myTypeNumbers[] =
 If the type has no member constant numbers, it can be simply set to NULL.
 
 
-The fourth field @[green]funcItems@[green] can be used to specify a list of member methods,
+The fourth field @[code]funcItems@[code] can be used to specify a list of member methods,
 which are defined in an array of the following structure:
 @[code(cxx)]
 struct DaoFuncItem
@@ -589,7 +589,7 @@ struct DaoFuncItem
 	const char   *proto;  /* function prototype: name( parlist ) => return_type */
 };
 @[code(cxx)]
-where the two fields @[cyan]fpter@[cyan] and @[cyan]proto@[cyan]
+where the two fields @[code]fpter@[code] and @[code]proto@[code]
 should be the same as they would in the parameter list of:
 @[code(cxx)]
 DaoRoutine*
@@ -599,8 +599,8 @@ DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fp, const char *prot
 
 @[subsubsection]Base types and casting functions@[subsubsection]
 
-The fifth field @[green]supers@[green] can be use to expose the inheritance structure
-of C/C++ types to Dao. To do this, one just need to set the @[green]supers@[green]
+The fifth field @[code]supers@[code] can be use to expose the inheritance structure
+of C/C++ types to Dao. To do this, one just need to set the @[code]supers@[code]
 array to the type information structures of the parent types, and terminate the array
 with a NULL pointer.
 
@@ -608,7 +608,7 @@ with a NULL pointer.
 If the wrapped type is a C++ class with virtual method(s) or
 virtual base(s), Dao will need to know how to cast this type to and from its parent
 type properly. This can be done by specifying a list of cast functions in the sixth
-field @[green]casts@[green] of the type structure.
+field @[code]casts@[code] of the type structure.
 
 
 If the C++ class has virtual method(s) but no virtual base(s), the cast function should
@@ -633,34 +633,34 @@ void* cast_Sub_Base( void *data, int down_casting )
 @[subsubsection]Deallocation and GC handling@[subsubsection]
 
 If the C/C++ type should not be deallocated by the standard C function
-@[green]free()@[green], a customized deallocation function must be specified for the
-type structure. For wrapped C/C++ types, the @[cyan]self@[cyan] parameter passed
+@[code]free()@[code], a customized deallocation function must be specified for the
+type structure. For wrapped C/C++ types, the @[code]self@[code] parameter passed
 to the deallocation function will be the opaque C/C++ pointer,
 and for customized C types, it will be the whole objects that have the same header fields
-as @[green]DaoCdata@[green].
+as @[code]DaoCdata@[code].
 
 
-The last field @[green]GetGCFields@[green] can be normally set to NULL.
+The last field @[code]GetGCFields@[code] can be normally set to NULL.
 But if the C/C++ type may retain reference(s) to Dao data structures that
 can form potentially cyclic referencing relationships, this field must be set
 to a proper function.
 The main purpose of this function is to expose the references retained by the C/C++
 type to Dao garbage collector.
 In this function, the pointers of Dao data that are directly referenced by the C/C++ type
-should be pushed to the @[cyan]values@[cyan] parameters; and for Dao data that are
-referenced through @[green]DList@[green] structures, these @[green]DList@[green] structures
-should be pushed into the @[cyan]lists@[cyan]; and for those that are referenced
-through @[green]DMap@[green] structures, these @[green]DMap@[green] structures
-should be pushed into the @[cyan]maps@[cyan].
+should be pushed to the @[code]values@[code] parameters; and for Dao data that are
+referenced through @[code]DList@[code] structures, these @[code]DList@[code] structures
+should be pushed into the @[code]lists@[code]; and for those that are referenced
+through @[code]DMap@[code] structures, these @[code]DMap@[code] structures
+should be pushed into the @[code]maps@[code].
 
 
-This function is called with a zero @[cyan]remove@[cyan] parameter automatically by 
+This function is called with a zero @[code]remove@[code] parameter automatically by 
 the garbage collector (GC) when an object of the C/C++ type needs to be scanned to determine 
 if it is no longer reachable from the program.
 It is also called before the object is deallocated by the GC,
-this time the @[cyan]remove@[cyan] parameter is set to one,
-and in this case, the @[green]GetGCFields@[green] must break the references that
-are pushed into the @[cyan]values@[cyan], @[cyan]lists@[cyan] and @[cyan]maps@[cyan] lists.
+this time the @[code]remove@[code] parameter is set to one,
+and in this case, the @[code]GetGCFields@[code] must break the references that
+are pushed into the @[code]values@[code], @[code]lists@[code] and @[code]maps@[code] lists.
 This is necessary, because some of the objects referenced by the C/C++ object
 can be deallocated by the GC, breaking references to them will avoid posible double deletion.
 
@@ -742,22 +742,22 @@ int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *nspace )
 @[code(cxx)]
 
 
-Since the @[cyan]value@[cyan] member of ClassOne is a public member,
+Since the @[code]value@[code] member of ClassOne is a public member,
 it is reasonable to add a getter and a setter method to wrapped ClassOne type.
-To add a getter, one only needs to register a method with name @[green].field@[green]
+To add a getter, one only needs to register a method with name @[code].field@[code]
 and no extra parameter.
-And for a setter, the method name must be @[green].field=@[green],
+And for a setter, the method name must be @[code].field=@[code],
 and it must also accept a parameter with type the same as the value 
 that can be assigned.
-For example, for the @[cyan]value@[cyan] member,
-one can added the following to the @[cyan]ClassOneMethods@[cyan] list,
+For example, for the @[code]value@[code] member,
+one can added the following to the @[code]ClassOneMethods@[code] list,
 @[code(cxx)]
 // the getter and setter:
 	{ dao_ClassOne_GETF_value,  ".value( self: ClassOne ) => int" },
 	{ dao_ClassOne_SETF_value,  ".value=( self: ClassOne, value: int )" },
 @[code(cxx)]
-Here the name @[cyan]dao_ClassOne_GETF_value@[cyan] 
-and @[cyan]dao_ClassOne_GETF_value@[cyan] are completely arbitrary.
+Here the name @[code]dao_ClassOne_GETF_value@[code] 
+and @[code]dao_ClassOne_GETF_value@[code] are completely arbitrary.
 They can be implemented in the following way,
 @[code(cxx)]
 static void dao_ClassOne_GETF_value( DaoProcess *proc, DaoValue *p[], int n )
@@ -775,7 +775,7 @@ static void dao_ClassOne_SETF_value( DaoProcess *proc, DaoValue *p[], int n )
 
 @[subsection]An advanced example@[subsection]
 
-Now given the following class that is derived from @[cyan]ClassTwo@[cyan],
+Now given the following class that is derived from @[code]ClassTwo@[code],
 @[code(cxx)]
 class ClassTwo : public ClassOne
 {
@@ -784,15 +784,15 @@ class ClassTwo : public ClassOne
 };
 @[code(cxx)]
 Because this class has a virtual method, if we want Dao classes can be
-derived from @[cyan]ClassTwo@[cyan] and reimplement its virtual functions,
+derived from @[code]ClassTwo@[code] and reimplement its virtual functions,
 the wrapping will be a bit more sophisticated.
 First, we will need to define a "proxy" class that is derived from
-@[cyan]ClassTwo@[cyan] and reimplements its virtual function 
+@[code]ClassTwo@[code] and reimplements its virtual function 
 such that this reimplemented function can check for
 a Dao reimplementation of the function and invoke it if it exists.
-When an instance of @[cyan]ClassTwo@[cyan] needs to be created,
+When an instance of @[code]ClassTwo@[code] needs to be created,
 an instance of this proxy class will be created and returned
-instead of the original @[cyan]ClassTwo@[cyan].
+instead of the original @[code]ClassTwo@[code].
 
 
 Here is an example of such proxy class,
@@ -810,8 +810,8 @@ class Dao_ClassTwo : public ClassTwo
 };
 @[code(cxx)]
 This proxy class will need to maintain a reference to the wrapper object,
-so an extra field @[cyan]dao_cdata@[cyan] is declared in the class.
-This wrapper object can be pre-allocated in the constructor of @[cyan]Dao_ClassTwo@[cyan],
+so an extra field @[code]dao_cdata@[code] is declared in the class.
+This wrapper object can be pre-allocated in the constructor of @[code]Dao_ClassTwo@[code],
 @[code(cxx)]
 Dao_ClassTwo::Dao_ClassTwo()
 {
@@ -819,11 +819,11 @@ Dao_ClassTwo::Dao_ClassTwo()
 	DaoGC_IncRC( (DaoValue*)dao_cdata );
 }
 @[code(cxx)]
-Here the @[cyan]dao_type_ClassTwo@[cyan] is the Dao type object for @[cyan]ClassTwo@[cyan],
-and can be obtained in the same way as @[cyan]dao_type_ClassOne@[cyan].
-Now that @[cyan]Dao_ClassTwo@[cyan] has a reference to a @[green]DaoCdata@[green]
-object, the @[green]GetGCFields@[green] field of the type information structure
-for @[cyan]ClassTwo@[cyan] should be set to a proper function, which will be provided later.
+Here the @[code]dao_type_ClassTwo@[code] is the Dao type object for @[code]ClassTwo@[code],
+and can be obtained in the same way as @[code]dao_type_ClassOne@[code].
+Now that @[code]Dao_ClassTwo@[code] has a reference to a @[code]DaoCdata@[code]
+object, the @[code]GetGCFields@[code] field of the type information structure
+for @[code]ClassTwo@[code] should be set to a proper function, which will be provided later.
 The destructor should also be handled this reference properly by,
 @[code(cxx)]
 Dao_ClassTwo::~Dao_ClassTwo()
@@ -838,7 +838,7 @@ Dao_ClassTwo::~Dao_ClassTwo()
 @[code(cxx)]
 
 
-Then the @[cyan]VirtualMethod()@[cyan] could be implemented in the following way,
+Then the @[code]VirtualMethod()@[code] could be implemented in the following way,
 @[code(cxx)]
 int Dao_ClassTwo::VirtualMethod( int i, float f )
 {
@@ -895,8 +895,8 @@ ErrorCall:
 @[code(cxx)]
 
 
-Now we will define a function that can be set to the @[cyan]GetGCFields@[cyan]
-field of the type information structure of @[cyan]ClassTwo@[cyan].
+Now we will define a function that can be set to the @[code]GetGCFields@[code]
+field of the type information structure of @[code]ClassTwo@[code].
 @[code(cxx)]
 static void Dao_ClassTwo_GetGCFields( void *self0,
 		DList *values, DList *lists, DList *maps, int remove )
@@ -922,7 +922,7 @@ static void Dao_ClassTwo_GetGCFields( void *self0,
 @[code(cxx)]
 
 
-The remaining part for wrapping @[cyan]ClassTwo@[cyan] should be something like,
+The remaining part for wrapping @[code]ClassTwo@[code] should be something like,
 @[code(cxx)]
 static void dao_ClassTwo_ClassTwo( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -986,24 +986,24 @@ void*     DaoValue_TryGetCdata( DaoValue *self );
 void**    DaoValue_TryGetCdata2( DaoValue *self );
 void*     DaoValue_TryCastCdata( DaoValue *self, DaoType *totype );
 @[code(cxx)]
-If the @[green]DaoValue@[green] object is of the requested type, the correct data
+If the @[code]DaoValue@[code] object is of the requested type, the correct data
 will be returned, otherwise zero or a null pointer is return.
 The last three functions are execlusively for wrapped C/C++ types,
 we come to this later.
 
 
-For other data types, you may need to cast @[green]DaoValue@[green] objects
+For other data types, you may need to cast @[code]DaoValue@[code] objects
 to proper types, and then use proper methods to retrieve C data values.
-There are two ways to cast from @[green]DaoValue@[green] to other types,
-one is to use @[green]DaoValue_Type()@[green] to check its type and than do C casting,
-the other is to use one of the @[green]DaoValue_CastXXX()@[green] series of methods.
-For example, the following are the two ways to cast @[cyan]value@[cyan] 
-from @[green]DaoValue@[green] to @[green]DaoTuple@[green],
+There are two ways to cast from @[code]DaoValue@[code] to other types,
+one is to use @[code]DaoValue_Type()@[code] to check its type and than do C casting,
+the other is to use one of the @[code]DaoValue_CastXXX()@[code] series of methods.
+For example, the following are the two ways to cast @[code]value@[code] 
+from @[code]DaoValue@[code] to @[code]DaoTuple@[code],
 @[code(cxx)]
 DaoTuple *tup1 = DaoValue_Type( value ) == DAO_TUPLE ? (DaoTuple*) value : NULL;
 DaoTuple *tup2 = DaoValue_CastTuple( value );
 @[code(cxx)]
-@[green]DaoValue_CastXXX()@[green] methods will return NULL, if the value
+@[code]DaoValue_CastXXX()@[code] methods will return NULL, if the value
 is not the correct type.
 
 

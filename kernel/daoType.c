@@ -2343,7 +2343,7 @@ static void DaoType_SpecMethod( DaoType *self, DaoTypeKernel *kernel, DaoRoutine
 		if( kernel->castors == NULL ){
 			kernel->castors = DaoRoutines_New( nspace, self, NULL );
 			GC_IncRC( kernel->castors );
-		}    
+		}
 		DRoutines_Add( kernel->castors->overloads, rout );
 	}
 }

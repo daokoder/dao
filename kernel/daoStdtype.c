@@ -1730,7 +1730,7 @@ extern DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc );
 static void DaoLIST_Sum( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoList *self = & p[0]->xList;
-	daoint i, type, size = self->value->size;
+	daoint i, len, type, size = self->value->size;
 	DaoValue **data = self->value->items.pValue;
 	type = DaoList_CheckType( self, proc );
 	if( type == 0 ){
@@ -1775,8 +1775,10 @@ static void DaoLIST_Sum( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	case DAO_STRING :
 		{
-			DString *m = DaoProcess_PutString( proc, data[0]->xString.value );
-			for(i=1; i<size; i++) DString_Append( m, data[i]->xString.value );
+			DString *m = DaoProcess_PutChars( proc, "" );
+			for(i=0,len=0; i<size; i++) len += data[i]->xString.value->size;
+			DString_Reserve( m, len );
+			for(i=0; i<size; i++) DString_Append( m, data[i]->xString.value );
 			break;
 		}
 	default : break;

@@ -58,8 +58,8 @@ struct DaoClass
 	DList   *allBases;     /* <DaoClass/DaoCData*>: mixin or parent classes; */
 
 	DList   *mixins;  /* <DaoClass*>: mixin classes; */
-	DArray *ranges;  /* <ushort_t>: ranges of the fields of the mixin classes; */
-	DArray *offsets; /* <ushort_t>: offsets of the fields from parent classes; */
+	DArray  *ranges;  /* <ushort_t>: ranges of the fields of the mixin classes; */
+	DArray  *offsets; /* <ushort_t>: offsets of the fields from parent classes; */
 
 	ushort_t  cstMixinStart;
 	ushort_t  glbMixinStart;

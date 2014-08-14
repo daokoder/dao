@@ -2566,7 +2566,7 @@ void DaoPrintCallError( DList *errors, DaoStream *stream )
 		DaoStream_WriteString( stream, errors->items.pString[i+1] );
 		DaoStream_WriteChars( stream, "     Assuming  : " );
 		if( rout ){
-			if( DaoToken_IsValidName( rout->routName->chars, rout->routName->size ) ){
+			if( isalpha( rout->routName->chars[0] ) ){
 				DaoStream_WriteChars( stream, "routine " );
 			}else{
 				DaoStream_WriteChars( stream, "operator " );
