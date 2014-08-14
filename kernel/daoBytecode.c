@@ -2271,9 +2271,10 @@ static void DaoByteCoder_DecodeClass( DaoByteCoder *self, DaoByteBlock *block )
 	DaoClass_UpdateMixinConstructors( klass );
 	DaoClass_UpdateVirtualMethods( klass );
 	DaoClass_UseMixinDecorators( klass );
-	if( klass->attribs != C ){
+	if( klass->attribs != (C & ~DAO_CLS_ASYNCHRONOUS) ){ /* check inferred attributes: */
 		DaoByteCoder_Error( self, block, "Class attributes not matching!" );
 	}
+	klass->attribs = C;
 }
 static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 {

@@ -1,6 +1,6 @@
 load sys
 
-class Test
+class Test !!
 {
 	routine Task1( chan : mt::channel<int> ){
 		while(1){
@@ -17,7 +17,7 @@ class Test
 	}
 }
 
-test = Test() !!
+test = Test()
 
 chan = mt::channel<int>(1)
 

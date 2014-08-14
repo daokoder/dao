@@ -199,6 +199,7 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 	DaoClass *klass = self->defClass;
 	daoint i;
 
+	self->isAsync = (klass->attribs & DAO_CLS_ASYNCHRONOUS) != 0;
 	if( that ){
 		GC_Assign( & self->rootObject, that );
 		self->objValues = that->objValues + offset;

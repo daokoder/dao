@@ -3603,11 +3603,9 @@ static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 	}
 	if( vmc->code != DVM_MCALL ) return 0;
 	if( frame->object && frame->object->isAsync ){
-		if( prev->object == NULL || frame->object->rootObject != prev->object->rootObject ){
-			DaoCallServer_AddCall( self );
-			self->status = DAO_PROCESS_RUNNING;
-			return 1;
-		}
+		DaoCallServer_AddCall( self );
+		self->status = DAO_PROCESS_RUNNING;
+		return 1;
 	}
 	return 0;
 }
@@ -3645,7 +3643,6 @@ static int DaoProcess_TryTailCall( DaoProcess *self, DaoRoutine *rout, DaoValue 
 		break;
 	case DAO_OBJECT  : root = O->xObject.rootObject; break;
 	}
-	if( root ) async |= root->isAsync;
 	/* No tail call optimization for possible asynchronous calls: */
 	/* No tail call optimization in constructors etc.: */
 	/* (self->topFrame->state>>1): get rid of the DVM_FRAME_RUNNING flag: */
@@ -3738,7 +3735,6 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 		othis = self->activeObject;
 	}else{
 		othis = onew = DaoObject_New( klass );
-		if( vmc->b & DAO_CALL_ASYNC ) onew->isAsync = 1;
 	}
 	rout = DaoRoutine_Resolve( routines, selfpar, NULL, params, types, npar, callmode );
 	if( rout == NULL ){

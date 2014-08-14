@@ -4337,7 +4337,6 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 			}
 		}
 	}
-	at = types[opa];
 	bt = ct = NULL;
 	if( code == DVM_CALL && self->tidHost == DAO_OBJECT ) bt = hostClass->objType;
 
@@ -4610,7 +4609,10 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	if( ct ) ct = DaoType_DefineTypes( ct, NS, defs2 );
 
 #ifdef DAO_WITH_CONCURRENT
-	if( (vmc->b & DAO_CALL_ASYNC) && at->tid != DAO_CLASS ){
+	if( code == DVM_MCALL && tp[0]->tid == DAO_OBJECT
+			&& (tp[0]->aux->xClass.attribs & DAO_CLS_ASYNCHRONOUS) ){
+		ct = DaoType_Specialize( dao_type_future, & ct, ct != NULL );
+	}else if( vmc->b & DAO_CALL_ASYNC ){
 		ct = DaoType_Specialize( dao_type_future, & ct, ct != NULL );
 	}
 #endif

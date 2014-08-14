@@ -3086,6 +3086,10 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		value = (DaoValue*) klass;
 		DaoParser_AddToScope( self, className, value, klass->objType, storeType );
 
+		if( start < to && tokens[start+1]->name == DTOK_BANG2 ){
+			klass->attribs |= DAO_CLS_ASYNCHRONOUS;
+			start += 1;
+		}
 		if( self->byteBlock ){
 			int pm = self->permission;
 			DaoByteBlock_AddClassBlock( self->byteBlock, klass, pm );
@@ -3174,7 +3178,8 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 
 	if( tokens[start]->name == DTOK_COLON ){
 		/* class AA : NS::BB { } */
-		DaoValue *super = NULL;
+		int async = DAO_CLS_ASYNCHRONOUS;
+		DaoClass *super = NULL;
 		DaoType *sutype = DaoParser_ParseType( self, start+1, to, & start, NULL );
 		if( start < 0 ) goto ErrorClassDefinition;
 		ename = & tokens[start-1]->string;
@@ -3183,13 +3188,14 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			if( sutype == NULL ) ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
 			goto ErrorClassDefinition;
 		}
-		super = sutype->aux;
+		super = (DaoClass*) sutype->aux;
 		if( super == NULL ){
 			ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
 			goto ErrorClassDefinition;
 		}
+		if( (super->attribs & async) != (klass->attribs & async) ) goto ErrorClassDefinition;
 		/* Add a reference to its super classes: */
-		DaoClass_AddSuperClass( klass, super );
+		DaoClass_AddSuperClass( klass, (DaoValue*) super );
 	}/* end parsing super classes */
 	if( tokens[start]->name == DKEY_FOR ){
 		ec = DAO_INVALID_DECO_PATTERN;

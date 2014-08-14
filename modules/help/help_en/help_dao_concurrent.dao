@@ -19,7 +19,7 @@ are attached to native threads for execution.
 
 Dao provides several features for concurrent programming such as:
 multi-threading module @[code]mt@[code] with parallelized code section methods,
-asynchronous function call, asynchronous class instance and communication channels.
+asynchronous function call, asynchronous class and communication channels.
 Support for conventional multi-threaded programming is all supported by an external module.
 
 @[text]
@@ -145,7 +145,7 @@ Select on a group of channels or future values, wait with a timeout for data bec
 
 ################################################################################
 ################################################################################
-#### Asynchronous Object
+#### Asynchronous Call
 ################################################################################
 ################################################################################
 @[name]
@@ -186,26 +186,23 @@ just like a @[link]monitor@@http://en.wikipedia.org/wiki/Monitor_(synchronizatio
 
 ################################################################################
 ################################################################################
-#### Asynchronous Object
+#### Asynchronous Class
 ################################################################################
 ################################################################################
 @[name]
-dao.concurrent.async-object
+dao.concurrent.async-class
 @[name]
 
 @[title]
-Asynchronous Object
+Asynchronous Class
 @[title]
 
 @[text]
 
 
-An asynchronous object is a class instance that is created with asynchronous call mode,
-@[code]
-async_objet = some_class( ... ) !!
-@[code]
-
-When an asynchronous object invokes a method, it will be automatically called in
+An asynchronous class is a class whose instance will automatically become
+asynchronous instance/object.
+And when an asynchronous object invokes a method, it will be automatically called in
 asynchronous mode, and start a tasklet and return a future value.
 Such tasklets are queued and and executed in the order they are queued.
 
@@ -218,9 +215,11 @@ For each instance, these messages are processed one by one
 in the order of receiving.
 
 
+Asynchronous class is defined by specifying asynchronous mode with @[code]!!@[code]
+after the class name.
 Here is an simple example,
 @[code]
-class Account
+class Account !!
 {
 	private
 
@@ -248,8 +247,8 @@ class Account
 	}
 }
 
-acount1 = Account( 100 ) !!
-acount2 = Account( 100 ) !!
+acount1 = Account( 100 )
+acount2 = Account( 100 )
 
 future1 = acount1.Withdraw( 10 )
 if( future1.value() == $true ) future2 = acount2.Deposit( 10 )
