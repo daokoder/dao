@@ -5156,6 +5156,11 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				if( !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
 				at = DaoType_GetInvarType( at );
 			}
+			if( type2 && *type2 != NULL ){
+				if( type2[0]->var == 1 && (at->invar == 1 && at->konst == 0) ){
+					return DaoInferencer_ErrorTypeNotMatching( self, at, *type2 );
+				}
+			}
 			if( type2 && (*type2 == NULL || (*type2)->tid == DAO_UDT || (*type2)->tid == DAO_THT) ){
 				GC_Assign( type2, at );
 			}

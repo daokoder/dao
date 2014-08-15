@@ -1357,11 +1357,10 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		}
 		GC_IncRC( copy->aux );
 	}
-	if( copy->quadtype == NULL && self->quadtype != NULL ){
-		copy->quadtype = DaoType_DefineTypes( self->quadtype, ns, defs );
-		if( copy->quadtype ==NULL ) goto DefFailed;
-		GC_IncRC( copy->quadtype );
-	}
+	/*
+	// Note: DO NOT handle ::quadtype here,
+	// which should be handle by DaoType_GetInvarType() etc.;
+	*/
 	if( copy->cbtype == NULL && self->cbtype != NULL ){
 		copy->cbtype = DaoType_DefineTypes( self->cbtype, ns, defs );
 		if( copy->cbtype ==NULL ) goto DefFailed;
