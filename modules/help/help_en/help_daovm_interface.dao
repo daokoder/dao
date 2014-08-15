@@ -757,7 +757,7 @@ one can added the following to the @[code]ClassOneMethods@[code] list,
 	{ dao_ClassOne_SETF_value,  ".value=( self: ClassOne, value: int )" },
 @[code(cxx)]
 Here the name @[code]dao_ClassOne_GETF_value@[code] 
-and @[code]dao_ClassOne_GETF_value@[code] are completely arbitrary.
+and @[code]dao_ClassOne_SETF_value@[code] are completely arbitrary.
 They can be implemented in the following way,
 @[code(cxx)]
 static void dao_ClassOne_GETF_value( DaoProcess *proc, DaoValue *p[], int n )
@@ -775,7 +775,7 @@ static void dao_ClassOne_SETF_value( DaoProcess *proc, DaoValue *p[], int n )
 
 @[subsection]An advanced example@[subsection]
 
-Now given the following class that is derived from @[code]ClassTwo@[code],
+Now given the following class that is derived from @[code]ClassOne@[code],
 @[code(cxx)]
 class ClassTwo : public ClassOne
 {
@@ -865,9 +865,7 @@ int Dao_ClassTwo::VirtualMethod( int i, float f )
 	DaoValue **params = DaoProcess_GetLastValues( proc, 2 );
 
 	// Resolve possible overloading using the parameters:
-	// This can be merged with DaoProcess_Call(), if the error code returned
-	// by DaoProcess_Call() is checked an properly handled.
-	method = DaoRoutine_Resolve( method, object, params, 2 );
+	method = DaoRoutine_ResolveByValue( method, object, params, 2 );
 	if( method == NULL ) goto CallDefault;
 
 	// Run the re-implemented function:
@@ -889,7 +887,6 @@ CallDefault:
 	return ClassTwo::VirtualMethod( i, f );
 ErrorCall:
 	DaoProcess_Release( vmspace, proc );
-	// Do something;
 	return 0;
 }
 @[code(cxx)]
@@ -905,17 +902,25 @@ static void Dao_ClassTwo_GetGCFields( void *self0,
 	if( self->dao_cdata == NULL ) return;
 	DList_Append( values, self->dao_cdata );
 	if( remove ){
-		// If this object cannot be deallocated because some other C/C++ objects
-		// are using it, here is the right place to set the wrapped pointer (namely
-		// this object) of dao_cdata to NULL, so that no deallocation will be
-		// invoked for this object.
+		// Parameter "remove" is zero, when this function is called by the
+		// garbage collector during the phase when the candidate garbage
+		// objects are scanned to determine true garbage objects.
 		//
-		// For example, in some GUI library, if a widget has a parent, the parent
-		// will be responsible for deleting the widget, so something like the
-		// following can be used to support this:
+		// For true garbage objects for wrapped types, this function will be
+		// called again with non-zero "remove" parameter. And in this case,
+		// the "dao_cdata" field should be set to NULL here, since it will be
+		// deleted by the garbage collector directly.
+		//
+		// Care must be taken if there is something else that is responsible
+		// for deallocating the wrapped C/C++ object. For example, in some GUI
+		// libraries, the parent widget will be responsible for deleting its
+		// children widgets. To prevent the deallocator of the wrapped C/C++
+		// objects from being invoked by Dao garbage collector, something like
+		// the following can be used:
 		// if( self->parent() ) DaoCdata_SetData( self->dao_cdata, NULL );
 		 
-		// To avoid the deallocator of Dao_ClassTwo being called by the GC:
+		// After this call, "dao_cdata" may become invalid, now set it to NULL
+		// to avoid wrong using:
 		self->dao_cdata = NULL;
 	}
 }
@@ -988,8 +993,7 @@ void*     DaoValue_TryCastCdata( DaoValue *self, DaoType *totype );
 @[code(cxx)]
 If the @[code]DaoValue@[code] object is of the requested type, the correct data
 will be returned, otherwise zero or a null pointer is return.
-The last three functions are execlusively for wrapped C/C++ types,
-we come to this later.
+The last three functions are execlusively for opaquely wrapped C/C++ types.
 
 
 For other data types, you may need to cast @[code]DaoValue@[code] objects

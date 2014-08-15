@@ -707,23 +707,17 @@ int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *nspace )
 @[code(cxx)]
 
 
-Since the @[code]value@[code] member of ClassOne is a public member,
-it is reasonable to add a getter and a setter method to wrapped ClassOne type.
-To add a getter, one only needs to register a method with name @[code].field@[code]
-and no extra parameter.
-And for a setter, the method name must be @[code].field=@[code],
-and it must also accept a parameter with type the same as the value 
-that can be assigned.
-For example, for the @[code]value@[code] member,
-one can added the following to the @[code]ClassOneMethods@[code] list,
+因为@[code]ClassOne@[code]的成员@[code]value@[code]为公共访问成员，
+@[code]ClassOne@[code]的完整封装类型应当包含属性方法以支持对该成员的直接访问。
+这种属性方法的定义即为对成员访问的操作符@[code].field@[code]和@[code].field=@[code]的重载。
+例如，对于成员@[code]value@[code]，下面的方法将使得它可以象公共成员那样使用。
 @[code(cxx)]
 // the getter and setter:
 	{ dao_ClassOne_GETF_value,  ".value( self: ClassOne ) => int" },
 	{ dao_ClassOne_SETF_value,  ".value=( self: ClassOne, value: int )" },
 @[code(cxx)]
-Here the name @[code]dao_ClassOne_GETF_value@[code] 
-and @[code]dao_ClassOne_GETF_value@[code] are completely arbitrary.
-They can be implemented in the following way,
+这里函数名称@[code]dao_ClassOne_GETF_value@[code]和@[code]dao_ClassOne_SETF_value@[code]
+可以随便设定。它们的基本实现如下：
 @[code(cxx)]
 static void dao_ClassOne_GETF_value( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -738,9 +732,10 @@ static void dao_ClassOne_SETF_value( DaoProcess *proc, DaoValue *p[], int n )
 @[code(cxx)]
 
 
-@[subsection]An advanced example@[subsection]
+@[subsection]一个更高级的例子@[subsection]
 
-Now given the following class that is derived from @[code]ClassTwo@[code],
+在这个更高级的例子里我们将看到对继承和虚函数的封装处理。
+这里我们有一个从@[code]ClassOne@[code]派生的类：
 @[code(cxx)]
 class ClassTwo : public ClassOne
 {
@@ -748,19 +743,19 @@ class ClassTwo : public ClassOne
 	virtual void VirtualMethod( int i, float f );
 };
 @[code(cxx)]
-Because this class has a virtual method, if we want Dao classes can be
-derived from @[code]ClassTwo@[code] and reimplement its virtual functions,
-the wrapping will be a bit more sophisticated.
-First, we will need to define a "proxy" class that is derived from
-@[code]ClassTwo@[code] and reimplements its virtual function 
-such that this reimplemented function can check for
-a Dao reimplementation of the function and invoke it if it exists.
-When an instance of @[code]ClassTwo@[code] needs to be created,
-an instance of this proxy class will be created and returned
-instead of the original @[code]ClassTwo@[code].
+因为这个类含有虚函数，如果我们需要支持从此类的封装类型派生的道语言类可以
+重新实现这个虚函数，那么这个类的封装将会复杂些。
 
 
-Here is an example of such proxy class,
+首先我们需要定义一个代理类，这个代理类将从我们要封装的类即@[code]ClassTwo@[code]
+派生，并要重新实现它的虚函数。这个重新实现的虚函数将负责检查调用此虚函数的类实例
+是否源自于该封装类型的道派生类型，且是否重新实现了该虚函数。
+若是，这个代理类的虚函数将调用道派生类所重新实现的虚函数，
+否则它将调用基类@[code]ClassTwo@[code]的虚函数。
+当这个封装类型的实例被创建时，实际被创建的C++类实例将是该类的代理类的实例。
+
+
+下面是一个例子代理类：
 @[code(cxx)]
 class Dao_ClassTwo : public ClassTwo
 {
@@ -774,9 +769,9 @@ class Dao_ClassTwo : public ClassTwo
 	int VirtualMethod( int i, float f );
 };
 @[code(cxx)]
-This proxy class will need to maintain a reference to the wrapper object,
-so an extra field @[code]dao_cdata@[code] is declared in the class.
-This wrapper object can be pre-allocated in the constructor of @[code]Dao_ClassTwo@[code],
+这个代理类需要它的封装对象的引用，以便在重新实现的虚函数里可正确地调用
+道派生类所重新实现的虚函数。这里成员@[code]dao_cdata@[code]即指向它的封装对象。
+这个封装对象可在@[code]Dao_ClassTwo@[code]的构造函数里预先创建：
 @[code(cxx)]
 Dao_ClassTwo::Dao_ClassTwo()
 {
@@ -784,18 +779,20 @@ Dao_ClassTwo::Dao_ClassTwo()
 	DaoGC_IncRC( (DaoValue*)dao_cdata );
 }
 @[code(cxx)]
-Here the @[code]dao_type_ClassTwo@[code] is the Dao type object for @[code]ClassTwo@[code],
-and can be obtained in the same way as @[code]dao_type_ClassOne@[code].
-Now that @[code]Dao_ClassTwo@[code] has a reference to a @[code]DaoCdata@[code]
-object, the @[code]GetGCFields@[code] field of the type information structure
-for @[code]ClassTwo@[code] should be set to a proper function, which will be provided later.
-The destructor should also be handled this reference properly by,
+这里@[code]dao_type_ClassTwo@[code]是此封装类型的类型对象，
+可以以获得@[code]dao_type_ClassOne@[code]的同样方式获得。
+现在@[code]Dao_ClassTwo@[code]有了一个@[code]DaoCdata@[code]对象的引用。
+这个对象的引用计数须作恰当处理，即在构造函数里需要增加其引用计数，
+而在析构函数里需要减少其引用计数。并且此封装类型的类型信息结构里的
+@[code]GetGCFields@[code]需要适当定义一正确支持垃圾回收处理，
+这个将在后面作介绍。
+这里先介绍它的析构函数：
 @[code(cxx)]
 Dao_ClassTwo::~Dao_ClassTwo()
 {
-	if( dao_cdata ){ // Could have been set to NULL by the GC:
-		// Set the opaque pointer of dao_cdata to NULL, so that the deallocator
-		// of DaoCdata will not attempt to call the deallocator of the opaque pointer:
+	if( dao_cdata ){ // 有可能在垃圾回收时被设为NULL:
+		// 将dao_cdata的C/C++对象指针设为NULL，以避免释放dao_cdata时，
+		// 道虚拟机将试图释放该指针所指向的内存:
 		DaoCdata_SetData( dao_cdata, NULL );
 		DaoGC_DecRC( (DaoValue*) dao_cdata );
 	}
@@ -803,48 +800,46 @@ Dao_ClassTwo::~Dao_ClassTwo()
 @[code(cxx)]
 
 
-Then the @[code]VirtualMethod()@[code] could be implemented in the following way,
+先面将介绍这个封装里最复杂的部分，即重新实现被封装类的虚函数：
 @[code(cxx)]
 int Dao_ClassTwo::VirtualMethod( int i, float f )
 {
 	DaoVmSpace *vmspace = DaoVmSpace_MainVmSpace();
 	DaoProcess *proc = NULL;
 
-	// Try to get the instance of a derived Dao class:
+	// 获取派生道类的实例:
 	DaoObject *object = DaoCdata_GetObject( dao_cdata );
 	if( object == NULL ) goto CallDefault;
 
-	// Try to get a method named "VirtualMethod":
+	// 获取道派生类所重新实现的名为"VirtualMethod"的方法:
 	DaoRoutine *method = DaoObject_GetMethod( object, "VirtualMethod" );
 	if( method == NULL ) goto CallDefault;
 
-	// Check if the method is a C/C++ wrapper function:
+	// 检查该方法是否为C/C++封装函数，若是，它表明虚函数没有被重新实现:
 	if( DaoRoutine_IsWrapper( method ) ) goto CallDefault;
 
-	// Acquire a process object to execute the re-implemented virtual function:
+	// 获取一个虚拟机进程对象，以便运行被道派生类重新实现的虚函数:
 	proc = DaoVmSpace_AcquireProcess( vmspace );
 	
-	// Prepare function call parameters:
+	// 准被虚函数调用的参数:
 	DaoProcess_NewInteger( proc, i );
 	DaoProcess_NewFloat( proc, f );
 	DaoValue **params = DaoProcess_GetLastValues( proc, 2 );
 
-	// Resolve possible overloading using the parameters:
-	// This can be merged with DaoProcess_Call(), if the error code returned
-	// by DaoProcess_Call() is checked an properly handled.
-	method = DaoRoutine_Resolve( method, object, params, 2 );
+	// 使用参数解析可能有重载的方法:
+	method = DaoRoutine_ResolveByValue( method, object, params, 2 );
 	if( method == NULL ) goto CallDefault;
 
-	// Run the re-implemented function:
+	// 调用重新实现的虚函数:
 	if( DaoProcess_Call( proc, method, object, params, 2 ) ) goto ErrorCall;
 
-	// Check the returned value:
+	// 检查虚函数调用的返回值:
 	DaoValue *res = DaoProcess_GetReturned( proc );
 	if( DaoValue_CastInteger( res ) ) goto ErrorCall;
 
 	int ires = DaoValue_TryGetInteger( res );
 
-	// Release the process object:
+	// 释放进程对象:
 	DaoProcess_Release( vmspace, proc );
 
 	return ires;
@@ -854,14 +849,12 @@ CallDefault:
 	return ClassTwo::VirtualMethod( i, f );
 ErrorCall:
 	DaoProcess_Release( vmspace, proc );
-	// Do something;
 	return 0;
 }
 @[code(cxx)]
 
 
-Now we will define a function that can be set to the @[code]GetGCFields@[code]
-field of the type information structure of @[code]ClassTwo@[code].
+现在我们将定义@[code]ClassTwo@[code]的封装类型信息结构里的@[code]GetGCFields@[code]函数:
 @[code(cxx)]
 static void Dao_ClassTwo_GetGCFields( void *self0,
 		DList *values, DList *lists, DList *maps, int remove )
@@ -870,24 +863,29 @@ static void Dao_ClassTwo_GetGCFields( void *self0,
 	if( self->dao_cdata == NULL ) return;
 	DList_Append( values, self->dao_cdata );
 	if( remove ){
-		// If this object cannot be deallocated because some other C/C++ objects
-		// are using it, here is the right place to set the wrapped pointer (namely
-		// this object) of dao_cdata to NULL, so that no deallocation will be
-		// invoked for this object.
-		//
-		// For example, in some GUI library, if a widget has a parent, the parent
-		// will be responsible for deleting the widget, so something like the
-		// following can be used to support this:
+		// 道语言的垃圾回收器将在不同的阶段调用此函数。如果是在扫瞄候选垃圾
+		// 对象以确定真实的垃圾期间调用，此函数的参数"remove"将为零。
+		// 
+		// 对于真实的垃圾对象，道垃圾回收器将用非零"remove"参数调用此函数。
+		// 这种情况下，成员"dao_cdata"必须在这里被设为空指针NULL，因为
+		// "dao_cdata"所指向的对象将被垃圾回收器直接释放，导致"dao_cdata"
+		// 在此函数调用后变成无效指针。
+		// 
+		// 需要特别注意的是，如果有别的东西负责释放被封装的C/C++对象，那么
+		// 这里需要做些特别处理。如在某些图形界面库里，父控件将负责它的子
+		// 控件的释放。为了防止道垃圾回收器调用被封装C/C++对象的释放函数，
+		// 提前或重复释放该C/C++对象，这里可做类似如下的处理:
 		// if( self->parent() ) DaoCdata_SetData( self->dao_cdata, NULL );
-		 
-		// To avoid the deallocator of Dao_ClassTwo being called by the GC:
+
+		// 此函数调用后，"dao_cdata"可能会变成无效指针，这里需要将它设为
+		// 空指针NULL，以防它被错误使用:
 		self->dao_cdata = NULL;
 	}
 }
 @[code(cxx)]
 
 
-The remaining part for wrapping @[code]ClassTwo@[code] should be something like,
+@[code]ClassTwo@[code]的剩余封装基本如下:
 @[code(cxx)]
 static void dao_ClassTwo_ClassTwo( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -908,7 +906,7 @@ static void* Dao_ClassTwo_Cast_ClassOne( void *data, int down )
 	if( down ) return static_cast<ClassTwo*>((ClassOne*)data);
 	return dynamic_cast<ClassOne*>((ClassTwo*)data);
 }
-// The type information structure for ClassTwo:
+// ClassTwo 的类型信息结构:
 static DaoTypeBase ClassTwo_Typer = 
 {
 	"ClassTwo", NULL, NULL, ClassTwoMethods,
@@ -916,13 +914,13 @@ static DaoTypeBase ClassTwo_Typer =
 	{ Dao_ClassTwo_Cast_ClassOne, NULL },
 	Dao_ClassTwo_Delete, NULL
 };
-// The Dao type structure for ClassTwo:
+// ClassTwo 的类型对象:
 DaoType *dao_type_ClassTwo = NULL;
 
 int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *nspace )
 {
 	...
-	// Wrap ClassTwo as an opaque C/C++ type:
+	// 以非透明方式封装ClassTwo:
 	dao_type_ClassTwo = DaoNamespace_WrapType( nspace, & ClassTwo_Typer, 1 );
 	return 0;
 }
@@ -932,12 +930,11 @@ int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *nspace )
 
 
 @[section]
-Data Conversion between Dao and C/C++
+Dao和C/C++类型之间的数据转换
 @[section]
 
-Dao provides various C interface functions to make data conversion between Dao
-and C/C++ simple. For simple data types, one can use the one of the following
-functions to convert Dao values to C values,
+道虚拟机提供了多个C借口函数，以方便Dao和C/C++类型之间的数据转换。
+对于简单的类型，下面的函数可将道数据转换为C数据:
 @[code(cxx)]
 daoint    DaoValue_TryGetInteger( DaoValue *self );
 float     DaoValue_TryGetFloat( DaoValue *self );
@@ -951,25 +948,22 @@ void*     DaoValue_TryGetCdata( DaoValue *self );
 void**    DaoValue_TryGetCdata2( DaoValue *self );
 void*     DaoValue_TryCastCdata( DaoValue *self, DaoType *totype );
 @[code(cxx)]
-If the @[code]DaoValue@[code] object is of the requested type, the correct data
-will be returned, otherwise zero or a null pointer is return.
-The last three functions are execlusively for wrapped C/C++ types,
-we come to this later.
+如果@[code]DaoValue@[code]对象的类型跟函数所假定的一致，正确的数据将被返回；
+否则零或者空指针将被返回。
+最后的三个函数仅适用于以非透明方式封装的C/C++类型。
 
 
-For other data types, you may need to cast @[code]DaoValue@[code] objects
-to proper types, and then use proper methods to retrieve C data values.
-There are two ways to cast from @[code]DaoValue@[code] to other types,
-one is to use @[code]DaoValue_Type()@[code] to check its type and than do C casting,
-the other is to use one of the @[code]DaoValue_CastXXX()@[code] series of methods.
-For example, the following are the two ways to cast @[code]value@[code] 
-from @[code]DaoValue@[code] to @[code]DaoTuple@[code],
+对于其他类型，你将需要先将@[code]DaoValue@[code]对象指针映射为相应类型的指针后，
+才可以用相应的函数访问它们的数据。
+这里有两种方法做这种映射，一种是先用@[code]DaoValue_Type()@[code]检查对象的类型，
+然后再用C方式做映射。另一种是使用@[code]DaoValue_CastXXX()@[code]系列方法之一。
+下例展示了这两种方法将@[code]DaoValue@[code]映射成@[code]DaoTuple@[code]:
 @[code(cxx)]
 DaoTuple *tup1 = DaoValue_Type( value ) == DAO_TUPLE ? (DaoTuple*) value : NULL;
 DaoTuple *tup2 = DaoValue_CastTuple( value );
 @[code(cxx)]
-@[code]DaoValue_CastXXX()@[code] methods will return NULL, if the value
-is not the correct type.
+@[code]DaoValue_CastXXX()@[code]将返回控指针，如果对象的类型和函数所要求的类型
+不一致。
 
 
 @[text]

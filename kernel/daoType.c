@@ -1359,7 +1359,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	}
 	/*
 	// Note: DO NOT handle ::quadtype here,
-	// which should be handle by DaoType_GetInvarType() etc.;
+	// which should be handled by DaoType_GetInvarType() etc.;
 	*/
 	if( copy->cbtype == NULL && self->cbtype != NULL ){
 		copy->cbtype = DaoType_DefineTypes( self->cbtype, ns, defs );
