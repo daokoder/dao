@@ -4921,7 +4921,7 @@ DaoValue* DaoParser_GetVariable( DaoParser *self, int reg )
 }
 int DaoParser_GetNormRegister( DaoParser *self, int reg, int exp, int first, int mid, int last )
 {
-	DaoVmCodeX vmc;
+	DaoVmCodeX vmc = {0,0,0,0,0,0,0,0,0,0};
 	int line = self->tokens->items.pToken[first]->line;
 	int st = LOOKUP_ST( reg );
 	int up = LOOKUP_UP( reg );
@@ -5825,15 +5825,15 @@ static int DaoParser_ParseClosure( DaoParser *self, int start )
 	}else{
 		goto ErrorParsing;
 	}
+
+	/* Routine name may have been changed by DaoParser_ParseSignature() */
+	sprintf( name, "AnonymousFunction_%p", rout );
+	DString_SetChars( rout->routName, name );
 	if( self->byteBlock ){
 		parser->byteCoder = self->byteCoder;
 		parser->byteBlock = DaoByteBlock_AddRoutineBlock( self->byteBlock, parser->routine, 0 );
 	}
 	offset = rb - parser->tokens->size;
-
-	/* Routine name may have been changed by DaoParser_ParseSignature() */
-	sprintf( name, "AnonymousFunction_%p", rout );
-	DString_SetChars( rout->routName, name );
 	if( rb < 0 || tokens[rb]->name != DTOK_RCB ){
 		DaoParser_Error( self, DAO_CTW_INVA_SYNTAX, NULL );
 		goto ErrorParsing;

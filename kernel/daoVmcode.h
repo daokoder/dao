@@ -33,7 +33,7 @@
 
 enum DaoOpcode
 {
-	DVM_NOP   , /* No operation, Dao VM assumes at most one NOP between two effective codes; */
+	DVM_NOP   , /* No operation; */
 	DVM_DATA  , /* Create primitive data:  C = B;  A: data type id;  B: direct value; */
 	DVM_GETCL , /* Get local const:  C = A:::B;  B, index;  A=0, implicit;  A=1, explicit; */
 	DVM_GETCK , /* Get class const:  C = A:::B;  B, index;  A=0; */
@@ -108,7 +108,6 @@ enum DaoOpcode
 	DVM_YIELD , /* yield A, A+1,.., A+B-1; return data at C when resumed; */
 	DVM_SECT ,  /* code section label, parameters: A,A+1,...,A+B-1; C, ID|(#explicit params); */
 	DVM_JITC ,  /* run Just-In-Time compiled Code A, and skip the next B instructions; */
-	DVM_DEBUG , /* prompt to debugging mode; */
 
 	/* optimized opcodes: */
 	DVM_DATA_I ,
@@ -496,11 +495,19 @@ enum DaoCodeType
 	DAO_CODE_JUMP
 };
 
+enum DaoCodeState
+{
+	DAO_CODE_BREAKING  = 1
+};
 
 struct DaoVmCode
 {
-	unsigned short  code;    /* opcode */
-	unsigned short  a, b, c; /* register ids for operands */
+	unsigned short  code;    /* opcode; */
+	unsigned short  a, b, c; /* operands; */
+
+#ifdef DAO_USE_CODE_STATE
+	unsigned short  state;   /* state; */
+#endif
 };
 
 DAO_DLL const char* DaoVmCode_GetOpcodeName( int code );
@@ -516,6 +523,7 @@ struct DaoVmCodeX
 {
 	unsigned short  code;    /* opcode */
 	unsigned short  a, b, c; /* register ids for operands */
+	unsigned short  state;   /* state; */
 	unsigned short  level;   /* lexical level */
 	unsigned short  line;    /* line number in the source file */
 	unsigned int    first;   /* first token */
@@ -526,8 +534,6 @@ void DaoVmCode_Print( DaoVmCode self, char *buffer );
 void DaoVmCodeX_Print( DaoVmCodeX self, char *annot, char *buffer );
 
 
-#define DaoGetSectionCode1(C) ((C[1].code == DVM_GOTO && C[2].code == DVM_SECT) ? C+2 : NULL)
-#define DaoGetSectionCode2(C) ((C[2].code == DVM_GOTO && C[3].code == DVM_SECT) ? C+3 : NULL)
-#define DaoGetSectionCode(C)  (C[1].code == DVM_NOP ? DaoGetSectionCode2(C) : DaoGetSectionCode1(C))
+#define DaoGetSectionCode(C) ((C[1].code == DVM_GOTO && C[2].code == DVM_SECT) ? C+2 : NULL)
 
 #endif

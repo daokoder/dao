@@ -609,7 +609,6 @@ static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 	DaoStackFrame *frame = self->topFrame;
 	DaoType *cbtype = NULL;
 	DaoVmCode *codes;
-	int nop = 0;
 
 	if( frame->routine ) cbtype = frame->routine->routType->cbtype;
 	if( cbtype == NULL ) return NULL;
@@ -625,8 +624,7 @@ static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 			cbtype2 = frame->routine->routType->cbtype;
 			if( frame->routine->body ){
 				codes = frame->codes + frame->entry;
-				nop = codes[0].code == DVM_NOP;
-				if( codes[nop].code == DVM_GOTO && codes[nop+1].code == DVM_SECT ) return frame;
+				if( codes[0].code == DVM_GOTO && codes[1].code == DVM_SECT ) return frame;
 			}
 		}
 		if( cbtype2 == NULL || DaoType_MatchTo( cbtype, cbtype2, NULL ) == 0 ) break;
@@ -634,15 +632,13 @@ static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 	}
 	if( frame == NULL || frame->routine == NULL ) return NULL;
 	codes = frame->codes + frame->entry;
-	nop = codes[0].code == DVM_NOP;
-	if( codes[nop].code == DVM_GOTO && codes[nop+1].code == DVM_SECT ) return frame;
+	if( codes[0].code == DVM_GOTO && codes[1].code == DVM_SECT ) return frame;
 	return NULL;
 }
 DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 {
 	DaoStackFrame *next, *frame = DaoProcess_FindSectionFrame( self );
 	DaoProfiler *profiler = self->vmSpace->profiler;
-	int nop = self->activeCode[1].code == DVM_NOP;
 	int returning = -1;
 
 	if( frame == NULL ) return NULL;
@@ -651,7 +647,7 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 		returning = self->activeCode->c;
 	}
 	next = DaoProcess_PushFrame( self, 0 );
-	next->entry = frame->entry + 2 + nop;
+	next->entry = frame->entry + 2;
 	next->state = DVM_FRAME_SECT | DVM_FRAME_KEEP;
 
 	GC_Assign( & next->object, frame->object );
@@ -817,7 +813,24 @@ static daoint DaoArray_ComputeIndex( DaoArray *self, DaoValue *ivalues[], int co
 
 
 static int DaoProcess_Move( DaoProcess *self, DaoValue *A, DaoValue **C, DaoType *t );
-static void DaoProcess_AdjustCodes( DaoProcess *self, int options );
+
+#ifdef DAO_USE_CODE_STATE
+static void DaoProcess_AdjustCodes( DaoProcess *self, int options )
+{
+	DaoDebugger *debugger = self->vmSpace->debugger;
+	DaoRoutine *routine = self->topFrame->routine;
+	DaoVmCode *c = self->topFrame->codes;
+	int i, n = routine->body->vmCodes->size;
+	int mode = routine->body->exeMode;
+	if( options & DAO_OPTION_DEBUG ){
+		routine->body->exeMode |= DAO_ROUT_MODE_DEBUG;
+		if( debugger && debugger->BreakPoints ) debugger->BreakPoints( debugger, routine );
+	}else if( mode & DAO_OPTION_DEBUG ){
+		routine->body->exeMode &= ~DAO_ROUT_MODE_DEBUG;
+		for(i=0; i<n; i++) c[i].state &= ~ DAO_CODE_BREAKING;
+	}
+}
+#endif
 
 #ifdef DAO_WITH_CONCURRENT
 int DaoCallServer_MarkActiveProcess( DaoProcess *process, int active );
@@ -830,7 +843,7 @@ int DaoCallServer_MarkActiveProcess( DaoProcess *process, int active );
 #endif
 
 #ifndef WITHOUT_DIRECT_THREADING
-#if !defined( __GNUC__ ) || defined( __STRICT_ANSI__ )
+#if defined(DAO_USE_CODE_STATE) || !defined( __GNUC__ ) || defined( __STRICT_ANSI__ )
 #define WITHOUT_DIRECT_THREADING
 #endif
 #endif
@@ -919,7 +932,6 @@ int DaoProcess_Start( DaoProcess *self )
 		&& LAB_RETURN , && LAB_YIELD ,
 		&& LAB_SECT ,
 		&& LAB_JITC ,
-		&& LAB_DEBUG ,
 
 		&& LAB_DATA_I , && LAB_DATA_F , && LAB_DATA_D , && LAB_DATA_C ,
 		&& LAB_GETCL_I , && LAB_GETCL_F , && LAB_GETCL_D , && LAB_GETCL_C ,
@@ -1024,6 +1036,7 @@ int DaoProcess_Start( DaoProcess *self )
 
 #else
 
+#ifndef DAO_USE_CODE_STATE
 #if defined( __GNUC__ ) && !defined( __STRICT_ANSI__ )
 #warning "=========================================="
 #warning "=========================================="
@@ -1031,8 +1044,20 @@ int DaoProcess_Start( DaoProcess *self )
 #warning "=========================================="
 #warning "=========================================="
 #endif
+#endif
 
-#define OPBEGIN() for(;;){ switch( vmc->code )
+#ifdef DAO_USE_CODE_STATE
+#define HANDLE_BREAK_POINT() \
+	if( vmc->state & DAO_CODE_BREAKING ){ \
+		self->activeCode = vmc; \
+		if( debugger && debugger->Debug ) debugger->Debug( debugger, self, NULL ); \
+		goto CheckException; \
+	}
+#else
+#define HANDLE_BREAK_POINT()
+#endif
+
+#define OPBEGIN() for(;;){ HANDLE_BREAK_POINT() switch( vmc->code )
 #define OPCASE( name ) case DVM_##name :
 #define OPNEXT() break;
 #define OPJUMP() continue;
@@ -1087,8 +1112,10 @@ CallEntry:
 	if( vmSpace->stopit ) goto FinishProcess;
 	if( invokehost ) handler->InvokeHost( handler, self );
 
-	if( (vmSpace->options & DAO_OPTION_DEBUG) | (routine->body->exeMode & DAO_ROUT_MODE_DEBUG) )
+#ifdef DAO_USE_CODE_STATE
+	if( (vmSpace->options&DAO_OPTION_DEBUG) | (routine->body->exeMode&DAO_ROUT_MODE_DEBUG) )
 		DaoProcess_AdjustCodes( self, vmSpace->options );
+#endif
 
 	vmcBase = topFrame->codes;
 	id = self->topFrame->entry;
@@ -1487,13 +1514,6 @@ CallEntry:
 			}
 			self->status = DAO_PROCESS_STACKED;
 			goto CheckException;
-		}OPCASE( DEBUG ){
-			if( vmSpace->stopit ) goto FinishProcess;
-			if( (vmSpace->options & DAO_OPTION_DEBUG ) ){
-				self->activeCode = vmc;
-				if( debugger && debugger->Debug ) debugger->Debug( debugger, self, NULL );
-				goto CheckException;
-			}
 		}OPNEXT() OPCASE( SECT ){
 			goto ReturnFalse;
 		}OPNEXT() OPCASE( DATA_I ){
@@ -6164,21 +6184,6 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 	return self->stackValues[ vmc->c ];
 }
 
-static void DaoProcess_AdjustCodes( DaoProcess *self, int options )
-{
-	DaoDebugger *debugger = self->vmSpace->debugger;
-	DaoRoutine *routine = self->topFrame->routine;
-	DaoVmCode *c = self->topFrame->codes;
-	int i, n = routine->body->vmCodes->size;
-	int mode = routine->body->exeMode;
-	if( options & DAO_OPTION_DEBUG ){
-		routine->body->exeMode |= DAO_ROUT_MODE_DEBUG;
-		if( debugger && debugger->BreakPoints ) debugger->BreakPoints( debugger, routine );
-	}else if( mode & DAO_OPTION_DEBUG ){
-		routine->body->exeMode &= ~DAO_ROUT_MODE_DEBUG;
-		for(i=0; i<n; i++) if( c[i].code == DVM_DEBUG ) c[i].code = DVM_NOP;
-	}
-}
 
 void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream )
 {

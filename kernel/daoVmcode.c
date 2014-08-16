@@ -115,7 +115,6 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "YIELD",      DVM_YIELD,      DAO_CODE_YIELD,   0 },
 	{ "SECT",       DVM_SECT,       DAO_CODE_EXPLIST, 0 },
 	{ "JITC",       DVM_JITC,       DAO_CODE_NOP,     0 },
-	{ "DEBUG",      DVM_DEBUG,      DAO_CODE_NOP,     0 },
 	{ "DATA_I",     DVM_DATA_I,     DAO_CODE_GETC,    0 },
 	{ "DATA_F",     DVM_DATA_F,     DAO_CODE_GETC,    0 },
 	{ "DATA_D",     DVM_DATA_D,     DAO_CODE_GETC,    0 },

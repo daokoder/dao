@@ -712,7 +712,7 @@ static int DaoVmCode_MayCreateReference( int code )
 	case DVM_GETF_KC : case DVM_GETF_KG :
 	case DVM_GETF_OC : case DVM_GETF_OG : case DVM_GETF_OV :
 		return 1;
-	default : return code < DVM_DEBUG;
+	default : return code < DVM_JITC;
 	}
 	return 0;
 }
@@ -769,9 +769,8 @@ static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 			k = codes[i-1]->code;
 			if( vmc->code == DVM_SECT || (vmc->code == DVM_GOTO && vmc->c == DVM_SECT) ){
 				/* Code section is isolated from the main codes: */
-				int nop = codes[i-1]->code == DVM_NOP;
-				DList_Append( nodes[i-1-nop]->outs, node );
-				DList_Append( node->ins, nodes[i-1-nop] );
+				DList_Append( nodes[i-1]->outs, node );
+				DList_Append( node->ins, nodes[i-1] );
 			}else if( k != DVM_GOTO && k != DVM_RETURN ){
 				DList_Append( nodes[i-1]->outs, node );
 				DList_Append( node->ins, nodes[i-1] );
@@ -1271,7 +1270,7 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 		node = nodes[i];
 		if( node->lvalue == 0xffff || node->exprid == 0xffff ) continue;
 		if( DaoVmCode_GetOpcodeType( (DaoVmCode*) vmc ) == DAO_CODE_MOVE ) continue;
-		if( vmc->code <= DVM_DEBUG ) continue;
+		if( vmc->code <= DVM_JITC ) continue;
 
 		sametype = 1;
 		avexprs->size = 0;
@@ -4314,12 +4313,11 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	int ctchecked = 0;
 	int argc = vmc->b & 0xff;
 	int codemode = code | ((int)vmc->b<<16);
-	int nop = inodes[i+1]->code == DVM_NOP; /* inserted in some mode; */
 	DaoType *cbtype = NULL;
 	DaoInode *sect = NULL;
 
-	if( (vmc->b & DAO_CALL_BLOCK) && inodes[i+2+nop]->code == DVM_SECT ){
-		sect = inodes[ i + 2 + nop ];
+	if( (vmc->b & DAO_CALL_BLOCK) && inodes[i+2]->code == DVM_SECT ){
+		sect = inodes[ i + 2 ];
 		for(j=0, k=sect->a; j<sect->b; j++, k++){
 			inited[k] = 1;
 			DaoInferencer_UpdateType( self, k, dao_type_udf );
@@ -4327,11 +4325,11 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	}
 	j = types[opa+1] ? types[opa+1]->tid : DAO_UDT;
 	if( code == DVM_MCALL && j >= DAO_ARRAY && j != DAO_ANY ){
-		DaoInode *p = inodes[i+1+nop];
+		DaoInode *p = inodes[i+1];
 		if( p->code == DVM_MOVE && p->a == opa+1 ){
 			p->code = DVM_NOP;
 			if( i+2 < N ){
-				p = inodes[i+2+nop];
+				p = inodes[i+2];
 				if( p->code >= DVM_SETVH && p->code <= DVM_SETF && p->a == opa+1 )
 					p->code = DVM_NOP;
 			}
@@ -4645,7 +4643,7 @@ TryPushBlockReturnType:
 			DaoInferencer_UpdateType( self, k, tt );
 		}
 		tt = DaoType_DefineTypes( (DaoType*)cbtype->aux, NS, defs2 );
-		DList_Append( rettypes, inodes[inodes[i+1+nop]->b] );
+		DList_Append( rettypes, inodes[inodes[i+1]->b] );
 		DList_Append( rettypes, inode ); /* type at "opc" to be redefined; */
 		DList_Append( rettypes, tt );
 		DList_Append( rettypes, tt );
@@ -4654,7 +4652,7 @@ TryPushBlockReturnType:
 		if( NoCheckingType( types[opc] ) == 0 ){
 			printf( "Unused code section at line %i!\n", vmc->line );
 		}
-		DList_Append( rettypes, inodes[inodes[i+1+nop]->b] );
+		DList_Append( rettypes, inodes[inodes[i+1]->b] );
 		DList_Append( rettypes, inode );
 		DList_Append( rettypes, NULL );
 		DList_Append( rettypes, NULL );
@@ -5052,7 +5050,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 
 		switch( code ){
 		case DVM_NOP :
-		case DVM_DEBUG :
 			break;
 		case DVM_DATA :
 			if( opa > DAO_STRING ) return DaoInferencer_Error( self, DTE_DATA_CANNOT_CREATE );

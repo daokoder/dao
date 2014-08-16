@@ -2688,7 +2688,7 @@ static void DaoByteCoder_DecodeRoutineCode( DaoByteCoder *self, DaoByteBlock *bl
 	for(i=0, k=1; i<numcode; i+=4){
 		DMap *lookupTable = NULL;
 		daoint *idx = self->indices->items.pInt + offset2 + i;
-		DaoVmCodeX vmc = {0,0,0,0,0,0,0,0,0};
+		DaoVmCodeX vmc = {0,0,0,0,0,0,0,0,0,0};
 		vmc.code = idx[0];
 		vmc.a = idx[1];
 		vmc.b = idx[2];

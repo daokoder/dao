@@ -120,6 +120,7 @@ struct DaoInode
 {
 	unsigned short  code;    /* opcode */
 	unsigned short  a, b, c; /* register ids for operands */
+	unsigned short  state;   /* state; */
 	unsigned short  level;   /* lexical level */
 	unsigned short  line;    /* line number in source file */
 	unsigned int    first;   /* index of the first token of the expression */
