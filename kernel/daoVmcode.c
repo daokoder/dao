@@ -40,7 +40,6 @@ struct DaoVmCodeInfo
 
 static DaoVmCodeInfo dao_code_infolist[] =
 {
-	{ "NOP",        DVM_NOP,        DAO_CODE_NOP,     1 },
 	{ "DATA",       DVM_DATA,       DAO_CODE_GETC,    1 },
 	{ "GETCL",      DVM_GETCL,      DAO_CODE_GETC,    1 },
 	{ "GETCK",      DVM_GETCK,      DAO_CODE_GETC,    1 },
@@ -352,6 +351,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "???",        DVM_UNUSED,     DAO_CODE_NOP,     0 },
 
 	/* for compiling only */
+	{ "nop",        DVM_UNUSED,     DAO_CODE_NOP, 0 },
 	{ "label",      DVM_UNUSED,     DAO_CODE_NOP, 0 },
 	{ "load2",      DVM_UNUSED,     DAO_CODE_NOP, 0 },
 	{ "loop",       DVM_UNUSED,     DAO_CODE_NOP, 0 },
@@ -372,7 +372,7 @@ const char* DaoVmCode_GetOpcodeName( int code )
 uchar_t DaoVmCode_GetOpcodeBase( int code )
 {
 	if( code >= 0 && code <= DVM_UNUSED ) return dao_code_infolist[ code ].base;
-	return DVM_NOP;
+	return DVM_DATA;
 }
 uchar_t DaoVmCode_CheckPermutable( int code )
 {

@@ -4323,18 +4323,6 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 			DaoInferencer_UpdateType( self, k, dao_type_udf );
 		}
 	}
-	j = types[opa+1] ? types[opa+1]->tid : DAO_UDT;
-	if( code == DVM_MCALL && j >= DAO_ARRAY && j != DAO_ANY ){
-		DaoInode *p = inodes[i+1];
-		if( p->code == DVM_MOVE && p->a == opa+1 ){
-			p->code = DVM_NOP;
-			if( i+2 < N ){
-				p = inodes[i+2];
-				if( p->code >= DVM_SETVH && p->code <= DVM_SETF && p->a == opa+1 )
-					p->code = DVM_NOP;
-			}
-		}
-	}
 	bt = ct = NULL;
 	if( code == DVM_CALL && self->tidHost == DAO_OBJECT ) bt = hostClass->objType;
 
@@ -4354,7 +4342,6 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		m = 1; /* tail call; */
 		for(k=i+1; k<N; k++){
 			DaoInode *ret = inodes[k];
-			if( ret->code == DVM_NOP ) continue;
 			if( ret->code == DVM_RETURN ){
 				m &= ret->c ==0 && (ret->b ==0 || (ret->b ==1 && ret->a == vmc->c));
 				break;
@@ -5049,8 +5036,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		}
 
 		switch( code ){
-		case DVM_NOP :
-			break;
 		case DVM_DATA :
 			if( opa > DAO_STRING ) return DaoInferencer_Error( self, DTE_DATA_CANNOT_CREATE );
 			at = self->basicTypes[ opa ];

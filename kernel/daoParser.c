@@ -4519,7 +4519,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 static int DaoParser_SetupBranching( DaoParser *self )
 {
 	DaoInode *it, *it2 = NULL;
-	int id = 0, unused = 0, notide = !(self->vmSpace->options & DAO_OPTION_IDE);;
+	int id = 0, unused = 0;
 	if( self->vmcLast->code != DVM_RETURN ){
 		DaoVmSpace *vms = self->vmSpace;
 		DaoNamespace *ns = self->nameSpace;
@@ -4535,26 +4535,12 @@ static int DaoParser_SetupBranching( DaoParser *self )
 		autoret &= self->vmcValue != NULL;
 		DaoParser_AddCode( self, DVM_RETURN, opa, autoret, 0, first,0,0 );
 	}
-	if( self->vmSpace->options & DAO_OPTION_IDE ){
-		/* for setting break points in DaoStudio */
-		for(it=self->vmcFirst; it; it=it2){
-			it2 = it->next;
-			if( it->code == DVM_NOP ) it->code = DVM_UNUSED;
-			if( it2 && it2->code == DVM_CASE ) continue;
-			if( it2 && it2->line != it->line ){
-				DaoParser_InsertCode( self, it, DVM_NOP, 0,0,0, it2->first )->line = it2->line;
-			}
-		}
-	}
 
 	for(it=self->vmcFirst; it; it=it->next){
 		switch( it->code ){
-		case DVM_NOP : if( notide ) it->code = DVM_UNUSED; break;
+		case DVM_NOP : it->code = DVM_UNUSED; break;
 		case DVM_GOTO : if( it->jumpTrue == it->next ) it->code = DVM_UNUSED; break;
 		default : if( it->code >= DVM_NULL ) it->code = DVM_UNUSED; break;
-		}
-		if( it->code == DVM_UNUSED || it->code == DVM_NOP ){
-			if( it->prev && it->prev->code == DVM_NOP ) it->prev->code = DVM_UNUSED;
 		}
 	}
 	for(it=self->vmcFirst,id=0; it; it=it->next){
@@ -4579,7 +4565,7 @@ static int DaoParser_SetupBranching( DaoParser *self )
 	DList_Clear( self->vmCodes );
 	for(it=self->vmcFirst; it; it=it->next){
 		/*
-		   DaoInode_Print( it );
+		   DaoInode_Print( it, it->index );
 		 */
 		switch( it->code ){
 		case DVM_NOP : break;

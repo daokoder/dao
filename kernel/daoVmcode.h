@@ -33,7 +33,6 @@
 
 enum DaoOpcode
 {
-	DVM_NOP   , /* No operation; */
 	DVM_DATA  , /* Create primitive data:  C = B;  A: data type id;  B: direct value; */
 	DVM_GETCL , /* Get local const:  C = A:::B;  B, index;  A=0, implicit;  A=1, explicit; */
 	DVM_GETCK , /* Get class const:  C = A:::B;  B, index;  A=0; */
@@ -411,7 +410,8 @@ typedef enum DaoOpcode DaoOpcode;
 */
 enum DaoOpcodeExtra
 {
-	DVM_LABEL = DVM_NULL + 1,
+	DVM_NOP = DVM_NULL + 1 ,
+	DVM_LABEL ,
 	DVM_LOAD2 ,
 	DVM_LOOP ,
 	DVM_BRANCH ,

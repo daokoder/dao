@@ -899,7 +899,6 @@ int DaoProcess_Start( DaoProcess *self )
 
 #ifndef WITHOUT_DIRECT_THREADING
 	static void *labels[] = {
-		&& LAB_NOP ,
 		&& LAB_DATA ,
 		&& LAB_GETCL , && LAB_GETCK , && LAB_GETCG ,
 		&& LAB_GETVH , && LAB_GETVS , && LAB_GETVO , && LAB_GETVK , && LAB_GETVG ,
@@ -1252,9 +1251,7 @@ CallEntry:
 	}
 
 	OPBEGIN(){
-		OPCASE( NOP ){
-			if( vmSpace->stopit ) goto FinishProcess;
-		}OPNEXT() OPCASE( DATA ){
+		OPCASE( DATA ){
 			if( vmc->a == DAO_NONE ){
 				GC_Assign( & locVars[vmc->c], dao_none_value );
 			}else{
