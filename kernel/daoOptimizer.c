@@ -6480,7 +6480,8 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 */
 DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoValue *p[], int n, int ip )
 {
-	int i, k, m, code, decolen, hasself = 0;
+	int i, k, m, callmode = 0;
+	int code, decolen, hasself = 0;
 	int parpass[DAO_MAX_PARAM];
 	DList *annotCodes, *added = NULL, *regmap = NULL;
 	DList *nested, *ptypes;
@@ -6492,7 +6493,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 
 	/* No in place decoration of overloaded function: */
 	if( self->overloads && ip ) return NULL;
-	if( self->attribs & (DAO_ROUT_CODESECT|DAO_ROUT_DECORATOR) ) return NULL;
+	if( self->attribs & DAO_ROUT_DECORATOR ) return NULL;
 	if( self->overloads ){
 		DList *routs = DList_New(0);
 		for(i=0; i<self->overloads->routines->size; i++){
@@ -6521,7 +6522,8 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		selfpar = (DaoValue*) obj;
 	}
 
-	decorator = DaoRoutine_ResolveX( decorator, selfpar, NULL, p, NULL, n, 0 );
+	if( self->attribs & DAO_ROUT_CODESECT ) callmode = DAO_CALL_BLOCK << 16;
+	decorator = DaoRoutine_ResolveX( decorator, selfpar, NULL, p, NULL, n, callmode );
 	if( decorator == NULL || decorator->type != DAO_ROUTINE ) return NULL;
 
 	if( (oldfn->attribs & DAO_ROUT_INVAR) && !(decorator->attribs & DAO_ROUT_INVAR) ) return NULL;
@@ -6554,6 +6556,10 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		DList_Delete( TS );
 	}
 	if( oldfn == NULL ) return NULL;
+	if( decorator->routType->cbtype ){
+		int m = DaoType_MatchTo( decorator->routType->cbtype, oldfn->routType->cbtype, NULL );
+		if( m < DAO_MT_EQ ) return NULL;
+	}
 
 	newfn = DaoRoutine_Copy( decorator, 1, 1, 1 );
 	added = DList_New( DAO_DATA_VMCODE );

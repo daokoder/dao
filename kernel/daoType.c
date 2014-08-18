@@ -137,6 +137,7 @@ void DaoType_Init()
 	dao_type_matrix[DAO_CDATA][DAO_CTYPE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_CDATA][DAO_CDATA] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_CDATA][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CODEBLOCK][DAO_CODEBLOCK] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_ROUTINE][DAO_ROUTINE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_PROCESS][DAO_ROUTINE] = DAO_MT_EXACT+1;
 }
@@ -735,6 +736,14 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( type && (type->tid == DAO_THT || type->tid == DAO_UDT) ){
 			return DaoType_MatchToTypeHolder( self, type, defs, binds );
 		}
+	}else if( mt == DAO_MT_LOOSE ){
+		if( self && type && self->tid == type->tid && self->tid == DAO_THT ){
+			if( DString_EQ( self->name, type->name ) ){
+				DNode *it1 = defs ? MAP_Find( defs, self ) : NULL;
+				DNode *it2 = defs ? MAP_Find( defs, type ) : NULL;
+				if( it1 == NULL && it2 == NULL ) return DAO_MT_EQ;
+			}
+		}
 	}else if( type->tid == DAO_INTERFACE ){
 		return DaoType_MatchInterface( self, (DaoInterface*) type->aux, binds );
 	}
@@ -860,10 +869,12 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( type->subtid == DAO_ROUTINES ) return 0;
 		if( self->name->chars[0] != type->name->chars[0] ) return 0; /* @routine */
 		if( type->aux == NULL ) return DAO_MT_SIM; /* match to "routine"; */
-		if( self->nested->size < type->nested->size ) return DAO_MT_NOT;
 		if( (self->cbtype == NULL) != (type->cbtype == NULL) ) return 0;
-		if( self->aux == NULL && type->aux ) return 0;
 		if( self->cbtype && DaoType_MatchTo( self->cbtype, type->cbtype, defs ) ==0 ) return 0;
+		/* Fall through; */
+	case DAO_CODEBLOCK :
+		if( self->nested->size < type->nested->size ) return DAO_MT_NOT;
+		if( self->aux == NULL && type->aux ) return 0;
 		/* self may have extra parameters, but they must have default values: */
 		for(i=type->nested->size,n=self->nested->size; i<n; i++){
 			it1 = self->nested->items.pType[i];

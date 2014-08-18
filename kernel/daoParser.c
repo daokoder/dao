@@ -2631,11 +2631,13 @@ static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 	}
 	params[0] = (DaoValue*) rout;
 	for(i=0; i<count; i++){
+		int callmode = 0;
 		DaoRoutine *decoFunc = self->decoFuncs->items.pRoutine[i];
 		DaoList *decoParam = (DaoList*) self->decoParams->items.pValue[i];
 		n = decoParam->value->size;
 		for(j=0; j<n; j++) params[j+1] = decoParam->value->items.pValue[j];
-		decoFunc = DaoRoutine_ResolveX( decoFunc, selfpar, NULL, params, NULL, n+1, 0 );
+		if( rout->attribs & DAO_ROUT_CODESECT ) callmode = DAO_CALL_BLOCK << 16;
+		decoFunc = DaoRoutine_ResolveX( decoFunc, selfpar, NULL, params, NULL, n+1, callmode );
 		if( decoFunc == NULL || DaoRoutine_Decorate( rout, decoFunc, params, n+1, 1 ) == NULL ){
 			DaoParser_Error( self, DAO_INVALID_FUNCTION_DECORATION, rout->routName );
 			return;
