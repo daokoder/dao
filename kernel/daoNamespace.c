@@ -1624,9 +1624,6 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		DString_AppendChars( mbs, "<any,any>" );
 		DList_Append( nstd, any );
 		DList_Append( nstd, any );
-	}else if( tid == DAO_TUPLE ){
-		DString_AppendChars( mbs, "<...>" );
-		attrib |= DAO_TYPE_VARIADIC;
 	}else if( tid == DAO_CLASS && pb ){
 		/*
 		// do not save the abstract type for class and object in namespace,

@@ -2142,7 +2142,8 @@ static int DaoRoutine_CheckType( DaoType *routType, DaoNamespace *ns, DaoType *s
 
 DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *routype, DList *routines, DList *partypes, int call, int *which, int *matched )
 {
-	DaoType *type, **types;
+	DString *name;
+	DaoType *type, *type2, **types;
 	DaoType *retype = (DaoType*) routype->aux;
 	DList *routypes = DList_New(0);
 	int parpass[DAO_MAX_PARAM];
@@ -2193,7 +2194,18 @@ DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *routype, DList *rou
 #endif
 	k = partypes->size;
 	types = partypes->items.pType;
-	return DaoNamespace_MakeType( NS, "routine", DAO_ROUTINE, (DaoValue*) retype, types, k );
+	type = DaoNamespace_MakeType( NS, "routine", DAO_ROUTINE, (DaoValue*) retype, types, k );
+	if( routype->cbtype == NULL ) return type;
+	name = DString_Copy( type->name );
+	DString_Append( name, routype->cbtype->name );
+	type2 = DaoNamespace_FindType( NS, name );
+	DString_Delete( name );
+	if( type2 ) return type2;
+	type = DaoType_Copy( type );
+	DString_Append( type->name, routype->cbtype->name );
+	GC_Assign( & type->cbtype, routype->cbtype );
+	DaoNamespace_AddType( NS, type->name, type );
+	return type;
 }
 
 void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
@@ -4632,7 +4644,7 @@ TryPushBlockReturnType:
 				break;
 			}/* XXX better warning */
 			tt = cbtype->nested->items.pType[j];
-			if( tt->tid == DAO_PAR_NAMED || tt->tid == DAO_PAR_DEFAULT ) tt = (DaoType*)tt->aux;
+			if( tt->tid >= DAO_PAR_NAMED && tt->tid <= DAO_PAR_VALIST ) tt = (DaoType*)tt->aux;
 			tt = DaoType_DefineTypes( tt, NS, defs2 );
 			GC_DecRC( types[k] );
 			types[k] = NULL;
@@ -4708,7 +4720,7 @@ int DaoInferencer_HandleClosure( DaoInferencer *self, DaoInode *inode, int i, DM
 	return 1;
 ErrorTyping: return DaoInferencer_Error( self, DTE_TYPE_NOT_MATCHING );
 }
-int DaoInferencer_HandleReturnYield( DaoInferencer *self, DaoInode *inode, DMap *defs )
+int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap *defs )
 {
 	int code = inode->code;
 	int opa = inode->a;
@@ -4722,6 +4734,7 @@ int DaoInferencer_HandleReturnYield( DaoInferencer *self, DaoInode *inode, DMap 
 	DaoType *at, *ct;
 	DaoInode *redef;
 	DaoType *ct2;
+
 	ct = rettypes->items.pType[ rettypes->size - 1 ];
 	ct2 = rettypes->items.pType[ rettypes->size - 2 ];
 	redef = rettypes->items.pInode[ rettypes->size - 3 ];
@@ -4754,7 +4767,8 @@ int DaoInferencer_HandleReturnYield( DaoInferencer *self, DaoInode *inode, DMap 
 	/*
 	   printf( "%p %i %s %s\n", self, routine->routType->nested->size, routine->routType->name->chars, ct?ct->name->chars:"" );
 	 */
-	if( code == DVM_YIELD && routine->routType->cbtype ){ /* yield in functional method: */
+	if( code == DVM_YIELD ){ /* yield in functional method: */
+		if( routine->routType->cbtype == NULL ) goto ErrorTyping;
 		if( vmc->b == 0 ){
 			if( routine->routType->cbtype->aux ) goto ErrorTyping;
 			return 1;
@@ -5853,7 +5867,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 
 		case DVM_RETURN :
 		case DVM_YIELD :
-			if( DaoInferencer_HandleReturnYield( self, inode, defs ) == 0 ) return 0;
+			if( DaoInferencer_HandleYieldReturn( self, inode, defs ) == 0 ) return 0;
 			break;
 
 		case DVM_DATA_I : case DVM_DATA_F : case DVM_DATA_D : case DVM_DATA_C :
@@ -6556,10 +6570,6 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		DList_Delete( TS );
 	}
 	if( oldfn == NULL ) return NULL;
-	if( decorator->routType->cbtype ){
-		int m = DaoType_MatchTo( decorator->routType->cbtype, oldfn->routType->cbtype, NULL );
-		if( m < DAO_MT_EQ ) return NULL;
-	}
 
 	newfn = DaoRoutine_Copy( decorator, 1, 1, 1 );
 	added = DList_New( DAO_DATA_VMCODE );
