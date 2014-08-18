@@ -2143,6 +2143,7 @@ static int DaoRoutine_CheckType( DaoType *routType, DaoNamespace *ns, DaoType *s
 DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *routype, DList *routines, DList *partypes, int call, int *which, int *matched )
 {
 	DaoType *type, **types;
+	DaoType *retype = (DaoType*) routype->aux;
 	DList *routypes = DList_New(0);
 	int parpass[DAO_MAX_PARAM];
 	int npar = partypes->size;
@@ -2182,9 +2183,17 @@ DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *routype, DList *rou
 		DList_Append( partypes, routype->nested->items.pType[j] );
 	}
 	if( routype->variadic ) DList_Append( partypes, DList_Back( routype->nested ) );
+#ifdef DAO_WITH_CONCURRENT
+	if( call == DVM_MCALL && partypes->items.pType[0]->tid == DAO_OBJECT ){
+		DaoClass *klass = (DaoClass*) partypes->items.pType[0]->aux;
+		if( klass->attribs & DAO_CLS_ASYNCHRONOUS ){
+			retype = DaoType_Specialize( dao_type_future, & retype, retype != NULL );
+		}
+	}
+#endif
 	k = partypes->size;
 	types = partypes->items.pType;
-	return DaoNamespace_MakeType( NS, "routine", DAO_ROUTINE, routype->aux, types, k );
+	return DaoNamespace_MakeType( NS, "routine", DAO_ROUTINE, (DaoValue*) retype, types, k );
 }
 
 void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );

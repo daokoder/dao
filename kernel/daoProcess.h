@@ -45,7 +45,7 @@
 
 struct DaoStackFrame
 {
-	int             entry;      /* entry code id; */
+	ushort_t        entry;      /* entry code id; */
 	ushort_t        state;      /* frame state; */
 	ushort_t        returning;  /* return register id; */
 	ushort_t        parCount;   /* the actual number of parameters passed in; */
@@ -54,17 +54,17 @@ struct DaoStackFrame
 	daoint          deferBase;  /* the offset on the DaoProcess::defers list; */
 	daoint          exceptBase; /* the offset on the DaoProcess::exceptions list; */
 
-	DaoVmCode      *codes; /* = routine->vmCodes->codes; */
-	DaoType       **types;
-	DaoType        *retype;
-	DaoRoutine     *routine;
-	DaoObject      *object;
-	DaoProcess     *outer;
+	DaoVmCode      *codes;    /* virtual machine codes for the routine; */
+	DaoType       **types;    /* types of the local variables in the routine; */
+	DaoType        *retype;   /* returning type for the called routine or function; */
+	DaoRoutine     *routine;  /* the called routine or function; */
+	DaoObject      *object;   /* the self object for the method call; */
+	DaoProcess     *outer;    /* the host process for code sections; */
 
-	DaoStackFrame  *active;
-	DaoStackFrame  *host; /* host frame of a frame for code section or defer block; */
-	DaoStackFrame  *prev;
-	DaoStackFrame  *next;
+	DaoStackFrame  *active;  /* active frame that corresponds to DaoProcess::activeXXX; */
+	DaoStackFrame  *host;    /* host frame for code sections or defer blocks; */
+	DaoStackFrame  *prev;    /* the previous frame in the stack; */
+	DaoStackFrame  *next;    /* the next frame in the stack; */
 };
 
 /*
