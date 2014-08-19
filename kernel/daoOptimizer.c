@@ -4781,12 +4781,15 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 	 */
 	if( code == DVM_YIELD ){ /* yield in functional method: */
 		if( routine->routType->cbtype == NULL ) goto ErrorTyping;
-		if( vmc->b == 0 ){
-			if( routine->routType->cbtype->aux ) goto ErrorTyping;
-			return 1;
-		}
 		tt = routine->routType->cbtype;
 		tp = tt->nested->items.pType;
+		if( vmc->b == 0 ){
+			if( tt->nested->size && tp[0]->tid != DAO_PAR_VALIST ) goto ErrorTyping;
+			ct = (DaoType*) tt->aux;
+			if( ct == NULL ) ct = dao_type_none;
+			DaoInferencer_UpdateType( self, opc, ct );
+			return 1;
+		}
 		at = ct = DaoNamespace_MakeType( NS, "tuple<>", DAO_TUPLE, NULL, NULL, 0 );
 		if( vmc->b ){
 			at = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, types+opa, vmc->b);
@@ -4795,7 +4798,7 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 			ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, tp, tt->nested->size );
 		}
 		if( DaoType_MatchTo( at, ct, defs2 ) == 0 ) goto ErrorTyping;
-		ct = (DaoType*) routine->routType->cbtype->aux;
+		ct = (DaoType*) tt->aux;
 		if( ct == NULL ) ct = dao_type_none;
 		if( ct ){
 			DaoInferencer_UpdateType( self, opc, ct );

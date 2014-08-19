@@ -669,8 +669,8 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_START ][ (unsigned) '~' ] = TOK_OP_TILDE;
 	daoLexTable[ TOK_START ][ (unsigned) '=' ] = TOK_OP_EQ;
 
-	/*  +=  -=  /=  *=  %=  &=  |=  ^=  !=  ==  <=  >=  */
-	for(i=TOK_OP_ADD; i<TOK_OP_GT; i++)
+	/*  +=  -=  /=  *=  %=  &=  |=  ^=  !=  ==  */
+	for(i=TOK_OP_ADD; i<=TOK_OP_EQ; i++)
 		daoLexTable[i][ (unsigned) '=' ] = i + (TOK_EQ_ADD - TOK_OP_ADD);
 	daoLexTable[ TOK_START ][ (unsigned) '>' ] = TOK_OP_GT;
 	daoLexTable[ TOK_OP_QUEST ][ (unsigned) '=' ] = TOK_END_TEQ; /* ?= */
