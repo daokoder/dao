@@ -934,7 +934,7 @@ routine ParseCode( source : string, snamespace="", lang="", fname : string="", i
 
 	source = source.change( ";%s*;[;%s]+", ";" );
 
-	allpats.sort{ X[1] < Y[1] };
+	allpats.sort{ [X,Y] X[1] < Y[1] };
 
 	for(var it in allpats ){
 		part = (string)it[2];

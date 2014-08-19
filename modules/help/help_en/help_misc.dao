@@ -370,8 +370,7 @@ CodeBlock { |x| puts "#{x}" }
 
 @[code]
 # Dao
-routine CodeBlock()
-[ int ] # parameter type for the block;
+routine CodeBlock() [ int ]  # parameter type for the block;
 {
     io.writeln( 'Starting CodeBlock' )
     yield( 123 )

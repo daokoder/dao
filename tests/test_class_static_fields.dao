@@ -57,7 +57,7 @@ class Klass
 obj = Klass::StaticMethod()
 @[test(code_01)]
 @[test(code_01)]
-{{At line}} .* {{Calling nonstatic method without instance}}
+{{At line}} .* {{Calling non-static method without instance}}
 @[test(code_01)]
 
 
@@ -65,7 +65,7 @@ obj = Klass::StaticMethod()
 
 
 ############################################################
-# Test overloading between static and nonstatic methods:
+# Test overloading between static and non-static methods:
 ############################################################
 @[test(code_01)]
 class Klass
@@ -78,7 +78,7 @@ class Klass
 obj = Klass::StaticMethod()
 @[test(code_01)]
 @[test(code_01)]
-{{At line}} .* {{Calling nonstatic method without instance}}
+{{At line}} .* {{Calling non-static method without instance}}
 @[test(code_01)]
 
 

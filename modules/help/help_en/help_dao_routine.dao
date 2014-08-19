@@ -259,9 +259,9 @@ returned = meth_name {
 	code_block
 }
 @[code]
-By default, the code section receives the parameters passed in by the method
-through implicitly defined variables named @[green]X@[green] and @[green]Y@[green].
-User can choose to use more meaningful names by,
+Some code section methods may pass parameters to the code sections that are
+attached to the calls, if the parameter names are specified and placed inside
+a pair of square brackets right at the beginning of the code sections.
 @[code]
 returned = meth_name { [index, item]
 	code_block
@@ -283,14 +283,14 @@ So this @[green]sort()@[green] can be use in the following ways,
 numlist = { 11, 44, 21, 32, 56, 67, 25 }
 
 # Sort all by ascend order:
-numlist.sort { X < Y }
+numlist.sort { [X,Y] X < Y }
 
 # Sort by descend order until the largest 3 items are sorted:
-numlist.sort( 3 ) { X > Y }
+numlist.sort( 3 ) { [A,B] A > B }
 # Now the first 3 items of the list is the largest 3 items;
 
 tuplist = { ( 2, 'ghi' ), ( 1, 'def' ), ( 2, 'abc' ), ( 1, 'abc' ) }
-tuplist.sort {
+tuplist.sort { [X,Y]
 	# First sort by the first items of the tuples;
 	if( X[0] != Y[0] ) return X[0] < Y[0];
 	# Then sort by the second items;
@@ -315,7 +315,7 @@ routine Test() [X :int => string] => string
 	return s;
 }
 
-Test {
+Test { [X]
 	io.writeln( 'In code section:', X );
 	return 'abc';
 }

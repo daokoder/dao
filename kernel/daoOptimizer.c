@@ -2275,6 +2275,8 @@ enum DaoTypingErrorCode
 	DTE_CALL_NON_INVAR ,
 	DTE_CALL_NOT_PERMIT ,
 	DTE_CALL_WITHOUT_INSTANCE ,
+	DTE_CALL_INVALID_SECTPARAM ,
+	DTE_CALL_INVALID_SECTION ,
 	DTE_ROUT_INVALID_RETURN ,
 	DTE_FIELD_NOT_PERMIT ,
 	DTE_FIELD_NOT_EXIST ,
@@ -2302,9 +2304,11 @@ static const char*const DaoTypingErrorString[] =
 	"Wrong container type",
 	"Data cannot be created",
 	"Invalid call",
-	"Call non-invar method inside invar method",
-	"Call not permitted",
-	"Calling nonstatic method without instance",
+	"Calling non-invar method inside invar method",
+	"Calling not permitted",
+	"Calling non-static method without instance",
+	"Calling with invalid code section parameter",
+	"Calling normal method with code section",
 	"Invalid return for the constructor or defer block",
 	"Member not permitted",
 	"Member not exist",
@@ -4650,11 +4654,8 @@ TryPushBlockReturnType:
 					break;
 				}
 			}else{
-				if( j < (sect->c & 0xf) ){
-					printf( "Unsupported code section parameter!\n" );
-				}
-				break;
-			} /* XXX better warning */
+				goto CallInvalidSectParam;
+			}
 			if( tt->attrib & DAO_TYPE_PARNAMED ) tt = (DaoType*)tt->aux;
 			GC_DecRC( types[k] );
 			types[k] = NULL;
@@ -4668,9 +4669,7 @@ TryPushBlockReturnType:
 		DList_Append( rettypes, tt );
 		DList_PushBack( self->typeMaps, defs2 );
 	}else if( sect && cbtype == NULL ){
-		if( NoCheckingType( types[opc] ) == 0 ){
-			printf( "Unused code section at line %i!\n", vmc->line );
-		}
+		if( NoCheckingType( types[opc] ) == 0 ) goto CallInvalidSection;
 		DList_Append( rettypes, inodes[inodes[i+1]->b] );
 		DList_Append( rettypes, inode );
 		DList_Append( rettypes, NULL );
@@ -4682,6 +4681,8 @@ InvParam : return DaoInferencer_Error( self, DTE_PARAM_ERROR );
 CallNonInvar : return DaoInferencer_Error( self, DTE_CALL_NON_INVAR );
 CallNotPermit : return DaoInferencer_Error( self, DTE_CALL_NOT_PERMIT );
 CallWithoutInst : return DaoInferencer_Error( self, DTE_CALL_WITHOUT_INSTANCE );
+CallInvalidSectParam : return DaoInferencer_Error( self, DTE_CALL_INVALID_SECTPARAM );
+CallInvalidSection: return DaoInferencer_Error( self, DTE_CALL_INVALID_SECTION );
 ErrorTyping: return DaoInferencer_Error( self, DTE_TYPE_NOT_MATCHING );
 }
 int DaoInferencer_HandleClosure( DaoInferencer *self, DaoInode *inode, int i, DMap *defs )

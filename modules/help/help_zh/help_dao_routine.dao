@@ -238,8 +238,8 @@ returned = meth_name {
 	code_block
 }
 @[code]
-缺省情况下，代码块可通过预先隐式定义的参数@[code]X@[code]和@[code]Y@[code]
-接受代码块方法传递进的参数值。用户可以显式声明更有意义的参数：
+代码块方法可通过用户指定的参数名，向代码块传递参数。
+这些参数名需要声明在代码块开头的方括号里。
 @[code]
 returned = meth_name { [index, item]
 	code_block
@@ -258,14 +258,14 @@ sort( self :list<@T>, k=0 ) [X :@T, Y :@T => int] => list<@T>
 numlist = { 11, 44, 21, 32, 56, 67, 25 }
 
 # 按升序排序:
-numlist.sort { X < Y }
+numlist.sort { [X,Y] X < Y }
 
 # 按降序排序，直到最大的三个值被排好:
-numlist.sort( 3 ) { X > Y }
+numlist.sort( 3 ) { [A,B] A > B }
 # 现在numlist的前三个元素即最大的三个元素;
 
 tuplist = { ( 2, 'ghi' ), ( 1, 'def' ), ( 2, 'abc' ), ( 1, 'abc' ) }
-tuplist.sort {
+tuplist.sort { [X,Y]
 	# 先按元组的第一个元素排序:
 	if( X[0] != Y[0] ) return X[0] < Y[0];
 	# 再按第二个元素排序:
@@ -289,7 +289,7 @@ routine Test() [X :int => string] => string
 	return s;
 }
 
-Test {
+Test { [X]
 	io.writeln( 'In code section:', X );
 	return 'abc';
 }

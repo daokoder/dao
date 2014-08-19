@@ -6550,12 +6550,6 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 				}
 				assert( sect->c < 16 && self->numSections < 14 );
 				sect->c |= (++self->numSections) << 4;
-				if( start == lb + 1 ){
-					DString X = DString_WrapChars( "X" );
-					DString Y = DString_WrapChars( "Y" );
-					MAP_Insert( varFunctional, & X, DaoParser_PushRegister( self ) );
-					MAP_Insert( varFunctional, & Y, DaoParser_PushRegister( self ) );
-				}
 				sect->b = self->regCount - regCount;
 				back = self->vmcLast;
 				regCount = self->regCount;
