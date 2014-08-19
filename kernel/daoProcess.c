@@ -2810,7 +2810,9 @@ DaoTuple* DaoProcess_PutTuple( DaoProcess *self, int size )
 	DaoTuple *tuple;
 
 	self->returned = self->activeCode->c;
-	if( type == NULL || type->tid != DAO_TUPLE ) return NULL;
+	if( type == NULL ) return NULL;
+	if( type->tid & DAO_ANY ) return DaoProcess_GetTuple( self, NULL, N, size > 0 );
+	if( type->tid != DAO_TUPLE ) return NULL;
 	if( size == 0 ) return DaoProcess_GetTuple( self, type, type->nested->size, 1 );
 	if( type->variadic == 0 && N != type->nested->size ) return NULL;
 	if( N < type->nested->size ) return NULL;

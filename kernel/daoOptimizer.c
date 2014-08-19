@@ -5316,8 +5316,12 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					if( (opb & 0x4) && at->invar == 0 ) at = DaoType_GetInvarType( at );
 					/* var declaration or normal move from constant: */
 					if( (opb & 0x4) == 0 && at->konst == 1 ) at = DaoType_GetBaseType( at );
+					if( ct == NULL || ct->tid == DAO_UDT || ct->tid == DAO_THT ){
+						GC_Assign( & types[opc], at );
+					}
+				}else{
+					DaoInferencer_UpdateType( self, opc, at );
 				}
-				DaoInferencer_UpdateType( self, opc, at );
 				k = DaoType_MatchTo( at, types[opc], defs );
 				ct = types[opc];
 
@@ -6014,10 +6018,13 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DVM_MOVE_CI : case DVM_MOVE_CF : case DVM_MOVE_CD :
 			TT1 = DAO_INTEGER + (code - DVM_MOVE_II) % 3;
 			TT3 = DAO_INTEGER + ((code - DVM_MOVE_II)/3) % 3;
-			ct = self->basicTypes[TT3];
-			if( (opb >> 1) == 0x3 && ct->invar == 0 ) ct = DaoType_GetInvarType( ct );
-			if( (opb & 0x4) == 0 && at->konst == 1 ) ct = DaoType_GetBaseType( ct );
-			DaoInferencer_UpdateType( self, opc, ct );
+			if( opb & 0x2 ){
+				if( ct == NULL || ct->tid == DAO_UDT || ct->tid == DAO_THT ){
+					GC_Assign( & types[opc], self->basicTypes[TT3] );
+				}
+			}else{
+				DaoInferencer_UpdateType( self, opc, self->basicTypes[TT3] );
+			}
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( types[opc], TT3 );
 			break;
@@ -6048,7 +6055,13 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DVM_MOVE_SS :
 			if( (opb >> 1) == 0x3 && at->invar == 0 ) at = DaoType_GetInvarType( at );
 			if( (opb & 0x4) == 0 && at->konst == 1 ) at = DaoType_GetBaseType( at );
-			DaoInferencer_UpdateType( self, opc, at );
+			if( opb & 0x2 ){
+				if( ct == NULL || ct->tid == DAO_UDT || ct->tid == DAO_THT ){
+					GC_Assign( & types[opc], at );
+				}
+			}else{
+				DaoInferencer_UpdateType( self, opc, at );
+			}
 			TT1 = TT3 = code == DVM_MOVE_SS ? DAO_STRING : DAO_COMPLEX;
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( types[opc], TT3 );
@@ -6061,7 +6074,13 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}
 			if( (opb >> 1) == 0x3 && at->invar == 0 ) at = DaoType_GetInvarType( at );
 			if( (opb & 0x4) == 0 && at->konst == 1 ) at = DaoType_GetBaseType( at );
-			DaoInferencer_UpdateType( self, opc, at );
+			if( opb & 0x2 ){
+				if( ct == NULL || ct->tid == DAO_UDT || ct->tid == DAO_THT ){
+					GC_Assign( & types[opc], at );
+				}
+			}else{
+				DaoInferencer_UpdateType( self, opc, at );
+			}
 			if( types[opc]->tid != DAO_ANY ){
 				if( DaoType_MatchTo( types[opc], at, NULL ) != DAO_MT_EQ ) goto NotMatch;
 			}

@@ -242,8 +242,8 @@ struct DaoException
 
 	DList     *callers;
 	DList     *lines;
-	DString    *info;
-	DaoValue   *data;
+	DString   *info;
+	DaoValue  *data;
 };
 
 DaoException* DaoException_New( DaoType *type );

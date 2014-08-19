@@ -2570,7 +2570,7 @@ static void DaoMap_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 	DaoMap *self = & self0->xMap;
 	if( pid->type == DAO_TUPLE && pid->xTuple.ctype == dao_type_for_iterator ){
 		DaoTuple *iter = & pid->xTuple;
-		DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
+		DaoTuple *tuple = DaoProcess_PutTuple( proc, 2 );
 		DNode *node = (DNode*) iter->values[1]->xCdata.data;
 		if( node == NULL || tuple->size != 2 ) return;
 		DaoValue_Copy( node->key.pValue, tuple->values );
