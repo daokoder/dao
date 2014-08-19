@@ -3041,6 +3041,7 @@ static int DaoParser_CompileRoutines( DaoParser *self )
 		}
 		error |= DaoParser_ParseRoutine( parser ) == 0;
 		if( parser->usingGlobal ) DList_Append( self->routReInferable, rout );
+		if( error ) DaoParser_PrintError( parser, 0, 0, NULL );
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 		if( error ) break;
 	}
@@ -6525,6 +6526,10 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 				varFunctional = DaoParser_CurrentSymbolTable( self );
 				start += 1;
 				regCount = self->regCount;
+				if( tokens[start]->name == DKEY_YIELD ){
+					while( tokens[start+1]->name == DTOK_SEMCO ) start += 1;
+					if( (start+1) == rb ) goto YieldSection;
+				}
 				if( tokens[start]->name == DTOK_LSB ){
 					int j, i = start + 1;
 					int rb2 = DaoParser_FindPairToken( self, DTOK_LSB, DTOK_RSB, start, rb );
@@ -6585,6 +6590,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 				}
 				self->isFunctional = isFunctional;
 
+YieldSection:
 				self->curToken = rb + 1;
 				DaoParser_DelScope( self, NULL );
 				DaoParser_AddCode( self, DVM_GOTO, 0, 0, DVM_SECT, rb, 0, 0 );

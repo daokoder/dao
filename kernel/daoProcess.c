@@ -604,36 +604,30 @@ void DaoProcess_InterceptReturnValue( DaoProcess *self )
 	}
 }
 
-static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
+static DaoStackFrame* DaoProcess_FindSectionFrame2( DaoProcess *self, DaoStackFrame *frame )
 {
-	DaoStackFrame *frame = self->topFrame;
-	DaoType *cbtype = NULL;
 	DaoVmCode *codes;
 
-	if( frame->routine ) cbtype = frame->routine->routType->cbtype;
-	if( cbtype == NULL ) return NULL;
+	if( frame->routine->routType->cbtype == NULL ) return NULL;
 	if( frame->host ){
 		/* yield inside code section should execute code section for the routine: */
 		frame = frame->host->prev;
 	}else{
-		frame = frame->active;
-	}
-	while( frame != self->firstFrame ){
-		DaoType *cbtype2 = NULL;
-		if( frame->routine ){
-			cbtype2 = frame->routine->routType->cbtype;
-			if( frame->routine->body ){
-				codes = frame->codes + frame->entry;
-				if( codes[0].code == DVM_GOTO && codes[1].code == DVM_SECT ) return frame;
-			}
-		}
-		if( cbtype2 == NULL || DaoType_MatchTo( cbtype, cbtype2, NULL ) == 0 ) break;
-		frame = frame->prev;
+		frame = frame->prev->active;
 	}
 	if( frame == NULL || frame->routine == NULL ) return NULL;
 	codes = frame->codes + frame->entry;
-	if( codes[0].code == DVM_GOTO && codes[1].code == DVM_SECT ) return frame;
+	if( codes[0].code == DVM_GOTO && codes[1].code == DVM_SECT ){
+		if( codes[2].code == DVM_GOTO && codes[2].b <= frame->entry ){ /* {yield} */
+			return DaoProcess_FindSectionFrame2( self, frame );
+		}
+		return frame;
+	}
 	return NULL;
+}
+static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
+{
+	return DaoProcess_FindSectionFrame2( self, self->topFrame );
 }
 DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 {

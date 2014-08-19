@@ -4637,17 +4637,28 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 TryPushBlockReturnType:
 	if( sect && cbtype && cbtype->nested ){
 		for(j=0, k=sect->a; j<sect->b; j++, k++){
-			if( j >= (int)cbtype->nested->size ){
+			if( j < (int)cbtype->nested->size ){
+				tt = cbtype->nested->items.pType[j];
+				if( tt->tid == DAO_PAR_VALIST ){
+					tt = (DaoType*) tt->aux;
+					for(; j<sect->b; j++, k++){
+						GC_DecRC( types[k] );
+						types[k] = NULL;
+						tt = DaoType_DefineTypes( tt, NS, defs2 );
+						DaoInferencer_UpdateType( self, k, tt );
+					}
+					break;
+				}
+			}else{
 				if( j < (sect->c & 0xf) ){
 					printf( "Unsupported code section parameter!\n" );
 				}
 				break;
-			}/* XXX better warning */
-			tt = cbtype->nested->items.pType[j];
-			if( tt->tid >= DAO_PAR_NAMED && tt->tid <= DAO_PAR_VALIST ) tt = (DaoType*)tt->aux;
-			tt = DaoType_DefineTypes( tt, NS, defs2 );
+			} /* XXX better warning */
+			if( tt->attrib & DAO_TYPE_PARNAMED ) tt = (DaoType*)tt->aux;
 			GC_DecRC( types[k] );
 			types[k] = NULL;
+			tt = DaoType_DefineTypes( tt, NS, defs2 );
 			DaoInferencer_UpdateType( self, k, tt );
 		}
 		tt = DaoType_DefineTypes( (DaoType*)cbtype->aux, NS, defs2 );
@@ -4775,8 +4786,13 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 		}
 		tt = routine->routType->cbtype;
 		tp = tt->nested->items.pType;
-		at = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, types+opa, vmc->b);
-		ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, tp, tt->nested->size );
+		at = ct = DaoNamespace_MakeType( NS, "tuple<>", DAO_TUPLE, NULL, NULL, 0 );
+		if( vmc->b ){
+			at = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, types+opa, vmc->b);
+		}
+		if( tt->nested->size ){
+			ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, tp, tt->nested->size );
+		}
 		if( DaoType_MatchTo( at, ct, defs2 ) == 0 ) goto ErrorTyping;
 		ct = (DaoType*) routine->routType->cbtype->aux;
 		if( ct == NULL ) ct = dao_type_none;
