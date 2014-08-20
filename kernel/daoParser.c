@@ -1806,6 +1806,27 @@ WrongForm:
 	DaoType_Delete( type );
 	return NULL;
 }
+static DaoType* DaoParser_MakeCSRoutineType( DaoParser *self, DaoType *type, DaoType *cbtype )
+{
+	DaoType *tt;
+	DaoNamespace *ns = self->nameSpace;
+	DString *name = DaoParser_GetString( self );
+
+	DString_Assign( name, type->name );
+	DString_Append( name, cbtype->name );
+	tt = DaoNamespace_FindType( ns, name );
+	if( tt ){
+		type = tt;
+	}else{
+		type = DaoType_Copy( type );
+		//type->attrib = 0; // XXX
+		type->attrib |= DAO_TYPE_CODESECT;
+		DString_Assign( type->name, name );
+		DList_Append( ns->auxData, type );
+		GC_Assign( & type->cbtype, cbtype );
+	}
+	return type;
+}
 static DaoType* DaoParser_ParseType2( DaoParser *self, int start, int end, int *newpos, DList *types )
 {
 	DaoType *type = NULL;
@@ -1959,24 +1980,20 @@ WrongType:
 			if( node && node->value.pInt == 0 ) type->attrib |= DAO_TYPE_SELF;
 		}
 		if( tid == DAO_ROUTINE && gt < end && tokens[gt+1]->type == DTOK_LSB ){
-			DaoType *tt, *cbtype = DaoParser_ParseCodeBlockType( self, gt+1, newpos );
+			DaoType *cbtype = DaoParser_ParseCodeBlockType( self, gt+1, newpos );
 			DString *name = DaoParser_GetString( self );
 			if( cbtype == NULL ) goto InvalidTypeForm;
-			DString_Assign( name, type->name );
-			DString_Append( name, cbtype->name );
-			tt = DaoNamespace_FindType( ns, name );
-			if( tt ){
-				type = tt;
-			}else{
-				type = DaoType_Copy( type );
-				//type->attrib = 0; // XXX
-				type->attrib |= DAO_TYPE_CODESECT;
-				DString_Assign( type->name, name );
-				DList_Append( ns->auxData, type );
-			}
+			type = DaoParser_MakeCSRoutineType( self, type, cbtype );
 		}
 DoneGenericType:
 		DList_Erase( types, count, count2 );
+	}else if( tokens[start]->name == DKEY_ROUTINE ){
+		type = DaoNamespace_MakeType( ns, "routine", DAO_ROUTINE, NULL, NULL, 0  );
+		if( start < end && tokens[start+1]->type == DTOK_LSB ){
+			DaoType *cbtype = DaoParser_ParseCodeBlockType( self, start+1, newpos );
+			if( cbtype == NULL ) goto InvalidTypeForm;
+			type = DaoParser_MakeCSRoutineType( self, type, cbtype );
+		}
 	}else if( tokname > 0 && tokname < 100 ){
 		DString *name = DString_New();
 		DString_AppendChars( name, "dao::" );
@@ -1992,7 +2009,7 @@ DoneGenericType:
 		goto InvalidTypeForm;
 	}
 #if 0
-	printf( "%s %i\n", type->name->chars, *newpos );
+	printf( "%s %i %p\n", type->name->chars, *newpos, type->cbtype );
 #endif
 	return type;
 InvalidTypeName:
@@ -2631,13 +2648,11 @@ static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 	}
 	params[0] = (DaoValue*) rout;
 	for(i=0; i<count; i++){
-		int callmode = 0;
 		DaoRoutine *decoFunc = self->decoFuncs->items.pRoutine[i];
 		DaoList *decoParam = (DaoList*) self->decoParams->items.pValue[i];
 		n = decoParam->value->size;
 		for(j=0; j<n; j++) params[j+1] = decoParam->value->items.pValue[j];
-		if( rout->attribs & DAO_ROUT_CODESECT ) callmode = DAO_CALL_BLOCK << 16;
-		decoFunc = DaoRoutine_ResolveX( decoFunc, selfpar, NULL, params, NULL, n+1, callmode );
+		decoFunc = DaoRoutine_ResolveX( decoFunc, selfpar, NULL, params, NULL, n+1, 0 );
 		if( decoFunc == NULL || DaoRoutine_Decorate( rout, decoFunc, params, n+1, 1 ) == NULL ){
 			DaoParser_Error( self, DAO_INVALID_FUNCTION_DECORATION, rout->routName );
 			return;
@@ -6528,10 +6543,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 				varFunctional = DaoParser_CurrentSymbolTable( self );
 				start += 1;
 				regCount = self->regCount;
-				if( tokens[start]->name == DKEY_YIELD ){
-					while( tokens[start+1]->name == DTOK_SEMCO ) start += 1;
-					if( (start+1) == rb ) goto YieldSection;
-				}
+				if( tokens[start]->name == DTOK_DOTS && (start+1) == rb ) goto YieldSection;
 				if( tokens[start]->name == DTOK_LSB ){
 					int j, i = start + 1;
 					int rb2 = DaoParser_FindPairToken( self, DTOK_LSB, DTOK_RSB, start, rb );

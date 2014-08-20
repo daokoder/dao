@@ -1462,7 +1462,7 @@ static DaoFuncItem numarMeths[] =
 
 	{ DaoARRAY_Map,
 		"map( invar self: array<@T> )"
-			"[item: @T, I: int, J: int, K: int, L: int, M: int => @V] => array<@V>"
+			"[item: @T, I: int, J: int, ... : int => @V] => array<@V>"
 		/*
 		// Map the array to a new array such that each element in the original array
 		// is mapped to a new value in the new array according to code section.
@@ -1473,7 +1473,7 @@ static DaoFuncItem numarMeths[] =
 	},
 	{ DaoARRAY_Reduce,
 		"reduce( invar self: array<@T> )"
-			"[item: @T, res: @T, I: int, J: int, K: int, L: int, M: int => @T] => @T"
+			"[item: @T, res: @T, I: int, J: int, ... : int => @T] => @T"
 		/*
 		// Reduce/fold the elements in the array according to the evaluation result
 		// of the code section.
@@ -1484,7 +1484,7 @@ static DaoFuncItem numarMeths[] =
 	},
 	{ DaoARRAY_Reduce,
 		"reduce( invar self: array<@T>, init: @V )"
-			"[item: @T, res: @V, I: int, J: int, K: int, L: int, M: int => @V] => @V"
+			"[item: @T, res: @V, I: int, J: int, ... : int => @V] => @V"
 		/*
 		// Reduce/fold the elements in the array according the evaluation result
 		// of the code section.
@@ -1494,22 +1494,20 @@ static DaoFuncItem numarMeths[] =
 	},
 	{ DaoARRAY_Collect,
 		"collect( invar self: array<@T> )"
-			"[item: @T, I: int, J: int, K: int, L: int, M: int => none|@V] => list<@V>"
+			"[item: @T, I: int, J: int, ... : int => none|@V] => list<@V>"
 		/*
 		// Iterate over the array, and execute the code section for each element,
 		// then collect the non "none" values to produce and return a list.
 		*/
 	},
 	{ DaoARRAY_Iterate,
-		"iterate( invar self: array<@T> )"
-			"[item: @T, I: int, J: int, K: int, L: int, M: int]"
+		"iterate( invar self: array<@T> ) [item: @T, I: int, J: int, ... : int]"
 		/*
 		// Iterate over the array, and execute the code section for each element.
 		*/
 	},
 	{ DaoARRAY_Apply,
-		"apply( self: array<@T> )"
-			"[item: @T, I: int, J: int, K: int, L: int, M: int => @T] => array<@T>"
+		"apply( self: array<@T> ) [item: @T, I: int, J: int, ... : int => @T] => array<@T>"
 		/*
 		// Iterate over the array, and execute the code section for each element.
 		// And substitute the elements with the values returned by the code section.
@@ -2411,7 +2409,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	DaoArray *array = NULL;
 	DaoArray *self2 = (DaoArray*) p[0];
 	DaoVmCode *sect = NULL;
-	DaoValue **idval = proc->activeValues + sect->a + 1;
+	DaoValue **idval = NULL;
 	DaoValue *elem, *res = NULL;
 	DaoArray *self = DaoArray_GetWorkArray( self2 );
 	daoint start = DaoArray_GetWorkStart( self2 );
@@ -2449,6 +2447,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	sect = DaoProcess_InitCodeSection( proc );
 	if( sect == NULL ) return;
 	vdim = sect->b - 1;
+	idval = proc->activeValues + sect->a + 1;
 	entry = proc->topFrame->entry;
 	for(j=0; j<vdim; j++) idval[j]->xInteger.value = 0;
 	for(i=first; i<N; ++i){

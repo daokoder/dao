@@ -2277,6 +2277,7 @@ enum DaoTypingErrorCode
 	DTE_CALL_WITHOUT_INSTANCE ,
 	DTE_CALL_INVALID_SECTPARAM ,
 	DTE_CALL_INVALID_SECTION ,
+	DTE_ROUT_INVALID_YIELD ,
 	DTE_ROUT_INVALID_RETURN ,
 	DTE_FIELD_NOT_PERMIT ,
 	DTE_FIELD_NOT_EXIST ,
@@ -2309,6 +2310,7 @@ static const char*const DaoTypingErrorString[] =
 	"Calling non-static method without instance",
 	"Calling with invalid code section parameter",
 	"Calling normal method with code section",
+	"Invalid yield in ordinary routine",
 	"Invalid return for the constructor or defer block",
 	"Member not permitted",
 	"Member not exist",
@@ -4434,9 +4436,11 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	if( rout == NULL && at->aux == NULL ){ /* "routine" type: */
 		/* DAO_CALL_INIT: mandatory passing the implicit self parameter. */
 		if( !(vmc->b & DAO_CALL_INIT) ) vmc->b |= DAO_CALL_NOSELF;
+		cbtype = at->cbtype;
 		ct = dao_type_any;
 		ctchecked = 1;
 	}else if( rout == NULL ){
+		cbtype = at->cbtype;
 		if( !(vmc->b & DAO_CALL_INIT) ) vmc->b |= DAO_CALL_NOSELF;
 		if( DaoRoutine_CheckType( at, NS, NULL, tp, argc, codemode, 0 ) ==0 ){
 			DaoRoutine_CheckError( NS, NULL, at, NULL, tp, argc, codemode, errors );
@@ -4449,7 +4453,6 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 			AssertTypeMatching( ct, types[opc], defs );
 			goto TryPushBlockReturnType;
 		}
-		cbtype = at->cbtype;
 		DaoRoutine_CheckType( at, NS, NULL, tp, argc, codemode, 1 );
 		ct = types[opa];
 	}else{
@@ -4769,12 +4772,23 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 	}
 #endif
 
-	/*
-	   printf( "%p %i %s %s\n", self, routine->routType->nested->size, routine->routType->name->chars, ct?ct->name->chars:"" );
-	 */
+
+#if 0
+	printf( "%p %i %s %s\n", self, routine->routType->nested->size, routine->routType->name->chars, ct?ct->name->chars:"" );
+#endif
 	if( code == DVM_YIELD ){ /* yield in functional method: */
-		if( routine->routType->cbtype == NULL ) goto ErrorTyping;
-		tt = routine->routType->cbtype;
+		tt = NULL;
+		if( routine->routType->cbtype ){
+			tt = routine->routType->cbtype;
+		}else if( routine->attribs & DAO_ROUT_DECORATOR ){
+			if( routine->routType->nested->size == 0 ) goto InvalidYield;
+			tt = routine->routType->nested->items.pType[0];
+			if( tt->tid == DAO_PAR_NAMED ) tt = (DaoType*) tt->aux;
+			if( tt == NULL || tt->tid != DAO_ROUTINE || tt->cbtype == NULL ) goto InvalidYield;
+			tt = tt->cbtype;
+		}else{
+			goto InvalidYield;
+		}
 		tp = tt->nested->items.pType;
 		if( vmc->b == 0 ){
 			if( tt->nested->size && tp[0]->tid != DAO_PAR_VALIST ) goto ErrorTyping;
@@ -4868,6 +4882,7 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 	}
 	return 1;
 ErrorTyping: return DaoInferencer_Error( self, DTE_TYPE_NOT_MATCHING );
+InvalidYield: return DaoInferencer_Error( self, DTE_ROUT_INVALID_YIELD );
 InvalidReturn: return DaoInferencer_Error( self, DTE_ROUT_INVALID_RETURN );
 }
 
@@ -6526,7 +6541,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 */
 DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoValue *p[], int n, int ip )
 {
-	int i, k, m, callmode = 0;
+	int i, k, m;
 	int code, decolen, hasself = 0;
 	int parpass[DAO_MAX_PARAM];
 	DList *annotCodes, *added = NULL, *regmap = NULL;
@@ -6568,8 +6583,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		selfpar = (DaoValue*) obj;
 	}
 
-	if( self->attribs & DAO_ROUT_CODESECT ) callmode = DAO_CALL_BLOCK << 16;
-	decorator = DaoRoutine_ResolveX( decorator, selfpar, NULL, p, NULL, n, callmode );
+	decorator = DaoRoutine_ResolveX( decorator, selfpar, NULL, p, NULL, n, 0 );
 	if( decorator == NULL || decorator->type != DAO_ROUTINE ) return NULL;
 
 	if( (oldfn->attribs & DAO_ROUT_INVAR) && !(decorator->attribs & DAO_ROUT_INVAR) ) return NULL;
