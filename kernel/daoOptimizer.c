@@ -4630,13 +4630,6 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	if( ct == NULL ) ct = DaoNamespace_GetType( NS, dao_none_value );
 	DaoInferencer_UpdateType( self, opc, ct );
 	AssertTypeMatching( ct, types[opc], defs );
-	/*
-	   if( rout && strcmp( rout->routName->chars, "values" ) ==0 ){
-	   DaoVmCodeX_Print( *vmc, NULL );
-	   printf( "ct = %s, %s %s\n", ct->name->chars, self->routName->chars, routine->routType->name->chars );
-	   printf( "%p  %s\n", types[opc], types[opc] ? types[opc]->name->chars : "----------" );
-	   }
-	 */
 
 TryPushBlockReturnType:
 	if( sect && cbtype && cbtype->nested ){

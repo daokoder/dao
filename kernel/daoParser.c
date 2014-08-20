@@ -3182,7 +3182,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( tokens[start]->name == DTOK_COLON ){
 		/* class AA : NS::BB { } */
 		int async = DAO_CLS_ASYNCHRONOUS;
-		DaoClass *super = NULL;
+		DaoClass *base = NULL;
 		DaoType *sutype = DaoParser_ParseType( self, start+1, to, & start, NULL );
 		if( start < 0 ) goto ErrorClassDefinition;
 		ename = & tokens[start-1]->string;
@@ -3191,15 +3191,17 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			if( sutype == NULL ) ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
 			goto ErrorClassDefinition;
 		}
-		super = (DaoClass*) sutype->aux;
-		if( super == NULL ){
+		base = (DaoClass*) sutype->aux;
+		if( base == NULL ){
 			ec = DAO_SYMBOL_POSSIBLY_UNDEFINED;
 			goto ErrorClassDefinition;
 		}
-		if( (super->attribs & async) != (klass->attribs & async) ) goto ErrorClassDefinition;
-		/* Add a reference to its super classes: */
-		DaoClass_AddSuperClass( klass, (DaoValue*) super );
-	}/* end parsing super classes */
+		if( base->type == DAO_CLASS && (base->attribs & async) != (klass->attribs & async) ){
+			goto ErrorClassDefinition;
+		}
+		/* Add a reference to its base classes: */
+		DaoClass_AddSuperClass( klass, (DaoValue*) base );
+	} /* end parsing base classes */
 	if( tokens[start]->name == DKEY_FOR ){
 		ec = DAO_INVALID_DECO_PATTERN;
 		if( klass->className->chars[0] != '@' ) goto ErrorClassDefinition;

@@ -2328,11 +2328,12 @@ static void DaoType_SpecMethod( DaoType *self, DaoTypeKernel *kernel, DaoRoutine
 {
 	DaoNamespace *nspace = self->kernel->nspace;
 	DaoRoutine *rout = DaoRoutine_Copy( method, 1, 0, 0 );
+
+	if( method->attribs & DAO_ROUT_INITOR ) DString_Assign( rout->routName, self->name );
 	DaoType_InitTypeDefines( self, rout, defs );
 	DaoRoutine_Finalize( rout, self, defs );
 	DaoMethods_Insert( kernel->methods, rout, nspace, self );
 	if( method->attribs & DAO_ROUT_INITOR ){
-		DString_Assign( rout->routName, self->name );
 		if( kernel->initors == NULL ){
 			kernel->initors = DaoRoutines_New( nspace, self, NULL );
 			GC_IncRC( kernel->initors );
