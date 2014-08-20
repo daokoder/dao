@@ -479,10 +479,10 @@ static void DaoStream_ReadLines( DaoStream *self, DaoList *list, DaoProcess *pro
 {
 	DaoValue *res;
 	DaoString *line;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
 	daoint i = 0;
 
-	if( sect == NULL || DaoProcess_PushSectionFrame( proc ) == NULL ){
+	if( sect == NULL ){
 		line = DaoString_New();
 		while( (count == 0 || (i++) < count) && DaoStream_ReadLine( self, line->value ) ){
 			if( chop ) DString_Chop( line->value, 0 );

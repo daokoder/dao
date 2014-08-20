@@ -447,8 +447,13 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 
 	if( caller->activeCode->b & DAO_CALL_BLOCK ){
 		DaoValue **calleeValues, **callerValues = caller->activeValues;
+		DaoStackFrame *sectFrame = DaoProcess_FindSectionFrame( caller );
 		DaoStackFrame *callerFrame = caller->topFrame->prev;
 		DaoVmCode *vmc, *end, *sect;
+		if( sectFrame != callerFrame ){
+			DaoProcess_RaiseError( caller, NULL, "Invalid code section" );
+			return;
+		}
 		if( caller->topFrame->routine->body ){
 			DaoProcess_PushRoutine( callee, callerFrame->routine, callerFrame->object );
 			callerValues = caller->stackValues + callerFrame->stackBase;
@@ -457,9 +462,9 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 		}
 		calleeValues = callee->stackValues + callee->topFrame->stackBase;
 		callee->activeCode = caller->activeCode;
-		vmc = callerFrame->routine->body->vmCodes->data.codes + callerFrame->entry - 1;
-		end = callerFrame->routine->body->vmCodes->data.codes + vmc[1].b;
-		sect = DaoGetSectionCode( vmc );
+		vmc = callerFrame->routine->body->vmCodes->data.codes + callerFrame->entry;
+		end = callerFrame->routine->body->vmCodes->data.codes + vmc->b;
+		sect = vmc + 1;
 		for(vmc=sect; vmc!=end; vmc++){
 			int i = -1, code = vmc->code;
 			if( code == DVM_GETVH || (code >= DVM_GETVH_I && code <= DVM_GETVH_C) ){
@@ -487,12 +492,11 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 		DaoProcess_PushFunction( callee, caller->topFrame->routine );
 	}
 	if( caller->activeCode->b & DAO_CALL_BLOCK ){
-		callee->topFrame->outer = callee;
 		callee->topFrame->host = callee->topFrame;
 		callee->topFrame->returning = -1;
 	}
 
-	DaoCallServer_TryInit( mainVmSpace );;
+	DaoCallServer_TryInit( mainVmSpace );
 	event = DaoCallServer_MakeEvent();
 	DaoTaskEvent_Init( event, DAO_EVENT_RESUME_TASKLET, DAO_EVENT_RESUME, future, NULL );
 

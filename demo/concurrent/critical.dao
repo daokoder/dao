@@ -1,7 +1,7 @@
 
 
 count = 0;
-mt.iterate( 10, 4 ){
+mt.iterate( 10, 4 ){ [X,Y]
 	io.writeln( "outside of critical section", Y );
 	mt.critical{[] # avoid redeclaring Y implicitly
 		io.writeln( "in critical section", Y );

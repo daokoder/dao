@@ -1919,10 +1919,10 @@ static void QuickSort( DaoValue *data[], daoint first, daoint last, daoint part,
 }
 static void DaoLIST_Sort( DaoProcess *proc, DaoValue *p[], int npar )
 {
+	DaoVmCode *sect;
 	DaoList *list = & p[0]->xList;
 	DaoValue **items = list->value->items.pValue;
 	daoint part = p[1 + (p[1]->type== DAO_ENUM)]->xInteger.value;
-	DaoStackFrame *frame;
 	daoint N;
 
 	DaoProcess_PutValue( proc, p[0] );
@@ -1930,15 +1930,14 @@ static void DaoLIST_Sort( DaoProcess *proc, DaoValue *p[], int npar )
 	if( N < 2 ) return;
 	if( part ==0 ) part = N;
 
-	frame = DaoProcess_PushSectionFrame( proc );
-	if( frame && p[1]->type != DAO_ENUM ){
+	sect = DaoProcess_InitCodeSection( proc );
+	if( sect && p[1]->type != DAO_ENUM ){
 		int entry = proc->topFrame->entry;
-		DaoVmCode *vmc = proc->topFrame->codes + entry - 1;
-		if( vmc->b < 2 ){
+		if( sect->b < 2 ){
 			DaoProcess_RaiseError( proc, NULL, "Two few code section parameters" );
 			return;
 		}
-		PartialQuickSort( proc, entry, vmc->a, vmc->a + 1, items, 0, N-1, part );
+		PartialQuickSort( proc, entry, sect->a, sect->a + 1, items, 0, N-1, part );
 		DaoProcess_PopFrame( proc );
 		return;
 	}

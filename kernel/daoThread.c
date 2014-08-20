@@ -459,7 +459,7 @@ static void DaoMT_InitProcess( DaoProcess *proto, DaoProcess *clone )
 	DaoProcess_PushRoutine( clone, proto->activeRoutine, proto->activeObject );
 	clone->activeCode = proto->activeCode;
 	DaoProcess_PushFunction( clone, proto->topFrame->routine );
-	DaoProcess_PushSectionFrame( clone );
+	DaoProcess_InitCodeSection( clone );
 	clone->topFrame->outer = proto;
 	clone->topFrame->host = proto->topFrame->prev;
 	clone->topFrame->returning = -1;
@@ -667,6 +667,7 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 	DaoList *list = NULL;
 	DaoArray *array = NULL;
 	DaoVmCode *sect = NULL;
+	DaoStackFrame *frame = DaoProcess_FindSectionFrame( proc );
 	int i, entry, threads = P[1]->xInteger.value;
 	daoint index = -1, status = 0, joined = 0;
 	DNode *node = NULL;
@@ -684,6 +685,10 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 	case DVM_FUNCT_FIND : DaoProcess_PutValue( proc, dao_none_value ); break;
 	}
 	if( threads <= 0 ) threads = 2;
+	if( frame != proc->topFrame->prev ){
+		DaoProcess_RaiseError( proc, NULL, "Invalid code section" );
+		return;
+	}
 	sect = DaoProcess_InitCodeSection( proc );
 	if( sect == NULL ) return;
 	if( list ){

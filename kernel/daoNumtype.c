@@ -2410,7 +2410,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	DaoList *list = NULL;
 	DaoArray *array = NULL;
 	DaoArray *self2 = (DaoArray*) p[0];
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoVmCode *sect = NULL;
 	DaoValue **idval = proc->activeValues + sect->a + 1;
 	DaoValue *elem, *res = NULL;
 	DaoArray *self = DaoArray_GetWorkArray( self2 );
@@ -2422,7 +2422,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	daoint i, id, id2, first = 0;
 	int j, D = self->ndim;
 	int isvec = (D == 2 && (dims[0] ==1 || dims[1] == 1));
-	int entry, vdim = sect->b - 1;
+	int entry, vdim;
 	int stackBase = proc->topFrame->active->stackBase;
 	daoint *count = NULL;
 
@@ -2446,8 +2446,9 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	case DVM_FUNCT_COLLECT : list = DaoProcess_PutList( proc ); break;
 	case DVM_FUNCT_APPLY : DaoProcess_PutValue( proc, (DaoValue*)self ); break;
 	}
+	sect = DaoProcess_InitCodeSection( proc );
 	if( sect == NULL ) return;
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
+	vdim = sect->b - 1;
 	entry = proc->topFrame->entry;
 	for(j=0; j<vdim; j++) idval[j]->xInteger.value = 0;
 	for(i=first; i<N; ++i){

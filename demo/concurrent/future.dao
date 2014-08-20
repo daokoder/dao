@@ -1,6 +1,6 @@
 load sys;
 
-class Test
+class Test !!
 {
 	routine Meth(){
 		for( i = 1 : 5 ){
@@ -10,9 +10,9 @@ class Test
 	}
 }
 
-t = Test() !!
+t = Test()
 
-mt.iterate( 4 ) {
+mt.iterate( 4 ) { [X]
 	io.writeln( "=========", "X"+(string)X );
 	f = mt.start {
 		for( i = 1 : 5 ){
@@ -25,7 +25,7 @@ mt.iterate( 4 ) {
 }
 
 
-mt.iterate( 4 ) {
+mt.iterate( 4 ) { [X]
 	io.writeln( "=========", X );
 	t.Meth() #.wait( 5 ); # ERROR: cannot block inside code section methods;
 	io.writeln( "---------", X );

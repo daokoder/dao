@@ -219,6 +219,7 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 		GC_DecRC( frame->routine );
 		frame->routine = NULL;
 	}
+	frame->process = self;
 	frame->host = NULL;
 	frame->stackBase = self->stackTop;
 	frame->varCount = size;
@@ -625,11 +626,11 @@ static DaoStackFrame* DaoProcess_FindSectionFrame2( DaoProcess *self, DaoStackFr
 	}
 	return NULL;
 }
-static DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
+DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self )
 {
 	return DaoProcess_FindSectionFrame2( self, self->topFrame );
 }
-DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
+static DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 {
 	DaoStackFrame *next, *frame = DaoProcess_FindSectionFrame( self );
 	DaoProfiler *profiler = self->vmSpace->profiler;
@@ -660,9 +661,27 @@ DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 }
 DaoVmCode* DaoProcess_InitCodeSection( DaoProcess *self )
 {
-	DaoVmCode *sect = DaoGetSectionCode( self->activeCode );
+	DaoType *cbtype = self->topFrame->routine->routType->cbtype;
+	DaoStackFrame *topFrame = self->topFrame;
 	DaoStackFrame *frame = DaoProcess_PushSectionFrame( self );
-	if( sect == NULL || frame == NULL ){
+	DaoVmCode *sect = NULL;
+	if( frame && cbtype ){
+		sect = frame->codes + frame->entry + 1;
+		if( sect->b > cbtype->nested->size ){
+			if( cbtype->nested->size > 0 ){
+				DaoType *type = (DaoType*) DList_Back( cbtype->nested );
+				if( type->tid != DAO_PAR_VALIST ) frame = NULL;
+			}else{
+				frame = NULL;
+			}
+		}
+	}
+	if( frame && frame->process != self ){
+		DaoProcess_PopFrames( self, topFrame );
+		DaoProcess_RaiseError( self, NULL, "Invalid code section from different process" );
+		return NULL;
+	}else if( frame == NULL ){
+		DaoProcess_PopFrames( self, topFrame );
 		DaoProcess_RaiseError( self, NULL, "Invalid code section" );
 		return NULL;
 	}
@@ -850,7 +869,7 @@ int DaoProcess_Start( DaoProcess *self )
 	DaoProfiler *profiler = self->vmSpace->profiler;
 	DaoUserHandler *handler = self->vmSpace->userHandler;
 	DaoVmSpace *vmSpace = self->vmSpace;
-	DaoVmCode *vmcBase, *vmc2, *vmc = NULL;
+	DaoVmCode *vmcBase, *sect, *vmc = NULL;
 	DaoStackFrame *topFrame;
 	DaoRoutine *routine;
 	DaoClass *host = NULL;
@@ -1069,6 +1088,7 @@ int DaoProcess_Start( DaoProcess *self )
 	rollback = self->topFrame->prev;
 	base = self->topFrame;
 	if( self->status == DAO_PROCESS_SUSPENDED ) base = self->firstFrame->next;
+	if( self->topFrame->state & DVM_FRAME_KEEP ) rollback = self->topFrame;
 
 CallEntry:
 
@@ -1487,19 +1507,16 @@ CallEntry:
 		}OPNEXT() OPCASE( YIELD ){
 			self->activeCode = vmc;
 			if( routine->routType->cbtype == NULL ){
-				DaoProcess_RaiseError( self, NULL, "Not in code section methods." );
+				DaoProcess_RaiseError( self, NULL, "Not yielding in code section methods." );
 				goto CheckException;
 			}
-			if( DaoProcess_PushSectionFrame( self ) == NULL ){
-				printf( "No code section is found\n" ); //XXX
-				goto FinishProcess;
-			}
+			sect = DaoProcess_InitCodeSection( self );
+			if( sect == NULL ) goto FinishProcess;
 			self->topFrame->state = DVM_FRAME_SECT;
-			vmc2 = self->topFrame->codes + self->topFrame->entry - 1;
 			locVars = self->stackValues + topFrame->stackBase;
-			for(i=0; i<vmc2->b; i++){
+			for(i=0; i<sect->b; i++){
 				if( i >= vmc->b ) break;
-				if( DaoProcess_SetValue( self, vmc2->a + i, locVars[vmc->a + i] ) == 0 ){
+				if( DaoProcess_SetValue( self, sect->a + i, locVars[vmc->a + i] ) == 0 ){
 					DaoProcess_RaiseError( self, "Param", "invalid yield" );
 				}
 			}

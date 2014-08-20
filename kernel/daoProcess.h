@@ -59,7 +59,8 @@ struct DaoStackFrame
 	DaoType        *retype;   /* returning type for the called routine or function; */
 	DaoRoutine     *routine;  /* the called routine or function; */
 	DaoObject      *object;   /* the self object for the method call; */
-	DaoProcess     *outer;    /* the host process for code sections; */
+	DaoProcess     *process;  /* the host process for the frame; */
+	DaoProcess     *outer;    /* the host process for the outer code section; */
 
 	DaoStackFrame  *active;  /* active frame that corresponds to DaoProcess::activeXXX; */
 	DaoStackFrame  *host;    /* host frame for code sections or defer blocks; */
@@ -139,7 +140,7 @@ DAO_DLL DaoProcess* DaoProcess_New( DaoVmSpace *vms );
 DAO_DLL void DaoProcess_Delete( DaoProcess *self );
 
 DAO_DLL DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size );
-DAO_DLL DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self );
+DAO_DLL DaoStackFrame* DaoProcess_FindSectionFrame( DaoProcess *self );
 DAO_DLL DaoVmCode* DaoProcess_InitCodeSection( DaoProcess *self );
 DAO_DLL void DaoProcess_PopFrame( DaoProcess *self );
 DAO_DLL void DaoProcess_PopFrames( DaoProcess *self, DaoStackFrame *rollback );
