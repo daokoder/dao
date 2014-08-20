@@ -6496,7 +6496,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 				DaoInode *jump, *label, *sect, *call;
 				DMap *varFunctional;
 				int isFunctional, opa = result.reg, opb = -1;
-				int lb = start, regCount;
+				int lb = start, regCount, regX = -1, regY = -1;
 				int rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
 				if( rb < 0 ) return error;
 
@@ -6544,12 +6544,18 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 					if( i < rb2 ){
 						DaoParser_PopRegisters( self, self->regCount - regCount );
 					}else{
-						sect->c = self->regCount - regCount;
 						start = rb2 + 1;
 					}
 				}
-				assert( sect->c < 16 && self->numSections < 14 );
-				sect->c |= (++self->numSections) << 4;
+				sect->c = ++self->numSections;
+				if( start == lb + 1 ){
+					DString X = DString_WrapChars( "X" );
+					DString Y = DString_WrapChars( "Y" );
+					regX = DaoParser_PushRegister( self );
+					regY = DaoParser_PushRegister( self );
+					MAP_Insert( varFunctional, & X, regX );
+					MAP_Insert( varFunctional, & Y, regY );
+				}
 				sect->b = self->regCount - regCount;
 				back = self->vmcLast;
 				regCount = self->regCount;
@@ -6583,6 +6589,26 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 					DaoParser_AddCode( self, DVM_RETURN, 0, 0, DVM_SECT, first, 0, rb );
 				}
 				self->isFunctional = isFunctional;
+				if( regX >= 0 ){
+					DaoInode *inode = sect->next;
+					while( inode ){
+						DaoVmCode operands = DaoVmCode_CheckOperands( (DaoVmCode*) inode );
+						ushort_t *bools = & operands.a;
+						ushort_t *regs = & inode->a;
+						int k;
+
+						inode = inode->next;
+						for(k=0; k<3; ++k){
+							if( bools[k] && regs[k] == regX ) regX = -1;
+							if( bools[k] && regs[k] == regY ) regY = -1;
+						}
+						if( regX < 0 && regY < 0 ) break;
+					}
+					if( regY >= 0 ){
+						sect->b -= 1;
+						if( regX >= 0 ) sect->b -= 1;
+					}
+				}
 
 YieldSection:
 				self->curToken = rb + 1;
