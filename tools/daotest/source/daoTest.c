@@ -37,6 +37,7 @@
 #include"daoProcess.h"
 #include"daoStream.h"
 #include"daoVmspace.h"
+#include"daoTasklet.h"
 
 
 
@@ -230,6 +231,7 @@ int main( int argc, char **argv )
 				DString_Reset( output, 0 );
 				DaoNamespace_AddParent( ns2, ns );
 				DaoProcess_Eval( proc, ns2, codes->chars );
+				DaoCallServer_Join();
 				DString_Trim( output, 1, 1, 0 );
 				DString_Trim( result, 1, 1, 0 );
 				if( output->size == 0 && result->size != 0 ){

@@ -6726,6 +6726,30 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	}
 
 	DaoRoutine_UpdateRegister( newfn, regmap );
+	for(i=0,m=annotCodes->size; i<m; i++){
+		vmc = annotCodes->items.pVmc[i];
+		if( vmc->code == DVM_CALL && (vmc->b & DAO_CALL_DECSUB) ){
+			if( vmc->b & DAO_CALL_BLOCK ){
+				DaoVmCodeX *sect = annotCodes->items.pVmc[i+2];
+				DaoVmCodeX *first = annotCodes->items.pVmc[i+3];
+				DaoType *cbtype = oldfn->routType->cbtype;
+				DaoType **cbtypes = cbtype->nested->items.pType;
+				int count = cbtype->nested->size;
+				if( sect->b != 0 && sect->c == 0 ){ /* [...] or [... as name]; */
+					if( first->a != sect->a || first->b != sect->b ) first = NULL;
+					if( count && cbtypes[count-1]->tid == DAO_PAR_VALIST ){
+						sect->b = DAO_MAX_PARAM;
+						sect->c = count - 1;
+					}else{
+						sect->b = sect->c = count;
+					}
+					if( first != NULL ) first->b = sect->b;
+					newfn->body->vmCodes->data.codes[i+2] = *(DaoVmCode*) sect;
+					newfn->body->vmCodes->data.codes[i+3] = *(DaoVmCode*) first;
+				}
+			}
+		}
+	}
 	if( DaoRoutine_DoTypeInference( newfn, 0 ) ==  0 ) goto ErrorDecorator;
 
 	for(i=0,m=annotCodes->size; i<m; i++){

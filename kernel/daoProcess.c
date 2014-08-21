@@ -226,6 +226,7 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 	frame->entry = 0;
 	frame->state = 0;
 	frame->returning = -1;
+	frame->parCount = 0;
 	frame->deferBase = self->defers->size;
 	frame->exceptBase = self->exceptions->size;
 	if( self->topFrame->routine && self->topFrame->routine->body && self->activeCode ){
