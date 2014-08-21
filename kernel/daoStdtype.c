@@ -763,7 +763,7 @@ static void DaoSTR_New2( DaoProcess *proc, DaoValue *p[], int N )
 		return;
 	}
 	if( size == 0 ) return;
-	sect = DaoProcess_InitCodeSection( proc );
+	sect = DaoProcess_InitCodeSection( proc, 1 );
 	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
 	for(i=0; i<size; i++){
@@ -1112,7 +1112,7 @@ static void DaoSTR_Scan( DaoProcess *proc, DaoValue *p[], int N )
 		return;
 	}
 
-	sect = DaoProcess_InitCodeSection( proc );
+	sect = DaoProcess_InitCodeSection( proc, 3 );
 	if( sect == NULL ) return;
 
 	denum.etype = DaoNamespace_MakeEnumType( proc->activeNamespace, "unmatched,matched" );
@@ -1178,7 +1178,7 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
 	DaoValue *chr = (DaoValue*)(void*)&chint;
-	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 2 );
 	DString *data = self->value;
 	daoint unit = p[1]->xEnum.value;
 	daoint entry, i, N = data->size;
@@ -1581,7 +1581,7 @@ static void DaoLIST_New( DaoProcess *proc, DaoValue *p[], int N )
 		return;
 	}
 	if( size == 0 ) return;
-	sect = DaoProcess_InitCodeSection( proc );
+	sect = DaoProcess_InitCodeSection( proc, 1 + fold );
 	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
 	for(i=fold; i<size; i++){
@@ -1930,7 +1930,7 @@ static void DaoLIST_Sort( DaoProcess *proc, DaoValue *p[], int npar )
 	if( N < 2 ) return;
 	if( part ==0 ) part = N;
 
-	sect = DaoProcess_InitCodeSection( proc );
+	sect = DaoProcess_InitCodeSection( proc, 2 );
 	if( sect && p[1]->type != DAO_ENUM ){
 		int entry = proc->topFrame->entry;
 		if( sect->b < 2 ){
@@ -1952,7 +1952,7 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue **items = list->value->items.pValue;
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 2 );
 	daoint entry, i, j, N = list->value->size;
 	int popped = 0;
 	switch( funct ){
@@ -2025,7 +2025,7 @@ static void DaoLIST_Reduce( DaoProcess *proc, DaoValue *p[], int npar, int which
 		DaoProcess_PutValue( proc, res );
 		return;
 	}
-	sect = DaoProcess_InitCodeSection( proc );
+	sect = DaoProcess_InitCodeSection( proc, 3 );
 	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
 	for(j=first; j<N; j++){
@@ -2061,7 +2061,7 @@ static void DaoLIST_Functional2( DaoProcess *proc, DaoValue *p[], int npar, int 
 	DaoValue **items = list->value->items.pValue;
 	DaoValue **items2 = list2->value->items.pValue;
 	DaoValue *index = (DaoValue*)(void*)&idint;
-	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 3 );
 	daoint entry, i, j, N = list->value->size;
 	int direction = p[2]->xEnum.value;
 	int hashing = p[2]->xInteger.value;
@@ -2117,7 +2117,7 @@ static void DaoLIST_Associate( DaoProcess *proc, DaoValue *p[], int npar )
 	DaoValue **items = list->value->items.pValue;
 	DaoValue *index = (DaoValue*)(void*)&idint;
 	DaoMap *map = DaoProcess_PutMap( proc, p[1]->xInteger.value );
-	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 2 );
 	daoint entry = proc->topFrame->entry;
 	daoint i, N = list->value->size;
 
@@ -2681,7 +2681,7 @@ static void DaoMAP_New( DaoProcess *proc, DaoValue *p[], int N )
 		return;
 	}
 	if( size == 0 ) return;
-	sect = DaoProcess_InitCodeSection( proc );
+	sect = DaoProcess_InitCodeSection( proc, 1 );
 	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
 	for(i=0; i<size; i++){
@@ -2821,7 +2821,7 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 	DaoList *list = NULL;
 	DaoTuple *tuple = NULL;
 	DaoType *type = self->ctype;
-	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 2 );
 	DaoValue *res;
 	DNode *node;
 	ushort_t entry;

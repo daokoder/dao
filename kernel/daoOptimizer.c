@@ -4650,7 +4650,8 @@ TryPushBlockReturnType:
 					break;
 				}
 			}else{
-				goto CallInvalidSectParam;
+				if( j < sect->c ) goto CallInvalidSectParam;
+				break;
 			}
 			if( tt->attrib & DAO_TYPE_PARNAMED ) tt = (DaoType*)tt->aux;
 			GC_DecRC( types[k] );
@@ -4914,7 +4915,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	int TT1, TT2, TT3, TT6;
 
 	if( self->inodes->size == 0 ) return 1;
-	/* DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream ); */
+	/*
+	DaoRoutine_PrintCode( routine, routine->nameSpace->vmSpace->errorStream );
+	*/
 
 	catype = dao_array_types[DAO_COMPLEX];
 
@@ -5633,12 +5636,27 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}
 		case DVM_TUPLE :
 			{
+				ct = NULL;
 				if( opa == 0 && opb == routine->parCount ){
 					k = routine->routType->nested->size;
 					tp = routine->routType->nested->items.pType;
 					ct = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, tp, k );
 					DaoInferencer_UpdateType( self, opc, ct );
-				}else{
+				}else if( i && inodes[i-1]->code == DVM_SECT ){
+					DaoInode *sect = inodes[i-1];
+					if( vmc->a == sect->a && vmc->b == sect->b ){
+						DaoType *t, *its[DAO_MAX_PARAM];
+						int count = sect->c;
+						memcpy( its, types + opa, sect->c * sizeof(DaoType*) );
+						if( opb > sect->c ){
+							t = DaoNamespace_MakeType( NS, "...", DAO_PAR_VALIST, 0, 0 ,0 );
+							its[count++] = t;
+						}
+						ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, 0, its, count );
+						DaoInferencer_UpdateType( self, opc, ct );
+					}
+				}
+				if( ct == NULL ){
 					ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, 0, types + opa, opb );
 					DaoInferencer_UpdateType( self, opc, ct );
 					for(j=0; j<opb; ++j){

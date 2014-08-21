@@ -659,7 +659,7 @@ static DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 	if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 0 );
 	return frame;
 }
-DaoVmCode* DaoProcess_InitCodeSection( DaoProcess *self )
+DaoVmCode* DaoProcess_InitCodeSection( DaoProcess *self, int argcount )
 {
 	DaoType *cbtype = self->topFrame->routine->routType->cbtype;
 	DaoStackFrame *topFrame = self->topFrame;
@@ -667,12 +667,14 @@ DaoVmCode* DaoProcess_InitCodeSection( DaoProcess *self )
 	DaoVmCode *sect = NULL;
 	if( frame && cbtype ){
 		sect = frame->codes + frame->entry + 1;
-		if( sect->b > cbtype->nested->size ){
-			if( cbtype->nested->size > 0 ){
-				DaoType *type = (DaoType*) DList_Back( cbtype->nested );
-				if( type->tid != DAO_PAR_VALIST ) frame = NULL;
-			}else{
-				frame = NULL;
+		if( sect->b == sect->c ){ /* no variadic destination argument list: */
+			if( sect->b > cbtype->nested->size ){
+				if( cbtype->nested->size > 0 ){
+					DaoType *type = (DaoType*) DList_Back( cbtype->nested );
+					if( type->tid != DAO_PAR_VALIST ) frame = NULL;
+				}else{
+					frame = NULL;
+				}
 			}
 		}
 	}
@@ -685,6 +687,7 @@ DaoVmCode* DaoProcess_InitCodeSection( DaoProcess *self )
 		DaoProcess_RaiseError( self, NULL, "Invalid code section" );
 		return NULL;
 	}
+	self->topFrame->parCount = argcount < sect->b ? argcount : sect->b;
 	return sect;
 }
 DAO_DLL void DaoProcess_FlushStdStreams( DaoProcess *self );
@@ -1510,7 +1513,7 @@ CallEntry:
 				DaoProcess_RaiseError( self, NULL, "Not yielding in code section methods." );
 				goto CheckException;
 			}
-			sect = DaoProcess_InitCodeSection( self );
+			sect = DaoProcess_InitCodeSection( self, vmc->b );
 			if( sect == NULL ) goto FinishProcess;
 			self->topFrame->state = DVM_FRAME_SECT;
 			locVars = self->stackValues + topFrame->stackBase;
@@ -2938,11 +2941,13 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 	DaoTuple *tuple;
 	DaoType *tp, *ct = self->activeTypes[ vmc->c ];
 	DaoType *routype = self->activeRoutine->routType;
+	DaoVmCode *sect = vmc - 1;
 	int argcount = self->topFrame->parCount;
 	int parcount = routype->nested->size - routype->variadic;
 	int parcount2 = argcount < parcount ? parcount : argcount; /* including defaults; */
 	int argstuple = vmc->a == 0 && vmc->b == self->activeRoutine->parCount;
-	int i, count = argstuple ? parcount2 : vmc->b;
+	int argstuple2 = sect->code == DVM_SECT && vmc->a == sect->a && vmc->b == sect->b;
+	int i, count = argstuple ? parcount2 : (argstuple2 ? argcount : vmc->b);
 
 	self->activeCode = vmc;
 	tuple = DaoProcess_GetTuple( self, ct && ct->variadic == 0 ? ct : NULL, count, 0 );
@@ -2980,7 +2985,7 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 		}
 		tuple->ctype = ct;
 		GC_IncRC( ct );
-	}else if( argstuple ){
+	}else if( argstuple || argstuple2 ){
 		GC_Assign( & tuple->ctype, ct );
 		for(i=0; i<count; i++) DaoTuple_SetItem( tuple, self->activeValues[vmc->a + i], i );
 	}else{

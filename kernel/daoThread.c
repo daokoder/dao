@@ -454,12 +454,12 @@ void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )
 	default : break;
 	}
 }
-static void DaoMT_InitProcess( DaoProcess *proto, DaoProcess *clone )
+static void DaoMT_InitProcess( DaoProcess *proto, DaoProcess *clone, int argcount )
 {
 	DaoProcess_PushRoutine( clone, proto->activeRoutine, proto->activeObject );
 	clone->activeCode = proto->activeCode;
 	DaoProcess_PushFunction( clone, proto->topFrame->routine );
-	DaoProcess_InitCodeSection( clone );
+	DaoProcess_InitCodeSection( clone, argcount );
 	clone->topFrame->outer = proto;
 	clone->topFrame->host = proto->topFrame->prev;
 	clone->topFrame->returning = -1;
@@ -475,7 +475,7 @@ static void DaoMT_RunIterateFunctional( void *p )
 	DaoVmCode *sect = self->sect;
 	daoint i, n = self->param->xInteger.value;
 
-	DaoMT_InitProcess( self->proto, clone );
+	DaoMT_InitProcess( self->proto, clone, 2 );
 	tidint.value = self->first;
 	for(i=self->first; i<n; i+=self->step){
 		idint.value = i;
@@ -501,7 +501,7 @@ static void DaoMT_RunListFunctional( void *p )
 	DaoValue **items = list->value->items.pValue;
 	daoint i, n = list->value->size;
 
-	DaoMT_InitProcess( self->proto, clone );
+	DaoMT_InitProcess( self->proto, clone, 3 );
 	tidint.value = self->first;
 	for(i=self->first; i<n; i+=self->step){
 		idint.value = i;
@@ -541,7 +541,7 @@ static void DaoMT_RunMapFunctional( void *p )
 	DNode *node = NULL;
 	daoint i = 0;
 
-	DaoMT_InitProcess( self->proto, clone );
+	DaoMT_InitProcess( self->proto, clone, 3 );
 	tidint.value = self->first;
 	type = type && type->nested->size > 1 ? type->nested->items.pType[1] : NULL;
 	for(node=DMap_First( map->value ); node; node=DMap_Next(map->value, node) ){
@@ -599,7 +599,7 @@ static void DaoMT_RunArrayFunctional( void *p )
 	int isvec = (D == 2 && (dims[0] ==1 || dims[1] == 1));
 	int stackBase, vdim = sect->b - 1;
 
-	DaoMT_InitProcess( self->proto, clone );
+	DaoMT_InitProcess( self->proto, clone, array->ndim + 1 );
 	tidint.xInteger.value = self->first;
 
 	stackBase = clone->topFrame->active->stackBase;
@@ -689,7 +689,7 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		DaoProcess_RaiseError( proc, NULL, "Invalid code section" );
 		return;
 	}
-	sect = DaoProcess_InitCodeSection( proc );
+	sect = DaoProcess_InitCodeSection( proc, 0 );
 	if( sect == NULL ) return;
 	if( list ){
 		DList_Clear( list->value );
@@ -773,14 +773,14 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 	int entry, nop = proc->activeCode[1].code == DVM_NOP;
 
 	DaoProcess_PutValue( proc, (DaoValue*) future );
-	sect = DaoProcess_InitCodeSection( proc );
+	sect = DaoProcess_InitCodeSection( proc, 0 );
 	if( sect == NULL ) return;
 
 	entry = proc->topFrame->entry;
 	end = proc->activeRoutine->body->vmCodes->data.codes + proc->activeCode[nop+1].b;
 	clone = DaoVmSpace_AcquireProcess( proc->vmSpace );
 	DaoProcess_PopFrame( proc );
-	DaoMT_InitProcess( proc, clone );
+	DaoMT_InitProcess( proc, clone, 0 );
 	clone->topFrame->entry = entry;
 	/*
 	// Use the cloned process instead of the parent process, in case that
@@ -892,7 +892,7 @@ static void DaoMT_Critical( DaoProcess *proc, DaoValue *p[], int n )
 	void *key;
 	DNode *it;
 	DMap *cache = (DMap*) DaoProcess_GetAuxData( proc, DaoMT_ProcMutexCache );
-	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 0 );
 	DaoRoutine *routine = proc->activeRoutine;
 
 	if( sect == NULL ) return;

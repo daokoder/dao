@@ -927,7 +927,7 @@ static void DaoARRAY_New( DaoProcess *proc, DaoValue *p[], int N )
 		return;
 	}
 	if( size == 0 ) return;
-	sect = DaoProcess_InitCodeSection( proc );
+	sect = DaoProcess_InitCodeSection( proc, 1 ); // XXX
 	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
 	for(i=0; i<size; i++){
@@ -2444,7 +2444,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	case DVM_FUNCT_COLLECT : list = DaoProcess_PutList( proc ); break;
 	case DVM_FUNCT_APPLY : DaoProcess_PutValue( proc, (DaoValue*)self ); break;
 	}
-	sect = DaoProcess_InitCodeSection( proc );
+	sect = DaoProcess_InitCodeSection( proc, self->ndim + 1 );
 	if( sect == NULL ) return;
 	vdim = sect->b - 1;
 	idval = proc->activeValues + sect->a + 1;

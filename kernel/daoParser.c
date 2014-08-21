@@ -284,10 +284,9 @@ void DaoParser_Reset( DaoParser *self )
 	self->isClassBody = 0;
 	self->isInterBody = 0;
 	self->permission = 0;
-	self->isFunctional = 0;
+	self->isSection = 0;
 	self->needConst = 0;
 	self->usingGlobal = 0;
-	self->numSections = 0;
 
 	self->curToken = 0;
 	self->regCount = 0;
@@ -4163,7 +4162,7 @@ DecoratorError:
 					start = end;
 				}
 			}
-			if( self->isFunctional && N > 1 ){
+			if( self->isSection && N > 1 ){
 				int tup = DaoParser_PushRegister( self );
 				DaoParser_AddCode( self, DVM_TUPLE, reg, N, tup, start, 0, end );
 				DaoParser_AddCode( self, DVM_RETURN, tup, 1, 0, start, 0, end );
@@ -6510,9 +6509,10 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 			}
 		case DTOK_LCB :
 			{
+				DMap *varSection;
+				DaoToken *argname = NULL;
 				DaoInode *jump, *label, *sect, *call;
-				DMap *varFunctional;
-				int isFunctional, opa = result.reg, opb = -1;
+				int isSection, opa = result.reg, opb = -1;
 				int lb = start, regCount, regX = -1, regY = -1;
 				int rb = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, start, end );
 				if( rb < 0 ) return error;
@@ -6534,47 +6534,67 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 				call->b |= DAO_CALL_BLOCK;
 
 				if( DaoParser_PushOuterRegOffset( self, start, rb ) == 0 )
-					goto InvalidFunctional;
+					goto InvalidSection;
 
 				jump = DaoParser_AddCode( self, DVM_GOTO, 0, 0, DVM_SECT, start+1, 0, 0 );
 				sect = DaoParser_AddCode( self, DVM_SECT, self->regCount, 0,0, start+1, 0,0 );
 				label = jump->jumpTrue = DaoParser_AddCode( self, DVM_LABEL, 0,0,0,rb,0,0 );
 				DaoParser_AddScope( self, DVM_LBRA, NULL );
-				varFunctional = DaoParser_CurrentSymbolTable( self );
+				varSection = DaoParser_CurrentSymbolTable( self );
 				start += 1;
 				regCount = self->regCount;
 				if( tokens[start]->name == DTOK_DOTS && (start+1) == rb ) goto YieldSection;
 				if( tokens[start]->name == DTOK_LSB ){
 					int j, i = start + 1;
 					int rb2 = DaoParser_FindPairToken( self, DTOK_LSB, DTOK_RSB, start, rb );
-					if( rb2 < 0 ) goto InvalidFunctional;
+					if( rb2 < 0 ) goto InvalidSection;
 					while( i < rb2 ){
+						if( tokens[i]->type == DTOK_DOTS ){
+							int count = self->regCount - regCount;
+							DaoParser_PushRegisters( self, DAO_MAX_PARAM - count );
+							i += 1;
+							break;
+						}
 						if( tokens[i]->type != DTOK_IDENTIFIER ) break;
+						sect->c += 1;
 						j = DaoParser_PushRegister( self );
-						MAP_Insert( varFunctional, & tokens[i]->string, j );
+						MAP_Insert( varSection, & tokens[i]->string, j );
 						if( tokens[++i]->name != DTOK_COMMA ) break;
 						i += 1;
 					}
+					if( tokens[i]->name == DKEY_AS ){
+						if( tokens[i+1]->type != DTOK_IDENTIFIER ) goto InvalidSection;
+						argname = tokens[i+1];
+						i += 2;
+					}
 					if( i < rb2 ){
 						DaoParser_PopRegisters( self, self->regCount - regCount );
+						goto InvalidSection;
 					}else{
 						start = rb2 + 1;
 					}
 				}
-				sect->c = ++self->numSections;
 				if( start == lb + 1 ){
 					DString X = DString_WrapChars( "X" );
 					DString Y = DString_WrapChars( "Y" );
 					regX = DaoParser_PushRegister( self );
 					regY = DaoParser_PushRegister( self );
-					MAP_Insert( varFunctional, & X, regX );
-					MAP_Insert( varFunctional, & Y, regY );
+					MAP_Insert( varSection, & X, regX );
+					MAP_Insert( varSection, & Y, regY );
+					sect->c = 2;
 				}
 				sect->b = self->regCount - regCount;
+
+				if( argname ){
+					int i = start - 3;
+					int reg = DaoParser_DeclareVariable( self, argname, 0, NULL );
+					DaoParser_AddCode( self, DVM_TUPLE, regCount, sect->b, reg, i, i, i+1 );
+				}
+
 				back = self->vmcLast;
 				regCount = self->regCount;
-				isFunctional = self->isFunctional;
-				self->isFunctional = 1;
+				isSection = self->isSection;
+				self->isSection = 1;
 				self->curToken = start;
 				enode = DaoParser_ParseExpression2( self, 0, 0, 0 );
 				if( enode.reg >= 0 && self->curToken == rb ){
@@ -6591,7 +6611,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 						self->returnType = NULL;
 						if( DaoParser_ParseCodes( self, start, rb-1 ) == 0 ){
 							self->returnType = oldret;
-							goto InvalidFunctional;
+							goto InvalidSection;
 						}
 						self->returnType = oldret;
 					}
@@ -6602,7 +6622,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 					int first = self->vmcLast->first;
 					DaoParser_AddCode( self, DVM_RETURN, 0, 0, DVM_SECT, first, 0, rb );
 				}
-				self->isFunctional = isFunctional;
+				self->isSection = isSection;
 				if( regX >= 0 ){
 					DaoInode *inode = sect->next;
 					while( inode ){
@@ -6622,6 +6642,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 						sect->b -= 1;
 						if( regX >= 0 ) sect->b -= 1;
 					}
+					sect->c = sect->b;
 				}
 
 YieldSection:
@@ -6638,7 +6659,7 @@ YieldSection:
 				result.update = call;
 				self->curToken = rb + 1;
 				break;
-InvalidFunctional:
+InvalidSection:
 				self->curToken = rb + 1;
 				enode.reg = -1;
 				return enode;

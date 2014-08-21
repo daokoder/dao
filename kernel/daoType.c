@@ -816,7 +816,9 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		break;
 	case DAO_TUPLE :
 		/* Source tuple type must contain at least as many item as the target tuple: */
-		if( self->nested->size < type->nested->size ) return DAO_MT_NOT;
+		if( (self->nested->size - self->variadic) < (type->nested->size - type->variadic) ){
+			return DAO_MT_NOT;
+		}
 		if( self->nested->size > type->nested->size && type->variadic == 0 ) return DAO_MT_NOT;
 		/* Compare non-variadic part of the tuple: */
 		for(i=0,n=type->nested->size-(type->variadic!=0); i<n; i++){

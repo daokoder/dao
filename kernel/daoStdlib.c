@@ -255,7 +255,7 @@ static void DaoSTD_Error3( DaoProcess *proc, DaoValue *p[], int n )
 }
 static void DaoSTD_Exec( DaoProcess *proc, DaoValue *p[], int n )
 {
-	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 0 );
 	int ecount = proc->exceptions->size;
 
 	if( sect == NULL ) return;
@@ -272,7 +272,7 @@ static void DaoSTD_Exec( DaoProcess *proc, DaoValue *p[], int n )
 }
 static void DaoSTD_Try( DaoProcess *proc, DaoValue *p[], int n )
 {
-	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 0 );
 	int i, ecount = proc->exceptions->size;
 
 	if( sect == NULL ) return;

@@ -479,7 +479,7 @@ static void DaoStream_ReadLines( DaoStream *self, DaoList *list, DaoProcess *pro
 {
 	DaoValue *res;
 	DaoString *line;
-	DaoVmCode *sect = DaoProcess_InitCodeSection( proc );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 1 );
 	daoint i = 0;
 
 	if( sect == NULL ){
@@ -491,10 +491,12 @@ static void DaoStream_ReadLines( DaoStream *self, DaoList *list, DaoProcess *pro
 		DaoString_Delete( line );
 	}else{
 		ushort_t entry = proc->topFrame->entry;
-		DaoString tmp = {DAO_STRING,0,0,0,1,NULL};
-		DString tmp2 = DString_WrapChars( "" );
-		tmp.value = & tmp2;
-		line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
+		if( sect->b ){
+			DaoString tmp = {DAO_STRING,0,0,0,1,NULL};
+			DString tmp2 = DString_WrapChars( "" );
+			tmp.value = & tmp2;
+			line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
+		}
 		while( (count == 0 || (i++) < count) && DaoStream_ReadLine( self, line->value ) ){
 			if( chop ) DString_Chop( line->value, 0 );
 			proc->topFrame->entry = entry;

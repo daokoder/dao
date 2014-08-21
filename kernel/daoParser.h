@@ -103,7 +103,7 @@ struct DaoParser
 	char  isClassBody;
 	char  isInterBody;
 	char  permission;
-	char  isFunctional;
+	char  isSection;
 	char  usingGlobal;
 	char  invarArg;
 	char  invarDecoArg;
