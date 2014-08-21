@@ -1508,18 +1508,34 @@ CallEntry:
 			if( vmSpace->stopit ) goto FinishProcess;
 			goto FinishCall;
 		}OPNEXT() OPCASE( YIELD ){
+			int i, opb = vmc->b & 0xff;
+			DaoValue **args = locVars + vmc->a;
+			DaoValue *buffer[ DAO_MAX_PARAM ];
+
 			self->activeCode = vmc;
 			if( routine->routType->cbtype == NULL ){
 				DaoProcess_RaiseError( self, NULL, "Not yielding in code section methods." );
 				goto CheckException;
 			}
-			sect = DaoProcess_InitCodeSection( self, vmc->b );
+			if( (vmc->b & DAO_CALL_EXPAR) && opb && args[opb-1]->type == DAO_TUPLE ){
+				DaoTuple *tup = (DaoTuple*) args[ opb-1 ];
+				for(i=0; i<opb-1; ++j) buffer[i] = args[i];
+				opb -= 1;
+				for(i=0; i<tup->size; ++i){
+					if( opb >= DAO_MAX_PARAM ){
+						DaoProcess_RaiseError( self, "Param", "too many parameters" );
+						goto CheckException;
+					}
+					buffer[opb++] = tup->values[i];
+				}
+				args = buffer;
+			}
+			sect = DaoProcess_InitCodeSection( self, opb );
 			if( sect == NULL ) goto FinishProcess;
-			self->topFrame->state = DVM_FRAME_SECT;
-			locVars = self->stackValues + topFrame->stackBase;
+			self->topFrame->state = DVM_FRAME_SECT; /* remove DVM_FRAME_KEEP; */
 			for(i=0; i<sect->b; i++){
-				if( i >= vmc->b ) break;
-				if( DaoProcess_SetValue( self, sect->a + i, locVars[vmc->a + i] ) == 0 ){
+				if( i >= opb ) break;
+				if( DaoProcess_SetValue( self, sect->a + i, args[i] ) == 0 ){
 					DaoProcess_RaiseError( self, "Param", "invalid yield" );
 				}
 			}
@@ -4050,6 +4066,10 @@ FastCallError:
 		}
 		for(i=0,m=tup->size; i<m; ++i, ++n){
 			DaoType *type = NULL;
+			if( n > DAO_MAX_PARAM ){
+				DaoProcess_RaiseError( self, "Param", "too many parameters" );
+				return;
+			}
 			if( ts->size ){
 				type = i < ts->size ? itypes[i] : itypes[ts->size-1];
 				if( tup->ctype->variadic ) type = (DaoType*) type->aux;

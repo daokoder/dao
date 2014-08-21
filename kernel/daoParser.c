@@ -6328,16 +6328,25 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 		result.last = result.update = self->vmcLast;
 		start = self->curToken;
 	}else if( tki == DKEY_YIELD ){
+		int mode = 0;
 		if( start+1 > end || tokens[start+1]->name != DTOK_LB ){
 			DaoParser_Error( self, DAO_INVALID_EXPRESSION, NULL );
 			return error;
 		}
 		self->curToken = start + 2;
 		enode = DaoParser_ParseExpressionList( self, DTOK_COMMA, NULL, NULL );
+		if( DaoParser_CurrentTokenName( self ) == DTOK_DOTS ){
+			mode = DAO_CALL_EXPAR;
+			self->curToken += 1;
+		}
 		if( enode.reg < 0 || DaoParser_CheckTokenType( self, DTOK_RB, ")" ) == 0 ) return error;
+		if( enode.count > DAO_MAX_PARAM ){
+			DaoParser_Error( self, DAO_CTW_LIMIT_PAR_NUM, NULL );
+			return error;
+		}
 		rb = self->curToken;
 		regLast = DaoParser_PushRegister( self );
-		DaoParser_AddCode( self, DVM_YIELD, enode.reg, enode.count, regLast, start, 0, rb );
+		DaoParser_AddCode( self, DVM_YIELD, enode.reg, enode.count|mode, regLast, start, 0, rb );
 		result.reg = regLast;
 		result.first = last->next;
 		result.last = result.update = self->vmcLast;

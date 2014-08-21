@@ -175,12 +175,16 @@ void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *vmc )
 		self->type = DAO_OP_SINGLE;
 		self->first = vmc->a;
 		break;
-	case DAO_CODE_YIELD :
 	case DAO_CODE_EXPLIST :
 		self->type = DAO_OP_RANGE;
 		self->first = vmc->a;
 		self->second = vmc->a + vmc->b;
-		if( type == DAO_CODE_YIELD ) self->lvalue = vmc->c;
+		break;
+	case DAO_CODE_YIELD :
+		self->type = DAO_OP_RANGE;
+		self->first = vmc->a;
+		self->second = vmc->a + (vmc->b & 0xff);
+		self->lvalue = vmc->c;
 		break;
 	default: break;
 	}
@@ -4778,6 +4782,7 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 	printf( "%p %i %s %s\n", self, routine->routType->nested->size, routine->routType->name->chars, ct?ct->name->chars:"" );
 #endif
 	if( code == DVM_YIELD ){ /* yield in functional method: */
+		int k, opb = vmc->b & 0xff;
 		tt = NULL;
 		if( routine->routType->cbtype ){
 			tt = routine->routType->cbtype;
@@ -4790,7 +4795,6 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 		}else{
 			goto InvalidYield;
 		}
-		tp = tt->nested->items.pType;
 		if( vmc->b == 0 ){
 			if( tt->nested->size && tp[0]->tid != DAO_PAR_VALIST ) goto ErrorTyping;
 			ct = (DaoType*) tt->aux;
@@ -4798,13 +4802,24 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 			DaoInferencer_UpdateType( self, opc, ct );
 			return 1;
 		}
-		at = ct = DaoNamespace_MakeType( NS, "tuple<>", DAO_TUPLE, NULL, NULL, 0 );
-		if( vmc->b ){
-			at = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, types+opa, vmc->b);
+		tp = types + opa;
+		if( (vmc->b & DAO_CALL_EXPAR) && opb && types[opa+opb-1]->tid == DAO_TUPLE ){
+			DList *its = types[opa+opb-1]->nested;
+			DList_Clear( self->types2 );
+			for(k=0; k<(opb-1); k++) DList_Append( self->types2, types[opa+k] );
+			for(k=0; k<its->size; k++) DList_Append( self->types2, its->items.pType[k] );
+			tp = self->types2->items.pType;
+			opb = self->types2->size;
 		}
+		at = ct = DaoNamespace_MakeType( NS, "tuple<>", DAO_TUPLE, NULL, NULL, 0 );
+		if( opb ) at = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, tp, opb );
+		tp = tt->nested->items.pType;
 		if( tt->nested->size ){
 			ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, tp, tt->nested->size );
 		}
+#if 0
+		printf( "%s %s\n", at->name->chars, ct->name->chars );
+#endif
 		if( DaoType_MatchTo( at, ct, defs2 ) == 0 ) goto ErrorTyping;
 		ct = (DaoType*) tt->aux;
 		if( ct == NULL ) ct = dao_type_none;
@@ -4864,22 +4879,6 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 			int m2 = DaoType_MatchTo( ct, ct2, defs2 );
 			if( m1 == 0 || m2 == 0 ) goto ErrorTyping;
 		}
-	}
-	if( code == DVM_YIELD ){
-		tt = routine->routType;
-		if( tt->nested->size ==1 ){
-			ct = tt->nested->items.pType[0];
-			if( ct->tid == DAO_PAR_NAMED || ct->tid == DAO_PAR_DEFAULT )
-				ct = & ct->aux->xType;
-		}else if( tt->nested->size ){
-			ct = DaoNamespace_MakeType(NS, "tuple", DAO_TUPLE, NULL,
-					tt->nested->items.pType, tt->nested->size );
-		}else{
-			ct = dao_type_udf;
-		}
-		DaoInferencer_UpdateType( self, opc, ct );
-		AssertTypeMatching( ct, types[opc], defs2 );
-		AssertTypeMatching( at, & tt->aux->xType, defs2 );
 	}
 	return 1;
 ErrorTyping: return DaoInferencer_Error( self, DTE_TYPE_NOT_MATCHING );
@@ -5022,9 +5021,11 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			for(j=0,J=opb&0xff; j<=J; ++j) AssertInitialized( opa+j, 0, middle, last );
 			break;
 		case DAO_CODE_ENUM :
-		case DAO_CODE_YIELD :
 		case DAO_CODE_EXPLIST :
 			for(j=0; j<opb; ++j) AssertInitialized( opa+j, 0, first, first );
+			break;
+		case DAO_CODE_YIELD :
+			for(j=0; j<(opb&0xff); ++j) AssertInitialized( opa+j, 0, first, first );
 			break;
 		}
 		if( K && K < DAO_CODE_EXPLIST && K != DAO_CODE_SETG && K != DAO_CODE_SETU ){

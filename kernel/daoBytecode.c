@@ -2384,10 +2384,15 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 			DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			break;
 		case DAO_CODE_ENUM :
-		case DAO_CODE_YIELD :
 			if( vmc->a >= regCount ) goto InvalidInstruction;
 			if( vmc->c >= regCount ) goto InvalidInstruction;
 			if( (vmc->a + vmc->b - 1) >= regCount ) goto InvalidInstruction;
+			DMap_Insert( current, IntToPointer( vmc->c ), 0 );
+			break;
+		case DAO_CODE_YIELD :
+			if( vmc->a >= regCount ) goto InvalidInstruction;
+			if( vmc->c >= regCount ) goto InvalidInstruction;
+			if( (vmc->a + (vmc->b&0xff) - 1) >= regCount ) goto InvalidInstruction;
 			DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			break;
 		case DAO_CODE_CALL :
