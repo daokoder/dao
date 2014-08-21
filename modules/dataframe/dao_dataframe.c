@@ -1502,7 +1502,7 @@ static void FRAME_CellsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, i
 {
 	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
 	DaoxDataFrame *original = self->original;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 4 );
 	DaoInteger integer1 = {DAO_INTEGER,0,0,0,0,0};
 	DaoInteger integer2 = {DAO_INTEGER,0,0,0,0,0};
 	DaoInteger integer3 = {DAO_INTEGER,0,0,0,0,0};
@@ -1516,7 +1516,6 @@ static void FRAME_CellsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, i
 
 	value.xInteger = integer1;
 	if( sect == NULL ) return;
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 
 	if( self->original == NULL ){
 		DaoxDataFrame_PrepareSlices( self );
@@ -1562,7 +1561,7 @@ static void FRAME_RowsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, in
 	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
 	DaoxDataFrame *original = self->original;
 	DaoNamespace *ns = proc->activeNamespace;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 3 );
 	DaoInteger integer1 = {DAO_INTEGER,0,0,0,0,0};
 	DaoInteger integer3 = {DAO_INTEGER,0,0,0,0,0};
 	DaoInteger *rowidx = & integer1;
@@ -1577,7 +1576,6 @@ static void FRAME_RowsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, in
 
 	value.xInteger = integer1;
 	if( sect == NULL ) return;
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 
 	if( self->original == NULL ){
 		DaoxDataFrame_PrepareSlices( self );
@@ -1636,7 +1634,7 @@ static void FRAME_ColsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, in
 	DaoxDataFrame *self = (DaoxDataFrame*) p[0];
 	DaoxDataFrame *original = self->original;
 	DaoNamespace *ns = proc->activeNamespace;
-	DaoVmCode *sect = DaoGetSectionCode( proc->activeCode );
+	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 3 );
 	DaoInteger integer2 = {DAO_INTEGER,0,0,0,0,0};
 	DaoInteger integer3 = {DAO_INTEGER,0,0,0,0,0};
 	DaoInteger *colidx = & integer2;
@@ -1649,7 +1647,6 @@ static void FRAME_ColsCodeSection( DaoProcess *proc, DaoValue *p[], int npar, in
 
 	value.xInteger = integer2;
 	if( sect == NULL ) return;
-	if( DaoProcess_PushSectionFrame( proc ) == NULL ) return;
 
 	if( self->original == NULL ){
 		DaoxDataFrame_PrepareSlices( self );

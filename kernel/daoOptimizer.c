@@ -4782,6 +4782,8 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 	printf( "%p %i %s %s\n", self, routine->routType->nested->size, routine->routType->name->chars, ct?ct->name->chars:"" );
 #endif
 	if( code == DVM_YIELD ){ /* yield in functional method: */
+		DaoType **partypes, **argtypes;
+		int parcount = 0, argcount = 0;
 		int k, opb = vmc->b & 0xff;
 		tt = NULL;
 		if( routine->routType->cbtype ){
@@ -4795,32 +4797,36 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 		}else{
 			goto InvalidYield;
 		}
+		partypes = tt->nested->items.pType;
+		parcount = tt->nested->size;
 		if( vmc->b == 0 ){
-			if( tt->nested->size && tp[0]->tid != DAO_PAR_VALIST ) goto ErrorTyping;
+			if( tt->nested->size && partypes[0]->tid != DAO_PAR_VALIST ) goto ErrorTyping;
 			ct = (DaoType*) tt->aux;
 			if( ct == NULL ) ct = dao_type_none;
 			DaoInferencer_UpdateType( self, opc, ct );
 			return 1;
 		}
-		tp = types + opa;
-		if( (vmc->b & DAO_CALL_EXPAR) && opb && types[opa+opb-1]->tid == DAO_TUPLE ){
-			DList *its = types[opa+opb-1]->nested;
+		argtypes = types + opa;
+		argcount = opb;
+		if( (vmc->b & DAO_CALL_EXPAR) && opb && argtypes[opb-1]->tid == DAO_TUPLE ){
+			DList *its = argtypes[opb-1]->nested;
 			DList_Clear( self->types2 );
-			for(k=0; k<(opb-1); k++) DList_Append( self->types2, types[opa+k] );
+			for(k=0; k<(opb-1); k++) DList_Append( self->types2, argtypes[k] );
 			for(k=0; k<its->size; k++) DList_Append( self->types2, its->items.pType[k] );
-			tp = self->types2->items.pType;
-			opb = self->types2->size;
+			argtypes = self->types2->items.pType;
+			argcount = self->types2->size;
 		}
 		at = ct = DaoNamespace_MakeType( NS, "tuple<>", DAO_TUPLE, NULL, NULL, 0 );
-		if( opb ) at = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, tp, opb );
-		tp = tt->nested->items.pType;
-		if( tt->nested->size ){
-			ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, tp, tt->nested->size );
+		if( argcount ){
+			at = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, argtypes, argcount );
+		}
+		if( parcount ){
+			ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, partypes, parcount );
 		}
 #if 0
 		printf( "%s %s\n", at->name->chars, ct->name->chars );
 #endif
-		if( DaoType_MatchTo( at, ct, defs2 ) == 0 ) goto ErrorTyping;
+		AssertTypeMatching( at, ct, defs2 );
 		ct = (DaoType*) tt->aux;
 		if( ct == NULL ) ct = dao_type_none;
 		if( ct ){

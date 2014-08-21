@@ -6577,8 +6577,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 						i += 2;
 					}
 					if( i < rb2 ){
+						/* Possible case: array<int>(5){ [] [1, 2, 3] } */
 						DaoParser_PopRegisters( self, self->regCount - regCount );
-						goto InvalidSection;
 					}else{
 						start = rb2 + 1;
 					}

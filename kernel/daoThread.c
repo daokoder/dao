@@ -686,7 +686,7 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 	}
 	if( threads <= 0 ) threads = 2;
 	if( frame != proc->topFrame->prev ){
-		DaoProcess_RaiseError( proc, NULL, "Invalid code section" );
+		DaoProcess_RaiseError( proc, NULL, "Invalid code section from non-immediate caller" );
 		return;
 	}
 	sect = DaoProcess_InitCodeSection( proc, 0 );

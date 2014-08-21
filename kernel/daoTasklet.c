@@ -440,7 +440,8 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 	DaoTaskEvent *event;
 	DaoProcess *callee = DaoVmSpace_AcquireProcess( caller->vmSpace );
 	DaoStackFrame *frame = caller->topFrame;
-	DaoType *type = (DaoType*) frame->routine->routType->aux;
+	DaoRoutine *routine = frame->routine;
+	DaoType *type = (DaoType*) routine->routType->aux;
 	DaoFuture *future = DaoFuture_New( type, 1 );
 	DaoValue **params = caller->stackValues + caller->topFrame->stackBase;
 	int i, count = caller->topFrame->parCount;
@@ -454,7 +455,7 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 			DaoProcess_RaiseError( caller, NULL, "Invalid code section" );
 			return;
 		}
-		if( caller->topFrame->routine->body ){
+		if( routine->body ){
 			DaoProcess_PushRoutine( callee, callerFrame->routine, callerFrame->object );
 			callerValues = caller->stackValues + callerFrame->stackBase;
 		}else{
@@ -485,11 +486,12 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 	GC_IncRC( future->process );
 
 	callee->parCount = count;
-	for(i=0; i<count; ++i) DaoValue_Copy( params[i], & callee->paramValues[i] );
-	if( caller->topFrame->routine->body ){
-		DaoProcess_PushRoutine( callee, caller->topFrame->routine, future->actor );
+	/* Use routine->parCount instead of caller->topFrame->parCount, for default parameters: */
+	for(i=0; i<routine->parCount; ++i) DaoValue_Copy( params[i], & callee->paramValues[i] );
+	if( routine->body ){
+		DaoProcess_PushRoutine( callee, routine, future->actor );
 	}else{
-		DaoProcess_PushFunction( callee, caller->topFrame->routine );
+		DaoProcess_PushFunction( callee, routine );
 	}
 	if( caller->activeCode->b & DAO_CALL_BLOCK ){
 		callee->topFrame->host = callee->topFrame;
