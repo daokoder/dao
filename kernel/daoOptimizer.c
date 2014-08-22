@@ -6106,7 +6106,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DVM_MOVE_PP :
 		case DVM_MOVE_XX :
 			if( code == DVM_MOVE_PP ){
-				if( consts[opa] ) goto InvOper;
 				if( at->tid && (at->tid < DAO_ARRAY || at->tid > DAO_TYPE) ) goto NotMatch;
 			}
 			if( (opb >> 1) == 0x3 && at->invar == 0 ) at = DaoType_GetInvarType( at );

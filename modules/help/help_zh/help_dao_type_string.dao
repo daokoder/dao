@@ -121,6 +121,8 @@ dao.type.string.method
 string( count: int, char = 0 ) => string
 string( count: int )[index: int => string] => string
 size( invar self: string ) => int
+insert( invar self: string, str: string, pos = 0 ) => string
+erase( invar self: string, pos = 0, count = -1 ) => string
 chop( invar self: string, utf8 = 0 ) => string
 trim( invar self: string, where: enum<head;tail> = $head+$tail, utf8 = 0 ) => string
 find( invar self: string, str: string, from = 0, reverse = 0 ) => int
@@ -199,6 +201,8 @@ S3 = string( 6 ){ [index] (string) index }  # 012345
 下面是可用来方便操作字符串的方法：
 @[code]
 size( invar self: string ) => int
+insert( invar self: string, str: string, pos = 0 ) => string
+erase( invar self: string, pos = 0, count = -1 ) => string
 chop( invar self: string, utf8 = 0 ) => string
 trim( invar self: string, where: enum<head;tail> = $head+$tail, utf8 = 0 ) => string
 find( invar self: string, str: string, from = 0, reverse = 0 ) => int
@@ -232,6 +236,28 @@ len2 = "XYZ".size()
 
 为了效率起见，用户也可考虑使用大小操作符@[code]%@[code]，
 @[code]%S@[code]将给出字符串的字符个数。
+
+
+@[subsubsection]
+insert(invar self:string,str:string,pos=0)=>string
+@[subsubsection]
+@[code]
+insert( invar self: string, str: string, pos = 0 ) => string
+@[code]
+在"pos"处插入"str"；
+
+返回新字符串。
+
+
+@[subsubsection]
+erase(invar self:string,pos=0,count=-1)=>string
+@[subsubsection]
+@[code]
+erase( invar self: string, pos = 0, count = -1 ) => string
+@[code]
+从"pos"处删除"count"字节；
+
+返回新字符串。
 
 
 @[subsubsection]

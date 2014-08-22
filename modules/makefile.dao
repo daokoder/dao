@@ -40,6 +40,8 @@ if( DaoMake::IsDir( "cblas" ) ) modules.AddDirectory( "cblas", "cblas" );
 
 if( DaoMake::IsDir( "clinker" ) ) modules.AddDirectory( "clinker", "clinker" );
 
+if( DaoMake::IsDir( "statistics" ) ) modules.AddDirectory( "statistics", "statistics" );
+
 if( DaoMake::IsDir( "DaoSQL" ) ) modules.AddDirectory( "DaoSQL", "DaoSQL" );
 
 if( DaoMake::IsDir( "DaoOpenGL" ) ) modules.AddDirectory( "OpenGL", "DaoOpenGL" );

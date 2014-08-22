@@ -124,6 +124,8 @@ Here is the full list of string methods:
 string( count: int, char = 0 ) => string
 string( count: int )[index: int => string] => string
 size( invar self: string ) => int
+insert( invar self: string, str: string, pos = 0 ) => string
+erase( invar self: string, pos = 0, count = -1 ) => string
 chop( invar self: string, utf8 = 0 ) => string
 trim( invar self: string, where: enum<head;tail> = $head+$tail, utf8 = 0 ) => string
 find( invar self: string, str: string, from = 0, reverse = 0 ) => int
@@ -204,6 +206,8 @@ Methods
 The following string methods are provided for convenient manipulation of strings.
 @[code]
 size( invar self: string ) => int
+insert( invar self: string, str: string, pos = 0 ) => string
+erase( invar self: string, pos = 0, count = -1 ) => string
 chop( invar self: string, utf8 = 0 ) => string
 trim( invar self: string, where: enum<head;tail> = $head+$tail, utf8 = 0 ) => string
 find( invar self: string, str: string, from = 0, reverse = 0 ) => int
@@ -236,6 +240,28 @@ len2 = "XYZ".size()
 
 For efficiency, you might consider to use the size operator @[code]%@[code],
 @[code]%S@[code] gives the length of the string.
+
+
+@[subsubsection]
+insert(invar self:string,str:string,pos=0)=>string
+@[subsubsection]
+@[code]
+insert( invar self: string, str: string, pos = 0 ) => string
+@[code]
+Insert "str" at "pos";
+
+Return a new string;
+
+
+@[subsubsection]
+erase(invar self:string,pos=0,count=-1)=>string
+@[subsubsection]
+@[code]
+erase( invar self: string, pos = 0, count = -1 ) => string
+@[code]
+Erase "count" bytes starting from "pos";
+
+Return a new string;
 
 
 @[subsubsection]
