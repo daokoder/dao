@@ -909,8 +909,11 @@ static void DaoARRAY_New( DaoProcess *proc, DaoValue *p[], int N )
 	DaoArray *array = DaoProcess_PutArray( proc );
 	DaoArray *first = NULL;
 	DaoArray *sub = NULL;
-	daoint i, j, k, entry, size = 1;
 	DaoVmCode *sect;
+	daoint D2 = p[1]->xInteger.value;
+	daoint D3 = p[2]->xInteger.value;
+	daoint A1 = D2 * D3;
+	daoint i, j, k, entry, size = 1;
 
 	/* if multi-dimensional array is disabled, DaoProcess_PutArray() will raise exception. */
 #ifdef DAO_WITH_NUMARRAY
@@ -927,12 +930,23 @@ static void DaoARRAY_New( DaoProcess *proc, DaoValue *p[], int N )
 		return;
 	}
 	if( size == 0 ) return;
-	sect = DaoProcess_InitCodeSection( proc, 1 ); // XXX
+	sect = DaoProcess_InitCodeSection( proc, 3 );
 	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
 	for(i=0; i<size; i++){
-		idint.value = i;
-		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, index );
+		if( sect->b > 0 ){
+			idint.value = i / A1;
+			DaoProcess_SetValue( proc, sect->a, index );
+			if( sect->b > 1 ){
+				daoint jk = i % A1;
+				idint.value = jk / D3;
+				DaoProcess_SetValue( proc, sect->a + 1, index );
+				if( sect->b > 2 ){
+					idint.value = jk % D3;
+					DaoProcess_SetValue( proc, sect->a + 2, index );
+				}
+			}
+		}
 		proc->topFrame->entry = entry;
 		DaoProcess_Execute( proc );
 		if( proc->status == DAO_PROCESS_ABORTED ) break;
@@ -1373,7 +1387,7 @@ static void DaoARRAY_Reduce( DaoProcess *proc, DaoValue *p[], int npar )
 static DaoFuncItem numarMeths[] =
 {
 	{ DaoARRAY_New,
-		"array<@T<none|int|float|double|complex>=none>( dim1: int, dim2 = 0, dim3 = 0 )"
+		"array<@T<none|int|float|double|complex>=none>( dim1: int, dim2 = 1, dim3 = 1 )"
 			"[I: int, J: int, K: int => @T|array<@T>] => array<@T>"
 	},
 	{ DaoARRAY_Dim,

@@ -702,6 +702,11 @@ Primary Expression
 @[subsection]
 
 @[code(syntax)]
+SectionParamValist ::= '...'
+SectionParamNames ::= Identifier { ',' Identifier }
+SectionParamItems ::= SectionParamValist | SectionParamNames [ ',' SectionParamValist ]
+SectionParamList ::= '[' [ SectionParamItems ] [ 'as' Identifier ] ']'
+
 PrimaryExpression ::= AtomicExpression 
                     | EnumerativeExpression
                     | '(' Expression ')'
@@ -709,7 +714,7 @@ PrimaryExpression ::= AtomicExpression
                     | PrimaryExpression '.'  Identifier
                     | PrimaryExpression '(' [ ArgumentList ] ')'
                     | PrimaryExpression '[' [ ExpressionList [ ',' ] ] ']'
-                    | PrimaryExpression '{' [ ArgumentList [ ',' ] ] '}'
+                    | PrimaryExpression '{' [ SectionParamList ] [StatementBlock] '}'
                     | PrimaryExpression '.{' [ ArgumentList ] '}'
 @[code(syntax)]
 
@@ -1024,6 +1029,33 @@ Import the constants and globals from another namespace to the current scope.
 
 
 
+@[subsection]
+Yield Statement
+@[subsection]
+
+@[code(syntax)]
+YieldStmt ::= 'yield' '(' [ ArgumentList ] ')'
+@[code(syntax)]
+
+
+
+
+@[subsection]
+Return Statement
+@[subsection]
+
+@[code(syntax)]
+ReturnStmt ::= 'return' [ ExpressionList ]
+@[code(syntax)]
+
+
+
+
+@[subsection]
+Statement and Block
+@[subsection]
+
+
 @[code(syntax)]
 Statement ::= DeclarationStmt
             | BasicStatement
@@ -1036,7 +1068,12 @@ Statement ::= DeclarationStmt
             | TypeAlias
             | LoadStmt
             | ImportStmt
+			| YieldStmt
+			| ReturnStmt
+
+StatementBlock ::= { Statement }
 @[code(syntax)]
+Note: the @[code]LoadStmt@[code] is only allowed at the top lexical scope.
 
 
 @[text]

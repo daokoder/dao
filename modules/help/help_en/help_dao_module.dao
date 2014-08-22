@@ -20,28 +20,21 @@ Built-in Standard Module
 
 @[text]
 @[code]
-path( path :string, action :enum<set,add,remove>=$add )
-compile( source :string )
-eval( source :string, st=io::stdio, safe=0 )=>any
-load( file :string, import=1, runim=0, safe=0 )=>any
-resource( path :string )=>string
-argv() => list<any>
-about( ... )=>string
-callable( object )=>int
-debug( ... )
-warn( info :string )
-error( info :string )
-gcmax( limit=0 )=>int/*by default, return the current value;*/
-gcmin( limit=0 )=>int
-subtype( obj1, obj2 )=>int
-version()=>string
-
-iterate( times :int )[index:int]
-string( size :int, type :enum<mbs,wcs>=$mbs )[index:int =>int] =>string
-array( D1 :int, D2 =0, D3 =0 )[I:int, J:int, K:int =>@V<@T<int|float|double|complex>|array<@T>>] =>array<@T>
-list( size :int )[index:int =>@T] =>list<@T>
-list( size :int, init :@T )[index:int, prev:@T =>@T] =>list<@T>
-map( size :int, hashing = 0 )[index:int =>tuple<@K,@V>] =>map<@K,@V>
+version( verbose = 0 ) => string
+path( path: string, action: enum<set,add,remove> = $add )
+compile( source: string, import: any = none ) => tuple<namespace:any,main:routine>
+eval( source: string, st = io::stdio ) => any
+load( file: string, import = 1, runim = 0 ) => namespace
+resource( path: string ) => string
+about( invar ... : any ) => string
+debug( invar ... : any )
+warn( info: string )
+error( info: string )
+error( errorObject: Error )
+error( errorType: class<Error>, info: string, data: any = none )
+exec() [=>@T] => @T
+exec( defaultValue: @T ) [=>@T] => @T
+try() [=>@T] => list<Error>|Error|@T
 @[code]
 @[text]
 
@@ -71,16 +64,15 @@ IO Module Methods
 
 @[text]
 @[code]
-write( ... )
-writef( format : string, ... )
-writeln( ... )
+open( type: enum<string,tmpfile> = $string )=>stream
+open( file: string, mode: string )=>stream
+open( fileno: int, mode: string )=>stream
+write( invar ... : any )
+writef( format: string, invar ... : any )
+writeln( invar ... : any )
 read( )=>string
-read( file : string, silent=0 )=>string
-open( )=>stream
-open( file :string, mode :string )=>stream
-sstream( type :enum<mbs, wcs> = $mbs )=>stream
-
-readlines( file :string, chop=0 )[line:string=>none|@T]=>list<@T>
+read( file: string, silent=0 )=>string
+readlines( file: string, chop=0 )[line: string=>none|@T]=>list<@T>
 @[code]
 @[text]
 
@@ -103,31 +95,22 @@ IO Stream Methods
 
 @[text]
 @[code]
-stream( )=>stream
-stream( type :enum<mbs, wcs> )=>stream
-stream( file :string, mode :string )=>stream
-write( self :stream, ... )
-writef( self :stream, format : string, ... )
-writeln( self :stream, ... )
-flush( self :stream )
-read( self :stream, count=0 )=>string
-read( self :stream, quantity :enum<line, all> )=>string
-getstring( self :stream )=>string
-close( self :stream )
-eof( self :stream )=>int
-isopen( self :stream )=>int
-seek( self :stream, pos :int, from :enum<begin,current,end> )=>int
-tell( self :stream )=>int
-fileno( self :stream )=>int
-name( self :stream )=>string
-mode( self :stream )=>enum<read; write>
-__for_iterator__( self :stream, iter : for_iterator )
-[]( self :stream, iter : for_iterator )=>string
+stream( type: enum<string,tmpfile> = $string )=>stream
+stream( file: string, mode: string )=>stream
+stream( fileno: int, mode: string )=>stream
+write( self: stream, invar ... : any )
+writef( self: stream, format: string, invar ... : any )
+writeln( self: stream, invar ... : any )
+read( self: stream, amount: int|enum<line,all> = $all )=>string
+readlines( self: stream, numline=0, chop=0 )[line: string=>none|@T]=>list<@T>
 
-readlines( self :stream, numline=0, chop=0 )[line:string=>none|@T]=>list<@T>
-// Not particularly useful, may be removed!
-writelines( self :stream, lines :int)[line:int =>string]
-writelines( file :string, lines :int)[line:int =>string]
+flush( self: stream )
+close( self: stream )
+seek( self: stream, pos: int, from: enum<begin,current,end> )=>int
+tell( self: stream )=>int
+fileno( self: stream )=>int
+enable( self: stream, what: enum<auto_conversion>, state: bool )
+check( self: stream, what: enum<readable,writable,is_open,is_eof,auto_conversion> ) => bool
 @[code]
 @[text]
 
@@ -151,50 +134,6 @@ Built-in Multi-threading Module
 
 @[text]
 
-
-@[subsection]
-Mutex Methods
-@[subsection]
-
-@[code]
-mutex()=>mutex
-lock( self : mutex )
-unlock( self : mutex )
-trylock( self : mutex )=>int
-protect( self : mutex )[]
-@[code]
-
-
-@[subsection]
-Condition Variable Methods
-@[subsection]
-
-@[code]
-condition()=>condition
-wait( self : condition, mtx : mutex )
-timedwait( self : condition, mtx : mutex, seconds :float )=>int
-signal( self : condition )
-broadcast( self : condition )
-@[code]
-
-
-@[subsection]
-Semaphore Methods
-@[subsection]
-
-@[code]
-semaphore( value = 0 )=>semaphore
-wait( self : semaphore )
-post( self : semaphore )
-setvalue( self : semaphore, n :int )
-getvalue( self : semaphore )=>int
-protect( self : semaphore )[]
-@[code]
-
-
-@[subsection]
-Module Methods
-@[subsection]
 
 @[code]
 critical()[]

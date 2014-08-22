@@ -1,0 +1,116 @@
+
+@[test(code_01)]
+routine Test()
+{
+    defer {
+        io.writeln( "always executed" )
+    }   
+    defer( none ){
+        io.writeln( "defer( none )" )
+    }   
+    defer( Error as error ){
+        io.writeln( "defer( Exception::Error as error )" )
+        return 999 
+    }   
+
+    for( i = 2 : 5 ) defer { io.writeln( "deferred", i ) } 
+
+    std.error( Error( "something" ) ) 
+    io.writeln( "returning" );
+    return 123 
+}
+
+io.writeln( Test() )
+@[test(code_01)]
+@[test(code_01)]
+always executed
+defer( Exception::Error as error )
+deferred 2
+deferred 3
+deferred 4
+deferred 5
+999
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+routine Test()
+{
+    defer ( Error ){
+        io.writeln( "Error is handled! And a new value is returned!" )
+        return 456 
+    }   
+    io.writeln( "Test(): before error;" )
+    std.error( "some error" )
+    io.writeln( "Test(): after error;" )
+    return 123 
+}
+
+io.writeln( Test() )
+@[test(code_01)]
+@[test(code_01)]
+Test(): before error;
+Error is handled! And a new value is returned!
+456
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class MyError : Error
+{
+    routine serialize(){ return ("MyError", self) }
+}
+
+routine Test2()
+{
+    defer ( MyError as error ) { 
+        io.writeln( "recovering from", error )
+        return none
+    }
+
+    io.writeln( "Test2(): before error;" )
+    std.error( MyError() );
+    io.writeln( "Test2(): after error;" )
+}
+
+Test2()
+@[test(code_01)]
+@[test(code_01)]
+{{Test2(): before error;}} .*
+{{recovering from ( "MyError", MyError}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+fout = io::stdio
+
+std.exec {
+    defer ( any ) { return none }
+    fout = io.open( "NonExistentFile.txt", "r+" )
+}
+
+if( fout != io::stdio ) defer{ fout.close() }
+
+fout.writeln( "hello" )
+@[test(code_01)]
+@[test(code_01)]
+hello
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+fout = std.exec( io::stdio ){ io.open( "NonExistentFile.txt", "r+" ) }
+if( fout != io::stdio ) defer{ fout.close() }
+fout.writeln( "hello" )
+@[test(code_01)]
+@[test(code_01)]
+hello
+@[test(code_01)]

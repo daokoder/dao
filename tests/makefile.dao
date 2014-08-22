@@ -25,6 +25,8 @@ daotests.AddTest( "Strings", "test_strings.dao" )
 test_enum = daotests.AddTest( "EnumSymbol", "test_enum_symbol_def.dao" )
 test_enum.AddTest( "test_enum_symbol_type.dao" )
 
+daotests.AddTest( "Arrays", "test_arrays.dao" )
+
 test_control = daotests.AddTest( "Controls", "test_if_else.dao" )
 test_control.AddTest( "test_for.dao" )
 test_control.AddTest( "test_while.dao" )
@@ -38,10 +40,13 @@ test_routine.AddTest( "test_decorator.dao" )
 test_class = daotests.AddTest( "Class", "test_class_inheritance.dao" )
 test_class.AddTest( "test_class_static_fields.dao" )
 test_class.AddTest( "test_class_operator.dao" )
+test_class.AddTest( "test_class_mixin.dao" )
 
 test_interface = daotests.AddTest( "Interface", "test_interface.dao" )
 
 test_regex = daotests.AddTest( "Regex", "test_regex_char_class.dao" )
 test_regex.AddDependency( chartype_dll )
+
+daotests.AddTest( "ErrorHandling", "test_error_handling.dao" )
 
 daotests.AddTest( "Misc", "test_misc.dao" )

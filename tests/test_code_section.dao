@@ -365,3 +365,36 @@ Test() { [X] io.writeln( X ) }
 @[test(code_00)]
 	{{Error}} .* {{Invalid code section}}
 @[test(code_00)]
+
+
+
+
+@[test(code_00)]
+class Base
+{
+    interface routine VirtualMethod()[]{
+        io.writeln( "Base::VirtualMethod()" )
+        yield()
+    }   
+    routine Test(){
+        VirtualMethod {
+            io.writeln( "Base::Test()" )
+        }   
+    }   
+}
+
+class Sub : Base
+{
+    routine VirtualMethod()[]{
+        io.writeln( "Sub::VirtualMethod()" )
+        yield()
+    }   
+}
+
+o = Sub()
+o.Test()
+@[test(code_00)]
+@[test(code_00)]
+Sub::VirtualMethod()
+Base::Test()
+@[test(code_00)]

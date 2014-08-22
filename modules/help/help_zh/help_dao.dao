@@ -13,6 +13,7 @@ load help_dao_class;
 load help_dao_defer_error;
 load help_dao_concurrent;
 load help_dao_macro;
+load help_dao_builtin;
 load help_dao_module;
 load help_dao_grammar;
 

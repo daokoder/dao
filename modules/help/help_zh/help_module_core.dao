@@ -6,7 +6,6 @@ module.core.sys
 @[name]
 
 @[title]
-System Dependent Core Functions
 @[title]
 
 
@@ -15,7 +14,6 @@ module.core.aux
 @[name]
 
 @[title]
-System Dependent Core Functions
 @[title]
 
 
@@ -24,7 +22,6 @@ module.core.math
 @[name]
 
 @[title]
-System Dependent Core Functions
 @[title]
 
 
@@ -33,5 +30,4 @@ module.core.meta
 @[name]
 
 @[title]
-System Dependent Core Functions
 @[title]

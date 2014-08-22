@@ -263,7 +263,7 @@ int main( int argc, char **argv )
 				}
 				if( fail > failed ){
 					FILE *log = logfile ? logfile : stderr;
-					if( output->size > 500 ) DString_Reset( output, 500 );
+					if( output->size > 1000 ) DString_Reset( output, 1000 );
 					fprintf( log, "\n#############################################\n" );
 					fprintf( log, "\nFAILED: %s, line %s:\n", argv[i], id->chars );
 					fprintf( log, "OUTPUT:\n\n%s\n\n", output->chars );
