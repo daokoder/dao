@@ -2958,13 +2958,18 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 	DaoTuple *tuple;
 	DaoType *tp, *ct = self->activeTypes[ vmc->c ];
 	DaoType *routype = self->activeRoutine->routType;
-	DaoVmCode *sect = vmc - 1;
 	int argcount = self->topFrame->parCount;
 	int parcount = routype->nested->size - routype->variadic;
 	int parcount2 = argcount < parcount ? parcount : argcount; /* including defaults; */
 	int argstuple = vmc->a == 0 && vmc->b == self->activeRoutine->parCount;
-	int argstuple2 = sect->code == DVM_SECT && vmc->a == sect->a && vmc->b == sect->b;
-	int i, count = argstuple ? parcount2 : (argstuple2 ? argcount : vmc->b);
+	int argstuple2 = 0;
+	int i, count;
+	
+	if( vmc > self->topFrame->active->codes ){
+		DaoVmCode *sect = vmc - 1;
+		argstuple2 = sect->code == DVM_SECT && vmc->a == sect->a && vmc->b == sect->b;
+	}
+	count = argstuple ? parcount2 : (argstuple2 ? argcount : vmc->b);
 
 	self->activeCode = vmc;
 	tuple = DaoProcess_GetTuple( self, ct && ct->variadic == 0 ? ct : NULL, count, 0 );

@@ -6418,6 +6418,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 		DaoInode *extra = self->vmcLast;
 		DaoInode *back = self->vmcLast;
 		DaoInode *getx = result.last;
+		int curStart = self->curToken;
 		int regcount = self->regCount;
 		int postart = start - 1;
 		tkn = DaoParser_CurrentTokenName( self );
@@ -6902,6 +6903,7 @@ InvalidSection:
 				break;
 			}else{
 				DaoParser_Error2( self, DAO_FAILED_INSTANTIATION, start-1, rb, 0 );
+				self->curToken = curStart;
 			}
 			return result;
 		default : return result;

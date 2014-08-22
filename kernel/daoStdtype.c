@@ -781,6 +781,32 @@ static void DaoSTR_Size( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutInteger( proc, p[0]->xString.value->size );
 }
 
+static void DaoSTR_Insert( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *self = p[0]->xString.value;
+	DString *str = p[1]->xString.value;
+	DString *res = DaoProcess_PutString( proc, self );
+	daoint pos = p[2]->xInteger.value;
+	if( pos < 0 ) pos += self->size;
+	if( pos < 0 || pos > self->size ){
+		DaoProcess_RaiseError( proc, "Index::Range", NULL );
+		return;
+	}
+	DString_Insert( res, str, pos, 0, -1 );
+}
+static void DaoSTR_Erase( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *self = p[0]->xString.value;
+	DString *res = DaoProcess_PutString( proc, self );
+	daoint pos = p[1]->xInteger.value;
+	daoint count = p[2]->xInteger.value;
+	if( pos < 0 ) pos += self->size;
+	if( pos < 0 || pos > self->size ){
+		DaoProcess_RaiseError( proc, "Index::Range", NULL );
+		return;
+	}
+	DString_Erase( res, pos, count );
+}
 static void DaoSTR_Chop( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *res = DaoProcess_PutString( proc, p[0]->xString.value );
@@ -862,11 +888,12 @@ static void DaoSTR_Replace( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DMap    *keys = p[1]->xMap.value;
 	DaoString *key = NULL;
 	DString *self = p[0]->xString.value;
 	DString *spec = p[2]->xString.value;
 	DString *res = NULL, *val = NULL, *sub = NULL;
+	DaoTuple *tup = DaoValue_CastTuple( p[1] );
+	DMap  *keys = NULL;
 	DNode *node = NULL;
 	daoint keep = p[3]->xInteger.value;
 	daoint i, pos1, pos2, prev = 0;
@@ -877,6 +904,11 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 	if( DString_Size( spec ) ==0 ){
 		DaoProcess_PutString( proc, self );
 		return;
+	}
+	if( tup ){
+		keys = tup->ctype->mapNames;
+	}else{
+		keys = p[1]->xMap.value;
 	}
 
 	res = DaoProcess_PutChars( proc, "" );
@@ -898,9 +930,13 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 			}
 			if( replace ){
 				DString_SubString( self, key->value, pos1+2, pos2-pos1-2 );
-				node = DMap_Find( keys, key );
+				node = DMap_Find( keys, tup ? (void*) key->value : (void*) key );
 				if( node ){
-					val = node->value.pValue->xString.value;
+					if( tup ){
+						val = tup->values[node->value.pInt]->xString.value;
+					}else{
+						val = node->value.pValue->xString.value;
+					}
 				}else if( keep ){
 					replace = 0;
 				}else{
@@ -1254,6 +1290,20 @@ static DaoFuncItem stringMeths[] =
 		// Return the number of bytes in the string.
 		*/
 	},
+	{ DaoSTR_Insert,
+		"insert( invar self: string, str: string, pos = 0 ) => string"
+		/*
+		// Insert "str" at "pos";
+		// Return a new string;
+		*/
+	},
+	{ DaoSTR_Erase,
+		"erase( invar self: string, pos = 0, count = -1 ) => string"
+		/*
+		// Erase "count" bytes starting from "pos";
+		// Return a new string;
+		*/
+	},
 	{ DaoSTR_Chop,
 		"chop( invar self: string, utf8 = 0 ) => string"
 		/*
@@ -1304,8 +1354,8 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Expand,
-		"expand( invar self: string, invar subs: map<string,string>, spec = \"$\", keep = 1 )"
-			"=> string"
+		"expand( invar self: string, invar subs: map<string,string>|tuple<...:string>,"
+			"spec = \"$\", keep = 1 ) => string"
 		/*
 		// Expand this string into a new string with substrings from the keys
 		// of "subs" substituted with the corresponding values of "subs".

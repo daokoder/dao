@@ -126,8 +126,8 @@ trim( invar self: string, where: enum<head;tail> = $head+$tail, utf8 = 0 ) => st
 find( invar self: string, str: string, from = 0, reverse = 0 ) => int
 convert( invar self: string, to: enum<local,utf8,lower,upper> ) => string
 replace( invar self: string, str1: string, str2: string, index = 0 ) => string
-expand( invar self: string, invar subs: map<string,string>, spec = "$", keep = 1 )
-	=> string
+expand( invar self: string, invar subs: map<string,string>|tuple<...:string>,
+		spec = "$", keep = 1 ) => string
 split( invar self: string, sep = "" ) => list<string>
 iterate( invar self: string, unit: enum<byte,char> = $byte )[char: int, index: int]
 collect( invar self: string, unit: enum<byte,char> = $byte )
@@ -204,8 +204,8 @@ trim( invar self: string, where: enum<head;tail> = $head+$tail, utf8 = 0 ) => st
 find( invar self: string, str: string, from = 0, reverse = 0 ) => int
 convert( invar self: string, to: enum<local,utf8,lower,upper> ) => string
 replace( invar self: string, str1: string, str2: string, index = 0 ) => string
-expand( invar self: string, invar subs: map<string,string>, spec = "$", keep = 1 )
-	=> string
+expand( invar self: string, invar subs: map<string,string>|tuple<...:string>,
+		spec = "$", keep = 1 ) => string
 split( invar self: string, sep = "" ) => list<string>
 iterate( invar self: string, unit: enum<byte,char> = $byte )[char: int, index: int]
 collect( invar self: string, unit: enum<byte,char> = $byte )
@@ -361,11 +361,11 @@ S4 = S1.replace( "dao", "fast", 0 )   # replace all "dao" with "fast";
 
 
 @[subsubsection]
-expand(invar self:string,invar subs:map<string,string>,spec="$",keep=1)=>...
+expand(invar self:string,invar subs:map<...>|tuple<...>,spec="$",keep=1)=>...
 @[subsubsection]
 @[code]
-expand( invar self: string, invar subs: map<string,string>, spec = "$", keep = 1 )
-	=> string
+expand( invar self: string, invar subs: map<string,string>|tuple<...:string>,
+		spec = "$", keep = 1 ) => string
 @[code]
 将此"self"字符串里的与"subs"里的键字符串匹配的子字符串替换为对应的值字符串，
 并将结果以新的字符串返回。

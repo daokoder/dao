@@ -1399,8 +1399,8 @@ void DaoClass_UpdateVirtualMethods( DaoClass *self )
 				continue;
 			}
 			for(j=1; j<otype->nested->size; ++j){
-				DaoType *optype = otype->nested->items.pType[i];
-				DaoType *iptype = itype->nested->items.pType[i];
+				DaoType *optype = otype->nested->items.pType[j];
+				DaoType *iptype = itype->nested->items.pType[j];
 				if( ! DString_EQ( iptype->name, optype->name ) ) break;
 				/*
 				// The parameter types of the interface methods must match to that of

@@ -6106,7 +6106,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DVM_MOVE_PP :
 		case DVM_MOVE_XX :
 			if( code == DVM_MOVE_PP ){
-				if( consts[opc] ) goto InvOper;
+				if( consts[opa] ) goto InvOper;
 				if( at->tid && (at->tid < DAO_ARRAY || at->tid > DAO_TYPE) ) goto NotMatch;
 			}
 			if( (opb >> 1) == 0x3 && at->invar == 0 ) at = DaoType_GetInvarType( at );
@@ -6121,7 +6121,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			if( types[opc]->tid != DAO_ANY ){
 				if( DaoType_MatchTo( types[opc], at, NULL ) != DAO_MT_EQ ) goto NotMatch;
 			}
-			if( opb ) GC_Assign( & consts[opc], consts[opa] );
 			break;
 		case DVM_ADD_III : case DVM_SUB_III : case DVM_MUL_III : case DVM_DIV_III :
 		case DVM_MOD_III : case DVM_POW_III : case DVM_AND_III : case DVM_OR_III  :

@@ -357,6 +357,14 @@ void DaoType_InitDefault( DaoType *self )
 		for(i=0; i<count; i++) DaoType_InitDefault( types[i] );
 		if( count ) value = types[0]->value;
 		break;
+	case DAO_ENUM :
+		value = (DaoValue*) DaoEnum_New( self, 0 );
+		/*
+		// self->subtid may be set later, setting value->xEnum.subtype
+		// to DAO_ENUM_SYM will ensure this value matchs to the type;
+		*/
+		if( self->subtid == 0 ) value->xEnum.subtype = DAO_ENUM_SYM;
+		break;
 	case DAO_UDT :
 	case DAO_ANY :
 	case DAO_THT :
@@ -367,7 +375,6 @@ void DaoType_InitDefault( DaoType *self )
 	case DAO_DOUBLE : value = (DaoValue*) DaoDouble_New(0.0); break;
 	case DAO_COMPLEX : value = (DaoValue*) DaoComplex_New(com); break;
 	case DAO_STRING : value = (DaoValue*) DaoString_New(); break;
-	case DAO_ENUM : value = (DaoValue*) DaoEnum_New( self, 0 ); break;
 	}
 	GC_Assign( & self->value, value );
 	if( value ) value->xBase.trait |= DAO_VALUE_CONST;
