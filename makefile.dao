@@ -412,7 +412,7 @@ if( daovm_bundle_program.size() ){
 	daomake_args += " --suffix .bundle bundle.dao"
 
 	archive = daovm.AddCommand( darc + ": " + daos, "./dao -c " + daos )
-	archive.AddCommand( "./dao -a " + daovm_bundle_program + ".dac" + daovm_bundle_resources )
+	archive.AddCommand( "./dao -a " + daovm_bundle_program + ".dac " + daovm_bundle_resources )
 	archive.AddCommand( "./dao tools/filetools/archive.dao " + daovm_bundle_program + ".dar" )
 	archive.AddCommand( "$(DAOMAKE) " + daomake_args )
 	archive.AddCommand( "$(MAKE) -f Makefile.bundle" )

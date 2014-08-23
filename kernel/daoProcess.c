@@ -1889,7 +1889,7 @@ CallEntry:
 			id = LocalInt(vmc->b);
 			if( id <0 ) id += str->size;
 			if( id <0 || id >= str->size ) goto RaiseErrorIndexOutOfRange;
-			LocalInt(vmc->c) = str->chars[id];
+			LocalInt(vmc->c) = (uchar_t) str->chars[id];
 		}OPNEXT() OPCASE( SETI_SII ){
 			str = locVars[vmc->c]->xString.value;
 			id = LocalInt(vmc->b);
@@ -1897,7 +1897,7 @@ CallEntry:
 			if( id <0 ) id += str->size;
 			if( id <0 || id >= str->size ) goto RaiseErrorIndexOutOfRange;
 			DString_Detach( str, str->size );
-			str->chars[id] = inum;
+			str->chars[id] = (char) inum;
 		}OPNEXT() OPCASE( GETI_LI ){
 			list = & locVars[vmc->a]->xList;
 			id = LocalInt(vmc->b);

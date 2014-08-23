@@ -75,7 +75,7 @@ routine main( file : string )
 		io.writeln( 'ERROR: input is not a Dao archive file!' );
 		return;
 	}
-	archive = archive.collect{ (X+256)%256 }
+	#archive = archive.collect{ (X+256)%256 }
 	(source, finders) = ArchiveToCSource( archive )
 	fout = io.open( file + '.c', 'w+' );
 	fout2 = io.open( file + '.finders', 'w+' );

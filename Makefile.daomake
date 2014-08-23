@@ -31,7 +31,7 @@ RESET ?=
 # For example, one can use: OPTIONS="--option-THREAD OFF"
 # to turn off support for multithreading.
 #
-# Another example is to use: OPTIONS="--option-BUNDLE-SCRIPT example.dao"
+# Another example is to use: OPTIONS="--option-BUNDLE-SCRIPT example"
 # to enable single executable deployment.
 # And add "--option-BUNDLE-RESOURCES file1,file2" to the "OPTIONS" to specify
 # the files to be bundled into the executable.

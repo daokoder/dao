@@ -1780,6 +1780,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 	case DTOK_SEMCO : type->subtid = DAO_ENUM_FLAG;  break;
 	case DTOK_COLON : type->subtid = DAO_ENUM_BOOL;  break;
 	}
+	type->value->xBase.subtype = type->subtid;
 	if( k < end ) goto WrongForm;
 	if( type->subtid == DAO_ENUM_BOOL ){
 		DNode *first = DMap_First( type->mapNames );
@@ -3350,6 +3351,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 	if( comma <0 ) comma = rb;
 	value = sep == DTOK_SEMCO;
 	abtp->subtid = sep == DTOK_SEMCO ? DAO_ENUM_FLAG : DAO_ENUM_STATE;
+	abtp->value->xBase.subtype = abtp->subtid;
 	start = start + 2;
 	while( comma >=0 ){
 		if( start >= comma ) break;
@@ -4996,19 +4998,18 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	DaoRoutine *mainRout = nameSpace->mainRoutine;
 	DaoVmSpace *vmSpace = self->vmSpace;
 	DaoToken **tokens = self->tokens->items.pToken;
+	DString *modpath = DaoParser_GetString( self );
 	DString *modname = NULL;
 	int i = start+1, j, code = 0, cyclic = 0;
 	int perm = self->permission;
 	unsigned char tki;
-
-	DString_Clear( self->string );
 
 	if( i > end ) goto ErrorLoad;
 	if( (self->levelBase + self->lexLevel) != 0 ) goto ErrorLoad;
 
 	tki = tokens[i]->name;
 	if( tki == DTOK_MBS || tki == DTOK_WCS ){
-		DString_SubString( & tokens[i]->string, self->string, 1, tokens[i]->string.size-2 );
+		DString_SubString( & tokens[i]->string, modpath, 1, tokens[i]->string.size-2 );
 		i ++;
 	}else if( tki == DKEY_AS ){
 		code = DAO_CTW_LOAD_INVALID;
@@ -5028,11 +5029,11 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		}
 	}else{
 		while( i <= end && tokens[i]->type == DTOK_IDENTIFIER ){
-			DString_Append( self->string, & tokens[i]->string );
+			DString_Append( modpath, & tokens[i]->string );
 			i ++;
 			if( i <= end && (tokens[i]->type == DTOK_COLON2 || tokens[i]->type == DTOK_DOT) ){
 				i ++;
-				DString_AppendChars( self->string, "/" );
+				DString_AppendChars( modpath, "/" );
 			}else break;
 		}
 	}
@@ -5045,11 +5046,12 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		i += 2;
 	}
 
+	DString_Assign( self->string, modpath );
 	if( mod == NULL ){
-		if( (mod = DaoNamespace_FindNamespace(nameSpace, self->string)) == NULL ){
-			mod = DaoVmSpace_LoadModule( vmSpace, self->string );
+		if( (mod = DaoNamespace_FindNamespace(nameSpace, modpath)) == NULL ){
+			mod = DaoVmSpace_LoadModule( vmSpace, modpath );
 			if( mod == NULL && modname == NULL ){
-				mod = DaoVmSpace_FindModule( vmSpace, self->string );
+				mod = DaoVmSpace_FindModule( vmSpace, modpath );
 				cyclic = mod && DaoNamespace_CyclicParent( mod, nameSpace );
 				mod = NULL;
 			}

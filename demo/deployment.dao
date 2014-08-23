@@ -1,0 +1,6 @@
+
+load mixins
+
+text = std::resource( "@demo/resource.txt" )
+
+io.writeln( text )

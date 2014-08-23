@@ -649,7 +649,7 @@ static void DaoString_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	switch( idtype ){
 	case IDX_EMPTY  : break;
 	case IDX_NULL   : DString_Assign( res, self ); break;
-	case IDX_SINGLE : *num = self->chars[start]; break;
+	case IDX_SINGLE : *num = (uchar_t) self->chars[start]; break;
 	case IDX_FROM   : DString_SubString( self, res, start, -1 ); break;
 	case IDX_TO     : DString_SubString( self, res, 0, end+1 ); break;
 	case IDX_PAIR   : DString_SubString( self, res, start, end-start+1 ); break;
@@ -1247,7 +1247,12 @@ static void DaoSTR_Functional( DaoProcess *proc, DaoValue *p[], int np, int func
 		res = proc->stackValues[0];
 		switch( funct ){
 		case DVM_FUNCT_COLLECT :
-			if( res->type != DAO_NONE ) DString_AppendWChar( string, res->xInteger.value );
+			if( res->type == DAO_NONE ) break;
+			if( unit ){
+				DString_AppendWChar( string, res->xInteger.value );
+			}else{
+				DString_AppendChar( string, res->xInteger.value );
+			}
 			break;
 		}
 	}
