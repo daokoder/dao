@@ -5782,18 +5782,24 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 						opa += 1;
 						opb -= 1;
 					}
-					if( at->nested->size != opb ) goto InvEnum;
-					for(j=1; j<=opb; j++){
-						bt = types[opa+j];
+					if( opb < (at->nested->size - at->variadic) ) goto InvEnum;
+					if( at->variadic == 0 && opb > at->nested->size ) goto InvEnum;
+					for(j=0; j<opb; j++){
+						bt = types[opa+1+j];
 						if( bt == NULL ) goto ErrorTyping;
 						if( bt->tid == DAO_PAR_NAMED ){
+							if( j >= (at->nested->size - at->variadic) ) goto InvEnum;
 							if( at->mapNames == NULL ) goto InvEnum;
 							node = MAP_Find( at->mapNames, bt->fname );
-							if( node == NULL || node->value.pInt != j-1 ) goto InvEnum;
+							if( node == NULL || node->value.pInt != j ) goto InvEnum;
 							bt = & bt->aux->xType;
 						}
-						tt = at->nested->items.pType[j-1];
-						if( tt->tid == DAO_PAR_NAMED || tt->tid == DAO_PAR_DEFAULT ) tt = & tt->aux->xType;
+						if( j >= at->nested->size ){
+							tt = at->nested->items.pType[at->nested->size-1];
+						}else{
+							tt = at->nested->items.pType[j];
+						}
+						if( tt->tid >= DAO_PAR_NAMED && tt->tid <= DAO_PAR_VALIST ) tt = & tt->aux->xType;
 						AssertTypeMatching( bt, tt, defs );
 					}
 				}else{

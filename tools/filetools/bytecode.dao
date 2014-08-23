@@ -1,4 +1,5 @@
 
+# OBSOLETE!!!
 
 enum DaoTypeID
 {
@@ -44,7 +45,44 @@ enum DaoTypeID
 	DAO_UDT = (1<<6)|2,
 }
 
-use enum DaoTypeID;
+const DAO_NONE        : int = DaoTypeID::DAO_NONE
+const DAO_INTEGER     : int = DaoTypeID::DAO_INTEGER
+const DAO_FLOAT       : int = DaoTypeID::DAO_FLOAT
+const DAO_DOUBLE      : int = DaoTypeID::DAO_DOUBLE
+const DAO_COMPLEX     : int = DaoTypeID::DAO_COMPLEX
+const DAO_LONG        : int = DaoTypeID::DAO_LONG
+const DAO_STRING      : int = DaoTypeID::DAO_STRING
+const DAO_ENUM        : int = DaoTypeID::DAO_ENUM
+const DAO_ARRAY       : int = DaoTypeID::DAO_ARRAY
+const DAO_LIST        : int = DaoTypeID::DAO_LIST
+const DAO_MAP         : int = DaoTypeID::DAO_MAP
+const DAO_TUPLE       : int = DaoTypeID::DAO_TUPLE
+const DAO_OBJECT      : int = DaoTypeID::DAO_OBJECT
+const DAO_CDATA       : int = DaoTypeID::DAO_CDATA
+const DAO_CLASS       : int = DaoTypeID::DAO_CLASS
+const DAO_CTYPE       : int = DaoTypeID::DAO_CTYPE
+const DAO_INTERFACE   : int = DaoTypeID::DAO_INTERFACE
+const DAO_ROUTINE     : int = DaoTypeID::DAO_ROUTINE
+const DAO_PROCESS     : int = DaoTypeID::DAO_PROCESS
+const DAO_NAMESPACE   : int = DaoTypeID::DAO_NAMESPACE
+const DAO_VMSPACE     : int = DaoTypeID::DAO_VMSPACE
+const DAO_TYPE        : int = DaoTypeID::DAO_TYPE
+const DAO_VARIANT     : int = DaoTypeID::DAO_VARIANT
+const DAO_FUTURE      : int = DaoTypeID::DAO_FUTURE
+const DAO_MACRO       : int = DaoTypeID::DAO_MACRO
+const DAO_CONSTANT    : int = DaoTypeID::DAO_CONSTANT
+const DAO_VARIABLE    : int = DaoTypeID::DAO_VARIABLE
+const DAO_ROUTBODY    : int = DaoTypeID::DAO_ROUTBODY
+const DAO_TYPEKERNEL  : int = DaoTypeID::DAO_TYPEKERNEL
+const DAO_CODEBLOCK   : int = DaoTypeID::DAO_CODEBLOCK
+const DAO_PAIR        : int = DaoTypeID::DAO_PAIR
+const DAO_PAR_NAMED   : int = DaoTypeID::DAO_PAR_NAMED
+const DAO_PAR_DEFAULT : int = DaoTypeID::DAO_PAR_DEFAULT
+const DAO_PAR_VALIST  : int = DaoTypeID::DAO_PAR_VALIST
+const DAO_VALTYPE     : int = DaoTypeID::DAO_VALTYPE
+const DAO_ANY         : int = DaoTypeID::DAO_ANY
+const DAO_THT         : int = DaoTypeID::DAO_THT
+const DAO_UDT         : int = DaoTypeID::DAO_UDT
 
 
 type Module = tuple<file:int,loadas:int>
@@ -195,7 +233,7 @@ class DaoByteCode
 	routine EncodeRoutine( tup : Routine )=>string
 	routine Encode()=>string;
 
-	routine ErrorFormat(){ raise Exception::Error( 'Invalid bytecode format' ) }
+	routine ErrorFormat(){ std::error( 'Invalid bytecode format' ) }
 }
 
 routine DaoByteCode::DecodeUInt8()=>int
@@ -221,9 +259,9 @@ routine DaoByteCode::DecodeUInt32()=>int
 }
 routine DaoByteCode::DecodeDaoInt()=>int
 {
-	routine ErrorTooBigInt(){ raise Exception::Error( 'Too big integer' ) }
+	routine ErrorTooBigInt(){ std::error( 'Too big integer' ) }
 
-	sizeofInt = std.datasize( 0 )
+	sizeofInt = % 0
 	if( offset + intSize > data.size() ) ErrorFormat()
 	B1 = data[offset+0];
 	B2 = data[offset+1];
@@ -274,7 +312,7 @@ routine DaoByteCode::DecodeIdentifiers()
 routine DaoByteCode::DecodeModules()
 {
 	count = DecodeUInt32();
-	for( i = 1 : count ) modules.append( Module{ DecodeUInt32(), DecodeUInt32() } );
+	for( i = 1 : count ) modules.append( Module.{ DecodeUInt32(), DecodeUInt32() } );
 }
 routine DaoByteCode::DecodeDeclarations()
 {
@@ -286,31 +324,31 @@ routine DaoByteCode::DecodeDeclarations()
 		name = DecodeUInt32();
 		host = DecodeUInt32();
 		field = DecodeUInt32();
-		declarations.append( Declaration{ otype, subtype, dectype, name, host, field } );
+		declarations.append( Declaration.{ otype, subtype, dectype, name, host, field } );
 	}
 }
 routine DaoByteCode::DecodeValue()=>Value
 {
 	tid = DecodeUInt8();
 	io.writeln( 'value tid:', tid, offset )
-	value = Value{ tid };
+	value = Value.{ tid };
 	switch( tid ){
 	case DAO_NONE :
 	case DAO_INTEGER :
-		value = IntValue{ tid, DecodeDaoInt() }
+		value = IntValue.{ tid, DecodeDaoInt() }
 	case DAO_FLOAT ,
 	case DAO_DOUBLE :
-		value = FloatValue{ tid, DecodeUInt32(), DecodeUInt32() }
+		value = FloatValue.{ tid, DecodeUInt32(), DecodeUInt32() }
 	case DAO_COMPLEX :
 		i1 = DecodeUInt32();
 		i2 = DecodeUInt32();
 		i3 = DecodeUInt32();
 		i4 = DecodeUInt32();
-		value = ComplexValue{ tid, i1, i2, i3, i4 }
+		value = ComplexValue.{ tid, i1, i2, i3, i4 }
 	case DAO_LONG :
 		sign = DecodeUInt8();
 		count = DecodeDaoInt();
-		value2 = LongValue{ tid, count, {} };
+		value2 = LongValue.{ tid, count, {} };
 		value = value2;
 		digits = value2.digits;
 		for( i = 1 : count ) digits.append( DecodeUInt8() );
@@ -318,7 +356,7 @@ routine DaoByteCode::DecodeValue()=>Value
 		flag = DecodeUInt8();
 		charsize = flag & 0xF;
 		count = DecodeDaoInt();
-		value3 = StringValue{ tid, flag, {} };
+		value3 = StringValue.{ tid, flag, {} };
 		value = value3;
 		chars = value3.chars;
 		switch( charsize ){
@@ -327,12 +365,12 @@ routine DaoByteCode::DecodeValue()=>Value
 		case 4 : for( i = 1 : count ) chars.append( DecodeUInt32() );
 		}
 	case DAO_ENUM :
-		value = EnumValue{ tid, DecodeUInt32(), DecodeUInt32() }
+		value = EnumValue.{ tid, DecodeUInt32(), DecodeUInt32() }
 	case DAO_ARRAY :
 		ntype = DecodeUInt8()
 		size = DecodeDaoInt()
 		ndim = DecodeUInt16()
-		value2 = ArrayValue{ tid, ntype, {}, {} }
+		value2 = ArrayValue.{ tid, ntype, {}, {} }
 		value = value
 		dims = value2.dims
 		elems = value2.elems
@@ -346,14 +384,14 @@ routine DaoByteCode::DecodeValue()=>Value
 	case DAO_LIST :
 		abtype = DecodeUInt32()
 		size = DecodeDaoInt()
-		value2 = ListValue{ tid, abtype, {} }
+		value2 = ListValue.{ tid, abtype, {} }
 		value = value2
 		items = value2.items
 		for( i = 1 : size ) items.append( DecodeUInt32() );
 	case DAO_TUPLE :
 		abtype = DecodeUInt32()
 		size = DecodeUInt32()
-		value2 = ListValue{ tid, abtype, {} }
+		value2 = ListValue.{ tid, abtype, {} }
 		value = value2
 		items = value2.items
 		for( i = 1 : size ) items.append( DecodeUInt32() );
@@ -361,50 +399,50 @@ routine DaoByteCode::DecodeValue()=>Value
 		abtype = DecodeUInt32()
 		hashing = DecodeUInt32()
 		size = DecodeDaoInt()
-		value2 = MapValue{ tid, abtype, hashing, {} }
+		value2 = MapValue.{ tid, abtype, hashing, {} }
 		value = value2
 		items = value2.items
 		for( i = 1 : 2*size ) items.append( DecodeUInt32() );
 	case DAO_TYPE :
 		abtype = DecodeUInt32()
-		value = TypeValue{ tid, abtype }
+		value = TypeValue.{ tid, abtype }
 	case DAO_OBJECT :
 		flag = DecodeUInt8()
 		dec = DecodeUInt32()
 		if( flag == 0x0 ){
 			num = DecodeUInt16()
-			value2 = CompleteInstanceValue{ tid, flag, dec, {} }
+			value2 = CompleteInstanceValue.{ tid, flag, dec, {} }
 			value = value2
 			vals = value2.values
 			for( i = 1 : num ) vals.append( DecodeUInt32() )
 		}else if( flag == 0x1 ){
 			offset = DecodeUInt16()
 			host = DecodeUInt32()
-			value = PartialInstanceValue{ tid, flag, dec, offset, host }
+			value = PartialInstanceValue.{ tid, flag, dec, offset, host }
 		}else{
-			value = DefaultInstanceValue{ tid, flag, dec }
+			value = DefaultInstanceValue.{ tid, flag, dec }
 		}
 	case DAO_CLASS ,
 	case DAO_CTYPE ,
 	case DAO_INTERFACE ,
 	case DAO_NAMESPACE :
 		dec = DecodeUInt32()
-		value = ClassValue{ tid, dec }
+		value = ClassValue.{ tid, dec }
 	case DAO_CDATA :
 	case DAO_ROUTINE :
 		dec = DecodeUInt32()
 		routype = DecodeUInt32()
 		hostype = DecodeUInt32()
 		flag = DecodeUInt8()
-		value = RoutineValue{ tid, dec, routype, hostype, flag }
+		value = RoutineValue.{ tid, dec, routype, hostype, flag }
 	case DAO_FUTURE :
 		id = DecodeUInt32()
-		value = FutureValue{ tid, id }
+		value = FutureValue.{ tid, id }
 	case DAO_PAR_NAMED :
 		name = DecodeUInt32();
 		tp = DecodeUInt32();
 		val = DecodeUInt32()
-		value = NamedValue{ tid, name, tp, val }
+		value = NamedValue.{ tid, name, tp, val }
 	default :
 		io.writeln( 'undecode value:', tid )
 	}
@@ -427,11 +465,11 @@ routine DaoByteCode::DecodeTypes()
 		case DAO_COMPLEX ,
 		case DAO_LONG ,
 		case DAO_STRING :
-			types.append( CoreType{ tid, att, name } );
+			types.append( CoreType.{ tid, att, name } );
 		case DAO_ENUM :
 			subtype = DecodeUInt8();
 			symcount = DecodeUInt16();
-			enumType = EnumType{ tid, att, name, subtype, {} };
+			enumType = EnumType.{ tid, att, name, subtype, {} };
 			symbols = enumType.symbols;
 			for( j = 1 : symcount ) symbols.append( (DecodeUInt32(), DecodeUInt32()) );
 			types.append( enumType );
@@ -442,7 +480,7 @@ routine DaoByteCode::DecodeTypes()
 		case DAO_TYPE ,
 		case DAO_FUTURE :
 			typeCount = DecodeUInt16();
-			contype = ContainerType{ tid, att, name, {} };
+			contype = ContainerType.{ tid, att, name, {} };
 			itypes = contype.types;
 			for( j = 1 : typeCount ) itypes.append( DecodeUInt32() );
 			types.append( contype )
@@ -450,12 +488,12 @@ routine DaoByteCode::DecodeTypes()
 		case DAO_CLASS ,
 		case DAO_INTERFACE :
 			dec = DecodeUInt32();
-			types.append( InstanceType{ tid, att, name, dec } );
+			types.append( InstanceType.{ tid, att, name, dec } );
 		case DAO_CDATA ,
 		case DAO_CTYPE :
 			dec = DecodeUInt32();
 			typeCount = DecodeUInt16();
-			tup = CdataType{ tid, att, name, dec, {} };
+			tup = CdataType.{ tid, att, name, dec, {} };
 			itypes = tup.types;
 			for( j = 1 : typeCount ) itypes.append( DecodeUInt32() );
 			types.append( tup );
@@ -464,7 +502,7 @@ routine DaoByteCode::DecodeTypes()
 			retype = DecodeUInt32();
 			cbtype = DecodeUInt32();
 			typeCount = DecodeUInt16();
-			tup = RoutineType{ tid, att, name, dec, retype, cbtype, {} };
+			tup = RoutineType.{ tid, att, name, dec, retype, cbtype, {} };
 			itypes = tup.types;
 			for( j = 1 : typeCount ) itypes.append( DecodeUInt32() );
 			types.append( tup );
@@ -472,7 +510,7 @@ routine DaoByteCode::DecodeTypes()
 		case DAO_CODEBLOCK :
 			holder = DecodeUInt32();
 			typeCount = DecodeUInt16();
-			contype = VariantType{ tid, att, name, holder, {} };
+			contype = VariantType.{ tid, att, name, holder, {} };
 			itypes = contype.types;
 			for( j = 1 : typeCount ) itypes.append( DecodeUInt32() );
 			types.append( contype );
@@ -480,12 +518,12 @@ routine DaoByteCode::DecodeTypes()
 		case DAO_PAR_DEFAULT :
 			fname = DecodeUInt32();
 			ftype = DecodeUInt32();
-			types.append( NameParamType{ tid, att, name, fname, ftype } );
+			types.append( NameParamType.{ tid, att, name, fname, ftype } );
 		case DAO_VALTYPE :
 			value = DecodeValue();
-			types.append( ValueType{ tid, att, name, value } );
+			types.append( ValueType.{ tid, att, name, value } );
 		default :
-			types.append( CoreType{ tid, att, name } );
+			types.append( CoreType.{ tid, att, name } );
 		}
 	}
 }
@@ -501,7 +539,7 @@ routine DaoByteCode::DecodeConstant()=>Constant
 	index = DecodeUInt16()
 	perm = DecodeUInt8()
 	value = DecodeUInt32()
-	return Constant{ name, index, perm, value }
+	return Constant.{ name, index, perm, value }
 }
 routine DaoByteCode::DecodeConstants()
 {
@@ -516,7 +554,7 @@ routine DaoByteCode::DecodeVariable()=>Variable
 	perm = DecodeUInt8()
 	typeid = DecodeUInt32()
 	value = DecodeUInt32()
-	return Variable{ name, index, perm, typeid, value }
+	return Variable.{ name, index, perm, typeid, value }
 }
 routine DaoByteCode::DecodeVariables()
 {
@@ -531,7 +569,7 @@ routine DaoByteCode::DecodeGlobalTypes()
 	for( i = 1 : count ){
 		name = DecodeUInt32()
 		typeid = DecodeUInt32()
-		typeDecls.append( TypeDecl{ name, typeid } )
+		typeDecls.append( TypeDecl.{ name, typeid } )
 	}
 }
 routine DaoByteCode::DecodeInterfaces()
@@ -540,7 +578,7 @@ routine DaoByteCode::DecodeInterfaces()
 	io.writeln( 'DecodeInterfaces()', count );
 	for( i = 1 : count ){
 		dec = DecodeUInt32()
-		inter = Interface{ dec, {}, {} }
+		inter = Interface.{ dec, {}, {} }
 		bases = inter.bases
 		meths = inter.methods
 		count = DecodeUInt16()
@@ -558,7 +596,7 @@ routine DaoByteCode::DecodeClasses()
 		classID = DecodeUInt32()
 		cstrID = DecodeUInt32()
 		attribs = DecodeUInt16()
-		klass = Class{ classID, cstrID, attribs, {}, {}, {}, {}, {} }
+		klass = Class.{ classID, cstrID, attribs, {}, {}, {}, {}, {} }
 		bases = klass.bases
 		consts = klass.constants
 		svars = klass.svariables
@@ -568,7 +606,7 @@ routine DaoByteCode::DecodeClasses()
 		for( j = 1 : DecodeUInt16() ) consts.append( DecodeConstant() )
 		for( j = 1 : DecodeUInt16() ) svars.append( DecodeVariable() )
 		for( j = 1 : DecodeUInt16() ) ivars.append( DecodeVariable() )
-		for( j = 1 : DecodeUInt16() ) abtypes.append( TypeDecl{ DecodeUInt32(), DecodeUInt32() } )
+		for( j = 1 : DecodeUInt16() ) abtypes.append( TypeDecl.{ DecodeUInt32(), DecodeUInt32() } )
 		classes.append( klass )
 	}
 }
@@ -585,7 +623,7 @@ routine DaoByteCode::DecodeRoutines()
 		attribs = DecodeUInt16();
 		line = DecodeUInt16();
 
-		rout = Routine{ routid, nameid, typeid, hostid, uproutid, attribs, line, {},0,{},{},{} }
+		rout = Routine.{ routid, nameid, typeid, hostid, uproutid, attribs, line, {},0,{},{},{} }
 		consts = rout.constants
 		varTypes = rout.varTypes
 		lineCounts = rout.lineCounts
@@ -607,7 +645,7 @@ routine DaoByteCode::DecodeRoutines()
 			a = DecodeUInt16()
 			b = DecodeUInt16()
 			c = DecodeUInt16()
-			codes.append( Instruction{ code, a, b, c } )
+			codes.append( Instruction.{ code, a, b, c } )
 		}
 		routines.append( rout )
 	}
@@ -616,10 +654,10 @@ routine DaoByteCode::Decode( bytecodes : string )
 {
 # "bytecodes" could be MBS, with character range [-127,127];
 # Map it to WCS, so that the character range will become [0,255];
-	data = bytecodes.map::{ (X+256)%256 }
+	data = bytecodes.collect{ (X+256)%256 }
 
-	if( data.size() < 16 ) raise Exception::Error( 'Invalid bytecode file' );
-	if( data[:3] != "\33Dao" ) raise Exception::Error( 'Not a Dao bytecode file' );
+	if( data.size() < 16 ) std::error( 'Invalid bytecode file' );
+	if( data[:3] != "\33Dao" ) std::error( 'Not a Dao bytecode file' );
 
 	header = data[:15];
 
@@ -666,7 +704,7 @@ routine DaoByteCode::EncodeUInt32( value : int )=>string
 routine DaoByteCode::EncodeDaoInt( value : int )=>string
 {
 	encode = ""
-	for( i = 1 : intSize ) encode += (value >> (8*(intSize-i))) & 0xFF;
+	for( i = 1 : intSize ) encode += string( 1, (value >> (8*(intSize-i))) & 0xFF );
 	#FIXME for( i = 1 : intSize ) encode += (value >> 8*(intSize-i)) & 0xFF;
 	return encode;
 }
@@ -980,11 +1018,11 @@ routine main( command : string, input : string, output = '' )
 
 	if( command == 'strip' ) coder.strip = 1;
 
-	if( output ){
+	if( %output ){
 		encode = coder.Encode();
 		#encode = encode.map::{ X-128 }
 		s = io.open( output, 'w+' )
-		for( ch in encode ) s.writef( '%c', ch < 128 ? ch ~ 127 - ch )
+		for( ch in encode ) s.writef( '%c', ch < 128 ? ch : 127 - ch )
 		#s.write( encode )
 		s.close()
 	}

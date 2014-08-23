@@ -1446,7 +1446,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 		if( right < 0 ) goto ErrorRoutine;
 		ec = 0;
 	}
-	if( tokens[right]->name != DTOK_LCB ) return right;
+	if( tokens[right]->name != DTOK_LCB ) return right - 1;
 
 	start = right;
 	e2 = start;
@@ -2917,7 +2917,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 	}
 	if( self->isClassBody && tokens[right]->name == DTOK_RCB ){
 		DList_Append( self->routCompilable, parser );
-		return right+1;
+		return right + 1;
 	}
 	if( tokens[right]->name == DTOK_RCB ){ /* with body */
 		if( rout->body == NULL ){
@@ -2928,7 +2928,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		if( parser->usingGlobal ) DList_Append( self->routReInferable, parser->routine );
 	}
 	if( parser ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
-	return right+1;
+	return right + 1;
 InvalidDefinition:
 	DaoParser_Error3( self, DAO_INVALID_FUNCTION_DEFINITION, errorStart );
 Failed:
@@ -4383,23 +4383,28 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 		DString *name = & varTok->string;
 		int regC = DaoParser_DeclareVariable( self, varTok, store, abtp );
 		int id = 0;
-		/* printf( "declaring %s\n", varTok->string.chars ); */
+		/*
+		printf( "declaring %s\n", varTok->string.chars );
+		*/
 		if( regC < 0 ) return -1;
 		if( store & DAO_DECL_CONST ){
+			DaoConstant *konst;
 			if( store & DAO_DECL_GLOBAL ){
 				id = DaoNamespace_FindConst( ns, & varTok->string );
 				if( id < 0 ){
 					DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, & varTok->string );
 					return -1;
 				}
-				DaoNamespace_SetConst( ns, id, value );
+				konst = ns->constants->items.pConst[ LOOKUP_ID( id ) ];
+				DaoValue_Move( value, & konst->value, abtp );
 				if( block ){
 					DaoByteBlock_DeclareConst( block, name, value, LOOKUP_PM(id) );
 				}
 			}else if( self->isClassBody && hostClass ){
 				id = DaoClass_FindConst( hostClass, & varTok->string );
 				if( cst ){
-					DaoClass_SetConst( hostClass, id, value );
+					konst = hostClass->constants->items.pConst[ LOOKUP_ID( id ) ];
+					DaoValue_Move( value, & konst->value, abtp );
 				}else if( eq >=0 ){
 					DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, eq+1, end, 0 );
 					return -1;
@@ -4409,7 +4414,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 				}
 			}else{
 				id = LOOKUP_ID( DaoParser_GetRegister( self, varTok) );
-				DaoValue_Copy( value, routine->routConsts->value->items.pValue + id );
+				DaoValue_Move( value, routine->routConsts->value->items.pValue + id, abtp );
 				DaoValue_MarkConst( routine->routConsts->value->items.pValue[id] );
 			}
 		}else{

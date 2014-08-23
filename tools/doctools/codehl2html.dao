@@ -115,13 +115,13 @@ routine DaoCodeHL::Highlight( source : string, name = '' )=>string
 	i = 0;
 	while( i < size ){
 		tok = tokens[i];
-		if( Replace.has( tok ) ){
+		if( Replace.find( tok ) != none ){
 			repl = Replace[tok];
 			output += repl;
-		}else if( HilitMap.has( tok ) ){
+		}else if( HilitMap.find( tok ) != none ){
 			tag = HilitMap[tok];
 			output += tag + tok + "</span>";
-		}else if( Library.has( tok ) ){
+		}else if( Library.find( tok ) != none ){
 			output += "<span class=Method>" + tok;
 			if( i+2<size ){
 				if( tokens[i+1] == "." or tokens[i+1] == "::" ){
@@ -130,15 +130,15 @@ routine DaoCodeHL::Highlight( source : string, name = '' )=>string
 				}
 			}
 			output += "</span>";
-		}else if( Block.has( tok[0:0] ) ){
+		}else if( Block.find( tok[0:0] ) != none ){
 			tag = Block[ tok[0:0] ];
 			tmp = tok;
 			tmp.replace( "<", "&lt;" );
 			tmp.replace( ">", "&gt;" );
 			output += tag + tmp + "</span>";
-		}else if( %tok.pfind( '^ ( 0 (x|X) %x+ | %d[%d%.]+ | [%C_%d]+ ) $' ) ){
+		}else if( tok.match( '^ ( 0 (x|X) %x+ | %d[%d%.]+ | [%C_%d]+ ) $' ) != none ){
 			output += "<span class=Number>" + tok + "</span>";
-		}else if( %tok.pfind( '^ %$ %w+ $' ) ){
+		}else if( tok.match( '^ %$ %w+ $' ) != none ){
 			output += "<span class=Number>" + tok + "</span>";
 		}else if( i+2 <size && tokens[i+1]=="@" && tokens[i+2]=="END" ){
 			tmp = tok[1:];
@@ -200,23 +200,23 @@ class CppCodeHL
 
 routine CppCodeHL::Highlight( source : string, name = '' )=>string
 {
-	tokens = source.tokenize( "#!%^&*()-=+|/{}[];:,.~<>? \t\n\r", "\'\"", 1 );
+	tokens = tokenize( source, "#!%^&*()-=+|/{}[];:,.~<>? \t\n\r", "\'\"", 1 );
 	output = '<pre class="hlcode">\n';
 
 	size = tokens.size();
 	i = 0;
 	while( i < size ){
 		tok = tokens[i];
-		if( Replace.has( tok ) ){
+		if( Replace.find( tok ) != none ){
 			output += Replace[tok];
-		}else if( HilitMap.has( tok ) ){
+		}else if( HilitMap.find( tok ) != none ){
 			output += HilitMap[tok] + tok + "</span>";
-		}else if( Block.has( tok[0:0] ) ){
+		}else if( Block.find( tok[0:0] ) != none ){
 			tmp = tok;
 			tmp.replace( "<", "&lt;" );
 			tmp.replace( ">", "&gt;" );
 			output += Block[ tok[0:0] ] + tmp + "</span>";
-		}else if( %tok.pfind( '^ ( 0 (x|X) %x+ | %d[%d%.]+ | [%C_%d]+ ) $' ) ){
+		}else if( tok.match( '^ ( 0 (x|X) %x+ | %d[%d%.]+ | [%C_%d]+ ) $' ) != none ){
 			output += "<span class=Number>" + tok + "</span>";
 		}else if( tok == "#" ){
 			output += "<span class=SpecSymbol>" + tok + tokens[i+1] + "</span>";
@@ -286,18 +286,18 @@ class BnfCodeHL
 
 routine BnfCodeHL::Highlight( source : string, name = '' )=>string
 {
-	tokens = source.tokenize( "|+*(){}[] \t\n\r", "\'\"", 1 );
+	tokens = tokenize( source, "|+*(){}[] \t\n\r", "\'\"", 1 );
 	output = '<pre class="hlcode">\n';
 
 	size = tokens.size();
 	i = 0;
 	while( i < size ){
 		tok = tokens[i];
-		if( Replace.has(tok) ){
+		if( Replace.find(tok) != none ){
 			output += Replace[tok];
-		}else if( HilitMap.has(tok) ){
+		}else if( HilitMap.find(tok) != none ){
 			output += HilitMap[tok] + tok + "</span>";
-		}else if( Block.has( tok[0:0] ) ){
+		}else if( Block.find( tok[0:0] ) != none ){
 			tag = Block[ tok[0:0] ];
 			tmp = tok;
 			tmp.replace( "<", "&lt;" );
@@ -372,12 +372,14 @@ routine SdmlCodeHL2::HL( source : string )=>string
 		tks = tok.capture( pat2 );
 		if( %tks ){
 			tag = tks[2];
-			tk1 = tks[1];  tk1.replace( Replace );
-			tk4 = tks[4];  tk4.replace( Replace );
+			tk1 = tks[1];
+			tk4 = tks[4];
+			Replace.iterate { tk1 = tk1.replace( X, Y ) }
+			Replace.iterate { tk4 = tk4.replace( X, Y ) }
 			html = '<span class=DataType>';
 			html2 = ''; html3 = '';
-			if( kv.has( tag ) ) html = kv[tag];
-			if( kv2.has( tag ) ){
+			if( kv.find( tag ) != none ) html = kv[tag];
+			if( kv2.find( tag ) != none ){
 				html2 = kv2[tag];
 				html3 = '</span>';
 			}
@@ -385,7 +387,7 @@ routine SdmlCodeHL2::HL( source : string )=>string
 			output += HL( tks[3] );
 			output += html3 + html + tk4 + '</span>';
 		}else{
-			tok.replace( Replace );
+			Replace.iterate { tok = tok.replace( X, Y ) }
 			output += tok;
 		}
 	}

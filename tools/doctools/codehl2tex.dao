@@ -7,6 +7,7 @@ License: GPL
 #}
 
 load aux;
+load string.tokenize
 load sdml_parser;
 
 
@@ -44,7 +45,7 @@ class DaoCodeHL : CodeHL
 		"any" => "\\CONST{",
 		"var" => "\\STORAGE{",
 		"const" => "\\STORAGE{",
-		"global" => "\\STORAGE{",
+		"var" => "\\STORAGE{",
 		"public"    => "\\ACCESS{",
 		"protected" => "\\ACCESS{",
 		"private"   => "\\ACCESS{",
@@ -136,11 +137,11 @@ routine DaoCodeHL::Highlight( source : string, name='' ) => string
 			output += "\\CONST{" + replace( tok ) + "}";
 		}else if( tok == "[" || tok == "]" || tok == "(" || tok == ")" ){
 			output += tok; 
-		}else if( HilitMap.has( tok ) ){
+		}else if( HilitMap.find( tok ) != none ){
 			output += HilitMap[tok] + replace( tok ) + "}";
-		}else if( HilitMap3.has( tok ) ){
+		}else if( HilitMap3.find( tok ) != none ){
 			output += HilitMap3[tok] + replace( tok ) + "}";
-		}else if( Library.has( tok ) ){
+		}else if( Library.find( tok ) != none ){
 			output += "\\METHOD{" + replace( tok );
 			if( i+1<size ){
 				if( tokens[i] == "." ){
@@ -149,9 +150,9 @@ routine DaoCodeHL::Highlight( source : string, name='' ) => string
 				}
 			}
 			output += "}";
-		}else if( % tok.pfind( '^[%d%C_]+$' ) ){
+		}else if( tok.match( '^[%d%C_]+$' ) != none ){
 			output += "\\NUMBER{" + replace( tok ) + "}";
-		}else if( % tok.pfind( '^%d* %.%d+$' ) ){
+		}else if( tok.match( '^%d* %.%d+$' ) != none ){
 			output += "\\NUMBER{" + replace( tok ) + "}";
 		}else if( tok[0:1] == "#{" ){
 			tok = replace( tok );
@@ -227,7 +228,7 @@ class CppCodeHL : CodeHL
 
 routine CppCodeHL::Highlight( source : string, name='' )=> string
 {
-	tokens = source.tokenize( "#!%^&*()-=+|/{}[];:,.~<>? \t\n\r", "\'\"", 1 );
+	tokens = tokenize( source, "#!%^&*()-=+|/{}[];:,.~<>? \t\n\r", "\'\"", 1 );
 	output = StartCode( name );
 	size = tokens.size();
 	i = 0;
@@ -239,13 +240,13 @@ routine CppCodeHL::Highlight( source : string, name='' )=> string
 			output += Replace[tok];
 		}el
 #}
-		if( HilitMap.has( tok ) ){
+		if( HilitMap.find( tok ) != none ){
 			output += HilitMap[tok] + tok + "}";
 		}else if( tok[0:0] == "\"" || tok[0:0] == "\'" ){
 			output += "\\STRING{" + replace( tok ) + "}";
-		}else if( % tok.pfind( '^[%d%C_]+$' ) ){
+		}else if( tok.match( '^[%d%C_]+$' ) != none ){
 			output += "\\NUMBER{" + replace(tok) + "}";
-		}else if( % tok.pfind( '^%d* %.%d+$' ) ){
+		}else if( tok.match( '^%d* %.%d+$' ) != none ){
 			output += "\\NUMBER{" + replace( tok ) + "}";
 		}else if( tok == "#" ){
 			output += "\\SPECIAL{\\#" + tokens[i+1] + "}";
@@ -306,7 +307,7 @@ class BnfCodeHL : CodeHL
 
 routine BnfCodeHL::Highlight( source : string, name = '' ) => string
 {
-	tokens = source.tokenize( "|+*(){}[] \t\n\r", "\'\"", 1 );
+	tokens = tokenize( source, "|+*(){}[] \t\n\r", "\'\"", 1 );
 	output = StartCode( name );
 
 	size = tokens.size();
@@ -318,12 +319,12 @@ routine BnfCodeHL::Highlight( source : string, name = '' ) => string
 			output += "\\COMMENT{" + replace( tok ) + "}";
 		}else if( tok[0:0] == "\"" || tok[0:0] == "\'" ){
 			output += "\\STRING{" + replace( tok ) + "}";
-		}else if( HilitMap.has( tok ) ){
+		}else if( HilitMap.find( tok ) != none ){
 			output += HilitMap[tok] + replace( tok ) + "}";
 		# }else if( tok =~/^(\d|\C|_)+$/ ){
-		}else if( % tok.pfind( '^[%d%C_]+$' ) ){
+		}else if( tok.match( '^[%d%C_]+$' ) != none ){
 			output += "\\NUMBER{" + replace( tok ) + "}";
-		}else if( % tok.pfind( '^%d* %.%d+$' ) ){
+		}else if( tok.match( '^%d* %.%d+$' ) != none ){
 			output += "\\NUMBER{" + replace( tok ) + "}";
 		}else if( tok[0:1] == "#{" ){
 			tok = replace( tok );

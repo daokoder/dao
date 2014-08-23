@@ -9,7 +9,7 @@ routine DaoDecodeUInt32( data : string, i = 0 )
 }
 routine CharToHex( source : string )
 {
-	const digits = '0123456789ABCDEF';
+	const digits = {"0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F"};
 	hex = '  ';
 	count = 0;
 	for( char in source ){
@@ -75,7 +75,7 @@ routine main( file : string )
 		io.writeln( 'ERROR: input is not a Dao archive file!' );
 		return;
 	}
-	archive = archive.map{ (X+256)%256 }
+	archive = archive.collect{ (X+256)%256 }
 	(source, finders) = ArchiveToCSource( archive )
 	fout = io.open( file + '.c', 'w+' );
 	fout2 = io.open( file + '.finders', 'w+' );

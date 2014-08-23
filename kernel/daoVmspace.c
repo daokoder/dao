@@ -1029,6 +1029,7 @@ static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DList *argName
 {
 	DString *name;
 	DaoRoutine *rout = NULL;
+	DaoRoutine *best = NULL;
 	DaoRoutine **routs = NULL;
 	int i, max = 0, count = 0;
 
@@ -1052,17 +1053,17 @@ static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DList *argName
 	for(i=0; i<count; ++i){
 		int s = DaoVmSpace_ConvertArguments( routs[i], argNames, argValues );
 		if( s > max ){
-			rout = routs[i];
+			best = routs[i];
 			max = s;
 		}
 	}
-	if( rout ){
-		DaoVmSpace_ConvertArguments( rout, argNames, argValues );
+	if( best ){
+		DaoVmSpace_ConvertArguments( best, argNames, argValues );
 	}else{
 		*error = 1;
 	}
 	DString_Delete( name );
-	return rout;
+	return best;
 }
 
 DaoNamespace* DaoVmSpace_LoadEx( DaoVmSpace *self, const char *file, int run )

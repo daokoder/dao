@@ -61,12 +61,12 @@ routine Sdml2Html::Sdml2Html()
 routine Sdml2Html::Warn( info : string )
 {
 	output += '<div><font color=\"#f00\">WARNING: ' + info + '!</font></div>\n';
-	panic( info )
+	std::error( info )
 }
 routine Sdml2Html::Error( info : string )
 {
 	output += '<div><font color=\"#f00\">ERROR: ' + info + '!</font></div>\n';
-	panic( info )
+	std::error( info )
 }
 routine Sdml2Html::OpenHeader( dtype = '' )
 {
@@ -103,13 +103,13 @@ routine Sdml2Html::MakeTOC( sect : TextSection )
 	tpl = '<li style="margin-top: 5px"><a href="#$(index)">$(name)</a></li>\n'
 	toc = '\n<table class=toc><tr><td><ol>';
 	for( sc in sect.subsections )
-		toc += tpl.expand( (index=>sc.numbering, name=>sc.sectname) );
-	output.insert( toc + '</ol></td></tr></table>', sect.bodyStart );
+		toc += tpl.expand( (index = sc.numbering, name = sc.sectname) );
+	output = output.insert( toc + '</ol></td></tr></table>', sect.bodyStart );
 }
 routine Sdml2Html::MakeImage( name = '' )
 {
 	const html_image = '<table align="right" class="textwrap" style="margin-right:50pt" ><tr><td><a @(onclick_$(suffix))="PromptUploadImage( \'$(name)\' );" @(href_$(suffix))="/space/@(space_$(suffix))/image/$(name)/?size=large" class="@(class_$(suffix))"><img src="/space/@(space_$(suffix))/image/$(name)"/><div>@(tooltip_$(suffix))</div></a></td></tr></table>';
-	if( %name.pfind( '^ %w+ $' ) ){
+	if( name.match( '^ %w+ $' ) != none ){
 		expand = { 'align' => 'right', 'suffix' => suffix, 'name' => '' };
 		expand[ 'name' ] = name;
 		output += html_image.expand( expand );
@@ -122,7 +122,7 @@ routine Sdml2Html::MakeLink( name='', tok1='', tok2='' )=>string
 	code = "<a href=\"";
 	if( tok2.size() ){
 		code += "/space" + tok1 + "/page/" + tok2;
-	}else if( %tok1.pfind( '^ %w+ (|#[%d%.]*) $' ) ){
+	}else if( tok1.match( '^ %w+ (|#[%d%.]*) $' ) != none ){
 		code += "@(url_base_" + suffix + ")/page/" + tok1;
 	}else{
 		code += tok1;
@@ -199,11 +199,11 @@ class A
 </code>
 @[sdml]
 
-src = io.read( 'test2.sdml' )
+#src = io.read( 'test2.sdml' )
 parser = Sdml2Html();
 fout = io.open( 'test.html', 'w' );
 html = parser.Parse( src )
-#io.writeln( html )
+io.writeln( html )
 fout.writeln( html );
 fout.close();
 #}

@@ -8,7 +8,7 @@ Date: 2008-12-20
 load sdml_parser;
 load codehl2tex;
 
-global useCJK = 0;
+var useCJK = 0;
 
 const texconfig1 =
 "
@@ -332,9 +332,9 @@ routine Sdml2Tex::EvalDemo( source = '' )
 	output += "\\noindent{\\colorbox{FrameColor2}{\\makebox[0.98\\textwidth]{";
 	output += "\\texttt{\\textcolor{CommentColor}{Output}}}}}\n";
 	output += "\\begin{verbatim}\n";
-	ss = io.sstream();
+	ss = io.stream( $string );
 	std.eval( source, ss );
-	str = ss.getstring();
+	str = ss.read();
 	if( str.size() && str[ str.size()-1: ] != "\n" ) str += "\n";
 	output += str;
 	output += "\\end{verbatim}}\n";
