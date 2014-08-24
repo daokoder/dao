@@ -63,6 +63,9 @@ daovm_full_static = DaoMake::Option( "FULL-STATIC", $OFF )
 daovm_use_gc_logger  = DaoMake::Option( "GC-LOGGER", $OFF )
 daovm_use_code_state = DaoMake::Option( "CODE-STATE", $OFF )
 
+daovm_use_help_path = DaoMake::Option( "HELP-PATH", "." )
+daovm_use_help_font = DaoMake::Option( "HELP-FONT", "monospace" )
+
 if( DaoMake::IsPlatform( "MINIX" ) or daovm_make_javascript == $ON ) daovm_with_thread = $OFF;
 if( daovm_full_static == $ON ){
 	daovm_with_thread = $OFF;
@@ -329,6 +332,8 @@ modules.AddDependency( daovm_exe )
 
 
 daovm.AddVariable( "DAO", DaoMake::MakePath( daovm.BinaryPath(), "dao" ) );
+daovm.AddVariable( "HELP_PATH", daovm_use_help_path );
+daovm.AddVariable( "HELP_FONT", daovm_use_help_font );
 
 # Add shell commands as a target:
 # Generate documentations here instead of inside modules/help,
@@ -337,8 +342,8 @@ daovm_doc = daovm.AddCommand( "./doc/html/en/index.html: Makefile" + DaoMake::Ma
 daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/" );
 daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/en" );
 daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/zh" );
-daovm_doc.AddCommand( @[]$(DAO) -e "load help; help::set_language(\"en\"); help::export(\"\",\"./doc/html/en\")"@[] );
-daovm_doc.AddCommand( @[]$(DAO) -e "load help; help::set_language(\"zh\"); help::export(\"\",\"./doc/html/zh\")"@[] );
+daovm_doc.AddCommand( @[]$(DAO) --path="$(HELP_PATH)" -e "load help; help::set_language('en'); help::set_font('$(HELP_FONT)'); help::export('','./doc/html/en')"@[] );
+daovm_doc.AddCommand( @[]$(DAO) --path="$(HELP_PATH)" -e "load help; help::set_language('zh'); help::set_font('$(HELP_FONT)'); help::export('','./doc/html/zh')"@[] );
 daovm_doc.AddDependency( daovm_dll );
 
 daovm.Install( daovm_doc_path, "./doc" )

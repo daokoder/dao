@@ -136,8 +136,9 @@ struct DaoxHelper
 	DMap           *trees;
 	DMap           *entries;
 	DMap           *helps;
-	DList         *nslist;
+	DList          *nslist;
 	DString        *notice;
+	DString        *font;
 	DMap           *cxxKeywords;
 };
 struct DaoxStream
@@ -1676,6 +1677,7 @@ static DaoxHelper* DaoxHelper_New()
 	self->entries = DMap_New( DAO_DATA_STRING, 0 );
 	self->nslist = DList_New( DAO_DATA_VALUE );
 	self->notice = DString_New();
+	self->font = DString_NewChars( "monospace" );
 	self->cxxKeywords = DMap_New( DAO_DATA_STRING, 0 );
 	DString_SetChars( self->notice, "By $(author). Released under the $(license).\n" );
 	for(i=0; i<100; i++){
@@ -1701,6 +1703,7 @@ static void DaoxHelper_Delete( DaoxHelper *self )
 	DMap_Delete( self->helps );
 	DList_Delete( self->nslist );
 	DString_Delete( self->notice );
+	DString_Delete( self->font );
 	DaoCstruct_Free( (DaoCstruct*) self );
 	free( self );
 }
@@ -2037,6 +2040,16 @@ static void HELP_Load( DaoProcess *proc, DaoValue *p[], int N )
 		DaoStream_WriteChars( stdio, "\"!\n" );
 	}
 }
+static void HELP_SetFont( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *font = p[0]->xString.value;
+	DNode *it;
+	DString_Assign( daox_helper->font, font );
+	for(it=DMap_First(daox_helpers->value); it; it=DMap_Next(daox_helpers->value,it)){
+		DaoxHelper *helper = (DaoxHelper*) it->value.pVoid;
+		DString_Assign( helper->font, font );
+	}
+}
 static void HELP_SetLang( DaoProcess *proc, DaoValue *p[], int N )
 {
 	const char *lang = DaoValue_TryGetChars( p[0] );
@@ -2053,7 +2066,7 @@ static void HELP_SetTempl( DaoProcess *proc, DaoValue *p[], int N )
 	DString_Assign( daox_helper->notice, p[0]->xString.value );
 }
 
-static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, DString *dir )
+static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, DString *dir, DString *font )
 {
 	daoint i;
 	FILE *fout;
@@ -2068,7 +2081,9 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 	}
 	DString_AppendChars( fname, ".html" );
 	DString_Reset( stream->output, 0 );
-	DString_AppendChars( stream->output, "\n<pre style=\"font-family: monospace;\">\n" );
+	DString_AppendChars( stream->output, "\n<pre style=\"font-family: " );
+	DString_Append( stream->output, font );
+	DString_AppendChars( stream->output, ";\">\n" );
 	if( self->parent ){
 		DaoxHelpEntry_Print( self, stream, stream->process );
 	}else{
@@ -2084,7 +2099,7 @@ static void DaoxHelpEntry_ExportHTML( DaoxHelpEntry *self, DaoxStream *stream, D
 
 	for(i=0; i<self->nested2->size; i++){
 		DaoxHelpEntry *entry = (DaoxHelpEntry*) self->nested2->items.pVoid[i];
-		DaoxHelpEntry_ExportHTML( entry, stream, dir );
+		DaoxHelpEntry_ExportHTML( entry, stream, dir, font );
 		self->failedTests += entry->failedTests;
 	}
 	DString_Reset( stream->output, 0 );
@@ -2134,7 +2149,7 @@ static void HELP_Export( DaoProcess *proc, DaoValue *p[], int N )
 	stream = DaoxStream_New( stdio, newproc );
 	stream->output = DString_New();
 	stream->fmtHTML = 1;
-	DaoxHelpEntry_ExportHTML( entry, stream, dir_name );
+	DaoxHelpEntry_ExportHTML( entry, stream, dir_name, daox_helper->font );
 	if( newproc ) DaoVmSpace_ReleaseProcess( proc->vmSpace, newproc );
 	DString_Delete( stream->output );
 	DaoxStream_Delete( stream );
@@ -2144,15 +2159,16 @@ static void HELP_Export( DaoProcess *proc, DaoValue *p[], int N )
 static DaoFuncItem helpMeths[]=
 {
 	{ HELP_Help1,     "help()" },
-	{ HELP_Help2,     "help( keyword :string, run = 0 )" },
-	{ HELP_Help3,     "help( object :any, keyword :string, run = 0 )" },
-	{ HELP_Search,    "search( keywords :string )" },
-	{ HELP_Search2,   "search( object :any, keywords :string )" },
-	{ HELP_Load,      "load( help_file :string )" },
-	{ HELP_List,      "list( object :any, type :enum<values,methods>=$methods )" },
-	{ HELP_SetLang,   "set_language( lang :string )" },
-	{ HELP_SetTempl,  "set_template( tpl :string, ttype :enum<notice> )" },
-	{ HELP_Export,    "export( root = \"\", dir = \"\", format :enum<html> = $html, run = 0 )" },
+	{ HELP_Help2,     "help( keyword: string, run = 0 )" },
+	{ HELP_Help3,     "help( object: any, keyword: string, run = 0 )" },
+	{ HELP_Search,    "search( keywords: string )" },
+	{ HELP_Search2,   "search( object: any, keywords: string )" },
+	{ HELP_Load,      "load( help_file: string )" },
+	{ HELP_List,      "list( object: any, type: enum<values,methods>=$methods )" },
+	{ HELP_SetFont,   "set_font( family: string )" },
+	{ HELP_SetLang,   "set_language( lang: string )" },
+	{ HELP_SetTempl,  "set_template( tpl: string, ttype: enum<notice> )" },
+	{ HELP_Export,    "export( root = \"\", dir = \"\", format: enum<html> = $html, run = 0 )" },
 	{ NULL, NULL }
 };
 
