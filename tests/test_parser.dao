@@ -1,0 +1,47 @@
+
+@[test(code_01)]
+io.writeln( std.about( (123.45) ) )
+@[test(code_01)]
+@[test(code_01)]
+{{double}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( std.about( (123.45,) ) )
+@[test(code_01)]
+@[test(code_01)]
+{{tuple<double>}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+routine Test() { 123.45 }
+io.writeln( std.about( Test ) )
+@[test(code_01)]
+@[test(code_01)]
+Test%{routine%<=%>double%>%}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+routine Test() { if( 1 ) 123.45 }
+io.writeln( std.about( Test ) )
+@[test(code_01)]
+@[test(code_01)]
+Test%{routine%<=%>@Test%>%}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]

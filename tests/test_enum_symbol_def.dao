@@ -95,3 +95,13 @@ flag = Bool.False + Bool.True
 @[test()]
 
 
+
+
+@[test()]
+const False : int = Bool::False
+const True  : int = Bool::True
+io.writeln( False, True )
+@[test()]
+@[test()]
+0 1
+@[test()]

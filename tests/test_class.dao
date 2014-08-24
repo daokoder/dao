@@ -1,0 +1,127 @@
+
+@[test(code_01)]
+class A
+{
+	type T = A
+
+	var index = 123
+}
+var x: A::T = A()
+io.writeln( x.index )
+@[test(code_01)]
+@[test(code_01)]
+123
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+class K
+{
+	var index = 123
+	invar routine M() { io.writeln( index ) }
+}
+k = K()
+k.M()
+@[test(code_01)]
+@[test(code_01)]
+123
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+class K
+{
+	var index = 123
+	routine K(){ index = 456 }
+	invar routine M() { io.writeln( index ) }
+}
+k = K()
+k.M()
+@[test(code_01)]
+@[test(code_01)]
+456
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+class K
+{
+	invar index = 123
+	routine M() { index = 456 }
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Constant or invariable cannot be modified}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class K
+{
+	var index = 123
+	invar routine M() { index = 456 }
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Constant or invariable cannot be modified}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class K
+{
+	var index = 123
+	routine F(){ index += 100 }
+	invar routine M() { F() }
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Calling non-invar method inside invar method}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class K
+{
+	var index = 123
+	routine F(){ index += 100 }
+}
+routine Test( invar k: K )
+{
+	k.F()
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Invalid parameter type}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class K
+{
+	var index = 123
+	routine F(){ index += 100 }
+}
+routine Test( k: K )
+{
+	k.F()
+}
+invar k = K()
+Test( k )
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Invalid parameter type}}
+@[test(code_01)]

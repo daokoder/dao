@@ -221,3 +221,17 @@ var TestVariadicFunction3 : any = TestVariadicFunction
 	{{Error::Param}} .* {{Invalid parameter type}}
 @[test(code_01)]
 
+
+
+
+@[test(code_01)]
+routine f(...: tuple<enum<a>, int>){ io.writeln(1) }
+routine f(...: tuple<enum<b>, int>){ io.writeln(2) }
+
+f(a = 1)
+f(b = 1)
+@[test(code_01)]
+@[test(code_01)]
+1
+2
+@[test(code_01)]

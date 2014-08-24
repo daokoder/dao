@@ -2,10 +2,12 @@
 ChangeLog for the Dao language and virtual machine:
 
 ================================
-release dao-2.0, 2013-XX-XX
+release dao-2.0, 2014-XX-XX
 ================================
 ADDED:
+-- Execution time profiler;
 -- Bytecode format and single file deployment;
+-- Basic data flow analysis and optimizations (CSE, DCE, register reallocation etc.);
 -- DaoJIT, LLVM-based JIT compiler;
 -- DaoCXX, Clang-based module to support embedding C/C++ codes;
 -- ClangDao, Clang-based automatic binding tool;
@@ -14,27 +16,21 @@ ADDED:
 -- Asynchronous class and future value;
 -- Communication channel for tasklets;
 -- Abstract interface type: interface Name{ methods };
--- Meta fields, access by object->field;
--- Deferred code block;
--- Defer-recover exception handling;
--- Framed code block;
+-- Deferred code block and error handling;
 -- Typed function decorators;
--- Runtime class creation;
+-- Class decorator and Apsect-Oriented Programming;
 -- Enum/flag/symbol type;
 -- Variant or disjoint union type: type1|type2;
 -- Hash map type (colliding keys as red-black tree);
 -- Explicit enumeration with keywords: array/list/map/tuple{};
 -- Verbatim string syntax;
 -- Customized for-in iteration;
--- Indentation-aware syntax macro;
 -- Improve operator overloading (added support for type casting);
 -- New technique for more efficient lookup of overloaded functions;
 -- Access control on syntax macros and global consts and variables;
 -- Data serialization (in aux module);
 -- Support for template-like C data type;
--- Support for auxiliary methods;
 -- Standard help system;
--- Basic data flow analysis and optimizations (CSE, DCE, register reallocation etc.);
 CHANGED:
 -- Internal data storage structures;
 -- Better parsing with a combination of top-down and bottom-up parsing;
@@ -44,11 +40,11 @@ CHANGED:
 -- Better implementation of call stack;
 -- Various improvements to the basic data types;
 -- Various improvements to the garbage collector;
--- Coroutine from library support to syntax support;
 -- Re-implementation of exception types as C data type;
 -- Moved aux, sys, math, meta and network modules from kernel to standard modules;
 -- Replaced builtin functional methods with various builtin code section methods;
 REMOVED:
+-- Wide character string;
 -- Posix like multi-threading methods;
 -- Try-catch style exception handling;
 -- Parameter passing by reference for basic data types;

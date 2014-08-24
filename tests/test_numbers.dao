@@ -6,3 +6,93 @@ io.writeln( 0xff )
 @[test(output_01)]
 255
 @[test(output_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( std.about(1.0) )
+@[test(code_01)]
+@[test(code_01)]
+{{double}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( std.about(1F) )
+@[test(code_01)]
+@[test(code_01)]
+{{float}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( std.about(1D) )
+@[test(code_01)]
+@[test(code_01)]
+{{double}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( std.about(1C) )
+@[test(code_01)]
+@[test(code_01)]
+{{complex}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( std.about(1.2C) )
+@[test(code_01)]
+@[test(code_01)]
+{{complex}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( std.about(1.) )
+@[test(code_01)]
+@[test(code_01)]
+{{double}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( std.about(.5) )
+@[test(code_01)]
+@[test(code_01)]
+{{double}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( std.about(1.D) )
+@[test(code_01)]
+@[test(code_01)]
+{{double}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( std.about(.1D) )
+@[test(code_01)]
+@[test(code_01)]
+{{double}}
+@[test(code_01)]

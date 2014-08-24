@@ -2,8 +2,36 @@
 @[test(code)]
 io.writeln( "hello world" )
 @[test(code)]
+@[test(output)]
+{{hello world}}
+@[test(output)]
 
-# Expected output is allowed to be pattern:
+
+
+
+@[test(code)]
+io.writeln( 'hello world' )
+@[test(code)]
 @[test(output)]
-hello %s world
+{{hello world}}
 @[test(output)]
+
+
+
+
+@[test(code)]
+io.writeln( @[]verbatim@[] )
+@[test(code)]
+@[test(code)]
+verbatim
+@[test(code)]
+
+
+
+
+@[test(code)]
+io.writeln( @[abc]verbatim@[abc] )
+@[test(code)]
+@[test(code)]
+verbatim
+@[test(code)]
