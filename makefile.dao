@@ -346,7 +346,7 @@ daovm_doc.AddCommand( @[]$(DAO) --path="$(HELP_PATH)" -e "load help; help::set_l
 daovm_doc.AddCommand( @[]$(DAO) --path="$(HELP_PATH)" -e "load help; help::set_language('zh'); help::set_font('$(HELP_FONT)'); help::export('','./doc/html/zh')"@[] );
 daovm_doc.AddDependency( daovm_dll );
 
-daovm.Install( daovm_doc_path, "./doc" )
+daovm.Install( daovm_doc_path, DaoMake::MakePath( daovm.BinaryPath(), "./doc" ) )
 
 demos = {
 	"demo/arrays.dao",

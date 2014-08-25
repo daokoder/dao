@@ -3373,6 +3373,12 @@ int main( int argc, char *argv[] )
 			return DaoMake_Remove( argc - 2, argv + 2 );
 		}else if( strcmp( argv[1], "copy" ) == 0 ){
 			return DaoMake_Copy( argc - 2, argv + 2 );
+		}else if( strcmp( argv[1], "cat2" ) == 0 ){
+			FILE *fout = Dao_OpenFile( argv[2], "w+" );
+			if( fout == NULL ) return 1;
+			while( (k = getchar()) != EOF ) fprintf( fout, "%c", k );
+			fclose( fout );
+			return 0;
 		}else if( strcmp( argv[1], "eval" ) == 0 ){
 			DaoRoutine *rout;
 			DaoNamespace *ns = DaoVmSpace_MainNamespace( vmSpace );
