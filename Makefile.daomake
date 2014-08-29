@@ -16,11 +16,6 @@ SRCDIR ?= .
 # Use STATIC=ON to turn on building statically linked Dao:
 STATIC ?= OFF
 
-# Use JAVASCRIPT=ON to turn on compiling to JavaScript.
-# Environment variable EMCC is required to be set to
-# the emscripten C to javascript compiler.
-JAVASCRIPT ?= OFF
-
 # Use RESET=--reset to turn on resetting of file generation,
 # so that Makefiles will be overrided by force, and CacheFind*.dao
 # will be regenerated.
@@ -40,7 +35,6 @@ OPTIONS ?=
 
 DAOMAKE_ARGS  = --mode $(MODE)
 DAOMAKE_ARGS += --option-INSTALL-PATH $(INSTALL)
-DAOMAKE_ARGS += --option-JAVASCRIPT $(JAVASCRIPT)
 DAOMAKE_ARGS += --option-STATIC $(STATIC)
 DAOMAKE_ARGS += $(RESET) $(OPTIONS)
 

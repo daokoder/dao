@@ -49,7 +49,7 @@ from the build directory:
 $ make -f DAO-DIR/Makefile.daomake PLATFORM SRCDIR=DAO-DIR
 
 Please read Makefile.daomake for more options such as making
-static build and compiling to JavaScript etc.
+static build etc.
 
 
 ================================================================

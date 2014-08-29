@@ -53,8 +53,6 @@ daovm_with_concurrent = DaoMake::Option( "CONCURRENT", $ON )
 
 daovm_with_readline   = DaoMake::Option( "READLINE",   $ON )
 
-daovm_make_javascript = DaoMake::Option( "JAVASCRIPT", $OFF )
-
 daovm_bundle_program   = DaoMake::Option( "BUNDLE-SCRIPT", "" )
 daovm_bundle_resources = DaoMake::Option( "BUNDLE-RESOURCES", "" )
 
@@ -66,7 +64,7 @@ daovm_use_code_state = DaoMake::Option( "CODE-STATE", $OFF )
 daovm_use_help_path = DaoMake::Option( "HELP-PATH", "." )
 daovm_use_help_font = DaoMake::Option( "HELP-FONT", "monospace" )
 
-if( DaoMake::IsPlatform( "MINIX" ) or daovm_make_javascript == $ON ) daovm_with_thread = $OFF;
+if( DaoMake::IsPlatform( "MINIX" ) ) daovm_with_thread = $OFF;
 if( daovm_full_static == $ON ){
 	daovm_with_thread = $OFF;
 	daovm_with_readline = $OFF;
@@ -423,23 +421,3 @@ if( daovm_bundle_program.size() ){
 	archive.AddCommand( "$(MAKE) -f Makefile.bundle" )
 }
 
-
-###########################################################################
-#
-# Add an javascript target:
-#
-###########################################################################
-if( daovm_make_javascript == $ON ){
-	ems_export  = @[]"['_DaoInit','_DaoQuit',@[]
-	ems_export += @[]'_DaoVmSpace_Eval','_DaoVmSpace_StdioStream',@[]
-	ems_export += @[]'_DaoStream_WriteChars']"@[]
-	daovm_js_main = daovm.AddObjects( { "kernel/daoMain.c" }, daovm_kernel_headers );
-	daovm_js = daovm.AddJavaScriptLibrary( "dao", daovm_kernel_objects, daovm_js_main )
-	daovm_js.AddDefinition( "DAO_BUILD_JS_TARGET" )
-	daovm_js.AddDefinition( "DAO_WITHOUT_DLL" )
-	daovm_js.AddDefinition( "WITHOUT_WCTYPE_H" )
-	daovm_js.AddDefinition( "WITHOUT_DIRECT_THREADING" )
-	daovm_js.AddLinkingFlag( "-s EXPORTED_FUNCTIONS=" + ems_export )
-	#daovm_js.AddLinkingFlag( "-s ASM_JS=1" )
-	if( DaoMake::BuildMode() == $RELEASE ) daovm_js.AddLinkingFlag( "-O2 --closure 1" )
-}
