@@ -1143,6 +1143,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 	DaoNamespace *ns;
 	DaoLexer *lexer = DaoLexer_New();
 	DString *input = DString_New();
+	DString *line = DString_New();
 	const char *varRegex = "^ %s* = %s* %S+";
 	const char *srcRegex = "^ %s* %w+ %. dao .* $";
 	const char *sysRegex = "^ %\\ %s* %w+ %s* .* $";
@@ -1158,7 +1159,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 		DString_Clear( input );
 		DaoValue_Clear( self->mainProcess->stackValues );
 		if( self->ReadLine ){
-			chs = self->ReadLine( "(dao) " );
+			chs = self->ReadLine( "(dao) ", line );
 			if( chs == NULL ){
 				printf( "\n" );
 				break;
@@ -1166,13 +1167,12 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 			while( chs ){
 				DString_AppendChars( input, chs );
 				DString_AppendChar( input, '\n' );
-				dao_free( chs );
 				if( CheckCodeCompletion( input, lexer ) ){
 					DString_Trim( input, 1, 1, 0 );
 					if( input->size && self->AddHistory ) self->AddHistory( input->chars );
 					break;
 				}
-				chs = self->ReadLine( "..... " );
+				chs = self->ReadLine( "..... ", line );
 			}
 		}else{
 			printf( "(dao) " );
@@ -1231,6 +1231,7 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 		 */
 	}
 	self->mainNamespace->options &= ~DAO_NS_AUTO_GLOBAL;
+	DString_Delete( line );
 	DString_Delete( input );
 	DaoLexer_Delete( lexer );
 }

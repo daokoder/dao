@@ -398,9 +398,22 @@ void DaoInitThreadSys()
 }
 #endif /* WIN32	*/
 
+static dao_thread_t daoMainThreadID;
 void DaoInitThread()
 {
 	DaoInitThreadSys();
+	daoMainThreadID = DThread_Self();
+}
+int DThread_IsMain()
+{
+	dao_thread_t threadid = DThread_Self();
+	return DThread_Equal( threadid, daoMainThreadID );
+}
+#else
+
+int DThread_IsMain()
+{
+	return 1;
 }
 #endif /* DAO_WITH_THREAD */
 

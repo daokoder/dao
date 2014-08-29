@@ -134,6 +134,7 @@ DAO_DLL void DThread_Exit( DThread *self );
 DAO_DLL void DThread_Join( DThread *self );
 DAO_DLL dao_thread_t DThread_Self();
 DAO_DLL int DThread_Equal( dao_thread_t x, dao_thread_t y );
+DAO_DLL int DThread_IsMain();
 
 DAO_DLL DThreadData* DThread_GetSpecific();
 

@@ -108,8 +108,8 @@ struct DaoVmSpace
 	DList   *loadedModules;
 	DList   *sourceArchive;
 
-	int options;
-	char stopit;
+	volatile int stopit;
+	int  options;
 	char evalCmdline;
 	char hasAuxlibPath;
 	char hasSyslibPath;
@@ -124,7 +124,7 @@ struct DaoVmSpace
 	DaoProfiler     *profiler;
 	DaoUserHandler  *userHandler;
 
-	char* (*ReadLine)( const char *prompt );
+	char* (*ReadLine)( const char *prompt, DString *buffer );
 	int   (*AddHistory)( const char *cmd );
 
 #ifdef DAO_WITH_THREAD

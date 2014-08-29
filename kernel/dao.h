@@ -318,7 +318,7 @@ struct DaoUserHandler
 	/* invoke host execution to do whatever (e.g., to process GUI events) */
 	void (*InvokeHost)( DaoUserHandler *self, DaoProcess *process );
 };
-typedef char* (*ReadLine)( const char *prompt );
+typedef char* (*ReadLine)( const char *prompt, DString *buffer );
 typedef int   (*AddHistory)( const char *cmd );
 
 

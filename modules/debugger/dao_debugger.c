@@ -54,23 +54,24 @@ DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *
 	DaoRoutine *routine = proc->activeRoutine;
 	DString *input;
 	DList *tokens;
-	DMap   *cycData;
+	DString *line;
+	DMap *cycData;
 	char *chs, *cmd;
 	int i;
 	if( ! (proc->vmSpace->options & DAO_OPTION_DEBUG ) ) return;
 	input = DString_New(1);
 	tokens = DList_New(DAO_DATA_STRING);
 	cycData = DMap_New(0,0);
+	line = DString_New();
 	if( stream == NULL ) stream = proc->vmSpace->stdioStream;
 	while( proc->vmSpace->stopit == 0 ){
 		if( proc->vmSpace->ReadLine ){
-			chs = proc->vmSpace->ReadLine( "(debug) " );
+			chs = proc->vmSpace->ReadLine( "(debug) ", line );
 			if( chs ){
 				DString_SetChars( input, chs );
 				DString_Trim( input, 1, 1, 0 );
 				if( input->size && proc->vmSpace->AddHistory )
 					proc->vmSpace->AddHistory( chs );
-				dao_free( chs );
 			}
 		}else{
 			DaoStream_WriteChars( stream, "(debug) " );
@@ -154,6 +155,7 @@ DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *
 		}
 	}
 	DString_Delete( input );
+	DString_Delete( line );
 	DList_Delete( tokens );
 }
 

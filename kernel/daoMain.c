@@ -31,6 +31,9 @@
 #include<string.h>
 #include"dao.h"
 
+#ifdef DAO_WITH_THREAD
+#include "daoThread.h"
+#endif
 
 #ifdef DAO_USE_READLINE
 #include"readline/readline.h"
@@ -44,19 +47,39 @@ static int readingline = 0;
 static DaoVmSpace *vmSpace = NULL;
 
 static int count = 0;
-static char* DaoReadLine( const char *s )
+static char* DaoReadLine( const char *s, DString *buffer )
 {
+	int ch;
 	char *line;
+
+	DString_Reset( buffer, 0 );
+
+#ifdef DAO_WITH_THREAD
+	if( ! DThread_IsMain() ){
+		printf( "%s", s );
+		fflush( stdout );
+		while( (ch = getchar()) != '\n' ) DString_AppendWChar( buffer, ch );
+		return DString_GetData( buffer );
+	}
+#endif
+
 	readingline = 1;
 	count = 0;
+
 #ifdef DAO_USE_READLINE
 	line = readline( s );
+	DString_SetChars( buffer, line );
+	free( line );
 #endif
 	readingline = 0;
-	return line;
+	return DString_GetData( buffer );
 }
 static void DaoSignalHandler( int sig )
 {
+#ifdef DAO_WITH_THREAD
+	if( ! DThread_IsMain() ) return;
+#endif
+
 	DaoVmSpace_Stop( vmSpace, 1);
 	if( count ++ ) exit(1);
 	count += 1;
