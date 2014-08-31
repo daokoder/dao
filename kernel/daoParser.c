@@ -50,6 +50,7 @@
 #include"daoBase.h"
 #include"daoValue.h"
 
+enum InExpressionAssignmentStatus { ASSIGNMENT_OK, ASSIGNMENT_WARNING, ASSIGNMENT_ERROR };
 
 /* Expression node */
 typedef struct DaoEnode DaoEnode;
@@ -3496,7 +3497,8 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 #endif
 
 	self->curToken = from;
-	enode = DaoParser_ParseExpression( self, 0 );
+	/* Ensure single assignment statement will not pass this parsing: */
+	enode = DaoParser_ParseExpression2( self, 0, 0, ASSIGNMENT_ERROR );
 	if( enode.reg >= 0 ){
 		i = self->curToken;
 		while( i <= to && tokens[i]->type == DTOK_SEMCO ) i += 1;
@@ -4284,11 +4286,11 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 			return -1;
 		}
 		self->curToken = start;
-		enode = DaoParser_ParseExpression2( self, 0, 0, 0 );
+		enode = DaoParser_ParseExpression2( self, 0, 0, ASSIGNMENT_OK );
 		if( enode.reg < 0 ) return -1;
 		while( DaoParser_CurrentTokenType( self ) == DTOK_COMMA ){
 			self->curToken += 1;
-			enode = DaoParser_ParseExpression2( self, 0, 0, 0 );
+			enode = DaoParser_ParseExpression2( self, 0, 0, ASSIGNMENT_OK );
 			if( enode.reg < 0 ) return -1;
 		}
 		return self->curToken;
@@ -6613,7 +6615,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 				isSection = self->isSection;
 				self->isSection = 1;
 				self->curToken = start;
-				enode = DaoParser_ParseExpression2( self, 0, 0, 0 );
+				enode = DaoParser_ParseExpression2( self, 0, 0, ASSIGNMENT_ERROR );
 				if( enode.reg >= 0 && self->curToken == rb ){
 					DaoParser_AddCode( self, DVM_RETURN, enode.reg, 1, DVM_SECT, start, 0, rb-1 );
 				}else{
@@ -6695,7 +6697,7 @@ InvalidSection:
 					if( (start+1) == rb ){
 						enode = DaoParser_NoneValue( self );
 					}else{
-						enode = DaoParser_ParseExpression2( self, 0, DAO_EXPRLIST_SLICE, 1 );
+						enode = DaoParser_ParseExpression2( self, 0, DAO_EXPRLIST_SLICE, ASSIGNMENT_WARNING );
 					}
 					if( enode.reg < 0 || self->curToken != rb ) return error;
 					if( result.konst && enode.konst ){
@@ -7008,7 +7010,7 @@ ErrorParsing:
 	result.reg = -1;
 	return result;
 }
-static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec, int stop, int eltype, int warn )
+static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec, int stop, int eltype, int astat )
 {
 	DaoEnode result = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
 	DaoEnode RHS = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
@@ -7098,8 +7100,14 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 		posend = self->curToken - 1;
 		if( oper == DAO_OPER_ASSN ){
 			if( LHS.konst ) goto InvalidConstModificatioin;
-			if( warn && curtok == DTOK_ASSN )
-				DaoParser_Warn2( self, DAO_WARN_ASSIGNMENT, postart, posend );
+			if( curtok == DTOK_ASSN ){
+				if( astat == ASSIGNMENT_WARNING ){
+					DaoParser_Warn2( self, DAO_WARN_ASSIGNMENT, postart, posend );
+				}else if( astat == ASSIGNMENT_ERROR ){
+					DaoParser_Error2( self, DAO_WARN_ASSIGNMENT, postart, posend, 0 );
+					return result;
+				}
+			}
 
 			if( code >= DVM_GETVH && code <= DVM_GETF ){ /* change GETX to SETX */
 				LHS.last->code += DVM_SETVH - DVM_GETVH;
@@ -7220,7 +7228,7 @@ InvalidExpression:
 	result.reg = -1;
 	return result;
 }
-static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int eltype, int warn )
+static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int eltype, int astat )
 {
 	int tt, start = self->curToken;
 	DaoEnode RHS, LHS = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
@@ -7246,7 +7254,7 @@ static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int eltyp
 		LHS = DaoParser_ParseUnary( self, stop, eltype );
 	}
 	if( LHS.reg >= 0 && DaoParser_GetOperPrecedence( self ) >= 0 ){
-		LHS = DaoParser_ParseOperator( self, LHS, 0, stop, eltype, warn );
+		LHS = DaoParser_ParseOperator( self, LHS, 0, stop, eltype, astat );
 	}
 Done:
 	if( LHS.reg < 0 ){
@@ -7262,7 +7270,7 @@ Done:
 }
 static DaoEnode DaoParser_ParseExpression( DaoParser *self, int stop )
 {
-	return DaoParser_ParseExpression2( self, stop, 0, 1 );
+	return DaoParser_ParseExpression2( self, stop, 0, ASSIGNMENT_WARNING );
 }
 
 static DaoEnode DaoParser_ParseExpressionList2( DaoParser *self, int sep, DaoInode *pre, DList *cids, int eltype )
@@ -7293,7 +7301,7 @@ static DaoEnode DaoParser_ParseExpressionList2( DaoParser *self, int sep, DaoIno
 		}else{
 			DaoParser_PushItemType( self, type, id++, sep );
 		}
-		item = DaoParser_ParseExpression2( self, sep, eltype, 1 );
+		item = DaoParser_ParseExpression2( self, sep, eltype, ASSIGNMENT_WARNING );
 		DList_PopFront( self->enumTypes );
 		if( item.reg < 0 ){
 			if( self->curToken == cur ) break;
