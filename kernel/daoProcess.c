@@ -5755,14 +5755,18 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		tsize = ct->nested->size - ct->variadic;
 		if( dA->type == DAO_TUPLE ){
 			tuple2 = (DaoTuple*) dA;
-			if( tuple2->ctype == ct || tsize == 0 ) goto Rebind;
+			if( tuple2->ctype == ct || ct->nested->size == 0 ) goto Rebind;
 			tuple = DaoProcess_PrepareTuple( proc, dC, ct, tuple2->size );
 			if( tuple == NULL ) goto FailConversion;
 			for(i=0; i<tuple->size; i++){
 				DaoValue *V = tuple2->values[i];
 				tp2 = dao_type_any;
-				if( i < tsize ) tp2 = ct->nested->items.pType[i];
-				if( tp2->tid == DAO_PAR_NAMED ) tp2 = & tp2->aux->xType;
+				if( i < ct->nested->size ){
+					tp2 = ct->nested->items.pType[i];
+				}else if( ct->variadic ){
+					tp2 = ct->nested->items.pType[tsize];
+				}
+				if( tp2->tid >= DAO_PAR_NAMED && tp2->tid <= DAO_PAR_VALIST ) tp2 = & tp2->aux->xType;
 				V = DaoTypeCast( proc, tp2, V, K );
 				if( V == NULL || V->type == 0 ) goto FailConversion;
 				DaoValue_Copy( V, tuple->values + i );
@@ -5774,8 +5778,12 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			for(i=0; i<tuple->size; i++){
 				DaoValue *V = list->value->items.pValue[i];
 				tp2 = dao_type_any;
-				if( i < tsize ) tp2 = ct->nested->items.pType[i];
-				if( tp2->tid == DAO_PAR_NAMED ) tp2 = & tp2->aux->xType;
+				if( i < ct->nested->size ){
+					tp2 = ct->nested->items.pType[i];
+				}else if( ct->variadic ){
+					tp2 = ct->nested->items.pType[tsize];
+				}
+				if( tp2->tid >= DAO_PAR_NAMED && tp2->tid <= DAO_PAR_VALIST ) tp2 = & tp2->aux->xType;
 				V = DaoTypeCast( proc, tp2, V, K );
 				if( V == NULL || V->type == 0 ) goto FailConversion;
 				DaoValue_Copy( V, tuple->values + i );

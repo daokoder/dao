@@ -891,8 +891,9 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 	DaoString *key = NULL;
 	DString *self = p[0]->xString.value;
 	DString *spec = p[2]->xString.value;
-	DString *res = NULL, *val = NULL, *sub = NULL;
+	DString *res = NULL, *sub = NULL;
 	DaoTuple *tup = DaoValue_CastTuple( p[1] );
+	DaoValue *val = NULL;
 	DMap  *keys = NULL;
 	DNode *node = NULL;
 	daoint keep = p[3]->xInteger.value;
@@ -933,15 +934,15 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 				node = DMap_Find( keys, tup ? (void*) key->value : (void*) key );
 				if( node ){
 					if( tup ){
-						val = tup->values[node->value.pInt]->xString.value;
+						val = tup->values[node->value.pInt];
 					}else{
-						val = node->value.pValue->xString.value;
+						val = node->value.pValue;
 					}
 				}else if( keep ){
 					replace = 0;
 				}else{
 					DString_Clear( key->value );
-					val = key->value;
+					val = (DaoValue*) key;
 				}
 			}
 		}
@@ -949,7 +950,8 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 		DString_Append( res, sub );
 		prev = pos1 + 1;
 		if( replace ){
-			DString_Append( res, val );
+			DString *s = DaoValue_GetString( val, sub );
+			DString_Append( res, s );
 			prev = pos2 + 1;
 		}else{
 			DString_AppendChar( res, spec2 );
@@ -1359,8 +1361,8 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Expand,
-		"expand( invar self: string, invar subs: map<string,string>|tuple<...:string>,"
-			"spec = \"$\", keep = 1 ) => string"
+		"expand( invar self: string, invar subs: map<string,string>"
+			"|tuple<...:int|float|double|string>, spec = \"$\", keep = 1 ) => string"
 		/*
 		// Expand this string into a new string with substrings from the keys
 		// of "subs" substituted with the corresponding values of "subs".
