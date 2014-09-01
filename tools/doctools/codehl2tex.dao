@@ -156,7 +156,7 @@ routine DaoCodeHL::Highlight( source : string, name='' ) => string
 			output += "\\NUMBER{" + replace( tok ) + "}";
 		}else if( tok[0:1] == "#{" ){
 			tok = replace( tok );
-			tok.replace( '\n', '}\n\\COMMENT{' );
+			tok = tok.replace( '\n', '}\n\\COMMENT{' );
 			output += "\\COMMENT{" + tok + "}";
 		}else if( tok == "\n" ){
 			output += tok;
@@ -274,7 +274,7 @@ routine CppCodeHL::Highlight( source : string, name='' )=> string
 			}
 			tmp += "*/";
 			tok = replace( tmp );
-			tok.replace( '\n', '}\n\\COMMENT{' );
+			tok = tok.replace( '\n', '}\n\\COMMENT{' );
 			output += "\\COMMENT{" + tok + "}";
 			i += 1;
 		}else{
@@ -328,7 +328,7 @@ routine BnfCodeHL::Highlight( source : string, name = '' ) => string
 			output += "\\NUMBER{" + replace( tok ) + "}";
 		}else if( tok[0:1] == "#{" ){
 			tok = replace( tok );
-			tok.replace( '\n', '}\n\\COMMENT{' );
+			tok = tok.replace( '\n', '}\n\\COMMENT{' );
 			output += "\\COMMENT{" + tok + "}";
 		}else{
 			output += replace( tok );

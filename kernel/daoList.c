@@ -37,37 +37,6 @@
 #include"daoParser.h"
 #include"daoGC.h"
 
-void* dao_malloc( size_t size )
-{
-	void *p = malloc( size );
-	if( size && p == NULL ){
-		printf( "malloc(): memory allocation %lu failed\n", (unsigned long)size );
-		exit(1);
-	}
-	return p;
-}
-void* dao_calloc( size_t nmemb, size_t size )
-{
-	void *p = calloc( nmemb, size );
-	if( nmemb && size && p == NULL ){
-		printf( "calloc(): memory allocation %lu failed\n", (unsigned long)( size * nmemb ) );
-		exit(1);
-	}
-	return p;
-}
-void* dao_realloc( void *ptr, size_t size )
-{
-	void *p = realloc( ptr, size );
-	if( size && p == NULL ){
-		printf( "realloc(): memory allocation %lu failed\n", (unsigned long)size );
-		exit(1);
-	}
-	return p;
-}
-void  dao_free( void *p )
-{
-	free( p );
-}
 
 int daoCountArray = 0;
 

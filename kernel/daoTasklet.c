@@ -237,7 +237,9 @@ static void DaoCallServer_Init( DaoVmSpace *vms )
 {
 	DaoCGC_Start();
 	daoCallServer = DaoCallServer_New( vms );
-	DThread_Start( & daoCallServer->timer, (DThreadTask) DaoCallServer_Timer, NULL );
+	if( DThread_Start( & daoCallServer->timer, (DThreadTask) DaoCallServer_Timer, NULL ) ==0 ){
+		dao_abort( "failed to create the timer thread" );
+	}
 }
 static DaoCallServer* DaoCallServer_TryInit( DaoVmSpace *vms )
 {
@@ -276,7 +278,11 @@ void DaoCallServer_AddThread( DThreadTask func, void *param )
 	daoCallServer->total += 1;
 	DList_Append( daoCallServer->threads, calth );
 	DMutex_Unlock( & daoCallServer->mutex );
-	DThread_Start( & calth->thread, (DThreadTask) DaoCallThread_Run, calth );
+	if( DThread_Start( & calth->thread, (DThreadTask) DaoCallThread_Run, calth ) == 0 ){
+		if( func != NULL || daoCallServer->total == 0 ){
+			dao_abort( "failed to create a task thread" );
+		}
+	}
 }
 static void DaoCallServer_TryAddThread( DThreadTask func, void *param, int todo )
 {

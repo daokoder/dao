@@ -163,7 +163,7 @@ routine SdmlParser::Parse( src : string )
 		}
 	}
 	source = src;
-	source.trim();
+	source = source.trim();
 	Tokenize();
 
 	start = 0;
@@ -227,7 +227,7 @@ routine SdmlParser::Parse( src : string )
 			for( j = 1 : 5 ){
 				suffix2 = random_string( i );
 				if( output.find( suffix2 ) <0 ){
-					output.replace( suffix, suffix2 );
+					output = output.replace( suffix, suffix2 );
 					suffix = suffix2;
 					done = 1;
 					break;
@@ -235,7 +235,7 @@ routine SdmlParser::Parse( src : string )
 			}
 			if( done ) break;
 		}
-		preface.replace( suffix_old, suffix );
+		preface = preface.replace( suffix_old, suffix );
 	}
 	if( makeheader ) CloseBody();
 	repl = { '|'=>'| ', '-'=>'- ', '_'=>'_ ', '/'=>'/ ', '\\'=>'\\ ',
@@ -254,12 +254,12 @@ routine SdmlParser::Parse( src : string )
 }
 routine Replace2( tok : string ) => string
 {
-	tok.replace( '<', '&lt;' );
-	tok.replace( '>', '&gt;' );
-	tok.change( '[\n] %s* [\n] %s* [\n]', '<br/><br/>\n' );
-	tok.change( '[\n] %s* [\n]', '<br/>\n' );
-	tok.replace( ' ', '&nbsp;' );
-	tok.replace( '\t', '&nbsp;&nbsp;&nbsp;&nbsp;' );
+	tok = tok.replace( '<', '&lt;' );
+	tok = tok.replace( '>', '&gt;' );
+	tok = tok.change( '[\n] %s* [\n] %s* [\n]', '<br/><br/>\n' );
+	tok = tok.change( '[\n] %s* [\n]', '<br/>\n' );
+	tok = tok.replace( ' ', '&nbsp;' );
+	tok = tok.replace( '\t', '&nbsp;&nbsp;&nbsp;&nbsp;' );
 	return tok;
 }
 routine SdmlParser::ParseSection( sect : TextSection, start : int, end : int )
@@ -474,14 +474,14 @@ routine SdmlParser::ParseBlock( sect : TextSection, start : int, end : int, top=
 			hlcode += Replace2( tk + tokens[i+1] + '\n' + tokens[i+2] ) + "</div>";
 			index = tk.fetch( 'index' );
 			lang = tk[ 6 : tk.size()-2 ];
-			lang.change( 'index', '' );
-			lang.trim();
+			lang = lang.change( 'index', '' );
+			lang = lang.trim();
 			if( i+1 <= end ) ParseCode( tokens[i+1], lang );
 			if( tk[:4] == '<demo' ) EvalDemo( tokens[i+1] );
 			i += 2;
 		}else if( tk[:4] == "<cite" ){
 			name = tk[ 6 : tk.size()-2 ];
-			name.trim();
+			name = name.trim();
 			code = quotebegin;
 			if( %name ) code += quotename1 + name + quotename2;
 			output += code;
@@ -516,7 +516,7 @@ routine SdmlParser::ParseCode( src : string, lang : string )
 {
 	if( codeparser.find( lang ) == none ) return;
 	parser = codeparser[ lang ];
-	src.trim();
+	src = src.trim();
 	output += parser.Highlight( src );
 }
 routine SplitListBlock( src : string, marker : string )
@@ -549,8 +549,7 @@ routine SdmlParser::ParseList( src : string )
 	parser.suffix = suffix;
 	parser.makesuffix = 0;
 	parser.makeheader = 0;
-	src.trim();
-	tk = src[:1];
+	tk = src.trim()[:1];
 	if( tk == '--' || tk == '==' ){
 		tagend = '';
 		items = {''}; # for typing
@@ -608,10 +607,10 @@ routine SdmlParser::ParseTable( src : string )
 	j = 0;
 	length = 0;
 	line = lines[0];
-	line.change( '^ %s+', '' );
+	line = line.change( '^ %s+', '' );
 	if( j = line.find( "^" ); j >=0 ){
-		line.change( '^ %s* %^', '' );
-		line.change( ' %^ %s* $', '' );
+		line = line.change( '^ %s* %^', '' );
+		line = line.change( ' %^ %s* $', '' );
 		toks = line.split( "^" );
 		if( toks.size() ){
 			param += "| c | ";
@@ -625,7 +624,7 @@ routine SdmlParser::ParseTable( src : string )
 	}
 	while( i< size ){
 		line = lines[i];
-		line.change( '^ %s+', '' );
+		line = line.change( '^ %s+', '' );
 		if( line[:2] == "===" ){
 			cells.append( (list<string>){} );
 			i += 1;

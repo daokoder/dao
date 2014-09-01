@@ -614,7 +614,9 @@ void DaoCGC_Start()
 	gcWorker.concurrent = 1;
 	gcWorker.finalizing = 0;
 	gcWorker.cycle = 0;
-	DThread_Start( & gcWorker.thread, DaoCGC_Recycle, NULL );
+	if( DThread_Start( & gcWorker.thread, DaoCGC_Recycle, NULL ) == 0 ){
+		dao_abort( "failed to create the GC thread" );
+	}
 #endif
 }
 static void DaoGC_DeleteSimpleData( DaoValue *value )

@@ -6,12 +6,12 @@ Date: 2008-12-20
 #}
 
 load sdml_parser;
-load codehl2html;
+load sdml_codehl;
 
 class Sdml2Html : SdmlParser
 {
 	routine Sdml2Html();
-	routine New(){ return Sdml2Html(); }
+	routine New() => SdmlParser { return Sdml2Html(); }
 	routine Warn( info : string );
 	routine Error( info : string );
 	routine AddPrefix();
@@ -87,7 +87,7 @@ routine Sdml2Html::MakeTitle( title = '' )
 }
 routine Sdml2Html::MakeAuthor( name = '' )
 {
-	name.change( '( %w[%w%.]* ) %s* @ %s* (%w+) %s* %. %s* (%w+)', 
+	name = name.change( '( %w[%w%.]* ) %s* @ %s* (%w+) %s* %. %s* (%w+)', 
 			'%1<img src="/images/at.png"/>%2<img src="/images/dot.png"/>%3' );
 	output += '<div align=center><p><b>' + name;
 	output += '</b></p></div>';
@@ -179,15 +179,14 @@ routine Sdml2Html::CloseSection( level=0, numbering='' )
 }
 routine Sdml2Html::Replace( src = '' ) => string
 {
-	src.replace( '<', '&lt;' );
-	src.replace( '>', '&gt;' );
-	src.change( '[\n] %s* [\n] %s* [\n]', '<br/><br/>\n' );
-	src.change( '[\n] %s* [\n]', '<br/>\n' );
+	src = src.replace( '<', '&lt;' );
+	src = src.replace( '>', '&gt;' );
+	src = src.change( '[\n] %s* [\n] %s* [\n]', '<br/><br/>\n' );
+	src = src.change( '[\n] %s* [\n]', '<br/>\n' );
 	return src;
 }
 
 
-#{
 src = 
 @[sdml]
 abc
@@ -197,6 +196,20 @@ class A
 	var i
 }
 </code>
+<list>
+-- item;
+-- item;
+  <list>
+	-- item;
+	-- item;
+  </list>
+-- item;
+  <list>
+	-- item;
+	-- item;
+  </list>
+-- item;
+</list>
 @[sdml]
 
 #src = io.read( 'test2.sdml' )
@@ -206,7 +219,12 @@ html = parser.Parse( src )
 io.writeln( html )
 fout.writeln( html );
 fout.close();
+#{
 #}
+
+
+
+
 
 #{
 routine main( input : string, output = "" )

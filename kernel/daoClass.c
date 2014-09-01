@@ -1343,8 +1343,32 @@ DaoRoutine* DaoClass_GetOverloadedRoutine( DaoClass *self, DString *signature )
 	if( node ) return (DaoRoutine*) node->value.pValue;
 	return NULL;
 }
+
+const char *interface_meth_warning =
+"[[WARNING]] Invalid overriding of interface (virtual) method with unmatched return types!\n";
+
+static void DaoStream_WriteMessageHeader( DaoStream *self )
+{
+	DaoStream_WriteChars( self, interface_meth_warning );
+}
+static void DaoStream_WriteRoutineInfo( DaoStream *self, DaoRoutine *routine, int virt )
+{
+	DaoStream_WriteChars( self, virt ? ">> Interface  method: " : ">> Overriding method: " );
+	DaoStream_WriteChars( self, routine->routHost ? routine->routHost->name->chars : "" );
+	DaoStream_WriteChars( self, "::" );
+	DaoStream_WriteString( self, routine->routName );
+	DaoStream_WriteChars( self, "(), " );
+	DaoStream_WriteString( self, routine->routType->name );
+	DaoStream_WriteChars( self, "\n   At line " );
+	DaoStream_WriteInt( self, routine->defLine );
+	DaoStream_WriteChars( self, ", in file: " );
+	DaoStream_WriteString( self, routine->nameSpace->name );
+	DaoStream_WriteChars( self, "\n" );
+}
+
 void DaoClass_UpdateVirtualMethods( DaoClass *self )
 {
+	DaoStream *stream = self->classRoutine->nameSpace->vmSpace->errorStream;
 	DNode *it;
 	int i, j;
 
@@ -1387,17 +1411,6 @@ void DaoClass_UpdateVirtualMethods( DaoClass *self )
 			if( otype->nested->size != itype->nested->size ) continue;
 			if( ! DString_EQ( imeth->routName, ometh->routName ) ) continue;
 
-			/* Type names must match (type matching may be insufficiently precise): */
-			if( ! DString_EQ( itype->aux->xType.name, otype->aux->xType.name ) ) continue;
-			
-			/*
-			// The return types of the overriding methods must match to that of the
-			// interface methods, so that the return values of the overriding methods
-			// can be passed properly:
-			*/
-			if( DaoType_MatchTo( (DaoType*)otype->aux, (DaoType*)itype->aux, NULL ) == 0 ){
-				continue;
-			}
 			for(j=1; j<otype->nested->size; ++j){
 				DaoType *optype = otype->nested->items.pType[j];
 				DaoType *iptype = itype->nested->items.pType[j];
@@ -1409,7 +1422,27 @@ void DaoClass_UpdateVirtualMethods( DaoClass *self )
 				*/
 				if( DaoType_MatchTo( iptype, optype, NULL ) == 0 ) break;
 			}
-			if( j >= otype->nested->size ) it->value.pRoutine = ometh;
+			if( j < otype->nested->size ) continue;
+
+			/* Type names must match (type matching may be insufficiently precise): */
+			if( ! DString_EQ( itype->aux->xType.name, otype->aux->xType.name ) ){
+				goto UnmatchingReturn;
+			}
+
+			/*
+			// The return types of the overriding methods must match to that of the
+			// interface methods, so that the return values of the overriding methods
+			// can be passed properly:
+			*/
+			if( DaoType_MatchTo( (DaoType*)otype->aux, (DaoType*)itype->aux, NULL ) == 0 ){
+				goto UnmatchingReturn;
+			}
+			it->value.pRoutine = ometh;
+			continue;
+UnmatchingReturn:
+			DaoStream_WriteMessageHeader( stream );
+			DaoStream_WriteRoutineInfo( stream, imeth, 1 );
+			DaoStream_WriteRoutineInfo( stream, ometh, 0 );
 		}
 	}
 }

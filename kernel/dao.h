@@ -974,6 +974,7 @@ DAO_DLL void* dao_malloc( size_t size );
 DAO_DLL void* dao_calloc( size_t nmemb, size_t size );
 DAO_DLL void* dao_realloc( void *ptr, size_t size );
 DAO_DLL void  dao_free( void *p );
+DAO_DLL void  dao_abort( const char *error );
 
 #ifdef __cplusplus
 }

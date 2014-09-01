@@ -133,8 +133,8 @@ routine DaoCodeHL::Highlight( source : string, name = '' )=>string
 		}else if( Block.find( tok[0:0] ) != none ){
 			tag = Block[ tok[0:0] ];
 			tmp = tok;
-			tmp.replace( "<", "&lt;" );
-			tmp.replace( ">", "&gt;" );
+			tmp = tmp.replace( "<", "&lt;" );
+			tmp = tmp.replace( ">", "&gt;" );
 			output += tag + tmp + "</span>";
 		}else if( tok.match( '^ ( 0 (x|X) %x+ | %d[%d%.]+ | [%C_%d]+ ) $' ) != none ){
 			output += "<span class=Number>" + tok + "</span>";
@@ -142,8 +142,8 @@ routine DaoCodeHL::Highlight( source : string, name = '' )=>string
 			output += "<span class=Number>" + tok + "</span>";
 		}else if( i+2 <size && tokens[i+1]=="@" && tokens[i+2]=="END" ){
 			tmp = tok[1:];
-			tmp.replace( "<", "&lt;" );
-			tmp.replace( ">", "&gt;" );
+			tmp = tmp.replace( "<", "&lt;" );
+			tmp = tmp.replace( ">", "&gt;" );
 			output += tmp;
 		}else{
 			output += tok;
@@ -213,8 +213,8 @@ routine CppCodeHL::Highlight( source : string, name = '' )=>string
 			output += HilitMap[tok] + tok + "</span>";
 		}else if( Block.find( tok[0:0] ) != none ){
 			tmp = tok;
-			tmp.replace( "<", "&lt;" );
-			tmp.replace( ">", "&gt;" );
+			tmp = tmp.replace( "<", "&lt;" );
+			tmp = tmp.replace( ">", "&gt;" );
 			output += Block[ tok[0:0] ] + tmp + "</span>";
 		}else if( tok.match( '^ ( 0 (x|X) %x+ | %d[%d%.]+ | [%C_%d]+ ) $' ) != none ){
 			output += "<span class=Number>" + tok + "</span>";
@@ -232,8 +232,8 @@ routine CppCodeHL::Highlight( source : string, name = '' )=>string
 				if( i >= size ) break;
 				tok = tokens[i];
 			}
-			tmp.replace( "<", "&lt;" );
-			tmp.replace( ">", "&gt;" );
+			tmp = tmp.replace( "<", "&lt;" );
+			tmp = tmp.replace( ">", "&gt;" );
 			output += tmp;
 			output += "</span>";
 		}else if( tok == "/" && i+1<size && tokens[i+1]=="*" ){
@@ -247,8 +247,8 @@ routine CppCodeHL::Highlight( source : string, name = '' )=>string
 			}
 			tmp += "*/";
 			i += 1;
-			tmp.replace( "<", "&lt;" );
-			tmp.replace( ">", "&gt;" );
+			tmp = tmp.replace( "<", "&lt;" );
+			tmp = tmp.replace( ">", "&gt;" );
 			output += tmp;
 			output += "</span>";
 		}else{
@@ -300,8 +300,8 @@ routine BnfCodeHL::Highlight( source : string, name = '' )=>string
 		}else if( Block.find( tok[0:0] ) != none ){
 			tag = Block[ tok[0:0] ];
 			tmp = tok;
-			tmp.replace( "<", "&lt;" );
-			tmp.replace( ">", "&gt;" );
+			tmp = tmp.replace( "<", "&lt;" );
+			tmp = tmp.replace( ">", "&gt;" );
 			output += tag + tmp + "</span>";
 		}else{
 			output += tok;

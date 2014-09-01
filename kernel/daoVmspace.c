@@ -67,6 +67,33 @@ DaoConfig daoConfig =
 DaoVmSpace *mainVmSpace = NULL;
 DaoProcess *mainProcess = NULL;
 
+void dao_abort( const char *error )
+{
+	fprintf( stderr, "Dao aborted with fatal error: %s!\n", error );
+	exit(0);
+}
+void* dao_malloc( size_t size )
+{
+	void *p = malloc( size );
+	if( size && p == NULL ) dao_abort( "memory allocation failed" );
+	return p;
+}
+void* dao_calloc( size_t nmemb, size_t size )
+{
+	void *p = calloc( nmemb, size );
+	if( nmemb && size && p == NULL ) dao_abort( "memory allocation failed" );
+	return p;
+}
+void* dao_realloc( void *ptr, size_t size )
+{
+	void *p = realloc( ptr, size );
+	if( size && p == NULL ) dao_abort( "memory allocation failed" );
+	return p;
+}
+void  dao_free( void *p )
+{
+	free( p );
+}
 
 static int TestFile( DaoVmSpace *vms, DString *fname )
 {

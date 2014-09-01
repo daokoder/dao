@@ -129,8 +129,9 @@ void DThread_Destroy( DThread *self )
 	DCondVar_Destroy( & self->condv );
 }
 
-void DThread_Wrapper( DThread *self )
+static void* DThread_Wrapper( void *p )
 {
+	DThread *self = (DThread*) p;
 	if( self->thdSpecData == NULL ){
 		self->thdSpecData = (DThreadData*)dao_calloc( 1, sizeof(DThreadData) );
 		self->thdSpecData->thdObject = self;
@@ -146,25 +147,17 @@ void DThread_Wrapper( DThread *self )
 		if( self->taskFunc ) self->taskFunc( self->taskArg );
 	}
 	pthread_exit( 0 );
+	return NULL;
 }
-
-typedef void* (*DThreadCast)(void*);
 
 int DThread_Start( DThread *self, DThreadTask task, void *arg )
 {
-	pthread_attr_t tattr;
-	/*
-	   daoint stacksize = 0;
-	   int ret;
-	   ret = pthread_attr_getstacksize(&tattr, &stacksize);
-	 */
+	pthread_attr_t att;
 
 	self->taskFunc = task;
 	self->taskArg = arg;
-	pthread_attr_init(&tattr);
-	pthread_attr_setstacksize(&tattr, 0xffff);
-	return ( 0 == pthread_create( & self->myThread, &tattr,
-				(DThreadCast) &DThread_Wrapper, (void*)self ) );
+	if( pthread_attr_init( & att ) ) return 0;
+	return pthread_create( & self->myThread, & att, & DThread_Wrapper, (void*)self ) == 0;
 }
 void DThread_Join( DThread *self )
 {
