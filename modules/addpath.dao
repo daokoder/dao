@@ -17,6 +17,7 @@ std::path( "bigint", $add );
 std::path( "net", $add );
 std::path( "os", $add );
 std::path( "web", $add );
+std::path( "pkgtools", $add );
 std::path( "clinker", $add );
 std::path( "debugger", $add );
 std::path( "profiler", $add );

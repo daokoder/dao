@@ -717,7 +717,7 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 		self->redirect->StdioWrite( self->redirect, mbs );
 		DString_Delete( mbs );
 	}else if( self->file ){
-		if( self->format ){
+		if( self->format && strcmp( self->format, "%s" ) != 0 ){
 			fprintf( self->file, self->format, data );
 		}else{
 			DaoFile_WriteString( self->file, val );
@@ -725,7 +725,7 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 	}else if( self->mode & DAO_STREAM_STRING ){
 		DString_AppendBytes( self->streamString, data, val->size );
 	}else{
-		if( self->format ){
+		if( self->format && strcmp( self->format, "%s" ) != 0 ){
 			printf( self->format, data );
 		}else{
 			DaoFile_WriteString( stdout, val );
@@ -769,7 +769,7 @@ int DaoStream_ReadLine( DaoStream *self, DString *line )
 	char buf[IO_BUF_SIZE];
 	char *start = buf, *end = buf + IO_BUF_SIZE;
 
-	DString_Clear( line );
+	DString_Reset( line, 0 );
 	if( self->redirect && self->redirect->StdioRead ){
 		self->redirect->StdioRead( self->redirect, line, 0 );
 		if( self->mode & DAO_STREAM_AUTOCONV ) DString_ToUTF8( line );
@@ -811,14 +811,17 @@ int DaoStream_ReadLine( DaoStream *self, DString *line )
 }
 int DaoFile_ReadLine( FILE *fin, DString *line )
 {
-	char buf[IO_BUF_SIZE];
+	int ch;
+
 	DString_Reset( line, 0 );
 	if( feof( fin ) ) return 0;
-	do{
-		buf[IO_BUF_SIZE - 1] = 1;
-		if( !fgets( buf, IO_BUF_SIZE, fin ) ) break;
-		DString_AppendChars( line, buf );
-	} while( buf[IO_BUF_SIZE - 1] != 1 );
+
+	while( (ch = fgetc(fin)) != EOF ){
+		if( line->size == line->bufSize ) DString_Reserve( line, 5 + 1.2*line->size );
+		line->chars[ line->size ++ ] = ch;
+		line->chars[ line->size ] = '\0';
+		if( ch == '\n' ) break;
+	}
 	return 1;
 }
 int DaoFile_ReadAll( FILE *fin, DString *all, int close )
