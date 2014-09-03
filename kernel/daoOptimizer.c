@@ -4470,7 +4470,8 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 			if( rout->routHost == NULL && rout->nameSpace != NS ) goto CallNotPermit;
 		}else if( rout->attribs & DAO_ROUT_PROTECTED ){
 			if( rout->routHost && routine->routHost == NULL ) goto CallNotPermit;
-		}else if( vmc->code == DVM_CALL && routine->routHost ){
+		}
+		if( vmc->code == DVM_CALL && routine->routHost ){
 			if( DaoType_ChildOf( routine->routHost, rout->routHost ) ){
 				int invarCaller = routine->attribs & DAO_ROUT_INVAR;
 				int staticCaller = routine->attribs & DAO_ROUT_STATIC;

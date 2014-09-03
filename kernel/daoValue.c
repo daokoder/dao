@@ -808,7 +808,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	}
 	if( S->type >= DAO_OBJECT || !(S->xBase.trait & DAO_VALUE_CONST) || T->invar ){
 		int fastmove = 0;
-		switch( T->tid ){
+		switch( S->type ){
 		case DAO_LIST :
 		case DAO_MAP :
 		case DAO_CSTRUCT :
