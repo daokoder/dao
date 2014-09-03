@@ -3487,7 +3487,7 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		/* Remove type holder bindings for the self parameter: */
 		DaoType_ResetTypeHolders( selftype, defs );
 		DaoType_MatchTo( at, selftype, defs );
-		//ct = DaoType_DefineTypes( ct, NS, defs );
+		ct = DaoType_DefineTypes( ct, NS, defs );
 	}
 	if( at->tid != DAO_CLASS && at->tid != DAO_NAMESPACE ){
 		if( at->konst && ct->konst == 0 ) ct = DaoType_GetConstType( ct );

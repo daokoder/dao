@@ -235,3 +235,31 @@ f(b = 1)
 1
 2
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+routine f() => list<tuple<a:int,b:int>>
+{
+	return {(1,2), (3,4)}
+}
+routine g() => tuple<list<int>, list<string>>
+{
+	return ({}, {})
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+routine f() => tuple<list<int>, list<string>>
+{
+	({}, {})
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]

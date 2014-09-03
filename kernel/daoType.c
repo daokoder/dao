@@ -2362,6 +2362,7 @@ void DaoType_SpecializeMethods( DaoType *self )
 	DaoType *intype = self;
 	DaoType *original = self->typer->core->kernel->abtype;
 	DaoTypeKernel *kernel;
+	DaoType *quads[4];
 	DNode *it;
 	daoint i, k;
 
@@ -2458,6 +2459,10 @@ void DaoType_SpecializeMethods( DaoType *self )
 			GC_Assign( & self->aux->xCtype.cdtype->kernel, kernel );
 		}else{
 			GC_Assign( & self->kernel, kernel );
+		}
+		DaoType_GetQuadTypes( self, quads );
+		for(i=0; i<4; ++i){
+			if( quads[i] ) GC_Assign( & quads[i]->kernel, kernel );
 		}
 	}
 	DMutex_Unlock( & mutex_methods_setup );

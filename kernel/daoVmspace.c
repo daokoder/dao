@@ -1597,6 +1597,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		int error = 0;
 		expMain = DaoVmSpace_FindExplicitMain( ns, argNames, argValues, & error );
 		if( error ){
+			res = 0;
 			DaoVmSpace_PrintCode( self );
 			DaoStream_WriteChars( io, "ERROR: invalid command line arguments.\n" );
 		}

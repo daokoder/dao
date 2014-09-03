@@ -398,3 +398,17 @@ o.Test()
 Sub::VirtualMethod()
 Base::Test()
 @[test(code_00)]
+
+
+
+
+@[test(code_00)]
+invar x = {'a'}
+y = { 'a' -> 'b' }
+z = x.associate { (X, y[X]) }
+
+io.writeln( std.about(z) )
+@[test(code_00)]
+@[test(code_00)]
+{{map<string,string>}}
+@[test(code_00)]

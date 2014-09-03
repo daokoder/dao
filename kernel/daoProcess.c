@@ -2678,9 +2678,6 @@ DaoType* DaoProcess_GetCallReturnType( DaoProcess *self, DaoVmCode *vmc, int tid
 {
 	DaoType *type = self->activeTypes[ vmc->c ];
 
-	if( vmc->code == DVM_CALL || vmc->code == DVM_MCALL ){
-		type = (DaoType*) self->topFrame->routine->routType->aux;
-	}
 	if( type == NULL ) return NULL;
 	if( type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, tid );
 	return type;

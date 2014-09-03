@@ -142,16 +142,16 @@ static void COROUT_Resume( DaoProcess *proc, DaoValue *p[], int N )
 	DaoxCoroutine *self = (DaoxCoroutine*) p[0];
 	DaoProcess *sp = self->process;
 	if( self->process == proc ){
-		DaoProcess_RaiseWarning( proc, NULL, "coroutine can only resume in alien process." );
+		DaoProcess_RaiseError( proc, NULL, "coroutine can only resume in alien process." );
 		return;
 	}
 	if( sp->status != DAO_PROCESS_SUSPENDED || sp->pauseType != DAO_PAUSE_COROUTINE_YIELD ){
-		DaoProcess_RaiseWarning( proc, NULL, "coroutine cannot be resumed." );
+		DaoProcess_RaiseError( proc, NULL, "coroutine cannot be resumed." );
 		return;
 	}
 	DaoProcess_Resume( self->process, p+1, N-1, proc );
 	if( sp->status == DAO_PROCESS_SUSPENDED && sp->pauseType != DAO_PAUSE_COROUTINE_YIELD ){
-		DaoProcess_RaiseWarning( proc, NULL, "coroutine is not suspended properly." );
+		DaoProcess_RaiseError( proc, NULL, "coroutine is not suspended properly." );
 		return;
 	}
 	if( self->process->status == DAO_PROCESS_ABORTED )
@@ -162,7 +162,7 @@ static void COROUT_Suspend( DaoProcess *proc, DaoValue *p[], int N )
 	DaoxCoroutine *self = (DaoxCoroutine*) p[0];
 	DaoValue *value = N > 1 ? p[1] : DaoValue_MakeNone();
 	if( self->process != proc ){
-		DaoProcess_RaiseWarning( proc, NULL, "coroutine cannot suspend in alien process." );
+		DaoProcess_RaiseError( proc, NULL, "coroutine cannot suspend in alien process." );
 		return;
 	}
 	GC_Assign( & proc->stackValues[0], value );

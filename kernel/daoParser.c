@@ -3457,6 +3457,17 @@ static int DaoParser_ImportSymbols( DaoParser *self, DaoNamespace *mod, int star
 static int DaoParser_ParseImportStatement( DaoParser *self, int start, int end, int full );
 static int DaoParser_ParseNamespaceStatement( DaoParser *self, int start, int end );
 static int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, int st );
+static int DaoParser_GetEnumTokenType( DaoType *type )
+{
+	int tok = 0;
+	switch( type ? type->tid : 0 ){
+	case DAO_ARRAY : tok = DTOK_LSB; break;
+	case DAO_LIST  : tok = DTOK_LCB; break;
+	case DAO_MAP   : tok = DTOK_LCB; break;
+	case DAO_TUPLE : tok = DTOK_LB; break;
+	}
+	return tok;
+}
 static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 {
 	DaoNamespace *ns = self->nameSpace;
@@ -3478,10 +3489,11 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 	int colon, comma, last, errorStart, needName;
 	int storeType = 0, scopeType = 0;
 	int reset_decos = 0;
-	unsigned char tkt, tki, tki2;
+	unsigned char tok, tkt, tki, tki2;
 
 	DaoInode *back = self->vmcLast;
 	DaoInode *inode, *opening, *closing;
+	DaoType *retype = self->returnType; /* Updated for code section; */
 	DString *mbs = self->string;
 	DaoValue *value;
 
@@ -3497,8 +3509,18 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 #endif
 
 	self->curToken = from;
-	/* Ensure single assignment statement will not pass this parsing: */
-	enode = DaoParser_ParseExpression2( self, 0, 0, ASSIGNMENT_ERROR );
+	tok = DaoParser_GetEnumTokenType( retype );
+	if( tokens[start]->type == tok ){
+		/* routine test() => list<tuple<a:int,b:int>> { {(1,2), (3,4)} } */
+		int rb = DaoParser_FindPairToken( self, tok, tok + 1, start, to );
+		DList_PushFront( self->enumTypes, retype );
+		enode = DaoParser_ParseEnumeration( self, 0, tok, start+1, rb-1 );
+		DList_PopFront( self->enumTypes );
+		self->curToken += 1;
+	}else{
+		/* Ensure single assignment statement will not pass this parsing: */
+		enode = DaoParser_ParseExpression2( self, 0, 0, ASSIGNMENT_ERROR );
+	}
 	if( enode.reg >= 0 ){
 		i = self->curToken;
 		while( i <= to && tokens[i]->type == DTOK_SEMCO ) i += 1;
@@ -4138,14 +4160,9 @@ DecoratorError:
 			reg = N = end = 0;
 			if( start <= to && tokens[start]->line == tokens[start-1]->line ){
 				DaoType *retype = self->returnType; /* Updated for code section; */
-				int tok = 0, ecount = self->errors->size;
+				int tok = DaoParser_GetEnumTokenType( retype );
+				int ecount = self->errors->size;
 				self->curToken = start;
-				switch( retype ? retype->tid : 0 ){
-				case DAO_ARRAY : tok = DTOK_LSB; break;
-				case DAO_LIST  : tok = DTOK_LCB; break;
-				case DAO_MAP   : tok = DTOK_LCB; break;
-				case DAO_TUPLE : tok = DTOK_LB; break;
-				}
 				if( tokens[start]->type == tok ){
 					/* routine test() => list<tuple<a:int,b:int>> { return {(1,2), (3,4)} } */
 					int rb = DaoParser_FindPairToken( self, tok, tok + 1, start, to );

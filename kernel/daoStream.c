@@ -311,7 +311,11 @@ static void DaoIO_Read( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	}else if( amount <= -2 ){
 		if( self->mode & DAO_STREAM_STRING ){
-			DString_SubString( self->streamString, ds, self->offset, -1 );
+			if( self->offset == 0 ){
+				DString_Assign( ds, self->streamString );
+			}else{
+				DString_SubString( self->streamString, ds, self->offset, -1 );
+			}
 			self->offset += ds->size;
 		}else{
 			while( (ch = getc(fin)) != '\n' ) DString_AppendWChar( ds, ch );
@@ -625,6 +629,14 @@ DaoUserStream* DaoStream_SetUserStream( DaoStream *self, DaoUserStream *us )
 	if( us ) us->stream = self;
 	return stream;
 }
+void DaoStream_TryResetStringBuffer( DaoStream *self )
+{
+	/* When it has been read passing the end of the buffer, reset the buffer: */
+	if( self->offset >= self->streamString->size ){
+		DString_Reset( self->streamString, 0 );
+		self->offset = 0;
+	}
+}
 void DaoStream_WriteChar( DaoStream *self, char val )
 {
 	const char *format = "%c";
@@ -636,6 +648,7 @@ void DaoStream_WriteChar( DaoStream *self, char val )
 	}else if( self->file ){
 		fprintf( self->file, format, val );
 	}else if( self->mode & DAO_STREAM_STRING ){
+		DaoStream_TryResetStringBuffer( self );
 		DString_AppendChar( self->streamString, val );
 	}else{
 		printf( format, val );
@@ -654,6 +667,7 @@ void DaoStream_WriteFormatedInt( DaoStream *self, daoint val, const char *format
 		fprintf( self->file, format, val );
 	}else if( self->mode & DAO_STREAM_STRING ){
 		sprintf( buffer, format, val );
+		DaoStream_TryResetStringBuffer( self );
 		DString_AppendChars( self->streamString, buffer );
 	}else{
 		printf( format, val );
@@ -685,6 +699,7 @@ void DaoStream_WriteFloat( DaoStream *self, double val )
 		fprintf( self->file, format, val );
 	}else if( self->mode & DAO_STREAM_STRING ){
 		sprintf( buffer, format, val );
+		DaoStream_TryResetStringBuffer( self );
 		DString_AppendChars( self->streamString, buffer );
 	}else{
 		printf( format, val );
@@ -702,6 +717,7 @@ void DaoStream_WriteChars( DaoStream *self, const char *val )
 	}else if( self->file ){
 		fprintf( self->file, format, val );
 	}else if( self->mode & DAO_STREAM_STRING ){
+		DaoStream_TryResetStringBuffer( self );
 		DString_AppendChars( self->streamString, val );
 	}else{
 		printf( format, val );
@@ -723,6 +739,7 @@ void DaoStream_WriteString( DaoStream *self, DString *val )
 			DaoFile_WriteString( self->file, val );
 		}
 	}else if( self->mode & DAO_STREAM_STRING ){
+		DaoStream_TryResetStringBuffer( self );
 		DString_AppendBytes( self->streamString, data, val->size );
 	}else{
 		if( self->format && strcmp( self->format, "%s" ) != 0 ){
@@ -754,6 +771,7 @@ void DaoStream_WritePointer( DaoStream *self, void *val )
 		fprintf( self->file, format, val );
 	}else if( self->mode & DAO_STREAM_STRING ){
 		sprintf( buffer, format, val );
+		DaoStream_TryResetStringBuffer( self );
 		DString_AppendChars( self->streamString, buffer );
 	}else{
 		printf( format, val );
@@ -779,16 +797,19 @@ int DaoStream_ReadLine( DaoStream *self, DString *line )
 		if( self->mode & DAO_STREAM_AUTOCONV ) DString_ToUTF8( line );
 		return res;
 	}else if( self->mode & DAO_STREAM_STRING ){
-		daoint pos = DString_FindChar( self->streamString, delim, 0 );
-		if( pos == DAO_NULLPOS ){
+		daoint pos = DString_FindChar( self->streamString, delim, self->offset );
+		if( self->offset == 0 && (pos == DAO_NULLPOS || pos == self->streamString->size-1) ){
 			DString_Assign( line, self->streamString );
-			DString_Clear( self->streamString );
+			self->offset = self->streamString->size;
+		}else if( pos == DAO_NULLPOS ){
+			DString_SubString( self->streamString, line, pos, -1 );
+			self->offset = self->streamString->size;
 		}else{
-			DString_SubString( self->streamString, line, 0, pos+1 );
-			DString_Erase( self->streamString, 0, pos+1 );
+			DString_SubString( self->streamString, line, pos, pos - self->offset + 1 );
+			self->offset = pos + 1;
 		}
 		if( self->mode & DAO_STREAM_AUTOCONV ) DString_ToUTF8( line );
-		return self->streamString->size >0;
+		return self->offset < self->streamString->size;
 	}else{
 		*start = ch = getchar();
 		start += 1;
