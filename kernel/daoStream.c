@@ -377,8 +377,8 @@ static void DaoIO_ReadFile( DaoProcess *proc, DaoValue *p[], int N )
 		struct stat info;
 		if( fin == NULL ) return;
 		fstat( fileno( fin ), &info );
-		DString_Resize( res, info.st_size );
-		DString_Resize( res, fread( res->chars, 1, res->size, fin ) );
+		DString_Reserve( res, info.st_size );
+		DString_Reset( res, fread( res->chars, 1, info.st_size, fin ) );
 		fclose( fin );
 	}
 }

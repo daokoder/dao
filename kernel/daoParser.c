@@ -3510,7 +3510,7 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 
 	self->curToken = from;
 	tok = DaoParser_GetEnumTokenType( retype );
-	if( tokens[start]->type == tok ){
+	if( to >= from && tokens[start]->type == tok ){
 		/* routine test() => list<tuple<a:int,b:int>> { {(1,2), (3,4)} } */
 		int rb = DaoParser_FindPairToken( self, tok, tok + 1, start, to );
 		DList_PushFront( self->enumTypes, retype );

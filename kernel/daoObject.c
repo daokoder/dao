@@ -231,7 +231,6 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 		 * its .ctype may need to be set properaly */
 		if( var->value ){
 			DaoValue_Move( var->value, value, var->dtype );
-			continue;
 		}else if( *value == NULL && var->dtype && var->dtype->value ){
 			DaoValue_Copy( var->dtype->value, value );
 		}
