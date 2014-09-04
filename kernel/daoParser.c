@@ -3456,7 +3456,7 @@ static void DaoParser_CheckStatementSeparation( DaoParser *self, int check, int 
 static int DaoParser_ImportSymbols( DaoParser *self, DaoNamespace *mod, int start, int to, int level );
 static int DaoParser_ParseImportStatement( DaoParser *self, int start, int end, int full );
 static int DaoParser_ParseNamespaceStatement( DaoParser *self, int start, int end );
-static int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, int st );
+static int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int st );
 static int DaoParser_GetEnumTokenType( DaoType *type )
 {
 	int tok = 0;
@@ -4204,7 +4204,7 @@ DecoratorError:
 			continue;
 		}
 
-		end = DaoParser_ParseVarExpressions( self, start, to, 0, storeType | scopeType );
+		end = DaoParser_ParseVarExpressions( self, start, to, storeType | scopeType );
 		if( end < 0 ) return 0;
 		if( DaoParser_CompleteScope( self, end-1 ) == 0 ) return 0;
 		DaoParser_CheckStatementSeparation( self, end-1, to );
@@ -4237,7 +4237,7 @@ static int DaoParser_SetInitValue( DaoParser *self, DaoVariable *var, DaoValue *
 	DaoValue_Copy( value, & var->value );
 	return 1;
 }
-int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, int store )
+int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store )
 {
 	DaoValue *value;
 	DaoEnode enode;
@@ -4557,7 +4557,11 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int var, 
 	}
 	self->curToken = end;
 	if( DaoParser_CurrentTokenType( self ) == DTOK_COMMA && (end+1) <= to ){
-		return DaoParser_ParseVarExpressions( self, end+1, to, 1, store );
+		if( explicit_store == 0 && self->vmcLast != back ){
+			DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
+			return -1;
+		}
+		return DaoParser_ParseVarExpressions( self, end+1, to, store );
 	}
 	return end;
 }
@@ -5517,7 +5521,7 @@ CleanUp:
 	}
 	/* init arith; */
 	cst = 0;
-	pos = DaoParser_ParseVarExpressions( self, start+2, semic1-1, 0, store );
+	pos = DaoParser_ParseVarExpressions( self, start+2, semic1-1, store );
 	if( pos < 0 ) return -1;
 	if( pos != semic1 ){
 		DaoParser_Error2( self, DAO_INVALID_EXPRESSION, start+2, semic1-1, 0 );
@@ -5586,7 +5590,7 @@ int DaoParser_ParseCondition( DaoParser *self, int start, int dec, DaoInode *ope
 			store = DAO_DECL_LOCAL|DAO_DECL_INVAR;
 			start += 1;
 		}
-		pos = DaoParser_ParseVarExpressions( self, start, rb-1, 0, store );
+		pos = DaoParser_ParseVarExpressions( self, start, rb-1, store );
 		if( pos < 0 ) return -1;
 		if( pos != semico ){
 			DaoParser_Error4( self, DAO_TOKEN_EXPECTING, tokens[pos]->line, ";" );

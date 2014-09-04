@@ -2490,7 +2490,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 		res = proc->stackValues[0];
 		switch( funct ){
 		case DVM_FUNCT_COLLECT :
-			if( res && res->type != DAO_NONE ) DaoList_Append( list, elem );
+			if( res && res->type != DAO_NONE ) DaoList_Append( list, res );
 			break;
 		case DVM_FUNCT_MAP : DaoArray_SetValue( array, i, res ); break;
 		case DVM_FUNCT_APPLY : DaoArray_SetValue( self, id, res ); break;

@@ -400,10 +400,13 @@ static void DaoIO_Open( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	}else{
 		stream->mode |= DAO_STREAM_FILE;
-		/* XXX Error handling? */
 		mode = DString_GetData( p[1]->xString.value );
 		if( p[0]->type == DAO_INTEGER ){
 			stream->file = fdopen( p[0]->xInteger.value, mode );
+			if( stream->file == NULL ){
+				DaoProcess_RaiseError( proc, NULL, "failed to create the stream object" );
+				return;
+			}
 		}else{
 			stream->file = DaoIO_OpenFile( proc, p[0]->xString.value, mode, 0 );
 		}

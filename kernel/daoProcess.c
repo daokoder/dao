@@ -138,9 +138,9 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->firstFrame->types = & dummyType;
 	self->firstFrame->codes = & dummyCode;
 	self->firstFrame->entry = 1;
-	self->stackSize = self->stackTop = 1 + DAO_MAX_PARAM;
+	self->stackSize = self->stackTop = 2 + DAO_MAX_PARAM;
 	self->stackValues = (DaoValue**)dao_calloc( self->stackSize, sizeof(DaoValue*) );
-	self->paramValues = self->stackValues + 1;
+	self->paramValues = self->stackValues + 2;
 	self->factory = DList_New( DAO_DATA_VALUE );
 
 	self->mbstring = DString_New();

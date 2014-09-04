@@ -291,6 +291,12 @@ static void DaoSTD_Try( DaoProcess *proc, DaoValue *p[], int n )
 		DaoProcess_PutValue( proc, proc->stackValues[0] );
 	}
 }
+static void DaoSTD_ProcData( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoProcess_PutValue( proc, proc->stackValues[1] );
+	if( n == 0 ) return;
+	DaoValue_Move( p[0], & proc->stackValues[1], NULL );
+}
 static void DaoSTD_Test( DaoProcess *proc, DaoValue *p[], int n )
 {
 	printf( "%i\n", p[0]->type );
@@ -306,6 +312,8 @@ DaoFuncItem dao_std_methods[] =
 	{ DaoSTD_Resource,  "resource( path: string ) => string" },
 	{ DaoSTD_About,     "about( invar ... : any ) => string" },
 	{ DaoSTD_Debug,     "debug( invar ... : any )" },
+
+	{ DaoSTD_ProcData,  "procdata( data: any = none ) => any" },
 
 	{ DaoSTD_Warn,
 		"warn( info: string )"
