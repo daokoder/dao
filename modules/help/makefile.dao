@@ -12,6 +12,9 @@ project_objs = project.AddObjects( { "dao_help.c" } )
 project_dll  = project.AddSharedLibrary( "dao_help", project_objs )
 project_lib  = project.AddStaticLibrary( "dao_help", project_objs )
 
+project_dll.SetTargetPath( "../../lib/dao/modules/help" )
+project_lib.SetTargetPath( "../../lib/dao/modules/help" )
+
 
 project.GenerateFinder( $TRUE );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );

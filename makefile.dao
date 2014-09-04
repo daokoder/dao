@@ -19,12 +19,13 @@ daovm = DaoMake::Project( "Dao" )
 ###########################################################################
 
 daovm_root_path = DaoMake::Option( "INSTALL-PATH", "/usr/local" )
-daovm_bin_path = DaoMake::Option( "BIN-PATH", daovm_root_path + "/bin" )
-daovm_lib_path = DaoMake::Option( "LIB-PATH", daovm_root_path + "/lib" )
-daovm_inc_path = DaoMake::Option( "INC-PATH", daovm_root_path + "/include/dao" )
-daovm_mod_path = DaoMake::Option( "MOD-PATH", daovm_root_path + "/lib/dao/modules" )
-daovm_doc_path = DaoMake::Option( "DOC-PATH", daovm_root_path + "/shared/dao" )
+daovm_bin_path = DaoMake::Option( "BIN-PATH", "$(INSTALL_PATH)/bin" )
+daovm_lib_path = DaoMake::Option( "LIB-PATH", "$(INSTALL_PATH)/lib" )
+daovm_inc_path = DaoMake::Option( "INC-PATH", "$(INSTALL_PATH)/include/dao" )
+daovm_mod_path = DaoMake::Option( "MOD-PATH", "$(INSTALL_PATH)/lib/dao/modules" )
+daovm_doc_path = DaoMake::Option( "DOC-PATH", "$(INSTALL_PATH)/shared/dao" )
 
+daovm.AddVariable( "INSTALL_PATH", daovm_root_path );
 
 #
 # Export paths that can be retrieved using:
@@ -191,6 +192,10 @@ daovm_lib = daovm.AddStaticLibrary( "dao", daovm_kernel_objects )
 #
 daovm_exe = daovm.AddExecutable( "dao", daovm_main_object )
 
+daovm_dll.SetTargetPath( "lib" )
+daovm_lib.SetTargetPath( "lib" )
+daovm_exe.SetTargetPath( "bin" )
+
 daovm.AddIncludePath( "kernel" )
 
 
@@ -329,7 +334,7 @@ modules.AddDependency( daovm_lib )
 modules.AddDependency( daovm_exe )
 
 
-daovm.AddVariable( "DAO", DaoMake::MakePath( daovm.BinaryPath(), "dao" ) );
+daovm.AddVariable( "DAO", DaoMake::MakePath( daovm.BinaryPath(), "bin/dao" ) );
 daovm.AddVariable( "HELP_PATH", daovm_use_help_path );
 daovm.AddVariable( "HELP_FONT", daovm_use_help_font );
 
@@ -414,9 +419,9 @@ if( daovm_bundle_program.size() ){
 	daomake_args += " --option-BUNDLE " + daovm_bundle_program
 	daomake_args += " --suffix .bundle bundle.dao"
 
-	archive = daovm.AddCommand( darc + ": " + daos, "./dao -c " + daos )
-	archive.AddCommand( "./dao -a " + daovm_bundle_program + ".dac " + daovm_bundle_resources )
-	archive.AddCommand( "./dao tools/filetools/archive.dao " + daovm_bundle_program + ".dar" )
+	archive = daovm.AddCommand( darc + ": " + daos, "$(DAO) -c " + daos )
+	archive.AddCommand( "$(DAO) -a " + daovm_bundle_program + ".dac " + daovm_bundle_resources )
+	archive.AddCommand( "$(DAO) tools/filetools/archive.dao " + daovm_bundle_program + ".dar" )
 	archive.AddCommand( "$(DAOMAKE) " + daomake_args )
 	archive.AddCommand( "$(MAKE) -f Makefile.bundle" )
 }

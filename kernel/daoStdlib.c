@@ -306,7 +306,7 @@ DaoFuncItem dao_std_methods[] =
 {
 	{ DaoSTD_Version,   "version( verbose = 0 ) => string" },
 	{ DaoSTD_Path,      "path( path: string, action: enum<set,add,remove> = $add )" },
-	{ DaoSTD_Compile,   "compile( source: string, import: any = none ) => tuple<namespace:any,main:routine>" },
+	{ DaoSTD_Compile,   "compile( source: string, import: any = none ) => tuple<ns:namespace,main:routine>" },
 	{ DaoSTD_Eval,      "eval( source: string, st = io::stdio ) => any" },
 	{ DaoSTD_Load,      "load( file: string, import = 1, runim = 0 ) => namespace" },
 	{ DaoSTD_Resource,  "resource( path: string ) => string" },

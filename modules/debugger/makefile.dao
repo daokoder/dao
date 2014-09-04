@@ -11,6 +11,9 @@ project_objs = project.AddObjects( { "dao_debugger.c" } )
 project_dll  = project.AddSharedLibrary( "dao_debugger", project_objs )
 project_lib  = project.AddStaticLibrary( "dao_debugger", project_objs )
 
+project_dll.SetTargetPath( "../../lib/dao/modules/debugger" )
+project_lib.SetTargetPath( "../../lib/dao/modules/debugger" )
+
 
 project.GenerateFinder( $TRUE );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );

@@ -12,6 +12,9 @@ project_objs = project.AddObjects( { "dao_dataframe.c" }, { "dao_dataframe.h" } 
 project_dll  = project.AddSharedLibrary( "dao_dataframe", project_objs )
 project_lib  = project.AddStaticLibrary( "dao_dataframe", project_objs )
 
+project_dll.SetTargetPath( "../../lib/dao/modules/dataframe" )
+project_lib.SetTargetPath( "../../lib/dao/modules/dataframe" )
+
 
 project.GenerateFinder( $TRUE );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );

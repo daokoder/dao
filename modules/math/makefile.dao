@@ -11,6 +11,9 @@ project_objs = project.AddObjects( { "dao_math.c" } )
 project_dll  = project.AddSharedLibrary( "dao_math", project_objs )
 project_lib  = project.AddStaticLibrary( "dao_math", project_objs )
 
+project_dll.SetTargetPath( "../../lib/dao/modules/math" )
+project_lib.SetTargetPath( "../../lib/dao/modules/math" )
+
 
 project.GenerateFinder( $TRUE );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );

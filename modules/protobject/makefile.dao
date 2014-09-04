@@ -12,6 +12,9 @@ project_objs = project.AddObjects( { "dao_protobject.c" } )
 project_dll  = project.AddSharedLibrary( "dao_protobject", project_objs )
 project_lib  = project.AddStaticLibrary( "dao_protobject", project_objs )
 
+project_dll.SetTargetPath( "../../lib/dao/modules/protobject" )
+project_lib.SetTargetPath( "../../lib/dao/modules/protobject" )
+
 
 findpkg = DaoMake::MakePath( project.BinaryPath(), "FindDaoProtobject.dao" );
 project.GenerateFinder( $TRUE );

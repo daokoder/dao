@@ -12,6 +12,9 @@ project_objs = project.AddObjects( { "dao_coroutine.c" } )
 project_dll  = project.AddSharedLibrary( "dao_coroutine", project_objs )
 project_lib  = project.AddStaticLibrary( "dao_coroutine", project_objs )
 
+project_dll.SetTargetPath( "../../lib/dao/modules/coroutine" )
+project_lib.SetTargetPath( "../../lib/dao/modules/coroutine" )
+
 
 findpkg = DaoMake::MakePath( project.BinaryPath(), "FindDaoCoroutine.dao" );
 project.GenerateFinder( $TRUE );

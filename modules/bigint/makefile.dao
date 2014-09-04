@@ -11,6 +11,9 @@ project_objs = project.AddObjects( { "dao_bigint.c" } )
 project_dll  = project.AddSharedLibrary( "dao_bigint", project_objs )
 project_lib  = project.AddStaticLibrary( "dao_bigint", project_objs )
 
+project_dll.SetTargetPath( "../../lib/dao/modules/bigint" )
+project_lib.SetTargetPath( "../../lib/dao/modules/bigint" )
+
 
 project.GenerateFinder( $TRUE );
 project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );

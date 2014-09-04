@@ -12,6 +12,8 @@ project_objs = project.AddObjects( { "dao_sys.c" }, { "dao_sys.h" } )
 project_dll  = project.AddSharedLibrary( "dao_sys", project_objs )
 project_lib  = project.AddStaticLibrary( "dao_sys", project_objs )
 
+project_dll.SetTargetPath( "../../lib/dao/modules/syslib" )
+project_lib.SetTargetPath( "../../lib/dao/modules/syslib" )
 
 findpkg = DaoMake::MakePath( project.BinaryPath(), "FindDaoSys.dao" );
 project.GenerateFinder( $TRUE );
