@@ -190,7 +190,7 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 	if( N > self->stackSize ){
 		daoint offset = self->activeValues - self->stackValues;
 		self->stackValues = (DaoValue**)dao_realloc( self->stackValues, N*sizeof(DaoValue*) );
-		self->paramValues = self->stackValues + 1;
+		self->paramValues = self->stackValues + 2;
 		memset( self->stackValues + self->stackSize, 0, (N-self->stackSize)*sizeof(DaoValue*) );
 		if( self->activeValues ) self->activeValues = self->stackValues +  offset;
 		self->stackSize = N;

@@ -868,7 +868,12 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		}
 		if( type->subtid == DAO_ROUTINES ) return 0;
 		if( self->name->chars[0] != type->name->chars[0] ) return 0; /* @routine */
-		if( type->aux == NULL ) return DAO_MT_SIM; /* match to "routine"; */
+		if( type->aux == NULL ){
+			int hascb1 = self->cbtype != NULL;
+			int hascb2 = type->cbtype != NULL;
+			/* match to "routine" or "routine[...]"; */
+			return DAO_MT_SIM * (hascb1 == hascb2);
+		}
 		if( self->nested->size < type->nested->size ) return DAO_MT_NOT;
 		if( (self->cbtype == NULL) != (type->cbtype == NULL) ) return 0;
 		if( self->aux == NULL && type->aux ) return 0;
