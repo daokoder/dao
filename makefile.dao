@@ -192,7 +192,7 @@ daovm_lib = daovm.AddStaticLibrary( "dao", daovm_kernel_objects )
 daovm_exe = daovm.AddExecutable( "dao", daovm_main_object )
 
 if( DaoMake::IsPlatform( "WIN32" ) ){
-	daovm_dll.SetTargetPath( "bin" )
+	daovm_dll.SetTargetPath( "bin" )  # Relative to build path;
 	daovm_lib.SetTargetPath( "bin" )
 }else{
 	daovm_dll.SetTargetPath( "lib" )
@@ -344,7 +344,15 @@ modules.AddDependency( daovm_lib )
 modules.AddDependency( daovm_exe )
 
 
-daovm.AddVariable( "DAO", DaoMake::MakePath( daovm.BinaryPath(), "bin/dao" ) );
+daocmd = DaoMake::MakePath( daovm.BinaryPath(), "bin/dao" )
+testcmd = DaoMake::MakePath( daovm.BinaryPath(), "bin/daotest" )
+if( DaoMake::UseLocalRPath() == 0 ){
+	ldpath = daovm_lib.MakeBuildPath( "lib" )
+	daocmd = "LD_LIBRARY_PATH=" + ldpath + " " + daocmd
+	testcmd = "LD_LIBRARY_PATH=" + ldpath + " " + testcmd
+}
+
+daovm.AddVariable( "DAO", daocmd );
 daovm.AddVariable( "HELP_PATH", daovm_use_help_path );
 daovm.AddVariable( "HELP_FONT", daovm_use_help_font );
 
@@ -406,7 +414,7 @@ daovm.Install( DaoMake::MakePath( daovm_doc_path, "./demo" ), demos )
 daovm.Install( DaoMake::MakePath( daovm_doc_path, "./demo/concurrent" ), demos2 )
 
 
-DaoMake::SetTestTool( DaoMake::MakePath( DaoMake::BinaryPath(), "bin/daotest" ) )
+DaoMake::SetTestTool( testcmd )
 tests = daovm.AddDirectory( "tests", "tests" )
 tests.AddDependency( modules )
 tests.AddDependency( daotest )

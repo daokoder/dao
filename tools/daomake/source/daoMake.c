@@ -263,6 +263,7 @@ static DString *daomake_test_tool_option = NULL;
 static char *daomake_makefile_suffix = "";
 static int daomake_build_mode = DAOMAKE_RELEASE;
 static int daomake_out_of_source = 0;
+static int daomake_local_rpath = 1;
 static int daomake_reset_cache = 0;
 static int daomake_test_count = 0;
 
@@ -1204,7 +1205,7 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 			it = DMap_Insert( self->testRules, signature, signature );
 			DString_AppendChars( it->value.pString, ": " );
 			DString_Append( it->value.pString, rule );
-			DString_AppendChars( it->value.pString, " $(DAOTEST)\n\t-$(DAOTEST) " );
+			DString_AppendChars( it->value.pString, "\n\t-$(DAOTEST) " );
 			DString_Append( it->value.pString, rule );
 			DString_AppendGap( it->value.pString );
 			DString_Append( it->value.pString, daomake_test_tool_option );
@@ -2029,7 +2030,16 @@ static void DaoMakeUnit_UseLibrary( DaoMakeUnit *self, DaoMakeProject *pro, DStr
 		}
 		if( ttype == DAOMAKE_SHAREDLIB ){
 			if( tar->objects->size ){ /* real target: */
-				DList_PushBack( self->linkingPaths, tar->base.binaryPath );
+				DString *binpath = tar->base.binaryPath;
+				if( daomake_local_rpath ){
+					DList_PushBack( self->linkingPaths, binpath );
+				}else{
+					flag = (DString*) DList_PushBack( self->linkingFlags, binpath );
+					if( daomake_relative_rpath ){
+						DaoMake_MakeRelativePath( self->binaryPath, flag );
+					}
+					DString_InsertChars( flag, "-L", 0, 0, 0 );
+				}
 			}
 			flag = (DString*) DList_PushBack( self->linkingFlags, name );
 			if( name->size ) DString_InsertChars( flag, "-l", 0, 0, 0 );
@@ -2816,7 +2826,6 @@ static void DAOMAKE_SetTestTool( DaoProcess *proc, DaoValue *p[], int N )
 	DString *tool = DaoValue_TryGetString( p[0] );
 	DString *option = DaoValue_TryGetString( p[1] );
 
-	DaoMake_MakePath( proc->activeNamespace->path, tool );
 	DString_Reset( daomake_test_tool, 0 );
 	DString_Reset( daomake_test_tool_option, 0 );
 	DString_Append( daomake_test_tool, tool );
@@ -2839,6 +2848,10 @@ static void DAOMAKE_Is64Bit( DaoProcess *proc, DaoValue *p[], int N )
 static void DAOMAKE_IsOutOfSource( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutInteger( proc, daomake_out_of_source );
+}
+static void DAOMAKE_UseLocalRPath( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoProcess_PutInteger( proc, daomake_local_rpath );
 }
 
 static DaoFuncItem DaoMakeMeths[] =
@@ -2872,6 +2885,7 @@ static DaoFuncItem DaoMakeMeths[] =
 	{ DAOMAKE_IsPlatform,  "IsPlatform( platform: string ) => int" },
 	{ DAOMAKE_Is64Bit,     "Is64Bit() => int" },
 
+	{ DAOMAKE_UseLocalRPath,  "UseLocalRPath() => int" },
 	{ DAOMAKE_IsOutOfSource,  "IsOutOfSourceBuild() => int" },
 	{ NULL, NULL }
 };
@@ -3305,6 +3319,8 @@ int main( int argc, char *argv[] )
 			daomake_makefile_suffix = argv[++i];
 		}else if( strcmp( arg, "--reset" ) == 0 ){
 			daomake_reset_cache = 1;
+		}else if( strcmp( arg, "--no-local-rpath" ) == 0 ){
+			daomake_local_rpath = 0;
 		}else if( strcmp( arg, "--help" ) == 0 ){
 			printf( "%s\n", daomake_doc_options );
 			if( i == 1 && argc == 2 ) return 0;
