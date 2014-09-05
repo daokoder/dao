@@ -194,6 +194,7 @@ struct DaoMakeProject
 
 	DString  *sourceName;
 	DString  *projectName;
+	DString  *targetPath;
 	uchar_t   generateFinder;
 
 	DList   *targets;
@@ -352,6 +353,7 @@ DaoMakeProject* DaoMakeProject_New()
 	DaoMakeUnit_Init( (DaoMakeUnit*) & self->base, daomake_type_project );
 	self->sourceName = DString_New();
 	self->projectName = DString_New();
+	self->targetPath = DString_New();
 
 	self->targets = DList_New(DAO_DATA_VALUE);
 	self->variables = DList_New(DAO_DATA_STRING);
@@ -389,6 +391,7 @@ void DaoMakeProject_Delete( DaoMakeProject *self )
 	DaoMakeUnit_Free( (DaoMakeUnit*) & self->base );
 	DString_Delete( self->sourceName );
 	DString_Delete( self->projectName );
+	DString_Delete( self->targetPath );
 
 	DList_Delete( self->targets );
 	DList_Delete( self->variables );
@@ -824,6 +827,15 @@ void DaoMakeUnit_ExportLinkingFlags( DaoMakeUnit *self, DString *lflags, DaoMake
 	}
 }
 
+
+
+static void DaoMakeTarget_SetTargetPath( DaoMakeTarget *self, DString *dest )
+{
+	DString_Assign( self->path, dest );
+	DString_Assign( self->base.binaryPath, dest );
+	DaoMake_MakePath( self->base.buildPath, self->base.binaryPath );
+	DaoMake_MakeDirs( self->base.binaryPath, 0 );
+}
 static void DaoMakeTarget_ExportCompilingFlags( DaoMakeTarget *self, DaoMakeProject *pro, DString *flags, DaoMakeUnit *target )
 {
 	daoint i;
@@ -1716,7 +1728,7 @@ static void DaoMakeTarget_MakeExport( DaoMakeTarget *self, DString *cflags, DStr
 		DString_AppendGap( stlibs );
 		DString_Append( stlibs, self->install );
 		DString_AppendPathSep( stlibs );
-		DaoMakeTarget_MakeName( self, path, 1 );
+		DaoMakeTarget_MakeName( self, path, 0 );
 		DString_Append( stlibs, path );
 	}
 	project->usedStrings -= 2;
@@ -1912,7 +1924,7 @@ void DaoMakeProject_MakeFindPackageForInstall( DaoMakeProject *self, DString *ou
 	for(i=0; i<self->installs->size; i+=2){
 		DString *dest = DaoValue_TryGetString( installs[i+1] );
 		DString *file = DaoValue_TryGetString( installs[i] );
-		DaoMakeTarget *tar = (DaoMakeTarget*) DaoValue_CastCdata( installs[i], daomake_type_target );
+		DaoMakeTarget *tar = (DaoMakeTarget*) DaoValue_CastCstruct( installs[i], daomake_type_target );
 		if( tar == NULL ) continue;
 		if( tar->ttype != DAOMAKE_SHAREDLIB && tar->ttype != DAOMAKE_STATICLIB ) continue;
 		if( tar->install->size == 0 ) continue;
@@ -1974,9 +1986,9 @@ void DaoMakeProject_MakeFindPackageForBuild( DaoMakeProject *self, DString *outp
 				DMap_Insert( lnkdirs, key, 0 );
 				DString *rpath = DaoMake_GetSettingValue( "DLL-RPATH" );
 				DString_Append( shlibs, rpath );
-				DString_Append( shlibs, tar->base.project->base.buildPath );
+				DString_Append( shlibs, tar->base.binaryPath );
 				DString_AppendChars( shlibs, " -L" );
-				DString_Append( shlibs, tar->base.project->base.buildPath );
+				DString_Append( shlibs, tar->base.binaryPath );
 			}
 			DString_Reset( empty, 0 );
 			DString_AppendChars( shlibs, " -l" );
@@ -2012,7 +2024,7 @@ void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output, int 
 	DString *md5 = self->string;
 	daoint i;
 
-	DString_Append( filePath, self->base.sourcePath );
+	DString_Append( filePath, self->base.buildPath );
 	DString_AppendPathSep( filePath );
 	DString_AppendChars( filePath, "Find" );
 	DString_Append( filePath, self->projectName );
@@ -2296,13 +2308,27 @@ static void UNIT_MakeLinkingFlags( DaoProcess *proc, DaoValue *p[], int N )
 	DString *res = DaoProcess_PutChars( proc, "" );
 	DaoMakeUnit_ExportLinkingFlags( self, res, NULL );
 }
+static void UNIT_MakeSourcePath( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
+	DString *path = p[1]->xString.value;
+	DString *res = DaoProcess_PutString( proc, path );
+	DaoMake_MakePath( self->sourcePath, res );
+}
+static void UNIT_MakeBuildPath( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
+	DString *path = p[1]->xString.value;
+	DString *res = DaoProcess_PutString( proc, path );
+	DaoMake_MakePath( self->sourcePath, res );
+}
 static DaoFuncItem DaoMakeUnitMeths[]=
 {
 	{ UNIT_AddPlatformDefs,   "AddPlatformDefs( self: Unit )" },
 	{ UNIT_AddDefinition,     "AddDefinition( self: Unit, name: string, value = \"\" )" },
 	{ UNIT_AddIncludePath,    "AddIncludePath( self: Unit, path: string, ...: string )" },
 	{ UNIT_AddLinkingPath,    "AddLinkingPath( self: Unit, path: string, ...: string )" },
-	{ UNIT_AddAssemblingFlag,  "AddAssemblingFlag( self: Unit, flag: string, ...: string )" },
+	{ UNIT_AddAssemblingFlag, "AddAssemblingFlag( self: Unit, flag: string, ...: string )" },
 	{ UNIT_AddCompilingFlag,  "AddCompilingFlag( self: Unit, flag: string, ...: string )" },
 	{ UNIT_AddLinkingFlag,    "AddLinkingFlag( self: Unit, flag: string, ...: string )" },
 	{ UNIT_AddRpath,          "AddRpath( self: Unit, flag: string, ...: string )" },
@@ -2316,6 +2342,9 @@ static DaoFuncItem DaoMakeUnitMeths[]=
 	{ UNIT_MakeLinkingPaths,    "MakeLinkingPaths( self: Unit ) => string" },
 	{ UNIT_MakeCompilingFlags,  "MakeCompilingFlags( self: Unit ) => string" },
 	{ UNIT_MakeLinkingFlags,    "MakeLinkingFlags( self: Unit ) => string" },
+
+	{ UNIT_MakeSourcePath,    "MakeSourcePath( self: Unit, path: string ) => string" },
+	{ UNIT_MakeBuildPath,     "MakeBuildPath( self: Unit, path: string ) => string" },
 	{ NULL, NULL }
 };
 DaoTypeBase DaoMakeUnit_Typer =
@@ -2408,10 +2437,7 @@ static void TARGET_SetTargetPath( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
 	DString *dest = p[1]->xString.value;
-	DString_Assign( self->path, dest );
-	DString_Assign( self->base.binaryPath, dest );
-	DaoMake_MakePath( self->base.buildPath, self->base.binaryPath );
-	DaoMake_MakeDirs( self->base.binaryPath, 0 );
+	DaoMakeTarget_SetTargetPath( self, dest );
 }
 static void TARGET_Install( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2491,6 +2517,7 @@ static void PROJECT_AddTarget( DaoProcess *proc, DaoValue *p[], int N, int ttype
 	target->ttype = ttype;
 	target->base.project = self;
 	DString_Assign( target->name, DaoValue_TryGetString( p[1] ) );
+	DString_Assign( target->base.binaryPath, self->targetPath );
 	for(i=2; i<N; ++i) DList_Append( target->objects, p[i] );
 	DaoProcess_PutValue( proc, (DaoValue*) target );
 	DList_Append( self->targets, (DaoValue*) target );
@@ -2581,6 +2608,19 @@ static void PROJECT_AddVAR( DaoProcess *proc, DaoValue *p[], int N )
 	DString *value = DaoValue_TryGetString( p[2] );
 	DList_Append( self->variables, name );
 	DList_Append( self->variables, value );
+}
+static void PROJECT_SetTargetPath( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeProject *self = (DaoMakeProject*) p[0];
+	DString *dest = p[1]->xString.value;
+	int i;
+	DString_Assign( self->targetPath, dest );
+	DaoMake_MakePath( self->base.buildPath, self->targetPath );
+	DaoMake_MakeDirs( self->targetPath, 0 );
+	for(i=0; i<self->targets->size; ++i){
+		DaoMakeTarget *target = (DaoMakeTarget*) self->targets->items.pVoid[i];
+		DaoMakeTarget_SetTargetPath( target, dest );
+	}
 }
 static void PROJECT_InstallTarget( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2698,6 +2738,8 @@ static DaoFuncItem DaoMakeProjectMeths[]=
 	{ PROJECT_AddDIR,  "AddDirectory( self: Project, name: string, path: string, ...: string ) => Target" },
 
 	{ PROJECT_AddVAR,   "AddVariable( self: Project, name: string, value: string )" },
+
+	{ PROJECT_SetTargetPath,  "SetTargetPath( self: Project, path: string )" },
 
 	{ PROJECT_InstallTarget,  "Install( self: Project, dest: string, target: Target, ...: Target )" },
 	{ PROJECT_InstallFile,    "Install( self: Project, dest: string, file: string, ...: string )" },
@@ -3539,7 +3581,7 @@ ErrorInvalidArgValue:
 	Dao_MakePath( vmSpace->daoBinPath, name );
 	DaoVmSpace_AddPath( vmSpace, name->chars );
 #ifdef UNIX
-	DString_SetChars( name, "../shared/daomake" );
+	DString_SetChars( name, "../lib/daomake" );
 	Dao_MakePath( vmSpace->daoBinPath, name );
 	DaoVmSpace_AddPath( vmSpace, name->chars );
 #endif

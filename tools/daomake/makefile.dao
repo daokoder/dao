@@ -9,12 +9,17 @@ project_objs = project.AddObjects( { "source/daoMake.c" } )
 project_exe  = project.AddExecutable( "daomake", project_objs )
 
 project_exe.UseSharedLibrary( daovm, "dao" )
+project_exe.SetTargetPath( "../../bin" )
 
-project.AddCommand( "copylib", "$(DAOMAKE) copy -u " + project_exe.Name() + " ../../" )
+libpath = "../../lib/daomake/"
 
-shared = DaoMake::MakePath( daovm.GetPath( "INSTALL-PATH" ), "./shared/daomake" );
+copy = project.AddCommand( "configs", "$(DAOMAKE) mkdir2 " + libpath )
+copy.AddCommand( "$(DAOMAKE) copy " + project.MakeSourcePath( "platforms" ) + " " + libpath )
+copy.AddCommand( "$(DAOMAKE) copy " + project.MakeSourcePath( "packages" ) + " " + libpath )
+
+libpath = DaoMake::MakePath( daovm.GetPath( "INSTALL-PATH" ), "lib/daomake/" );
 
 project.Install( daovm.GetPath( "BIN-PATH" ), project_exe );
-project.Install( shared, "platforms" );
-project.Install( shared, "packages" );
+project.Install( libpath, "platforms" );
+project.Install( libpath, "packages" );
 

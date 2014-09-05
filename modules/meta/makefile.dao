@@ -6,13 +6,11 @@ daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 if( daovm == none ) return
 
 project.UseImportLibrary( daovm, "dao" )
+project.SetTargetPath( "../../lib/dao/modules" )
 
 project_objs = project.AddObjects( { "dao_meta.c" } )
 project_dll  = project.AddSharedLibrary( "dao_meta", project_objs )
 project_lib  = project.AddStaticLibrary( "dao_meta", project_objs )
-
-project_dll.SetTargetPath( "../../lib/dao/modules/meta" )
-project_lib.SetTargetPath( "../../lib/dao/modules/meta" )
 
 
 project.GenerateFinder( $TRUE );

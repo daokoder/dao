@@ -9,8 +9,7 @@ project_objs = project.AddObjects( { "source/daoTest.c" } )
 project_exe  = project.AddExecutable( "daotest", project_objs )
 
 project_exe.UseSharedLibrary( daovm, "dao" )
-
-project.AddCommand( "copylib", "$(DAOMAKE) copy -u " + project_exe.Name() + " ../../" )
+project_exe.SetTargetPath( "../../bin" )
 
 project.Install( daovm.GetPath( "BIN-PATH" ), project_exe );
 
