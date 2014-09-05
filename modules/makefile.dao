@@ -5,14 +5,6 @@ daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
-modules.Install( daovm.GetPath( "MOD-PATH" ), "addpath.dao" )
-
-if( modules.SourcePath() != modules.BinaryPath() ){
-	src = DaoMake::MakePath( modules.SourcePath(), "addpath.dao" );
-	dest = DaoMake::MakePath( modules.BinaryPath(), "../lib/dao/modules/" );
-	modules.AddCommand( "addpath:", "$(DAOMAKE) copy " + src + " " + dest );
-}
-
 if( DaoMake::IsDir( "DaoJIT" ) ) modules.AddDirectory( "DaoJIT", "DaoJIT" );
 
 if( DaoMake::IsDir( "DaoCXX" ) ) modules.AddDirectory( "DaoCXX", "DaoCXX" );

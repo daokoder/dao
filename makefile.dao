@@ -204,7 +204,7 @@ daovm.AddIncludePath( "kernel" )
 # so that some linking flags can be generated properly:
 #
 ###########################################################################
-daomake_pkg_path = DaoMake::MakePath( daovm.GetPath( "INSTALL-PATH" ), "share/daomake/packages/" )
+daomake_pkg_path = DaoMake::MakePath( daovm.GetPath( "INSTALL-PATH" ), "lib/daomake/packages/" )
 daovm.ExportPath( "FINDER-PATH", daomake_pkg_path );
 daovm.Install( daovm_bin_path, daovm_exe )
 daovm.Install( daovm_lib_path, daovm_dll, daovm_lib )
@@ -269,7 +269,7 @@ if( daovm_with_readline == $ON ){
 	# the following subdirectories:
 	# 1. "packages", relative to the daomake execution directory;
 	# 2. "packages", relative to the daomake executable directory;
-	# 3. Unix only: "../share/daomake/packages", relative to the 
+	# 3. Unix only: "../lib/daomake/packages", relative to the 
 	#    daomake executable directory;
 	#
 	readline = DaoMake::FindPackage( "ReadLine" )

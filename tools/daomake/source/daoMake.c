@@ -1,8 +1,8 @@
 /*
-// Dao Make Tool
+// DaoMake Tool
 // http://www.daovm.net
 //
-// Copyright (c) 2013, Limin Fu
+// Copyright (c) 2013,2014, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -14,15 +14,16 @@
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
 //
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-// OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
-// SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
-// OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// THIS SOFTWARE IS PROVIDED  BY THE COPYRIGHT HOLDERS AND  CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED  WARRANTIES,  INCLUDING,  BUT NOT LIMITED TO,  THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+// IN NO EVENT SHALL  THE COPYRIGHT HOLDER OR CONTRIBUTORS  BE LIABLE FOR ANY DIRECT,
+// INDIRECT,  INCIDENTAL, SPECIAL,  EXEMPLARY,  OR CONSEQUENTIAL  DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO,  PROCUREMENT OF  SUBSTITUTE  GOODS OR  SERVICES;  LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION)  HOWEVER CAUSED  AND ON ANY THEORY OF
+// LIABILITY,  WHETHER IN CONTRACT,  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+// OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+// OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include<stdio.h>
@@ -1781,7 +1782,9 @@ void DaoMakeTarget_MakeFindPackageForInstall( DaoMakeTarget *self, DString *outp
 	}
 	DaoMakeUnit_MakeFinderCodes( (DaoMakeUnit*) self, tarname->chars, output );
 
-	DaoMake_AddCallParam1( output, tarname->chars, "AddLinkingPath", self->install );
+	if( self->install->size ){
+		DaoMake_AddCallParam1( output, tarname->chars, "AddLinkingPath", self->install );
+	}
 
 	project->usedStrings -= 2;
 }
@@ -1805,7 +1808,9 @@ void DaoMakeTarget_MakeFindPackageForBuild( DaoMakeTarget *self, DString *output
 	DaoMakeUnit_MakeFinderCodes( (DaoMakeUnit*) self, tarname->chars, output );
 	DaoMakeUnit_MakeFinderCodes2( (DaoMakeUnit*) self, tarname->chars, output );
 
-	DaoMake_AddCallParam1( output, tarname->chars, "AddLinkingPath", self->base.binaryPath );
+	if( self->objects->size ){ /* real target: */
+		DaoMake_AddCallParam1( output, tarname->chars, "AddLinkingPath", self->base.binaryPath );
+	}
 
 	project->usedStrings -= 2;
 }
@@ -2011,12 +2016,16 @@ static void DaoMakeUnit_UseLibrary( DaoMakeUnit *self, DaoMakeProject *pro, DStr
 		DList_Append( self->linkingFlags, flags );
 
 		if( import && DaoMap_GetValueChars( daomake_platforms, "WIN32" ) == NULL ) break;
-		if( tar->install->size ){
+		if( tar->install->size && ! DString_EQ( tar->install, tar->base.binaryPath ) ){
 			flag = (DString*) DList_PushBack( self->linkingFlags, rpath );
-			DString_Append( flag, tar->install );
+			DString_Assign( flags, tar->install );
+			DaoMake_MakeRelativePath( self->binaryPath, flags );
+			DString_Append( flag, flags );
 		}
 		if( ttype == DAOMAKE_SHAREDLIB ){
-			DList_PushBack( self->linkingPaths, tar->base.binaryPath );
+			if( tar->objects->size ){ /* real target: */
+				DList_PushBack( self->linkingPaths, tar->base.binaryPath );
+			}
 			flag = (DString*) DList_PushBack( self->linkingFlags, name );
 			if( name->size ) DString_InsertChars( flag, "-l", 0, 0, 0 );
 		}else if( ttype == DAOMAKE_STATICLIB ){
