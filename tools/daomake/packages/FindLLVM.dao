@@ -6,5 +6,7 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 	if( libs == "" ) return;
 
 	llvm = DaoMake::Project( "LLVM" )
-	llvm.ExportLibrary( "", cflags.chop(), libs.chop() + " " + lflags.chop() )
+	llvm.AddSharedLibrary( "" );
+	llvm.AddCompilingFlag( cflags.chop() )
+	llvm.AddLinkingFlag( libs.chop() + " " + lflags.chop() )
 }

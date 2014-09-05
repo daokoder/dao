@@ -2,10 +2,10 @@
 if( DaoMake::IsPlatform( "UNIX" ) ){
 	cflags = DaoMake::Shell( "gsl-config --cflags" )
 	lflags = DaoMake::Shell( "gsl-config --libs" )
-	libs = ""
-	stlibs = ""
 	if( lflags == "" ) return;
 
 	gsl = DaoMake::Project( "GSL" )
-	gsl.ExportLibrary( "GSL", cflags.chop(), lflags.chop(), libs.chop(), stlibs.chop() )
+	gsl.AddSharedLibrary( "gsl" )
+	gsl.AddCompilingFlag( cflags.chop() )
+	gsl.AddLinkingFlag( lflags.chop() )
 }

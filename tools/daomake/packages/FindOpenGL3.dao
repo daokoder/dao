@@ -13,12 +13,13 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 	if( header_path == "" ) return;
 
 	opengl = DaoMake::Project( "OpenGL3" )
-	cflags = "-I" + header_path
 	shlibs = "";
 	if( DaoMake::IsPlatform( "MACOSX" ) && header_path.find( "Frameworks" ) >= 0 ){
 		shlibs = "-framework OpenGL"
 	}else{
 		shlibs = "-lGL -lGLU"
 	}
-	opengl.ExportLibrary( "OpenGL", cflags, "", shlibs )
+	opengl.AddSharedLibrary( "" )
+	opengl.AddIncludePath( header_path )
+	opengl.AddLinkingFlag( shlibs )
 }

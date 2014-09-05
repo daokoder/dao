@@ -7,7 +7,7 @@ header_path = DaoMake::FindFile( "glib.h", header_hints )
 
 if( header_path == "" ) return;
 
-sqlite = DaoMake::Project( "GLib" )
-cflags = "-I" + header_path
-shlibs = "-lglib-2.0 -lgobject-2.0";
-sqlite.ExportLibrary( "GLib", cflags, "", shlibs )
+glib = DaoMake::Project( "GLib" )
+glib.AddSharedLibrary( "glib" )
+glib.AddIncludePath( header_path )
+glib.AddLinkingFlag( "-lglib-2.0 -lgobject-2.0" )

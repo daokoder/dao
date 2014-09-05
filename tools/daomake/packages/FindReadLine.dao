@@ -14,12 +14,14 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 	header_path2 = DaoMake::FindFile( "readline/history.h" )
 	if( header_path == "" or header_path2 == "" ) return;
 
-	lflags = "-lreadline";
+	lflags = "";
 	if( DaoMake::TestCompile( code, "-lreadline", "-I." ) == 0 ){
 		if( DaoMake::TestCompile( code, "-lreadline -lncurses", "-I." ) == 0 ) return;
-		lflags = "-lreadline -lncurses";
+		lflags = "-lncurses";
 	}
 
 	readline = DaoMake::Project( "ReadLine" )
-	readline.ExportLibrary( "readline", "-I" + header_path, lflags )
+	readline.AddSharedLibrary( "readline" )
+	readline.AddIncludePath( header_path )
+	readline.AddLinkingFlag( lflags )
 }

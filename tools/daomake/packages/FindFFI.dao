@@ -8,6 +8,5 @@ header_path = DaoMake::FindFile( "ffi.h", header_hints )
 if( header_path == "" ) return;
 
 sqlite = DaoMake::Project( "FFI" )
-cflags = "-I" + header_path
-shlibs = "-lffi";
-sqlite.ExportLibrary( "FFI", cflags, "", shlibs )
+sqlite.AddIncludePath( header_path )
+sqlite.AddLinkingFlag( "-lffi" )

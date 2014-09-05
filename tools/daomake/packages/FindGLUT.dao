@@ -20,12 +20,13 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 	if( header_path == "" ) return;
 
 	opengl = DaoMake::Project( "GLUT" )
-	cflags = "-I" + header_path
-	shlibs = "";
+	shlibs = ""
 	if( DaoMake::IsPlatform( "MACOSX" ) && header_path.find( "Frameworks" ) >= 0 ){
 		shlibs = "-framework GLUT"
 	}else{
 		shlibs = "-lglut"
 	}
-	opengl.ExportLibrary( "GLUT", cflags, "", shlibs )
+	opengl.AddSharedLibrary( "" )
+	opengl.AddIncludePath( header_path )
+	opengl.AddLinkingFlag( shlibs )
 }

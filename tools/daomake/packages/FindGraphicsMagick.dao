@@ -7,5 +7,7 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 	if( libs == "" ) return;
 
 	magick = DaoMake::Project( "GraphicsMagick" )
-	magick.ExportLibrary( "Magick", cflags.chop(), lflags.chop(), libs.chop(), stlibs.chop() )
+	magick.AddSharedLibrary( "Magick" )
+	magick.AddCompilingFlag( cflags.chop() )
+	magick.AddLinkingFlag( lflags.chop() + " " + libs.chop() )
 }

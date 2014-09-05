@@ -7,5 +7,7 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 	if( stlibs == "" ) return;
 
 	sdl = DaoMake::Project( "SDL" )
-	sdl.ExportLibrary( "SDL", cflags.chop(), lflags.chop(), libs.chop(), stlibs.chop() )
+	sdl.AddSharedLibrary( "" )
+	sdl.AddCompilingFlag( cflags.chop() )
+	sdl.AddLinkingFlag( lflags.chop() + " " + libs.chop() )
 }

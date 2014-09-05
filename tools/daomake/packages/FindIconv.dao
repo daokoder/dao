@@ -20,5 +20,6 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 	}
 
 	iconv = DaoMake::Project( "Iconv" )
-	iconv.ExportLibrary( "iconv", "-I" + header_path, lflags )
+	iconv.AddSharedLibrary( "" )
+	iconv.AddIncludePath( header_path )
 }

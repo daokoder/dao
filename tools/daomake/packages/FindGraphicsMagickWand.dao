@@ -7,5 +7,7 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 	if( libs == "" ) return;
 
 	wand = DaoMake::Project( "GraphicsMagickWand" )
-	wand.ExportLibrary( "Wand", cflags.chop(), lflags.chop(), libs.chop(), stlibs.chop() )
+	wand.AddSharedLibrary( "Wand" )
+	wand.AddCompilingFlag( cflags.chop() )
+	wand.AddLinkingFlag( lflags.chop() + " " + libs.chop() )
 }
