@@ -5,7 +5,7 @@ code =
 #include<iconv.h>
 int main(void){
 	iconv_t state = iconv_open( "", "UTF-8" );
-	return 1;
+	return 0;
 }
 @[cxx]
 

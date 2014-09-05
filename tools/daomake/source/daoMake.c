@@ -266,6 +266,11 @@ static int daomake_out_of_source = 0;
 static int daomake_reset_cache = 0;
 static int daomake_test_count = 0;
 
+#ifdef LINUX
+static int daomake_relative_rpath = 0;
+#else
+static int daomake_relative_rpath = 1;
+#endif
 
 
 
@@ -778,7 +783,7 @@ void DaoMakeUnit_ExportLinkingPaths( DaoMakeUnit *self, DString *lflags, DaoMake
 	for(i=0; i<self->linkingPaths->size; ++i){
 		DString_Assign( path, self->linkingPaths->items.pString[i] );
 		DaoMake_MakePath( self->sourcePath, path );
-		DaoMake_MakeRelativePath( target->binaryPath, path );
+		if( daomake_relative_rpath ) DaoMake_MakeRelativePath( target->binaryPath, path );
 		DString_AppendGap( lflags );
 		DString_Append( lflags, rpath );
 		DString_Append( lflags, path );
@@ -2019,7 +2024,7 @@ static void DaoMakeUnit_UseLibrary( DaoMakeUnit *self, DaoMakeProject *pro, DStr
 		if( tar->install->size && ! DString_EQ( tar->install, tar->base.binaryPath ) ){
 			flag = (DString*) DList_PushBack( self->linkingFlags, rpath );
 			DString_Assign( flags, tar->install );
-			DaoMake_MakeRelativePath( self->binaryPath, flags );
+			if( daomake_relative_rpath ) DaoMake_MakeRelativePath( self->binaryPath, flags );
 			DString_Append( flag, flags );
 		}
 		if( ttype == DAOMAKE_SHAREDLIB ){

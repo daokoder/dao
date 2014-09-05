@@ -191,8 +191,13 @@ daovm_lib = daovm.AddStaticLibrary( "dao", daovm_kernel_objects )
 #
 daovm_exe = daovm.AddExecutable( "dao", daovm_main_object )
 
-daovm_dll.SetTargetPath( "lib" )
-daovm_lib.SetTargetPath( "lib" )
+if( DaoMake::IsPlatform( "WIN32" ) ){
+	daovm_dll.SetTargetPath( "bin" )
+	daovm_lib.SetTargetPath( "bin" )
+}else{
+	daovm_dll.SetTargetPath( "lib" )
+	daovm_lib.SetTargetPath( "lib" )
+}
 daovm_exe.SetTargetPath( "bin" )
 
 daovm.AddIncludePath( "kernel" )
