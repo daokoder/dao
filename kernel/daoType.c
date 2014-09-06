@@ -746,24 +746,27 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		return DaoType_MatchInterface( self, (DaoInterface*) type->aux, binds );
 	}
 	mt = dao_type_matrix[self->tid][type->tid];
+	if( mt == DAO_MT_EQ ){
+		if( type->valtype ){
+			if( self->valtype == 0 ) return DaoType_MatchValue( self, type->aux, defs );
+			if( DaoValue_Compare( self->aux, type->aux ) == 0 ) return DAO_MT_EXACT;
+			return DAO_MT_NOT;
+		}else if( self->valtype ){
+			mt = DAO_MT_NOT;
+			if( type->valtype == 0 ){
+				mt = DaoType_MatchValue( type, self->aux, defs );
+			}else if( DaoValue_Compare( self->aux, type->aux ) == 0 ){
+				mt = DAO_MT_EXACT;
+			}
+			if( mt && type->tid == DAO_THT ){
+				if( defs ) MAP_Insert( defs, type, self );
+			}
+			return mt;
+		}
+	}
 	if( mt <= DAO_MT_EXACT ) return mt;
 
-	if( type->valtype ){
-		if( self->valtype == 0 ) return DaoType_MatchValue( self, type->aux, defs );
-		if( DaoValue_Compare( self->aux, type->aux ) == 0 ) return DAO_MT_EXACT;
-		return DAO_MT_NOT;
-	}else if( self->valtype ){
-		mt = DAO_MT_NOT;
-		if( type->valtype == 0 ){
-			mt = DaoType_MatchValue( type, self->aux, defs );
-		}else if( DaoValue_Compare( self->aux, type->aux ) == 0 ){
-			mt = DAO_MT_EXACT;
-		}
-		if( mt && type->tid == DAO_THT ){
-			if( defs ) MAP_Insert( defs, type, self );
-		}
-		return mt;
-	}else if( self->tid == DAO_VARIANT && type->tid == DAO_VARIANT ){
+	if( self->tid == DAO_VARIANT && type->tid == DAO_VARIANT ){
 		mt = DAO_MT_EQ;
 		for(i=0,n=self->nested->size; i<n; i++){
 			it2 = self->nested->items.pType[i];

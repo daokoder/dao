@@ -3280,7 +3280,15 @@ static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 		int id = DaoValue_GetInteger( pid->xTuple.values[1] );
 		if( id >=0 && id < self->size ){
 			DaoValue **data = pid->xTuple.values;
-			DaoProcess_PutValue( proc, self->values[id] );
+			DaoTuple *tup = DaoProcess_PutTuple( proc, 0 );
+			DaoValue_Move( self->values[id], & tup->values[1], NULL );
+			DString_Reset( tup->values[0]->xString.value, 0 );
+			if( id < self->ctype->nested->size ){
+				DaoType *itype = self->ctype->nested->items.pType[id];
+				if( itype->tid == DAO_PAR_NAMED ){
+					DString_Assign( tup->values[0]->xString.value, itype->fname );
+				}
+			}
 			data[1]->xInteger.value += 1;
 			data[0]->xInteger.value = data[1]->xInteger.value < self->size;
 			ec = 0;

@@ -58,6 +58,20 @@ static void DaoSTD_Version( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutChars( proc, p[0]->xInteger.value ? dao_version : DAO_VERSION );
 }
 
+static void DaoSTD_Program( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoVmSpace *vms = proc->vmSpace;
+	DaoProcess_PutString( proc, p[0]->xEnum.value ? vms->startPath : vms->daoBinPath );
+}
+static void DaoSTD_Source( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoNamespace *ns = proc->activeNamespace;
+	switch( p[0]->xEnum.value ){
+	case 0: DaoProcess_PutString( proc, ns->path ); break;
+	case 1: DaoProcess_PutString( proc, ns->file ); break;
+	case 2: DaoProcess_PutString( proc, ns->name ); break;
+	}
+}
 
 static void DaoSTD_Path( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -305,15 +319,20 @@ static void DaoSTD_Test( DaoProcess *proc, DaoValue *p[], int n )
 DaoFuncItem dao_std_methods[] =
 {
 	{ DaoSTD_Version,   "version( verbose = 0 ) => string" },
+	{ DaoSTD_Program,   "program( path: enum<binary,start> ) => string" },
+	{ DaoSTD_Source,    "source( part: enum<path,file,full> = $full ) => string" },
 	{ DaoSTD_Path,      "path( path: string, action: enum<set,add,remove> = $add )" },
-	{ DaoSTD_Compile,   "compile( source: string, import: any = none ) => tuple<ns:namespace,main:routine>" },
+
+	{ DaoSTD_Compile,   "compile( source: string, import: namespace|none = none ) => tuple<ns:namespace,main:routine>" },
 	{ DaoSTD_Eval,      "eval( source: string, st = io::stdio ) => any" },
 	{ DaoSTD_Load,      "load( file: string, import = 1, runim = 0 ) => namespace" },
+
 	{ DaoSTD_Resource,  "resource( path: string ) => string" },
 	{ DaoSTD_About,     "about( invar ... : any ) => string" },
 	{ DaoSTD_Debug,     "debug( invar ... : any )" },
 
-	{ DaoSTD_ProcData,  "procdata( data: any = none ) => any" },
+	{ DaoSTD_ProcData,  "procdata( ) => any" },
+	{ DaoSTD_ProcData,  "procdata( data: any ) => any" },
 
 	{ DaoSTD_Warn,
 		"warn( info: string )"

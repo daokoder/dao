@@ -3126,6 +3126,7 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 				}
 			}
 		}else if( bt == dao_type_for_iterator ){
+			DaoType *itypes[2];
 			int j;
 			if( at->nested->size == 0 ) goto InvIndex;
 			ct = at->nested->items.pType[0];
@@ -3142,6 +3143,9 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 					break;
 				}
 			}
+			itypes[0] = dao_type_string;
+			itypes[1] = ct;
+			ct = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, NULL, itypes, 2 );
 		}else if( bt->realnum ){
 			if( code == DVM_GETI ){
 				vmc->code = DVM_GETI_TI;
