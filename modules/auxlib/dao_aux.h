@@ -56,7 +56,7 @@ DAO_DLL DaoArray*  DaoProcess_PutVectorUI( DaoProcess *self, unsigned int *array
 DAO_DLL DaoArray*  DaoProcess_PutVectorI( DaoProcess *self, daoint *array, daoint N );
 DAO_DLL DaoArray*  DaoProcess_PutVectorF( DaoProcess *self, float  *array, daoint N );
 DAO_DLL DaoArray*  DaoProcess_PutVectorD( DaoProcess *self, double *array, daoint N );
-DAO_DLL DaoArray*  DaoProcess_PutVectorC( DaoProcess *self, complex16 *array, daoint N );
+DAO_DLL DaoArray*  DaoProcess_PutVectorC( DaoProcess *self, dao_complex *array, daoint N );
 
 
 /*

@@ -89,7 +89,6 @@ enum DaoTypes
 	DAO_NONE  = 0,
 	DAO_INTEGER ,
 	DAO_FLOAT   ,
-	DAO_DOUBLE  ,
 	DAO_COMPLEX ,
 	DAO_STRING ,
 	DAO_ENUM  ,
@@ -146,6 +145,7 @@ enum DaoOptions
 };
 
 
+
 /*
 // define an integer type with size equal to the size of pointers
 // on both 32-bits and 64-bits systems.
@@ -154,6 +154,22 @@ typedef ptrdiff_t       daoint;
 typedef unsigned char   uchar_t;
 typedef unsigned short  ushort_t;
 typedef unsigned int    uint_t;
+
+
+#ifdef DAO_USE_SYS_BIT_INT
+typedef ptrdiff_t  dao_integer;
+#else
+typedef long long  dao_integer;
+#endif
+
+typedef double dao_float;
+
+/* Complex type: */
+typedef struct dao_complex
+{
+	dao_float  real;
+	dao_float  imag;
+} dao_complex;
 
 typedef struct DString  DString;
 typedef struct DList    DList;
@@ -173,7 +189,6 @@ typedef union  DaoValue        DaoValue;
 typedef struct DaoNone         DaoNone;
 typedef struct DaoInteger      DaoInteger;
 typedef struct DaoFloat        DaoFloat;
-typedef struct DaoDouble       DaoDouble;
 typedef struct DaoComplex      DaoComplex;
 typedef struct DaoString       DaoString;
 typedef struct DaoEnum         DaoEnum;
@@ -196,9 +211,6 @@ typedef struct DaoVmSpace      DaoVmSpace;
 typedef struct DaoProcess      DaoProcess;
 typedef struct DaoChannel      DaoChannel;
 typedef struct DaoType         DaoType;
-
-/* Complex type: */
-typedef struct complex16 { double real, imag; } complex16;
 
 typedef void  (*CallbackOnString)( const char *str );
 typedef void  (*DThreadTask)( void *arg );
@@ -352,7 +364,6 @@ DAO_DLL int DaoValue_Type( DaoValue *self );
 */
 DAO_DLL DaoInteger*   DaoValue_CastInteger( DaoValue *self );
 DAO_DLL DaoFloat*     DaoValue_CastFloat( DaoValue *self );
-DAO_DLL DaoDouble*    DaoValue_CastDouble( DaoValue *self );
 DAO_DLL DaoComplex*   DaoValue_CastComplex( DaoValue *self );
 DAO_DLL DaoString*    DaoValue_CastString( DaoValue *self );
 DAO_DLL DaoEnum*      DaoValue_CastEnum( DaoValue *self );
@@ -377,10 +388,10 @@ DAO_DLL DaoValue* DaoValue_MakeNone();
 // The following functions will check the type of the DaoValue and
 // return the requested data on success. Otherwise return zero or NULL;
 */
-DAO_DLL daoint    DaoValue_TryGetInteger( DaoValue *self );
-DAO_DLL float     DaoValue_TryGetFloat( DaoValue *self );
-DAO_DLL double    DaoValue_TryGetDouble( DaoValue *self );
-DAO_DLL complex16 DaoValue_TryGetComplex( DaoValue *self );
+DAO_DLL dao_integer  DaoValue_TryGetInteger( DaoValue *self );
+DAO_DLL dao_float    DaoValue_TryGetFloat( DaoValue *self );
+DAO_DLL dao_complex  DaoValue_TryGetComplex( DaoValue *self );
+
 DAO_DLL char*     DaoValue_TryGetChars( DaoValue *self );
 DAO_DLL DString*  DaoValue_TryGetString( DaoValue *self );
 DAO_DLL int       DaoValue_TryGetEnum( DaoValue *self );
@@ -506,18 +517,14 @@ DAO_DLL DaoInteger* DaoInteger_New( daoint value );
 DAO_DLL daoint      DaoInteger_Get( DaoInteger *self );
 DAO_DLL void        DaoInteger_Set( DaoInteger *self, daoint value );
 
-DAO_DLL DaoFloat* DaoFloat_New( float value );
-DAO_DLL float     DaoFloat_Get( DaoFloat *self );
-DAO_DLL void      DaoFloat_Set( DaoFloat *self, float value );
+DAO_DLL DaoFloat*   DaoFloat_New( dao_float value );
+DAO_DLL dao_float   DaoFloat_Get( DaoFloat *self );
+DAO_DLL void        DaoFloat_Set( DaoFloat *self, dao_float value );
 
-DAO_DLL DaoDouble* DaoDouble_New( double value );
-DAO_DLL double     DaoDouble_Get( DaoDouble *self );
-DAO_DLL void       DaoDouble_Set( DaoDouble *self, double value );
-
-DAO_DLL DaoComplex* DaoComplex_New( complex16 value );
-DAO_DLL DaoComplex* DaoComplex_New2( double real, double imag );
-DAO_DLL complex16   DaoComplex_Get( DaoComplex *self );
-DAO_DLL void        DaoComplex_Set( DaoComplex *self, complex16 value );
+DAO_DLL DaoComplex* DaoComplex_New( dao_complex value );
+DAO_DLL DaoComplex* DaoComplex_New2( dao_float real, dao_float imag );
+DAO_DLL dao_complex DaoComplex_Get( DaoComplex *self );
+DAO_DLL void        DaoComplex_Set( DaoComplex *self, dao_complex value );
 
 DAO_DLL DaoString*  DaoString_New();
 DAO_DLL DaoString*  DaoString_NewChars( const char *mbs );
@@ -645,9 +652,9 @@ DAO_DLL daoint DaoArray_GetFlatIndex( DaoArray *self, daoint *indexes );
 // DaoArray_FromXyz() should be called after DaoArray_ToXyz() to restore
 // the consistency between the numeric type of the array and the data buffer.
 */
-DAO_DLL daoint* DaoArray_ToInteger( DaoArray *self );
-DAO_DLL float*  DaoArray_ToFloat( DaoArray *self );
-DAO_DLL double* DaoArray_ToDouble( DaoArray *self );
+DAO_DLL dao_integer*   DaoArray_ToInteger( DaoArray *self );
+DAO_DLL float*         DaoArray_ToFloat( DaoArray *self );
+DAO_DLL double*        DaoArray_ToDouble( DaoArray *self );
 DAO_DLL signed   char* DaoArray_ToSByte( DaoArray *self );
 DAO_DLL unsigned char* DaoArray_ToUByte( DaoArray *self );
 DAO_DLL signed   short* DaoArray_ToSShort( DaoArray *self );
@@ -700,7 +707,7 @@ DAO_DLL void DaoStream_Delete( DaoStream *self );
 DAO_DLL void DaoStream_Close( DaoStream *self );
 DAO_DLL void DaoStream_Flush( DaoStream *self );
 DAO_DLL void DaoStream_WriteChar( DaoStream *self, char val );
-DAO_DLL void DaoStream_WriteInt( DaoStream *self, daoint val );
+DAO_DLL void DaoStream_WriteInt( DaoStream *self, dao_integer val );
 DAO_DLL void DaoStream_WriteFloat( DaoStream *self, double val );
 DAO_DLL void DaoStream_WriteString( DaoStream *self, DString *val );
 DAO_DLL void DaoStream_WriteLocalString( DaoStream *self, DString *val );
@@ -763,11 +770,10 @@ DAO_DLL void DaoProcess_RaiseError( DaoProcess *self, const char *type, const ch
 // returning value does not match to the returning type that is specified by the
 // function prototype of the wrapped C function.
 */
-DAO_DLL DaoNone*   DaoProcess_PutNone( DaoProcess *self );
-DAO_DLL daoint*    DaoProcess_PutInteger( DaoProcess *self, daoint value );
-DAO_DLL float*     DaoProcess_PutFloat( DaoProcess *self, float value );
-DAO_DLL double*    DaoProcess_PutDouble( DaoProcess *self, double value );
-DAO_DLL complex16* DaoProcess_PutComplex( DaoProcess *self, complex16 value );
+DAO_DLL DaoNone*     DaoProcess_PutNone( DaoProcess *self );
+DAO_DLL dao_integer* DaoProcess_PutInteger( DaoProcess *self, dao_integer value );
+DAO_DLL dao_float*   DaoProcess_PutFloat( DaoProcess *self, dao_float value );
+DAO_DLL dao_complex* DaoProcess_PutComplex( DaoProcess *self, dao_complex value );
 DAO_DLL DString*   DaoProcess_PutChars( DaoProcess *self, const char *mbs );
 DAO_DLL DString*   DaoProcess_PutBytes( DaoProcess *self, const char *bytes, daoint N );
 DAO_DLL DString*   DaoProcess_PutString( DaoProcess *self, DString *str );
@@ -918,9 +924,8 @@ DAO_DLL void DaoProcess_PopValues( DaoProcess *self, int N );
 */
 DAO_DLL DaoNone*    DaoProcess_NewNone( DaoProcess *self );
 DAO_DLL DaoInteger* DaoProcess_NewInteger( DaoProcess *self, daoint v );
-DAO_DLL DaoFloat*   DaoProcess_NewFloat( DaoProcess *self, float v );
-DAO_DLL DaoDouble*  DaoProcess_NewDouble( DaoProcess *self, double v );
-DAO_DLL DaoComplex* DaoProcess_NewComplex( DaoProcess *self, complex16 v );
+DAO_DLL DaoFloat*   DaoProcess_NewFloat( DaoProcess *self, double v );
+DAO_DLL DaoComplex* DaoProcess_NewComplex( DaoProcess *self, dao_complex v );
 /*
 // Negative "n" indicates a null-terminated string:
 */

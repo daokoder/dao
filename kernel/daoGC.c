@@ -626,7 +626,6 @@ static void DaoGC_DeleteSimpleData( DaoValue *value )
 	case DAO_NONE :
 	case DAO_INTEGER :
 	case DAO_FLOAT :
-	case DAO_DOUBLE :
 	case DAO_COMPLEX :
 #ifdef DAO_USE_GC_LOGGER
 		DaoObjectLogger_LogDelete( value );
@@ -684,7 +683,6 @@ static int DaoGC_DecRC2( DaoValue *p )
 		case DAO_NONE :
 		case DAO_INTEGER :
 		case DAO_FLOAT :
-		case DAO_DOUBLE :
 		case DAO_COMPLEX :
 		case DAO_STRING :
 #if 0

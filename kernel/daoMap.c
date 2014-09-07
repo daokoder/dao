@@ -126,14 +126,12 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max, u
 	switch( self->type ){
 	case DAO_INTEGER :
 		data = & self->xInteger.value;  len = sizeof(daoint);  break;
-	case DAO_FLOAT   :
-		data = & self->xFloat.value;  len = sizeof(float);  break;
-	case DAO_DOUBLE  :
-		data = & self->xDouble.value;  len = sizeof(double);  break;
+	case DAO_FLOAT  :
+		data = & self->xFloat.value;  len = sizeof(double);  break;
 	case DAO_COMPLEX :
-		data = & self->xComplex.value;  len = sizeof(complex16);  break;
+		data = & self->xComplex.value;  len = sizeof(dao_complex);  break;
 	case DAO_ENUM  :
-		data = self->xEnum.etype->name->chars; /* XXX */
+		data = self->xEnum.etype->name->chars;
 		len = self->xEnum.etype->name->size;
 		break;
 	case DAO_STRING  :
@@ -145,9 +143,8 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max, u
 		len = self->xArray.size;
 		switch( self->xArray.etype ){
 		case DAO_INTEGER : len *= sizeof(int); break;
-		case DAO_FLOAT   : len *= sizeof(float); break;
-		case DAO_DOUBLE  : len *= sizeof(double); break;
-		case DAO_COMPLEX : len *= sizeof(complex16); break;
+		case DAO_FLOAT   : len *= sizeof(double); break;
+		case DAO_COMPLEX : len *= sizeof(dao_complex); break;
 		default : break;
 		}
 		break;
@@ -309,9 +306,9 @@ static void DMap_SwapNode( DMap *self, DNode *node, DNode *extreme )
 	node->key.pVoid = key;
 	node->value.pVoid = value;
 }
-static complex16* complex16_new( complex16 *other )
+static dao_complex* dao_complex_new( dao_complex *other )
 {
-	complex16 *res = (complex16*) dao_malloc( sizeof(complex16) );
+	dao_complex *res = (dao_complex*) dao_malloc( sizeof(dao_complex) );
 	res->real = other->real;
 	res->imag = other->imag;
 	return res;
@@ -321,7 +318,7 @@ static void DMap_CopyItem( void **dest, void *item, short type )
 	int n = 2*sizeof(void*);
 	if( *dest == NULL ){
 		switch( type ){
-		case DAO_DATA_COMPLEX : *dest =  complex16_new( (complex16*) item ); break;
+		case DAO_DATA_COMPLEX : *dest =  dao_complex_new( (dao_complex*) item ); break;
 		case DAO_DATA_STRING : *dest = DString_Copy( (DString*) item ); break;
 		case DAO_DATA_LIST   : *dest = DList_Copy( (DList*) item ); break;
 		case DAO_DATA_MAP    : *dest = DMap_Copy( (DMap*) item ); break;
@@ -333,7 +330,7 @@ static void DMap_CopyItem( void **dest, void *item, short type )
 		}
 	}else{
 		switch( type ){
-		case DAO_DATA_COMPLEX : *(complex16*) (*dest) = *(complex16*) item; break;
+		case DAO_DATA_COMPLEX : *(dao_complex*) (*dest) = *(dao_complex*) item; break;
 		case DAO_DATA_STRING : DString_Assign( (DString*)(*dest), (DString*) item ); break;
 		case DAO_DATA_LIST   : DList_Assign( (DList*)(*dest), (DList*) item ); break;
 		case DAO_DATA_MAP    : DMap_Assign( (DMap*)(*dest), (DMap*) item ); break;
@@ -701,7 +698,7 @@ static int DaoValue_Compare3( DaoValue *left, DaoValue *right )
 	if( left->type <= DAO_STRING ) return DaoValue_Compare( left, right );
 	return left < right ? -100 : 100;
 }
-static int complex16_compare( complex16 *left, complex16 *right )
+static int dao_complex_compare( dao_complex *left, dao_complex *right )
 {
 	if( left->real != right->real ) return left->real < right->real ? -1 : 1;
 	if( left->imag != right->imag ) return left->imag < right->imag ? -1 : 1;
@@ -711,7 +708,7 @@ static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
 {
 	daoint cmp = 0;
 	switch( self->keytype ){
-	case DAO_DATA_COMPLEX : cmp = complex16_compare( (complex16*) k1, (complex16*) k2 ); break;
+	case DAO_DATA_COMPLEX : cmp = dao_complex_compare( (dao_complex*) k1, (dao_complex*) k2 ); break;
 	case DAO_DATA_STRING : cmp = DString_Compare( (DString*) k1, (DString*) k2 ); break;
 	case DAO_DATA_VALUE  : cmp = DaoValue_Compare( (DaoValue*) k1, (DaoValue*) k2 );  break;
 	case DAO_DATA_VALUE2 : cmp = DaoValue_Compare2( (DaoValue*) k1, (DaoValue*) k2 ); break;

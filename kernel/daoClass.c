@@ -569,32 +569,29 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 			DString *name;
 			switch( vmc->code ){
 			case DVM_GETCK:
-			case DVM_GETCK_I: case DVM_GETCK_F:
-			case DVM_GETCK_D: case DVM_GETCK_C:
+			case DVM_GETCK_I: case DVM_GETCK_F: case DVM_GETCK_C:
 				vmc->b = DaoClass_MapIndex( mixin, DAO_CLASS_CONSTANT, vmc->b, mixed );
 				break;
 			case DVM_GETVK:
-			case DVM_GETVK_I: case DVM_GETVK_F:
-			case DVM_GETVK_D: case DVM_GETVK_C:
+			case DVM_GETVK_I: case DVM_GETVK_F: case DVM_GETVK_C:
 			case DVM_SETVK:
 			case DVM_SETVK_II: case DVM_SETVK_FF:
-			case DVM_SETVK_DD: case DVM_SETVK_CC:
 				vmc->b = DaoClass_MapIndex( mixin, DAO_CLASS_VARIABLE, vmc->b, mixed );
 				break;
 			case DVM_GETVO:
 			case DVM_GETVO_I: case DVM_GETVO_F:
-			case DVM_GETVO_D: case DVM_GETVO_C:
+			case DVM_GETVO_C:
 			case DVM_SETVO:
 			case DVM_SETVO_II: case DVM_SETVO_FF:
-			case DVM_SETVO_DD: case DVM_SETVO_CC:
+			case DVM_SETVO_CC:
 				vmc->b = DaoClass_MapIndex( mixin, DAO_OBJECT_VARIABLE, vmc->b, mixed );
 				break;
 			case DVM_GETF_KC:
 			case DVM_GETF_KCI: case DVM_GETF_KCF:
-			case DVM_GETF_KCD: case DVM_GETF_KCC:
+			case DVM_GETF_KCC:
 			case DVM_GETF_OC:
 			case DVM_GETF_OCI: case DVM_GETF_OCF:
-			case DVM_GETF_OCD: case DVM_GETF_OCC:
+			case DVM_GETF_OCC:
 				klass = (DaoClass*) types[ vmc->a ]->aux;
 				name  = DaoClass_GetDataName( klass, DAO_CLASS_CONSTANT, vmc->b );
 				vmc->b = DaoRoutine_GetFieldIndex( rout, name );
@@ -602,10 +599,10 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 				break;
 			case DVM_GETF_KG:
 			case DVM_GETF_KGI: case DVM_GETF_KGF:
-			case DVM_GETF_KGD: case DVM_GETF_KGC:
+			case DVM_GETF_KGC:
 			case DVM_GETF_OG:
 			case DVM_GETF_OGI: case DVM_GETF_OGF:
-			case DVM_GETF_OGD: case DVM_GETF_OGC:
+			case DVM_GETF_OGC:
 				klass = (DaoClass*) types[ vmc->a ]->aux;
 				name  = DaoClass_GetDataName( klass, DAO_CLASS_VARIABLE, vmc->b );
 				vmc->b = DaoRoutine_GetFieldIndex( rout, name );
@@ -613,7 +610,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 				break;
 			case DVM_GETF_OV:
 			case DVM_GETF_OVI: case DVM_GETF_OVF:
-			case DVM_GETF_OVD: case DVM_GETF_OVC:
+			case DVM_GETF_OVC:
 				klass = (DaoClass*) types[ vmc->a ]->aux;
 				name  = DaoClass_GetDataName( klass, DAO_OBJECT_VARIABLE, vmc->b );
 				vmc->b = DaoRoutine_GetFieldIndex( rout, name );
@@ -621,10 +618,10 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 				break;
 			case DVM_SETF_KG:
 			case DVM_SETF_KGII: case DVM_SETF_KGFF:
-			case DVM_SETF_KGDD: case DVM_SETF_KGCC:
+			case DVM_SETF_KGCC:
 			case DVM_SETF_OG:
 			case DVM_SETF_OGII: case DVM_SETF_OGFF:
-			case DVM_SETF_OGDD: case DVM_SETF_OGCC:
+			case DVM_SETF_OGCC:
 				klass = (DaoClass*) types[ vmc->c ]->aux;
 				name  = DaoClass_GetDataName( klass, DAO_CLASS_VARIABLE, vmc->b );
 				vmc->b = DaoRoutine_GetFieldIndex( rout, name );
@@ -632,7 +629,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 				break;
 			case DVM_SETF_OV:
 			case DVM_SETF_OVII: case DVM_SETF_OVFF:
-			case DVM_SETF_OVDD: case DVM_SETF_OVCC:
+			case DVM_SETF_OVCC:
 				klass = (DaoClass*) types[ vmc->c ]->aux;
 				name  = DaoClass_GetDataName( klass, DAO_OBJECT_VARIABLE, vmc->b );
 				vmc->b = DaoRoutine_GetFieldIndex( rout, name );

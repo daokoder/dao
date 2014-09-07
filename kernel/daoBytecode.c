@@ -331,17 +331,7 @@ static int DaoByteCoder_BigEndianFloat()
 	uchar_t *bytes = (uchar_t*) & inf;
 	return bytes[0] != 0;
 }
-static void DaoByteCoder_EncodeFloat( uchar_t *data, float value )
-{
-	int i;
-	uchar_t *bytes = (uchar_t*) & value;
-	if( DaoByteCoder_BigEndianFloat() ){
-		for(i=0; i<4; ++i) data[i] = bytes[i];
-	}else{
-		for(i=0; i<4; ++i) data[i] = bytes[3-i];
-	}
-}
-static void DaoByteCoder_EncodeDouble( uchar_t *data, double value )
+static void DaoByteCoder_EncodeFloat( uchar_t *data, double value )
 {
 	int i;
 	uchar_t *bytes = (uchar_t*) & value;
@@ -412,15 +402,7 @@ TooBigInteger:
 //
 //   value = (-1)^S  *  ( 1 + \sigma_0^51 (b_i * 2^{-(52-i)}) )  *  2^{E-1023}
 */
-float DaoByteCoder_DecodeFloat( DaoByteCoder *self, uchar_t *data )
-{
-	int i;
-	uchar_t bytes[4];
-	if( DaoByteCoder_BigEndianFloat() ) return *(float*) data;
-	for(i=0; i<4; ++i) bytes[i] = data[3-i];
-	return *(float*) bytes;
-}
-double DaoByteCoder_DecodeDouble( DaoByteCoder *self, uchar_t *data )
+double DaoByteCoder_DecodeFloat( DaoByteCoder *self, uchar_t *data )
 {
 	int i;
 	uchar_t bytes[8];
@@ -481,7 +463,7 @@ DaoByteBlock* DaoByteBlock_EncodeInteger( DaoByteBlock *self, daoint val )
 	DaoByteCoder_EncodeDaoInt( block->end, val );
 	return block;
 }
-DaoByteBlock* DaoByteBlock_EncodeFloat( DaoByteBlock *self, float val )
+DaoByteBlock* DaoByteBlock_EncodeFloat( DaoByteBlock *self, double val )
 {
 	DaoByteBlock *block;
 	DaoFloat tmp = {DAO_FLOAT,0,0,0,0,0.0};
@@ -495,20 +477,6 @@ DaoByteBlock* DaoByteBlock_EncodeFloat( DaoByteBlock *self, float val )
 	DaoByteCoder_EncodeFloat( block->end, val );
 	return block;
 }
-DaoByteBlock* DaoByteBlock_EncodeDouble( DaoByteBlock *self, double val )
-{
-	DaoByteBlock *block;
-	DaoDouble tmp = {DAO_DOUBLE,0,0,0,0,0.0};
-	DaoValue *value = (DaoValue*) & tmp;
-
-	value->xDouble.value = val;
-	block = DaoByteBlock_FindOrCopyBlock( self, value );
-	if( block ) return block;
-	block = DaoByteBlock_AddBlock( self, value, DAO_ASM_VALUE );
-	block->begin[0] = DAO_DOUBLE;
-	DaoByteCoder_EncodeDouble( block->end, val );
-	return block;
-}
 DaoByteBlock* DaoByteBlock_EncodeComplex( DaoByteBlock *self, DaoComplex *value )
 {
 	DaoByteBlock *block2, *block = DaoByteBlock_FindOrCopyBlock( self, (DaoValue*) value );
@@ -516,8 +484,8 @@ DaoByteBlock* DaoByteBlock_EncodeComplex( DaoByteBlock *self, DaoComplex *value 
 	block = DaoByteBlock_AddBlock( self, (DaoValue*) value, DAO_ASM_VALUE );
 	block2 = DaoByteBlock_NewBlock( block, DAO_ASM_DATA );
 	block->begin[0] = DAO_COMPLEX;
-	DaoByteCoder_EncodeDouble( block2->begin, value->value.real );
-	DaoByteCoder_EncodeDouble( block->end, value->value.imag );
+	DaoByteCoder_EncodeFloat( block2->begin, value->value.real );
+	DaoByteCoder_EncodeFloat( block->end, value->value.imag );
 	return block;
 }
 DaoByteBlock* DaoByteBlock_EncodeString( DaoByteBlock *self, DString *string )
@@ -672,30 +640,22 @@ DaoByteBlock* DaoByteBlock_EncodeArray( DaoByteBlock *self, DaoArray *value )
 		if( i < value->size ) DaoByteCoder_EncodeDaoInt( block->end, value->data.i[i] );
 		if( (i+1)<value->size ) DaoByteCoder_EncodeDaoInt( block->end+4, value->data.i[i+1] );
 	}else if( value->etype == DAO_FLOAT ){
-		for(i=0; (i+2)<value->size; i+=2){
-			databk = DaoByteBlock_NewBlock( block, DAO_ASM_DATA );
-			DaoByteCoder_EncodeFloat( databk->begin, value->data.f[i] );
-			DaoByteCoder_EncodeFloat( databk->begin+4, value->data.f[i+1] );
-		}
-		if( i < value->size ) DaoByteCoder_EncodeFloat( block->end, value->data.f[i] );
-		if( (i+1)<value->size ) DaoByteCoder_EncodeFloat( block->end+4, value->data.f[i+1] );
-	}else if( value->etype == DAO_DOUBLE ){
 		for(i=0; (i+1)<value->size; i+=1){
 			databk = DaoByteBlock_NewBlock( block, DAO_ASM_DATA );
-			DaoByteCoder_EncodeDouble( databk->begin, value->data.d[i] );
+			DaoByteCoder_EncodeFloat( databk->begin, value->data.f[i] );
 		}
-		if( i < value->size ) DaoByteCoder_EncodeDouble( block->end, value->data.d[i] );
+		if( i < value->size ) DaoByteCoder_EncodeFloat( block->end, value->data.f[i] );
 	}else if( value->etype == DAO_COMPLEX ){
 		for(i=0; (i+1)<value->size; i+=1){
 			DaoByteBlock *databk1 = DaoByteBlock_NewBlock( block, DAO_ASM_DATA );
 			DaoByteBlock *databk2 = DaoByteBlock_NewBlock( block, DAO_ASM_DATA );
-			DaoByteCoder_EncodeDouble( databk1->begin, value->data.c[i].real );
-			DaoByteCoder_EncodeDouble( databk2->begin, value->data.c[i].imag );
+			DaoByteCoder_EncodeFloat( databk1->begin, value->data.c[i].real );
+			DaoByteCoder_EncodeFloat( databk2->begin, value->data.c[i].imag );
 		}
 		if( i < value->size ){
 			databk = DaoByteBlock_NewBlock( block, DAO_ASM_DATA );
-			DaoByteCoder_EncodeDouble( databk->begin, value->data.c[i].real );
-			DaoByteCoder_EncodeDouble( block->end, value->data.c[i].imag );
+			DaoByteCoder_EncodeFloat( databk->begin, value->data.c[i].real );
+			DaoByteCoder_EncodeFloat( block->end, value->data.c[i].imag );
 		}
 	}
 	return block;
@@ -809,7 +769,6 @@ DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value )
 	case DAO_NONE : return DaoByteBlock_AddBlock( self, value, DAO_ASM_VALUE );
 	case DAO_INTEGER : return DaoByteBlock_EncodeInteger( self, value->xInteger.value );
 	case DAO_FLOAT   : return DaoByteBlock_EncodeFloat( self, value->xFloat.value );
-	case DAO_DOUBLE  : return DaoByteBlock_EncodeDouble( self, value->xDouble.value );
 	case DAO_COMPLEX : return DaoByteBlock_EncodeComplex( self, (DaoComplex*) value );
 	case DAO_STRING : return DaoByteBlock_EncodeString( self, value->xString.value );
 	case DAO_ENUM : return DaoByteBlock_EncodeEnum( self, (DaoEnum*) value );
@@ -1333,16 +1292,13 @@ void DaoByteCoder_FinalizeRoutineBlock( DaoByteCoder *self, DaoByteBlock *block 
 			break;
 #endif
 		case DVM_GETCG :
-		case DVM_GETCG_I : case DVM_GETCG_F :
-		case DVM_GETCG_D : case DVM_GETCG_C :
+		case DVM_GETCG_I : case DVM_GETCG_F : case DVM_GETCG_C :
 			st = DAO_GLOBAL_CONSTANT;
 			break;
 		case DVM_GETVG :
-		case DVM_GETVG_I : case DVM_GETVG_F :
-		case DVM_GETVG_D : case DVM_GETVG_C :
+		case DVM_GETVG_I : case DVM_GETVG_F : case DVM_GETVG_C :
 		case DVM_SETVG :
-		case DVM_SETVG_II : case DVM_SETVG_FF :
-		case DVM_SETVG_DD : case DVM_SETVG_CC :
+		case DVM_SETVG_II : case DVM_SETVG_FF : case DVM_SETVG_CC :
 			st = DAO_GLOBAL_VARIABLE;
 			break;
 		}
@@ -1787,14 +1743,10 @@ static void DaoByteCoder_DecodeValue( DaoByteCoder *self, DaoByteBlock *block )
 		value = (DaoValue*) DaoFloat_New(0.0);
 		value->xFloat.value = DaoByteCoder_DecodeFloat( self, block->end );
 		break;
-	case DAO_DOUBLE :
-		value = (DaoValue*) DaoDouble_New(0.0);
-		value->xDouble.value = DaoByteCoder_DecodeDouble( self, block->end );
-		break;
 	case DAO_COMPLEX :
 		value = (DaoValue*) DaoComplex_New2(0.0,0.0);
-		value->xComplex.value.real = DaoByteCoder_DecodeDouble( self, block->first->begin );
-		value->xComplex.value.imag = DaoByteCoder_DecodeDouble( self, block->end );
+		value->xComplex.value.real = DaoByteCoder_DecodeFloat( self, block->first->begin );
+		value->xComplex.value.imag = DaoByteCoder_DecodeFloat( self, block->end );
 		pb = pb->next;
 		break;
 	case DAO_STRING :
@@ -1855,27 +1807,18 @@ static void DaoByteCoder_DecodeValue( DaoByteCoder *self, DaoByteBlock *block )
 				if( !(C%2) ) array->data.i[i+1] = DaoByteCoder_DecodeDaoInt( self, block->end+4 );
 			}
 		}else if( array->etype == DAO_FLOAT ){
-			for(i=0; (i+2)<C && pb != NULL; i+=2, pb=pb->next){
-				array->data.f[i] = DaoByteCoder_DecodeFloat( self, pb->begin );
-				array->data.f[i+1] = DaoByteCoder_DecodeFloat( self, pb->begin+4 );
-			}
-			if(C){
-				array->data.f[i] = DaoByteCoder_DecodeFloat( self, block->end );
-				if( !(C%2) ) array->data.f[i+1] = DaoByteCoder_DecodeFloat( self, block->end+4 );
-			}
-		}else if( array->etype == DAO_DOUBLE ){
 			for(i=0; (i+1)<C && pb != NULL; i+=1, pb=pb->next){
-				array->data.d[i] = DaoByteCoder_DecodeDouble( self, pb->begin );
+				array->data.f[i] = DaoByteCoder_DecodeFloat( self, pb->begin );
 			}
-			if(C) array->data.d[i] = DaoByteCoder_DecodeDouble( self, block->end );
+			if(C) array->data.f[i] = DaoByteCoder_DecodeFloat( self, block->end );
 		}else if( array->etype == DAO_COMPLEX ){
 			for(i=0; (i+1)<C && pb != NULL && pb->next != NULL; i+=1, pb=pb->next->next){
-				array->data.c[i].real = DaoByteCoder_DecodeDouble( self, pb->begin );
-				array->data.c[i].imag = DaoByteCoder_DecodeDouble( self, pb->next->begin );
+				array->data.c[i].real = DaoByteCoder_DecodeFloat( self, pb->begin );
+				array->data.c[i].imag = DaoByteCoder_DecodeFloat( self, pb->next->begin );
 			}
 			if( C ){
-				array->data.c[i].real = DaoByteCoder_DecodeDouble( self, pb->begin );
-				array->data.c[i].imag = DaoByteCoder_DecodeDouble( self, block->end );
+				array->data.c[i].real = DaoByteCoder_DecodeFloat( self, pb->begin );
+				array->data.c[i].imag = DaoByteCoder_DecodeFloat( self, block->end );
 			}
 		}
 		break;
@@ -2330,8 +2273,7 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 			if( vmc->c >= regCount ) goto InvalidInstruction;
 			switch( vmc->code ){
 			case DVM_GETVS :
-			case DVM_GETVS_I : case DVM_GETVS_F :
-			case DVM_GETVS_D : case DVM_GETVS_C :
+			case DVM_GETVS_I : case DVM_GETVS_F : case DVM_GETVS_C :
 				if( routine->body->upValues == NULL ) goto InvalidInstruction;
 				if( vmc->b >= routine->body->upValues->size ) goto InvalidInstruction;
 			}
@@ -2341,8 +2283,7 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 			if( vmc->a >= regCount ) goto InvalidInstruction;
 			switch( vmc->code ){
 			case DVM_SETVS :
-			case DVM_SETVS_II : case DVM_SETVS_FF :
-			case DVM_SETVS_DD : case DVM_SETVS_CC :
+			case DVM_SETVS_II : case DVM_SETVS_FF : case DVM_SETVS_CC :
 				if( routine->body->upValues == NULL ) goto InvalidInstruction;
 				if( vmc->b >= routine->body->upValues->size ) goto InvalidInstruction;
 			}
@@ -2712,16 +2653,13 @@ static void DaoByteCoder_DecodeRoutineCode( DaoByteCoder *self, DaoByteBlock *bl
 			break;
 #endif
 		case DVM_GETCG :
-		case DVM_GETCG_I : case DVM_GETCG_F :
-		case DVM_GETCG_D : case DVM_GETCG_C :
+		case DVM_GETCG_I : case DVM_GETCG_F : case DVM_GETCG_C :
 			lookupTable = routine->nameSpace->lookupTable;
 			break;
 		case DVM_GETVG :
-		case DVM_GETVG_I : case DVM_GETVG_F :
-		case DVM_GETVG_D : case DVM_GETVG_C :
+		case DVM_GETVG_I : case DVM_GETVG_F : case DVM_GETVG_C :
 		case DVM_SETVG :
-		case DVM_SETVG_II : case DVM_SETVG_FF :
-		case DVM_SETVG_DD : case DVM_SETVG_CC :
+		case DVM_SETVG_II : case DVM_SETVG_FF : case DVM_SETVG_CC :
 			lookupTable = routine->nameSpace->lookupTable;
 			useGlobal = 1;
 			break;
@@ -3155,7 +3093,7 @@ static void DaoStream_PrintDaoInt( DaoStream *self, const char *fmt, daoint A )
 	snprintf( buffer, sizeof(buffer), fmt, A );
 	DaoStream_WriteChars( self, buffer );
 }
-static void DaoStream_PrintDouble( DaoStream *self, const char *fmt, double A )
+static void DaoStream_PrintFloat( DaoStream *self, const char *fmt, double A )
 {
 	char buffer[128];
 	snprintf( buffer, sizeof(buffer), fmt, A );
@@ -3259,12 +3197,7 @@ void DaoByteCoder_PrintBlock( DaoByteCoder *self, DaoByteBlock *block, int space
 		case DAO_FLOAT :
 			DaoStream_WriteChars( stream, "DAO_FLOAT;\n" );
 			DaoStream_PrintTag( stream, DAO_ASM_END, spaces );
-			DaoStream_PrintDouble( stream, " %g ;\n", DaoByteCoder_DecodeFloat( self, block->end ) );
-			break;
-		case DAO_DOUBLE :
-			DaoStream_WriteChars( stream, "DAO_DOUBLE;\n" );
-			DaoStream_PrintTag( stream, DAO_ASM_END, spaces );
-			DaoStream_PrintDouble( stream, " %g ;\n", DaoByteCoder_DecodeDouble( self, block->end ) );
+			DaoStream_PrintFloat( stream, " %g ;\n", DaoByteCoder_DecodeFloat( self, block->end ) );
 			break;
 		case DAO_STRING :
 			C = block->begin[1];
@@ -3330,34 +3263,17 @@ void DaoByteCoder_PrintBlock( DaoByteCoder *self, DaoByteBlock *block, int space
 						DaoStream_PrintDaoInt( stream, ", %12"DAO_INT_FORMAT"", k );
 					}
 				}
-			}else if( block->begin[1] == DAO_FLOAT ){
-				for(; pb!=NULL; pb=pb->next){
-					float f = DaoByteCoder_DecodeFloat( self, pb->begin );
-					float g = DaoByteCoder_DecodeFloat( self, pb->begin+4 );
-					DaoStream_PrintTag( stream, DAO_ASM_DATA, spaces + 4 );
-					DaoStream_PrintDouble( stream, "%12g, ", f );
-					DaoStream_PrintDouble( stream, "%12g;\n", g );
-				}
-				DaoStream_PrintTag( stream, DAO_ASM_END, spaces );
-				if( C ){
-					float f = DaoByteCoder_DecodeFloat( self, block->end );
-					DaoStream_PrintDouble( stream, "%12g", f );
-					if( !(C%2) ){
-						f = DaoByteCoder_DecodeFloat( self, block->end+4 );
-						DaoStream_PrintDouble( stream, ", %12g", f );
-					}
-				}
 			}else{
 				double f;
 				for(; pb!=NULL; pb=pb->next){
-					f = DaoByteCoder_DecodeDouble( self, pb->begin );
+					f = DaoByteCoder_DecodeFloat( self, pb->begin );
 					DaoStream_PrintTag( stream, DAO_ASM_DATA, spaces + 4 );
-					DaoStream_PrintDouble( stream, "%12g;\n", f );
+					DaoStream_PrintFloat( stream, "%12g;\n", f );
 				}
 				DaoStream_PrintTag( stream, DAO_ASM_END, spaces );
 				if( C ){
-					f = DaoByteCoder_DecodeDouble( self, block->end );
-					DaoStream_PrintDouble( stream, "%12g", f );
+					f = DaoByteCoder_DecodeFloat( self, block->end );
+					DaoStream_PrintFloat( stream, "%12g", f );
 				}
 			}
 			DaoStream_WriteChars( stream, ";\n" );

@@ -3368,7 +3368,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 			if( reg < 0 ) goto ErrorEnumDefinition;
 			dv = NULL;
 			if( cst ) dv = DaoParser_GetVariable( self, cst );
-			if( dv == NULL || dv->type < DAO_INTEGER || dv->type > DAO_DOUBLE ){
+			if( dv == NULL || dv->type < DAO_INTEGER || dv->type > DAO_FLOAT ){
 				DaoParser_Error( self, DAO_EXPR_NEED_CONST_NUMBER, & tokens[start+2]->string );
 				goto ErrorEnumDefinition;
 			}
@@ -5654,14 +5654,14 @@ static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoValue *value
 	daoint pl = 0;
 	if( tok->name == DTOK_SINGLE_DEC ){
 		value->type = DAO_FLOAT;
-		value->xFloat.value = DaoToken_ToDouble( tok );
+		value->xFloat.value = DaoToken_ToFloat( tok );
 	}else if( tok->name >= DTOK_DOUBLE_DEC && tok->name <= DTOK_NUMBER_SCI ){
-		value->type = DAO_DOUBLE;
-		value->xDouble.value = DaoToken_ToDouble( tok );
+		value->type = DAO_FLOAT;
+		value->xFloat.value = DaoToken_ToFloat( tok );
 	}else if( tok->name == DTOK_NUMBER_IMG ){
 		value->type = DAO_COMPLEX;
 		value->xComplex.value.real = 0;
-		value->xComplex.value.imag = DaoToken_ToDouble( tok );
+		value->xComplex.value.imag = DaoToken_ToFloat( tok );
 	}else{
 		value->type = DAO_INTEGER;
 		value->xInteger.value = DaoToken_ToInteger( tok );
@@ -5773,9 +5773,6 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 	}else if( value && value->type == DAO_FLOAT && value->xFloat.value == 0.0 ){
 		varReg = DaoParser_PushRegister( self );
 		DaoParser_AddCode( self, DVM_DATA, DAO_FLOAT, 0, varReg, start, 0, 0 );
-	}else if( value && value->type == DAO_DOUBLE && value->xDouble.value == 0.0 ){
-		varReg = DaoParser_PushRegister( self );
-		DaoParser_AddCode( self, DVM_DATA, DAO_DOUBLE, 0, varReg, start, 0, 0 );
 	}
 	return DaoParser_GetNormRegister( self, varReg, exp, start, 0, start );
 }
@@ -6390,7 +6387,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 		}
 		if( rb == start+2 /* && tki == DKEY_RAND */ ){
 			reg = DaoParser_PushRegister( self );
-			DaoParser_AddCode( self, DVM_DATA, DAO_DOUBLE, 1, reg, start, 0, rb );
+			DaoParser_AddCode( self, DVM_DATA, DAO_FLOAT, 1, reg, start, 0, rb );
 		}else{
 			reg = DaoParser_MakeArithTree( self, start+2, rb-1, &cst );
 		}

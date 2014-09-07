@@ -89,7 +89,7 @@ void DaoInteger_Set( DaoInteger *self, daoint value )
 	self->value = value;
 }
 
-DaoFloat* DaoFloat_New( float value )
+DaoFloat* DaoFloat_New( dao_float value )
 {
 	DaoFloat *self = (DaoFloat*) dao_malloc( sizeof(DaoFloat) );
 	DaoValue_Init( self, DAO_FLOAT );
@@ -99,35 +99,17 @@ DaoFloat* DaoFloat_New( float value )
 #endif
 	return self;
 }
-float DaoFloat_Get( DaoFloat *self )
+dao_float DaoFloat_Get( DaoFloat *self )
 {
 	return self->value;
 }
-void DaoFloat_Set( DaoFloat *self, float value )
+void DaoFloat_Set( DaoFloat *self, dao_float value )
 {
 	self->value = value;
 }
 
-DaoDouble* DaoDouble_New( double value )
-{
-	DaoDouble *self = (DaoDouble*) dao_malloc( sizeof(DaoDouble) );
-	DaoValue_Init( self, DAO_DOUBLE );
-	self->value = value;
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( (DaoValue*) self );
-#endif
-	return self;
-}
-double DaoDouble_Get( DaoDouble *self )
-{
-	return self->value;
-}
-void DaoDouble_Set( DaoDouble *self, double value )
-{
-	self->value = value;
-}
 
-DaoComplex* DaoComplex_New( complex16 value )
+DaoComplex* DaoComplex_New( dao_complex value )
 {
 	DaoComplex *self = (DaoComplex*) dao_malloc( sizeof(DaoComplex) );
 	DaoValue_Init( self, DAO_COMPLEX );
@@ -137,7 +119,7 @@ DaoComplex* DaoComplex_New( complex16 value )
 #endif
 	return self;
 }
-DaoComplex* DaoComplex_New2( double real, double imag )
+DaoComplex* DaoComplex_New2( dao_float real, dao_float imag )
 {
 	DaoComplex *self = (DaoComplex*) dao_malloc( sizeof(DaoComplex) );
 	DaoValue_Init( self, DAO_COMPLEX );
@@ -148,11 +130,11 @@ DaoComplex* DaoComplex_New2( double real, double imag )
 #endif
 	return self;
 }
-complex16  DaoComplex_Get( DaoComplex *self )
+dao_complex  DaoComplex_Get( DaoComplex *self )
 {
 	return self->value;
 }
-void DaoComplex_Set( DaoComplex *self, complex16 value )
+void DaoComplex_Set( DaoComplex *self, dao_complex value )
 {
 	self->value = value;
 }
@@ -264,14 +246,6 @@ static void MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *star
 		*start = n1;
 		*end = n1;
 		break;
-	case DAO_DOUBLE :
-		*idtype = IDX_SINGLE;
-		n1 = (daoint)(index->xDouble.value);
-		if( n1 <0 ) n1 += N;
-		if( n1 <0 || n1 >= N ) *idtype = IDX_OUTOFRANGE;
-		*start = n1;
-		*end = n1;
-		break;
 	case DAO_TUPLE:
 		*idtype = IDX_PAIR;
 		if( index->xTuple.ctype == dao_type_for_iterator ){
@@ -287,7 +261,7 @@ static void MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *star
 		first = index->xTuple.values[0];
 		second = index->xTuple.values[1];
 		/* a[ : 1 ] ==> pair(nil,int) */
-		if( first->type > DAO_DOUBLE || second->type > DAO_DOUBLE ){
+		if( first->type > DAO_FLOAT || second->type > DAO_FLOAT ){
 			*idtype = IDX_NONUMINDEX;
 			break;
 		}
@@ -532,8 +506,7 @@ DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
 	switch( self->type ){
 	case DAO_NONE : return & baseTyper;
 	case DAO_INTEGER :
-	case DAO_FLOAT   :
-	case DAO_DOUBLE  : return & numberTyper;
+	case DAO_FLOAT   : return & numberTyper;
 	case DAO_COMPLEX : return & comTyper;
 	case DAO_ENUM    : return & enumTyper;
 	case DAO_STRING  : return & stringTyper;
@@ -591,7 +564,6 @@ static void DaoNumber_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream
 	switch( self->type ){
 	case DAO_INTEGER : DaoStream_WriteInt( stream, self->xInteger.value ); break;
 	case DAO_FLOAT   : DaoStream_WriteFloat( stream, self->xFloat.value ); break;
-	case DAO_DOUBLE  : DaoStream_WriteFloat( stream, self->xDouble.value ); break;
 	}
 }
 static void DaoNumber_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N )
@@ -623,7 +595,7 @@ static void DaoNumer_Delete( DaoValue *self )
 
 DaoTypeBase numberTyper=
 {
-	"double", & numberCore, NULL, NULL, {0}, {0}, (FuncPtrDel) DaoNumer_Delete, NULL
+	"float", & numberCore, NULL, NULL, {0}, {0}, (FuncPtrDel) DaoNumer_Delete, NULL
 };
 
 /**/
@@ -637,7 +609,7 @@ static void DaoString_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	daoint size = DString_Size( self );
 	daoint start, end;
 	DString *res = NULL;
-	daoint *num = NULL;
+	dao_integer *num = NULL;
 	int idtype;
 
 	MakeIndex( proc, pid, size, & start, & end, & idtype );
@@ -663,7 +635,7 @@ static void DaoString_GetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	DString *res = DaoProcess_PutChars( proc, "" );
 	daoint i, j, valid;
 
-	valid = pid1->type > DAO_NONE && pid1->type <= DAO_DOUBLE && pid2->type == DAO_NONE;
+	valid = pid1->type > DAO_NONE && pid1->type <= DAO_FLOAT && pid2->type == DAO_NONE;
 	if( valid == 0 ){
 		DaoProcess_RaiseError( proc, "Index", NULL );
 		return;
@@ -689,7 +661,7 @@ static void DaoString_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid
 	int idtype;
 	MakeIndex( proc, pid, size, & start, & end, & idtype );
 	DString_Detach( self, self->size );
-	if( value->type >= DAO_INTEGER && value->type <= DAO_DOUBLE ){
+	if( value->type >= DAO_INTEGER && value->type <= DAO_FLOAT ){
 		daoint i, id = value->xInteger.value;
 		for(i=start; i<=end; i++) self->chars[i] = id;
 	}else if( value->type == DAO_STRING ){
@@ -1362,7 +1334,7 @@ static DaoFuncItem stringMeths[] =
 	},
 	{ DaoSTR_Expand,
 		"expand( invar self: string, invar subs: map<string,string>"
-			"|tuple<...:int|float|double|string>, spec = \"$\", keep = 1 ) => string"
+			"|tuple<...:int|float|string>, spec = \"$\", keep = 1 ) => string"
 		/*
 		// Expand this string into a new string with substrings from the keys
 		// of "subs" substituted with the corresponding values of "subs".
@@ -1804,21 +1776,14 @@ static void DaoLIST_Sum( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	case DAO_FLOAT :
 		{
-			float res = 0.0;
+			dao_float res = 0.0;
 			for(i=0; i<size; i++) res += data[i]->xFloat.value;
 			DaoProcess_PutFloat( proc, res );
 			break;
 		}
-	case DAO_DOUBLE :
-		{
-			double res = 0.0;
-			for(i=0; i<size; i++) res += data[i]->xDouble.value;
-			DaoProcess_PutDouble( proc, res );
-			break;
-		}
 	case DAO_COMPLEX :
 		{
-			complex16 res = { 0.0, 0.0 };
+			dao_complex res = { 0.0, 0.0 };
 			for(i=0; i<self->value->size; i++) COM_IP_ADD( res, data[i]->xComplex.value );
 			DaoProcess_PutComplex( proc, res );
 			break;
@@ -2213,7 +2178,7 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Resize,
-		"resize( self: list<@T<int|float|double|complex|string|enum>>, size: int )"
+		"resize( self: list<@T<int|float|complex|string|enum>>, size: int )"
 		/*
 		// Resize the list of primitive data to size "size".
 		*/
@@ -2225,7 +2190,7 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Max,
-		"max( invar self: list<@T<int|float|double|complex|string|enum>> ) => tuple<@T,int>"
+		"max( invar self: list<@T<int|float|complex|string|enum>> ) => tuple<@T,int>"
 		/*
 		// Return the maximum value of the list and its index.
 		// The list has to contain primitive data.
@@ -2234,13 +2199,13 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Min,
-		"min( invar self: list<@T<int|float|double|complex|string|enum>> ) => tuple<@T,int>"
+		"min( invar self: list<@T<int|float|complex|string|enum>> ) => tuple<@T,int>"
 		/*
 		// Return the minimum value of the list and its index.
 		*/
 	},
 	{ DaoLIST_Sum,
-		"sum( invar self: list<@T<int|float|double|complex|string|enum>> ) => @T"
+		"sum( invar self: list<@T<int|float|complex|string|enum>> ) => @T"
 		/*
 		// Return the sum of the list.
 		*/
@@ -3268,7 +3233,7 @@ static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 	if( pid->type == DAO_NONE ){
 		ec = 0;
 		DaoTupleCore_GetCopy( self, proc );
-	}else if( pid->type >= DAO_INTEGER && pid->type <= DAO_DOUBLE ){
+	}else if( pid->type >= DAO_INTEGER && pid->type <= DAO_FLOAT ){
 		int id = DaoValue_GetInteger( pid );
 		if( id >=0 && id < self->size ){
 			DaoProcess_PutValue( proc, self->values[id] );
@@ -3304,7 +3269,7 @@ static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 		daoint i, end = DaoValue_GetInteger( second );
 		if( start < 0 || end < 0 ) goto InvIndex; /* No support for negative index; */
 		if( start >= self->size || end >= self->size ) goto InvIndex;
-		if( first->type > DAO_DOUBLE || second->type > DAO_DOUBLE ) goto InvIndex;
+		if( first->type > DAO_FLOAT || second->type > DAO_FLOAT ) goto InvIndex;
 		if( first->type == DAO_NONE && second->type == DAO_NONE ){
 			DaoTupleCore_GetCopy( self, proc );
 		}else{
@@ -3325,7 +3290,7 @@ static void DaoTupleCore_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 	DaoTuple *self = & self0->xTuple;
 	DaoType *t, **type = self->ctype->nested->items.pType;
 	int ec = 0;
-	if( pid->type >= DAO_INTEGER && pid->type <= DAO_DOUBLE ){
+	if( pid->type >= DAO_INTEGER && pid->type <= DAO_FLOAT ){
 		int id = DaoValue_GetInteger( pid );
 		if( id >=0 && id < self->size ){
 			t = type[id];

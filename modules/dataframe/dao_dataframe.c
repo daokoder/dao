@@ -42,10 +42,9 @@
 static int DaoType_GetDataSize( DaoType *self )
 {
 	switch( self->tid ){
-	case DAO_INTEGER : return sizeof(daoint);
-	case DAO_FLOAT   : return sizeof(float);
-	case DAO_DOUBLE  : return sizeof(double);
-	case DAO_COMPLEX : return sizeof(complex16);
+	case DAO_INTEGER : return sizeof(dao_integer);
+	case DAO_FLOAT   : return sizeof(dao_float);
+	case DAO_COMPLEX : return sizeof(dao_complex);
 	case DAO_STRING  : return sizeof(DString);
 	default : break;
 	}
@@ -57,7 +56,6 @@ static int DaoType_GetDataType( DaoType *self )
 	switch( self->tid ){
 	case DAO_INTEGER :
 	case DAO_FLOAT   :
-	case DAO_DOUBLE  :
 	case DAO_COMPLEX :
 	case DAO_STRING  : break;
 	default : datatype = 0; break;  /* zero for DaoValue* items; */
@@ -133,15 +131,14 @@ void DaoxDataColumn_SetType( DaoxDataColumn *self, DaoType *type )
 void DaoxDataColumn_SetCell( DaoxDataColumn *self, daoint i, DaoValue *value )
 {
 	if( value == NULL ){
-		complex16 zero = {0.0,0.0};
+		dao_complex zero = {0.0,0.0};
 		switch( self->vatype->tid ){
 		default :
 			GC_DecRC( self->cells->data.values[i] );
 			self->cells->data.values[i] = value;
 			break;
 		case DAO_INTEGER : self->cells->data.daoints[i]   = 0; break;
-		case DAO_FLOAT   : self->cells->data.floats[i]    = 0.0; break;
-		case DAO_DOUBLE  : self->cells->data.doubles[i]   = 0.0; break;
+		case DAO_FLOAT   : self->cells->data.doubles[i]   = 0.0; break;
 		case DAO_COMPLEX : self->cells->data.complexes[i] = zero; break;
 		case DAO_STRING  : DString_Reset( & self->cells->data.strings[i], 0 ); break;
 		}
@@ -152,8 +149,7 @@ void DaoxDataColumn_SetCell( DaoxDataColumn *self, daoint i, DaoValue *value )
 		GC_Assign( & self->cells->data.values[i], value );
 		break;
 	case DAO_INTEGER : self->cells->data.daoints[i]   = DaoValue_GetInteger( value ); break;
-	case DAO_FLOAT   : self->cells->data.floats[i]    = DaoValue_GetFloat( value );  break;
-	case DAO_DOUBLE  : self->cells->data.doubles[i]   = DaoValue_GetDouble( value ); break;
+	case DAO_FLOAT   : self->cells->data.doubles[i]   = DaoValue_GetFloat( value ); break;
 	case DAO_COMPLEX : self->cells->data.complexes[i] = DaoValue_GetComplex( value ); break;
 	case DAO_STRING  : DaoValue_GetString( value, & self->cells->data.strings[i] ); break;
 	}
@@ -163,8 +159,7 @@ DaoValue* DaoxDataColumn_GetCell( DaoxDataColumn *self, daoint i, DaoValue *valu
 	value->xNone.type = self->vatype->tid;
 	switch( self->vatype->tid ){
 	case DAO_INTEGER : value->xInteger.value = self->cells->data.daoints[i]; break;
-	case DAO_FLOAT   : value->xFloat.value   = self->cells->data.floats[i];  break;
-	case DAO_DOUBLE  : value->xDouble.value  = self->cells->data.doubles[i]; break;
+	case DAO_FLOAT   : value->xFloat.value  = self->cells->data.doubles[i]; break;
 	case DAO_COMPLEX : value->xComplex.value = self->cells->data.complexes[i]; break;
 	case DAO_STRING  : value->xString.value   = & self->cells->data.strings[i]; break;
 	default : value = self->cells->data.values[i]; break;
@@ -175,8 +170,7 @@ static int DaoxDataColumn_GetPrintWidth( DaoxDataColumn *self, int max )
 {
 	daoint i, width = 0;
 	switch( self->vatype->tid ){
-	case DAO_FLOAT   :
-	case DAO_DOUBLE  : return 12;
+	case DAO_FLOAT   : return 12;
 	case DAO_COMPLEX : return 16;
 	}
 	for(i=0; i<self->cells->size; ++i){
@@ -312,8 +306,7 @@ int DaoxDataFrame_FromMatrix( DaoxDataFrame *self, DaoArray *mat )
 				daoint id3 = i * MK + j * K + k;
 				switch( mat->etype ){
 				case DAO_INTEGER : col->cells->data.daoints[id2]   = mat->data.i[id3]; break;
-				case DAO_FLOAT   : col->cells->data.floats[id2]    = mat->data.f[id3]; break;
-				case DAO_DOUBLE  : col->cells->data.doubles[id2]   = mat->data.d[id3]; break;
+				case DAO_FLOAT   : col->cells->data.doubles[id2]   = mat->data.f[id3]; break;
 				case DAO_COMPLEX : col->cells->data.complexes[id2] = mat->data.c[id3]; break;
 				}
 			}
@@ -542,7 +535,6 @@ static void MakeSlice( DaoProcess *proc, DaoValue *pid, daoint N, DArray *slice 
 	switch( pid->type ){
 	case DAO_INTEGER :
 	case DAO_FLOAT :
-	case DAO_DOUBLE :
 		{
 			id = DaoValue_GetInteger( pid );
 			rc = SliceRange2( slice, N, id, 1 );
@@ -561,10 +553,10 @@ static void MakeSlice( DaoProcess *proc, DaoValue *pid, daoint N, DArray *slice 
 				rc = SliceRange( slice, N, from, to );
 			}else if( data[0]->type == DAO_NONE && data[1]->type == DAO_NONE ){
 				rc = SliceRange2( slice, N, 0, N );
-			}else if( data[0]->type <= DAO_DOUBLE && data[1]->type == DAO_NONE ){
+			}else if( data[0]->type <= DAO_FLOAT && data[1]->type == DAO_NONE ){
 				from = DaoValue_GetInteger( data[0] );
 				rc = SliceRange( slice, N, from, -1 );
-			}else if( data[0]->type == DAO_NONE && data[1]->type <= DAO_DOUBLE ){
+			}else if( data[0]->type == DAO_NONE && data[1]->type <= DAO_FLOAT ){
 				to = DaoValue_GetInteger( data[1] );
 				rc = SliceRange( slice, N, 0, to );
 			}else if( data[0]->type == DAO_STRING && data[1]->type == DAO_STRING ){
@@ -708,7 +700,7 @@ enum
 static int DaoValue_Update( DaoValue *self, DaoValue *other, int opcode )
 {
 	double D1, D2;
-	complex16 C1, C2;
+	dao_complex C1, C2;
 
 	switch( (self->type<<8)|other->type ){
 	case (DAO_INTEGER<<8)|DAO_INTEGER :
@@ -738,23 +730,9 @@ static int DaoValue_Update( DaoValue *self, DaoValue *other, int opcode )
 		default : return 1;
 		}
 		break;
-	case (DAO_DOUBLE<<8)|DAO_DOUBLE :
-		D1 = self->xDouble.value;
-		D2 = other->xDouble.value;
-		switch( opcode ){
-		case DVM_MOVE : self->xDouble.value  = other->xDouble.value; break;
-		case DVM_ADD  : self->xDouble.value += other->xDouble.value; break;
-		case DVM_SUB  : self->xDouble.value -= other->xDouble.value; break;
-		case DVM_MUL  : self->xDouble.value *= other->xDouble.value; break;
-		case DVM_DIV  : self->xDouble.value /= other->xDouble.value; break;
-		case DVM_MOD  : self->xDouble.value  = D1-D2*(daoint)(D1/D2); break;
-		default : return 1;
-		}
-		break;
 	case (DAO_INTEGER<<8)|DAO_FLOAT :
-	case (DAO_INTEGER<<8)|DAO_DOUBLE :
 		D1 = self->xInteger.value;
-		D2 = DaoValue_GetDouble( other );
+		D2 = DaoValue_GetFloat( other );
 		switch( opcode ){
 		case DVM_MOVE : self->xInteger.value = (daoint) D2; break;
 		case DVM_ADD  : self->xInteger.value = (daoint)(D1 + D2); break;
@@ -766,9 +744,8 @@ static int DaoValue_Update( DaoValue *self, DaoValue *other, int opcode )
 		}
 		break;
 	case (DAO_FLOAT<<8)|DAO_INTEGER :
-	case (DAO_FLOAT<<8)|DAO_DOUBLE :
 		D1 = self->xFloat.value;
-		D2 = DaoValue_GetDouble( other );
+		D2 = DaoValue_GetFloat( other );
 		switch( opcode ){
 		case DVM_MOVE : self->xFloat.value =  D2; break;
 		case DVM_ADD  : self->xFloat.value = (D1 + D2); break;
@@ -779,25 +756,10 @@ static int DaoValue_Update( DaoValue *self, DaoValue *other, int opcode )
 		default : return 1;
 		}
 		break;
-	case (DAO_DOUBLE<<8)|DAO_INTEGER :
-	case (DAO_DOUBLE<<8)|DAO_FLOAT :
-		D1 = self->xDouble.value;
-		D2 = DaoValue_GetDouble( other );
-		switch( opcode ){
-		case DVM_MOVE : self->xDouble.value =  D2; break;
-		case DVM_ADD  : self->xDouble.value = (D1 + D2); break;
-		case DVM_SUB  : self->xDouble.value = (D1 - D2); break;
-		case DVM_MUL  : self->xDouble.value = (D1 * D2); break;
-		case DVM_DIV  : self->xDouble.value = (D1 / D2); break;
-		case DVM_MOD  : self->xDouble.value = (D1-D2*(daoint)(D1/D2)); break;
-		default : return 1;
-		}
-		break;
 	case (DAO_COMPLEX<<8)|DAO_INTEGER :
 	case (DAO_COMPLEX<<8)|DAO_FLOAT :
-	case (DAO_COMPLEX<<8)|DAO_DOUBLE :
 		C1 = self->xComplex.value;
-		D2 = DaoValue_GetDouble( other );
+		D2 = DaoValue_GetFloat( other );
 		switch( opcode ){
 		case DVM_MOVE : C1.real = D2;  C1.imag = 0.0; self->xComplex.value = C1; break;
 		case DVM_MUL  : C1.real *= D2; C1.imag *= D2; self->xComplex.value = C1; break;
@@ -1074,14 +1036,14 @@ static void FRAME_AddListCol( DaoProcess *proc, DaoValue *p[], int N )
 
 static int DaoxDF_IsSingleIndex( DaoValue *value )
 {
-	if( value->type >= DAO_INTEGER && value->type <= DAO_DOUBLE ) return 1;
+	if( value->type >= DAO_INTEGER && value->type <= DAO_FLOAT ) return 1;
 	if( value->type == DAO_STRING ) return 1;
 	return 0;
 }
 static daoint DaoxDF_MakeIndex( DaoxDataFrame *self, int dim, DaoValue *value, DaoProcess *p )
 {
 	daoint idx = -1;
-	if( value->type >= DAO_INTEGER && value->type <= DAO_DOUBLE ){
+	if( value->type >= DAO_INTEGER && value->type <= DAO_FLOAT ){
 		idx = DaoValue_GetInteger( value );
 	}else if( value->type == DAO_STRING ){
 		idx = DaoxDataFrame_GetIndex( self, dim, value->xString.value->chars );
@@ -1260,7 +1222,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 		width = DaoxDataColumn_GetPrintWidth( col, 16 );
 		for(i=0; i<N && i<1000; ++i){
 			daoint v, ii = DaoSlice_GetIndex( self->slices, 0, i );
-			complex16 com;
+			dao_complex com;
 			switch( datatype ){
 			case DAO_INTEGER :
 				v = cells->data.daoints[ii];
@@ -1268,9 +1230,6 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 				if( w > max ) max = w;
 				break;
 			case DAO_FLOAT   :
-				CheckPrintWidth( cells->data.floats[ii], & max, & min, & dec );
-				break;
-			case DAO_DOUBLE  :
 				CheckPrintWidth( cells->data.doubles[ii], & max, & min, & dec );
 				break;
 			case DAO_COMPLEX :
@@ -1452,8 +1411,8 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 					}else if( value->type == DAO_INTEGER ){
 						sprintf( fmt, "%%%i%s", width, DAO_INT_FORMAT );
 						snprintf( buf, width+1, fmt, value->xInteger.value );
-					}else if( value->type == DAO_FLOAT || value->type == DAO_DOUBLE ){
-						double f = DaoValue_GetDouble( value );
+					}else if( value->type == DAO_FLOAT ){
+						double f = DaoValue_GetFloat( value );
 						if( scifmt ){
 							sprintf( fmt, "%%%iE", width );
 						}else{
@@ -1461,7 +1420,7 @@ static void FRAME_PRINT( DaoProcess *proc, DaoValue *p[], int n )
 						}
 						snprintf( buf, width+1, fmt, f );
 					}else if( value->type == DAO_COMPLEX ){
-						complex16 com = value->xComplex.value;
+						dao_complex com = value->xComplex.value;
 						char s = com.imag>=0 ? '+' : '-';
 						int w = width/2-2;
 						int d = dec;

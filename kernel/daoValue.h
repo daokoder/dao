@@ -74,7 +74,6 @@ union DaoValue
 	DaoNone        xNone;
 	DaoInteger     xInteger;
 	DaoFloat       xFloat;
-	DaoDouble      xDouble;
 	DaoComplex     xComplex;
 	DaoString      xString;
 	DaoEnum        xEnum;
@@ -132,10 +131,9 @@ DAO_DLL void DaoValue_SetType( DaoValue *to, DaoType *tp );
 DAO_DLL void DaoValue_MarkConst( DaoValue *self );
 
 DAO_DLL int DaoValue_IsZero( DaoValue *self );
-DAO_DLL daoint DaoValue_GetInteger( DaoValue *self );
-DAO_DLL float  DaoValue_GetFloat( DaoValue *self );
-DAO_DLL double DaoValue_GetDouble( DaoValue *self );
-DAO_DLL complex16 DaoValue_GetComplex( DaoValue *self );
+DAO_DLL dao_integer DaoValue_GetInteger( DaoValue *self );
+DAO_DLL dao_float   DaoValue_GetFloat( DaoValue *self );
+DAO_DLL dao_complex DaoValue_GetComplex( DaoValue *self );
 DAO_DLL DString* DaoValue_GetString( DaoValue *self, DString *str );
 
 DAO_DLL int DaoValue_IsNumber( DaoValue *self );

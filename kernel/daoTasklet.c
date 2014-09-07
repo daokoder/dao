@@ -154,13 +154,13 @@ struct DaoCallServer
 	DList  *parameters; /* list of void* */
 	DList  *events;     /* list of DaoTaskEvent* */
 	DList  *events2;    /* list of DaoTaskEvent* */
-	DMap   *waitings;   /* timed waiting: <complex16,DaoTaskEvent*> */
+	DMap   *waitings;   /* timed waiting: <dao_complex,DaoTaskEvent*> */
 	DMap   *active;     /* map of DaoObject* or DaoProcess* keys */
 	DMap   *pending;    /* map of pointers from ::parameters, ::events and ::events2 */
 
 	DList  *caches;
 
-	complex16    timestamp;  /* (time,index); */
+	dao_complex    timestamp;  /* (time,index); */
 	DaoVmSpace  *vmspace;
 };
 static DaoCallServer *daoCallServer = NULL;
@@ -808,7 +808,7 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 MoveToWaiting:
 		if( event->expiring >= 0.0 && event->expiring < MIN_TIME ) continue;
 		if( event->expiring >= MIN_TIME ){
-			complex16 com = {0.0,0.0};
+			dao_complex com = {0.0,0.0};
 			com.real = event->expiring;
 			DMap_Insert( server->waitings, & com, event );
 			DCondVar_Signal( & server->condv2 );

@@ -146,7 +146,7 @@ static void DaoSerializeDouble( double value, DString *serial )
 	DaoEncodeDouble( buf, value );
 	DString_AppendChars( serial, buf );
 }
-static void DaoSerializeComplex( complex16 value, DString *serial )
+static void DaoSerializeComplex( dao_complex value, DString *serial )
 {
 	DaoSerializeDouble( value.real, serial );
 	DString_AppendChar( serial, ' ' );
@@ -188,7 +188,6 @@ static void DaoArray_Serialize( DaoArray *self, DString *serial, DString *buf )
 		switch( self->etype ){
 		case DAO_INTEGER : DaoSerializeInteger( self->data.i[i], serial ); break;
 		case DAO_FLOAT : DaoSerializeDouble( self->data.f[i], serial ); break;
-		case DAO_DOUBLE : DaoSerializeDouble( self->data.d[i], serial ); break;
 		case DAO_COMPLEX : DaoSerializeComplex( self->data.c[i], serial ); break;
 		}
 	}
@@ -357,9 +356,6 @@ int DaoValue_Serialize2( DaoValue *self, DString *serial, DaoNamespace *ns, DaoP
 		break;
 	case DAO_FLOAT :
 		DaoSerializeDouble( self->xFloat.value, serial );
-		break;
-	case DAO_DOUBLE :
-		DaoSerializeDouble( self->xDouble.value, serial );
 		break;
 	case DAO_COMPLEX :
 		DaoSerializeComplex( self->xComplex.value, serial );
@@ -547,10 +543,6 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 		value->xFloat.value = DaoDecodeDouble( str );
 		if( minus ) value->xFloat.value = - value->xFloat.value;
 		break;
-	case DAO_DOUBLE :
-		value->xDouble.value = DaoDecodeDouble( str );
-		if( minus ) value->xDouble.value = - value->xDouble.value;
-		break;
 	case DAO_COMPLEX :
 		value->xComplex.value.real = DaoDecodeDouble( str );
 		if( minus ) value->xComplex.value.real = - value->xComplex.value.real;
@@ -609,7 +601,6 @@ static int DaoParser_Deserialize( DaoParser *self, int start, int end, DaoValue 
 			switch( it1->tid ){
 			case DAO_INTEGER : array->data.i[n] = tmp->xInteger.value; break;
 			case DAO_FLOAT   : array->data.f[n] = tmp->xFloat.value; break;
-			case DAO_DOUBLE  : array->data.d[n] = tmp->xDouble.value; break;
 			}
 			i = j;
 			n += 1;

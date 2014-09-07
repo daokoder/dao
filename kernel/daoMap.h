@@ -43,7 +43,7 @@ typedef union
 {
 	daoint       pInt;
 	void        *pVoid;
-	complex16   *pComplex;
+	dao_complex *pComplex;
 	DString     *pString;
 	DList       *pArray;
 	DMap        *pMap;

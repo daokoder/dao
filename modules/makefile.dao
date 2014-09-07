@@ -34,6 +34,8 @@ if( DaoMake::IsDir( "xml" ) ) modules.AddDirectory( "xml", "xml" );
 
 if( DaoMake::IsDir( "zip" ) ) modules.AddDirectory( "zip", "zip" );
 
+if( DaoMake::IsDir( "crypto" ) ) modules.AddDirectory( "crypto", "crypto" );
+
 if( DaoMake::IsDir( "web" ) ) modules.AddDirectory( "web", "web" );
 
 if( DaoMake::IsDir( "DaoGraphics" ) ) modules.AddDirectory( "Graphics", "DaoGraphics" );
@@ -46,14 +48,14 @@ if( DaoMake::IsDir( "statistics" ) ) modules.AddDirectory( "statistics", "statis
 
 if( DaoMake::IsDir( "DaoSQL" ) ) modules.AddDirectory( "DaoSQL", "DaoSQL" );
 
-if( DaoMake::IsDir( "DaoOpenGL" ) ) modules.AddDirectory( "OpenGL", "DaoOpenGL" );
+#if( DaoMake::IsDir( "DaoOpenGL" ) ) modules.AddDirectory( "OpenGL", "DaoOpenGL" );
 
-if( DaoMake::IsDir( "DaoGSL" ) ) modules.AddDirectory( "GSL", "DaoGSL" );
+#if( DaoMake::IsDir( "DaoGSL" ) ) modules.AddDirectory( "GSL", "DaoGSL" );
 
-if( DaoMake::IsDir( "DaoSDL" ) ) modules.AddDirectory( "SDL", "DaoSDL" );
+#if( DaoMake::IsDir( "DaoSDL" ) ) modules.AddDirectory( "SDL", "DaoSDL" );
 
-if( DaoMake::IsDir( "DaoFLTK" ) ) modules.AddDirectory( "FLTK", "DaoFLTK" );
+#if( DaoMake::IsDir( "DaoFLTK" ) ) modules.AddDirectory( "FLTK", "DaoFLTK" );
 
-if( DaoMake::IsDir( "DaoGraphicsMagick" ) ) modules.AddDirectory( "GraphicsMagick", "DaoGraphicsMagick" );
+#if( DaoMake::IsDir( "DaoGraphicsMagick" ) ) modules.AddDirectory( "GraphicsMagick", "DaoGraphicsMagick" );
 
 if( DaoMake::IsDir( "DaoGame" ) ) modules.AddDirectory( "Game", "DaoGame" );

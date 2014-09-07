@@ -169,8 +169,7 @@ void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumItem *items )
 		DString name = DString_WrapChars( items[i].name );
 		switch( items[i].type ){
 		case DAO_INTEGER : value->xInteger.value = (int) items[i].value; break;
-		case DAO_FLOAT   : value->xFloat.value = (float) items[i].value; break;
-		case DAO_DOUBLE  : value->xDouble.value = items[i].value; break;
+		case DAO_FLOAT   : value->xFloat.value = items[i].value; break;
 		default: continue;
 		}
 		value->type = items[i].type;
@@ -244,8 +243,7 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 			value->type = typer->numItems[i].type;
 			switch( value->type ){
 			case DAO_INTEGER : value->xInteger.value = (int) dv; break;
-			case DAO_FLOAT : value->xFloat.value = (float) dv; break;
-			case DAO_DOUBLE : value->xDouble.value = dv; break;
+			case DAO_FLOAT   : value->xFloat.value = dv; break;
 			default : continue;
 			}
 			DMap_Insert( values, & name, value );
@@ -1382,7 +1380,7 @@ void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *t
 	}
 }
 
-DaoType *simpleTypes[ DAO_ARRAY ] = { 0, 0, 0, 0, 0, 0, 0 };
+DaoType *simpleTypes[ DAO_ARRAY ] = { 0, 0, 0, 0, 0, 0 };
 
 DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 {
@@ -1413,7 +1411,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 			abtp = DaoNamespace_MakeValueType( self, dao_none_value );
 		}
 		break;
-	case DAO_INTEGER : case DAO_FLOAT : case DAO_DOUBLE :
+	case DAO_INTEGER : case DAO_FLOAT :
 	case DAO_COMPLEX : case DAO_STRING :
 		abtp = simpleTypes[ p->type ];
 		if( abtp ) break;
@@ -1496,10 +1494,6 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 			}else if( array->etype == DAO_FLOAT ){
 				itp = DaoNamespace_MakeType( self, "float", DAO_FLOAT, 0,0,0 );
 				DString_AppendChars( mbs, "<float>" );
-				DList_Append( nested, itp );
-			}else if( array->etype == DAO_DOUBLE ){
-				itp = DaoNamespace_MakeType( self, "double", DAO_DOUBLE, 0,0,0 );
-				DString_AppendChars( mbs, "<double>" );
 				DList_Append( nested, itp );
 			}else{
 				itp = DaoNamespace_MakeType( self, "complex", DAO_COMPLEX, 0,0,0 );

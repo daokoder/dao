@@ -146,10 +146,10 @@ static void DaoProfiler_LeaveFrame( DaoProfiler *self, DaoProcess *proc, DaoStac
 	if( end ) DaoxProfiler_Update( (DaoxProfiler*) self, frame, tmdata->value.real );
 }
 
-complex16 DaoProfiler_Sum( DMap *profile )
+dao_complex DaoProfiler_Sum( DMap *profile )
 {
 	DNode *it2;
-	complex16 com = {0.0, 0.0};
+	dao_complex com = {0.0, 0.0};
 	for(it2=DMap_First(profile); it2; it2=DMap_Next(profile,it2)){
 		DaoRoutine *caller = (DaoRoutine*) it2->key.pValue;
 		DaoComplex *data = (DaoComplex*) it2->value.pValue;
@@ -269,7 +269,7 @@ void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream )
 	DaoStream_WriteChars( stream, delimiter2 );
 	for(count=max,it=DMap_First(summary); it; it=DMap_Next(summary,it),--count){
 		DNode *it2 = (DNode*) it->value.pVoid;
-		complex16 data = it->key.pValue->xComplex.value;
+		dao_complex data = it->key.pValue->xComplex.value;
 		DaoRoutine *callee = (DaoRoutine*) it2->key.pValue;
 		DaoRoutine_MakeName( callee, name1, 28, 10, 2 );
 		snprintf( buf, sizeof(buf), row_format, name1->chars, (int) -data.imag, -data.real );
@@ -299,7 +299,7 @@ void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream )
 		}
 		for(it2=DMap_First(summary2); it2; it2=DMap_Next(summary2,it2)){
 			DaoRoutine *caller = (DaoRoutine*) it2->value.pValue;
-			complex16 data = it2->key.pValue->xComplex.value;
+			dao_complex data = it2->key.pValue->xComplex.value;
 			DString_Reset( name2, 0 );
 			if( caller ) DaoRoutine_MakeName( caller, name2, 22, 0, 0 );
 			snprintf( buf, sizeof(buf), row_format2, name1->chars, name2->chars, (int) -data.imag, -data.real );

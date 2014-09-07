@@ -208,13 +208,13 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 			if( F == 'c' ) DString_ToLocal( fmt2 );
 			DaoStream_WriteString( self, fmt2 );
 		}else if( F == 'd' || F == 'i' || F == 'o' || F == 'x' || F == 'X' ){
-			if( sizeof(daoint) != 4 ) DString_InsertChar( fmt2, DAO_INT_FORMAT[0], fmt2->size-1 );
+			if( sizeof(dao_integer) != 4 ) DString_InsertChar( fmt2, DAO_INT_FORMAT[0], fmt2->size-1 );
 			self->format = fmt2->chars;
-			if( value->type == DAO_NONE || value->type > DAO_DOUBLE ) goto WrongParameter;
+			if( value->type == DAO_NONE || value->type > DAO_FLOAT ) goto WrongParameter;
 			DaoStream_WriteInt( self, DaoValue_GetInteger( value ) );
 		}else if( toupper( F ) == 'E' || toupper( F ) == 'F' || toupper( F ) == 'G' ){
-			if( value->type == DAO_NONE || value->type > DAO_DOUBLE ) goto WrongParameter;
-			DaoStream_WriteFloat( self, DaoValue_GetDouble( value ) );
+			if( value->type == DAO_NONE || value->type > DAO_FLOAT ) goto WrongParameter;
+			DaoStream_WriteFloat( self, DaoValue_GetFloat( value ) );
 		}else if( F == 's' && value->type == DAO_STRING ){
 			DaoStream_WriteString( self, value->xString.value );
 		}else if( F == 'S' && value->type == DAO_STRING ){
@@ -469,7 +469,7 @@ static void DaoIO_Seek( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoIO_Tell( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
-	daoint *num = DaoProcess_PutInteger( proc, 0 );
+	dao_integer *num = DaoProcess_PutInteger( proc, 0 );
 	if( self->mode & DAO_STREAM_STRING ) *num = self->offset;
 	if( self->file == NULL ) return;
 	*num = ftell( self->file );
@@ -477,7 +477,7 @@ static void DaoIO_Tell( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoIO_FileNO( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
-	daoint *num = DaoProcess_PutInteger( proc, 0 );
+	dao_integer *num = DaoProcess_PutInteger( proc, 0 );
 	if( self->file == NULL ) return;
 	*num = fileno( self->file );
 }
@@ -657,7 +657,7 @@ void DaoStream_WriteChar( DaoStream *self, char val )
 		printf( format, val );
 	}
 }
-void DaoStream_WriteFormatedInt( DaoStream *self, daoint val, const char *format )
+void DaoStream_WriteFormatedInt( DaoStream *self, dao_integer val, const char *format )
 {
 	char buffer[100];
 	if( self->redirect && self->redirect->StdioWrite ){
@@ -676,7 +676,7 @@ void DaoStream_WriteFormatedInt( DaoStream *self, daoint val, const char *format
 		printf( format, val );
 	}
 }
-void DaoStream_WriteInt( DaoStream *self, daoint val )
+void DaoStream_WriteInt( DaoStream *self, dao_integer val )
 {
 	const char *format = self->format;
 	if( format == NULL ) format = "%" DAO_INT_FORMAT;
@@ -687,8 +687,8 @@ void DaoStream_WriteFloat( DaoStream *self, double val )
 	const char *format = self->format;
 	const char *iconvs = "diouxXcC";
 	char buffer[100];
-	if( format && strchr( iconvs, format[ strlen(format)-1 ] ) && val ==(long)val ){
-		DaoStream_WriteInt( self, (daoint)val );
+	if( format && strchr( iconvs, format[ strlen(format)-1 ] ) && val ==(dao_integer)val ){
+		DaoStream_WriteInt( self, (dao_integer)val );
 		return;
 	}
 	if( format == NULL ) format = "%f";

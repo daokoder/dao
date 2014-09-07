@@ -83,7 +83,7 @@ DAO_DLL void DaoxBigInt_ShiftLeft( DaoxBigInt *self, int bits );
 DAO_DLL void DaoxBigInt_ShiftRight( DaoxBigInt *self, int bits );
 DAO_DLL void DaoxBigInt_Print( DaoxBigInt *self, DString *s );
 DAO_DLL void DaoxBigInt_FromInteger( DaoxBigInt *self, daoint x );
-DAO_DLL void DaoxBigInt_FromDouble( DaoxBigInt *self, double x );
+DAO_DLL void DaoxBigInt_FromFloat( DaoxBigInt *self, double x );
 DAO_DLL char DaoxBigInt_FromString( DaoxBigInt *self, DString *s );
 DAO_DLL void DaoxBigInt_FromValue( DaoxBigInt *self, DaoValue *value );
 DAO_DLL daoint DaoxBigInt_ToInteger( DaoxBigInt *self );
@@ -128,7 +128,7 @@ static DArray* DaoxBigIntBuffer_NewVector( DaoxBigIntBuffer *self )
 {
 	DArray *vec;
 	if( self->coms->size ) return (DArray*) DList_PopBack( self->coms );
-	return DArray_New( sizeof(complex16) );
+	return DArray_New( sizeof(dao_complex) );
 }
 static DaoxBigInt* DaoxBigIntBuffer_NewBigInt( DaoxBigIntBuffer *self )
 {
@@ -148,17 +148,17 @@ static void DaoxBigIntBuffer_FreeBigInt( DaoxBigIntBuffer *self, DaoxBigInt *big
 
 #define PI2 6.283185307179586
 
-#define complex16_mul(z,x,y) { complex16 tmp; \
+#define dao_complex_mul(z,x,y) { dao_complex tmp; \
 	tmp.real=x.real*y.real-x.imag*y.imag; \
 	tmp.imag=x.real*y.imag+x.imag*y.real; z = tmp; }
 #define complex_init(c,r,i) { c.real=r; c.imag=i; }
 
-void dao_fft16( complex16 data[], daoint M, int inv )
+void dao_fft16( dao_complex data[], daoint M, int inv )
 {
 	daoint d, i, j, k, m, S, B, D, N = 1<<M;
 	double expo = PI2 / (double) N;
-	complex16 wn = { 0.0, 0.0 };
-	complex16 wi, wj, ws, tmp;
+	dao_complex wn = { 0.0, 0.0 };
+	dao_complex wi, wj, ws, tmp;
 
 	wn.real = cos( 0.5 * PI2 );  wn.imag = inv * sin( 0.5 * PI2 );
 	assert( abs(inv) == 1 );
@@ -178,16 +178,16 @@ void dao_fft16( complex16 data[], daoint M, int inv )
 		complex_init( ws, cos( expo * D ), inv * sin( expo * D ) );
 		complex_init( wi, 1.0, 0.0 );
 		for(k=0; k<B; k++){ /* for k-th butterfly */
-			complex16_mul( wj, wi, wn );
+			dao_complex_mul( wj, wi, wn );
 			for(d=0; d<D; d++){ /* in each DFT */
 				i = d * S + k;  j = i + B;
 				tmp = data[i];
-				complex16_mul( data[i], data[j], wi );
-				complex16_mul( data[j], data[j], wj );
+				dao_complex_mul( data[i], data[j], wi );
+				dao_complex_mul( data[j], data[j], wj );
 				data[i].real += tmp.real; data[i].imag += tmp.imag;
 				data[j].real += tmp.real; data[j].imag += tmp.imag;
 			}
-			complex16_mul( wi, wi, ws );
+			dao_complex_mul( wi, wi, ws );
 		}
 	}
 }
@@ -635,7 +635,7 @@ static void DaoxBigInt_UMulFFT( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, Dao
 {
 	DArray *vx = DaoxBigIntBuffer_NewVector( buffer );
 	DArray *vy = DaoxBigIntBuffer_NewVector( buffer );
-	complex16 *cx, *cy;
+	dao_complex *cx, *cy;
 	uchar_t *dx = x->data;
 	uchar_t *dy = y->data;
 	daoint nx = x->size;
@@ -648,7 +648,7 @@ static void DaoxBigInt_UMulFFT( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, Dao
 	/* printf( "nc = %i, mc = %i, max = %i\n", nc, mc, max ); */
 	DArray_Reserve( vx, nc );
 	cx = cy = vx->data.complexes;
-	memset( cx, 0, nc*sizeof(complex16) );
+	memset( cx, 0, nc*sizeof(dao_complex) );
 	for(i=0; i<nx; i++) cx[i].real = dx[i];
 	dao_fft16( cx, mc, -1 );
 	if( x == y ){
@@ -656,11 +656,11 @@ static void DaoxBigInt_UMulFFT( DaoxBigInt *z, DaoxBigInt *x, DaoxBigInt *y, Dao
 	}else{
 		DArray_Reserve( vy, nc );
 		cy = vy->data.complexes;
-		memset( cy, 0, nc*sizeof(complex16) );
+		memset( cy, 0, nc*sizeof(dao_complex) );
 		for(i=0; i<ny; i++) cy[i].real = dy[i];
 		dao_fft16( cy, mc, -1 );
 	}
-	for(i=0; i<nc; i++) complex16_mul( cx[i], cx[i], cy[i] );
+	for(i=0; i<nc; i++) dao_complex_mul( cx[i], cx[i], cy[i] );
 	dao_fft16( cx, mc, 1 );
 	DaoxBigInt_Resize( z, nc );
 	memset( z->data, 0, nc*sizeof(uchar_t) );
@@ -1204,7 +1204,7 @@ void DaoxBigInt_FromInteger( DaoxBigInt *self, daoint x )
 		y = y >> LONG_BITS;
 	}
 }
-void DaoxBigInt_FromDouble( DaoxBigInt *self, double value )
+void DaoxBigInt_FromFloat( DaoxBigInt *self, double value )
 {
 	double prod, frac;
 	int expon, bit;
@@ -1291,8 +1291,7 @@ void DaoxBigInt_FromValue( DaoxBigInt *self, DaoValue *value )
 		DaoxBigInt_Move( self, other );
 		break;
 	case DAO_INTEGER : DaoxBigInt_FromInteger( self, value->xInteger.value ); break;
-	case DAO_FLOAT   : DaoxBigInt_FromDouble ( self, value->xFloat.value   ); break;
-	case DAO_DOUBLE  : DaoxBigInt_FromDouble ( self, value->xDouble.value  ); break;
+	case DAO_FLOAT   : DaoxBigInt_FromFloat ( self, value->xFloat.value   ); break;
 	case DAO_STRING  : DaoxBigInt_FromString ( self, value->xString.value   ); break;
 	}
 }
@@ -1933,7 +1932,7 @@ static void BIGINT_BITRIT4( DaoProcess *proc, DaoValue *p[], int N )
 static void BIGINT_CastToInt( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoxBigInt *self = (DaoxBigInt*) p[0];
-	daoint *res = DaoProcess_PutInteger( proc, 0 );
+	dao_integer *res = DaoProcess_PutInteger( proc, 0 );
 	*res = DaoxBigInt_ToInteger( self );
 }
 static void BIGINT_CastToString( DaoProcess *proc, DaoValue *p[], int n )

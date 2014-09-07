@@ -53,28 +53,21 @@ struct DaoInteger
 {
 	DAO_VALUE_CORE;
 
-	daoint value;
+	dao_integer value;
 };
 
 struct DaoFloat
 {
 	DAO_VALUE_CORE;
 
-	float value;
-};
-
-struct DaoDouble
-{
-	DAO_VALUE_CORE;
-
-	double value;
+	dao_float value;
 };
 
 struct DaoComplex
 {
 	DAO_VALUE_CORE;
 
-	complex16 value;
+	dao_complex value;
 };
 
 

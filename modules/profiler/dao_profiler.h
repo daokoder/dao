@@ -50,7 +50,7 @@ struct DaoxProfiler
 DAO_DLL DaoxProfiler* DaoxProfiler_New();
 DAO_DLL void DaoxProfiler_Delete( DaoxProfiler *self );
 
-DAO_DLL complex16 DaoProfiler_Sum( DMap *profile );
+DAO_DLL dao_complex DaoProfiler_Sum( DMap *profile );
 
 
 DAO_DLL void DaoRoutine_MakeName( DaoRoutine *self, DString *name, int max1, int max2, int max3 );

@@ -128,11 +128,12 @@ struct DArray
 		uint_t     *uints;
 		wchar_t    *wchars;
 		ushort_t   *ushorts;
-		complex16  *complexes;
 		DString    *strings;
 		DaoToken   *tokens;
 		DaoVmCode  *codes;
 		DaoValue  **values;
+
+		dao_complex  *complexes;
 
 		DAO_ARRAY_ITEM_TYPES
 	} data;

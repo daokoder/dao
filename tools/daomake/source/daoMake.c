@@ -2660,7 +2660,7 @@ static void DAOMAKE_TestCompile( DaoProcess *proc, DaoValue *p[], int N )
 	DString *lflag = DaoValue_TryGetString( p[1] );
 	DString *cflag = DaoValue_TryGetString( p[2] );
 	daoint pos1, pos2, pos3, cxx = DaoValue_TryGetInteger( p[3] );
-	daoint *res = DaoProcess_PutInteger( proc, 0 );
+	dao_integer *res = DaoProcess_PutInteger( proc, 0 );
 	FILE *file;
 
 	DString_Trim( cflag, 1, 1, 0 );

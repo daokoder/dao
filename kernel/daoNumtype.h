@@ -67,31 +67,30 @@
 #define COM_MINUS( self, com ) \
 { (self).real = - com.real; (self).imag = - com.imag;  }
 
-DAO_DLL double abs_c( const complex16 com );
-DAO_DLL double arg_c( const complex16 com );
-DAO_DLL double norm_c( const complex16 com );
-DAO_DLL complex16 cos_c( const complex16 com );
-DAO_DLL complex16 cosh_c( const complex16 com );
-DAO_DLL complex16 exp_c( const complex16 com );
-DAO_DLL complex16 log_c( const complex16 com );
-DAO_DLL complex16 sin_c( const complex16 com );
-DAO_DLL complex16 sinh_c( const complex16 com );
-DAO_DLL complex16 sqrt_c( const complex16 com );
-DAO_DLL complex16 tan_c( const complex16 com );
-DAO_DLL complex16 tanh_c( const complex16 com );
-DAO_DLL complex16 ceil_c( const complex16 com );
-DAO_DLL complex16 floor_c( const complex16 com );
+DAO_DLL double abs_c( const dao_complex com );
+DAO_DLL double arg_c( const dao_complex com );
+DAO_DLL double norm_c( const dao_complex com );
+DAO_DLL dao_complex cos_c( const dao_complex com );
+DAO_DLL dao_complex cosh_c( const dao_complex com );
+DAO_DLL dao_complex exp_c( const dao_complex com );
+DAO_DLL dao_complex log_c( const dao_complex com );
+DAO_DLL dao_complex sin_c( const dao_complex com );
+DAO_DLL dao_complex sinh_c( const dao_complex com );
+DAO_DLL dao_complex sqrt_c( const dao_complex com );
+DAO_DLL dao_complex tan_c( const dao_complex com );
+DAO_DLL dao_complex tanh_c( const dao_complex com );
+DAO_DLL dao_complex ceil_c( const dao_complex com );
+DAO_DLL dao_complex floor_c( const dao_complex com );
 
 
 typedef union DaoArrayData DaoArrayData;
 
 union DaoArrayData
 {
-	void       *p;
-	daoint     *i;
-	float      *f;
-	double     *d;
-	complex16  *c;
+	void         *p;
+	dao_integer  *i;
+	dao_float    *f;
+	dao_complex  *c;
 };
 
 
@@ -110,7 +109,7 @@ struct DaoArray
 	DaoArrayData data;
 
 	DaoArray *original; /* original array for an array slicing; */
-	DArray  *slices;
+	DArray   *slices;
 	/*
 	// ::slices structure:
 	// The first 2*ndim values: slice in each dimension;
@@ -145,10 +144,9 @@ DAO_DLL void DaoArray_ResizeArray( DaoArray *self, daoint *dims, int D );
 DAO_DLL int DaoArray_Sliced( DaoArray *self );
 DAO_DLL void DaoArray_UseData( DaoArray *self, void *data );
 
-DAO_DLL daoint DaoArray_GetInteger( DaoArray *na, daoint i );
-DAO_DLL float  DaoArray_GetFloat( DaoArray *na, daoint i );
-DAO_DLL double DaoArray_GetDouble( DaoArray *na, daoint i );
-DAO_DLL complex16 DaoArray_GetComplex( DaoArray *na, daoint i );
+DAO_DLL dao_integer DaoArray_GetInteger( DaoArray *na, daoint i );
+DAO_DLL dao_float   DaoArray_GetFloat( DaoArray *na, daoint i );
+DAO_DLL dao_complex DaoArray_GetComplex( DaoArray *na, daoint i );
 DAO_DLL DaoValue* DaoArray_GetValue( DaoArray *self, daoint i, DaoValue *res );
 
 DAO_DLL DaoArray* DaoArray_GetWorkArray( DaoArray *self );

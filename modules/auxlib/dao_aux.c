@@ -50,7 +50,6 @@ void name( DaoArray *self, type *vec, daoint N ) \
 	switch( self->etype ){ \
 	case DAO_INTEGER : for(i=0; i<N; i++) self->data.i[i] = (daoint) vec[i]; break; \
 	case DAO_FLOAT   : for(i=0; i<N; i++) self->data.f[i] = vec[i]; break; \
-	case DAO_DOUBLE  : for(i=0; i<N; i++) self->data.d[i] = vec[i]; break; \
 	case DAO_COMPLEX : \
 		for(i=0; i<N; i++){ \
 			self->data.c[i].real = vec[i+i]; \
@@ -82,7 +81,6 @@ void name( DaoArray *self, type **mat, daoint R, daoint C ) \
 	switch( self->etype ){ \
 	case DAO_INTEGER : for(i=0; i<N; i++) self->data.i[i] = (daoint)mat[i/R][i%R]; break; \
 	case DAO_FLOAT   : for(i=0; i<N; i++) self->data.f[i] = mat[i/R][i%R]; break; \
-	case DAO_DOUBLE  : for(i=0; i<N; i++) self->data.d[i] = mat[i/R][i%R]; break; \
 	case DAO_COMPLEX : for(i=0; i<N; i++){ \
 						   self->data.c[i].real = mat[i/R][2*(i%R)]; \
 						   self->data.c[i].imag = mat[i/R][2*(i%R)+1]; \
@@ -162,7 +160,7 @@ DaoArray* DaoProcess_NewVectorF( DaoProcess *self, float *s, daoint n )
 }
 DaoArray* DaoProcess_NewVectorD( DaoProcess *self, double *s, daoint n )
 {
-	DaoArray *res = DaoArray_New( DAO_DOUBLE );
+	DaoArray *res = DaoArray_New( DAO_FLOAT );
 	if( s ) DaoArray_SetVectorD( res, s, n );
 	DaoProcess_CacheValue( self, (DaoValue*) res );
 	return res;
@@ -225,7 +223,7 @@ DaoArray* DaoProcess_NewMatrixF( DaoProcess *self, float **s, daoint n, daoint m
 }
 DaoArray* DaoProcess_NewMatrixD( DaoProcess *self, double **s, daoint n, daoint m )
 {
-	DaoArray *res = DaoArray_New( DAO_DOUBLE );
+	DaoArray *res = DaoArray_New( DAO_FLOAT );
 	if( s ) DaoArray_SetMatrixD( res, s, n, m );
 	DaoProcess_CacheValue( self, (DaoValue*) res );
 	return res;
@@ -298,11 +296,11 @@ DaoArray* DaoProcess_PutVectorF( DaoProcess *self, float *array, daoint N )
 DaoArray* DaoProcess_PutVectorD( DaoProcess *self, double *array, daoint N )
 {
 	DaoArray *res = DaoProcess_PutArray( self );
-	DaoArray_SetNumType( res, DAO_DOUBLE );
+	DaoArray_SetNumType( res, DAO_FLOAT );
 	if( array ) DaoArray_SetVectorD( res, array, N );
 	return res;
 }
-DaoArray* DaoProcess_PutVectorC( DaoProcess *self, complex16 *array, daoint N )
+DaoArray* DaoProcess_PutVectorC( DaoProcess *self, dao_complex *array, daoint N )
 {
 	DaoArray *res = DaoProcess_PutArray( self );
 	DaoArray_SetNumType( res, DAO_COMPLEX );
@@ -400,7 +398,7 @@ DaoArray* DaoProcess_PutVectorUI( DaoProcess *s, unsigned int *v, daoint N ){ re
 DaoArray* DaoProcess_PutVectorI( DaoProcess *s, daoint *v, daoint n ){ return NullArray(s); }
 DaoArray* DaoProcess_PutVectorF( DaoProcess *s, float *v, daoint n ){ return NullArray(s); }
 DaoArray* DaoProcess_PutVectorD( DaoProcess *s, double *v, daoint n ){ return NullArray(s); }
-DaoArray* DaoProcess_PutVectorC( DaoProcess *s, complex16 *v, daoint n ){ return NullArray(s); }
+DaoArray* DaoProcess_PutVectorC( DaoProcess *s, dao_complex *v, daoint n ){ return NullArray(s); }
 #endif
 
 

@@ -207,7 +207,6 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	switch( type ){
 	case DAO_INTEGER  :  return & numberTyper;
 	case DAO_FLOAT    :  return & numberTyper;
-	case DAO_DOUBLE   :  return & numberTyper;
 	case DAO_COMPLEX  :  return & comTyper;
 	case DAO_ENUM     :  return & enumTyper;
 	case DAO_STRING   :  return & stringTyper;
@@ -964,7 +963,6 @@ static int DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *na
 	int isnum = DaoToken_IsNumber( string->xString.value->chars, string->xString.value->size );
 	DaoValue ival = {DAO_INTEGER};
 	DaoValue fval = {DAO_FLOAT};
-	DaoValue dval = {DAO_DOUBLE};
 	DaoValue *argv;
 
 	switch( type->tid ){
@@ -975,10 +973,6 @@ static int DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *na
 	case DAO_FLOAT :
 		fval.xFloat.value = strtod( string->xString.value->chars, 0 );
 		DaoList_SetItem( self, & fval, i );
-		return 10 * isnum;
-	case DAO_DOUBLE :
-		dval.xDouble.value = strtod( string->xString.value->chars, 0 );
-		DaoList_SetItem( self, & dval, i );
 		return 10 * isnum;
 	default :
 		argv = string;
@@ -2266,7 +2260,7 @@ static void DaoConfigure_FromFile( const char *name )
 			if( tk2->type >= DTOK_DIGITS_DEC && tk2->type <= DTOK_NUMBER_SCI ){
 				isnum = 1;
 				isint = tk2->type <= DTOK_NUMBER_HEX;
-				number = DaoToken_ToDouble( tk2 );
+				number = DaoToken_ToFloat( tk2 );
 				integer = number;
 			}else if( tk2->type == DTOK_IDENTIFIER ){
 				if( strcmp( tk2->string.chars, "yes" )==0 ) yes = 1;
@@ -2465,7 +2459,6 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_any = DaoType_New( "any", DAO_ANY, NULL, NULL );
 	dao_type_int = DaoType_New( "int", DAO_INTEGER, NULL, NULL );
 	dao_type_float = DaoType_New( "float", DAO_FLOAT, NULL, NULL );
-	dao_type_double = DaoType_New( "double", DAO_DOUBLE, NULL, NULL );
 	dao_type_complex = DaoType_New( "complex", DAO_COMPLEX, NULL, NULL );
 	dao_type_string = DaoType_New( "string", DAO_STRING, NULL, NULL );
 	dao_type_tht = tht = DaoType_New( "@X", DAO_THT, NULL, NULL );
@@ -2512,7 +2505,6 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_AddTypeConstant( daons, dao_type_any->name, dao_type_any );
 	DaoNamespace_AddTypeConstant( daons, dao_type_int->name, dao_type_int );
 	DaoNamespace_AddTypeConstant( daons, dao_type_float->name, dao_type_float );
-	DaoNamespace_AddTypeConstant( daons, dao_type_double->name, dao_type_double );
 	DaoNamespace_AddTypeConstant( daons, dao_type_complex->name, dao_type_complex );
 	DaoNamespace_AddTypeConstant( daons, dao_type_string->name, dao_type_string );
 
@@ -2537,7 +2529,6 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_array_types[DAO_NONE] = dao_type_array_empty;
 	dao_array_types[DAO_INTEGER] = DaoType_Specialize( dao_type_array_template, & dao_type_int, 1 );
 	dao_array_types[DAO_FLOAT] = DaoType_Specialize( dao_type_array_template, & dao_type_float, 1 );
-	dao_array_types[DAO_DOUBLE] = DaoType_Specialize( dao_type_array_template, & dao_type_double, 1 );
 	dao_array_types[DAO_COMPLEX] = DaoType_Specialize( dao_type_array_template, & dao_type_complex, 1 );
 #endif
 
