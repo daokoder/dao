@@ -54,7 +54,7 @@ Float Type
 
 @[text]
 
-@[green]float@[green] is the built-in primitive data type for single precision
+@[green]float@[green] is the built-in primitive data type for double precision
 floating point numbers.
 
 
@@ -66,63 +66,21 @@ DecNumber ::= DotDec | DecDot
 DecNumber ::= DecInteger | DecNumber
 SciNumber ::= DecNumber ( 'e' | 'E' ) [ '+' | '-' ] DecInteger
 
-Float  ::= ( DecInteger | DecNumber | SciNumber ) 'F'
+Float  ::= DecNumber | SciNumber
 @[code(syntax)]
 where @[green]DecInteger@[green] is defined @[node]dao.type.int@[node].
 
 
 @[subsection]Examples@[subsection]
 @[code]
-A = .12F
-B = 12.F
-C = 12.5F
-D = 2e-3
-E = 2e-3F
-@[code]
-@[text]
-
-
-################################################################################
-################################################################################
-#### Double Precision Floating Point Number Type
-################################################################################
-################################################################################
-@[name]
-dao.type.double
-@[name]
-
-@[title]
-Double Type
-@[title]
-
-@[text]
-
-@[green]double@[green] is the built-in primitive data type for double precision
-floating point numbers.
-
-
-@[subsection]Definition@[subsection]
-@[code(syntax)]
-Double ::= ( DecInteger | DecNumber | SciNumber ) [ 'D' ]
-@[code(syntax)]
-where @[green]DecInteger@[green] is defined @[node]dao.type.int@[node],
-and @[green]DecNumber@[green] and @[green]DecSinglePrecision@[green]
-are defined in @[node]dao.type.float@[node].
-
-
-@[subsection]Examples@[subsection]
-@[code]
 A = .12
-A = .12D
 B = 12.
-B = 12.D
 C = 12.5
-C = 12.5D
-D = 123D
+D = 2e-3
 E = 2E-3
-E = 2E-3D
 @[code]
 @[text]
+
 
 
 ################################################################################

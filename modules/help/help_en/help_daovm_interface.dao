@@ -979,10 +979,9 @@ Dao provides various C interface functions to make data conversion between Dao
 and C/C++ simple. For simple data types, one can use the one of the following
 functions to convert Dao values to C values,
 @[code(cxx)]
-daoint    DaoValue_TryGetInteger( DaoValue *self );
-float     DaoValue_TryGetFloat( DaoValue *self );
-double    DaoValue_TryGetDouble( DaoValue *self );
-complex16 DaoValue_TryGetComplex( DaoValue *self );
+dao_integer DaoValue_TryGetInteger( DaoValue *self );
+dao_float   DaoValue_TryGetFloat( DaoValue *self );
+dao_complex DaoValue_TryGetComplex( DaoValue *self );
 char*     DaoValue_TryGetChars( DaoValue *self );
 DString*  DaoValue_TryGetString( DaoValue *self );
 int       DaoValue_TryGetEnum( DaoValue *self );

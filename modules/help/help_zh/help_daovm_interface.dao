@@ -936,10 +936,9 @@ Dao和C/C++类型之间的数据转换
 道虚拟机提供了多个C借口函数，以方便Dao和C/C++类型之间的数据转换。
 对于简单的类型，下面的函数可将道数据转换为C数据:
 @[code(cxx)]
-daoint    DaoValue_TryGetInteger( DaoValue *self );
-float     DaoValue_TryGetFloat( DaoValue *self );
-double    DaoValue_TryGetDouble( DaoValue *self );
-complex16 DaoValue_TryGetComplex( DaoValue *self );
+dao_integer DaoValue_TryGetInteger( DaoValue *self );
+dao_float   DaoValue_TryGetFloat( DaoValue *self );
+dao_complex DaoValue_TryGetComplex( DaoValue *self );
 char*     DaoValue_TryGetChars( DaoValue *self );
 DString*  DaoValue_TryGetString( DaoValue *self );
 int       DaoValue_TryGetEnum( DaoValue *self );

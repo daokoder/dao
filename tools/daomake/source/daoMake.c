@@ -2036,7 +2036,7 @@ static void DaoMakeUnit_UseLibrary( DaoMakeUnit *self, DaoMakeProject *pro, DStr
 				}else{
 					flag = (DString*) DList_PushBack( self->linkingFlags, binpath );
 					if( daomake_relative_rpath ){
-						DaoMake_MakeRelativePath( self->binaryPath, flag );
+						DaoMake_MakeRelativePath( self->buildPath, flag );
 					}
 					DString_InsertChars( flag, "-L", 0, 0, 0 );
 				}

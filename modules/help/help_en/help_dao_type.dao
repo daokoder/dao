@@ -73,9 +73,8 @@ The basic types are the following:
 @[table]
 ##Type Name  ##Type Description
 ##none     &&none value type
-##int      &&integer type
-##float    &&single precision floating point number type
-##double   &&double precision floating point number type
+##int      &&64 bit integer type
+##float    &&64 bit floating point number type
 ##complex  &&complex number type
 ##string   &&string type
 ##enum     &&enum symbol type
@@ -428,19 +427,17 @@ io.writeln( std.about( Test ) );
 Test( AA() )
 Test( BB() )
 
-routine Test2( data: int|float|double|string )
+routine Test2( data: int|float|string )
 {
 	switch( data ) type {
 	case int    : io.writeln( 'handling int' );
 	case float  : io.writeln( 'handling float' );
-	case double : io.writeln( 'handling double' );
 	case string : io.writeln( 'handling string' );
 	}
 }
 
 Test2( 1 );
-Test2( 1.0F );
-Test2( 1.0D );
+Test2( 1.0);
 Test2( 'abc' );
 @[code]
 

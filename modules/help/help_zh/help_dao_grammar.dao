@@ -185,8 +185,7 @@ DecNumber ::= DotDec | DecDot
 DecNumber ::= DecInteger | DecNumber
 SciNumber ::= DecNumber ( 'e' | 'E' ) [ '+' | '-' ] DecInteger
 
-Float  ::= ( DecInteger | DecNumber | SciNumber ) 'F'
-Double ::= ( DecInteger | DecNumber | SciNumber ) [ 'D' ]
+Float  ::= DecNumber | SciNumber
 @[code(syntax)]
 
 Complex number, imaginary part literal:
@@ -344,8 +343,8 @@ Constant Atomic Expression
 @[subsection]
 
 @[code(syntax)]
-ConstAtomicExpression ::= ConstIdentifier | Integer | Float | Double 
-                        | ComplexImaginary | LongInteger | String | Symbol
+ConstAtomicExpression ::= ConstIdentifier | Integer | Float
+                        | ComplexImaginary | String | Symbol
 @[code(syntax)]
 Where @[green]ConstIdentifier@[green] represents identifiers for constants
 such as routines, classes, namespaces, type names and user defined constants.
@@ -505,7 +504,7 @@ Primitive Types
 @[subsection]
 
 @[code(syntax)]
-PrimitiveType ::= 'int' | 'float' | 'double' | 'complex' | 'string'
+PrimitiveType ::= 'int' | 'float' | 'complex' | 'string'
 @[code(syntax)]
 
 
@@ -530,7 +529,7 @@ Array Type
 @[subsection]
 
 @[code(syntax)]
-ArrayNumType ::= 'int' | 'float' | 'double' | 'complex'
+ArrayNumType ::= 'int' | 'float' | 'complex'
 ArrayType ::= 'array' [ '<' ( ArrayNumType | TypeHolder ) '>' ]
 @[code(syntax)]
 
@@ -667,7 +666,7 @@ Atomic Expression
 @[subsection]
 
 @[code(syntax)]
-AtomicExpression ::= Identifier | Integer | LongInteger | Float | Double 
+AtomicExpression ::= Identifier | Integer | Float | Double 
                    | ComplexImaginary | String | Symbol
 @[code(syntax)]
 

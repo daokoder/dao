@@ -60,9 +60,8 @@ class Klass
 @[table]
 ##类型名   ##类型描述
 ##none     &&空值类型
-##int      &&整数类型
-##float    &&单精度浮点数类型
-##double   &&双精度浮点数类型
+##int      &&整数类型（64位）
+##float    &&双精度浮点数类型（64位）
 ##complex  &&双精度复数类型
 ##string   &&字符串类型
 ##enum     &&枚举符号类型
@@ -392,19 +391,17 @@ io.writeln( std.about( Test ) );
 Test( AA() )
 Test( BB() )
 
-routine Test2( data: int|float|double|string )
+routine Test2( data: int|float|string )
 {
 	switch( data ) type {
 	case int    : io.writeln( 'handling int' );
 	case float  : io.writeln( 'handling float' );
-	case double : io.writeln( 'handling double' );
 	case string : io.writeln( 'handling string' );
 	}
 }
 
 Test2( 1 );
 Test2( 1.0F );
-Test2( 1.0D );
 Test2( 'abc' );
 @[code]
 

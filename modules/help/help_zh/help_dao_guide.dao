@@ -184,7 +184,7 @@ const vector:  array<float> = [ 12.5, 34.6 ]
 invar invlist: list<float> = { 12.5, 34.6 }
 var   varlist: list<int>
 @[code]
-这里如果没有类型标注，"vector"将成为类型为"array<double>"的数值数组。
+这里如果没有类型标注，"vector"将成为类型为"array<float>"的数值数组。
 而且"varlist"的声明没有初始化信息，它的类型信息将没法被自动推导出。
 
 
@@ -207,12 +207,10 @@ var   varlist: list<int>
 数字类型
 @[subsection]
 
-道对以下数字类型有原生支持：@[code]int@[code]，@[code]float@[code]，
-@[code]double@[code]和@[code]complex@[code]。
+道对以下数字类型有原生支持：@[code]int@[code]，@[code]float@[code]
+和@[code]complex@[code]。
+整数，浮点数及复数的虚实部均按64位存储。
 道里面，整数和浮点数的表示方式跟其他语言类似。
-值得注意的是，道里面浮点数是以双精度处理的。
-要使用单精度浮点数，数字后面必须带有@[code]F@[code]后缀
-（双精度使用@[code]D@[code]后缀）。
 带@[code]C@[code]后缀的数字表示复数的纯虚部。
 
 
@@ -220,12 +218,9 @@ var   varlist: list<int>
 @[code]
 I1 = 123     # 10进制整数;
 I2 = 0xabc   # 16进制整数;
-F1 = 456.7F  # 带F后缀的单精度浮点数;
-F2 = 123e4F  # 带F后缀的单精度浮点数;
-D1 = 123D    # 带D后缀的双精度浮点数;
-D2 = 456.7   # 缺省双精度浮点数; 或456.7D;
-D3 = 123e4   # 缺省双精度浮点数;
-D4 = 123E4   # 缺省双精度浮点数;
+F1 = 456.7   # 双精度浮点数;
+F2 = 123e4   # 双精度浮点数;
+F3 = 123E4   # 双精度浮点数;
 C1 = 123C    # 双精度复数，实部0.0，虚部123;
 C2 = 456.6C  # 双精度复数，实部0.0，虚部456.6;
 @[code]
@@ -237,13 +232,13 @@ C2 = 456.6C  # 双精度复数，实部0.0，虚部456.6;
 I1 = 123 + 456
 I2 = 789 % 123
 F1 = 123.5 ** 3
-D1 = 789.5D / 123
+F2 = 789.5 / 123
 C1 = 12.3 + 45.6C
 @[code]
 
 详情请参看
 @[node]dao.type.int@[node]，@[node]dao.type.float@[node]，
-@[node]dao.type.double@[node]和@[node]dao.type.complex@[node]。
+和@[node]dao.type.complex@[node]。
 
 
 @[subsection]
@@ -370,7 +365,7 @@ str += 88    # 从后面添加字符: str = ABCDEFGHIJK123X
 @[code]
 vec1 = [1, 2, 3]            # array<int> 向量, 即 1x3 矩阵;
 vec2 = [1.0; 2; 3]          # array<float> 3x1 矩阵, 即转置向量;
-mat1 = [1D, 2; 3, 4]        # array<double> 2x2 矩阵;
+mat1 = [1.0, 2; 3, 4]        # array<float> 2x2 矩阵;
 mat2 = [ [1, 2], [3, 4] ]   # 2x2 矩阵
 mat3 = array{ 1, 2; 3, 4 }  # 2x2 矩阵
 @[code]

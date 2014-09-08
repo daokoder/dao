@@ -210,8 +210,7 @@ DecNumber ::= DotDec | DecDot
 DecNumber ::= DecInteger | DecNumber
 SciNumber ::= DecNumber ( 'e' | 'E' ) [ '+' | '-' ] DecInteger
 
-Float  ::= ( DecInteger | DecNumber | SciNumber ) 'F'
-Double ::= ( DecInteger | DecNumber | SciNumber ) [ 'D' ]
+Float  ::= DecNumber | SciNumber;
 @[code(syntax)]
 
 Complex number, imaginary part literal:
@@ -369,7 +368,7 @@ Constant Atomic Expression
 @[subsection]
 
 @[code(syntax)]
-ConstAtomicExpression ::= ConstIdentifier | Integer | Float | Double 
+ConstAtomicExpression ::= ConstIdentifier | Integer | Float
                         | ComplexImaginary | LongInteger | String | Symbol
 @[code(syntax)]
 Where @[green]ConstIdentifier@[green] represents identifiers for constants
@@ -530,7 +529,7 @@ Primitive Types
 @[subsection]
 
 @[code(syntax)]
-PrimitiveType ::= 'int' | 'float' | 'double' | 'complex' | 'string'
+PrimitiveType ::= 'int' | 'float' | 'complex' | 'string'
 @[code(syntax)]
 
 
@@ -555,7 +554,7 @@ Array Type
 @[subsection]
 
 @[code(syntax)]
-ArrayNumType ::= 'int' | 'float' | 'double' | 'complex'
+ArrayNumType ::= 'int' | 'float' | 'complex'
 ArrayType ::= 'array' [ '<' ( ArrayNumType | TypeHolder ) '>' ]
 @[code(syntax)]
 

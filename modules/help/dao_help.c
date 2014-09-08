@@ -804,7 +804,6 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		case DKEY_NONE :
 		case DTOK_DOLLAR :
 		case DTOK_DIGITS_DEC :
-		case DTOK_SINGLE_DEC : case DTOK_DOUBLE_DEC :
 		case DTOK_NUMBER_HEX : case DTOK_NUMBER_DEC :
 		case DTOK_NUMBER_IMG : case DTOK_NUMBER_SCI :
 			fgcolor = DAOX_RED;

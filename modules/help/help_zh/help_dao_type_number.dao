@@ -46,7 +46,7 @@ dao.type.float
 
 @[text]
 
-道语言里单精度浮点数类型由@[code]float@[code]表示。
+道语言里双精度浮点数类型由@[code]float@[code]表示。
 
 
 @[subsection]定义@[subsection]
@@ -57,58 +57,22 @@ DecNumber ::= DotDec | DecDot
 DecNumber ::= DecInteger | DecNumber
 SciNumber ::= DecNumber ( 'e' | 'E' ) [ '+' | '-' ] DecInteger
 
-Float  ::= ( DecInteger | DecNumber | SciNumber ) 'F'
+Float  ::= DecNumber | SciNumber
 @[code(syntax)]
 这里@[code]DecInteger@[code]在@[node]dao.type.int@[node]里有定义。
 
 
 @[subsection]例子@[subsection]
 @[code]
-A = .12F
-B = 12.F
-C = 12.5F
-D = 2e-3
-E = 2e-3F
-@[code]
-@[text]
-
-
-
-@[name]
-dao.type.double
-@[name]
-
-@[title]
-双精度浮点数类型
-@[title]
-
-@[text]
-
-道语言里双精度浮点数类型由@[code]double@[code]表示。
-
-
-@[subsection]定义@[subsection]
-@[code(syntax)]
-Double ::= ( DecInteger | DecNumber | SciNumber ) [ 'D' ]
-@[code(syntax)]
-这里@[code]DecInteger@[code]在@[node]dao.type.int@[node]里有定义，
-@[code]DecNumber@[code]和@[code]DecSinglePrecision@[code]
-在@[node]dao.type.float@[node]里有定义。
-
-
-@[subsection]例子@[subsection]
-@[code]
 A = .12
-A = .12D
 B = 12.
-B = 12.D
 C = 12.5
-C = 12.5D
-D = 123D
+D = 2e-3
 E = 2E-3
-E = 2E-3D
 @[code]
 @[text]
+
+
 
 
 @[name]

@@ -208,7 +208,7 @@ const vector:  array<float> = [ 12.5, 34.6 ]
 invar invlist: list<float> = { 12.5, 34.6 }
 var   varlist: list<int>
 @[code]
-Here without type annotation, "vector" will become a constant of type "array<double>".
+Here without type annotation, "vector" will become a constant of type "array<float>".
 And "varlist" is declared without initializing expression, so its type cannot be
 inferred here.
 
@@ -234,13 +234,10 @@ Numbers
 @[subsection]
 
 Dao has native supports for the following number types:
-@[code]int@[code], @[code]float@[code], @[code]double@[code]
-and @[code]complex@[code].
+@[code]int@[code], @[code]float@[code], and @[code]complex@[code].
+Both @[code]int@[code] and @[code]float@[code] are stored in 64 bits.
 Integer and floating point numbers can be expressed
 in the same ways as in most other languages.
-Floating point numbers are stored in double precision by default.
-To use single precision floating point numbers, the number literals
-should be suffixed with @[code]F@[code] (@[code]D@[code] for explicit double precision).
 Number literals suffixed with @[code]C@[code] represent the imaginary
 parts of double precision complex numbers.
 
@@ -249,12 +246,9 @@ Examples,
 @[code]
 I1 = 123     # Base-10 integer;
 I2 = 0xabc   # Base-16 integer;
-F1 = 456.7F  # Single precision with suffix "F";
-F2 = 123e4F  # Single precision with suffix "F";
-D1 = 123D    # Double precision with suffix "D";
-D2 = 456.7   # Double precision by default; Or: 456.7D;
-D3 = 123e4   # Double precision by default;
-D4 = 123E4   # Double precision by default;
+F1 = 456.7   # Double precision;
+F2 = 123e4   # Double precision;
+F3 = 123E4   # Double precision;
 C1 = 123C    # Double precision complex number with 0.0 real part and 123 imag part;
 C2 = 456.6C  # Double precision complex number;
 @[code]
@@ -268,13 +262,12 @@ are supported.
 I1 = 123 + 456
 I2 = 789 % 123
 F1 = 123.5 ** 3
-D1 = 789.5D / 123
+F2 = 789.5 / 123
 C1 = 12.3 + 45.6C
 @[code]
 
-Please see @[node]dao.type.int@[node], @[node]dao.type.float@[node],
-@[node]dao.type.double@[node] and @[node]dao.type.complex@[node]
-for more information.
+Please see @[node]dao.type.int@[node], @[node]dao.type.float@[node]
+and @[node]dao.type.complex@[node] for more information.
 
 
 @[subsection]
@@ -411,7 +404,7 @@ If the step value is omitted, it will be assumed to be zero.
 @[code]
 vec1 = [1, 2, 3]            # array<int> vector, or 1x3 matrix;
 vec2 = [1.0; 2; 3]          # array<float> 3x1 matrix, or transposed vector;
-mat1 = [1D, 2; 3, 4]        # array<double> 2x2 matrix;
+mat1 = [1.0, 2; 3, 4]       # array<float> 2x2 matrix;
 mat2 = [ [1, 2], [3, 4] ]   # 2x2 matrix
 mat3 = array{ 1, 2; 3, 4 }  # 2x2 matrix
 @[code]

@@ -48,7 +48,7 @@ routine BernsteinHash( key : string )
 routine RotatingHash( key : string )
 {
 	n = key.size();
-	hash = (double) n;
+	hash = n;
 	for( i = 0 : n-1 ) hash = ((hash<<4)^(hash>>28)^key[i])&0x7fffffff;
 	return hash % 997;
 }
