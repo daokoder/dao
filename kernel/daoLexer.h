@@ -44,8 +44,6 @@ enum DaoTokNames
 	DTOK_ID_SYMBOL , /* $symbol */
 	DTOK_DIGITS_DEC ,
 	DTOK_NUMBER_HEX ,
-	DTOK_SINGLE_DEC , /* 345F, 123.25F */
-	DTOK_DOUBLE_DEC , /* 345D, 123.25D */
 	DTOK_NUMBER_DEC , /* 123. 123.5 */
 	DTOK_NUMBER_SCI ,
 	DTOK_NUMBER_IMG , /* 123.0C, imaginary part of complex */
@@ -232,8 +230,8 @@ DAO_DLL void DaoToken_Delete( DaoToken *self );
 DAO_DLL DaoToken* DaoToken_Copy( DaoToken *self );
 
 DAO_DLL const char* DaoToken_NameToString( unsigned char name );
-DAO_DLL daoint DaoToken_ToInteger( DaoToken *self );
-DAO_DLL double DaoToken_ToFloat( DaoToken *self );
+DAO_DLL dao_integer DaoToken_ToInteger( DaoToken *self );
+DAO_DLL dao_float DaoToken_ToFloat( DaoToken *self );
 DAO_DLL int DaoToken_Check( const char *src, int size, int *length );
 DAO_DLL int DaoToken_IsNumber( const char *src, int size );
 DAO_DLL int DaoToken_IsValidName( const char *src, int size );

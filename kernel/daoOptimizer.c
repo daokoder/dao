@@ -6058,8 +6058,10 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			break;
 		case DVM_MOVE_II : case DVM_MOVE_IF :
 		case DVM_MOVE_FI : case DVM_MOVE_FF :
-			TT1 = DAO_INTEGER + (code - DVM_MOVE_II) % 2;
-			TT3 = DAO_INTEGER + ((code - DVM_MOVE_II)/2) % 2;
+		case DVM_MOVE_CI : case DVM_MOVE_CF :
+			k = DAO_FLOAT - DAO_INTEGER + 1;
+			TT1 = DAO_INTEGER + (code - DVM_MOVE_II) % k;
+			TT3 = DAO_INTEGER + ((code - DVM_MOVE_II)/k) % k;
 			if( opb & 0x2 ){
 				if( ct == NULL || ct->tid == DAO_UDT || ct->tid == DAO_THT ){
 					GC_Assign( & types[opc], self->basicTypes[TT3] );
@@ -6072,8 +6074,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			break;
 		case DVM_NOT_I : case DVM_NOT_F :
 		case DVM_MINUS_I : case DVM_MINUS_F :
+			k = DAO_FLOAT - DAO_INTEGER + 1;
 			DaoInferencer_UpdateVarType( self, opc, at );
-			TT1 = TT3 = DAO_INTEGER + (code - DVM_NOT_I) % 2;
+			TT1 = TT3 = DAO_INTEGER + (code - DVM_NOT_I) % k;
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( types[opc], TT3 );
 			break;
@@ -6220,14 +6223,15 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		case DVM_SETI_LIII : case DVM_SETI_LFIF : case DVM_SETI_LCIC :
 		case DVM_SETI_AIII : case DVM_SETI_AFIF : case DVM_SETI_ACIC :
 		case DVM_SETI_LSIS :
+			k = DAO_FLOAT - DAO_INTEGER + 1;
 			TT2 = DAO_INTEGER;
 			TT1 = TT6 = 0;
 			if( code >= DVM_SETI_AIII ){
 				TT6 = DAO_ARRAY;
-				TT1 = DAO_INTEGER + (code - DVM_SETI_AIII)%2;
+				TT1 = DAO_INTEGER + (code - DVM_SETI_AIII)%k;
 			}else if( code != DVM_SETI_LSIS ){
 				TT6 = DAO_LIST;
-				TT1 = DAO_INTEGER + (code - DVM_SETI_LIII)%2;
+				TT1 = DAO_INTEGER + (code - DVM_SETI_LIII)%k;
 			}else{
 				TT6 = DAO_LIST;
 				TT1 = DAO_STRING;
@@ -6369,9 +6373,10 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				if( at != ct && ct->tid != DAO_ANY ) goto NotMatch;
 				break;
 			}
+			k = DAO_FLOAT - DAO_INTEGER + 1;
 			AssertTypeMatching( at, ct, defs );
-			if( at->tid != (DAO_INTEGER + (code - DVM_SETF_KGII)%2) ) goto NotMatch;
-			if( ct->tid != (DAO_INTEGER + (code - DVM_SETF_KGII)/2) ) goto NotMatch;
+			if( at->tid != (DAO_INTEGER + (code - DVM_SETF_KGII)%k) ) goto NotMatch;
+			if( ct->tid != (DAO_INTEGER + (code - DVM_SETF_KGII)/k) ) goto NotMatch;
 			break;
 		case DVM_SETF_OGII : case DVM_SETF_OGFF :
 		case DVM_SETF_OGCC :

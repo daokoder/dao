@@ -569,13 +569,16 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 			DString *name;
 			switch( vmc->code ){
 			case DVM_GETCK:
-			case DVM_GETCK_I: case DVM_GETCK_F: case DVM_GETCK_C:
+			case DVM_GETCK_I: case DVM_GETCK_F:
+			case DVM_GETCK_C:
 				vmc->b = DaoClass_MapIndex( mixin, DAO_CLASS_CONSTANT, vmc->b, mixed );
 				break;
 			case DVM_GETVK:
-			case DVM_GETVK_I: case DVM_GETVK_F: case DVM_GETVK_C:
+			case DVM_GETVK_I: case DVM_GETVK_F:
+			case DVM_GETVK_C:
 			case DVM_SETVK:
 			case DVM_SETVK_II: case DVM_SETVK_FF:
+			case DVM_SETVK_CC:
 				vmc->b = DaoClass_MapIndex( mixin, DAO_CLASS_VARIABLE, vmc->b, mixed );
 				break;
 			case DVM_GETVO:

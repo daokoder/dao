@@ -1406,7 +1406,7 @@ CallEntry:
 			switch( vA->type ){
 			case DAO_NONE    : vC->xInteger.value = 0; break;
 			case DAO_INTEGER : vC->xInteger.value = sizeof(dao_integer); break;
-			case DAO_FLOAT   : vC->xInteger.value = sizeof(double); break;
+			case DAO_FLOAT   : vC->xInteger.value = sizeof(dao_float); break;
 			case DAO_COMPLEX : vC->xInteger.value = sizeof(dao_complex); break;
 			case DAO_ENUM    : vC->xInteger.value = sizeof(int); break; break;
 			case DAO_STRING  : vC->xInteger.value = vA->xString.value->size; break;
@@ -5048,24 +5048,23 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 		DaoArray *array = & A->xArray;
 		daoint i, n;
 		C = A;
-		if( array->etype == DAO_FLOAT ){
+		if( array->etype <= DAO_FLOAT ){
 			DaoArray *res = DaoProcess_GetArray( self, vmc );
 			DaoArray_SetNumType( res, array->etype );
 			DaoArray_ResizeArray( res, array->dims, array->ndim );
-#warning"array"
-			if( array->etype == DAO_FLOAT ){
-				dao_float *va = array->data.f;
-				dao_float *vc = res->data.f;
+			if( array->etype == DAO_INTEGER ){
+				dao_integer *va = array->data.i;
+				dao_integer *vc = res->data.i;
 				if( vmc->code == DVM_NOT ){
-					for(i=0,n=array->size; i<n; i++ ) vc[i] = (dao_float) ! va[i];
+					for(i=0,n=array->size; i<n; i++ ) vc[i] = ! va[i];
 				}else{
 					for(i=0,n=array->size; i<n; i++ ) vc[i] = - va[i];
 				}
 			}else{
-				double *va = array->data.f;
-				double *vc = res->data.f;
+				dao_float *va = array->data.f;
+				dao_float *vc = res->data.f;
 				if( vmc->code == DVM_NOT ){
-					for(i=0,n=array->size; i<n; i++ ) vc[i] = ! va[i];
+					for(i=0,n=array->size; i<n; i++ ) vc[i] = (dao_float) ! va[i];
 				}else{
 					for(i=0,n=array->size; i<n; i++ ) vc[i] = - va[i];
 				}
@@ -5320,7 +5319,7 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 
 	switch( tid ){
 	case DAO_INTEGER :
-		if( tok->name < DTOK_DIGITS_DEC || tok->name > DTOK_DOUBLE_DEC ) goto ReturnFalse;
+		if( tok->name < DTOK_DIGITS_DEC || tok->name > DTOK_NUMBER_DEC ) goto ReturnFalse;
 		dC->xInteger.value = DaoToken_ToInteger( tok );
 		if( sign <0 ) dC->xInteger.value = - dC->xInteger.value;
 		break;

@@ -513,9 +513,9 @@ DAO_DLL void DString_Assign( DString *left, DString *right );
 DAO_DLL int DString_Compare( DString *left, DString *right );
 
 
-DAO_DLL DaoInteger* DaoInteger_New( daoint value );
-DAO_DLL daoint      DaoInteger_Get( DaoInteger *self );
-DAO_DLL void        DaoInteger_Set( DaoInteger *self, daoint value );
+DAO_DLL DaoInteger* DaoInteger_New( dao_integer value );
+DAO_DLL dao_integer DaoInteger_Get( DaoInteger *self );
+DAO_DLL void        DaoInteger_Set( DaoInteger *self, dao_integer value );
 
 DAO_DLL DaoFloat*   DaoFloat_New( dao_float value );
 DAO_DLL dao_float   DaoFloat_Get( DaoFloat *self );
@@ -652,15 +652,16 @@ DAO_DLL daoint DaoArray_GetFlatIndex( DaoArray *self, daoint *indexes );
 // DaoArray_FromXyz() should be called after DaoArray_ToXyz() to restore
 // the consistency between the numeric type of the array and the data buffer.
 */
-DAO_DLL dao_integer*   DaoArray_ToInteger( DaoArray *self );
-DAO_DLL float*         DaoArray_ToFloat( DaoArray *self );
-DAO_DLL double*        DaoArray_ToDouble( DaoArray *self );
-DAO_DLL signed   char* DaoArray_ToSByte( DaoArray *self );
-DAO_DLL unsigned char* DaoArray_ToUByte( DaoArray *self );
-DAO_DLL signed   short* DaoArray_ToSShort( DaoArray *self );
-DAO_DLL unsigned short* DaoArray_ToUShort( DaoArray *self );
-DAO_DLL signed   int* DaoArray_ToSInt( DaoArray *self );
-DAO_DLL unsigned int* DaoArray_ToUInt( DaoArray *self );
+DAO_DLL dao_integer*    DaoArray_ToInteger( DaoArray *self );
+DAO_DLL dao_float*      DaoArray_ToFloat( DaoArray *self );
+DAO_DLL signed   char*  DaoArray_ToSInt8( DaoArray *self );
+DAO_DLL unsigned char*  DaoArray_ToUInt8( DaoArray *self );
+DAO_DLL signed   short* DaoArray_ToSInt16( DaoArray *self );
+DAO_DLL unsigned short* DaoArray_ToUInt16( DaoArray *self );
+DAO_DLL signed   int*   DaoArray_ToSInt32( DaoArray *self );
+DAO_DLL unsigned int*   DaoArray_ToUInt32( DaoArray *self );
+DAO_DLL float*          DaoArray_ToFloat32( DaoArray *self );
+DAO_DLL double*         DaoArray_ToFloat64( DaoArray *self );
 
 /*
 // The following functions DaoArray_FromXyz() re-interprets the internal data
@@ -668,13 +669,14 @@ DAO_DLL unsigned int* DaoArray_ToUInt( DaoArray *self );
 */
 DAO_DLL void DaoArray_FromInteger( DaoArray *self );
 DAO_DLL void DaoArray_FromFloat( DaoArray *self );
-DAO_DLL void DaoArray_FromDouble( DaoArray *self );
-DAO_DLL void DaoArray_FromSByte( DaoArray *self );
-DAO_DLL void DaoArray_FromUByte( DaoArray *self );
-DAO_DLL void DaoArray_FromSShort( DaoArray *self );
-DAO_DLL void DaoArray_FromUShort( DaoArray *self );
-DAO_DLL void DaoArray_FromUInt( DaoArray *self );
-DAO_DLL void DaoArray_FromSInt( DaoArray *self );
+DAO_DLL void DaoArray_FromSInt8( DaoArray *self );
+DAO_DLL void DaoArray_FromUInt8( DaoArray *self );
+DAO_DLL void DaoArray_FromSInt16( DaoArray *self );
+DAO_DLL void DaoArray_FromUInt16( DaoArray *self );
+DAO_DLL void DaoArray_FromUInt32( DaoArray *self );
+DAO_DLL void DaoArray_FromSInt32( DaoArray *self );
+DAO_DLL void DaoArray_FromFloat32( DaoArray *self );
+DAO_DLL void DaoArray_FromFloat64( DaoArray *self );
 
 DAO_DLL void* DaoArray_GetBuffer( DaoArray *self );
 DAO_DLL void  DaoArray_SetBuffer( DaoArray *self, void *buffer, daoint size );
@@ -923,8 +925,8 @@ DAO_DLL void DaoProcess_PopValues( DaoProcess *self, int N );
 // reference counting of the created value.
 */
 DAO_DLL DaoNone*    DaoProcess_NewNone( DaoProcess *self );
-DAO_DLL DaoInteger* DaoProcess_NewInteger( DaoProcess *self, daoint v );
-DAO_DLL DaoFloat*   DaoProcess_NewFloat( DaoProcess *self, double v );
+DAO_DLL DaoInteger* DaoProcess_NewInteger( DaoProcess *self, dao_integer v );
+DAO_DLL DaoFloat*   DaoProcess_NewFloat( DaoProcess *self, dao_float v );
 DAO_DLL DaoComplex* DaoProcess_NewComplex( DaoProcess *self, dao_complex v );
 /*
 // Negative "n" indicates a null-terminated string:

@@ -137,7 +137,8 @@ DaoByteCoder* DaoByteCoder_New( DaoVmSpace *vms )
 	self->indices = DList_New(0);
 	self->routines = DList_New(0);
 	self->path = DString_New();
-	self->intSize = sizeof(daoint);
+	self->intSize = sizeof(dao_integer);
+	self->floatSize = sizeof(dao_float);
 	self->vmspace = vms;
 	for(i=0; i<DAO_ASM_INVALID; ++i){
 		snprintf( buf, sizeof(buf), "%i:%s;", i, dao_asm_names[i] );
@@ -308,9 +309,9 @@ void DaoByteCoder_EncodeUInt32( uchar_t *data, uint_t value )
 	data[2] = (value >>  8) & 0xFF;
 	data[3] = value & 0xFF;
 }
-void DaoByteCoder_EncodeDaoInt( uchar_t *data, daoint value )
+void DaoByteCoder_EncodeDaoInt( uchar_t *data, dao_integer value )
 {
-	uchar_t i, m = sizeof(daoint);
+	uchar_t i, m = sizeof(dao_integer);
 	for(i=0; i<m; ++i) data[i] = (value >> 8*(m-1-i)) & 0xFF;
 }
 /*
@@ -360,15 +361,15 @@ uint_t DaoByteCoder_DecodeUInt32( uchar_t *data )
 	data += 4;
 	return value;
 }
-daoint DaoByteCoder_DecodeDaoInt( DaoByteCoder *self, uchar_t *data )
+dao_integer DaoByteCoder_DecodeDaoInt( DaoByteCoder *self, uchar_t *data )
 {
 	DaoStream *stream = self->vmspace->errorStream;
 	uchar_t i, m = self->intSize;
-	daoint value = 0;
+	dao_integer value = 0;
 
-	if( self->intSize > sizeof(daoint) ){ /* self->intSize=8, sizeof(daoint)=4 */
-		daoint B1 = data[0], B2 = data[1], B3 = data[2], B4 = data[3];
-		daoint B5 = data[4], B6 = data[5], B7 = data[6], B8 = data[7];
+	if( self->intSize > sizeof(dao_integer) ){ /* self->intSize=8, sizeof(dao_integer)=4 */
+		dao_integer B1 = data[0], B2 = data[1], B3 = data[2], B4 = data[3];
+		dao_integer B5 = data[4], B6 = data[5], B7 = data[6], B8 = data[7];
 
 		if( (B1 == 0x7F || B1 == 0xFF) && B2 == 0xFF && B3 == 0xFF && B4 == 0xFF ){
 			if( B5 & 0x80 ) goto TooBigInteger;
@@ -377,18 +378,18 @@ daoint DaoByteCoder_DecodeDaoInt( DaoByteCoder *self, uchar_t *data )
 			goto TooBigInteger;
 		}
 		return (B5<<24)|(B6<<16)|(B7<<8)|B8;
-	}else if( self->intSize < sizeof(daoint) ){ /* self->intSize=4, sizeof(daoint)=8 */
-		daoint B1 = data[0], B2 = data[1], B3 = data[2], B4 = data[3];
+	}else if( self->intSize < sizeof(dao_integer) ){ /* self->intSize=4, sizeof(dao_integer)=8 */
+		dao_integer B1 = data[0], B2 = data[1], B3 = data[2], B4 = data[3];
 
 		if( B1 & 0x80 ){
-			daoint leading = (0xFF<<24)|(0xFF<<16)|(0xFF<<8)|0xFF;
-			daoint shift = 32; /* just to avoid a warning on 32 bit systems; */
+			dao_integer leading = (0xFF<<24)|(0xFF<<16)|(0xFF<<8)|0xFF;
+			dao_integer shift = 32; /* just to avoid a warning on 32 bit systems; */
 			return (leading<<shift)|(0xFF<<24)|((B1&0x7F)<<24)|(B2<<16)|(B3<<8)|B4;
 		}
 		return (B1<<24)|(B2<<16)|(B3<<8)|B4;
 	}
 
-	for(i=0; i<m; ++i) value |= ((daoint)data[i]) << 8*(m-1-i);
+	for(i=0; i<m; ++i) value |= ((dao_integer)data[i]) << 8*(m-1-i);
 	return value;
 TooBigInteger:
 	DaoStream_WriteChars( stream, "Error: too big integer value for the platform!" );
@@ -449,7 +450,7 @@ void DaoByteCoder_DecodeSubChunk24( uchar_t *data, uint_t *A, uint_t *B )
 }
 
 
-DaoByteBlock* DaoByteBlock_EncodeInteger( DaoByteBlock *self, daoint val )
+DaoByteBlock* DaoByteBlock_EncodeInteger( DaoByteBlock *self, dao_integer val )
 {
 	DaoByteBlock *block;
 	DaoInteger tmp = {DAO_INTEGER,0,0,0,0,0.0};
@@ -625,7 +626,7 @@ DaoByteBlock* DaoByteBlock_EncodeArray( DaoByteBlock *self, DaoArray *value )
 	databk = DaoByteBlock_NewBlock( block, DAO_ASM_DATA );
 	DaoByteCoder_EncodeUInt32( databk->begin, value->dims[i] );
 	if( (i+1)<value->ndim ) DaoByteCoder_EncodeUInt32( databk->begin+4, value->dims[i+1] );
-	if( value->etype == DAO_INTEGER && sizeof(daoint) == 8 ){
+	if( value->etype == DAO_INTEGER && sizeof(dao_integer) == 8 ){
 		for(i=0; (i+1)<value->size; i+=1){
 			databk = DaoByteBlock_NewBlock( block, DAO_ASM_DATA );
 			DaoByteCoder_EncodeDaoInt( databk->begin, value->data.i[i] );
@@ -1485,11 +1486,13 @@ void DaoByteCoder_EncodeHeader( DaoByteCoder *self, const char *fname, DString *
 	}else{
 		DString_AppendChar( output, 0x0 );
 	}
-	DString_AppendChar( output, sizeof(daoint) == 4 ? '\4' : '\x8' );
+	DString_AppendChar( output, sizeof(dao_integer) == 4 ? '\4' : '\x8' );
+	DString_AppendChar( output, sizeof(dao_float) == 4 ? '\4' : '\x8' );
+	DString_AppendChar( output, '\0' );
 	DString_AppendBytes( output, (char*) bytes4, 4 );
 	DString_AppendBytes( output, "\0\0\0\0\0", 5 );
 	DString_AppendBytes( output, "\0\0\0\0\0", 5 );
-	DString_AppendBytes( output, "\0\0\0\0\0\0\r\n", 8 );
+	DString_AppendBytes( output, "\0\0\0\0\r\n", 6 );
 
 	DString_AppendBytes( output, (char*) bytes2, 2 );
 	DString_AppendBytes( output, path->chars, path->size );
@@ -1516,16 +1519,20 @@ int DaoByteCoder_Decode( DaoByteCoder *self, DString *input )
 	if( DString_EQ( & header, & signature ) == 0 ) goto InvalidFormat;
 	if( input->chars[8] != 0 && input->chars[8] != 1 ) goto InvalidVersion;
 
-	hash = DaoByteCoder_DecodeUInt32( (uchar_t*)input->chars+10 );
+	hash = DaoByteCoder_DecodeUInt32( (uchar_t*)input->chars+12 );
 	if( hash != self->fmthash ) goto InvalidHash;
 
 	DaoByteCoder_Init( self );
 
 	fmtclass = input->chars[8];
 	self->intSize = input->chars[9];
+	self->floatSize = input->chars[10];
 	codes = (uchar_t*) input->chars + 32;
 	end = (uchar_t*) input->chars + input->size;
 	if( self->intSize != 4 && self->intSize != 8 ) goto InvalidFormat;
+	if( self->floatSize != 4 && self->floatSize != 8 ) goto InvalidFormat;
+	if( sizeof(dao_integer) == 4 && self->intSize == 8 ) goto InvalidFormat;
+	if( sizeof(dao_float) == 4 && self->floatSize == 8 ) goto InvalidFormat;
 
 	i = DaoByteCoder_DecodeUInt16( codes );
 	DString_Reset( self->path, i );
@@ -1792,7 +1799,7 @@ static void DaoByteCoder_DecodeValue( DaoByteCoder *self, DaoByteBlock *block )
 		if( array->size != C ) DaoByteCoder_Error( self, block, "size not matching!" );
 		if( self->error ) break;
 
-		if( array->etype == DAO_INTEGER && sizeof(daoint) == 8 ){
+		if( array->etype == DAO_INTEGER && sizeof(dao_integer) == 8 ){
 			for(i=0; (i+1)<C && pb != NULL; i+=1, pb=pb->next){
 				array->data.i[i] = DaoByteCoder_DecodeDaoInt( self, pb->begin );
 			}
@@ -3087,7 +3094,7 @@ int DaoByteCoder_Build( DaoByteCoder *self, DaoNamespace *nspace )
 
 
 
-static void DaoStream_PrintDaoInt( DaoStream *self, const char *fmt, daoint A )
+static void DaoStream_PrintDaoInt( DaoStream *self, const char *fmt, dao_integer A )
 {
 	char buffer[128];
 	snprintf( buffer, sizeof(buffer), fmt, A );
@@ -3236,7 +3243,7 @@ void DaoByteCoder_PrintBlock( DaoByteCoder *self, DaoByteBlock *block, int space
 				pb = pb->next;
 				D -= 2;
 			}
-			if( block->begin[1] == DAO_INTEGER && sizeof(daoint) == 8 ){
+			if( block->begin[1] == DAO_INTEGER && sizeof(dao_integer) == 8 ){
 				for(; pb!=NULL; pb=pb->next){
 					k = DaoByteCoder_DecodeDaoInt( self, pb->begin );
 					DaoStream_PrintTag( stream, DAO_ASM_DATA, spaces + 4 );

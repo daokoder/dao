@@ -1653,7 +1653,8 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DList *t
 				i = i + 2;
 			}
 			type = DaoParser_ParseType( self, i, end, & i, types );
-			if( invar && type ) type = DaoType_GetInvarType( type );
+			if( type == NULL ) goto InvalidTypeForm;
+			if( invar ) type = DaoType_GetInvarType( type );
 			if( name ){
 				type = DaoNamespace_MakeType( ns, name->chars, tid, (DaoValue*)type, NULL,0 );
 			}
@@ -5652,10 +5653,7 @@ static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoValue *value
 {
 	char *str = tok->string.chars;
 	daoint pl = 0;
-	if( tok->name == DTOK_SINGLE_DEC ){
-		value->type = DAO_FLOAT;
-		value->xFloat.value = DaoToken_ToFloat( tok );
-	}else if( tok->name >= DTOK_DOUBLE_DEC && tok->name <= DTOK_NUMBER_SCI ){
+	if( tok->name >= DTOK_NUMBER_DEC && tok->name <= DTOK_NUMBER_SCI ){
 		value->type = DAO_FLOAT;
 		value->xFloat.value = DaoToken_ToFloat( tok );
 	}else if( tok->name == DTOK_NUMBER_IMG ){

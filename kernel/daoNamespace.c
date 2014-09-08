@@ -168,7 +168,7 @@ void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumItem *items )
 	while( items[i].name != NULL ){
 		DString name = DString_WrapChars( items[i].name );
 		switch( items[i].type ){
-		case DAO_INTEGER : value->xInteger.value = (int) items[i].value; break;
+		case DAO_INTEGER : value->xInteger.value = (dao_integer) items[i].value; break;
 		case DAO_FLOAT   : value->xFloat.value = items[i].value; break;
 		default: continue;
 		}
@@ -242,7 +242,7 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 			double dv = typer->numItems[i].value;
 			value->type = typer->numItems[i].type;
 			switch( value->type ){
-			case DAO_INTEGER : value->xInteger.value = (int) dv; break;
+			case DAO_INTEGER : value->xInteger.value = (dao_integer) dv; break;
 			case DAO_FLOAT   : value->xFloat.value = dv; break;
 			default : continue;
 			}

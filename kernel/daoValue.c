@@ -244,11 +244,11 @@ int DaoValue_IsZero( DaoValue *self )
 	}
 	return 0;
 }
-static daoint DString_ToInteger( DString *self )
+static dao_integer DString_ToInteger( DString *self )
 {
 		return strtoll( self->chars, NULL, 0 );
 }
-double DString_ToFloat( DString *self )
+dao_float DString_ToFloat( DString *self )
 {
 	return strtod( self->chars, 0 );
 }
@@ -264,7 +264,7 @@ dao_integer DaoValue_GetInteger( DaoValue *self )
 	}
 	return 0;
 }
-double DaoValue_GetFloat( DaoValue *self )
+dao_float DaoValue_GetFloat( DaoValue *self )
 {
 	DString *str;
 	switch( self->type ){
@@ -1062,13 +1062,13 @@ DaoNone* DaoProcess_NewNone( DaoProcess *self )
 	DaoProcess_CacheValue( self, (DaoValue*) res );
 	return res;
 }
-DaoInteger* DaoProcess_NewInteger( DaoProcess *self, daoint v )
+DaoInteger* DaoProcess_NewInteger( DaoProcess *self, dao_integer v )
 {
 	DaoInteger *res = DaoInteger_New( v );
 	DaoProcess_CacheValue( self, (DaoValue*) res );
 	return res;
 }
-DaoFloat* DaoProcess_NewFloat( DaoProcess *self, double v )
+DaoFloat* DaoProcess_NewFloat( DaoProcess *self, dao_float v )
 {
 	DaoFloat *res = DaoFloat_New( v );
 	DaoProcess_CacheValue( self, (DaoValue*) res );

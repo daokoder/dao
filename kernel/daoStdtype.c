@@ -70,7 +70,7 @@ DaoNone* DaoNone_New()
 #endif
 	return self;
 }
-DaoInteger* DaoInteger_New( daoint value )
+DaoInteger* DaoInteger_New( dao_integer value )
 {
 	DaoInteger *self = (DaoInteger*) dao_malloc( sizeof(DaoInteger) );
 	DaoValue_Init( self, DAO_INTEGER );
@@ -80,11 +80,11 @@ DaoInteger* DaoInteger_New( daoint value )
 #endif
 	return self;
 }
-daoint DaoInteger_Get( DaoInteger *self )
+dao_integer DaoInteger_Get( DaoInteger *self )
 {
 	return self->value;
 }
-void DaoInteger_Set( DaoInteger *self, daoint value )
+void DaoInteger_Set( DaoInteger *self, dao_integer value )
 {
 	self->value = value;
 }

@@ -14,7 +14,7 @@ io.writeln( 0xff )
 io.writeln( std.about(1.0) )
 @[test(code_01)]
 @[test(code_01)]
-{{double}}
+{{float}}
 @[test(code_01)]
 
 
@@ -24,7 +24,7 @@ io.writeln( std.about(1.0) )
 io.writeln( std.about(1F) )
 @[test(code_01)]
 @[test(code_01)]
-{{float}}
+	Invalid %s token
 @[test(code_01)]
 
 
@@ -34,7 +34,7 @@ io.writeln( std.about(1F) )
 io.writeln( std.about(1D) )
 @[test(code_01)]
 @[test(code_01)]
-{{double}}
+	Invalid %s token
 @[test(code_01)]
 
 
@@ -64,7 +64,7 @@ io.writeln( std.about(1.2C) )
 io.writeln( std.about(1.) )
 @[test(code_01)]
 @[test(code_01)]
-{{double}}
+{{float}}
 @[test(code_01)]
 
 
@@ -74,7 +74,7 @@ io.writeln( std.about(1.) )
 io.writeln( std.about(.5) )
 @[test(code_01)]
 @[test(code_01)]
-{{double}}
+{{float}}
 @[test(code_01)]
 
 
@@ -84,7 +84,7 @@ io.writeln( std.about(.5) )
 io.writeln( std.about(1.D) )
 @[test(code_01)]
 @[test(code_01)]
-{{double}}
+	Invalid %s token
 @[test(code_01)]
 
 
@@ -94,5 +94,5 @@ io.writeln( std.about(1.D) )
 io.writeln( std.about(.1D) )
 @[test(code_01)]
 @[test(code_01)]
-{{double}}
+	Invalid %s token
 @[test(code_01)]

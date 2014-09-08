@@ -1748,6 +1748,12 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	source = DString_New();
 	if( ! DaoVmSpace_ReadSource( self, libpath, source ) ) goto LoadingFailed;
 
+	if( sizeof(dao_integer) != 8 || sizeof(dao_float) != 8 ){
+		int daofile = DString_Match( libpath, "%w %. dao $", 0, 0 );
+		int daocmd = DString_Match( source, "^ #! [^%n]* dao %s* {{\n}}", 0, 0 );
+		if( daofile == 0 && daocmd == 0 ) goto LoadingFailed;
+	}
+
 	if( self->options & DAO_OPTION_ARCHIVE ){
 		DList_Append( self->sourceArchive, libpath );
 		DList_Append( self->sourceArchive, source );

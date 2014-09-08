@@ -160,8 +160,8 @@ struct DaoCallServer
 
 	DList  *caches;
 
-	dao_complex    timestamp;  /* (time,index); */
-	DaoVmSpace  *vmspace;
+	dao_complex   timestamp;  /* (time,index); */
+	DaoVmSpace   *vmspace;
 };
 static DaoCallServer *daoCallServer = NULL;
 

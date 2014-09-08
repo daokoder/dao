@@ -230,10 +230,9 @@ static int DaoArray_Permute( DaoArray *self, DList *perm )
 	daoint i, j, k, m, N = self->size, D = perm->size;
 	daoint *dim, *acc, *origIndex, *permIndex, *pm = perm->items.pInt;
 	DArray *buffer = DArray_New( sizeof(daoint) );
-	dao_complex c16val = {0,0};
-	double dval = 0;
-	daoint ival = 0;
-	float fval = 0;
+	dao_complex cval = {0,0};
+	dao_float fval = 0;
+	dao_integer ival = 0;
 	int res = 0;
 
 	if( D != self->ndim ) goto Finalize;
@@ -273,8 +272,8 @@ static int DaoArray_Permute( DaoArray *self, DList *perm )
 		k = i;
 		switch( self->etype ){
 		case DAO_INTEGER : ival = self->data.i[i]; break;
-		case DAO_FLOAT   : dval = self->data.f[i]; break;
-		case DAO_COMPLEX : c16val = self->data.c[i]; break;
+		case DAO_FLOAT   : fval = self->data.f[i]; break;
+		case DAO_COMPLEX : cval = self->data.c[i]; break;
 		default : break;
 		}
 		while(1){
@@ -284,8 +283,8 @@ static int DaoArray_Permute( DaoArray *self, DList *perm )
 			/* printf( "i = %i; m = %i\n", i, m ); */
 			switch( self->etype ){
 			case DAO_INTEGER : self->data.i[k] = (m == min) ? ival : self->data.i[m]; break;
-			case DAO_FLOAT   : self->data.f[k] = (m == min) ? dval : self->data.f[m]; break;
-			case DAO_COMPLEX : self->data.c[k] = (m == min) ? c16val : self->data.c[m]; break;
+			case DAO_FLOAT   : self->data.f[k] = (m == min) ? fval : self->data.f[m]; break;
+			case DAO_COMPLEX : self->data.c[k] = (m == min) ? cval : self->data.c[m]; break;
 			default : break;
 			}
 			if( m == min ) break;
@@ -1150,9 +1149,10 @@ static void DaoARRAY_sum( DaoProcess *proc, DaoValue *par[], int N )
 	daoint start = DaoArray_GetWorkStart( self );
 	daoint len = DaoArray_GetWorkIntervalSize( self );
 	daoint step = DaoArray_GetWorkStep( self );
-	daoint i, j, isum = 0;
-	dao_float fsum = 0;
 	dao_complex csum = {0,0};
+	dao_integer isum = 0;
+	dao_float fsum = 0;
+	daoint i, j;
 
 	for(i=0; i<size; ++i){
 		j = start + (i / len) * step + (i % len);
@@ -1522,103 +1522,55 @@ int DaoArray_Reshape( DaoArray *self, daoint *dims, int D )
 	DaoArray_FinalizeDimData( self );
 	return 1;
 }
-#warning "dao_float size"
-double* DaoArray_ToDouble( DaoArray *self )
+dao_float* DaoArray_ToFloat( DaoArray *self )
 {
-	daoint i, tsize = sizeof(double);
-	double *buf;
+	daoint i;
+	dao_float *buf;
+
 	DaoArray_Sliced( self );
-	if( self->owner ==0 ) return self->data.f;
-	if( self->etype == DAO_FLOAT || self->etype == DAO_COMPLEX ) return self->data.f;
-	self->data.p = dao_realloc( self->data.p, (self->size+1) * tsize );
 	buf = self->data.f;
-	if( self->etype == DAO_INTEGER ){
-		for(i=self->size-1; i>=0; i--) buf[i] = self->data.i[i];
-	}
-	return buf;
-}
-void DaoArray_FromDouble( DaoArray *self )
-{
-	daoint i;
-	double *buf = self->data.f;
-	if( self->etype == DAO_FLOAT || self->etype == DAO_COMPLEX ) return;
-	if( self->etype == DAO_INTEGER ){
-		for(i=0; i<self->size; i++) self->data.i[i] = buf[i];
-	}
-}
-float* DaoArray_ToFloat( DaoArray *self )
-{
-	daoint i;
-	float *buf = (float*) self->data.p;
-	DaoArray_Sliced( self );
-	if( self->etype == DAO_INTEGER ){
-		for(i=0; i<self->size; i++) buf[i] = (float)self->data.i[i];
-	}else if( self->etype == DAO_FLOAT ){
-		for(i=0; i<self->size; i++) buf[i] = (float)self->data.f[i];
-	}else{
-		for(i=0; i<self->size; i++){
-			buf[2*i] = (float)self->data.c[i].real;
-			buf[2*i+1] = (float)self->data.c[i].imag;
-		}
-	}
+	if( self->etype == DAO_FLOAT || self->etype == DAO_COMPLEX ) return buf;
+	for(i=0; i<self->size; i++) buf[i] = (dao_float)self->data.i[i];
 	return buf;
 }
 void DaoArray_FromFloat( DaoArray *self )
 {
 	daoint i;
-	float *buf = (float*) self->data.p;
-	if( self->etype == DAO_FLOAT ) return;
-	if( self->etype == DAO_INTEGER ){
-		for(i=0; i<self->size; i++) self->data.i[i] = buf[i];
-	}else if( self->etype == DAO_FLOAT ){
-		for(i=self->size-1; i>=0; i--) self->data.f[i] = buf[i];
-	}else{
-		for(i=self->size-1; i>=0; i--){
-			self->data.c[i].real = buf[2*i];
-			self->data.c[i].imag = buf[2*i+1];
-		}
-	}
+	dao_float *buf = self->data.f;
+	if( self->etype == DAO_FLOAT || self->etype == DAO_COMPLEX ) return;
+	for(i=0; i<self->size; i++) self->data.i[i] = buf[i];
 }
 dao_integer* DaoArray_ToInteger( DaoArray *self )
 {
-	daoint i;
-	dao_integer *buf = self->data.i;
+	daoint i, size;
+	dao_integer *buf;
+
 	DaoArray_Sliced( self );
+	buf = self->data.i;
 	if( self->etype == DAO_INTEGER ) return self->data.i;
-	switch( self->etype ){
-	case DAO_FLOAT : for(i=0; i<self->size; i++) buf[i] = (dao_integer)self->data.f[i]; break;
-	case DAO_COMPLEX :
-		for(i=0; i<self->size; i++){
-			buf[2*i] = (dao_integer)self->data.c[i].real;
-			buf[2*i+1] = (dao_integer)self->data.c[i].imag;
-		}
-		break;
-	default : break;
-	}
+	size = self->size;
+	if( self->etype == DAO_COMPLEX ) size += size;
+	for(i=0; i<size; i++) buf[i] = (dao_integer)self->data.f[i];
 	return buf;
 }
 void DaoArray_FromInteger( DaoArray *self )
 {
-	daoint i;
+	daoint i, size;
 	dao_integer *buf = self->data.i;
 	if( self->etype == DAO_INTEGER ) return;
-	switch( self->etype ){
-	case DAO_FLOAT : for(i=self->size-1; i>=0; i--) self->data.f[i] = buf[i]; break;
-	case DAO_COMPLEX :
-		for(i=self->size-1; i>=0; i--){
-			self->data.c[i].real = buf[2*i];
-			self->data.c[i].imag = buf[2*i+1];
-		}
-		break;
-	default : break;
-	}
+	size = self->size;
+	if( self->etype == DAO_COMPLEX ) size += size;
+	for(i=self->size-1; i>=0; i--) self->data.f[i] = buf[i];
 }
+
 #define DefineFunction_DaoArray_To( name, type, cast ) \
 type* name( DaoArray *self ) \
 { \
-	daoint i, size = self->size; \
-	type *buf = (type*) self->data.p; \
+	daoint i, size; \
+	type *buf; \
 	DaoArray_Sliced( self ); \
+	buf = (type*) self->data.p; \
+	size = self->size; \
 	switch( self->etype ){ \
 	case DAO_INTEGER : for(i=0; i<size; i++) buf[i] = (cast)self->data.i[i]; break; \
 	case DAO_FLOAT   : for(i=0; i<size; i++) buf[i] = (cast)self->data.f[i]; break; \
@@ -1632,12 +1584,14 @@ type* name( DaoArray *self ) \
 	} \
 	return buf; \
 }
-DefineFunction_DaoArray_To( DaoArray_ToSByte, signed char, int );
-DefineFunction_DaoArray_To( DaoArray_ToSShort, signed short, int );
-DefineFunction_DaoArray_To( DaoArray_ToSInt, signed int, int );
-DefineFunction_DaoArray_To( DaoArray_ToUByte, unsigned char, unsigned int );
-DefineFunction_DaoArray_To( DaoArray_ToUShort, unsigned short, unsigned int );
-DefineFunction_DaoArray_To( DaoArray_ToUInt, unsigned int, unsigned int );
+DefineFunction_DaoArray_To( DaoArray_ToSInt8, signed char, int );
+DefineFunction_DaoArray_To( DaoArray_ToSInt16, signed short, int );
+DefineFunction_DaoArray_To( DaoArray_ToSInt32, signed int, int );
+DefineFunction_DaoArray_To( DaoArray_ToUInt8, unsigned char, unsigned int );
+DefineFunction_DaoArray_To( DaoArray_ToUInt16, unsigned short, unsigned int );
+DefineFunction_DaoArray_To( DaoArray_ToUInt32, unsigned int, unsigned int );
+static DefineFunction_DaoArray_To( DaoArray_ToFloat32X, float, float );
+static DefineFunction_DaoArray_To( DaoArray_ToFloat64X, double, double );
 
 #define DefineFunction_DaoArray_From( name, type ) \
 void name( DaoArray *self ) \
@@ -1657,12 +1611,39 @@ void name( DaoArray *self ) \
 	} \
 }
 
-DefineFunction_DaoArray_From( DaoArray_FromSByte, signed char );
-DefineFunction_DaoArray_From( DaoArray_FromSShort, signed short );
-DefineFunction_DaoArray_From( DaoArray_FromSInt, signed int );
-DefineFunction_DaoArray_From( DaoArray_FromUByte, unsigned char );
-DefineFunction_DaoArray_From( DaoArray_FromUShort, unsigned short );
-DefineFunction_DaoArray_From( DaoArray_FromUInt, unsigned int );
+DefineFunction_DaoArray_From( DaoArray_FromSInt8, signed char );
+DefineFunction_DaoArray_From( DaoArray_FromSInt16, signed short );
+DefineFunction_DaoArray_From( DaoArray_FromSInt32, signed int );
+DefineFunction_DaoArray_From( DaoArray_FromUInt8, unsigned char );
+DefineFunction_DaoArray_From( DaoArray_FromUInt16, unsigned short );
+DefineFunction_DaoArray_From( DaoArray_FromUInt32, unsigned int );
+static DefineFunction_DaoArray_From( DaoArray_FromFloat32X, float );
+static DefineFunction_DaoArray_From( DaoArray_FromFloat64X, double );
+
+float* DaoArray_ToFloat32( DaoArray *self )
+{
+	if( self->etype == DAO_FLOAT && sizeof(dao_float) == sizeof(float) ){
+		return (float*) self->data.f;
+	}
+	return DaoArray_ToFloat32X( self );
+}
+void DaoArray_FromFloat32( DaoArray *self )
+{
+	if( self->etype == DAO_FLOAT && sizeof(dao_float) == sizeof(float) ) return;
+	DaoArray_FromFloat32X( self );
+}
+double* DaoArray_ToFloat64( DaoArray *self )
+{
+	if( self->etype == DAO_FLOAT && sizeof(dao_float) == sizeof(double) ){
+		return (double*) self->data.f;
+	}
+	return DaoArray_ToFloat64X( self );
+}
+void DaoArray_FromFloat64( DaoArray *self )
+{
+	if( self->etype == DAO_FLOAT && sizeof(dao_float) == sizeof(double) ) return;
+	DaoArray_FromFloat64X( self );
+}
 
 
 void* DaoArray_GetBuffer( DaoArray *self )

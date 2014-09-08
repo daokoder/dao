@@ -3,7 +3,7 @@
 io.writeln( std.about( (123.45) ) )
 @[test(code_01)]
 @[test(code_01)]
-{{double}}
+{{float}}
 @[test(code_01)]
 
 
@@ -13,7 +13,7 @@ io.writeln( std.about( (123.45) ) )
 io.writeln( std.about( (123.45,) ) )
 @[test(code_01)]
 @[test(code_01)]
-{{tuple<double>}}
+{{tuple<float>}}
 @[test(code_01)]
 
 
@@ -24,7 +24,7 @@ routine Test() { 123.45 }
 io.writeln( std.about( Test ) )
 @[test(code_01)]
 @[test(code_01)]
-Test%{routine%<=%>double%>%}
+Test%{routine%<=%>float%>%}
 @[test(code_01)]
 
 

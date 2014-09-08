@@ -18,25 +18,15 @@ vec = [1.0; 2; 3]
 io.writeln( std.about(vec), vec )
 @[test(code_01)]
 @[test(code_01)]
-{{array<double>}} .* {{[ 1.000000; 2.000000; 3.000000 ]}}
-@[test(code_01)]
-
-
-
-
-@[test(code_01)]
-vec = [1F; 2; 3]
-io.writeln( std.about(vec), vec )
-@[test(code_01)]
-@[test(code_01)]
 {{array<float>}} .* {{[ 1.000000; 2.000000; 3.000000 ]}}
 @[test(code_01)]
 
 
 
 
+
 @[test(code_01)]
-mat = [1F, 2; 3, 4]
+mat = [1.0, 2; 3, 4]
 io.writeln( std.about(mat) )
 io.writeln( mat )
 @[test(code_01)]

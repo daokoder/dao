@@ -125,9 +125,9 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max, u
 	unsigned int hash = 0;
 	switch( self->type ){
 	case DAO_INTEGER :
-		data = & self->xInteger.value;  len = sizeof(daoint);  break;
+		data = & self->xInteger.value;  len = sizeof(dao_integer);  break;
 	case DAO_FLOAT  :
-		data = & self->xFloat.value;  len = sizeof(double);  break;
+		data = & self->xFloat.value;  len = sizeof(dao_float);  break;
 	case DAO_COMPLEX :
 		data = & self->xComplex.value;  len = sizeof(dao_complex);  break;
 	case DAO_ENUM  :
@@ -142,8 +142,8 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max, u
 		data = self->xArray.data.p;
 		len = self->xArray.size;
 		switch( self->xArray.etype ){
-		case DAO_INTEGER : len *= sizeof(int); break;
-		case DAO_FLOAT   : len *= sizeof(double); break;
+		case DAO_INTEGER : len *= sizeof(dao_integer); break;
+		case DAO_FLOAT   : len *= sizeof(dao_float); break;
 		case DAO_COMPLEX : len *= sizeof(dao_complex); break;
 		default : break;
 		}

@@ -49,9 +49,11 @@
 // Byte       # Carriage Return (CR), 0x0D;
 // Byte       # Line Feed (LF), 0x0A;
 // Byte       # format class: 0x0, official; 0x1, encrypted;
-// Byte       # size of integer type, default 0x4;
+// Byte       # size of integer type, standard 0x8;
+// Byte       # size of float type, standard 0x8;
+// Byte       # one reserved byte;
 // Byte[4]    # format hash (rotating hash of the ASM tags and VM opcodes);
-// Byte[16]   # 16 reserved bytes;
+// Byte[14]   # 16 reserved bytes;
 // Byte       # Carriage Return (CR), 0x0D;
 // Byte       # Line Feed (LF), 0x0A;
 // Byte[2]    # length of the source path;
@@ -388,6 +390,7 @@ struct DaoByteCoder
 	uint_t   index;
 	uint_t   fmthash;
 	uchar_t  intSize;
+	uchar_t  floatSize;
 	uchar_t  error;
 
 	DaoByteBlock  *top;
@@ -456,7 +459,7 @@ DaoByteBlock* DaoByteBlock_DeclareVar( DaoByteBlock *self, DString *name, DaoVal
 DaoByteBlock* DaoByteBlock_DeclareStatic( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int level, int id );
 DaoByteBlock* DaoByteBlock_DeclareGlobal( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int perm );
 
-DaoByteBlock* DaoByteBlock_EncodeInteger( DaoByteBlock *self, daoint value );
+DaoByteBlock* DaoByteBlock_EncodeInteger( DaoByteBlock *self, dao_integer value );
 DaoByteBlock* DaoByteBlock_EncodeFloat( DaoByteBlock *self, double value );
 DaoByteBlock* DaoByteBlock_EncodeComplex( DaoByteBlock *self, DaoComplex *value );
 DaoByteBlock* DaoByteBlock_EncodeEnum( DaoByteBlock *self, DaoEnum *value );

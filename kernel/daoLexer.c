@@ -353,8 +353,6 @@ enum
 	TOK_DOT_DIGITS , /* .12 */
 	TOK_DIGITS_DOT , /* 12. */
 	TOK_NUMBER_DEC ,
-	TOK_SINGLE_DEC ,
-	TOK_DOUBLE_DEC ,
 	TOK_NUMBER_HEX ,
 	TOK_NUMBER_SCI_E , /* 1.2e */
 	TOK_NUMBER_SCI_ES , /* 1.2e+ */
@@ -445,8 +443,6 @@ static unsigned char daoTokenMap[ TOK_ERROR ] =
 	DTOK_NUMBER_DEC , /* .12 */
 	DTOK_NUMBER_DEC , /* 12. */
 	DTOK_NUMBER_DEC ,
-	DTOK_SINGLE_DEC ,
-	DTOK_DOUBLE_DEC ,
 	DTOK_NUMBER_HEX ,
 	DTOK_NUMBER_SCI , /* 1.2e */
 	DTOK_NUMBER_SCI , /* 1.2e+ */
@@ -636,18 +632,6 @@ void DaoInitLexTable()
 	daoLexTable[ TOK_OP_DOT2 ][ (unsigned) '.' ] = TOK_END_DOTS; /* ... */
 	daoLexTable[ TOK_DIGITS_0 ][ (unsigned) '.' ] = TOK_DIGITS_DOT;
 	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) '.' ] = TOK_DIGITS_DOT;
-	daoLexTable[ TOK_DIGITS_0   ][ (unsigned) 'F' ] = TOK_SINGLE_DEC;
-	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) 'F' ] = TOK_SINGLE_DEC;
-	daoLexTable[ TOK_DOT_DIGITS ][ (unsigned) 'F' ] = TOK_SINGLE_DEC;
-	daoLexTable[ TOK_DIGITS_DOT ][ (unsigned) 'F' ] = TOK_SINGLE_DEC;
-	daoLexTable[ TOK_NUMBER_DEC ][ (unsigned) 'F' ] = TOK_SINGLE_DEC;
-	daoLexTable[ TOK_NUMBER_SCI ][ (unsigned) 'F' ] = TOK_SINGLE_DEC;
-	daoLexTable[ TOK_DIGITS_0   ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
-	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
-	daoLexTable[ TOK_DOT_DIGITS ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
-	daoLexTable[ TOK_DIGITS_DOT ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
-	daoLexTable[ TOK_NUMBER_DEC ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
-	daoLexTable[ TOK_NUMBER_SCI ][ (unsigned) 'D' ] = TOK_DOUBLE_DEC;
 	daoLexTable[ TOK_DIGITS_0   ][ (unsigned) 'C' ] = TOK_NUMBER_IMG;
 	daoLexTable[ TOK_DIGITS_DEC ][ (unsigned) 'C' ] = TOK_NUMBER_IMG;
 	daoLexTable[ TOK_NUMBER_DEC ][ (unsigned) 'C' ] = TOK_NUMBER_IMG;
@@ -804,40 +788,38 @@ void DaoToken_Set( DaoToken *self, int type, int name, int index, const char *s 
 	self->index = index;
 	if( s ) DString_SetChars( & self->string, s );
 }
-daoint DaoToken_ToInteger( DaoToken *self )
+dao_integer DaoToken_ToInteger( DaoToken *self )
 {
 	char *chars = self->string.chars;
-	daoint value = 0;
+	dao_integer value = 0;
 	switch( self->name ){
-	case DTOK_SINGLE_DEC : case DTOK_DOUBLE_DEC :
 	case DTOK_NUMBER_DEC : case DTOK_NUMBER_SCI :
 	case DTOK_NUMBER_IMG :
 		value = strtod( chars, NULL );
 		break;
 	case DTOK_DIGITS_DEC :
-		value = sizeof(daoint) == 4 ? strtol(chars, 0, 10) : strtoll(chars, 0, 10);
+		value = sizeof(dao_integer) == 4 ? strtol(chars, 0, 10) : strtoll(chars, 0, 10);
 		break;
 	case DTOK_NUMBER_HEX :
-		value = sizeof(daoint) == 4 ? strtol(chars, 0, 16) : strtoll(chars, 0, 16);
+		value = sizeof(dao_integer) == 4 ? strtol(chars, 0, 16) : strtoll(chars, 0, 16);
 		break;
 	}
 	return value;
 }
-double DaoToken_ToFloat( DaoToken *self )
+dao_float DaoToken_ToFloat( DaoToken *self )
 {
 	char *chars = self->string.chars;
-	double value = 0;
+	dao_float value = 0;
 	switch( self->name ){
-	case DTOK_SINGLE_DEC : case DTOK_DOUBLE_DEC :
 	case DTOK_NUMBER_DEC : case DTOK_NUMBER_SCI :
 	case DTOK_NUMBER_IMG :
 		value = strtod( chars, NULL );
 		break;
 	case DTOK_DIGITS_DEC :
-		value = sizeof(daoint) == 4 ? strtol(chars, 0, 10) : strtoll(chars, 0, 10);
+		value = sizeof(dao_integer) == 4 ? strtol(chars, 0, 10) : strtoll(chars, 0, 10);
 		break;
 	case DTOK_NUMBER_HEX :
-		value = sizeof(daoint) == 4 ? strtol(chars, 0, 16) : strtoll(chars, 0, 16);
+		value = sizeof(dao_integer) == 4 ? strtol(chars, 0, 16) : strtoll(chars, 0, 16);
 		break;
 	}
 	return value;
