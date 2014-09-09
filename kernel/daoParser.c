@@ -3604,6 +3604,7 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 		if( rb >0 && (rb+1) <= to && tokens[rb+1]->type == DTOK_ASSN ){
 			/* multiple assignment: */
 			DList *inodes = DList_New(0);
+			int movetype = 1|((storeType!=0)<<1)|(((storeType & DAO_DECL_INVAR) != 0)<<2);
 			int foldConst = storeType & (DAO_DECL_CONST|DAO_DECL_STATIC);
 			self->curToken = start + 1;
 			while( self->curToken < rb ){
@@ -3622,7 +3623,6 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 				enode = DaoParser_ParseExpression( self, 0 );
 				if( enode.reg < 0 ) goto InvalidMultiAssignment;
 				if( enode.update == NULL ){
-					int movetype = 1|((storeType!=0)<<1);
 					DaoParser_AddCode( self, DVM_MOVE, 0, movetype, enode.reg, tid, 0, 0 );
 					DList_Append( inodes, self->vmcLast );
 				}else{
