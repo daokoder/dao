@@ -984,7 +984,7 @@ static void DaoParser_Restore( DaoParser *self, DaoInode *back, int regCount )
 }
 
 void DaoType_MapNames( DaoType *self );
-DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DList *types );
+DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, int valtype, DList *types );
 static int DaoParser_MakeArithTree( DaoParser *self, int start, int end, int *cst );
 
 static DaoType* DaoParser_ParseCodeBlockType( DaoParser *self, int start, int *next )
@@ -996,7 +996,7 @@ static DaoType* DaoParser_ParseCodeBlockType( DaoParser *self, int start, int *n
 	int ecount = self->errors->size;
 	int rb = DaoParser_FindPairToken( self, DTOK_LSB, DTOK_RSB, start, -1 );
 	if( rb < 0 ) return NULL;
-	type = DaoParser_ParseTypeItems( self, start+1, rb-1, types );
+	type = DaoParser_ParseTypeItems( self, start+1, rb-1, 0, types );
 	if( self->errors->size > ecount ) return NULL;
 	*next = rb + 1;
 	type = DaoNamespace_MakeType( ns, "", DAO_CODEBLOCK, (DaoValue*) type, types->items.pType + tcount, types->size - tcount );
@@ -1615,7 +1615,7 @@ InvalidTypeName:
 	return NULL;
 }
 
-DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DList *types )
+DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, int valtype, DList *types )
 {
 	DaoNamespace *ns = self->nameSpace;
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -1634,6 +1634,7 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DList *t
 			t2 = (i+1 <= end) ? tokens[i+1]->type : 0;
 		}
 		if( tokens[i]->type >= DTOK_ID_SYMBOL && tokens[i]->type <= DTOK_WCS ){
+			if( valtype == 0 ) goto InvalidTypeForm;
 			type = DaoParser_ParseValueType( self, i );
 			if( invar && type ) type = DaoType_GetInvarType( type );
 			i += 1;
@@ -1654,6 +1655,7 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DList *t
 			}
 			type = DaoParser_ParseType( self, i, end, & i, types );
 			if( type == NULL ) goto InvalidTypeForm;
+			if( valtype == 0 && type->valtype ) goto InvalidTypeForm;
 			if( invar ) type = DaoType_GetInvarType( type );
 			if( name ){
 				type = DaoNamespace_MakeType( ns, name->chars, tid, (DaoValue*)type, NULL,0 );
@@ -1905,7 +1907,7 @@ WrongType:
 		gt = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start, end );
 		if( gt < 0 ) goto InvalidTypeForm;
 		*newpos = gt + 1;
-		type = DaoParser_ParseTypeItems( self, start+2, gt-1, types );
+		type = DaoParser_ParseTypeItems( self, start+2, gt-1, 0, types );
 		if( self->errors->size > ecount ) goto InvalidTypeForm;
 		if( type && tokens[start]->name != DKEY_ROUTINE ) goto InvalidTypeForm;
 		count2 = types->size - count;
@@ -2065,7 +2067,7 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 		goto FailedInstantiation;
 	}
 	gentype = tpl->type == DAO_CTYPE ? ctype->cdtype : (DaoType*) tpl;
-	DaoParser_ParseTypeItems( self, start, end, types );
+	DaoParser_ParseTypeItems( self, start, end, 1, types );
 	if( self->errors->size > errors ) goto FailedInstantiation;
 	sptype = DaoType_Specialize( gentype, types->items.pType, types->size );
 	if( sptype == NULL ) goto FailedInstantiation;

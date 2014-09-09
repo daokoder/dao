@@ -964,6 +964,8 @@ static int DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *na
 	DaoValue ival = {DAO_INTEGER};
 	DaoValue fval = {DAO_FLOAT};
 	DaoValue *argv;
+	DaoType *emtype;
+	DString *sym;
 
 	switch( type->tid ){
 	case DAO_INTEGER :
@@ -974,11 +976,21 @@ static int DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *na
 		fval.xFloat.value = strtod( string->xString.value->chars, 0 );
 		DaoList_SetItem( self, & fval, i );
 		return 10 * isnum;
+	case DAO_ENUM :
+		sym = DString_Copy( string->xString.value );
+		DString_InsertChar( sym, '$', 0 );
+		emtype = DaoNamespace_MakeSymbolType( NS, sym->chars );
+		DString_Delete( sym );
+		argv = (DaoValue*) DaoEnum_New( emtype, 1 );
+		DaoList_SetItem( self, argv, i );
+		DaoGC_TryDelete( (DaoValue*) argv );
+		if( type && DaoType_MatchValue( type, argv, NULL ) == 0 ) return 0;
+		return 10;
 	default :
 		argv = string;
 		if( name && name->size ) argv = DaoVmSpace_MakeNameArgument( NS, name, argv );
-		if( type && DaoType_MatchValue( type, argv, NULL ) == 0 ) return 0;
 		DaoList_SetItem( self, argv, i );
+		if( type && DaoType_MatchValue( type, argv, NULL ) == 0 ) return 0;
 		break;
 	}
 	return 1;
@@ -1007,7 +1019,8 @@ static int DaoVmSpace_ConvertArguments( DaoRoutine *routine, DList *argNames, DL
 		DString *name = argNames->items.pString[i];
 		DString *value = argValues->items.pString[i];
 		int ito = i;
-		type = routype->nested->items.pType[ito];
+		type = (DaoType*) DList_Back( routype->nested );
+		if( i < routype->nested->size ) type = routype->nested->items.pType[i];
 		DString_Assign( val, value );
 		if( type->tid == DAO_PAR_VALIST ){
 			DaoType *type2 = (DaoType*) type->aux;
