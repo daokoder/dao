@@ -3457,6 +3457,7 @@ static void DaoParser_CheckStatementSeparation( DaoParser *self, int check, int 
 static int DaoParser_ImportSymbols( DaoParser *self, DaoNamespace *mod, int start, int to, int level );
 static int DaoParser_ParseImportStatement( DaoParser *self, int start, int end, int full );
 static int DaoParser_ParseNamespaceStatement( DaoParser *self, int start, int end );
+static int DaoParser_MultipleAssignment( DaoParser *self, int start, int rb, int to, int store );
 static int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int st );
 static int DaoParser_GetEnumTokenType( DaoType *type )
 {
@@ -3602,65 +3603,10 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 		tki = tokens[start]->type;
 		if( tki == DTOK_LB ) rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
 		if( rb >0 && (rb+1) <= to && tokens[rb+1]->type == DTOK_ASSN ){
-			/* multiple assignment: */
-			DList *inodes = DList_New(0);
-			int movetype = 1|((storeType!=0)<<1)|(((storeType & DAO_DECL_INVAR) != 0)<<2);
-			int foldConst = storeType & (DAO_DECL_CONST|DAO_DECL_STATIC);
-			self->curToken = start + 1;
-			while( self->curToken < rb ){
-				int tid = self->curToken;
-				int cur = tokens[tid]->name;
-				int nxt = tokens[tid+1]->name;
-				cur = cur == DTOK_IDENTIFIER || cur >= DKEY_ABS;
-				nxt = nxt == DTOK_COMMA || nxt == DTOK_RB;
-				if( cur && nxt ){
-					k = DaoParser_GetRegister( self, tokens[tid] );
-					if( k < 0 ){
-						k = DaoParser_DeclareVariable( self, tokens[tid], storeType, NULL );
-						if( k < 0 ) goto InvalidMultiAssignment;
-					}
-				}
-				enode = DaoParser_ParseExpression( self, 0 );
-				if( enode.reg < 0 ) goto InvalidMultiAssignment;
-				if( enode.update == NULL ){
-					DaoParser_AddCode( self, DVM_MOVE, 0, movetype, enode.reg, tid, 0, 0 );
-					DList_Append( inodes, self->vmcLast );
-				}else{
-					int code = enode.update->code;
-					if( code < DVM_GETVH || code > DVM_GETF ){
-						DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
-						goto InvalidMultiAssignment;
-					}
-					enode.update->code += DVM_SETVH - DVM_GETVH;
-					enode.update->c = enode.update->a;
-					DaoParser_PopRegister( self );
-					DList_Append( inodes, enode.update );
-				}
-				if( DaoParser_CurrentTokenType( self ) == DTOK_COMMA ) self->curToken += 1;
-			}
-			self->curToken = rb + 2;
-			if( foldConst ) self->needConst += 1;
-			enode = DaoParser_ParseExpression( self, 0 );
-			if( foldConst ) self->needConst -= 1;
-			if( enode.reg < 0 ) goto InvalidMultiAssignment;
-			if( foldConst && enode.konst == 0 ){
-				DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, start, end, 0 );
-				goto InvalidMultiAssignment;
-			}
-			i = DaoParser_PushRegister( self );
-			for(k=0; k<inodes->size; k++){
-				int p1 = inodes->items.pInode[k]->first;
-				int p2 = p1 + inodes->items.pInode[k]->last;
-				reg = DaoParser_PushRegister( self );
-				DaoParser_AddCode( self, DVM_GETDI, enode.reg, k, reg, p1, 0, p2 );
-				DaoParser_AppendCode( self, inodes->items.pInode[k] );
-				self->vmcLast->a = reg;
-			}
-			DList_Delete( inodes );
-			start = self->curToken;
-			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
+			start = DaoParser_MultipleAssignment( self, start, rb, to, storeType );
+			if( start < 0 ) return 0;
+			if( DaoParser_CompleteScope( self, start ) == 0 ) return -1;
 			continue;
-InvalidMultiAssignment: DList_Delete( inodes ); return 0;
 		}
 
 		tki = tokens[start]->name;
@@ -4238,6 +4184,71 @@ static int DaoParser_SetInitValue( DaoParser *self, DaoVariable *var, DaoValue *
 	DaoValue_Copy( value, & var->value );
 	return 1;
 }
+int DaoParser_MultipleAssignment( DaoParser *self, int start, int rb, int to, int store )
+{
+	DaoEnode enode;
+	DList *inodes = DList_New(0);
+	DaoToken **tokens = self->tokens->items.pToken;
+	int movetype = 1|((store!=0)<<1)|(((store & DAO_DECL_INVAR) != 0)<<2);
+	int foldConst = store & (DAO_DECL_CONST|DAO_DECL_STATIC);
+	int i, k, reg, errorStart = start;
+
+	self->curToken = start + 1;
+	while( self->curToken < rb ){
+		int tid = self->curToken;
+		int cur = tokens[tid]->name;
+		int nxt = tokens[tid+1]->name;
+		cur = cur == DTOK_IDENTIFIER || cur >= DKEY_ABS;
+		nxt = nxt == DTOK_COMMA || nxt == DTOK_RB;
+		if( cur && nxt ){
+			k = DaoParser_GetRegister( self, tokens[tid] );
+			if( k < 0 ){
+				k = DaoParser_DeclareVariable( self, tokens[tid], store, NULL );
+				if( k < 0 ) goto InvalidMultiAssignment;
+			}
+		}
+		enode = DaoParser_ParseExpression( self, 0 );
+		if( enode.reg < 0 ) goto InvalidMultiAssignment;
+		if( enode.update == NULL ){
+			DaoParser_AddCode( self, DVM_MOVE, 0, movetype, enode.reg, tid, 0, 0 );
+			DList_Append( inodes, self->vmcLast );
+		}else{
+			int code = enode.update->code;
+			if( code < DVM_GETVH || code > DVM_GETF ){
+				DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
+				goto InvalidMultiAssignment;
+			}
+			enode.update->code += DVM_SETVH - DVM_GETVH;
+			enode.update->c = enode.update->a;
+			DaoParser_PopRegister( self );
+			DList_Append( inodes, enode.update );
+		}
+		if( DaoParser_CurrentTokenType( self ) == DTOK_COMMA ) self->curToken += 1;
+	}
+	self->curToken = rb + 2;
+	if( foldConst ) self->needConst += 1;
+	enode = DaoParser_ParseExpression( self, 0 );
+	if( foldConst ) self->needConst -= 1;
+	if( enode.reg < 0 ) goto InvalidMultiAssignment;
+	if( foldConst && enode.konst == 0 ){
+		DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, start, to, 0 );
+		goto InvalidMultiAssignment;
+	}
+	i = DaoParser_PushRegister( self );
+	for(k=0; k<inodes->size; k++){
+		int p1 = inodes->items.pInode[k]->first;
+		int p2 = p1 + inodes->items.pInode[k]->last;
+		reg = DaoParser_PushRegister( self );
+		DaoParser_AddCode( self, DVM_GETDI, enode.reg, k, reg, p1, 0, p2 );
+		DaoParser_AppendCode( self, inodes->items.pInode[k] );
+		self->vmcLast->a = reg;
+	}
+	DList_Delete( inodes );
+	return self->curToken;
+InvalidMultiAssignment:
+	DList_Delete( inodes );
+	return -1;
+}
 int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store )
 {
 	DaoValue *value;
@@ -4255,7 +4266,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 	int explicit_store = (store>>3)<<3;
 	int expression = explicit_store == 0;
 	int reg, cst, temp, eq, errorStart = start;
-	int k, m, end = start, remove = 1;
+	int k, m, rb = to, end = start, remove = 1;
 	int tki, tki2, errors;
 
 #if 0
@@ -4272,6 +4283,12 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 	k = start;
 	ptok = tokens[k];
 	nameStart = self->toks->size;
+	if( ptok->type == DTOK_LB ){
+		rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, to );
+		if( rb > 0 && (rb+1) <= to && tokens[rb+1]->type == DTOK_ASSN ){
+			return DaoParser_MultipleAssignment( self, start, rb, to, store );
+		}
+	}
 	while( ptok->name == DTOK_IDENTIFIER || ptok->name >= DKEY_ABS ){
 		DList_Append( self->toks, ptok );
 		if( (++k) > to ) break;
