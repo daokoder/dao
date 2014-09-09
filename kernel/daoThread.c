@@ -152,12 +152,9 @@ static void* DThread_Wrapper( void *p )
 
 int DThread_Start( DThread *self, DThreadTask task, void *arg )
 {
-	pthread_attr_t att;
-
 	self->taskFunc = task;
 	self->taskArg = arg;
-	if( pthread_attr_init( & att ) ) return 0;
-	return pthread_create( & self->myThread, & att, & DThread_Wrapper, (void*)self ) == 0;
+	return pthread_create( & self->myThread, NULL, & DThread_Wrapper, (void*)self ) == 0;
 }
 void DThread_Join( DThread *self )
 {

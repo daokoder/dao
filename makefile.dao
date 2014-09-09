@@ -342,6 +342,7 @@ dataframe.AddDependency( daovm_dll )
 daomake.AddDependency( daovm_lib )
 modules.AddDependency( daovm_lib )
 modules.AddDependency( daovm_exe )
+return
 
 
 daocmd = DaoMake::MakePath( daovm.BinaryPath(), "bin/dao" )

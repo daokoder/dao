@@ -142,11 +142,11 @@ struct DaoCallServer
 	DCondVar condv;
 	DCondVar condv2;
 
-	int finishing;
-	int timing;
-	int total;
-	int idle;
-	int stopped;
+	volatile int finishing;
+	volatile int timing;
+	volatile int total;
+	volatile int idle;
+	volatile int stopped;
 
 	DList  *threads;
 
@@ -237,6 +237,8 @@ static void DaoCallServer_Init( DaoVmSpace *vms )
 {
 	DaoCGC_Start();
 	daoCallServer = DaoCallServer_New( vms );
+	/* Set it here, so that DaoCallServer_Stop() will not stop prematurally: */
+	daoCallServer->timing = 1;
 	if( DThread_Start( & daoCallServer->timer, (DThreadTask) DaoCallServer_Timer, NULL ) ==0 ){
 		dao_abort( "failed to create the timer thread" );
 	}
@@ -368,7 +370,6 @@ static void DaoCallServer_Timer( void *p )
 	double time = 0.0;
 	daoint i, timeout;
 
-	server->timing = 1;
 	while( server->finishing == 0 || server->stopped != server->total ){
 		DMutex_Lock( & server->mutex );
 		while( server->waitings->size == 0 ){

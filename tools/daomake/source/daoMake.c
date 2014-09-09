@@ -1475,6 +1475,13 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 	DString_Reset( makefile, 0 );
 	if( (self->targets->size + self->installs->size) == 0 ) return;
 
+	DString_AppendChars( makefile, "\nDAOMAKE_SOURCE_DIR = " );
+	DString_Append( makefile, self->base.sourcePath );
+
+	DString_AppendChars( makefile, "\nDAOMAKE_BUILD_DIR  = " );
+	DString_Append( makefile, self->base.buildPath );
+	DString_AppendChars( makefile, "\n\n" );
+
 	if( 1 ){
 		DString *all = DaoMakeProject_GetBufferString( self );
 		DString *phony = DaoMakeProject_GetBufferString( self );
@@ -2450,6 +2457,7 @@ static void PROJECT_SetTargetPath( DaoProcess *proc, DaoValue *p[], int N )
 	DString_Assign( self->targetPath, dest );
 	DaoMake_MakePath( self->base.buildPath, self->targetPath );
 	DaoMake_MakeDirs( self->targetPath, 0 );
+	DString_Assign( self->base.binaryPath, self->targetPath );
 	for(i=0; i<self->targets->size; ++i){
 		DaoMakeTarget *target = (DaoMakeTarget*) self->targets->items.pVoid[i];
 		DaoMakeTarget_SetTargetPath( target, dest );
