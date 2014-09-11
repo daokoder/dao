@@ -2585,11 +2585,13 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 	DaoRoutine *routine = self->routine;
 	DaoRoutine *tmpRoutine;
 	DaoParser *tmpParser;
-	DaoType *type, *old;
+	DaoType *type, *old, *tht;
 	DString *str;
 	DNode *node;
 	int estart = start;
 	int use = start;
+	int id, recursive;
+
 	start ++;
 	if( DaoParser_CheckNameToken( self, start, to, DAO_INVALID_TYPE_ALIAS, use ) ==0 ) return -1;
 	nameTok = tokens[start];
@@ -2600,10 +2602,33 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 		DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
 		goto InvalidAliasing;
 	}
+
+	/* Add a new temporary type in a new scope: */
+	DaoParser_PushLevel( self );
+	tht = DaoType_New( str->chars, DAO_THT, NULL, NULL );
+	if( self->byteBlock ){
+		DaoByteBlock_EncodeType( self->byteBlock, tht );
+	}
+	id = LOOKUP_BIND_LC( routine->routConsts->value->size );
+	MAP_Insert( DaoParser_CurrentSymbolTable( self ), str, id );
+	DaoRoutine_AddConstant( routine, (DaoValue*) tht );
+	id = tht->refCount;
+
 	type = old = DaoParser_ParseType( self, start, to, & start, NULL );
+	recursive = tht->refCount > id; /* The temporary type is used; */
+	DaoParser_PopLevel( self );
+
 	if( type == NULL ) goto InvalidAliasing;
+	if( self->byteBlock ){
+		DaoType *rt = recursive ? tht : NULL;
+		DaoByteBlock_EncodeTypeAlias( self->byteBlock, old, type, str, rt, self->permission );
+	}
 	type = DaoType_Copy( type );
 	DString_Assign( type->name, str );
+	if( recursive ){
+		type->recursive = 1;
+		DaoType_SetupRecursive( type, tht, type );
+	}
 	if( (self->levelBase + self->lexLevel) == 0 ){
 		DaoNamespace_AddType( NS, str, type );
 		DaoNamespace_AddTypeConstant( NS, str, type );
@@ -2611,12 +2636,9 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 		DaoClass_AddConst( self->hostClass, str, (DaoValue*) type, self->permission );
 	}else{
 		DMap *table = DaoParser_CurrentSymbolTable( self );
-		int id = LOOKUP_BIND_LC( routine->routConsts->value->size );
+		id = LOOKUP_BIND_LC( routine->routConsts->value->size );
 		MAP_Insert( table, str, id );
 		DaoRoutine_AddConstant( routine, (DaoValue*) type );
-	}
-	if( self->byteBlock ){
-		DaoByteBlock_EncodeTypeAlias( self->byteBlock, old, type, str, self->permission );
 	}
 	return start;
 InvalidAliasing:
@@ -3405,7 +3427,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 		DaoNamespace_AddType( self->nameSpace, abtp2->name, abtp2 );
 		DaoParser_AddConstant( self, abtp2->name, (DaoValue*) abtp2, tokens[enumkey] );
 		if( self->byteBlock ){
-			DaoByteBlock_EncodeTypeAlias( self->byteBlock, old, abtp2, alias, DAO_PERM_PUBLIC );
+			DaoByteBlock_EncodeTypeAlias( self->byteBlock, old, abtp2, alias, NULL, DAO_PERM_PUBLIC );
 		}
 	}
 	return rb + 1;

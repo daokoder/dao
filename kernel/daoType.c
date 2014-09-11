@@ -650,7 +650,7 @@ static int DaoType_MatchToTypeHolder( DaoType *self, DaoType *type, DMap *defs, 
 	if( node ){
 		type = node->value.pType;  /* type associated to the type holder; */
 		if( type->tid == DAO_THT || type->tid == DAO_UDT ) return DAO_MT_LOOSE;
-		return DaoType_MatchToX( self, type, defs, binds );
+		return DaoType_Match( self, type, defs, binds );
 	}
 	if( type->aux != NULL ){ /* @type_holder<type> */
 		int mt = DaoType_MatchTo( self, (DaoType*) type->aux, defs );
@@ -664,7 +664,7 @@ static int DaoType_MatchToVariant( DaoType *self, DaoType *type, DMap *defs, DMa
 	int i, n, mt = DAO_MT_NOT;
 	for(i=0,n=type->nested->size; i<n; i++){
 		DaoType *it2 = type->nested->items.pType[i];
-		int mt2 = DaoType_MatchToX( self, it2, defs, binds );
+		int mt2 = DaoType_Match( self, it2, defs, binds );
 		if( mt2 > mt ) mt = mt2;
 		if( mt == DAO_MT_EQ ) break;
 	}
@@ -709,7 +709,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	}else if( self->invar && type->invar ){
 		self = DaoType_GetBaseType( self );
 		type = DaoType_GetBaseType( type );
-		return DaoType_MatchToX( self, type, defs, binds );
+		return DaoType_Match( self, type, defs, binds );
 	}else if( self->invar || type->invar ){
 		/*
 		// Invar type cannot match to variable type due to potential modification;
@@ -721,7 +721,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 
 		if( self->invar ) self = DaoType_GetBaseType( self );
 		if( type->invar ) type = DaoType_GetBaseType( type );
-		mt = DaoType_MatchToX( self, type, defs, binds );
+		mt = DaoType_Match( self, type, defs, binds );
 		if( mt > DAO_MT_NOT ) mt -= 1; /* slightly reduce the score; */
 		return mt;
 	}
@@ -802,7 +802,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			it1 = self->nested->items.pType[i];
 			it2 = type->nested->items.pType[i];
 			tid = it2->tid;
-			k = DaoType_MatchToX( it1, it2, defs, binds );
+			k = DaoType_Match( it1, it2, defs, binds );
 			/* printf( "%i %s %s\n", k, it1->name->chars, it2->name->chars ); */
 			if( defs && defs->size && defs->size == ndefs ){
 				/*
@@ -928,16 +928,24 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 }
 int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 {
+	DMap *binds2 = binds;
 	void *pvoid[2];
 	int mt;
 
 	pvoid[0] = self;
 	pvoid[1] = type;
 
-	if( self ==NULL || type ==NULL ) return DAO_MT_NOT;
+	if( self == NULL || type == NULL ) return DAO_MT_NOT;
 	if( self == type ) return DAO_MT_EQ;
 
+	if( self->recursive && type->recursive && binds == NULL ){
+		binds = DHash_New( DAO_DATA_VOID2, 0 );
+	}
 	mt = DaoType_MatchToX( self, type, defs, binds );
+	if( binds2 != binds ){
+		DMap_Delete( binds );
+		binds = NULL;
+	}
 #if 0
 	printf( "mt = %i %s %s\n", mt, self->name->chars, type->name->chars );
 	if( mt ==0 && binds ){
@@ -1228,23 +1236,27 @@ static void DMap_Erase2( DMap *defs, void *p )
 	for(i=0,n=keys->size; i<n; i++) DMap_Erase( defs, keys->items.pVoid[i] );
 	DList_Delete( keys );
 }
-static int DaoType_CheckTypeMapping( DaoType *self, DMap *defs )
+static int DaoType_CheckTypeMapping( DaoType *self, DMap *defs, DMap *chk )
 {
 	daoint i, n;
+
+	if( DMap_Find( chk, self ) ) return 0;
+	DMap_Insert( chk, self, NULL );
+
 	if( DMap_Find( defs, self ) != NULL ) return 1;
 
 	if( self->nested ){
 		for(i=0,n=self->nested->size; i<n; i++){
-			if( DaoType_CheckTypeMapping( self->nested->items.pType[i], defs ) ) return 1;
+			if( DaoType_CheckTypeMapping( self->nested->items.pType[i], defs, chk ) ) return 1;
 		}
 	}
 	if( self->bases ){
 		for(i=0,n=self->bases->size; i<n; i++){
-			if( DaoType_CheckTypeMapping( self->bases->items.pType[i], defs ) ) return 1;
+			if( DaoType_CheckTypeMapping( self->bases->items.pType[i], defs, chk ) ) return 1;
 		}
 	}
 	if( self->aux && self->aux->type == DAO_TYPE ){
-		if( DaoType_CheckTypeMapping( & self->aux->xType, defs ) ) return 1;
+		if( DaoType_CheckTypeMapping( & self->aux->xType, defs, chk ) ) return 1;
 	}
 	return 0;
 }
@@ -1252,11 +1264,25 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 {
 	DaoType *type, *copy = NULL;
 	DNode *node;
+	DMap *chk;
 	daoint i, n;
 
 	if( self == NULL ) return NULL;
+	/*
+	// Specialization of recursive types is problematic.
+	// Apparently specialization of their names is most problematic.
+	// For example, for a recusive type defined as:
+	// type RecursiveTuple = tuple<@T,none|RecursiveTuple>
+	// What should be the name for a specialization with @T=int?
+	//
+	// So only allow explicit definition of recursive type using
+	// the type aliasing syntax.
+	*/
+	if( self->recursive ) return self;
 
-	n = DaoType_CheckTypeMapping( self, defs );
+	chk = DHash_New(0,0);
+	n = DaoType_CheckTypeMapping( self, defs, chk );
+	DMap_Delete( chk );
 	if( n == 0 && !(self->attrib & DAO_TYPE_SPEC) ) return self;
 
 	node = MAP_Find( defs, self );
@@ -1315,6 +1341,10 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 				DString_AppendChar( copy->name, self->name->chars[i] );
 			}
 			DString_AppendChar( copy->name, '<' );
+		}else if( self->tid <= DAO_TUPLE && self->nested->size ){
+			DString_AppendChars( copy->name, coreTypeNames[self->tid] );
+			DString_AppendChar( copy->name, '<' );
+			m = 1;
 		}
 		for(i=0,n=self->nested->size; i<n; i++){
 			type = DaoType_DefineTypes( self->nested->items.pType[i], ns, defs );
@@ -1479,6 +1509,35 @@ void DaoType_ResetTypeHolders( DaoType *self, DMap *types )
 		}
 		it = DMap_Next( types, it );
 	}
+}
+static void DaoType_SetupRecursive2( DaoType *self, DaoType *tht, DaoType *root, DMap *chk )
+{
+	daoint i, n;
+	if( DMap_Find( chk, self ) ) return;
+	DMap_Insert( chk, self, NULL );
+	if( self->nested ){
+		for(i=0,n=self->nested->size; i<n; i++){
+			if( self->nested->items.pType[i] == tht ){
+				GC_Assign( & self->nested->items.pType[i], root );
+			}else{
+				DaoType_SetupRecursive2( self->nested->items.pType[i], tht, root, chk );
+			}
+		}
+	}
+	if( self->aux && self->aux->type == DAO_TYPE ){
+		if( self->aux == (DaoValue*) tht ){
+			GC_Assign( & self->aux, root );
+		}else{
+			DaoType_SetupRecursive2( (DaoType*) self->aux, tht, root, chk );
+		}
+	}
+	if( self->cbtype ) DaoType_SetupRecursive2( self->cbtype, tht, root, chk );
+}
+void DaoType_SetupRecursive( DaoType *self, DaoType *tht, DaoType *root )
+{
+	DMap *chk = DHash_New(0,0);
+	DaoType_SetupRecursive2( self, tht, root, chk );
+	DMap_Delete( chk );
 }
 
 

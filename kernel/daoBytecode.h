@@ -172,7 +172,7 @@
 // ASM_AUXTYPE(1B): Type-Index(2B), SubType(2B), Zeros(4B);
 //
 // type alias:
-// ASM_TYPEDEF(1B): Name-Index(2B), Type-Index(2B), Permision(2B), Zeros(2B);
+// ASM_TYPEDEF(1B): Name-Index(2B), Type-Index(2B), RecurType(2B), Permision(2B);
 //
 // namespace:
 // ASM_NAMESPACE(1B): Name/Def-Index(2B), ScopeNS-Index(2B), Zeros(4B);
@@ -444,7 +444,7 @@ DaoByteBlock* DaoByteBlock_EncodeString( DaoByteBlock *self, DString *string );
 DaoByteBlock* DaoByteBlock_EncodeType( DaoByteBlock *self, DaoType *type );
 DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value );
 DaoByteBlock* DaoByteBlock_EncodeCtype( DaoByteBlock *self, DaoCtype *ctype, DaoCtype *generic, DaoType **types, int n );
-DaoByteBlock* DaoByteBlock_EncodeTypeAlias( DaoByteBlock *self, DaoType *type, DaoType *aliased, DString *alias, int perm );
+DaoByteBlock* DaoByteBlock_EncodeTypeAlias( DaoByteBlock *self, DaoType *type, DaoType *aliased, DString *alias, DaoType *rectype, int perm );
 DaoByteBlock* DaoByteBlock_EncodeTypeOf( DaoByteBlock *self, DaoType *type, DaoValue *value );
 DaoByteBlock* DaoByteBlock_EncodeLoad( DaoByteBlock *self, DaoNamespace *mod, DString *modname, DString *asname );
 DaoByteBlock* DaoByteBlock_EncodeExport( DaoByteBlock *self, DaoNamespace *ns, DString *names[3] );

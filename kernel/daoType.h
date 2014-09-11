@@ -92,7 +92,7 @@ struct DaoType
 	uchar_t   variadic  : 1; /* type for variadic tuple or routine */
 	uchar_t   realnum   : 1; /* for type of int/float/double */
 	uchar_t   noncyclic : 1; /* this type representing non-cyclic data */
-	uchar_t   unused    : 1;
+	uchar_t   recursive : 1; /* recursive type */
 	uchar_t   rntcount  : 4; /* real number type count */
 	uchar_t   ffitype   : 4; /* for modules using ffi */
 	DString  *name;   /* type name */
@@ -167,6 +167,7 @@ DAO_DLL DaoType* DaoType_GetCommonType( int type, int subtype );
 /* all DAO_THT: @T ... */
 DAO_DLL void DaoType_ResetTypeHolders( DaoType *self, DMap *types );
 DAO_DLL void DaoType_GetTypeHolders( DaoType *self, DMap *types );
+DAO_DLL void DaoType_SetupRecursive( DaoType *self, DaoType *tht, DaoType *root );
 
 DAO_DLL DaoType* DaoType_GetVariantItem( DaoType *self, int tid );
 
