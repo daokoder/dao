@@ -12,49 +12,49 @@ class Integer
 
 	routine Integer( v = 0 ){ value = v }
 
-	static operator +( A : Integer, B : int ){
+	static routine +( A : Integer, B : int ){
 		io.writeln( "Integer + int" );
 		return Integer( A.value + B );
 	}
 	# no longer supported, now the first operand must be a user type:
-	static operator +( A : int, B : Integer ){
+	static routine +( A : int, B : Integer ){
 		io.writeln( "int + Integer" );
 		return Integer( A + B.value );
 	}
-	static operator +( A : Integer, B : Integer ){
+	static routine +( A : Integer, B : Integer ){
 		io.writeln( "Integer + Integer" );
 		return Integer( A.value + B.value );
 	}
-	static operator +( C : Integer, A : Integer, B : Integer ){
+	static routine +( C : Integer, A : Integer, B : Integer ){
 		io.writeln( "Integer = Integer + Integer" );
 		C.value = A.value + B.value;
 		return C;
 	}
-	static operator +=( C : Integer, B : Integer ){
+	static routine +=( C : Integer, B : Integer ){
 		io.writeln( "Integer += Integer" );
 		C.value += B.value;
 		return C;
 	}
-	static operator -( A : Integer ){
+	static routine -( A : Integer ){
 		io.writeln( "- Integer" );
 		return Integer( - A.value );
 	}
-	static operator -( A : Integer, B : Integer ){
+	static routine -( A : Integer, B : Integer ){
 		io.writeln( "Integer - Integer" );
 		return Integer( A.value - B.value );
 	}
-	static operator >( A : Integer, B : Integer ){
+	static routine >( A : Integer, B : Integer ){
 		io.writeln( "Integer > Integer" );
 		b = A > B;
 		return Integer( A.value > B.value );
 	}
-	static operator !( C : Integer, A : Integer ){
-		io.writeln( "operator !( C : Integer, A : Integer )" );
+	static routine !( C : Integer, A : Integer ){
+		io.writeln( "routine !( C : Integer, A : Integer )" );
 		C.value = ! A.value;
 		return C;
 	}
-	static operator !( A : Integer ){
-		io.writeln( "operator !( A : Integer )" );
+	static routine !( A : Integer ){
+		io.writeln( "routine !( A : Integer )" );
 		return Integer( ! A.value );
 	}
 #{

@@ -2,11 +2,11 @@
 interface AA
 {
 	routine Meth( a = 0 );
-	operator[]( index : int )=>int;
-	operator.name()=>string;
+	routine[]( index : int )=>int;
+	routine.name()=>string;
 
-	operator for( iter : for_iterator );
-	operator[]( iter : for_iterator )=>int;
+	routine for( iter : for_iterator );
+	routine[]( iter : for_iterator )=>int;
 }
 routine Test( o : AA )
 {
@@ -20,14 +20,14 @@ routine Test( o : AA )
 class BB
 {
 	routine Meth( a = 0 ){ io.writeln( a ) }
-	operator[]( index : int ){ return index }
-	operator.name(){ return "BB" }
+	routine[]( index : int ){ return index }
+	routine.name(){ return "BB" }
 
-	operator for( iter : for_iterator ){
+	routine for( iter : for_iterator ){
 		iter.valid = 1;
 		iter.iterator = 0;
 	}
-	operator[]( iter : for_iterator ){
+	routine[]( iter : for_iterator ){
 		id = (int)iter.iterator;
 		iter.valid = id + 1 < 5;
 		iter.iterator = id + 1;

@@ -17,9 +17,9 @@ object = ClassOne( "abc" )
 
 class Point3D
 {
-	var x = 0D;
-	var y = 0D;
-	var z = 0D;
+	var x = 0.0;
+	var y = 0.0;
+	var z = 0.0;
 }
 # Create instance enumerating the members of the class,
 point = Point3D.{ 1, 2, 3 };
@@ -53,8 +53,8 @@ class MyNumber
 		value = v;
 	}
 
-	operator .value=( v ){ value = v }  # setter;
-	operator .value(){ return value }   # getter;
+	routine .value=( v ){ value = v }  # setter;
+	routine .value(){ return value }   # getter;
 }
 
 num = MyNumber( 123 )

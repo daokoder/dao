@@ -43,19 +43,17 @@ io.writeln( std.about( Test ) );
 Test( AA() )
 Test( BB() )
 
-routine Test2( data: int|float|double|string )
+routine Test2( data: int|float|string )
 {
 	switch( data ) type {
 	case int    : io.writeln( "handling int", std.about( data ) );
 	case float  : io.writeln( "handling float", std.about( data ) );
-	case double : io.writeln( "handling double", std.about( data ) );
 	case string : io.writeln( "handling string", std.about( data ) );
 	}
 }
 
 Test2( 1 );
-Test2( 1.0F );
-Test2( 1.0D );
+Test2( 1.0 );
 Test2( "abc" );
 
 
@@ -68,10 +66,10 @@ class FakeImage
 {
 	var image = [1,2,3,4;5,6,7,8;11,12,13,14;15,16,17,18];
 
-# instead of writing operator methods with all the combinations
+# instead of writing routine methods with all the combinations
 # such as tuple<int,int>, tuple<int,none>, ...
 # one can use disjoint union to simplify this.
-	operator[]( i: int, js: none|tuple<int|none,int|none> )=>array<int>
+	routine[]( i: int, js: none|tuple<int|none,int|none> )=>array<int>
 	{
 # one can simply return image[i,js], but the following is for demonstration purpose:
 		j1 = 0;

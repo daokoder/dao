@@ -26,8 +26,8 @@ TestMethodInterface( MethodClass() )
 
 interface OperatorInterface
 {
-	operator []( index : int ) => int;
-	operator .name() => string;
+	routine []( index : int ) => int;
+	routine .name() => string;
 }
 
 routine TestOperatorInterface( inter : OperatorInterface )
@@ -38,8 +38,8 @@ routine TestOperatorInterface( inter : OperatorInterface )
 
 class OperatorClass
 {
-	operator []( index : int ){ return index }
-	operator .name(){ return "name" }
+	routine []( index : int ){ return index }
+	routine .name(){ return "name" }
 }
 
 
@@ -57,8 +57,8 @@ name
 
 interface IteratorInterface
 {
-	operator for( iter : for_iterator );
-	operator []( iter : for_iterator )=>int;
+	routine for( iter : for_iterator );
+	routine []( iter : for_iterator )=>int;
 }
 
 routine TestIteratorInterface( inter : IteratorInterface )
@@ -68,11 +68,11 @@ routine TestIteratorInterface( inter : IteratorInterface )
 
 class IteratorClass
 {
-	operator for( iter : for_iterator ){
+	routine for( iter : for_iterator ){
 		iter.valid = 1;
 		iter.iterator = 0;
 	}
-	operator []( iter : for_iterator ){
+	routine []( iter : for_iterator ){
 		id = (int)iter.iterator;
 		iter.valid = id + 1 < 5;
 		iter.iterator = id + 1;

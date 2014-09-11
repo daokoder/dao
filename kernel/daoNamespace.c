@@ -200,12 +200,10 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 	daoint i, j, valCount;
 	DList *parents;
 	DMap *values;
-	DMap *supValues;
 	DNode *it;
 
 	if( typer->core == NULL ) return 0;
-	if( typer->core->kernel && typer->core->kernel->values != NULL ) return 1;
-	typer->core->kernel->SetupValues = NULL;
+	if( typer->core->kernel->SetupValues == NULL ) return 1;
 	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
 		if( typer->supers[i] == NULL ) break;
 		DaoNamespace_SetupValues( self, typer->supers[i] );
@@ -221,7 +219,6 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 		DList_Append( self->auxData, typer->core->kernel );
 	}
 	if( typer->core->kernel->values == NULL ){
-		DString defname = DString_WrapChars( "default" );
 		DaoValue buf = {0};
 		DaoValue *value = (DaoValue*) & buf;
 		DaoType *abtype = typer->core->kernel->abtype;
@@ -236,7 +233,7 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 #else
 		values = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 #endif
-		if( abtype && abtype->value ) DMap_Insert( values, & defname, abtype->value );
+		typer->core->kernel->values = values;
 		for(i=0; i<valCount; i++){
 			DString name = DString_WrapChars( typer->numItems[i].name );
 			double dv = typer->numItems[i].value;
@@ -252,19 +249,19 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 		DaoTypeBase_Parents( typer, parents );
 		for(i=1; i<parents->size; i++){
 			DaoTypeBase *sup = (DaoTypeBase*) parents->items.pVoid[i];
-			supValues = sup->core->kernel->values;
+			DaoTypeKernel *skn = sup->core->kernel;
 			if( sup->numItems == NULL ) continue;
 			for(j=0; sup->numItems[j].name!=NULL; j++){
 				DString name = DString_WrapChars( sup->numItems[j].name );
-				it = DMap_Find( supValues, & name );
-				if( it && DMap_Find( values, & name ) == NULL )
+				it = DMap_Find( sup->core->kernel->values, & name );
+				if( it && DMap_Find( values, & name ) == NULL ){
 					DMap_Insert( values, it->key.pVoid, it->value.pVoid );
+				}
 			}
 		}
 		DList_Delete( parents );
-		/* Set values field after it has been setup, for read safety in multithreading: */
-		typer->core->kernel->values = values;
 	}
+	typer->core->kernel->SetupValues = NULL;
 	DMutex_Unlock( & mutex_values_setup );
 	return 1;
 }
@@ -285,17 +282,18 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 {
 	DaoParser *parser, *defparser;
 	DaoRoutine *cur;
-	DString *name1, *name2;
 	DList *parents;
 	DMap *methods;
 	DMap *supMethods;
 	DNode *it;
 	daoint i, k, size;
 
+#if DEBUG
 	assert( typer->core != NULL );
+#endif
+
+	if( typer->core->kernel->SetupMethods == NULL ) return 1;
 	if( typer->funcItems == NULL && typer->supers[0] == NULL ) return 0;
-	if( typer->core->kernel && typer->core->kernel->methods != NULL ) return 1;
-	typer->core->kernel->SetupMethods = NULL;
 	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
 		if( typer->supers[i] == NULL ) break;
 		DaoNamespace_SetupMethods( self, typer->supers[i] );
@@ -307,21 +305,11 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 	}
 	if( typer->core->kernel->methods == NULL ){
 		DaoType *hostype = typer->core->kernel->abtype;
-		DMap *methods2 = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 
 		methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
-		name1 = DString_New();
-		name2 = DString_New();
 		DaoNamespace_InitConstEvalData( self );
 
-		/*
-		// Set a temporary empty method list, so that this method setup
-		// will not be invoked again on the same ctype, when its method
-		// is accessed during constant folding. The shortcoming of this
-		// is that the method accession will not be successful, but it is
-		// acceptable as such case is extremely rare.
-		*/
-		typer->core->kernel->methods = methods2;
+		typer->core->kernel->methods = methods;
 
 		parser = DaoVmSpace_AcquireParser( self->vmSpace );
 		parser->vmSpace = self->vmSpace;
@@ -354,11 +342,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 			cur->pFunc = typer->funcItems[i].fpter;
 			if( hostype && DString_EQ( cur->routName, hostype->name ) ){
 				cur->attribs |= DAO_ROUT_INITOR;
-				if( hostype->kernel->initors == NULL ){
-					hostype->kernel->initors = DaoRoutines_New( self, hostype, NULL );
-					GC_IncRC( hostype->kernel->initors );
-				}
-				DRoutines_Add( hostype->kernel->initors->overloads, cur );
+				DaoTypeKernel_InsertInitor( hostype->kernel, self, hostype, cur );
 			}
 			DaoMethods_Insert( methods, cur, self, hostype );
 		}
@@ -376,7 +360,9 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 						if( rout->attribs & DAO_ROUT_INITOR ) continue;
 						/* skip methods not defined in this parent type */
 						if( rout->routHost != sup->core->kernel->abtype ) continue;
-						DaoMethods_Insert( methods, rout, self, hostype );
+						DaoMethods_Insert( hostype->kernel->methods, rout, self, hostype );
+						if( !( rout->attribs & DAO_ROUT_CASTOR ) ) continue;
+						DaoTypeKernel_InsertCastor( hostype->kernel, self, hostype, rout );
 					}
 				}else{
 					DaoRoutine *rout = it->value.pRoutine;
@@ -384,27 +370,17 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 					if( rout->attribs & DAO_ROUT_INITOR ) continue;
 					/* skip methods not defined in this parent type */
 					if( rout->routHost != sup->core->kernel->abtype ) continue;
-					DaoMethods_Insert( methods, rout, self, hostype );
+					DaoMethods_Insert( hostype->kernel->methods, rout, self, hostype );
+					if( !( rout->attribs & DAO_ROUT_CASTOR ) ) continue;
+					DaoTypeKernel_InsertCastor( hostype->kernel, self, hostype, rout );
 				}
 			}
 		}
 		DList_Delete( parents );
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 		DaoVmSpace_ReleaseParser( self->vmSpace, defparser );
-
-		assert( DAO_ROUT_MAIN < (1<<DVM_NOT) );
-		for(i=DVM_NOT; i<=DVM_BITRIT; i++){
-			DString_SetChars( name1, daoBitBoolArithOpers[i-DVM_NOT] );
-			if( DMap_Find( methods, name1 ) == NULL ) continue;
-			typer->core->kernel->attribs |= DAO_OPER_OVERLOADED;
-			break;
-		}
-		DString_Delete( name1 );
-		DString_Delete( name2 );
-		/* Set methods field after it has been setup, for read safety in multithreading: */
-		typer->core->kernel->methods = methods;
-		DMap_Delete( methods2 );
 	}
+	typer->core->kernel->SetupMethods = NULL;
 	DMutex_Unlock( & mutex_methods_setup );
 	return 1;
 }
@@ -431,7 +407,9 @@ static void DaoValue_AddType( DaoValue *self, DString *name, DaoType *type )
 	case DAO_CTYPE :
 		core = self->xCdata.ctype->kernel->core;
 		DaoNamespace_SetupValues( core->kernel->nspace, self->xCdata.ctype->kernel->typer );
-		if( core->kernel->values == NULL ) core->kernel->values = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
+		if( core->kernel->values == NULL ){
+			core->kernel->values = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
+		}
 		DMap_Insert( core->kernel->values, name, cst );
 		break;
 	case DAO_CLASS :
@@ -455,6 +433,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	DString *string = NULL;
 	DaoToken **tokens;
 	DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
+	DaoTypeKernel *kernel = type->typer->core->kernel;
 	DaoValue *scope = NULL, *value = NULL;
 	DTypeSpecTree *sptree = NULL;
 	daoint i, k, n, tid, ret = DAO_DT_UNSCOPED;
@@ -566,10 +545,11 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 			int id = DaoNamespace_FindConst( self, name );
 			value = DaoNamespace_GetConst( self, id );
 			if( value == NULL ) goto Error;
+		}else{
+			kernel->attribs |= DAO_TYPEKERNEL_TEMPLATE;
 		}
 	}
 	if( value == NULL ){
-		DaoTypeKernel *kernel = type->typer->core->kernel;
 		DaoType *alias = type2;
 		DString *name = & tokens[k]->string;
 
@@ -1770,7 +1750,6 @@ DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *proto, 
 {
 	DaoRoutine *func = DaoRoutine_New( self, NULL, 0 );
 	DaoParser *defparser, *oldparser = NULL;
-	int key = DKEY_OPERATOR;
 	int optok = 0;
 
 	assert( parser != NULL );
@@ -1788,13 +1767,9 @@ DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *proto, 
 	func->routHost = parser->hostType;
 	if( ! DaoLexer_Tokenize( defparser->lexer, proto, 0 ) ) goto Error;
 	if( defparser->tokens->size < 3 ) goto Error;
-	if( (optok = defparser->tokens->items.pToken[0]->name == DKEY_OPERATOR) == 0 ){
-		if( defparser->tokens->items.pToken[0]->type == DTOK_IDENTIFIER
-				&& defparser->tokens->items.pToken[1]->type == DTOK_LB ) key = 0;
-	}
 
 	parser->routine = (DaoRoutine*) func; /* safe to parse params only */
-	if( DaoParser_ParseSignature( defparser, parser, key, optok ) < 0 ){
+	if( DaoParser_ParseSignature( defparser, parser, optok ) < 0 ){
 		DaoParser_PrintError( defparser, 0, 0, NULL );
 		goto Error;
 	}

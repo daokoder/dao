@@ -242,8 +242,12 @@ enum DaoRoutineModes
 	DAO_ROUT_MODE_DEBUG = 1
 };
 
-#define DAO_TYPER_FREE       (DAO_ROUT_REUSABLE<<1)
-#define DAO_OPER_OVERLOADED  (DAO_TYPER_FREE<<1)
+enum DaoTypeKernelAttribs
+{
+	DAO_TYPEKERNEL_FREE = 1 ,
+	DAO_TYPEKERNEL_TEMPLATE = 2
+};
+
 
 enum DaoGlobalConstOffset
 {

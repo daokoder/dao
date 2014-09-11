@@ -236,6 +236,8 @@ struct DaoTypeKernel
 	int  (*SetupMethods)( DaoNamespace *space, DaoTypeBase *typer );
 };
 DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer );
+void DaoTypeKernel_InsertInitor( DaoTypeKernel *self, DaoNamespace *ns, DaoType *host, DaoRoutine *routine );
+void DaoTypeKernel_InsertCastor( DaoTypeKernel *self, DaoNamespace *ns, DaoType *host, DaoRoutine *routine );
 
 
 /*

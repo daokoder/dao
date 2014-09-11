@@ -2032,8 +2032,8 @@ static DaoFuncItem bigintMeths[]=
 	{ BIGINT_BITLFT4, "<<( C :BigInt, A :BigInt, B :BigInt ) => BigInt" },
 	{ BIGINT_BITRIT4, ">>( C :BigInt, A :BigInt, B :BigInt ) => BigInt" },
 
-	{ BIGINT_CastToInt,     "operator (int)( self :BigInt )" },
-	{ BIGINT_CastToString,  "operator (string)( self :BigInt )" },
+	{ BIGINT_CastToInt,     "(int)( self :BigInt )" },
+	{ BIGINT_CastToString,  "(string)( self :BigInt )" },
 
 	{ BIGINT_PRINT,  "Print( self :BigInt )" },
 	{ BIGINT_PRINT,  "__PRINT__( self :BigInt )" },

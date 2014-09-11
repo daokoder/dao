@@ -116,6 +116,7 @@ DAO_DLL void DaoClass_ResetAttributes( DaoClass *self );
 DAO_DLL void DaoClass_MakeInterface( DaoClass *self );
 DAO_DLL int DaoClass_UseMixinDecorators( DaoClass *self );
 DAO_DLL void DaoClass_UpdateVirtualMethods( DaoClass *self );
+DAO_DLL void DaoClass_CastingMethod( DaoClass *self, DaoRoutine *routine );
 
 DAO_DLL int  DaoClass_ChildOf( DaoClass *self, DaoValue *super );
 DAO_DLL void DaoClass_AddMixinClass( DaoClass *self, DaoClass *mixin );

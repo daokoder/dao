@@ -4588,7 +4588,6 @@ static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, 
 	int boolres = code >= DVM_AND && code <= DVM_NE;
 	int bothobj = B ? A->type == B->type : 0;
 	int recursive = 0;
-	int overloaded = 0;
 	int compo = 0; /* try composite operator */
 	int nopac = 0; /* do not pass C as parameter */
 	int npar = 3;
@@ -4605,7 +4604,6 @@ static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, 
 			if( DString_EQ( name, self->activeRoutine->routName ) ) recursive = 1;
 			if( recursive && object->defClass->objType == self->activeRoutine->routHost ) return 0;
 			klass = object->defClass;
-			overloaded = klass->attribs & DAO_OPER_OVERLOADED;
 			rc = DaoObject_GetData( object, name, & value,  self->activeObject );
 		}else{ /* DAO_CDATA */
 			value = (DaoValue*) DaoType_FindFunction( cdata->ctype, name );
@@ -4623,7 +4621,6 @@ TryAgain:
 		if( DString_EQ( name, self->activeRoutine->routName ) ) recursive = 1;
 		if( recursive && object->defClass->objType == self->activeRoutine->routHost ) return 0;
 		klass = object->defClass;
-		overloaded = klass->attribs & DAO_OPER_OVERLOADED;
 		rc = DaoObject_GetData( object, name, & value,  self->activeObject );
 	}else{ /* DAO_CDATA */
 		value = (DaoValue*) DaoType_FindFunction( cdata->ctype, name );

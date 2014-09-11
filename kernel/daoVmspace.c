@@ -2718,7 +2718,7 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 	typer->Delete = parent->typer->Delete;
 	typer->GetGCFields = parent->typer->GetGCFields;
 	type = DaoNamespace_WrapType( self->daoNamespace, typer, 0 );
-	type->kernel->attribs |= DAO_TYPER_FREE;
+	type->kernel->attribs |= DAO_TYPEKERNEL_FREE;
 
 	for(i=DAO_EXCEPTION; i<ENDOF_BASIC_EXCEPT; i++){
 		if( strcmp( typer->name, daoExceptionNames[i] ) == 0 ){

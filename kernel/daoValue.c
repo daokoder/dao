@@ -183,7 +183,7 @@ int DaoList_Compare( DaoList *list1, DaoList *list2 )
 	/* find the first unequal items */
 	while( i < min && (cmp = DaoValue_Compare(*d1, *d2)) ==0 ) i++, d1++, d2++;
 	if( i < min ){
-		if( abs( cmp > 1 ) ) return cmp;
+		if( abs( cmp ) > 1 ) return cmp;
 		return cmp * res;
 	}
 	if( size1 == size2  ) return 0;
@@ -363,7 +363,7 @@ DString* DaoValue_GetString( DaoValue *self, DString *str )
 	char chs[100] = {0};
 	DString_Clear( str );
 	switch( self->type ){
-	case DAO_INTEGER : sprintf( chs, "%lli", self->xInteger.value ); break;
+	case DAO_INTEGER : sprintf( chs, "%lli", (long long) self->xInteger.value ); break;
 	case DAO_FLOAT   : sprintf( chs, "%g", self->xFloat.value ); break;
 	case DAO_COMPLEX : sprintf( chs, (self->xComplex.value.imag < 0) ? "%g%gC" : "%g+%gC", self->xComplex.value.real, self->xComplex.value.imag ); break;
 	case DAO_ENUM : DaoEnum_MakeName( & self->xEnum, str ); break;

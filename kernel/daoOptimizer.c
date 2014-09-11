@@ -2524,7 +2524,7 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 			DString_AppendChars( s, "too many parameters \";\n" );
 			goto FinishError;
 		}
-		abtp = routType->nested->items.pType[ito];
+		abtp = (DaoType*) routType->nested->items.pType[ito]->aux;
 		parpass[ito] = DaoType_MatchTo( tp, abtp, defs );
 
 #if 0
@@ -6739,9 +6739,11 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 					}else{
 						sect->b = sect->c = count;
 					}
-					if( first != NULL ) first->b = sect->b;
+					if( first != NULL ){
+						first->b = sect->b;
+						newfn->body->vmCodes->data.codes[i+3] = *(DaoVmCode*) first;
+					}
 					newfn->body->vmCodes->data.codes[i+2] = *(DaoVmCode*) sect;
-					newfn->body->vmCodes->data.codes[i+3] = *(DaoVmCode*) first;
 				}
 			}
 		}

@@ -781,6 +781,16 @@ int DaoCass_DeriveMixinData( DaoClass *self )
 	return bl;
 }
 
+void DaoClass_CastingMethod( DaoClass *self, DaoRoutine *routine )
+{
+	DaoNamespace *NS = self->classRoutine->nameSpace;
+	if( self->castRoutines == NULL ){
+		self->castRoutines = DaoRoutines_New( NS, self->objType, NULL );
+		GC_IncRC( self->castRoutines );
+	}
+	DaoRoutines_Add( self->castRoutines, routine );
+}
+
 /* assumed to be called before parsing class body */
 int DaoClass_DeriveClassData( DaoClass *self )
 {
@@ -845,6 +855,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 			id = LOOKUP_BIND( st, pm, up+1, id );
 			DMap_Insert( self->lookupTable, it->key.pString, (void*)id );
 		}
+		if( klass->castRoutines ) DaoClass_CastingMethod( self, klass->castRoutines );
 	}else if( self->parent && self->parent->type == DAO_CTYPE ){
 		DaoCtype *cdata = (DaoCtype*) self->parent;
 		DaoTypeKernel *kernel = cdata->ctype->kernel;
@@ -884,6 +895,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 			DList_Append( mf->perms, IntToPointer( DAO_PERM_PUBLIC ) );
 			DList_Append( mf->routines, it->value.pValue );
 		}
+		if( kernel->castors ) DaoClass_CastingMethod( self, kernel->castors );
 	}
 	DaoClass_SetupMethodFields( self, mf );
 	DaoMethodFields_Delete( mf );
@@ -1051,7 +1063,6 @@ int DaoClass_UseMixinDecorators( DaoClass *self )
 void DaoClass_ResetAttributes( DaoClass *self )
 {
 	DNode *node;
-	DString *mbs = DString_New();
 	int i, k, id, autoinitor = self->parent == NULL;
 
 	DaoObject_Init( & self->objType->value->xObject, NULL, 0 );
@@ -1070,18 +1081,6 @@ void DaoClass_ResetAttributes( DaoClass *self )
 #if 0
 	printf( "%s %i\n", self->className->chars, autoinitor );
 #endif
-	for(i=DVM_NOT; i<=DVM_BITRIT; i++){
-		DString_SetChars( mbs, daoBitBoolArithOpers[i-DVM_NOT] );
-		node = DMap_Find( self->lookupTable, mbs );
-		if( node == NULL ) continue;
-		if( LOOKUP_ST( node->value.pInt ) != DAO_CLASS_CONSTANT ) continue;
-		id = LOOKUP_ID( node->value.pInt );
-		k = self->constants->items.pConst[id]->value->type;
-		if( k != DAO_ROUTINE ) continue;
-		self->attribs |= DAO_OPER_OVERLOADED;
-		break;
-	}
-	DString_Delete( mbs );
 }
 
 int DaoClass_ChildOf( DaoClass *self, DaoValue *other )

@@ -1052,7 +1052,7 @@ static int DaoParser_ExtractRoutineBody( DaoParser *self, DaoParser *parser, int
 	return right;
 }
 
-int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int start )
+int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 {
 	DNode *node;
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -1076,6 +1076,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	int isMeth, notStatic, notConstr;
 	int hasdeft = 0, selfpar = 0;
 	int isconstru = klass != NULL;
+	int lb = 0;
 
 	DString_Assign( routine->routName, & nameTok->string );
 	DString_Assign( module->fileName, self->fileName );
@@ -1083,32 +1084,33 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	module->nameSpace = self->nameSpace;
 	self->returnType = NULL;
 	if( start + 2 >= size ) return -1;
-	start ++;
-	if( key == DKEY_OPERATOR ){
-		int lb = 0;
-		if( tokens[start-1]->name == DTOK_LB ){ /* operator () or operator (type) */
-			int rb = start;
-			if( tokens[start]->name != DTOK_RB ){
-				rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start-1, -1 );
-				cast = DaoParser_ParseType( self, start, rb-1, & rb, NULL );
-				if( cast == NULL || tokens[rb]->name != DTOK_RB ) goto ErrorInvalidOperator;
-			}
-			lb = DaoParser_FindOpenToken( self, DTOK_LB, rb+1, -1, 1 );
-		}else if( tokens[start-1]->name == DTOK_LSB ){ /* operator [] */
-			if( tokens[start]->name != DTOK_RSB ) goto ErrorInvalidOperator;
-			lb = DaoParser_FindOpenToken( self, DTOK_LB, start+1, -1, 1 );
-		}else{
-			lb = DaoParser_FindOpenToken( self, DTOK_LB, start, -1, 1 );
+
+	start += 1;
+	if( tokens[start-1]->name == DTOK_LB ){ /* operator () or operator (type) */
+		int rb = start;
+		if( tokens[start]->name != DTOK_RB ){
+			rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start-1, -1 );
+			cast = DaoParser_ParseType( self, start, rb-1, & rb, NULL );
+			if( cast == NULL || tokens[rb]->name != DTOK_RB ) goto ErrorInvalidOperator;
 		}
-		if( lb < 0 ) goto ErrorInvalidOperator;
-		for(i=start; i<lb; i++) DString_Append( routine->routName, & tokens[i]->string );
-		start = lb;
+		lb = DaoParser_FindOpenToken( self, DTOK_LB, rb+1, -1, 1 );
+	}else if( tokens[start-1]->name == DTOK_LSB ){ /* operator [] */
+		if( tokens[start]->name != DTOK_RSB ) goto ErrorInvalidOperator;
+		lb = DaoParser_FindOpenToken( self, DTOK_LB, start+1, -1, 1 );
+	}else if( tokens[start-1]->type != DTOK_IDENTIFIER ){
+		lb = DaoParser_FindOpenToken( self, DTOK_LB, start, -1, 1 );
 	}else if( tokens[start]->name == DTOK_LT ){ /* constructor of template types */
 		int lb = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start, -1 );
 		if( lb < 0 ) return -1;
 		for(i=start; i<=lb; i++) DString_Append( routine->routName, & tokens[i]->string );
 		start = lb + 1;
 	}
+	if( lb < 0 ) goto ErrorInvalidOperator;
+	if( lb > start ){
+		for(i=start; i<lb; i++) DString_Append( routine->routName, & tokens[i]->string );
+		start = lb;
+	}
+
 	if( klass ) isconstru &= DString_EQ( routine->routName, klass->className );
 
 	if( tokens[start]->name != DTOK_LB ) return -1;
@@ -1400,23 +1402,12 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int s
 	// for two reasons:
 	// 1. Searching casting methods by type names may be unreliable;
 	// 2. Casting similar types can be supported in this way; For example,
-	//    if "operator(double)" is defined, casting to "float" will be allowed.
+	//    if "operator(float)" is defined, casting to "int" will be allowed.
 	 */
 	if( cast != NULL ){
 		routine->attribs |= DAO_ROUT_CASTOR;
-		if( klass ){
-			if( klass->castRoutines == NULL ){
-				klass->castRoutines = DaoRoutines_New( NS, klass->objType, NULL );
-				GC_IncRC( klass->castRoutines );
-			}
-			DRoutines_Add( klass->castRoutines->overloads, routine );
-		}else if( hostype ){
-			if( hostype->kernel->castors == NULL ){
-				hostype->kernel->castors = DaoRoutines_New( NS, hostype, NULL );
-				GC_IncRC( hostype->kernel->castors );
-			}
-			DRoutines_Add( hostype->kernel->castors->overloads, routine );
-		}
+		if( hostype ) DaoTypeKernel_InsertCastor( hostype->kernel, NS, hostype, routine );
+		else if( klass ) DaoClass_CastingMethod( klass, routine );
 	}
 
 	/*  remove vmcode for consts */
@@ -2784,7 +2775,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		}
 		klass = (DaoClass*) scope;
 		DString_Assign( mbs, & tokens[start]->string );
-		if( value == NULL && tki == DKEY_OPERATOR ){
+		if( value == NULL ){
 			int i, lb = start;
 			if( tokens[start]->name == DTOK_LB ){ /* operator () or operator (type) */
 				lb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, lb, -1 );
@@ -2812,7 +2803,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		parser->routine->attribs |= attribs;
 		parser->hostType = klass->objType;
 		parser->hostClass = klass;
-		right = DaoParser_ParseSignature( self, parser, tki, start );
+		right = DaoParser_ParseSignature( self, parser, start );
 		if( right < 0 ) goto InvalidDefinition;
 		DString_Assign( mbs, parser->routine->routName );
 		DString_AppendChar( mbs, ':' );
@@ -2852,7 +2843,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		klass = self->hostClass;
 		parser = DaoParser_NewRoutineParser( self, start, attribs );
 		rout = parser->routine;
-		right = DaoParser_ParseSignature( self, parser, tki, start );
+		right = DaoParser_ParseSignature( self, parser, start );
 		if( right < 0 ) goto InvalidDefinition;
 		DString_Assign( mbs, rout->routName );
 		DString_AppendChar( mbs, ':' );
@@ -2882,7 +2873,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 	}else if( self->isInterBody ){
 		parser = DaoParser_NewRoutineParser( self, start, attribs );
 		rout = parser->routine;
-		right = DaoParser_ParseSignature( self, parser, tki, start );
+		right = DaoParser_ParseSignature( self, parser, start );
 		if( right < 0 ) goto InvalidDefinition;
 		GC_Assign( & rout->routHost, self->hostInter->abtype );
 		parser->hostInter = self->hostInter;
@@ -2892,7 +2883,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		if( self->lexLevel != 0 ) goto InvalidDefinition; /* TODO: better information; */
 
 		parser = DaoParser_NewRoutineParser( self, start, attribs );
-		right = DaoParser_ParseSignature( self, parser, tki, start );
+		right = DaoParser_ParseSignature( self, parser, start );
 		if( right < 0 ) goto InvalidDefinition;
 
 		rout = parser->routine;
@@ -2926,7 +2917,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 	}
 	if( tokens[right]->name == DTOK_RCB ){ /* with body */
 		if( rout->body == NULL ){
-			DaoParser_Error2( self, DAO_ROUT_REDUNDANT_IMPLEMENTATION, errorStart+1, k, 0 );
+			DaoParser_Error2( self, DAO_ROUT_REDUNDANT_IMPLEMENTATION, errorStart+1, right, 0 );
 			goto InvalidDefinition;
 		}
 		if( DaoParser_ParseRoutine( parser ) == 0 ) goto Failed;
@@ -3688,7 +3679,7 @@ DecoratorError:
 		// Note: routine(){...}();
 		// It is allowed to define and call immediately an anonymous function.
 		*/
-		if( (tki == DKEY_ROUTINE && tki2 != DTOK_LB) || tki == DKEY_OPERATOR ){
+		if( tki == DKEY_ROUTINE && (tki2 != DTOK_LB || self->isClassBody || self->isInterBody) ){
 			int attribs = 0;
 			switch( storeType ){
 			case DAO_DECL_VAR:
@@ -5864,7 +5855,7 @@ static int DaoParser_ParseClosure( DaoParser *self, int start )
 		rb = DaoParser_ExtractRoutineBody( self, parser, offset );
 		if( rb < 0 ) goto ErrorParsing;
 	}else if( tokens[start+1]->name == DTOK_LB ){
-		rb = DaoParser_ParseSignature( self, parser, DKEY_ROUTINE, start );
+		rb = DaoParser_ParseSignature( self, parser, start );
 	}else if( tokens[start+1]->name == DTOK_LCB ){
 		DaoType *type = DaoType_New( "@X", DAO_THT, NULL, NULL );
 		type = DaoType_New( "routine<=>@X>", DAO_ROUTINE, (DaoValue*)type, NULL);
@@ -6359,7 +6350,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 	}else if( tki == DTOK_LB ){
 		result = DaoParser_ParseParenthesis( self );
 		start = self->curToken;
-	}else if( tki == DKEY_ROUTINE ){
+	}else if( tki == DKEY_ROUTINE && self->isClassBody == 0 && self->isInterBody == 0 ){
 		int tokname = DaoParser_NextTokenName( self );
 		/* anonymous function or closure expression */
 		self->curToken += 1;

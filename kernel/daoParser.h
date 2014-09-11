@@ -160,7 +160,7 @@ DAO_DLL void DaoParser_Delete( DaoParser *self );
 DAO_DLL void DaoParser_Reset( DaoParser *self );
 
 DAO_DLL int DaoParser_LexCode( DaoParser *self, const char *source, int replace );
-DAO_DLL int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int key, int start );
+DAO_DLL int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start );
 DAO_DLL int DaoParser_ParseScript( DaoParser *self );
 DAO_DLL int DaoParser_ParseRoutine( DaoParser *self );
 

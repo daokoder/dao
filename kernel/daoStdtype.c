@@ -3829,7 +3829,7 @@ static DaoFuncItem dao_Exception_Meths[] =
 	/* for testing or demonstration */
 	{ Dao_Exception_Get_name, "typename( self: Exception )=>string" },
 	{ Dao_Exception_Get_summary, "serialize( self: Exception )=>string" },
-	{ Dao_Exception_Get_summary, "operator cast( self: Exception )=>string" },
+	{ Dao_Exception_Get_summary, "(string)( self: Exception )" },
 #ifdef DEBUG
 	{ Dao_Exception_Getf, ".( self: Exception, name: string )=>any" },
 	{ Dao_Exception_Setf, ".=( self: Exception, name: string, value: any)" },
