@@ -1355,7 +1355,7 @@ void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *t
 	if( id >=0 && LOOKUP_UP(id) ) return;
 	if( tp->aux && (tp->tid >= DAO_OBJECT && tp->tid <= DAO_CTYPE) ){
 		DaoNamespace_AddConst( self, name, tp->aux, DAO_PERM_PUBLIC );
-	}else if( tp->tid != DAO_THT ){
+	}else{
 		DaoNamespace_AddConst( self, name, (DaoValue*) tp, DAO_PERM_PUBLIC );
 	}
 }

@@ -5398,8 +5398,9 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 	DNode *node;
 	daoint i, n, size;
 	int type, variadic, tsize;
+
 	if( ct == NULL ) goto FailConversion;
-	if( ct->tid == DAO_ANY ) goto Rebind;
+	if( ct->tid & DAO_ANY ) goto Rebind;
 	if( dA->type == ct->tid && ct->tid >= DAO_INTEGER && ct->tid < DAO_ARRAY ) goto Rebind;
 	if( ct->tid > DAO_NONE && ct->tid <= DAO_STRING && (dC == NULL || dC->type != ct->tid) ){
 		dC = DaoValue_SimpleCopy( ct->value );
@@ -5530,7 +5531,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 				}
 				if( tp2->tid >= DAO_PAR_NAMED && tp2->tid <= DAO_PAR_VALIST ) tp2 = & tp2->aux->xType;
 				V = DaoTypeCast( proc, tp2, V, K );
-				if( V == NULL || V->type == 0 ) goto FailConversion;
+				if( V == NULL ) goto FailConversion;
 				DaoValue_Copy( V, tuple->values + i );
 			}
 		}else if( dA->type == DAO_LIST ){
@@ -5547,7 +5548,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 				}
 				if( tp2->tid >= DAO_PAR_NAMED && tp2->tid <= DAO_PAR_VALIST ) tp2 = & tp2->aux->xType;
 				V = DaoTypeCast( proc, tp2, V, K );
-				if( V == NULL || V->type == 0 ) goto FailConversion;
+				if( V == NULL ) goto FailConversion;
 				DaoValue_Copy( V, tuple->values + i );
 			}
 		}else{

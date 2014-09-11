@@ -4577,6 +4577,8 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		if( rout != routine && defs2->size && (defs2->size > k || rout->routType->aux->xType.tid == DAO_UDT) && (rout->body == NULL || rout->body->vmCodes->size) ){
 			DaoRoutine *orig = rout, *rout2 = rout;
 			if( rout->original ) rout = orig = rout->original;
+#warning"--------------------------"
+//			printf( "here: %s\n", rout->routType->name->chars );
 
 			/* Do not share function body. It may be thread unsafe to share: */
 			rout = DaoRoutine_Copy( rout, 0, 1, 0 );

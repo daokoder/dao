@@ -208,7 +208,7 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 			if( F == 'c' ) DString_ToLocal( fmt2 );
 			DaoStream_WriteString( self, fmt2 );
 		}else if( F == 'd' || F == 'i' || F == 'o' || F == 'x' || F == 'X' ){
-			if( sizeof(dao_integer) != 4 ) DString_InsertChar( fmt2, DAO_INT_FORMAT[0], fmt2->size-1 );
+			DString_InsertChars( fmt2, "ll", fmt2->size-1, 0, 2 );
 			self->format = fmt2->chars;
 			if( value->type == DAO_NONE || value->type > DAO_FLOAT ) goto WrongParameter;
 			DaoStream_WriteInt( self, DaoValue_GetInteger( value ) );
@@ -667,19 +667,19 @@ void DaoStream_WriteFormatedInt( DaoStream *self, dao_integer val, const char *f
 		self->redirect->StdioWrite( self->redirect, mbs );
 		DString_Delete( mbs );
 	}else if( self->file ){
-		fprintf( self->file, format, val );
+		fprintf( self->file, format, (long long) val );
 	}else if( self->mode & DAO_STREAM_STRING ){
-		sprintf( buffer, format, val );
+		sprintf( buffer, format, (long long) val );
 		DaoStream_TryResetStringBuffer( self );
 		DString_AppendChars( self->streamString, buffer );
 	}else{
-		printf( format, val );
+		printf( format, (long long) val );
 	}
 }
 void DaoStream_WriteInt( DaoStream *self, dao_integer val )
 {
 	const char *format = self->format;
-	if( format == NULL ) format = "%" DAO_INT_FORMAT;
+	if( format == NULL ) format = "%lli";
 	DaoStream_WriteFormatedInt( self, val, format );
 }
 void DaoStream_WriteFloat( DaoStream *self, double val )

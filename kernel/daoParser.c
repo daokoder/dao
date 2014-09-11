@@ -1646,7 +1646,7 @@ DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, int valt
 			}
 			type = DaoParser_ParseType( self, i, end, & i, types );
 			if( type == NULL ) goto InvalidTypeForm;
-			if( valtype == 0 && type->valtype ) goto InvalidTypeForm;
+			if( valtype == 0 && type->valtype && type->tid != DAO_NONE ) goto InvalidTypeForm;
 			if( invar ) type = DaoType_GetInvarType( type );
 			if( name ){
 				type = DaoNamespace_MakeType( ns, name->chars, tid, (DaoValue*)type, NULL,0 );
@@ -6196,7 +6196,10 @@ static DaoEnode DaoParser_ParseParenthesis( DaoParser *self )
 	if( rb > 0 && rb < end && maybeType && tokens[rb]->line == tokens[rb+1]->line ){
 		int cur, count = self->errors->size;
 		self->curToken = rb + 1;
+		/* To skip the explicit enum type, which is for the entire casting expression: */
+		DList_PushFront( self->enumTypes, NULL );
 		enode = DaoParser_ParsePrimary( self, 0, 0 );
+		DList_PopFront( self->enumTypes );
 		cur = self->curToken;
 		if( enode.reg >= 0 ){
 			/* type casting expression */
