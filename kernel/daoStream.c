@@ -435,7 +435,15 @@ static void DaoIO_Check( DaoProcess *proc, DaoValue *p[], int N )
 	case 1 : res = (self->mode & DAO_STREAM_WRITABLE) != 0; break;
 	case 2 : res = self->file != NULL; break;
 	case 3 : if( self->file ) res = feof( self->file ); break;
-	case 4 : res = (self->mode & DAO_STREAM_AUTOCONV) != 0; break;
+	}
+	DaoProcess_PutEnum( proc, res ? "true" : "false" );
+}
+static void DaoIO_Check2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoStream *self = & p[0]->xStream;
+	int res = 0, what = p[1]->xEnum.value;
+	switch( what ){
+	case 0 : res = (self->mode & DAO_STREAM_AUTOCONV) != 0; break;
 	}
 	DaoProcess_PutEnum( proc, res ? "true" : "false" );
 }
@@ -557,10 +565,12 @@ static DaoFuncItem streamMeths[] =
 	{ DaoIO_Open,      "stream( type: enum<string,tmpfile> = $string )=>stream" },
 	{ DaoIO_Open,      "stream( file: string, mode: string )=>stream" },
 	{ DaoIO_Open,      "stream( fileno: int, mode: string )=>stream" },
+	{ DaoIO_Write,     "write( self: stream, data: string )" },
 	{ DaoIO_Write,     "write( self: stream, invar ... : any )" },
 	{ DaoIO_Writef,    "writef( self: stream, format: string, invar ... : any )" },
 	{ DaoIO_Writeln,   "writeln( self: stream, invar ... : any )" },
-	{ DaoIO_Read,      "read( self: stream, amount: int|enum<line,all> = $all )=>string" },
+	{ DaoIO_Read,      "read( self: stream, count = -1 )=>string" },
+	{ DaoIO_Read,      "read( self: stream, amount: enum<line,all> = $all )=>string" },
 	{ DaoIO_ReadLines2,"readlines( self: stream, numline=0, chop=0 )[line: string=>none|@T]=>list<@T>" },
 
 	{ DaoIO_Flush,     "flush( self: stream )" },
@@ -569,22 +579,26 @@ static DaoFuncItem streamMeths[] =
 	{ DaoIO_Tell,      "tell( self: stream )=>int" },
 	{ DaoIO_FileNO,    "fileno( self: stream )=>int" },
 	{ DaoIO_Enable,    "enable( self: stream, what: enum<auto_conversion>, state: bool )" },
-	{ DaoIO_Check,     "check( self: stream, what: enum<readable,writable,is_open,is_eof,auto_conversion> ) => bool" },
+	{ DaoIO_Check,     "check( self: stream, what: enum<readable,writable,open,eof> ) => bool" },
+	{ DaoIO_Check2,     "check( self: stream, what: enum<auto_conversion> ) => bool" },
 
 	{ NULL, NULL }
 };
 
+static DaoFuncItem ioDeviceMeths[] =
+{
+	{ NULL, "read( self: device, count = -1 ) => string" },
+	{ NULL, "write( self: device, data: string )" },
+	{ NULL, "close( self: device )" },
+	{ NULL, "check( self: device, what: enum<readable,writable,open,eof> ) => bool" },
+	{ NULL, NULL }
+};
 
-void DaoStream_SetFile( DaoStream *self, FILE *fd )
+DaoTypeBase ioDeviceTyper =
 {
-	DaoValue *p = (DaoValue*) self;
-	self->file = fd;
-}
-FILE* DaoStream_GetFile( DaoStream *self )
-{
-	if( self->file ) return self->file;
-	return NULL;
-}
+	"device", NULL, NULL, (DaoFuncItem*) ioDeviceMeths, {0}, {0},
+	(FuncPtrDel) NULL, NULL
+};
 
 DaoTypeBase streamTyper =
 {
@@ -873,3 +887,13 @@ void DaoFile_WriteString( FILE* file, DString *str )
 	}
 }
 
+void DaoStream_SetFile( DaoStream *self, FILE *fd )
+{
+	DaoValue *p = (DaoValue*) self;
+	self->file = fd;
+}
+FILE* DaoStream_GetFile( DaoStream *self )
+{
+	if( self->file ) return self->file;
+	return NULL;
+}

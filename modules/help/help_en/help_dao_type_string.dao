@@ -135,8 +135,6 @@ expand( invar self: string, invar subs: map<string,string>|tuple<...:string>,
 		spec = "$", keep = 1 ) => string
 split( invar self: string, sep = "" ) => list<string>
 iterate( invar self: string, unit: enum<byte,char> = $byte )[char: int, index: int]
-collect( invar self: string, unit: enum<byte,char> = $byte )
-	[char: int, index: int => none|int] => string
 fetch( invar self: string, pattern: string, group = 0, start = 0, end = -1 )
 	=> string
 match( invar self: string, pattern: string, group = 0, start = 0, end = -1 )
@@ -217,8 +215,6 @@ expand( invar self: string, invar subs: map<string,string>|tuple<...:string>,
 		spec = "$", keep = 1 ) => string
 split( invar self: string, sep = "" ) => list<string>
 iterate( invar self: string, unit: enum<byte,char> = $byte )[char: int, index: int]
-collect( invar self: string, unit: enum<byte,char> = $byte )
-	[char: int, index: int => none|int] => string
 @[code]
 
 
@@ -464,23 +460,6 @@ Examples,
 @[code]
 @[code]
 
-
-@[subsubsection]
-collect(invar self:string,unit:enum<byte,char>=$byte)[...]=>string
-@[subsubsection]
-@[code]
-collect( invar self: string, unit: enum<byte,char> = $byte )
-	[char: int, index: int => none|int] => string
-@[code]
-Map each unit of the string to a new value and return a new string form
-from the mapped values.
-
-The parameters have the same meaning as in "iterate()";
-
-
-Examples,
-@[code]
-@[code]
 
 
 

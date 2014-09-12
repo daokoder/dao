@@ -305,6 +305,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 	}
 	if( typer->core->kernel->methods == NULL ){
 		DaoType *hostype = typer->core->kernel->abtype;
+		DaoInterface *inter = DaoValue_CastInterface( hostype->aux );
 
 		methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 		DaoNamespace_InitConstEvalData( self );
@@ -346,6 +347,12 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 			}
 			DaoMethods_Insert( methods, cur, self, hostype );
 		}
+		if( hostype->tid == DAO_INTERFACE ){
+			for(i=0; i<DAO_MAX_CDATA_SUPER; ++i){
+				if( typer->supers[i] == NULL ) break;
+				DList_Append( inter->supers, typer->supers[i]->core->kernel->abtype->aux );
+			}
+		}
 		parents = DList_New(0);
 		DaoTypeBase_Parents( typer, parents );
 		for(i=1; i<parents->size; i++){
@@ -375,6 +382,10 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 					DaoTypeKernel_InsertCastor( hostype->kernel, self, hostype, rout );
 				}
 			}
+		}
+		if( hostype->tid == DAO_INTERFACE ){
+			DMap_Assign( hostype->aux->xInterface.methods, methods );
+			hostype->aux->xInterface.derived = 1;
 		}
 		DList_Delete( parents );
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
@@ -720,6 +731,34 @@ DaoType* DaoNamespace_WrapGenericType( DaoNamespace *self, DaoTypeBase *typer, i
 	}
 	//printf( "type wrapping: %s\n", typer->name );
 	return cdata_type;
+}
+DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeBase *typer )
+{
+	DaoInterface *inter;
+	DaoTypeKernel *kernel;
+	DaoType *abtype;
+
+	if( typer->core ) return typer->core->kernel->abtype;
+
+	inter = DaoInterface_New( typer->name );
+	kernel = DaoTypeKernel_New( typer );
+	abtype = inter->abtype;
+
+	GC_Assign( & abtype->kernel, kernel );
+	GC_Assign( & kernel->abtype, abtype );
+	GC_Assign( & kernel->nspace, self );
+
+	typer->core = kernel->core;
+
+	kernel->SetupValues = DaoNamespace_SetupValues;
+	kernel->SetupMethods = DaoNamespace_SetupMethods;
+	if( DaoNS_ParseType( self, typer->name, abtype, abtype, 1 ) == DAO_DT_FAILED ){
+		GC_IncRC( inter );
+		GC_DecRC( inter );
+		printf( "type wrapping failed: %s from %s\n", typer->name, self->name->chars );
+		return NULL;
+	}
+	return abtype;
 }
 void DaoNamespace_SetupType( DaoNamespace *self, DaoTypeBase *typer, DaoType *type )
 {

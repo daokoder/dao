@@ -1236,10 +1236,6 @@ static void DaoSTR_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoSTR_Functional( proc, p, N, DVM_FUNCT_ITERATE );
 }
-static void DaoSTR_Collect( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoSTR_Functional( proc, p, N, DVM_FUNCT_COLLECT );
-}
 static void DaoSTR_CharAt( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.value;
@@ -1429,15 +1425,6 @@ static DaoFuncItem stringMeths[] =
 		// For the code section parameters, the first will hold the byte value or
 		// character codepoint for each iteration, and the second will be the byte
 		// location in the string.
-		*/
-	},
-	{ DaoSTR_Collect,
-		"collect( invar self: string, unit: enum<byte,char> = $byte )"
-			"[char: int, index: int => none|int] => string"
-		/*
-		// Map each unit of the string to a new value and return a new string form
-		// from the mapped values.
-		// The parameters have the same meaning as in "iterate()";
 		*/
 	},
 

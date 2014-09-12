@@ -174,6 +174,7 @@ extern DaoTypeBase  stringTyper;
 extern DaoTypeBase  enumTyper;
 extern DaoTypeBase  listTyper;
 extern DaoTypeBase  mapTyper;
+extern DaoTypeBase  ioDeviceTyper;
 extern DaoTypeBase  streamTyper;
 extern DaoTypeBase  routTyper;
 extern DaoTypeBase  interTyper;
@@ -2569,6 +2570,7 @@ DaoVmSpace* DaoInit( const char *command )
 
 	ns2 = DaoVmSpace_GetNamespace( vms, "io" );
 	DaoNamespace_AddConstValue( daons, "io", (DaoValue*) ns2 );
+	DaoNamespace_WrapInterface( ns2, & ioDeviceTyper );
 	dao_type_stream = DaoNamespace_WrapType( ns2, & streamTyper, 0 );
 	GC_Assign( & vms->stdioStream->ctype, dao_type_stream );
 	GC_Assign( & vms->errorStream->ctype, dao_type_stream );

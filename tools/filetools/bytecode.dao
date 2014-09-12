@@ -654,7 +654,7 @@ routine DaoByteCode::Decode( bytecodes : string )
 {
 # "bytecodes" could be MBS, with character range [-127,127];
 # Map it to WCS, so that the character range will become [0,255];
-	data = bytecodes.collect{ (X+256)%256 }
+	#data = bytecodes.collect{ (X+256)%256 }
 
 	if( data.size() < 16 ) std::error( 'Invalid bytecode file' );
 	if( data[:3] != "\33Dao" ) std::error( 'Not a Dao bytecode file' );
