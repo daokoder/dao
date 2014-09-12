@@ -610,6 +610,8 @@ static int DaoType_MatchTemplateParams( DaoType *self, DaoType *type, DMap *defs
 			// mt::channel<int>.
 			*/
 			if( k < DAO_MT_EQ && tid != DAO_THT && tid != DAO_UDT ) return DAO_MT_NOT;
+			/* Matching to @T<SomeType> has to be precise: */
+			if( k < DAO_MT_EQ && tid == DAO_THT && ts2[i]->aux != NULL ) return DAO_MT_NOT;
 		}
 	}
 	return mt;
@@ -646,6 +648,7 @@ static int DaoValue_MatchToParent( DaoValue *object, DaoType *parent, DMap *defs
 }
 static int DaoType_MatchToTypeHolder( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 {
+	int mt = DAO_MT_THT;
 	DNode *node = defs ? MAP_Find( defs, type ) : NULL;
 	if( node ){
 		type = node->value.pType;  /* type associated to the type holder; */
@@ -653,11 +656,12 @@ static int DaoType_MatchToTypeHolder( DaoType *self, DaoType *type, DMap *defs, 
 		return DaoType_Match( self, type, defs, binds );
 	}
 	if( type->aux != NULL ){ /* @type_holder<type> */
-		int mt = DaoType_MatchTo( self, (DaoType*) type->aux, defs );
-		if( mt == DAO_MT_NOT ) return DAO_MT_NOT;
+		mt = DaoType_MatchTo( self, (DaoType*) type->aux, defs );
+		/* Matching to @T<SomeType> has to be precise: */
+		if( mt < DAO_MT_EQ ) return DAO_MT_NOT;
 	}
 	if( defs ) MAP_Insert( defs, type, self );
-	return DAO_MT_THT;
+	return mt;
 }
 static int DaoType_MatchToVariant( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 {
@@ -809,6 +813,10 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 				// No unassociated type holders involved in the matching,
 				// so the matching has to be exact.
 				*/
+				if( k < mt ) mt = k;
+			}else if( tid == DAO_THT && it2->aux != NULL ){
+				/* Type matching to @T<Type> has to be precise: */
+				if( k < DAO_MT_EQ ) return DAO_MT_NOT;
 				if( k < mt ) mt = k;
 			}else if( tid == DAO_THT || tid == DAO_UDT ){
 				/*
@@ -995,7 +1003,9 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			node = MAP_Find( defs, self );
 			if( node ) return DaoType_MatchValue( node->value.pType, value, defs );
 		}else if( self->tid == DAO_THT && self->aux != NULL ){
-			return DaoType_MatchValue( (DaoType*) self->aux, value, defs );
+			mt = DaoType_MatchValue( (DaoType*) self->aux, value, defs );
+			/* Type matching to @T<Type> has to be precise: */
+			return mt >= DAO_MT_EQ ? mt : DAO_MT_NOT;
 		}
 		return DAO_MT_THT;
 	case DAO_VARIANT :
@@ -1075,20 +1085,24 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			// its values are set properly!
 			*/
 			if( value->xTuple.values[i] == NULL ) continue;
-			if( tp->tid == DAO_UDT || tp->tid == DAO_ANY || tp->tid == DAO_THT ) continue;
+			if( tp->tid == DAO_UDT || tp->tid == DAO_ANY ) continue;
 
 			mt2 = DaoType_MatchValue( tp, value->xTuple.values[i], defs );
-			if( mt2 < DAO_MT_SIM ) return 0;
+			/* Type matching to @T<Type> has to be precise: */
+			if( tp->tid == DAO_THT && tp->aux != NULL && mt2 < DAO_MT_EQ ) return DAO_MT_NOT;
+			if( mt2 < DAO_MT_SIM ) return DAO_MT_NOT;
 			if( mt2 < mt ) mt = mt2;
 		}
 		tp = self->nested->items.pType[self->nested->size-1];
 		if( tp->tid == DAO_PAR_VALIST ) tp = (DaoType*) tp->aux;
 		for(i=self->nested->size-(self->variadic!=0),n=value->xTuple.size; i<n; ++i){
 			if( value->xTuple.values[i] == NULL ) continue;
-			if( tp->tid == DAO_UDT || tp->tid == DAO_ANY || tp->tid == DAO_THT ) continue;
+			if( tp->tid == DAO_UDT || tp->tid == DAO_ANY ) continue;
 
 			mt2 = DaoType_MatchValue( tp, value->xTuple.values[i], defs );
-			if( mt2 < DAO_MT_SIM ) return 0;
+			/* Type matching to @T<Type> has to be precise: */
+			if( tp->tid == DAO_THT && tp->aux != NULL && mt2 < DAO_MT_EQ ) return DAO_MT_NOT;
+			if( mt2 < DAO_MT_SIM ) return DAO_MT_NOT;
 			if( mt2 < mt ) mt = mt2;
 		}
 		if( value->xTuple.ctype == NULL ) return DAO_MT_EQ;

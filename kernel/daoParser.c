@@ -2623,7 +2623,7 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 		DaoType *rt = recursive ? tht : NULL;
 		DaoByteBlock_EncodeTypeAlias( self->byteBlock, old, type, str, rt, self->permission );
 	}
-	if( type->tid && type->tid <= DAO_TUPLE ){
+	if( (type->tid && type->tid <= DAO_TUPLE) || type->tid == DAO_VARIANT ){
 		/* See comments in: DaoNamespace_TypeDefine(); */
 		type = DaoType_Copy( type );
 		DString_Assign( type->name, str );

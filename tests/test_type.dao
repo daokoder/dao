@@ -1,0 +1,22 @@
+
+@[test(code_01)]
+type Node = tuple<value: int, next: none|Node>
+var node : Node = ( 123, none )
+node.next = node
+io.writeln( node )
+@[test(code_01)]
+@[test(code_01)]
+{{( 123, (...) )}}
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+type Node = tuple<value: int, next: none|Node>
+var node : Node = ( 123, (Node)( 456, none ) )
+node.next.next = node
+io.writeln( node )
+@[test(code_01)]
+@[test(code_01)]
+{{( 123, ( 456, (...) ) )}}
+@[test(code_01)]

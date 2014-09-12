@@ -50,4 +50,5 @@ test_regex.AddDependency( chartype_dll )
 
 daotests.AddTest( "ErrorHandling", "test_error_handling.dao" )
 
-daotests.AddTest( "Misc", "test_misc.dao" )
+misc = daotests.AddTest( "Misc", "test_misc.dao" )
+misc.AddTest( "test_type.dao" );

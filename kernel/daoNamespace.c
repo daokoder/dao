@@ -676,7 +676,7 @@ DoneSourceType:
 	*/
 	if( tp->tid == DAO_CDATA || tp->tid == DAO_CSTRUCT ) tp = tp->aux->xCtype.ctype;
 	tp2 = tp;
-	if( tp->tid && tp->tid <= DAO_TUPLE ){
+	if( (tp->tid && tp->tid <= DAO_TUPLE) || tp->tid == DAO_VARIANT ){
 		tp = DaoType_Copy( tp );
 		DString_SetChars( tp->name, type );
 		if( recursive ){
