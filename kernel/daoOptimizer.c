@@ -4319,6 +4319,58 @@ int DaoInferencer_HandleSwitch( DaoInferencer *self, DaoInode *inode, int i, DMa
 	}
 	return 1;
 }
+static DaoRoutine* DaoInferencer_Specialize( DaoInferencer *self, DaoRoutine *rout, DMap *defs2, DaoInode *inode )
+{
+	DaoNamespace *NS = self->routine->nameSpace;
+	DaoType *routype = DaoType_DefineTypes( rout->routType, NS, defs2 );
+	DaoRoutine *orig = rout, *rout2 = rout;
+	DMap *defs3 = self->defs3;
+
+	DMap_Reset( defs3 );
+	if( DaoType_MatchTo( routype, rout->routType, defs3 ) >= DAO_MT_EQ ) return rout;
+	if( rout->original ) rout = orig = rout->original;
+
+	/* Do not share function body. It may be thread unsafe to share: */
+	rout = DaoRoutine_Copy( rout, 0, 1, 0 );
+	DaoRoutine_Finalize( rout, NULL, defs2 );
+
+	if( rout->routType->attrib & DAO_TYPE_SPEC ){
+		DaoGC_TryDelete( (DaoValue*) rout );
+		rout = rout2;
+	}else{
+		DMutex_Lock( & mutex_routine_specialize );
+		if( orig->specialized == NULL ) orig->specialized = DRoutines_New();
+		DMutex_Unlock( & mutex_routine_specialize );
+
+		GC_Assign( & rout->original, orig );
+		/*
+		// Need to add before specializing the body,
+		// to avoid possible infinite recursion:
+		 */
+		DRoutines_Add( orig->specialized, rout );
+		inode->b &= ~DAO_CALL_FAST;
+
+		/* rout may has only been declared */
+		/* forward declared routine may have an empty routine body: */
+		if( rout->body && rout->body->vmCodes->size ){
+			/* Create a new copy of the routine for specialization: */
+			rout = DaoRoutine_Copy( rout, 0, 1, 0 );
+			GC_Assign( & rout->original, orig );
+			DMap_Reset( defs3 );
+			DaoType_MatchTo( rout->routType, orig->routType, defs3 );
+			DaoRoutine_MapTypes( rout, defs3 );
+
+			/* to infer returned type */
+			if( DaoRoutine_DoTypeInference( rout, self->silent ) ==0 ){
+				DaoGC_TryDelete( (DaoValue*) rout );
+				return NULL;
+			}
+			/* Replace the previous unspecialized copy with this specialized copy: */
+			DRoutines_Add( orig->specialized, rout );
+		}
+	}
+	return rout;
+}
 int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap *defs )
 {
 	int code = inode->code;
@@ -4575,50 +4627,8 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		DaoRoutine_PassParamTypes( rout, bt, tp, argc, code, defs2 );
 		/* rout->body->vmCodes->size is zero for declared but unimplemented routines: */
 		if( rout != routine && defs2->size && (defs2->size > k || rout->routType->aux->xType.tid == DAO_UDT) && (rout->body == NULL || rout->body->vmCodes->size) ){
-			DaoRoutine *orig = rout, *rout2 = rout;
-			if( rout->original ) rout = orig = rout->original;
-#warning"--------------------------"
-//			printf( "here: %s\n", rout->routType->name->chars );
-
-			/* Do not share function body. It may be thread unsafe to share: */
-			rout = DaoRoutine_Copy( rout, 0, 1, 0 );
-			DaoRoutine_Finalize( rout, NULL, defs2 );
-
-			if( rout->routType->attrib & DAO_TYPE_SPEC ){
-				DaoGC_TryDelete( (DaoValue*) rout );
-				rout = rout2;
-			}else{
-				DMutex_Lock( & mutex_routine_specialize );
-				if( orig->specialized == NULL ) orig->specialized = DRoutines_New();
-				DMutex_Unlock( & mutex_routine_specialize );
-
-				GC_Assign( & rout->original, orig );
-				/*
-				// Need to add before specializing the body,
-				// to avoid possible infinite recursion:
-				 */
-				DRoutines_Add( orig->specialized, rout );
-				vmc->b &= ~DAO_CALL_FAST;
-
-				/* rout may has only been declared */
-				/* forward declared routine may have an empty routine body: */
-				if( rout->body && rout->body->vmCodes->size ){
-					/* Create a new copy of the routine for specialization: */
-					rout = DaoRoutine_Copy( rout, 0, 1, 0 );
-					GC_Assign( & rout->original, orig );
-					DMap_Reset( defs3 );
-					DaoType_MatchTo( rout->routType, orig->routType, defs3 );
-					DaoRoutine_MapTypes( rout, defs3 );
-
-					/* to infer returned type */
-					if( DaoRoutine_DoTypeInference( rout, self->silent ) ==0 ){
-						DaoGC_TryDelete( (DaoValue*) rout );
-						goto InvParam;
-					}
-					/* Replace the previous unspecialized copy with this specialized copy: */
-					DRoutines_Add( orig->specialized, rout );
-				}
-			}
+			rout = DaoInferencer_Specialize( self, rout, defs2, inode );
+			if( rout == NULL ) goto InvParam;
 		}
 		if( at->tid != DAO_CLASS && ! ctchecked ) ct = rout->routType;
 		/*

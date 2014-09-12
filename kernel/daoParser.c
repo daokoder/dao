@@ -379,14 +379,14 @@ DMap* DaoParser_CurrentSymbolTable( DaoParser *self )
 {
 	return self->lookupTables->items.pMap[ self->lexLevel ];
 }
-static void DaoParser_PushLevel( DaoParser *self )
+void DaoParser_PushLevel( DaoParser *self )
 {
 	self->lexLevel ++;
 	if( self->lexLevel >= self->lookupTables->size ){
 		DList_Append( self->lookupTables, self->table );
 	}
 }
-static void DaoParser_PopLevel( DaoParser *self )
+void DaoParser_PopLevel( DaoParser *self )
 {
 	DMap_Reset( self->lookupTables->items.pMap[ self->lexLevel ] );
 	self->lexLevel --;
@@ -2604,11 +2604,11 @@ static int DaoParser_ParseTypeAliasing( DaoParser *self, int start, int to )
 	}
 
 	/* Add a new temporary type in a new scope: */
-	DaoParser_PushLevel( self );
 	tht = DaoType_New( str->chars, DAO_THT, NULL, NULL );
 	if( self->byteBlock ){
 		DaoByteBlock_EncodeType( self->byteBlock, tht );
 	}
+	DaoParser_PushLevel( self );
 	id = LOOKUP_BIND_LC( routine->routConsts->value->size );
 	MAP_Insert( DaoParser_CurrentSymbolTable( self ), str, id );
 	DaoRoutine_AddConstant( routine, (DaoValue*) tht );

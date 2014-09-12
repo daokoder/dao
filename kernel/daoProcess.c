@@ -2573,6 +2573,8 @@ DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc, unsigned int hashi
 	DaoMap *map = (DaoMap*) self->activeValues[ vmc->c ];
 	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_MAP );
 
+	printf( "%s\n", tp->name->chars );
+
 	self->returned = self->activeCode->c;
 	if( map && map->type == DAO_MAP && map->ctype == tp ){
 		if( (map->value->hashing == 0) == (hashing == 0) ){

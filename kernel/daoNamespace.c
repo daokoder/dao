@@ -609,20 +609,43 @@ Error:
 	if( defts ) DList_Delete( defts );
 	return DAO_DT_FAILED;
 }
+void DaoParser_PushLevel( DaoParser *self );
+void DaoParser_PopLevel( DaoParser *self );
 DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const char *type )
 {
 	DaoNamespace *ns;
-	DaoType *tp, *tp2;
+	DaoType *tp, *tp2, *tht = NULL;
 	DString name = DString_WrapChars( old );
 	DString alias = DString_WrapChars( type );
 	DNode *node;
-	int i;
+	int i = 0, id, recursive = 0;
 	/* printf( "DaoNamespace_TypeDefine: %s %s\n", old, type ); */
 	tp = DaoNamespace_FindType( self, & name );
-	if( tp == NULL ) tp = DaoParser_ParseTypeName( old, self, NULL );
 	if( tp == NULL ){
-		printf( "type aliasing failed: %s to %s, source type is not found!\n", old, type );
-		return NULL;
+		DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
+		if( ! DaoLexer_Tokenize( parser->lexer, old, DAO_LEX_ESCAPE ) ) goto DoneSourceType;
+		DaoNamespace_InitConstEvalData( self );
+		parser->nameSpace = self;
+		parser->routine = self->constEvalRoutine;
+
+		DaoParser_PushLevel( parser );
+		tht = DaoType_New( type, DAO_THT, NULL, NULL );
+		id = LOOKUP_BIND_LC( parser->routine->routConsts->value->size );
+		MAP_Insert( parser->lookupTables->items.pMap[ parser->lexLevel ], & alias, id );
+		DaoRoutine_AddConstant( parser->routine, (DaoValue*) tht ); 
+		id = tht->refCount;
+
+		tp = DaoParser_ParseType( parser, 0, parser->tokens->size-1, &i, NULL );
+		if( i < parser->tokens->size && tp ) tp = NULL;
+		recursive = tht->refCount > id;
+		DaoParser_PopLevel( parser );
+
+DoneSourceType:
+		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+		if( tp == NULL ){
+			printf( "type aliasing failed: %s to %s, source type is not found!\n", old, type );
+			return NULL;
+		}
 	}
 	tp2 = DaoNamespace_FindType( self, & alias );
 	if( tp2 == NULL ) tp2 = DaoParser_ParseTypeName( type, self, NULL );
@@ -656,6 +679,10 @@ DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const cha
 	if( tp->tid && tp->tid <= DAO_TUPLE ){
 		tp = DaoType_Copy( tp );
 		DString_SetChars( tp->name, type );
+		if( recursive ){
+			tp->recursive = 1; 
+			DaoType_SetupRecursive( tp, tht, tp );
+		}    
 	}
 	if( DaoNS_ParseType( self, type, tp, tp, tp != tp2 ) == DAO_DT_FAILED ){
 		printf( "type aliasing failed: %s to %s\n", old, type );
