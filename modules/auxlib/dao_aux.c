@@ -402,50 +402,9 @@ DaoArray* DaoProcess_PutVectorC( DaoProcess *s, dao_complex *v, daoint n ){ retu
 #endif
 
 
-static void AUX_Tokenize( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *source = p[0]->xString.value;
-	DaoList *list = DaoProcess_PutList( proc );
-	DaoLexer *lexer = DaoLexer_New();
-	DList *tokens = lexer->tokens;
-	int i, rc = 0;
-	rc = DaoLexer_Tokenize( lexer, source->chars, DAO_LEX_COMMENT|DAO_LEX_SPACE );
-	if( rc ){
-		DaoString *str = DaoString_New(1);
-		for(i=0; i<tokens->size; i++){
-			DString_Assign( str->value, & tokens->items.pToken[i]->string );
-			DList_Append( list->value, (DaoValue*) str );
-		}
-		DaoString_Delete( str );
-	}
-	DaoLexer_Delete( lexer );
-}
-static void AUX_Log( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *info = p[0]->xString.value;
-	FILE *fout = fopen( "dao.log", "a" );
-	fprintf( fout, "%s\n", info->chars );
-	fclose( fout );
-}
-static void AUX_Test( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoProcess_RaiseException( proc, "Exception::Error::SomeError", "just a test", NULL );
-}
-
-static DaoFuncItem auxMeths[]=
-{
-	{ AUX_Tokenize,    "tokenize( source :string )=>list<string>" },
-	{ AUX_Log,         "log( info=\"\" )" },
-#ifdef DEBUG
-	{ AUX_Test,        "__test__()" },
-#endif
-	{ NULL, NULL }
-};
 
 DAO_DLL int DaoAux_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	ns = DaoVmSpace_GetNamespace( vmSpace, "std" );
-	DaoNamespace_WrapFunctions( ns, auxMeths );
 	return 0;
 }
 
