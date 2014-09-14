@@ -949,6 +949,14 @@ int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	if( self->recursive && type->recursive && binds == NULL ){
 		binds = DHash_New( DAO_DATA_VOID2, 0 );
 	}
+	if( self->recursive && type->recursive ){
+		DNode *it = DMap_Find( binds, pvoid );
+		if( it ){
+			return DAO_MT_EQ;
+		}else{
+			DMap_Insert( binds, pvoid, 0 );
+		}
+	}
 	mt = DaoType_MatchToX( self, type, defs, binds );
 	if( binds2 != binds ){
 		DMap_Delete( binds );

@@ -690,11 +690,11 @@ DoneSourceType:
 	if( (tp->tid && tp->tid <= DAO_TUPLE) || tp->tid == DAO_VARIANT ){
 		tp = DaoType_Copy( tp );
 		DString_SetChars( tp->name, alias );
-		if( recursive ){
-			tp->recursive = 1; 
-			DaoType_SetupRecursive( tp, tht, tp );
-		}    
 	}
+	if( recursive ){
+		tp->recursive = 1; 
+		DaoType_SetupRecursive( tp, tht, tp );
+	}    
 	if( DaoNS_ParseType( self, alias, tp, tp, tp != tp2 ) == DAO_DT_FAILED ){
 		DaoStream_WriteChars( stream, "ERROR: in DaoNamespace_DefineType(), type aliasing from \"" );
 		DaoStream_WriteChars( stream, type );

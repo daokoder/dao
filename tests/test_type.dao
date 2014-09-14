@@ -20,3 +20,20 @@ io.writeln( node )
 @[test(code_01)]
 {{( 123, ( 456, (...) ) )}}
 @[test(code_01)]
+
+
+
+@[test(code_01)]
+type Test1 = none | tuple<value: int, next: Test1>
+type Test2 = none | tuple<value: float, next: Test2>
+type Test3 = none | tuple<value: string, next: Test3>
+type Test4 = none | tuple<value: string, next: Test4>
+
+type Test5 = none | tuple<value: string, next: Test3>
+type Test6 = none | tuple<value: string, next: Test4>
+
+io.writeln( Test1 ?= Test2, Test1 ?= Test3, Test3 ?= Test4, Test5 ?= Test6 )
+@[test(code_01)]
+@[test(code_01)]
+^ {{0 0 1 1}} $
+@[test(code_01)]
