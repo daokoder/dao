@@ -4055,16 +4055,20 @@ int DaoInferencer_HandleBinaryArith( DaoInferencer *self, DaoInode *inode, DMap 
 		}
 	}else if( at->realnum && bt->realnum ){
 		ct = at->tid > bt->tid ? at : bt;
-	}else if( at->tid != bt->tid && (code == DVM_AND || code == DVM_OR) ){
-		if( at->tid == DAO_INTEGER && bt->tid == DAO_ENUM && bt->subtid == DAO_ENUM_BOOL ){
-			DaoInferencer_InsertCast( self, inode, & inode->a, bt );
-			ct = bt;
-		}else if( bt->tid == DAO_INTEGER && at->tid == DAO_ENUM && at->subtid == DAO_ENUM_BOOL ){
-			DaoInferencer_InsertCast( self, inode, & inode->b, at );
-			ct = at;
-		}else{
-			goto InvOper;
+	}else if( at->tid == DAO_INTEGER && bt->tid == DAO_ENUM && bt->subtid == DAO_ENUM_BOOL ){
+		switch( code ){
+		case DVM_AND : case DVM_OR : break;
+		default: goto InvOper;
 		}
+		ct = bt;
+	}else if( bt->tid == DAO_INTEGER && at->tid == DAO_ENUM && at->subtid == DAO_ENUM_BOOL ){
+		switch( code ){
+		case DVM_AND : case DVM_OR : break;
+		default: goto InvOper;
+		}
+		ct = at;
+	}else if( at->tid != bt->tid && (code == DVM_AND || code == DVM_OR) ){
+		goto InvOper;
 	}else if( at->realnum && (bt->tid ==DAO_COMPLEX || bt->tid ==DAO_ARRAY) ){
 		ct = bt;
 	}else if( (at->tid ==DAO_COMPLEX || at->tid ==DAO_ARRAY) && bt->realnum ){
@@ -5446,6 +5450,18 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				}else if( at->tid >= DAO_INTEGER && at->tid <= DAO_FLOAT
 						&& bt->tid >= DAO_INTEGER && bt->tid <= DAO_FLOAT ){
 					/* pass */
+				}else if( at->tid == DAO_INTEGER && bt->tid == DAO_ENUM && bt->subtid == DAO_ENUM_BOOL ){
+					switch( code ){
+					case DVM_EQ : case DVM_NE : break;
+					default: goto InvOper;
+					}
+					ct = bt;
+				}else if( bt->tid == DAO_INTEGER && at->tid == DAO_ENUM && at->subtid == DAO_ENUM_BOOL ){
+					switch( code ){
+					case DVM_EQ : case DVM_NE : break;
+					default: goto InvOper;
+					}
+					ct = at;
 				}else if( code != DVM_EQ && code != DVM_NE ){
 					goto InvOper;
 				}

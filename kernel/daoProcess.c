@@ -4931,14 +4931,16 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		case DVM_NE:  D = DaoValue_GetFloat( A ) != DaoValue_GetFloat( B ); break;
 		default: break;
 		}
+		return;
 	}else if( A->type == DAO_COMPLEX && B->type == DAO_COMPLEX ){
 		double AR = A->xComplex.value.real, AI = A->xComplex.value.imag;
 		double BR = B->xComplex.value.real, BI = B->xComplex.value.imag;
 		switch( vmc->code ){
 		case DVM_EQ: D = (AR == BR) && (AI == BI); break;
 		case DVM_NE: D = (AR != BR) || (AI != BI); break;
-		default: break;
+		default: goto InvalidOperation;
 		}
+		return;
 	}else if( A->type == DAO_STRING && B->type == DAO_STRING ){
 		switch( vmc->code ){
 		case DVM_AND: C = DString_Size( A->xString.value ) ? B : A; break;
@@ -4949,6 +4951,7 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		case DVM_NE:  D = DString_Compare( A->xString.value, B->xString.value )!=0; break;
 		default: break;
 		}
+		return;
 	}else if( (A->type == DAO_ENUM && B->type == DAO_ENUM)
 			 || (A->type == DAO_TUPLE && B->type == DAO_TUPLE) ){
 		switch( vmc->code ){
@@ -4960,7 +4963,31 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		case DVM_NE:  D = DaoValue_Compare( A, B ) != 0; break;
 		default: break;
 		}
-	}else if( vmc->code == DVM_AND || vmc->code == DVM_OR ){
+		return;
+	}else if( A->type == DAO_INTEGER || B->type == DAO_INTEGER ){
+		int b1 = 0, b2 = 0;
+		if( A->type == DAO_ENUM && A->xBase.subtype == DAO_ENUM_BOOL ){
+			C = DaoProcess_PutValue( self, A );
+			b1 = A->xEnum.value;
+			b2 = B->xInteger.value;
+		}else if( B->type == DAO_ENUM && B->xBase.subtype == DAO_ENUM_BOOL ){
+			C = DaoProcess_PutValue( self, B );
+			b1 = A->xInteger.value;
+			b2 = B->xEnum.value;
+		}
+		if( C != NULL ){
+			switch( vmc->code ){
+			case DVM_AND : C->xEnum.value = b1 ? b2 : b1; break;
+			case DVM_OR  : C->xEnum.value = b1 ? b1 : b2; break;
+			case DVM_EQ  : C->xEnum.value = (b1 !=0 ) == (b2 != 0); break;
+			case DVM_NE  : C->xEnum.value = (b1 !=0 ) != (b2 != 0); break;
+			}
+			C->xEnum.value = C->xEnum.value != 0;
+			return;
+		}
+	}
+	
+	if( vmc->code == DVM_AND || vmc->code == DVM_OR ){
 		DaoValue *AA = A, *BB = B;
 		if( A->type == B->type ){
 			if( vmc->code == DVM_OR ){ AA = B; BB = A; }
@@ -4969,25 +4996,6 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 			case DAO_FLOAT   : C = A->xFloat.value ? BB : AA; break;
 			case DAO_ENUM : C = A->xEnum.value ? BB : AA; break;
 			default : break;
-			}
-		}else if( A->type == DAO_INTEGER || B->type == DAO_INTEGER ){
-			int b1 = 0, b2 = 0;
-			if( A->type == DAO_ENUM && A->xBase.subtype == DAO_ENUM_BOOL ){
-				C = DaoProcess_PutValue( self, A );
-				b1 = A->xEnum.value;
-				b2 = B->xInteger.value;
-			}else if( B->type == DAO_ENUM && B->xBase.subtype == DAO_ENUM_BOOL ){
-				C = DaoProcess_PutValue( self, B );
-				b1 = A->xInteger.value;
-				b2 = B->xEnum.value;
-			}
-			if( C != NULL ){
-				switch( vmc->code ){
-				case DVM_AND : C->xEnum.value = b1 ? b2 : b1; break;
-				case DVM_OR  : C->xEnum.value = b1 ? b1 : b2; break;
-				}
-				C->xEnum.value = C->xEnum.value != 0;
-				return;
 			}
 		}
 		if( C == NULL ){
