@@ -4931,7 +4931,7 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		case DVM_NE:  D = DaoValue_GetFloat( A ) != DaoValue_GetFloat( B ); break;
 		default: break;
 		}
-		return;
+		goto ReturnResult;
 	}else if( A->type == DAO_COMPLEX && B->type == DAO_COMPLEX ){
 		double AR = A->xComplex.value.real, AI = A->xComplex.value.imag;
 		double BR = B->xComplex.value.real, BI = B->xComplex.value.imag;
@@ -4940,7 +4940,7 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		case DVM_NE: D = (AR != BR) || (AI != BI); break;
 		default: goto InvalidOperation;
 		}
-		return;
+		goto ReturnResult;
 	}else if( A->type == DAO_STRING && B->type == DAO_STRING ){
 		switch( vmc->code ){
 		case DVM_AND: C = DString_Size( A->xString.value ) ? B : A; break;
@@ -4951,7 +4951,7 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		case DVM_NE:  D = DString_Compare( A->xString.value, B->xString.value )!=0; break;
 		default: break;
 		}
-		return;
+		goto ReturnResult;
 	}else if( (A->type == DAO_ENUM && B->type == DAO_ENUM)
 			 || (A->type == DAO_TUPLE && B->type == DAO_TUPLE) ){
 		switch( vmc->code ){
@@ -4963,7 +4963,7 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		case DVM_NE:  D = DaoValue_Compare( A, B ) != 0; break;
 		default: break;
 		}
-		return;
+		goto ReturnResult;
 	}else if( A->type == DAO_INTEGER || B->type == DAO_INTEGER ){
 		int b1 = 0, b2 = 0;
 		if( A->type == DAO_ENUM && A->xBase.subtype == DAO_ENUM_BOOL ){
@@ -5026,6 +5026,7 @@ InvalidOperation:
 		DaoProcess_RaiseError( self, "Type", "" );
 		return;
 	}
+ReturnResult:
 	if( C ) DaoProcess_PutValue( self, C );
 	else DaoProcess_PutInteger( self, D );
 }
