@@ -364,7 +364,7 @@ static FILE* DaoIO_OpenFile( DaoProcess *proc, DString *name, const char *mode, 
 static void DaoIO_ReadFile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *res = DaoProcess_PutChars( proc, "" );
-	daoint silent = p[1]->xInteger.value;
+	daoint silent = p[1]->xEnum.value;
 	if( DString_Size( p[0]->xString.value ) ==0 ){
 		char buf[1024];
 		while(1){
@@ -528,7 +528,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 	DaoStream *stream;
 	DaoList *list = DaoProcess_PutList( proc );
 	FILE *fin = DaoIO_OpenFile( proc, p[0]->xString.value, "r", 0 );
-	int chop = p[1]->xInteger.value;
+	int chop = p[1]->xEnum.value;
 
 	if( fin == NULL ) return;
 
@@ -542,7 +542,7 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoList *list = DaoProcess_PutList( proc );
 	int count = p[1]->xInteger.value;
-	int chop = p[2]->xInteger.value;
+	int chop = p[2]->xEnum.value;
 	DaoStream_ReadLines( (DaoStream*) p[0], list, proc, count, chop );
 }
 
@@ -555,8 +555,8 @@ DaoFuncItem dao_io_methods[] =
 	{ DaoIO_Writef2,   "writef( format: string, invar ... : any )" },
 	{ DaoIO_Writeln2,  "writeln( invar ... : any )" },
 	{ DaoIO_Read,      "read( )=>string" },
-	{ DaoIO_ReadFile,  "read( file: string, silent=0 )=>string" },
-	{ DaoIO_ReadLines, "readlines( file: string, chop=0 )[line: string=>none|@T]=>list<@T>" },
+	{ DaoIO_ReadFile,  "read( file: string, silent = bool::false )=>string" },
+	{ DaoIO_ReadLines, "readlines( file: string, chop = bool::false )[line: string=>none|@T]=>list<@T>" },
 	{ NULL, NULL }
 };
 
@@ -571,7 +571,7 @@ static DaoFuncItem streamMeths[] =
 	{ DaoIO_Writeln,   "writeln( self: stream, invar ... : any )" },
 	{ DaoIO_Read,      "read( self: stream, count = -1 )=>string" },
 	{ DaoIO_Read,      "read( self: stream, amount: enum<line,all> = $all )=>string" },
-	{ DaoIO_ReadLines2,"readlines( self: stream, numline=0, chop=0 )[line: string=>none|@T]=>list<@T>" },
+	{ DaoIO_ReadLines2,"readlines( self: stream, numline=0, chop = bool::false )[line: string=>none|@T]=>list<@T>" },
 
 	{ DaoIO_Flush,     "flush( self: stream )" },
 	{ DaoIO_Close,     "close( self: stream )" },

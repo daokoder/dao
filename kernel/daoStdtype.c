@@ -782,7 +782,7 @@ static void DaoSTR_Erase( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoSTR_Chop( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *res = DaoProcess_PutString( proc, p[0]->xString.value );
-	daoint utf8 = p[1]->xInteger.value;
+	daoint utf8 = p[1]->xEnum.value;
 	DString_Chop( res, utf8 );
 }
 static void DaoSTR_Trim( DaoProcess *proc, DaoValue *p[], int N )
@@ -790,7 +790,7 @@ static void DaoSTR_Trim( DaoProcess *proc, DaoValue *p[], int N )
 	DString *res = DaoProcess_PutString( proc, p[0]->xString.value );
 	daoint head = p[1]->xEnum.value & 0x1;
 	daoint tail = p[1]->xEnum.value & 0x2;
-	daoint utf8 = p[2]->xInteger.value;
+	daoint utf8 = p[2]->xEnum.value;
 	DString_Trim( res, head, tail, utf8 );
 }
 static void DaoSTR_Find( DaoProcess *proc, DaoValue *p[], int N )
@@ -799,7 +799,7 @@ static void DaoSTR_Find( DaoProcess *proc, DaoValue *p[], int N )
 	DString *str = p[1]->xString.value;
 	daoint from = p[2]->xInteger.value;
 	daoint pos = DAO_NULLPOS;
-	if( p[3]->xInteger.value ){
+	if( p[3]->xEnum.value ){
 		pos = DString_RFind( self, str, from );
 	}else{
 		pos = DString_Find( self, str, from );
@@ -868,7 +868,7 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue *val = NULL;
 	DMap  *keys = NULL;
 	DNode *node = NULL;
-	daoint keep = p[3]->xInteger.value;
+	daoint keep = p[3]->xEnum.value;
 	daoint i, pos1, pos2, prev = 0;
 	char spec2;
 	int replace;
@@ -1280,7 +1280,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Chop,
-		"chop( invar self: string, utf8 = 0 ) => string"
+		"chop( invar self: string, utf8 = bool::false ) => string"
 		/*
 		// Chop EOF, '\n' and/or '\r' off the end of the string;
 		// -- EOF  is first checked and removed if found;
@@ -1291,7 +1291,8 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Trim,
-		"trim( invar self: string, where: enum<head;tail> = $head+$tail, utf8 = 0 ) => string"
+		"trim( invar self: string, where: enum<head;tail> = $head+$tail, utf8 = bool::false )"
+			"=> string"
 		/*
 		// Trim whitespaces from the head and/or the tail of the string;
 		// If "utf8" is not zero, all bytes that do not constitute a
@@ -1299,7 +1300,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Find,
-		"find( invar self: string, str: string, from = 0, reverse = 0 ) => int"
+		"find( invar self: string, str: string, from = 0, reverse = bool::false ) => int"
 		/*
 		// Find the first occurrence of "str" in this string, searching from "from";
 		// If "reverse" is zero, search forward, otherwise backward;
@@ -1330,7 +1331,7 @@ static DaoFuncItem stringMeths[] =
 	},
 	{ DaoSTR_Expand,
 		"expand( invar self: string, invar subs: map<string,string>"
-			"|tuple<...:int|float|string>, spec = \"$\", keep = 1 ) => string"
+			"|tuple<...:int|float|string>, spec = \"$\", keep = bool::true ) => string"
 		/*
 		// Expand this string into a new string with substrings from the keys
 		// of "subs" substituted with the corresponding values of "subs".

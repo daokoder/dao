@@ -611,51 +611,62 @@ Error:
 }
 void DaoParser_PushLevel( DaoParser *self );
 void DaoParser_PopLevel( DaoParser *self );
-DaoType* DaoNamespace_TypeDefine( DaoNamespace *self, const char *old, const char *type )
+DaoType* DaoNamespace_DefineType( DaoNamespace *self, const char *type, const char *alias )
 {
 	DaoNamespace *ns;
 	DaoType *tp, *tp2, *tht = NULL;
-	DString name = DString_WrapChars( old );
-	DString alias = DString_WrapChars( type );
+	DaoStream *stream = self->vmSpace->errorStream;
+	DString name = DString_WrapChars( type );
+	DString alias2 = DString_WrapChars( alias );
 	DNode *node;
 	int i = 0, id, recursive = 0;
-	/* printf( "DaoNamespace_TypeDefine: %s %s\n", old, type ); */
+	/* printf( "DaoNamespace_TypeDefine: %s %s\n", type, alias ); */
 	tp = DaoNamespace_FindType( self, & name );
 	if( tp == NULL ){
 		DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
-		if( ! DaoLexer_Tokenize( parser->lexer, old, DAO_LEX_ESCAPE ) ) goto DoneSourceType;
+		if( ! DaoLexer_Tokenize( parser->lexer, type, DAO_LEX_ESCAPE ) ) goto DoneSourceType;
 		DaoNamespace_InitConstEvalData( self );
 		parser->nameSpace = self;
 		parser->routine = self->constEvalRoutine;
 
-		DaoParser_PushLevel( parser );
-		tht = DaoType_New( type, DAO_THT, NULL, NULL );
-		id = LOOKUP_BIND_LC( parser->routine->routConsts->value->size );
-		MAP_Insert( parser->lookupTables->items.pMap[ parser->lexLevel ], & alias, id );
-		DaoRoutine_AddConstant( parser->routine, (DaoValue*) tht ); 
-		id = tht->refCount;
+		if( alias != NULL ){
+			DaoParser_PushLevel( parser );
+			tht = DaoType_New( alias, DAO_THT, NULL, NULL );
+			id = LOOKUP_BIND_LC( parser->routine->routConsts->value->size );
+			MAP_Insert( parser->lookupTables->items.pMap[ parser->lexLevel ], & alias2, id );
+			DaoRoutine_AddConstant( parser->routine, (DaoValue*) tht ); 
+			id = tht->refCount;
+		}
 
 		tp = DaoParser_ParseType( parser, 0, parser->tokens->size-1, &i, NULL );
 		if( i < parser->tokens->size && tp ) tp = NULL;
-		recursive = tht->refCount > id;
-		DaoParser_PopLevel( parser );
+		if( alias != NULL ){
+			recursive = tht->refCount > id;
+			DaoParser_PopLevel( parser );
+		}
 
 DoneSourceType:
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 		if( tp == NULL ){
-			printf( "type aliasing failed: %s to %s, source type is not found!\n", old, type );
+			DaoStream_WriteChars( stream, "ERROR: in DaoNamespace_DefineType(), type \"" );
+			DaoStream_WriteChars( stream, type );
+			DaoStream_WriteChars( stream, "\" is not valid!\n" );
 			return NULL;
 		}
 	}
-	tp2 = DaoNamespace_FindType( self, & alias );
-	if( tp2 == NULL ) tp2 = DaoParser_ParseTypeName( type, self, NULL );
+	if( alias == NULL ) return tp;
+
+	tp2 = DaoNamespace_FindType( self, & alias2 );
+	if( tp2 == NULL ) tp2 = DaoParser_ParseTypeName( alias, self, NULL );
 	if( tp == tp2 ) return tp;
-	/* printf( "ns = %p  tp = %p  name = %s\n", self, tp, type ); */
+	/* printf( "ns = %p  tp = %p  name = %s\n", self, tp, alias ); */
 
 	/* Only allow overiding types defined in parent namespaces: */
-	node = MAP_Find( self->abstypes, & alias );
+	node = MAP_Find( self->abstypes, & alias2 );
 	if( node != NULL ){
-		printf( "type aliasing failed: %s to %s, target type was defined!\n", old, type );
+		DaoStream_WriteChars( stream, "ERROR: in DaoNamespace_DefineType(), type \"" );
+		DaoStream_WriteChars( stream, alias );
+		DaoStream_WriteChars( stream, "\" was defined!\n" );
 		return NULL;
 	}
 
@@ -678,14 +689,18 @@ DoneSourceType:
 	tp2 = tp;
 	if( (tp->tid && tp->tid <= DAO_TUPLE) || tp->tid == DAO_VARIANT ){
 		tp = DaoType_Copy( tp );
-		DString_SetChars( tp->name, type );
+		DString_SetChars( tp->name, alias );
 		if( recursive ){
 			tp->recursive = 1; 
 			DaoType_SetupRecursive( tp, tht, tp );
 		}    
 	}
-	if( DaoNS_ParseType( self, type, tp, tp, tp != tp2 ) == DAO_DT_FAILED ){
-		printf( "type aliasing failed: %s to %s\n", old, type );
+	if( DaoNS_ParseType( self, alias, tp, tp, tp != tp2 ) == DAO_DT_FAILED ){
+		DaoStream_WriteChars( stream, "ERROR: in DaoNamespace_DefineType(), type aliasing from \"" );
+		DaoStream_WriteChars( stream, type );
+		DaoStream_WriteChars( stream, "\" to \"" );
+		DaoStream_WriteChars( stream, alias );
+		DaoStream_WriteChars( stream, "\" failed!\n" );
 		GC_IncRC( tp );
 		GC_DecRC( tp );
 		return NULL;
@@ -818,12 +833,12 @@ int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typers[] )
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return ec;
 }
-int DaoNamespace_TypeDefines( DaoNamespace *self, const char *alias[] )
+int DaoNamespace_AliasTypes( DaoNamespace *self, const char *alias[] )
 {
 	int i = 0, ec = 0;
 	if( alias == NULL ) return 0;
 	while( alias[i] && alias[i+1] ){
-		ec += DaoNamespace_TypeDefine( self, alias[i], alias[i+1] ) == NULL;
+		ec += DaoNamespace_DefineType( self, alias[i], alias[i+1] ) == NULL;
 		i += 2;
 	}
 	return ec;

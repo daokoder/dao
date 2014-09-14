@@ -2537,7 +2537,7 @@ DaoVmSpace* DaoInit( const char *command )
 
 	dao_type_tuple = DaoParser_ParseTypeName( "tuple<...>", daons, NULL );
 
-	DaoNamespace_TypeDefine( daons, "enum<false:true>", "bool" );
+	DaoNamespace_DefineType( daons, "enum<false:true>", "bool" );
 
 	DaoNamespace_SetupType( daons, & stringTyper, dao_type_string );
 	DaoNamespace_SetupType( daons, & comTyper, dao_type_complex );
