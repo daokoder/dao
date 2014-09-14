@@ -3207,7 +3207,7 @@ void DaoByteCoder_PrintBlock( DaoByteCoder *self, DaoByteBlock *block, int space
 		case DAO_INTEGER :
 			DaoStream_WriteChars( stream, "DAO_INTEGER;\n" );
 			DaoStream_PrintTag( stream, DAO_ASM_END, spaces );
-			DaoStream_PrintDaoInt( stream, " %" DAO_INT_FORMAT " ;\n", DaoByteCoder_DecodeDaoInt( self, block->end ) );
+			DaoStream_PrintDaoInt( stream, " %" DAO_I64 " ;\n", DaoByteCoder_DecodeDaoInt( self, block->end ) );
 			break;
 		case DAO_FLOAT :
 			DaoStream_WriteChars( stream, "DAO_FLOAT;\n" );
@@ -3253,29 +3253,29 @@ void DaoByteCoder_PrintBlock( DaoByteCoder *self, DaoByteBlock *block, int space
 			}
 			if( block->begin[1] == DAO_INTEGER && sizeof(dao_integer) == 8 ){
 				for(; pb!=NULL; pb=pb->next){
-					k = DaoByteCoder_DecodeDaoInt( self, pb->begin );
+					dao_integer ivalue = DaoByteCoder_DecodeDaoInt( self, pb->begin );
 					DaoStream_PrintTag( stream, DAO_ASM_DATA, spaces + 4 );
-					DaoStream_PrintDaoInt( stream, "%12"DAO_INT_FORMAT";\n", k );
+					DaoStream_PrintDaoInt( stream, "%12"DAO_I64";\n", ivalue );
 				}
 				DaoStream_PrintTag( stream, DAO_ASM_END, spaces );
 				if(C){
-					k = DaoByteCoder_DecodeDaoInt( self, block->end );
-					DaoStream_PrintDaoInt( stream, " %12"DAO_INT_FORMAT"", k );
+					dao_integer ivalue = DaoByteCoder_DecodeDaoInt( self, block->end );
+					DaoStream_PrintDaoInt( stream, " %12"DAO_I64"", ivalue );
 				}
 			}else if( block->begin[1] == DAO_INTEGER ){
 				for(; pb!=NULL; pb=pb->next){
 					k = DaoByteCoder_DecodeDaoInt( self, pb->begin );
 					m = DaoByteCoder_DecodeDaoInt( self, pb->begin+4 );
 					DaoStream_PrintTag( stream, DAO_ASM_DATA, spaces + 4 );
-					DaoStream_PrintInt2( stream, "%12"DAO_INT_FORMAT", %12"DAO_INT_FORMAT";\n", k, k );
+					DaoStream_PrintInt2( stream, "%12"DAO_INT", %12"DAO_INT";\n", k, k );
 				}
 				DaoStream_PrintTag( stream, DAO_ASM_END, spaces );
 				if( C ){
 					k = DaoByteCoder_DecodeDaoInt( self, block->end );
-					DaoStream_PrintDaoInt( stream, "%12"DAO_INT_FORMAT"", k );
+					DaoStream_PrintDaoInt( stream, "%12"DAO_INT"", k );
 					if( !(C%2) ){
 						k = DaoByteCoder_DecodeDaoInt( self, block->end+4 );
-						DaoStream_PrintDaoInt( stream, ", %12"DAO_INT_FORMAT"", k );
+						DaoStream_PrintDaoInt( stream, ", %12"DAO_INT"", k );
 					}
 				}
 			}else{

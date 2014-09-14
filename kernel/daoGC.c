@@ -71,9 +71,9 @@ void print_trace( const char *info )
 	char **strings = backtrace_symbols (array, size);
 	FILE *debug = fopen( "debug.txt", "w+" );
 	fprintf (debug, "===========================================\n");
-	fprintf (debug, "Obtained %" DAO_INT_FORMAT " stack frames.\n", size);
+	fprintf (debug, "Obtained %" DAO_I64 " stack frames.\n", size);
 	printf ("=====================%s======================\n", info);
-	printf ("Obtained %" DAO_INT_FORMAT " stack frames.\n", size);
+	printf ("Obtained %" DAO_I64 " stack frames.\n", size);
 	for (i = 0; i < size; i++){
 		printf ("%s\n", strings[i]);
 		fprintf (debug,"%s\n", strings[i]);

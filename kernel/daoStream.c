@@ -693,7 +693,7 @@ void DaoStream_WriteFormatedInt( DaoStream *self, dao_integer val, const char *f
 void DaoStream_WriteInt( DaoStream *self, dao_integer val )
 {
 	const char *format = self->format;
-	if( format == NULL ) format = "%lli";
+	if( format == NULL ) format = "%"DAO_I64;
 	DaoStream_WriteFormatedInt( self, val, format );
 }
 void DaoStream_WriteFloat( DaoStream *self, double val )

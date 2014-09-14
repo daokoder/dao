@@ -67,13 +67,15 @@
 #endif /* WIN32 */
 
 
-#ifndef DAO_INT_FORMAT
+#ifndef DAO_I64
 #  ifdef WIN32
-#    define DAO_INT_FORMAT  "Ii"
+#    define DAO_INT  "Ii"
+#    define DAO_I64  "I64i"
 #  else
-#    define DAO_INT_FORMAT  "ti"
+#    define DAO_INT  "ti"
+#    define DAO_I64  "lli"
 #  endif /* WIN32 */
-#endif /* DAO_INT_FORMAT */
+#endif /* DAO_I64 */
 
 
 #define DAO_MAX_CDATA_SUPER 8

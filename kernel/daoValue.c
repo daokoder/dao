@@ -28,6 +28,7 @@
 
 #include"stdlib.h"
 #include"string.h"
+#include"assert.h"
 
 #include"daoGC.h"
 #include"daoType.h"
@@ -360,14 +361,17 @@ dao_complex DaoValue_GetComplex( DaoValue *self )
 }
 DString* DaoValue_GetString( DaoValue *self, DString *str )
 {
+	dao_complex *com;
 	char chs[100] = {0};
 	DString_Clear( str );
 	switch( self->type ){
-	case DAO_INTEGER : sprintf( chs, "%lli", (long long) self->xInteger.value ); break;
+	case DAO_COMPLEX :
+		com = & self->xComplex.value;
+		sprintf( chs, (com->imag < 0) ? "%g%gC" : "%g+%gC", com->real, com->imag ); break;
+	case DAO_INTEGER : sprintf( chs, "%"DAO_I64, (long long) self->xInteger.value ); break;
 	case DAO_FLOAT   : sprintf( chs, "%g", self->xFloat.value ); break;
-	case DAO_COMPLEX : sprintf( chs, (self->xComplex.value.imag < 0) ? "%g%gC" : "%g+%gC", self->xComplex.value.real, self->xComplex.value.imag ); break;
-	case DAO_ENUM : DaoEnum_MakeName( & self->xEnum, str ); break;
 	case DAO_STRING : DString_Assign( str, self->xString.value ); break;
+	case DAO_ENUM : DaoEnum_MakeName( & self->xEnum, str ); break;
 	default : break;
 	}
 	if( self->type <= DAO_COMPLEX ) DString_SetChars( str, chs );
@@ -443,15 +447,6 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 		case DAO_STRING  : return (DaoValue*) DaoString_Copy( & self->xString );
 		}
 		return self; /* unreachable; */
-	}else if( self->type == DAO_ENUM ){
-		switch( tp ? tp->tid : 0 ){
-		case DAO_ENUM :
-			if( tp->subtid == DAO_ENUM_ANY ) tp = NULL;
-			return (DaoValue*) DaoEnum_Copy( & self->xEnum, tp );
-		case DAO_INTEGER : return (DaoValue*) DaoInteger_New( self->xEnum.value );
-		case DAO_FLOAT   : return (DaoValue*) DaoFloat_New( self->xEnum.value );
-		}
-		return (DaoValue*) DaoEnum_Copy( & self->xEnum, NULL );
 	}else if( tp && tp->tid >= DAO_INTEGER && tp->tid <= DAO_FLOAT ){
 		DaoValue *value = NULL;
 		switch( tp->tid ){
@@ -463,7 +458,26 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 		case DAO_FLOAT   : value->xFloat.value   = DaoValue_GetFloat( self );   break;
 		}
 		return value;
+	}else if( self->type == DAO_ENUM ){
+		switch( tp ? tp->tid : 0 ){
+		case DAO_ENUM :
+			if( tp->subtid == DAO_ENUM_ANY ) tp = NULL;
+			return (DaoValue*) DaoEnum_Copy( & self->xEnum, tp );
+		case DAO_INTEGER : return (DaoValue*) DaoInteger_New( self->xEnum.value );
+		case DAO_FLOAT   : return (DaoValue*) DaoFloat_New( self->xEnum.value );
+		}
+		return (DaoValue*) DaoEnum_Copy( & self->xEnum, NULL );
+	}else if( tp && tp->tid == DAO_ENUM ){
+		switch( self->type ){
+		case DAO_INTEGER : return (DaoValue*) DaoEnum_New( tp, self->xInteger.value );
+		case DAO_FLOAT   : return (DaoValue*) DaoEnum_New( tp, self->xFloat.value );
+		}
 	}
+	if( tp != NULL ){
+		assert( tp->tid == 0 || tp->tid > DAO_ENUM );
+		assert( self->type == 0 || self->type > DAO_ENUM );
+	}
+
 #ifdef DAO_WITH_NUMARRAY
 	if( self->type == DAO_ARRAY && self->xArray.original ){
 		DaoArray_Sliced( (DaoArray*)self );
