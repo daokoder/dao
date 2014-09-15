@@ -1989,13 +1989,6 @@ DoneGenericType:
 			if( cbtype == NULL ) goto InvalidTypeForm;
 			type = DaoParser_MakeCSRoutineType( self, type, cbtype );
 		}
-	}else if( tokname > 0 && tokname < 100 ){
-		DString *name = DString_New();
-		DString_AppendChars( name, "dao::" );
-		DString_Append( name, & tok->string );
-		type = DaoNamespace_MakeType( ns, name->chars, tokname, NULL, 0,0 );
-		DString_Delete( name );
-		*newpos = start + 1;
 	}else if( tokens[start]->type == DTOK_IDENTIFIER ){
 		if( daons ) start -= 2;
 		type = DaoParser_ParsePlainType( self, start, end, newpos );
@@ -2978,7 +2971,7 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 	if( start <0 ) goto ErrorInterfaceDefinition;
 	if( value == NULL || value->type == 0 ){
 		int t = tokens[start]->name;
-		if( (t != DTOK_IDENTIFIER && t < DKEY_ABS) || t > DKEY_TANH ) goto ErrorInterfaceDefinition;
+		if( (t != DTOK_IDENTIFIER && t < DKEY_RAND) || t > DKEY_TANH ) goto ErrorInterfaceDefinition;
 		interName = & tokens[start]->string;
 		inter = DaoInterface_New( interName->chars );
 		if( routine != NS->mainRoutine ) ns = NULL;
@@ -3112,7 +3105,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( value == NULL || value->type == 0 ){
 		DString *name = & tokens[start]->string;
 		int t = tokens[start]->name;
-		if( t != DTOK_IDENTIFIER && t != DTOK_ID_THTYPE && t < DKEY_ABS ) goto ErrorClassDefinition;
+		if( t != DTOK_IDENTIFIER && t != DTOK_ID_THTYPE && t < DKEY_RAND ) goto ErrorClassDefinition;
 		klass = DaoClass_New();
 
 		className = klass->className;
@@ -3737,7 +3730,7 @@ DecoratorError:
 			continue;
 		}
 
-		if( needName && (tkt != DTOK_IDENTIFIER || (tki > DAO_NOKEY1 && tki < DKEY_ABS)) ){
+		if( needName && (tkt != DTOK_IDENTIFIER || (tki > DAO_NOKEY1 && tki < DKEY_RAND)) ){
 			DaoParser_Error( self, DAO_TOKEN_NEED_NAME, & tokens[start]->string );
 			DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
 			return 0;
@@ -4216,7 +4209,7 @@ int DaoParser_MultipleAssignment( DaoParser *self, int start, int rb, int to, in
 		int tid = self->curToken;
 		int cur = tokens[tid]->name;
 		int nxt = tokens[tid+1]->name;
-		cur = cur == DTOK_IDENTIFIER || cur >= DKEY_ABS;
+		cur = cur == DTOK_IDENTIFIER || cur >= DKEY_RAND;
 		nxt = nxt == DTOK_COMMA || nxt == DTOK_RB;
 		if( cur && nxt ){
 			k = DaoParser_GetRegister( self, tokens[tid] );
@@ -4307,7 +4300,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 			return DaoParser_MultipleAssignment( self, start, rb, to, store );
 		}
 	}
-	while( ptok->name == DTOK_IDENTIFIER || ptok->name >= DKEY_ABS ){
+	while( ptok->name == DTOK_IDENTIFIER || ptok->name >= DKEY_RAND ){
 		DList_Append( self->toks, ptok );
 		if( (++k) > to ) break;
 		lastok = ptok;
@@ -5297,7 +5290,7 @@ int DaoParser_ParseNamespaceStatement( DaoParser *self, int start, int end )
 	if( value == NULL || value->type == 0 ){
 		DString *name = & tokens[start]->string;
 		int tok = tokens[start]->name;
-		if( tok != DTOK_IDENTIFIER && tok < DKEY_ABS ) goto InvalidNamespace;
+		if( tok != DTOK_IDENTIFIER && tok < DKEY_RAND ) goto InvalidNamespace;
 		if( scope && scope->type != DAO_NAMESPACE ) goto InvalidNamespace;
 
 		defNS = DaoNamespace_New( NS->vmSpace, name->chars );
@@ -6245,6 +6238,49 @@ ParsingError:
 	return result;
 }
 
+static DaoEnode DaoParser_ParseIntrinsicMath( DaoParser *self, int tki, int start, int end )
+{
+	DaoInode *last = self->vmcLast;
+	DaoEnode enode, result = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
+	DaoEnode error = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
+	int rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
+	int reg, regLast = -1, cst = 0;
+
+	self->curToken = start;
+	if( rb < 0 || (rb == start+2 && tki != DKEY_RAND) ){
+		if( rb == start+2 ) DaoParser_Error( self, DAO_PARAM_INVALID, NULL );
+		return error;
+	}
+	if( rb == start+2 /* && tki == DKEY_RAND */ ){
+		reg = DaoParser_PushRegister( self );
+		DaoParser_AddCode( self, DVM_DATA, DAO_FLOAT, 1, reg, start, 0, rb );
+	}else{
+		reg = DaoParser_MakeArithTree( self, start+2, rb-1, &cst );
+	}
+	if( reg <0 ) return error;
+	if( cst && tki != DKEY_RAND ){
+		DaoProcess *proc;
+		DaoVmCode vmc = { DVM_MATH, 0, 1, 0 };
+		DaoValue *value;
+
+		vmc.a = tki - DKEY_RAND;
+		proc = DaoNamespace_ReserveFoldingOperands( self->nameSpace, 2 );
+		DaoValue_Copy( DaoParser_GetVariable( self, cst ), & proc->activeValues[1] );
+		proc->activeCode = & vmc;
+		value = DaoParser_EvalConst( self, proc, 2 );
+		if( value == NULL ) return error;
+		result.konst = LOOKUP_BIND_LC( DaoRoutine_AddConstant( self->routine, value ));
+		regLast = DaoParser_GetNormRegister( self, result.konst, 0, start, 0, rb );
+	}else{
+		regLast = DaoParser_PushRegister( self );
+		DaoParser_AddCode( self, DVM_MATH, tki-DKEY_RAND, reg, regLast, start, 0, rb );
+	}
+	result.reg = regLast;
+	result.first = last->next;
+	result.last = result.update = self->vmcLast;
+	self->curToken = rb + 1;
+	return result;
+}
 
 static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 {
@@ -6414,41 +6450,6 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 		result.first = last->next;
 		result.last = result.update = self->vmcLast;
 		start = rb + 1;
-	}else if( tki2 == DTOK_LB && (tki >= DKEY_RAND && tki <= DKEY_TANH) ){
-		/* built-in math functions */
-		rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
-		if( rb < 0 || (rb == start+2 && tki != DKEY_RAND) ){
-			if( rb == start+2 ) DaoParser_Error( self, DAO_PARAM_INVALID, NULL );
-			return error;
-		}
-		if( rb == start+2 /* && tki == DKEY_RAND */ ){
-			reg = DaoParser_PushRegister( self );
-			DaoParser_AddCode( self, DVM_DATA, DAO_FLOAT, 1, reg, start, 0, rb );
-		}else{
-			reg = DaoParser_MakeArithTree( self, start+2, rb-1, &cst );
-		}
-		if( reg <0 ) return error;
-		if( cst && tki != DKEY_RAND ){
-			DaoProcess *proc;
-			DaoVmCode vmc = { DVM_MATH, 0, 1, 0 };
-			DaoValue *value;
-
-			vmc.a = tki - DKEY_RAND;
-			proc = DaoNamespace_ReserveFoldingOperands( self->nameSpace, 2 );
-			DaoValue_Copy( DaoParser_GetVariable( self, cst ), & proc->activeValues[1] );
-			proc->activeCode = & vmc;
-			value = DaoParser_EvalConst( self, proc, 2 );
-			if( value == NULL ) return error;
-			result.konst = LOOKUP_BIND_LC( DaoRoutine_AddConstant( self->routine, value ));
-			regLast = DaoParser_GetNormRegister( self, result.konst, 0, start, 0, rb );
-		}else{
-			regLast = DaoParser_PushRegister( self );
-			DaoParser_AddCode( self, DVM_MATH, tki-DKEY_RAND, reg, regLast, start, 0, rb );
-		}
-		result.reg = regLast;
-		result.first = last->next;
-		result.last = result.update = self->vmcLast;
-		start = rb + 1;
 	}else if( tki == DTOK_ID_THTYPE && tki2 == DTOK_LB ){
 		DaoToken tok = *tokens[start];
 		regLast = DaoParser_GetRegister( self, & tok );
@@ -6467,11 +6468,27 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 		result.last = result.update = self->vmcLast;
 		start += 1;
 	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_COLON
-			|| (tki >= DKEY_ANY && tki <= DKEY_TUPLE) || tki >= DKEY_ABS || tki == DKEY_SELF ){
+			|| (tki >= DKEY_ANY && tki <= DKEY_TUPLE) || tki >= DKEY_RAND || tki == DKEY_SELF ){
+		int count = self->errors->size;
+		int cur = start;
 		regLast = DaoParser_ParseAtomicExpression( self, start, & cst );
 		if( last != self->vmcLast ) result.first = result.last = result.update = self->vmcLast;
 		result.reg = regLast;
 		result.konst = cst;
+		value = regLast >= 0 && cst ? DaoParser_GetVariable( self, cst ) : NULL;
+		if( regLast < 0 || value == (DaoValue*) self->vmSpace->daoNamespace ){
+			cur = start;
+			if( value == (DaoValue*) self->vmSpace->daoNamespace ){
+				if( cur+2 < self->tokens->size && tokens[cur+1]->type == DTOK_COLON2 ) cur += 2;
+			}
+			tki = tokens[cur]->name;
+			tki2 = cur + 1 < self->tokens->size ? tokens[cur+1]->name : 0;
+			if( tki2 == DTOK_LB && (tki >= DKEY_RAND && tki <= DKEY_TANH) ){
+				DList_Erase( self->errors, count, -1 );
+				result = DaoParser_ParseIntrinsicMath( self, tki, cur, end );
+				start = self->curToken;
+			}
+		}
 		start += 1;
 	}
 	self->curToken = start;
