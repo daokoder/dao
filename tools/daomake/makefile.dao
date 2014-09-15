@@ -17,7 +17,7 @@ copy = project.AddCommand( "configs", "$(DAOMAKE) mkdir2 " + libpath )
 copy.AddCommand( "$(DAOMAKE) copy " + project.MakeSourcePath( "platforms" ) + " " + libpath )
 copy.AddCommand( "$(DAOMAKE) copy " + project.MakeSourcePath( "packages" ) + " " + libpath )
 
-libpath = DaoMake::MakePath( daovm.GetPath( "INSTALL-PATH" ), "lib/daomake/" );
+libpath = DaoMake::MakePath( daovm.GetPath( "LIB-PATH" ), "daomake/" );
 
 project.Install( daovm.GetPath( "BIN-PATH" ), project_exe );
 project.Install( libpath, "platforms" );

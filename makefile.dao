@@ -19,11 +19,32 @@ daovm = DaoMake::Project( "Dao" )
 ###########################################################################
 
 daovm_root_path = DaoMake::Option( "INSTALL-PATH", "/usr/local" )
-daovm_bin_path = DaoMake::Option( "BIN-PATH", DaoMake::MakePath( daovm_root_path, "bin" ) )
-daovm_lib_path = DaoMake::Option( "LIB-PATH", DaoMake::MakePath( daovm_root_path, "lib" ) )
-daovm_inc_path = DaoMake::Option( "INC-PATH", DaoMake::MakePath( daovm_root_path, "include/dao" ) )
-daovm_mod_path = DaoMake::Option( "MOD-PATH", DaoMake::MakePath( daovm_root_path, "lib/dao/modules" ) )
-daovm_doc_path = DaoMake::Option( "DOC-PATH", DaoMake::MakePath( daovm_root_path, "share/dao" ) )
+
+daovm.AddVariable( "INSTALL", daovm_root_path, "?=" )
+
+daovm_bin_path = "$(INSTALL)/bin"
+daovm_lib_path = "$(INSTALL)/lib"
+daovm_inc_path = "$(INSTALL)/include/dao"
+daovm_mod_path = "$(INSTALL)/lib/dao/modules"
+daovm_doc_path = "$(INSTALL)/share/dao"
+
+
+
+# Uncomment the following, if these paths need to be changable
+# from command line with command such as:
+#   make install INSTALL_BIN=/usr/bin ...
+#{
+daovm.AddVariable( "INSTALL_BIN", daovm_bin_path, "?=" )
+daovm.AddVariable( "INSTALL_LIB", daovm_lib_path, "?=" )
+daovm.AddVariable( "INSTALL_INC", daovm_inc_path, "?=" )
+daovm.AddVariable( "INSTALL_MOD", daovm_mod_path, "?=" )
+daovm.AddVariable( "INSTALL_DOC", daovm_doc_path, "?=" )
+daovm_bin_path = "$(INSTALL_BIN)"
+daovm_lib_path = "$(INSTALL_LIB)"
+daovm_inc_path = "$(INSTALL_INC)"
+daovm_mod_path = "$(INSTALL_MOD)"
+daovm_doc_path = "$(INSTALL_DOC)"
+#}
 
 
 #
@@ -61,7 +82,7 @@ daovm_full_static = DaoMake::Option( "FULL-STATIC", $OFF )
 daovm_use_gc_logger  = DaoMake::Option( "GC-LOGGER", $OFF )
 daovm_use_code_state = DaoMake::Option( "CODE-STATE", $OFF )
 
-daovm_use_help_path = DaoMake::Option( "HELP-PATH", "." )
+daovm_use_help_path = DaoMake::Option( "HELP-PATH", "modules/help" )
 daovm_use_help_font = DaoMake::Option( "HELP-FONT", "monospace" )
 
 if( DaoMake::IsPlatform( "MINIX" ) ) daovm_with_thread = $OFF;
@@ -83,8 +104,8 @@ if( daovm_with_numarray   == $ON ) daovm.AddDefinition( "DAO_WITH_NUMARRAY" )
 if( daovm_with_decorator  == $ON ) daovm.AddDefinition( "DAO_WITH_DECORATOR" )
 if( daovm_with_thread     == $ON ) daovm.AddDefinition( "DAO_WITH_THREAD" )
 if( daovm_with_concurrent == $ON ) daovm.AddDefinition( "DAO_WITH_CONCURRENT" )
-if( daovm_use_gc_logger  == $ON ) daovm.AddDefinition( "DAO_USE_GC_LOGGER" );
-if( daovm_use_code_state == $ON ) daovm.AddDefinition( "DAO_USE_CODE_STATE" );
+if( daovm_use_gc_logger   == $ON ) daovm.AddDefinition( "DAO_USE_GC_LOGGER" );
+if( daovm_use_code_state  == $ON ) daovm.AddDefinition( "DAO_USE_CODE_STATE" );
 
 changeset = io.read( DaoMake::MakePath( DaoMake::SourcePath(), "manifest.uuid" ), $true )
 if( % changeset ) daovm.AddDefinition( "CHANGESET_ID", "\\\"FOS." + changeset[:11] + "\\\"" )
@@ -337,7 +358,7 @@ if( DaoMake::UseLocalRPath() == 0 ){
 }
 
 daovm.AddVariable( "DAO", daocmd );
-daovm.AddVariable( "HELP_PATH", daovm_use_help_path );
+daovm.AddVariable( "HELP_PATH", daovm.MakeSourcePath( daovm_use_help_path ) );
 daovm.AddVariable( "HELP_FONT", daovm_use_help_font );
 
 # Add shell commands as a target:

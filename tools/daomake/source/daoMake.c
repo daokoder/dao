@@ -1340,26 +1340,11 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 	return self->targetRules->items.pString[self->targetRules->size-2];
 }
 
-void DaoMakeProject_MakeInstallPath( DaoMakeProject *self, DString *path, DString *install, DString *uninstall, DMap *mapPaths, int top )
+void DaoMakeProject_MakeInstallPath( DaoMakeProject *self, DString *path, DString *install, DString *uninstall, int top )
 {
-	DString *sub;
-
 	if( DaoMake_IsDir( path->chars ) ) return;
-	if( DMap_Find( mapPaths, path ) ) return;
-	DMap_Insert( mapPaths, path, 0 );
 
-	sub = DaoMakeProject_GetBufferString( self );
-	DString_Reset( sub, 0 );
-	DString_Append( sub, path );
-	if( sub->size && sub->chars[sub->size-1] == '/' ) sub->size --;
-	while( sub->size && sub->chars[sub->size-1] != '/' ) sub->size --;
-	if( sub->size && sub->chars[sub->size-1] == '/' ) sub->size --;
-	sub->chars[sub->size] = '\0';
-
-	if( sub->size && DaoMake_IsDir( sub->chars ) == 0 ){
-		DaoMakeProject_MakeInstallPath( self, sub, install, uninstall, mapPaths, 0 );
-	}
-	DString_AppendChars( install, "\t$(DAOMAKE) mkdir2 " );
+	DString_AppendChars( install, "\t$(DAOMAKE) mkdir3 " );
 	DString_Append( install, path );
 	DString_AppendChar( install, '\n' );
 
@@ -1368,8 +1353,6 @@ void DaoMakeProject_MakeInstallPath( DaoMakeProject *self, DString *path, DStrin
 		DString_Append( uninstall, path );
 		DString_AppendChar( uninstall, '\n' );
 	}
-
-	self->usedStrings -= 1;
 }
 void DaoMakeProject_MakeCopy( DaoMakeProject *self, DString *src, DString *dest, DString *output )
 {
@@ -1423,7 +1406,6 @@ void DaoMakeProject_MakeInstallation( DaoMakeProject *self, DString *makefile )
 	DString *install = DaoMakeProject_GetBufferString( self );
 	DString *uninstall = DaoMakeProject_GetBufferString( self );
 	DString *file = DaoMakeProject_GetBufferString( self );
-	DMap *mapPaths = DMap_New(DAO_DATA_STRING,0);
 	daoint i;
 
 	for(i=0; i<self->installs->size; i+=2){
@@ -1438,14 +1420,13 @@ void DaoMakeProject_MakeInstallation( DaoMakeProject *self, DString *makefile )
 			DaoMakeTarget_MakeName( target, tname, 1 );
 		}
 		if( DaoMake_IsDir( path->chars ) == 0 ){
-			DaoMakeProject_MakeInstallPath( self, path, install, uninstall, mapPaths, 1 );
+			DaoMakeProject_MakeInstallPath( self, path, install, uninstall, 1 );
 		}else{
 			DaoMakeProject_MakeRemove( self, tname, path, uninstall );
 		}
 		DaoMake_MakeRelativePath( self->base.buildPath, tname );
 		DaoMakeProject_MakeCopy( self, tname, path, install );
 	}
-	DMap_Delete( mapPaths );
 	self->usedStrings -= 4;
 	DaoMakeProject_MakeDirectoryMake( self, install, "install" );
 	DaoMakeProject_MakeDirectoryMake( self, uninstall, "uninstall" );
@@ -1540,9 +1521,9 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 	DString_AppendPathSep( makefile );
 	DString_AppendChars( makefile, "daomake\n\n" );
 
-	for(i=0; i<self->variables->size; i+=2){
+	for(i=0; i<self->variables->size; i+=3){
 		DString_Append( makefile, self->variables->items.pString[i] );
-		DString_AppendChars( makefile, " =" );
+		DString_Append( makefile, self->variables->items.pString[i+2] );
 		DString_Append( makefile, self->variables->items.pString[i+1] );
 		DString_AppendChar( makefile, '\n' );
 	}
@@ -2446,8 +2427,10 @@ static void PROJECT_AddVAR( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMakeProject *self = (DaoMakeProject*) p[0];
 	DString *name = DaoValue_TryGetString( p[1] );
 	DString *value = DaoValue_TryGetString( p[2] );
+	DString *oper = DaoValue_TryGetString( p[3] );
 	DList_Append( self->variables, name );
 	DList_Append( self->variables, value );
+	DList_Append( self->variables, oper );
 }
 static void PROJECT_SetTargetPath( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2551,7 +2534,7 @@ static DaoFuncItem DaoMakeProjectMeths[]=
 
 	{ PROJECT_AddDIR,  "AddDirectory( self: Project, name: string, path: string, ...: string ) => Target" },
 
-	{ PROJECT_AddVAR,   "AddVariable( self: Project, name: string, value: string )" },
+	{ PROJECT_AddVAR,  "AddVariable( self: Project, name: string, value: string, op = '=' )" },
 
 	{ PROJECT_SetTargetPath,  "SetTargetPath( self: Project, path: string )" },
 
