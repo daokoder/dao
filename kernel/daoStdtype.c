@@ -1014,7 +1014,7 @@ static void DaoSTR_Match( DaoProcess *proc, DaoValue *p[], int N )
 	}
 Done:
 	if( matched ){
-		DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
+		DaoTuple *tuple = DaoProcess_PutTuple( proc, 2 );
 		tuple->values[0]->xInteger.value = start;
 		tuple->values[1]->xInteger.value = end;
 	}else{
@@ -1697,7 +1697,7 @@ static int DaoList_CheckType( DaoList *self, DaoProcess *proc )
 }
 static void DaoLIST_Max( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
+	DaoTuple *tuple = DaoProcess_PutTuple( proc, 2 );
 	DaoList *self = & p[0]->xList;
 	DaoValue *res, **data = self->value->items.pValue;
 	daoint i, imax, type, size = self->value->size;
@@ -1721,7 +1721,7 @@ static void DaoLIST_Max( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoLIST_Min( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
+	DaoTuple *tuple = DaoProcess_PutTuple( proc, 2 );
 	DaoList *self = & p[0]->xList;
 	DaoValue *res, **data = self->value->items.pValue;
 	daoint i, imin, type, size = self->value->size;
@@ -1990,7 +1990,7 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 		if( funct == DVM_FUNCT_FIND && res->xInteger.value ){
 			popped = 1;
 			DaoProcess_PopFrame( proc );
-			tuple = DaoProcess_PutTuple( proc, 0 );
+			tuple = DaoProcess_PutTuple( proc, 2 );
 			GC_Assign( & tuple->values[1], items[i] );
 			tuple->values[0]->xInteger.value = j;
 			break;
@@ -2779,21 +2779,21 @@ static void DaoMAP_Find( DaoProcess *proc, DaoValue *p[], int N )
 	case 0 :
 		node = MAP_FindLE( self->value, p[1] );
 		if( node == NULL ) break;
-		res = DaoProcess_PutTuple( proc, 0 );
+		res = DaoProcess_PutTuple( proc, 2 );
 		DaoValue_Copy( node->key.pValue, res->values );
 		DaoValue_Copy( node->value.pValue, res->values + 1 );
 		break;
 	case 1  :
 		node = MAP_Find( self->value, p[1] );
 		if( node == NULL ) break;
-		res = DaoProcess_PutTuple( proc, 0 );
+		res = DaoProcess_PutTuple( proc, 2 );
 		DaoValue_Copy( node->key.pValue, res->values );
 		DaoValue_Copy( node->value.pValue, res->values + 1 );
 		break;
 	case 2  :
 		node = MAP_FindGE( self->value, p[1] );
 		if( node == NULL ) break;
-		res = DaoProcess_PutTuple( proc, 0 );
+		res = DaoProcess_PutTuple( proc, 2 );
 		DaoValue_Copy( node->key.pValue, res->values );
 		DaoValue_Copy( node->value.pValue, res->values + 1 );
 		break;
@@ -2864,7 +2864,7 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 		if( funct == DVM_FUNCT_FIND && res->xInteger.value ){
 			popped = 1;
 			DaoProcess_PopFrame( proc );
-			tuple = DaoProcess_PutTuple( proc, 0 );
+			tuple = DaoProcess_PutTuple( proc, 2 );
 			GC_Assign( & tuple->values[0], node->key.pValue );
 			GC_Assign( & tuple->values[1], node->value.pValue );
 			break;
@@ -3233,7 +3233,7 @@ static void DaoTupleCore_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *
 		int id = DaoValue_GetInteger( pid->xTuple.values[1] );
 		if( id >=0 && id < self->size ){
 			DaoValue **data = pid->xTuple.values;
-			DaoTuple *tup = DaoProcess_PutTuple( proc, 0 );
+			DaoTuple *tup = DaoProcess_PutTuple( proc, 2 );
 			DaoValue_Move( self->values[id], & tup->values[1], NULL );
 			DString_Reset( tup->values[0]->xString.value, 0 );
 			if( id < self->ctype->nested->size ){

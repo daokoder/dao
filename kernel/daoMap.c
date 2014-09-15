@@ -837,7 +837,7 @@ DNode* DMap_Insert( DMap *self, void *key, void *value )
 			if( self->size >= self->tsize ) DHash_ResetTable( self );
 		}
 	}else{
-		if( self->valtype != DAO_DATA_VALUE ){
+		if( self->valtype < DAO_DATA_VALUE || self->valtype > DAO_DATA_VALUE3 ){
 			DMap_DeleteItem( p->value.pVoid, self->valtype );
 			p->value.pVoid = NULL;
 		}

@@ -740,7 +740,7 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		status |= task->status;
 	}
 	if( F == DVM_FUNCT_FIND ){
-		DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
+		DaoTuple *tuple = DaoProcess_PutTuple( proc, 2 );
 		if( param->type == DAO_LIST && index != -1 ){
 			DaoValue **items = param->xList.value->items.pValue;
 			GC_Assign( & tuple->values[1], items[index] );

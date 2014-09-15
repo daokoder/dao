@@ -1406,7 +1406,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	 */
 	if( cast != NULL ){
 		routine->attribs |= DAO_ROUT_CASTOR;
-		if( hostype ) DaoTypeKernel_InsertCastor( hostype->kernel, NS, hostype, routine );
+		if( ctype ) DaoTypeKernel_InsertCastor( hostype->kernel, NS, hostype, routine );
 		else if( klass ) DaoClass_CastingMethod( klass, routine );
 	}
 

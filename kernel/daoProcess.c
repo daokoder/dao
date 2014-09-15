@@ -3794,6 +3794,12 @@ static int DaoProcess_FastPassParams( DaoProcess *self, DaoType *partypes[], Dao
 			case DAO_STRING :
 				DString_Assign( dests[i]->xString.value, param->xString.value );
 				break;
+			case DAO_ENUM :
+				if( dests[i]->xEnum.etype != param->xEnum.etype ){
+					GC_Assign( & dests[i]->xEnum.etype, param->xEnum.etype );
+				}
+				dests[i]->xEnum.value = param->xEnum.value;
+				break;
 			default :
 				GC_Assign( & dests[i], param );
 				break;

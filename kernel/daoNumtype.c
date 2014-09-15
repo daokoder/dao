@@ -1081,7 +1081,7 @@ static void DaoARRAY_Index( DaoProcess *proc, DaoValue *par[], int N )
 }
 static void DaoARRAY_max( DaoProcess *proc, DaoValue *par[], int N )
 {
-	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
+	DaoTuple *tuple = DaoProcess_PutTuple( proc, 2 );
 	DaoArray *self = (DaoArray*) par[0];
 	DaoArray *array = DaoArray_GetWorkArray( self );
 	daoint size = DaoArray_GetWorkSize( self );
@@ -1112,7 +1112,7 @@ static void DaoARRAY_max( DaoProcess *proc, DaoValue *par[], int N )
 }
 static void DaoARRAY_min( DaoProcess *proc, DaoValue *par[], int N )
 {
-	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
+	DaoTuple *tuple = DaoProcess_PutTuple( proc, 2 );
 	DaoArray *self = (DaoArray*) par[0];
 	DaoArray *array = DaoArray_GetWorkArray( self );
 	daoint size = DaoArray_GetWorkSize( self );

@@ -1023,7 +1023,7 @@ static int DaoVmSpace_ConvertArguments( DaoRoutine *routine, DList *argNames, DL
 		type = (DaoType*) DList_Back( routype->nested );
 		if( i < routype->nested->size ) type = routype->nested->items.pType[i];
 		DString_Assign( val, value );
-		if( type->tid == DAO_PAR_VALIST ){
+		if( type && type->tid == DAO_PAR_VALIST ){
 			DaoType *type2 = (DaoType*) type->aux;
 			for(j=i; j<argNames->size; ++j){
 				name = argNames->items.pString[j];
