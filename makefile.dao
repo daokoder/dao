@@ -20,7 +20,8 @@ daovm = DaoMake::Project( "Dao" )
 
 daovm_root_path = DaoMake::Option( "INSTALL-PATH", "/usr/local" )
 
-daovm.AddVariable( "INSTALL", daovm_root_path, "?=" )
+# A global variable to be written to every Makefile:
+DaoMake::Variables[ "INSTALL" ] = daovm_root_path
 
 daovm_bin_path = "$(INSTALL)/bin"
 daovm_lib_path = "$(INSTALL)/lib"

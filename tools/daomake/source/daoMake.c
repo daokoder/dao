@@ -244,6 +244,7 @@ static DaoMap  *daomake_platforms = NULL;
 static DaoMap  *daomake_assemblers = NULL;
 static DaoMap  *daomake_compilers = NULL;
 static DaoMap  *daomake_linkers = NULL;
+static DaoMap  *daomake_variables = NULL;
 static DaoList *daomake_includes = NULL;
 
 static DMap *daomake_boolean_options = NULL;
@@ -1495,6 +1496,14 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 	DString_Append( makefile, self->base.buildPath );
 	DString_AppendChars( makefile, "\n\n" );
 
+	for(it=DMap_First(daomake_variables->value); it; it=DMap_Next(daomake_variables->value,it)){
+		DString_Append( makefile, it->key.pValue->xString.value );
+		DString_AppendChars( makefile, " ?=" );
+		DString_Append( makefile, it->value.pValue->xString.value );
+		DString_AppendChars( makefile, "\n" );
+	}
+	DString_AppendChars( makefile, "\n" );
+
 	if( 1 ){
 		DString *all = DaoMakeProject_GetBufferString( self );
 		DString *phony = DaoMakeProject_GetBufferString( self );
@@ -1867,6 +1876,39 @@ void DaoMakeProject_MakeFindPackageForBuild( DaoMakeProject *self, DString *outp
 		DaoMakeTarget_MakeFindPackageForBuild( tar, output, tab );
 	}
 }
+static void DString_RepaceVariable( DString *self, DString *name, DString *value )
+{
+	daoint pos = DString_Find( self, name, 0 );
+	daoint offset = 0;
+
+	while( pos != DAO_NULLPOS ){
+		DString_Insert( self, value, pos, name->size, value->size );
+		offset += value->size - name->size;
+		pos = DString_Find( self, name, offset );
+	}
+}
+static void DaoMakeProject_ReplaceVariables( DaoMakeProject *self, DString *output )
+{
+	DString *name = DString_New();
+	DNode *it;
+	daoint i;
+
+	for(it=DMap_First(daomake_variables->value); it; it=DMap_Next(daomake_variables->value,it)){
+		DString_Reset( name, 0 );
+		DString_AppendChars( name, "$(" );
+		DString_Append( name, it->key.pValue->xString.value );
+		DString_AppendChars( name, ")" );
+		DString_RepaceVariable( output, name, it->value.pValue->xString.value );
+	}
+	for(i=0; i<self->variables->size; i+=3){
+		DString_Reset( name, 0 );
+		DString_AppendChars( name, "$(" );
+		DString_Append( name, self->variables->items.pString[i] );
+		DString_AppendChars( name, ")" );
+		DString_RepaceVariable( output, name, self->variables->items.pString[i+1] );
+	}
+	DString_Delete( name );
+}
 void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output, int caching )
 {
 	DString *filePath = DaoMakeProject_GetBufferString( self );
@@ -1903,6 +1945,8 @@ void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output, int 
 	if( installPath->size == 0 || caching ){
 		DaoMakeProject_MakeFindPackageForBuild( self, find1, 0 );
 		DString_Append( output, find1 );
+		DString_AppendChars( output, "\n" );
+		DaoMakeProject_ReplaceVariables( self, output );
 		if( find1->size == 0 ) DString_Reset( output, 0 );
 		self->usedStrings -= 4;
 		return;
@@ -1916,7 +1960,8 @@ void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output, int 
 	DString_Append( output, find1 );
 	DString_AppendChars( output, "}else{\n" );
 	DString_Append( output, find2 );
-	DString_AppendChars( output, "}" );
+	DString_AppendChars( output, "}\n" );
+	DaoMakeProject_ReplaceVariables( self, output );
 	self->usedStrings -= 4;
 	if( find1->size + find2->size == 0 ) DString_Reset( output, 0 );
 }
@@ -3439,6 +3484,7 @@ ErrorInvalidArgValue:
 	daomake_assemblers = DaoMap_New(0);
 	daomake_compilers = DaoMap_New(0);
 	daomake_linkers = DaoMap_New(0);
+	daomake_variables = DaoMap_New(0);
 	daomake_includes = DaoList_New();
 	DaoGC_IncRC( (DaoValue*) daomake_projects );
 	DaoGC_IncRC( (DaoValue*) daomake_settings );
@@ -3446,6 +3492,7 @@ ErrorInvalidArgValue:
 	DaoGC_IncRC( (DaoValue*) daomake_assemblers );
 	DaoGC_IncRC( (DaoValue*) daomake_compilers );
 	DaoGC_IncRC( (DaoValue*) daomake_linkers );
+	DaoGC_IncRC( (DaoValue*) daomake_variables );
 	DaoGC_IncRC( (DaoValue*) daomake_includes );
 
 	nspace = DaoVmSpace_GetNamespace( vmSpace, "DaoMake" );
@@ -3462,6 +3509,7 @@ ErrorInvalidArgValue:
 	DaoNamespace_AddValue( nspace, "Compilers", (DaoValue*) daomake_compilers, "map<string,string>" );
 	DaoNamespace_AddValue( nspace, "Linkers", (DaoValue*) daomake_linkers, "map<string,string>" );
 	DaoNamespace_AddValue( nspace, "Includes", (DaoValue*) daomake_includes, "list<string>" );
+	DaoNamespace_AddValue( nspace, "Variables", (DaoValue*) daomake_variables, "map<string,string>" );
 
 	DaoMap_AddKeyValues( daomake_assemblers, daomake_lang_assemblers );
 	DaoMap_AddKeyValues( daomake_compilers, daomake_lang_compilers );
