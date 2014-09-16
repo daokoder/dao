@@ -930,7 +930,7 @@ DaoFuncItem dao_mt_methods[] =
 		"critical()[]"
 	},
 	{ DaoMT_Start,
-		"start( when: enum<auto,now> = $auto ) [ => @V|none] => future<@V>"
+		"start( when: enum<auto,now> = $auto ) [ => @V|none] => Future<@V>"
 	},
 	{ DaoMT_Iterate,
 		"iterate( times: int, threads = 2 ) [index: int, threadid: int]"

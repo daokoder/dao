@@ -3,7 +3,7 @@ const N = 100000;
 
 class Producer !!
 {
-	routine Run( chan : mt::channel<int> ){
+	routine Run( chan : mt::Channel<int> ){
 		index = 0;
 		while( ++index <= N ){
 			if( index % 100 == 0 ) io.writeln( "sending", index )
@@ -15,7 +15,7 @@ class Producer !!
 
 class Consumer !!
 {
-	routine Run( chan : mt::channel<int> ){
+	routine Run( chan : mt::Channel<int> ){
 		while(1){
 			data = chan.receive()
 			if( (int)data.data % 100 == 0 ) io.writeln( "received", data );
@@ -24,7 +24,7 @@ class Consumer !!
 	}
 }
 
-chan = mt::channel<int>(100)
+chan = mt::Channel<int>(100)
 
 producer = Producer()
 consumer = Consumer()

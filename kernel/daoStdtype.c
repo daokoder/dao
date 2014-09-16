@@ -3987,6 +3987,13 @@ static void DString_Format( DString *self, int width, int head )
 		}
 	}
 }
+static void DaoException_PrintName( DaoValue *exception, DaoStream *ss )
+{
+	if( exception == NULL || exception->type != DAO_OBJECT ) return;
+	if( exception->xObject.parent ) DaoException_PrintName( exception->xObject.parent, ss );
+	DaoStream_WriteChars( ss, "::" );
+	DaoStream_WriteString( ss, exception->xObject.defClass->className );
+}
 void DaoException_Print( DaoException *self, DaoStream *stream )
 {
 	int i, h, w = 100, n = self->callers->size;
@@ -3996,6 +4003,7 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 
 	DaoStream_WriteChars( ss, "[[" );
 	DaoStream_WriteChars( ss, self->ctype->typer->name );
+	DaoException_PrintName( (DaoValue*) self->object, ss );
 	DaoStream_WriteChars( ss, "]] --- " );
 	h = sstring->size;
 	if( h > 40 ) h = 40;

@@ -131,7 +131,7 @@ The @[code]mt@[code] module also supports a few other methods:
 
 Select on a group of channels or future values, wait with a timeout for data become available from any of the channels. It returns a tuple with the following possible values:
  @[list(sub)]
- -- @[code](channel|future, data, $selected)@[code];
+ -- @[code](Channel|Future, data, $selected)@[code];
  -- @[code](none, none, $timeout)@[code];
  -- @[code](none, none, $finished)@[code];
  @[list(sub)] 
@@ -291,14 +291,14 @@ Tasklets can communicate and synchronize with each other using
 @[code]communication channels@[code].
 
 
-The @[code]channel@[code] type is implemented as a customized C data type
+The @[code]Channel@[code] type is implemented as a customized C data type
 that supports template-like type arguments. So to construct a channel that 
 can send and receive integers, one can use,
 @[code]
-chan = mt::channel<int>()
+chan = mt::Channel<int>()
 @[code]
-Here @[code]channel@[code] is prefixed with @[code]mt::@[code],
-because @[code]channel@[code] is defined in the built-in @[code]mt@[code]
+Here @[code]Channel@[code] is prefixed with @[code]mt::@[code],
+because @[code]Channel@[code] is defined in the built-in @[code]mt@[code]
 multi-threading module.
 
 
@@ -322,23 +322,23 @@ an optional parameter, which is one by default.
 
 The channel type has a number of methods which include:
 @[list]
---@[code]buffer( self: channel<@V> ) => int@[code]
+--@[code]buffer( self: Channel<@V> ) => int@[code]
 
 It returns the number of unprocessed data items in the channel buffer.
 
---@[code] cap( self: channel<@V> ) => int @[code]
+--@[code] cap( self: Channel<@V> ) => int @[code]
 
 Return the channel capacity.
 
---@[code] cap( self: channel<@V>, cap: int ) => int @[code]
+--@[code] cap( self: Channel<@V>, cap: int ) => int @[code]
 
 Set the channel capacity and returns the previous one. Set the capacity to zero to prevent it from receiving further data, and effectively close it when its buffer become empty.
 
---@[code] send( self: channel<@V>, data: @V, timeout: float = -1 ) => int @[code]
+--@[code] send( self: Channel<@V>, data: @V, timeout: float = -1 ) => int @[code]
 
 Send a data item with a timeout. A negative timeout parameter means infinite waiting. It return 1 upon timeout, 0 otherwise.
 
---@[code] receive( self: channel<@V>, timeout: float = -1 ) => tuple<data: @V|none, status: enum<received,timeout,finished>> @[code]
+--@[code] receive( self: Channel<@V>, timeout: float = -1 ) => tuple<data: @V|none, status: enum<received,timeout,finished>> @[code]
 
 Receive a data item with a timeout. A negative timeout parameter means infinite waiting. It returns a tuple with the following possible values:
  @[list(sub)]
@@ -352,7 +352,7 @@ Here is a simple example, where integers are sent through one channel and string
 @[code]
 load sys
 
-chans = { mt::channel<int>(1), mt::channel<string>(1) }
+chans = { mt::Channel<int>(1), mt::Channel<string>(1) }
 
 mt.start {
     index = 0;

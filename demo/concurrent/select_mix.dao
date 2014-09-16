@@ -3,8 +3,8 @@ load sys
 const N = 10;
 const C = 1;
 
-ichan = mt::channel<int>(C)
-schan = mt::channel<string>(C)
+ichan = mt::Channel<int>(C)
+schan = mt::Channel<string>(C)
 
 
 fut = mt.start {

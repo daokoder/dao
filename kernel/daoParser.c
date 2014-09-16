@@ -6486,7 +6486,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 			if( tki2 == DTOK_LB && (tki >= DKEY_RAND && tki <= DKEY_TANH) ){
 				DList_Erase( self->errors, count, -1 );
 				result = DaoParser_ParseIntrinsicMath( self, tki, cur, end );
-				start = self->curToken;
+				start = self->curToken - 1;
 			}
 		}
 		start += 1;

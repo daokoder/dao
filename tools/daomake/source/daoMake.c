@@ -161,6 +161,10 @@ struct DaoMakeUnit
 	DList  *linkingFlags;
 	DList  *linkingFlags2;
 	DList  *staticLibNames;
+
+	DList  *importLibUses;
+	DList  *sharedLibUses;
+	DList  *staticLibUses;
 };
 
 
@@ -291,6 +295,9 @@ void DaoMakeUnit_Init( DaoMakeUnit *self, DaoType *type )
 	self->linkingFlags = DList_New(DAO_DATA_STRING);
 	self->linkingFlags2 = DList_New(DAO_DATA_STRING);
 	self->staticLibNames = DList_New(DAO_DATA_STRING);
+	self->importLibUses = DList_New(DAO_DATA_VALUE);
+	self->sharedLibUses = DList_New(DAO_DATA_VALUE);
+	self->staticLibUses = DList_New(DAO_DATA_VALUE);
 }
 void DaoMakeUnit_Free( DaoMakeUnit *self )
 {
@@ -307,6 +314,9 @@ void DaoMakeUnit_Free( DaoMakeUnit *self )
 	DList_Delete( self->linkingFlags );
 	DList_Delete( self->linkingFlags2 );
 	DList_Delete( self->staticLibNames );
+	DList_Delete( self->importLibUses );
+	DList_Delete( self->sharedLibUses );
+	DList_Delete( self->staticLibUses );
 }
 
 DaoMakeObjects* DaoMakeObjects_New()
@@ -819,6 +829,16 @@ void DaoMakeUnit_ExportCompilingFlags( DaoMakeUnit *self, DString *cflags, DaoMa
 	DaoMakeUnit_ExportIncludePaths( self, cflags, tar );
 	DaoMakeUnit_MakeDefinitions( self, cflags );
 }
+void DaoMakeUnit_ExportCompilingFlags2( DaoMakeUnit *self, DString *cflags, DaoMakeUnit *tar )
+{
+	daoint i, j;
+	DString_AppendGap( cflags );
+	for(i=0; i<self->compilingFlags2->size; ++i){
+		DString_AppendGap( cflags );
+		DString_Append( cflags, self->compilingFlags2->items.pString[i] );
+	}
+	DaoMakeUnit_ExportCompilingFlags( self, cflags, tar );
+}
 void DaoMakeUnit_ExportLinkingFlags( DaoMakeUnit *self, DString *lflags, DaoMakeUnit *target )
 {
 	daoint i, j;
@@ -827,6 +847,15 @@ void DaoMakeUnit_ExportLinkingFlags( DaoMakeUnit *self, DString *lflags, DaoMake
 	for(i=0; i<self->linkingFlags->size; ++i){
 		DString_AppendGap( lflags );
 		DString_Append( lflags, self->linkingFlags->items.pString[i] );
+	}
+}
+void DaoMakeUnit_ExportLinkingFlags2( DaoMakeUnit *self, DString *lflags, DaoMakeUnit *target )
+{
+	daoint i, j;
+	DaoMakeUnit_ExportLinkingFlags( self, lflags, target );
+	for(i=0; i<self->linkingFlags2->size; ++i){
+		DString_AppendGap( lflags );
+		DString_Append( lflags, self->linkingFlags2->items.pString[i] );
 	}
 }
 
@@ -844,10 +873,13 @@ static void DaoMakeTarget_ExportCompilingFlags( DaoMakeTarget *self, DaoMakeProj
 	daoint i;
 	if( pro ) DaoMakeUnit_ExportCompilingFlags( & pro->base, flags, target );
 	DaoMakeUnit_ExportCompilingFlags( & self->base, flags, target );
+	/* Do not export compiling flags for objects! */
+#if 0
 	for(i=0; i<self->objects->size; ++i){
 		DaoMakeObjects *objects = (DaoMakeObjects*) self->objects->items.pVoid[i];
 		DaoMakeUnit_ExportCompilingFlags( & objects->base, flags, target );
 	}
+#endif
 }
 
 static void DaoMakeTarget_ExportLinkingFlags( DaoMakeTarget *self, DaoMakeProject *pro, DString *flags, DaoMakeUnit *target )
@@ -1023,9 +1055,9 @@ DString* DaoMakeProject_MakeObjectRule( DaoMakeProject *self, DaoMakeTarget *tar
 		mode = DaoMake_GetSettingValue( daomake_mode_keys[ 3*daomake_build_mode+1 ] );
 		if( mode ) DString_Append( cflags, mode );
 
-		DaoMakeUnit_ExportCompilingFlags( & self->base, cflags, NULL );
-		DaoMakeUnit_ExportCompilingFlags( & target->base, cflags, NULL );
-		DaoMakeUnit_ExportCompilingFlags( & objects->base, cflags, NULL );
+		DaoMakeUnit_ExportCompilingFlags2( & self->base, cflags, NULL );
+		DaoMakeUnit_ExportCompilingFlags2( & target->base, cflags, NULL );
+		DaoMakeUnit_ExportCompilingFlags2( & objects->base, cflags, NULL );
 	}
 
 	DString_Assign( signature, cflags );
@@ -1235,8 +1267,8 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 	mode = DaoMake_GetSettingValue( daomake_mode_keys[ 3*daomake_build_mode+2 ] );
 	if( mode ) DString_Append( lflags, mode );
 
-	DaoMakeUnit_ExportLinkingFlags( & self->base, lflags, NULL );
-	DaoMakeUnit_ExportLinkingFlags( & target->base, lflags, NULL );
+	DaoMakeUnit_ExportLinkingFlags2( & self->base, lflags, NULL );
+	DaoMakeUnit_ExportLinkingFlags2( & target->base, lflags, NULL );
 
 	DString_Reset( objs, 0 );
 	DMap_Reset( self->mapStringInt );
@@ -1262,7 +1294,7 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 			}
 		}
 
-		DaoMakeUnit_ExportLinkingFlags( & objects->base, lflags, NULL );
+		DaoMakeUnit_ExportLinkingFlags2( & objects->base, lflags, NULL );
 
 		DString_AppendGap( objs );
 		DString_AppendChars( objs, "$(" );
@@ -1985,6 +2017,10 @@ static void UNIT_AddRpath( DaoProcess *proc, DaoValue *p[], int N )
 		DString_Append( flag, path );
 	}
 }
+/*
+// Library using has to be applied per target, due to the handling of rpath,
+// which has to be relative the binary paths of the targets!
+*/
 static void DaoMakeUnit_UseLibrary( DaoMakeUnit *self, DaoMakeProject *pro, DString *name, int ttype, int import )
 {
 	DString *flags = DaoMakeProject_GetBufferString( pro );
@@ -2004,10 +2040,10 @@ static void DaoMakeUnit_UseLibrary( DaoMakeUnit *self, DaoMakeProject *pro, DStr
 		if( DString_EQ( tar->name, name ) == 0 ) continue;
 		DString_Reset( flags, 0 );
 		DaoMakeTarget_ExportCompilingFlags( tar, pro, flags, (DaoMakeUnit*) self );
-		DList_Append( self->compilingFlags, flags );
+		DList_Append( self->compilingFlags2, flags );
 		DString_Reset( flags, 0 );
 		DaoMakeTarget_ExportLinkingFlags( tar, pro, flags, (DaoMakeUnit*) self );
-		DList_Append( self->linkingFlags, flags );
+		DList_Append( self->linkingFlags2, flags );
 
 		if( import && DaoMap_GetValueChars( daomake_platforms, "WIN32" ) == NULL ) break;
 		if( tar->install->size && ! DString_EQ( tar->install, tar->base.binaryPath ) ){
@@ -2059,43 +2095,68 @@ static void DaoMakeUnit_UseAllLibraries( DaoMakeUnit *self, DaoMakeProject *pro,
 	}
 	DMap_Delete( names );
 }
-static void UNIT_UseImportLib( DaoProcess *proc, DaoValue *p[], int N )
+static void UNIT_AddUseLib( DList *uses, DaoValue *p[], int N )
+{
+	DaoMakeProject *pro = (DaoMakeProject*) p[1];
+	int i;
+	for(i=2; i<N; ++i){
+		DString *name = DaoValue_TryGetString( p[i] );
+		if( name == NULL ) continue;
+		DList_Append( uses, pro );
+		DList_Append( uses, p[i] );
+	}
+	if( N == 2 ){
+		DList_Append( uses, pro );
+		DList_Append( uses, NULL );
+	}
+}
+static void UNIT_OneUseLib( DaoMakeUnit *self, DaoValue *p[], int N, int type, int import )
 {
 	int i;
-	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
 	DaoMakeProject *pro = (DaoMakeProject*) p[1];
 
 	for(i=2; i<N; ++i){
 		DString *name = DaoValue_TryGetString( p[i] );
 		if( name == NULL ) continue;
-		DaoMakeUnit_UseLibrary( self, pro, name, DAOMAKE_SHAREDLIB, 1 );
+		DaoMakeUnit_UseLibrary( self, pro, name, type, import );
 	}
-	if( N == 2 ) DaoMakeUnit_UseAllLibraries( self, pro, DAOMAKE_SHAREDLIB, 1 );
+	if( N == 2 ) DaoMakeUnit_UseAllLibraries( self, pro, type, import );
+}
+static void UNIT_UseLib( DaoMakeUnit *self, DaoValue *p[], int N, int type, int import )
+{
+	DaoMakeProject *pro;
+	int i;
+	if( self->ctype != daomake_type_project ){
+		UNIT_OneUseLib( self, p, N, type, import );
+		return;
+	}
+	pro = (DaoMakeProject*) self;
+	for(i=0; i<pro->targets->size; ++i){
+		DaoMakeTarget *tar = (DaoMakeTarget*) pro->targets->items.pVoid[i];
+		if( tar->ttype > DAOMAKE_STATICLIB ) continue;
+		UNIT_OneUseLib( (DaoMakeUnit*) tar, p, N, type, import );
+	}
+}
+static void UNIT_UseImportLib( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
+
+	UNIT_AddUseLib( self->importLibUses, p, N );
+	UNIT_UseLib( self, p, N, DAOMAKE_SHAREDLIB, 1 );
 }
 static void UNIT_UseSharedLib( DaoProcess *proc, DaoValue *p[], int N )
 {
-	int i;
 	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
-	DaoMakeProject *pro = (DaoMakeProject*) p[1];
 
-	for(i=2; i<N; ++i){
-		DString *name = DaoValue_TryGetString( p[i] );
-		if( name == NULL ) continue;
-		DaoMakeUnit_UseLibrary( self, pro, name, DAOMAKE_SHAREDLIB, 0 );
-	}
-	if( N == 2 ) DaoMakeUnit_UseAllLibraries( self, pro, DAOMAKE_SHAREDLIB, 0 );
+	UNIT_AddUseLib( self->sharedLibUses, p, N );
+	UNIT_UseLib( self, p, N, DAOMAKE_SHAREDLIB, 0 );
 }
 static void UNIT_UseStaticLib( DaoProcess *proc, DaoValue *p[], int N )
 {
-	int i;
 	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
-	DaoMakeProject *pro = (DaoMakeProject*) p[1];
-	for(i=2; i<N; ++i){
-		DString *name = DaoValue_TryGetString( p[i] );
-		if( name == NULL ) continue;
-		DaoMakeUnit_UseLibrary( self, pro, name, DAOMAKE_STATICLIB, 0 );
-	}
-	if( N == 2 ) DaoMakeUnit_UseAllLibraries( self, pro, DAOMAKE_STATICLIB, 0 );
+
+	UNIT_AddUseLib( self->staticLibUses, p, N );
+	UNIT_UseLib( self, p, N, DAOMAKE_STATICLIB, 0 );
 }
 static void UNIT_MakeDefinitions( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2295,6 +2356,25 @@ DaoTypeBase DaoMakeTarget_Typer =
 
 
 
+static void DaoMakeUnit_ApplyLibUses( DaoMakeUnit *self, DList *uses, int type, int import )
+{
+	int i;
+	for(i=0; i<uses->size; i+=2){
+		DaoMakeProject *pro = (DaoMakeProject*) uses->items.pValue[i];
+		DaoValue *name = uses->items.pValue[i+1];
+		if( name && name->type == DAO_STRING ){
+			DaoMakeUnit_UseLibrary( self, pro, name->xString.value, type, import );
+		}else{
+			DaoMakeUnit_UseAllLibraries( self, pro, type, import );
+		}
+	}
+}
+static void DaoMakeProject_ApplyLibUses( DaoMakeProject *self, DaoMakeUnit *unit )
+{
+	DaoMakeUnit_ApplyLibUses( unit, self->base.importLibUses, DAOMAKE_SHAREDLIB, 1 );
+	DaoMakeUnit_ApplyLibUses( unit, self->base.sharedLibUses, DAOMAKE_SHAREDLIB, 0 );
+	DaoMakeUnit_ApplyLibUses( unit, self->base.staticLibUses, DAOMAKE_STATICLIB, 0 );
+}
 
 static void PROJECT_New( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2340,7 +2420,12 @@ static void PROJECT_AddTarget( DaoProcess *proc, DaoValue *p[], int N, int ttype
 	DString_Assign( target->base.binaryPath, self->targetPath );
 	for(i=2; i<N; ++i) DList_Append( target->objects, p[i] );
 	DaoProcess_PutValue( proc, (DaoValue*) target );
-	if( N > 2 ) DList_Append( self->targets, (DaoValue*) target );
+	if( N > 2 ){
+		DList_Append( self->targets, (DaoValue*) target );
+		if( ttype <= DAOMAKE_STATICLIB ){
+			DaoMakeProject_ApplyLibUses( self, (DaoMakeUnit*) target );
+		}
+	}
 	DList_Append( self->targets2, (DaoValue*) target );
 }
 static void PROJECT_AddEXE( DaoProcess *proc, DaoValue *p[], int N )

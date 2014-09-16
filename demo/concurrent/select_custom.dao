@@ -1,7 +1,7 @@
 
 const N = 100;
 
-chans = { mt::channel<int>(1), mt::channel<string>(1) }
+chans = { mt::Channel<int>(1), mt::Channel<string>(1) }
 
 mt.start {
 	index = 0;
@@ -20,7 +20,7 @@ mt.start {
 	chans[1].cap(0)
 }
 
-select = mt::channel<int|string>(1)
+select = mt::Channel<int|string>(1)
 
 mt.start {
 

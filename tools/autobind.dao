@@ -255,7 +255,7 @@ class Variable
 		get_item = "";
 		set_item = "";
 	}
-	routine _PRINT( s : io::stream ){ io.writeln( name, typeid, typename ); }
+	routine _PRINT( s : io::Stream ){ io.writeln( name, typeid, typename ); }
 }
 
 enum FunctionTrait
@@ -2731,13 +2731,13 @@ var daoqt_sig_slot_code =
 var daoqt_sig_slot_emit = 
 "  emit signal_$(ssname)( _message );\n}\n";
 
-routine NewProxyFunctionName( self :coroutine<none,string> )
+routine NewProxyFunctionName( self: Coroutine<none,string> )
 {
 	id = BigInt( "10000L16" )
 	while(1) self.suspend("Function_" + (string)(++id));
 	return "";
 }
-var new_proxy_function_name = coroutine<none,string>();
+var new_proxy_function_name = Coroutine<none,string>();
 new_proxy_function_name.start( NewProxyFunctionName )
 
 routine Function::Generate()
@@ -4412,7 +4412,7 @@ var usertype_code_struct = methlist_code + delete_struct + usertype_code;
 var usertype_code_class = methlist_code + delete_class + usertype_code;
 var usertype_code_class2 = methlist_code + delete_class + delete_test + usertype_code;
 
-routine WriteUserTypeDecl( utp : UserType, fout : io::stream )
+routine WriteUserTypeDecl( utp : UserType, fout : io::Stream )
 {
 }
 routine WriteUserTypeCode( utp : UserType, del_tests : map<UserType,string> )

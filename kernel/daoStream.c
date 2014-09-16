@@ -548,9 +548,9 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 
 DaoFuncItem dao_io_methods[] =
 {
-	{ DaoIO_Open,      "open( type: enum<string,tmpfile> = $string )=>stream" },
-	{ DaoIO_Open,      "open( file: string, mode: string )=>stream" },
-	{ DaoIO_Open,      "open( fileno: int, mode: string )=>stream" },
+	{ DaoIO_Open,      "open( type: enum<string,tmpfile> = $string )=>Stream" },
+	{ DaoIO_Open,      "open( file: string, mode: string )=>Stream" },
+	{ DaoIO_Open,      "open( fileno: int, mode: string )=>Stream" },
 	{ DaoIO_Write2,    "write( invar ... : any )" },
 	{ DaoIO_Writef2,   "writef( format: string, invar ... : any )" },
 	{ DaoIO_Writeln2,  "writeln( invar ... : any )" },
@@ -562,47 +562,47 @@ DaoFuncItem dao_io_methods[] =
 
 static DaoFuncItem streamMeths[] =
 {
-	{ DaoIO_Open,      "stream( type: enum<string,tmpfile> = $string )=>stream" },
-	{ DaoIO_Open,      "stream( file: string, mode: string )=>stream" },
-	{ DaoIO_Open,      "stream( fileno: int, mode: string )=>stream" },
-	{ DaoIO_Write,     "write( self: stream, data: string )" },
-	{ DaoIO_Write,     "write( self: stream, invar ... : any )" },
-	{ DaoIO_Writef,    "writef( self: stream, format: string, invar ... : any )" },
-	{ DaoIO_Writeln,   "writeln( self: stream, invar ... : any )" },
-	{ DaoIO_Read,      "read( self: stream, count = -1 )=>string" },
-	{ DaoIO_Read,      "read( self: stream, amount: enum<line,all> = $all )=>string" },
-	{ DaoIO_ReadLines2,"readlines( self: stream, numline=0, chop = bool::false )[line: string=>none|@T]=>list<@T>" },
+	{ DaoIO_Open,      "Stream( type: enum<string,tmpfile> = $string )=>Stream" },
+	{ DaoIO_Open,      "Stream( file: string, mode: string )=>Stream" },
+	{ DaoIO_Open,      "Stream( fileno: int, mode: string )=>Stream" },
+	{ DaoIO_Write,     "write( self: Stream, data: string )" },
+	{ DaoIO_Write,     "write( self: Stream, invar ... : any )" },
+	{ DaoIO_Writef,    "writef( self: Stream, format: string, invar ... : any )" },
+	{ DaoIO_Writeln,   "writeln( self: Stream, invar ... : any )" },
+	{ DaoIO_Read,      "read( self: Stream, count = -1 )=>string" },
+	{ DaoIO_Read,      "read( self: Stream, amount: enum<line,all> = $all )=>string" },
+	{ DaoIO_ReadLines2,"readlines( self: Stream, numline=0, chop = bool::false )[line: string=>none|@T]=>list<@T>" },
 
-	{ DaoIO_Flush,     "flush( self: stream )" },
-	{ DaoIO_Close,     "close( self: stream )" },
-	{ DaoIO_Seek,      "seek( self: stream, pos: int, from: enum<begin,current,end> )=>int" },
-	{ DaoIO_Tell,      "tell( self: stream )=>int" },
-	{ DaoIO_FileNO,    "fileno( self: stream )=>int" },
-	{ DaoIO_Enable,    "enable( self: stream, what: enum<auto_conversion>, state: bool )" },
-	{ DaoIO_Check,     "check( self: stream, what: enum<readable,writable,open,eof> ) => bool" },
-	{ DaoIO_Check2,     "check( self: stream, what: enum<auto_conversion> ) => bool" },
+	{ DaoIO_Flush,     "flush( self: Stream )" },
+	{ DaoIO_Close,     "close( self: Stream )" },
+	{ DaoIO_Seek,      "seek( self: Stream, pos: int, from: enum<begin,current,end> )=>int" },
+	{ DaoIO_Tell,      "tell( self: Stream )=>int" },
+	{ DaoIO_FileNO,    "fileno( self: Stream )=>int" },
+	{ DaoIO_Enable,    "enable( self: Stream, what: enum<auto_conversion>, state: bool )" },
+	{ DaoIO_Check,     "check( self: Stream, what: enum<readable,writable,open,eof> ) => bool" },
+	{ DaoIO_Check2,     "check( self: Stream, what: enum<auto_conversion> ) => bool" },
 
 	{ NULL, NULL }
 };
 
 static DaoFuncItem ioDeviceMeths[] =
 {
-	{ NULL, "read( self: device, count = -1 ) => string" },
-	{ NULL, "write( self: device, data: string )" },
-	{ NULL, "close( self: device )" },
-	{ NULL, "check( self: device, what: enum<readable,writable,open,eof> ) => bool" },
+	{ NULL, "read( self: Device, count = -1 ) => string" },
+	{ NULL, "write( self: Device, data: string )" },
+	{ NULL, "close( self: Device )" },
+	{ NULL, "check( self: Device, what: enum<readable,writable,open,eof> ) => bool" },
 	{ NULL, NULL }
 };
 
 DaoTypeBase ioDeviceTyper =
 {
-	"device", NULL, NULL, (DaoFuncItem*) ioDeviceMeths, {0}, {0},
+	"Device", NULL, NULL, (DaoFuncItem*) ioDeviceMeths, {0}, {0},
 	(FuncPtrDel) NULL, NULL
 };
 
 DaoTypeBase streamTyper =
 {
-	"stream", NULL, NULL, (DaoFuncItem*) streamMeths, {0}, {0},
+	"Stream", NULL, NULL, (DaoFuncItem*) streamMeths, {0}, {0},
 	(FuncPtrDel) DaoStream_Delete, NULL
 };
 

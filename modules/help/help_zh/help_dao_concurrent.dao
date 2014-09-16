@@ -129,7 +129,7 @@ mt.iterate( {1,2,3,4,5,6}, 3 ) { io.writeln( X ) }
 
 从一组管道或未来值中选择来获得最新可用的管道或未来值。它支持一个等待超时时间。
 它可返回一个带以下可能值的元组：
- -- @[code](channel|future, data, $selected)@[code];
+ -- @[code](Channel|Future, data, $selected)@[code];
  -- @[code](none, none, $timeout)@[code];
  -- @[code](none, none, $finished)@[code];
  @[list(sub)] 
@@ -282,14 +282,14 @@ dao.concurrent.channel
 轻任务可通过通讯管道进行通讯，同步与调度处理。
 
 
-管道类型@[code]channel@[code]被实现为一个用户定制的类型，
+管道类型@[code]Channel@[code]被实现为一个用户定制的类型，
 它可以带类似模版类型的类型参数。因此，要创建一个可发送和接收
 整数的管道，可用下面的方式：
 @[code]
-chan = mt::channel<int>()
+chan = mt::Channel<int>()
 @[code]
-这里@[code]channel@[code]带了前缀@[code]mt::@[code]，
-因为@[code]channel@[code]是多线程模块@[code]mt@[code]里定义的一个类型。
+这里@[code]Channel@[code]带了前缀@[code]mt::@[code]，
+因为@[code]Channel@[code]是多线程模块@[code]mt@[code]里定义的一个类型。
 
 
 这个管道类型的类型参数为@[code]int@[code]表示这个管道只能用来传输整数。
@@ -309,25 +309,25 @@ chan = mt::channel<int>()
 
 管道类型有以下方法：
 @[list]
---@[code]buffer( self: channel<@V> ) => int@[code]
+--@[code]buffer( self: Channel<@V> ) => int@[code]
 
 它返回管道里未被读取的消息数目。
 
---@[code] cap( self: channel<@V> ) => int @[code]
+--@[code] cap( self: Channel<@V> ) => int @[code]
 
 返回管道的容量。
 
---@[code] cap( self: channel<@V>, cap: int ) => int @[code]
+--@[code] cap( self: Channel<@V>, cap: int ) => int @[code]
 
 设置管道的容量，并返回原先的容量。将容量设为零将阻止它接收新的消息，
 这实际上就将该管道关闭了。
 
---@[code] send( self: channel<@V>, data: @V, timeout: float = -1 ) => int @[code]
+--@[code] send( self: Channel<@V>, data: @V, timeout: float = -1 ) => int @[code]
 
 向管道发送消息，并指定一个等待超时时间。负值超时时间表示无限时间等待。
 超时后返回一，否者返回零。
 
---@[code] receive( self: channel<@V>, timeout: float = -1 ) => tuple<data: @V|none, status: enum<received,timeout,finished>> @[code]
+--@[code] receive( self: Channel<@V>, timeout: float = -1 ) => tuple<data: @V|none, status: enum<received,timeout,finished>> @[code]
 
 从管道里读取消息，并指定一个等待超时时间。负值超时时间表示无限时间等待。
 它可返回一个带以下可能值的元组：
@@ -342,7 +342,7 @@ chan = mt::channel<int>()
 @[code]
 load sys
 
-chans = { mt::channel<int>(1), mt::channel<string>(1) }
+chans = { mt::Channel<int>(1), mt::Channel<string>(1) }
 
 mt.start {
     index = 0;

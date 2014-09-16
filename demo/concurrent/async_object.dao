@@ -2,7 +2,7 @@ load sys
 
 class Test !!
 {
-	routine Task1( chan : mt::channel<int> ){
+	routine Task1( chan : mt::Channel<int> ){
 		while(1){
 			data = chan.receive()
 			io.writeln( "Task1", data )
@@ -19,7 +19,7 @@ class Test !!
 
 test = Test()
 
-chan = mt::channel<int>(1)
+chan = mt::Channel<int>(1)
 
 test.Task1( chan )
 test.Task2()

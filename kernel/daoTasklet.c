@@ -1120,12 +1120,12 @@ static void CHANNEL_Receive( DaoProcess *proc, DaoValue *par[], int N )
 
 static DaoFuncItem channelMeths[] =
 {
-	{ CHANNEL_New,      "channel<@V>( cap = 1 )" },
-	{ CHANNEL_Buffer,   "buffer( self: channel<@V> ) => int" },
-	{ CHANNEL_Cap,      "cap( self: channel<@V> ) => int" },
-	{ CHANNEL_Cap,      "cap( self: channel<@V>, cap: int ) =>int" },
-	{ CHANNEL_Send,     "send( self: channel<@V>, data: @V, timeout: float = -1 ) => int" },
-	{ CHANNEL_Receive,  "receive( self: channel<@V>, timeout: float = -1 ) => tuple<data: @V|none, status: enum<received,timeout,finished>>" },
+	{ CHANNEL_New,      "Channel<@V>( cap = 1 )" },
+	{ CHANNEL_Buffer,   "buffer( self: Channel<@V> ) => int" },
+	{ CHANNEL_Cap,      "cap( self: Channel<@V> ) => int" },
+	{ CHANNEL_Cap,      "cap( self: Channel<@V>, cap: int ) =>int" },
+	{ CHANNEL_Send,     "send( self: Channel<@V>, data: @V, timeout: float = -1 ) => int" },
+	{ CHANNEL_Receive,  "receive( self: Channel<@V>, timeout: float = -1 ) => tuple<data: @V|none, status: enum<received,timeout,finished>>" },
 	{ NULL, NULL }
 };
 static void DaoChannel_Delete( DaoChannel *self )
@@ -1142,7 +1142,7 @@ static void DaoChannel_GetGCFields( void *p, DList *vs, DList *arrays, DList *ms
 
 DaoTypeBase channelTyper =
 {
-	"channel<@V>", NULL, NULL, (DaoFuncItem*) channelMeths, {0}, {0},
+	"Channel<@V>", NULL, NULL, (DaoFuncItem*) channelMeths, {0}, {0},
 	(FuncPtrDel) DaoChannel_Delete, DaoChannel_GetGCFields
 };
 
@@ -1173,8 +1173,8 @@ static void FUTURE_Wait( DaoProcess *proc, DaoValue *par[], int N )
 }
 static DaoFuncItem futureMeths[] =
 {
-	{ FUTURE_Value,   "value( self: future<@V> )=>@V" },
-	{ FUTURE_Wait,    "wait( self: future<@V>, timeout: float = -1 )=>int" },
+	{ FUTURE_Value,   "value( self: Future<@V> )=>@V" },
+	{ FUTURE_Wait,    "wait( self: Future<@V>, timeout: float = -1 )=>int" },
 	{ NULL, NULL }
 };
 static void DaoFuture_Delete( DaoFuture *self )
@@ -1209,7 +1209,7 @@ static void DaoFuture_GetGCFields( void *p, DList *values, DList *arrays, DList 
 
 DaoTypeBase futureTyper =
 {
-	"future<@V=none>", NULL, NULL, (DaoFuncItem*) futureMeths, {0}, {0},
+	"Future<@V=none>", NULL, NULL, (DaoFuncItem*) futureMeths, {0}, {0},
 	(FuncPtrDel) DaoFuture_Delete, DaoFuture_GetGCFields
 };
 
