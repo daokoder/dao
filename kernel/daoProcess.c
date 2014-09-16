@@ -2510,8 +2510,14 @@ DaoType* DaoProcess_GetCallReturnType( DaoProcess *self, DaoVmCode *vmc, int tid
 {
 	DaoType *type = self->activeTypes[ vmc->c ];
 
-	if( type == NULL ) return NULL;
-	if( type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, tid );
+	if( type && type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, tid );
+
+	if( type == NULL || type->tid != tid ){
+		if( self->activeCode->code == DVM_CALL || self->activeCode->code == DVM_MCALL ){
+			type = (DaoType*) self->topFrame->routine->routType->aux;
+			if( type && type->tid == DAO_VARIANT ) type = DaoType_GetVariantItem( type, tid );
+		}
+	}
 	return type;
 }
 DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc )

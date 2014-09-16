@@ -836,6 +836,7 @@ int DaoParser_ParseMaybeScopeConst( DaoParser *self, DaoValue **scope, DaoValue 
 		DaoParser_Error3( self, DAO_EXPR_NEED_CONST_EXPR, start );
 		return -1;
 	}
+	if( self->curToken >= self->tokens->size ) return self->curToken;
 	if( enode.konst == 0 && self->tokens->items.pToken[self->curToken]->type == DTOK_COLON2 ){
 		return self->curToken + 1;
 	}
@@ -6690,21 +6691,16 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 				if( enode.reg >= 0 && self->curToken == rb ){
 					DaoParser_AddCode( self, DVM_RETURN, enode.reg, 1, DVM_SECT, start, 0, rb-1 );
 				}else{
+					DaoType *oldret = self->returnType;
 					self->curToken = start;
 					DaoParser_Restore( self, back, regCount );
-					enode = DaoParser_ParseExpressionList( self, DTOK_COMMA, NULL, NULL );
-					if( enode.reg >= 0 && self->curToken == rb ){
-						DaoParser_AddCode( self, DVM_RETURN, enode.reg, enode.count, DVM_SECT, start, 0, rb-1 );
-					}else{
-						DaoType *oldret = self->returnType;
-						DaoParser_Restore( self, back, regCount );
-						self->returnType = NULL;
-						if( DaoParser_ParseCodes( self, start, rb-1 ) == 0 ){
-							self->returnType = oldret;
-							goto InvalidSection;
-						}
+					DaoParser_Restore( self, back, regCount );
+					self->returnType = NULL;
+					if( DaoParser_ParseCodes( self, start, rb-1 ) == 0 ){
 						self->returnType = oldret;
+						goto InvalidSection;
 					}
+					self->returnType = oldret;
 				}
 				if( self->vmcLast->code == DVM_RETURN ){
 					self->vmcLast->c = DVM_SECT;

@@ -2428,6 +2428,7 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoVmSpace *vms;
 	DaoNamespace *daons, *ns2;
 	DaoType *type, *tht;
+	char *cwd;
 	int i;
 
 	if( mainVmSpace ) return mainVmSpace;
@@ -2487,8 +2488,8 @@ DaoVmSpace* DaoInit( const char *command )
 	mainVmSpace = vms = DaoVmSpace_New();
 
 	DString_Reserve( mainVmSpace->startPath, 512 );
-	getcwd( mainVmSpace->startPath->chars, 511 );
-	DString_Reset( mainVmSpace->startPath, strlen( mainVmSpace->startPath->chars ) );
+	cwd = getcwd( mainVmSpace->startPath->chars, 511 );
+	DString_Reset( mainVmSpace->startPath, cwd ? strlen( cwd ) : 0 );
 	Dao_NormalizePathSep( mainVmSpace->startPath );
 
 	DString_AppendPathSep( mainVmSpace->startPath );
