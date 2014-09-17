@@ -35,5 +35,5 @@ type Test6 = none | tuple<value: string, next: Test4>
 io.writeln( Test1 ?= Test2, Test1 ?= Test3, Test3 ?= Test4, Test5 ?= Test6 )
 @[test(code_01)]
 @[test(code_01)]
-^ {{0 0 1 1}} $
+^ {{false false true true}} $
 @[test(code_01)]

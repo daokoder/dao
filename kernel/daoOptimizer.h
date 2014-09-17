@@ -141,7 +141,7 @@ DaoInode* DaoInode_New();
 
 void DaoInodes_Clear( DList *inodes );
 
-void DaoRoutine_CodesToInodes( DaoRoutine *self, DList *inodes );
+void DaoRoutine_CodesToInodes( DaoRoutine *self, DList *inodes, int dupicate );
 void DaoRoutine_CodesFromInodes( DaoRoutine *self, DList *inodes );
 void DaoRoutine_SetupSimpleVars( DaoRoutine *self );
 

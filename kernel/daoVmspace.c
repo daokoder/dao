@@ -206,6 +206,7 @@ static DaoTypeBase vmsTyper=
 DaoTypeBase* DaoVmSpace_GetTyper( short type )
 {
 	switch( type ){
+	case DAO_BOOLEAN  :
 	case DAO_INTEGER  :  return & numberTyper;
 	case DAO_FLOAT    :  return & numberTyper;
 	case DAO_COMPLEX  :  return & comTyper;
@@ -2461,6 +2462,12 @@ DaoVmSpace* DaoInit( const char *command )
 #ifdef DEBUG
 	for(i=0; i<100; i++) ObjectProfile[i] = 0;
 #endif
+#if 0
+	for(i=0; i<=DVM_UNUSED; ++i){
+		printf( "%3i: %3i %s\n", i, DaoVmCode_GetOpcodeBase(i), DaoVmCode_GetOpcodeName(i) );
+		if( i != DaoVmCode_GetOpcodeBase(i) ) printf( "!!!!!!!!!!\n" );
+	}
+#endif
 
 #ifdef DAO_WITH_THREAD
 	DaoInitThread();
@@ -2478,6 +2485,7 @@ DaoVmSpace* DaoInit( const char *command )
 
 	dao_type_udf = DaoType_New( "?", DAO_UDT, NULL, NULL );
 	dao_type_any = DaoType_New( "any", DAO_ANY, NULL, NULL );
+	dao_type_bool = DaoType_New( "bool", DAO_BOOLEAN, NULL, NULL );
 	dao_type_int = DaoType_New( "int", DAO_INTEGER, NULL, NULL );
 	dao_type_float = DaoType_New( "float", DAO_FLOAT, NULL, NULL );
 	dao_type_complex = DaoType_New( "complex", DAO_COMPLEX, NULL, NULL );
@@ -2524,21 +2532,17 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_tht );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_routine );
 	DaoNamespace_AddTypeConstant( daons, dao_type_any->name, dao_type_any );
+	DaoNamespace_AddTypeConstant( daons, dao_type_bool->name, dao_type_bool );
 	DaoNamespace_AddTypeConstant( daons, dao_type_int->name, dao_type_int );
 	DaoNamespace_AddTypeConstant( daons, dao_type_float->name, dao_type_float );
 	DaoNamespace_AddTypeConstant( daons, dao_type_complex->name, dao_type_complex );
 	DaoNamespace_AddTypeConstant( daons, dao_type_string->name, dao_type_string );
 
 	dao_type_none = DaoNamespace_MakeValueType( daons, dao_none_value );
-	dao_type_for_iterator = DaoParser_ParseTypeName( "tuple<valid:int,iterator:any>", daons, NULL );
-
-	DString_SetChars( dao_type_for_iterator->name, "for_iterator" );
-	DaoNamespace_AddType( daons, dao_type_for_iterator->name, dao_type_for_iterator );
-	DaoNamespace_AddTypeConstant( daons, dao_type_for_iterator->name, dao_type_for_iterator );
+	dao_type_for_iterator = DaoNamespace_DefineType( daons, "tuple<valid:bool,iterator:any>", "ForIterator" );
 
 	dao_type_tuple = DaoParser_ParseTypeName( "tuple<...>", daons, NULL );
 
-	DaoNamespace_DefineType( daons, "enum<false:true>", "bool" );
 
 	DaoNamespace_SetupType( daons, & stringTyper, dao_type_string );
 	DaoNamespace_SetupType( daons, & comTyper, dao_type_complex );

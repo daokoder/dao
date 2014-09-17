@@ -83,6 +83,7 @@ static void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc );
+static void DaoProcess_DoUnaBool( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoBitLogic( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoBitShift( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc );
@@ -315,6 +316,7 @@ void DaoProcess_InitTopFrame( DaoProcess *self, DaoRoutine *routine, DaoObject *
 		value2 = NULL;
 		switch( tid ){
 		case DAO_NONE    : value2 = dao_none_value; break;
+		case DAO_BOOLEAN : value2 = (DaoValue*) DaoBoolean_New(0); break;
 		case DAO_INTEGER : value2 = (DaoValue*) DaoInteger_New(0); break;
 		case DAO_FLOAT   : value2 = (DaoValue*) DaoFloat_New(0.0); break;
 		case DAO_COMPLEX : value2 = (DaoValue*) DaoComplex_New2(0.0,0.0); break;
@@ -947,60 +949,73 @@ int DaoProcess_Start( DaoProcess *self )
 		&& LAB_SECT ,
 		&& LAB_JITC ,
 
-		&& LAB_DATA_I , && LAB_DATA_F , && LAB_DATA_C ,
-		&& LAB_GETCL_I , && LAB_GETCL_F , && LAB_GETCL_C ,
-		&& LAB_GETCK_I , && LAB_GETCK_F , && LAB_GETCK_C ,
-		&& LAB_GETCG_I , && LAB_GETCG_F , && LAB_GETCG_C ,
-		&& LAB_GETVH_I , && LAB_GETVH_F , && LAB_GETVH_C ,
-		&& LAB_GETVS_I , && LAB_GETVS_F , && LAB_GETVS_C ,
-		&& LAB_GETVO_I , && LAB_GETVO_F , && LAB_GETVO_C ,
-		&& LAB_GETVK_I , && LAB_GETVK_F , && LAB_GETVK_C ,
-		&& LAB_GETVG_I , && LAB_GETVG_F , && LAB_GETVG_C ,
-		&& LAB_SETVH_II , && LAB_SETVH_FF , && LAB_SETVH_CC ,
-		&& LAB_SETVS_II , && LAB_SETVS_FF , && LAB_SETVS_CC ,
-		&& LAB_SETVO_II , && LAB_SETVO_FF , && LAB_SETVO_CC ,
-		&& LAB_SETVK_II , && LAB_SETVK_FF , && LAB_SETVK_CC ,
-		&& LAB_SETVG_II , && LAB_SETVG_FF , && LAB_SETVG_CC ,
+		&& LAB_DATA_B , && LAB_DATA_I , && LAB_DATA_F , && LAB_DATA_C ,
+		&& LAB_GETCL_B , && LAB_GETCL_I , && LAB_GETCL_F , && LAB_GETCL_C ,
+		&& LAB_GETCK_B , && LAB_GETCK_I , && LAB_GETCK_F , && LAB_GETCK_C ,
+		&& LAB_GETCG_B , && LAB_GETCG_I , && LAB_GETCG_F , && LAB_GETCG_C ,
+		&& LAB_GETVH_B , && LAB_GETVH_I , && LAB_GETVH_F , && LAB_GETVH_C ,
+		&& LAB_GETVS_B , && LAB_GETVS_I , && LAB_GETVS_F , && LAB_GETVS_C ,
+		&& LAB_GETVO_B , && LAB_GETVO_I , && LAB_GETVO_F , && LAB_GETVO_C ,
+		&& LAB_GETVK_B , && LAB_GETVK_I , && LAB_GETVK_F , && LAB_GETVK_C ,
+		&& LAB_GETVG_B , && LAB_GETVG_I , && LAB_GETVG_F , && LAB_GETVG_C ,
+		&& LAB_SETVH_BB , && LAB_SETVH_II , && LAB_SETVH_FF , && LAB_SETVH_CC ,
+		&& LAB_SETVS_BB , && LAB_SETVS_II , && LAB_SETVS_FF , && LAB_SETVS_CC ,
+		&& LAB_SETVO_BB , && LAB_SETVO_II , && LAB_SETVO_FF , && LAB_SETVO_CC ,
+		&& LAB_SETVK_BB , && LAB_SETVK_II , && LAB_SETVK_FF , && LAB_SETVK_CC ,
+		&& LAB_SETVG_BB , && LAB_SETVG_II , && LAB_SETVG_FF , && LAB_SETVG_CC ,
 
-		&& LAB_MOVE_II , && LAB_MOVE_IF ,
-		&& LAB_MOVE_FI , && LAB_MOVE_FF ,
-		&& LAB_MOVE_CI , && LAB_MOVE_CF , && LAB_MOVE_CC , 
+		&& LAB_MOVE_BB , && LAB_MOVE_BI , && LAB_MOVE_BF ,
+		&& LAB_MOVE_IB , && LAB_MOVE_II , && LAB_MOVE_IF ,
+		&& LAB_MOVE_FB , && LAB_MOVE_FI , && LAB_MOVE_FF ,
+
+		&& LAB_MOVE_CF , && LAB_MOVE_CC , 
 		&& LAB_MOVE_SS , && LAB_MOVE_PP , && LAB_MOVE_XX ,
-		&& LAB_NOT_I , && LAB_NOT_F ,
+
+		&& LAB_NOT_B , && LAB_NOT_I , && LAB_NOT_F ,
 		&& LAB_MINUS_I , && LAB_MINUS_F , && LAB_MINUS_C ,
 		&& LAB_TILDE_I , && LAB_TILDE_C ,
 
-		&& LAB_ADD_III , && LAB_SUB_III , && LAB_MUL_III , && LAB_DIV_III ,
-		&& LAB_MOD_III , && LAB_POW_III , && LAB_AND_III , && LAB_OR_III ,
-		&& LAB_LT_III , && LAB_LE_III , && LAB_EQ_III , && LAB_NE_III ,
+		&& LAB_AND_BBB , && LAB_OR_BBB , && LAB_LT_BBB , 
+		&& LAB_LE_BBB , && LAB_EQ_BBB , && LAB_NE_BBB ,
+
+		&& LAB_ADD_III , && LAB_SUB_III , && LAB_MUL_III ,
+		&& LAB_DIV_III , && LAB_MOD_III , && LAB_POW_III ,
+
+		&& LAB_AND_BII , && LAB_OR_BII , && LAB_LT_BII , 
+		&& LAB_LE_BII , && LAB_EQ_BII , && LAB_NE_BII ,
+
 		&& LAB_BITAND_III , && LAB_BITOR_III , && LAB_BITXOR_III ,
 		&& LAB_BITLFT_III , && LAB_BITRIT_III ,
 
-		&& LAB_ADD_FFF , && LAB_SUB_FFF , && LAB_MUL_FFF , && LAB_DIV_FFF ,
-		&& LAB_MOD_FFF , && LAB_POW_FFF , && LAB_AND_FFF , && LAB_OR_FFF ,
-		&& LAB_LT_IFF , && LAB_LE_IFF , && LAB_EQ_IFF , && LAB_NE_IFF ,
+		&& LAB_ADD_FFF , && LAB_SUB_FFF , && LAB_MUL_FFF ,
+		&& LAB_DIV_FFF , && LAB_MOD_FFF , && LAB_POW_FFF ,
+
+		&& LAB_AND_BFF , && LAB_OR_BFF , && LAB_LT_BFF ,
+		&& LAB_LE_BFF , && LAB_EQ_BFF , && LAB_NE_BFF ,
 
 		&& LAB_ADD_CCC , && LAB_SUB_CCC ,
 		&& LAB_MUL_CCC , && LAB_DIV_CCC ,
-		&& LAB_EQ_ICC , && LAB_NE_ICC ,
+		&& LAB_EQ_BCC , && LAB_NE_BCC ,
 
 		&& LAB_ADD_SSS ,
-		&& LAB_LT_ISS , && LAB_LE_ISS ,
-		&& LAB_EQ_ISS , && LAB_NE_ISS ,
+		&& LAB_LT_BSS , && LAB_LE_BSS ,
+		&& LAB_EQ_BSS , && LAB_NE_BSS ,
 
 		&& LAB_GETI_LI , && LAB_SETI_LI , && LAB_GETI_SI , && LAB_SETI_SII ,
-		&& LAB_GETI_LII , && LAB_GETI_LFI ,
+		&& LAB_GETI_LBI , && LAB_GETI_LII , && LAB_GETI_LFI ,
 		&& LAB_GETI_LCI , && LAB_GETI_LSI ,
-		&& LAB_SETI_LIII , && LAB_SETI_LFIF ,
+		&& LAB_SETI_LBIB , && LAB_SETI_LIII , && LAB_SETI_LFIF ,
 		&& LAB_SETI_LCIC , && LAB_SETI_LSIS ,
 		&& LAB_GETI_AII , && LAB_GETI_AFI , && LAB_GETI_ACI ,
 		&& LAB_SETI_AIII , && LAB_SETI_AFIF , && LAB_SETI_ACIC ,
 
 		&& LAB_GETI_TI , && LAB_SETI_TI ,
 
-		&& LAB_GETF_TI , && LAB_GETF_TF , && LAB_GETF_TC , && LAB_GETF_TX ,
-		&& LAB_SETF_TII , && LAB_SETF_TFF , && LAB_SETF_TCC ,
-		&& LAB_SETF_TSS , && LAB_SETF_TPP , && LAB_SETF_TXX ,
+		&& LAB_GETF_TB , && LAB_GETF_TI , && LAB_GETF_TF ,
+		&& LAB_GETF_TC , && LAB_GETF_TX ,
+		&& LAB_SETF_TBB , && LAB_SETF_TII , && LAB_SETF_TFF ,
+		&& LAB_SETF_TCC , && LAB_SETF_TSS ,
+		&& LAB_SETF_TPP , && LAB_SETF_TXX ,
 
 		&& LAB_GETMI_AII , && LAB_GETMI_AFI , && LAB_GETMI_ACI ,
 		&& LAB_SETMI_AIII , && LAB_SETMI_AFIF , && LAB_SETMI_ACIC ,
@@ -1011,19 +1026,19 @@ int DaoProcess_Start( DaoProcess *self )
 		&& LAB_GETF_OC , && LAB_GETF_OG , && LAB_GETF_OV ,
 		&& LAB_SETF_KG , && LAB_SETF_OG , && LAB_SETF_OV ,
 
-		&& LAB_GETF_KCI , && LAB_GETF_KCF , && LAB_GETF_KCC ,
-		&& LAB_GETF_KGI , && LAB_GETF_KGF , && LAB_GETF_KGC ,
-		&& LAB_GETF_OCI , && LAB_GETF_OCF , && LAB_GETF_OCC ,
-		&& LAB_GETF_OGI , && LAB_GETF_OGF , && LAB_GETF_OGC ,
-		&& LAB_GETF_OVI , && LAB_GETF_OVF , && LAB_GETF_OVC ,
+		&& LAB_GETF_KCB , && LAB_GETF_KCI , && LAB_GETF_KCF , && LAB_GETF_KCC ,
+		&& LAB_GETF_KGB , && LAB_GETF_KGI , && LAB_GETF_KGF , && LAB_GETF_KGC ,
+		&& LAB_GETF_OCB , && LAB_GETF_OCI , && LAB_GETF_OCF , && LAB_GETF_OCC ,
+		&& LAB_GETF_OGB , && LAB_GETF_OGI , && LAB_GETF_OGF , && LAB_GETF_OGC ,
+		&& LAB_GETF_OVB , && LAB_GETF_OVI , && LAB_GETF_OVF , && LAB_GETF_OVC ,
 
-		&& LAB_SETF_KGII , && LAB_SETF_KGFF , && LAB_SETF_KGCC ,
-		&& LAB_SETF_OGII , && LAB_SETF_OGFF , && LAB_SETF_OGCC ,
-		&& LAB_SETF_OVII , && LAB_SETF_OVFF , && LAB_SETF_OVCC ,
+		&& LAB_SETF_KGBB , && LAB_SETF_KGII , && LAB_SETF_KGFF , && LAB_SETF_KGCC ,
+		&& LAB_SETF_OGBB , && LAB_SETF_OGII , && LAB_SETF_OGFF , && LAB_SETF_OGCC ,
+		&& LAB_SETF_OVBB , && LAB_SETF_OVII , && LAB_SETF_OVFF , && LAB_SETF_OVCC ,
 
-		&& LAB_TEST_I , && LAB_TEST_F ,
-		&& LAB_MATH_I , && LAB_MATH_F ,
-		&& LAB_CAST_I , && LAB_CAST_F ,
+		&& LAB_TEST_B , && LAB_TEST_I , && LAB_TEST_F ,
+		&& LAB_MATH_B , && LAB_MATH_I , && LAB_MATH_F ,
+		&& LAB_CAST_B , && LAB_CAST_I , && LAB_CAST_F ,
 		&& LAB_CAST_C , && LAB_CAST_S , 
 		&& LAB_CAST_VE , && LAB_CAST_VX ,
 		&& LAB_ISA_ST ,
@@ -1072,7 +1087,7 @@ int DaoProcess_Start( DaoProcess *self )
 
 #ifdef DAO_DEBUG_VM
 #undef OPBEGIN
-#define OPBEGIN() for(;;){ printf("%3i:", (i=vmc-vmcBase) ); DaoVmCodeX_Print( *topFrame->routine->body->annotCodes->items.pVmc[i], NULL, NULL ); switch( vmc->code )
+#define OPBEGIN() for(;;){ printf("%3i:", (i=vmc-vmcBase) ); DaoVmCodeX_Print( *topFrame->routine->body->annotCodes->items.pVmc[i], NULL, NULL ); fflush(stdout); switch( vmc->code )
 #endif
 
 #endif
@@ -1274,6 +1289,7 @@ CallEntry:
 					value->xComplex.value.real = 0;
 					value->xComplex.value.imag = vmc->b;
 					break;
+				case DAO_BOOLEAN : value->xInteger.value = vmc->b != 0; break;
 				case DAO_INTEGER : value->xInteger.value = vmc->b; break;
 				case DAO_FLOAT  : value->xFloat.value = vmc->b; break;
 				default : break;
@@ -1384,7 +1400,11 @@ CallEntry:
 			self->activeCode = vmc;
 			DaoProcess_DoInTest( self, vmc );
 			goto CheckException;
-		}OPNEXT() OPCASE( NOT ) OPCASE( MINUS ){
+		}OPNEXT() OPCASE( NOT ){
+			self->activeCode = vmc;
+			DaoProcess_DoUnaBool( self, vmc );
+			goto CheckException;
+		}OPNEXT() OPCASE( MINUS ){
 			self->activeCode = vmc;
 			DaoProcess_DoUnaArith( self, vmc );
 			goto CheckException;
@@ -1405,10 +1425,11 @@ CallEntry:
 			vC = locVars[vmc->c];
 			switch( vA->type ){
 			case DAO_NONE    : vC->xInteger.value = 0; break;
+			case DAO_BOOLEAN : vC->xInteger.value = sizeof(dao_integer); break;
 			case DAO_INTEGER : vC->xInteger.value = sizeof(dao_integer); break;
 			case DAO_FLOAT   : vC->xInteger.value = sizeof(dao_float); break;
 			case DAO_COMPLEX : vC->xInteger.value = sizeof(dao_complex); break;
-			case DAO_ENUM    : vC->xInteger.value = sizeof(int); break; break;
+			case DAO_ENUM    : vC->xInteger.value = sizeof(int) + sizeof(DaoType*); break;
 			case DAO_STRING  : vC->xInteger.value = vA->xString.value->size; break;
 			case DAO_LIST    : vC->xInteger.value = vA->xList.value->size; break;
 			case DAO_MAP     : vC->xInteger.value = vA->xMap.value->size; break;
@@ -1457,6 +1478,7 @@ CallEntry:
 			switch( vA->type ){
 			case DAO_NONE :
 				vmc = vmcBase + vmc->b; break;
+			case DAO_BOOLEAN :
 			case DAO_INTEGER :
 				vmc = vA->xInteger.value ? vmc+1 : vmcBase + vmc->b; break;
 			case DAO_FLOAT   :
@@ -1530,6 +1552,8 @@ CallEntry:
 			goto CheckException;
 		}OPNEXT() OPCASE( SECT ){
 			goto ReturnFalse;
+		}OPNEXT() OPCASE( DATA_B ){
+			locVars[vmc->c]->xInteger.value = vmc->b != 0;
 		}OPNEXT() OPCASE( DATA_I ){
 			locVars[vmc->c]->xInteger.value = vmc->b;
 		}OPNEXT() OPCASE( DATA_F ){
@@ -1537,13 +1561,13 @@ CallEntry:
 		}OPNEXT() OPCASE( DATA_C ){
 			dao_complex *com = & locVars[vmc->c]->xComplex.value;
 			com->real = 0; com->imag = vmc->b;
-		}OPNEXT() OPCASE( GETCL_I ){
+		}OPNEXT() OPCASE( GETCL_B ) OPCASE( GETCL_I ){
 			locVars[vmc->c]->xInteger.value = dataCL[vmc->b]->xInteger.value;
 		}OPNEXT() OPCASE( GETCL_F ){
 			locVars[vmc->c]->xFloat.value = dataCL[vmc->b]->xFloat.value;
 		}OPNEXT() OPCASE( GETCL_C ){
 			locVars[vmc->c]->xComplex.value = dataCL[vmc->b]->xComplex.value;
-		}OPNEXT() OPCASE( GETCK_I ){
+		}OPNEXT() OPCASE( GETCK_B ) OPCASE( GETCK_I ){
 			value = clsConsts->items.pConst[vmc->b]->value;;
 			locVars[vmc->c]->xInteger.value = value->xInteger.value;
 		}OPNEXT() OPCASE( GETCK_F ){
@@ -1552,7 +1576,7 @@ CallEntry:
 		}OPNEXT() OPCASE( GETCK_C ){
 			value = clsConsts->items.pConst[vmc->b]->value;;
 			locVars[vmc->c]->xComplex.value = value->xComplex.value;
-		}OPNEXT() OPCASE( GETCG_I ){
+		}OPNEXT() OPCASE( GETCG_B ) OPCASE( GETCG_I ){
 			value = glbConsts->items.pConst[vmc->b]->value;
 			locVars[vmc->c]->xInteger.value = value->xInteger.value;
 		}OPNEXT() OPCASE( GETCG_F ){
@@ -1561,66 +1585,68 @@ CallEntry:
 		}OPNEXT() OPCASE( GETCG_C ){
 			value = glbConsts->items.pConst[vmc->b]->value;
 			locVars[vmc->c]->xComplex.value = value->xComplex.value;
-		}OPNEXT() OPCASE( GETVH_I ){
+		}OPNEXT() OPCASE( GETVH_B ) OPCASE( GETVH_I ){
 			locVars[vmc->c]->xInteger.value = dataVH[vmc->a]->activeValues[vmc->b]->xInteger.value;
 		}OPNEXT() OPCASE( GETVH_F ){
 			locVars[vmc->c]->xFloat.value = dataVH[vmc->a]->activeValues[vmc->b]->xFloat.value;
 		}OPNEXT() OPCASE( GETVH_C ){
 			locVars[vmc->c]->xComplex.value = dataVH[vmc->a]->activeValues[vmc->b]->xComplex.value;
-		}OPNEXT() OPCASE( GETVS_I ){
+		}OPNEXT() OPCASE( GETVS_B ) OPCASE( GETVS_I ){
 			locVars[vmc->c]->xInteger.value = upValues[vmc->b]->value->xInteger.value;
 		}OPNEXT() OPCASE( GETVS_F ){
 			locVars[vmc->c]->xFloat.value = upValues[vmc->b]->value->xFloat.value;
 		}OPNEXT() OPCASE( GETVS_C ){
 			locVars[vmc->c]->xComplex.value = upValues[vmc->b]->value->xComplex.value;
-		}OPNEXT() OPCASE( GETVO_I ){
+		}OPNEXT() OPCASE( GETVO_B ) OPCASE( GETVO_I ){
 			locVars[vmc->c]->xInteger.value = dataVO[vmc->b]->xInteger.value;
 		}OPNEXT() OPCASE( GETVO_F ){
 			locVars[vmc->c]->xFloat.value = dataVO[vmc->b]->xFloat.value;
 		}OPNEXT() OPCASE( GETVO_C ){
 			locVars[vmc->c]->xComplex.value = dataVO[vmc->b]->xComplex.value;
-		}OPNEXT() OPCASE( GETVK_I ){
+		}OPNEXT() OPCASE( GETVK_B ) OPCASE( GETVK_I ){
 			LocalInt(vmc->c) = clsVars->items.pVar[vmc->b]->value->xInteger.value;
 		}OPNEXT() OPCASE( GETVK_F ){
 			LocalFloat(vmc->c) = clsVars->items.pVar[vmc->b]->value->xFloat.value;
 		}OPNEXT() OPCASE( GETVK_C ){
 			LocalComplex(vmc->c) = clsVars->items.pVar[vmc->b]->value->xComplex.value;
-		}OPNEXT() OPCASE( GETVG_I ){
+		}OPNEXT() OPCASE( GETVG_B ) OPCASE( GETVG_I ){
 			LocalInt(vmc->c) = glbVars->items.pVar[vmc->b]->value->xInteger.value;
 		}OPNEXT() OPCASE( GETVG_F ){
 			LocalFloat(vmc->c) = glbVars->items.pVar[vmc->b]->value->xFloat.value;
 		}OPNEXT() OPCASE( GETVG_C ){
 			LocalComplex(vmc->c) = glbVars->items.pVar[vmc->b]->value->xComplex.value;
-		}OPNEXT() OPCASE( SETVH_II ){
+		}OPNEXT() OPCASE( SETVH_BB ) OPCASE( SETVH_II ){
 			dataVH[vmc->c]->activeValues[vmc->b]->xInteger.value = LocalInt(vmc->a);
 		}OPNEXT() OPCASE( SETVH_FF ){
 			dataVH[vmc->c]->activeValues[vmc->b]->xFloat.value = LocalFloat(vmc->a);
 		}OPNEXT() OPCASE( SETVH_CC ){
 			dataVH[vmc->c]->activeValues[vmc->b]->xComplex.value = LocalComplex(vmc->a);
-		}OPNEXT() OPCASE( SETVS_II ){
+		}OPNEXT() OPCASE( SETVS_BB ) OPCASE( SETVS_II ){
 			upValues[vmc->b]->value->xInteger.value = LocalInt(vmc->a);
 		}OPNEXT() OPCASE( SETVS_FF ){
 			upValues[vmc->b]->value->xFloat.value = LocalFloat(vmc->a);
 		}OPNEXT() OPCASE( SETVS_CC ){
 			upValues[vmc->b]->value->xComplex.value = LocalComplex(vmc->a);
-		}OPNEXT() OPCASE( SETVO_II ){
+		}OPNEXT() OPCASE( SETVO_BB ) OPCASE( SETVO_II ){
 			dataVO[vmc->b]->xInteger.value = LocalInt(vmc->a);
 		}OPNEXT() OPCASE( SETVO_FF ){
 			dataVO[vmc->b]->xFloat.value = LocalFloat(vmc->a);
 		}OPNEXT() OPCASE( SETVO_CC ){
 			dataVO[vmc->b]->xComplex.value = LocalComplex(vmc->a);
-		}OPNEXT() OPCASE( SETVK_II ){
+		}OPNEXT() OPCASE( SETVK_BB ) OPCASE( SETVK_II ){
 			clsVars->items.pVar[vmc->b]->value->xInteger.value = LocalInt(vmc->a);
 		}OPNEXT() OPCASE( SETVK_FF ){
 			clsVars->items.pVar[vmc->b]->value->xFloat.value = LocalFloat(vmc->a);
 		}OPNEXT() OPCASE( SETVK_CC ){
 			clsVars->items.pVar[vmc->b]->value->xComplex.value = LocalComplex(vmc->a);
-		}OPNEXT() OPCASE( SETVG_II ){
+		}OPNEXT() OPCASE( SETVG_BB ) OPCASE( SETVG_II ){
 			glbVars->items.pVar[vmc->b]->value->xInteger.value = LocalInt(vmc->a);
 		}OPNEXT() OPCASE( SETVG_FF ){
 			glbVars->items.pVar[vmc->b]->value->xFloat.value = LocalFloat(vmc->a);
 		}OPNEXT() OPCASE( SETVG_CC ){
 			glbVars->items.pVar[vmc->b]->value->xComplex.value = LocalComplex(vmc->a);
+		}OPNEXT() OPCASE( MOVE_BB ){
+			LocalInt(vmc->c) = LocalInt(vmc->a) != 0;
 		}OPNEXT() OPCASE( MOVE_II ){
 			LocalInt(vmc->c) = LocalInt(vmc->a);
 		}OPNEXT() OPCASE( ADD_III ){
@@ -1639,21 +1665,17 @@ CallEntry:
 			LocalInt(vmc->c) = LocalInt(vmc->a) % inum;
 		}OPNEXT() OPCASE( POW_III ){
 			LocalInt(vmc->c) = pow( LocalInt(vmc->a), LocalInt(vmc->b) );
-		}OPNEXT() OPCASE( AND_III ){
-			LocalInt(vmc->c) = LocalInt(vmc->a) ? LocalInt(vmc->b) : LocalInt(vmc->a);
-		}OPNEXT() OPCASE( OR_III ){
-			LocalInt(vmc->c) = LocalInt(vmc->a) ? LocalInt(vmc->a) : LocalInt(vmc->b);
-		}OPNEXT() OPCASE( NOT_I ){
-			LocalInt(vmc->c) = ! LocalInt(vmc->a);
-		}OPNEXT() OPCASE( MINUS_I ){
-			LocalInt(vmc->c) = - LocalInt(vmc->a);
-		}OPNEXT() OPCASE( LT_III ){
+		}OPNEXT() OPCASE( AND_BBB ) OPCASE( AND_BII ){
+			LocalInt(vmc->c) = LocalInt(vmc->b) && LocalInt(vmc->a);
+		}OPNEXT() OPCASE( OR_BBB ) OPCASE( OR_BII ){
+			LocalInt(vmc->c) = LocalInt(vmc->a) || LocalInt(vmc->b);
+		}OPNEXT() OPCASE( LT_BBB ) OPCASE( LT_BII ){
 			LocalInt(vmc->c) = LocalInt(vmc->a) < LocalInt(vmc->b);
-		}OPNEXT() OPCASE( LE_III ){
+		}OPNEXT() OPCASE( LE_BBB ) OPCASE( LE_BII ){
 			LocalInt(vmc->c) = LocalInt(vmc->a) <= LocalInt(vmc->b);
-		}OPNEXT() OPCASE( EQ_III ){
+		}OPNEXT() OPCASE( EQ_BBB ) OPCASE( EQ_BII ){
 			LocalInt(vmc->c) = LocalInt(vmc->a) == LocalInt(vmc->b);
-		}OPNEXT() OPCASE( NE_III ){
+		}OPNEXT() OPCASE( NE_BBB ) OPCASE( NE_BII ){
 			LocalInt(vmc->c) = LocalInt(vmc->a) != LocalInt(vmc->b);
 		}OPNEXT() OPCASE( BITAND_III ){
 			LocalInt(vmc->c) = LocalInt(vmc->a) & LocalInt(vmc->b);
@@ -1689,23 +1711,19 @@ CallEntry:
 			LocalFloat(vmc->c) = LocalFloat(vmc->a) - inum * fnum;
 		}OPNEXT() OPCASE( POW_FFF ){
 			LocalFloat(vmc->c) = powf( LocalFloat(vmc->a), LocalFloat(vmc->b) );
-		}OPNEXT() OPCASE( AND_FFF ){
+		}OPNEXT() OPCASE( AND_BFF ){
 			fnum = LocalFloat(vmc->a);
-			LocalFloat(vmc->c) = fnum ? LocalFloat(vmc->b) : fnum;
-		}OPNEXT() OPCASE( OR_FFF ){
+			LocalInt(vmc->c) = fnum ? LocalFloat(vmc->b) : fnum;
+		}OPNEXT() OPCASE( OR_BFF ){
 			fnum = LocalFloat(vmc->a);
-			LocalFloat(vmc->c) = fnum ? fnum : LocalFloat(vmc->b);
-		}OPNEXT() OPCASE( NOT_F ){
-			LocalFloat(vmc->c) = ! LocalFloat(vmc->a);
-		}OPNEXT() OPCASE( MINUS_F ){
-			LocalFloat(vmc->c) = - LocalFloat(vmc->a);
-		}OPNEXT() OPCASE( LT_IFF ){
+			LocalInt(vmc->c) = fnum ? fnum : LocalFloat(vmc->b);
+		}OPNEXT() OPCASE( LT_BFF ){
 			LocalInt(vmc->c) = LocalFloat(vmc->a) < LocalFloat(vmc->b);
-		}OPNEXT() OPCASE( LE_IFF ){
+		}OPNEXT() OPCASE( LE_BFF ){
 			LocalInt(vmc->c) = LocalFloat(vmc->a) <= LocalFloat(vmc->b);
-		}OPNEXT() OPCASE( EQ_IFF ){
+		}OPNEXT() OPCASE( EQ_BFF ){
 			LocalInt(vmc->c) = LocalFloat(vmc->a) == LocalFloat(vmc->b);
-		}OPNEXT() OPCASE( NE_IFF ){
+		}OPNEXT() OPCASE( NE_BFF ){
 			LocalInt(vmc->c) = LocalFloat(vmc->a) != LocalFloat(vmc->b);
 		}OPNEXT() OPCASE( ADD_SSS ){
 			vA = locVars[vmc->a];  vB = locVars[vmc->b];
@@ -1718,25 +1736,30 @@ CallEntry:
 				DString_Assign( vC->xString.value, vA->xString.value );
 				DString_Append( vC->xString.value, vB->xString.value );
 			}
-		}OPNEXT() OPCASE( LT_ISS ){
+		}OPNEXT() OPCASE( LT_BSS ){
 			vA = locVars[vmc->a];  vB = locVars[vmc->b];
 			LocalInt(vmc->c) = DString_CompareUTF8( vA->xString.value, vB->xString.value )<0;
-		}OPNEXT() OPCASE( LE_ISS ){
+		}OPNEXT() OPCASE( LE_BSS ){
 			vA = locVars[vmc->a];  vB = locVars[vmc->b];
 			LocalInt(vmc->c) = DString_CompareUTF8( vA->xString.value, vB->xString.value )<=0;
-		}OPNEXT() OPCASE( EQ_ISS ){
+		}OPNEXT() OPCASE( EQ_BSS ){
 			vA = locVars[vmc->a];  vB = locVars[vmc->b];
 			LocalInt(vmc->c) = DString_Compare( vA->xString.value, vB->xString.value )==0;
-		}OPNEXT() OPCASE( NE_ISS ){
+		}OPNEXT() OPCASE( NE_BSS ){
 			vA = locVars[vmc->a];  vB = locVars[vmc->b];
 			LocalInt(vmc->c) = DString_Compare( vA->xString.value, vB->xString.value )!=0;
+		}OPNEXT() OPCASE( MOVE_BI ){
+			LocalInt(vmc->c) = LocalInt(vmc->a) != 0;
+		}OPNEXT() OPCASE( MOVE_BF ){
+			LocalInt(vmc->c) = LocalFloat(vmc->a) != 0.0;
+		}OPNEXT() OPCASE( MOVE_IB ){
+			LocalInt(vmc->c) = LocalInt(vmc->a) != 0;
 		}OPNEXT() OPCASE( MOVE_IF ){
 			LocalInt(vmc->c) = LocalFloat(vmc->a);
+		}OPNEXT() OPCASE( MOVE_FB ){
+			LocalFloat(vmc->c) = LocalInt(vmc->a) != 0;
 		}OPNEXT() OPCASE( MOVE_FI ){
 			LocalFloat(vmc->c) = LocalInt(vmc->a);
-		}OPNEXT() OPCASE( MOVE_CI ){
-			locVars[vmc->c]->xComplex.value.real = locVars[vmc->a]->xInteger.value;
-			locVars[vmc->c]->xComplex.value.imag = 0.0;
 		}OPNEXT() OPCASE( MOVE_CF ){
 			locVars[vmc->c]->xComplex.value.real = locVars[vmc->a]->xFloat.value;
 			locVars[vmc->c]->xComplex.value.imag = 0.0;
@@ -1760,6 +1783,14 @@ CallEntry:
 			}
 			if( value == NULL ) goto RaiseErrorNullObject;
 			DaoValue_CopyX( value, locVars + vmc->c, locTypes[vmc->c] );
+		}OPNEXT() OPCASE( NOT_B ) OPCASE( NOT_I ){
+			LocalInt(vmc->c) = ! LocalInt(vmc->a);
+		}OPNEXT() OPCASE( NOT_F ){
+			LocalInt(vmc->c) = ! LocalFloat(vmc->a);
+		}OPNEXT() OPCASE( MINUS_I ){
+			LocalInt(vmc->c) = - LocalInt(vmc->a);
+		}OPNEXT() OPCASE( MINUS_F ){
+			LocalFloat(vmc->c) = - LocalFloat(vmc->a);
 		}OPNEXT() OPCASE( MINUS_C ){
 			acom = LocalComplex(vmc->a);
 			vC = locVars[vmc->c];
@@ -1786,11 +1817,11 @@ CallEntry:
 			dnum = bcom.real * bcom.real + bcom.imag * bcom.imag;
 			vC->xComplex.value.real = (acom.real*bcom.real + acom.imag*bcom.imag) / dnum;
 			vC->xComplex.value.imag = (acom.imag*bcom.real - acom.real*bcom.imag) / dnum;
-		}OPNEXT() OPCASE( EQ_ICC ){
+		}OPNEXT() OPCASE( EQ_BCC ){
 			dao_complex *ca = & locVars[vmc->a]->xComplex.value;
 			dao_complex *cb = & locVars[vmc->b]->xComplex.value;
 			LocalInt(vmc->c) = ca->real == cb->real && ca->imag == cb->imag;
-		}OPNEXT() OPCASE( NE_ICC ){
+		}OPNEXT() OPCASE( NE_BCC ){
 			dao_complex *ca = & locVars[vmc->a]->xComplex.value;
 			dao_complex *cb = & locVars[vmc->b]->xComplex.value;
 			LocalInt(vmc->c) = ca->real != cb->real || ca->imag != cb->imag;
@@ -1824,6 +1855,7 @@ CallEntry:
 			if( id <0 || id >= list->value->size ) goto RaiseErrorIndexOutOfRange;
 			DaoValue_Copy( locVars[vmc->a], list->value->items.pValue + id );
 		}OPNEXT()
+		OPCASE( GETI_LBI )
 		OPCASE( GETI_LII )
 		OPCASE( GETI_LFI )
 		OPCASE( GETI_LCI )
@@ -1837,11 +1869,13 @@ CallEntry:
 			case DVM_GETI_LSI :
 				GC_Assign( & locVars[vmc->c], vA );
 				break;
+			case DVM_GETI_LBI :
 			case DVM_GETI_LII : locVars[vmc->c]->xInteger.value = vA->xInteger.value; break;
 			case DVM_GETI_LFI : locVars[vmc->c]->xFloat.value = vA->xFloat.value; break;
 			case DVM_GETI_LCI : locVars[vmc->c]->xComplex.value = vA->xComplex.value; break;
 			}
 			}OPNEXT()
+		OPCASE( SETI_LBIB )
 		OPCASE( SETI_LIII ){
 			list = & locVars[vmc->c]->xList;
 			id = LocalInt(vmc->b);
@@ -1941,7 +1975,7 @@ CallEntry:
 			if( abtp->tid == DAO_PAR_NAMED ) abtp = & abtp->aux->xType;
 			if( DaoProcess_Move( self, locVars[vmc->a], tuple->values + id, abtp ) ==0 )
 				goto CheckException;
-		}OPNEXT() OPCASE( GETF_TI ){
+		}OPNEXT() OPCASE( GETF_TB ) OPCASE( GETF_TI ){
 			/*
 			// Do not get reference here!
 			// Getting reference is always more expensive due to reference counting.
@@ -1960,7 +1994,7 @@ CallEntry:
 			tuple = & locVars[vmc->a]->xTuple;
 			value = tuple->values[vmc->b];
 			GC_Assign( & locVars[vmc->c], value );
-		}OPNEXT() OPCASE( SETF_TII ){
+		}OPNEXT() OPCASE( SETF_TBB ) OPCASE( SETF_TII ){
 			tuple = & locVars[vmc->c]->xTuple;
 			tuple->values[vmc->b]->xInteger.value = LocalInt(vmc->a);
 		}OPNEXT() OPCASE( SETF_TFF ){
@@ -2003,7 +2037,7 @@ CallEntry:
 			if( object->isNull ) goto AccessNullInstance;
 			value = object->objValues[vmc->b];
 			GC_Assign( & locVars[vmc->c], value );
-		}OPNEXT() OPCASE( GETF_KCI ){
+		}OPNEXT() OPCASE( GETF_KCB ) OPCASE( GETF_KCI ){
 			value = locVars[vmc->a]->xClass.constants->items.pConst[vmc->b]->value;
 			locVars[vmc->c]->xInteger.value = value->xInteger.value;
 		}OPNEXT() OPCASE( GETF_KCF ){
@@ -2012,7 +2046,7 @@ CallEntry:
 		}OPNEXT() OPCASE( GETF_KCC ){
 			value = locVars[vmc->a]->xClass.constants->items.pConst[vmc->b]->value;
 			locVars[vmc->c]->xComplex.value = value->xComplex.value;
-		}OPNEXT() OPCASE( GETF_KGI ){
+		}OPNEXT() OPCASE( GETF_KGB ) OPCASE( GETF_KGI ){
 			value = locVars[vmc->a]->xClass.variables->items.pVar[vmc->b]->value;
 			locVars[vmc->c]->xInteger.value = value->xInteger.value;
 		}OPNEXT() OPCASE( GETF_KGF ){
@@ -2021,7 +2055,7 @@ CallEntry:
 		}OPNEXT() OPCASE( GETF_KGC ){
 			value = locVars[vmc->a]->xClass.variables->items.pVar[vmc->b]->value;
 			locVars[vmc->c]->xComplex.value = value->xComplex.value;
-		}OPNEXT() OPCASE( GETF_OCI ){
+		}OPNEXT() OPCASE( GETF_OCB ) OPCASE( GETF_OCI ){
 			value = locVars[vmc->a]->xObject.defClass->constants->items.pConst[vmc->b]->value;
 			locVars[vmc->c]->xInteger.value = value->xInteger.value;
 		}OPNEXT() OPCASE( GETF_OCF ){
@@ -2030,7 +2064,7 @@ CallEntry:
 		}OPNEXT() OPCASE( GETF_OCC ){
 			value = locVars[vmc->a]->xObject.defClass->constants->items.pConst[vmc->b]->value;
 			locVars[vmc->c]->xComplex.value = value->xComplex.value;
-		}OPNEXT() OPCASE( GETF_OGI ){
+		}OPNEXT() OPCASE( GETF_OGB ) OPCASE( GETF_OGI ){
 			value = locVars[vmc->a]->xObject.defClass->variables->items.pVar[vmc->b]->value;
 			locVars[vmc->c]->xInteger.value = value->xInteger.value;
 		}OPNEXT() OPCASE( GETF_OGF ){
@@ -2039,7 +2073,7 @@ CallEntry:
 		}OPNEXT() OPCASE( GETF_OGC ){
 			value = locVars[vmc->a]->xObject.defClass->variables->items.pVar[vmc->b]->value;
 			locVars[vmc->c]->xComplex.value = value->xComplex.value;
-		}OPNEXT() OPCASE( GETF_OVI ){
+		}OPNEXT() OPCASE( GETF_OVB ) OPCASE( GETF_OVI ){
 			object = & locVars[vmc->a]->xObject;
 			if( object->isNull ) goto AccessNullInstance;
 			locVars[vmc->c]->xInteger.value = object->objValues[vmc->b]->xInteger.value;
@@ -2061,7 +2095,7 @@ CallEntry:
 			object = & locVars[vmc->c]->xObject;
 			if( object->isNull ) goto AccessNullInstance;
 			DaoValue_Copy( locVars[vmc->a], object->objValues + vmc->b );
-		}OPNEXT() OPCASE( SETF_KGII ){
+		}OPNEXT() OPCASE( SETF_KGBB ) OPCASE( SETF_KGII ){
 			klass = & locVars[vmc->c]->xClass;
 			klass->variables->items.pVar[vmc->b]->value->xInteger.value = LocalInt(vmc->a);
 		}OPNEXT() OPCASE( SETF_KGFF ){
@@ -2070,7 +2104,7 @@ CallEntry:
 		}OPNEXT() OPCASE( SETF_KGCC ){
 			klass = & locVars[vmc->c]->xClass;
 			klass->variables->items.pVar[vmc->b]->value->xComplex.value = LocalComplex(vmc->a);
-		}OPNEXT() OPCASE( SETF_OGII ){
+		}OPNEXT() OPCASE( SETF_OGBB ) OPCASE( SETF_OGII ){
 			klass = locVars[vmc->c]->xObject.defClass;
 			klass->variables->items.pVar[vmc->b]->value->xInteger.value = LocalInt(vmc->a);
 		}OPNEXT() OPCASE( SETF_OGFF ){
@@ -2079,7 +2113,7 @@ CallEntry:
 		}OPNEXT() OPCASE( SETF_OGCC ){
 			klass = locVars[vmc->c]->xObject.defClass;
 			klass->variables->items.pVar[vmc->b]->value->xComplex.value = LocalComplex(vmc->a);
-		}OPNEXT() OPCASE( SETF_OVII ){
+		}OPNEXT() OPCASE( SETF_OVBB ) OPCASE( SETF_OVII ){
 			object = (DaoObject*) locVars[vmc->c];
 			if( object->isNull ) goto AccessNullInstance;
 			object->objValues[vmc->b]->xInteger.value = LocalInt(vmc->a);
@@ -2091,11 +2125,11 @@ CallEntry:
 			object = (DaoObject*) locVars[vmc->c];
 			if( object->isNull ) goto AccessNullInstance;
 			object->objValues[vmc->b]->xComplex.value = LocalComplex(vmc->a);
-		}OPNEXT() OPCASE( TEST_I ){
+		}OPNEXT() OPCASE( TEST_B ) OPCASE( TEST_I ){
 			vmc = LocalInt(vmc->a) ? vmc+1 : vmcBase+vmc->b;
 		}OPJUMP() OPCASE( TEST_F ){
 			vmc = LocalFloat(vmc->a) ? vmc+1 : vmcBase+vmc->b;
-		}OPJUMP() OPCASE( MATH_I ){
+		}OPJUMP() OPCASE( MATH_B ) OPCASE( MATH_I ){
 			switch( vmc->a ){
 			case DVM_MATH_RAND :
 				LocalInt(vmc->c) = (int)(LocalInt(vmc->b)*DaoProcess_Random(self));
@@ -2138,12 +2172,13 @@ CallEntry:
 			case DVM_MATH_TANH : LocalFloat(vmc->c) = tanh( LocalFloat(vmc->b) ); break;
 			default : break;
 			}
-		}OPNEXT() OPCASE( CAST_I ) OPCASE( CAST_F )
+		}OPNEXT() OPCASE( CAST_B ) OPCASE( CAST_I ) OPCASE( CAST_F )
 		OPCASE( CAST_C ) OPCASE( CAST_S ) OPCASE( CAST_VE ) {
 			vA = locVars[vmc->a];
 			vC = locVars[vmc->c];
-			if( vA->type == DAO_INTEGER + (vmc->code - DVM_CAST_I) ){
+			if( vA->type == DAO_BOOLEAN + (vmc->code - DVM_CAST_B) ){
 				switch( vmc->code ){
+				case DVM_CAST_B :
 				case DVM_CAST_I : vC->xInteger.value = vA->xInteger.value; break;
 				case DVM_CAST_F : vC->xFloat.value   = vA->xFloat.value;   break;
 				case DVM_CAST_C : vC->xComplex.value = vA->xComplex.value; break;
@@ -2321,7 +2356,7 @@ DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 
 	if( vmc->c ==0 ) return self->topFrame->codes + vmc->b;
 	if( vmc[1].c == DAO_CASE_TABLE ){
-		if( opa->type == DAO_INTEGER ){
+		if( opa->type == DAO_BOOLEAN || opa->type == DAO_INTEGER ){
 			min = cst[ vmc[1].a ]->xInteger.value;
 			max = cst[ vmc[vmc->c].a ]->xInteger.value;
 			if( opa->xInteger.value >= min && opa->xInteger.value <= max )
@@ -2404,6 +2439,14 @@ DaoNone* DaoProcess_PutNone( DaoProcess *self )
 {
 	DaoProcess_PutValue( self, dao_none_value );
 	return (DaoNone*) dao_none_value;
+}
+dao_integer* DaoProcess_PutBoolean( DaoProcess *self, dao_boolean value )
+{
+	DaoBoolean tmp = {DAO_BOOLEAN,0,0,0,0,0};
+	DaoValue *res = DaoProcess_PutValue( self, (DaoValue*) & tmp );
+	if( res == NULL ) return NULL;
+	res->xBoolean.value = value != 0;
+	return & res->xBoolean.value;
 }
 dao_integer* DaoProcess_PutInteger( DaoProcess *self, dao_integer value )
 {
@@ -2879,7 +2922,7 @@ void DaoProcess_DoCheckSame( DaoProcess *self, DaoVmCode *vmc )
 	dao_integer *res = 0;
 
 	self->activeCode = vmc;
-	res = DaoProcess_PutInteger( self, 0 );
+	res = DaoProcess_PutBoolean( self, 0 );
 
 	if( dA->type != dB->type ) return;
 
@@ -2921,7 +2964,7 @@ void DaoProcess_DoCheckIsa( DaoProcess *self, DaoVmCode *vmc )
 	dao_integer *res = 0;
 
 	self->activeCode = vmc;
-	res = DaoProcess_PutInteger( self, 0 );
+	res = DaoProcess_PutBoolean( self, 0 );
 
 	if( dB->type == DAO_CTYPE ){
 		dB = (DaoValue*) dB->xCtype.cdtype;
@@ -2999,7 +3042,7 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 			DaoProcess_RaiseError( self, "Index", "index out of range" );
 			return;
 		}
-	}else if( A->type == DAO_LIST && (B->type >= DAO_INTEGER && B->type <= DAO_FLOAT ) ){
+	}else if( A->type == DAO_LIST && (B->type >= DAO_BOOLEAN && B->type <= DAO_FLOAT ) ){
 		DaoList *list = & A->xList;
 		id = DaoValue_GetInteger( B );
 		if( id < 0 ) id += list->value->size;
@@ -3010,7 +3053,7 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 			return;
 		}
 #ifdef DAO_WITH_NUMARRAY
-	}else if( A->type == DAO_ARRAY && (B->type >=DAO_INTEGER && B->type <=DAO_FLOAT )){
+	}else if( A->type == DAO_ARRAY && (B->type >= DAO_BOOLEAN && B->type <= DAO_FLOAT )){
 		DaoValue temp = {0};
 		DaoValue *C = (DaoValue*) & temp;
 		DaoArray *na = & A->xArray;
@@ -3027,6 +3070,7 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 		}
 		C->type = na->etype;
 		switch( na->etype ){
+			// XXX
 			case DAO_INTEGER : C->xInteger.value = na->data.i[id]; break;
 			case DAO_FLOAT   : C->xFloat.value = na->data.f[id];  break;
 			case DAO_COMPLEX : C->xComplex.value = na->data.c[id]; break;
@@ -3092,8 +3136,8 @@ void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 	}else if( C->type == DAO_LIST && B->type == DAO_FLOAT ){
 		rc = DaoList_SetItem( & C->xList, A, (daoint) B->xFloat.value );
 #ifdef DAO_WITH_NUMARRAY
-	}else if( C->type == DAO_ARRAY && (B->type >=DAO_INTEGER && B->type <=DAO_FLOAT)
-			 && (A->type >=DAO_INTEGER && A->type <=DAO_FLOAT) ){
+	}else if( C->type == DAO_ARRAY && (B->type >= DAO_BOOLEAN && B->type <= DAO_FLOAT)
+			 && (A->type >= DAO_BOOLEAN && A->type <= DAO_FLOAT) ){
 		DaoArray *na = & C->xArray;
 		double val = DaoValue_GetFloat( A );
 		dao_complex cpx = DaoValue_GetComplex( A );
@@ -3108,6 +3152,7 @@ void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 			return;
 		}
 		switch( na->etype ){
+			// XXX
 		case DAO_INTEGER : na->data.i[ id ] = (daoint) val; break;
 		case DAO_FLOAT  : na->data.f[ id ] = (double) val; break;
 		case DAO_COMPLEX : na->data.c[ id ] = cpx; break;
@@ -3355,6 +3400,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 			return;
 		}
 		switch( ct->tid ){
+		case DAO_BOOLEAN :
 		case DAO_INTEGER : vc->xInteger.value = DaoValue_GetInteger( va ); return;
 		case DAO_FLOAT   : vc->xFloat.value = DaoValue_GetFloat( va ); return;
 		case DAO_COMPLEX : vc->xComplex.value = DaoValue_GetComplex( va ); return;
@@ -3370,12 +3416,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		DaoEnum_SetType( & vc->xEnum, ct );
 		if( DaoEnum_SetValue( & vc->xEnum, & va->xEnum ) ==0 ) goto FailConversion;
 		return;
-	}else if( ct->tid == DAO_ENUM && va->type == DAO_INTEGER ){
-		if( ct->subtid == DAO_ENUM_BOOL ){
-			DaoEnum_SetType( & vc->xEnum, ct );
-			vc->xEnum.value = va->xInteger.value != 0;
-			return;
-		}
+	}else if( ct->tid == DAO_ENUM && (va->type == DAO_BOOLEAN || va->type == DAO_INTEGER) ){
 		if( ct->mapNames == NULL ) goto FailConversion;
 		for(node=DMap_First(ct->mapNames);node;node=DMap_Next(ct->mapNames,node)){
 			if( node->value.pInt == va->xInteger.value ) break;
@@ -3788,6 +3829,7 @@ static int DaoProcess_FastPassParams( DaoProcess *self, DaoType *partypes[], Dao
 		DaoValue *param = params[i];
 		if( dests[i] && dests[i]->xBase.refCount == 1 && param->type == dests[i]->type ){
 			switch( param->type ){
+			case DAO_BOOLEAN :
 			case DAO_INTEGER :
 				dests[i]->xInteger.value = param->xInteger.value;
 				break;
@@ -3934,11 +3976,11 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 	if( va == NULL || va->type == 0 ) return;
 
 	if( vc == NULL || vc->type != DAO_TUPLE || vc->xTuple.ctype != dao_type_for_iterator ){
-		vc = (DaoValue*) DaoProcess_PutTuple( self, 0 );
+		vc = (DaoValue*) DaoProcess_PutTuple( self, 2 );
 	}
 
 	iter = & vc->xTuple;
-	iter->values[0]->xInteger.value = 0;
+	iter->values[0]->xBoolean.value = 0;
 	DaoTuple_SetItem( iter, dao_none_value, 1 );
 
 	index = DaoInteger_New(0);
@@ -3984,9 +4026,9 @@ static void DaoProcess_TestIter( DaoProcess *self, DaoVmCode *vmc )
 	int i, res = 1;
 	for(i=0; i<vmc->b; ++i){
 		DaoTuple *iter = (DaoTuple*) self->activeValues[vmc->a+i];
-		res &= iter->values[0]->xInteger.value != 0;
+		res &= iter->values[0]->xBoolean.value != 0;
 	}
-	self->activeValues[vmc->c]->xInteger.value = res;
+	self->activeValues[vmc->c]->xBoolean.value = res;
 }
 void DaoProcess_DoIter( DaoProcess *self, DaoVmCode *vmc )
 {
@@ -4037,6 +4079,7 @@ void DaoProcess_DoVector( DaoProcess *self, DaoVmCode *vmc )
 	if( count && array->etype == DAO_NONE ){
 		DaoValue *p = self->activeValues[opA];
 		switch( p->type ){
+			// XXX
 		case DAO_INTEGER :
 		case DAO_FLOAT :
 		case DAO_COMPLEX : array->etype = p->type; break;
@@ -4090,6 +4133,7 @@ InvalidItem:
 		DaoArray_ResizeVector( array, N );
 	}
 	k = 0;
+	// XXX
 	if( array->etype == DAO_INTEGER ){
 		dao_integer *vals = array->data.i;
 		for( j=0; j<N; j++ ){
@@ -4684,12 +4728,25 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		return;
 	}
 
-	if( A->type >= DAO_INTEGER && A->type <= DAO_FLOAT && B->type >= DAO_INTEGER && B->type <= DAO_FLOAT ){
-		DaoValue *val;
-		DaoValue temp = {0};
-		int type = A->type > B->type ? A->type : B->type;
+	if( A->type >= DAO_BOOLEAN && A->type <= DAO_INTEGER && B->type >= DAO_BOOLEAN && B->type <= DAO_INTEGER ){
+		dao_integer va, vb, res = 0;
+		switch( vmc->code ){
+		case DVM_MOD:
+			va = DaoValue_GetInteger( A );
+			vb = DaoValue_GetInteger( B );
+			if( vb ==0 ) DaoProcess_RaiseError( self, "Integer:DivByZero", "" );
+			res = va - vb * (dao_integer)(va/vb);
+			break;
+		case DVM_ADD: res = DaoValue_GetInteger( A ) + DaoValue_GetInteger( B ); break;
+		case DVM_SUB: res = DaoValue_GetInteger( A ) - DaoValue_GetInteger( B ); break;
+		case DVM_MUL: res = DaoValue_GetInteger( A ) * DaoValue_GetInteger( B ); break;
+		case DVM_DIV: res = DaoValue_GetInteger( A ) / DaoValue_GetInteger( B ); break;
+		case DVM_POW: res = powf( DaoValue_GetInteger( A ), DaoValue_GetInteger( B ) ); break;
+		default : break;
+		}
+		DaoProcess_PutInteger( self, res );
+	}else if( A->type >= DAO_BOOLEAN && A->type <= DAO_FLOAT && B->type >= DAO_BOOLEAN && B->type <= DAO_FLOAT ){
 		double va, vb, res = 0;
-		memset( & temp, 0, sizeof(DaoValue) );
 		switch( vmc->code ){
 		case DVM_MOD:
 			va = DaoValue_GetFloat( A );
@@ -4704,47 +4761,39 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		case DVM_POW: res = powf( DaoValue_GetFloat( A ), DaoValue_GetFloat( B ) ); break;
 		default : break;
 		}
-		val = (DaoValue*) & temp;
-		val->type = type;
-		switch( type ){
-		case DAO_INTEGER: val->xInteger.value = res; break;
-		case DAO_FLOAT :  val->xFloat.value = res; break;
-		default : val->type = 0;  break;
-		}
-		DaoProcess_SetValue( self, vmc->c, val );
-		return;
-	}else if( B->type >=DAO_INTEGER && B->type <=DAO_FLOAT && A->type ==DAO_COMPLEX ){
-		DaoComplex res = {DAO_COMPLEX,0,0,0,0,{0.0,0.0}};
+		DaoProcess_PutFloat( self, res );
+	}else if( B->type >= DAO_BOOLEAN && B->type <= DAO_FLOAT && A->type == DAO_COMPLEX ){
+		dao_complex res = {0.0,0.0};
 		double f = DaoValue_GetFloat( B );
-		res.value.real = A->xComplex.value.real;
-		res.value.imag = A->xComplex.value.imag;
+		res.real = A->xComplex.value.real;
+		res.imag = A->xComplex.value.imag;
 		switch( vmc->code ){
-		case DVM_ADD: res.value.real += f; break;
-		case DVM_SUB: res.value.real -= f; break;
-		case DVM_MUL: res.value.real *= f; res.value.imag *= f; break;
-		case DVM_DIV: res.value.real /= f; res.value.imag /= f; break;
+		case DVM_ADD: res.real += f; break;
+		case DVM_SUB: res.real -= f; break;
+		case DVM_MUL: res.real *= f; res.imag *= f; break;
+		case DVM_DIV: res.real /= f; res.imag /= f; break;
 		default: break; /* XXX: pow for complex??? */
 		}
-		DaoProcess_SetValue( self, vmc->c, (DaoValue*) & res );
-	}else if( A->type >=DAO_INTEGER && A->type <=DAO_FLOAT && B->type ==DAO_COMPLEX ){
-		DaoComplex res = {DAO_COMPLEX,0,0,0,0,{0.0,0.0}};
+		DaoProcess_PutComplex( self, res );
+	}else if( A->type >= DAO_BOOLEAN && A->type <= DAO_FLOAT && B->type == DAO_COMPLEX ){
+		dao_complex res = {0.0,0.0};
 		double n, f = DaoValue_GetFloat( A );
 		double real = B->xComplex.value.real;
 		double imag = B->xComplex.value.imag;
 		switch( vmc->code ){
 		case DVM_DIV:
 			n = real * real + imag * imag;
-			res.value.real = f * real / n;
-			res.value.imag = f * imag / n;
+			res.real = f * real / n;
+			res.imag = f * imag / n;
 			break;
-		case DVM_ADD: res.value.real = f + real;  res.value.imag = imag; break;
-		case DVM_SUB: res.value.real = f - real;  res.value.imag = - imag; break;
-		case DVM_MUL: res.value.real = f * real;  res.value.imag = f * imag; break;
+		case DVM_ADD: res.real = f + real;  res.imag = imag; break;
+		case DVM_SUB: res.real = f - real;  res.imag = - imag; break;
+		case DVM_MUL: res.real = f * real;  res.imag = f * imag; break;
 		default: break; /* XXX: pow for complex??? */
 		}
-		DaoProcess_SetValue( self, vmc->c, (DaoValue*) & res );
+		DaoProcess_PutComplex( self, res );
 	}else if( A->type == DAO_COMPLEX && B->type == DAO_COMPLEX ){
-		DaoComplex res = {DAO_COMPLEX,0,0,0,0,{0.0,0.0}};
+		dao_complex res = {0.0,0.0};
 		double AR = A->xComplex.value.real;
 		double AI = A->xComplex.value.imag;
 		double BR = B->xComplex.value.real;
@@ -4752,25 +4801,25 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		double N = 0;
 		switch( vmc->code ){
 		case DVM_ADD:
-			res.value.real = AR + BR;
-			res.value.imag = AI + BI;
+			res.real = AR + BR;
+			res.imag = AI + BI;
 			break;
 		case DVM_SUB:
-			res.value.real = AR - BR;
-			res.value.imag = AI - BI;
+			res.real = AR - BR;
+			res.imag = AI - BI;
 			break;
 		case DVM_MUL:
-			res.value.real = AR * BR - AI * BI;
-			res.value.imag = AR * BI + AI * BR;
+			res.real = AR * BR - AI * BI;
+			res.imag = AR * BI + AI * BR;
 			break;
 		case DVM_DIV:
 			N = BR * BR + BI * BI;
-			res.value.real = (AR * BR + AI * BI) / N;
-			res.value.imag = (AR * BI - AI * BR) / N;
+			res.real = (AR * BR + AI * BI) / N;
+			res.imag = (AR * BI - AI * BR) / N;
 			break;
 		default: break; /* XXX: pow for complex??? */
 		}
-		DaoProcess_SetValue( self, vmc->c, (DaoValue*) & res );
+		DaoProcess_PutComplex( self, res );
 #ifdef DAO_WITH_NUMARRAY
 	}else if( B->type >=DAO_INTEGER && B->type <=DAO_COMPLEX && A->type ==DAO_ARRAY ){
 		DaoArray *na = & A->xArray;
@@ -4864,8 +4913,8 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 	if( B == NULL ) B = dao_none_value;
 	if( A->type ==0 || B->type ==0 ){
 		switch( vmc->code ){
-		case DVM_AND: C = A->type ? B : A; break;
-		case DVM_OR:  C = A->type ? A : B; break;
+		case DVM_AND: D = B && A; break;
+		case DVM_OR:  D = A || B; break;
 		case DVM_LT:  D = A->type < B->type; break;
 		case DVM_LE:  D = A->type <= B->type; break;
 		case DVM_EQ:  D = A->type == B->type; break;
@@ -4889,8 +4938,7 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 				D = object->isNull ? 0 : 1;
 			}
 		}
-		if( C ) DaoProcess_PutValue( self, C );
-		else DaoProcess_PutInteger( self, D );
+		DaoProcess_PutBoolean( self, D );
 		return;
 	}
 
@@ -4898,27 +4946,26 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		rc = DaoProcess_TryUserArith( self, A, B, C );
 		if( rc == 0 && (A->type == DAO_OBJECT || A->type == DAO_CSTRUCT) ){
 			switch( vmc->code ){
-			case DVM_AND: C = A ? B : A; break;
-			case DVM_OR:  C = A ? A : B; break;
+			case DVM_AND: D = A && B; break;
+			case DVM_OR:  D = A || B; break;
 			case DVM_LT:  D = A < B; break;
 			case DVM_LE:  D = A <= B; break;
 			case DVM_EQ:  D = A == B; break;
 			case DVM_NE:  D = A != B; break;
 			default: break;
 			}
-			if( C ) DaoProcess_PutValue( self, C );
-			else DaoProcess_PutInteger( self, D );
+			DaoProcess_PutBoolean( self, D );
 		}else if( rc == 0 ){  /* A->type == DAO_CDATA */
 			if( B->type != DAO_CDATA ){
 				switch( vmc->code ){
-				case DVM_AND: C = A->xCdata.data ? B : A; break;
-				case DVM_OR : C = A->xCdata.data ? A : B; break;
+				case DVM_AND: D = A && B; break;
+				case DVM_OR : D = A || B; break;
 				default : D = vmc->code == DVM_NE; break;
 				}
 			}else{
 				switch( vmc->code ){
-				case DVM_AND: C = A->xCdata.data ? B : A; break;
-				case DVM_OR:  C = A->xCdata.data ? A : B; break;
+				case DVM_AND: D = A->xCdata.data && B->xCdata.data; break;
+				case DVM_OR : D = A->xCdata.data || B->xCdata.data; break;
 				case DVM_LT:  D = A->xCdata.data < B->xCdata.data; break;
 				case DVM_LE:  D = A->xCdata.data <= B->xCdata.data; break;
 				case DVM_EQ:  D = A->xCdata.data == B->xCdata.data; break;
@@ -4926,24 +4973,33 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 				default: break;
 				}
 			}
-			if( C ) DaoProcess_PutValue( self, C );
-			else DaoProcess_PutInteger( self, D );
+			DaoProcess_PutBoolean( self, D );
 		}
 		return;
 	}
 
-	if( A->type >= DAO_INTEGER && A->type <= DAO_FLOAT
-	   && B->type >= DAO_INTEGER && B->type <= DAO_FLOAT ){
+	if( A->type >= DAO_BOOLEAN && A->type <= DAO_INTEGER
+			&& B->type >= DAO_BOOLEAN && B->type <= DAO_INTEGER ){
 		switch( vmc->code ){
-		case DVM_AND: C = DaoValue_GetFloat( A ) ? B : A; break;
-		case DVM_OR:  C = DaoValue_GetFloat( A ) ? A : B; break;
+		case DVM_AND: D = DaoValue_GetInteger( A ) && DaoValue_GetInteger( B ); break;
+		case DVM_OR:  D = DaoValue_GetInteger( A ) || DaoValue_GetInteger( B ); break;
+		case DVM_LT:  D = DaoValue_GetInteger( A ) < DaoValue_GetInteger( B ); break;
+		case DVM_LE:  D = DaoValue_GetInteger( A ) <= DaoValue_GetInteger( B ); break;
+		case DVM_EQ:  D = DaoValue_GetInteger( A ) == DaoValue_GetInteger( B ); break;
+		case DVM_NE:  D = DaoValue_GetInteger( A ) != DaoValue_GetInteger( B ); break;
+		default: break;
+		}
+	}else if( A->type >= DAO_BOOLEAN && A->type <= DAO_FLOAT
+			&& B->type >= DAO_BOOLEAN && B->type <= DAO_FLOAT ){
+		switch( vmc->code ){
+		case DVM_AND: D = DaoValue_GetFloat( A ) && DaoValue_GetFloat( B ); break;
+		case DVM_OR:  D = DaoValue_GetFloat( A ) || DaoValue_GetFloat( B ); break;
 		case DVM_LT:  D = DaoValue_GetFloat( A ) < DaoValue_GetFloat( B ); break;
 		case DVM_LE:  D = DaoValue_GetFloat( A ) <= DaoValue_GetFloat( B ); break;
 		case DVM_EQ:  D = DaoValue_GetFloat( A ) == DaoValue_GetFloat( B ); break;
 		case DVM_NE:  D = DaoValue_GetFloat( A ) != DaoValue_GetFloat( B ); break;
 		default: break;
 		}
-		goto ReturnResult;
 	}else if( A->type == DAO_COMPLEX && B->type == DAO_COMPLEX ){
 		double AR = A->xComplex.value.real, AI = A->xComplex.value.imag;
 		double BR = B->xComplex.value.real, BI = B->xComplex.value.imag;
@@ -4952,67 +5008,31 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		case DVM_NE: D = (AR != BR) || (AI != BI); break;
 		default: goto InvalidOperation;
 		}
-		goto ReturnResult;
 	}else if( A->type == DAO_STRING && B->type == DAO_STRING ){
 		switch( vmc->code ){
-		case DVM_AND: C = DString_Size( A->xString.value ) ? B : A; break;
-		case DVM_OR:  C = DString_Size( A->xString.value ) ? A : B; break;
 		case DVM_LT:  D = DString_CompareUTF8( A->xString.value, B->xString.value )<0; break;
 		case DVM_LE:  D = DString_CompareUTF8( A->xString.value, B->xString.value )<=0; break;
 		case DVM_EQ:  D = DString_Compare( A->xString.value, B->xString.value )==0; break;
 		case DVM_NE:  D = DString_Compare( A->xString.value, B->xString.value )!=0; break;
-		default: break;
+		default: goto InvalidOperation;
 		}
-		goto ReturnResult;
-	}else if( (A->type == DAO_ENUM && B->type == DAO_ENUM)
-			 || (A->type == DAO_TUPLE && B->type == DAO_TUPLE) ){
+	}else if( A->type == DAO_ENUM && B->type == DAO_ENUM ){
 		switch( vmc->code ){
-		case DVM_AND: C = DaoValue_GetInteger( A ) ? B : A; break;
-		case DVM_OR:  C = DaoValue_GetInteger( A ) ? A : B; break;
+		case DVM_AND: D = A->xEnum.value && B->xEnum.value; break;
+		case DVM_OR:  D = A->xEnum.value || A->xEnum.value; break;
 		case DVM_LT:  D = DaoValue_Compare( A, B ) < 0; break;
 		case DVM_LE:  D = DaoValue_Compare( A, B ) <= 0; break;
 		case DVM_EQ:  D = DaoValue_Compare( A, B ) == 0; break;
 		case DVM_NE:  D = DaoValue_Compare( A, B ) != 0; break;
 		default: break;
 		}
-		goto ReturnResult;
-	}else if( A->type == DAO_INTEGER || B->type == DAO_INTEGER ){
-		int b1 = 0, b2 = 0;
-		if( A->type == DAO_ENUM && A->xBase.subtype == DAO_ENUM_BOOL ){
-			C = DaoProcess_PutValue( self, A );
-			b1 = A->xEnum.value;
-			b2 = B->xInteger.value;
-		}else if( B->type == DAO_ENUM && B->xBase.subtype == DAO_ENUM_BOOL ){
-			C = DaoProcess_PutValue( self, B );
-			b1 = A->xInteger.value;
-			b2 = B->xEnum.value;
-		}
-		if( C != NULL ){
-			switch( vmc->code ){
-			case DVM_AND : C->xEnum.value = b1 ? b2 : b1; break;
-			case DVM_OR  : C->xEnum.value = b1 ? b1 : b2; break;
-			case DVM_EQ  : C->xEnum.value = (b1 !=0 ) == (b2 != 0); break;
-			case DVM_NE  : C->xEnum.value = (b1 !=0 ) != (b2 != 0); break;
-			}
-			C->xEnum.value = C->xEnum.value != 0;
-			return;
-		}
-	}
-	
-	if( vmc->code == DVM_AND || vmc->code == DVM_OR ){
-		DaoValue *AA = A, *BB = B;
-		if( A->type == B->type ){
-			if( vmc->code == DVM_OR ){ AA = B; BB = A; }
-			switch( A->type ){
-			case DAO_INTEGER : C = A->xInteger.value ? BB : AA; break;
-			case DAO_FLOAT   : C = A->xFloat.value ? BB : AA; break;
-			case DAO_ENUM : C = A->xEnum.value ? BB : AA; break;
-			default : break;
-			}
-		}
-		if( C == NULL ){
-			DaoProcess_RaiseError( self, "Type", "" );
-			return;
+	}else if( A->type == DAO_TUPLE && B->type == DAO_TUPLE ){
+		switch( vmc->code ){
+		case DVM_LT:  D = DaoValue_Compare( A, B ) < 0; break;
+		case DVM_LE:  D = DaoValue_Compare( A, B ) <= 0; break;
+		case DVM_EQ:  D = DaoValue_Compare( A, B ) == 0; break;
+		case DVM_NE:  D = DaoValue_Compare( A, B ) != 0; break;
+		default: goto InvalidOperation;
 		}
 	}else if( A->type == B->type && A->type == DAO_ARRAY ){
 		D = DaoValue_Compare( A, B );
@@ -5038,9 +5058,7 @@ InvalidOperation:
 		DaoProcess_RaiseError( self, "Type", "" );
 		return;
 	}
-ReturnResult:
-	if( C ) DaoProcess_PutValue( self, C );
-	else DaoProcess_PutInteger( self, D );
+	DaoProcess_PutBoolean( self, D );
 }
 void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 {
@@ -5055,33 +5073,15 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 
 	if( ta == DAO_INTEGER ){
 		C = DaoProcess_SetValue( self, vmc->c, A );
-		switch( vmc->code ){
-		case DVM_NOT :  C->xInteger.value = ! C->xInteger.value; break;
-		case DVM_MINUS : C->xInteger.value = - C->xInteger.value; break;
-		default: break;
-		}
+		C->xInteger.value = - C->xInteger.value;
 	}else if( ta == DAO_FLOAT ){
 		C = DaoProcess_SetValue( self, vmc->c, A );
-		switch( vmc->code ){
-		case DVM_NOT :  C->xInteger.value = ! C->xFloat.value; break;
-		case DVM_MINUS : C->xFloat.value = - C->xFloat.value; break;
-		default: break;
-		}
+		C->xFloat.value = - C->xFloat.value;
 	}else if( ta == DAO_COMPLEX ){
-		if( vmc->code == DVM_MINUS ){
-			C = DaoProcess_SetValue( self, vmc->c, A );
-			C->xComplex.value.real = - C->xComplex.value.real;
-			C->xComplex.value.imag = - C->xComplex.value.imag;
-		}
+		C = DaoProcess_SetValue( self, vmc->c, A );
+		C->xComplex.value.real = - C->xComplex.value.real;
+		C->xComplex.value.imag = - C->xComplex.value.imag;
 #ifdef DAO_WITH_NUMARRAY
-	}else if( ta == DAO_ENUM ){
-		if( A->xEnum.subtype == DAO_ENUM_BOOL ){
-			DaoValue *res = DaoProcess_PutValue( self, A );
-			res->xEnum.value = ! A->xEnum.value;
-		}else{
-			DaoProcess_PutInteger( self, ! A->xEnum.value );
-		}
-		return;
 	}else if( ta == DAO_ARRAY ){
 		DaoArray *array = & A->xArray;
 		daoint i, n;
@@ -5093,21 +5093,13 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 			if( array->etype == DAO_INTEGER ){
 				dao_integer *va = array->data.i;
 				dao_integer *vc = res->data.i;
-				if( vmc->code == DVM_NOT ){
-					for(i=0,n=array->size; i<n; i++ ) vc[i] = ! va[i];
-				}else{
-					for(i=0,n=array->size; i<n; i++ ) vc[i] = - va[i];
-				}
+				for(i=0,n=array->size; i<n; i++ ) vc[i] = - va[i];
 			}else{
 				dao_float *va = array->data.f;
 				dao_float *vc = res->data.f;
-				if( vmc->code == DVM_NOT ){
-					for(i=0,n=array->size; i<n; i++ ) vc[i] = (dao_float) ! va[i];
-				}else{
-					for(i=0,n=array->size; i<n; i++ ) vc[i] = - va[i];
-				}
+				for(i=0,n=array->size; i<n; i++ ) vc[i] = - va[i];
 			}
-		}else if( vmc->code == DVM_MINUS ){
+		}else{
 			DaoArray *res = DaoProcess_GetArray( self, vmc );
 			dao_complex *va, *vc;
 			DaoArray_SetNumType( res, array->etype );
@@ -5123,26 +5115,44 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 	}else if( ta == DAO_OBJECT || ta == DAO_CDATA || ta == DAO_CSTRUCT ){
 		C = self->activeValues[ vmc->c ];
 		if( DaoProcess_TryUserArith( self, A, NULL, C ) == 0 ){
-			if( vmc->code == DVM_NOT ){
-				if( ta == DAO_OBJECT ){
-					DaoValue *deft = A->xObject.defClass->objType->value;
-					DaoProcess_PutInteger( self, A == deft );
-				}else{
-					DaoProcess_PutInteger( self, A->xCdata.data == NULL );
-				}
-				return;
-			}
 			DaoProcess_RaiseError( self, "Type", NULL );
 		}
+	}else{
+		DaoProcess_RaiseError( self, "Type", NULL );
+	}
+}
+void DaoProcess_DoUnaBool( DaoProcess *self, DaoVmCode *vmc )
+{
+	DaoValue *A = self->activeValues[ vmc->a ];
+	int ta = A->type;
+	self->activeCode = vmc;
+	if( A->type ==0 ){
+		DaoProcess_RaiseError( self, "Type", "on none object" );
 		return;
 	}
-	if( C == NULL ) DaoProcess_RaiseError( self, "Type", NULL );
+
+	if( ta == DAO_BOOLEAN || ta == DAO_INTEGER ){
+		DaoProcess_PutBoolean( self, ! A->xInteger.value );
+	}else if( ta == DAO_FLOAT ){
+		DaoProcess_PutBoolean( self, ! A->xFloat.value );
+#ifdef DAO_WITH_NUMARRAY
+	}else if( ta == DAO_ENUM ){
+		DaoProcess_PutFloat( self, ! A->xEnum.value );
+#endif
+	}else if( ta == DAO_OBJECT || ta == DAO_CDATA || ta == DAO_CSTRUCT ){
+		DaoValue *C = self->activeValues[ vmc->c ];
+		if( DaoProcess_TryUserArith( self, A, NULL, C ) == 0 ){
+			DaoProcess_RaiseError( self, "Type", NULL );
+		}
+	}else{
+		DaoProcess_RaiseError( self, "Type", NULL );
+	}
 }
 void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoValue *A = self->activeValues[ vmc->a ];
 	DaoValue *B = self->activeValues[ vmc->b ];
-	dao_integer *C = DaoProcess_PutInteger( self, 0 );
+	dao_integer *C = DaoProcess_PutBoolean( self, 0 );
 	daoint i, n;
 	if( A->type == DAO_INTEGER && B->type == DAO_STRING ){
 		dao_integer bv = A->xInteger.value;
@@ -5956,7 +5966,9 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 	case DVM_IN :
 		DaoProcess_DoInTest( self, vmc );
 		break;
-	case DVM_NOT : case DVM_MINUS :
+	case DVM_NOT :
+		DaoProcess_DoUnaBool( self, vmc ); break;
+	case DVM_MINUS :
 		DaoProcess_DoUnaArith( self, vmc ); break;
 	case DVM_BITAND : case DVM_BITOR : case DVM_BITXOR :
 		DaoProcess_DoBitLogic( self, vmc ); break;

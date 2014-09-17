@@ -70,6 +70,26 @@ DaoNone* DaoNone_New()
 #endif
 	return self;
 }
+
+DaoBoolean* DaoBoolean_New( dao_boolean value )
+{
+	DaoBoolean *self = (DaoBoolean*) dao_malloc( sizeof(DaoBoolean) );
+	DaoValue_Init( self, DAO_BOOLEAN );
+	self->value = value != 0;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( (DaoValue*) self );
+#endif
+	return self;
+}
+dao_boolean DaoBoolean_Get( DaoBoolean *self )
+{
+	return self->value;
+}
+void DaoBoolean_Set( DaoBoolean *self, dao_boolean value )
+{
+	self->value = value != 0;
+}
+
 DaoInteger* DaoInteger_New( dao_integer value )
 {
 	DaoInteger *self = (DaoInteger*) dao_malloc( sizeof(DaoInteger) );
@@ -250,7 +270,7 @@ static void MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *star
 		*idtype = IDX_PAIR;
 		if( index->xTuple.ctype == dao_type_for_iterator ){
 			DaoValue **data = index->xTuple.values;
-			if( data[0]->type == data[1]->type && data[0]->type == DAO_INTEGER ){
+			if( data[0]->type == DAO_BOOLEAN && data[1]->type == DAO_INTEGER ){
 				*start = data[1]->xInteger.value;
 				*idtype = *start < N ? IDX_SINGLE : IDX_OUTOFRANGE;
 				data[1]->xInteger.value += 1;
@@ -310,8 +330,12 @@ DaoTypeBase baseTyper =
 {
 	"none", & baseCore, NULL, NULL, {0}, {0}, dao_free, NULL
 };
-static DaoNone none = {0,DAO_NONE,DAO_VALUE_CONST,0,1};
+static DaoNone none = {DAO_NONE,0,DAO_VALUE_CONST,0,1};
+static DaoBoolean dao_false = {DAO_BOOLEAN,0,DAO_VALUE_CONST,0,1,0};
+static DaoBoolean dao_true = {DAO_BOOLEAN,0,DAO_VALUE_CONST,0,1,1};
 DaoValue *dao_none_value = (DaoValue*) (void*) & none;
+DaoValue *dao_false_value = (DaoValue*) (void*) & dao_false;
+DaoValue *dao_true_value = (DaoValue*) (void*) & dao_true;
 
 
 extern DaoTypeBase numberTyper;
@@ -399,7 +423,7 @@ int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols )
 	} while( i < names->size );
 	DString_Delete( names );
 	if( k == 0 ) return 0;
-	if( (self->subtype == DAO_ENUM_STATE || self->subtype == DAO_ENUM_BOOL) && k > 1 ){
+	if( self->subtype == DAO_ENUM_STATE && k > 1 ){
 		self->value = first;
 		return 0;
 	}
@@ -420,7 +444,7 @@ int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other )
 	if( self->subtype == DAO_ENUM_SYM ) return 0;
 
 	self->value = 0;
-	if( other->subtype == DAO_ENUM_STATE || other->subtype == DAO_ENUM_BOOL ){
+	if( other->subtype == DAO_ENUM_STATE ){
 		for(node=DMap_First(otherNames); node; node=DMap_Next(otherNames,node)){
 			if( node->value.pInt != other->value ) continue;
 			search = DMap_Find( selfNames, node->key.pVoid );
@@ -438,7 +462,7 @@ int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other )
 			self->value |= search->value.pInt;
 			ret += 1;
 		}
-		if( self->subtype == DAO_ENUM_STATE || self->subtype == DAO_ENUM_BOOL ) ret = ret==1;
+		if( self->subtype == DAO_ENUM_STATE ) ret = ret==1;
 	}
 	return ret;
 }
@@ -782,7 +806,7 @@ static void DaoSTR_Erase( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoSTR_Chop( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *res = DaoProcess_PutString( proc, p[0]->xString.value );
-	daoint utf8 = p[1]->xEnum.value;
+	daoint utf8 = p[1]->xBoolean.value;
 	DString_Chop( res, utf8 );
 }
 static void DaoSTR_Trim( DaoProcess *proc, DaoValue *p[], int N )
@@ -790,7 +814,7 @@ static void DaoSTR_Trim( DaoProcess *proc, DaoValue *p[], int N )
 	DString *res = DaoProcess_PutString( proc, p[0]->xString.value );
 	daoint head = p[1]->xEnum.value & 0x1;
 	daoint tail = p[1]->xEnum.value & 0x2;
-	daoint utf8 = p[2]->xEnum.value;
+	daoint utf8 = p[2]->xBoolean.value;
 	DString_Trim( res, head, tail, utf8 );
 }
 static void DaoSTR_Find( DaoProcess *proc, DaoValue *p[], int N )
@@ -799,7 +823,7 @@ static void DaoSTR_Find( DaoProcess *proc, DaoValue *p[], int N )
 	DString *str = p[1]->xString.value;
 	daoint from = p[2]->xInteger.value;
 	daoint pos = DAO_NULLPOS;
-	if( p[3]->xEnum.value ){
+	if( p[3]->xBoolean.value ){
 		pos = DString_RFind( self, str, from );
 	}else{
 		pos = DString_Find( self, str, from );
@@ -868,7 +892,7 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue *val = NULL;
 	DMap  *keys = NULL;
 	DNode *node = NULL;
-	daoint keep = p[3]->xEnum.value;
+	daoint keep = p[3]->xBoolean.value;
 	daoint i, pos1, pos2, prev = 0;
 	char spec2;
 	int replace;
@@ -1280,7 +1304,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Chop,
-		"chop( invar self: string, utf8 = bool::false ) => string"
+		"chop( invar self: string, utf8 = false ) => string"
 		/*
 		// Chop EOF, '\n' and/or '\r' off the end of the string;
 		// -- EOF  is first checked and removed if found;
@@ -1291,7 +1315,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Trim,
-		"trim( invar self: string, where: enum<head;tail> = $head+$tail, utf8 = bool::false )"
+		"trim( invar self: string, where: enum<head;tail> = $head+$tail, utf8 = false )"
 			"=> string"
 		/*
 		// Trim whitespaces from the head and/or the tail of the string;
@@ -1300,7 +1324,7 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Find,
-		"find( invar self: string, str: string, from = 0, reverse = bool::false ) => int"
+		"find( invar self: string, str: string, from = 0, reverse = false ) => int"
 		/*
 		// Find the first occurrence of "str" in this string, searching from "from";
 		// If "reverse" is zero, search forward, otherwise backward;
@@ -1331,7 +1355,7 @@ static DaoFuncItem stringMeths[] =
 	},
 	{ DaoSTR_Expand,
 		"expand( invar self: string, invar subs: map<string,string>"
-			"|tuple<...:int|float|string>, spec = \"$\", keep = bool::true ) => string"
+			"|tuple<...:int|float|string>, spec = \"$\", keep = true ) => string"
 		/*
 		// Expand this string into a new string with substrings from the keys
 		// of "subs" substituted with the corresponding values of "subs".
@@ -3380,7 +3404,7 @@ DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 	for(i=0; i<size; i++){
 		DaoType *it = i < M ? types[i] : types[M-1];
 		if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_VALIST ) it = & it->aux->xType;
-		if( it->tid >= DAO_INTEGER && it->tid <= DAO_ENUM ){
+		if( it->tid >= DAO_BOOLEAN && it->tid <= DAO_ENUM ){
 			DaoValue_Move( it->value, self->values + i, it );
 		}
 	}

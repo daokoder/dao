@@ -89,6 +89,7 @@ extern "C"{
 enum DaoTypes
 {
 	DAO_NONE  = 0,
+	DAO_BOOLEAN ,
 	DAO_INTEGER ,
 	DAO_FLOAT   ,
 	DAO_COMPLEX ,
@@ -157,6 +158,7 @@ typedef unsigned char   uchar_t;
 typedef unsigned short  ushort_t;
 typedef unsigned int    uint_t;
 
+typedef int    dao_boolean;
 
 #ifdef DAO_USE_SYS_BIT_INT
 typedef ptrdiff_t  dao_integer;
@@ -189,6 +191,7 @@ typedef struct DaoParser       DaoParser;
 
 typedef union  DaoValue        DaoValue;
 typedef struct DaoNone         DaoNone;
+typedef struct DaoInteger      DaoBoolean;
 typedef struct DaoInteger      DaoInteger;
 typedef struct DaoFloat        DaoFloat;
 typedef struct DaoComplex      DaoComplex;
@@ -364,6 +367,7 @@ DAO_DLL int DaoValue_Type( DaoValue *self );
 // The following functions will check the type of the DaoValue and
 // cast it to the requested type on success. Otherwise return NULL;
 */
+DAO_DLL DaoBoolean*   DaoValue_CastBoolean( DaoValue *self );
 DAO_DLL DaoInteger*   DaoValue_CastInteger( DaoValue *self );
 DAO_DLL DaoFloat*     DaoValue_CastFloat( DaoValue *self );
 DAO_DLL DaoComplex*   DaoValue_CastComplex( DaoValue *self );
@@ -390,6 +394,7 @@ DAO_DLL DaoValue* DaoValue_MakeNone();
 // The following functions will check the type of the DaoValue and
 // return the requested data on success. Otherwise return zero or NULL;
 */
+DAO_DLL dao_boolean  DaoValue_TryGetBoolean( DaoValue *self );
 DAO_DLL dao_integer  DaoValue_TryGetInteger( DaoValue *self );
 DAO_DLL dao_float    DaoValue_TryGetFloat( DaoValue *self );
 DAO_DLL dao_complex  DaoValue_TryGetComplex( DaoValue *self );
@@ -514,6 +519,10 @@ DAO_DLL daoint DString_RFindChar( DString *self, char ch, daoint start );
 DAO_DLL void DString_Assign( DString *left, DString *right );
 DAO_DLL int DString_Compare( DString *left, DString *right );
 
+
+DAO_DLL DaoBoolean* DaoBoolean_New( dao_boolean value );
+DAO_DLL dao_boolean DaoBoolean_Get( DaoBoolean *self );
+DAO_DLL void        DaoBoolean_Set( DaoBoolean *self, dao_boolean value );
 
 DAO_DLL DaoInteger* DaoInteger_New( dao_integer value );
 DAO_DLL dao_integer DaoInteger_Get( DaoInteger *self );
@@ -775,6 +784,7 @@ DAO_DLL void DaoProcess_RaiseError( DaoProcess *self, const char *type, const ch
 // function prototype of the wrapped C function.
 */
 DAO_DLL DaoNone*     DaoProcess_PutNone( DaoProcess *self );
+DAO_DLL dao_integer* DaoProcess_PutBoolean( DaoProcess *self, dao_boolean value );
 DAO_DLL dao_integer* DaoProcess_PutInteger( DaoProcess *self, dao_integer value );
 DAO_DLL dao_float*   DaoProcess_PutFloat( DaoProcess *self, dao_float value );
 DAO_DLL dao_complex* DaoProcess_PutComplex( DaoProcess *self, dao_complex value );
@@ -928,6 +938,7 @@ DAO_DLL void DaoProcess_PopValues( DaoProcess *self, int N );
 // reference counting of the created value.
 */
 DAO_DLL DaoNone*    DaoProcess_NewNone( DaoProcess *self );
+DAO_DLL DaoBoolean* DaoProcess_NewBoolean( DaoProcess *self, dao_boolean v );
 DAO_DLL DaoInteger* DaoProcess_NewInteger( DaoProcess *self, dao_integer v );
 DAO_DLL DaoFloat*   DaoProcess_NewFloat( DaoProcess *self, dao_float v );
 DAO_DLL DaoComplex* DaoProcess_NewComplex( DaoProcess *self, dao_complex v );

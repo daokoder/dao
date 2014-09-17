@@ -47,6 +47,8 @@ struct DaoNone
 	DAO_VALUE_CORE;
 };
 DAO_DLL DaoValue *dao_none_value;
+DAO_DLL DaoValue *dao_false_value;
+DAO_DLL DaoValue *dao_true_value;
 DAO_DLL DaoNone* DaoNone_New();
 
 struct DaoInteger

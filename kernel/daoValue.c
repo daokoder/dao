@@ -209,14 +209,15 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	if( left == NULL || right == NULL ) return left < right ? -100 : 100;
 	if( left->type != right->type ){
 		res = left->type < right->type ? -100 : 100;
-		if( left->type != DAO_INTEGER && left->type != DAO_FLOAT ) return res;
-		if( right->type != DAO_INTEGER && right->type != DAO_FLOAT ) return res;
+		if( left->type < DAO_BOOLEAN || left->type > DAO_FLOAT ) return res;
+		if( right->type > DAO_BOOLEAN || right->type > DAO_FLOAT ) return res;
 		L = DaoValue_GetFloat( left );
 		R = DaoValue_GetFloat( right );
 		return L == R ? 0 : (L < R ? -1 : 1);
 	}
 	switch( left->type ){
 	case DAO_NONE : return 0;
+	case DAO_BOOLEAN :
 	case DAO_INTEGER : return number_compare( left->xInteger.value, right->xInteger.value );
 	case DAO_FLOAT   : return number_compare( left->xFloat.value, right->xFloat.value );
 	case DAO_COMPLEX : return DaoComplex_Compare( & left->xComplex, & right->xComplex );
@@ -238,6 +239,7 @@ int DaoValue_IsZero( DaoValue *self )
 	if( self == NULL ) return 1;
 	switch( self->type ){
 	case DAO_NONE : return 1;
+	case DAO_BOOLEAN :
 	case DAO_INTEGER : return self->xInteger.value == 0;
 	case DAO_FLOAT  : return self->xFloat.value == 0.0;
 	case DAO_COMPLEX : return self->xComplex.value.real == 0.0 && self->xComplex.value.imag == 0.0;
@@ -256,6 +258,7 @@ dao_float DString_ToFloat( DString *self )
 dao_integer DaoValue_GetInteger( DaoValue *self )
 {
 	switch( self->type ){
+	case DAO_BOOLEAN :
 	case DAO_INTEGER : return self->xInteger.value;
 	case DAO_FLOAT   : return self->xFloat.value;
 	case DAO_COMPLEX : return self->xComplex.value.real;
@@ -270,6 +273,7 @@ dao_float DaoValue_GetFloat( DaoValue *self )
 	DString *str;
 	switch( self->type ){
 	case DAO_NONE    : return 0;
+	case DAO_BOOLEAN :
 	case DAO_INTEGER : return self->xInteger.value;
 	case DAO_FLOAT   : return self->xFloat.value;
 	case DAO_COMPLEX : return self->xComplex.value.real;
@@ -315,6 +319,8 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 	}
 	if( cycData == NULL ) cycData = DMap_New(0,0);
 	switch( self->type ){
+	case DAO_BOOLEAN :
+		DaoStream_WriteChars( stream, self->xBoolean.value ? "true" : "false" ); break;
 	case DAO_INTEGER :
 		DaoStream_WriteInt( stream, self->xInteger.value ); break;
 	case DAO_FLOAT   :
@@ -352,6 +358,7 @@ dao_complex DaoValue_GetComplex( DaoValue *self )
 {
 	dao_complex com = { 0.0, 0.0 };
 	switch( self->type ){
+	case DAO_BOOLEAN :
 	case DAO_INTEGER : com.real = self->xInteger.value; break;
 	case DAO_FLOAT   : com.real = self->xFloat.value; break;
 	case DAO_COMPLEX : com = self->xComplex.value; break;
@@ -368,6 +375,7 @@ DString* DaoValue_GetString( DaoValue *self, DString *str )
 	case DAO_COMPLEX :
 		com = & self->xComplex.value;
 		sprintf( chs, (com->imag < 0) ? "%g%gC" : "%g+%gC", com->real, com->imag ); break;
+	case DAO_BOOLEAN : strcat( chs, self->xBoolean.value ? "true" : "false" ); break;
 	case DAO_INTEGER : sprintf( chs, "%"DAO_I64, (long long) self->xInteger.value ); break;
 	case DAO_FLOAT   : sprintf( chs, "%g", self->xFloat.value ); break;
 	case DAO_STRING : DString_Assign( str, self->xString.value ); break;
@@ -441,34 +449,34 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 		if( cst && cst->invar ) return self;
 		switch( self->type ){
 		case DAO_NONE : return self;
+		case DAO_BOOLEAN : return (DaoValue*) DaoBoolean_New( self->xBoolean.value );
 		case DAO_INTEGER : return (DaoValue*) DaoInteger_New( self->xInteger.value );
 		case DAO_FLOAT   : return (DaoValue*) DaoFloat_New( self->xFloat.value );
 		case DAO_COMPLEX : return (DaoValue*) DaoComplex_New( self->xComplex.value );
 		case DAO_STRING  : return (DaoValue*) DaoString_Copy( & self->xString );
 		}
 		return self; /* unreachable; */
-	}else if( tp && tp->tid >= DAO_INTEGER && tp->tid <= DAO_FLOAT ){
-		DaoValue *value = NULL;
+	}else if( tp && tp->tid >= DAO_BOOLEAN && tp->tid <= DAO_FLOAT ){
+		DaoValue *va = NULL;
 		switch( tp->tid ){
-		case DAO_INTEGER : value = (DaoValue*) DaoInteger_New(0); break;
-		case DAO_FLOAT   : value = (DaoValue*) DaoFloat_New(0);   break;
+		case DAO_BOOLEAN : va = (DaoValue*) DaoBoolean_New( DaoValue_GetInteger(self) ); break;
+		case DAO_INTEGER : va = (DaoValue*) DaoInteger_New( DaoValue_GetInteger(self) ); break;
+		case DAO_FLOAT   : va = (DaoValue*) DaoFloat_New( DaoValue_GetFloat(self) );   break;
 		}
-		switch( tp->tid ){
-		case DAO_INTEGER : value->xInteger.value = DaoValue_GetInteger( self ); break;
-		case DAO_FLOAT   : value->xFloat.value   = DaoValue_GetFloat( self );   break;
-		}
-		return value;
+		return va;
 	}else if( self->type == DAO_ENUM ){
 		switch( tp ? tp->tid : 0 ){
 		case DAO_ENUM :
 			if( tp->subtid == DAO_ENUM_ANY ) tp = NULL;
 			return (DaoValue*) DaoEnum_Copy( & self->xEnum, tp );
+		case DAO_BOOLEAN : return (DaoValue*) DaoBoolean_New( self->xEnum.value );
 		case DAO_INTEGER : return (DaoValue*) DaoInteger_New( self->xEnum.value );
 		case DAO_FLOAT   : return (DaoValue*) DaoFloat_New( self->xEnum.value );
 		}
 		return (DaoValue*) DaoEnum_Copy( & self->xEnum, NULL );
 	}else if( tp && tp->tid == DAO_ENUM ){
 		switch( self->type ){
+		case DAO_BOOLEAN :
 		case DAO_INTEGER : return (DaoValue*) DaoEnum_New( tp, self->xInteger.value );
 		case DAO_FLOAT   : return (DaoValue*) DaoEnum_New( tp, self->xFloat.value );
 		}
@@ -544,6 +552,7 @@ void DaoValue_CopyX( DaoValue *src, DaoValue **dest, DaoType *cst )
 		DaoEnum_SetType( & dest2->xEnum, src->xEnum.etype );
 		DaoEnum_SetValue( & dest2->xEnum, & src->xEnum );
 		break;
+	case DAO_BOOLEAN :
 	case DAO_INTEGER : dest2->xInteger.value = src->xInteger.value; break;
 	case DAO_FLOAT   : dest2->xFloat.value = src->xFloat.value; break;
 	case DAO_COMPLEX : dest2->xComplex.value = src->xComplex.value; break;
@@ -670,8 +679,13 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 {
 	int tm = 1;
 	switch( (T->tid << 8) | S->type ){
+	case (DAO_BOOLEAN << 8) | DAO_BOOLEAN :
+	case (DAO_BOOLEAN << 8) | DAO_INTEGER :
+	case (DAO_BOOLEAN << 8) | DAO_FLOAT   :
+	case (DAO_INTEGER << 8) | DAO_BOOLEAN :
 	case (DAO_INTEGER << 8) | DAO_INTEGER :
 	case (DAO_INTEGER << 8) | DAO_FLOAT   :
+	case (DAO_FLOAT   << 8) | DAO_BOOLEAN :
 	case (DAO_FLOAT   << 8) | DAO_INTEGER :
 	case (DAO_FLOAT   << 8) | DAO_FLOAT   :
 	case (DAO_COMPLEX << 8) | DAO_COMPLEX :
@@ -826,6 +840,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		case DAO_ENUM    :
 			DaoEnum_SetType( & D2->xEnum, T->subtid == DAO_ENUM_ANY ? S->xEnum.etype : T );
 			return DaoEnum_SetValue( & D2->xEnum, & S->xEnum );
+		case DAO_BOOLEAN :
 		case DAO_INTEGER : D2->xInteger.value = S->xInteger.value; break;
 		case DAO_FLOAT   : D2->xFloat.value = S->xFloat.value; break;
 		case DAO_COMPLEX : D2->xComplex.value = S->xComplex.value; break;
@@ -843,8 +858,13 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		DaoEnum_SetType( & D2->xEnum, T->subtid == DAO_ENUM_ANY ? S->xEnum.etype : T );
 		DaoEnum_SetValue( & D2->xEnum, & S->xEnum );
 		break;
+	case (DAO_BOOLEAN<<8)|DAO_BOOLEAN : D2->xInteger.value = S->xInteger.value; break;
+	case (DAO_BOOLEAN<<8)|DAO_INTEGER : D2->xInteger.value = S->xInteger.value; break;
+	case (DAO_BOOLEAN<<8)|DAO_FLOAT   : D2->xFloat.value   = S->xInteger.value; break;
+	case (DAO_INTEGER<<8)|DAO_BOOLEAN : D2->xInteger.value = S->xInteger.value; break;
 	case (DAO_INTEGER<<8)|DAO_INTEGER : D2->xInteger.value = S->xInteger.value; break;
 	case (DAO_INTEGER<<8)|DAO_FLOAT   : D2->xFloat.value   = S->xInteger.value; break;
+	case (DAO_FLOAT  <<8)|DAO_BOOLEAN : D2->xInteger.value = S->xFloat.value; break;
 	case (DAO_FLOAT  <<8)|DAO_INTEGER : D2->xInteger.value = S->xFloat.value; break;
 	case (DAO_FLOAT  <<8)|DAO_FLOAT   : D2->xFloat.value   = S->xFloat.value; break;
 	case (DAO_COMPLEX<<8)|DAO_COMPLEX : D2->xComplex.value = S->xComplex.value; break;
@@ -875,6 +895,11 @@ int DaoValue_Type( DaoValue *self )
 	return self->type;
 }
 
+DaoBoolean* DaoValue_CastBoolean( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_BOOLEAN ) return NULL;
+	return (DaoBoolean*) self;
+}
 DaoInteger* DaoValue_CastInteger( DaoValue *self )
 {
 	if( self == NULL || self->type != DAO_INTEGER ) return NULL;
@@ -988,6 +1013,11 @@ DaoValue* DaoValue_MakeNone()
 	return dao_none_value;
 }
 
+dao_boolean DaoValue_TryGetBoolean( DaoValue *self )
+{
+	if( self->type != DAO_BOOLEAN ) return 0;
+	return self->xBoolean.value;
+}
 dao_integer DaoValue_TryGetInteger( DaoValue *self )
 {
 	if( self->type != DAO_INTEGER ) return 0;
@@ -1073,6 +1103,12 @@ DaoValue** DaoProcess_GetLastValues( DaoProcess *self, int N )
 DaoNone* DaoProcess_NewNone( DaoProcess *self )
 {
 	DaoNone *res = DaoNone_New();
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoBoolean* DaoProcess_NewBoolean( DaoProcess *self, dao_boolean v )
+{
+	DaoBoolean *res = DaoBoolean_New( v );
 	DaoProcess_CacheValue( self, (DaoValue*) res );
 	return res;
 }

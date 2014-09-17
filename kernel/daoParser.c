@@ -1249,7 +1249,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 				e2 = comma - 1;
 #if 0
 				printf( "cst = %i;  reg = %i, %s\n", cst, reg, type?type->name->chars:"" );
-				for(j=i+1; j<comma; j++) printf( "%s\n", tokens[j]->string->chars );
+				for(j=i+1; j<comma; j++) printf( "%s\n", tokens[j]->string.chars );
 #endif
 				self->needConst += 1;
 				DList_PushFront( self->enumTypes, type );
@@ -1754,7 +1754,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 		}
 		if( sep ==0 && (k+1) <= end ){
 			sep = tokens[k+1]->type;
-			if( sep != DTOK_COMMA && sep != DTOK_SEMCO && sep != DTOK_COLON ) break;
+			if( sep != DTOK_COMMA && sep != DTOK_SEMCO ) break;
 			if( sep == DTOK_SEMCO && set == 0 ) value = 1;
 		}
 		if( DMap_Find( type->mapNames, field ) ) goto WrongForm;
@@ -1774,17 +1774,9 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 	default : type->subtid = DAO_ENUM_STATE; break;
 	case DTOK_COMMA : type->subtid = DAO_ENUM_STATE; break;
 	case DTOK_SEMCO : type->subtid = DAO_ENUM_FLAG;  break;
-	case DTOK_COLON : type->subtid = DAO_ENUM_BOOL;  break;
 	}
 	type->value->xBase.subtype = type->subtid;
 	if( k < end ) goto WrongForm;
-	if( type->subtid == DAO_ENUM_BOOL ){
-		DNode *first = DMap_First( type->mapNames );
-		DNode *last = DMap_Next( type->mapNames, first );
-		if( type->mapNames->size != 2 ) goto WrongForm;
-		if( first->value.pInt != 0 && first->value.pInt != 1 ) goto WrongForm;
-		if( last->value.pInt != ! first->value.pInt ) goto WrongForm;
-	}
 	for(k=start; k<=end; k++) DString_Append( type->name, & tokens[k]->string );
 	DString_AppendChar( type->name, '>' );
 	/*

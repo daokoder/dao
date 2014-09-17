@@ -72,6 +72,7 @@ union DaoValue
 	uchar_t        type;
 	DaoNone        xBase;
 	DaoNone        xNone;
+	DaoBoolean     xBoolean;
 	DaoInteger     xInteger;
 	DaoFloat       xFloat;
 	DaoComplex     xComplex;

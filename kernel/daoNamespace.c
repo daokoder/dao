@@ -987,6 +987,10 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 
 	DString_SetChars( name, "none" );
 	DaoNamespace_AddConst( self, name, dao_none_value, DAO_PERM_PUBLIC );
+	DString_SetChars( name, "false" );
+	DaoNamespace_AddConst( self, name, dao_false_value, DAO_PERM_PUBLIC );
+	DString_SetChars( name, "true" );
+	DaoNamespace_AddConst( self, name, dao_true_value, DAO_PERM_PUBLIC );
 
 	DList_Append( self->constants, DaoConstant_New( dao_none_value ) ); /* reserved for main */
 
@@ -1441,7 +1445,7 @@ void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *t
 	}
 }
 
-DaoType *simpleTypes[ DAO_ARRAY ] = { 0, 0, 0, 0, 0, 0 };
+DaoType *simpleTypes[ DAO_ARRAY ] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 
 DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 {
@@ -1472,6 +1476,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 			abtp = DaoNamespace_MakeValueType( self, dao_none_value );
 		}
 		break;
+	case DAO_BOOLEAN :
 	case DAO_INTEGER : case DAO_FLOAT :
 	case DAO_COMPLEX : case DAO_STRING :
 		abtp = simpleTypes[ p->type ];

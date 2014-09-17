@@ -159,7 +159,7 @@ DAO_DLL void Dao_AboutVar( DaoNamespace *ns, DaoValue *var, DString *str )
 			DString_AppendChars( str, buf );
 		}
 	}else{
-		DString_AppendChars( str, "NULL" );
+		DString_AppendChars( str, "none[0x0]" );
 	}
 }
 static void Dao_AboutVars( DaoNamespace *ns, DaoValue *par[], int N, DString *str )

@@ -207,7 +207,7 @@ const char* const daoExceptionTitles[] =
 
 const char* const coreTypeNames[] =
 {
-	"none", "int", "float", "complex", "string",
+	"none", "bool", "int", "float", "complex", "string",
 	"enum", "array", "list", "map", "tuple"
 };
 const char *const daoBitBoolArithOpers[] = {

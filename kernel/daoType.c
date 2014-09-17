@@ -49,6 +49,7 @@ DaoType *dao_type_udf = NULL;
 DaoType *dao_type_tht = NULL;
 DaoType *dao_type_none = NULL;
 DaoType *dao_type_any = NULL;
+DaoType *dao_type_bool = NULL;
 DaoType *dao_type_int = NULL;
 DaoType *dao_type_float = NULL;
 DaoType *dao_type_complex = NULL;
@@ -77,12 +78,13 @@ void DaoType_Init()
 {
 	int i, j;
 	memset( dao_type_matrix, DAO_MT_NOT, END_EXTRA_TYPES*END_EXTRA_TYPES );
-	for(i=DAO_INTEGER; i<=DAO_FLOAT; i++){
+	for(i=DAO_BOOLEAN; i<=DAO_FLOAT; i++){
 		dao_type_matrix[DAO_ENUM][i] = DAO_MT_SUB;
 		dao_type_matrix[i][DAO_COMPLEX] = DAO_MT_SUB;
-		for(j=DAO_INTEGER; j<=DAO_FLOAT; j++)
+		for(j=DAO_BOOLEAN; j<=DAO_FLOAT; j++)
 			dao_type_matrix[i][j] = DAO_MT_SIM;
 	}
+	dao_type_matrix[DAO_BOOLEAN][DAO_ENUM] = DAO_MT_SUB;
 	dao_type_matrix[DAO_INTEGER][DAO_ENUM] = DAO_MT_SUB;
 	for(i=0; i<END_EXTRA_TYPES; i++) dao_type_matrix[i][i] = DAO_MT_EQ;
 	for(i=0; i<END_EXTRA_TYPES; i++){
@@ -218,7 +220,7 @@ void DaoType_CheckAttributes( DaoType *self )
 {
 	daoint i, count = 0;
 
-	self->realnum = self->tid >= DAO_INTEGER && self->tid <= DAO_FLOAT;
+	self->realnum = self->tid >= DAO_BOOLEAN && self->tid <= DAO_FLOAT;
 	self->attrib &= ~(DAO_TYPE_SPEC|DAO_TYPE_UNDEF);
 	if( DString_FindChar( self->name, '@', 0 ) != DAO_NULLPOS ) self->attrib |= DAO_TYPE_SPEC;
 	if( DString_FindChar( self->name, '?', 0 ) != DAO_NULLPOS ) self->attrib |= DAO_TYPE_UNDEF;
@@ -236,7 +238,7 @@ void DaoType_CheckAttributes( DaoType *self )
 		for(i=0; i<self->nested->size; i++){
 			DaoType *it = self->nested->items.pType[i];
 			if( it->tid == DAO_PAR_NAMED ) it = & it->aux->xType;
-			self->rntcount += it->tid >= DAO_INTEGER && it->tid <= DAO_FLOAT;
+			self->rntcount += it->tid >= DAO_BOOLEAN && it->tid <= DAO_FLOAT;
 		}
 	}else if( self->tid == DAO_THT ){
 		daoint pos = DString_FindChar( self->name, '<', 0 );
@@ -369,6 +371,7 @@ void DaoType_InitDefault( DaoType *self )
 	case DAO_THT :
 	case DAO_ROUTINE :
 	case DAO_INTERFACE : value = dao_none_value; break;
+	case DAO_BOOLEAN : value = dao_false_value; break;
 	case DAO_INTEGER : value = (DaoValue*) DaoInteger_New(0); break;
 	case DAO_FLOAT  : value = (DaoValue*) DaoFloat_New(0.0); break;
 	case DAO_COMPLEX : value = (DaoValue*) DaoComplex_New(com); break;
@@ -993,11 +996,16 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	}
 
 	switch( (self->tid << 8) | value->type ){
+	case (DAO_BOOLEAN << 8) | DAO_BOOLEAN : return DAO_MT_EQ;
 	case (DAO_INTEGER << 8) | DAO_INTEGER : return DAO_MT_EQ;
 	case (DAO_FLOAT   << 8) | DAO_FLOAT   : return DAO_MT_EQ;
 	case (DAO_COMPLEX << 8) | DAO_COMPLEX : return DAO_MT_EQ;
 	case (DAO_STRING  << 8) | DAO_STRING  : return DAO_MT_EQ;
+	case (DAO_BOOLEAN << 8) | DAO_INTEGER : return DAO_MT_SIM;
+	case (DAO_BOOLEAN << 8) | DAO_FLOAT   : return DAO_MT_SIM;
+	case (DAO_INTEGER << 8) | DAO_BOOLEAN : return DAO_MT_SIM;
 	case (DAO_INTEGER << 8) | DAO_FLOAT   : return DAO_MT_SIM;
+	case (DAO_FLOAT   << 8) | DAO_BOOLEAN : return DAO_MT_SIM;
 	case (DAO_FLOAT   << 8) | DAO_INTEGER : return DAO_MT_SIM;
 	}
 
@@ -1205,6 +1213,7 @@ DaoType* DaoType_GetCommonType( int type, int subtype )
 		break;
 	case DAO_NONE    : return dao_type_none;
 	case DAO_ANY     : return dao_type_any;
+	case DAO_BOOLEAN : return dao_type_bool;
 	case DAO_INTEGER : return dao_type_int;
 	case DAO_FLOAT   : return dao_type_float;
 	case DAO_COMPLEX : return dao_type_complex;

@@ -66,7 +66,6 @@ enum DaoSubTypes
 	DAO_ENUM_SYM ,
 	DAO_ENUM_STATE ,
 	DAO_ENUM_FLAG ,
-	DAO_ENUM_BOOL ,
 	DAO_CDATA_PTR ,  /* opaque C/C++ data, not owned by the wrapper */
 	DAO_CDATA_CXX ,  /* opaque C/C++ data, owned by the wrapper */
 	DAO_PAIR ,
@@ -252,7 +251,7 @@ enum DaoTypeKernelAttribs
 enum DaoGlobalConstOffset
 {
 	DVR_NSC_NONE = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, DAO_PERM_PUBLIC, 0, 1 ) ,
-	DVR_NSC_MAIN = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, DAO_PERM_PUBLIC, 0, 2 )
+	DVR_NSC_MAIN = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, DAO_PERM_PUBLIC, 0, 4 )
 };
 
 enum DaoExceptionType
