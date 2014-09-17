@@ -11,5 +11,5 @@ project_exe  = project.AddExecutable( "daotest", project_objs )
 project_exe.UseSharedLibrary( daovm, "dao" )
 project_exe.SetTargetPath( "../../bin" )
 
-project.Install( daovm.GetPath( "BIN-PATH" ), project_exe );
+project.Install( DaoMake::Variables[ "INSTALL_BIN" ], project_exe );
 

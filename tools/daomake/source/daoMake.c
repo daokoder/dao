@@ -2627,22 +2627,6 @@ static void PROJECT_BinaryPath( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMakeProject *self = (DaoMakeProject*) p[0];
 	DaoProcess_PutString( proc, self->base.buildPath );
 }
-static void PROJECT_ExportPath( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoMakeProject *self = (DaoMakeProject*) p[0];
-	DString *name = DaoValue_TryGetString( p[1] );
-	DString *path = DaoValue_TryGetString( p[2] );
-	DaoMakeProject_MakeBuildPath( self, path );
-	DMap_Insert( self->exportPaths, name, path );
-}
-static void PROJECT_GetPath( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoMakeProject *self = (DaoMakeProject*) p[0];
-	DString *name = DaoValue_TryGetString( p[1] );
-	DString *res = DaoProcess_PutChars( proc, "" );
-	DNode *it = DMap_Find( self->exportPaths, name );
-	if( it ) DString_Assign( res, it->value.pString );
-}
 static void PROJECT_GenerateFinder( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeProject *self = (DaoMakeProject*) p[0];
@@ -2675,9 +2659,7 @@ static DaoFuncItem DaoMakeProjectMeths[]=
 	{ PROJECT_SourcePath,  "SourcePath( self: Project ) => string" },
 	{ PROJECT_BinaryPath,  "BinaryPath( self: Project ) => string" },
 
-	{ PROJECT_ExportPath,    "ExportPath( self: Project, name: string, path: string )" },
-	{ PROJECT_GetPath,       "GetPath( self: Project, name: string ) => string" },
-	{ PROJECT_GenerateFinder,   "GenerateFinder( self: Project, bl: enum<FALSE,TRUE> = $TRUE )" },
+	{ PROJECT_GenerateFinder, "GenerateFinder( self: Project, bl: enum<FALSE,TRUE> = $TRUE )" },
 	{ NULL, NULL }
 };
 static void PROJ_GetGCFields( void *p, DList *values, DList *arrays, DList *maps, int rm )

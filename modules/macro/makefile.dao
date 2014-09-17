@@ -14,5 +14,5 @@ project_lib  = project.AddStaticLibrary( "dao_macro", project_objs )
 
 
 project.GenerateFinder( $TRUE );
-project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );
-project.Install( daovm.GetPath( "MOD-PATH" ), project_lib );
+project.Install( DaoMake::Variables[ "INSTALL_MOD" ], project_dll );
+project.Install( DaoMake::Variables[ "INSTALL_MOD" ], project_lib );

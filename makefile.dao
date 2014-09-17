@@ -20,46 +20,27 @@ daovm = DaoMake::Project( "Dao" )
 
 daovm_root_path = DaoMake::Option( "INSTALL-PATH", "/usr/local" )
 
-# A global variable to be written to every Makefile:
-DaoMake::Variables[ "INSTALL" ] = daovm.MakeBuildPath( daovm_root_path )
-
-daovm_bin_path = "$(INSTALL)/bin"
-daovm_lib_path = "$(INSTALL)/lib"
-daovm_inc_path = "$(INSTALL)/include/dao"
-daovm_mod_path = "$(INSTALL)/lib/dao/modules"
-daovm_doc_path = "$(INSTALL)/share/dao"
+daovm_root_path = daovm.MakeBuildPath( daovm_root_path ).change( "(.) / $", "%1" )
 
 
+# Global variables to be written to every Makefile:
+DaoMake::Variables[ "INSTALL" ] = daovm_root_path
 
-# Uncomment the following, if these paths need to be changable
-# from command line with command such as:
-#   make install INSTALL_BIN=/usr/bin ...
-#{
-daovm.AddVariable( "INSTALL_BIN", daovm_bin_path, "?=" )
-daovm.AddVariable( "INSTALL_LIB", daovm_lib_path, "?=" )
-daovm.AddVariable( "INSTALL_INC", daovm_inc_path, "?=" )
-daovm.AddVariable( "INSTALL_MOD", daovm_mod_path, "?=" )
-daovm.AddVariable( "INSTALL_DOC", daovm_doc_path, "?=" )
+DaoMake::Variables[ "INSTALL_BIN" ] = "$(INSTALL)/bin"
+DaoMake::Variables[ "INSTALL_LIB" ] = "$(INSTALL)/lib"
+DaoMake::Variables[ "INSTALL_INC" ] = "$(INSTALL)/include/dao"
+DaoMake::Variables[ "INSTALL_MOD" ] = "$(INSTALL)/lib/dao/modules"
+DaoMake::Variables[ "INSTALL_DOC" ] = "$(INSTALL)/share/dao"
+
+DaoMake::Variables[ "INSTALL_FINDER" ] = "$(INSTALL)/lib/daomake/packages"
+
+
 daovm_bin_path = "$(INSTALL_BIN)"
 daovm_lib_path = "$(INSTALL_LIB)"
 daovm_inc_path = "$(INSTALL_INC)"
 daovm_mod_path = "$(INSTALL_MOD)"
 daovm_doc_path = "$(INSTALL_DOC)"
-#}
-
-
-#
-# Export paths that can be retrieved using:
-#   daovm = DaoMake::FindPackage( "Dao" )
-#   path = daovm.GetPath( "PATH-NAME" )
-#
-daovm.ExportPath( "INSTALL-PATH", daovm_root_path );
-daovm.ExportPath( "BIN-PATH", daovm_bin_path );
-daovm.ExportPath( "LIB-PATH", daovm_lib_path );
-daovm.ExportPath( "INC-PATH", daovm_inc_path );
-daovm.ExportPath( "MOD-PATH", daovm_mod_path );
-daovm.ExportPath( "DOC-PATH", daovm_doc_path );
-
+daomake_pkg_path = "$(INSTALL_FINDER)"
 
 
 ###########################################################################
@@ -231,8 +212,6 @@ daovm.AddIncludePath( "kernel" )
 # so that some linking flags can be generated properly:
 #
 ###########################################################################
-daomake_pkg_path = "$(INSTALL)/lib/daomake/packages/"
-daovm.ExportPath( "FINDER-PATH", daomake_pkg_path );
 daovm.Install( daovm_bin_path, daovm_exe )
 daovm.Install( daovm_lib_path, daovm_dll, daovm_lib )
 daovm.Install( daovm_inc_path, daovm_kernel_headers )

@@ -16,9 +16,9 @@ project_lib  = project.AddStaticLibrary( "dao_help", project_objs )
 
 
 project.GenerateFinder( $TRUE );
-project.Install( daovm.GetPath( "MOD-PATH" ), project_dll );
-project.Install( daovm.GetPath( "MOD-PATH" ), project_lib );
+project.Install( DaoMake::Variables[ "INSTALL_MOD" ], project_dll );
+project.Install( DaoMake::Variables[ "INSTALL_MOD" ], project_lib );
 
 
-project.Install( DaoMake::MakePath( daovm.GetPath( "MOD-PATH" ), "help_en" ), "help_en" )
-project.Install( DaoMake::MakePath( daovm.GetPath( "MOD-PATH" ), "help_zh" ), "help_zh" )
+project.Install( DaoMake::MakePath( DaoMake::Variables[ "INSTALL_MOD" ], "help_en" ), "help_en" )
+project.Install( DaoMake::MakePath( DaoMake::Variables[ "INSTALL_MOD" ], "help_zh" ), "help_zh" )
