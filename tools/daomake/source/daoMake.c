@@ -3233,7 +3233,50 @@ int DaoMake_Copy( int argc, char *argv[] )
 	return 0;
 }
 
+int DaoMake_Run( int argc, char *argv[] )
+{
+	DString *opts, *args;
+	int i, k, idsrc = -1;
+	for(i=1; i<argc; i++){
+		if( strcmp( argv[i], "-e" ) ==0 || strcmp( argv[i], "--eval" ) ==0 ) break;
+		/* also allows execution of script files without suffix .dao */
+		if( argv[i][0] != '-' ){
+			idsrc = i;
+			break;
+		}
+	}
 
+	k = idsrc;
+	if( k < 0 ) k = argc;
+
+	opts = DString_New();
+	args  = DString_New();
+	for(i=1; i<k; i++ ){
+		DString_AppendChars( opts, argv[i] );
+		DString_AppendChar( opts, '\1' );
+	}
+	if( idsrc >= 0 ){
+		for(i=idsrc; i<argc; i++ ){
+			DString_AppendChars( args, argv[i] );
+			DString_AppendChar( args, '\1' );
+		}
+	}
+	DaoVmSpace_ParseOptions( vmSpace, DString_GetData( opts ) );
+
+	if( idsrc < 0 && argc == 1 ){
+		DString_AppendChar( opts, '\1' );
+		DString_AppendChars( opts, "-vi" );
+		DaoVmSpace_ParseOptions( vmSpace, DString_GetData( opts ) );
+	}
+
+	/* Start execution. */
+	k = ! DaoVmSpace_RunMain( vmSpace, DString_GetData( args ) );
+
+	DString_Delete( args );
+	DString_Delete( opts );
+	DaoQuit();
+	return k;
+}
 
 
 static const char *const daomake_doc_options =
@@ -3364,6 +3407,8 @@ int main( int argc, char *argv[] )
 			if( DaoProcess_Compile( vmp, ns, argv[2] ) ==0 ) return 0;
 			rout = ns->mainRoutines->items.pRoutine[ ns->mainRoutines->size-1 ];
 			return DaoProcess_Call( vmp, rout, NULL, NULL, 0 );
+		}else if( strcmp( argv[1], "run" ) == 0 ){
+			return DaoMake_Run( argc-1, argv + 1 );
 		}
 	}
 
