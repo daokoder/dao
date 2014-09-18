@@ -88,6 +88,7 @@ typedef union DaoArrayData DaoArrayData;
 union DaoArrayData
 {
 	void         *p;
+	dao_boolean  *b;
 	dao_integer  *i;
 	dao_float    *f;
 	dao_complex  *c;
@@ -144,6 +145,7 @@ DAO_DLL void DaoArray_ResizeArray( DaoArray *self, daoint *dims, int D );
 DAO_DLL int DaoArray_Sliced( DaoArray *self );
 DAO_DLL void DaoArray_UseData( DaoArray *self, void *data );
 
+DAO_DLL dao_boolean DaoArray_GetBoolean( DaoArray *self, daoint i );
 DAO_DLL dao_integer DaoArray_GetInteger( DaoArray *na, daoint i );
 DAO_DLL dao_float   DaoArray_GetFloat( DaoArray *na, daoint i );
 DAO_DLL dao_complex DaoArray_GetComplex( DaoArray *na, daoint i );

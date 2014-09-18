@@ -1006,8 +1006,8 @@ int DaoProcess_Start( DaoProcess *self )
 		&& LAB_GETI_LCI , && LAB_GETI_LSI ,
 		&& LAB_SETI_LBIB , && LAB_SETI_LIII , && LAB_SETI_LFIF ,
 		&& LAB_SETI_LCIC , && LAB_SETI_LSIS ,
-		&& LAB_GETI_AII , && LAB_GETI_AFI , && LAB_GETI_ACI ,
-		&& LAB_SETI_AIII , && LAB_SETI_AFIF , && LAB_SETI_ACIC ,
+		&& LAB_GETI_ABI , && LAB_GETI_AII , && LAB_GETI_AFI , && LAB_GETI_ACI ,
+		&& LAB_SETI_ABIB , && LAB_SETI_AIII , && LAB_SETI_AFIF , && LAB_SETI_ACIC ,
 
 		&& LAB_GETI_TI , && LAB_SETI_TI ,
 
@@ -1017,8 +1017,8 @@ int DaoProcess_Start( DaoProcess *self )
 		&& LAB_SETF_TCC , && LAB_SETF_TSS ,
 		&& LAB_SETF_TPP , && LAB_SETF_TXX ,
 
-		&& LAB_GETMI_AII , && LAB_GETMI_AFI , && LAB_GETMI_ACI ,
-		&& LAB_SETMI_AIII , && LAB_SETMI_AFIF , && LAB_SETMI_ACIC ,
+		&& LAB_GETMI_ABI , && LAB_GETMI_AII , && LAB_GETMI_AFI , && LAB_GETMI_ACI ,
+		&& LAB_SETMI_ABIB , && LAB_SETMI_AIII , && LAB_SETMI_AFIF , && LAB_SETMI_ACIC ,
 
 		&& LAB_GETF_CX , && LAB_SETF_CX ,
 
@@ -1903,57 +1903,61 @@ CallEntry:
 			DString_Assign( list->value->items.pValue[id]->xString.value, vA->xString.value );
 		}OPNEXT()
 #ifdef DAO_WITH_NUMARRAY
-		OPCASE( GETI_AII ) OPCASE( GETI_AFI ) OPCASE( GETI_ACI ){
+		OPCASE( GETI_ABI ) OPCASE( GETI_AII ) OPCASE( GETI_AFI ) OPCASE( GETI_ACI ){
 			array = & locVars[vmc->a]->xArray;
 			id = LocalInt(vmc->b);
 			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing;
 			if( id <0 ) id += array->size;
 			if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
 			switch( vmc->code ){
+			case DVM_GETI_ABI : LocalInt(vmc->c) = array->data.b[id]; break;
 			case DVM_GETI_AII : LocalInt(vmc->c) = array->data.i[id]; break;
 			case DVM_GETI_AFI : LocalFloat(vmc->c) = array->data.f[id]; break;
 			case DVM_GETI_ACI : LocalComplex(vmc->c) = array->data.c[id]; break;
 			}
 
-		}OPNEXT() OPCASE(SETI_AIII) OPCASE(SETI_AFIF) OPCASE(SETI_ACIC){
+		}OPNEXT() OPCASE(SETI_ABIB) OPCASE(SETI_AIII) OPCASE(SETI_AFIF) OPCASE(SETI_ACIC){
 			array = & locVars[vmc->c]->xArray;
 			id = LocalInt(vmc->b);
 			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing;
 			if( id <0 ) id += array->size;
 			if( id <0 || id >= array->size ) goto RaiseErrorIndexOutOfRange;
 			switch( vmc->code ){
+			case DVM_SETI_ABIB : array->data.b[id] = locVars[vmc->a]->xBoolean.value; break;
 			case DVM_SETI_AIII : array->data.i[id] = locVars[vmc->a]->xInteger.value; break;
 			case DVM_SETI_AFIF : array->data.f[id] = locVars[vmc->a]->xFloat.value; break;
 			case DVM_SETI_ACIC : array->data.c[id] = locVars[vmc->a]->xComplex.value; break;
 			}
 
-		}OPNEXT() OPCASE(GETMI_AII) OPCASE(GETMI_AFI) OPCASE(GETMI_ACI){
+		}OPNEXT() OPCASE(GETMI_ABI) OPCASE(GETMI_AII) OPCASE(GETMI_AFI) OPCASE(GETMI_ACI){
 			array = & locVars[vmc->a]->xArray;
 			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing;
 			id = DaoArray_ComputeIndex( array, locVars + vmc->a + 1, vmc->b );
 			if( id < 0 ) goto RaiseErrorIndexOutOfRange;
 			switch( vmc->code ){
+			case DVM_GETMI_ABI: locVars[vmc->c]->xBoolean.value = array->data.b[id]; break;
 			case DVM_GETMI_AII: locVars[vmc->c]->xInteger.value = array->data.i[id]; break;
 			case DVM_GETMI_AFI: locVars[vmc->c]->xFloat.value = array->data.f[id]; break;
 			case DVM_GETMI_ACI: locVars[vmc->c]->xComplex.value = array->data.c[id]; break;
 			}
 
-		}OPNEXT() OPCASE(SETMI_AIII) OPCASE(SETMI_AFIF) OPCASE(SETMI_ACIC){
+		}OPNEXT() OPCASE(SETMI_ABIB) OPCASE(SETMI_AIII) OPCASE(SETMI_AFIF) OPCASE(SETMI_ACIC){
 			array = & locVars[vmc->c]->xArray;
 			if( array->original && DaoArray_Sliced( array ) == 0 ) goto RaiseErrorSlicing;
 			id = DaoArray_ComputeIndex( array, locVars + vmc->c + 1, vmc->b  );
 			if( id < 0 ) goto RaiseErrorIndexOutOfRange;
 			switch( vmc->code ){
+			case DVM_SETMI_ABIB: array->data.b[id] = locVars[vmc->a]->xBoolean.value; break;
 			case DVM_SETMI_AIII: array->data.i[id] = locVars[vmc->a]->xInteger.value; break;
 			case DVM_SETMI_AFIF: array->data.f[id] = locVars[vmc->a]->xFloat.value; break;
 			case DVM_SETMI_ACIC: array->data.c[id] = locVars[vmc->a]->xComplex.value; break;
 			}
 		}OPNEXT()
 #else
-		OPCASE( GETI_AII ) OPCASE( GETI_AFI ) OPCASE( GETI_ACI )
-		OPCASE( SETI_AIII ) OPCASE( SETI_AFIF ) OPCASE( SETI_ACIC )
-		OPCASE( GETMI_AII ) OPCASE( GETMI_AFI ) OPCASE( GETMI_ACI )
-		OPCASE( SETMI_AIII ) OPCASE( SETMI_AFIF ) OPCASE( SETMI_ACIC )
+		OPCASE( GETI_ABI ) OPCASE( GETI_AII ) OPCASE( GETI_AFI ) OPCASE( GETI_ACI )
+		OPCASE( SETI_ABIB ) OPCASE( SETI_AIII ) OPCASE( SETI_AFIF ) OPCASE( SETI_ACIC )
+		OPCASE( GETMI_ABI ) OPCASE( GETMI_AII ) OPCASE( GETMI_AFI ) OPCASE( GETMI_ACI )
+		OPCASE( SETMI_ABIB ) OPCASE( SETMI_AIII ) OPCASE( SETMI_AFIF ) OPCASE( SETMI_ACIC )
 			{
 				self->activeCode = vmc;
 				DaoProcess_RaiseError( self, NULL, "numeric array is disabled" );
@@ -3070,7 +3074,7 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 		}
 		C->type = na->etype;
 		switch( na->etype ){
-			// XXX
+			case DAO_BOOLEAN : C->xBoolean.value = na->data.b[id]; break;
 			case DAO_INTEGER : C->xInteger.value = na->data.i[id]; break;
 			case DAO_FLOAT   : C->xFloat.value = na->data.f[id];  break;
 			case DAO_COMPLEX : C->xComplex.value = na->data.c[id]; break;
@@ -3139,8 +3143,6 @@ void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 	}else if( C->type == DAO_ARRAY && (B->type >= DAO_BOOLEAN && B->type <= DAO_FLOAT)
 			 && (A->type >= DAO_BOOLEAN && A->type <= DAO_FLOAT) ){
 		DaoArray *na = & C->xArray;
-		double val = DaoValue_GetFloat( A );
-		dao_complex cpx = DaoValue_GetComplex( A );
 		id = DaoValue_GetFloat( B );
 		if( na->original && DaoArray_Sliced( na ) == 0 ){
 			DaoProcess_RaiseError( self, "Index", "slicing" );
@@ -3152,10 +3154,10 @@ void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 			return;
 		}
 		switch( na->etype ){
-			// XXX
-		case DAO_INTEGER : na->data.i[ id ] = (daoint) val; break;
-		case DAO_FLOAT  : na->data.f[ id ] = (double) val; break;
-		case DAO_COMPLEX : na->data.c[ id ] = cpx; break;
+		case DAO_BOOLEAN : na->data.b[ id ] = DaoValue_IsZero( A ) != 0; break;
+		case DAO_INTEGER : na->data.i[ id ] = DaoValue_GetInteger( A ); break;
+		case DAO_FLOAT  : na->data.f[ id ]  = DaoValue_GetFloat( A ); break;
+		case DAO_COMPLEX : na->data.c[ id ] = DaoValue_GetComplex( A ); break;
 		default : break;
 		}
 #endif
@@ -4079,7 +4081,7 @@ void DaoProcess_DoVector( DaoProcess *self, DaoVmCode *vmc )
 	if( count && array->etype == DAO_NONE ){
 		DaoValue *p = self->activeValues[opA];
 		switch( p->type ){
-			// XXX
+		case DAO_BOOLEAN :
 		case DAO_INTEGER :
 		case DAO_FLOAT :
 		case DAO_COMPLEX : array->etype = p->type; break;
@@ -4133,8 +4135,22 @@ InvalidItem:
 		DaoArray_ResizeVector( array, N );
 	}
 	k = 0;
-	// XXX
-	if( array->etype == DAO_INTEGER ){
+	if( array->etype == DAO_BOOLEAN ){
+		dao_boolean *vals = array->data.b;
+		for( j=0; j<N; j++ ){
+			DaoValue *p = values[j];
+			if( p && p->type == DAO_ARRAY ){
+				DaoArray *array2 = & p->xArray;
+				for(i=0; i<array2->size; i++){
+					vals[k] = DaoArray_GetBoolean( array2, i );
+					k++;
+				}
+			}else{
+				vals[k] = ! DaoValue_IsZero( p );
+				k ++;
+			}
+		}
+	}else if( array->etype == DAO_INTEGER ){
 		dao_integer *vals = array->data.i;
 		for( j=0; j<N; j++ ){
 			DaoValue *p = values[j];
@@ -5452,7 +5468,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 
 	if( ct == NULL ) goto FailConversion;
 	if( ct->tid & DAO_ANY ) goto Rebind;
-	if( dA->type == ct->tid && ct->tid >= DAO_INTEGER && ct->tid < DAO_ARRAY ) goto Rebind;
+	if( dA->type == ct->tid && ct->tid >= DAO_BOOLEAN && ct->tid < DAO_ARRAY ) goto Rebind;
 	if( ct->tid > DAO_NONE && ct->tid <= DAO_STRING && (dC == NULL || dC->type != ct->tid) ){
 		dC = DaoValue_SimpleCopy( ct->value );
 		DaoProcess_CacheValue( proc, dC );
@@ -5466,6 +5482,9 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		return dA;
 	}
 	switch( ct->tid ){
+	case DAO_BOOLEAN :
+		dC->xBoolean.value = DaoValue_IsZero( dA ) != 0;
+		break;
 	case DAO_INTEGER :
 		dC->xInteger.value = DaoValue_GetInteger( dA );
 		break;
@@ -5484,19 +5503,20 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		break;
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY :
+		array2 = & dA->xArray;
 		if( ct->nested->size >0 ) tp = ct->nested->items.pType[0];
 		if( dA->type != DAO_ARRAY ) goto FailConversion;
 		if( tp == NULL ) goto Rebind;
 		if( tp->tid & DAO_ANY ) goto Rebind;
 		if( array2->etype == tp->tid ) goto Rebind;
-		if( tp->tid < DAO_INTEGER || tp->tid > DAO_COMPLEX ) goto FailConversion;
-		array2 = & dA->xArray;
+		if( tp->tid < DAO_BOOLEAN || tp->tid > DAO_COMPLEX ) goto FailConversion;
 		if( array2->original && DaoArray_Sliced( array2 ) == 0 ) goto FailConversion;
 
 		array = DaoProcess_PrepareArray( proc, dC, tp->tid );
 		DaoArray_ResizeArray( array, array2->dims, array2->ndim );
 		for(i=0,size=array2->size; i<size; i++){
 			switch( array->etype ){
+			case DAO_BOOLEAN : array->data.b[i] = DaoArray_GetBoolean( array2, i ); break;
 			case DAO_INTEGER : array->data.i[i] = DaoArray_GetInteger( array2, i ); break;
 			case DAO_FLOAT   : array->data.f[i] = DaoArray_GetFloat( array2, i );  break;
 			case DAO_COMPLEX : array->data.c[i] = DaoArray_GetComplex( array2, i ); break;

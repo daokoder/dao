@@ -222,10 +222,12 @@ enum DaoOpcode
 	DVM_SETI_LFIF , /* set item : C[B] = A;  */
 	DVM_SETI_LCIC , /* set item : C[B] = A;  */
 	DVM_SETI_LSIS , /* set item : C[B] = A;  */
-	// XXX
+
+	DVM_GETI_ABI ,  /* get item : C = A[B]; array<bool>[int] */
 	DVM_GETI_AII ,  /* get item : C = A[B]; array<int>[int] */
 	DVM_GETI_AFI ,  /* get item : C = A[B]; array<float>[int] */
 	DVM_GETI_ACI ,  /* get item : C = A[B]; array<complex>[int] */
+	DVM_SETI_ABIB , /* set item : C[B] = A;  */
 	DVM_SETI_AIII , /* set item : C[B] = A;  */
 	DVM_SETI_AFIF , /* set item : C[B] = A;  */
 	DVM_SETI_ACIC , /* set item : C[B] = A;  */
@@ -247,13 +249,14 @@ enum DaoOpcode
 	DVM_SETF_TPP , /* set item: C[B]=A or C.B=A; tuple<..X..>[int]=X, or tuple<..any..>[int]=X; */
 	DVM_SETF_TXX , /* set item: C[B]=A or C.B=A; tuple<..X..>[int]=X, or tuple<..any..>[int]=X; */
 
-	// XXX
 	/* multiple indexing a[i,j] */
+	DVM_GETMI_ABI , /* array: get item(s) : C = A[B]; B,C: integer, A boolean array; */
 	DVM_GETMI_AII , /* array: get item(s) : C = A[B]; B,C: integer, A integer array; */
 	DVM_GETMI_AFI , /* array: get item(s) : C = A[B]; B,C: integer, A float array; */
 	DVM_GETMI_ACI , /* array: get item(s) : C = A[B]; B,C: integer, A complex array; */
-	DVM_SETMI_AIII , /* set item(s) : C[B] = A; A,B: integer, C complex array; */
-	DVM_SETMI_AFIF , /* set item(s) : C[B] = A; A,B: integer, C complex array; */
+	DVM_SETMI_ABIB , /* set item(s) : C[B] = A; A,B: integer, C boolean array; */
+	DVM_SETMI_AIII , /* set item(s) : C[B] = A; A,B: integer, C integer array; */
+	DVM_SETMI_AFIF , /* set item(s) : C[B] = A; A,B: integer, C float array; */
 	DVM_SETMI_ACIC , /* set item(s) : C[B] = A; A,B: integer, C complex array; */
 
 	DVM_GETF_CX , /* get complex field: real/imag; */

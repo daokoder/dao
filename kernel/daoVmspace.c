@@ -2552,6 +2552,7 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_array_empty = DaoType_Specialize( dao_type_array_template, NULL, 0 );
 	dao_type_array_empty = DaoType_GetConstType( dao_type_array_empty );
 	dao_array_types[DAO_NONE] = dao_type_array_empty;
+	dao_array_types[DAO_BOOLEAN] = DaoType_Specialize( dao_type_array_template, & dao_type_bool, 1 );
 	dao_array_types[DAO_INTEGER] = DaoType_Specialize( dao_type_array_template, & dao_type_int, 1 );
 	dao_array_types[DAO_FLOAT] = DaoType_Specialize( dao_type_array_template, & dao_type_float, 1 );
 	dao_array_types[DAO_COMPLEX] = DaoType_Specialize( dao_type_array_template, & dao_type_complex, 1 );

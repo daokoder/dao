@@ -158,7 +158,7 @@ typedef unsigned char   uchar_t;
 typedef unsigned short  ushort_t;
 typedef unsigned int    uint_t;
 
-typedef int    dao_boolean;
+typedef char  dao_boolean;
 
 #ifdef DAO_USE_SYS_BIT_INT
 typedef ptrdiff_t  dao_integer;
@@ -166,7 +166,7 @@ typedef ptrdiff_t  dao_integer;
 typedef long long  dao_integer;
 #endif
 
-typedef double dao_float;
+typedef double  dao_float;
 
 /* Complex type: */
 typedef struct dao_complex

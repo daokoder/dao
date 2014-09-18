@@ -1779,9 +1779,16 @@ static void DaoLIST_Sum( DaoProcess *proc, DaoValue *p[], int N )
 		return;
 	}
 	switch( type ){
-	case DAO_INTEGER :
+	case DAO_BOOLEAN :
 		{
 			daoint res = 0;
+			for(i=0; i<size; i++) res |= data[i]->xInteger.value;
+			DaoProcess_PutBoolean( proc, res );
+			break;
+		}
+	case DAO_INTEGER :
+		{
+			dao_integer res = 0;
 			for(i=0; i<size; i++) res += data[i]->xInteger.value;
 			DaoProcess_PutInteger( proc, res );
 			break;
@@ -2190,7 +2197,7 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Resize,
-		"resize( self: list<@T<int|float|complex|string|enum>>, size: int )"
+		"resize( self: list<@T<bool|int|float|complex|string|enum>>, size: int )"
 		/*
 		// Resize the list of primitive data to size "size".
 		*/
@@ -2202,7 +2209,7 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Max,
-		"max( invar self: list<@T<int|float|complex|string|enum>> ) => tuple<@T,int>"
+		"max( invar self: list<@T<bool|int|float|complex|string|enum>> ) => tuple<@T,int>"
 		/*
 		// Return the maximum value of the list and its index.
 		// The list has to contain primitive data.
@@ -2211,13 +2218,13 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Min,
-		"min( invar self: list<@T<int|float|complex|string|enum>> ) => tuple<@T,int>"
+		"min( invar self: list<@T<bool|int|float|complex|string|enum>> ) => tuple<@T,int>"
 		/*
 		// Return the minimum value of the list and its index.
 		*/
 	},
 	{ DaoLIST_Sum,
-		"sum( invar self: list<@T<int|float|complex|string|enum>> ) => @T"
+		"sum( invar self: list<@T<bool|int|float|complex|string>> ) => @T"
 		/*
 		// Return the sum of the list.
 		*/
