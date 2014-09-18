@@ -436,7 +436,7 @@ static void DaoIO_Check( DaoProcess *proc, DaoValue *p[], int N )
 	case 2 : res = self->file != NULL; break;
 	case 3 : if( self->file ) res = feof( self->file ); break;
 	}
-	DaoProcess_PutEnum( proc, res ? "true" : "false" );
+	DaoProcess_PutBoolean( proc, res );
 }
 static void DaoIO_Check2( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -445,13 +445,13 @@ static void DaoIO_Check2( DaoProcess *proc, DaoValue *p[], int N )
 	switch( what ){
 	case 0 : res = (self->mode & DAO_STREAM_AUTOCONV) != 0; break;
 	}
-	DaoProcess_PutEnum( proc, res ? "true" : "false" );
+	DaoProcess_PutBoolean( proc, res );
 }
 static void DaoIO_Enable( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
 	int what = p[1]->xEnum.value;
-	if( p[2]->xEnum.value ){
+	if( p[2]->xBoolean.value ){
 		self->mode |= DAO_STREAM_AUTOCONV;
 	}else{
 		self->mode &= ~DAO_STREAM_AUTOCONV;

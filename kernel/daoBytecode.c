@@ -450,32 +450,31 @@ void DaoByteCoder_DecodeSubChunk24( uchar_t *data, uint_t *A, uint_t *B )
 }
 
 
-DaoByteBlock* DaoByteBlock_EncodeInteger( DaoByteBlock *self, dao_integer val )
+DaoByteBlock* DaoByteBlock_EncodeBoolean( DaoByteBlock *self, DaoBoolean *value )
 {
-	DaoByteBlock *block;
-	DaoInteger tmp = {DAO_INTEGER,0,0,0,0,0.0};
-	DaoValue *value = (DaoValue*) & tmp;
-
-	value->xInteger.value = val;
-	block = DaoByteBlock_FindOrCopyBlock( self, value );
+	DaoByteBlock *block = DaoByteBlock_FindOrCopyBlock( self, (DaoValue*) value );
 	if( block ) return block;
-	block = DaoByteBlock_AddBlock( self, value, DAO_ASM_VALUE );
-	block->begin[0] = DAO_INTEGER;
-	DaoByteCoder_EncodeDaoInt( block->end, val );
+	block = DaoByteBlock_AddBlock( self, (DaoValue*) value, DAO_ASM_VALUE );
+	block->begin[0] = DAO_BOOLEAN;
+	block->end[0] = value->value;
 	return block;
 }
-DaoByteBlock* DaoByteBlock_EncodeFloat( DaoByteBlock *self, double val )
+DaoByteBlock* DaoByteBlock_EncodeInteger( DaoByteBlock *self, DaoInteger *value )
 {
-	DaoByteBlock *block;
-	DaoFloat tmp = {DAO_FLOAT,0,0,0,0,0.0};
-	DaoValue *value = (DaoValue*) & tmp;
-
-	value->xFloat.value = val;
-	block = DaoByteBlock_FindOrCopyBlock( self, value );
+	DaoByteBlock *block = DaoByteBlock_FindOrCopyBlock( self, (DaoValue*) value );
 	if( block ) return block;
-	block = DaoByteBlock_AddBlock( self, value, DAO_ASM_VALUE );
+	block = DaoByteBlock_AddBlock( self, (DaoValue*) value, DAO_ASM_VALUE );
+	block->begin[0] = DAO_INTEGER;
+	DaoByteCoder_EncodeDaoInt( block->end, value->value );
+	return block;
+}
+DaoByteBlock* DaoByteBlock_EncodeFloat( DaoByteBlock *self, DaoFloat *value )
+{
+	DaoByteBlock *block = DaoByteBlock_FindOrCopyBlock( self, (DaoValue*) value );
+	if( block ) return block;
+	block = DaoByteBlock_AddBlock( self, (DaoValue*) value, DAO_ASM_VALUE );
 	block->begin[0] = DAO_FLOAT;
-	DaoByteCoder_EncodeFloat( block->end, val );
+	DaoByteCoder_EncodeFloat( block->end, value->value );
 	return block;
 }
 DaoByteBlock* DaoByteBlock_EncodeComplex( DaoByteBlock *self, DaoComplex *value )
@@ -768,8 +767,9 @@ DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value )
 		DaoByteCoder_Error3( self->coder, NULL, "Unencoded routine (type = %s)!", chs );
 		break;
 	case DAO_NONE : return DaoByteBlock_AddBlock( self, value, DAO_ASM_VALUE );
-	case DAO_INTEGER : return DaoByteBlock_EncodeInteger( self, value->xInteger.value );
-	case DAO_FLOAT   : return DaoByteBlock_EncodeFloat( self, value->xFloat.value );
+	case DAO_BOOLEAN : return DaoByteBlock_EncodeBoolean( self, (DaoBoolean*) value );
+	case DAO_INTEGER : return DaoByteBlock_EncodeInteger( self, (DaoInteger*) value );
+	case DAO_FLOAT   : return DaoByteBlock_EncodeFloat( self, (DaoFloat*) value );
 	case DAO_COMPLEX : return DaoByteBlock_EncodeComplex( self, (DaoComplex*) value );
 	case DAO_STRING : return DaoByteBlock_EncodeString( self, value->xString.value );
 	case DAO_ENUM : return DaoByteBlock_EncodeEnum( self, (DaoEnum*) value );
@@ -1743,6 +1743,10 @@ static void DaoByteCoder_DecodeValue( DaoByteCoder *self, DaoByteBlock *block )
 	switch( tid ){
 	case DAO_NONE :
 		value = dao_none_value;
+		break;
+	case DAO_BOOLEAN :
+		value = (DaoValue*) DaoBoolean_New(0);
+		value->xBoolean.value = block->end[0];
 		break;
 	case DAO_INTEGER :
 		value = (DaoValue*) DaoInteger_New(0);

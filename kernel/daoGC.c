@@ -625,6 +625,7 @@ static void DaoGC_DeleteSimpleData( DaoValue *value )
 	if( value == NULL || value->xGC.refCount ) return;
 	switch( value->type ){
 	case DAO_NONE :
+	case DAO_BOOLEAN :
 	case DAO_INTEGER :
 	case DAO_FLOAT :
 	case DAO_COMPLEX :

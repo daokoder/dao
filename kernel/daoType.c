@@ -114,6 +114,7 @@ void DaoType_Init()
 
 	dao_type_matrix[DAO_ANY][DAO_ANY] = DAO_MT_EQ;
 	dao_type_matrix[DAO_ANY][DAO_THT] = DAO_MT_THT;
+	dao_type_matrix[DAO_THT][DAO_THT] = DAO_MT_THTX;
 	dao_type_matrix[DAO_THT][DAO_ANY] = DAO_MT_THTX;
 
 	dao_type_matrix[DAO_ENUM][DAO_ENUM] = DAO_MT_EXACT+1;
@@ -669,11 +670,21 @@ static int DaoType_MatchToTypeHolder( DaoType *self, DaoType *type, DMap *defs, 
 static int DaoType_MatchToVariant( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 {
 	int i, n, mt = DAO_MT_NOT;
+	if( self->tid == DAO_VARIANT ){
+		mt = DAO_MT_EQ;
+		for(i=0,n=self->nested->size; i<n; i++){
+			DaoType *it2 = self->nested->items.pType[i];
+			int mt2 = DaoType_MatchToVariant( it2, type, defs, binds );
+			if( mt2 < mt ) mt = mt2;
+			if( mt == DAO_MT_NOT ) break;
+		}
+		return mt;
+	}
 	for(i=0,n=type->nested->size; i<n; i++){
 		DaoType *it2 = type->nested->items.pType[i];
 		int mt2 = DaoType_Match( self, it2, defs, binds );
 		if( mt2 > mt ) mt = mt2;
-		if( mt == DAO_MT_EQ ) break;
+		if( mt >= DAO_MT_EQ ) break;
 	}
 	return mt;
 }
@@ -731,6 +742,35 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		mt = DaoType_Match( self, type, defs, binds );
 		if( mt > DAO_MT_NOT ) mt -= 1; /* slightly reduce the score; */
 		return mt;
+	}else if( self->tid == DAO_THT && type->tid == DAO_THT ){
+		if( defs ){
+			node = MAP_Find( defs, self );
+			if( node ) self = node->value.pType;
+			node = MAP_Find( defs, type );
+			if( node ) type = node->value.pType;
+		}
+		if( self->tid == DAO_THT && type->tid == DAO_THT ){
+			if( self->aux != NULL && type->aux != NULL ){
+				self = (DaoType*) self->aux;
+				type = (DaoType*) type->aux;
+				if( self->tid == DAO_VARIANT ){
+					mt = DAO_MT_NOT;
+					for(i=0,n=self->nested->size; i<n; i++){
+						DaoType *it2 = self->nested->items.pType[i];
+						int mt2 = DaoType_MatchToVariant( it2, type, defs, binds );
+						if( mt2 > mt ) mt = mt2;
+						if( mt >= DAO_MT_EQ ) break;
+					}
+				}else{
+					mt = DaoType_Match( self, type, defs, binds );
+				}
+				/* Precise matching to @T<dest_type> is require: */
+				if( mt < DAO_MT_EQ ) return DAO_MT_NOT;
+				return mt;
+			}
+			return DAO_MT_THTX;
+		}
+		return DaoType_MatchToTypeHolder( self, type, defs, binds );
 	}
 
 
@@ -740,16 +780,19 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			self->name->chars, type->name->chars, defs );
 	 */
 	if( mt == DAO_MT_THT ){
-		if( self && (self->tid == DAO_THT || self->tid == DAO_UDT) ){
+		if( self->tid == DAO_THT || self->tid == DAO_UDT ){
 			if( defs ) node = MAP_Find( defs, self );
 			if( node ) self = node->value.pType;
 		}
-		if( type && (type->tid == DAO_THT || type->tid == DAO_UDT) ){
+		if( type->tid == DAO_THT || type->tid == DAO_UDT ){
 			return DaoType_MatchToTypeHolder( self, type, defs, binds );
 		}
 	}else if( type->tid == DAO_INTERFACE ){
 		return DaoType_MatchInterface( self, (DaoInterface*) type->aux, binds );
+	}else if( type->tid == DAO_VARIANT ){
+		return DaoType_MatchToVariant( self, type, defs, binds );
 	}
+
 	mt = dao_type_matrix[self->tid][type->tid];
 	if( mt == DAO_MT_EQ ){
 		if( type->valtype ){
@@ -771,18 +814,6 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	}
 	if( mt <= DAO_MT_EXACT ) return mt;
 
-	if( self->tid == DAO_VARIANT && type->tid == DAO_VARIANT ){
-		mt = DAO_MT_EQ;
-		for(i=0,n=self->nested->size; i<n; i++){
-			it2 = self->nested->items.pType[i];
-			mt2 = DaoType_MatchToVariant( it2, type, defs, binds );
-			if( mt2 < mt ) mt = mt2;
-			if( mt == DAO_MT_NOT ) break;
-		}
-		return mt;
-	}else if( type->tid == DAO_VARIANT ){
-		return DaoType_MatchToVariant( self, type, defs, binds );
-	}
 	mt = DAO_MT_EQ;
 	switch( self->tid ){
 	case DAO_ENUM :
@@ -926,7 +957,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		mt3 = DAO_MT_NOT;
 		for(i=0,n=self->nested->size; i<n; i++){
 			it1 = self->nested->items.pType[i];
-			mt2 = DaoType_MatchTo( it1, type, defs );
+			mt2 = DaoType_Match( it1, type, defs, binds );
 			if( mt2 < mt ) mt = mt2;
 			if( mt2 > mt3 ) mt3 = mt2;
 		}

@@ -78,9 +78,14 @@
 // Values:
 //########
 //
+// bool:
+// ASM_VALUE(1Byte): DAO_BOOLEAN(1Bytes), Zeros(7Bytes);
+// ASM_END(1B): Value(1B), Zeros(7Bytes);
+//
+//
 // int:
 // ASM_VALUE(1Byte): DAO_INTEGER(1Bytes), Zeros(7Bytes);
-// ASM_END(1B): Value(4B/8B), Zeros(4B/0B);
+// ASM_END(1B): Value(8B);
 //
 //
 // float:
@@ -459,8 +464,8 @@ DaoByteBlock* DaoByteBlock_DeclareVar( DaoByteBlock *self, DString *name, DaoVal
 DaoByteBlock* DaoByteBlock_DeclareStatic( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int level, int id );
 DaoByteBlock* DaoByteBlock_DeclareGlobal( DaoByteBlock *self, DString *name, DaoValue *value, DaoType *type, int perm );
 
-DaoByteBlock* DaoByteBlock_EncodeInteger( DaoByteBlock *self, dao_integer value );
-DaoByteBlock* DaoByteBlock_EncodeFloat( DaoByteBlock *self, double value );
+DaoByteBlock* DaoByteBlock_EncodeInteger( DaoByteBlock *self, DaoInteger *value );
+DaoByteBlock* DaoByteBlock_EncodeFloat( DaoByteBlock *self, DaoFloat *value );
 DaoByteBlock* DaoByteBlock_EncodeComplex( DaoByteBlock *self, DaoComplex *value );
 DaoByteBlock* DaoByteBlock_EncodeEnum( DaoByteBlock *self, DaoEnum *value );
 

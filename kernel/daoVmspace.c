@@ -553,29 +553,47 @@ static int dao_default_test_inliner( DaoNamespace *NS, DString *mode, DString *v
 	return 0;
 }
 
+static int DaoVmSpace_InitModulePath( DaoVmSpace *self, DString *path, DString *buffer )
+{
+	DString_Reset( buffer, 0 );
+	DString_AppendChars( buffer, DAO_DLL_PREFIX "dao_aux" DAO_DLL_SUFFIX );
+	Dao_MakePath( path, buffer );
+	if( Dao_IsFile( buffer->chars ) ){
+		DaoVmSpace_AddPath( self, path->chars );
+		return 1;
+	}
+	return 0;
+}
 static void DaoVmSpace_InitPath( DaoVmSpace *self )
 {
-	DString *path;
-	char *daodir = getenv( "DAO_DIR" );
-	const char *const paths[] = { "modules", "./lib/dao/modules", "../lib/dao/modules" };
+	DString *file = DString_New();
+	DString *path = DString_New();
+	const char *const paths[] = { "../lib/dao/modules", "./lib/dao/modules" };
+	char *daodir;
 	int i;
 
-	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
 	DaoVmSpace_SetPath( self, self->startPath->chars );
 
-	DaoVmSpace_AddPath( self, DAO_DIR );
-	if( self->hasAuxlibPath && self->hasSyslibPath ) return;
+	DString_AppendChars( file, DAO_DIR );
+	DString_AppendChars( path, "lib/dao/modules/" );
+	Dao_MakePath( file, path );
+	if( DaoVmSpace_InitModulePath( self, path, file ) ) goto Done;
 
-	path = DString_New();
-	for(i=0; i<3; ++i){
-		DString_SetChars( path, paths[i] );
+	for(i=0; i<2; ++i){
+		DString_Reset( path, 0 );
+		DString_AppendChars( path, paths[i] );
 		Dao_MakePath( mainVmSpace->daoBinPath, path );
-		DaoVmSpace_AddPath( self, path->chars );
-		if( self->hasAuxlibPath && self->hasSyslibPath ) goto Done;
+		if( DaoVmSpace_InitModulePath( self, path, file ) ) goto Done;
 	}
 
-	if( daodir ) DaoVmSpace_AddPath( self, daodir );
+	daodir = getenv( "DAO_DIR" );
+	if( daodir ){
+		DString_Reset( path, 0 );
+		DString_AppendChars( path, daodir );
+		if( DaoVmSpace_InitModulePath( self, path, file ) ) goto Done;
+	}
 Done:
+	DString_Delete( file );
 	DString_Delete( path );
 }
 
@@ -2173,21 +2191,7 @@ void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path )
 
 	if( pstr->chars[pstr->size-1] == '/' ) DString_Erase( pstr, pstr->size-1, 1 );
 
-	if( Dao_IsDir( pstr->chars ) ){
-		int len = pstr->size - strlen( "modules/auxlib" );
-		if( len >= 0 ){
-			if( DString_FindChars( pstr, "modules/auxlib", 0 ) == len ) self->hasAuxlibPath = 1;
-			if( DString_FindChars( pstr, "modules/syslib", 0 ) == len ) self->hasSyslibPath = 1;
-		}
-		DList_PushFront( self->pathSearching, pstr );
-		DString_AppendChars( pstr, "/addpath.dao" );
-		if( TestFile( self, pstr ) ){
-			/* the namespace may have got no chance to reduce its reference count: */
-			DaoNamespace *ns = DaoVmSpace_LoadDaoModuleExt( self, pstr, NULL, 0 );
-			GC_IncRC( ns );
-			GC_DecRC( ns );
-		}
-	}
+	if( Dao_IsDir( pstr->chars ) ) DList_PushFront( self->pathSearching, pstr );
 	DString_Delete( pstr );
 	/*
 	   for(i=0; i<self->pathSearching->size; i++ )
@@ -2214,25 +2218,7 @@ void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path )
 			break;
 		}
 	}
-	if( id >= 0 ){
-		DString *pathDao = DString_Copy( pstr );
-		DString_AppendChars( pathDao, "/delpath.dao" );
-		if( TestFile( self, pathDao ) ){
-			DaoNamespace *ns = DaoVmSpace_LoadDaoModuleExt( self, pathDao, NULL, 0 );
-			GC_IncRC( ns );
-			GC_DecRC( ns );
-			/* id may become invalid after loadDaoModule(): */
-			id = -1;
-			for(i=0; i<self->pathSearching->size; i++ ){
-				if( DString_Compare( pstr, self->pathSearching->items.pString[i] ) == 0 ){
-					id = i;
-					break;
-				}
-			}
-		}
-		DList_Erase( self->pathSearching, id, 1 );
-		DString_Delete( pathDao );
-	}
+	if( id >= 0 ) DList_Erase( self->pathSearching, id, 1 );
 	DString_Delete( pstr );
 }
 const char* DaoVmSpace_CurrentWorkingPath( DaoVmSpace *self )

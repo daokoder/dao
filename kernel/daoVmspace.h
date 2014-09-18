@@ -108,11 +108,9 @@ struct DaoVmSpace
 	DList   *loadedModules;
 	DList   *sourceArchive;
 
-	volatile int stopit;
-	int  options;
-	char evalCmdline;
-	char hasAuxlibPath;
-	char hasSyslibPath;
+	int    stopit;
+	int    options;
+	int    evalCmdline;
 
 	DMap  *vfiles;
 	DMap  *vmodules;

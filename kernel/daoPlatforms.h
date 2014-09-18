@@ -70,7 +70,7 @@
 
 #elif defined(UNIX) /* UNIX */
 
-#  define DAO_DIR "/usr/local/dao"
+#  define DAO_DIR "/usr/local"
 #  define DAO_ENV_PATH_SEP ':'
 
 #  include<unistd.h>

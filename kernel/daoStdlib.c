@@ -58,28 +58,15 @@ static void DaoSTD_Version( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutChars( proc, p[0]->xInteger.value ? dao_version : DAO_VERSION );
 }
 
-static void DaoSTD_Program( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoVmSpace *vms = proc->vmSpace;
-	DaoProcess_PutString( proc, p[0]->xEnum.value ? vms->startPath : vms->daoBinPath );
-}
-static void DaoSTD_Source( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoNamespace *ns = proc->activeNamespace;
-	switch( p[0]->xEnum.value ){
-	case 0: DaoProcess_PutString( proc, ns->path ); break;
-	case 1: DaoProcess_PutString( proc, ns->file ); break;
-	case 2: DaoProcess_PutString( proc, ns->name ); break;
-	}
-}
-
 static void DaoSTD_Path( DaoProcess *proc, DaoValue *p[], int N )
 {
-	char *path = DString_GetData( p[0]->xString.value );
-	switch( p[1]->xEnum.value ){
-	case 0 : DaoVmSpace_SetPath( proc->vmSpace, path ); break;
-	case 1 : DaoVmSpace_AddPath( proc->vmSpace, path ); break;
-	case 2 : DaoVmSpace_DelPath( proc->vmSpace, path ); break;
+	DaoVmSpace *vms = proc->vmSpace;
+	DaoNamespace *ns = proc->activeNamespace;
+	switch( p[0]->xEnum.value ){
+	case 0: DaoProcess_PutString( proc, vms->daoBinPath ); break;
+	case 1: DaoProcess_PutString( proc, ns->name ); break;
+	case 2: DaoProcess_PutString( proc, vms->startPath ); break;
+	case 3: DaoProcess_PutString( proc, ns->path ); break;
 	}
 }
 static void DaoSTD_Compile( DaoProcess *proc, DaoValue *p[], int N )
@@ -319,9 +306,15 @@ static void DaoSTD_Test( DaoProcess *proc, DaoValue *p[], int n )
 DaoFuncItem dao_std_methods[] =
 {
 	{ DaoSTD_Version,   "version( verbose = 0 ) => string" },
-	{ DaoSTD_Program,   "program( path: enum<binary,start> ) => string" },
-	{ DaoSTD_Source,    "source( part: enum<path,file,full> = $full ) => string" },
-	{ DaoSTD_Path,      "path( path: string, action: enum<set,add,remove> = $add )" },
+	{ DaoSTD_Path,
+		/*
+		// program: the interpreter path;
+		// script : the source script path;
+		// working: the working directory from which the program was started;
+		// loading: the source directory from which the script was loaded;
+		*/
+		"path( which: enum<program,script,working,loading> = $script ) => string"
+	},
 
 	{ DaoSTD_Compile,   "compile( source: string, import: namespace|none = none ) => tuple<ns:namespace,main:routine>" },
 	{ DaoSTD_Eval,      "eval( source: string, st = io::stdio ) => any" },

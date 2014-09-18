@@ -50,11 +50,11 @@ struct DaoStream
 {
 	DAO_CSTRUCT_COMMON;
 
-	short       mode;
-	dao_integer      offset;
-	char       *format;
-	FILE       *file;
-	DString    *streamString;
+	short        mode;
+	dao_integer  offset;
+	char        *format;
+	FILE        *file;
+	DString     *streamString;
 
 	DaoUserStream *redirect;
 };
