@@ -4263,10 +4263,10 @@ int DaoInferencer_HandleListArrayEnum( DaoInferencer *self, DaoInode *inode, DMa
 		}
 	}else if( code == DVM_LIST || code == DVM_APLIST ){
 		at = DaoType_GetBaseType( at );
-		ct = DaoType_Specialize( dao_type_list_template, & at, at != NULL );
+		ct = DaoType_Specialize( dao_type_list, & at, at != NULL );
 	}else if( at && at->tid >= DAO_BOOLEAN && at->tid <= DAO_COMPLEX ){
 		at = DaoType_GetBaseType( at );
-		ct = DaoType_Specialize( dao_type_array_template, & at, 1 );
+		ct = DaoType_Specialize( dao_type_array, & at, 1 );
 	}else if( NoCheckingType( at ) ){
 		ct = dao_type_array_empty; /* specially handled for copying; */
 	}else{
@@ -5821,7 +5821,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					if( DaoType_MatchTo( types[opa+j], at, defs )==0 ) goto ErrorTyping;
 				}
 				at = DaoType_GetBaseType( at );
-				ct = DaoType_Specialize( dao_type_array_template, & at, at != NULL );
+				ct = DaoType_Specialize( dao_type_array, & at, at != NULL );
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
 				break;

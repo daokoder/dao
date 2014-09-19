@@ -886,7 +886,7 @@ int DaoProcess_Start( DaoProcess *self )
 	DList   *clsVars = NULL;
 	DList   *glbConsts = NULL;
 	DList   *clsConsts = NULL;
-	DaoProcess *dataVH[DAO_MAX_SECTDEPTH+1] = {0};
+	DaoProcess *dataVH[DAO_MAX_SECTDEPTH+1] = {NULL};
 	DaoVariable *variable = NULL;
 	DaoVariable **upValues = NULL;
 	DaoValue  **dataVO = NULL;

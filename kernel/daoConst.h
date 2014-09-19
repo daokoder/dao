@@ -29,10 +29,8 @@
 #ifndef DAO_CONST_H
 #define DAO_CONST_H
 
-#define DAO_MAX_PARAM  30
-#define DAO_MAX_INDEX  10
-
-#define DAO_MAX_SECTDEPTH  8
+#define DAO_MAX_PARAM      32
+#define DAO_MAX_SECTDEPTH  64
 
 #define DAO_KERNEL
 

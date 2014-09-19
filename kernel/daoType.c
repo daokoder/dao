@@ -55,12 +55,12 @@ DaoType *dao_type_float = NULL;
 DaoType *dao_type_complex = NULL;
 DaoType *dao_type_string = NULL;
 DaoType *dao_type_tuple = NULL;
-DaoType *dao_type_array_template = NULL;
+DaoType *dao_type_array = NULL;
 DaoType *dao_type_array_empty = NULL;
-DaoType *dao_type_list_template = NULL;
+DaoType *dao_type_list = NULL;
 DaoType *dao_type_list_empty = NULL;
 DaoType *dao_type_list_any = NULL;
-DaoType *dao_type_map_template = NULL;
+DaoType *dao_type_map = NULL;
 DaoType *dao_type_map_empty = NULL;
 DaoType *dao_type_map_any = NULL;
 DaoType *dao_type_routine = NULL;
@@ -1232,13 +1232,13 @@ DaoType* DaoType_GetCommonType( int type, int subtype )
 		break;
 	case DAO_LIST :
 		switch( subtype ){
-		case DAO_NONE : return dao_type_list_template;
+		case DAO_NONE : return dao_type_list_empty;
 		case DAO_ANY : return dao_type_list_any;
 		}
 		break;
 	case DAO_MAP  :
 		switch( subtype ){
-		case DAO_NONE : return dao_type_map_template;
+		case DAO_NONE : return dao_type_map_empty;
 		case DAO_ANY : return dao_type_map_any;
 		}
 		break;

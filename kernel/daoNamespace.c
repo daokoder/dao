@@ -1625,12 +1625,12 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 
 	switch( tid ){
 	case DAO_ARRAY :
-		if( dao_type_array_template == NULL ) return NULL; /* Numeric array not enable; */
-		return DaoType_Specialize( dao_type_array_template, nest, N );
+		if( dao_type_array == NULL ) return NULL; /* Numeric array not enable; */
+		return DaoType_Specialize( dao_type_array, nest, N );
 	case DAO_LIST :
-		return DaoType_Specialize( dao_type_list_template, nest, N );
+		return DaoType_Specialize( dao_type_list, nest, N );
 	case DAO_MAP :
-		return DaoType_Specialize( dao_type_map_template, nest, N );
+		return DaoType_Specialize( dao_type_map, nest, N );
 	case DAO_INTERFACE :
 		if( pb == NULL ) return NULL;
 		return pb->xInterface.abtype;

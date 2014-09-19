@@ -2527,28 +2527,27 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_none = DaoNamespace_MakeValueType( daons, dao_none_value );
 	dao_type_for_iterator = DaoNamespace_DefineType( daons, "tuple<valid:bool,iterator:any>", "ForIterator" );
 
-	dao_type_tuple = DaoParser_ParseTypeName( "tuple<...>", daons, NULL );
-
+	dao_type_tuple = DaoNamespace_DefineType( daons, "tuple<...>", NULL );
 
 	DaoNamespace_SetupType( daons, & stringTyper, dao_type_string );
 	DaoNamespace_SetupType( daons, & comTyper, dao_type_complex );
 
 #ifdef DAO_WITH_NUMARRAY
-	dao_type_array_template = DaoNamespace_WrapGenericType( daons, & numarTyper, DAO_ARRAY );
-	dao_type_array_empty = DaoType_Specialize( dao_type_array_template, NULL, 0 );
+	dao_type_array = DaoNamespace_WrapGenericType( daons, & numarTyper, DAO_ARRAY );
+	dao_type_array_empty = DaoType_Specialize( dao_type_array, NULL, 0 );
 	dao_type_array_empty = DaoType_GetConstType( dao_type_array_empty );
 	dao_array_types[DAO_NONE] = dao_type_array_empty;
-	dao_array_types[DAO_BOOLEAN] = DaoType_Specialize( dao_type_array_template, & dao_type_bool, 1 );
-	dao_array_types[DAO_INTEGER] = DaoType_Specialize( dao_type_array_template, & dao_type_int, 1 );
-	dao_array_types[DAO_FLOAT] = DaoType_Specialize( dao_type_array_template, & dao_type_float, 1 );
-	dao_array_types[DAO_COMPLEX] = DaoType_Specialize( dao_type_array_template, & dao_type_complex, 1 );
+	dao_array_types[DAO_BOOLEAN] = DaoType_Specialize( dao_type_array, & dao_type_bool, 1 );
+	dao_array_types[DAO_INTEGER] = DaoType_Specialize( dao_type_array, & dao_type_int, 1 );
+	dao_array_types[DAO_FLOAT] = DaoType_Specialize( dao_type_array, & dao_type_float, 1 );
+	dao_array_types[DAO_COMPLEX] = DaoType_Specialize( dao_type_array, & dao_type_complex, 1 );
 #endif
 
-	dao_type_list_template = DaoNamespace_WrapGenericType( daons, & listTyper, DAO_LIST );
-	dao_type_map_template = DaoNamespace_WrapGenericType( daons, & mapTyper, DAO_MAP );
+	dao_type_list = DaoNamespace_WrapGenericType( daons, & listTyper, DAO_LIST );
+	dao_type_map = DaoNamespace_WrapGenericType( daons, & mapTyper, DAO_MAP );
 
-	dao_type_list_any = DaoType_Specialize( dao_type_list_template, NULL, 0 );
-	dao_type_map_any  = DaoType_Specialize( dao_type_map_template, NULL, 0 );
+	dao_type_list_any = DaoType_Specialize( dao_type_list, NULL, 0 );
+	dao_type_map_any  = DaoType_Specialize( dao_type_map, NULL, 0 );
 
 	/*
 	// These types should not be accessible by developers using type annotation.

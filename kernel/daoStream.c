@@ -426,15 +426,19 @@ static void DaoIO_Close( DaoProcess *proc, DaoValue *p[], int N )
 	DaoStream *self = & p[0]->xStream;
 	DaoStream_Close( self );
 }
+static int DaoStream_IsOpen( DaoStream *self );
+static int DaoStream_EndOfStream( DaoStream *self );
+static int DaoStream_IsReadable( DaoStream *self );
+static int DaoStream_IsWritable( DaoStream *self );
 static void DaoIO_Check( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
 	int res = 0, what = p[1]->xEnum.value;
 	switch( what ){
-	case 0 : res = (self->mode & DAO_STREAM_READABLE) != 0; break;
-	case 1 : res = (self->mode & DAO_STREAM_WRITABLE) != 0; break;
-	case 2 : res = self->file != NULL; break;
-	case 3 : if( self->file ) res = feof( self->file ); break;
+	case 0 : res = DaoStream_IsReadable( self ); break;
+	case 1 : res = DaoStream_IsWritable( self ); break;
+	case 2 : res = DaoStream_IsOpen( self ); break;
+	case 3 : res = DaoStream_EndOfStream( self ); break;
 	}
 	DaoProcess_PutBoolean( proc, res );
 }
@@ -611,9 +615,7 @@ DaoStream* DaoStream_New()
 	DaoStream *self = (DaoStream*) dao_calloc( 1, sizeof(DaoStream) );
 	DaoCstruct_Init( (DaoCstruct*) self, dao_type_stream );
 	self->type = DAO_CSTRUCT; /* dao_type_stream may still be null in DaoVmSpace_New(); */
-	self->offset = 0;
 	self->streamString = DString_New();
-	self->mode = DAO_STREAM_READABLE | DAO_STREAM_WRITABLE;
 #ifdef DAO_USE_GC_LOGGER
 	if( dao_type_stream == NULL ) DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
@@ -630,7 +632,7 @@ void DaoStream_Close( DaoStream *self )
 		}
 		self->file = NULL;
 	}
-	self->mode = DAO_STREAM_WRITABLE | DAO_STREAM_READABLE;
+	self->mode &= ~(DAO_STREAM_WRITABLE | DAO_STREAM_READABLE);
 }
 void DaoStream_Delete( DaoStream *self )
 {
@@ -638,6 +640,67 @@ void DaoStream_Delete( DaoStream *self )
 	DString_Delete( self->streamString );
 	DaoCstruct_Free( (DaoCstruct*) self );
 	dao_free( self );
+}
+static int DaoStream_IsOpen( DaoStream *self )
+{
+	if( self->mode & DAO_STREAM_STRING ){
+		return 1;
+	}else if( self->mode & (DAO_STREAM_FILE|DAO_STREAM_PIPE) ){
+		return self->file != NULL;
+	}else if( self->redirect ){
+		return self->redirect->StdioRead != NULL || self->redirect->StdioWrite != NULL;
+	}else if( self->file == stdin || self->file == stdout || self->file == stderr ){
+		return 1;
+	}else if( self->file == NULL ){
+		return 1;
+	}
+	return 0;
+}
+static int DaoStream_EndOfStream( DaoStream *self )
+{
+	if( self->mode & DAO_STREAM_STRING ){
+		return 0;
+	}else if( self->mode & (DAO_STREAM_FILE|DAO_STREAM_PIPE) ){
+		if( self->file == NULL ) return 1;
+		return feof( self->file );
+	}else if( self->redirect ){
+		return self->redirect->StdioRead == NULL && self->redirect->StdioWrite == NULL;
+	}else if( self->file == stdin || self->file == stdout || self->file == stderr ){
+		return 0;
+	}else if( self->file == NULL ){
+		return 0;
+	}
+	return 1;
+}
+static int DaoStream_IsReadable( DaoStream *self )
+{
+	if( self->mode & DAO_STREAM_STRING ){
+		return 1;
+	}else if( self->mode & (DAO_STREAM_FILE|DAO_STREAM_PIPE) ){
+		if( self->file == NULL ) return 0;
+		if( feof( self->file ) ) return 0;
+		return self->mode & DAO_STREAM_READABLE;
+	}else if( self->redirect ){
+		return self->redirect->StdioRead != NULL;
+	}else if( self->file == NULL || self->file == stdin ){
+		return 1;
+	}
+	return 0;
+}
+static int DaoStream_IsWritable( DaoStream *self )
+{
+	if( self->mode & DAO_STREAM_STRING ){
+		return 1;
+	}else if( self->mode & (DAO_STREAM_FILE|DAO_STREAM_PIPE) ){
+		if( self->file == NULL ) return 0;
+		if( feof( self->file ) ) return 0;
+		return self->mode & DAO_STREAM_WRITABLE;
+	}else if( self->redirect ){
+		return self->redirect->StdioWrite != NULL;
+	}else if( self->file == NULL || self->file == stdout || self->file == stderr ){
+		return 1;
+	}
+	return 0;
 }
 DaoUserStream* DaoStream_SetUserStream( DaoStream *self, DaoUserStream *us )
 {
