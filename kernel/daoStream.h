@@ -57,6 +57,12 @@ struct DaoStream
 	DString     *streamString;
 
 	DaoUserStream *redirect;
+
+	DString  *format1;
+	DString  *format2;
+	DString  *fgcolor;
+	DString  *bgcolor;
+	DMap     *cyclic;
 };
 DAO_DLL DaoType *dao_type_stream;
 
@@ -74,6 +80,11 @@ DAO_DLL void DaoStream_WriteChars( DaoStream *self, const char *val );
 DAO_DLL void DaoStream_WritePointer( DaoStream *self, void *val );
 DAO_DLL void DaoStream_WriteFormatedInt( DaoStream *self, dao_integer val, const char *format );
 DAO_DLL void DaoStream_WriteNewLine( DaoStream *self );
+
+DAO_DLL int DaoStream_IsOpen( DaoStream *self );
+DAO_DLL int DaoStream_EndOfStream( DaoStream *self );
+DAO_DLL int DaoStream_IsReadable( DaoStream *self );
+DAO_DLL int DaoStream_IsWritable( DaoStream *self );
 
 DAO_DLL int DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor );
 DAO_DLL int DaoStream_ReadLine( DaoStream *self, DString *buf );

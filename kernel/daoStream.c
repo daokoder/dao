@@ -49,62 +49,68 @@ void DaoStream_Flush( DaoStream *self )
 		fflush( stdout );
 	}
 }
+static int DaoIO_CheckMode( DaoStream *self, DaoProcess *proc, int what )
+{
+	if( DaoStream_IsOpen( self ) == 0 ){
+		DaoProcess_RaiseError( proc, NULL, "stream is not open!" );
+		return 0;
+	}
+	if( DaoStream_EndOfStream( self ) == 1 ){
+		DaoProcess_RaiseError( proc, NULL, "stream reached the end!" );
+		return 0;
+	}
+	if( what == DAO_STREAM_READABLE && DaoStream_IsReadable( self ) == 0 ){
+		DaoProcess_RaiseError( proc, NULL, "stream is not readable!" );
+		return 0;
+	}
+	if( what == DAO_STREAM_WRITABLE && DaoStream_IsWritable( self ) == 0 ){
+		DaoProcess_RaiseError( proc, NULL, "stream is not writable!" );
+		return 0;
+	}
+	return 1;
+}
 static void DaoIO_Write0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int N )
 {
-	DMap *cycData;
 	int i;
-	if( (self->mode & (DAO_STREAM_FILE | DAO_STREAM_PIPE)) && self->file == NULL ){
-		DaoProcess_RaiseError( proc, NULL, "stream is not open!" );
-		return;
-	}
-	cycData = DMap_New(0,0);
-	for(i=0; i<N; i++) DaoValue_Print( p[i], proc, self, cycData );
-	DMap_Delete( cycData );
+
+	DMap_Reset( self->cyclic );
+	for(i=0; i<N; i++) DaoValue_Print( p[i], proc, self, self->cyclic );
 }
 static void DaoIO_Write( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
-	if( ( self->mode & DAO_STREAM_WRITABLE ) == 0 ){
-		DaoProcess_RaiseError( proc, NULL, "stream is not writable" );
-		return;
-	}
+	if( DaoIO_CheckMode( self, proc, DAO_STREAM_WRITABLE ) == 0 ) return;
 	DaoIO_Write0( self, proc, p+1, N-1 );
 }
 static void DaoIO_Write2( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *stream = proc->stdioStream;
 	if( stream == NULL ) stream = proc->vmSpace->stdioStream;
+	if( DaoIO_CheckMode( stream, proc, DAO_STREAM_WRITABLE ) == 0 ) return;
 	DaoIO_Write0( stream, proc, p, N );
 }
 static void DaoIO_Writeln0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int N )
 {
-	DMap *cycData;
 	int i;
-	if( (self->mode & (DAO_STREAM_FILE | DAO_STREAM_PIPE)) && self->file == NULL ){
-		DaoProcess_RaiseError( proc, NULL, "stream is not open!" );
-		return;
-	}
-	cycData = DMap_New(0,0);
+	if( DaoIO_CheckMode( self, proc, DAO_STREAM_WRITABLE ) == 0 ) return;
 	for(i=0; i<N; i++){
-		DaoValue_Print( p[i], proc, self, cycData );
+		DMap_Reset( self->cyclic );
+		DaoValue_Print( p[i], proc, self, self->cyclic );
 		if( i+1<N ) DaoStream_WriteChars( self, " ");
 	}
-	DMap_Delete( cycData );
 	DaoStream_WriteChars( self, "\n");
 }
 static void DaoIO_Writeln( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
-	if( ( self->mode & DAO_STREAM_WRITABLE ) == 0 ){
-		DaoProcess_RaiseError( proc, NULL, "stream is not writable" );
-		return;
-	}
+	if( DaoIO_CheckMode( self, proc, DAO_STREAM_WRITABLE ) == 0 ) return;
 	DaoIO_Writeln0( self, proc, p+1, N-1 );
 }
 static void DaoIO_Writeln2( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *stream = proc->stdioStream;
 	if( stream == NULL ) stream = proc->vmSpace->stdioStream;
+	if( DaoIO_CheckMode( stream, proc, DAO_STREAM_WRITABLE ) == 0 ) return;
 	DaoIO_Writeln0( stream, proc, p, N );
 }
 /*
@@ -130,22 +136,17 @@ static void DaoIO_Writeln2( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoValue *value;
-	DMap *cycData;
-	DString *format, *fmt2;
-	DString *fgcolor, *bgcolor;
+	DString *format = self->format1;
+	DString *fmt2 = self->format2;
+	DString *fgcolor = self->fgcolor;
+	DString *bgcolor = self->bgcolor;
 	const char *convs = "asSpcCdiouxXfFeEgG";
 	char F, *s, *end, *fg, *bg, *fmt, message[100];
 	int k, id = 0;
-	if( (self->mode & (DAO_STREAM_FILE | DAO_STREAM_PIPE)) && self->file == NULL ){
-		DaoProcess_RaiseError( proc, NULL, "stream is not open!" );
-		return;
-	}
-	/* TODO: move these variable to DaoStream for efficiency? */
-	cycData = DMap_New(0,0);
-	fmt2 = DString_New();
-	fgcolor = DString_New();
-	bgcolor = DString_New();
-	format = DString_Copy( p[0]->xString.value );
+
+	if( DaoIO_CheckMode( self, proc, DAO_STREAM_WRITABLE ) == 0 ) return;
+
+	DString_Assign( format, p[0]->xString.value );
 	s = format->chars;
 	end = s + format->size;
 	for(; s<end; s++){
@@ -223,7 +224,8 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 			DaoStream_WritePointer( self, value );
 		}else if( F == 'a' ){
 			self->format = NULL;
-			DaoValue_Print( value, proc, self, cycData );
+			DMap_Reset( self->cyclic );
+			DaoValue_Print( value, proc, self, self->cyclic );
 		}else{
 			goto WrongParameter;
 		}
@@ -244,25 +246,18 @@ WrongParameter:
 		sprintf( message, "%i-th parameter has wrong type for format \"%s\"!", id, fmt2->chars );
 		DaoProcess_RaiseWarning( proc, NULL, message );
 	}
-	DString_Delete( fgcolor );
-	DString_Delete( bgcolor );
-	DString_Delete( format );
-	DString_Delete( fmt2 );
-	DMap_Delete( cycData );
 }
 static void DaoIO_Writef( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
-	if( ( self->mode & DAO_STREAM_WRITABLE ) == 0 ){
-		DaoProcess_RaiseError( proc, NULL, "stream is not writable" );
-		return;
-	}
+	if( DaoIO_CheckMode( self, proc, DAO_STREAM_WRITABLE ) == 0 ) return;
 	DaoIO_Writef0( self, proc, p+1, N-1 );
 }
 static void DaoIO_Writef2( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *stream = proc->stdioStream;
 	if( stream == NULL ) stream = proc->vmSpace->stdioStream;
+	if( DaoIO_CheckMode( stream, proc, DAO_STREAM_WRITABLE ) == 0 ) return;
 	DaoIO_Writef0( stream, proc, p, N );
 }
 static void DaoIO_Flush( DaoProcess *proc, DaoValue *p[], int N )
@@ -283,10 +278,7 @@ static void DaoIO_Read( DaoProcess *proc, DaoValue *p[], int N )
 		if( self->file ) fin = self->file;
 		amount = -2;
 	}
-	if( (self->mode & DAO_STREAM_READABLE) == 0 ){
-		DaoProcess_RaiseError( proc, NULL, "stream is not readable" );
-		return;
-	}
+	if( DaoIO_CheckMode( self, proc, DAO_STREAM_READABLE ) == 0 ) return;
 	if( N > 1 ){
 		if( p[1]->type == DAO_INTEGER ){
 			amount = p[1]->xInteger.value;
@@ -426,10 +418,6 @@ static void DaoIO_Close( DaoProcess *proc, DaoValue *p[], int N )
 	DaoStream *self = & p[0]->xStream;
 	DaoStream_Close( self );
 }
-static int DaoStream_IsOpen( DaoStream *self );
-static int DaoStream_EndOfStream( DaoStream *self );
-static int DaoStream_IsReadable( DaoStream *self );
-static int DaoStream_IsWritable( DaoStream *self );
 static void DaoIO_Check( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
@@ -547,6 +535,7 @@ static void DaoIO_ReadLines2( DaoProcess *proc, DaoValue *p[], int N )
 	DaoList *list = DaoProcess_PutList( proc );
 	int count = p[1]->xInteger.value;
 	int chop = p[2]->xBoolean.value;
+	if( DaoIO_CheckMode( (DaoStream*) p[0], proc, DAO_STREAM_READABLE ) == 0 ) return;
 	DaoStream_ReadLines( (DaoStream*) p[0], list, proc, count, chop );
 }
 
@@ -616,6 +605,11 @@ DaoStream* DaoStream_New()
 	DaoCstruct_Init( (DaoCstruct*) self, dao_type_stream );
 	self->type = DAO_CSTRUCT; /* dao_type_stream may still be null in DaoVmSpace_New(); */
 	self->streamString = DString_New();
+	self->format1 = DString_New();
+	self->format2 = DString_New();
+	self->fgcolor = DString_New();
+	self->bgcolor = DString_New();
+	self->cyclic = DHash_New(0,0);
 #ifdef DAO_USE_GC_LOGGER
 	if( dao_type_stream == NULL ) DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
@@ -637,11 +631,16 @@ void DaoStream_Close( DaoStream *self )
 void DaoStream_Delete( DaoStream *self )
 {
 	DaoStream_Close( self );
+	DMap_Delete( self->cyclic );
+	DString_Delete( self->format1 );
+	DString_Delete( self->format2 );
+	DString_Delete( self->fgcolor );
+	DString_Delete( self->bgcolor );
 	DString_Delete( self->streamString );
 	DaoCstruct_Free( (DaoCstruct*) self );
 	dao_free( self );
 }
-static int DaoStream_IsOpen( DaoStream *self )
+int DaoStream_IsOpen( DaoStream *self )
 {
 	if( self->mode & DAO_STREAM_STRING ){
 		return 1;
@@ -656,7 +655,7 @@ static int DaoStream_IsOpen( DaoStream *self )
 	}
 	return 0;
 }
-static int DaoStream_EndOfStream( DaoStream *self )
+int DaoStream_EndOfStream( DaoStream *self )
 {
 	if( self->mode & DAO_STREAM_STRING ){
 		return 0;
@@ -672,7 +671,7 @@ static int DaoStream_EndOfStream( DaoStream *self )
 	}
 	return 1;
 }
-static int DaoStream_IsReadable( DaoStream *self )
+int DaoStream_IsReadable( DaoStream *self )
 {
 	if( self->mode & DAO_STREAM_STRING ){
 		return 1;
@@ -687,7 +686,7 @@ static int DaoStream_IsReadable( DaoStream *self )
 	}
 	return 0;
 }
-static int DaoStream_IsWritable( DaoStream *self )
+int DaoStream_IsWritable( DaoStream *self )
 {
 	if( self->mode & DAO_STREAM_STRING ){
 		return 1;
