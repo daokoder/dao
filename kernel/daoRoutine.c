@@ -552,9 +552,12 @@ static int Dao_CheckParameter( DaoType *partype, DaoValue *argvalue, DaoType *ar
 {
 	int m = 0;
 	if( argvalue && argtype && argtype->tid > DAO_ENUM ){
-		m = DaoType_MatchValue( partype, argvalue, defs );
 		/* See comments in DaoType_MatchToX() regarding invariable: */
 		if( argtype->invar && ! argtype->konst && ! partype->invar ) return 0;
+		m = DaoType_MatchValue( partype, argvalue, defs );
+	}else if( argtype && argtype->tid > DAO_ENUM ){
+		if( argtype->invar && ! argtype->konst && ! partype->invar ) return 0;
+		m = DaoType_MatchTo( argtype, partype, defs );
 	}else if( argvalue ){
 		m = DaoType_MatchValue( partype, argvalue, defs );
 	}else if( argtype ){

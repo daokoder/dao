@@ -211,7 +211,7 @@ const char* const coreTypeNames[] =
 	"enum", "array", "list", "map", "tuple"
 };
 const char *const daoBitBoolArithOpers[] = {
-	"!", "-", "~", "&", "+", "-", "*", "/", "%", "**", "&&", "||",
+	"!", "-", "~", "%", "+", "-", "*", "/", "%", "**", "&&", "||",
 	"<", "<=", "==", "!=", "in", "&", "|", "^", "<<", ">>"
 };
 const char *const daoBitBoolArithOpers2[] = {

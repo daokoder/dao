@@ -2396,7 +2396,7 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 	}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
 		rout = DaoType_FindFunction( at, mbs );
 	}
-	if( rout == NULL ) return ct;
+	if( rout == NULL ) return NULL;
 	rout2 = rout;
 	rout = NULL;
 	if( ct ){ /* Check methods that can take all three parameters: */
@@ -2409,8 +2409,7 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 	if( rout == NULL ) rout = DaoRoutine_ResolveX( rout2, NULL, NULL, NULL, ts+1, 1+(bt!=NULL), DVM_CALL );
 	/* if the operation is used in the overloaded operator, do operation by address */
 	if( boolop && rout == self ) return dao_type_int;
-	if( rout ) ct = & rout->routType->aux->xType;
-	return ct;
+	return rout ? (DaoType*) rout->routType->aux : NULL;
 }
 static DaoType* DaoCheckBinArith( DaoRoutine *self, DaoVmCodeX *vmc,
 		DaoType *at, DaoType *bt, DaoType *ct, DaoClass *hostClass, DString *mbs )
@@ -5585,7 +5584,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			if( at->tid == DAO_OBJECT || at->tid == DAO_CDATA
 					|| at->tid == DAO_CSTRUCT || at->tid == DAO_INTERFACE ){
 				ct = DaoCheckBinArith( routine, vmc, at, NULL, types[opc], hostClass, mbs );
-				if( ct == NULL ) ct = dao_type_int;
+				if( ct == NULL ) goto InvOper;
 			}
 			AssertTypeMatching( at, ct, defs );
 			if( NoCheckingType( at ) ) continue;
@@ -5602,6 +5601,11 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			{
 				ct = DaoInferencer_UpdateVarType( self, opc, at );
 				if( NoCheckingType( at ) ) continue;
+				if( at->tid == DAO_OBJECT || at->tid == DAO_CDATA
+						|| at->tid == DAO_CSTRUCT || at->tid == DAO_INTERFACE ){
+					ct = DaoCheckBinArith( routine, vmc, at, NULL, types[opc], hostClass, mbs );
+					if( ct == NULL ) goto InvOper;
+				}
 				AssertTypeMatching( at, ct, defs );
 				if( at->realnum && ct->realnum ){
 					if( at->tid != DAO_INTEGER )
@@ -5618,6 +5622,11 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			{
 				ct = DaoInferencer_UpdateType( self, opc, dao_type_int );
 				if( NoCheckingType( at ) ) continue;
+				if( at->tid == DAO_OBJECT || at->tid == DAO_CDATA
+						|| at->tid == DAO_CSTRUCT || at->tid == DAO_INTERFACE ){
+					ct = DaoCheckBinArith( routine, vmc, at, NULL, types[opc], hostClass, mbs );
+					if( ct == NULL ) goto InvOper;
+				}
 				AssertTypeMatching( dao_type_int, ct, defs );
 				if( at->tid >= DAO_INTEGER && at->tid <= DAO_COMPLEX ){
 					vmc->code = DVM_DATA_I;

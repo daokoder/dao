@@ -57,10 +57,33 @@ class Integer
 		io.writeln( "routine !( A : Integer )" );
 		return Integer( ! A.value );
 	}
+	static routine <<( C: Integer, A: Integer, B: int ){
+		io.writeln( "routine <<( C: Integer, B: Integer, A: int )" );
+		C.value = A.value << B;
+		return C
+	}
+	static routine <<( A: Integer, B: int ){
+		io.writeln( "routine <<( C: Integer, B: Integer, A: int )" );
+		return Integer( A.value << B );
+	}
+	static routine ~( C : Integer, A : Integer ){
+		io.writeln( "routine ~( C : Integer, A : Integer )" );
+		C.value = ~ A.value;
+		return C;
+	}
+	static routine ~( A : Integer ){
+		io.writeln( "routine ~( A : Integer )" );
+		return Integer( ~ A.value );
+	}
+	static routine %( A : Integer ){
+		io.writeln( "routine %( A : Integer )" );
+		return % A.value;
+	}
 #{
 #}
 	routine serialize(){ return value; }
 }
+
 
 n1 = Integer(10);
 n2 = Integer(20);
@@ -93,3 +116,11 @@ n9 += n8
 ls = { n8 + n9 }
 
 std.about( n8 + n9 );
+
+invar n11 = Integer(10);
+#io.writeln( % n11 )
+#io.writeln( n9 + n11 )
+
+k : any = n9
+io.writeln( "The following should raise an error!" )
+io.writeln( k + n11 ) # Error

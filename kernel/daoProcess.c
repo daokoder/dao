@@ -100,6 +100,8 @@ static DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc );
 static DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc );
 static int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A );
 
+static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoValue *C, DaoType *TA, DaoType *TB );
+
 int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, DaoProcess *ctx );
 int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, DaoProcess *ctx );
 int DaoArray_ArrayArith( DaoArray *s, DaoArray *l, DaoArray *r, short p, DaoProcess *c );
@@ -576,12 +578,12 @@ static int DaoProcess_CheckInvarMethod( DaoProcess *self, DaoRoutine *routine )
 }
 /* If the callable is a constructor, and O is a derived type of the constructor's type,
  * cast O to the constructor's type and then call the constructor on the casted object: */
-int DaoProcess_PushCallable( DaoProcess *self, DaoRoutine *R, DaoValue *O, DaoValue *P[], int N )
+static int DaoProcess_PushCallableX( DaoProcess *self, DaoRoutine *R, DaoValue *O, DaoValue *P[], DaoType *T[], int N )
 {
 	if( R == NULL ) return DAO_ERROR;
-	R = DaoRoutine_Resolve( R, O, NULL, P, NULL, N, DVM_CALL );
+	R = DaoRoutine_Resolve( R, O, NULL, P, T, N, DVM_CALL );
 	if( R != NULL && DaoProcess_CheckInvarMethod( self, R ) == 0 ) return DAO_ERROR;
-	if( R ) R = DaoProcess_PassParams( self, R, NULL, O, P, NULL, N, DVM_CALL );
+	if( R ) R = DaoProcess_PassParams( self, R, NULL, O, P, T, N, DVM_CALL );
 	if( R == NULL ) return DAO_ERROR_PARAM;
 
 	if( R->body ){
@@ -596,6 +598,10 @@ int DaoProcess_PushCallable( DaoProcess *self, DaoRoutine *R, DaoValue *O, DaoVa
 		DaoProcess_PushFunction( self, R );
 	}
 	return 0;
+}
+int DaoProcess_PushCallable( DaoProcess *self, DaoRoutine *R, DaoValue *O, DaoValue *P[], int N )
+{
+	return DaoProcess_PushCallableX( self, R, O, P, NULL, N );
 }
 void DaoProcess_InterceptReturnValue( DaoProcess *self )
 {
@@ -896,7 +902,7 @@ int DaoProcess_Start( DaoProcess *self )
 	DaoValue **vref;
 	DaoValue **locVars;
 	DaoType **locTypes;
-	DaoType *abtp;
+	DaoType *abtp, *ta, *tb;
 	DaoTuple *tuple;
 	DaoList *list;
 	DString *str;
@@ -1424,6 +1430,14 @@ CallEntry:
 			vA = locVars[vmc->a];
 			vC = locVars[vmc->c];
 			switch( vA->type ){
+			case DAO_CSTRUCT :
+			case DAO_CDATA :
+			case DAO_OBJECT :
+				self->activeCode = vmc;
+				ta = self->activeTypes[ vmc->a ];
+				tb = self->activeTypes[ vmc->b ];
+				if( DaoProcess_TryUserArith( self, vA, NULL, vC, ta, tb ) ) goto CheckException;
+				goto RaiseErrorInvalidOperation;
 			case DAO_NONE    : vC->xInteger.value = 0; break;
 			case DAO_BOOLEAN : vC->xInteger.value = sizeof(dao_integer); break;
 			case DAO_INTEGER : vC->xInteger.value = sizeof(dao_integer); break;
@@ -4647,7 +4661,7 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 // For binary operation, if C == A, the following will be tried first:
 // operator += ( C : Number, B : Number ){... return C_or_else}
 */
-static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoValue *C )
+static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoValue *C, DaoType *TA, DaoType *TB )
 {
 	DaoRoutine *rout = 0;
 	DaoObject *object = (DaoObject*)A;
@@ -4655,6 +4669,7 @@ static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, 
 	DaoClass *klass;
 	DString *name = self->mbstring;
 	DaoValue **p, *par[3];
+	DaoType *argt[3] = { NULL };
 	DaoValue *value = NULL;
 	int code = self->activeCode->code;
 	int boolres = code >= DVM_AND && code <= DVM_NE;
@@ -4670,6 +4685,8 @@ static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, 
 	par[0] = C;
 	par[1] = A;
 	par[2] = B;
+	argt[1] = TA;
+	argt[2] = TB;
 	if( C == A && daoBitBoolArithOpers2[ code-DVM_NOT ] ){
 		DString_SetChars( name, daoBitBoolArithOpers2[ code-DVM_NOT ] );
 		if( A->type == DAO_OBJECT ){
@@ -4683,8 +4700,8 @@ static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, 
 		if( rc == 0 && value && value->type == DAO_ROUTINE ){
 			rout = (DaoRoutine*) value;
 			/* Check the method with self parameter first, then other methods: */
-			if( DaoProcess_PushCallable( self, rout, A, & B, B!=NULL ) == 0 ) return 1;
-			if( DaoProcess_PushCallable( self, rout, NULL, par+1, 2 ) == 0 ) return 1;
+			if( DaoProcess_PushCallableX( self, rout, A, & B, & TB, B!=NULL ) == 0 ) return 1;
+			if( DaoProcess_PushCallableX( self, rout, NULL, par+1, argt+1, 2 ) == 0 ) return 1;
 		}
 	}
 	DString_SetChars( name, daoBitBoolArithOpers[ code-DVM_NOT ] );
@@ -4701,11 +4718,11 @@ TryAgain:
 		rout = (DaoRoutine*) value;
 		if( C && C->xBase.refCount == 1 ){ /* Check methods that can take three parameters: */
 			/* Check only static method that takes parameters: C, A, B: */
-			if( DaoProcess_PushCallable( self, rout, NULL, par, 2+(B!=NULL) ) == 0 ) return 1;
+			if( DaoProcess_PushCallableX( self, rout, NULL, par, argt, 2+(B!=NULL) ) == 0 ) return 1;
 		}
 		/* Check the method with self parameter first, then other methods: */
-		if( DaoProcess_PushCallable( self, rout, A, & B, B!=NULL ) == 0 ) return 1;
-		if( DaoProcess_PushCallable( self, rout, NULL, par+1, 1+(B!=NULL) ) == 0 ) return 1;
+		if( DaoProcess_PushCallableX( self, rout, A, & B, & TB, B!=NULL ) == 0 ) return 1;
+		if( DaoProcess_PushCallableX( self, rout, NULL, par+1, argt+1, 1+(B!=NULL) ) == 0 ) return 1;
 	}
 	if( first && (code == DVM_LT || code == DVM_LE) ){
 		first = 0;
@@ -4733,14 +4750,6 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 	self->activeCode = vmc;
 	if( A == NULL || B == NULL ){
 		DaoProcess_RaiseError( self, "Value", "on none object" );
-		return;
-	}
-
-	if( A->type == DAO_OBJECT || A->type == DAO_CDATA || A->type == DAO_CSTRUCT ){
-		self->activeCode = vmc;
-		if( DaoProcess_TryUserArith( self, A, B, C ) == 0 ){
-			DaoProcess_RaiseError( self, "Type", NULL );
-		}
 		return;
 	}
 
@@ -4912,6 +4921,13 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 				DaoProcess_RaiseError( self, "Type", "symbol not found in the enum" );
 			return;
 		}
+	}else if( A->type == DAO_OBJECT || A->type == DAO_CDATA || A->type == DAO_CSTRUCT ){
+		DaoType *ta = self->activeTypes[ vmc->a ];
+		DaoType *tb = self->activeTypes[ vmc->b ];
+		self->activeCode = vmc;
+		if( DaoProcess_TryUserArith( self, A, B, C, ta, tb ) == 0 ){
+			DaoProcess_RaiseError( self, "Type", NULL );
+		}
 	}else{
 		DaoProcess_RaiseError( self, "Type", "" );
 	}
@@ -4927,72 +4943,6 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 	self->activeCode = vmc;
 	if( A == NULL ) A = dao_none_value;
 	if( B == NULL ) B = dao_none_value;
-	if( A->type ==0 || B->type ==0 ){
-		switch( vmc->code ){
-		case DVM_AND: D = B && A; break;
-		case DVM_OR:  D = A || B; break;
-		case DVM_LT:  D = A->type < B->type; break;
-		case DVM_LE:  D = A->type <= B->type; break;
-		case DVM_EQ:  D = A->type == B->type; break;
-		case DVM_NE:  D = A->type != B->type; break;
-		default: break;
-		}
-		if( A->type == DAO_CSTRUCT || B->type == DAO_CSTRUCT ){
-			D = vmc->code == DVM_NE;
-		}else if( A->type == DAO_CDATA || B->type == DAO_CDATA ){
-			DaoCdata *cdata = (DaoCdata*)( A->type == DAO_CDATA ? & A->xCdata : & B->xCdata );
-			if( vmc->code == DVM_EQ ){
-				D = cdata->data ? 0 : 1;
-			}else if( vmc->code == DVM_NE ){
-				D = cdata->data ? 1 : 0;
-			}
-		}else if( A->type == DAO_OBJECT || B->type == DAO_OBJECT ){
-			DaoObject *object = (DaoObject*)(A->type == DAO_OBJECT ? A : B);
-			if( vmc->code == DVM_EQ ){
-				D = object->isNull ? 1 : 0;
-			}else if( vmc->code == DVM_NE ){
-				D = object->isNull ? 0 : 1;
-			}
-		}
-		DaoProcess_PutBoolean( self, D );
-		return;
-	}
-
-	if( A->type == DAO_OBJECT || A->type == DAO_CSTRUCT || A->type == DAO_CDATA ){
-		rc = DaoProcess_TryUserArith( self, A, B, C );
-		if( rc == 0 && (A->type == DAO_OBJECT || A->type == DAO_CSTRUCT) ){
-			switch( vmc->code ){
-			case DVM_AND: D = A && B; break;
-			case DVM_OR:  D = A || B; break;
-			case DVM_LT:  D = A < B; break;
-			case DVM_LE:  D = A <= B; break;
-			case DVM_EQ:  D = A == B; break;
-			case DVM_NE:  D = A != B; break;
-			default: break;
-			}
-			DaoProcess_PutBoolean( self, D );
-		}else if( rc == 0 ){  /* A->type == DAO_CDATA */
-			if( B->type != DAO_CDATA ){
-				switch( vmc->code ){
-				case DVM_AND: D = A && B; break;
-				case DVM_OR : D = A || B; break;
-				default : D = vmc->code == DVM_NE; break;
-				}
-			}else{
-				switch( vmc->code ){
-				case DVM_AND: D = A->xCdata.data && B->xCdata.data; break;
-				case DVM_OR : D = A->xCdata.data || B->xCdata.data; break;
-				case DVM_LT:  D = A->xCdata.data < B->xCdata.data; break;
-				case DVM_LE:  D = A->xCdata.data <= B->xCdata.data; break;
-				case DVM_EQ:  D = A->xCdata.data == B->xCdata.data; break;
-				case DVM_NE:  D = A->xCdata.data != B->xCdata.data; break;
-				default: break;
-				}
-			}
-			DaoProcess_PutBoolean( self, D );
-		}
-		return;
-	}
 
 	if( A->type >= DAO_BOOLEAN && A->type <= DAO_INTEGER
 			&& B->type >= DAO_BOOLEAN && B->type <= DAO_INTEGER ){
@@ -5065,6 +5015,69 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		case DVM_NE: D = D != 0; break;
 		default: break;
 		}
+	}else if( A->type == 0 || B->type == 0 ){
+		switch( vmc->code ){
+		case DVM_AND: D = B && A; break;
+		case DVM_OR:  D = A || B; break;
+		case DVM_LT:  D = A->type < B->type; break;
+		case DVM_LE:  D = A->type <= B->type; break;
+		case DVM_EQ:  D = A->type == B->type; break;
+		case DVM_NE:  D = A->type != B->type; break;
+		default: break;
+		}
+		if( A->type == DAO_CSTRUCT || B->type == DAO_CSTRUCT ){
+			D = vmc->code == DVM_NE;
+		}else if( A->type == DAO_CDATA || B->type == DAO_CDATA ){
+			DaoCdata *cdata = (DaoCdata*)( A->type == DAO_CDATA ? & A->xCdata : & B->xCdata );
+			if( vmc->code == DVM_EQ ){
+				D = cdata->data ? 0 : 1;
+			}else if( vmc->code == DVM_NE ){
+				D = cdata->data ? 1 : 0;
+			}
+		}else if( A->type == DAO_OBJECT || B->type == DAO_OBJECT ){
+			DaoObject *object = (DaoObject*)(A->type == DAO_OBJECT ? A : B);
+			if( vmc->code == DVM_EQ ){
+				D = object->isNull ? 1 : 0;
+			}else if( vmc->code == DVM_NE ){
+				D = object->isNull ? 0 : 1;
+			}
+		}
+	}else if( A->type == DAO_OBJECT || A->type == DAO_CSTRUCT || A->type == DAO_CDATA ){
+		DaoType *ta = self->activeTypes[ vmc->a ];
+		DaoType *tb = self->activeTypes[ vmc->b ];
+		rc = DaoProcess_TryUserArith( self, A, B, C, ta, tb );
+		if( rc ) return;
+		if( A->type == DAO_OBJECT || A->type == DAO_CSTRUCT ){
+			switch( vmc->code ){
+			case DVM_AND: D = A && B; break;
+			case DVM_OR:  D = A || B; break;
+			case DVM_LT:  D = A < B; break;
+			case DVM_LE:  D = A <= B; break;
+			case DVM_EQ:  D = A == B; break;
+			case DVM_NE:  D = A != B; break;
+			default: break;
+			}
+			DaoProcess_PutBoolean( self, D );
+		}else{  /* A->type == DAO_CDATA */
+			if( B->type != DAO_CDATA ){
+				switch( vmc->code ){
+				case DVM_AND: D = A && B; break;
+				case DVM_OR : D = A || B; break;
+				default : D = vmc->code == DVM_NE; break;
+				}
+			}else{
+				switch( vmc->code ){
+				case DVM_AND: D = A->xCdata.data && B->xCdata.data; break;
+				case DVM_OR : D = A->xCdata.data || B->xCdata.data; break;
+				case DVM_LT:  D = A->xCdata.data < B->xCdata.data; break;
+				case DVM_LE:  D = A->xCdata.data <= B->xCdata.data; break;
+				case DVM_EQ:  D = A->xCdata.data == B->xCdata.data; break;
+				case DVM_NE:  D = A->xCdata.data != B->xCdata.data; break;
+				default: break;
+				}
+			}
+			DaoProcess_PutBoolean( self, D );
+		}
 	}else if( vmc->code == DVM_EQ ){
 		D = A == B;
 	}else if( vmc->code == DVM_NE ){
@@ -5129,8 +5142,10 @@ void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
 		}
 #endif
 	}else if( ta == DAO_OBJECT || ta == DAO_CDATA || ta == DAO_CSTRUCT ){
+		DaoType *ta = self->activeTypes[ vmc->a ];
+		DaoType *tb = self->activeTypes[ vmc->b ];
 		C = self->activeValues[ vmc->c ];
-		if( DaoProcess_TryUserArith( self, A, NULL, C ) == 0 ){
+		if( DaoProcess_TryUserArith( self, A, NULL, C, ta, tb ) == 0 ){
 			DaoProcess_RaiseError( self, "Type", NULL );
 		}
 	}else{
@@ -5157,7 +5172,9 @@ void DaoProcess_DoUnaBool( DaoProcess *self, DaoVmCode *vmc )
 #endif
 	}else if( ta == DAO_OBJECT || ta == DAO_CDATA || ta == DAO_CSTRUCT ){
 		DaoValue *C = self->activeValues[ vmc->c ];
-		if( DaoProcess_TryUserArith( self, A, NULL, C ) == 0 ){
+		DaoType *ta = self->activeTypes[ vmc->a ];
+		DaoType *tb = self->activeTypes[ vmc->b ];
+		if( DaoProcess_TryUserArith( self, A, NULL, C, ta, tb ) == 0 ){
 			DaoProcess_RaiseError( self, "Type", NULL );
 		}
 	}else{
@@ -5272,7 +5289,9 @@ void DaoProcess_DoBitLogic( DaoProcess *self, DaoVmCode *vmc )
 		}
 	}else if( A->type == DAO_OBJECT || A->type == DAO_CDATA || A->type == DAO_CSTRUCT ){
 		DaoValue *C = self->activeValues[ vmc->c ];
-		if( DaoProcess_TryUserArith( self, A, B, C ) == 0 ){
+		DaoType *ta = self->activeTypes[ vmc->a ];
+		DaoType *tb = self->activeTypes[ vmc->b ];
+		if( DaoProcess_TryUserArith( self, A, B, C, ta, tb ) == 0 ){
 			DaoProcess_RaiseError( self, "Type", NULL );
 		}
 	}else{
@@ -5300,8 +5319,10 @@ void DaoProcess_DoBitShift( DaoProcess *self, DaoVmCode *vmc )
 		}
 	}else if( A->type == DAO_OBJECT || A->type == DAO_CDATA || A->type == DAO_CSTRUCT ){
 		DaoValue *C = self->activeValues[ vmc->c ];
+		DaoType *ta = self->activeTypes[ vmc->a ];
+		DaoType *tb = self->activeTypes[ vmc->b ];
 		self->activeCode = vmc;
-		if( DaoProcess_TryUserArith( self, A, B, C ) == 0 ){
+		if( DaoProcess_TryUserArith( self, A, B, C, ta, tb ) == 0 ){
 			DaoProcess_RaiseError( self, "Type", NULL );
 		}
 	}else{
@@ -5341,7 +5362,9 @@ void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc )
 		}
 	}else if( A->type == DAO_OBJECT || A->type == DAO_CDATA || A->type == DAO_CSTRUCT ){
 		DaoValue *C = self->activeValues[ vmc->c ];
-		if( DaoProcess_TryUserArith( self, A, NULL, C ) == 0 ){
+		DaoType *ta = self->activeTypes[ vmc->a ];
+		DaoType *tb = self->activeTypes[ vmc->b ];
+		if( DaoProcess_TryUserArith( self, A, NULL, C, ta, tb ) == 0 ){
 			DaoProcess_RaiseError( self, "Type", NULL );
 		}
 	}else{
