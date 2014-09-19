@@ -788,6 +788,8 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			return DaoType_MatchToTypeHolder( self, type, defs, binds );
 		}
 	}else if( type->tid == DAO_INTERFACE ){
+		/* Matching to "interface": */
+		if( type->aux == NULL ) return DAO_MT_SUB * (self->tid == DAO_INTERFACE);
 		return DaoType_MatchInterface( self, (DaoInterface*) type->aux, binds );
 	}else if( type->tid == DAO_VARIANT ){
 		return DaoType_MatchToVariant( self, type, defs, binds );
@@ -834,6 +836,8 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		case DAO_LIST  : if( self == dao_type_list_empty )  return DAO_MT_ANY; break;
 		case DAO_MAP   : if( self == dao_type_map_empty )   return DAO_MT_ANY; break;
 		}
+		if( type->nested == NULL || type->nested->size == 0 ) return DAO_MT_SUB;
+		if( self->nested == NULL || self->nested->size == 0 ) return DAO_MT_LOOSE;
 		if( self->nested->size != type->nested->size ) return DAO_MT_NOT;
 		for(i=0,n=self->nested->size; i<n; i++){
 			int ndefs = defs ? defs->size : 0;
@@ -1064,6 +1068,10 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			if( mt == DAO_MT_EQ ) break;
 		}
 		return mt;
+	case DAO_INTERFACE :
+		/* Matching to "interface": */
+		if( self->aux == NULL ) return DAO_MT_SUB * (value->type == DAO_INTERFACE);
+		break;
 	case DAO_ANY : return DAO_MT_ANY;
 	}
 	mt = dao_type_matrix[value->type][self->tid];
@@ -1205,7 +1213,8 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case DAO_TYPE :
 		tp = & value->xType;
 		if( self->tid != DAO_TYPE ) return 0;
-		/* if( tp == self ) return DAO_MT_EQ; */
+		/* generic "tyoe"; */
+		if( self->nested == NULL || self->nested->size == 0 ) return DAO_MT_SUB;
 		return DaoType_MatchTo( tp, self->nested->items.pType[0], defs );
 	case DAO_PAR_NAMED :
 	case DAO_PAR_DEFAULT :

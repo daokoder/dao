@@ -3467,6 +3467,10 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		ct = at;
 	}
 	if( ct->tid == DAO_INTERFACE ){
+		if( ct->aux == NULL ){
+			if( va->type != DAO_INTERFACE ) goto FailConversion;
+			goto FastCasting;
+		}
 		switch( va->type ){
 		case DAO_OBJECT  :
 			va = (DaoValue*) va->xObject.rootObject;
@@ -3479,6 +3483,8 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		at = DaoNamespace_GetType( self->activeNamespace, va );
 		/* automatic binding when casted to an interface: */
 		mt = DaoInterface_BindTo( & ct->aux->xInterface, at, NULL );
+	}else if( ct->tid == DAO_TYPE && (ct->nested == NULL || ct->nested->size == 0) ){
+		if( va->type == DAO_TYPE ) goto FastCasting;
 	}
 	mt = DaoType_MatchValue( ct, va, NULL );
 	/* printf( "mt = %i, ct = %s\n", mt, ct->name->chars ); */

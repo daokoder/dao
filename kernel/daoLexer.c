@@ -124,7 +124,7 @@ DIntStringPair dao_keywords[] =
 	{   0, "as" } ,
 	{ DAO_CLASS, "class" } ,
 	{ DAO_ROUTINE, "routine" } , /* for typing */
-	{ 100, "interface" } ,
+	{ DAO_INTERFACE, "interface" } ,
 	{ DAO_NAMESPACE, "namespace" } ,
 	{ 0, "self" } ,
 	{ DAO_TYPE, "type" } ,

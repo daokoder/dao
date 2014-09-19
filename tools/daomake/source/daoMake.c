@@ -3547,11 +3547,9 @@ ErrorInvalidArgValue:
 	DString_SetChars( name, ".." );
 	Dao_MakePath( vmSpace->daoBinPath, name );
 	DaoVmSpace_AddPath( vmSpace, name->chars );
-#ifdef UNIX
 	DString_SetChars( name, "../lib/daomake" );
 	Dao_MakePath( vmSpace->daoBinPath, name );
 	DaoVmSpace_AddPath( vmSpace, name->chars );
-#endif
 	if( platform && *platform ){
 		DaoNamespace *pns;
 		DString_SetChars( daomake_platform, platform );

@@ -1632,7 +1632,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 	case DAO_MAP :
 		return DaoType_Specialize( dao_type_map, nest, N );
 	case DAO_INTERFACE :
-		if( pb == NULL ) return NULL;
+		if( pb == NULL ) break; /* may be the general "interface" type; */
 		return pb->xInterface.abtype;
 	case DAO_CLASS :
 		if( pb == NULL ) break; /* may be the general "class" type; */
