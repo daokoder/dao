@@ -1,5 +1,29 @@
 load help;
 
+@[name]
+dao.type.bool
+@[name]
+
+@[title]
+Boolean Type
+@[title]
+
+@[text]
+
+Boolean (@[code]bool@[code]) is a simple logical data type representing true and false.
+True and false values are represented by reserved constants @[code]true@[code]
+and @[code]false@[code] respectively.
+Comparison and logical operations are evaluated to boolean values.
+@[code]
+B1 = true
+B2 = false
+B3 = 3 > 2
+B4 = B1 and B2
+@[code]
+
+@[text]
+
+
 ################################################################################
 ################################################################################
 #### Integer Type

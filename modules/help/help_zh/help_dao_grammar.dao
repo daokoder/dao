@@ -104,7 +104,7 @@ PermKeyword ::= private | protected | public
 
 -- Built-in constants/variables:
 @[code(syntax)]
-ConstVarKeyword ::= none | self
+ConstVarKeyword ::= none | false | true | self
 @[code(syntax)]
 
 -- Control statements:
@@ -345,6 +345,7 @@ Constant Atomic Expression
 @[code(syntax)]
 ConstAtomicExpression ::= ConstIdentifier | Integer | Float
                         | ComplexImaginary | String | Symbol
+						| none | false | true
 @[code(syntax)]
 Where @[green]ConstIdentifier@[green] represents identifiers for constants
 such as routines, classes, namespaces, type names and user defined constants.

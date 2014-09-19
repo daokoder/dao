@@ -112,8 +112,7 @@ extern DIntStringPair dao_keywords[];
 
 static const int mapAithOpcode[]=
 {
-	200, 200, 200, /* padding for regex opers */
-
+	DVM_NOP ,
 	DVM_MOVE , /* DAO_OPER_ASSN */
 	DVM_ADD , /* DAO_OPER_ASSN_ADD */
 	DVM_SUB , /* DAO_OPER_ASSN_SUB */
@@ -124,7 +123,7 @@ static const int mapAithOpcode[]=
 	DVM_BITOR  , /* DAO_OPER_ASSN_OR */
 	DVM_BITXOR , /* DAO_OPER_ASSN_XOR */
 
-	200,
+	DVM_NOP,
 	DVM_PAIR , /* DAO_OPER_COLON */
 
 	DVM_BITLFT, /* << */
@@ -147,7 +146,6 @@ static const int mapAithOpcode[]=
 	-DVM_LE , /* DAO_OPER_GE */
 	DVM_SAME ,
 	DVM_ISA ,
-	200 , /* padding for assertion operator */
 
 	DVM_ADD , /* DAO_OPER_ADD */
 	DVM_SUB , /* DAO_OPER_SUB */

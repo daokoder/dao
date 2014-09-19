@@ -278,12 +278,9 @@ enum DaoExceptionType
 	ENDOF_BASIC_EXCEPT
 };
 
-enum DaoArithOperType{
-
-	DAO_OPER_REGEX_EQ  =0,
-	DAO_OPER_REGEX_NE  =1,
-	DAO_OPER_REGEX_ALL =2,
-
+enum DaoArithOperType
+{
+	DAO_OPER_NONE ,
 	DAO_OPER_ASSN ,
 	DAO_OPER_ASSN_ADD ,
 	DAO_OPER_ASSN_SUB ,
@@ -318,7 +315,6 @@ enum DaoArithOperType{
 	DAO_OPER_GE ,
 	DAO_OPER_TEQ ,
 	DAO_OPER_TISA ,
-	DAO_OPER_ASSERT ,
 
 	DAO_OPER_ADD ,
 	DAO_OPER_SUB ,
@@ -332,7 +328,6 @@ enum DaoArithOperType{
 	DAO_OPER_DECR ,
 	DAO_OPER_NEGAT ,
 	DAO_OPER_TILDE
-
 };
 
 enum DaoCtInfoId

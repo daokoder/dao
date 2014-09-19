@@ -199,8 +199,22 @@ var   varlist: list<int>
 @[section]
 
 为了方便编程，道对一些通用的数据类型有比较好的支持。
-这些数据类型包括几种数字类型，枚举符号，字符串，数值数组，
+这些数据类型包括布尔类型，数字类型，枚举符号，字符串，数值数组，
 元组，列表和关联表等。
+
+
+@[subsection]
+布尔类型
+@[subsection]
+
+布尔类型（@[code]bool@[code]）是一种简单的逻辑数据类型，可用来表示真与假值。
+@[code]
+B1 = true
+B2 = false
+B3 = 3 > 2
+B4 = B1 and B2
+@[code]
+
 
 
 @[subsection]

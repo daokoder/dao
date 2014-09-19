@@ -981,20 +981,20 @@ static void dao_MySum( DaoProcess *proc, DaoValue *pars[], int npar )
     /*
     // No need to check parameter types here, they are guaranteed to be
     // two doubles when this function is registered as:
-    //   MySum( x: double, y: double ) => double
+    //   MySum( x: float, y: float ) => float
     //
     // So the parameter values can be retrieved directly if "daoValue.h"
-    // has been included, otherwise, one may use "DaoValue_TryGetDouble()".
+    // has been included, otherwise, one may use "DaoValue_TryGetFloat()".
     */
-    double x = pars[0]->xDouble.value;
-    double y = pars[1]->xDouble.value;
-    DaoProcess_PutDouble( proc, x + y );
+    double x = pars[0]->xFloat.value;
+    double y = pars[1]->xFloat.value;
+    DaoProcess_PutFloat( proc, x + y );
 }
 
 static const DaoFuncItem myfuncs[] =
 {
     /* A function signature must be provided for each function: */
-    { dao_MySum, "MySum( x: double, y: double ) => double" },
+    { dao_MySum, "MySum( x: float, y: float ) => float" },
     { NULL, NULL }
 };
 

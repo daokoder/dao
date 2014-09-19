@@ -33,12 +33,12 @@ syn match   daoError		"}"
 syn match   daoError		"\<\%(else\)\>"
 
 syn keyword daoConditional	if else switch case and or not in
-syn keyword daoRepeat		while for do until
-syn keyword daoStructure	interface class routine sub function operator syntax as type int float double complex long string enum tuple array list map any
+syn keyword daoRepeat		while for do
+syn keyword daoStructure	interface class routine as type int float complex string enum tuple array list map any
 
 " other keywords
-syn keyword daoStatement	defer return skip break global static const use load public protected private case default try catch retry raise virtual
-syn keyword daoConstant		var invar none self
+syn keyword daoStatement	defer return skip break static const load import public protected private case default
+syn keyword daoConstant		var invar none false true self
 
 " syn match   daoPreProc	  "^\s*$\%(debug\|nodebug\|if\|ifnot\|end\|else\|endinput\)\>"
 
@@ -75,10 +75,6 @@ syn region  daoTableBlock       transparent matchgroup=daoTable start="{" end="}
 syn keyword   daoFunc	io
 syn keyword   daoFunc	mt
 syn keyword   daoFunc	std
-syn keyword   daoFunc	aux
-syn keyword   daoFunc	sys
-syn keyword   daoFunc	math
-syn keyword   daoFunc	meta
 
 "syncing method
 syn sync minlines=100

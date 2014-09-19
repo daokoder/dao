@@ -802,6 +802,8 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 			DaoxStream_WriteMBS( self, "    " );
 			break;
 		case DKEY_NONE :
+		case DKEY_TRUE :
+		case DKEY_FALSE :
 		case DTOK_DOLLAR :
 		case DTOK_DIGITS_DEC :
 		case DTOK_NUMBER_HEX : case DTOK_NUMBER_DEC :
@@ -871,10 +873,12 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 			fgcolor = DAOX_MAGENTA;
 			break;
 		case DKEY_TYPE :
-		case DKEY_ANY : case DKEY_ENUM :
+		case DKEY_ANY :
+		case DKEY_BOOL :
 		case DKEY_INT : case DKEY_FLOAT :
 		case DKEY_COMPLEX :
 		case DKEY_STRING :
+		case DKEY_ENUM :
 		case DKEY_LIST : case DKEY_MAP :
 		case DKEY_TUPLE : case DKEY_ARRAY :
 		case DKEY_CLASS : case DKEY_INTERFACE :

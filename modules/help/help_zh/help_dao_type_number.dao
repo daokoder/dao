@@ -1,5 +1,29 @@
 load help;
 
+
+@[name]
+dao.type.bool
+@[name]
+
+@[title]
+布尔类型
+@[title]
+
+@[text]
+
+布尔类型（@[code]bool@[code]）是一种简单的逻辑数据类型，可用来表示真与假值。
+保留关键字常量@[code]true@[code]和@[code]false@[code]被用来分别表示真值和假值。
+比较和逻辑运算表达式的求值将产生布尔值。
+@[code]
+B1 = true
+B2 = false
+B3 = 3 > 2
+B4 = B1 and B2
+@[code]
+
+@[text]
+
+
 @[name]
 dao.type.int
 @[name]

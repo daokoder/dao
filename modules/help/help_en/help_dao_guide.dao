@@ -225,8 +225,21 @@ Data Types
 @[section]
 
 Dao supports a good number of data types to facilitate programming.
-These include several number types, enum symbol, string, numeric array,
+These include, boolean type, several number types, enum symbol, string, numeric array,
 tuple, list and map etc. types. 
+
+
+@[subsection]
+Boolean
+@[subsection]
+
+Boolean (@[code]bool@[code]) is a simple logical data type representing true and false.
+@[code]
+B1 = true
+B2 = false
+B3 = 3 > 2
+B4 = B1 and B2
+@[code]
 
 
 @[subsection]
