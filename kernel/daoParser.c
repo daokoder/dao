@@ -1588,8 +1588,6 @@ static DaoType* DaoParser_ParsePlainType( DaoParser *self, int start, int end, i
 		type = DaoNamespace_MakeType( ns, name->chars, i, NULL, 0,0 );
 	}else if( token->name == DKEY_NONE ){
 		type = DaoNamespace_MakeValueType( ns, dao_none_value );
-	}else if( token->name == DTOK_ID_SYMBOL ){
-		type = DaoParser_ParseValueType( self, start );
 	}else if( token->name == DTOK_ID_THTYPE ){
 		DMap *initypes = self->innerParser ? self->innerParser->initTypes : self->initTypes;
 		type = DaoType_New( token->string.chars, DAO_THT, NULL, NULL );
@@ -2006,10 +2004,12 @@ DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *next, DL
 	count = types->size;
 	type = DaoParser_ParseType2( self, start, end, next, types );
 	if( type == NULL ) goto InvalidType;
+	if( type->tid != DAO_NONE && type->valtype ) goto InvalidType;
 	DList_Append( types, type );
 	while( type && *next <= end && tokens[*next]->name == DTOK_PIPE ){
 		type = DaoParser_ParseType2( self, *next + 1, end, next, types );
 		if( type == NULL ) goto InvalidType;
+		if( type->tid != DAO_NONE && type->valtype ) goto InvalidType;
 		DList_Append( types, type );
 	}
 	if( types->size == count + 1 ){
@@ -4346,8 +4346,10 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 	}
 	abtp = extype = NULL;
 	if( DaoParser_CurrentTokenType( self ) == DTOK_COLON ){
+		int pos = self->curToken + 1;
 		extype = DaoParser_ParseType( self, self->curToken+1, to, & k, NULL );
 		if( extype == NULL ){
+			DaoParser_Error3( self, DAO_INVALID_TYPE_FORM, pos );
 			DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
 			return -1;
 		}
@@ -5723,7 +5725,7 @@ static int DaoParser_ParseSymbol( DaoParser *self, DString *symbol )
 	DaoRoutine *routine = self->routine;
 	DaoType *type = DaoNamespace_MakeSymbolType( ns, symbol->chars );
 	if( (node = MAP_Find( self->allConsts, symbol )) == NULL ){
-		self->denum->value = 1;
+		self->denum->value = 0;
 		DaoEnum_SetType( self->denum, type );
 		node = MAP_Insert( self->allConsts, symbol, routine->routConsts->value->size );
 		DaoRoutine_AddConstant( routine, (DaoValue*) self->denum );

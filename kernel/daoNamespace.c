@@ -1871,15 +1871,24 @@ Error:
 }
 DaoType* DaoNamespace_MakeSymbolType( DaoNamespace *self, const char *symbol )
 {
-	DString sym = DString_WrapChars( symbol );
-	DString name = DString_WrapChars( symbol + 1 );
-	DaoType *type = DaoNamespace_FindType( self, & sym );
-	if( type || symbol[0] != '$' ) return type;
-	type = DaoType_New( symbol, DAO_ENUM, NULL, NULL );
+	DString sym = DString_WrapChars( symbol + 1 );
+	DString *name = DString_NewChars( "enum<" );
+	DaoType *type;
+
+	DString_Append( name, & sym );
+	DString_AppendChar( name, '>' );
+	type = DaoNamespace_FindType( self, name );
+	if( type || symbol[0] != '$' ){
+		DString_Delete( name );
+		return type;
+	}
+
+	type = DaoType_New( name->chars, DAO_ENUM, NULL, NULL );
 	type->subtid = DAO_ENUM_SYM;
 	type->valtype = 1;
-	DMap_Insert( type->mapNames, & name, (void*)1 );
-	DaoNamespace_AddType( self, & sym, type );
+	DMap_Insert( type->mapNames, & sym, (void*)0 );
+	DaoNamespace_AddType( self, type->name, type );
+	DString_Delete( name );
 	return type;
 }
 /* symbols should be comma or semicolon delimited string */
@@ -1901,16 +1910,14 @@ DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols )
 	key = DString_New();
 	type = DaoType_New( name->chars, DAO_ENUM, NULL, NULL );
 	type->subtid = DAO_ENUM_STATE;
-	if( symbols[0] == '$' ) type->subtid = DAO_ENUM_SYM;
 	for(i=0; i<n; i++){
 		char sym = symbols[i];
-		if( i == 0 && symbols[0] == '$' ) continue;
 		if( sym == ',' ){
 			MAP_Insert( type->mapNames, key, k );
 			DString_Clear( key );
 			k += 1;
 			t1 = 1;
-		}else if( sym == ';' || sym == '$' ){
+		}else if( sym == ';' ){
 			MAP_Insert( type->mapNames, key, 1<<k );
 			DString_Clear( key );
 			k += 1;
@@ -1937,6 +1944,11 @@ DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 	if( value == NULL || value->type >= DAO_ARRAY ) return NULL;
 	name = DString_New();
 	DaoValue_GetString( value, name );
+	if( value->type == DAO_ENUM && value->xEnum.subtype == DAO_ENUM_SYM ){
+		type = DaoNamespace_MakeSymbolType( self, name->chars );
+		DString_Delete( name );
+		return type;
+	}
 	if( value->type == DAO_STRING ){
 		DString_InsertChar( name, '\'', 0 );
 		DString_AppendChar( name, '\'' );

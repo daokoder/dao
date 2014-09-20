@@ -380,7 +380,7 @@ void DaoEnum_MakeName( DaoEnum *self, DString *name )
 	DString_Clear( name );
 	mapNames = self->etype->mapNames;
 	for(node=DMap_First(mapNames); node; node=DMap_Next(mapNames,node)){
-		if( self->subtype == DAO_ENUM_FLAG || self->subtype == DAO_ENUM_SYM ){
+		if( self->subtype == DAO_ENUM_FLAG ){
 			if( !(node->value.pInt & self->value) ) continue;
 		}else if( node->value.pInt != self->value ){
 			continue;
@@ -406,7 +406,10 @@ int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols )
 
 	names = DString_New();
 	DString_SetChars( names, symbols );
-	for(i=0,n=names->size; i<n; i++) if( names->chars[i] == '$' ) names->chars[i] = 0;
+	for(i=0,n=names->size; i<n; i++){
+		char ch = names->chars[i];
+		if( ch == '$' || ch == ',' || ch == ';' ) names->chars[i] = 0;
+	}
 	i = 0;
 	if( names->chars[0] == '\0' ) i += 1;
 	do{ /* for multiple symbols */
@@ -444,7 +447,7 @@ int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other )
 	if( self->subtype == DAO_ENUM_SYM ) return 0;
 
 	self->value = 0;
-	if( other->subtype == DAO_ENUM_STATE ){
+	if( other->subtype == DAO_ENUM_STATE || other->subtype == DAO_ENUM_SYM ){
 		for(node=DMap_First(otherNames); node; node=DMap_Next(otherNames,node)){
 			if( node->value.pInt != other->value ) continue;
 			search = DMap_Find( selfNames, node->key.pVoid );

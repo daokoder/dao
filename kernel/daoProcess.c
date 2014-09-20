@@ -4900,14 +4900,18 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		if( A->xEnum.subtype == DAO_ENUM_SYM && B->xEnum.subtype == DAO_ENUM_SYM ){
 			DaoNamespace *NS = self->activeNamespace;
 			denum = DaoProcess_GetEnum( self, vmc );
-			DString_Assign( self->mbstring, ta->name );
-			DString_Change( self->mbstring, "enum%< (.*) %>", "%1", 0 );
-			DString_Append( self->mbstring, tb->name );
 			if( denum->etype == NULL ){ /* Can happen in constant evaluation: */
-				DaoType *tp = DaoNamespace_MakeEnumType( NS, self->mbstring->chars );
+				DaoType *tp;
+				DNode *it;
+				DString_Reset( self->mbstring, 0 );
+				DString_Append( self->mbstring, ta->mapNames->root->key.pString );
+				DString_AppendChar( self->mbstring, ';' );
+				DString_Append( self->mbstring, tb->mapNames->root->key.pString );
+				tp = DaoNamespace_MakeEnumType( NS, self->mbstring->chars );
 				DaoEnum_SetType( denum, tp );
 			}
-			DaoEnum_SetSymbols( denum, self->mbstring->chars );
+			DaoEnum_AddValue( denum, (DaoEnum*) A );
+			DaoEnum_AddValue( denum, (DaoEnum*) B );
 			return;
 		}
 		if( vmc->c != vmc->a ){

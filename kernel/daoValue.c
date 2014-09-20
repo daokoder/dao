@@ -135,11 +135,11 @@ int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
 		return DString_CompareUTF8( L->etype->name, R->etype->name );
 	}else if( L->subtype == DAO_ENUM_SYM ){
 		E = *R;
-		if( DaoEnum_SetSymbols( & E, L->etype->name->chars ) == 0 ) goto CompareAddress;
+		if( DaoEnum_SetValue( & E, L ) == 0 ) goto CompareAddress;
 		return E.value == R->value ? 0 : (E.value < R->value ? -1 : 1);
 	}else if( R->subtype == DAO_ENUM_SYM ){
 		E = *L;
-		if( DaoEnum_SetSymbols( & E, R->etype->name->chars ) == 0 ) goto CompareAddress;
+		if( DaoEnum_SetValue( & E, R ) == 0 ) goto CompareAddress;
 		return L->value == E.value ? 0 : (L->value < E.value ? -1 : 1);
 	}
 CompareAddress:
