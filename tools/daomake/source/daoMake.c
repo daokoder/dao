@@ -1917,6 +1917,7 @@ void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output, int 
 	DString *find2 = DaoMakeProject_GetBufferString( self );
 	DaoValue **installs = self->installs->items.pValue;
 	DString *md5 = self->string;
+	DNode *it;
 	daoint i;
 
 	DString_Append( filePath, self->base.buildPath );
@@ -1940,6 +1941,14 @@ void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output, int 
 	DString_Append( output, self->projectName );
 	DString_AppendChars( output, "\" )\n" );
 
+	for(it=DMap_First(daomake_variables->value); it; it=DMap_Next(daomake_variables->value,it)){
+		DString_AppendChars( output, "DaoMake::Variables[\"" );
+		DString_Append( output, it->key.pValue->xString.value );
+		DString_AppendChars( output, "\"] = \"" );
+		DString_Append( output, it->value.pValue->xString.value );
+		DString_AppendChars( output, "\"\n" );
+	}
+
 	DaoMakeUnit_MakeFinderCodes( (DaoMakeUnit*) self, "project", output );
 
 	if( installPath->size == 0 || caching ){
@@ -1953,6 +1962,8 @@ void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output, int 
 	}
 	DaoMakeProject_MakeFindPackageForInstall( self, find1, 1 );
 	DaoMakeProject_MakeFindPackageForBuild( self, find2, 1 );
+
+	DaoMakeProject_ReplaceVariables( self, installPath );
 
 	DString_AppendChars( output, "if( project.SourcePath() == " );
 	DString_AppendVerbatim( output, installPath, md5 );

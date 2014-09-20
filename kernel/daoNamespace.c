@@ -1877,6 +1877,7 @@ DaoType* DaoNamespace_MakeSymbolType( DaoNamespace *self, const char *symbol )
 	if( type || symbol[0] != '$' ) return type;
 	type = DaoType_New( symbol, DAO_ENUM, NULL, NULL );
 	type->subtid = DAO_ENUM_SYM;
+	type->valtype = 1;
 	DMap_Insert( type->mapNames, & name, (void*)1 );
 	DaoNamespace_AddType( self, & sym, type );
 	return type;
