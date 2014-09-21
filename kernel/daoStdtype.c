@@ -4054,6 +4054,20 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 
 	for(i=0; i<n; i++){
 		DaoRoutine *rout = self->callers->items.pRoutine[i];
+		if( i == 0 && rout->subtype == DAO_ROUTINE ){
+			DaoVmCodeX **codes = rout->body->annotCodes->items.pVmc;
+			int m = rout->body->vmCodes->size;
+			int j, k = self->lines->items.pInt[i] & 0xffff;
+			int j1 = k >= 2 ? k-2 : 0;
+			int j2 = (k+2) < m ? k+2 : m-1;
+			DaoStream_WriteChars( stream, "In code snippet:\n" );
+			for(j=j1; j<=j2; ++j){
+				DaoRoutine_FormatCode( rout, j, *codes[j], sstring );
+				DaoStream_WriteChars( stream, j==k ? ">>" : "  " );
+				DaoStream_WriteString( stream, sstring );
+			}
+			DString_Clear( sstring );
+		}
 		DaoStream_WriteChars( ss, i == 0 ? "Raised by:  " : "Called by:  " );
 		if( rout->attribs & DAO_ROUT_PARSELF ){
 			DaoType *type = rout->routType->nested->items.pType[0];
@@ -4067,7 +4081,7 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 		DaoStream_WriteChars( ss, "()," );
 		if( rout->subtype == DAO_ROUTINE ){
 			DaoStream_WriteChars( ss, " at instruction " );
-			DaoStream_WriteInt( ss, self->lines->items.pInt[i] & 0xff );
+			DaoStream_WriteInt( ss, self->lines->items.pInt[i] & 0xffff );
 			DaoStream_WriteChars( ss, " in line " );
 			DaoStream_WriteInt( ss, self->lines->items.pInt[i] >> 16 );
 			DaoStream_WriteChars( ss, " in file \"" );

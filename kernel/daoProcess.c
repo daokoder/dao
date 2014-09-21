@@ -871,6 +871,54 @@ int DaoCallServer_MarkActiveProcess( DaoProcess *process, int active );
 #endif
 #endif
 
+
+#ifndef WITHOUT_DIRECT_THREADING
+
+#define OPBEGIN() goto *labels[ vmc->code ];
+#define OPCASE( name ) LAB_##name :
+#define OPNEXT() goto *labels[ (++vmc)->code ];
+#define OPJUMP() goto *labels[ vmc->code ];
+#define OPDEFAULT()
+#define OPEND()
+
+#else
+
+#ifndef DAO_USE_CODE_STATE
+#if defined( __GNUC__ ) && !defined( __STRICT_ANSI__ )
+#warning "=========================================="
+#warning "=========================================="
+#warning "  NOT USING DIRECT THREADING"
+#warning "=========================================="
+#warning "=========================================="
+#endif
+#endif
+
+#ifdef DAO_USE_CODE_STATE
+#define HANDLE_BREAK_POINT() \
+	if( vmc->state & DAO_CODE_BREAKING ){ \
+		self->activeCode = vmc; \
+		if( debugger && debugger->Debug ) debugger->Debug( debugger, self, NULL ); \
+		goto CheckException; \
+	}
+#else
+#define HANDLE_BREAK_POINT()
+#endif
+
+#define OPBEGIN() for(;;){ HANDLE_BREAK_POINT() switch( vmc->code )
+#define OPCASE( name ) case DVM_##name :
+#define OPNEXT() break;
+#define OPJUMP() continue;
+#define OPDEFAULT() default:
+#define OPEND() vmc++; }
+
+#ifdef DAO_DEBUG_VM
+#undef OPBEGIN
+#define OPBEGIN() for(;;){ printf("%3i:", (i=vmc-vmcBase) ); DaoVmCodeX_Print( *topFrame->routine->body->annotCodes->items.pVmc[i], NULL, NULL ); fflush(stdout); switch( vmc->code )
+#endif
+
+#endif
+
+
 int DaoProcess_Start( DaoProcess *self )
 {
 	DaoJitCallData jitCallData = {NULL};
@@ -880,7 +928,9 @@ int DaoProcess_Start( DaoProcess *self )
 	DaoUserHandler *handler = self->vmSpace->userHandler;
 	DaoVmSpace *vmSpace = self->vmSpace;
 	DaoVmCode *vmcBase, *sect, *vmc = NULL;
+	DaoVmCode operands = {0};
 	DaoStackFrame *topFrame;
+	DaoStackFrame *base;
 	DaoRoutine *routine;
 	DaoClass *host = NULL;
 	DaoClass *klass = NULL;
@@ -908,6 +958,8 @@ int DaoProcess_Start( DaoProcess *self )
 	DString *str;
 	dao_complex com = {0,0};
 	dao_complex czero = {0,0};
+	dao_complex acom, bcom;
+	double AA, BB, dnum=0;
 	int invokehost = handler && handler->InvokeHost;
 	int print, active = self->active;
 	daoint exceptCount0 = self->exceptions->size;
@@ -916,9 +968,6 @@ int DaoProcess_Start( DaoProcess *self )
 	daoint i, j, id, size;
 	daoint inum=0;
 	float fnum=0;
-	double AA, BB, dnum=0;
-	dao_complex acom, bcom;
-	DaoStackFrame *base;
 
 #ifndef WITHOUT_DIRECT_THREADING
 	static void *labels[] = {
@@ -1052,51 +1101,6 @@ int DaoProcess_Start( DaoProcess *self )
 	};
 #endif
 
-#ifndef WITHOUT_DIRECT_THREADING
-
-#define OPBEGIN() goto *labels[ vmc->code ];
-#define OPCASE( name ) LAB_##name :
-#define OPNEXT() goto *labels[ (++vmc)->code ];
-#define OPJUMP() goto *labels[ vmc->code ];
-#define OPDEFAULT()
-#define OPEND()
-
-#else
-
-#ifndef DAO_USE_CODE_STATE
-#if defined( __GNUC__ ) && !defined( __STRICT_ANSI__ )
-#warning "=========================================="
-#warning "=========================================="
-#warning "  NOT USING DIRECT THREADING"
-#warning "=========================================="
-#warning "=========================================="
-#endif
-#endif
-
-#ifdef DAO_USE_CODE_STATE
-#define HANDLE_BREAK_POINT() \
-	if( vmc->state & DAO_CODE_BREAKING ){ \
-		self->activeCode = vmc; \
-		if( debugger && debugger->Debug ) debugger->Debug( debugger, self, NULL ); \
-		goto CheckException; \
-	}
-#else
-#define HANDLE_BREAK_POINT()
-#endif
-
-#define OPBEGIN() for(;;){ HANDLE_BREAK_POINT() switch( vmc->code )
-#define OPCASE( name ) case DVM_##name :
-#define OPNEXT() break;
-#define OPJUMP() continue;
-#define OPDEFAULT() default:
-#define OPEND() vmc++; }
-
-#ifdef DAO_DEBUG_VM
-#undef OPBEGIN
-#define OPBEGIN() for(;;){ printf("%3i:", (i=vmc-vmcBase) ); DaoVmCodeX_Print( *topFrame->routine->body->annotCodes->items.pVmc[i], NULL, NULL ); fflush(stdout); switch( vmc->code )
-#endif
-
-#endif
 
 
 	if( self->topFrame == self->firstFrame ) goto ReturnFalse;
@@ -1498,6 +1502,7 @@ CallEntry:
 			case DAO_FLOAT   :
 				vmc = vA->xFloat.value ? vmc+1 : vmcBase + vmc->b; break;
 			case DAO_ENUM  :
+				if( vA->xEnum.subtype == DAO_ENUM_SYM ) goto RaiseErrorInvalidOperation;
 				vmc = vA->xEnum.value ? vmc+1 : vmcBase + vmc->b;
 				break;
 			default :
@@ -2238,6 +2243,7 @@ RaiseErrorDivByZero:
 			DaoProcess_RaiseError( self, "Float:DivByZero", "" );
 			goto CheckException;
 RaiseErrorInvalidOperation:
+			operands = DaoVmCode_CheckOperands( vmc );
 			self->activeCode = vmc;
 			DaoProcess_RaiseError( self, NULL, "invalid operation" );
 			goto CheckException;
@@ -5177,7 +5183,7 @@ void DaoProcess_DoUnaBool( DaoProcess *self, DaoVmCode *vmc )
 	}else if( ta == DAO_FLOAT ){
 		DaoProcess_PutBoolean( self, ! A->xFloat.value );
 #ifdef DAO_WITH_NUMARRAY
-	}else if( ta == DAO_ENUM ){
+	}else if( ta == DAO_ENUM && A->xEnum.subtype != DAO_ENUM_SYM ){
 		DaoProcess_PutFloat( self, ! A->xEnum.value );
 #endif
 	}else if( ta == DAO_OBJECT || ta == DAO_CDATA || ta == DAO_CSTRUCT ){

@@ -210,7 +210,7 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	if( left->type != right->type ){
 		res = left->type < right->type ? -100 : 100;
 		if( left->type < DAO_BOOLEAN || left->type > DAO_FLOAT ) return res;
-		if( right->type > DAO_BOOLEAN || right->type > DAO_FLOAT ) return res;
+		if( right->type < DAO_BOOLEAN || right->type > DAO_FLOAT ) return res;
 		L = DaoValue_GetFloat( left );
 		R = DaoValue_GetFloat( right );
 		return L == R ? 0 : (L < R ? -1 : 1);
@@ -695,6 +695,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		return 1;
 	}
 	switch( S->type ){
+	case DAO_ENUM : if( S->xEnum.subtype == DAO_ENUM_SYM && T->realnum ) return 0;
 	case DAO_OBJECT : if( S->xObject.isNull ) return 0; break;
 	case DAO_CDATA  : if( S->xCdata.data == NULL ) return 0; break;
 	}
@@ -792,7 +793,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		return 1;
 	}
 	if( T->valtype ){
-		if( DaoValue_Compare( S, T->aux ) !=0 ) return 0;
+		if( DaoValue_Compare( S, T->value ) !=0 ) return 0;
 		DaoValue_CopyX( S, D, C );
 		return 1;
 	}

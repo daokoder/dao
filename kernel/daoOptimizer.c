@@ -5566,6 +5566,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				ct = DaoCheckBinArith( routine, vmc, at, NULL, types[opc], hostClass, mbs );
 				if( ct == NULL ) ct = dao_type_bool;
 			}
+			if( at->subtid == DAO_ENUM_SYM ) goto InvOper;
 			DaoInferencer_UpdateVarType( self, opc, ct );
 			AssertTypeMatching( ct, types[opc], defs );
 			if( NoCheckingType( at ) ) continue;
@@ -5979,6 +5980,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				/* if( inited[opa] ==0 ) goto NotInit;  allow none value for testing! */
 				if( types[opa] == NULL ) goto NotMatch;
 				if( at->tid == DAO_STRING ) goto NotMatch;
+				if( at->subtid == DAO_ENUM_SYM ) goto NotMatch;
 				if( at->tid >= DAO_ARRAY && at->tid <= DAO_TUPLE ) goto NotMatch;
 				if( consts[opa] && consts[opa]->type <= DAO_COMPLEX ){
 					vmc->code =  DaoValue_IsZero( consts[opa] ) ? (int)DVM_GOTO : (int)DVM_UNUSED;

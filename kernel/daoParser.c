@@ -1767,7 +1767,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 		if( sep != tok->type ) break;
 	}
 	switch( sep ){
-	default : type->subtid = DAO_ENUM_STATE; break;
+	default : type->subtid = DAO_ENUM_SYM; break;
 	case DTOK_COMMA : type->subtid = DAO_ENUM_STATE; break;
 	case DTOK_SEMCO : type->subtid = DAO_ENUM_FLAG;  break;
 	}
@@ -5654,7 +5654,7 @@ int DaoParser_ParseCondition( DaoParser *self, int start, int dec, DaoInode *ope
 
 	reg = DaoParser_MakeArithTree( self, start, rb-1, & cst );
 	if( reg < 0 ) return -1;
-	DaoParser_AddCode( self, DVM_TEST, reg, from, 0, start, 0, rb );
+	DaoParser_AddCode( self, DVM_TEST, reg, from, 0, lb-1, 0, rb );
 	return rb;
 }
 

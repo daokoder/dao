@@ -813,6 +813,8 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 			}
 			return mt;
 		}
+	}else if( self->subtid == DAO_ENUM_SYM && type->realnum ){
+		return DAO_MT_NOT;
 	}
 	if( mt <= DAO_MT_EXACT ) return mt;
 
@@ -1086,6 +1088,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		other = & value->xEnum;
 		if( self == value->xEnum.etype ) return DAO_MT_EQ;
 		if( self->subtid == DAO_ENUM_ANY ) return DAO_MT_SIM;
+		if( self->realnum && value->xEnum.subtype == DAO_ENUM_SYM ) return DAO_MT_NOT;
 		if( dinterface ) return DaoType_MatchInterface( value->xEnum.etype, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
 		if( self->subtid != other->subtype && other->subtype != DAO_ENUM_SYM ) return 0;

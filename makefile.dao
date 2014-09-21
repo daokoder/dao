@@ -344,10 +344,8 @@ daovm.AddVariable( "HELP_FONT", daovm_use_help_font );
 # Add shell commands as a target:
 # Generate documentations here instead of inside modules/help,
 # as it might be problematic to use relative path in windows to invoke Dao.
-daovm_doc = daovm.AddCommand( "./doc/html/en/index.html: Makefile" + DaoMake::MakefileSuffix(), "@$(DAOMAKE) mkdir2 ./doc/" );
-daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/" );
-daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/en" );
-daovm_doc.AddCommand( "@$(DAOMAKE) mkdir2 ./doc/html/zh" );
+daovm_doc = daovm.AddCommand( "./doc/html/en/index.html: Makefile" + DaoMake::MakefileSuffix(), "@$(DAOMAKE) mkdir3 ./doc/html/en" );
+daovm_doc.AddCommand( "@$(DAOMAKE) mkdir3 ./doc/html/zh" );
 daovm_doc.AddCommand( @[]$(DAO) --path="$(HELP_PATH)" -e "load help; help::set_language('en'); help::set_font('$(HELP_FONT)'); help::export('','./doc/html/en')"@[] );
 daovm_doc.AddCommand( @[]$(DAO) --path="$(HELP_PATH)" -e "load help; help::set_language('zh'); help::set_font('$(HELP_FONT)'); help::export('','./doc/html/zh')"@[] );
 daovm_doc.AddDependency( daovm_dll );
