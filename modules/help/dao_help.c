@@ -750,15 +750,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		}
 	}else{
 		DaoLexer_Tokenize( lexer, code->chars, DAO_LEX_COMMENT|DAO_LEX_SPACE );
-		if( lang && strcmp( lang->chars, "dao" ) == 0 ){
-			for(i=0; i<tokens->size; i++){
-				DaoToken *tok = tokens->items.pToken[i];
-				const char *ts = tok->string.chars;
-				if( tok->type != DTOK_IDENTIFIER ) continue;
-				if( strcmp( ts, "panic" ) == 0 )   tok->name = DKEY_RAND;
-				if( strcmp( ts, "recover" ) == 0 ) tok->name = DKEY_RAND;
-			}
-		}else if( lang && strcmp( lang->chars, "syntax" ) == 0 ){
+		if( lang && strcmp( lang->chars, "syntax" ) == 0 ){
 			for(i=0; i<tokens->size; i++){
 				DaoToken *tok = tokens->items.pToken[i];
 				switch( tok->type ){

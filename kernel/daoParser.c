@@ -5978,7 +5978,13 @@ int DaoParser_MakeArithTree( DaoParser *self, int start, int end, int *cst )
 	return reg;
 }
 
-
+static int DaoToken_LineSpan( DaoToken *self )
+{
+	int i, span = 1;
+	if( self->type < DTOK_VERBATIM || self->type > DTOK_WCS ) return 1;
+	for(i=0; i<self->string.size; ++i) span += self->string.chars[i] == '\n';
+	return span;
+}
 int DaoParser_GetOperPrecedence( DaoParser *self )
 {
 	DOper oper;
@@ -6019,7 +6025,8 @@ int DaoParser_GetOperPrecedence( DaoParser *self )
 	if( self->curToken > 0 ){
 		DaoToken *t1 = tokens[self->curToken-1];
 		DaoToken *t2 = tokens[self->curToken];
-		if( t1->line != t2->line ) return -1;
+		int span = DaoToken_LineSpan( t1 );
+		if( t1->line != t2->line && (t1->line + span - 1) != t2->line ) return -1;
 	}
 	oper = daoArithOper[tokens[self->curToken]->name];
 	if( oper.oper == 0 || oper.binary == 0 ) return -1;

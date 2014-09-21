@@ -854,7 +854,7 @@ int DString_CheckUTF8( DString *self )
 		case 4 : if( U8TrailCheck3( chs[1], chs[2], chs[3] ) ) break; goto InvalidByte;
 		default: goto InvalidByte;
 		}
-		valid += len;
+		valid += len > 1; /* Do not count ASCII, as they are the same for all encodings; */
 		chs += len;
 		continue;
 InvalidByte:

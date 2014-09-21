@@ -20,5 +20,5 @@ project.Install( DaoMake::Variables[ "INSTALL_MOD" ], project_dll );
 project.Install( DaoMake::Variables[ "INSTALL_MOD" ], project_lib );
 
 
-project.Install( DaoMake::MakePath( DaoMake::Variables[ "INSTALL_MOD" ], "help_en" ), "help_en" )
-project.Install( DaoMake::MakePath( DaoMake::Variables[ "INSTALL_MOD" ], "help_zh" ), "help_zh" )
+project.Install( DaoMake::Variables[ "INSTALL_MOD" ], "help_en" )
+project.Install( DaoMake::Variables[ "INSTALL_MOD" ], "help_zh" )
