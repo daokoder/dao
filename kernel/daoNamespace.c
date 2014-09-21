@@ -1963,7 +1963,7 @@ DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 			type = DaoType_Copy( type );
 			DString_Assign( type->name, name );
 		}
-		GC_Assign( & type->aux, value );
+		GC_Assign( & type->value, value );
 		type->valtype = 1;
 		DaoNamespace_AddType( self, name, type );
 	}
