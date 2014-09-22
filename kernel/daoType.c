@@ -1908,13 +1908,13 @@ static void DaoCdata_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 		int error, npar = 0;
 
 		str.value = name;
-		DString_SetChars( proc->mbstring, "." );
-		DString_Append( proc->mbstring, name );
-		func = DaoType_FindFunction( type, proc->mbstring );
+		DString_SetChars( proc->string, "." );
+		DString_Append( proc->string, name );
+		func = DaoType_FindFunction( type, proc->string );
 		if( func == NULL ){
 			npar = 1;
-			DString_SetChars( proc->mbstring, "." );
-			func = DaoType_FindFunction( type, proc->mbstring );
+			DString_SetChars( proc->string, "." );
+			func = DaoType_FindFunction( type, proc->string );
 		}
 		if( func == NULL ){
 			DaoProcess_RaiseError( proc, "Field::NotExist", "not exist" );
@@ -1938,15 +1938,15 @@ static void DaoCdata_SetField( DaoValue *self, DaoProcess *proc, DString *name, 
 	str.value = name;
 	pars[0] = pars[1] = value;
 
-	DString_SetChars( proc->mbstring, "." );
-	DString_Append( proc->mbstring, name );
-	DString_AppendChars( proc->mbstring, "=" );
-	func = DaoType_FindFunction( type, proc->mbstring );
+	DString_SetChars( proc->string, "." );
+	DString_Append( proc->string, name );
+	DString_AppendChars( proc->string, "=" );
+	func = DaoType_FindFunction( type, proc->string );
 	if( func == NULL ){
 		pars[0] = (DaoValue*) & str;
 		npar = 2;
-		DString_SetChars( proc->mbstring, ".=" );
-		func = DaoType_FindFunction( type, proc->mbstring );
+		DString_SetChars( proc->string, ".=" );
+		func = DaoType_FindFunction( type, proc->string );
 	}
 	if( func == NULL ){
 		DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
@@ -1973,8 +1973,8 @@ static void DaoCdata_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid,
 	DaoRoutine *func = NULL;
 	DaoValue *p[2];
 
-	DString_SetChars( proc->mbstring, "[]=" );
-	func = DaoType_FindFunction( type, proc->mbstring );
+	DString_SetChars( proc->string, "[]=" );
+	func = DaoType_FindFunction( type, proc->string );
 	if( func == NULL ){
 		DaoProcess_RaiseError( proc, "Field::NotExist", "" );
 		return;

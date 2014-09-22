@@ -146,7 +146,8 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->paramValues = self->stackValues + 2;
 	self->factory = DList_New( DAO_DATA_VALUE );
 
-	self->mbstring = DString_New();
+	self->string = DString_New();
+	self->list = DList_New(0);
 	self->pauseType = 0;
 	self->active = 0;
 #ifdef DAO_USE_GC_LOGGER
@@ -172,7 +173,8 @@ void DaoProcess_Delete( DaoProcess *self )
 	for(i=0; i<self->stackSize; i++) GC_DecRC( self->stackValues[i] );
 	if( self->stackValues ) dao_free( self->stackValues );
 
-	DString_Delete( self->mbstring );
+	DString_Delete( self->string );
+	DList_Delete( self->list );
 	DList_Delete( self->exceptions );
 	DList_Delete( self->defers );
 	if( self->future ) GC_DecRC( self->future );
@@ -772,6 +774,7 @@ static int DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
 	daoint errorCount = self->exceptions->size - frame->exceptBase;
 	daoint i, j;
 	self->activeCode = NULL;
+	self->list->size = 0;
 	for(i=self->defers->size-1; i>=frame->deferBase; --i){
 		DaoRoutine *rout, *closure = self->defers->items.pRoutine[i];
 		DaoValue *param = NULL;
@@ -801,9 +804,15 @@ static int DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
 			}
 			if( param == NULL ) continue;
 		}
+		DList_Append( self->list, param );
+		DList_Append( self->defers, closure );
+	}
+	for(i=0; i<self->list->size; ++i){
+		DaoValue *param = self->list->items.pValue[ self->list->size - i - 1 ];
+		DaoRoutine *closure = self->defers->items.pRoutine[ self->defers->size - i - 1 ];
+
 		self->parCount = param != NULL;
 		if( param ) DaoValue_Copy( param, self->paramValues );
-		DList_Append( self->defers, closure );
 		DaoProcess_PushRoutine( self, closure, NULL );
 		self->topFrame->deferBase -= deferCount;
 		self->topFrame->returning = -1;
@@ -1161,10 +1170,10 @@ CallEntry:
 
 	if( id >= routine->body->vmCodes->size ){
 		if( id == 0 ){
-			DString_SetChars( self->mbstring, "Not implemented function, " );
-			DString_Append( self->mbstring, routine->routName );
-			DString_AppendChars( self->mbstring, "()" );
-			DaoProcess_RaiseError( self, NULL, self->mbstring->chars );
+			DString_SetChars( self->string, "Not implemented function, " );
+			DString_Append( self->string, routine->routName );
+			DString_AppendChars( self->string, "()" );
+			DaoProcess_RaiseError( self, NULL, self->string->chars );
 			goto FinishProcess;
 		}
 		goto FinishCall;
@@ -3993,7 +4002,7 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc,
 		DString *name, DaoValue *P[], int N, int ignore_return, int execute );
 static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 {
-	DString *name = self->mbstring;
+	DString *name = self->string;
 	DaoValue *va = self->activeValues[ vmc->a ];
 	DaoValue *vc = self->activeValues[ vmc->c ];
 	DaoType *type = DaoNamespace_GetType( self->activeNamespace, va );
@@ -4679,7 +4688,7 @@ static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, 
 	DaoObject *object = (DaoObject*)A;
 	DaoCdata *cdata = (DaoCdata*)A;
 	DaoClass *klass;
-	DString *name = self->mbstring;
+	DString *name = self->string;
 	DaoValue **p, *par[3];
 	DaoType *argt[3] = { NULL };
 	DaoValue *value = NULL;
@@ -4909,11 +4918,11 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 			if( denum->etype == NULL ){ /* Can happen in constant evaluation: */
 				DaoType *tp;
 				DNode *it;
-				DString_Reset( self->mbstring, 0 );
-				DString_Append( self->mbstring, ta->mapNames->root->key.pString );
-				DString_AppendChar( self->mbstring, ';' );
-				DString_Append( self->mbstring, tb->mapNames->root->key.pString );
-				tp = DaoNamespace_MakeEnumType( NS, self->mbstring->chars );
+				DString_Reset( self->string, 0 );
+				DString_Append( self->string, ta->mapNames->root->key.pString );
+				DString_AppendChar( self->string, ';' );
+				DString_Append( self->string, tb->mapNames->root->key.pString );
+				tp = DaoNamespace_MakeEnumType( NS, self->string->chars );
 				DaoEnum_SetType( denum, tp );
 			}
 			DaoEnum_AddValue( denum, (DaoEnum*) A );
@@ -5393,7 +5402,7 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 	DaoLexer *lexer;
 	DaoParser *parser;
 	DaoToken *tok, **tokens;
-	DString *mbs = proc->mbstring;
+	DString *mbs = proc->string;
 	double fvalue = 0;
 	dao_integer ivalue = 0;
 	int tid = dC->type;

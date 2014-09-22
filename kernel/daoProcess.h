@@ -132,7 +132,8 @@ struct DaoProcess
 	// Pairs of deallocation function pointer and data pointer;
 	*/
 	DMap           *aux;
-	DString        *mbstring;
+	DList          *list;
+	DString        *string;
 };
 
 /* Create a new virtual machine process */

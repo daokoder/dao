@@ -4030,6 +4030,7 @@ static void DaoException_PrintName( DaoValue *exception, DaoStream *ss )
 }
 void DaoException_Print( DaoException *self, DaoStream *stream )
 {
+	int codeShown = 0;
 	int i, h, w = 100, n = self->callers->size;
 	DaoStream *ss = DaoStream_New();
 	DString *sstring = ss->streamString;
@@ -4054,7 +4055,7 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 
 	for(i=0; i<n; i++){
 		DaoRoutine *rout = self->callers->items.pRoutine[i];
-		if( i == 0 && rout->subtype == DAO_ROUTINE ){
+		if( codeShown == 0 && rout->subtype == DAO_ROUTINE ){
 			DaoVmCodeX **codes = rout->body->annotCodes->items.pVmc;
 			int m = rout->body->vmCodes->size;
 			int j, k = self->lines->items.pInt[i] & 0xffff;
@@ -4067,6 +4068,7 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 				DaoStream_WriteString( stream, sstring );
 			}
 			DString_Clear( sstring );
+			codeShown = 1;
 		}
 		DaoStream_WriteChars( ss, i == 0 ? "Raised by:  " : "Called by:  " );
 		if( rout->attribs & DAO_ROUT_PARSELF ){

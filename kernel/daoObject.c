@@ -75,11 +75,11 @@ static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *strea
 	}
 	if( cycData ) MAP_Insert( cycData, self, self );
 
-	DString_SetChars( proc->mbstring, "serialize" );
+	DString_SetChars( proc->string, "serialize" );
 	DaoValue_Clear( & proc->stackValues[0] );
-	ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, NULL,0,1,1 );
+	ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->string, NULL,0,1,1 );
 	if( ec && ec != DAO_ERROR_FIELD_NOTEXIST ){
-		DaoProcess_RaiseException( proc, daoExceptionNames[ec], proc->mbstring->chars, NULL );
+		DaoProcess_RaiseException( proc, daoExceptionNames[ec], proc->string->chars, NULL );
 	}else if( ec == DAO_ERROR_FIELD_NOTEXIST || proc->stackValues[0] == NULL ){
 		DaoStream_WriteString( stream, self->defClass->className );
 		DaoStream_WriteChars( stream, buf );
@@ -93,7 +93,7 @@ static void DaoObject_Core_GetField( DaoValue *self0, DaoProcess *proc, DString 
 	DaoValue *value = NULL;
 	int rc = DaoObject_GetData( self, name, & value, proc->activeObject );
 	if( rc ){
-		DString *field = proc->mbstring;
+		DString *field = proc->string;
 		DString_SetChars( field, "." );
 		DString_Append( field, name );
 		rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, field, NULL,0,0,0 );
@@ -115,7 +115,7 @@ static void DaoObject_Core_SetField( DaoValue *self0, DaoProcess *proc, DString 
 	int ec = DaoObject_SetData( self, name, value, proc->activeObject );
 	int ec2 = ec;
 	if( ec != DAO_ERROR ){
-		DString *mbs = proc->mbstring;
+		DString *mbs = proc->string;
 		DString_SetChars( mbs, "." );
 		DString_Append( mbs, name );
 		DString_AppendChars( mbs, "=" );
@@ -137,9 +137,9 @@ static void DaoObject_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[
 {
 	DaoObject *self = & self0->xObject;
 	int rc = 0;
-	DString_SetChars( proc->mbstring, "[]" );
-	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, ids, N,0,0 );
-	if( rc ) DaoProcess_RaiseException( proc, daoExceptionNames[rc], proc->mbstring->chars, NULL );
+	DString_SetChars( proc->string, "[]" );
+	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->string, ids, N,0,0 );
+	if( rc ) DaoProcess_RaiseException( proc, daoExceptionNames[rc], proc->string->chars, NULL );
 }
 static void DaoObject_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
 {
@@ -148,9 +148,9 @@ static void DaoObject_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[
 	int rc;
 	memcpy( ps+1, ids, N*sizeof(DaoValue*) );
 	ps[0] = value;
-	DString_SetChars( proc->mbstring, "[]=" );
-	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->mbstring, ps, N+1,1,0 );
-	if( rc ) DaoProcess_RaiseException( proc, daoExceptionNames[rc], proc->mbstring->chars, NULL );
+	DString_SetChars( proc->string, "[]=" );
+	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->string, ps, N+1,1,0 );
+	if( rc ) DaoProcess_RaiseException( proc, daoExceptionNames[rc], proc->string->chars, NULL );
 }
 
 static DaoTypeCore objCore =
