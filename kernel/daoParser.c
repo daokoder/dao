@@ -2958,7 +2958,7 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 	if( start+1 > to ) goto ErrorInterfaceDefinition;
 	tokName = tokens[start+1];
 	interName = ename = & tokName->string;
-	start = DaoParser_ParseScopedConstOrName( self, NULL, & value, start + 1, 0 );
+	start = DaoParser_ParseScopedConstOrName( self, NULL, & value, start + 1, DTOK_LCB );
 	if( start <0 ) goto ErrorInterfaceDefinition;
 	if( value == NULL || value->type == 0 ){
 		int t = tokens[start]->name;
@@ -3090,7 +3090,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( start+1 > to ) goto ErrorClassDefinition;
 	tokName = tokens[start+1];
 	className = ename = & tokName->string;
-	start = DaoParser_ParseScopedConstOrName( self, NULL, & value, start+1, 0 );
+	start = DaoParser_ParseScopedConstOrName( self, NULL, & value, start+1, DTOK_LCB );
 	if( start <0 ) goto ErrorClassDefinition;
 	ename = & tokens[start]->string;
 	if( value == NULL || value->type == 0 ){
@@ -5307,7 +5307,7 @@ int DaoParser_ParseNamespaceStatement( DaoParser *self, int start, int end )
 	if( start+1 > end ) goto InvalidNamespace;
 	if( (self->levelBase + self->lexLevel) != 0 ) goto InvalidNamespace;
 
-	start = DaoParser_ParseScopedConstOrName( self, & scope, & value, start+1, 0 );
+	start = DaoParser_ParseScopedConstOrName( self, & scope, & value, start+1, DTOK_LCB );
 	if( start <0 ) goto InvalidNamespace;
 
 	ename = & tokens[start]->string;
@@ -6735,7 +6735,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 				if( self->vmcLast->code == DVM_RETURN ){
 					self->vmcLast->c = DVM_SECT;
 				}else{
-					int first = self->vmcLast->first;
+					int first = self->curToken;
 					DaoParser_AddCode( self, DVM_RETURN, 0, 0, DVM_SECT, first, 0, rb );
 				}
 				self->isSection = isSection;
