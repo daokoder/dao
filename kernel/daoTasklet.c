@@ -468,6 +468,7 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 		}else{
 			DaoProcess_PushRoutine( callee, caller->activeRoutine, caller->activeObject );
 		}
+		DaoProcess_SetActiveFrame( callee, callee->topFrame );
 		calleeValues = callee->stackValues + callee->topFrame->stackBase;
 		callee->activeCode = caller->activeCode;
 		vmc = callerFrame->routine->body->vmCodes->data.codes + callerFrame->entry;
@@ -499,6 +500,7 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 		DaoProcess_PushRoutine( callee, routine, future->actor );
 	}else{
 		DaoProcess_PushFunction( callee, routine );
+		callee->activeNamespace = caller->activeNamespace;
 	}
 	if( caller->activeCode->b & DAO_CALL_BLOCK ){
 		callee->topFrame->host = callee->topFrame;

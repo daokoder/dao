@@ -1810,13 +1810,6 @@ static void DaoLIST_Sum( DaoProcess *proc, DaoValue *p[], int N )
 			DaoProcess_PutComplex( proc, res );
 			break;
 		}
-	case DAO_ENUM :
-		{
-			/* XXX */
-			DaoEnum *denum = DaoProcess_GetEnum( proc, proc->activeCode );
-			for(i=0; i<self->value->size; i++) denum->value += data[i]->xEnum.value;
-			break;
-		}
 	case DAO_STRING :
 		{
 			DString *m = DaoProcess_PutChars( proc, "" );

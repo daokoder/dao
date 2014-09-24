@@ -203,7 +203,6 @@ void DaoProcess_Trace( DaoProcess *self, int depth )
 void DaoSTD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoDebugger *debugger = proc->vmSpace->debugger;
-	DaoRoutine *routine = proc->activeRoutine;
 	DaoStream *stream = proc->vmSpace->stdioStream;
 	DString *input;
 	if( ! (proc->vmSpace->options & DAO_OPTION_DEBUG ) ) return;

@@ -288,9 +288,8 @@ int DaoValue_IsNumber( DaoValue *self )
 	if( self->type == DAO_INTEGER || self->type == DAO_FLOAT ) return 1;
 	return 0;
 }
-static void DaoValue_BasicPrint( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
+static void DaoValue_BasicPrint( DaoValue *self, DaoStream *stream, DMap *cycData )
 {
-	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
 	if( self->type <= DAO_TUPLE )
 		DaoStream_WriteChars( stream, coreTypeNames[ self->type ] );
 	else
@@ -305,8 +304,6 @@ static void DaoValue_BasicPrint( DaoValue *self, DaoProcess *proc, DaoStream *st
 	DaoStream_WriteInt( stream, self->type );
 	DaoStream_WriteChars( stream, "_" );
 	DaoStream_WritePointer( stream, self );
-	if( self->type <= DAO_TUPLE ) return;
-	if( type && self == type->value ) DaoStream_WriteChars( stream, "[default]" );
 }
 void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
@@ -346,7 +343,7 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 	default :
 		typer = DaoVmSpace_GetTyper( self->type );
 		if( typer->core->Print == DaoValue_Print ){
-			DaoValue_BasicPrint( self, proc, stream, cycData );
+			DaoValue_BasicPrint( self, stream, cycData );
 			break;
 		}
 		typer->core->Print( self, proc, stream, cycData );

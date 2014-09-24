@@ -230,7 +230,7 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 	frame->varCount = size;
 	frame->entry = 0;
 	frame->state = 0;
-	frame->returning = -1;
+	frame->returning = 0xffff;
 	frame->parCount = 0;
 	frame->deferBase = self->defers->size;
 	frame->exceptBase = self->exceptions->size;
@@ -609,14 +609,10 @@ int DaoProcess_PushCallable( DaoProcess *self, DaoRoutine *R, DaoValue *O, DaoVa
 {
 	return DaoProcess_PushCallableX( self, R, O, P, NULL, N );
 }
+/* Specialize case: mt.start()!!{} */
 void DaoProcess_InterceptReturnValue( DaoProcess *self )
 {
-	if( self->topFrame->routine && self->topFrame->routine->body ){
-		self->topFrame->returning = -1;
-	}else{
-		self->topFrame->active = self->firstFrame;
-		DaoProcess_SetActiveFrame( self, self->firstFrame );
-	}
+	self->topFrame->returning = 0xffff;
 }
 
 static DaoStackFrame* DaoProcess_FindSectionFrame2( DaoProcess *self, DaoStackFrame *frame )
@@ -648,7 +644,7 @@ static DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 {
 	DaoStackFrame *next, *frame = DaoProcess_FindSectionFrame( self );
 	DaoProfiler *profiler = self->vmSpace->profiler;
-	int returning = -1;
+	int returning = 0xffff;
 
 	if( frame == NULL ) return NULL;
 	if( self->topFrame->routine->body ){
@@ -756,14 +752,20 @@ Done:
 void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[], int n )
 {
 	int m = self->factory->size;
-	int opc = self->activeCode->c;
 	int cur = self->returned;
-	int optype = DaoVmCode_GetOpcodeType( self->activeCode );
-	int ret = (optype >= DAO_CODE_GETC) & (optype <= DAO_CODE_GETM);
-	ret |= (optype >= DAO_CODE_MOVE) & (optype <= DAO_CODE_YIELD);
 	self->returned = 0xffff;
 	func->pFunc( self, p, n );
-	if( ret && self->returned == 0xffff ) DaoProcess_SetValue( self, opc, dao_none_value );
+	if( self->returned == 0xffff ){
+		if( self->topFrame != self->topFrame->active && self->topFrame->returning == 0xffff ){
+			GC_Assign( self->stackValues, dao_none_value );
+		}else{
+			int opc = self->activeCode->c;
+			int optype = DaoVmCode_GetOpcodeType( self->activeCode );
+			int ret = (optype >= DAO_CODE_GETC) & (optype <= DAO_CODE_GETM);
+			ret |= (optype >= DAO_CODE_MOVE) & (optype <= DAO_CODE_YIELD);
+			if( ret ) DaoProcess_SetValue( self, opc, dao_none_value );
+		}
+	}
 	if( self->factory->size > m ) DList_Erase( self->factory, m, -1 );
 	self->returned = cur;
 }
@@ -819,7 +821,7 @@ static int DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
 		if( param ) DaoValue_Copy( param, self->paramValues );
 		DaoProcess_PushRoutine( self, closure, NULL );
 		self->topFrame->deferBase -= deferCount;
-		self->topFrame->returning = -1;
+		self->topFrame->returning = 0xffff;
 		self->topFrame->host = frame;
 	}
 	DList_Erase( self->defers, frame->deferBase, deferCount );
@@ -2469,6 +2471,12 @@ DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value )
 }
 DaoValue* DaoProcess_PutValue( DaoProcess *self, DaoValue *value )
 {
+	if( self->topFrame != self->topFrame->active && self->topFrame->returning == 0xffff ){
+		int res = DaoValue_Move( value, self->stackValues, NULL );
+		self->returned = 0;
+		if( res ) return self->stackValues[0];
+		return NULL;
+	}
 	self->returned = self->activeCode->c;
 	return DaoProcess_SetValue( self, self->activeCode->c, value );
 }
@@ -3236,7 +3244,7 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		returning = topFrame->host->returning;
 	}
 
-	if( returning != (ushort_t)-1 ){
+	if( returning != 0xffff ){
 #ifdef DEBUG
 		assert( lastframe && lastframe->routine );
 #endif
@@ -6108,7 +6116,7 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 	default: break;
 	}
 	if( self->status == DAO_PROCESS_STACKED ){
-		self->topFrame->returning = -1;
+		self->topFrame->returning = 0xffff;
 		DaoProcess_Execute( self );
 	}
 	if( self->exceptions->size >0 ) return NULL;
