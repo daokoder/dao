@@ -1154,6 +1154,7 @@ void DaoMakeProject_MakeDependency( DaoMakeProject *self, DaoMakeTarget *target,
 	for(i=0; i<target->depends->size; ++i){
 		DaoMakeTarget *t = (DaoMakeTarget*) target->depends->items.pVoid[i];
 		DaoMakeTarget_MakeName( t, tname, 1 );
+		if( t->ttype <= DAOMAKE_STATICLIB ) DaoMake_MakePath( t->base.buildPath, tname );
 		DString_AppendGap( deps );
 		DString_Append( deps, tname );
 	}
@@ -1238,6 +1239,7 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 			it = DMap_Insert( self->testRules, signature, signature );
 			DString_AppendChars( it->value.pString, ": " );
 			DString_Append( it->value.pString, rule );
+			DString_AppendChars( it->value.pString, " $(DAOTEST)" );
 			DString_AppendChars( it->value.pString, "\n\t-$(DAOTEST) " );
 			DString_Append( it->value.pString, rule );
 			DString_AppendGap( it->value.pString );
@@ -2354,7 +2356,7 @@ static void TARGET_AddDepends( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
 	int i;
 	for(i=1; i<N; ++i){
-		DaoMakeTarget *target = (DaoMakeTarget*) DaoValue_CastCdata( p[i], daomake_type_target );
+		DaoMakeTarget *target = (DaoMakeTarget*) DaoValue_CastCstruct( p[i], daomake_type_target );
 		if( target == NULL ) continue;
 		DList_Append( self->depends, target );
 	}
@@ -2573,6 +2575,25 @@ static void PROJECT_AddVAR( DaoProcess *proc, DaoValue *p[], int N )
 	DList_Append( self->variables, value );
 	DList_Append( self->variables, oper );
 }
+static void PROJECT_FindTarget( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeProject *self = (DaoMakeProject*) p[0];
+	DString *name = DaoValue_TryGetString( p[1] );
+	int ttype = p[2]->xEnum.value;
+	int i;
+	for(i=0; i<self->targets2->size; ++i){
+		DaoMakeTarget *tar = (DaoMakeTarget*) self->targets2->items.pVoid[i];
+		int check = 0;
+		if( (ttype & 1) && tar->ttype == DAOMAKE_SHAREDLIB ) check = 1;
+		if( (ttype & 2) && tar->ttype == DAOMAKE_STATICLIB ) check = 1;
+		if( check == 0 ) continue;
+		if( DString_EQ( tar->name, name ) ){
+			DaoProcess_PutValue( proc, (DaoValue*) tar );
+			return;
+		}
+	}
+	DaoProcess_PutNone( proc );
+}
 static void PROJECT_SetTargetPath( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeProject *self = (DaoMakeProject*) p[0];
@@ -2660,6 +2681,8 @@ static DaoFuncItem DaoMakeProjectMeths[]=
 	{ PROJECT_AddDIR,  "AddDirectory( self: Project, name: string, path: string, ...: string ) => Target" },
 
 	{ PROJECT_AddVAR,  "AddVariable( self: Project, name: string, value: string, op = '=' )" },
+
+	{ PROJECT_FindTarget,  "FindTarget( self: Project, name: string, ttype: enum<shared;static> = $shared ) => Target|none" },
 
 	{ PROJECT_SetTargetPath,  "SetTargetPath( self: Project, path: string )" },
 

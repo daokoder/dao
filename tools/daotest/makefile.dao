@@ -5,8 +5,11 @@ daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
+libdao_dll = daovm.FindTarget( "dao", $shared );
+
 project_objs = project.AddObjects( { "source/daoTest.c" } )
 project_exe  = project.AddExecutable( "daotest", project_objs )
+project_exe.AddDependency( libdao_dll )
 
 project_exe.UseSharedLibrary( daovm, "dao" )
 project_exe.SetTargetPath( "../../bin" )

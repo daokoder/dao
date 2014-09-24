@@ -698,7 +698,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		return 1;
 	}
 	switch( S->type ){
-	case DAO_ENUM : if( S->xEnum.subtype == DAO_ENUM_SYM && T->realnum ) return 0;
+	case DAO_ENUM : if( S->xEnum.subtype == DAO_ENUM_SYM && T->realnum ) return 0; break;
 	case DAO_OBJECT : if( S->xObject.isNull ) return 0; break;
 	case DAO_CDATA  : if( S->xCdata.data == NULL ) return 0; break;
 	}

@@ -37,7 +37,7 @@
 #include"daoValue.h"
 #include"daoGC.h"
 
-#define IO_BUF_SIZE  512
+#define IO_BUF_SIZE  1024
 
 void DaoStream_Flush( DaoStream *self )
 {
@@ -269,8 +269,9 @@ static void DaoIO_Read( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = proc->stdioStream;
 	DString *ds = DaoProcess_PutChars( proc, "" );
-	int ch, amount = -1; /* amount=-2: all; amount=-1: line; amount>=0: bytes; */
+	int ch, size, amount = -1; /* amount=-2: all; amount=-1: line; amount>=0: bytes; */
 	FILE *fin = stdin;
+	char buf[IO_BUF_SIZE];
 
 	if( self == NULL ) self = proc->vmSpace->stdioStream;
 	if( N > 0 ){
@@ -310,7 +311,10 @@ static void DaoIO_Read( DaoProcess *proc, DaoValue *p[], int N )
 			}
 			self->offset += ds->size;
 		}else{
-			while( (ch = getc(fin)) != '\n' ) DString_AppendWChar( ds, ch );
+			do {
+				size = fread( buf, 1, sizeof(buf), fin );
+				DString_AppendBytes( ds, buf, size);
+			} while ( size );
 		}
 	}else{
 		DaoStream_ReadLine( self, ds );
@@ -358,7 +362,7 @@ static void DaoIO_ReadFile( DaoProcess *proc, DaoValue *p[], int N )
 	DString *res = DaoProcess_PutChars( proc, "" );
 	daoint silent = p[1]->xBoolean.value;
 	if( DString_Size( p[0]->xString.value ) ==0 ){
-		char buf[1024];
+		char buf[IO_BUF_SIZE];
 		while(1){
 			size_t count = fread( buf, 1, sizeof( buf ), stdin );
 			if( count ==0 ) break;
