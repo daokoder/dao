@@ -2228,7 +2228,6 @@ DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *routype, DList *rou
 	return type;
 }
 
-void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
 void DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype,
 		DaoType *ts[], int np, int code, DMap *defs )
 {
@@ -4394,9 +4393,9 @@ static DaoRoutine* DaoInferencer_Specialize( DaoInferencer *self, DaoRoutine *ro
 
 	/* Do not share function body. It may be thread unsafe to share: */
 	rout = DaoRoutine_Copy( rout, 0, 1, 0 );
-	DaoRoutine_Finalize( rout, NULL, defs2 );
+	DaoRoutine_Finalize( rout, orig, NULL, defs2 );
 
-	if( rout->routType->attrib & DAO_TYPE_SPEC ){
+	if( rout->routType == orig->routType || rout->routType == rout2->routType ){
 		DaoGC_TryDelete( (DaoValue*) rout );
 		rout = rout2;
 	}else{
@@ -4415,12 +4414,13 @@ static DaoRoutine* DaoInferencer_Specialize( DaoInferencer *self, DaoRoutine *ro
 		/* rout may has only been declared */
 		/* forward declared routine may have an empty routine body: */
 		if( rout->body && rout->body->vmCodes->size ){
+			DaoRoutine *rout3 = rout;
 			/* Create a new copy of the routine for specialization: */
 			rout = DaoRoutine_Copy( rout, 0, 1, 0 );
 			GC_Assign( & rout->original, orig );
 			DMap_Reset( defs3 );
 			DaoType_MatchTo( rout->routType, orig->routType, defs3 );
-			DaoRoutine_MapTypes( rout, defs3 );
+			DaoRoutine_MapTypes( rout, rout3, defs3 );
 
 			/* to infer returned type */
 			if( DaoRoutine_DoTypeInference( rout, self->silent ) ==0 ){

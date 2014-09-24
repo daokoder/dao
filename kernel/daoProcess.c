@@ -530,7 +530,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 		DaoRoutine *current = routine;
 		/* Do not share function body. It may be thread unsafe to share: */
 		routine = DaoRoutine_Copy( original, 0, 1, 0 );
-		DaoRoutine_Finalize( routine, routine->routHost, defs );
+		DaoRoutine_Finalize( routine, original, routine->routHost, defs );
 
 		if( routine->routType->attrib & DAO_TYPE_SPEC ){
 			DaoGC_TryDelete( (DaoValue*) routine );
@@ -540,7 +540,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 				DMap *defs2 = DHash_New(0,0);
 				DaoType_MatchTo( routine->routType, original->routType, defs2 );
 				/* Only specialize explicitly declared variables: */
-				DaoRoutine_MapTypes( routine, defs2 );
+				DaoRoutine_MapTypes( routine, original, defs2 );
 				DMap_Delete( defs2 );
 				if( DaoRoutine_DoTypeInference( routine, 1 ) == 0 ){
 					/*
@@ -5800,7 +5800,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	DaoProcess_MapTypes( self, deftypes );
 	tp = DaoType_DefineTypes( closure->routType, closure->nameSpace, deftypes );
 	GC_Assign( & closure->routType, tp );
-	DaoRoutine_MapTypes( closure, deftypes );
+	DaoRoutine_MapTypes( closure, proto, deftypes );
 	DMap_Delete( deftypes );
 
 	/* It's necessary to put it in "self" process in any case, so that it can be GC'ed: */

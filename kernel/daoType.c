@@ -2424,7 +2424,6 @@ DaoType* DaoType_Specialize( DaoType *self, DaoType *types[], int count )
 	return type;
 }
 
-int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
 
 /*
 // For constructors and static methods.
@@ -2475,7 +2474,7 @@ static void DaoType_SpecMethod( DaoType *self, DaoTypeKernel *kernel, DaoRoutine
 
 	if( method->attribs & DAO_ROUT_INITOR ) DString_Assign( rout->routName, self->name );
 	DaoType_InitTypeDefines( self, rout, defs );
-	DaoRoutine_Finalize( rout, self, defs );
+	DaoRoutine_Finalize( rout, method, self, defs );
 	DaoMethods_Insert( kernel->methods, rout, nspace, self );
 	if( method->attribs & DAO_ROUT_INITOR ){
 		DaoTypeKernel_InsertInitor( kernel, nspace, self, rout );

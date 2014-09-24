@@ -95,8 +95,8 @@ DAO_DLL void DaoRoutine_SetSource( DaoRoutine *self, DList *tokens, DaoNamespace
 DAO_DLL void DaoRoutine_FormatCode( DaoRoutine *self, int i, DaoVmCodeX vmc, DString *output );
 DAO_DLL void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream );
 
-DAO_DLL void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
-DAO_DLL int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
+DAO_DLL void DaoRoutine_MapTypes( DaoRoutine *self, DaoRoutine *origcopy, DMap *deftypes );
+DAO_DLL int DaoRoutine_Finalize( DaoRoutine *self, DaoRoutine *origcopy, DaoType *host, DMap *deftypes );
 DAO_DLL int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent );
 
 struct DaoRoutineBody

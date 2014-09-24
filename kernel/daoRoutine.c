@@ -255,7 +255,7 @@ void DaoRoutine_SetSource( DaoRoutine *self, DList *tokens, DaoNamespace *ns )
 }
 
 
-void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
+void DaoRoutine_MapTypes( DaoRoutine *self, DaoRoutine *original, DMap *deftypes )
 {
 	DaoType *tp;
 	DNode *it;
@@ -267,25 +267,42 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes )
 		printf( "%16s -> %s\n", it->key.pType->name->chars, it->value.pType->name->chars );
 	}
 #endif
-	for(it=DMap_First(self->body->localVarType); it; it=DMap_Next(self->body->localVarType,it)){
-		tp = DaoType_DefineTypes( it->value.pType, self->nameSpace, deftypes );
-		it->value.pType = tp;
+	if( self->body != original->body ){
+		for(it=DMap_First(self->body->localVarType); it; it=DMap_Next(self->body->localVarType,it)){
+			tp = DaoType_DefineTypes( it->value.pType, self->nameSpace, deftypes );
+			it->value.pType = tp;
+		}
 	}
-	if( self->body->upValues == NULL ) return;
+	for(i=0,n=self->routConsts->value->size; i<n; ++i){
+		DaoValue **value2 = self->routConsts->value->items.pValue + i;
+		DaoType *type = DaoValue_CastType( *value2 );
+		if( type ){
+			DaoType *type2 = DaoType_DefineTypes( type, self->nameSpace, deftypes );
+			if( type2 == type ) continue;
+			if( self->routConsts == original->routConsts ){
+				DaoList *list = DaoList_New();
+				DList_Assign( list->value, self->routConsts->value );
+				GC_Assign( & self->routConsts, list );
+				value2 = self->routConsts->value->items.pValue + i;
+			}
+			GC_Assign( value2, type2 );
+		}
+	}
+	if( self->body == original->body || self->body->upValues == NULL ) return;
 	for(i=0,n=self->body->upValues->size; i<n; ++i){
 		DaoVariable *var = self->body->upValues->items.pVar[i];
 		DaoType *type = DaoType_DefineTypes( var->dtype, self->nameSpace, deftypes );
 		GC_Assign( & var->dtype, type );
 	}
 }
-int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes )
+int DaoRoutine_Finalize( DaoRoutine *self, DaoRoutine *original, DaoType *host, DMap *deftypes )
 {
 	DaoType *tp = DaoType_DefineTypes( self->routType, self->nameSpace, deftypes );
 	if( tp == NULL ) return 0;
 	GC_Assign( & self->routType, tp );
 	if( host ) GC_Assign( & self->routHost, host );
 	if( self->body == NULL ) return 1;
-	DaoRoutine_MapTypes( self, deftypes );
+	DaoRoutine_MapTypes( self, original, deftypes );
 	return 1;
 	/*
 	 DaoRoutine_PrintCode( self, self->nameSpace->vmSpace->stdioStream );

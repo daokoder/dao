@@ -163,8 +163,6 @@ void DaoClass_AddReference( DaoClass *self, void *reference )
 	if( reference == NULL ) return;
 	DList_Append( self->references, reference );
 }
-void DaoRoutine_MapTypes( DaoRoutine *self, DMap *deftypes );
-int DaoRoutine_Finalize( DaoRoutine *self, DaoType *host, DMap *deftypes );
 void DaoClass_Parents( DaoClass *self, DList *parents, DList *offsets );
 
 
@@ -465,7 +463,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 			void *original2 = it ? it->value.pVoid : old->routHost;
 			rout = DaoRoutine_Copy( rout, 1, 1, 1 );
 			DMap_Insert( rout->body->aux, DaoRoutine_OriginalHost, original2 );
-			bl = bl && DaoRoutine_Finalize( rout, self->objType, deftypes );
+			bl = bl && DaoRoutine_Finalize( rout, old, self->objType, deftypes );
 #if 0
 			printf( "%2i:  %s  %s\n", i, rout->routName->chars, rout->routType->name->chars );
 #endif
