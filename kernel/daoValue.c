@@ -446,7 +446,13 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 {
 	if( self == NULL ) return dao_none_value;
 	if( (tp == NULL || tp->tid == self->type) && self->type < DAO_ENUM ){
-		if( cst && cst->invar ) return self;
+		/*
+		// The following optimization is safe theoretically.
+		// But it is not practically safe for DaoProcess_PutChars() etc.,
+		// which often uses shallow wraps of "const char*" as the source value,
+		// and expects it to be copied at the destination as a primitive value.
+		*/
+		/* if( cst && cst->invar ) return self; */
 		switch( self->type ){
 		case DAO_NONE : return self;
 		case DAO_BOOLEAN : return (DaoValue*) DaoBoolean_New( self->xBoolean.value );
