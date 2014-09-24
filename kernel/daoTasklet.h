@@ -165,6 +165,7 @@ DAO_DLL DaoType *dao_type_future;
 DAO_DLL DaoChannel* DaoChannel_New( DaoType *type, int dtype );
 DAO_DLL DaoFuture*  DaoFuture_New( DaoType *type, int vatype );
 
+DAO_DLL void DaoChannel_Send( DaoChannel *self, DaoValue *data );
 DAO_DLL void DaoChannel_ActivateEvent( DaoChannel *self, int type );
 DAO_DLL void DaoFuture_ActivateEvent( DaoFuture *self );
 

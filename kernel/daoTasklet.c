@@ -1063,6 +1063,15 @@ static void CHANNEL_Cap( DaoProcess *proc, DaoValue *par[], int N )
 	DCondVar_Signal( & daoCallServer->condv );
 	DMutex_Unlock( & daoCallServer->mutex );
 }
+void DaoChannel_Send( DaoChannel *self, DaoValue *data )
+{
+	DMutex_Lock( & daoCallServer->mutex );
+	DList_Append( self->buffer, data );
+	DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_RECEIVING );
+	DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_SELECT );
+	DCondVar_Signal( & daoCallServer->condv );
+	DMutex_Unlock( & daoCallServer->mutex );
+}
 static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoValue *data;
@@ -1070,7 +1079,7 @@ static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
 	DaoChannel *self = (DaoChannel*) par[0];
 	float timeout = par[2]->xFloat.value;
 
-	DaoProcess_PutInteger( proc, 1 );
+	DaoProcess_PutBoolean( proc, 1 );
 	if( self->cap <= 0 ){
 		DaoProcess_RaiseError( proc, "Param", "channel is closed" );
 		return;
@@ -1083,12 +1092,7 @@ static void CHANNEL_Send( DaoProcess *proc, DaoValue *par[], int N )
 	}
 
 	//printf( "CHANNEL_Send: %p\n", event );
-	DMutex_Lock( & daoCallServer->mutex );
-	DList_Append( self->buffer, data );
-	DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_RECEIVING );
-	DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_SELECT );
-	DCondVar_Signal( & daoCallServer->condv );
-	DMutex_Unlock( & daoCallServer->mutex );
+	DaoChannel_Send( self, data );
 
 	if( self->buffer->size >= self->cap ){
 		DaoTaskEvent *event = DaoCallServer_MakeEvent();
@@ -1125,8 +1129,8 @@ static DaoFuncItem channelMeths[] =
 	{ CHANNEL_New,      "Channel<@V>( cap = 1 )" },
 	{ CHANNEL_Buffer,   "buffer( self: Channel<@V> ) => int" },
 	{ CHANNEL_Cap,      "cap( self: Channel<@V> ) => int" },
-	{ CHANNEL_Cap,      "cap( self: Channel<@V>, cap: int ) =>int" },
-	{ CHANNEL_Send,     "send( self: Channel<@V>, data: @V, timeout: float = -1 ) => int" },
+	{ CHANNEL_Cap,      "cap( self: Channel<@V>, cap: int ) => int" },
+	{ CHANNEL_Send,     "send( self: Channel<@V>, data: @V, timeout: float = -1 ) => bool" },
 	{ CHANNEL_Receive,  "receive( self: Channel<@V>, timeout: float = -1 ) => tuple<data: @V|none, status: enum<received,timeout,finished>>" },
 	{ NULL, NULL }
 };
@@ -1167,7 +1171,7 @@ static void FUTURE_Wait( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoFuture *self = (DaoFuture*) par[0];
 	float timeout = par[1]->xFloat.value;
-	DaoProcess_PutInteger( proc, self->state == DAO_CALL_FINISHED );
+	DaoProcess_PutBoolean( proc, self->state == DAO_CALL_FINISHED );
 	if( self->state == DAO_CALL_FINISHED || timeout == 0 ) return;
 	proc->status = DAO_PROCESS_SUSPENDED;
 	proc->pauseType = DAO_PAUSE_FUTURE_WAIT;
@@ -1176,7 +1180,7 @@ static void FUTURE_Wait( DaoProcess *proc, DaoValue *par[], int N )
 static DaoFuncItem futureMeths[] =
 {
 	{ FUTURE_Value,   "value( self: Future<@V> )=>@V" },
-	{ FUTURE_Wait,    "wait( self: Future<@V>, timeout: float = -1 )=>int" },
+	{ FUTURE_Wait,    "wait( self: Future<@V>, timeout: float = -1 ) => bool" },
 	{ NULL, NULL }
 };
 static void DaoFuture_Delete( DaoFuture *self )

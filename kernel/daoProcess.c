@@ -1225,10 +1225,10 @@ CallEntry:
 			DaoProcess_PutValue( self, finished ? future->precond->value : dao_none_value );
 			break;
 		case DAO_PAUSE_FUTURE_WAIT :
-			DaoProcess_PutInteger( self, future->precond->state == DAO_CALL_FINISHED );
+			DaoProcess_PutBoolean( self, future->precond->state == DAO_CALL_FINISHED );
 			break;
 		case DAO_PAUSE_CHANNEL_SEND :
-			DaoProcess_PutInteger( self, future->timeout == 0 );
+			DaoProcess_PutBoolean( self, future->timeout == 0 );
 			break;
 		case DAO_PAUSE_CHANNEL_RECEIVE :
 			/*
