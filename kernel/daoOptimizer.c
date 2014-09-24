@@ -2910,13 +2910,12 @@ static DaoType* DaoType_GetAutoCastType2( DaoType *self )
 {
 	if( self->tid != DAO_VARIANT ) return NULL;
 	if( self->nested->size == 1 ){
-		DaoType *T = self->nested->items.pType[0];
-		if( T->tid != DAO_NONE && !(T->tid & DAO_ANY) ) return T;
+		return self->nested->items.pType[0];
 	}else if( self->nested->size == 2 ){
 		DaoType *T1 = self->nested->items.pType[0];
 		DaoType *T2 = self->nested->items.pType[1];
-		if( T1->tid == DAO_NONE && T2->tid != DAO_NONE && !(T2->tid & DAO_ANY) ) return T2;
-		if( T2->tid == DAO_NONE && T1->tid != DAO_NONE && !(T1->tid & DAO_ANY) ) return T1;
+		if( T1->tid == DAO_NONE ) return T2;
+		if( T2->tid == DAO_NONE ) return T1;
 	}
 	return NULL;
 }

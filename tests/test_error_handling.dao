@@ -23,12 +23,12 @@ routine Test()
 io.writeln( Test() )
 @[test(code_01)]
 @[test(code_01)]
-always executed
-defer( Exception::Error as error )
-deferred 2
-deferred 3
-deferred 4
 deferred 5
+deferred 4
+deferred 3
+deferred 2
+defer( Exception::Error as error )
+always executed
 999
 @[test(code_01)]
 

@@ -1,4 +1,29 @@
 
+# Test auto-type casting:
+@[test(code_01)]
+var a : none|int = 123
+var b = a + 100
+@[test(code_01)]
+# no error, no output
+@[test(code_01)]
+@[test(code_01)]
+
+@[test(code_01)]
+var a : none|@T = 123
+var b = a + 100
+@[test(code_01)]
+# no error, no output
+@[test(code_01)]
+@[test(code_01)]
+
+@[test(code_01)]
+x = (none|@V)99
+y = x + x
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+# Test recursive types:
 @[test(code_01)]
 type Node = tuple<value: int, next: none|Node>
 var node : Node = ( 123, none )
