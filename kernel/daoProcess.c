@@ -349,8 +349,12 @@ static void DaoProcess_CopyStackParams( DaoProcess *self )
 	for(i=0; i<defCount; ++i){
 		DaoValue *value = self->paramValues[i];
 		if( value == NULL ) break;
-		self->paramValues[i] = frameValues[i];
-		frameValues[i] = value;
+		/*
+		// DO NOT swap the values for optimziation!
+		// frameValues[i] could be a primitive constant, swapping it
+		// to self->paramValues may allow it to be modified!
+		*/
+		GC_Assign( & frameValues[i], value );
 	}
 }
 void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *object )
