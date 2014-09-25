@@ -1239,7 +1239,7 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 			it = DMap_Insert( self->testRules, signature, signature );
 			DString_AppendChars( it->value.pString, ": " );
 			DString_Append( it->value.pString, rule );
-			DString_AppendChars( it->value.pString, " $(DAOTEST)" );
+			DaoMakeProject_MakeDependency( self, target, it->value.pString );
 			DString_AppendChars( it->value.pString, "\n\t-$(DAOTEST) " );
 			DString_Append( it->value.pString, rule );
 			DString_AppendGap( it->value.pString );
@@ -2581,8 +2581,8 @@ static void PROJECT_FindTarget( DaoProcess *proc, DaoValue *p[], int N )
 	DString *name = DaoValue_TryGetString( p[1] );
 	int ttype = p[2]->xEnum.value;
 	int i;
-	for(i=0; i<self->targets2->size; ++i){
-		DaoMakeTarget *tar = (DaoMakeTarget*) self->targets2->items.pVoid[i];
+	for(i=0; i<self->targets->size; ++i){
+		DaoMakeTarget *tar = (DaoMakeTarget*) self->targets->items.pVoid[i];
 		int check = 0;
 		if( (ttype & 1) && tar->ttype == DAOMAKE_SHAREDLIB ) check = 1;
 		if( (ttype & 2) && tar->ttype == DAOMAKE_STATICLIB ) check = 1;
@@ -2593,6 +2593,19 @@ static void PROJECT_FindTarget( DaoProcess *proc, DaoValue *p[], int N )
 		}
 	}
 	DaoProcess_PutNone( proc );
+}
+static void PROJECT_GetTarget( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoList *list = DaoProcess_PutList( proc );
+	DaoMakeProject *self = (DaoMakeProject*) p[0];
+	int ttype = p[1]->xEnum.value;
+	int i, j;
+	for(i=0; i<self->targets->size; ++i){
+		DaoMakeTarget *tar = (DaoMakeTarget*) self->targets->items.pVoid[i];
+		int check = 0;
+		for(j=DAOMAKE_EXECUTABLE; j<=DAOMAKE_DIRECTORY; ++j) check |= ttype & (1<<j);
+		if( ttype & (1<<tar->ttype) ) DaoList_Append( list, (DaoValue*) tar );
+	}
 }
 static void PROJECT_SetTargetPath( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -2683,6 +2696,8 @@ static DaoFuncItem DaoMakeProjectMeths[]=
 	{ PROJECT_AddVAR,  "AddVariable( self: Project, name: string, value: string, op = '=' )" },
 
 	{ PROJECT_FindTarget,  "FindTarget( self: Project, name: string, ttype: enum<shared;static> = $shared ) => Target|none" },
+
+	{ PROJECT_GetTarget,  "GetTargets( self: Project, ttype: enum<exec;shared;static;js;test;cmd;dir> = $shared ) => list<Target>" },
 
 	{ PROJECT_SetTargetPath,  "SetTargetPath( self: Project, path: string )" },
 

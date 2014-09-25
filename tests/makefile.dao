@@ -13,7 +13,6 @@ chartype_dll.UseSharedLibrary( daovm, "dao" )
 chartype_dll.EnableDynamicLinking()
 
 
-
 daotests.AddTest( "Example", "examples.dao" )
 
 daotests.AddTest( "Lexer",  "test_lexer.dao" )
@@ -52,3 +51,9 @@ daotests.AddTest( "ErrorHandling", "test_error_handling.dao" )
 
 misc = daotests.AddTest( "Misc", "test_misc.dao" )
 misc.AddTest( "test_type.dao" );
+
+libdao_dll = daovm.FindTarget( "dao", $shared );
+daotests.GetTargets( $test ).iterate { [test]
+	test.AddDependency( libdao_dll )
+}
+
