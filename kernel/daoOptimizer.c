@@ -5765,6 +5765,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				if( ct == NULL ){
 					ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, 0, types + opa, opb );
 					DaoInferencer_UpdateType( self, opc, ct );
+					if( types[opc]->variadic == 0 && opb > types[opc]->nested->size ){
+						goto InvEnum;
+					}
 					for(j=0; j<opb; ++j){
 						DaoType *t = types[opc]->nested->items.pType[j];
 						tt = types[opa+j];

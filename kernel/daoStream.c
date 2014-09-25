@@ -37,7 +37,7 @@
 #include"daoValue.h"
 #include"daoGC.h"
 
-#define IO_BUF_SIZE  1024
+#define IO_BUF_SIZE  4096
 
 void DaoStream_Flush( DaoStream *self )
 {
