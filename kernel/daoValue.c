@@ -672,7 +672,7 @@ static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp, Da
 		if( k > mt ){
 			itp = itp2;
 			mt = k;
-			if( mt == DAO_MT_EQ ) break;
+			if( mt >= DAO_MT_EQ ) break;
 		}
 	}
 	if( itp == NULL ) return 0;

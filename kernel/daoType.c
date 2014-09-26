@@ -571,7 +571,7 @@ static int DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *bin
 	/*
 	   printf( "m = %i:  %s  %s\n", m, ext1->name->chars, ext2->name->chars );
 	 */
-	if( host == DAO_TUPLE && m == DAO_MT_EQ ){
+	if( host == DAO_TUPLE && m >= DAO_MT_EQ ){
 		if( self->tid != DAO_PAR_NAMED && type->tid == DAO_PAR_NAMED ) return DAO_MT_SUB;
 	}else if( host == DAO_ROUTINE ){
 		if( self->tid != DAO_PAR_DEFAULT && type->tid == DAO_PAR_DEFAULT ) return 0;
@@ -632,7 +632,7 @@ static int DaoType_MatchToParent( DaoType *self, DaoType *type, DMap *defs )
 	for(i=0,n=self->bases->size; i<n; i++){
 		k = DaoType_MatchToParent( self->bases->items.pType[i], type, defs );
 		if( k > mt ) mt = k;
-		if( k == DAO_MT_EQ ) return DAO_MT_SUB;
+		if( k >= DAO_MT_EQ ) return DAO_MT_SUB;
 	}
 	return mt;
 }
@@ -1063,7 +1063,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			tp = self->nested->items.pType[i];
 			mt2 = DaoType_MatchValue( tp, value, defs );
 			if( mt2 > mt ) mt = mt2;
-			if( mt == DAO_MT_EQ ) break;
+			if( mt >= DAO_MT_EQ ) break;
 		}
 		return mt;
 	case DAO_INTERFACE :

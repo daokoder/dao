@@ -513,7 +513,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 
 		passed |= (size_t)1<<parindex;
 		if( need_self && parindex == 0 ){
-			if( DaoType_MatchValue( partype, argvalue, defs ) == DAO_MT_EQ ){
+			if( DaoType_MatchValue( partype, argvalue, defs ) >= DAO_MT_EQ ){
 				GC_Assign( & dest[parindex], argvalue );
 				continue;
 			}
@@ -2368,16 +2368,16 @@ int DaoProcess_Execute( DaoProcess *self )
 	int ret = DaoProcess_Start( self );
 #ifdef DAO_WITH_CONCURRENT
 	if( self->status >= DAO_PROCESS_SUSPENDED ){
-		DMutex mutex;
+		DMutex *mutex = DaoCallServer_GetMutex();
 		DCondVar condv;
-		DMutex_Init( & mutex );
 		DCondVar_Init( & condv );
 		if( DaoCallServer_GetThreadCount() == 0 ) DaoCallServer_AddThread( NULL, NULL );
-		DMutex_Lock( & mutex );
-		while( self->status >= DAO_PROCESS_SUSPENDED )
-			DCondVar_TimedWait( & condv, & mutex, 0.01 );
-		DMutex_Unlock( & mutex );
-		DMutex_Destroy( & mutex );
+		DMutex_Lock( mutex );
+		while( self->status >= DAO_PROCESS_SUSPENDED ){
+			DCondVar_TimedWait( & condv, mutex, 0.01 );
+			DaoCallServer_ActivateEvents();
+		}
+		DMutex_Unlock( mutex );
 		DCondVar_Destroy( & condv );
 	}
 #endif
@@ -2993,9 +2993,9 @@ void DaoProcess_DoCheckSame( DaoProcess *self, DaoVmCode *vmc )
 		case DAO_TUPLE : t1 = dA->xTuple.ctype; t2 = dB->xTuple.ctype; break;
 		default : break;
 		}
-		*res = DaoType_MatchTo( t1, t2, NULL ) == DAO_MT_EQ;
+		*res = DaoType_MatchTo( t1, t2, NULL ) >= DAO_MT_EQ;
 	}else if( dA->type == DAO_TYPE ){
-		*res = DaoType_MatchTo( (DaoType*) dA, (DaoType*) dB, NULL ) == DAO_MT_EQ;
+		*res = DaoType_MatchTo( (DaoType*) dA, (DaoType*) dB, NULL ) >= DAO_MT_EQ;
 	}else if( dA-> type <= DAO_STRING ){
 		*res = 1;
 	}
@@ -3043,7 +3043,7 @@ void DaoProcess_DoCheckIsa( DaoProcess *self, DaoVmCode *vmc )
 				max = mt;
 				id = i + 1;
 			}
-			if( max == DAO_MT_EQ ) break;
+			if( max >= DAO_MT_EQ ) break;
 		}
 		*res = id;
 		return;
@@ -3515,7 +3515,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 	}
 	mt = DaoType_MatchValue( ct, va, NULL );
 	/* printf( "mt = %i, ct = %s\n", mt, ct->name->chars ); */
-	if( mt == DAO_MT_EQ || (mt && ct->tid == DAO_INTERFACE) ){
+	if( mt >= DAO_MT_EQ || (mt && ct->tid == DAO_INTERFACE) ){
 		DaoValue_Copy( va, vc2 );
 		return;
 	}
@@ -5805,12 +5805,10 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 		}
 	}
 
-	tp = DaoNamespace_MakeRoutType( self->activeNamespace, closure->routType, pp2, NULL, NULL);
-	GC_Assign( & closure->routType, tp );
-
 	deftypes = DMap_New(0,0);
 	DaoProcess_MapTypes( self, deftypes );
-	tp = DaoType_DefineTypes( closure->routType, closure->nameSpace, deftypes );
+	tp = DaoNamespace_MakeRoutType( self->activeNamespace, closure->routType, pp2, NULL, NULL);
+	tp = DaoType_DefineTypes( tp, closure->nameSpace, deftypes );
 	GC_Assign( & closure->routType, tp );
 	DaoRoutine_MapTypes( closure, proto, deftypes );
 	DMap_Delete( deftypes );

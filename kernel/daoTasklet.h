@@ -173,6 +173,8 @@ DAO_DLL void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )
 
 
 DAO_DLL int DaoCallServer_GetThreadCount();
+DAO_DLL DMutex* DaoCallServer_GetMutex();
+DAO_DLL void DaoCallServer_ActivateEvents();
 DAO_DLL void DaoCallServer_Join();
 DAO_DLL void DaoCallServer_Stop();
 DAO_DLL void DaoCallServer_AddThread( DThreadTask func, void *param );
