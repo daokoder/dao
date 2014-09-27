@@ -2368,16 +2368,17 @@ int DaoProcess_Execute( DaoProcess *self )
 	int ret = DaoProcess_Start( self );
 #ifdef DAO_WITH_CONCURRENT
 	if( self->status >= DAO_PROCESS_SUSPENDED ){
-		DMutex *mutex = DaoCallServer_GetMutex();
+		DMutex mutex;
 		DCondVar condv;
+		DMutex_Init( & mutex );
 		DCondVar_Init( & condv );
 		if( DaoCallServer_GetThreadCount() == 0 ) DaoCallServer_AddThread( NULL, NULL );
-		DMutex_Lock( mutex );
+		DMutex_Lock( & mutex );
 		while( self->status >= DAO_PROCESS_SUSPENDED ){
-			DCondVar_TimedWait( & condv, mutex, 0.01 );
-			DaoCallServer_ActivateEvents();
+			DCondVar_TimedWait( & condv, & mutex, 0.01 );
 		}
-		DMutex_Unlock( mutex );
+		DMutex_Unlock( & mutex );
+		DMutex_Destroy( & mutex );
 		DCondVar_Destroy( & condv );
 	}
 #endif
@@ -4050,7 +4051,7 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 		DaoValue **data = iter->values;
 		data[0]->xInteger.value = va->xMap.value->size >0;
 		if( data[1]->type != DAO_CDATA || data[1]->xCdata.ctype != dao_type_cdata ){
-			DaoCdata *it = DaoCdata_New( dao_type_cdata, node );
+			DaoCdata *it = DaoCdata_Wrap( dao_type_cdata, node );
 			GC_Assign( & data[1], it );
 		}else{
 			data[1]->xCdata.data = node;

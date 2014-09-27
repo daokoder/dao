@@ -313,11 +313,7 @@ static int DaoTaskEvent_CheckSelect( DaoTaskEvent *self )
 	if( self->selects->value->size == closed ) move = 1;
 	return move;
 }
-DMutex* DaoCallServer_GetMutex()
-{
-	return & daoCallServer->mutex;
-}
-void DaoCallServer_ActivateEvents()
+static void DaoCallServer_ActivateEvents()
 {
 	DaoCallServer *server = daoCallServer;
 	char message[128];
@@ -927,7 +923,6 @@ void DaoCallServer_Join()
 	DMutex_Lock( & daoCallServer->mutex );
 	while( daoCallServer->pending->size || daoCallServer->idle != daoCallServer->total ){
 		DCondVar_TimedWait( & condv, & daoCallServer->mutex, 0.01 );
-		DaoCallServer_ActivateEvents();
 	}
 	DMutex_Unlock( & daoCallServer->mutex );
 	DCondVar_Destroy( & condv );
@@ -950,7 +945,6 @@ void DaoCallServer_Stop()
 	DMutex_Lock( & daoCallServer->mutex );
 	while( daoCallServer->stopped != daoCallServer->total || daoCallServer->timing ){
 		DCondVar_TimedWait( & condv, & daoCallServer->mutex, 0.01 );
-		DaoCallServer_ActivateEvents();
 	}
 	DMutex_Unlock( & daoCallServer->mutex );
 
