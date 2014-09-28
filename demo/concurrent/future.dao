@@ -5,7 +5,7 @@ class Test !!
 	routine Meth(){
 		for( i = 1 : 5 ){
 			io.writeln( "@Test::Meth()", i );
-			os.sleep(0.2);
+			#os.sleep(0.2);
 		}
 	}
 }

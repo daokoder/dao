@@ -1,4 +1,4 @@
-load os
+#load os
 
 class Test !!
 {
@@ -12,7 +12,7 @@ class Test !!
 	routine Task2(){
 		for( i = 1 : 5 ){
 			io.writeln( "Task2", i )
-			os.sleep(0.5);
+			#os.sleep(0.5);
 		}
 	}
 }
@@ -29,13 +29,13 @@ io.writeln( "Start to send message" )
 for( i = 1 : 5 ){
 	io.writeln( "sending", 100*i )
 	chan.send( 100*i )
-	os.sleep(0.5)
+	#os.sleep(0.5)
 }
 chan.cap(0)
 
 routine main(){
 	for(i=1:10){
 		io.writeln( "main()" )
-		os.sleep(0.5)
+		#os.sleep(0.5)
 	}
 }

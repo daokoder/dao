@@ -57,12 +57,6 @@ struct DaoStream
 	DString     *streamString;
 
 	DaoUserStream *redirect;
-
-	DString  *format1;
-	DString  *format2;
-	DString  *fgcolor;
-	DString  *bgcolor;
-	DMap     *cyclic;
 };
 DAO_DLL DaoType *dao_type_stream;
 

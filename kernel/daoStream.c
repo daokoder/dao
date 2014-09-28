@@ -71,10 +71,20 @@ static int DaoIO_CheckMode( DaoStream *self, DaoProcess *proc, int what )
 }
 static void DaoIO_Write0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int N )
 {
+	DMap *cyclic = NULL;
 	int i;
 
-	DMap_Reset( self->cyclic );
-	for(i=0; i<N; i++) DaoValue_Print( p[i], proc, self, self->cyclic );
+	for(i=0; i<N; i++){
+		if( p[i]->type > DAO_ARRAY ){
+			cyclic = DHash_New(0,0);
+			break;
+		}
+	}
+	for(i=0; i<N; i++){
+		if( p[i]->type > DAO_ARRAY ) DMap_Reset( cyclic );
+		DaoValue_Print( p[i], proc, self, cyclic );
+	}
+	if( cyclic ) DMap_Delete( cyclic );
 }
 static void DaoIO_Write( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -91,14 +101,22 @@ static void DaoIO_Write2( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoIO_Writeln0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int N )
 {
+	DMap *cyclic = NULL;
 	int i;
 	if( DaoIO_CheckMode( self, proc, DAO_STREAM_WRITABLE ) == 0 ) return;
 	for(i=0; i<N; i++){
-		DMap_Reset( self->cyclic );
-		DaoValue_Print( p[i], proc, self, self->cyclic );
+		if( p[i]->type > DAO_ARRAY ){
+			cyclic = DHash_New(0,0);
+			break;
+		}
+	}
+	for(i=0; i<N; i++){
+		if( p[i]->type > DAO_ARRAY ) DMap_Reset( cyclic );
+		DaoValue_Print( p[i], proc, self, cyclic );
 		if( i+1<N ) DaoStream_WriteChars( self, " ");
 	}
 	DaoStream_WriteChars( self, "\n");
+	if( cyclic ) DMap_Delete( cyclic );
 }
 static void DaoIO_Writeln( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -136,19 +154,26 @@ static void DaoIO_Writeln2( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoValue *value;
-	DString *format = self->format1;
-	DString *fmt2 = self->format2;
-	DString *fgcolor = self->fgcolor;
-	DString *bgcolor = self->bgcolor;
+	DString *fmt2;
+	DString *fgcolor = NULL;
+	DString *bgcolor = NULL;
+	DMap *cyclic = NULL;
 	const char *convs = "asSpcCdiouxXfFeEgG";
 	char F, *s, *end, *fg, *bg, *fmt, message[100];
-	int k, id = 0;
+	int i, k, id = 0;
 
 	if( DaoIO_CheckMode( self, proc, DAO_STREAM_WRITABLE ) == 0 ) return;
 
-	DString_Assign( format, p[0]->xString.value );
-	s = format->chars;
-	end = s + format->size;
+	fmt2 = DString_New();
+	for(i=0; i<N; i++){
+		if( p[i]->type > DAO_ARRAY ){
+			cyclic = DHash_New(0,0);
+			break;
+		}
+	}
+
+	s = p[0]->xString.value->chars;
+	end = s + p[0]->xString.value->size;
 	for(; s<end; s++){
 		if( *s != '%' ){
 			DaoStream_WriteChar( self, *s );
@@ -184,12 +209,14 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 			s += 1;
 			fmt = s;
 			while( isalnum( *s ) ) s += 1;
+			if( fgcolor == NULL ) fgcolor = DString_New();
 			DString_SetBytes( fgcolor, fmt, s - fmt );
 			if( fgcolor->size ) fg = fgcolor->chars;
 			if( *s == ':' ){
 				s += 1;
 				fmt = s;
 				while( isalnum( *s ) ) s += 1;
+				if( bgcolor == NULL ) bgcolor = DString_New();
 				DString_SetBytes( bgcolor, fmt, s - fmt );
 				if( bgcolor->size ) bg = bgcolor->chars;
 			}
@@ -224,27 +251,43 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 			DaoStream_WritePointer( self, value );
 		}else if( F == 'a' ){
 			self->format = NULL;
-			DMap_Reset( self->cyclic );
-			DaoValue_Print( value, proc, self, self->cyclic );
+			if( value->type > DAO_ARRAY ) DMap_Reset( cyclic );
+			DaoValue_Print( value, proc, self, cyclic );
 		}else{
 			goto WrongParameter;
 		}
 		self->format = NULL;
 		if( fg || bg ) DaoStream_SetColor( self, NULL, NULL );
+		if( cyclic ) DMap_Delete( cyclic );
+		if( fgcolor ) DString_Delete( fgcolor );
+		if( bgcolor ) DString_Delete( bgcolor );
+		DString_Delete( fmt2 );
 		continue;
 NullParameter:
 		sprintf( message, "%i-th parameter is null!", id );
 		DaoProcess_RaiseWarning( proc, NULL, message );
+		if( cyclic ) DMap_Delete( cyclic );
+		if( fgcolor ) DString_Delete( fgcolor );
+		if( bgcolor ) DString_Delete( bgcolor );
+		DString_Delete( fmt2 );
 		continue;
 WrongColor:
 		sprintf( message, "%i-th parameter has wrong color format!", id );
 		DaoProcess_RaiseWarning( proc, NULL, message );
+		if( cyclic ) DMap_Delete( cyclic );
+		if( fgcolor ) DString_Delete( fgcolor );
+		if( bgcolor ) DString_Delete( bgcolor );
+		DString_Delete( fmt2 );
 		continue;
 WrongParameter:
 		self->format = NULL;
 		if( fg || bg ) DaoStream_SetColor( self, NULL, NULL );
 		sprintf( message, "%i-th parameter has wrong type for format \"%s\"!", id, fmt2->chars );
 		DaoProcess_RaiseWarning( proc, NULL, message );
+		if( cyclic ) DMap_Delete( cyclic );
+		if( fgcolor ) DString_Delete( fgcolor );
+		if( bgcolor ) DString_Delete( bgcolor );
+		DString_Delete( fmt2 );
 	}
 }
 static void DaoIO_Writef( DaoProcess *proc, DaoValue *p[], int N )
@@ -609,11 +652,6 @@ DaoStream* DaoStream_New()
 	DaoCstruct_Init( (DaoCstruct*) self, dao_type_stream );
 	self->type = DAO_CSTRUCT; /* dao_type_stream may still be null in DaoVmSpace_New(); */
 	self->streamString = DString_New();
-	self->format1 = DString_New();
-	self->format2 = DString_New();
-	self->fgcolor = DString_New();
-	self->bgcolor = DString_New();
-	self->cyclic = DHash_New(0,0);
 #ifdef DAO_USE_GC_LOGGER
 	if( dao_type_stream == NULL ) DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
@@ -635,11 +673,6 @@ void DaoStream_Close( DaoStream *self )
 void DaoStream_Delete( DaoStream *self )
 {
 	DaoStream_Close( self );
-	DMap_Delete( self->cyclic );
-	DString_Delete( self->format1 );
-	DString_Delete( self->format2 );
-	DString_Delete( self->fgcolor );
-	DString_Delete( self->bgcolor );
 	DString_Delete( self->streamString );
 	DaoCstruct_Free( (DaoCstruct*) self );
 	dao_free( self );
