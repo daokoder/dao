@@ -1,4 +1,4 @@
-load sys;
+load os;
 
 routine Test()
 {
@@ -7,7 +7,7 @@ routine Test()
 	return mt.start {
 		for( i = 1 : 10 ){
 			io.writeln( i );
-			sys.sleep( 0.1 );
+			os.sleep( 0.1 );
 		}
 		# here id, name should have been copied, and it is safe to
 		# access them even after Test() and its process is finished!

@@ -1,4 +1,4 @@
-load sys
+load os
 
 const N = 10;
 const C = 1;
@@ -18,7 +18,7 @@ mt.start {
 			io.writeln( "sending string: index_" + (string) index );
 			schan.send( "index_" + (string) index )
 		}
-		sys.sleep(0.5)
+		os.sleep(0.5)
 	}
 	io.writeln( "end producing" )
 	ichan.cap(0)  # set channel buffer size to zero to close the channel;

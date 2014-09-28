@@ -1,11 +1,11 @@
-load sys;
+load os;
 
 class Test !!
 {
 	routine Meth(){
 		for( i = 1 : 5 ){
 			io.writeln( "@Test::Meth()", i );
-			sys.sleep(0.2);
+			os.sleep(0.2);
 		}
 	}
 }
@@ -17,7 +17,7 @@ mt.iterate( 4 ) { [X]
 	f = mt.start {
 		for( i = 1 : 5 ){
 			io.writeln( "start{}", i );
-			#sys.sleep(0.01);
+			#os.sleep(0.01);
 		}
 	}
 	#f.value(); # ERROR: cannot block inside code section methods;
