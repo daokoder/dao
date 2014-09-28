@@ -717,7 +717,7 @@ static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
 	case DAO_DATA_VOID2  : cmp = DVoid2_Compare( (void**) k1, (void**) k2 );          break;
 	case DAO_DATA_VMCODE : cmp = DaoVmCode_Compare( (DaoVmCode*) k1, (DaoVmCode*) k2 );  break;
 	case DAO_DATA_VMCODE2: cmp = DaoVmCode_Compare2( (DaoVmCode*) k1, (DaoVmCode*) k2 ); break;
-	default : cmp = (daoint)k1 - (daoint)k2; break;
+	default : cmp = k1 == k2 ? 0 : (k1 < k2 ? -1 : 1 ); break;
 	}
 	if( self->hashing && cmp == 0 ){
 		DString *s1 = NULL;
