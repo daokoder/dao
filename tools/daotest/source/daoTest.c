@@ -55,12 +55,25 @@ struct DaoTestStream
 	DString  *output;
 };
 
+#ifdef DAO_WITH_THREAD
+
+DMutex mutex;
+
+static void DaoTestStream_Write( DaoTestStream *self, DString *output )
+{
+	DMutex_Lock( & mutex );
+	DString_Append( self->output, output );
+	DMutex_Unlock( & mutex );
+}
+
+#else
 
 static void DaoTestStream_Write( DaoTestStream *self, DString *output )
 {
 	DString_Append( self->output, output );
 }
 
+#endif
 
 
 static DList  *dao_tests = NULL;
@@ -196,6 +209,7 @@ int main( int argc, char **argv )
 		DaoQuit();
 		return 0;
 	}
+	DMutex_Init( & mutex );
 
 	if( (logopt+1) < argc ) logfile = Dao_OpenFile( argv[logopt+1], "w+b" );
 	for(i=1; i<logopt; ++i){
@@ -286,6 +300,7 @@ int main( int argc, char **argv )
 		DList_Delete( dao_tests );
 		DaoQuit();
 	}
+	DMutex_Destroy( & mutex );
 
 	printf( "Test summary:\nfiles: %4i passed, %4i failed;\nunits: %4i passed, %4i failed;\n",
 			mpasses, mfails, passes, fails );

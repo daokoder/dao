@@ -444,12 +444,12 @@ static void DaoCallServer_Add( DaoTaskEvent *event )
 }
 void DaoCallServer_AddCall( DaoProcess *caller )
 {
+	DaoFuture *future;
 	DaoTaskEvent *event;
 	DaoProcess *callee = DaoVmSpace_AcquireProcess( caller->vmSpace );
 	DaoStackFrame *frame = caller->topFrame;
 	DaoRoutine *routine = frame->routine;
 	DaoType *type = (DaoType*) routine->routType->aux;
-	DaoFuture *future = DaoFuture_New( type, 1 );
 	DaoValue **params = caller->stackValues + caller->topFrame->stackBase;
 	int i, count = caller->topFrame->parCount;
 
@@ -459,6 +459,7 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 		DaoStackFrame *callerFrame = caller->topFrame->prev;
 		DaoVmCode *vmc, *end, *sect;
 		if( sectFrame != callerFrame ){
+			DaoVmSpace_ReleaseProcess( caller->vmSpace, callee );
 			DaoProcess_RaiseError( caller, NULL, "Invalid code section" );
 			return;
 		}
@@ -485,6 +486,7 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 		}
 	}
 
+	future = DaoFuture_New( type, 1 );
 	future->state = DAO_CALL_PAUSED;
 	future->actor = caller->topFrame->object;
 	GC_IncRC( future->actor );
