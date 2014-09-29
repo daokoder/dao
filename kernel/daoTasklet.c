@@ -491,9 +491,8 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 	future->actor = caller->topFrame->object;
 	GC_IncRC( future->actor );
 
-	GC_Assign( & callee->future, future );
-	future->process = callee;
-	GC_IncRC( future->process );
+	GC_Assign( & future->process, callee );
+ 	GC_Assign( & callee->future, future );
 
 	callee->parCount = count;
 	/* Use routine->parCount instead of caller->topFrame->parCount, for default parameters: */
@@ -520,13 +519,13 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 }
 DaoFuture* DaoProcess_GetInitFuture( DaoProcess *self )
 {
+	DaoFuture *future;
 	if( self->future ) return self->future;
 
-	self->future = DaoFuture_New( NULL, 1 );
-	self->future->process = self;
-	GC_IncRC( self->future );
-	GC_IncRC( self );
-	return self->future;
+	future = DaoFuture_New( NULL, 1 );
+	GC_Assign( & self->future, future );
+	GC_Assign( & future->process, self );
+	return future;
 }
 void DaoCallServer_MarkActiveProcess( DaoProcess *process, int active )
 {
@@ -802,8 +801,14 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 			future->process->active = 1;
 		}
 
-		GC_Assign( & future->message, event->message );
-		GC_Assign( & future->selected, event->selected );
+		/*
+		// DaoValue_Move() should be used instead of GC_Assign() for thread safety.
+		// Because using GC_Assign() here, may caused "future->message" of primitive
+		// type being deleted, right after DaoFuture_GetGCFields() has retrieved it
+		// for GC scanning.
+		 */
+		DaoValue_Move( event->message, & future->message, NULL );
+		DaoValue_Move( event->selected, & future->selected, NULL );
 		future->aux1 = event->auxiliary;
 		future->timeout = event->timeout;
 
@@ -1054,15 +1059,14 @@ static void CHANNEL_Cap( DaoProcess *proc, DaoValue *par[], int N )
 	DaoProcess_PutInteger( proc, self->cap );
 	if( N == 1 ) return;
 
-	self->cap = par[1]->xInteger.value;
-	if( self->cap > 0 ) return;
-	self->cap = 0;
-
 	/* Closing the channel: */
 	DMutex_Lock( & daoCallServer->mutex );
-	DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_RECEIVING );
-	DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_SELECT );
-	DCondVar_Signal( & daoCallServer->condv );
+	self->cap = par[1]->xInteger.value;
+	if( self->cap == 0 ){
+		DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_RECEIVING );
+		DaoChannel_ActivateEvent( self, DAO_EVENT_WAIT_SELECT );
+		DCondVar_Signal( & daoCallServer->condv );
+	}
 	DMutex_Unlock( & daoCallServer->mutex );
 }
 void DaoChannel_Send( DaoChannel *self, DaoValue *data )
@@ -1142,10 +1146,10 @@ static void DaoChannel_Delete( DaoChannel *self )
 	DList_Delete( self->buffer );
 	dao_free( self );
 }
-static void DaoChannel_GetGCFields( void *p, DList *vs, DList *arrays, DList *ms, int rm )
+static void DaoChannel_GetGCFields( void *p, DList *vs, DList *lists, DList *ms, int rm )
 {
 	DaoChannel *self = (DaoChannel*) p;
-	DList_Append( arrays, self->buffer );
+	DList_Append( lists, self->buffer );
 }
 
 DaoTypeBase channelTyper =
@@ -1196,7 +1200,7 @@ static void DaoFuture_Delete( DaoFuture *self )
 	GC_DecRC( self->precond );
 	dao_free( self );
 }
-static void DaoFuture_GetGCFields( void *p, DList *values, DList *arrays, DList *maps, int remove )
+static void DaoFuture_GetGCFields( void *p, DList *values, DList *lists, DList *maps, int remove )
 {
 	DaoFuture *self = (DaoFuture*) p;
 	if( self->value ) DList_Append( values, self->value );

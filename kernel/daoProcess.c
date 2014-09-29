@@ -979,7 +979,7 @@ int DaoProcess_Start( DaoProcess *self )
 	int print, active = self->active;
 	daoint exceptCount0 = self->exceptions->size;
 	daoint exceptCount = 0;
-	daoint gotoCount = 0;
+	daoint count = 0;
 	daoint i, j, id, size;
 	daoint inum=0;
 	float fnum=0;
@@ -2279,6 +2279,7 @@ CheckException:
 			locVars = self->activeValues;
 			self->baseFrame = rollback; /* may have been changed; */
 			if( vmSpace->stopit ) goto FinishProcess;
+			if( (++count) % 1000 == 0 ) DaoGC_TryInvoke();
 			if( invokehost ) handler->InvokeHost( handler, self );
 			if( self->exceptions->size > exceptCount ){
 				goto FinishCall;

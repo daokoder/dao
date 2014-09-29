@@ -103,7 +103,6 @@ DMap* DMap_New( short kt, short vt )
 	self->keytype = kt;
 	self->valtype = vt;
 	self->hashing = 0;
-	self->mutating = 0;
 	return self;
 }
 DMap* DHash_New( short kt, short vt )
@@ -245,15 +244,15 @@ static int DMap_Lockable( DMap *self )
 static void DHash_ResetTable( DMap *self )
 {
 	DNode **nodes = self->table;
-	int i, locked, tsize = self->tsize;
+	int i, tsize = self->tsize;
 
 	if( self->hashing ==0 ) return;
-	locked = DMap_Lockable( self ) ? DaoGC_LockMap( self ) : 0;
+	if( DMap_Lockable( self ) ) DaoGC_LockData();
 	self->tsize = 2 * self->size + 1;
 	self->table = (DNode**)dao_calloc( self->tsize, sizeof(DNode*) );
 	self->size = 0;
 	for(i=0; i<tsize; i++) if( nodes[i] ) DMap_InsertTree( self, nodes[i] );
-	DaoGC_UnlockMap( self, locked );
+	if( DMap_Lockable( self ) ) DaoGC_UnlockData();
 	if( nodes ) dao_free( nodes );
 }
 DMap* DMap_Copy( DMap *other )
@@ -395,7 +394,7 @@ static void DMap_DeleteTree( DMap *self, DNode *node )
 void DMap_Clear( DMap *self )
 {
 	daoint i;
-	int locked = DMap_Lockable( self ) ? DaoGC_LockMap( self ) : 0;
+	if( DMap_Lockable( self ) ) DaoGC_LockData();
 	if( self->hashing ){
 		for(i=0; i<self->tsize; i++) DMap_DeleteTree( self, self->table[i] );
 		if( self->table ) dao_free( self->table );
@@ -406,12 +405,12 @@ void DMap_Clear( DMap *self )
 	}
 	self->root = NULL;
 	self->size = 0;
-	DaoGC_UnlockMap( self, locked );
+	if( DMap_Lockable( self ) ) DaoGC_UnlockData();
 }
 void DMap_Reset( DMap *self )
 {
 	daoint i;
-	int locked = DMap_Lockable( self ) ? DaoGC_LockMap( self ) : 0;
+	if( DMap_Lockable( self ) ) DaoGC_LockData();
 	if( self->hashing ){
 		for(i=0; i<self->tsize; i++) DMap_BufferTree( self, self->table[i] );
 		memset( self->table, 0, self->tsize*sizeof(DNode*) );
@@ -420,7 +419,7 @@ void DMap_Reset( DMap *self )
 	}
 	self->root = NULL;
 	self->size = 0;
-	DaoGC_UnlockMap( self, locked );
+	if( DMap_Lockable( self ) ) DaoGC_UnlockData();
 }
 
 static void DMap_RotateLeft( DMap *self, DNode *child )
@@ -623,21 +622,20 @@ static void DMap_EraseChild( DMap *self, DNode *node )
 }
 void DMap_EraseNode( DMap *self, DNode *node )
 {
-	int locked;
 	if( node == NULL ) return;
 	if( self->hashing ){
 		int hash = node->hash;
 		self->root = self->table[ hash ];
 		if( self->root == NULL ) return;
-		locked = DMap_Lockable( self ) ? DaoGC_LockMap( self ) : 0;
+		if( DMap_Lockable( self ) ) DaoGC_LockData();
 		DMap_EraseChild( self, node );
 		self->table[ hash ] = self->root;
-		DaoGC_UnlockMap( self, locked );
+		if( DMap_Lockable( self ) ) DaoGC_UnlockData();
 		if( self->size < 0.25*self->tsize ) DHash_ResetTable( self );
 	}else{
-		locked = DMap_Lockable( self ) ? DaoGC_LockMap( self ) : 0;
+		if( DMap_Lockable( self ) ) DaoGC_LockData();
 		DMap_EraseChild( self, node );
-		DaoGC_UnlockMap( self, locked );
+		if( DMap_Lockable( self ) ) DaoGC_UnlockData();
 	}
 }
 static daoint DList_Compare( DList *k1, DList *k2 )
@@ -829,9 +827,9 @@ DNode* DMap_Insert( DMap *self, void *key, void *value )
 	if( p == node ){ /* key not exist: */
 		DMap_CopyItem( & node->key.pVoid, key, self->keytype );
 		DMap_CopyItem( & node->value.pVoid, value, self->valtype );
-		locked = DMap_Lockable( self ) ? DaoGC_LockMap( self ) : 0;
+		if( DMap_Lockable( self ) ) DaoGC_LockData();
 		DMap_InsertNode( self, node );
-		DaoGC_UnlockMap( self, locked );
+		if( DMap_Lockable( self ) ) DaoGC_UnlockData();
 		if( self->hashing ){
 			self->table[id] = self->root;
 			if( self->size >= self->tsize ) DHash_ResetTable( self );

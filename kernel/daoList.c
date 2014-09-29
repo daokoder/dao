@@ -50,7 +50,6 @@ DList* DList_New( short type )
 	self->size = self->bufsize = 0;
 	self->offset = 0;
 	self->type = type;
-	self->mutating = 0;
 	return self;
 }
 void DList_Delete( DList *self )
@@ -122,23 +121,20 @@ void DList_Resize( DList *self, daoint size, void *val )
 	daoint i;
 
 	if( size == self->size && self->bufsize>0 ) return;
+	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	DList_DeleteItems( self, size, self->size );
 
 	if( self->offset ){
 		daoint min = size > self->size ? self->size : size;
-		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		memmove( buf, self->items.pVoid, min*sizeof(void*) );
 		self->items.pVoid = buf;
 		self->offset = 0;
-		DaoGC_UnlockArray( self, locked );
 	}
 	/* When resize() is called, probably this is the intended size,
 	 * not to be changed frequently. */
 	if( size >= self->bufsize || size < self->bufsize /2 ){
-		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		self->bufsize = size;
 		self->items.pVoid = (void**) dao_realloc( buf, self->bufsize*sizeof(void*) );
-		DaoGC_UnlockArray( self, locked );
 	}
 
 	if( self->type && val != NULL ){
@@ -147,15 +143,18 @@ void DList_Resize( DList *self, daoint size, void *val )
 		for(i=self->size; i<size; i++ ) self->items.pVoid[i] = val;
 	}
 	self->size = size;
+	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 }
 void DList_Clear( DList *self )
 {
 	void **buf = self->items.pVoid - self->offset;
+	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	DList_DeleteItems( self, 0, self->size );
 	if( buf ) dao_free( buf );
 	self->items.pVoid = NULL;
 	self->size = self->bufsize = 0;
 	self->offset = 0;
+	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 }
 
 DList* DList_Copy( DList *self )
@@ -179,7 +178,9 @@ void DList_Assign( DList *left, DList *right )
 		for( i=0; i<right->size; i++ ) DList_Append( left, right->items.pVoid[i] );
 	}else{
 		DList_Resize( left, right->size, NULL );
+		if( left->type == DAO_DATA_VALUE ) DaoGC_LockData();
 		for( i=0; i<right->size; i++ ) left->items.pVoid[i] = right->items.pVoid[i];
+		if( left->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 	}
 }
 void DList_Swap( DList *left, DList *right )
@@ -190,6 +191,7 @@ void DList_Swap( DList *left, DList *right )
 	void **tmpItem = left->items.pVoid;
 	assert( left->type == right->type );
 	assert( left->type != DAO_DATA_VALUE );
+	if( left->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	left->size = right->size;
 	left->offset = right->offset;
 	left->bufsize = right->bufsize;
@@ -198,6 +200,7 @@ void DList_Swap( DList *left, DList *right )
 	right->offset = tmpOffset;
 	right->bufsize = tmpBufSize;
 	right->items.pVoid = tmpItem;
+	if( left->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 }
 void DList_Insert( DList *self, void *val, daoint id )
 {
@@ -210,24 +213,22 @@ void DList_Insert( DList *self, void *val, daoint id )
 		DList_PushBack( self, val );
 		return;
 	}
+	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	if( (daoint)(self->offset + self->size + 1) >= self->bufsize ){
-		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		if( self->offset > 0 ) memmove( buf, self->items.pVoid, self->size*sizeof(void*) );
 		self->bufsize += self->bufsize/5 + 5;
 		self->items.pVoid = (void**) dao_realloc( buf, (self->bufsize+1)*sizeof(void*) );
 		self->offset = 0;
-		DaoGC_UnlockArray( self, locked );
 	}
 	if( self->type && val != NULL ){
-		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		for( i=self->size; i>id; i-- ) self->items.pVoid[i] = self->items.pVoid[i-1];
-		DaoGC_UnlockArray( self, locked );
 		self->items.pVoid[ id ] = DList_CopyItem( self, val );
 	}else{
 		for( i=self->size; i>id; i-- ) self->items.pVoid[i] = self->items.pVoid[i-1];
 		self->items.pVoid[id] = val;
 	}
 	self->size++;
+	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 }
 void DList_InsertList( DList *self, daoint at, DList *list, daoint id, daoint n )
 {
@@ -240,6 +241,7 @@ void DList_InsertList( DList *self, daoint at, DList *list, daoint id, daoint n 
 	n += id;
 	if( n > list->size ) n = list->size;
 	if( n ==0 || id >= list->size ) return;
+	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	if( (daoint)(self->offset + self->size + n-id) >= self->bufsize ){
 		if( self->offset > 0 ) memmove( buf, self->items.pVoid, self->size*sizeof(void*) );
 		self->bufsize += self->bufsize/5 + 1 + ( n - id );
@@ -262,6 +264,7 @@ void DList_InsertList( DList *self, daoint at, DList *list, daoint id, daoint n 
 		}
 	}
 	self->size += (n-id);
+	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 }
 void DList_AppendList( DList *self, DList *list )
 {
@@ -270,7 +273,7 @@ void DList_AppendList( DList *self, DList *list )
 void DList_Erase( DList *self, daoint start, daoint n )
 {
 	void **buf = self->items.pVoid - self->offset;
-	daoint rest, locked;
+	daoint rest;
 	if( start >= self->size ) return;
 	if( n < 0 ) n = self->size;
 	if( n > self->size - start ) n = self->size - start;
@@ -284,9 +287,9 @@ void DList_Erase( DList *self, daoint start, daoint n )
 		}
 	}
 
+	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	DList_DeleteItems( self, start, start+n );
 	rest = self->size - start - n;
-	locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 	memmove( self->items.pVoid + start, self->items.pVoid + start + n, rest * sizeof(void*) );
 	self->size -= n;
 	if( self->size < 0.5*self->bufsize && self->size + 10 < self->bufsize ){
@@ -295,11 +298,12 @@ void DList_Erase( DList *self, daoint start, daoint n )
 		self->items.pVoid = (void**) dao_realloc( buf, (self->bufsize+1)*sizeof(void*) );
 		self->offset = 0;
 	}
-	DaoGC_UnlockArray( self, locked );
+	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 }
 void* DList_PushFront( DList *self, void *val )
 {
 	void **buf = self->items.pVoid - self->offset;
+	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	if( self->offset > 0 ){
 		/* make sure the concurrent gc won't access an invalid pointer: */
 		self->items.pVoid[-1] = NULL;
@@ -307,13 +311,11 @@ void* DList_PushFront( DList *self, void *val )
 	}else{
 		size_t moffset = 0xffff;
 		size_t offset = self->bufsize/5 + 5;
-		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		self->offset = offset < moffset ? offset : moffset;
 		self->bufsize += self->offset;
 		buf = (void**) dao_realloc( buf, (self->bufsize+1)*sizeof(void*) );
 		memmove( buf + self->offset, buf, self->size*sizeof(void*) );
 		self->items.pVoid = buf + self->offset - 1;
-		DaoGC_UnlockArray( self, locked );
 	}
 	if( self->type && val != NULL ){
 		self->items.pVoid[0] = DList_CopyItem( self, val );
@@ -322,6 +324,7 @@ void* DList_PushFront( DList *self, void *val )
 	}
 	self->size ++;
 	self->offset --;
+	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 	return self->items.pVoid[0];
 }
 void* DList_PopFront( DList *self )
@@ -329,19 +332,17 @@ void* DList_PopFront( DList *self )
 	void *ret, **buf = self->items.pVoid - self->offset;
 	size_t moffset = 0xffff;
 	if( self->size == 0 ) return NULL;
+	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	self->size --;
 	self->offset ++;
 	ret = self->items.pVoid[0];
-	if( self->type ) DList_DeleteItem( self, self->items.pVoid[0] );
 	self->items.pVoid ++;
+	if( self->type ) DList_DeleteItem( self, ret );
 	if( self->offset >= moffset ){
-		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		self->offset /= 2;
 		memmove( buf + self->offset, self->items.pVoid, self->size*sizeof(void*) );
 		self->items.pVoid = buf + self->offset;
-		DaoGC_UnlockArray( self, locked );
 	}else if( self->size < 0.5 * self->bufsize && self->size + 10 < self->bufsize ){
-		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		if( self->offset < 0.1 * self->bufsize ){ /* shrink from back */
 			self->bufsize = 0.6 * self->bufsize + 1;
 		}else{ /* shrink from front */
@@ -350,20 +351,19 @@ void* DList_PopFront( DList *self )
 		}
 		buf = (void**) dao_realloc( buf, (self->bufsize+1)*sizeof(void*) );
 		self->items.pVoid = buf + self->offset;
-		DaoGC_UnlockArray( self, locked );
 	}
+	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 	if( self->type ) return NULL;
 	return ret;
 }
 void* DList_PushBack( DList *self, void *val )
 {
 	void **buf = self->items.pVoid - self->offset;
+	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	if( (daoint)(self->offset + self->size + 1) >= self->bufsize ){
-		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		self->bufsize += self->bufsize/5 + 5;
 		buf = (void**) dao_realloc( buf, (self->bufsize+1)*sizeof(void*) );
 		self->items.pVoid = buf + self->offset;
-		DaoGC_UnlockArray( self, locked );
 	}
 	if( self->type && val != NULL ){
 		self->items.pVoid[ self->size ] = DList_CopyItem( self, val );
@@ -371,17 +371,18 @@ void* DList_PushBack( DList *self, void *val )
 		self->items.pVoid[ self->size ] = val;
 	}
 	self->size++;
+	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 	return self->items.pVoid[ self->size - 1 ];
 }
 void* DList_PopBack( DList *self )
 {
 	void *ret, **buf = self->items.pVoid - self->offset;
 	if( self->size == 0 ) return NULL;
+	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	self->size --;
 	ret = self->items.pVoid[ self->size ];
 	if( self->type ) DList_DeleteItem( self, self->items.pVoid[ self->size ] );
 	if( self->size < 0.5 * self->bufsize && self->size + 10 < self->bufsize ){
-		int locked = self->type == DAO_DATA_VALUE ? DaoGC_LockArray( self ) : 0;
 		if( self->offset < 0.1 * self->bufsize ){ /* shrink from back */
 			self->bufsize = 0.6 * self->bufsize + 1;
 		}else{ /* shrink from front */
@@ -390,19 +391,21 @@ void* DList_PopBack( DList *self )
 		}
 		buf = (void**) dao_realloc( buf, (self->bufsize+1)*sizeof(void*) );
 		self->items.pVoid = buf + self->offset;
-		DaoGC_UnlockArray( self, locked );
 	}
+	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 	if( self->type ) return NULL;
 	return ret;
 }
 void  DList_SetItem( DList *self, daoint index, void *value )
 {
 	if( index >= self->size ) return;
+	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	if( self->type && value ){
 		self->items.pVoid[ index ] = DList_CopyItem( self, value );
 	}else{
 		self->items.pVoid[index] = value;
 	}
+	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 }
 void* DList_GetItem( DList *self, daoint index )
 {

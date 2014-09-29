@@ -76,9 +76,7 @@ struct DList
 	daoint    size;
 	daoint    bufsize;
 	ushort_t  offset;
-	uchar_t   type; /* can be 0 (for integers or pointers), or, D_STRING, D_ARRAY, etc. */
-
-	volatile uchar_t   mutating;
+	ushort_t  type; /* can be 0 (for integers or pointers), or, D_STRING, D_ARRAY, etc. */
 };
 
 DAO_DLL DList* DList_New( short type );

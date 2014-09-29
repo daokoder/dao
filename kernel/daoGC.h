@@ -61,33 +61,8 @@ DAO_DLL void DaoGC_DecRCs( DList *dbases );
 #define GC_Assign(dest,src)  DaoGC_Assign( (DaoValue**)(dest), (DaoValue*)(src) );
 
 
-
-/*
-// DaoGC_LockArray() and DaoGC_LockMap() are used to ensure the concurrent GC
-// will be scanning a consistent array or map. A consistent array/map contains
-// only valid or NULL pointers; and contain exactly one pointer per reference;
-// Such protection is necessary only when the memory of an array is being reallocated,
-// or its item pointers are being moved, or tree structure (in the case of map)
-// is being mutated.
-//
-// Modification of array/map with GC_IncRC(), GC_DecRC() and GC_Assign(),
-// does not need such protection, because when these GC_XyzRC() methods are
-// used, the concurrent GC is able to handle the concurrent modification
-// of array/map properly.
-//
-// Both DList and DMap have a "mutating" field, which is set to non-zero,
-// when DaoGC_LockArray() or DaoGC_LockMap() is called. But they do real locking
-// only if the array/map is being scanned by the concurrent GC.
-// In the GC part, when it observes that the "mutating" field of an array/map
-// is set to non-zero, it will block until the field is reset to zero.
-// It always does real locking so that the mutator can block by locking.
-*/
-
-DAO_DLL int DaoGC_LockArray( DList *array );
-DAO_DLL void DaoGC_UnlockArray( DList *array, int locked );
-
-DAO_DLL int DaoGC_LockMap( DMap *map );
-DAO_DLL void DaoGC_UnlockMap( DMap *map, int locked );
+DAO_DLL void DaoGC_LockData();
+DAO_DLL void DaoGC_UnlockData();
 
 
 #endif
