@@ -3160,6 +3160,7 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 			itypes[1] = ct;
 			ct = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, NULL, itypes, 2 );
 		}else if( bt->realnum ){
+			ct = DaoNamespace_MakeType( NS, "", DAO_VARIANT, NULL, at->nested->items.pType, at->nested->size );
 			if( code == DVM_GETI ){
 				vmc->code = DVM_GETI_TI;
 				if( bt->tid != DAO_INTEGER )
@@ -6377,7 +6378,8 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			break;
 		case DVM_GETI_TI :
 			if( at->tid != DAO_TUPLE || bt->tid != DAO_INTEGER ) goto NotMatch;
-			DaoInferencer_UpdateType( self, opc, dao_type_any );
+			ct = DaoNamespace_MakeType( NS, "", DAO_VARIANT, NULL, at->nested->items.pType, at->nested->size );
+			DaoInferencer_UpdateType( self, opc, ct );
 			break;
 		case DVM_SETI_TI :
 			if( ct->tid != DAO_TUPLE || bt->tid != DAO_INTEGER ) goto NotMatch;

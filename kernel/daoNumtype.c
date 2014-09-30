@@ -1367,6 +1367,10 @@ static void DaoARRAY_Map( DaoProcess *proc, DaoValue *p[], int npar )
 {
 	DaoARRAY_BasicFunctional( proc, p, npar, DVM_FUNCT_MAP );
 }
+static void DaoARRAY_Select( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	DaoARRAY_BasicFunctional( proc, p, npar, DVM_FUNCT_SELECT );
+}
 static void DaoARRAY_Collect( DaoProcess *proc, DaoValue *p[], int npar )
 {
 	DaoARRAY_BasicFunctional( proc, p, npar, DVM_FUNCT_COLLECT );
@@ -1504,6 +1508,10 @@ static DaoFuncItem numarMeths[] =
 		// It is the same as the previous method, except that the initial result
 		// is specified as an additional parameter to the method.
 		*/
+	},
+	{ DaoARRAY_Select,
+		"select( invar self: array<@T> )"
+			"[item: @T, I: int, J: int, ... : int => bool] => list<@T>"
 	},
 	{ DaoARRAY_Collect,
 		"collect( invar self: array<@T> )"
@@ -2373,6 +2381,7 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 		}
 		DaoProcess_PutValue( proc, res );
 		break;
+	case DVM_FUNCT_SELECT :
 	case DVM_FUNCT_COLLECT : list = DaoProcess_PutList( proc ); break;
 	case DVM_FUNCT_APPLY : DaoProcess_PutValue( proc, (DaoValue*)self ); break;
 	}
@@ -2409,6 +2418,9 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 		switch( funct ){
 		case DVM_FUNCT_COLLECT :
 			if( res && res->type != DAO_NONE ) DaoList_Append( list, res );
+			break;
+		case DVM_FUNCT_SELECT :
+			if( res && res->xBoolean.value ) DaoList_Append( list, elem );
 			break;
 		case DVM_FUNCT_MAP : DaoArray_SetValue( array, i, res ); break;
 		case DVM_FUNCT_APPLY : DaoArray_SetValue( self, id, res ); break;

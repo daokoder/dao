@@ -1993,6 +1993,7 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 	daoint entry, i, j, N = list->value->size;
 	int popped = 0;
 	switch( funct ){
+	case DVM_FUNCT_SELECT :
 	case DVM_FUNCT_COLLECT : list2 = DaoProcess_PutList( proc ); break;
 	case DVM_FUNCT_APPLY : DaoProcess_PutValue( proc, p[0] ); break;
 	case DVM_FUNCT_FIND : DaoProcess_PutValue( proc, dao_none_value ); break;
@@ -2012,9 +2013,12 @@ static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, 
 		case DVM_FUNCT_COLLECT :
 			if( res->type != DAO_NONE ) DaoList_Append( list2, res );
 			break;
+		case DVM_FUNCT_SELECT :
+			if( res->xBoolean.value ) DaoList_Append( list2, items[i] );
+			break;
 		case DVM_FUNCT_APPLY : DaoList_SetItem( list, res, i ); break;
 		}
-		if( funct == DVM_FUNCT_FIND && res->xInteger.value ){
+		if( funct == DVM_FUNCT_FIND && res->xBoolean.value ){
 			popped = 1;
 			DaoProcess_PopFrame( proc );
 			tuple = DaoProcess_PutTuple( proc, 2 );
@@ -2032,6 +2036,10 @@ static void DaoLIST_Collect( DaoProcess *proc, DaoValue *p[], int npar )
 static void DaoLIST_Find( DaoProcess *proc, DaoValue *p[], int npar )
 {
 	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_FIND );
+}
+static void DaoLIST_Select( DaoProcess *proc, DaoValue *p[], int npar )
+{
+	DaoLIST_BasicFunctional( proc, p, npar, DVM_FUNCT_SELECT );
 }
 static void DaoLIST_Iterate( DaoProcess *proc, DaoValue *p[], int npar )
 {
@@ -2355,9 +2363,19 @@ static DaoFuncItem listMeths[] =
 	},
 	{ DaoLIST_Find,
 		"find( invar self: list<@T>, direction: enum<forward,backward> = $forward )"
-			"[item: invar<@T>, index: int => int] => tuple<index:int,value:@T> | none"
+			"[item: invar<@T>, index: int => bool] => tuple<index:int,value:@T> | none"
 		/*
 		// Find the first item in the list that meets the condition as expressed
+		// by the code section. A non-zero value of the code section indicates
+		// the condition is met.
+		// The direction of iteration can be controlled by the "direction" paramter.
+		*/
+	},
+	{ DaoLIST_Select,
+		"select( invar self: list<@T>, direction: enum<forward,backward> = $forward )"
+			"[item: invar<@T>, index: int => bool] => list<@T>"
+		/*
+		// Select items in the list that meets the condition as expressed
 		// by the code section. A non-zero value of the code section indicates
 		// the condition is met.
 		// The direction of iteration can be controlled by the "direction" paramter.
@@ -2869,6 +2887,7 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 	case DVM_FUNCT_ASSOCIATE : map = DaoProcess_PutMap( proc, p[1]->xInteger.value ); break;
 	case DVM_FUNCT_APPLY : DaoProcess_PutValue( proc, p[0] ); break;
 	case DVM_FUNCT_FIND : DaoProcess_PutValue( proc, dao_none_value ); break;
+	case DVM_FUNCT_SELECT : map = DaoProcess_PutMap( proc, self->value->hashing ); break;
 	}
 	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
@@ -2886,10 +2905,15 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 				DaoMap_Insert( map, res->xTuple.values[0], res->xTuple.values[1] );
 			}
 			break;
+		case DVM_FUNCT_SELECT :
+			if( res->xBoolean.value ){
+				DaoMap_Insert( map, node->key.pVoid, node->value.pVoid );
+			}
+			break;
 		case DVM_FUNCT_APPLY : DaoValue_Move( res, & node->value.pValue, type ); break;
 		case DVM_FUNCT_COLLECT : if( res->type != DAO_NONE ) DaoList_Append( list, res ); break;
 		}
-		if( funct == DVM_FUNCT_FIND && res->xInteger.value ){
+		if( funct == DVM_FUNCT_FIND && res->xBoolean.value ){
 			popped = 1;
 			DaoProcess_PopFrame( proc );
 			tuple = DaoProcess_PutTuple( proc, 2 );
@@ -2907,6 +2931,10 @@ static void DaoMAP_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoMAP_Find2( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMAP_Functional( proc, p, N, DVM_FUNCT_FIND );
+}
+static void DaoMAP_Select( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMAP_Functional( proc, p, N, DVM_FUNCT_SELECT );
 }
 static void DaoMAP_Associate( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -3033,10 +3061,19 @@ static DaoFuncItem mapMeths[] =
 		*/
 	},
 	{ DaoMAP_Find2,
-		"find( invar self: map<@K,@V> )[key: invar<@K>, value: invar<@V> =>int]"
+		"find( invar self: map<@K,@V> )[key: invar<@K>, value: invar<@V> =>bool]"
 			"=> tuple<key:@K,value:@V> | none"
 		/*
 		// Find the first key-value pair that meets the condition as expressed
+		// by the code section. A non-zero integer result from the code section
+		// means the condition is satisfied.
+		*/
+	},
+	{ DaoMAP_Select,
+		"select( invar self: map<@K,@V> )[key: invar<@K>, value: invar<@V> =>bool]"
+			"=> map<@K,@V>"
+		/*
+		// Select key-value pairs that meets the condition as expressed
 		// by the code section. A non-zero integer result from the code section
 		// means the condition is satisfied.
 		*/
