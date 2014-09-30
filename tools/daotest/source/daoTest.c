@@ -245,7 +245,7 @@ int main( int argc, char **argv )
 				DString_Reset( output, 0 );
 				DaoNamespace_AddParent( ns2, ns );
 				DaoProcess_Eval( proc, ns2, codes->chars );
-#ifdef DAO_WITH_THREAD
+#ifdef DAO_WITH_CONCURRENT
 				DaoCallServer_Join();
 #endif
 				DString_Trim( output, 1, 1, 0 );

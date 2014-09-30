@@ -272,11 +272,7 @@ static int daomake_local_rpath = 1;
 static int daomake_reset_cache = 0;
 static int daomake_test_count = 0;
 
-#ifdef LINUX
-static int daomake_relative_rpath = 0;
-#else
 static int daomake_relative_rpath = 1;
-#endif
 
 
 
@@ -789,15 +785,20 @@ void DaoMakeUnit_ExportIncludePaths( DaoMakeUnit *self, DString *cflags, DaoMake
 void DaoMakeUnit_ExportLinkingPaths( DaoMakeUnit *self, DString *lflags, DaoMakeUnit *target )
 {
 	DString *rpath = DaoMake_GetSettingValue( "DLL-RPATH" );
+	DString *rpath2 = DaoMake_GetSettingValue( "DLL-RPATH-REL" );
 	DString *path = DString_New();
 	daoint i;
 	if( target == NULL ) target = self;
 	for(i=0; i<self->linkingPaths->size; ++i){
 		DString_Assign( path, self->linkingPaths->items.pString[i] );
 		DaoMake_MakePath( self->sourcePath, path );
-		if( daomake_relative_rpath ) DaoMake_MakeRelativePath( target->binaryPath, path );
 		DString_AppendGap( lflags );
-		DString_Append( lflags, rpath );
+		if( daomake_relative_rpath ){
+			DaoMake_MakeRelativePath( target->binaryPath, path );
+			DString_Append( lflags, rpath2 );
+		}else{
+			DString_Append( lflags, rpath );
+		}
 		DString_Append( lflags, path );
 		DString_Assign( path, self->linkingPaths->items.pString[i] );
 		DaoMake_MakePath( self->sourcePath, path );
