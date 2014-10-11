@@ -3481,20 +3481,6 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		goto FailConversion;
 	}
 
-	if( ct->tid == DAO_VARIANT ){
-		at = NULL;
-		mt = DAO_MT_NOT;
-		for(i=0,n=ct->nested->size; i<n; i++){
-			DaoType *tp = ct->nested->items.pType[i];
-			mt2 = DaoType_MatchValue( tp, va, NULL );
-			if( mt2 > mt ){
-				mt = mt2;
-				at = tp;
-			}
-		}
-		if( at == NULL ) goto FailConversion;
-		ct = at;
-	}
 	if( ct->tid == DAO_INTERFACE ){
 		if( ct->aux == NULL ){
 			if( va->type != DAO_INTERFACE ) goto FailConversion;
@@ -3521,6 +3507,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		DaoValue_Copy( va, vc2 );
 		return;
 	}
+	if( ct->tid == DAO_VARIANT ) goto NormalCasting;
 	if( va->type == DAO_OBJECT ){
 		DaoValue *value = DaoObject_CastToBase( (DaoObject*) va, ct );
 		if( value ){
@@ -5526,11 +5513,11 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 	DString *str;
 	DNode *node;
 	daoint i, n, size;
-	int type, variadic, tsize;
+	int mt, type, variadic, tsize;
 
 	if( ct == NULL ) goto FailConversion;
 	if( ct->tid & DAO_ANY ) goto Rebind;
-	if( dA->type == ct->tid && ct->tid >= DAO_BOOLEAN && ct->tid < DAO_ARRAY ) goto Rebind;
+	if( dA->type == ct->tid && ct->tid >= DAO_NONE && ct->tid < DAO_ARRAY ) goto Rebind;
 	if( ct->tid > DAO_NONE && ct->tid <= DAO_STRING && (dC == NULL || dC->type != ct->tid) ){
 		dC = DaoValue_SimpleCopy( ct->value );
 		DaoProcess_CacheValue( proc, dC );
@@ -5607,7 +5594,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			data2 = list2->value->items.pValue;
 			for(i=0,n=list2->value->size; i<n; i++ ){
 				V = DaoTypeCast( proc, tp, data2[i], V );
-				if( V == NULL || V->type ==0 ) goto FailConversion;
+				if( V == NULL ) goto FailConversion;
 				DaoValue_Copy( V, data + i );
 			}
 		}else if( dA->type == DAO_TUPLE ){
@@ -5617,7 +5604,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 			data2 = tuple2->values;
 			for(i=0,n=tuple2->size; i<n; i++ ){
 				V = DaoTypeCast( proc, tp, data2[i], V );
-				if( V == NULL || V->type ==0 ) goto FailConversion;
+				if( V == NULL ) goto FailConversion;
 				DaoValue_Copy( V, data + i );
 			}
 		}else goto FailConversion;
@@ -5643,7 +5630,7 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		for(; node!=NULL; node=DMap_Next(map2->value,node) ){
 			K = DaoTypeCast( proc, tp, node->key.pValue, K );
 			V = DaoTypeCast( proc, tp2, node->value.pValue, V );
-			if( K ==NULL || V ==NULL || K->type ==0 || V->type ==0 ) goto FailConversion;
+			if( K == NULL || V == NULL ) goto FailConversion;
 			DMap_Insert( map->value, K, V );
 		}
 		break;
@@ -5721,9 +5708,19 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		if( dC == NULL ) goto FailConversion;
 		break;
 	case DAO_VARIANT :
-		dC = dA;
-		break;
-	default : break;
+		tp = NULL;
+		mt = DAO_MT_NOT;
+		for(i=0,n=ct->nested->size; i<n; i++){
+			DaoType *itp = ct->nested->items.pType[i];
+			int mt2 = DaoType_MatchValue( itp, dA, NULL );
+			if( mt2 > mt ){
+				mt = mt2;
+				tp = itp;
+			}
+		}
+		if( tp == NULL ) goto FailConversion;
+		return DaoTypeCast( proc, tp, dA, dC );
+	default : goto FailConversion;
 	}
 	return dC;
 Rebind :
