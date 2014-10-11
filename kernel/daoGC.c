@@ -1561,7 +1561,7 @@ void DaoGC_CycRefCountIncrements( DaoValue **values, daoint size )
 void DaoGC_RefCountDecrements( DaoValue **values, daoint size )
 {
 	daoint i;
-	DMutex_Lock( & gcWorker.mutex_idle_list );
+	if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.mutex_idle_list );
 	for(i=0; i<size; i++){
 		DaoValue *p = values[i];
 		if( p == NULL ) continue;
@@ -1569,7 +1569,7 @@ void DaoGC_RefCountDecrements( DaoValue **values, daoint size )
 		if( p->xGC.refCount == 0 && p->type < DAO_ENUM ) DaoGC_DeleteSimpleData( p );
 		values[i] = 0;
 	}
-	DMutex_Unlock( & gcWorker.mutex_idle_list );
+	if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.mutex_idle_list );
 }
 void cycRefCountDecrements( DList *list )
 {
@@ -1589,11 +1589,11 @@ void directRefCountDecrement( DaoValue **value )
 {
 	DaoValue *p = *value;
 	if( p == NULL ) return;
-	DMutex_Lock( & gcWorker.mutex_idle_list );
+	if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.mutex_idle_list );
 	p->xGC.refCount --;
 	*value = NULL;
 	if( p->xGC.refCount == 0 && p->type < DAO_ENUM ) DaoGC_DeleteSimpleData( p );
-	DMutex_Unlock( & gcWorker.mutex_idle_list );
+	if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.mutex_idle_list );
 }
 void directRefCountDecrements( DList *list )
 {
@@ -2187,14 +2187,14 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			vmp->stackSize = 0;
 			while( frame ){
 				count += 3;
-				DMutex_Lock( & gcWorker.mutex_idle_list );
+				if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.mutex_idle_list );
 				if( frame->routine ) frame->routine->refCount --;
 				if( frame->object ) frame->object->refCount --;
 				if( frame->retype ) frame->retype->refCount --;
 				frame->routine = NULL;
 				frame->object = NULL;
 				frame->retype = NULL;
-				DMutex_Unlock( & gcWorker.mutex_idle_list );
+				if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.mutex_idle_list );
 				frame = frame->next;
 			}
 			break;

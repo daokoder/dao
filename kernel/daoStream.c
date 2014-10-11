@@ -258,37 +258,25 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 		}
 		self->format = NULL;
 		if( fg || bg ) DaoStream_SetColor( self, NULL, NULL );
-		if( cyclic ) DMap_Delete( cyclic );
-		if( fgcolor ) DString_Delete( fgcolor );
-		if( bgcolor ) DString_Delete( bgcolor );
-		DString_Delete( fmt2 );
 		continue;
 NullParameter:
 		sprintf( message, "%i-th parameter is null!", id );
 		DaoProcess_RaiseWarning( proc, NULL, message );
-		if( cyclic ) DMap_Delete( cyclic );
-		if( fgcolor ) DString_Delete( fgcolor );
-		if( bgcolor ) DString_Delete( bgcolor );
-		DString_Delete( fmt2 );
 		continue;
 WrongColor:
 		sprintf( message, "%i-th parameter has wrong color format!", id );
 		DaoProcess_RaiseWarning( proc, NULL, message );
-		if( cyclic ) DMap_Delete( cyclic );
-		if( fgcolor ) DString_Delete( fgcolor );
-		if( bgcolor ) DString_Delete( bgcolor );
-		DString_Delete( fmt2 );
 		continue;
 WrongParameter:
 		self->format = NULL;
 		if( fg || bg ) DaoStream_SetColor( self, NULL, NULL );
 		sprintf( message, "%i-th parameter has wrong type for format \"%s\"!", id, fmt2->chars );
 		DaoProcess_RaiseWarning( proc, NULL, message );
-		if( cyclic ) DMap_Delete( cyclic );
-		if( fgcolor ) DString_Delete( fgcolor );
-		if( bgcolor ) DString_Delete( bgcolor );
-		DString_Delete( fmt2 );
 	}
+	if( cyclic ) DMap_Delete( cyclic );
+	if( fgcolor ) DString_Delete( fgcolor );
+	if( bgcolor ) DString_Delete( bgcolor );
+	DString_Delete( fmt2 );
 }
 static void DaoIO_Writef( DaoProcess *proc, DaoValue *p[], int N )
 {
