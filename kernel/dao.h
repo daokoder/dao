@@ -978,6 +978,7 @@ DAO_DLL DaoType* DaoType_GetItemType( DaoType *self, int i );
 
 DAO_DLL void DaoGC_IncRC( DaoValue *p );
 DAO_DLL void DaoGC_DecRC( DaoValue *p );
+DAO_DLL void DaoGC_Assign( DaoValue **dest, DaoValue *src );
 
 /*
 // DaoGC_TryDelete() will register the object for collection.
