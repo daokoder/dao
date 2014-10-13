@@ -600,7 +600,7 @@ DAO_DLL DaoValue* DaoMap_GetValue( DaoMap *self, DaoValue *key  );
 DAO_DLL DaoValue* DaoMap_GetValueChars( DaoMap *self, const char *key  );
 
 
-
+DAO_DLL DNode* DaoMap_Find( DaoMap *self, DaoValue *key );
 DAO_DLL DNode* DaoMap_First( DaoMap *self );
 DAO_DLL DNode* DaoMap_Next( DaoMap *self, DNode *iter );
 DAO_DLL DaoValue* DNode_Key( DNode *self );

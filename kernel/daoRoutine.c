@@ -369,6 +369,22 @@ void DaoRoutine_PrintCode( DaoRoutine *self, DaoStream *stream )
 	DaoStream_WriteChars( stream, sep2 );
 	DString_Delete( annot );
 }
+void DaoRoutine_PrintCodeSnippet( DaoRoutine *self, DaoStream *stream, int k )
+{
+	DString* mbs = DString_New();
+	DaoVmCodeX **codes = self->body->annotCodes->items.pVmc;
+	int j, m = self->body->annotCodes->size;
+	int j1 = k >= daoConfig.snippet ? k-daoConfig.snippet : 0;
+	int j2 = (k+daoConfig.snippet) < m ? k+daoConfig.snippet : m-1;
+
+	DaoStream_WriteChars( stream, "In code snippet:\n" );
+	for(j=j1; j<=j2; ++j){
+		DaoRoutine_FormatCode( self, j, *codes[j], mbs );
+		DaoStream_WriteChars( stream, j==k ? ">>" : "  " );
+		DaoStream_WriteString( stream, mbs );
+	}
+	DString_Delete( mbs );
+}
 
 
 

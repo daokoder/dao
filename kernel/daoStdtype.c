@@ -2618,6 +2618,30 @@ static void DaoMap_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, 
 	DaoStream_WriteChars( stream, " }" );
 	if( cycData ) MAP_Erase( cycData, self );
 }
+static DaoValue* DaoMap_MakeSymbolKey( DaoMap *self, DaoValue *key, DaoEnum *sym )
+{
+	if( key->type != DAO_ENUM || key->xEnum.subtype != DAO_ENUM_SYM ) return key;
+	if( self->ctype->nested->items.pType[0]->tid == DAO_ENUM ){
+		*sym = self->ctype->nested->items.pType[0]->value->xEnum;
+		if( DaoEnum_SetValue( sym, (DaoEnum*) key ) ) key = (DaoValue*) sym;
+	}
+	return key;
+}
+DNode* DaoMap_Find( DaoMap *self, DaoValue *key )
+{
+	DaoEnum sym = {0};
+	return DMap_Find( self->value, DaoMap_MakeSymbolKey( self, key, & sym ) );
+}
+static DNode* DaoMap_FindGE( DaoMap *self, DaoValue *key )
+{
+	DaoEnum sym = {0};
+	return DMap_FindGE( self->value, DaoMap_MakeSymbolKey( self, key, & sym ) );
+}
+static DNode* DaoMap_FindLE( DaoMap *self, DaoValue *key )
+{
+	DaoEnum sym = {0};
+	return DMap_FindLE( self->value, DaoMap_MakeSymbolKey( self, key, & sym ) );
+}
 static void DaoMap_GetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N );
 static void DaoMap_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 {
@@ -2636,7 +2660,7 @@ static void DaoMap_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 	}else if( pid->type == DAO_TUPLE && pid->xTuple.size == 2 ){
 		DaoMap_GetItem2( self0, proc, pid->xTuple.values, 2 );
 	}else{
-		DNode *node = MAP_Find( self->value, pid );
+		DNode *node = DaoMap_Find( self, pid );
 		if( node ==NULL ){
 			DaoProcess_RaiseError( proc, "Key", NULL );
 			return;
@@ -2661,8 +2685,8 @@ static void DaoMap_GetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 	DaoMap *map = DaoProcess_PutMap( proc, self->value->hashing );
 	DNode *node1 = DMap_First( self->value );
 	DNode *node2 = NULL;
-	if( ids[0]->type ) node1 = MAP_FindGE( self->value, ids[0] );
-	if( ids[1]->type ) node2 = MAP_FindLE( self->value, ids[1] );
+	if( ids[0]->type ) node1 = DaoMap_FindGE( self, ids[0] );
+	if( ids[1]->type ) node2 = DaoMap_FindLE( self, ids[1] );
 	if( node2 ) node2 = DMap_Next(self->value, node2 );
 	for(; node1 != node2; node1 = DMap_Next(self->value, node1 ) )
 		DaoMap_Insert( map, node1->key.pValue, node1->value.pValue );
@@ -2699,8 +2723,8 @@ static void DaoMap_SetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 		if( DaoType_MatchValue( tp2, value, NULL ) ==0 )
 			DaoProcess_RaiseError( proc, "Type", "value not matching" );
 	}
-	if( ids[0]->type ) node1 = MAP_FindGE( self->value, ids[0] );
-	if( ids[1]->type ) node2 = MAP_FindLE( self->value, ids[1] );
+	if( ids[0]->type ) node1 = DaoMap_FindGE( self, ids[0] );
+	if( ids[1]->type ) node2 = DaoMap_FindLE( self, ids[1] );
 	if( node2 ) node2 = DMap_Next(self->value, node2 );
 	for(; node1 != node2; node1 = DMap_Next(self->value, node1 ) )
 		DaoValue_Move( value, & node1->value.pValue, tp2 );
@@ -2779,26 +2803,27 @@ static void DaoMAP_Reset( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoMAP_Erase( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DMap *self = p[0]->xMap.value;
+	DaoMap *self = (DaoMap*) p[0];
 	DNode *ml, *mg;
 	DList *keys;
+
 	DaoProcess_PutValue( proc, p[0] );
 	N --;
 	switch( N ){
 	case 0 :
-		DMap_Clear( self ); break;
+		DMap_Clear( self->value ); break;
 	case 1 :
-		MAP_Erase( self, p[1] );
+		DaoMap_Erase( self, p[1] );
 		break;
 	case 2 :
-		mg = MAP_FindGE( self, p[1] );
-		ml = MAP_FindLE( self, p[2] );
+		mg = DaoMap_FindGE( self, p[1] );
+		ml = DaoMap_FindLE( self, p[2] );
 		if( mg ==NULL || ml ==NULL ) return;
-		ml = DMap_Next( self, ml );
+		ml = DMap_Next( self->value, ml );
 		keys = DList_New(0);
-		for(; mg != ml; mg=DMap_Next(self, mg)) DList_Append( keys, mg->key.pVoid );
+		for(; mg != ml; mg=DMap_Next(self->value, mg)) DList_Append( keys, mg->key.pVoid );
 		while( keys->size ){
-			MAP_Erase( self, keys->items.pVoid[0] );
+			MAP_Erase( self->value, keys->items.pVoid[0] );
 			DList_PopFront( keys );
 		}
 		DList_Delete( keys );
@@ -2818,26 +2843,26 @@ static void DaoMAP_Insert( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoMAP_Find( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoMap *self = & p[0]->xMap;
+	DaoMap *self = (DaoMap*) p[0];
 	DaoTuple *res = NULL;
 	DNode *node;
 	switch( (int)p[2]->xEnum.value ){
 	case 0 :
-		node = MAP_FindLE( self->value, p[1] );
+		node = DaoMap_FindLE( self, p[1] );
 		if( node == NULL ) break;
 		res = DaoProcess_PutTuple( proc, 2 );
 		DaoValue_Copy( node->key.pValue, res->values );
 		DaoValue_Copy( node->value.pValue, res->values + 1 );
 		break;
 	case 1  :
-		node = MAP_Find( self->value, p[1] );
+		node = DaoMap_Find( self, p[1] );
 		if( node == NULL ) break;
 		res = DaoProcess_PutTuple( proc, 2 );
 		DaoValue_Copy( node->key.pValue, res->values );
 		DaoValue_Copy( node->value.pValue, res->values + 1 );
 		break;
 	case 2  :
-		node = MAP_FindGE( self->value, p[1] );
+		node = DaoMap_FindGE( self, p[1] );
 		if( node == NULL ) break;
 		res = DaoProcess_PutTuple( proc, 2 );
 		DaoValue_Copy( node->key.pValue, res->values );
@@ -3229,15 +3254,16 @@ int DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value )
 }
 void DaoMap_Erase( DaoMap *self, DaoValue *key )
 {
-	MAP_Erase( self->value, key );
+	DaoEnum sym = {0};
+	MAP_Erase( self->value, DaoMap_MakeSymbolKey( self, key, & sym ) );
 }
 DNode* DaoMap_First( DaoMap *self )
 {
-	return DMap_First(self->value);
+	return DMap_First( self->value );
 }
 DNode* DaoMap_Next( DaoMap *self, DNode *iter )
 {
-	return DMap_Next(self->value,iter);
+	return DMap_Next( self->value, iter );
 }
 
 
@@ -4087,18 +4113,7 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 	for(i=0; i<n; i++){
 		DaoRoutine *rout = self->callers->items.pRoutine[i];
 		if( codeShown == 0 && rout->subtype == DAO_ROUTINE ){
-			DaoVmCodeX **codes = rout->body->annotCodes->items.pVmc;
-			int m = rout->body->vmCodes->size;
-			int j, k = self->lines->items.pInt[i] & 0xffff;
-			int j1 = k >= 2 ? k-2 : 0;
-			int j2 = (k+2) < m ? k+2 : m-1;
-			DaoStream_WriteChars( stream, "In code snippet:\n" );
-			for(j=j1; j<=j2; ++j){
-				DaoRoutine_FormatCode( rout, j, *codes[j], sstring );
-				DaoStream_WriteChars( stream, j==k ? ">>" : "  " );
-				DaoStream_WriteString( stream, sstring );
-			}
-			DString_Clear( sstring );
+			DaoRoutine_PrintCodeSnippet( rout, stream, self->lines->items.pInt[i] & 0xffff );
 			codeShown = 1;
 		}
 		DaoStream_WriteChars( ss, i == 0 ? "Raised by:  " : "Called by:  " );

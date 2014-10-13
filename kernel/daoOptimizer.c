@@ -2756,6 +2756,7 @@ static void DaoInferencer_WriteErrorHeader( DaoInferencer *self )
 	char char50[50], char200[200];
 	DaoRoutine *routine = self->routine;
 	DaoStream  *stream = routine->nameSpace->vmSpace->errorStream;
+	DaoVmCodeX **codes = self->inodes->items.pVmc;
 	DaoVmCodeX *vmc;
 
 	self->error = 1;
@@ -2777,6 +2778,8 @@ static void DaoInferencer_WriteErrorHeader( DaoInferencer *self )
 	DaoStream_WriteChars( stream, "Invalid virtual machine instruction --- \" " );
 	DaoStream_WriteChars( stream, char200 );
 	DaoStream_WriteChars( stream, " \";\n" );
+
+	DaoRoutine_PrintCodeSnippet( routine, stream, self->currentIndex );
 }
 static void DaoInferencer_WriteErrorGeneral( DaoInferencer *self, int error )
 {

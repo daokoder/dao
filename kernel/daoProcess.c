@@ -4387,6 +4387,9 @@ void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc )
 	if( type == dao_type_map_empty ) map->trait |= DAO_VALUE_CONST;
 	if( bval == 2 && pp[opA]->type ==0 && pp[opA+1]->type ==0 ) return;
 	for( i=0; i<bval-1; i+=2 ){
+		if( DaoMap_Find( map, pp[opA+i] ) != NULL ){
+			DaoProcess_RaiseWarning( self, NULL, "duplicated key in enumeration" );
+		}
 		if( (c = DaoMap_Insert( map, pp[opA+i], pp[opA+i+1] ) ) ){
 			if( c ==1 ){
 				DaoProcess_RaiseError( self, "Type", "key not matching" );

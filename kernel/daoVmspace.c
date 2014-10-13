@@ -57,11 +57,12 @@ extern int ObjectProfile[100];
 
 DaoConfig daoConfig =
 {
-	1, /*cpu*/
-	0, /*jit*/
-	1, /*optimize*/
-	0, /*iscgi*/
-	8, /*tabspace*/
+	1, /* cpu */
+	0, /* jit */
+	1, /* optimize */
+	0, /* iscgi */
+	8, /* tabspace */
+	2, /* snippet */
 };
 
 DaoVmSpace *mainVmSpace = NULL;
@@ -2283,6 +2284,9 @@ static void DaoConfigure_FromFile( const char *name )
 			}else if( strcmp( tk1->string.chars, "optimize" )==0 ){
 				if( yes <0 ) goto InvalidConfigValue;
 				daoConfig.optimize = yes;
+			}else if( strcmp( tk1->string.chars, "snippet" )==0 ){
+				if( isint == 0 ) goto InvalidConfigValue;
+				daoConfig.snippet = integer;
 			}else{
 				goto InvalidConfigName;
 			}

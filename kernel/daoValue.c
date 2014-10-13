@@ -124,11 +124,6 @@ int DaoComplex_Compare( DaoComplex *left, DaoComplex *right )
 int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
 {
 	DaoEnum E;
-	DNode *N = NULL;
-	DMap *ML = L->etype->mapNames;
-	DMap *MR = R->etype->mapNames;
-	char SL = L->etype->name->chars[0];
-	char SR = R->etype->name->chars[0];
 	if( L->etype == R->etype ){
 		return L->value == R->value ? 0 : (L->value < R->value ? -1 : 1);
 	}else if( L->subtype == DAO_ENUM_SYM && R->subtype == DAO_ENUM_SYM ){
