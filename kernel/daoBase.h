@@ -88,7 +88,6 @@ struct DaoConfig
 	short optimize;  /* enable optimization */
 	short iscgi;     /* is CGI script */
 	short tabspace;  /* number of spaces counted for a tab */
-	short snippet;   /* number of instructions for error printing; */
 };
 
 extern DaoConfig daoConfig;

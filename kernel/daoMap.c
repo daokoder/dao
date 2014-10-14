@@ -130,8 +130,8 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max, u
 	case DAO_COMPLEX :
 		data = & self->xComplex.value;  len = sizeof(dao_complex);  break;
 	case DAO_ENUM  :
-		data = self->xEnum.etype->name->chars;
-		len = self->xEnum.etype->name->size;
+		data = & self->xEnum.value;
+		len = sizeof(int);
 		break;
 	case DAO_STRING  :
 		data = self->xString.value->chars;

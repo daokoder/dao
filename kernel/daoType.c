@@ -398,11 +398,11 @@ DaoType* DaoType_Copy( DaoType *other )
 	if( other->mapNames ) self->mapNames = DMap_Copy( other->mapNames );
 	if( other->interfaces ) self->interfaces = DMap_Copy( other->interfaces );
 	self->aux = other->aux;
-	self->value = other->value;
 	GC_IncRC( other->aux );
-	GC_IncRC( other->value );
 	GC_IncRC( other->kernel );
 	GC_IncRC( other->cbtype );
+	self->value = NULL;
+	DaoValue_Move( other->value, & self->value, self ); /* needed for enum symbol types; */
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif

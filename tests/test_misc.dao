@@ -99,11 +99,9 @@ TestTailCall( 5 )
 [^%n]* %n
 {{Raised by:}} [^%n]* %n
 {{In code snippet:}} [^%n]* %n
-[^%n]* {{LOAD}} [^%n]* %n
 [^%n]* {{GETCL}} [^%n]* %n
 [^%n]* {{MCALL}} [^%n]* %n
 [^%n]* {{GETCG}} [^%n]* %n
-[^%n]* {{DATA_I}} [^%n]* %n
 {{Called by:  TestTailCall()}} [^%n]* %s*
 {{Called by:  __main__()}} [^%n]* %s*
 @[test(code_03)]
