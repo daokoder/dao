@@ -391,6 +391,7 @@ void DaoEnum_MakeName( DaoEnum *self, DString *name )
 }
 void DaoEnum_SetType( DaoEnum *self, DaoType *type )
 {
+	type = DaoType_GetBaseType( type );
 	if( self->etype == type ) return;
 	GC_Assign( & self->etype, type );
 	self->subtype = type->subtid;
