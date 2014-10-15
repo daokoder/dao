@@ -293,7 +293,9 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DList *nest )
 		GC_IncRC( extra );
 	}
 	DString_SetChars( self->name, name );
-	if( tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ) self->fname = DString_New();
+	if( tid == DAO_ENUM || tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ){
+		self->fname = DString_New();
+	}
 	if( nest ){
 		self->nested = DList_New( DAO_DATA_VALUE );
 		DList_Assign( self->nested, nest );
@@ -819,14 +821,13 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	case DAO_ENUM :
 		if( self == type ) return DAO_MT_EQ;
 		if( type->subtid == DAO_ENUM_ANY ) return DAO_MT_SIM;
-		if( DString_EQ( self->name, type->name ) ) return DAO_MT_SIM;
 		if( self->subtid != type->subtid && self->subtid != DAO_ENUM_SYM ) return 0;
-		for(it=DMap_First(self->mapNames); it; it=DMap_Next(self->mapNames, it )){
+		if( self->subtid == DAO_ENUM_SYM ){
+			it = DMap_First(self->mapNames);
 			node = DMap_Find( type->mapNames, it->key.pVoid );
-			if( node ==NULL ) return 0;
-			/* if( node->value.pInt != it->value.pInt ) return 0; */
+			return node ? DAO_MT_EQ : DAO_MT_NOT;
 		}
-		return DAO_MT_SIM;
+		return DString_EQ( self->fname, type->fname ) ? DAO_MT_EQ : DAO_MT_NOT;
 	case DAO_ARRAY : case DAO_LIST : case DAO_MAP :
 	case DAO_TYPE :
 		switch( self->tid ){

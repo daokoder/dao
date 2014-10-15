@@ -1,0 +1,101 @@
+
+@[test(code_01)]
+invar x = 123
+x += 1
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Constant or invariable cannot be modified}}
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+var x = 123
+invar y = x
+x += 1
+io.writeln( y )
+@[test(code_01)]
+@[test(code_01)]
+123
+@[test(code_01)]
+
+
+@[test(code_01)]
+var x = { 1, 2, 3 }
+invar y = x
+x.append( 4 )
+io.writeln( y )
+@[test(code_01)]
+@[test(code_01)]
+{ 1, 2, 3, 4 }
+@[test(code_01)]
+
+
+@[test(code_01)]
+var x = { 1, 2, 3 }
+invar y = x
+y.append( 4 )
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Invalid virtual machine instruction}} .* 
+{{Invalid parameter type --- " 'invar<list<int>>' for 'self:list<int>' "}}
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+invar x = { {1, 2}, {3, 4} }
+x[0].append( 5 )
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Invalid virtual machine instruction}} .* 
+{{Invalid parameter type --- " 'invar<list<int>>' for 'self:list<int>' "}}
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+invar x = { {1, 2}, {3, 4} }
+y = x[0]
+y.append( 5 )
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Invalid virtual machine instruction}} .* 
+{{Invalid parameter type --- " 'invar<list<int>>' for 'self:list<int>' "}}
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+invar x = { {1, 2}, {3, 4} }
+var y = x[0]
+y.append( 5 )
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Invalid virtual machine instruction}} .* 
+{{Types not matching --- " 'invar<list<int>>' for 'var<@X>' "}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+var m: map<enum<A,B,C>,int> = { $A -> 1, $B -> 2, $C -> 3 }
+invar k = $A
+io.writeln( m.find( k ) )
+@[test(code_01)]
+@[test(code_01)]
+( $A(0), 1 )
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar m: map<enum<A,B,C>,int> = { $A -> 1, $B -> 2, $C -> 3 }
+var k = $A
+io.writeln( m.find( k ) )
+@[test(code_01)]
+@[test(code_01)]
+( $A(0), 1 )
+@[test(code_01)]

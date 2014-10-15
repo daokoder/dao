@@ -96,7 +96,7 @@ struct DaoType
 	uchar_t   rntcount  : 4; /* real number type count */
 	uchar_t   ffitype   : 4; /* for modules using ffi */
 	DString  *name;   /* type name */
-	DString  *fname;  /* field name, or parameter name */
+	DString  *fname;  /* field name, or parameter name, or original name for enum types */
 	DList    *nested; /* type items */
 	DList    *bases;  /* base types */
 	DMap     *mapNames;

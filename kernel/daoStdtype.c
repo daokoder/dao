@@ -3029,7 +3029,7 @@ static DaoFuncItem mapMeths[] =
 		"find( invar self: map<@K,@V>, invar key: @K, comparison: enum<LE,EQ,GE> = $EQ )"
 			"=> tuple<key:@K,value:@V> | none"
 		/*
-		// Find the key-value pair that corresponds to "key".
+		// Find the key-value pair that corresponds (or is closest) to "key".
 		// According to the "comparison" parameter:
 		// 1. "$LE": the key must be less than or equal to the found one;
 		// 2. "$EQ": the key must equal to the found one;

@@ -935,7 +935,11 @@ DAO_DLL void DaoProcess_PopValues( DaoProcess *self, int N );
 // The following methods create values of the requested type with data
 // specified by the parameter(s). Values created in this way have references
 // stored in the process's cache, so that user does not need to handle the
-// reference counting of the created value.
+// reference counting of the created value if it used in local or temporary
+// variables, namely, no need to call DaoGC_IncRC() and DaoGC_DecRC().
+// However if it is used in any variable where DaoGC_IncRC() or DaoGC_DecRC()
+// is called, ensure they are called in pair (when assigning to a variable,
+// another option is to use DaoGC_Assign()).
 */
 DAO_DLL DaoNone*    DaoProcess_NewNone( DaoProcess *self );
 DAO_DLL DaoBoolean* DaoProcess_NewBoolean( DaoProcess *self, dao_boolean v );

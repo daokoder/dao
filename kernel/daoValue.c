@@ -130,15 +130,17 @@ int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
 		return DString_CompareUTF8( L->etype->name, R->etype->name );
 	}else if( L->subtype == DAO_ENUM_SYM ){
 		E = *R;
-		if( DaoEnum_SetValue( & E, L ) == 0 ) goto CompareAddress;
+		if( DaoEnum_SetValue( & E, L ) == 0 ) goto CompareName;
 		return E.value == R->value ? 0 : (E.value < R->value ? -1 : 1);
 	}else if( R->subtype == DAO_ENUM_SYM ){
 		E = *L;
-		if( DaoEnum_SetValue( & E, R ) == 0 ) goto CompareAddress;
+		if( DaoEnum_SetValue( & E, R ) == 0 ) goto CompareName;
 		return L->value == E.value ? 0 : (L->value < E.value ? -1 : 1);
+	}else if( DString_EQ( L->etype->fname, R->etype->fname ) ){
+		return L->value == R->value ? 0 : (L->value < R->value ? -1 : 1);
 	}
-CompareAddress:
-	return L->etype < R->etype ? -100 : 100;
+CompareName:
+	return DString_CompareUTF8( L->etype->fname, R->etype->fname );
 }
 int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt )
 {

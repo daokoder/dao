@@ -1775,6 +1775,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 	if( k < end ) goto WrongForm;
 	for(k=start; k<=end; k++) DString_Append( type->name, & tokens[k]->string );
 	DString_AppendChar( type->name, '>' );
+	DString_Assign( type->fname, type->name );
 	/*
 	   printf( "%i  %i  %s\n", end, i, type->name->chars );
 	 */
@@ -3400,6 +3401,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 		if( comma <0 ) comma = rb;
 	}
 	DString_AppendChar( abtp->name, '>' );
+	DString_Assign( abtp->fname, abtp->name );
 	abtp2 = DaoNamespace_FindType( self->nameSpace, abtp->name );
 	if( abtp2 ){
 		DaoType_Delete( abtp );

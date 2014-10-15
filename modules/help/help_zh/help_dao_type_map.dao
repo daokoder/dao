@@ -173,7 +173,7 @@ find(invar self:map<@K,@V>,invar key:@K,...)=>tuple<key:@K,value:@V>|none
 find( invar self: map<@K,@V>, invar key: @K, comparison: enum<LE,EQ,GE> = $EQ )
 	=> tuple<key:@K,value:@V> | none
 @[code]
-查找与键"key"象对应的键值。
+查找与键"key"象对应（或最接近的）的键值。
 对应方式由"comparison"参数指定：
 
 1. "$LE": 参数键必须小于或等于查找的键;

@@ -1885,6 +1885,7 @@ DaoType* DaoNamespace_MakeSymbolType( DaoNamespace *self, const char *symbol )
 
 	type = DaoType_New( name->chars, DAO_ENUM, NULL, NULL );
 	type->subtid = DAO_ENUM_SYM;
+	DString_Assign( type->fname, type->name );
 	DMap_Insert( type->mapNames, & sym, (void*)0 );
 	DaoNamespace_AddType( self, type->name, type );
 	DString_Delete( name );

@@ -26,6 +26,8 @@ test_enum.AddTest( "test_enum_symbol_type.dao" )
 
 daotests.AddTest( "Arrays", "test_arrays.dao" )
 
+test_decl = daotests.AddTest( "Declarations", "test_invar.dao" )
+
 test_control = daotests.AddTest( "Controls", "test_if_else.dao" )
 test_control.AddTest( "test_for.dao" )
 test_control.AddTest( "test_while.dao" )
