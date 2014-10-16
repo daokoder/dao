@@ -78,6 +78,7 @@ static const char* const daoCtInfo[] =
 	"Invalid scope ending",
 	"Invalid target pattern for decorator",
 	"Invalid functional method",
+	"Invalid declaration",
 	"Invalid definition",
 	"Invalid enum definition",
 	"Invalid class definition",

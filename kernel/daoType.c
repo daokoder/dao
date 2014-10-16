@@ -536,10 +536,12 @@ DaoType* DaoType_GetVarType( DaoType *self )
 {
 	DaoType *base, *var, *quads[4] = {NULL};
 
-
 	DaoType_GetQuadTypes( self, quads );
 	if( quads[3] ) return quads[3];
+#if 0
+	// XXX
 	if( self->tid != DAO_THT ) return quads[0];  /* base type; */
+#endif
 
 	base = quads[0];
 	var = DaoType_Copy( base );
@@ -816,6 +818,10 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 	}
 	if( mt <= DAO_MT_EXACT ) return mt;
 
+	/* some types such routine type for verloaded routines rely on comparing type pointer: */
+	if( self->var ) self = DaoType_GetBaseType( self );
+	if( type->var ) type = DaoType_GetBaseType( type );
+
 	mt = DAO_MT_EQ;
 	switch( self->tid ){
 	case DAO_ENUM :
@@ -1044,7 +1050,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	}
 
 	/* some types such routine type for verloaded routines rely on comparing type pointer: */
-	if( self->invar ) self = DaoType_GetBaseType( self );
+	if( self->var || self->invar ) self = DaoType_GetBaseType( self );
 
 	switch( self->tid ){
 	case DAO_UDT :

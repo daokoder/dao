@@ -4356,6 +4356,10 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 			return -1;
 		}
 		self->curToken = k;
+		if( ((store&DAO_DECL_VAR) && extype->invar) || ((store&DAO_DECL_INVAR) && extype->var) ){
+			DaoParser_Error3( self, DAO_INVALID_DECLARATION, errorStart - 1 );
+			return -1;
+		}
 	}
 	abtp = extype;
 	oldcount = self->regCount;
@@ -4401,23 +4405,26 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 			return -1;
 		}
 	}
-	if( abtp == NULL && value && store != 0 && (store & DAO_DECL_INVAR) == 0 ){
-		/*
-		// Type of local variable should not be set here prematurely.
-		// It should be the inferencer that infer its implicit type.
-		 */
-		abtp = DaoNamespace_GetType( ns, value );
-		if( self->byteBlock ) DaoByteBlock_EncodeTypeOf( self->byteBlock, abtp, value );
+	if( abtp == NULL && value ){
+		if( store != 0 && (store & DAO_DECL_INVAR) == 0 ){
+			/*
+			// Type of local variable should not be set here prematurely.
+			// It should be the inferencer that infer its implicit type.
+			*/
+			abtp = DaoNamespace_GetType( ns, value );
+		}else if( store >> 1 ){
+			/*
+			// No instruction will be generated for declaration of non-local variables
+			// with constant intialization values, so there will be no type inference
+			// for such declarations. So get the type here for the declaration.
+			*/
+			abtp = DaoNamespace_GetType( ns, value );
+		}
+		if( abtp && self->byteBlock ) DaoByteBlock_EncodeTypeOf( self->byteBlock, abtp, value );
 	}
 	if( store & DAO_DECL_VAR ){
-		if( abtp == NULL ){
-			abtp = DaoParser_MakeVarTypeHolder( self );
-			abtp = DaoType_GetVarType( abtp );
-		}
-		if( abtp->invar ){
-			DaoParser_Error3( self, DAO_TYPE_NOT_MATCHING, errorStart );
-			return -1;
-		}
+		if( abtp == NULL ) abtp = DaoParser_MakeVarTypeHolder( self );
+		abtp = DaoType_GetVarType( abtp );
 	}else if( store & DAO_DECL_INVAR ){
 		if( abtp == NULL ) abtp = DaoParser_MakeVarTypeHolder( self );
 		abtp = DaoType_GetInvarType( abtp );
