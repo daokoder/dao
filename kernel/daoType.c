@@ -831,7 +831,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds )
 		if( self->subtid == DAO_ENUM_SYM ){
 			it = DMap_First(self->mapNames);
 			node = DMap_Find( type->mapNames, it->key.pVoid );
-			return node ? DAO_MT_EQ : DAO_MT_NOT;
+			return node ? DAO_MT_SIM : DAO_MT_NOT;
 		}
 		return DString_EQ( self->fname, type->fname ) ? DAO_MT_EQ : DAO_MT_NOT;
 	case DAO_ARRAY : case DAO_LIST : case DAO_MAP :

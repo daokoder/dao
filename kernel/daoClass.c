@@ -204,11 +204,6 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 
 	DaoClass_AddConst( self, rout->routName, (DaoValue*)self->classRoutines, DAO_PERM_PUBLIC );
 
-	self->objType->value = (DaoValue*) DaoObject_Allocate( self, 0 );
-	self->objType->value->xObject.trait |= DAO_VALUE_CONST|DAO_VALUE_NOCOPY;
-	self->objType->value->xObject.isNull = 1;
-	GC_IncRC( self->objType->value );
-
 	DString_Delete( str );
 }
 /* breadth-first search */
@@ -1012,8 +1007,11 @@ int DaoClass_UseMixinDecorators( DaoClass *self )
 	int bl = 1;
 #ifdef DAO_WITH_DECORATOR
 	daoint i, j, k;
-	DaoObject object = *(DaoObject*) self->objType->value;
+	DaoObject object = {0};
 	DaoObject *obj = & object;
+
+	object.type = DAO_OBJECT;
+	object.defClass = self;
 
 	/*
 	// Apply the decorators from mixins only to the methods defined in this class.
@@ -1062,11 +1060,6 @@ void DaoClass_ResetAttributes( DaoClass *self )
 {
 	DNode *node;
 	int i, k, id, autoinitor = self->parent == NULL;
-
-	DaoObject_Init( & self->objType->value->xObject, NULL, 0 );
-	self->objType->value->xObject.trait &= ~DAO_VALUE_CONST;
-	DaoValue_MarkConst( self->objType->value );
-	DaoValue_MarkConst( self->constants->items.pConst[1]->value ); /* ::default */
 
 	for(i=0; autoinitor && (i<self->classRoutines->overloads->routines->size); i++){
 		DaoRoutine *rout = self->classRoutines->overloads->routines->items.pRoutine[i];

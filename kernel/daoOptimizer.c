@@ -6702,7 +6702,7 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	DList *annotCodes, *added = NULL, *regmap = NULL;
 	DList *nested, *ptypes;
 	DaoValue *selfpar = NULL;
-	DaoObject object, *obj = & object;
+	DaoObject object = {0}, *obj = & object;
 	DaoType *ftype, **decotypes;
 	DaoRoutine *newfn, *oldfn = self;
 	DaoVmCodeX *vmc;
@@ -6733,8 +6733,8 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	}
 
 	if( self->routHost ){
-		/* To circumvent the default object issue for type matching: */
-		object = *(DaoObject*) self->routHost->value;
+		object.type = DAO_OBJECT;
+		object.defClass = (DaoClass*) self->routHost->aux;
 		selfpar = (DaoValue*) obj;
 	}
 

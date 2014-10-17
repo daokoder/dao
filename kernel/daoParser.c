@@ -2638,7 +2638,7 @@ static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 {
 	DaoValue *selfpar = NULL;
 	DaoValue *params[DAO_MAX_PARAM+1];
-	DaoObject object, *obj = & object;
+	DaoObject object = {0}, *obj = & object;
 	int i, j, n, count = self->decoFuncs->size;
 
 	if( self->byteBlock && count ){
@@ -2647,8 +2647,8 @@ static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
 	}
 
 	if( rout->routHost ){
-		/* To circumvent the default object issue for type matching: */
-		object = *(DaoObject*) rout->routHost->value;
+		object.type = DAO_OBJECT;
+		object.defClass = (DaoClass*) rout->routHost->aux;
 		selfpar = (DaoValue*) obj;
 	}
 	params[0] = (DaoValue*) rout;
@@ -3429,22 +3429,6 @@ ErrorEnumDefinition:
 	return 0;
 }
 static int DaoParser_GetNormRegister( DaoParser *self, int reg, int exp, int first, int mid, int last );
-static int DaoParser_CheckDefault( DaoParser *self, DaoType *type, int estart )
-{
-	DaoValue *value = type->value;
-	int mt = 0;
-	if( value ){
-		if( value->type == DAO_CTYPE || value->type == DAO_CDATA || value->type == DAO_CSTRUCT ){
-			mt = DaoType_MatchTo( value->xCdata.ctype, type, NULL );
-		}else if( value->type == 0 ){
-			mt = 1;
-		}else{
-			mt = DaoType_MatchValue( type, value, NULL );
-		}
-	}
-	if( mt == 0 ) DaoParser_Error3( self, DAO_TYPE_NO_DEFAULT, estart );
-	return mt;
-}
 static void DaoParser_CheckStatementSeparation( DaoParser *self, int check, int end )
 {
 	DaoInode *close = (DaoInode*) DList_Back( self->scopeClosings );
@@ -4505,9 +4489,6 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 				}else if( eq >=0 ){
 					DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, eq+1, end, 0 );
 					return -1;
-				}else if( abtp && DaoParser_CheckDefault( self, abtp, errorStart ) ==0 ){
-					DaoParser_Error2( self, DAO_TYPE_NO_DEFAULT, errorStart, start, 0 );
-					return -1;
 				}else if( block ){
 					DaoByteBlock_DeclareVar( block, name, NULL, extype, pm );
 				}
@@ -4525,9 +4506,6 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 					DaoParser_AddCode( self, DVM_SETVK, reg, id, 0, first, mid, end );
 				}else if( eq >=0 ){
 					DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, eq+1, end, 0 );
-					return -1;
-				}else if( abtp && DaoParser_CheckDefault( self, abtp, errorStart ) ==0 ){
-					DaoParser_Error2( self, DAO_TYPE_NO_DEFAULT, errorStart, start, 0 );
 					return -1;
 				}else if( block ){
 					DaoByteBlock_Declare( block, DAO_ASM_STATIC, name, NULL, extype, pm );

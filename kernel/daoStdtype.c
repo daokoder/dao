@@ -3805,7 +3805,6 @@ DaoTypeBase defaultCdataTyper =
 */
 DaoType* DaoCdata_NewType( DaoTypeBase *typer )
 {
-	DaoCdata *cdata = DaoCdata_New( NULL, NULL );
 	DaoCtype *ctype = DaoCtype_New( NULL, NULL );
 	DaoType *cdata_type;
 	DaoType *ctype_type;
@@ -3813,17 +3812,12 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer )
 
 	DString_SetChars( ctype->name, typer->name );
 	ctype->subtype = DAO_CDATA_PTR;
-	cdata->subtype = DAO_CDATA_PTR;
 	ctype->trait |= DAO_VALUE_NOCOPY;
-	cdata->trait |= DAO_VALUE_CONST|DAO_VALUE_NOCOPY;
 
 	ctype_type = DaoType_New( typer->name, DAO_CTYPE, (DaoValue*)ctype, NULL );
 	cdata_type = DaoType_New( typer->name, DAO_CDATA, (DaoValue*)ctype, NULL );
-	GC_IncRC( cdata );
-	cdata_type->value = (DaoValue*) cdata;
 	GC_Assign( & ctype->cdtype, cdata_type );
 	GC_Assign( & ctype->ctype, ctype_type );
-	GC_Assign( & cdata->ctype, cdata_type );
 	ctype_type->typer = typer;
 	cdata_type->typer = typer;
 
