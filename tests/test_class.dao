@@ -125,3 +125,18 @@ Test( k )
 @[test(code_01)]
 {{At line}} .* {{Invalid parameter type}}
 @[test(code_01)]
+
+
+
+@[test(code_01)]
+class Klass {
+	static a
+	var    b
+	invar  c
+}
+
+obj = Klass.{"1","3"}
+obj.a
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]

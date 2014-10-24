@@ -3425,6 +3425,7 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		}else{
 			ct = *type2;
 		}
+		if( ct == NULL ) ct = dao_type_any; /* static declared without type and init; */
 		j = DaoClass_GetDataIndex( klass, str );
 
 		/* specialize instructions for finalized class/instance: */
