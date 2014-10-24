@@ -263,3 +263,17 @@ routine f() => tuple<list<int>, list<string>>
 @[test(code_01)]
 @[test(code_01)]
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+routine t( a: array<@T<int|float>>, b: @T = 1 )
+{
+	io.writeln( a, std.about(b) )
+};
+t( [1.0] )
+@[test(code_01)]
+@[test(code_01)]
+float %[ 0x %x+ %]
+@[test(code_01)]

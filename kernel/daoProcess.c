@@ -2255,7 +2255,7 @@ RaiseErrorSlicing:
 			goto CheckException;
 RaiseErrorDivByZero:
 			self->activeCode = vmc;
-			DaoProcess_RaiseError( self, "Float:DivByZero", "" );
+			DaoProcess_RaiseError( self, "Float::DivByZero", "" );
 			goto CheckException;
 RaiseErrorInvalidOperation:
 			operands = DaoVmCode_CheckOperands( vmc );
@@ -4782,15 +4782,19 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		dao_integer va, vb, res = 0;
 		switch( vmc->code ){
 		case DVM_MOD:
+		case DVM_DIV:
 			va = DaoValue_GetInteger( A );
 			vb = DaoValue_GetInteger( B );
-			if( vb ==0 ) DaoProcess_RaiseError( self, "Integer:DivByZero", "" );
-			res = va - vb * (dao_integer)(va/vb);
+			if( vb == 0 ){
+				DaoProcess_RaiseError( self, "Float::DivByZero", "" );
+				return;
+			}
+			res = va / vb;
+			if( vmc->code == DVM_MOD ) res = va - vb * (dao_integer) res;
 			break;
 		case DVM_ADD: res = DaoValue_GetInteger( A ) + DaoValue_GetInteger( B ); break;
 		case DVM_SUB: res = DaoValue_GetInteger( A ) - DaoValue_GetInteger( B ); break;
 		case DVM_MUL: res = DaoValue_GetInteger( A ) * DaoValue_GetInteger( B ); break;
-		case DVM_DIV: res = DaoValue_GetInteger( A ) / DaoValue_GetInteger( B ); break;
 		case DVM_POW: res = powf( DaoValue_GetInteger( A ), DaoValue_GetInteger( B ) ); break;
 		default : break;
 		}
