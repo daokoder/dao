@@ -219,5 +219,6 @@ struct DaoJitCallData
 
 /* Mersenne twister random number in [0,1] interval: */
 DAO_DLL double DaoProcess_Random( DaoProcess *self );
+DAO_DLL void DaoProcess_SeedRandom( DaoProcess *self, uint_t seed );
 
 #endif

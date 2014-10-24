@@ -286,6 +286,14 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DaoRoutine *original, DMap *deftypes
 				value2 = self->routConsts->value->items.pValue + i;
 			}
 			GC_Assign( value2, type2 );
+		}else if( *value2 != NULL && i < self->routType->nested->size ){
+			DaoType *partype = self->routType->nested->items.pType[i];
+			DaoValue *value = NULL;
+			if( partype->tid != DAO_PAR_DEFAULT ) continue;
+			partype = (DaoType*) partype->aux;
+			DaoValue_Move( *value2, & value, partype );
+			GC_Assign( value2, value );
+			GC_DecRC( value );
 		}
 	}
 	if( self->body == original->body || self->body->upValues == NULL ) return;

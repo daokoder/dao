@@ -526,9 +526,6 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 			}
 		}
 	}
-	if( (selfChecked + argcount) < parcount ){
-		if( DaoRoutine_PassDefault( routine, dest, passed, defs ) == 0 ) goto ReturnNull;
-	}
 	if( defs && defs->size ){ /* Need specialization */
 		DaoRoutine *original = routine->original ? routine->original : routine;
 		DaoRoutine *current = routine;
@@ -562,6 +559,9 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 			GC_Assign( & routine->original, original );
 			DRoutines_Add( original->specialized, routine );
 		}
+	}
+	if( (selfChecked + argcount) < parcount ){
+		if( DaoRoutine_PassDefault( routine, dest, passed, defs ) == 0 ) goto ReturnNull;
 	}
 ReturnRoutine:
 	if( defs ) DMap_Delete( defs );
@@ -6164,21 +6164,26 @@ struct DaoRandGenCache
 	int     mtIndex;
 };
 
-static DaoRandGenCache* DaoRandGenCache_New()
+static void DaoRandGenCache_Seed( DaoRandGenCache *self, uint_t seed );
+static DaoRandGenCache* DaoRandGenCache_New( uint_t seed )
 {
-	int i;
 	DaoRandGenCache *self = (DaoRandGenCache*) dao_malloc( sizeof(DaoRandGenCache) );
-	self->mtIndex = 0;
-	self->mtBuffer[0] = rand();
-	for(i=1; i<DAO_MTCOUNT; ++i){
-		uint_t prev = self->mtBuffer[i-1];
-		self->mtBuffer[i] = 0x6c078965 * (prev ^ (prev>>30)) + i;
-	}
+	DaoRandGenCache_Seed( self, seed );
 	return self;
 }
 static void DaoRandGenCache_Delete( DaoRandGenCache *self )
 {
 	free( self );
+}
+static void DaoRandGenCache_Seed( DaoRandGenCache *self, uint_t seed )
+{
+	int i;
+	self->mtIndex = 0;
+	self->mtBuffer[0] = seed;
+	for(i=1; i<DAO_MTCOUNT; ++i){
+		uint_t prev = self->mtBuffer[i-1];
+		self->mtBuffer[i] = 0x6c078965 * (prev ^ (prev>>30)) + i;
+	}
 }
 static void DaoRandGenCache_GenerateMT( DaoRandGenCache *self )
 {
@@ -6205,10 +6210,20 @@ double DaoProcess_Random( DaoProcess *self )
 {
 	DaoRandGenCache *randgen = (DaoRandGenCache*) DaoProcess_GetAuxData( self, DaoRandGenCache_Delete );
 	if( randgen == NULL ){
-		randgen = DaoRandGenCache_New();
+		randgen = DaoRandGenCache_New( rand() );
 		DaoProcess_SetAuxData( self, DaoRandGenCache_Delete, randgen );
 	}
 	return DaoRandGenCache_ExtractMT( randgen ) / (double) 0xffffffff;
+}
+void DaoProcess_SeedRandom( DaoProcess *self, uint_t seed )
+{
+	DaoRandGenCache *randgen = (DaoRandGenCache*) DaoProcess_GetAuxData( self, DaoRandGenCache_Delete );
+	if( randgen == NULL ){
+		randgen = DaoRandGenCache_New( seed );
+		DaoProcess_SetAuxData( self, DaoRandGenCache_Delete, randgen );
+	}else{
+		DaoRandGenCache_Seed( randgen, seed );
+	}
 }
 
 
