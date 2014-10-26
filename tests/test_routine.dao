@@ -275,5 +275,5 @@ routine t( a: array<@T<int|float>>, b: @T = 1 )
 t( [1.0] )
 @[test(code_01)]
 @[test(code_01)]
-float %[ 0x %x+ %]
+float
 @[test(code_01)]

@@ -2170,7 +2170,7 @@ CallEntry:
 		}OPJUMP() OPCASE( MATH_B ) OPCASE( MATH_I ){
 			switch( vmc->a ){
 			case DVM_MATH_RAND :
-				LocalInt(vmc->c) = (int)(LocalInt(vmc->b)*DaoProcess_Random(self));
+				LocalInt(vmc->c) = (int)(LocalInt(vmc->b)*DaoProcess_UniformRand(self));
 				break;
 			case DVM_MATH_CEIL : LocalInt(vmc->c) = ceil( LocalInt(vmc->b) ); break;
 			case DVM_MATH_FLOOR: LocalInt(vmc->c) = floor( LocalInt(vmc->b) ); break;
@@ -2192,7 +2192,7 @@ CallEntry:
 		}OPNEXT() OPCASE( MATH_F ){
 			switch( vmc->a ){
 			case DVM_MATH_RAND :
-				LocalFloat(vmc->c) = LocalFloat(vmc->b) * DaoProcess_Random(self); break;
+				LocalFloat(vmc->c) = LocalFloat(vmc->b) * DaoProcess_UniformRand(self); break;
 			case DVM_MATH_CEIL : LocalFloat(vmc->c) = ceil( LocalFloat(vmc->b) ); break;
 			case DVM_MATH_FLOOR : LocalFloat(vmc->c) = floor( LocalFloat(vmc->b) ); break;
 			case DVM_MATH_ABS  : LocalFloat(vmc->c) = fabs( LocalFloat(vmc->b) );  break;
@@ -3354,7 +3354,7 @@ int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 	}else if( A->type == DAO_INTEGER && func <= DVM_MATH_ABS ){
 		daoint res = A->xInteger.value;
 		switch( func ){
-		case DVM_MATH_RAND : res = res * DaoProcess_Random( self ); break;
+		case DVM_MATH_RAND : res = res * DaoProcess_UniformRand( self ); break;
 		case DVM_MATH_ABS  : res = abs( res );  break;
 		/* case DVM_MATH_CEIL : res = par; break; */
 		/* case DVM_MATH_FLOOR: res = par; break; */
@@ -3380,7 +3380,7 @@ int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 		case DVM_MATH_EXP  : res = exp( par );  break;
 		case DVM_MATH_FLOOR: res = floor( par ); break;
 		case DVM_MATH_LOG  : res = log( par );  break;
-		case DVM_MATH_RAND : res = par * DaoProcess_Random( self ); break;
+		case DVM_MATH_RAND : res = par * DaoProcess_UniformRand( self ); break;
 		case DVM_MATH_SIN  : res = sin( par );  break;
 		case DVM_MATH_SINH : res = sinh( par ); break;
 		case DVM_MATH_SQRT : res = sqrt( par ); break;
@@ -4779,40 +4779,41 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 	}
 
 	if( A->type >= DAO_BOOLEAN && A->type <= DAO_INTEGER && B->type >= DAO_BOOLEAN && B->type <= DAO_INTEGER ){
-		dao_integer va, vb, res = 0;
+		dao_integer va = DaoValue_GetInteger( A );
+		dao_integer vb = DaoValue_GetInteger( B );
+		dao_integer res = 0;
 		switch( vmc->code ){
-		case DVM_MOD:
 		case DVM_DIV:
-			va = DaoValue_GetInteger( A );
-			vb = DaoValue_GetInteger( B );
-			if( vb == 0 ){
-				DaoProcess_RaiseError( self, "Float::DivByZero", "" );
-				return;
-			}
+			if( vb == 0 ) goto ErrorDivByZero;
 			res = va / vb;
-			if( vmc->code == DVM_MOD ) res = va - vb * (dao_integer) res;
+		case DVM_MOD:
+			if( vb == 0 ) goto ErrorDivByZero;
+			res = va % vb;
 			break;
-		case DVM_ADD: res = DaoValue_GetInteger( A ) + DaoValue_GetInteger( B ); break;
-		case DVM_SUB: res = DaoValue_GetInteger( A ) - DaoValue_GetInteger( B ); break;
-		case DVM_MUL: res = DaoValue_GetInteger( A ) * DaoValue_GetInteger( B ); break;
-		case DVM_POW: res = powf( DaoValue_GetInteger( A ), DaoValue_GetInteger( B ) ); break;
+		case DVM_ADD: res = va + vb; break;
+		case DVM_SUB: res = va - vb; break;
+		case DVM_MUL: res = va * vb; break;
+		case DVM_POW: res = powf( va, vb ); break;
 		default : break;
 		}
 		DaoProcess_PutInteger( self, res );
 	}else if( A->type >= DAO_BOOLEAN && A->type <= DAO_FLOAT && B->type >= DAO_BOOLEAN && B->type <= DAO_FLOAT ){
-		double va, vb, res = 0;
+		double va = DaoValue_GetFloat( A );
+		double vb = DaoValue_GetFloat( B );
+		double res = 0.0;
 		switch( vmc->code ){
+		case DVM_DIV:
+			if( vb == 0.0 ) goto ErrorDivByZero;
+			res = va / vb;
+			break;
 		case DVM_MOD:
-			va = DaoValue_GetFloat( A );
-			vb = DaoValue_GetFloat( B );
-			if( vb ==0 ) DaoProcess_RaiseError( self, "Float:DivByZero", "" );
+			if( vb == 0.0 ) goto ErrorDivByZero;
 			res = va - vb * (dao_integer)(va/vb);
 			break;
-		case DVM_ADD: res = DaoValue_GetFloat( A ) + DaoValue_GetFloat( B ); break;
-		case DVM_SUB: res = DaoValue_GetFloat( A ) - DaoValue_GetFloat( B ); break;
-		case DVM_MUL: res = DaoValue_GetFloat( A ) * DaoValue_GetFloat( B ); break;
-		case DVM_DIV: res = DaoValue_GetFloat( A ) / DaoValue_GetFloat( B ); break;
-		case DVM_POW: res = powf( DaoValue_GetFloat( A ), DaoValue_GetFloat( B ) ); break;
+		case DVM_ADD: res = va + vb; break;
+		case DVM_SUB: res = va - vb; break;
+		case DVM_MUL: res = va * vb; break;
+		case DVM_POW: res = powf( va, vb ); break;
 		default : break;
 		}
 		DaoProcess_PutFloat( self, res );
@@ -4964,6 +4965,9 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 	}else{
 		DaoProcess_RaiseError( self, "Type", "" );
 	}
+	return;
+ErrorDivByZero:
+	DaoProcess_RaiseError( self, "Float::DivByZero", "" );
 }
 /* binary operation with boolean result. */
 void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
@@ -6158,76 +6162,29 @@ void* DaoProcess_SetAuxData( DaoProcess *self, void *key, void *value )
 
 
 
-#define DAO_MTCOUNT 624
-
-typedef struct DaoRandGenCache DaoRandGenCache;
-
-struct DaoRandGenCache
+static DaoRandGenerator* DaoProcess_GetRandCache( DaoProcess *self, uint_t seeding )
 {
-	uint_t  mtBuffer[DAO_MTCOUNT];
-	int     mtIndex;
-};
-
-static void DaoRandGenCache_Seed( DaoRandGenCache *self, uint_t seed );
-static DaoRandGenCache* DaoRandGenCache_New( uint_t seed )
-{
-	DaoRandGenCache *self = (DaoRandGenCache*) dao_malloc( sizeof(DaoRandGenCache) );
-	DaoRandGenCache_Seed( self, seed );
-	return self;
-}
-static void DaoRandGenCache_Delete( DaoRandGenCache *self )
-{
-	free( self );
-}
-static void DaoRandGenCache_Seed( DaoRandGenCache *self, uint_t seed )
-{
-	int i;
-	self->mtIndex = 0;
-	self->mtBuffer[0] = seed;
-	for(i=1; i<DAO_MTCOUNT; ++i){
-		uint_t prev = self->mtBuffer[i-1];
-		self->mtBuffer[i] = 0x6c078965 * (prev ^ (prev>>30)) + i;
-	}
-}
-static void DaoRandGenCache_GenerateMT( DaoRandGenCache *self )
-{
-	uint_t i, *mtnums = self->mtBuffer;
-	for(i=1; i<DAO_MTCOUNT; ++i){
-		uint_t y = (mtnums[i] & 0x80000000) + (mtnums[(i+1)%DAO_MTCOUNT] & 0x7fffffff);
-		mtnums[i] = mtnums[(i+397)%DAO_MTCOUNT] ^ (y >> 1);
-		if( y % 2 ) mtnums[i] ^= 0x9908b0df;
-	}
-}
-static uint_t DaoRandGenCache_ExtractMT( DaoRandGenCache *self )
-{
-	uint_t y;
-	if( self->mtIndex == 0 ) DaoRandGenCache_GenerateMT( self );
-	y = self->mtBuffer[ self->mtIndex ];
-	y ^= y>>11;
-	y ^= (y<<7) & 0x9d2c5680;
-	y ^= (y<<15) & 0xefc60000;
-	y ^= y>>18;
-	self->mtIndex = (self->mtIndex + 1) % DAO_MTCOUNT;
-	return y;
-}
-double DaoProcess_Random( DaoProcess *self )
-{
-	DaoRandGenCache *randgen = (DaoRandGenCache*) DaoProcess_GetAuxData( self, DaoRandGenCache_Delete );
+	void *randgen = DaoProcess_GetAuxData( self, DaoRandGenerator_Delete );
 	if( randgen == NULL ){
-		randgen = DaoRandGenCache_New( rand() );
-		DaoProcess_SetAuxData( self, DaoRandGenCache_Delete, randgen );
+		randgen = DaoRandGenerator_New( seeding ? seeding : rand() );
+		DaoProcess_SetAuxData( self, DaoRandGenerator_Delete, randgen );
 	}
-	return DaoRandGenCache_ExtractMT( randgen ) / (double) 0xffffffff;
+	return (DaoRandGenerator*) randgen;
+}
+double DaoProcess_UniformRand( DaoProcess *self )
+{
+	DaoRandGenerator *randgen = DaoProcess_GetRandCache( self, 0 );
+	return DaoRandGenerator_GetUniform( randgen );
+}
+double DaoProcess_NormalRand( DaoProcess *self )
+{
+	DaoRandGenerator *randgen = DaoProcess_GetRandCache( self, 0 );
+	return DaoRandGenerator_GetNormal( randgen );
 }
 void DaoProcess_SeedRandom( DaoProcess *self, uint_t seed )
 {
-	DaoRandGenCache *randgen = (DaoRandGenCache*) DaoProcess_GetAuxData( self, DaoRandGenCache_Delete );
-	if( randgen == NULL ){
-		randgen = DaoRandGenCache_New( seed );
-		DaoProcess_SetAuxData( self, DaoRandGenCache_Delete, randgen );
-	}else{
-		DaoRandGenCache_Seed( randgen, seed );
-	}
+	DaoRandGenerator *randgen = DaoProcess_GetRandCache( self, seed );
+	DaoRandGenerator_Seed( randgen, seed );
 }
 
 

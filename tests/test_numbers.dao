@@ -133,5 +133,5 @@ b = a/0
 io.writeln( 123 / 0.0 )
 @[test(output_01)]
 @[test(output_01)]
-inf
+{{[[Error::Float::DivByZero]] --- Division by zero}}
 @[test(output_01)]

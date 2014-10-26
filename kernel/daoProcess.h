@@ -217,8 +217,10 @@ struct DaoJitCallData
 };
 
 
-/* Mersenne twister random number in [0,1] interval: */
-DAO_DLL double DaoProcess_Random( DaoProcess *self );
+/* Uniform distribution random number in [0,1] interval: */
+DAO_DLL double DaoProcess_UniformRand( DaoProcess *self );
+/* Normal distribution random number with mean (0,0) and variance 1: */
+DAO_DLL double DaoProcess_NormalRand( DaoProcess *self );
 DAO_DLL void DaoProcess_SeedRandom( DaoProcess *self, uint_t seed );
 
 #endif
