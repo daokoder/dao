@@ -241,6 +241,7 @@ int main( int argc, char **argv )
 				DaoNamespace *ns2 = DaoNamespace_New( vmSpace, "test" );
 				int failed = fail;
 
+				ns2->options |= DAO_NS_AUTO_GLOBAL;
 				stream->output = output;
 				DString_Reset( output, 0 );
 				DaoNamespace_AddParent( ns2, ns );

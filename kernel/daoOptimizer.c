@@ -2751,6 +2751,25 @@ static DaoType* DaoInferencer_UpdateVarType( DaoInferencer *self, int id, DaoTyp
 {
 	return DaoInferencer_UpdateTypeX( self, id, type, 0 );
 }
+void DaoInferencer_PrintCodeSnippet( DaoInferencer *self, DaoStream *stream, int k )
+{
+	DString* mbs = DString_New();
+	DaoVmCodeX **codes = self->inodes->items.pVmc;
+	int debug = self->routine->nameSpace->vmSpace->options & DAO_OPTION_DEBUG;
+	int prev = debug ? 16 : 1;
+	int next = debug ? 8 : 1;
+	int j, m = self->routine->body->annotCodes->size;
+	int j1 = k >= prev ? k-prev : 0;
+	int j2 = (k+next) < m ? k+next : m-1;
+
+	DaoStream_WriteChars( stream, "In code snippet:\n" );
+	for(j=j1; j<=j2; ++j){
+		DaoRoutine_FormatCode( self->routine, j, *codes[j], mbs );
+		DaoStream_WriteChars( stream, j==k ? ">>" : "  " );
+		DaoStream_WriteString( stream, mbs );
+	}
+	DString_Delete( mbs );
+}
 static void DaoInferencer_WriteErrorHeader( DaoInferencer *self )
 {
 	char char50[50], char200[200];
@@ -2779,7 +2798,7 @@ static void DaoInferencer_WriteErrorHeader( DaoInferencer *self )
 	DaoStream_WriteChars( stream, char200 );
 	DaoStream_WriteChars( stream, " \";\n" );
 
-	DaoRoutine_PrintCodeSnippet( routine, stream, self->currentIndex );
+	DaoInferencer_PrintCodeSnippet( self, stream, self->currentIndex );
 }
 static void DaoInferencer_WriteErrorGeneral( DaoInferencer *self, int error )
 {
