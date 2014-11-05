@@ -4122,6 +4122,8 @@ DecoratorError:
 				int tup = DaoParser_PushRegister( self );
 				DaoParser_AddCode( self, DVM_TUPLE, reg, N, tup, start, 0, end );
 				DaoParser_AddCode( self, DVM_RETURN, tup, 1, 0, start, 0, end );
+			}else if( self->isSection ){
+				DaoParser_AddCode( self, DVM_RETURN, reg, N, 0, start, 0, end );
 			}else if( N && (routine->attribs & DAO_ROUT_INITOR) ){
 				DaoParser_Error3( self, DAO_ROUT_INVALID_RETURN, errorStart );
 				return 0;

@@ -3252,6 +3252,8 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 #endif
 		type = lastframe->routine->body->regType->items.pType[ returning ];
 		dest = self->stackValues + lastframe->stackBase + returning;
+	}else if( self->topFrame->state & DVM_FRAME_SECT ){
+		type = (DaoType*) lastframe->routine->routType->cbtype->aux;
 	}
 	if( topFrame->routine->attribs & DAO_ROUT_INITOR ){
 		retValue = (DaoValue*)self->activeObject;
