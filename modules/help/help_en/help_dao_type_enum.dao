@@ -97,7 +97,7 @@ except that semi-colons should be used in place of commas.
 @[code]
 enum MyEnum
 {
-	AA    ;  # 0
+	AA    ;  # 1
 	BB = 3;  # 3
 	CC       # 6
 }
@@ -148,16 +148,6 @@ result = MySearch( values, $forward )
 @[code]
 
 
-In addition to use commas or semi-colons, a colon can also be used in a two-symbol
-enum type names to create a boolean-like type:
-@[code]
-type MyBool = enum<False:True>
-b1:MyBool = $False
-b2:MyBool = $True
-b3 = b1 || b2
-b4 = b1 && b2
-io.writeln( b3, b4 )  # Output: $True(1) $False(0)
-@[code]
 
 
 @[subsection]Enum in Switch-Case@[subsection]

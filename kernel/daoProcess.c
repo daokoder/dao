@@ -5248,7 +5248,7 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 			*C = 1;
 			for(it=DMap_First(ma); it; it=DMap_Next(ma,it) ){
 				if( A->xEnum.subtype == DAO_ENUM_FLAG ){
-					if( !(it->value.pInt & A->xEnum.value) ) continue;
+					if( (it->value.pInt & A->xEnum.value) != it->value.pInt ) continue;
 				}else if( it->value.pInt != A->xEnum.value ){
 					continue;
 				}
@@ -5256,7 +5256,7 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 					*C = 0;
 					break;
 				}
-				if( !(node->value.pInt & B->xEnum.value) ){
+				if( (node->value.pInt & B->xEnum.value) != node->value.pInt ){
 					*C = 0;
 					break;
 				}

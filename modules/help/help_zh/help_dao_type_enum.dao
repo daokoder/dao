@@ -91,7 +91,7 @@ io.writeln( e2 )  # 输出: $AA(10)
 @[code]
 enum MyEnum
 {
-	AA    ;  # 0
+	AA    ;  # 1
 	BB = 3;  # 3
 	CC       # 6
 }
@@ -141,16 +141,6 @@ result = MySearch( values, $forward )
 @[code]
 
 
-除了状态枚举和标识枚举外，通过枚举类型名，用户还可定义一种类似布尔类型的
-枚举类型。例如：
-@[code]
-type MyBool = enum<False:True>
-b1:MyBool = $False
-b2:MyBool = $True
-b3 = b1 || b2
-b4 = b1 && b2
-io.writeln( b3, b4 )  # Output: $True(1) $False(0)
-@[code]
 
 
 

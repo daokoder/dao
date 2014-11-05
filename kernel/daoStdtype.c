@@ -381,7 +381,7 @@ void DaoEnum_MakeName( DaoEnum *self, DString *name )
 	mapNames = self->etype->mapNames;
 	for(node=DMap_First(mapNames); node; node=DMap_Next(mapNames,node)){
 		if( self->subtype == DAO_ENUM_FLAG ){
-			if( !(node->value.pInt & self->value) ) continue;
+			if( (node->value.pInt & self->value) != node->value.pInt ) continue;
 		}else if( node->value.pInt != self->value ){
 			continue;
 		}
@@ -460,7 +460,7 @@ int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other )
 		ret = ret == 1;
 	}else{
 		for(node=DMap_First(otherNames); node; node=DMap_Next(otherNames,node)){
-			if( !(node->value.pInt & other->value) ) continue;
+			if( (node->value.pInt & other->value) != node->value.pInt ) continue;
 			search = DMap_Find( selfNames, node->key.pVoid );
 			if( search == NULL ) return 0;
 			self->value |= search->value.pInt;
@@ -485,7 +485,7 @@ int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other )
 
 	for(node=DMap_First(otherNames); node; node=DMap_Next(otherNames,node)){
 		if( other->subtype == DAO_ENUM_FLAG ){
-			if( !(node->value.pInt & other->value) ) continue;
+			if( (node->value.pInt & other->value) != node->value.pInt ) continue;
 		}else{
 			if( node->value.pInt != other->value ) continue;
 		}
@@ -510,7 +510,7 @@ int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other )
 
 	for(node=DMap_First(otherNames); node; node=DMap_Next(otherNames,node)){
 		if( other->subtype == DAO_ENUM_FLAG ){
-			if( !(node->value.pInt & other->value) ) continue;
+			if( (node->value.pInt & other->value) != node->value.pInt ) continue;
 		}else{
 			if( node->value.pInt != other->value ) continue;
 		}
