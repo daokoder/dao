@@ -4788,6 +4788,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		case DVM_DIV:
 			if( vb == 0 ) goto ErrorDivByZero;
 			res = va / vb;
+			break;
 		case DVM_MOD:
 			if( vb == 0 ) goto ErrorDivByZero;
 			res = va % vb;
@@ -5279,7 +5280,7 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 		DaoType *ta = DaoNamespace_GetType( self->activeNamespace, A );
 		if( ta && B->xMap.ctype && B->xMap.ctype->nested->size ){
 			DaoType *tb = B->xMap.ctype->nested->items.pType[0];
-			if( tb && DaoType_MatchTo( ta, tb, NULL ) < DAO_MT_SUB	 ) return;
+			if( tb && DaoType_MatchTo( ta, tb, NULL ) == 0 ) return;
 		}
 		*C = DMap_Find( B->xMap.value, A ) != NULL;
 	}else if( B->type == DAO_TUPLE && B->xTuple.subtype == DAO_PAIR ){

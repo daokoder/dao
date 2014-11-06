@@ -2686,11 +2686,15 @@ static void DaoMap_GetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 	DaoMap *map = DaoProcess_PutMap( proc, self->value->hashing );
 	DNode *node1 = DMap_First( self->value );
 	DNode *node2 = NULL;
+	int cmp = DaoValue_Compare( ids[0], ids[1] );
+	if( cmp > 0 ) return;
 	if( ids[0]->type ) node1 = DaoMap_FindGE( self, ids[0] );
 	if( ids[1]->type ) node2 = DaoMap_FindLE( self, ids[1] );
+	if( cmp == 0 && node1 != node2 ) return;
 	if( node2 ) node2 = DMap_Next(self->value, node2 );
-	for(; node1 != node2; node1 = DMap_Next(self->value, node1 ) )
+	for(; node1 != node2; node1 = DMap_Next(self->value, node1 ) ){
 		DaoMap_Insert( map, node1->key.pValue, node1->value.pValue );
+	}
 }
 static void DaoMap_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N )
 {
@@ -2707,6 +2711,8 @@ static void DaoMap_SetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 	DaoType *tp2=NULL;
 	DNode *node1 = DMap_First( self->value );
 	DNode *node2 = NULL;
+	int cmp = DaoValue_Compare( ids[0], ids[1] );
+	if( cmp > 0 ) return;
 	if( tp == NULL ){
 		/* a : tuple<string,map<string,int>> = ('',{=>});
 		   duplicating the constant to assign to "a" may not set the ctype properly */
@@ -2726,9 +2732,11 @@ static void DaoMap_SetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 	}
 	if( ids[0]->type ) node1 = DaoMap_FindGE( self, ids[0] );
 	if( ids[1]->type ) node2 = DaoMap_FindLE( self, ids[1] );
+	if( cmp == 0 && node1 != node2 ) return;
 	if( node2 ) node2 = DMap_Next(self->value, node2 );
-	for(; node1 != node2; node1 = DMap_Next(self->value, node1 ) )
+	for(; node1 != node2; node1 = DMap_Next(self->value, node1 ) ){
 		DaoValue_Move( value, & node1->value.pValue, tp2 );
+	}
 }
 static void DaoMap_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
 {
@@ -2807,6 +2815,7 @@ static void DaoMAP_Erase( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMap *self = (DaoMap*) p[0];
 	DNode *ml, *mg;
 	DList *keys;
+	int cmp;
 
 	DaoProcess_PutValue( proc, p[0] );
 	N --;
@@ -2817,9 +2826,12 @@ static void DaoMAP_Erase( DaoProcess *proc, DaoValue *p[], int N )
 		DaoMap_Erase( self, p[1] );
 		break;
 	case 2 :
+		cmp = DaoValue_Compare( p[0], p[1] );
+		if( cmp > 0 ) return;
 		mg = DaoMap_FindGE( self, p[1] );
 		ml = DaoMap_FindLE( self, p[2] );
-		if( mg ==NULL || ml ==NULL ) return;
+		if( cmp == 0 && mg != ml ) return;
+		if( mg == NULL || ml == NULL ) return;
 		ml = DMap_Next( self->value, ml );
 		keys = DList_New(0);
 		for(; mg != ml; mg=DMap_Next(self->value, mg)) DList_Append( keys, mg->key.pVoid );
