@@ -8,6 +8,16 @@ x += 1
 @[test(code_01)]
 
 
+@[test(code_01)]
+invar x = 123
+var y = x
+y += 100
+io.writeln( x, y )
+@[test(code_01)]
+@[test(code_01)]
+123 223
+@[test(code_01)]
+
 
 @[test(code_01)]
 var x = 123

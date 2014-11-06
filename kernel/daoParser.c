@@ -1129,13 +1129,13 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	}
 	DString_AppendChars( pname, "routine<" );
 	routine->parCount = 0;
-	if( tokens[start+1]->name == DKEY_SELF ) selfpar = 1;
+	if( tokens[start+1+(tokens[start+1]->name==DKEY_INVAR)]->name == DKEY_SELF ) selfpar = 1;
 
 	isMeth = klass && routine != klass->classRoutine;
 	notStatic = (routine->attribs & DAO_ROUT_STATIC) ==0;
 	notConstr = hostname && DString_EQ( routine->routName, hostname ) == 0;
 	if( self->isClassBody && notConstr == 0 ) routine->attribs |= DAO_ROUT_INITOR;
-	if( (isMeth || inter) && tokens[start+1]->name != DKEY_SELF && notStatic && notConstr ){
+	if( (isMeth || inter) && selfpar == 0 && notStatic && notConstr ){
 		type = hostype;
 		if( routine->attribs & DAO_ROUT_INVAR ) type = DaoType_GetInvarType( type );
 		type = DaoNamespace_MakeType( NS, "self", DAO_PAR_NAMED, (DaoValue*)type, NULL, 0 );

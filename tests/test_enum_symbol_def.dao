@@ -105,3 +105,22 @@ io.writeln( False, True )
 @[test()]
 0 1
 @[test()]
+
+
+
+@[test()]
+enum EC
+{
+    AA; 
+    BB = 3;
+    CC  
+}
+io.writeln( EC::AA )
+io.writeln( EC::BB )
+io.writeln( EC::CC )
+@[test()]
+@[test()]
+$AA(1)
+$AA$BB(3)
+$CC(6)
+@[test()]

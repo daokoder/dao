@@ -278,6 +278,10 @@ static void MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *star
 				break;
 			}
 		}
+		if( index->xTuple.subtype != DAO_PAIR ){
+			*idtype = IDX_OUTOFRANGE;
+			break;
+		}
 		first = index->xTuple.values[0];
 		second = index->xTuple.values[1];
 		/* a[ : 1 ] ==> pair(nil,int) */
@@ -2740,11 +2744,16 @@ static void DaoMap_SetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 }
 static void DaoMap_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
 {
-	switch( N ){
-	case 0 : DaoMap_SetItem1( self, proc, dao_none_value, value ); break;
-	case 1 : DaoMap_SetItem1( self, proc, ids[0], value ); break;
-	case 2 : DaoMap_SetItem2( self, proc, ids, N, value ); break;
-	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
+	if( N == 1 ){
+		if( ids[0]->xBase.subtype == DAO_PAIR ){
+			DaoMap_SetItem2( self, proc, ids[0]->xTuple.values, 2, value );
+		}else{
+			DaoMap_SetItem1( self, proc, ids[0], value );
+		}
+	}else if( N == 0 ){
+		DaoMap_SetItem1( self, proc, dao_none_value, value );
+	}else{
+		DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
 static DaoTypeCore mapCore =

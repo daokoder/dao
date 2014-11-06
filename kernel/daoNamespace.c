@@ -1666,10 +1666,6 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 			DString_Append( mbs, it->name );
 			DList_Append( nstd, it );
 		}
-		if( attrib & DAO_TYPE_VARIADIC ){
-			if( N ) DString_AppendChar( mbs, ',' );
-			DString_AppendChars( mbs, "..." );
-		}
 		if( (tid == DAO_ROUTINE || tid == DAO_CODEBLOCK) && pb && pb->type == DAO_TYPE ){
 			DString_AppendChars( mbs, "=>" );
 			DString_Append( mbs, ((DaoType*)pb)->name );
@@ -1973,15 +1969,28 @@ DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 }
 DaoType* DaoNamespace_MakePairType( DaoNamespace *self, DaoType *first, DaoType *second )
 {
-	DaoType *types[2] = {NULL, NULL};
 	DaoType *noneType = DaoNamespace_MakeValueType( self, dao_none_value );
+	DaoType *types[2] = {NULL, NULL};
+	DaoType *type, *type2;
+	DString *name;
+
 	if( first == NULL ) first = noneType;
 	if( second == NULL ) second = noneType;
 	if( first->invar )  first = DaoType_GetBaseType( first );
 	if( second->invar ) second = DaoType_GetBaseType( second );
 	types[0] = DaoNamespace_MakeType( self, "first", DAO_PAR_NAMED, (DaoValue*)first, 0, 0 );
 	types[1] = DaoNamespace_MakeType( self, "second", DAO_PAR_NAMED, (DaoValue*)second, 0, 0 );
-	return DaoNamespace_MakeType( self, "tuple", DAO_TUPLE, NULL, types, 2 );
+	type = DaoNamespace_MakeType( self, "tuple", DAO_TUPLE, NULL, types, 2 );
+	name = DString_Copy( type->name );
+	DString_AppendChars( name, "::subtype::pair" );
+	type2 = DaoNamespace_FindType( self, name );
+	if( type2 == NULL ){
+		type = type2 = DaoType_Copy( type );
+		type->subtid = DAO_PAIR;
+		DaoNamespace_AddType( self, name, type );
+	}
+	DString_Delete( name );
+	return type;
 }
 DaoType* DaoNamespace_MakePairValueType( DaoNamespace *self, DaoValue *first, DaoValue *second )
 {

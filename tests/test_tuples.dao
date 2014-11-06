@@ -1,0 +1,23 @@
+
+@[test(code)]
+tup : tuple<int,int,...:int> = ( 1, 2, 3 )
+io.writeln( tup )
+io.writeln( std.about(tup) )
+@[test(code)]
+@[test(code)]
+{{( 1, 2, 3 )
+tuple<int,int,...:int>}}
+@[test(code)]
+
+
+
+
+@[test(code)]
+tup : tuple<int,int,...:int> = ( 1, 2, 3 )
+io.writeln( tup[1:] )
+io.writeln( std.about(tup[1:]) )
+@[test(code)]
+@[test(code)]
+{{( 2, 3 )
+tuple<int,...:int>}}
+@[test(code)]

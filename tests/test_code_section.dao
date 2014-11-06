@@ -401,6 +401,17 @@ Base::Test()
 
 
 
+@[test(code_00)]
+class A { 
+	routine A(){
+		x = std.exec {return 0}
+	}   
+}
+@[test(code_00)]
+@[test(code_00)]
+@[test(code_00)]
+
+
 
 @[test(code_00)]
 invar x = {'a'}
