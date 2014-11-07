@@ -2372,7 +2372,7 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 			node = DMap_Find( at->aux->xInterface.methods, mbs );
 			rout = node->value.pRoutine;
 		}else if( at->tid == DAO_OBJECT ){
-			rout = DaoClass_FindOperator( & at->aux->xClass, mbs->chars, hostClass );
+			rout = DaoClass_FindMethod( & at->aux->xClass, mbs->chars, hostClass );
 		}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
 			rout = DaoType_FindFunction( at, mbs );
 		}
@@ -2391,7 +2391,7 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 		node = DMap_Find( at->aux->xInterface.methods, mbs );
 		rout = node ? node->value.pRoutine : NULL;
 	}else if( at->tid == DAO_OBJECT ){
-		rout = DaoClass_FindOperator( & at->aux->xClass, mbs->chars, hostClass );
+		rout = DaoClass_FindMethod( & at->aux->xClass, mbs->chars, hostClass );
 	}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
 		rout = DaoType_FindFunction( at, mbs );
 	}
@@ -3189,7 +3189,7 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 		}else if( bt->tid != DAO_UDT && bt->tid != DAO_ANY ){
 			goto InvIndex;
 		}
-	}else if( at->tid == DAO_OBJECT && (meth = DaoClass_FindOperator( & at->aux->xClass, "[]", hostClass )) ){
+	}else if( at->tid == DAO_OBJECT && (meth = DaoClass_FindMethod( & at->aux->xClass, "[]", hostClass )) ){
 		rout = DaoRoutine_Check( meth, at, & bt, 1, DVM_CALL, errors );
 		if( rout == NULL ) goto InvIndex;
 		ct = & rout->routType->aux->xType;
@@ -3296,7 +3296,7 @@ int DaoInferencer_HandleGetMItem( DaoInferencer *self, DaoInode *inode, DMap *de
 	}else if( at->tid == DAO_MAP ){
 		goto InvIndex;
 	}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
-		meth = DaoClass_FindOperator( & at->aux->xClass, "[]", hostClass );
+		meth = DaoClass_FindMethod( & at->aux->xClass, "[]", hostClass );
 		if( meth == NULL ) goto WrongContainer;
 	}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
 		meth = DaoType_FindFunction( at, mbs );
@@ -3712,7 +3712,7 @@ int DaoInferencer_HandleSetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 		break;
 	case DAO_CLASS :
 	case DAO_OBJECT :
-		if( (meth=DaoClass_FindOperator( & ct->aux->xClass, "[]=", hostClass )) == NULL)
+		if( (meth=DaoClass_FindMethod( & ct->aux->xClass, "[]=", hostClass )) == NULL)
 			goto InvIndex;
 		ts[0] = at;
 		ts[1] = bt;
@@ -3800,7 +3800,7 @@ int DaoInferencer_HandleSetMItem( DaoInferencer *self, DaoInode *inode, DMap *de
 	}else if( at->tid == DAO_MAP ){
 		goto InvIndex;
 	}else if( ct->tid == DAO_CLASS || ct->tid == DAO_OBJECT ){
-		meth = DaoClass_FindOperator( & ct->aux->xClass, "[]=", hostClass );
+		meth = DaoClass_FindMethod( & ct->aux->xClass, "[]=", hostClass );
 		if( meth == NULL ) goto WrongContainer;
 	}else if( ct->tid == DAO_CDATA || ct->tid == DAO_CSTRUCT ){
 		meth = DaoType_FindFunction( ct, mbs );
@@ -4562,7 +4562,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		DaoInferencer_UpdateType( self, opc, dao_type_any );
 		goto TryPushBlockReturnType;
 	}else if( at->tid == DAO_OBJECT ){
-		rout = DaoClass_FindOperator( & at->aux->xClass, "()", hostClass );
+		rout = DaoClass_FindMethod( & at->aux->xClass, "()", hostClass );
 		if( rout == NULL ) goto ErrorTyping;
 		bt = at;
 	}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
@@ -5468,7 +5468,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					/* less strict checking */
 				}else if( at != ct && (ct->tid == DAO_OBJECT || ct->tid == DAO_CDATA || ct->tid == DAO_CSTRUCT) ){
 					if( ct->tid == DAO_OBJECT ){
-						meth = DaoClass_FindOperator( & ct->aux->xClass, "=", hostClass );
+						meth = DaoClass_FindMethod( & ct->aux->xClass, "=", hostClass );
 					}else{
 						meth = DaoType_FindFunctionChars( ct, "=" );
 					}

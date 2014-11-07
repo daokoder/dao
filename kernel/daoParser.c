@@ -1342,7 +1342,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	k = pname->size;
 	if( cast != NULL ){
 		DaoType *tt;
-		if( nested->size > selfpar ) goto ErrorTooManyParams;
+		if( nested->size > (selfpar+1) ) goto ErrorTooManyParams;
 		if( retype != NULL ) goto ErrorInvalidReturn;
 		tt = DaoNamespace_GetType( NS, (DaoValue*) cast );
 		DString_AppendChar( pname, ',' );

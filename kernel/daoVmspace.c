@@ -964,18 +964,13 @@ static DaoValue* DaoVmSpace_MakeNameArgument( DaoNamespace *NS, DString *name, D
 	DaoEnum *em;
 	DaoTuple *tuple;
 	DaoType *type, *types[2];
-	DString *symbol = DString_New();
-	DString_AppendChar( symbol, '$' );
-	DString_Append( symbol, name );
-	type = DaoNamespace_MakeSymbolType( NS, symbol->chars );
-	em = DaoEnum_New( type, 1 );
-	types[0] = type;
+	em = DaoNamespace_MakeSymbol( NS, name->chars );
+	types[0] = em->etype;
 	types[1] = dao_type_string;
 	type = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, NULL, types, 2 );
 	tuple = DaoTuple_Create( type, 2, 0 );
 	DaoTuple_SetItem( tuple, (DaoValue*) em, 0 );
 	DaoTuple_SetItem( tuple, argv, 1 );
-	DaoGC_TryDelete( (DaoValue*) em );
 	return (DaoValue*) tuple;
 }
 static int DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *name, DaoValue *string, DaoNamespace *NS )
@@ -997,13 +992,8 @@ static int DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *na
 		DaoList_SetItem( self, & fval, i );
 		return 10 * isnum;
 	case DAO_ENUM :
-		sym = DString_Copy( string->xString.value );
-		DString_InsertChar( sym, '$', 0 );
-		emtype = DaoNamespace_MakeSymbolType( NS, sym->chars );
-		DString_Delete( sym );
-		argv = (DaoValue*) DaoEnum_New( emtype, 1 );
+		argv = (DaoValue*) DaoNamespace_MakeSymbol( NS, sym->chars );
 		DaoList_SetItem( self, argv, i );
-		DaoGC_TryDelete( (DaoValue*) argv );
 		if( type && DaoType_MatchValue( type, argv, NULL ) == 0 ) return 0;
 		return 10;
 	default :

@@ -42,10 +42,11 @@ struct DaoObject
 	ushort_t    unused    : 12;
 	ushort_t    valueCount;
 
-	DaoClass   *defClass; /* definition class; */
+	DaoClass   *defClass;   /* definition class; */
 	DaoObject  *rootObject; /* root object for safe down-casting; */
-	DaoValue   *parent;    /* parent object; */
-	DaoValue  **objValues; /* instance variable values; */
+	DaoValue   *signature;  /* the signature object; */
+	DaoValue   *parent;     /* parent object; */
+	DaoValue  **objValues;  /* instance variable values; */
 };
 
 DAO_DLL DaoObject* DaoObject_Allocate( DaoClass *klass, int value_count );

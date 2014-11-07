@@ -368,6 +368,7 @@ void DaoObjectLogger_Quit()
 					DaoObjectLogger_ScanValues( obj->objValues, obj->valueCount );
 				}
 				DaoObjectLogger_ScanValue( (DaoValue*) obj->parent );
+				DaoObjectLogger_ScanValue( (DaoValue*) obj->signature );
 				DaoObjectLogger_ScanValue( (DaoValue*) obj->rootObject );
 				DaoObjectLogger_ScanValue( (DaoValue*) obj->defClass );
 				break;
@@ -375,6 +376,7 @@ void DaoObjectLogger_Quit()
 		case DAO_CSTRUCT : case DAO_CDATA : case DAO_CTYPE :
 			{
 				DaoCdata *cdata = (DaoCdata*) value;
+				DaoObjectLogger_ScanValue( (DaoValue*) cdata->signature );
 				DaoObjectLogger_ScanValue( (DaoValue*) cdata->object );
 				DaoObjectLogger_ScanValue( (DaoValue*) cdata->ctype );
 				if( value->type == DAO_CDATA || value->type == DAO_CSTRUCT ){
@@ -1674,6 +1676,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 				count += obj->valueCount;
 			}
 			cycRefCountDecrement( (DaoValue*) obj->parent );
+			cycRefCountDecrement( (DaoValue*) obj->signature );
 			cycRefCountDecrement( (DaoValue*) obj->rootObject );
 			cycRefCountDecrement( (DaoValue*) obj->defClass );
 			break;
@@ -1681,6 +1684,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 	case DAO_CSTRUCT : case DAO_CDATA : case DAO_CTYPE :
 		{
 			DaoCdata *cdata = (DaoCdata*) value;
+			cycRefCountDecrement( (DaoValue*) cdata->signature );
 			cycRefCountDecrement( (DaoValue*) cdata->object );
 			cycRefCountDecrement( (DaoValue*) cdata->ctype );
 			if( value->type == DAO_CDATA || value->type == DAO_CSTRUCT ){
@@ -1870,6 +1874,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 				count += obj->valueCount;
 			}
 			cycRefCountIncrement( (DaoValue*) obj->parent );
+			cycRefCountIncrement( (DaoValue*) obj->signature );
 			cycRefCountIncrement( (DaoValue*) obj->rootObject );
 			cycRefCountIncrement( (DaoValue*) obj->defClass );
 			break;
@@ -1877,6 +1882,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 	case DAO_CSTRUCT : case DAO_CDATA : case DAO_CTYPE :
 		{
 			DaoCdata *cdata = (DaoCdata*) value;
+			cycRefCountIncrement( (DaoValue*) cdata->signature );
 			cycRefCountIncrement( (DaoValue*) cdata->object );
 			cycRefCountIncrement( (DaoValue*) cdata->ctype );
 			if( value->type == DAO_CDATA || value->type == DAO_CSTRUCT ){
@@ -2063,6 +2069,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 				count += obj->valueCount;
 			}
 			directRefCountDecrement( (DaoValue**) & obj->parent );
+			directRefCountDecrement( (DaoValue**) & obj->signature );
 			directRefCountDecrement( (DaoValue**) & obj->rootObject );
 			directRefCountDecrement( (DaoValue**) & obj->defClass );
 			obj->valueCount = 0;
@@ -2072,6 +2079,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		{
 			DaoCdata *cdata = (DaoCdata*) value;
 			DaoType *ctype = cdata->ctype;
+			directRefCountDecrement( (DaoValue**) & cdata->signature );
 			directRefCountDecrement( (DaoValue**) & cdata->object );
 			directRefCountDecrement( (DaoValue**) & cdata->ctype );
 			cdata->ctype = ctype;

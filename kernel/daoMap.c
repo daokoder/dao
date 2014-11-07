@@ -153,7 +153,19 @@ static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max, u
 			if( id >= max ) break;
 		}
 		break;
-	default : data = & self; len = sizeof(DaoValue*); break;
+	case DAO_OBJECT :
+		if( self->xObject.signature == NULL ) goto Default;
+		return DaoValue_Hash( self->xObject.signature, buf, id, max, seed );
+	case DAO_CSTRUCT :
+	case DAO_CDATA :
+	case DAO_CTYPE :
+		if( self->xCstruct.signature == NULL ) goto Default;
+		return DaoValue_Hash( self->xCstruct.signature, buf, id, max, seed );
+	default :
+Default:
+		data = & self;
+		len = sizeof(DaoValue*);
+		break;
 	}
 	if( data ) hash = MurmurHash3( data, len, seed );
 	if( id == id2 && id < max ){

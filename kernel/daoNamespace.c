@@ -1865,6 +1865,18 @@ Error:
 	DaoRoutine_Delete( func );
 	return NULL;
 }
+DaoEnum* DaoNamespace_MakeSymbol( DaoNamespace *self, const char *symbol )
+{
+	DString *name = DString_NewChars( symbol );
+	DaoType *type;
+
+	if( symbol[0] != '$' ) DString_InsertChar( name, '$', 0 );
+
+	type = DaoNamespace_MakeSymbolType( self, name->chars );
+	DString_Delete( name );
+
+	return (DaoEnum*) type->value;
+}
 DaoType* DaoNamespace_MakeSymbolType( DaoNamespace *self, const char *symbol )
 {
 	DString sym = DString_WrapChars( symbol + 1 );

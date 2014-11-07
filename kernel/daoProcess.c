@@ -1476,28 +1476,37 @@ CallEntry:
 			DaoProcess_DoCheckSame( self, vmc );
 		}OPNEXT() OPCASE( ISA ){
 			DaoProcess_DoCheckIsa( self, vmc );
+			goto CheckException;
 		}OPNEXT() OPCASE( NAMEVA ){
 			DaoProcess_BindNameValue( self, vmc );
 		}OPNEXT() OPCASE( PAIR ){
 			DaoProcess_DoPair( self, vmc );
 		}OPNEXT() OPCASE( TUPLE ){
 			DaoProcess_DoTuple( self, vmc );
+			goto CheckException;
 		}OPNEXT() OPCASE( LIST ){
 			self->activeCode = vmc;
 			DaoProcess_DoList( self, vmc );
+			goto CheckException;
 		}OPNEXT() OPCASE( MAP ) OPCASE( HASH ){
 			self->activeCode = vmc;
 			DaoProcess_DoMap( self, vmc );
+			goto CheckException;
 		}OPNEXT() OPCASE( VECTOR ){
 			DaoProcess_DoVector( self, vmc );
+			goto CheckException;
 		}OPNEXT() OPCASE( MATRIX ){
 			DaoProcess_DoMatrix( self, vmc );
+			goto CheckException;
 		}OPNEXT() OPCASE( APLIST ){
 			DaoProcess_DoAPList( self, vmc );
+			goto CheckException;
 		}OPNEXT() OPCASE( APVECTOR ){
 			DaoProcess_DoAPVector( self, vmc );
+			goto CheckException;
 		}OPNEXT() OPCASE( PACK ) OPCASE( MPACK ){
 			DaoProcess_DoPacking( self, vmc );
+			goto CheckException;
 		}OPNEXT() OPCASE( CASE ) OPCASE( GOTO ){
 			vmc = vmcBase + vmc->b;
 		}OPJUMP() OPCASE( SWITCH ){
@@ -3801,7 +3810,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		}
 	}else if( caller->type == DAO_OBJECT ){
 		DaoClass *host = self->activeObject ? self->activeObject->defClass : NULL;
-		rout = rout2 = DaoClass_FindOperator( caller->xObject.defClass, "()", host );
+		rout = rout2 = DaoClass_FindMethod( caller->xObject.defClass, "()", host );
 		if( rout == NULL ){
 			DaoProcess_RaiseError( self, "Type", "class instance not callable" );
 			return;
@@ -4392,7 +4401,7 @@ void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc )
 		if( DaoMap_Find( map, pp[opA+i] ) != NULL ){
 			DaoProcess_RaiseWarning( self, NULL, "duplicated key in enumeration" );
 		}
-		if( (c = DaoMap_Insert( map, pp[opA+i], pp[opA+i+1] ) ) ){
+		if( (c = DaoMap_Insert2( map, pp[opA+i], pp[opA+i+1], self ) ) ){
 			if( c ==1 ){
 				DaoProcess_RaiseError( self, "Type", "key not matching" );
 			}else if( c ==2 ){
@@ -5282,7 +5291,7 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 			DaoType *tb = B->xMap.ctype->nested->items.pType[0];
 			if( tb && DaoType_MatchTo( ta, tb, NULL ) == 0 ) return;
 		}
-		*C = DMap_Find( B->xMap.value, A ) != NULL;
+		*C = DaoMap_Find2( (DaoMap*) B, A, self ) != NULL;
 	}else if( B->type == DAO_TUPLE && B->xTuple.subtype == DAO_PAIR ){
 		int c1 = DaoValue_Compare( B->xTuple.values[0], A );
 		int c2 = DaoValue_Compare( A, B->xTuple.values[1] );

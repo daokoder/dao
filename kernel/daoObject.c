@@ -244,6 +244,7 @@ void DaoObject_Delete( DaoObject *self )
 #endif
 	GC_DecRC( self->defClass );
 	GC_DecRC( self->parent );
+	GC_DecRC( self->signature );
 	if( self->isRoot ){
 		for(i=0; i<self->valueCount; i++) GC_DecRC( self->objValues[i] );
 		if( self->objValues != (DaoValue**) (self + 1) ) dao_free( self->objValues );
@@ -251,10 +252,6 @@ void DaoObject_Delete( DaoObject *self )
 	dao_free( self );
 }
 
-DaoClass* DaoObject_MyClass( DaoObject *self )
-{
-	return self->defClass;
-}
 int DaoObject_ChildOf( DaoValue *self, DaoValue *obj )
 {
 	int i;

@@ -1449,11 +1449,11 @@ void DaoClass_PrintCode( DaoClass *self, DaoStream *stream )
 		DaoRoutine_PrintCode( & cst->xRoutine, stream );
 	}
 }
-DaoRoutine* DaoClass_FindOperator( DaoClass *self, const char *oper, DaoClass *scoped )
+DaoRoutine* DaoClass_FindMethod( DaoClass *self, const char *name, DaoClass *scoped )
 {
 	DaoValue *V = NULL;
-	DString name = DString_WrapChars( oper );
-	DaoClass_GetData( self, & name, & V, scoped );
+	DString name2 = DString_WrapChars( name );
+	DaoClass_GetData( self, & name2, & V, scoped );
 	if( V == NULL || V->type != DAO_ROUTINE ) return NULL;
 	return (DaoRoutine*) V;
 }

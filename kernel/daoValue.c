@@ -187,16 +187,29 @@ int DaoList_Compare( DaoList *list1, DaoList *list2 )
 	if( size1 == size2  ) return 0;
 	return size1 < size2 ? -100 : 100;
 }
-int DaoCstruct_Compare( DaoValue *left, DaoValue *right )
+int DaoCstruct_Compare( DaoCstruct *left, DaoCstruct *right )
 {
 	if( left == right ) return 0;
-	if( left->xCstruct.ctype != right->xCstruct.ctype ){
-		return number_compare( (size_t)left->xCstruct.ctype, (size_t)right->xCstruct.ctype );
+	if( left->signature != NULL && right->signature != NULL ){
+		return DaoValue_Compare( left->signature, right->signature );
+	}
+	if( left->ctype != right->ctype ){
+		return number_compare( (size_t)left->ctype, (size_t)right->ctype );
 	}
 	if( left->type == DAO_CDATA ){
-		return number_compare( (size_t)left->xCdata.data, (size_t)right->xCdata.data );
+		DaoCdata *l = (DaoCdata*) left;
+		DaoCdata *r = (DaoCdata*) right;
+		return number_compare( (size_t)l->data, (size_t)r->data );
 	}
 	return number_compare( (size_t)left, (size_t)right );
+}
+int DaoObject_Compare( DaoObject *left, DaoObject *right )
+{
+	if( left == right ) return 0;
+	if( left->signature == NULL || right->signature == NULL ){
+		return number_compare( (size_t)left, (size_t)right );
+	}
+	return DaoValue_Compare( left->signature, right->signature );
 }
 int DaoValue_Compare( DaoValue *left, DaoValue *right )
 {
@@ -222,9 +235,10 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	case DAO_ENUM    : return DaoEnum_Compare( & left->xEnum, & right->xEnum );
 	case DAO_TUPLE   : return DaoTuple_Compare( & left->xTuple, & right->xTuple );
 	case DAO_LIST    : return DaoList_Compare( & left->xList, & right->xList );
-	case DAO_CDATA :
+	case DAO_OBJECT  : return DaoObject_Compare( (DaoObject*) left, (DaoObject*) right );
+	case DAO_CDATA   :
 	case DAO_CSTRUCT :
-	case DAO_CTYPE : return DaoCstruct_Compare( left, right );
+	case DAO_CTYPE : return DaoCstruct_Compare( (DaoCstruct*) left, (DaoCstruct*) right );
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY   : return DaoArray_Compare( & left->xArray, & right->xArray );
 #endif
