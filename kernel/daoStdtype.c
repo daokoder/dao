@@ -598,22 +598,14 @@ static void DaoNumber_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream
 	case DAO_FLOAT   : DaoStream_WriteFloat( stream, self->xFloat.value ); break;
 	}
 }
-static void DaoNumber_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N )
-{
-	DaoProcess_RaiseError( proc, "Index", "not supported" );
-}
-static void DaoNumber_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
-{
-	DaoProcess_RaiseError( proc, "Index", "not supported" );
-}
 
 static DaoTypeCore numberCore=
 {
 	NULL,
 	DaoValue_GetField,
 	DaoValue_SetField,
-	DaoNumber_GetItem,
-	DaoNumber_SetItem,
+	DaoValue_GetItem,
+	DaoValue_SetItem,
 	DaoNumber_Print
 };
 

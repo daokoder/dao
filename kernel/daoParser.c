@@ -3479,6 +3479,7 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 	int colon, comma, last, errorStart, needName;
 	int storeType = 0, scopeType = 0;
 	int reset_decos = 0;
+	int stmtStart;
 	unsigned char tok, tkt, tki, tki2;
 
 	DaoInode *back = self->vmcLast;
@@ -3544,7 +3545,7 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 			DList_Clear( self->decoParams2 );
 		}
 		if( self->enumTypes->size ) DList_Clear( self->enumTypes );
-		errorStart = start;
+		stmtStart = errorStart = start;
 		if( ! self->isClassBody ){
 			self->permission = DAO_PERM_PUBLIC;
 			if( self->nsDefined ) self->permission = DAO_PERM_PRIVATE;
@@ -4121,21 +4122,21 @@ DecoratorError:
 			if( self->isSection && N > 1 ){
 				int tup = DaoParser_PushRegister( self );
 				DaoParser_AddCode( self, DVM_TUPLE, reg, N, tup, start, 0, end );
-				DaoParser_AddCode( self, DVM_RETURN, tup, 1, 0, start, 0, end );
+				DaoParser_AddCode( self, DVM_RETURN, tup, 1, 0, stmtStart, 0, end );
 			}else if( self->isSection ){
-				DaoParser_AddCode( self, DVM_RETURN, reg, N, 0, start, 0, end );
+				DaoParser_AddCode( self, DVM_RETURN, reg, N, 0, stmtStart, 0, end );
 			}else if( N && (routine->attribs & DAO_ROUT_INITOR) ){
 				DaoParser_Error3( self, DAO_ROUT_INVALID_RETURN, errorStart );
 				return 0;
 			}else if( N && (routine->attribs & DAO_ROUT_DEFER) ){
 				if( routine->attribs & DAO_ROUT_DEFER_RET ){
-					DaoParser_AddCode( self, DVM_RETURN, reg, N, 0, start, 0, end );
+					DaoParser_AddCode( self, DVM_RETURN, reg, N, 0, stmtStart, 0, end );
 				}else{
 					DaoParser_Error3( self, DAO_ROUT_INVALID_RETURN, errorStart );
 					return 0;
 				}
 			}else{
-				DaoParser_AddCode( self, DVM_RETURN, reg, N, 0, start, 0, end );
+				DaoParser_AddCode( self, DVM_RETURN, reg, N, 0, stmtStart, 0, end );
 			}
 			if( DaoParser_CompleteScope( self, start-1 ) == 0 ) return 0;
 			continue;

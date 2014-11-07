@@ -1384,6 +1384,10 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		copy = DaoType_GetVarType( copy );
 		DMap_Insert( defs, self, copy );
 		return copy;
+	}else if( self->tid == DAO_TUPLE && self->subtid == DAO_PAIR ){
+		DaoType *t1 = DaoType_DefineTypes( self->nested->items.pType[0], ns, defs );
+		DaoType *t2 = DaoType_DefineTypes( self->nested->items.pType[2], ns, defs );
+		return DaoNamespace_MakePairType( ns, t1, t2 );
 	}else if( self->tid & DAO_ANY ){
 		return self;
 	}else if( self->tid == DAO_CLASS ){ /* e.g., class<Item<@T>> */

@@ -667,7 +667,7 @@ Atomic Expression
 @[subsection]
 
 @[code(syntax)]
-AtomicExpression ::= Identifier | Integer | Float | Double 
+AtomicExpression ::= Identifier | Integer | Float
                    | ComplexImaginary | String | Symbol
 @[code(syntax)]
 

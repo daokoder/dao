@@ -1982,7 +1982,7 @@ DaoType* DaoNamespace_MakePairType( DaoNamespace *self, DaoType *first, DaoType 
 	types[1] = DaoNamespace_MakeType( self, "second", DAO_PAR_NAMED, (DaoValue*)second, 0, 0 );
 	type = DaoNamespace_MakeType( self, "tuple", DAO_TUPLE, NULL, types, 2 );
 	name = DString_Copy( type->name );
-	DString_AppendChars( name, "::subtype::pair" );
+	DString_AppendChars( name, "::subtype::pair" ); /* Distinguish with normal tuple types; */
 	type2 = DaoNamespace_FindType( self, name );
 	if( type2 == NULL ){
 		type = type2 = DaoType_Copy( type );
@@ -1990,7 +1990,7 @@ DaoType* DaoNamespace_MakePairType( DaoNamespace *self, DaoType *first, DaoType 
 		DaoNamespace_AddType( self, name, type );
 	}
 	DString_Delete( name );
-	return type;
+	return type2;
 }
 DaoType* DaoNamespace_MakePairValueType( DaoNamespace *self, DaoValue *first, DaoValue *second )
 {
