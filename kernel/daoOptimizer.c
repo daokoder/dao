@@ -2298,6 +2298,7 @@ enum DaoTypingErrorCode
 	DTE_CALL_INVALID_SECTION ,
 	DTE_ROUT_INVALID_YIELD ,
 	DTE_ROUT_INVALID_RETURN ,
+	DTE_ROUT_INVALID_RETURN2 ,
 	DTE_FIELD_NOT_PERMIT ,
 	DTE_FIELD_NOT_EXIST ,
 	DTE_FIELD_OF_INSTANCE ,
@@ -2312,6 +2313,9 @@ enum DaoTypingErrorCode
 	DTE_PARAM_WRONG_NAME ,
 	DTE_INVALID_TYPE_CASE ,
 	DTE_CONST_WRONG_MODIFYING ,
+	DTE_INVALID_INVAR_INITOR ,
+	DTE_ACCESS_FROM_INVAR_INITOR ,
+	DTE_CALL_FROM_INVAR_INITOR ,
 	DTE_ROUT_NOT_IMPLEMENTED
 };
 static const char*const DaoTypingErrorString[] =
@@ -2331,6 +2335,7 @@ static const char*const DaoTypingErrorString[] =
 	"Calling normal method with code section",
 	"Invalid yield in ordinary routine",
 	"Invalid return for the constructor or defer block",
+	"Invalid return type",
 	"Member not permitted",
 	"Member not exist",
 	"Need class instance",
@@ -2345,6 +2350,9 @@ static const char*const DaoTypingErrorString[] =
 	"Invalid parameter name",
 	"Invalid type case",
 	"Constant or invariable cannot be modified",
+	"Invalid constructor definition for invar class",
+	"Invalid access to global or static variables",
+	"Invalid calls that return nonprimitive and mutable types",
 	"Call to un-implemented function"
 };
 
@@ -2772,11 +2780,17 @@ void DaoInferencer_PrintCodeSnippet( DaoInferencer *self, DaoStream *stream, int
 }
 static void DaoInferencer_WriteErrorHeader( DaoInferencer *self )
 {
-	char char50[50], char200[200];
+	DaoVmCodeX *vmc;
 	DaoRoutine *routine = self->routine;
 	DaoStream  *stream = routine->nameSpace->vmSpace->errorStream;
 	DaoVmCodeX **codes = self->inodes->items.pVmc;
-	DaoVmCodeX *vmc;
+	int invarinit = !!(routine->attribs & DAO_ROUT_INITOR);
+	char char50[50], char200[200];
+
+	if( invarinit ){
+		invarinit &= routine->routHost->tid == DAO_OBJECT;
+		invarinit &= !!(routine->routHost->aux->xClass.attribs & DAO_CLS_INVAR);
+	}
 
 	self->error = 1;
 	if( self->silent ) return;
@@ -2789,7 +2803,12 @@ static void DaoInferencer_WriteErrorHeader( DaoInferencer *self )
 	DaoStream_WriteChars( stream, "\":\n" );
 	sprintf( char50, "  At line %i : ", routine->defLine );
 	DaoStream_WriteChars( stream, char50 );
-	DaoStream_WriteChars( stream, "Invalid function definition --- \" " );
+	if( invarinit ){
+		DaoStream_WriteChars( stream, DaoTypingErrorString[DTE_INVALID_INVAR_INITOR] );
+	}else{
+		DaoStream_WriteChars( stream, "Invalid function definition" );
+	}
+	DaoStream_WriteChars( stream, " --- \" " );
 	DaoStream_WriteString( stream, routine->routName );
 	DaoStream_WriteChars( stream, "() \";\n" );
 	sprintf( char50, "  At line %i : ", vmc->line );
@@ -3832,6 +3851,7 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 	DList *errors = self->errors;
 	DString *str, *mbs = self->mbstring;
 	DList  *routConsts = self->routine->routConsts->value;
+	DaoRoutine *routine = self->routine;
 	DaoType **type2, **types = self->types->items.pType;
 	DaoValue *value, **consts = self->consts->items.pValue;
 	DaoClass *klass, *hostClass = self->hostClass;
@@ -3927,6 +3947,7 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		if( k == DAO_OBJECT_VARIABLE && ct->tid ==DAO_CLASS ) goto NeedInstVar;
 		if( setter ) break;
 		if( type2 == NULL ) goto NotPermit;
+		if( type2[0] && type2[0]->invar && !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
 		if( *type2 == NULL || (*type2)->tid == DAO_UDT ){
 			GC_Assign( type2, types[opa] );
 		}
@@ -3962,6 +3983,7 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 			if( k <0 || k >= (int)ct->nested->size ) goto InvIndex;
 			ct = ct->nested->items.pType[ k ];
 			if( ct->tid == DAO_PAR_NAMED ) ct = & ct->aux->xType;
+			if( ct && ct->invar ) goto ModifyConstant;
 			AssertTypeMatching( at, ct, defs );
 			if( k < 0xffff ){
 				if( ct->tid && ct->tid <= DAO_COMPLEX && at->tid && at->tid <= DAO_COMPLEX ){
@@ -3996,6 +4018,7 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 					if( value ) ct = DaoNamespace_GetType( ans, value );
 				}
 				if( k <0 ) goto NotExist;
+				if( ct && ct->invar ) goto ModifyConstant;
 				AssertTypeMatching( at, ct, defs );
 			}
 			break;
@@ -4027,6 +4050,7 @@ NotExist : return DaoInferencer_Error( self, DTE_FIELD_NOT_EXIST );
 NeedInstVar : return DaoInferencer_Error( self, DTE_FIELD_OF_INSTANCE );
 InvOper : return DaoInferencer_Error( self, DTE_OPERATION_NOT_VALID );
 InvIndex : return DaoInferencer_Error( self, DTE_INDEX_NOT_VALID );
+ModifyConstant: return DaoInferencer_Error( self, DTE_CONST_WRONG_MODIFYING );
 }
 int DaoInferencer_HandleBinaryArith( DaoInferencer *self, DaoInode *inode, DMap *defs )
 {
@@ -4489,8 +4513,14 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	int ctchecked = 0;
 	int argc = vmc->b & 0xff;
 	int codemode = code | ((int)vmc->b<<16);
+	int invarinit = !!(routine->attribs & DAO_ROUT_INITOR);
 	DaoType *cbtype = NULL;
 	DaoInode *sect = NULL;
+
+	if( invarinit ){
+		invarinit &= routine->routHost->tid == DAO_OBJECT;
+		invarinit &= !!(routine->routHost->aux->xClass.attribs & DAO_CLS_INVAR);
+	}
 
 	if( (vmc->b & DAO_CALL_BLOCK) && inodes[i+2]->code == DVM_SECT ){
 		sect = inodes[ i + 2 ];
@@ -4743,6 +4773,10 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	if( ct == NULL ) ct = DaoNamespace_GetType( NS, dao_none_value );
 	DaoInferencer_UpdateType( self, opc, ct );
 	AssertTypeMatching( ct, types[opc], defs );
+
+	if( invarinit && DaoType_IsPrimitiveOrImmutable( types[opc] ) == 0 ){
+		return DaoInferencer_Error( self, DTE_CALL_FROM_INVAR_INITOR );
+	}
 
 TryPushBlockReturnType:
 	if( sect && cbtype && cbtype->nested ){
@@ -5021,6 +5055,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	daoint i, N = routine->body->annotCodes->size;
 	daoint j, k, J, K, M = routine->body->regCount;
 	char *inited = self->inited->chars;
+	int invarinit = !!(routine->attribs & DAO_ROUT_INITOR);
 	int invarmeth = routine->attribs & DAO_ROUT_INVAR;
 	int code, opa, opb, opc, first, middle, last;
 	int TT1, TT2, TT3, TT6;
@@ -5034,6 +5069,52 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 
 	for(i=1; i<=DAO_MAX_SECTDEPTH; i++) typeVH[i] = types;
 	for(i=0; i<N; i++) inodes[i]->index = N | (1<<16); /* for return ranges (rettypes); */
+
+	if( invarinit ){
+		invarinit &= routine->routHost->tid == DAO_OBJECT;
+		invarinit &= !!(routine->routHost->aux->xClass.attribs & DAO_CLS_INVAR);
+	}
+	if( invarinit ){
+		DaoStream *stream = routine->nameSpace->vmSpace->errorStream;
+		DaoType *routype = routine->routType;
+		DaoType *retype = (DaoType*) routype->aux;
+		DaoType *partype = NULL;
+		int error = 0;
+		for(i=0; i<routype->nested->size; ++i){
+			partype = routype->nested->items.pType[i];
+			if( partype->tid >= DAO_PAR_NAMED && partype->tid <= DAO_PAR_VALIST ){
+				partype = (DaoType*) partype->aux;
+			}
+			if( DaoType_IsPrimitiveOrImmutable( partype ) == 0 ){
+				error = DTE_PARAM_WRONG_TYPE;
+				break;
+			}
+		}
+		if( error == 0 && DaoType_IsPrimitiveOrImmutable( retype ) == 0 ){
+			error = DTE_ROUT_INVALID_RETURN2;
+			partype = retype;
+		}
+		if( error ){
+			char char50[50];
+			sprintf( char50, "  At line %i : ", routine->defLine );
+			DaoStream_WriteChars( stream, "[[ERROR]] in file \"" );
+			DaoStream_WriteString( stream, routine->nameSpace->name );
+			DaoStream_WriteChars( stream, "\":\n" );
+			DaoStream_WriteChars( stream, char50 );
+			DaoStream_WriteChars( stream, DaoTypingErrorString[DTE_INVALID_INVAR_INITOR] );
+			DaoStream_WriteChars( stream, " --- \" " );
+			DaoStream_WriteString( stream, routine->routName );
+			DaoStream_WriteChars( stream, "() \";\n" );
+			DaoStream_WriteChars( stream, char50 );
+			DaoStream_WriteChars( stream, DaoTypingErrorString[error] );
+			DaoStream_WriteChars( stream, " --- \" " );
+			DaoStream_WriteChars( stream, partype->name->chars );
+			DaoStream_WriteChars( stream, " \";\n" );
+			DaoStream_WriteChars( stream, char50 );
+			DaoStream_WriteChars( stream, "Expecting primitive or immutable types;\n" );
+			return 0;
+		}
+	}
 
 	DList_Append( rettypes, inodes[N-1] );
 	DList_Append( rettypes, NULL );
@@ -5264,6 +5345,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			case DVM_GETVO : at = hostClass->instvars->items.pVar[opb]->dtype; break;
 			case DVM_GETVK : at = hostClass->variables->items.pVar[opb]->dtype; break;
 			case DVM_GETVG : at = NS->variables->items.pVar[opb]->dtype; break;
+			}
+			if( invarinit && code != DVM_GETVO && code != DVM_GETVH ){
+				return DaoInferencer_Error( self, DTE_ACCESS_FROM_INVAR_INITOR );
 			}
 			if( at == NULL ) at = dao_type_udf;
 			if( invarmeth && code == DVM_GETVO && at->konst == 0 ){
@@ -6421,6 +6505,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			if( opb >= ct->nested->size ) goto InvIndex;
 			tt = ct->nested->items.pType[opb];
 			if( tt->tid == DAO_PAR_NAMED ) tt = & tt->aux->xType;
+			if( tt && tt->invar ) goto ModifyConstant;
 			if( at != tt && tt->tid != DAO_ANY ) goto NotMatch;
 			if( code == DVM_SETF_TPP && consts[opa] ) goto InvOper;
 			break;
@@ -6453,6 +6538,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			if( opb >= ct->nested->size ) goto InvIndex;
 			tt = ct->nested->items.pType[opb];
 			if( tt->tid == DAO_PAR_NAMED ) tt = & tt->aux->xType;
+			if( tt && tt->invar ) goto ModifyConstant;
 			if( tt->tid != TT1 ) goto NotMatch;
 			break;
 		case DVM_GETF_CX :
@@ -6530,6 +6616,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			if( types[opa] ==NULL || types[opc] ==NULL ) goto NotMatch;
 			if( ct->tid != DAO_CLASS ) goto NotMatch;
 			ct = ct->aux->xClass.variables->items.pVar[ opb ]->dtype;
+			if( ct && ct->invar && !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
 			if( code == DVM_SETF_KG ){
 				if( at != ct && ct->tid != DAO_ANY ) goto NotMatch;
 				break;
@@ -6546,6 +6633,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			if( types[opa] ==NULL || types[opc] ==NULL ) goto NotMatch;
 			if( ct->tid != DAO_OBJECT ) goto NotMatch;
 			ct = ct->aux->xClass.variables->items.pVar[ opb ]->dtype;
+			if( ct && ct->invar && !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
 			if( code == DVM_SETF_OG ){
 				if( at != ct && ct->tid != DAO_ANY ) goto NotMatch;
 				break;
@@ -6560,6 +6648,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			if( types[opa] ==NULL || types[opc] ==NULL ) goto NotMatch;
 			if( ct->tid != DAO_OBJECT ) goto NotMatch;
 			ct = ct->aux->xClass.instvars->items.pVar[ opb ]->dtype;
+			if( ct && ct->invar && !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
 			if( code == DVM_SETF_OV ){
 				if( ct->tid == DAO_ANY ) break;
 				if( DaoType_MatchTo( at, ct, NULL ) != DAO_MT_EQ ) goto NotMatch;

@@ -112,6 +112,7 @@ enum DaoTypes
 	DAO_TYPE ,
 	END_CORE_TYPES
 };
+
 enum DaoProcessStatus
 {
 	DAO_PROCESS_FINISHED ,  /* finished normally */
@@ -120,11 +121,13 @@ enum DaoProcessStatus
 	DAO_PROCESS_RUNNING ,   /* currently running */
 	DAO_PROCESS_STACKED     /* new frame on the process stack */
 };
+
 enum DaoNamespaceOption
 {
 	/* automatically make variable declared outside {} global, for interactive mode */
 	DAO_NS_AUTO_GLOBAL = (1<<0)
 };
+
 /* Execution options, combinable by | */
 enum DaoOptions
 {
@@ -145,6 +148,12 @@ enum DaoOptions
 	// -- insert NOP codes for convenient setting up of break points;
 	*/
 	DAO_OPTION_IDE = (1<<31)
+};
+
+enum DaoCtypeWrapOptions
+{
+	DAO_CTYPE_OPAQUE = 1,
+	DAO_CTYPE_INVAR  = 2
 };
 
 
@@ -855,7 +864,7 @@ DAO_DLL void DaoNamespace_AddConstValue( DaoNamespace *self, const char *name, D
 DAO_DLL void DaoNamespace_AddValue( DaoNamespace *self, const char *name, DaoValue *d, const char *type);
 DAO_DLL DaoValue* DaoNamespace_FindData( DaoNamespace *self, const char *name );
 DAO_DLL DaoType* DaoNamespace_DefineType( DaoNamespace *self, const char *type, const char *alias );
-DAO_DLL DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque );
+DAO_DLL DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int options );
 DAO_DLL DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeBase *typer );
 DAO_DLL DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fp, const char *proto );
 DAO_DLL int DaoNamespace_AliasTypes( DaoNamespace *self, const char *alias[] );

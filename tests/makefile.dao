@@ -45,6 +45,7 @@ test_class.AddTest( "test_class_inheritance.dao" )
 test_class.AddTest( "test_class_static_fields.dao" )
 test_class.AddTest( "test_class_operator.dao" )
 test_class.AddTest( "test_class_mixin.dao" )
+test_class.AddTest( "test_invar_class.dao" )
 
 test_interface = daotests.AddTest( "Interface", "test_interface.dao" )
 

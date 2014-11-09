@@ -224,9 +224,10 @@ struct DaoCtype
 {
 	DAO_CSTRUCT_COMMON;
 
-	DaoType      *cdtype;
-	DString      *name;
-	DString      *info;
+	DaoType  *cdtype;
+	DString  *name;
+	DString  *info;
+	int       attribs;
 };
 DAO_DLL DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype );
 DAO_DLL void DaoCtype_Delete( DaoCtype *self );

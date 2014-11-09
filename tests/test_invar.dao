@@ -183,3 +183,15 @@ Test( ls )
 {{At line}} .* {{Invalid virtual machine instruction}} .* 
 {{Invalid parameter type --- " 'invar<list<int>>' for 'list<int>' "}}
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+type Tuple = tuple<index: invar<int>, name: invar<string>>
+tup: Tuple = ( 123, 'abc' )
+tup.index = 456
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Constant or invariable cannot be modified}}
+@[test(code_01)]

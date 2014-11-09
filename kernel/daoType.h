@@ -172,6 +172,8 @@ DAO_DLL void DaoType_SetupRecursive( DaoType *self, DaoType *tht, DaoType *root 
 
 DAO_DLL DaoType* DaoType_GetVariantItem( DaoType *self, int tid );
 
+DAO_DLL int DaoType_IsImmutable( DaoType *self );
+DAO_DLL int DaoType_IsPrimitiveOrImmutable( DaoType *self );
 DAO_DLL int DaoType_ChildOf( DaoType *self, DaoType *other );
 DAO_DLL DaoValue* DaoType_CastToParent( DaoValue *object, DaoType *parent );
 DAO_DLL DaoValue* DaoType_CastToDerived( DaoValue *object, DaoType *derived );

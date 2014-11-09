@@ -205,10 +205,11 @@ enum DaoFieldPermission
 };
 enum DaoClassAttrib
 {
-	DAO_CLS_AUTO_INITOR   = 1,
-	DAO_CLS_PRIVATE_VAR   = 2,
-	DAO_CLS_PROTECTED_VAR = 4,
-	DAO_CLS_ASYNCHRONOUS  = 8
+	DAO_CLS_INVAR         = (1<<0),
+	DAO_CLS_AUTO_INITOR   = (1<<1),
+	DAO_CLS_PRIVATE_VAR   = (1<<2),
+	DAO_CLS_PROTECTED_VAR = (1<<3),
+	DAO_CLS_ASYNCHRONOUS  = (1<<4)
 };
 enum DaoRoutineAttrib
 {

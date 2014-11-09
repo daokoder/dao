@@ -1344,6 +1344,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 		DaoType *tt;
 		if( nested->size > (selfpar+1) ) goto ErrorTooManyParams;
 		if( retype != NULL ) goto ErrorInvalidReturn;
+		retype = cast;
 		tt = DaoNamespace_GetType( NS, (DaoValue*) cast );
 		DString_AppendChar( pname, ',' );
 		DString_Append( pname, tt->name );
@@ -1367,6 +1368,11 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 			DString_Assign( mbs, routine->routName );
 			if( isalpha( mbs->chars[0] ) == 0 ) DString_SetChars( mbs, "X" );
 			retype = DaoParser_MakeParTypeHolder( self, mbs );
+		}
+	}
+	if( routine->routHost && DaoType_IsImmutable( routine->routHost ) ){
+		if( DaoType_IsPrimitiveOrImmutable( retype ) == 0 ){
+			retype = DaoType_GetInvarType( retype );
 		}
 	}
 	DString_AppendChars( pname, "=>" );
@@ -2912,6 +2918,11 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			parser->routine = rout;
 		}
 	}
+	if( rout->routHost && rout->routHost->tid == DAO_CLASS ){
+		if( rout->routHost->aux->xClass.attribs & DAO_CLS_INVAR ){
+			rout->attribs |= DAO_ROUT_INVAR;
+		}
+	}
 	if( attribs && rout->routHost == NULL ){
 		int efrom = errorStart - (attribs != 0);  /* XXX */
 		DaoParser_Error2( self, DAO_INVALID_STORAGE, efrom, errorStart+1, 0 );
@@ -3086,6 +3097,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	daoint begin, line = self->curLine;
 	daoint i, k, rb, right, error = 0;
 	int errorStart = start;
+	int immutable = storeType == DAO_DECL_INVAR;
 	int pm1, pm2, ec = 0;
 
 	if( start+1 > to ) goto ErrorClassDefinition;
@@ -3099,6 +3111,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		int t = tokens[start]->name;
 		if( t != DTOK_IDENTIFIER && t != DTOK_ID_THTYPE && t < DKEY_RAND ) goto ErrorClassDefinition;
 		klass = DaoClass_New();
+		if( immutable ) klass->attribs |= DAO_CLS_INVAR;
 
 		className = klass->className;
 		DString_Assign( className, name );
@@ -3222,6 +3235,17 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		/* Add a reference to its base classes: */
 		DaoClass_AddSuperClass( klass, (DaoValue*) base );
 	} /* end parsing base classes */
+
+	if( klass->attribs & DAO_CLS_INVAR ){
+		for(i=0; i<klass->allBases->size; ++i){
+			DaoType *btype = DaoNamespace_GetType( NS, klass->allBases->items.pValue[i] );
+			if( DaoType_IsImmutable( btype ) == 0 ){
+				DaoParser_Error( self, DAO_INVALID_PARENT_CLASS, btype->name );
+				goto ErrorClassDefinition;
+			}
+		}
+	}
+
 	if( tokens[start]->name == DKEY_FOR ){
 		ec = DAO_INVALID_DECO_PATTERN;
 		if( klass->className->chars[0] != '@' ) goto ErrorClassDefinition;
@@ -3584,6 +3608,10 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 			if( ns->options & DAO_NS_AUTO_GLOBAL ) scopeType = DAO_DECL_GLOBAL;
 		}else if( self->isClassBody ){
 			scopeType = DAO_DECL_MEMBER;
+			if( (storeType & DAO_DECL_VAR) && (hostClass->attribs & DAO_CLS_INVAR) ){
+				storeType &= ~DAO_DECL_VAR;
+				storeType |= DAO_DECL_INVAR;
+			}
 		}else{
 			scopeType = DAO_DECL_LOCAL;
 		}
@@ -3701,6 +3729,16 @@ DecoratorError:
 			if( start <0 ) return 0;
 			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
 			continue;
+		}else if( tki == DKEY_CLASS ){
+			if( storeType && storeType != DAO_DECL_INVAR ){
+				DaoParser_Error( self, DAO_INVALID_STORAGE, & tokens[start]->string );
+				return 0;
+			}
+			/* parsing class definition */
+			start = DaoParser_ParseClassDefinition( self, start, to, storeType );
+			if( start <0 ) return 0;
+			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
+			continue;
 		}else if( tki == DKEY_ENUM && (tki2 == DTOK_LCB || tki2 == DTOK_IDENTIFIER) ){
 			start = DaoParser_ParseEnumDefinition( self, start, to, storeType );
 			if( start <0 ) return 0;
@@ -3740,12 +3778,6 @@ DecoratorError:
 			continue;
 		}else if( tki == DKEY_INTERFACE ){
 			start = DaoParser_ParseInterfaceDefinition( self, start, to, storeType );
-			if( start <0 ) return 0;
-			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
-			continue;
-		}else if( tki == DKEY_CLASS ){
-			/* parsing class definition */
-			start = DaoParser_ParseClassDefinition( self, start, to, storeType );
 			if( start <0 ) return 0;
 			if( cons && topll ) DaoParser_MakeCodes( self, errorStart, start, ns->inputs );
 			continue;

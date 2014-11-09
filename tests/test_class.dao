@@ -140,3 +140,18 @@ obj.a
 @[test(code_01)]
 @[test(code_01)]
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class K
+{
+	invar index = 123
+}
+k = K()
+k.index = 456
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Constant or invariable cannot be modified}}
+@[test(code_01)]

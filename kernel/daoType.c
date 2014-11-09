@@ -553,6 +553,35 @@ DaoType* DaoType_GetVarType( DaoType *self )
 	DaoType_RelinkQuadTypes( base, var );
 	return var;
 }
+int DaoType_IsImmutable( DaoType *self )
+{
+	int i;
+	switch( self->tid ){
+	case DAO_OBJECT :
+		return (self->aux->xClass.attribs & DAO_CLS_INVAR);
+	case DAO_CSTRUCT :
+	case DAO_CDATA :
+		return (self->aux->xCtype.attribs & DAO_CLS_INVAR);
+		break;
+	case DAO_VARIANT :
+		for(i=0; i<self->nested->size; ++i){
+			if( DaoType_IsImmutable( self->nested->items.pType[i] ) == 0 ) return 0;
+		}
+		break;
+	}
+	return 0;
+}
+int DaoType_IsPrimitiveOrImmutable( DaoType *self )
+{
+	int i;
+	if( self->tid <= DAO_ENUM ) return 1;
+	if( self->tid == DAO_VARIANT ){
+		for(i=0; i<self->nested->size; ++i){
+			if( DaoType_IsPrimitiveOrImmutable( self->nested->items.pType[i] ) == 0 ) return 0;
+		}
+	}
+	return DaoType_IsImmutable( self );
+}
 
 static int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int dep );
 

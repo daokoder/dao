@@ -725,14 +725,15 @@ static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeBase *typ
 	return ctype_type;
 }
 
-static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, int opaque )
+static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, int options )
 {
 	DaoType *ctype_type, *cdata_type;
 
 	if( typer->core ) return typer->core->kernel->abtype;
 
-	ctype_type = DaoNamespace_MakeCdataType( self, typer, opaque );
+	ctype_type = DaoNamespace_MakeCdataType( self, typer, options & DAO_CTYPE_OPAQUE );
 	cdata_type = typer->core->kernel->abtype;
+	if( options & DAO_CTYPE_INVAR ) cdata_type->aux->xCtype.attribs |= DAO_CLS_INVAR;
 	typer->core->kernel->SetupValues = DaoNamespace_SetupValues;
 	typer->core->kernel->SetupMethods = DaoNamespace_SetupMethods;
 	if( DaoNS_ParseType( self, typer->name, ctype_type, cdata_type, 1 ) == DAO_DT_FAILED ){
@@ -744,9 +745,9 @@ static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, 
 	DString_SetChars( cdata_type->aux->xCtype.name, cdata_type->name->chars );
 	return cdata_type;
 }
-DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int opaque )
+DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int options )
 {
-	return DaoNamespace_WrapType2( self, typer, opaque );
+	return DaoNamespace_WrapType2( self, typer, options );
 }
 DaoType* DaoNamespace_WrapGenericType( DaoNamespace *self, DaoTypeBase *typer, int tid )
 {

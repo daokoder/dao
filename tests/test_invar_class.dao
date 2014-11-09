@@ -1,0 +1,73 @@
+
+@[test(code_01)]
+invar class Immutable
+{
+    var index = 123 
+    var items : list<int>
+
+    routine Immutable( wrong_param: list<int> ){
+    }   
+}
+@[test(code_01)]
+@[test(code_01)]
+{{Invalid constructor definition for invar class}}.*
+{{Expecting primitive or immutable types}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar class Immutable
+{
+    var items : list<int>
+
+    routine Immutable(){
+        items = Method()
+    }   
+
+    routine Method(){
+        return global
+    }   
+}
+@[test(code_01)]
+@[test(code_01)]
+{{Invalid constructor definition for invar class}}.*
+{{Invalid calls that return nonprimitive and mutable types}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar class Immutable
+{
+    var items : Immutable|none = none
+
+    routine Immutable( dep = 10 ){
+        if( dep ) items = Immutable( dep-1 )
+    }   
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar class Immutable
+{
+    var index = 123 
+
+    routine Immutable( i: int ){
+		index = i
+    }
+}
+im = Immutable( 12 )
+im.index = 456
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Constant or invariable cannot be modified}}
+@[test(code_01)]
+
