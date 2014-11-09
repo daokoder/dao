@@ -1185,7 +1185,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 				tk = DList_Append( routine->body->defLocals, tokens[i] );
 				DaoToken_Set( tk, 1, 0, routine->parCount, NULL );
 			}
-			if( nested->size == 0 && strcmp( tks->chars, "self" ) == 0 ){
+			if( nested->size == 0 && tki == DKEY_SELF ){
 				routine->attribs |= DAO_ROUT_PARSELF;
 			}
 			MAP_Insert( DaoParser_CurrentSymbolTable( module ), tks, module->regCount );

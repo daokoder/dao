@@ -114,7 +114,7 @@ DMap* DHash_New( short kt, short vt )
 	return self;
 }
 
-unsigned int MurmurHash3( const void * key, int len, unsigned int seed );
+unsigned int MurmurHash3( const void *key, int len, unsigned int seed );
 
 static int DaoValue_Hash( DaoValue *self, unsigned int buf[], int id, int max, unsigned int seed )
 {
@@ -181,50 +181,47 @@ static int DHash_HashIndex( DMap *self, void *key )
 	DString *s;
 	DList *array;
 	unsigned int buf[HASH_MAX];
-	unsigned int T = self->tsize;
-	unsigned id = 0;
+	unsigned int id = 0;
 	void *data;
 	int m;
 
 	switch( self->keytype ){
 	case DAO_DATA_COMPLEX :
-		id = MurmurHash3( key, 2*sizeof(double), self->hashing ) % T;
+		id = MurmurHash3( key, 2*sizeof(double), self->hashing );
 		break;
 	case DAO_DATA_STRING :
 		s = (DString*)key;
-		m = s->size;
-		data = s->chars;
-		id = MurmurHash3( data, m, self->hashing ) % T;
+		id = MurmurHash3( s->chars, s->size, self->hashing );
 		break;
 	case DAO_DATA_VALUE :
 	case DAO_DATA_VALUE2 :
 	case DAO_DATA_VALUE3 :
 		m = DaoValue_Hash( (DaoValue*) key, buf, 0, HASH_MAX, self->hashing );
 		if( m ==1 ){
-			id = buf[0] % T;
+			id = buf[0];
 		}else{
-			id = MurmurHash3( buf, m*sizeof(unsigned int), self->hashing ) % T;
+			id = MurmurHash3( buf, m*sizeof(unsigned int), self->hashing );
 		}
 		break;
 	case DAO_DATA_LIST :
 		array = (DList*)key;
 		m = array->size * sizeof(void*);
-		id = MurmurHash3( array->items.pVoid, m, self->hashing ) % T;
+		id = MurmurHash3( array->items.pVoid, m, self->hashing );
 		break;
 	case DAO_DATA_VOID2 :
-		id = MurmurHash3( key, 2*sizeof(void*), self->hashing ) % T;
+		id = MurmurHash3( key, 2*sizeof(void*), self->hashing );
 		break;
 	case DAO_DATA_VMCODE :
-		id = MurmurHash3( key, 4*sizeof(unsigned short), self->hashing ) % T;
+		id = MurmurHash3( key, 4*sizeof(unsigned short), self->hashing );
 		break;
 	case DAO_DATA_VMCODE2 :
-		id = MurmurHash3( key, 3*sizeof(unsigned short), self->hashing ) % T;
+		id = MurmurHash3( key, 3*sizeof(unsigned short), self->hashing );
 		break;
 	default :
-		id = MurmurHash3( & key, sizeof(void*), self->hashing ) % T;
+		id = MurmurHash3( & key, sizeof(void*), self->hashing );
 		break;
 	}
-	return (int)id;
+	return id & 0x7fffffff;
 }
 static DNode* DMap_SimpleInsert( DMap *self, DNode *node );
 static void DMap_InsertNode( DMap *self, DNode *node );
@@ -232,17 +229,16 @@ static void DMap_InsertTree( DMap *self, DNode *node )
 {
 	DNode *left = node->left;
 	DNode *right = node->right;
-	node->hash = DHash_HashIndex( self, node->key.pVoid );
 	node->parent = node->left = node->right = NULL;
-	self->root = self->table[ node->hash ];
+	self->root = self->table[ node->hash % self->tsize ];
 	if( self->root == NULL ){
 		node->color = RB_BLACK;
-		self->table[ node->hash ] = node;
+		self->table[ node->hash % self->tsize ] = node;
 		self->size += 1;
 	}else{
 		DMap_SimpleInsert( self, node );
 		DMap_InsertNode( self, node );
-		self->table[ node->hash ] = self->root;
+		self->table[ node->hash % self->tsize ] = self->root;
 	}
 	if( left ) DMap_InsertTree( self, left );
 	if( right ) DMap_InsertTree( self, right );
@@ -637,11 +633,11 @@ void DMap_EraseNode( DMap *self, DNode *node )
 	if( node == NULL ) return;
 	if( self->hashing ){
 		int hash = node->hash;
-		self->root = self->table[ hash ];
+		self->root = self->table[ hash % self->tsize ];
 		if( self->root == NULL ) return;
 		if( DMap_Lockable( self ) ) DaoGC_LockData();
 		DMap_EraseChild( self, node );
-		self->table[ hash ] = self->root;
+		self->table[ hash % self->tsize ] = self->root;
 		if( DMap_Lockable( self ) ) DaoGC_UnlockData();
 		if( self->size < 0.25*self->tsize ) DHash_ResetTable( self );
 	}else{
@@ -714,9 +710,12 @@ static int dao_complex_compare( dao_complex *left, dao_complex *right )
 	if( left->imag != right->imag ) return left->imag < right->imag ? -1 : 1;
 	return 0;
 }
-static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
+static daoint DMap_CompareKeys( DMap *self, DNode *n1, DNode *n2 )
 {
+	void *k1 = n1->key.pVoid;
+	void *k2 = n2->key.pVoid;
 	daoint cmp = 0;
+	if( self->hashing && n1->hash != n2->hash ) return n1->hash < n2->hash ? -1 : 1;
 	switch( self->keytype ){
 	case DAO_DATA_COMPLEX : cmp = dao_complex_compare( (dao_complex*) k1, (dao_complex*) k2 ); break;
 	case DAO_DATA_STRING : cmp = DString_Compare( (DString*) k1, (DString*) k2 ); break;
@@ -729,35 +728,22 @@ static daoint DMap_CompareKeys( DMap *self, void *k1, void *k2 )
 	case DAO_DATA_VMCODE2: cmp = DaoVmCode_Compare2( (DaoVmCode*) k1, (DaoVmCode*) k2 ); break;
 	default : cmp = k1 == k2 ? 0 : (k1 < k2 ? -1 : 1 ); break;
 	}
-	if( self->hashing && cmp == 0 ){
-		DString *s1 = NULL;
-		DString *s2 = NULL;
-		if( self->keytype == DAO_DATA_STRING ){
-			s1 = (DString*) k1;
-			s2 = (DString*) k2;
-		}else if( self->keytype >= DAO_DATA_VALUE && self->keytype <= DAO_DATA_VALUE3 ){
-			DaoValue *skv1 = (DaoValue*) k1;
-			DaoValue *skv2 = (DaoValue*) k2;
-			if( skv1->type == DAO_STRING ){
-				s1 = skv1->xString.value;
-				s2 = skv2->xString.value;
-			}
-		}
-		if( s1 != NULL && (s1->chars == NULL) != (s2->chars == NULL) ) cmp = s1->chars ? 1 : -1;
-	}
 	return cmp;
 }
 
 static DNode* DMap_FindChild( DMap *self, DNode *root, void *key, KeySearchType type )
 {
+	DNode query = {0, 0, NULL, NULL};
 	DNode *p = root;
 	DNode *m = 0;
 	daoint compare;
 
 	if( root == NULL ) return NULL;
 
+	query.key.pVoid = key;
+	if( self->hashing ) query.hash = DHash_HashIndex( self, key );
 	for(;;){
-		compare = DMap_CompareKeys( self, key, p->key.pVoid );
+		compare = DMap_CompareKeys( self, & query, p );
 		if( compare == 0 ) return p;
 
 		if( compare < 0 ){
@@ -776,9 +762,8 @@ static DNode* DMap_FindNode( DMap *self, void *key, KeySearchType type )
 	int id;
 	if( self->hashing ){
 		id = DHash_HashIndex( self, key );
-		root = self->table[id];
+		root = self->table[id % self->tsize];
 		if( root == NULL ) return NULL;
-		/* if( DMap_CompareKeys( self, key, root->key.pVoid ) ==0 ) return root; */
 	}
 	return DMap_FindChild( self, root, key, type );
 }
@@ -789,7 +774,7 @@ static DNode* DMap_SimpleInsert( DMap *self, DNode *node )
 	node->color = RB_RED;
 	if( self->root == NULL ) return node;
 	for(;;){
-		compare = DMap_CompareKeys( self, node->key.pVoid, p->key.pVoid );
+		compare = DMap_CompareKeys( self, node, p );
 		if( compare == 0 ){
 			return p;
 		}else if( compare < 0 ){
@@ -821,10 +806,10 @@ DNode* DMap_Insert( DMap *self, void *key, void *value )
 	if( self->hashing ){
 		id = DHash_HashIndex( self, key );
 		node->hash = id;
-		self->root = self->table[id];
+		self->root = self->table[id % self->tsize];
 		if( self->root ==NULL ){
 			self->size += 1;
-			self->table[id] = node;
+			self->table[id % self->tsize] = node;
 			node->color = RB_BLACK;
 			DMap_CopyItem( & node->key.pVoid, key, self->keytype );
 			DMap_CopyItem( & node->value.pVoid, value, self->valtype );
@@ -843,7 +828,7 @@ DNode* DMap_Insert( DMap *self, void *key, void *value )
 		DMap_InsertNode( self, node );
 		if( DMap_Lockable( self ) ) DaoGC_UnlockData();
 		if( self->hashing ){
-			self->table[id] = self->root;
+			self->table[id % self->tsize] = self->root;
 			if( self->size >= self->tsize ) DHash_ResetTable( self );
 		}
 	}else{
@@ -890,7 +875,7 @@ DNode* DMap_Next( DMap *self, DNode *node )
 	if( node == NULL ) return NULL;
 	next = DNode_Next( node );
 	if( next == NULL && self->hashing ){
-		daoint i = node->hash + 1;
+		daoint i = node->hash % self->tsize + 1;
 		while( i < self->tsize && self->table[i] == NULL ) i += 1;
 		if( i < self->tsize ) next = DNode_First( self->table[i] );
 	}
