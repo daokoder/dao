@@ -188,3 +188,85 @@ s.append( 123 );
 
 
 
+
+@[test(code_01)]
+class Base
+{
+	var value = 123
+}
+invar class Derived : Base
+{
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Invalid parent class}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class Base
+{
+	var value = 123
+}
+invar class Derived ( Base )
+{
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Invalid parent class}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar class Base
+{
+	var value = 123
+	routine Base(){ value = 456 }
+}
+invar class Derived : Base
+{
+	var name = 'abc'
+	routine Derived() : Base() { name = 'def' }
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar class Base
+{
+	var value = 123
+	routine Base(){ value = 456 }
+}
+invar class Derived ( Base )
+{
+	var name = 'abc'
+	routine Derived() : Base() { name = 'def' }
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar class Base
+{
+	var value = 123
+}
+invar class Derived ( Base )
+{
+	var name = 'abc'
+	routine Derived() : Base() { name = 'def' }
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]

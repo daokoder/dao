@@ -6691,25 +6691,20 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	inodes = self->inodes->items.pInode;
 	types = self->types->items.pType;
 	N = self->inodes->size;
-	M = self->types->size;
 	for(i=0; i<N; i++){
 		inode = inodes[i];
 		inode->index = i;
 		self->currentIndex = i;
 
-		K = DaoVmCode_GetOpcodeType( (DaoVmCode*) inode );
-		/*
-		// No need to check for operands in expression list,
-		// they must have been checked by other instructions.
-		*/
-		switch( K ){
+		switch( DaoVmCode_GetOpcodeType( (DaoVmCode*) inode ) ){
 		case DAO_CODE_GETG :
 		case DAO_CODE_GETF :
-		case DAO_CODE_UNARY :
 		case DAO_CODE_GETI :
+		case DAO_CODE_UNARY :
 		case DAO_CODE_BINARY :
 		case DAO_CODE_CALL :
 			if( inode->code == DVM_GETVO ) continue;
+			if( inode->code == DVM_CALL && (inode->b & DAO_CALL_INIT) ) continue;
 			if( invarinit && DaoType_IsPrimitiveOrImmutable( types[inode->c] ) == 0 ){
 				return DaoInferencer_Error( self, DTE_INVAR_INITOR_MUTABLE );
 			}
@@ -6884,7 +6879,9 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 	decorator = DaoRoutine_ResolveX( decorator, selfpar, NULL, p, NULL, n, 0 );
 	if( decorator == NULL || decorator->type != DAO_ROUTINE ) return NULL;
 
-	if( (oldfn->attribs & DAO_ROUT_INVAR) && !(decorator->attribs & DAO_ROUT_INVAR) ) return NULL;
+	if( oldfn->attribs & DAO_ROUT_INVAR ){
+		if( !(decorator->attribs & (DAO_ROUT_INVAR|DAO_ROUT_STATIC)) ) return NULL;
+	}
 
 	nested = decorator->routType->nested;
 	decotypes = nested->items.pType;
@@ -7025,7 +7022,6 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 			}
 		}
 	}
-	if( DaoRoutine_DoTypeInference( newfn, 0 ) ==  0 ) goto ErrorDecorator;
 
 	for(i=0,m=annotCodes->size; i<m; i++){
 		vmc = annotCodes->items.pVmc[i];
@@ -7045,6 +7041,8 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 			newfn->body->vmCodes->data.codes[i] = *(DaoVmCode*) vmc;
 		}
 	}
+	if( DaoRoutine_DoTypeInference( newfn, 0 ) ==  0 ) goto ErrorDecorator;
+
 #if 0
 	printf( "###################################\n" );
 	printf( "################################### %s\n", oldfn->routName->chars );

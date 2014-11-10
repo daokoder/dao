@@ -84,6 +84,7 @@ void DaoType_Init()
 		for(j=DAO_BOOLEAN; j<=DAO_FLOAT; j++)
 			dao_type_matrix[i][j] = DAO_MT_SIM;
 	}
+	dao_type_matrix[DAO_NONE][DAO_NONE] = DAO_MT_EXACT;
 	dao_type_matrix[DAO_BOOLEAN][DAO_ENUM] = DAO_MT_SUB;
 	dao_type_matrix[DAO_INTEGER][DAO_ENUM] = DAO_MT_SUB;
 	for(i=0; i<END_EXTRA_TYPES; i++) dao_type_matrix[i][i] = DAO_MT_EQ;
@@ -400,10 +401,11 @@ DaoType* DaoType_Copy( DaoType *other )
 	if( other->mapNames ) self->mapNames = DMap_Copy( other->mapNames );
 	if( other->interfaces ) self->interfaces = DMap_Copy( other->interfaces );
 	self->aux = other->aux;
-	GC_IncRC( other->aux );
-	GC_IncRC( other->kernel );
-	GC_IncRC( other->cbtype );
-	self->value = NULL;
+	GC_IncRC( self->aux );
+	GC_IncRC( self->kernel );
+	GC_IncRC( self->cbtype );
+	/* DaoValue_Move() may fail for value type if self->value is null: */
+	GC_IncRC( self->value );
 	DaoValue_Move( other->value, & self->value, self ); /* needed for enum symbol types; */
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
@@ -1076,6 +1078,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	}
 
 	switch( (self->tid << 8) | value->type ){
+	case (DAO_NONE << 8)    | DAO_NONE : return DAO_MT_EXACT;
 	case (DAO_BOOLEAN << 8) | DAO_BOOLEAN : return DAO_MT_EQ;
 	case (DAO_INTEGER << 8) | DAO_INTEGER : return DAO_MT_EQ;
 	case (DAO_FLOAT   << 8) | DAO_FLOAT   : return DAO_MT_EQ;

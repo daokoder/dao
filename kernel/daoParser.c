@@ -3242,7 +3242,12 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 
 	if( klass->attribs & DAO_CLS_INVAR ){
 		for(i=0; i<klass->allBases->size; ++i){
-			DaoType *btype = DaoNamespace_GetType( NS, klass->allBases->items.pValue[i] );
+			DaoValue *base = klass->allBases->items.pValue[i];
+			DaoType *btype = NULL;
+			switch( base->type ){
+			case DAO_CLASS : btype = base->xClass.objType; break;
+			case DAO_CTYPE : btype = base->xCtype.cdtype;  break;
+			}
 			if( DaoType_IsImmutable( btype ) == 0 ){
 				DaoParser_Error( self, DAO_INVALID_PARENT_CLASS, btype->name );
 				goto ErrorClassDefinition;
