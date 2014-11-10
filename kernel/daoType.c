@@ -557,6 +557,9 @@ int DaoType_IsImmutable( DaoType *self )
 {
 	int i;
 	switch( self->tid ){
+	case DAO_ROUTINE :
+	case DAO_TYPE :
+		return 1;
 	case DAO_OBJECT :
 		return (self->aux->xClass.attribs & DAO_CLS_INVAR);
 	case DAO_CSTRUCT :

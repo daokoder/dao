@@ -1068,6 +1068,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	DString *hostname = NULL;
 	DString *pname = NULL;
 	DString *mbs = NULL;
+	int invarhost = routine->routHost && DaoType_IsImmutable( routine->routHost );
 	int size = self->tokens->size;
 	int i, j, k, right, invarpar = 0;
 	int line = 0; /* XXX number of super classes */
@@ -1134,8 +1135,11 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	isMeth = klass && routine != klass->classRoutine;
 	notStatic = (routine->attribs & DAO_ROUT_STATIC) ==0;
 	notConstr = hostname && DString_EQ( routine->routName, hostname ) == 0;
-	if( self->isClassBody && notConstr == 0 ) routine->attribs |= DAO_ROUT_INITOR;
+	if( routine->routHost && hostname && DString_EQ( routine->routName, hostname ) ){
+		routine->attribs |= DAO_ROUT_INITOR;
+	}
 	if( (isMeth || inter) && selfpar == 0 && notStatic && notConstr ){
+		if( invarhost ) routine->attribs |= DAO_ROUT_INVAR;
 		type = hostype;
 		if( routine->attribs & DAO_ROUT_INVAR ) type = DaoType_GetInvarType( type );
 		type = DaoNamespace_MakeType( NS, "self", DAO_PAR_NAMED, (DaoValue*)type, NULL, 0 );
@@ -1236,6 +1240,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 				if( i+1 >= right || tokens[i+1]->type != DTOK_IDENTIFIER ) goto ErrorNeedType;
 				type = DaoParser_ParseType( self, i+1, right-1, &i, NULL );
 				if( type == NULL ) goto ErrorParamParsing;
+				if( tki == DKEY_SELF && invarhost ) type = DaoType_GetInvarType( type );
 			}
 			if( tokens[i]->type == DTOK_ASSN ){
 				int reg=1, cst = 0;
@@ -1285,6 +1290,11 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 		}
 		if( nameTok->name == DTOK_ID_THTYPE ){
 			if( nested->size == selfpar && type->tid != DAO_ROUTINE ) goto ErrorInvalidParam;
+		}
+		if( invarhost && (routine->attribs & DAO_ROUT_INITOR) ){
+			DaoType *type2 = type;
+			if( type2->tid == DAO_PAR_VALIST ) type2 = (DaoType*) type2->aux;
+			if( DaoType_IsPrimitiveOrImmutable( type2 ) == 0 ) goto ErrorParamParsing2;
 		}
 
 		if( invarpar && type->tid != DAO_PAR_VALIST ) type = DaoType_GetInvarType( type );
@@ -1370,10 +1380,8 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 			retype = DaoParser_MakeParTypeHolder( self, mbs );
 		}
 	}
-	if( routine->routHost && DaoType_IsImmutable( routine->routHost ) ){
-		if( DaoType_IsPrimitiveOrImmutable( retype ) == 0 ){
-			retype = DaoType_GetInvarType( retype );
-		}
+	if( invarhost && DaoType_IsPrimitiveOrImmutable( retype ) == 0 ){
+		retype = DaoType_GetInvarType( retype );
 	}
 	DString_AppendChars( pname, "=>" );
 	DString_Append( pname, retype->name );
@@ -1468,6 +1476,7 @@ ErrorInvalidDefault: ec = DAO_PARAM_INVALID_DEFAULT; goto ErrorParamParsing;
 ErrorVariableDefault: ec = DAO_PARAM_VARIABLE_DEFAULT; goto ErrorParamParsing;
 ErrorImproperDefault: ec = DAO_PARAM_IMPROPER_DEFAULT; goto ErrorParamParsing;
 ErrorInvalidReturn:  ec = DAO_PARAM_INVALID_RETURN; goto ErrorParamParsing;
+ErrorParamParsing2: ec = DAO_PARAM_INVALID_MUTABLE; goto ErrorParamParsing;
 ErrorParamParsing:
 ErrorRoutine:
 	if( ec ){
@@ -2918,11 +2927,6 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			parser->routine = rout;
 		}
 	}
-	if( rout->routHost && rout->routHost->tid == DAO_CLASS ){
-		if( rout->routHost->aux->xClass.attribs & DAO_CLS_INVAR ){
-			rout->attribs |= DAO_ROUT_INVAR;
-		}
-	}
 	if( attribs && rout->routHost == NULL ){
 		int efrom = errorStart - (attribs != 0);  /* XXX */
 		DaoParser_Error2( self, DAO_INVALID_STORAGE, efrom, errorStart+1, 0 );
@@ -4367,7 +4371,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 	abtp = extype = NULL;
 	if( DaoParser_CurrentTokenType( self ) == DTOK_COLON ){
 		int pos = self->curToken + 1;
-		extype = DaoParser_ParseType( self, self->curToken+1, to, & k, NULL );
+		if( pos <= to ) extype = DaoParser_ParseType( self, pos, to, & k, NULL );
 		if( extype == NULL ){
 			DaoParser_Error3( self, DAO_INVALID_TYPE_FORM, pos );
 			DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
@@ -6143,6 +6147,8 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 	int isempty = 0, step = 0;
 	int regC;
 
+	if( tp && (tp->tid & DAO_ANY) ) tp = NULL;
+
 	if( btype == DTOK_LSB ) enumcode = DVM_VECTOR;
 	if( etype == DKEY_ARRAY ) enumcode = DVM_VECTOR;
 	result.prev = self->vmcLast;
@@ -6939,6 +6945,10 @@ InvalidSection:
 			{
 				int opb, opa = result.reg;
 				self->curToken += 1;
+				if( self->curToken >= self->tokens->size ){
+					DaoParser_Error2( self, DAO_INVALID_EXPRESSION, start, 1, 0 );
+					return error;
+				}
 				name = & tokens[self->curToken]->string;
 				if( tokens[self->curToken]->type == DTOK_DIGITS_DEC ){
 					daoint id = DaoToken_ToInteger( tokens[self->curToken] );

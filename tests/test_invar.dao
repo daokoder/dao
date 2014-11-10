@@ -195,3 +195,16 @@ tup.index = 456
 @[test(code_01)]
 {{At line}} .* {{Constant or invariable cannot be modified}}
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar a = { 1 }
+b = (any) a
+b.append( 2 )
+io.writeln( a )
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Invalid casting from invar type}}
+@[test(code_01)]

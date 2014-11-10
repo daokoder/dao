@@ -96,6 +96,7 @@ static const char* const daoCtInfo[] =
 	"Invalid for-in loop",
 	"Invalid parameter list for",
 	"Invalid parameter",
+	"Expecting primitive or immutable parameter types",
 	"Parameters not separated",
 	"Variable-length parameter list not final",
 	"Explicit type not expected",

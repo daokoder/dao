@@ -2307,6 +2307,7 @@ enum DaoTypingErrorCode
 	DTE_INDEX_NOT_VALID ,
 	DTE_KEY_NOT_VALID ,
 	DTE_OPERATION_NOT_VALID ,
+	DTE_INVALID_INVAR_CAST ,
 	DTE_PARAM_ERROR ,
 	DTE_PARAM_WRONG_NUMBER ,
 	DTE_PARAM_WRONG_TYPE ,
@@ -2314,8 +2315,7 @@ enum DaoTypingErrorCode
 	DTE_INVALID_TYPE_CASE ,
 	DTE_CONST_WRONG_MODIFYING ,
 	DTE_INVALID_INVAR_INITOR ,
-	DTE_ACCESS_FROM_INVAR_INITOR ,
-	DTE_CALL_FROM_INVAR_INITOR ,
+	DTE_INVAR_INITOR_MUTABLE ,
 	DTE_ROUT_NOT_IMPLEMENTED
 };
 static const char*const DaoTypingErrorString[] =
@@ -2344,6 +2344,7 @@ static const char*const DaoTypingErrorString[] =
 	"Invalid index access",
 	"Invalid key acess",
 	"Invalid operation on the type",
+	"Invalid casting from invar type",
 	"Invalid parameters for the call",
 	"Invalid number of parameter",
 	"Invalid parameter type",
@@ -2351,8 +2352,7 @@ static const char*const DaoTypingErrorString[] =
 	"Invalid type case",
 	"Constant or invariable cannot be modified",
 	"Invalid constructor definition for invar class",
-	"Invalid access to global or static variables",
-	"Invalid calls that return nonprimitive and mutable types",
+	"Invalid operation that might return external nonprimitive and mutable types",
 	"Call to un-implemented function"
 };
 
@@ -2778,6 +2778,32 @@ void DaoInferencer_PrintCodeSnippet( DaoInferencer *self, DaoStream *stream, int
 	}
 	DString_Delete( mbs );
 }
+static void DaoInferencer_WriteErrorHeader2( DaoInferencer *self )
+{
+	DaoRoutine *routine = self->routine;
+	DaoStream  *stream = routine->nameSpace->vmSpace->errorStream;
+	int invarinit = !!(routine->attribs & DAO_ROUT_INITOR);
+	char char50[50], char200[200];
+
+	if( invarinit ){
+		invarinit &= routine->routHost->tid == DAO_OBJECT;
+		invarinit &= !!(routine->routHost->aux->xClass.attribs & DAO_CLS_INVAR);
+	}
+
+	DaoStream_WriteChars( stream, "[[ERROR]] in file \"" );
+	DaoStream_WriteString( stream, routine->nameSpace->name );
+	DaoStream_WriteChars( stream, "\":\n" );
+	sprintf( char50, "  At line %i : ", routine->defLine );
+	DaoStream_WriteChars( stream, char50 );
+	if( invarinit ){
+		DaoStream_WriteChars( stream, DaoTypingErrorString[DTE_INVALID_INVAR_INITOR] );
+	}else{
+		DaoStream_WriteChars( stream, "Invalid function definition" );
+	}
+	DaoStream_WriteChars( stream, " --- \" " );
+	DaoStream_WriteString( stream, routine->routName );
+	DaoStream_WriteChars( stream, "() \";\n" );
+}
 static void DaoInferencer_WriteErrorHeader( DaoInferencer *self )
 {
 	DaoVmCodeX *vmc;
@@ -2798,19 +2824,8 @@ static void DaoInferencer_WriteErrorHeader( DaoInferencer *self )
 	vmc = self->inodes->items.pVmc[self->currentIndex];
 	sprintf( char200, "%s:%i,%i,%i", DaoVmCode_GetOpcodeName( vmc->code ), vmc->a, vmc->b, vmc->c );
 
-	DaoStream_WriteChars( stream, "[[ERROR]] in file \"" );
-	DaoStream_WriteString( stream, routine->nameSpace->name );
-	DaoStream_WriteChars( stream, "\":\n" );
-	sprintf( char50, "  At line %i : ", routine->defLine );
-	DaoStream_WriteChars( stream, char50 );
-	if( invarinit ){
-		DaoStream_WriteChars( stream, DaoTypingErrorString[DTE_INVALID_INVAR_INITOR] );
-	}else{
-		DaoStream_WriteChars( stream, "Invalid function definition" );
-	}
-	DaoStream_WriteChars( stream, " --- \" " );
-	DaoStream_WriteString( stream, routine->routName );
-	DaoStream_WriteChars( stream, "() \";\n" );
+	DaoInferencer_WriteErrorHeader2( self );
+
 	sprintf( char50, "  At line %i : ", vmc->line );
 	DaoStream_WriteChars( stream, char50 );
 	DaoStream_WriteChars( stream, "Invalid virtual machine instruction --- \" " );
@@ -4513,14 +4528,8 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	int ctchecked = 0;
 	int argc = vmc->b & 0xff;
 	int codemode = code | ((int)vmc->b<<16);
-	int invarinit = !!(routine->attribs & DAO_ROUT_INITOR);
 	DaoType *cbtype = NULL;
 	DaoInode *sect = NULL;
-
-	if( invarinit ){
-		invarinit &= routine->routHost->tid == DAO_OBJECT;
-		invarinit &= !!(routine->routHost->aux->xClass.attribs & DAO_CLS_INVAR);
-	}
 
 	if( (vmc->b & DAO_CALL_BLOCK) && inodes[i+2]->code == DVM_SECT ){
 		sect = inodes[ i + 2 ];
@@ -4773,10 +4782,6 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	if( ct == NULL ) ct = DaoNamespace_GetType( NS, dao_none_value );
 	DaoInferencer_UpdateType( self, opc, ct );
 	AssertTypeMatching( ct, types[opc], defs );
-
-	if( invarinit && DaoType_IsPrimitiveOrImmutable( types[opc] ) == 0 ){
-		return DaoInferencer_Error( self, DTE_CALL_FROM_INVAR_INITOR );
-	}
 
 TryPushBlockReturnType:
 	if( sect && cbtype && cbtype->nested ){
@@ -5097,14 +5102,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		if( error ){
 			char char50[50];
 			sprintf( char50, "  At line %i : ", routine->defLine );
-			DaoStream_WriteChars( stream, "[[ERROR]] in file \"" );
-			DaoStream_WriteString( stream, routine->nameSpace->name );
-			DaoStream_WriteChars( stream, "\":\n" );
-			DaoStream_WriteChars( stream, char50 );
-			DaoStream_WriteChars( stream, DaoTypingErrorString[DTE_INVALID_INVAR_INITOR] );
-			DaoStream_WriteChars( stream, " --- \" " );
-			DaoStream_WriteString( stream, routine->routName );
-			DaoStream_WriteChars( stream, "() \";\n" );
+			DaoInferencer_WriteErrorHeader2( self );
 			DaoStream_WriteChars( stream, char50 );
 			DaoStream_WriteChars( stream, DaoTypingErrorString[error] );
 			DaoStream_WriteChars( stream, " --- \" " );
@@ -5346,9 +5344,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			case DVM_GETVK : at = hostClass->variables->items.pVar[opb]->dtype; break;
 			case DVM_GETVG : at = NS->variables->items.pVar[opb]->dtype; break;
 			}
-			if( invarinit && code != DVM_GETVO && code != DVM_GETVH ){
-				return DaoInferencer_Error( self, DTE_ACCESS_FROM_INVAR_INITOR );
-			}
 			if( at == NULL ) at = dao_type_udf;
 			if( invarmeth && code == DVM_GETVO && at->konst == 0 ){
 				at = DaoType_GetInvarType( at );
@@ -5449,6 +5444,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			AssertTypeMatching( bt, types[opc], defs );
 			at = types[opa];
 			ct = types[opc];
+			if( at->invar && ct->invar == 0 && ct->tid > DAO_ENUM ) goto InvalidCasting;
 			if( at->realnum && ct->realnum ){
 				int K = DAO_FLOAT - DAO_BOOLEAN + 1;
 				vmc->code = DVM_MOVE_BB + K*(ct->tid - DAO_BOOLEAN) + at->tid - DAO_BOOLEAN;
@@ -6683,6 +6679,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			continue;
 		}
 	}
+
 	for(i=0; i<self->defers->size; ++i){
 		DaoRoutine *closure = self->defers->items.pRoutine[i];
 		DaoType *retype = (DaoType*) routine->routType->aux;
@@ -6691,19 +6688,48 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		GC_Assign( & closure->routType, type );
 		if( DaoRoutine_DoTypeInference( closure, self->silent ) == 0 ) return 0;
 	}
+	inodes = self->inodes->items.pInode;
+	types = self->types->items.pType;
+	N = self->inodes->size;
+	M = self->types->size;
+	for(i=0; i<N; i++){
+		inode = inodes[i];
+		inode->index = i;
+		self->currentIndex = i;
+
+		K = DaoVmCode_GetOpcodeType( (DaoVmCode*) inode );
+		/*
+		// No need to check for operands in expression list,
+		// they must have been checked by other instructions.
+		*/
+		switch( K ){
+		case DAO_CODE_GETG :
+		case DAO_CODE_GETF :
+		case DAO_CODE_UNARY :
+		case DAO_CODE_GETI :
+		case DAO_CODE_BINARY :
+		case DAO_CODE_CALL :
+			if( inode->code == DVM_GETVO ) continue;
+			if( invarinit && DaoType_IsPrimitiveOrImmutable( types[inode->c] ) == 0 ){
+				return DaoInferencer_Error( self, DTE_INVAR_INITOR_MUTABLE );
+			}
+			break;
+		}
+	}
 
 	DaoInferencer_Finalize( self );
 	return 1;
-NotMatch : return DaoInferencer_ErrorTypeNotMatching( self, NULL, NULL );
-NotInit : return DaoInferencer_ErrorNotInitialized( self, 0, 0, 0 );
-NotPermit : return DaoInferencer_Error( self, DTE_FIELD_NOT_PERMIT );
-NotExist : return DaoInferencer_Error( self, DTE_FIELD_NOT_EXIST );
-NeedInstVar : return DaoInferencer_Error( self, DTE_FIELD_OF_INSTANCE );
+NotMatch: return DaoInferencer_ErrorTypeNotMatching( self, NULL, NULL );
+NotInit: return DaoInferencer_ErrorNotInitialized( self, 0, 0, 0 );
+NotPermit: return DaoInferencer_Error( self, DTE_FIELD_NOT_PERMIT );
+NotExist: return DaoInferencer_Error( self, DTE_FIELD_NOT_EXIST );
+NeedInstVar: return DaoInferencer_Error( self, DTE_FIELD_OF_INSTANCE );
 ModifyConstant: return DaoInferencer_Error( self, DTE_CONST_WRONG_MODIFYING );
 InvEnum: return DaoInferencer_Error( self, DTE_INVALID_ENUMERATION );
-InvIndex : return DaoInferencer_Error( self, DTE_INDEX_NOT_VALID );
-InvOper : return DaoInferencer_Error( self, DTE_OPERATION_NOT_VALID );
-InvParam : return DaoInferencer_Error( self, DTE_PARAM_ERROR );
+InvIndex: return DaoInferencer_Error( self, DTE_INDEX_NOT_VALID );
+InvOper: return DaoInferencer_Error( self, DTE_OPERATION_NOT_VALID );
+InvalidCasting: return DaoInferencer_Error( self, DTE_INVALID_INVAR_CAST );
+InvParam: return DaoInferencer_Error( self, DTE_PARAM_ERROR );
 ErrorTyping: return DaoInferencer_Error( self, DTE_TYPE_NOT_MATCHING );
 }
 static void DaoRoutine_ReduceLocalConsts( DaoRoutine *self )

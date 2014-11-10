@@ -10,14 +10,56 @@ invar class Immutable
 }
 @[test(code_01)]
 @[test(code_01)]
+{{At line}} .* {{Expecting primitive or immutable parameter types}}
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+var global = 123
+
+invar class Immutable
+{
+    var items : list<int>
+
+    routine Immutable(){
+        items = { global }
+    }   
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+var global = { 1, 2, 3 }
+
+invar class Immutable
+{
+    var items : list<int>
+
+    routine Immutable(){
+        items = global
+    }   
+}
+@[test(code_01)]
+@[test(code_01)]
 {{Invalid constructor definition for invar class}}.*
-{{Expecting primitive or immutable types}}
+{{Invalid operation that might return external nonprimitive and mutable types}}
 @[test(code_01)]
 
 
 
 
+
 @[test(code_01)]
+var global = { 1, 2, 3 }
+
 invar class Immutable
 {
     var items : list<int>
@@ -33,7 +75,7 @@ invar class Immutable
 @[test(code_01)]
 @[test(code_01)]
 {{Invalid constructor definition for invar class}}.*
-{{Invalid calls that return nonprimitive and mutable types}}
+{{Invalid operation that might return external nonprimitive and mutable types}}
 @[test(code_01)]
 
 
@@ -70,4 +112,79 @@ im.index = 456
 @[test(code_01)]
 {{At line}} .* {{Constant or invariable cannot be modified}}
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar class K
+{
+    var index = {}
+}
+
+a = { 1, 2, 3 } 
+
+k = K.{ a } 
+@[test(code_01)]
+@[test(code_01)]
+{{At line}}.*{{Types not matching}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar class Immutable
+{
+    var index = 123 
+    var items : list<int>
+
+    routine Immutable(){
+        items = items
+    }   
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+invar class K
+{
+    var index: list<any> = { { } } 
+
+    routine M(){
+        return index[0]
+    }   
+}
+invar k = K() 
+s = k.M()
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar class K
+{
+    var index: list<any> = { { } } 
+
+    routine M(){
+        return index[0]
+    }   
+}
+k = K() 
+s = k.M()
+s.append( 123 );
+@[test(code_01)]
+@[test(code_01)]
+{{[[Error::Param]] --- Invalid parameter(s)}}
+@[test(code_01)]
+
+
 
