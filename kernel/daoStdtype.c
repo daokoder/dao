@@ -1735,7 +1735,7 @@ static void DaoLIST_Max( DaoProcess *proc, DaoValue *p[], int N )
 	imax = 0;
 	res = data[0];
 	for(i=1; i<size; i++){
-		if( DaoValue_Compare( res, data[i] ) <0 ){
+		if( DaoValue_ComparePro( res, data[i], proc ) <0 ){
 			imax = i;
 			res = data[i];
 		}
@@ -1759,7 +1759,7 @@ static void DaoLIST_Min( DaoProcess *proc, DaoValue *p[], int N )
 	imin = 0;
 	res = data[0];
 	for(i=1; i<size; i++){
-		if( DaoValue_Compare( res, data[i] ) >0 ){
+		if( DaoValue_ComparePro( res, data[i], proc ) >0 ){
 			imin = i;
 			res = data[i];
 		}
@@ -1917,7 +1917,7 @@ static void PartialQuickSort( DaoProcess *proc, int entry, int r0, int r1,
 	if( upper >= part ) return;
 	if( upper+1 < last ) PartialQuickSort( proc, entry, r0, r1, data, upper+1, last, part );
 }
-static void QuickSort( DaoValue *data[], daoint first, daoint last, daoint part, int asc )
+static void QuickSort( DaoProcess *self, DaoValue *data[], daoint first, daoint last, daoint part, int asc )
 {
 	daoint lower=first+1, upper=last;
 	DaoValue *val, *pivot;
@@ -1930,11 +1930,11 @@ static void QuickSort( DaoValue *data[], daoint first, daoint last, daoint part,
 
 	while( lower <= upper ){
 		if( asc ){
-			while( lower < last && DaoValue_Compare( data[lower], pivot ) <0 ) lower ++;
-			while( upper > first && DaoValue_Compare( pivot, data[upper] ) <0 ) upper --;
+			while( lower < last && DaoValue_ComparePro( data[lower], pivot, self ) <0 ) lower ++;
+			while( upper > first && DaoValue_ComparePro( pivot, data[upper], self ) <0 ) upper --;
 		}else{
-			while( lower < last && DaoValue_Compare( data[lower], pivot ) >0 ) lower ++;
-			while( upper > first && DaoValue_Compare( pivot, data[upper] ) >0 ) upper --;
+			while( lower < last && DaoValue_ComparePro( data[lower], pivot, self ) >0 ) lower ++;
+			while( upper > first && DaoValue_ComparePro( pivot, data[upper], self ) >0 ) upper --;
 		}
 		if( lower < upper ){
 			val = data[lower];
@@ -1947,9 +1947,9 @@ static void QuickSort( DaoValue *data[], daoint first, daoint last, daoint part,
 	val = data[first];
 	data[first] = data[upper];
 	data[upper] = val;
-	if( first+1 < upper ) QuickSort( data, first, upper-1, part, asc );
+	if( first+1 < upper ) QuickSort( self, data, first, upper-1, part, asc );
 	if( upper >= part ) return;
-	if( upper+1 < last ) QuickSort( data, upper+1, last, part, asc );
+	if( upper+1 < last ) QuickSort( self, data, upper+1, last, part, asc );
 }
 static void DaoLIST_Sort( DaoProcess *proc, DaoValue *p[], int npar )
 {
@@ -1975,7 +1975,7 @@ static void DaoLIST_Sort( DaoProcess *proc, DaoValue *p[], int npar )
 		DaoProcess_PopFrame( proc );
 		return;
 	}
-	QuickSort( items, 0, N-1, part, p[1]->xEnum.value == 0 );
+	QuickSort( proc, items, 0, N-1, part, p[1]->xEnum.value == 0 );
 }
 static void DaoLIST_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, int funct )
 {
@@ -2655,55 +2655,8 @@ static DaoRoutine* DaoRoutine_FindSnapshotMethod( DaoRoutine *self, DaoEnum *mod
 	}
 	return routine;
 }
-static DaoValue* DaoValue_HandleSnapshot( DaoValue *self, DaoProcess *proc, int set )
-{
-	DaoEnum *em;
-	DaoRoutine *meth;
-	DaoRoutine *casts = NULL;
-	DaoValue **signature2 = NULL;
-	DaoValue *signature;
-	DaoValue *params[2];
-	DaoValue *type;
-
-	if( proc == NULL ) return NULL;
-
-	switch( self->type ){
-	case DAO_OBJECT  :
-		signature2 = & self->xObject.signature;
-		casts = self->xObject.defClass->castRoutines;
-		break;
-	case DAO_CSTRUCT :
-	case DAO_CDATA   :
-		signature2 = & self->xCstruct.signature;
-		casts = DaoType_GetCastor( self->xCstruct.ctype );
-		break;
-	}
-	if( casts == NULL ) return NULL;
-
-	em = DaoNamespace_MakeSymbol( proc->activeNamespace, "$hashkey" );
-	meth = DaoRoutine_FindSnapshotMethod( casts, em );
-	if( meth == NULL ) return NULL;
-
-	params[0] = (DaoValue*) em;
-	params[1] = (DaoValue*) meth->routType->nested->items.pType[2]->nested->items.pType[0];
-	if( DaoProcess_Call( proc, meth, self, params, 2 ) ) return NULL;
-
-	signature = proc->stackValues[0];
-	if( *signature2 && DaoValue_Compare( signature, *signature2 ) != 0 ){
-		DaoProcess_RaiseError( proc, NULL, "object has been modified" );
-		return NULL;
-	}
-	if( set && *signature2 == NULL ){
-		if( signature->type == DAO_ARRAY || signature->type == DAO_TUPLE ){
-			signature = DaoValue_CopyContainer( signature, NULL );
-		}
-		DaoValue_Copy( signature, signature2 );
-	}
-	return signature;
-}
 static DaoValue* DaoMap_AdjustKey( DaoMap *self, DaoValue *key, DaoEnum *sym, DaoProcess *proc )
 {
-	DaoValue_HandleSnapshot( key, proc, 1 );
 	if( key->type != DAO_ENUM || key->xEnum.subtype != DAO_ENUM_SYM ) return key;
 	if( self->ctype->nested->items.pType[0]->tid == DAO_ENUM ){
 		*sym = self->ctype->nested->items.pType[0]->value->xEnum;
@@ -2719,22 +2672,25 @@ DNode* DaoMap_Find( DaoMap *self, DaoValue *key )
 DNode* DaoMap_Find2( DaoMap *self, DaoValue *key, DaoProcess *proc )
 {
 	DaoEnum sym = {0};
-	return DMap_Find( self->value, DaoMap_AdjustKey( self, key, & sym, proc ) );
+	key = DaoMap_AdjustKey( self, key, & sym, proc );
+	return DMap_FindPro( self->value, key, DAO_KEY_EQ, proc );
 }
 static void DaoMap_Erase2( DaoMap *self, DaoValue *key, DaoProcess *proc )
 {
 	DaoEnum sym = {0};
-	MAP_Erase( self->value, DaoMap_AdjustKey( self, key, & sym, proc ) );
+	DMap_ErasePro( self->value, DaoMap_AdjustKey( self, key, & sym, proc ), proc );
 }
 static DNode* DaoMap_FindGE( DaoMap *self, DaoValue *key, DaoProcess *proc )
 {
 	DaoEnum sym = {0};
-	return DMap_FindGE( self->value, DaoMap_AdjustKey( self, key, & sym, proc ) );
+	key = DaoMap_AdjustKey( self, key, & sym, proc );
+	return DMap_FindPro( self->value, key, DAO_KEY_GE, proc );
 }
 static DNode* DaoMap_FindLE( DaoMap *self, DaoValue *key, DaoProcess *proc )
 {
 	DaoEnum sym = {0};
-	return DMap_FindLE( self->value, DaoMap_AdjustKey( self, key, & sym, proc ) );
+	key = DaoMap_AdjustKey( self, key, & sym, proc );
+	return DMap_FindPro( self->value, key, DAO_KEY_LE, proc );
 }
 static void DaoMap_GetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N );
 static void DaoMap_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
@@ -2779,7 +2735,7 @@ static void DaoMap_GetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 	DaoMap *map = DaoProcess_PutMap( proc, self->value->hashing );
 	DNode *node1 = DMap_First( self->value );
 	DNode *node2 = NULL;
-	int cmp = DaoValue_Compare( ids[0], ids[1] );
+	int cmp = DaoValue_ComparePro( ids[0], ids[1], proc );
 	if( cmp > 0 ) return;
 	if( ids[0]->type ) node1 = DaoMap_FindGE( self, ids[0], proc );
 	if( ids[1]->type ) node2 = DaoMap_FindLE( self, ids[1], proc );
@@ -2804,7 +2760,7 @@ static void DaoMap_SetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 	DaoType *tp2=NULL;
 	DNode *node1 = DMap_First( self->value );
 	DNode *node2 = NULL;
-	int cmp = DaoValue_Compare( ids[0], ids[1] );
+	int cmp = DaoValue_ComparePro( ids[0], ids[1], proc );
 	if( cmp > 0 ) return;
 	if( tp == NULL ){
 		/* a : tuple<string,map<string,int>> = ('',{=>});
@@ -2914,7 +2870,7 @@ static void DaoMAP_Erase( DaoProcess *proc, DaoValue *p[], int N )
 		DaoMap_Erase2( self, p[1], proc );
 		break;
 	case 2 :
-		cmp = DaoValue_Compare( p[0], p[1] );
+		cmp = DaoValue_ComparePro( p[0], p[1], proc );
 		if( cmp > 0 ) return;
 		mg = DaoMap_FindGE( self, p[1], proc );
 		ml = DaoMap_FindLE( self, p[2], proc );
@@ -2956,7 +2912,6 @@ static void DaoMAP_Find( DaoProcess *proc, DaoValue *p[], int N )
 	if( proc->exceptions->size > errors ) return;
 	if( node ){
 		DaoTuple *res = DaoProcess_PutTuple( proc, 2 );
-		DaoValue_HandleSnapshot( node->key.pValue, proc, 1 );
 		DaoValue_Copy( node->key.pValue, res->values );
 		DaoValue_Copy( node->value.pValue, res->values + 1 );
 	}else{
@@ -3350,8 +3305,7 @@ int DaoMap_Insert2( DaoMap *self, DaoValue *key, DaoValue *value, DaoProcess *pr
 			value = value2;
 		}
 	}
-	DaoValue_HandleSnapshot( key, proc, 1 );
-	DMap_Insert( self->value, key, value );
+	DMap_InsertPro( self->value, key, value, proc );
 	GC_DecRC( key2 );
 	GC_DecRC( value2 );
 	return 0;
@@ -3757,7 +3711,6 @@ void DaoCstruct_Init( DaoCstruct *self, DaoType *type )
 	DaoType *intype = type;
 	if( type == NULL ) type = dao_type_cdata;
 	DaoValue_Init( self, type ? type->tid : DAO_CDATA );
-	self->signature = NULL;
 	self->object = NULL;
 	self->ctype = type;
 	if( self->ctype ) GC_IncRC( self->ctype );
@@ -3772,9 +3725,7 @@ void DaoCstruct_Free( DaoCstruct *self )
 	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	if( self->ctype && !(self->trait & DAO_VALUE_BROKEN) ) GC_DecRC( self->ctype );
-	if( self->signature ) GC_DecRC( self->signature );
 	if( self->object ) GC_DecRC( self->object );
-	self->signature = NULL;
 	self->object = NULL;
 	self->ctype = NULL;
 }

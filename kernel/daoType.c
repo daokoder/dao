@@ -2569,6 +2569,7 @@ void DaoType_SpecializeMethods( DaoType *self )
 	if( original->kernel->sptree == NULL ) return;
 	DMutex_Lock( & mutex_methods_setup );
 	if( self->kernel == original->kernel && original->kernel && original->kernel->methods ){
+		DString name;
 		DaoNamespace *nspace = self->kernel->nspace;
 		DMap *orimeths = original->kernel->methods;
 		DMap *methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
@@ -2652,6 +2653,12 @@ void DaoType_SpecializeMethods( DaoType *self )
 		for(i=0; i<4; ++i){
 			if( quads[i] ) GC_Assign( & quads[i]->kernel, kernel );
 		}
+		name = DString_WrapChars( "<=>" );
+		it = DMap_Find( methods, & name );
+		if( it ) self->kernel->compares = it->value.pRoutine;
+		name = DString_WrapChars( "(int)" );
+		it = DMap_Find( methods, & name );
+		if( it ) self->kernel->intcasts = it->value.pRoutine;
 	}
 	DMutex_Unlock( & mutex_methods_setup );
 }

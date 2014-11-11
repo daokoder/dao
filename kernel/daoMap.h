@@ -37,7 +37,12 @@
 #define DAO_MAP_ITEM_TYPES
 #endif
 
-typedef enum{ KEY_EQ=0, KEY_LE, KEY_GE } KeySearchType;
+enum KeySearchType
+{
+	DAO_KEY_EQ,
+	DAO_KEY_LE,
+	DAO_KEY_GE
+};
 
 typedef union
 {
@@ -101,13 +106,18 @@ DAO_DLL DNode* DMap_Find( DMap *self, void *key );
 DAO_DLL DNode* DMap_First( DMap *self );
 DAO_DLL DNode* DMap_Next( DMap *self, DNode *node );
 
-DAO_DLL DNode* DMap_FindLE( DMap *self, void *key );
-DAO_DLL DNode* DMap_FindGE( DMap *self, void *key );
+DAO_DLL void DMap_ErasePro( DMap *self, void *key, DaoProcess *process );
+DAO_DLL void DMap_EraseNodePro( DMap *self, DNode *node, DaoProcess *process );
+DAO_DLL DNode* DMap_InsertPro( DMap *self, void *key, void *value, DaoProcess *process );
+DAO_DLL DNode* DMap_FindPro( DMap *self, void *key, int type, DaoProcess *process );
 
 #define MAP_Insert( s, k, v ) DMap_Insert( (DMap*)(s), (void*)(daoint)(k), (void*)(daoint)(v) )
 #define MAP_Erase( s, k ) DMap_Erase( (DMap*)(s), (void*)(daoint)(k) )
 #define MAP_Find( s, k ) DMap_Find( (DMap*)(s), (void*)(daoint)(k) )
 #define MAP_FindLE( s, k ) DMap_FindLE( (DMap*)(s), (void*)(daoint)(k) )
 #define MAP_FindGE( s, k ) DMap_FindGE( (DMap*)(s), (void*)(daoint)(k) )
+
+
+DAO_DLL unsigned int Dao_Hash( const void *key, int len, unsigned int seed );
 
 #endif

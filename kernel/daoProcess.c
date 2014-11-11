@@ -2433,7 +2433,7 @@ DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 	}else if( vmc[1].c == DAO_CASE_UNORDERED ){
 		for(id=1; id<=vmc->c; id++){
 			mid = vmc + id;
-			if( DaoValue_Compare( opa, cst[ mid->a ] ) ==0 ){
+			if( DaoValue_ComparePro( opa, cst[ mid->a ], self ) ==0 ){
 				return self->topFrame->codes + mid->b;
 			}
 		}
@@ -2443,7 +2443,7 @@ DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 	while( first <= last ){
 		id = ( first + last ) / 2;
 		mid = vmc + id;
-		cmp = DaoValue_Compare( opa, cst[ mid->a ] );
+		cmp = DaoValue_ComparePro( opa, cst[ mid->a ], self );
 		if( cmp ==0 ){
 			return self->topFrame->codes + mid->b;
 		}else if( cmp <0 ){
@@ -5040,10 +5040,10 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		}
 	}else if( A->type == DAO_TUPLE && B->type == DAO_TUPLE ){
 		switch( vmc->code ){
-		case DVM_LT:  D = DaoValue_Compare( A, B ) < 0; break;
-		case DVM_LE:  D = DaoValue_Compare( A, B ) <= 0; break;
-		case DVM_EQ:  D = DaoValue_Compare( A, B ) == 0; break;
-		case DVM_NE:  D = DaoValue_Compare( A, B ) != 0; break;
+		case DVM_LT:  D = DaoValue_ComparePro( A, B, self ) < 0; break;
+		case DVM_LE:  D = DaoValue_ComparePro( A, B, self ) <= 0; break;
+		case DVM_EQ:  D = DaoValue_ComparePro( A, B, self ) == 0; break;
+		case DVM_NE:  D = DaoValue_ComparePro( A, B, self ) != 0; break;
 		default: goto InvalidOperation;
 		}
 	}else if( A->type == B->type && A->type == DAO_ARRAY ){
@@ -5279,7 +5279,7 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 			if( tb && DaoType_MatchTo( ta, tb, NULL ) == 0 ) return;
 		}
 		for(i=0,n=items->size; i<n; i++){
-			*C = DaoValue_Compare( A, items->items.pValue[i] ) ==0;
+			*C = DaoValue_ComparePro( A, items->items.pValue[i], self ) ==0;
 			if( *C ) break;
 		}
 	}else if( B->type == DAO_MAP ){
@@ -5290,12 +5290,12 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 		}
 		*C = DaoMap_Find2( (DaoMap*) B, A, self ) != NULL;
 	}else if( B->type == DAO_TUPLE && B->xTuple.subtype == DAO_PAIR ){
-		int c1 = DaoValue_Compare( B->xTuple.values[0], A );
-		int c2 = DaoValue_Compare( A, B->xTuple.values[1] );
+		int c1 = DaoValue_ComparePro( B->xTuple.values[0], A, self );
+		int c2 = DaoValue_ComparePro( A, B->xTuple.values[1], self );
 		*C = c1 <=0 && c2 <= 0;
 	}else if( B->type == DAO_TUPLE ){
 		for(i=0; i<B->xTuple.size; ++i){
-			if( DaoValue_Compare( A, B->xTuple.values[i] ) == 0 ){
+			if( DaoValue_ComparePro( A, B->xTuple.values[i], self ) == 0 ){
 				*C = 1;
 				break;
 			}

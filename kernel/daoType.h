@@ -229,6 +229,8 @@ struct DaoTypeKernel
 	DaoType       *abtype; /* the template cdata type for a specialized type; */
 	DaoRoutine    *initors;
 	DaoRoutine    *castors;
+	DaoRoutine    *intcasts;
+	DaoRoutine    *compares;
 	DTypeSpecTree *sptree;
 	DaoNamespace  *nspace;
 	DaoTypeCore   *core;

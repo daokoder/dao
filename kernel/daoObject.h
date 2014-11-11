@@ -44,7 +44,6 @@ struct DaoObject
 
 	DaoClass   *defClass;   /* definition class; */
 	DaoObject  *rootObject; /* root object for safe down-casting; */
-	DaoValue   *signature;  /* the signature object; */
 	DaoValue   *parent;     /* parent object; */
 	DaoValue  **objValues;  /* instance variable values; */
 };

@@ -1069,6 +1069,8 @@ void DaoClass_ResetAttributes( DaoClass *self )
 		autoinitor = 0;
 	}
 	if( autoinitor ) self->attribs |= DAO_CLS_AUTO_INITOR;
+	self->intRoutines = DaoClass_FindMethod( self, "(int)", NULL );
+	self->cmpRoutines = DaoClass_FindMethod( self, "<=>", NULL );
 #if 0
 	printf( "%s %i\n", self->className->chars, autoinitor );
 #endif

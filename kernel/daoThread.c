@@ -562,6 +562,7 @@ static void DaoMT_RunMapFunctional( void *p )
 			self->status |= DaoValue_Move( res, & node->value.pValue, type ) == 0;
 		}else if( self->funct == DVM_FUNCT_FIND ){
 			DNode **p = self->node;
+			/* XXX: 2014-11-11 */
 			if( *p && DaoValue_Compare( (*p)->key.pValue, node->key.pValue ) < 0 ) break;
 			if( res->xInteger.value ){
 				DMutex_Lock( self->mutex );

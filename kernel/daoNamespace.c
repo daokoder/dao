@@ -306,6 +306,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 	if( typer->core->kernel->methods == NULL ){
 		DaoType *hostype = typer->core->kernel->abtype;
 		DaoInterface *inter = DaoValue_CastInterface( hostype->aux );
+		DString name;
 
 		methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 		DaoNamespace_InitConstEvalData( self );
@@ -390,6 +391,12 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		DList_Delete( parents );
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 		DaoVmSpace_ReleaseParser( self->vmSpace, defparser );
+		name = DString_WrapChars( "<=>" );
+		it = DMap_Find( methods, & name );
+		if( it ) hostype->kernel->compares = it->value.pRoutine;
+		name = DString_WrapChars( "(int)" );
+		it = DMap_Find( methods, & name );
+		if( it ) hostype->kernel->intcasts = it->value.pRoutine;
 	}
 	typer->core->kernel->SetupMethods = NULL;
 	DMutex_Unlock( & mutex_methods_setup );

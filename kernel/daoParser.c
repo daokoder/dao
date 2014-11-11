@@ -1076,7 +1076,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	int isMeth, notStatic, notConstr;
 	int hasdeft = 0, selfpar = 0;
 	int isconstru = klass != NULL;
-	int lb = 0;
+	int lb = 0, offset = 0;
 
 	DString_Assign( routine->routName, & nameTok->string );
 	DString_Assign( module->fileName, self->fileName );
@@ -1157,6 +1157,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 		routine->parCount ++;
 		selfpar = 1;
 	}
+	offset = pname->size;
 	if( selfpar ) routine->attribs |= DAO_ROUT_PARSELF;
 	DMap_Clear( module->initTypes );
 	if( hostype ) DaoType_GetTypeHolders( hostype, module->initTypes );
@@ -1169,6 +1170,8 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 		DaoInode *back = self->vmcLast;
 		DaoValue *dft = NULL;
 		DString *tks = NULL;
+
+		if( nested->size == 1 ) offset = pname->size;
 
 		e1 = i;
 		e2 = right;
@@ -1329,6 +1332,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 		}
 		i ++;
 	}
+	if( nested->size == 1 ) offset = pname->size;
 	if( routine->parCount > DAO_MAX_PARAM ) goto ErrorTooManyParams;
 
 	e1 = right + 1;
@@ -1356,9 +1360,9 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 		if( retype != NULL ) goto ErrorInvalidReturn;
 		retype = cast;
 		tt = DaoNamespace_GetType( NS, (DaoValue*) cast );
-		DString_AppendChar( pname, ',' );
-		DString_Append( pname, tt->name );
-		DList_Append( nested, (void*) tt );
+		DString_InsertChar( pname, ',', offset + 1 );
+		DString_Insert( pname, tt->name, offset + 1, 0, -1 );
+		DList_Insert( nested, (void*) tt, 1 );
 		DList_Append( NS->auxData, (void*) tt );
 		DaoRoutine_AddConstant( routine, NULL );
 		DaoParser_PushRegister( module );
@@ -3622,8 +3626,8 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 		}else if( self->isClassBody ){
 			scopeType = DAO_DECL_MEMBER;
 			if( (storeType & DAO_DECL_VAR) && (hostClass->attribs & DAO_CLS_INVAR) ){
-				storeType &= ~DAO_DECL_VAR;
-				storeType |= DAO_DECL_INVAR;
+				DaoParser_Error( self, DAO_INVALID_STORAGE, & tokens[start-1]->string );
+				return 0;
 			}
 		}else{
 			scopeType = DAO_DECL_LOCAL;
@@ -3635,7 +3639,7 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 		if( rb >0 && (rb+1) <= to && tokens[rb+1]->type == DTOK_ASSN ){
 			start = DaoParser_MultipleAssignment( self, start, rb, to, storeType );
 			if( start < 0 ) return 0;
-			if( DaoParser_CompleteScope( self, start ) == 0 ) return -1;
+			if( DaoParser_CompleteScope( self, start ) == 0 ) return 0;
 			continue;
 		}
 

@@ -120,6 +120,7 @@ DAO_DLL DaoValue* DaoValue_CopyContainer( DaoValue *self, DaoType *tp );
 
 DAO_DLL void DaoValue_Clear( DaoValue **self );
 
+DAO_DLL int DaoValue_ComparePro( DaoValue *left, DaoValue *right, DaoProcess *process );
 DAO_DLL int DaoValue_Compare( DaoValue *left, DaoValue *right );
 
 DAO_DLL void DaoValue_Assign( DaoValue *src, DaoValue **dest );

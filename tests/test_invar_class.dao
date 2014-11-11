@@ -1,9 +1,28 @@
 
+
 @[test(code_01)]
 invar class Immutable
 {
     var index = 123 
     var items : list<int>
+
+    routine Immutable(){
+    }
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Invalid storage type/combination}}
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+invar class Immutable
+{
+    invar index = 123 
+    invar items : list<int>
 
     routine Immutable( wrong_param: list<int> ){
     }   
@@ -22,7 +41,7 @@ var global = 123
 
 invar class Immutable
 {
-    var items : list<int>
+    invar items : list<int>
 
     routine Immutable(){
         items = { global }
@@ -41,7 +60,7 @@ var global = { 1, 2, 3 }
 
 invar class Immutable
 {
-    var items : list<int>
+    invar items : list<int>
 
     routine Immutable(){
         items = global
@@ -62,7 +81,7 @@ var global = { 1, 2, 3 }
 
 invar class Immutable
 {
-    var items : list<int>
+    invar items : list<int>
 
     routine Immutable(){
         items = Method()
@@ -84,7 +103,7 @@ invar class Immutable
 @[test(code_01)]
 invar class Immutable
 {
-    var items : Immutable|none = none
+    invar items : Immutable|none = none
 
     routine Immutable( dep = 10 ){
         if( dep ) items = Immutable( dep-1 )
@@ -100,7 +119,7 @@ invar class Immutable
 @[test(code_01)]
 invar class Immutable
 {
-    var index = 123 
+    invar index = 123 
 
     routine Immutable( i: int ){
 		index = i
@@ -119,7 +138,7 @@ im.index = 456
 @[test(code_01)]
 invar class K
 {
-    var index = {}
+    invar index = {}
 }
 
 a = { 1, 2, 3 } 
@@ -136,8 +155,8 @@ k = K.{ a }
 @[test(code_01)]
 invar class Immutable
 {
-    var index = 123 
-    var items : list<int>
+    invar index = 123 
+    invar items : list<int>
 
     routine Immutable(){
         items = items
@@ -154,7 +173,7 @@ invar class Immutable
 @[test(code_01)]
 invar class K
 {
-    var index: list<any> = { { } } 
+    invar index: list<any> = { { } } 
 
     routine M(){
         return index[0]
@@ -172,7 +191,7 @@ s = k.M()
 @[test(code_01)]
 invar class K
 {
-    var index: list<any> = { { } } 
+    invar index: list<any> = { { } } 
 
     routine M(){
         return index[0]
@@ -192,7 +211,7 @@ s.append( 123 );
 @[test(code_01)]
 class Base
 {
-	var value = 123
+	invar value = 123
 }
 invar class Derived : Base
 {
@@ -208,7 +227,7 @@ invar class Derived : Base
 @[test(code_01)]
 class Base
 {
-	var value = 123
+	invar value = 123
 }
 invar class Derived ( Base )
 {
@@ -224,12 +243,12 @@ invar class Derived ( Base )
 @[test(code_01)]
 invar class Base
 {
-	var value = 123
+	invar value = 123
 	routine Base(){ value = 456 }
 }
 invar class Derived : Base
 {
-	var name = 'abc'
+	invar name = 'abc'
 	routine Derived() : Base() { name = 'def' }
 }
 @[test(code_01)]
@@ -242,12 +261,12 @@ invar class Derived : Base
 @[test(code_01)]
 invar class Base
 {
-	var value = 123
+	invar value = 123
 	routine Base(){ value = 456 }
 }
 invar class Derived ( Base )
 {
-	var name = 'abc'
+	invar name = 'abc'
 	routine Derived() : Base() { name = 'def' }
 }
 @[test(code_01)]
@@ -260,11 +279,11 @@ invar class Derived ( Base )
 @[test(code_01)]
 invar class Base
 {
-	var value = 123
+	invar value = 123
 }
 invar class Derived ( Base )
 {
-	var name = 'abc'
+	invar name = 'abc'
 	routine Derived() : Base() { name = 'def' }
 }
 @[test(code_01)]

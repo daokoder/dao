@@ -142,7 +142,7 @@ int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
 CompareName:
 	return DString_CompareUTF8( L->etype->fname, R->etype->fname );
 }
-int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt )
+int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt, DaoProcess *process )
 {
 	int i, lb, rb, res;
 	if( lt->size < rt->size ) return -100;
@@ -154,7 +154,7 @@ int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt )
 		int lb = lv ? lv->type : 0;
 		int rb = rv ? rv->type : 0;
 		if( lb == rb && lb == DAO_TUPLE ){
-			res = DaoTuple_Compare( (DaoTuple*) lv, (DaoTuple*) rv );
+			res = DaoTuple_Compare( (DaoTuple*) lv, (DaoTuple*) rv, process );
 			if( res != 0 ) return res;
 		}else if( lb != rb || lb ==0 || lb > DAO_ARRAY || lb == DAO_COMPLEX ){
 			if( lv < rv ){
@@ -163,13 +163,13 @@ int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt )
 				return 100;
 			}
 		}else{
-			res = DaoValue_Compare( lv, rv );
+			res = DaoValue_ComparePro( lv, rv, process );
 			if( res != 0 ) return res;
 		}
 	}
 	return 0;
 }
-int DaoList_Compare( DaoList *list1, DaoList *list2 )
+int DaoList_Compare( DaoList *list1, DaoList *list2, DaoProcess *process )
 {
 	DaoValue **d1 = list1->value->items.pValue;
 	DaoValue **d2 = list2->value->items.pValue;
@@ -179,7 +179,7 @@ int DaoList_Compare( DaoList *list1, DaoList *list2 )
 	int res = size1 == size2 ? 1 : 100;
 	int i = 0, cmp = 0;
 	/* find the first unequal items */
-	while( i < min && (cmp = DaoValue_Compare(*d1, *d2)) ==0 ) i++, d1++, d2++;
+	while( i < min && (cmp = DaoValue_ComparePro(*d1, *d2, process)) ==0 ) i++, d1++, d2++;
 	if( i < min ){
 		if( abs( cmp ) > 1 ) return cmp;
 		return cmp * res;
@@ -187,31 +187,38 @@ int DaoList_Compare( DaoList *list1, DaoList *list2 )
 	if( size1 == size2  ) return 0;
 	return size1 < size2 ? -100 : 100;
 }
-int DaoCstruct_Compare( DaoCstruct *left, DaoCstruct *right )
+int DaoCstruct_Compare( DaoCstruct *left, DaoCstruct *right, DaoProcess *process )
 {
+	DaoRoutine *routine = left->ctype->kernel->compares;
+	DaoValue *L = (DaoValue*) left;
+	DaoValue *R = (DaoValue*) right;
 	if( left == right ) return 0;
-	if( left->signature != NULL && right->signature != NULL ){
-		return DaoValue_Compare( left->signature, right->signature );
-	}
+	if( process == NULL || routine == NULL ) goto PointerComparison;
+	if( DaoProcess_Call( process, routine, L, & R, 1 ) ) goto PointerComparison;
+	return DaoValue_GetInteger( process->stackValues[0] );
+PointerComparison:
 	if( left->ctype != right->ctype ){
 		return number_compare( (size_t)left->ctype, (size_t)right->ctype );
-	}
-	if( left->type == DAO_CDATA ){
+	}else if( left->type == DAO_CDATA ){
 		DaoCdata *l = (DaoCdata*) left;
 		DaoCdata *r = (DaoCdata*) right;
 		return number_compare( (size_t)l->data, (size_t)r->data );
 	}
 	return number_compare( (size_t)left, (size_t)right );
 }
-int DaoObject_Compare( DaoObject *left, DaoObject *right )
+int DaoObject_Compare( DaoObject *left, DaoObject *right, DaoProcess *process )
 {
+	DaoRoutine *routine = left->defClass->cmpRoutines;
+	DaoValue *L = (DaoValue*) left;
+	DaoValue *R = (DaoValue*) right;
 	if( left == right ) return 0;
-	if( left->signature == NULL || right->signature == NULL ){
-		return number_compare( (size_t)left, (size_t)right );
-	}
-	return DaoValue_Compare( left->signature, right->signature );
+	if( process == NULL || routine == NULL ) goto PointerComparison;
+	if( DaoProcess_Call( process, routine, L, & R, 1 ) ) goto PointerComparison;
+	return DaoValue_GetInteger( process->stackValues[0] );
+PointerComparison:
+	return number_compare( (size_t)left, (size_t)right );
 }
-int DaoValue_Compare( DaoValue *left, DaoValue *right )
+int DaoValue_ComparePro( DaoValue *left, DaoValue *right, DaoProcess *proc )
 {
 	double L, R;
 	int res = 0;
@@ -233,17 +240,21 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 	case DAO_COMPLEX : return DaoComplex_Compare( & left->xComplex, & right->xComplex );
 	case DAO_STRING  : return DString_CompareUTF8( left->xString.value, right->xString.value );
 	case DAO_ENUM    : return DaoEnum_Compare( & left->xEnum, & right->xEnum );
-	case DAO_TUPLE   : return DaoTuple_Compare( & left->xTuple, & right->xTuple );
-	case DAO_LIST    : return DaoList_Compare( & left->xList, & right->xList );
-	case DAO_OBJECT  : return DaoObject_Compare( (DaoObject*) left, (DaoObject*) right );
+	case DAO_TUPLE   : return DaoTuple_Compare( & left->xTuple, & right->xTuple, proc );
+	case DAO_LIST    : return DaoList_Compare( & left->xList, & right->xList, proc );
+	case DAO_OBJECT  : return DaoObject_Compare( (DaoObject*)left, (DaoObject*)right, proc );
 	case DAO_CDATA   :
 	case DAO_CSTRUCT :
-	case DAO_CTYPE : return DaoCstruct_Compare( (DaoCstruct*) left, (DaoCstruct*) right );
+	case DAO_CTYPE : return DaoCstruct_Compare( (DaoCstruct*)left, (DaoCstruct*)right, proc );
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY   : return DaoArray_Compare( & left->xArray, & right->xArray );
 #endif
 	}
 	return left < right ? -100 : 100; /* needed for map */
+}
+int DaoValue_Compare( DaoValue *left, DaoValue *right )
+{
+	return DaoValue_ComparePro( left, right, NULL );
 }
 int DaoValue_IsZero( DaoValue *self )
 {

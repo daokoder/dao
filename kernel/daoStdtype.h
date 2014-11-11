@@ -38,7 +38,7 @@
 #define DAO_VALUE_CORE      uchar_t type, subtype, trait, marks; int refCount
 #define DAO_VALUE_COMMON    DAO_VALUE_CORE; int cycRefCount
 #define DAO_GENERIC_COMMON  DAO_VALUE_COMMON; DaoType *ctype
-#define DAO_CSTRUCT_COMMON  DAO_GENERIC_COMMON; DaoObject *object; DaoValue *signature
+#define DAO_CSTRUCT_COMMON  DAO_GENERIC_COMMON; DaoObject *object
 
 void DaoValue_Init( void *dbase, char type );
 
