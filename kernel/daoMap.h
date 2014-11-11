@@ -31,7 +31,7 @@
 
 #include"daoBase.h"
 
-#define HASH_SEED  0xda0
+#define DAO_HASH_SEED  0xda0
 
 #ifndef DAO_MAP_ITEM_TYPES
 #define DAO_MAP_ITEM_TYPES

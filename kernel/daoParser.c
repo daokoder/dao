@@ -2146,6 +2146,17 @@ int DaoParser_ParseScript( DaoParser *self )
 	return 1;
 }
 
+static int DaoParser_GetTokenLine( DaoParser *self, int index )
+{
+	int line = 0;
+	DaoToken **tokens = self->tokens->items.pToken;
+	if( index < self->tokens->size ){
+		line = tokens[index]->line;
+	}else if( self->tokens->size ){
+		line = tokens[self->tokens->size-1]->line;
+	}
+	return line;
+}
 static void DaoVmCode_Set( DaoVmCodeX *self, ushort_t code, ushort_t a, ushort_t b,
 		ushort_t c, uchar_t lev, int line, int first, int mid, int last )
 {
@@ -2164,20 +2175,13 @@ static void DaoVmCode_Set( DaoVmCodeX *self, ushort_t code, ushort_t a, ushort_t
 static DaoInode* DaoParser_AddCode( DaoParser *self, ushort_t code,
 		ushort_t a, ushort_t b, ushort_t c, int first, int mid, int last )
 {
-	DaoToken **tokens = self->tokens->items.pToken;
-	int line = 0;
-	if( first < self->tokens->size ) line = tokens[first]->line;
-	else if( self->tokens->size ) line = tokens[self->tokens->size-1]->line;
 	return DaoParser_AddCode2( self, code, a, b, c, first, mid, last );
 }
 static DaoInode* DaoParser_AddCode2( DaoParser *self, ushort_t code,
 		ushort_t a, ushort_t b, ushort_t c, int first, int mid, int last )
 {
-	DaoToken **tokens = self->tokens->items.pToken;
 	DaoInode *node = DaoParser_NewNode( self );
-	int line = 0;
-	if( first < self->tokens->size ) line = tokens[first]->line;
-	else if( self->tokens->size ) line = tokens[self->tokens->size-1]->line;
+	int line = DaoParser_GetTokenLine( self, first );
 
 	if( mid >= first ) mid -= first;
 	if( last >= first ) last -= first;
@@ -6101,6 +6105,8 @@ static DaoInode* DaoParser_InsertCode( DaoParser *self, DaoInode *after, int cod
 	node->b = b;
 	node->c = c;
 	node->first = first;
+	node->last = first;
+	node->line = DaoParser_GetTokenLine( self, first );
 	node->jumpTrue = node->jumpFalse = NULL;
 	node->prev = after;
 	node->next = after->next;
@@ -7216,12 +7222,13 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 		result.update = NULL;
 		if( oper == DAO_OPER_IF ){ /* conditional operation:  c ? e1 : e2 */
 			DaoEnode RHS1, RHS2;
-			int prec2 = 10*(20 - daoArithOper[DTOK_COLON].binary);
+			int colon, prec2 = 10*(20 - daoArithOper[DTOK_COLON].binary);
 			RHS1 = DaoParser_ParseOperator(self, RHS, prec2 + 1, DTOK_COLON, 0, 1 );
+			colon = self->curToken;
 			if( DaoParser_CheckTokenType( self, DTOK_COLON, ":" ) == 0 ) RHS1.reg = -1;
 			if( RHS1.reg < 0 ) return RHS1;
 			if( last1 == self->vmcLast ){
-				last1 = DaoParser_AddCode( self, DVM_MOVE, RHS1.reg, 0, RHS1.reg, 0,0, pos );
+				last1 = DaoParser_AddCode( self, DVM_MOVE, RHS1.reg, 0, RHS1.reg, pos,0, pos );
 				RHS1.first = RHS1.update = RHS1.last = last1;
 			}
 			last2 = self->vmcLast;
@@ -7231,7 +7238,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			RHS2 = DaoParser_ParseOperator(self, RHS2, prec2 + 1, DTOK_COLON, 0, 1 );
 			if( RHS2.reg < 0 ) return RHS2;
 			if( last2 == self->vmcLast ){
-				last2 = DaoParser_AddCode( self, DVM_MOVE, RHS2.reg, 0, RHS2.reg, 0,0, pos );
+				last2 = DaoParser_AddCode( self, DVM_MOVE, RHS2.reg, 0, RHS2.reg, pos,0, pos );
 				RHS2.first = RHS2.update = RHS2.last = last2;
 			}
 
@@ -7240,7 +7247,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			test = DaoParser_InsertCode( self, LHS.last, DVM_TEST, LHS.reg, 0, 0, pos );
 			jump = DaoParser_InsertCode( self, RHS2.prev, DVM_GOTO, 0,0,0, pos );
 			DaoParser_InsertCode( self, RHS2.prev, DVM_MOVE, RHS1.reg, 0, result.reg, pos );
-			DaoParser_AddCode( self, DVM_MOVE, RHS2.reg, 0, result.reg, 0,0, pos );
+			DaoParser_AddCode( self, DVM_MOVE, RHS2.reg, 0, result.reg, pos, colon, self->curToken-1 );
 			DaoParser_AddCode( self, DVM_UNUSED, 0,0,0, 0,0,0 );
 			jump->jumpTrue = self->vmcLast;
 			test->jumpFalse = jump->next;

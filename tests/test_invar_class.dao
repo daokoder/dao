@@ -49,9 +49,9 @@ invar class Immutable
 }
 @[test(code_01)]
 @[test(code_01)]
-{{Invalid constructor definition for invar class}}.*
-{{Invalid operation that might return external nonprimitive and mutable types}}
 @[test(code_01)]
+# {{Invalid constructor definition for invar class}}.*
+# {{Invalid operation that might return external nonprimitive and mutable types}}
 
 
 
@@ -74,9 +74,9 @@ invar class Immutable
 }
 @[test(code_01)]
 @[test(code_01)]
-{{Invalid constructor definition for invar class}}.*
-{{Invalid operation that might return external nonprimitive and mutable types}}
 @[test(code_01)]
+# {{Invalid constructor definition for invar class}}.*
+# {{Invalid operation that might return external nonprimitive and mutable types}}
 
 
 

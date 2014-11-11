@@ -2044,7 +2044,7 @@ int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, D
 			case DVM_MUL : data_c->i[c] = af * bf; break;
 			case DVM_DIV : data_c->i[c] = af / bf; break;
 			case DVM_MOD : data_c->i[c] = af - bf*(dao_integer)(af / bf); break;
-			case DVM_POW : data_c->i[c] = powf( af, bf );break;
+			case DVM_POW : data_c->i[c] = pow( af, bf );break;
 			default : break;
 			}
 			break;
@@ -2057,7 +2057,7 @@ int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, D
 			case DVM_MUL : data_c->f[c] = af * bf; break;
 			case DVM_DIV : data_c->f[c] = af / bf; break;
 			case DVM_MOD : data_c->f[c] = af - bf*(dao_integer)(af / bf); break;
-			case DVM_POW : data_c->f[c] = powf( af, bf );break;
+			case DVM_POW : data_c->f[c] = pow( af, bf );break;
 			default : break;
 			}
 			break;
@@ -2235,7 +2235,7 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 				case DVM_MUL : data_c->i[c] = data_a->i[a] * data_b->i[b]; break;
 				case DVM_DIV : data_c->i[c] = data_a->i[a] / data_b->i[b]; break;
 				case DVM_MOD : data_c->i[c] = data_a->i[a] % data_b->i[b]; break;
-				case DVM_POW : data_c->i[c] = powf( data_a->i[a], data_b->i[b] );break;
+				case DVM_POW : data_c->i[c] = pow( data_a->i[a], data_b->i[b] );break;
 				default : break;
 				}
 				break;
@@ -2248,7 +2248,7 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 				case DVM_MUL : data_c->f[c] = data_a->f[a] * vb; break;
 				case DVM_DIV : data_c->f[c] = data_a->f[a] / vb; break;
 				case DVM_MOD : va = data_a->f[a]; data_c->f[c] = va - vb*(dao_integer)(va/vb); break;
-				case DVM_POW : data_c->f[c] = powf( data_a->f[a], vb );break;
+				case DVM_POW : data_c->f[c] = pow( data_a->f[a], vb );break;
 				default : break;
 				}
 				break;
@@ -2307,7 +2307,7 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 			case DVM_MUL : data_c->i[c] = ad * bd; break;
 			case DVM_DIV : data_c->i[c] = ad / bd; break;
 			case DVM_MOD : data_c->i[c] = ad - bd*(dao_integer)(ad/bd); break;
-			case DVM_POW : data_c->i[c] = powf( ad, bd );break;
+			case DVM_POW : data_c->i[c] = pow( ad, bd );break;
 			default : break;
 			}
 			break;
@@ -2321,7 +2321,7 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 			case DVM_MUL : data_c->f[c] = ad * bd; break;
 			case DVM_DIV : data_c->f[c] = ad / bd; break;
 			case DVM_MOD : data_c->f[c] = ad - bd*(dao_integer)(ad/bd); break;
-			case DVM_POW : data_c->f[c] = powf( ad, bd );break;
+			case DVM_POW : data_c->f[c] = pow( ad, bd );break;
 			default : break;
 			}
 			break;

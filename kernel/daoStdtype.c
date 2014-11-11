@@ -2889,23 +2889,13 @@ static void DaoMAP_Clear( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoMAP_Reset( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoMap_Reset( & p[0]->xMap );
-	if( N > 1 ){
+	if( N == 0 ){
+		DaoMap_Reset( & p[0]->xMap, 1 );
+	}else if( N > 1 ){
 		DMap *map = p[0]->xMap.value;
-		int type = p[1]->xEnum.value;
-		if( type < 2 && map->hashing == type ) return;
-		if( type == 0 ){
-			map->hashing = 0;
-			if( map->table ) dao_free( map->table );
-			map->table = NULL;
-			map->tsize = 0;
-		}else{
-			if( map->hashing == 0 ){
-				map->tsize = 4;
-				map->table = (DNode**) dao_calloc( map->tsize, sizeof(DNode*) );
-			}
-			map->hashing = type == 1 ? HASH_SEED : rand();
-		}
+		unsigned int hashing = p[1]->xEnum.value;
+		if( hashing == 2 ) hashing = 0xffffffff * DaoProcess_UniformRand( proc );
+		DaoMap_Reset( & p[0]->xMap, hashing );
 	}
 }
 static void DaoMAP_Erase( DaoProcess *proc, DaoValue *p[], int N )
@@ -3274,11 +3264,7 @@ DaoMap* DaoMap_New( unsigned int hashing )
 	DaoValue_Init( self, DAO_MAP );
 	self->value = hashing ? DHash_New( DAO_DATA_VALUE, DAO_DATA_VALUE ) : DMap_New( DAO_DATA_VALUE, DAO_DATA_VALUE );
 	self->ctype = NULL;
-	if( hashing == 2 ){
-		self->value->hashing = rand();
-	}else if( hashing > 2 ){
-		self->value->hashing = hashing;
-	}
+	if( hashing > 1 ) self->value->hashing = hashing;
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
@@ -3298,9 +3284,25 @@ void DaoMap_Clear( DaoMap *self )
 {
 	DMap_Clear( self->value );
 }
-void DaoMap_Reset( DaoMap *self )
+void DaoMap_Reset( DaoMap *self, unsigned int hashing )
 {
+	DMap *map = self->value;
+
 	DMap_Reset( self->value );
+	if( hashing == 1 ) return;
+
+	if( hashing == 0 ){
+		map->hashing = 0;
+		if( map->table ) dao_free( map->table );
+		map->table = NULL;
+		map->tsize = 0;
+	}else{
+		if( map->hashing == 0 ){
+			map->tsize = 4;
+			map->table = (DNode**) dao_calloc( map->tsize, sizeof(DNode*) );
+		}
+		map->hashing = hashing;
+	}
 }
 DaoMap* DaoMap_Copy( DaoMap *self, DaoType *type )
 {

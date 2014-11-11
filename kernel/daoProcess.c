@@ -1753,7 +1753,7 @@ CallEntry:
 			inum = (dao_integer)(LocalFloat(vmc->a) / fnum);
 			LocalFloat(vmc->c) = LocalFloat(vmc->a) - inum * fnum;
 		}OPNEXT() OPCASE( POW_FFF ){
-			LocalFloat(vmc->c) = powf( LocalFloat(vmc->a), LocalFloat(vmc->b) );
+			LocalFloat(vmc->c) = pow( LocalFloat(vmc->a), LocalFloat(vmc->b) );
 		}OPNEXT() OPCASE( AND_BFF ){
 			fnum = LocalFloat(vmc->a);
 			LocalInt(vmc->c) = fnum ? LocalFloat(vmc->b) : fnum;
@@ -2680,20 +2680,17 @@ DaoMap* DaoProcess_GetMap( DaoProcess *self,  DaoVmCode *vmc, unsigned int hashi
 
 	self->returned = self->activeCode->c;
 	if( map && map->type == DAO_MAP && map->ctype == tp ){
-		if( (map->value->hashing == 0) == (hashing == 0) ){
-			if( map->refCount == 1 ){
-				DaoMap_Reset( map );
-				map->value->hashing = hashing;
-				return map;
-			}
-			if( map->refCount == 2 && !(self->trait & DAO_VALUE_CONST) ){
-				DaoVmCode *vmc2 = vmc + 1;
-				if( (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) && vmc2->a != vmc2->c ){
-					if( self->activeValues[vmc2->c] == (DaoValue*) map ){
-						DaoMap_Reset( map );
-						map->value->hashing = hashing;
-						return map;
-					}
+		if( hashing == 1 ) hashing = DAO_HASH_SEED;
+		if( map->refCount == 1 ){
+			DaoMap_Reset( map, hashing );
+			return map;
+		}
+		if( map->refCount == 2 && !(self->trait & DAO_VALUE_CONST) ){
+			DaoVmCode *vmc2 = vmc + 1;
+			if( (vmc2->code == DVM_MOVE || vmc2->code == DVM_MOVE_PP) && vmc2->a != vmc2->c ){
+				if( self->activeValues[vmc2->c] == (DaoValue*) map ){
+					DaoMap_Reset( map, hashing );
+					return map;
 				}
 			}
 		}
@@ -4805,7 +4802,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		case DVM_ADD: res = va + vb; break;
 		case DVM_SUB: res = va - vb; break;
 		case DVM_MUL: res = va * vb; break;
-		case DVM_POW: res = powf( va, vb ); break;
+		case DVM_POW: res = pow( va, vb ); break;
 		default : break;
 		}
 		DaoProcess_PutInteger( self, res );
@@ -4825,7 +4822,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		case DVM_ADD: res = va + vb; break;
 		case DVM_SUB: res = va - vb; break;
 		case DVM_MUL: res = va * vb; break;
-		case DVM_POW: res = powf( va, vb ); break;
+		case DVM_POW: res = pow( va, vb ); break;
 		default : break;
 		}
 		DaoProcess_PutFloat( self, res );
@@ -6178,7 +6175,7 @@ static DaoRandGenerator* DaoProcess_GetRandCache( DaoProcess *self, uint_t seedi
 {
 	void *randgen = DaoProcess_GetAuxData( self, DaoRandGenerator_Delete );
 	if( randgen == NULL ){
-		randgen = DaoRandGenerator_New( seeding ? seeding : rand() );
+		randgen = DaoRandGenerator_New( seeding ? seeding : (uint_t)time(NULL) );
 		DaoProcess_SetAuxData( self, DaoRandGenerator_Delete, randgen );
 	}
 	return (DaoRandGenerator*) randgen;

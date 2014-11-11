@@ -108,7 +108,7 @@ DMap* DMap_New( short kt, short vt )
 DMap* DHash_New( short kt, short vt )
 {
 	DMap *self = DMap_New( kt, vt );
-	self->hashing = HASH_SEED;
+	self->hashing = DAO_HASH_SEED;
 	self->tsize = 4;
 	self->table = (DNode**) dao_calloc( self->tsize, sizeof(DNode*) );
 	return self;

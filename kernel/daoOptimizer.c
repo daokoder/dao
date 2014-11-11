@@ -4663,7 +4663,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 				int invarCallee = rout->attribs & DAO_ROUT_INVAR;
 				int initorCallee = rout->attribs & DAO_ROUT_INITOR;
 				if( staticCaller && ! staticCallee && ! initorCallee ) goto CallWithoutInst;
-				if( invarCaller && ! invarCallee ) goto CallNonInvar;
+				if( invarCaller && ! invarCallee && ! initorCallee ) goto CallNonInvar;
 			}
 		}
 		checkfast = DVM_CALL && ((vmc->b & 0xff00) & ~DAO_CALL_TAIL) == 0;
@@ -6688,6 +6688,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		GC_Assign( & closure->routType, type );
 		if( DaoRoutine_DoTypeInference( closure, self->silent ) == 0 ) return 0;
 	}
+#if 0
 	inodes = self->inodes->items.pInode;
 	types = self->types->items.pType;
 	N = self->inodes->size;
@@ -6711,6 +6712,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			break;
 		}
 	}
+#endif
 
 	DaoInferencer_Finalize( self );
 	return 1;

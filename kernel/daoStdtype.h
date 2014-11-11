@@ -135,10 +135,20 @@ struct DaoMap
 	DMap  *value;
 };
 
+/*
+// hashing = 0: no hashing;
+// hashing = 1: hashing with the default seed;
+// hashing > 1: hashing with "hashing" as the seed;
+*/
 DAO_DLL DaoMap* DaoMap_New( unsigned int hashing );
 DAO_DLL void DaoMap_Delete( DaoMap *self );
 DAO_DLL void DaoMap_Clear( DaoMap *self );
-DAO_DLL void DaoMap_Reset( DaoMap *self );
+/*
+// hashing = 0: no hashing;
+// hashing = 1: hashing with the same seed;
+// hashing > 1: hashing with "hashing" as the seed;
+*/
+DAO_DLL void DaoMap_Reset( DaoMap *self, unsigned int hashing );
 DAO_DLL DaoMap* DaoMap_Copy( DaoMap *self, DaoType *type );
 
 DAO_DLL DNode* DaoMap_Find2( DaoMap *self, DaoValue *key, DaoProcess *proc );
