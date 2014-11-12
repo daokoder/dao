@@ -1363,6 +1363,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 		tt = DaoNamespace_GetType( NS, (DaoValue*) cast );
 		DString_InsertChar( pname, ',', offset + 1 );
 		DString_Insert( pname, tt->name, offset + 1, 0, -1 );
+		DList_Insert( routine->routConsts->value, NULL, 1 );
 		DList_Insert( nested, (void*) tt, 1 );
 		DList_Append( NS->auxData, (void*) tt );
 		DaoRoutine_AddConstant( routine, NULL );
