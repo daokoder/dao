@@ -3996,7 +3996,7 @@ static void Dao_Exception_Set_summary( DaoProcess *proc, DaoValue *p[], int n )
 static void Dao_Exception_Get_data( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoException* self = (DaoException*) p[0];
-	DaoProcess_PutValue( proc, self->data );
+	DaoProcess_PutValue( proc, self->data ? self->data : dao_none_value );
 }
 static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n )
 {

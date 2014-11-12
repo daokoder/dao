@@ -87,6 +87,7 @@ DAO_DLL int DaoParser_NextTokenName( DaoParser *self );
 static int DaoParser_CheckTokenType( DaoParser *self, int tok, const char *str );
 static int DaoParser_ParseSymbol( DaoParser *self, DString *symbol );
 static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype );
+static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop, int eltype );
 static DaoEnode DaoParser_ParseExpression( DaoParser *self, int stop );
 static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int eltype, int warn );
 static DaoEnode DaoParser_ParseExpressionList( DaoParser *self, int, DaoInode*, DList* );
@@ -6298,7 +6299,7 @@ static DaoEnode DaoParser_ParseParenthesis( DaoParser *self )
 		self->curToken = rb + 1;
 		/* To skip the explicit enum type, which is for the entire casting expression: */
 		DList_PushFront( self->enumTypes, NULL );
-		enode = DaoParser_ParsePrimary( self, 0, 0 );
+		enode = DaoParser_ParseUnary( self, 0, 0 );
 		DList_PopFront( self->enumTypes );
 		cur = self->curToken;
 		if( enode.reg >= 0 ){

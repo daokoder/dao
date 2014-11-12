@@ -2072,9 +2072,10 @@ static void DaoCdata_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[],
 }
 static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
-	int ec;
+	int ec = 0;
 	char buf[50];
 	DaoRoutine *meth;
+	DaoValue *type = (DaoValue*) dao_type_string;
 	DaoCdata *self = & self0->xCdata;
 
 	sprintf( buf, "[%p]", self );
@@ -2091,12 +2092,16 @@ static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream
 	}
 	if( cycData ) MAP_Insert( cycData, self, self );
 
-	meth = DaoType_FindFunctionChars( self->ctype, "__PRINT__" );
-	if( meth && DaoProcess_Call( proc, meth, NULL, &self0, 1 ) == 0 ) return;
-
-	DaoValue_Clear( & proc->stackValues[0] );
-	meth = DaoType_FindFunctionChars( self->ctype, "serialize" );
-	if( meth && DaoProcess_Call( proc, meth, NULL, &self0, 1 ) == 0 ){
+	meth = DaoType_FindFunctionChars( self->ctype, "(string)" );
+	if( meth ){
+		ec = DaoProcess_Call( proc, meth, self0, & type, 1 );
+	}else{
+		meth = DaoType_FindFunctionChars( self->ctype, "serialize" );
+		ec = DaoProcess_Call( proc, meth, self0, NULL, 0 );
+	}
+	if( ec ){
+		DaoProcess_RaiseException( proc, daoExceptionNames[ec], proc->string->chars, NULL );
+	}else if( proc->stackValues[0] ){
 		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
 	}else{
 		DaoStream_WriteString( stream, self->ctype->name );

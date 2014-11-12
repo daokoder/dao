@@ -62,6 +62,9 @@ static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *strea
 	int ec;
 	char buf[50];
 	DaoObject *self = & self0->xObject;
+	DaoValue *type = (DaoValue*) dao_type_string;
+	DaoRoutine *meth;
+
 	sprintf( buf, "[%p]", self );
 	if( self0 == self->defClass->objType->value ){
 		DaoStream_WriteString( stream, self->defClass->className );
@@ -75,16 +78,20 @@ static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *strea
 	}
 	if( cycData ) MAP_Insert( cycData, self, self );
 
-	DString_SetChars( proc->string, "serialize" );
-	DaoValue_Clear( & proc->stackValues[0] );
-	ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->string, NULL,0,1,1 );
-	if( ec && ec != DAO_ERROR_FIELD_NOTEXIST ){
+	meth = DaoClass_FindMethod( self->defClass, "(string)", NULL );
+	if( meth ){
+		ec = DaoProcess_Call( proc, meth, self0, & type, 1 );
+	}else{
+		meth = DaoClass_FindMethod( self->defClass, "serialize", NULL );
+		ec = DaoProcess_Call( proc, meth, self0, NULL, 0 );
+	}
+	if( ec ){
 		DaoProcess_RaiseException( proc, daoExceptionNames[ec], proc->string->chars, NULL );
-	}else if( ec == DAO_ERROR_FIELD_NOTEXIST || proc->stackValues[0] == NULL ){
+	}else if( proc->stackValues[0] ){
+		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
+	}else{
 		DaoStream_WriteString( stream, self->defClass->className );
 		DaoStream_WriteChars( stream, buf );
-	}else{
-		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
 	}
 }
 static void DaoObject_Core_GetField( DaoValue *self0, DaoProcess *proc, DString *name )

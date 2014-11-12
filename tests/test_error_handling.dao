@@ -62,7 +62,7 @@ Error is handled! And a new value is returned!
 @[test(code_01)]
 class MyError : Error
 {
-    routine serialize(){ return ("MyError", self) }
+    routine (string)(){ return "MyError.{" + self.summary + "}" }
 }
 
 routine Test2()
@@ -81,7 +81,7 @@ Test2()
 @[test(code_01)]
 @[test(code_01)]
 {{Test2(): before error;}} .*
-{{recovering from ( "MyError", MyError}}
+{{recovering from MyError}}
 @[test(code_01)]
 
 

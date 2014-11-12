@@ -36,7 +36,7 @@ io.writeln( Test() )
 # Example to handle user defined exception type:
 class MyError : Error
 {
-	routine serialize(){ return ("MyError", self) }
+    routine (string)(){ return "MyError.{" + self.summary + "}" }
 }
 
 routine Test2()

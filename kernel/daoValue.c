@@ -804,10 +804,27 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	}
 	return 1;
 }
+int DaoValue_FastMatchTo( DaoValue *self, DaoType *type )
+{
+	int matched = 0;
+	switch( self->type ){
+	case DAO_LIST :
+	case DAO_MAP :
+	case DAO_CSTRUCT :
+	case DAO_CDATA : 
+	case DAO_CTYPE : matched = self->xCstruct.ctype == type; break;
+	case DAO_TUPLE : matched = self->xTuple.ctype == type; break;
+	case DAO_ROUTINE : matched = self->xRoutine.routType == type; break;
+	case DAO_CLASS  : matched = self->xClass.clsType == type; break;
+	case DAO_OBJECT : matched = self->xObject.defClass->objType == type; break;
+	default : break;
+	}
+	return matched;
+}
 int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *defs )
 {
 	DaoValue *D2 = *D;
-	if( S == D2 ) return 1;
+	if( S == D2 && (S == NULL || DaoValue_FastMatchTo( S, T )) ) return 1;
 	if( S == NULL ){
 		GC_DecRC( *D );
 		*D = NULL;
@@ -839,20 +856,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	default : break;
 	}
 	if( S->type >= DAO_OBJECT || !(S->xBase.trait & DAO_VALUE_CONST) || T->invar ){
-		int fastmove = 0;
-		switch( S->type ){
-		case DAO_LIST :
-		case DAO_MAP :
-		case DAO_CSTRUCT :
-		case DAO_CDATA : 
-		case DAO_CTYPE : fastmove = S->xCstruct.ctype == T; break;
-		case DAO_TUPLE : fastmove = S->xTuple.ctype == T; break;
-		case DAO_ROUTINE : fastmove = S->xRoutine.routType == T; break;
-		case DAO_CLASS  : fastmove = S->xClass.clsType == T; break;
-		case DAO_OBJECT : fastmove = S->xObject.defClass->objType == T; break;
-		default : break;
-		}
-		if( fastmove ){
+		if( DaoValue_FastMatchTo( S, T ) ){
 			GC_Assign( D, S );
 			return 1;
 		}
