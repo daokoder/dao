@@ -157,7 +157,7 @@ static int DaoValue_Hash( DaoValue *self, DaoProcess *process, unsigned int hash
 		}
 		break;
 	case DAO_OBJECT :
-		routine = self->xObject.defClass->intRoutines;
+		routine = self->xObject.defClass->intOperators;
 		if( process == NULL || routine == NULL ) goto Default;
 		if( DaoProcess_Call( process, routine, self, params, 2 ) ) goto Default;
 		hash = DaoValue_GetInteger( process->stackValues[0] );
@@ -166,7 +166,7 @@ static int DaoValue_Hash( DaoValue *self, DaoProcess *process, unsigned int hash
 	case DAO_CSTRUCT :
 	case DAO_CDATA :
 	case DAO_CTYPE :
-		routine = self->xCstruct.ctype->kernel->intcasts;
+		routine = self->xCstruct.ctype->kernel->intOperators;
 		if( process == NULL || routine == NULL ) goto Default;
 		if( DaoProcess_Call( process, routine, self, params, 2 ) ) goto Default;
 		hash = DaoValue_GetInteger( process->stackValues[0] );

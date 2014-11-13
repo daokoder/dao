@@ -928,7 +928,7 @@ DaoByteBlock* DaoByteBlock_AddRoutineBlock( DaoByteBlock *self, DaoRoutine *rout
 	if( host ) DaoByteBlock_InsertBlockIndex( rout, rout->begin+4, host );
 	DaoByteCoder_EncodeUInt16( rout->begin+6, routine->attribs );
 	if( routine->routHost && routine->routHost->tid == DAO_CLASS ){
-		rout->end[6] = routine == routine->routHost->aux->xClass.classRoutine;
+		rout->end[6] = routine == routine->routHost->aux->xClass.initRoutine;
 	}
 	rout->end[7] = perm;
 	if( routine->body ) DaoByteBlock_EncodeDecoPatterns( rout, routine->body->decoTargets );
@@ -1196,7 +1196,7 @@ void DaoByteCoder_FinalizeRoutineBlock( DaoByteCoder *self, DaoByteBlock *block 
 	}
 	if( routine->routHost && routine->routHost->tid == DAO_OBJECT ){
 		/* Default constructor; */
-		block->end[6] = routine == routine->routHost->aux->xClass.classRoutine;
+		block->end[6] = routine == routine->routHost->aux->xClass.initRoutine;
 	}
 
 	/* local constants: */
@@ -2068,13 +2068,13 @@ static void DaoByteCoder_AddToScope( DaoByteCoder *self, DaoByteBlock *block, DS
 		DaoRoutine *rout = DaoValue_CastRoutine( value );
 		if( rout && rout->routHost == klass->objType ){
 			if( rout->attribs & DAO_ROUT_INITOR ){
-				DaoClass_AddConst( klass, klass->classRoutine->routName, value, perm );
+				DaoClass_AddConst( klass, klass->initRoutine->routName, value, perm );
 			}else if( rout->attribs & DAO_ROUT_CASTOR ){
-				if( klass->castRoutines == NULL ){
-					klass->castRoutines = DaoRoutines_New( self->nspace, klass->objType, NULL);
-					GC_IncRC( klass->castRoutines );
+				if( klass->castOperators == NULL ){
+					klass->castOperators = DaoRoutines_New( self->nspace, klass->objType, NULL);
+					GC_IncRC( klass->castOperators );
 				}
-				DRoutines_Add( klass->castRoutines->overloads, rout );
+				DRoutines_Add( klass->castOperators->overloads, rout );
 			}else{
 				DaoClass_AddConst( klass, name, value, perm );
 			}
@@ -2434,7 +2434,7 @@ static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block 
 	if( block->end[6] ){  /* Default constructor; */
 		host = DaoByteCoder_LookupTypeBlock( self, block, C );
 		if( self->error ) return;
-		routine = host->value->xType.aux->xClass.classRoutine;
+		routine = host->value->xType.aux->xClass.initRoutine;
 		add = 1;
 	}else if( A ){
 		name = DaoByteCoder_LookupValueBlock( self, block, A );

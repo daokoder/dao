@@ -188,6 +188,7 @@ DaoParser* DaoParser_New()
 	self->decoFuncs2  = DList_New(0);
 	self->decoParams  = DList_New( DAO_DATA_VALUE );
 	self->decoParams2 = DList_New( DAO_DATA_VALUE );
+	self->refCountedList = DList_New( DAO_DATA_VALUE );
 	self->nsDefines = NULL;
 	self->nsSymbols = NULL;
 
@@ -239,6 +240,7 @@ void DaoParser_Delete( DaoParser *self )
 	DList_Delete( self->decoFuncs2 );
 	DList_Delete( self->decoParams );
 	DList_Delete( self->decoParams2 );
+	DList_Delete( self->refCountedList );
 	DList_Delete( self->toks );
 	DList_Delete( self->scopeOpenings );
 	DList_Delete( self->scopeClosings );
@@ -331,6 +333,7 @@ void DaoParser_Reset( DaoParser *self )
 
 	DList_Clear( self->decoParams );
 	DList_Clear( self->decoParams2 );
+	DList_Clear( self->refCountedList );
 	DList_Clear( self->switchTables );
 	DList_Clear( self->switchNames );
 	DList_Clear( self->enumTypes );
@@ -1133,7 +1136,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	routine->parCount = 0;
 	if( tokens[start+1+(tokens[start+1]->name==DKEY_INVAR)]->name == DKEY_SELF ) selfpar = 1;
 
-	isMeth = klass && routine != klass->classRoutine;
+	isMeth = klass && routine != klass->initRoutine;
 	notStatic = (routine->attribs & DAO_ROUT_STATIC) ==0;
 	notConstr = hostname && DString_EQ( routine->routName, hostname ) == 0;
 	if( routine->routHost && hostname && DString_EQ( routine->routName, hostname ) ){
@@ -1471,19 +1474,19 @@ ErrorConstructorReturn: ec = DAO_ROUT_INVALID_RETURN; goto ErrorRoutine;
 ErrorNeedReturnType:  ec = DAO_ROUT_NEED_RETURN_TYPE; goto ErrorRoutine;
 ErrorInvalidDecoParam:   ec = DAO_ROUT_INVALID_DECO_PARAM; goto ErrorRoutine;
 ErrorInvalidTypeForm: ec = DAO_INVALID_TYPE_FORM; goto ErrorRoutine;
-ErrorTooManyParams:  ec = DAO_PARAM_TOO_MANY; goto ErrorParamParsing;
-ErrorInvalidParam:   ec = DAO_PARAM_INVALID; goto ErrorParamParsing;
-ErrorNeedSeparator:  ec = DAO_PARAM_NEED_SEPARATOR; goto ErrorParamParsing;
-ErrorMiddleValist:   ec = DAO_PARAM_MIDDLE_VALIST; goto ErrorParamParsing;
-ErrorRedundantType:  ec = DAO_PARAM_REDUNDANT_TYPE; goto ErrorParamParsing;
-ErrorNeedType:       ec = DAO_PARAM_NEED_TYPE;    goto ErrorParamParsing;
-ErrorNeedDefault:    ec = DAO_PARAM_NEED_DEFAULT; goto ErrorParamParsing;
-ErrorInvalidDefault: ec = DAO_PARAM_INVALID_DEFAULT; goto ErrorParamParsing;
-ErrorVariableDefault: ec = DAO_PARAM_VARIABLE_DEFAULT; goto ErrorParamParsing;
-ErrorImproperDefault: ec = DAO_PARAM_IMPROPER_DEFAULT; goto ErrorParamParsing;
-ErrorInvalidReturn:  ec = DAO_PARAM_INVALID_RETURN; goto ErrorParamParsing;
-ErrorParamParsing2: ec = DAO_PARAM_INVALID_MUTABLE; goto ErrorParamParsing;
-ErrorParamParsing:
+ErrorTooManyParams:  ec = DAO_PARAM_TOO_MANY; goto ErrorRoutine;
+ErrorInvalidParam:   ec = DAO_PARAM_INVALID; goto ErrorRoutine;
+ErrorNeedSeparator:  ec = DAO_PARAM_NEED_SEPARATOR; goto ErrorRoutine;
+ErrorMiddleValist:   ec = DAO_PARAM_MIDDLE_VALIST; goto ErrorRoutine;
+ErrorRedundantType:  ec = DAO_PARAM_REDUNDANT_TYPE; goto ErrorRoutine;
+ErrorNeedType:       ec = DAO_PARAM_NEED_TYPE;    goto ErrorRoutine;
+ErrorNeedDefault:    ec = DAO_PARAM_NEED_DEFAULT; goto ErrorRoutine;
+ErrorInvalidDefault: ec = DAO_PARAM_INVALID_DEFAULT; goto ErrorRoutine;
+ErrorVariableDefault: ec = DAO_PARAM_VARIABLE_DEFAULT; goto ErrorRoutine;
+ErrorImproperDefault: ec = DAO_PARAM_IMPROPER_DEFAULT; goto ErrorRoutine;
+ErrorInvalidReturn:  ec = DAO_PARAM_INVALID_RETURN; goto ErrorRoutine;
+ErrorParamParsing2: ec = DAO_PARAM_INVALID_MUTABLE; goto ErrorRoutine;
+ErrorParamParsing: ec = DAO_PARAM_INVALID;
 ErrorRoutine:
 	if( ec ){
 		if( e2 >= size ) e2 = size - 1;
@@ -2703,6 +2706,7 @@ static DaoParser* DaoParser_NewRoutineParser( DaoParser *self, int start, int at
 	}else{
 		rout = DaoRoutine_New( self->nameSpace, NULL, 1 );
 	}
+	DList_Append( self->refCountedList, rout );
 	rout->defLine = tokens[start]->line;
 	parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	parser->routine = rout;
@@ -2827,7 +2831,7 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			DaoParser_Error( self, DAO_ROUT_NOT_DECLARED, mbs );
 			goto InvalidDefinition;
 		}
-		if( value->type == DAO_CLASS ) value = (DaoValue*) value->xClass.classRoutine;
+		if( value->type == DAO_CLASS ) value = (DaoValue*) value->xClass.initRoutine;
 		if( value->type != DAO_ROUTINE || value->xRoutine.routHost != klass->objType ){
 			goto InvalidDefinition;
 		}
@@ -2896,8 +2900,8 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			}
 			DaoClass_AddOverloadedRoutine( klass, mbs, rout );
 			if( rout->attribs & DAO_ROUT_INITOR ){ /* overloading constructor */
-				/* DRoutines_Add( klass->classRoutines->overloads, rout ); */
-				DaoClass_AddConst( klass, klass->classRoutine->routName, (DaoValue*)rout, perm );
+				/* DRoutines_Add( klass->initRoutines->overloads, rout ); */
+				DaoClass_AddConst( klass, klass->initRoutine->routName, (DaoValue*)rout, perm );
 			}else{
 				DaoClass_AddConst( klass, rout->routName, (DaoValue*)rout, perm );
 			}
@@ -3131,7 +3135,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DString_Assign( className, name );
 		DaoClass_SetName( klass, className, NS );
 
-		DList_Append( NS->definedRoutines, klass->classRoutine );
+		DList_Append( NS->definedRoutines, klass->initRoutine );
 		if( routine != NS->mainRoutine ) ns = NULL;
 		value = (DaoValue*) klass;
 		DaoParser_AddToScope( self, className, value, klass->objType, storeType );
@@ -3165,7 +3169,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		klass = & value->xClass;
 	}
 
-	rout = klass->classRoutine;
+	rout = klass->initRoutine;
 	rout->defLine = tokens[start]->line;
 	GC_Assign( & rout->nameSpace, NS );
 
@@ -3294,7 +3298,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			DaoParser_PrintError( parser, 0, 0, NULL );
 		goto ErrorClassDefinition;
 	}
-	DaoList_Clear( klass->classRoutine->routConsts );
+	DaoList_Clear( klass->initRoutine->routConsts );
 	if( parser->vmcLast != parser->vmcBase ){
 #if 0
 		DaoParser_PrintCodes( parser );
@@ -3325,15 +3329,15 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DaoByteCoder_EncodeUInt32( parser->byteBlock->begin+4, klass->attribs );
 	}
 	error = DaoParser_CompileRoutines( parser ) == 0;
-	if( error == 0 && klass->classRoutines->overloads->routines->size == 0 ){
+	if( error == 0 && klass->initRoutines->overloads->routines->size == 0 ){
 		DString *ctorname = klass->cstDataName->items.pString[DAO_CLASS_CONST_CSTOR];
 		DList_Clear( parser->tokens );
 		DaoParser_AddDefaultInitializer( parser, klass, 0 );
 		error |= DaoParser_ParseRoutine( parser ) == 0;
-		DaoClass_AddConst( klass, ctorname, (DaoValue*)klass->classRoutine, DAO_PERM_PUBLIC );
+		DaoClass_AddConst( klass, ctorname, (DaoValue*)klass->initRoutine, DAO_PERM_PUBLIC );
 		if( parser->byteBlock ){
 			DaoByteBlock *bk = parser->byteBlock;
-			bk = DaoByteBlock_AddRoutineBlock( bk, klass->classRoutine, DAO_PERM_PUBLIC );
+			bk = DaoByteBlock_AddRoutineBlock( bk, klass->initRoutine, DAO_PERM_PUBLIC );
 			DaoByteCoder_FinalizeRoutineBlock( self->byteCoder, bk );
 		}
 	}

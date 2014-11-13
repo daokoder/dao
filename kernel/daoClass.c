@@ -137,7 +137,7 @@ void DaoClass_Delete( DaoClass *self )
 	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	GC_DecRC( self->clsType );
-	GC_DecRC( self->castRoutines );
+	GC_DecRC( self->castOperators );
 	DMap_Delete( self->lookupTable );
 	DMap_Delete( self->methSignatures );
 	DList_Delete( self->constants );
@@ -171,7 +171,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 	DaoRoutine *rout;
 	DString *str;
 
-	if( self->classRoutine ) return;
+	if( self->initRoutine ) return;
 
 	self->objType = DaoType_New( name->chars, DAO_OBJECT, (DaoValue*)self, NULL );
 	self->clsType = DaoType_New( name->chars, DAO_CLASS, (DaoValue*) self, NULL );
@@ -188,7 +188,7 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 	DString_Assign( rout->routName, name );
 	DString_AppendChars( rout->routName, "::" );
 	DString_Append( rout->routName, name );
-	self->classRoutine = rout; /* XXX class<name> */
+	self->initRoutine = rout; /* XXX class<name> */
 	GC_IncRC( rout );
 
 	rout->routType = DaoType_New( "routine<=>", DAO_ROUTINE, (DaoValue*)self->objType, NULL );
@@ -199,10 +199,10 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 
 	DaoClass_AddConst( self, name, (DaoValue*) self, DAO_PERM_PUBLIC );
 
-	self->classRoutines = DaoRoutines_New( ns, self->objType, NULL );
-	DString_Assign( self->classRoutines->routName, name );
+	self->initRoutines = DaoRoutines_New( ns, self->objType, NULL );
+	DString_Assign( self->initRoutines->routName, name );
 
-	DaoClass_AddConst( self, rout->routName, (DaoValue*)self->classRoutines, DAO_PERM_PUBLIC );
+	DaoClass_AddConst( self, rout->routName, (DaoValue*)self->initRoutines, DAO_PERM_PUBLIC );
 
 	DString_Delete( str );
 }
@@ -395,7 +395,7 @@ static void DaoRoutine_OriginalHost( void *p ){}
 static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMethodFields *mf )
 {
 	daoint i, j, k, id, bl = 1;
-	DaoNamespace *ns = self->classRoutine->nameSpace;
+	DaoNamespace *ns = self->initRoutine->nameSpace;
 	DList *routines;
 	DMap *deftypes;
 	DMap *routmap;
@@ -776,12 +776,12 @@ int DaoCass_DeriveMixinData( DaoClass *self )
 
 void DaoClass_CastingMethod( DaoClass *self, DaoRoutine *routine )
 {
-	DaoNamespace *NS = self->classRoutine->nameSpace;
-	if( self->castRoutines == NULL ){
-		self->castRoutines = DaoRoutines_New( NS, self->objType, NULL );
-		GC_IncRC( self->castRoutines );
+	DaoNamespace *NS = self->initRoutine->nameSpace;
+	if( self->castOperators == NULL ){
+		self->castOperators = DaoRoutines_New( NS, self->objType, NULL );
+		GC_IncRC( self->castOperators );
 	}
-	DaoRoutines_Add( self->castRoutines, routine );
+	DaoRoutines_Add( self->castOperators, routine );
 }
 
 /* assumed to be called before parsing class body */
@@ -848,7 +848,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 			id = LOOKUP_BIND( st, pm, up+1, id );
 			DMap_Insert( self->lookupTable, it->key.pString, (void*)id );
 		}
-		if( klass->castRoutines ) DaoClass_CastingMethod( self, klass->castRoutines );
+		if( klass->castOperators ) DaoClass_CastingMethod( self, klass->castOperators );
 	}else if( self->parent && self->parent->type == DAO_CTYPE ){
 		DaoCtype *cdata = (DaoCtype*) self->parent;
 		DaoTypeKernel *kernel = cdata->ctype->kernel;
@@ -888,7 +888,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 			DList_Append( mf->perms, IntToPointer( DAO_PERM_PUBLIC ) );
 			DList_Append( mf->routines, it->value.pValue );
 		}
-		if( kernel->castors ) DaoClass_CastingMethod( self, kernel->castors );
+		if( kernel->castOperators ) DaoClass_CastingMethod( self, kernel->castOperators );
 	}
 	DaoClass_SetupMethodFields( self, mf );
 	DaoMethodFields_Delete( mf );
@@ -1061,16 +1061,17 @@ void DaoClass_ResetAttributes( DaoClass *self )
 	DNode *node;
 	int i, k, id, autoinitor = self->parent == NULL;
 
-	for(i=0; autoinitor && (i<self->classRoutines->overloads->routines->size); i++){
-		DaoRoutine *rout = self->classRoutines->overloads->routines->items.pRoutine[i];
-		if( rout == self->classRoutine ) continue;
+	for(i=0; autoinitor && (i<self->initRoutines->overloads->routines->size); i++){
+		DaoRoutine *rout = self->initRoutines->overloads->routines->items.pRoutine[i];
+		if( rout == self->initRoutine ) continue;
 		if( !(rout->attribs & DAO_ROUT_INITOR) ) continue;
 		if( rout->routHost != self->objType ) continue;
 		autoinitor = 0;
 	}
 	if( autoinitor ) self->attribs |= DAO_CLS_AUTO_INITOR;
-	self->intRoutines = DaoClass_FindMethod( self, "(int)", NULL );
-	self->cmpRoutines = DaoClass_FindMethod( self, "<=>", NULL );
+	self->intOperators = DaoClass_FindMethod( self, "(int)", NULL );
+	self->eqOperators = DaoClass_FindMethod( self, "==", NULL );
+	self->ltOperators = DaoClass_FindMethod( self, "<", NULL );
 #if 0
 	printf( "%s %i\n", self->className->chars, autoinitor );
 #endif
@@ -1215,7 +1216,7 @@ static void DaoClass_AddConst3( DaoClass *self, DString *name, DaoValue *data )
 static int DaoClass_AddConst2( DaoClass *self, DString *name, DaoValue *data, int s )
 {
 	int id = LOOKUP_BIND( DAO_CLASS_CONSTANT, s, 0, self->constants->size );
-	DaoNamespace *ns = self->classRoutine->nameSpace;
+	DaoNamespace *ns = self->initRoutine->nameSpace;
 	if( data->type == DAO_ROUTINE && data->xRoutine.routHost != self->objType ){
 		if( data->xRoutine.overloads ){
 			DaoRoutine *routs = DaoRoutines_New( ns, self->objType, (DaoRoutine*) data );
@@ -1232,7 +1233,7 @@ int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *data, int s )
 	int fromParent = 0;
 	int sto, pm, up, id;
 	DNode *node = MAP_Find( self->lookupTable, name );
-	DaoNamespace *ns = self->classRoutine->nameSpace;
+	DaoNamespace *ns = self->initRoutine->nameSpace;
 	DaoConstant *dest;
 	DaoValue *value;
 
@@ -1360,7 +1361,7 @@ static void DaoStream_WriteRoutineInfo( DaoStream *self, DaoRoutine *routine, in
 
 void DaoClass_UpdateVirtualMethods( DaoClass *self )
 {
-	DaoStream *stream = self->classRoutine->nameSpace->vmSpace->errorStream;
+	DaoStream *stream = self->initRoutine->nameSpace->vmSpace->errorStream;
 	DNode *it;
 	int i, j;
 

@@ -1844,6 +1844,22 @@ static void DaoLIST_Pop( DaoProcess *proc, DaoValue *p[], int N )
 		DaoList_Erase( self, self->value->size -1 );
 	}
 }
+static void DaoLIST_Join( DaoProcess *proc, DaoValue *p[], int N )
+{
+	int i;
+	DaoList *self = & p[0]->xList;
+	DaoProcess_PutValue( proc, p[0] );
+	for(i=1; i<N; ++i){
+		DaoList *other = (DaoList*) p[i];
+		daoint size = self->value->size;
+		daoint j, size2 = other->value->size;
+		for(j=0; j<size2; ++j) DaoList_Append( self, other->value->items.pValue[j] );
+		if( (size + size2) < self->value->size ){
+			DaoProcess_RaiseError( proc, "Value", "value type" );
+			break;
+		}
+	}
+}
 static void DaoLIST_PushBack( DaoProcess *proc, DaoValue *p[], int N )
 {
 	int i;
@@ -1852,7 +1868,10 @@ static void DaoLIST_PushBack( DaoProcess *proc, DaoValue *p[], int N )
 	for(i=1; i<N; ++i){
 		daoint size = self->value->size;
 		DaoList_Append( self, p[i] );
-		if( size == self->value->size ) DaoProcess_RaiseError( proc, "Value", "value type" );
+		if( size == self->value->size ){
+			DaoProcess_RaiseError( proc, "Value", "value type" );
+			break;
+		}
 	}
 }
 static void DaoLIST_Front( DaoProcess *proc, DaoValue *p[], int N )
@@ -2244,10 +2263,17 @@ static DaoFuncItem listMeths[] =
 		// Return the self list;
 		*/
 	},
+	{ DaoLIST_Join,
+		"join( self: list<@T>, other: list<@T>, ... : list<@T> ) => list<@T>"
+		/*
+		// Join none or more lists at the end of the list.
+		// Return the self list;
+		*/
+	},
 	{ DaoLIST_PushBack,
 		"append( self: list<@T>, item: @T, ... : @T ) => list<@T>"
 		/*
-		// Append an item at the end of the list.
+		// Append one or more items at the end of the list.
 		// Return the self list;
 		*/
 	},
@@ -2363,7 +2389,7 @@ static DaoFuncItem listMeths[] =
 			"[item: invar<@T>, index: int => bool] => tuple<index:int,value:@T> | none"
 		/*
 		// Find the first item in the list that meets the condition as expressed
-		// by the code section. A non-zero value of the code section indicates
+		// by the code section. A true value of the code section indicates
 		// the condition is met.
 		// The direction of iteration can be controlled by the "direction" paramter.
 		*/
@@ -2373,7 +2399,7 @@ static DaoFuncItem listMeths[] =
 			"[item: invar<@T>, index: int => bool] => list<@T>"
 		/*
 		// Select items in the list that meets the condition as expressed
-		// by the code section. A non-zero value of the code section indicates
+		// by the code section. A true value of the code section indicates
 		// the condition is met.
 		// The direction of iteration can be controlled by the "direction" paramter.
 		*/
@@ -2898,6 +2924,15 @@ static void DaoMAP_Insert( DaoProcess *proc, DaoValue *p[], int N )
 	case 2 : DaoProcess_RaiseError( proc, "Type", "value not matching" ); break;
 	}
 }
+static void DaoMAP_Invert( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMap *self = & p[0]->xMap;
+	DaoMap *inverted = DaoProcess_PutMap( proc, self->value->hashing );
+	DNode *it;
+	for(it=DMap_First(self->value); it; it=DMap_Next(self->value,it)){
+		DMap_InsertPro( inverted->value, it->value.pValue, it->key.pValue, proc );
+	}
+}
 static void DaoMAP_Find( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMap *self = (DaoMap*) p[0];
@@ -3070,6 +3105,13 @@ static DaoFuncItem mapMeths[] =
 		// Return self map.
 		*/
 	},
+	{ DaoMAP_Invert,
+		"invert( self: map<@K,@V> ) => map<@V,@K>"
+		/*
+		// Invert the key-value relationship.
+		// Return a new map.
+		*/
+	},
 	{ DaoMAP_Find,
 		"find( invar self: map<@K,@V>, invar key: @K, comparison: enum<LE,EQ,GE> = $EQ )"
 			"=> tuple<key:@K,value:@V> | none"
@@ -3136,8 +3178,8 @@ static DaoFuncItem mapMeths[] =
 			"=> tuple<key:@K,value:@V> | none"
 		/*
 		// Find the first key-value pair that meets the condition as expressed
-		// by the code section. A non-zero integer result from the code section
-		// means the condition is satisfied.
+		// by the code section. A true value from the code section means the
+		// condition is satisfied.
 		*/
 	},
 	{ DaoMAP_Select,
@@ -3145,8 +3187,8 @@ static DaoFuncItem mapMeths[] =
 			"=> map<@K,@V>"
 		/*
 		// Select key-value pairs that meets the condition as expressed
-		// by the code section. A non-zero integer result from the code section
-		// means the condition is satisfied.
+		// by the code section. A true from the code section means the
+		// condition is satisfied.
 		*/
 	},
 	{ DaoMAP_Apply,

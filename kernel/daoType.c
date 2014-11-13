@@ -1690,13 +1690,13 @@ DaoRoutine* DaoType_GetInitor( DaoType *self )
 {
 	DaoType_TrySetupMethods( self );
 	if( self->kernel == NULL ) return NULL;
-	return self->kernel->initors;
+	return self->kernel->initRoutines;
 }
 DaoRoutine* DaoType_GetCastor( DaoType *self )
 {
 	DaoType_TrySetupMethods( self );
 	if( self->kernel == NULL ) return NULL;
-	return self->kernel->castors;
+	return self->kernel->castOperators;
 }
 DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 {
@@ -1803,7 +1803,7 @@ int DaoInterface_CheckBind( DList *methods, DaoType *type, DMap *binds )
 		DaoClass *klass = & type->aux->xClass;
 		for(i=0,n=methods->size; i<n; i++){
 			DaoRoutine *rout = methods->items.pRoutine[i];
-			rout2 = klass->classRoutines;
+			rout2 = klass->initRoutines;
 			if( !(rout->attribs & DAO_ROUT_INITOR) ){
 				id = DaoClass_FindConst( klass, rout->routName );
 				if( id <0 ) return 0;
@@ -2119,8 +2119,8 @@ void DaoTypeKernel_Delete( DaoTypeKernel *self )
 #endif
 	if( self->values ) DMap_Delete( self->values );
 	if( self->methods ) DMap_Delete( self->methods );
-	GC_DecRC( self->initors );
-	GC_DecRC( self->castors );
+	GC_DecRC( self->initRoutines );
+	GC_DecRC( self->castOperators );
 	/* self->core may no longer be valid, but self->typer->core always is: */
 	if( self->typer->core ) self->typer->core->kernel = NULL;
 	if( self->core == (DaoTypeCore*)(self + 1) ){
@@ -2166,19 +2166,19 @@ DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer )
 
 void DaoTypeKernel_InsertInitor( DaoTypeKernel *self, DaoNamespace *ns, DaoType *host, DaoRoutine *routine )
 {
-	if( self->initors == NULL ){
-		self->initors = DaoRoutines_New( ns, host, NULL );
-		GC_IncRC( self->initors );
+	if( self->initRoutines == NULL ){
+		self->initRoutines = DaoRoutines_New( ns, host, NULL );
+		GC_IncRC( self->initRoutines );
 	}
-	DRoutines_Add( self->initors->overloads, routine );
+	DRoutines_Add( self->initRoutines->overloads, routine );
 }
 void DaoTypeKernel_InsertCastor( DaoTypeKernel *self, DaoNamespace *ns, DaoType *host, DaoRoutine *routine )
 {
-	if( self->castors == NULL ){
-		self->castors = DaoRoutines_New( ns, host, NULL );
-		GC_IncRC( self->castors );
+	if( self->castOperators == NULL ){
+		self->castOperators = DaoRoutines_New( ns, host, NULL );
+		GC_IncRC( self->castOperators );
 	}
-	DRoutines_Add( self->castors->overloads, routine );
+	DRoutines_Add( self->castOperators->overloads, routine );
 }
 
 
@@ -2658,12 +2658,15 @@ void DaoType_SpecializeMethods( DaoType *self )
 		for(i=0; i<4; ++i){
 			if( quads[i] ) GC_Assign( & quads[i]->kernel, kernel );
 		}
-		name = DString_WrapChars( "<=>" );
-		it = DMap_Find( methods, & name );
-		if( it ) self->kernel->compares = it->value.pRoutine;
 		name = DString_WrapChars( "(int)" );
 		it = DMap_Find( methods, & name );
-		if( it ) self->kernel->intcasts = it->value.pRoutine;
+		if( it ) self->kernel->intOperators = it->value.pRoutine;
+		name = DString_WrapChars( "==" );
+		it = DMap_Find( methods, & name );
+		if( it ) self->kernel->eqOperators = it->value.pRoutine;
+		name = DString_WrapChars( "<" );
+		it = DMap_Find( methods, & name );
+		if( it ) self->kernel->ltOperators = it->value.pRoutine;
 	}
 	DMutex_Unlock( & mutex_methods_setup );
 }

@@ -3524,7 +3524,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		}else{
 			DaoClass *scope = self->activeObject ? self->activeObject->defClass : NULL;
 			DaoValue *tpar = (DaoValue*) ct;
-			meth = va->xObject.defClass->castRoutines;
+			meth = va->xObject.defClass->castOperators;
 			if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) == 0 ) return;
 			goto FailConversion;
 		}
@@ -3544,7 +3544,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 				goto FastCasting;
 			}
 		}
-		meth = va->xCdata.ctype->kernel->castors;
+		meth = DaoType_GetCastor( va->xCdata.ctype );
 		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) == 0 ) return;
 		goto FailConversion;
 	}
@@ -3696,7 +3696,7 @@ static void DaoProcess_DoNewCall( DaoProcess *self, DaoVmCode *vmc,
 {
 	DaoValue *ret;
 	DaoRoutine *rout;
-	DaoRoutine *routines = klass->classRoutines;
+	DaoRoutine *routines = klass->initRoutines;
 	DaoObject *obj, *othis = NULL, *onew = NULL;
 	int i, code = vmc->code;
 	int callmode = code | (vmc->b<<16);

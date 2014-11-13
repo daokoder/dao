@@ -391,12 +391,15 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		DList_Delete( parents );
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 		DaoVmSpace_ReleaseParser( self->vmSpace, defparser );
-		name = DString_WrapChars( "<=>" );
-		it = DMap_Find( methods, & name );
-		if( it ) hostype->kernel->compares = it->value.pRoutine;
 		name = DString_WrapChars( "(int)" );
 		it = DMap_Find( methods, & name );
-		if( it ) hostype->kernel->intcasts = it->value.pRoutine;
+		if( it ) hostype->kernel->intOperators = it->value.pRoutine;
+		name = DString_WrapChars( "==" );
+		it = DMap_Find( methods, & name );
+		if( it ) hostype->kernel->eqOperators = it->value.pRoutine;
+		name = DString_WrapChars( "<" );
+		it = DMap_Find( methods, & name );
+		if( it ) hostype->kernel->ltOperators = it->value.pRoutine;
 	}
 	typer->core->kernel->SetupMethods = NULL;
 	DMutex_Unlock( & mutex_methods_setup );

@@ -4582,10 +4582,10 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	ct = types[opa];
 	rout = NULL;
 	if( at->tid == DAO_CLASS ){
-		if( at->aux->xClass.classRoutines->overloads->routines->size ){
-			rout = (DaoRoutine*) at->aux->xClass.classRoutines; /* XXX */
+		if( at->aux->xClass.initRoutines->overloads->routines->size ){
+			rout = (DaoRoutine*) at->aux->xClass.initRoutines; /* XXX */
 		}else{
-			rout = at->aux->xClass.classRoutine;
+			rout = at->aux->xClass.initRoutine;
 		}
 		ct = at->aux->xClass.objType;
 	}else if( at->tid == DAO_CTYPE ){

@@ -189,13 +189,27 @@ int DaoList_Compare( DaoList *list1, DaoList *list2, DaoProcess *process )
 }
 int DaoCstruct_Compare( DaoCstruct *left, DaoCstruct *right, DaoProcess *process )
 {
-	DaoRoutine *routine = left->ctype->kernel->compares;
-	DaoValue *L = (DaoValue*) left;
-	DaoValue *R = (DaoValue*) right;
+	DaoRoutine *EQ = left->ctype->kernel->eqOperators;
+	DaoRoutine *LT = left->ctype->kernel->ltOperators;
+	DaoValue *P[2];
+	int NE = 0;
+
 	if( left == right ) return 0;
-	if( process == NULL || routine == NULL ) goto PointerComparison;
-	if( DaoProcess_Call( process, routine, L, & R, 1 ) ) goto PointerComparison;
-	return DaoValue_GetInteger( process->stackValues[0] );
+	if( process == NULL ) goto PointerComparison;
+
+	P[0] = (DaoValue*) left; /* To support calling static methods: */
+	P[1] = (DaoValue*) right;
+
+	if( EQ ){
+		if( DaoProcess_Call( process, EQ, 0, P, 2 ) ) goto PointerComparison;
+		if( DaoValue_GetInteger( process->stackValues[0] ) ) return 0;
+		NE = 1;
+	}
+	if( LT ){
+		if( DaoProcess_Call( process, LT, 0, P, 2 ) ) goto PointerComparison;
+		if( DaoValue_GetInteger( process->stackValues[0] ) ) return -1;
+		if( NE ) return 1;
+	}
 PointerComparison:
 	if( left->ctype != right->ctype ){
 		return number_compare( (size_t)left->ctype, (size_t)right->ctype );
@@ -208,13 +222,26 @@ PointerComparison:
 }
 int DaoObject_Compare( DaoObject *left, DaoObject *right, DaoProcess *process )
 {
-	DaoRoutine *routine = left->defClass->cmpRoutines;
-	DaoValue *L = (DaoValue*) left;
-	DaoValue *R = (DaoValue*) right;
-	if( left == right ) return 0;
-	if( process == NULL || routine == NULL ) goto PointerComparison;
-	if( DaoProcess_Call( process, routine, L, & R, 1 ) ) goto PointerComparison;
-	return DaoValue_GetInteger( process->stackValues[0] );
+	DaoRoutine *EQ = left->defClass->eqOperators;
+	DaoRoutine *LT = left->defClass->ltOperators;
+	DaoValue *P[2];
+	int NE = 0;
+
+	if( process == NULL ) goto PointerComparison;
+
+	P[0] = (DaoValue*) left; /* To support calling static methods: */
+	P[1] = (DaoValue*) right;
+
+	if( EQ ){
+		if( DaoProcess_Call( process, EQ, 0, P, 2 ) ) goto PointerComparison;
+		if( DaoValue_GetInteger( process->stackValues[0] ) ) return 0;
+		NE = 1;
+	}
+	if( LT ){
+		if( DaoProcess_Call( process, EQ, 0, P, 2 ) ) goto PointerComparison;
+		if( DaoValue_GetInteger( process->stackValues[0] ) ) return -1;
+		if( NE ) return 1;
+	}
 PointerComparison:
 	return number_compare( (size_t)left, (size_t)right );
 }

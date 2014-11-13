@@ -131,6 +131,7 @@ struct DaoParser
 	DList *decoParams2;
 	DList *routCompilable; /* list of defined routines with bodies */
 	DList *routReInferable;
+	DList *refCountedList;
 
 	DList     *nsDefines;
 	DaoLexer  *nsSymbols;
