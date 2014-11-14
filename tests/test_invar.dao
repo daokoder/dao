@@ -203,8 +203,8 @@ tup.index = 456
 invar a = { 1 }
 b = (any) a
 b.append( 2 )
-io.writeln( a )
+io.writeln( std.about(a) != std.about(b) )
 @[test(code_01)]
 @[test(code_01)]
-{{At line}} .* {{Invalid casting from invar type}}
+true
 @[test(code_01)]

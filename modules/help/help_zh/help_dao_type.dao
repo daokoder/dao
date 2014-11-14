@@ -60,6 +60,7 @@ class Klass
 @[table]
 ##类型名   ##类型描述
 ##none     &&空值类型
+##bool     &&布尔类型
 ##int      &&整数类型（64位）
 ##float    &&双精度浮点数类型（64位）
 ##complex  &&双精度复数类型

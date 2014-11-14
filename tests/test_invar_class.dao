@@ -289,3 +289,79 @@ invar class Derived ( Base )
 @[test(code_01)]
 @[test(code_01)]
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar class K { }
+invar k = K()
+var m = k  # Allowed, because k is immutable regardless "var" or "invar" declaration;
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+invar class K { }
+routine T()
+{
+	invar k = K()
+	var m = k  # Allowed, because k is immutable regardless "var" or "invar" declaration;
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+invar class K { }
+invar k = K()
+var m: tuple<int,K> = ( 123, k )
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar class K { }
+invar k = K()
+var m: tuple<int,K> = ( 123, K() )
+m[1] = k
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar class K { }
+invar k = K()
+var m: tuple<id:int,obj:K> = ( 123, K() )
+m.obj = k
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+
+
+@[test(code_01)]
+invar class K { }
+routine T( k: K ) { }
+invar k = K()
+T( k )  # Allowed, because k is immutable regardless "var" or "invar" declaration;
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]

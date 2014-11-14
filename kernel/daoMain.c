@@ -285,7 +285,7 @@ int main( int argc, char **argv )
 
 #ifdef DAO_USE_READLINE
 	DaoVmSpace_ReadLine( vmSpace, DaoReadLine );
-	DaoVmSpace_AddHistory( vmSpace, add_history );
+	DaoVmSpace_AddHistory( vmSpace, (AddHistory) add_history );
 	read_history( NULL );
 #endif
 

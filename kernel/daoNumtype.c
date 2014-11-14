@@ -2452,7 +2452,7 @@ DaoRandGenerator* DaoRandGenerator_New( uint_t seed )
 }
 void DaoRandGenerator_Delete( DaoRandGenerator *self )
 {
-	free( self );
+	dao_free( self );
 }
 void DaoRandGenerator_Seed( DaoRandGenerator *self, uint_t seed )
 {

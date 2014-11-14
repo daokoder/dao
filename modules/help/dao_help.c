@@ -212,7 +212,7 @@ static DaoxStream* DaoxStream_New( DaoStream *stream, DaoProcess *proc )
 	DString ssection = DString_WrapChars( "section" );
 	DString ssubsect = DString_WrapChars( "subsection" );
 	DString ssubsect2 = DString_WrapChars( "subsubsection" );
-	DaoxStream *self = (DaoxStream*) calloc( 1, sizeof(DaoxStream) );
+	DaoxStream *self = (DaoxStream*) dao_calloc( 1, sizeof(DaoxStream) );
 
 	self->mtypes = DHash_New( DAO_DATA_STRING, 0 );
 	self->regex = DaoRegex_New( & spat );
@@ -234,7 +234,7 @@ static void DaoxStream_Delete( DaoxStream *self )
 {
 	DaoRegex_Delete( self->regex );
 	DMap_Delete( self->mtypes );
-	free( self );
+	dao_free( self );
 }
 static void DaoxStream_SetColor( DaoxStream *self, const char *fg, const char *bg )
 {
@@ -1655,7 +1655,7 @@ static void DaoxHelp_Delete( DaoxHelp *self )
 {
 	/* Do not delete entries here, they are managed by DaoxHelper; */
 	DMap_Delete( self->entries );
-	free( self );
+	dao_free( self );
 }
 
 
@@ -1699,7 +1699,7 @@ static void DaoxHelper_Delete( DaoxHelper *self )
 	DString_Delete( self->notice );
 	DString_Delete( self->font );
 	DaoCstruct_Free( (DaoCstruct*) self );
-	free( self );
+	dao_free( self );
 }
 static void DaoxHelper_GetGCFields( void *p, DList *v, DList *arrays, DList *m, int rm )
 {

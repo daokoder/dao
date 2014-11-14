@@ -62,6 +62,7 @@ sum( invar self: list<@T<int|float|double|complex|string|enum>> ) => @T
 
 insert( self: list<@T>, item: @T, pos = 0 ) => list<@T>
 erase( self: list<@T>, start = 0, count = 1 ) => list<@T>
+join( self: list<@T>, other: list<@T>, ... : list<@T> ) => list<@T>
 append( self: list<@T>, item: @T, ... : @T ) => list<@T>
 push( self: list<@T>, item: @T, to: enum<front, back> = $back ) => list<@T>
 pop( self: list<@T>, from: enum<front,back> = $back ) => @T
@@ -202,6 +203,16 @@ erase(self:list<@T>,start=0,count=1)=>list<@T>
 erase( self: list<@T>, start = 0, count = 1 ) => list<@T>
 @[code]
 从列表的"start"位置开始删除"count"个元素。
+返回该列表本身。
+
+
+@[subsubsection]
+join(self:list<@T>,other:list<@T>,...:list<@T>)=>list<@T>
+@[subsubsection]
+@[code]
+join( self: list<@T>, other: list<@T>, ... : list<@T> ) => list<@T>
+@[code]
+将一个或多个列表附加到列表尾部。
 返回该列表本身。
 
 

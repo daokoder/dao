@@ -81,6 +81,7 @@ reset( self: map<@K,@V>, hashing: enum<none,auto,random> )
 erase( self: map<@K,@V>, from: @K ) => map<@K,@V>
 erase( self: map<@K,@V>, from: @K, to: @K ) => map<@K,@V>
 insert( self: map<@K,@V>, key: @K, value: @V ) => map<@K,@V>
+invert( self: map<@K,@V> ) => map<@V,@K>
 find( invar self: map<@K,@V>, invar key: @K, comparison: enum<LE,EQ,GE> = $EQ )
 	=> tuple<key:@K,value:@V> | none
 keys( invar self: map<@K,@V> ) => list<@K>
@@ -163,6 +164,16 @@ insert( self: map<@K,@V>, key: @K, value: @V ) => map<@K,@V>
 @[code]
 Insert a new key-value pair to the map.
 Return self map.
+
+
+@[subsubsection]
+invert(self:map<@K,@V>)=>map<@V,@K>
+@[subsubsection]
+@[code]
+invert( self: map<@K,@V> ) => map<@V,@K>
+@[code]
+Invert the key-value relationship.
+Return a new map.
 
 
 @[subsubsection]

@@ -73,6 +73,7 @@ The basic types are the following:
 @[table]
 ##Type Name  ##Type Description
 ##none     &&none value type
+##bool     &&boolean type
 ##int      &&64 bit integer type
 ##float    &&64 bit floating point number type
 ##complex  &&complex number type

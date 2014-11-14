@@ -86,8 +86,8 @@ DAO_DLL void DaoString_Delete( DaoString *self );
 /*
 // Structure for symbol, enum, flag and bool:
 // Storage modes:
-// Symbol: $AA => { type<$AA>, 0 }
-// Symbols: $AA + $BB => { type<$AA$BB>, 1|2 }
+// Symbol: $AA => { type<enum<AA>>, 0 }
+// Symbols: $AA + $BB => { type<enum<AA;BB>>, 1|2 }
 // Enum: enum MyEnum{ AA=1, BB=2 }, MyEnum.AA => { 1, type<MyEnum> }
 // Flag: enum MyFlag{ AA=1; BB=2 }, MyFlag.AA + MyFlag.BB => { 1|2, type<MyFlag> }
 */

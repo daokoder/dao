@@ -1508,9 +1508,6 @@ void DaoIGC_FreeGarbage()
 }
 void cycRefCountDecrement( DaoValue *value )
 {
-#if 0
-	if( value == 0x49be70 ) free(123);
-#endif
 	if( value == NULL ) return;
 	/* do not scan simple data types, as they cannot from cyclic structure: */
 	if( value->type < DAO_ENUM ) return;

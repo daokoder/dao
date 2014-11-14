@@ -30,6 +30,8 @@ daotests.AddTest( "Tuples", "test_tuples.dao" )
 
 test_decl = daotests.AddTest( "Declarations", "test_invar.dao" )
 
+test_operator = daotests.AddTest( "Operators", "test_operators.dao" )
+
 test_control = daotests.AddTest( "Controls", "test_if_else.dao" )
 test_control.AddTest( "test_for.dao" )
 test_control.AddTest( "test_while.dao" )

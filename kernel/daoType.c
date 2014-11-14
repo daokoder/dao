@@ -734,6 +734,16 @@ static int DaoType_MatchToVariant( DaoType *self, DaoType *type, DMap *defs, DMa
 	}
 	return mt;
 }
+int DaoType_CheckInvarMatch( DaoType *self, DaoType *type )
+{
+	/*
+	// Invar type cannot match to variable type due to potential modification;
+	// But const type can, because constant will be copied when it is moved.
+	 */
+	if( self->konst == 1 || self->invar == 0 || type->invar != 0 ) return 1;
+	if( self->tid <= DAO_ENUM || DaoType_IsImmutable( self ) ) return 1;
+	return type->tid == DAO_ANY || type->tid == DAO_THT;
+}
 int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int dep )
 {
 	DaoType *it1, *it2;
@@ -775,13 +785,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 		type = DaoType_GetBaseType( type );
 		return DaoType_Match( self, type, defs, binds, dep );
 	}else if( self->invar || type->invar ){
-		/*
-		// Invar type cannot match to variable type due to potential modification;
-		// But const type can, because constant will be copied when it is moved.
-		*/
-		if( self->tid > DAO_ENUM && self->invar && ! self->konst && ! type->invar ){
-			if( (type->tid != DAO_ANY && type->tid != DAO_THT) || type->var ) return 0;
-		}
+		if( DaoType_CheckInvarMatch( self, type ) == 0 ) return 0;
 
 		if( self->invar ) self = DaoType_GetBaseType( self );
 		if( type->invar ) type = DaoType_GetBaseType( type );
@@ -2097,7 +2101,7 @@ static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream
 		ec = DaoProcess_Call( proc, meth, self0, & type, 1 );
 	}else{
 		meth = DaoType_FindFunctionChars( self->ctype, "serialize" );
-		ec = DaoProcess_Call( proc, meth, self0, NULL, 0 );
+		if( meth ) ec = DaoProcess_Call( proc, meth, self0, NULL, 0 );
 	}
 	if( ec ){
 		DaoProcess_RaiseException( proc, daoExceptionNames[ec], proc->string->chars, NULL );

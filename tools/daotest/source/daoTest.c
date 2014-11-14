@@ -108,10 +108,10 @@ static int dao_test_inliner( DaoNamespace *NS, DString *mode, DString *VT, DStri
 }
 
 const char *last_line_format =
-"Summary:  files, %2i passed, %2i failed;  units: %3i passed, %3i failed;\n";
+"Summary:  files, %2i passed, %2i failed;  units: %3i passed, %3i failed;";
 
-const char *last_line_format2 =
-"All Test Summary:  files, %i passed, %i failed;  units: %i passed, %i failed;\n";
+const char *line_separator =
+"-------------------------------------------------------------------------------------";
 
 const char *last_line_pattern =
 "<1>(.*) (([^\n]*)) {{Summary:  files,}} %s* "
@@ -165,12 +165,17 @@ int main( int argc, char **argv )
 		if( logfile ){
 			DaoFile_ReadAll( logfile, string, 0 );
 			DString_Assign( summary, string );
+			DString_Change( summary, "{{--------}} %- + %n", "", 0 );
+			DString_Change( summary, "^ DaoTest: [^%n]* %n", "", 0 );
 			DString_Change( summary, last_line_pattern, "%1", 0 );
 			GetCounts( string, & mpasses, & mfails, & passes, & fails );
 			fseek( logfile, 0, SEEK_SET );
 		}else{
 			logfile = Dao_OpenFile( argv[logopt+1], "w+b" );
 		}
+		fprintf( logfile, "%s\n", line_separator );
+		fprintf( logfile, "DaoTest: Using Dao %s (%s, %s)\n", DAO_VERSION, CHANGESET_ID, __DATE__ );
+		fprintf( logfile, "%s\n", line_separator );
 		fprintf( logfile, "%s", summary->chars );
 		DString_Reset( summary, 0 );
 		for(i=2; i<logopt; ++i){
@@ -201,7 +206,9 @@ int main( int argc, char **argv )
 		passes += passes2;
 		fails += fails2;
 		fprintf( logfile, "%s\n", summary->chars );
-		fprintf( logfile, last_line_format2, mpasses, mfails, passes, fails );
+		fprintf( logfile, "%s\n", line_separator );
+		fprintf( logfile, "%-15s", "ALL" );
+		fprintf( logfile, last_line_format, mpasses, mfails, passes, fails );
 		fclose( logfile );
 		DString_Delete( string );
 		DString_Delete( summary );

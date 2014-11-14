@@ -1774,7 +1774,7 @@ DaoInode* DaoInode_New()
 }
 void DaoInode_Delete( DaoInode *self )
 {
-	free( self );
+	dao_free( self );
 }
 void DaoInode_Print( DaoInode *self, int index )
 {
@@ -2085,7 +2085,7 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 		*/
 		selfMatch = DaoType_MatchTo( selftype, partype, defs );
 		if( selfMatch ){
-			if( selftype->invar && partype->invar == 0 ) goto FinishError;
+			if( DaoType_CheckInvarMatch( selftype, partype ) == 0 ) goto FinishError;
 			selfChecked = 1;
 			parpass[0] = selfMatch;
 		}
@@ -2108,7 +2108,7 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 			}
 			break;
 		}else if( (partype->attrib & DAO_TYPE_SELFNAMED) && partype->aux->xType.invar == 0 ){
-			if( tp->invar != 0 ) goto FinishError;
+			if( DaoType_CheckInvarMatch( tp, (DaoType*) partype->aux ) == 0 ) goto FinishError;
 		}
 		if( tp == NULL )  goto FinishError;
 		if( tp->attrib & DAO_TYPE_PARNAMED ) tp = (DaoType*) tp->aux;
@@ -2499,7 +2499,7 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 		if( selfMatch ){
 			selfChecked = 1;
 			parpass[0] = selfMatch;
-			if( selftype->invar && abtp->invar == 0 ){
+			if( DaoType_CheckInvarMatch( selftype, abtp ) == 0 ){
 				DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );
 				abtp = DaoType_DefineTypes( abtp, ns, defs );
 				DString_AppendTypeError( s, selftype, abtp );
@@ -2533,7 +2533,7 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 			}
 			break;
 		}else if( (abtp->attrib & DAO_TYPE_SELFNAMED) && abtp->aux->xType.invar == 0 ){
-			if( tp->invar != 0 ) goto WrongParamType;
+			if( DaoType_CheckInvarMatch( tp, (DaoType*) abtp->aux ) == 0 ) goto WrongParamType;
 		}
 		if( tp == NULL ){
 			DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );
@@ -5387,7 +5387,8 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}
 			if( at->tid <= DAO_ENUM ) at = DaoType_GetBaseType( at );
 			if( type2 && *type2 != NULL && at->tid > DAO_ENUM ){
-				if( type2[0]->var == 1 && (at->invar == 1 && at->konst == 0) ){
+				int im = DaoType_IsImmutable( at );
+				if( im == 0 && type2[0]->var == 1 && (at->invar == 1 && at->konst == 0) ){
 					return DaoInferencer_ErrorTypeNotMatching( self, at, *type2 );
 				}
 			}
@@ -5438,13 +5439,12 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			if( DaoInferencer_HandleSetField( self, inode, defs ) == 0 ) return 0;
 			break;
 		case DVM_CAST :
-			if( routConsts->items.pValue[opb]->type != DAO_TYPE ) goto ErrorTyping;
+			if( routConsts->items.pValue[opb]->type != DAO_TYPE ) goto InvalidCasting;
 			bt = (DaoType*) routConsts->items.pValue[opb];
 			DaoInferencer_UpdateType( self, opc, bt );
 			AssertTypeMatching( bt, types[opc], defs );
 			at = types[opa];
 			ct = types[opc];
-			if( at->invar && ct->invar == 0 && ct->tid > DAO_ENUM ) goto InvalidCasting;
 			if( at->realnum && ct->realnum ){
 				int K = DAO_FLOAT - DAO_BOOLEAN + 1;
 				vmc->code = DVM_MOVE_BB + K*(ct->tid - DAO_BOOLEAN) + at->tid - DAO_BOOLEAN;

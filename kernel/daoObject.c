@@ -59,7 +59,7 @@ InvalidParam:
 }
 static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
-	int ec;
+	int ec = 0;
 	char buf[50];
 	DaoObject *self = & self0->xObject;
 	DaoValue *type = (DaoValue*) dao_type_string;
@@ -83,7 +83,7 @@ static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *strea
 		ec = DaoProcess_Call( proc, meth, self0, & type, 1 );
 	}else{
 		meth = DaoClass_FindMethod( self->defClass, "serialize", NULL );
-		ec = DaoProcess_Call( proc, meth, self0, NULL, 0 );
+		if( meth ) ec = DaoProcess_Call( proc, meth, self0, NULL, 0 );
 	}
 	if( ec ){
 		DaoProcess_RaiseException( proc, daoExceptionNames[ec], proc->string->chars, NULL );

@@ -1849,30 +1849,14 @@ static void DaoLIST_Join( DaoProcess *proc, DaoValue *p[], int N )
 	int i;
 	DaoList *self = & p[0]->xList;
 	DaoProcess_PutValue( proc, p[0] );
-	for(i=1; i<N; ++i){
-		DaoList *other = (DaoList*) p[i];
-		daoint size = self->value->size;
-		daoint j, size2 = other->value->size;
-		for(j=0; j<size2; ++j) DaoList_Append( self, other->value->items.pValue[j] );
-		if( (size + size2) < self->value->size ){
-			DaoProcess_RaiseError( proc, "Value", "value type" );
-			break;
-		}
-	}
+	for(i=1; i<N; ++i) DList_AppendList( self->value, p[i]->xList.value );
 }
 static void DaoLIST_PushBack( DaoProcess *proc, DaoValue *p[], int N )
 {
 	int i;
 	DaoList *self = & p[0]->xList;
 	DaoProcess_PutValue( proc, p[0] );
-	for(i=1; i<N; ++i){
-		daoint size = self->value->size;
-		DaoList_Append( self, p[i] );
-		if( size == self->value->size ){
-			DaoProcess_RaiseError( proc, "Value", "value type" );
-			break;
-		}
-	}
+	for(i=1; i<N; ++i) DaoList_Append( self, p[i] );
 }
 static void DaoLIST_Front( DaoProcess *proc, DaoValue *p[], int N )
 {
