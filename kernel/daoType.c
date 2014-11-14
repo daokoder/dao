@@ -734,14 +734,15 @@ static int DaoType_MatchToVariant( DaoType *self, DaoType *type, DMap *defs, DMa
 	}
 	return mt;
 }
-int DaoType_CheckInvarMatch( DaoType *self, DaoType *type )
+int DaoType_CheckInvarMatch( DaoType *self, DaoType *type, int enforePrimitive )
 {
 	/*
 	// Invar type cannot match to variable type due to potential modification;
 	// But const type can, because constant will be copied when it is moved.
 	 */
 	if( self->konst == 1 || self->invar == 0 || type->invar != 0 ) return 1;
-	if( self->tid <= DAO_ENUM || DaoType_IsImmutable( self ) ) return 1;
+	if( enforePrimitive == 0 && self->tid <= DAO_ENUM ) return 1;
+	if( DaoType_IsImmutable( self ) ) return 1;
 	return type->tid == DAO_ANY || type->tid == DAO_THT;
 }
 int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int dep )
@@ -785,7 +786,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 		type = DaoType_GetBaseType( type );
 		return DaoType_Match( self, type, defs, binds, dep );
 	}else if( self->invar || type->invar ){
-		if( DaoType_CheckInvarMatch( self, type ) == 0 ) return 0;
+		if( DaoType_CheckInvarMatch( self, type, 0 ) == 0 ) return 0;
 
 		if( self->invar ) self = DaoType_GetBaseType( self );
 		if( type->invar ) type = DaoType_GetBaseType( type );

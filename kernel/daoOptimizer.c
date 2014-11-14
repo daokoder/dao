@@ -2085,7 +2085,7 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 		*/
 		selfMatch = DaoType_MatchTo( selftype, partype, defs );
 		if( selfMatch ){
-			if( DaoType_CheckInvarMatch( selftype, partype ) == 0 ) goto FinishError;
+			if( DaoType_CheckInvarMatch( selftype, partype, 1 ) == 0 ) goto FinishError;
 			selfChecked = 1;
 			parpass[0] = selfMatch;
 		}
@@ -2108,7 +2108,7 @@ static int DaoRoutine_CheckTypeX( DaoType *routType, DaoNamespace *ns, DaoType *
 			}
 			break;
 		}else if( (partype->attrib & DAO_TYPE_SELFNAMED) && partype->aux->xType.invar == 0 ){
-			if( DaoType_CheckInvarMatch( tp, (DaoType*) partype->aux ) == 0 ) goto FinishError;
+			if( DaoType_CheckInvarMatch( tp, (DaoType*) partype->aux, 1 ) == 0 ) goto FinishError;
 		}
 		if( tp == NULL )  goto FinishError;
 		if( tp->attrib & DAO_TYPE_PARNAMED ) tp = (DaoType*) tp->aux;
@@ -2499,7 +2499,7 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 		if( selfMatch ){
 			selfChecked = 1;
 			parpass[0] = selfMatch;
-			if( DaoType_CheckInvarMatch( selftype, abtp ) == 0 ){
+			if( DaoType_CheckInvarMatch( selftype, abtp, 1 ) == 0 ){
 				DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );
 				abtp = DaoType_DefineTypes( abtp, ns, defs );
 				DString_AppendTypeError( s, selftype, abtp );
@@ -2533,7 +2533,7 @@ void DaoRoutine_CheckError( DaoNamespace *ns, DaoRoutine *rout, DaoType *routTyp
 			}
 			break;
 		}else if( (abtp->attrib & DAO_TYPE_SELFNAMED) && abtp->aux->xType.invar == 0 ){
-			if( DaoType_CheckInvarMatch( tp, (DaoType*) abtp->aux ) == 0 ) goto WrongParamType;
+			if( DaoType_CheckInvarMatch( tp, (DaoType*) abtp->aux, 1 ) == 0 ) goto WrongParamType;
 		}
 		if( tp == NULL ){
 			DString *s = AppendError( errors, routobj, DTE_PARAM_WRONG_TYPE );

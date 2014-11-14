@@ -157,7 +157,7 @@ DAO_DLL DaoType* DaoType_GetInvarType( DaoType *self );
 DAO_DLL DaoType* DaoType_GetVarType( DaoType *self );
 
 /* if "self" match to "type": */
-DAO_DLL int DaoType_CheckInvarMatch( DaoType *self, DaoType *type );
+DAO_DLL int DaoType_CheckInvarMatch( DaoType *self, DaoType *type, int enforePrimitive );
 DAO_DLL int DaoType_MatchTo( DaoType *self, DaoType *type, DMap *defs );
 DAO_DLL int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs );
 DAO_DLL int DaoType_MatchValue2( DaoType *self, DaoValue *value, DMap *defs );

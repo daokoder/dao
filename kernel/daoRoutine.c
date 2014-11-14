@@ -596,10 +596,10 @@ static int Dao_CheckParameter( DaoType *partype, DaoValue *argvalue, DaoType *ar
 {
 	int m = 0;
 	if( argvalue && argtype && argtype->tid > DAO_ENUM ){
-		if( DaoType_CheckInvarMatch( argtype, partype ) == 0 ) return 0;
+		if( DaoType_CheckInvarMatch( argtype, partype, 0 ) == 0 ) return 0;
 		m = DaoType_MatchValue( partype, argvalue, defs );
 	}else if( argtype && argtype->tid > DAO_ENUM ){
-		if( DaoType_CheckInvarMatch( argtype, partype ) == 0 ) return 0;
+		if( DaoType_CheckInvarMatch( argtype, partype, 0 ) == 0 ) return 0;
 		m = DaoType_MatchTo( argtype, partype, defs );
 	}else if( argvalue ){
 		m = DaoType_MatchValue( partype, argvalue, defs );
@@ -646,7 +646,7 @@ static DaoRoutine* DParamNode_Lookup( DParamNode *self, DaoValue *values[], DaoT
 			// self parameter will be passed by reference, const self argument
 			// should not be passed to non-const self parameter;
 			*/
-			if( argtype && argtype->invar && parnode->type->invar == 0 ) continue;
+			if( DaoType_CheckInvarMatch( argtype, parnode->type, 1 ) == 0 ) continue;
 		}
 		if( defs && clear ) DMap_Reset( defs );
 
@@ -685,7 +685,7 @@ static DaoRoutine* DRoutines_Lookup2( DRoutines *self, DaoValue *svalue, DaoType
 		 */
 		for(parnode=self->mtree->first; parnode; parnode=parnode->next){
 			if( parnode->type == NULL ) continue;
-			if( stype != NULL && stype->invar && parnode->type->invar == 0 ) continue;
+			if( stype != NULL && DaoType_CheckInvarMatch( stype, parnode->type, 1 ) == 0 ) continue;
 
 			m = Dao_CheckParameter( parnode->type, svalue, stype, defs );
 			if( strict && m < DAO_MT_ANY ) continue;
@@ -831,7 +831,8 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *svalue, DaoType *stype,
 			}
 			break;
 		}else if( (partype->attrib & DAO_TYPE_SELFNAMED) && partype->aux->xType.invar == 0 ){
-			if( argtype && argtype->invar != 0 ) goto NotMatched;
+			DaoType *ptype = (DaoType*) partype->aux;
+			if( argtype != NULL && DaoType_CheckInvarMatch( argtype, ptype, 1 ) == 0 ) continue;
 		}
 		if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
 		parpass[parindex] = Dao_CheckParameter( partype, argvalue, argtype, defs );

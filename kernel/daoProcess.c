@@ -498,7 +498,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 				argvalue = argvalues[argindex];
 				parindex = argindex + selfChecked;
 				if( argtype && argvalue->type > DAO_ENUM ){
-					if( DaoType_CheckInvarMatch( argtype, partype ) == 0 ) goto ReturnNull;
+					if( DaoType_CheckInvarMatch( argtype, partype, 0 ) == 0 ) goto ReturnNull;
 				}
 				if( DaoValue_Move2( argvalue, & dest[parindex], partype, defs ) == 0 ) goto ReturnNull;
 				passed |= (size_t)1<<parindex;
@@ -508,7 +508,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 		if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
 
 		if( argtype && argvalue->type > DAO_ENUM ){
-			if( DaoType_CheckInvarMatch( argtype, partype ) == 0 ) goto ReturnNull;
+			if( DaoType_CheckInvarMatch( argtype, partype, 0 ) == 0 ) goto ReturnNull;
 		}
 
 		passed |= (size_t)1<<parindex;
