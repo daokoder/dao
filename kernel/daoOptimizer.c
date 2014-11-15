@@ -5619,6 +5619,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 						|| at->tid == DAO_INTERFACE || bt->tid == DAO_INTERFACE ){
 					ct = DaoCheckBinArith( routine, vmc, at, bt, types[opc], hostClass, mbs );
 					if( ct == NULL && code != DVM_EQ && code != DVM_NE ) goto InvOper;
+					if( ct == NULL && DaoType_MatchTo( at, bt, NULL ) == 0 ) goto InvOper;
 					if( ct == NULL ) ct = dao_type_bool;
 				}else if( at->tid == bt->tid ){
 					if( at->tid == DAO_COMPLEX && code < DVM_EQ ) goto InvOper;
@@ -5627,6 +5628,8 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 						&& bt->tid >= DAO_BOOLEAN && bt->tid <= DAO_FLOAT ){
 					/* pass */
 				}else if( code != DVM_EQ && code != DVM_NE ){
+					goto InvOper;
+				}else if( DaoType_MatchTo( at, bt, NULL ) == 0 ){
 					goto InvOper;
 				}
 				DaoInferencer_UpdateVarType( self, opc, ct );

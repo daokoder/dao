@@ -253,6 +253,31 @@ static void DaoSTD_Error3( DaoProcess *proc, DaoValue *p[], int n )
 	DaoException_Init( exception, proc, p[1]->xString.value->chars, p[2] );
 	DList_Append( proc->exceptions, exception );
 }
+const char *dao_assertion_format = "Assertion failed at line %i in file \"%s\" with message:\n";
+static void DaoSTD_Assert( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoType *etype;
+	DaoException *exception;
+	DaoRoutine *rout = proc->activeRoutine;
+	DString *file = proc->activeNamespace->name;
+	int line, id = (ushort_t) (proc->activeCode - proc->topFrame->active->codes);
+
+	if( p[0]->xBoolean.value ) return;
+
+	line = rout->defLine;
+	if( id < rout->body->vmCodes->size ) line = rout->body->annotCodes->items.pVmc[id]->line;
+
+	etype = DaoVmSpace_MakeExceptionType( proc->vmSpace, "Error::Assertion" );
+	exception = DaoException_New( etype );
+	DList_Append( proc->exceptions, exception );
+
+	DaoException_Init( exception, proc, NULL, NULL );
+
+	DString_Reserve( exception->info, file->size + 100 );
+	id = sprintf( exception->info->chars, dao_assertion_format, line, file->chars );
+	if( id ) exception->info->size = id;
+	DString_Append( exception->info, p[1]->xString.value );
+}
 static void DaoSTD_Exec( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 0 );
@@ -351,6 +376,9 @@ DaoFuncItem dao_std_methods[] =
 		// Raise an error of type "eclass" with message "info", and associate "data"
 		// to the error.
 		*/
+	},
+	{ DaoSTD_Assert,
+		"assert( condition: bool, message = '' )"
 	},
 	{ DaoSTD_Exec,
 		"exec() [=>@T] => @T"

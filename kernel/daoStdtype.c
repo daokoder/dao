@@ -3969,9 +3969,6 @@ static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n );
 
 static DaoFuncItem dao_Exception_Meths[] =
 {
-	{ Dao_Exception_Define,
-		"Define( name: string, info = '' ) => class<Exception>"
-	},
 
 	/*
 	// No constructors, so that interface of user-defined exception type
@@ -4067,10 +4064,16 @@ static void Dao_Exception_Define( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutValue( proc, (DaoValue*) etype->aux );
 }
 
+static DaoFuncItem dao_ExceptionWarning_Meths[] =
+{
+	{ Dao_Exception_New, "Warning( summary = \"\" )=>Warning" },
+	{ Dao_Exception_Define, "Define( name: string, info = '' ) => class<Warning>" },
+	{ NULL, NULL }
+};
 
 DaoTypeBase dao_ExceptionWarning_Typer =
 {
-	"Exception::Warning", NULL, NULL, NULL,
+	"Exception::Warning", NULL, NULL, dao_ExceptionWarning_Meths,
 	{ & dao_Exception_Typer, NULL }, {0},
 	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
 };
@@ -4079,6 +4082,7 @@ static DaoFuncItem dao_ExceptionError_Meths[] =
 {
 	{ Dao_Exception_New, "Error( summary = \"\" )=>Error" },
 	{ Dao_Exception_New22, "Error( data: any )=>Error" },
+	{ Dao_Exception_Define, "Define( name: string, info = '' ) => class<Error>" },
 	{ NULL, NULL }
 };
 DaoTypeBase dao_ExceptionError_Typer =

@@ -104,6 +104,7 @@ static const char* const daoCtInfo[] =
 	"Parameter need default value",
 	"Default parameter is not constant",
 	"Invalid default parameter",
+	"Invalid default parameter before non-default parameter(s)",
 	"Default value not matching parameter type",
 	"Too many parameters",
 	"Invalid return type",

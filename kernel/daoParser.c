@@ -1293,7 +1293,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 		}
 		if( hasdeft && dft == NULL && type_default == NULL && module->outerParser == NULL ){
 			e1 = hasdeft;  e2 = right;
-			goto ErrorInvalidDefault;
+			goto ErrorMiddleDefault;
 		}
 		if( nameTok->name == DTOK_ID_THTYPE ){
 			if( nested->size == selfpar && type->tid != DAO_ROUTINE ) goto ErrorInvalidParam;
@@ -1482,6 +1482,7 @@ ErrorRedundantType:  ec = DAO_PARAM_REDUNDANT_TYPE; goto ErrorRoutine;
 ErrorNeedType:       ec = DAO_PARAM_NEED_TYPE;    goto ErrorRoutine;
 ErrorNeedDefault:    ec = DAO_PARAM_NEED_DEFAULT; goto ErrorRoutine;
 ErrorInvalidDefault: ec = DAO_PARAM_INVALID_DEFAULT; goto ErrorRoutine;
+ErrorMiddleDefault: ec = DAO_PARAM_MIDDLE_DEFAULT; goto ErrorRoutine;
 ErrorVariableDefault: ec = DAO_PARAM_VARIABLE_DEFAULT; goto ErrorRoutine;
 ErrorImproperDefault: ec = DAO_PARAM_IMPROPER_DEFAULT; goto ErrorRoutine;
 ErrorInvalidReturn:  ec = DAO_PARAM_INVALID_RETURN; goto ErrorRoutine;
@@ -1492,6 +1493,7 @@ ErrorRoutine:
 		if( e2 >= size ) e2 = size - 1;
 		DString_Clear( self->string );
 		for(i=e1; i<=e2; i++){
+			if( tokens[i]->type == tokens[i-1]->type ) DString_AppendChar( self->string, ' ' );
 			DString_Append( self->string, & tokens[i]->string );
 			if( self->string->size > 20 ) break;
 		}
@@ -5649,11 +5651,13 @@ CleanUp:
 	}
 	/* init arith; */
 	cst = 0;
-	pos = DaoParser_ParseVarExpressions( self, start+2, semic1-1, store );
-	if( pos < 0 ) return -1;
-	if( pos != semic1 ){
-		DaoParser_Error2( self, DAO_INVALID_EXPRESSION, start+2, semic1-1, 0 );
-		return -1;
+	if( start+2 < semic1 ){
+		pos = DaoParser_ParseVarExpressions( self, start+2, semic1-1, store );
+		if( pos < 0 ) return -1;
+		if( pos != semic1 ){
+			DaoParser_Error2( self, DAO_INVALID_EXPRESSION, start+2, semic1-1, 0 );
+			return -1;
+		}
 	}
 	/* see the comments for parsing if-else: */
 	inode = DaoParser_AddCode( self, DVM_GOTO, 0, 0, 0, start+2, 0,0 );
