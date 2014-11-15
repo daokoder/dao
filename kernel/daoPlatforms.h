@@ -44,17 +44,8 @@
 
 #  include <windows.h>
 
-// 2014-04-30: no more needed;
-//#  define stat _stat
-//#  define fstat _fstat
-
-#  ifndef fileno
-#    define fileno _fileno
-#  endif
-
 #  ifdef _MSC_VER
 #    include<direct.h>
-#    define getcwd _getcwd
 #  else
 #    include<unistd.h>
 #  endif
@@ -63,6 +54,10 @@
 #    define strtoll _strtoi64
 #    define wcstoll _wcstoi64
 #    define snprintf _snprintf
+#    define getcwd _getcwd
+#    define stat _stat
+#    define fstat _fstat
+#    define fileno _fileno
 #    define popen _popen
 #    define pclose _pclose
 #  endif

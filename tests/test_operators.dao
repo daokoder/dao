@@ -1,0 +1,53 @@
+
+@[test(code_01)]
+invar ls = { 1, 2, 3 }
+ls2 = (any) ls
+io.writeln( std.about(ls) != std.about(ls2) )
+@[test(code_01)]
+@[test(code_01)]
+true
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+class K
+{
+}
+invar k = K()
+o = (any) k
+@[test(code_01)]
+@[test(code_01)]
+{{[[Error::Type]]}} .* {{casting}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class K
+{
+	routine M(){}
+}
+invar k = { K() }
+o = (any) k
+o[0].M()
+@[test(code_01)]
+@[test(code_01)]
+{{[[Error::Type]]}} .* {{casting}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar class K
+{
+	routine M(){}
+}
+invar k = { K() }
+o = (any) k  # Allowed, K instance is invariable anyway;
+o[0].M()
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]

@@ -4067,7 +4067,7 @@ static void Dao_Exception_Define( DaoProcess *proc, DaoValue *p[], int N )
 static DaoFuncItem dao_ExceptionWarning_Meths[] =
 {
 	{ Dao_Exception_New, "Warning( summary = \"\" )=>Warning" },
-	{ Dao_Exception_Define, "Define( name: string, info = '' ) => class<Warning>" },
+	{ Dao_Exception_Define, "define( name: string, info = '' ) => class<Warning>" },
 	{ NULL, NULL }
 };
 
@@ -4082,7 +4082,7 @@ static DaoFuncItem dao_ExceptionError_Meths[] =
 {
 	{ Dao_Exception_New, "Error( summary = \"\" )=>Error" },
 	{ Dao_Exception_New22, "Error( data: any )=>Error" },
-	{ Dao_Exception_Define, "Define( name: string, info = '' ) => class<Error>" },
+	{ Dao_Exception_Define, "define( name: string, info = '' ) => class<Error>" },
 	{ NULL, NULL }
 };
 DaoTypeBase dao_ExceptionError_Typer =

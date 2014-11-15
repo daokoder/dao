@@ -2843,7 +2843,6 @@ static void DAOMAKE_TestCompile( DaoProcess *proc, DaoValue *p[], int N )
 	DString_MD5( command, md5 );
 	DString_Reset( md5, 12 );
 
-	DaoMake_MakeObjectDir( proc->activeNamespace->path );
 	DString_AppendChars( source, daomake_objects_dir );
 	DString_AppendChars( source, "/source_" );
 	DString_Append( source, md5 );
