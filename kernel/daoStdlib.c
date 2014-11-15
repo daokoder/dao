@@ -55,7 +55,7 @@ const char *const dao_version = "Dao " DAO_VERSION " (" CHANGESET_ID ", " __DATE
 
 static void DaoSTD_Version( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoProcess_PutChars( proc, p[0]->xInteger.value ? dao_version : DAO_VERSION );
+	DaoProcess_PutChars( proc, p[0]->xBoolean.value ? dao_version : DAO_VERSION );
 }
 
 static void DaoSTD_Path( DaoProcess *proc, DaoValue *p[], int N )
@@ -329,7 +329,7 @@ static void DaoSTD_Test( DaoProcess *proc, DaoValue *p[], int n )
 
 DaoFuncItem dao_std_methods[] =
 {
-	{ DaoSTD_Version,   "version( verbose = 0 ) => string" },
+	{ DaoSTD_Version,   "version( verbose = false ) => string" },
 	{ DaoSTD_Path,
 		/*
 		// program: the interpreter path;

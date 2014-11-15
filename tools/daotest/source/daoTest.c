@@ -134,6 +134,7 @@ int main( int argc, char **argv )
 	DaoTestStream stream0 = {NULL,NULL,NULL,NULL,NULL,NULL};
 	DaoTestStream *stream = & stream0;
 	DaoNamespace *ns;
+	DaoProcess *proc;
 	DString *string;
 	DString *summary;
 	DString *info;
@@ -174,7 +175,10 @@ int main( int argc, char **argv )
 			logfile = Dao_OpenFile( argv[logopt+1], "w+b" );
 		}
 		fprintf( logfile, "%s\n", line_separator );
-		fprintf( logfile, "DaoTest: Using Dao %s (%s, %s)\n", DAO_VERSION, CHANGESET_ID, __DATE__ );
+		proc = DaoVmSpace_AcquireProcess( vmSpace );
+		DaoProcess_Eval( proc, vmSpace->mainNamespace, "std.version(true)" );
+		fprintf( logfile, "DaoTest: Using %s\n", DaoValue_TryGetChars( proc->stackValues[0] ) );
+		DaoVmSpace_ReleaseProcess( vmSpace, proc );
 		fprintf( logfile, "%s\n", line_separator );
 		fprintf( logfile, "%s", summary->chars );
 		DString_Reset( summary, 0 );
