@@ -240,7 +240,7 @@ static void DaoxStream_SetColor( DaoxStream *self, const char *fg, const char *b
 {
 	DString fg2 = DString_WrapChars( fg );
 	DString bg2 = DString_WrapChars( bg );
-	DaoStream_SetColor( self->stream, fg, bg );
+	if( self->fmtHTML == 0 ) DaoStream_SetColor( self->stream, fg, bg );
 	if( fg == NULL && bg == NULL ){
 		if( self->fmtHTML && self->cstack ){
 			DString_AppendChars( self->output, "</span>" );

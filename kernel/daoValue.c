@@ -238,7 +238,7 @@ int DaoObject_Compare( DaoObject *left, DaoObject *right, DaoProcess *process )
 		NE = 1;
 	}
 	if( LT ){
-		if( DaoProcess_Call( process, EQ, 0, P, 2 ) ) goto PointerComparison;
+		if( DaoProcess_Call( process, LT, 0, P, 2 ) ) goto PointerComparison;
 		if( DaoValue_GetInteger( process->stackValues[0] ) ) return -1;
 		if( NE ) return 1;
 	}
@@ -296,6 +296,11 @@ int DaoValue_IsZero( DaoValue *self )
 	}
 	return 0;
 }
+int DaoValue_IsNumber( DaoValue *self )
+{
+	if( self->type == DAO_INTEGER || self->type == DAO_FLOAT ) return 1;
+	return 0;
+}
 static dao_integer DString_ToInteger( DString *self )
 {
 		return strtoll( self->chars, NULL, 0 );
@@ -332,11 +337,38 @@ dao_float DaoValue_GetFloat( DaoValue *self )
 	}
 	return 0.0;
 }
-int DaoValue_IsNumber( DaoValue *self )
+dao_complex DaoValue_GetComplex( DaoValue *self )
 {
-	if( self->type == DAO_INTEGER || self->type == DAO_FLOAT ) return 1;
-	return 0;
+	dao_complex com = { 0.0, 0.0 };
+	switch( self->type ){
+	case DAO_BOOLEAN :
+	case DAO_INTEGER : com.real = self->xInteger.value; break;
+	case DAO_FLOAT   : com.real = self->xFloat.value; break;
+	case DAO_COMPLEX : com = self->xComplex.value; break;
+	default : break;
+	}
+	return com;
 }
+DString* DaoValue_GetString( DaoValue *self, DString *str )
+{
+	dao_complex *com;
+	char chs[100] = {0};
+	DString_Clear( str );
+	switch( self->type ){
+	case DAO_COMPLEX :
+		com = & self->xComplex.value;
+		sprintf( chs, (com->imag < 0) ? "%g%gC" : "%g+%gC", com->real, com->imag ); break;
+	case DAO_BOOLEAN : strcat( chs, self->xBoolean.value ? "true" : "false" ); break;
+	case DAO_INTEGER : sprintf( chs, "%"DAO_I64, (long long) self->xInteger.value ); break;
+	case DAO_FLOAT   : sprintf( chs, "%g", self->xFloat.value ); break;
+	case DAO_STRING : DString_Assign( str, self->xString.value ); break;
+	case DAO_ENUM : DaoEnum_MakeName( & self->xEnum, str ); break;
+	default : break;
+	}
+	if( self->type <= DAO_COMPLEX ) DString_SetChars( str, chs );
+	return str;
+}
+
 static void DaoValue_BasicPrint( DaoValue *self, DaoStream *stream, DMap *cycData )
 {
 	if( self->type <= DAO_TUPLE )
@@ -400,37 +432,8 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 	}
 	if( cycData != cd ) DMap_Delete( cycData );
 }
-dao_complex DaoValue_GetComplex( DaoValue *self )
-{
-	dao_complex com = { 0.0, 0.0 };
-	switch( self->type ){
-	case DAO_BOOLEAN :
-	case DAO_INTEGER : com.real = self->xInteger.value; break;
-	case DAO_FLOAT   : com.real = self->xFloat.value; break;
-	case DAO_COMPLEX : com = self->xComplex.value; break;
-	default : break;
-	}
-	return com;
-}
-DString* DaoValue_GetString( DaoValue *self, DString *str )
-{
-	dao_complex *com;
-	char chs[100] = {0};
-	DString_Clear( str );
-	switch( self->type ){
-	case DAO_COMPLEX :
-		com = & self->xComplex.value;
-		sprintf( chs, (com->imag < 0) ? "%g%gC" : "%g+%gC", com->real, com->imag ); break;
-	case DAO_BOOLEAN : strcat( chs, self->xBoolean.value ? "true" : "false" ); break;
-	case DAO_INTEGER : sprintf( chs, "%"DAO_I64, (long long) self->xInteger.value ); break;
-	case DAO_FLOAT   : sprintf( chs, "%g", self->xFloat.value ); break;
-	case DAO_STRING : DString_Assign( str, self->xString.value ); break;
-	case DAO_ENUM : DaoEnum_MakeName( & self->xEnum, str ); break;
-	default : break;
-	}
-	if( self->type <= DAO_COMPLEX ) DString_SetChars( str, chs );
-	return str;
-}
+
+
 void DaoValue_MarkConst( DaoValue *self )
 {
 	DMap *map;

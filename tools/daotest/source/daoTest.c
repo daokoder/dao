@@ -108,13 +108,13 @@ static int dao_test_inliner( DaoNamespace *NS, DString *mode, DString *VT, DStri
 }
 
 const char *last_line_format =
-"Summary:  files, %2i passed, %2i failed;  units: %3i passed, %3i failed;";
+":  files, %2i passed, %2i failed;  units: %3i passed, %3i failed;";
 
 const char *line_separator =
-"-------------------------------------------------------------------------------------";
+"------------------------------------------------------------------------------";
 
 const char *last_line_pattern =
-"<1>(.*) (([^\n]*)) {{Summary:  files,}} %s* "
+"<1>(.*) (([^\n]*)) {{:  files,}} %s* "
 "<2>(%d+) {{ passed,}} %s* <3>(%d+) {{ failed;  units:}} %s*"
 "<4>(%d+) {{ passed,}} %s* <5>(%d+) {{ failed;}}%s* $";
 
@@ -211,7 +211,7 @@ int main( int argc, char **argv )
 		fails += fails2;
 		fprintf( logfile, "%s\n", summary->chars );
 		fprintf( logfile, "%s\n", line_separator );
-		fprintf( logfile, "%-15s", "ALL" );
+		fprintf( logfile, "%-15s", "Summary" );
 		fprintf( logfile, last_line_format, mpasses, mfails, passes, fails );
 		fclose( logfile );
 		DString_Delete( string );

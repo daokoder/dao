@@ -13,6 +13,13 @@ chartype_dll.UseSharedLibrary( daovm, "dao" )
 chartype_dll.EnableDynamicLinking()
 
 
+usertype_objs = daotests.AddObjects( { "dao_UserType.c" } )
+usertype_dll  = daotests.AddSharedLibrary( "dao_UserType", usertype_objs )
+
+usertype_dll.UseSharedLibrary( daovm, "dao" )
+usertype_dll.EnableDynamicLinking()
+
+
 daotests.AddTest( "Example", "examples.dao" )
 
 daotests.AddTest( "Lexer",  "test_lexer.dao" )
@@ -27,6 +34,8 @@ test_enum.AddTest( "test_enum_symbol_type.dao" )
 daotests.AddTest( "Arrays", "test_arrays.dao" )
 
 daotests.AddTest( "Tuples", "test_tuples.dao" )
+
+daotests.AddTest( "Maps", "test_maps.dao" )
 
 test_decl = daotests.AddTest( "Declarations", "test_invar.dao" )
 

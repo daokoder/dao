@@ -3261,7 +3261,7 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 	}else if( self->topFrame->state & DVM_FRAME_SECT ){
 		type = (DaoType*) lastframe->routine->routType->cbtype->aux;
 	}
-	if( topFrame->routine->attribs & DAO_ROUT_INITOR ){
+	if( (topFrame->routine->attribs & DAO_ROUT_INITOR) && !(topFrame->state & DVM_FRAME_SECT) ){
 		retValue = (DaoValue*)self->activeObject;
 	}else if( vmc->b == 1 ){
 		retValue = self->activeValues[ vmc->a ];
@@ -5467,6 +5467,9 @@ int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
 	tok = tokens[tokid++];
 
 	switch( tid ){
+	case DAO_BOOLEAN :
+		dC->xBoolean.value = strcmp( tok->string.chars, "true" ) == 0;
+		break;
 	case DAO_INTEGER :
 		if( tok->name < DTOK_DIGITS_DEC || tok->name > DTOK_NUMBER_DEC ) goto ReturnFalse;
 		dC->xInteger.value = DaoToken_ToInteger( tok );
@@ -5568,6 +5571,10 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 	}
 	switch( ct->tid ){
 	case DAO_BOOLEAN :
+		if( dA->type == DAO_STRING ){
+			dC->xBoolean.value = strcmp( dA->xString.value->chars, "true" ) == 0;
+			break;
+		}
 		dC->xBoolean.value = DaoValue_IsZero( dA ) != 0;
 		break;
 	case DAO_INTEGER :

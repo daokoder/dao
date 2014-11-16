@@ -1,4 +1,104 @@
 
+
+
+
+@[test(code_01)]
+io.writeln( (int) true, (int) false )
+@[test(code_01)]
+@[test(code_01)]
+1 0
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( (string) true, (string) false )
+@[test(code_01)]
+@[test(code_01)]
+true false
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( (bool) 1, (bool) 0 )
+@[test(code_01)]
+@[test(code_01)]
+true false
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( (bool) "true", (bool) "false" )
+@[test(code_01)]
+@[test(code_01)]
+true false
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+io.writeln( (float) true, (float) false )
+@[test(code_01)]
+@[test(code_01)]
+1.000000 0.000000
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+io.writeln( (float) 123 )
+@[test(code_01)]
+@[test(code_01)]
+123.000000
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+io.writeln( (string) 123 )
+@[test(code_01)]
+@[test(code_01)]
+123
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( (string) 123.45 )
+@[test(code_01)]
+@[test(code_01)]
+123.45
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( (list<any>) (123.45, 'abc') )
+@[test(code_01)]
+@[test(code_01)]
+{ 123.450000, "abc" }
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+io.writeln( (tuple<float,string>) {123.45, 'abc'} )
+@[test(code_01)]
+@[test(code_01)]
+( 123.450000, "abc" )
+@[test(code_01)]
+
+
+
+
 @[test(code_01)]
 invar ls = { 1, 2, 3 }
 ls2 = (any) ls

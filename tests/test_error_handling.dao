@@ -114,3 +114,36 @@ fout.writeln( "hello" )
 @[test(code_01)]
 hello
 @[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+const UserError = Error::define( "Error::User" )
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+const UserError = Error::define( "Error::User" )
+std.error( UserError, "Test" )
+@[test(code_01)]
+@[test(code_01)]
+{{[[Error::User]]}} .* {{Test}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+var abc = 123
+std.assert( abc == 0, "Test" )
+@[test(code_01)]
+@[test(code_01)]
+{{[[Error::Assertion]]}} .* {{Assertion failed at line 3 in file}}
+@[test(code_01)]
