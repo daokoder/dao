@@ -151,3 +151,14 @@ o[0].M()
 @[test(code_01)]
 @[test(code_01)]
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+routine Func( a: int ){}
+
+var a = (any) (123, Func)
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]

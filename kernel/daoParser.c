@@ -2878,7 +2878,6 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			DaoParser_Error2( self, DAO_ROUT_REDUNDANT_IMPLEMENTATION, errorStart+1, right, 0 );
 			goto InvalidDefinition;
 		}
-		DaoRoutine_Delete( parser->routine );
 		parser->routine = rout;
 	}else if( self->isClassBody ){
 		klass = self->hostClass;
@@ -2908,7 +2907,6 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 				DaoClass_AddConst( klass, rout->routName, (DaoValue*)rout, perm );
 			}
 		}else{
-			DaoRoutine_Delete( parser->routine );
 			parser->routine = rout;
 		}
 	}else if( self->isInterBody ){
@@ -2939,7 +2937,6 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 			if( strcmp( rout->routName->chars, "main" ) ==0 ) rout->attribs |= DAO_ROUT_MAIN;
 			DaoNamespace_AddConst( NS, rout->routName, (DaoValue*) rout, perm );
 		}else{
-			DaoRoutine_Delete( parser->routine );
 			parser->routine = rout;
 		}
 	}
@@ -3326,7 +3323,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			DaoParser_Warn( self, DAO_WARN_GET_SETTER, mbs );
 		}
 	}
-	DaoClass_ResetAttributes( klass );
+	DaoClass_UpdateAttributes( klass );
 	if( parser->byteBlock ){
 		DaoByteCoder_EncodeUInt32( parser->byteBlock->begin+4, klass->attribs );
 	}

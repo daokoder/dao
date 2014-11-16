@@ -277,3 +277,19 @@ t( [1.0] )
 @[test(code_01)]
 float
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+routine ForwardDeclaredRoutine( a: tuple<int,string> )
+
+routine ForwardDeclaredRoutine( a: tuple<int,string> )
+{
+	io.writeln( a )
+}
+ForwardDeclaredRoutine( (123, "abc") )
+@[test(code_01)]
+@[test(code_01)]
+( 123, "abc" )
+@[test(code_01)]

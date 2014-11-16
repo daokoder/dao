@@ -155,3 +155,98 @@ k.index = 456
 @[test(code_01)]
 {{At line}} .* {{Constant or invariable cannot be modified}}
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class Klass
+{
+	routine Method( a: list<int> )
+}
+routine Klass::Method( a: list<int> )
+{
+	io.writeln( a )
+}
+k = Klass()
+k.Method( {1, 2, 3} )
+@[test(code_01)]
+@[test(code_01)]
+{ 1, 2, 3 }
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class Klass
+{
+	static routine Method( a: list<int> )
+}
+static routine Klass::Method( a: list<int> )
+{
+	io.writeln( a )
+}
+k = Klass()
+k.Method( {1, 2, 3} )
+@[test(code_01)]
+@[test(code_01)]
+{ 1, 2, 3 }
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class Klass
+{
+	static routine Method( a: list<int> )
+}
+static routine Klass::Method( a: list<int> )
+{
+	io.writeln( a )
+}
+k = Klass()
+Klass::Method( {1, 2, 3} )
+@[test(code_01)]
+@[test(code_01)]
+{ 1, 2, 3 }
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class Klass
+{
+	routine Method( a: list<int> )
+}
+static routine Klass::Method( a: list<int> )
+{
+	io.writeln( a )
+}
+k = Klass()
+k.Method( {1, 2, 3} )
+@[test(code_01)]
+@[test(code_01)]
+{{At line 6 : Method signature not matching}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class Klass
+{
+	static routine Method( a: list<int> )
+}
+routine Klass::Method( a: list<int> )
+{
+	io.writeln( a )
+}
+k = Klass()
+k.Method( {1, 2, 3} )
+@[test(code_01)]
+@[test(code_01)]
+{{At line 6 : Method signature not matching}}
+@[test(code_01)]

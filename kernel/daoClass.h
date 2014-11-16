@@ -115,7 +115,7 @@ DAO_DLL int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes 
 DAO_DLL int DaoClass_DeriveClassData( DaoClass *self );
 DAO_DLL void DaoClass_DeriveObjectData( DaoClass *self );
 DAO_DLL void DaoClass_UpdateMixinConstructors( DaoClass *self );
-DAO_DLL void DaoClass_ResetAttributes( DaoClass *self );
+DAO_DLL void DaoClass_UpdateAttributes( DaoClass *self );
 DAO_DLL void DaoClass_MakeInterface( DaoClass *self );
 DAO_DLL int DaoClass_UseMixinDecorators( DaoClass *self );
 DAO_DLL void DaoClass_UpdateVirtualMethods( DaoClass *self );

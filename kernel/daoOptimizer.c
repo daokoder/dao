@@ -27,6 +27,7 @@
 */
 
 #include<string.h>
+#include<ctype.h>
 #include<stdlib.h>
 #include<stdio.h>
 #include<assert.h>
@@ -5619,7 +5620,11 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 						|| at->tid == DAO_INTERFACE || bt->tid == DAO_INTERFACE ){
 					ct = DaoCheckBinArith( routine, vmc, at, bt, types[opc], hostClass, mbs );
 					if( ct == NULL && code != DVM_EQ && code != DVM_NE ) goto InvOper;
-					if( ct == NULL && DaoType_MatchTo( at, bt, NULL ) == 0 ) goto InvOper;
+					if( ct == NULL && at->tid != DAO_NONE && bt->tid != DAO_NONE ){
+						j = DaoType_MatchTo( at, bt, NULL );
+						k = DaoType_MatchTo( bt, at, NULL );
+						if( j == 0 && k == 0 ) goto InvOper;
+					}
 					if( ct == NULL ) ct = dao_type_bool;
 				}else if( at->tid == bt->tid ){
 					if( at->tid == DAO_COMPLEX && code < DVM_EQ ) goto InvOper;
@@ -5629,8 +5634,10 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					/* pass */
 				}else if( code != DVM_EQ && code != DVM_NE ){
 					goto InvOper;
-				}else if( DaoType_MatchTo( at, bt, NULL ) == 0 ){
-					goto InvOper;
+				}else if( at->tid != DAO_NONE && bt->tid != DAO_NONE ){
+					j = DaoType_MatchTo( at, bt, NULL );
+					k = DaoType_MatchTo( bt, at, NULL );
+					if( j == 0 && k == 0 ) goto InvOper;
 				}
 				DaoInferencer_UpdateVarType( self, opc, ct );
 				/* allow less strict typing: */

@@ -5773,7 +5773,9 @@ DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC
 		}
 		if( tp == NULL ) goto FailConversion;
 		return DaoTypeCast( proc, tp, dA, dC, invarToVar );
-	default : goto FailConversion;
+	default :
+		if( DaoType_MatchValue( ct, dA, NULL ) < DAO_MT_EQ ) goto FailConversion;
+		dC = dA;
 	}
 	return dC;
 Rebind :

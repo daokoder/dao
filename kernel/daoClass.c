@@ -1056,7 +1056,7 @@ int DaoClass_UseMixinDecorators( DaoClass *self )
 #endif
 	return bl;
 }
-void DaoClass_ResetAttributes( DaoClass *self )
+void DaoClass_UpdateAttributes( DaoClass *self )
 {
 	DNode *node;
 	int i, k, id, autoinitor = self->parent == NULL;

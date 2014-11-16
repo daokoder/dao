@@ -4053,9 +4053,15 @@ static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n )
 }
 static void Dao_Exception_Define( DaoProcess *proc, DaoValue *p[], int N )
 {
+	DaoType *etype;
+	DString *host = proc->topFrame->routine->routHost->name;
 	DString *name = p[0]->xString.value;
 	DString *info = p[1]->xString.value;
-	DaoType *etype = DaoVmSpace_MakeExceptionType( proc->vmSpace, name->chars );
+	if( DString_Find( name, host, 0 ) != 0 && DString_FindChar( name, ':', 0 ) != host->size ){
+		DString_InsertChars( name, "::", 0, 0, -1 );
+		DString_Insert( name, host, 0, 0, -1 );
+	}
+	etype = DaoVmSpace_MakeExceptionType( proc->vmSpace, name->chars );
 	if( etype == 0 ){
 		DaoProcess_RaiseError( proc, "Param", "Invalid exception name" );
 		return;

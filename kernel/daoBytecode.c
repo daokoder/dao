@@ -2070,6 +2070,7 @@ static void DaoByteCoder_AddToScope( DaoByteCoder *self, DaoByteBlock *block, DS
 			if( rout->attribs & DAO_ROUT_INITOR ){
 				DaoClass_AddConst( klass, klass->initRoutine->routName, value, perm );
 			}else if( rout->attribs & DAO_ROUT_CASTOR ){
+				DaoClass_AddConst( klass, name, value, perm );
 				if( klass->castOperators == NULL ){
 					klass->castOperators = DaoRoutines_New( self->nspace, klass->objType, NULL);
 					GC_IncRC( klass->castOperators );
@@ -2233,6 +2234,9 @@ static void DaoByteCoder_DecodeClass( DaoByteCoder *self, DaoByteBlock *block )
 	DaoClass_UpdateMixinConstructors( klass );
 	DaoClass_UpdateVirtualMethods( klass );
 	DaoClass_UseMixinDecorators( klass );
+	klass->intOperators = DaoClass_FindMethod( klass, "(int)", NULL );
+	klass->eqOperators = DaoClass_FindMethod( klass, "==", NULL );
+	klass->ltOperators = DaoClass_FindMethod( klass, "<", NULL );
 	if( klass->attribs != (C & ~DAO_CLS_ASYNCHRONOUS) ){ /* check inferred attributes: */
 		DaoByteCoder_Error( self, block, "Class attributes not matching!" );
 	}
@@ -2479,7 +2483,7 @@ static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block 
 		if( routine->routHost == klass->objType && block->prev != NULL ){
 			if( block->prev->type != DAO_ASM_ROUTINE || block->prev->first == NULL ){
 				/* Not a routine block, or just a routine declation block: */
-				DaoClass_ResetAttributes( klass );
+				DaoClass_UpdateAttributes( klass );
 			}
 		}
 	}

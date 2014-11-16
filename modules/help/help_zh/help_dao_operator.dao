@@ -110,28 +110,6 @@ not (int|float|double) # Logic negation (NOT);
 (int|float|double) ||  (int|float|double) # Logic OR;
 (int|float|double) or  (int|float|double) # Logic OR;
 @[code]
-Note:
-And the @[green]and@[green] and @[green]or@[green] operator behave in the same way as
-the Lua @[green]and@[green] @[green]or@[green] operators,
-namely, the last evaluated operand is returned as the result.
-This means, when the first operand can determine the result,
-return the first operand, otherwise return the second.
-When the operands have values of 0 or 1, this behaviour is exactly
-the same as normal boolean logic. The following lists some examples
-for other cases,
-@[code]
-10 && 0  # gives 0
-0  && 10 # gives 0
-10 && 20 # gives 20
-20 && 10 # gives 10
-
-10 || 0  # gives 10
-0  || 10 # gives 10
-10 || 20 # gives 10
-20 || 10 # gives 20
-@[code]
-Properly exploiting the behaviour of the @[green]and@[green] @[green]or@[green] operators 
-can simplify coding for some cases.
 
 
 
