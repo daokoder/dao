@@ -2643,7 +2643,7 @@ void DaoQuit()
 	DMutex_Destroy( & mutex_routine_specialize );
 	DMutex_Destroy( & mutex_routine_specialize2 );
 	DMutex_Destroy( & dao_cdata_mutex );
-	DaoInitThread();
+	DaoQuitThread();
 #endif
 }
 DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname )
