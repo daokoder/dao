@@ -190,9 +190,13 @@ DThreadData* DThread_GetSpecific()
 	return (DThreadData*) pthread_getspecific( thdSpecKey );
 }
 
-void DaoInitThreadSys()
+static void DaoThread_SysInit()
 {
 	pthread_key_create( & thdSpecKey, free );
+}
+static void DaoThread_SysQuit()
+{
+	pthread_key_delete( thdSpecKey );
 }
 
 #elif WIN32
@@ -373,26 +377,37 @@ DThreadData* DThread_GetSpecific()
 {
 	return (DThreadData*) TlsGetValue( thdSpecKey );
 }
-void DaoInitThreadSys()
+
+/* DThread object for the main thread, used for join() */
+DThread mainThread;
+
+static void DaoThread_SysInit()
 {
-	/* DThread object for the main thread, used for join() */
-	DThread *mainThread = (DThread*)dao_calloc( 1, sizeof(DThread) );
 	thdSpecKey = (dao_thdspec_t)TlsAlloc();
-	DThread_Init( mainThread );
+	DThread_Init( & mainThread );
 
-	mainThread->thdSpecData = (DThreadData*)GlobalAlloc( GPTR, sizeof(DThreadData) );
-	mainThread->thdSpecData->thdObject = mainThread;
-	mainThread->thdSpecData->state = 0;
+	mainThread.thdSpecData = (DThreadData*)GlobalAlloc( GPTR, sizeof(DThreadData) );
+	mainThread.thdSpecData->thdObject = & mainThread;
+	mainThread.thdSpecData->state = 0;
 
-	TlsSetValue( thdSpecKey, mainThread->thdSpecData );
+	TlsSetValue( thdSpecKey, mainThread.thdSpecData );
+}
+static void DaoThread_SysQuit()
+{
+	DThread_Destroy( & mainThread );
+	TlsFree( thdSpecKey );
 }
 #endif /* WIN32	*/
 
 static dao_thread_t daoMainThreadID;
 void DaoInitThread()
 {
-	DaoInitThreadSys();
+	DaoThread_SysInit();
 	daoMainThreadID = DThread_Self();
+}
+void DaoQuitThread()
+{
+	DaoThread_SysQuit();
 }
 int DThread_IsMain()
 {

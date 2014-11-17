@@ -2586,8 +2586,9 @@ DaoVmSpace* DaoInit( const char *command )
 	DString_Delete( mbs );
 	return vms;
 }
-extern DaoType* DaoParser_ParseTypeName( const char *type, DaoNamespace *ns, DaoClass *cls );
+
 extern DaoType *simpleTypes[ DAO_ARRAY ];
+
 void DaoQuit()
 {
 	int i;
@@ -2642,6 +2643,7 @@ void DaoQuit()
 	DMutex_Destroy( & mutex_routine_specialize );
 	DMutex_Destroy( & mutex_routine_specialize2 );
 	DMutex_Destroy( & dao_cdata_mutex );
+	DaoInitThread();
 #endif
 }
 DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname )

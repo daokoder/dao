@@ -7282,13 +7282,9 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 		posend = self->curToken - 1;
 		if( oper == DAO_OPER_ASSN ){
 			if( LHS.konst ) goto InvalidConstModificatioin;
-			if( curtok == DTOK_ASSN ){
-				if( astat == ASSIGNMENT_WARNING ){
-					DaoParser_Warn2( self, DAO_WARN_ASSIGNMENT, postart, posend );
-				}else if( astat == ASSIGNMENT_ERROR ){
-					DaoParser_Error2( self, DAO_WARN_ASSIGNMENT, postart, posend, 0 );
-					return result;
-				}
+			if( curtok == DTOK_ASSN && astat ){
+				DaoParser_Error2( self, DAO_WARN_ASSIGNMENT, postart, posend, 0 );
+				return result;
 			}
 
 			if( code >= DVM_GETVH && code <= DVM_GETF ){ /* change GETX to SETX */

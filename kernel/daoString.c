@@ -468,12 +468,12 @@ void DString_SubString( DString *self, DString *sub, daoint from, daoint n )
 {
 	daoint i, size = self->size;
 	if( from >= size ){
-		DString_Clear( sub );
+		DString_Reset( sub, 0 );
 		return;
 	}
 	if( n < 0 || n > size ) n = size;
 	if( from+n > size ) n = size-from;
-	DString_Resize( sub, n );
+	DString_Reset( sub, n );
 	memcpy( sub->chars, self->chars + from, n * sizeof(char) );
 }
 /* TODO: better string searching algorithm */
