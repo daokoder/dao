@@ -120,7 +120,7 @@ dao.type.string.method
 @[code]
 string( count: int, char = 0 ) => string
 string( count: int )[index: int => string] => string
-size( invar self: string ) => int
+size( invar self: string, utf8 = false ) => int
 insert( invar self: string, str: string, pos = 0 ) => string
 erase( invar self: string, pos = 0, count = -1 ) => string
 chop( invar self: string, utf8 = 0 ) => string
@@ -144,6 +144,9 @@ extract( invar self: string, pattern: string,
 scan( invar self: string, pattern: string, start = 0, end = -1 )
 	[start: int, end: int, state: enum<unmatched,matched> => none|@V]
 	=> list<@V>
+
+offset( invar self: string, charIndex: int ) => int
+char( invar self: string, charIndex: int ) => string
 @[code]
 
 
@@ -198,7 +201,7 @@ S3 = string( 6 ){ [index] (string) index }  # 012345
 
 下面是可用来方便操作字符串的方法：
 @[code]
-size( invar self: string ) => int
+size( invar self: string, utf8 = false ) => int
 insert( invar self: string, str: string, pos = 0 ) => string
 erase( invar self: string, pos = 0, count = -1 ) => string
 chop( invar self: string, utf8 = 0 ) => string
@@ -210,16 +213,18 @@ expand( invar self: string, invar subs: map<string,string>|tuple<...:string>,
 		spec = "$", keep = 1 ) => string
 split( invar self: string, sep = "" ) => list<string>
 iterate( invar self: string, unit: enum<byte,char> = $byte )[char: int, index: int]
+offset( invar self: string, charIndex: int ) => int
+char( invar self: string, charIndex: int ) => string
 @[code]
 
 
 @[subsubsection]
-size(invar self:string)=>int
+size(invar self:string,utf8=false)=>int
 @[subsubsection]
 @[code]
-size( invar self: string ) => int
+size( invar self: string, utf8 = false ) => int
 @[code]
-返回字符串里的字符个数。
+返回字符串里的字节或字符个数。
 
 
 例子：
@@ -450,6 +455,27 @@ iterate( invar self: string, unit: enum<byte,char> = $byte )[char: int, index: i
 @[code]
 @[code]
 
+
+
+
+
+@[subsubsection]
+offset(invar self:string,charIndex:int)=>int
+@[subsubsection]
+@[code]
+offset( invar self: string, charIndex: int ) => int
+@[code]
+获取第"charIndex"个字符的字节位置。
+
+
+
+@[subsubsection]
+char(invar self:string,charIndex:int)=>string
+@[subsubsection]
+@[code]
+char( invar self: string, charIndex: int ) => string
+@[code]
+获取第"charIndex"个字符。
 
 
 

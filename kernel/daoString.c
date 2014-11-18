@@ -88,7 +88,7 @@ static void DStringAux_Update( DStringAux *self, DString *string )
 			last->count += 1;
 		}else{
 			daoint chars = last->chars + last->count;
-			daoint bytes = last->chars + last->count * last->width;
+			daoint bytes = last->bytes + last->count * last->width;
 			if( size == self->cap ){
 				self->cap += 1.25 * self->cap + 5;
 				self->counters = (DCounter*) dao_realloc( self->counters, self->cap*sizeof(DCounter) );
@@ -97,7 +97,7 @@ static void DStringAux_Update( DStringAux *self, DString *string )
 			last->width = width;
 			last->count = 1;
 			last->chars = chars;
-			last->chars = bytes;
+			last->bytes = bytes;
 		}
 		self->chars += 1;
 		i += width;
@@ -108,7 +108,7 @@ static void DStringAux_Update( DStringAux *self, DString *string )
 	printf( "counters: %i;  chars: %i;  bytes: %i\n", (int) size, self->chars, string->size );
 	for(i=0; i<self->size; ++i){
 		DCounter *c = self->counters + i;
-		printf( "%5i: %2i %5i %5i %5i\n", i, c->width, c->count, c->chars, c->chars );
+		printf( "%5i: %2i %5i %5i %5i\n", i, c->width, c->count, c->chars, c->bytes );
 	}
 #endif
 }
@@ -125,13 +125,12 @@ static daoint DStringAux_GetByteIndex( DStringAux *self, DString *string, daoint
 	while( visit < end && chindex > visit->chars + visit->count ) visit += 1;
 	if( visit < start || visit >= end ) return DAO_NULLPOS;
 	self->visit = visit - start;
-	return visit->chars + visit->width * (chindex - visit->chars);
+	return visit->bytes + visit->width * (chindex - visit->chars);
 }
 
 
 
-//static
-int dao_string[4] = {1,0,0,0};
+static int dao_string[4] = {1,0,0,0};
 
 /**/
 void DString_Init( DString *self )
@@ -806,20 +805,29 @@ daoint DString_LocateChar( DString *self, daoint start, daoint count )
 	}
 	return pos;
 }
+static void DString_UpdateAux( DString *self )
+{
+	if( self->aux != NULL && self->aux->size != 0 ) return;
+#   ifdef DAO_WITH_THREAD
+	DMutex_Lock( & mutex_string_sharing );
+#   endif
+	if( self->aux == NULL ) self->aux = DStringAux_New();
+	if( self->aux->size == 0 ) DStringAux_Update( self->aux, self );
+#   ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & mutex_string_sharing );
+#   endif
+}
 daoint DString_GetByteIndex( DString *self, daoint chindex )
 {
 	if( self->size == 0 ) return DAO_NULLPOS;
-	if( self->aux == NULL || self->aux->size == 0 ){
-#       ifdef DAO_WITH_THREAD
-		DMutex_Lock( & mutex_string_sharing );
-#       endif
-		if( self->aux == NULL ) self->aux = DStringAux_New();
-		if( self->aux->size == 0 ) DStringAux_Update( self->aux, self );
-#       ifdef DAO_WITH_THREAD
-		DMutex_Unlock( & mutex_string_sharing );
-#       endif
-	}
+	DString_UpdateAux( self );
 	return DStringAux_GetByteIndex( self->aux, self, chindex );
+}
+daoint DString_GetCharCount( DString *self )
+{
+	if( self->size == 0 ) return 0;
+	DString_UpdateAux( self );
+	return self->aux->chars;
 }
 
 int DString_IsASCII( DString *self )

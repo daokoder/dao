@@ -774,7 +774,9 @@ static void DaoSTR_New2( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoSTR_Size( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoProcess_PutInteger( proc, p[0]->xString.value->size );
+	DString *self = p[0]->xString.value;
+	int chars = p[1]->xBoolean.value;
+	DaoProcess_PutInteger( proc, chars ? DString_GetCharCount( self ) : self->size );
 }
 
 static void DaoSTR_Insert( DaoProcess *proc, DaoValue *p[], int N )
@@ -1260,12 +1262,20 @@ static void DaoSTR_Iterate( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoSTR_Functional( proc, p, N, DVM_FUNCT_ITERATE );
 }
-static void DaoSTR_CharAt( DaoProcess *proc, DaoValue *p[], int N )
+static void DaoSTR_Index( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.value;
 	daoint index = p[1]->xInteger.value;
 	daoint pos = DString_GetByteIndex( self, index );
 	DaoProcess_PutInteger( proc, pos );
+}
+static void DaoSTR_Char( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *self = p[0]->xString.value;
+	daoint index = p[1]->xInteger.value;
+	daoint pos = DString_GetByteIndex( self, index );
+	DCharState state = DString_DecodeChar( self->chars + pos, self->chars + self->size );
+	DaoProcess_PutBytes( proc, self->chars + pos, state.width );
 }
 
 static DaoFuncItem stringMeths[] =
@@ -1284,9 +1294,9 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 	{ DaoSTR_Size,
-		"size( invar self: string ) => int"
+		"size( invar self: string, utf8 = false ) => int"
 		/*
-		// Return the number of bytes in the string.
+		// Return the number of bytes or characters in the string.
 		*/
 	},
 	{ DaoSTR_Insert,
@@ -1453,9 +1463,17 @@ static DaoFuncItem stringMeths[] =
 		*/
 	},
 
-	/* for testing */
-	{ DaoSTR_CharAt,
-		"char( invar self: string, index: int ) => int"
+	{ DaoSTR_Index,
+		"offset( invar self: string, charIndex: int ) => int"
+		/*
+		// Get byte offset for the character with index "charIndex";
+		*/
+	},
+	{ DaoSTR_Char,
+		"char( invar self: string, charIndex: int ) => string"
+		/*
+		// Get the character with index "charIndex";
+		*/
 	},
 	{ NULL, NULL }
 };

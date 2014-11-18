@@ -120,6 +120,7 @@ DAO_DLL void DString_AppendPathSep( DString *self );
 DAO_DLL DCharState DString_DecodeChar( char *start, char *end );
 DAO_DLL daoint DString_LocateChar( DString *self, daoint start, daoint count );
 DAO_DLL daoint DString_GetByteIndex( DString *self, daoint chindex );
+DAO_DLL daoint DString_GetCharCount( DString *self );
 DAO_DLL void DString_AppendWChar( DString *self, size_t ch );
 DAO_DLL void DString_Chop( DString *self, int utf8 );
 DAO_DLL void DString_Trim( DString *self, int head, int tail, int utf8 );
