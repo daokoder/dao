@@ -2080,7 +2080,7 @@ static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream
 	int ec = 0;
 	char buf[50];
 	DaoRoutine *meth;
-	DaoValue *type = (DaoValue*) dao_type_string;
+	DaoValue *params[2];
 	DaoCdata *self = & self0->xCdata;
 
 	sprintf( buf, "[%p]", self );
@@ -2097,9 +2097,12 @@ static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream
 	}
 	if( cycData ) MAP_Insert( cycData, self, self );
 
+	params[0] = (DaoValue*) dao_type_string;
+	params[1] = (DaoValue*) stream;
 	meth = DaoType_FindFunctionChars( self->ctype, "(string)" );
 	if( meth ){
-		ec = DaoProcess_Call( proc, meth, self0, & type, 1 );
+		ec = DaoProcess_Call( proc, meth, self0, params, 2 );
+		if( ec ) ec = DaoProcess_Call( proc, meth, self0, params, 1 );
 	}else{
 		meth = DaoType_FindFunctionChars( self->ctype, "serialize" );
 		if( meth ) ec = DaoProcess_Call( proc, meth, self0, NULL, 0 );

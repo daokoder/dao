@@ -215,7 +215,7 @@ void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other, int
 	DList_Clear( self->upValues );
 	for(i=0; i<other->upValues->size; ++i){
 		DaoVariable *var = other->upValues->items.pVar[i];
-		if( copy_stat ) var = DaoVariable_New( var->value, var->dtype );
+		if( copy_stat ) var = DaoVariable_New( var->value, var->dtype, DAO_LOCAL_CONSTANT );
 		DList_Append( self->upValues, var );
 	}
 }

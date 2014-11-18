@@ -45,21 +45,23 @@
 #include"daoValue.h"
 
 
-DaoConstant* DaoConstant_New( DaoValue *value )
+DaoConstant* DaoConstant_New( DaoValue *value, int subtype )
 {
 	DaoConstant *self = (DaoConstant*) dao_calloc( 1, sizeof(DaoConstant) );
 	DaoValue_Init( self, DAO_CONSTANT );
 	DaoValue_Copy( value, & self->value );
+	self->subtype = subtype;
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
-DaoVariable* DaoVariable_New( DaoValue *value, DaoType *type )
+DaoVariable* DaoVariable_New( DaoValue *value, DaoType *type, int subtype )
 {
 	DaoVariable *self = (DaoVariable*) dao_calloc( 1, sizeof(DaoVariable) );
 	DaoValue_Init( self, DAO_VARIABLE );
 	DaoValue_Move( value, & self->value, type );
+	self->subtype = subtype;
 	self->dtype = type;
 	GC_IncRC( type );
 #ifdef DAO_USE_GC_LOGGER

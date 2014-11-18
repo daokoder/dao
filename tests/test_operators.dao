@@ -1,6 +1,17 @@
 
 
 
+@[test(code_01)]
+a = 1;
+b = (a<<1) + (a<<2)
+io.writeln(a, b)
+@[test(code_01)]
+@[test(code_01)]
+1 6
+@[test(code_01)]
+
+
+
 
 @[test(code_01)]
 io.writeln( (int) true, (int) false )
@@ -161,4 +172,14 @@ routine Func( a: int ){}
 var a = (any) (123, Func)
 @[test(code_01)]
 @[test(code_01)]
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+a = 1
+b = (string) ++i
+@[test(code_01)]
+@[test(code_01)]
+{{At line 3 : Invalid expression}}
 @[test(code_01)]

@@ -868,7 +868,7 @@ static void DaoMakeTarget_SetTargetPath( DaoMakeTarget *self, DString *dest )
 	DString_Assign( self->path, dest );
 	DString_Assign( self->base.binaryPath, dest );
 	DaoMake_MakePath( self->base.buildPath, self->base.binaryPath );
-	DaoMake_MakeDirs( self->base.binaryPath, 0 );
+	if( self->objects->size ) DaoMake_MakeDirs( self->base.binaryPath, 0 );
 }
 static void DaoMakeTarget_ExportCompilingFlags( DaoMakeTarget *self, DaoMakeProject *pro, DString *flags, DaoMakeUnit *target )
 {
@@ -1785,6 +1785,11 @@ void DaoMakeTarget_MakeFindPackageForInstall( DaoMakeTarget *self, DString *outp
 			"%s = project.Add%sLibrary( \"%s\" );\n", tarname->chars,
 			self->ttype == DAOMAKE_SHAREDLIB ? "Shared" : "Static", self->name->chars );
 
+	DString_Reserve( output, output->size + 50 + self->name->size + self->base.binaryPath->size );
+	output->size += sprintf( output->chars + output->size,
+			"%s.SetTargetPath( \"%s\" );\n", tarname->chars,
+			self->base.binaryPath->chars );
+
 	for(i=0; i<self->objects->size; ++i){
 		DaoMakeObjects *objs = (DaoMakeObjects*) DList_Item( self->objects, i );
 		for(j=0; j<objs->headers->size; ++j){
@@ -1842,6 +1847,11 @@ void DaoMakeTarget_MakeFindPackageForBuild( DaoMakeTarget *self, DString *output
 	output->size += sprintf( output->chars + output->size,
 			"%s = project.Add%sLibrary( \"%s\" );\n", tarname->chars,
 			self->ttype == DAOMAKE_SHAREDLIB ? "Shared" : "Static", self->name->chars );
+
+	DString_Reserve( output, output->size + 50 + self->name->size + self->base.binaryPath->size );
+	output->size += sprintf( output->chars + output->size,
+			"%s.SetTargetPath( \"%s\" );\n", tarname->chars,
+			self->base.binaryPath->chars );
 
 	DaoMakeUnit_MakeFinderCodes( (DaoMakeUnit*) self, tarname->chars, output );
 	DaoMakeUnit_MakeFinderCodes2( (DaoMakeUnit*) self, tarname->chars, output );
@@ -2132,7 +2142,7 @@ static void DaoMakeUnit_UseLibrary( DaoMakeUnit *self, DaoMakeProject *pro, DStr
 			flag = (DString*) DList_PushBack( self->linkingFlags, name );
 			if( prefix != NULL ) DString_Insert( flag, prefix, 0, 0, 0 );
 			DString_Append( flag, suffix );
-			DaoMake_MakePath( tar->base.project->base.buildPath, flag );
+			DaoMake_MakePath( tar->base.binaryPath, flag );
 		}
 		break;
 	}
@@ -2378,6 +2388,11 @@ static void TARGET_SetTargetPath( DaoProcess *proc, DaoValue *p[], int N )
 	DString *dest = p[1]->xString.value;
 	DaoMakeTarget_SetTargetPath( self, dest );
 }
+static void TARGET_BinaryPath( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeTarget *self = (DaoMakeTarget*) p[0];
+	DaoProcess_PutString( proc, self->base.binaryPath );
+}
 static void TARGET_Install( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoNamespace *ns = proc->activeNamespace;
@@ -2396,6 +2411,7 @@ static DaoFuncItem DaoMakeTargetMeths[]=
 	{ TARGET_EnableDynamicExporting,  "EnableDynamicExporting( self: Target, bl :enum<FALSE,TRUE> = $TRUE )" },
 	{ TARGET_EnableDynamicLinking,    "EnableDynamicLinking( self: Target, bl :enum<FALSE,TRUE> = $TRUE )" },
 	{ TARGET_SetTargetPath,  "SetTargetPath( self: Target, path: string )" },
+	{ TARGET_BinaryPath,  "BinaryPath( self: Target ) => string" },
 	{ TARGET_Install,  "Install( self: Target, dest: string )" },
 	{ NULL, NULL }
 };

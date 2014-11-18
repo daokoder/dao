@@ -55,8 +55,8 @@ struct DaoVariable
 	DaoType  *dtype;
 };
 
-DAO_DLL DaoConstant* DaoConstant_New( DaoValue *value );
-DAO_DLL DaoVariable* DaoVariable_New( DaoValue *value, DaoType *type );
+DAO_DLL DaoConstant* DaoConstant_New( DaoValue *value, int subtype );
+DAO_DLL DaoVariable* DaoVariable_New( DaoValue *value, DaoType *type, int subtype );
 
 DAO_DLL void DaoConstant_Delete( DaoConstant *self );
 DAO_DLL void DaoVariable_Delete( DaoVariable *self );

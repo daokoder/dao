@@ -139,6 +139,7 @@ DAO_DLL int DThread_IsMain();
 DAO_DLL DThreadData* DThread_GetSpecific();
 
 DAO_DLL void DaoInitThread();
+DAO_DLL void DaoQuitThread();
 
 #else
 

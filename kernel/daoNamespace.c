@@ -1003,7 +1003,8 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DString_SetChars( name, "true" );
 	DaoNamespace_AddConst( self, name, dao_true_value, DAO_PERM_PUBLIC );
 
-	DList_Append( self->constants, DaoConstant_New( dao_none_value ) ); /* reserved for main */
+	/* reserved for main */
+	DList_Append( self->constants, DaoConstant_New( dao_none_value, DAO_GLOBAL_CONSTANT ) );
 
 	if( vms && vms->daoNamespace ){
 		DaoNamespace *ns = vms->daoNamespace;
@@ -1122,7 +1123,7 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 			mroutine->trait |= DAO_VALUE_CONST;
 			node->value.pInt = LOOKUP_BIND( st, pm, 0, self->constants->size );
 			DaoRoutines_Add( mroutine, (DaoRoutine*) value );
-			DList_Append( self->constants, DaoConstant_New( (DaoValue*) mroutine ) );
+			DList_Append( self->constants, DaoConstant_New( (DaoValue*) mroutine, DAO_GLOBAL_CONSTANT ) );
 			return node->value.pInt;
 		}
 	}
@@ -1134,7 +1135,7 @@ int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, i
 
 	id = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, pm, 0, self->constants->size );
 	MAP_Insert( self->lookupTable, name, id );
-	DList_Append( self->constants, (dest = DaoConstant_New( value )) );
+	DList_Append( self->constants, (dest = DaoConstant_New( value, DAO_GLOBAL_CONSTANT )) );
 	DaoValue_MarkConst( dest->value );
 	return id;
 }
@@ -1187,7 +1188,7 @@ int DaoNamespace_AddVariable( DaoNamespace *self, DString *name, DaoValue *value
 	}else{
 		id = LOOKUP_BIND( DAO_GLOBAL_VARIABLE, pm, 0, self->variables->size );
 		MAP_Insert( self->lookupTable, name, id ) ;
-		DList_Append( self->variables, DaoVariable_New( value, tp ) );
+		DList_Append( self->variables, DaoVariable_New( value, tp, DAO_GLOBAL_VARIABLE ) );
 	}
 	return id;
 }
@@ -1317,7 +1318,7 @@ static void DaoNS_ImportRoutine( DaoNamespace *self, DString *name, DaoRoutine *
 			}
 			DaoValue_MarkConst( (DaoValue*) routine2 );
 			/* Add individual entry for the existing function: */
-			DList_Append( self->constants, DaoConstant_New( (DaoValue*) routine2 ) );
+			DList_Append( self->constants, DaoConstant_New( (DaoValue*) routine2, DAO_GLOBAL_CONSTANT ) );
 			DaoNamespace_SetConst( self, search->value.pInt, (DaoValue*) routs );
 		}
 	}

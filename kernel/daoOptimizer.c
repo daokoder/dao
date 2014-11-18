@@ -3429,25 +3429,22 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 			ct = & rout->routType->aux->xType;
 		}
 	}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
+		DaoValue *data;
 		int j, getter = 0;
-		klass = & at->aux->xClass;
-		type2 = DaoClass_GetDataType( klass, str, & j, hostClass );
-		if( j ){
-			value = NULL;
+		klass = (DaoClass*) at->aux;
+		data = DaoClass_GetData( klass, str, hostClass );
+		if( data == NULL || data->type == DAO_NONE ){
 			DString_SetChars( mbs, "." );
 			DString_Append( mbs, str );
-			DaoClass_GetDataType( klass, mbs, & j, hostClass );
-			DaoClass_GetData( klass, mbs, & value, hostClass );
-			if( j == DAO_ERROR_FIELD_NOTEXIST ){
+			data = DaoClass_GetData( klass, mbs, hostClass );
+			if( data == NULL ){
 				pars = & dao_type_string;
 				npar = 1;
-				value = NULL;
 				DString_SetChars( mbs, "." );
-				DaoClass_GetDataType( klass, mbs, & j, hostClass );
-				DaoClass_GetData( klass, mbs, & value, hostClass );
+				data = DaoClass_GetData( klass, mbs, hostClass );
 			}
-			if( j == 0 && value && value->type == DAO_ROUTINE ){
-				rout2 = rout = (DaoRoutine*) value;
+			if( data && data->type == DAO_CONSTANT && data->xConst.value->type == DAO_ROUTINE ){
+				rout2 = rout = (DaoRoutine*) data->xConst.value;
 				rout = DaoRoutine_Check( rout, at, pars, npar, DVM_CALL, errors );
 				if( rout == NULL ) goto NotMatch;
 				ct = & rout->routType->aux->xType;
@@ -3456,24 +3453,20 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 				if( at->invar && ct->invar == 0 ) ct = DaoType_GetInvarType( ct );
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
+			}else{
+				goto InvOper;
 			}
 		}
-		DString_Assign( mbs, at->name );
-		DString_AppendChar( mbs, '.' );
-		DString_Append( mbs, str );
-		if( j == DAO_ERROR_FIELD_NOTPERMIT ) goto NotPermit;
-		if( j == DAO_ERROR_FIELD_NOTEXIST ) goto NotExist;
-		j = DaoClass_GetDataIndex( klass, str );
-		k = LOOKUP_ST( j );
-		if( k == DAO_OBJECT_VARIABLE && at->tid ==DAO_CLASS ) goto NeedInstVar;
-		if( k == DAO_CLASS_VARIABLE ) consts[opc] = NULL;
+		if( data == NULL ) goto NotExist;
+		if( data->type == DAO_NONE ) goto NotPermit;
+		if( data->xBase.subtype == DAO_OBJECT_VARIABLE && at->tid ==DAO_CLASS ) goto NeedInstVar;
+		if( data->xBase.subtype == DAO_CLASS_VARIABLE ) consts[opc] = NULL;
 		if( getter ) return 1;
-		if( type2 == NULL ){
-			DaoClass_GetData( klass, str, & value, hostClass );
-			ct = DaoNamespace_GetType( NS, value );
-			GC_Assign( & consts[opc], value );
+		if( data->xBase.subtype == DAO_CLASS_CONSTANT ){
+			ct = DaoNamespace_GetType( NS, data->xConst.value );
+			GC_Assign( & consts[opc], data->xConst.value );
 		}else{
-			ct = *type2;
+			ct = data->xVar.dtype;
 		}
 		if( ct == NULL ) ct = dao_type_any; /* static declared without type and init; */
 		j = DaoClass_GetDataIndex( klass, str );
@@ -3572,6 +3565,7 @@ NotMatch : return DaoInferencer_ErrorTypeNotMatching( self, NULL, NULL );
 NotPermit : return DaoInferencer_Error( self, DTE_FIELD_NOT_PERMIT );
 NotExist : return DaoInferencer_Error( self, DTE_FIELD_NOT_EXIST );
 NeedInstVar : return DaoInferencer_Error( self, DTE_FIELD_OF_INSTANCE );
+InvOper : return DaoInferencer_Error( self, DTE_OPERATION_NOT_VALID );
 }
 int DaoInferencer_HandleSetItem( DaoInferencer *self, DaoInode *inode, DMap *defs )
 {
@@ -3868,19 +3862,19 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 	DString *str, *mbs = self->mbstring;
 	DList  *routConsts = self->routine->routConsts->value;
 	DaoRoutine *routine = self->routine;
-	DaoType **type2, **types = self->types->items.pType;
-	DaoValue *value, **consts = self->consts->items.pValue;
+	DaoType *type, **types = self->types->items.pType;
+	DaoValue *data, *value, **consts = self->consts->items.pValue;
 	DaoClass *klass, *hostClass = self->hostClass;
 	DaoVmCodeX *vmc = (DaoVmCodeX*) inode;
 	DaoRoutine *meth, *rout;
 	DaoType *at = types[opa];
 	DaoType *ct = types[opc];
 	DNode *node;
-	int k;
 	DaoType *pars[2] = { NULL, NULL };
 	int j = 0, setter = 0;
 	int npar = 1;
 	int ck = 0;
+	int k;
 
 #if 0
 	printf( "a: %s\n", types[opa]->name->chars );
@@ -3930,61 +3924,61 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 	case DAO_CLASS :
 	case DAO_OBJECT :
 		ck = ct->tid ==DAO_CLASS;
-		klass = & types[opc]->aux->xClass;
-		type2 = DaoClass_GetDataType( klass, str, & j, hostClass );
+		klass = (DaoClass*) ct->aux;
+		data = DaoClass_GetData( klass, str, hostClass );
 		if( strcmp( str->chars, "self" ) ==0 ) goto NotPermit;
-		if( j ){
-			value = NULL;
+		if( data == NULL || data->type == DAO_NONE ){
 			DString_SetChars( mbs, "." );
 			DString_Append( mbs, str );
 			DString_AppendChars( mbs, "=" );
-			DaoClass_GetDataType( klass, mbs, & j, hostClass );
-			DaoClass_GetData( klass, mbs, & value, hostClass );
-			if( j == DAO_ERROR_FIELD_NOTEXIST ){
+			data = DaoClass_GetData( klass, mbs, hostClass );
+			if( data == NULL ){
 				pars[0] = dao_type_string;
 				npar = 2;
-				value = NULL;
 				DString_SetChars( mbs, ".=" );
-				DaoClass_GetDataType( klass, mbs, & j, hostClass );
-				DaoClass_GetData( klass, mbs, & value, hostClass );
+				data = DaoClass_GetData( klass, mbs, hostClass );
 			}
-			if( j == 0 && value && value->type == DAO_ROUTINE ){
-				meth = (DaoRoutine*) value;
+			if( data && data->type == DAO_CONSTANT && data->xConst.value->type == DAO_ROUTINE ){
+				meth = (DaoRoutine*) data->xConst.value;
 				setter = 1;
 				rout = DaoRoutine_Check( meth, ct, pars, npar, DVM_CALL, errors );
 				if( rout == NULL ) goto NotMatch;
+			}else{
+				goto InvOper;
 			}
 		}
-		if( j == DAO_ERROR_FIELD_NOTPERMIT ) goto NotPermit;
-		if( j == DAO_ERROR_FIELD_NOTEXIST ) goto NotExist;
-		j = DaoClass_GetDataIndex( klass, str );
-		k = LOOKUP_ST( j );
-		if( k == DAO_CLASS_CONSTANT ) goto InvOper;
-		if( k == DAO_OBJECT_VARIABLE && ct->tid ==DAO_CLASS ) goto NeedInstVar;
+		if( data == NULL ) goto NotExist;
+		if( data->type == DAO_NONE ) goto NotPermit;
+		if( data->xBase.subtype == DAO_OBJECT_VARIABLE && at->tid == DAO_CLASS ) goto NeedInstVar;
+
 		if( setter ) break;
-		if( type2 == NULL ) goto NotPermit;
-		if( type2[0] && type2[0]->invar && !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
-		if( *type2 == NULL || (*type2)->tid == DAO_UDT ){
-			GC_Assign( type2, types[opa] );
+		if( data->xBase.subtype == DAO_CLASS_CONSTANT ) goto InvOper;
+
+		if( data->xVar.dtype && data->xVar.dtype->invar ){
+			if( !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
 		}
-		AssertTypeMatching( types[opa], *type2, defs );
+		if( data->xVar.dtype == NULL && data->xVar.dtype->tid == DAO_UDT ){
+			GC_Assign( & data->xVar.dtype, types[opa] );
+		}
+		AssertTypeMatching( types[opa], data->xVar.dtype, defs );
 		j = DaoClass_GetDataIndex( klass, str );
 
 		k = LOOKUP_ST( j );
-		if( *type2 && (*type2)->realnum && at->realnum ){
+		type = data->xVar.dtype;
+		if( data->xVar.dtype && data->xVar.dtype->realnum && at->realnum ){
 			vmc->code = ck ? DVM_SETF_KGBB : DVM_SETF_OGBB;
 			if( k == DAO_OBJECT_VARIABLE ) vmc->code = DVM_SETF_OVBB;
-			if( at->tid != (*type2)->tid )
-				DaoInferencer_InsertMove( self, inode, & inode->a, at, *type2 );
-			vmc->code += (*type2)->tid - DAO_BOOLEAN;
+			if( at->tid != type->tid )
+				DaoInferencer_InsertMove( self, inode, & inode->a, at, type );
+			vmc->code += type->tid - DAO_BOOLEAN;
 			vmc->b = LOOKUP_ID( j );
-		}else if( *type2 && (*type2)->tid == DAO_COMPLEX && at->tid && at->tid <= DAO_COMPLEX ){
+		}else if( type && type->tid == DAO_COMPLEX && at->tid && at->tid <= DAO_COMPLEX ){
 			vmc->b = LOOKUP_ID( j );
 			vmc->code = ck ? DVM_SETF_KGCC : DVM_SETF_OGCC;
 			if( k == DAO_OBJECT_VARIABLE ) vmc->code = DVM_SETF_OVCC;
-			if( at->tid != (*type2)->tid )
-				DaoInferencer_InsertMove( self, inode, & inode->a, at, *type2 );
-		}else if( at == *type2 || (*type2)->tid == DAO_ANY ){
+			if( at->tid != type->tid )
+				DaoInferencer_InsertMove( self, inode, & inode->a, at, type );
+		}else if( at == type || type->tid == DAO_ANY ){
 			vmc->b = LOOKUP_ID( j );
 			vmc->code = ck ? DVM_SETF_KG : DVM_SETF_OG;
 			if( k == DAO_OBJECT_VARIABLE ) vmc->code = DVM_SETF_OV;
@@ -6042,6 +6036,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			break;
 		case DVM_ITER :
 			{
+				DaoValue *data;
 				int j, skip = 0;
 				if( vmc->b ){
 					for(j=0; j<vmc->b; ++j){
@@ -6069,14 +6064,11 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				case DAO_CLASS :
 				case DAO_OBJECT :
 					klass = & at->aux->xClass;
-					type2 = DaoClass_GetDataType( klass, mbs, & j, hostClass );
-					if( j == DAO_ERROR_FIELD_NOTPERMIT ) goto NotPermit;
-					if( j == DAO_ERROR_FIELD_NOTEXIST ) goto NotExist;
-					j = DaoClass_GetDataIndex( klass, mbs );
-					k = LOOKUP_ST( j );
-					if( k == DAO_OBJECT_VARIABLE && at->tid == DAO_CLASS ) goto NeedInstVar;
-					DaoClass_GetData( klass, mbs, & value, hostClass );
-					if( value == NULL || value->type != DAO_ROUTINE ) goto NotMatch;
+					data = DaoClass_GetData( klass, mbs, hostClass );
+					if( data == NULL ) goto NotExist;
+					if( data->type == DAO_NONE ) goto NotPermit;
+					if( data->xBase.subtype == DAO_OBJECT_VARIABLE && at->tid ==DAO_CLASS ) goto NeedInstVar;
+					if( data->type != DAO_CONSTANT || data->xConst.value->type != DAO_ROUTINE ) goto NotMatch;
 					meth = (DaoRoutine*) value;
 					break;
 				case DAO_INTERFACE :

@@ -129,9 +129,8 @@ DAO_DLL DaoValue* DaoClass_CastToBase( DaoClass *self, DaoType *parent );
 DAO_DLL int  DaoClass_FindConst( DaoClass *self, DString *name );
 DAO_DLL DaoValue* DaoClass_GetConst( DaoClass *self, int id );
 DAO_DLL void DaoClass_SetConst( DaoClass *self, int id, DaoValue *value );
-DAO_DLL int DaoClass_GetData( DaoClass *self, DString *name, DaoValue **value, DaoClass *thisClass/*=0*/ );
 
-DAO_DLL DaoType** DaoClass_GetDataType( DaoClass *self, DString *name, int *res, DaoClass *thisClass );
+DAO_DLL DaoValue* DaoClass_GetData( DaoClass *self, DString *name, DaoClass *thisClass );
 DAO_DLL int DaoClass_GetDataIndex( DaoClass *self, DString *name );
 
 DAO_DLL int DaoClass_AddConst( DaoClass *self, DString *name, DaoValue *value, int pm );

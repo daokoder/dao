@@ -342,7 +342,7 @@ routine SdmlParser::ParseBlock( sect : TextSection, start : int, end : int, top=
 	if( start > end ) return '';
 	if( start == end ){
 		#io.writeln( tokens[start] );
-		tks = tokenize( tokens[start], '\\' );
+		tks = str.tokenize( tokens[start], '\\' );
 		n = tks.size() - 1;
 		src = '';
 		for( j = 0 : n ){
@@ -630,7 +630,7 @@ routine SdmlParser::ParseTable( src : string )
 			i += 1;
 			skip;
 		}
-		tkns = tokenize( line, "|", "\"", 1 );
+		tkns = str.tokenize( line, "|", "\"", 1 );
 		toks = {};
 		for( j = 0 : tkns.size()-1 ){
 			tok = tkns[j];

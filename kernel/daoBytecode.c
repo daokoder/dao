@@ -2496,7 +2496,7 @@ static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block 
 			routine->body->upValues = DList_New( DAO_DATA_VALUE );
 		}
 		while( routine->body->upValues->size < B ){
-			DList_Append( routine->body->upValues, DaoVariable_New(NULL,NULL) );
+			DList_Append( routine->body->upValues, DaoVariable_New(NULL,NULL,0) );
 		}
 	}
 
@@ -2834,7 +2834,7 @@ static void DaoByteCoder_DecodeDeclaration( DaoByteCoder *self, DaoByteBlock *bl
 	}else if( block->parent->type == DAO_ASM_ROUTINE ){
 		DaoRoutine *routine = (DaoRoutine*) block->parent->value;
 		if( block->type == DAO_ASM_STATIC ){
-			DaoVariable *var = DaoVariable_New( value, type );
+			DaoVariable *var = DaoVariable_New( value, type, DAO_GLOBAL_VARIABLE );
 			int i = LOOKUP_BIND( DAO_GLOBAL_VARIABLE, 0, 0, self->nspace->variables->size );
 			MAP_Insert( self->nspace->lookupTable, name, i );
 			DList_Append( self->nspace->variables, var );

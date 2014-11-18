@@ -5821,7 +5821,7 @@ static int DaoNamespace_CopyStaticVar( DaoNamespace *self, int id, DMap *map )
 	DNode *it = MAP_Find( map, id );
 	if( it == NULL ){
 		DaoVariable *var = self->variables->items.pVar[id];
-		var = DaoVariable_New( var->value, var->dtype );
+		var = DaoVariable_New( var->value, var->dtype, DAO_STATIC_VARIABLE );
 		DList_Append( self->variables, var );
 		it = MAP_Insert( map, id, self->variables->size-1 );
 	}
@@ -6045,9 +6045,9 @@ static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc, int mo
 	case DAO_CLASS :
 		if( routine->routHost ) thisClass = DaoValue_CastClass( routine->routHost->aux );
 		if( mode & DAO_CONST_EVAL_METHDEF ) thisClass = (DaoClass*) A;
-		if( DaoClass_GetData( (DaoClass*) A, name, &tmp, thisClass ) ) goto InvalidConstField;
-		opb = DaoClass_FindConst( & A->xClass, name );
-		if( opb >=0 ) C = DaoClass_GetConst( & A->xClass, opb );
+		tmp = DaoClass_GetData( (DaoClass*) A, name, thisClass );
+		if( tmp == NULL || tmp->type != DAO_CONSTANT ) goto InvalidConstField;
+		C = tmp->xConst.value;
 		break;
 	default :
 		type = DaoNamespace_GetType( self->activeNamespace, A );

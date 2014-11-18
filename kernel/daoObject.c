@@ -62,7 +62,7 @@ static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *strea
 	int ec = 0;
 	char buf[50];
 	DaoObject *self = & self0->xObject;
-	DaoValue *type = (DaoValue*) dao_type_string;
+	DaoValue *params[2];
 	DaoRoutine *meth;
 
 	sprintf( buf, "[%p]", self );
@@ -78,9 +78,12 @@ static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *strea
 	}
 	if( cycData ) MAP_Insert( cycData, self, self );
 
+	params[0] = (DaoValue*) dao_type_string;
+	params[1] = (DaoValue*) stream;
 	meth = DaoClass_FindMethod( self->defClass, "(string)", NULL );
 	if( meth ){
-		ec = DaoProcess_Call( proc, meth, self0, & type, 1 );
+		ec = DaoProcess_Call( proc, meth, self0, params, 2 );
+		if( ec ) ec = DaoProcess_Call( proc, meth, self0, params, 1 );
 	}else{
 		meth = DaoClass_FindMethod( self->defClass, "serialize", NULL );
 		if( meth ) ec = DaoProcess_Call( proc, meth, self0, NULL, 0 );

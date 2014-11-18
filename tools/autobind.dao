@@ -1746,7 +1746,7 @@ var qt_container = "^ (QList|QVector)(P|)_(%w+) $";
 
 routine Variable::Generate( cxx_no_self =0 )
 {
-	if( % typename == "unsigned" ){
+	if( typename == "unsigned" ){
 		typename = "unsigned";
 		typeid = $CT_UINT;
 	}else if( typename.match( "^ unsigned %s (char|short|int|long) $" ) != none ) {
@@ -2849,7 +2849,7 @@ routine Function::Generate()
 		signature += "const";
 		signature2 += "const";
 	}
-	if( excluded ){ 
+	if( excluded == 0 ){ 
 		#{ signature might be improperly generated for excluded function
 			that has complex types #}
 		parts = source.capture( "^(.*)((%w+) %s* %b() .*)$" );

@@ -4979,7 +4979,7 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 				DList_Append( self->uplocs, tokpos );
 				i = LOOKUP_BIND( DAO_CLOSURE_VARIABLE, 0, 0, routine->body->upValues->size );
 				MAP_Insert( DaoParser_CurrentSymbolTable( self ), & nametok->string, i );
-				DList_Append( routine->body->upValues, DaoVariable_New(NULL,NULL) );
+				DList_Append( routine->body->upValues, DaoVariable_New(NULL,NULL,0) );
 			}
 			return i;
 		}
@@ -6065,6 +6065,9 @@ int DaoParser_GetOperPrecedence( DaoParser *self )
 {
 	DOper oper;
 	DaoToken **tokens = self->tokens->items.pToken;
+	if( self->curToken < self->tokens->size && tokens[self->curToken]->type == DTOK_SPACE ){
+		self->curToken += 1;
+	}
 	if( self->curToken >= self->tokens->size ) return -1;
 	if( (self->curToken+1) < self->tokens->size ){
 		DaoToken *t1 = tokens[self->curToken];
@@ -6299,13 +6302,18 @@ static DaoEnode DaoParser_ParseParenthesis( DaoParser *self )
 	int maybeType = tokens[start+1]->type == DTOK_IDENTIFIER;
 	int regC;
 
+	if( rb > 0 && rb < end && tokens[rb]->line == tokens[rb+1]->line ){
+		DOper oper = daoArithOper[ tokens[rb+1]->type ];
+		if( oper.left != 0 && oper.binary == 0 ) goto ParsingError;
+	}
+
 	result.prev = self->vmcLast;
 	if( rb > 0 && rb < end && maybeType && tokens[rb]->line == tokens[rb+1]->line ){
 		int cur, count = self->errors->size;
 		self->curToken = rb + 1;
 		/* To skip the explicit enum type, which is for the entire casting expression: */
 		DList_PushFront( self->enumTypes, NULL );
-		enode = DaoParser_ParseUnary( self, 0, 0 );
+		enode = DaoParser_ParsePrimary( self, 0, 0 );
 		DList_PopFront( self->enumTypes );
 		cur = self->curToken;
 		if( enode.reg >= 0 ){
@@ -6339,7 +6347,7 @@ ParseNoCasting:
 	}
 	result = DaoParser_ParseExpression( self, 0 );
 	if( result.reg < 0 ) return result;
-	if( DaoParser_CheckTokenType( self, DTOK_RB, ")" ) == 0 ) goto ParsingError;
+	if( self->curToken < rb ) goto ParsingError;
 	self->curToken += 1;
 	return result;
 ParsingError:

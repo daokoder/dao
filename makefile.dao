@@ -416,11 +416,12 @@ if( daovm_bundle_program.size() ){
 	mode = ((string) DaoMake::BuildMode())[1:].convert( $lower )
 	daos = daovm_bundle_program + ".dao"
 	darc = daovm_bundle_program + ".dar.c"
+	daolib = daovm_lib.BinaryPath() + daovm_lib.Name()
 	daomake_args  = "--platform " + DaoMake::Platform() + " --mode " + mode;
 	daomake_args += " --option-BUNDLE " + daovm_bundle_program
 	daomake_args += " --suffix .bundle bundle.dao"
 
-	archive = daovm.AddCommand( darc + ": " + daos, "$(DAO) -c " + daos )
+	archive = daovm.AddCommand( darc + ": " + daos + " " + daolib, "$(DAO) -c " + daos )
 	archive.AddCommand( "$(DAO) -a " + daovm_bundle_program + ".dac " + daovm_bundle_resources )
 	archive.AddCommand( "$(DAO) tools/filetools/archive.dao " + daovm_bundle_program + ".dar" )
 	archive.AddCommand( "$(DAOMAKE) " + daomake_args )

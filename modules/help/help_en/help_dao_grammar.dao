@@ -1109,7 +1109,7 @@ ParamList2 ::= ParamList1 { ',' ParamItem2 } [ ',' ValistParam ]
 ParamList3 ::= ParamItem2 { ',' ParamItem2 } [ ',' ValistParam ]
 ParamList  ::= ( ParamList2 | ParamList3 | ValistParam ) [ 'as' Identifier ]
 
-OverloadableOperator ::= Operator | 'cast' | '.' Identifier [ '=' ] | '[' ']' [ '=' ]
+OverloadableOperator ::= Operator | '.' Identifier [ '=' ] | '[' ']' [ '=' ]
 
 ParamReturn ::= '(' [ ParamList ] ')' [ '=>' Type ]
 

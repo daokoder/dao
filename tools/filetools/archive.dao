@@ -35,7 +35,7 @@ routine ArchiveToCSource( archive : string )
 	size = archive.size();
 	if( size < 8 ) return '', '';
 
-	pos = 4, 
+	pos = 4
 	files = DaoDecodeUInt32( archive, pos );
 	pos += 4;
 
