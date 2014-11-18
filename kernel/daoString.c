@@ -159,7 +159,10 @@ void DString_DeleteData( DString *self )
 {
 	int *data = (int*)self->chars - self->sharing;
 
-	if( self->aux ) DStringAux_Delete( self->aux );
+	if( self->aux ){
+		DStringAux_Delete( self->aux );
+		self->aux = NULL;
+	}
 
 	if( data == NULL || data == dao_string ) return;
 
@@ -556,7 +559,6 @@ void DString_Assign( DString *self, DString *chs )
 	int assigned = 0;
 	if( self == chs ) return;
 	if( data1 == data2 ) return;
-	//XXX
 
 	if( data2 != dao_string ){
 #ifdef DAO_WITH_THREAD
@@ -568,11 +570,11 @@ void DString_Assign( DString *self, DString *chs )
 				data1[0] -= 1;
 				if( data1[0] ==0 ) dao_free( data1 );
 			}
-			*self = *chs;
+			memcpy( self, chs, sizeof(DString) - sizeof(DStringAux*) );
 			data2[0] += 1;
 			assigned = 1;
 		}else if( data1 == NULL && chs->sharing ){
-			*self = *chs;
+			memcpy( self, chs, sizeof(DString) - sizeof(DStringAux*) );
 			data2[0] += 1;
 			assigned = 1;
 		}
