@@ -5,8 +5,8 @@ interface AA
 	routine[]( index : int )=>int;
 	routine.name()=>string;
 
-	routine for( iter : for_iterator );
-	routine[]( iter : for_iterator )=>int;
+	routine for( iter : ForIterator );
+	routine[]( iter : ForIterator )=>int;
 }
 routine Test( o : AA )
 {
@@ -23,11 +23,11 @@ class BB
 	routine[]( index : int ){ return index }
 	routine.name(){ return "BB" }
 
-	routine for( iter : for_iterator ){
+	routine for( iter : ForIterator ){
 		iter.valid = 1;
 		iter.iterator = 0;
 	}
-	routine[]( iter : for_iterator ){
+	routine[]( iter : ForIterator ){
 		id = (int)iter.iterator;
 		iter.valid = id + 1 < 5;
 		iter.iterator = id + 1;

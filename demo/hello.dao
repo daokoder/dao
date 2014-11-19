@@ -5,4 +5,4 @@ io.write( "Hello Dao!\n" #{ comment inside codes #} );
 Here are multi-lines comments.
 Here are multi-lines comments.
 #}
-io.writef( "\nThis version is %s.\n", std.version(1) )
+io.writef( "\nThis version is %s.\n", std.version(true) )
