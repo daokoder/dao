@@ -114,7 +114,7 @@ TypeKeyword ::= type | any | bool | int | float | complex | string
 
 -- Structures:
 @[code(syntax)]
-StructKeyword ::= interface | class | routine | operator
+StructKeyword ::= interface | class | routine
 @[code(syntax)]
 
 -- Storage/scoping:
@@ -657,6 +657,7 @@ Type ::= SpecialType
        | [ 'dao' '::' ] TupleType
        | [ 'dao' '::' ] RoutineType
        | { Identifier '::' } UserType
+       | ( 'var' | 'invar' ) '<' Type '>'
 @[code(syntax)]
 
 
@@ -840,7 +841,7 @@ Expression
 Expression ::= PrimaryExpression
              | LeftUnaryOperator PrimaryExpression
              | PrimaryExpression BinaryOperator PrimaryExpression
-             | (Type) Expression
+             | '(' Type ')' PrimaryExpression
              | AnonymousRoutine
 @[code(syntax)]
 
@@ -1118,7 +1119,7 @@ CodeBlockSig ::= Identifier '(' [ ParamList ] ')' '[' [ ParamList1 ] ']' [ '=>' 
 DecoratorSig ::= TypeHolder '(' Identifier '(' Identifier ')' [ ',' ParamList ] ')'
 
 RoutineDecl1 ::= 'routine' { Identifier '::' } ( RoutineSig | CodeBlockSig | DecoratorSig )
-RoutineDecl2 ::= 'operator' { Identifier '::' } OverloadableOperator ParamReturn
+RoutineDecl2 ::= 'routine' { Identifier '::' } OverloadableOperator ParamReturn
 
 RoutineDecl ::= RoutineDecl1 | RoutineDecl2
 

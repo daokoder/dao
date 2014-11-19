@@ -1,4 +1,6 @@
 
+# make -f Makefile.daomake macosx MODE=debug OPTIONS="--option-BUNDLE-SCRIPT demo/deployment --option-BUNDLE-RESOURCES demo/resource.txt"
+
 load mixins
 
 text = std::resource( "@demo/resource.txt" )

@@ -1,4 +1,16 @@
 
+
+@[test(code_01)]
+var a: dao::int
+var b: dao::string
+var c: dao::list<int>
+var d: dao::tuple<int,string>
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
 # Test auto-type casting:
 @[test(code_01)]
 var a : none|int = 123

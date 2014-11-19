@@ -6217,21 +6217,23 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			break;
 		case DVM_SETVH_BB : case DVM_SETVH_II : case DVM_SETVH_FF : case DVM_SETVH_CC :
 			tp = typeVH[opc] + opb;
-			if( *tp == NULL || (*tp)->tid == DAO_UDT ){
-				GC_Assign( tp, types[opa] );
+			if( at->tid <= DAO_ENUM ) at = DaoType_GetBaseType( at );
+			if( *tp == NULL || (*tp)->tid == DAO_UDT || (*tp)->tid == DAO_THT ){
+				GC_Assign( tp, at );
 			}
 			TT1 = DAO_BOOLEAN + (code - DVM_SETVH_BB);
-			AssertTypeMatching( types[opa], *tp, defs );
+			AssertTypeMatching( at, *tp, defs );
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( tp[0], TT1 );
 			break;
 		case DVM_SETVS_BB : case DVM_SETVS_II : case DVM_SETVS_FF : case DVM_SETVS_CC :
 			var = body->upValues->items.pVar[opb];
-			if( var->dtype == NULL || var->dtype->tid == DAO_UDT ){
+			if( at->tid <= DAO_ENUM ) at = DaoType_GetBaseType( at );
+			if( var->dtype == NULL || var->dtype->tid == DAO_UDT || var->dtype->tid == DAO_THT ){
 				DaoVariable_SetType( var, at );
 			}
 			TT1 = DAO_BOOLEAN + (code - DVM_SETVS_BB);
-			AssertTypeMatching( types[opa], var->dtype, defs );
+			AssertTypeMatching( at, var->dtype, defs );
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( var->dtype, TT1 );
 			break;
@@ -6242,21 +6244,22 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				if( !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
 				at = DaoType_GetInvarType( at );
 			}
-			if( var->dtype == NULL || var->dtype->tid == DAO_UDT ){
+			if( var->dtype == NULL || var->dtype->tid == DAO_UDT || var->dtype->tid == DAO_THT ){
 				DaoVariable_SetType( var, at );
 			}
 			TT1 = DAO_BOOLEAN + (code - DVM_SETVO_BB);
-			AssertTypeMatching( types[opa], var->dtype, defs );
+			AssertTypeMatching( at, var->dtype, defs );
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( var->dtype, TT1 );
 			break;
 		case DVM_SETVK_BB : case DVM_SETVK_II : case DVM_SETVK_FF : case DVM_SETVK_CC :
 			var = hostClass->variables->items.pVar[opb];
-			if( var->dtype == NULL || var->dtype->tid == DAO_UDT ){
+			if( at->tid <= DAO_ENUM ) at = DaoType_GetBaseType( at );
+			if( var->dtype == NULL || var->dtype->tid == DAO_UDT || var->dtype->tid == DAO_THT ){
 				DaoVariable_SetType( var, at );
 			}
 			TT1 = DAO_BOOLEAN + (code - DVM_SETVK_BB);
-			AssertTypeMatching( types[opa], var->dtype, defs );
+			AssertTypeMatching( at, var->dtype, defs );
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( var->dtype, TT1 );
 			break;
@@ -6265,11 +6268,12 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			if( !(opc & 0x4) && var->dtype && var->dtype->invar ) goto ModifyConstant;
 			if( (opc >> 1) == 0x3 ) at = DaoType_GetInvarType( at );
 			if( (opc & 0x4) == 0 && at->konst == 1 ) at = DaoType_GetBaseType( at );
-			if( var->dtype == NULL || var->dtype->tid == DAO_UDT ){
+			if( at->tid <= DAO_ENUM ) at = DaoType_GetBaseType( at );
+			if( var->dtype == NULL || var->dtype->tid == DAO_UDT || var->dtype->tid == DAO_THT ){
 				DaoVariable_SetType( var, at );
 			}
 			TT1 = DAO_BOOLEAN + (code - DVM_SETVG_BB);
-			AssertTypeMatching( types[opa], var->dtype, defs );
+			AssertTypeMatching( at, var->dtype, defs );
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( var->dtype, TT1 );
 			break;

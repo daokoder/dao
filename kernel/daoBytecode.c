@@ -2237,7 +2237,8 @@ static void DaoByteCoder_DecodeClass( DaoByteCoder *self, DaoByteBlock *block )
 	klass->intOperators = DaoClass_FindMethod( klass, "(int)", NULL );
 	klass->eqOperators = DaoClass_FindMethod( klass, "==", NULL );
 	klass->ltOperators = DaoClass_FindMethod( klass, "<", NULL );
-	if( klass->attribs != (C & ~DAO_CLS_ASYNCHRONOUS) ){ /* check inferred attributes: */
+	/* Check inferred attributes: */
+	if( klass->attribs != (C & ~(DAO_CLS_INVAR|DAO_CLS_ASYNCHRONOUS)) ){
 		DaoByteCoder_Error( self, block, "Class attributes not matching!" );
 	}
 	klass->attribs = C;
