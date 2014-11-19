@@ -6069,7 +6069,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 					if( data->type == DAO_NONE ) goto NotPermit;
 					if( data->xBase.subtype == DAO_OBJECT_VARIABLE && at->tid ==DAO_CLASS ) goto NeedInstVar;
 					if( data->type != DAO_CONSTANT || data->xConst.value->type != DAO_ROUTINE ) goto NotMatch;
-					meth = (DaoRoutine*) value->xConst.value;
+					meth = (DaoRoutine*) data->xConst.value;
 					break;
 				case DAO_INTERFACE :
 					node = DMap_Find( at->aux->xInterface.methods, mbs );
