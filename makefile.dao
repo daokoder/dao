@@ -68,6 +68,7 @@ daovm_use_help_path = DaoMake::Option( "HELP-PATH", "modules/help" )
 daovm_use_help_font = DaoMake::Option( "HELP-FONT", "monospace" )
 
 if( DaoMake::IsPlatform( "MINIX" ) ) daovm_with_thread = $OFF;
+if( DaoMake::IsPlatform( "IOS" ) ) daovm_with_readline = $OFF;
 if( daovm_full_static == $ON ){
 	daovm_with_thread = $OFF;
 	daovm_with_readline = $OFF;
@@ -311,7 +312,9 @@ daomake = daovm.AddDirectory( "daomake", "tools/daomake" )
 daotest = daovm.AddDirectory( "daotest", "tools/daotest" )
 
 
-if( DaoMake::IsDir( "tools/clangdao" ) ) daovm.AddDirectory( "clangdao", "tools/clangdao" );
+if( not DaoMake::IsPlatform( "IOS" ) ){
+	if( DaoMake::IsDir( "tools/clangdao" ) ) daovm.AddDirectory( "clangdao", "tools/clangdao" );
+}
 
 modules = daovm.AddDirectory( "modules", "modules" )
 
@@ -328,6 +331,9 @@ daomake.AddDependency( daovm_lib )
 modules.AddDependency( daovm_lib )
 modules.AddDependency( daovm_exe )
 
+daovm.GenerateFinder( $TRUE );
+
+if( DaoMake::IsPlatform( "IOS" ) ) return
 
 daocmd = DaoMake::MakePath( daovm.BinaryPath(), "bin/dao" )
 testcmd = DaoMake::MakePath( daovm.BinaryPath(), "bin/daotest" )
@@ -402,8 +408,6 @@ tests = daovm.AddDirectory( "tests", "tests" )
 tests.AddDependency( modules )
 tests.AddDependency( daotest )
 
-
-daovm.GenerateFinder( $TRUE );
 
 
 ###########################################################################

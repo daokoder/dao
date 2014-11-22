@@ -3018,7 +3018,7 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 	DaoNamespace *NS = self->routine->nameSpace;
 	DaoClass *hostClass = self->hostClass;
 	DaoVmCodeX *vmc = (DaoVmCodeX*) inode;
-	DaoRoutine *meth, *rout;
+	DaoRoutine *rout, *meth = NULL;
 	DaoType *at = types[opa];
 	DaoType *bt = types[opb];
 	DaoType *ct = types[opc];
@@ -3224,25 +3224,18 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 		}else if( bt->tid != DAO_UDT && bt->tid != DAO_ANY ){
 			goto InvIndex;
 		}
-	}else if( at->tid == DAO_OBJECT && (meth = DaoClass_FindMethod( & at->aux->xClass, "[]", hostClass )) ){
-		rout = DaoRoutine_Check( meth, at, & bt, 1, DVM_CALL, errors );
-		if( rout == NULL ) goto InvIndex;
-		ct = & rout->routType->aux->xType;
+	}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
+		meth = DaoClass_FindMethod( & at->aux->xClass, "[]", hostClass );
+		if( meth == NULL ) goto InvIndex;
 	}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
 		DString_SetChars( mbs, "[]" );
 		meth = DaoType_FindFunction( at, mbs );
 		if( meth == NULL ) goto WrongContainer;
-		rout = DaoRoutine_Check( meth, at, & bt, 1, DVM_CALL, errors );
-		if( rout == NULL ) goto InvIndex;
-		ct = & rout->routType->aux->xType;
 	}else if( at->tid == DAO_INTERFACE ){
 		DString_SetChars( mbs, "[]" );
 		node = DMap_Find( at->aux->xInterface.methods, mbs );
 		if( node == NULL ) goto WrongContainer;
 		meth = node->value.pRoutine;
-		rout = DaoRoutine_Check( meth, at, & bt, 1, DVM_CALL, errors );
-		if( rout == NULL ) goto InvIndex;
-		ct = & rout->routType->aux->xType;
 	}else if( at->tid & DAO_ANY ){
 		ct = dao_type_udf;
 	}else if( at->typer ){
@@ -3251,11 +3244,13 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 		DString_SetChars( mbs, "[]" );
 		meth = DaoType_FindFunction( at, mbs );
 		if( meth == NULL ) goto WrongContainer;
+	}else{
+		goto WrongContainer;
+	}
+	if( meth ){
 		rout = DaoRoutine_Check( meth, at, & bt, 1, DVM_CALL, errors );
 		if( rout == NULL ) goto InvIndex;
 		ct = & rout->routType->aux->xType;
-	}else{
-		goto WrongContainer;
 	}
 	if( ct == NULL ) goto InvKey;
 	if( at->tid >= DAO_ARRAY ){
@@ -3755,6 +3750,7 @@ int DaoInferencer_HandleSetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 		rout = DaoRoutine_Check( meth, ct, ts, k, DVM_CALL, errors );
 		if( rout == NULL ) goto InvIndex;
 		break;
+	case DAO_CTYPE :
 	case DAO_CDATA :
 	case DAO_CSTRUCT :
 		DString_SetChars( mbs, "[]=" );
@@ -5216,6 +5212,10 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		if( K && K < DAO_CODE_EXPLIST && K != DAO_CODE_SETG && K != DAO_CODE_SETU ){
 			if( K != DAO_CODE_SETM ) inited[inode->c] = 1;
 			if( K != DAO_CODE_MOVE ){
+				if( ct != NULL && (ct->tid == DAO_CLASS || ct->tid == DAO_CTYPE) ){
+					/* TODO: SETF; see daoParser.c: line 6893; */
+					if( K == DAO_CODE_SETI || K == DAO_CODE_SETM ) goto SkipChecking;
+				}
 				if( ct != NULL && ct->invar != 0 && K == DAO_CODE_SETF ){
 					if( ct->tid != DAO_CLASS && ct->tid != DAO_NAMESPACE ) goto ModifyConstant;
 				}else if( ct != NULL && ct->invar != 0 && K > DAO_CODE_GETG ){
@@ -5236,6 +5236,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			}
 		}
 
+SkipChecking:
 		switch( K ){
 		case DAO_CODE_MOVE :
 			if( code == DVM_LOAD ){

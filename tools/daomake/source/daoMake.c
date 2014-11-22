@@ -60,6 +60,8 @@
 
 #ifdef LINUX
 #define DAOMAKE_PLATFORM  "linux"
+#elif defined( IOS )
+#define DAOMAKE_PLATFORM  "ios"
 #elif defined( MACOSX )
 #define DAOMAKE_PLATFORM  "macosx"
 #elif defined( FREEBSD )
@@ -244,8 +246,12 @@ static DaoMap  *daomake_platforms = NULL;
 static DaoMap  *daomake_assemblers = NULL;
 static DaoMap  *daomake_compilers = NULL;
 static DaoMap  *daomake_linkers = NULL;
-static DaoMap  *daomake_variables = NULL;
 static DaoList *daomake_includes = NULL;
+
+static DMap    *daomake_variable_map  = NULL;
+static DMap    *daomake_variable_map2 = NULL;
+static DMap    *daomake_variable_map3 = NULL;
+static DList   *daomake_variable_list = NULL;
 
 static DMap *daomake_boolean_options = NULL;
 static DMap *daomake_string_options = NULL;
@@ -1497,13 +1503,11 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 
 	DString_AppendChars( makefile, "\nDAOMAKE_BUILD_DIR  = " );
 	DString_Append( makefile, self->base.buildPath );
-	DString_AppendChars( makefile, "\n\n" );
+	DString_AppendChars( makefile, "\n" );
 
-	for(it=DMap_First(daomake_variables->value); it; it=DMap_Next(daomake_variables->value,it)){
-		DString_Append( makefile, it->key.pValue->xString.value );
-		DString_AppendChars( makefile, " ?=" );
-		DString_Append( makefile, it->value.pValue->xString.value );
-		DString_AppendChars( makefile, "\n" );
+	for(i=0; i<daomake_variable_list->size; ++i){
+		if( i%3 == 0 ) DString_AppendChars( makefile, "\n" );
+		DString_Append( makefile, daomake_variable_list->items.pString[i] );
 	}
 	DString_AppendChars( makefile, "\n" );
 
@@ -1906,12 +1910,12 @@ static void DaoMakeProject_ReplaceVariables( DaoMakeProject *self, DString *outp
 	DNode *it;
 	daoint i;
 
-	for(it=DMap_First(daomake_variables->value); it; it=DMap_Next(daomake_variables->value,it)){
+	for(it=DMap_First(daomake_variable_map2); it; it=DMap_Next(daomake_variable_map2,it)){
 		DString_Reset( name, 0 );
 		DString_AppendChars( name, "$(" );
-		DString_Append( name, it->key.pValue->xString.value );
+		DString_Append( name, it->key.pString );
 		DString_AppendChars( name, ")" );
-		DString_RepaceVariable( output, name, it->value.pValue->xString.value );
+		DString_RepaceVariable( output, name, it->value.pString );
 	}
 	for(i=0; i<self->variables->size; i+=3){
 		DString_Reset( name, 0 );
@@ -1954,11 +1958,13 @@ void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output, int 
 	DString_Append( output, self->projectName );
 	DString_AppendChars( output, "\" )\n" );
 
-	for(it=DMap_First(daomake_variables->value); it; it=DMap_Next(daomake_variables->value,it)){
+	for(i=0; i<daomake_variable_list->size; i+=3){
 		DString_AppendChars( output, "DaoMake::Variables[\"" );
-		DString_Append( output, it->key.pValue->xString.value );
+		DString_Append( output, daomake_variable_list->items.pString[i] );
+		DString_AppendChars( output, "\",\"" );
+		DString_Append( output, daomake_variable_list->items.pString[i+1] );
 		DString_AppendChars( output, "\"] = \"" );
-		DString_Append( output, it->value.pValue->xString.value );
+		DString_Append( output, daomake_variable_list->items.pString[i+2] );
 		DString_AppendChars( output, "\"\n" );
 	}
 
@@ -2739,6 +2745,50 @@ DaoTypeBase DaoMakeProject_Typer =
 	"Project", NULL, NULL, (DaoFuncItem*) DaoMakeProjectMeths,
 	{ & DaoMakeUnit_Typer, NULL }, {0},
 	(FuncPtrDel)DaoMakeProject_Delete,  PROJ_GetGCFields
+};
+
+
+
+static void Vars_Get( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *key = DaoValue_TryGetString( p[0] );
+	DNode *it = DMap_Find( daomake_variable_map, key );
+	if( it == NULL ){
+		DaoProcess_RaiseError( proc, "Key", key->chars );
+		return;
+	}
+	DaoProcess_PutString( proc, it->value.pString );
+}
+static void Vars_Set( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *key = DaoValue_TryGetString( p[1] );
+	DString *oper = DaoValue_TryGetString( p[2] );
+	DString *value = DaoValue_TryGetString( p[0] );
+	DNode *it = DMap_Find( daomake_variable_map, key );
+	if( it && DString_EQ( value, it->value.pString ) ) return;
+	it = DMap_Find( daomake_variable_map3, key );
+	if( it ){
+		DString_Assign( daomake_variable_list->items.pString[it->value.pInt], value );
+	}else{
+		DList_Append( daomake_variable_list, key );
+		DList_Append( daomake_variable_list, oper );
+		DList_Append( daomake_variable_list, value );
+	}
+	DMap_Insert( daomake_variable_map, key, value );
+	DMap_Insert( daomake_variable_map3, key, (void*)(size_t)(daomake_variable_list->size-1) );
+	if( oper->chars[0] == '?' ) DMap_Insert( daomake_variable_map2, key, value );
+}
+static DaoFuncItem DaoMakeVarsMeths[]=
+{
+	{ Vars_Get,     "[]( key: string ) => string" },
+	{ Vars_Set,     "[]=( value: string, key: string, mode = '?=' )" },
+	{ NULL, NULL }
+};
+
+DaoTypeBase DaoMakeVariables_Typer =
+{
+	"Variables", NULL, NULL, (DaoFuncItem*) DaoMakeVarsMeths,
+	{ NULL }, { NULL }, NULL, NULL
 };
 
 
@@ -3576,32 +3626,36 @@ ErrorInvalidArgValue:
 	daomake_assemblers = DaoMap_New(0);
 	daomake_compilers = DaoMap_New(0);
 	daomake_linkers = DaoMap_New(0);
-	daomake_variables = DaoMap_New(0);
 	daomake_includes = DaoList_New();
+	daomake_variable_map  = DHash_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	daomake_variable_map2 = DHash_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	daomake_variable_map3 = DHash_New(DAO_DATA_STRING,0);
+	daomake_variable_list = DList_New(DAO_DATA_STRING);
 	DaoGC_IncRC( (DaoValue*) daomake_projects );
 	DaoGC_IncRC( (DaoValue*) daomake_settings );
 	DaoGC_IncRC( (DaoValue*) daomake_platforms );
 	DaoGC_IncRC( (DaoValue*) daomake_assemblers );
 	DaoGC_IncRC( (DaoValue*) daomake_compilers );
 	DaoGC_IncRC( (DaoValue*) daomake_linkers );
-	DaoGC_IncRC( (DaoValue*) daomake_variables );
 	DaoGC_IncRC( (DaoValue*) daomake_includes );
 
 	nspace = DaoVmSpace_GetNamespace( vmSpace, "DaoMake" );
 	DaoNamespace_AddConst( vmSpace->daoNamespace, nspace->name, (DaoValue*) nspace, DAO_PERM_PUBLIC );
 	DaoNamespace_AddConst( vmSpace->mainNamespace, nspace->name, (DaoValue*) nspace, DAO_PERM_PUBLIC );
+
 	daomake_type_unit    = DaoNamespace_WrapType( nspace, & DaoMakeUnit_Typer, 0 );
 	daomake_type_objects = DaoNamespace_WrapType( nspace, & DaoMakeObjects_Typer, 0 );
 	daomake_type_target  = DaoNamespace_WrapType( nspace, & DaoMakeTarget_Typer, 0 );
 	daomake_type_project = DaoNamespace_WrapType( nspace, & DaoMakeProject_Typer, 0 );
+	DaoNamespace_WrapType( nspace, & DaoMakeVariables_Typer, 0 );
 	DaoNamespace_WrapFunctions( nspace, DaoMakeMeths );
+
 	DaoNamespace_AddValue( nspace, "Settings", (DaoValue*) daomake_settings, "map<string,string>" );
 	DaoNamespace_AddValue( nspace, "Platforms", (DaoValue*) daomake_platforms, "map<string,int>" );
 	DaoNamespace_AddValue( nspace, "Assemblers", (DaoValue*) daomake_assemblers, "map<string,string>" );
 	DaoNamespace_AddValue( nspace, "Compilers", (DaoValue*) daomake_compilers, "map<string,string>" );
 	DaoNamespace_AddValue( nspace, "Linkers", (DaoValue*) daomake_linkers, "map<string,string>" );
 	DaoNamespace_AddValue( nspace, "Includes", (DaoValue*) daomake_includes, "list<string>" );
-	DaoNamespace_AddValue( nspace, "Variables", (DaoValue*) daomake_variables, "map<string,string>" );
 
 	DaoMap_AddKeyValues( daomake_assemblers, daomake_lang_assemblers );
 	DaoMap_AddKeyValues( daomake_compilers, daomake_lang_compilers );
@@ -3712,6 +3766,10 @@ ErrorInvalidArgValue:
 	DaoGC_DecRC( (DaoValue*) daomake_compilers );
 	DaoGC_DecRC( (DaoValue*) daomake_linkers );
 	DaoGC_DecRC( (DaoValue*) daomake_includes );
+	DList_Delete( daomake_variable_list );
+	DMap_Delete( daomake_variable_map );
+	DMap_Delete( daomake_variable_map2 );
+	DMap_Delete( daomake_variable_map3 );
 
 	DaoQuit();
 	return k;

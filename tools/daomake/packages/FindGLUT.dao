@@ -1,4 +1,8 @@
 
+
+if( DaoMake::IsPlatform( "IOS" ) ) return
+
+
 header_hints = { "." }
 
 

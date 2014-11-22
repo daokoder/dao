@@ -6872,9 +6872,15 @@ InvalidSection:
 			{
 				/*  map/list/array[ i ] : */
 				int regcount = self->regCount;
+				int assignment = 0;
 
 				rb = DaoParser_FindPairToken( self, DTOK_LSB, DTOK_RSB, start, end );
 				if( rb < 0 ) return error;
+
+				if( (rb+1) < self->tokens->size ){
+					int T = tokens[rb+1]->type;
+					assignment = T == DTOK_ASSN || (T >= DTOK_ADDASN && T <= DTOK_XORASN);
+				}
 
 				cst = 0;
 				self->curToken += 1;
@@ -6885,7 +6891,8 @@ InvalidSection:
 						enode = DaoParser_ParseExpression2( self, 0, DAO_EXPRLIST_SLICE, ASSIGNMENT_WARNING );
 					}
 					if( enode.reg < 0 || self->curToken != rb ) return error;
-					if( result.konst && enode.konst ){
+					/* TODO: the same for GETF; */
+					if( result.konst && enode.konst && assignment == 0 ){
 						DaoValue *v1 = DaoParser_GetVariable( self, result.konst );
 						DaoValue *v2 = DaoParser_GetVariable( self, enode.konst );
 						regLast = DaoParser_MakeArithConst( self, DVM_GETI, v1, v2, & cst, back, regcount );
@@ -6908,7 +6915,7 @@ InvalidSection:
 					regLast = DaoParser_PushRegister( self );
 					DaoParser_AddCode( self, DVM_GETMI, enode.reg, enode.count-1, regLast, postart, start, rb );
 
-					if( result.konst ){
+					if( result.konst && assignment == 0 ){
 						cid->items.pInt[0] = result.konst;
 						enode.prev = extra ? extra->prev : back;
 

@@ -1,5 +1,5 @@
 
-PLATS = linux macosx freebsd openbsd mingw minix haiku
+PLATS = linux macosx freebsd openbsd mingw minix haiku ios
 
 # Set build mode: release, debug or profile;
 MODE ?= release
@@ -43,6 +43,6 @@ all:
 
 $(PLATS) :
 	cd $(SRCDIR)/tools/daomake/bootstrap && $(MAKE) $@ PLAT=$@
-	$(SRCDIR)/tools/daomake/bootstrap/daomake $(DAOMAKE_ARGS) $(SRCDIR)
+	$(SRCDIR)/tools/daomake/bootstrap/daomake --platform $@ $(DAOMAKE_ARGS) $(SRCDIR)
 	$(MAKE)
 

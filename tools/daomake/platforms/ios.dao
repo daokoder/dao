@@ -1,0 +1,50 @@
+load macosx
+
+io.writeln( "DaoMake: using IOS settings!" )
+
+xcode_path = DaoMake::Shell( "xcode-select --print-path" ).trim()
+if( xcode_path == "" ){
+	std.error( "Cannot find XCode location (try xcode-select -switch to set the correct path)" )
+}
+
+sdks = DaoMake::Shell( "xcodebuild -showsdks" )
+parts = sdks.capture( "iphoneos (%S+)" )
+if( %parts == 0 ) std.error( "Cannot find a valid iOS SDK" )
+
+sdk_version = parts[1];
+
+dev_path = xcode_path + "/Platforms/iPhoneSimulator.platform/Developer"
+sdk_path = dev_path + "/SDKs/iPhoneSimulator" + sdk_version + ".sdk"
+
+min_os_version = DaoMake::GetEnv( "MIN_OS_VERSION" )
+if( min_os_version == "" ) min_os_version = "3.0"
+
+
+DaoMake::Platforms["IOS"]  = DaoMake::Platforms["MACOSX"] + 1
+
+DaoMake::Variables["IOS_DEV_PATH", "="] = dev_path
+DaoMake::Variables["IOS_SDK_PATH", "="] = sdk_path
+DaoMake::Variables["IOS_MIN_VERSION", "="] = min_os_version
+
+DaoMake::Variables["CC", "="]  = "$(IOS_DEV_PATH)/usr/bin/llvm-gcc-4.2"
+DaoMake::Variables["CXX", "="] = "$(IOS_DEV_PATH)/usr/bin/llvm-g++-4.2"
+DaoMake::Variables["LD", "="]  = "$(IOS_DEV_PATH)/usr/bin/ld"
+DaoMake::Variables["AR", "="]  = "$(IOS_DEV_PATH)/usr/bin/ar rcs"
+
+
+cflags  = " -pipe -no-cpp-precomp -isysroot$(IOS_SDK_PATH)"
+cflags += " -miphoneos-version-min=$(IOS_MIN_VERSION)"
+cflags += " -I$(IOS_SDK_PATH)/usr/include/"
+
+ldflags  = " -L$(IOS_SDK_PATH)/usr/lib/ -isysroot$(IOS_SDK_PATH)"
+ldflags += " -miphoneos-version-min=$(IOS_MIN_VERSION) -static-libgcc"
+
+cflags  += " -arch i386"
+ldflags += " -arch i386"
+
+DaoMake::Settings["RELEASE-CFLAG"] += cflags
+DaoMake::Settings["RELEASE-LFLAG"] += ldflags
+DaoMake::Settings["DEBUG-CFLAG"]   += cflags
+DaoMake::Settings["DEBUG-LFLAG"]   += ldflags
+DaoMake::Settings["PROFILE-CFLAG"] += cflags
+DaoMake::Settings["PROFILE-LFLAG"] += ldflags
