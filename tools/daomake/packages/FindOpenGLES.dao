@@ -6,7 +6,7 @@ header_hints = { "." }
 if( DaoMake::IsPlatform( "IOS" ) ){
 	sdk_path = DaoMake::Variables[ "IOS_SDK_PATH" ]
 	header_path = "";
-	header_hints.append( sdk_path + "/System/Library/Frameworks/OpenGLES.framework/Headers/ES2" )
+	header_hints.append( sdk_path + "/System/Library/Frameworks/OpenGLES.framework/Headers/ES3" )
 	header_path = DaoMake::FindFile( "gl.h", header_hints )
 	if( header_path == "" ) return;
 

@@ -6895,8 +6895,12 @@ InvalidSection:
 					if( result.konst && enode.konst && assignment == 0 ){
 						DaoValue *v1 = DaoParser_GetVariable( self, result.konst );
 						DaoValue *v2 = DaoParser_GetVariable( self, enode.konst );
-						regLast = DaoParser_MakeArithConst( self, DVM_GETI, v1, v2, & cst, back, regcount );
-						result.konst = cst;
+						if( v1->type != DAO_CLASS && v1->type != DAO_CTYPE ){
+							regLast = DaoParser_MakeArithConst( self, DVM_GETI, v1, v2, & cst, back, regcount );
+							result.konst = cst;
+						}else{
+							result.konst = 0;
+						}
 					}else{
 						result.konst = 0;
 					}
@@ -6916,10 +6920,13 @@ InvalidSection:
 					DaoParser_AddCode( self, DVM_GETMI, enode.reg, enode.count-1, regLast, postart, start, rb );
 
 					if( result.konst && assignment == 0 ){
+						DaoValue *v = DaoParser_GetVariable( self, result.konst );
 						cid->items.pInt[0] = result.konst;
 						enode.prev = extra ? extra->prev : back;
 
-						reg = DaoParser_MakeEnumConst( self, & enode, cid, regcount );
+						if( v->type != DAO_CLASS && v->type != DAO_CTYPE ){
+							reg = DaoParser_MakeEnumConst( self, & enode, cid, regcount );
+						}
 					}
 					if( reg >=0 ){
 						result.first = self->vmcLast;

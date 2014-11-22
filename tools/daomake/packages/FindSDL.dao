@@ -6,6 +6,9 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 	stlibs = DaoMake::Shell( "sdl2-config --static-libs" )
 	if( stlibs == "" ) return;
 
+	libs = libs.chop()
+	if( DaoMake::IsPlatform( "IOS" ) ) libs = "/usr/local/lib/libSDL2-IOS.a"
+
 	sdl = DaoMake::Project( "SDL" )
 	sdl.AddSharedLibrary( "" )
 	sdl.AddCompilingFlag( cflags.chop() )

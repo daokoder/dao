@@ -13,31 +13,34 @@ if( %parts == 0 ) std.error( "Cannot find a valid iOS SDK" )
 
 sdk_version = parts[1];
 
-dev_path = xcode_path + "/Platforms/iPhoneSimulator.platform/Developer"
-sdk_path = dev_path + "/SDKs/iPhoneSimulator" + sdk_version + ".sdk"
+dev_path  = xcode_path + "/Platforms/iPhoneSimulator.platform/Developer"
+dev_path2 = xcode_path + "/Platforms/iPhoneOS.platform/Developer"
+sdk_path  = dev_path + "/SDKs/iPhoneSimulator" + sdk_version + ".sdk"
 
-min_os_version = DaoMake::GetEnv( "MIN_OS_VERSION" )
-if( min_os_version == "" ) min_os_version = "3.0"
+ios_version_min = DaoMake::GetEnv( "IOS_VERSION_MIN" )
+if( ios_version_min == "" ) ios_version_min = sdk_version.change( "%. %d+", ".0" )
 
 
 DaoMake::Platforms["IOS"]  = DaoMake::Platforms["MACOSX"] + 1
 
-DaoMake::Variables["IOS_DEV_PATH", "="] = dev_path
-DaoMake::Variables["IOS_SDK_PATH", "="] = sdk_path
-DaoMake::Variables["IOS_MIN_VERSION", "="] = min_os_version
+DaoMake::Variables["IOS_DEV_PATH", "="]    = dev_path
+DaoMake::Variables["IOS_DEV_PATH2", "="]   = dev_path2
+DaoMake::Variables["IOS_SDK_PATH", "="]    = sdk_path
+DaoMake::Variables["IOS_VERSION_MIN", "="] = ios_version_min
 
-DaoMake::Variables["CC", "="]  = "$(IOS_DEV_PATH)/usr/bin/llvm-gcc-4.2"
-DaoMake::Variables["CXX", "="] = "$(IOS_DEV_PATH)/usr/bin/llvm-g++-4.2"
+DaoMake::Variables["CC", "="]  = "$(IOS_DEV_PATH)/usr/bin/gcc"
+DaoMake::Variables["CXX", "="] = "$(IOS_DEV_PATH)/usr/bin/g++"
 DaoMake::Variables["LD", "="]  = "$(IOS_DEV_PATH)/usr/bin/ld"
-DaoMake::Variables["AR", "="]  = "$(IOS_DEV_PATH)/usr/bin/ar rcs"
+
+DaoMake::Settings["AR"] = "$(IOS_DEV_PATH2)/usr/bin/ar rcs"
 
 
 cflags  = " -pipe -no-cpp-precomp -isysroot$(IOS_SDK_PATH)"
-cflags += " -miphoneos-version-min=$(IOS_MIN_VERSION)"
+cflags += " -miphoneos-version-min=$(IOS_VERSION_MIN)"
 cflags += " -I$(IOS_SDK_PATH)/usr/include/"
 
 ldflags  = " -L$(IOS_SDK_PATH)/usr/lib/ -isysroot$(IOS_SDK_PATH)"
-ldflags += " -miphoneos-version-min=$(IOS_MIN_VERSION) -static-libgcc"
+ldflags += " -miphoneos-version-min=$(IOS_VERSION_MIN)" #" -static-libgcc"
 
 cflags  += " -arch i386"
 ldflags += " -arch i386"

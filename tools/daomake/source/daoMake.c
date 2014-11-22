@@ -1319,11 +1319,13 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 		DString_Append( rule, tname );
 		DString_AppendChars( rule, "\n\t" );
 
-		if( arc ) DString_Append( rule, arc );
-		DString_AppendGap( rule );
-		DString_Append( rule, tname );
-		DString_AppendGap( rule );
-		DString_Append( rule, objs );
+		if( arc ){
+			DString_Append( rule, arc );
+			DString_AppendGap( rule );
+			DString_Append( rule, tname );
+			DString_AppendGap( rule );
+			DString_Append( rule, objs );
+		}
 	}else{
 		for(it=lk=DMap_First(self->mapStringInt); it; it=DMap_Next(self->mapStringInt,it)){
 			if( it->value.pInt > lk->value.pInt ) lk = it;
