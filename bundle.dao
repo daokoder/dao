@@ -34,12 +34,14 @@ cmd_dir = DaoMake::SourcePath()
 dao_dir = DaoMake::GetEnv( 'DAO_DIR' )
 home_dir = DaoMake::GetEnv( 'HOME' )
 for( finder in bundle_finders ){
-	finder.replace( '$(CMD_DIR)/', cmd_dir )
-	finder.replace( '$(DAO_DIR)/', dao_dir )
-	finder.replace( '$(HOME)/', home_dir )
-	fields = finder.capture( '^ ([^%t]+) %t ([^%t]+) $' )
+	finder = finder.replace( '$(CMD_DIR)/', cmd_dir )
+	finder = finder.replace( '$(DAO_DIR)/', dao_dir )
+	finder = finder.replace( '$(HOME)/', home_dir )
+	fields = finder.split( '\t' )
 	if( fields.size() < 3 ) skip;
-	if( DaoMake::IsFile( fields[2] ) ) std.load( fields[2] )
-	pro = DaoMake::FindPackage( fields[1] )
-	if( pro ) bundle.UseStaticLibrary( pro )
+
+	if( DaoMake::IsFile( fields[1] ) ) std.load( fields[1] )
+	pro = DaoMake::FindPackage( fields[0] )
+	io.writeln( pro, fields )
+	if( pro != none ) bundle.UseStaticLibrary( pro )
 }

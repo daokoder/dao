@@ -1511,7 +1511,7 @@ void DaoMakeProject_MakeFile( DaoMakeProject *self, DString *makefile )
 		if( i%3 == 0 ) DString_AppendChars( makefile, "\n" );
 		DString_Append( makefile, daomake_variable_list->items.pString[i] );
 	}
-	DString_AppendChars( makefile, "\n" );
+	DString_AppendChars( makefile, "\n\n" );
 
 	if( 1 ){
 		DString *all = DaoMakeProject_GetBufferString( self );
@@ -1939,7 +1939,7 @@ void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output, int 
 	DNode *it;
 	daoint i;
 
-	DString_Append( filePath, self->base.buildPath );
+	DString_Append( filePath, self->base.binaryPath );
 	DString_AppendPathSep( filePath );
 	DString_AppendChars( filePath, "Find" );
 	DString_Append( filePath, self->projectName );
@@ -2144,7 +2144,7 @@ static void DaoMakeUnit_UseLibrary( DaoMakeUnit *self, DaoMakeProject *pro, DStr
 			}
 			flag = (DString*) DList_PushBack( self->linkingFlags, name );
 			if( name->size ) DString_InsertChars( flag, "-l", 0, 0, 0 );
-		}else if( ttype == DAOMAKE_STATICLIB ){
+		}else if( ttype == DAOMAKE_STATICLIB && name->size ){
 			DString *prefix = DaoMake_GetSettingValue( daomake_prefix_keys[ ttype ] );
 			DString *suffix = DaoMake_GetSettingValue( daomake_suffix_keys[ ttype ] );
 			flag = (DString*) DList_PushBack( self->linkingFlags, name );
@@ -3745,7 +3745,7 @@ ErrorInvalidArgValue:
 		if( source->size == 0 ) continue;
 
 		DString_Reset( name, 0 );
-		DString_Append( name, project->base.sourcePath );
+		DString_Append( name, project->base.binaryPath );
 		DString_AppendPathSep( name );
 		DString_AppendChars( name, "Find" );
 		DString_Append( name, project->projectName );

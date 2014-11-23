@@ -116,7 +116,7 @@ static void DaoSTD_Resource( DaoProcess *proc, DaoValue *p[], int N )
 {
 	FILE *fin;
 	DString *file = DString_Copy( p[0]->xString.value );
-	if( DaoVmSpace_SearchResource( proc->vmSpace, file ) == 0 ){
+	if( DaoVmSpace_SearchResource( proc->vmSpace, file, proc->activeNamespace->path ) == 0 ){
 		DaoProcess_RaiseError( proc, NULL, "resource file not found" );
 		DString_Delete( file );
 		return;

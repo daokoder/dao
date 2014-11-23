@@ -7,10 +7,12 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 	if( stlibs == "" ) return;
 
 	libs = libs.chop()
-	if( DaoMake::IsPlatform( "IOS" ) ) libs = "/usr/local/lib/libSDL2-IOS.a"
+	if( DaoMake::IsPlatform( "IOS" ) ) libs += " /usr/local/lib/libSDL2-IOS.a"
 
 	sdl = DaoMake::Project( "SDL" )
-	sdl.AddSharedLibrary( "" )
+	sdl_dll = sdl.AddSharedLibrary( "" )
+	sdl_lib = sdl.AddStaticLibrary( "" )
 	sdl.AddCompilingFlag( cflags.chop() )
-	sdl.AddLinkingFlag( lflags.chop() + " " + libs.chop() )
+	sdl_dll.AddLinkingFlag( lflags.chop() + " " + libs.chop() )
+	sdl_lib.AddLinkingFlag( lflags.chop() + " /usr/local/lib/libSDL2.a " + stlibs.chop() )
 }

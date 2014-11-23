@@ -90,6 +90,8 @@ if( daovm_with_concurrent == $ON ) daovm.AddDefinition( "DAO_WITH_CONCURRENT" )
 if( daovm_use_gc_logger   == $ON ) daovm.AddDefinition( "DAO_USE_GC_LOGGER" );
 if( daovm_use_code_state  == $ON ) daovm.AddDefinition( "DAO_USE_CODE_STATE" );
 
+daovm.AddDefinition( "TARGET_PLAT", "\\\"" + DaoMake::Platform() + "\\\"" )
+
 changeset = io.read( DaoMake::MakePath( DaoMake::SourcePath(), "manifest.uuid" ), true )
 if( % changeset ) daovm.AddDefinition( "CHANGESET_ID", "\\\"FOS." + changeset[:11] + "\\\"" )
 
@@ -333,7 +335,6 @@ modules.AddDependency( daovm_exe )
 
 daovm.GenerateFinder( $TRUE );
 
-if( DaoMake::IsPlatform( "IOS" ) ) return
 
 daocmd = DaoMake::MakePath( daovm.BinaryPath(), "bin/dao" )
 testcmd = DaoMake::MakePath( daovm.BinaryPath(), "bin/daotest" )
@@ -346,6 +347,39 @@ if( DaoMake::UseLocalRPath() == 0 ){
 daovm.AddVariable( "DAO", daocmd );
 daovm.AddVariable( "HELP_PATH", daovm.MakeSourcePath( daovm_use_help_path ) );
 daovm.AddVariable( "HELP_FONT", daovm_use_help_font );
+
+
+###########################################################################
+#
+# Single executable deployment:
+#
+###########################################################################
+
+if( daovm_bundle_program.size() ){
+	mode = ((string) DaoMake::BuildMode())[1:].convert( $lower )
+	daos = daovm_bundle_program + ".dao"
+	darc = daovm_bundle_program + ".dar.c"
+	daolib = daovm_lib.BinaryPath() + daovm_lib.Name()
+	daomake_args  = "--platform " + DaoMake::Platform() + " --mode " + mode;
+	daomake_args += " --option-BUNDLE " + daovm_bundle_program
+	daomake_args += " --suffix .bundle bundle.dao"
+
+	archive = daovm.AddCommand( darc + ": " + daos + " " + daolib, "" )
+#   The following commands will not work for cross compiling, so the solution is
+#   to make a single deployment build on the host platform, and then skip these
+#   commands to make a single deployment build for the target platform.
+	if( not DaoMake::IsPlatform( "IOS" ) ){
+		archive.AddCommand( "$(DAO) -c " + daos )
+		archive.AddCommand( "$(DAO) -a " + daovm_bundle_program + ".dac " + daovm_bundle_resources )
+		archive.AddCommand( "$(DAO) tools/filetools/archive.dao " + daovm_bundle_program + ".dar" )
+	}
+	archive.AddCommand( "$(DAOMAKE) " + daomake_args )
+	archive.AddCommand( "$(MAKE) -f Makefile.bundle" )
+
+	return
+}
+
+
 
 # Add shell commands as a target:
 # Generate documentations here instead of inside modules/help,
@@ -407,28 +441,4 @@ DaoMake::SetTestTool( testcmd )
 tests = daovm.AddDirectory( "tests", "tests" )
 tests.AddDependency( modules )
 tests.AddDependency( daotest )
-
-
-
-###########################################################################
-#
-# Single executable deployment:
-#
-###########################################################################
-
-if( daovm_bundle_program.size() ){
-	mode = ((string) DaoMake::BuildMode())[1:].convert( $lower )
-	daos = daovm_bundle_program + ".dao"
-	darc = daovm_bundle_program + ".dar.c"
-	daolib = daovm_lib.BinaryPath() + daovm_lib.Name()
-	daomake_args  = "--platform " + DaoMake::Platform() + " --mode " + mode;
-	daomake_args += " --option-BUNDLE " + daovm_bundle_program
-	daomake_args += " --suffix .bundle bundle.dao"
-
-	archive = daovm.AddCommand( darc + ": " + daos + " " + daolib, "$(DAO) -c " + daos )
-	archive.AddCommand( "$(DAO) -a " + daovm_bundle_program + ".dac " + daovm_bundle_resources )
-	archive.AddCommand( "$(DAO) tools/filetools/archive.dao " + daovm_bundle_program + ".dar" )
-	archive.AddCommand( "$(DAOMAKE) " + daomake_args )
-	archive.AddCommand( "$(MAKE) -f Makefile.bundle" )
-}
 

@@ -51,9 +51,10 @@ routine ArchiveToCSource( archive : string )
 			onloads += 'extern int ' + source + '( DaoVmSpace *vms, DaoNamespace *ns );\n';
 			modules += '  { "' + name + '", 0, NULL, ' + source + ' },\n';
 
-			name.change( 'lib [^/\\]* %.(dll|so|dylib)$', '' )
-			source.change( '_OnLoad$', '' );
-			finders += source + '\t' + name + 'Find' + source + '.dao\n';
+			stlib = name.change( '%.(dll|so|dylib)$', '.a' )
+			name = name.change( 'lib [^/\\]* %.(dll|so|dylib)$', '' )
+			source = source.change( '_OnLoad$', '' );
+			finders += source + '\t' + name + 'Find' + source + '.dao\t' + stlib + '\n';
 		}else{
 			variable = 'source' + (string)i;
 			sources += 'unsigned char ' + variable + '[] =\n{\n';

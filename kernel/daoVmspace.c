@@ -133,12 +133,17 @@ static int daoModuleTypes[] =
 	DAO_MODULE_DAC, DAO_MODULE_DAO, DAO_MODULE_DLL
 };
 
+#ifndef TARGET_PLAT
+#define TARGET_PLAT "Undefined"
+#endif
+
 #ifndef CHANGESET_ID
 #define CHANGESET_ID "Undefined"
 #endif
 
 const char *const dao_copy_notice =
 "  Dao Virtual Machine " DAO_VERSION "\n"
+"  Target: " TARGET_PLAT "\n"
 "  Built date: " __DATE__ "\n"
 "  Changeset ID: " CHANGESET_ID "\n\n"
 "  Copyright(C) 2006-2014, Fu Limin\n"
@@ -1463,9 +1468,10 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 		DaoStream_WriteString( self->stdioStream, data );
 		DaoStream_WriteChars( self->stdioStream, "\n" );
 		count += 1;
+		DaoVmSpace_ConvertPath( self, data );
+		DString_AppendUInt16( archive, data->size );
+		DString_Append( archive, data );
 		DaoFile_ReadAll( fin, data, 1 );
-		DString_AppendUInt16( archive, file->size );
-		DString_Append( archive, file );
 		DString_AppendUInt32( archive, data->size );
 		DString_Append( archive, data );
 	}
@@ -2050,7 +2056,7 @@ void Dao_MakePath( DString *base, DString *path )
 	DString_Change( path, "/ %. (/|$)", "/", 0 );
 	DString_Delete( base );
 }
-int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname )
+int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname, DString *search )
 {
 	DString *path;
 	if( fname->size == 0 || fname->chars[0] != '@' ) return 0;
@@ -2059,7 +2065,7 @@ int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname )
 	DString_AppendChars( path, fname->chars + 1 );
 	if( TestPath( self, path, DAO_FILE_PATH ) == 0 ){
 		DString_SetChars( path, fname->chars + 1 );
-		Dao_MakePath( self->pathWorking, path );
+		Dao_MakePath( search, path );
 	}
 	if( TestPath( self, path, DAO_FILE_PATH ) ){
 		DString_Assign( fname, path );
@@ -2094,7 +2100,7 @@ void DaoVmSpace_SearchPath( DaoVmSpace *self, DString *fname, int type, int chec
 	char *p;
 	DString *path;
 
-	if( DaoVmSpace_SearchResource( self, fname ) ) return;
+	if( DaoVmSpace_SearchResource( self, fname, self->pathWorking ) ) return;
 
 	DString_Change( fname, "/ %s* %. %s* /", "/", 0 );
 	DString_Change( fname, "[^%./] + / %. %. /", "", 0 );

@@ -157,7 +157,7 @@ DAO_DLL DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname );
 DAO_DLL DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname );
 DAO_DLL DaoNamespace* DaoVmSpace_FindNamespace( DaoVmSpace *self, DString *name );
 
-DAO_DLL int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname );
+DAO_DLL int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname, DString *search );
 DAO_DLL void DaoVmSpace_ConvertPath( DaoVmSpace *self, DString *path );
 
 DAO_DLL void DaoVmSpace_SearchPath( DaoVmSpace *self, DString *fname, int type, int check );
