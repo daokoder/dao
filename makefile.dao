@@ -356,11 +356,14 @@ daovm.AddVariable( "HELP_FONT", daovm_use_help_font );
 ###########################################################################
 
 if( daovm_bundle_program.size() ){
+	arch = DaoMake::Architecture().trim()
 	mode = ((string) DaoMake::BuildMode())[1:].convert( $lower )
 	daos = daovm_bundle_program + ".dao"
 	darc = daovm_bundle_program + ".dar.c"
 	daolib = daovm_lib.BinaryPath() + daovm_lib.Name()
-	daomake_args  = "--platform " + DaoMake::Platform() + " --mode " + mode;
+	daomake_args  = "--platform " + DaoMake::Platform()
+	if( arch != "" ) daomake_args += " --arch " + arch
+	daomake_args += " --mode " + mode;
 	daomake_args += " --option-BUNDLE " + daovm_bundle_program
 	daomake_args += " --suffix .bundle bundle.dao"
 

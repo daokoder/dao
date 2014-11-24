@@ -266,6 +266,7 @@ static DaoType *daomake_type_target  = NULL;
 static DaoType *daomake_type_project = NULL;
 
 static DString *daomake_platform = NULL;
+static DString *daomake_architecture = NULL;
 static DString *daomake_current_path = NULL;
 static DString *daomake_main_source_path = NULL;
 static DString *daomake_test_tool = NULL;
@@ -799,13 +800,15 @@ void DaoMakeUnit_ExportLinkingPaths( DaoMakeUnit *self, DString *lflags, DaoMake
 		DString_Assign( path, self->linkingPaths->items.pString[i] );
 		DaoMake_MakePath( self->sourcePath, path );
 		DString_AppendGap( lflags );
-		if( daomake_relative_rpath ){
-			DaoMake_MakeRelativePath( target->binaryPath, path );
-			DString_Append( lflags, rpath2 );
-		}else{
-			DString_Append( lflags, rpath );
+		if( rpath->size && rpath2->size ){
+			if( daomake_relative_rpath ){
+				DaoMake_MakeRelativePath( target->binaryPath, path );
+				DString_Append( lflags, rpath2 );
+			}else{
+				DString_Append( lflags, rpath );
+			}
+			DString_Append( lflags, path );
 		}
-		DString_Append( lflags, path );
 		DString_Assign( path, self->linkingPaths->items.pString[i] );
 		DaoMake_MakePath( self->sourcePath, path );
 		DaoMake_MakeRelativePath( target->buildPath, path );
@@ -1331,6 +1334,11 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 			if( it->value.pInt > lk->value.pInt ) lk = it;
 		}
 		if( target->ttype == DAOMAKE_EXECUTABLE ){
+			DString *flag = DaoMake_GetSettingValue( "EXE-FLAG" );
+			if( flag ){
+				DString_AppendGap( lflags );
+				DString_Append( lflags, flag );
+			}
 		}else if( target->ttype == DAOMAKE_SHAREDLIB ){
 			DString *flag = DaoMake_GetSettingValue( "DLL-FLAG" );
 			DString *flag2 = DaoMake_GetSettingValue( "DLL-NAME" );
@@ -2085,6 +2093,7 @@ static void UNIT_AddRpath( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
 	DString *rpath = DaoMake_GetSettingValue( "DLL-RPATH" );
 	int i;
+	if( rpath->size == 0 ) return; /* TODO: WARNING; */
 	for(i=1; i<N; ++i){
 		DString *flag, *path = DaoValue_TryGetString( p[i] );
 		if( path == NULL ) continue;
@@ -2124,17 +2133,19 @@ static void DaoMakeUnit_UseLibrary( DaoMakeUnit *self, DaoMakeProject *pro, DStr
 
 		if( import && DaoMap_GetValueChars( daomake_platforms, "WIN32" ) == NULL ) break;
 		if( tar->install->size && ! DString_EQ( tar->install, tar->base.binaryPath ) ){
-			flag = (DString*) DList_PushBack( self->linkingFlags, rpath );
-			DString_Assign( flags, tar->install );
-			if( daomake_relative_rpath ) DaoMake_MakeRelativePath( self->binaryPath, flags );
-			DString_Append( flag, flags );
+			if( rpath->size ){
+				flag = (DString*) DList_PushBack( self->linkingFlags, rpath );
+				DString_Assign( flags, tar->install );
+				if( daomake_relative_rpath ) DaoMake_MakeRelativePath( self->binaryPath, flags );
+				DString_Append( flag, flags );
+			}
 		}
 		if( ttype == DAOMAKE_SHAREDLIB ){
 			if( tar->objects->size ){ /* real target: */
 				DString *binpath = tar->base.binaryPath;
 				if( daomake_local_rpath ){
 					DList_PushBack( self->linkingPaths, binpath );
-				}else{
+				}else if( rpath->size ){
 					flag = (DString*) DList_PushBack( self->linkingFlags, binpath );
 					if( daomake_relative_rpath ){
 						DaoMake_MakeRelativePath( self->buildPath, flag );
@@ -3028,6 +3039,7 @@ static void DAOMAKE_MakeRpath( DaoProcess *proc, DaoValue *p[], int N )
 	DString *flag = DaoProcess_PutChars( proc, "" );
 	DString *rpath = DaoMake_GetSettingValue( "DLL-RPATH" );
 	int i;
+	if( rpath->size == 0 ) return; /* TODO: WARNING; */
 	for(i=0; i<N; ++i){
 		DString *path = DaoValue_TryGetString( p[i] );
 		if( path == NULL ) continue;
@@ -3054,6 +3066,10 @@ static void DAOMAKE_SetTestTool( DaoProcess *proc, DaoValue *p[], int N )
 static void DAOMAKE_Platform( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoProcess_PutString( proc, daomake_platform );
+}
+static void DAOMAKE_Arch( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoProcess_PutString( proc, daomake_architecture );
 }
 static void DAOMAKE_IsPlatform( DaoProcess *proc, DaoValue *p[], int N)
 {
@@ -3102,6 +3118,8 @@ static DaoFuncItem DaoMakeMeths[] =
 	{ DAOMAKE_IsDir,       "IsDir( path: string ) => int" },
 
 	{ DAOMAKE_Platform,    "Platform() => string" },
+	{ DAOMAKE_Arch,        "Architecture() => string" },
+
 	{ DAOMAKE_IsPlatform,  "IsPlatform( platform: string ) => int" },
 	{ DAOMAKE_Is64Bit,     "Is64Bit() => int" },
 
@@ -3451,6 +3469,7 @@ int main( int argc, char *argv[] )
 {
 	int i, k, m;
 	char *platform = DAOMAKE_PLATFORM;
+	char *architecture = "";
 	char *mode = NULL;
 	FILE *fin, *fout;
 	DaoNamespace *nspace;
@@ -3539,6 +3558,9 @@ int main( int argc, char *argv[] )
 		if( strcmp( arg, "--platform" ) == 0 ){
 			if( (i + 1) == argc ) goto ErrorMissingArgValue;
 			platform = argv[++i];
+		}else if( strcmp( arg, "--arch" ) == 0 ){
+			if( (i + 1) == argc ) goto ErrorMissingArgValue;
+			architecture = argv[++i];
 		}else if( strcmp( arg, "--mode" ) == 0 ){
 			if( (i + 1) == argc ) goto ErrorMissingArgValue;
 			mode = argv[++i];
@@ -3622,6 +3644,7 @@ ErrorInvalidArgValue:
 
 	/* Use no hashing: the same string will be hashed differently in MBS and WCS! */
 	daomake_platform = DString_New();
+	daomake_architecture = DString_New();
 	daomake_projects = DaoMap_New(0);
 	daomake_settings = DaoMap_New(0);
 	daomake_platforms = DaoMap_New(0);
@@ -3671,6 +3694,7 @@ ErrorInvalidArgValue:
 	DString_SetChars( name, "../lib/daomake" );
 	Dao_MakePath( vmSpace->daoBinPath, name );
 	DaoVmSpace_AddPath( vmSpace, name->chars );
+	if( architecture && *architecture ) DString_SetChars( daomake_architecture, architecture );
 	if( platform && *platform ){
 		DaoNamespace *pns;
 		DString_SetChars( daomake_platform, platform );
