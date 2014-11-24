@@ -949,18 +949,35 @@ int DaoFile_ReadLine( FILE *fin, DString *line )
 	}
 	return 1;
 }
-int DaoFile_ReadAll( FILE *fin, DString *all, int close )
+int DaoFile_ReadAll( FILE *fin, DString *output, int close )
 {
 	char buf[IO_BUF_SIZE];
-	DString_Reset( all, 0 );
+	DString_Reset( output, 0 );
 	if( fin == NULL ) return 0;
 	while(1){
 		size_t count = fread( buf, 1, IO_BUF_SIZE, fin );
 		if( count ==0 ) break;
-		DString_AppendBytes( all, buf, count );
+		DString_AppendBytes( output, buf, count );
 	}
 	if( close ) fclose( fin );
 	return 1;
+}
+int DaoFile_ReadPart( FILE *fin, DString *output, daoint offset, daoint count )
+{
+	char buf[IO_BUF_SIZE];
+	daoint k, m, size = output->size;
+
+	if( fin == NULL ) return 0;
+	fseek( fin, offset, SEEK_SET );
+	while( count > 0 ){
+		m = (count + 1) < IO_BUF_SIZE ? (count + 1) : IO_BUF_SIZE;
+		k = fread( buf, 1, m, fin );
+		if( k == 0 ) break;
+		DString_AppendBytes( output, buf, k );
+		count -= k;
+	}
+	if( close ) fclose( fin );
+	return output->size - size;
 }
 void DaoFile_WriteString( FILE* file, DString *str )
 {

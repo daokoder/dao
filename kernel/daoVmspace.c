@@ -53,6 +53,35 @@
 #include"daoThread.h"
 #endif
 
+
+typedef struct DaoVirtualFile DaoVirtualFile;
+
+/*
+// If DaoVirtualFile::offset is greater than zero, DaoVirtualFile::data will
+// be the path to an archive file, and DaoVirtualFile::offset will be the location
+// of the virtual file's data in the archive file. Otherwise, DaoVirtualFile::data
+// contains the data for the virtual file.
+*/
+struct DaoVirtualFile
+{
+	daoint   offset;
+	daoint   size;
+	DString *data;
+};
+
+DaoVirtualFile* DaoVirtualFile_New()
+{
+	DaoVirtualFile *self = (DaoVirtualFile*) dao_calloc( 1, sizeof(DaoVirtualFile) );
+	self->data = DString_New();
+	return self;
+}
+void DaoVirtualFile_Delete( DaoVirtualFile *self )
+{
+	DString_Delete( self->data );
+	dao_free( self );
+}
+
+
 extern int ObjectProfile[100];
 
 DaoConfig daoConfig =
@@ -614,7 +643,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->daoBinPath = DString_New();
 	self->startPath = DString_New();
 	self->mainSource = DString_New();
-	self->vfiles = DHash_New( DAO_DATA_STRING, DAO_DATA_STRING );
+	self->vfiles = DHash_New( DAO_DATA_STRING, 0 );
 	self->vmodules = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsModules = DHash_New( DAO_DATA_STRING, 0 );
 	self->pathWorking = DString_New();
@@ -682,6 +711,9 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	for(it=DMap_First(self->allOptimizers); it; it=DMap_Next(self->allOptimizers,it)){
 		DaoOptimizer_Delete( (DaoOptimizer*) it->key.pVoid );
 	}
+	for(it=DMap_First(self->vfiles); it; it=DMap_Next(self->vfiles,it)){
+		DaoVirtualFile_Delete( (DaoVirtualFile*) it->value.pVoid );
+	}
 	GC_DecRC( self->daoNamespace );
 	GC_DecRC( self->mainNamespace );
 	GC_DecRC( self->stdioStream );
@@ -739,15 +771,35 @@ void DaoVmSpace_Unlock( DaoVmSpace *self )
 	DMutex_Unlock( & self->mutexLoad );
 #endif
 }
+int DaoDecodeUInt16( const char *data )
+{
+	const uchar_t *p = (const uchar_t*) data;
+	return (p[0]<<8) + p[1];
+}
+int DaoDecodeUInt32( const char *data )
+{
+	const uchar_t *p = (const uchar_t*) data;
+	return (p[0]<<24) + (p[1]<<16) + (p[2]<<8) + p[3];
+}
 int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname, DString *source )
 {
+	FILE *fin;
 	DNode *node = MAP_Find( self->vfiles, fname );
 	/* printf( "reading %s\n", fname->chars ); */
 	if( node ){
-		DString_Assign( source, node->value.pString );
+		DaoVirtualFile *vfile = (DaoVirtualFile*) node->value.pVoid;
+		if( vfile->offset == 0 ){
+			DString_Assign( source, vfile->data );
+			return 1;
+		}
+		fin = Dao_OpenFile( vfile->data->chars, "r" );
+		if( fin == NULL ) goto Failed;
+		DaoFile_ReadPart( fin, source, vfile->offset, vfile->size );
+		fclose( fin );
 		return 1;
 	}
 	if( DaoFile_ReadAll( Dao_OpenFile( fname->chars, "r" ), source, 1 ) ) return 1;
+Failed:
 	DaoStream_WriteChars( self->errorStream, "ERROR: can not open file \"" );
 	DaoStream_WriteChars( self->errorStream, fname->chars );
 	DaoStream_WriteChars( self->errorStream, "\".\n" );
@@ -1407,24 +1459,18 @@ void DString_AppendUInt32( DString *bytecodes, uint_t value )
 	DString_AppendBytes( bytecodes, (char*) bytes, 4 );
 }
 
-int DaoDecodeUInt16( const char *data )
-{
-	const uchar_t *p = (const uchar_t*) data;
-	return (p[0]<<8) + p[1];
-}
-int DaoDecodeUInt32( const char *data )
-{
-	const uchar_t *p = (const uchar_t*) data;
-	return (p[0]<<24) + (p[1]<<16) + (p[2]<<8) + p[3];
-}
 static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 {
-	FILE *fin, *fout;
+	FILE *fin, *fout, *fout2;
 	int i, count = 1;
 	int slen = strlen( DAO_DLL_SUFFIX );
 	DaoNamespace *ns = self->mainNamespace;
+	DMap *archives = DMap_New(DAO_DATA_STRING,DAO_DATA_STRING);
+	DMap *counts = DMap_New(DAO_DATA_STRING,0);
 	DString *archive = DString_New();
+	DString *group = DString_New();
 	DString *data = DString_New();
+	DNode *it, *it2;
 
 	DString_Append( archive, ns->name );
 	if( archive->size > ns->lang->size ) archive->size -= ns->lang->size;
@@ -1454,8 +1500,15 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 		}
 	}
 	for(i=0; i<argValues->size; ++i){
+		DString *archsource = archive;
 		DString *file = argValues->items.pString[i];
+		int pos = DString_FindChars( file, "::", 0 );
+		DString_Reset( group, 0 );
 		DString_Assign( data, file );
+		if( pos != DAO_NULLPOS ){
+			DString_SubString( file, group, 0, pos );
+			DString_SubString( file, data, pos+2, -1 );
+		}
 		Dao_MakePath( self->pathWorking, data );
 		fin = Dao_OpenFile( data->chars, "r" );
 		if( fin == NULL ){
@@ -1464,16 +1517,50 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 			DaoStream_WriteChars( self->errorStream, "\".\n" );
 			continue;
 		}
-		DaoStream_WriteChars( self->stdioStream, "Adding to the archive: " );
+		DaoStream_WriteChars( self->stdioStream, "Adding to the archive(s): " );
 		DaoStream_WriteString( self->stdioStream, data );
 		DaoStream_WriteChars( self->stdioStream, "\n" );
-		count += 1;
+		if( group->size == 0 ){
+			count += 1;
+		}else{
+			it = DMap_Find( archives, group );
+			it2 = DMap_Find( counts, group );
+			if( it == NULL ){
+				it = DMap_Insert( archives, group, group );
+				it2 = DMap_Insert( counts, group, 0 );
+				it->value.pString->size = 0;
+			}
+			archsource = it->value.pString;
+			it2->value.pInt += 1;
+		}
 		DaoVmSpace_ConvertPath( self, data );
+		DString_AppendUInt16( archsource, data->size );
+		DString_Append( archsource, data );
+		DaoFile_ReadAll( fin, data, 1 );
+		DString_AppendUInt32( archsource, data->size );
+		DString_Append( archsource, data );
+	}
+
+	for(it=DMap_First(archives); it; it=DMap_Next(archives,it)){
+		DString_Assign( group, it->key.pString );
+		it2 = DMap_Find( counts, group );
+		DString_AppendChars( group, ".dar" );
+		fout2 = Dao_OpenFile( group->chars, "w+" );
+		fprintf( fout2, "\33\33\r\n" );
+		DString_Clear( data );
+		DString_AppendUInt32( data, count );
+		DaoFile_WriteString( fout2, data );
+		DaoFile_WriteString( fout2, it->value.pString );
+		fclose( fout2 );
+
+		count += 1;
+		DString_Clear( data );
+		DString_AppendChars( data, "$(ARCHIVE)/" );
+		DString_Append( data, group );
 		DString_AppendUInt16( archive, data->size );
 		DString_Append( archive, data );
-		DaoFile_ReadAll( fin, data, 1 );
-		DString_AppendUInt32( archive, data->size );
-		DString_Append( archive, data );
+		DString_AppendUInt32( archive, 2 );
+		DString_AppendBytes( archive, "\n\0", 2 );
 	}
 
 	fprintf( fout, "\33\33\r\n" );
@@ -1481,22 +1568,27 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 	DString_AppendUInt32( data, count );
 	DaoFile_WriteString( fout, data );
 	DaoFile_WriteString( fout, archive );
-	DString_Delete( archive );
-	DString_Delete( data );
 	fclose( fout );
+
+	DMap_Delete( archives );
+	DMap_Delete( counts );
+	DString_Delete( archive );
+	DString_Delete( group );
+	DString_Delete( data );
 }
-void DaoVmSpace_LoadArchive( DaoVmSpace *self, DString *archive )
+void DaoVmSpace_LoadArchive( DaoVmSpace *self, DString *archive, DString *group )
 {
-	DString *name;
+	DString *name, *source;
 	DaoVModule module = { NULL, 0, NULL, NULL };
 	char *data = (char*) archive->chars;
 	int slen = strlen( DAO_DLL_SUFFIX );
 	int pos = 4, size = archive->size;
 	int i, m, n, files;
 
-	DString_Clear( self->mainSource );
+	if( group == NULL ) DString_Clear( self->mainSource );
 	if( size < 8 ) return;
 	name = DString_New();
+	source = DString_New();
 	data = (char*) archive->chars;
 	files = DaoDecodeUInt32( data + pos );
 	pos += 4;
@@ -1505,23 +1597,35 @@ void DaoVmSpace_LoadArchive( DaoVmSpace *self, DString *archive )
 		m = DaoDecodeUInt16( data + pos );
 		if( (pos + 2 + m + 4) >= size ) break;
 		n = DaoDecodeUInt32( data + pos + 2 + m );
-		if( i == 0 ){
+		DString_SetBytes( name, data + pos + 2, m );
+		if( i == 0 && group == NULL ){
 			DString_SetChars( self->mainSource, "/@/" );
 			DString_AppendBytes( self->mainSource, data + pos + 2, m );
 			DaoNamespace_SetName( self->mainNamespace, self->mainSource->chars );
 			DString_SetBytes( self->mainSource, data + pos + 2 + m + 4, n );
+		}else if( DString_FindChars( name, "$(ARCHIVE)/", 0 ) == 0 ){
+			FILE *fin;
+			DString_Change( name, "^{{$(ARCHIVE)/}}", self->startPath->chars, 0 );
+			fin = Dao_OpenFile( name->chars, "r" );
+			if( fin == NULL ) continue;
+			DaoFile_ReadAll( fin, source, 1 );
+			DaoVmSpace_LoadArchive( self, source, name );
 		}else{
-			DString_SetBytes( name, data + pos + 2, m );
 			/* Ignore DLL modules: */
 			if( DString_FindChars( name, DAO_DLL_SUFFIX, 0 ) != m - slen ){
 				module.name = name->chars;
 				module.length = n;
 				module.data = (uchar_t*) data + pos + 2 + m + 4;
+				if( group ){
+					module.length = - (pos + 2 + m);
+					module.data = (uchar_t*)group->chars;
+				}
 				DaoVmSpace_AddVirtualModule( self, & module );
 			}
 		}
 		pos += 2 + m + 4 + n;
 	}
+	DString_Delete( source );
 	DString_Delete( name );
 }
 int DaoVmSpace_Eval( DaoVmSpace *self, const char *src )
@@ -1581,7 +1685,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	res = DaoVmSpace_ReadSource( self, ns->name, self->mainSource );
 	if( strncmp( self->mainSource->chars, "\33\33\r\n", 4 ) == 0 ){
 		DString *archive = DString_Copy( self->mainSource );
-		DaoVmSpace_LoadArchive( self, archive );
+		DaoVmSpace_LoadArchive( self, archive, NULL );
 		DString_Delete( archive );
 	}
 	if( self->options & DAO_OPTION_ARCHIVE ){
@@ -2008,15 +2112,31 @@ void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, DaoVModule *module )
 	DString_AppendChars( fname, module->name );
 	if( module->onload ){
 		MAP_Insert( self->vmodules, fname, module->onload );
-	}else{
-		if( n < 0 ) n = strlen( data );
+	}else if( n >= 0 && strncmp( module->name, "$(ARCHIVE)/", 11 ) != 0 ){
+		if( n == 0 ) n = strlen( data );
 		node = DMap_Find( self->vfiles, fname );
 		if( node ){
-			DString_AppendBytes( node->value.pString, data, n );
+			DaoVirtualFile *vfile = (DaoVirtualFile*) node->value.pVoid;
+			DString_AppendBytes( vfile->data, data, n );
 		}else{
-			DString_SetBytes( source, data, n );
-			MAP_Insert( self->vfiles, fname, source );
+			DaoVirtualFile *vfile = DaoVirtualFile_New();
+			DString_SetBytes( vfile->data, data, n );
+			MAP_Insert( self->vfiles, fname, vfile );
 		}
+	}else{
+		FILE *fin = Dao_OpenFile( data, "r" );
+		node = DMap_Find( self->vfiles, fname );
+		if( node == NULL && fin != NULL ){
+			DaoFile_ReadPart( fin, source, abs(n), 4 );
+			if( source->size == 4 ){
+				DaoVirtualFile *vfile = DaoVirtualFile_New();
+				DString_SetChars( vfile->data, data );
+				vfile->offset = abs(n);
+				vfile->size = DaoDecodeUInt32( source->chars );
+				MAP_Insert( self->vfiles, fname, vfile );
+			}
+		}
+		if( fin != NULL ) fclose( fin );
 	}
 	pos = DString_RFindChar( fname, '/', -1 );
 	DString_Erase( fname, pos, -1 );
