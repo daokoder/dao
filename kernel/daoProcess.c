@@ -4901,7 +4901,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		}
 		DaoProcess_PutComplex( self, res );
 #ifdef DAO_WITH_NUMARRAY
-	}else if( B->type >=DAO_INTEGER && B->type <=DAO_COMPLEX && A->type ==DAO_ARRAY ){
+	}else if( B->type >= DAO_INTEGER && B->type <= DAO_COMPLEX && A->type == DAO_ARRAY ){
 		DaoArray *na = & A->xArray;
 		DaoArray *nc = na;
 		if( vmc->a != vmc->c ){
@@ -4909,7 +4909,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 			if( nc->etype == DAO_NONE ) nc->etype = na->etype;
 		}
 		DaoArray_array_op_number( nc, na, B, vmc->code, self );
-	}else if( A->type >=DAO_INTEGER && A->type <=DAO_COMPLEX && B->type ==DAO_ARRAY ){
+	}else if( A->type >= DAO_INTEGER && A->type <= DAO_COMPLEX && B->type == DAO_ARRAY ){
 		DaoArray *nb = & B->xArray;
 		DaoArray *nc = nb;
 		if( vmc->b != vmc->c ){
@@ -4917,7 +4917,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 			if( nc->etype == DAO_NONE ) nc->etype = nb->etype;
 		}
 		DaoArray_number_op_array( nc, A, nb, vmc->code, self );
-	}else if( A->type ==DAO_ARRAY && B->type ==DAO_ARRAY ){
+	}else if( A->type == DAO_ARRAY && B->type == DAO_ARRAY ){
 		DaoArray *na = & A->xArray;
 		DaoArray *nb = & B->xArray;
 		DaoArray *nc;
@@ -4931,7 +4931,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		}
 		DaoArray_ArrayArith( nc, na, nb, vmc->code, self );
 #endif
-	}else if( A->type ==DAO_STRING && B->type ==DAO_STRING && vmc->code ==DVM_ADD ){
+	}else if( A->type == DAO_STRING && B->type == DAO_STRING && vmc->code == DVM_ADD ){
 		if( vmc->a == vmc->c ){
 			DString_Append( A->xString.value, B->xString.value );
 		}else if( vmc->b == vmc->c ){
@@ -4939,6 +4939,18 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		}else{
 			DaoValue *C = DaoProcess_PutValue( self, A );
 			DString_Append( C->xString.value, B->xString.value );
+		}
+	}else if( A->type == DAO_STRING && B->type == DAO_STRING && vmc->code == DVM_DIV ){
+		if( vmc->a == vmc->c ){
+			DString *base = DString_Copy( A->xString.value );
+			DString_Assign( A->xString.value, B->xString.value );
+			Dao_MakePath( base, A->xString.value );
+			DString_Delete( base );
+		}else if( vmc->b == vmc->c ){
+			Dao_MakePath( A->xString.value, B->xString.value );
+		}else{
+			DaoValue *C = DaoProcess_PutValue( self, B );
+			Dao_MakePath( A->xString.value, C->xString.value );
 		}
 	}else if( A->type == DAO_ENUM && B->type == DAO_ENUM
 			 && (vmc->code == DVM_ADD || vmc->code == DVM_SUB) ){

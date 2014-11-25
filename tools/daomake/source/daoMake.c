@@ -683,15 +683,7 @@ void DaoMake_MakeOutOfSourcePath( DString *path, int isfile )
 void Dao_MakePath( DString *base, DString *path );
 void DaoMake_MakePath( DString *base, DString *path )
 {
-	if( path->size == 0 ) return;
-	if( path->size >= 2 && path->chars[0] == '$' && path->chars[1] == '(' ) goto Finalize;
-#ifdef WIN32
-	if( path->size >= 2 && isalpha( path->chars[0] ) && path->chars[1] == ':' ) goto Finalize;
-#else
-	if( path->chars[0] == '/' ) goto Finalize;
-#endif
 	Dao_MakePath( base, path );
-Finalize:
 	if( DaoMake_IsDir( path->chars ) ) DString_AppendPathSep( path );
 }
 void DaoMake_MakeRelativePath( DString *current, DString *path )
@@ -2828,7 +2820,13 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 
 	DString_AppendPathSep( cache );
 	DString_AppendChars( cache, "CacheFind" );
-	DString_Append( cache, name);
+	DString_Append( cache, name );
+	DString_AppendChar( cache, '-' );
+	DString_Append( cache, daomake_platform );
+	if( daomake_architecture->size ){
+		DString_AppendChar( cache, '-' );
+		DString_Append( cache, daomake_architecture );
+	}
 	DString_AppendChars( cache, ".dao" );
 	DaoMake_MakeOutOfSourcePath( cache, 1 );
 

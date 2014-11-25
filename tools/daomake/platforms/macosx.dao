@@ -13,8 +13,8 @@ if( %parts == 0 ) std.error( "Cannot find a valid MacOSX SDK" )
 
 sdk_version = parts[1];
 
-dev_path  = xcode_path + "/Platforms/MacOSX.platform/Developer"
-sdk_path  = dev_path + "/SDKs/MacOSX" + sdk_version + ".sdk"
+dev_path  = xcode_path/"Platforms/MacOSX.platform/Developer"
+sdk_path  = dev_path/"SDKs/MacOSX" + sdk_version + ".sdk"
 
 DaoMake::Platforms["MACOSX"]  = DaoMake::Platforms["BSD"] + 1
 

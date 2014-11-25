@@ -111,7 +111,6 @@ static void DaoSTD_Load( DaoProcess *proc, DaoValue *p[], int N )
 	DList_PopFront( vms->pathLoading );
 	if( import && ns ) DaoNamespace_AddParent( proc->activeNamespace, ns );
 }
-int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname, DString *source );
 static void DaoSTD_Resource( DaoProcess *proc, DaoValue *p[], int N )
 {
 	FILE *fin;
@@ -121,7 +120,7 @@ static void DaoSTD_Resource( DaoProcess *proc, DaoValue *p[], int N )
 		DString_Delete( file );
 		return;
 	}
-	DaoVmSpace_ReadSource( proc->vmSpace, file, file );
+	DaoVmSpace_ReadFile( proc->vmSpace, file, file );
 	DaoProcess_PutString( proc, file );
 	DString_Delete( file );
 }

@@ -13,16 +13,16 @@ if( %parts == 0 ) std.error( "Cannot find a valid iOS SDK" )
 
 sdk_version = parts[1];
 
-dev_path  = xcode_path + "/Platforms/iPhoneSimulator.platform/Developer"
-dev_path2 = xcode_path + "/Platforms/iPhoneOS.platform/Developer"
+dev_path  = xcode_path/"Platforms/iPhoneSimulator.platform/Developer"
+dev_path2 = xcode_path/"Platforms/iPhoneOS.platform/Developer"
 sdk_path = "";
 
 arch = DaoMake::Architecture()
 
 if( arch == "i386" or arch == "x86_64" ){
-	sdk_path  = dev_path + "/SDKs/iPhoneSimulator" + sdk_version + ".sdk"
+	sdk_path  = dev_path/"SDKs/iPhoneSimulator" + sdk_version + ".sdk"
 }else if( arch == "armv6" or arch == "armv7" ){
-	sdk_path  = dev_path2 + "/SDKs/iPhoneOS" + sdk_version + ".sdk"
+	sdk_path  = dev_path2/"SDKs/iPhoneOS" + sdk_version + ".sdk"
 }else{
 	std.error( "Invalid architecture" )
 }

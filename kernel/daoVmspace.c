@@ -124,15 +124,15 @@ void  dao_free( void *p )
 	free( p );
 }
 
-static int TestFile( DaoVmSpace *vms, DString *fname )
+int DaoVmSpace_TestFile( DaoVmSpace *self, DString *fname )
 {
-	if( MAP_Find( vms->vfiles, fname ) ) return 1;
-	if( MAP_Find( vms->vmodules, fname ) ) return 1;
+	if( MAP_Find( self->vfiles, fname ) ) return 1;
+	if( MAP_Find( self->vmodules, fname ) ) return 1;
 	return Dao_IsFile( fname->chars );
 }
 static int TestPath( DaoVmSpace *vms, DString *fname, int type )
 {
-	if( type == DAO_FILE_PATH ) return TestFile( vms, fname );
+	if( type == DAO_FILE_PATH ) return DaoVmSpace_TestFile( vms, fname );
 	return Dao_IsDir( fname->chars );
 }
 void DaoAux_Delete( DMap *aux )
@@ -781,7 +781,7 @@ int DaoDecodeUInt32( const char *data )
 	const uchar_t *p = (const uchar_t*) data;
 	return (p[0]<<24) + (p[1]<<16) + (p[2]<<8) + p[3];
 }
-int DaoVmSpace_ReadSource( DaoVmSpace *self, DString *fname, DString *source )
+int DaoVmSpace_ReadFile( DaoVmSpace *self, DString *fname, DString *source )
 {
 	FILE *fin;
 	DNode *node = MAP_Find( self->vfiles, fname );
@@ -1682,7 +1682,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	ns->time = tm;
 
 	/* self->fileName may has been changed */
-	res = DaoVmSpace_ReadSource( self, ns->name, self->mainSource );
+	res = DaoVmSpace_ReadFile( self, ns->name, self->mainSource );
 	if( strncmp( self->mainSource->chars, "\33\33\r\n", 4 ) == 0 ){
 		DString *archive = DString_Copy( self->mainSource );
 		DaoVmSpace_LoadArchive( self, archive, NULL );
@@ -1776,16 +1776,16 @@ int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int types )
 	size = fname->size;
 	if( (types & DAO_MODULE_DAC) && size >4 && DString_FindChars( fname, ".dac", 0 ) == size-4 ){
 		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
-		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DAC;
+		if( DaoVmSpace_TestFile( self, fname ) ) modtype = DAO_MODULE_DAC;
 	}else if( (types & DAO_MODULE_DAO) && size >4 && DString_FindChars( fname, ".dao", 0 ) == size-4 ){
 		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
-		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DAO;
+		if( DaoVmSpace_TestFile( self, fname ) ) modtype = DAO_MODULE_DAO;
 	}else if( types == DAO_MODULE_ANY && size >4 && DString_FindChars( fname, ".cgi", 0 ) == size-4 ){
 		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
-		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DAO;
+		if( DaoVmSpace_TestFile( self, fname ) ) modtype = DAO_MODULE_DAO;
 	}else if( (types & DAO_MODULE_DLL) && size > slen && DString_FindChars( fname, DAO_DLL_SUFFIX, 0 ) == size - slen ){
 		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
-		if( TestFile( self, fname ) ) modtype = DAO_MODULE_DLL;
+		if( DaoVmSpace_TestFile( self, fname ) ) modtype = DAO_MODULE_DLL;
 	}else{
 		DString *fn = DString_New();
 		DString *path = DString_New();
@@ -1818,7 +1818,7 @@ int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int types )
 			// as a dll module to load that dll module in certain way, or do extra things.
 			*/
 			if( self->nameLoading->size && DString_EQ( fn, self->nameLoading->items.pString[0] ) ) continue;
-			if( TestFile( self, fn ) ){
+			if( DaoVmSpace_TestFile( self, fn ) ){
 				modtype = daoModuleTypes[i];
 				if( modtype > DAO_MODULE_DLL ) modtype = DAO_MODULE_DLL;
 				DString_Assign( fname, fn );
@@ -1827,7 +1827,7 @@ int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int types )
 		}
 		if( modtype == DAO_MODULE_NONE ){
 			DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
-			if( TestFile( self, fname ) ) modtype = DAO_MODULE_ANY;
+			if( DaoVmSpace_TestFile( self, fname ) ) modtype = DAO_MODULE_ANY;
 		}
 		DString_Delete( fn );
 		DString_Delete( path );
@@ -1879,7 +1879,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	}
 
 	source = DString_New();
-	if( ! DaoVmSpace_ReadSource( self, libpath, source ) ) goto LoadingFailed;
+	if( ! DaoVmSpace_ReadFile( self, libpath, source ) ) goto LoadingFailed;
 
 	if( sizeof(dao_integer) != 8 || sizeof(dao_float) != 8 ){
 		int daofile = DString_Match( libpath, "%w %. dao $", 0, 0 );
@@ -2145,9 +2145,14 @@ void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, DaoVModule *module )
 	DString_Delete( source );
 }
 
-/* base is assumed to be absolute, and path is assumed to be relative: */
 void Dao_MakePath( DString *base, DString *path )
 {
+	if( base->size == 0 ) return;
+	if( path->size >= 2 && path->chars[0] == '$' && path->chars[1] == '(' ) return;
+
+	if( path->size >= 2 && isalpha( path->chars[0] ) && path->chars[1] == ':' ) return;
+	if( path->chars[0] == '/' ) return;
+
 	base = DString_Copy( base );
 	Dao_NormalizePathSep( base );
 	Dao_NormalizePathSep( path );
@@ -2173,18 +2178,18 @@ void Dao_MakePath( DString *base, DString *path )
 	}else if( base->size && path->size == 0 ){
 		DString_Assign( path, base );
 	}
-	DString_Change( path, "/ %. (/|$)", "/", 0 );
+	while( DString_Change( path, "/ %. (/|$)", "/", 0 ) );
 	DString_Delete( base );
 }
 int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname, DString *search )
 {
 	DString *path;
-	if( fname->size == 0 || fname->chars[0] != '@' ) return 0;
+	if( fname->size == 0 ) return 0;
 	path = DString_New();
 	DString_AppendChars( path, "/@/" );
-	DString_AppendChars( path, fname->chars + 1 );
+	DString_Append( path, fname );
 	if( TestPath( self, path, DAO_FILE_PATH ) == 0 ){
-		DString_SetChars( path, fname->chars + 1 );
+		DString_Assign( path, fname );
 		Dao_MakePath( search, path );
 	}
 	if( TestPath( self, path, DAO_FILE_PATH ) ){

@@ -4097,7 +4097,7 @@ int DaoInferencer_HandleBinaryArith( DaoInferencer *self, DaoInode *inode, DMap 
 			if( code == DVM_MOD ) goto InvOper;
 			break;
 		case DAO_STRING :
-			if( code != DVM_ADD ) goto InvOper;
+			if( code != DVM_ADD && code != DVM_DIV ) goto InvOper;
 			break;
 		case DAO_ENUM :
 			if( code != DVM_ADD && code != DVM_SUB ) goto InvOper;
