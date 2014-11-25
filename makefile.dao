@@ -367,7 +367,7 @@ if( daovm_bundle_program.size() ){
 	daomake_args += " --option-BUNDLE " + daovm_bundle_program
 	daomake_args += " --suffix .bundle bundle.dao"
 
-	archive = daovm.AddCommand( darc + ": " + daos + " " + daolib, "" )
+	archive = daovm.AddCommand( darc + ": " + daos + " " + daolib, "-@cd ." )
 #   The following commands will not work for cross compiling, so the solution is
 #   to make a single deployment build on the host platform, and then skip these
 #   commands to make a single deployment build for the target platform.

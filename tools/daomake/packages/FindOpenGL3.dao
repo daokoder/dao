@@ -3,25 +3,29 @@ if( DaoMake::IsPlatform( "IOS" ) ) return
 
 header_hints = { "." }
 
-if( DaoMake::IsPlatform( "UNIX" ) ){
-	header_path = "";
-	if( DaoMake::IsPlatform( "MACOSX" ) ){
-		header_hints.append( "/Library/Frameworks/OpenGL.framework/Headers" )
-		header_hints.append( "/System/Library/Frameworks/OpenGL.framework/Headers" )
-		header_path = DaoMake::FindFile( "gl3.h", header_hints )
-	}else{
-		header_path = DaoMake::FindFile( "GL/gl3.h", header_hints )
+if( DaoMake::IsPlatform( "MACOSX" ) ){
+	sdk_path = DaoMake::Variables[ "MACOSX_SDK_PATH" ]
+	header_hints.append( sdk_path + "/System/Library/Frameworks/OpenGL.framework/Headers" )
+	header_path = DaoMake::FindFile( "gl3.h", header_hints )
+	if( header_path != "" ){
+		opengl = DaoMake::Project( "OpenGL3" )
+		shlibs = "-framework OpenGL"
+		opengl.AddSharedLibrary( "" )
+		opengl.AddIncludePath( header_path )
+		opengl.AddLinkingFlag( shlibs )
+		return;
 	}
+}
+
+if( DaoMake::IsPlatform( "UNIX" ) ){
+	header_path = DaoMake::FindFile( "GL/gl3.h", header_hints )
+	if( % header_path ) header_path = DaoMake::MakePath( header_path, "./GL" )
 	if( header_path == "" ) return;
 
 	opengl = DaoMake::Project( "OpenGL3" )
-	shlibs = "";
-	if( DaoMake::IsPlatform( "MACOSX" ) && header_path.find( "Frameworks" ) >= 0 ){
-		shlibs = "-framework OpenGL"
-	}else{
-		shlibs = "-lGL -lGLU"
-	}
+	shlibs = "-lGL -lGLU"
 	opengl.AddSharedLibrary( "" )
 	opengl.AddIncludePath( header_path )
 	opengl.AddLinkingFlag( shlibs )
 }
+

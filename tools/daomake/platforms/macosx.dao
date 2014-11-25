@@ -2,7 +2,24 @@ load bsd;
 
 io.writeln( "DaoMake: using MacOSX settings!" )
 
+xcode_path = DaoMake::Shell( "xcode-select --print-path" ).trim()
+if( xcode_path == "" ){
+	std.error( "Cannot find XCode location (try xcode-select -switch to set the correct path)" )
+}
+
+sdks = DaoMake::Shell( "xcodebuild -showsdks" )
+parts = sdks.capture( "macosx (%S+)" )
+if( %parts == 0 ) std.error( "Cannot find a valid MacOSX SDK" )
+
+sdk_version = parts[1];
+
+dev_path  = xcode_path + "/Platforms/MacOSX.platform/Developer"
+sdk_path  = dev_path + "/SDKs/MacOSX" + sdk_version + ".sdk"
+
 DaoMake::Platforms["MACOSX"]  = DaoMake::Platforms["BSD"] + 1
+
+DaoMake::Variables["MACOSX_DEV_PATH", "="]  = dev_path
+DaoMake::Variables["MACOSX_SDK_PATH", "="]  = sdk_path
 
 DaoMake::Settings["DLL-SUFFIX"]      = ".dylib"
 DaoMake::Settings["DLL-FLAG"]        = "-dynamiclib"
