@@ -970,7 +970,7 @@ int DaoFile_ReadPart( FILE *fin, DString *output, daoint offset, daoint count )
 	if( fin == NULL ) return 0;
 	fseek( fin, offset, SEEK_SET );
 	while( count > 0 ){
-		m = (count + 1) < IO_BUF_SIZE ? (count + 1) : IO_BUF_SIZE;
+		m = count < IO_BUF_SIZE ? count : IO_BUF_SIZE;
 		k = fread( buf, 1, m, fin );
 		if( k == 0 ) break;
 		DString_AppendBytes( output, buf, k );

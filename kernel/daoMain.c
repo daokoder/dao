@@ -244,11 +244,7 @@ int main( int argc, char **argv )
 
 #ifdef DAO_WITH_STATIC_MODULES
 	idsrc = 1;
-	vmods = 0;
-	while( dao_virtual_modules[vmods].name ){
-		DaoVmSpace_AddVirtualModule( vmSpace, & dao_virtual_modules[vmods] );
-		vmods ++;
-	}
+	vmods = DaoVmSpace_AddVirtualModules( vmSpace, dao_virtual_modules );
 #endif
 
 	k = idsrc;
@@ -270,8 +266,8 @@ int main( int argc, char **argv )
 
 #ifdef DAO_WITH_STATIC_MODULES
 	if( vmods ){
-		DString_InsertChar( args, '\1', 0 );
-		DString_InsertChars( args, dao_virtual_modules[0].name, 0, 0, 0 );
+		DString_InsertChars( args, "/@/\1", 0, 0, 0 );
+		DString_InsertChars( args, dao_virtual_modules[0].name, 3, 0, 0 );
 		/* set the path for the virtual files: */
 		DaoVmSpace_SetPath( vmSpace, "/@/" );
 	}else

@@ -17,6 +17,6 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 	if( DaoMake::IsPlatform( "IOS" ) ){
 		sdl_lib.AddLinkingFlag( archive )
 	}else{
-		sdl_lib.AddLinkingFlag( lflags.chop() + archive + stlibs.chop() )
+		sdl_lib.AddLinkingFlag( archive )
 	}
 }

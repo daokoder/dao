@@ -22,6 +22,8 @@ routine CharToHex( source : string )
 		hex += digits[ char&0xf ];
 		count += 1;
 	}
+	hex += ", 0x00";
+	count += 1;
 	return hex;
 }
 
