@@ -13,7 +13,7 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 	sdl_dll = sdl.AddSharedLibrary( "" )
 	sdl_lib = sdl.AddStaticLibrary( "" )
 	sdl.AddCompilingFlag( cflags.chop() )
-	sdl_dll.AddLinkingFlag( lflags.chop() + " " + libs.chop() )
+	sdl_dll.AddLinkingFlag( stlibs.chop() + " " + libs.chop() )
 	if( DaoMake::IsPlatform( "IOS" ) ){
 		sdl_lib.AddLinkingFlag( archive )
 	}else{

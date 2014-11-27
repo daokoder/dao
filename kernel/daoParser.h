@@ -52,12 +52,17 @@ struct DaoParser
 
 	DaoParser *defParser;
 
-	int  curToken;
-	int  curLine;
-	int  lineCount;
+	int  lineCount;    /* Line count in the source file; */
+	int  curLine;      /* Current line number; */
+	int  curToken;     /* Current token index; */
 
-	DaoLexer  *lexer;
+	int  firstToken;   /* Index for the first token of the current expression/statement; */
+	int  middleToken;  /* Index for the middle token; */
+	int  lastToken;    /* Index for the last token; */
+
+	DArray    *tokenTriples; /* List of index triples for the first, middle and last tokens; */
 	DList     *tokens; /* lexer->tokens; */
+	DaoLexer  *lexer;
 
 	/*
 	// DList<DaoVmCodeX*>: need to be store as pointers, because in code generation,
@@ -140,6 +145,7 @@ struct DaoParser
 	DaoLexer  *wlexer;
 	DList     *errors;
 	DList     *warnings;
+
 
 	/* members for convenience */
 	DaoEnum   *denum;
