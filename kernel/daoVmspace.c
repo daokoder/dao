@@ -1466,6 +1466,18 @@ void DString_AppendUInt32( DString *bytecodes, uint_t value )
 	DString_AppendBytes( bytecodes, (char*) bytes, 4 );
 }
 
+/*
+// Archive File Format:
+// -- Header:
+//    Byte[4]   # Signature: \33\33\r\n
+//    Byte[4]   # Count of files in the archive;
+// -- Body (repetition of the following structure):
+//    Byte[2]   # Length of the file name;
+//    Byte[]    # File name;
+//    Byte[4]   # File size;
+//    Byte[]    # File data;
+// Note: the count, lengths and sizes are encoded in big endian;
+*/
 static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 {
 	FILE *fin, *fout, *fout2;
@@ -1490,6 +1502,10 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 	archive->size = 0;
 
 	count = self->sourceArchive->size/2;
+	/*
+	// Store the scripts and modules in the main archive:
+	// The archive file is created in the same directory as the main script;
+	*/
 	for(i=0; i<self->sourceArchive->size; i+=2){
 		DString *name = self->sourceArchive->items.pString[i];
 		DString *source = self->sourceArchive->items.pString[i+1];
@@ -1503,6 +1519,13 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 			// TODO:
 		}
 	}
+
+	/*
+	// Store the resource files in the main archive or separated archives:
+	// -- Resources prefixed with <GroupName>:: are stored in separated
+	//    archives which are identified by the <GroupName>;
+	// -- Resources without group prefixes are stored in the main archive;
+	*/
 	for(i=0; i<argValues->size; ++i){
 		DString *archsource = archive;
 		DString *file = argValues->items.pString[i];
@@ -1542,6 +1565,10 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 		DString_Append( archsource, data );
 	}
 
+	/*
+	// Created separated archives for each resource group:
+	// Such archives are created in the same directory as the main archive;
+	*/
 	for(it=DMap_First(archives); it; it=DMap_Next(archives,it)){
 		DString_Assign( group, it->key.pString );
 		it2 = DMap_Find( counts, group );
@@ -1555,6 +1582,13 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 		DaoFile_WriteString( fout2, it->value.pString );
 		fclose( fout2 );
 
+		/*
+		// Add place holders in the main archive to reference the separated archives:
+		// Byte[ 2]:  0x00 0xA
+		// Byte[10]:  $(ARCHIVE)
+		// Byte[ 4]:  <LengthOfTheFollowingString>
+		// Byte[  ]:  $(DAR_DIR)/<GroupName>.dar
+		*/
 		count += 1;
 		pathLoading = self->pathLoading->items.pString[0];
 		if( DString_Find( group, pathLoading, 0 ) == 0 ){
@@ -1591,12 +1625,18 @@ void DaoVmSpace_LoadArchive( DaoVmSpace *self, DString *archive, DString *group 
 
 	if( group == NULL ) DString_Clear( self->mainSource );
 	if( size < 8 ) return;
+
+	/*
+	// Push the archive name and path to the ::nameLoading and ::pathLoading stacks
+	// for resolving the $(DAR_DIR) variables in the references to other archives:
+	*/
 	if( group != NULL ){
 		DString *name = DList_PushFront( self->nameLoading, group );
 		DString *path = DList_PushFront( self->pathLoading, group );
 		DString_Change( name, "^ .* ([^/\\]+) $", "%1", 0 );
 		DString_Change( path, "[^/\\]* $", "", 0 );
 	}
+
 	name = DString_New();
 	source = DString_New();
 	data = (char*) archive->chars;
@@ -1608,12 +1648,12 @@ void DaoVmSpace_LoadArchive( DaoVmSpace *self, DString *archive, DString *group 
 		if( (pos + 2 + m + 4) >= size ) break;
 		n = DaoDecodeUInt32( data + pos + 2 + m );
 		DString_SetBytes( name, data + pos + 2, m );
-		if( i == 0 && group == NULL ){
+		if( i == 0 && group == NULL ){ /* Retrieve the main script: */
 			DString_SetChars( self->mainSource, "/@/" );
 			DString_AppendBytes( self->mainSource, data + pos + 2, m );
 			DaoNamespace_SetName( self->mainNamespace, self->mainSource->chars );
 			DString_SetBytes( self->mainSource, data + pos + 2 + m + 4, n );
-		}else if( strcmp( name->chars, "$(ARCHIVE)" ) == 0 ){
+		}else if( strcmp( name->chars, "$(ARCHIVE)" ) == 0 ){ /* Load referenced archive: */
 			FILE *fin;
 			DString_SetChars( name, data + pos + 2 + m + 4 );
 			DaoVmSpace_ConvertPath2( self, name );
@@ -1625,18 +1665,18 @@ void DaoVmSpace_LoadArchive( DaoVmSpace *self, DString *archive, DString *group 
 			}
 			DaoFile_ReadAll( fin, source, 1 );
 			DaoVmSpace_LoadArchive( self, source, name );
+		}else if( DString_FindChars( name, DAO_DLL_SUFFIX, 0 ) != m - slen ){
+			module.name = name->chars;
+			module.length = n;
+			module.data = (uchar_t*) data + pos + 2 + m + 4;
+			if( group ){
+				/* Negative length to indicate the file is not from the main archive: */
+				module.length = - (pos + 2 + m);
+				module.data = (uchar_t*)group->chars;
+			}
+			DaoVmSpace_AddVirtualModule( self, & module );
 		}else{
 			/* Ignore DLL modules: */
-			if( DString_FindChars( name, DAO_DLL_SUFFIX, 0 ) != m - slen ){
-				module.name = name->chars;
-				module.length = n;
-				module.data = (uchar_t*) data + pos + 2 + m + 4;
-				if( group ){
-					module.length = - (pos + 2 + m);
-					module.data = (uchar_t*)group->chars;
-				}
-				DaoVmSpace_AddVirtualModule( self, & module );
-			}
 		}
 		pos += 2 + m + 4 + n;
 	}
@@ -2146,7 +2186,7 @@ void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, DaoVModule *module )
 	printf( "DaoVmSpace_AddVirtualModule: %s %s\n", module->name, module->data );
 #endif
 
-	if( strcmp( module->name, "$(ARCHIVE)" ) == 0 ){
+	if( strcmp( module->name, "$(ARCHIVE)" ) == 0 ){ /* External archive: */
 		DString_SetBytes( fname, data, module->length );
 		DaoVmSpace_ConvertPath2( self, fname );
 		Dao_MakePath( self->startPath, fname );
@@ -2162,6 +2202,7 @@ void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, DaoVModule *module )
 		return;
 	}
 
+	/* Add a fake root "/@/" to all virtual files: */
 	DString_SetChars( fname, "/@/" );
 	DString_AppendChars( fname, module->name );
 	if( module->onload ){
@@ -2178,6 +2219,10 @@ void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, DaoVModule *module )
 			MAP_Insert( self->vfiles, fname, vfile );
 		}
 	}else{
+		/*
+		// Add virtual file from external archive:
+		// Only the archive name, byte offset and byte count are stored;
+		*/
 		fin = Dao_OpenFile( data, "r" );
 		node = DMap_Find( self->vfiles, fname );
 		if( node == NULL && fin != NULL ){

@@ -77,7 +77,7 @@ static void DaoxProfiler_Update( DaoxProfiler *self, DaoStackFrame *frame, doubl
 	DaoRoutine *callee = frame->routine;
 	DNode *it, *it2;
 
-	if( frame->returning == -1 ) caller = NULL;
+	if( frame->returning == 0xffff ) caller = NULL;
 	while( caller && caller->original ) caller = caller->original;
 	while( callee && callee->original ) callee = callee->original;
 

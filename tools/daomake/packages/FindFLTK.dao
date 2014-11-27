@@ -9,5 +9,5 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 	fltk = DaoMake::Project( "FLTK" )
 	fltk.AddSharedLibrary( "fltk" )
 	fltk.AddCompilingFlag( cflags.chop() )
-	fltk.AddLinkingFlag( lflags.chop() + " " + libs.chop() )
+	fltk.AddLinkingFlag( "-L/usr/local/lib " + lflags.chop() + " " + libs.chop() )
 }
