@@ -1,7 +1,7 @@
 
-header_hints = { "." }
+header_hints = ".;"
 if( DaoMake::IsPlatform( "MACOSX" ) ){
-	header_hints.append( "/usr/local/Cellar/glib/include" )
+	header_hints += "/usr/local/Cellar/glib/include;"
 }
 header_path = DaoMake::FindFile( "glib.h", header_hints )
 

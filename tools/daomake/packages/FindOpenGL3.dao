@@ -1,11 +1,11 @@
 
 if( DaoMake::IsPlatform( "IOS" ) ) return
 
-header_hints = { "." }
+header_hints = ".;"
 
 if( DaoMake::IsPlatform( "MACOSX" ) ){
 	sdk_path = DaoMake::Variables[ "MACOSX_SDK_PATH" ]
-	header_hints.append( sdk_path /"System/Library/Frameworks/OpenGL.framework/Headers" )
+	header_hints += sdk_path /"System/Library/Frameworks/OpenGL.framework/Headers;"
 	header_path = DaoMake::FindFile( "gl3.h", header_hints )
 	if( header_path != "" ){
 		opengl = DaoMake::Project( "OpenGL3" )
