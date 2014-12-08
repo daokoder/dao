@@ -5,7 +5,7 @@ daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
-project.UseImportLibrary( daovm, "dao" )
+project.UseImportLibrary( daovm )
 project.SetTargetPath( "../../lib/dao/modules" )
 
 project_objs = project.AddObjects( { "dao_debugger.c" } )

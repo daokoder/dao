@@ -8,7 +8,7 @@ if( daovm == none ) return
 project_objs = project.AddObjects( { "source/daoMake.c" } )
 project_exe  = project.AddExecutable( "daomake", project_objs )
 
-project_exe.UseSharedLibrary( daovm, "dao" )
+project.UseSharedLibrary( daovm )
 project_exe.SetTargetPath( "../../bin" )
 
 libpath = "../../lib/daomake/"

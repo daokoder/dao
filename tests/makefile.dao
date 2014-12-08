@@ -5,18 +5,17 @@ daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
+daotests.UseSharedLibrary( daovm )
 
 chartype_objs = daotests.AddObjects( { "dao_CharType.c" } )
 chartype_dll  = daotests.AddSharedLibrary( "dao_CharType", chartype_objs )
 
-chartype_dll.UseSharedLibrary( daovm, "dao" )
 chartype_dll.EnableDynamicLinking()
 
 
 usertype_objs = daotests.AddObjects( { "dao_UserType.c" } )
 usertype_dll  = daotests.AddSharedLibrary( "dao_UserType", usertype_objs )
 
-usertype_dll.UseSharedLibrary( daovm, "dao" )
 usertype_dll.EnableDynamicLinking()
 
 

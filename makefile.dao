@@ -293,7 +293,7 @@ if( daovm_with_readline == $ON ){
 		# linking flags that will be added to "daovm_main_object" by
 		# calling UsePackage().
 		#
-		daovm_main_object.UseSharedLibrary( readline, "readline" )
+		daovm_exe.UseSharedLibrary( readline, "readline" )
 	}
 }
 

@@ -11,7 +11,7 @@ project_objs = project.AddObjects( { "source/daoTest.c" } )
 project_exe  = project.AddExecutable( "daotest", project_objs )
 project_exe.AddDependency( libdao_dll )
 
-project_exe.UseSharedLibrary( daovm, "dao" )
+project.UseSharedLibrary( daovm )
 project_exe.SetTargetPath( "../../bin" )
 
 project.Install( DaoMake::Variables[ "INSTALL_BIN" ], project_exe );
