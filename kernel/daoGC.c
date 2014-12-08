@@ -247,9 +247,14 @@ static void DaoObjectLogger_ScanValues( DaoValue **values, daoint size )
 	daoint i;
 	for(i=0; i<size; ++i) DaoObjectLogger_ScanValue( values[i] );
 }
-static void DaoObjectLogger_ScanArray( DList *list )
+static void DaoObjectLogger_ScanArray2( DList *list )
 {
 	if( list == NULL ) return;
+	DaoObjectLogger_ScanValues( list->items.pValue, list->size );
+}
+static void DaoObjectLogger_ScanArray( DList *list )
+{
+	if( list == NULL || list->type != DAO_DATA_VALUE ) return;
 	DaoObjectLogger_ScanValues( list->items.pValue, list->size );
 }
 static void DaoObjectLogger_ScanMap( DMap *map, int gckey, int gcval )
@@ -257,8 +262,8 @@ static void DaoObjectLogger_ScanMap( DMap *map, int gckey, int gcval )
 	DMap *objmap = dao_object_logger.allObjects;
 	DNode *it;
 	if( map == NULL || map->size == 0 ) return;
-	gckey &= map->keytype == 0 || map->keytype == DAO_DATA_VALUE;
-	gcval &= map->valtype == 0 || map->valtype == DAO_DATA_VALUE;
+	gckey &= map->keytype == DAO_DATA_VALUE;
+	gcval &= map->valtype == DAO_DATA_VALUE;
 	for(it = DMap_First(map); it != NULL; it = DMap_Next(map, it) ){
 		if( gckey ) DaoObjectLogger_ScanValue( it->key.pValue );
 		if( gcval ) DaoObjectLogger_ScanValue( it->value.pValue );
@@ -282,7 +287,7 @@ static void DaoObjectLogger_ScanCdata( DaoCdata *cdata )
 	}else{
 		return;
 	}
-	DaoObjectLogger_ScanArray( cvalues );
+	DaoObjectLogger_ScanArray2( cvalues );
 	for(i=0,n=clists->size; i<n; i++) DaoObjectLogger_ScanArray( clists->items.pList[i] );
 	for(i=0,n=cmaps->size; i<n; i++) DaoObjectLogger_ScanMap( cmaps->items.pMap[i], 1, 1 );
 }
@@ -1002,10 +1007,10 @@ void DaoGC_UnlockData()
 	DMutex_Unlock( & gcWorker.data_lock );
 #endif
 }
-static void DaoGC_ScanArray( DList *array, int action )
+static void DaoGC_ScanArray( DList *array, int action, int valueArrayOnly )
 {
 	if( array == NULL || array->size == 0 ) return;
-	if( array->type != 0 && array->type != DAO_DATA_VALUE ) return;
+	if( valueArrayOnly && array->type != DAO_DATA_VALUE ) return;
 	switch( action ){
 	case DAO_GC_DEC : cycRefCountDecrements( array ); break;
 	case DAO_GC_INC : cycRefCountIncrements( array ); break;
@@ -1025,8 +1030,8 @@ static int DaoGC_ScanMap( DMap *map, int action, int gckey, int gcvalue )
 	int count = 0;
 	DNode *it;
 	if( map == NULL || map->size == 0 ) return 0;
-	gckey &= map->keytype == 0 || map->keytype == DAO_DATA_VALUE;
-	gcvalue &= map->valtype == 0 || map->valtype == DAO_DATA_VALUE;
+	gckey &= map->keytype == DAO_DATA_VALUE;
+	gcvalue &= map->valtype == DAO_DATA_VALUE;
 	if( action != DAO_GC_BREAK ){
 		/* if action == DAO_GC_BREAK, no mutator can access this map: */
 		DaoGC_LockData();
@@ -1063,8 +1068,8 @@ static void DaoGC_ScanCdata( DaoCdata *cdata, int action )
 	}else{
 		return;
 	}
-	DaoGC_ScanArray( cvalues, action );
-	for(i=0,n=clists->size; i<n; i++) DaoGC_ScanArray( clists->items.pList[i], action );
+	DaoGC_ScanArray( cvalues, action, 0 );
+	for(i=0,n=clists->size; i<n; i++) DaoGC_ScanArray( clists->items.pList[i], action, 0 );
 	for(i=0,n=cmaps->size; i<n; i++) DaoGC_ScanMap( cmaps->items.pMap[i], action, 1, 1 );
 }
 

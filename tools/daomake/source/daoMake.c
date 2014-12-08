@@ -143,7 +143,29 @@ const char *const daomake_suffix_keys[] =
 };
 
 
-
+/*
+// TODO:
+// MakeUnit:
+// -- Base type for objects, targets and projects; 
+//
+// MakeObjects:
+// -- Type for compiled object lists;
+// -- Supports compiling flags only;
+//
+// MakeTarget:
+// -- Type for linking targets;
+// -- Supports linking flags only;
+//
+// MakeProject:
+// -- Type for building projects;
+// -- Supports both compiling flags and linking flags;
+// -- Compiling flags are applied to all its objects;
+// -- Linking flags are applied to all its targets;
+//
+// When using a target (library) from a project (package):
+// -- Compiling flags of the project is used by MakeObjects;
+// -- Linking flags of the project is used by MakeTarget;
+*/
 struct DaoMakeUnit
 {
 	DAO_CSTRUCT_COMMON;
@@ -2123,6 +2145,7 @@ static void DaoMakeUnit_UseLibrary( DaoMakeUnit *self, DaoMakeProject *pro, DStr
 		DString_Reset( flags, 0 );
 		DaoMakeTarget_ExportLinkingFlags( tar, pro, flags, (DaoMakeUnit*) self );
 		DList_Append( self->linkingFlags2, flags );
+		DList_Append( self->linkingFlags, flags );
 
 		if( import && DaoMap_GetValueChars( daomake_platforms, "WIN32" ) == NULL ) break;
 		if( tar->install->size && ! DString_EQ( tar->install, tar->base.binaryPath ) ){
@@ -2855,7 +2878,7 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 			return;
 		}
 	}
-	if( 0 && project == NULL ){
+	if( 0&&project == NULL ){
 		DNode *it = DMap_Find( daomake_packages->value, p[0] );
 		if( it != NULL ){
 			DaoTuple *tuple = (DaoTuple*) it->value.pValue;
@@ -2863,19 +2886,25 @@ static void DAOMAKE_FindPackage( DaoProcess *proc, DaoValue *p[], int N )
 			DString *file = tuple->values[1]->xString.value;
 			size_t loc = DaoMake_FindFile( file, hints );
 			if( loc ){
-				DaoMakeProject *p = DaoMakeProject_New();
-				p->base.project = p;
-				DString_SubString( hints, p->projectName, loc>>16, loc&0xffff );
-				DList_Append( p->base.includePaths, p->projectName );
-				DList_Append( p->base.compilingFlags, tuple->values[2]->xString.value );
-				DList_Append( p->base.compilingFlags2, tuple->values[2]->xString.value );
-				DList_Append( p->base.linkingFlags, tuple->values[3]->xString.value );
-				DList_Append( p->base.linkingFlags2, tuple->values[3]->xString.value );
+				DaoMakeProject *project = DaoMakeProject_New();
+				DaoMakeTarget *tar = DaoMakeTarget_New();
 
-				DString_Assign( p->projectName, name );
-				DaoMap_InsertChars( daomake_projects, p->projectName->chars, (DaoValue*) p );
+				project->base.project = project;
+				tar->ttype = DAOMAKE_STATICLIB;
+				tar->base.project = project;
+				DList_Append( project->targets2, (DaoValue*) tar );
 
-				DaoProcess_PutValue( proc, (DaoValue*) p );
+				DString_SubString( hints, project->projectName, loc>>16, loc&0xffff );
+				DList_Append( tar->base.includePaths, project->projectName );
+				DList_Append( tar->base.compilingFlags, tuple->values[2]->xString.value );
+				DList_Append( tar->base.compilingFlags2, tuple->values[2]->xString.value );
+				DList_Append( tar->base.linkingFlags, tuple->values[3]->xString.value );
+				DList_Append( tar->base.linkingFlags2, tuple->values[3]->xString.value );
+
+				DString_Assign( project->projectName, name );
+				DaoMap_InsertChars( daomake_projects, name->chars, (DaoValue*) project );
+
+				DaoProcess_PutValue( proc, (DaoValue*) project );
 				DString_Delete( original );
 				DString_Delete( message );
 				DString_Delete( cache );

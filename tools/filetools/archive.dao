@@ -7,24 +7,23 @@ routine DaoDecodeUInt32( data : string, i = 0 )
 {
 	return (data[i]<<24) + (data[i+1]<<16) + (data[i+2]<<8) + data[i+3];
 }
-routine CharToHex( source : string )
+routine CharToNumber( source : string )
 {
-	const digits = {"0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F"};
-	hex = '  ';
+	numbers = "\t";
 	count = 0;
 	for( char in source ){
-		if( count ){
-			hex += ', ';
-			if( count % 10 == 0 ) hex += '\n  ';
+		if( %numbers - count > 58 ){
+			numbers += "\n\t";
+			count = %numbers;
 		}
-		hex += '0x';
-		hex += digits[ char>>4 ];
-		hex += digits[ char&0xf ];
-		count += 1;
+		numbers += (string)char + ",";
+		if( %numbers - count > 60 ){
+			numbers += "\n\t";
+			count = %numbers;
+		}
 	}
-	hex += ", 0x00";
-	count += 1;
-	return hex;
+	numbers += "0";
+	return numbers;
 }
 
 routine ArchiveToCSource( archive : string )
@@ -60,7 +59,7 @@ routine ArchiveToCSource( archive : string )
 		}else{
 			variable = 'source' + (string)i;
 			sources += 'unsigned char ' + variable + '[] =\n{\n';
-			sources += CharToHex( source ) + '\n};\n';
+			sources += CharToNumber( source ) + '\n};\n';
 			modules += '  { "' + name + '", ';
 			modules += (string)source.size() + ', ' + variable + ', NULL },\n';
 		}

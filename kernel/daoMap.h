@@ -50,7 +50,7 @@ typedef union
 	void        *pVoid;
 	dao_complex *pComplex;
 	DString     *pString;
-	DList       *pArray;
+	DList       *pList;
 	DMap        *pMap;
 	DaoValue    *pValue;
 	DaoInteger  *pInteger;
