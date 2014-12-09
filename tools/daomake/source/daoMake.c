@@ -2231,6 +2231,26 @@ static void OBJECTS_AddSources( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMakeObjects *self = (DaoMakeObjects*) p[0];
 	for(i=1; i<N; ++i) DList_Append( self->sources, DaoValue_TryGetString( p[i] ) );
 }
+static void OBJECTS_AddHeaders2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	int i;
+	DaoMakeObjects *self = (DaoMakeObjects*) p[0];
+	DList *files = p[1]->xList.value;
+	for(i=0; i<files->size; ++i){
+		DString *file = files->items.pValue[i]->xString.value;
+		DList_Append( self->headers, file );
+	}
+}
+static void OBJECTS_AddSources2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	int i;
+	DaoMakeObjects *self = (DaoMakeObjects*) p[0];
+	DList *files = p[1]->xList.value;
+	for(i=0; i<files->size; ++i){
+		DString *file = files->items.pValue[i]->xString.value;
+		DList_Append( self->sources, file );
+	}
+}
 static void OBJECTS_UseProject( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeUnit *self = (DaoMakeUnit*) p[0];
@@ -2241,6 +2261,8 @@ static DaoFuncItem DaoMakeObjectsMeths[]=
 {
 	{ OBJECTS_AddHeaders,  "AddHeaders( self: Objects, file: string, ...: string )" },
 	{ OBJECTS_AddSources,  "AddSources( self: Objects, file: string, ...: string )" },
+	{ OBJECTS_AddHeaders2, "AddHeaders( self: Objects, files: list<string> )" },
+	{ OBJECTS_AddSources2, "AddSources( self: Objects, files: list<string> )" },
 	{ OBJECTS_UseProject,  "UseProject( self: Objects, pro: Project )" },
 	{ NULL, NULL }
 };

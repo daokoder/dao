@@ -27,3 +27,25 @@ DaoMake::Settings["PROFILE-LFLAG"]   = "-pg"
 
 DaoMake::Includes += "/usr/local/include;"
 DaoMake::Includes += "/usr/include;"
+
+
+var x11_packages: list<tuple<name:string,header:string,lib:string>> = 
+{
+	("X11"        ,  "X.h",                    "-lX11"  ),
+	("Xrandr"     ,  "extensions/Xrandr.h",    "-lXrandr"  ),
+	("Xinerama"   ,  "extensions/Xinerama.h",  "-lXinerama"),
+	("XInput"     ,  "extensions/XInput.h",    "-lXi"      ),
+	("Xf86VidMode",  "extensions/xf86vm.h",    "-lXxf86vm" ),
+	("XKB"        ,  "extensions/XKB.h",       ""          ),
+	("Xcursor"    ,  "Xcursor/Xcursor.h",      "-lXcursor" ),
+}
+
+# DaoMake::Packages is for system packages that have standard header files
+# and header locations, and can be used with standard compiling and linking flags.
+# Packages intended for static linking (not the case for most system packages)
+# should not be included here.
+
+x11_packages.iterate { [tup]
+	path = "/usr/include/X11"
+	DaoMake::Packages[ tup.name ] = ( path, tup.header, "", tup.lib )
+}
