@@ -25,8 +25,7 @@ DaoMake::Settings["DEBUG-LFLAG"]     = "-ggdb"
 DaoMake::Settings["PROFILE-CFLAG"]   = "-pg"
 DaoMake::Settings["PROFILE-LFLAG"]   = "-pg"
 
-DaoMake::Includes += "/usr/local/include;"
-DaoMake::Includes += "/usr/include;"
+DaoMake::Includes.append( "/usr/local/include;/usr/include;" )
 
 
 var x11_packages: list<tuple<name:string,header:string,lib:string>> = 

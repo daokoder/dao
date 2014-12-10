@@ -262,7 +262,7 @@ static DaoMap  *daomake_packages  = NULL;
 static DaoMap  *daomake_assemblers = NULL;
 static DaoMap  *daomake_compilers = NULL;
 static DaoMap  *daomake_linkers = NULL;
-static DaoString *daomake_includes = NULL;
+static DaoList *daomake_includes = NULL;
 
 static DMap    *daomake_variable_map  = NULL;
 static DMap    *daomake_variable_map2 = NULL;
@@ -905,7 +905,7 @@ void DaoMakeUnit_Use( DaoMakeUnit *self, DaoMakeUnit *other, int import )
 		DList_AppendList( self->compilingFlags, other->compilingFlags );
 	}else if( self->ctype == daomake_type_target && other->ctype == daomake_type_project ){
 		DList_AppendPaths( self->linkingPaths, other->linkingPaths, other->sourcePath );
-		DList_AppendList( self->linkingPaths, other->linkingPaths );
+		DList_AppendList( self->linkingFlags, other->linkingFlags );
 	}else if( self->ctype == daomake_type_project && other->ctype == daomake_type_project ){
 		DList_AppendPaths( self->includePaths, other->includePaths, other->sourcePath );
 		DList_AppendPaths( self->linkingPaths, other->linkingPaths, other->sourcePath );
@@ -2891,8 +2891,12 @@ static void DAOMAKE_FindFile( DaoProcess *proc, DaoValue *p[], int N )
 	DString *hints = DaoValue_TryGetString( p[1] );
 	size_t loc = DaoMake_FindFile( file, hints );
 	if( loc == 0 ){
-		hints = daomake_includes->value;
-		loc = DaoMake_FindFile( file, hints );
+		int i;
+		for(i=0; i<daomake_includes->value->size; ++i){
+			hints = daomake_includes->value->items.pValue[i]->xString.value;
+			loc = DaoMake_FindFile( file, hints );
+			if( loc ) break;
+		}
 	}
 	if( loc ) DString_SubString( hints, res, loc>>16, loc&0xffff );
 }
@@ -2950,7 +2954,7 @@ static void DAOMAKE_TestCompile( DaoProcess *proc, DaoValue *p[], int N )
 	}
 
 	DString_Delete( md5 );
-	if( DaoMake_IsFile( output->chars ) ){
+	if( daomake_reset_cache == 0 && DaoMake_IsFile( output->chars ) ){
 		DString_Delete( command );
 		DString_Delete( source );
 		DString_Delete( output );
@@ -3663,7 +3667,7 @@ ErrorInvalidArgValue:
 	daomake_assemblers = DaoMap_New(0);
 	daomake_compilers = DaoMap_New(0);
 	daomake_linkers = DaoMap_New(0);
-	daomake_includes = DaoString_New();
+	daomake_includes = DaoList_New();
 	daomake_variable_map  = DHash_New(DAO_DATA_STRING,DAO_DATA_STRING);
 	daomake_variable_map2 = DHash_New(DAO_DATA_STRING,DAO_DATA_STRING);
 	daomake_variable_map3 = DHash_New(DAO_DATA_STRING,0);
@@ -3693,7 +3697,7 @@ ErrorInvalidArgValue:
 	DaoNamespace_AddValue( nspace, "Assemblers", (DaoValue*) daomake_assemblers, "map<string,string>" );
 	DaoNamespace_AddValue( nspace, "Compilers", (DaoValue*) daomake_compilers, "map<string,string>" );
 	DaoNamespace_AddValue( nspace, "Linkers", (DaoValue*) daomake_linkers, "map<string,string>" );
-	DaoNamespace_AddValue( nspace, "Includes", (DaoValue*) daomake_includes, "string" );
+	DaoNamespace_AddValue( nspace, "Includes", (DaoValue*) daomake_includes, "list<string>" );
 	DaoNamespace_AddValue( nspace, "Packages", (DaoValue*) daomake_packages, "map<string,tuple<includes:string,header:string,cflags:string,lflags:string>>" );
 
 	DaoMap_AddKeyValues( daomake_assemblers, daomake_lang_assemblers );

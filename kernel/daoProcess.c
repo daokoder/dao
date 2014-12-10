@@ -575,7 +575,7 @@ static int DaoProcess_CheckInvarMethod( DaoProcess *self, DaoRoutine *routine )
 {
 	if( self->activeRoutine == NULL ) return 1;
 	if( ! (self->activeRoutine->attribs & DAO_ROUT_INVAR) ) return 1;
-	if( routine->attribs & DAO_ROUT_INVAR ) return 1;
+	if( routine->attribs & (DAO_ROUT_INITOR|DAO_ROUT_INVAR) ) return 1;
 	if( DaoType_ChildOf( routine->routHost, self->activeRoutine->routHost ) ){
 		DaoProcess_RaiseError( self, "Type", "cannot call normal method inside invar method" );
 		return 0;

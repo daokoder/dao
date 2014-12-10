@@ -5528,6 +5528,7 @@ SkipChecking:
 						GC_Assign( & types[opc], at );
 					}
 				}else{
+					if( at->tid <= DAO_ENUM ) at = DaoType_GetBaseType( at );
 					DaoInferencer_UpdateType( self, opc, at );
 				}
 				k = DaoType_MatchTo( at, types[opc], defs );
