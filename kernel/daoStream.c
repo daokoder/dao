@@ -649,11 +649,7 @@ void DaoStream_Close( DaoStream *self )
 {
 	if( self->file ){
 		fflush( self->file );
-		if( self->mode & DAO_STREAM_PIPE ){
-			pclose( self->file );
-		}else{
-			fclose( self->file );
-		}
+		if( self->ctype == dao_type_stream ) fclose( self->file );
 		self->file = NULL;
 	}
 	self->mode &= ~(DAO_STREAM_WRITABLE | DAO_STREAM_READABLE);
@@ -669,7 +665,7 @@ int DaoStream_IsOpen( DaoStream *self )
 {
 	if( self->mode & DAO_STREAM_STRING ){
 		return 1;
-	}else if( self->mode & (DAO_STREAM_FILE|DAO_STREAM_PIPE) ){
+	}else if( self->mode & DAO_STREAM_FILE ){
 		return self->file != NULL;
 	}else if( self->redirect ){
 		return self->redirect->StdioRead != NULL || self->redirect->StdioWrite != NULL;
@@ -684,7 +680,7 @@ int DaoStream_EndOfStream( DaoStream *self )
 {
 	if( self->mode & DAO_STREAM_STRING ){
 		return 0;
-	}else if( self->mode & (DAO_STREAM_FILE|DAO_STREAM_PIPE) ){
+	}else if( self->mode & DAO_STREAM_FILE ){
 		if( self->file == NULL ) return 1;
 		return feof( self->file );
 	}else if( self->redirect ){
@@ -700,7 +696,7 @@ int DaoStream_IsReadable( DaoStream *self )
 {
 	if( self->mode & DAO_STREAM_STRING ){
 		return 1;
-	}else if( self->mode & (DAO_STREAM_FILE|DAO_STREAM_PIPE) ){
+	}else if( self->mode & DAO_STREAM_FILE ){
 		if( self->file == NULL ) return 0;
 		if( feof( self->file ) ) return 0;
 		return self->mode & DAO_STREAM_READABLE;
@@ -715,7 +711,7 @@ int DaoStream_IsWritable( DaoStream *self )
 {
 	if( self->mode & DAO_STREAM_STRING ){
 		return 1;
-	}else if( self->mode & (DAO_STREAM_FILE|DAO_STREAM_PIPE) ){
+	}else if( self->mode & DAO_STREAM_FILE ){
 		if( self->file == NULL ) return 0;
 		if( feof( self->file ) ) return 0;
 		return self->mode & DAO_STREAM_WRITABLE;

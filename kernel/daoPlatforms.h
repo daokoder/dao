@@ -58,8 +58,6 @@
 #    define stat _stat
 #    define fstat _fstat
 #    define fileno _fileno
-#    define popen _popen
-#    define pclose _pclose
 #  endif
 
 
