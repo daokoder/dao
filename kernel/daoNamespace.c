@@ -224,15 +224,7 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeBase *typer )
 		DaoType *abtype = typer->core->kernel->abtype;
 
 		memset( value, 0, sizeof(DaoValue) );
-#ifdef DAO_BUILD_JS_TARGET
-		/*
-		// There is a bug with emscripten (llvmsvn) for the MurmurHash3() function,
-		// revealed by demo/errors.dao.
-		*/
-		values = DMap_New( DAO_DATA_STRING, DAO_DATA_VALUE );
-#else
 		values = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
-#endif
 		typer->core->kernel->values = values;
 		for(i=0; i<valCount; i++){
 			DString name = DString_WrapChars( typer->numItems[i].name );

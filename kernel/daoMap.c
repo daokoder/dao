@@ -913,9 +913,24 @@ unsigned int Dao_Hash( const void *key, int len, unsigned int seed )
 	uint_t k1 = 0;
 	int i;
 
+	/*
+	// Notes:
+	// Emscripten compiler appears to assume that the address "blocks" is aligned at
+	// four-byte (size of uint_t) boundary, and generates codes like HEAP32[$X>>2]|0.
+	// But in Dao, it is possible to pass arbitrary address to this hash function.
+	// For example, a string may hold "Exception::Error", and a temporary substring
+	// "Error" may be passed in for hashing. If "Exception::Error" is aligned at
+	// four-byte boundary, "Error" will not be!
+	*/
+
 	/* body: */
 	for(i = -nblocks; i; i++){
+#ifdef DAO_BUILD_JS_TARGET
+		const uchar_t *b = tail + 4 * i;
+		k1 = b[0] | (b[1]<<8) | (b[2]<<16) | (b[3]<<24);
+#else
 		k1 = blocks[i];
+#endif
 
 		k1 *= c1;
 		k1 = ROTL32(k1,15);
