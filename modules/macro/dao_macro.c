@@ -1036,7 +1036,7 @@ Failed :
 int DaoParser_MacroTransform( DaoParser *self, DaoMacro *macro, int start, int tag )
 {
 	DNode *it;
-	DString *mbs = DString_New(1);
+	DString *mbs = DString_New();
 	DList *toks = DList_New( DAO_DATA_TOKEN );
 	DList *all = DList_New(0);
 	DMap *tokMap = DMap_New( DAO_DATA_STRING, 0 );
@@ -1351,7 +1351,7 @@ ReturnMacro:
 }
 static void DaoNamespace_ImportMacro( DaoNamespace *self, DString *lang )
 {
-	DString *name2 = DString_New(1);
+	DString *name2 = DString_New();
 	DNode *it;
 	daoint i, pos;
 	for(i=0; i<self->namespaces->size; i++){

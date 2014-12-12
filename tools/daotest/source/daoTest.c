@@ -159,9 +159,9 @@ int main( int argc, char **argv )
 		int fails2 = 0, mfails2 = 0;
 		if( logopt == argc ) return 1;
 		vmSpace = DaoInit( argv[0] );
-		string = DString_New(1);
-		summary = DString_New(1);
-		info = DString_New(1);
+		string = DString_New();
+		summary = DString_New();
+		info = DString_New();
 		logfile = Dao_OpenFile( argv[logopt+1], "r+b" );
 		if( logfile ){
 			DaoFile_ReadAll( logfile, string, 0 );
@@ -229,7 +229,7 @@ int main( int argc, char **argv )
 		ns = DaoVmSpace_GetNamespace( vmSpace, "dao" );
 		DaoNamespace_AddCodeInliner( ns, "test", dao_test_inliner );
 
-		string = DString_New(1);
+		string = DString_New();
 		dao_tests = DList_New(DAO_DATA_STRING);
 		ns = DaoVmSpace_Load( vmSpace, argv[i] );
 		if( ns == NULL ){
@@ -238,8 +238,8 @@ int main( int argc, char **argv )
 		}else{
 			int pass = 0, fail = 0;
 			DaoProcess *proc = DaoVmSpace_AcquireProcess( vmSpace );
-			DString *output = DString_New(1);
-			DString *output2 = DString_New(1);
+			DString *output = DString_New();
+			DString *output2 = DString_New();
 			DaoRegex *regex;
 			stream->StdioWrite = DaoTestStream_Write;
 			stream->output = output;

@@ -245,8 +245,8 @@ void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream )
 	DaoxProfiler *self = (DaoxProfiler*) self0;
 	DMap *summary = DMap_New( DAO_DATA_VALUE, 0 );
 	DMap *summary2 = DMap_New( DAO_DATA_VALUE, 0 );
-	DString *name1 = DString_New(1);
-	DString *name2 = DString_New(1);
+	DString *name1 = DString_New();
+	DString *name2 = DString_New();
 	DNode *it, *it2;
 	int count, max = 20;
 	char buf1[32];

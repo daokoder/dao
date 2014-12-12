@@ -59,7 +59,7 @@ DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *
 	char *chs, *cmd;
 	int i;
 	if( ! (proc->vmSpace->options & DAO_OPTION_DEBUG ) ) return;
-	input = DString_New(1);
+	input = DString_New();
 	tokens = DList_New(DAO_DATA_STRING);
 	cycData = DMap_New(0,0);
 	line = DString_New();
@@ -114,7 +114,7 @@ DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *
 		}else if( strcmp( cmd, "h" ) == 0 || strcmp( cmd, "help" ) == 0 ){
 			DaoStream_WriteChars( stream, help );
 		}else if( strcmp( cmd, "l" ) == 0 || strcmp( cmd, "list" ) == 0 ){
-			DString *mbs = DString_New(1);
+			DString *mbs = DString_New();
 			int entry = proc->activeCode - proc->activeRoutine->body->vmCodes->data.codes;
 			int start = entry - 10;
 			int end = entry;
