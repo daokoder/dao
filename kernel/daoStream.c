@@ -101,6 +101,7 @@ static void DaoIO_Write2( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoIO_Writeln0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int N )
 {
+	DaoValue *params[DAO_MAX_PARAM];
 	DMap *cyclic = NULL;
 	int i;
 	if( DaoIO_CheckMode( self, proc, DAO_STREAM_WRITABLE ) == 0 ) return;
@@ -110,9 +111,14 @@ static void DaoIO_Writeln0( DaoStream *self, DaoProcess *proc, DaoValue *p[], in
 			break;
 		}
 	}
+	/*
+	// DaoValue_Print() may call user defined function and change the stack
+	// and invalidate the parameter array:
+	*/
+	memmove( params, p, N*sizeof(DaoValue*) );
 	for(i=0; i<N; i++){
-		if( p[i]->type > DAO_ARRAY ) DMap_Reset( cyclic );
-		DaoValue_Print( p[i], proc, self, cyclic );
+		if( params[i]->type > DAO_ARRAY ) DMap_Reset( cyclic );
+		DaoValue_Print( params[i], proc, self, cyclic );
 		if( i+1<N ) DaoStream_WriteChars( self, " ");
 	}
 	DaoStream_WriteChars( self, "\n");
