@@ -1,13 +1,6 @@
 
 load help;
 
-@[name]
-module.core.sys
-@[name]
-
-@[title]
-@[title]
-
 
 @[name]
 module.core.aux
@@ -16,18 +9,3 @@ module.core.aux
 @[title]
 @[title]
 
-
-@[name]
-module.core.math
-@[name]
-
-@[title]
-@[title]
-
-
-@[name]
-module.core.meta
-@[name]
-
-@[title]
-@[title]

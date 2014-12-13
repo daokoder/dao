@@ -4,6 +4,7 @@ mkdir Dao-$VERSION
 cd Dao-$VERSION
 fossil open --nested ../Dao.fossil
 fossil close
+cp ../manifest.uuid .
 
 mkdir -p doc
 cp -r ../doc/html doc/

@@ -1,6 +1,22 @@
 
 load help;
 
+
+@[name]
+module.standard.math
+@[name]
+
+@[title]
+@[title]
+
+
+@[name]
+module.standard.meta
+@[name]
+
+@[title]
+@[title]
+
 @[name]
 module.standard.jit
 @[name]

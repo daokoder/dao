@@ -612,8 +612,10 @@ static int MatchSet( DaoRegex *self, DaoRgxItem *patt, daoint pos )
 		chi3.width = 0;
 		chi3.value = 0;
 		chi = DString_DecodeChar2( chars + i, end );
-		chi2 = DString_DecodeChar2( chars + i + 1, end );
-		if( i+2 < patt->length ) chi3 = DString_DecodeChar2( chars + i + 2, end );
+		chi2 = DString_DecodeChar2( chars + i + chi.width, end );
+		if( (i + chi.width + chi2.width) < patt->length ){
+			chi3 = DString_DecodeChar2( chars + i + chi.width + chi2.width, end );
+		}
 		if( i == 0 && chi.value == '^' ){
 			blmatch = 0;
 		}else if( chi.value == '%' ){

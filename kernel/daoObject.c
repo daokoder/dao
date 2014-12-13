@@ -78,6 +78,8 @@ static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *strea
 	}
 	if( cycData ) MAP_Insert( cycData, self, self );
 
+	DaoValue_Clear( & proc->stackValues[0] );
+
 	params[0] = (DaoValue*) dao_type_string;
 	params[1] = (DaoValue*) stream;
 	meth = DaoClass_FindMethod( self->defClass, "(string)", NULL );

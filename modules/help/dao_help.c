@@ -2,7 +2,7 @@
 // Dao Standard Modules
 // http://www.daovm.net
 //
-// Copyright (c) 2012,2013, Limin Fu
+// Copyright (c) 2012-2014, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -360,10 +360,11 @@ static int DaoxStream_WriteItemID( DaoxStream *self, char type, int id )
 }
 static void DaoxStream_WriteParagraph( DaoxStream *self, DString *text, int offset, int width )
 {
-	char *stop = text->chars + text->size;
-	char chars[8];
+	char *stop, chars[8];
 	int i, j;
 
+	DString_Change( text, "[\n]", " ", 0 );
+	stop = text->chars + text->size;
 	for(i=0; i<text->size; ){
 		DCharState state = DString_DecodeChar( text->chars + i, stop );
 		while( self->offset < offset ) DaoxStream_WriteChar( self, ' ' );
@@ -398,7 +399,7 @@ static void DaoxStream_WriteText( DaoxStream *self, DString *text, int offset, i
 	DString_Change( text, "[\n][ \t]+[\n]", "\n\n", 0 );
 	DString_Change( text, "(^|[^\n])[\n]([^\n]|$)", "%1 %2", 0 );
 	DString_Change( text, "[ \t]+", " ", 0 );
-	pos = DString_FindChar( text, '\n', 0 );
+	pos = DString_FindChars( text, "\n\n", 0 );
 	while( last < text->size ){
 		if( pos == DAO_NULLPOS ) pos = text->size;
 		DString_SubString( text, paragraph, last, pos - last );
@@ -407,7 +408,7 @@ static void DaoxStream_WriteText( DaoxStream *self, DString *text, int offset, i
 		while( last < text->size && text->chars[last] == '\n' ) last += 1;
 		if( last > (pos + 1) ) DaoxStream_WriteNewLine( self, "" );
 		if( last > (pos + 2) ) DaoxStream_WriteNewLine( self, "" );
-		pos = DString_FindChar( text, '\n', last );
+		pos = DString_FindChars( text, "\n\n", last );
 	}
 	DString_Delete( paragraph );
 	DString_Delete( text );

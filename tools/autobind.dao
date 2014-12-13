@@ -5,7 +5,7 @@ author: Fu Limin (phoolimin@gmail.com)
 
 #}
 
-load sys
+load os
 load bigint
 load coroutine
 
@@ -4547,7 +4547,7 @@ routine SortFiles( files : list<string>, dir="", subdir="", mod="" )
 		io.writef( "%4i  %4i  %4i\n", depends.size(), last, sorted.size() );
 		if( debug and sorted.size() == last ){
 			io.writef( "ERROR: cyclic dependency is detected among header files for module: %s!\n", mod );
-			sys.exit();
+			os.exit();
 			break;
 		}
 		debug = sorted.size() == last;

@@ -43,8 +43,8 @@ Arithmetic Operators
 #Unary operators:
 +  (int|float|double|complex|array) # Unary plus;
 -  (int|float|double|complex|array) # Unary minus;
-++ (int|float|double|complex|array) # Increment;
--- (int|float|double|complex|array) # Decrement;
+++ (int|float|double|complex|array) # Prefix Increment;
+-- (int|float|double|complex|array) # Prefix Decrement;
 @[code]
 
 
@@ -194,7 +194,7 @@ array<complex> %= (int|float|double|complex|array) # Modulo assignment
 the expression in the right side should yield a list or tuple,
 and each of the elements in the tuple/list is assigned accordingly to
 each of the variables in the left side.
-Extra elements are ignored.
+Extra elements in the right side are ignored.
 
 @[text]
 
@@ -209,6 +209,15 @@ Type Casting Operators
 @[title]
 
 @[text]
+
+The values of many types can be converted to values of other types by type casting with:
+@[code]
+(typename) value
+@[code]
+Most of the primitive types support conversion between each other.
+Type casting between aggregate types such as tuples, lists and maps are also supported
+by applying the casting of the items recursively.
+
 @[text]
 
 
@@ -228,9 +237,34 @@ String operators
 
 @[code]
 string + string   # Concatenation;
-string += int     # Character appending;
 string += string  # String appending;
+
+string / string   # Path-like Concatenation;
+string /= string  # Path-like appending;
 @[code]
+For path-like concatenation, the paths do not need to exist.
+For such operation, @[green]/@[green] and @[green]X:@[green],
+where @[green]X@[green] is any alphabetical character,
+are considered as absolute paths. Additionally, paths starting with
+@[green]$(@[green] (such as @[green]$(HOME)/abc@[green] etc.)
+are also considered as absolute (note that the right brackets are not checked).
+All other paths are considered as relative, and for concatenation,
+@[green]../@[green] will represent one level higher path with respect to the
+current path.
+
+
+
+@[subsection]
+Type Operators
+@[subsection]
+
+@[code]
+# Operators:  ?=  ?<
+
+value1 ?= value2  # Type equal;
+value  ?< type    # Is type of;
+@[code]
+
 
 
 @[subsection]
@@ -253,8 +287,8 @@ Ternery operator: ?:
 @[code]
 expression1 ? expression2 : expression3
 @[code]
-The value of @[cyan]expression2@[cyan] is returned if @[cyan]expression1@[cyan]
-is evaluated to true (non zero), otherwise the value of @[cyan]expression3@[cyan]
+The value of @[code]expression2@[code] is returned if @[code]expression1@[code]
+is evaluated to true (non zero), otherwise the value of @[code]expression3@[code]
 is returned.
 
 
@@ -308,4 +342,7 @@ Operator Overloading
 @[title]
 
 @[text]
+Please see @[node]dao.class.operator@[node].
+Operator overloading for wrapped C/C++ types is supported in the same way as in
+Dao classes.
 @[text]

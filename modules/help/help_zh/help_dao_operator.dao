@@ -33,18 +33,18 @@ dao.operator.arithmetic
 @[text]
 @[code]
 # 二元运算符:
-(int|float|double|complex|array) +  (int|float|double|complex|array) # Addtion;
-(int|float|double|complex|array) -  (int|float|double|complex|array) # Subtraction;
-(int|float|double|complex|array) *  (int|float|double|complex|array) # Multiplication;
-(int|float|double|complex|array) /  (int|float|double|complex|array) # Division;
-(int|float|double|complex|array) %  (int|float|double|complex|array) # Modulo;
-(int|float|double|complex|array) ** (int|float|double|complex|array) # Power;
+(int|float|double|complex|array) +  (int|float|double|complex|array) # 加法;
+(int|float|double|complex|array) -  (int|float|double|complex|array) # 减法;
+(int|float|double|complex|array) *  (int|float|double|complex|array) # 乘法;
+(int|float|double|complex|array) /  (int|float|double|complex|array) # 除法;
+(int|float|double|complex|array) %  (int|float|double|complex|array) # 取模;
+(int|float|double|complex|array) ** (int|float|double|complex|array) # 幂次;
 
 # 一元运算符:
-+  (int|float|double|complex|array) # Unary plus;
--  (int|float|double|complex|array) # Unary minus;
-++ (int|float|double|complex|array) # Increment;
--- (int|float|double|complex|array) # Decrement;
++  (int|float|double|complex|array) # 一元加法;
+-  (int|float|double|complex|array) # 一元减法;
+++ (int|float|double|complex|array) # 前缀式自增;
+-- (int|float|double|complex|array) # 前缀式自减;
 @[code]
 
 
@@ -62,29 +62,29 @@ dao.operator.comparison
 
 @[text]
 @[code]
-(int|float|double) == (int|float|double) # Equal to;
-(int|float|double) != (int|float|double) # Not equal to;
-(int|float|double) <  (int|float|double) # Less than;
-(int|float|double) >  (int|float|double) # Greater than;
-(int|float|double) <= (int|float|double) # No greater than;
-(int|float|double) >= (int|float|double) # No less than;
+(int|float|double) == (int|float|double) # 等于;
+(int|float|double) != (int|float|double) # 不等于;
+(int|float|double) <  (int|float|double) # 小于;
+(int|float|double) >  (int|float|double) # 大于;
+(int|float|double) <= (int|float|double) # 小于等于;
+(int|float|double) >= (int|float|double) # 大于等于;
 
-complex == complex # Equal to;
-complex != complex # Not equal to;
+complex == complex # 等于;
+complex != complex # 不等于;
 
-array == array # Equal to;
-array != array # Not equal to;
-array(<int>|<float>|<double>) <  array(<int>|<float>|<double>) # Less than;
-array(<int>|<float>|<double>) >  array(<int>|<float>|<double>) # Greater than;
-array(<int>|<float>|<double>) <= array(<int>|<float>|<double>) # No greater than;
-array(<int>|<float>|<double>) >= array(<int>|<float>|<double>) # No less than;
+array == array # 等于;
+array != array # 不等于;
+array(<int>|<float>|<double>) <  array(<int>|<float>|<double>) # 小于;
+array(<int>|<float>|<double>) >  array(<int>|<float>|<double>) # 大于;
+array(<int>|<float>|<double>) <= array(<int>|<float>|<double>) # 小于等于;
+array(<int>|<float>|<double>) >= array(<int>|<float>|<double>) # 大于等于;
 
-string == string # Equal to;
-string != string # Not equal to;
-string <  string # Less than;
-string >  string # Greater than;
-string <= string # No greater than;
-string >= string # No less than;
+string == string # 等于;
+string != string # 不等于;
+string <  string # 小于;
+string >  string # 大于;
+string <= string # 小于等于;
+string >= string # 大于等于;
 @[code]
 
 
@@ -209,6 +209,14 @@ dao.operator.typecast
 @[title]
 
 @[text]
+
+很多类型的值可以通过以下类型映射操作符转换为其他类型的值:
+@[code]
+(typename) value
+@[code]
+大部分基本类型支持相互间的转换。元组，列表和哈希表等复合类型的类型转换
+则通过递归地转换他们的元素而实现。
+
 @[text]
 
 
@@ -228,9 +236,20 @@ String operators
 
 @[code]
 string + string   # Concatenation;
-string += int     # Character appending;
 string += string  # String appending;
+
+string / string   # Path-like Concatenation;
+string /= string  # Path-like appending;
 @[code]
+For path-like concatenation, the paths do not need to exist.
+For such operation, @[green]/@[green] and @[green]X:@[green],
+where @[green]X@[green] is any alphabetical character,
+are considered as absolute paths. Additionally, paths starting with
+@[green]$(@[green] (such as @[green]$(HOME)/abc@[green] etc.)
+are also considered as absolute (note that the right brackets are not checked).
+All other paths are considered as relative, and for concatenation,
+@[green]../@[green] will represent one level higher path with respect to the
+current path.
 
 
 @[subsection]
@@ -308,4 +327,6 @@ dao.operator.overloading
 @[title]
 
 @[text]
+请参看@[node]dao.class.operator@[node].
+封装的C/C++类型的运算符重载支持跟Dao类的支持基本一样。
 @[text]
