@@ -481,20 +481,20 @@ submap = amap[ 'abc' : 'def' ];
 它的创建方式类似关联表，只不过要用@[code]()@[code]或@[code]tuple{}@[code]。
 @[code]
 tup1 = ( 123, 'abc' )               # 无成员名的元组;
-tup2 = ( index => 123, 'abc' )      # 第一个元素的成员名为"index";
-tup3 = tuple{ 123, name => 'abc' }  # 第二个元素的成员名为"name";
+tup2 = ( index = 123, 'abc' )      # 第一个元素的成员名为"index";
+tup3 = tuple{ 123, name = 'abc' }  # 第二个元素的成员名为"name";
 @[code]
 
 元组里的每个元素都可通过下标访问或修改。有成员名的元素也可通过成员名访问。
 对元组进行下标切片将产生新的元组。
 @[code]
-tup = ( index => 123, 'abc', [1,2,3] )
+tup = ( index = 123, 'abc', [1,2,3] )
 
 id = tup[0]
 id = tup.index
 tup.index = 456
 
-tup2 = tup[:1]  # ( index => 123, 'abc' )
+tup2 = tup[:1]  # ( index = 123, 'abc' )
 @[code]
 
 

@@ -202,7 +202,7 @@ the testing result:
 
 An example to check a result object:
 @[code(test)]
-tup = ( index => 123, 'abc' )
+tup = ( index = 123, 'abc' )
 tup.index = 456
 
 global __result__ = tup

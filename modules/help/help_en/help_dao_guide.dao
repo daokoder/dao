@@ -522,20 +522,20 @@ They can be created in similar ways as creating lists and maps,
 but using @[code]()@[code] instead.
 @[code]
 tup1 = ( 123, 'abc' )               # tuple with unnamed items;
-tup2 = ( index => 123, 'abc' )      # the first item is named as "index";
-tup3 = tuple{ 123, name => 'abc' }  # the second item is named as "name";
+tup2 = ( index = 123, 'abc' )      # the first item is named as "index";
+tup3 = tuple{ 123, name = 'abc' }  # the second item is named as "name";
 @[code]
 
 Each item of a tuple can be accessed using its index or field (item name).
 New tuples can be created from other tuples by slicing.
 @[code]
-tup = ( index => 123, 'abc', [1,2,3] )
+tup = ( index = 123, 'abc', [1,2,3] )
 
 id = tup[0]
 id = tup.index
 tup.index = 456
 
-tup2 = tup[:1]  # ( index => 123, 'abc' )
+tup2 = tup[:1]  # ( index = 123, 'abc' )
 @[code]
 
 
