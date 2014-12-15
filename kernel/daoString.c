@@ -1017,6 +1017,7 @@ int DString_ExportUTF8( DString *self, DString *utf8 )
 	DString_Reserve( utf8, utf8->size + 3*wcs->size );
 	wchs = wcs->data.wchars;
 	for(i=0; i<wcs->size; ++i, ++wchs) DString_AppendWChar( utf8, *wchs );
+	DArray_Delete( wcs );
 	return 1;
 }
 int DString_ToLocal( DString *self )
@@ -1038,6 +1039,7 @@ int DString_ToUTF8( DString *self )
 	DString_Reserve( self, 3*wcs->size );
 	wchs = wcs->data.wchars;
 	for(i=0; i<wcs->size; ++i, ++wchs) DString_AppendWChar( self, *wchs );
+	DArray_Delete( wcs );
 	return 1;
 }
 

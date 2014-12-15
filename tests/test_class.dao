@@ -250,3 +250,22 @@ k.Method( {1, 2, 3} )
 @[test(code_01)]
 {{At line 6 : Method signature not matching}}
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class Klass
+{
+	private routine Method( a: list<int> )
+}
+routine Klass::Method( a: list<int> )
+{
+	io.writeln( a )
+}
+k = Klass()
+k.Method( {1, 2, 3} )
+@[test(code_01)]
+@[test(code_01)]
+{{At line 11 : Invalid operation on the type}}
+@[test(code_01)]

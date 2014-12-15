@@ -146,7 +146,7 @@ static void DaoIO_Writeln2( DaoProcess *proc, DaoValue *p[], int N )
 // but 'type' can only be:
 //   d, i, o, u, x/X : for integer;
 //   e/E, f/F, g/G : for float and double;
-//   c/C : for character, c for local encoding;
+//   c/C : for character, C for local encoding;
 //   s/S : for string, S for local encoding;
 //   p : for any type, write address;
 //   a : automatic, for any type, write in the default format;
@@ -239,7 +239,7 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 			DString_Reset( fmt2, 0 );
 			DString_AppendWChar( fmt2, value->xInteger.value );
 			self->format = "%s";
-			if( F == 'c' ) DString_ToLocal( fmt2 );
+			if( F == 'C' ) DString_ToLocal( fmt2 );
 			DaoStream_WriteString( self, fmt2 );
 		}else if( F == 'd' || F == 'i' || F == 'o' || F == 'x' || F == 'X' ){
 			DString_InsertChars( fmt2, "ll", fmt2->size-1, 0, 2 );

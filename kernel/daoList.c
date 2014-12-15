@@ -236,7 +236,6 @@ void DList_InsertList( DList *self, daoint at, DList *list, daoint id, daoint n 
 	void **objs = list->items.pVoid;
 	daoint i;
 	assert( self->type == list->type );
-	assert( self->type != DAO_DATA_VALUE );
 	if( n < 0 ) n = list->size;
 	n += id;
 	if( n > list->size ) n = list->size;

@@ -1188,18 +1188,6 @@ CallEntry:
 	if( !(topFrame->state & DVM_FRAME_RUNNING) ){
 		topFrame->deferBase = self->defers->size;
 		topFrame->exceptBase = self->exceptions->size;
-		if( (routine->attribs & (DAO_ROUT_PRIVATE|DAO_ROUT_PROTECTED)) && topFrame->prev ){
-			ushort_t priv = routine->attribs & DAO_ROUT_PRIVATE;
-			if( routine->routHost ){
-				DaoObject *obj = topFrame->prev->object;
-				//TODO: permission check before tail call optimization!
-				//XXX fltk/demo/table.dao:
-				//if( priv == 0 && obj == NULL ) goto CallNotPermitted;
-				if( priv && obj && obj->defClass->objType != routine->routHost ) goto CallNotPermitted;
-			}else if( priv && routine->nameSpace != topFrame->prev->routine->nameSpace ){
-				goto CallNotPermitted;
-			}
-		}
 	}
 
 	exceptCount = self->exceptions->size;
@@ -2321,10 +2309,6 @@ FinishCall:
 	DaoProcess_PopFrame( self );
 	DaoGC_TryInvoke();
 	goto CallEntry;
-
-CallNotPermitted:
-	/* DaoProcess_PopFrame( self ); cannot popframe, it may be tail-call optimized! */
-	DaoProcess_RaiseError( self, NULL, "CallNotPermitted" );
 
 FinishProcess:
 
@@ -3613,8 +3597,8 @@ static int DaoProcess_TryTailCall( DaoProcess *self, DaoRoutine *rout, DaoValue 
 	DaoObject *root = NULL;
 
 	/*
-	// No tail call optimization. Because it is less useful
-	// and more inconvenient to setup properly.
+	// No tail call optimization for wrapped C/C++ functions.
+	// Because it is less useful and more inconvenient to setup properly.
 	*/
 	if( rout->pFunc != NULL ) return 0;
 

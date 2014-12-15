@@ -2679,6 +2679,11 @@ static void PROJECT_SourcePath( DaoProcess *proc, DaoValue *p[], int N )
 static void PROJECT_BinaryPath( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoMakeProject *self = (DaoMakeProject*) p[0];
+	DaoProcess_PutString( proc, self->base.binaryPath );
+}
+static void PROJECT_BuildPath( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoMakeProject *self = (DaoMakeProject*) p[0];
 	DaoProcess_PutString( proc, self->base.buildPath );
 }
 static void PROJECT_GenerateFinder( DaoProcess *proc, DaoValue *p[], int N )
@@ -2719,6 +2724,7 @@ static DaoFuncItem DaoMakeProjectMeths[]=
 
 	{ PROJECT_SourcePath,  "SourcePath( self: Project ) => string" },
 	{ PROJECT_BinaryPath,  "BinaryPath( self: Project ) => string" },
+	{ PROJECT_BuildPath,   "BuildPath( self: Project ) => string" },
 
 	{ PROJECT_GenerateFinder, "GenerateFinder( self: Project, bl: enum<FALSE,TRUE> = $TRUE )" },
 	{ NULL, NULL }
