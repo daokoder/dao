@@ -119,6 +119,7 @@ struct DaoProcess
 	uchar_t         status;
 	uchar_t         active;
 	ushort_t        returned;
+	ushort_t        depth;  /* number of nested calls by DaoProcess_Start(); */
 
 	DaoFuture      *future;
 	DaoStream      *stdioStream;

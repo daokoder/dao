@@ -326,6 +326,7 @@ DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self )
 	if( self->processes->size ){
 		proc = (DaoProcess*) DList_Back( self->processes );
 		proc->active = 0;
+		proc->depth = 0;
 		DList_PopBack( self->processes );
 	}else{
 		proc = DaoProcess_New( self );

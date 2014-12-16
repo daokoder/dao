@@ -1117,6 +1117,12 @@ int DaoProcess_Start( DaoProcess *self )
 #endif
 
 
+	self->depth += 1;
+	if( self->depth > 1024 ){
+		DaoStream *stream = vmSpace->errorStream;
+		DaoStream_WriteChars( stream, "ERROR: too deeply nested process execution!\n" );
+		goto AbortProcess;
+	}
 
 	if( self->topFrame == self->firstFrame ) goto ReturnFalse;
 	rollback = self->topFrame->prev;
@@ -2333,6 +2339,7 @@ ReturnFalse:
 	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
 #endif
 	DaoGC_TryInvoke();
+	self->depth -= 1;
 	return 0;
 
 ReturnTrue:
@@ -2355,6 +2362,7 @@ ReturnTrue:
 	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
 #endif
 	DaoGC_TryInvoke();
+	self->depth -= 1;
 	return 1;
 }
 int DaoProcess_Execute( DaoProcess *self )
@@ -5050,7 +5058,7 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		case DVM_NE:  D = DaoValue_Compare( A, B ) != 0; break;
 		default: break;
 		}
-	}else if( A->type == DAO_TUPLE && B->type == DAO_TUPLE ){
+	}else if( A->type == B->type && (A->type == DAO_TUPLE || A->type == DAO_LIST) ){
 		switch( vmc->code ){
 		case DVM_LT:  D = DaoValue_ComparePro( A, B, self ) < 0; break;
 		case DVM_LE:  D = DaoValue_ComparePro( A, B, self ) <= 0; break;
