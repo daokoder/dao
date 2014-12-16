@@ -676,8 +676,6 @@ static daoint DaoVmCode_Compare2( DaoVmCode *k1, DaoVmCode *k2 )
 }
 
 extern int DaoArray_Compare( DaoArray *x, DaoArray *y );
-extern int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt, DaoProcess *process );
-extern int DaoList_Compare( DaoList *list1, DaoList *list2, DaoProcess *process );
 
 static int DaoValue_Compare2( DaoValue *left, DaoValue *right )
 {
@@ -685,13 +683,13 @@ static int DaoValue_Compare2( DaoValue *left, DaoValue *right )
 	if( left == NULL || right == NULL ) return left < right ? -100 : 100;
 	if( left->type != right->type ) return left->type < right->type ? -100 : 100;
 	if( left->type == DAO_TUPLE && left->xTuple.ctype == right->xTuple.ctype ){
-		return DaoTuple_Compare( (DaoTuple*) left, (DaoTuple*) right, NULL );
+		return DaoValue_Compare( left, right );
 #ifdef DAO_WITH_NUMARRAY
 	}else if( left->type == DAO_ARRAY && left->xArray.etype == right->xArray.etype ){
 		return DaoArray_Compare( (DaoArray*) left, (DaoArray*) right );
 #endif
 	}else if( left->type == DAO_LIST && left->xList.ctype == right->xList.ctype ){
-		return DaoList_Compare( (DaoList*) left, (DaoList*) right, NULL );
+		return DaoValue_Compare( left, right );
 	}
 	if( left->type <= DAO_STRING ) return DaoValue_Compare( left, right );
 	return left < right ? -100 : 100;

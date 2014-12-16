@@ -183,3 +183,49 @@ b = (string) ++i
 @[test(code_01)]
 {{At line 3 : Invalid expression}}
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+var a: tuple<int,any> = (123, none)
+var b: tuple<int,any> = (123, none)
+io.writeln( a == b )
+@[test(code_01)]
+@[test(code_01)]
+true
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+var a: tuple<int,any> = (123, none)
+var b: tuple<int,any> = (123, none)
+a[1] = a
+b[1] = b
+io.writeln( a == b )
+@[test(code_01)]
+@[test(code_01)]
+WARNING: recursion limit is reached for comparison!
+false
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class K
+{
+	routine ==( other: K ){
+		return (self,none) == (other,none)
+	}
+}
+k1 = K()
+k2 = K()
+io.writeln( k1 == k2 )
+@[test(code_01)]
+@[test(code_01)]
+WARNING: recursion limit is reached for comparison!
+false
+@[test(code_01)]

@@ -38,7 +38,7 @@ static const char* const daoCtInfo[] =
 	"Statements not seperated properly",
 	"Assignment inside expression",
 	"Getter/setter may not be used for",
-	"No method to use from",
+	"Value was used",
 	"Symbol possibly undefined",
 	"Symbol not defined",
 	"Symbol was defined",

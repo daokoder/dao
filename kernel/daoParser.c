@@ -1777,6 +1777,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 	DaoType *type, *type2;
 	DaoToken *tok;
 	DaoToken **tokens = self->tokens->items.pToken;
+	DMap *values = DHash_New(0,0);
 	DString *field = NULL;
 	uchar_t sep = 0;
 	daoint value = 0;
@@ -1792,6 +1793,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 		sign = 1;
 		if( tok->type != DTOK_IDENTIFIER ) break;
 		if( tok->name == DTOK_ID_THTYPE || tok->name == DTOK_ID_SYMBOL ) break;
+		if( DMap_Find( type->mapNames, field ) ) goto WrongForm;
 		if( k+1 <= end && tokens[k+1]->type == DTOK_ASSN ){
 			k += 1;
 			if( k+1 <= end ){
@@ -1807,6 +1809,11 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 				k += 1;
 				set = 1;
 				value = DaoToken_ToInteger( tokens[k] );
+				if( DMap_Find( values, IntToPointer( value ) ) != NULL ){
+					DaoParser_Error2( self, DAO_VALUE_WAS_USED, k, k, 0 );
+					break;
+				}
+				DMap_Insert( values, IntToPointer( value ), 0 );
 			}else break;
 		}
 		if( sep ==0 && (k+1) <= end ){
@@ -1814,7 +1821,6 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 			if( sep != DTOK_COMMA && sep != DTOK_SEMCO ) break;
 			if( sep == DTOK_SEMCO && set == 0 ) value = 1;
 		}
-		if( DMap_Find( type->mapNames, field ) ) goto WrongForm;
 		if( sign < 0 ) value = - value;
 		DMap_Insert( type->mapNames, field, (void*)value );
 		if( sep == DTOK_SEMCO ){
@@ -1846,10 +1852,12 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 	}else{
 		DaoNamespace_AddType( self->nameSpace, type->name, type );
 	}
+	DMap_Delete( values );
 	return type;
 WrongForm:
 	DaoParser_ErrorToken( self, DAO_INVALID_TYPE_FORM, tokens[k] );
 	DaoType_Delete( type );
+	DMap_Delete( values );
 	return NULL;
 }
 static DaoType* DaoParser_MakeCSRoutineType( DaoParser *self, DaoType *type, DaoType *cbtype )
@@ -3403,6 +3411,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 	DaoType *abtp, *abtp2;
 	DString *str, *alias = NULL;
 	DaoValue *dv = NULL;
+	DMap *values = NULL;
 	int sep = DTOK_COMMA, value = 0;
 	int id, rb, comma, semco, explicitdef=0;
 	int enumkey = start + 1;
@@ -3438,6 +3447,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 		comma = semco;
 	}
 	if( comma <0 ) comma = rb;
+	values = DHash_New(0,0);
 	value = sep == DTOK_SEMCO;
 	abtp->subtid = sep == DTOK_SEMCO ? DAO_ENUM_FLAG : DAO_ENUM_STATE;
 	abtp->value->xBase.subtype = abtp->subtid;
@@ -3449,6 +3459,10 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 			goto ErrorEnumDefinition;
 		}
 		str = & tokens[start]->string;
+		if( DMap_Find( abtp->mapNames, str ) ){
+			DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
+			goto ErrorEnumDefinition;
+		}
 		explicitdef = 0;
 		if( tokens[start+1]->type == DTOK_ASSN ){
 			explicitdef = 1;
@@ -3461,12 +3475,13 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 				goto ErrorEnumDefinition;
 			}
 			value = DaoValue_GetInteger( dv );
+			if( DMap_Find( values, IntToPointer( value ) ) != NULL ){
+				DaoParser_Error2( self, DAO_VALUE_WAS_USED, start+2, self->curToken, 0 );
+				goto ErrorEnumDefinition;
+			}
+			DMap_Insert( values, IntToPointer( value ), 0 );
 		}else if( start+1 != rb && tokens[start+1]->type != sep ){
 			DaoParser_Error( self, DAO_TOKEN_NOT_EXPECTED, & tokens[start+1]->string );
-			goto ErrorEnumDefinition;
-		}
-		if( DMap_Find( abtp->mapNames, str ) ){
-			DaoParser_Error( self, DAO_SYMBOL_WAS_DEFINED, str );
 			goto ErrorEnumDefinition;
 		}
 		if( abtp->mapNames->size ){
@@ -3503,12 +3518,14 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 			DaoByteBlock_EncodeTypeAlias( self->byteBlock, old, abtp2, alias, NULL, DAO_PERM_PUBLIC );
 		}
 	}
+	if( values ) DMap_Delete( values );
 	return rb + 1;
 ErrorEnumDefinition:
 	if( rb >=0 )
 		DaoParser_Error2( self, DAO_INVALID_ENUM_DEFINITION, start, rb, 0 );
 	else
 		DaoParser_Error3( self, DAO_INVALID_ENUM_DEFINITION, start );
+	if( values ) DMap_Delete( values );
 	if( abtp ) DaoType_Delete( abtp );
 	return 0;
 }
