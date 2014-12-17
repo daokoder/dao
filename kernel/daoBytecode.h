@@ -371,9 +371,9 @@ struct DaoByteBlock
 	uchar_t  begin[8];
 	uchar_t  end[8];
 
-	DMap  *wordToBlocks;      /* map<uchar_t*,DaoByteBlock*>; */
-	DMap  *valueDataBlocks;   /* hash<DaoValue*,DaoByteBlock*>; Same data to same block; */
-	DMap  *valueObjectBlocks; /* hash<DaoValue*,DaoByteBlock*>; Same object to same block; */
+	DMap_(uchar_t*,DaoByteBlock*)    *wordToBlocks;
+	DHash_(DaoValue*,DaoByteBlock*)  *valueDataBlocks;   /* Same data to same block; */
+	DHash_(DaoValue*,DaoByteBlock*)  *valueObjectBlocks; /* Same object to same block; */
 
 	DaoValue  *value;
 
@@ -402,17 +402,17 @@ struct DaoByteCoder
 
 	DString  *path;
 
-	DMap  *valueDataBlocks;   /* hash<DaoValue*,DaoByteBlock*>; Same data to same block; */
-	DMap  *valueObjectBlocks; /* hash<DaoValue*,DaoByteBlock*>; Same object to same block; */
+	DHash_(DaoValue*,DaoByteBlock*)  *valueDataBlocks;   /* Same data to same block; */
+	DHash_(DaoValue*,DaoByteBlock*)  *valueObjectBlocks; /* Same object to same block; */
 
-	DList  *stack;    /* list<DaoByteBlock*> */
-	DList  *caches;   /* list<DaoByteBlock*> */
-	DList  *lines;    /* list<daoint> */
-	DList  *iblocks;  /* list<DaoByteBlock*> */
-	DList  *ivalues;  /* list<DaoValue*> */
-	DList  *indices;  /* list<daoint> */
+	DList_(DaoByteBlock*)  *stack;
+	DList_(DaoByteBlock*)  *caches;
+	DList_(DaoByteBlock*)  *iblocks;
+	DList_(DaoValue*)      *ivalues;
+	DList_(daoint)         *indices;
+	DList_(daoint)         *lines;
 
-	DList  *routines;
+	DList_(DaoRoutine*)    *routines;
 
 	DaoNamespace  *nspace;
 	DaoVmSpace    *vmspace;

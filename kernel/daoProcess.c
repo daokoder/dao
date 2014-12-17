@@ -141,9 +141,9 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->firstFrame->types = & dummyType;
 	self->firstFrame->codes = & dummyCode;
 	self->firstFrame->entry = 1;
-	self->stackSize = self->stackTop = 2 + DAO_MAX_PARAM;
+	self->stackSize = self->stackTop = 1 + DAO_MAX_PARAM;
 	self->stackValues = (DaoValue**)dao_calloc( self->stackSize, sizeof(DaoValue*) );
-	self->paramValues = self->stackValues + 2;
+	self->paramValues = self->stackValues + 1;
 	self->factory = DList_New( DAO_DATA_VALUE );
 
 	self->string = DString_New();
@@ -195,7 +195,7 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 	if( N > self->stackSize ){
 		daoint offset = self->activeValues - self->stackValues;
 		self->stackValues = (DaoValue**)dao_realloc( self->stackValues, N*sizeof(DaoValue*) );
-		self->paramValues = self->stackValues + 2;
+		self->paramValues = self->stackValues + 1;
 		memset( self->stackValues + self->stackSize, 0, (N-self->stackSize)*sizeof(DaoValue*) );
 		if( self->activeValues ) self->activeValues = self->stackValues +  offset;
 		self->stackSize = N;

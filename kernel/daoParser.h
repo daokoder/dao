@@ -60,16 +60,21 @@ struct DaoParser
 	int  middleToken;  /* Index for the middle token; */
 	int  lastToken;    /* Index for the last token; */
 
-	DArray    *tokenTriples; /* List of index triples for the first, middle and last tokens; */
-	DList     *tokens; /* lexer->tokens; */
 	DaoLexer  *lexer;
+	DList_(DaoToken*)  *tokens; /* lexer->tokens; */
 
 	/*
-	// DList<DaoVmCodeX*>: need to be store as pointers, because in code generation,
+	// Each virtual instruction is annotated with a triple of indices,
+	// marking a starting, an ending and a significant middle token:
+	*/
+	DArray_(int[3])    *tokenTriples;
+
+	/*
+	// It needs to be store as pointers, because in code generation,
 	// it may be necessary to modify previously generated codes, for this,
 	// it is much easier to use pointers.
 	*/
-	DList  *vmCodes;
+	DList_(DaoVmCodeX*)  *vmCodes;
 
 	DaoInode *vmcBase;   /* the node before the ::vmcFirst; */
 	DaoInode *vmcFirst;  /* the first instruction node; */
@@ -80,15 +85,19 @@ struct DaoParser
 	int  vmcCount;
 	int  regCount;
 
-	DList  *scopeOpenings; /* <DaoInode*> */
-	DList  *scopeClosings; /* <DaoInode*> */
-	DList  *lookupTables; /* DList<DMap<DString*,int>*>: lookup table for each level; */
-	DList  *switchTables; /* DList<DMap<DaoValue*,DaoInode*>> */
-	DList  *switchNames;  /* DList<DString*>: (var name, invar name) */
-	DList  *enumTypes;    /* DList<DaoType*> */
+	DList_(DaoInode*)  *scopeOpenings;
+	DList_(DaoInode*)  *scopeClosings;
 
-	DMap  *allConsts;  /* DMap<DString*,int>: implicit and explict local constants; */
-	DMap  *initTypes;  /* type holders @T from parameters and the up routine */
+	DList_(DHash(DString*,int)*)  *lookupTables; /* Lookup table at each lexical scope; */
+
+	DList_(DMap(DaoValue*,DaoInode*))  *switchTables;
+
+	DList_(DString*)  *switchNames;  /* (var name, invar name) */
+	DList_(DaoType*)  *enumTypes;
+
+	DHash_(DString*,int)  *allConsts;  /* implicit and explict local constants; */
+
+	DMap_(DString*,DaoType*)  *initTypes; /* type holders from parameters and up routine; */
 
 	short  levelBase;
 	short  lexLevel;
@@ -128,23 +137,26 @@ struct DaoParser
 	DaoToken     *argName;
 	DaoToken     *decoArgName;
 
-	DList *uplocs;
-	DList *outers;
-	DList *decoFuncs;
-	DList *decoFuncs2;
-	DList *decoParams;
-	DList *decoParams2;
-	DList *routCompilable; /* list of defined routines with bodies */
-	DList *routReInferable;
-	DList *refCountedList;
+	DArray_(int[4]) *uplocs;
+	DArray_(int)    *outers;
 
-	DList     *nsDefines;
-	DaoLexer  *nsSymbols;
+	DList_(DaoRoutine*)  *decoFuncs;
+	DList_(DaoRoutine*)  *decoFuncs2;
+	DList_(DaoList*)     *decoParams;
+	DList_(DaoList*)     *decoParams2;
 
-	DaoLexer  *elexer;
-	DaoLexer  *wlexer;
-	DList     *errors;
-	DList     *warnings;
+	DList_(DaoRoutine*) *routCompilable; /* list of defined routines with bodies */
+	DList_(DaoRoutine*) *routReInferable;
+
+	DList_(DaoValue*) *refCountedList;
+
+	DList_(DaoNamespace*)  *nsDefines;
+	DaoLexer               *nsSymbols;
+
+	DaoLexer           *elexer;
+	DaoLexer           *wlexer;
+	DList_(DaoToken*)  *errors;   /* elexer->tokens; */
+	DList_(DaoToken*)  *warnings; /* wlexer->tokens; */
 
 
 	/* members for convenience */

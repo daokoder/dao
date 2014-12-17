@@ -118,12 +118,11 @@ DaoClass* DaoClass_New()
 	self->allBases   = DList_New( DAO_DATA_VALUE );
 	self->mixins  = DList_New(0);
 	self->ranges  = DArray_New(sizeof(ushort_t));
-	self->offsets = DArray_New(sizeof(ushort_t));
 	self->references  = DList_New( DAO_DATA_VALUE );
 
 	self->cstMixinStart = self->cstMixinEnd = self->cstMixinEnd2 = 0;
-	self->glbMixinStart = self->glbMixinEnd = self->glbMixinEnd2 = 0;
-	self->objMixinStart = self->objMixinEnd = self->objMixinEnd2 = 0;
+	self->glbMixinStart = self->glbMixinEnd = 0;
+	self->objMixinStart = self->objMixinEnd = 0;
 	self->cstParentStart = self->cstParentEnd = 0;
 	self->glbParentStart = self->glbParentEnd = 0;
 #ifdef DAO_USE_GC_LOGGER
@@ -150,7 +149,6 @@ void DaoClass_Delete( DaoClass *self )
 	DList_Delete( self->mixinBases );
 	DList_Delete( self->mixins );
 	DArray_Delete( self->ranges );
-	DArray_Delete( self->offsets );
 	DList_Delete( self->references );
 	if( self->interMethods ) DMap_Delete( self->interMethods );
 	if( self->decoTargets ) DList_Delete( self->decoTargets );
@@ -486,7 +484,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 			}
 		}
 	}
-	for(i=mixin->glbMixinEnd2; i<mixin->glbDataName->size; ++i){
+	for(i=mixin->glbMixinEnd; i<mixin->glbDataName->size; ++i){
 		daoint src = LOOKUP_BIND( DAO_CLASS_VARIABLE, 0, 0, i );
 		daoint des = LOOKUP_BIND( DAO_CLASS_VARIABLE, 0, 0, self->variables->size );
 		DString *name = mixin->glbDataName->items.pString[i];
@@ -499,7 +497,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 		DList_Append( self->glbDataName, (void*) name );
 		DList_Append( self->variables, DaoVariable_New( var, type, DAO_CLASS_VARIABLE ) );
 	}
-	for(i=mixin->objMixinEnd2; i<mixin->objDataName->size; ++i){
+	for(i=mixin->objMixinEnd; i<mixin->objDataName->size; ++i){
 		daoint src = LOOKUP_BIND( DAO_OBJECT_VARIABLE, 0, 0, i );
 		daoint des = LOOKUP_BIND( DAO_OBJECT_VARIABLE, 0, 0, self->instvars->size );
 		DString *name = mixin->objDataName->items.pString[i];
@@ -531,10 +529,10 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 			if( id >= mixin->cstMixinStart && id < mixin->cstMixinEnd2 ) continue;
 			break;
 		case DAO_CLASS_VARIABLE :
-			if( id >= mixin->glbMixinStart && id < mixin->glbMixinEnd2 ) continue;
+			if( id >= mixin->glbMixinStart && id < mixin->glbMixinEnd ) continue;
 			break;
 		case DAO_OBJECT_VARIABLE :
-			if( id >= mixin->objMixinStart && id < mixin->objMixinEnd2 ) continue;
+			if( id >= mixin->objMixinStart && id < mixin->objMixinEnd ) continue;
 			break;
 		}
 		if( st != DAO_OBJECT_VARIABLE || id != 0 ){ /* not a "self": */
@@ -766,8 +764,6 @@ int DaoCass_DeriveMixinData( DaoClass *self )
 	DaoClass_SetupMethodFields( self, mf );
 
 	self->cstMixinEnd2 = self->constants->size;
-	self->glbMixinEnd2 = self->variables->size;
-	self->objMixinEnd2 = self->instvars->size;
 
 	DMap_Delete( mixed );
 	DaoMethodFields_Delete( mf );
@@ -807,8 +803,6 @@ int DaoClass_DeriveClassData( DaoClass *self )
 	self->cstParentStart = self->constants->size;
 	self->glbParentStart = self->variables->size;
 
-	DArray_PushUshort( self->offsets, self->constants->size );
-	DArray_PushUshort( self->offsets, self->variables->size );
 	if( self->parent && self->parent->type == DAO_CLASS ){
 		DaoClass *klass = (DaoClass*) self->parent;
 		DList_Append( self->clsType->bases, klass->clsType );

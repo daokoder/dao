@@ -40,7 +40,7 @@
 #define DAO_ARRAY_ITEM_TYPES
 #endif
 
-/* Array of pointers or integers: */
+/* List of pointers or integers: */
 struct DList
 {
 	union{

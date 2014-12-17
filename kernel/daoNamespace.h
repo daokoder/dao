@@ -43,27 +43,28 @@ struct DaoNamespace
 
 	DaoVmSpace *vmSpace;
 
-	DMap   *lookupTable; /* <DString*,size_t> */
-	DList  *namespaces;  /* <DaoNamespace*> */
-	DList  *constants;   /* <DaoConstant*>, global constants; */
-	DList  *variables;   /* <DaoVariable*>, global variables; */
-	DList  *auxData;     /* mainly for GC */
+	DHash_(DString*,size_t)  *lookupTable;
+	DList_(DaoNamespace*)    *namespaces;  /* loaded modules/namespaces; */
+	DList_(DaoConstant*)     *constants;   /* global constants; */
+	DList_(DaoVariable*)     *variables;   /* global variables; */
+	DList_(DaoValue*)        *auxData;     /* mainly for GC */
 
 	DaoRoutine *mainRoutine;
 	DaoList    *argParams;
 
-	DList *mainRoutines; /* stdlib.eval() */
-	DList *definedRoutines; /* for DaoStudio IDE */
+	DList_(DaoRoutine*)  *mainRoutines;    /* stdlib.eval() */
+	DList_(DaoRoutine*)  *definedRoutines; /* for DaoStudio IDE */
 
 	void  *libHandle;
 	int    cstUser;
 	int    options;
 
-	DMap   *localMacros;  /* <DString*,DaoMacro*> */
-	DMap   *globalMacros; /* <DString*,DaoMacro*> */
-	DMap   *abstypes;     /* <DString*,DaoType*> */
-	DMap   *codeInliners; /* <DString*,DaoCodeInliner> */
-	DList  *tokenFilters; /* <DaoTokenFilter> */
+	DHash_(DString*,DaoType*)    *abstypes;
+	DHash_(DString*,DaoMacro*)   *localMacros;
+	DHash_(DString*,DaoMacro*)   *globalMacros;
+
+	DHash_(DString*,DaoCodeInliner)  *codeInliners;
+	DList_(DaoTokenFilter)           *tokenFilters;
 
 	DString  *file;
 	DString  *path;

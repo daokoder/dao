@@ -226,6 +226,17 @@ typedef struct DaoProcess      DaoProcess;
 typedef struct DaoChannel      DaoChannel;
 typedef struct DaoType         DaoType;
 
+/*
+// The following macros can be used instead of the original type names,
+// such that the element types, key and value types can be annotated
+// explicitly as parts of the type names. Though not compiler checked,
+// such use may increase readability of the source code.
+*/
+#define DArray_(ElementType)       DArray
+#define DList_(ElementType)        DList
+#define DMap_(KeyType,ValueType)   DMap
+#define DHash_(KeyType,ValueType)  DMap
+
 typedef void  (*CallbackOnString)( const char *str );
 typedef void  (*DThreadTask)( void *arg );
 typedef void* (*FuncPtrCast)( void*, int );

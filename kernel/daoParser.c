@@ -265,8 +265,8 @@ void DaoParser_Delete( DaoParser *self )
 	if( self->nsSymbols ) DaoLexer_Delete( self->nsSymbols );
 	if( self->argName ) DaoToken_Delete( self->argName );
 	if( self->decoArgName ) DaoToken_Delete( self->decoArgName );
-	if( self->uplocs ) DList_Delete( self->uplocs );
-	if( self->outers ) DList_Delete( self->outers );
+	if( self->uplocs ) DArray_Delete( self->uplocs );
+	if( self->outers ) DArray_Delete( self->outers );
 	if( self->allConsts ) DMap_Delete( self->allConsts );
 	DMap_Delete( self->initTypes );
 	DMap_Delete( self->table );
@@ -357,8 +357,8 @@ void DaoParser_Reset( DaoParser *self )
 	self->nsDefined = 0;
 	if( self->nsDefines ) self->nsDefines->size = 0;
 	if( self->nsSymbols ) DaoLexer_Reset( self->nsSymbols );
-	if( self->uplocs ) DList_Clear( self->uplocs );
-	if( self->outers ) DList_Clear( self->outers );
+	if( self->uplocs ) DArray_Clear( self->uplocs );
+	if( self->outers ) DArray_Clear( self->outers );
 	if( self->allConsts ) DMap_Reset( self->allConsts );
 	if( self->argName ) DaoToken_Delete( self->argName );
 	if( self->decoArgName ) DaoToken_Delete( self->decoArgName );
@@ -404,19 +404,19 @@ void DaoParser_PopLevel( DaoParser *self )
 }
 static int DaoParser_PushOuterRegOffset( DaoParser *self, int start, int end )
 {
-	if( self->outers == NULL ) self->outers = DList_New(0);
+	if( self->outers == NULL ) self->outers = DArray_New(sizeof(int));
 	if( self->outers->size >= DAO_MAX_SECTDEPTH ){
 		DaoParser_Error2( self, DAO_SECTION_TOO_DEEP, start, end, 0 );
 		return 0;
 	}
-	DList_PushBack( self->outers, (void*)(daoint)self->regCount );
+	DArray_PushInt( self->outers, self->regCount );
 	return 1;
 }
 static int DaoParser_GetOuterLevel( DaoParser *self, int reg )
 {
 	int i = 0;
 	if( self->outers == NULL ) return 0;
-	while( i < self->outers->size && reg >= self->outers->items.pInt[i] ) i += 1;
+	while( i < self->outers->size && reg >= self->outers->data.ints[i] ) i += 1;
 	if( i >= self->outers->size ) return 0;
 	return self->outers->size - i;
 }
@@ -823,7 +823,7 @@ static int DaoClass_BaseCstrOffset( DaoClass *self, DaoClass *base, int idx )
 			}
 		}
 	}else{
-		offset = self->offsets->data.ushorts[2*(idx - self->mixinBases->size)];
+		offset = self->cstParentStart;
 		offset += (base->type == DAO_CLASS ? DAO_CLASS_CONST_CSTOR : 0);
 	}
 	return offset;
@@ -922,7 +922,7 @@ static int DaoParser_ParseInitSuper( DaoParser *self, DaoParser *module, int sta
 			DaoLexer *lexer = module->lexer;
 			DaoInode *back = self->vmcLast;
 			int pos = DaoParser_FindMaybeScopedConst( self, & value, dlm+1, DTOK_LB );
-			int reg, offset, count, found = -1;
+			int reg, count, found = -1;
 
 			DaoParser_PopCodes( self, back );
 			if( value == NULL ) goto ErrorRoutine;
@@ -942,7 +942,6 @@ static int DaoParser_ParseInitSuper( DaoParser *self, DaoParser *module, int sta
 			if( rb < 0 ) goto ErrorRoutine;
 
 			DaoParser_PushTokenIndices( self, dlm+1, dlm+1, dlm+1 );
-			offset = klass->offsets->data.ushorts[2*(found - klass->mixinBases->size)];
 			inode = DaoParser_AddCode( module, DVM_GETCK, 1, 0, 0 );
 			inode->b = DaoClass_BaseCstrOffset( klass, (DaoClass*) value, found );
 			inode->c = DaoParser_PushRegister( module );
@@ -1307,10 +1306,10 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 					type_default = DaoNamespace_GetType( NS, dft );
 				}else if( module->uplocs ){
 					int loc = routine->routConsts->value->size;
-					DList_Append( module->uplocs, reg );
-					DList_Append( module->uplocs, loc );
-					DList_Append( module->uplocs, i+1 );
-					DList_Append( module->uplocs, comma-1 );
+					DArray_PushInt( module->uplocs, reg );
+					DArray_PushInt( module->uplocs, loc );
+					DArray_PushInt( module->uplocs, i+1 );
+					DArray_PushInt( module->uplocs, comma-1 );
 					type_default = DaoParser_MakeParTypeHolder( module, tks );
 				}else{
 					goto ErrorVariableDefault;
@@ -5074,10 +5073,10 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 					routine->body->upValues = DList_New( DAO_DATA_VALUE );
 				}
 				i = DaoParser_GetNormRegister( self->outerParser, i, 0, tokpos, 0, tokpos );
-				DList_Append( self->uplocs, i );
-				DList_Append( self->uplocs, routine->body->upValues->size + DAO_MAX_PARAM );
-				DList_Append( self->uplocs, tokpos );
-				DList_Append( self->uplocs, tokpos );
+				DArray_PushInt( self->uplocs, i );
+				DArray_PushInt( self->uplocs, routine->body->upValues->size + DAO_MAX_PARAM );
+				DArray_PushInt( self->uplocs, tokpos );
+				DArray_PushInt( self->uplocs, tokpos );
 				i = LOOKUP_BIND( DAO_CLOSURE_VARIABLE, 0, 0, routine->body->upValues->size );
 				MAP_Insert( DaoParser_CurrentSymbolTable( self ), & nametok->string, i );
 				DList_Append( routine->body->upValues, DaoVariable_New(NULL,NULL,0) );
@@ -6033,7 +6032,7 @@ static int DaoParser_ParseClosure( DaoParser *self, int start )
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoRoutine *rout;
 	DaoParser *parser;
-	DList *uplocs;
+	DArray *uplocs;
 	DNode *it;
 
 	parser = DaoVmSpace_AcquireParser( self->vmSpace );
@@ -6043,7 +6042,7 @@ static int DaoParser_ParseClosure( DaoParser *self, int start )
 	parser->nameSpace = self->nameSpace;
 	parser->vmSpace = self->vmSpace;
 	parser->outerParser = self;
-	if( parser->uplocs == NULL ) parser->uplocs = DList_New(0);
+	if( parser->uplocs == NULL ) parser->uplocs = DArray_New(sizeof(int));
 	uplocs = parser->uplocs;
 	DString_Assign( parser->fileName, self->fileName );
 	if( self->hostClass ){
@@ -6123,10 +6122,10 @@ static int DaoParser_ParseClosure( DaoParser *self, int start )
 	DaoParser_AddCode( self, DVM_GETCL, 0, i, regCall );
 
 	for(i=0; i<uplocs->size; i+=4 ){
-		int up = uplocs->items.pInt[i];
-		int loc = uplocs->items.pInt[i+1];
-		int first = uplocs->items.pInt[i+2] + offset;
-		int last = uplocs->items.pInt[i+3] + offset;
+		int up = uplocs->data.ints[i];
+		int loc = uplocs->data.ints[i+1];
+		int first = uplocs->data.ints[i+2] + offset;
+		int last = uplocs->data.ints[i+3] + offset;
 		DaoParser_PushTokenIndices( self, first, first, last );
 		DaoParser_AddCode( self, DVM_MOVE, up, 0, regCall+1+i/2 );
 		DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, loc, regCall+2+i/2 );
@@ -6989,7 +6988,7 @@ YieldSection:
 				DaoParser_DelScope( self, NULL );
 				DaoParser_PushTokenIndices( self, rb, 0, 0 );
 				DaoParser_AddCode( self, DVM_GOTO, 0, 0, DVM_SECT );
-				DList_PopBack( self->outers );
+				DArray_Pop( self->outers );
 				self->vmcLast->jumpTrue = jump;
 				DaoParser_AppendCode( self, label ); /* move to back */
 				regLast = call->c;

@@ -33,53 +33,105 @@
 
 #define DAO_CLASS_CONST_CSTOR  1
 
-
+/*
+// The DaoClass structure contains all the information for a Dao class.
+//
+// In the Dao type system, Dao class is represented by two DaoType objects:
+// -- DaoClass::clsType: for the class object itself;
+// -- DaoClass::objType: for the instance objects of the class;
+//
+// The class members can be looked up by DaoClass::lookupTable, which maps
+// the member names to lookup indices.
+//
+// Bit structure for the lookup indices: EEPPSSSSUUUUUUUUIIIIIIIIIIIIIIII.
+// Where:
+// -- EE: 2 bits reserved for encoding error;
+// -- PP: 2 bits to encode permission;
+// -- SSSS: 4 bits to encode storage type;
+// -- UUUUUUUU: 8 bits to encode up index;
+// -- IIIIIIIIIIIIIIII: 16 bits to encode the actual index in field arrays;
+//
+// The permission bits will encode the following values:
+// -- DAO_PERM_PRIVATE;
+// -- DAO_PERM_PROTECTED;
+// -- DAO_PERM_PUBLIC;
+//
+// The storage bits will encode the following values:
+// -- DAO_CLASS_CONSTANT: for constants;
+// -- DAO_CLASS_VARIABLE: for static variables;
+// -- DAO_OBJECT_VARIABLE: for instance variables;
+//
+// The up-index bits will encode the following values:
+// -- Zero: for members from the current class;
+// -- One:  for members from the direct base class;
+// -- Two and above: for members from the indirect base classes;
+//
+// Class constant layout in DaoClass:constants:
+// -- Single Index (0): the class object itself, with its name ("X") as the lookup name;
+// -- Single Index (1): the class constructor (implicit/explicit), with lookup name "X::X";
+// -- Multiple Indices: the constants from the mixin component classes;
+// -- Mulitple Indices: the constants from the base class;
+// -- Mulitple Indices: the constants defined in the current class;
+//
+// Class instance variable information layout in DaoClass::instvars;
+// -- Single Index (0): information for the self object with type DaoClass::objType;
+// -- Multiple Indices: the "instvars" from the mixin component classes;
+// -- Multiple Indices: the "instvars" from the base class;
+// -- Mulitple Indices: the instance variables defined in the current class;
+//
+// Class static variable information layout in DaoClass::instvars;
+// -- Multiple Indices: the static variables from the mixin component classes;
+// -- Multiple Indices: the static variables from the base class;
+// -- Mulitple Indices: the static variables defined in the current class;
+//
+// Index ranges for the constants and variables from mixin component and base classes:
+// -- [ DaoClass::cstMixinStart, DaoClass::cstMixinEnd ) :
+//    Constants from mixin components;
+// -- [ DaoClass::cstMixinStart, DaoClass::cstMixinEnd2 ) :
+//    Constants from mixin components, plus extra constants created for method overloading;
+// -- [ DaoClass::glbMixinStart, DaoClass::glbMixinEnd ) :
+//    Static variables from mixin components;
+// -- [ DaoClass::objMixinStart, DaoClass::objMixinEnd ) :
+//    Instance variables from mixin components;
+// -- [ DaoClass::cstParentStart, DaoClass::cstParentEnd ) :
+//    Constants from base/parent classes;
+// -- [ DaoClass::glbParentStart, DaoClass::glbParentEnd ) :
+//    Static variables from base/parent classes;
+// Index ranges for individual mixin components are stored in DaoClass::ranges;
+*/
 struct DaoClass
 {
 	DAO_VALUE_COMMON;
 
-	/* Holding index of class members, including data from its parents: */
-	/* negative index indicates an inaccessible private member from a parent? XXX */
-	DMap   *lookupTable; /* <DString*,size_t> */
+	DHash_(DString*,size_t)  *lookupTable;  /* member lookup table; */
 
-	/* Holding class consts and routines - class data: */
-	/* For both this class and its parents: */
-	DList  *constants; /* <DaoConstant*>, constants; */
-	DList  *variables; /* <DaoVariable*>, static variables; */
-	DList  *instvars;  /* <DaoVariable*>, instance variable types and default values; */
+	DList_(DaoConstant*)  *constants; /* constants; */
+	DList_(DaoVariable*)  *variables; /* static variables (types and init values); */
+	DList_(DaoVariable*)  *instvars;  /* instance variable (types and default values); */
 
-	DList  *cstDataName;  /* <DString*>: keep track field declaration order: */
-	DList  *glbDataName;  /* <DString*>: keep track field declaration order: */
-	DList  *objDataName;  /* <DString*>: keep tracking field declaration order: */
+	DList_(DString*)  *cstDataName;  /* keep track field declaration order; */
+	DList_(DString*)  *glbDataName;  /* keep track field declaration order; */
+	DList_(DString*)  *objDataName;  /* keep tracking field declaration order; */
 
-	DaoValue  *parent;     /* DaoClass or DaoCData; */
+	DaoValue  *parent;  /* DaoClass or DaoCData; */
 
-	DList   *mixinBases;   /* <DaoClass*>: direct mixin classes; */
-	DList   *allBases;     /* <DaoClass/DaoCData*>: mixin or parent classes; */
+	DList_(DaoClass*)            *mixinBases;  /* direct mixin classes; */
+	DList_(DaoClass*|DaoCData*)  *allBases;    /* mixin or parent classes; */
 
-	DList   *mixins;  /* <DaoClass*>: mixin classes; */
-	DArray  *ranges;  /* <ushort_t>: ranges of the fields of the mixin classes; */
-	DArray  *offsets; /* <ushort_t>: offsets of the fields from parent classes; */
+	DList_(DaoClass*)  *mixins;  /* mixin classes; */
+	DArray_(ushort_t)  *ranges;  /* ranges of the fields of the mixin classes; */
 
-	ushort_t  cstMixinStart;
-	ushort_t  glbMixinStart;
-	ushort_t  objMixinStart;
-	ushort_t  cstMixinEnd;
-	ushort_t  glbMixinEnd;
-	ushort_t  objMixinEnd;
-	ushort_t  cstMixinEnd2;
-	ushort_t  glbMixinEnd2;
-	ushort_t  objMixinEnd2;
-	ushort_t  cstParentStart;
-	ushort_t  glbParentStart;
-	ushort_t  cstParentEnd;
-	ushort_t  glbParentEnd;
+	ushort_t  cstMixinStart, cstMixinEnd, cstMixinEnd2;
+	ushort_t  glbMixinStart, glbMixinEnd;
+	ushort_t  objMixinStart, objMixinEnd;
+	ushort_t  cstParentStart, cstParentEnd;
+	ushort_t  glbParentStart, glbParentEnd;
 
 	/* Routines with overloading signatures: */
 	/* They are inserted into constants, no refCount updating for this. */
-	DMap  *methSignatures; /* <DString*,DaoRoutine*> */
+	DMap_(DString*,DaoRoutine*)  *methSignatures;
 
-	DMap  *interMethods; /* <DaoRoutine*,DaoRoutine*> */
+	DMap_(DaoRoutine*,DaoRoutine*)  *interMethods;
 
 	DaoRoutine  *initRoutine;   /* Default class constructor. */
 	DaoRoutine  *initRoutines;  /* All explicit constructors; GC handled in constants; */
@@ -93,10 +145,9 @@ struct DaoClass
 	DaoType  *clsType;
 	DaoType  *objType; /* GC handled in constants; */
 
-	DList *decoTargets;
+	DList_(DString*) *decoTargets;
 
-	/* for GC */
-	DList *references;
+	DList_(DaoValue*) *references; /* for GC */
 
 	uint_t    attribs;
 	ushort_t  objDefCount;
