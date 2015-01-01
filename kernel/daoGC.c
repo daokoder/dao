@@ -686,6 +686,7 @@ static int DaoGC_DecRC2( DaoValue *p )
 	if( p->xGC.refCount == 0 ){
 		switch( p->xGC.type ){
 		case DAO_NONE :
+		case DAO_BOOLEAN:
 		case DAO_INTEGER :
 		case DAO_FLOAT :
 		case DAO_COMPLEX :

@@ -2481,6 +2481,19 @@ DaoValue* DaoProcess_PutValue( DaoProcess *self, DaoValue *value )
 		return NULL;
 	}
 	self->returned = self->activeCode->c;
+	if( value == NULL ){
+		DaoType *type = self->activeTypes[self->activeCode->c];
+		if( type != NULL && (type->tid & DAO_ANY) == 0 ){
+			int tm = type->tid == DAO_NONE;
+			if( type->tid == DAO_VARIANT ){
+				tm = DaoType_MatchValue( type, dao_none_value, NULL );
+			}
+			if( tm == 0 ){
+				DaoProcess_RaiseTypeError( self, dao_type_none, type, "moving" );
+				return NULL;
+			}
+		}
+	}
 	return DaoProcess_SetValue( self, self->activeCode->c, value );
 }
 DaoNone* DaoProcess_PutNone( DaoProcess *self )

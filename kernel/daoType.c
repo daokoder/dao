@@ -435,7 +435,14 @@ DaoType* DaoType_GetVariantItem( DaoType *self, int tid )
 	if( self->tid == DAO_VARIANT && self->nested ){
 		DaoType **types = self->nested->items.pType;
 		daoint i, n = self->nested->size;
-		for(i=0; i<n; i++) if( types[i]->tid == tid ) return types[i];
+		for(i=0; i<n; i++){
+			DaoType *itype = types[i];
+			if( itype->tid == tid ) return itype;
+			if( itype->tid == DAO_VARIANT ){
+				itype = DaoType_GetVariantItem( itype, tid );
+				if( itype ) return itype;
+			}
+		}
 	}
 	return NULL;
 }

@@ -43,11 +43,11 @@ struct DaoNamespace
 
 	DaoVmSpace *vmSpace;
 
-	DHash_(DString*,size_t)  *lookupTable;
+	DHash_(DString*,size_t)  *lookupTable; /* lookup table; */
 	DList_(DaoNamespace*)    *namespaces;  /* loaded modules/namespaces; */
 	DList_(DaoConstant*)     *constants;   /* global constants; */
 	DList_(DaoVariable*)     *variables;   /* global variables; */
-	DList_(DaoValue*)        *auxData;     /* mainly for GC */
+	DList_(DaoValue*)        *auxData;     /* only for GC; */
 
 	DaoRoutine *mainRoutine;
 	DaoList    *argParams;
