@@ -4023,9 +4023,12 @@ DecoratorError:
 			}
 			if( switchType == 0 && switchNameType != 0 && switchName != NULL ){
 				/* switch( var|invar <name> = <expr> ) { } */
-				int pos = start + 1 + (switchNameType != 0);
-				int movetype = switchNameType == DKEY_VAR ? (1<<1) : (3<<1);
+				int movetype = 0, pos = start + 1 + (switchNameType != 0);
 				int reg = DaoParser_PushRegister( self );
+				switch( switchNameType ){
+				case DKEY_VAR   : movetype = 1<<1; break;
+				case DKEY_INVAR : movetype = 3<<1; break;
+				}
 				DaoParser_PushLevel( self );
 				MAP_Insert( DaoParser_CurrentSymbolTable( self ), switchName, reg );
 				DaoParser_PushTokenIndices( self, pos, pos, pos );
@@ -4181,9 +4184,13 @@ DecoratorError:
 			DaoParser_AddCode( self, DVM_UNUSED, 0, 0, 0 );
 			DaoParser_PushLevel( self );
 			if( switchName != NULL ){ /* Create a new variable for the case block: */
-				int movetype = switchNameType == DKEY_VAR ? (1<<1) : (3<<1);
 				int pos = start + 1 + (switchNameType != 0);
 				int reg = DaoParser_PushRegister( self );
+				int movetype = 0;
+				switch( switchNameType ){
+				case DKEY_VAR   : movetype = 1<<1; break;
+				case DKEY_INVAR : movetype = 3<<1; break;
+				}
 				MAP_Insert( DaoParser_CurrentSymbolTable( self ), switchName, reg );
 				DaoParser_PushTokenIndices( self, pos, pos, pos );
 				if( casetype ){

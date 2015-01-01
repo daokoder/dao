@@ -3987,25 +3987,17 @@ static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n );
 
 static DaoFuncItem dao_Exception_Meths[] =
 {
-
-	/*
-	// No constructors, so that interface of user-defined exception type
-	// can match to interface<class<Exception>>!
-	// See also the built-in method recover().
-	*/
-#if 0
-	{ Dao_Exception_New,   "Exception( summary = \"\" )=>Exception" },
-	{ Dao_Exception_New22, "Exception( data: any )=>Exception" },
-#endif
 	{ Dao_Exception_Get_name,    ".name( self: Exception )=>string" },
 	{ Dao_Exception_Get_summary, ".summary( self: Exception )=>string" },
 	{ Dao_Exception_Set_summary, ".summary=( self: Exception, summary: string)" },
 	{ Dao_Exception_Get_data,    ".data( self: Exception )=>any" },
 	{ Dao_Exception_Set_data,    ".data=( self: Exception, data: any)" },
+
 	/* for testing or demonstration */
 	{ Dao_Exception_Get_name, "typename( self: Exception )=>string" },
 	{ Dao_Exception_Get_summary, "serialize( self: Exception )=>string" },
 	{ Dao_Exception_Get_summary, "(string)( self: Exception )" },
+
 #ifdef DEBUG
 	{ Dao_Exception_Getf, ".( self: Exception, name: string )=>any" },
 	{ Dao_Exception_Setf, ".=( self: Exception, name: string, value: any)" },
@@ -4090,7 +4082,7 @@ static void Dao_Exception_Define( DaoProcess *proc, DaoValue *p[], int N )
 
 static DaoFuncItem dao_ExceptionWarning_Meths[] =
 {
-	{ Dao_Exception_New, "Warning( summary = \"\" )=>Warning" },
+	{ Dao_Exception_New, "Warning( summary = \"\" )" },
 	{ Dao_Exception_Define, "define( name: string, info = '' ) => class<Warning>" },
 	{ NULL, NULL }
 };
@@ -4104,8 +4096,8 @@ DaoTypeBase dao_ExceptionWarning_Typer =
 
 static DaoFuncItem dao_ExceptionError_Meths[] =
 {
-	{ Dao_Exception_New, "Error( summary = \"\" )=>Error" },
-	{ Dao_Exception_New22, "Error( data: any )=>Error" },
+	{ Dao_Exception_New, "Error( summary = \"\" )" },
+	{ Dao_Exception_New22, "Error( data: any )" },
 	{ Dao_Exception_Define, "define( name: string, info = '' ) => class<Error>" },
 	{ NULL, NULL }
 };

@@ -2935,6 +2935,24 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 	type = DaoNamespace_WrapType( self->daoNamespace, typer, 0 );
 	if( type == NULL ) return NULL;
 
+	if( parent->kernel->initRoutines ){
+		DaoRoutine *initors = parent->kernel->initRoutines;
+		DaoType_FindFunctionChars( type, "x" ); /* To trigger method setup; */
+		for(i=0; i<initors->overloads->routines->size; ++i){
+			DaoRoutine *tmp = initors->overloads->routines->items.pRoutine[i];
+			DaoRoutine *initor = DaoRoutine_Copy( tmp, 1, 0, 0 );
+			DaoNamespace *nspace = tmp->nameSpace;
+			DaoType *routype = tmp->routType;
+			routype = DaoNamespace_MakeRoutType( nspace, tmp->routType, NULL, NULL, type );
+			GC_Assign( & initor->routType, routype );
+			GC_Assign( & initor->routHost, type );
+			DString_Assign( initor->routName, type->name );
+			initor->attribs |= DAO_ROUT_INITOR;
+			DaoTypeKernel_InsertInitor( type->kernel, nspace, type, initor );
+			DaoMethods_Insert( type->kernel->methods, initor, nspace, type );
+		}
+	}
+
 	type->kernel->attribs |= DAO_TYPEKERNEL_FREE;
 	for(i=DAO_EXCEPTION; i<ENDOF_BASIC_EXCEPT; i++){
 		if( strcmp( typer->name, daoExceptionNames[i] ) == 0 ){

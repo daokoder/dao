@@ -159,3 +159,27 @@ std.assert( abc == 0, "Test" )
 @[test(code_01)]
 {{[[Error::Assertion]]}} .* {{Assertion failed at line 3 in file}}
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+const err = Error::define('Error::SomeError')
+e = std.try { std.error(err, 'test') }
+switch (e) type { case err: std.error(e) }
+@[test(code_01)]
+@[test(code_01)]
+{{[[Error::SomeError]]}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+const E = Error::define('Error::SomeError2');
+e = E('xyz');
+std.error(e)
+@[test(code_01)]
+@[test(code_01)]
+{{[[Error::SomeError2]]}}
+@[test(code_01)]
