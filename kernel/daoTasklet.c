@@ -531,7 +531,9 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 #else
 	DaoProcess_PopFrame( caller );
 	DaoProcess_PutValue( caller, (DaoValue*) future );
-	if( DaoProcess_Execute( callee ) ) DaoProcess_ReturnFutureValue( callee, future );
+	DaoProcess_InterceptReturnValue( callee );
+	DaoProcess_Execute( callee );
+	DaoProcess_ReturnFutureValue( callee, future );
 	DaoVmSpace_ReleaseProcess( caller->vmSpace, callee );
 #endif
 }

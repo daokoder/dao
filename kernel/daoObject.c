@@ -92,7 +92,7 @@ static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *strea
 	}
 	if( ec ){
 		DaoProcess_RaiseException( proc, daoExceptionNames[ec], proc->string->chars, NULL );
-	}else if( proc->stackValues[0] ){
+	}else if( meth && proc->stackValues[0] ){
 		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
 	}else{
 		DaoStream_WriteString( stream, self->defClass->className );

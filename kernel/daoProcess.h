@@ -108,14 +108,14 @@ struct DaoProcess
 	DaoValue      **activeValues;
 	DaoValue      **paramValues;
 	DaoValue      **stackValues;
-	daoint          stackSize; /* capacity of stackValues; */
-	daoint          stackTop; /* one past the last active stack value; */
+	daoint          stackReturn; /* stack value location of the most recent return; */
+	daoint          stackSize;   /* capacity of stackValues; */
+	daoint          stackTop;    /* one past the last active stack value; */
 
 	uchar_t         parCount;
 	uchar_t         pauseType;
 	uchar_t         status;
 	uchar_t         active;
-	ushort_t        returned;
 	ushort_t        depth;  /* number of nested calls by DaoProcess_Start(); */
 
 	DaoFuture      *future;

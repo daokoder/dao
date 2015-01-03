@@ -66,6 +66,7 @@ daotests.AddTest( "ErrorHandling", "test_error_handling.dao" )
 
 misc = daotests.AddTest( "Misc", "test_misc.dao" )
 misc.AddTest( "test_type.dao" );
+misc.AddTest( "test_tasklet.dao" );
 
 daovm_defs = daovm.MakeDefinitions()
 if( daovm_defs.find( "-DDAO_WITH_THREAD" ) >= 0 ) misc.AddTest( "test_multi_threading.dao" );
