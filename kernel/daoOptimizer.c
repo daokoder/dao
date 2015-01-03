@@ -2205,14 +2205,12 @@ DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *routype, DList *rou
 		DList_Append( partypes, routype->nested->items.pType[j] );
 	}
 	if( routype->variadic ) DList_Append( partypes, DList_Back( routype->nested ) );
-#ifdef DAO_WITH_CONCURRENT
 	if( call == DVM_MCALL && partypes->items.pType[0]->tid == DAO_OBJECT ){
 		DaoClass *klass = (DaoClass*) partypes->items.pType[0]->aux;
 		if( klass->attribs & DAO_CLS_ASYNCHRONOUS ){
 			retype = DaoType_Specialize( dao_type_future, & retype, retype != NULL );
 		}
 	}
-#endif
 	k = partypes->size;
 	types = partypes->items.pType;
 	type = DaoNamespace_MakeType( NS, "routine", DAO_ROUTINE, (DaoValue*) retype, types, k );
@@ -4761,14 +4759,12 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	if( at->tid != DAO_CLASS && ! ctchecked ) ct = & ct->aux->xType;
 	if( ct ) ct = DaoType_DefineTypes( ct, NS, defs2 );
 
-#ifdef DAO_WITH_CONCURRENT
 	if( code == DVM_MCALL && tp[0]->tid == DAO_OBJECT
 			&& (tp[0]->aux->xClass.attribs & DAO_CLS_ASYNCHRONOUS) ){
 		ct = DaoType_Specialize( dao_type_future, & ct, ct != NULL );
 	}else if( vmc->b & DAO_CALL_ASYNC ){
 		ct = DaoType_Specialize( dao_type_future, & ct, ct != NULL );
 	}
-#endif
 	if( types[opc] && types[opc]->tid == DAO_ANY ) goto TryPushBlockReturnType;
 	if( ct == NULL ) ct = DaoNamespace_GetType( NS, dao_none_value );
 	DaoInferencer_UpdateType( self, opc, ct );

@@ -97,18 +97,6 @@ DaoChannel* DaoChannel_New( DaoType *type, int dtype )
 
 
 
-DaoFuture* DaoFuture_New( DaoType *type, int vatype )
-{
-	DaoFuture *self = (DaoFuture*) dao_calloc( 1, sizeof(DaoFuture) );
-	if( vatype ) type = DaoType_Specialize( dao_type_future, & type, type != NULL );
-	DaoCstruct_Init( (DaoCstruct*) self, type );
-	GC_IncRC( dao_none_value );
-	self->state = DAO_CALL_PAUSED;
-	self->value = dao_none_value;
-	return self;
-}
-
-
 static int DaoValue_CheckCtype( DaoValue *self, DaoType *type )
 {
 	if( self->type != DAO_CSTRUCT && self->type != DAO_CDATA ) return 0;
@@ -442,6 +430,29 @@ static void DaoCallServer_Add( DaoTaskEvent *event )
 	DMutex_Unlock( & server->mutex );
 	DaoCallServer_TryAddThread( NULL, NULL, server->pending->size );
 }
+#endif
+
+void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )
+{
+	DaoType *type;
+	if( future == NULL ) return;
+	type = future->ctype;
+	type = type && type->nested->size ? type->nested->items.pType[0] : NULL;
+	switch( self->status ){
+	case DAO_PROCESS_ABORTED :
+		future->state = DAO_CALL_ABORTED;
+		break;
+	case DAO_PROCESS_FINISHED :
+		DaoValue_Move( self->stackValues[0], & future->value, type );
+		future->state = DAO_CALL_FINISHED;
+		break;
+	case DAO_PROCESS_SUSPENDED : future->state = DAO_CALL_PAUSED; break;
+	case DAO_PROCESS_RUNNING :
+	case DAO_PROCESS_STACKED : future->state = DAO_CALL_RUNNING; break;
+	default : break;
+	}
+}
+
 void DaoCallServer_AddCall( DaoProcess *caller )
 {
 	DaoFuture *future;
@@ -508,6 +519,7 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 		callee->topFrame->returning = -1;
 	}
 
+#ifdef DAO_WITH_CONCURRENT
 	DaoCallServer_TryInit( mainVmSpace );
 	event = DaoCallServer_MakeEvent();
 	DaoTaskEvent_Init( event, DAO_EVENT_RESUME_TASKLET, DAO_EVENT_RESUME, future, NULL );
@@ -516,7 +528,15 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 	DaoProcess_PutValue( caller, (DaoValue*) future );
 
 	DaoCallServer_Add( event );
+#else
+	DaoProcess_PopFrame( caller );
+	DaoProcess_PutValue( caller, (DaoValue*) future );
+	if( DaoProcess_Execute( callee ) ) DaoProcess_ReturnFutureValue( callee, future );
+	DaoVmSpace_ReleaseProcess( caller->vmSpace, callee );
+#endif
 }
+
+#ifdef DAO_WITH_CONCURRENT
 DaoFuture* DaoProcess_GetInitFuture( DaoProcess *self )
 {
 	DaoFuture *future;
@@ -1162,72 +1182,6 @@ DaoTypeBase channelTyper =
 
 
 
-static void FUTURE_Value( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoFuture *self = (DaoFuture*) par[0];
-	if( self->state == DAO_CALL_FINISHED ){
-		DaoProcess_PutValue( proc, self->value );
-		return;
-	}
-	proc->status = DAO_PROCESS_SUSPENDED;
-	proc->pauseType = DAO_PAUSE_FUTURE_VALUE;
-	DaoCallServer_AddWait( proc, self, -1 );
-}
-static void FUTURE_Wait( DaoProcess *proc, DaoValue *par[], int N )
-{
-	DaoFuture *self = (DaoFuture*) par[0];
-	float timeout = par[1]->xFloat.value;
-	DaoProcess_PutBoolean( proc, self->state == DAO_CALL_FINISHED );
-	if( self->state == DAO_CALL_FINISHED || timeout == 0 ) return;
-	proc->status = DAO_PROCESS_SUSPENDED;
-	proc->pauseType = DAO_PAUSE_FUTURE_WAIT;
-	DaoCallServer_AddWait( proc, self, timeout );
-}
-static DaoFuncItem futureMeths[] =
-{
-	{ FUTURE_Value,   "value( self: Future<@V> )=>@V" },
-	{ FUTURE_Wait,    "wait( self: Future<@V>, timeout: float = -1 ) => bool" },
-	{ NULL, NULL }
-};
-static void DaoFuture_Delete( DaoFuture *self )
-{
-	DaoCstruct_Free( (DaoCstruct*) self );
-	GC_DecRC( self->value );
-	GC_DecRC( self->actor );
-	GC_DecRC( self->message );
-	GC_DecRC( self->selected );
-	GC_DecRC( self->process );
-	GC_DecRC( self->precond );
-	dao_free( self );
-}
-static void DaoFuture_GetGCFields( void *p, DList *values, DList *lists, DList *maps, int remove )
-{
-	DaoFuture *self = (DaoFuture*) p;
-	if( self->value ) DList_Append( values, self->value );
-	if( self->actor ) DList_Append( values, self->actor );
-	if( self->message ) DList_Append( values, self->message );
-	if( self->selected ) DList_Append( values, self->selected );
-	if( self->process ) DList_Append( values, self->process );
-	if( self->precond ) DList_Append( values, self->precond );
-	if( remove ){
-		self->value = NULL;
-		self->actor = NULL;
-		self->message = NULL;
-		self->selected = NULL;
-		self->process = NULL;
-		self->precond = NULL;
-	}
-}
-
-DaoTypeBase futureTyper =
-{
-	"Future<@V=none>", NULL, NULL, (DaoFuncItem*) futureMeths, {0}, {0},
-	(FuncPtrDel) DaoFuture_Delete, DaoFuture_GetGCFields
-};
-
-
-
-
 void DaoMT_Select( DaoProcess *proc, DaoValue *par[], int n )
 {
 	DNode *it;
@@ -1260,5 +1214,94 @@ void DaoMT_Select( DaoProcess *proc, DaoValue *par[], int n )
 	DMutex_Unlock( & daoCallServer->mutex );
 }
 
-
 #endif
+
+
+
+
+
+DaoFuture* DaoFuture_New( DaoType *type, int vatype )
+{
+	DaoFuture *self = (DaoFuture*) dao_calloc( 1, sizeof(DaoFuture) );
+	if( vatype ) type = DaoType_Specialize( dao_type_future, & type, type != NULL );
+	DaoCstruct_Init( (DaoCstruct*) self, type );
+	GC_IncRC( dao_none_value );
+	self->state = DAO_CALL_PAUSED;
+	self->value = dao_none_value;
+	return self;
+}
+static void DaoFuture_Delete( DaoFuture *self )
+{
+	DaoCstruct_Free( (DaoCstruct*) self );
+	GC_DecRC( self->value );
+	GC_DecRC( self->actor );
+	GC_DecRC( self->message );
+	GC_DecRC( self->selected );
+	GC_DecRC( self->process );
+	GC_DecRC( self->precond );
+	dao_free( self );
+}
+
+
+static void FUTURE_Value( DaoProcess *proc, DaoValue *par[], int N )
+{
+	DaoFuture *self = (DaoFuture*) par[0];
+	if( self->state == DAO_CALL_FINISHED ){
+		DaoProcess_PutValue( proc, self->value );
+		return;
+	}
+#ifdef DAO_WITH_CONCURRENT
+	proc->status = DAO_PROCESS_SUSPENDED;
+	proc->pauseType = DAO_PAUSE_FUTURE_VALUE;
+	DaoCallServer_AddWait( proc, self, -1 );
+#else
+	DaoProcess_RaiseError( proc, NULL, "Invalid future value" );
+#endif
+}
+static void FUTURE_Wait( DaoProcess *proc, DaoValue *par[], int N )
+{
+	DaoFuture *self = (DaoFuture*) par[0];
+	float timeout = par[1]->xFloat.value;
+	DaoProcess_PutBoolean( proc, self->state == DAO_CALL_FINISHED );
+	if( self->state == DAO_CALL_FINISHED || timeout == 0 ) return;
+#ifdef DAO_WITH_CONCURRENT
+	proc->status = DAO_PROCESS_SUSPENDED;
+	proc->pauseType = DAO_PAUSE_FUTURE_WAIT;
+	DaoCallServer_AddWait( proc, self, timeout );
+#else
+	DaoProcess_RaiseError( proc, NULL, "Invalid future value" );
+#endif
+}
+static DaoFuncItem futureMeths[] =
+{
+	{ FUTURE_Value,   "value( self: Future<@V> )=>@V" },
+	{ FUTURE_Wait,    "wait( self: Future<@V>, timeout: float = -1 ) => bool" },
+	{ NULL, NULL }
+};
+
+static void DaoFuture_GetGCFields( void *p, DList *values, DList *lists, DList *maps, int remove )
+{
+	DaoFuture *self = (DaoFuture*) p;
+	if( self->value ) DList_Append( values, self->value );
+	if( self->actor ) DList_Append( values, self->actor );
+	if( self->message ) DList_Append( values, self->message );
+	if( self->selected ) DList_Append( values, self->selected );
+	if( self->process ) DList_Append( values, self->process );
+	if( self->precond ) DList_Append( values, self->precond );
+	if( remove ){
+		self->value = NULL;
+		self->actor = NULL;
+		self->message = NULL;
+		self->selected = NULL;
+		self->process = NULL;
+		self->precond = NULL;
+	}
+}
+
+DaoTypeBase futureTyper =
+{
+	"Future<@V=none>", NULL, NULL, (DaoFuncItem*) futureMeths, {0}, {0},
+	(FuncPtrDel) DaoFuture_Delete, DaoFuture_GetGCFields
+};
+
+

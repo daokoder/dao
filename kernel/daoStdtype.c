@@ -832,6 +832,29 @@ static void DaoSTR_Find( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	DaoProcess_PutInteger( proc, pos );
 }
+static void DaoSTR_Contain( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *self = p[0]->xString.value;
+	int i, res = 1;
+	for(i=1; i<N; ++i){
+		DaoTuple *tuple = (DaoTuple*) p[i];
+		DString *keyword = tuple->values[1]->xString.value;
+		daoint pos = 0, len = keyword->size;
+		if( tuple->values[0]->type == DAO_INTEGER ){
+			pos = tuple->values[0]->xInteger.value;
+			if( pos < 0 ) pos += self->size - (len - 1);
+		}else{ /* DAO_ENUM: */
+			pos = tuple->values[0]->xEnum.value == 0 ? 0 : self->size - len;
+		}
+		if( pos < 0 || (self->size - pos) < len ){
+			res = 0;
+			break;
+		}
+		res = res && memcmp( self->chars + pos, keyword->chars, len ) == 0;
+		if( res == 0 ) break;
+	}
+	DaoProcess_PutBoolean( proc, res );
+}
 static void DaoSTR_Replace( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *res = DaoProcess_PutChars( proc, "" );
@@ -1342,6 +1365,10 @@ static DaoFuncItem stringMeths[] =
 		// Return the index of the first byte of the found substring for forward searching;
 		// Return the index of the last byte of the found substring for backward searching;
 		*/
+	},
+	{ DaoSTR_Contain,
+		"contain( invar self: string, "
+			"...: tuple<pos:int|enum<prefix,suffix>,keyword:string> ) => bool"
 	},
 	{ DaoSTR_Convert,
 		"convert( invar self: string, to: enum<local,utf8,lower,upper> ) => string"

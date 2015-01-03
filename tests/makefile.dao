@@ -67,6 +67,9 @@ daotests.AddTest( "ErrorHandling", "test_error_handling.dao" )
 misc = daotests.AddTest( "Misc", "test_misc.dao" )
 misc.AddTest( "test_type.dao" );
 
+daovm_defs = daovm.MakeDefinitions()
+if( daovm_defs.find( "-DDAO_WITH_THREAD" ) >= 0 ) misc.AddTest( "test_multi_threading.dao" );
+
 libdao_dll = daovm.FindTarget( "dao", $shared );
 daotests.GetTargets( $test ).iterate { [test]
 	test.AddDependency( libdao_dll )

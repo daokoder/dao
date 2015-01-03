@@ -2555,9 +2555,10 @@ static void DaoConfigure()
 extern void DaoType_Init();
 
 
+DaoType *dao_type_future  = NULL;
+
 #ifdef DAO_WITH_THREAD
 DaoType *dao_type_channel = NULL;
-DaoType *dao_type_future  = NULL;
 
 extern DMutex mutex_string_sharing;
 extern DMutex mutex_type_map;
@@ -2793,13 +2794,14 @@ DaoVmSpace* DaoInit( const char *command )
 
 	DaoException_Setup( vms->daoNamespace );
 
-#ifdef DAO_WITH_CONCURRENT
 	ns2 = DaoVmSpace_GetNamespace( vms, "mt" );
 	DaoNamespace_AddConstValue( daons, "mt", (DaoValue*) ns2 );
-	dao_type_channel = DaoNamespace_WrapType( ns2, & channelTyper, 0 );
 	dao_type_future  = DaoNamespace_WrapType( ns2, & futureTyper, 0 );
+#ifdef DAO_WITH_CONCURRENT
+	dao_type_channel = DaoNamespace_WrapType( ns2, & channelTyper, 0 );
 	DaoNamespace_WrapFunctions( ns2, dao_mt_methods );
 #endif
+
 	DaoNamespace_SetupType( vms->daoNamespace, & vmpTyper, NULL );
 
 	ns2 = DaoVmSpace_GetNamespace( vms, "std" );

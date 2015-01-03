@@ -452,26 +452,6 @@ struct DaoTaskData
 	DNode  **node; /* smallest key found by all threads; */
 };
 
-void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )
-{
-	DaoType *type;
-	if( future == NULL ) return;
-	type = future->ctype;
-	type = type && type->nested->size ? type->nested->items.pType[0] : NULL;
-	switch( self->status ){
-	case DAO_PROCESS_ABORTED :
-		future->state = DAO_CALL_ABORTED;
-		break;
-	case DAO_PROCESS_FINISHED :
-		DaoValue_Move( self->stackValues[0], & future->value, type );
-		future->state = DAO_CALL_FINISHED;
-		break;
-	case DAO_PROCESS_SUSPENDED : future->state = DAO_CALL_PAUSED; break;
-	case DAO_PROCESS_RUNNING :
-	case DAO_PROCESS_STACKED : future->state = DAO_CALL_RUNNING; break;
-	default : break;
-	}
-}
 static void DaoMT_InitProcess( DaoProcess *proto, DaoProcess *clone, int argcount )
 {
 	DaoProcess_PushRoutine( clone, proto->activeRoutine, proto->activeObject );

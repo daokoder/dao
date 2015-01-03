@@ -3582,7 +3582,6 @@ FailConversion :
 	if( at == NULL ) at = DaoNamespace_GetType( self->activeNamespace, va );
 	DaoProcess_RaiseTypeError( self, at, ct, "casting" );
 }
-#ifdef DAO_WITH_CONCURRENT
 static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoStackFrame *frame = self->topFrame;
@@ -3600,7 +3599,6 @@ static int DaoProcess_TryAsynCall( DaoProcess *self, DaoVmCode *vmc )
 	}
 	return 0;
 }
-#endif
 static int DaoProcess_InitBase( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller )
 {
 	if( (vmc->b & DAO_CALL_INIT) && self->activeObject ){
@@ -3672,9 +3670,7 @@ static void DaoProcess_PrepareCall( DaoProcess *self, DaoRoutine *rout,
 	if( noasync == 0 ) DaoProcess_TryTailCall( self, rout, O, vmc );
 	DaoProcess_PushRoutine( self, rout, DaoValue_CastObject( O ) );
 	if( noasync ) return;
-#ifdef DAO_WITH_CONCURRENT
 	DaoProcess_TryAsynCall( self, vmc );
-#endif
 }
 static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 		DaoType *hostype, DaoRoutine *func, DaoValue *selfpar, DaoValue *P[], DaoType *T[], int N, int noasync )
@@ -3696,9 +3692,7 @@ static void DaoProcess_DoCxxCall( DaoProcess *self, DaoVmCode *vmc,
 		return;
 	}
 	DaoProcess_PushFunction( self, func );
-#ifdef DAO_WITH_CONCURRENT
 	if( noasync == 0 && DaoProcess_TryAsynCall( self, vmc ) ) return;
-#endif
 #if 0
 	if( caller->type == DAO_CTYPE ){
 		DaoType *retype = caller->xCtype.cdtype;
