@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2014, Limin Fu
+// Copyright (c) 2006-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -1613,32 +1613,36 @@ void DaoType_GetTypeHolders( DaoType *self, DMap *types )
 		}
 	}
 }
-int DaoType_CheckTypeHolder( DaoType *self, DaoType *tht )
+int DaoType_Contains( DaoType *self, DaoType *type, DMap *checking )
 {
+	DMap *checking2 = checking;
 	daoint i, n, bl = 0;
-	if( self == tht ) return 1;
-	if( self->tid == DAO_THT && tht->tid == DAO_THT ) return 0;
-	if( self->tid == DAO_THT ) return DaoType_CheckTypeHolder( tht, self );
+	if( self == type ) return 1;
+	if( checking && DMap_Find( checking, self ) != NULL ) return 0;
+	if( checking == NULL ) checking = DHash_New(0,0);
+	DMap_Insert( checking, self, NULL );
 	if( self->nested ){
 		for(i=0,n=self->nested->size; i<n; i++){
-			bl |= DaoType_CheckTypeHolder( self->nested->items.pType[i], tht );
+			bl |= DaoType_Contains( self->nested->items.pType[i], type, checking );
 		}
 	}
 	if( self->bases ){
 		for(i=0,n=self->bases->size; i<n; i++){
-			bl |= DaoType_CheckTypeHolder( self->bases->items.pType[i], tht );
+			bl |= DaoType_Contains( self->bases->items.pType[i], type, checking );
 		}
 	}
-	if( self->cbtype ) bl |= DaoType_CheckTypeHolder( self->cbtype, tht );
+	if( self->cbtype ) bl |= DaoType_Contains( self->cbtype, type, checking );
 	if( self->aux && self->aux->type == DAO_TYPE )
-		bl |= DaoType_CheckTypeHolder( & self->aux->xType, tht );
+		bl |= DaoType_Contains( & self->aux->xType, type, checking );
+
+	if( checking2 == NULL ) DMap_Delete( checking );
 	return bl;
 }
 void DaoType_ResetTypeHolders( DaoType *self, DMap *types )
 {
 	DNode *it;
 	for(it=DMap_First(types); it; ){
-		if( DaoType_CheckTypeHolder( it->key.pType, self ) ){
+		if( DaoType_Contains( it->key.pType, self, NULL ) ){
 			DMap_EraseNode( types, it );
 			it = DMap_First(types);
 			continue;

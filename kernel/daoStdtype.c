@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2014, Limin Fu
+// Copyright (c) 2006-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -832,7 +832,7 @@ static void DaoSTR_Find( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	DaoProcess_PutInteger( proc, pos );
 }
-static void DaoSTR_Contain( DaoProcess *proc, DaoValue *p[], int N )
+static void DaoSTR_Contains( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *self = p[0]->xString.value;
 	int i, res = 1;
@@ -1366,8 +1366,8 @@ static DaoFuncItem stringMeths[] =
 		// Return the index of the last byte of the found substring for backward searching;
 		*/
 	},
-	{ DaoSTR_Contain,
-		"contain( invar self: string, "
+	{ DaoSTR_Contains,
+		"contains( invar self: string, "
 			"...: tuple<pos:int|enum<prefix,suffix>,keyword:string> ) => bool"
 	},
 	{ DaoSTR_Convert,
