@@ -1412,6 +1412,8 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 			retype = klass->objType;
 		}else if( ctype && routine->routHost == ctype->cdtype ){
 			retype = ctype->cdtype;
+		}else if( inter && routine->routHost == inter->abtype ){
+			retype = inter->abtype;
 		}
 	}
 	if( retype == NULL ){

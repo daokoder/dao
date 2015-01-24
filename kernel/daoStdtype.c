@@ -1369,6 +1369,10 @@ static DaoFuncItem stringMeths[] =
 	{ DaoSTR_Contains,
 		"contains( invar self: string, "
 			"...: tuple<pos:int|enum<prefix,suffix>,keyword:string> ) => bool"
+		/*
+		// Check if the string contain specific keywords at specific locations.
+		// Locations can be specified by byte indices or symbol $prefix or $suffix.
+		*/
 	},
 	{ DaoSTR_Convert,
 		"convert( invar self: string, to: enum<local,utf8,lower,upper> ) => string"
@@ -2140,6 +2144,16 @@ static void DaoLIST_Reduce2( DaoProcess *proc, DaoValue *p[], int npar )
 {
 	DaoLIST_Reduce( proc, p, npar, 2 );
 }
+static unsigned int DaoProcess_GetHashSeed( DaoProcess *self, DaoValue *seed )
+{
+	if( seed->type == DAO_INTEGER ) return seed->xInteger.value;
+	if( seed->type == DAO_ENUM ){
+		unsigned int hashing = seed->xEnum.value;
+		if( hashing == 2 ) hashing = 0xffffffff * DaoProcess_UniformRand( self );
+		return hashing;
+	}
+	return 0;
+}
 static void DaoLIST_Functional2( DaoProcess *proc, DaoValue *p[], int npar, int meth )
 {
 	DaoValue *res = NULL;
@@ -2153,8 +2167,8 @@ static void DaoLIST_Functional2( DaoProcess *proc, DaoValue *p[], int npar, int 
 	DaoValue *index = (DaoValue*)(void*)&idint;
 	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 3 );
 	daoint entry, i, j, N = list->value->size;
-	int direction = p[2]->xEnum.value;
-	int hashing = p[2]->xInteger.value;
+	unsigned int hashing = DaoProcess_GetHashSeed( proc, p[2] );
+	int direction = DaoValue_TryGetEnum( p[2] );
 
 	switch( meth ){
 	case DVM_FUNCT_COLLECT :
@@ -2206,7 +2220,7 @@ static void DaoLIST_Associate( DaoProcess *proc, DaoValue *p[], int npar )
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue **items = list->value->items.pValue;
 	DaoValue *index = (DaoValue*)(void*)&idint;
-	DaoMap *map = DaoProcess_PutMap( proc, p[1]->xInteger.value );
+	DaoMap *map = DaoProcess_PutMap( proc, DaoProcess_GetHashSeed( proc, p[1] ) );
 	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 2 );
 	daoint entry = proc->topFrame->entry;
 	daoint i, N = list->value->size;
@@ -2354,7 +2368,7 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Associate,
-		"associate( invar self: list<@T>, hashing = 0 )"
+		"associate( invar self: list<@T>, hashing: enum<none,auto,random>|int = $none )"
 			"[item: invar<@T>, index: int => none|tuple<@K,@V>] => map<@K,@V>"
 		/*
 		// Iterate over this list and evaluate the code section on the item
@@ -2364,17 +2378,18 @@ static DaoFuncItem listMeths[] =
 		// be returned by the method.
 		//
 		// The last optional parameter "hashing" may take the following values:
-		// -- Zero: indicating the resulting map will be ordered by keys;
-		// -- One : indicating the resulting map will be a hash map with the
-		//          default hashing seed;
-		// -- Two : indicating the resulting map will be a hash map with a
-		//          random hashing seed;
-		// -- Else: indicating the resulting map will be a hash map with this
-		//          "hashing" value as the hashing seed;
+		// -- "0" or "$none": indicating the resulting map will be ordered by keys;
+		// -- "1" or "$auto": indicating the resulting map will be a hash map with
+		//                    the default hashing seed;
+		// -- "2" or "$random": indicating the resulting map will be a hash map with
+		//                      a random hashing seed;
+		// -- Other integers: indicating the resulting map will be a hash map with
+		//                    this "hashing" value as the hashing seed;
 		*/
 	},
 	{ DaoLIST_Associate2,
-		"associate( invar self: list<@T>, invar other: list<@S>, hashing = 0 )"
+		"associate( invar self: list<@T>, invar other: list<@S>,"
+			"hashing: enum<none,auto,random>|int = $none )"
 			"[item: invar<@T>, item2: invar<@S>, index: int => none|tuple<@K,@V>]"
 			"=> map<@K,@V>"
 		/*
@@ -2870,7 +2885,7 @@ static void DaoMAP_New( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoInteger idint = {DAO_INTEGER,0,0,0,0,0};
 	DaoValue *res, *index = (DaoValue*)(void*)&idint;
-	DaoMap *map = DaoProcess_PutMap( proc, p[1]->xInteger.value );
+	DaoMap *map = DaoProcess_PutMap( proc, DaoProcess_GetHashSeed( proc, p[1] ) );
 	daoint i, entry, size = p[0]->xInteger.value;
 	DaoVmCode *sect;
 
@@ -3013,13 +3028,16 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 	DaoTuple *tuple = NULL;
 	DaoType *type = self->ctype;
 	DaoVmCode *sect = DaoProcess_InitCodeSection( proc, 2 );
+	unsigned int hashing;
+	int entry, popped = 0;
 	DaoValue *res;
 	DNode *node;
-	ushort_t entry;
-	int popped = 0;
 	switch( funct ){
+	case DVM_FUNCT_ASSOCIATE :
+		hashing = DaoProcess_GetHashSeed( proc, p[1] );
+		map = DaoProcess_PutMap( proc, hashing );
+		break;
 	case DVM_FUNCT_COLLECT : list = DaoProcess_PutList( proc ); break;
-	case DVM_FUNCT_ASSOCIATE : map = DaoProcess_PutMap( proc, p[1]->xInteger.value ); break;
 	case DVM_FUNCT_APPLY : DaoProcess_PutValue( proc, p[0] ); break;
 	case DVM_FUNCT_FIND : DaoProcess_PutValue( proc, dao_none_value ); break;
 	case DVM_FUNCT_SELECT : map = DaoProcess_PutMap( proc, self->value->hashing ); break;
@@ -3086,8 +3104,18 @@ static void DaoMAP_Apply( DaoProcess *proc, DaoValue *p[], int N )
 static DaoFuncItem mapMeths[] =
 {
 	{ DaoMAP_New,
-		"map<@K=any,@V=any>( count: int, hashing = 0 )[index: int => tuple<@K,@V>]"
-			"=> map<@K,@V>"
+		"map<@K=any,@V=any>( count: int, hashing: enum<none,auto,random>|int = $none )"
+			"[index: int => tuple<@K,@V>] => map<@K,@V>"
+		/*
+		// The last optional parameter "hashing" may take the following values:
+		// -- "0" or "$none": indicating the resulting map will be ordered by keys;
+		// -- "1" or "$auto": indicating the resulting map will be a hash map with
+		//                    the default hashing seed;
+		// -- "2" or "$random": indicating the resulting map will be a hash map with
+		//                      a random hashing seed;
+		// -- Other integers: indicating the resulting map will be a hash map with
+		//                    this "hashing" value as the hashing seed;
+		*/
 	},
 	{ DaoMAP_Clear,
 		"clear( self: map<@K,@V> )"
@@ -3193,7 +3221,7 @@ static DaoFuncItem mapMeths[] =
 		*/
 	},
 	{ DaoMAP_Associate,
-		"associate( invar self: map<@K,@V>, hashing = 0 )"
+		"associate( invar self: map<@K,@V>, hashing: enum<none,auto,random>|int = $none )"
 			"[key: invar<@K>, value: invar<@V> => none|tuple<@K2,@V2>] => map<@K2,@V2>"
 		/*
 		// Iterate over the map, and execute the associated code section
