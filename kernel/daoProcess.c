@@ -1018,10 +1018,8 @@ int DaoProcess_Start( DaoProcess *self )
 		&& LAB_BITXOR , && LAB_BITLFT ,
 		&& LAB_BITRIT , && LAB_SAME , && LAB_ISA ,
 		&& LAB_NAMEVA , && LAB_PAIR ,
-		&& LAB_TUPLE  , && LAB_LIST ,
-		&& LAB_MAP    , && LAB_HASH ,
+		&& LAB_TUPLE  , && LAB_LIST , && LAB_MAP ,
 		&& LAB_VECTOR , && LAB_MATRIX ,
-		&& LAB_APLIST , && LAB_APVECTOR ,
 		&& LAB_PACK  , && LAB_MPACK ,
 		&& LAB_ROUTINE ,
 		&& LAB_GOTO ,
@@ -1494,23 +1492,27 @@ CallEntry:
 			goto CheckException;
 		}OPNEXT() OPCASE( LIST ){
 			self->activeCode = vmc;
-			DaoProcess_DoList( self, vmc );
+			if( (vmc->b >> 14) == DVM_ENUM_MODE0 ){
+				DaoProcess_DoList( self, vmc );
+			}else{
+				DaoProcess_DoAPList( self, vmc );
+			}
 			goto CheckException;
-		}OPNEXT() OPCASE( MAP ) OPCASE( HASH ){
+		}OPNEXT() OPCASE( MAP ){
 			self->activeCode = vmc;
 			DaoProcess_DoMap( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( VECTOR ){
-			DaoProcess_DoVector( self, vmc );
+			self->activeCode = vmc;
+			if( (vmc->b >> 14) == DVM_ENUM_MODE0 ){
+				DaoProcess_DoVector( self, vmc );
+			}else{
+				DaoProcess_DoAPVector( self, vmc );
+			}
 			goto CheckException;
 		}OPNEXT() OPCASE( MATRIX ){
+			self->activeCode = vmc;
 			DaoProcess_DoMatrix( self, vmc );
-			goto CheckException;
-		}OPNEXT() OPCASE( APLIST ){
-			DaoProcess_DoAPList( self, vmc );
-			goto CheckException;
-		}OPNEXT() OPCASE( APVECTOR ){
-			DaoProcess_DoAPVector( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( PACK ) OPCASE( MPACK ){
 			DaoProcess_DoPacking( self, vmc );
@@ -2911,15 +2913,13 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 	int argcount = self->topFrame->parCount;
 	int parcount = routype->nested->size - routype->variadic;
 	int parcount2 = argcount < parcount ? parcount : argcount; /* including defaults; */
-	int argstuple = vmc->a == 0 && vmc->b == self->activeRoutine->parCount;
-	int argstuple2 = 0;
-	int i, count;
+	int i, count, mode = vmc->b >> 14;
 	
-	if( vmc > self->topFrame->active->codes ){
-		DaoVmCode *sect = vmc - 1;
-		argstuple2 = sect->code == DVM_SECT && vmc->a == sect->a && vmc->b == sect->b;
+	switch( mode ){
+	case DVM_ENUM_MODE0 : count = vmc->b & (0xffff>>2); break;
+	case DVM_ENUM_MODE1 : count = parcount2 - vmc->a; break; /* skip self parameter; */
+	case DVM_ENUM_MODE2 : count = argcount; break;
 	}
-	count = argstuple ? parcount2 : (argstuple2 ? argcount : vmc->b);
 
 	self->activeCode = vmc;
 	tuple = DaoProcess_GetTuple( self, ct && ct->variadic == 0 ? ct : NULL, count, 0 );
@@ -2957,7 +2957,7 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 		}
 		tuple->ctype = ct;
 		GC_IncRC( ct );
-	}else if( argstuple || argstuple2 ){
+	}else if( mode ){
 		GC_Assign( & tuple->ctype, ct );
 		for(i=0; i<count; i++) DaoTuple_SetItem( tuple, self->activeValues[vmc->a + i], i );
 	}else{
@@ -4273,11 +4273,12 @@ InvalidItem:
 }
 void DaoProcess_DoAPList(  DaoProcess *self, DaoVmCode *vmc )
 {
+	int opb = vmc->b & (0xffff>>2);
 	DaoList *list = DaoProcess_GetList( self, vmc );
 	DaoValue **items, **regValues = self->activeValues;
-	DaoValue *countValue = regValues[vmc->a + 1 + (vmc->b == 3)];
+	DaoValue *countValue = regValues[vmc->a + 1 + (opb == 3)];
 	DaoValue *initValue = regValues[vmc->a];
-	DaoValue *stepValue = vmc->b == 3 ? regValues[vmc->a+1] : NULL;
+	DaoValue *stepValue = opb == 3 ? regValues[vmc->a+1] : NULL;
 	daoint i, num = DaoValue_GetInteger( countValue );
 	double step = stepValue ? DaoValue_GetFloat( stepValue ) : 0.0;
 
@@ -4355,11 +4356,12 @@ SetupType:
 void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc )
 {
 #ifdef DAO_WITH_NUMARRAY
+	int opb = vmc->b & (0xffff>>2);
 	DaoArray *array = NULL;
 	DaoValue **regValues = self->activeValues;
-	DaoValue *countValue = regValues[vmc->a + 1 + (vmc->b == 3)];
+	DaoValue *countValue = regValues[vmc->a + 1 + (opb == 3)];
 	DaoValue *initValue = regValues[vmc->a];
-	DaoValue *stepValue = vmc->b == 3 ? regValues[vmc->a+1] : NULL;
+	DaoValue *stepValue = opb == 3 ? regValues[vmc->a+1] : NULL;
 	double step = stepValue ? DaoValue_GetFloat( stepValue ) : 0.0;
 	daoint num = DaoValue_GetInteger( countValue );
 	daoint i, j, k, m, N, S, transvec = 0; /* transposed vector */
@@ -4414,12 +4416,13 @@ void DaoProcess_DoAPVector( DaoProcess *self, DaoVmCode *vmc )
 void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc )
 {
 	int i, c;
-	const ushort_t opA = vmc->a;
-	const ushort_t bval = vmc->b;
+	int opA = vmc->a;
+	int bval = vmc->b & (0xffff>>2);
+	int mode = vmc->b >> 14;
 	DaoNamespace *ns = self->activeNamespace;
 	DaoValue **pp = self->activeValues;
 	DaoType *type = self->activeTypes[vmc->c];
-	DaoMap *map = DaoProcess_GetMap( self, vmc, vmc->code == DVM_HASH );
+	DaoMap *map = DaoProcess_GetMap( self, vmc, mode == DVM_ENUM_MODE1 );
 
 	if( type == dao_type_map_empty ) map->trait |= DAO_VALUE_CONST;
 	if( bval == 2 && pp[opA]->type ==0 && pp[opA+1]->type ==0 ) return;
@@ -6175,12 +6178,22 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 	case DVM_GETF :
 		DaoProcess_DoGetConstField( self, vmc, mode ); break;
 	case DVM_LIST :
-		DaoProcess_DoList( self, vmc ); break;
+		if( (vmc->b >> 14) == DVM_ENUM_MODE0 ){
+			DaoProcess_DoList( self, vmc );
+		}else{
+			DaoProcess_DoAPList( self, vmc );
+		}
+		break;
 	case DVM_MAP :
-	case DVM_HASH :
-		DaoProcess_DoMap( self, vmc ); break;
+		DaoProcess_DoMap( self, vmc );
+		break;
 	case DVM_VECTOR :
-		DaoProcess_DoVector( self, vmc ); break;
+		if( (vmc->b >> 14) == DVM_ENUM_MODE0 ){
+			DaoProcess_DoVector( self, vmc );
+		}else{
+			DaoProcess_DoAPVector( self, vmc );
+		}
+		break;
 	case DVM_MATRIX :
 		DaoProcess_DoMatrix( self, vmc ); break;
 	case DVM_MATH :

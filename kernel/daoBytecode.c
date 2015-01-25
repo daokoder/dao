@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2014, Limin Fu
+// Copyright (c) 2006-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -2351,7 +2351,7 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 		case DAO_CODE_ENUM :
 			if( vmc->a >= regCount ) goto InvalidInstruction;
 			if( vmc->c >= regCount ) goto InvalidInstruction;
-			if( (vmc->a + vmc->b - 1) >= regCount ) goto InvalidInstruction;
+			if( (vmc->a + (vmc->b&(0xffff>>2)) - 1) >= regCount ) goto InvalidInstruction;
 			DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			break;
 		case DAO_CODE_YIELD :

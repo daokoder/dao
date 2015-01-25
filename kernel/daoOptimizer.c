@@ -141,13 +141,18 @@ void DaoCnode_InitOperands( DaoCnode *self, DaoVmCode *vmc )
 		self->first = vmc->b;
 		self->lvalue = vmc->c;
 		break;
-	case DAO_CODE_GETM :
 	case DAO_CODE_ENUM :
+		self->type = DAO_OP_RANGE;
+		self->first = vmc->a;
+		self->second = vmc->a + (vmc->b & (0xffff>>2));
+		self->lvalue = vmc->c;
+		break;
+	case DAO_CODE_GETM :
 	case DAO_CODE_ENUM2 :
 	case DAO_CODE_ROUTINE :
 		self->type = DAO_OP_RANGE;
 		self->first = vmc->a;
-		self->second = vmc->a + vmc->b - (type == DAO_CODE_ENUM) + 1;
+		self->second = vmc->a + vmc->b + 1;
 		self->lvalue = vmc->c;
 		break;
 	case DAO_CODE_SETM:
@@ -1188,6 +1193,12 @@ static void DaoOptimizer_UpdateRegister( DaoOptimizer *self, DaoRoutine *routine
 			node->lvalue2 = vmc->c;
 			break;
 		case DAO_CODE_ENUM :
+			if( (vmc->b&(0xffff>>2)) || vmc->a < M ){
+				node->second += vmc->a - node->first;
+				node->first = vmc->a;
+			}
+			node->lvalue = vmc->c;
+			break;
 		case DAO_CODE_YIELD :
 			if( vmc->b || vmc->a < M ){
 				node->second += vmc->a - node->first;
@@ -4225,8 +4236,9 @@ int DaoInferencer_HandleListArrayEnum( DaoInferencer *self, DaoInode *inode, DMa
 {
 	int code = inode->code;
 	int opa = inode->a;
-	int opb = inode->b;
+	int opb = inode->b & (0xffff>>2);
 	int opc = inode->c;
+	int mode = inode->b >> 14;
 	DaoType **types = self->types->items.pType;
 	DaoNamespace *NS = self->routine->nameSpace;
 	DaoVmCodeX *vmc = (DaoVmCodeX*) inode;
@@ -4234,12 +4246,11 @@ int DaoInferencer_HandleListArrayEnum( DaoInferencer *self, DaoInode *inode, DMa
 	DaoType *ct = types[opc];
 	int j;
 
-	int tid = (code == DVM_LIST || code == DVM_APLIST) ? DAO_LIST : DAO_ARRAY;
+	int tid = code == DVM_LIST ? DAO_LIST : DAO_ARRAY;
 	if( types[opc] && types[opc]->tid == tid ){
 		if( types[opc]->nested && types[opc]->nested->size == 1 ){
 			DaoType *it = types[opc]->nested->items.pType[0];
-			int n = opb - (code == DVM_APLIST || code == DVM_APVECTOR);
-			if( code == DVM_APVECTOR ){
+			if( code == DVM_VECTOR && mode == DVM_ENUM_MODE1 ){
 				int m1 = DaoType_MatchTo( types[opa], types[opc], defs );
 				int m2 = DaoType_MatchTo( types[opa], it, defs );
 				if( m1 == 0 && m2 == 0 ){
@@ -4253,7 +4264,7 @@ int DaoInferencer_HandleListArrayEnum( DaoInferencer *self, DaoInode *inode, DMa
 					}
 				}
 				AssertTypeMatching( types[opa+opb-1], dao_type_int, defs );
-			}else if( code == DVM_APLIST ){
+			}else if( code == DVM_LIST && mode == DVM_ENUM_MODE1 ){
 				AssertTypeMatching( types[opa], it, defs );
 				if( opb == 3 ) AssertTypeMatching( types[opa+1], it, defs );
 				AssertTypeMatching( types[opa+opb-1], dao_type_int, defs );
@@ -4264,20 +4275,20 @@ int DaoInferencer_HandleListArrayEnum( DaoInferencer *self, DaoInode *inode, DMa
 					return DaoInferencer_ErrorTypeNotMatching( self, types[opa], it );
 				}
 				if( m1 ) it = types[opc];
-				for(j=0; j<n; ++j) AssertTypeMatching( types[opa+j], it, defs );
+				for(j=0; j<opb; ++j) AssertTypeMatching( types[opa+j], it, defs );
 			}else{
-				for(j=0; j<n; ++j) AssertTypeMatching( types[opa+j], it, defs );
+				for(j=0; j<opb; ++j) AssertTypeMatching( types[opa+j], it, defs );
 			}
 			return 1;
 		}
 	}
 	at = dao_type_udf;
-	if( code == DVM_VECTOR && opb ){
+	if( code == DVM_VECTOR && mode == DVM_ENUM_MODE0 && opb ){
 		at = types[opa];
 		for(j=1; j<opb; j++) AssertTypeMatching( types[opa+j], at, defs );
 		if( at->tid == DAO_ARRAY ) at = at->nested->items.pType[0];
 		if( at->tid == DAO_NONE || at->tid > DAO_COMPLEX ) at = dao_type_float;
-	}else if( code == DVM_LIST && opb ){
+	}else if( code == DVM_LIST && mode == DVM_ENUM_MODE0 && opb ){
 		at = types[opa];
 		for(j=1; j<opb; j++){
 			if( DaoType_MatchTo( types[opa+j], at, defs )==0 ){
@@ -4286,7 +4297,7 @@ int DaoInferencer_HandleListArrayEnum( DaoInferencer *self, DaoInode *inode, DMa
 			}
 			if( at->tid < types[opa+j]->tid ) at = types[opa+j];
 		}
-	}else if( code == DVM_APLIST || code == DVM_APVECTOR ){
+	}else if( mode == DVM_ENUM_MODE1 ){
 		int num = types[opa+1+(opb==3)]->tid;
 		int init = types[opa]->tid;
 		at = types[opa];
@@ -4298,7 +4309,7 @@ int DaoInferencer_HandleListArrayEnum( DaoInferencer *self, DaoInode *inode, DMa
 				if( types[opa+1]->realnum == 0 ) goto ErrorTyping;
 			}else if( init == DAO_COMPLEX ){
 				if( step > DAO_COMPLEX ) goto ErrorTyping;
-			}else if( init == DAO_STRING && code == DVM_APLIST ){
+			}else if( init == DAO_STRING && code == DVM_LIST ){
 				if( step != DAO_STRING ) goto ErrorTyping;
 			}else{
 				goto ErrorTyping;
@@ -4306,18 +4317,18 @@ int DaoInferencer_HandleListArrayEnum( DaoInferencer *self, DaoInode *inode, DMa
 		}
 	}else if( opb == 0 && types[opc] != NULL ){
 		if( types[opc]->tid == DAO_LIST ){
-			if( code == DVM_LIST || code == DVM_APLIST ) return 1;
+			if( code == DVM_LIST ) return 1;
 		}else if( types[opc]->tid == DAO_ARRAY ){
-			if( code == DVM_VECTOR || code == DVM_APVECTOR ) return 1;
+			if( code == DVM_VECTOR ) return 1;
 		}
 	}
 	if( opb == 0 ){
-		if( code == DVM_LIST || code == DVM_APLIST ){
+		if( code == DVM_LIST ){
 			ct = dao_type_list_empty;
 		}else{
 			ct = dao_type_array_empty;
 		}
-	}else if( code == DVM_LIST || code == DVM_APLIST ){
+	}else if( code == DVM_LIST ){
 		at = DaoType_GetBaseType( at );
 		ct = DaoType_Specialize( dao_type_list, & at, at != NULL );
 	}else if( at && at->tid >= DAO_BOOLEAN && at->tid <= DAO_COMPLEX ){
@@ -5198,6 +5209,8 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			for(j=0,J=opb&0xff; j<=J; ++j) AssertInitialized( opa+j, 0, middle, last );
 			break;
 		case DAO_CODE_ENUM :
+			for(j=0, J=opb&(0xffff>>2); j<J; ++j) AssertInitialized( opa+j, 0, first, first );
+			break;
 		case DAO_CODE_EXPLIST :
 			for(j=0; j<opb; ++j) AssertInitialized( opa+j, 0, first, first );
 			break;
@@ -5856,25 +5869,26 @@ SkipChecking:
 			}
 		case DVM_TUPLE :
 			{
+				int mode = opb >> 14;
+				opb = opb & (0xffff>>2);
 				ct = NULL;
-				if( opa == 0 && opb == routine->parCount ){
+				if( mode == DVM_ENUM_MODE1 ){
 					k = routine->routType->nested->size;
 					tp = routine->routType->nested->items.pType;
-					ct = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, tp, k );
+					ct = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, NULL, tp+opa, k-opa );
 					DaoInferencer_UpdateType( self, opc, ct );
-				}else if( i && inodes[i-1]->code == DVM_SECT ){
+				}else if( mode == DVM_ENUM_MODE2 ){
+					DaoType *t, *its[DAO_MAX_PARAM];
 					DaoInode *sect = inodes[i-1];
-					if( vmc->a == sect->a && vmc->b == sect->b ){
-						DaoType *t, *its[DAO_MAX_PARAM];
-						int count = sect->c;
-						memcpy( its, types + opa, sect->c * sizeof(DaoType*) );
-						if( opb > sect->c ){
-							t = DaoNamespace_MakeType( NS, "...", DAO_PAR_VALIST, 0, 0 ,0 );
-							its[count++] = t;
-						}
-						ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, 0, its, count );
-						DaoInferencer_UpdateType( self, opc, ct );
+					int count = sect->c;
+
+					memcpy( its, types + opa, sect->c * sizeof(DaoType*) );
+					if( opb > sect->c ){
+						t = DaoNamespace_MakeType( NS, "...", DAO_PAR_VALIST, 0, 0 ,0 );
+						its[count++] = t;
 					}
+					ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, 0, its, count );
+					DaoInferencer_UpdateType( self, opc, ct );
 				}
 				if( ct == NULL ){
 					ct = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, 0, types + opa, opb );
@@ -5882,13 +5896,15 @@ SkipChecking:
 					if( types[opc]->variadic == 0 && opb > types[opc]->nested->size ){
 						goto InvEnum;
 					}
-					for(j=0; j<opb; ++j){
-						DaoType *t = types[opc]->nested->items.pType[j];
-						tt = types[opa+j];
-						if( t->tid >= DAO_PAR_NAMED && t->tid <= DAO_PAR_VALIST ) break;
-						if( tt->tid >= DAO_PAR_NAMED && tt->tid <= DAO_PAR_VALIST ) break;
+					if( mode == DVM_ENUM_MODE0 ){
+						for(j=0; j<opb; ++j){
+							DaoType *t = types[opc]->nested->items.pType[j];
+							tt = types[opa+j];
+							if( t->tid >= DAO_PAR_NAMED && t->tid <= DAO_PAR_VALIST ) break;
+							if( tt->tid >= DAO_PAR_NAMED && tt->tid <= DAO_PAR_VALIST ) break;
+						}
+						if( j >= opb ) vmc->code = DVM_TUPLE_SIM;
 					}
-					if( j >= opb ) vmc->code = DVM_TUPLE_SIM;
 				}
 				AssertTypeMatching( ct, types[opc], defs );
 				break;
@@ -5899,12 +5915,11 @@ SkipChecking:
 			AssertTypeMatching( ct, types[opc], defs );
 			break;
 		case DVM_LIST : case DVM_VECTOR :
-		case DVM_APLIST : case DVM_APVECTOR :
 			if( DaoInferencer_HandleListArrayEnum( self, inode, defs ) == 0 ) return 0;
 			break;
 		case DVM_MAP :
-		case DVM_HASH :
 			{
+				opb = opb & (0xffff>>2);
 				if( types[opc] && types[opc]->tid == DAO_ANY ) continue;
 				if( types[opc] && types[opc]->tid == DAO_MAP ){
 					if( types[opc]->nested && types[opc]->nested->size == 2 ){
@@ -7012,7 +7027,9 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 				DaoType **cbtypes = cbtype->nested->items.pType;
 				int count = cbtype->nested->size;
 				if( sect->b != 0 && sect->c == 0 ){ /* [...] or [... as name]; */
-					if( first->a != sect->a || first->b != sect->b ) first = NULL;
+					if( first->code != DVM_TUPLE || (first->b >> 14) != DVM_ENUM_MODE2 ){
+						first = NULL;
+					}
 					if( count && cbtypes[count-1]->tid == DAO_PAR_VALIST ){
 						sect->b = DAO_MAX_PARAM;
 						sect->c = count - 1;

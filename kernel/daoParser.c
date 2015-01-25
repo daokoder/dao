@@ -4826,15 +4826,16 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	}
 	if( self->argName ){
 		int tokidx = self->argName->index;
-		DList *partypes = routine->routType->nested;
-		np = partypes->size;
-		//if( np && partypes->items.pType[np-1]->tid == DAO_PAR_VALIST ) np -= 1;
-		tt = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, partypes->items.pType, np );
+		int opa = routine->routHost != NULL && !(routine->attribs & DAO_ROUT_STATIC);
+		int mode = DVM_ENUM_MODE1 << 14;
+		int np = routine->routType->nested->size;
+		DaoType **partypes = routine->routType->nested->items.pType;
+		tt = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, partypes+opa, np-opa );
 		id = self->regCount;
 		if( self->invarArg ) tt = DaoType_GetInvarType( tt );
 		if( DaoParser_DeclareVariable( self, self->argName, 0, tt ) < 0 ) return 0;
 		DaoParser_PushTokenIndices( self, tokidx, tokidx, tokidx );
-		DaoParser_AddCode( self, DVM_TUPLE, 0, routine->parCount, id );
+		DaoParser_AddCode( self, DVM_TUPLE, opa, mode|(routine->parCount - opa), id );
 	}
 
 	if( DaoParser_ParseCodes( self, offset, tokCount-1 )==0 ){
@@ -6329,9 +6330,9 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 	}else if( etype == DKEY_MAP || (etype == 0 && btype == DTOK_LCB && (pto >= 0 || arrow >= 0) ) ){
 		/* { a=>1, b=>[] }; {=>}; */
 		/* { a->1, b->[] }; {->}; */
+		int enummode = pto >= 0 ? DVM_ENUM_MODE0 : DVM_ENUM_MODE1;
+		if( etype == DKEY_MAP && arrow < 0 ) enummode = DVM_ENUM_MODE0;
 		if( tp && tp->tid != DAO_MAP ) goto ParsingError;
-		enumcode = pto >= 0 ? DVM_MAP : DVM_HASH;
-		if( etype == DKEY_MAP && arrow < 0 ) enumcode = DVM_MAP;
 		isempty = lb >= rb;
 		if( lb >= rb ){
 			if( self->needConst ){
@@ -6344,7 +6345,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 				regC = DaoParser_GetNormRegister( self, enode.konst, 0, start, 0, end );
 			}else{
 				regC = DaoParser_PushRegister( self );
-				DaoParser_AddCode( self, enumcode, regC, 0, regC );
+				DaoParser_AddCode( self, DVM_MAP, regC, (enummode<<14)|0, regC );
 			}
 		}else{
 			int sep = pto >= 0 ? DTOK_FIELD : DTOK_ARROW;
@@ -6352,7 +6353,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 			enode = DaoParser_ParseExpressionLists( self, sep, DTOK_COMMA, & step, cid );
 			if( enode.reg < 0 || self->curToken != end ) goto ParsingError;
 			regC = DaoParser_PushRegister( self );
-			DaoParser_AddCode( self, enumcode, enode.reg, enode.count, regC );
+			DaoParser_AddCode( self, DVM_MAP, enode.reg, (enummode<<14)|enode.count, regC );
 		}
 	}else if( colon > lb && comma < 0 && semi < 0 ){
 		/* arithmetic progression: [ 1 : 2 : 10 ]; [ 1 : 10 ] */
@@ -6365,10 +6366,8 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 			DaoParser_Error( self, DAO_CTW_ENUM_INVALID, NULL );
 			goto ParsingError;
 		}
-		if( enumcode == DVM_LIST ) enumcode = DVM_APLIST;
-		if( enumcode == DVM_VECTOR ) enumcode = DVM_APVECTOR;
 		regC = DaoParser_PushRegister( self );
-		DaoParser_AddCode( self, enumcode, enode.reg, enode.count, regC );
+		DaoParser_AddCode( self, enumcode, enode.reg, (DVM_ENUM_MODE1<<14)|enode.count, regC );
 	}else if( semi < 0 ){
 		/* [a,b,c] */
 		if( tp && (enumcode == DVM_LIST && tp->tid != DAO_LIST) ) goto ParsingError;
@@ -6937,8 +6936,9 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 				if( argname ){
 					int i = start - 3;
 					int reg = DaoParser_DeclareVariable( self, argname, 0, NULL );
+					int mode = DVM_ENUM_MODE2 << 14;
 					DaoParser_PushTokenIndices( self, i, i, i+1 );
-					DaoParser_AddCode( self, DVM_TUPLE, regCount, sect->b, reg );
+					DaoParser_AddCode( self, DVM_TUPLE, regCount, mode|sect->b, reg );
 				}
 
 				back = self->vmcLast;

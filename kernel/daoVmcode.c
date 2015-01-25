@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2014, Limin Fu
+// Copyright (c) 2006-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -94,11 +94,8 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "TUPLE",      DVM_TUPLE,      DAO_CODE_ENUM,    1 },
 	{ "LIST",       DVM_LIST,       DAO_CODE_ENUM,    1 },
 	{ "MAP",        DVM_MAP,        DAO_CODE_ENUM,    1 },
-	{ "HASH",       DVM_HASH,       DAO_CODE_ENUM,    1 },
 	{ "VECTOR",     DVM_VECTOR,     DAO_CODE_ENUM,    1 },
 	{ "MATRIX",     DVM_MATRIX,     DAO_CODE_MATRIX,  1 },
-	{ "APLIST",     DVM_APLIST,     DAO_CODE_ENUM,    1 },
-	{ "APVECTOR",   DVM_APVECTOR,   DAO_CODE_ENUM,    1 },
 	{ "PACK",       DVM_PACK,       DAO_CODE_ENUM2,   1 },
 	{ "MPACK",      DVM_MPACK,      DAO_CODE_ENUM2,   1 },
 	{ "ROUTINE",    DVM_ROUTINE,    DAO_CODE_ROUTINE, 1 },

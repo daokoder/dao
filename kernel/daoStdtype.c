@@ -1770,15 +1770,13 @@ static int DaoList_CheckType( DaoList *self, DaoProcess *proc )
 }
 static void DaoLIST_Max( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoTuple *tuple = DaoProcess_PutTuple( proc, 2 );
-	DaoList *self = & p[0]->xList;
+	DaoTuple *tuple;
+	DaoList *self = (DaoList*) p[0];
 	DaoValue *res, **data = self->value->items.pValue;
-	daoint i, imax, type, size = self->value->size;
+	daoint i, imax, size = self->value->size;
 
-	tuple->values[1]->xInteger.value = -1;
-	type = DaoList_CheckType( self, proc );
-	if( type == 0 ){
-		DaoTuple_SetItem( tuple, self->ctype->nested->items.pType[0]->value, 0 );
+	if( DaoList_CheckType( self, proc ) == 0 ){
+		DaoProcess_PutNone( proc );
 		return;
 	}
 	imax = 0;
@@ -1789,20 +1787,19 @@ static void DaoLIST_Max( DaoProcess *proc, DaoValue *p[], int N )
 			res = data[i];
 		}
 	}
+	tuple = DaoProcess_PutTuple( proc, 2 );
 	tuple->values[1]->xInteger.value = imax;
 	DaoTuple_SetItem( tuple, res, 0 );
 }
 static void DaoLIST_Min( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoTuple *tuple = DaoProcess_PutTuple( proc, 2 );
-	DaoList *self = & p[0]->xList;
+	DaoTuple *tuple;
+	DaoList *self = (DaoList*) p[0];
 	DaoValue *res, **data = self->value->items.pValue;
-	daoint i, imin, type, size = self->value->size;
+	daoint i, imin, size = self->value->size;
 
-	tuple->values[1]->xInteger.value = -1;
-	type = DaoList_CheckType( self, proc );
-	if( type == 0 ){
-		DaoTuple_SetItem( tuple, self->ctype->nested->items.pType[0]->value, 0 );
+	if( DaoList_CheckType( self, proc ) == 0 ){
+		DaoProcess_PutNone( proc );
 		return;
 	}
 	imin = 0;
@@ -1813,6 +1810,7 @@ static void DaoLIST_Min( DaoProcess *proc, DaoValue *p[], int N )
 			res = data[i];
 		}
 	}
+	tuple = DaoProcess_PutTuple( proc, 2 );
 	tuple->values[1]->xInteger.value = imin;
 	DaoTuple_SetItem( tuple, res, 0 );
 }
@@ -2272,7 +2270,7 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Max,
-		"max( invar self: list<@T<bool|int|float|complex|string|enum>> ) => tuple<@T,int>"
+		"max( invar self: list<@T<bool|int|float|complex|string|enum>> ) => tuple<@T,int>|none"
 		/*
 		// Return the maximum value of the list and its index.
 		// The list has to contain primitive data.
@@ -2281,7 +2279,7 @@ static DaoFuncItem listMeths[] =
 		*/
 	},
 	{ DaoLIST_Min,
-		"min( invar self: list<@T<bool|int|float|complex|string|enum>> ) => tuple<@T,int>"
+		"min( invar self: list<@T<bool|int|float|complex|string|enum>> ) => tuple<@T,int>|none"
 		/*
 		// Return the minimum value of the list and its index.
 		*/
