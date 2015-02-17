@@ -95,12 +95,12 @@ static void DaoParser_ErrorX( DaoParser *self, int code, DString *ext )
 }
 static void DaoParser_ErrorX2( DaoParser *self, int code, int m, int n, int single_line )
 {
-	DaoParser_ErrorX2( self, code, m, n, single_line );
+	DaoParser_Error2( self, code, m, n, single_line );
 	DaoParser_UpdateError( self );
 }
 static void DaoParser_ErrorX3( DaoParser *self, int code, int m )
 {
-	DaoParser_ErrorX3( self, code, m );
+	DaoParser_Error3( self, code, m );
 	DaoParser_UpdateError( self );
 }
 
@@ -1429,7 +1429,7 @@ int DaoMacro_Preprocess( DaoParser *self )
 		}else if( tki == DKEY_USE && tki2 == DKEY_SYNTAX ){
 			if( DaoParser_CheckNameToken( self, start+1, to, DAO_INVALID_STATEMENT, start ) ==0 ) return -1;
 			DaoNamespace_ImportMacro( ns, & tokens[start+1]->string );
-			DList_Erase( self->tokens, start, end-start+1 );
+			DList_Erase( self->tokens, start, 3 );
 			tokens = self->tokens->items.pToken;
 		}else{
 			start ++;
