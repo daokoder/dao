@@ -274,7 +274,7 @@ static int DaoParser_MakeMacroGroup( DaoParser *self, DMacroGroup *group, DMacro
 	DNode *it;
 
 	/*
-	   for( i=from; i<to; i++ ) printf( "%s  ", toks[i]->chars ); printf("\n");
+	   for( i=from; i<to; i++ ) printf( "%s  ", toks[i]->string.chars ); printf("\n");
 	 */
 
 	i = from;
@@ -356,6 +356,10 @@ static int DaoParser_MakeMacroGroup( DaoParser *self, DMacroGroup *group, DMacro
 				unit->type = DMACRO_OP;
 			}else if( DString_FindChars( & tok->string, "BL", 0 ) == 1 ){
 				unit->type = DMACRO_BL;
+			}else if( strcmp( chs, "$STR" ) == 0 ){
+				unit->type = DMACRO_STR;
+			}else if( strcmp( chs, "$CAT" ) == 0 ){
+				unit->type = DMACRO_CAT;
 			}else{
 				DaoParser_ErrorX( self, DAO_CTW_INV_MAC_SPECTOK, & tok->string );
 				return 0;
@@ -891,20 +895,21 @@ static int DaoParser_MacroApply( DaoParser *self, DList *tokens,
 		int level, DString *tag, int pos0, int adjust )
 {
 	DMacroUnit **units = (DMacroUnit**) group->units->items.pVoid;
-	DMacroUnit  *unit;
+	DMacroUnit  *unit, *strUnit;
 	DMacroGroup *grp;
 	DMacroNode *node, *node2;
 	DList *toks = DList_New( DAO_DATA_TOKEN );
 	DaoToken *tk = DaoToken_New();
+	DaoToken *literal = NULL;
 	DaoToken *tt = NULL;
 	DNode  *kwnode = NULL;
 	DMap *check = NULL;
 	DMap one = { NULL, 0, 0, 0 };
 	int M, N = group->units->size;
-	int i, j, gid = -1;
+	int i, j, k, l, gid = -1;
 	int repeated = 0;
-	int start_mbs = -1;
-	int start_wcs = -1;
+	int prevLine = -1;
+	int prevEnd = -1;
 
 	if( group->repeat != DMACRO_AUTO ) level ++;
 
@@ -917,10 +922,12 @@ static int DaoParser_MacroApply( DaoParser *self, DList *tokens,
 		 */
 		switch( unit->type ){
 		case DMACRO_TOK :
+			repeated = 1;
 			DList_Append( tokens, unit->marker );
 			tokens->items.pToken[ tokens->size-1 ]->cpos += adjust;
 			break;
 		case DMACRO_VAR :
+			repeated = 1;
 			DaoToken_Assign( tk, unit->marker );
 			DString_Append( & tk->string, tag );
 			DList_Append( tokens, tk );
@@ -982,14 +989,14 @@ static int DaoParser_MacroApply( DaoParser *self, DList *tokens,
 				break;
 			case DMACRO_ZERO_OR_ONE :
 				gid = i;
-				repeated = (j>0);
+				repeated = 1;
 				if( j >=0 ){
 					DList_InsertList( tokens, tokens->size, toks, 0, -1 );
 				}
 				break;
 			case DMACRO_ZERO_OR_MORE :
 				gid = i;
-				repeated = (j>0);
+				repeated = 1;
 				if( j >=0 ){
 					DList_InsertList( tokens, tokens->size, toks, 0, -1 );
 				}
@@ -1018,6 +1025,148 @@ static int DaoParser_MacroApply( DaoParser *self, DList *tokens,
 				}
 				break;
 			}
+			break;
+		case DMACRO_STR:
+			++i;
+			if( tokens->size >0 ) pos0 = tokens->items.pToken[ tokens->size -1 ]->line;
+			self->curLine = pos0;
+			if(units[i]->type != DMACRO_GRP)
+			{
+				goto Failed;
+			}
+			literal = DaoToken_New();
+			literal->type = literal->name = DTOK_WCS;
+			DString_AppendChar( &literal->string, '\"' );
+			grp = (DMacroGroup*) units[i];
+			for(j = 0; j < grp->units->size; ++j)
+			{
+				strUnit = ((DMacroUnit**)grp->units->items.pVoid)[j];
+				//printf( ">>>\n%s level %i: \n", strUnit->marker->string.chars, level );
+				switch(strUnit->type)
+				{
+				case DMACRO_EXP :
+				case DMACRO_ID :
+				case DMACRO_OP :
+				case DMACRO_BL :
+					kwnode = MAP_Find( tokMap, &strUnit->marker->string );
+					if( kwnode ==NULL ){
+						DaoParser_ErrorX( self, DAO_CTW_UNDEF_MAC_MARKER, & strUnit->marker->string );
+						goto Failed;
+					}
+					node = (DMacroNode*) kwnode->value.pVoid;
+					kwnode = MAP_Find( used, strUnit );
+					if( kwnode == NULL ){
+						DMap_Insert( used, strUnit, & one );
+						kwnode = MAP_Find( used, strUnit );
+					}
+					check = (DMap*) kwnode->value.pVoid;
+					repeated = 1;
+
+					node2 = DMacroNode_FindLeaf( node, check, level );
+					if( node2 ){
+						for(k = 0; k < node2->leaves->size; ++k)
+						{
+							tt = node2->leaves->items.pToken[k];
+							if(k != 0)
+							{
+								if(tt->line != prevLine)
+								{
+									for(l = 0; l < tt->line - prevLine; ++l)
+									{
+										DString_AppendChar(&literal->string, '\n');
+									}
+									for(l = 0; l < tt->cpos; ++l)
+									{
+										DString_AppendChar(&literal->string, ' ');
+									}
+								}
+								else
+								{
+									for(l = 0; l < tt->cpos - prevEnd; ++l)
+									{
+										DString_AppendChar(&literal->string, ' ');
+									}
+								}
+							}
+							DString_AppendChars( &literal->string, tt->string.chars );
+							prevLine = tt->line;
+							prevEnd = tt->cpos + tt->string.size;
+						}
+						DMap_Insert( check, node2, NULL );
+					}else{
+						DMacroNode_RemoveEmptyLeftBranch( node, level );
+						goto Failed;
+					}
+					break;
+				default:
+					repeated = 0;
+					break;
+				}
+			}
+			DString_AppendChar( &literal->string, '\"' );
+			DList_Append( tokens, literal );
+
+			DaoToken_Delete(literal);
+			break;
+		case DMACRO_CAT:
+			++i;
+			if( tokens->size >0 ) pos0 = tokens->items.pToken[ tokens->size -1 ]->line;
+			self->curLine = pos0;
+			if(units[i]->type != DMACRO_GRP)
+			{
+				goto Failed;
+			}
+			literal = DaoToken_New();
+			literal->type = literal->name = DTOK_IDENTIFIER;
+			grp = (DMacroGroup*) units[i];
+			for(j = 0; j < grp->units->size; ++j)
+			{
+				strUnit = ((DMacroUnit**)grp->units->items.pVoid)[j];
+				switch(strUnit->type)
+				{
+				case DMACRO_TOK :
+					repeated = 1;
+					DString_AppendChars(&literal->string, strUnit->marker->string.chars );
+					break;
+				case DMACRO_EXP :
+				case DMACRO_ID :
+				case DMACRO_OP :
+				case DMACRO_BL :
+					kwnode = MAP_Find( tokMap, &strUnit->marker->string );
+					if( kwnode ==NULL ){
+						DaoParser_ErrorX( self, DAO_CTW_UNDEF_MAC_MARKER, & strUnit->marker->string );
+						goto Failed;
+					}
+					node = (DMacroNode*) kwnode->value.pVoid;
+					kwnode = MAP_Find( used, strUnit );
+					if( kwnode == NULL ){
+						DMap_Insert( used, strUnit, & one );
+						kwnode = MAP_Find( used, strUnit );
+					}
+					check = (DMap*) kwnode->value.pVoid;
+					repeated = 1;
+
+					node2 = DMacroNode_FindLeaf( node, check, level );
+					if( node2 ){
+						for(k = 0; k < node2->leaves->size; ++k)
+						{
+							tt = node2->leaves->items.pToken[k];
+							DString_AppendChars( &literal->string, tt->string.chars );
+						}
+						DMap_Insert( check, node2, NULL );
+					}else{
+						DMacroNode_RemoveEmptyLeftBranch( node, level );
+						goto Failed;
+					}
+					break;
+				default:
+					repeated = 0;
+					break;
+				}
+			}
+			DList_Append( tokens, literal );
+
+			DaoToken_Delete(literal);
 			break;
 		default : goto Failed;
 		}
