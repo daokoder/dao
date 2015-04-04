@@ -57,8 +57,9 @@ enum DaoOpcode
 	DVM_SETMI , /* Set item(s):  C[C+1, ..., C+B] = A; */
 	DVM_SETF  , /* Set field:  C.B = A or C::B = A; */
 	DVM_LOAD ,  /* Put local value A as reference at C; */
-	DVM_CAST ,  /* Cast A to B and store at C:  C = (B)A;  B, local const index; */
 	DVM_MOVE ,  /* Move A to C:  C = A;  B: B1, explicit; B2, decl; B3, invar; */
+	DVM_UNTAG , /* Untag A of type X|none to X type at C; */
+	DVM_CAST ,  /* Cast A to B and store at C:  C = (B)A;  B, local const index; */
 	DVM_NOT ,   /* Not:  C = ! A; */
 	DVM_MINUS , /* Unary minus:  C = - A; */
 	DVM_TILDE , /* Bitwise not:  C = ~ A */

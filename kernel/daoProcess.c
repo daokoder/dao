@@ -1006,7 +1006,7 @@ int DaoProcess_Start( DaoProcess *self )
 		&& LAB_GETI  , && LAB_GETDI , && LAB_GETMI , && LAB_GETF  ,
 		&& LAB_SETVH , && LAB_SETVS , && LAB_SETVO , && LAB_SETVK , && LAB_SETVG ,
 		&& LAB_SETI  , && LAB_SETDI , && LAB_SETMI , && LAB_SETF  ,
-		&& LAB_LOAD  , && LAB_CAST , && LAB_MOVE ,
+		&& LAB_LOAD  , && LAB_MOVE , && LAB_UNTAG , && LAB_CAST ,
 		&& LAB_NOT , && LAB_MINUS , && LAB_TILDE , && LAB_SIZE ,
 		&& LAB_ADD , && LAB_SUB ,
 		&& LAB_MUL , && LAB_DIV ,
@@ -1399,12 +1399,12 @@ CallEntry:
 					DaoValue_Copy( vA, & locVars[vmc->c] );
 				}
 			}
-		}OPNEXT() OPCASE( CAST ){
-			DaoProcess_DoCast( self, vmc );
-			goto CheckException;
-		}OPNEXT() OPCASE( MOVE ){
+		}OPNEXT() OPCASE( MOVE ) OPCASE( UNTAG ) {
 			self->activeCode = vmc;
 			DaoProcess_Move( self, locVars[vmc->a], & locVars[vmc->c], locTypes[vmc->c] );
+			goto CheckException;
+		}OPNEXT() OPCASE( CAST ){
+			DaoProcess_DoCast( self, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( ADD )
