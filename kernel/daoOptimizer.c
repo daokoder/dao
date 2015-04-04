@@ -1558,7 +1558,7 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 			intervals[2*id+1] = i + 1; /* plus one because it is alive at the exit; */
 			k += 1;
 		}
-		if( vmc->code == DVM_LOAD || vmc->code == DVM_CAST ){
+		if( vmc->code == DVM_LOAD || vmc->code == DVM_CAST || vmc->code == DVM_UNTAG ){
 			/* These opcodes may create a reference (alias) of ::a at the result register (::c),
 			// the liveness interval of ::a must be expanded to the point where ::c is used: */
 			for(j=i+1; j<N; ++j){
@@ -2708,10 +2708,9 @@ static DaoInode* DaoInferencer_InsertMove( DaoInferencer *self, DaoInode *inode,
 	*op = move->c;
 	return move;
 }
-static DaoInode* DaoInferencer_InsertCast( DaoInferencer *self, DaoInode *inode, unsigned short *op, DaoType *ct )
+static DaoInode* DaoInferencer_InsertUntag( DaoInferencer *self, DaoInode *inode, unsigned short *op, DaoType *ct )
 {
-	DaoInode *cast = DaoInferencer_InsertNode( self, inode, DVM_CAST, 1, ct );
-	cast->b = DaoRoutine_AddConstant( self->routine, (DaoValue*) ct );
+	DaoInode *cast = DaoInferencer_InsertNode( self, inode, DVM_UNTAG, 1, ct );
 	cast->a = *op;
 	*op = cast->c;
 	return cast;
@@ -5250,7 +5249,7 @@ SkipChecking:
 		case DAO_CODE_MOVE :
 			if( code == DVM_LOAD ){
 				tt = DaoType_GetAutoCastType( at );
-				if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->a, tt );
+				if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->a, tt );
 			}
 			break;
 		case DAO_CODE_GETF :
@@ -5260,24 +5259,24 @@ SkipChecking:
 		case DAO_CODE_ENUM2 :
 		case DAO_CODE_CALL :
 			tt = DaoType_GetAutoCastType( at );
-			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->a, tt );
+			if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->a, tt );
 			break;
 		case DAO_CODE_UNARY2 :
 			tt = DaoType_GetAutoCastType( bt );
-			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->b, tt );
+			if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->b, tt );
 			break;
 		case DAO_CODE_SETF :
 		case DAO_CODE_SETI :
 		case DAO_CODE_SETM :
 			tt = DaoType_GetAutoCastType( ct );
-			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->c, tt );
+			if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->c, tt );
 			break;
 		case DAO_CODE_BINARY :
 			if( code == DVM_EQ || code == DVM_NE ) break;
 			tt = DaoType_GetAutoCastType( at );
-			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->a, tt );
+			if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->a, tt );
 			tt = DaoType_GetAutoCastType( bt );
-			if( tt != NULL ) DaoInferencer_InsertCast( self, inode, & inode->b, tt );
+			if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->b, tt );
 			break;
 		}
 		if( self->inodes->size != N ){
@@ -5418,9 +5417,6 @@ SkipChecking:
 				}
 				vmc->code = DVM_SETVH_BB + type2[0]->tid - DAO_BOOLEAN;
 				vmc->code += K*(code - DVM_SETVH);
-			}else if( k == DAO_MT_SUB ){
-				/* global L = { 1.5, 2.5 }; L = { 1, 2 }; L[0] = 3.5 */
-				DaoInferencer_InsertCast( self, inode, & inode->a, *type2 );
 			}
 			break;
 		case DVM_GETI :
@@ -5572,8 +5568,6 @@ SkipChecking:
 
 				if( k == DAO_MT_SUB && at != ct ){
 					/* L = { 1.5, 2.5 }; L = { 1, 2 }; L[0] = 3.5 */
-					vmc->code = DVM_CAST;
-					vmc->b = DaoRoutine_AddConstant( self->routine, (DaoValue*) types[opc] );
 					if( at->tid && at->tid <= DAO_COMPLEX && types[opc]->tid == DAO_COMPLEX ){
 						if( at->tid < DAO_FLOAT ){
 							DaoInferencer_InsertMove( self, inode, & inode->a, at, dao_type_float );
@@ -5606,6 +5600,12 @@ SkipChecking:
 				}
 				break;
 			}
+		case DVM_UNTAG :
+			tt = DaoType_GetAutoCastType( at );
+			if( tt == NULL ) goto ErrorTyping;
+			DaoInferencer_UpdateType( self, opc, tt );
+			AssertTypeMatching( tt, types[opc], defs );
+			break;
 		case DVM_ADD : case DVM_SUB : case DVM_MUL :
 		case DVM_DIV : case DVM_MOD : case DVM_POW :
 			if( DaoInferencer_HandleBinaryArith( self, inode, defs ) == 0 ) return 0;
