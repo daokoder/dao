@@ -1187,7 +1187,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( tp == self ) return DAO_MT_EQ;
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		if( self->tid != value->type ) return DAO_MT_NOT;
-		if( value->xTuple.size < self->nested->size ) return DAO_MT_NOT;
+		if( value->xTuple.size < (self->nested->size - self->variadic) ) return DAO_MT_NOT;
 		if( value->xTuple.size > self->nested->size && self->variadic ==0 ) return DAO_MT_NOT;
 
 		mt = DAO_MT_EQ;

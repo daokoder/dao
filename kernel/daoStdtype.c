@@ -945,7 +945,7 @@ static void DaoSTR_Expand( DaoProcess *proc, DaoValue *p[], int N )
 			replace = 1;
 			for(i=pos1+2; i<pos2; i++){
 				ch = self->chars[i];
-				if( ch != '-' && ch != '_' && ! isalnum( ch ) ){
+				if( ch != '-' && ch != '_' && ch != ' ' && ! isalnum( ch ) ){
 					replace = 0;
 					break;
 				}
@@ -4035,6 +4035,7 @@ static void Dao_Exception_Get_data( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Getf( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Setf( DaoProcess *proc, DaoValue *p[], int n );
+static void Dao_Exception_Serialize( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_New( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n );
 
@@ -4048,8 +4049,8 @@ static DaoFuncItem dao_Exception_Meths[] =
 
 	/* for testing or demonstration */
 	{ Dao_Exception_Get_name, "typename( self: Exception )=>string" },
-	{ Dao_Exception_Get_summary, "serialize( self: Exception )=>string" },
-	{ Dao_Exception_Get_summary, "(string)( self: Exception )" },
+	{ Dao_Exception_Serialize, "serialize( self: Exception )=>string" },
+	{ Dao_Exception_Serialize, "(string)( self: Exception )" },
 
 #ifdef DEBUG
 	{ Dao_Exception_Getf, ".( self: Exception, name: string )=>any" },
@@ -4088,6 +4089,15 @@ static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoException* self = (DaoException*) p[0];
 	DaoValue_Move( p[1], & self->data, NULL );
+}
+static void Dao_Exception_Serialize( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoException* self = (DaoException*) p[0];
+	DaoStream *stream = DaoStream_New();
+	stream->mode |= DAO_STREAM_STRING;
+	DaoException_Print( self, stream );
+	DaoProcess_PutString( proc, stream->streamString );
+	DaoGC_TryDelete( (DaoValue*) stream );
 }
 #ifdef DEBUG
 static void Dao_Exception_Getf( DaoProcess *proc, DaoValue *p[], int n )

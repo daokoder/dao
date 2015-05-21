@@ -4428,7 +4428,13 @@ void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc )
 	if( bval == 2 && pp[opA]->type ==0 && pp[opA+1]->type ==0 ) return;
 	for( i=0; i<bval-1; i+=2 ){
 		if( DaoMap_Find( map, pp[opA+i] ) != NULL ){
-			DaoProcess_RaiseWarning( self, NULL, "duplicated key in enumeration" );
+			DString *key = DaoValue_GetString( pp[opA+i], self->string );
+			key = DString_Copy( key );
+			if( key->size > 16 ) DString_Reset( key, 16 );
+			DString_InsertChars( key, "enumeration with duplicated key \"", 0, 0, -1 );
+			DString_AppendChar( key, '"' );
+			DaoProcess_RaiseWarning( self, NULL, key->chars );
+			DString_Delete( key );
 		}
 		if( (c = DaoMap_Insert2( map, pp[opA+i], pp[opA+i+1], self ) ) ){
 			if( c ==1 ){
@@ -6078,8 +6084,7 @@ static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc, int mo
 		if( routine->routHost ) thisClass = DaoValue_CastClass( routine->routHost->aux );
 		if( mode & DAO_CONST_EVAL_METHDEF ) thisClass = (DaoClass*) A;
 		tmp = DaoClass_GetData( (DaoClass*) A, name, thisClass );
-		if( tmp == NULL || tmp->type != DAO_CONSTANT ) goto InvalidConstField;
-		C = tmp->xConst.value;
+		if( tmp != NULL && tmp->type == DAO_CONSTANT ) C = tmp->xConst.value;
 		break;
 	default :
 		type = DaoNamespace_GetType( self->activeNamespace, A );

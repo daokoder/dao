@@ -1,8 +1,21 @@
 
 header_path = DaoMake::FindFile( "libpq-fe.h" )
 
+inc = ""
+lib = ""
+
+if( header_path == "" ){
+	header_path = DaoMake::FindFile( "libpq-fe.h", "/usr/local/pgsql/include" )
+	inc = "/usr/local/pgsql/include"
+	lib = "/usr/local/pgsql/lib"
+}
+
 if( header_path == "" ) return;
 
 mysql = DaoMake::Project( "PostgreSQL" )
 mysql.AddSharedLibrary( "pq" )
+mysql.AddLinkingFlag( "-lpq" ) # XXX
 mysql.AddIncludePath( header_path )
+
+if( inc != "" ) mysql.AddIncludePath( inc )
+if( lib != "" ) mysql.AddLinkingPath( lib )
