@@ -1454,11 +1454,22 @@ void DaoMakeProject_MakeInstallPath( DaoMakeProject *self, DString *path, DStrin
 	DString_Append( install, path );
 	DString_AppendChar( install, '\n' );
 
+	/*
+	// It is not reliable to use the existence of directory to determine
+	// whether to remove the directory upon uninstallation.
+	// Because the path may contain variables that can only be resolved
+	// at running time.
+	//
+	// TODO: add Uninstall() method for explicit removing directories.
+	*/
+
+#if 0
 	if( top ){
 		DString_AppendChars( uninstall, "\t$(DAOMAKE) remove " );
 		DString_Append( uninstall, path );
 		DString_AppendChar( uninstall, '\n' );
 	}
+#endif
 }
 void DaoMakeProject_MakeCopy( DaoMakeProject *self, DString *src, DString *dest, DString *output )
 {
@@ -1527,9 +1538,8 @@ void DaoMakeProject_MakeInstallation( DaoMakeProject *self, DString *makefile )
 		}
 		if( DaoMake_IsDir( path->chars ) == 0 ){
 			DaoMakeProject_MakeInstallPath( self, path, install, uninstall, 1 );
-		}else{
-			DaoMakeProject_MakeRemove( self, tname, path, uninstall );
 		}
+		DaoMakeProject_MakeRemove( self, tname, path, uninstall );
 		DaoMake_MakeRelativePath( self->base.buildPath, tname );
 		DaoMakeProject_MakeCopy( self, tname, path, install );
 	}

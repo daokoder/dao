@@ -723,6 +723,7 @@ static int DaoGC_DecRC2( DaoValue *p )
 				DaoValue **items = array->items.pValue;
 				for(i=0,n=array->size; i<n; i++) if( items[i] ) DaoGC_DecRC2( items[i] );
 				array->size = 0;
+				array->type = 0; /* To avoid locking in DList_Clear(); */
 				DList_Clear( array );
 			}
 			break;

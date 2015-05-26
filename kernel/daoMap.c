@@ -402,18 +402,18 @@ static void DMap_DeleteTree( DMap *self, DNode *node )
 void DMap_Clear( DMap *self )
 {
 	daoint i;
-	if( DMap_Lockable( self ) ) DaoGC_LockData();
 	if( self->hashing ){
 		for(i=0; i<self->tsize; i++) DMap_DeleteTree( self, self->table[i] );
+		if( DMap_Lockable( self ) ) DaoGC_LockData();
 		if( self->table ) dao_free( self->table );
 		self->tsize = 4;
 		self->table = (DNode**) dao_calloc( self->tsize, sizeof(DNode*) );
+		if( DMap_Lockable( self ) ) DaoGC_UnlockData();
 	}else{
 		DMap_DeleteTree( self, self->root );
 	}
 	self->root = NULL;
 	self->size = 0;
-	if( DMap_Lockable( self ) ) DaoGC_UnlockData();
 }
 void DMap_Reset( DMap *self )
 {
