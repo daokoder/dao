@@ -14,7 +14,6 @@ if( header_path == "" ) return;
 
 mysql = DaoMake::Project( "PostgreSQL" )
 mysql.AddSharedLibrary( "pq" )
-mysql.AddLinkingFlag( "-lpq" ) # XXX
 mysql.AddIncludePath( header_path )
 
 if( inc != "" ) mysql.AddIncludePath( inc )

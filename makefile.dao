@@ -356,6 +356,7 @@ daovm.AddVariable( "HELP_FONT", daovm_use_help_font );
 ###########################################################################
 
 if( daovm_bundle_program.size() ){
+	bundle = DaoMake::SourcePath() /"bundle.dao"
 	arch = DaoMake::Architecture().trim()
 	mode = ((string) DaoMake::BuildMode())[1:].convert( $lower )
 	daos = daovm_bundle_program + ".dao"
@@ -365,16 +366,17 @@ if( daovm_bundle_program.size() ){
 	if( arch != "" ) daomake_args += " --arch " + arch
 	daomake_args += " --mode " + mode;
 	daomake_args += " --option-BUNDLE " + daovm_bundle_program
-	daomake_args += " --suffix .bundle bundle.dao"
+	daomake_args += " --suffix .bundle " + bundle
 
 	archive = daovm.AddCommand( darc + ": " + daos + " " + daolib, "-@cd ." )
 #   The following commands will not work for cross compiling, so the solution is
 #   to make a single deployment build on the host platform, and then skip these
 #   commands to make a single deployment build for the target platform.
 	if( not DaoMake::IsPlatform( "IOS" ) ){
+		artool = DaoMake::SourcePath() /"tools/filetools/archive.dao"
 		archive.AddCommand( "$(DAO) -c " + daos )
 		archive.AddCommand( "$(DAO) -a " + daovm_bundle_program + ".dac " + daovm_bundle_resources )
-		archive.AddCommand( "$(DAO) tools/filetools/archive.dao " + daovm_bundle_program + ".dar" )
+		archive.AddCommand( "$(DAO) " + artool + " " + daovm_bundle_program + ".dar" )
 	}
 	archive.AddCommand( "$(DAOMAKE) " + daomake_args )
 	archive.AddCommand( "$(MAKE) -f Makefile.bundle" )

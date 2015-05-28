@@ -2,7 +2,7 @@
 // DaoMake Tool
 // http://www.daovm.net
 //
-// Copyright (c) 2013,2014, Limin Fu
+// Copyright (c) 2013-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -654,35 +654,6 @@ size_t DaoMake_FindFile( DString *file, DString *hints )
 	DString_Delete( fname );
 	return res;
 }
-void DaoMake_MakeDirs( DString *path, int isfile )
-{
-	daoint k = 0;
-
-	while( k < path->size ){
-		while( k < path->size && path->chars[k] != '/' ) k += 1;
-		if( k == path->size ) break;
-		path->chars[k] = '\0';
-		if( DaoMake_IsDir( path->chars ) == 0 && DaoMake_IsFile( path->chars ) == 0 ){
-			DaoMake_MakeDir( path->chars );
-		}
-		path->chars[k] = '/';
-		k += 1;
-	}
-	if( isfile ) return;
-	if( DaoMake_IsDir( path->chars ) == 0 && DaoMake_IsFile( path->chars ) == 0 ){
-		DaoMake_MakeDir( path->chars );
-	}
-}
-void DaoMake_MakeOutOfSourcePath( DString *path, int isfile )
-{
-	DString *binpath = vmSpace->startPath;
-	daoint k = binpath->size + 1;
-
-	if( daomake_out_of_source == 0 ) return;
-	DString_Insert( path, binpath, 0, daomake_main_source_path->size, binpath->size );
-
-	DaoMake_MakeDirs( path, isfile );
-}
 void Dao_MakePath( DString *base, DString *path );
 void DaoMake_MakePath( DString *base, DString *path )
 {
@@ -709,6 +680,36 @@ void DaoMake_MakeRelativePath( DString *current, DString *path )
 Finalize:
 	if( path->size == 0 ) DString_AppendChar( path, '.' );
 	DString_Delete( current );
+}
+void DaoMake_MakeDirs( DString *path, int isfile )
+{
+	daoint k = 0;
+
+	while( k < path->size ){
+		while( k < path->size && path->chars[k] != '/' ) k += 1;
+		if( k == path->size ) break;
+		path->chars[k] = '\0';
+		if( DaoMake_IsDir( path->chars ) == 0 && DaoMake_IsFile( path->chars ) == 0 ){
+			DaoMake_MakeDir( path->chars );
+		}
+		path->chars[k] = '/';
+		k += 1;
+	}
+	if( isfile ) return;
+	if( DaoMake_IsDir( path->chars ) == 0 && DaoMake_IsFile( path->chars ) == 0 ){
+		DaoMake_MakeDir( path->chars );
+	}
+}
+void DaoMake_MakeOutOfSourcePath( DString *path, int isfile )
+{
+	DString *binpath = vmSpace->startPath;
+	daoint k = binpath->size + 1;
+
+	if( daomake_out_of_source == 0 ) return;
+	DaoMake_MakeRelativePath( daomake_main_source_path, path );
+	DaoMake_MakePath( binpath, path );
+
+	DaoMake_MakeDirs( path, isfile );
 }
 void DaoMakeProject_MakeSourcePath( DaoMakeProject *self, DString *path )
 {
@@ -922,7 +923,6 @@ void DaoMakeUnit_Use( DaoMakeUnit *self, DaoMakeUnit *other, int import )
 
 		DList_AppendPaths( self->includePaths, other->includePaths, other->sourcePath );
 		DList_AppendList( self->linkingFlags, other->linkingFlags );
-		if( tar->objects->size == 0 ) return; /* pseudo tar; */
 		if( import && DaoMap_GetValueChars( daomake_platforms, "WIN32" ) == NULL ) return;
 		if( tar->ttype == DAOMAKE_STATICLIB ){
 			DString *prefix = DaoMake_GetSettingValue( daomake_prefix_keys[ tar->ttype ] );
@@ -3803,7 +3803,7 @@ ErrorInvalidArgValue:
 		if( source->size == 0 ) continue;
 
 		DString_Reset( name, 0 );
-		DString_Append( name, project->base.binaryPath );
+		DString_Append( name, project->base.sourcePath );
 		DString_AppendPathSep( name );
 		DString_AppendChars( name, "Find" );
 		DString_Append( name, project->projectName );
