@@ -15,9 +15,8 @@ project_lib  = project.AddStaticLibrary( "dao_aux", project_objs )
 
 
 auxinc = DaoMake::MakePath( DaoMake::Variables[ "INSTALL_INC" ], "modules/auxlib" )
-findpkg = DaoMake::MakePath( project.BinaryPath(), "FindDaoAux.dao" );
-project.GenerateFinder( $TRUE );
 project.Install( auxinc, { "dao_aux.h" } );
+findpkg = project.GenerateFinder( $TRUE );
 project.Install( DaoMake::Variables[ "INSTALL_MOD" ], project_dll );
 project.Install( DaoMake::Variables[ "INSTALL_MOD" ], project_lib );
 project.Install( DaoMake::Variables[ "INSTALL_FINDER" ], findpkg );

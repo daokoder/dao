@@ -215,15 +215,16 @@ daovm.AddIncludePath( "kernel" )
 # so that some linking flags can be generated properly:
 #
 ###########################################################################
+finder_path = daovm.GenerateFinder( $TRUE );
 daovm.Install( daovm_bin_path, daovm_exe )
 daovm.Install( daovm_lib_path, daovm_dll, daovm_lib )
 daovm.Install( daovm_inc_path, daovm_kernel_headers )
-daovm.Install( daomake_pkg_path, daovm.MakeBuildPath( "FindDao.dao" ) );
+daovm.Install( daomake_pkg_path, finder_path );
 
 
 daomake_pkg_local = daovm.MakeBuildPath( "lib/daomake/packages/" )
 finder = daovm.AddCommand( "finder", "$(DAOMAKE) mkdir3 " + daomake_pkg_local )
-finder.AddCommand( "$(DAOMAKE) copy " + daovm.MakeBuildPath( "FindDao.dao" ) + " " + daomake_pkg_local )
+finder.AddCommand( "$(DAOMAKE) copy " + finder_path + " " + daomake_pkg_local )
 
 
 
@@ -333,7 +334,6 @@ daomake.AddDependency( daovm_lib )
 modules.AddDependency( daovm_lib )
 modules.AddDependency( daovm_exe )
 
-daovm.GenerateFinder( $TRUE );
 
 
 daocmd  = daovm.BinaryPath() /"bin/dao"
