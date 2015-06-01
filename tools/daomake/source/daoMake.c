@@ -702,12 +702,9 @@ void DaoMake_MakeDirs( DString *path, int isfile )
 }
 void DaoMake_MakeOutOfSourcePath( DString *path, int isfile )
 {
-	DString *binpath = vmSpace->startPath;
-	daoint k = binpath->size + 1;
-
 	if( daomake_out_of_source == 0 ) return;
 	DaoMake_MakeRelativePath( daomake_main_source_path, path );
-	DaoMake_MakePath( binpath, path );
+	DaoMake_MakePath( vmSpace->startPath, path );
 
 	DaoMake_MakeDirs( path, isfile );
 }
@@ -922,8 +919,10 @@ void DaoMakeUnit_Use( DaoMakeUnit *self, DaoMakeUnit *other, int import )
 		DString *flag;
 
 		DList_AppendPaths( self->includePaths, other->includePaths, other->sourcePath );
-		DList_AppendList( self->linkingFlags, other->linkingFlags );
-		if( import && DaoMap_GetValueChars( daomake_platforms, "WIN32" ) == NULL ) return;
+		if( import && DaoMap_GetValueChars( daomake_platforms, "WIN32" ) == NULL ){
+			DList_AppendList( self->linkingFlags, other->linkingFlags );
+			return;
+		}
 		if( tar->ttype == DAOMAKE_STATICLIB ){
 			DString *prefix = DaoMake_GetSettingValue( daomake_prefix_keys[ tar->ttype ] );
 			DString *suffix = DaoMake_GetSettingValue( daomake_suffix_keys[ tar->ttype ] );
@@ -954,6 +953,7 @@ void DaoMakeUnit_Use( DaoMakeUnit *self, DaoMakeUnit *other, int import )
 			flag = (DString*) DList_PushBack( self->linkingFlags, name );
 			if( name->size ) DString_InsertChars( flag, "-l", 0, 0, 0 );
 		}
+		DList_AppendList( self->linkingFlags, other->linkingFlags );
 		self->project->usedStrings -= 1;
 	}
 }
@@ -1275,7 +1275,7 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 		self->usedStrings -= 7;
 		DList_Append( self->targetRules, tname );
 		DList_Append( self->targetRules, rule );
-		return target->name;
+		return tname;
 	}else if( target->ttype == DAOMAKE_TESTING ){
 		DString_Reset( objs, 0 );
 		for(i=0; i<target->tests->size; ++i){
@@ -1327,7 +1327,7 @@ DString* DaoMakeProject_MakeTargetRule( DaoMakeProject *self, DaoMakeTarget *tar
 		DList_Append( self->targetRules, target->name );
 		DList_Append( self->targetRules, rule );
 		self->usedStrings -= 7;
-		return target->name;
+		return tname;
 	}
 
 	mode = DaoMake_GetSettingValue( daomake_mode_keys[ 3*daomake_build_mode+2 ] );
@@ -2069,12 +2069,20 @@ void DaoMakeProject_MakeFindPackage( DaoMakeProject *self, DString *output, int 
 void DaoMakeProject_MakeFinderPath( DaoMakeProject *self, DString *path )
 {
 	DString_Reset( path, 0 );
-	DString_Append( path, self->base.sourcePath );
-	DString_AppendPathSep( path );
 	DString_AppendChars( path, "Find" );
 	DString_Append( path, self->projectName );
 	DString_AppendChars( path, ".dao" );
-	DaoMake_MakeOutOfSourcePath( path, 1 );
+
+	/*
+	// Better to be placed in the same directory as the binary,
+	// for easy guessing the location of the finder file given
+	// the path of binary library target.
+	//
+	// It is necessary for a functional single file deployment mode
+	// for building Dao applications that can link the module binaries
+	// into the executable.
+	*/
+	DaoMake_MakePath( self->base.binaryPath, path );
 }
 
 
@@ -3046,13 +3054,34 @@ static void DAOMAKE_IsDir( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMake_MakePath( proc->activeNamespace->path, path );
 	DaoProcess_PutInteger( proc, DaoMake_IsDir( path->chars ) );
 }
+static void DAOMAKE_MakeDir( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *path = DaoValue_TryGetString( p[0] );
+	if( DaoMake_IsFile( path->chars ) ){
+		DaoProcess_RaiseError( proc, NULL, "The path is a file" );
+		return;
+	}
+	if( DaoMake_IsDir( path->chars ) ) return;
+	path = DString_Copy( path );
+	DaoMake_MakeDirs( path, 0 );
+	DString_Delete( path );
+}
 static void DAOMAKE_Shell( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *res = DaoProcess_PutChars( proc, "" );
 	DString *cmd = DaoValue_TryGetString( p[0] );
 	FILE *fin = popen( DString_GetData( cmd ), "r" );
+	if( fin == NULL ){
+		DaoProcess_RaiseError( proc, NULL, "Command failed to execute!" );
+		return;
+	}
 	DaoFile_ReadAll( fin, res, 0 );
 	pclose( fin );
+}
+static void DAOMAKE_Shell2( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *cmd = DaoValue_TryGetString( p[0] );
+	DaoProcess_PutInteger( proc, system( cmd->chars ) );
 }
 static void DAOMAKE_GetEnv( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -3144,8 +3173,9 @@ static DaoFuncItem DaoMakeMeths[] =
 
 	{ DAOMAKE_Suffix,      "MakefileSuffix() => string" },
 
-	{ DAOMAKE_Shell,       "Shell( command: string ) => string" },
 	{ DAOMAKE_GetEnv,      "GetEnv( name: string ) => string" },
+	{ DAOMAKE_Shell,       "Shell( command: string ) => string" },
+	{ DAOMAKE_Shell2,      "Shell2( command: string ) => int" },
 
 	{ DAOMAKE_SourcePath,  "SourcePath() => string" },
 	{ DAOMAKE_BinaryPath,  "BinaryPath() => string" },
@@ -3159,6 +3189,7 @@ static DaoFuncItem DaoMakeMeths[] =
 
 	{ DAOMAKE_IsFile,      "IsFile( path: string ) => int" },
 	{ DAOMAKE_IsDir,       "IsDir( path: string ) => int" },
+	{ DAOMAKE_MakeDir,     "MakeDir( path: string )" },
 
 	{ DAOMAKE_Platform,    "Platform() => string" },
 	{ DAOMAKE_Arch,        "Architecture() => string" },

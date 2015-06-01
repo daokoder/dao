@@ -30,7 +30,10 @@ finders = io.read( daovm_bundle + ".dar.finders" )
 
 bundle_finders = finders.split( "\n" )
 
-cmd_dir = DaoMake::SourcePath()
+# The path variable $(CMD_DIR) in the ".finders" file refers to the building directory,
+# which is the working directory for Dao to compile the program. And this script
+# should also be executed in the same directory.
+cmd_dir = std.path( $working )
 dao_dir = DaoMake::GetEnv( "DAO_DIR" )
 home_dir = DaoMake::GetEnv( "HOME" )
 for( finder in bundle_finders ){
