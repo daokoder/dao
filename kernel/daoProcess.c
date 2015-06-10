@@ -3281,6 +3281,13 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		type = (DaoType*) lastframe->routine->routType->cbtype->aux;
 	}
 	if( (topFrame->routine->attribs & DAO_ROUT_INITOR) && !(topFrame->state & DVM_FRAME_SECT) ){
+		int idx = DaoObject_VerifyFields( self->activeObject );
+		if( idx != 0 ){
+			DString *name = self->activeObject->defClass->objDataName->items.pString[idx-1];
+			const char *msg = "Class instance field \"%s\" not initialized!";
+			DaoProcess_RaiseException2( self, "Error", msg, name->chars );
+			return NULL;
+		}
 		retValue = (DaoValue*)self->activeObject;
 	}else if( vmc->b == 1 ){
 		retValue = self->activeValues[ vmc->a ];
@@ -4429,12 +4436,8 @@ void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc )
 	for( i=0; i<bval-1; i+=2 ){
 		if( DaoMap_Find( map, pp[opA+i] ) != NULL ){
 			DString *key = DaoValue_GetString( pp[opA+i], self->string );
-			key = DString_Copy( key );
-			if( key->size > 16 ) DString_Reset( key, 16 );
-			DString_InsertChars( key, "enumeration with duplicated key \"", 0, 0, -1 );
-			DString_AppendChar( key, '"' );
-			DaoProcess_RaiseWarning( self, NULL, key->chars );
-			DString_Delete( key );
+			const char *msg = "Enumeration with duplicated key \"%s\"!";
+			DaoProcess_RaiseException2( self, "Warning", msg, key->chars );
 		}
 		if( (c = DaoMap_Insert2( map, pp[opA+i], pp[opA+i+1], self ) ) ){
 			if( c ==1 ){
@@ -5980,6 +5983,26 @@ void DaoProcess_RaiseException( DaoProcess *self, const char *type, const char *
 	if( etype == NULL ) return;
 	exception = DaoProcess_RaiseExceptionEx( self, etype, info );
 	if( data != NULL && exception != NULL ) DaoValue_Copy( data, & exception->data );
+}
+void DaoProcess_RaiseException2( DaoProcess *self, const char *type, const char *info, char *args )
+{
+	DString info2 = DString_WrapChars( info );
+	DString args2 = DString_WrapChars( args );
+	DString *msg = DString_New();
+	daoint i = 0, j = 0;
+	while( i < info2.size && j < args2.size ){
+		daoint i2 = DString_FindChars( & info2, "%s", i );
+		daoint j2 = DString_FindChars( & args2, "\n", j );
+		if( i2 == DAO_NULLPOS ) i2 = info2.size;
+		if( j2 == DAO_NULLPOS ) j2 = args2.size;
+		DString_AppendBytes( msg, info + i, i2 - i );
+		if( i2 < info2.size ) DString_AppendBytes( msg, args + j, j2 - j );
+		i = i2 + 2;
+		j = j2 + 1;
+	}
+	if( i < info2.size ) DString_AppendBytes( msg, info + i, info2.size - i );
+	DaoProcess_RaiseException( self, type, msg->chars, NULL );
+	DString_Delete( msg );
 }
 static void DaoProcess_RaiseEx( DaoProcess *self, const char *type, const char *info, int err )
 {

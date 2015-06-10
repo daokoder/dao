@@ -2893,6 +2893,10 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		parser->hostClass = klass;
 		right = DaoParser_ParseSignature( self, parser, start );
 		if( right < 0 ) goto InvalidDefinition;
+		if( DString_EQ( self->nameSpace->name, klass->initRoutine->nameSpace->name ) == 0 ){
+			DaoParser_Error2( self, DAO_ROUT_MISPLACED_IMPLEMENTATION, errorStart+1, right, 0 );
+			goto InvalidDefinition;
+		}
 		DString_Assign( mbs, parser->routine->routName );
 		DString_AppendChar( mbs, ':' );
 		DString_Append( mbs, parser->routine->routType->name );
@@ -4525,6 +4529,9 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 			DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, start, end, 0 );
 			goto ReturnError;
 		}
+	}else if( self->isClassBody == 0 && (abtp == NULL || abtp->tid > DAO_ENUM) ){
+		DaoParser_Error2( self, DAO_VARIABLE_WITHOUT_INIT, start, end, 0 );
+		goto ReturnError;
 	}
 
 	reg = enode.reg;
@@ -4541,6 +4548,11 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 			DaoParser_Error3( self, DAO_TYPE_NOT_MATCHING, errorStart );
 			goto ReturnError;
 		}
+		/*
+		// The following should just declare variable of any type:
+		// [var|invar] name = none
+		*/
+		if( abtp == NULL && value->type == DAO_NONE ) abtp = dao_type_any;
 	}
 	if( abtp == NULL && value ){
 		if( store != 0 && (store & DAO_DECL_INVAR) == 0 ){
@@ -4658,11 +4670,12 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 				}else if( ! self->isClassBody ){
 					if( reg < 0 ) continue;
 					DaoParser_AddCode( self, DVM_SETVK, reg, id, 0 );
-				}else if( eq >=0 ){
+				}else if( eq < 0 ){
+					DaoParser_Error2( self, DAO_VARIABLE_WITHOUT_INIT, start, end, 0 );
+					goto ReturnError;
+				}else{ /* eq >=0 */
 					DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, eq+1, end, 0 );
 					goto ReturnError;
-				}else if( block ){
-					DaoByteBlock_Declare( block, DAO_ASM_STATIC, name, NULL, extype, pm );
 				}
 				break;
 			case DAO_GLOBAL_VARIABLE :

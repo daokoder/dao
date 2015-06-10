@@ -3066,11 +3066,21 @@ static void DAOMAKE_MakeDir( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMake_MakeDirs( path, 0 );
 	DString_Delete( path );
 }
+static void DaoProcess_WriteChars( DaoProcess *self, const char *chars )
+{
+	DaoStream *stream = self->stdioStream;
+	if( stream == NULL ) stream = self->vmSpace->stdioStream;
+	DaoStream_WriteChars( stream, "Executing: " );
+	DaoStream_WriteChars( stream, chars );
+	DaoStream_WriteChars( stream, "\n" );
+	DaoStream_Flush( stream );
+}
 static void DAOMAKE_Shell( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *res = DaoProcess_PutChars( proc, "" );
 	DString *cmd = DaoValue_TryGetString( p[0] );
 	FILE *fin = popen( DString_GetData( cmd ), "r" );
+	DaoProcess_WriteChars( proc, cmd->chars );
 	if( fin == NULL ){
 		DaoProcess_RaiseError( proc, NULL, "Command failed to execute!" );
 		return;
@@ -3081,6 +3091,7 @@ static void DAOMAKE_Shell( DaoProcess *proc, DaoValue *p[], int N )
 static void DAOMAKE_Shell2( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *cmd = DaoValue_TryGetString( p[0] );
+	DaoProcess_WriteChars( proc, cmd->chars );
 	DaoProcess_PutInteger( proc, system( cmd->chars ) );
 }
 static void DAOMAKE_GetEnv( DaoProcess *proc, DaoValue *p[], int N )

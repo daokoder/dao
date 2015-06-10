@@ -1652,6 +1652,57 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		if( pb == NULL ) return NULL;
 		return pb->xCtype.cdtype;
 	}
+	
+	if( tid == DAO_VARIANT ){
+		DList *types;
+		int newlist = 0;
+		int j, k = 0;
+		if( N == 0 ){
+			return dao_type_none;
+		}else if( N == 1 ){
+			return nest[0];
+		}
+		types = DList_New(0);
+		/* Coalesce variants: */
+		for(i=0; i<N; ++i){
+			if( nest[i]->tid == DAO_VARIANT ){
+				for(j=0; j<nest[i]->nested->size; ++j){
+					DList_Append( types, nest[i]->nested->items.pType[j] );
+				}
+			}else{
+				DList_Append( types, nest[i] );
+			}
+		}
+		newlist = types->size > N;
+		/* Remove redundant variants: (and do not modify "nest"!) */
+		for(i=0; i<types->size; ++i){
+			DaoType *it = types->items.pType[i];
+			int unique = 1;
+			for(j=0; j<k; ++j){
+				DaoType *jt = types->items.pType[j];
+				int e1 = it->tid == jt->tid;
+				int e2 = it->aux == jt->aux;
+				int e3 = DString_EQ( it->name, jt->name );
+				/* Note:
+				// 1. Consider aliased types as unique types;
+				// 2. Different type objects may exist for the same type (such as "int");
+				*/
+				if( e1 && e2 && e3 ){
+					newlist = 1;
+					unique = 0;
+					break;
+				}
+			}
+			if( unique ) types->items.pType[k++] = it;
+		}
+		if( newlist ){
+			tp = DaoNamespace_MakeType( self, "", DAO_VARIANT, NULL, types->items.pType, k );
+			DList_Delete( types );
+			return tp;
+		}
+		DList_Delete( types );
+		/* Then use the original "nest" and "N" arguments: */
+	}
 
 	mbs = DString_New();
 	DString_Reserve( mbs, 128 );

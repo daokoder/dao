@@ -34,7 +34,7 @@ class CC : BB
 	routine Virt(){ io.writeln( "CC::Virt()", self ) }
 }
 
-var c;
+var c = none;
 
 
 @[test(code_01)]

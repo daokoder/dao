@@ -172,7 +172,7 @@ const CT_TYPE_REFER2 = 4; # type **var
 const CT_TYPE_ARRAY = 8; # type var[]
 const CT_TYPE_ARRAY2 = 16; # type var[][]
 
-var log_file;
+var log_file = none;
 var on_load = "";
 var basic_typedefs = {};
 var CT_MAP = CT_MAP_BASIC;
@@ -287,7 +287,7 @@ class Function
 	var input_file = "";
 	var source = "";
 	
-	var retype : Variable;
+	var retype : Variable|none = none;
 	var parlist : list<Variable> = {};
 	
 	var extraCodes = {};
@@ -912,7 +912,7 @@ routine ExtractPatterns( source :string, pattern :string, ptype :PatternType, al
 }
 routine ParseCode( source : string, snamespace="", lang="", fname : string="", inExtFile=0  )
 {
-	ns_utp : UserType;
+	ns_utp : UserType|none = none;
 	if( % snamespace ) ns_utp = map_user_types[ snamespace ];
 
 	const pat_struct2 = "typedef %s+ (const %s+ |) (struct|union) %s+ (%w+) %s+ (%w+) %s*;";
@@ -1088,7 +1088,6 @@ routine ParseFile( file : string, dir = "", subdir="",
 fixing : list<list<string>>={}, lang="", inExtFile=0 )
 {
 	subdirs = subdir.split( "," );
-	utp : UserType;
 	
 	file2 = file;
 	source = io.read( file, 1 );
@@ -2207,7 +2206,7 @@ routine Variable::Generate( cxx_no_self =0 )
 		}else{
 		}
 	}else if( map_user_types.find( typename ) != none or map_ns_types.find( typename ) != none ){
-		utp: UserType;
+		utp: UserType|none = none;
 		if( map_user_types.find( typename ) != none ){
 			utp = map_user_types[ typename ];
 			daotype = utp.name;

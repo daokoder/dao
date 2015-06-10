@@ -3,8 +3,8 @@
 @[test(code_01)]
 var a: dao::int
 var b: dao::string
-var c: dao::list<int>
-var d: dao::tuple<int,string>
+var c: dao::list<int> = {}
+var d: dao::tuple<int,string> = (1,"a")
 @[test(code_01)]
 @[test(code_01)]
 @[test(code_01)]

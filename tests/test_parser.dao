@@ -42,6 +42,18 @@ Test%{routine%<=%>@Test%>%}
 
 
 @[test(code_01)]
+var a
 @[test(code_01)]
 @[test(code_01)]
+{{At line}} .* {{Variable declared without initialization}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar a
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Variable declared without initialization}}
 @[test(code_01)]

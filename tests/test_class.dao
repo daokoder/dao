@@ -131,6 +131,16 @@ Test( k )
 @[test(code_01)]
 class Klass {
 	static a
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Variable declared without initialization}}
+@[test(code_01)]
+
+
+@[test(code_01)]
+class Klass {
+	static a = 1
 	var    b
 	invar  c
 }

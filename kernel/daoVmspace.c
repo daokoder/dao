@@ -1888,6 +1888,15 @@ int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int types )
 		if( modtype == DAO_MODULE_NONE ){
 			DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
 			if( DaoVmSpace_TestFile( self, fname ) ) modtype = DAO_MODULE_ANY;
+		}else if( modtype == DAO_MODULE_DAC ){
+			size_t tmdac = Dao_FileChangedTime( fname->chars );
+			fname->chars[ fname->size - 1 ] = 'o';  /* .dac to .dao; */
+			if( DaoVmSpace_TestFile( self, fname ) ){
+				size_t tmdao = Dao_FileChangedTime( fname->chars );
+				/* Check if the source file has been changed: */
+				if( tmdac < tmdao ) modtype = DAO_MODULE_DAO;
+			}
+			if( modtype == DAO_MODULE_DAC ) fname->chars[ fname->size - 1 ] = 'c';
 		}
 		DString_Delete( fn );
 		DString_Delete( path );

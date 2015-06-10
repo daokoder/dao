@@ -21,3 +21,27 @@ io.writeln( std.about(tup[1:]) )
 {{( 2, 3 )
 tuple<int,...:int>}}
 @[test(code)]
+
+
+
+
+@[test(code)]
+tup = ( "abc", 1, 2, 3 )
+idx = 2
+tup[idx] += 10
+@[test(code)]
+@[test(code)]
+{{At line}} .* {{Inconsistent typing}}
+@[test(code)]
+
+
+
+
+@[test(code)]
+tup = ( 1.5, 1, 2, 3 )
+idx = 2
+tup[idx] += 10
+@[test(code)]
+@[test(code)]
+{{At line}} .* {{Inconsistent typing}}
+@[test(code)]

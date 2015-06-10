@@ -2896,10 +2896,10 @@ static void DaoInferencer_WriteErrorSpecific( DaoInferencer *self, int error )
 		vmc2.first = annot_first;
 		vmc2.last = annot_last > annot_first ? annot_last - annot_first : 0;
 		DaoLexer_AnnotateCode( routine->body->source, vmc2, mbs, 32 );
-	}else if( error == DTE_TYPE_NOT_MATCHING ){
+	}else if( error == DTE_TYPE_NOT_MATCHING || error == DTE_TYPE_NOT_CONSISTENT ){
 		DString_SetChars( mbs, "'" );
 		DString_AppendChars( mbs, self->type_source ? self->type_source->name->chars : "none" );
-		DString_AppendChars( mbs, "' for '" );
+		DString_AppendChars( mbs, error == DTE_TYPE_NOT_MATCHING ? "' for '" : "' with '" );
 		if( self->type_target ){
 			DString_AppendChars( mbs, self->type_target->name->chars );
 		}else if( self->tid_target <= DAO_TUPLE ){
@@ -2932,8 +2932,17 @@ static int DaoInferencer_ErrorTypeNotMatching( DaoInferencer *self, DaoType *S, 
 	if( S ) self->type_source = S;
 	if( T ) self->type_target = T;
 	DaoInferencer_WriteErrorHeader( self );
-	DaoInferencer_WriteErrorGeneral( self, DTE_TYPE_NOT_MATCHING );
+	DaoInferencer_WriteErrorGeneral( self, DTE_OPERATION_NOT_VALID );
 	DaoInferencer_WriteErrorSpecific( self, DTE_TYPE_NOT_MATCHING );
+	return 0;
+}
+static int DaoInferencer_ErrorTypeNotConsistent( DaoInferencer *self, DaoType *S, DaoType *T )
+{
+	if( S ) self->type_source = S;
+	if( T ) self->type_target = T;
+	DaoInferencer_WriteErrorHeader( self );
+	DaoInferencer_WriteErrorGeneral( self, DTE_OPERATION_NOT_VALID );
+	DaoInferencer_WriteErrorSpecific( self, DTE_TYPE_NOT_CONSISTENT );
 	return 0;
 }
 static int DaoInferencer_ErrorTypeID( DaoInferencer *self, DaoType *S, int tid )
@@ -4066,61 +4075,84 @@ InvOper : return DaoInferencer_Error( self, DTE_OPERATION_NOT_VALID );
 InvIndex : return DaoInferencer_Error( self, DTE_INDEX_NOT_VALID );
 ModifyConstant: return DaoInferencer_Error( self, DTE_CONST_WRONG_MODIFYING );
 }
-int DaoInferencer_HandleBinaryArith( DaoInferencer *self, DaoInode *inode, DMap *defs )
+DaoType* DaoInferencer_CheckBinaryOper( DaoInferencer *self, DaoInode *inode, DaoType *at, DaoType *bt )
 {
-	int code = inode->code;
-	int opa = inode->a;
-	int opb = inode->b;
-	int opc = inode->c;
 	DString *mbs = self->mbstring;
-	DaoType *catype, **types = self->types->items.pType;
+	DaoType **types = self->types->items.pType;
 	DaoNamespace *NS = self->routine->nameSpace;
 	DaoClass *hostClass = self->hostClass;
 	DaoVmCodeX *vmc = (DaoVmCodeX*) inode;
-	DaoType *at = types[opa];
-	DaoType *bt = types[opb];
-	DaoType *ct = types[opc];
+	DaoType *ct = NULL;
+	int code = inode->code;
+	int opc = inode->c;
 
-	catype = dao_array_types[DAO_COMPLEX];
-	ct = NULL;
-#if 0
-	if( types[opa] ) printf( "a: %s\n", types[opa]->name->chars );
-	if( types[opb] ) printf( "b: %s\n", types[opb]->name->chars );
-	if( types[opc] ) printf( "c: %s\n", types[opc]->name->chars );
-#endif
 	if( NoCheckingType( at ) || NoCheckingType( bt ) ){
 		ct = dao_type_udf;
+#if 0
+	}else if( at->tid == DAO_VARIANT || bt->tid == DAO_VARIANT ){
+		DList *types = DList_New(0);
+		int i;
+		if( at->tid == DAO_VARIANT ){
+			for(i=0; i<at->nested->size; ++i){
+				DaoType *at2 = at->nested->items.pType[i];
+				DaoType *ct2 = DaoInferencer_CheckBinaryOper( self, inode, at2, bt );
+				if( ct2 == NULL ){
+					DList_Delete( types );
+					return NULL;
+				}
+				DList_Append( types, ct2 );
+			}
+		}else{
+			for(i=0; i<bt->nested->size; ++i){
+				DaoType *bt2 = bt->nested->items.pType[i];
+				DaoType *ct2 = DaoInferencer_CheckBinaryOper( self, inode, at, bt2 );
+				if( ct2 == NULL ){
+					DList_Delete( types );
+					return NULL;
+				}
+				DList_Append( types, ct2 );
+			}
+		}
+		ct = DaoNamespace_MakeType( NS, "", DAO_VARIANT, NULL, types->items.pType, types->size );
+		DList_Delete( types );
+#endif
 	}else if( at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
 			|| at->tid == DAO_CDATA || bt->tid == DAO_CDATA
 			|| at->tid == DAO_CSTRUCT || bt->tid == DAO_CSTRUCT
 			|| at->tid == DAO_INTERFACE || bt->tid == DAO_INTERFACE ){
 		ct = DaoCheckBinArith( self->routine, vmc, at, bt, types[opc], hostClass, mbs );
-		if( ct == NULL ) goto InvOper;
+		if( ct == NULL ) return NULL;
+	}else if( code == DVM_AND || code == DVM_OR ){
+		if( at->realnum && bt->realnum ){
+			ct = dao_type_bool;
+		}else{
+			return NULL;
+		}
 	}else if( at->tid == bt->tid ){
 		ct = at;
 		switch( at->tid ){
 		case DAO_INTEGER : case DAO_FLOAT :
 			break;
 		case DAO_COMPLEX :
-			if( code == DVM_MOD ) goto InvOper;
+			if( code == DVM_MOD ) return NULL;
 			break;
 		case DAO_STRING :
-			if( code != DVM_ADD && code != DVM_DIV ) goto InvOper;
+			if( code != DVM_ADD && code != DVM_DIV ) return NULL;
 			break;
 		case DAO_ENUM :
-			if( code != DVM_ADD && code != DVM_SUB ) goto InvOper;
+			if( code != DVM_ADD && code != DVM_SUB ) return NULL;
 			if( at->subtid == DAO_ENUM_SYM && bt->subtid == DAO_ENUM_SYM ){
 				DString_Assign( self->mbstring, at->name );
 				DString_Change( self->mbstring, "enum%< (.*) %>", "%1", 0 );
 				DString_Append( self->mbstring, bt->name );
 				ct = DaoNamespace_MakeEnumType( NS, self->mbstring->chars );
 			}else if( at->subtid != DAO_ENUM_FLAG ){
-				goto InvOper;
+				return NULL;
 			}
 			break;
 		case DAO_ARRAY :
 			break;
-		default : goto InvOper;
+		default : return NULL;
 		}
 	}else if( at->realnum && bt->realnum ){
 		ct = at->tid > bt->tid ? at : bt;
@@ -4130,10 +4162,36 @@ int DaoInferencer_HandleBinaryArith( DaoInferencer *self, DaoInode *inode, DMap 
 		ct = at;
 	}else if( ( at->tid ==DAO_COMPLEX && bt->tid ==DAO_ARRAY )
 			|| ( at->tid ==DAO_ARRAY && bt->tid ==DAO_COMPLEX ) ){
-		ct = catype;
+		ct = dao_array_types[DAO_COMPLEX];
 	}else{
-		goto InvOper;
+		return NULL;
 	}
+	return ct;
+}
+int DaoInferencer_HandleBinaryArith( DaoInferencer *self, DaoInode *inode, DMap *defs )
+{
+	int code = inode->code;
+	int opa = inode->a;
+	int opb = inode->b;
+	int opc = inode->c;
+	DString *mbs = self->mbstring;
+	DaoType **types = self->types->items.pType;
+	DaoNamespace *NS = self->routine->nameSpace;
+	DaoClass *hostClass = self->hostClass;
+	DaoVmCodeX *vmc = (DaoVmCodeX*) inode;
+	DaoType *at = types[opa];
+	DaoType *bt = types[opb];
+	DaoType *ct = types[opc];
+
+#if 0
+	if( types[opa] ) printf( "a: %s\n", types[opa]->name->chars );
+	if( types[opb] ) printf( "b: %s\n", types[opb]->name->chars );
+	if( types[opc] ) printf( "c: %s\n", types[opc]->name->chars );
+#endif
+
+	ct = DaoInferencer_CheckBinaryOper( self, inode, at, bt );
+	if( ct == NULL ) goto InvOper;
+
 	DaoInferencer_UpdateVarType( self, opc, ct );
 	/* allow less strict typing: */
 	if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ) return 1;
@@ -4170,7 +4228,8 @@ int DaoInferencer_HandleBinaryArith( DaoInferencer *self, DaoInode *inode, DMap 
 		if( ct->tid == DAO_STRING && code == DVM_ADD ) vmc->code = DVM_ADD_SSS;
 	}
 	return 1;
-InvOper : return DaoInferencer_Error( self, DTE_OPERATION_NOT_VALID );
+InvOper :
+	return DaoInferencer_ErrorTypeNotConsistent( self, at, bt );
 }
 int DaoInferencer_HandleBinaryBool( DaoInferencer *self, DaoInode *inode, DMap *defs )
 {
@@ -4187,26 +4246,15 @@ int DaoInferencer_HandleBinaryBool( DaoInferencer *self, DaoInode *inode, DMap *
 	DaoType *bt = types[opb];
 	DaoType *ct = types[opc];
 
-	ct = NULL;
-
 #if 0
 	if( types[opa] ) printf( "a: %s\n", types[opa]->name->chars );
 	if( types[opb] ) printf( "b: %s\n", types[opb]->name->chars );
 	if( types[opc] ) printf( "c: %s\n", types[opc]->name->chars );
 #endif
-	if( NoCheckingType( at ) || NoCheckingType( bt ) ){
-		ct = dao_type_udf;
-	}else if( at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
-			|| at->tid == DAO_CDATA || bt->tid == DAO_CDATA
-			|| at->tid == DAO_CSTRUCT || bt->tid == DAO_CSTRUCT
-			|| at->tid == DAO_INTERFACE || bt->tid == DAO_INTERFACE ){
-		ct = DaoCheckBinArith( self->routine, vmc, at, bt, types[opc], hostClass, mbs );
-		if( ct == NULL ) goto InvOper;
-	}else if( at->realnum && bt->realnum ){
-		ct = dao_type_bool;
-	}else{
-		goto InvOper;
-	}
+
+	ct = DaoInferencer_CheckBinaryOper( self, inode, at, bt );
+	if( ct == NULL ) goto InvOper;
+
 	DaoInferencer_UpdateVarType( self, opc, ct );
 	/* allow less strict typing: */
 	if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ) return 1;

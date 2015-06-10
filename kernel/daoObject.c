@@ -263,6 +263,19 @@ void DaoObject_Delete( DaoObject *self )
 	dao_free( self );
 }
 
+int DaoObject_VerifyFields( DaoObject *self )
+{
+	DaoVariable **vars = self->defClass->instvars->items.pVar;
+	ushort_t i;
+	for(i=0; i<self->valueCount; ++i){
+		if( self->objValues[i] == NULL ) return i+1;
+		if( self->objValues[i]->type == DAO_NONE ){
+			DaoType *type = DaoType_GetVariantItem( vars[i]->dtype, DAO_NONE );
+			if( type == NULL ) return i+1;
+		}
+	}
+	return 0;
+}
 int DaoObject_ChildOf( DaoValue *self, DaoValue *obj )
 {
 	int i;

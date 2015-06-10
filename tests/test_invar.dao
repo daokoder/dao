@@ -90,14 +90,14 @@ y.append( 5 )
 
 @[test(code_01)]
 invar x = { {1, 2}, {3, 4} }
-var y
+var y = none
 
 y = x[0]
 y.append( 5 )
 @[test(code_01)]
 @[test(code_01)]
 {{At line}} .* {{Invalid virtual machine instruction}} .* 
-{{Types not matching --- " 'invar<list<int>>' for 'var<@X>' "}}
+{{Types not matching --- " 'invar<list<int>>' for 'var<any>' "}}
 @[test(code_01)]
 
 
