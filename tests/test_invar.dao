@@ -20,6 +20,21 @@ io.writeln( x, y )
 
 
 @[test(code_01)]
+routine test100()
+{
+	invar x = 123
+	var y = x
+	y += 100
+	io.writeln( x, y )
+}
+test100()
+@[test(code_01)]
+@[test(code_01)]
+123 223
+@[test(code_01)]
+
+
+@[test(code_01)]
 var x = 123
 invar y = x
 x += 1
@@ -83,7 +98,22 @@ y.append( 5 )
 @[test(code_01)]
 @[test(code_01)]
 {{At line}} .* {{Invalid virtual machine instruction}} .* 
-{{Types not matching --- " 'invar<list<int>>' for 'var<@X>' "}}
+{{Invalid assignment from invar value to var varaible}}
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+routine test200()
+{
+	invar x = { {1, 2}, {3, 4} }
+	var y = x[0]
+	y.append( 5 )
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Invalid virtual machine instruction}} .* 
+{{Invalid assignment from invar value to var varaible}}
 @[test(code_01)]
 
 

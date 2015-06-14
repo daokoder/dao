@@ -10,8 +10,8 @@ if( DaoMake::IsPlatform( "UNIX" ) ){
 	if( DaoMake::IsPlatform( "IOS" ) ) archive = " /Users/min/Projects/dao/modules/DaoSDL/libSDL2-Simulator.a "
 
 	sdl = DaoMake::Project( "SDL" )
-	sdl_dll = sdl.AddSharedLibrary( "" )
-	sdl_lib = sdl.AddStaticLibrary( "" )
+	sdl_dll = sdl.AddSharedLibrary( "SDL2" )
+	sdl_lib = sdl.AddStaticLibrary( "SDL2" )
 	sdl.AddCompilingFlag( cflags.chop() )
 	sdl_dll.AddLinkingFlag( stlibs.chop() + " " + libs.chop() )
 	if( DaoMake::IsPlatform( "IOS" ) ){

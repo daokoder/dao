@@ -2318,6 +2318,7 @@ enum DaoTypingErrorCode
 	DTE_KEY_NOT_VALID ,
 	DTE_OPERATION_NOT_VALID ,
 	DTE_INVALID_INVAR_CAST ,
+	DTE_INVAR_VAL_TO_VAR_VAR,
 	DTE_PARAM_ERROR ,
 	DTE_PARAM_WRONG_NUMBER ,
 	DTE_PARAM_WRONG_TYPE ,
@@ -2355,6 +2356,7 @@ static const char*const DaoTypingErrorString[] =
 	"Invalid key acess",
 	"Invalid operation on the type",
 	"Invalid casting from invar type",
+	"Invalid assignment from invar value to var varaible",
 	"Invalid parameters for the call",
 	"Invalid number of parameter",
 	"Invalid parameter type",
@@ -5082,6 +5084,43 @@ InvalidYield: return DaoInferencer_Error( self, DTE_ROUT_INVALID_YIELD );
 InvalidReturn: return DaoInferencer_Error( self, DTE_ROUT_INVALID_RETURN );
 }
 
+static DaoType* DaoInferencer_HandleVarInvarDecl( DaoInferencer *self, DaoType *at, int opb )
+{
+	if( ! (opb & 0x2) ) return at; /* not an explicit declaration; */
+
+	/* invar declaration: */
+	if( opb & 0x4 ) return DaoType_GetInvarType( at );
+
+	/* var declaration: */
+
+	/* Move from constant: get base type without const; */
+	if( at->konst == 1 ) return DaoType_GetBaseType( at );
+	
+	/* Move from invariable: */
+	if( at->invar == 1 ){
+		/* Move from primitive type: get base type without const or invar; */	
+		if( at->tid <= DAO_ENUM ){
+			return DaoType_GetBaseType( at );
+		}else if( DaoType_IsImmutable( at ) ){
+			/*
+			// Variables of immutable types are immutable regardless of the "var" keyword.
+			// Such declaration is permited for conveniece, otherwise, every declaration
+			// of variables or parameters of such immutable types (such as invar class or
+			// ctype, e.g., DateTime) would require the use of the "invar" keyword, and
+			// too verbose to write.
+			//
+			// Also the point of supporting invar class and invar ctype is exactly that
+			// we will not need to write invar everywhere to guarantee its immutability!
+			*/
+			return at;
+		}else{
+			DaoInferencer_Error( self, DTE_INVAR_VAL_TO_VAR_VAR );
+			return NULL;
+		}
+	}
+	return at;
+}
+
 int DaoInferencer_DoInference( DaoInferencer *self )
 {
 	DNode *node;
@@ -5431,8 +5470,10 @@ SkipChecking:
 			at = types[opa];
 			if( code == DVM_SETVG ){
 				if( !(opc & 0x4) && var->dtype && var->dtype->invar ) goto ModifyConstant;
-				if( (opc >> 1) == 0x3 ) at = DaoType_GetInvarType( at );
-				if( (opc & 0x4) == 0 && at->konst == 1 ) at = DaoType_GetBaseType( at );
+				if( opc & 0x2 ){
+					at = DaoInferencer_HandleVarInvarDecl( self, at, opc );
+					if( at == NULL ) return 0;
+				}
 			}else if( code == DVM_SETVO && var->subtype == DAO_INVAR ){
 				if( !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
 				at = DaoType_GetInvarType( at );
@@ -5573,10 +5614,9 @@ SkipChecking:
 			{
 				if( opb & 0x2 ){
 					at = DaoType_DefineTypes( at, NS, defs );
-					/* invar declaration: */
-					if( (opb & 0x4) && at->invar == 0 ) at = DaoType_GetInvarType( at );
-					/* var declaration or normal move from constant: */
-					if( (opb & 0x4) == 0 && at->konst == 1 ) at = DaoType_GetBaseType( at );
+					at = DaoInferencer_HandleVarInvarDecl( self, at, opb );
+					if( at == NULL ) return 0;
+
 					if( ct == NULL || ct->tid == DAO_UDT || ct->tid == DAO_THT ){
 						GC_Assign( & types[opc], at );
 					}
@@ -6278,6 +6318,10 @@ SkipChecking:
 			break;
 		case DVM_SETVH_BB : case DVM_SETVH_II : case DVM_SETVH_FF : case DVM_SETVH_CC :
 			tp = typeVH[opc] + opb;
+			if( opc & 0x2 ){
+				at = DaoInferencer_HandleVarInvarDecl( self, at, opc );
+				if( at == NULL ) return 0;
+			}
 			if( at->tid <= DAO_ENUM ) at = DaoType_GetBaseType( at );
 			if( *tp == NULL || (*tp)->tid == DAO_UDT || (*tp)->tid == DAO_THT ){
 				GC_Assign( tp, at );
@@ -6289,6 +6333,10 @@ SkipChecking:
 			break;
 		case DVM_SETVS_BB : case DVM_SETVS_II : case DVM_SETVS_FF : case DVM_SETVS_CC :
 			var = body->upValues->items.pVar[opb];
+			if( opc & 0x2 ){
+				at = DaoInferencer_HandleVarInvarDecl( self, at, opc );
+				if( at == NULL ) return 0;
+			}
 			if( at->tid <= DAO_ENUM ) at = DaoType_GetBaseType( at );
 			if( var->dtype == NULL || var->dtype->tid == DAO_UDT || var->dtype->tid == DAO_THT ){
 				DaoVariable_SetType( var, at );
@@ -6301,6 +6349,10 @@ SkipChecking:
 		case DVM_SETVO_BB : case DVM_SETVO_II : case DVM_SETVO_FF : case DVM_SETVO_CC :
 			if( self->tidHost != DAO_OBJECT ) goto ErrorTyping;
 			var = hostClass->instvars->items.pVar[opb];
+			if( opc & 0x2 ){
+				at = DaoInferencer_HandleVarInvarDecl( self, at, opc );
+				if( at == NULL ) return 0;
+			}
 			if( var->subtype == DAO_INVAR ){
 				if( !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
 				at = DaoType_GetInvarType( at );
@@ -6315,6 +6367,10 @@ SkipChecking:
 			break;
 		case DVM_SETVK_BB : case DVM_SETVK_II : case DVM_SETVK_FF : case DVM_SETVK_CC :
 			var = hostClass->variables->items.pVar[opb];
+			if( opc & 0x2 ){
+				at = DaoInferencer_HandleVarInvarDecl( self, at, opc );
+				if( at == NULL ) return 0;
+			}
 			if( at->tid <= DAO_ENUM ) at = DaoType_GetBaseType( at );
 			if( var->dtype == NULL || var->dtype->tid == DAO_UDT || var->dtype->tid == DAO_THT ){
 				DaoVariable_SetType( var, at );
@@ -6327,8 +6383,10 @@ SkipChecking:
 		case DVM_SETVG_BB : case DVM_SETVG_II : case DVM_SETVG_FF : case DVM_SETVG_CC :
 			var = NS->variables->items.pVar[opb];
 			if( !(opc & 0x4) && var->dtype && var->dtype->invar ) goto ModifyConstant;
-			if( (opc >> 1) == 0x3 ) at = DaoType_GetInvarType( at );
-			if( (opc & 0x4) == 0 && at->konst == 1 ) at = DaoType_GetBaseType( at );
+			if( opc & 0x2 ){
+				at = DaoInferencer_HandleVarInvarDecl( self, at, opc );
+				if( at == NULL ) return 0;
+			}
 			if( at->tid <= DAO_ENUM ) at = DaoType_GetBaseType( at );
 			if( var->dtype == NULL || var->dtype->tid == DAO_UDT || var->dtype->tid == DAO_THT ){
 				DaoVariable_SetType( var, at );
@@ -6350,8 +6408,10 @@ SkipChecking:
 				TT2 = DAO_COMPLEX;
 			}
 			if( opb & 0x2 ){
+				at = DaoInferencer_HandleVarInvarDecl( self, self->basicTypes[TT3], opb );
+				if( at == NULL ) return 0;
 				if( ct == NULL || ct->tid == DAO_UDT || ct->tid == DAO_THT ){
-					GC_Assign( & types[opc], self->basicTypes[TT3] );
+					GC_Assign( & types[opc], at );
 				}
 			}else{
 				DaoInferencer_UpdateType( self, opc, self->basicTypes[TT3] );
@@ -6390,9 +6450,9 @@ SkipChecking:
 			break;
 		case DVM_MOVE_CC :
 		case DVM_MOVE_SS :
-			if( (opb >> 1) == 0x3 && at->invar == 0 ) at = DaoType_GetInvarType( at );
-			if( (opb & 0x4) == 0 && at->konst == 1 ) at = DaoType_GetBaseType( at );
 			if( opb & 0x2 ){
+				at = DaoInferencer_HandleVarInvarDecl( self, at, opb );
+				if( at == NULL ) return 0;
 				if( ct == NULL || ct->tid == DAO_UDT || ct->tid == DAO_THT ){
 					GC_Assign( & types[opc], at );
 				}
@@ -6408,9 +6468,9 @@ SkipChecking:
 			if( code == DVM_MOVE_PP ){
 				if( at->tid && (at->tid < DAO_ARRAY || at->tid > DAO_TYPE) ) goto NotMatch;
 			}
-			if( (opb >> 1) == 0x3 && at->invar == 0 ) at = DaoType_GetInvarType( at );
-			if( (opb & 0x4) == 0 && at->konst == 1 ) at = DaoType_GetBaseType( at );
 			if( opb & 0x2 ){
+				at = DaoInferencer_HandleVarInvarDecl( self, at, opb );
+				if( at == NULL ) return 0;
 				if( ct == NULL || ct->tid == DAO_UDT || ct->tid == DAO_THT ){
 					GC_Assign( & types[opc], at );
 				}

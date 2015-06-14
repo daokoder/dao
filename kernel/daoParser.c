@@ -4624,6 +4624,8 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 			int id = LOOKUP_ID( regC );
 			int pm = LOOKUP_PM( regC );
 			int isdecl = self->isClassBody && (store & DAO_DECL_MEMBER);
+			int explicit_decl = explicit_store != 0;
+			int explicit_invar = (explicit_store & DAO_DECL_INVAR) != 0;
 			int first = varTok->index;
 			int mid = eq >= 0 ? eq : 0;
 			remove = 0;
@@ -4634,7 +4636,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 				if( (up = DaoParser_GetOuterLevel( self, id )) > 0 ){
 					DaoParser_AddCode( self, DVM_SETVH, reg, id, up );
 				}else{
-					int opb = 1|(1<<1)|(((store & DAO_DECL_INVAR) != 0)<<2);
+					int opb = 1|(explicit_decl<<1)|(explicit_invar<<2);
 					DaoParser_AddCode( self, DVM_MOVE, reg, opb, id );
 				}
 				break;
@@ -4695,7 +4697,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 						DaoByteBlock_DeclareGlobal( block, name, var->value, var->dtype, pm );
 					}
 				}else{
-					int mode = (1<<1)|(((store & DAO_DECL_INVAR) != 0)<<2);
+					int mode = (explicit_decl<<1)|(explicit_invar<<2);
 					DaoParser_AddCode( self, DVM_SETVG, reg, id, mode );
 					self->usingGlobal = 1;
 					if( explicit_store && block ){
@@ -4715,7 +4717,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 						DaoByteBlock_DeclareStatic( block, name, var->value, var->dtype, self->lexLevel, id );
 					}
 				}else if( reg >= 0 ){
-					DaoParser_AddCode( self, DVM_SETVG, reg, id, (1<<1) );
+					DaoParser_AddCode( self, DVM_SETVG, reg, id, (explicit_decl<<1) );
 				}else if( explicit_store && block ){
 					DaoByteBlock_DeclareStatic( block, name, NULL, extype, self->lexLevel, id );
 				}
