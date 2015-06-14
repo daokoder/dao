@@ -924,12 +924,14 @@ void DaoMakeUnit_Use( DaoMakeUnit *self, DaoMakeUnit *other, int import )
 			return;
 		}
 		if( tar->ttype == DAOMAKE_STATICLIB ){
-			DString *prefix = DaoMake_GetSettingValue( daomake_prefix_keys[ tar->ttype ] );
-			DString *suffix = DaoMake_GetSettingValue( daomake_suffix_keys[ tar->ttype ] );
-			flag = (DString*) DList_PushBack( self->linkingFlags, name );
-			if( prefix != NULL ) DString_Insert( flag, prefix, 0, 0, 0 );
-			DString_Append( flag, suffix );
-			DaoMake_MakePath( tar->base.binaryPath, flag );
+			if( name->size ){
+				DString *prefix = DaoMake_GetSettingValue( daomake_prefix_keys[ tar->ttype ] );
+				DString *suffix = DaoMake_GetSettingValue( daomake_suffix_keys[ tar->ttype ] );
+				flag = (DString*) DList_PushBack( self->linkingFlags, name );
+				if( prefix != NULL ) DString_Insert( flag, prefix, 0, 0, 0 );
+				DString_Append( flag, suffix );
+				DaoMake_MakePath( tar->base.binaryPath, flag );
+			}
 		}else if( tar->ttype == DAOMAKE_SHAREDLIB ){
 			if( tar->install->size && ! DString_EQ( tar->install, tar->base.binaryPath ) ){
 				if( rpath->size ){

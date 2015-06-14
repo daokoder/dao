@@ -5713,7 +5713,8 @@ CleanUp:
 		}
 		tokens[colon1]->type = DTOK_SEMCO;
 		tokens[colon1]->name = DTOK_SEMCO;
-		pos = DaoParser_ParseVarExpressions( self, start+2, colon1-1, store );
+		st = store & (~DAO_DECL_INVAR); /* To compile "invar a=init" as "var a=init"; */
+		pos = DaoParser_ParseVarExpressions( self, start+2, colon1-1, st );
 		tokens[colon1]->type = DTOK_COLON;
 		tokens[colon1]->name = DTOK_COLON;
 		if( pos < 0 ) return -1;
