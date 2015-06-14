@@ -38,30 +38,32 @@ FILE* Dao_OpenFile( const char *file, const char *mode )
 	DString mode2 = DString_WrapChars( mode );
 	DArray *file3 = DArray_New( sizeof(wchar_t) );
 	DArray *mode3 = DArray_New( sizeof(wchar_t) );
-	FILE *pfile;
-	DString_DecodeUTF8( & file2, file3 );
-	DString_DecodeUTF8( & mode2, mode3 );
-	pfile = _wfopen( file3->data.wchars, mode3->data.wchars );
+	int ret1 = DString_DecodeUTF8( & file2, file3 );
+	int ret2 = DString_DecodeUTF8( & mode2, mode3 );
+	if( ret1 && ret2 ){
+		FILE *pfile = _wfopen( file3->data.wchars, mode3->data.wchars );
+		DArray_Delete( file3 );
+		DArray_Delete( mode3 );
+		return pfile;
+	}
 	DArray_Delete( file3 );
 	DArray_Delete( mode3 );
-	return pfile;
-#else
-	return fopen( file, mode );
 #endif
+	return fopen( file, mode );
 }
 int Dao_FileStat( const char *path, struct stat *buf )
 {
 #if WIN32
 	DString path2 = DString_WrapChars( path );
 	DArray *path3 = DArray_New( sizeof(wchar_t) );
-	int ret;
-	DString_DecodeUTF8( & path2, path3 );
-	ret = _wstat( path3->data.wchars, buf );
+	if( DString_DecodeUTF8( & path2, path3 ) ){
+		int ret = _wstat( path3->data.wchars, buf );
+		DArray_Delete( path3 );
+		return ret;
+	}
 	DArray_Delete( path3 );
-	return ret;
-#else
-	return stat( path, buf );
 #endif
+	return stat( path, buf );
 }
 
 
