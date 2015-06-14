@@ -4552,7 +4552,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 		// The following should just declare variable of any type:
 		// [var|invar] name = none
 		*/
-		if( abtp == NULL && value->type == DAO_NONE ) abtp = dao_type_any;
+		if( abtp == NULL && value && value->type == DAO_NONE ) abtp = dao_type_any;
 	}
 	if( abtp == NULL && value ){
 		if( store != 0 && (store & DAO_DECL_INVAR) == 0 ){
