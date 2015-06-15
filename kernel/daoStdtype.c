@@ -4284,7 +4284,8 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 		DaoStream_WriteChars( ss, i == 0 ? "Raised by:  " : "Called by:  " );
 		if( rout->attribs & DAO_ROUT_PARSELF ){
 			DaoType *type = rout->routType->nested->items.pType[0];
-			DaoType_WriteMainName( & type->aux->xType, ss );
+			type = DaoType_GetBaseType( (DaoType*) type->aux );
+			DaoType_WriteMainName( type, ss );
 			DaoStream_WriteChars( ss, "." );
 		}else if( rout->routHost ){
 			DaoType_WriteMainName( rout->routHost, ss );

@@ -260,6 +260,11 @@ static int DaoObject_Compare( DaoObject *left, DaoObject *right, DaoProcess *pro
 PointerComparison:
 	return number_compare( (size_t)left, (size_t)right );
 }
+static int DaoType_Compare( DaoType *left, DaoType *right )
+{
+	if( DaoType_MatchTo( left, right, NULL ) >= DAO_MT_EQ ) return 0;
+	return number_compare( (size_t)left, (size_t)right );
+}
 static int DaoValue_ComparePro2( DaoValue *left, DaoValue *right, DaoProcess *proc, int dep )
 {
 	double L, R;
@@ -288,6 +293,7 @@ static int DaoValue_ComparePro2( DaoValue *left, DaoValue *right, DaoProcess *pr
 	case DAO_CDATA   :
 	case DAO_CSTRUCT :
 	case DAO_CTYPE : return DaoCstruct_Compare( (DaoCstruct*)left, (DaoCstruct*)right, proc, dep );
+	case DAO_TYPE : return DaoType_Compare( (DaoType*) left, (DaoType*) right );
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY   : return DaoArray_Compare( & left->xArray, & right->xArray );
 #endif

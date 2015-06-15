@@ -990,7 +990,7 @@ int DaoProcess_Start( DaoProcess *self )
 	dao_complex acom, bcom;
 	double AA, BB, dnum=0;
 	int invokehost = handler && handler->InvokeHost;
-	int print, active = self->active;
+	int active = self->active;
 	daoint exceptCount0 = self->exceptions->size;
 	daoint exceptCount = 0;
 	daoint count = 0;
@@ -2328,6 +2328,19 @@ FinishCall:
 		if( self->exceptions->size > exceptCount0 ) goto AbortProcess;
 		goto ReturnTrue;
 	}
+	/* Better to print while the frame is still on the stack: */
+	if( self->topFrame->prev == self->firstFrame && self == vmSpace->mainProcess ){
+		int interun = self->vmSpace->options & DAO_OPTION_INTERUN;
+		int autoglb = self->activeNamespace->options & DAO_NS_AUTO_GLOBAL;
+		int print = interun && autoglb; // XXX: use autoglb?
+		int status = self->status;
+		if( (print || vmSpace->evalCmdline) && self->stackValues[0] ){
+			DaoStream_WriteChars( vmSpace->stdioStream, "= " );
+			DaoValue_Print( self->stackValues[0], self, vmSpace->stdioStream, NULL );
+			DaoStream_WriteNewLine( vmSpace->stdioStream );
+		}
+		self->status = status;
+	}
 	DaoProcess_PopFrame( self );
 	DaoGC_TryInvoke();
 	goto CallEntry;
@@ -2346,6 +2359,7 @@ AbortProcess:
 	self->status = DAO_PROCESS_ABORTED;
 
 ReturnFalse:
+
 #ifdef DAO_WITH_CONCURRENT
 	/*
 	// active==0:       if the process is started outside of the tasklet pool;
@@ -2359,21 +2373,7 @@ ReturnFalse:
 	return 0;
 
 ReturnTrue:
-	if( self->topFrame == self->firstFrame && self == vmSpace->mainProcess ){
-		DaoNamespace *ns = self->activeNamespace;
-		int status = self->status;
-		print = (vmSpace->options & DAO_OPTION_INTERUN) && (ns->options & DAO_NS_AUTO_GLOBAL);
-		if( (print || vmSpace->evalCmdline) && self->stackValues[0] ){
-			/* Need one extra frame to ensure this part is not executed again,
-			// in case that DaoValue_Print() will invoke some methods: */
-			DaoProcess_PushFrame( self, 0 );
-			DaoStream_WriteChars( vmSpace->stdioStream, "= " );
-			DaoValue_Print( self->stackValues[0], self, vmSpace->stdioStream, NULL );
-			DaoStream_WriteNewLine( vmSpace->stdioStream );
-			DaoProcess_PopFrame( self );
-		}
-		self->status = status;
-	}
+
 #ifdef DAO_WITH_CONCURRENT
 	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
 #endif
@@ -5179,8 +5179,14 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		}
 	}else if( vmc->code == DVM_EQ ){
 		D = A == B;
+		if( A->type == DAO_TYPE && B->type == DAO_TYPE ){
+			D = DaoType_MatchTo( (DaoType*) A, (DaoType*) B, NULL ) >= DAO_MT_EQ;
+		}
 	}else if( vmc->code == DVM_NE ){
 		D = A != B;
+		if( A->type == DAO_TYPE && B->type == DAO_TYPE ){
+			D = DaoType_MatchTo( (DaoType*) A, (DaoType*) B, NULL ) < DAO_MT_EQ;
+		}
 	}else{
 InvalidOperation:
 		DaoProcess_RaiseError( self, "Type", "" );
@@ -5954,7 +5960,10 @@ static DaoException* DaoProcess_RaiseExceptionEx( DaoProcess *self, DaoType *ety
 	DaoStream *stream = self->vmSpace->errorStream;
 	DaoException *except;
 
-	if( self->activeRoutine == NULL ) return NULL; // TODO: Error infor;
+	if( self->activeRoutine == NULL ){
+		DaoStream_WriteChars( stream, "ERROR: no active routine to raise an exception!\n" );
+		return NULL;
+	}
 
 	if( DaoType_ChildOf( etype, warning ) ){
 		/* XXX support warning suppression */
@@ -5980,7 +5989,10 @@ void DaoProcess_RaiseException( DaoProcess *self, const char *type, const char *
 {
 	DaoException *exception;
 	DaoType *etype = DaoVmSpace_MakeExceptionType( self->vmSpace, type );
-	if( etype == NULL ) return;
+	if( etype == NULL ){
+		DaoProcess_RaiseError( self, "Param", "invalid exception type name" );
+		return;
+	}
 	exception = DaoProcess_RaiseExceptionEx( self, etype, info );
 	if( data != NULL && exception != NULL ) DaoValue_Copy( data, & exception->data );
 }
@@ -6014,9 +6026,6 @@ static void DaoProcess_RaiseEx( DaoProcess *self, const char *type, const char *
 		DString_AppendChars( name, type );
 	}
 	DaoProcess_RaiseException( self, name->chars, info, NULL );
-	if( err != 0 && self->exceptions->size == ecount ){
-		DaoProcess_RaiseError( self, "Param", "invalid exception type name" );
-	}
 	DString_Delete( name );
 }
 void DaoProcess_RaiseWarning( DaoProcess *self, const char *type, const char *info )
