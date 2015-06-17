@@ -361,7 +361,6 @@ enum DaoEnumCodeModes
 
 enum DaoMathFunct
 {
-	DVM_MATH_RAND ,
 	DVM_MATH_CEIL ,
 	DVM_MATH_FLOOR ,
 	DVM_MATH_ABS ,

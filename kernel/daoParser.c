@@ -3042,7 +3042,7 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 	if( start <0 ) goto ErrorInterfaceDefinition;
 	if( value == NULL || value->type == 0 ){
 		int t = tokens[start]->name;
-		if( (t != DTOK_IDENTIFIER && t < DKEY_RAND) || t > DKEY_TANH ) goto ErrorInterfaceDefinition;
+		if( (t != DTOK_IDENTIFIER && t < DKEY_CEIL) || t > DKEY_TANH ) goto ErrorInterfaceDefinition;
 		interName = & tokens[start]->string;
 		inter = DaoInterface_New( interName->chars );
 		if( routine != NS->mainRoutine ) ns = NULL;
@@ -3177,7 +3177,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( value == NULL || value->type == 0 ){
 		DString *name = & tokens[start]->string;
 		int t = tokens[start]->name;
-		if( t != DTOK_IDENTIFIER && t != DTOK_ID_THTYPE && t < DKEY_RAND ) goto ErrorClassDefinition;
+		if( t != DTOK_IDENTIFIER && t != DTOK_ID_THTYPE && t < DKEY_CEIL ) goto ErrorClassDefinition;
 		klass = DaoClass_New();
 		if( immutable ) klass->attribs |= DAO_CLS_INVAR;
 
@@ -3834,7 +3834,7 @@ DecoratorError:
 			continue;
 		}
 
-		if( needName && (tkt != DTOK_IDENTIFIER || (tki > DAO_NOKEY1 && tki < DKEY_RAND)) ){
+		if( needName && (tkt != DTOK_IDENTIFIER || (tki > DAO_NOKEY1 && tki < DKEY_CEIL)) ){
 			DaoParser_Error( self, DAO_TOKEN_NEED_NAME, & tokens[start]->string );
 			DaoParser_Error3( self, DAO_INVALID_STATEMENT, errorStart );
 			goto ReturnFalse;
@@ -4338,7 +4338,7 @@ int DaoParser_MultipleAssignment( DaoParser *self, int start, int rb, int to, in
 		int tid = self->curToken;
 		int cur = tokens[tid]->name;
 		int nxt = tokens[tid+1]->name;
-		cur = cur == DTOK_IDENTIFIER || cur >= DKEY_RAND;
+		cur = cur == DTOK_IDENTIFIER || cur >= DKEY_CEIL;
 		nxt = nxt == DTOK_COMMA || nxt == DTOK_RB;
 		DaoParser_PushTokenIndices( self, tid, tid, tid );
 		if( cur && nxt ){
@@ -4434,7 +4434,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 			return DaoParser_MultipleAssignment( self, start, rb, to, store );
 		}
 	}
-	while( ptok->name == DTOK_IDENTIFIER || ptok->name >= DKEY_RAND ){
+	while( ptok->name == DTOK_IDENTIFIER || ptok->name >= DKEY_CEIL ){
 		DList_Append( self->toks, ptok );
 		if( (++k) > to ) break;
 		lastok = ptok;
@@ -5482,7 +5482,7 @@ int DaoParser_ParseNamespaceStatement( DaoParser *self, int start, int end )
 	if( value == NULL || value->type == 0 ){
 		DString *name = & tokens[start]->string;
 		int tok = tokens[start]->name;
-		if( tok != DTOK_IDENTIFIER && tok < DKEY_RAND ) goto InvalidNamespace;
+		if( tok != DTOK_IDENTIFIER && tok < DKEY_CEIL ) goto InvalidNamespace;
 		if( scope && scope->type != DAO_NAMESPACE ) goto InvalidNamespace;
 
 		defNS = DaoNamespace_New( NS->vmSpace, name->chars );
@@ -6514,23 +6514,18 @@ static DaoEnode DaoParser_ParseIntrinsicMath( DaoParser *self, int tki, int star
 
 	self->curToken = start;
 	DaoParser_PushTokenIndices( self, start, start+1, rb );
-	if( rb < 0 || (rb == start+2 && tki != DKEY_RAND) ){
+	if( rb < 0 || rb == start+2 ){
 		if( rb == start+2 ) DaoParser_Error( self, DAO_PARAM_INVALID, NULL );
 		return error;
 	}
-	if( rb == start+2 /* && tki == DKEY_RAND */ ){
-		reg = DaoParser_PushRegister( self );
-		DaoParser_AddCode( self, DVM_DATA, DAO_FLOAT, 1, reg );
-	}else{
-		reg = DaoParser_MakeArithTree( self, start+2, rb-1, &cst );
-	}
+	reg = DaoParser_MakeArithTree( self, start+2, rb-1, &cst );
 	if( reg <0 ) return error;
-	if( cst && tki != DKEY_RAND ){
+	if( cst ){
 		DaoProcess *proc;
 		DaoVmCode vmc = { DVM_MATH, 0, 1, 0 };
 		DaoValue *value;
 
-		vmc.a = tki - DKEY_RAND;
+		vmc.a = tki - DKEY_CEIL;
 		proc = DaoNamespace_ReserveFoldingOperands( self->nameSpace, 2 );
 		DaoValue_Copy( DaoParser_GetVariable( self, cst ), & proc->activeValues[1] );
 		proc->activeCode = & vmc;
@@ -6540,7 +6535,7 @@ static DaoEnode DaoParser_ParseIntrinsicMath( DaoParser *self, int tki, int star
 		regLast = DaoParser_GetNormRegister( self, result.konst, 0, start, 0, rb );
 	}else{
 		regLast = DaoParser_PushRegister( self );
-		DaoParser_AddCode( self, DVM_MATH, tki-DKEY_RAND, reg, regLast );
+		DaoParser_AddCode( self, DVM_MATH, tki - DKEY_CEIL, reg, regLast );
 	}
 	result.reg = regLast;
 	result.first = last->next;
@@ -6580,7 +6575,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 	tki2 = DaoParser_NextTokenName( self );
 	if( tki2 == stop ) tki2 = 0;
 	if( (start + 2) <= end ) tki3 = tokens[start+2]->type;
-	if( (tki == DTOK_IDENTIFIER || tki >= DKEY_RAND) && tki2 == DTOK_ASSN && eltype == DAO_EXPRLIST_TUPLE ){
+	if( (tki == DTOK_IDENTIFIER || tki >= DKEY_CEIL) && tki2 == DTOK_ASSN && eltype == DAO_EXPRLIST_TUPLE ){
 		DaoType *type = self->enumTypes->size ? self->enumTypes->items.pType[0] : NULL;
 		DaoString ds = {DAO_STRING,0,0,0,1,NULL};
 		DaoValue *value = (DaoValue*) & ds;
@@ -6609,7 +6604,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 		result.last = result.update = self->vmcLast;
 		result.first = result.last;
 		return result;
-	}else if( (tki == DTOK_IDENTIFIER || tki >= DKEY_RAND) && tki2 == DTOK_ASSN && eltype == DAO_EXPRLIST_PARAM ){
+	}else if( (tki == DTOK_IDENTIFIER || tki >= DKEY_CEIL) && tki2 == DTOK_ASSN && eltype == DAO_EXPRLIST_PARAM ){
 		DString *symbol = DaoParser_GetString( self );
 
 		DString_AppendChar( symbol, '$' );
@@ -6738,7 +6733,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 		result.last = result.update = self->vmcLast;
 		start += 1;
 	}else if( (tki >= DTOK_IDENTIFIER && tki <= DTOK_WCS) || tki == DTOK_COLON
-			|| (tki >= DKEY_ANY && tki <= DKEY_TUPLE) || tki >= DKEY_RAND || tki == DKEY_SELF ){
+			|| (tki >= DKEY_ANY && tki <= DKEY_TUPLE) || tki >= DKEY_CEIL || tki == DKEY_SELF ){
 		int count = self->errors->size;
 		int cur = start;
 		regLast = DaoParser_ParseAtomicExpression( self, start, & cst );
@@ -6753,7 +6748,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 			}
 			tki = tokens[cur]->name;
 			tki2 = cur + 1 < self->tokens->size ? tokens[cur+1]->name : 0;
-			if( tki2 == DTOK_LB && (tki >= DKEY_RAND && tki <= DKEY_TANH) ){
+			if( tki2 == DTOK_LB && (tki >= DKEY_CEIL && tki <= DKEY_TANH) ){
 				DList_Erase( self->errors, count, -1 );
 				result = DaoParser_ParseIntrinsicMath( self, tki, cur, end );
 				start = self->curToken - 1;

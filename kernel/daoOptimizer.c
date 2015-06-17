@@ -1716,8 +1716,6 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 		break;
 	case DAO_CODE_UNARY2 :
 		/* Exclude expressions that may have side effects: */
-		if( code == DVM_MATH && vmc->a == DVM_MATH_RAND ) return;
-		if( (code >= DVM_MATH_I && code <= DVM_MATH_F) && vmc->a == DVM_MATH_RAND ) return;
 		if( DaoRoutine_IsVolatileParameter( routine, vmc->b ) ) return;
 		break;
 	case DAO_CODE_GETF :
@@ -6212,11 +6210,7 @@ SkipChecking:
 			if( bt->tid > DAO_COMPLEX && !(bt->tid & DAO_ANY) ) goto InvParam;
 			ct = bt; /* return the same type as the argument by default; */
 			K = bt->realnum ? DVM_MATH_B + (bt->tid - DAO_BOOLEAN) : DVM_MATH;
-			if( opa == DVM_MATH_RAND ){
-				if( bt->tid == DAO_COMPLEX ) goto InvParam;
-				DaoInferencer_UpdateVarType( self, opc, ct );
-				if( bt->realnum && types[opc]->tid == bt->tid ) code = K;
-			}else if( opa <= DVM_MATH_FLOOR ){
+			if( opa <= DVM_MATH_FLOOR ){
 				DaoInferencer_UpdateVarType( self, opc, ct );
 				if( bt->tid <= DAO_COMPLEX && types[opc]->tid == bt->tid ) code = K;
 			}else if( opa == DVM_MATH_ABS ){

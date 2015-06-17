@@ -159,14 +159,4 @@ DAO_DLL daoint DaoArray_GetWorkIntervalSize( DaoArray *self );
 
 #endif
 
-
-typedef struct DaoRandGenerator DaoRandGenerator;
-
-DAO_DLL DaoRandGenerator* DaoRandGenerator_New( uint_t seed );
-DAO_DLL void DaoRandGenerator_Delete( DaoRandGenerator *self );
-DAO_DLL void DaoRandGenerator_Seed( DaoRandGenerator *self, uint_t seed );
-DAO_DLL double DaoRandGenerator_GetUniform( DaoRandGenerator *self );
-DAO_DLL double DaoRandGenerator_GetNormal( DaoRandGenerator *self );
-
-
 #endif

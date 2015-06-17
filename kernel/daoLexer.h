@@ -159,7 +159,6 @@ enum DaoKeyNames
 	DKEY_PROTECTED ,
 	DKEY_PUBLIC ,
 	/* Built-in math functions; not real keywords, handle as keywords for convenience: */
-	DKEY_RAND ,
 	DKEY_CEIL ,
 	DKEY_FLOOR ,
 	DKEY_ABS ,

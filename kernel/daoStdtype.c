@@ -2147,7 +2147,7 @@ static unsigned int DaoProcess_GetHashSeed( DaoProcess *self, DaoValue *seed )
 	if( seed->type == DAO_INTEGER ) return seed->xInteger.value;
 	if( seed->type == DAO_ENUM ){
 		unsigned int hashing = seed->xEnum.value;
-		if( hashing == 2 ) hashing = 0xffffffff * DaoProcess_UniformRand( self );
+		if( hashing == 2 ) hashing = rand();
 		return hashing;
 	}
 	return 0;
@@ -2918,7 +2918,7 @@ static void DaoMAP_Reset( DaoProcess *proc, DaoValue *p[], int N )
 	}else if( N > 1 ){
 		DMap *map = p[0]->xMap.value;
 		unsigned int hashing = p[1]->xEnum.value;
-		if( hashing == 2 ) hashing = 0xffffffff * DaoProcess_UniformRand( proc );
+		if( hashing == 2 ) hashing = rand();
 		DaoMap_Reset( & p[0]->xMap, hashing );
 	}
 }
