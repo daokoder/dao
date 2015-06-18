@@ -881,7 +881,7 @@ static void DaoxStream_PrintCode( DaoxStream *self, DString *code, DString *lang
 		case DTOK_ID_SYMBOL :
 			fgcolor = DAOX_GREEN;
 			break;
-		case DKEY_RAND : case DKEY_CEIL : case DKEY_FLOOR :
+		case DKEY_CEIL : case DKEY_FLOOR :
 		case DKEY_ABS  : case DKEY_ARG  : case DKEY_IMAG :
 		case DKEY_NORM : case DKEY_REAL : case DKEY_ACOS :
 		case DKEY_ASIN : case DKEY_ATAN : case DKEY_COS :

@@ -5027,7 +5027,7 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 	}
 	if( vmc->b ==0 ){
 		/* less strict checking for type holder as well (case mt.start()): */
-		if( ct && ct->tid == DAO_UDT ){
+		if( ct && (ct->tid == DAO_UDT || ct->tid == DAO_THT) ){
 			ct = DaoNamespace_MakeValueType( NS, dao_none_value );
 			rettypes->items.pType[ rettypes->size - 1 ] = ct;
 			ct = DaoNamespace_MakeRoutType( NS, routine->routType, NULL, NULL, ct );
