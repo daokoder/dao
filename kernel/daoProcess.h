@@ -125,6 +125,8 @@ struct DaoProcess
 	DList          *exceptions;
 	DList          *factory;
 
+	DMap           *wrappers;
+
 	/*
 	// Process auxiliary data (process specific data):
 	// Pairs of deallocation function pointer and data pointer;

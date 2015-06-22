@@ -35,7 +35,7 @@ routine Test() { if( 1 ) 123.45 }
 io.writeln( std.about( Test ) )
 @[test(code_01)]
 @[test(code_01)]
-Test%{routine%<=%>@Test%>%}
+Test%{routine%<=%>none%>%}
 @[test(code_01)]
 
 

@@ -782,6 +782,7 @@ DAO_DLL void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream );
 DAO_DLL DaoValue* DaoProcess_GetReturned( DaoProcess *self );
 DAO_DLL DaoType*  DaoProcess_GetReturnType( DaoProcess *self );
 DAO_DLL DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt );
+DAO_DLL DaoCdata* DaoProcess_MakeCdata( DaoProcess *self, DaoType *type, void *data, int owned );
 DAO_DLL void DaoProcess_RaiseException( DaoProcess *self, const char *type, const char *info, DaoValue *data );
 DAO_DLL void DaoProcess_RaiseException2( DaoProcess *self, const char *type, const char *info, char *args );
 DAO_DLL void DaoProcess_RaiseWarning( DaoProcess *self, const char *type, const char *info );

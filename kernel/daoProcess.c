@@ -147,6 +147,7 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->paramValues = self->stackValues + 1;
 	self->factory = DList_New( DAO_DATA_VALUE );
 
+	self->wrappers = DMap_New(0,DAO_DATA_VALUE);
 	self->string = DString_New();
 	self->list = DList_New(0);
 	self->pauseType = 0;
@@ -178,6 +179,7 @@ void DaoProcess_Delete( DaoProcess *self )
 	DList_Delete( self->list );
 	DList_Delete( self->exceptions );
 	DList_Delete( self->defers );
+	DMap_Delete( self->wrappers );
 	if( self->future ) GC_DecRC( self->future );
 	if( self->factory ) DList_Delete( self->factory );
 	if( self->aux ) DaoAux_Delete( self->aux );
@@ -841,6 +843,22 @@ static int DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
 	DList_Erase( self->defers, frame->deferBase, deferCount );
 	for(f=self->topFrame; f!=frame; f=f->prev) f->exceptBase = self->exceptions->size;
 	return self->topFrame != frame;
+}
+
+static void DaoProcess_Regularize( DaoProcess *self )
+{
+	int count = 0;
+	void *keys[1000];
+	DNode *it;
+
+	for(it=DMap_First(self->wrappers); it; it=DMap_Next(self->wrappers,it)){
+		if( it->value.pValue->xBase.refCount == 1 ){
+			keys[count++] = it->key.pVoid;
+			if( count >= 1000 ) break;
+		}
+	}
+	while( count ) DMap_Erase( self->wrappers, keys[--count] );
+	DaoGC_TryInvoke();
 }
 
 static daoint DaoArray_ComputeIndex( DaoArray *self, DaoValue *ivalues[], int count )
@@ -2293,7 +2311,7 @@ CheckException:
 			locVars = self->activeValues;
 			self->baseFrame = rollback; /* may have been changed; */
 			if( vmSpace->stopit ) goto FinishProcess;
-			if( (++count) % 1000 == 0 ) DaoGC_TryInvoke();
+			if( (++count) % 1000 == 0 ) DaoProcess_Regularize( self );
 			if( invokehost ) handler->InvokeHost( handler, self );
 			if( self->exceptions->size > exceptCount ){
 				goto FinishCall;
@@ -2337,7 +2355,7 @@ FinishCall:
 		self->status = status;
 	}
 	DaoProcess_PopFrame( self );
-	DaoGC_TryInvoke();
+	DaoProcess_Regularize( self );
 	goto CallEntry;
 
 FinishProcess:
@@ -2363,7 +2381,7 @@ ReturnFalse:
 	*/
 	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
 #endif
-	DaoGC_TryInvoke();
+	DaoProcess_Regularize( self );
 	self->depth -= 1;
 	return 0;
 
@@ -2372,7 +2390,7 @@ ReturnTrue:
 #ifdef DAO_WITH_CONCURRENT
 	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
 #endif
-	DaoGC_TryInvoke();
+	DaoProcess_Regularize( self );
 	self->depth -= 1;
 	return 1;
 }
@@ -2601,14 +2619,14 @@ DaoStream* DaoProcess_PutFile( DaoProcess *self, FILE *file )
 void DaoCdata_Delete( DaoCdata *self );
 DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type )
 {
-	DaoCdata *cdata = DaoCdata_New( type, data );
+	DaoCdata *cdata = DaoProcess_MakeCdata( self, type, data, 1 );
 	if( DaoProcess_PutValue( self, (DaoValue*)cdata ) ) return cdata;
 	DaoGC_TryDelete( (DaoValue*) cdata );
 	return NULL;
 }
 DaoCdata* DaoProcess_WrapCdata( DaoProcess *self, void *data, DaoType *type )
 {
-	DaoCdata *cdata = DaoCdata_Wrap( type, data );
+	DaoCdata *cdata = DaoProcess_MakeCdata( self, type, data, 0 );
 	if( DaoProcess_PutValue( self, (DaoValue*)cdata ) ) return cdata;
 	DaoGC_TryDelete( (DaoValue*) cdata );
 	return NULL;
@@ -3562,7 +3580,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 			/* down casting: */
 			void *data = DaoType_DownCastCxxData( va->xCdata.ctype, ct, va->xCdata.data );
 			if( data ){
-				va = (DaoValue*) DaoCdata_Wrap( ct, data );
+				va = (DaoValue*) DaoProcess_MakeCdata( self, ct, data, 0 );
 				goto FastCasting;
 			}
 		}
@@ -4064,7 +4082,7 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 		DaoValue **data = iter->values;
 		data[0]->xInteger.value = va->xMap.value->size >0;
 		if( data[1]->type != DAO_CDATA || data[1]->xCdata.ctype != dao_type_cdata ){
-			DaoCdata *it = DaoCdata_Wrap( dao_type_cdata, node );
+			DaoCdata *it = DaoProcess_MakeCdata( self, dao_type_cdata, node, 0 );
 			GC_Assign( & data[1], it );
 		}else{
 			data[1]->xCdata.data = node;
@@ -6306,4 +6324,28 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src )
 	}
 	DMap_Insert( regexCaches, src, pat );
 	return pat;
+}
+
+
+/*
+// The reference count of the object returned by this method should be increased before
+// DaoProcess_Regularize() is called, otherwise, the object might be collected by the GC.
+// To ensure this, it is better to do the reference count increment before the execution
+// is returned to DaoProcess_Start() and DaoProcess_Execute().
+*/
+DaoCdata* DaoProcess_MakeCdata( DaoProcess *self, DaoType *type, void *data, int owned )
+{
+	DNode *node = DMap_Find( self->wrappers, data );
+	DaoCdata *cdata;
+	if( node ){
+		cdata = (DaoCdata*) node->value.pVoid;
+		if( cdata->type == DAO_CDATA && cdata->ctype == type && cdata->data == data ){
+			return cdata;
+		}
+	}
+	cdata = owned ? DaoCdata_New( type, data ) : DaoCdata_Wrap( type, data );
+	if( node == NULL ){
+		DMap_Insert( self->wrappers, data, cdata );
+	}
+	return cdata;
 }

@@ -476,6 +476,7 @@ void DaoObjectLogger_Quit()
 				DaoObjectLogger_ScanArray( vmp->exceptions );
 				DaoObjectLogger_ScanArray( vmp->defers );
 				DaoObjectLogger_ScanArray( vmp->factory );
+				DaoObjectLogger_ScanMap( vmp->wrappers, 0, 1 );
 				DaoObjectLogger_ScanValues( vmp->stackValues, vmp->stackSize );
 				while( frame ){
 					DaoObjectLogger_ScanValue( (DaoValue*) frame->routine );
@@ -1790,6 +1791,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			cycRefCountDecrements( vmp->defers );
 			cycRefCountDecrements( vmp->factory );
 			DaoGC_CycRefCountDecrements( vmp->stackValues, vmp->stackSize );
+			count += DaoGC_ScanMap( vmp->wrappers, DAO_GC_DEC, 0, 1 );
 			count += vmp->stackSize;
 			while( frame ){
 				count += 3;
@@ -1986,6 +1988,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			cycRefCountIncrements( vmp->defers );
 			cycRefCountIncrements( vmp->factory );
 			DaoGC_CycRefCountIncrements( vmp->stackValues, vmp->stackSize );
+			count += DaoGC_ScanMap( vmp->wrappers, DAO_GC_INC, 0, 1 );
 			count += vmp->stackSize;
 			while( frame ){
 				count += 3;
@@ -2187,6 +2190,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			directRefCountDecrements( vmp->defers );
 			directRefCountDecrements( vmp->factory );
 			DaoGC_RefCountDecrements( vmp->stackValues, vmp->stackSize );
+			count += DaoGC_ScanMap( vmp->wrappers, DAO_GC_BREAK, 0, 1 );
 			count += vmp->stackSize;
 			vmp->stackSize = 0;
 			while( frame ){

@@ -2576,7 +2576,6 @@ extern DMutex mutex_methods_setup;
 extern DMutex mutex_routines_update;
 extern DMutex mutex_routine_specialize;
 extern DMutex mutex_routine_specialize2;
-extern DMutex dao_cdata_mutex;
 extern DaoFuncItem dao_mt_methods[];
 #endif
 
@@ -2587,7 +2586,6 @@ extern DaoFuncItem dao_io_methods[];
 #include<signal.h>
 void print_trace();
 
-extern DMap *dao_cdata_bindings;
 
 int DaoVmSpace_TryInitDebugger( DaoVmSpace *self, const char *module )
 {
@@ -2652,8 +2650,6 @@ DaoVmSpace* DaoInit( const char *command )
 
 	if( mainVmSpace ) return mainVmSpace;
 
-	dao_cdata_bindings = DHash_New(0,0);
-
 	/* signal( SIGSEGV, print_trace ); */
 	/* signal( SIGABRT, print_trace ); */
 
@@ -2665,7 +2661,6 @@ DaoVmSpace* DaoInit( const char *command )
 	DMutex_Init( & mutex_routines_update );
 	DMutex_Init( & mutex_routine_specialize );
 	DMutex_Init( & mutex_routine_specialize2 );
-	DMutex_Init( & dao_cdata_mutex );
 #endif
 
 	mbs = DString_New();
@@ -2863,8 +2858,6 @@ void DaoQuit()
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_Quit();
 #endif
-	DMap_Delete( dao_cdata_bindings );
-	dao_cdata_bindings = NULL;
 	dao_type_stream = NULL;
 	mainVmSpace = NULL;
 	mainProcess = NULL;
@@ -2883,7 +2876,6 @@ void DaoQuit()
 	DMutex_Destroy( & mutex_routines_update );
 	DMutex_Destroy( & mutex_routine_specialize );
 	DMutex_Destroy( & mutex_routine_specialize2 );
-	DMutex_Destroy( & dao_cdata_mutex );
 	DaoQuitThread();
 #endif
 }

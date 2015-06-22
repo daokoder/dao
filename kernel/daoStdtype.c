@@ -3751,57 +3751,6 @@ DaoNameValue* DaoNameValue_New( DString *name, DaoValue *value )
 
 
 
-DMap *dao_cdata_bindings = NULL;
-#ifdef DAO_WITH_THREAD
-DMutex dao_cdata_mutex;
-static DaoCdata* DaoCdataBindings_Find( DaoType *type, void *data )
-{
-	DNode *node;
-	DaoCdata *cdata = NULL;
-
-	DMutex_Lock( & dao_cdata_mutex );
-	node = DMap_Find( dao_cdata_bindings, data );
-	if( node ) cdata = (DaoCdata*) node->value.pVoid;
-	DMutex_Unlock( & dao_cdata_mutex );
-	if( cdata && cdata->ctype == type && cdata->refCount && cdata->cycRefCount ) return cdata;
-	return NULL;
-}
-static void DaoCdataBindings_Insert( void *data, DaoCdata *wrap )
-{
-	if( data == NULL ) return;
-	DMutex_Lock( & dao_cdata_mutex );
-	DMap_Insert( dao_cdata_bindings, data, wrap );
-	DMutex_Unlock( & dao_cdata_mutex );
-}
-static void DaoCdataBindings_Erase( void *data )
-{
-	if( data == NULL ) return;
-	DMutex_Lock( & dao_cdata_mutex );
-	DMap_Erase( dao_cdata_bindings, data );
-	DMutex_Unlock( & dao_cdata_mutex );
-}
-#else
-static DaoCdata* DaoCdataBindings_Find( DaoType *type, void *data )
-{
-	DaoCdata *cdata;
-	DNode *node = DMap_Find( dao_cdata_bindings, data );
-	if( node == NULL ) return NULL;
-	cdata = (DaoCdata*) node->value.pVoid;
-	if( cdata->ctype == type && cdata->refCount && cdata->cycRefCount ) return cdata;
-	return NULL;
-}
-static void DaoCdataBindings_Insert( void *data, DaoCdata *wrap )
-{
-	if( data == NULL ) return;
-	DMap_Insert( dao_cdata_bindings, data, wrap );
-}
-static void DaoCdataBindings_Erase( void *data )
-{
-	if( data == NULL ) return;
-	DMap_Erase( dao_cdata_bindings, data );
-}
-#endif
-
 /**/
 void DaoCstruct_Init( DaoCstruct *self, DaoType *type )
 {
@@ -3828,13 +3777,10 @@ void DaoCstruct_Free( DaoCstruct *self )
 }
 DaoCdata* DaoCdata_New( DaoType *type, void *data )
 {
-	DaoCdata *self = DaoCdataBindings_Find( type, data );
-	if( self && self->ctype == type && self->data == data ) return self;
-	self = (DaoCdata*)dao_calloc( 1, sizeof(DaoCdata) );
+	DaoCdata *self = (DaoCdata*)dao_calloc( 1, sizeof(DaoCdata) );
 	DaoCstruct_Init( (DaoCstruct*)self, type );
 	self->subtype = DAO_CDATA_CXX;
 	self->data = data;
-	if( data ) DaoCdataBindings_Insert( data, self );
 #ifdef DAO_USE_GC_LOGGER
 	if( type == NULL ) DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
@@ -3842,9 +3788,7 @@ DaoCdata* DaoCdata_New( DaoType *type, void *data )
 }
 DaoCdata* DaoCdata_Wrap( DaoType *type, void *data )
 {
-	DaoCdata *self = DaoCdataBindings_Find( type, data );
-	if( self && self->ctype == type && self->data == data ) return self;
-	self = DaoCdata_New( type, data );
+	DaoCdata *self = DaoCdata_New( type, data );
 	self->subtype = DAO_CDATA_PTR;
 	return self;
 }
@@ -3861,7 +3805,6 @@ void DaoCdata_Delete( DaoCdata *self )
 void DaoCdata_DeleteData( DaoCdata *self )
 {
 	void (*fdel)(void*) = (void (*)(void *))DaoCdata_Delete;
-	DaoCdataBindings_Erase( self->data );
 	if( self->subtype == DAO_CDATA_CXX && self->data != NULL ){
 		if( self->ctype->typer->Delete && self->ctype->typer->Delete != fdel ){
 			self->ctype->typer->Delete( self->data );
@@ -3887,9 +3830,7 @@ void DaoCdata_SetType( DaoCdata *self, DaoType *type )
 }
 void DaoCdata_SetData( DaoCdata *self, void *data )
 {
-	if( self->data ) DaoCdataBindings_Erase( self->data );
 	self->data = data;
-	if( data ) DaoCdataBindings_Insert( data, self );
 }
 void* DaoCdata_GetData( DaoCdata *self )
 {

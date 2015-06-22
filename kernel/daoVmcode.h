@@ -31,7 +31,7 @@
 
 #include"daoBase.h"
 
-// TODO: more detailed description!
+/* TODO: more detailed description! */
 enum DaoOpcode
 {
 	DVM_DATA  , /* Create primitive data:  C = B;  A: data type id;  B: direct value; */
@@ -355,7 +355,7 @@ enum DaoEnumCodeModes
 	DVM_ENUM_MODE0 , /* Default mode; */
 	DVM_ENUM_MODE1 , /* LIST/VECTOR: arithmetic progression; MAP: hashing; TUPLE: arguments; */
 	DVM_ENUM_MODE2 , /* TUPLE: code section arguments; */
-	DVM_ENUM_MODE3 , /* Reserved; */
+	DVM_ENUM_MODE3   /* Reserved; */
 };
 
 

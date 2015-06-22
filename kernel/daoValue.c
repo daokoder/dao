@@ -1274,7 +1274,7 @@ DaoStream* DaoProcess_NewStream( DaoProcess *self, FILE *f )
 }
 DaoCdata* DaoProcess_NewCdata( DaoProcess *self, DaoType *type, void *data, int owned )
 {
-	DaoCdata *res = owned ? DaoCdata_New( type, data ) : DaoCdata_Wrap( type, data );
+	DaoCdata *res = DaoProcess_MakeCdata( self, type, data, owned );
 	DaoProcess_CacheValue( self, (DaoValue*) res );
 	return res;
 }

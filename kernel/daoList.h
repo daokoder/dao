@@ -124,6 +124,7 @@ struct DArray
 		float      *floats;
 		double     *doubles;
 		uint_t     *uints;
+		uchar_t    *uchars;
 		wchar_t    *wchars;
 		ushort_t   *ushorts;
 		DString    *strings;
