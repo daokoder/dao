@@ -64,6 +64,8 @@ enum DaoSubTypes
 	DAO_ENUM_SYM ,
 	DAO_ENUM_STATE ,
 	DAO_ENUM_FLAG ,
+	DAO_IFACE_ABS ,
+	DAO_IFACE_CON ,
 	DAO_CDATA_PTR ,  /* opaque C/C++ data, not owned by the wrapper */
 	DAO_CDATA_CXX ,  /* opaque C/C++ data, owned by the wrapper */
 	DAO_PAIR ,

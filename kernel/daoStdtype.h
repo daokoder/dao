@@ -197,6 +197,16 @@ DaoNameValue* DaoNameValue_New( DString *name, DaoValue *value );
 
 
 
+/* Interface Wrapper: */
+struct DaoInterfaceBox
+{
+	DAO_VALUE_COMMON;
+
+	DaoInterface  *iface;
+	DaoValue      *value;
+};
+DaoInterfaceBox* DaoInterfaceBox_New( DaoInterface *iface, DaoValue *value );
+
 
 
 /* Customized/extended Dao data: */

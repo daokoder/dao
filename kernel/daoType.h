@@ -192,9 +192,13 @@ struct DaoInterface
 {
 	DAO_VALUE_COMMON;
 
-	DaoType  *abtype;  /* type object of this interface; */
-	DList    *supers;  /* parent interfaces; */
-	DMap     *methods; /* DHash<DString*,DaoRoutine*>; */
+	DaoType       *abtype;  /* type object of this interface; */
+	DList         *supers;  /* parent interfaces; */
+	DMap          *methods; /* DHash<DString*,DaoRoutine*>; */
+
+	DaoType       *target;    /* the target type for concrete interfaces; */
+	DaoInterface  *abstract;  /* the abstract interface for concrete interfaces; */
+	DMap          *concretes; /* the concrete interfaces for abstract interfaces; */
 
 	short derived;
 };
@@ -204,8 +208,7 @@ DaoInterface* DaoInterface_New( const char *name );
 int DaoInterface_Bind( DList *pairs, DList *fails );
 int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds );
 void DaoInterface_DeriveMethods( DaoInterface *self );
-
-void DMap_SortMethods( DMap *hash, DList *methods );
+DaoInterface* DaoInterface_GetConcrete( DaoInterface *self, DaoType *type );
 
 int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds );
 

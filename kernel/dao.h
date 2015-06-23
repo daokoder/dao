@@ -105,6 +105,7 @@ enum DaoTypes
 	DAO_CLASS  ,
 	DAO_CTYPE  ,
 	DAO_INTERFACE ,
+	DAO_IFACEBOX ,
 	DAO_ROUTINE   ,
 	DAO_PROCESS ,
 	DAO_NAMESPACE ,
@@ -212,6 +213,7 @@ typedef struct DaoMap          DaoMap;
 typedef struct DaoTuple        DaoTuple;
 typedef struct DaoRoutine      DaoRoutine;
 typedef struct DaoInterface    DaoInterface;
+typedef struct DaoInterfaceBox DaoInterfaceBox;
 typedef struct DaoClass        DaoClass;
 typedef struct DaoObject       DaoObject;
 typedef struct DaoStream       DaoStream;

@@ -89,6 +89,7 @@ union DaoValue
 	DaoCtype       xCtype;
 	DaoClass       xClass;
 	DaoInterface   xInterface;
+	DaoInterfaceBox xInterfaceBox;
 	DaoRoutine     xRoutine;
 	DaoProcess     xProcess;
 	DaoNamespace   xNamespace;

@@ -212,6 +212,7 @@ extern DaoTypeBase  ioDeviceTyper;
 extern DaoTypeBase  streamTyper;
 extern DaoTypeBase  routTyper;
 extern DaoTypeBase  interTyper;
+extern DaoTypeBase  ifaceboxTyper;
 extern DaoTypeBase  classTyper;
 extern DaoTypeBase  objTyper;
 extern DaoTypeBase  nsTyper;
@@ -260,6 +261,7 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_CDATA   :  return & defaultCdataTyper;
 	case DAO_ROUTINE   :  return & routTyper;
 	case DAO_INTERFACE :  return & interTyper;
+	case DAO_IFACEBOX  :  return & ifaceboxTyper;
 	case DAO_CLASS     :  return & classTyper;
 	case DAO_OBJECT    :  return & objTyper;
 	case DAO_NAMESPACE :  return & nsTyper;

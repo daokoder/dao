@@ -3468,6 +3468,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		return;
 	}
 	if( va->type == DAO_PAR_NAMED ) va = va->xNameValue.value;
+	if( va->type == DAO_IFACEBOX )  va = va->xInterfaceBox.value; // XXX;
 	if( ct == NULL ) goto FastCasting;
 	if( va->type == ct->tid && ct->tid <= DAO_STRING ) goto FastCasting;
 	if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ){
@@ -3524,9 +3525,18 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 	}
 
 	if( ct->tid == DAO_INTERFACE ){
-		if( ct->aux == NULL ){
+		DaoInterface *iface = (DaoInterface*) ct->aux;
+		if( ct->aux == NULL ){ /* type "interface": */
 			if( va->type != DAO_INTERFACE ) goto FailConversion;
 			goto FastCasting;
+		}
+		at = DaoNamespace_GetType( self->activeNamespace, va );
+		if( iface->concretes ){
+			DaoInterface *iface2 = DaoInterface_GetConcrete( iface, at );
+			if( iface2 ){
+				va = (DaoValue*) DaoProcess_MakeInterfaceBox( self, iface2, va );
+				goto FastCasting;
+			}
 		}
 		switch( va->type ){
 		case DAO_OBJECT  :
@@ -3537,9 +3547,8 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 			if( va->xCstruct.object ) va = (DaoValue*) va->xCstruct.object->rootObject;
 			break;
 		}
-		at = DaoNamespace_GetType( self->activeNamespace, va );
 		/* automatic binding when casted to an interface: */
-		mt = DaoInterface_BindTo( & ct->aux->xInterface, at, NULL );
+		mt = DaoInterface_BindTo( iface, at, NULL );
 	}else if( ct->tid == DAO_TYPE && (ct->nested == NULL || ct->nested->size == 0) ){
 		if( va->type == DAO_TYPE ) goto FastCasting;
 	}
@@ -6348,4 +6357,20 @@ DaoCdata* DaoProcess_MakeCdata( DaoProcess *self, DaoType *type, void *data, int
 		DMap_Insert( self->wrappers, data, cdata );
 	}
 	return cdata;
+}
+DaoInterfaceBox* DaoProcess_MakeInterfaceBox( DaoProcess *self, DaoInterface *iface, DaoValue *value )
+{
+	DNode *node = DMap_Find( self->wrappers, value );
+	DaoInterfaceBox *box;
+	if( node ){
+		box = (DaoInterfaceBox*) node->value.pVoid;
+		if( box->type == DAO_IFACEBOX && box->iface == iface && box->value == value ){
+			return box;
+		}
+	}
+	box = DaoInterfaceBox_New( iface, value );
+	if( node == NULL ){
+		DMap_Insert( self->wrappers, value, box );
+	}
+	return box;
 }

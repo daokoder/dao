@@ -2748,7 +2748,8 @@ static DaoParser* DaoParser_NewRoutineParser( DaoParser *self, int start, int at
 	DaoRoutine *rout = NULL;
 	DaoParser *parser;
 	if( self->isInterBody ){
-		rout = DaoRoutine_New( self->nameSpace, self->hostInter->abtype, 0 );
+		DaoInterface *iface = self->hostInter;
+		rout = DaoRoutine_New( self->nameSpace, iface->abtype, iface->subtype == DAO_IFACE_CON );
 	}else if( self->isClassBody ){
 		rout = DaoRoutine_New( self->nameSpace, self->hostClass->objType, 1 );
 		rout->attribs |= attribs;
@@ -3056,14 +3057,34 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 			start += 2;
 			return start;
 		}
-	}else if( value->type != DAO_INTERFACE ){
-		ec = DAO_SYMBOL_WAS_DEFINED;
-		goto ErrorInterfaceDefinition;
-	}else if( value->xInterface.derived ){
-		ec = DAO_SYMBOL_WAS_DEFINED;
-		goto ErrorInterfaceDefinition;
+	}else if( value->type == DAO_INTERFACE ){
+		inter = (DaoInterface*) value;
+		if( tokens[start+1]->name == DKEY_FOR ){
+			DString *name = DaoParser_GetString( self );
+			DaoType *target;
+			
+			if( inter->subtype == DAO_IFACE_CON ) goto ErrorInterfaceDefinition; // TODO;
+
+			target = DaoParser_ParseType( self, start+2, to, & start, NULL );
+			if( target == NULL ) goto ErrorInterfaceDefinition; // TODO;
+			start -= 1;
+			
+			DString_Assign( name, inter->abtype->name ); 
+			DString_AppendChar( name, '<' );
+			DString_Append( name, target->name );
+			DString_AppendChar( name, '>' );
+
+			inter = DaoInterface_New( name->chars );
+			inter->subtype = DAO_IFACE_CON;
+			GC_Assign( & inter->target, (DaoValue*) target );
+			GC_Assign( & inter->abstract, (DaoValue*) value );
+		}else if( value->xInterface.derived ){
+			ec = DAO_SYMBOL_WAS_DEFINED;
+			goto ErrorInterfaceDefinition;
+		}
 	}else{
-		inter = & value->xInterface;
+		ec = DAO_SYMBOL_WAS_DEFINED;
+		goto ErrorInterfaceDefinition;
 	}
 	start += 1; /* token after class name. */
 	if( tokens[start]->name == DTOK_COLON ){
@@ -3119,6 +3140,16 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 		goto ErrorInterfaceDefinition;
 	}
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+	if( inter->subtype == DAO_IFACE_CON ){
+		if( DaoType_MatchInterface( inter->abtype, inter->abstract, NULL ) == 0 ){
+			// TODO;
+			goto ErrorInterfaceDefinition;
+		}
+		if( inter->abstract->concretes == NULL ){
+			inter->abstract->concretes = DHash_New(0,DAO_DATA_VALUE);
+		}
+		DMap_Insert( inter->abstract->concretes, inter->target, inter );
+	}
 	return right + 1;
 ErrorInterfaceBase:
 	DaoParser_Error( self, DAO_SYMBOL_NEED_INTERFACE, ename );

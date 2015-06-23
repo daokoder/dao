@@ -427,6 +427,15 @@ void DaoObjectLogger_Quit()
 				DaoInterface *inter = (DaoInterface*)value;
 				DaoObjectLogger_ScanArray( inter->supers );
 				DaoObjectLogger_ScanValue( (DaoValue*) inter->abtype );
+				DaoObjectLogger_ScanValue( (DaoValue*) inter->target );
+				DaoObjectLogger_ScanValue( (DaoValue*) inter->abstract );
+				DaoObjectLogger_ScanMap( inter->concretes, 0, 1 );
+				break;
+			}
+		case DAO_IFACEBOX :
+			{
+				DaoObjectLogger_ScanValue( value->xInterfaceBox.value );
+				DaoObjectLogger_ScanValue( (DaoValue*) value->xInterfaceBox.iface );
 				break;
 			}
 		case DAO_NAMESPACE :
@@ -1737,9 +1746,18 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			DaoInterface *inter = (DaoInterface*)value;
 			cycRefCountDecrements( inter->supers );
 			cycRefCountDecrement( (DaoValue*) inter->abtype );
+			cycRefCountDecrement( (DaoValue*) inter->target );
+			cycRefCountDecrement( (DaoValue*) inter->abstract );
+			count += DaoGC_ScanMap( inter->concretes, DAO_GC_DEC, 0, 1 );
 			count += DaoGC_ScanMap( inter->methods, DAO_GC_DEC, 0, 1 );
-			count += inter->supers->size + inter->methods->size;
+			count += inter->supers->size;
 			break;
+	case DAO_IFACEBOX :
+		{
+			cycRefCountDecrement( value->xInterfaceBox.value );
+			cycRefCountDecrement( (DaoValue*) value->xInterfaceBox.iface );
+			break;
+		}
 		}
 	case DAO_NAMESPACE :
 		{
@@ -1932,10 +1950,19 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 	case DAO_INTERFACE :
 		{
 			DaoInterface *inter = (DaoInterface*)value;
-			DaoGC_ScanMap( inter->methods, DAO_GC_INC, 0, 1 );
 			cycRefCountIncrements( inter->supers );
 			cycRefCountIncrement( (DaoValue*) inter->abtype );
-			count += inter->supers->size + inter->methods->size;
+			cycRefCountIncrement( (DaoValue*) inter->target );
+			cycRefCountIncrement( (DaoValue*) inter->abstract );
+			count += DaoGC_ScanMap( inter->concretes, DAO_GC_INC, 0, 1 );
+			count += DaoGC_ScanMap( inter->methods, DAO_GC_INC, 0, 1 );
+			count += inter->supers->size;
+			break;
+		}
+	case DAO_IFACEBOX :
+		{
+			cycRefCountIncrement( value->xInterfaceBox.value );
+			cycRefCountIncrement( (DaoValue*) value->xInterfaceBox.iface );
 			break;
 		}
 	case DAO_NAMESPACE :
@@ -2134,10 +2161,19 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 	case DAO_INTERFACE :
 		{
 			DaoInterface *inter = (DaoInterface*)value;
-			count += inter->supers->size + inter->methods->size;
-			count += DaoGC_ScanMap( inter->methods, DAO_GC_BREAK, 0, 1 );
 			directRefCountDecrements( inter->supers );
 			directRefCountDecrement( (DaoValue**) & inter->abtype );
+			directRefCountDecrement( (DaoValue**) & inter->target );
+			directRefCountDecrement( (DaoValue**) & inter->abstract );
+			count += DaoGC_ScanMap( inter->concretes, DAO_GC_BREAK, 0, 1 );
+			count += DaoGC_ScanMap( inter->methods, DAO_GC_BREAK, 0, 1 );
+			count += inter->supers->size;
+			break;
+		}
+	case DAO_IFACEBOX :
+		{
+			directRefCountDecrement( & value->xInterfaceBox.value );
+			directRefCountDecrement( (DaoValue**) & value->xInterfaceBox.iface );
 			break;
 		}
 	case DAO_NAMESPACE :

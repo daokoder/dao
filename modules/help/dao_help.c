@@ -1808,6 +1808,37 @@ static void PrintMethod( DaoProcess *proc, DaoRoutine *meth )
 	DaoProcess_Print( proc, meth->routType->name->chars );
 	DaoProcess_Print( proc, "\n" );
 }
+static void DMap_SortMethods( DMap *hash, DList *methods )
+{
+	DMap *map = DMap_New( DAO_DATA_STRING, 0 );
+	DString *name = DString_New();
+	DNode *it;
+	daoint i, n;
+	for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
+		if( it->value.pRoutine->overloads ){
+			DRoutines *one = it->value.pRoutine->overloads;
+			for(i=0,n=one->routines->size; i<n; i++){
+				DaoRoutine *rout = one->routines->items.pRoutine[i];
+				DString_Assign( name, rout->routName );
+				DString_AppendChars( name, " " );
+				DString_Append( name, rout->routType->name );
+				DMap_Insert( map, name, (void*)rout );
+			}
+		}else{
+			DaoRoutine *rout = it->value.pRoutine;
+			DString_Assign( name, rout->routName );
+			DString_AppendChars( name, " " );
+			DString_Append( name, rout->routType->name );
+			DMap_Insert( map, name, (void*)rout );
+		}
+	}
+	DList_Clear( methods );
+	for(it=DMap_First(map); it; it=DMap_Next(map,it))
+		DList_Append( methods, it->value.pVoid );
+	DMap_Delete( map );
+	DString_Delete( name );
+}
+// TODO: move or remove?
 static void HELP_List( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoNamespace *ns = proc->activeNamespace;

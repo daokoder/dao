@@ -1451,30 +1451,23 @@ void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *t
 
 DaoType *simpleTypes[ DAO_ARRAY ] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 
-DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
+DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *value )
 {
 	DNode *node;
-	DList *nested = NULL;
+	DList *nested;
 	DString *mbs;
-	DaoRoutine *rout;
-	DaoType *abtp = NULL;
-	DaoType *itp = (DaoType*) p;
-	DaoTuple *tuple = (DaoTuple*) p;
-	DaoNameValue *nameva = (DaoNameValue*) p;
-	DaoList *list = (DaoList*) p;
-	DaoMap *map = (DaoMap*) p;
-	DaoArray *array = (DaoArray*) p;
-	DaoCdata *cdata = (DaoCdata*) p;
-	DaoProcess *vmp = (DaoProcess*) p;
+	DaoType *abtp;
+	DaoType *itp;
 	DaoTypeBase *typer;
 	int i, tid;
 
-	if( p == NULL ) return NULL;
-	tid = p->type;
+	if( value == NULL ) return NULL;
+	tid = value->type;
 
-	switch( p->type ){
+	abtp = NULL;
+	switch( value->type ){
 	case DAO_NONE :
-		if( p->xBase.subtype == DAO_ANY ){
+		if( value->xBase.subtype == DAO_ANY ){
 			abtp = dao_type_any;
 		}else{
 			abtp = DaoNamespace_MakeValueType( self, dao_none_value );
@@ -1483,65 +1476,56 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 	case DAO_BOOLEAN :
 	case DAO_INTEGER : case DAO_FLOAT :
 	case DAO_COMPLEX : case DAO_STRING :
-		abtp = simpleTypes[ p->type ];
+		abtp = simpleTypes[ value->type ];
 		if( abtp ) break;
-		abtp = DaoNamespace_MakeType( self, coreTypeNames[p->type], p->type, NULL, NULL, 0 );
-		simpleTypes[ p->type ] = abtp;
+		abtp = DaoNamespace_MakeType( self, coreTypeNames[value->type], value->type, NULL, NULL, 0 );
+		simpleTypes[ value->type ] = abtp;
 		GC_IncRC( abtp );
 		break;
 	case DAO_ENUM :
-		abtp = p->xEnum.etype;
+		abtp = value->xEnum.etype;
 		if( abtp ) break;
-		abtp = simpleTypes[ p->type ];
+		abtp = simpleTypes[ value->type ];
 		if( abtp ) break;
-		abtp = DaoNamespace_MakeType( self, coreTypeNames[p->type], p->type, NULL, NULL, 0 );
-		simpleTypes[ p->type ] = abtp;
+		abtp = DaoNamespace_MakeType( self, coreTypeNames[value->type], value->type, NULL, NULL, 0 );
+		simpleTypes[ value->type ] = abtp;
 		GC_IncRC( abtp );
 		break;
-	case DAO_LIST :
-		abtp = list->ctype; break;
-	case DAO_MAP :
-		abtp = map->ctype; break;
 #ifdef DAO_WITH_NUMARRAY
-	case DAO_ARRAY :
-		abtp = dao_array_types[ array->etype ]; break;
+	case DAO_ARRAY : return dao_array_types[ value->xArray.etype ];
 #endif
-	case DAO_OBJECT :
-		abtp = p->xObject.defClass->objType; break;
-	case DAO_CLASS :
-		abtp = p->xClass.clsType; break;
-	case DAO_CTYPE :
-	case DAO_CDATA :
-	case DAO_CSTRUCT :
-		abtp = p->xCdata.ctype; break;
-	case DAO_ROUTINE :
-		abtp = p->xRoutine.routType;
-		break;
-	case DAO_PAR_NAMED :
-		abtp = nameva->ctype; break;
-	case DAO_TUPLE :
-		abtp = tuple->ctype; break;
-	case DAO_INTERFACE :
-		abtp = p->xInterface.abtype; break;
+	case DAO_LIST   : return value->xList.ctype;
+	case DAO_MAP    : return value->xMap.ctype;
+	case DAO_TUPLE  : return value->xTuple.ctype;
+	case DAO_OBJECT : return value->xObject.defClass->objType;
+	case DAO_CLASS  : return value->xClass.clsType;
+	case DAO_CTYPE   :
+	case DAO_CDATA   :
+	case DAO_CSTRUCT : return value->xCdata.ctype;
+	case DAO_ROUTINE   : return value->xRoutine.routType;
+	case DAO_PAR_NAMED : return value->xNameValue.ctype;
+	case DAO_INTERFACE : return value->xInterface.abtype;
+	case DAO_IFACEBOX  : return value->xInterfaceBox.iface->abtype;
 	default : break;
 	}
 	if( abtp ){
-		//abtp->typer = DaoValue_GetTyper( p );
 		return abtp;
 	}
 
-	if( p->type == DAO_LIST ){
-		if( list->value->size == 0 ) return dao_type_list_empty;
+	if( value->type == DAO_LIST ){
+		if( value->xList.value->size == 0 ) return dao_type_list_empty;
 		return DaoNamespace_MakeType( self, "list", DAO_LIST, NULL, NULL, 0 );
-	}else if( p->type == DAO_MAP ){
-		if( map->value->size == 0 ) return dao_type_map_empty;
+	}else if( value->type == DAO_MAP ){
+		if( value->xMap.value->size == 0 ) return dao_type_map_empty;
 		return DaoNamespace_MakeType( self, "map", DAO_MAP, NULL, NULL, 0 );
 	}
 
+	nested = NULL;
 	mbs = DString_New();
-	if( p->type <= DAO_TUPLE ){
-		DString_SetChars( mbs, coreTypeNames[p->type] );
-		if( p->type == DAO_TUPLE ){
+	if( value->type <= DAO_TUPLE ){
+		DString_SetChars( mbs, coreTypeNames[value->type] );
+		if( value->type == DAO_TUPLE ){
+			DaoTuple *tuple = (DaoTuple*) value;
 			DString_SetChars( mbs, "tuple<" );
 			nested = DList_New(0);
 			for(i=0; i<tuple->size; i++){
@@ -1552,7 +1536,8 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 			}
 			DString_AppendChars( mbs, ">" );
 #ifdef DAO_WITH_NUMARRAY
-		}else if( p->type == DAO_ARRAY ){
+		}else if( value->type == DAO_ARRAY ){
+			DaoArray *array = (DaoArray*) value;
 			nested = DList_New(0);
 			if( array->size ==0 ){
 				DString_AppendChars( mbs, "<?>" );
@@ -1575,13 +1560,14 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		abtp = DaoNamespace_FindType( self, mbs );
 		if( abtp == NULL ){
 			abtp = DaoType_New( mbs->chars, tid, NULL, nested );
-			if( p->type && p->type < DAO_ARRAY ){
-				simpleTypes[ p->type ] = abtp;
+			if( value->type && value->type < DAO_ARRAY ){
+				simpleTypes[ value->type ] = abtp;
 				GC_IncRC( abtp );
 			}
 			abtp = DaoNamespace_AddType( self, abtp->name, abtp );
 		}
-	}else if( p->type == DAO_TYPE ){
+	}else if( value->type == DAO_TYPE ){
+		itp = (DaoType*) value;
 		DString_SetChars( mbs, "type<" );
 		nested = DList_New(0);
 		DList_Append( nested, itp );
@@ -1589,21 +1575,21 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p )
 		DString_AppendChars( mbs, ">" );
 		abtp = DaoNamespace_FindType( self, mbs );
 		if( abtp == NULL ){
-			abtp = DaoType_New( mbs->chars, p->type, NULL, nested );
+			abtp = DaoType_New( mbs->chars, value->type, NULL, nested );
 			abtp = DaoNamespace_AddType( self, abtp->name, abtp );
 		}
 	}else{
-		typer = DaoValue_GetTyper( p );
+		typer = DaoValue_GetTyper( value );
 		DString_SetChars( mbs, typer->name );
 		abtp = DaoNamespace_FindType( self, mbs );
 		if( abtp == NULL ){
-			abtp = DaoType_New( typer->name, p->type, NULL, NULL );
+			abtp = DaoType_New( typer->name, value->type, NULL, NULL );
 			abtp = DaoNamespace_AddType( self, abtp->name, abtp );
 		}
 	}
 	/* abtp might be rout->routType, which might be NULL,
 	 * in case rout is DaoNamespace.constEvalRoutine */
-	//XXX if( abtp && abtp->typer ==NULL ) abtp->typer = DaoValue_GetTyper( p );
+	//XXX if( abtp && abtp->typer ==NULL ) abtp->typer = DaoValue_GetTyper( value );
 	DString_Delete( mbs );
 	if( nested ) DList_Delete( nested );
 	return abtp;

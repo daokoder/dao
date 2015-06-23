@@ -555,16 +555,57 @@ void DaoValue_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
 	DaoValue *p = DaoType_FindValue( type, name );
 	if( p == NULL ){
-		DString *mbs = DString_New();
-		DString_Append( mbs, name );
-		DaoProcess_RaiseError( proc, "Field::NonExist", DString_GetData( mbs ) );
-		DString_Delete( mbs );
-		return;
+		DaoRoutine *func = NULL;
+		DaoString str = {DAO_STRING,0,0,0,1,NULL};
+		DaoValue *pars = (DaoValue*) & str;
+		int error, npar = 0;
+
+		str.value = name;
+		DString_SetChars( proc->string, "." );
+		DString_Append( proc->string, name );
+		func = DaoType_FindFunction( type, proc->string );
+		if( func == NULL ){
+			npar = 1;
+			DString_SetChars( proc->string, "." );
+			func = DaoType_FindFunction( type, proc->string );
+		}
+		if( func == NULL ){
+			DaoProcess_RaiseError( proc, "Field::NotExist", "not exist" );
+			return;
+		}
+		if( (error = DaoProcess_PushCallable( proc, func, self, & pars, npar )) != 0 ){
+			DaoProcess_RaiseException( proc, daoExceptionNames[error], NULL, NULL );
+		}
+	}else{
+		DaoProcess_PutValue( proc, p );
 	}
-	DaoProcess_PutValue( proc, p );
 }
 void DaoValue_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
 {
+    int npar = 1; 
+    DaoValue *pars[2];
+    DaoRoutine *func = NULL;
+    DaoString str = {DAO_STRING,0,0,0,1,NULL};
+	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
+
+    str.value = name;
+    pars[0] = pars[1] = value;
+
+    DString_SetChars( proc->string, "." );
+    DString_Append( proc->string, name );
+    DString_AppendChars( proc->string, "=" );
+    func = DaoType_FindFunction( type, proc->string );
+    if( func == NULL ){
+        pars[0] = (DaoValue*) & str; 
+        npar = 2; 
+        DString_SetChars( proc->string, ".=" );
+        func = DaoType_FindFunction( type, proc->string );
+    }    
+    if( func == NULL ){
+        DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
+        return;
+    }    
+    DaoProcess_PushCallable( proc, func, self, pars, npar );
 }
 void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N )
 {
@@ -3737,17 +3778,136 @@ DaoTypeBase namevaTyper =
 };
 DaoNameValue* DaoNameValue_New( DString *name, DaoValue *value )
 {
-	DaoNameValue *self = (DaoNameValue*)dao_malloc( sizeof(DaoNameValue) );
+	DaoNameValue *self = (DaoNameValue*)dao_calloc( 1, sizeof(DaoNameValue) );
 	DaoValue_Init( self, DAO_PAR_NAMED );
 	self->name = DString_Copy( name );
-	self->ctype = NULL;
-	self->value = NULL;
 	DaoValue_Copy( value, & self->value );
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
+
+
+
+
+void DaoInterfaceBox_Delete( DaoInterfaceBox *self )
+{
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
+#endif
+	GC_DecRC( self->iface );
+	GC_DecRC( self->value );
+	dao_free( self );
+}
+void DaoInterfaceBox_GetField( DaoValue *self, DaoProcess *proc, DString *name )
+{
+	DNode *it = DMap_Find( self->xInterfaceBox.iface->methods, name );
+	if( it == NULL ){
+		DaoString str = {DAO_STRING,0,0,0,1,NULL};
+		DaoValue *pars = (DaoValue*) & str;
+		int error, npar = 0;
+
+		str.value = name;
+		DString_SetChars( proc->string, "." );
+		DString_Append( proc->string, name );
+		it = DMap_Find( self->xInterfaceBox.iface->methods, proc->string );
+		if( it == NULL ){
+			npar = 1;
+			DString_SetChars( proc->string, "." );
+			it = DMap_Find( self->xInterfaceBox.iface->methods, proc->string );
+		}
+		if( it == NULL ){
+			DaoProcess_RaiseError( proc, "Field::NotExist", "not exist" );
+			return;
+		}
+		if( (error = DaoProcess_PushCallable( proc, it->value.pRoutine, self, & pars, npar )) != 0 ){
+			DaoProcess_RaiseException( proc, daoExceptionNames[error], NULL, NULL );
+		}
+	}else{
+		DaoProcess_PutValue( proc, it->value.pValue );
+	}
+}
+void DaoInterfaceBox_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
+{
+    int npar = 1; 
+    DaoValue *pars[2];
+    DaoString str = {DAO_STRING,0,0,0,1,NULL};
+	DNode *it;
+
+    str.value = name;
+    pars[0] = pars[1] = value;
+
+    DString_SetChars( proc->string, "." );
+    DString_Append( proc->string, name );
+    DString_AppendChars( proc->string, "=" );
+	it = DMap_Find( self->xInterfaceBox.iface->methods, proc->string );
+    if( it == NULL ){
+        pars[0] = (DaoValue*) & str; 
+        npar = 2; 
+        DString_SetChars( proc->string, ".=" );
+		it = DMap_Find( self->xInterfaceBox.iface->methods, proc->string );
+    }    
+    if( it == NULL ){
+        DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
+        return;
+    }    
+    DaoProcess_PushCallable( proc, it->value.pRoutine, self, pars, npar );
+}
+void DaoInterfaceBox_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N )
+{
+	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
+	DaoRoutine *func = DaoType_FindFunctionChars( type, "[]" );
+	if( func == NULL ){
+		DaoProcess_RaiseError( proc, "Field::NonExist", "[]" );
+		return;
+	}
+	DaoProcess_PushCallable( proc, func, self, pid, N );
+}
+void DaoInterfaceBox_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value )
+{
+	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
+	DaoRoutine *func = DaoType_FindFunctionChars( type, "[]=" );
+	DaoValue *p[ DAO_MAX_PARAM ];
+	memcpy( p+1, pid, N*sizeof(DaoValue*) );
+	p[0] = value;
+	if( func == NULL ){
+		DaoProcess_RaiseError( proc, "Field::NonExist", "[]=" );
+		return;
+	}
+	DaoProcess_PushCallable( proc, func, self, p, N+1 );
+}
+static void DaoInterfaceBox_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
+{
+	DaoInterfaceBox *self = (DaoInterfaceBox*) self0;
+	DaoValue_Print( self->value, proc, stream, cycData );
+	// TODO: wrapper;
+}
+static DaoTypeCore ifaceboxCore=
+{
+	NULL,
+	DaoInterfaceBox_GetField,
+	DaoInterfaceBox_SetField,
+	DaoInterfaceBox_GetItem,
+	DaoInterfaceBox_SetItem,
+	DaoValue_Print
+};
+DaoTypeBase ifaceboxTyper =
+{
+	"InterfaceBox", & ifaceboxCore, NULL, NULL, {0}, {0}, (FuncPtrDel) DaoInterfaceBox_Delete, NULL
+};
+DaoInterfaceBox* DaoInterfaceBox_New( DaoInterface *iface, DaoValue *value )
+{
+	DaoInterfaceBox *self = (DaoInterfaceBox*)dao_calloc( 1, sizeof(DaoInterfaceBox) );
+	DaoValue_Init( self, DAO_IFACEBOX );
+	GC_Assign( & self->iface, iface );
+	GC_Assign( & self->value, value );
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( (DaoValue*) self );
+#endif
+	return self;
+}
+
 
 
 

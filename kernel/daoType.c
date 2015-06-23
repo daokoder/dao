@@ -142,6 +142,8 @@ void DaoType_Init()
 	dao_type_matrix[DAO_CDATA][DAO_INTERFACE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_ROUTINE][DAO_ROUTINE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_PROCESS][DAO_ROUTINE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_IFACEBOX][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_IFACEBOX][DAO_IFACEBOX] = DAO_MT_EXACT+1;
 }
 
 
@@ -1020,6 +1022,11 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 	case DAO_CSTRUCT :
 		if( self->aux == type->aux ) return DAO_MT_EQ; /* for aliased type; */
 		return DaoType_MatchToParent( self, type, defs, dep );
+	case DAO_IFACEBOX :
+		if( self == type ) return DAO_MT_EQ;
+		//if( dinterface == NULL ) 
+		return DAO_MT_NOT;
+		//return DaoType_MatchInterface( value->xInterfaceBox.iface->abtype, dinterface, NULL );
 	case DAO_VARIANT :
 		mt = DAO_MT_EQ;
 		mt3 = DAO_MT_NOT;
@@ -1276,6 +1283,10 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( self->tid == value->type && self->aux == tp->aux ) return DAO_MT_EQ; /* alias type */
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		return DaoValue_MatchToParent( value, self, defs );
+	case DAO_IFACEBOX :
+		if( dinterface == NULL ) return DAO_MT_NOT;
+		if( value->xInterfaceBox.iface->abtype == self ) return DAO_MT_EQ;
+		return DaoType_MatchInterface( value->xInterfaceBox.iface->abtype, dinterface, NULL );
 	case DAO_TYPE :
 		tp = & value->xType;
 		if( self->tid != DAO_TYPE ) return 0;
@@ -1768,6 +1779,9 @@ void DaoInterface_Delete( DaoInterface *self )
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
+	if( self->concretes ) DMap_Delete( self->concretes );
+	GC_DecRC( self->abstract );
+	GC_DecRC( self->target );
 	GC_DecRC( self->abtype );
 	DList_Delete( self->supers );
 	DMap_Delete( self->methods );
@@ -1783,6 +1797,7 @@ DaoInterface* DaoInterface_New( const char *name )
 {
 	DaoInterface *self = (DaoInterface*) dao_calloc( 1, sizeof(DaoInterface) );
 	DaoValue_Init( self, DAO_INTERFACE );
+	self->subtype = DAO_IFACE_ABS;
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->derived = 0;
 	self->supers = DList_New( DAO_DATA_VALUE );
@@ -1871,6 +1886,36 @@ static void DaoInterface_TempBind( DaoInterface *self, DaoType *type, DMap *bind
 		DaoInterface_TempBind( super, type, binds );
 	}
 }
+static void DMap_SortMethods( DMap *hash, DList *methods )
+{
+	DMap *map = DMap_New( DAO_DATA_STRING, 0 );
+	DString *name = DString_New();
+	DNode *it;
+	daoint i, n;
+	for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
+		if( it->value.pRoutine->overloads ){
+			DRoutines *one = it->value.pRoutine->overloads;
+			for(i=0,n=one->routines->size; i<n; i++){
+				DaoRoutine *rout = one->routines->items.pRoutine[i];
+				DString_Assign( name, rout->routName );
+				DString_AppendChars( name, " " );
+				DString_Append( name, rout->routType->name );
+				DMap_Insert( map, name, (void*)rout );
+			}
+		}else{
+			DaoRoutine *rout = it->value.pRoutine;
+			DString_Assign( name, rout->routName );
+			DString_AppendChars( name, " " );
+			DString_Append( name, rout->routType->name );
+			DMap_Insert( map, name, (void*)rout );
+		}
+	}
+	DList_Clear( methods );
+	for(it=DMap_First(map); it; it=DMap_Next(map,it))
+		DList_Append( methods, it->value.pVoid );
+	DMap_Delete( map );
+	DString_Delete( name );
+}
 int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds )
 {
 	DNode *it;
@@ -1924,37 +1969,16 @@ void DaoInterface_DeriveMethods( DaoInterface *self )
 	}
 	self->derived = 1;
 }
-
-DAO_DLL void DMap_SortMethods( DMap *hash, DList *methods )
+DaoInterface* DaoInterface_GetConcrete( DaoInterface *self, DaoType *type )
 {
-	DMap *map = DMap_New( DAO_DATA_STRING, 0 );
-	DString *name = DString_New();
-	DNode *it;
-	daoint i, n;
-	for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
-		if( it->value.pRoutine->overloads ){
-			DRoutines *one = it->value.pRoutine->overloads;
-			for(i=0,n=one->routines->size; i<n; i++){
-				DaoRoutine *rout = one->routines->items.pRoutine[i];
-				DString_Assign( name, rout->routName );
-				DString_AppendChars( name, " " );
-				DString_Append( name, rout->routType->name );
-				DMap_Insert( map, name, (void*)rout );
-			}
-		}else{
-			DaoRoutine *rout = it->value.pRoutine;
-			DString_Assign( name, rout->routName );
-			DString_AppendChars( name, " " );
-			DString_Append( name, rout->routType->name );
-			DMap_Insert( map, name, (void*)rout );
-		}
+	DNode *it = DMap_Find( self->concretes, type );
+	if( it == NULL ){
+		// TODO: traverse and match the keys;
+		return NULL;
 	}
-	DList_Clear( methods );
-	for(it=DMap_First(map); it; it=DMap_Next(map,it))
-		DList_Append( methods, it->value.pVoid );
-	DMap_Delete( map );
-	DString_Delete( name );
+	return (DaoInterface*) it->value.pVoid;
 }
+
 int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds )
 {
 	DMap *inters = self->interfaces;
