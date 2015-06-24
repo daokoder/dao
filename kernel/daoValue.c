@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2014, Limin Fu
+// Copyright (c) 2006-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -106,208 +106,9 @@ void DaoVariable_SetType( DaoVariable *self, DaoType *type )
 	}
 }
 
-#ifdef DAO_WITH_NUMARRAY
-int DaoArray_Compare( DaoArray *x, DaoArray *y );
-#endif
 
-#define number_compare( x, y ) ((x)==(y) ? 0 : ((x)<(y) ? -1 : 1))
 
-/* Invalid comparison returns either -100 or 100: */
 
-int DaoComplex_Compare( DaoComplex *left, DaoComplex *right )
-{
-	if( left->value.real < right->value.real ) return -100;
-	if( left->value.real > right->value.real ) return  100;
-	if( left->value.imag < right->value.imag ) return -100;
-	if( left->value.imag > right->value.imag ) return  100;
-	return 0;
-}
-
-int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
-{
-	DaoEnum E;
-	if( L->etype == R->etype ){
-		return L->value == R->value ? 0 : (L->value < R->value ? -1 : 1);
-	}else if( L->subtype == DAO_ENUM_SYM && R->subtype == DAO_ENUM_SYM ){
-		return DString_CompareUTF8( L->etype->name, R->etype->name );
-	}else if( L->subtype == DAO_ENUM_SYM ){
-		E = *R;
-		if( DaoEnum_SetValue( & E, L ) == 0 ) goto CompareName;
-		return E.value == R->value ? 0 : (E.value < R->value ? -1 : 1);
-	}else if( R->subtype == DAO_ENUM_SYM ){
-		E = *L;
-		if( DaoEnum_SetValue( & E, R ) == 0 ) goto CompareName;
-		return L->value == E.value ? 0 : (L->value < E.value ? -1 : 1);
-	}else if( DString_EQ( L->etype->fname, R->etype->fname ) ){
-		return L->value == R->value ? 0 : (L->value < R->value ? -1 : 1);
-	}
-CompareName:
-	return DString_CompareUTF8( L->etype->fname, R->etype->fname );
-}
-static int DaoValue_ComparePro2( DaoValue *left, DaoValue *right, DaoProcess *proc, int dep );
-static void DaoProcess_WarnComparisonRecursion( DaoProcess *self )
-{
-	DaoStream *stream = self->vmSpace->errorStream;
-	DaoStream_WriteChars( stream, "WARNING: recursion limit is reached for comparison!\n" );
-}
-static int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt, DaoProcess *process, int dep )
-{
-	int i, lb, rb, res;
-	if( lt->size < rt->size ) return -100;
-	if( lt->size > rt->size ) return 100;
-
-	if( dep + (process ? process->depth : 0) > 1000 ){
-		DaoProcess_WarnComparisonRecursion( process );
-		return number_compare( (size_t)lt, (size_t)rt );
-	}
-
-	for(i=0; i<lt->size; i++){
-		res = DaoValue_ComparePro2( lt->values[i], rt->values[i], process, dep+1 );
-		if( res != 0 ) return res;
-	}
-	return 0;
-}
-static int DaoList_Compare( DaoList *list1, DaoList *list2, DaoProcess *process, int dep )
-{
-	DaoValue **d1 = list1->value->items.pValue;
-	DaoValue **d2 = list2->value->items.pValue;
-	int size1 = list1->value->size;
-	int size2 = list2->value->size;
-	int min = size1 < size2 ? size1 : size2;
-	int res = size1 == size2 ? 1 : 100;
-	int i, cmp = 0;
-
-	if( dep + (process ? process->depth : 0) > 1000 ){
-		DaoProcess_WarnComparisonRecursion( process );
-		return number_compare( (size_t)list1, (size_t)list2 );
-	}
-
-	/* find the first unequal items */
-	for(i=0; i<min; i++, d1++, d2++){
-		cmp = DaoValue_ComparePro2( *d1, *d2, process, dep+1 );
-		if( cmp != 0 ) break;
-	}
-	if( i < min ){
-		if( abs( cmp ) > 1 ) return cmp;
-		return cmp * res;
-	}
-	if( size1 == size2  ) return 0;
-	return size1 < size2 ? -100 : 100;
-}
-static int DaoCstruct_Compare( DaoCstruct *left, DaoCstruct *right, DaoProcess *process, int dep )
-{
-	DaoRoutine *EQ = left->ctype->kernel->eqOperators;
-	DaoRoutine *LT = left->ctype->kernel->ltOperators;
-	DaoValue *P[2];
-	int NE = 0;
-
-	if( left == right ) return 0;
-	if( process == NULL ) goto PointerComparison;
-	if( (process->depth + dep) > 1000 ){
-		DaoProcess_WarnComparisonRecursion( process );
-		goto PointerComparison;
-	}
-
-	P[0] = (DaoValue*) left; /* To support calling static methods: */
-	P[1] = (DaoValue*) right;
-
-	if( EQ ){
-		if( DaoProcess_Call( process, EQ, 0, P, 2 ) ) goto PointerComparison;
-		if( DaoValue_GetInteger( process->stackValues[0] ) ) return 0;
-		NE = 1;
-	}
-	if( LT ){
-		if( DaoProcess_Call( process, LT, 0, P, 2 ) ) goto PointerComparison;
-		if( DaoValue_GetInteger( process->stackValues[0] ) ) return -1;
-		if( NE ) return 1;
-	}
-PointerComparison:
-	if( left->ctype != right->ctype ){
-		return number_compare( (size_t)left->ctype, (size_t)right->ctype );
-	}else if( left->type == DAO_CDATA ){
-		DaoCdata *l = (DaoCdata*) left;
-		DaoCdata *r = (DaoCdata*) right;
-		return number_compare( (size_t)l->data, (size_t)r->data );
-	}
-	return number_compare( (size_t)left, (size_t)right );
-}
-static int DaoObject_Compare( DaoObject *left, DaoObject *right, DaoProcess *process, int dep )
-{
-	DaoRoutine *EQ = left->defClass->eqOperators;
-	DaoRoutine *LT = left->defClass->ltOperators;
-	DaoValue *P[2];
-	int NE = 0;
-
-	if( process == NULL ) goto PointerComparison;
-	if( (process->depth + dep) > 1000 ){
-		DaoProcess_WarnComparisonRecursion( process );
-		goto PointerComparison;
-	}
-
-	P[0] = (DaoValue*) left; /* To support calling static methods: */
-	P[1] = (DaoValue*) right;
-
-	if( EQ ){
-		if( DaoProcess_Call( process, EQ, 0, P, 2 ) ) goto PointerComparison;
-		if( DaoValue_GetInteger( process->stackValues[0] ) ) return 0;
-		NE = 1;
-	}
-	if( LT ){
-		if( DaoProcess_Call( process, LT, 0, P, 2 ) ) goto PointerComparison;
-		if( DaoValue_GetInteger( process->stackValues[0] ) ) return -1;
-		if( NE ) return 1;
-	}
-PointerComparison:
-	return number_compare( (size_t)left, (size_t)right );
-}
-static int DaoType_Compare( DaoType *left, DaoType *right )
-{
-	if( DaoType_MatchTo( left, right, NULL ) >= DAO_MT_EQ ) return 0;
-	return number_compare( (size_t)left, (size_t)right );
-}
-static int DaoValue_ComparePro2( DaoValue *left, DaoValue *right, DaoProcess *proc, int dep )
-{
-	double L, R;
-	int res = 0;
-	if( left == right ) return 0;
-	if( left == NULL || right == NULL ) return left < right ? -100 : 100;
-	if( left->type != right->type ){
-		res = left->type < right->type ? -100 : 100;
-		if( left->type < DAO_BOOLEAN || left->type > DAO_FLOAT ) return res;
-		if( right->type < DAO_BOOLEAN || right->type > DAO_FLOAT ) return res;
-		L = DaoValue_GetFloat( left );
-		R = DaoValue_GetFloat( right );
-		return L == R ? 0 : (L < R ? -1 : 1);
-	}
-	switch( left->type ){
-	case DAO_NONE : return 0;
-	case DAO_BOOLEAN :
-	case DAO_INTEGER : return number_compare( left->xInteger.value, right->xInteger.value );
-	case DAO_FLOAT   : return number_compare( left->xFloat.value, right->xFloat.value );
-	case DAO_COMPLEX : return DaoComplex_Compare( & left->xComplex, & right->xComplex );
-	case DAO_STRING  : return DString_CompareUTF8( left->xString.value, right->xString.value );
-	case DAO_ENUM    : return DaoEnum_Compare( & left->xEnum, & right->xEnum );
-	case DAO_TUPLE   : return DaoTuple_Compare( & left->xTuple, & right->xTuple, proc, dep );
-	case DAO_LIST    : return DaoList_Compare( & left->xList, & right->xList, proc, dep );
-	case DAO_OBJECT  : return DaoObject_Compare( (DaoObject*)left, (DaoObject*)right, proc, dep );
-	case DAO_CDATA   :
-	case DAO_CSTRUCT :
-	case DAO_CTYPE : return DaoCstruct_Compare( (DaoCstruct*)left, (DaoCstruct*)right, proc, dep );
-	case DAO_TYPE : return DaoType_Compare( (DaoType*) left, (DaoType*) right );
-#ifdef DAO_WITH_NUMARRAY
-	case DAO_ARRAY   : return DaoArray_Compare( & left->xArray, & right->xArray );
-#endif
-	}
-	return left < right ? -100 : 100; /* needed for map */
-}
-int DaoValue_ComparePro( DaoValue *left, DaoValue *right, DaoProcess *proc )
-{
-	return DaoValue_ComparePro2( left, right, proc, 0 );
-}
-int DaoValue_Compare( DaoValue *left, DaoValue *right )
-{
-	return DaoValue_ComparePro2( left, right, NULL, 0 );
-}
 int DaoValue_IsZero( DaoValue *self )
 {
 	if( self == NULL ) return 1;
@@ -394,69 +195,6 @@ DString* DaoValue_GetString( DaoValue *self, DString *str )
 	return str;
 }
 
-static void DaoValue_BasicPrint( DaoValue *self, DaoStream *stream, DMap *cycData )
-{
-	if( self->type <= DAO_TUPLE )
-		DaoStream_WriteChars( stream, coreTypeNames[ self->type ] );
-	else
-		DaoStream_WriteChars( stream, DaoValue_GetTyper( self )->name );
-	if( self->type == DAO_NONE ) return;
-	if( self->type == DAO_TYPE ){
-		DaoStream_WriteChars( stream, "<" );
-		DaoStream_WriteChars( stream, self->xType.name->chars );
-		DaoStream_WriteChars( stream, ">" );
-	}
-	DaoStream_WriteChars( stream, "_" );
-	DaoStream_WriteInt( stream, self->type );
-	DaoStream_WriteChars( stream, "_" );
-	DaoStream_WritePointer( stream, self );
-}
-void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
-{
-	DString *name;
-	DaoTypeBase *typer;
-	DMap *cd = cycData;
-	if( self == NULL ){
-		DaoStream_WriteChars( stream, "none[0x0]" );
-		return;
-	}
-	if( cycData == NULL ) cycData = DMap_New(0,0);
-	switch( self->type ){
-	case DAO_BOOLEAN :
-		DaoStream_WriteChars( stream, self->xBoolean.value ? "true" : "false" ); break;
-	case DAO_INTEGER :
-		DaoStream_WriteInt( stream, self->xInteger.value ); break;
-	case DAO_FLOAT   :
-		DaoStream_WriteFloat( stream, self->xFloat.value ); break;
-	case DAO_COMPLEX :
-		DaoStream_WriteFloat( stream, self->xComplex.value.real );
-		if( self->xComplex.value.imag >= -0.0 ) DaoStream_WriteChars( stream, "+" );
-		DaoStream_WriteFloat( stream, self->xComplex.value.imag );
-		DaoStream_WriteChars( stream, "C" );
-		break;
-	case DAO_ENUM  :
-		name = DString_New();
-		DaoEnum_MakeName( & self->xEnum, name );
-		DaoStream_WriteChars( stream, name->chars );
-		DaoStream_WriteChars( stream, "(" );
-		DaoStream_WriteInt( stream, self->xEnum.value );
-		DaoStream_WriteChars( stream, ")" );
-		DString_Delete( name );
-		break;
-	case DAO_STRING  :
-		DaoStream_WriteString( stream, self->xString.value );
-		break;
-	default :
-		typer = DaoVmSpace_GetTyper( self->type );
-		if( typer->core->Print == DaoValue_Print ){
-			DaoValue_BasicPrint( self, stream, cycData );
-			break;
-		}
-		typer->core->Print( self, proc, stream, cycData );
-		break;
-	}
-	if( cycData != cd ) DMap_Delete( cycData );
-}
 
 
 void DaoValue_MarkConst( DaoValue *self )
@@ -915,6 +653,8 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 			GC_Assign( D, S );
 			return 1;
 		}
+	}else if( S->type == DAO_CINVALUE && S->xCinValue.cintype->target == T /* TODO; */ ){
+		S = S->xCinValue.value;
 	}
 	if( D2 && D2->xBase.refCount > 1 ){
 		GC_DecRC( D2 );
@@ -973,6 +713,426 @@ int DaoValue_Move2( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 	}
 	return rc;
 }
+
+
+#ifdef DAO_WITH_NUMARRAY
+int DaoArray_Compare( DaoArray *x, DaoArray *y );
+#endif
+
+#define number_compare( x, y ) ((x)==(y) ? 0 : ((x)<(y) ? -1 : 1))
+
+/* Invalid comparison returns either -100 or 100: */
+
+int DaoComplex_Compare( DaoComplex *left, DaoComplex *right )
+{
+	if( left->value.real < right->value.real ) return -100;
+	if( left->value.real > right->value.real ) return  100;
+	if( left->value.imag < right->value.imag ) return -100;
+	if( left->value.imag > right->value.imag ) return  100;
+	return 0;
+}
+
+int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
+{
+	DaoEnum E;
+	if( L->etype == R->etype ){
+		return L->value == R->value ? 0 : (L->value < R->value ? -1 : 1);
+	}else if( L->subtype == DAO_ENUM_SYM && R->subtype == DAO_ENUM_SYM ){
+		return DString_CompareUTF8( L->etype->name, R->etype->name );
+	}else if( L->subtype == DAO_ENUM_SYM ){
+		E = *R;
+		if( DaoEnum_SetValue( & E, L ) == 0 ) goto CompareName;
+		return E.value == R->value ? 0 : (E.value < R->value ? -1 : 1);
+	}else if( R->subtype == DAO_ENUM_SYM ){
+		E = *L;
+		if( DaoEnum_SetValue( & E, R ) == 0 ) goto CompareName;
+		return L->value == E.value ? 0 : (L->value < E.value ? -1 : 1);
+	}else if( DString_EQ( L->etype->fname, R->etype->fname ) ){
+		return L->value == R->value ? 0 : (L->value < R->value ? -1 : 1);
+	}
+CompareName:
+	return DString_CompareUTF8( L->etype->fname, R->etype->fname );
+}
+static int DaoValue_ComparePro2( DaoValue *left, DaoValue *right, DaoProcess *proc, int dep );
+static void DaoProcess_WarnComparisonRecursion( DaoProcess *self )
+{
+	DaoStream *stream = self->vmSpace->errorStream;
+	DaoStream_WriteChars( stream, "WARNING: recursion limit is reached for comparison!\n" );
+}
+static int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt, DaoProcess *process, int dep )
+{
+	int i, lb, rb, res;
+	if( lt->size < rt->size ) return -100;
+	if( lt->size > rt->size ) return 100;
+
+	if( dep + (process ? process->depth : 0) > 1000 ){
+		DaoProcess_WarnComparisonRecursion( process );
+		return number_compare( (size_t)lt, (size_t)rt );
+	}
+
+	for(i=0; i<lt->size; i++){
+		res = DaoValue_ComparePro2( lt->values[i], rt->values[i], process, dep+1 );
+		if( res != 0 ) return res;
+	}
+	return 0;
+}
+static int DaoList_Compare( DaoList *list1, DaoList *list2, DaoProcess *process, int dep )
+{
+	DaoValue **d1 = list1->value->items.pValue;
+	DaoValue **d2 = list2->value->items.pValue;
+	int size1 = list1->value->size;
+	int size2 = list2->value->size;
+	int min = size1 < size2 ? size1 : size2;
+	int res = size1 == size2 ? 1 : 100;
+	int i, cmp = 0;
+
+	if( dep + (process ? process->depth : 0) > 1000 ){
+		DaoProcess_WarnComparisonRecursion( process );
+		return number_compare( (size_t)list1, (size_t)list2 );
+	}
+
+	/* find the first unequal items */
+	for(i=0; i<min; i++, d1++, d2++){
+		cmp = DaoValue_ComparePro2( *d1, *d2, process, dep+1 );
+		if( cmp != 0 ) break;
+	}
+	if( i < min ){
+		if( abs( cmp ) > 1 ) return cmp;
+		return cmp * res;
+	}
+	if( size1 == size2  ) return 0;
+	return size1 < size2 ? -100 : 100;
+}
+static int DaoCstruct_Compare( DaoCstruct *left, DaoCstruct *right, DaoProcess *process, int dep )
+{
+	DaoRoutine *EQ = left->ctype->kernel->eqOperators;
+	DaoRoutine *LT = left->ctype->kernel->ltOperators;
+	DaoValue *P[2];
+	int NE = 0;
+
+	if( left == right ) return 0;
+	if( process == NULL ) goto PointerComparison;
+	if( (process->depth + dep) > 1000 ){
+		DaoProcess_WarnComparisonRecursion( process );
+		goto PointerComparison;
+	}
+
+	P[0] = (DaoValue*) left; /* To support calling static methods: */
+	P[1] = (DaoValue*) right;
+
+	if( EQ ){
+		if( DaoProcess_Call( process, EQ, 0, P, 2 ) ) goto PointerComparison;
+		if( DaoValue_GetInteger( process->stackValues[0] ) ) return 0;
+		NE = 1;
+	}
+	if( LT ){
+		if( DaoProcess_Call( process, LT, 0, P, 2 ) ) goto PointerComparison;
+		if( DaoValue_GetInteger( process->stackValues[0] ) ) return -1;
+		if( NE ) return 1;
+	}
+PointerComparison:
+	if( left->ctype != right->ctype ){
+		return number_compare( (size_t)left->ctype, (size_t)right->ctype );
+	}else if( left->type == DAO_CDATA ){
+		DaoCdata *l = (DaoCdata*) left;
+		DaoCdata *r = (DaoCdata*) right;
+		return number_compare( (size_t)l->data, (size_t)r->data );
+	}
+	return number_compare( (size_t)left, (size_t)right );
+}
+static int DaoObject_Compare( DaoObject *left, DaoObject *right, DaoProcess *process, int dep )
+{
+	DaoRoutine *EQ = left->defClass->eqOperators;
+	DaoRoutine *LT = left->defClass->ltOperators;
+	DaoValue *P[2];
+	int NE = 0;
+
+	if( process == NULL ) goto PointerComparison;
+	if( (process->depth + dep) > 1000 ){
+		DaoProcess_WarnComparisonRecursion( process );
+		goto PointerComparison;
+	}
+
+	P[0] = (DaoValue*) left; /* To support calling static methods: */
+	P[1] = (DaoValue*) right;
+
+	if( EQ ){
+		if( DaoProcess_Call( process, EQ, 0, P, 2 ) ) goto PointerComparison;
+		if( DaoValue_GetInteger( process->stackValues[0] ) ) return 0;
+		NE = 1;
+	}
+	if( LT ){
+		if( DaoProcess_Call( process, LT, 0, P, 2 ) ) goto PointerComparison;
+		if( DaoValue_GetInteger( process->stackValues[0] ) ) return -1;
+		if( NE ) return 1;
+	}
+PointerComparison:
+	return number_compare( (size_t)left, (size_t)right );
+}
+static int DaoType_Compare( DaoType *left, DaoType *right )
+{
+	if( DaoType_MatchTo( left, right, NULL ) >= DAO_MT_EQ ) return 0;
+	return number_compare( (size_t)left, (size_t)right );
+}
+static int DaoValue_ComparePro2( DaoValue *left, DaoValue *right, DaoProcess *proc, int dep )
+{
+	double L, R;
+	int res = 0;
+	if( left == right ) return 0;
+	if( left == NULL || right == NULL ) return left < right ? -100 : 100;
+	if( left->type != right->type ){
+		res = left->type < right->type ? -100 : 100;
+		if( left->type < DAO_BOOLEAN || left->type > DAO_FLOAT ) return res;
+		if( right->type < DAO_BOOLEAN || right->type > DAO_FLOAT ) return res;
+		L = DaoValue_GetFloat( left );
+		R = DaoValue_GetFloat( right );
+		return L == R ? 0 : (L < R ? -1 : 1);
+	}
+	switch( left->type ){
+	case DAO_NONE : return 0;
+	case DAO_BOOLEAN :
+	case DAO_INTEGER : return number_compare( left->xInteger.value, right->xInteger.value );
+	case DAO_FLOAT   : return number_compare( left->xFloat.value, right->xFloat.value );
+	case DAO_COMPLEX : return DaoComplex_Compare( & left->xComplex, & right->xComplex );
+	case DAO_STRING  : return DString_CompareUTF8( left->xString.value, right->xString.value );
+	case DAO_ENUM    : return DaoEnum_Compare( & left->xEnum, & right->xEnum );
+	case DAO_TUPLE   : return DaoTuple_Compare( & left->xTuple, & right->xTuple, proc, dep );
+	case DAO_LIST    : return DaoList_Compare( & left->xList, & right->xList, proc, dep );
+	case DAO_OBJECT  : return DaoObject_Compare( (DaoObject*)left, (DaoObject*)right, proc, dep );
+	case DAO_CDATA   :
+	case DAO_CSTRUCT :
+	case DAO_CTYPE : return DaoCstruct_Compare( (DaoCstruct*)left, (DaoCstruct*)right, proc, dep );
+	case DAO_TYPE : return DaoType_Compare( (DaoType*) left, (DaoType*) right );
+#ifdef DAO_WITH_NUMARRAY
+	case DAO_ARRAY   : return DaoArray_Compare( & left->xArray, & right->xArray );
+#endif
+	}
+	return left < right ? -100 : 100; /* needed for map */
+}
+int DaoValue_ComparePro( DaoValue *left, DaoValue *right, DaoProcess *proc )
+{
+	return DaoValue_ComparePro2( left, right, proc, 0 );
+}
+int DaoValue_Compare( DaoValue *left, DaoValue *right )
+{
+	return DaoValue_ComparePro2( left, right, NULL, 0 );
+}
+
+
+extern DaoTypeBase baseTyper;
+extern DaoTypeBase numberTyper;
+extern DaoTypeBase comTyper;
+extern DaoTypeBase stringTyper;
+extern DaoTypeBase enumTyper;
+
+DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
+{
+	if( self == NULL ) return & baseTyper;
+	switch( self->type ){
+	case DAO_NONE : return & baseTyper;
+	case DAO_INTEGER :
+	case DAO_FLOAT   : return & numberTyper;
+	case DAO_COMPLEX : return & comTyper;
+	case DAO_ENUM    : return & enumTyper;
+	case DAO_STRING  : return & stringTyper;
+	case DAO_CTYPE   :
+	case DAO_CSTRUCT :
+	case DAO_CDATA   : return self->xCdata.ctype->typer;
+	default : break;
+	}
+	return DaoVmSpace_GetTyper( self->type );
+}
+
+void DaoValue_GetField( DaoValue *self, DaoProcess *proc, DString *name )
+{
+	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
+	DaoValue *p = DaoType_FindValue( type, name );
+	if( p == NULL ){
+		DaoRoutine *func = NULL;
+		DaoString str = {DAO_STRING,0,0,0,1,NULL};
+		DaoValue *pars = (DaoValue*) & str;
+		int error, npar = 0;
+
+		str.value = name;
+		DString_SetChars( proc->string, "." );
+		DString_Append( proc->string, name );
+		func = DaoType_FindFunction( type, proc->string );
+		if( func == NULL ){
+			npar = 1;
+			DString_SetChars( proc->string, "." );
+			func = DaoType_FindFunction( type, proc->string );
+		}
+		if( func == NULL ){
+			DaoProcess_RaiseError( proc, "Field::NotExist", "not exist" );
+			return;
+		}
+		if( (error = DaoProcess_PushCallable( proc, func, self, & pars, npar )) != 0 ){
+			DaoProcess_RaiseException( proc, daoExceptionNames[error], NULL, NULL );
+		}
+	}else{
+		DaoProcess_PutValue( proc, p );
+	}
+}
+void DaoValue_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
+{
+    int npar = 1; 
+    DaoValue *pars[2];
+    DaoRoutine *func = NULL;
+    DaoString str = {DAO_STRING,0,0,0,1,NULL};
+	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
+
+    str.value = name;
+    pars[0] = pars[1] = value;
+
+    DString_SetChars( proc->string, "." );
+    DString_Append( proc->string, name );
+    DString_AppendChars( proc->string, "=" );
+    func = DaoType_FindFunction( type, proc->string );
+    if( func == NULL ){
+        pars[0] = (DaoValue*) & str; 
+        npar = 2; 
+        DString_SetChars( proc->string, ".=" );
+        func = DaoType_FindFunction( type, proc->string );
+    }    
+    if( func == NULL ){
+        DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
+        return;
+    }    
+    DaoProcess_PushCallable( proc, func, self, pars, npar );
+}
+void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N )
+{
+	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
+	DaoRoutine *func = DaoType_FindFunctionChars( type, "[]" );
+	if( func == NULL ){
+		DaoProcess_RaiseError( proc, "Field::NonExist", "[]" );
+		return;
+	}
+	DaoProcess_PushCallable( proc, func, self, pid, N );
+}
+void DaoValue_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value )
+{
+	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
+	DaoRoutine *func = DaoType_FindFunctionChars( type, "[]=" );
+	DaoValue *p[ DAO_MAX_PARAM ];
+	memcpy( p+1, pid, N*sizeof(DaoValue*) );
+	p[0] = value;
+	if( func == NULL ){
+		DaoProcess_RaiseError( proc, "Field::NonExist", "[]=" );
+		return;
+	}
+	DaoProcess_PushCallable( proc, func, self, p, N+1 );
+}
+
+static void DaoValue_BasicPrint( DaoValue *self, DaoStream *stream, DMap *cycData )
+{
+	if( self->type <= DAO_TUPLE )
+		DaoStream_WriteChars( stream, coreTypeNames[ self->type ] );
+	else
+		DaoStream_WriteChars( stream, DaoValue_GetTyper( self )->name );
+	if( self->type == DAO_NONE ) return;
+	if( self->type == DAO_TYPE ){
+		DaoStream_WriteChars( stream, "<" );
+		DaoStream_WriteChars( stream, self->xType.name->chars );
+		DaoStream_WriteChars( stream, ">" );
+	}
+	DaoStream_WriteChars( stream, "_" );
+	DaoStream_WriteInt( stream, self->type );
+	DaoStream_WriteChars( stream, "_" );
+	DaoStream_WritePointer( stream, self );
+}
+static void DaoValue_PrintCdata( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
+{
+	int ec = 0;
+	char buf[50];
+	DaoRoutine *meth;
+	DaoValue *params[2];
+	DaoCdata *cdata = (DaoCdata*) self;
+
+	sprintf( buf, "[%p]", cdata );
+
+	if( self == cdata->ctype->value ){
+		DaoStream_WriteString( stream, cdata->ctype->name );
+		DaoStream_WriteChars( stream, "[default]" );
+		return;
+	}
+	if( cycData != NULL && DMap_Find( cycData, cdata ) != NULL ){
+		DaoStream_WriteString( stream, cdata->ctype->name );
+		DaoStream_WriteChars( stream, buf );
+		return;
+	}
+	if( cycData ) MAP_Insert( cycData, cdata, cdata );
+
+	params[0] = (DaoValue*) dao_type_string;
+	params[1] = (DaoValue*) stream;
+	meth = DaoType_FindFunctionChars( cdata->ctype, "(string)" );
+	if( meth ){
+		ec = DaoProcess_Call( proc, meth, self, params, 2 );
+		if( ec ) ec = DaoProcess_Call( proc, meth, self, params, 1 );
+	}else{
+		meth = DaoType_FindFunctionChars( cdata->ctype, "serialize" );
+		if( meth ) ec = DaoProcess_Call( proc, meth, self, NULL, 0 );
+	}
+	if( ec ){
+		DaoProcess_RaiseException( proc, daoExceptionNames[ec], proc->string->chars, NULL );
+	}else if( meth && proc->stackValues[0] ){
+		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
+	}else{
+		DaoStream_WriteString( stream, cdata->ctype->name );
+		DaoStream_WriteChars( stream, buf );
+	}
+}
+void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
+{
+	DString *name;
+	DaoTypeBase *typer;
+	DMap *cd = cycData;
+	if( self == NULL ){
+		DaoStream_WriteChars( stream, "none[0x0]" );
+		return;
+	}
+	if( cycData == NULL ) cycData = DMap_New(0,0);
+	switch( self->type ){
+	case DAO_BOOLEAN :
+		DaoStream_WriteChars( stream, self->xBoolean.value ? "true" : "false" ); break;
+	case DAO_INTEGER :
+		DaoStream_WriteInt( stream, self->xInteger.value ); break;
+	case DAO_FLOAT   :
+		DaoStream_WriteFloat( stream, self->xFloat.value ); break;
+	case DAO_COMPLEX :
+		DaoStream_WriteFloat( stream, self->xComplex.value.real );
+		if( self->xComplex.value.imag >= -0.0 ) DaoStream_WriteChars( stream, "+" );
+		DaoStream_WriteFloat( stream, self->xComplex.value.imag );
+		DaoStream_WriteChars( stream, "C" );
+		break;
+	case DAO_ENUM  :
+		name = DString_New();
+		DaoEnum_MakeName( & self->xEnum, name );
+		DaoStream_WriteChars( stream, name->chars );
+		DaoStream_WriteChars( stream, "(" );
+		DaoStream_WriteInt( stream, self->xEnum.value );
+		DaoStream_WriteChars( stream, ")" );
+		DString_Delete( name );
+		break;
+	case DAO_STRING  :
+		DaoStream_WriteString( stream, self->xString.value );
+		break;
+	case DAO_CDATA :
+	case DAO_CSTRUCT :
+		DaoValue_PrintCdata( self, proc, stream, cycData );
+		break;
+	default :
+		typer = DaoVmSpace_GetTyper( self->type );
+		if( typer->core->Print == DaoValue_Print ){
+			DaoValue_BasicPrint( self, stream, cycData );
+			break;
+		}
+		typer->core->Print( self, proc, stream, cycData );
+		break;
+	}
+	if( cycData != cd ) DMap_Delete( cycData );
+}
+
 
 
 int DaoValue_Type( DaoValue *self )

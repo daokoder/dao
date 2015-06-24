@@ -21,7 +21,7 @@ HEADERS = $(DAO_SRC_DIR)/dao.h $(DAO_SRC_DIR)/daoBase.h $(DAO_SRC_DIR)/daoGC.h \
 		  $(DAO_SRC_DIR)/daoProcess.h $(DAO_SRC_DIR)/daoString.h \
 		  $(DAO_SRC_DIR)/daoVmspace.h $(DAO_SRC_DIR)/daoConst.h \
 		  $(DAO_SRC_DIR)/daoNumtype.h $(DAO_SRC_DIR)/daoRegex.h \
-		  $(DAO_SRC_DIR)/daoTasklet.h
+		  $(DAO_SRC_DIR)/daoInterface.h $(DAO_SRC_DIR)/daoTasklet.h
 
 
 first: all
@@ -34,6 +34,9 @@ daoMap-$(PLAT).o: $(HEADERS) $(DAO_SRC_DIR)/daoMap.c
 
 daoType-$(PLAT).o: $(HEADERS) $(DAO_SRC_DIR)/daoType.c
 	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoType.c -o daoType-$(PLAT).o
+
+daoInterface-$(PLAT).o: $(HEADERS) $(DAO_SRC_DIR)/daoInterface.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoInterface.c -o daoInterface-$(PLAT).o
 
 daoValue-$(PLAT).o: $(HEADERS) $(DAO_SRC_DIR)/daoValue.c
 	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoValue.c -o daoValue-$(PLAT).o
@@ -108,7 +111,7 @@ daoMake-$(PLAT).o: $(HEADERS) ../source/daoMake.c
 	$(CC) -c $(CFLAGS) $(INCS) ../source/daoMake.c -o daoMake-$(PLAT).o
 
 
-OBJECTS = daoConst-$(PLAT).o daoVmcode-$(PLAT).o \
+OBJECTS = daoConst-$(PLAT).o daoVmcode-$(PLAT).o daoInterface-$(PLAT).o \
 		  daoString-$(PLAT).o daoList-$(PLAT).o daoMap-$(PLAT).o \
 		  daoValue-$(PLAT).o daoStdtype-$(PLAT).o daoNumtype-$(PLAT).o \
 		  daoRoutine-$(PLAT).o daoClass-$(PLAT).o daoObject-$(PLAT).o \
@@ -116,7 +119,8 @@ OBJECTS = daoConst-$(PLAT).o daoVmcode-$(PLAT).o \
 		  daoLexer-$(PLAT).o daoParser-$(PLAT).o daoBytecode-$(PLAT).o \
 		  daoType-$(PLAT).o daoOptimizer-$(PLAT).o daoStdlib-$(PLAT).o \
 		  daoStream-$(PLAT).o daoRegex-$(PLAT).o daoGC-$(PLAT).o \
-		  daoThread-$(PLAT).o daoTasklet-$(PLAT).o daoPlatforms-$(PLAT).o daoMake-$(PLAT).o
+		  daoThread-$(PLAT).o daoTasklet-$(PLAT).o daoPlatforms-$(PLAT).o \
+		  daoMake-$(PLAT).o
 
 
 

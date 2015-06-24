@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2014, Limin Fu
+// Copyright (c) 2006-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -1505,7 +1505,8 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *value )
 	case DAO_ROUTINE   : return value->xRoutine.routType;
 	case DAO_PAR_NAMED : return value->xNameValue.ctype;
 	case DAO_INTERFACE : return value->xInterface.abtype;
-	case DAO_IFACEBOX  : return value->xInterfaceBox.iface->abtype;
+	case DAO_CINTYPE  : return value->xCinType.citype;
+	case DAO_CINVALUE  : return value->xCinValue.cintype->vatype;
 	default : break;
 	}
 	if( abtp ){

@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2014, Limin Fu
+// Copyright (c) 2006-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -185,32 +185,6 @@ DAO_DLL DaoRoutine* DaoType_GetInitor( DaoType *self );
 DAO_DLL DaoRoutine* DaoType_GetCastor( DaoType *self );
 DAO_DLL DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name );
 DAO_DLL DaoRoutine* DaoType_FindFunctionChars( DaoType *self, const char *name );
-
-
-
-struct DaoInterface
-{
-	DAO_VALUE_COMMON;
-
-	DaoType       *abtype;  /* type object of this interface; */
-	DList         *supers;  /* parent interfaces; */
-	DMap          *methods; /* DHash<DString*,DaoRoutine*>; */
-
-	DaoType       *target;    /* the target type for concrete interfaces; */
-	DaoInterface  *abstract;  /* the abstract interface for concrete interfaces; */
-	DMap          *concretes; /* the concrete interfaces for abstract interfaces; */
-
-	short derived;
-};
-
-DaoInterface* DaoInterface_New( const char *name );
-
-int DaoInterface_Bind( DList *pairs, DList *fails );
-int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds );
-void DaoInterface_DeriveMethods( DaoInterface *self );
-DaoInterface* DaoInterface_GetConcrete( DaoInterface *self, DaoType *type );
-
-int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds );
 
 
 

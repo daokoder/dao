@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2014, Limin Fu
+// Copyright (c) 2006-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -3468,7 +3468,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		return;
 	}
 	if( va->type == DAO_PAR_NAMED ) va = va->xNameValue.value;
-	if( va->type == DAO_IFACEBOX )  va = va->xInterfaceBox.value; // XXX;
+	if( va->type == DAO_CINVALUE )  va = va->xCinValue.value; // XXX;
 	if( ct == NULL ) goto FastCasting;
 	if( va->type == ct->tid && ct->tid <= DAO_STRING ) goto FastCasting;
 	if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ){
@@ -3524,31 +3524,40 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		goto FailConversion;
 	}
 
-	if( ct->tid == DAO_INTERFACE ){
-		DaoInterface *iface = (DaoInterface*) ct->aux;
+	if( ct->tid == DAO_CINVALUE ){
+		DaoCinType *cintype = (DaoCinType*) ct->aux;
+		DaoType *at = DaoNamespace_GetType( self->activeNamespace, va );
+
+		if( cintype->target != at ) goto FailConversion; // TODO;
+		va = (DaoValue*) DaoProcess_MakeCinValue( self, cintype, va );
+		goto FastCasting;
+	}else if( ct->tid == DAO_INTERFACE ){
+		DaoInterface *inter = (DaoInterface*) ct->aux;
 		if( ct->aux == NULL ){ /* type "interface": */
 			if( va->type != DAO_INTERFACE ) goto FailConversion;
 			goto FastCasting;
 		}
 		at = DaoNamespace_GetType( self->activeNamespace, va );
-		if( iface->concretes ){
-			DaoInterface *iface2 = DaoInterface_GetConcrete( iface, at );
-			if( iface2 ){
-				va = (DaoValue*) DaoProcess_MakeInterfaceBox( self, iface2, va );
+		if( inter->concretes ){
+			DaoCinType *cintype = DaoInterface_GetConcrete( inter, at );
+			if( cintype ){
+				va = (DaoValue*) DaoProcess_MakeCinValue( self, cintype, va );
 				goto FastCasting;
 			}
 		}
 		switch( va->type ){
 		case DAO_OBJECT  :
 			va = (DaoValue*) va->xObject.rootObject;
+			at = va->xObject.defClass->objType;
 			break;
 		case DAO_CSTRUCT :
 		case DAO_CDATA   :
 			if( va->xCstruct.object ) va = (DaoValue*) va->xCstruct.object->rootObject;
+			at = va->xObject.defClass->objType;
 			break;
 		}
 		/* automatic binding when casted to an interface: */
-		mt = DaoInterface_BindTo( iface, at, NULL );
+		mt = DaoInterface_BindTo( inter, at, NULL );
 	}else if( ct->tid == DAO_TYPE && (ct->nested == NULL || ct->nested->size == 0) ){
 		if( va->type == DAO_TYPE ) goto FastCasting;
 	}
@@ -6358,19 +6367,19 @@ DaoCdata* DaoProcess_MakeCdata( DaoProcess *self, DaoType *type, void *data, int
 	}
 	return cdata;
 }
-DaoInterfaceBox* DaoProcess_MakeInterfaceBox( DaoProcess *self, DaoInterface *iface, DaoValue *value )
+DaoCinValue* DaoProcess_MakeCinValue( DaoProcess *self, DaoCinType *type, DaoValue *value )
 {
 	DNode *node = DMap_Find( self->wrappers, value );
-	DaoInterfaceBox *box;
+	DaoCinValue *cinva;
 	if( node ){
-		box = (DaoInterfaceBox*) node->value.pVoid;
-		if( box->type == DAO_IFACEBOX && box->iface == iface && box->value == value ){
-			return box;
+		cinva = (DaoCinValue*) node->value.pVoid;
+		if( cinva->type == DAO_CINVALUE && cinva->cintype == type && cinva->value == value ){
+			return cinva;
 		}
 	}
-	box = DaoInterfaceBox_New( iface, value );
+	cinva = DaoCinValue_New( type, value );
 	if( node == NULL ){
-		DMap_Insert( self->wrappers, value, box );
+		DMap_Insert( self->wrappers, value, cinva );
 	}
-	return box;
+	return cinva;
 }

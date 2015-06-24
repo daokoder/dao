@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2014, Limin Fu
+// Copyright (c) 2006-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -116,6 +116,7 @@ struct DaoParser
 	char  autoReturn;
 	char  isClassBody;
 	char  isInterBody;
+	char  isCinTypeBody;
 	char  permission;
 	char  isSection;
 	char  usingGlobal;
@@ -127,6 +128,7 @@ struct DaoParser
 	DaoCtype      *hostCtype;
 	DaoClass      *hostClass;
 	DaoInterface  *hostInter;
+	DaoCinType    *hostCinType;
 	DaoParser     *outerParser;
 	DaoParser     *innerParser;
 

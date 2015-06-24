@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2014, Limin Fu
+// Copyright (c) 2006-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -100,12 +100,13 @@ enum DaoTypes
 	DAO_MAP   ,
 	DAO_TUPLE ,
 	DAO_OBJECT ,
+	DAO_CINVALUE ,
 	DAO_CSTRUCT ,
 	DAO_CDATA  ,
 	DAO_CLASS  ,
 	DAO_CTYPE  ,
+	DAO_CINTYPE ,
 	DAO_INTERFACE ,
-	DAO_IFACEBOX ,
 	DAO_ROUTINE   ,
 	DAO_PROCESS ,
 	DAO_NAMESPACE ,
@@ -213,7 +214,8 @@ typedef struct DaoMap          DaoMap;
 typedef struct DaoTuple        DaoTuple;
 typedef struct DaoRoutine      DaoRoutine;
 typedef struct DaoInterface    DaoInterface;
-typedef struct DaoInterfaceBox DaoInterfaceBox;
+typedef struct DaoCinType      DaoCinType;
+typedef struct DaoCinValue     DaoCinValue;
 typedef struct DaoClass        DaoClass;
 typedef struct DaoObject       DaoObject;
 typedef struct DaoStream       DaoStream;

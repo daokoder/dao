@@ -142,8 +142,8 @@ void DaoType_Init()
 	dao_type_matrix[DAO_CDATA][DAO_INTERFACE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_ROUTINE][DAO_ROUTINE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_PROCESS][DAO_ROUTINE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_IFACEBOX][DAO_INTERFACE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_IFACEBOX][DAO_IFACEBOX] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CINVALUE][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CINVALUE][DAO_CINVALUE] = DAO_MT_EXACT+1;
 }
 
 
@@ -597,7 +597,7 @@ int DaoType_IsPrimitiveOrImmutable( DaoType *self )
 	return DaoType_IsImmutable( self );
 }
 
-static int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int dep );
+int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int dep );
 
 static int DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int host, int dep )
 {
@@ -1022,11 +1022,11 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 	case DAO_CSTRUCT :
 		if( self->aux == type->aux ) return DAO_MT_EQ; /* for aliased type; */
 		return DaoType_MatchToParent( self, type, defs, dep );
-	case DAO_IFACEBOX :
+	case DAO_CINVALUE :
 		if( self == type ) return DAO_MT_EQ;
 		//if( dinterface == NULL ) 
 		return DAO_MT_NOT;
-		//return DaoType_MatchInterface( value->xInterfaceBox.iface->abtype, dinterface, NULL );
+		//return DaoType_MatchInterface( value->xProxy.iface->abtype, dinterface, NULL );
 	case DAO_VARIANT :
 		mt = DAO_MT_EQ;
 		mt3 = DAO_MT_NOT;
@@ -1283,10 +1283,11 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		if( self->tid == value->type && self->aux == tp->aux ) return DAO_MT_EQ; /* alias type */
 		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
 		return DaoValue_MatchToParent( value, self, defs );
-	case DAO_IFACEBOX :
+	case DAO_CINVALUE :
+		if( value->xCinValue.cintype->vatype == self ) return DAO_MT_EQ;
+		if( value->xCinValue.cintype->abstract == dinterface ) return DAO_MT_EQ;
 		if( dinterface == NULL ) return DAO_MT_NOT;
-		if( value->xInterfaceBox.iface->abtype == self ) return DAO_MT_EQ;
-		return DaoType_MatchInterface( value->xInterfaceBox.iface->abtype, dinterface, NULL );
+		return DaoType_MatchInterface( value->xCinValue.cintype->vatype, dinterface, NULL );
 	case DAO_TYPE :
 		tp = & value->xType;
 		if( self->tid != DAO_TYPE ) return 0;
@@ -1773,392 +1774,6 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 
 
 
-/* interface implementations */
-void DaoInterface_Delete( DaoInterface *self )
-{
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( (DaoValue*) self );
-#endif
-	if( self->concretes ) DMap_Delete( self->concretes );
-	GC_DecRC( self->abstract );
-	GC_DecRC( self->target );
-	GC_DecRC( self->abtype );
-	DList_Delete( self->supers );
-	DMap_Delete( self->methods );
-	dao_free( self );
-}
-DaoTypeBase interTyper=
-{
-	"interface", & baseCore, NULL, NULL, {0}, {0},
-	(FuncPtrDel) DaoInterface_Delete, NULL
-};
-
-DaoInterface* DaoInterface_New( const char *name )
-{
-	DaoInterface *self = (DaoInterface*) dao_calloc( 1, sizeof(DaoInterface) );
-	DaoValue_Init( self, DAO_INTERFACE );
-	self->subtype = DAO_IFACE_ABS;
-	self->trait |= DAO_VALUE_DELAYGC;
-	self->derived = 0;
-	self->supers = DList_New( DAO_DATA_VALUE );
-	self->methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
-	self->abtype = DaoType_New( name, DAO_INTERFACE, (DaoValue*)self, NULL );
-	GC_IncRC( self->abtype );
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( (DaoValue*) self );
-#endif
-	return self;
-}
-static int DaoRoutine_IsCompatible( DaoRoutine *self, DaoType *type, DMap *binds )
-{
-	DaoRoutine *rout;
-	daoint i, j, n, k=-1, max = 0;
-	if( self->overloads == NULL ) return DaoType_Match( self->routType, type, NULL, binds, 0 );
-	for(i=0,n=self->overloads->routines->size; i<n; i++){
-		rout = self->overloads->routines->items.pRoutine[i];
-		if( rout->routType == type ) return 1;
-	}
-	for(i=0,n=self->overloads->routines->size; i<n; i++){
-		rout = self->overloads->routines->items.pRoutine[i];
-		j = DaoType_Match( rout->routType, type, NULL, binds, 0 );
-		/*
-		   printf( "%3i %3i: %3i  %s  %s\n",n,i,j,rout->routType->name->chars,type->name->chars );
-		 */
-		if( j && j >= max ){
-			max = j;
-			k = i;
-		}
-	}
-	return (k >= 0);
-}
-int DaoInterface_CheckBind( DList *methods, DaoType *type, DMap *binds )
-{
-	DaoRoutine *rout2;
-	daoint i, n, id;
-	if( type->tid == DAO_OBJECT || type->tid == DAO_CLASS ){
-		DaoClass *klass = & type->aux->xClass;
-		for(i=0,n=methods->size; i<n; i++){
-			DaoRoutine *rout = methods->items.pRoutine[i];
-			rout2 = klass->initRoutines;
-			if( !(rout->attribs & DAO_ROUT_INITOR) ){
-				id = DaoClass_FindConst( klass, rout->routName );
-				if( id <0 ) return 0;
-				rout2 = (DaoRoutine*) DaoClass_GetConst( klass, id );
-				if( rout2->type != DAO_ROUTINE ) return 0;
-			}
-			/*printf( "AAA: %s %s\n", rout->routType->name->chars,rout2->routType->name->chars);*/
-			if( DaoRoutine_IsCompatible( rout2, rout->routType, binds ) ==0 ) return 0;
-		}
-	}else if( type->tid == DAO_INTERFACE ){
-		DaoInterface *inter = (DaoInterface*) type->aux;
-		for(i=0,n=methods->size; i<n; i++){
-			DaoRoutine *rout = methods->items.pRoutine[i];
-			DString *name = rout->routName;
-			DNode *it;
-			if( rout->attribs & DAO_ROUT_INITOR ) name = inter->abtype->name;
-			it = DMap_Find( inter->methods, name );
-			if( it == NULL ) return 0;
-			if( DaoRoutine_IsCompatible( it->value.pRoutine, rout->routType, binds ) ==0 ) return 0;
-		}
-	}else{
-		for(i=0,n=methods->size; i<n; i++){
-			DaoRoutine *rout = methods->items.pRoutine[i];
-			DString *name = rout->routName;
-			DaoRoutine *func;
-			if( rout->attribs & DAO_ROUT_INITOR ) name = type->name;
-			func = DaoType_FindFunction( type, name );
-			if( func == NULL ) return 0;
-			if( DaoRoutine_IsCompatible( func, rout->routType, binds ) ==0 ) return 0;
-		}
-	}
-	return 1;
-}
-static void DaoInterface_TempBind( DaoInterface *self, DaoType *type, DMap *binds )
-{
-	daoint i, N = self->supers->size;
-	void *pvoid[2];
-	pvoid[0] = type;
-	pvoid[1] = self->abtype;
-	if( DMap_Find( binds, pvoid ) ) return;
-	DMap_Insert( binds, pvoid, NULL );
-	for(i=0; i<N; i++){
-		DaoInterface *super = (DaoInterface*) self->supers->items.pValue[i];
-		DaoInterface_TempBind( super, type, binds );
-	}
-}
-static void DMap_SortMethods( DMap *hash, DList *methods )
-{
-	DMap *map = DMap_New( DAO_DATA_STRING, 0 );
-	DString *name = DString_New();
-	DNode *it;
-	daoint i, n;
-	for(it=DMap_First(hash); it; it=DMap_Next(hash,it)){
-		if( it->value.pRoutine->overloads ){
-			DRoutines *one = it->value.pRoutine->overloads;
-			for(i=0,n=one->routines->size; i<n; i++){
-				DaoRoutine *rout = one->routines->items.pRoutine[i];
-				DString_Assign( name, rout->routName );
-				DString_AppendChars( name, " " );
-				DString_Append( name, rout->routType->name );
-				DMap_Insert( map, name, (void*)rout );
-			}
-		}else{
-			DaoRoutine *rout = it->value.pRoutine;
-			DString_Assign( name, rout->routName );
-			DString_AppendChars( name, " " );
-			DString_Append( name, rout->routType->name );
-			DMap_Insert( map, name, (void*)rout );
-		}
-	}
-	DList_Clear( methods );
-	for(it=DMap_First(map); it; it=DMap_Next(map,it))
-		DList_Append( methods, it->value.pVoid );
-	DMap_Delete( map );
-	DString_Delete( name );
-}
-int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds )
-{
-	DNode *it;
-	DMap *newbinds = NULL;
-	DList *methods;
-	void *pvoid[2];
-	daoint i, n, bl;
-
-	/* XXX locking */
-	if( type->interfaces == NULL ) type->interfaces = DHash_New( DAO_DATA_VALUE, 0 );
-
-	pvoid[0] = type;
-	pvoid[1] = self->abtype;
-	if( (it = DMap_Find( type->interfaces, self )) ) return it->value.pVoid != NULL;
-	if( binds && DMap_Find( binds, pvoid ) ) return 1;
-	if( binds ==NULL ) newbinds = binds = DHash_New( DAO_DATA_VOID2, 0 );
-	DaoInterface_TempBind( self, type, binds );
-	methods = DList_New(0);
-	DMap_SortMethods( self->methods, methods );
-	bl = DaoInterface_CheckBind( methods, type, binds );
-	DList_Delete( methods );
-	if( newbinds ) DMap_Delete( newbinds );
-	DMap_Insert( type->interfaces, self, bl ? self : NULL );
-	if( bl == 0 ) return 0;
-	for(i=0,n=self->supers->size; i<n; i++){
-		DaoInterface *super = (DaoInterface*) self->supers->items.pValue[i];
-		if( DMap_Find( type->interfaces, super ) ) continue;
-		DMap_Insert( type->interfaces, super, super );
-	}
-	return 1;
-}
-void DaoMethods_Insert( DMap *methods, DaoRoutine *rout, DaoNamespace *ns, DaoType *host );
-void DaoInterface_DeriveMethods( DaoInterface *self )
-{
-	daoint i, k, m, N = self->supers->size;
-	DaoInterface *super;
-	DNode *it;
-	for(i=0; i<N; i++){
-		super = (DaoInterface*) self->supers->items.pValue[i];
-		for(it=DMap_First(super->methods); it; it=DMap_Next( super->methods, it )){
-			if( it->value.pRoutine->overloads ){
-				DRoutines *routs = it->value.pRoutine->overloads;
-				for(k=0,m=routs->routines->size; k<m; k++){
-					DaoRoutine *rout = routs->routines->items.pRoutine[i];
-					DaoMethods_Insert( self->methods, rout, NULL, self->abtype );
-				}
-			}else{
-				DaoMethods_Insert( self->methods, it->value.pRoutine, NULL, self->abtype );
-			}
-		}
-	}
-	self->derived = 1;
-}
-DaoInterface* DaoInterface_GetConcrete( DaoInterface *self, DaoType *type )
-{
-	DNode *it = DMap_Find( self->concretes, type );
-	if( it == NULL ){
-		// TODO: traverse and match the keys;
-		return NULL;
-	}
-	return (DaoInterface*) it->value.pVoid;
-}
-
-int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds )
-{
-	DMap *inters = self->interfaces;
-	DNode *it;
-	daoint i;
-	if( inter == NULL ) return DAO_MT_NOT;
-	if( inter->abtype->kernel->SetupMethods ){
-		DaoTypeKernel *kernel = inter->abtype->kernel;
-		kernel->SetupMethods( kernel->nspace, kernel->typer );
-	}
-	if( inters == NULL ) return DAO_MT_SUB * DaoInterface_BindTo( inter, self, binds );
-	if( (it = DMap_Find( inters, inter )) ) return it->value.pVoid ? DAO_MT_SUB : DAO_MT_NOT;
-	return DAO_MT_SUB * DaoInterface_BindTo( inter, self, binds );
-}
-
-
-
-static void DaoCdata_GetField( DaoValue *self, DaoProcess *proc, DString *name )
-{
-	DaoType *type = self->xCdata.ctype;
-	DaoValue *p = DaoType_FindValue( type, name );
-	if( p == NULL ){
-		DaoRoutine *func = NULL;
-		DaoString str = {DAO_STRING,0,0,0,1,NULL};
-		DaoValue *pars = (DaoValue*) & str;
-		int error, npar = 0;
-
-		str.value = name;
-		DString_SetChars( proc->string, "." );
-		DString_Append( proc->string, name );
-		func = DaoType_FindFunction( type, proc->string );
-		if( func == NULL ){
-			npar = 1;
-			DString_SetChars( proc->string, "." );
-			func = DaoType_FindFunction( type, proc->string );
-		}
-		if( func == NULL ){
-			DaoProcess_RaiseError( proc, "Field::NotExist", "not exist" );
-			return;
-		}
-		if( (error = DaoProcess_PushCallable( proc, func, self, & pars, npar )) != 0 ){
-			DaoProcess_RaiseException( proc, daoExceptionNames[error], NULL, NULL );
-		}
-	}else{
-		DaoProcess_PutValue( proc, p );
-	}
-}
-static void DaoCdata_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
-{
-	int npar = 1;
-	DaoValue *pars[2];
-	DaoRoutine *func = NULL;
-	DaoString str = {DAO_STRING,0,0,0,1,NULL};
-	DaoType *type = self->xCdata.ctype;
-
-	str.value = name;
-	pars[0] = pars[1] = value;
-
-	DString_SetChars( proc->string, "." );
-	DString_Append( proc->string, name );
-	DString_AppendChars( proc->string, "=" );
-	func = DaoType_FindFunction( type, proc->string );
-	if( func == NULL ){
-		pars[0] = (DaoValue*) & str;
-		npar = 2;
-		DString_SetChars( proc->string, ".=" );
-		func = DaoType_FindFunction( type, proc->string );
-	}
-	if( func == NULL ){
-		DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
-		return;
-	}
-	DaoProcess_PushCallable( proc, func, self, pars, npar );
-}
-static void DaoCdata_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
-{
-	DaoCdata *self = & self0->xCdata;
-	DaoType *type = self->ctype;
-	DaoRoutine *func = NULL;
-
-	func = DaoType_FindFunctionChars( type, "[]" );
-	if( func == NULL ){
-		DaoProcess_RaiseError( proc, "Field::NotExist", "" );
-		return;
-	}
-	DaoProcess_PushCallable( proc, func, self0, & pid, 1 );
-}
-static void DaoCdata_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, DaoValue *value )
-{
-	DaoType *type = self0->xCdata.ctype;
-	DaoRoutine *func = NULL;
-	DaoValue *p[2];
-
-	DString_SetChars( proc->string, "[]=" );
-	func = DaoType_FindFunction( type, proc->string );
-	if( func == NULL ){
-		DaoProcess_RaiseError( proc, "Field::NotExist", "" );
-		return;
-	}
-	p[0] = value;
-	p[1] = pid;
-	DaoProcess_PushCallable( proc, func, self0, p, 2 );
-}
-static void DaoCdata_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N )
-{
-	DaoType *type = self->xCdata.ctype;
-	DaoRoutine *func = NULL;
-	if( N == 1 ){
-		DaoCdata_GetItem1( self, proc, ids[0] );
-		return;
-	}
-	func = DaoType_FindFunctionChars( type, "[]" );
-	if( func == NULL ){
-		DaoProcess_RaiseError( proc, "Field::NotExist", "" );
-		return;
-	}
-	DaoProcess_PushCallable( proc, func, self, ids, N );
-}
-static void DaoCdata_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
-{
-	DaoType *type = self->xCdata.ctype;
-	DaoRoutine *func = NULL;
-	DaoValue *p[ DAO_MAX_PARAM ];
-	if( N == 1 ){
-		DaoCdata_SetItem1( self, proc, ids[0], value );
-		return;
-	}
-	func = DaoType_FindFunctionChars( type, "[]=" );
-	if( func == NULL ){
-		DaoProcess_RaiseError( proc, "Field::NotExist", "" );
-		return;
-	}
-	memcpy( p+1, ids, N*sizeof(DaoValue*) );
-	p[0] = value;
-	DaoProcess_PushCallable( proc, func, self, p, N+1 );
-}
-static void DaoCdata_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
-{
-	int ec = 0;
-	char buf[50];
-	DaoRoutine *meth;
-	DaoValue *params[2];
-	DaoCdata *self = & self0->xCdata;
-
-	sprintf( buf, "[%p]", self );
-
-	if( self0 == self->ctype->value ){
-		DaoStream_WriteString( stream, self->ctype->name );
-		DaoStream_WriteChars( stream, "[default]" );
-		return;
-	}
-	if( cycData != NULL && DMap_Find( cycData, self ) != NULL ){
-		DaoStream_WriteString( stream, self->ctype->name );
-		DaoStream_WriteChars( stream, buf );
-		return;
-	}
-	if( cycData ) MAP_Insert( cycData, self, self );
-
-	params[0] = (DaoValue*) dao_type_string;
-	params[1] = (DaoValue*) stream;
-	meth = DaoType_FindFunctionChars( self->ctype, "(string)" );
-	if( meth ){
-		ec = DaoProcess_Call( proc, meth, self0, params, 2 );
-		if( ec ) ec = DaoProcess_Call( proc, meth, self0, params, 1 );
-	}else{
-		meth = DaoType_FindFunctionChars( self->ctype, "serialize" );
-		if( meth ) ec = DaoProcess_Call( proc, meth, self0, NULL, 0 );
-	}
-	if( ec ){
-		DaoProcess_RaiseException( proc, daoExceptionNames[ec], proc->string->chars, NULL );
-	}else if( meth && proc->stackValues[0] ){
-		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
-	}else{
-		DaoStream_WriteString( stream, self->ctype->name );
-		DaoStream_WriteChars( stream, buf );
-	}
-}
-
-
-
 
 void DaoTypeKernel_Delete( DaoTypeKernel *self )
 {
@@ -2199,11 +1814,11 @@ DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer )
 	if( typer && typer->core ) self->core = typer->core;
 	if( self->core == NULL ){
 		self->core = (DaoTypeCore*)(self + 1);
-		self->core->GetField = DaoCdata_GetField;
-		self->core->SetField = DaoCdata_SetField;
-		self->core->GetItem = DaoCdata_GetItem;
-		self->core->SetItem = DaoCdata_SetItem;
-		self->core->Print = DaoCdata_Print;
+		self->core->GetField = DaoValue_GetField;
+		self->core->SetField = DaoValue_SetField;
+		self->core->GetItem = DaoValue_GetItem;
+		self->core->SetItem = DaoValue_SetItem;
+		self->core->Print = DaoValue_Print;
 	}
 	if( self->core->kernel == NULL ) self->core->kernel = self;
 #ifdef DAO_USE_GC_LOGGER

@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2014, Limin Fu
+// Copyright (c) 2006-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -195,17 +195,6 @@ struct DaoNameValue
 };
 DaoNameValue* DaoNameValue_New( DString *name, DaoValue *value );
 
-
-
-/* Interface Wrapper: */
-struct DaoInterfaceBox
-{
-	DAO_VALUE_COMMON;
-
-	DaoInterface  *iface;
-	DaoValue      *value;
-};
-DaoInterfaceBox* DaoInterfaceBox_New( DaoInterface *iface, DaoValue *value );
 
 
 

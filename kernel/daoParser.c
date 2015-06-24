@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2014, Limin Fu
+// Copyright (c) 2006-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -288,6 +288,7 @@ void DaoParser_Reset( DaoParser *self )
 	self->autoReturn = 0;
 	self->isClassBody = 0;
 	self->isInterBody = 0;
+	self->isCinTypeBody = 0;
 	self->permission = 0;
 	self->isSection = 0;
 	self->needConst = 0;
@@ -333,6 +334,7 @@ void DaoParser_Reset( DaoParser *self )
 	self->hostCtype = NULL;
 	self->hostClass = NULL;
 	self->hostInter = NULL;
+	self->hostCinType = NULL;
 	self->outerParser = NULL;
 	self->innerParser = NULL;
 	self->byteCoder = NULL;
@@ -1155,9 +1157,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	right = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
 	if( right < 0 ) return -1;
 
-	if( inter ) hostname = inter->abtype->name;
-	else if( klass ) hostname = klass->className;
-	else if( ctype ) hostname = ctype->name;
+	if( module->hostType ) hostname = module->hostType->name;
 
 	mbs = DaoParser_GetString( self );
 	pname = DaoParser_GetString( self );
@@ -1176,9 +1176,10 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	if( routine->routHost && hostname && DString_EQ( routine->routName, hostname ) ){
 		routine->attribs |= DAO_ROUT_INITOR;
 	}
-	if( (isMeth || inter) && selfpar == 0 && notStatic && notConstr ){
+	if( (isMeth || inter || module->hostCinType) && selfpar == 0 && notStatic && notConstr ){
 		if( invarhost ) routine->attribs |= DAO_ROUT_INVAR;
 		type = hostype;
+		if( module->hostCinType ) type = module->hostCinType->target;
 		if( routine->attribs & DAO_ROUT_INVAR ) type = DaoType_GetInvarType( type );
 		type = DaoNamespace_MakeType( NS, "self", DAO_PAR_NAMED, (DaoValue*)type, NULL, 0 );
 		DList_Append( nested, (void*) type ); /* self parameter type */
@@ -2107,26 +2108,37 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 	DList *types = DList_New(0);
 	DaoCtype *ctype = (DaoCtype*) tpl;
 	DaoType *sptype, *gentype;
+	DaoCinType *cintype = NULL;
 	int errors = self->errors->size;
 
-	if( tpl == NULL || (tpl->type != DAO_CTYPE && tpl->type != DAO_TYPE) ){
+	if( tpl == NULL ) goto FailedInstantiation;
+
+	if( tpl->type != DAO_INTERFACE && tpl->type != DAO_CTYPE && tpl->type != DAO_TYPE ){
 		goto FailedInstantiation;
 	}
-	gentype = tpl->type == DAO_CTYPE ? ctype->cdtype : (DaoType*) tpl;
 	DaoParser_ParseTypeItems( self, start, end, 1, types );
 	if( self->errors->size > errors ) goto FailedInstantiation;
-	sptype = DaoType_Specialize( gentype, types->items.pType, types->size );
-	if( sptype == NULL ) goto FailedInstantiation;
-	if( self->byteBlock && tpl->type == DAO_CTYPE ){
-		DaoCtype *ctype = (DaoCtype*) sptype->aux;
-		DaoCtype *gtype = (DaoCtype*) gentype->aux;
-		DaoType **ts = types->items.pType;
-		DaoByteBlock_EncodeCtype( self->byteBlock, ctype, gtype, ts, types->size );
-		DaoByteBlock_EncodeType( self->byteBlock, sptype );
+
+	if( tpl->type == DAO_INTERFACE ){ /* TODO: bytecode */
+		if( types->size != 1 ) goto FailedInstantiation;
+		cintype = DaoInterface_GetConcrete( (DaoInterface*) tpl, types->items.pType[0] );
+		if( cintype == NULL ) goto FailedInstantiation;
+	}else{
+		gentype = tpl->type == DAO_CTYPE ? ctype->cdtype : (DaoType*) tpl;
+		sptype = DaoType_Specialize( gentype, types->items.pType, types->size );
+		if( sptype == NULL ) goto FailedInstantiation;
+		if( self->byteBlock && tpl->type == DAO_CTYPE ){
+			DaoCtype *ctype = (DaoCtype*) sptype->aux;
+			DaoCtype *gtype = (DaoCtype*) gentype->aux;
+			DaoType **ts = types->items.pType;
+			DaoByteBlock_EncodeCtype( self->byteBlock, ctype, gtype, ts, types->size );
+			DaoByteBlock_EncodeType( self->byteBlock, sptype );
+		}
 	}
 
 DoneInstantiation:
 	DList_Delete( types );
+	if( tpl->type == DAO_INTERFACE ) return (DaoValue*) cintype; 
 	return tpl->type == DAO_CTYPE ? sptype->aux : (DaoValue*) sptype;
 FailedInstantiation:
 	DList_Delete( types );
@@ -2748,8 +2760,11 @@ static DaoParser* DaoParser_NewRoutineParser( DaoParser *self, int start, int at
 	DaoRoutine *rout = NULL;
 	DaoParser *parser;
 	if( self->isInterBody ){
-		DaoInterface *iface = self->hostInter;
-		rout = DaoRoutine_New( self->nameSpace, iface->abtype, iface->subtype == DAO_IFACE_CON );
+		DaoInterface *inter = self->hostInter;
+		rout = DaoRoutine_New( self->nameSpace, inter->abtype, 0 );
+	}else if( self->isCinTypeBody ){
+		DaoCinType *cintype = self->hostCinType;
+		rout = DaoRoutine_New( self->nameSpace, cintype->vatype, 1 );
 	}else if( self->isClassBody ){
 		rout = DaoRoutine_New( self->nameSpace, self->hostClass->objType, 1 );
 		rout->attribs |= attribs;
@@ -2764,6 +2779,7 @@ static DaoParser* DaoParser_NewRoutineParser( DaoParser *self, int start, int at
 	parser->hostType = self->hostType;
 	parser->hostClass = self->hostClass;
 	parser->hostInter = self->hostInter;
+	parser->hostCinType = self->hostCinType;
 	parser->levelBase = self->levelBase + self->lexLevel + 1;
 	parser->defParser = self;
 	DList_Assign( parser->decoFuncs, self->decoFuncs2 );
@@ -2968,7 +2984,17 @@ static int DaoParser_ParseRoutineDefinition( DaoParser *self, int start, int fro
 		if( right < 0 ) goto InvalidDefinition;
 		GC_Assign( & rout->routHost, self->hostInter->abtype );
 		parser->hostInter = self->hostInter;
+		parser->hostType = self->hostType;
 		DaoMethods_Insert( self->hostInter->methods, rout, NS, rout->routHost );
+	}else if( self->isCinTypeBody ){
+		parser = DaoParser_NewRoutineParser( self, start, attribs );
+		rout = parser->routine;
+		right = DaoParser_ParseSignature( self, parser, start );
+		if( right < 0 ) goto InvalidDefinition;
+		GC_Assign( & rout->routHost, self->hostCinType->vatype );
+		parser->hostCinType = self->hostCinType;
+		parser->hostType = self->hostType;
+		DaoMethods_Insert( self->hostCinType->methods, rout, NS, rout->routHost );
 	}else{
 		/* Nested normal routine not allowed: */
 		if( self->lexLevel != 0 ) goto InvalidDefinition; /* TODO: better information; */
@@ -3029,6 +3055,7 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 	DaoNamespace *NS = self->nameSpace;
 	DaoNamespace *ns = NULL;
 	DaoInterface *inter = NULL;
+	DaoCinType *cintype = NULL;
 	DaoParser *parser = NULL;
 	DaoValue *value = NULL;
 	DaoToken *tokName;
@@ -3063,21 +3090,11 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 			DString *name = DaoParser_GetString( self );
 			DaoType *target;
 			
-			if( inter->subtype == DAO_IFACE_CON ) goto ErrorInterfaceDefinition; // TODO;
-
 			target = DaoParser_ParseType( self, start+2, to, & start, NULL );
 			if( target == NULL ) goto ErrorInterfaceDefinition; // TODO;
 			start -= 1;
-			
-			DString_Assign( name, inter->abtype->name ); 
-			DString_AppendChar( name, '<' );
-			DString_Append( name, target->name );
-			DString_AppendChar( name, '>' );
 
-			inter = DaoInterface_New( name->chars );
-			inter->subtype = DAO_IFACE_CON;
-			GC_Assign( & inter->target, (DaoValue*) target );
-			GC_Assign( & inter->abstract, (DaoValue*) value );
+			cintype = DaoCinType_New( inter, target );
 		}else if( value->xInterface.derived ){
 			ec = DAO_SYMBOL_WAS_DEFINED;
 			goto ErrorInterfaceDefinition;
@@ -3113,6 +3130,14 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 	parser->levelBase = self->levelBase + self->lexLevel + 1;
 	parser->hostType = inter->abtype;
 
+	if( cintype ){
+		parser->hostType = cintype->vatype;
+		parser->hostCinType = cintype;
+		parser->isCinTypeBody = 1;
+		parser->hostInter = NULL;
+		parser->isInterBody = 0;
+	}
+
 	DString_Assign( parser->fileName, self->fileName );
 
 	right = tokens[start]->name == DTOK_LCB ?
@@ -3140,15 +3165,16 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 		goto ErrorInterfaceDefinition;
 	}
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
-	if( inter->subtype == DAO_IFACE_CON ){
-		if( DaoType_MatchInterface( inter->abtype, inter->abstract, NULL ) == 0 ){
+	if( cintype ){
+		if( DaoType_MatchInterface( cintype->vatype, inter, NULL ) == 0 ){
 			// TODO;
+			printf( "here\n" );
 			goto ErrorInterfaceDefinition;
 		}
-		if( inter->abstract->concretes == NULL ){
-			inter->abstract->concretes = DHash_New(0,DAO_DATA_VALUE);
+		if( inter->concretes == NULL ){
+			inter->concretes = DHash_New(0,DAO_DATA_VALUE);
 		}
-		DMap_Insert( inter->abstract->concretes, inter->target, inter );
+		DMap_Insert( inter->concretes, cintype->target, cintype );
 	}
 	return right + 1;
 ErrorInterfaceBase:
@@ -3822,7 +3848,8 @@ DecoratorError:
 		// Note: routine(){...}();
 		// It is allowed to define and call immediately an anonymous function.
 		*/
-		if( tki == DKEY_ROUTINE && (tki2 != DTOK_LB || self->isClassBody || self->isInterBody) ){
+		if( tki == DKEY_ROUTINE && (tki2 != DTOK_LB || self->isClassBody || self->isInterBody
+			|| self->isCinTypeBody) ){
 			int attribs = 0;
 			switch( storeType ){
 			case DAO_DECL_VAR:
@@ -4982,7 +5009,7 @@ int DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, Da
 	int perm = self->permission;
 	int found, id = -1;
 
-	if( self->isInterBody ) goto OutOfContext;
+	if( self->isInterBody || self->isCinTypeBody ) goto OutOfContext;
 	if( tok->name >= DKEY_LOAD && tok->name <= DKEY_PUBLIC ){
 		DaoParser_Error3( self, DAO_TOKEN_NEED_NAME, tok->index );
 		return -1;
@@ -5455,7 +5482,7 @@ static int DaoParser_ParseImportStatement( DaoParser *self, int start, int to, i
 
 	start += tokens[start]->name == DKEY_IMPORT;
 	if( DaoParser_CheckNameToken( self, start, to, error, import ) == 0 ) return -1;
-	if( self->isClassBody || self->isInterBody ) goto InvalidImport;
+	if( self->isClassBody || self->isInterBody || self->isCinTypeBody ) goto InvalidImport;
 
 	start = DaoParser_FindMaybeScopedConst( self, & value, start, DTOK_DOT );
 	if( start < 0 || value == NULL || value->type != DAO_NAMESPACE ) goto InvalidImport;
@@ -6709,7 +6736,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 	}else if( tki == DTOK_LB ){
 		result = DaoParser_ParseParenthesis( self );
 		start = self->curToken;
-	}else if( tki == DKEY_ROUTINE && self->isClassBody == 0 && self->isInterBody == 0 ){
+	}else if( tki == DKEY_ROUTINE && self->isClassBody == 0 && self->isInterBody == 0
+			&& self->isCinTypeBody == 0 ){
 		int tokname = DaoParser_NextTokenName( self );
 		/* anonymous function or closure expression */
 		self->curToken += 1;
@@ -7293,7 +7321,9 @@ InvalidSection:
 		case DTOK_LT :
 			if( result.konst == 0 ) return result;
 			value = DaoParser_GetVariable( self, result.konst );
-			if( value->type != DAO_CTYPE && value->type != DAO_TYPE ) return result;
+			if( value->type != DAO_CTYPE && value->type != DAO_TYPE
+					&& value->type != DAO_INTERFACE ) return result;
+
 			rb = DaoParser_FindPairToken( self, DTOK_LT, DTOK_GT, start, end );
 			if( rb < 0 ) return result;
 			dbase = DaoParse_InstantiateType( self, value, start+1, rb-1 );

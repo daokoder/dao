@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2014, Limin Fu
+// Copyright (c) 2006-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -35,6 +35,7 @@
 #include"daoStream.h"
 #include"daoClass.h"
 #include"daoObject.h"
+#include"daoInterface.h"
 #include"daoRoutine.h"
 #include"daoNamespace.h"
 #include"daoProcess.h"
@@ -89,7 +90,8 @@ union DaoValue
 	DaoCtype       xCtype;
 	DaoClass       xClass;
 	DaoInterface   xInterface;
-	DaoInterfaceBox xInterfaceBox;
+	DaoCinType     xCinType;
+	DaoCinValue    xCinValue;
 	DaoRoutine     xRoutine;
 	DaoProcess     xProcess;
 	DaoNamespace   xNamespace;

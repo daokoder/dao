@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2014, Limin Fu
+// Copyright (c) 2006-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -212,7 +212,8 @@ extern DaoTypeBase  ioDeviceTyper;
 extern DaoTypeBase  streamTyper;
 extern DaoTypeBase  routTyper;
 extern DaoTypeBase  interTyper;
-extern DaoTypeBase  ifaceboxTyper;
+extern DaoTypeBase  cinTypeTyper;
+extern DaoTypeBase  cinValueTyper;
 extern DaoTypeBase  classTyper;
 extern DaoTypeBase  objTyper;
 extern DaoTypeBase  nsTyper;
@@ -261,7 +262,8 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_CDATA   :  return & defaultCdataTyper;
 	case DAO_ROUTINE   :  return & routTyper;
 	case DAO_INTERFACE :  return & interTyper;
-	case DAO_IFACEBOX  :  return & ifaceboxTyper;
+	case DAO_CINTYPE   :  return & cinTypeTyper;
+	case DAO_CINVALUE  :  return & cinValueTyper;
 	case DAO_CLASS     :  return & classTyper;
 	case DAO_OBJECT    :  return & objTyper;
 	case DAO_NAMESPACE :  return & nsTyper;

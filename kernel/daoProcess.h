@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2014, Limin Fu
+// Copyright (c) 2006-2015, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -181,7 +181,7 @@ DAO_DLL void DaoProcess_PrintException( DaoProcess *self, DaoStream *stream, int
 
 DAO_DLL void DaoProcess_Trace( DaoProcess *self, int depth );
 
-DAO_DLL DaoInterfaceBox* DaoProcess_MakeInterfaceBox( DaoProcess *self, DaoInterface *iface, DaoValue *value );
+DAO_DLL DaoCinValue* DaoProcess_MakeCinValue( DaoProcess *self, DaoCinType *type, DaoValue *value );
 DAO_DLL DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode );
 
 DAO_DLL void* DaoProcess_GetAuxData( DaoProcess *self, void *key );
