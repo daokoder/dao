@@ -74,7 +74,8 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds );
 //    Target type which can be any type;
 //
 // -- SomeMethod:
-//    Non-static method with the target type as the implicit self parameter type;
+//    Inside non-static methods, the implicit self parameter is automatically casted to
+//    the target type.
 //
 // -- Type Names:
 //    interface<SomeInterface<SomeTargetType>>: class  type for the concrete interface;
@@ -84,14 +85,11 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds );
 //    SomeInterface<SomeTargetType> can match to both SomeInterface
 //    and interface<SomeInterface<SomeTargetType>>;
 //
-//    When matching to SomeInterface, the self parameter types of non-static methods
-//    has to be handled specially
-//
 // -- Type Casting:
 //    Assignment and moving between SomeTargetType and SomeInterface will convert
 //    one to the other automatically with implicit type casting.
 //
-// -- Inheritance:
+// -- Inheritance: (TODO)
 //    interface SubInterface for SomeTargetType : SomeInterface<SomeTargetType> {
 //        routine SomeMethod2(){
 //        }

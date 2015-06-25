@@ -244,7 +244,11 @@ DaoCinType* DaoInterface_GetConcrete( DaoInterface *self, DaoType *type )
 
 	it = DMap_Find( self->concretes, type );
 	if( it == NULL ){
-		// TODO: traverse and match the keys;
+		for(it=DMap_First(self->concretes); it; it=DMap_Next(self->concretes,it)){
+			if( DaoType_MatchTo( it->key.pType, type, NULL ) >= DAO_MT_EQ ){
+				return (DaoCinType*) it->value.pVoid;
+			}
+		}
 		return NULL;
 	}
 	return (DaoCinType*) it->value.pVoid;

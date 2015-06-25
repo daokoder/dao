@@ -1090,6 +1090,7 @@ static int DaoParser_ExtractRoutineBody( DaoParser *self, DaoParser *parser, int
 	for(i=left+1; i<right; ++i) DaoLexer_AppendToken( parser->lexer, tokens[i] );
 	return right;
 }
+static DaoInode* DaoParser_AddCode( DaoParser *self, ushort_t code, ushort_t a, ushort_t b, ushort_t c );
 
 int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 {
@@ -1179,7 +1180,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	if( (isMeth || inter || module->hostCinType) && selfpar == 0 && notStatic && notConstr ){
 		if( invarhost ) routine->attribs |= DAO_ROUT_INVAR;
 		type = hostype;
-		if( module->hostCinType ) type = module->hostCinType->target;
 		if( routine->attribs & DAO_ROUT_INVAR ) type = DaoType_GetInvarType( type );
 		type = DaoNamespace_MakeType( NS, "self", DAO_PAR_NAMED, (DaoValue*)type, NULL, 0 );
 		DList_Append( nested, (void*) type ); /* self parameter type */
@@ -1499,6 +1499,14 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	}
 	if( tokens[right]->name != DTOK_LCB ) return right - 1;
 
+	if( module->hostCinType && selfpar ){
+		int b = DaoRoutine_AddConstant( routine, (DaoValue*) module->hostCinType->target );
+		DString_SetChars( mbs, "self" );
+		MAP_Insert( DaoParser_CurrentSymbolTable( module ), mbs, module->regCount );
+		DaoParser_AddCode( module, DVM_CAST, 0, b, module->regCount );
+		DaoParser_PushRegister( module );
+	}
+
 	start = right;
 	e2 = start;
 	if( tokens[start]->name == DTOK_LCB ){
@@ -1600,6 +1608,7 @@ static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, in
 	case DAO_CLASS : type = value->xClass.objType; break;
 	case DAO_CTYPE : type = value->xCtype.cdtype; break; /* get its cdata type */
 	case DAO_TYPE  : type = & value->xType; break;
+	case DAO_CINTYPE : type = value->xCinType.vatype; break;
 	case DAO_INTERFACE : type = value->xInterface.abtype; break;
 	default : break;
 	}
@@ -6531,7 +6540,6 @@ static DaoEnode DaoParser_ParseParenthesis( DaoParser *self )
 				goto ParseNoCasting;
 			}
 			regC = DaoParser_PushRegister( self );
-			MAP_Insert( self->routine->body->localVarType, regC, abtp );
 			it = DaoRoutine_AddConstant( self->routine, (DaoValue*) abtp );
 			DaoParser_PushTokenIndices( self, start, rb, self->curToken-1 );
 			DaoParser_AddCode( self, DVM_CAST, enode.reg, it, regC );

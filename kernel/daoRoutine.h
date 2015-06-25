@@ -120,7 +120,7 @@ struct DaoRoutineBody
 	DList *decoTargets;
 
 	DList *simpleVariables;
-	DMap   *localVarType;  /* DMap<int,DaoType*> local variable types */
+	DMap  *localVarType;  /* DMap<int,DaoType*> local variable types */
 
 	ushort_t  regCount;
 	uchar_t   exeMode;

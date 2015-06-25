@@ -2386,9 +2386,8 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 	if( setname && opa == opc && daoBitBoolArithOpers2[code-DVM_NOT] ){
 		/* Check composite assignment operator first: */
 		DString_SetChars( mbs, daoBitBoolArithOpers2[code-DVM_NOT] );
-		if( at->tid == DAO_INTERFACE ){
-			node = DMap_Find( at->aux->xInterface.methods, mbs );
-			rout = node->value.pRoutine;
+		if( at->tid == DAO_INTERFACE || at->tid == DAO_CINVALUE ){
+			rout = DaoType_FindFunction( at, mbs );
 		}else if( at->tid == DAO_OBJECT ){
 			rout = DaoClass_FindMethod( & at->aux->xClass, mbs->chars, hostClass );
 		}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
@@ -2405,9 +2404,8 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 		}
 	}
 	if( setname ) DString_SetChars( mbs, daoBitBoolArithOpers[code-DVM_NOT] );
-	if( at->tid == DAO_INTERFACE ){
-		node = DMap_Find( at->aux->xInterface.methods, mbs );
-		rout = node ? node->value.pRoutine : NULL;
+	if( at->tid == DAO_INTERFACE || at->tid == DAO_CINVALUE ){
+		rout = DaoType_FindFunction( at, mbs );
 	}else if( at->tid == DAO_OBJECT ){
 		rout = DaoClass_FindMethod( & at->aux->xClass, mbs->chars, hostClass );
 	}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
@@ -3244,15 +3242,14 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 	}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
 		meth = DaoClass_FindMethod( & at->aux->xClass, "[]", hostClass );
 		if( meth == NULL ) goto InvIndex;
-	}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
+	}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT || at->tid == DAO_CTYPE ){
 		DString_SetChars( mbs, "[]" );
 		meth = DaoType_FindFunction( at, mbs );
 		if( meth == NULL ) goto WrongContainer;
-	}else if( at->tid == DAO_INTERFACE ){
+	}else if( at->tid == DAO_INTERFACE || at->tid == DAO_CINTYPE || at->tid == DAO_CINVALUE ){
 		DString_SetChars( mbs, "[]" );
-		node = DMap_Find( at->aux->xInterface.methods, mbs );
-		if( node == NULL ) goto WrongContainer;
-		meth = node->value.pRoutine;
+		meth = DaoType_FindFunction( at, mbs );
+		if( meth == NULL ) goto WrongContainer;
 	}else if( at->tid & DAO_ANY ){
 		ct = dao_type_udf;
 	}else if( at->typer ){
@@ -3345,13 +3342,12 @@ int DaoInferencer_HandleGetMItem( DaoInferencer *self, DaoInode *inode, DMap *de
 	}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
 		meth = DaoClass_FindMethod( & at->aux->xClass, "[]", hostClass );
 		if( meth == NULL ) goto WrongContainer;
-	}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT ){
+	}else if( at->tid == DAO_CDATA || at->tid == DAO_CSTRUCT || at->tid == DAO_CTYPE ){
 		meth = DaoType_FindFunction( at, mbs );
 		if( meth == NULL ) goto WrongContainer;
-	}else if( at->tid == DAO_INTERFACE ){
-		node = DMap_Find( at->aux->xInterface.methods, mbs );
-		if( node == NULL ) goto WrongContainer;
-		meth = node->value.pRoutine;
+	}else if( at->tid == DAO_INTERFACE || at->tid == DAO_CINTYPE || at->tid == DAO_CINVALUE ){
+		meth = DaoType_FindFunction( at, mbs );
+		if( meth == NULL ) goto WrongContainer;
 	}else if( at->typer ){
 		meth = DaoType_FindFunction( at, mbs );
 		if( meth == NULL ) goto WrongContainer;
@@ -3420,22 +3416,21 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		}else{
 			goto NotExist;
 		}
-	}else if( at->tid == DAO_INTERFACE ){
-		node = DMap_Find( at->aux->xInterface.methods, str );
-		if( node ){
-			ct = node->value.pRoutine->routType;
+	}else if( at->tid == DAO_INTERFACE || at->tid == DAO_CINTYPE || at->tid == DAO_CINVALUE ){
+		meth = DaoType_FindFunction( at, str );
+		if( meth ){
+			ct = meth->routType;
 		}else{
 			DString_SetChars( mbs, "." );
 			DString_Append( mbs, str );
-			node = DMap_Find( at->aux->xInterface.methods, mbs );
-			if( node == NULL ){
+			meth = DaoType_FindFunction( at, mbs );
+			if( meth == NULL ){
 				pars = & dao_type_string;
 				npar = 1;
 				DString_SetChars( mbs, "." );
-				node = DMap_Find( at->aux->xInterface.methods, mbs );
+				meth = DaoType_FindFunction( at, mbs );
 			}
-			if( node == NULL ) goto NotExist;
-			meth = node->value.pRoutine;
+			if( meth == NULL ) goto NotExist;
 			rout = DaoRoutine_Check( meth, at, pars, npar, DVM_CALL, errors );
 			if( rout == NULL ) goto NotExist;
 			ct = & rout->routType->aux->xType;
@@ -3770,6 +3765,9 @@ int DaoInferencer_HandleSetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 	case DAO_CTYPE :
 	case DAO_CDATA :
 	case DAO_CSTRUCT :
+	case DAO_INTERFACE :
+	case DAO_CINTYPE :
+	case DAO_CINVALUE :
 		DString_SetChars( mbs, "[]=" );
 		meth = DaoType_FindFunction( ct, mbs );
 		if( meth == NULL ) goto InvIndex;
@@ -3807,14 +3805,16 @@ int DaoInferencer_HandleSetMItem( DaoInferencer *self, DaoInode *inode, DMap *de
 	DaoType *ct = types[opc];
 	DaoInode *inode2;
 	DNode *node;
-	int j;
+	int j, min, max;
 
 	if( ct == NULL ) goto ErrorTyping;
 	if( NoCheckingType( at ) || NoCheckingType( ct ) ) return 1;
 	meth = NULL;
 	DString_SetChars( mbs, "[]=" );
-	if( ct->tid == DAO_ARRAY ){
-		int max = DAO_NONE, min = DAO_COMPLEX;
+	switch( ct->tid ){
+	case DAO_ARRAY :
+		max = DAO_NONE;
+		min = DAO_COMPLEX;
 		type = ct->nested->items.pType[0];
 		for(j=1; j<=opb; j++){
 			int tid = types[j+opc]->tid;
@@ -3839,21 +3839,33 @@ int DaoInferencer_HandleSetMItem( DaoInferencer *self, DaoInode *inode, DMap *de
 				}
 			}
 		}
-	}else if( at->tid == DAO_MAP ){
+		break;
+	case DAO_MAP :
 		goto InvIndex;
-	}else if( ct->tid == DAO_CLASS || ct->tid == DAO_OBJECT ){
+	case DAO_CLASS :
+	case DAO_OBJECT :
 		meth = DaoClass_FindMethod( & ct->aux->xClass, "[]=", hostClass );
 		if( meth == NULL ) goto WrongContainer;
-	}else if( ct->tid == DAO_CDATA || ct->tid == DAO_CSTRUCT ){
+		break;
+	case DAO_CDATA :
+	case DAO_CSTRUCT :
+	case DAO_CTYPE :
 		meth = DaoType_FindFunction( ct, mbs );
 		if( meth == NULL ) goto WrongContainer;
-	}else if( ct->tid == DAO_INTERFACE ){
-		node = DMap_Find( ct->aux->xInterface.methods, mbs );
-		if( node == NULL ) goto WrongContainer;
-		meth = node->value.pRoutine;
-	}else if( ct->typer ){
+		break;
+	case DAO_INTERFACE :
+	case DAO_CINTYPE :
+	case DAO_CINVALUE :
 		meth = DaoType_FindFunction( ct, mbs );
 		if( meth == NULL ) goto WrongContainer;
+		break;
+	default :
+		if( ct->typer ){
+			meth = DaoType_FindFunction( ct, mbs );
+			if( meth == NULL ) goto WrongContainer;
+			break;
+		}
+		goto WrongContainer;
 	}
 	if( meth ){
 		ts[0] = at;
@@ -3912,27 +3924,6 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 			DaoInferencer_InsertMove( self, inode, & inode->a, at, dao_type_float );
 		inode->code = DVM_SETF_CX;
 		inode->b = strcmp( str->chars, "imag" ) == 0;
-		break;
-	case DAO_INTERFACE :
-		node = DMap_Find( ct->aux->xInterface.methods, str );
-		if( node ){
-			ct = node->value.pRoutine->routType;
-		}else{
-			DString_SetChars( mbs, "." );
-			DString_Append( mbs, str );
-			node = DMap_Find( ct->aux->xInterface.methods, mbs );
-			if( node == NULL ){
-				pars[0] = dao_type_string;
-				npar = 2;
-				DString_SetChars( mbs, "." );
-				node = DMap_Find( ct->aux->xInterface.methods, mbs );
-			}
-			if( node == NULL ) goto NotExist;
-			meth = node->value.pRoutine;
-			rout = DaoRoutine_Check( meth, ct, pars, npar, DVM_CALL, errors );
-			if( rout == NULL ) goto NotExist;
-			ct = & rout->routType->aux->xType;
-		}
 		break;
 	case DAO_CLASS :
 	case DAO_OBJECT :
@@ -4048,6 +4039,9 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		}
 	case DAO_CDATA :
 	case DAO_CSTRUCT :
+	case DAO_INTERFACE :
+	case DAO_CINTYPE :
+	case DAO_CINVALUE :
 		{
 			DString_SetChars( mbs, "." );
 			DString_Append( mbs, str );
@@ -4119,6 +4113,7 @@ DaoType* DaoInferencer_CheckBinaryOper( DaoInferencer *self, DaoInode *inode, Da
 	}else if( at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
 			|| at->tid == DAO_CDATA || bt->tid == DAO_CDATA
 			|| at->tid == DAO_CSTRUCT || bt->tid == DAO_CSTRUCT
+			|| at->tid == DAO_CINVALUE || bt->tid == DAO_CINVALUE 
 			|| at->tid == DAO_INTERFACE || bt->tid == DAO_INTERFACE ){
 		ct = DaoCheckBinArith( self->routine, vmc, at, bt, types[opc], hostClass, mbs );
 		if( ct == NULL ) return NULL;
@@ -5529,6 +5524,10 @@ SkipChecking:
 		case DVM_CAST :
 			if( routConsts->items.pValue[opb]->type != DAO_TYPE ) goto InvalidCasting;
 			bt = (DaoType*) routConsts->items.pValue[opb];
+			if( bt->tid == DAO_INTERFACE ){
+				DaoCinType *cintype = DaoInterface_GetConcrete( (DaoInterface*) bt->aux, at );
+				if( cintype ) bt = cintype->vatype;
+			}
 			DaoInferencer_UpdateType( self, opc, bt );
 			AssertTypeMatching( bt, types[opc], defs );
 			at = types[opa];
@@ -5708,6 +5707,7 @@ SkipChecking:
 				}else if( at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
 						|| at->tid == DAO_CDATA || bt->tid == DAO_CDATA
 						|| at->tid == DAO_CSTRUCT || bt->tid == DAO_CSTRUCT
+						|| at->tid == DAO_CINVALUE || bt->tid == DAO_CINVALUE 
 						|| at->tid == DAO_INTERFACE || bt->tid == DAO_INTERFACE ){
 					ct = DaoCheckBinArith( routine, vmc, at, bt, types[opc], hostClass, mbs );
 					if( ct == NULL && code != DVM_EQ && code != DVM_NE ) goto InvOper;
@@ -5773,7 +5773,7 @@ SkipChecking:
 			break;
 		case DVM_NOT :
 			ct = NoCheckingType( at ) ? dao_type_udf : dao_type_bool;
-			if( at->tid == DAO_OBJECT || at->tid == DAO_CDATA
+			if( at->tid == DAO_OBJECT || at->tid == DAO_CDATA || at->tid == DAO_CINVALUE
 					|| at->tid == DAO_CSTRUCT || at->tid == DAO_INTERFACE ){
 				ct = DaoCheckBinArith( routine, vmc, at, NULL, types[opc], hostClass, mbs );
 				if( ct == NULL ) ct = dao_type_bool;
@@ -5794,7 +5794,7 @@ SkipChecking:
 			break;
 		case DVM_MINUS :
 			ct = DaoInferencer_UpdateVarType( self, opc, at );
-			if( at->tid == DAO_OBJECT || at->tid == DAO_CDATA
+			if( at->tid == DAO_OBJECT || at->tid == DAO_CDATA || at->tid == DAO_CINVALUE
 					|| at->tid == DAO_CSTRUCT || at->tid == DAO_INTERFACE ){
 				ct = DaoCheckBinArith( routine, vmc, at, NULL, types[opc], hostClass, mbs );
 				if( ct == NULL ) goto InvOper;
@@ -5814,7 +5814,7 @@ SkipChecking:
 			{
 				ct = DaoInferencer_UpdateVarType( self, opc, at );
 				if( NoCheckingType( at ) ) continue;
-				if( at->tid == DAO_OBJECT || at->tid == DAO_CDATA
+				if( at->tid == DAO_OBJECT || at->tid == DAO_CDATA || at->tid == DAO_CINVALUE
 						|| at->tid == DAO_CSTRUCT || at->tid == DAO_INTERFACE ){
 					ct = DaoCheckBinArith( routine, vmc, at, NULL, types[opc], hostClass, mbs );
 					if( ct == NULL ) goto InvOper;
@@ -5835,7 +5835,7 @@ SkipChecking:
 			{
 				ct = DaoInferencer_UpdateType( self, opc, dao_type_int );
 				if( NoCheckingType( at ) ) continue;
-				if( at->tid == DAO_OBJECT || at->tid == DAO_CDATA
+				if( at->tid == DAO_OBJECT || at->tid == DAO_CDATA || at->tid == DAO_CINVALUE
 						|| at->tid == DAO_CSTRUCT || at->tid == DAO_INTERFACE ){
 					ct = DaoCheckBinArith( routine, vmc, at, NULL, types[opc], hostClass, mbs );
 					if( ct == NULL ) goto InvOper;
@@ -5862,6 +5862,7 @@ SkipChecking:
 				}else if( at->tid == DAO_OBJECT || bt->tid == DAO_OBJECT
 						|| at->tid == DAO_CDATA || bt->tid == DAO_CDATA
 						|| at->tid == DAO_CSTRUCT || bt->tid == DAO_CSTRUCT
+						|| at->tid == DAO_CINVALUE || bt->tid == DAO_CINVALUE 
 						|| at->tid == DAO_INTERFACE || bt->tid == DAO_INTERFACE ){
 					ct = DaoCheckBinArith( routine, vmc, at, bt, ct, hostClass, mbs );
 					if( ct == NULL ) goto InvOper;

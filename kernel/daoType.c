@@ -94,6 +94,8 @@ void DaoType_Init()
 		dao_type_matrix[DAO_PAR_NAMED][i] = DAO_MT_EXACT+2;
 		dao_type_matrix[DAO_PAR_DEFAULT][i] = DAO_MT_EXACT+2;
 
+		dao_type_matrix[i][DAO_CINVALUE] = DAO_MT_EXACT+1;
+		dao_type_matrix[DAO_CINVALUE][i] = DAO_MT_EXACT+1;
 		dao_type_matrix[DAO_VARIANT][i] = DAO_MT_EXACT+1;
 		dao_type_matrix[i][DAO_VARIANT] = DAO_MT_EXACT+1;
 	}
@@ -142,8 +144,6 @@ void DaoType_Init()
 	dao_type_matrix[DAO_CDATA][DAO_INTERFACE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_ROUTINE][DAO_ROUTINE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_PROCESS][DAO_ROUTINE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CINVALUE][DAO_INTERFACE] = DAO_MT_EXACT+1;
-	dao_type_matrix[DAO_CINVALUE][DAO_CINVALUE] = DAO_MT_EXACT+1;
 }
 
 
@@ -847,6 +847,9 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 		if( type->tid == DAO_THT || type->tid == DAO_UDT ){
 			return DaoType_MatchToTypeHolder( self, type, defs, binds, dep );
 		}
+	}else if( type->tid == DAO_CINVALUE ){
+		mt = DaoType_MatchTo( self, type->aux->xCinType.target, NULL );
+		if( mt >= DAO_MT_EQ ) return DAO_MT_SIM;
 	}else if( type->tid == DAO_INTERFACE ){
 		/* Matching to "interface": */
 		if( type->aux == NULL ) return DAO_MT_SUB * (self->tid == DAO_INTERFACE);
@@ -1024,9 +1027,16 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 		return DaoType_MatchToParent( self, type, defs, dep );
 	case DAO_CINVALUE :
 		if( self == type ) return DAO_MT_EQ;
-		//if( dinterface == NULL ) 
+		if( self->aux->xCinType.target == type ) return DAO_MT_SIM;
+		if( type->tid == DAO_INTERFACE ){
+			DaoInterface *inter = (DaoInterface*) type->aux;
+			if( self->aux->xCinType.abstract == inter ) return DAO_MT_EQ;
+			return DaoType_MatchInterface( self, inter, NULL );
+		}
+		if( DaoType_MatchTo( self->aux->xCinType.target, type, NULL ) >= DAO_MT_EQ ){
+			return DAO_MT_EQ;
+		}
 		return DAO_MT_NOT;
-		//return DaoType_MatchInterface( value->xProxy.iface->abtype, dinterface, NULL );
 	case DAO_VARIANT :
 		mt = DAO_MT_EQ;
 		mt3 = DAO_MT_NOT;
@@ -1140,6 +1150,10 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			if( mt >= DAO_MT_EQ ) break;
 		}
 		return mt;
+	case DAO_CINVALUE :
+		mt = DaoType_MatchValue( self->aux->xCinType.target, value, NULL );
+		if( mt >= DAO_MT_EQ ) return DAO_MT_SIM;
+		break;
 	case DAO_INTERFACE :
 		/* Matching to "interface": */
 		if( self->aux == NULL ) return DAO_MT_SUB * (value->type == DAO_INTERFACE);
@@ -1285,13 +1299,19 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 		return DaoValue_MatchToParent( value, self, defs );
 	case DAO_CINVALUE :
 		if( value->xCinValue.cintype->vatype == self ) return DAO_MT_EQ;
+		if( value->xCinValue.cintype->target == self ) return DAO_MT_SIM;
 		if( value->xCinValue.cintype->abstract == dinterface ) return DAO_MT_EQ;
-		if( dinterface == NULL ) return DAO_MT_NOT;
+		if( dinterface == NULL ){
+			if( DaoType_MatchValue( self, value->xCinValue.value, NULL ) >= DAO_MT_EQ ){
+				return DAO_MT_SIM;
+			}
+			return DAO_MT_NOT;
+		}
 		return DaoType_MatchInterface( value->xCinValue.cintype->vatype, dinterface, NULL );
 	case DAO_TYPE :
 		tp = & value->xType;
 		if( self->tid != DAO_TYPE ) return 0;
-		/* generic "tyoe"; */
+		/* generic "type"; */
 		if( self->nested == NULL || self->nested->size == 0 ) return DAO_MT_SUB;
 		return DaoType_MatchTo( tp, self->nested->items.pType[0], defs );
 	case DAO_PAR_NAMED :
@@ -1734,6 +1754,14 @@ DaoRoutine* DaoType_GetCastor( DaoType *self )
 DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 {
 	DNode *node;
+
+	if( self->tid == DAO_INTERFACE || self->tid == DAO_CINTYPE || self->tid == DAO_CINVALUE ){
+		DaoValue *aux = self->aux;
+		DMap *meths = self->tid == DAO_INTERFACE ? aux->xInterface.methods : aux->xCinType.methods;
+		node = DMap_Find( meths, name );
+		if( node ) return node->value.pRoutine;
+		return NULL;
+	}
 
 	DaoType_TrySetupMethods( self );
 	if( self->kernel == NULL || self->kernel->methods == NULL ) return NULL;

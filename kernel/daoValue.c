@@ -588,7 +588,17 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	// but if d is of type list<list<any>>,
 	// the matching do not necessary to be exact.
 	*/
-	S = DaoValue_SimpleCopyWithTypeX( S, T, C );
+	if( T->tid == DAO_CINVALUE ){
+		if( DaoType_MatchValue( T->aux->xCinType.target, S, NULL ) >= DAO_MT_EQ ){
+			S = DaoValue_SimpleCopyWithTypeX( S, T->aux->xCinType.target, C );
+			S = (DaoValue*) DaoCinValue_New( (DaoCinType*) T->aux, S );
+			// TODO: Pass in DaoProcess and use cache;
+		}else{
+			S = DaoValue_SimpleCopyWithTypeX( S, T, C );
+		}
+	}else{
+		S = DaoValue_SimpleCopyWithTypeX( S, T, C );
+	}
 	GC_Assign( D, S );
 	if( S->type == DAO_TUPLE && S->xTuple.ctype != T && tm == DAO_MT_SIM ){
 		return DaoValue_TryCastTuple( S, D, T );
@@ -653,8 +663,12 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 			GC_Assign( D, S );
 			return 1;
 		}
-	}else if( S->type == DAO_CINVALUE && S->xCinValue.cintype->target == T /* TODO; */ ){
-		S = S->xCinValue.value;
+	}else if( S->type == DAO_CINVALUE ){
+		if( S->xCinValue.cintype->target == T ){
+			S = S->xCinValue.value;
+		}else if( DaoType_MatchTo( S->xCinValue.cintype->target, T, NULL ) >= DAO_MT_EQ ){
+			S = S->xCinValue.value;
+		}
 	}
 	if( D2 && D2->xBase.refCount > 1 ){
 		GC_DecRC( D2 );
