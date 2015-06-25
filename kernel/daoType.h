@@ -127,6 +127,7 @@ DAO_DLL DaoType *dao_type_int;
 DAO_DLL DaoType *dao_type_float;
 DAO_DLL DaoType *dao_type_complex;
 DAO_DLL DaoType *dao_type_string;
+DAO_DLL DaoType *dao_type_enum;
 DAO_DLL DaoType *dao_type_tuple;
 DAO_DLL DaoType *dao_type_array;
 DAO_DLL DaoType *dao_type_array_empty;
@@ -243,13 +244,6 @@ struct DaoTypeCore
 extern DaoTypeCore  baseCore;
 
 
-DaoTypeBase* DaoValue_GetTyper( DaoValue *p );
-
-DAO_DLL void DaoValue_GetField( DaoValue *self, DaoProcess *proc, DString *name );
-DAO_DLL void DaoValue_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value );
-DAO_DLL void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N );
-DAO_DLL void DaoValue_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value );
-DAO_DLL void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData );
 
 
 typedef struct DTypeParam DTypeParam;

@@ -3527,11 +3527,16 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 
 	if( ct->tid == DAO_CINVALUE ){
 		DaoCinType *cintype = (DaoCinType*) ct->aux;
-		DaoType *at = DaoNamespace_GetType( self->activeNamespace, va );
+		DaoType *at;
 
-		if( cintype->target != at ) goto FailConversion; // TODO;
-		va = (DaoValue*) DaoProcess_MakeCinValue( self, cintype, va );
-		goto FastCasting;
+		if( va->type == DAO_CINVALUE && va->xCinValue.cintype == cintype ) goto FastCasting;
+
+		at = DaoNamespace_GetType( self->activeNamespace, va );
+		if( cintype->target == at || DaoType_MatchTo( cintype->target, at, NULL ) >= DAO_MT_EQ ){
+			va = (DaoValue*) DaoProcess_MakeCinValue( self, cintype, va );
+			goto FastCasting;
+		}
+		goto FailConversion;
 	}else if( ct->tid == DAO_INTERFACE ){
 		DaoInterface *inter = (DaoInterface*) ct->aux;
 		if( ct->aux == NULL ){ /* type "interface": */

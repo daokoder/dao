@@ -113,6 +113,8 @@ union DaoValue
 	} xGC;
 };
 
+DAO_DLL DaoType* DaoValue_GetType( DaoValue *self );
+
 /*
 // Copy when self is a simple data type (with type <= DAO_ENUM),
 // or it is a constant array, list, map or tuple.
@@ -142,7 +144,13 @@ DAO_DLL dao_complex DaoValue_GetComplex( DaoValue *self );
 DAO_DLL DString* DaoValue_GetString( DaoValue *self, DString *str );
 
 DAO_DLL int DaoValue_IsNumber( DaoValue *self );
-DAO_DLL void DaoValue_Print( DaoValue *self, DaoProcess *ctx, DaoStream *stream, DMap *cycData );
 
+DAO_DLL void DaoValue_GetField( DaoValue *self, DaoProcess *proc, DString *name );
+DAO_DLL void DaoValue_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value );
+DAO_DLL void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N );
+DAO_DLL void DaoValue_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value );
+DAO_DLL void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData );
+
+DaoTypeBase* DaoValue_GetTyper( DaoValue *p );
 
 #endif

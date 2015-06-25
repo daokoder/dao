@@ -2643,6 +2643,9 @@ DaoVmSpace* DaoVmSpace_MainVmSpace()
 {
 	return mainVmSpace;
 }
+
+extern DaoType *simpleTypes[ DAO_ARRAY ];
+
 DaoVmSpace* DaoInit( const char *command )
 {
 	DString *mbs;
@@ -2707,8 +2710,17 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_float = DaoType_New( "float", DAO_FLOAT, NULL, NULL );
 	dao_type_complex = DaoType_New( "complex", DAO_COMPLEX, NULL, NULL );
 	dao_type_string = DaoType_New( "string", DAO_STRING, NULL, NULL );
+	dao_type_enum = DaoType_New( "enum", DAO_ENUM, NULL, NULL );
 	dao_type_tht = tht = DaoType_New( "@X", DAO_THT, NULL, NULL );
 	dao_type_routine = DaoType_New( "routine<=>@X>", DAO_ROUTINE, (DaoValue*)tht, NULL );
+
+	simpleTypes[ DAO_NONE    ] = dao_type_none;
+	simpleTypes[ DAO_BOOLEAN ] = dao_type_bool;
+	simpleTypes[ DAO_INTEGER ] = dao_type_int;
+	simpleTypes[ DAO_FLOAT   ] = dao_type_float;
+	simpleTypes[ DAO_COMPLEX ] = dao_type_complex;
+	simpleTypes[ DAO_STRING  ] = dao_type_string;
+	simpleTypes[ DAO_ENUM    ] = dao_type_enum;
 
 	mainVmSpace = vms = DaoVmSpace_New();
 
@@ -2752,6 +2764,7 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_AddTypeConstant( daons, dao_type_float->name, dao_type_float );
 	DaoNamespace_AddTypeConstant( daons, dao_type_complex->name, dao_type_complex );
 	DaoNamespace_AddTypeConstant( daons, dao_type_string->name, dao_type_string );
+	DaoNamespace_AddTypeConstant( daons, dao_type_enum->name, dao_type_enum );
 
 	dao_type_none = DaoNamespace_MakeValueType( daons, dao_none_value );
 	dao_type_for_iterator = DaoNamespace_DefineType( daons, "tuple<valid:bool,iterator:any>", "ForIterator" );
@@ -2827,8 +2840,6 @@ DaoVmSpace* DaoInit( const char *command )
 	return vms;
 }
 
-extern DaoType *simpleTypes[ DAO_ARRAY ];
-
 void DaoQuit()
 {
 	int i;
@@ -2847,10 +2858,7 @@ void DaoQuit()
 	}
 
 	DaoVmSpace_DeleteData( mainVmSpace );
-	for(i=0; i<DAO_ARRAY; i++){
-		GC_DecRC( simpleTypes[i] );
-		simpleTypes[i] = NULL;
-	}
+
 	DaoGC_Finish();
 #ifdef DEBUG
 	for(it=DMap_First(mainVmSpace->nsModules); it; it=DMap_Next(mainVmSpace->nsModules,it) ){

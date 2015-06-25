@@ -495,6 +495,7 @@ static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp, Da
 }
 int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *defs )
 {
+	DaoCinType *cintype;
 	int tm = 1;
 	switch( (T->tid << 8) | S->type ){
 	case (DAO_BOOLEAN << 8) | DAO_BOOLEAN :
@@ -588,14 +589,29 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	// but if d is of type list<list<any>>,
 	// the matching do not necessary to be exact.
 	*/
+	cintype = NULL;
 	if( T->tid == DAO_CINVALUE ){
 		if( DaoType_MatchValue( T->aux->xCinType.target, S, NULL ) >= DAO_MT_EQ ){
-			S = DaoValue_SimpleCopyWithTypeX( S, T->aux->xCinType.target, C );
-			S = (DaoValue*) DaoCinValue_New( (DaoCinType*) T->aux, S );
-			// TODO: Pass in DaoProcess and use cache;
-		}else{
-			S = DaoValue_SimpleCopyWithTypeX( S, T, C );
+			cintype = (DaoCinType*) T->aux;
 		}
+	}else if( T->tid == DAO_INTERFACE && T->aux->xInterface.concretes ){
+		DaoInterface *inter = (DaoInterface*) T->aux;
+		DaoType *st = DaoValue_GetType( S );
+		DNode *it; 
+		cintype = DaoInterface_GetConcrete( inter, st );
+		if( cintype == NULL ){
+			for(it=DMap_First(inter->concretes); it; it=DMap_Next(inter->concretes,it)){
+				if( DaoType_MatchValue( it->key.pType, S, NULL ) >= DAO_MT_EQ ){
+					cintype = (DaoCinType*) it->value.pVoid;
+					break;
+				}
+			}
+		}
+	}
+	if( cintype ){
+		S = DaoValue_SimpleCopyWithTypeX( S, cintype->target, C );
+		S = (DaoValue*) DaoCinValue_New( cintype, S );
+		// TODO: Pass in DaoProcess and use cache;
 	}else{
 		S = DaoValue_SimpleCopyWithTypeX( S, T, C );
 	}
@@ -939,6 +955,38 @@ extern DaoTypeBase comTyper;
 extern DaoTypeBase stringTyper;
 extern DaoTypeBase enumTyper;
 
+DaoType* DaoValue_GetType( DaoValue *self )
+{
+	if( self == NULL ) return NULL;
+
+	switch( self->type ){
+	case DAO_NONE    : return self->xBase.subtype == DAO_ANY ? dao_type_any : dao_type_none;
+	case DAO_BOOLEAN : return dao_type_bool;
+	case DAO_INTEGER : return dao_type_int;
+	case DAO_FLOAT   : return dao_type_float;
+	case DAO_COMPLEX : return dao_type_complex;
+	case DAO_STRING  : return dao_type_string;
+	case DAO_ENUM    : return self->xEnum.etype ? self->xEnum.etype : dao_type_enum;
+#ifdef DAO_WITH_NUMARRAY
+	case DAO_ARRAY : return dao_array_types[ self->xArray.etype ];
+#endif
+	case DAO_LIST   : return self->xList.ctype;
+	case DAO_MAP    : return self->xMap.ctype;
+	case DAO_TUPLE  : return self->xTuple.ctype;
+	case DAO_OBJECT : return self->xObject.defClass->objType;
+	case DAO_CLASS  : return self->xClass.clsType;
+	case DAO_CTYPE   :
+	case DAO_CDATA   :
+	case DAO_CSTRUCT : return self->xCdata.ctype;
+	case DAO_ROUTINE   : return self->xRoutine.routType;
+	case DAO_PAR_NAMED : return self->xNameValue.ctype;
+	case DAO_INTERFACE : return self->xInterface.abtype;
+	case DAO_CINTYPE   : return self->xCinType.citype;
+	case DAO_CINVALUE  : return self->xCinValue.cintype->vatype;
+	default : break;
+	}
+	return NULL;
+}
 DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
 {
 	if( self == NULL ) return & baseTyper;
@@ -960,8 +1008,8 @@ DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
 void DaoValue_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 {
 	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
-	DaoValue *p = DaoType_FindValue( type, name );
-	if( p == NULL ){
+	DaoValue *value = DaoType_FindValue( type, name );
+	if( value == NULL ){
 		DaoRoutine *func = NULL;
 		DaoString str = {DAO_STRING,0,0,0,1,NULL};
 		DaoValue *pars = (DaoValue*) & str;
@@ -984,7 +1032,7 @@ void DaoValue_GetField( DaoValue *self, DaoProcess *proc, DString *name )
 			DaoProcess_RaiseException( proc, daoExceptionNames[error], NULL, NULL );
 		}
 	}else{
-		DaoProcess_PutValue( proc, p );
+		DaoProcess_PutValue( proc, value );
 	}
 }
 void DaoValue_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
@@ -1055,44 +1103,56 @@ static void DaoValue_BasicPrint( DaoValue *self, DaoStream *stream, DMap *cycDat
 	DaoStream_WriteChars( stream, "_" );
 	DaoStream_WritePointer( stream, self );
 }
-static void DaoValue_PrintCdata( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
+static void DaoValue_PrintEx( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
 	int ec = 0;
 	char buf[50];
 	DaoRoutine *meth;
 	DaoValue *params[2];
-	DaoCdata *cdata = (DaoCdata*) self;
+	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
+	DaoCinValue *cinvalue = NULL;
+	DaoCstruct *cstruct = NULL;
 
-	sprintf( buf, "[%p]", cdata );
-
-	if( self == cdata->ctype->value ){
-		DaoStream_WriteString( stream, cdata->ctype->name );
-		DaoStream_WriteChars( stream, "[default]" );
-		return;
+	switch( self->type ){
+	case DAO_CDATA :
+	case DAO_CSTRUCT  : cstruct  = (DaoCstruct*) self; break;
+	case DAO_CINVALUE : cinvalue = (DaoCinValue*) self; break;
 	}
-	if( cycData != NULL && DMap_Find( cycData, cdata ) != NULL ){
-		DaoStream_WriteString( stream, cdata->ctype->name );
+
+	sprintf( buf, "[%p]", self );
+
+	if( cstruct ){
+		if( self == cstruct->ctype->value ){
+			DaoStream_WriteString( stream, cstruct->ctype->name );
+			DaoStream_WriteChars( stream, "[default]" );
+			return;
+		}
+	}
+	if( cycData != NULL && DMap_Find( cycData, self ) != NULL ){
+		DaoStream_WriteString( stream, type->name );
 		DaoStream_WriteChars( stream, buf );
 		return;
 	}
-	if( cycData ) MAP_Insert( cycData, cdata, cdata );
+	if( cycData ) MAP_Insert( cycData, self, self );
 
 	params[0] = (DaoValue*) dao_type_string;
 	params[1] = (DaoValue*) stream;
-	meth = DaoType_FindFunctionChars( cdata->ctype, "(string)" );
+	meth = DaoType_FindFunctionChars( type, "(string)" );
 	if( meth ){
 		ec = DaoProcess_Call( proc, meth, self, params, 2 );
 		if( ec ) ec = DaoProcess_Call( proc, meth, self, params, 1 );
 	}else{
-		meth = DaoType_FindFunctionChars( cdata->ctype, "serialize" );
+		meth = DaoType_FindFunctionChars( type, "serialize" );
 		if( meth ) ec = DaoProcess_Call( proc, meth, self, NULL, 0 );
 	}
 	if( ec ){
 		DaoProcess_RaiseException( proc, daoExceptionNames[ec], proc->string->chars, NULL );
 	}else if( meth && proc->stackValues[0] ){
 		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
+	}else if( cinvalue ){
+		DaoValue_Print( cinvalue->value, proc, stream, cycData );
 	}else{
-		DaoStream_WriteString( stream, cdata->ctype->name );
+		DaoStream_WriteString( stream, type->name );
 		DaoStream_WriteChars( stream, buf );
 	}
 }
@@ -1133,7 +1193,8 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 		break;
 	case DAO_CDATA :
 	case DAO_CSTRUCT :
-		DaoValue_PrintCdata( self, proc, stream, cycData );
+	case DAO_CINVALUE :
+		DaoValue_PrintEx( self, proc, stream, cycData );
 		break;
 	default :
 		typer = DaoVmSpace_GetTyper( self->type );

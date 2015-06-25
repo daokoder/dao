@@ -54,6 +54,7 @@ DaoType *dao_type_int = NULL;
 DaoType *dao_type_float = NULL;
 DaoType *dao_type_complex = NULL;
 DaoType *dao_type_string = NULL;
+DaoType *dao_type_enum = NULL;
 DaoType *dao_type_tuple = NULL;
 DaoType *dao_type_array = NULL;
 DaoType *dao_type_array_empty = NULL;
@@ -853,6 +854,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 	}else if( type->tid == DAO_INTERFACE ){
 		/* Matching to "interface": */
 		if( type->aux == NULL ) return DAO_MT_SUB * (self->tid == DAO_INTERFACE);
+		if( DaoInterface_GetConcrete( (DaoInterface*) type->aux, self ) ) return DAO_MT_SIM;
 		return DaoType_MatchInterface( self, (DaoInterface*) type->aux, binds );
 	}else if( type->tid == DAO_VARIANT ){
 		return DaoType_MatchToVariant( self, type, defs, binds, dep );
@@ -1157,6 +1159,15 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 	case DAO_INTERFACE :
 		/* Matching to "interface": */
 		if( self->aux == NULL ) return DAO_MT_SUB * (value->type == DAO_INTERFACE);
+		if( self->aux->xInterface.concretes != NULL ){
+			DaoInterface *inter = (DaoInterface*) self->aux;
+			DNode *it;
+			for(it=DMap_First(inter->concretes); it; it=DMap_Next(inter->concretes,it)){
+				if( DaoType_MatchValue( it->key.pType, value, NULL ) >= DAO_MT_EQ ){
+					return DAO_MT_SIM;
+				}   
+			}   
+		}
 		break;
 	case DAO_ANY : return DAO_MT_ANY;
 	}

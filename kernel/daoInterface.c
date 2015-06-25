@@ -352,97 +352,14 @@ void DaoCinValue_Delete( DaoCinValue *self )
 	dao_free( self );
 }
 
-void DaoCinValue_GetField( DaoValue *self, DaoProcess *proc, DString *name )
-{
-	DNode *it = DMap_Find( self->xCinValue.cintype->methods, name );
-	if( it == NULL ){
-		DaoString str = {DAO_STRING,0,0,0,1,NULL};
-		DaoValue *pars = (DaoValue*) & str;
-		int error, npar = 0;
-
-		str.value = name;
-		DString_SetChars( proc->string, "." );
-		DString_Append( proc->string, name );
-		it = DMap_Find( self->xCinValue.cintype->methods, proc->string );
-		if( it == NULL ){
-			npar = 1;
-			DString_SetChars( proc->string, "." );
-			it = DMap_Find( self->xCinValue.cintype->methods, proc->string );
-		}
-		if( it == NULL ){
-			DaoProcess_RaiseError( proc, "Field::NotExist", "not exist" );
-			return;
-		}
-		if( (error = DaoProcess_PushCallable( proc, it->value.pRoutine, self, & pars, npar )) != 0 ){
-			DaoProcess_RaiseException( proc, daoExceptionNames[error], NULL, NULL );
-		}
-	}else{
-		DaoProcess_PutValue( proc, it->value.pValue );
-	}
-}
-void DaoCinValue_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
-{
-    int npar = 1; 
-    DaoValue *pars[2];
-    DaoString str = {DAO_STRING,0,0,0,1,NULL};
-	DNode *it;
-
-    str.value = name;
-    pars[0] = pars[1] = value;
-
-    DString_SetChars( proc->string, "." );
-    DString_Append( proc->string, name );
-    DString_AppendChars( proc->string, "=" );
-	it = DMap_Find( self->xCinValue.cintype->methods, proc->string );
-    if( it == NULL ){
-        pars[0] = (DaoValue*) & str; 
-        npar = 2; 
-        DString_SetChars( proc->string, ".=" );
-		it = DMap_Find( self->xCinValue.cintype->methods, proc->string );
-    }    
-    if( it == NULL ){
-        DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
-        return;
-    }    
-    DaoProcess_PushCallable( proc, it->value.pRoutine, self, pars, npar );
-}
-void DaoCinValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N )
-{
-	DString name = DString_WrapChars( "[]" );
-	DNode *it = DMap_Find( self->xCinValue.cintype->methods, & name );
-	if( it == NULL ){
-		DaoProcess_RaiseError( proc, "Field::NonExist", "[]" );
-		return;
-	}
-	DaoProcess_PushCallable( proc, it->value.pRoutine, self, pid, N );
-}
-void DaoCinValue_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value )
-{
-	DString name = DString_WrapChars( "[]=" );
-	DNode *it = DMap_Find( self->xCinValue.cintype->methods, & name );
-	DaoValue *p[ DAO_MAX_PARAM ];
-	memcpy( p+1, pid, N*sizeof(DaoValue*) );
-	p[0] = value;
-	if( it == NULL ){
-		DaoProcess_RaiseError( proc, "Field::NonExist", "[]=" );
-		return;
-	}
-	DaoProcess_PushCallable( proc, it->value.pRoutine, self, p, N+1 );
-}
-static void DaoCinValue_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
-{
-	DaoCinValue *self = (DaoCinValue*) self0;
-	DaoValue_Print( self->value, proc, stream, cycData );
-	// TODO: wrapper;
-}
 
 static DaoTypeCore cinValueCore=
 {
 	NULL,
-	DaoCinValue_GetField,
-	DaoCinValue_SetField,
-	DaoCinValue_GetItem,
-	DaoCinValue_SetItem,
+	DaoValue_GetField,
+	DaoValue_SetField,
+	DaoValue_GetItem,
+	DaoValue_SetItem,
 	DaoValue_Print
 };
 
