@@ -1100,10 +1100,6 @@ void DaoClass_AddMixinClass( DaoClass *self, DaoClass *mixin )
 }
 void DaoClass_AddSuperClass( DaoClass *self, DaoValue *super )
 {
-	if( self->parent ){
-		printf( "Error: parent class alread set!\n" );
-		return;
-	}
 	self->parent = super;
 	DList_Append( self->allBases, super );
 }

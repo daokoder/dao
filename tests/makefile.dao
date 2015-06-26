@@ -58,6 +58,7 @@ test_class.AddTest( "test_class_mixin.dao" )
 test_class.AddTest( "test_invar_class.dao" )
 
 test_interface = daotests.AddTest( "Interface", "test_interface.dao" )
+test_interface.AddTest( "test_concrete_interface.dao" )
 
 test_regex = daotests.AddTest( "Regex", "test_regex_char_class.dao" )
 test_regex.AddDependency( chartype_dll )

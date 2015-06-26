@@ -2145,7 +2145,7 @@ static void DaoByteCoder_DecodeBases( DaoByteCoder *self, DaoByteBlock *block )
 		for(i=D; i<self->ivalues->size; ++i){
 			DList_Append( inter->supers, self->ivalues->items.pValue[i] );
 		}
-		DaoInterface_DeriveMethods( inter );
+		DaoInterface_DeriveMethods( (DaoInterface*) inter );
 	}else{
 		DaoByteCoder_Error( self, block, "Invalid scope!" );
 	}

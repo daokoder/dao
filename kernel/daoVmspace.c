@@ -2644,7 +2644,6 @@ DaoVmSpace* DaoVmSpace_MainVmSpace()
 	return mainVmSpace;
 }
 
-extern DaoType *simpleTypes[ DAO_ARRAY ];
 
 DaoVmSpace* DaoInit( const char *command )
 {
@@ -2713,14 +2712,6 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_enum = DaoType_New( "enum", DAO_ENUM, NULL, NULL );
 	dao_type_tht = tht = DaoType_New( "@X", DAO_THT, NULL, NULL );
 	dao_type_routine = DaoType_New( "routine<=>@X>", DAO_ROUTINE, (DaoValue*)tht, NULL );
-
-	simpleTypes[ DAO_NONE    ] = dao_type_none;
-	simpleTypes[ DAO_BOOLEAN ] = dao_type_bool;
-	simpleTypes[ DAO_INTEGER ] = dao_type_int;
-	simpleTypes[ DAO_FLOAT   ] = dao_type_float;
-	simpleTypes[ DAO_COMPLEX ] = dao_type_complex;
-	simpleTypes[ DAO_STRING  ] = dao_type_string;
-	simpleTypes[ DAO_ENUM    ] = dao_type_enum;
 
 	mainVmSpace = vms = DaoVmSpace_New();
 

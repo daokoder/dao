@@ -39,20 +39,20 @@ struct DaoInterface
 {
 	DAO_VALUE_COMMON;
 
-	DaoType       *abtype;  /* type object for this interface; */
-	DList         *supers;  /* parent interfaces; */
-	DMap          *methods; /* DHash<DString*,DaoRoutine*>; */
-	DMap          *concretes; /* the concrete interfaces for abstract interfaces; */
-
-	short derived;
+	int       derived;
+	DaoType  *abtype;  /* type object for this interface; */
+	DList    *supers;  /* parent interfaces; */
+	DMap     *methods; /* DHash<DString*,DaoRoutine*>; */
+	DMap     *concretes; /* the concrete interfaces for abstract interfaces; */
 };
 
 DaoInterface* DaoInterface_New( const char *name );
 void DaoInterface_Delete( DaoInterface *self );
 
+void DaoInterface_DeriveMethods( DaoInterface *self );
+
 int DaoInterface_Bind( DList *pairs, DList *fails );
 int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds );
-void DaoInterface_DeriveMethods( DaoInterface *self );
 DaoCinType* DaoInterface_GetConcrete( DaoInterface *self, DaoType *type );
 
 int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds );
@@ -63,7 +63,7 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds );
 // Concrete Interface Type:
 //
 // interface SomeInterface for SomeTargetType {
-//     routine SomeMethod(){  # routine<self:SomeTargetType=>none>
+//     routine SomeMethod(){
 //     }
 // }
 //
@@ -101,19 +101,21 @@ struct DaoCinType
 {
 	DAO_VALUE_COMMON;
 
-	DaoType       *citype;  /* concrete interface type type; */
-	DaoType       *vatype;  /* concrete interface value type; */
-	DList         *supers;  /* parent interface classes; */
-	DMap          *methods; /* DHash<DString*,DaoRoutine*>; */
+	int       derived;
+	DaoType  *citype;  /* concrete interface type type; */
+	DaoType  *vatype;  /* concrete interface value type; */
+	DList    *supers;  /* parent interface classes; */
+	DMap     *methods; /* DHash<DString*,DaoRoutine*>; */
 
 	DaoType       *target;    /* target type; */
 	DaoInterface  *abstract;  /* abstract interface; */
-
-	short derived;
 };
 
 DaoCinType* DaoCinType_New( DaoInterface *inter, DaoType *target );
 void DaoCinType_Delete( DaoCinType *self );
+
+void DaoCinType_DeriveMethods( DaoCinType *self );
+
 
 
 /*

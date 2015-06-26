@@ -3081,6 +3081,10 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 		int t = tokens[start]->name;
 		if( (t != DTOK_IDENTIFIER && t < DKEY_CEIL) || t > DKEY_TANH ) goto ErrorInterfaceDefinition;
 		interName = & tokens[start]->string;
+		if( tokens[start+1]->name == DKEY_FOR ){
+			ename = interName;
+			ec = DAO_SYMBOL_NEED_INTERFACE;
+		}
 		inter = DaoInterface_New( interName->chars );
 		if( routine != NS->mainRoutine ) ns = NULL;
 		value = (DaoValue*) inter;
@@ -3117,15 +3121,33 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 		/* interface AB : NS::BB, CC{ } */
 		unsigned char sep = DTOK_COLON;
 		while( tokens[start]->name == sep ){
+			int estart = start + 1;
 			DaoType *sutype = DaoParser_ParseType( self, start+1, to, & start, NULL );
 			if( start < 0 ) goto ErrorInterfaceBase;
-			ename = & tokens[start-1]->string;
-			if( sutype == NULL || sutype->tid != DAO_INTERFACE ){
+			ename = & tokens[estart]->string;
+			if( sutype == NULL || (sutype->tid != DAO_INTERFACE && sutype->tid != DAO_CINVALUE ) ){
 				ec = DAO_SYMBOL_NEED_INTERFACE;
 				goto ErrorInterfaceBase;
 			}
+			if( cintype == NULL && sutype->tid != DAO_INTERFACE ){
+				ec = DAO_INVALID_PARENT_INTERFACE;
+				goto ErrorInterfaceDefinition;
+			}else if( cintype != NULL && sutype->tid != DAO_CINVALUE ){
+				ec = DAO_INVALID_PARENT_INTERFACE;
+				goto ErrorInterfaceDefinition;
+			}
 			/* Add a reference to its super interfaces: */
-			DList_Append( inter->supers, sutype->aux );
+			if( cintype ){
+				DaoCinType *cinbase = (DaoCinType*) sutype->aux;
+				int childof = DaoType_ChildOf( inter->abtype, cinbase->abstract->abtype );
+				if( inter == cinbase->abstract || childof == 0 ){
+					ec = DAO_INVALID_PARENT_INTERFACE;
+					goto ErrorInterfaceDefinition;
+				}
+				DList_Append( cintype->supers, sutype->aux );
+			}else{
+				DList_Append( inter->supers, sutype->aux );
+			}
 			sep = DTOK_COMMA;
 		}
 	}
@@ -3158,7 +3180,11 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 		parser->byteCoder = self->byteCoder;
 	}
 
-	DaoInterface_DeriveMethods( inter );
+	if( cintype ){
+		DaoCinType_DeriveMethods( cintype );
+	}else{
+		DaoInterface_DeriveMethods( inter );
+	}
 	for(i=start+1; i<right; i++) DaoLexer_AppendToken( parser->lexer, tokens[i] );
 
 	if( DaoParser_ParseCodes( parser, 0, parser->tokens->size-1 )==0 ){
@@ -3176,8 +3202,8 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	if( cintype ){
 		if( DaoType_MatchInterface( cintype->vatype, inter, NULL ) == 0 ){
-			// TODO;
-			printf( "here\n" );
+			ename = cintype->vatype->name;
+			ec = DAO_INCOMPLETE_INTERFACE_IMPL;
 			goto ErrorInterfaceDefinition;
 		}
 		if( inter->concretes == NULL ){
@@ -3366,9 +3392,13 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		if( base->type == DAO_CLASS && (base->attribs & async) != (klass->attribs & async) ){
 			goto ErrorClassDefinition;
 		}
+		if( klass->parent ){
+			ec = DAO_TOO_MANY_PARENT_TYPES;
+			goto ErrorClassDefinition;
+		}
 		/* Add a reference to its base classes: */
 		DaoClass_AddSuperClass( klass, (DaoValue*) base );
-	} /* end parsing base classes */
+	} /* End parsing base classes */
 
 	if( klass->attribs & DAO_CLS_INVAR ){
 		for(i=0; i<klass->allBases->size; ++i){

@@ -213,6 +213,7 @@ typedef struct DaoList         DaoList;
 typedef struct DaoMap          DaoMap;
 typedef struct DaoTuple        DaoTuple;
 typedef struct DaoRoutine      DaoRoutine;
+typedef struct DaoInterBase    DaoInterBase;
 typedef struct DaoInterface    DaoInterface;
 typedef struct DaoCinType      DaoCinType;
 typedef struct DaoCinValue     DaoCinValue;

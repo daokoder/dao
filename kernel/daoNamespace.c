@@ -1449,7 +1449,6 @@ void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, DaoType *t
 	}
 }
 
-DaoType *simpleTypes[ DAO_ARRAY ] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 
 DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *value )
 {

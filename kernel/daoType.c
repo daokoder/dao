@@ -672,7 +672,7 @@ static int DaoType_MatchToParent( DaoType *self, DaoType *type, DMap *defs, int 
 {
 	daoint i, k, n, mt = DAO_MT_NOT;
 	if( self == type ) return DAO_MT_EQ;
-	if( self->tid == type->tid && (self->tid >= DAO_OBJECT && self->tid <= DAO_CTYPE) ){
+	if( self->tid == type->tid && (self->tid >= DAO_OBJECT && self->tid <= DAO_INTERFACE) ){
 		if( self->aux == type->aux ) return DAO_MT_EQ; /* for aliased type; */
 	}
 	if( (mt = DaoType_MatchTemplateParams( self, type, defs, dep )) ) return mt;
@@ -695,6 +695,10 @@ static int DaoValue_MatchToParent( DaoValue *object, DaoType *parent, DMap *defs
 		mt = DaoType_MatchToParent( object->xCdata.ctype, parent, defs, 0 );
 	}else if( object->type == DAO_CLASS ){
 		mt = DaoType_MatchToParent( object->xClass.clsType, parent, defs, 0 );
+	}else if( object->type == DAO_CINVALUE ){
+		mt = DaoType_MatchToParent( object->xCinValue.cintype->vatype, parent, defs, 0 );
+	}else if( object->type == DAO_CINTYPE ){
+		mt = DaoType_MatchToParent( object->xCinType.citype, parent, defs, 0 );
 	}
 	return mt;
 }
@@ -1038,7 +1042,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 		if( DaoType_MatchTo( self->aux->xCinType.target, type, NULL ) >= DAO_MT_EQ ){
 			return DAO_MT_EQ;
 		}
-		return DAO_MT_NOT;
+		return DaoType_MatchToParent( self, type, defs, dep );
 	case DAO_VARIANT :
 		mt = DAO_MT_EQ;
 		mt3 = DAO_MT_NOT;
@@ -1316,7 +1320,7 @@ int DaoType_MatchValue( DaoType *self, DaoValue *value, DMap *defs )
 			if( DaoType_MatchValue( self, value->xCinValue.value, NULL ) >= DAO_MT_EQ ){
 				return DAO_MT_SIM;
 			}
-			return DAO_MT_NOT;
+			return DaoValue_MatchToParent( value, self, defs );
 		}
 		return DaoType_MatchInterface( value->xCinValue.cintype->vatype, dinterface, NULL );
 	case DAO_TYPE :

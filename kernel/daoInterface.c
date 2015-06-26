@@ -38,6 +38,8 @@
 #include"daoGC.h"
 
 extern int DaoType_Match( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int dep );
+void DaoMethods_Insert( DMap *methods, DaoRoutine *rout, DaoNamespace *ns, DaoType *host );
+
 
 DaoInterface* DaoInterface_New( const char *name )
 {
@@ -64,6 +66,30 @@ void DaoInterface_Delete( DaoInterface *self )
 	DList_Delete( self->supers );
 	DMap_Delete( self->methods );
 	dao_free( self );
+}
+
+void DaoInterface_DeriveMethods( DaoInterface *self )
+{
+	daoint i, k, m, N = self->supers->size;
+	DaoInterface *super;
+	DNode *it;
+	for(i=0; i<N; i++){
+		super = (DaoInterface*) self->supers->items.pValue[i];
+		if( self->abtype->bases == NULL ) self->abtype->bases = DList_New( DAO_DATA_VALUE );
+		DList_Append( self->abtype->bases, super->abtype );
+		for(it=DMap_First(super->methods); it; it=DMap_Next( super->methods, it )){
+			if( it->value.pRoutine->overloads ){
+				DRoutines *routs = it->value.pRoutine->overloads;
+				for(k=0,m=routs->routines->size; k<m; k++){
+					DaoRoutine *rout = routs->routines->items.pRoutine[i];
+					DaoMethods_Insert( self->methods, rout, NULL, self->abtype );
+				}
+			}else{
+				DaoMethods_Insert( self->methods, it->value.pRoutine, NULL, self->abtype );
+			}
+		}
+	}
+	self->derived = 1;
 }
 
 static int DaoRoutine_IsCompatible( DaoRoutine *self, DaoType *type, DMap *binds )
@@ -214,28 +240,6 @@ int DaoInterface_BindTo( DaoInterface *self, DaoType *type, DMap *binds )
 	}
 	return 1;
 }
-void DaoMethods_Insert( DMap *methods, DaoRoutine *rout, DaoNamespace *ns, DaoType *host );
-void DaoInterface_DeriveMethods( DaoInterface *self )
-{
-	daoint i, k, m, N = self->supers->size;
-	DaoInterface *super;
-	DNode *it;
-	for(i=0; i<N; i++){
-		super = (DaoInterface*) self->supers->items.pValue[i];
-		for(it=DMap_First(super->methods); it; it=DMap_Next( super->methods, it )){
-			if( it->value.pRoutine->overloads ){
-				DRoutines *routs = it->value.pRoutine->overloads;
-				for(k=0,m=routs->routines->size; k<m; k++){
-					DaoRoutine *rout = routs->routines->items.pRoutine[i];
-					DaoMethods_Insert( self->methods, rout, NULL, self->abtype );
-				}
-			}else{
-				DaoMethods_Insert( self->methods, it->value.pRoutine, NULL, self->abtype );
-			}
-		}
-	}
-	self->derived = 1;
-}
 DaoCinType* DaoInterface_GetConcrete( DaoInterface *self, DaoType *type )
 {
 	DNode *it;
@@ -320,6 +324,34 @@ void DaoCinType_Delete( DaoCinType *self )
 	DMap_Delete( self->methods );
 	dao_free( self );
 }
+
+void DaoCinType_DeriveMethods( DaoCinType *self )
+{
+	daoint i, k, m, N = self->supers->size;
+	DaoCinType *super;
+	DNode *it;
+	for(i=0; i<N; i++){
+		super = (DaoCinType*) self->supers->items.pValue[i];
+		self->citype->bases = DList_New( DAO_DATA_VALUE );
+		self->vatype->bases = DList_New( DAO_DATA_VALUE );
+		DList_Append( self->citype->bases, super->citype );
+		DList_Append( self->vatype->bases, super->vatype );
+		for(it=DMap_First(super->methods); it; it=DMap_Next( super->methods, it )){
+			if( it->value.pRoutine->overloads ){
+				DRoutines *routs = it->value.pRoutine->overloads;
+				for(k=0,m=routs->routines->size; k<m; k++){
+					DaoRoutine *rout = routs->routines->items.pRoutine[i];
+					DaoMethods_Insert( self->methods, rout, NULL, self->vatype );
+				}
+			}else{
+				DaoMethods_Insert( self->methods, it->value.pRoutine, NULL, self->vatype );
+			}
+		}
+	}
+	self->derived = 1;
+}
+
+
 
 DaoTypeBase cinTypeTyper =
 {

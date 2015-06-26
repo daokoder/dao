@@ -1,15 +1,12 @@
 
+# Abstract interface:
 interface InterA
 {
 	routine size()=>int
 	routine serialize()=>string
 }
 
-interface InterB : InterA
-{
-	routine []( index: int ) => float
-}
-
+# Concrete interface for int:
 interface InterA for int
 {
 	routine size(){
@@ -28,7 +25,7 @@ io.writeln( (int) a )
 
 var d: int = c
 
-# int is automatically converted to InterA<int>, when InterA or InterA<int>
+# int is automatically converted to InterA<int>, where InterA or InterA<int>
 # is expected:
 var e: list<InterA<int>> = { 123 }
 
@@ -42,11 +39,21 @@ io.writeln( e, f )
 
 
 
-#{
+
+interface InterB : InterA
+{
+	routine []( index: int ) => int
+}
+
 interface InterB for int : InterA<int>
 {
-	routine []( index: int ) => float {
-		return self[index];
+	routine []( index: int ) => int {
+		return (self & (1<<index)) >> index;
 	}
 }
-#}
+
+var k = (InterB) 0x7ffeff;
+
+f.append( k )
+
+io.writeln( f, k[1] )
