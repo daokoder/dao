@@ -31,6 +31,14 @@
 
 #include"daoType.h"
 
+/*
+// The DaoCdata and DaoCinValue objects must be globally unique for the wrapped data.
+// Because relations regarding to the inheritance can only be set when the wrappers
+// are initialized at the first time.
+*/
+DAO_DLL DaoCdata* DaoWrappers_MakeCdata( DaoType *type, void *data, int owned );
+DAO_DLL DaoCinValue* DaoWrappers_MakeCinValue( DaoCinType *type, DaoValue *value );
+
 
 #ifdef DAO_USE_GC_LOGGER
 DAO_DLL void DaoObjectLogger_Init();

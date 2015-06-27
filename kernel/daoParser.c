@@ -3224,6 +3224,7 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 ErrorInterfaceBase:
 	DaoParser_Error( self, DAO_SYMBOL_NEED_INTERFACE, ename );
 ErrorInterfaceDefinition:
+	if( cintype ) DaoGC_TryDelete( (DaoValue*) cintype );
 	if( parser ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	if( ec ) DaoParser_Error( self, ec, ename );
 	DaoParser_Error2( self, DAO_INVALID_INTERFACE_DEFINITION, errorStart, to, 0 );

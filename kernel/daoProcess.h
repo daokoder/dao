@@ -125,8 +125,6 @@ struct DaoProcess
 	DList          *exceptions;
 	DList          *factory;
 
-	DMap           *wrappers;
-
 	/*
 	// Process auxiliary data (process specific data):
 	// Pairs of deallocation function pointer and data pointer;
@@ -181,7 +179,6 @@ DAO_DLL void DaoProcess_PrintException( DaoProcess *self, DaoStream *stream, int
 
 DAO_DLL void DaoProcess_Trace( DaoProcess *self, int depth );
 
-DAO_DLL DaoCinValue* DaoProcess_MakeCinValue( DaoProcess *self, DaoCinType *type, DaoValue *value );
 DAO_DLL DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode );
 
 DAO_DLL void* DaoProcess_GetAuxData( DaoProcess *self, void *key );

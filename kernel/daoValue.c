@@ -610,8 +610,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	}
 	if( cintype ){
 		S = DaoValue_SimpleCopyWithTypeX( S, cintype->target, C );
-		S = (DaoValue*) DaoCinValue_New( cintype, S );
-		// TODO: Pass in DaoProcess and use cache;
+		S = (DaoValue*) DaoWrappers_MakeCinValue( cintype, S );
 	}else{
 		S = DaoValue_SimpleCopyWithTypeX( S, T, C );
 	}
@@ -1509,7 +1508,7 @@ DaoStream* DaoProcess_NewStream( DaoProcess *self, FILE *f )
 }
 DaoCdata* DaoProcess_NewCdata( DaoProcess *self, DaoType *type, void *data, int owned )
 {
-	DaoCdata *res = DaoProcess_MakeCdata( self, type, data, owned );
+	DaoCdata *res = DaoWrappers_MakeCdata( type, data, owned );
 	DaoProcess_CacheValue( self, (DaoValue*) res );
 	return res;
 }

@@ -495,7 +495,6 @@ void DaoObjectLogger_Quit()
 				DaoObjectLogger_ScanArray( vmp->exceptions );
 				DaoObjectLogger_ScanArray( vmp->defers );
 				DaoObjectLogger_ScanArray( vmp->factory );
-				DaoObjectLogger_ScanMap( vmp->wrappers, 0, 1 );
 				DaoObjectLogger_ScanValues( vmp->stackValues, vmp->stackSize );
 				while( frame ){
 					DaoObjectLogger_ScanValue( (DaoValue*) frame->routine );
@@ -543,6 +542,7 @@ struct DaoGarbageCollector
 	DList   *cdataLists;
 	DList   *cdataMaps;
 	DList   *temporary;
+	DMap    *wrappers;
 
 	uchar_t   finalizing;
 	uchar_t   delayMask;
@@ -602,7 +602,8 @@ void DaoGC_Init()
 	gcWorker.cdataLists = DList_New(0);
 	gcWorker.cdataMaps = DList_New(0);
 	gcWorker.temporary = DList_New(0);
-	
+	gcWorker.wrappers = DHash_New(0,DAO_DATA_VALUE);
+
 	gcWorker.delayMask = DAO_VALUE_DELAYGC;
 	gcWorker.finalizing = 0;
 	gcWorker.cycle = 0;
@@ -643,6 +644,102 @@ void DaoCGC_Start()
 	}
 #endif
 }
+
+
+
+static void DaoWrappers_ClearGarbage2()
+{
+	int count = 0;
+	void *keys[1000];
+	DNode *it;
+
+	for(it=DMap_First(gcWorker.wrappers); it; it=DMap_Next(gcWorker.wrappers,it)){
+		if( it->value.pValue->xBase.refCount == 1 ){
+			keys[count++] = it->key.pVoid;
+			if( count >= 1000 ) break;
+		}
+	}
+	while( count ) DMap_Erase( gcWorker.wrappers, keys[--count] );
+}
+
+#ifdef DAO_WITH_THREAD
+static DaoValue* DaoWrappers_Find( void *data )
+{
+	DNode *node;
+	DaoValue *value = NULL;
+
+	DMutex_Lock( & gcWorker.generic_lock );
+	node = DMap_Find( gcWorker.wrappers, data );
+	if( node ) value = (DaoValue*) node->value.pVoid;
+	DMutex_Unlock( & gcWorker.generic_lock );
+	return value;
+}
+static void DaoWrappers_Insert( void *data, DaoValue *wrap )
+{
+	if( data == NULL ) return;
+	DMutex_Lock( & gcWorker.generic_lock );
+	DMap_Insert( gcWorker.wrappers, data, wrap );
+	DMutex_Unlock( & gcWorker.generic_lock );
+}
+static void DaoWrappers_Erase( void *data )
+{
+	if( data == NULL ) return;
+	DMutex_Lock( & gcWorker.generic_lock );
+	DMap_Erase( gcWorker.wrappers, data );
+	DMutex_Unlock( & gcWorker.generic_lock );
+}
+static void DaoWrappers_ClearGarbage()
+{
+	DMutex_Lock( & gcWorker.generic_lock );
+	DaoWrappers_ClearGarbage2();
+	DMutex_Unlock( & gcWorker.generic_lock );
+}
+#else
+static DaoValue* DaoWrappers_Find( void *data )
+{
+	DNode *node = DMap_Find( gcWorker.wrappers, data );
+	if( node ) return (DaoValue*) node->value.pVoid;
+	return NULL;
+}
+static void DaoWrappers_Insert( void *data, DaoValue *wrap )
+{
+	if( data == NULL ) return;
+	DMap_Insert( gcWorker.wrappers, data, wrap );
+}
+static void DaoWrappers_Erase( void *data )
+{
+	if( data == NULL ) return;
+	DMap_Erase( gcWorker.wrappers, data );
+}
+static void DaoWrappers_ClearGarbage()
+{
+	DaoWrappers_ClearGarbage2();
+}
+#endif
+
+
+
+DaoCdata* DaoWrappers_MakeCdata( DaoType *type, void *data, int owned )
+{
+	DaoCdata *cdata = (DaoCdata*) DaoWrappers_Find( data );
+	if( cdata && cdata->type == DAO_CDATA && cdata->ctype == type ) return cdata;
+	cdata = owned ? DaoCdata_New( type, data ) : DaoCdata_Wrap( type, data );
+	DaoWrappers_Insert( data, (DaoValue*) cdata );
+	return cdata;
+}
+DaoCinValue* DaoWrappers_MakeCinValue( DaoCinType *type, DaoValue *value )
+{
+	DaoCinValue *cinva = (DaoCinValue*) DaoWrappers_Find( value );
+	if( cinva && cinva->type == DAO_CINVALUE && cinva->cintype == type && cinva->value == value ){
+		return cinva;
+	}
+	cinva = DaoCinValue_New( type, value );
+	DaoWrappers_Insert( value, (DaoValue*) cinva );
+	return cinva;
+}
+
+
+
 static void DaoGC_DeleteSimpleData( DaoValue *value )
 {
 	if( value == NULL || value->xGC.refCount ) return;
@@ -765,6 +862,8 @@ static int DaoGC_DecRC2( DaoValue *p )
 void DaoGC_Finish()
 {
 	daoint i;
+
+	DMap_Clear( gcWorker.wrappers );
 	if( gcWorker.concurrent ){
 #ifdef DAO_WITH_THREAD
 		DaoCGC_Finish();
@@ -801,6 +900,7 @@ void DaoGC_Finish()
 	DList_Delete( gcWorker.cdataLists );
 	DList_Delete( gcWorker.cdataMaps );
 	DList_Delete( gcWorker.temporary );
+	DMap_Delete( gcWorker.wrappers );
 	gcWorker.idleList = NULL;
 }
 
@@ -1182,6 +1282,8 @@ void DaoCGC_DeregisterModules()
 	daoint i;
 	DList *workList = gcWorker.workList;
 
+	DaoWrappers_ClearGarbage();
+
 	for( i=0; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.alive ) continue;
@@ -1401,6 +1503,8 @@ void DaoIGC_DeregisterModules()
 	daoint min = workList->size >> 2;
 	daoint i = gcWorker.ii;
 	daoint k = 0;
+
+	DaoWrappers_ClearGarbage();
 
 	if( min < gcWorker.gcMin ) min = gcWorker.gcMin;
 
@@ -1829,7 +1933,6 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			cycRefCountDecrements( vmp->defers );
 			cycRefCountDecrements( vmp->factory );
 			DaoGC_CycRefCountDecrements( vmp->stackValues, vmp->stackSize );
-			count += DaoGC_ScanMap( vmp->wrappers, DAO_GC_DEC, 0, 1 );
 			count += vmp->stackSize;
 			while( frame ){
 				count += 3;
@@ -2045,7 +2148,6 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			cycRefCountIncrements( vmp->defers );
 			cycRefCountIncrements( vmp->factory );
 			DaoGC_CycRefCountIncrements( vmp->stackValues, vmp->stackSize );
-			count += DaoGC_ScanMap( vmp->wrappers, DAO_GC_INC, 0, 1 );
 			count += vmp->stackSize;
 			while( frame ){
 				count += 3;
@@ -2145,6 +2247,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			}else{
 				directRefCountDecrement( (DaoValue**) & value->xCtype.cdtype );
 			}
+			DaoWrappers_Erase( cdata->data );
 			break;
 		}
 	case DAO_ROUTINE :
@@ -2212,6 +2315,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		}
 	case DAO_CINVALUE :
 		{
+			DaoWrappers_Erase( value->xCinValue.value );
 			directRefCountDecrement( & value->xCinValue.value );
 			directRefCountDecrement( (DaoValue**) & value->xCinValue.cintype );
 			break;
@@ -2266,7 +2370,6 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			directRefCountDecrements( vmp->defers );
 			directRefCountDecrements( vmp->factory );
 			DaoGC_RefCountDecrements( vmp->stackValues, vmp->stackSize );
-			count += DaoGC_ScanMap( vmp->wrappers, DAO_GC_BREAK, 0, 1 );
 			count += vmp->stackSize;
 			vmp->stackSize = 0;
 			while( frame ){

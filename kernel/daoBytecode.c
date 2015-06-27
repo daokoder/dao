@@ -1931,7 +1931,7 @@ static void DaoByteCoder_DecodeValue( DaoByteCoder *self, DaoByteBlock *block )
 		typebk = DaoByteCoder_LookupValueBlock( self, block, B );
 		valuebk = DaoByteCoder_LookupValueBlock( self, block, C );
 		if( self->error ) break;
-		value = (DaoValue*) DaoCinValue_New( (DaoCinType*) typebk->value, valuebk->value );
+		value = (DaoValue*) DaoWrappers_MakeCinValue( (DaoCinType*) typebk->value, valuebk->value );
 		break;
 	case DAO_PAR_NAMED :
 		B = DaoByteCoder_DecodeUInt16( block->begin+2 );
