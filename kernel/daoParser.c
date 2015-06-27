@@ -3071,6 +3071,8 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 	DString *interName;
 	DString *ename = NULL;
 	int i, right, ec = 0, errorStart = start;
+	int pm = self->permission;
+
 	parser = NULL;
 	if( start+1 > to ) goto ErrorInterfaceDefinition;
 	tokName = tokens[start+1];
@@ -3176,7 +3178,11 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 	if( right < 0 ) goto ErrorInterfaceDefinition;
 
 	if( self->byteBlock ){
-		parser->byteBlock = DaoByteBlock_AddInterfaceBlock( self->byteBlock, inter, self->permission );
+		if( cintype ){
+			parser->byteBlock = DaoByteBlock_AddCinTypeBlock( self->byteBlock, cintype, pm );
+		}else{
+			parser->byteBlock = DaoByteBlock_AddInterfaceBlock( self->byteBlock, inter, pm );
+		}
 		parser->byteCoder = self->byteCoder;
 	}
 

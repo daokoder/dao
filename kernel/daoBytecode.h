@@ -152,6 +152,11 @@
 // ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //
 //
+// concrete interface value:
+// ASM_VALUE(1B): DAO_CINVALUE(1B), SubTypeID(1B), CinType-Index(2B), Value-Index(2B), Zeros(2B);
+// ASM_END(1B): Zeros(8B);
+//
+//
 // namevalue:
 // ASM_VALUE(1B): DAO_PAR_NAMED(1B), Zeros(1B), Name-Index(2B), Value-Index(2B), Type-Index(2B);
 // ASM_END(1B): Zeros(8B);
@@ -201,7 +206,7 @@
 //
 //
 // interface:
-// ASM_INTERFACE(1B): Name/Decl-Index(2B), Parent-Count(2B), Zeros(4B);
+// ASM_INTERFACE(1B): Name/Decl-Index(2B), Target-TypeID(2B), Parent-Count(2B), Zeros(2B);
 //   ASM_BASES(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //   ...
 // ASM_END(1B): LineDef(2B), Zeros(5B), Permission(1B);
@@ -437,6 +442,7 @@ DaoByteBlock* DaoByteBlock_AddNamespace( DaoByteBlock *self, DaoNamespace *ns, D
 DaoByteBlock* DaoByteBlock_AddRoutineBlock( DaoByteBlock *self, DaoRoutine *routine, int pm );
 DaoByteBlock* DaoByteBlock_AddClassBlock( DaoByteBlock *self, DaoClass *klass, int pm );
 DaoByteBlock* DaoByteBlock_AddInterfaceBlock( DaoByteBlock *self, DaoInterface *inter, int pm );
+DaoByteBlock* DaoByteBlock_AddCinTypeBlock( DaoByteBlock *self, DaoCinType *cintype, int pm );
 DaoByteBlock* DaoByteBlock_AddEvalBlock( DaoByteBlock *self, DaoValue *value, int code, int opb, int mode, DaoType *type );
 
 void DaoByteCoder_FinalizeRoutineBlock( DaoByteCoder *self, DaoByteBlock *block );
