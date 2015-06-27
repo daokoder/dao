@@ -1383,7 +1383,7 @@ int DaoType_ChildOf( DaoType *self, DaoType *other )
 }
 DaoValue* DaoType_CastToParent( DaoValue *object, DaoType *parent )
 {
-	daoint i, n;
+	daoint i;
 	DaoValue *value;
 	if( object == NULL || parent == NULL ) return NULL;
 	if( object->type == DAO_CSTRUCT || object->type == DAO_CDATA || object->type == DAO_CTYPE ){
@@ -1400,6 +1400,22 @@ DaoValue* DaoType_CastToParent( DaoValue *object, DaoType *parent )
 			value = DaoType_CastToParent( object->xClass.parent, parent );
 			if( value ) return value;
 		}
+	}else if( object->type == DAO_INTERFACE ){
+		if( object->xInterface.abtype == parent ) return object;
+		for(i=0; i<object->xInterface.supers->size; ++i){
+			value = DaoType_CastToParent( object->xInterface.supers->items.pValue[i], parent );
+			if( value ) return value;
+		}
+	}else if( object->type == DAO_CINTYPE ){
+		if( object->xCinType.citype == parent ) return object;
+		for(i=0; i<object->xCinType.supers->size; ++i){
+			value = DaoType_CastToParent( object->xCinType.supers->items.pValue[i], parent );
+			if( value ) return value;
+		}
+	}else if( object->type == DAO_CINVALUE ){
+		DaoCinType *cintype = object->xCinValue.cintype;
+		if( DaoType_MatchToParent( cintype->vatype, parent, NULL, 0 ) ) return object;
+		return NULL;
 	}
 	return NULL;
 }

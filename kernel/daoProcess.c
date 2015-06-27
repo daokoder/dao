@@ -3469,8 +3469,16 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		return;
 	}
 	if( va->type == DAO_PAR_NAMED ) va = va->xNameValue.value;
-	if( va->type == DAO_CINVALUE )  va = va->xCinValue.value; // XXX;
 	if( ct == NULL ) goto FastCasting;
+
+	if( va->type == DAO_CINVALUE ){
+		if( va->xCinValue.cintype->target == ct ){
+			va = va->xCinValue.value;
+		}else if( DaoType_MatchTo( va->xCinValue.cintype->target, ct, NULL ) >= DAO_MT_EQ ){
+			va = va->xCinValue.value;
+		}
+	}
+
 	if( va->type == ct->tid && ct->tid <= DAO_STRING ) goto FastCasting;
 	if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ){
 		at = self->activeTypes[ vmc->a ];
@@ -3530,6 +3538,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		DaoType *at;
 
 		if( va->type == DAO_CINVALUE && va->xCinValue.cintype == cintype ) goto FastCasting;
+		if( va->type == DAO_CINVALUE && DaoType_MatchValue( ct, va, NULL ) ) goto FastCasting;
 
 		at = DaoNamespace_GetType( self->activeNamespace, va );
 		if( cintype->target == at || DaoType_MatchTo( cintype->target, at, NULL ) >= DAO_MT_EQ ){
@@ -3543,6 +3552,8 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 			if( va->type != DAO_INTERFACE ) goto FailConversion;
 			goto FastCasting;
 		}
+		if( va->type == DAO_CINVALUE && DaoType_MatchValue( ct, va, NULL ) ) goto FastCasting;
+
 		at = DaoNamespace_GetType( self->activeNamespace, va );
 		if( inter->concretes ){
 			DaoCinType *cintype = DaoInterface_GetConcrete( inter, at );

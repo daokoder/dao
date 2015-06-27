@@ -116,6 +116,30 @@ io.writeln( f, k[1] )
 
 
 
+@[test()]
+var k = (InterB) 0x7ffeff;
+var h = (InterA) k;
+io.writeln( std.about(h), h )
+@[test()]
+@[test()]
+{{InterB<int>}}
+@[test()]
+
+
+
+
+@[test()]
+var k = (InterB) 0x7ffeff;
+var m: InterA = k;
+io.writeln( std.about(m), m )
+@[test()]
+@[test()]
+{{InterB<int>}}
+@[test()]
+
+
+
+
 
 @[test()]
 interface InterC : InterB<int>

@@ -2128,7 +2128,7 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 	DaoParser_ParseTypeItems( self, start, end, 1, types );
 	if( self->errors->size > errors ) goto FailedInstantiation;
 
-	if( tpl->type == DAO_INTERFACE ){ /* TODO: bytecode */
+	if( tpl->type == DAO_INTERFACE ){
 		if( types->size != 1 ) goto FailedInstantiation;
 		cintype = DaoInterface_GetConcrete( (DaoInterface*) tpl, types->items.pType[0] );
 		if( cintype == NULL ) goto FailedInstantiation;
@@ -3106,7 +3106,10 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 			DaoType *target;
 			
 			target = DaoParser_ParseType( self, start+2, to, & start, NULL );
-			if( target == NULL ) goto ErrorInterfaceDefinition; // TODO;
+			if( target == NULL ){
+				ec = DAO_INVALID_INTERFACE_TARGET;
+				goto ErrorInterfaceDefinition;
+			}
 			start -= 1;
 
 			cintype = DaoCinType_New( inter, target );

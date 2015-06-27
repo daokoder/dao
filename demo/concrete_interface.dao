@@ -57,3 +57,9 @@ var k = (InterB) 0x7ffeff;
 f.append( k )
 
 io.writeln( f, k[1] )
+
+var h = (InterA) k;
+io.writeln( std.about(h), h )
+
+var m: InterA = k;
+io.writeln( std.about(m), m )

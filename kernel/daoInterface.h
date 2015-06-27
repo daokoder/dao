@@ -89,7 +89,7 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds );
 //    Assignment and moving between SomeTargetType and SomeInterface will convert
 //    one to the other automatically with implicit type casting.
 //
-// -- Inheritance: (TODO)
+// -- Inheritance:
 //    interface SubInterface for SomeTargetType : SomeInterface<SomeTargetType> {
 //        routine SomeMethod2(){
 //        }
