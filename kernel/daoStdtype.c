@@ -49,7 +49,6 @@
 #include"daoTasklet.h"
 #include"daoValue.h"
 
-int ObjectProfile[100];
 
 void DaoValue_Init( void *value, char type )
 {

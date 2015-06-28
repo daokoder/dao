@@ -27,6 +27,7 @@
 
 #include <string.h>
 
+#include "daoValue.h"
 #include "daoStream.h"
 #include "daoRoutine.h"
 #include "daoProcess.h"

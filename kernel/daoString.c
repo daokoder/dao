@@ -835,9 +835,10 @@ daoint DString_GetCharCount( DString *self )
 int DString_IsASCII( DString *self )
 {
 	daoint i, count = 0;
-	char *bytes;
-	for(i=0,bytes=self->chars; i<self->size; ++i, ++bytes){
-		if( U8CodeType( *bytes ) != 1 ) return 0;
+	uchar_t *bytes = (uchar_t*) self->chars;
+	uchar_t *end = (uchar_t*) self->chars + self->size;
+	for(; bytes < end; ++bytes){
+		if( U8CodeType( *bytes ) != 0 ) return 0;
 	}
 	return 1;
 }
@@ -993,7 +994,11 @@ InvalidByte:
 		chs += 1;
 		ret = 0;
 	}
-	wcs->data.wchars[ wcs->size ] = 0;
+	if( wcs->stride == 4 ){ /* UTF-32 */
+		wcs->data.uints[ wcs->size ] = 0;
+	}else{
+		wcs->data.wchars[ wcs->size ] = 0;
+	}
 	return ret;
 }
 

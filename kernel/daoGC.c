@@ -668,31 +668,31 @@ static DaoValue* DaoWrappers_Find( void *data )
 	DNode *node;
 	DaoValue *value = NULL;
 
-	DMutex_Lock( & gcWorker.generic_lock );
+	if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.generic_lock );
 	node = DMap_Find( gcWorker.wrappers, data );
 	if( node ) value = (DaoValue*) node->value.pVoid;
-	DMutex_Unlock( & gcWorker.generic_lock );
+	if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.generic_lock );
 	return value;
 }
 static void DaoWrappers_Insert( void *data, DaoValue *wrap )
 {
 	if( data == NULL ) return;
-	DMutex_Lock( & gcWorker.generic_lock );
+	if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.generic_lock );
 	DMap_Insert( gcWorker.wrappers, data, wrap );
-	DMutex_Unlock( & gcWorker.generic_lock );
+	if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.generic_lock );
 }
 static void DaoWrappers_Erase( void *data )
 {
 	if( data == NULL ) return;
-	DMutex_Lock( & gcWorker.generic_lock );
+	if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.generic_lock );
 	DMap_Erase( gcWorker.wrappers, data );
-	DMutex_Unlock( & gcWorker.generic_lock );
+	if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.generic_lock );
 }
 static void DaoWrappers_ClearGarbage()
 {
-	DMutex_Lock( & gcWorker.generic_lock );
+	if( gcWorker.concurrent ) DMutex_Lock( & gcWorker.generic_lock );
 	DaoWrappers_ClearGarbage2();
-	DMutex_Unlock( & gcWorker.generic_lock );
+	if( gcWorker.concurrent ) DMutex_Unlock( & gcWorker.generic_lock );
 }
 #else
 static DaoValue* DaoWrappers_Find( void *data )
@@ -874,6 +874,8 @@ void DaoGC_Finish()
 
 	DaoObjectLogger_SwitchBuffer();
 
+	DMap_Delete( gcWorker.wrappers );
+
 #ifdef DAO_WITH_THREAD
 	if( gcWorker.concurrent ){
 		DThread_Destroy( & gcWorker.thread );
@@ -900,7 +902,6 @@ void DaoGC_Finish()
 	DList_Delete( gcWorker.cdataLists );
 	DList_Delete( gcWorker.cdataMaps );
 	DList_Delete( gcWorker.temporary );
-	DMap_Delete( gcWorker.wrappers );
 	gcWorker.idleList = NULL;
 }
 

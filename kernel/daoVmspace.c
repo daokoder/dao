@@ -82,8 +82,6 @@ void DaoVirtualFile_Delete( DaoVirtualFile *self )
 }
 
 
-extern int ObjectProfile[100];
-
 DaoConfig daoConfig =
 {
 	1, /* cpu */
@@ -2678,9 +2676,6 @@ DaoVmSpace* DaoInit( const char *command )
 	   printf( "number of VM instructions: %i\n", DVM_NULL );
 	 */
 
-#ifdef DEBUG
-	for(i=0; i<100; i++) ObjectProfile[i] = 0;
-#endif
 #if 0
 	for(i=0; i<=DVM_UNUSED; ++i){
 		printf( "%3i: %3i %s\n", i, DaoVmCode_GetOpcodeBase(i), DaoVmCode_GetOpcodeName(i) );
