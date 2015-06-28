@@ -56,6 +56,29 @@ io.writeln( y )
 @[test(code_01)]
 
 
+
+
+@[test(code_01)]
+routine f(invar x: @T<list<int>>){}
+f( {} )
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+routine f(invar x: @T<list<int>>){}
+invar ls: list<int> = {};
+f(ls)
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
 @[test(code_01)]
 var x = { 1, 2, 3 }
 invar y = x

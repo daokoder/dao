@@ -3019,6 +3019,34 @@ static DaoType* DaoType_GetAutoCastType( DaoType *self )
 	if( DaoInferencer_AssertPairNumberType( self, tp ) == 0 ) \
 		return DaoInferencer_ErrorTypeNotMatching( self, NULL, NULL );
 
+static DaoType* DaoInferencer_HandleSlicedType( DaoInferencer *self, DaoType *type )
+{
+	int i, tid = type->tid;
+	const char *name = coreTypeNames[tid];
+	DaoNamespace *NS = self->routine->nameSpace;
+	DList *types = self->array;
+
+	DList_Clear( types );
+	for(i=0; i<type->nested->size; ++i){
+		DaoType *it = type->nested->items.pType[i];
+		if( it->tid && it->tid <= DAO_ENUM ){
+			it = DaoType_GetBaseType( it );
+		}else if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_VALIST ){
+			const char *fn = it->fname->chars;
+			DaoType *tp = (DaoType*) it->aux;
+			if( tp->tid && tp->tid <= DAO_ENUM ){
+				tp = DaoType_GetBaseType( tp );
+			}else{
+				tp = DaoType_GetInvarType( tp );
+			}
+			it = DaoNamespace_MakeType( NS, fn, it->tid, (DaoValue*) tp, NULL, 0 );
+		}else{
+			it = DaoType_GetInvarType( it );
+		}
+		DList_Append( types, it );
+	}
+	return DaoNamespace_MakeType( NS, name, tid, NULL, types->items.pType, types->size );
+}
 
 int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *defs )
 {
@@ -3270,6 +3298,15 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 	if( at->tid >= DAO_ARRAY ){
 		if( at->konst && ct->konst == 0 ) ct = DaoType_GetConstType( ct );
 		if( at->invar && ct->invar == 0 ) ct = DaoType_GetInvarType( ct );
+		if( bt->tid == DAO_NONE || (bt->tid == DAO_TUPLE && bt->subtid == DAO_PAIR) ){
+			if( ct->invar && ct->konst == 0 ){
+				if( at->tid == DAO_ARRAY ){
+					ct = DaoType_GetBaseType( ct );
+				}else if( at->tid == DAO_LIST || at->tid == DAO_MAP || at->tid == DAO_TUPLE ){
+					ct = DaoInferencer_HandleSlicedType( self, ct );
+				}
+			}
+		}
 	}else{
 		if( at->invar && ct->invar ) ct = DaoType_GetBaseType( ct );
 	}

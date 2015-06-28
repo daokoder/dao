@@ -4069,7 +4069,7 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 	DaoType *type = DaoNamespace_GetType( self->activeNamespace, va );
 	DaoInteger *index;
 	DaoTuple *iter;
-	int rc = 1;
+	int rc = DAO_ERROR_FIELD_NOTEXIST;
 
 	if( va == NULL || va->type == 0 ) return;
 
@@ -4115,7 +4115,7 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 			DaoRoutine *meth = DaoType_FindFunction( type, name );
 			if( meth ) rc = DaoProcess_Call( self, meth, va, &vc, 1 );
 		}
-		if( rc ) DaoProcess_RaiseError( self, "Field::NotExist", name->chars );
+		if( rc ) DaoProcess_RaiseError( self, daoExceptionNames[rc], name->chars );
 	}
 	GC_DecRC( index );
 }

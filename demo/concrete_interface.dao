@@ -63,3 +63,6 @@ io.writeln( std.about(h), h )
 
 var m: InterA = k;
 io.writeln( std.about(m), m )
+
+var s = (InterA<int>) k;
+io.writeln( std.about(s), s )

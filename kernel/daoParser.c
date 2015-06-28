@@ -239,6 +239,7 @@ void DaoParser_Delete( DaoParser *self )
 	DString_Delete( self->string );
 	DString_Delete( self->string2 );
 	DString_Delete( self->str );
+	DArray_Delete( self->tokenTriples );
 	DList_Delete( self->decoFuncs );
 	DList_Delete( self->decoFuncs2 );
 	DList_Delete( self->decoParams );
@@ -5686,8 +5687,8 @@ int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
 	DaoInode *opening, *closing, *inode;
 	DaoToken *tok, **tokens = self->tokens->items.pToken;
 	int semic1, semic2, reg1, reg2, fromCode, colon1, colon2;
-	int pos, movetype = 0, store = 0;
-	int cst, forever = 0;
+	int pos, movetype = 0, movemask = 0x3;
+	int cst, store = 0, forever = 0;
 	int rb = -1;
 	int in = -1;
 	if( start+1 >= self->tokens->size ) return -1;
@@ -5702,6 +5703,7 @@ int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
 	}else if( tokens[start+2]->name == DKEY_INVAR ){
 		store = DAO_DECL_LOCAL|DAO_DECL_INVAR;
 		movetype = 1|(3<<1);
+		movemask = 0x0;
 		start += 1;
 	}
 
@@ -5783,7 +5785,7 @@ int DaoParser_ParseForLoop( DaoParser *self, int start, int end )
 			daoint item2 = t[FOR_IN_EXP_ITEM];
 			DaoParser_PushTokenIndices( self, first, first+1, last );
 			DaoParser_AddCode( self, DVM_GETI, cont, iter, self->regCount );
-			DaoParser_AddCode( self, DVM_MOVE, self->regCount, movetype&0x3, item );
+			DaoParser_AddCode( self, DVM_MOVE, self->regCount, movetype&movemask, item );
 			DaoParser_PushRegister( self );
 			if( LOOKUP_ST( item2 ) > DAO_LOCAL_CONSTANT ){
 				DaoParser_TryAddSetVX( self, item2, item, first, 0, last );

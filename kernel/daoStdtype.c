@@ -4077,6 +4077,17 @@ void DaoException_Init( DaoException *self, DaoProcess *proc, const char *summar
 
 	line = rout->defLine;
 	annotCodes = rout->body->annotCodes->items.pVmc;
+	if( proc->topFrame->active == proc->topFrame->prev ){
+		/*
+		// proc->activeCode could be a dummy code set by:
+		//   DaoProcess_InterceptReturnValue();
+		// So always use the entry index whenever possible.
+		*/
+		id = proc->topFrame->prev->entry;
+	}else{
+		id = (int) (vmc - proc->topFrame->active->codes);
+		if( id < 0 || id > 0xffff ) id = 0; /* Not the precise location, but a safe one; */
+	}
 	if( vmc && rout->body->vmCodes->size ) line = annotCodes[id]->line;
 
 	if( summary && summary[0] != 0 ) DString_SetChars( self->info, summary );

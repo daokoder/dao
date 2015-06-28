@@ -55,7 +55,7 @@ int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc,
 	return 0;
 InvalidParam:
 	DaoProcess_ShowCallError( proc, (DaoRoutine*)V, O, P, N, DVM_CALL );
-	return 0;
+	return DAO_ERROR_PARAM;
 }
 static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {

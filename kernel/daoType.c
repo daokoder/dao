@@ -795,6 +795,15 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 		}else{
 			return DAO_MT_NOT;
 		}
+	}else if( type->invar && type->tid == DAO_THT && type->aux != NULL ){
+		/*
+		// routine f(invar x: @T<list<int>>){} f({})
+		// routine f(invar x: @T<list<int>>){} invar ls: list<int> = {}; f(ls)
+		*/
+		if( self->invar && self->konst == 0 ) self = DaoType_GetBaseType( self );
+		mt = DaoType_Match( self, (DaoType*) type->aux, defs, binds, dep );
+		if( mt > 0 && defs ) MAP_Insert( defs, type, self );
+		return mt;
 	}else if( self->invar && type->invar ){
 		self = DaoType_GetBaseType( self );
 		type = DaoType_GetBaseType( type );
