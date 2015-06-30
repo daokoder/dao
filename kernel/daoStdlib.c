@@ -126,9 +126,9 @@ static void DaoSTD_Resource( DaoProcess *proc, DaoValue *p[], int N )
 	DString_Delete( file );
 }
 /* modules/debugger */
-DAO_DLL void Dao_AboutVar( DaoNamespace *ns, DaoValue *var, DString *str )
+DAO_DLL void Dao_AboutVar( DaoProcess *proc, DaoType *type, DaoValue *var, DString *str )
 {
-	DaoType *abtp = DaoNamespace_GetType( ns, var );
+	DaoType *abtp = DaoNamespace_GetType( proc->activeNamespace, var );
 	char buf[50];
 	if( abtp ){
 		if( var->type == DAO_ROUTINE ){
@@ -148,20 +148,27 @@ DAO_DLL void Dao_AboutVar( DaoNamespace *ns, DaoValue *var, DString *str )
 	}else{
 		DString_AppendChars( str, "none[0x0]" );
 	}
+	if( type ){
+		DString_AppendChars( str, ":" );
+		DString_Append( str, type->name );
+	}
 }
-static void Dao_AboutVars( DaoNamespace *ns, DaoValue *par[], int N, DString *str )
+static void Dao_AboutVars( DaoProcess *proc, DaoValue *par[], int N, DString *str )
 {
+	DaoVmCode *vmc = proc->activeCode;
+	DaoType **types = proc->activeTypes + vmc->a + 1;
 	int i;
 	DString_Clear( str );
+	if( vmc->code == DVM_MCALL ) types += 1;
 	for( i=0; i<N; i++ ){
-		Dao_AboutVar( ns, par[i], str );
+		Dao_AboutVar( proc, types[i], par[i], str );
 		if( i+1<N ) DString_AppendChars( str, " " );
 	}
 }
 static void DaoSTD_About( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *str = DaoProcess_PutChars( proc, "" );
-	Dao_AboutVars( proc->activeNamespace, p, N, str );
+	Dao_AboutVars( proc, p, N, str );
 }
 
 void DaoProcess_Trace( DaoProcess *self, int depth )
@@ -213,7 +220,7 @@ void DaoSTD_Debug( DaoProcess *proc, DaoValue *p[], int N )
 		N --;
 	}
 	if( N > 0 ){
-		Dao_AboutVars( proc->activeNamespace, p, N, input );
+		Dao_AboutVars( proc, p, N, input );
 		DaoStream_WriteString( stream, input );
 		DaoStream_WriteChars( stream, "\n" );
 		DString_Delete( input );
