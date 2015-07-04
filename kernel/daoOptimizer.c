@@ -961,7 +961,7 @@ static void DaoOptimizer_InitKills( DaoOptimizer *self )
 		case DAO_CODE_GETM :
 			at = types[node->first] ? types[node->first]->tid : DAO_UDT;
 			overload = (at & DAO_ANY) || at == DAO_VARIANT;
-			overload |= at >= DAO_OBJECT && at <= DAO_CTYPE;
+			overload |= at >= DAO_OBJECT && at <= DAO_INTERFACE;
 			if( overload == 0 ) break;
 			DaoOptimizer_AddKill( self, kills, node->first );
 			if( code == DAO_CODE_GETI ) DaoOptimizer_AddKill( self, kills, node->second );
@@ -974,7 +974,7 @@ static void DaoOptimizer_InitKills( DaoOptimizer *self )
 		case DAO_CODE_SETM :
 			ct = types[node->lvalue2] ? types[node->lvalue2]->tid : DAO_UDT;
 			overload = (ct & DAO_ANY) || ct == DAO_VARIANT;
-			overload |= ct >= DAO_OBJECT && ct <= DAO_CTYPE;
+			overload |= ct >= DAO_OBJECT && ct <= DAO_INTERFACE;
 			if( overload == 0 ) break;
 			DaoOptimizer_AddKill( self, kills, node->first );
 			if( code == DAO_CODE_SETI ) DaoOptimizer_AddKill( self, kills, node->second );
@@ -989,8 +989,8 @@ static void DaoOptimizer_InitKills( DaoOptimizer *self )
 			ct = types[node->lvalue] ? types[node->lvalue]->tid : DAO_UDT;
 			overload  = (at & DAO_ANY) || at == DAO_VARIANT;
 			overload |= (ct & DAO_ANY) || ct == DAO_VARIANT;
-			overload |= at >= DAO_OBJECT && at <= DAO_CTYPE;
-			overload |= ct >= DAO_OBJECT && ct <= DAO_CTYPE;
+			overload |= at >= DAO_OBJECT && at <= DAO_INTERFACE;
+			overload |= ct >= DAO_OBJECT && ct <= DAO_INTERFACE;
 			if( overload == 0 ) break;
 			DaoOptimizer_AddKill( self, kills, node->first );
 			/* node->lvalue must already be in kills; */
@@ -1002,9 +1002,9 @@ static void DaoOptimizer_InitKills( DaoOptimizer *self )
 			overload  = (at & DAO_ANY) || at == DAO_VARIANT;
 			overload |= (bt & DAO_ANY) || bt == DAO_VARIANT;
 			overload |= (ct & DAO_ANY) || ct == DAO_VARIANT;
-			overload |= at >= DAO_OBJECT && at <= DAO_CTYPE;
-			overload |= bt >= DAO_OBJECT && bt <= DAO_CTYPE;
-			overload |= ct >= DAO_OBJECT && ct <= DAO_CTYPE;
+			overload |= at >= DAO_OBJECT && at <= DAO_INTERFACE;
+			overload |= bt >= DAO_OBJECT && bt <= DAO_INTERFACE;
+			overload |= ct >= DAO_OBJECT && ct <= DAO_INTERFACE;
 			if( overload == 0 ) break;
 			DaoOptimizer_AddKill( self, kills, node->first );
 			DaoOptimizer_AddKill( self, kills, node->second );
@@ -1725,8 +1725,8 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 		ct = types[vmc->c] ? types[vmc->c]->tid : DAO_UDT;
 		if( (at & DAO_ANY) || at == DAO_VARIANT ) return;
 		if( (ct & DAO_ANY) || ct == DAO_VARIANT ) return;
-		if( at >= DAO_OBJECT && at <= DAO_CTYPE ) return;
-		if( ct >= DAO_OBJECT && ct <= DAO_CTYPE ) return;
+		if( at >= DAO_OBJECT && at <= DAO_INTERFACE ) return;
+		if( ct >= DAO_OBJECT && ct <= DAO_INTERFACE ) return;
 		if( DaoRoutine_IsVolatileParameter( routine, vmc->a ) ) return;
 		break;
 	case DAO_CODE_BINARY :
@@ -1744,9 +1744,9 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 		if( (at & DAO_ANY) || at == DAO_VARIANT ) return;
 		if( (bt & DAO_ANY) || bt == DAO_VARIANT ) return;
 		if( (ct & DAO_ANY) || ct == DAO_VARIANT ) return;
-		if( at >= DAO_OBJECT && at <= DAO_CTYPE ) return;
-		if( bt >= DAO_OBJECT && bt <= DAO_CTYPE ) return;
-		if( ct >= DAO_OBJECT && ct <= DAO_CTYPE ) return;
+		if( at >= DAO_OBJECT && at <= DAO_INTERFACE ) return;
+		if( bt >= DAO_OBJECT && bt <= DAO_INTERFACE ) return;
+		if( ct >= DAO_OBJECT && ct <= DAO_INTERFACE ) return;
 		if( DaoRoutine_IsVolatileParameter( routine, vmc->a ) ) return;
 		if( DaoRoutine_IsVolatileParameter( routine, vmc->b ) ) return;
 		break;
@@ -5826,7 +5826,7 @@ SkipChecking:
 				continue;
 			}
 			if( at->tid == DAO_ENUM || at->tid == DAO_ARRAY ) continue;
-			if( at->tid >= DAO_OBJECT && at->tid <= DAO_CTYPE ) continue;
+			if( at->tid >= DAO_OBJECT && at->tid <= DAO_INTERFACE ) continue;
 			goto InvOper;
 			break;
 		case DVM_MINUS :
@@ -5844,7 +5844,7 @@ SkipChecking:
 				continue;
 			}
 			if( at->tid == DAO_ARRAY ) continue;
-			if( at->tid >= DAO_OBJECT && at->tid <= DAO_CTYPE ) continue;
+			if( at->tid >= DAO_OBJECT && at->tid <= DAO_INTERFACE ) continue;
 			goto InvOper;
 			break;
 		case DVM_TILDE :
