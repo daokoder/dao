@@ -374,6 +374,18 @@ uchar_t DaoVmCode_GetOpcodeType( DaoVmCode *self )
 	if( code >= 0 && code <= DVM_UNUSED ) return dao_code_infolist[ code ].type;
 	return DAO_CODE_NOP;
 }
+int DaoVmCode_MayCreateReference( int code )
+{
+	switch( code ){
+	case DVM_GETI_LI : case DVM_GETI_LSI :
+	case DVM_GETI_TI : case DVM_GETF_TX :
+	case DVM_GETF_KC : case DVM_GETF_KG :
+	case DVM_GETF_OC : case DVM_GETF_OG : case DVM_GETF_OV :
+		return 1;
+	default : return code < DVM_JITC;
+	}
+	return 0;
+}
 DaoVmCode DaoVmCode_CheckOperands( DaoVmCode *self )
 {
 	DaoVmCode vmc = { 0, 0, 0, 0 };

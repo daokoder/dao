@@ -12,6 +12,7 @@ HEADERS = $(DAO_SRC_DIR)/dao.h $(DAO_SRC_DIR)/daoBase.h $(DAO_SRC_DIR)/daoGC.h \
 		  $(DAO_SRC_DIR)/daoObject.h $(DAO_SRC_DIR)/daoRoutine.h \
 		  $(DAO_SRC_DIR)/daoThread.h $(DAO_SRC_DIR)/daoList.h \
 		  $(DAO_SRC_DIR)/daoLexer.h $(DAO_SRC_DIR)/daoOptimizer.h \
+		  $(DAO_SRC_DIR)/daoInferencer.h \
 		  $(DAO_SRC_DIR)/daoStdlib.h $(DAO_SRC_DIR)/daoType.h \
 		  $(DAO_SRC_DIR)/daoParser.h $(DAO_SRC_DIR)/daoStdtype.h \
 		  $(DAO_SRC_DIR)/daoValue.h $(DAO_SRC_DIR)/daoBytecode.h \
@@ -74,6 +75,9 @@ daoBytecode-$(PLAT).o: $(HEADERS) $(DAO_SRC_DIR)/daoBytecode.c
 daoOptimizer-$(PLAT).o: $(HEADERS) $(DAO_SRC_DIR)/daoOptimizer.c
 	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoOptimizer.c -o daoOptimizer-$(PLAT).o
 
+daoInferencer-$(PLAT).o: $(HEADERS) $(DAO_SRC_DIR)/daoInferencer.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoInferencer.c -o daoInferencer-$(PLAT).o
+
 daoThread-$(PLAT).o: $(HEADERS) $(DAO_SRC_DIR)/daoThread.c
 	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoThread.c -o daoThread-$(PLAT).o
 
@@ -118,6 +122,7 @@ OBJECTS = daoConst-$(PLAT).o daoVmcode-$(PLAT).o daoInterface-$(PLAT).o \
 		  daoProcess-$(PLAT).o daoNamespace-$(PLAT).o daoVmspace-$(PLAT).o \
 		  daoLexer-$(PLAT).o daoParser-$(PLAT).o daoBytecode-$(PLAT).o \
 		  daoType-$(PLAT).o daoOptimizer-$(PLAT).o daoStdlib-$(PLAT).o \
+		  daoInferencer-$(PLAT).o \
 		  daoStream-$(PLAT).o daoRegex-$(PLAT).o daoGC-$(PLAT).o \
 		  daoThread-$(PLAT).o daoTasklet-$(PLAT).o daoPlatforms-$(PLAT).o \
 		  daoMake-$(PLAT).o

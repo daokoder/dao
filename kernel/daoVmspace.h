@@ -34,6 +34,7 @@
 #include"daoType.h"
 #include"daoThread.h"
 #include"daoOptimizer.h"
+#include"daoInferencer.h"
 #include"daoProcess.h"
 #include"daoBytecode.h"
 

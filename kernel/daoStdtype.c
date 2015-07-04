@@ -4200,3 +4200,68 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 	}
 	DaoStream_Delete( ss );
 }
+
+
+
+DaoConstant* DaoConstant_New( DaoValue *value, int subtype )
+{
+	DaoConstant *self = (DaoConstant*) dao_calloc( 1, sizeof(DaoConstant) );
+	DaoValue_Init( self, DAO_CONSTANT );
+	DaoValue_Copy( value, & self->value );
+	self->subtype = subtype;
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( (DaoValue*) self );
+#endif
+	return self;
+}
+DaoVariable* DaoVariable_New( DaoValue *value, DaoType *type, int subtype )
+{
+	DaoVariable *self = (DaoVariable*) dao_calloc( 1, sizeof(DaoVariable) );
+	DaoValue_Init( self, DAO_VARIABLE );
+	DaoValue_Move( value, & self->value, type );
+	self->subtype = subtype;
+	self->dtype = type;
+	GC_IncRC( type );
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( (DaoValue*) self );
+#endif
+	return self;
+}
+
+void DaoConstant_Delete( DaoConstant *self )
+{
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
+#endif
+	GC_DecRC( self->value );
+	dao_free( self );
+}
+void DaoVariable_Delete( DaoVariable *self )
+{
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
+#endif
+	GC_DecRC( self->value );
+	GC_DecRC( self->dtype );
+	dao_free( self );
+}
+void DaoConstant_Set( DaoConstant *self, DaoValue *value )
+{
+	DaoValue_Copy( value, & self->value );
+}
+int DaoVariable_Set( DaoVariable *self, DaoValue *value, DaoType *type )
+{
+	if( type ) GC_Assign( & self->dtype, type );
+	return DaoValue_Move( value, & self->value, self->dtype );
+}
+void DaoVariable_SetType( DaoVariable *self, DaoType *type )
+{
+	GC_Assign( & self->dtype, type );
+	if( self->value == NULL || self->value->type != type->value->type ){
+		GC_DecRC( self->value );
+		self->value = DaoValue_SimpleCopy( type->value );
+		GC_IncRC( self->value );
+	}
+}
+
+

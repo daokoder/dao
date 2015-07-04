@@ -450,6 +450,7 @@ DAO_DLL ushort_t    DaoVmCode_GetOpcodeBase( int code );
 DAO_DLL uchar_t     DaoVmCode_CheckPermutable( int code );
 DAO_DLL uchar_t     DaoVmCode_GetOpcodeType( DaoVmCode *self );
 DAO_DLL DaoVmCode   DaoVmCode_CheckOperands( DaoVmCode *self );
+DAO_DLL int         DaoVmCode_MayCreateReference( int code );
 
 DAO_DLL DaoVmCode*  DArray_PushCode( DArray *self, DaoVmCode code );
 

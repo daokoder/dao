@@ -6355,3 +6355,117 @@ DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *src )
 }
 
 
+void DaoProcess_CacheValue( DaoProcess *self, DaoValue *value )
+{
+	DList_Append( self->factory, NULL );
+	GC_IncRC( value );
+	self->factory->items.pValue[ self->factory->size - 1 ] = value;
+}
+void DaoProcess_PopValues( DaoProcess *self, int N )
+{
+	if( N < 0 ) return;
+	if( N >= (int)self->factory->size ){
+		DList_Clear( self->factory );
+	}else{
+		DList_Erase( self->factory, self->factory->size - N, N );
+	}
+}
+DaoValue** DaoProcess_GetLastValues( DaoProcess *self, int N )
+{
+	if( N > (int)self->factory->size ) return self->factory->items.pValue;
+	return self->factory->items.pValue + (self->factory->size - N);
+}
+
+DaoNone* DaoProcess_NewNone( DaoProcess *self )
+{
+	DaoNone *res = DaoNone_New();
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoBoolean* DaoProcess_NewBoolean( DaoProcess *self, dao_boolean v )
+{
+	DaoBoolean *res = DaoBoolean_New( v );
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoInteger* DaoProcess_NewInteger( DaoProcess *self, dao_integer v )
+{
+	DaoInteger *res = DaoInteger_New( v );
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoFloat* DaoProcess_NewFloat( DaoProcess *self, dao_float v )
+{
+	DaoFloat *res = DaoFloat_New( v );
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoComplex* DaoProcess_NewComplex( DaoProcess *self, dao_complex v )
+{
+	DaoComplex *res = DaoComplex_New( v );
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoString* DaoProcess_NewString( DaoProcess *self, const char *s, daoint n )
+{
+	DaoString *res = DaoString_New();
+	if( s ) DString_SetBytes( res->value, s, n );
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoEnum* DaoProcess_NewEnum( DaoProcess *self, DaoType *type, int value )
+{
+	DaoEnum *res = DaoEnum_New( type, value );
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoTuple* DaoProcess_NewTuple( DaoProcess *self, int count )
+{
+	int i, N = abs( count );
+	int M = self->factory->size;
+	DaoValue **values = self->factory->items.pValue;
+	DaoTuple *res = NULL;
+	if( count < 0 ){
+		if( M < N ) return NULL;
+		res = DaoTuple_New( N );
+		for(i=0; i<N; i++) DaoTuple_SetItem( res, values[M-N+i], i );
+	}
+	if( res == NULL ) res = DaoTuple_New( N );
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoList* DaoProcess_NewList( DaoProcess *self )
+{
+	DaoList *res = DaoList_New();
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoMap* DaoProcess_NewMap( DaoProcess *self, unsigned int hashing )
+{
+	DaoMap *res = DaoMap_New( hashing );
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoArray* DaoProcess_NewArray( DaoProcess *self, int type )
+{
+#ifdef DAO_WITH_NUMARRAY
+	DaoArray *res = DaoArray_New( type );
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+#else
+	return NULL;
+#endif
+}
+DaoStream* DaoProcess_NewStream( DaoProcess *self, FILE *f )
+{
+	DaoStream *res = DaoStream_New();
+	DaoStream_SetFile( res, f );
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+DaoCdata* DaoProcess_NewCdata( DaoProcess *self, DaoType *type, void *data, int owned )
+{
+	DaoCdata *res = DaoWrappers_MakeCdata( type, data, owned );
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+}

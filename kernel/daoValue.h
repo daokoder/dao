@@ -41,31 +41,6 @@
 #include"daoProcess.h"
 
 
-struct DaoConstant
-{
-	DAO_VALUE_COMMON;
-
-	DaoValue *value;
-};
-
-struct DaoVariable
-{
-	DAO_VALUE_COMMON;
-
-	DaoValue *value;
-	DaoType  *dtype;
-};
-
-DAO_DLL DaoConstant* DaoConstant_New( DaoValue *value, int subtype );
-DAO_DLL DaoVariable* DaoVariable_New( DaoValue *value, DaoType *type, int subtype );
-
-DAO_DLL void DaoConstant_Delete( DaoConstant *self );
-DAO_DLL void DaoVariable_Delete( DaoVariable *self );
-
-DAO_DLL void DaoConstant_Set( DaoConstant *self, DaoValue *value );
-DAO_DLL int  DaoVariable_Set( DaoVariable *self, DaoValue *value, DaoType *type );
-DAO_DLL void DaoVariable_SetType( DaoVariable *self, DaoType *type );
-
 
 
 union DaoValue
