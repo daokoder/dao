@@ -125,6 +125,7 @@ DaoClass* DaoClass_New()
 	self->objMixinStart = self->objMixinEnd = 0;
 	self->cstParentStart = self->cstParentEnd = 0;
 	self->glbParentStart = self->glbParentEnd = 0;
+	self->objParentStart = self->objParentEnd = 0;
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
@@ -455,6 +456,7 @@ static int DaoClass_MixIn( DaoClass *self, DaoClass *mixin, DMap *mixed, DaoMeth
 			DNode *it = DMap_Find( old->body->aux, DaoRoutine_OriginalHost );
 			void *original2 = it ? it->value.pVoid : old->routHost;
 			rout = DaoRoutine_Copy( rout, 1, 1, 1 );
+			rout->attribs |= DAO_ROUT_MIXIN;
 			DMap_Insert( rout->body->aux, DaoRoutine_OriginalHost, original2 );
 			bl = bl && DaoRoutine_Finalize( rout, old, self->objType, deftypes );
 #if 0
@@ -917,7 +919,6 @@ int DaoClass_DeriveClassData( DaoClass *self )
 	DString_Delete( mbs );
 	return 1;
 }
-/* assumed to be called after parsing class body */
 void DaoClass_DeriveObjectData( DaoClass *self )
 {
 	DaoType *type;
@@ -927,10 +928,11 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 	DNode *search;
 	daoint i, id, perm, index, offset = 0;
 
+	self->objParentStart = self->instvars->size;
 	self->objDefCount = self->objDataName->size;
 	offset = self->objDataName->size;
-	mbs = DString_New();
 
+	mbs = DString_New();
 	parents = DList_New(0);
 	offsets = DList_New(0);
 	DaoClass_Parents( self, parents, offsets );
@@ -966,6 +968,7 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 			}
 		}
 	}
+	self->objParentEnd = self->instvars->size;
 
 	self->derived = 1;
 	DString_Delete( mbs );
@@ -1156,7 +1159,6 @@ int DaoClass_AddObjectVar( DaoClass *self, DString *name, DaoValue *deft, DaoTyp
 	int id;
 	DNode *node = MAP_Find( self->lookupTable, name );
 	if( node && LOOKUP_UP( node->value.pInt ) == 0 ) return -DAO_CTW_WAS_DEFINED;
-	if( deft == NULL && t != NULL ) deft = t->value;
 
 	id = self->objDataName->size;
 	if( id != 0 ){ /* not self; */

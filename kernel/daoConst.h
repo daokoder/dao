@@ -225,10 +225,11 @@ enum DaoRoutineAttrib
 	DAO_ROUT_DECORATOR = (1<<7),   /* function decorator */
 	DAO_ROUT_INITOR    = (1<<8),   /* class/ctype constructor */
 	DAO_ROUT_CASTOR    = (1<<9),   /* user defined casting method */
-	DAO_ROUT_MAIN      = (1<<10),  /* main function */
-	DAO_ROUT_PRIVATE   = (1<<11),  /* private method */
-	DAO_ROUT_PROTECTED = (1<<12),  /* protected method */
-	DAO_ROUT_REUSABLE  = (1<<13)   /* stack data for the routine is reusable */
+	DAO_ROUT_MIXIN     = (1<<10),  /* methods from mixin */
+	DAO_ROUT_MAIN      = (1<<11),  /* main function */
+	DAO_ROUT_PRIVATE   = (1<<12),  /* private method */
+	DAO_ROUT_PROTECTED = (1<<13),  /* protected method */
+	DAO_ROUT_REUSABLE  = (1<<14)   /* stack data for the routine is reusable */
 };
 
 enum DaoConstEvalMode

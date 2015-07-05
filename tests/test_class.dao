@@ -141,7 +141,22 @@ class Klass {
 @[test(code_01)]
 class Klass {
 	static a = 1
-	var    b
+	var    b = ""
+	invar  c = ""
+}
+
+obj = Klass.{"1","3"}
+obj.a
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+@[test(code_01)]
+class Klass {
+	static a = 1
+	var    b = ""
 	invar  c
 }
 
@@ -149,6 +164,7 @@ obj = Klass.{"1","3"}
 obj.a
 @[test(code_01)]
 @[test(code_01)]
+{{At line}} .* {{Class instance field "c" not initialized!}}
 @[test(code_01)]
 
 
@@ -278,4 +294,118 @@ k.Method( {1, 2, 3} )
 @[test(code_01)]
 @[test(code_01)]
 {{At line 11 : Invalid operation on the type}}
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+class Klass
+{
+    var items : list<int>
+
+    routine Klass( bl = 1 ){
+		if( bl ){
+			items = { 123 }
+		}else{
+			items = { 456 }
+		}
+    }   
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+class Klass
+{
+    var items : list<int>
+
+    routine Klass( bl = 1 ){
+		do {
+			items = { 123 }
+		} while( --bl > 0 )
+    }   
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar class Base
+{
+	invar index = 123
+}
+invar class Derived ( Base )
+{
+	invar values: list<int>
+	routine Derived() : Base() { values = {1,2,3} }
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class Klass
+{
+    var items : list<int>
+
+    routine Klass( bl = 1 ){
+		if( bl ){
+			items = { 123 }
+		}
+    }   
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Class instance field "items" not initialized}}
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+class Klass
+{
+    var items : list<int>
+
+    routine Klass( bl = 1 ){
+		for(i=1; i<0; ++i){
+			items = { 123 }
+		}
+    }   
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Class instance field "items" not initialized}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+invar class Base
+{
+	invar index = 123
+}
+invar class Derived ( Base )
+{
+	invar values: list<int>
+	routine Derived() : Base() {}
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Class instance field "values" not initialized}}
 @[test(code_01)]

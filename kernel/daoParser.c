@@ -3445,7 +3445,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	if( right < 0 ) goto ErrorClassDefinition;
 
 	if( DaoClass_DeriveClassData( klass ) == 0 ) goto ErrorClassDefinition;
-	DaoClass_DeriveObjectData( klass );
+	DaoClass_DeriveObjectData( klass ); /* Moved before parsing the body, for bytecode; */
 
 	for(i=begin+1; i<right; i++) DaoLexer_AppendToken( parser->lexer, tokens[i] );
 	if( DaoParser_ParseCodes( parser, 0, parser->tokens->size-1 )==0 ){
@@ -5083,7 +5083,7 @@ int DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, Da
 		}else if( storeType & DAO_DECL_STATIC ){
 			id = DaoClass_AddGlobalVar( klass, name, NULL, abtp, perm );
 		}else if( storeType & (DAO_DECL_VAR|DAO_DECL_INVAR) ){
-			id = DaoClass_AddObjectVar( klass, name, dao_none_value, abtp, perm );
+			id = DaoClass_AddObjectVar( klass, name, NULL, abtp, perm );
 			var = (DaoVariable*) DList_Back( klass->instvars );
 			if( storeType & DAO_DECL_INVAR ) var->subtype = DAO_INVAR;
 		}else{

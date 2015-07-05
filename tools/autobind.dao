@@ -370,7 +370,7 @@ class UserType
 	var isQWidget = 0;
 	var unsupport = 0;
 
-	var condType : UserType;
+	var condType : UserType|none = none;
 	
 	var fields : list<Variable> = {};
 	var methods : list<Function> = {};

@@ -5199,6 +5199,52 @@ static void DaoRoutine_ReduceLocalConsts( DaoRoutine *self )
 	GC_Assign( & self->routConsts, list );
 	DMap_Delete( used );
 }
+
+static int DaoInferencer_CheckInitialization( DaoInferencer *self, DaoOptimizer *optimizer )
+{
+	DaoClass *klass;
+	DaoRoutine *routine = self->routine;
+	DaoStream  *stream = routine->nameSpace->vmSpace->errorStream;
+	DList *annotCodes = routine->body->annotCodes;
+	DaoVmCodeX **codes = annotCodes->items.pVmc;
+	DaoCnode **nodes;
+	char char50[50];
+	int i, j, ret = 1;
+
+	DaoOptimizer_DoVIA( optimizer, routine );
+
+	if( !(routine->attribs & DAO_ROUT_INITOR) ) return 1;
+	if( routine->attribs & DAO_ROUT_MIXIN ) return 1;  /* Alread checked; */
+
+	klass = (DaoClass*) routine->routHost->aux;
+	nodes = optimizer->nodes->items.pCnode;
+	for(i=0; i<optimizer->nodes->size; i++){
+		DaoCnode *node = nodes[i];
+		DaoVmCodeX *vmc = codes[i];
+		int first = vmc->first;
+		int middle = first + vmc->middle;
+		int last = middle + vmc->last;
+
+		if( vmc->code != DVM_RETURN ) continue;
+		for(j=klass->objParentEnd; j<klass->instvars->size; ++j){
+			DaoVariable *var = klass->instvars->items.pVar[j];
+			int key = (DAO_OBJECT_VARIABLE<<16) | j;
+			if( var->dtype && var->dtype->tid <= DAO_ENUM ) continue;
+			if( var->value && DaoType_MatchValue( var->dtype, var->value, NULL ) ) continue;
+			if( DaoCnode_FindResult( node, IntToPointer(key) ) < 0 ){
+				sprintf( char50, "  At line %i : ", routine->defLine );
+				DaoInferencer_WriteErrorHeader2( self );
+				DaoStream_WriteChars( stream, char50 );
+				DaoStream_WriteChars( stream, "Class instance field \"" );
+				DaoStream_WriteString( stream, klass->objDataName->items.pString[j] );
+				DaoStream_WriteChars( stream, "\" not initialized!\n" );
+				ret = 0;
+			}
+		}
+	}
+	return ret;
+}
+
 int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 {
 	DaoInferencer *inferencer;
@@ -5217,8 +5263,10 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 
 	inferencer = DaoVmSpace_AcquireInferencer( vmspace );
 	DaoInferencer_Init( inferencer, self, silent );
-	retc = DaoInferencer_DoInference( inferencer );
+	retc  = DaoInferencer_CheckInitialization( inferencer, optimizer );
+	retc &= DaoInferencer_DoInference( inferencer );
 	DaoVmSpace_ReleaseInferencer( vmspace, inferencer );
+
 	/*
 	// Do not optimize decorators now, because there are reverved
 	// registers for decoration, but not used in the codes.
@@ -5229,7 +5277,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	/* Maybe more unreachable code after inference and optimization: */
 	if( ! decorator ) DaoOptimizer_RemoveUnreachableCodes( optimizer, self );
 
-	if( notide && daoConfig.jit && dao_jit.Compile ){
+	if( retc && notide && daoConfig.jit && dao_jit.Compile ){
 		/* LLVMContext provides no locking guarantees: */
 		DMutex_Lock( & mutex_routine_specialize );
 		dao_jit.Compile( self, optimizer );

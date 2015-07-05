@@ -42,7 +42,6 @@
 #include"daoOptimizer.h"
 
 
-extern DMutex mutex_routine_specialize;
 
 static DaoCnode* DaoCnode_New()
 {
@@ -220,8 +219,8 @@ DaoOptimizer* DaoOptimizer_New()
 	DaoOptimizer *self = (DaoOptimizer*) dao_malloc( sizeof(DaoOptimizer) );
 	self->routine = NULL;
 	self->array = DList_New(0); /* DList<daoint> */
-	self->array2 = DList_New(0); /* DList<DaoCnode*> */
-	self->array3 = DList_New(0); /* DList<DaoCnode*> */
+	self->array2 = DList_New(0); /* DList<daoint|DaoCnode*> */
+	self->array3 = DList_New(0); /* DList<daoint|DaoCnode*> */
 	self->nodeCache  = DList_New(0); /* DList<DaoCnode*> */
 	self->arrayCache = DList_New( DAO_DATA_LIST ); /* DList<DList<DaoCnode*>> */
 	self->nodes = DList_New(0);  /* DList<DaoCnode*> */
@@ -553,6 +552,36 @@ static int Dao_IntsUnion( DList *first, DList *second, DList *output, daoint exc
 	}
 	return changes;
 }
+static int Dao_IntsIntersection( DList *first, DList *second, DList *output, daoint including )
+{
+	daoint size1 = first->size;
+	daoint size2 = second->size;
+	daoint i, j, changes = 0;
+	int included = 0;
+
+	output->size = 0;
+	for(i=0, j=0; i<size1 && j<size2; ){
+		daoint id1 = first->items.pInt[i];
+		daoint id2 = second->items.pInt[j];
+		if( id1 == id2 ){
+			if( including >= 0 && id1 > including ){
+				DList_Append( output, IntToPointer(including) );
+				including = -1; /* To avoid duplication; */
+			}
+			if( id1 == including ) including = -1; /* To avoid duplication; */
+			DList_Append( output, IntToPointer(id1) );
+			i += 1;
+			j += 1;
+		}else if( id1 < id2 ){
+			changes += 1;
+			i += 1;
+		}else{
+			j += 1;
+		}
+	}
+	if( including >= 0 ) DList_Append( output, IntToPointer(including) );
+	return changes;
+}
 
 #define RDA_OFFSET  0xffff
 
@@ -662,6 +691,42 @@ static int DaoOptimizer_UpdateLVA( DaoOptimizer *self, DaoCnode *first, DaoCnode
 	DList_Assign( self->array2, second->list );
 	return Dao_IntsUnion( self->array2, self->array3, second->list, -1 );
 }
+static void DaoOptimizer_GetInitVariables( DaoOptimizer *self, DaoCnode *node, DList *out )
+{
+	out->size = 0;
+	if( node->initvar >= 0 ){
+		DList_Append( out, IntToPointer(node->initvar) );
+	}else{
+		DaoVmCodeX *vmc = self->routine->body->annotCodes->items.pVmc[node->index];
+		if( vmc->code == DVM_SECT ){
+			int i;
+			for(i=0; i<vmc->b; ++i){
+				DList_Append( out, IntToPointer(vmc->a + i) );
+			}
+		}
+	}
+}
+/* Variable initialization analysis: */
+static void DaoOptimizer_InitNodeVIA( DaoOptimizer *self, DaoCnode *node )
+{
+	DaoOptimizer_GetInitVariables( self, node, node->list );
+	if( node->index ){
+		DaoCnode *prev = self->nodes->items.pCnode[node->index-1];
+		DList_Assign( self->array2, node->list );
+		Dao_IntsUnion( prev->list, self->array2, node->list, -1 );
+	}
+}
+static int DaoOptimizer_UpdateVIA( DaoOptimizer *self, DaoCnode *first, DaoCnode *second )
+{
+	int changes;
+
+	DList_Assign( self->array2, second->list );
+	changes = Dao_IntsIntersection( first->list, self->array2, self->array3, -1 );
+
+	DaoOptimizer_GetInitVariables( self, second, self->array2 );
+	Dao_IntsUnion( self->array2, self->array3, second->list, -1 );
+	return changes;
+}
 static void DaoOptimizer_ProcessWorklist( DaoOptimizer *self, DList *worklist )
 {
 	daoint i;
@@ -689,22 +754,23 @@ static void DaoOptimizer_SolveFlowEquation( DaoOptimizer *self )
 	DList *worklist = DList_New(0);
 	DaoCnode *node, **nodes = self->nodes->items.pCnode;
 	daoint i, j, N = self->nodes->size;
-	if( self->reverseFlow ){
-		for(i=0; i<N; ++i){
-			node = nodes[i];
-			self->init( self, node );
+	for(i=0; i<N; ++i){
+		node = nodes[i];
+		/*
+		// Always initialize in forward order:
+		// Variable Initialization Analysis (VIA) relies on it;
+		// Other analyses do not;
+		*/
+		self->init( self, node );
+		if( self->reverseFlow ){
 			for(j=0; j<node->outs->size; j++){
 				DList_PushBack( worklist, node->outs->items.pVoid[j] );
 				DList_PushBack( worklist, node );
 			}
-		}
-	}else{
-		for(i=N-1; i>=0; --i){
-			node = nodes[i];
-			self->init( self, node );
+		}else{
 			for(j=0; j<node->outs->size; j++){
-				DList_PushBack( worklist, node );
-				DList_PushBack( worklist, node->outs->items.pVoid[j] );
+				DList_PushFront( worklist, node->outs->items.pVoid[j] );
+				DList_PushFront( worklist, node );
 			}
 		}
 	}
@@ -838,6 +904,14 @@ void DaoOptimizer_DoLVA( DaoOptimizer *self, DaoRoutine *routine )
 void DaoOptimizer_DoRDA( DaoOptimizer *self, DaoRoutine *routine )
 {
 	DaoOptimizer_InitRDA( self, routine );
+	DaoOptimizer_SolveFlowEquation( self );
+}
+void DaoOptimizer_DoVIA( DaoOptimizer *self, DaoRoutine *routine )
+{
+	self->reverseFlow = 0;
+	self->init = DaoOptimizer_InitNodeVIA;
+	self->update = DaoOptimizer_UpdateVIA;
+	DaoOptimizer_Init( self, routine );
 	DaoOptimizer_SolveFlowEquation( self );
 }
 void DaoOptimizer_LinkDU( DaoOptimizer *self, DaoRoutine *routine )
@@ -1639,6 +1713,7 @@ static void DaoOptimizer_ReduceRegister( DaoOptimizer *self, DaoRoutine *routine
 	DaoRoutine_UpdateCodes( routine );
 }
 
+
 void DaoOptimizer_Optimize( DaoOptimizer *self, DaoRoutine *routine )
 {
 	DaoType *type, **types = routine->body->regType->items.pType;
@@ -1677,6 +1752,52 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 	int i, at, bt, ct, code = vmc->code;
 
 	DaoCnode_InitOperands( node, vmc );
+
+	node->initvar = -1;
+	if( self->update == DaoOptimizer_UpdateVIA ){
+		switch( type ){
+		case DAO_CODE_GETU :
+			if( vmc->a != 0 ) node->initvar = vmc->b;
+			break;
+		case DAO_CODE_UNARY2 :
+		case DAO_CODE_GETF :
+		case DAO_CODE_MOVE :
+		case DAO_CODE_UNARY :
+		case DAO_CODE_GETI :
+		case DAO_CODE_BINARY :
+		case DAO_CODE_GETM :
+		case DAO_CODE_ENUM :
+		case DAO_CODE_ENUM2 :
+		case DAO_CODE_ROUTINE :
+		case DAO_CODE_MATRIX :
+		case DAO_CODE_CALL :
+		case DAO_CODE_YIELD :
+			node->initvar = vmc->c;
+			break;
+		case DAO_CODE_EXPLIST :
+			if( vmc->code != DVM_SECT ) break;
+			/* Is handled during the analysis */
+			break;
+		case DAO_CODE_SETG :
+			switch( vmc->code ){
+			case DVM_SETVO :
+			case DVM_SETVO_BB :
+			case DVM_SETVO_II :
+			case DVM_SETVO_FF :
+			case DVM_SETVO_CC :
+				node->initvar = (DAO_OBJECT_VARIABLE<<16)|vmc->b;
+				break;
+			}
+			break;
+		case DAO_CODE_SETF :
+			if( !(self->routine->attribs & DAO_ROUT_INITOR) ) break;
+			switch( vmc->code ){
+			case DVM_SETF_OV :
+			break;
+			}
+			break;
+		}
+	}
 
 	/* Exclude expression that does not yield new value: */
 	if( node->lvalue == 0xffff ) return;

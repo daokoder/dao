@@ -55,6 +55,7 @@ struct DaoCnode
 	ushort_t  lvalue;     /* variable defined by the instruction; 0xffff for none; */
 	ushort_t  lvalue2;    /* C operand for SETF, SETI, SETDI, SETMI instructions; */
 	ushort_t  exprid;     /* expression id; 0xffff for none; */
+	int       initvar;    /* variable id; -1 for none; */
 
 	DList   *ins;   /* in nodes in the flow graph; */
 	DList   *outs;  /* out nodes in the flow graph; */
@@ -104,6 +105,7 @@ DAO_DLL void DaoOptimizer_Delete( DaoOptimizer *self );
 
 DAO_DLL void DaoOptimizer_DoLVA( DaoOptimizer *self, DaoRoutine *routine );
 DAO_DLL void DaoOptimizer_DoRDA( DaoOptimizer *self, DaoRoutine *routine );
+DAO_DLL void DaoOptimizer_DoVIA( DaoOptimizer *self, DaoRoutine *routine );
 
 /*
 // Link Definition-Use and Use-Definition:
