@@ -3277,13 +3277,6 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 		type = (DaoType*) lastframe->routine->routType->cbtype->aux;
 	}
 	if( (topFrame->routine->attribs & DAO_ROUT_INITOR) && !(topFrame->state & DVM_FRAME_SECT) ){
-		int idx = DaoObject_VerifyFields( self->activeObject );
-		if( idx != 0 ){
-			DString *name = self->activeObject->defClass->objDataName->items.pString[idx-1];
-			const char *msg = "Class instance field \"%s\" not initialized!";
-			DaoProcess_RaiseException2( self, "Error", msg, name->chars );
-			return NULL;
-		}
 		retValue = (DaoValue*)self->activeObject;
 	}else if( vmc->b == 1 ){
 		retValue = self->activeValues[ vmc->a ];

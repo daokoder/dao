@@ -53,7 +53,6 @@ DAO_DLL DaoObject* DaoObject_New( DaoClass *klass );
 DAO_DLL void DaoObject_Init( DaoObject *self, DaoObject *that, int offset );
 DAO_DLL void DaoObject_Delete( DaoObject *self );
 
-DAO_DLL int DaoObject_VerifyFields( DaoObject *self );
 DAO_DLL int DaoObject_ChildOf( DaoValue *self, DaoValue *obj );
 
 DAO_DLL DaoValue* DaoObject_CastToBase( DaoObject *self, DaoType *host );
