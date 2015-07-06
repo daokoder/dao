@@ -81,7 +81,6 @@ struct DaoInferencer
 	DList      *consts;
 	DList      *types;
 	DList      *types2;
-	DString     *inited;
 
 	DList      *rettypes;
 	DList      *typeMaps;

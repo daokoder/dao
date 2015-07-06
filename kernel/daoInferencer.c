@@ -194,7 +194,6 @@ DaoInferencer* DaoInferencer_New()
 	self->consts = DList_New( DAO_DATA_VALUE );
 	self->types = DList_New( DAO_DATA_VALUE );
 	self->types2 = DList_New( DAO_DATA_VALUE );
-	self->inited = DString_New();
 	self->rettypes = DList_New(0);
 	self->typeMaps = DList_New( DAO_DATA_MAP );
 	self->errors = DList_New(0);
@@ -214,7 +213,6 @@ void DaoInferencer_Reset( DaoInferencer *self )
 	DList_Clear( self->types );
 	DList_Clear( self->types2 );
 	DList_Clear( self->typeMaps );
-	DString_Reset( self->inited, 0 );
 	DMap_Reset( self->defs );
 	DMap_Reset( self->defs2 );
 	DMap_Reset( self->defs3 );
@@ -237,7 +235,6 @@ void DaoInferencer_Delete( DaoInferencer *self )
 	DList_Delete( self->consts );
 	DList_Delete( self->types );
 	DList_Delete( self->types2 );
-	DString_Delete( self->inited );
 	DList_Delete( self->rettypes );
 	DList_Delete( self->typeMaps );
 	DList_Delete( self->errors );
@@ -258,7 +255,6 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 	DaoNamespace *NS = routine->nameSpace;
 	DList *partypes = routine->routType->nested;
 	daoint i, n, M = routine->body->regCount;
-	char *inited;
 
 	DaoInferencer_Reset( self );
 	self->silent = silent;
@@ -268,7 +264,6 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 
 	DaoRoutine_CodesToInodes( routine, self->inodes, 1 );
 
-	DString_Resize( self->inited, M );
 	DList_Resize( self->consts, M, NULL );
 	/*
 	// Allocate more memory so that the "types" and "typeVH" variables in
@@ -276,11 +271,8 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 	*/
 	DList_Resize( self->types, 3*M, NULL );
 	self->types->size = M;
-	inited = self->inited->chars;
 	types = self->types->items.pType;
 
-	for(i=0; i<routine->parCount; ++i) inited[i] = 1;
-	if( (routine->attribs & DAO_ROUT_DECORATOR) && partypes->size ) inited[routine->parCount] = 1;
 	for(i=0,n=partypes->size; i<n; i++){
 		types[i] = partypes->items.pType[i];
 		if( types[i] && types[i]->tid == DAO_PAR_VALIST ){
@@ -947,7 +939,6 @@ static DaoInode* DaoInferencer_InsertNode( DaoInferencer *self, DaoInode *inode,
 		inode->c = self->types->size;
 		DList_Append( self->types, type );
 		DList_Append( self->consts, NULL );
-		DString_AppendChar( self->inited, '\0' );
 	}
 	if( prev ){
 		prev->next = inode;
@@ -1279,10 +1270,6 @@ static DaoType* DaoType_GetAutoCastType( DaoType *self )
 #define AssertTypeIdMatching( source, id ) \
 	if( source == NULL || source->tid != id ) \
 		return DaoInferencer_ErrorTypeID( self, source, id );
-
-#define AssertInitialized2( reg, ec, first, last ) { \
-	if( inited[reg] == 0 || types[reg] == NULL ) \
-		return DaoInferencer_ErrorNotInitialized( self, ec, first, last ); }
 
 #define AssertPairNumberType( tp ) \
 	if( DaoInferencer_AssertPairNumberType( self, tp ) == 0 ) \
@@ -2869,7 +2856,6 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	DaoRoutine *rout, *rout2;
 	DaoType *at = types[opa];
 	DaoType *ct = types[opc];
-	char *inited = self->inited->chars;
 	int N = self->inodes->size;
 	int j, k, m, K;
 	int checkfast = 0;
@@ -2882,7 +2868,6 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	if( (vmc->b & DAO_CALL_BLOCK) && inodes[i+2]->code == DVM_SECT ){
 		sect = inodes[ i + 2 ];
 		for(j=0, k=sect->a; j<sect->b; j++, k++){
-			inited[k] = 1;
 			DaoInferencer_UpdateType( self, k, dao_type_udf );
 		}
 	}
@@ -3444,7 +3429,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	DList  *routConsts = routine->routConsts->value;
 	daoint i, N = routine->body->annotCodes->size;
 	daoint j, k, J, K, M = routine->body->regCount;
-	char *inited = self->inited->chars;
 	int invarinit = !!(routine->attribs & DAO_ROUT_INITOR);
 	int invarmeth = routine->attribs & DAO_ROUT_INVAR;
 	int code, opa, opb, opc, first, middle, last;
@@ -3507,7 +3491,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		inodes = self->inodes->items.pInode;
 		consts = self->consts->items.pValue;
 		types = self->types->items.pType;
-		inited = self->inited->chars;
 		N = self->inodes->size;
 		M = self->types->size;
 		self->currentIndex = i;
@@ -3539,74 +3522,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 #endif
 
 		K = DaoVmCode_GetOpcodeType( (DaoVmCode*) inode );
-		/*
-		// No need to check for operands in expression list,
-		// they must have been checked by other instructions.
-		*/
-		switch( K ){
-		case DAO_CODE_GETU :
-			if( inode->a != 0 ) AssertInitialized2( inode->b, 0, middle, middle );
-			break;
-		case DAO_CODE_UNARY2 :
-			AssertInitialized2( inode->b, 0, middle, middle );
-			break;
-		case DAO_CODE_GETF :
-		case DAO_CODE_BRANCH :
-			AssertInitialized2( inode->a, 0, first, first );
-			break;
-		case DAO_CODE_SETG :
-		case DAO_CODE_SETU :
-			AssertInitialized2( inode->a, 0, first, first );
-			break;
-		case DAO_CODE_MOVE :
-		case DAO_CODE_UNARY :
-			AssertInitialized2( inode->a, 0, first, last );
-			break;
-		case DAO_CODE_SETF :
-			AssertInitialized2( inode->a, 0, last+1, last+1 );
-			AssertInitialized2( inode->c, 0, first, first );
-			break;
-		case DAO_CODE_GETI :
-			AssertInitialized2( inode->a, DTE_ITEM_WRONG_ACCESS, first, first );
-			AssertInitialized2( inode->b, DTE_ITEM_WRONG_ACCESS, middle, middle );
-			break;
-		case DAO_CODE_BINARY :
-			AssertInitialized2( inode->a, 0, first, first );
-			AssertInitialized2( inode->b, 0, middle, middle );
-			break;
-		case DAO_CODE_SETI :
-			AssertInitialized2( inode->c, DTE_ITEM_WRONG_ACCESS, first, first );
-			AssertInitialized2( inode->b, DTE_ITEM_WRONG_ACCESS, middle, middle );
-			AssertInitialized2( inode->a, DTE_ITEM_WRONG_ACCESS, last+1, last+1 );
-			break;
-		case DAO_CODE_GETM :
-		case DAO_CODE_ENUM2 :
-		case DAO_CODE_ROUTINE :
-			for(j=0; j<=opb; ++j) AssertInitialized2( opa+j, 0, first, first );
-			break;
-		case DAO_CODE_SETM :
-			AssertInitialized2( inode->c, DTE_ITEM_WRONG_ACCESS, first, first );
-			for(j=0; j<=opb; ++j) AssertInitialized2( opc+j, 0, first, first );
-			break;
-		case DAO_CODE_MATRIX :
-			J=(opb>>8)*(opb&0xff);
-			for(j=0; j<J; ++j) AssertInitialized2( opa+j, 0, first, first );
-			break;
-		case DAO_CODE_CALL :
-			for(j=0,J=opb&0xff; j<=J; ++j) AssertInitialized2( opa+j, 0, middle, last );
-			break;
-		case DAO_CODE_ENUM :
-			for(j=0, J=opb&(0xffff>>2); j<J; ++j) AssertInitialized2( opa+j, 0, first, first );
-			break;
-		case DAO_CODE_EXPLIST :
-			for(j=0; j<opb; ++j) AssertInitialized2( opa+j, 0, first, first );
-			break;
-		case DAO_CODE_YIELD :
-			for(j=0; j<(opb&0xff); ++j) AssertInitialized2( opa+j, 0, first, first );
-			break;
-		}
 		if( K && K < DAO_CODE_EXPLIST && K != DAO_CODE_SETG && K != DAO_CODE_SETU ){
-			if( K != DAO_CODE_SETM ) inited[inode->c] = 1;
 			if( K != DAO_CODE_MOVE ){
 				if( ct != NULL && (ct->tid == DAO_CLASS || ct->tid == DAO_CTYPE) ){
 					/* TODO: SETF; see daoParser.c: line 6893; */
@@ -4503,7 +4419,6 @@ SkipChecking:
 			break;
 		case DVM_TEST :
 			{
-				/* if( inited[opa] ==0 ) goto NotInit;  allow none value for testing! */
 				if( types[opa] == NULL ) goto NotMatch;
 				if( at->tid == DAO_STRING ) goto NotMatch;
 				if( at->subtid == DAO_ENUM_SYM ) goto NotMatch;
