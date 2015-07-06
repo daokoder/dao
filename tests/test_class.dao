@@ -47,6 +47,38 @@ k.M()
 
 
 
+@[test(code_01)]
+class K
+{
+    routine K(){}
+
+    routine K( k: K ){
+        self = k;
+    }   
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Invalid operation on the type}}
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+class K
+{
+    routine M( k: K ){
+        self = k;
+    }   
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Invalid operation on the type}}
+@[test(code_01)]
+
+
+
 
 @[test(code_01)]
 class K
@@ -363,6 +395,27 @@ class Klass
 
     routine Klass( bl = 1 ){
 		if( bl ){
+			self.items = { 123 }
+		}else{
+			self.items = { 456 }
+		}
+    }   
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+class Klass
+{
+    var items : list<int>
+
+    routine Klass( bl = 1 ){
+		if( bl ){
 			items = { 123 }
 		}
     }   
@@ -408,4 +461,78 @@ invar class Derived ( Base )
 @[test(code_01)]
 @[test(code_01)]
 {{At line}} .* {{Class instance field "values" not initialized}}
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+class Klass
+{
+	var index = 123;
+	var name = "abc";
+
+	routine Meth(){
+		self.index = 456;
+		self.name[1:2] = "xyz";
+		io.writeln( self.index )
+		io.writeln( self.name.size() )
+		io.writeln( self.property )
+		io.writeln( self.arbitrary )
+	}
+	routine .property(){
+		return "def"
+	}
+	routine .( field: string ){
+		return field
+	}
+}
+k = Klass()
+k.Meth()
+@[test(code_01)]
+@[test(code_01)]
+456
+4
+def
+arbitrary
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+class Klass
+{
+	var index = 123;
+
+	routine Meth(){
+		self.index = 456;
+		self.name[1:2] = "xyz";
+	}
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Field not exists}}
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+class Klass
+{
+	var index = 123;
+	var name = "abc";
+
+	static routine Meth(){
+		self.index = 456;
+		self.name[1:2] = "xyz";
+	}
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Invalid self access in static method}}
 @[test(code_01)]

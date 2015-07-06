@@ -3758,6 +3758,7 @@ SkipChecking:
 		case DVM_SETVO :
 		case DVM_SETVK :
 		case DVM_SETVG :
+			if( code == DVM_SETVO && opb == 0 ) goto InvOper; /* Invalid move to "self"; */
 			var = NULL;
 			type2 = NULL;
 			switch( code ){
@@ -3915,6 +3916,9 @@ SkipChecking:
 			break;
 		case DVM_MOVE :
 			{
+				if( opc == 0 && !(routine->attribs & (DAO_ROUT_INITOR|DAO_ROUT_STATIC)) ){
+					if( routine->routHost ) goto InvOper; /* Invalid move to "self"; */
+				}
 				at = DaoInferencer_HandleVarInvarDecl( self, at, opb );
 				if( at == NULL ) return 0;
 				if( opb & 0x2 ){

@@ -6652,6 +6652,75 @@ static DaoEnode DaoParser_ParseIntrinsicMath( DaoParser *self, int tki, int star
 	return result;
 }
 
+static DaoEnode DaoParser_ParseSelfGetField( DaoParser *self )
+{
+	DaoValue *data;
+	DaoClass *klass = self->hostClass;
+	DaoEnode enode, result = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
+	DaoEnode error = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
+	DaoToken **tokens = self->tokens->items.pToken;
+	DString *field = & tokens[ self->curToken+2]->string;
+	int start = self->curToken;
+	int opa, opb, opc, code = 0;
+	int index = 0;
+
+	if( self->hostClass == NULL ) goto SelfNotDefined;
+	if( self->routine->attribs & DAO_ROUT_STATIC ) goto SelfInStaticError;
+
+	data = DaoClass_GetData( klass, field, klass );
+	if( data != NULL ){
+		index = DaoClass_GetDataIndex( klass, field );
+
+		opa = LOOKUP_UP( index );
+		opb = LOOKUP_ID( index );
+		opc = DaoParser_PushRegister( self );
+		DaoParser_PushTokenIndices( self, start, start, start );
+		switch( LOOKUP_ST( index ) ){
+		case DAO_OBJECT_VARIABLE : code = DVM_GETVO; break;
+		case DAO_CLASS_VARIABLE  : code = DVM_GETVK; break;
+		case DAO_CLASS_CONSTANT  : code = DVM_GETCK; break;
+		}
+		DaoParser_AddCode( self, code, opa, opb, opc );
+		result.reg = opc;
+		result.last = result.update = self->vmcLast;
+	}else{
+		DString *name = self->string;
+		DString_SetChars( name, "." );
+		DString_Append( name, field );
+		data = DaoClass_GetData( klass, name, klass );
+		if( data == NULL ){
+			DString_SetChars( name, "." );
+			data = DaoClass_GetData( klass, name, klass );
+		}
+		if( data == NULL ) goto FieldNotExistError;
+
+		opa = DaoParser_PushRegister( self );
+		DaoParser_PushTokenIndices( self, start, start, start );
+		DaoParser_AddCode( self, DVM_GETVO, 0, 0, opa );
+
+		opc = DaoParser_PushRegister( self );
+		opb = DaoParser_AddFieldConst( self, field );
+		DaoParser_PushTokenIndices( self, start, start+1, start+2 );
+		DaoParser_AddCode( self, DVM_GETF, opa, opb, opc );
+
+		result.reg = opc;
+		result.last = result.update = self->vmcLast;
+		DaoParser_PushTokenIndices( self, start, start+1, start+2 );
+		DaoParser_AddCode( self, DVM_LOAD2, opa, 0, 0 );
+	}
+	return result;
+
+SelfNotDefined:
+	DaoParser_Error( self, DAO_SYMBOL_NOT_DEFINED, & tokens[self->curToken]->string );
+	return error;
+SelfInStaticError:
+	DaoParser_Error( self, DAO_INVALID_SELF_IN_STATIC, NULL );
+	return error;
+FieldNotExistError:
+	DaoParser_Error( self, DAO_FIELD_NOT_EXIST, NULL );
+	return error;
+}
+
 static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 {
 	DString *name;
@@ -6756,6 +6825,13 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 		result.last = result.update = self->vmcLast;
 		result.first = result.last;
 		return result;
+	}else if( tki == DKEY_SELF && tki2 == DTOK_DOT ){
+		if( tki3 != DTOK_IDENTIFIER && tki3 < DKEY_CEIL ){
+			DaoParser_Error( self, DAO_INVALID_EXPRESSION, NULL );
+			return error;
+		}
+		result = DaoParser_ParseSelfGetField( self );
+		start += 3;
 	}else if( tki == DKEY_TYPE && tki2 == DTOK_LB ){
 		int start0 = start + 2;
 		DaoType *type = DaoParser_ParseType( self, start + 2, end, & start, NULL );

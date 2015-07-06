@@ -4099,7 +4099,16 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 		DaoValue **data = iter->values;
 		data[0]->xInteger.value = va->xMap.value->size >0;
 		if( data[1]->type != DAO_CDATA || data[1]->xCdata.ctype != dao_type_cdata ){
-			DaoCdata *it = DaoWrappers_MakeCdata( dao_type_cdata, node, 0 );
+			/*
+			// Do not use DaoWrappers_MakeCdata()!
+			// DaoWrappers_MakeCdata() will make a wrapper that is unique
+			// for the wrapped data "node", since the wrapped data will be
+			// updated during each iteration, the correspondence between
+			// wrapped data and the wrapper will be invalidated.
+			// As a consequence, nested for-in loop on the same map will
+			// not work!
+			*/
+			DaoCdata *it = DaoCdata_Wrap( dao_type_cdata, node );
 			GC_Assign( & data[1], it );
 		}else{
 			data[1]->xCdata.data = node;

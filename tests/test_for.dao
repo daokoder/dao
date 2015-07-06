@@ -143,3 +143,24 @@ io.writeln( i )
 {{At line}} .* {{Symbol not defined}}
 @[test(code_01)]
 
+
+
+
+@[test(code_01)]
+m =
+{
+	"AA" => 12,
+	"BB" => 34
+}
+for( x in m ){
+	for( y in m ){  # Must never mess with the outer loop;
+		io.writeln( x, y )
+	}
+}
+@[test(code_01)]
+@[test(code_01)]
+( "AA", 12 ) ( "AA", 12 )
+( "AA", 12 ) ( "BB", 34 )
+( "BB", 34 ) ( "AA", 12 )
+( "BB", 34 ) ( "BB", 34 )
+@[test(code_01)]
