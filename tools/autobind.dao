@@ -2730,10 +2730,10 @@ var daoqt_sig_slot_code =
 var daoqt_sig_slot_emit = 
 "  emit signal_$(ssname)( _message );\n}\n";
 
-routine NewProxyFunctionName( self: Coroutine<none,string> )
+routine NewProxyFunctionName( co: Coroutine<none,string> )
 {
 	id = BigInt( "10000L16" )
-	while(1) self.suspend("Function_" + (string)(++id));
+	while(1) co.suspend("Function_" + (string)(++id));
 	return "";
 }
 var new_proxy_function_name = Coroutine<none,string>();

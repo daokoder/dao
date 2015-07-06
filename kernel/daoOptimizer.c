@@ -709,11 +709,21 @@ static void DaoOptimizer_GetInitVariables( DaoOptimizer *self, DaoCnode *node, D
 /* Variable initialization analysis: */
 static void DaoOptimizer_InitNodeVIA( DaoOptimizer *self, DaoCnode *node )
 {
-	DaoOptimizer_GetInitVariables( self, node, node->list );
+	int i;
+	DaoOptimizer_GetInitVariables( self, node, self->array2 );
 	if( node->index ){
 		DaoCnode *prev = self->nodes->items.pCnode[node->index-1];
-		DList_Assign( self->array2, node->list );
 		Dao_IntsUnion( prev->list, self->array2, node->list, -1 );
+	}else{
+		DList *partypes = self->routine->routType->nested;
+		self->array3->size = 0;
+		for(i=0; i<self->routine->parCount; ++i){
+			DList_Append( self->array3, IntToPointer(i) );
+		}
+		if( (self->routine->attribs & DAO_ROUT_DECORATOR) && partypes->size ){
+			DList_Append( self->array3, IntToPointer(self->routine->parCount) );
+		}
+		Dao_IntsUnion( self->array3, self->array2, node->list, -1 );
 	}
 }
 static int DaoOptimizer_UpdateVIA( DaoOptimizer *self, DaoCnode *first, DaoCnode *second )
@@ -1756,21 +1766,21 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 	node->initvar = -1;
 	if( self->update == DaoOptimizer_UpdateVIA ){
 		switch( type ){
+		case DAO_CODE_GETC :
+		case DAO_CODE_GETG :
 		case DAO_CODE_GETU :
-			if( vmc->a != 0 ) node->initvar = vmc->b;
-			break;
-		case DAO_CODE_UNARY2 :
 		case DAO_CODE_GETF :
+		case DAO_CODE_GETI :
+		case DAO_CODE_GETM :
 		case DAO_CODE_MOVE :
 		case DAO_CODE_UNARY :
-		case DAO_CODE_GETI :
+		case DAO_CODE_UNARY2 :
 		case DAO_CODE_BINARY :
-		case DAO_CODE_GETM :
+		case DAO_CODE_MATRIX :
 		case DAO_CODE_ENUM :
 		case DAO_CODE_ENUM2 :
-		case DAO_CODE_ROUTINE :
-		case DAO_CODE_MATRIX :
 		case DAO_CODE_CALL :
+		case DAO_CODE_ROUTINE :
 		case DAO_CODE_YIELD :
 			node->initvar = vmc->c;
 			break;
@@ -1789,12 +1799,8 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 				break;
 			}
 			break;
-		case DAO_CODE_SETF :
-			if( !(self->routine->attribs & DAO_ROUT_INITOR) ) break;
-			switch( vmc->code ){
-			case DVM_SETF_OV :
-			break;
-			}
+		case DAO_CODE_SETU :
+			if( vmc->a != 0 ) node->initvar = vmc->b;
 			break;
 		}
 	}

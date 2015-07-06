@@ -1280,7 +1280,7 @@ static DaoType* DaoType_GetAutoCastType( DaoType *self )
 	if( source == NULL || source->tid != id ) \
 		return DaoInferencer_ErrorTypeID( self, source, id );
 
-#define AssertInitialized( reg, ec, first, last ) { \
+#define AssertInitialized2( reg, ec, first, last ) { \
 	if( inited[reg] == 0 || types[reg] == NULL ) \
 		return DaoInferencer_ErrorNotInitialized( self, ec, first, last ); }
 
@@ -3545,64 +3545,64 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		*/
 		switch( K ){
 		case DAO_CODE_GETU :
-			if( inode->a != 0 ) AssertInitialized( inode->b, 0, middle, middle );
+			if( inode->a != 0 ) AssertInitialized2( inode->b, 0, middle, middle );
 			break;
 		case DAO_CODE_UNARY2 :
-			AssertInitialized( inode->b, 0, middle, middle );
+			AssertInitialized2( inode->b, 0, middle, middle );
 			break;
 		case DAO_CODE_GETF :
 		case DAO_CODE_BRANCH :
-			AssertInitialized( inode->a, 0, first, first );
+			AssertInitialized2( inode->a, 0, first, first );
 			break;
 		case DAO_CODE_SETG :
 		case DAO_CODE_SETU :
-			AssertInitialized( inode->a, 0, first, first );
+			AssertInitialized2( inode->a, 0, first, first );
 			break;
 		case DAO_CODE_MOVE :
 		case DAO_CODE_UNARY :
-			AssertInitialized( inode->a, 0, first, last );
+			AssertInitialized2( inode->a, 0, first, last );
 			break;
 		case DAO_CODE_SETF :
-			AssertInitialized( inode->a, 0, last+1, last+1 );
-			AssertInitialized( inode->c, 0, first, first );
+			AssertInitialized2( inode->a, 0, last+1, last+1 );
+			AssertInitialized2( inode->c, 0, first, first );
 			break;
 		case DAO_CODE_GETI :
-			AssertInitialized( inode->a, DTE_ITEM_WRONG_ACCESS, first, first );
-			AssertInitialized( inode->b, DTE_ITEM_WRONG_ACCESS, middle, middle );
+			AssertInitialized2( inode->a, DTE_ITEM_WRONG_ACCESS, first, first );
+			AssertInitialized2( inode->b, DTE_ITEM_WRONG_ACCESS, middle, middle );
 			break;
 		case DAO_CODE_BINARY :
-			AssertInitialized( inode->a, 0, first, first );
-			AssertInitialized( inode->b, 0, middle, middle );
+			AssertInitialized2( inode->a, 0, first, first );
+			AssertInitialized2( inode->b, 0, middle, middle );
 			break;
 		case DAO_CODE_SETI :
-			AssertInitialized( inode->c, DTE_ITEM_WRONG_ACCESS, first, first );
-			AssertInitialized( inode->b, DTE_ITEM_WRONG_ACCESS, middle, middle );
-			AssertInitialized( inode->a, DTE_ITEM_WRONG_ACCESS, last+1, last+1 );
+			AssertInitialized2( inode->c, DTE_ITEM_WRONG_ACCESS, first, first );
+			AssertInitialized2( inode->b, DTE_ITEM_WRONG_ACCESS, middle, middle );
+			AssertInitialized2( inode->a, DTE_ITEM_WRONG_ACCESS, last+1, last+1 );
 			break;
 		case DAO_CODE_GETM :
 		case DAO_CODE_ENUM2 :
 		case DAO_CODE_ROUTINE :
-			for(j=0; j<=opb; ++j) AssertInitialized( opa+j, 0, first, first );
+			for(j=0; j<=opb; ++j) AssertInitialized2( opa+j, 0, first, first );
 			break;
 		case DAO_CODE_SETM :
-			AssertInitialized( inode->c, DTE_ITEM_WRONG_ACCESS, first, first );
-			for(j=0; j<=opb; ++j) AssertInitialized( opc+j, 0, first, first );
+			AssertInitialized2( inode->c, DTE_ITEM_WRONG_ACCESS, first, first );
+			for(j=0; j<=opb; ++j) AssertInitialized2( opc+j, 0, first, first );
 			break;
 		case DAO_CODE_MATRIX :
 			J=(opb>>8)*(opb&0xff);
-			for(j=0; j<J; ++j) AssertInitialized( opa+j, 0, first, first );
+			for(j=0; j<J; ++j) AssertInitialized2( opa+j, 0, first, first );
 			break;
 		case DAO_CODE_CALL :
-			for(j=0,J=opb&0xff; j<=J; ++j) AssertInitialized( opa+j, 0, middle, last );
+			for(j=0,J=opb&0xff; j<=J; ++j) AssertInitialized2( opa+j, 0, middle, last );
 			break;
 		case DAO_CODE_ENUM :
-			for(j=0, J=opb&(0xffff>>2); j<J; ++j) AssertInitialized( opa+j, 0, first, first );
+			for(j=0, J=opb&(0xffff>>2); j<J; ++j) AssertInitialized2( opa+j, 0, first, first );
 			break;
 		case DAO_CODE_EXPLIST :
-			for(j=0; j<opb; ++j) AssertInitialized( opa+j, 0, first, first );
+			for(j=0; j<opb; ++j) AssertInitialized2( opa+j, 0, first, first );
 			break;
 		case DAO_CODE_YIELD :
-			for(j=0; j<(opb&0xff); ++j) AssertInitialized( opa+j, 0, first, first );
+			for(j=0; j<(opb&0xff); ++j) AssertInitialized2( opa+j, 0, first, first );
 			break;
 		}
 		if( K && K < DAO_CODE_EXPLIST && K != DAO_CODE_SETG && K != DAO_CODE_SETU ){
@@ -5204,6 +5204,10 @@ static void DaoRoutine_ReduceLocalConsts( DaoRoutine *self )
 	DMap_Delete( used );
 }
 
+#define AssertInitialized( reg, ec, first, last ) { \
+	if( DaoCnode_FindResult( node, IntToPointer(reg) ) < 0 ) \
+		return DaoInferencer_ErrorNotInitialized( self, ec, first, last ); }
+
 static int DaoInferencer_CheckInitialization( DaoInferencer *self, DaoOptimizer *optimizer )
 {
 	DaoClass *klass;
@@ -5213,15 +5217,100 @@ static int DaoInferencer_CheckInitialization( DaoInferencer *self, DaoOptimizer 
 	DaoVmCodeX **codes = annotCodes->items.pVmc;
 	DaoCnode **nodes;
 	char char50[50];
-	int i, j, ret = 1;
+	int i, j, J, ret = 1;
 
 	DaoOptimizer_DoVIA( optimizer, routine );
+
+	nodes = optimizer->nodes->items.pCnode;
+	for(i=0; i<annotCodes->size; i++){
+		DaoCnode *node = nodes[i];
+		DaoVmCodeX *vmc = codes[i];
+		int first = vmc->first;
+		int middle = first + vmc->middle;
+		int last = middle + vmc->last;
+
+		self->currentIndex = i;
+
+#if 0
+		DString *mbs = self->mbstring;
+		DaoLexer_AnnotateCode( routine->body->source, *vmc, mbs, 24 );
+		printf( "%4i: ", i );DaoVmCodeX_Print( *vmc, mbs->chars, NULL );
+#endif
+
+		switch( DaoVmCode_GetOpcodeType( (DaoVmCode*) vmc ) ){
+		case DAO_CODE_GETU :
+			if( vmc->a != 0 ) AssertInitialized( vmc->b, 0, middle, middle );
+			break;
+		case DAO_CODE_UNARY2 :
+			AssertInitialized( vmc->b, 0, middle, middle );
+			break;
+		case DAO_CODE_GETF :
+		case DAO_CODE_BRANCH :
+			AssertInitialized( vmc->a, 0, first, first );
+			break;
+		case DAO_CODE_SETG :
+		case DAO_CODE_SETU :
+			AssertInitialized( vmc->a, 0, first, first );
+			break;
+		case DAO_CODE_MOVE :
+		case DAO_CODE_UNARY :
+			AssertInitialized( vmc->a, 0, first, last );
+			break;
+		case DAO_CODE_SETF :
+			AssertInitialized( vmc->a, 0, last+1, last+1 );
+			AssertInitialized( vmc->c, 0, first, first );
+			break;
+		case DAO_CODE_GETI :
+			AssertInitialized( vmc->a, DTE_ITEM_WRONG_ACCESS, first, first );
+			AssertInitialized( vmc->b, DTE_ITEM_WRONG_ACCESS, middle, middle );
+			break;
+		case DAO_CODE_BINARY :
+			AssertInitialized( vmc->a, 0, first, first );
+			AssertInitialized( vmc->b, 0, middle, middle );
+			break;
+		case DAO_CODE_SETI :
+			AssertInitialized( vmc->c, DTE_ITEM_WRONG_ACCESS, first, first );
+			AssertInitialized( vmc->b, DTE_ITEM_WRONG_ACCESS, middle, middle );
+			AssertInitialized( vmc->a, DTE_ITEM_WRONG_ACCESS, last+1, last+1 );
+			break;
+		case DAO_CODE_GETM :
+		case DAO_CODE_ENUM2 :
+		case DAO_CODE_ROUTINE :
+			for(j=0; j<=vmc->b; ++j){
+				AssertInitialized( vmc->a+j, 0, first, first );
+			}
+			break;
+		case DAO_CODE_SETM :
+			AssertInitialized( vmc->c, DTE_ITEM_WRONG_ACCESS, first, first );
+			for(j=0; j<=vmc->b; ++j) AssertInitialized( vmc->c+j, 0, first, first );
+			break;
+		case DAO_CODE_MATRIX :
+			J=(vmc->b>>8)*(vmc->b&0xff);
+			for(j=0; j<J; ++j) AssertInitialized( vmc->a+j, 0, first, first );
+			break;
+		case DAO_CODE_CALL :
+			for(j=0, J=vmc->b&0xff; j<=J; ++j){
+				AssertInitialized( vmc->a+j, 0, middle, last );
+			}
+			break;
+		case DAO_CODE_ENUM :
+			for(j=0, J=vmc->b&(0xffff>>2); j<J; ++j){
+				AssertInitialized( vmc->a+j, 0, first, first );
+			}
+			break;
+		case DAO_CODE_EXPLIST :
+			for(j=0; j<vmc->b; ++j) AssertInitialized( vmc->a+j, 0, first, first );
+			break;
+		case DAO_CODE_YIELD :
+			for(j=0; j<(vmc->b&0xff); ++j) AssertInitialized( vmc->a+j, 0, first, first );
+			break;
+		}
+	}
 
 	if( !(routine->attribs & DAO_ROUT_INITOR) ) return 1;
 	if( routine->attribs & DAO_ROUT_MIXIN ) return 1;  /* Alread checked; */
 
 	klass = (DaoClass*) routine->routHost->aux;
-	nodes = optimizer->nodes->items.pCnode;
 	for(i=0; i<optimizer->nodes->size; i++){
 		DaoCnode *node = nodes[i];
 		DaoVmCodeX *vmc = codes[i];
