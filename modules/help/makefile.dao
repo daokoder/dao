@@ -10,9 +10,9 @@ if( DaoMake::IsPlatform( "MINIX" ) ) project.AddDefinition( "MINIX" )
 
 project.SetTargetPath( "../../lib/dao/modules" )
 
-dest = DaoMake::MakePath( project.BinaryPath(), "../../lib/dao/modules/help/" );
+dest = DaoMake::MakePath( project.BinaryPath(), "./help/" );
 if( project.SourcePath() != dest ){
-	dest = DaoMake::MakePath( project.BinaryPath(), "../../lib/dao/modules/" );
+	dest = project.BinaryPath();
 	src = DaoMake::MakePath( project.SourcePath(), "help_en" );
 	cmd = project.AddCommand( "copyhelp:", "$(DAOMAKE) copy " + src + " " + dest );
 	src = DaoMake::MakePath( project.SourcePath(), "help_zh" );

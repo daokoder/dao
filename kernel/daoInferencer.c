@@ -5237,7 +5237,7 @@ static int DaoInferencer_CheckInitialization( DaoInferencer *self, DaoOptimizer 
 		for(j=klass->objParentEnd; j<klass->instvars->size; ++j){
 			DaoVariable *var = klass->instvars->items.pVar[j];
 			int key = (DAO_OBJECT_VARIABLE<<16) | j;
-			if( var->dtype && var->dtype->tid <= DAO_ENUM ) continue;
+			if( var->dtype && var->dtype->tid <= DAO_STRING ) continue;
 			if( var->value && DaoType_MatchValue( var->dtype, var->value, NULL ) ) continue;
 			if( DaoCnode_FindResult( node, IntToPointer(key) ) < 0 ){
 				sprintf( char50, "  At line %i : ", routine->defLine );

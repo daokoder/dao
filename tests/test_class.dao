@@ -80,6 +80,23 @@ class K
 
 
 
+
+@[test(code_01)]
+class K
+{
+    routine M( k: K ){
+        self.self = k;
+    }   
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Invalid operation on the type}}
+@[test(code_01)]
+
+
+
+
+
 @[test(code_01)]
 class K
 {
@@ -408,6 +425,28 @@ class Klass
 
 
 
+@[test(code_01)]
+class Test
+{
+	var a: any;
+	var b = 1;
+
+	routine Test() {
+
+		switch( b ){
+		default: a = {}
+		case 0 : a = 3;
+		case 1 : a = "a";
+		case 2 : a = 4
+		}
+	}
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
 
 @[test(code_01)]
 class Klass
@@ -444,6 +483,30 @@ class Klass
 @[test(code_01)]
 {{At line}} .* {{Class instance field "items" not initialized}}
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class Test
+{
+	var a: any;
+	var b = 1;
+
+	routine Test() {
+
+		switch( b ){
+		case 0 : a = 3;
+		case 1 : a = "a";
+		case 2 : a = 4
+		}
+	}
+}
+@[test(code_01)]
+@[test(code_01)]
+{{At line}} .* {{Class instance field "a" not initialized}}
+@[test(code_01)]
+
 
 
 

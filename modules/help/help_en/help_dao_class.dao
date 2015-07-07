@@ -669,6 +669,27 @@ dao.interface
 @[name]
 
 @[title]
+Interfaces
+@[title]
+
+
+
+@[text]
+Dao supports two types of interfaces: Abstract Interface and Concrete Interface.
+Abstract interface only defines a set of method signatures that a type must support
+in order to be compatible with the interface type.
+Concrete interface, on the other hand, implement a set of methods defined by
+an abstract interface for a target type.
+@[text]
+
+
+
+
+@[name]
+dao.interface.abstract
+@[name]
+
+@[title]
 Abstract Interface
 @[title]
 
@@ -752,4 +773,108 @@ PrintSize2( {} );
 @[text]
 
 
+
+
+@[name]
+dao.interface.concrete
+@[name]
+
+@[title]
+Concrete Interface
+@[title]
+
+
+@[text]
+When a type need to be used in places where an abstract interface type is expected,
+but the type does not support all the methods defined by the abstract interface,
+a concrete interface can be defined for the (target) type to implement the methods
+of the abstract interface, so that the target type can be used whereever the abstract
+interface type is expected.
+For example,
+@[code]
+# Abstract interface:
+interface SomeInterface
+{
+    routine SomeMethod();
+}
+
+# Concrete interface:
+interface SomeInterface for SomeTargetType
+{
+    routine SomeMethod(){
+    }
+}
+@[code]
+Here the second interface type is a concrete one. It has a generic-like type name:
+@[code]interface<SomeInterface<SomeTargetType>>@[code],
+which stands for the concrete interface type itself.
+When a value of the target type @[code]SomeTargetType@[code] is used in places
+where the interface type @[code]SomeInterface@[code] is expected,
+the value will be automatically casted to the interface type by wrapping it
+as an instance of the concrete interface.
+Such instance also has a generic-like type name: @[code]SomeInterface<SomeTargetType>@[code].
+And it is also automatically casted to the target type when needed.
+
+
+Concrete interfaces also support inheritance:
+@[code]
+interface SubInterface : SomeInterface
+{
+	routine SomeMethod2();
+}
+interface SubInterface for SomeTargetType : SomeInterface<SomeTargetType>
+{
+    routine SomeMethod2(){
+    }
+}
+@[code]
+The abstract interface @[code]SubInterface@[code] must have been derived from 
+@[code]SomeInterface@[code]. And the target types must be the same.
+
+ 
+More example,
+@[code]
+interface InterA
+{
+	routine size()=>int
+	routine serialize()=>string
+}
+
+interface InterB : InterA
+{
+	routine []( index: int ) => float
+}
+
+interface InterA for int
+{
+	routine size(){
+		io.writeln( "InterA<int>::size()", std.about(self) )
+		return self + 1;
+	}
+	routine serialize() => string { return "abc" + (string) self; }
+}
+
+var a: InterA = 123       # a: value type InterA<int>; variable type InterA;
+var b = (InterA) 123;     # b: value type InterA<int>; variable type InterA<int>;
+var c: InterA<int> = 123  # c: value type InterA<int>; variable type InterA<int>;
+
+io.writeln( a.size() )
+io.writeln( (int) a )
+
+var d: int = c
+
+var e: list<InterA<int>> = { 123 }
+
+e.append(456)
+
+var f: list<InterA> = { 678 }
+
+f.append(456)
+
+io.writeln( e, f )
+@[code]
+
+
+
+@[text]
 

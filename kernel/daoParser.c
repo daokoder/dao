@@ -4637,7 +4637,7 @@ int DaoParser_ParseVarExpressions( DaoParser *self, int start, int to, int store
 			DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, start, end, 0 );
 			goto ReturnError;
 		}
-	}else if( self->isClassBody == 0 && (abtp == NULL || abtp->tid > DAO_ENUM) ){
+	}else if( self->isClassBody == 0 ){
 		DaoParser_Error2( self, DAO_VARIABLE_WITHOUT_INIT, start, end, 0 );
 		goto ReturnError;
 	}

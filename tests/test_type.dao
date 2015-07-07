@@ -1,8 +1,8 @@
 
 
 @[test(code_01)]
-var a: dao::int
-var b: dao::string
+var a: dao::int = 1
+var b: dao::string = "x"
 var c: dao::list<int> = {}
 var d: dao::tuple<int,string> = (1,"a")
 @[test(code_01)]

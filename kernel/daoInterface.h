@@ -82,8 +82,8 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds );
 //    SomeInterface<SomeTargetType>           : object type for the concrete interface;
 //
 // -- Type Matching:
-//    SomeInterface<SomeTargetType> can match to both SomeInterface
-//    and interface<SomeInterface<SomeTargetType>>;
+//    SomeTargetType can match to both SomeInterface and SomeInterface<SomeTargetType>;
+//    SomeInterface<SomeTargetType> can match to SomeInterface;
 //
 // -- Type Casting:
 //    Assignment and moving between SomeTargetType and SomeInterface will convert

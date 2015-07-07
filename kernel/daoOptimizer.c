@@ -845,7 +845,7 @@ static void DaoOptimizer_Init( DaoOptimizer *self, DaoRoutine *routine )
 				/* Code section is isolated from the main codes: */
 				DList_Append( nodes[i-1]->outs, node );
 				DList_Append( node->ins, nodes[i-1] );
-			}else if( k != DVM_GOTO && k != DVM_RETURN ){
+			}else if( k != DVM_GOTO && k != DVM_CASE && k != DVM_RETURN ){
 				DList_Append( nodes[i-1]->outs, node );
 				DList_Append( node->ins, nodes[i-1] );
 			}
