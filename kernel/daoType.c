@@ -853,7 +853,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 	printf( "here: %i  %i  %i, %s  %s,  %p\n", mt, self->tid, type->tid,
 			self->name->chars, type->name->chars, defs );
 	 */
-	if( mt == DAO_MT_THT ){
+	if( mt == DAO_MT_THT || mt == DAO_MT_THTX ){
 		if( self->tid == DAO_THT || self->tid == DAO_UDT ){
 			if( defs ) node = MAP_Find( defs, self );
 			if( node ) self = node->value.pType;
@@ -946,6 +946,16 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 				// the matching is not exact, but allowed.
 				*/
 				continue;
+			}else if( (it1->tid == DAO_THT || it1->tid == DAO_UDT) && tid == DAO_ANY ){
+				/*
+				// Unassociated type holders can represent any types,
+				// so matching to "any" should be allowed.
+				*/
+				if( defs == NULL || DMap_Find( defs, it1 ) == NULL ){
+					continue;
+				}else if( k < mt ){
+					mt = k;
+				}
 			}else{
 				if( k < mt ) mt = k;
 			}

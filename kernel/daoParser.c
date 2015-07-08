@@ -1803,8 +1803,8 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 		field = & tok->string;
 		c = tok->string.chars[0];
 		sign = 1;
-		if( tok->type != DTOK_IDENTIFIER ) break;
-		if( tok->name == DTOK_ID_THTYPE || tok->name == DTOK_ID_SYMBOL ) break;
+		if( tok->type != DTOK_IDENTIFIER ) goto WrongForm;
+		if( tok->name == DTOK_ID_THTYPE || tok->name == DTOK_ID_SYMBOL ) goto WrongForm;
 		if( DMap_Find( type->mapNames, field ) ) goto WrongForm;
 		if( k+1 <= end && tokens[k+1]->type == DTOK_ASSN ){
 			k += 1;
@@ -1815,7 +1815,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 					if( c == DTOK_SUB ) sign = -1;
 				}
 			}
-			if( k+1 > end ) break;
+			if( k+1 > end ) goto WrongForm;
 			c = tokens[k+1]->type;
 			if( c >= DTOK_DIGITS_DEC && c <= DTOK_NUMBER_HEX ){
 				k += 1;
@@ -1826,11 +1826,11 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 					break;
 				}
 				DMap_Insert( values, IntToPointer( value ), 0 );
-			}else break;
+			}else goto WrongForm;
 		}
 		if( sep ==0 && (k+1) <= end ){
 			sep = tokens[k+1]->type;
-			if( sep != DTOK_COMMA && sep != DTOK_SEMCO ) break;
+			if( sep != DTOK_COMMA && sep != DTOK_SEMCO ) goto WrongForm;
 			if( sep == DTOK_SEMCO && set == 0 ) value = 1;
 		}
 		if( sign < 0 ) value = - value;
