@@ -1864,22 +1864,20 @@ int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int types )
 			if( !(types & daoModuleTypes[i]) ) continue;
 			if( daoModuleTypes[i] < DAO_MODULE_DLL ){
 				DString_Assign( fn, fname );
+			}else if( strstr( fname->chars, "dao_" ) == fname->chars ){
+				/* See modules/canvas/canvas.dao; */
+				DString_Assign( fn, path );
+				DString_AppendChars( fn, DAO_DLL_PREFIX "" );
+				DString_Append( fn, file );
 			}else{
-				if( strncmp( fname->chars, daoDllPrefix[i], 3 ) == 0 ) break;
+				if( strstr( fname->chars, daoDllPrefix[i] ) == fname->chars ) break;
 				DString_Assign( fn, path );
 				DString_AppendChars( fn, daoDllPrefix[i] );
 				DString_Append( fn, file );
 			}
 			DString_AppendChars( fn, daoFileSuffix[i] );
 			DaoVmSpace_SearchPath( self, fn, DAO_FILE_PATH, 1 );
-#if 0
-			printf( "%i %s %s\n", i, fn->chars, self->nameLoading->items.pString[0]->chars );
-#endif
-			/*
-			// skip the current file, since one may create .dao file with the same name
-			// as a dll module to load that dll module in certain way, or do extra things.
-			*/
-			if( self->nameLoading->size && DString_EQ( fn, self->nameLoading->items.pString[0] ) ) continue;
+
 			if( DaoVmSpace_TestFile( self, fn ) ){
 				modtype = daoModuleTypes[i];
 				if( modtype > DAO_MODULE_DLL ) modtype = DAO_MODULE_DLL;

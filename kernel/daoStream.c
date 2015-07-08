@@ -735,7 +735,7 @@ DaoUserStream* DaoStream_SetUserStream( DaoStream *self, DaoUserStream *us )
 	if( us ) us->stream = self;
 	return stream;
 }
-void DaoStream_TryResetStringBuffer( DaoStream *self )
+static void DaoStream_TryResetStringBuffer( DaoStream *self )
 {
 	/* When it has been read passing the end of the buffer, reset the buffer: */
 	if( self->offset >= self->streamString->size ){
