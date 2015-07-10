@@ -7749,6 +7749,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			result.reg = result.last->c;
 			fold = 1;
 		}
+		result.konst = 0;
 		if( fold && LHS.konst && RHS.konst ){
 			DaoValue *v1 = DaoParser_GetVariable( self, LHS.konst );
 			DaoValue *v2 = DaoParser_GetVariable( self, RHS.konst );
