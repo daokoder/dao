@@ -1848,6 +1848,12 @@ int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int types )
 	}else if( (types & DAO_MODULE_DLL) && size > slen && DString_FindChars( fname, DAO_DLL_SUFFIX, 0 ) == size - slen ){
 		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
 		if( DaoVmSpace_TestFile( self, fname ) ) modtype = DAO_MODULE_DLL;
+	//If we're given a filename (i.e., if it has an extension) and it's not a known filetype, load it anyway.
+	//With custom syntaxes people can use custom extensions, and we should allow them to load with those.
+	//In this case, always treat the extension as DAO_MODULE_DAO; that's all we'll support for custom extensions.
+	}else if( (types & DAO_MODULE_DAO) && size >1 && DString_FindChars( fname, ".", 0 ) != -1 ){
+		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
+		if( DaoVmSpace_TestFile( self, fname ) ) modtype = DAO_MODULE_DAO;
 	}else{
 		DString *fn = DString_New();
 		DString *path = DString_New();

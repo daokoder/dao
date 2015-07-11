@@ -44,7 +44,9 @@ enum DMacroUnitTypes
 	DMACRO_OP  , /* $OP  prefixed identifier: operator token */
 	DMACRO_BL  , /* $BL  prefixed identifier: code block tokens */
 	DMACRO_GRP , /* ( ... ) */
-	DMACRO_ALT   /* ( ... | ... ) */
+	DMACRO_ALT , /* ( ... | ... ) */
+	DMACRO_STR , /* $STR identifier: stringify token */
+	DMACRO_CAT   /* $CAT identifier: concatenate tokens */
 };
 
 enum DaoMacroGroupRepeatTypes
