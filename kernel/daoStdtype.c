@@ -3286,11 +3286,11 @@ void DaoMap_Reset( DaoMap *self, unsigned int hashing )
 		map->hashing = 0;
 		if( map->table ) dao_free( map->table );
 		map->table = NULL;
-		map->tsize = 0;
+		map->tsize2rt = 0;
 	}else{
 		if( map->hashing == 0 ){
-			map->tsize = 4;
-			map->table = (DNode**) dao_calloc( map->tsize, sizeof(DNode*) );
+			map->tsize2rt = 2;
+			map->table = (DNode**) dao_calloc( map->tsize2rt * map->tsize2rt, sizeof(DNode*) );
 		}
 		map->hashing = hashing;
 	}

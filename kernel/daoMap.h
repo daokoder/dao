@@ -79,14 +79,15 @@ typedef DMap DHash;
 
 struct DMap
 {
-	DNode  **table;    /* hash table, each entry is a tree; */
-	DNode   *root;     /* root node; */
-	DNode   *list;     /* first node of the free list; */
-	daoint   size;     /* size of the map; */
-	daoint   tsize;    /* size of the table; */
-	uint_t   hashing;  /* hashing seed; */
-	uchar_t  keytype;  /* key type; */
-	uchar_t  valtype;  /* value type; */
+	DNode   **table;        /* Hash table, each entry is a tree; */
+	DNode    *root;         /* Root node; */
+	DNode    *list;         /* First node of the free list; */
+	size_t    size;         /* Size of the map; */
+	uint_t    hashing;      /* Hashing seed; */
+	uint_t    tsize2rt;     /* Square root of the table size; */
+	uint_t    keytype :  4; /* Key type; */
+	uint_t    valtype :  4; /* Value type; */
+	uint_t    changes : 24; /* Changes that may change the tree structure(s); */
 };
 
 DAO_DLL DMap* DMap_New( short kt, short vt );

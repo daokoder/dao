@@ -73,10 +73,11 @@ struct DList
 
 	} items;
 
-	daoint    size;
-	daoint    bufsize;
-	ushort_t  offset;
-	ushort_t  type; /* can be 0 (for integers or pointers), or, D_STRING, D_ARRAY, etc. */
+	daoint    size;         /* Number of elements; */
+	daoint    bufsize;      /* Buffer size; */
+	uint_t    offset;       /* Free spaces at the front; */
+	uint_t    type    :  8; /* Element type: zero , D_STRING, D_ARRAY, etc. */
+	uint_t    changes : 24; /* Changes that could change the location or number of elements; */
 };
 
 DAO_DLL DList* DList_New( short type );

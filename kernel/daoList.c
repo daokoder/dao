@@ -315,7 +315,7 @@ void* DList_PushFront( DList *self, void *val )
 		self->items.pVoid[-1] = NULL;
 		self->items.pVoid --;
 	}else{
-		size_t moffset = 0xffff;
+		size_t moffset = 0xffffffff;
 		size_t offset = self->bufsize/5 + 5;
 		self->offset = offset < moffset ? offset : moffset;
 		self->bufsize += self->offset;
@@ -339,7 +339,7 @@ void* DList_PushFront( DList *self, void *val )
 void* DList_PopFront( DList *self )
 {
 	void *ret, **buf = self->items.pVoid - self->offset;
-	size_t moffset = 0xffff;
+	size_t moffset = 0xffffffff;
 	if( self->size == 0 ) return NULL;
 
 	ret = self->items.pVoid[0];
