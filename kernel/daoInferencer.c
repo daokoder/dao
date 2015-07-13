@@ -2905,7 +2905,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		for(k=0; k<(argc-1); k++) DList_Append( self->types2, tp[k] );
 		for(k=0; k<its->size; k++){
 			DaoType *it = its->items.pType[k];
-			if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_DEFAULT ) it = (DaoType*) it->aux;
+			if( it->tid >= DAO_PAR_NAMED && it->tid <= DAO_PAR_VALIST ) it = (DaoType*)it->aux;
 			DList_Append( self->types2, it );
 		}
 		tp = self->types2->items.pType;

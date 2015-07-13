@@ -293,3 +293,35 @@ ForwardDeclaredRoutine( (123, "abc") )
 @[test(code_01)]
 ( 123, "abc" )
 @[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+routine A( meth: string, ...: string as args )
+{
+}
+routine B( a: string, b: string as args )
+{
+	A('GET', args, ... )
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+routine A( meth: string, ...: tuple<enum,int|string|list<string>> as args )
+{
+}
+routine B( ...: tuple<enum,int|string|list<string>> as args )
+{
+	A('GET', args, ... )
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
