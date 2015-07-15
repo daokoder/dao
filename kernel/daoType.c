@@ -449,6 +449,7 @@ DaoType* DaoType_GetVariantItem( DaoType *self, int tid )
 	}
 	return NULL;
 }
+
 /*
 // Output:
 // quads[0] = base type;
@@ -582,7 +583,7 @@ int DaoType_IsImmutable( DaoType *self )
 		for(i=0; i<self->nested->size; ++i){
 			if( DaoType_IsImmutable( self->nested->items.pType[i] ) == 0 ) return 0;
 		}
-		break;
+		return 1;
 	}
 	return 0;
 }
@@ -594,6 +595,7 @@ int DaoType_IsPrimitiveOrImmutable( DaoType *self )
 		for(i=0; i<self->nested->size; ++i){
 			if( DaoType_IsPrimitiveOrImmutable( self->nested->items.pType[i] ) == 0 ) return 0;
 		}
+		return 1;
 	}
 	return DaoType_IsImmutable( self );
 }
@@ -755,7 +757,7 @@ int DaoType_CheckInvarMatch( DaoType *self, DaoType *type, int enforePrimitive )
 	// But const type can, because constant will be copied when it is moved.
 	 */
 	if( self->konst == 1 || self->invar == 0 || type->invar != 0 ) return 1;
-	if( enforePrimitive == 0 && self->tid <= DAO_ENUM ) return 1;
+	if( enforePrimitive == 0 && DaoType_IsPrimitiveOrImmutable( self ) ) return 1;
 	if( DaoType_IsImmutable( self ) ) return 1;
 	return type->tid == DAO_ANY || type->tid == DAO_THT;
 }
@@ -1848,6 +1850,11 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 	node = DMap_Find( kernel->values, name );
 	if( node ) return node->value.pValue;
 	return value;
+}
+
+DaoTypeBase* DaoType_GetTyper( DaoType *self )
+{
+	return self->typer;
 }
 
 

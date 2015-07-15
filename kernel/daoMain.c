@@ -111,11 +111,12 @@ void DaoRestartRun( char **argv, int argc, int optid )
 	for(;;){
 		int status = 0;
 		if( forked ) waitpid( 0, & status, 0 );
-		if( forked == 0 || !WIFEXITED( status ) ){
+		if( forked == 0 || !WIFEXITED( status ) || WEXITSTATUS(status) ){
+			int restarted = forked != 0;
 			int pid = fork();
 			forked = 1;
 			if( pid == 0 ){
-				fprintf( stderr, "Dao process forked!\n" );
+				if( restarted ) fprintf( stderr, "Dao process restarted!\n" );
 				break;
 			}else if( pid < 0 ){
 				fprintf( stderr, "Failed to fork and restart!\n" );
@@ -133,6 +134,7 @@ void DaoRestartRun( char **argv, int argc, int optid )
 
 void DaoRestartRun( char **argv, int argc, int optid )
 {
+	int restarted = 0;
 	int i, m, offset = 0;
 	char cmdline[1024] = {0};
     STARTUPINFO si;
@@ -170,7 +172,7 @@ void DaoRestartRun( char **argv, int argc, int optid )
 			fprintf( stderr, "CreateProcess failed (%d).\n", GetLastError() );
 			return;
 		}
-		fprintf( stderr, "Dao process forked!\n" );
+		if( restarted ) fprintf( stderr, "Dao process restarted!\n" );
 
 		/* Wait until child process exits. */
 		WaitForSingleObject( pi.hProcess, INFINITE );
@@ -181,6 +183,7 @@ void DaoRestartRun( char **argv, int argc, int optid )
 		/* Close process and thread handles.  */
 		CloseHandle( pi.hProcess );
 		CloseHandle( pi.hThread );
+		restarted = 1;
 	}
 }
 

@@ -3333,7 +3333,8 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 		if( vmc->b >1 )
 			at = DaoNamespace_MakeType2( NS, "tuple", DAO_TUPLE, NULL, types+opa, vmc->b);
 
-		if( ct && DaoType_MatchTo( at, ct, defs2 ) == 0 ) goto ErrorTyping;
+		if( ct ) AssertTypeMatching( at, ct, defs2 );
+
 		/* XXX */
 		if( ct == NULL || ( ct->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) ){
 			if( rettypes->size == 4 ){
@@ -3357,9 +3358,8 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 			}
 		}
 		if( ct != ct2 ){
-			int m1 = DaoType_MatchTo( at, ct2, defs2 );
-			int m2 = DaoType_MatchTo( ct, ct2, defs2 );
-			if( m1 == 0 || m2 == 0 ) goto ErrorTyping;
+			AssertTypeMatching( at, ct2, defs2 );
+			AssertTypeMatching( ct, ct2, defs2 );
 		}
 	}
 	return 1;

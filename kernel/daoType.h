@@ -187,6 +187,7 @@ DAO_DLL DaoRoutine* DaoType_GetCastor( DaoType *self );
 DAO_DLL DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name );
 DAO_DLL DaoRoutine* DaoType_FindFunctionChars( DaoType *self, const char *name );
 
+DAO_DLL DaoTypeBase* DaoType_GetTyper( DaoType *self );
 
 
 typedef void (*FuncPtrSliced)( DaoValue *self );

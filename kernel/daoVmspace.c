@@ -1045,7 +1045,6 @@ static int DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *na
 	DaoValue ival = {DAO_INTEGER};
 	DaoValue fval = {DAO_FLOAT};
 	DaoValue *argv;
-	DaoType *emtype;
 	DString *sym;
 
 	switch( type->tid ){
@@ -1058,6 +1057,7 @@ static int DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *na
 		DaoList_SetItem( self, & fval, i );
 		return 10 * isnum;
 	case DAO_ENUM :
+		sym = string->xString.value;
 		argv = (DaoValue*) DaoNamespace_MakeSymbol( NS, sym->chars );
 		DaoList_SetItem( self, argv, i );
 		if( type && DaoType_MatchValue( type, argv, NULL ) == 0 ) return 0;
