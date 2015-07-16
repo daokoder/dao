@@ -421,6 +421,7 @@ static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp, Da
 	int j, k, mt;
 	for(j=0,mt=0; j<n; j++){
 		DaoType *itp2 = tp->nested->items.pType[j];
+		if( tp->invar ) itp2 = DaoType_GetInvarType( itp2 );
 		k = DaoType_MatchValue( itp2, src, NULL );
 		if( k > mt ){
 			itp = itp2;

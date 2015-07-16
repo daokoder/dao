@@ -143,10 +143,11 @@ invar class K
 
 a = { 1, 2, 3 } 
 
+# index is of type: invar<list<any>>
+# list<int> can be allowed to match to it:
 k = K.{ a } 
 @[test(code_01)]
 @[test(code_01)]
-{{At line}}.*{{Types not matching}}
 @[test(code_01)]
 
 

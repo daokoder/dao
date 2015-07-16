@@ -261,3 +261,17 @@ io.writeln( std.about(a) != std.about(b) )
 @[test(code_01)]
 true
 @[test(code_01)]
+
+
+
+
+# Covariant to invariable containers:
+@[test(code_01)]
+var a = { 1 };
+var b = { 1=>2 };
+invar c: list<any> = a;
+invar d: list<float> = a;
+invar e: map<any,any> = b;
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
