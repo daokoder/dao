@@ -2591,14 +2591,6 @@ DaoArray* DaoProcess_PutArray( DaoProcess *self )
 {
 	return DaoProcess_GetArray( self, self->activeCode );
 }
-DaoStream* DaoProcess_PutFile( DaoProcess *self, FILE *file )
-{
-	DaoStream *stream = DaoStream_New();
-	DaoStream_SetFile( stream, file );
-	if( DaoProcess_PutValue( self, (DaoValue*) stream ) ) return stream;
-	DaoStream_Delete( stream );
-	return NULL;
-}
 void DaoCdata_Delete( DaoCdata *self );
 DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type )
 {
@@ -4993,13 +4985,13 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		if( vmc->a == vmc->c ){
 			DString *base = DString_Copy( A->xString.value );
 			DString_Assign( A->xString.value, B->xString.value );
-			Dao_MakePath( base, A->xString.value );
+			DString_MakePath( base, A->xString.value );
 			DString_Delete( base );
 		}else if( vmc->b == vmc->c ){
-			Dao_MakePath( A->xString.value, B->xString.value );
+			DString_MakePath( A->xString.value, B->xString.value );
 		}else{
 			DaoValue *C = DaoProcess_PutValue( self, B );
-			Dao_MakePath( A->xString.value, C->xString.value );
+			DString_MakePath( A->xString.value, C->xString.value );
 		}
 	}else if( A->type == DAO_ENUM && B->type == DAO_ENUM
 			 && (vmc->code == DVM_ADD || vmc->code == DVM_SUB) ){
@@ -5861,7 +5853,7 @@ FailConversion :
 }
 
 DaoRoutine* DaoRoutine_Check( DaoRoutine *self, DaoType *selftp, DaoType *ts[], int np, int code, DList *es );
-void DaoPrintCallError( DList *errors, DaoStream *stdio );
+void DaoPrintCallError( DList *errors, DaoStream *stream );
 
 void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int callmode )
 {
@@ -5871,13 +5863,13 @@ void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *sel
 	DaoType *ts[DAO_MAX_PARAM];
 	DList *errors = DList_New(0);
 	int i;
+	DaoStream_SetStringMode( ss );
 	for(i=0; i<np; i++) ts[i] = DaoNamespace_GetType( ns, ps[i] );
 	DaoRoutine_Check( rout, selftype, ts, np, callmode, errors );
-	ss->mode |= DAO_STREAM_STRING;
 	DaoPrintCallError( errors, ss );
 	DList_Delete( errors );
-	DaoProcess_RaiseError( self, "Param", ss->streamString->chars );
-	DaoStream_Delete( ss );
+	DaoProcess_RaiseError( self, "Param", ss->buffer->chars );
+	DaoGC_TryDelete( (DaoValue*) ss );
 }
 
 int DaoRoutine_SetVmCodes2( DaoRoutine *self, DArray *vmCodes );
@@ -6457,13 +6449,6 @@ DaoArray* DaoProcess_NewArray( DaoProcess *self, int type )
 #else
 	return NULL;
 #endif
-}
-DaoStream* DaoProcess_NewStream( DaoProcess *self, FILE *f )
-{
-	DaoStream *res = DaoStream_New();
-	DaoStream_SetFile( res, f );
-	DaoProcess_CacheValue( self, (DaoValue*) res );
-	return res;
 }
 DaoCdata* DaoProcess_NewCdata( DaoProcess *self, DaoType *type, void *data, int owned )
 {

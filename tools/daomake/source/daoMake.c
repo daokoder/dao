@@ -655,10 +655,9 @@ size_t DaoMake_FindFile( DString *file, DString *hints )
 	DString_Delete( fname );
 	return res;
 }
-void Dao_MakePath( DString *base, DString *path );
 void DaoMake_MakePath( DString *base, DString *path )
 {
-	Dao_MakePath( base, path );
+	DString_MakePath( base, path );
 	if( DaoMake_IsDir( path->chars ) ) DString_AppendPathSep( path );
 }
 void DaoMake_MakeRelativePath( DString *current, DString *path )
@@ -3780,10 +3779,10 @@ ErrorInvalidArgValue:
 	name = DString_New();
 	DaoVmSpace_AddPath( vmSpace, vmSpace->daoBinPath->chars );
 	DString_SetChars( name, ".." );
-	Dao_MakePath( vmSpace->daoBinPath, name );
+	DString_MakePath( vmSpace->daoBinPath, name );
 	DaoVmSpace_AddPath( vmSpace, name->chars );
 	DString_SetChars( name, "../lib/daomake" );
-	Dao_MakePath( vmSpace->daoBinPath, name );
+	DString_MakePath( vmSpace->daoBinPath, name );
 	DaoVmSpace_AddPath( vmSpace, name->chars );
 	if( architecture && *architecture ) DString_SetChars( daomake_architecture, architecture );
 	if( platform && *platform ){

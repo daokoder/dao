@@ -194,7 +194,6 @@ typedef struct DMap     DMap;
 typedef struct DaoTypeCore     DaoTypeCore;
 typedef struct DaoTypeBase     DaoTypeBase;
 typedef struct DaoStackFrame   DaoStackFrame;
-typedef struct DaoUserStream   DaoUserStream;
 typedef struct DaoUserHandler  DaoUserHandler;
 typedef struct DaoDebugger     DaoDebugger;
 typedef struct DaoProfiler     DaoProfiler;
@@ -325,16 +324,6 @@ struct DaoTypeBase
 	// When "remove" != 0, references to data that are pushed to "values" should be broken;
 	*/
 	void  (*GetGCFields)( void *self, DList *values, DList *lists, DList *maps, int remove );
-};
-
-struct DaoUserStream
-{
-	DaoStream *stream;
-	/* count>0: read count bytes; count=0: one line; count<0: until EOF */
-	void (*StdioRead)( DaoUserStream *self, DString *input, int count );
-	void (*StdioWrite)( DaoUserStream *self, DString *output );
-	void (*StdioFlush)( DaoUserStream *self );
-	void (*SetColor)( DaoUserStream *self, const char *fgcolor, const char *bgcolor );
 };
 
 /*
@@ -751,13 +740,10 @@ DAO_DLL void DaoStream_WriteString( DaoStream *self, DString *val );
 DAO_DLL void DaoStream_WriteLocalString( DaoStream *self, DString *val );
 DAO_DLL void DaoStream_WriteChars( DaoStream *self, const char *val );
 DAO_DLL void DaoStream_WritePointer( DaoStream *self, void *val );
-DAO_DLL void DaoStream_SetFile( DaoStream *self, FILE *fd );
-DAO_DLL FILE* DaoStream_GetFile( DaoStream *self );
 DAO_DLL int DaoStream_ReadLine( DaoStream *self, DString *line );
 DAO_DLL int DaoFile_ReadLine( FILE *fin, DString *line );
 DAO_DLL int DaoFile_ReadAll( FILE *fin, DString *all, int close );
 DAO_DLL void DaoFile_WriteString( FILE *fout, DString *str );
-DAO_DLL DaoUserStream* DaoStream_SetUserStream( DaoStream *self, DaoUserStream *us );
 
 
 
@@ -822,7 +808,6 @@ DAO_DLL DaoEnum*   DaoProcess_PutEnum( DaoProcess *self, const char *symbols );
 DAO_DLL DaoArray*  DaoProcess_PutArray( DaoProcess *self );
 DAO_DLL DaoList*   DaoProcess_PutList( DaoProcess *self );
 DAO_DLL DaoMap*    DaoProcess_PutMap( DaoProcess *self, unsigned int hashing );
-DAO_DLL DaoStream* DaoProcess_PutFile( DaoProcess *self, FILE *file );
 DAO_DLL DaoValue*  DaoProcess_PutValue( DaoProcess *self, DaoValue *value );
 
 
@@ -914,11 +899,11 @@ DAO_DLL void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc );
 DAO_DLL DaoStream* DaoVmSpace_StdioStream( DaoVmSpace *self );
 DAO_DLL DaoStream* DaoVmSpace_ErrorStream( DaoVmSpace *self );
 
-DAO_DLL DaoUserStream* DaoVmSpace_SetUserStdio( DaoVmSpace *self, DaoUserStream *stream );
-DAO_DLL DaoUserStream* DaoVmSpace_SetUserStdError( DaoVmSpace *self, DaoUserStream *stream );
-DAO_DLL DaoUserHandler* DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler );
-DAO_DLL DaoDebugger* DaoVmSpace_SetUserDebugger( DaoVmSpace *self, DaoDebugger *debugger );
-DAO_DLL DaoProfiler* DaoVmSpace_SetUserProfiler( DaoVmSpace *self, DaoProfiler *profiler );
+DAO_DLL DaoStream* DaoVmSpace_SetStdio( DaoVmSpace *self, DaoStream *stream );
+DAO_DLL DaoStream* DaoVmSpace_SetStdError( DaoVmSpace *self, DaoStream *stream );
+DAO_DLL DaoDebugger* DaoVmSpace_SetDebugger( DaoVmSpace *self, DaoDebugger *debugger );
+DAO_DLL DaoProfiler* DaoVmSpace_SetProfiler( DaoVmSpace *self, DaoProfiler *profiler );
+DAO_DLL DaoUserHandler* DaoVmSpace_SetHandler( DaoVmSpace *self, DaoUserHandler *handler );
 DAO_DLL void DaoVmSpace_ReadLine( DaoVmSpace *self, ReadLine fptr );
 DAO_DLL void DaoVmSpace_AddHistory( DaoVmSpace *self, AddHistory fptr );
 
@@ -994,11 +979,6 @@ DAO_DLL DaoMap*   DaoProcess_NewMap( DaoProcess *self, unsigned int hashing );
 DAO_DLL DaoArray* DaoProcess_NewArray( DaoProcess *self, int type );
 
 /*
-// DaoProcess_NewStream() creates a new stream with specified file.
-*/
-DAO_DLL DaoStream* DaoProcess_NewStream( DaoProcess *self, FILE *file );
-
-/*
 // DaoProcess_NewCdata() creates a new cdata object with specified type and data.
 // If and only if "owned" is not zero, the created cdata will be responsible to
 // deallocated "data".
@@ -1021,8 +1001,6 @@ DAO_DLL void DaoGC_Assign( DaoValue **dest, DaoValue *src );
 DAO_DLL void DaoGC_TryDelete( DaoValue *p );
 
 DAO_DLL int DaoOnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns );
-
-DAO_DLL void Dao_MakePath( DString *base, DString *path );
 
 DAO_DLL void* dao_malloc( size_t size );
 DAO_DLL void* dao_calloc( size_t nmemb, size_t size );

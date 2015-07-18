@@ -108,4 +108,6 @@ DAO_DLL double Dao_GetCurrentTime();
 DAO_DLL void* Dao_OpenDLL( const char *name );
 DAO_DLL void* Dao_GetSymbolAddress( void *handle, const char *name );
 
+DAO_DLL int DaoStream_SetScreenColor( DaoStream *self, const char *fgcolor, const char *bgcolor );
+
 #endif

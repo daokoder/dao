@@ -165,6 +165,6 @@ static DaoDebugger debugger = { NULL, NULL };
 DAO_DLL int DaoDebugger_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	debugger.Debug = DaoDebugger_Debug;
-	DaoVmSpace_SetUserDebugger( vmSpace, & debugger );
+	DaoVmSpace_SetDebugger( vmSpace, & debugger );
 	return 0;
 }

@@ -92,10 +92,11 @@ fout = io::stdio
 
 std.exec {
     defer ( any ) { return none }
-    fout = io.open( "NonExistentFile.txt", "r+" )
+    #fout = io.open( "NonExistentFile.txt", "r+" )
+	std.error( "error" );
 }
 
-if( fout != io::stdio ) defer{ fout.close() }
+#if( fout != io::stdio ) defer{ fout.close() }
 
 fout.writeln( "hello" )
 @[test(code_01)]
@@ -107,8 +108,9 @@ hello
 
 
 @[test(code_01)]
-fout = std.exec( io::stdio ){ io.open( "NonExistentFile.txt", "r+" ) }
-if( fout != io::stdio ) defer{ fout.close() }
+s = { io::stdio, io::stderr }
+fout = std.exec( io::stdio ){ s[3] }
+#if( fout != io::stdio ) defer{ fout.close() }
 fout.writeln( "hello" )
 @[test(code_01)]
 @[test(code_01)]

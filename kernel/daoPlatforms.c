@@ -171,6 +171,15 @@ int Dao_IsDir( const char *file )
 
 #ifndef DAO_WITHOUT_COLORPRINT
 
+FILE* DaoStream_GetFileHandle( DaoStream *self )
+{
+	if( self->Write == DaoStream_WriteStdout ) return stdout;
+	if( self->Write == DaoStream_WriteStderr ) return stderr;
+	if( self->Write == DaoStdStream_WriteStdout ) return stdout;
+	if( self->Write == DaoStdStream_WriteStderr ) return stderr;
+	return NULL;
+}
+
 #ifdef WIN32
 
 #include<windows.h>
@@ -183,7 +192,7 @@ static int SetCharColor( DaoStream *stream, int color, int RGB[3] )
 {
 	int res = 0;
 	struct _CONSOLE_SCREEN_BUFFER_INFO info;
-	FILE *file = DaoStream_GetFile( stream );
+	FILE *file = DaoStream_GetFileHandle( stream );
 	HANDLE fd = INVALID_HANDLE_VALUE;
 	WORD attr;
 	if( file ) fd = (HANDLE)_get_osfhandle( _fileno( file ) );
@@ -228,9 +237,8 @@ static int IsaTTY( DaoStream *stream )
 #ifdef UNIX
 	static int ist = 0;
 	static int checked = 0;
-	FILE *file = stdout;
+	FILE *file = DaoStream_GetFileHandle( stream );
 	if( checked ) return ist;
-	if( stream->file ) file = stream->file;
 	ist = isatty( fileno( file ) );
 	checked = 1;
 	return ist;
@@ -267,34 +275,30 @@ static int MapColor( const char *mbs )
 	return 254;
 }
 
-int DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor )
+int DaoStream_SetScreenColor( DaoStream *self, const char *fgcolor, const char *bgcolor )
 {
 	static int fg = -1;
 	static int bg = -1;
 	if( fgcolor && fgcolor[0] && MapColor( fgcolor ) >= 254 ) return 0;
 	if( bgcolor && bgcolor[0] && MapColor( bgcolor ) >= 254 ) return 0;
-	if( self->redirect == NULL && self->file == NULL ){
-		/* reset first, because resetting one of foreground and background could reset both: */
-		if( fg >= 0 && (fgcolor == NULL || fgcolor[0] == 0) ) SetCharForeground( self, fg );
-		if( bg >= 0 && (bgcolor == NULL || bgcolor[0] == 0) ) SetCharBackground( self, bg );
 
-		if( fgcolor && fgcolor[0] ){
-			int fg2 = SetCharForeground( self, MapColor( fgcolor ) );
-			if( fg < 0 ) fg = fg2;
-		}
-		if( bgcolor && bgcolor[0] ){
-			int bg2 = SetCharBackground( self, MapColor( bgcolor ) );
-			if( bg < 0 ) bg = bg2;
-		}
-		return 1;
+	/* reset first, because resetting one of foreground and background could reset both: */
+	if( fg >= 0 && (fgcolor == NULL || fgcolor[0] == 0) ) SetCharForeground( self, fg );
+	if( bg >= 0 && (bgcolor == NULL || bgcolor[0] == 0) ) SetCharBackground( self, bg );
+
+	if( fgcolor && fgcolor[0] ){
+		int fg2 = SetCharForeground( self, MapColor( fgcolor ) );
+		if( fg < 0 ) fg = fg2;
 	}
-	if( self->redirect == NULL || self->redirect->SetColor == NULL ) return 0;
-	self->redirect->SetColor( self->redirect, fgcolor, bgcolor );
+	if( bgcolor && bgcolor[0] ){
+		int bg2 = SetCharBackground( self, MapColor( bgcolor ) );
+		if( bg < 0 ) bg = bg2;
+	}
 	return 1;
 }
 
 #else
 
-int DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor ){ return 0; }
+int DaoStream_SetScreenColor( DaoStream *self, const char *fgcolor, const char *bgcolor ){ return 0; }
 
 #endif

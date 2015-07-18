@@ -60,7 +60,7 @@ DAO_DLL DString* DString_New();
 DAO_DLL void DString_Init( DString *self );
 DAO_DLL void DString_DeleteData( DString *self );
 DAO_DLL void DString_Delete( DString *self );
-DAO_DLL void DString_Detach( DString *self, int bufsize );
+DAO_DLL void DString_Detach( DString *self, daoint bufsize );
 
 DAO_DLL void DString_SetSharing( DString *self, int sharing );
 
@@ -114,8 +114,8 @@ DAO_DLL daoint DString_BalancedChar( DString *self, char ch, char lch, char rch,
 DAO_DLL DString DString_WrapBytes( const char *mbs, int n );
 DAO_DLL DString DString_WrapChars( const char *mbs );
 
-
 DAO_DLL void DString_AppendPathSep( DString *self );
+DAO_DLL void DString_MakePath( DString *base, DString *path );
 
 DAO_DLL DCharState DString_DecodeChar( char *start, char *end );
 DAO_DLL daoint DString_LocateChar( DString *self, daoint start, daoint count );

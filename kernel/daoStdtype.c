@@ -3973,9 +3973,9 @@ static void Dao_Exception_Serialize( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoException* self = (DaoException*) p[0];
 	DaoStream *stream = DaoStream_New();
-	stream->mode |= DAO_STREAM_STRING;
+	DaoStream_SetStringMode( stream );
 	DaoException_Print( self, stream );
-	DaoProcess_PutString( proc, stream->streamString );
+	DaoProcess_PutString( proc, stream->buffer );
 	DaoGC_TryDelete( (DaoValue*) stream );
 }
 #ifdef DEBUG
@@ -4145,9 +4145,10 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 	int codeShown = 0;
 	int i, h, w = 100, n = self->callers->size;
 	DaoStream *ss = DaoStream_New();
-	DString *sstring = ss->streamString;
-	ss->mode |= DAO_STREAM_STRING;
+	DString *sstring;
 
+	DaoStream_SetStringMode( ss );
+	sstring = ss->buffer;
 	DaoStream_WriteChars( ss, "[[" );
 	DaoStream_WriteChars( ss, self->ctype->typer->name );
 	DaoException_PrintName( (DaoValue*) self->object, ss );

@@ -315,6 +315,6 @@ void DaoProfiler_Report( DaoProfiler *self0, DaoStream *stream )
 DAO_DLL int DaoProfiler_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	DaoxProfiler *profiler = DaoxProfiler_New();
-	DaoVmSpace_SetUserProfiler( vmSpace, (DaoProfiler*) profiler );
+	DaoVmSpace_SetProfiler( vmSpace, (DaoProfiler*) profiler );
 	return 0;
 }

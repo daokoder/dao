@@ -538,25 +538,27 @@ DaoStream* DaoVmSpace_ErrorStream( DaoVmSpace *self )
 {
 	return self->errorStream;
 }
-DaoUserStream* DaoVmSpace_SetUserStdio( DaoVmSpace *self, DaoUserStream *stream )
+DaoStream* DaoVmSpace_SetStdio( DaoVmSpace *self, DaoStream *stream )
 {
-	return DaoStream_SetUserStream( self->stdioStream, stream );
+	DaoStdStream *stdstream = (DaoStdStream*) self->stdioStream;
+	DaoStream *prev = stdstream->redirect;
+	stdstream->redirect = stream;
+	return prev;
 }
-DaoUserStream* DaoVmSpace_SetUserStdError( DaoVmSpace *self, DaoUserStream *stream )
+DaoStream* DaoVmSpace_SetStdError( DaoVmSpace *self, DaoStream *stream )
 {
-	if( self->errorStream == self->stdioStream ){
-		DaoStream *stream = DaoStream_New();
-		GC_Assign( & self->errorStream, stream );
-	}
-	return DaoStream_SetUserStream( self->errorStream, stream );
+	DaoStdStream *stdstream = (DaoStdStream*) self->errorStream;
+	DaoStream *prev = stdstream->redirect;
+	stdstream->redirect = stream;
+	return prev;
 }
-DaoDebugger* DaoVmSpace_SetUserDebugger( DaoVmSpace *self, DaoDebugger *handler )
+DaoDebugger* DaoVmSpace_SetDebugger( DaoVmSpace *self, DaoDebugger *handler )
 {
 	DaoDebugger *hd = self->debugger;
 	self->debugger = handler;
 	return hd;
 }
-DaoProfiler* DaoVmSpace_SetUserProfiler( DaoVmSpace *self, DaoProfiler *profiler )
+DaoProfiler* DaoVmSpace_SetProfiler( DaoVmSpace *self, DaoProfiler *profiler )
 {
 	DaoProfiler *hd = self->profiler;
 	if( profiler == NULL || profiler->EnterFrame == NULL || profiler->LeaveFrame == NULL ){
@@ -565,7 +567,7 @@ DaoProfiler* DaoVmSpace_SetUserProfiler( DaoVmSpace *self, DaoProfiler *profiler
 	self->profiler = profiler;
 	return hd;
 }
-DaoUserHandler* DaoVmSpace_SetUserHandler( DaoVmSpace *self, DaoUserHandler *handler )
+DaoUserHandler* DaoVmSpace_SetHandler( DaoVmSpace *self, DaoUserHandler *handler )
 {
 	DaoUserHandler *hd = self->userHandler;
 	self->userHandler = handler;
@@ -594,7 +596,7 @@ static int DaoVmSpace_InitModulePath( DaoVmSpace *self, DString *path, DString *
 {
 	DString_Reset( buffer, 0 );
 	DString_AppendChars( buffer, DAO_DLL_PREFIX "dao_aux" DAO_DLL_SUFFIX );
-	Dao_MakePath( path, buffer );
+	DString_MakePath( path, buffer );
 	if( Dao_IsFile( buffer->chars ) ){
 		DaoVmSpace_AddPath( self, path->chars );
 		return 1;
@@ -613,13 +615,13 @@ static void DaoVmSpace_InitPath( DaoVmSpace *self )
 
 	DString_AppendChars( file, DAO_DIR );
 	DString_AppendChars( path, "lib/dao/modules/" );
-	Dao_MakePath( file, path );
+	DString_MakePath( file, path );
 	if( DaoVmSpace_InitModulePath( self, path, file ) ) goto Done;
 
 	for(i=0; i<2; ++i){
 		DString_Reset( path, 0 );
 		DString_AppendChars( path, paths[i] );
-		Dao_MakePath( mainVmSpace->daoBinPath, path );
+		DString_MakePath( mainVmSpace->daoBinPath, path );
 		if( DaoVmSpace_InitModulePath( self, path, file ) ) goto Done;
 	}
 
@@ -640,9 +642,10 @@ DaoVmSpace* DaoVmSpace_New()
 {
 	DaoVmSpace *self = (DaoVmSpace*) dao_calloc( 1, sizeof(DaoVmSpace) );
 	DaoValue_Init( self, DAO_VMSPACE );
-	self->stdioStream = DaoStream_New();
-	self->errorStream = DaoStream_New();
-	self->errorStream->file = stderr;
+	self->stdioStream = DaoStdStream_New();
+	self->errorStream = DaoStdStream_New();
+	self->errorStream->Read = NULL;
+	self->errorStream->Write = DaoStdStream_WriteStderr;
 	self->daoBinPath = DString_New();
 	self->startPath = DString_New();
 	self->mainSource = DString_New();
@@ -1539,7 +1542,7 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 			DString_SubString( file, group, 0, pos );
 			DString_SubString( file, data, pos+2, -1 );
 		}
-		Dao_MakePath( self->pathWorking, data );
+		DString_MakePath( self->pathWorking, data );
 		fin = Dao_OpenFile( data->chars, "r" );
 		if( fin == NULL ){
 			DaoStream_PrintFileInfo( self->errorStream, data, "WARNING: cannot open resource: " );
@@ -1575,7 +1578,7 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 	for(it=DMap_First(archives); it; it=DMap_Next(archives,it)){
 		DString_Assign( group, it->key.pString );
 		it2 = DMap_Find( counts, group );
-		Dao_MakePath( ns->path, group );
+		DString_MakePath( ns->path, group );
 		DString_AppendChars( group, ".dar" );
 		fout2 = Dao_OpenFile( group->chars, "w+" );
 		fprintf( fout2, "\33\33\r\n" );
@@ -1660,7 +1663,7 @@ void DaoVmSpace_LoadArchive( DaoVmSpace *self, DString *archive, DString *group 
 			FILE *fin;
 			DString_SetChars( name, data + pos + 2 + m + 4 );
 			DaoVmSpace_ConvertPath2( self, name );
-			Dao_MakePath( self->startPath, name );
+			DString_MakePath( self->startPath, name );
 			fin = Dao_OpenFile( name->chars, "r" );
 			if( fin == NULL ){
 				DaoStream_PrintFileInfo( self->errorStream, name, "WARNING: cannot open archive: " );
@@ -2199,7 +2202,7 @@ void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, DaoVModule *module )
 	if( strcmp( module->name, "$(ARCHIVE)" ) == 0 ){ /* External archive: */
 		DString_SetBytes( fname, data, module->length );
 		DaoVmSpace_ConvertPath2( self, fname );
-		Dao_MakePath( self->startPath, fname );
+		DString_MakePath( self->startPath, fname );
 		fin = Dao_OpenFile( fname->chars, "r" );
 		if( fin != NULL ){
 			DaoFile_ReadAll( fin, source, 1 );
@@ -2254,42 +2257,6 @@ void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, DaoVModule *module )
 	DString_Delete( source );
 }
 
-void Dao_MakePath( DString *base, DString *path )
-{
-	if( base->size == 0 ) return;
-	if( path->size >= 2 && path->chars[0] == '$' && path->chars[1] == '(' ) return;
-
-	if( path->size >= 2 && isalpha( path->chars[0] ) && path->chars[1] == ':' ) return;
-	if( path->chars[0] == '/' ) return;
-
-	base = DString_Copy( base );
-	Dao_NormalizePathSep( base );
-	Dao_NormalizePathSep( path );
-	while( DString_Match( path, " ^ %.%. / ", NULL, NULL ) ){
-		if( DString_Match( base, " [^/] + ( / | ) $ ", NULL, NULL ) ){
-			DString_Change( path, " ^ %.%. / ", "", 1 );
-			DString_Change( base, " [^/] + ( / |) $ ", "", 0 );
-		}else{
-			DString_Delete( base );
-			return;
-		}
-	}
-	if( DString_Match( path, " ^ %.%. $ ", NULL, NULL ) ){
-		if( DString_Match( base, " [^/] + ( / | ) $ ", NULL, NULL ) ){
-			DString_Clear( path );
-			DString_Change( base, " [^/] + ( / |) $ ", "", 0 );
-		}
-	}
-	if( base->size && path->size ){
-		if( base->chars[ base->size-1 ] != '/' && path->chars[0] != '/' )
-			DString_InsertChar( path, '/', 0 );
-		DString_Insert( path, base, 0, 0, 0 );
-	}else if( base->size && path->size == 0 ){
-		DString_Assign( path, base );
-	}
-	while( DString_Change( path, "/ %. (/|$)", "/", 0 ) );
-	DString_Delete( base );
-}
 int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname, DString *search )
 {
 	DString *path;
@@ -2299,7 +2266,7 @@ int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname, DString *search
 	DString_Append( path, fname );
 	if( TestPath( self, path, DAO_FILE_PATH ) == 0 ){
 		DString_Assign( path, fname );
-		Dao_MakePath( search, path );
+		DString_MakePath( search, path );
 	}
 	if( TestPath( self, path, DAO_FILE_PATH ) ){
 		DString_Assign( fname, path );
@@ -2362,7 +2329,7 @@ void DaoVmSpace_SearchPath( DaoVmSpace *self, DString *fname, int type, int chec
 			if( path->size ==0 ) goto FreeString;
 		}else if( self->pathWorking->size==0 ) goto FreeString;
 
-		Dao_MakePath( path, fname );
+		DString_MakePath( path, fname );
 		goto FreeString;
 	}
 
@@ -2398,7 +2365,7 @@ void DaoVmSpace_MakePath( DaoVmSpace *self, DString *path )
 
 	if( self->pathLoading->size ) wpath = self->pathLoading->items.pString[0];
 	if( path->chars[0] == '.' ){
-		Dao_MakePath( wpath, path );
+		DString_MakePath( wpath, path );
 	}else{
 		DString *tmp = DString_Copy( wpath );
 		if( tmp->size > 0 && tmp->chars[ tmp->size-1 ] != '/' ) DString_AppendChars( tmp, "/" );
@@ -2625,7 +2592,7 @@ static int Dao_GetExecutablePath( const char *command, DString *path )
 		daoint len = (j == DAO_NULLPOS) ? paths.size - i : j - i;
 		DString base = DString_WrapBytes( paths.chars + i, len );
 		DString_SetChars( path, command );
-		Dao_MakePath( & base, path );
+		DString_MakePath( & base, path );
 		Dao_NormalizePathSep( path );
 		if( Dao_IsFile( path->chars ) ) return 1;
 		if( j == DAO_NULLPOS ) break;
@@ -2724,7 +2691,7 @@ DaoVmSpace* DaoInit( const char *command )
 #endif
 		if( absolute == 0 ){
 			if( relative ){
-				Dao_MakePath( mainVmSpace->startPath, mainVmSpace->daoBinPath );
+				DString_MakePath( mainVmSpace->startPath, mainVmSpace->daoBinPath );
 			}else{
 				Dao_GetExecutablePath( command, mainVmSpace->daoBinPath );
 			}

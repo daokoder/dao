@@ -8035,9 +8035,9 @@ static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nva
 	if( proc->exceptions->size == 0 ) return value;
 
 	stream = DaoStream_New();
-	stream->mode |= DAO_STREAM_STRING;
+	DaoStream_SetStringMode( stream );
 	DaoProcess_PrintException( proc, stream, 1 );
-	DaoParser_Error( self, DAO_EVAL_EXCEPTION, stream->streamString );
+	DaoParser_Error( self, DAO_EVAL_EXCEPTION, stream->buffer );
 	DaoParser_Error( self, DAO_CTW_INV_CONST_EXPR, NULL );
 	DaoStream_Delete( stream );
 	return value;

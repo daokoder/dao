@@ -45,13 +45,7 @@ typedef struct DaoTestStream  DaoTestStream;
 
 struct DaoTestStream
 {
-	DaoStream *stream;
-	/* count>0: read count bytes; count=0: one line; count<0: until EOF */
-	void (*StdioRead)( DaoTestStream *self, DString *input, int count );
-	void (*StdioWrite)( DaoTestStream *self, DString *output );
-	void (*StdioFlush)( DaoTestStream *self );
-	void (*SetColor)( DaoTestStream *self, const char *fgcolor, const char *bgcolor );
-
+	DaoStream base;
 	DString  *output;
 };
 
@@ -59,18 +53,24 @@ struct DaoTestStream
 
 DMutex mutex;
 
-static void DaoTestStream_Write( DaoTestStream *self, DString *output )
+static int DaoTestStream_Write( DaoStream *stream, const void *data, int count )
 {
+	DaoTestStream *self = (DaoTestStream*) stream;
+	DString string = DString_WrapBytes( (char*) data, count );
 	DMutex_Lock( & mutex );
-	DString_Append( self->output, output );
+	DString_Append( self->output, & string );
 	DMutex_Unlock( & mutex );
+	return count;
 }
 
 #else
 
-static void DaoTestStream_Write( DaoTestStream *self, DString *output )
+static int DaoTestStream_Write( DaoStream *stream, const void *data, int count )
 {
-	DString_Append( self->output, output );
+	DaoTestStream *self = (DaoTestStream*) stream;
+	DString string = DString_WrapBytes( (char*) data, count );
+	DString_Append( self->output, & string );
+	return count;
 }
 
 #endif
@@ -131,7 +131,7 @@ void GetCounts( DString *text, int *mps, int *mfs, int *ps, int *fs )
 
 int main( int argc, char **argv )
 {
-	DaoTestStream stream0 = {NULL,NULL,NULL,NULL,NULL,NULL};
+	DaoTestStream stream0 = { {DAO_CSTRUCT,0,0,0,1,1, NULL,NULL, NULL,NULL,NULL,NULL,NULL, 0, NULL} };
 	DaoTestStream *stream = & stream0;
 	DaoNamespace *ns;
 	DaoProcess *proc;
@@ -241,10 +241,10 @@ int main( int argc, char **argv )
 			DString *output = DString_New();
 			DString *output2 = DString_New();
 			DaoRegex *regex;
-			stream->StdioWrite = DaoTestStream_Write;
+			stream->base.Write = DaoTestStream_Write;
 			stream->output = output;
-			DaoVmSpace_SetUserStdio( vmSpace, (DaoUserStream*) stream );
-			DaoVmSpace_SetUserStdError( vmSpace, (DaoUserStream*) stream );
+			DaoVmSpace_SetStdio( vmSpace, (DaoStream*) stream );
+			DaoVmSpace_SetStdError( vmSpace, (DaoStream*) stream );
 			for(j=0; j<dao_tests->size; j+=3){
 				DString *id = dao_tests->items.pString[j];
 				DString *codes = dao_tests->items.pString[j+1];

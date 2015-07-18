@@ -189,7 +189,7 @@ void DString_Delete( DString *self )
 	DString_DeleteData( self );
 	dao_free( self );
 }
-void DString_Detach( DString *self, int bufsize )
+void DString_Detach( DString *self, daoint bufsize )
 {
 	daoint size;
 	int *data2, *data = (int*)self->chars - self->sharing;
@@ -667,6 +667,43 @@ void DString_AppendPathSep( DString *self )
 	char last = self->size ? self->chars[self->size-1] : 0;
 	if( last != '/' && last != '\\' ) DString_AppendChar( self, '/' );
 }
+void DString_MakePath( DString *base, DString *path )
+{
+	if( base->size == 0 ) return;
+	if( path->size >= 2 && path->chars[0] == '$' && path->chars[1] == '(' ) return;
+
+	if( path->size >= 2 && isalpha( path->chars[0] ) && path->chars[1] == ':' ) return;
+	if( path->chars[0] == '/' ) return;
+
+	base = DString_Copy( base );
+	Dao_NormalizePathSep( base );
+	Dao_NormalizePathSep( path );
+	while( DString_Match( path, " ^ %.%. / ", NULL, NULL ) ){
+		if( DString_Match( base, " [^/] + ( / | ) $ ", NULL, NULL ) ){
+			DString_Change( path, " ^ %.%. / ", "", 1 );
+			DString_Change( base, " [^/] + ( / |) $ ", "", 0 );
+		}else{
+			DString_Delete( base );
+			return;
+		}
+	}
+	if( DString_Match( path, " ^ %.%. $ ", NULL, NULL ) ){
+		if( DString_Match( base, " [^/] + ( / | ) $ ", NULL, NULL ) ){
+			DString_Clear( path );
+			DString_Change( base, " [^/] + ( / |) $ ", "", 0 );
+		}
+	}
+	if( base->size && path->size ){
+		if( base->chars[ base->size-1 ] != '/' && path->chars[0] != '/' )
+			DString_InsertChar( path, '/', 0 );
+		DString_Insert( path, base, 0, 0, 0 );
+	}else if( base->size && path->size == 0 ){
+		DString_Assign( path, base );
+	}
+	while( DString_Change( path, "/ %. (/|$)", "/", 0 ) );
+	DString_Delete( base );
+}
+
 
 
 

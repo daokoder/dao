@@ -34,14 +34,13 @@
 
 #include"daoType.h"
 
+typedef struct DaoStdStream  DaoStdStream;
 
 enum DaoStreamModes
 {
-	DAO_STREAM_FILE     = 1<<0 ,
-	DAO_STREAM_STRING   = 1<<1 ,
-	DAO_STREAM_READABLE = 1<<2 ,
-	DAO_STREAM_WRITABLE = 1<<3 ,
-	DAO_STREAM_AUTOCONV = 1<<4 
+	DAO_STREAM_READABLE = 1<<0 ,
+	DAO_STREAM_WRITABLE = 1<<1 ,
+	DAO_STREAM_AUTOCONV = 1<<2 
 };
 
 
@@ -49,19 +48,61 @@ struct DaoStream
 {
 	DAO_CSTRUCT_COMMON;
 
-	short        mode;
-	dao_integer  offset;
-	char        *format;
-	FILE        *file;
-	DString     *streamString;
+	/*
+	// Read at most count bytes from the stream;
+	// Return the number of readed bytes;
+	// Return -1 on error;
+	// Not null for a readable stream;
+	//
+	// If appliable:
+	// -- count = -2: read all;
+	// -- count = -1: read line;
+	// -- count >= 0: read count bytes;
+	*/
+	int (*Read) ( DaoStream *self, DString *data, int count );
 
-	DaoUserStream *redirect;
+	/*
+	// Write count number of bytes to the stream; 
+	// Return the number of written bytes;
+	// Return -1 on error;
+	// Not null for a writable stream;
+	*/
+	int (*Write)( DaoStream *self, const void *data, int count );
+
+	/*
+	// End of stream, if supported;
+	*/
+	int (*AtEnd)( DaoStream *self );
+
+	/*
+	// Flush writes, if supported;
+	*/
+	void (*Flush)( DaoStream *self );
+
+	/*
+	// Set text highlighting color (terminal color on screen stdout);
+	*/
+	int (*SetColor)( DaoStream *self, const char *fgcolor, const char *bgcolor );
+
+	short     mode;
+	char     *format;
+	DString  *buffer;
 };
+
+struct DaoStdStream
+{
+	DaoStream   base;
+	DaoStream  *redirect;
+};
+
 DAO_DLL DaoType *dao_type_stream;
 
+
 DAO_DLL DaoStream* DaoStream_New();
+DAO_DLL DaoStream* DaoStdStream_New();
+
 DAO_DLL void DaoStream_Delete( DaoStream *self );
-DAO_DLL void DaoStream_Close( DaoStream *self );
+DAO_DLL void DaoStream_SetStringMode( DaoStream *self );
 DAO_DLL void DaoStream_Flush( DaoStream *self );
 
 DAO_DLL void DaoStream_WriteChar( DaoStream *self, char val );
@@ -69,10 +110,14 @@ DAO_DLL void DaoStream_WriteInt( DaoStream *self, dao_integer val );
 DAO_DLL void DaoStream_WriteFloat( DaoStream *self, double val );
 DAO_DLL void DaoStream_WriteString( DaoStream *self, DString *val );
 DAO_DLL void DaoStream_WriteLocalString( DaoStream *self, DString *val );
-DAO_DLL void DaoStream_WriteChars( DaoStream *self, const char *val );
-DAO_DLL void DaoStream_WritePointer( DaoStream *self, void *val );
+DAO_DLL void DaoStream_WriteChars( DaoStream *self, const char *chars );
+DAO_DLL void DaoStream_WritePointer( DaoStream *self, void *pointer );
 DAO_DLL void DaoStream_WriteFormatedInt( DaoStream *self, dao_integer val, const char *format );
 DAO_DLL void DaoStream_WriteNewLine( DaoStream *self );
+
+DAO_DLL daoint DaoStream_Read( DaoStream *self, DString *output, daoint count );
+DAO_DLL daoint DaoStream_ReadBytes( DaoStream *self, void *output, daoint count );
+DAO_DLL daoint DaoStream_WriteBytes( DaoStream *self, const void *bytes, daoint count );
 
 DAO_DLL int DaoStream_IsOpen( DaoStream *self );
 DAO_DLL int DaoStream_EndOfStream( DaoStream *self );
@@ -81,6 +126,16 @@ DAO_DLL int DaoStream_IsWritable( DaoStream *self );
 
 DAO_DLL int DaoStream_SetColor( DaoStream *self, const char *fgcolor, const char *bgcolor );
 DAO_DLL int DaoStream_ReadLine( DaoStream *self, DString *buf );
+
+DAO_DLL int DaoStream_ReadStdin( DaoStream *self, DString *data, int count );
+DAO_DLL int DaoStream_WriteStdout( DaoStream *self, const void *output, int count );
+DAO_DLL int DaoStream_WriteStderr( DaoStream *self, const void *output, int count );
+DAO_DLL void DaoStream_FlushStdout( DaoStream *self );
+
+DAO_DLL int DaoStdStream_ReadStdin( DaoStream *self, DString *data, int count );
+DAO_DLL int DaoStdStream_WriteStdout( DaoStream *self, const void *output, int count );
+DAO_DLL int DaoStdStream_WriteStderr( DaoStream *self, const void *output, int count );
+
 DAO_DLL int DaoFile_ReadLine( FILE *fin, DString *line );
 DAO_DLL int DaoFile_ReadAll( FILE *fin, DString *output, int close );
 DAO_DLL int DaoFile_ReadPart( FILE *fin, DString *output, daoint offset, daoint count );
