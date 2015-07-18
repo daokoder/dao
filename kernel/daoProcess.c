@@ -3536,8 +3536,10 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 			break;
 		case DAO_CSTRUCT :
 		case DAO_CDATA   :
-			if( va->xCstruct.object ) va = (DaoValue*) va->xCstruct.object->rootObject;
-			at = va->xObject.defClass->objType;
+			if( va->xCstruct.object ){
+				va = (DaoValue*) va->xCstruct.object->rootObject;
+				at = va->xObject.defClass->objType;
+			}
 			break;
 		}
 		/* automatic binding when casted to an interface: */
