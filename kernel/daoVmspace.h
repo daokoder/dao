@@ -112,6 +112,7 @@ struct DaoVmSpace
 	int    stopit;
 	int    options;
 	int    evalCmdline;
+	int    auxLoaded;
 
 	DMap  *vfiles;
 	DMap  *vmodules;

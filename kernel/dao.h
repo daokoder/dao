@@ -67,6 +67,11 @@
 #endif /* WIN32 */
 
 
+#ifndef DAO_API
+#  define DAO_API(Linkage,Type,Name,Signature)  Linkage Type Name Signature
+#endif
+
+
 #ifndef DAO_I64
 #  ifdef WIN32
 #    define DAO_INT  "Ii"

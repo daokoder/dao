@@ -170,6 +170,17 @@ daovm_kernel_sources =
 	"kernel/daoVmspace.c" 
 }
 
+daovm_auxlib_headers =
+{
+	"modules/auxlib/dao_aux.h",
+	"modules/auxlib/dao_api.h"
+}
+daovm_auxlib_sources =
+{
+	"modules/auxlib/dao_aux.c",
+	"modules/auxlib/dao_api.c"
+}
+
 
 
 ###########################################################################
@@ -179,6 +190,7 @@ daovm_kernel_sources =
 #
 ###########################################################################
 daovm_kernel_objects = daovm.AddObjects( daovm_kernel_sources, daovm_kernel_headers )
+daovm_auxlib_objects = daovm.AddObjects( daovm_auxlib_sources, daovm_auxlib_headers )
 daovm_main_object    = daovm.AddObjects( { "kernel/daoMain.c" }, daovm_kernel_headers );
 
 
@@ -192,11 +204,13 @@ daovm_main_object    = daovm.AddObjects( { "kernel/daoMain.c" }, daovm_kernel_he
 # This target will be built from the object set "daovm_kernel_objects".
 #
 daovm_dll = daovm.AddSharedLibrary( "dao", daovm_kernel_objects )
+auxlib_dll = daovm.AddSharedLibrary( "dao_aux", daovm_auxlib_objects )
 
 #
 # Add a static library target to the project:
 #
 daovm_lib = daovm.AddStaticLibrary( "dao", daovm_kernel_objects )
+auxlib_lib = daovm.AddStaticLibrary( "dao_aux", daovm_auxlib_objects )
 
 #
 # Add an executable target:
@@ -211,8 +225,11 @@ if( DaoMake::IsPlatform( "WIN32" ) ){
 	daovm_lib.SetTargetPath( "lib" )
 }
 daovm_exe.SetTargetPath( "bin" )
+auxlib_dll.SetTargetPath( "lib/dao/modules" )
+auxlib_lib.SetTargetPath( "lib/dao/modules" )
 
 daovm.AddIncludePath( "kernel" )
+daovm.AddIncludePath( "modules/auxlib" )
 
 
 ###########################################################################
@@ -304,6 +321,9 @@ if( daovm_with_readline == $ON ){
 	}
 }
 
+if( DaoMake::IsDir( "modules/stream" ) ) daovm_auxlib_objects.AddDefinition( "DAO_HAS_STREAM" );
+if( DaoMake::IsDir( "modules/image" ) )  daovm_auxlib_objects.AddDefinition( "DAO_HAS_IMAGE" );
+
 
 ###########################################################################
 #
@@ -311,9 +331,9 @@ if( daovm_with_readline == $ON ){
 #
 ###########################################################################
 
+#auxlib = daovm.AddDirectory( "auxlib", "modules/auxlib" );
 debugger = daovm.AddDirectory( "debugger", "modules/debugger" );
 profiler = daovm.AddDirectory( "profiler", "modules/profiler" );
-auxlib = daovm.AddDirectory( "auxlib", "modules/auxlib" )
 help = daovm.AddDirectory( "help", "modules/help" )
 macro = daovm.AddDirectory( "macro", "modules/macro" )
 
@@ -330,9 +350,9 @@ modules = daovm.AddDirectory( "modules", "modules" )
 
 
 # Add dependencies:
+#auxlib.AddDependency( daovm_dll )
 debugger.AddDependency( daovm_dll )
 profiler.AddDependency( daovm_dll )
-auxlib.AddDependency( daovm_dll )
 help.AddDependency( daovm_dll )
 macro.AddDependency( daovm_dll )
 

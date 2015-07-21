@@ -1,22 +1,19 @@
 
-project = DaoMake::Project( "DaoAux" ) 
-
 daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
-project.UseImportLibrary( daovm, "dao" )
-project.AddIncludePath( "." ) # To be exported in FindDaoAux.dao
-project.SetTargetPath( "../../lib/dao/modules" )
+daovm.AddIncludePath( "." ) # To be exported in FindDaoAux.dao
+daovm.SetTargetPath( "../../lib/dao/modules" )
 
-project_objs = project.AddObjects( { "dao_aux.c" }, { "dao_aux.h" } )
-project_dll  = project.AddSharedLibrary( "dao_aux", project_objs )
-project_lib  = project.AddStaticLibrary( "dao_aux", project_objs )
+if( DaoMake::IsDir( "stream" ) ) daovm.AddDefinition( "DAO_HAS_STREAM" );
+
+daovm_aux_objs = daovm.AddObjects( { "dao_aux.c", "dao_api.c" }, { "dao_aux.h", "dao_api.h" } )
+daovm_aux_dll  = daovm.AddSharedLibrary( "dao_aux", daovm_aux_objs )
+daovm_aux_lib  = daovm.AddStaticLibrary( "dao_aux", daovm_aux_objs )
 
 
 auxinc = DaoMake::MakePath( DaoMake::Variables[ "INSTALL_INC" ], "modules/auxlib" )
-project.Install( auxinc, { "dao_aux.h" } );
-findpkg = project.GenerateFinder( $TRUE );
-project.Install( DaoMake::Variables[ "INSTALL_MOD" ], project_dll );
-project.Install( DaoMake::Variables[ "INSTALL_MOD" ], project_lib );
-project.Install( DaoMake::Variables[ "INSTALL_FINDER" ], findpkg );
+daovm.Install( auxinc, { "dao_aux.h", "dao_api.h" } );
+daovm.Install( DaoMake::Variables[ "INSTALL_MOD" ], daovm_aux_dll );
+daovm.Install( DaoMake::Variables[ "INSTALL_MOD" ], daovm_aux_lib );

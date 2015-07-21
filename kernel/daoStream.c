@@ -191,7 +191,7 @@ int DaoStream_IsOpen( DaoStream *self )
 }
 int DaoStream_EndOfStream( DaoStream *self )
 {
-	if( self->AtEnd == NULL ) return 1;
+	if( self->AtEnd == NULL ) return 0;
 	return self->AtEnd( self );
 }
 int DaoStream_IsReadable( DaoStream *self )

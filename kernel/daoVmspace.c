@@ -2086,6 +2086,17 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	ns = DaoVmSpace_FindNamespace( self, libpath );
 	if( ns ) return ns;
 
+	if( self->auxLoaded == 0 ){
+		int load = 0;
+		DaoVmSpace_Lock( self );
+		if( self->auxLoaded == 0 ){
+			self->auxLoaded = 1;
+			load = 1;
+		}
+		DaoVmSpace_Unlock( self );
+		if( load ) DaoVmSpace_Load( self, "dao_aux" );
+	}
+
 	if( (node = MAP_Find( self->vmodules, libpath ) ) ){
 		funpter = (DaoModuleOnLoad) node->value.pVoid;
 		ns = DaoNamespace_New( self, libpath->chars );
