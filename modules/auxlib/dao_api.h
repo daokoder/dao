@@ -54,3 +54,8 @@
 #include"../image/source/dao_image.h"
 #endif
 
+
+#ifdef DAO_HAS_TIME
+#define DAO_TIME
+#include"../time/dao_time.h"
+#endif

@@ -15,3 +15,8 @@
 #ifdef DAO_HAS_IMAGE
 #include"../image/source/dao_image.h"
 #endif
+
+
+#ifdef DAO_HAS_TIME
+#include"../time/dao_time.h"
+#endif
