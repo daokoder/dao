@@ -2557,6 +2557,7 @@ extern DMutex mutex_routine_specialize2;
 extern DaoFuncItem dao_mt_methods[];
 #endif
 
+DaoType *dao_type_io_device = NULL;
 DaoType *dao_type_stream = NULL;
 extern DaoFuncItem dao_std_methods[];
 extern DaoFuncItem dao_io_methods[];
@@ -2765,7 +2766,7 @@ DaoVmSpace* DaoInit( const char *command )
 
 	ns2 = DaoVmSpace_GetNamespace( vms, "io" );
 	DaoNamespace_AddConstValue( daons, "io", (DaoValue*) ns2 );
-	DaoNamespace_WrapInterface( ns2, & ioDeviceTyper );
+	dao_type_io_device = DaoNamespace_WrapInterface( ns2, & ioDeviceTyper );
 	dao_type_stream = DaoNamespace_WrapType( ns2, & streamTyper, 0 );
 	GC_Assign( & vms->stdioStream->ctype, dao_type_stream );
 	GC_Assign( & vms->errorStream->ctype, dao_type_stream );

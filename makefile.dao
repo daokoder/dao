@@ -94,7 +94,7 @@ if( daovm_use_code_state  == $ON ) daovm.AddDefinition( "DAO_USE_CODE_STATE" );
 
 daovm.AddDefinition( "TARGET_PLAT", "\\\"" + DaoMake::Platform() + "\\\"" )
 
-changeset = io.read( DaoMake::SourcePath() /"manifest.uuid", true )
+changeset = DaoMake::ReadFile( DaoMake::SourcePath() /"manifest.uuid", true )
 if( % changeset ) daovm.AddDefinition( "CHANGESET_ID", "\\\"FOS." + changeset[:11] + "\\\"" )
 
 

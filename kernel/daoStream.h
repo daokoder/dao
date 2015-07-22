@@ -95,6 +95,7 @@ struct DaoStdStream
 	DaoStream  *redirect;
 };
 
+DAO_DLL DaoType *dao_type_io_device;
 DAO_DLL DaoType *dao_type_stream;
 
 
@@ -139,7 +140,7 @@ DAO_DLL int DaoStdStream_WriteStderr( DaoStream *self, const void *output, int c
 DAO_DLL int DaoFile_ReadLine( FILE *fin, DString *line );
 DAO_DLL int DaoFile_ReadAll( FILE *fin, DString *output, int close );
 DAO_DLL int DaoFile_ReadPart( FILE *fin, DString *output, daoint offset, daoint count );
-DAO_DLL void DaoFile_WriteString( FILE *fout, DString *str );
+DAO_DLL int DaoFile_WriteString( FILE *fout, DString *str );
 
 
 #endif

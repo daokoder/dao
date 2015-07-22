@@ -376,16 +376,21 @@ int DaoFile_ReadPart( FILE *fin, DString *output, daoint offset, daoint count )
 	if( close ) fclose( fin );
 	return output->size - size;
 }
-void DaoFile_WriteString( FILE* file, DString *str )
+int DaoFile_WriteString( FILE* file, DString *str )
 {
 	daoint pos = 0;
-	while( 1 ){
-		fprintf( file, "%s", str->chars + pos );
-		pos = DString_FindChar( str, '\0', pos );
-		if( pos == DAO_NULLPOS ) break;
+	while( pos < str->size ){
+		daoint count = fprintf( file, "%s", str->chars + pos );
+		if( count < 0 ) return 0;
+
+		pos += count;
+		if( pos >= str->size ) return 1;
+		if( str->chars[pos] != '\0' ) return 0;
+
 		fprintf( file, "%c", 0 );
 		pos += 1;
 	}
+	return 1;
 }
 
 
@@ -674,60 +679,6 @@ static void DaoIO_Read( DaoProcess *proc, DaoValue *p[], int N )
 }
 
 
-/*
-// Special relative paths:
-// 1. ::path, path relative to the current source code file;
-// 2. :path, path relative to the current working directory;
-*/
-static void DaoIO_MakePath( DaoProcess *proc, DString *path )
-{
-	if( path->size ==0 ) return;
-	if( path->chars[0] != ':' ) return;
-	if( path->chars[1] == ':' ){
-		DString_Erase( path, 0, 2 );
-		DString_MakePath( proc->activeNamespace->path, path );
-		return;
-	}
-	DString_Erase( path, 0, 1 );
-	DString_MakePath( proc->vmSpace->pathWorking, path );
-}
-static FILE* DaoIO_OpenFile( DaoProcess *proc, DString *name, const char *mode, int silent )
-{
-	DString *fname = DString_Copy( name );
-	char buf[IO_BUF_SIZE];
-	FILE *fin;
-
-	DaoIO_MakePath( proc, fname );
-	fin = Dao_OpenFile( fname->chars, mode );
-	DString_Delete( fname );
-	if( fin == NULL && silent == 0 ){
-		snprintf( buf, IO_BUF_SIZE, "error opening file: %s", DString_GetData( name ) );
-		DaoProcess_RaiseError( proc, NULL, buf );
-		return NULL;
-	}
-	return fin;
-}
-static void DaoIO_ReadFile( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DString *res = DaoProcess_PutChars( proc, "" );
-	daoint silent = p[1]->xBoolean.value;
-	if( DString_Size( p[0]->xString.value ) ==0 ){
-		char buf[IO_BUF_SIZE];
-		while(1){
-			size_t count = fread( buf, 1, sizeof( buf ), stdin );
-			if( count ==0 ) break;
-			DString_AppendBytes( res, buf, count );
-		}
-	}else{
-		FILE *fin = DaoIO_OpenFile( proc, p[0]->xString.value, "r", silent );
-		struct stat info;
-		if( fin == NULL ) return;
-		fstat( fileno( fin ), &info );
-		DString_Reserve( res, info.st_size );
-		DString_Reset( res, fread( res->chars, 1, info.st_size, fin ) );
-		fclose( fin );
-	}
-}
 static void DaoIO_Check( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoStream *self = & p[0]->xStream;
@@ -808,7 +759,6 @@ DaoFuncItem dao_io_methods[] =
 	{ DaoIO_Writef2,   "writef( format: string, invar ... : any )" },
 	{ DaoIO_Writeln2,  "writeln( invar ... : any )" },
 	{ DaoIO_Read,      "read( )=>string" },
-	{ DaoIO_ReadFile,  "read( file: string, silent = false )=>string" },
 	{ NULL, NULL }
 };
 

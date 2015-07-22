@@ -2939,6 +2939,51 @@ static void DAOMAKE_FindFile( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	if( loc ) DString_SubString( hints, res, loc>>16, loc&0xffff );
 }
+/*
+// Special relative paths:
+// 1. ::path, path relative to the current source code file;
+// 2. :path, path relative to the current working directory;
+*/
+static void DAOMAKE_MakeFilePath( DaoProcess *proc, DString *path )
+{
+	if( path->size ==0 ) return;
+	if( path->chars[0] != ':' ) return;
+	if( path->chars[1] == ':' ){
+		DString_Erase( path, 0, 2 );
+		DString_MakePath( proc->activeNamespace->path, path );
+		return;
+	}
+	DString_Erase( path, 0, 1 );
+	DString_MakePath( proc->vmSpace->pathWorking, path );
+}
+static FILE* DAOMAKE_OpenFile( DaoProcess *proc, DString *name, const char *mode, int silent )
+{
+	DString *fname = DString_Copy( name );
+	char buf[128];
+	FILE *fin;
+
+	DAOMAKE_MakeFilePath( proc, fname );
+	fin = Dao_OpenFile( fname->chars, mode );
+	DString_Delete( fname );
+	if( fin == NULL && silent == 0 ){
+		snprintf( buf, sizeof(buf), "error opening file: %s", DString_GetData( name ) );
+		DaoProcess_RaiseError( proc, NULL, buf );
+		return NULL;
+	}
+	return fin;
+}
+static void DAOMAKE_ReadFile( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DString *res = DaoProcess_PutChars( proc, "" );
+	daoint silent = p[1]->xBoolean.value;
+	FILE *fin = DAOMAKE_OpenFile( proc, p[0]->xString.value, "r", silent );
+	struct stat info;
+	if( fin == NULL ) return;
+	fstat( fileno( fin ), &info );
+	DString_Reserve( res, info.st_size );
+	DString_Reset( res, fread( res->chars, 1, info.st_size, fin ) );
+	fclose( fin );
+}
 static void DAOMAKE_TestCompile( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *md5, *command, *source, *output;
@@ -3180,6 +3225,9 @@ static DaoFuncItem DaoMakeMeths[] =
 {
 	{ DAOMAKE_FindPackage, "FindPackage( name: string, opt :enum<OPTIONAL,REQUIRED> = $OPTIONAL ) => Project|none" },
 	{ DAOMAKE_FindFile,    "FindFile( file: string, hints = '' ) => string" },
+
+	{ DAOMAKE_ReadFile,    "ReadFile( file: string, silent = false ) => string" },
+
 	{ DAOMAKE_TestCompile, "TestCompile( code :string, lflag='', cflag='', cxx=0 ) => int" },
 
 	{ DAOMAKE_OptionBOOL,  "Option( name: string, value: enum<OFF,ON> ) => enum<OFF,ON>" },
