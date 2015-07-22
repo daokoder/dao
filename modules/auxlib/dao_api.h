@@ -34,9 +34,9 @@
 
 
 #ifdef DAO_API_INIT
-#  define DAO_API(Linkage,Type,Name,Signature)  _##Name = Name;
+#  define DAO_API(Linkage,Type,Name,Signature)  _##Name = Name
 /*
- printf( "%i %p\n", __LINE__, & _##Name )
+; printf( "%i %p\n", __LINE__, & _##Name )
  */
 #else
 #  define DAO_API(Linkage,Type,Name,Signature)  DAO_DLL Type (*_##Name) Signature
@@ -44,18 +44,15 @@
 
 
 #ifdef DAO_HAS_STREAM
-#define DAO_STREAM
 #include"../stream/dao_stream.h"
 #endif
 
 
 #ifdef DAO_HAS_IMAGE
-#define DAO_IMAGE
 #include"../image/source/dao_image.h"
 #endif
 
 
 #ifdef DAO_HAS_TIME
-#define DAO_TIME
 #include"../time/dao_time.h"
 #endif

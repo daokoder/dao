@@ -267,6 +267,8 @@ if( daovm_partial_static == $ON ){
 	daovm_exe.UseSharedLibrary( daovm, "dao" )
 	daovm_exe.AddDependency( daovm_dll )
 }
+auxlib_dll.UseSharedLibrary( daovm, "dao" )
+auxlib_dll.AddDependency( daovm_dll )
 
 
 

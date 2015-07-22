@@ -26,16 +26,18 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#define DAO_AUX
+
 #include<stdlib.h>
 #include<string.h>
 #include<math.h>
+#include"dao_aux.h"
 #include"daoString.h"
 #include"daoValue.h"
 #include"daoParser.h"
 #include"daoNamespace.h"
 #include"daoNumtype.h"
 #include"daoGC.h"
-#include"dao_aux.h"
 
 
 
@@ -404,7 +406,7 @@ DaoArray* DaoProcess_PutVectorC( DaoProcess *s, dao_complex *v, daoint n ){ retu
 
 
 
-DAO_DLL int DaoAux_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
+DAO_DLL_EXPORT int DaoAux_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	return 0;
 }

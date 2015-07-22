@@ -919,6 +919,7 @@ void DaoMakeUnit_Use( DaoMakeUnit *self, DaoMakeUnit *other, int import )
 		DString *flag;
 
 		DList_AppendPaths( self->includePaths, other->includePaths, other->sourcePath );
+		DList_AppendPaths( self->linkingPaths, other->linkingPaths, other->sourcePath );
 		if( import && DaoMap_GetValueChars( daomake_platforms, "WIN32" ) == NULL ){
 			DList_AppendList( self->linkingFlags, other->linkingFlags );
 			return;
