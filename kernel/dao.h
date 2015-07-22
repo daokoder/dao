@@ -61,8 +61,8 @@
 #else /* other system */
 
 #  define DAO_DLL extern
-#  define DAO_DLL_EXPORT
-#  define DAO_DLL_IMPORT
+#  define DAO_DLL_EXPORT extern
+#  define DAO_DLL_IMPORT extern
 
 #endif /* WIN32 */
 

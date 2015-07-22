@@ -323,6 +323,7 @@ if( daovm_with_readline == $ON ){
 	}
 }
 
+if( DaoMake::IsDir( "modules/random" ) ) daovm_auxlib_objects.AddDefinition( "DAO_HAS_RANDOM" );
 if( DaoMake::IsDir( "modules/stream" ) ) daovm_auxlib_objects.AddDefinition( "DAO_HAS_STREAM" );
 if( DaoMake::IsDir( "modules/image" ) )  daovm_auxlib_objects.AddDefinition( "DAO_HAS_IMAGE" );
 if( DaoMake::IsDir( "modules/time" ) )   daovm_auxlib_objects.AddDefinition( "DAO_HAS_TIME" );

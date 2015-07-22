@@ -43,6 +43,11 @@
 #endif
 
 
+#ifdef DAO_HAS_RANDOM
+#include"../random/dao_random.h"
+#endif
+
+
 #ifdef DAO_HAS_STREAM
 #include"../stream/dao_stream.h"
 #endif
