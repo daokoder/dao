@@ -405,7 +405,7 @@ void DaoParser_PrintError( DaoParser *self, int line, int code, DString *ext );
 int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop );
 int DaoParser_ParseTemplateParams( DaoParser *self, int start, int end, DList *holders, DList *defaults, DString *name );
 DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DList *types, int *co );
-DaoType* DaoCdata_NewType( DaoTypeBase *typer );
+DaoType* DaoCdata_NewType( DaoTypeBase *typer, int opaque );
 
 int DaoParser_ParseMaybeScopeConst( DaoParser *self, DaoValue **scope, DaoValue **value, int start, int stop, int type );
 
@@ -713,14 +713,13 @@ DoneSourceType:
 static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeBase *typer, int opaque )
 {
 	DaoTypeKernel *kernel = DaoTypeKernel_New( typer );
-	DaoType *cdata_type = DaoCdata_NewType( typer );
+	DaoType *cdata_type = DaoCdata_NewType( typer, opaque );
 	DaoType *ctype_type = cdata_type->aux->xCdata.ctype;
 
 	GC_IncRC( self );
 	GC_IncRC( cdata_type );
 	kernel->nspace = self;
 	kernel->abtype = cdata_type;
-	cdata_type->tid = opaque ? DAO_CDATA : DAO_CSTRUCT;
 	GC_Assign( & ctype_type->kernel, kernel );
 	GC_Assign( & cdata_type->kernel, kernel );
 	typer->core = kernel->core;
