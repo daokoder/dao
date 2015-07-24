@@ -132,6 +132,7 @@ void DaoType_Init()
 	dao_type_matrix[DAO_CLASS][DAO_CTYPE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_CLASS][DAO_INTERFACE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_OBJECT][DAO_CDATA] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_OBJECT][DAO_CPOD] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_OBJECT][DAO_CSTRUCT] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_OBJECT][DAO_OBJECT] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_OBJECT][DAO_INTERFACE] = DAO_MT_EXACT+1;
@@ -140,6 +141,9 @@ void DaoType_Init()
 	dao_type_matrix[DAO_CSTRUCT][DAO_CTYPE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_CSTRUCT][DAO_CSTRUCT] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_CSTRUCT][DAO_INTERFACE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CPOD][DAO_CTYPE] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CPOD][DAO_CPOD] = DAO_MT_EXACT+1;
+	dao_type_matrix[DAO_CPOD][DAO_INTERFACE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_CDATA][DAO_CTYPE] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_CDATA][DAO_CDATA] = DAO_MT_EXACT+1;
 	dao_type_matrix[DAO_CDATA][DAO_INTERFACE] = DAO_MT_EXACT+1;
@@ -576,6 +580,7 @@ int DaoType_IsImmutable( DaoType *self )
 	case DAO_OBJECT :
 		return (self->aux->xClass.attribs & DAO_CLS_INVAR);
 	case DAO_CSTRUCT :
+	case DAO_CPOD :
 	case DAO_CDATA :
 		return (self->aux->xCtype.attribs & DAO_CLS_INVAR);
 		break;
@@ -698,7 +703,7 @@ static int DaoValue_MatchToParent( DaoValue *object, DaoType *parent, DMap *defs
 	if( object == NULL || parent == NULL ) return DAO_MT_NOT;
 	if( object->type == DAO_OBJECT ){
 		mt = DaoType_MatchToParent( object->xObject.defClass->objType, parent, defs, 0 );
-	}else if( object->type == DAO_CSTRUCT || object->type == DAO_CDATA || object->type == DAO_CTYPE ){
+	}else if( object->type >= DAO_CSTRUCT && object->type <= DAO_CTYPE ){
 		mt = DaoType_MatchToParent( object->xCdata.ctype, parent, defs, 0 );
 	}else if( object->type == DAO_CLASS ){
 		mt = DaoType_MatchToParent( object->xClass.clsType, parent, defs, 0 );
@@ -1057,6 +1062,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 		return DaoType_MatchToParent( self, type, defs, dep );
 	case DAO_CTYPE :
 	case DAO_CDATA :
+	case DAO_CPOD :
 	case DAO_CSTRUCT :
 		if( self->aux == type->aux ) return DAO_MT_EQ; /* for aliased type; */
 		return DaoType_MatchToParent( self, type, defs, dep );
@@ -1338,6 +1344,7 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 		return DaoValue_MatchToParent( value, self, defs );
 	case DAO_CTYPE :
 	case DAO_CDATA :
+	case DAO_CPOD :
 	case DAO_CSTRUCT :
 		tp = value->xCstruct.ctype;
 		if( self == tp ) return DAO_MT_EQ;
@@ -1422,7 +1429,7 @@ DaoValue* DaoType_CastToParent( DaoValue *object, DaoType *parent )
 	daoint i;
 	DaoValue *value;
 	if( object == NULL || parent == NULL ) return NULL;
-	if( object->type == DAO_CSTRUCT || object->type == DAO_CDATA || object->type == DAO_CTYPE ){
+	if( object->type >= DAO_CSTRUCT && object->type <= DAO_CTYPE ){
 		if( DaoType_MatchToParent( object->xCdata.ctype, parent, NULL, 0 ) ) return object;
 	}else if( object->type == DAO_OBJECT ){
 		if( object->xObject.defClass->objType == parent ) return object;
@@ -1593,7 +1600,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 			DString_Append( copy->name, type->name );
 			if( i+1 < (int)self->nested->size ) DString_AppendChar( copy->name, sep );
 		}
-		if( self->tid == DAO_CTYPE || self->tid == DAO_CDATA || self->tid == DAO_CSTRUCT
+		if( (self->tid >= DAO_CSTRUCT && self->tid <= DAO_CTYPE)
 				|| self->tid == DAO_ARRAY || self->tid == DAO_LIST || self->tid == DAO_MAP ){
 			if( self->typer->core->kernel->sptree ){
 				DaoType *sptype = self->typer->core->kernel->abtype;
@@ -2104,7 +2111,7 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 	uchar_t tid = self->tid;
 	daoint i, pos;
 
-	assert( self->tid == DAO_CSTRUCT || self->tid == DAO_CDATA || self->tid == DAO_CTYPE );
+	assert( self->tid >= DAO_CSTRUCT && self->tid <= DAO_CTYPE );
 
 	self = self->kernel->abtype;
 	if( tid == DAO_CTYPE ) self = self->aux->xCtype.cdtype;
@@ -2235,6 +2242,7 @@ DaoType* DaoType_Specialize( DaoType *self, DaoType *types[], int count )
 		type = DaoGenericType_Specialize( self, types, count );
 		break;
 	case DAO_CSTRUCT :
+	case DAO_CPOD :
 	case DAO_CDATA :
 	case DAO_CTYPE :
 		type = DaoCdataType_Specialize( self, types, count );
@@ -2326,7 +2334,7 @@ void DaoType_SpecializeMethods( DaoType *self )
 	if( self == original ) return;
 	if( self->kernel != original->kernel ) return;
 	if( original->kernel == NULL || original->kernel->methods == NULL ) return;
-	assert( self->tid == DAO_CSTRUCT || self->tid == DAO_CDATA || self->tid == DAO_CTYPE || self->tid == DAO_ARRAY || self->tid == DAO_LIST || self->tid == DAO_MAP );
+	assert( (self->tid >= DAO_CSTRUCT && self->tid <= DAO_CTYPE) || self->tid == DAO_ARRAY || self->tid == DAO_LIST || self->tid == DAO_MAP );
 	if( self->tid == DAO_CTYPE ) self = self->aux->xCtype.cdtype;
 	if( self->bases ){
 		for(i=0; i<self->bases->size; i++){
@@ -2411,7 +2419,7 @@ void DaoType_SpecializeMethods( DaoType *self )
 		DList_Delete( parents );
 		DMap_Delete( defs );
 		/* Set new kernel after it has been setup, for read safety in multithreading: */
-		if( self->tid == DAO_CSTRUCT || self->tid == DAO_CDATA || self->tid == DAO_CTYPE ){
+		if( self->tid >= DAO_CSTRUCT && self->tid <= DAO_CTYPE ){
 			GC_Assign( & self->aux->xCtype.ctype->kernel, kernel );
 			GC_Assign( & self->aux->xCtype.cdtype->kernel, kernel );
 		}else{

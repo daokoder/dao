@@ -94,3 +94,20 @@ io.writeln( m2.find( UserType(2) ) )
 none
 ( UserType.{2}, 2 )
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+load UserPodType
+var m1 = { UserPodType(3) => 3, UserPodType(1) => 1, UserPodType(4) => 4, UserPodType(2) => 2 }
+var m2 = { UserPodType(3) -> 3, UserPodType(1) -> 1, UserPodType(4) -> 4, UserPodType(2) -> 2 }
+io.writeln( m1 )
+io.writeln( m2.find( UserPodType(0) ) )
+io.writeln( m2.find( UserPodType(2) ) )
+@[test(code_01)]
+@[test(code_01)]
+{ UserPodType.{1} => 1, UserPodType.{2} => 2, UserPodType.{3} => 3, UserPodType.{4} => 4 }
+none
+( UserPodType.{2}, 2 )
+@[test(code_01)]

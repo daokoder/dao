@@ -3806,11 +3806,11 @@ ErrorInvalidArgValue:
 	DaoNamespace_AddConst( vmSpace->daoNamespace, nspace->name, (DaoValue*) nspace, DAO_PERM_PUBLIC );
 	DaoNamespace_AddConst( vmSpace->mainNamespace, nspace->name, (DaoValue*) nspace, DAO_PERM_PUBLIC );
 
-	daomake_type_unit    = DaoNamespace_WrapType( nspace, & DaoMakeUnit_Typer, 0 );
-	daomake_type_objects = DaoNamespace_WrapType( nspace, & DaoMakeObjects_Typer, 0 );
-	daomake_type_target  = DaoNamespace_WrapType( nspace, & DaoMakeTarget_Typer, 0 );
-	daomake_type_project = DaoNamespace_WrapType( nspace, & DaoMakeProject_Typer, 0 );
-	DaoNamespace_WrapType( nspace, & DaoMakeVariables_Typer, 0 );
+	daomake_type_unit    = DaoNamespace_WrapType( nspace, & DaoMakeUnit_Typer, DAO_CSTRUCT, 0 );
+	daomake_type_objects = DaoNamespace_WrapType( nspace, & DaoMakeObjects_Typer, DAO_CSTRUCT, 0 );
+	daomake_type_target  = DaoNamespace_WrapType( nspace, & DaoMakeTarget_Typer, DAO_CSTRUCT, 0 );
+	daomake_type_project = DaoNamespace_WrapType( nspace, & DaoMakeProject_Typer, DAO_CSTRUCT, 0 );
+	DaoNamespace_WrapType( nspace, & DaoMakeVariables_Typer, DAO_CSTRUCT, 0 );
 	DaoNamespace_WrapFunctions( nspace, DaoMakeMeths );
 
 	DaoNamespace_AddValue( nspace, "Settings", (DaoValue*) daomake_settings, "map<string,string>" );

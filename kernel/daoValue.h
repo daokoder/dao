@@ -60,7 +60,8 @@ union DaoValue
 	DaoTuple       xTuple;
 	DaoStream      xStream;
 	DaoObject      xObject;
-	DaoCdata       xCstruct;
+	DaoCstruct     xCstruct;
+	DaoCpod        xCpod;
 	DaoCdata       xCdata;
 	DaoCtype       xCtype;
 	DaoClass       xClass;

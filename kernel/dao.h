@@ -107,9 +107,10 @@ enum DaoTypes
 	DAO_OBJECT ,
 	DAO_CINVALUE ,
 	DAO_CSTRUCT ,
+	DAO_CPOD ,
 	DAO_CDATA  ,
-	DAO_CLASS  ,
 	DAO_CTYPE  ,
+	DAO_CLASS  ,
 	DAO_CINTYPE ,
 	DAO_INTERFACE ,
 	DAO_ROUTINE   ,
@@ -225,8 +226,9 @@ typedef struct DaoClass        DaoClass;
 typedef struct DaoObject       DaoObject;
 typedef struct DaoStream       DaoStream;
 typedef struct DaoCtype        DaoCtype;
-typedef struct DaoCdata        DaoCdata;
 typedef struct DaoCstruct      DaoCstruct;
+typedef struct DaoCpod         DaoCpod;
+typedef struct DaoCdata        DaoCdata;
 typedef struct DaoRegex        DaoRegex;
 typedef struct DaoException    DaoException;
 typedef struct DaoNamespace    DaoNamespace;
@@ -872,7 +874,7 @@ DAO_DLL void DaoNamespace_AddConstValue( DaoNamespace *self, const char *name, D
 DAO_DLL void DaoNamespace_AddValue( DaoNamespace *self, const char *name, DaoValue *d, const char *type);
 DAO_DLL DaoValue* DaoNamespace_FindData( DaoNamespace *self, const char *name );
 DAO_DLL DaoType* DaoNamespace_DefineType( DaoNamespace *self, const char *type, const char *alias );
-DAO_DLL DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int options );
+DAO_DLL DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int tid, int options );
 DAO_DLL DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeBase *typer );
 DAO_DLL DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fp, const char *proto );
 DAO_DLL int DaoNamespace_AliasTypes( DaoNamespace *self, const char *alias[] );

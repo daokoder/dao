@@ -195,7 +195,7 @@ DaoValue* DaoValue_CopyContainer( DaoValue *self, DaoType *tp )
 DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cst )
 {
 	if( self == NULL ) return dao_none_value;
-	if( (tp == NULL || tp->tid == self->type) && self->type < DAO_ENUM ){
+	if( (tp == NULL || tp->tid == self->type) && (self->type < DAO_ENUM || self->type == DAO_CPOD) ){
 		/*
 		// The following optimization is safe theoretically.
 		// But it is not practically safe for DaoProcess_PutChars() etc.,
@@ -210,6 +210,7 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 		case DAO_FLOAT   : return (DaoValue*) DaoFloat_New( self->xFloat.value );
 		case DAO_COMPLEX : return (DaoValue*) DaoComplex_New( self->xComplex.value );
 		case DAO_STRING  : return (DaoValue*) DaoString_Copy( & self->xString );
+		case DAO_CPOD    : return (DaoValue*) DaoCpod_Copy( (DaoCpod*) self );
 		}
 		return self; /* unreachable; */
 	}else if( tp && tp->tid >= DAO_BOOLEAN && tp->tid <= DAO_FLOAT ){
@@ -248,7 +249,7 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 		return self;
 	}else
 #endif
-	if( self->type == DAO_CSTRUCT || self->type == DAO_CDATA ){
+	if( self->type >= DAO_CSTRUCT && self->type <= DAO_CDATA ){
 		FuncPtrSliced sliced = self->xCstruct.ctype->kernel->Sliced;
 		if( sliced ) (*sliced)( self );
 		return self;
@@ -448,6 +449,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	case (DAO_FLOAT   << 8) | DAO_FLOAT   :
 	case (DAO_COMPLEX << 8) | DAO_COMPLEX :
 	case (DAO_STRING  << 8) | DAO_STRING  :
+	case (DAO_CPOD    << 8) | DAO_CPOD  :
 		S = DaoValue_SimpleCopyWithTypeX( S, T, C );
 		GC_Assign( D, S );
 		return 1;
@@ -473,7 +475,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 			return 1;
 		}
 	}
-	if( (T->tid == DAO_OBJECT || T->tid == DAO_CDATA || T->tid == DAO_CSTRUCT) && S->type == DAO_OBJECT ){
+	if( (T->tid == DAO_OBJECT || (T->tid >= DAO_CSTRUCT && T->tid <= DAO_CDATA)) && S->type == DAO_OBJECT ){
 		if( S->xObject.defClass != & T->aux->xClass ){
 			S = DaoObject_CastToBase( S->xObject.rootObject, T );
 			tm = (S != NULL);
@@ -568,6 +570,7 @@ int DaoValue_FastMatchTo( DaoValue *self, DaoType *type )
 	case DAO_LIST :
 	case DAO_MAP :
 	case DAO_CSTRUCT :
+	case DAO_CPOD : 
 	case DAO_CDATA : 
 	case DAO_CTYPE : matched = self->xCstruct.ctype == type; break;
 	case DAO_TUPLE : matched = self->xTuple.ctype == type; break;
@@ -628,7 +631,8 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		GC_DecRC( D2 );
 		*D = D2 = NULL;
 	}
-	if( D2 && S->type == D2->type && S->type == T->tid && S->type <= DAO_ENUM ){
+#if 0
+	if( D2 && S->type == D2->type && S->type == T->tid && (S->type <= DAO_ENUM || S->type == DAO_CPOD)){
 		switch( S->type ){
 		case DAO_ENUM    :
 			DaoEnum_SetType( & D2->xEnum, T->subtid == DAO_ENUM_ANY ? S->xEnum.etype : T );
@@ -638,9 +642,11 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		case DAO_FLOAT   : D2->xFloat.value = S->xFloat.value; break;
 		case DAO_COMPLEX : D2->xComplex.value = S->xComplex.value; break;
 		case DAO_STRING  : DString_Assign( D2->xString.value, S->xString.value ); break;
+		case DAO_CPOD    : memcpy( (DaoCpod*)D2 + 1, (DaoCpod*)S + 1, S->xPod.size ); break;
 		}
 		return 1;
 	}
+#endif
 	if( D2 == NULL || D2->type != T->tid ) return DaoValue_Move4( S, D, T, C, defs );
 
 	switch( (S->type << 8) | T->tid ){
@@ -650,6 +656,15 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	case (DAO_ENUM<<8)|DAO_ENUM :
 		DaoEnum_SetType( & D2->xEnum, T->subtid == DAO_ENUM_ANY ? S->xEnum.etype : T );
 		DaoEnum_SetValue( & D2->xEnum, & S->xEnum );
+		break;
+	case (DAO_CPOD<<8)|DAO_CPOD :
+		if( S->xCpod.ctype != T ) return DaoValue_Move4( S, D, T, C, defs );
+		if( D2->xCpod.ctype != T || D2->xCpod.size < S->xCpod.size ){
+			S = (DaoValue*) DaoCpod_Copy( (DaoCpod*) S );
+			DaoGC_Assign( D, S );
+			return 1;
+		}
+		memcpy( (DaoCpod*)D2 + 1, (DaoCpod*)S + 1, S->xCpod.size );
 		break;
 	case (DAO_BOOLEAN<<8)|DAO_BOOLEAN : D2->xInteger.value = S->xInteger.value; break;
 	case (DAO_BOOLEAN<<8)|DAO_INTEGER : D2->xInteger.value = S->xInteger.value; break;
@@ -868,6 +883,7 @@ static int DaoValue_ComparePro2( DaoValue *left, DaoValue *right, DaoProcess *pr
 	case DAO_LIST    : return DaoList_Compare( & left->xList, & right->xList, proc, dep );
 	case DAO_OBJECT  : return DaoObject_Compare( (DaoObject*)left, (DaoObject*)right, proc, dep );
 	case DAO_CDATA   :
+	case DAO_CPOD    :
 	case DAO_CSTRUCT :
 	case DAO_CTYPE : return DaoCstruct_Compare( (DaoCstruct*)left, (DaoCstruct*)right, proc, dep );
 	case DAO_TYPE : return DaoType_Compare( (DaoType*) left, (DaoType*) right );
@@ -913,8 +929,9 @@ DaoType* DaoValue_GetType( DaoValue *self )
 	case DAO_TUPLE  : return self->xTuple.ctype;
 	case DAO_OBJECT : return self->xObject.defClass->objType;
 	case DAO_CLASS  : return self->xClass.clsType;
-	case DAO_CTYPE   :
-	case DAO_CDATA   :
+	case DAO_CTYPE  :
+	case DAO_CDATA  :
+	case DAO_CPOD   :
 	case DAO_CSTRUCT : return self->xCdata.ctype;
 	case DAO_ROUTINE   : return self->xRoutine.routType;
 	case DAO_PAR_NAMED : return self->xNameValue.ctype;
@@ -937,7 +954,8 @@ DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
 	case DAO_STRING  : return & stringTyper;
 	case DAO_CTYPE   :
 	case DAO_CSTRUCT :
-	case DAO_CDATA   : return self->xCdata.ctype->typer;
+	case DAO_CPOD :
+	case DAO_CDATA : return self->xCdata.ctype->typer;
 	default : break;
 	}
 	return DaoVmSpace_GetTyper( self->type );
@@ -1053,6 +1071,7 @@ static void DaoValue_PrintEx( DaoValue *self, DaoProcess *proc, DaoStream *strea
 
 	switch( self->type ){
 	case DAO_CDATA :
+	case DAO_CPOD :
 	case DAO_CSTRUCT  : cstruct  = (DaoCstruct*) self; break;
 	case DAO_CINVALUE : cinvalue = (DaoCinValue*) self; break;
 	}
@@ -1130,6 +1149,7 @@ void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *
 		DaoStream_WriteString( stream, self->xString.value );
 		break;
 	case DAO_CDATA :
+	case DAO_CPOD :
 	case DAO_CSTRUCT :
 	case DAO_CINVALUE :
 		DaoValue_PrintEx( self, proc, stream, cycData );
@@ -1220,7 +1240,7 @@ DaoCstruct* DaoValue_CastCstruct( DaoValue *self, DaoType *type )
 		self = (DaoValue*) DaoObject_CastCstruct( (DaoObject*) self, type );
 		if( self == NULL ) return NULL;
 	}
-	if( self->type != DAO_CSTRUCT && self->type != DAO_CDATA ) return NULL;
+	if( self->type < DAO_CSTRUCT || self->type > DAO_CDATA ) return NULL;
 	if( DaoType_ChildOf( self->xCstruct.ctype, type ) ) return (DaoCstruct*) self;
 	return NULL;
 }

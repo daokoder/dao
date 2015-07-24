@@ -19,6 +19,12 @@ usertype_dll  = daotests.AddSharedLibrary( "dao_UserType", usertype_objs )
 usertype_dll.EnableDynamicLinking()
 
 
+podtype_objs = daotests.AddObjects( { "dao_UserPodType.c" } )
+podtype_dll  = daotests.AddSharedLibrary( "dao_UserPodType", podtype_objs )
+
+podtype_dll.EnableDynamicLinking()
+
+
 daotests.AddTest( "Example", "examples.dao" )
 
 daotests.AddTest( "Lexer",  "test_lexer.dao" )

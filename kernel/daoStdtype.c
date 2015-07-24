@@ -3713,6 +3713,26 @@ void DaoCstruct_Free( DaoCstruct *self )
 	self->object = NULL;
 	self->ctype = NULL;
 }
+
+DaoCpod* DaoCpod_New( DaoType *type, int size )
+{
+	DaoCpod *self = (DaoCpod*)dao_calloc( 1, sizeof(DaoCpod) + size );
+	DaoCstruct_Init( (DaoCstruct*)self, type );
+	self->size = size;
+	return self;
+}
+DaoCpod* DaoCpod_Copy( DaoCpod *self )
+{
+	DaoCpod *copy = DaoCpod_New( self->ctype, self->size );
+	memcpy( copy + 1, self + 1, self->size );
+	return copy;
+}
+void DaoCpod_Delete( DaoCpod *self )
+{
+	DaoCstruct_Free( (DaoCstruct*)self );
+	dao_free( self );
+}
+
 DaoCdata* DaoCdata_New( DaoType *type, void *data )
 {
 	DaoCdata *self = (DaoCdata*)dao_calloc( 1, sizeof(DaoCdata) );
@@ -3840,7 +3860,7 @@ DaoTypeBase defaultCdataTyper =
 // one with typeid DAO_CTYPE serves an auxiliary value for the two type objects;
 // the other with typeid DAO_CDATA serves as the default value for the cdata object type.
 */
-DaoType* DaoCdata_NewType( DaoTypeBase *typer, int opaque )
+DaoType* DaoCdata_NewType( DaoTypeBase *typer, int tid )
 {
 	DaoCtype *ctype = DaoCtype_New( NULL, NULL );
 	DaoType *cdata_type;
@@ -3857,7 +3877,7 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer, int opaque )
 	GC_Assign( & ctype->ctype, ctype_type );
 	ctype_type->typer = typer;
 	cdata_type->typer = typer;
-	cdata_type->tid = opaque ? DAO_CDATA : DAO_CSTRUCT;
+	cdata_type->tid = tid;
 
 	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
 		DaoTypeBase *sup = typer->supers[i];
@@ -4059,9 +4079,9 @@ DaoTypeBase dao_ExceptionError_Typer =
 
 void DaoException_Setup( DaoNamespace *ns )
 {
-	dao_type_exception = DaoNamespace_WrapType( ns, & dao_Exception_Typer, 0 );
-	dao_type_warning = DaoNamespace_WrapType( ns, & dao_ExceptionWarning_Typer, 0 );
-	dao_type_error = DaoNamespace_WrapType( ns, & dao_ExceptionError_Typer, 0 );
+	dao_type_exception = DaoNamespace_WrapType( ns, & dao_Exception_Typer, DAO_CSTRUCT, 0 );
+	dao_type_warning = DaoNamespace_WrapType( ns, & dao_ExceptionWarning_Typer, DAO_CSTRUCT, 0 );
+	dao_type_error = DaoNamespace_WrapType( ns, & dao_ExceptionError_Typer, DAO_CSTRUCT, 0 );
 	DaoNamespace_AddType( ns, dao_type_warning->name, dao_type_warning );
 	DaoNamespace_AddType( ns, dao_type_error->name, dao_type_error );
 	DaoNamespace_AddTypeConstant( ns, dao_type_warning->name, dao_type_warning );

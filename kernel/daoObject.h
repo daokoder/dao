@@ -56,7 +56,7 @@ DAO_DLL void DaoObject_Delete( DaoObject *self );
 DAO_DLL int DaoObject_ChildOf( DaoValue *self, DaoValue *obj );
 
 DAO_DLL DaoValue* DaoObject_CastToBase( DaoObject *self, DaoType *host );
-DAO_DLL void DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent );
+DAO_DLL void DaoObject_SetParentCstruct( DaoObject *self, DaoCstruct *parent );
 
 DAO_DLL void DaoObject_AddData( DaoObject *self, DString *name, DaoValue *data );
 

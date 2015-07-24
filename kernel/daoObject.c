@@ -267,8 +267,8 @@ int DaoObject_ChildOf( DaoValue *self, DaoValue *obj )
 {
 	int i;
 	if( obj == self ) return 1;
-	if( self->type == DAO_CDATA || self->type == DAO_CSTRUCT ){
-		if( obj->type == DAO_CDATA || obj->type == DAO_CSTRUCT ){
+	if( self->type >= DAO_CSTRUCT && self->type <= DAO_CDATA ){
+		if( obj->type >= DAO_CSTRUCT && obj->type <= DAO_CDATA ){
 			DaoCstruct *cdata1 = (DaoCstruct*) self;
 			DaoCstruct *cdata2 = (DaoCstruct*) obj;
 			if( DaoType_ChildOf( cdata1->ctype, cdata2->ctype ) ) return 1;
@@ -291,13 +291,15 @@ DaoValue* DaoObject_CastToBase( DaoObject *self, DaoType *host )
 	if( sup->type == DAO_OBJECT ){
 		if( (sup = DaoObject_CastToBase( & sup->xObject, host ) ) ) return sup;
 	}else if( sup->type == DAO_CSTRUCT && host->tid == DAO_CSTRUCT ){
-		if( DaoType_ChildOf( sup->xCdata.ctype, host ) ) return sup;
+		if( DaoType_ChildOf( sup->xCstruct.ctype, host ) ) return sup;
+	}else if( sup->type == DAO_CPOD && host->tid == DAO_CPOD ){
+		if( DaoType_ChildOf( sup->xCstruct.ctype, host ) ) return sup;
 	}else if( sup->type == DAO_CDATA && host->tid == DAO_CDATA ){
-		if( DaoType_ChildOf( sup->xCdata.ctype, host ) ) return sup;
+		if( DaoType_ChildOf( sup->xCstruct.ctype, host ) ) return sup;
 	}
 	return NULL;
 }
-void DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent )
+void DaoObject_SetParentCstruct( DaoObject *self, DaoCstruct *parent )
 {
 	DaoObject *child = NULL;
 	DaoObject *obj = (DaoObject*) self->parent;
@@ -305,9 +307,9 @@ void DaoObject_SetParentCdata( DaoObject *self, DaoCdata *parent )
 	if( parent == NULL ) return;
 	if( sup == NULL ) return;
 	if( obj && obj->type == DAO_OBJECT ){
-		DaoObject_SetParentCdata( obj, parent );
+		DaoObject_SetParentCstruct( obj, parent );
 	}else if( sup->type == DAO_CTYPE ){
-		DaoCdata *cdata = (DaoCdata*)sup;
+		DaoCstruct *cdata = (DaoCstruct*)sup;
 		if( DaoType_ChildOf( cdata->ctype, parent->ctype ) ){
 			GC_Assign( & self->parent, parent );
 		}
@@ -317,7 +319,7 @@ DaoCstruct* DaoObject_CastCstruct( DaoObject *self, DaoType *type )
 {
 	DaoValue *p = NULL;
 	if( type ) p = DaoObject_CastToBase( self, type );
-	if( p && (p->type == DAO_CDATA || p->type == DAO_CSTRUCT) ) return (DaoCstruct*) p;
+	if( p && (p->type >= DAO_CSTRUCT && p->type <= DAO_CDATA) ) return (DaoCstruct*) p;
 	return NULL;
 }
 DaoCdata* DaoObject_CastCdata( DaoObject *self, DaoType *type )

@@ -120,6 +120,7 @@ static int DaoValue_Hash( DaoValue *self, DaoProcess *process, unsigned int hash
 	DaoBoolean bl = {DAO_BOOLEAN,0,0,0,0,1};
 	DaoRoutine *routine;
 	DaoValue *params[2];
+	DaoCpod *pod;
 	void *data = NULL;
 	int i, len = 0;
 
@@ -162,6 +163,10 @@ static int DaoValue_Hash( DaoValue *self, DaoProcess *process, unsigned int hash
 		if( DaoProcess_Call( process, routine, self, params, 2 ) ) goto Default;
 		hash = DaoValue_GetInteger( process->stackValues[0] );
 		hash = Dao_Hash( & hash, 4, 0 );
+		break;
+	case DAO_CPOD :
+		pod = (DaoCpod*) self;
+		hash = Dao_Hash( pod + 1, pod->size, 0 );
 		break;
 	case DAO_CSTRUCT :
 	case DAO_CDATA :

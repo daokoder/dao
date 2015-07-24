@@ -39,6 +39,7 @@
 #define DAO_VALUE_COMMON    DAO_VALUE_CORE; int cycRefCount
 #define DAO_GENERIC_COMMON  DAO_VALUE_COMMON; DaoType *ctype
 #define DAO_CSTRUCT_COMMON  DAO_GENERIC_COMMON; DaoObject *object
+#define DAO_CPOD_COMMON     DAO_CSTRUCT_COMMON; daoint size
 
 void DaoValue_Init( void *dbase, char type );
 
@@ -169,10 +170,10 @@ struct DaoTuple
 {
 	DAO_VALUE_COMMON;
 
-	/* packed with the previous field in 64-bits system; */
+	/* Packed with the previous field in 64-bits system; */
 	int        size;
 	DaoType   *ctype;
-	DaoValue  *values[DAO_TUPLE_MINSIZE]; /* the actual number of items is in ::size; */
+	DaoValue  *values[DAO_TUPLE_MINSIZE]; /* The actual number of items is in ::size; */
 };
 
 DAO_DLL DaoTuple* DaoTuple_Create( DaoType *type, int size, int init );
@@ -206,6 +207,18 @@ struct DaoCstruct
 
 DAO_DLL void DaoCstruct_Init( DaoCstruct *self, DaoType *type );
 DAO_DLL void DaoCstruct_Free( DaoCstruct *self );
+
+
+
+/* C Plain Old Data (POD): */
+struct DaoCpod
+{
+	DAO_CPOD_COMMON;
+};
+
+DAO_DLL DaoCpod* DaoCpod_New( DaoType *type, int size );
+DAO_DLL DaoCpod* DaoCpod_Copy( DaoCpod *self );
+DAO_DLL void DaoCpod_Delete( DaoCpod *self );
 
 
 

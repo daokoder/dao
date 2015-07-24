@@ -285,3 +285,86 @@ io.writeln( m2.find( SubType(2) ) )
 none
 ( SubType.{2}, 2 )
 @[test(code_01)]
+
+
+
+
+load UserPodType
+
+@[test(code_01)]
+class Sub : UserPodType
+{
+	routine Sub(){} # Error calling: UserPodType(value:int)
+}
+@[test(code_01)]
+@[test(code_01)]
+{{Invalid number of parameter --- " too few parameters "}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class Sub : UserPodType
+{
+	routine Sub() : UserPodType( 123 ) {}
+}
+@[test(code_01)]
+@[test(code_01)]
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class Sub : UserPodType
+{
+	routine Sub() : UserPodType( 123 ) {}
+}
+
+s = Sub()
+io.writeln( s )
+@[test(code_01)]
+@[test(code_01)]
+UserPodType.{123}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class Sub : UserPodType
+{
+	routine Sub() : UserPodType( 123 ) {}
+	routine (string)(){ return "Sub.{" + (string)(UserPodType)self + "}" }
+}
+
+s = Sub()
+io.writeln( s )
+@[test(code_01)]
+@[test(code_01)]
+Sub.{UserPodType.{123}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+class SubPodType : UserPodType
+{
+	routine SubPodType( id: int ) : UserPodType( id ) {}
+	routine (string)(){ return "SubPodType.{" + (string)(int)self + "}" }
+	routine (int)(){ return (int)(UserPodType)self }
+}
+
+var m1 = { SubPodType(3) => 3, SubPodType(1) => 1, SubPodType(4) => 4, SubPodType(2) => 2 }
+var m2 = { SubPodType(3) -> 3, SubPodType(1) -> 1, SubPodType(4) -> 4, SubPodType(2) -> 2 }
+io.writeln( m1 )
+io.writeln( m2.find( SubPodType(0) ) )
+io.writeln( m2.find( SubPodType(2) ) )
+@[test(code_01)]
+@[test(code_01)]
+{ SubPodType.{1} => 1, SubPodType.{2} => 2, SubPodType.{3} => 3, SubPodType.{4} => 4 }
+none
+( SubPodType.{2}, 2 )
+@[test(code_01)]

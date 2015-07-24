@@ -776,6 +776,8 @@ DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value )
 		DaoByteCoder_Error3( self->coder, NULL, "Unencoded class (name = %s)!", chs );
 		break;
 	case DAO_CTYPE :
+	case DAO_CSTRUCT :
+	case DAO_CPOD:
 	case DAO_CDATA :
 		chs = value->xCtype.ctype->name->chars;
 		DaoByteCoder_Error3( self->coder, NULL, "Unencoded cdata type (name = %s)!", chs );

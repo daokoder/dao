@@ -405,7 +405,7 @@ void DaoParser_PrintError( DaoParser *self, int line, int code, DString *ext );
 int DaoParser_FindPairToken( DaoParser *self,  uchar_t lw, uchar_t rw, int start, int stop );
 int DaoParser_ParseTemplateParams( DaoParser *self, int start, int end, DList *holders, DList *defaults, DString *name );
 DaoType* DaoParser_ParseTypeItems( DaoParser *self, int start, int end, DList *types, int *co );
-DaoType* DaoCdata_NewType( DaoTypeBase *typer, int opaque );
+DaoType* DaoCdata_NewType( DaoTypeBase *typer, int tid );
 
 int DaoParser_ParseMaybeScopeConst( DaoParser *self, DaoValue **scope, DaoValue **value, int start, int stop, int type );
 
@@ -687,7 +687,7 @@ DoneSourceType:
 	// To create a template-like alias to a template-like cdata type, it is only
 	// necessary to add a specialization entry in the template cdata type.
 	*/
-	if( tp->tid == DAO_CDATA || tp->tid == DAO_CSTRUCT ) tp = tp->aux->xCtype.ctype;
+	if( tp->tid >= DAO_CSTRUCT && tp->tid <= DAO_CDATA ) tp = tp->aux->xCtype.ctype;
 	tp2 = tp;
 	if( (tp->tid && tp->tid <= DAO_TUPLE) || tp->tid == DAO_VARIANT ){
 		tp = DaoType_Copy( tp );
@@ -710,10 +710,10 @@ DoneSourceType:
 	return tp;
 }
 
-static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeBase *typer, int opaque )
+static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeBase *typer, int tid )
 {
 	DaoTypeKernel *kernel = DaoTypeKernel_New( typer );
-	DaoType *cdata_type = DaoCdata_NewType( typer, opaque );
+	DaoType *cdata_type = DaoCdata_NewType( typer, tid );
 	DaoType *ctype_type = cdata_type->aux->xCdata.ctype;
 
 	GC_IncRC( self );
@@ -726,13 +726,13 @@ static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeBase *typ
 	return ctype_type;
 }
 
-static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, int options )
+static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, int tid, int options )
 {
 	DaoType *ctype_type, *cdata_type;
 
 	if( typer->core ) return typer->core->kernel->abtype;
 
-	ctype_type = DaoNamespace_MakeCdataType( self, typer, options & DAO_CTYPE_OPAQUE );
+	ctype_type = DaoNamespace_MakeCdataType( self, typer, tid );
 	cdata_type = typer->core->kernel->abtype;
 	if( options & DAO_CTYPE_INVAR ) cdata_type->aux->xCtype.attribs |= DAO_CLS_INVAR;
 	typer->core->kernel->SetupValues = DaoNamespace_SetupValues;
@@ -746,9 +746,9 @@ static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeBase *typer, 
 	DString_SetChars( cdata_type->aux->xCtype.name, cdata_type->name->chars );
 	return cdata_type;
 }
-DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int options )
+DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int tid, int options )
 {
-	return DaoNamespace_WrapType2( self, typer, options );
+	return DaoNamespace_WrapType2( self, typer, tid, options );
 }
 DaoType* DaoNamespace_WrapGenericType( DaoNamespace *self, DaoTypeBase *typer, int tid )
 {
@@ -828,7 +828,7 @@ int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typers[] )
 	DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	int i, ec = 0;
 	for(i=0; typers[i]; i++ ){
-		ec += DaoNamespace_WrapType2( self, typers[i], 1 ) == NULL;
+		ec += DaoNamespace_WrapType2( self, typers[i], DAO_CDATA, 0 ) == NULL;
 		/* e |= ( DaoNamespace_SetupValues( self, typers[i] ) == 0 ); */
 	}
 	/* if( setup ) return DaoNamespace_SetupTypes( self, typers ); */
@@ -1583,6 +1583,7 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		if( pb == NULL ) return NULL;
 		return pb->xCtype.ctype;
 	case DAO_CDATA :
+	case DAO_CPOD :
 	case DAO_CSTRUCT :
 		if( pb == NULL ) return NULL;
 		return pb->xCtype.cdtype;

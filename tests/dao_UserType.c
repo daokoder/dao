@@ -251,6 +251,6 @@ DaoTypeBase userTypeTyper =
 
 DAO_DLL int DaoUsertype_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	daox_type_user_type = DaoNamespace_WrapType( ns, & userTypeTyper, DAO_CTYPE_INVAR );
+	daox_type_user_type = DaoNamespace_WrapType( ns, & userTypeTyper, DAO_CSTRUCT, DAO_CTYPE_INVAR );
 	return 0;
 }

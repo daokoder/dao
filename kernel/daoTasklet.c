@@ -99,7 +99,7 @@ DaoChannel* DaoChannel_New( DaoType *type, int dtype )
 
 static int DaoValue_CheckCtype( DaoValue *self, DaoType *type )
 {
-	if( self->type != DAO_CSTRUCT && self->type != DAO_CDATA ) return 0;
+	if( self->type < DAO_CSTRUCT || self->type > DAO_CDATA ) return 0;
 	if( self->type != type->tid ) return 0;
 	return self->xCstruct.ctype->typer == type->typer;
 }

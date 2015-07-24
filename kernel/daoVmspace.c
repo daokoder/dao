@@ -257,6 +257,7 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 #endif
 	case DAO_CTYPE   :
 	case DAO_CSTRUCT :
+	case DAO_CPOD :
 	case DAO_CDATA   :  return & defaultCdataTyper;
 	case DAO_ROUTINE   :  return & routTyper;
 	case DAO_INTERFACE :  return & interTyper;
@@ -2767,22 +2768,22 @@ DaoVmSpace* DaoInit( const char *command )
 	ns2 = DaoVmSpace_GetNamespace( vms, "io" );
 	DaoNamespace_AddConstValue( daons, "io", (DaoValue*) ns2 );
 	dao_type_io_device = DaoNamespace_WrapInterface( ns2, & ioDeviceTyper );
-	dao_type_stream = DaoNamespace_WrapType( ns2, & streamTyper, 0 );
+	dao_type_stream = DaoNamespace_WrapType( ns2, & streamTyper, DAO_CSTRUCT, 0 );
 	GC_Assign( & vms->stdioStream->ctype, dao_type_stream );
 	GC_Assign( & vms->errorStream->ctype, dao_type_stream );
 	DaoNamespace_WrapFunctions( ns2, dao_io_methods );
 	DaoNamespace_AddConstValue( ns2, "stdio",  (DaoValue*) vms->stdioStream );
 	DaoNamespace_AddConstValue( ns2, "stderr", (DaoValue*) vms->errorStream );
 
-	dao_type_cdata = DaoNamespace_WrapType( vms->daoNamespace, & defaultCdataTyper, 1 );
+	dao_type_cdata = DaoNamespace_WrapType( vms->daoNamespace, & defaultCdataTyper, DAO_CDATA, 1 );
 
 	DaoException_Setup( vms->daoNamespace );
 
 	ns2 = DaoVmSpace_GetNamespace( vms, "mt" );
 	DaoNamespace_AddConstValue( daons, "mt", (DaoValue*) ns2 );
-	dao_type_future  = DaoNamespace_WrapType( ns2, & futureTyper, 0 );
+	dao_type_future  = DaoNamespace_WrapType( ns2, & futureTyper, DAO_CSTRUCT, 0 );
 #ifdef DAO_WITH_CONCURRENT
-	dao_type_channel = DaoNamespace_WrapType( ns2, & channelTyper, 0 );
+	dao_type_channel = DaoNamespace_WrapType( ns2, & channelTyper, DAO_CSTRUCT, 0 );
 	DaoNamespace_WrapFunctions( ns2, dao_mt_methods );
 #endif
 
@@ -2910,7 +2911,7 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 	typer->supers[0] = parent->typer;
 	typer->Delete = parent->typer->Delete;
 	typer->GetGCFields = parent->typer->GetGCFields;
-	type = DaoNamespace_WrapType( self->daoNamespace, typer, 0 );
+	type = DaoNamespace_WrapType( self->daoNamespace, typer, DAO_CSTRUCT, 0 );
 	if( type == NULL ) return NULL;
 
 	if( parent->kernel->initRoutines ){
