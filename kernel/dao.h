@@ -846,6 +846,11 @@ DAO_DLL DaoValue*  DaoProcess_PutValue( DaoProcess *self, DaoValue *value );
 DAO_DLL DaoTuple*  DaoProcess_PutTuple( DaoProcess *self, int size );
 
 /*
+// DaoProcess_PutCpod() create a plain old data (POD) value as the returned value.
+*/
+DAO_DLL DaoCpod*  DaoProcess_PutCpod( DaoProcess *self, DaoType *type, int size );
+
+/*
 // DaoProcess_PutCdata() creates a cdata as the returned value.
 // This cdata will be responsible to deallocate "data".
 */
@@ -984,6 +989,12 @@ DAO_DLL DaoMap*   DaoProcess_NewMap( DaoProcess *self, unsigned int hashing );
 // specified by the parameter "type".
 */
 DAO_DLL DaoArray* DaoProcess_NewArray( DaoProcess *self, int type );
+
+/*
+// DaoProcess_NewCpod() creates a plain old data (POD) value
+// with the given type and size.
+*/
+DAO_DLL DaoCpod* DaoProcess_NewCpod( DaoProcess *self, DaoType *type, int size );
 
 /*
 // DaoProcess_NewCdata() creates a new cdata object with specified type and data.

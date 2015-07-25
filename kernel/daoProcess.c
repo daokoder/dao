@@ -2592,6 +2592,25 @@ DaoArray* DaoProcess_PutArray( DaoProcess *self )
 {
 	return DaoProcess_GetArray( self, self->activeCode );
 }
+DaoCpod* DaoProcess_PutCpod( DaoProcess *self, DaoType *type, int size )
+{
+	DaoValue *dC = self->activeValues[ self->activeCode->c ];
+	DaoCpod *pod = NULL;
+	
+	self->stackReturn = self->activeCode->c + (self->activeValues - self->stackValues);
+	if( dC != NULL && dC->type == DAO_CPOD && dC->xCpod.ctype == type ) pod = (DaoCpod*) dC;
+	if( pod == NULL || pod->size < size || !(pod->trait & DAO_VALUE_STACK) || pod->refCount > 1 ){
+		DaoCpod *pod = DaoCpod_New( type, size );
+		DaoValue *ret = DaoProcess_PutValue( self, (DaoValue*) pod );
+		if( ret != (DaoValue*) pod ) DaoGC_TryDelete( (DaoValue*) pod );
+		if( ret->type != DAO_CPOD ) return NULL;
+		ret->xBase.trait |=  DAO_VALUE_STACK;
+		return (DaoCpod*) ret;
+	}
+	pod->trait |=  DAO_VALUE_STACK;
+	pod->size = size;
+	return pod;
+}
 void DaoCdata_Delete( DaoCdata *self );
 DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type )
 {
@@ -6452,6 +6471,12 @@ DaoArray* DaoProcess_NewArray( DaoProcess *self, int type )
 #else
 	return NULL;
 #endif
+}
+DaoCpod* DaoProcess_NewCpod( DaoProcess *self, DaoType *type, int size )
+{
+	DaoCpod *res = DaoCpod_New( type, size );
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
 }
 DaoCdata* DaoProcess_NewCdata( DaoProcess *self, DaoType *type, void *data, int owned )
 {

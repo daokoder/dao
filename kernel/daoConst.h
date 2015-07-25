@@ -152,10 +152,11 @@ enum DaoVarStorage
 
 enum DaoValueTrait
 {
-	DAO_VALUE_CONST   = (1<<1), /* constant data object */
-	DAO_VALUE_NOCOPY  = (1<<2), /* data object not for copying */
-	DAO_VALUE_DELAYGC = (1<<3), /* objects with this trait are scanned less frequently by GC */
-	DAO_VALUE_BROKEN  = (1<<4)  /* reference already broken (may not yet set to NULL) by GC */
+	DAO_VALUE_STACK   = (1<<0), /* stack value; */
+	DAO_VALUE_CONST   = (1<<1), /* constant value; */
+	DAO_VALUE_NOCOPY  = (1<<2), /* value not for copying; */
+	DAO_VALUE_DELAYGC = (1<<3), /* values with this trait are scanned less frequently by GC; */
+	DAO_VALUE_BROKEN  = (1<<4)  /* reference already broken (may not yet set to NULL) by GC; */
 };
 enum DaoTypeAttribs
 {

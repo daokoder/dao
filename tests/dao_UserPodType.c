@@ -25,7 +25,7 @@ DAO_DLL void DaoxUserPodType_Delete( DaoxUserPodType *self );
 
 DaoxUserPodType* DaoxUserPodType_New()
 {
-	DaoxUserPodType *self = (DaoxUserPodType*) DaoCpod_New( daox_type_user_pod_type, sizeof(dao_integer) );
+	DaoxUserPodType *self = (DaoxUserPodType*) DaoCpod_New( daox_type_user_pod_type, sizeof(DaoxUserPodType) );
 	return self;
 }
 void DaoxUserPodType_Delete( DaoxUserPodType *self )

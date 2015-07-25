@@ -665,6 +665,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 			return 1;
 		}
 		memcpy( (DaoCpod*)D2 + 1, (DaoCpod*)S + 1, S->xCpod.size );
+		D2->xCpod.size = S->xCpod.size;
 		break;
 	case (DAO_BOOLEAN<<8)|DAO_BOOLEAN : D2->xInteger.value = S->xInteger.value; break;
 	case (DAO_BOOLEAN<<8)|DAO_INTEGER : D2->xInteger.value = S->xInteger.value; break;

@@ -3716,14 +3716,14 @@ void DaoCstruct_Free( DaoCstruct *self )
 
 DaoCpod* DaoCpod_New( DaoType *type, int size )
 {
-	DaoCpod *self = (DaoCpod*)dao_calloc( 1, sizeof(DaoCpod) + size );
+	DaoCpod *self = (DaoCpod*)dao_calloc( 1, size );
 	DaoCstruct_Init( (DaoCstruct*)self, type );
-	self->size = size;
+	self->size = size - sizeof(DaoCpod);
 	return self;
 }
 DaoCpod* DaoCpod_Copy( DaoCpod *self )
 {
-	DaoCpod *copy = DaoCpod_New( self->ctype, self->size );
+	DaoCpod *copy = DaoCpod_New( self->ctype, self->size + sizeof(DaoCpod) );
 	memcpy( copy + 1, self + 1, self->size );
 	return copy;
 }
