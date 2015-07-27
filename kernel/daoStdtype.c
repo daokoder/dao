@@ -3719,6 +3719,9 @@ DaoCpod* DaoCpod_New( DaoType *type, int size )
 	DaoCpod *self = (DaoCpod*)dao_calloc( 1, size );
 	DaoCstruct_Init( (DaoCstruct*)self, type );
 	self->size = size - sizeof(DaoCpod);
+#ifdef DAO_USE_GC_LOGGER
+	if( type != NULL ) DaoObjectLogger_LogNew( (DaoValue*) self );
+#endif
 	return self;
 }
 DaoCpod* DaoCpod_Copy( DaoCpod *self )
@@ -3729,6 +3732,9 @@ DaoCpod* DaoCpod_Copy( DaoCpod *self )
 }
 void DaoCpod_Delete( DaoCpod *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
+#endif
 	DaoCstruct_Free( (DaoCstruct*)self );
 	dao_free( self );
 }

@@ -386,7 +386,10 @@ void DaoObjectLogger_Quit()
 				DaoObjectLogger_ScanValue( (DaoValue*) obj->defClass );
 				break;
 			}
-		case DAO_CSTRUCT : case DAO_CDATA : case DAO_CTYPE :
+		case DAO_CSTRUCT :
+		case DAO_CPOD :
+		case DAO_CDATA :
+		case DAO_CTYPE :
 			{
 				DaoCdata *cdata = (DaoCdata*) value;
 				DaoObjectLogger_ScanValue( (DaoValue*) cdata->object );
@@ -2264,6 +2267,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		}
 	case DAO_CSTRUCT :
 	case DAO_CPOD :
+	case DAO_CDATA :
 	case DAO_CTYPE :
 		{
 			DaoCdata *cdata = (DaoCdata*) value;

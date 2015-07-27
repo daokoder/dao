@@ -2487,6 +2487,9 @@ DaoValue* DaoProcess_SetValue( DaoProcess *self, ushort_t reg, DaoValue *value )
 }
 DaoValue* DaoProcess_PutValue( DaoProcess *self, DaoValue *value )
 {
+	DaoType *type = self->activeTypes[self->activeCode->c];
+	DaoValue *ret;
+
 	if( self->topFrame != self->topFrame->active && self->topFrame->returning == 0xffff ){
 		int res = DaoValue_Move( value, self->stackValues, NULL );
 		self->stackReturn = 0;
@@ -2495,7 +2498,6 @@ DaoValue* DaoProcess_PutValue( DaoProcess *self, DaoValue *value )
 	}
 	self->stackReturn = self->activeCode->c + (self->activeValues - self->stackValues);
 	if( value == NULL ){
-		DaoType *type = self->activeTypes[self->activeCode->c];
 		if( type != NULL && (type->tid & DAO_ANY) == 0 ){
 			int tm = type->tid == DAO_NONE;
 			if( type->tid == DAO_VARIANT ){
@@ -2507,7 +2509,9 @@ DaoValue* DaoProcess_PutValue( DaoProcess *self, DaoValue *value )
 			}
 		}
 	}
-	return DaoProcess_SetValue( self, self->activeCode->c, value );
+	ret = DaoProcess_SetValue( self, self->activeCode->c, value );
+	if( ret == NULL && type ) DaoProcess_RaiseError( self, "Value", "invalid return" );
+	return ret;
 }
 DaoNone* DaoProcess_PutNone( DaoProcess *self )
 {

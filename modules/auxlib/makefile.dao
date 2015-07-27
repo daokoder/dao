@@ -1,19 +1,30 @@
 
+project = DaoMake::Project( "DaoAux" ) 
+
 daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
 
 if( daovm == none ) return
 
-daovm.AddIncludePath( "." ) # To be exported in FindDaoAux.dao
-daovm.SetTargetPath( "../../lib/dao/modules" )
+project.UseImportLibrary( daovm, "dao" )
+project.AddIncludePath( "." ) # To be exported in FindDaoAux.dao
+project.SetTargetPath( "../../lib/dao/modules" )
 
-if( DaoMake::IsDir( "stream" ) ) daovm.AddDefinition( "DAO_HAS_STREAM" );
+project_objs = project.AddObjects( { "dao_aux.c", "dao_api.c" }, { "dao_aux.h", "dao_api.h" } )
 
-daovm_aux_objs = daovm.AddObjects( { "dao_aux.c", "dao_api.c" }, { "dao_aux.h", "dao_api.h" } )
-daovm_aux_dll  = daovm.AddSharedLibrary( "dao_aux", daovm_aux_objs )
-daovm_aux_lib  = daovm.AddStaticLibrary( "dao_aux", daovm_aux_objs )
+if( DaoMake::IsDir( "modules/random" ) ) project_objs.AddDefinition( "DAO_HAS_RANDOM" );
+if( DaoMake::IsDir( "modules/stream" ) ) project_objs.AddDefinition( "DAO_HAS_STREAM" );
+if( DaoMake::IsDir( "modules/image" ) )  project_objs.AddDefinition( "DAO_HAS_IMAGE" );
+if( DaoMake::IsDir( "modules/time" ) )   project_objs.AddDefinition( "DAO_HAS_TIME" );
+
+project_dll  = project.AddSharedLibrary( "dao_aux", project_objs )
+project_lib  = project.AddStaticLibrary( "dao_aux", project_objs )
 
 
 auxinc = DaoMake::MakePath( DaoMake::Variables[ "INSTALL_INC" ], "modules/auxlib" )
-daovm.Install( auxinc, { "dao_aux.h", "dao_api.h" } );
-daovm.Install( DaoMake::Variables[ "INSTALL_MOD" ], daovm_aux_dll );
-daovm.Install( DaoMake::Variables[ "INSTALL_MOD" ], daovm_aux_lib );
+project.Install( auxinc, { "dao_aux.h", "dao_api.h" } );
+findpkg = project.GenerateFinder( $TRUE );
+
+# The Aux module compiled with the Dao project has been installed!
+#project.Install( DaoMake::Variables[ "INSTALL_MOD" ], project_dll );
+#project.Install( DaoMake::Variables[ "INSTALL_MOD" ], project_lib );
+project.Install( DaoMake::Variables[ "INSTALL_FINDER" ], findpkg );

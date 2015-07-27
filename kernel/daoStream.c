@@ -402,7 +402,7 @@ static int DaoIO_CheckMode( DaoStream *self, DaoProcess *proc, int what )
 		DaoProcess_RaiseError( proc, NULL, "stream is not open!" );
 		return 0;
 	}
-	if( DaoStream_EndOfStream( self ) == 1 ){
+	if( what == DAO_STREAM_READABLE && DaoStream_EndOfStream( self ) == 1 ){
 		DaoProcess_RaiseError( proc, NULL, "stream reached the end!" );
 		return 0;
 	}

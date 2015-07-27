@@ -1,3 +1,4 @@
+load stream
 
 routine DaoDecodeUInt16( data : string, i = 0 )
 {

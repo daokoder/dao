@@ -26,7 +26,7 @@ std.load( "FindDao.dao" )
 daovm = DaoMake::FindPackage( "Dao" )
 if( daovm != none ) bundle.UseStaticLibrary( daovm, "dao" )
 
-finders = io.read( daovm_bundle + ".dar.finders" )
+finders = DaoMake::ReadFile( daovm_bundle + ".dar.finders" )
 
 bundle_finders = finders.split( "\n" )
 
