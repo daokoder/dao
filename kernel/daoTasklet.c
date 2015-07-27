@@ -349,6 +349,9 @@ static void DaoCallServer_ActivateEvents()
 	if( count == 0 ){
 		DaoStream *stream = mainVmSpace->errorStream;
 		DaoStream_WriteChars( stream, "ERROR: All tasklets are suspended - deadlock!\n" );
+#if DEBUG
+		fprintf( stderr, "ERROR: All tasklets are suspended - deadlock!\n" );
+#endif
 		exit(1);
 	}
 }

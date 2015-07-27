@@ -297,7 +297,6 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 	}
 	if( typer->core->kernel->methods == NULL ){
 		DaoType *hostype = typer->core->kernel->abtype;
-		DaoInterface *inter = DaoValue_CastInterface( hostype->aux );
 		DString name;
 
 		methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
@@ -340,12 +339,6 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 			}
 			DaoMethods_Insert( methods, cur, self, hostype );
 		}
-		if( hostype->tid == DAO_INTERFACE ){
-			for(i=0; i<DAO_MAX_CDATA_SUPER; ++i){
-				if( typer->supers[i] == NULL ) break;
-				DList_Append( inter->supers, typer->supers[i]->core->kernel->abtype->aux );
-			}
-		}
 		parents = DList_New(0);
 		DaoTypeBase_Parents( typer, parents );
 		for(i=1; i<parents->size; i++){
@@ -379,6 +372,9 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		if( hostype->tid == DAO_INTERFACE ){
 			DMap_Assign( hostype->aux->xInterface.methods, methods );
 			hostype->aux->xInterface.derived = 1;
+		}else if( hostype->tid == DAO_CINVALUE ){
+			DMap_Assign( hostype->aux->xCinType.methods, methods );
+			hostype->aux->xCinType.derived = 1;
 		}
 		DList_Delete( parents );
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
@@ -781,6 +777,8 @@ DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeBase *typer )
 	DaoInterface *inter;
 	DaoTypeKernel *kernel;
 	DaoType *abtype;
+	DaoType *sutype;
+	int i;
 
 	if( typer->core ) return typer->core->kernel->abtype;
 
@@ -793,16 +791,80 @@ DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeBase *typer )
 	GC_Assign( & kernel->nspace, self );
 
 	typer->core = kernel->core;
+	abtype->typer = typer;
+
+	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
+		if( typer->supers[i] == NULL ) break;
+		sutype = DaoNamespace_WrapInterface( self, typer->supers[i] );
+		DList_Append( inter->supers, sutype->aux );
+		if( abtype->bases == NULL ) abtype->bases = DList_New( DAO_DATA_VALUE );
+		DList_Append( abtype->bases, sutype );
+	}
+	DaoInterface_DeriveMethods( inter );
 
 	kernel->SetupValues = DaoNamespace_SetupValues;
 	kernel->SetupMethods = DaoNamespace_SetupMethods;
 	if( DaoNS_ParseType( self, typer->name, abtype, abtype, 1 ) == DAO_DT_FAILED ){
 		GC_IncRC( inter );
 		GC_DecRC( inter );
-		printf( "type wrapping failed: %s from %s\n", typer->name, self->name->chars );
+		printf( "Abstract interface wrapping failed: %s from %s\n", typer->name, self->name->chars );
 		return NULL;
 	}
 	return abtype;
+}
+DaoType* DaoNamespace_WrapCinType( DaoNamespace *self, DaoTypeBase *con, DaoType *abs, DaoType *tar )
+{
+	DaoInterface *abstract = (DaoInterface*) abs->aux;
+	DaoCinType *cintype;
+	DaoTypeKernel *kernel;
+	DaoType *sutype;
+	int i;
+
+	if( con->core ) return con->core->kernel->abtype;
+
+	cintype = DaoCinType_New( abstract, tar );
+	kernel = DaoTypeKernel_New( con );
+
+	GC_Assign( & cintype->citype->kernel, kernel );
+	GC_Assign( & cintype->vatype->kernel, kernel );
+	GC_Assign( & kernel->abtype, cintype->vatype );
+	GC_Assign( & kernel->nspace, self );
+
+	con->core = kernel->core;
+	cintype->citype->typer = con;
+	cintype->vatype->typer = con;
+
+	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
+		if( con->supers[i] == NULL ) break;
+		if( i >= abstract->supers->size ) goto Error;
+		sutype = abstract->supers->items.pInter[i]->abtype;
+		sutype = DaoNamespace_WrapCinType( self, con->supers[i], sutype, tar );
+		if( sutype == NULL ) goto Error;
+		DList_Append( cintype->supers, sutype->aux );
+		if( cintype->citype->bases == NULL ) cintype->citype->bases = DList_New( DAO_DATA_VALUE );
+		if( cintype->vatype->bases == NULL ) cintype->vatype->bases = DList_New( DAO_DATA_VALUE );
+		DList_Append( cintype->citype->bases, sutype->aux->xCinType.citype );
+		DList_Append( cintype->vatype->bases, sutype );
+	}
+	DaoCinType_DeriveMethods( cintype );
+
+	kernel->SetupValues = DaoNamespace_SetupValues;
+	kernel->SetupMethods = DaoNamespace_SetupMethods;
+	if( DaoNS_ParseType( self, con->name, cintype->citype, cintype->vatype, 1 ) == DAO_DT_FAILED ){
+		goto Error;
+	}
+
+	/* TODO: handle error: */
+	DaoNamespace_SetupMethods( self, con );
+
+	if( DaoType_MatchInterface( cintype->vatype, abstract, NULL ) == 0 ) goto Error;
+	if( abstract->concretes == NULL ) abstract->concretes = DHash_New(0,DAO_DATA_VALUE);
+	DMap_Insert( abstract->concretes, cintype->target, cintype );
+	return cintype->vatype;
+Error:
+	DaoGC_TryDelete( (DaoValue*) cintype );
+	printf( "Concrete interface wrapping failed: %s from %s\n", con->name, self->name->chars );
+	return NULL;
 }
 void DaoNamespace_SetupType( DaoNamespace *self, DaoTypeBase *typer, DaoType *type )
 {

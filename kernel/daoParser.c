@@ -6825,7 +6825,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 		result.last = result.update = self->vmcLast;
 		result.first = result.last;
 		return result;
-	}else if( tki == DKEY_SELF && tki2 == DTOK_DOT ){
+	}else if( tki == DKEY_SELF && tki2 == DTOK_DOT && self->hostClass ){
 		if( tki3 != DTOK_IDENTIFIER && tki3 < DKEY_CEIL ){
 			DaoParser_Error( self, DAO_INVALID_EXPRESSION, NULL );
 			return error;

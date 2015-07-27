@@ -322,6 +322,12 @@ DaoCstruct* DaoObject_CastCstruct( DaoObject *self, DaoType *type )
 	if( p && (p->type >= DAO_CSTRUCT && p->type <= DAO_CDATA) ) return (DaoCstruct*) p;
 	return NULL;
 }
+DaoCpod* DaoObject_CastCpod( DaoObject *self, DaoType *type )
+{
+	DaoCstruct *p = DaoObject_CastCstruct( self, type );
+	if( p && p->type == DAO_CPOD ) return (DaoCpod*) p;
+	return NULL;
+}
 DaoCdata* DaoObject_CastCdata( DaoObject *self, DaoType *type )
 {
 	DaoCstruct *p = DaoObject_CastCstruct( self, type );

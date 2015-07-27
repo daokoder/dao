@@ -1245,16 +1245,22 @@ DaoCstruct* DaoValue_CastCstruct( DaoValue *self, DaoType *type )
 	if( DaoType_ChildOf( self->xCstruct.ctype, type ) ) return (DaoCstruct*) self;
 	return NULL;
 }
+DaoCpod* DaoValue_CastCpod( DaoValue *self, DaoType *type )
+{
+	DaoCstruct *cstruct = DaoValue_CastCstruct( self, type );
+	if( cstruct == NULL || cstruct->type != DAO_CPOD ) return NULL;
+	return (DaoCpod*) cstruct;
+}
 DaoCdata* DaoValue_CastCdata( DaoValue *self, DaoType *type )
 {
-	if( self == NULL || type == NULL ) return (DaoCdata*) self;
-	if( self->type == DAO_OBJECT ){
-		self = (DaoValue*) DaoObject_CastCdata( (DaoObject*) self, type );
-		if( self == NULL ) return NULL;
-	}
-	if( self->type != DAO_CDATA ) return NULL;
-	if( DaoType_ChildOf( self->xCdata.ctype, type ) ) return (DaoCdata*) self;
-	return NULL;
+	DaoCstruct *cstruct = DaoValue_CastCstruct( self, type );
+	if( cstruct == NULL || cstruct->type != DAO_CDATA ) return NULL;
+	return (DaoCdata*) cstruct;
+}
+DaoCinValue* DaoValue_CastCinValue( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_CINVALUE ) return NULL;
+	return (DaoCinValue*) self;
 }
 DaoClass* DaoValue_CastClass( DaoValue *self )
 {
@@ -1265,6 +1271,11 @@ DaoInterface* DaoValue_CastInterface( DaoValue *self )
 {
 	if( self == NULL || self->type != DAO_INTERFACE ) return NULL;
 	return (DaoInterface*) self;
+}
+DaoCinType* DaoValue_CastCinType( DaoValue *self )
+{
+	if( self == NULL || self->type != DAO_CINTYPE ) return NULL;
+	return (DaoCinType*) self;
 }
 DaoRoutine* DaoValue_CastRoutine( DaoValue *self )
 {

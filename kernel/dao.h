@@ -401,9 +401,12 @@ DAO_DLL DaoTuple*     DaoValue_CastTuple( DaoValue *self );
 DAO_DLL DaoStream*    DaoValue_CastStream( DaoValue *self );
 DAO_DLL DaoObject*    DaoValue_CastObject( DaoValue *self );
 DAO_DLL DaoCstruct*   DaoValue_CastCstruct( DaoValue *self, DaoType *totype );
+DAO_DLL DaoCpod*      DaoValue_CastCpod( DaoValue *self, DaoType *totype );
 DAO_DLL DaoCdata*     DaoValue_CastCdata( DaoValue *self, DaoType *totype );
+DAO_DLL DaoCinValue*  DaoValue_CastCinValue( DaoValue *self );
 DAO_DLL DaoClass*     DaoValue_CastClass( DaoValue *self );
 DAO_DLL DaoInterface* DaoValue_CastInterface( DaoValue *self );
+DAO_DLL DaoCinType*   DaoValue_CastCinType( DaoValue *self );
 DAO_DLL DaoRoutine*   DaoValue_CastRoutine( DaoValue *self );
 DAO_DLL DaoProcess*   DaoValue_CastProcess( DaoValue *self );
 DAO_DLL DaoNamespace* DaoValue_CastNamespace( DaoValue *self );
@@ -732,6 +735,7 @@ DAO_DLL int DaoRoutine_IsWrapper( DaoRoutine *self );
 DAO_DLL DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name );
 DAO_DLL DaoValue*   DaoObject_GetField( DaoObject *self, const char *name );
 DAO_DLL DaoCstruct* DaoObject_CastCstruct( DaoObject *self, DaoType *type );
+DAO_DLL DaoCpod*    DaoObject_CastCpod( DaoObject *self, DaoType *type );
 DAO_DLL DaoCdata*   DaoObject_CastCdata( DaoObject *self, DaoType *type );
 
 
@@ -881,6 +885,7 @@ DAO_DLL DaoValue* DaoNamespace_FindData( DaoNamespace *self, const char *name );
 DAO_DLL DaoType* DaoNamespace_DefineType( DaoNamespace *self, const char *type, const char *alias );
 DAO_DLL DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int tid, int options );
 DAO_DLL DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeBase *typer );
+DAO_DLL DaoType* DaoNamespace_WrapCinType( DaoNamespace *self, DaoTypeBase *c, DaoType *a, DaoType *t );
 DAO_DLL DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fp, const char *proto );
 DAO_DLL int DaoNamespace_AliasTypes( DaoNamespace *self, const char *alias[] );
 DAO_DLL int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typer[] );
