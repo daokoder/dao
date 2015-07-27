@@ -879,6 +879,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 	}else if( type->tid == DAO_CINVALUE ){
 		mt = DaoType_MatchTo( self, type->aux->xCinType.target, NULL );
 		if( mt >= DAO_MT_EQ ) return DAO_MT_SIM;
+		type = type->aux->xCinType.target;
 	}else if( type->tid == DAO_INTERFACE ){
 		/* Matching to "interface": */
 		if( type->aux == NULL ) return DAO_MT_SUB * (self->tid == DAO_INTERFACE);

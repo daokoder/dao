@@ -841,10 +841,6 @@ DaoType* DaoNamespace_WrapCinType( DaoNamespace *self, DaoTypeBase *con, DaoType
 		sutype = DaoNamespace_WrapCinType( self, con->supers[i], sutype, tar );
 		if( sutype == NULL ) goto Error;
 		DList_Append( cintype->supers, sutype->aux );
-		if( cintype->citype->bases == NULL ) cintype->citype->bases = DList_New( DAO_DATA_VALUE );
-		if( cintype->vatype->bases == NULL ) cintype->vatype->bases = DList_New( DAO_DATA_VALUE );
-		DList_Append( cintype->citype->bases, sutype->aux->xCinType.citype );
-		DList_Append( cintype->vatype->bases, sutype );
 	}
 	DaoCinType_DeriveMethods( cintype );
 
