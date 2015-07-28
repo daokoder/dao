@@ -699,6 +699,12 @@ static int DaoValue_Compare2( DaoValue *left, DaoValue *right )
 #endif
 	}else if( left->type == DAO_LIST && left->xList.ctype == right->xList.ctype ){
 		return DaoValue_Compare( left, right );
+	}else if( left->type == DAO_CPOD && left->xCpod.ctype == right->xCpod.ctype ){
+		char *b1 = (char*)((DaoCpod*)left + 1);
+		char *b2 = (char*)((DaoCpod*)right + 1);
+		DString s1 = DString_WrapBytes( b1, left->xCpod.size );
+		DString s2 = DString_WrapBytes( b2, right->xCpod.size );
+		return DString_Compare( & s1, & s2 );
 	}
 	if( left->type <= DAO_STRING ) return DaoValue_Compare( left, right );
 	return left < right ? -100 : 100;

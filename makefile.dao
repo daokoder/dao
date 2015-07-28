@@ -241,6 +241,7 @@ daovm.AddIncludePath( "modules/auxlib" )
 finder_path = daovm.GenerateFinder( $TRUE );
 daovm.Install( daovm_bin_path, daovm_exe )
 daovm.Install( daovm_lib_path, daovm_dll, daovm_lib )
+daovm.Install( daovm_mod_path, auxlib_dll, auxlib_lib )
 daovm.Install( daovm_inc_path, daovm_kernel_headers )
 daovm.Install( daomake_pkg_path, finder_path );
 

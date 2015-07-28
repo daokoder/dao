@@ -324,6 +324,14 @@
 //    constant/variable's lookup names; If no lookup name is available,
 //    automatically generate a unique one;
 //
+// 3. DaoCpod should NOT be encoded directly by its bit values. Because some
+//    DaoCpod must be constructed at the loading time. Consider:
+//      load time;
+//      const now = time::now()
+//    It would be wrong to encode "now" by its bit values, because that would
+//    be a time around the compiling time, which is clearly not what the user
+//    intended.
+//
 //##########################################################################
 */
 enum DaoAuxOpcode

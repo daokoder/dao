@@ -1204,9 +1204,11 @@ DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, const char *file )
 {
 	return DaoVmSpace_LoadEx( self, file, 0 );
 }
-/* Link "ns" to the module/namespace corresponding to "mod". */
-/* If the module "mod" is not loaded yet, it will be loaded first. */
-/* Return the namespace corresponding to "mod". */
+/*
+// Link "ns" to the module/namespace corresponding to "mod".
+// If the module "mod" is not loaded yet, it will be loaded first.
+// Return the namespace corresponding to "mod".
+*/
 DaoNamespace* DaoVmSpace_LinkModule( DaoVmSpace *self, DaoNamespace *ns, const char *mod )
 {
 	DaoNamespace *modns = DaoVmSpace_Load( self, mod );

@@ -2012,6 +2012,7 @@ WrongType:
 			DList_Erase( types, count, count2 );
 			switch( type ? type->tid : 0 ){
 			case DAO_CDATA :
+			case DAO_CPOD :
 			case DAO_CSTRUCT : type = type->aux->xCtype.ctype;  goto DoneGenericType;
 			case DAO_OBJECT : type = type->aux->xClass.clsType; goto DoneGenericType;
 			}
@@ -5392,13 +5393,25 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 	if( mod == NULL ){
 		for(j=0; j<modpaths->size; ++j){
 			DString_Assign( self->string, modpaths->items.pString[j] );
-			if( (mod = DaoNamespace_FindNamespace(nameSpace, self->string)) == NULL ){
-				mod = DaoVmSpace_LoadModule( vmSpace, self->string );
-				if( mod == NULL && modname == NULL ){
-					mod = DaoVmSpace_FindModule( vmSpace, self->string );
-					cyclic = mod && DaoNamespace_CyclicParent( mod, nameSpace );
-					mod = NULL;
-				}
+			/*
+			// Do not use DaoNamespace_FindNamespace(nameSpace, self->string).
+			// Because it might return the explicit namespace with that name,
+			// but the loading statement must return the module namespace.
+			//
+			// Consider:
+			//   load time;
+			//   load time;
+			// The first load will add the module namespace "modules/libdao_time.dylib"
+			// as a parent of the current namespace. Then if DaoNamespace_FindNamespace()
+			// is used, it will return the "time" module defined inside "libdao_time.dylib"
+			// and added it as a parent of the current namespace. This will expose the
+			// constants and variables from "time" to the current namespace!
+			*/
+			mod = DaoVmSpace_LoadModule( vmSpace, self->string );
+			if( mod == NULL && modname == NULL ){
+				mod = DaoVmSpace_FindModule( vmSpace, self->string );
+				cyclic = mod && DaoNamespace_CyclicParent( mod, nameSpace );
+				mod = NULL;
 			}
 			if( mod == NULL ) break;
 			DList_Append( modlist, mod );
