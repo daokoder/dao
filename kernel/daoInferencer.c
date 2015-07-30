@@ -3002,6 +3002,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		}
 		checkfast = DVM_CALL && ((vmc->b & 0xff00) & ~DAO_CALL_TAIL) == 0;
 		checkfast &= at->tid == DAO_ROUTINE && argc >= rout2->parCount;
+		checkfast &= !(rout2->attribs & DAO_ROUT_DECORATOR);
 		checkfast &= rout2->routHost == NULL;
 		checkfast &= rout2 == rout;
 		checkfast &= rout2->body != NULL || rout2->pFunc != NULL; /* not curry; */

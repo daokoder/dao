@@ -311,7 +311,11 @@ void DaoObject_SetParentCstruct( DaoObject *self, DaoCstruct *parent )
 	}else if( sup->type == DAO_CTYPE ){
 		DaoCstruct *cdata = (DaoCstruct*)sup;
 		if( DaoType_ChildOf( cdata->ctype, parent->ctype ) ){
-			GC_Assign( & self->parent, parent );
+			if( parent->type == DAO_CPOD ){
+				DaoValue_MoveCpod( (DaoCpod*) parent, & self->parent );
+			}else{
+				GC_Assign( & self->parent, parent );
+			}
 		}
 	}
 }

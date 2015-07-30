@@ -64,23 +64,27 @@ static DaoTypeCore userTypeCore=
 	DaoxUserPodType_SetItem,
 	NULL
 };
+static DaoxUserPodType* DaoProcess_PutUserPod( DaoProcess *proc, dao_integer value )
+{
+	DaoCpod *pod = DaoProcess_PutCpod( proc, daox_type_user_pod_type, sizeof(DaoxUserPodType) );
+	DaoxUserPodType *self = (DaoxUserPodType*) pod;
+	self->value = value;
+	return self;
+}
 static void UT_New1( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoxUserPodType *self = DaoxUserPodType_New();
-	DaoProcess_PutValue( proc, (DaoValue*) self );
-	self->value = p[0]->xInteger.value;
+	DaoProcess_PutUserPod( proc, p[0]->xInteger.value );
 }
 static void UT_GETI( DaoProcess *proc, DaoValue *p[], int N )
 {
-	DaoxUserPodType *self = (DaoxUserPodType*) DaoValue_CastCstruct( p[0], daox_type_user_pod_type );
+	DaoxUserPodType *self = (DaoxUserPodType*) p[0];
 	DaoxUserPodType_GetItem1( p[0], proc, p[1] );
 }
 static void UT_BinaryOper2( DaoProcess *proc, DaoValue *p[], int N, int oper )
 {
-	DaoxUserPodType *C = DaoxUserPodType_New();
 	DaoxUserPodType *A = (DaoxUserPodType*) p[0];
 	DaoxUserPodType *B = (DaoxUserPodType*) p[1];
-	DaoProcess_PutValue( proc, (DaoValue*) C );
+	DaoProcess_PutUserPod( proc, A->value + B->value );
 }
 static void UT_CompOper2( DaoProcess *proc, DaoValue *p[], int N, int oper )
 {
@@ -149,10 +153,8 @@ static void UT_NE2( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void UT_UnaryOper( DaoProcess *proc, DaoValue *p[], int N, int oper )
 {
-	daoint ta;
 	DaoxUserPodType *A = (DaoxUserPodType*) p[0];
-	DaoxUserPodType *C = DaoxUserPodType_New();
-	DaoProcess_PutValue( proc, (DaoValue*) C );
+	DaoProcess_PutUserPod( proc, A->value );
 }
 static void UT_MINUS( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -170,8 +172,7 @@ static void UT_BitOper2( DaoProcess *proc, DaoValue *p[], int N, int oper )
 {
 	DaoxUserPodType *A = (DaoxUserPodType*) p[0];
 	DaoxUserPodType *B = (DaoxUserPodType*) p[1];
-	DaoxUserPodType *C = DaoxUserPodType_New();
-	DaoProcess_PutValue( proc, (DaoValue*) C );
+	DaoProcess_PutUserPod( proc, A->value | B->value );
 }
 static void UT_BITAND2( DaoProcess *proc, DaoValue *p[], int N )
 {

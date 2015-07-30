@@ -1539,7 +1539,7 @@ ErrorRoutine:
 		if( e2 >= size ) e2 = size - 1;
 		DString_Clear( self->string );
 		for(i=e1; i<=e2; i++){
-			if( tokens[i]->type == tokens[i-1]->type ) DString_AppendChar( self->string, ' ' );
+			if( i && tokens[i]->type == tokens[i-1]->type ) DString_AppendChar( self->string, ' ' );
 			DString_Append( self->string, & tokens[i]->string );
 			if( self->string->size > 20 ) break;
 		}
@@ -5403,9 +5403,10 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 			//   load time;
 			// The first load will add the module namespace "modules/libdao_time.dylib"
 			// as a parent of the current namespace. Then if DaoNamespace_FindNamespace()
-			// is used, it will return the "time" module defined inside "libdao_time.dylib"
-			// and added it as a parent of the current namespace. This will expose the
-			// constants and variables from "time" to the current namespace!
+			// is used, the second load will find the "time" module defined inside
+			// the module namespace and added it as a parent of the current namespace.
+			// This will expose the constants and variables from "time" to the current
+			// namespace!
 			*/
 			mod = DaoVmSpace_LoadModule( vmSpace, self->string );
 			if( mod == NULL && modname == NULL ){

@@ -622,6 +622,7 @@ static int DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *bin
 	if( p1 && p2 && type->fname->size && ! DString_EQ( self->fname, type->fname ) ){
 		return DAO_MT_NOT;
 	}
+	if( p1 && p2 && self->tid == DAO_PAR_NAMED && type->tid == DAO_PAR_DEFAULT ) return 0;
 	if( p1 || self->tid == DAO_PAR_VALIST ) ext1 = & self->aux->xType;
 	if( p2 || type->tid == DAO_PAR_VALIST ) ext2 = & type->aux->xType;
 	/* To avoid matching: type to name:var<type> etc. */
@@ -829,7 +830,6 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 			mode |= DAO_MODE_INVAR_DEST;
 		}
 		mt = DaoType_Match( self, type, defs, binds, dep, mode );
-		if( mt > DAO_MT_NOT ) mt -= 1; /* slightly reduce the score; */
 		return mt;
 	}else if( self->tid == DAO_THT && type->tid == DAO_THT ){
 		if( defs ){
@@ -1076,7 +1076,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 			return DaoType_MatchInterface( self, inter, NULL );
 		}
 		if( DaoType_MatchTo( self->aux->xCinType.target, type, NULL ) >= DAO_MT_EQ ){
-			return DAO_MT_EQ;
+			return DAO_MT_SIM;
 		}
 		return DaoType_MatchToParent( self, type, defs, dep );
 	case DAO_VARIANT :

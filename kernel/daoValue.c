@@ -293,6 +293,10 @@ void DaoValue_CopyX( DaoValue *src, DaoValue **dest, DaoType *cst )
 		GC_DecRC( dest2 );
 		*dest = dest2 = NULL;
 	}
+	if( src->type == DAO_CPOD ){
+		DaoValue_MoveCpod( (DaoCpod*) src, dest );
+		return;
+	}
 	if( dest2 == NULL ){
 		src = DaoValue_SimpleCopyWithTypeX( src, NULL, cst );
 		GC_IncRC( src );
@@ -432,6 +436,18 @@ static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp, Da
 	}
 	if( itp == NULL ) return 0;
 	return DaoValue_Move5( src, dest, itp, C, NULL );
+}
+void DaoValue_MoveCpod( DaoCpod *S, DaoValue **D )
+{
+	DaoValue *D2 = *D;
+	int notpod = D2 == NULL || D2->type != DAO_CPOD || D2->xCpod.refCount > 1;
+	if( notpod || D2->xCpod.ctype != S->ctype || D2->xCpod.size < S->size ){
+		S = DaoCpod_Copy( S );
+		DaoGC_Assign( D, (DaoValue*) S );
+		return;
+	}
+	memcpy( (DaoCpod*)D2 + 1, S + 1, S->size );
+	D2->xCpod.size = S->size;
 }
 int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *defs )
 {
@@ -617,10 +633,15 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	}
 	if( S->type >= DAO_OBJECT || !(S->xBase.trait & DAO_VALUE_CONST) || T->invar ){
 		if( DaoValue_FastMatchTo( S, T ) ){
-			GC_Assign( D, S );
+			if( S->type == DAO_CPOD ){
+				DaoValue_MoveCpod( (DaoCpod*) S, D );
+			}else{
+				GC_Assign( D, S );
+			}
 			return 1;
 		}
-	}else if( S->type == DAO_CINVALUE ){
+	}
+	if( S->type == DAO_CINVALUE ){
 		if( S->xCinValue.cintype->target == T ){
 			S = S->xCinValue.value;
 		}else if( DaoType_MatchTo( S->xCinValue.cintype->target, T, NULL ) >= DAO_MT_EQ ){
@@ -659,13 +680,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		break;
 	case (DAO_CPOD<<8)|DAO_CPOD :
 		if( S->xCpod.ctype != T ) return DaoValue_Move4( S, D, T, C, defs );
-		if( D2->xCpod.ctype != T || D2->xCpod.size < S->xCpod.size ){
-			S = (DaoValue*) DaoCpod_Copy( (DaoCpod*) S );
-			DaoGC_Assign( D, S );
-			return 1;
-		}
-		memcpy( (DaoCpod*)D2 + 1, (DaoCpod*)S + 1, S->xCpod.size );
-		D2->xCpod.size = S->xCpod.size;
+		DaoValue_MoveCpod( (DaoCpod*) S, D );
 		break;
 	case (DAO_BOOLEAN<<8)|DAO_BOOLEAN : D2->xInteger.value = S->xInteger.value; break;
 	case (DAO_BOOLEAN<<8)|DAO_INTEGER : D2->xInteger.value = S->xInteger.value; break;
