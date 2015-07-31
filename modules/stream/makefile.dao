@@ -1,0 +1,20 @@
+
+project = DaoMake::Project( "DaoStream" ) 
+
+daovm = DaoMake::FindPackage( "Dao", $REQUIRED )
+
+if( daovm == none ) return
+
+project.UseImportLibrary( daovm )
+project.SetTargetPath( "../../lib/dao/modules" )
+
+project_objs = project.AddObjects( { "dao_stream.c" } )
+project_dll  = project.AddSharedLibrary( "dao_stream", project_objs )
+project_lib  = project.AddStaticLibrary( "dao_stream", project_objs )
+
+
+project.Install( DaoMake::Variables[ "INSTALL_MOD" ], project_dll );
+project.Install( DaoMake::Variables[ "INSTALL_MOD" ], project_lib );
+
+findpkg = project.GenerateFinder( $TRUE );
+project.Install( DaoMake::Variables[ "INSTALL_FINDER" ], findpkg );

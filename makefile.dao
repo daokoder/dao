@@ -341,8 +341,7 @@ if( DaoMake::IsDir( "modules/image" ) )  daovm_auxlib_objects.AddDefinition( "DA
 #auxlib = daovm.AddDirectory( "auxlib", "modules/auxlib" );
 debugger = daovm.AddDirectory( "debugger", "modules/debugger" );
 profiler = daovm.AddDirectory( "profiler", "modules/profiler" );
-help = daovm.AddDirectory( "help", "modules/help" )
-macro = daovm.AddDirectory( "macro", "modules/macro" )
+stream = daovm.AddDirectory( "stream", "modules/stream" );
 
 daomake = daovm.AddDirectory( "daomake", "tools/daomake" )
 daotest = daovm.AddDirectory( "daotest", "tools/daotest" )
@@ -360,8 +359,7 @@ modules = daovm.AddDirectory( "modules", "modules" )
 #auxlib.AddDependency( daovm_dll )
 debugger.AddDependency( daovm_dll )
 profiler.AddDependency( daovm_dll )
-help.AddDependency( daovm_dll )
-macro.AddDependency( daovm_dll )
+stream.AddDependency( daovm_dll )
 
 daomake.AddDependency( daovm_lib )
 modules.AddDependency( daovm_lib )
@@ -378,8 +376,6 @@ if( DaoMake::UseLocalRPath() == 0 ){
 }
 
 daovm.AddVariable( "DAO", daocmd );
-daovm.AddVariable( "HELP_PATH", daovm.MakeSourcePath( daovm_use_help_path ) );
-daovm.AddVariable( "HELP_FONT", daovm_use_help_font );
 
 
 ###########################################################################
@@ -422,13 +418,20 @@ if( daovm_bundle_program.size() ){
 # Add shell commands as a target:
 # Generate documentations here instead of inside modules/help,
 # as it might be problematic to use relative path in windows to invoke Dao.
-daovm_doc = daovm.AddCommand( "./doc/html/en/index.html: Makefile" + DaoMake::MakefileSuffix(), "@$(DAOMAKE) mkdir3 ./doc/html/en" );
-daovm_doc.AddCommand( "@$(DAOMAKE) mkdir3 ./doc/html/zh" );
-daovm_doc.AddCommand( @[]$(DAO) --path="$(HELP_PATH)" -e "load help; help::set_language('en'); help::set_font('$(HELP_FONT)'); help::export('','./doc/html/en')"@[] );
-daovm_doc.AddCommand( @[]$(DAO) --path="$(HELP_PATH)" -e "load help; help::set_language('zh'); help::set_font('$(HELP_FONT)'); help::export('','./doc/html/zh')"@[] );
-daovm_doc.AddDependency( daovm_dll );
+if( DaoMake::IsDir( "modules/help" ) ){
+	help = daovm.AddDirectory( "help", "modules/help" );
+	help.AddDependency( daovm_dll );
+	daovm.AddVariable( "HELP_PATH", daovm.MakeSourcePath( daovm_use_help_path ) );
+	daovm.AddVariable( "HELP_FONT", daovm_use_help_font );
 
-daovm.Install( daovm_doc_path, daovm.BinaryPath() /"doc" )
+	daovm_doc = daovm.AddCommand( "./doc/html/en/index.html: Makefile" + DaoMake::MakefileSuffix(), "@$(DAOMAKE) mkdir3 ./doc/html/en" );
+	daovm_doc.AddCommand( "@$(DAOMAKE) mkdir3 ./doc/html/zh" );
+	daovm_doc.AddCommand( @[]$(DAO) --path="$(HELP_PATH)" -e "load help; help::set_language('en'); help::set_font('$(HELP_FONT)'); help::export('','./doc/html/en')"@[] );
+	daovm_doc.AddCommand( @[]$(DAO) --path="$(HELP_PATH)" -e "load help; help::set_language('zh'); help::set_font('$(HELP_FONT)'); help::export('','./doc/html/zh')"@[] );
+	daovm_doc.AddDependency( daovm_dll );
+
+	daovm.Install( daovm_doc_path, daovm.BinaryPath() /"doc" )
+}
 
 demos = {
 	"demo/arrays.dao",
