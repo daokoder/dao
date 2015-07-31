@@ -45,13 +45,25 @@
 #endif
 
 
-#ifdef DAO_HAS_IMAGE
-#define DAO_IMAGE
-#include"../image/source/dao_image.h"
-#endif
-
-
 #ifdef DAO_HAS_TIME
 #define DAO_TIME
 #include"../time/dao_time.h"
+#endif
+
+
+#ifdef DAO_HAS_ZIP
+#define DAO_ZIP
+#include"../zip/dao_zip.h"
+#endif
+
+
+#ifdef DAO_HAS_CRYPTO
+#define DAO_CRYPTO
+#include"../crypto/dao_crypto.h"
+#endif
+
+
+#ifdef DAO_HAS_IMAGE
+#define DAO_IMAGE
+#include"../image/source/dao_image.h"
 #endif

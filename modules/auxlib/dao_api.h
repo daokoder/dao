@@ -53,11 +53,21 @@
 #endif
 
 
-#ifdef DAO_HAS_IMAGE
-#include"../image/source/dao_image.h"
+#ifdef DAO_HAS_TIME
+#include"../time/dao_time.h"
 #endif
 
 
-#ifdef DAO_HAS_TIME
-#include"../time/dao_time.h"
+#ifdef DAO_HAS_ZIP
+#include"../zip/dao_zip.h"
+#endif
+
+
+#ifdef DAO_HAS_CRYPTO
+#include"../crypto/dao_crypto.h"
+#endif
+
+
+#ifdef DAO_HAS_IMAGE
+#include"../image/source/dao_image.h"
 #endif
