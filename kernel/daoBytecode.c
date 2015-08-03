@@ -2314,23 +2314,14 @@ static void DaoByteCoder_DecodeClass( DaoByteCoder *self, DaoByteBlock *block )
 }
 static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 {
-	DaoVmCodeX *vmc2, *vmc = NULL;
-	DMap *current, *outer = DHash_New(0,0);
-	DList *outers = DList_New( DAO_DATA_MAP );
+	DaoVmCodeX *vmc = NULL;
 	DaoInferencer *inferencer;
 	DaoRoutine *routine = (DaoRoutine*) block->value;
 	int regCount = routine->body->regCount;
 	int i, T, M, ret, N = routine->body->annotCodes->size;
 	char buf[200];
 
-	DList_PushBack( outers, outer );
-	DList_PushBack( outers, outer );
-	current = (DMap*) DList_Back( outers );
-	for(i=0; i<routine->routType->nested->size; ++i){
-		DMap_Insert( current, IntToPointer(i), 0 );
-	}
 	for(i=0; i<N; ++i){
-		current = (DMap*) DList_Back( outers );
 		vmc = (DaoVmCodeX*) routine->body->annotCodes->items.pVmc[i];
 
 		if( vmc->code >= DVM_NULL ) goto InvalidInstruction;
@@ -2344,21 +2335,14 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 		switch( T ){
 		case DAO_CODE_GETU :
 			if( vmc->c >= regCount ) goto InvalidInstruction;
-			DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			if( vmc->a ){
-				DMap *map = outers->items.pMap[vmc->a];
-				if( vmc->a >= outers->size ) goto InvalidInstruction;
 				if( vmc->b >= regCount ) goto InvalidInstruction;
-				if( DMap_Find( map, IntToPointer(vmc->b) ) == NULL ) goto InvalidInstruction;
 			}
 			break;
 		case DAO_CODE_SETU :
 			if( vmc->a >= regCount ) goto InvalidInstruction;
 			if( vmc->c ){
-				DMap *map = outers->items.pMap[vmc->c];
-				if( vmc->c >= outers->size ) goto InvalidInstruction;
 				if( vmc->b >= regCount ) goto InvalidInstruction;
-				if( DMap_Find( map, IntToPointer(vmc->b) ) == NULL ) goto InvalidInstruction;
 			}
 			break;
 		case DAO_CODE_GETC :
@@ -2370,7 +2354,6 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 				if( routine->body->upValues == NULL ) goto InvalidInstruction;
 				if( vmc->b >= routine->body->upValues->size ) goto InvalidInstruction;
 			}
-			DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			break;
 		case DAO_CODE_SETG :
 			if( vmc->a >= regCount ) goto InvalidInstruction;
@@ -2387,12 +2370,10 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 		case DAO_CODE_UNARY :
 			if( vmc->a >= regCount ) goto InvalidInstruction;
 			if( vmc->c >= regCount ) goto InvalidInstruction;
-			if( T != DAO_CODE_SETF ) DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			break;
 		case DAO_CODE_UNARY2 :
 			if( vmc->b >= regCount ) goto InvalidInstruction;
 			if( vmc->c >= regCount ) goto InvalidInstruction;
-			DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			break;
 		case DAO_CODE_GETM :
 		case DAO_CODE_SETM :
@@ -2400,7 +2381,6 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 			if( vmc->c >= regCount ) goto InvalidInstruction;
 			if( T == DAO_CODE_GETM && (vmc->a + vmc->b) >= regCount ) goto InvalidInstruction;
 			if( T == DAO_CODE_SETM && (vmc->c + vmc->b) >= regCount ) goto InvalidInstruction;
-			if( T == DAO_CODE_GETM ) DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			break;
 		case DAO_CODE_GETI :
 		case DAO_CODE_SETI :
@@ -2408,40 +2388,34 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 			if( vmc->a >= regCount ) goto InvalidInstruction;
 			if( vmc->b >= regCount ) goto InvalidInstruction;
 			if( vmc->c >= regCount ) goto InvalidInstruction;
-			if( T != DAO_CODE_SETI ) DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			break;
 		case DAO_CODE_MATRIX :
 			M = (vmc->b>>8)*(vmc->b&0xff);
 			if( vmc->a >= regCount ) goto InvalidInstruction;
 			if( vmc->c >= regCount ) goto InvalidInstruction;
 			if( (vmc->a + M) >= regCount ) goto InvalidInstruction;
-			DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			break;
 		case DAO_CODE_ENUM :
 			if( vmc->a >= regCount ) goto InvalidInstruction;
 			if( vmc->c >= regCount ) goto InvalidInstruction;
 			if( (vmc->a + (vmc->b&(0xffff>>2)) - 1) >= regCount ) goto InvalidInstruction;
-			DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			break;
 		case DAO_CODE_YIELD :
 			if( vmc->a >= regCount ) goto InvalidInstruction;
 			if( vmc->c >= regCount ) goto InvalidInstruction;
 			if( (vmc->a + (vmc->b&0xff) - 1) >= regCount ) goto InvalidInstruction;
-			DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			break;
 		case DAO_CODE_CALL :
 			M = vmc->b & 0xff;
 			if( vmc->a >= regCount ) goto InvalidInstruction;
 			if( vmc->c >= regCount ) goto InvalidInstruction;
 			if( (vmc->a + M) >= regCount ) goto InvalidInstruction;
-			DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			break;
 		case DAO_CODE_ENUM2 :
 		case DAO_CODE_ROUTINE :
 			if( vmc->a >= regCount ) goto InvalidInstruction;
 			if( vmc->c >= regCount ) goto InvalidInstruction;
 			if( (vmc->a + vmc->b) >= regCount ) goto InvalidInstruction;
-			DMap_Insert( current, IntToPointer( vmc->c ), 0 );
 			break;
 		case DAO_CODE_EXPLIST :
 			if( vmc->b == 0 ) break;
@@ -2458,22 +2432,8 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 		default :
 			break;
 		}
-		switch( vmc->code ){
-		case DVM_SECT :
-			DList_PushBack( outers, outer );
-			break;
-		case DVM_GOTO :
-			if( vmc->b >= i ) break;
-			vmc2 = (DaoVmCodeX*) routine->body->annotCodes->items.pVmc[vmc->b+1];
-			if( vmc2->code == DVM_SECT ) DList_PopBack( outers );
-			break;
-		}
 	}
-	DMap_Delete( outer );
-	DList_Delete( outers );
 	vmc = NULL;
-	outer = NULL;
-	outers = NULL;
 	inferencer = DaoInferencer_New();
 	DList_Resize( routine->body->regType, routine->body->regCount, NULL );
 	DaoInferencer_Init( inferencer, routine, 0 );
@@ -2490,8 +2450,6 @@ InvalidInstruction:
 		DaoVmCodeX_Print( *vmc, NULL, buf + 7 );
 		DaoStream_WriteChars( self->vmspace->errorStream, buf );
 	}
-	if( outers ) DList_Delete( outers );
-	if( outer ) DMap_Delete( outer );
 	return 0;
 }
 static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block )

@@ -155,9 +155,17 @@ static const char* const daoFileSuffix[] =
 {
 	".dac", ".dao", DAO_DLL_SUFFIX
 };
+static const char* const daoFileSuffix2[] =
+{
+	".dao", ".dac", DAO_DLL_SUFFIX
+};
 static int daoModuleTypes[] =
 {
 	DAO_MODULE_DAC, DAO_MODULE_DAO, DAO_MODULE_DLL
+};
+static int daoModuleTypes2[] =
+{
+	DAO_MODULE_DAO, DAO_MODULE_DAC, DAO_MODULE_DLL
 };
 
 #ifndef TARGET_PLAT
@@ -1738,7 +1746,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	argNames = DList_New( DAO_DATA_STRING );
 	argValues = DList_New( DAO_DATA_STRING );
 	DaoVmSpace_ParseArguments( self, ns, file, NULL, argNames, argValues );
-	DaoVmSpace_AddPath( self, ns->path->chars );
+	DaoVmSpace_SetPath( self, ns->path->chars );
 	DList_PushFront( self->nameLoading, ns->name );
 	DList_PushFront( self->pathLoading, ns->path );
 	DList_PushFront( self->loadedModules, ns );
@@ -1855,6 +1863,12 @@ int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int types )
 		DaoVmSpace_SearchPath( self, fname, DAO_FILE_PATH, 1 );
 		if( DaoVmSpace_TestFile( self, fname ) ) modtype = DAO_MODULE_DLL;
 	}else{
+		const char* const *fileSuffix = daoFileSuffix;
+		int *moduleTypes = daoModuleTypes;
+		if( self->options & DAO_OPTION_COMP_BC ){
+			fileSuffix = daoFileSuffix2;
+			moduleTypes = daoModuleTypes2;
+		}
 		DString *fn = DString_New();
 		DString *path = DString_New();
 		DString *file = DString_New();
@@ -1867,8 +1881,8 @@ int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int types )
 			DString_Assign( file, fname );
 		}
 		for(i=0; i<DAO_FILE_TYPE_NUM; i++){
-			if( !(types & daoModuleTypes[i]) ) continue;
-			if( daoModuleTypes[i] < DAO_MODULE_DLL ){
+			if( !(types & moduleTypes[i]) ) continue;
+			if( moduleTypes[i] < DAO_MODULE_DLL ){
 				DString_Assign( fn, fname );
 			}else if( strstr( fname->chars, "dao_" ) == fname->chars ){
 				/* See modules/canvas/canvas.dao; */
@@ -1881,11 +1895,11 @@ int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int types )
 				DString_AppendChars( fn, daoDllPrefix[i] );
 				DString_Append( fn, file );
 			}
-			DString_AppendChars( fn, daoFileSuffix[i] );
+			DString_AppendChars( fn, fileSuffix[i] );
 			DaoVmSpace_SearchPath( self, fn, DAO_FILE_PATH, 1 );
 
 			if( DaoVmSpace_TestFile( self, fn ) ){
-				modtype = daoModuleTypes[i];
+				modtype = moduleTypes[i];
 				if( modtype > DAO_MODULE_DLL ) modtype = DAO_MODULE_DLL;
 				DString_Assign( fname, fn );
 				break;
@@ -2867,9 +2881,7 @@ DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname )
 DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname )
 {
 	DaoNamespace *ns = NULL;
-	int modtype = DAO_MODULE_ANY;
-	if( self->options & DAO_OPTION_COMP_BC ) modtype = DAO_MODULE_DAO | DAO_MODULE_DLL;
-	switch( DaoVmSpace_CompleteModuleName( self, fname, modtype ) ){
+	switch( DaoVmSpace_CompleteModuleName( self, fname, DAO_MODULE_ANY ) ){
 	case DAO_MODULE_DAC :
 	case DAO_MODULE_DAO : ns = DaoVmSpace_LoadDaoModule( self, fname ); break;
 	case DAO_MODULE_DLL : ns = DaoVmSpace_LoadDllModule( self, fname ); break;
