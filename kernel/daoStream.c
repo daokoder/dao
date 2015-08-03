@@ -540,7 +540,7 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 			continue;
 		}
 
-		if( ++id > N || p[id] == NULL ) goto NullParameter;
+		if( ++id >= N || p[id] == NULL ) goto NullParameter;
 		value = p[id];
 
 		/* flags: */

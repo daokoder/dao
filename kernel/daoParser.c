@@ -2575,7 +2575,7 @@ static int DaoParser_Preprocess( DaoParser *self )
 			/* only for top level "load", for macros in the module  */
 			end = DaoParser_ParseLoadStatement( self, start, self->tokens->size-1 );
 			if( end < 0 ) return 0;
-			if( cons ) DaoParser_MakeCodes( self, start, end, ns->inputs );
+			if( cons ) DaoParser_MakeCodes( self, start, end-1, ns->inputs );
 			DList_Erase( self->tokens, start, end-start );
 			tokens = self->tokens->items.pToken;
 		}else if( tki == DTOK_VERBATIM ){
