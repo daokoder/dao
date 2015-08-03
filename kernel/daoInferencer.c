@@ -3579,6 +3579,7 @@ SkipChecking:
 			break;
 		case DAO_CODE_BINARY :
 			if( code == DVM_EQ || code == DVM_NE ) break;
+			if( code == DVM_SAME || code == DVM_ISA ) break;
 			tt = DaoType_GetAutoCastType( at );
 			if( tt != NULL ) DaoInferencer_InsertUntag( self, inode, & inode->a, tt );
 			tt = DaoType_GetAutoCastType( bt );
@@ -4122,9 +4123,16 @@ SkipChecking:
 				DaoInferencer_UpdateVarType( self, opc, dao_type_bool );
 				if( NoCheckingType( at ) || NoCheckingType( bt ) ) continue;
 				AssertTypeMatching( dao_type_int, types[opc], defs );
-				if( at->tid != bt->tid && types[opc]->tid == DAO_BOOLEAN ){
-					vmc->code = DVM_DATA_B;
-					vmc->b = 0;
+				if( at->tid != DAO_VARIANT && bt->tid != DAO_VARIANT ){
+					if( types[opc]->tid == DAO_BOOLEAN ){
+						if( at->tid != bt->tid ){
+							vmc->code = DVM_DATA_B;
+							vmc->b = 0;
+						}else if( at->tid <= DAO_STRING ){
+							vmc->code = DVM_DATA_B;
+							vmc->b = 1;
+						}
+					}
 				}
 				break;
 			}
@@ -4136,7 +4144,7 @@ SkipChecking:
 					AssertTypeMatching( dao_type_bool, types[opc], defs );
 					continue;
 				}
-				if( bt->tid != DAO_TYPE ) goto ErrorTyping;
+				if( bt->tid != DAO_NONE && bt->tid != DAO_TYPE ) goto ErrorTyping;
 				AssertTypeMatching( dao_type_bool, types[opc], defs );
 				ct = types[opc];
 				k = bt->tid == DAO_TYPE ? bt->nested->items.pType[0]->tid : DAO_UDT;

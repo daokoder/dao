@@ -3058,6 +3058,7 @@ void DaoProcess_DoCheckIsa( DaoProcess *self, DaoVmCode *vmc )
 		if( dA->type == DAO_CLASS ) dA = (DaoValue*) dA->xClass.objType;
 	}
 
+	if( dB->type == DAO_NONE ) dB = (DaoValue*) dao_type_none;
 	if( dB->type != DAO_TYPE ){
 		DaoProcess_RaiseError( self, "Value", "invalid type operand" );
 		return;

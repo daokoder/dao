@@ -589,9 +589,9 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 			if( F == 'C' ) DString_ToLocal( fmt2 );
 			DaoStream_WriteString( self, fmt2 );
 		}else if( F == 'd' || F == 'i' || F == 'o' || F == 'x' || F == 'X' ){
+			if( value->type == DAO_NONE || value->type > DAO_FLOAT ) goto WrongParameter;
 			DString_InsertChars( fmt2, "ll", fmt2->size-1, 0, 2 );
 			self->format = fmt2->chars;
-			if( value->type == DAO_NONE || value->type > DAO_FLOAT ) goto WrongParameter;
 			DaoStream_WriteInt( self, DaoValue_GetInteger( value ) );
 		}else if( toupper( F ) == 'E' || toupper( F ) == 'F' || toupper( F ) == 'G' ){
 			if( value->type == DAO_NONE || value->type > DAO_FLOAT ) goto WrongParameter;

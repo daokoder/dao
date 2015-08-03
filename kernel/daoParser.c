@@ -1074,6 +1074,7 @@ static int DaoParser_ParseDecoTargets( DaoParser *self, int start, int to, DList
 			}
 		}
 		if( tks[i]->name != DTOK_COMMA ) break;
+		i += 1;
 	}
 	if( tks[i]->name != DTOK_LCB ) return -1;
 	return i;
@@ -1492,6 +1493,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	if( tokens[right]->name == DKEY_FOR ){
 		DaoRoutineBody *body = routine->body;
 		ec = DAO_INVALID_DECO_PATTERN;
+		if( self->hostClass == NULL ) goto ErrorRoutine;
 		if( !(routine->attribs & DAO_ROUT_DECORATOR) ) goto ErrorRoutine;
 		if( body->decoTargets == NULL ) body->decoTargets = DList_New( DAO_DATA_STRING );
 		right = DaoParser_ParseDecoTargets( self, right+1, size-1, body->decoTargets );

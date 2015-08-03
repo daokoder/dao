@@ -2713,7 +2713,7 @@ DaoVmSpace* DaoInit( const char *command )
 		}
 #ifdef DEBUG
 		if( ! Dao_IsFile( mainVmSpace->daoBinPath->chars ) ){
-			printf( "WARNING: the path of the executable cannot be located!" );
+			printf( "WARNING: the path of the executable cannot be located!\n" );
 		}
 #endif
 		DString_Change( mainVmSpace->daoBinPath, "[^/\\]* $", "", 0 );

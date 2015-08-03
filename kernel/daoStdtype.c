@@ -3964,7 +3964,7 @@ static DaoFuncItem dao_Exception_Meths[] =
 	{ Dao_Exception_Serialize, "serialize( self: Exception )=>string" },
 	{ Dao_Exception_Serialize, "(string)( self: Exception )" },
 
-#ifdef DEBUG
+#if 0
 	{ Dao_Exception_Getf, ".( self: Exception, name: string )=>any" },
 	{ Dao_Exception_Setf, ".=( self: Exception, name: string, value: any)" },
 #endif

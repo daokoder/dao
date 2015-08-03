@@ -26,6 +26,10 @@
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+// %s/\(\w\+\) \(\w\+\)( \(.*\) )/DAO_API( DAO_TIME_DLL, \1, \2, (\3) )
+*/
+
 #ifdef DAO_API
 #  undef DAO_API
 #endif
