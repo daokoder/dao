@@ -155,8 +155,8 @@ DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file );
 DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, const char *file );
 DAO_DLL DaoNamespace* DaoVmSpace_LoadEx( DaoVmSpace *self, const char *file, int run );
 
-DAO_DLL DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname );
-DAO_DLL DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *fname );
+DAO_DLL DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *name, DaoParser *parser );
+DAO_DLL DaoNamespace* DaoVmSpace_FindModule( DaoVmSpace *self, DString *name );
 DAO_DLL DaoNamespace* DaoVmSpace_FindNamespace( DaoVmSpace *self, DString *name );
 
 DAO_DLL int DaoVmSpace_TestFile( DaoVmSpace *self, DString *fname );
@@ -165,8 +165,8 @@ DAO_DLL int DaoVmSpace_SearchResource( DaoVmSpace *self, DString *fname, DString
 
 DAO_DLL void DaoVmSpace_ConvertPath( DaoVmSpace *self, DString *path );
 
-DAO_DLL void DaoVmSpace_SearchPath( DaoVmSpace *self, DString *fname, int type, int check );
-DAO_DLL int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int types );
+DAO_DLL int DaoVmSpace_SearchModulePath( DaoVmSpace *self, DString *fname, int lib );
+DAO_DLL int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int lib );
 
 DAO_DLL void DaoVmSpace_SetPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path );

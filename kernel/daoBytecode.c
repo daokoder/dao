@@ -2900,7 +2900,7 @@ static void DaoByteCoder_LoadModule( DaoByteCoder *self, DaoByteBlock *block )
 	}
 	spath = DString_Copy( path->value->xString.value );
 	if( (ns = DaoNamespace_FindNamespace(self->nspace, spath)) == NULL ){
-		ns = DaoVmSpace_LoadModule( self->nspace->vmSpace, spath );
+		ns = DaoVmSpace_LoadModule( self->nspace->vmSpace, spath, NULL );
 	}
 	if( ns == NULL ){
 		self->error = 1;

@@ -614,12 +614,10 @@ void DaoParser_Suggest( DaoParser *self, const char *suggestion )
 	DaoStream_WriteChars( self->vmSpace->errorStream, suggestion );
 	DaoStream_WriteChar( self->vmSpace->errorStream, '\n' );
 }
-void DaoParser_PrintInformation( DaoParser *self, DList *infolist, const char *header )
+void DaoParser_PrintInfoHeader( DaoParser *self, const char *header )
 {
-	int i;
 	DaoStream *stream = self->vmSpace->errorStream;
 
-	if( infolist->size ==0 ) return;
 	DaoStream_WriteChars( stream, header );
 	DaoStream_WriteChars( stream, " in file \"" );
 	if( self->fileName->size )
@@ -627,50 +625,64 @@ void DaoParser_PrintInformation( DaoParser *self, DList *infolist, const char *h
 	else
 		DaoStream_WriteString( stream, self->nameSpace->name );
 	DaoStream_WriteChars( stream, "\":\n" );
+}
 
-	for(i=infolist->size-1; i>=0; i--){
-		DaoToken *tok = infolist->items.pToken[i];
-		if( i < infolist->size-1 ){
-			DaoToken *tok2 = infolist->items.pToken[i+1];
+void DaoParser_PrintInfoLine( DaoParser *self, DaoToken *tok )
+{
+	DaoStream *stream = self->vmSpace->errorStream;
+	if( tok->name == 0 ){
+		DaoStream_WriteChars( stream, "  From file : " );
+	}else{
+		DaoStream_WriteChars( stream, "  At line " );
+		DaoStream_WriteInt( stream, tok->line );
+		DaoStream_WriteChars( stream, " : " );
+		if( tok->name < DAO_CTW_END ){
+			DaoStream_WriteChars( stream, getCtInfo( tok->name ) );
+			if( tok->string.size ) DaoStream_WriteChars( stream, " --- " );
+		}
+	}
+	if( tok->name == DAO_EVAL_EXCEPTION ){
+		DaoStream_WriteChars( stream, "\n" );
+		DaoStream_WriteString( stream, & tok->string );
+		DaoStream_WriteChars( stream, "\n" );
+		return;
+	}
+	if( tok->string.size ){
+		DaoStream_WriteChars( stream, "\" " );
+		DaoStream_WriteString( stream, & tok->string );
+		DaoStream_WriteChars( stream, " \"" );
+	}
+	DaoStream_WriteChars( stream, ";\n" );
+}
+static void DaoParser_PrintWarnings( DaoParser *self )
+{
+	int i;
+	if( self->warnings->size == 0 ) return;
+	DaoParser_PrintInfoHeader( self, "[[WARNING]]" );
+	for(i=0; i<self->warnings->size; ++i){
+		DaoToken *tok = self->warnings->items.pToken[i];
+		DaoParser_PrintInfoLine( self, tok );
+	}
+	DList_Clear( self->warnings );
+}
+void DaoParser_PrintError( DaoParser *self, int line, int code, DString *ext )
+{
+	int i;
+	DaoParser_PrintWarnings( self );
+	if( code ) DaoParser_Error4( self, code, line, ext ? ext->chars : "" );
+	if( self->errors->size == 0 ) return;
+	DaoParser_PrintInfoHeader( self, "[[ERROR]]" );
+	for(i=self->errors->size-1; i>=0; i--){
+		DaoToken *tok = self->errors->items.pToken[i];
+		if( i < self->errors->size-1 ){
+			DaoToken *tok2 = self->errors->items.pToken[i+1];
 			if( tok->line == tok2->line && tok->name == tok2->name ){
 				if( DString_EQ( & tok->string, & tok2->string ) ) continue;
 			}
 		}
-		if( tok->name == 0 ){
-			DaoStream_WriteChars( stream, "  From file : " );
-		}else{
-			DaoStream_WriteChars( stream, "  At line " );
-			DaoStream_WriteInt( stream, tok->line );
-			DaoStream_WriteChars( stream, " : " );
-			if( tok->name < DAO_CTW_END ){
-				DaoStream_WriteChars( stream, getCtInfo( tok->name ) );
-				if( tok->string.size ) DaoStream_WriteChars( stream, " --- " );
-			}
-		}
-		if( tok->name == DAO_EVAL_EXCEPTION ){
-			DaoStream_WriteChars( stream, "\n" );
-			DaoStream_WriteString( stream, & tok->string );
-			DaoStream_WriteChars( stream, "\n" );
-			continue;
-		}
-		if( tok->string.size ){
-			DaoStream_WriteChars( stream, "\" " );
-			DaoStream_WriteString( stream, & tok->string );
-			DaoStream_WriteChars( stream, " \"" );
-		}
-		DaoStream_WriteChars( stream, ";\n" );
+		DaoParser_PrintInfoLine( self, tok );
 	}
-	DList_Clear( infolist );
-}
-static void DaoParser_PrintWarnings( DaoParser *self )
-{
-	DaoParser_PrintInformation( self, self->warnings, "[[WARNING]]" );
-}
-void DaoParser_PrintError( DaoParser *self, int line, int code, DString *ext )
-{
-	DaoParser_PrintWarnings( self );
-	if( code ) DaoParser_Error4( self, code, line, ext ? ext->chars : "" );
-	DaoParser_PrintInformation( self, self->errors, "[[ERROR]]" );
+	DList_Clear( self->errors );
 }
 static void DaoParser_StatementError( DaoParser *self, DaoParser *parser, int code )
 {
@@ -2608,6 +2620,7 @@ static int DaoParser_Preprocess( DaoParser *self )
 			}
 		}
 	}
+	DaoParser_PrintWarnings( self );
 	return 1;
 }
 static int DaoParser_AddToScope( DaoParser *self, DString *name, DaoValue *value, DaoType *abtype, int store )
@@ -5410,7 +5423,7 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 			// This will expose the constants and variables from "time" to the current
 			// namespace!
 			*/
-			mod = DaoVmSpace_LoadModule( vmSpace, self->string );
+			mod = DaoVmSpace_LoadModule( vmSpace, self->string, self );
 			if( mod == NULL && modname == NULL ){
 				mod = DaoVmSpace_FindModule( vmSpace, self->string );
 				cyclic = mod && DaoNamespace_CyclicParent( mod, nameSpace );

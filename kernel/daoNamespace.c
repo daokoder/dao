@@ -2067,7 +2067,7 @@ DaoNamespace* DaoNamespace_LoadModule( DaoNamespace *self, DString *name )
 	if( mod ) return mod;
 
 	name = DString_Copy( name );
-	mod = DaoVmSpace_LoadModule( self->vmSpace, name );
+	mod = DaoVmSpace_LoadModule( self->vmSpace, name, NULL );
 	DString_Delete( name );
 	return mod;
 }
