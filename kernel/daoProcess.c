@@ -468,7 +468,11 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 	}else if( svalue && need_self && ! mcall ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		partype = (DaoType*) partypes[0]->aux;
-		if( DaoValue_Move2( svalue, & dest[0], partype, defs ) ){
+		if( DaoType_MatchValue( partype, svalue, defs ) >= DAO_MT_EQ ){
+			GC_Assign( & dest[0], svalue );
+			selfChecked = 1;
+			passed = 1;
+		}else if( DaoValue_Move2( svalue, & dest[0], partype, defs ) ){
 			passed = 1;
 			selfChecked = 1;
 			if( defs && (partype->tid == DAO_UDT || partype->tid == DAO_THT) ){
