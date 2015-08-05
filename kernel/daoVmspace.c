@@ -2611,6 +2611,15 @@ int DaoVmSpace_TryInitJIT( DaoVmSpace *self, const char *module )
 	return 0;
 }
 
+static void Dao_CompleteWinExeFile( DString *path )
+{
+#ifdef WIN32
+	DString_Change( path, "/", "\\", 0 );
+	if( DString_RFindChars( path, ".exe", -1 ) != path->size - 1 ){
+		DString_AppendChars( path, ".exe" );
+	}
+#endif
+}
 static int Dao_GetExecutablePath( const char *command, DString *path )
 {
 	char *PATH = getenv( "PATH" );
@@ -2627,6 +2636,7 @@ static int Dao_GetExecutablePath( const char *command, DString *path )
 		DString_SetChars( path, command );
 		DString_MakePath( & base, path );
 		Dao_NormalizePathSep( path );
+		Dao_CompleteWinExeFile( path );
 		if( Dao_IsFile( path->chars ) ) return 1;
 		if( j == DAO_NULLPOS ) break;
 		i = j + 1;
@@ -2732,12 +2742,7 @@ DaoVmSpace* DaoInit( const char *command )
 		}
 #ifdef DEBUG
 		path = DString_Copy( mainVmSpace->daoBinPath );
-#ifdef WIN32
-		DString_Change( path, "/", "\\", 0 );
-		if( DString_RFindChars( path, ".exe", -1 ) != path->size - 1 ){
-			DString_AppendChars( path, ".exe" );
-		}
-#endif
+		Dao_CompleteWinExeFile( path );
 		if( ! Dao_IsFile( path->chars ) ){
 			printf( "WARNING: the path of the executable cannot be located!\n" );
 		}
