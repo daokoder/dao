@@ -8062,6 +8062,11 @@ static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nva
 	// folding for field expressions such as: namespace::variable.
 	*/
 	if( proc->exceptions->size == 0 ) return value;
+	/*
+	// If constant evaluation failed for field access, let the inferencer
+	// to check if the access is valid.
+	*/
+	if( vmc->code >= DVM_GETI && vmc->code <= DVM_GETF ) return value;
 
 	stream = DaoStream_New();
 	DaoStream_SetStringMode( stream );

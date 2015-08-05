@@ -1854,8 +1854,6 @@ int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int lib )
 		if( DaoVmSpace_SearchModulePath( self, fname, lib ) ) modtype = DAO_MODULE_DAC;
 	}else if( size >4 && DString_FindChars( fname, ".dao", 0 ) == size-4 ){
 		if( DaoVmSpace_SearchModulePath( self, fname, lib ) ) modtype = DAO_MODULE_DAO;
-	}else if( size >4 && DString_FindChars( fname, ".cgi", 0 ) == size-4 ){
-		if( DaoVmSpace_SearchModulePath( self, fname, lib ) ) modtype = DAO_MODULE_DAO;
 	}else if( size > slen && DString_FindChars( fname, DAO_DLL_SUFFIX, 0 ) == size - slen ){
 		if( DaoVmSpace_SearchModulePath( self, fname, lib ) ) modtype = DAO_MODULE_DLL;
 	}else{

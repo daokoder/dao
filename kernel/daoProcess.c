@@ -468,7 +468,11 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 	}else if( svalue && need_self && ! mcall ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		partype = (DaoType*) partypes[0]->aux;
-		if( DaoType_MatchValue( partype, svalue, defs ) >= DAO_MT_EQ ){
+		if( svalue->type == DAO_CPOD && DaoType_ChildOf( svalue->xCpod.ctype, partype ) ){
+			GC_Assign( & dest[0], svalue );
+			selfChecked = 1;
+			passed = 1;
+		}else if( DaoType_MatchValue( partype, svalue, defs ) >= DAO_MT_EQ ){
 			GC_Assign( & dest[0], svalue );
 			selfChecked = 1;
 			passed = 1;
@@ -518,7 +522,9 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 
 		passed |= (size_t)1<<parindex;
 		if( need_self && parindex == 0 ){
-			if( DaoType_MatchValue( partype, argvalue, defs ) >= DAO_MT_EQ ){
+			if( argvalue->type == DAO_CPOD && DaoType_ChildOf( argvalue->xCpod.ctype, partype ) ){
+				GC_Assign( & dest[parindex], argvalue );
+			}else if( DaoType_MatchValue( partype, argvalue, defs ) >= DAO_MT_EQ ){
 				GC_Assign( & dest[parindex], argvalue );
 				continue;
 			}

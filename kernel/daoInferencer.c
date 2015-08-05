@@ -1523,6 +1523,8 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 		}else if( bt->tid != DAO_UDT && bt->tid != DAO_ANY ){
 			goto InvIndex;
 		}
+	}else if( at->tid == DAO_CLASS && at->aux == NULL ){  /* "class" */
+		ct = dao_type_any;
 	}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
 		meth = DaoClass_FindMethod( & at->aux->xClass, "[]", hostClass );
 		if( meth == NULL ) goto InvIndex;
@@ -1632,6 +1634,8 @@ int DaoInferencer_HandleGetMItem( DaoInferencer *self, DaoInode *inode, DMap *de
 		}
 	}else if( at->tid == DAO_MAP ){
 		goto InvIndex;
+	}else if( at->tid == DAO_CLASS && at->aux == NULL ){  /* "class" */
+		ct = dao_type_any;
 	}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
 		meth = DaoClass_FindMethod( & at->aux->xClass, "[]", hostClass );
 		if( meth == NULL ) goto WrongContainer;
@@ -1728,6 +1732,8 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 			if( rout == NULL ) goto NotExist;
 			ct = & rout->routType->aux->xType;
 		}
+	}else if( at->tid == DAO_CLASS && at->aux == NULL ){  /* "class" */
+		ct = dao_type_any;
 	}else if( at->tid == DAO_CLASS || at->tid == DAO_OBJECT ){
 		DaoValue *data;
 		int j, getter = 0;
@@ -2916,12 +2922,16 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 	ct = types[opa];
 	rout = NULL;
 	if( at->tid == DAO_CLASS ){
-		if( at->aux->xClass.initRoutines->overloads->routines->size ){
-			rout = (DaoRoutine*) at->aux->xClass.initRoutines; /* XXX */
+		if( at->aux == NULL ){  /* type "class": */
+			ct = dao_type_any;
 		}else{
-			rout = at->aux->xClass.initRoutine;
+			if( at->aux->xClass.initRoutines->overloads->routines->size ){
+				rout = (DaoRoutine*) at->aux->xClass.initRoutines; /* XXX */
+			}else{
+				rout = at->aux->xClass.initRoutine;
+			}
+			ct = at->aux->xClass.objType;
 		}
-		ct = at->aux->xClass.objType;
 	}else if( at->tid == DAO_CTYPE ){
 		rout = DaoType_GetInitor( at );
 		if( rout == NULL ) goto ErrorTyping;
@@ -3829,8 +3839,10 @@ SkipChecking:
 		case DVM_LOAD :
 			DaoInferencer_UpdateType( self, opc, at );
 			AssertTypeMatching( at, types[opc], defs );
-			if( at == types[opc] && at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && consts[opa] == NULL ){
-				vmc->code = DVM_MOVE_PP;
+			if( at == types[opc] && consts[opa] == NULL ){
+				if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && at->tid != DAO_CPOD ){
+					vmc->code = DVM_MOVE_PP;
+				}
 			}
 			break;
 		case DVM_MOVE :
@@ -3906,7 +3918,7 @@ SkipChecking:
 				}else if( at == ct || ct->tid == DAO_ANY ){
 					if( types[opa]->konst ){
 						vmc->code = DVM_MOVE_XX;
-					}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && consts[opa] == NULL ){
+					}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && at->tid != DAO_CPOD && consts[opa] == NULL ){
 						vmc->code = DVM_MOVE_PP;
 					}else{
 						vmc->code = DVM_MOVE_XX;
@@ -4298,6 +4310,8 @@ SkipChecking:
 					ct = DaoRoutine_PartialCheck( NS, at, routines, self->array, call, & wh, & mc );
 					if( mc > 1 ) return DaoInferencer_Error( self, DTE_TYPE_AMBIGIOUS_PFA );
 					if( ct == NULL ) goto InvOper;
+				}else if( at->tid == DAO_CLASS && at->aux == NULL ){  /* "class" */
+					ct = dao_type_any;
 				}else if( at->tid == DAO_CLASS ){
 					if( consts[opa] == NULL ) goto NotInit;
 					klass = & at->aux->xClass;
@@ -4680,7 +4694,7 @@ SkipChecking:
 		case DVM_MOVE_PP :
 		case DVM_MOVE_XX :
 			if( code == DVM_MOVE_PP ){
-				if( at->tid && (at->tid < DAO_ARRAY || at->tid > DAO_TYPE) ) goto NotMatch;
+				if( at->tid && (at->tid < DAO_ARRAY || at->tid > DAO_TYPE || at->tid == DAO_CPOD) ) goto NotMatch;
 			}
 			at = DaoInferencer_HandleVarInvarDecl( self, at, opb );
 			if( at == NULL ) return 0;
