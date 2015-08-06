@@ -118,6 +118,7 @@ struct DaoRoutineBody
 	DList *defLocals; /* DList<DaoToken*> */
 	DList *source; /* DList<DaoToken*> */
 	DList *decoTargets;
+	DList *decoratees;
 
 	DList *simpleVariables;
 	DMap  *localVarType;  /* DMap<int,DaoType*> local variable types */

@@ -559,6 +559,7 @@ enum DaoTypingErrorCode
 	DTE_TYPE_NOT_INITIALIZED,
 	DTE_TYPE_WRONG_CONTAINER ,
 	DTE_DATA_CANNOT_CREATE ,
+	DTE_NOT_CALLABLE ,
 	DTE_CALL_INVALID ,
 	DTE_CALL_NON_INVAR ,
 	DTE_CALL_NOT_PERMIT ,
@@ -597,6 +598,7 @@ static const char*const DaoTypingErrorString[] =
 	"Variable not initialized",
 	"Wrong container type",
 	"Data cannot be created",
+	"Object not callable",
 	"Invalid call",
 	"Calling non-invar method inside invar method",
 	"Calling not permitted",
@@ -2355,7 +2357,7 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 				DString_SetChars( mbs, ".=" );
 				meth = DaoType_FindFunction( ct, mbs );
 			}
-			if( meth == NULL ) goto NotMatch;
+			if( meth == NULL ) goto NotExist;
 			rout = DaoRoutine_Check( meth, ct, pars, npar, DVM_CALL, errors );
 			if( rout == NULL ) goto NotMatch;
 			break;
@@ -2934,7 +2936,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		}
 	}else if( at->tid == DAO_CTYPE ){
 		rout = DaoType_GetInitor( at );
-		if( rout == NULL ) goto ErrorTyping;
+		if( rout == NULL ) goto NotCallable;
 	}else if( consts[opa] && consts[opa]->type == DAO_ROUTINE ){
 		rout = (DaoRoutine*) consts[opa];
 	}else if( at->tid == DAO_THT ){
@@ -2946,23 +2948,23 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		goto TryPushBlockReturnType;
 	}else if( at->tid == DAO_OBJECT ){
 		rout = DaoClass_FindMethod( & at->aux->xClass, "()", hostClass );
-		if( rout == NULL ) goto ErrorTyping;
+		if( rout == NULL ) goto NotCallable;
 		bt = at;
 	}else if( at->tid >= DAO_CSTRUCT && at->tid <= DAO_CTYPE ){
 		rout = DaoType_FindFunctionChars( at, "()" );
-		if( rout == NULL ) goto ErrorTyping;
+		if( rout == NULL ) goto NotCallable;
 		bt = at;
 	}else if( at->tid == DAO_INTERFACE ){
 		DaoInterface *inter = (DaoInterface*) at->aux;
 		DNode *it = DMap_Find( inter->methods, inter->abtype->name );
-		if( it == NULL ) goto ErrorTyping;
+		if( it == NULL ) goto NotCallable;
 		rout = it->value.pRoutine;
 	}else if( at->tid == DAO_TYPE ){
 		at = at->nested->items.pType[0];
 		rout = DaoType_FindFunction( at, at->name );
-		if( rout == NULL ) goto ErrorTyping;
+		if( rout == NULL ) goto NotCallable;
 	}else if( at->tid != DAO_ROUTINE ){
-		goto ErrorTyping;
+		goto NotCallable;
 	}
 	if( at->tid == DAO_ROUTINE && at->subtid == DAO_ROUTINES ) rout = (DaoRoutine*)at->aux;
 	if( rout == NULL && at->aux == NULL ){ /* "routine" type: */
@@ -2976,7 +2978,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		if( !(vmc->b & DAO_CALL_INIT) ) vmc->b |= DAO_CALL_NOSELF;
 		if( DaoRoutine_CheckType( at, NS, NULL, tp, argc, codemode, 0 ) ==0 ){
 			DaoRoutine_CheckError( NS, NULL, at, NULL, tp, argc, codemode, errors );
-			goto ErrorTyping;
+			goto InvParam;
 		}
 		if( at->name->chars[0] == '@' ){
 			ct = tp[0];
@@ -2988,11 +2990,11 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		DaoRoutine_CheckType( at, NS, NULL, tp, argc, codemode, 1 );
 		ct = types[opa];
 	}else{
-		if( rout->type != DAO_ROUTINE ) goto ErrorTyping;
+		if( rout->type != DAO_ROUTINE ) goto NotCallable;
 		rout2 = rout;
 		/* rout can be DRoutines: */
 		rout = DaoRoutine_Check( rout, bt, tp, argc, codemode, errors );
-		if( rout == NULL ) goto ErrorTyping;
+		if( rout == NULL ) goto InvParam;
 		if( rout->attribs & DAO_ROUT_PRIVATE ){
 			if( rout->routHost && rout->routHost != routine->routHost ) goto CallNotPermit;
 			if( rout->routHost == NULL && rout->nameSpace != NS ) goto CallNotPermit;
@@ -3042,7 +3044,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 					int nn = ft->nested->size;
 					int cc = DVM_CALL + (ft->attrib & DAO_TYPE_SELF);
 					rout = DaoRoutine_Check( (DaoRoutine*)pp[0], NULL, pts, nn, cc|((int)vmc->b<<16), errors );
-					if( rout == NULL ) goto ErrorTyping;
+					if( rout == NULL ) goto InvParam;
 				}
 			}
 			DaoInferencer_UpdateType( self, opc, ct );
@@ -3166,6 +3168,7 @@ TryPushBlockReturnType:
 		DList_PushBack( self->typeMaps, defs2 );
 	}
 	return 1;
+NotCallable: return DaoInferencer_Error( self, DTE_NOT_CALLABLE );
 InvParam : return DaoInferencer_Error( self, DTE_PARAM_ERROR );
 CallNonInvar : return DaoInferencer_Error( self, DTE_CALL_NON_INVAR );
 CallNotPermit : return DaoInferencer_Error( self, DTE_CALL_NOT_PERMIT );
@@ -5560,6 +5563,10 @@ DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoVal
 		newfn->nameSpace = ns;
 		newfn->body = body;
 	}
+	if( decorator->body->decoratees == NULL ){
+		decorator->body->decoratees = DList_New(DAO_DATA_VALUE);
+	}
+	DList_Append( decorator->body->decoratees, newfn );
 	DList_Delete( added );
 	DList_Delete( regmap );
 

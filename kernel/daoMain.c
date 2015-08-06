@@ -104,6 +104,7 @@ static void DaoSignalHandler( int sig )
 #if defined(DAO_WITH_RESTART) && defined(UNIX)
 
 #include <unistd.h>
+#include <sys/wait.h>
 
 void DaoRestartRun( char **argv, int argc, int optid )
 {

@@ -419,6 +419,7 @@ void DaoObjectLogger_Quit()
 				DaoRoutineBody *rout = (DaoRoutineBody*)value;
 				DaoObjectLogger_ScanArray( rout->regType );
 				DaoObjectLogger_ScanArray( rout->upValues );
+				DaoObjectLogger_ScanArray( rout->decoratees );
 				break;
 			}
 		case DAO_CLASS :
@@ -1864,8 +1865,10 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			DaoRoutineBody *rout = (DaoRoutineBody*)value;
 			count += rout->regType->size;
 			count += rout->upValues ? rout->upValues->size : 0;
+			count += rout->decoratees ? rout->decoratees->size : 0;
 			cycRefCountDecrements( rout->regType );
 			cycRefCountDecrements( rout->upValues );
+			cycRefCountDecrements( rout->decoratees );
 			break;
 		}
 	case DAO_CLASS :
@@ -2082,8 +2085,10 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			DaoRoutineBody *rout = (DaoRoutineBody*)value;
 			count += rout->regType->size;
 			count += rout->upValues ? rout->upValues->size : 0;
+			count += rout->decoratees ? rout->decoratees->size : 0;
 			cycRefCountIncrements( rout->regType );
 			cycRefCountIncrements( rout->upValues );
+			cycRefCountIncrements( rout->decoratees );
 			break;
 		}
 	case DAO_CLASS :
@@ -2306,8 +2311,10 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			DaoRoutineBody *rout = (DaoRoutineBody*)value;
 			count += rout->regType->size;
 			count += rout->upValues ? rout->upValues->size : 0;
+			count += rout->decoratees ? rout->decoratees->size : 0;
 			directRefCountDecrements( rout->regType );
 			directRefCountDecrements( rout->upValues );
+			directRefCountDecrements( rout->decoratees );
 			break;
 		}
 	case DAO_CLASS :

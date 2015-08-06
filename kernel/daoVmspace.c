@@ -2905,13 +2905,14 @@ DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DaoParser
 	case DAO_MODULE_DLL : ns = DaoVmSpace_LoadDllModule( self, fname ); break;
 	}
 	if( ns && DaoVmSpace_CompleteModuleName( self, name, 1 ) ){
-		if( DString_EQ( fname, name ) == 0 ){
+		if( DString_EQ( fname, name ) == 0 && DString_FindChars( fname, "/@/", 0 ) != 0 ){
 			DString warning = DString_WrapChars( "conflict module names!" );
 			if( parser ){
 				DaoParser_Warn( parser, DAO_CTW_LOAD_INVA_MOD_NAME, & warning );
 			}else{
 				DaoStream_WriteChars( self->errorStream, "[[WARNING]] " );
 				DaoStream_WriteString( self->errorStream, & warning );
+				DaoStream_WriteChars( self->errorStream, "\n" );
 			}
 			DaoStream_WriteChars( self->errorStream, "User    module: " );
 			DaoStream_WriteString( self->errorStream, fname );

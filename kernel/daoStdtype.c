@@ -3945,6 +3945,7 @@ static void Dao_Exception_Get_summary( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Set_summary( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Get_data( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n );
+static void Dao_Exception_Get_line( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Getf( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Setf( DaoProcess *proc, DaoValue *p[], int n );
 static void Dao_Exception_Serialize( DaoProcess *proc, DaoValue *p[], int n );
@@ -3958,6 +3959,7 @@ static DaoFuncItem dao_Exception_Meths[] =
 	{ Dao_Exception_Set_summary, ".summary=( self: Exception, summary: string)" },
 	{ Dao_Exception_Get_data,    ".data( self: Exception )=>any" },
 	{ Dao_Exception_Set_data,    ".data=( self: Exception, data: any)" },
+	{ Dao_Exception_Get_line,    ".line( self: Exception )=>int" },
 
 	/* for testing or demonstration */
 	{ Dao_Exception_Get_name, "typename( self: Exception )=>string" },
@@ -4001,6 +4003,11 @@ static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoException* self = (DaoException*) p[0];
 	DaoValue_Move( p[1], & self->data, NULL );
+}
+static void Dao_Exception_Get_line( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoException* self = (DaoException*) p[0];
+	DaoProcess_PutInteger( proc, self->lines->size ? self->lines->items.pInt[0] & 0xffff : 0 );
 }
 static void Dao_Exception_Serialize( DaoProcess *proc, DaoValue *p[], int n )
 {

@@ -186,6 +186,7 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 	DMap_Delete( self->localVarType );
 	if( self->upValues ) DList_Delete( self->upValues );
 	if( self->decoTargets ) DList_Delete( self->decoTargets );
+	if( self->decoratees ) DList_Delete( self->decoratees );
 	if( self->revised ) GC_DecRC( self->revised );
 	if( self->aux ) DaoAux_Delete( self->aux );
 	if( dao_jit.Free && self->jitData ) dao_jit.Free( self->jitData );

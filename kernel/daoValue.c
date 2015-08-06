@@ -804,8 +804,7 @@ static int DaoList_Compare( DaoList *list1, DaoList *list2, DaoProcess *process,
 }
 static int DaoCstruct_Compare( DaoCstruct *left, DaoCstruct *right, DaoProcess *process, int dep )
 {
-	DaoRoutine *EQ = left->ctype->kernel->eqOperators;
-	DaoRoutine *LT = left->ctype->kernel->ltOperators;
+	DaoRoutine *EQ, *LT;
 	DaoValue *P[2];
 	int NE = 0;
 
@@ -816,9 +815,12 @@ static int DaoCstruct_Compare( DaoCstruct *left, DaoCstruct *right, DaoProcess *
 		goto PointerComparison;
 	}
 
-	P[0] = (DaoValue*) left; /* To support calling static methods: */
+	P[0] = (DaoValue*) left; /* To support calling static methods; */
 	P[1] = (DaoValue*) right;
 
+	DaoType_GetInitor( left->ctype ); /* To setup methods; */
+	EQ = left->ctype->kernel->eqOperators;
+	LT = left->ctype->kernel->ltOperators;
 	if( EQ ){
 		if( DaoProcess_Call( process, EQ, 0, P, 2 ) ) goto PointerComparison;
 		if( DaoValue_GetInteger( process->stackValues[0] ) ) return 0;
@@ -852,7 +854,7 @@ static int DaoObject_Compare( DaoObject *left, DaoObject *right, DaoProcess *pro
 		goto PointerComparison;
 	}
 
-	P[0] = (DaoValue*) left; /* To support calling static methods: */
+	P[0] = (DaoValue*) left; /* To support calling static methods; */
 	P[1] = (DaoValue*) right;
 
 	if( EQ ){
