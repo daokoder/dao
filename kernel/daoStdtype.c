@@ -4007,7 +4007,7 @@ static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n )
 static void Dao_Exception_Get_line( DaoProcess *proc, DaoValue *p[], int n )
 {
 	DaoException* self = (DaoException*) p[0];
-	DaoProcess_PutInteger( proc, self->lines->size ? self->lines->items.pInt[0] & 0xffff : 0 );
+	DaoProcess_PutInteger( proc, self->lines->size ? (self->lines->items.pInt[0]>>16)&0xffff : 0 );
 }
 static void Dao_Exception_Serialize( DaoProcess *proc, DaoValue *p[], int n )
 {

@@ -4784,7 +4784,7 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 // For binary operation, if C == A, the following will be tried first:
 // operator += ( C : Number, B : Number ){... return C_or_else}
 */
-static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoValue *C, DaoType *TA, DaoType *TB )
+static int DaoProcess_TryUserArithX( DaoProcess *self, DaoValue *A, DaoValue *B, DaoValue *C, DaoType *TA, DaoType *TB )
 {
 	DaoRoutine *rout = 0;
 	DaoObject *object = (DaoObject*)A;
@@ -4864,10 +4864,24 @@ TryAgain:
 			par[2] = A;
 			A = par[1];
 			B = par[2];
+			object = (DaoObject*)A;
+			cstruct = (DaoCstruct*)A;
+			cinvalue = (DaoCinValue*)A;
 			goto TryAgain;
 		}
 	}
 	return 0;
+}
+static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoValue *C, DaoType *TA, DaoType *TB )
+{
+	int ret = DaoProcess_TryUserArithX( self, A, B, C, TA, TB );
+	if( ret ) return ret;
+	if( A && A->type == DAO_CINVALUE ) A = A->xCinValue.value;
+	if( B && B->type == DAO_CINVALUE ) B = B->xCinValue.value;
+	if( C && C->type == DAO_CINVALUE ) C = C->xCinValue.value;
+	if( TA && TA->tid == DAO_CINVALUE ) TA = TA->aux->xCinType.target;
+	if( TB && TB->tid == DAO_CINVALUE ) TB = TB->aux->xCinType.target;
+	return DaoProcess_TryUserArithX( self, A, B, C, TA, TB );
 }
 void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 {

@@ -629,7 +629,7 @@ static const char*const DaoTypingErrorString[] =
 	"Call to un-implemented function"
 };
 
-static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
+static DaoType* DaoCheckBinArith1( DaoRoutine *self, DaoVmCodeX *vmc,
 		DaoType *at, DaoType *bt, DaoType *ct, DaoClass *hostClass,
 		DString *mbs, int setname )
 {
@@ -689,15 +689,25 @@ static DaoType* DaoCheckBinArith0( DaoRoutine *self, DaoVmCodeX *vmc,
 	if( boolop && rout == self ) return dao_type_int;
 	return rout ? (DaoType*) rout->routType->aux : NULL;
 }
+static DaoType* DaoCheckBinArith2( DaoRoutine *self, DaoVmCodeX *vmc,
+		DaoType *at, DaoType *bt, DaoType *ct, DaoClass *hostClass, DString *mbs )
+{
+	DaoType *rt = DaoCheckBinArith1( self, vmc, at, bt, ct, hostClass, mbs, 1 );
+	if( rt == NULL && (vmc->code == DVM_LT || vmc->code == DVM_LE) ){
+		DString_SetChars( mbs, vmc->code == DVM_LT ? ">" : ">=" );
+		return DaoCheckBinArith1( self, vmc, bt, at, ct, hostClass, mbs, 0 );
+	}
+	return rt;
+}
 static DaoType* DaoCheckBinArith( DaoRoutine *self, DaoVmCodeX *vmc,
 		DaoType *at, DaoType *bt, DaoType *ct, DaoClass *hostClass, DString *mbs )
 {
-	DaoType *rt = DaoCheckBinArith0( self, vmc, at, bt, ct, hostClass, mbs, 1 );
-	if( rt == NULL && (vmc->code == DVM_LT || vmc->code == DVM_LE) ){
-		DString_SetChars( mbs, vmc->code == DVM_LT ? ">" : ">=" );
-		return DaoCheckBinArith0( self, vmc, bt, at, ct, hostClass, mbs, 0 );
-	}
-	return rt;
+	DaoType *rt = DaoCheckBinArith2( self, vmc, at, bt, ct, hostClass, mbs );
+	if( rt ) return rt;
+	if( at && at->tid == DAO_CINVALUE ) at = at->aux->xCinType.target;
+	if( bt && bt->tid == DAO_CINVALUE ) bt = bt->aux->xCinType.target;
+	if( ct && ct->tid == DAO_CINVALUE ) ct = ct->aux->xCinType.target;
+	return DaoCheckBinArith2( self, vmc, at, bt, ct, hostClass, mbs );
 }
 static DString* AppendError( DList *errors, DaoValue *rout, size_t type )
 {

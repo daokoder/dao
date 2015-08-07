@@ -1973,7 +1973,7 @@ static void DString_RepaceVariable( DString *self, DString *name, DString *value
 
 	while( pos != DAO_NULLPOS ){
 		DString_Insert( self, value, pos, name->size, value->size );
-		offset += value->size - name->size;
+		offset += value->size;
 		pos = DString_Find( self, name, offset );
 	}
 }
