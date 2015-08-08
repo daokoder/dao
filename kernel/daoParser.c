@@ -883,7 +883,7 @@ int DaoParser_ParseMaybeScopeConst( DaoParser *self, DaoValue **scope, DaoValue 
 		DaoParser_Error3( self, DAO_EXPR_NEED_CONST_EXPR, start );
 		return -1;
 	}
-	if( self->curToken >= self->tokens->size ) return self->curToken;
+	if( self->curToken >= self->tokens->size ) return self->curToken - 1;
 	if( enode.konst == 0 && self->tokens->items.pToken[self->curToken]->type == DTOK_COLON2 ){
 		return self->curToken + 1;
 	}
@@ -7036,6 +7036,10 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 				cid = DaoParser_GetArray( self );
 				enode = DaoParser_ParseExpressionList2( self, DTOK_COMMA, inode, cid, DAO_EXPRLIST_PARAM );
 				if( DaoParser_CurrentTokenName( self ) == DTOK_DOTS ){
+					if( enode.count <= (1 + (code == DVM_MCALL)) ){
+						DaoParser_Error( self, DAO_PARAM_INVALID, NULL );
+						return error;
+					}
 					mode |= DAO_CALL_EXPAR;
 					self->curToken += 1;
 				}
