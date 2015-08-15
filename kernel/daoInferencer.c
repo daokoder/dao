@@ -663,7 +663,11 @@ static DaoType* DaoCheckBinArith1( DaoRoutine *self, DaoVmCodeX *vmc,
 			if( rout == NULL ) rout = DaoRoutine_ResolveX( rout2, NULL, NULL, NULL, ts+1, 1+(bt!=NULL), DVM_CALL );
 			/* if the operation is used in the overloaded operator, do operation by address */
 			if( boolop && rout == self ) return dao_type_int;
-			if( rout ) return ct;
+			/*
+			// Do not return ct, as the routine is not guaranteed to return a proper type;
+			// Returning rout->routType->aux will allow the returning type to be checked.
+			*/
+			if( rout ) return (DaoType*) rout->routType->aux;
 		}
 	}
 	if( setname ) DString_SetChars( mbs, daoBitBoolArithOpers[code-DVM_NOT] );

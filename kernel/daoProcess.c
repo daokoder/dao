@@ -2788,6 +2788,23 @@ DaoArray* DaoProcess_GetArray( DaoProcess *self, DaoVmCode *vmc )
 	DaoType *tp = DaoProcess_GetCallReturnType( self, vmc, DAO_ARRAY );
 	return DaoProcess_GetArrayByType( self, vmc, tp );
 }
+static DaoTuple* DaoTuple_Reset( DaoTuple *self )
+{
+	dao_complex com = {0.0,0.0};
+	int i;
+	for(i=0; i<self->size; ++i){
+		DaoValue *value = self->values[i];
+		switch( value->type ){
+		case DAO_BOOLEAN : value->xInteger.value = 0; break;
+		case DAO_INTEGER : value->xInteger.value = 0; break;
+		case DAO_FLOAT   : value->xFloat.value = 0;   break;
+		case DAO_COMPLEX : value->xComplex.value = com; break;
+		case DAO_STRING  : value->xString.value->size = 0; break;
+		case DAO_ENUM    : value->xEnum.value = 0; break;
+		}
+	}
+	return self;
+}
 DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int init )
 {
 	DaoValue *val = self->activeValues[ self->activeCode->c ];
@@ -2795,12 +2812,12 @@ DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int in
 
 	self->stackReturn = self->activeCode->c + (self->activeValues - self->stackValues);
 	if( tup && tup->ctype == type && tup->size == size ){
-		if( tup->refCount == 1 ) return tup;
+		if( tup->refCount == 1 ) return DaoTuple_Reset( tup );
 		if( tup->refCount == 2 && !(self->trait & DAO_VALUE_CONST) ){
 			DaoVmCode *vmc = self->activeCode + 1;
 			int code = vmc->code;
 			if( (code == DVM_MOVE || code == DVM_MOVE_PP) && vmc->a != vmc->c ){
-				if( self->activeValues[vmc->c] == (DaoValue*) tup ) return tup;
+				if( self->activeValues[vmc->c] == (DaoValue*) tup ) return DaoTuple_Reset( tup );
 			}
 		}
 	}
