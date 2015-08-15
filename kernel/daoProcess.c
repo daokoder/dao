@@ -2799,7 +2799,7 @@ static DaoTuple* DaoTuple_Reset( DaoTuple *self )
 		case DAO_INTEGER : value->xInteger.value = 0; break;
 		case DAO_FLOAT   : value->xFloat.value = 0;   break;
 		case DAO_COMPLEX : value->xComplex.value = com; break;
-		case DAO_STRING  : value->xString.value->size = 0; break;
+		case DAO_STRING  : DString_Reset( value->xString.value, 0 ); break;
 		case DAO_ENUM    : value->xEnum.value = 0; break;
 		}
 	}
