@@ -524,6 +524,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 		if( need_self && parindex == 0 ){
 			if( argvalue->type == DAO_CPOD && DaoType_ChildOf( argvalue->xCpod.ctype, partype ) ){
 				GC_Assign( & dest[parindex], argvalue );
+				continue;
 			}else if( DaoType_MatchValue( partype, argvalue, defs ) >= DAO_MT_EQ ){
 				GC_Assign( & dest[parindex], argvalue );
 				continue;
@@ -2565,12 +2566,8 @@ DString* DaoProcess_PutChars( DaoProcess *self, const char *mbs )
 {
 	DString str = DString_WrapChars( mbs );
 	DaoString tmp = {DAO_STRING,0,0,0,0,NULL};
-	DaoValue *res, *dest;
+	DaoValue *res;
 	tmp.value = & str;
-	dest = self->activeValues[ self->activeCode->c ];
-	if( dest && dest->type == DAO_STRING ){
-		DString_Reset( dest->xString.value, 0 );
-	}
 	res = DaoProcess_PutValue( self, (DaoValue*) & tmp );
 	if( res == NULL ) return NULL;
 	return res->xString.value;
