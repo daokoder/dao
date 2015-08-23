@@ -3015,15 +3015,17 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		}else if( rout->attribs & DAO_ROUT_PROTECTED ){
 			if( rout->routHost && routine->routHost == NULL ) goto CallNotPermit;
 		}
-		if( vmc->code == DVM_CALL && routine->routHost ){
+		if( vmc->code == DVM_CALL && rout->routHost ){
+			int staticCallee = rout->attribs & DAO_ROUT_STATIC;
+			int invarCallee = rout->attribs & DAO_ROUT_INVAR;
+			int initorCallee = rout->attribs & DAO_ROUT_INITOR;
 			if( DaoType_ChildOf( routine->routHost, rout->routHost ) ){
 				int invarCaller = routine->attribs & DAO_ROUT_INVAR;
 				int staticCaller = routine->attribs & DAO_ROUT_STATIC;
-				int staticCallee = rout->attribs & DAO_ROUT_STATIC;
-				int invarCallee = rout->attribs & DAO_ROUT_INVAR;
-				int initorCallee = rout->attribs & DAO_ROUT_INITOR;
 				if( staticCaller && ! staticCallee && ! initorCallee ) goto CallWithoutInst;
 				if( invarCaller && ! invarCallee && ! initorCallee ) goto CallNonInvar;
+			}else{
+				if( ! staticCallee && ! initorCallee ) goto CallWithoutInst;
 			}
 		}
 		checkfast = DVM_CALL && ((vmc->b & 0xff00) & ~DAO_CALL_TAIL) == 0;
@@ -3212,7 +3214,7 @@ int DaoInferencer_HandleClosure( DaoInferencer *self, DaoInode *inode, int i, DM
 	if( types[opa]->tid != DAO_ROUTINE ) goto ErrorTyping;
 	if( closure->attribs & DAO_ROUT_DEFER_RET ) DList_Append( self->defers, closure );
 
-	DaoRoutine_DoTypeInference( closure, self->silent );
+	if( DaoRoutine_DoTypeInference( closure, self->silent ) == 0 ) goto ErrorTyping;
 
 	self->array->size = 0;
 	DList_Resize( self->array, closure->parCount, 0 );

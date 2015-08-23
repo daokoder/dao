@@ -5968,6 +5968,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	DaoNamespace *NS = proto->nameSpace;
 	DMap *deftypes;
 	int i, j, k, m, K;
+
 	if( proto->body->vmCodes->size ==0 && proto->body->annotCodes->size ){
 		if( DaoRoutine_SetVmCodes( proto, proto->body->annotCodes ) ==0 ){
 			DaoProcess_RaiseError( self, NULL, "invalid closure" );

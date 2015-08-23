@@ -1,0 +1,130 @@
+
+@[test]
+closures = {};
+
+for( i = 1 : 5 ){
+	ls = { i };
+	closure = routine(){
+		io.writeln( ls, i )
+	}
+	closures.append( closure )
+}
+
+for( closure in closures ) closure()
+@[test]
+@[test]
+{ 1 } 1
+{ 2 } 2
+{ 3 } 3
+{ 4 } 4
+{ 5 } 5
+@[test]
+
+
+
+
+@[test]
+routine Test()
+{
+	abc = "abc"
+	rout = routine(){
+		io.writeln( "outer closure", abc )
+		rout = routine(){
+			io.writeln( "inner closure", abc )
+		}
+		return rout;
+	}
+	return rout()
+}
+
+rout = Test()
+rout()
+@[test]
+@[test]
+outer closure abc
+inner closure abc
+@[test]
+
+
+
+
+@[test]
+class Klass
+{
+	var value = 123;
+	routine Meth(){
+		value = 456;
+		return routine{
+			io.writeln( value )  # Accessing class member is OK;
+		}
+	}
+}
+k = Klass();
+m = k.Meth()
+m()
+@[test]
+@[test]
+456
+@[test]
+
+
+
+
+@[test]
+class Klass
+{
+	var value = 123;
+	routine Func( param: string ){
+		io.writeln( param, value )
+	}
+	routine Meth(){
+		value = 456;
+		return routine{
+			Func( "hello" );  # Calling instance method is not OK;
+		}
+	}
+}
+k = Klass();
+m = k.Meth()
+m()
+@[test]
+@[test]
+{{At line}} .* {{Invalid parameter type}}
+@[test]
+
+
+
+
+@[test]
+class K {
+	routine F( a ){}
+	routine M(){
+		defer {
+			self.F(1)
+		}
+	}
+}
+k=K()
+k.M()
+@[test]
+@[test]
+@[test]
+
+
+
+
+@[test]
+class K {
+	routine F( a ){}
+	routine M(){
+		defer {
+			F(1)
+		}
+	}
+}
+k=K()
+k.M()
+@[test]
+@[test]
+{{At line}} .* {{Invalid parameter type}}
+@[test]

@@ -1482,6 +1482,11 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 		if( ctype ) DaoTypeKernel_InsertCastor( hostype->kernel, NS, hostype, routine );
 		else if( klass ) DaoClass_CastingMethod( klass, routine );
 	}
+	if( ctype && routine->routHost == ctype->cdtype ){
+		if( notConstr && !(routine->routType->attrib & DAO_TYPE_SELF) ){
+			routine->attribs |= DAO_ROUT_STATIC;
+		}
+	}
 
 	/*  remove vmcode for consts */
 	DaoParser_ClearCodes( module );
@@ -6209,9 +6214,6 @@ static int DaoParser_ParseClosure( DaoParser *self, int start )
 	if( parser->uplocs == NULL ) parser->uplocs = DArray_New(sizeof(int));
 	uplocs = parser->uplocs;
 	DString_Assign( parser->fileName, self->fileName );
-	if( self->hostClass ){
-		GC_Assign( & rout->routHost, self->hostClass->objType );
-	}
 	DList_Append( NS->definedRoutines, rout );
 
 	if( tokens[start]->name == DKEY_DEFER ){
