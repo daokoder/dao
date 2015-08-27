@@ -4106,7 +4106,6 @@ void DaoException_Setup( DaoNamespace *ns )
 
 void DaoException_Init( DaoException *self, DaoProcess *proc, const char *summary, DaoValue *dat )
 {
-	DaoVmCodeX **annotCodes;
 	DaoVmCode *vmc = proc->activeCode;
 	DaoRoutine *rout = proc->activeRoutine;
 	DaoStackFrame *frame = proc->topFrame->prev;
@@ -4115,19 +4114,24 @@ void DaoException_Init( DaoException *self, DaoProcess *proc, const char *summar
 	if( rout == NULL ) return;
 
 	line = rout->defLine;
-	annotCodes = rout->body->annotCodes->items.pVmc;
 	if( proc->topFrame->active == proc->topFrame->prev ){
+		DaoRoutine *rout2 = proc->topFrame->prev->routine;
 		/*
 		// proc->activeCode could be a dummy code set by:
 		//   DaoProcess_InterceptReturnValue();
 		// So always use the entry index whenever possible.
 		*/
 		id = proc->topFrame->prev->entry;
+		if( rout2->body && id && id <= rout2->body->vmCodes->size ){
+			line = rout2->body->annotCodes->items.pVmc[id-1]->line;
+		}
 	}else{
 		id = (int) (vmc - proc->topFrame->active->codes);
 		if( id < 0 || id > 0xffff ) id = 0; /* Not the precise location, but a safe one; */
+		if( vmc && id < rout->body->vmCodes->size ){
+			line = rout->body->annotCodes->items.pVmc[id]->line;
+		}
 	}
-	if( vmc && rout->body->vmCodes->size ) line = annotCodes[id]->line;
 
 	if( summary && summary[0] != 0 ) DString_SetChars( self->info, summary );
 	GC_Assign( & self->data, dat );

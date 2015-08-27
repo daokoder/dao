@@ -909,6 +909,7 @@ routine ExtractPatterns( source :string, pattern :string, ptype :PatternType, al
 		allpats.append( (ptype, start, codes ) );
 		return none;
 	}
+	return source;
 }
 routine ParseCode( source : string, snamespace="", lang="", fname : string="", inExtFile=0  )
 {
@@ -924,13 +925,13 @@ routine ParseCode( source : string, snamespace="", lang="", fname : string="", i
 
 	blank = ";"[0];
 	allpats : list<tuple<PatternType,int,string>> = {};
-	ExtractPatterns( source, pat_struct, $pat_struct, allpats );
-	ExtractPatterns( source, pat_struct2, $pat_struct2, allpats );
-	ExtractPatterns( source, pat_enum, $pat_enum, allpats );
-	ExtractPatterns( source, pat_typedef, $pat_typedef, allpats );
-	ExtractPatterns( source, pat_enum2, $pat_enum2, allpats );
-	ExtractPatterns( source, pat_usercst, $pat_usercst, allpats );
-	ExtractPatterns( source, pat_funct, $pat_funct, allpats );
+	source = ExtractPatterns( source, pat_struct, $pat_struct, allpats );
+	source = ExtractPatterns( source, pat_struct2, $pat_struct2, allpats );
+	source = ExtractPatterns( source, pat_enum, $pat_enum, allpats );
+	source = ExtractPatterns( source, pat_typedef, $pat_typedef, allpats );
+	source = ExtractPatterns( source, pat_enum2, $pat_enum2, allpats );
+	source = ExtractPatterns( source, pat_usercst, $pat_usercst, allpats );
+	source = ExtractPatterns( source, pat_funct, $pat_funct, allpats );
 
 	source = source.change( ";%s*;[;%s]+", ";" );
 
