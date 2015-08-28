@@ -270,6 +270,9 @@ void DaoMethods_Insert( DMap *methods, DaoRoutine *rout, DaoNamespace *ns, DaoTy
 		GC_Assign( & node->value.pValue, mroutine );
 	}
 }
+
+static DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *proto, DaoParser *parser, DaoParser *defparser );
+
 int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 {
 	DaoParser *parser, *defparser;
@@ -309,7 +312,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		parser->nameSpace = self;
 		parser->hostType = hostype;
 		parser->hostCtype = (DaoCtype*) hostype->aux;
-		parser->defParser = defparser = DaoVmSpace_AcquireParser( self->vmSpace );
+		defparser = DaoVmSpace_AcquireParser( self->vmSpace );
 		defparser->vmSpace = self->vmSpace;
 		defparser->nameSpace = self;
 		defparser->hostType = hostype;
@@ -327,7 +330,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 				typer->core->kernel->Sliced = (FuncPtrSliced) typer->funcItems[i].fpter;
 				continue;
 			}
-			cur = DaoNamespace_ParseSignature( self, proto, parser );
+			cur = DaoNamespace_ParseSignature( self, proto, parser, defparser );
 			if( cur == NULL ){
 				printf( "  In function: %s::%s\n", typer->name, proto );
 				continue;
@@ -911,29 +914,28 @@ int DaoNamespace_SetupTypes( DaoNamespace *self, DaoTypeBase *typers[] )
 	}
 	return ec;
 }
-DaoRoutine* DaoNamespace_MakeFunction( DaoNamespace *self, const char *proto, DaoParser *parser )
+DaoRoutine* DaoNamespace_MakeFunction( DaoNamespace *self, const char *proto, DaoParser *parser, DaoParser *defparser )
 {
 	DaoParser *old = parser;
-	DaoParser *defparser = NULL;
+	DaoParser *old2 = defparser;
 	DaoRoutine *func;
 	DaoValue *value;
 
 	if( parser == NULL ){
-		DaoNamespace_InitConstEvalData( self );
 		parser = DaoVmSpace_AcquireParser( self->vmSpace );
-		defparser = DaoVmSpace_AcquireParser( self->vmSpace );
 		parser->vmSpace = self->vmSpace;
 		parser->nameSpace = self;
-		parser->defParser = defparser;
+	}
+	if( defparser == NULL ){
+		DaoNamespace_InitConstEvalData( self );
+		defparser = DaoVmSpace_AcquireParser( self->vmSpace );
 		defparser->vmSpace = self->vmSpace;
 		defparser->nameSpace = self;
 		defparser->routine = self->constEvalRoutine;
 	}
-	func = DaoNamespace_ParseSignature( self, proto, parser );
-	if( old == NULL ){
-		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
-		DaoVmSpace_ReleaseParser( self->vmSpace, defparser );
-	}
+	func = DaoNamespace_ParseSignature( self, proto, parser, defparser );
+	if( old  == NULL ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
+	if( old2 == NULL ) DaoVmSpace_ReleaseParser( self->vmSpace, defparser );
 	if( func == NULL ) return NULL;
 	value = DaoNamespace_GetData( self, func->routName );
 	if( value && value->type == DAO_ROUTINE && value->xRoutine.overloads ){
@@ -945,7 +947,7 @@ DaoRoutine* DaoNamespace_MakeFunction( DaoNamespace *self, const char *proto, Da
 }
 DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fptr, const char *proto )
 {
-	DaoRoutine *func = DaoNamespace_MakeFunction( self, proto, NULL );
+	DaoRoutine *func = DaoNamespace_MakeFunction( self, proto, NULL, NULL );
 	if( func == NULL ) return NULL;
 	func->pFunc = fptr;
 	return func;
@@ -961,12 +963,11 @@ int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items )
 	DaoNamespace_InitConstEvalData( self );
 	parser->vmSpace = self->vmSpace;
 	parser->nameSpace = self;
-	parser->defParser = defparser;
 	defparser->vmSpace = self->vmSpace;
 	defparser->nameSpace = self;
 	defparser->routine = self->constEvalRoutine;
 	while( items[i].fpter != NULL ){
-		func = DaoNamespace_MakeFunction( self, items[i].proto, parser );
+		func = DaoNamespace_MakeFunction( self, items[i].proto, parser, defparser );
 		if( func ) func->pFunc = (DaoCFunction)items[i].fpter;
 		ec += func == NULL;
 		i ++;
@@ -1877,16 +1878,15 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 	return abtp;
 }
 
-DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *proto, DaoParser *parser )
+DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *proto, DaoParser *parser, DaoParser *defparser )
 {
 	DaoRoutine *func = DaoRoutine_New( self, NULL, 0 );
-	DaoParser *defparser, *oldparser = NULL;
+	DaoParser *oldparser = defparser;
 	int optok = 0;
 
 	assert( parser != NULL );
-	defparser = oldparser = parser->defParser;
-	if( parser->defParser == NULL ){
-		parser->defParser = defparser = DaoVmSpace_AcquireParser( self->vmSpace );
+	if( defparser == NULL ){
+		defparser = DaoVmSpace_AcquireParser( self->vmSpace );
 		defparser->vmSpace = self->vmSpace;
 		defparser->nameSpace = self;
 		defparser->hostType = parser->hostType;
@@ -1904,13 +1904,11 @@ DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *proto, 
 		DaoParser_PrintError( defparser, 0, 0, NULL );
 		goto Error;
 	}
-	if( oldparser == NULL ) DaoVmSpace_ReleaseParser( self->vmSpace, parser->defParser );
-	parser->defParser = oldparser;
+	if( oldparser == NULL ) DaoVmSpace_ReleaseParser( self->vmSpace, defparser );
 	return func;
 Error:
 	printf( "Function wrapping failed for %s\n", proto );
-	if( oldparser == NULL ) DaoVmSpace_ReleaseParser( self->vmSpace, parser->defParser );
-	parser->defParser = oldparser;
+	if( oldparser == NULL ) DaoVmSpace_ReleaseParser( self->vmSpace, defparser );
 	DaoRoutine_Delete( func );
 	return NULL;
 }

@@ -50,8 +50,6 @@ struct DaoParser
 
 	DString *fileName;
 
-	DaoParser *defParser;
-
 	int  lineCount;    /* Line count in the source file; */
 	int  curLine;      /* Current line number; */
 	int  curToken;     /* Current token index; */

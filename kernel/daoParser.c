@@ -329,7 +329,6 @@ void DaoParser_Reset( DaoParser *self )
 	self->scopeClosings->size = 0;
 
 	self->nameSpace = NULL;
-	self->defParser = NULL;
 	self->routine = NULL;
 	self->hostType = NULL;
 	self->hostCtype = NULL;
@@ -2812,7 +2811,6 @@ static DaoParser* DaoParser_NewRoutineParser( DaoParser *self, int start, int at
 	parser->hostInter = self->hostInter;
 	parser->hostCinType = self->hostCinType;
 	parser->levelBase = self->levelBase + self->lexLevel + 1;
-	parser->defParser = self;
 	DList_Assign( parser->decoFuncs, self->decoFuncs2 );
 	DList_Assign( parser->decoParams, self->decoParams2 );
 	return parser;

@@ -139,8 +139,7 @@ DAO_DLL int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer );
 DAO_DLL void DaoNamespace_SetupType( DaoNamespace *self, DaoTypeBase *typer, DaoType *type );
 DAO_DLL void DaoMethods_Insert( DMap *methods, DaoRoutine *rout, DaoNamespace *ns, DaoType *host );
 
-DAO_DLL DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *proto, DaoParser *parser );
-DAO_DLL DaoRoutine* DaoNamespace_MakeFunction( DaoNamespace *self, const char *proto, DaoParser *parser );
+DAO_DLL DaoRoutine* DaoNamespace_MakeFunction( DaoNamespace *self, const char *proto, DaoParser *parser, DaoParser *defparser );
 
 DAO_DLL void DaoNamespace_InitConstEvalData( DaoNamespace *self );
 
