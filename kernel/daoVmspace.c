@@ -2959,7 +2959,7 @@ DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DaoParser
 }
 
 
-DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
+static DaoType* DaoVmSpace_MakeExceptionType2( DaoVmSpace *self, const char *name )
 {
 	DaoTypeBase *typer;
 	DaoValue *value;
@@ -2975,7 +2975,7 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 	offset = DString_RFindChars( basename, "::", -1 );
 	if( offset != DAO_NULLPOS ){
 		DString_Erase( basename, offset - 1, -1 );
-		parent = DaoVmSpace_MakeExceptionType( self, basename->chars );
+		parent = DaoVmSpace_MakeExceptionType2( self, basename->chars );
 		offset += 1;
 	}
 	DString_Delete( basename );
@@ -2994,9 +2994,7 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 	typer->supers[0] = parent->typer;
 	typer->Delete = parent->typer->Delete;
 	typer->GetGCFields = parent->typer->GetGCFields;
-	DaoVmSpace_Lock( self );
 	type = DaoNamespace_WrapType( self->daoNamespace, typer, DAO_CSTRUCT, 0 );
-	DaoVmSpace_Unlock( self );
 	if( type == NULL ) return NULL;
 
 	if( parent->kernel->initRoutines ){
@@ -3008,9 +3006,7 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 			DaoNamespace *nspace = tmp->nameSpace;
 			DaoType *routype = tmp->routType;
 
-			DaoVmSpace_Lock( self );
 			routype = DaoNamespace_MakeRoutType( nspace, tmp->routType, NULL, NULL, type );
-			DaoVmSpace_Unlock( self );
 			GC_Assign( & initor->routType, routype );
 			GC_Assign( & initor->routHost, type );
 			DString_Assign( initor->routName, type->name );
@@ -3027,5 +3023,19 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 			break;
 		}
 	}
+	return type;
+}
+
+DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
+{
+	DaoType *type;
+	/*
+	// Locking is necessary because these exceptions are placed in a common
+	// namespace DaoVmSpace::daoNamespace. Also, it is necessary to lock this
+	// method altogether, so that no duplicated exception will be created.
+	*/
+	DaoVmSpace_Lock( self );
+	type = DaoVmSpace_MakeExceptionType2( self, name );
+	DaoVmSpace_Unlock( self );
 	return type;
 }
