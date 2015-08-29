@@ -870,7 +870,8 @@ DaoByteBlock* DaoByteBlock_EncodeType( DaoByteBlock *self, DaoType *type )
 	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin, nameBlock );
 	if( auxBlock ) DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin+4, auxBlock );
 	if( cbtypebk ) DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin+6, cbtypebk );
-	DaoByteCoder_EncodeUInt16( newBlock->begin+2, type->tid );
+	newBlock->begin[2] = type->tid;
+	newBlock->begin[3] = type->subtid;
 	DaoByteBlock_AddBlockIndexData( newBlock, 0, size );
 	return newBlock;
 }
@@ -1985,13 +1986,15 @@ static void DaoByteCoder_DecodeType( DaoByteCoder *self, DaoByteBlock *block )
 	DaoByteBlock *name, *aux, *cbtype;
 	DaoByteBlock *pb2, *pb = block->first;
 	uint_t offset = self->ivalues->size;
-	uint_t A, B, C, D;
+	uint_t A, B, C, D, E;
 	int i, count;
 	daoint pos;
 
 	DaoByteCoder_DecodeChunk2222( block->begin, & A, & B, & C, & D );
 	name = DaoByteCoder_LookupStringBlock( self, block, A );
 	aux = DaoByteCoder_LookupBlock( self, block, C );
+	B = block->begin[2];
+	E = block->begin[3];
 	
 	if( self->error ) goto Finalize2;
 
@@ -2011,6 +2014,7 @@ static void DaoByteCoder_DecodeType( DaoByteCoder *self, DaoByteBlock *block )
 	itypes = self->ivalues->items.pType + offset;
 	count = self->ivalues->size - offset;
 	type = DaoNamespace_MakeType( self->nspace, sname->chars, B, aux?aux->value:NULL, itypes, count );
+	type->subtid = E;
 	if( D ){
 		DaoType *cbt;
 		cbtype = DaoByteCoder_LookupTypeBlock( self, block, D );

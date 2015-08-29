@@ -219,7 +219,7 @@
 //
 //
 // type:
-// ASM_TYPE(1B): Name-Index(2B), TypeID(2B), Aux-Index(2B), CodeBlockType-Index(2B);
+// ASM_TYPE(1B): Name-Index(2B), TypeID(1B), SubTypeID(1B), Aux-Idx(2B), CodeBlockType-Idx(2B);
 //   ASM_DATA(1B): Type-Index(2B) X 4;
 // ASM_END(1B): Type-Index(2B) X 4;
 //
