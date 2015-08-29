@@ -368,6 +368,37 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 #endif
 }
 
+DaoRoutine* DaoVmSpace_AcquireRoutine( DaoVmSpace *self )
+{
+	DaoRoutine *rout = NULL;
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->cacheMutex );
+#endif
+	if( self->routines->size ){
+		rout = (DaoRoutine*) DList_Back( self->routines );
+		DList_PopBack( self->routines );
+	}else{
+		rout = DaoRoutine_New( self->mainNamespace, NULL, 1 );
+		DMap_Insert( self->allRoutines, rout, 0 );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->cacheMutex );
+#endif
+	return rout;
+}
+void DaoVmSpace_ReleaseRoutine( DaoVmSpace *self, DaoRoutine *rout )
+{
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->cacheMutex );
+#endif
+	if( DMap_Find( self->allRoutines, rout ) ){
+		DList_PushBack( self->routines, rout );
+	}
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->cacheMutex );
+#endif
+}
+
 #if 0
 #define SHARE_NO_PARSER
 #define SHARE_NO_INFERENCER
@@ -668,11 +699,13 @@ DaoVmSpace* DaoVmSpace_New()
 	self->virtualPaths = DList_New( DAO_DATA_STRING );
 	self->sourceArchive = DList_New( DAO_DATA_STRING );
 	self->processes = DList_New(0);
+	self->routines = DList_New(0);
 	self->parsers = DList_New(0);
 	self->byteCoders = DList_New(0);
 	self->inferencers = DList_New(0);
 	self->optimizers = DList_New(0);
 	self->allProcesses = DMap_New( DAO_DATA_VALUE, 0 );
+	self->allRoutines= DMap_New( DAO_DATA_VALUE, 0 );
 	self->allParsers = DMap_New(0,0);
 	self->allByteCoders = DMap_New(0,0);
 	self->allInferencers = DMap_New(0,0);
@@ -741,6 +774,7 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DList_Delete( self->pathSearching );
 	DList_Delete( self->virtualPaths );
 	DList_Delete( self->processes );
+	DList_Delete( self->routines );
 	DList_Delete( self->loadedModules );
 	DList_Delete( self->sourceArchive );
 	DList_Delete( self->parsers );
@@ -750,6 +784,7 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DMap_Delete( self->vfiles );
 	DMap_Delete( self->vmodules );
 	DMap_Delete( self->allProcesses );
+	DMap_Delete( self->allRoutines );
 	DMap_Delete( self->allParsers );
 	DMap_Delete( self->allByteCoders );
 	DMap_Delete( self->allInferencers );

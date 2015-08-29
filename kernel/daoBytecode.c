@@ -30,6 +30,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "daoParser.h"
 #include "daoBytecode.h"
 #include "daoOptimizer.h"
 #include "daoNamespace.h"
@@ -2732,10 +2733,11 @@ static void DaoByteCoder_DecodeRoutineCode( DaoByteCoder *self, DaoByteBlock *bl
 	DList_Erase( self->lines, offset1, -1 );
 	DList_Erase( self->indices, offset2, -1 );
 }
-DaoProcess* DaoNamespace_ReserveFoldingOperands( DaoNamespace *self, int N );
+DaoProcess* DaoParser_ReserveFoldingOperands( DaoParser *self, int N );
 static void DaoByteCoder_EvaluateValue( DaoByteCoder *self, DaoByteBlock *block )
 {
 	DaoProcess *process;
+	DaoParser *parser;
 	DaoType *retype = NULL;
 	DaoValue *value = NULL;
 	DaoVmCode vmcode = {0,1,2,0};
@@ -2799,7 +2801,10 @@ ConstantNotFound:
 	if( self->error ) return;
 
 	count = self->iblocks->size - offset;
-	process = DaoNamespace_ReserveFoldingOperands( self->nspace, count + 1 );
+	parser = DaoVmSpace_AcquireParser( self->vmspace );
+	parser->vmSpace = self->vmspace;
+	parser->nameSpace = self->nspace;
+	process = DaoParser_ReserveFoldingOperands( parser, count + 1 );
 	if( vmcode.code == DVM_GETF ){
 		DaoByteBlock *block = (DaoByteBlock*) self->iblocks->items.pVoid[offset+1];
 		vmcode.b = DaoRoutine_AddConstant( process->activeRoutine, block->value );
@@ -2827,6 +2832,7 @@ ConstantNotFound:
 	}
 	GC_DecRC( process->activeRoutine->routHost );
 	process->activeRoutine->routHost = NULL;
+	DaoVmSpace_ReleaseParser( self->vmspace, parser );
 
 Done:
 	//DaoByteCoder_PrintBlock( self, block, 0, 0 );

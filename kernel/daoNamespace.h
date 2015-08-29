@@ -73,9 +73,6 @@ struct DaoNamespace
 	DString  *inputs; /* interactive inputs (load statements and some definitions) */
 	DList    *sources;
 	size_t    time;
-
-	DaoProcess  *constEvalProcess;
-	DaoRoutine  *constEvalRoutine;
 };
 
 DAO_DLL DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *name );

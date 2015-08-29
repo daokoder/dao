@@ -303,7 +303,6 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		DString name;
 
 		methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
-		DaoNamespace_InitConstEvalData( self );
 
 		typer->core->kernel->methods = methods;
 
@@ -312,12 +311,14 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeBase *typer )
 		parser->nameSpace = self;
 		parser->hostType = hostype;
 		parser->hostCtype = (DaoCtype*) hostype->aux;
+		DaoParser_InitConstEvaluator( parser );
+
 		defparser = DaoVmSpace_AcquireParser( self->vmSpace );
 		defparser->vmSpace = self->vmSpace;
 		defparser->nameSpace = self;
 		defparser->hostType = hostype;
 		defparser->hostCtype = (DaoCtype*) hostype->aux;
-		defparser->routine = self->constEvalRoutine;
+		defparser->routine = parser->evaluator.routine;
 
 		size = 0;
 		if( typer->funcItems != NULL ){
@@ -450,10 +451,10 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	DTypeSpecTree *sptree = NULL;
 	daoint i, k, n, tid, ret = DAO_DT_UNSCOPED;
 
-	DaoNamespace_InitConstEvalData( self );
 	parser->vmSpace = self->vmSpace;
 	parser->nameSpace = self;
-	parser->routine = self->constEvalRoutine;
+	DaoParser_InitConstEvaluator( parser );
+	parser->routine = parser->evaluator.routine;
 	parser->evalMode |= DAO_CONST_EVAL_GETVALUE;
 
 	if( ! DaoLexer_Tokenize( parser->lexer, name, 0 ) ) goto Error;
@@ -626,9 +627,9 @@ DaoType* DaoNamespace_DefineType( DaoNamespace *self, const char *type, const ch
 	if( tp == NULL ){
 		DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
 		if( ! DaoLexer_Tokenize( parser->lexer, type, DAO_LEX_ESCAPE ) ) goto DoneSourceType;
-		DaoNamespace_InitConstEvalData( self );
 		parser->nameSpace = self;
-		parser->routine = self->constEvalRoutine;
+		DaoParser_InitConstEvaluator( parser );
+		parser->routine = parser->evaluator.routine;
 
 		if( alias != NULL ){
 			DaoParser_PushLevel( parser );
@@ -927,11 +928,11 @@ DaoRoutine* DaoNamespace_MakeFunction( DaoNamespace *self, const char *proto, Da
 		parser->nameSpace = self;
 	}
 	if( defparser == NULL ){
-		DaoNamespace_InitConstEvalData( self );
+		DaoParser_InitConstEvaluator( parser );
 		defparser = DaoVmSpace_AcquireParser( self->vmSpace );
 		defparser->vmSpace = self->vmSpace;
 		defparser->nameSpace = self;
-		defparser->routine = self->constEvalRoutine;
+		defparser->routine = parser->evaluator.routine;
 	}
 	func = DaoNamespace_ParseSignature( self, proto, parser, defparser );
 	if( old  == NULL ) DaoVmSpace_ReleaseParser( self->vmSpace, parser );
@@ -960,12 +961,12 @@ int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items )
 	DaoRoutine *func;
 	int i = 0;
 	int ec = 0;
-	DaoNamespace_InitConstEvalData( self );
 	parser->vmSpace = self->vmSpace;
 	parser->nameSpace = self;
+	DaoParser_InitConstEvaluator( parser );
 	defparser->vmSpace = self->vmSpace;
 	defparser->nameSpace = self;
-	defparser->routine = self->constEvalRoutine;
+	defparser->routine = parser->evaluator.routine;
 	while( items[i].fpter != NULL ){
 		func = DaoNamespace_MakeFunction( self, items[i].proto, parser, defparser );
 		if( func ) func->pFunc = (DaoCFunction)items[i].fpter;
@@ -1105,21 +1106,6 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	DString_Delete( self->inputs );
 	DList_Delete( self->sources );
 	dao_free( self );
-}
-void DaoNamespace_InitConstEvalData( DaoNamespace *self )
-{
-	if( self->constEvalProcess ) return;
-	self->constEvalProcess = DaoProcess_New( self->vmSpace );
-	self->constEvalRoutine = DaoRoutine_New( self, NULL, 1 );
-	self->constEvalRoutine->routType = dao_type_routine;
-	self->constEvalProcess->activeNamespace = self;
-	GC_IncRC( dao_type_routine );
-	DaoProcess_InitTopFrame( self->constEvalProcess, self->constEvalRoutine, NULL );
-	DaoProcess_SetActiveFrame( self->constEvalProcess, self->constEvalProcess->topFrame );
-	self->constEvalRoutine->trait |= DAO_VALUE_CONST;
-	self->constEvalProcess->trait |= DAO_VALUE_CONST;
-	DList_Append( self->auxData, (DaoValue*) self->constEvalRoutine );
-	DList_Append( self->auxData, (DaoValue*) self->constEvalProcess );
 }
 void DaoNamespace_SetName( DaoNamespace *self, const char *name )
 {
@@ -1886,12 +1872,13 @@ DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *proto, 
 
 	assert( parser != NULL );
 	if( defparser == NULL ){
+		DaoParser_InitConstEvaluator( parser );
 		defparser = DaoVmSpace_AcquireParser( self->vmSpace );
 		defparser->vmSpace = self->vmSpace;
 		defparser->nameSpace = self;
 		defparser->hostType = parser->hostType;
 		defparser->hostCtype = parser->hostCtype;
-		defparser->routine = self->constEvalRoutine;
+		defparser->routine = parser->evaluator.routine;
 	}
 
 	GC_IncRC( parser->hostType );

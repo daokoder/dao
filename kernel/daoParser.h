@@ -45,6 +45,11 @@ enum DaoExpressionListTypes
 
 struct DaoParser
 {
+	struct {
+		DaoProcess   *process;
+		DaoRoutine   *routine;
+	} evaluator;  /* For constant folding; */
+
 	DaoVmSpace   *vmSpace;
 	DaoNamespace *nameSpace;
 
@@ -185,5 +190,7 @@ DAO_DLL int DaoParser_ParseRoutine( DaoParser *self );
 
 DAO_DLL DaoType* DaoParser_ParseTypeName( const char *type, DaoNamespace *ns, DaoClass *cls );
 DAO_DLL DaoType* DaoParser_ParseType( DaoParser *self, int start, int end, int *newpos, DList *types );
+
+DAO_DLL void DaoParser_InitConstEvaluator( DaoParser *self );
 
 #endif

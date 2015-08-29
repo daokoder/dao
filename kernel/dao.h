@@ -193,6 +193,7 @@ typedef struct dao_complex
 } dao_complex;
 
 typedef struct DString  DString;
+typedef struct DArray   DArray;
 typedef struct DList    DList;
 typedef struct DNode    DNode;
 typedef struct DMap     DMap;

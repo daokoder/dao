@@ -85,12 +85,14 @@ struct DaoVmSpace
 	DaoStream  *errorStream;
 
 	DMap    *allProcesses;
+	DMap    *allRoutines;
 	DMap    *allParsers;
 	DMap    *allByteCoders;
 	DMap    *allInferencers;
 	DMap    *allOptimizers;
 
 	DList   *processes;
+	DList   *routines;
 	DList   *parsers;
 	DList   *byteCoders;
 	DList   *inferencers;
@@ -176,10 +178,12 @@ DAO_DLL DaoTypeBase* DaoVmSpace_GetTyper( short type );
 
 DAO_DLL DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name );
 
+DAO_DLL DaoRoutine* DaoVmSpace_AcquireRoutine( DaoVmSpace *self );
 DAO_DLL DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self );
 DAO_DLL DaoByteCoder* DaoVmSpace_AcquireByteCoder( DaoVmSpace *self );
 DAO_DLL DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self );
 DAO_DLL DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self );
+DAO_DLL void DaoVmSpace_ReleaseRoutine( DaoVmSpace *self, DaoRoutine *rout );
 DAO_DLL void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser );
 DAO_DLL void DaoVmSpace_ReleaseByteCoder( DaoVmSpace *self, DaoByteCoder *byteCoder );
 DAO_DLL void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *inferencer );

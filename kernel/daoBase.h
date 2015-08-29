@@ -50,8 +50,6 @@ typedef struct DaoInode      DaoInode;
 typedef struct DaoVmCode     DaoVmCode;
 typedef struct DaoVmCodeX    DaoVmCodeX;
 
-typedef struct DArray   DArray;
-
 typedef struct DaoFuture     DaoFuture;
 typedef struct DaoNameValue  DaoNameValue;
 typedef struct DaoConstant   DaoConstant;
