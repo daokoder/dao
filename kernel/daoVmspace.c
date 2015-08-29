@@ -332,7 +332,7 @@ DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self )
 {
 	DaoProcess *proc = NULL;
 #ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexProc );
+	DMutex_Lock( & self->cacheMutex );
 #endif
 	if( self->processes->size ){
 		proc = (DaoProcess*) DList_Back( self->processes );
@@ -344,14 +344,14 @@ DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self )
 		DMap_Insert( self->allProcesses, proc, 0 );
 	}
 #ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexProc );
+	DMutex_Unlock( & self->cacheMutex );
 #endif
 	return proc;
 }
 void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 {
 #ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexProc );
+	DMutex_Lock( & self->cacheMutex );
 #endif
 	if( DMap_Find( self->allProcesses, proc ) ){
 		if( proc->factory ) DList_Clear( proc->factory );
@@ -364,7 +364,7 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 		DList_PushBack( self->processes, proc );
 	}
 #ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexProc );
+	DMutex_Unlock( & self->cacheMutex );
 #endif
 }
 
@@ -385,7 +385,7 @@ DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )
 #endif
 
 #ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexMisc );
+	DMutex_Lock( & self->cacheMutex );
 #endif
 	if( self->parsers->size ){
 		parser = (DaoParser*) DList_Back( self->parsers );
@@ -396,7 +396,7 @@ DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )
 		DMap_Insert( self->allParsers, parser, 0 );
 	}
 #ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexMisc );
+	DMutex_Unlock( & self->cacheMutex );
 #endif
 	return parser;
 }
@@ -408,13 +408,13 @@ void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser )
 
 	DaoParser_Reset( parser );
 #ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexMisc );
+	DMutex_Lock( & self->cacheMutex );
 #endif
 	if( DMap_Find( self->allParsers, parser ) ){
 		DList_PushBack( self->parsers, parser );
 	}
 #ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexMisc );
+	DMutex_Unlock( & self->cacheMutex );
 #endif
 }
 DaoByteCoder* DaoVmSpace_AcquireByteCoder( DaoVmSpace *self )
@@ -428,7 +428,7 @@ DaoByteCoder* DaoVmSpace_AcquireByteCoder( DaoVmSpace *self )
 #endif
 
 #ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexMisc );
+	DMutex_Lock( & self->cacheMutex );
 #endif
 	if( self->byteCoders->size ){
 		byteCoder = (DaoByteCoder*) DList_Back( self->byteCoders );
@@ -439,7 +439,7 @@ DaoByteCoder* DaoVmSpace_AcquireByteCoder( DaoVmSpace *self )
 		DMap_Insert( self->allByteCoders, byteCoder, 0 );
 	}
 #ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexMisc );
+	DMutex_Unlock( & self->cacheMutex );
 #endif
 	return byteCoder;
 }
@@ -451,13 +451,13 @@ void DaoVmSpace_ReleaseByteCoder( DaoVmSpace *self, DaoByteCoder *byteCoder )
 
 	DaoByteCoder_Reset( byteCoder );
 #ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexMisc );
+	DMutex_Lock( & self->cacheMutex );
 #endif
 	if( DMap_Find( self->allByteCoders, byteCoder ) ){
 		DList_PushBack( self->byteCoders, byteCoder );
 	}
 #ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexMisc );
+	DMutex_Unlock( & self->cacheMutex );
 #endif
 }
 DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self )
@@ -469,7 +469,7 @@ DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self )
 #endif
 
 #ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexMisc );
+	DMutex_Lock( & self->cacheMutex );
 #endif
 	if( self->inferencers->size ){
 		inferencer = (DaoInferencer*) DList_Back( self->inferencers );
@@ -479,7 +479,7 @@ DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self )
 		DMap_Insert( self->allInferencers, inferencer, 0 );
 	}
 #ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexMisc );
+	DMutex_Unlock( & self->cacheMutex );
 #endif
 	return inferencer;
 }
@@ -491,13 +491,13 @@ void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *inferencer )
 
 	DaoInferencer_Reset( inferencer );
 #ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexMisc );
+	DMutex_Lock( & self->cacheMutex );
 #endif
 	if( DMap_Find( self->allInferencers, inferencer ) ){
 		DList_PushBack( self->inferencers, inferencer );
 	}
 #ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexMisc );
+	DMutex_Unlock( & self->cacheMutex );
 #endif
 }
 DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self )
@@ -509,7 +509,7 @@ DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self )
 #endif
 
 #ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexMisc );
+	DMutex_Lock( & self->cacheMutex );
 #endif
 	if( self->optimizers->size ){
 		optimizer = (DaoOptimizer*) DList_Back( self->optimizers );
@@ -519,7 +519,7 @@ DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self )
 		DMap_Insert( self->allOptimizers, optimizer, 0 );
 	}
 #ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexMisc );
+	DMutex_Unlock( & self->cacheMutex );
 #endif
 	return optimizer;
 }
@@ -530,13 +530,13 @@ void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *optimizer )
 #endif
 
 #ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexMisc );
+	DMutex_Lock( & self->cacheMutex );
 #endif
 	if( DMap_Find( self->allOptimizers, optimizer ) ){
 		DList_PushBack( self->optimizers, optimizer );
 	}
 #ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexMisc );
+	DMutex_Unlock( & self->cacheMutex );
 #endif
 }
 DaoStream* DaoVmSpace_StdioStream( DaoVmSpace *self )
@@ -680,10 +680,9 @@ DaoVmSpace* DaoVmSpace_New()
 	self->loadedModules = DList_New( DAO_DATA_VALUE );
 
 #ifdef DAO_WITH_THREAD
-	DMutex_Init( & self->mutexLoad );
-	DMutex_Init( & self->mutexProc );
-	DMutex_Init( & self->mutexMisc );
-	DCondVar_Init( & self->condvWait );
+	DMutex_Init( & self->moduleMutex );
+	DMutex_Init( & self->cacheMutex );
+	DMutex_Init( & self->miscMutex );
 #endif
 
 	self->daoNamespace = NULL; /* need to be set for DaoNamespace_New() */
@@ -767,23 +766,22 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 	if( self->stdioStream ) DaoVmSpace_DeleteData( self );
 	DMap_Delete( self->nsModules );
 #ifdef DAO_WITH_THREAD
-	DMutex_Destroy( & self->mutexLoad );
-	DMutex_Destroy( & self->mutexProc );
-	DMutex_Destroy( & self->mutexMisc );
-	DCondVar_Destroy( & self->condvWait );
+	DMutex_Destroy( & self->moduleMutex );
+	DMutex_Destroy( & self->cacheMutex );
+	DMutex_Destroy( & self->miscMutex );
 #endif
 	dao_free( self );
 }
 void DaoVmSpace_Lock( DaoVmSpace *self )
 {
 #ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->mutexLoad );
+	DMutex_Lock( & self->miscMutex );
 #endif
 }
 void DaoVmSpace_Unlock( DaoVmSpace *self )
 {
 #ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->mutexLoad );
+	DMutex_Unlock( & self->miscMutex );
 #endif
 }
 int DaoDecodeUInt16( const char *data )
@@ -2961,7 +2959,9 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 	typer->supers[0] = parent->typer;
 	typer->Delete = parent->typer->Delete;
 	typer->GetGCFields = parent->typer->GetGCFields;
+	DaoVmSpace_Lock( self );
 	type = DaoNamespace_WrapType( self->daoNamespace, typer, DAO_CSTRUCT, 0 );
+	DaoVmSpace_Unlock( self );
 	if( type == NULL ) return NULL;
 
 	if( parent->kernel->initRoutines ){
@@ -2972,7 +2972,10 @@ DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name )
 			DaoRoutine *initor = DaoRoutine_Copy( tmp, 1, 0, 0 );
 			DaoNamespace *nspace = tmp->nameSpace;
 			DaoType *routype = tmp->routType;
+
+			DaoVmSpace_Lock( self );
 			routype = DaoNamespace_MakeRoutType( nspace, tmp->routType, NULL, NULL, type );
+			DaoVmSpace_Unlock( self );
 			GC_Assign( & initor->routType, routype );
 			GC_Assign( & initor->routHost, type );
 			DString_Assign( initor->routName, type->name );
