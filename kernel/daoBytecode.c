@@ -2894,6 +2894,7 @@ static void DaoByteCoder_DecodeDeclaration( DaoByteCoder *self, DaoByteBlock *bl
 Error:
 	DaoByteCoder_Error( self, block, "Invalid declaration!" );
 }
+int DaoNamespace_CyclicParent( DaoNamespace *self, DaoNamespace *parent );
 static void DaoByteCoder_LoadModule( DaoByteCoder *self, DaoByteBlock *block )
 {
 	uint_t A = DaoByteCoder_DecodeUInt16( block->begin );
@@ -2909,8 +2910,16 @@ static void DaoByteCoder_LoadModule( DaoByteCoder *self, DaoByteBlock *block )
 		return;
 	}
 	spath = DString_Copy( path->value->xString.value );
-	if( (ns = DaoNamespace_FindNamespace(self->nspace, spath)) == NULL ){
-		ns = DaoVmSpace_LoadModule( self->nspace->vmSpace, spath, NULL );
+
+	/* See comments in DaoParser_ParseLoadStatement(); */
+	ns = DaoVmSpace_LoadModule( self->vmspace, spath, NULL );
+	if( ns == NULL && mod == NULL ){
+		ns = DaoVmSpace_FindModule( self->vmspace, spath );
+		if( ns && DaoNamespace_CyclicParent( ns, self->nspace ) ){ 
+			DaoByteCoder_Error3( self, block, "Cyclic module loading for %s!", spath->chars );
+			ns = NULL;
+		}    
+
 	}
 	if( ns == NULL ){
 		self->error = 1;

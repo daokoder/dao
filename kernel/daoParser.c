@@ -5438,8 +5438,10 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 			mod = DaoVmSpace_LoadModule( vmSpace, self->string, self );
 			if( mod == NULL && modname == NULL ){
 				mod = DaoVmSpace_FindModule( vmSpace, self->string );
-				cyclic = mod && DaoNamespace_CyclicParent( mod, nameSpace );
-				mod = NULL;
+				if( mod && DaoNamespace_CyclicParent( mod, nameSpace ) ){
+					DaoParser_Error( self, DAO_LOAD_CYCLIC, NULL );
+					mod = NULL;
+				}
 			}
 			if( mod == NULL ) break;
 			DList_Append( modlist, mod );
@@ -5462,7 +5464,10 @@ int DaoParser_ParseLoadStatement( DaoParser *self, int start, int end )
 		}else{
 			DaoNamespace_AddConst( nameSpace, modname, (DaoValue*) mod, perm );
 		}
-		if( cyclic ) DaoParser_Warn( self, DAO_LOAD_CYCLIC, NULL );
+		if( cyclic ){
+			DaoParser_Error( self, DAO_LOAD_CYCLIC, NULL );
+			goto ErrorLoad;
+		}
 	}
 
 	while( i <= end && tokens[i]->name == DKEY_IMPORT && tokens[i]->line == tokens[i-1]->line ){
