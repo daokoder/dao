@@ -37,17 +37,31 @@
 #include"daoThread.h"
 #include"daoOptimizer.h"
 
-#define DVM_FRAME_RUNNING  (1<<0)
-#define DVM_FRAME_FINISHED (1<<1)
-#define DVM_FRAME_SECT     (1<<5)
-#define DVM_FRAME_KEEP     (1<<6)
+
+enum DaoFrameState
+{
+	DVM_FRAME_RUNNING  = (1<<0),
+	DVM_FRAME_FINISHED = (1<<1),
+	DVM_FRAME_SECT     = (1<<5),
+	DVM_FRAME_KEEP     = (1<<6)
+};
+
+
+enum DaoReturningMode
+{
+	DVM_RET_NOWHERE ,
+	DVM_RET_FRAME ,
+	DVM_RET_PROCESS ,
+	DVM_RET_FUTURE
+};
 
 
 struct DaoStackFrame
 {
 	ushort_t        entry;      /* entry code id; */
 	ushort_t        state;      /* frame state; */
-	ushort_t        returning;  /* return register id; */
+	ushort_t        retmode;    /* returning mode; */
+	ushort_t        returning;  /* returning register id; */
 	ushort_t        parCount;   /* the actual number of parameters passed in; */
 	ushort_t        varCount;   /* the number of variables allocated on the stack; */
 	daoint          stackBase;  /* the offset on the stack for the local variables; */

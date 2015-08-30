@@ -460,7 +460,8 @@ static void DaoMT_InitProcess( DaoProcess *proto, DaoProcess *clone, int argcoun
 	DaoProcess_InitCodeSection( clone, argcount );
 	clone->topFrame->outer = proto;
 	clone->topFrame->host = proto->topFrame->prev;
-	clone->topFrame->returning = -1;
+	clone->topFrame->retmode = DVM_RET_PROCESS;
+	clone->topFrame->returning = 0;
 }
 static void DaoMT_RunIterateFunctional( void *p )
 {

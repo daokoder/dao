@@ -519,7 +519,8 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 	}
 	if( caller->activeCode->b & DAO_CALL_BLOCK ){
 		callee->topFrame->host = callee->topFrame;
-		callee->topFrame->returning = -1;
+		callee->topFrame->retmode = DVM_RET_PROCESS;
+		callee->topFrame->returning = 0;
 	}
 
 #ifdef DAO_WITH_CONCURRENT

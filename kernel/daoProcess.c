@@ -231,12 +231,14 @@ DaoStackFrame* DaoProcess_PushFrame( DaoProcess *self, int size )
 	frame->varCount = size;
 	frame->entry = 0;
 	frame->state = 0;
-	frame->returning = 0xffff;
+	frame->retmode = DVM_RET_NOWHERE;
+	frame->returning = 0;
 	frame->parCount = 0;
 	frame->deferBase = self->defers->size;
 	frame->exceptBase = self->exceptions->size;
 	if( self->topFrame->routine && self->topFrame->routine->body && self->activeCode ){
 		self->topFrame->entry = (int)(self->activeCode - self->topFrame->codes) + 1;
+		frame->retmode = DVM_RET_FRAME;
 		frame->returning = self->activeCode->c;
 	}
 	self->topFrame = frame;
@@ -624,7 +626,7 @@ int DaoProcess_PushCallable( DaoProcess *self, DaoRoutine *R, DaoValue *O, DaoVa
 /* Special case: mt.start()!!{} */
 void DaoProcess_InterceptReturnValue( DaoProcess *self )
 {
-	self->topFrame->returning = 0xffff;
+	self->topFrame->retmode = DVM_RET_PROCESS;
 	if( self->topFrame->routine->body == NULL ){
 		self->activeValues = self->stackValues;
 		self->activeTypes = self->firstFrame->types;
@@ -661,11 +663,13 @@ static DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 {
 	DaoStackFrame *next, *frame = DaoProcess_FindSectionFrame( self );
 	DaoProfiler *profiler = self->vmSpace->profiler;
-	int returning = 0xffff;
+	int retmode = DVM_RET_NOWHERE;
+	int returning = 0;
 
 	if( frame == NULL ) return NULL;
 	if( self->topFrame->routine->body ){
 		self->topFrame->entry = 1 + self->activeCode - self->topFrame->codes;
+		retmode = DVM_RET_FRAME;
 		returning = self->activeCode->c;
 	}
 	next = DaoProcess_PushFrame( self, 0 );
@@ -681,6 +685,7 @@ static DaoStackFrame* DaoProcess_PushSectionFrame( DaoProcess *self )
 	next->active = next;
 	next->host = frame;
 	next->outer = self;
+	next->retmode = retmode;
 	next->returning = returning;
 	DaoProcess_SetActiveFrame( self, frame );
 	if( profiler ) profiler->EnterFrame( profiler, self, self->topFrame, 0 );
@@ -774,9 +779,9 @@ void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[],
 	self->stackReturn = -1;
 	func->pFunc( self, p, n );
 	if( self->stackReturn == -1 ){
-		if( self->topFrame != self->topFrame->active && self->topFrame->returning == 0xffff ){
+		if( self->topFrame->retmode == DVM_RET_PROCESS ){
 			GC_Assign( self->stackValues, dao_none_value );
-		}else{
+		}else if( self->topFrame->retmode == DVM_RET_FRAME ){
 			int opc = self->activeCode->c;
 			int optype = DaoVmCode_GetOpcodeType( self->activeCode );
 			int ret = (optype >= DAO_CODE_GETC) & (optype <= DAO_CODE_GETM);
@@ -787,7 +792,12 @@ void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[],
 			}
 		}
 	}
-	if( self->topFrame->returning == 0xffff && self->stackReturn > 0 ){
+	/*
+	// Check if the returning value is supposed to be a process return.
+	// If yes, move the value from the regular location to the start of
+	// the stack.
+	*/
+	if( self->topFrame->retmode == DVM_RET_PROCESS && self->stackReturn > 0 ){
 		DaoValue *returned = self->stackValues[ self->stackReturn ];
 		GC_Assign( self->stackValues, returned );
 	}
@@ -846,7 +856,8 @@ static int DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
 		if( param ) DaoValue_Copy( param, self->paramValues );
 		DaoProcess_PushRoutine( self, closure, NULL );
 		self->topFrame->deferBase -= deferCount;
-		self->topFrame->returning = 0xffff;
+		self->topFrame->retmode = DVM_RET_PROCESS;
+		self->topFrame->returning = 0;
 		self->topFrame->host = frame;
 	}
 	DList_Erase( self->defers, frame->deferBase, deferCount );
@@ -2501,7 +2512,8 @@ DaoValue* DaoProcess_PutValue( DaoProcess *self, DaoValue *value )
 	DaoType *type;
 	DaoValue *ret;
 
-	if( self->topFrame != self->topFrame->active && self->topFrame->returning == 0xffff ){
+	/* For user defined function only: */
+	if( self->topFrame->routine->body == NULL && self->topFrame->retmode == DVM_RET_PROCESS ){
 		int res = DaoValue_Move( value, self->stackValues, NULL );
 		self->stackReturn = 0;
 		if( res ) return self->stackValues[0];
@@ -3300,16 +3312,19 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue **dest = self->stackValues;
 	DaoValue *retValue = dao_none_value;
 	DaoType *type = NULL;
-	daoint i, n, returning = topFrame->returning;
+	int returning = topFrame->returning;
+	int retmode = topFrame->retmode;
+	daoint i, n;
 
 	self->activeCode = vmc;
 
 	if( vmc->b && (topFrame->routine->attribs & DAO_ROUT_DEFER) ){
 		lastframe = topFrame->host->prev;
 		returning = topFrame->host->returning;
+		retmode = topFrame->host->retmode;
 	}
 
-	if( returning != 0xffff ){
+	if( retmode == DVM_RET_FRAME ){
 #ifdef DEBUG
 		assert( lastframe && lastframe->routine );
 #endif
@@ -6335,7 +6350,8 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 	default: break;
 	}
 	if( self->status == DAO_PROCESS_STACKED ){
-		self->topFrame->returning = 0xffff;
+		self->topFrame->retmode = DVM_RET_PROCESS;
+		self->topFrame->returning = 0;
 		DaoProcess_Execute( self );
 	}
 	if( self->exceptions->size >0 ) return NULL;
