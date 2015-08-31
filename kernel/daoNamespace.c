@@ -1617,6 +1617,12 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		return DaoType_Specialize( dao_type_map, nest, N );
 	case DAO_INTERFACE :
 		if( pb == NULL ) break; /* may be the general "interface" type; */
+		if( N > 1 ) return NULL;
+		if( N == 1 ){
+			DaoCinType *cintype = DaoInterface_GetConcrete( (DaoInterface*) pb, nest[0] );
+			if( cintype ) return cintype->vatype;
+			return NULL;
+		}
 		return pb->xInterface.abtype;
 	case DAO_CLASS :
 		if( pb == NULL ) break; /* may be the general "class" type; */
@@ -1626,11 +1632,13 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		return pb->xClass.objType;
 	case DAO_CTYPE :
 		if( pb == NULL ) return NULL;
+		if( N > 0 ) return DaoType_Specialize( pb->xCtype.ctype, nest, N );
 		return pb->xCtype.ctype;
 	case DAO_CDATA :
 	case DAO_CPOD :
 	case DAO_CSTRUCT :
 		if( pb == NULL ) return NULL;
+		if( N > 0 ) return DaoType_Specialize( pb->xCtype.cdtype, nest, N );
 		return pb->xCtype.cdtype;
 	}
 	
