@@ -35,6 +35,10 @@
 #include "daoThread.h"
 #endif
 
+#ifdef DAO_WITH_STATIC_MODULES
+#include "daoVmspace.h"
+#endif
+
 #ifdef DAO_USE_READLINE
 #include"readline/readline.h"
 #include"readline/history.h"
@@ -222,7 +226,7 @@ int main( int argc, char **argv )
 {
 	int restart = 0;
 	int i, k, idsrc, vmods = 0;
-	DString *opts, *args;
+	DString *opts = NULL, *args = NULL;
 
 	/*mtrace(); */
 
@@ -247,20 +251,39 @@ int main( int argc, char **argv )
 	}
 
 #ifdef DAO_WITH_STATIC_MODULES
+	/*
+	// For single file deployment.
+	// Identify the script argument, such that the arguments before the script
+	// can be passed in as virtual machine arguments.
+	// Example: ./script --restart script.dao ...
+	*/
+	args = DString_Copy( vmSpace->daoBinFile );
+	DString_Erase( args, 0, vmSpace->daoBinPath->size );
+	DString_AppendChars( args, ".dao" );
 	idsrc = 1;
+	for(i=1; i<argc; i++){
+		if( strcmp( argv[i], args->chars ) == 0 ){
+			idsrc = i;
+			break;
+		}
+	}
 	vmods = DaoVmSpace_AddVirtualModules( vmSpace, dao_virtual_modules );
+	DString_Reset( args, 0 );
 #endif
 
 	k = idsrc;
 	if( k < 0 ) k = argc;
 
-	opts = DString_New();
-	args  = DString_New();
+	if( opts == NULL ) opts = DString_New();
+	if( args == NULL ) args = DString_New();
 	for(i=1; i<k; i++ ){
 		DString_AppendChars( opts, argv[i] );
 		DString_AppendChar( opts, '\1' );
 	}
 	if( idsrc >= 0 ){
+#ifdef DAO_WITH_STATIC_MODULES
+		idsrc += 1;
+#endif
 		for(i=idsrc; i<argc; i++ ){
 			DString_AppendChars( args, argv[i] );
 			DString_AppendChar( args, '\1' );
@@ -292,7 +315,7 @@ int main( int argc, char **argv )
 	signal( SIGINT, DaoSignalHandler );
 
 	/* Start execution. */
-	k = ! DaoVmSpace_RunMain( vmSpace, DString_GetData( args ) );
+	k = DaoVmSpace_RunMain( vmSpace, DString_GetData( args ) );
 
 #ifdef DAO_USE_READLINE
 	write_history( NULL );

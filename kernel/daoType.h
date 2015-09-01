@@ -171,6 +171,7 @@ DAO_DLL DaoType* DaoType_GetCommonType( int type, int subtype );
 DAO_DLL void DaoType_ResetTypeHolders( DaoType *self, DMap *types );
 DAO_DLL void DaoType_GetTypeHolders( DaoType *self, DMap *types );
 DAO_DLL void DaoType_SetupRecursive( DaoType *self, DaoType *tht, DaoType *root );
+DAO_DLL void DaoType_ExportArguments( DaoType *self, DList *args, int noname );
 
 DAO_DLL DaoType* DaoType_GetVariantItem( DaoType *self, int tid );
 

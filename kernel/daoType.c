@@ -1791,6 +1791,17 @@ void DaoType_SetupRecursive( DaoType *self, DaoType *tht, DaoType *root )
 	DaoType_SetupRecursive2( self, tht, root, chk );
 	DMap_Delete( chk );
 }
+void DaoType_ExportArguments( DaoType *self, DList *args, int noname )
+{
+	int i;
+	for(i=0; i<self->nested->size; ++i){
+		DaoType *it = self->nested->items.pType[i];
+		if( noname && it->tid >= DAO_PAR_NAMED && it->tid <= DAO_PAR_VALIST ){
+			it = (DaoType*) it->aux;
+		}
+		DList_Append( args, it );
+	}
+}
 
 
 extern DMutex mutex_methods_setup;

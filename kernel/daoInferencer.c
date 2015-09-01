@@ -569,6 +569,7 @@ enum DaoTypingErrorCode
 	DTE_ROUT_INVALID_YIELD ,
 	DTE_ROUT_INVALID_RETURN ,
 	DTE_ROUT_INVALID_RETURN2 ,
+	DTE_ROUT_MISSING_RETURN ,
 	DTE_FIELD_NOT_PERMIT ,
 	DTE_FIELD_NOT_EXIST ,
 	DTE_FIELD_OF_INSTANCE ,
@@ -608,6 +609,7 @@ static const char*const DaoTypingErrorString[] =
 	"Invalid yield in ordinary routine",
 	"Invalid return for the constructor or defer block",
 	"Invalid return type",
+	"Return is expected but not present",
 	"Member not permitted",
 	"Member not exist",
 	"Need class instance",
@@ -1528,7 +1530,9 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 			itypes[1] = ct;
 			ct = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, NULL, itypes, 2 );
 		}else if( bt->realnum ){
-			ct = DaoNamespace_MakeType( NS, "", DAO_VARIANT, NULL, at->nested->items.pType, at->nested->size );
+			self->array->size = 0;
+			DaoType_ExportArguments( at, self->array, 1 );
+			ct = DaoNamespace_MakeType( NS, "", DAO_VARIANT, NULL, self->array->items.pType, self->array->size );
 			if( code == DVM_GETI ){
 				vmc->code = DVM_GETI_TI;
 				if( bt->tid != DAO_INTEGER )
@@ -3352,7 +3356,7 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 			return 1;
 		}
 		if( ct && DaoType_MatchValue( ct, dao_none_value, NULL ) ) return 1;
-		if( ct && ! (routine->attribs & DAO_ROUT_INITOR) ) goto ErrorTyping;
+		if( ct && ! (routine->attribs & DAO_ROUT_INITOR) ) goto MissingReturn;
 	}else{
 		if( code == DVM_RETURN && (routine->attribs & DAO_ROUT_INITOR) ){
 			/* goto InvalidReturn; */  /* TODO: not for decorated initor; */
@@ -3397,6 +3401,7 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 ErrorTyping: return DaoInferencer_Error( self, DTE_TYPE_NOT_MATCHING );
 InvalidYield: return DaoInferencer_Error( self, DTE_ROUT_INVALID_YIELD );
 InvalidReturn: return DaoInferencer_Error( self, DTE_ROUT_INVALID_RETURN );
+MissingReturn: return DaoInferencer_Error( self, DTE_ROUT_MISSING_RETURN );
 }
 
 static DaoType* DaoInferencer_HandleVarInvarDecl( DaoInferencer *self, DaoType *at, int opb )
@@ -3511,6 +3516,16 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 			DaoStream_WriteChars( stream, char50 );
 			DaoStream_WriteChars( stream, "Expecting primitive or immutable types;\n" );
 			return 0;
+		}
+	}
+	if( (routine->attribs & DAO_ROUT_MAIN) && strcmp( routine->routName->chars, "main" ) == 0 ){
+		DaoType *routype = routine->routType;
+		DaoType *retype = (DaoType*) routype->aux;
+		if( retype && retype->tid != DAO_THT && retype->tid != DAO_INTEGER ){
+			return DaoInferencer_ErrorTypeNotMatching( self, retype, dao_type_int );
+		}else if( retype && retype->tid == DAO_THT ){
+			routype = DaoNamespace_MakeRoutType( NS, routype, NULL, NULL, dao_type_int );
+			GC_Assign( & routine->routType, routype );
 		}
 	}
 
@@ -4863,7 +4878,9 @@ SkipChecking:
 			break;
 		case DVM_GETI_TI :
 			if( at->tid != DAO_TUPLE || bt->tid != DAO_INTEGER ) goto NotMatch;
-			ct = DaoNamespace_MakeType( NS, "", DAO_VARIANT, NULL, at->nested->items.pType, at->nested->size );
+			self->array->size = 0;
+			DaoType_ExportArguments( at, self->array, 1 );
+			ct = DaoNamespace_MakeType( NS, "", DAO_VARIANT, NULL, self->array->items.pType, self->array->size );
 			DaoInferencer_UpdateType( self, opc, ct );
 			break;
 		case DVM_SETI_TI :

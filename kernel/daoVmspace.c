@@ -686,6 +686,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->errorStream = DaoStdStream_New();
 	self->errorStream->Read = NULL;
 	self->errorStream->Write = DaoStdStream_WriteStderr;
+	self->daoBinFile = DString_New();
 	self->daoBinPath = DString_New();
 	self->startPath = DString_New();
 	self->mainSource = DString_New();
@@ -765,6 +766,7 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	GC_DecRC( self->mainNamespace );
 	GC_DecRC( self->stdioStream );
 	GC_DecRC( self->errorStream );
+	DString_Delete( self->daoBinFile );
 	DString_Delete( self->daoBinPath );
 	DString_Delete( self->startPath );
 	DString_Delete( self->mainSource );
@@ -1765,16 +1767,16 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		if( self->evalCmdline ){
 			DaoRoutine *rout;
 			DString_SetChars( self->mainNamespace->name, "command line codes" );
-			if( DaoProcess_Compile( vmp, ns, self->mainSource->chars ) ==0 ) return 0;
+			if( DaoProcess_Compile( vmp, ns, self->mainSource->chars ) ==0 ) return 1;
 			DaoVmSpace_ExeCmdArgs( self );
 			rout = ns->mainRoutines->items.pRoutine[ ns->mainRoutines->size-1 ];
-			if( DaoProcess_Call( vmp, rout, NULL, NULL, 0 ) ) return 0;
+			if( DaoProcess_Call( vmp, rout, NULL, NULL, 0 ) ) return 1;
 		}else{
 			DaoVmSpace_ExeCmdArgs( self );
 		}
 		if( (self->options & DAO_OPTION_INTERUN) && self->userHandler == NULL )
 			DaoVmSpace_Interun( self, NULL );
-		return 1;
+		return 0;
 	}
 	argNames = DList_New( DAO_DATA_STRING );
 	argValues = DList_New( DAO_DATA_STRING );
@@ -1842,16 +1844,16 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 
 	if( res == 0 ){
 		DList_Delete( argValues );
-		return 0;
+		return 1;
 	}
 
 	if( self->options & DAO_OPTION_ARCHIVE ){
 		DaoVmSpace_SaveArchive( self, argValues );
 		DList_Delete( argValues );
-		return 1;
+		return 0;
 	}
 	DList_Delete( argValues );
-	if( self->options & DAO_OPTION_COMP_BC ) return 1;
+	if( self->options & DAO_OPTION_COMP_BC ) return 0;
 
 	mainRoutine = ns->mainRoutine;
 
@@ -1869,12 +1871,15 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		if( ret == DAO_ERROR_PARAM ){
 			DaoStream_WriteChars( io, "ERROR: invalid command line arguments.\n" );
 		}
-		if( ret ) return 0;
+		if( ret ) return 1;
+		if( vmp->stackValues[0] && vmp->stackValues[0]->type == DAO_INTEGER ){
+			return vmp->stackValues[0]->xInteger.value;
+		}
 	}
 	if( (self->options & DAO_OPTION_INTERUN) && self->userHandler == NULL )
 		DaoVmSpace_Interun( self, NULL );
 
-	return 1;
+	return 0;
 }
 int DaoVmSpace_CompleteModuleName( DaoVmSpace *self, DString *fname, int lib )
 {
@@ -2779,6 +2784,7 @@ DaoVmSpace* DaoInit( const char *command )
 		}
 		DString_Delete( path );
 #endif
+		DString_Assign( mainVmSpace->daoBinFile, mainVmSpace->daoBinPath );
 		DString_Change( mainVmSpace->daoBinPath, "[^/\\]* $", "", 0 );
 	}
 

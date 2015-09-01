@@ -544,6 +544,9 @@ DAO_DLL daoint DString_RFindChar( DString *self, char ch, daoint start );
 DAO_DLL void DString_Assign( DString *left, DString *right );
 DAO_DLL int DString_Compare( DString *left, DString *right );
 
+DAO_DLL int DString_Match( DString *self, const char *pat, daoint *start, daoint *end );
+DAO_DLL int DString_Change( DString *self, const char *pat, const char *target, int index );
+
 
 DAO_DLL DaoBoolean* DaoBoolean_New( dao_boolean value );
 DAO_DLL dao_boolean DaoBoolean_Get( DaoBoolean *self );

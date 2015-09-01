@@ -98,6 +98,7 @@ struct DaoVmSpace
 	DList   *inferencers;
 	DList   *optimizers;
 
+	DString *daoBinFile;
 	DString *daoBinPath;
 	DString *startPath;
 	DString *mainSource;

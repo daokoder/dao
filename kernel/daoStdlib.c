@@ -62,9 +62,10 @@ static void DaoSTD_Path( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoVmSpace *vms = proc->vmSpace;
 	DaoNamespace *ns = proc->activeNamespace;
+	dao_boolean full = p[1]->xBoolean.value;
 	switch( p[0]->xEnum.value ){
-	case 0: DaoProcess_PutString( proc, vms->daoBinPath ); break;
-	case 1: DaoProcess_PutString( proc, ns->name ); break;
+	case 0: DaoProcess_PutString( proc, full ? vms->daoBinFile : vms->daoBinPath ); break;
+	case 1: DaoProcess_PutString( proc, full ? ns->file : ns->name ); break;
 	case 2: DaoProcess_PutString( proc, vms->startPath ); break;
 	case 3: DaoProcess_PutString( proc, ns->path ); break;
 	}
@@ -339,12 +340,16 @@ DaoFuncItem dao_std_methods[] =
 	{ DaoSTD_Version,   "version( verbose = false ) => string" },
 	{ DaoSTD_Path,
 		/*
-		// program: the interpreter path;
-		// script : the source script path;
-		// working: the working directory from which the program was started;
-		// loading: the source directory from which the script was loaded;
+		// Path types:
+		// -- program: the interpreter path;
+		// -- script : the source script path;
+		// -- working: the working directory from which the program was started;
+		// -- loading: the source directory from which the script was loaded;
+		// For program and script paths:
+		// -- full = true : include the file name;
+		// -- full = false: exclude the file name;
 		*/
-		"path( which: enum<program,script,working,loading> = $script ) => string"
+		"path( which: enum<program,script,working,loading> = $script, full = false ) => string"
 	},
 
 	{ DaoSTD_Compile,   "compile( source: string, import: namespace|none = none ) => tuple<ns:namespace,main:routine>" },
