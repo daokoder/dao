@@ -52,6 +52,7 @@ static const char* const dao_asm_names[] =
 	"ASM_LOAD"      ,
 	"ASM_COPY"      ,
 	"ASM_TYPEOF"    ,
+	"ASM_TYPEFOR"    ,
 	"ASM_TYPEDEF"   ,
 	"ASM_AUXTYPE" ,
 	"ASM_NAMESPACE" ,
@@ -897,6 +898,17 @@ DaoByteBlock* DaoByteBlock_EncodeTypeOf( DaoByteBlock *self, DaoType *type, DaoV
 	if( valBlock == NULL ) return NULL;
 
 	newBlock = DaoByteBlock_AddBlock( self, (DaoValue*) type, DAO_ASM_TYPEOF );
+	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin, valBlock );
+	return newBlock;
+}
+DaoByteBlock* DaoByteBlock_EncodeTypeFor( DaoByteBlock *self, DaoType *type, DaoValue *value )
+{
+	DaoByteBlock *newBlock = DaoByteBlock_FindOrCopyBlock( self, (DaoValue*) type );
+	DaoByteBlock *valBlock = DaoByteBlock_FindOrCopyBlock( self, value );
+	if( newBlock ) return newBlock;
+	if( valBlock == NULL ) return NULL;
+
+	newBlock = DaoByteBlock_AddBlock( self, (DaoValue*) type, DAO_ASM_TYPEFOR );
 	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin, valBlock );
 	return newBlock;
 }
@@ -2008,6 +2020,10 @@ static void DaoByteCoder_DecodeType( DaoByteCoder *self, DaoByteBlock *block )
 	itypes = self->ivalues->items.pType + offset;
 	count = self->ivalues->size - offset;
 	type = DaoNamespace_MakeType( self->nspace, sname->chars, B, aux?aux->value:NULL, itypes, count );
+	if( type == NULL ){
+		DaoByteCoder_Error( self, block, "Type decoding failed!" );
+		return;
+	}
 	type->subtid = E;
 	if( D ){
 		DaoType *cbt;
@@ -2094,6 +2110,27 @@ static void DaoByteCoder_DecodeTypeOf( DaoByteCoder *self, DaoByteBlock *block )
 
 	if( self->error ) return;
 	type = DaoNamespace_GetType( self->nspace, valuebk->value );
+
+	GC_Assign( & block->value, type );
+}
+static void DaoByteCoder_DecodeTypeFor( DaoByteCoder *self, DaoByteBlock *block )
+{
+	uint_t A = DaoByteCoder_DecodeUInt16( block->begin );
+	DaoByteBlock *valuebk = DaoByteCoder_LookupValueBlock( self, block, A );
+	DaoType *type = NULL;
+
+	if( self->error ) return;
+	switch( valuebk->value->type ){
+	case DAO_CLASS : type = valuebk->value->xClass.objType; break;
+	case DAO_CTYPE : type = valuebk->value->xCtype.cdtype; break;
+	case DAO_CINTYPE : type = valuebk->value->xCinType.vatype; break;
+	case DAO_INTERFACE : type = valuebk->value->xInterface.abtype; break;
+	default : break;
+	}
+	if( type == NULL ){
+		DaoByteCoder_Error( self, block, "Invalid type object!" );
+		return;
+	}
 
 	GC_Assign( & block->value, type );
 }
@@ -3121,6 +3158,7 @@ static void DaoByteCoder_DecodeBlock( DaoByteCoder *self, DaoByteBlock *block )
 	case DAO_ASM_AUXTYPE   : DaoByteCoder_DecodeAuxType( self, block ); break;
 	case DAO_ASM_TYPEDEF   : DaoByteCoder_DecodeTypeAlias( self, block ); break;
 	case DAO_ASM_TYPEOF    : DaoByteCoder_DecodeTypeOf( self, block ); break;
+	case DAO_ASM_TYPEFOR   : DaoByteCoder_DecodeTypeFor( self, block ); break;
 	case DAO_ASM_BASES     : DaoByteCoder_DecodeBases( self, block ); break;
 	case DAO_ASM_PATTERNS  : DaoByteCoder_DecodePatterns( self, block ); break;
 	case DAO_ASM_DECOS : break;

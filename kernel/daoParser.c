@@ -1609,6 +1609,19 @@ static DaoType* DaoParser_ParseValueType( DaoParser *self, int start )
 
 static int type_stop_tokens[] = { DTOK_LB, DTOK_LSB, DTOK_LCB };
 
+static DaoType* DaoValue_GetDefinitionType( DaoValue *self )
+{
+	DaoType *type = NULL;
+	switch( self ? self->type : 0 ){
+	case DAO_CLASS : type = self->xClass.objType; break;
+	case DAO_CTYPE : type = self->xCtype.cdtype; break;
+	case DAO_CINTYPE : type = self->xCinType.vatype; break;
+	case DAO_INTERFACE : type = self->xInterface.abtype; break;
+	default : break;
+	}
+	return type;
+}
+
 static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, int *newpos )
 {
 	DaoType *type = NULL;
@@ -1640,7 +1653,12 @@ static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, in
 	case DAO_INTERFACE : type = value->xInterface.abtype; break;
 	default : break;
 	}
-	if( type ) return type;
+	if( type ){
+		if( self->byteBlock && k == start ){
+			DaoByteBlock_EncodeTypeFor( self->byteBlock, type, value );
+		}
+		return type;
+	}
 	if( value == NULL ) return NULL;
 	return DaoNamespace_MakeValueType( ns, value );
 }
@@ -6144,11 +6162,14 @@ static int DaoParser_ParseAtomicExpression( DaoParser *self, int start, int *cst
 			case DAO_GLOBAL_CONSTANT: opcode = DVM_GETCG; break;
 			}
 			if( value && value->type >= DAO_ENUM ){
+				DaoType *type;
 				if( DaoByteBlock_FindObjectBlock( block, value ) == NULL ){
 					DaoByteBlock *name = DaoByteBlock_EncodeString( block, str );
 					eval = DaoByteBlock_AddEvalBlock( block, value, opcode, 1, 0, NULL );
 					DaoByteBlock_InsertBlockIndex( eval, eval->end, name );
 				}
+				type = DaoValue_GetDefinitionType( value );
+				if( type ) DaoByteBlock_EncodeTypeFor( block, type, value );
 			}
 		}
 		/*
@@ -8079,12 +8100,15 @@ static DaoValue* DaoParser_EvalConst( DaoParser *self, DaoProcess *proc, int nva
 	}
 	value = DaoProcess_MakeConst( proc, self->evalMode );
 	if( value != NULL && max > DAO_COMPLEX ){
+		DaoType *type = NULL;
 		if( max > DAO_ENUM || DaoByteBlock_FindObjectBlock( coder, value ) == NULL ){
 			DaoType* retype = proc->activeTypes[0];
 			int opb = vmc->code == DVM_GETF ? 2 : vmc->b;
 			eval = DaoByteBlock_AddEvalBlock( coder, value, vmc->code, opb, self->evalMode, retype );
 			DaoByteBlock_AddBlockIndexData( eval, 0, nvalues );
 		}
+		type = DaoValue_GetDefinitionType( value );
+		if( type ) DaoByteBlock_EncodeTypeFor( coder, type, value );
 	}
 	GC_DecRC( proc->activeRoutine->routHost );
 	proc->activeRoutine->routHost = NULL;

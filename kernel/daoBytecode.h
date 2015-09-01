@@ -178,6 +178,9 @@
 // type of a value:
 // ASM_TYPEOF(1B): Value-Index(2B), Zeros(6B);
 //
+// type for a class/ctype/interface:
+// ASM_TYPEFOR(1B): Value-Index(2B), Zeros(6B);
+//
 // const/invar/var type:
 // ASM_AUXTYPE(1B): Type-Index(2B), SubType(2B), Zeros(4B);
 //
@@ -340,6 +343,7 @@ enum DaoAuxOpcode
 	DAO_ASM_LOAD      ,
 	DAO_ASM_COPY      ,
 	DAO_ASM_TYPEOF    ,
+	DAO_ASM_TYPEFOR   ,
 	DAO_ASM_TYPEDEF   ,
 	DAO_ASM_AUXTYPE ,
 	DAO_ASM_NAMESPACE ,
@@ -465,6 +469,7 @@ DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value );
 DaoByteBlock* DaoByteBlock_EncodeCtype( DaoByteBlock *self, DaoCtype *ctype, DaoCtype *generic, DaoType **types, int n );
 DaoByteBlock* DaoByteBlock_EncodeTypeAlias( DaoByteBlock *self, DaoType *type, DaoType *aliased, DString *alias, DaoType *rectype, int perm );
 DaoByteBlock* DaoByteBlock_EncodeTypeOf( DaoByteBlock *self, DaoType *type, DaoValue *value );
+DaoByteBlock* DaoByteBlock_EncodeTypeFor( DaoByteBlock *self, DaoType *type, DaoValue *value );
 DaoByteBlock* DaoByteBlock_EncodeLoad( DaoByteBlock *self, DaoNamespace *mod, DString *modname, DString *asname );
 DaoByteBlock* DaoByteBlock_EncodeExport( DaoByteBlock *self, DaoNamespace *ns, DString *names[3] );
 DaoByteBlock* DaoByteBlock_EncodeImport( DaoByteBlock *self, DaoValue *mod, DString *name, int scope, int index );
