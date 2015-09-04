@@ -3216,7 +3216,11 @@ int DaoInferencer_HandleClosure( DaoInferencer *self, DaoInode *inode, int i, DM
 	DaoType *ct;
 
 	if( types[opa]->tid != DAO_ROUTINE ) goto ErrorTyping;
-	if( closure->attribs & DAO_ROUT_DEFER_RET ) DList_Append( self->defers, closure );
+	if( closure->attribs & DAO_ROUT_DEFER_RET ){
+		if( self->rettypes->size == 4 ){
+			DList_Append( self->defers, closure );
+		}
+	}
 
 	if( DaoRoutine_DoTypeInference( closure, self->silent ) == 0 ) goto ErrorTyping;
 
@@ -3351,8 +3355,10 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 		if( ct && (ct->tid == DAO_UDT || ct->tid == DAO_THT) ){
 			ct = DaoNamespace_MakeValueType( NS, dao_none_value );
 			rettypes->items.pType[ rettypes->size - 1 ] = ct;
-			ct = DaoNamespace_MakeRoutType( NS, routine->routType, NULL, NULL, ct );
-			GC_Assign( & routine->routType, ct );
+			if( rettypes->size == 4 ){
+				ct = DaoNamespace_MakeRoutType( NS, routine->routType, NULL, NULL, ct );
+				GC_Assign( & routine->routType, ct );
+			}
 			return 1;
 		}
 		if( ct && DaoType_MatchValue( ct, dao_none_value, NULL ) ) return 1;

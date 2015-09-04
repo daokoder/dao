@@ -3541,7 +3541,7 @@ int DaoMake_Run( int argc, char *argv[] )
 	}
 
 	/* Start execution. */
-	k = ! DaoVmSpace_RunMain( vmSpace, DString_GetData( args ) );
+	k = DaoVmSpace_RunMain( vmSpace, DString_GetData( args ) );
 
 	DString_Delete( args );
 	DString_Delete( opts );
@@ -3868,7 +3868,7 @@ ErrorInvalidArgValue:
 	}
 
 	/* Start execution. */
-	k = ! DaoVmSpace_RunMain( vmSpace, makefile->chars );
+	k = DaoVmSpace_RunMain( vmSpace, makefile->chars );
 
 	source = DString_New();
 	for(it=DaoMap_First(daomake_projects); it; it=DaoMap_Next(daomake_projects,it)){
