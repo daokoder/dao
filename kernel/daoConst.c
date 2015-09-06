@@ -57,6 +57,7 @@ static const char* const daoCtInfo[] =
 	"Need constant expression for number",
 	"Need constant expression",
 	"Constant cannot be modified",
+	"R-value cannot be modified",
 	"Interface not compatible",
 	"Missing interface method",
 	"Failed interface binding",

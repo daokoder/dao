@@ -52,18 +52,21 @@
 
 enum InExpressionAssignmentStatus { ASSIGNMENT_OK, ASSIGNMENT_WARNING, ASSIGNMENT_ERROR };
 
-/* Expression node */
 typedef struct DaoEnode DaoEnode;
+
+/* Expression node: */
 struct DaoEnode
 {
-	int reg;    /* vm register id, for the value produced by the expression */
-	int konst;  /* constant id for the value of a constant expression */
-	int count;  /* number of expressions in an expression list */
-	int scope;  /* constant id for scope value of a constant expression */
-	DaoInode *prev;   /* the previous instruction, should never be NULL */
-	DaoInode *first;  /* the first instruction node for the expression */
-	DaoInode *last;   /* the last instruction node for the expression */
-	DaoInode *update; /* the last instruction that updates the value of "reg" */
+	int    reg;         /* vm register id, for the value produced by the expression; */
+	int    konst;       /* constant id for the value of a constant expression; */
+	short  count;       /* number of expressions in an expression list; */
+	short  lvalue;      /* indicator for l-values; */
+	int    scope;       /* constant id for scope value of a constant expression; */
+
+	DaoInode  *prev;    /* the previous instruction, should never be NULL; */
+	DaoInode  *first;   /* the first instruction node for the expression; */
+	DaoInode  *last;    /* the last instruction node for the expression; */
+	DaoInode  *update;  /* the last instruction that updates the value of "reg"; */
 };
 
 
@@ -3724,7 +3727,7 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 	DaoRoutine *routine = self->routine;
 	DaoClass *hostClass = self->hostClass;
 
-	DaoEnode enode = {-1,0,0,0,NULL,NULL,NULL,NULL};
+	DaoEnode enode = {-1,0,0,0,0,NULL,NULL,NULL,NULL};
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoToken *ptok;
 	DaoType *casetype;
@@ -4292,7 +4295,7 @@ DecoratorError:
 			}
 			while( last < colon ){
 				DNode *it;
-				DaoEnode item = {-1,0,0,0,NULL,NULL,NULL,NULL};
+				DaoEnode item = {-1,0,0,0,0,NULL,NULL,NULL,NULL};
 				int oldcount = self->regCount;
 				back = self->vmcLast;
 				self->curToken = last;
@@ -5071,7 +5074,7 @@ int DaoParser_ParseRoutine( DaoParser *self )
 }
 static DaoEnode DaoParser_NoneValue( DaoParser *self )
 {
-	DaoEnode enode = {0,0,0,0,NULL,NULL,NULL,NULL};
+	DaoEnode enode = {0,0,0,0,0,NULL,NULL,NULL,NULL};
 	int cst = 0;
 	if( self->noneValue >= 0 ){
 		cst = self->noneValue;
@@ -6477,7 +6480,7 @@ static DaoInode* DaoParser_AddBinaryCode( DaoParser *self, int code, DaoEnode *L
 DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int lb, int rb )
 {
 	DList *cid = DaoParser_GetArray( self );
-	DaoEnode enode, result = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
+	DaoEnode enode, result = { -1, 0, 1, 0, 0, NULL, NULL, NULL, NULL };
 	DaoInode *back = self->vmcLast;
 	DaoType *tp = self->enumTypes->size ? self->enumTypes->items.pType[0] : 0;
 	int start = lb - 1 - (etype != 0);
@@ -6611,7 +6614,7 @@ ParsingError:
 }
 static DaoEnode DaoParser_ParseParenthesis( DaoParser *self )
 {
-	DaoEnode enode, result = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
+	DaoEnode enode, result = { -1, 0, 1, 0, 0, NULL, NULL, NULL, NULL };
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoInode *back = self->vmcLast;
 	int start = self->curToken;
@@ -6679,8 +6682,8 @@ ParsingError:
 static DaoEnode DaoParser_ParseIntrinsicMath( DaoParser *self, int tki, int start, int end )
 {
 	DaoInode *last = self->vmcLast;
-	DaoEnode enode, result = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
-	DaoEnode error = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
+	DaoEnode enode, result = { -1, 0, 1, 0, 0, NULL, NULL, NULL, NULL };
+	DaoEnode error = { -1, 0, 1, 0, 0, NULL, NULL, NULL, NULL };
 	int rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, end );
 	int reg, regLast = -1, cst = 0;
 
@@ -6720,8 +6723,8 @@ static DaoEnode DaoParser_ParseSelfGetField( DaoParser *self )
 {
 	DaoValue *data;
 	DaoClass *klass = self->hostClass;
-	DaoEnode enode, result = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
-	DaoEnode error = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
+	DaoEnode enode, result = { -1, 0, 1, 0, 0, NULL, NULL, NULL, NULL };
+	DaoEnode error = { -1, 0, 1, 0, 0, NULL, NULL, NULL, NULL };
 	DaoToken **tokens = self->tokens->items.pToken;
 	DString *field = & tokens[ self->curToken+2]->string;
 	int start = self->curToken;
@@ -6791,8 +6794,8 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 	DaoValue *dbase;
 	DaoValue *value = NULL;
 	DaoInode *last = self->vmcLast;
-	DaoEnode enode, result = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
-	DaoEnode error = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
+	DaoEnode enode, result = { -1, 0, 1, 0, 0, NULL, NULL, NULL, NULL };
+	DaoEnode error = { -1, 0, 1, 0, 0, NULL, NULL, NULL, NULL };
 	DaoRoutine *routine = self->routine;
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoString daostr = {DAO_STRING,0,0,0,1,NULL};
@@ -6895,6 +6898,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 			return error;
 		}
 		result = DaoParser_ParseSelfGetField( self );
+		result.lvalue = 1;
 		start += 3;
 	}else if( tki == DKEY_TYPE && tki2 == DTOK_LB ){
 		int start0 = start + 2;
@@ -6989,6 +6993,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 		if( last != self->vmcLast ) result.first = result.last = result.update = self->vmcLast;
 		result.reg = regLast;
 		result.konst = cst;
+		result.lvalue = 1;
 		value = regLast >= 0 && cst ? DaoParser_GetVariable( self, cst ) : NULL;
 		if( regLast < 0 || value == (DaoValue*) self->vmSpace->daoNamespace ){
 			cur = start;
@@ -7352,6 +7357,7 @@ InvalidSection:
 				result.reg = regLast;
 				result.last = result.update = self->vmcLast;
 				result.konst = cst;
+				result.lvalue = 1;
 				self->curToken = rb + 1;
 				break;
 			}
@@ -7380,6 +7386,7 @@ InvalidSection:
 					regLast = DaoParser_MakeArithConst( self, DVM_GETF, obj, svalue, & cst, back, regcount );
 					result.scope = result.konst;
 					result.konst = cst;
+					result.lvalue = 1;
 					if( cst == 0 && (eltype & DAO_EXPRLIST_SCOPE) ){
 						DList_Erase( self->errors, count, -1 );
 						self->curToken --;
@@ -7393,6 +7400,7 @@ InvalidSection:
 					DaoParser_AddCode( self, DVM_GETF, opa, opb, regLast );
 					if( getx ) self->vmcLast->extra = getx;
 				}
+				result.lvalue = 1;
 				result.reg = regLast;
 				result.last = result.update = self->vmcLast;
 				self->curToken += 1;
@@ -7505,6 +7513,7 @@ InvalidSection:
 					DaoParser_AddCode( self, DVM_GETF, opa, opb, regLast );
 					if( getx ) self->vmcLast->extra = getx;
 				}
+				result.lvalue = 1;
 				result.reg = regLast;
 				result.last = result.update = self->vmcLast;
 				DaoParser_PushTokenIndices( self, postart, start, start+1 );
@@ -7513,6 +7522,7 @@ InvalidSection:
 				break;
 			}
 		case DTOK_LT :
+			result.lvalue = 1;
 			if( result.konst == 0 ) return result;
 			value = DaoParser_GetVariable( self, result.konst );
 			if( value->type != DAO_CTYPE && value->type != DAO_TYPE
@@ -7577,6 +7587,8 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop, int eltype )
 	if( result.reg < 0 ) return result;
 	if( oper == DAO_OPER_ADD ) return result;
 
+	result.lvalue = 0;
+
 	switch( oper ){
 	case DAO_OPER_NOT : code = DVM_NOT; break;
 	case DAO_OPER_INCR : code = DVM_ADD; break;
@@ -7637,8 +7649,8 @@ ErrorParsing:
 }
 static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec, int stop, int eltype, int astat )
 {
-	DaoEnode result = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
-	DaoEnode RHS = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
+	DaoEnode result = { -1, 0, 1, 0, 0, NULL, NULL, NULL, NULL };
+	DaoEnode RHS = { -1, 0, 1, 0, 0, NULL, NULL, NULL, NULL };
 	DaoToken **tokens = self->tokens->items.pToken;
 	DaoInode *move, *test, *jump, *jump2, *inode = NULL;
 	int oper, code, postart = self->curToken-1, posend;
@@ -7730,6 +7742,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 		posend = self->curToken - 1;
 		if( oper == DAO_OPER_ASSN ){
 			if( LHS.konst ) goto InvalidConstModificatioin;
+			if( LHS.lvalue == 0 ) goto InvalidRvalueModificatioin;
 			if( curtok == DTOK_ASSN && astat ){
 				DaoParser_Error2( self, DAO_WARN_ASSIGNMENT, postart, posend, 0 );
 				return result;
@@ -7752,6 +7765,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 			}
 		}else if( oper >= DAO_OPER_ASSN_ADD && oper <= DAO_OPER_ASSN_XOR ){
 			if( LHS.konst ) goto InvalidConstModificatioin;
+			if( LHS.lvalue == 0 ) goto InvalidRvalueModificatioin;
 			result.last = DaoParser_AddBinaryCode( self, mapAithOpcode[oper], & LHS, & RHS, pos );
 			result.update = result.last;
 			DaoParser_PopRegister( self ); /* result.last->c */
@@ -7854,6 +7868,8 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 	return LHS;
 InvalidConstModificatioin:
 	DaoParser_Error3( self, DAO_EXPR_MODIFY_CONSTANT, postart );
+InvalidRvalueModificatioin:
+	DaoParser_Error3( self, DAO_EXPR_MODIFY_RVALUE, postart );
 InvalidExpression:
 	DaoParser_Error3( self, DAO_INVALID_EXPRESSION, postart );
 	result.reg = -1;
@@ -7862,7 +7878,7 @@ InvalidExpression:
 static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int eltype, int astat )
 {
 	int tt, start = self->curToken;
-	DaoEnode RHS, LHS = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
+	DaoEnode RHS, LHS = { -1, 0, 1, 0, 0, NULL, NULL, NULL, NULL };
 	DaoToken **tokens = self->tokens->items.pToken;
 
 #if 0
@@ -7908,7 +7924,7 @@ static DaoEnode DaoParser_ParseExpressionList2( DaoParser *self, int sep, DaoIno
 {
 	DaoInode *inode;
 	DaoType *type = self->enumTypes->size ? self->enumTypes->items.pType[0] : NULL;
-	DaoEnode item, result = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
+	DaoEnode item, result = { -1, 0, 1, 0, 0, NULL, NULL, NULL, NULL };
 	DMap *vartypes = self->routine->body->localVarType;
 	DList *inodes = DList_New(0);
 	int i, tok, cur, id = 0;
@@ -7979,7 +7995,7 @@ static DaoEnode DaoParser_ParseExpressionLists( DaoParser *self, int sep1, int s
 {
 	DaoInode *inode;
 	DaoType *type = self->enumTypes->size ? self->enumTypes->items.pType[0] : NULL;
-	DaoEnode item, result = { -1, 0, 1, 0, NULL, NULL, NULL, NULL };
+	DaoEnode item, result = { -1, 0, 1, 0, 0, NULL, NULL, NULL, NULL };
 	DMap *vartypes = self->routine->body->localVarType;
 	DList *inodes = DList_New(0);
 	int i, tok, id=0, count = 0;
