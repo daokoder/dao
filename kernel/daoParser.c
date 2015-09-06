@@ -8154,14 +8154,14 @@ int DaoParser_MakeEnumConst( DaoParser *self, DaoEnode *enode, DList *cid, int r
 		DaoValue *v = DaoParser_GetVariable( self, cid->items.pInt[i] );
 		DaoValue_Copy( v, & proc->activeValues[i+1] );
 	}
-	DaoParser_PopCodes2( self, enode->prev );
-	for(i=regcount; i<self->regCount; i++) MAP_Erase( self->routine->body->localVarType, i );
-	DaoParser_PopRegisters( self, self->regCount - regcount );
 	/* Execute the instruction to get the const result: */
 	GC_Assign( & proc->activeTypes[0], type );
 	proc->activeCode = & vmcValue;
 	value = DaoParser_EvalConst( self, proc, N );
 	if( value == NULL ) return -1;
+	DaoParser_PopCodes2( self, enode->prev );
+	for(i=regcount; i<self->regCount; i++) MAP_Erase( self->routine->body->localVarType, i );
+	DaoParser_PopRegisters( self, self->regCount - regcount );
 	enode->konst = LOOKUP_BIND_LC( DaoRoutine_AddConstant( self->routine, value ));
 	return DaoParser_GetNormRegister( self, enode->konst, 0, p1, 0, p3 );
 }
@@ -8173,9 +8173,6 @@ int DaoParser_MakeArithConst( DaoParser *self, ushort_t code, DaoValue *a, DaoVa
 	int p1 = self->vmcLast->first;
 	int p2 = p1 + self->vmcLast->middle;
 	int p3 = p1 + self->vmcLast->last;
-
-	DaoParser_PopCodes2( self, back );
-	DaoParser_PopRegisters( self, self->regCount - regcount );
 
 	*cst = 0;
 	vmc.code = code;
@@ -8190,6 +8187,8 @@ int DaoParser_MakeArithConst( DaoParser *self, ushort_t code, DaoValue *a, DaoVa
 	proc->activeCode = & vmc;
 	value = DaoParser_EvalConst( self, proc, 2 );
 	if( value == NULL ) return -1;
+	DaoParser_PopCodes2( self, back );
+	DaoParser_PopRegisters( self, self->regCount - regcount );
 	*cst = LOOKUP_BIND_LC( DaoRoutine_AddConstant( self->routine, value ));
 	return DaoParser_GetNormRegister( self, *cst, 0, p1, p2, p3 );
 }

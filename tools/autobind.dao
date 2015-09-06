@@ -4601,7 +4601,7 @@ onload="DaoOnLoad" )
 	#io.writeln( extfiles );
 	if( files.size() ==0 ){
 		io.writeln( "no input, quit..." );
-		return;
+		return 1;
 	}
 	main_fname = % wrap_name ? wrap_name : files[0];
 	main_fname = main_fname.change( "%..*$", "" );
@@ -5106,5 +5106,6 @@ onload="DaoOnLoad" )
 	fout_source.close();
 	fout_source2.close();
 	fout_source3.close();
+	return 0;
 }
 
