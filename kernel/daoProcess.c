@@ -385,6 +385,7 @@ void DaoProcess_PushRoutine( DaoProcess *self, DaoRoutine *routine, DaoObject *o
 			object = that;
 		}
 	}
+	if( routine->attribs & DAO_ROUT_STATIC ) object = NULL;
 
 	frame = DaoProcess_PushFrame( self, routine->body->regCount );
 	DaoProcess_InitTopFrame( self, routine, object );

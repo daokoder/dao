@@ -78,7 +78,7 @@ void DaoInodes_Clear( DList *inodes )
 	DList_Clear( inodes );
 }
 
-void DaoRoutine_CodesToInodes( DaoRoutine *self, DList *inodes, int duplicate )
+void DaoRoutine_CodesToInodes( DaoRoutine *self, DList *inodes )
 {
 	DaoInode *inode, *inode2;
 	DaoVmCodeX *vmc, **vmcs = self->body->annotCodes->items.pVmc;
@@ -86,20 +86,6 @@ void DaoRoutine_CodesToInodes( DaoRoutine *self, DList *inodes, int duplicate )
 
 	for(i=0; i<N; i++){
 		inode2 = (DaoInode*) DList_Back( inodes );
-
-		if( duplicate ){
-			/*
-			// Add unused duplicated nodes to allow insertion of new nodes,
-			// without messing up the jumps.
-			*/
-			inode = DaoInode_New();
-			inode->code = DVM_UNUSED;
-			if( inode2 ){
-				inode2->next = inode;
-				inode->prev = inode2;
-			}
-			inode2 = inode;
-		}
 
 		inode = DaoInode_New();
 		vmc = vmcs[i];
@@ -125,7 +111,6 @@ void DaoRoutine_CodesToInodes( DaoRoutine *self, DList *inodes, int duplicate )
 		case DVM_GOTO : case DVM_CASE : case DVM_SWITCH :
 		case DVM_TEST : case DVM_TEST_B : case DVM_TEST_I : case DVM_TEST_F :
 			inode->jumpFalse = inodes->items.pInode[vmc->b];
-			if( duplicate ) inode->jumpFalse = inode->jumpFalse->prev;
 			break;
 		default : break;
 		}
@@ -138,9 +123,18 @@ void DaoRoutine_CodesFromInodes( DaoRoutine *self, DList *inodes )
 	DaoInode *it, *first = (DaoInode*) DList_Front( inodes );
 	while( first->prev ) first = first->prev;
 	for(it=first; it; it=it->next){
+		if( it->jumpFalse == NULL ) continue;
+		while( it->jumpFalse->prev && it->jumpFalse->prev->index == it->jumpFalse->index ){
+			/*
+			// Instructions with the same index are from the same single original
+			// instruction, so they belong to the same branch group (basic block).
+			*/
+			it->jumpFalse = it->jumpFalse->prev;
+		}
+	}
+	for(it=first; it; it=it->next){
 		it->index = count;
 		count += it->code != DVM_UNUSED;
-		//while( it->jumpFalse && it->jumpFalse->extra ) it->jumpFalse = it->jumpFalse->extra;
 	}
 	DArray_Clear( body->vmCodes );
 	DList_Clear( body->annotCodes );
@@ -262,7 +256,7 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent )
 	self->tidHost = routine->routHost ? routine->routHost->tid : 0;
 	self->hostClass = self->tidHost == DAO_OBJECT ? & routine->routHost->aux->xClass:NULL;
 
-	DaoRoutine_CodesToInodes( routine, self->inodes, 1 );
+	DaoRoutine_CodesToInodes( routine, self->inodes );
 
 	DList_Resize( self->consts, M, NULL );
 	/*
@@ -952,6 +946,7 @@ static DaoInode* DaoInferencer_InsertNode( DaoInferencer *self, DaoInode *inode,
 
 	inode = DaoInode_New();
 	*(DaoVmCodeX*)inode = *(DaoVmCodeX*)next;
+	inode->index = next->index;  /* Same basic block (same jump/branch group); */
 	inode->code = code;
 	if( addreg ){
 		inode->c = self->types->size;
@@ -960,7 +955,7 @@ static DaoInode* DaoInferencer_InsertNode( DaoInferencer *self, DaoInode *inode,
 	}
 	if( prev ){
 		prev->next = inode;
-		inode->prev = next;
+		inode->prev = prev;
 	}
 	inode->next = next;
 	next->prev = inode;
@@ -997,6 +992,7 @@ static void DaoInferencer_InsertMove2( DaoInferencer *self, DaoInode *inode, Dao
 	int K = DAO_FLOAT - DAO_BOOLEAN + 1;
 	int code = DVM_MOVE_BB + K*(ct->tid - DAO_BOOLEAN) + (at->tid - DAO_BOOLEAN);
 	DaoInode *move = DaoInferencer_InsertNode( self, inode->next, code, 1, at );
+	move->index = inode->index;  /* Same basic block (same jump/branch group); */
 	inode->c = move->c;
 	move->a = move->c;
 	move->c = opc;
@@ -3484,7 +3480,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	catype = dao_array_types[DAO_COMPLEX];
 
 	for(i=1; i<=DAO_MAX_SECTDEPTH; i++) typeVH[i] = types;
-	for(i=0; i<N; i++) inodes[i]->index = N | (1<<16); /* for return ranges (rettypes); */
 
 	if( invarinit ){
 		invarinit &= routine->routHost->tid == DAO_OBJECT;
@@ -3547,7 +3542,6 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		M = self->types->size;
 		self->currentIndex = i;
 		inode = inodes[i];
-		inode->index = i;
 		vmc = (DaoVmCodeX*) inode;
 		code = vmc->code;
 		opa = vmc->a;  opb = vmc->b;  opc = vmc->c;
@@ -3560,7 +3554,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 
 		if( rettypes->size > 4 ){
 			DaoInode *range = rettypes->items.pInode[rettypes->size - 4];
-			if( inode->prev == range ){
+			if( inode == range ){
 				DList_Erase( rettypes, rettypes->size - 4, -1 );
 				DList_PopBack( self->typeMaps );
 			}

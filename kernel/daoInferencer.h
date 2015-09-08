@@ -35,30 +35,30 @@
 /* Instruction Node */
 struct DaoInode
 {
-	unsigned short  code;    /* opcode */
-	unsigned short  a, b, c; /* register ids for operands */
-	unsigned short  state;   /* state; */
-	unsigned short  level;   /* lexical level */
-	unsigned short  line;    /* line number in source file */
-	unsigned int    first;   /* index of the first token of the expression */
-	unsigned short  middle;  /* the middle token, relative to "first" */
-	unsigned short  last;    /* the last token, relative to "first" */
+	unsigned short  code;    /* Opcode; */
+	unsigned short  a, b, c; /* Operands; */
+	unsigned short  state;   /* State; */
+	unsigned short  level;   /* Lexical level; */
+	unsigned short  line;    /* Line number in source file; */
+	unsigned int    first;   /* Index of the first token of the expression; */
+	unsigned short  middle;  /* The middle token, relative to "first"; */
+	unsigned short  last;    /* The last token, relative to "first"; */
 
-	unsigned int  index;   /* index of the instruction */
+	unsigned int  index;   /* Index of the instruction; */
 
-	DaoInode *jumpTrue;
-	DaoInode *jumpFalse;
-	DaoInode *extra;
+	DaoInode  *jumpTrue;
+	DaoInode  *jumpFalse;
+	DaoInode  *extra;
 
-	DaoInode *prev;
-	DaoInode *next;
+	DaoInode  *prev;
+	DaoInode  *next;
 };
 
 DaoInode* DaoInode_New();
 
 void DaoInodes_Clear( DList *inodes );
 
-void DaoRoutine_CodesToInodes( DaoRoutine *self, DList *inodes, int dupicate );
+void DaoRoutine_CodesToInodes( DaoRoutine *self, DList *inodes );
 void DaoRoutine_CodesFromInodes( DaoRoutine *self, DList *inodes );
 void DaoRoutine_SetupSimpleVars( DaoRoutine *self );
 

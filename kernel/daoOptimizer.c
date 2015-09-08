@@ -1340,7 +1340,7 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 	DaoOptimizer_LinkDU( self, routine );
 	DaoOptimizer_InitAEA( self, routine );
 	DaoOptimizer_SolveFlowEquation( self );
-	DaoRoutine_CodesToInodes( routine, inodes, 0 );
+	DaoRoutine_CodesToInodes( routine, inodes );
 	nodes = self->nodes->items.pCnode;
 
 	/* DaoOptimizer_Print( self ); */
@@ -1416,6 +1416,7 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 			DaoInode *inode;
 
 			inode = DaoInode_New();
+			inode->index = next->index;
 			inode->level = prev->level;
 			inode->line = prev->line;
 			inode->first = prev->first;
@@ -1435,7 +1436,7 @@ static void DaoOptimizer_CSE( DaoOptimizer *self, DaoRoutine *routine )
 			prev->c = inode->a = reg;
 
 			prev->next = inode;
-			inode->prev = next;
+			inode->prev = prev;
 			inode->next = next;
 			next->prev = inode;
 		}
@@ -1471,7 +1472,7 @@ static void DaoOptimizer_DCE( DaoOptimizer *self, DaoRoutine *routine )
 
 	DaoOptimizer_LinkDU( self, routine );
 	DaoOptimizer_DoLVA( self, routine );
-	DaoRoutine_CodesToInodes( routine, inodes, 0 );
+	DaoRoutine_CodesToInodes( routine, inodes );
 
 	nodes = self->nodes->items.pCnode;
 	for(i=N-1; i>=0; --i){

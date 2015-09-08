@@ -1419,14 +1419,14 @@ static DaoFuncItem numarMeths[] =
 		*/
 	},
 	{ DaoARRAY_Resize,
-		"resize( self: array<@T>, invar dims: array<int> )"
+		"resize( self: array<@T>, invar dims: array<int> ) => array<@T>"
 		/*
 		// Resize the array such that the size in each dimension is the same as specified
 		// in "dims".
 		*/
 	},
 	{ DaoARRAY_Reshape,
-		"reshape( self: array<@T>, invar dims: array<int> )"
+		"reshape( self: array<@T>, invar dims: array<int> ) => array<@T>"
 		/*
 		// Reshape the array such that the size in each dimension is the same as specified
 		// in "dims".
@@ -1434,7 +1434,7 @@ static DaoFuncItem numarMeths[] =
 	},
 
 	{ DaoARRAY_Permute,
-		"permute( self: array<@T>, invar dims: array<int> )"
+		"permute( self: array<@T>, invar dims: array<int> ) => array<@T>"
 		/*
 		// Permute the elements of the array such that an element located by
 		// its original index in the original array is moved to the location
@@ -1442,7 +1442,7 @@ static DaoFuncItem numarMeths[] =
 		*/
 	},
 	{ DaoARRAY_Transpose,
-		"transpose( self: array<@T> )"
+		"transpose( self: array<@T> ) => array<@T>"
 		/*
 		// Transpose a matrix.
 		*/
