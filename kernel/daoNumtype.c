@@ -2007,6 +2007,19 @@ int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, D
 		if( proc ) DaoProcess_RaiseError( proc, "Value", "not matched shape" );
 		return 0;
 	}
+	if( op == DVM_DIV || op == DVM_MOD ){
+		int zerob = 0;
+		for(i=0; i<N; ++i){
+			b = start_b + (i / len_b) * step_b + (i % len_b);
+			switch( array_b->etype ){
+			case DAO_BOOLEAN : zerob |= data_b->b[b] == 0; break;
+			case DAO_INTEGER : zerob |= data_b->i[b] == 0; break;
+			case DAO_FLOAT   : zerob |= data_b->f[b] == 0.0; break;
+			case DAO_COMPLEX : zerob |= data_b->c[b].real == 0.0 && data_b->c[b].imag == 0.0; break;
+			}
+		}
+		if( zerob ) goto ErrorDivByZero;
+	}
 	if( array_b->etype == DAO_INTEGER && A->type == DAO_INTEGER ){
 		daoint bi, ci = 0, ai = A->xInteger.value;
 		for(i=0; i<N; ++i){
@@ -2076,6 +2089,10 @@ int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, D
 		}
 	}
 	return 1;
+
+ErrorDivByZero:
+	if( proc ) DaoProcess_RaiseError( proc, "Float::DivByZero", "" );
+	return 0;
 }
 int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, DaoProcess *proc )
 {
@@ -2100,6 +2117,12 @@ int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, D
 	if( N < 0 ){
 		if( proc ) DaoProcess_RaiseError( proc, "Value", "not matched shape" );
 		return 0;
+	}
+	if( op == DVM_DIV || op == DVM_MOD ){
+		if( DaoValue_IsZero( B ) ){
+			if( proc ) DaoProcess_RaiseError( proc, "Float::DivByZero", "" );
+			return 0;
+		}
 	}
 	if( array_a->etype == DAO_INTEGER && B->type == DAO_INTEGER ){
 		for(i=0; i<N; ++i){
@@ -2213,6 +2236,21 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 			return 1;
 		}
 	}
+
+	if( op == DVM_DIV || op == DVM_MOD ){
+		int zerob = 0;
+		for(i=0; i<N; ++i){
+			b = start_b + (i / len_b) * step_b + (i % len_b);
+			switch( array_b->etype ){
+			case DAO_BOOLEAN : zerob |= data_b->b[b] == 0; break;
+			case DAO_INTEGER : zerob |= data_b->i[b] == 0; break;
+			case DAO_FLOAT   : zerob |= data_b->f[b] == 0.0; break;
+			case DAO_COMPLEX : zerob |= data_b->c[b].real == 0.0 && data_b->c[b].imag == 0.0; break;
+			}
+		}
+		if( zerob ) goto ErrorDivByZero;
+	}
+
 	if( A != C && C->original == NULL && M != N ){
 		DaoArray_GetSliceShape( A, & C->dims, & C->ndim );
 		DaoArray_ResizeArray( C, C->dims, C->ndim );
@@ -2341,6 +2379,10 @@ int DaoArray_ArrayArith( DaoArray *C, DaoArray *A, DaoArray *B, short op, DaoPro
 		}
 	}
 	return 1;
+
+ErrorDivByZero:
+	if( proc ) DaoProcess_RaiseError( proc, "Float::DivByZero", "" );
+	return 0;
 }
 
 static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar, int funct )

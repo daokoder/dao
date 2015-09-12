@@ -4972,10 +4972,13 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		res.real = A->xComplex.value.real;
 		res.imag = A->xComplex.value.imag;
 		switch( vmc->code ){
+		case DVM_DIV:
+			if( f == 0.0 ) goto ErrorDivByZero;
+			res.real /= f; res.imag /= f;
+			break;
 		case DVM_ADD: res.real += f; break;
 		case DVM_SUB: res.real -= f; break;
 		case DVM_MUL: res.real *= f; res.imag *= f; break;
-		case DVM_DIV: res.real /= f; res.imag /= f; break;
 		default: break; /* XXX: pow for complex??? */
 		}
 		DaoProcess_PutComplex( self, res );
@@ -4987,6 +4990,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 		switch( vmc->code ){
 		case DVM_DIV:
 			n = real * real + imag * imag;
+			if( n == 0.0 ) goto ErrorDivByZero;
 			res.real = f * real / n;
 			res.imag = f * imag / n;
 			break;
@@ -5018,6 +5022,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 			break;
 		case DVM_DIV:
 			N = BR * BR + BI * BI;
+			if( N == 0.0 ) goto ErrorDivByZero;
 			res.real = (AR * BR + AI * BI) / N;
 			res.imag = (AR * BI - AI * BR) / N;
 			break;

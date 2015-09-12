@@ -123,3 +123,93 @@ mat.iterate{ [X,I,J,K]
 4 1 2 2
 5 1 2 2}}
 @[test(code_01)]
+
+
+
+
+@[test(code_01)]
+[1] / 0
+@[test(code_01)]
+@[test(code_01)]
+{{Error::Float::DivByZero}} .* {{Division by zero}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+[1] / 0.0
+@[test(code_01)]
+@[test(code_01)]
+{{Error::Float::DivByZero}} .* {{Division by zero}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+[1] / 0.0C
+@[test(code_01)]
+@[test(code_01)]
+{{Error::Float::DivByZero}} .* {{Division by zero}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+[1] / [0]
+@[test(code_01)]
+@[test(code_01)]
+{{Error::Float::DivByZero}} .* {{Division by zero}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+[1] / [0.0]
+@[test(code_01)]
+@[test(code_01)]
+{{Error::Float::DivByZero}} .* {{Division by zero}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+[1] / [0.0C]
+@[test(code_01)]
+@[test(code_01)]
+{{Error::Float::DivByZero}} .* {{Division by zero}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+[1.0] / 0
+@[test(code_01)]
+@[test(code_01)]
+{{Error::Float::DivByZero}} .* {{Division by zero}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+[1.0] / 0.0
+@[test(code_01)]
+@[test(code_01)]
+{{Error::Float::DivByZero}} .* {{Division by zero}}
+@[test(code_01)]
+
+
+
+
+@[test(code_01)]
+[1.0] / 0.0C
+@[test(code_01)]
+@[test(code_01)]
+{{Error::Float::DivByZero}} .* {{Division by zero}}
+@[test(code_01)]
