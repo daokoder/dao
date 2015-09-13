@@ -1047,7 +1047,6 @@ static void DaoARRAY_Size( DaoProcess *proc, DaoValue *par[], int N )
 static void DaoARRAY_Resize( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoArray *self = & par[0]->xArray;
-	DaoArray *nad = & par[1]->xArray;
 	DArray *ad;
 	daoint *dims;
 	daoint i, size = 1;
@@ -1055,47 +1054,35 @@ static void DaoARRAY_Resize( DaoProcess *proc, DaoValue *par[], int N )
 	if( self->etype == DAO_NONE && self->size == 0 ) self->etype = DAO_FLOAT;
 
 	DaoArray_Sliced( self );
-	DaoArray_Sliced( nad );
 
-	if( nad->etype == DAO_COMPLEX || nad->size < 2 ){
-		DaoProcess_RaiseError( proc, "Param", "invalid dimension" );
-		return;
-	}
 	ad = DArray_New( sizeof(daoint) );
-	DArray_Resize( ad, nad->size );
+	DArray_Resize( ad, N-1 );
 	dims = ad->data.daoints;
 
-	for(i=0; i<nad->size; i++){
-		dims[i] = DaoArray_GetInteger( nad, i );
+	for(i=0; i<N-1; i++){
+		dims[i] = par[i+1]->xInteger.value;
 		size *= dims[i];
 	}
 	DaoProcess_PutValue( proc, (DaoValue*)self );
 	DaoArray_ResizeArray( self, dims, ad->size );
 	DArray_Delete( ad );
-	if( self->ndim < 2 ) DaoProcess_RaiseError( proc, "Param", "invalid dimension" );
 }
 static void DaoARRAY_Reshape( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoArray *self = & par[0]->xArray;
-	DaoArray *nad = & par[1]->xArray;
 	DArray *ad;
 	daoint *dims;
 	daoint i, size;
 
 	DaoArray_Sliced( self );
-	DaoArray_Sliced( nad );
 
-	if( nad->etype == DAO_COMPLEX || nad->size < 2 ){
-		DaoProcess_RaiseError( proc, "Param", "invalid dimension" );
-		return;
-	}
 	ad = DArray_New( sizeof(daoint) );
-	DArray_Resize( ad, nad->size );
+	DArray_Resize( ad, N-1 );
 	dims = ad->data.daoints;
 	size = 1;
-	for(i=0; i<nad->size; i++){
-		dims[i] = DaoArray_GetInteger( nad, i );
-		size *= (int)dims[i];
+	for(i=0; i<N-1; i++){
+		dims[i] = par[i+1]->xInteger.value;
+		size *= dims[i];
 	}
 	if( self->owner && self->size != size ){
 		DArray_Delete( ad );
@@ -1346,23 +1333,33 @@ static void DaoARRAY_sort( DaoProcess *proc, DaoValue *par[], int npar )
 static void DaoARRAY_Permute( DaoProcess *proc, DaoValue *par[], int npar )
 {
 	DaoArray *self = & par[0]->xArray;
-	DaoArray *pm = & par[1]->xArray;
-	DList *perm;
+	DList *perm = NULL;
 	int i, D = self->ndim;
-	int res;
+	int res = 1;
 
-	if( pm->ndim >2 || pm->size != D ) goto RaiseException;
-	if( pm->dims[0] * pm->dims[1] != pm->size ) goto RaiseException;
+	DaoProcess_PutValue( proc, (DaoValue*)self );
+	if( npar-1 != D ) goto RaiseException;
 
 	perm = DList_New(0);
 	DList_Resize( perm, D, 0 );
-	for(i=0; i<D; i++) perm->items.pInt[i] = DaoArray_GetInteger( pm, i );
+	for(i=0; i<D; ++i){
+		daoint index = par[i+1]->xInteger.value;
+		if( index < 0 || index >= D ) goto RaiseException;
+		perm->items.pInt[index] = 1;
+	}
+	for(i=0; i<D; ++i){
+		daoint k = perm->items.pInt[i];
+		if( k == 0 ) goto RaiseException;
+	}
+	for(i=0; i<D; ++i) perm->items.pInt[i] = par[i+1]->xInteger.value;
 	res = DaoArray_Permute( self, perm );
 	DList_Delete( perm );
-	if( res ==0 ) goto RaiseException;
-	return;
+	perm = NULL;
+	if( res == 0 ){
 RaiseException:
-	DaoProcess_RaiseError( proc, "Param", "invalid parameter for permute()" );
+		if( perm != NULL ) DList_Delete( perm );
+		DaoProcess_RaiseError( proc, "Param", "invalid parameter for permute()" );
+	}
 }
 static void DaoARRAY_Transpose( DaoProcess *proc, DaoValue *par[], int npar )
 {
@@ -1430,22 +1427,20 @@ static DaoFuncItem numarMeths[] =
 		*/
 	},
 	{ DaoARRAY_Resize,
-		"resize( self: array<@T>, invar dims: array<int> ) => array<@T>"
+		"resize( self: array<@T>, size: int, ...: int ) => array<@T>"
 		/*
-		// Resize the array such that the size in each dimension is the same as specified
-		// in "dims".
+		// Resize the array. The size in each dimension is specified in the parameters.
 		*/
 	},
 	{ DaoARRAY_Reshape,
-		"reshape( self: array<@T>, invar dims: array<int> ) => array<@T>"
+		"reshape( self: array<@T>, size: int, ...: int ) => array<@T>"
 		/*
-		// Reshape the array such that the size in each dimension is the same as specified
-		// in "dims".
+		// Reshape the array. The size in each dimension is specified in the parameters.
 		*/
 	},
 
 	{ DaoARRAY_Permute,
-		"permute( self: array<@T>, invar dims: array<int> ) => array<@T>"
+		"permute( self: array<@T>, index: int, ...: int ) => array<@T>"
 		/*
 		// Permute the elements of the array such that an element located by
 		// its original index in the original array is moved to the location
