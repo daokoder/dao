@@ -435,9 +435,13 @@ static int DaoArray_MakeSlice( DaoArray *self, DaoProcess *proc, DaoValue *idx[]
 	if( proc->exceptions->size > exceptions ) return 0;
 	for(i=0; i<D; ++i) S *= result->slices->data.daoints[2*i+1];
 	length = result->slices->data.daoints[2*self->ndim-1];
-	count = S / length;
-	start = DaoArray_IndexFromSlice( self, result->slices, 0 );
-	step = count > 1 ? DaoArray_IndexFromSlice( self, result->slices, length ) - start : 0;
+	if( length ){
+		count = S / length;
+		start = DaoArray_IndexFromSlice( self, result->slices, 0 );
+		step  = DaoArray_IndexFromSlice( self, result->slices, length ) - start;
+	}else{
+		count = start = step = 0;
+	}
 	DArray_PushDaoInt( result->slices, count );
 	DArray_PushDaoInt( result->slices, step );
 	DArray_PushDaoInt( result->slices, start );
@@ -1068,6 +1072,7 @@ static void DaoARRAY_Resize( DaoProcess *proc, DaoValue *par[], int N )
 	DaoProcess_PutValue( proc, (DaoValue*)self );
 	DaoArray_ResizeArray( self, dims, ad->size );
 	DArray_Delete( ad );
+	if( self->ndim < 2 ) DaoProcess_RaiseError( proc, "Param", "invalid dimension" );
 }
 static void DaoARRAY_Reshape( DaoProcess *proc, DaoValue *par[], int N )
 {
@@ -1126,7 +1131,7 @@ static void DaoARRAY_Index( DaoProcess *proc, DaoValue *par[], int N )
 }
 static void DaoARRAY_max( DaoProcess *proc, DaoValue *par[], int N )
 {
-	DaoTuple *tuple = DaoProcess_PutTuple( proc, 2 );
+	DaoTuple *tuple;
 	DaoArray *self = (DaoArray*) par[0];
 	DaoArray *array = DaoArray_GetWorkArray( self );
 	daoint size = DaoArray_GetWorkSize( self );
@@ -1135,8 +1140,11 @@ static void DaoARRAY_max( DaoProcess *proc, DaoValue *par[], int N )
 	daoint step = DaoArray_GetWorkStep( self );
 	daoint i, j, cmp = 0, imax = -1;
 
+	DaoProcess_PutNone( proc );
 	if( self->etype == DAO_COMPLEX ) return;/* no exception, guaranteed by the typing system */
 	if( size == 0 ) return;
+
+	tuple = DaoProcess_PutTuple( proc, 2 );
 	if( size ) imax = start;
 	for(i=1; i<size; ++i){
 		j = start + (i / len) * step + (i % len);
@@ -1159,7 +1167,7 @@ static void DaoARRAY_max( DaoProcess *proc, DaoValue *par[], int N )
 }
 static void DaoARRAY_min( DaoProcess *proc, DaoValue *par[], int N )
 {
-	DaoTuple *tuple = DaoProcess_PutTuple( proc, 2 );
+	DaoTuple *tuple;
 	DaoArray *self = (DaoArray*) par[0];
 	DaoArray *array = DaoArray_GetWorkArray( self );
 	daoint size = DaoArray_GetWorkSize( self );
@@ -1168,8 +1176,11 @@ static void DaoARRAY_min( DaoProcess *proc, DaoValue *par[], int N )
 	daoint step = DaoArray_GetWorkStep( self );
 	daoint i, j, cmp = 0, imin = -1;
 
+	DaoProcess_PutNone( proc );
 	if( self->etype == DAO_COMPLEX ) return;/* no exception, guaranteed by the typing system */
 	if( size == 0 ) return;
+
+	tuple = DaoProcess_PutTuple( proc, 2 );
 	if( size ) imin = start;
 	for(i=1; i<size; ++i){
 		j = start + (i / len) * step + (i % len);
@@ -1449,13 +1460,13 @@ static DaoFuncItem numarMeths[] =
 	},
 
 	{ DaoARRAY_max,
-		"max( invar self: array<@T<bool|int|float>> ) => tuple<@T,int>"
+		"max( invar self: array<@T<bool|int|float>> ) => tuple<@T,int>|none"
 		/*
 		// Get the maximum element in the array.
 		*/
 	},
 	{ DaoARRAY_min,
-		"min( invar self: array<@T<bool|int|float>> ) => tuple<@T,int>"
+		"min( invar self: array<@T<bool|int|float>> ) => tuple<@T,int>|none"
 		/*
 		// Get the minimum element in the array.
 		*/
@@ -1546,10 +1557,11 @@ int DaoArray_NumType( DaoArray *self )
 }
 void DaoArray_SetNumType( DaoArray *self, short numtype )
 {
-	int n, m = DaoArray_DataTypeSize( self );
+	int k, n, m = DaoArray_DataTypeSize( self );
 	if( self->etype == numtype ) return;
 	self->etype = numtype;
-	n = self->size * m / DaoArray_DataTypeSize( self );
+	k = DaoArray_DataTypeSize( self );
+	n = self->size * m / (k ? k : 1);
 	DaoArray_ResizeData( self, self->size, n );
 }
 int DaoArray_Size( DaoArray *self )
@@ -1927,38 +1939,34 @@ void DaoArray_ResizeVector( DaoArray *self, daoint size )
 void DaoArray_ResizeArray( DaoArray *self, daoint *dims, int D )
 {
 	daoint *dims2 = dims;
-	int i, k;
+	int i, ndim = 0;
 	daoint old = self->size;
 	if( D == 1 ){
 		DaoArray_ResizeVector( self, dims[0] );
 		return;
 	}
-	k = 0;
 	for(i=0; i<D; ++i){
 		if( dims[i] == 0 ){
 			DaoArray_ResizeVector( self, 0 );
 			return;
 		}
-		if( dims[i] != 1 || D ==2 ) k ++;
+		if( i > 0 && dims[i] == 1 ) continue;  /* Degenerated dimensions; */
+		ndim += 1;
 	}
 	/* It could be: self->dims == dims; */
 	dims = (daoint*) dao_malloc( D*sizeof(daoint) );
 	for(i=0; i<D; ++i) dims[i] = dims2[i];
-	if( self->dims != dims || self->ndim != k ) DaoArray_SetDimCount( self, k );
-	k = 0;
+	if( self->dims != dims || self->ndim != ndim ) DaoArray_SetDimCount( self, ndim );
+	ndim = 0;
 	for(i=0; i<D; ++i){
-		if( dims[i] != 1 || D ==2 ) self->dims[k++] = dims[i];
+		if( i > 0 && dims[i] == 1 ) continue;
+		self->dims[ndim++] = dims[i];
 	}
-	/* self->ndim will be one for dims such as [100,1,1] */
-	if( self->ndim ==1 ){
-		self->ndim += 1;
-		self->dims = (daoint*) dao_realloc( self->dims, 2*(k+1)*sizeof(daoint) );
-		if( dims[0] == 1 ){
-			self->dims[1] = self->dims[0];
-			self->dims[0] = 1;
-		}else{
-			self->dims[k] = 1;
-		}
+	/* self->ndim will be one for dims such as [1,1] */
+	if( self->ndim == 1 ){
+		self->ndim = 2;
+		self->dims = (daoint*) dao_realloc( self->dims, 2*2*sizeof(daoint) );
+		self->dims[1] = 1;
 	}
 	dao_free( dims );
 	DaoArray_FinalizeDimData( self );
