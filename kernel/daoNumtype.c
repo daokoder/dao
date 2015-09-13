@@ -1024,19 +1024,16 @@ static void DaoARRAY_Dim( DaoProcess *proc, DaoValue *par[], int N )
 static void DaoARRAY_Dims( DaoProcess *proc, DaoValue *par[], int N )
 {
 	DaoArray *self = & par[0]->xArray;
-	DaoArray *na = DaoProcess_PutArray( proc );
-	dao_integer *v;
 	daoint i;
 
-	DaoArray_SetNumType( na, DAO_INTEGER );
 	if( self->original ){
-		DaoArray_ResizeVector( na, self->original->ndim );
-		v = na->data.i;
-		for(i=0; i<self->original->ndim; ++i) v[i] = self->slices->data.daoints[2*i+1];
+		DaoTuple *tup = DaoProcess_PutTuple( proc, self->original->ndim );
+		for(i=0; i<self->original->ndim; ++i){
+			tup->values[i]->xInteger.value = self->slices->data.daoints[2*i+1];
+		}
 	}else{
-		DaoArray_ResizeVector( na, self->ndim );
-		v = na->data.i;
-		for(i=0; i<self->ndim; i++) v[i] = self->dims[i];
+		DaoTuple *tup = DaoProcess_PutTuple( proc, self->ndim );
+		for(i=0; i<self->ndim; i++) tup->values[i]->xInteger.value = self->dims[i];
 	}
 }
 static void DaoARRAY_Size( DaoProcess *proc, DaoValue *par[], int N )
@@ -1097,22 +1094,19 @@ static void DaoARRAY_Reshape( DaoProcess *proc, DaoValue *par[], int N )
 }
 static void DaoARRAY_Index( DaoProcess *proc, DaoValue *par[], int N )
 {
+	DaoTuple *tup;
 	DaoArray *self = & par[0]->xArray;
-	DaoArray *na = DaoProcess_PutArray( proc );
 	daoint *dim = self->dims;
 	int i, D = self->ndim;
 	dao_integer sd = par[1]->xInteger.value;
-	dao_integer *v;
 
 	DaoArray_Sliced( self );
 	dim = self->dims;
 	D = self->ndim;
 
-	DaoArray_SetNumType( na, DAO_INTEGER );
-	DaoArray_ResizeVector( na, self->ndim );
-	v = na->data.i;
+	tup = DaoProcess_PutTuple( proc, self->ndim );
 	for(i=D-1; i>=0; i--){
-		v[i] = sd % dim[i];
+		tup->values[i]->xInteger.value = sd % dim[i];
 		sd = sd / dim[i];
 	}
 }
@@ -1409,13 +1403,13 @@ static DaoFuncItem numarMeths[] =
 		*/
 	},
 	{ DaoARRAY_Dims,
-		"dims( invar self: array<@T> ) => array<int>"
+		"dims( invar self: array<@T> ) => tuple<...:int>"
 		/*
 		// Get all the dimensions.
 		*/
 	},
 	{ DaoARRAY_Index,
-		"index( invar self: array<@T>, i: int ) => array<int>"
+		"index( invar self: array<@T>, i: int ) => tuple<...:int>"
 		/*
 		// Convert an one-dimensional index to a multi-dimensional index.
 		*/
