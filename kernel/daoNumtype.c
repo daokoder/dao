@@ -1836,17 +1836,17 @@ int DaoArray_SliceFrom( DaoArray *self, DaoArray *original, DArray *slices )
 	if( slices->size < 2*original->ndim ) return 0;
 	for(i=0; i<original->ndim; ++i){
 		k = slices->data.daoints[2*i+1];
-		S += k > 1;
-		if( k == 0 ){ /* skip empty dimension */
+		if( k == 0 ){ /* Skip empty dimension: */
 			DaoArray_ResizeVector( self, 0 );
 			return 1;
 		}
+		if( i && k == 1 ) continue; /* Skip degenerated dimension; */
+		S += 1;
 	}
 	DaoArray_SetDimCount( self, S );
 	for(i=0; i<original->ndim; ++i){
 		k = slices->data.daoints[2*i+1];
-		/* skip size one dimension if the final slice has at least two dimensions */
-		if( k == 1 && (S > 1 || D > 1) ) continue;
+		if( i && k == 1 ) continue; /* Skip degenerated dimension; */
 		self->dims[D++] = k;
 	}
 	DaoArray_ResizeArray( self, self->dims, D );
