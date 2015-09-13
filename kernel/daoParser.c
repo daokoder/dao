@@ -6518,6 +6518,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 		if( enode.reg < 0 || self->curToken != end ) goto ParsingError;
 		regC = DaoParser_PushRegister( self );
 		enumcode = DVM_TUPLE;
+		DaoParser_PushTokenIndices( self, start, mid, end );
 		DaoParser_AddCode( self, DVM_TUPLE, enode.reg, enode.count, regC );
 	}else if( etype == DKEY_MAP || (etype == 0 && btype == DTOK_LCB && (pto >= 0 || arrow >= 0) ) ){
 		/* { a=>1, b=>[] }; {=>}; */
@@ -6545,6 +6546,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 			enode = DaoParser_ParseExpressionLists( self, sep, DTOK_COMMA, & step, cid );
 			if( enode.reg < 0 || self->curToken != end ) goto ParsingError;
 			regC = DaoParser_PushRegister( self );
+			DaoParser_PushTokenIndices( self, start, mid, end );
 			DaoParser_AddCode( self, DVM_MAP, enode.reg, (enummode<<14)|enode.count, regC );
 		}
 	}else if( colon > lb && comma < 0 && semi < 0 ){
@@ -6559,6 +6561,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 			goto ParsingError;
 		}
 		regC = DaoParser_PushRegister( self );
+		DaoParser_PushTokenIndices( self, start, mid, end );
 		DaoParser_AddCode( self, enumcode, enode.reg, (DVM_ENUM_MODE1<<14)|enode.count, regC );
 	}else if( semi < 0 ){
 		/* [a,b,c] */
@@ -6568,6 +6571,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 		if( enode.reg < 0 || self->curToken != end ) goto ParsingError;
 		isempty = lb > rb;
 		regC = DaoParser_PushRegister( self );
+		DaoParser_PushTokenIndices( self, start, mid, end );
 		DaoParser_AddCode( self, enumcode, enode.reg, enode.count, regC );
 	}else if( etype == DKEY_ARRAY || (etype == 0 && btype == DTOK_LSB) ){
 		/* [1,2; 3,4] */
@@ -6584,6 +6588,7 @@ DaoEnode DaoParser_ParseEnumeration( DaoParser *self, int etype, int btype, int 
 			goto ParsingError;
 		}
 		regC = DaoParser_PushRegister( self );
+		DaoParser_PushTokenIndices( self, start, mid, end );
 		DaoParser_AddCode( self, DVM_MATRIX, enode.reg, ((row<<8)|col), regC );
 	}else{
 		regC = -1;

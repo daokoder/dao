@@ -2697,6 +2697,9 @@ int DaoInferencer_HandleListArrayEnum( DaoInferencer *self, DaoInode *inode, DMa
 	}else{
 		goto ErrorTyping;
 	}
+	if( ct == NULL ){
+		return DaoInferencer_Error( self, DTE_INVALID_ENUMERATION );
+	}
 	DaoInferencer_UpdateType( self, opc, ct );
 	AssertTypeMatching( ct, types[opc], defs );
 	return 1;
@@ -4324,6 +4327,9 @@ SkipChecking:
 				}
 				at = DaoType_GetBaseType( at );
 				ct = DaoType_Specialize( dao_type_array, & at, at != NULL );
+				if( ct == NULL ){
+					return DaoInferencer_Error( self, DTE_INVALID_ENUMERATION );
+				}
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
 				break;
