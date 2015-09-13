@@ -1057,7 +1057,7 @@ static void DaoARRAY_Resize( DaoProcess *proc, DaoValue *par[], int N )
 	DaoArray_Sliced( self );
 	DaoArray_Sliced( nad );
 
-	if( nad->etype == DAO_COMPLEX ){
+	if( nad->etype == DAO_COMPLEX || nad->size < 2 ){
 		DaoProcess_RaiseError( proc, "Param", "invalid dimension" );
 		return;
 	}
@@ -1085,7 +1085,7 @@ static void DaoARRAY_Reshape( DaoProcess *proc, DaoValue *par[], int N )
 	DaoArray_Sliced( self );
 	DaoArray_Sliced( nad );
 
-	if( nad->etype == DAO_COMPLEX ){
+	if( nad->etype == DAO_COMPLEX || nad->size < 2 ){
 		DaoProcess_RaiseError( proc, "Param", "invalid dimension" );
 		return;
 	}

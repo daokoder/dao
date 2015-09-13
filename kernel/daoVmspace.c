@@ -2811,7 +2811,7 @@ DaoVmSpace* DaoInit( const char *command )
 
 #ifdef DAO_WITH_NUMARRAY
 	dao_type_array = DaoNamespace_WrapGenericType( daons, & numarTyper, DAO_ARRAY );
-	dao_type_array_empty = DaoType_Specialize( dao_type_array, NULL, 0 );
+	dao_type_array_empty = DaoType_Specialize( dao_type_array, & dao_type_float, 1 );
 	dao_type_array_empty = DaoType_GetConstType( dao_type_array_empty );
 	dao_array_types[DAO_NONE] = dao_type_array_empty;
 	dao_array_types[DAO_BOOLEAN] = DaoType_Specialize( dao_type_array, & dao_type_bool, 1 );
