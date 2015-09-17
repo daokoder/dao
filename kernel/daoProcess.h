@@ -111,7 +111,7 @@ struct DaoProcess
 	DaoVmSpace     *vmSpace;
 
 	DaoStackFrame  *firstFrame; /* the first frame; */
-	DaoStackFrame  *baseFrame;  /* the base frame when process started or resumed; */
+	DaoStackFrame  *startFrame; /* the starting frame where process started or resumed; */
 	DaoStackFrame  *topFrame;   /* the top call frame; */
 
 	DaoVmCode      *activeCode;

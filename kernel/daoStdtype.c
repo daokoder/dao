@@ -4144,7 +4144,7 @@ void DaoException_Init( DaoException *self, DaoProcess *proc, const char *summar
 	DList_Clear( self->lines );
 	DList_Append( self->callers, proc->topFrame->routine );
 	DList_Append( self->lines, (daoint) (line<<16)|id );
-	while( frame && frame->routine ){
+	while( frame && frame != proc->startFrame->prev  && frame->routine ){
 		DaoRoutineBody *body = frame->routine->body;
 		if( self->callers->size >= 5 ) break;
 		if( frame->entry ){

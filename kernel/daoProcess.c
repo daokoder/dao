@@ -137,7 +137,7 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->exceptions = DList_New( DAO_DATA_VALUE );
 	self->defers = DList_New( DAO_DATA_VALUE );
 
-	self->firstFrame = self->baseFrame = self->topFrame = DaoStackFrame_New();
+	self->firstFrame = self->startFrame = self->topFrame = DaoStackFrame_New();
 	self->firstFrame->active = self->firstFrame;
 	self->firstFrame->types = & dummyType;
 	self->firstFrame->codes = & dummyCode;
@@ -975,6 +975,7 @@ int DaoProcess_Start( DaoProcess *self )
 {
 	DaoJitCallData jitCallData = {NULL};
 	DaoStackFrame *rollback = NULL;
+	DaoStackFrame *startFrame = self->startFrame;
 	DaoDebugger *debugger = self->vmSpace->debugger;
 	DaoProfiler *profiler = self->vmSpace->profiler;
 	DaoUserHandler *handler = self->vmSpace->userHandler;
@@ -1151,6 +1152,7 @@ int DaoProcess_Start( DaoProcess *self )
 	};
 #endif
 
+	self->startFrame = self->topFrame;
 
 	self->depth += 1;
 	if( self->depth > 1024 ){
@@ -2316,7 +2318,6 @@ RaiseErrorNullObject:
 CheckException:
 
 			locVars = self->activeValues;
-			self->baseFrame = rollback; /* may have been changed; */
 			if( vmSpace->stopit ) goto FinishProcess;
 			if( (++count) % 1000 == 0 ) DaoGC_TryInvoke( self );
 			if( invokehost ) handler->InvokeHost( handler, self );
@@ -2389,6 +2390,7 @@ ReturnFalse:
 	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
 #endif
 	DaoGC_TryInvoke( self );
+	self->startFrame = startFrame;
 	self->depth -= 1;
 	return 0;
 
@@ -2398,6 +2400,7 @@ ReturnTrue:
 	if( active == 0 && self->active ) DaoCallServer_MarkActiveProcess( self, 0 );
 #endif
 	DaoGC_TryInvoke( self );
+	self->startFrame = startFrame;
 	self->depth -= 1;
 	return 1;
 }
@@ -3712,7 +3715,7 @@ static int DaoProcess_TryTailCall( DaoProcess *self, DaoRoutine *rout, DaoValue 
 	*/
 	if( rout->pFunc != NULL ) return 0;
 
-	if( !(vmc->b & DAO_CALL_TAIL) || self->topFrame->prev == self->baseFrame ) return 0;
+	if( !(vmc->b & DAO_CALL_TAIL) || self->topFrame == self->startFrame ) return 0;
 	/* no tail call optimization when there is deferred code blocks: */
 	if( self->defers->size > self->topFrame->deferBase ) return 0;
 
