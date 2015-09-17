@@ -2413,7 +2413,7 @@ int DaoProcess_Execute( DaoProcess *self )
 		DCondVar condv;
 		DMutex_Init( & mutex );
 		DCondVar_Init( & condv );
-		if( DaoCallServer_GetThreadCount() == 0 ) DaoCallServer_AddThread( NULL, NULL );
+		if( DaoCallServer_GetThreadCount() == 0 ) DaoCallServer_AddThread( NULL, NULL, NULL );
 		DMutex_Lock( & mutex );
 		while( self->status >= DAO_PROCESS_SUSPENDED ){
 			DCondVar_TimedWait( & condv, & mutex, 0.01 );

@@ -723,7 +723,7 @@ static void DaoMT_Functional( DaoProcess *proc, DaoValue *P[], int N, int F )
 		task->condv = & condv;
 		task->mutex = & mutex;
 		task->clone = DaoVmSpace_AcquireProcess( proc->vmSpace );
-		if( i ) DaoCallServer_AddTask( DaoMT_RunFunctional, task, 1 );
+		if( i ) DaoCallServer_AddTask( DaoMT_RunFunctional, task, task->clone );
 	}
 	DaoMT_RunFunctional( tasks );
 
@@ -801,7 +801,7 @@ static void DaoMT_Start( DaoProcess *proc, DaoValue *p[], int n )
 		}
 		if( i >= 0 ) DaoValue_Move( proc->activeValues[i], & clone->activeValues[i], NULL );
 	}
-	DaoCallServer_AddTask( DaoMT_Start0, clone, p[0]->xEnum.value );
+	DaoCallServer_AddTask( DaoMT_Start0, clone, p[0]->xEnum.value ? clone : NULL );
 }
 static void DaoMT_Iterate( DaoProcess *proc, DaoValue *p[], int n )
 {
@@ -927,7 +927,7 @@ DaoFuncItem dao_mt_methods[] =
 		"critical()[]"
 	},
 	{ DaoMT_Start,
-		"start( when: enum<auto,now> = $auto ) [ => @V|none] => Future<@V>"
+		"start( mode: enum<shared,exclusive> = $shared ) [ => @V|none] => Future<@V>"
 	},
 	{ DaoMT_Iterate,
 		"iterate( times: int, threads = 2 ) [index: int, threadid: int]"

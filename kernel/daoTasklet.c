@@ -118,6 +118,7 @@ struct DaoCallThread
 
 	DThreadTask   taskFunc;  /* first task; */
 	void         *taskParam;
+	void         *taskOwner;
 };
 
 static DaoCallThread* DaoCallThread_New( DThreadTask func, void *param );
@@ -140,6 +141,7 @@ struct DaoCallServer
 
 	DList  *functions;  /* list of DThreadTask function pointers */
 	DList  *parameters; /* list of void* */
+	DList  *owners;     /* list of void* */
 	DList  *events;     /* list of DaoTaskEvent* */
 	DList  *events2;    /* list of DaoTaskEvent* */
 	DMap   *waitings;   /* timed waiting: <dao_complex,DaoTaskEvent*> */
@@ -155,8 +157,7 @@ static DaoCallServer *daoCallServer = NULL;
 
 static DaoCallThread* DaoCallThread_New( DThreadTask func, void *param )
 {
-	DaoCallThread *self = (DaoCallThread*)dao_malloc( sizeof(DaoCallThread) );
-	self->thdData = NULL;
+	DaoCallThread *self = (DaoCallThread*)dao_calloc( 1, sizeof(DaoCallThread) );
 	self->taskFunc = func;
 	self->taskParam = param;
 	DThread_Init( & self->thread );
@@ -183,6 +184,7 @@ static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 	self->threads = DList_New(0);
 	self->functions = DList_New(0);
 	self->parameters = DList_New(0);
+	self->owners = DList_New(0);
 	self->events = DList_New(0);
 	self->events2 = DList_New(0);
 	self->waitings = DMap_New( DAO_DATA_COMPLEX, 0 );
@@ -206,6 +208,7 @@ static void DaoCallServer_Delete( DaoCallServer *self )
 	DList_Delete( self->threads );
 	DList_Delete( self->functions );
 	DList_Delete( self->parameters );
+	DList_Delete( self->owners );
 	DList_Delete( self->events );
 	DList_Delete( self->events2 );
 	DList_Delete( self->caches );
@@ -259,11 +262,12 @@ int DaoCallServer_GetThreadCount()
 	DaoCallServer_TryInit( mainVmSpace );
 	return daoCallServer->total;
 }
-void DaoCallServer_AddThread( DThreadTask func, void *param )
+void DaoCallServer_AddThread( DThreadTask func, void *param, void *proc )
 {
 	DaoCallThread *calth;
 	DaoCallServer_TryInit( mainVmSpace );
 	calth = DaoCallThread_New( func, param );
+	calth->taskOwner = proc;
 	DMutex_Lock( & daoCallServer->mutex );
 	daoCallServer->total += 1;
 	DList_Append( daoCallServer->threads, calth );
@@ -278,9 +282,11 @@ static void DaoCallServer_TryAddThread( DThreadTask func, void *param, int todo 
 {
 	int max = daoConfig.cpu > 2 ? daoConfig.cpu : 2;
 	int total = daoCallServer->total;
-	if( total < 2 ) DaoCallServer_AddThread( NULL, NULL );
+	if( total < 2 ) DaoCallServer_AddThread( NULL, NULL, NULL );
 	if( todo == 0 ) return;
-	if( total < max || todo > pow( total + max + 10, 5 ) ) DaoCallServer_AddThread( NULL, NULL );
+	if( total < max || todo > pow( total + max + 10, 5 ) ){
+		DaoCallServer_AddThread( NULL, NULL, NULL );
+	}
 }
 static int DaoTaskEvent_CheckSelect( DaoTaskEvent *self )
 {
@@ -399,23 +405,24 @@ static void DaoCallServer_Timer( void *p )
 	server->timing = 0;
 }
 
-void DaoCallServer_AddTask( DThreadTask func, void *param, int now )
+void DaoCallServer_AddTask( DThreadTask func, void *param, void *proc )
 {
 	int scheduled = 0;
 	DaoCallServer *server = DaoCallServer_TryInit( mainVmSpace );
 	DMutex_Lock( & server->mutex );
-	if( server->idle > server->parameters->size || now == 0 ){
+	if( server->idle > server->parameters->size || proc == NULL ){
 		scheduled = 1;
 		DList_Append( server->functions, func );
 		DList_Append( server->parameters, param );
+		DList_Append( server->owners, proc );
 		DMap_Insert( server->pending, param, NULL );
 		DCondVar_Signal( & server->condv );
 	}
 	DMutex_Unlock( & server->mutex );
 	if( scheduled ){
-		if( now == 0 ) DaoCallServer_TryAddThread( NULL, NULL, server->parameters->size );
+		if( proc == NULL ) DaoCallServer_TryAddThread( NULL, NULL, server->parameters->size );
 	}else{
-		DaoCallServer_AddThread( func, param );
+		DaoCallServer_AddThread( func, param, proc );
 	}
 }
 static void DaoCallServer_AddEvent( DaoTaskEvent *event )
@@ -863,7 +870,10 @@ static void DaoCallThread_Run( DaoCallThread *self )
 	daoint i, count, timeout;
 
 	self->thdData = DThread_GetSpecific();
-	if( self->taskFunc ) self->taskFunc( self->taskParam );
+	if( self->taskFunc ){
+		self->taskFunc( self->taskParam );
+		self->taskOwner = NULL;
+	}
 	while( server->vmspace->stopit == 0 ){
 		DaoProcess *process = NULL;
 		DaoFuture *future = NULL;
@@ -872,7 +882,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 
 		if( self->thdData != NULL ) self->thdData->state = 0;
 		DMutex_Lock( & server->mutex );
-		server->idle += 1;
+		server->idle += self->taskOwner == NULL;
 		while( server->pending->size == (server->events2->size + server->waitings->size) ){
 			//printf( "%p %i %i %i %i\n", self, server->events->size, server->pending->size, server->events2->size, server->waitings->size );
 			if( server->vmspace->stopit ) break;
@@ -886,10 +896,12 @@ static void DaoCallThread_Run( DaoCallThread *self )
 			void *param = server->parameters->items.pVoid[i];
 			if( DMap_Find( server->active, param ) ) continue;
 			DMap_Insert( server->active, param, NULL );
+			self->taskOwner = server->owners->items.pVoid[i];
 			function = (DThreadTask) server->functions->items.pVoid[i];
 			parameter = param;
 			DList_Erase( server->functions, i, 1 );
 			DList_Erase( server->parameters, i, 1 );
+			DList_Erase( server->owners, i, 1 );
 			DMap_Erase( server->pending, parameter );
 			server->idle -= 1;
 			break;
@@ -899,6 +911,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		if( server->vmspace->stopit ) break;
 		if( function ){
 			(*function)( parameter );
+			self->taskOwner = NULL;
 			DMutex_Lock( & server->mutex );
 			DMap_Erase( server->active, parameter );
 			DMutex_Unlock( & server->mutex );
@@ -908,7 +921,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		if( server->pending->size == 0 && server->finishing && server->idle == server->total ) break;
 
 		DMutex_Lock( & server->mutex );
-		server->idle -= 1;
+		server->idle -= self->taskOwner == NULL;
 		future = DaoCallServer_GetNextFuture();
 		DMutex_Unlock( & server->mutex );
 
@@ -925,6 +938,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 		DaoProcess_InterceptReturnValue( process );
 		DaoProcess_Start( process );
 		if( process->exceptions->size > count ) DaoProcess_PrintException( process, NULL, 1 );
+		if( process->status <= DAO_PROCESS_ABORTED ) self->taskOwner = NULL;
 
 		if( future->actor ){
 			int erase = 1;

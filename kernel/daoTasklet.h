@@ -177,8 +177,17 @@ DAO_DLL void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )
 DAO_DLL int DaoCallServer_GetThreadCount();
 DAO_DLL void DaoCallServer_Join();
 DAO_DLL void DaoCallServer_Stop();
-DAO_DLL void DaoCallServer_AddThread( DThreadTask func, void *param );
-DAO_DLL void DaoCallServer_AddTask( DThreadTask func, void *param, int now );
+
+/*
+// If "proc" is not NULL, obtain (or create) a thread exclusively for
+// a tasklet that is identified by "proc" (virtual process).
+// The thread will become available to other tasklets only after this
+// tasklet is completed, namely, when proc->status = DAO_PROCESS_FINISHED
+// or proc->status = DAO_PROCESS_ABORTED after DaoProcess_Start(proc).
+// the virtual process "proc".
+*/
+DAO_DLL void DaoCallServer_AddThread( DThreadTask func, void *param, void *proc );
+DAO_DLL void DaoCallServer_AddTask( DThreadTask func, void *param, void *proc );
 DAO_DLL void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *future, double timeout );
 
 #endif

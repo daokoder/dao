@@ -1381,7 +1381,9 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 		}
 #ifdef DAO_WITH_CONCURRENT
 		if( self->mainProcess->status >= DAO_PROCESS_SUSPENDED ){
-			if( DaoCallServer_GetThreadCount() == 0 ) DaoCallServer_AddThread( NULL, NULL );
+			if( DaoCallServer_GetThreadCount() == 0 ){
+				DaoCallServer_AddThread( NULL, NULL, NULL );
+			}
 		}
 		DaoCallServer_Join();
 #endif
