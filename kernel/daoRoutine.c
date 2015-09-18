@@ -57,6 +57,7 @@ DaoRoutine* DaoRoutine_New( DaoNamespace *nspace, DaoType *host, int body )
 	self->routConsts = DaoList_New();
 	self->nameSpace = nspace;
 	self->routHost = host;
+	self->variables = NULL;
 	GC_IncRC( self->nameSpace );
 	GC_IncRC( self->routHost );
 	GC_IncRC( self->routConsts );
@@ -111,6 +112,14 @@ void DaoRoutine_CopyFields( DaoRoutine *self, DaoRoutine *from, int cst, int cbo
 		if( cbody ) body = DaoRoutineBody_Copy( body, stat );
 		GC_Assign( & self->body, body );
 	}
+	if( from->variables == NULL ) return;
+	if( self->variables == NULL ) self->variables = DList_New( DAO_DATA_VALUE );
+	DList_Clear( self->variables );
+	for(i=0; i<from->variables->size; ++i){
+		DaoVariable *var = from->variables->items.pVar[i];
+		if( stat ) var = DaoVariable_New( var->value, var->dtype, DAO_LOCAL_CONSTANT );
+		DList_Append( self->variables, var );
+	}
 }
 DaoRoutine* DaoRoutine_Copy( DaoRoutine *self, int cst, int body, int stat )
 {
@@ -128,6 +137,7 @@ void DaoRoutine_Delete( DaoRoutine *self )
 	GC_DecRC( self->routConsts );
 	GC_DecRC( self->nameSpace );
 	DString_Delete( self->routName );
+	if( self->variables ) DList_Delete( self->variables );
 	if( self->overloads ) DRoutines_Delete( self->overloads );
 	if( self->specialized ) DRoutines_Delete( self->specialized );
 	if( self->original ) GC_DecRC( self->original );
@@ -158,7 +168,6 @@ DaoRoutineBody* DaoRoutineBody_New()
 	DaoValue_Init( self, DAO_ROUTBODY );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->source = NULL;
-	self->upValues = NULL;
 	self->vmCodes = DArray_New( sizeof(DaoVmCode) );
 	self->regType = DList_New( DAO_DATA_VALUE );
 	self->defLocals = DList_New( DAO_DATA_TOKEN );
@@ -184,7 +193,6 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 	DList_Delete( self->defLocals );
 	DList_Delete( self->annotCodes );
 	DMap_Delete( self->localVarType );
-	if( self->upValues ) DList_Delete( self->upValues );
 	if( self->decoTargets ) DList_Delete( self->decoTargets );
 	if( self->decoratees ) DList_Delete( self->decoratees );
 	if( self->revised ) GC_DecRC( self->revised );
@@ -211,14 +219,6 @@ void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other, int
 	self->regCount = other->regCount;
 	self->codeStart = other->codeStart;
 	self->codeEnd = other->codeEnd;
-	if( other->upValues == NULL ) return;
-	if( self->upValues == NULL ) self->upValues = DList_New( DAO_DATA_VALUE );
-	DList_Clear( self->upValues );
-	for(i=0; i<other->upValues->size; ++i){
-		DaoVariable *var = other->upValues->items.pVar[i];
-		if( copy_stat ) var = DaoVariable_New( var->value, var->dtype, DAO_LOCAL_CONSTANT );
-		DList_Append( self->upValues, var );
-	}
 }
 DaoRoutineBody* DaoRoutineBody_Copy( DaoRoutineBody *self, int copy_stat )
 {
@@ -297,9 +297,9 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DaoRoutine *original, DMap *deftypes
 			GC_DecRC( value );
 		}
 	}
-	if( self->body == original->body || self->body->upValues == NULL ) return;
-	for(i=0,n=self->body->upValues->size; i<n; ++i){
-		DaoVariable *var = self->body->upValues->items.pVar[i];
+	if( self->body == original->body || self->variables == NULL ) return;
+	for(i=0,n=self->variables->size; i<n; ++i){
+		DaoVariable *var = self->variables->items.pVar[i];
 		DaoType *type = DaoType_DefineTypes( var->dtype, self->nameSpace, deftypes );
 		GC_Assign( & var->dtype, type );
 	}

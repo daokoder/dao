@@ -410,6 +410,7 @@ void DaoObjectLogger_Quit()
 				DaoObjectLogger_ScanValue( (DaoValue*) rout->original );
 				DaoObjectLogger_ScanValue( (DaoValue*) rout->routConsts );
 				DaoObjectLogger_ScanValue( (DaoValue*) rout->body );
+				DaoObjectLogger_ScanArray( rout->variables );
 				if( rout->overloads ) DaoObjectLogger_ScanArray( rout->overloads->array );
 				if( rout->specialized ) DaoObjectLogger_ScanArray( rout->specialized->array );
 				break;
@@ -418,7 +419,6 @@ void DaoObjectLogger_Quit()
 			{
 				DaoRoutineBody *rout = (DaoRoutineBody*)value;
 				DaoObjectLogger_ScanArray( rout->regType );
-				DaoObjectLogger_ScanArray( rout->upValues );
 				DaoObjectLogger_ScanArray( rout->decoratees );
 				break;
 			}
@@ -1850,12 +1850,14 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 	case DAO_ROUTINE :
 		{
 			DaoRoutine *rout = (DaoRoutine*)value;
+			count += rout->variables ? rout->variables->size : 0;
 			cycRefCountDecrement( (DaoValue*) rout->routType );
 			cycRefCountDecrement( (DaoValue*) rout->routHost );
 			cycRefCountDecrement( (DaoValue*) rout->nameSpace );
 			cycRefCountDecrement( (DaoValue*) rout->original );
 			cycRefCountDecrement( (DaoValue*) rout->routConsts );
 			cycRefCountDecrement( (DaoValue*) rout->body );
+			cycRefCountDecrements( rout->variables );
 			if( rout->overloads ) cycRefCountDecrements( rout->overloads->array );
 			if( rout->specialized ) cycRefCountDecrements( rout->specialized->array );
 			break;
@@ -1864,10 +1866,8 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 		{
 			DaoRoutineBody *rout = (DaoRoutineBody*)value;
 			count += rout->regType->size;
-			count += rout->upValues ? rout->upValues->size : 0;
 			count += rout->decoratees ? rout->decoratees->size : 0;
 			cycRefCountDecrements( rout->regType );
-			cycRefCountDecrements( rout->upValues );
 			cycRefCountDecrements( rout->decoratees );
 			break;
 		}
@@ -2070,12 +2070,14 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 	case DAO_ROUTINE :
 		{
 			DaoRoutine *rout = (DaoRoutine*) value;
+			count += rout->variables ? rout->variables->size : 0;
 			cycRefCountIncrement( (DaoValue*) rout->routType );
 			cycRefCountIncrement( (DaoValue*) rout->routHost );
 			cycRefCountIncrement( (DaoValue*) rout->nameSpace );
 			cycRefCountIncrement( (DaoValue*) rout->original );
 			cycRefCountIncrement( (DaoValue*) rout->routConsts );
 			cycRefCountIncrement( (DaoValue*) rout->body );
+			cycRefCountIncrements( rout->variables );
 			if( rout->overloads ) cycRefCountIncrements( rout->overloads->array );
 			if( rout->specialized ) cycRefCountIncrements( rout->specialized->array );
 			break;
@@ -2084,10 +2086,8 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 		{
 			DaoRoutineBody *rout = (DaoRoutineBody*)value;
 			count += rout->regType->size;
-			count += rout->upValues ? rout->upValues->size : 0;
 			count += rout->decoratees ? rout->decoratees->size : 0;
 			cycRefCountIncrements( rout->regType );
-			cycRefCountIncrements( rout->upValues );
 			cycRefCountIncrements( rout->decoratees );
 			break;
 		}
@@ -2292,6 +2292,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 	case DAO_ROUTINE :
 		{
 			DaoRoutine *rout = (DaoRoutine*)value;
+			count += rout->variables ? rout->variables->size : 0;
 			directRefCountDecrement( (DaoValue**) & rout->nameSpace );
 			/* may become NULL, if it has already become garbage
 			 * in the last cycle */
@@ -2302,6 +2303,7 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			directRefCountDecrement( (DaoValue**) & rout->original );
 			directRefCountDecrement( (DaoValue**) & rout->routConsts );
 			directRefCountDecrement( (DaoValue**) & rout->body );
+			directRefCountDecrements( rout->variables );
 			if( rout->overloads ) directRefCountDecrements( rout->overloads->array );
 			if( rout->specialized ) directRefCountDecrements( rout->specialized->array );
 			break;
@@ -2310,10 +2312,8 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		{
 			DaoRoutineBody *rout = (DaoRoutineBody*)value;
 			count += rout->regType->size;
-			count += rout->upValues ? rout->upValues->size : 0;
 			count += rout->decoratees ? rout->decoratees->size : 0;
 			directRefCountDecrements( rout->regType );
-			directRefCountDecrements( rout->upValues );
 			directRefCountDecrements( rout->decoratees );
 			break;
 		}

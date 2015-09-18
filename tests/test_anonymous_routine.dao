@@ -23,8 +23,5 @@ rout = routine( x, y : string, z = a+a, s = 123 ){
 rout( 1, "XXX" );
 @[test(code_01)]
 @[test(code_01)]
-lambda  ABC_abc
-lambda  XXX
-lambda  ABCABC
-lambda  123
+{{At line}} .* {{Default parameter is not constant}}
 @[test(code_01)]

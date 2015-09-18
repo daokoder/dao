@@ -1330,13 +1330,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 				if( cst ){
 					dft = DaoParser_GetVariable( self, cst );
 					type_default = DaoNamespace_GetType( NS, dft );
-				}else if( module->uplocs ){
-					int loc = routine->routConsts->value->size;
-					DArray_PushInt( module->uplocs, reg );
-					DArray_PushInt( module->uplocs, loc );
-					DArray_PushInt( module->uplocs, i+1 );
-					DArray_PushInt( module->uplocs, comma-1 );
-					type_default = DaoParser_MakeParTypeHolder( module, tks );
 				}else{
 					goto ErrorVariableDefault;
 				}
@@ -5251,17 +5244,17 @@ int DaoParser_GetRegister( DaoParser *self, DaoToken *nametok )
 				DaoRoutine_AddConstant( routine, cst );
 			}else{
 				int tokpos = nametok->index;
-				if( routine->body->upValues == NULL ){
-					routine->body->upValues = DList_New( DAO_DATA_VALUE );
+				if( routine->variables == NULL ){
+					routine->variables = DList_New( DAO_DATA_VALUE );
 				}
 				i = DaoParser_GetNormRegister( self->outerParser, i, 0, tokpos, 0, tokpos );
 				DArray_PushInt( self->uplocs, i );
-				DArray_PushInt( self->uplocs, routine->body->upValues->size + DAO_MAX_PARAM );
+				DArray_PushInt( self->uplocs, routine->variables->size );
 				DArray_PushInt( self->uplocs, tokpos );
 				DArray_PushInt( self->uplocs, tokpos );
-				i = LOOKUP_BIND( DAO_CLOSURE_VARIABLE, 0, 0, routine->body->upValues->size );
+				i = LOOKUP_BIND( DAO_CLOSURE_VARIABLE, 0, 0, routine->variables->size );
 				MAP_Insert( DaoParser_CurrentSymbolTable( self ), & nametok->string, i );
-				DList_Append( routine->body->upValues, DaoVariable_New(NULL,NULL,0) );
+				DList_Append( routine->variables, DaoVariable_New(NULL,NULL,0) );
 			}
 			return i;
 		}

@@ -66,20 +66,21 @@ struct DaoRoutine
 	DAO_VALUE_COMMON;
 
 	ushort_t         attribs;
-	ushort_t         parCount; /* number of parameters that can be accepted; */
-	ushort_t         defLine;  /* definition line number in the source file; */
-	DString         *routName; /* routine name; */
-	DaoType         *routType; /* routine type; */
-	DaoType         *routHost; /* host type, for routine that is a method; */
-	DaoList         *routConsts; /* default parameters and routine constants; */
-	DaoNamespace    *nameSpace; /* definition namespace; */
+	ushort_t         parCount;    /* Number of parameters that can be accepted; */
+	ushort_t         defLine;     /* Definition line number in the source file; */
+	DString         *routName;    /* Routine name; */
+	DaoType         *routType;    /* Routine type; */
+	DaoType         *routHost;    /* Host type, for routine that is a method; */
+	DaoList         *routConsts;  /* Default parameters and routine constants; */
+	DaoNamespace    *nameSpace;   /* Definition namespace; */
+	DList           *variables;   /* Static or closure variables; */
 
-	DaoRoutineBody  *body; /* data for Dao routines; */
-	DaoCFunction     pFunc;
+	DaoRoutineBody  *body;   /* Data for Dao routines; */
+	DaoCFunction     pFunc;  /* Function pointer for wrapped C/C++ functions; */
 
-	DaoRoutine      *original; /* the original routine of a PS specialized one; */
-	DRoutines       *specialized; /* specialization based on parameters; */
-	DRoutines       *overloads; /* overloaded routines; */
+	DaoRoutine      *original;     /* The original routine of a PS specialized one; */
+	DRoutines       *specialized;  /* Specialization based on parameters; */
+	DRoutines       *overloads;    /* Overloaded routines; */
 };
 
 DAO_DLL DaoRoutine* DaoRoutine_New( DaoNamespace *nspace, DaoType *host, int body );
@@ -109,7 +110,6 @@ struct DaoRoutineBody
 
 	/* data type for local registers: */
 	DList *regType;   /* DList<DaoType*> */
-	DList *upValues;  /* DList<DaoVariable*> */
 
 	/* VM codes with annotations */
 	DList *annotCodes; /* DList<DaoVmCodeX*> */

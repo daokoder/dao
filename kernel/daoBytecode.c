@@ -1236,8 +1236,8 @@ void DaoByteCoder_FinalizeRoutineBlock( DaoByteCoder *self, DaoByteBlock *block 
 	nspace = routine->nameSpace;
 	DaoByteCoder_EncodeUInt16( block->begin+6, routine->attribs );
 	DaoByteCoder_EncodeUInt16( block->end, routine->body->regCount );
-	if( routine->body->upValues ){
-		DaoByteCoder_EncodeUInt16( block->end + 2, routine->body->upValues->size );
+	if( routine->variables ){
+		DaoByteCoder_EncodeUInt16( block->end + 2, routine->variables->size );
 	}
 	if( routine->routHost && routine->routHost->tid == DAO_OBJECT ){
 		/* Default constructor; */
@@ -2387,8 +2387,8 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 			switch( vmc->code ){
 			case DVM_GETVS :
 			case DVM_GETVS_I : case DVM_GETVS_F : case DVM_GETVS_C :
-				if( routine->body->upValues == NULL ) goto InvalidInstruction;
-				if( vmc->b >= routine->body->upValues->size ) goto InvalidInstruction;
+				if( routine->variables == NULL ) goto InvalidInstruction;
+				if( vmc->b >= routine->variables->size ) goto InvalidInstruction;
 			}
 			break;
 		case DAO_CODE_SETG :
@@ -2396,8 +2396,8 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 			switch( vmc->code ){
 			case DVM_SETVS :
 			case DVM_SETVS_II : case DVM_SETVS_FF : case DVM_SETVS_CC :
-				if( routine->body->upValues == NULL ) goto InvalidInstruction;
-				if( vmc->b >= routine->body->upValues->size ) goto InvalidInstruction;
+				if( routine->variables == NULL ) goto InvalidInstruction;
+				if( vmc->b >= routine->variables->size ) goto InvalidInstruction;
 			}
 			break;
 		case DAO_CODE_GETF :
@@ -2556,11 +2556,11 @@ static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block 
 	DaoByteCoder_DecodeChunk2222( block->end, & A, & B, & C, & D );
 	routine->body->regCount = A;
 	if( B ){
-		if( routine->body->upValues == NULL ){
-			routine->body->upValues = DList_New( DAO_DATA_VALUE );
+		if( routine->variables == NULL ){
+			routine->variables = DList_New( DAO_DATA_VALUE );
 		}
-		while( routine->body->upValues->size < B ){
-			DList_Append( routine->body->upValues, DaoVariable_New(NULL,NULL,0) );
+		while( routine->variables->size < B ){
+			DList_Append( routine->variables, DaoVariable_New(NULL,NULL,0) );
 		}
 	}
 

@@ -3204,8 +3204,8 @@ int DaoInferencer_HandleClosure( DaoInferencer *self, DaoInode *inode, int i, DM
 	int opc = inode->c;
 	DMap *defs2 = self->defs2;
 	DList *rettypes = self->rettypes;
-	DaoType *tt, **tp, **types = self->types->items.pType;
-	DaoValue **pp, **consts = self->consts->items.pValue;
+	DaoType **types = self->types->items.pType;
+	DaoValue **consts = self->consts->items.pValue;
 	DaoInode *inode2, **inodes = self->inodes->items.pInode;
 	DaoNamespace *NS = self->routine->nameSpace;
 	DaoVmCodeX *vmc = (DaoVmCodeX*) inode;
@@ -3221,26 +3221,14 @@ int DaoInferencer_HandleClosure( DaoInferencer *self, DaoInode *inode, int i, DM
 		}
 	}
 
-	if( DaoRoutine_DoTypeInference( closure, self->silent ) == 0 ) goto ErrorTyping;
-
-	self->array->size = 0;
-	DList_Resize( self->array, closure->parCount, 0 );
-	for(j=0; j<closure->parCount; j+=1){
-		DaoType *partype = closure->routType->nested->items.pType[j];
-		self->array->items.pType[j] = partype;
-	}
 	for(j=0; j<vmc->b; j+=2){
 		DaoInode *idata = inodes[i - vmc->b + j + 1];
-		if( idata->b < DAO_MAX_PARAM ){
-			self->array->items.pType[idata->b] = types[opa+1+j];
-		}else{
-			DaoType *uptype = types[opa+1+j];
-			DaoVariable *var = closure->body->upValues->items.pVar[ idata->b - DAO_MAX_PARAM ];
-			if( uptype->invar ) uptype = DaoType_GetBaseType( uptype );
-			GC_Assign( & var->dtype, uptype );
-		}
+		DaoType *uptype = types[opa+1+j];
+		DaoVariable *var = closure->variables->items.pVar[ idata->b ];
+		if( uptype->invar ) uptype = DaoType_GetBaseType( uptype );
+		GC_Assign( & var->dtype, uptype );
 	}
-	at = DaoNamespace_MakeRoutType( NS, at, NULL, self->array->items.pType, NULL );
+	if( DaoRoutine_DoTypeInference( closure, self->silent ) == 0 ) goto ErrorTyping;
 
 	DaoInferencer_UpdateType( self, opc, at );
 	AssertTypeMatching( at, types[opc], defs );
@@ -3254,7 +3242,7 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 	int opc = inode->c;
 	DMap *defs2 = self->defs2;
 	DList *rettypes = self->rettypes;
-	DaoType *tt, **tp, **types = self->types->items.pType;
+	DaoType *tt, **types = self->types->items.pType;
 	DaoNamespace *NS = self->routine->nameSpace;
 	DaoVmCodeX *vmc = (DaoVmCodeX*) inode;
 	DaoRoutine *routine = self->routine;
@@ -3697,7 +3685,7 @@ SkipChecking:
 			at = 0;
 			switch( code ){
 			case DVM_GETVH : at = typeVH[opa][opb]; break;
-			case DVM_GETVS : at = body->upValues->items.pVar[opb]->dtype; break;
+			case DVM_GETVS : at = routine->variables->items.pVar[opb]->dtype; break;
 			case DVM_GETVO : at = hostClass->instvars->items.pVar[opb]->dtype; break;
 			case DVM_GETVK : at = hostClass->variables->items.pVar[opb]->dtype; break;
 			case DVM_GETVG : at = NS->variables->items.pVar[opb]->dtype; break;
@@ -3729,7 +3717,7 @@ SkipChecking:
 			type2 = NULL;
 			switch( code ){
 			case DVM_SETVH : type2 = typeVH[opc] + opb; break;
-			case DVM_SETVS : var = body->upValues->items.pVar[opb]; break;
+			case DVM_SETVS : var = routine->variables->items.pVar[opb]; break;
 			case DVM_SETVO : var = hostClass->instvars->items.pVar[opb]; break;
 			case DVM_SETVK : var = hostClass->variables->items.pVar[opb]; break;
 			case DVM_SETVG : var = NS->variables->items.pVar[opb]; break;
@@ -4566,7 +4554,7 @@ SkipChecking:
 			break;
 		case DVM_GETVS_B : case DVM_GETVS_I : case DVM_GETVS_F : case DVM_GETVS_C :
 			TT1 = DAO_BOOLEAN + (code - DVM_GETVS_B);
-			at = body->upValues->items.pVar[opb]->dtype;
+			at = routine->variables->items.pVar[opb]->dtype;
 			ct = DaoInferencer_UpdateType( self, opc, self->basicTypes[TT1] );
 			AssertTypeIdMatching( at, TT1 );
 			AssertTypeIdMatching( ct, TT1 );
@@ -4606,7 +4594,7 @@ SkipChecking:
 			AssertTypeIdMatching( tp[0], TT1 );
 			break;
 		case DVM_SETVS_BB : case DVM_SETVS_II : case DVM_SETVS_FF : case DVM_SETVS_CC :
-			var = body->upValues->items.pVar[opb];
+			var = routine->variables->items.pVar[opb];
 			at = DaoInferencer_HandleVarInvarDecl( self, at, opc );
 			if( at == NULL ) return 0;
 			if( at->tid <= DAO_ENUM ) at = DaoType_GetBaseType( at );

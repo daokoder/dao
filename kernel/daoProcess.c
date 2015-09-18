@@ -1301,7 +1301,7 @@ CallEntry:
 	locVars = self->activeValues;
 	locTypes = self->activeTypes;
 	dataCL = routine->routConsts->value->items.pValue;
-	upValues = routine->body->upValues ? routine->body->upValues->items.pVar : NULL;
+	upValues = routine->variables ? routine->variables->items.pVar : NULL;
 	if( routine->body->jitData ){
 		jitCallData.localValues = locVars;
 		jitCallData.localConsts = routine->routConsts->value->items.pValue;
@@ -5987,12 +5987,10 @@ static int DaoNamespace_CopyStaticVar( DaoNamespace *self, int id, DMap *map )
 }
 void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 {
-	DaoType *tp;
-	DaoValue **pp2, **pp = self->activeValues + vmc->a + 1;
+	DaoValue **pp = self->activeValues + vmc->a + 1;
 	DaoRoutine *closure, *proto = (DaoRoutine*) self->activeValues[vmc->a];
 	DaoNamespace *NS = proto->nameSpace;
-	DMap *deftypes;
-	int i, j, k, m, K;
+	int i, j, k;
 
 	if( proto->body->vmCodes->size ==0 && proto->body->annotCodes->size ){
 		if( DaoRoutine_SetVmCodes( proto, proto->body->annotCodes ) ==0 ){
@@ -6000,41 +5998,24 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 			return;
 		}
 	}
-	if( vmc->b == 0 && proto->body->upValues == NULL && proto->body->hasStatic == 0 ){
+	if( vmc->b == 0 && proto->variables == NULL && proto->body->hasStatic == 0 ){
 		DaoProcess_SetValue( self, vmc->c, (DaoValue*) proto );
 		if( proto->attribs & DAO_ROUT_DEFER ) DList_Append( self->defers, proto );
 		return;
 	}
 
-	closure = DaoRoutine_Copy( proto, 1, 1, 1 );
-	pp2 = closure->routConsts->value->items.pValue;
+	closure = DaoRoutine_Copy( proto, 0, proto->body->hasStatic, 1 );
 
 	for(j=0; j<vmc->b; j+=2){
 		k = pp[j+1]->xInteger.value;
-		if( k < DAO_MAX_PARAM ){
-			DaoValue_Copy( pp[j], pp2 + k );
-		}else{
-			DaoVariable_Set( closure->body->upValues->items.pVar[k-DAO_MAX_PARAM], pp[j], NULL );
-		}
+		DaoVariable_Set( closure->variables->items.pVar[k], pp[j], NULL );
 	}
-
-	deftypes = DMap_New(0,0);
-	DaoProcess_MapTypes( self, deftypes );
-	tp = DaoNamespace_MakeRoutType( self->activeNamespace, closure->routType, pp2, NULL, NULL);
-	tp = DaoType_DefineTypes( tp, closure->nameSpace, deftypes );
-	GC_Assign( & closure->routType, tp );
-	DaoRoutine_MapTypes( closure, proto, deftypes );
-	DMap_Delete( deftypes );
 
 	/* It's necessary to put it in "self" process in any case, so that it can be GC'ed: */
 	DaoProcess_SetValue( self, vmc->c, (DaoValue*) closure );
-	DList_Assign( closure->body->annotCodes, proto->body->annotCodes );
-	if( DaoRoutine_SetVmCodes2( closure, proto->body->vmCodes ) ==0 ){
-		DaoProcess_RaiseError( self, NULL, "function creation failed" );
-	}
+
 	if( proto->body->hasStatic ){
 		DMap *updated = DMap_New(0,0);
-		DNode *it;
 		for(i=0; i<closure->body->vmCodes->size; ++i){
 			DaoVmCodeX *vmcx = closure->body->annotCodes->items.pVmc[i];
 			DaoVmCode *vmc = closure->body->vmCodes->data.codes + i;
