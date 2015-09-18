@@ -134,7 +134,8 @@ struct DaoCallServer
 	volatile int finishing;
 	volatile int timing;
 	volatile int total;
-	volatile int idle;
+	volatile int vacant;  /* Not used; */
+	volatile int idle;    /* Not active; */
 	volatile int stopped;
 
 	DList  *threads;
@@ -179,6 +180,7 @@ static DaoCallServer* DaoCallServer_New( DaoVmSpace *vms )
 	self->finishing = 0;
 	self->timing = 0;
 	self->total = 0;
+	self->vacant = 0;
 	self->idle = 0;
 	self->stopped = 0;
 	self->threads = DList_New(0);
@@ -410,7 +412,7 @@ void DaoCallServer_AddTask( DThreadTask func, void *param, void *proc )
 	int scheduled = 0;
 	DaoCallServer *server = DaoCallServer_TryInit( mainVmSpace );
 	DMutex_Lock( & server->mutex );
-	if( server->idle > server->parameters->size || proc == NULL ){
+	if( server->vacant > server->parameters->size || proc == NULL ){
 		scheduled = 1;
 		DList_Append( server->functions, func );
 		DList_Append( server->parameters, param );
@@ -882,11 +884,12 @@ static void DaoCallThread_Run( DaoCallThread *self )
 
 		if( self->thdData != NULL ) self->thdData->state = 0;
 		DMutex_Lock( & server->mutex );
-		server->idle += self->taskOwner == NULL;
+		server->idle += 1;
+		server->vacant += self->taskOwner == NULL;
 		while( server->pending->size == (server->events2->size + server->waitings->size) ){
 			//printf( "%p %i %i %i %i\n", self, server->events->size, server->pending->size, server->events2->size, server->waitings->size );
 			if( server->vmspace->stopit ) break;
-			if( server->finishing && server->idle == server->total ){
+			if( server->finishing && server->vacant == server->total ){
 				if( (server->events2->size + server->waitings->size) == 0 ) break;
 			}
 			wt = 0.01*(server->idle == server->total) + 0.001;
@@ -904,6 +907,7 @@ static void DaoCallThread_Run( DaoCallThread *self )
 			DList_Erase( server->owners, i, 1 );
 			DMap_Erase( server->pending, parameter );
 			server->idle -= 1;
+			server->vacant -= 1;
 			break;
 		}
 		DMutex_Unlock( & server->mutex );
@@ -918,10 +922,11 @@ static void DaoCallThread_Run( DaoCallThread *self )
 			continue;
 		}
 
-		if( server->pending->size == 0 && server->finishing && server->idle == server->total ) break;
+		if( server->pending->size == 0 && server->finishing && server->vacant == server->total ) break;
 
 		DMutex_Lock( & server->mutex );
-		server->idle -= self->taskOwner == NULL;
+		server->idle -= 1;
+		server->vacant -= self->taskOwner == NULL;
 		future = DaoCallServer_GetNextFuture();
 		DMutex_Unlock( & server->mutex );
 
@@ -968,7 +973,7 @@ void DaoCallServer_Join()
 	if( daoCallServer == NULL ) return;
 	DCondVar_Init( & condv );
 	DMutex_Lock( & daoCallServer->mutex );
-	while( daoCallServer->pending->size || daoCallServer->idle != daoCallServer->total ){
+	while( daoCallServer->pending->size || daoCallServer->vacant != daoCallServer->total ){
 		DCondVar_TimedWait( & condv, & daoCallServer->mutex, 0.01 );
 	}
 	DMutex_Unlock( & daoCallServer->mutex );
