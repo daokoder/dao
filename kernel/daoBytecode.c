@@ -53,6 +53,7 @@ static const char* const dao_asm_names[] =
 	"ASM_COPY"      ,
 	"ASM_TYPEOF"    ,
 	"ASM_TYPEFOR"    ,
+	"ASM_TYPEIN"    ,
 	"ASM_TYPEDEF"   ,
 	"ASM_AUXTYPE" ,
 	"ASM_NAMESPACE" ,
@@ -839,7 +840,10 @@ static DaoByteBlock* DaoByteBlock_EncodeAuxType( DaoByteBlock *self, DaoType *ty
 	DaoByteBlock *newBlock = DaoByteBlock_FindOrCopyBlock( self, (DaoValue*) type );
 	DaoByteBlock *vatBlock = DaoByteBlock_EncodeType( self, DaoType_GetBaseType( type ) );
 	if( newBlock ) return newBlock;
-	if( vatBlock == NULL ) return NULL;
+	if( vatBlock == NULL ){
+		DaoByteCoder_Error3( self->coder, NULL, "Unencoded type (%s)!", type->name->chars );
+		return NULL;
+	}
 
 	newBlock = DaoByteBlock_AddBlock( self, (DaoValue*) type, DAO_ASM_AUXTYPE );
 	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin, vatBlock );
@@ -870,12 +874,60 @@ DaoByteBlock* DaoByteBlock_EncodeType( DaoByteBlock *self, DaoType *type )
 	DaoByteBlock_AddBlockIndexData( newBlock, 0, size );
 	return newBlock;
 }
+static DaoByteBlock* DaoByteBlock_EncodeInnerType( DaoByteBlock *self, DaoType *inner, DaoByteBlock *host, int location, int index )
+{
+	DaoByteBlock *block = DaoByteBlock_FindOrCopyBlock( self, (DaoValue*) inner );
+
+	if( block ) return block;
+
+	block = DaoByteBlock_AddBlock( self, (DaoValue*) inner, DAO_ASM_TYPEIN );
+	DaoByteBlock_InsertBlockIndex( block, block->begin, host );
+	DaoByteCoder_EncodeUInt16( block->begin+2, location );
+	DaoByteCoder_EncodeUInt16( block->begin+4, index );
+	return block;
+}
+static void DaoByteBlock_EncodeInnerTypes( DaoByteBlock *self, DaoType *type, DaoByteBlock *host )
+{
+	DaoByteBlock *block;
+	int i;
+
+	if( type->aux && type->aux->type == DAO_TYPE ){
+		DaoType *aux = (DaoType*) type->aux;
+		block = DaoByteBlock_EncodeInnerType( self, aux, host, DAO_INNTYPE_AUX, 0 );
+		DaoByteBlock_EncodeInnerTypes( self, aux, block );
+	}
+	if( type->nested ){
+		for(i=0; i<type->nested->size; ++i){
+			DaoType *it = type->nested->items.pType[i];
+			block = DaoByteBlock_EncodeInnerType( self, it, host, DAO_INNTYPE_ARG, i );
+			DaoByteBlock_EncodeInnerTypes( self, it, block );
+		}
+	}
+	if( type->bases ){
+		for(i=0; i<type->bases->size; ++i){
+			DaoType *it = type->bases->items.pType[i];
+			block = DaoByteBlock_EncodeInnerType( self, it, host, DAO_INNTYPE_BASE, i );
+			DaoByteBlock_EncodeInnerTypes( self, it, block );
+		}
+	}
+	if( type->cbtype ){
+		block = DaoByteBlock_EncodeInnerType( self, type->cbtype, host, DAO_INNTYPE_CB, 0 );
+		DaoByteBlock_EncodeInnerTypes( self, type->cbtype, block );
+	}
+}
 DaoByteBlock* DaoByteBlock_EncodeTypeAlias( DaoByteBlock *self, DaoType *type, DaoType *aliased, DString *alias, DaoType *rectype, int perm )
 {
 	DaoByteBlock *newBlock = NULL;
 	DaoByteBlock *nameBlock = DaoByteBlock_EncodeString( self, alias );
 	DaoByteBlock *typeBlock = DaoByteBlock_EncodeType( self, type );
 	DaoByteBlock *typeBlock2 = DaoByteBlock_EncodeType( self, rectype );
+	
+	if( typeBlock == NULL ){
+		DaoByteCoder_Error3( self->coder, NULL, "Unencoded type (%s)!", type->name->chars );
+		return NULL;
+	}
+
+	DaoByteBlock_EncodeInnerTypes( self, type, typeBlock );
 	if( aliased == type ){
 		newBlock = DaoByteBlock_AddBlock( self, (DaoValue*) aliased, DAO_ASM_TYPEDEF );
 	}else{
@@ -894,22 +946,46 @@ DaoByteBlock* DaoByteBlock_EncodeTypeOf( DaoByteBlock *self, DaoType *type, DaoV
 {
 	DaoByteBlock *newBlock = DaoByteBlock_FindOrCopyBlock( self, (DaoValue*) type );
 	DaoByteBlock *valBlock = DaoByteBlock_FindOrCopyBlock( self, value );
-	if( newBlock ) return newBlock;
-	if( valBlock == NULL ) return NULL;
+	if( newBlock ){
+		DaoByteBlock_EncodeInnerTypes( self, type, newBlock );
+		return newBlock;
+	}
+	if( valBlock == NULL ){
+		newBlock = DaoByteBlock_EncodeType( self, type );
+		if( newBlock ) return newBlock; /* If it can be encoded normally, so do inner types; */
+		valBlock = DaoByteBlock_EncodeValue( self, value );
+		if( valBlock == NULL ){
+			DaoByteCoder_Error3( self->coder, NULL, "Unencoded value (%s)!", type->name->chars );
+			return NULL;
+		}
+	}
 
 	newBlock = DaoByteBlock_AddBlock( self, (DaoValue*) type, DAO_ASM_TYPEOF );
 	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin, valBlock );
+	DaoByteBlock_EncodeInnerTypes( self, type, newBlock );
 	return newBlock;
 }
 DaoByteBlock* DaoByteBlock_EncodeTypeFor( DaoByteBlock *self, DaoType *type, DaoValue *value )
 {
 	DaoByteBlock *newBlock = DaoByteBlock_FindOrCopyBlock( self, (DaoValue*) type );
 	DaoByteBlock *valBlock = DaoByteBlock_FindOrCopyBlock( self, value );
-	if( newBlock ) return newBlock;
-	if( valBlock == NULL ) return NULL;
+	if( newBlock ){
+		DaoByteBlock_EncodeInnerTypes( self, type, newBlock );
+		return newBlock;
+	}
+	if( valBlock == NULL ){
+		newBlock = DaoByteBlock_EncodeType( self, type );
+		if( newBlock ) return newBlock; /* If it can be encoded normally, so do inner types; */
+		valBlock = DaoByteBlock_EncodeValue( self, value );
+		if( valBlock == NULL ){
+			DaoByteCoder_Error3( self->coder, NULL, "Unencoded value (%s)!", type->name->chars );
+			return NULL;
+		}
+	}
 
 	newBlock = DaoByteBlock_AddBlock( self, (DaoValue*) type, DAO_ASM_TYPEFOR );
 	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin, valBlock );
+	DaoByteBlock_EncodeInnerTypes( self, type, newBlock );
 	return newBlock;
 }
 DaoByteBlock* DaoByteBlock_EncodeCtype( DaoByteBlock *self, DaoCtype *ctype, DaoCtype *generic, DaoType **types, int n )
@@ -2134,6 +2210,35 @@ static void DaoByteCoder_DecodeTypeFor( DaoByteCoder *self, DaoByteBlock *block 
 
 	GC_Assign( & block->value, type );
 }
+static void DaoByteCoder_DecodeTypeIn( DaoByteCoder *self, DaoByteBlock *block )
+{
+	uint_t A = DaoByteCoder_DecodeUInt16( block->begin );
+	uint_t B = DaoByteCoder_DecodeUInt16( block->begin+2 );
+	uint_t C = DaoByteCoder_DecodeUInt16( block->begin+4 );
+	DaoByteBlock *hostbk = DaoByteCoder_LookupTypeBlock( self, block, A );
+	DaoType *type, *inner = NULL;
+
+	if( self->error ) return;
+	if( hostbk->value == NULL || hostbk->value->type != DAO_TYPE ){
+		DaoByteCoder_Error( self, block, "Invalid host type!" );
+		return;
+	}
+	type = (DaoType*) hostbk->value;
+	if( B == DAO_INNTYPE_AUX ){
+		if( type->aux && type->aux->type == DAO_TYPE ) inner = (DaoType*) type->aux;
+	}else if( B == DAO_INNTYPE_ARG ){
+		if( type->nested && C < type->nested->size ) inner = type->nested->items.pType[C];
+	}else if( B == DAO_INNTYPE_BASE ){
+		if( type->bases && C < type->bases->size ) inner = type->bases->items.pType[C];
+	}else if( B == DAO_INNTYPE_CB ){
+		if( type->cbtype ) inner = type->cbtype;
+	}
+	if( inner == NULL ){
+		DaoByteCoder_Error3( self, block, "Invalid inner type (in %s)!", type->name->chars );
+		return;
+	}
+	GC_Assign( & block->value, inner );
+}
 static void DaoByteCoder_AddToScope( DaoByteCoder *self, DaoByteBlock *block, DString *name, DaoValue *value )
 {
 	int perm = block->end[7];
@@ -3161,6 +3266,7 @@ static void DaoByteCoder_DecodeBlock( DaoByteCoder *self, DaoByteBlock *block )
 	case DAO_ASM_TYPEDEF   : DaoByteCoder_DecodeTypeAlias( self, block ); break;
 	case DAO_ASM_TYPEOF    : DaoByteCoder_DecodeTypeOf( self, block ); break;
 	case DAO_ASM_TYPEFOR   : DaoByteCoder_DecodeTypeFor( self, block ); break;
+	case DAO_ASM_TYPEIN    : DaoByteCoder_DecodeTypeIn( self, block ); break;
 	case DAO_ASM_BASES     : DaoByteCoder_DecodeBases( self, block ); break;
 	case DAO_ASM_PATTERNS  : DaoByteCoder_DecodePatterns( self, block ); break;
 	case DAO_ASM_DECOS : break;

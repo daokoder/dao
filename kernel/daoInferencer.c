@@ -5091,31 +5091,6 @@ SkipChecking:
 		if( types[ node->key.pInt ]->tid > DAO_ARRAY ) continue;
 		node->value.pType = types[ node->key.pInt ];
 	}
-#if 0
-	inodes = self->inodes->items.pInode;
-	types = self->types->items.pType;
-	N = self->inodes->size;
-	for(i=0; i<N; i++){
-		inode = inodes[i];
-		inode->index = i;
-		self->currentIndex = i;
-
-		switch( DaoVmCode_GetOpcodeType( (DaoVmCode*) inode ) ){
-		case DAO_CODE_GETG :
-		case DAO_CODE_GETF :
-		case DAO_CODE_GETI :
-		case DAO_CODE_UNARY :
-		case DAO_CODE_BINARY :
-		case DAO_CODE_CALL :
-			if( inode->code == DVM_GETVO ) continue;
-			if( inode->code == DVM_CALL && (inode->b & DAO_CALL_INIT) ) continue;
-			if( invarinit && DaoType_IsPrimitiveOrImmutable( types[inode->c] ) == 0 ){
-				return DaoInferencer_Error( self, DTE_INVAR_INITOR_MUTABLE );
-			}
-			break;
-		}
-	}
-#endif
 
 	DaoInferencer_Finalize( self );
 	return 1;

@@ -76,7 +76,7 @@ routine main( file : string )
 	archive = io.read( file )
 	if( archive[0:1] != '\33\33' ){
 		io.writeln( 'ERROR: input is not a Dao archive file!' );
-		return;
+		return 1;
 	}
 	#archive = archive.collect{ (X+256)%256 }
 	(source, finders) = ArchiveToCSource( archive )
@@ -87,4 +87,5 @@ routine main( file : string )
 	fout2.writeln( finders )
 	fout.close()
 	fout2.close()
+	return 0;
 }

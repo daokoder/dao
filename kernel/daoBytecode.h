@@ -78,34 +78,34 @@
 // Values:
 //########
 //
-// bool:
+// Boolean:
 // ASM_VALUE(1Byte): DAO_BOOLEAN(1Bytes), Zeros(7Bytes);
 // ASM_END(1B): Value(1B), Zeros(7Bytes);
 //
 //
-// int:
+// Integer:
 // ASM_VALUE(1Byte): DAO_INTEGER(1Bytes), Zeros(7Bytes);
 // ASM_END(1B): Value(8B);
 //
 //
-// float:
+// Float:
 // ASM_VALUE(1B): DAO_FLOAT(1B), Zeros(7B);
 // ASM_END(1B): Value(8B);
 //
 //
-// complex:
+// Complex:
 // ASM_VALUE(1B): DAO_COMPLEX(1B), Zeros(7B);
 //   ASM_DATA(1B): Real(8B);
 // ASM_END(1B): Imag(8B);
 //
 //
-// string:
+// String:
 // ASM_VALUE(1B): DAO_STRING(1B), SizeMod16(1B), Bytes(6B);
 //   ASM_DATA(1B); Bytes(8B);
 // ASM_END(1B): Bytes(8B);
 //
 //
-// enum symbol:
+// Enum symbol:
 // ASM_VALUE(1B): DAO_ENUM(1B), Zeros(1B), Type-Index(2B), Zeros(4B);
 // ASM_END(1B): Value(4B), Zeros(0);
 //
@@ -123,7 +123,7 @@
 //   seek chunk.
 //
 //
-// array:
+// Array:
 // ASM_VALUE(1B): DAO_ARRAY(1B), Numeric-Type(1B), Dimensions(2B), Size(4B);
 //   ASM_DATA(1B); Dim1(4B), Dim2(4B);
 //   ASM_DATA(1B); More dimensions;
@@ -132,13 +132,13 @@
 // ASM_END(1B): Data(8B);
 //
 //
-// list:
+// List:
 // ASM_VALUE(1B): DAO_LIST(1B), Zeros(1B), Type-Index(2B), Size(4B);
 //   ASM_DATA(1B); Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 // ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //
 //
-// map:
+// Map:
 // ASM_VALUE(1B): DAO_MAP(1B), Zeros(1B), Type-Index(2B), Hash-Seed(4B);
 //   ASM_DATA(1B); Key-Index(2B), Value-Index(2B), Key-Index(2B), Value-Index(2B);
 // ASM_END(1B): Key-Index(2B), Value-Index(2B), Key-Index(2B), Value-Index(2B);
@@ -146,23 +146,23 @@
 // A pair of "Value-Index"s is for a pair of key-value, zero marks the end.
 //
 //
-// tuple:
+// Tuple:
 // ASM_VALUE(1B): DAO_TUPLE(1B), SubTypeID(1B), Type-Index(2B), Size(2B), Value-Index(2B);
 //   ASM_DATA(1B); Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 // ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //
 //
-// concrete interface value:
+// Concrete interface value:
 // ASM_VALUE(1B): DAO_CINVALUE(1B), SubTypeID(1B), CinType-Index(2B), Value-Index(2B), Zeros(2B);
 // ASM_END(1B): Zeros(8B);
 //
 //
-// namevalue:
+// Name Value:
 // ASM_VALUE(1B): DAO_PAR_NAMED(1B), Zeros(1B), Name-Index(2B), Value-Index(2B), Type-Index(2B);
 // ASM_END(1B): Zeros(8B);
 // 
 //
-// specialized ctype:
+// Specialized ctype:
 // ASM_VALUE(1B): DAO_CTYPE(1B), Zeros(1B), Value-Index(2B), Type-Index(2B) X 2;
 //   ASM_DATA(1B): Type-Index(2B) X 4;
 // ASM_END(1B): Type-Index(2B) X 4;
@@ -172,22 +172,25 @@
 // Other Values
 //#############
 //
-// copied value:
+// Copied value:
 // ASM_COPY(1B): Value-Index(2B), Zeros(6B);
 //
-// type of a value:
+// Type of a value:
 // ASM_TYPEOF(1B): Value-Index(2B), Zeros(6B);
 //
-// type for a class/ctype/interface:
+// Type for a class/ctype/interface:
 // ASM_TYPEFOR(1B): Value-Index(2B), Zeros(6B);
 //
-// const/invar/var type:
+// Inner type within a host type:
+// ASM_TYPEIN(1B): HostType-Index(2B), Location-Type(2B), Location-Index(2B), Zeros(2B);
+//
+// Const/invar/var type:
 // ASM_AUXTYPE(1B): Type-Index(2B), SubType(2B), Zeros(4B);
 //
-// type alias:
+// Type alias:
 // ASM_TYPEDEF(1B): Name-Index(2B), Type-Index(2B), RecurType(2B), Permision(2B);
 //
-// namespace:
+// Namespace:
 // ASM_NAMESPACE(1B): Name/Def-Index(2B), ScopeNS-Index(2B), Zeros(4B);
 //
 //
@@ -195,33 +198,33 @@
 // Blocks:
 //#########
 //
-// routine:
+// Routine:
 // ASM_ROUTINE(1B): Name-Index(2B), Type-Index(2B), Host-Index(2B), Attrib(2B);
 //   ...
 // ASM_END: RegCount(2B), UpValCount(2B), Zeros(2B), DefaultConstructor(1B), Permission(1B);
 //
 //
-// class:
+// Class:
 // ASM_CLASS(1B): Name/Decl-Index(2B), Parent-Index(2B), Attrib(4B);
 //   ASM_BASES(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //   ...
 // ASM_END(1B): LineDef(2B), Zeros(5B), Permission(1B);
 //
 //
-// interface:
+// Interface:
 // ASM_INTERFACE(1B): Name/Decl-Index(2B), Target-TypeID(2B), Parent-Count(2B), Zeros(2B);
 //   ASM_BASES(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //   ...
 // ASM_END(1B): LineDef(2B), Zeros(5B), Permission(1B);
 //
 //
-// enum:
+// Enum:
 // ASM_ENUM(1B): Name-Index(2B), SubType(2B), Count(4B);
 //   ASM_DATA(1B): Name-Index(2B), Value(4B), Zeros(2B);
 // ASM_END(1B): Name-Index(2B), Value(4B), Zeros(2B);
 //
 //
-// type:
+// Type:
 // ASM_TYPE(1B): Name-Index(2B), TypeID(1B), SubTypeID(1B), Aux-Idx(2B), CodeBlockType-Idx(2B);
 //   ASM_DATA(1B): Type-Index(2B) X 4;
 // ASM_END(1B): Type-Index(2B) X 4;
@@ -229,47 +232,47 @@
 // Note 1: the nested types are zero Type-Index terminated;
 // Note 2: "Aux-Index" could be index to returned type or class block etc;
 //
-// value:
+// Value:
 // See above;
 //
 //
-// evaluation:
+// Evaluation:
 // ASM_EVAL(1B): Opcode(2B), OpB(2B), Mode(2B), Type-Index(2B);
 //   ASM_DATA(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 // ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //
 //
-// bases (mixin components or interface parents):
+// Bases (mixin components or interface parents):
 // ASM_BASES(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //   ASM_DATA(1B): Value-Index(2B) X 4;
 // ASM_END(1B): Value-Index(2B) X 4;
 //
 //
-// decorators for the current routine:
+// Decorators for the current routine:
 // ASM_DECOS(1B): Func-Index(2B), ParList-Index(2B), Func-Index(2B), ParList-Index(2B);
 //   ASM_DATA(1B): Func-Index(2B), ParList-Index(2B), Func-Index(2B), ParList-Index(2B);
 // ASM_END(1B): Func-Index(2B), ParList-Index(2B), Func-Index(2B), ParList-Index(2B);
 //
 //
-// patterns for automatic decorator application:
+// Patterns for automatic decorator application:
 // ASM_PATTERNS(1B): PatternString-Index(2B) X 4;
 //   ASM_DATA(1B): PatternString-Index(2B) X 4;
 // ASM_END(1B): PatternString-Index(2B) X 4;
 //
 //
-// consts:
+// Consts:
 // ASM_CONSTS(1B): Count(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //   ASM_DATA(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 // ASM_END(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //
 //
-// types:
+// Types:
 // ASM_TYPES(1B): Count(2B), Zeros(2B), Var-Index(2B), Type-Index(2B);
 //   ASM_DATA(1B): Var-Index(2B), Type-Index(2B), Var-Index(2B), Type-Index(2B);
 // ASM_END(1B): Var-Index(2B), Type-Index(2B), Var-Index(2B), Type-Index(2B);
 //
 //
-// code:
+// Code:
 // ASM_CODE(1B): CodeNum(2B), Line-Num-Count(2B), LineNum(2B), Count(2B);
 //   ASM_DATA(1B): LineDiff(2B), Count(2B), LineDiff(2B), Count(2B);
 //   ASM_DATA(1B): Opcode(2B), A(2B), B(2B), C(2B);
@@ -280,31 +283,31 @@
 // Statement:
 //###########
 //
-// load statement:
+// Loading statement:
 // ASM_LOAD(1B): File-Path-Index(2B), Optional-Name-Index(2B), Zeros(4B);
 //
-// export to namespace:
+// Export to namespace:
 // ASM_EXPORT(1B): NS-Index(2B), Name-Index(2B), Name-Index(2B), Name-Index(2B);
 //
-// import from namespace/module:
+// Import from namespace/module:
 // ASM_IMPORT(1B): Mod-Index(2B), Name-Index(2B), Scope(2B), Offset(2B);
 //
-// verbatim:
+// Verbatim:
 // ASM_VERBATIM(1B): Tag-Index(2B), Mode-Index(2B), Text-Index(2B), LineNum(2B);
 //
-// var declaration:
+// Var declaration:
 // ASM_VAR(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Scope(1B), Perm(1B);
 //
-// const declaration:
+// Const declaration:
 // ASM_CONST(1B): Name-Index(2B), Value-Index(2B), Zeros(2B), Scope(1B), Permission(1B);
 //
-// static declaration:
+// Static declaration:
 // ASM_STATIC(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Scope(1B), Perm(1B);
 //
-// global declaration:
+// Global declaration:
 // ASM_GLOBAL(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Scope(1B), Perm(1B);
 // 
-// seek:
+// Seek:
 // ASM_SEEK(1B): New-Index(2B), Zeros(6B);
 //
 //##########################################################################
@@ -337,6 +340,15 @@
 //
 //##########################################################################
 */
+
+enum DaoInnerTypeLocation
+{
+	DAO_INNTYPE_AUX ,   /* DaoType::aux; */
+	DAO_INNTYPE_ARG ,   /* DaoType::nested; */
+	DAO_INNTYPE_BASE ,  /* DaoType::bases; */
+	DAO_INNTYPE_CB      /* DaoType::cbtype; */
+};
+
 enum DaoAuxOpcode
 {
 	DAO_ASM_NONE      ,
@@ -344,6 +356,7 @@ enum DaoAuxOpcode
 	DAO_ASM_COPY      ,
 	DAO_ASM_TYPEOF    ,
 	DAO_ASM_TYPEFOR   ,
+	DAO_ASM_TYPEIN    ,
 	DAO_ASM_TYPEDEF   ,
 	DAO_ASM_AUXTYPE ,
 	DAO_ASM_NAMESPACE ,
