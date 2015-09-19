@@ -2432,9 +2432,11 @@ static int DaoByteCoder_VerifyRoutine( DaoByteCoder *self, DaoByteBlock *block )
 			if( (vmc->a + M) >= regCount ) goto InvalidInstruction;
 			break;
 		case DAO_CODE_ENUM :
-			if( vmc->a >= regCount ) goto InvalidInstruction;
+			if( vmc->b ){
+				if( vmc->a >= regCount ) goto InvalidInstruction;
+				if( (vmc->a + (vmc->b&(0xffff>>2)) - 1) >= regCount ) goto InvalidInstruction;
+			}
 			if( vmc->c >= regCount ) goto InvalidInstruction;
-			if( (vmc->a + (vmc->b&(0xffff>>2)) - 1) >= regCount ) goto InvalidInstruction;
 			break;
 		case DAO_CODE_YIELD :
 			if( vmc->a >= regCount ) goto InvalidInstruction;

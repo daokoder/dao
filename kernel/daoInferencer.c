@@ -5073,6 +5073,24 @@ SkipChecking:
 		GC_Assign( & closure->routType, type );
 		if( DaoRoutine_DoTypeInference( closure, self->silent ) == 0 ) return 0;
 	}
+	/*
+	// Note:
+	// Due to Common Subexpression Elimination, the register of an explicit
+	// variable might be mapped to the result register (operand) of an operation
+	// such as DVM_SUB_III. But the resulting type of DVM_SUB_III will not be
+	// updated when handling DVM_SUB_III. So if the declared type is implicit (@X),
+	// the type checking will fail for DVM_SUB_III.
+	//
+	// So for byte encoding, it is necessary to store the inferred type for
+	// explicit variables.
+	*/
+	node = DMap_First( routine->body->localVarType );
+	for( ; node !=NULL; node = DMap_Next(routine->body->localVarType,node) ){
+		if( node->key.pInt < routine->parCount ) continue;
+		/* Workaround: recursive type cannot be encoded directly by the byte encoder; */
+		if( types[ node->key.pInt ]->tid > DAO_ARRAY ) continue;
+		node->value.pType = types[ node->key.pInt ];
+	}
 #if 0
 	inodes = self->inodes->items.pInode;
 	types = self->types->items.pType;
