@@ -1014,11 +1014,6 @@ static DaoType* DaoInferencer_UpdateTypeX( DaoInferencer *self, int id, DaoType 
 	DaoType **types = self->types->items.pType;
 	DMap *defs = (DMap*)DList_Back( self->typeMaps );
 
-	/* If c == 0, the de-const type should be used: */
-	if( type->invar && c == 0 ) type = DaoType_GetBaseType( type );
-
-	if( type->attrib & DAO_TYPE_SPEC ) type = DaoType_DefineTypes( type, NS, defs );
-
 	/*
 	// Do NOT update types that have been inferred:
 	// Because if it has been inferred, some instructions may have been
@@ -1051,6 +1046,11 @@ static DaoType* DaoInferencer_UpdateTypeX( DaoInferencer *self, int id, DaoType 
 	if( types[id] != NULL && !(types[id]->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) ){
 		return types[id];
 	}
+
+	/* If c == 0, the de-const type should be used: */
+	if( type->invar && c == 0 ) type = DaoType_GetBaseType( type );
+
+	if( type->attrib & DAO_TYPE_SPEC ) type = DaoType_DefineTypes( type, NS, defs );
 
 	GC_Assign( & types[id], type );
 	return types[id];
