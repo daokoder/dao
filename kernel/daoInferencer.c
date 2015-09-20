@@ -1007,28 +1007,51 @@ static void DaoInferencer_Finalize( DaoInferencer *self )
 	body->regCount = body->regType->size;
 	DaoRoutine_SetupSimpleVars( self->routine );
 }
+static int DaoInferencer_ErrorTypeNotConsistent( DaoInferencer *self, DaoType *S, DaoType *T );
 static DaoType* DaoInferencer_UpdateTypeX( DaoInferencer *self, int id, DaoType *type, int c )
 {
 	DaoNamespace *NS = self->routine->nameSpace;
 	DaoType **types = self->types->items.pType;
 	DMap *defs = (DMap*)DList_Back( self->typeMaps );
+
+	/* If c == 0, the de-const type should be used: */
+	if( type->invar && c == 0 ) type = DaoType_GetBaseType( type );
+
+	if( type->attrib & DAO_TYPE_SPEC ) type = DaoType_DefineTypes( type, NS, defs );
+
 	/*
-	// Do NOT update types that have been inferred (even as undefined types):
+	// Do NOT update types that have been inferred:
 	// Because if it has been inferred, some instructions may have been
 	// specialized according to this inferred type. If it is allowed to
 	// be updated here, other instructions may be specialized differently.
 	// So the previously specialized instruction and the currently specialized
 	// instruction will assume different types of the same register!
 	//
-	// This happens for short curcuit evaluation of boolean operations:
-	// expression_produces_string_but_inferred_as_undefined && expression_produces_int
+	// Note 1:
+	// Operations involving undefined types or type holder types should never
+	// be specialized.
+	//
+	// Note 2:
+	// Type holder types must be updated in order to support bytecode decoding.
+	// Because variables can be declared with implicit types (type holder types),
+	// and only types of declared variables will be encoded for bytecodes.
+	// And due to Common Subexpression Elimination, the register of a declared
+	// variable could be mapped to the result register (operand) of a specialized
+	// operation (such as DVM_SUB_III). So when decoding bytecode, the result type
+	// of such operation might be a type holder type, and if it is allowed to update
+	// during inference, the type checking will fail for such operations.
+	//
+	// Note 3:
+	// It is extremely hard to encode inferred types from C/C++ modules if they
+	// are user-defined and never explicitly expressed in Dao source code.
+	// In particular, user-defined types inferred from function calls of wrapped
+	// functions cannot be reasonably encoded due to function overloading and
+	// parametric polymorphism.
 	*/
-	if( types[id] != NULL ) return types[id];
+	if( types[id] != NULL && !(types[id]->attrib & (DAO_TYPE_SPEC|DAO_TYPE_UNDEF)) ){
+		return types[id];
+	}
 
-	/* If c == 0, the de-const type should be used: */
-	if( type->invar && c == 0 ) type = DaoType_GetBaseType( type );
-
-	if( type->attrib & DAO_TYPE_SPEC ) type = DaoType_DefineTypes( type, NS, defs );
 	GC_Assign( & types[id], type );
 	return types[id];
 }
@@ -5072,24 +5095,6 @@ SkipChecking:
 		type = DaoNamespace_MakeRoutType( NS, type, NULL, type->nested->items.pType, retype );
 		GC_Assign( & closure->routType, type );
 		if( DaoRoutine_DoTypeInference( closure, self->silent ) == 0 ) return 0;
-	}
-	/*
-	// Note:
-	// Due to Common Subexpression Elimination, the register of an explicit
-	// variable might be mapped to the result register (operand) of an operation
-	// such as DVM_SUB_III. But the resulting type of DVM_SUB_III will not be
-	// updated when handling DVM_SUB_III. So if the declared type is implicit (@X),
-	// the type checking will fail for DVM_SUB_III.
-	//
-	// So for byte encoding, it is necessary to store the inferred type for
-	// explicit variables.
-	*/
-	node = DMap_First( routine->body->localVarType );
-	for( ; node !=NULL; node = DMap_Next(routine->body->localVarType,node) ){
-		if( node->key.pInt < routine->parCount ) continue;
-		/* Workaround: recursive type cannot be encoded directly by the byte encoder; */
-		if( types[ node->key.pInt ]->tid > DAO_ARRAY ) continue;
-		node->value.pType = types[ node->key.pInt ];
 	}
 
 	DaoInferencer_Finalize( self );
