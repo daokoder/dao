@@ -37,7 +37,6 @@
 // are initialized at the first time.
 */
 DAO_DLL DaoCdata* DaoWrappers_MakeCdata( DaoType *type, void *data, int owned );
-DAO_DLL DaoCinValue* DaoWrappers_MakeCinValue( DaoCinType *type, DaoValue *value );
 
 
 #ifdef DAO_USE_GC_LOGGER

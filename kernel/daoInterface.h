@@ -129,6 +129,7 @@ struct DaoCinValue
 	DaoValue    *value;
 };
 DaoCinValue* DaoCinValue_New( DaoCinType *cintype, DaoValue *value );
+DaoCinValue* DaoCinValue_Copy( DaoCinValue *self );
 void DaoCinValue_Delete( DaoCinValue *self );
 
 

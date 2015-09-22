@@ -740,17 +740,6 @@ DaoCdata* DaoWrappers_MakeCdata( DaoType *type, void *data, int owned )
 	DaoWrappers_Insert( data, (DaoValue*) cdata );
 	return cdata;
 }
-DaoCinValue* DaoWrappers_MakeCinValue( DaoCinType *type, DaoValue *value )
-{
-	DaoCinValue *cinva = (DaoCinValue*) DaoWrappers_Find( value );
-	if( cinva && cinva->type == DAO_CINVALUE && cinva->cintype == type && cinva->value == value ){
-		return cinva;
-	}
-	cinva = DaoCinValue_New( type, value );
-	DaoWrappers_Insert( value, (DaoValue*) cinva );
-	return cinva;
-}
-
 
 
 static void DaoGC_DeleteSimpleData( DaoValue *value )

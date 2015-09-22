@@ -372,11 +372,15 @@ DaoCinValue* DaoCinValue_New( DaoCinType *cintype, DaoValue *value )
 	DaoCinValue *self = (DaoCinValue*)dao_calloc( 1, sizeof(DaoCinValue) );
 	DaoValue_Init( self, DAO_CINVALUE );
 	GC_Assign( & self->cintype, cintype );
-	GC_Assign( & self->value, value );
+	DaoValue_Move( value, & self->value, cintype->target );
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
+}
+DaoCinValue* DaoCinValue_Copy( DaoCinValue *self )
+{
+	return DaoCinValue_New( self->cintype, self->value );
 }
 
 void DaoCinValue_Delete( DaoCinValue *self )

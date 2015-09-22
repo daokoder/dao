@@ -3578,7 +3578,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 
 		at = DaoNamespace_GetType( self->activeNamespace, va );
 		if( cintype->target == at || DaoType_MatchTo( cintype->target, at, NULL ) >= DAO_MT_EQ ){
-			va = (DaoValue*) DaoWrappers_MakeCinValue( cintype, va );
+			va = (DaoValue*) DaoCinValue_New( cintype, va );
 			goto FastCasting;
 		}
 		goto FailConversion;
@@ -3594,7 +3594,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		if( inter->concretes ){
 			DaoCinType *cintype = DaoInterface_GetConcrete( inter, at );
 			if( cintype ){
-				va = (DaoValue*) DaoWrappers_MakeCinValue( cintype, va );
+				va = (DaoValue*) DaoCinValue_New( cintype, va );
 				goto FastCasting;
 			}
 		}

@@ -195,7 +195,7 @@ DaoValue* DaoValue_CopyContainer( DaoValue *self, DaoType *tp )
 DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cst )
 {
 	if( self == NULL ) return dao_none_value;
-	if( (tp == NULL || tp->tid == self->type) && (self->type < DAO_ENUM || self->type == DAO_CPOD) ){
+	if( self->type < DAO_ENUM && (tp == NULL || tp->tid == self->type) ){
 		/*
 		// The following optimization is safe theoretically.
 		// But it is not practically safe for DaoProcess_PutChars() etc.,
@@ -210,7 +210,6 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 		case DAO_FLOAT   : return (DaoValue*) DaoFloat_New( self->xFloat.value );
 		case DAO_COMPLEX : return (DaoValue*) DaoComplex_New( self->xComplex.value );
 		case DAO_STRING  : return (DaoValue*) DaoString_Copy( & self->xString );
-		case DAO_CPOD    : return (DaoValue*) DaoCpod_Copy( (DaoCpod*) self );
 		}
 		return self; /* unreachable; */
 	}else if( tp && tp->tid >= DAO_BOOLEAN && tp->tid <= DAO_FLOAT ){
@@ -237,6 +236,10 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 		case DAO_INTEGER : return (DaoValue*) DaoEnum_New( tp, self->xInteger.value );
 		case DAO_FLOAT   : return (DaoValue*) DaoEnum_New( tp, self->xFloat.value );
 		}
+	}else if( self->type == DAO_CPOD && (tp == NULL || tp->tid == self->type) ){
+		return (DaoValue*) DaoCpod_Copy( (DaoCpod*) self );
+	}else if( self->type == DAO_CINVALUE && (tp == NULL || tp->tid == self->type) ){
+		return (DaoValue*) DaoCinValue_Copy( (DaoCinValue*) self );
 	}
 	if( tp != NULL ){
 		assert( tp->tid == 0 || tp->tid > DAO_ENUM );
@@ -284,6 +287,17 @@ DaoValue* DaoValue_SimpleCopy( DaoValue *self )
 {
 	return DaoValue_SimpleCopyWithTypeX( self, NULL, NULL );
 }
+void DaoValue_MoveCinValue( DaoCinValue *S, DaoValue **D )
+{
+	DaoValue *D2 = *D;
+	int notcinv = D2 == NULL || D2->type != DAO_CINVALUE || D2->xCinValue.refCount > 1;
+	if( notcinv || D2->xCinValue.cintype != S->cintype ){
+		S = DaoCinValue_Copy( S );
+		DaoGC_Assign( D, (DaoValue*) S );
+		return;
+	}
+	DaoValue_Copy( S->value, & D2->xCinValue.value );
+}
 
 void DaoValue_CopyX( DaoValue *src, DaoValue **dest, DaoType *cst )
 {
@@ -295,6 +309,9 @@ void DaoValue_CopyX( DaoValue *src, DaoValue **dest, DaoType *cst )
 	}
 	if( src->type == DAO_CPOD ){
 		DaoValue_MoveCpod( (DaoCpod*) src, dest );
+		return;
+	}else if( src->type == DAO_CINVALUE ){
+		DaoValue_MoveCinValue( (DaoCinValue*) src, dest );
 		return;
 	}
 	if( dest2 == NULL ){
@@ -466,6 +483,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	case (DAO_COMPLEX << 8) | DAO_COMPLEX :
 	case (DAO_STRING  << 8) | DAO_STRING  :
 	case (DAO_CPOD    << 8) | DAO_CPOD  :
+	case (DAO_CINVALUE<< 8) | DAO_CINVALUE  :
 		S = DaoValue_SimpleCopyWithTypeX( S, T, C );
 		GC_Assign( D, S );
 		return 1;
@@ -537,13 +555,13 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 #endif
 	if( tm == 0 ) return 0;
 	/*
-	// composite known types must match exactly. example,
+	// Composite types must match exactly. Example,
 	// where it will not work if composite types are allowed to match loosely.
 	// d : list<list<int>> = {};
 	// e : list<float> = { 1.0 };
 	// d.append( e );
 	//
-	// but if d is of type list<list<any>>,
+	// But if d is of type list<list<any>>,
 	// the matching do not necessary to be exact.
 	*/
 	cintype = NULL;
@@ -566,8 +584,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		}
 	}
 	if( cintype ){
-		S = DaoValue_SimpleCopyWithTypeX( S, cintype->target, C );
-		S = (DaoValue*) DaoWrappers_MakeCinValue( cintype, S );
+		S = (DaoValue*) DaoCinValue_New( cintype, S );
 	}else{
 		S = DaoValue_SimpleCopyWithTypeX( S, T, C );
 	}
@@ -593,6 +610,7 @@ int DaoValue_FastMatchTo( DaoValue *self, DaoType *type )
 	case DAO_ROUTINE : matched = self->xRoutine.routType == type; break;
 	case DAO_CLASS  : matched = self->xClass.clsType == type; break;
 	case DAO_OBJECT : matched = self->xObject.defClass->objType == type; break;
+	case DAO_CINVALUE : matched = self->xCinValue.cintype->vatype == type; break;
 	default : break;
 	}
 	return matched;
@@ -635,6 +653,8 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		if( DaoValue_FastMatchTo( S, T ) ){
 			if( S->type == DAO_CPOD ){
 				DaoValue_MoveCpod( (DaoCpod*) S, D );
+			}else if( S->type == DAO_CINVALUE ){
+				DaoValue_MoveCinValue( (DaoCinValue*) S, D );
 			}else{
 				GC_Assign( D, S );
 			}
@@ -681,6 +701,10 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	case (DAO_CPOD<<8)|DAO_CPOD :
 		if( S->xCpod.ctype != T ) return DaoValue_Move4( S, D, T, C, defs );
 		DaoValue_MoveCpod( (DaoCpod*) S, D );
+		break;
+	case (DAO_CINVALUE<<8)|DAO_CINVALUE :
+		if( S->xCinValue.cintype->vatype != T ) return DaoValue_Move4( S, D, T, C, defs );
+		DaoValue_MoveCinValue( (DaoCinValue*) S, D );
 		break;
 	case (DAO_BOOLEAN<<8)|DAO_BOOLEAN : D2->xInteger.value = S->xInteger.value; break;
 	case (DAO_BOOLEAN<<8)|DAO_INTEGER : D2->xInteger.value = S->xInteger.value; break;
