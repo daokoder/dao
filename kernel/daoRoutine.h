@@ -125,7 +125,8 @@ struct DaoRoutineBody
 
 	ushort_t  regCount;
 	uchar_t   exeMode;
-	uchar_t   hasStatic;
+	uchar_t   hasStatic   : 4;
+	uchar_t   useNonLocal : 4;
 	ushort_t  codeStart;
 	ushort_t  codeEnd;
 

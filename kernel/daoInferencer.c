@@ -1033,8 +1033,8 @@ static DaoType* DaoInferencer_UpdateTypeX( DaoInferencer *self, int id, DaoType 
 	// And due to Common Subexpression Elimination, the register of a declared
 	// variable could be mapped to the result register (operand) of a specialized
 	// operation (such as DVM_SUB_III). So when decoding bytecode, the result type
-	// of such operation might be a type holder type, and if it is allowed to update
-	// during inference, the type checking will fail for such operations.
+	// of such operation might be a type holder type, and if it is not allowed to
+	// update during inference, the type checking will fail for such operations.
 	//
 	// Note 3:
 	// It is extremely hard to encode inferred types from C/C++ modules if they
@@ -3610,6 +3610,10 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 
 SkipChecking:
 		switch( K ){
+		case DAO_CODE_GETG :
+		case DAO_CODE_SETG :
+			routine->body->useNonLocal = 1;
+			break;
 		case DAO_CODE_MOVE :
 			if( code == DVM_LOAD ){
 				tt = DaoType_GetAutoCastType( at );

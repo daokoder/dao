@@ -5962,18 +5962,7 @@ void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *sel
 	DaoGC_TryDelete( (DaoValue*) ss );
 }
 
-int DaoRoutine_SetVmCodes2( DaoRoutine *self, DArray *vmCodes );
 
-static void DaoProcess_MapTypes( DaoProcess *self, DMap *deftypes )
-{
-	DaoRoutine *routine = self->activeRoutine;
-	DNode *it = DMap_First(routine->body->localVarType);
-	for(; it; it = DMap_Next(routine->body->localVarType,it) ){
-		DaoValue *V = self->activeValues[ it->key.pInt ];
-		if( V == NULL || V->type != DAO_TYPE || it->value.pType->tid != DAO_TYPE ) continue;
-		MAP_Insert( deftypes, it->value.pType->nested->items.pType[0], V );
-	}
-}
 static int DaoNamespace_CopyStaticVar( DaoNamespace *self, int id, DMap *map )
 {
 	DNode *it = MAP_Find( map, id );
@@ -6340,14 +6329,27 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 	default: break;
 	}
 	if( self->status == DAO_PROCESS_STACKED ){
+		DaoRoutine *routine = self->topFrame->routine;
+		/*
+		// Calling routines that access non-local variables should not be allowed
+		// in constant evaluation mode. Consider the following:
+		//
+		// var value = some_function();
+		// routine Test(){ return value }
+		// const K = Test();
+		//
+		// Otherise, when Test() is called in the constant evaluation, the global
+		// variable "value" is not initialized yet!
+		*/
+		if( routine->body && routine->body->useNonLocal ){
+			DaoProcess_RaiseError( self, NULL, "Routine cannot be called in constant evaluation mode!" );
+			return NULL;
+		}
 		self->topFrame->retmode = DVM_RET_PROCESS;
 		self->topFrame->returning = 0;
 		DaoProcess_Execute( self );
 	}
 	if( self->exceptions->size >0 ) return NULL;
-
-	/* avoid GC */
-	/* DList_Clear( self->regArray ); */
 	return self->stackValues[ vmc->c ];
 }
 
