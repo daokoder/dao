@@ -491,11 +491,10 @@ DaoType* DaoRoutine_PartialCheck( DaoNamespace *NS, DaoType *routype, DList *rou
 	return type;
 }
 
-static int DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype, DaoType *argtypes[], int argcount, int code, DMap *defs )
+static void DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype, DaoType *argtypes[], int argcount, int code, DMap *defs )
 {
 	int argindex, parindex;
 	int selfChecked = 0;
-	int mt, min = DAO_MT_EQ;
 	int parcount = self->parCount;
 	DaoType **partypes = self->routType->nested->items.pType;
 	DaoType  *partype, *argtype;
@@ -506,7 +505,7 @@ static int DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype, DaoTy
 
 	/* Check for explicit self parameter: */
 	if( argcount && (argtypes[0]->attrib & DAO_TYPE_SELFNAMED) ) selftype = NULL;
-	if( argcount == parcount && parcount == 0 ) return DAO_MT_EQ;
+	if( argcount == parcount && parcount == 0 ) return;
 
 	/* Remove type holder bindings for the self parameter: */
 	if( self->routType->attrib & DAO_TYPE_SELF ){
@@ -520,11 +519,7 @@ static int DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype, DaoTy
 	}else if( selftype && (self->routType->attrib & DAO_TYPE_SELF) && code != DVM_MCALL ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		partype = (DaoType*) self->routType->nested->items.pType[0]->aux;
-		mt = DaoType_MatchTo( selftype, partype, defs );
-		if( mt ){
-			if( mt < min ) min = mt;
-			selfChecked = 1;
-		}
+		if( DaoType_MatchTo( selftype, partype, defs ) ) selfChecked = 1;
 	}
 	for(argindex=0; argindex<argcount; argindex++){
 		parindex = argindex + selfChecked;
@@ -532,8 +527,7 @@ static int DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype, DaoTy
 		if( parindex < parcount && partypes[parindex]->tid == DAO_PAR_VALIST ){
 			DaoType *vlt = (DaoType*) partypes[parindex]->aux;
 			while( argindex < argcount ){
-				mt = DaoType_MatchTo( argtypes[argindex++], vlt, defs );
-				if( mt < min ) min = mt;
+				DaoType_MatchTo( argtypes[argindex++], vlt, defs );
 			}
 			break;
 		}
@@ -542,14 +536,12 @@ static int DaoRoutine_PassParamTypes( DaoRoutine *self, DaoType *selftype, DaoTy
 		partype = partypes[parindex];
 		if( partype->attrib & DAO_TYPE_PARNAMED ) partype = (DaoType*) partype->aux;
 		if( argtype == NULL || partype == NULL )  break;
-		mt = DaoType_MatchTo( argtype, partype, defs );
-		if( mt < min ) min = mt;
+		DaoType_MatchTo( argtype, partype, defs );
 	}
 	/*
 	   for(node=DMap_First(defs);node;node=DMap_Next(defs,node))
 	   printf( "binding:  %s  %s\n", node->key.pType->name->chars, node->value.pType->name->chars );
 	 */
-	return min;
 }
 
 
@@ -3145,42 +3137,26 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		tt = rout->routType;
 		cbtype = tt->cbtype;
 
-		k = DaoRoutine_PassParamTypes( rout, bt, tp, argc, code, defs2 );
-		/*
-		// Specialization may be necessary if the parameter type do not match equally:
-		//   routine test( a ) 
-		//   {
-		//       io.writeln( std.about(a) )
-		//   }
-		//   test(1)
-		//   test(2.5)
-		// The second test() will be resolved to test(a:int), which is wrong for
-		// the second call, so new specialization from the original test(a:@a)
-		// is necessary.
-		//
-		// TODO:
-		// Improvements to avoid unnecessary attempt for specialization in case
-		// there are types such "any" in the parameters.
-		*/
-		if( k < DAO_MT_EQ || rout->routType->aux->xType.tid == DAO_THT ){
+		DMap_Reset( defs2 );
+		if( at->tid == DAO_CTYPE && at->kernel->sptree ){
+			/*
+			// It is a call to the constructor of a specialized type,
+			// do the matching to initialize the type holder mapping:
+			*/
+			DaoType_MatchTo( at, at->kernel->abtype->aux->xCdata.ctype, defs2 );
+		}
+		k = defs2->size;
+		DaoRoutine_PassParamTypes( rout2, bt, tp, argc, code, defs2 );
 
-			DMap_Reset( defs2 );
-			if( at->tid == DAO_CTYPE && at->kernel->sptree ){
-				/*
-				// The self parameter type may be a specialized type,
-				// do the matching to initialize the type holder mapping:
-				*/
-				k = DaoType_MatchTo( at, at->kernel->abtype->aux->xCdata.ctype, defs2 );
-			}
-
-			k = defs2->size;
-			DaoRoutine_PassParamTypes( rout2, bt, tp, argc, code, defs2 );
-			/* rout->body->vmCodes->size is zero for declared but unimplemented routines: */
-			if( rout2 != routine && defs2->size && (defs2->size > k || rout2->routType->aux->xType.tid == DAO_THT) && (rout2->body == NULL || rout2->body->vmCodes->size) ){
+		if( defs2->size > k || rout->routType->aux->xType.tid == DAO_THT ){
+			DaoType *routype = DaoType_DefineTypes( rout2->routType, NS, defs2 );
+			DMap_Reset( defs3 );
+			if( DaoType_MatchTo( routype, rout->routType, defs3 ) < DAO_MT_EQ ){
 				rout = DaoInferencer_Specialize( self, rout2, defs2, inode );
 				if( rout == NULL ) goto InvParam;
 			}
 		}
+
 		if( at->tid != DAO_CLASS && ! ctchecked ) ct = rout->routType;
 		/*
 		   printf( "ct2 = %s\n", ct ? ct->name->chars : "" );
