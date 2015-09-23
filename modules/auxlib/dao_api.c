@@ -55,6 +55,12 @@
 #endif
 
 
+#ifdef DAO_HAS_DECIMAL
+#define DAO_DECIMAL
+#include"../decimal/dao_decimal.h"
+#endif
+
+
 #ifdef DAO_HAS_ZIP
 #define DAO_ZIP
 #include"../zip/dao_zip.h"

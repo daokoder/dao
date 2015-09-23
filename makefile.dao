@@ -189,9 +189,9 @@ daovm_auxlib_sources =
 # set that includes the objects compiled from the "source_file_list":
 #
 ###########################################################################
-daovm_kernel_objects = daovm.AddObjects( daovm_kernel_sources, daovm_kernel_headers )
-daovm_auxlib_objects = daovm.AddObjects( daovm_auxlib_sources, daovm_auxlib_headers )
-daovm_main_object    = daovm.AddObjects( { "kernel/daoMain.c" }, daovm_kernel_headers );
+daovm_kernel_objs = daovm.AddObjects( daovm_kernel_sources, daovm_kernel_headers )
+daovm_auxlib_objs = daovm.AddObjects( daovm_auxlib_sources, daovm_auxlib_headers )
+daovm_main_object = daovm.AddObjects( { "kernel/daoMain.c" }, daovm_kernel_headers );
 
 
 ###########################################################################
@@ -201,16 +201,16 @@ daovm_main_object    = daovm.AddObjects( { "kernel/daoMain.c" }, daovm_kernel_he
 ###########################################################################
 #
 # Add a shared library target named "dao" to the project.
-# This target will be built from the object set "daovm_kernel_objects".
+# This target will be built from the object set "daovm_kernel_objs".
 #
-daovm_dll = daovm.AddSharedLibrary( "dao", daovm_kernel_objects )
-auxlib_dll = daovm.AddSharedLibrary( "dao_aux", daovm_auxlib_objects )
+daovm_dll = daovm.AddSharedLibrary( "dao", daovm_kernel_objs )
+auxlib_dll = daovm.AddSharedLibrary( "dao_aux", daovm_auxlib_objs )
 
 #
 # Add a static library target to the project:
 #
-daovm_lib = daovm.AddStaticLibrary( "dao", daovm_kernel_objects )
-auxlib_lib = daovm.AddStaticLibrary( "dao_aux", daovm_auxlib_objects )
+daovm_lib = daovm.AddStaticLibrary( "dao", daovm_kernel_objs )
+auxlib_lib = daovm.AddStaticLibrary( "dao_aux", daovm_auxlib_objs )
 
 #
 # Add an executable target:
@@ -263,7 +263,7 @@ if( DaoMake::IsPlatform( "WIN32" ) ) daovm_partial_static = $OFF;
 
 if( daovm_partial_static == $ON ){
 	daovm_main_object.AddDefinition( "DAO_KERNEL" );
-	daovm_exe.AddObjects( daovm_kernel_objects );
+	daovm_exe.AddObjects( daovm_kernel_objs );
 }else{
 	daovm_exe.UseSharedLibrary( daovm, "dao" )
 	daovm_exe.AddDependency( daovm_dll )
@@ -324,12 +324,13 @@ if( daovm_with_readline == $ON ){
 	}
 }
 
-if( DaoMake::IsDir( "modules/random" ) ) daovm_auxlib_objects.AddDefinition( "DAO_HAS_RANDOM" );
-if( DaoMake::IsDir( "modules/stream" ) ) daovm_auxlib_objects.AddDefinition( "DAO_HAS_STREAM" );
-if( DaoMake::IsDir( "modules/time" ) )   daovm_auxlib_objects.AddDefinition( "DAO_HAS_TIME" );
-if( DaoMake::IsDir( "modules/zip" ) )    daovm_auxlib_objects.AddDefinition( "DAO_HAS_ZIP" );
-if( DaoMake::IsDir( "modules/crypto" ) ) daovm_auxlib_objects.AddDefinition( "DAO_HAS_CRYPTO" );
-if( DaoMake::IsDir( "modules/image" ) )  daovm_auxlib_objects.AddDefinition( "DAO_HAS_IMAGE" );
+if( DaoMake::IsDir( "modules/random" ) )  daovm_auxlib_objs.AddDefinition( "DAO_HAS_RANDOM" );
+if( DaoMake::IsDir( "modules/stream" ) )  daovm_auxlib_objs.AddDefinition( "DAO_HAS_STREAM" );
+if( DaoMake::IsDir( "modules/time" ) )    daovm_auxlib_objs.AddDefinition( "DAO_HAS_TIME" );
+if( DaoMake::IsDir( "modules/decimal" ) ) daovm_auxlib_objs.AddDefinition( "DAO_HAS_DECIMAL" );
+if( DaoMake::IsDir( "modules/zip" ) )     daovm_auxlib_objs.AddDefinition( "DAO_HAS_ZIP" );
+if( DaoMake::IsDir( "modules/crypto" ) )  daovm_auxlib_objs.AddDefinition( "DAO_HAS_CRYPTO" );
+if( DaoMake::IsDir( "modules/image" ) )   daovm_auxlib_objs.AddDefinition( "DAO_HAS_IMAGE" );
 
 
 ###########################################################################

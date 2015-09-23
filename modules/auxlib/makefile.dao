@@ -15,6 +15,7 @@ if( DaoMake::IsDir( "modules/random" ) ) project_objs.AddDefinition( "DAO_HAS_RA
 if( DaoMake::IsDir( "modules/stream" ) ) project_objs.AddDefinition( "DAO_HAS_STREAM" );
 if( DaoMake::IsDir( "modules/image" ) )  project_objs.AddDefinition( "DAO_HAS_IMAGE" );
 if( DaoMake::IsDir( "modules/time" ) )   project_objs.AddDefinition( "DAO_HAS_TIME" );
+if( DaoMake::IsDir( "modules/decimal" ) ) project_objs.AddDefinition( "DAO_HAS_DECIMAL" );
 
 project_dll  = project.AddSharedLibrary( "dao_aux", project_objs )
 project_lib  = project.AddStaticLibrary( "dao_aux", project_objs )

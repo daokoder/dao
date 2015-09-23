@@ -58,6 +58,11 @@
 #endif
 
 
+#ifdef DAO_HAS_DECIMAL
+#include"../decimal/dao_decimal.h"
+#endif
+
+
 #ifdef DAO_HAS_ZIP
 #include"../zip/dao_zip.h"
 #endif
