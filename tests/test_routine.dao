@@ -325,3 +325,20 @@ routine B( ...: tuple<enum,int|string|list<string>> as args )
 @[test(code_01)]
 @[test(code_01)]
 @[test(code_01)]
+
+
+
+
+
+@[test(code_01)]
+routine testing( a, b: string )
+{
+	io.writeln( std.about(a) )
+}
+testing( 1, "a" )
+testing( 2.5, "b" )
+@[test(code_01)]
+@[test(code_01)]
+int .*
+float .*
+@[test(code_01)]

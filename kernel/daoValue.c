@@ -236,9 +236,9 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 		case DAO_INTEGER : return (DaoValue*) DaoEnum_New( tp, self->xInteger.value );
 		case DAO_FLOAT   : return (DaoValue*) DaoEnum_New( tp, self->xFloat.value );
 		}
-	}else if( self->type == DAO_CPOD && (tp == NULL || tp->tid == self->type) ){
+	}else if( self->type == DAO_CPOD && (tp == NULL || tp == self->xCpod.ctype) ){
 		return (DaoValue*) DaoCpod_Copy( (DaoCpod*) self );
-	}else if( self->type == DAO_CINVALUE && (tp == NULL || tp->tid == self->type) ){
+	}else if( self->type == DAO_CINVALUE && (tp == NULL || tp == self->xCinValue.cintype->vatype) ){
 		return (DaoValue*) DaoCinValue_Copy( (DaoCinValue*) self );
 	}
 	if( tp != NULL ){
