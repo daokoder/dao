@@ -687,7 +687,7 @@ DoneSourceType:
 	// To create a template-like alias to a template-like cdata type, it is only
 	// necessary to add a specialization entry in the template cdata type.
 	*/
-	if( tp->tid >= DAO_CSTRUCT && tp->tid <= DAO_CDATA ) tp = tp->aux->xCtype.ctype;
+	if( tp->tid >= DAO_CSTRUCT && tp->tid <= DAO_CDATA ) tp = tp->aux->xCtype.cdtype;
 	tp2 = tp;
 	if( (tp->tid && tp->tid <= DAO_TUPLE) || tp->tid == DAO_VARIANT ){
 		tp = DaoType_Copy( tp );
