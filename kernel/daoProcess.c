@@ -447,10 +447,10 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 	int selfChecked = 0;
 #if 0
 	int i;
-	printf( "%s: %i %i %i\n", routine->routName->chars, parcount, np, svalue ? svalue->type : 0 );
+	printf( "%s: %i %i %i\n", routine->routName->chars, parcount, argcount, svalue ? svalue->type : 0 );
 	for(i=0; i<argcount; i++){
-		tp = DaoNamespace_GetType( routine->nameSpace, p[i] );
-		printf( "%i  %s\n", i, tp->name->chars );
+		argtype = DaoNamespace_GetType( routine->nameSpace, values[i] );
+		printf( "%i  %s\n", i, argtype->name->chars );
 	}
 #endif
 
@@ -3578,7 +3578,13 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 
 		at = DaoNamespace_GetType( self->activeNamespace, va );
 		if( cintype->target == at || DaoType_MatchTo( cintype->target, at, NULL ) >= DAO_MT_EQ ){
+			if( vc && vc->type == DAO_CINVALUE && vc->xCinValue.refCount == 1 ){
+				GC_Assign( & vc->xCinValue.cintype, cintype );
+				DaoValue_Move( va, & vc->xCinValue.value, cintype->target );
+				return;
+			}
 			va = (DaoValue*) DaoCinValue_New( cintype, va );
+			GC_Assign( vc2, va );
 			goto FastCasting;
 		}
 		goto FailConversion;
@@ -3669,7 +3675,7 @@ NormalCasting:
 	if( va == NULL || va->type == 0 ) goto FailConversion;
 	return;
 FastCasting:
-	GC_Assign( vc2, va );
+	DaoValue_Copy( va, vc2 );  /* DaoCinValue, DaoCpod; */
 	return;
 FailConversion :
 	at = self->activeTypes[ vmc->a ];

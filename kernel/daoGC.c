@@ -1378,7 +1378,7 @@ static void DaoCGC_FreeGarbage()
 		value->xGC.work = value->xGC.alive = 0;
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
 		if( value->xGC.refCount !=0 ){
-			printf(" refCount not zero %i: %i\n", value->type, value->xGC.refCount );
+			printf( "refCount not zero %i: %i\n", value->type, value->xGC.refCount );
 			DaoGC_PrintValueInfo( value );
 
 			value->xGC.delay = 1;
@@ -2272,10 +2272,10 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			cdata->trait |= DAO_VALUE_BROKEN;
 			if( value->type == DAO_CDATA || value->type == DAO_CSTRUCT ){
 				DaoGC_ScanCdata( cdata, DAO_GC_BREAK );
+				if( value->type == DAO_CDATA ) DaoWrappers_Erase( cdata->data );
 			}else if( value->type == DAO_CTYPE ){
 				directRefCountDecrement( (DaoValue**) & value->xCtype.cdtype );
 			}
-			DaoWrappers_Erase( cdata->data );
 			break;
 		}
 	case DAO_ROUTINE :
@@ -2345,7 +2345,6 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		}
 	case DAO_CINVALUE :
 		{
-			DaoWrappers_Erase( value->xCinValue.value );
 			directRefCountDecrement( & value->xCinValue.value );
 			directRefCountDecrement( (DaoValue**) & value->xCinValue.cintype );
 			break;

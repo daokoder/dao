@@ -236,9 +236,11 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 		case DAO_INTEGER : return (DaoValue*) DaoEnum_New( tp, self->xInteger.value );
 		case DAO_FLOAT   : return (DaoValue*) DaoEnum_New( tp, self->xFloat.value );
 		}
-	}else if( self->type == DAO_CPOD && (tp == NULL || tp == self->xCpod.ctype) ){
+	}else if( self->type == DAO_CPOD ){ /* Types should have been checked: */
+		FuncPtrSliced sliced = self->xCpod.ctype->kernel->Sliced;
+		if( sliced ) (*sliced)( self );
 		return (DaoValue*) DaoCpod_Copy( (DaoCpod*) self );
-	}else if( self->type == DAO_CINVALUE && (tp == NULL || tp == self->xCinValue.cintype->vatype) ){
+	}else if( self->type == DAO_CINVALUE ){
 		return (DaoValue*) DaoCinValue_Copy( (DaoCinValue*) self );
 	}
 	if( tp != NULL ){
@@ -272,11 +274,11 @@ DaoValue* DaoValue_SimpleCopyWithTypeX( DaoValue *self, DaoType *tp, DaoType *cs
 #endif
 		default : break;
 		}
-		if( tp ) tp = DaoType_GetBaseType( tp );
 	}
 	if( self->xBase.trait & DAO_VALUE_NOCOPY ) return self;
 	if( (self->xBase.trait & DAO_VALUE_CONST) == 0 ) return self;
 	if( cst != NULL && cst->invar != 0 ) return self;
+	if( tp ) tp = DaoType_GetBaseType( tp );
 	return DaoValue_CopyContainer( self, tp );
 }
 DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *tp )
@@ -290,11 +292,13 @@ DaoValue* DaoValue_SimpleCopy( DaoValue *self )
 void DaoValue_MoveCinValue( DaoCinValue *S, DaoValue **D )
 {
 	DaoValue *D2 = *D;
-	int notcinv = D2 == NULL || D2->type != DAO_CINVALUE || D2->xCinValue.refCount > 1;
-	if( notcinv || D2->xCinValue.cintype != S->cintype ){
+	if( D2 == NULL || D2->type != DAO_CINVALUE || D2->xCinValue.refCount > 1 ){
 		S = DaoCinValue_Copy( S );
 		DaoGC_Assign( D, (DaoValue*) S );
 		return;
+	}
+	if( D2->xCinValue.cintype != S->cintype ){
+		GC_Assign( & D2->xCinValue.cintype, S->cintype );
 	}
 	DaoValue_Copy( S->value, & D2->xCinValue.value );
 }
