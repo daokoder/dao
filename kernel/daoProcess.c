@@ -2624,10 +2624,13 @@ DaoCpod* DaoProcess_PutCpod( DaoProcess *self, DaoType *type, int size )
 {
 	DaoValue *dC = self->activeValues[ self->activeCode->c ];
 	DaoCpod *pod = NULL;
+	int dataSize = size - sizeof(DaoCpod);
+
+	if( dataSize < 0 ) return NULL;
 	
 	self->stackReturn = self->activeCode->c + (self->activeValues - self->stackValues);
 	if( dC != NULL && dC->type == DAO_CPOD && dC->xCpod.ctype == type ) pod = (DaoCpod*) dC;
-	if( pod == NULL || pod->size < size || !(pod->trait & DAO_VALUE_STACK) || pod->refCount > 1 ){
+	if( pod == NULL || pod->size < dataSize || !(pod->trait & DAO_VALUE_STACK) || pod->refCount > 1 ){
 		DaoCpod *pod = DaoCpod_New( type, size );
 		DaoValue *ret = DaoProcess_PutValue( self, (DaoValue*) pod );
 		if( ret != (DaoValue*) pod ) DaoGC_TryDelete( (DaoValue*) pod );
@@ -2636,7 +2639,7 @@ DaoCpod* DaoProcess_PutCpod( DaoProcess *self, DaoType *type, int size )
 		return (DaoCpod*) ret;
 	}
 	pod->trait |=  DAO_VALUE_STACK;
-	pod->size = size;
+	pod->size = dataSize;
 	return pod;
 }
 void DaoCdata_Delete( DaoCdata *self );

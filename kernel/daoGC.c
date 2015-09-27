@@ -44,18 +44,6 @@
 #include"daoValue.h"
 
 
-#ifdef DAO_TRACE_ADDRESS
-#define DAO_TRACE_ADDRESS ((DaoValue*)0x7fac2cf646a0)
-void DaoGC_TraceValue( DaoValue *value )
-{
-	if( value == DAO_TRACE_ADDRESS ){
-		int uninitialized; /* for valgrind; */
-		uninitialized += time(NULL);
-		if( uninitialized % 1000 == 0 ) printf( "%i\n", uninitialized );
-		printf( "DaoGC_TraceValue: %i %i\n", value->type, value->xBase.refCount );
-	}
-}
-#endif
 
 #if defined(DEBUG) && defined(UNIX)
 #if 0
@@ -84,6 +72,24 @@ void print_trace( const char *info )
 	fflush( debug );
 	fclose( debug );
 	fflush( stdout );
+}
+#endif
+
+#ifdef DAO_TRACE_ADDRESS
+#define DAO_TRACE_ADDRESS ((DaoValue*)0x102e4fad0)
+void DaoGC_TraceValue( DaoValue *value )
+{
+	if( value && value->type == DAO_CPOD && strstr(value->xCpod.ctype->name->chars, "Decimal") )
+	//if( value == DAO_TRACE_ADDRESS || value == (DaoValue*) 0x10038b300 )
+	{
+		int uninitialized; /* for valgrind; */
+		uninitialized += time(NULL);
+		//if( uninitialized % 1000 == 0 ) printf( "%i\n", uninitialized );
+		//printf( "DaoGC_TraceValue: %i %i\n", value->type, value->xBase.refCount );
+		char buffer[60];
+		sprintf( buffer, "tracing %p", value );
+		print_trace( buffer );
+	}
 }
 #endif
 

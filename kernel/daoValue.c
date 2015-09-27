@@ -292,6 +292,7 @@ DaoValue* DaoValue_SimpleCopy( DaoValue *self )
 void DaoValue_MoveCinValue( DaoCinValue *S, DaoValue **D )
 {
 	DaoValue *D2 = *D;
+	if( D2 == (DaoValue*) S ) return;
 	if( D2 == NULL || D2->type != DAO_CINVALUE || D2->xCinValue.refCount > 1 ){
 		S = DaoCinValue_Copy( S );
 		DaoGC_Assign( D, (DaoValue*) S );
@@ -461,7 +462,11 @@ static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp, Da
 void DaoValue_MoveCpod( DaoCpod *S, DaoValue **D )
 {
 	DaoValue *D2 = *D;
-	int notpod = D2 == NULL || D2->type != DAO_CPOD || D2->xCpod.refCount > 1;
+	int notpod;
+	
+	if( D2 == (DaoValue*) S ) return;
+
+	notpod = D2 == NULL || D2->type != DAO_CPOD || D2->xCpod.refCount > 1;
 	if( notpod || D2->xCpod.ctype != S->ctype || D2->xCpod.size < S->size ){
 		S = DaoCpod_Copy( S );
 		DaoGC_Assign( D, (DaoValue*) S );
