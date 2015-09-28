@@ -548,20 +548,20 @@ void DaoObjectLogger_SwitchBuffer(){}
 typedef struct DaoGarbageCollector  DaoGarbageCollector;
 struct DaoGarbageCollector
 {
-	DList   *idleList;
-	DList   *workList;
-	DList   *idleList2;
-	DList   *workList2;
-	DList   *delayList;
-	DList   *freeList;
-	DList   *auxList;
-	DList   *auxList2;
-	DList   *nsList;
-	DList   *cdataValues;
-	DList   *cdataLists;
-	DList   *cdataMaps;
-	DList   *temporary;
-	DMap    *wrappers;
+	DList   *idleList;     /* List of new garbage candidates; */
+	DList   *workList;     /* List of working candidates; */
+	DList   *idleList2;    /* List of new garbage candidates (primitive types); */
+	DList   *workList2;    /* List of working candidates (primitive types); */
+	DList   *delayList;    /* List of delayed candidates; */
+	DList   *freeList;     /* List of garbage objects as determined by the GC; */
+	DList   *auxList;      /* Auxiliary list for GC; */
+	DList   *auxList2;     /* Auxiliary list for GC; */
+	DList   *nsList;       /* List of namespaces; */
+	DList   *cdataValues;  /* Value buffer for scanning wrapped objects; */
+	DList   *cdataLists;   /* List buffer for scanning wrapped objects; */
+	DList   *cdataMaps;    /* Map buffer for scanning wrapped objects; */
+	DList   *temporary;    /* Temporary list; */
+	DMap    *wrappers;     /* Globally unique wrappers for Cdata objects; */
 
 	uchar_t   finalizing;
 	uchar_t   delayMask;
@@ -1079,15 +1079,16 @@ void DaoGC_PrepareCandidates()
 		/* push delayed objects into the working list for full GC scan: */
 		for(i=0; i<delayList->size; ++i){
 			value = delayList->items.pValue[i];
-			if( value->xGC.work ) continue;
 			value->xGC.delay = 0;
+			if( value->xGC.work ) continue; /* Skip objects in freeList; */
 			DList_PushBack2( workList, value );
 		}
 		delayList->size = 0;
 	}else if( freeList->size ){
 		for(i=0,k=0; i<delayList->size; ++i){
 			value = delayList->items.pValue[i];
-			if( value->xGC.work ) continue;
+			if( value->xGC.work | value->xGC.delay ) continue;
+			value->xGC.delay = 1;
 			delayList->items.pValue[k++] = value;
 		}
 		delayList->size = k;
@@ -1123,6 +1124,7 @@ void DaoGC_PrepareCandidates()
 	types->size = 0;
 	for(i=0; i<freeList->size; i++){
 		if( freeList->items.pValue[i]->type == DAO_TYPE ){
+			freeList->items.pValue[i]->xGC.work = 0;
 			DList_PushBack2( types, freeList->items.pValue[i] ); /* should be freed after cdata; */
 			continue;
 		}

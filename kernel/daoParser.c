@@ -2216,8 +2216,7 @@ int DaoParser_ParseScript( DaoParser *self )
 		GC_Assign( & self->byteBlock->value, routMain );
 	}
 	if( routMain->routType == NULL ){
-		routMain->routType = dao_type_routine;
-		GC_IncRC( dao_type_routine );
+		GC_Assign( & routMain->routType, dao_type_routine );
 	}
 	routMain->attribs |= DAO_ROUT_MAIN;
 	ns->mainRoutine = routMain;

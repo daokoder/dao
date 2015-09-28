@@ -6003,6 +6003,7 @@ void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc )
 	}
 
 	closure = DaoRoutine_Copy( proto, 0, proto->body->hasStatic, 1 );
+	closure->trait &= ~DAO_VALUE_DELAYGC;
 
 	for(j=0; j<vmc->b; j+=2){
 		k = pp[j+1]->xInteger.value;

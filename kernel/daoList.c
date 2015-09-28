@@ -180,9 +180,7 @@ void DList_Assign( DList *left, DList *right )
 		for( i=0; i<right->size; i++ ) DList_Append( left, right->items.pVoid[i] );
 	}else{
 		DList_Resize( left, right->size, NULL );
-		if( left->type == DAO_DATA_VALUE ) DaoGC_LockData();
 		for( i=0; i<right->size; i++ ) left->items.pVoid[i] = right->items.pVoid[i];
-		if( left->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
 	}
 }
 void DList_Swap( DList *left, DList *right )
