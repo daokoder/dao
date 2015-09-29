@@ -232,7 +232,18 @@ DaoParser* DaoParser_New()
 	self->usedList = 0;
 	return self;
 }
-void DaoParser_ClearCodes( DaoParser *self );
+static void DaoParser_ClearCodes( DaoParser *self );
+static void DaoParser_ReleaseEvaluator( DaoParser *self )
+{
+	if( self->evaluator.process ){
+		self->evaluator.process->trait &= ~ DAO_VALUE_CONST;
+		self->evaluator.routine->trait &= ~ DAO_VALUE_CONST;
+		DaoVmSpace_ReleaseProcess( self->vmSpace, self->evaluator.process );
+		DaoVmSpace_ReleaseRoutine( self->vmSpace, self->evaluator.routine );
+	}
+	self->evaluator.process = NULL;
+	self->evaluator.routine = NULL;
+}
 void DaoParser_Delete( DaoParser *self )
 {
 	DaoInode *node;
@@ -274,6 +285,8 @@ void DaoParser_Delete( DaoParser *self )
 	if( self->allConsts ) DMap_Delete( self->allConsts );
 	DMap_Delete( self->initTypes );
 	DMap_Delete( self->table );
+
+	DaoParser_ReleaseEvaluator( self );
 	DaoParser_ClearCodes( self );
 	node = self->vmcFree;
 	while( node ){
@@ -373,15 +386,7 @@ void DaoParser_Reset( DaoParser *self )
 	DMap_Clear( self->initTypes );
 	DMap_Reset( self->table );
 	DaoParser_ClearCodes( self );
-
-	if( self->evaluator.process ){
-		self->evaluator.process->trait &= ~ DAO_VALUE_CONST;
-		self->evaluator.routine->trait &= ~ DAO_VALUE_CONST;
-		DaoVmSpace_ReleaseProcess( self->vmSpace, self->evaluator.process );
-		DaoVmSpace_ReleaseRoutine( self->vmSpace, self->evaluator.routine );
-	}
-	self->evaluator.process = NULL;
-	self->evaluator.routine = NULL;
+	DaoParser_ReleaseEvaluator( self );
 }
 
 static DString* DaoParser_GetString( DaoParser *self )
@@ -8052,9 +8057,8 @@ void DaoParser_InitConstEvaluator( DaoParser *self )
 	if( self->evaluator.process ) return;
 	self->evaluator.process = DaoVmSpace_AcquireProcess( self->vmSpace );
 	self->evaluator.routine = DaoVmSpace_AcquireRoutine( self->vmSpace );
-	self->evaluator.routine->routType = dao_type_routine;
 	self->evaluator.process->activeNamespace = self->nameSpace;
-	GC_IncRC( dao_type_routine );
+	GC_Assign( & self->evaluator.routine->routType, dao_type_routine );
 	GC_Assign( & self->evaluator.routine->nameSpace, self->nameSpace );
 	DaoProcess_InitTopFrame( self->evaluator.process, self->evaluator.routine, NULL );
 	DaoProcess_SetActiveFrame( self->evaluator.process, self->evaluator.process->topFrame );
