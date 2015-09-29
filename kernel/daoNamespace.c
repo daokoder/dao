@@ -664,8 +664,7 @@ DoneSourceType:
 	/* printf( "ns = %p  tp = %p  name = %s\n", self, tp, alias ); */
 
 	/* Only allow overiding types defined in parent namespaces: */
-	node = MAP_Find( self->abstypes, & alias2 );
-	if( node != NULL ){
+	if( DaoNamespace_FindType( self, & alias2 ) != NULL ){
 		DaoStream_WriteChars( stream, "ERROR: in DaoNamespace_DefineType(), type \"" );
 		DaoStream_WriteChars( stream, alias );
 		DaoStream_WriteChars( stream, "\" was defined!\n" );

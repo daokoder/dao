@@ -357,17 +357,17 @@ static void DMap_CopyItem( void **dest, void *item, short type )
 		}
 	}
 }
-static void DMap_DeleteItem( void *item, short type )
+static void DMap_DeleteItem( void **item, short type )
 {
 	switch( type ){
-	case DAO_DATA_COMPLEX : dao_free( item ); break;
-	case DAO_DATA_STRING : DString_Delete( (DString*) item ); break;
-	case DAO_DATA_LIST   : DList_Delete( (DList*) item ); break;
-	case DAO_DATA_MAP    : DMap_Delete( (DMap*) item ); break;
+	case DAO_DATA_COMPLEX : dao_free( *item ); break;
+	case DAO_DATA_STRING : DString_Delete( (DString*) *item ); break;
+	case DAO_DATA_LIST   : DList_Delete( (DList*) *item ); break;
+	case DAO_DATA_MAP    : DMap_Delete( (DMap*) *item ); break;
 	case DAO_DATA_VALUE  :
 	case DAO_DATA_VALUE2 :
-	case DAO_DATA_VALUE3 : GC_DecRC( (DaoValue*) item ); break;
-	case DAO_DATA_VOID2  : dao_free( item ); break;
+	case DAO_DATA_VALUE3 : DaoValue_Clear( (DaoValue**) item ); break;
+	case DAO_DATA_VOID2  : dao_free( *item ); break;
 	default : break;
 	}
 }
@@ -396,8 +396,8 @@ static void DMap_BufferTree( DMap *self, DNode *node )
 }
 static void DMap_DeleteNode( DMap *self, DNode *node )
 {
-	if( node->key.pVoid ) DMap_DeleteItem( node->key.pVoid, self->keytype );
-	if( node->value.pVoid ) DMap_DeleteItem( node->value.pVoid, self->valtype );
+	if( node->key.pVoid ) DMap_DeleteItem( & node->key.pVoid, self->keytype );
+	if( node->value.pVoid ) DMap_DeleteItem( & node->value.pVoid, self->valtype );
 	dao_free( node );
 }
 static void DMap_DeleteTree( DMap *self, DNode *node )
@@ -848,7 +848,7 @@ DNode* DMap_InsertPro( DMap *self, void *key, void *value, DaoProcess *process )
 		}
 	}else{
 		if( self->valtype < DAO_DATA_VALUE || self->valtype > DAO_DATA_VALUE3 ){
-			DMap_DeleteItem( p->value.pVoid, self->valtype );
+			DMap_DeleteItem( & p->value.pVoid, self->valtype );
 			p->value.pVoid = NULL;
 		}
 		DMap_CopyItem( & p->value.pVoid, value, self->valtype );

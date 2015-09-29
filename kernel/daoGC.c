@@ -118,6 +118,9 @@ static void DaoGC_PrintValueInfo( DaoValue *value )
 	case DAO_OBJECT :
 		printf( "object: %s\n", value->xObject.defClass->className->chars );
 		break;
+	case DAO_NAMESPACE :
+		printf( "namespace: %s\n", value->xNamespace.name->chars );
+		break;
 	}
 	printf( "%16p %2i %i %i\n", value, value->type, value->xGC.refCount, value->xGC.cycRefCount );
 }
@@ -1069,26 +1072,31 @@ void DaoGC_PrepareCandidates()
 	uchar_t delay = cycle && gcWorker.finalizing == 0 ? DAO_VALUE_DELAYGC : 0;
 	daoint i, k = 0;
 	int delay2;
-	for(i=0; i<freeList->size; ++i) freeList->items.pValue[i]->xGC.work = 1;
+
 	gcWorker.delayMask = delay;
-	/* damping to avoid "delay2" changing too dramatically: */
+	/* Damping to avoid "delay2" changing too dramatically: */
 	gcWorker.mdelete = 0.5*gcWorker.mdelete + 0.5*freeList->size;
 	delay2 = gcWorker.cycle % (1 + 100 / (1 + gcWorker.mdelete));
 	if( gcWorker.finalizing ) delay2 = 0;
+
 	if( delay == 0 ){
-		/* push delayed objects into the working list for full GC scan: */
+		/* Push delayed objects into the working list for full GC scan: */
 		for(i=0; i<delayList->size; ++i){
 			value = delayList->items.pValue[i];
 			value->xGC.delay = 0;
-			if( value->xGC.work ) continue; /* Skip objects in freeList; */
+			if( value->xGC.dead ) continue;
 			DList_PushBack2( workList, value );
 		}
 		delayList->size = 0;
 	}else if( freeList->size ){
+		/*
+		// It is ok to have redundant items in delayList,
+		// because the redundancy will be removed after
+		// they are pushed into workList.
+		*/
 		for(i=0,k=0; i<delayList->size; ++i){
 			value = delayList->items.pValue[i];
-			if( value->xGC.work | value->xGC.delay ) continue;
-			value->xGC.delay = 1;
+			if( value->xGC.dead ) continue;
 			delayList->items.pValue[k++] = value;
 		}
 		delayList->size = k;
@@ -1096,7 +1104,7 @@ void DaoGC_PrepareCandidates()
 	/* Remove possible redundant items: */
 	for(i=0,k=0; i<workList->size; ++i){
 		value = workList->items.pValue[i];
-		if( value->xGC.work | value->xGC.delay ) continue;
+		if( value->xGC.work | value->xGC.delay | value->xGC.dead ) continue;
 		if( (value->xBase.trait & delay) || (delay2 && value->xBase.refCount) ){
 			/*
 			// for non full scan cycles, delay scanning on objects with DAO_VALUE_DELAYGC trait;
@@ -1124,8 +1132,8 @@ void DaoGC_PrepareCandidates()
 	types->size = 0;
 	for(i=0; i<freeList->size; i++){
 		if( freeList->items.pValue[i]->type == DAO_TYPE ){
-			freeList->items.pValue[i]->xGC.work = 0;
-			DList_PushBack2( types, freeList->items.pValue[i] ); /* should be freed after cdata; */
+			/* DaoType should be freed after DaoCdata; */
+			DList_PushBack2( types, freeList->items.pValue[i] );
 			continue;
 		}
 		DaoValue_Delete( freeList->items.pValue[i] );
@@ -1386,13 +1394,16 @@ static void DaoCGC_FreeGarbage()
 		value->xGC.work = value->xGC.alive = 0;
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
 		if( value->xGC.refCount !=0 ){
+#ifdef DEBUG
 			printf( "refCount not zero %i: %i\n", value->type, value->xGC.refCount );
 			DaoGC_PrintValueInfo( value );
+#endif
 
 			value->xGC.delay = 1;
 			DList_PushBack2( gcWorker.delayList, value );
 			continue;
 		}
+		value->xGC.dead = 1;
 		DList_PushBack2( gcWorker.freeList, value );
 	}
 	DaoObjectLogger_SwitchBuffer();
@@ -1640,12 +1651,15 @@ void DaoIGC_FreeGarbage()
 		value->xGC.work = value->xGC.alive = 0;
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
 		if( value->xGC.refCount !=0 ){
+#ifdef DEBUG
 			printf(" refCount not zero %p %i: %i\n", value, value->type, value->xGC.refCount);
 			DaoGC_PrintValueInfo( value );
+#endif
 			value->xGC.delay = 1;
 			DList_PushBack2( gcWorker.delayList, value );
 			continue;
 		}
+		value->xGC.dead = 1;
 		DList_PushBack2( gcWorker.freeList, value );
 		if( j >= min ) break;
 	}
@@ -1682,8 +1696,6 @@ void cycRefCountDecrement( DaoValue *value )
 		printf( "cycRefCount<0 : %2i %p\n", value->type, value );
 		DaoGC_PrintValueInfo( value );
 #endif
-		/*
-		 */
 		value->xGC.cycRefCount = 0;
 	}
 }

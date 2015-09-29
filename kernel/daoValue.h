@@ -80,10 +80,11 @@ union DaoValue
 		uchar_t  type;
 		uchar_t  subtype;
 		uchar_t  trait;
-		uchar_t  work  : 1; /* mark objects in the work buffer; */
-		uchar_t  alive : 1; /* mark alive objects (scanned for reachable objects); */
+		uchar_t  work  : 1; /* mark objects in the working list; */
 		uchar_t  delay : 1; /* mark objects in the delayed list; */
-		uchar_t  dummy : 5;
+		uchar_t  alive : 1; /* mark alive objects (scanned for reachable objects); */
+		uchar_t  dead  : 1; /* mark objects in the free list; */
+		uchar_t  dummy : 4;
 		int  refCount;
 		int  cycRefCount;
 	} xGC;

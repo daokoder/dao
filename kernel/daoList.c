@@ -105,7 +105,7 @@ static void DList_DeleteItems( DList *self, daoint M, daoint N )
 {
 	daoint i;
 	switch( self->type ){
-	case DAO_DATA_VALUE  : for(i=M; i<N; i++) GC_DecRC( self->items.pValue[i] ); break;
+	case DAO_DATA_VALUE  : for(i=M; i<N; i++) DaoValue_Clear( self->items.pValue+i ); break;
 	case DAO_DATA_VMCODE : for(i=M; i<N; i++) DaoVmCodeX_Delete( self->items.pVmc[i] ); break;
 	case DAO_DATA_TOKEN  : for(i=M; i<N; i++) DaoToken_Delete( self->items.pToken[i] ); break;
 	case DAO_DATA_STRING : for(i=M; i<N; i++) DString_Delete( self->items.pString[i] ); break;
@@ -340,13 +340,16 @@ void* DList_PopFront( DList *self )
 	size_t moffset = 0xffffffff;
 	if( self->size == 0 ) return NULL;
 
-	ret = self->items.pVoid[0];
-	if( self->type ) DList_DeleteItem( self, ret );
-
 	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
+	ret = self->items.pVoid[0];
 	self->size --;
 	self->offset ++;
 	self->items.pVoid ++;
+	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
+
+	if( self->type ) DList_DeleteItem( self, ret );
+
+	if( self->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	if( self->offset >= moffset ){
 		self->offset /= 2;
 		memmove( buf + self->offset, self->items.pVoid, self->size*sizeof(void*) );

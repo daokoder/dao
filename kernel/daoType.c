@@ -1668,7 +1668,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 	}
 
 	DaoType_CheckAttributes( copy );
-	node = DMap_Find( ns->abstypes, copy->name );
+	type = DaoNamespace_FindType( ns, copy->name );
 #if 0
 	if( strstr( copy->name->chars, "map<" ) == copy->name->chars ){
 		printf( "%s  %p  %p\n", copy->name->chars, copy, node );
@@ -1676,9 +1676,9 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		print_trace();
 	}
 #endif
-	if( node ){
+	if( type ){
 		DMap_Erase2( defs, copy );
-		return node->value.pType;
+		return type;
 	}else{
 		/* reference count already increased */
 		DaoNamespace_AddType( ns, copy->name, copy );
