@@ -169,9 +169,7 @@ void DaoValue_MarkConst( DaoValue *self )
 
 void DaoValue_Clear( DaoValue **self )
 {
-	DaoValue *value = *self;
-	*self = NULL;
-	GC_DecRC( value );
+	DaoGC_Assign( self, NULL );
 }
 
 

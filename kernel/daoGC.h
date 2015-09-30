@@ -59,6 +59,7 @@ DAO_DLL void DaoCGC_Start();
 DAO_DLL void DaoGC_IncRC( DaoValue *dbase );
 DAO_DLL void DaoGC_DecRC( DaoValue *dbase );
 DAO_DLL void DaoGC_Assign( DaoValue **dest, DaoValue *src );
+DAO_DLL void DaoGC_Assign2( DaoValue **dest, DaoValue *src );
 
 DAO_DLL void DaoGC_IncRCs( DList *dbases );
 DAO_DLL void DaoGC_DecRCs( DList *dbases );

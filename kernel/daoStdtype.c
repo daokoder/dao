@@ -2498,7 +2498,7 @@ int DaoList_Insert( DaoList *self, DaoValue *item, daoint pos )
 		return 1;
 	}
 	DList_Insert( self->value, NULL, pos );
-	self->value->items.pValue[ pos ] = temp;
+	DaoGC_Assign2( self->value->items.pValue + pos, temp );
 	return 0;
 }
 int DaoList_PushFront( DaoList *self, DaoValue *item )
@@ -2510,7 +2510,7 @@ int DaoList_PushFront( DaoList *self, DaoValue *item )
 		return 1;
 	}
 	DList_PushFront( self->value, NULL );
-	self->value->items.pValue[ 0 ] = temp;
+	DaoGC_Assign2( self->value->items.pValue, temp );
 	return 0;
 }
 int DaoList_PushBack( DaoList *self, DaoValue *item )
@@ -2522,7 +2522,7 @@ int DaoList_PushBack( DaoList *self, DaoValue *item )
 		return 1;
 	}
 	DList_PushBack( self->value, NULL );
-	self->value->items.pValue[ self->value->size - 1 ] = temp;
+	DaoGC_Assign2( self->value->items.pValue + self->value->size - 1, temp );
 	return 0;
 }
 void DaoList_PopFront( DaoList *self )

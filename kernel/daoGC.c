@@ -937,9 +937,9 @@ void DaoGC_Finish()
 void DaoGC_IncRC( DaoValue *value )
 {
 	if( value == NULL ) return;
-	if( value->type >= DAO_ENUM ) value->xGC.cycRefCount ++;
 	if( gcWorker.concurrent ){
 		DMutex_Lock( & gcWorker.mutex_idle_list );
+		if( value->type >= DAO_ENUM ) value->xGC.cycRefCount ++;
 		value->xGC.refCount ++;
 		DMutex_Unlock( & gcWorker.mutex_idle_list );
 #ifdef DAO_TRACE_ADDRESS
@@ -947,6 +947,7 @@ void DaoGC_IncRC( DaoValue *value )
 #endif
 		return;
 	}
+	if( value->type >= DAO_ENUM ) value->xGC.cycRefCount ++;
 	value->xGC.refCount ++;
 #ifdef DAO_TRACE_ADDRESS
 	DaoGC_TraceValue( value );
@@ -969,11 +970,13 @@ void DaoGC_Assign( DaoValue **dest, DaoValue *src )
 {
 	DaoValue *value = *dest;
 	if( src == value ) return;
-	if( src && src->type >= DAO_ENUM ) src->xGC.cycRefCount ++;
 	if( gcWorker.concurrent ){
 		int bl;
 		DMutex_Lock( & gcWorker.mutex_idle_list );
-		if( src ) src->xGC.refCount ++;
+		if( src ){
+			if( src->type >= DAO_ENUM ) src->xGC.cycRefCount ++;
+			src->xGC.refCount ++;
+		}
 #ifdef DAO_TRACE_ADDRESS
 		DaoGC_TraceValue( src );
 #endif
@@ -983,12 +986,27 @@ void DaoGC_Assign( DaoValue **dest, DaoValue *src )
 		if( bl ) DaoCGC_TryBlock();
 		return;
 	}
-	if( src ) src->xGC.refCount ++;
+	if( src ){
+		if( src->type >= DAO_ENUM ) src->xGC.cycRefCount ++;
+		src->xGC.refCount ++;
+	}
 #ifdef DAO_TRACE_ADDRESS
 	DaoGC_TraceValue( src );
 #endif
 	*dest = src;
 	if( value ) DaoGC_DecRC2( value );
+}
+void DaoGC_Assign2( DaoValue **dest, DaoValue *src )
+{
+	DaoValue *value = *dest;
+	if( src == value ) return;
+	if( gcWorker.concurrent ){
+		DMutex_Lock( & gcWorker.mutex_idle_list );
+		*dest = src;
+		DMutex_Unlock( & gcWorker.mutex_idle_list );
+		return;
+	}
+	*dest = src;
 }
 void DaoGC_TryInvoke()
 {
@@ -1101,6 +1119,12 @@ void DaoGC_PrepareCandidates()
 		}
 		delayList->size = k;
 	}
+	for(i=0,k=0; i<workList->size; ++i){
+		value = workList->items.pValue[i];
+		if( value->xGC.work ){
+			DaoGC_PrintValueInfo( value );
+		}
+	}
 	/* Remove possible redundant items: */
 	for(i=0,k=0; i<workList->size; ++i){
 		value = workList->items.pValue[i];
@@ -1132,7 +1156,11 @@ void DaoGC_PrepareCandidates()
 	types->size = 0;
 	for(i=0; i<freeList->size; i++){
 		if( freeList->items.pValue[i]->type == DAO_TYPE ){
-			/* DaoType should be freed after DaoCdata; */
+			/*
+			// DaoType should be freed after DaoCdata, because
+			// the function pointers for free the wrapped data
+			// is stored in association with DaoType;
+			*/
 			DList_PushBack2( types, freeList->items.pValue[i] );
 			continue;
 		}
@@ -1336,14 +1364,14 @@ void DaoCGC_CycRefCountIncScan()
 	if( gcWorker.finalizing ){
 		for( i=0; i<workList->size; i++ ){
 			DaoValue *value = workList->items.pValue[i];
-			if( value->xGC.cycRefCount >0 ) DaoGC_PrintValueInfo( value );
+			if( value->xGC.cycRefCount > 0 ) DaoGC_PrintValueInfo( value );
 		}
 	}
 #endif
 	for( i=0; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.alive ) continue;
-		if( value->xGC.cycRefCount >0 ){
+		if( value->xGC.cycRefCount > 0 ){
 			auxList->size = 0;
 			value->xGC.alive = 1;
 			DList_PushBack2( auxList, value );
@@ -1393,9 +1421,11 @@ static void DaoCGC_FreeGarbage()
 		DaoValue *value = workList->items.pValue[i];
 		value->xGC.work = value->xGC.alive = 0;
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
-		if( value->xGC.refCount !=0 ){
-#ifdef DEBUG
-			printf( "refCount not zero %i: %i\n", value->type, value->xGC.refCount );
+		if( value->xGC.refCount ){
+			/* This is possible since Cyclic RefCount is not updated atomically: */
+#ifdef DEBUG_TRACE
+			printf("RefCount not zero %p %i: %i %i\n", value, value->type,
+					value->xGC.refCount, value->xGC.cycRefCount );
 			DaoGC_PrintValueInfo( value );
 #endif
 
@@ -1473,7 +1503,7 @@ void DaoIGC_Continue()
 			daoint i;
 			for( i=0; i<gcWorker.workList->size; i++ ){
 				DaoValue *value = gcWorker.workList->items.pValue[i];
-				if( value->xGC.cycRefCount >0 ) DaoGC_PrintValueInfo( value );
+				if( value->xGC.cycRefCount > 0 ) DaoGC_PrintValueInfo( value );
 			}
 		}
 #endif
@@ -1576,7 +1606,7 @@ void DaoIGC_CycRefCountIncScan()
 	for( ; i<workList->size; i++ ){
 		DaoValue *value = workList->items.pValue[i];
 		if( value->xGC.alive ) continue;
-		if( value->xGC.cycRefCount >0 ){
+		if( value->xGC.cycRefCount > 0 ){
 			auxList->size = 0;
 			value->xGC.alive = 1;
 			DList_PushBack2( auxList, value );
@@ -1650,9 +1680,11 @@ void DaoIGC_FreeGarbage()
 		DaoValue *value = workList->items.pValue[i];
 		value->xGC.work = value->xGC.alive = 0;
 		if( value->xGC.cycRefCount && value->xGC.refCount ) continue;
-		if( value->xGC.refCount !=0 ){
-#ifdef DEBUG
-			printf(" refCount not zero %p %i: %i\n", value, value->type, value->xGC.refCount);
+		if( value->xGC.refCount ){
+			/* This is possible since Cyclic RefCount is not updated atomically: */
+#ifdef DEBUG_TRACE
+			printf("RefCount not zero %p %i: %i %i\n", value, value->type,
+					value->xGC.refCount, value->xGC.cycRefCount );
 			DaoGC_PrintValueInfo( value );
 #endif
 			value->xGC.delay = 1;
@@ -1677,8 +1709,9 @@ void DaoIGC_FreeGarbage()
 void cycRefCountDecrement( DaoValue *value )
 {
 	if( value == NULL ) return;
-	/* do not scan simple data types, as they cannot from cyclic structure: */
+	/* Do not scan simple data types, as they cannot from cyclic structure: */
 	if( value->type < DAO_ENUM ) return;
+	if( value->xGC.delay ) return;
 	if( (value->xBase.trait & gcWorker.delayMask) && value->xGC.delay == 0 ){
 		DList_PushBack2( gcWorker.delayList, value );
 		value->xGC.cycRefCount = value->xGC.refCount;
@@ -1691,20 +1724,32 @@ void cycRefCountDecrement( DaoValue *value )
 	}
 	value->xGC.cycRefCount --;
 
-	if( value->xGC.cycRefCount<0 ){
-#if DEBUG
-		printf( "cycRefCount<0 : %2i %p\n", value->type, value );
+	/*
+	// Cyclic RefCount could become negative if it is initialized right after
+	// its RefCount reaches zero. This could be avoided if the operation on
+	// Cyclic RefCount is atomic. However, locks are currently used to ensure
+	// atomicity of such operations, and it is computationally expensive to
+	// use locking on Cyclic RefCount, so race condition is allowed on Cyclic
+	// RefCount.
+	//
+	// Please note that the GC works correctly even if Cyclic RefCount is not
+	// updated atomically. Because the GC performs two rounds of increment step
+	// for Cyclic RefCount, which can guarantee that Cyclic RefCount will become
+	// positive for alive objects.
+	*/
+#if DEBUG_TRACE
+	if( value->xGC.cycRefCount < 0 ){
+		printf( "CycRefCount become negative: %2i %p %i %i %i\n", value->type, value );
 		DaoGC_PrintValueInfo( value );
-#endif
-		value->xGC.cycRefCount = 0;
 	}
+#endif
 }
 void cycRefCountIncrement( DaoValue *value )
 {
 	if( value == NULL ) return;
 	/* do not scan simple data types, as they cannot from cyclic structure: */
 	if( value->type < DAO_ENUM ) return;
-	value->xGC.cycRefCount++;
+	value->xGC.cycRefCount ++;
 	if( ! value->xGC.alive ){
 		value->xGC.alive = 1;
 		DList_PushBack2( gcWorker.auxList, value );
@@ -1770,6 +1815,7 @@ void directRefCountDecrements( DList *list )
 static int DaoGC_CycRefCountDecScan( DaoValue *value )
 {
 	int count = 1;
+	if( value->xGC.delay ) return 0;
 	switch( value->type ){
 	case DAO_ENUM :
 		{
@@ -1990,6 +2036,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 static int DaoGC_CycRefCountIncScan( DaoValue *value )
 {
 	int count = 1;
+	if( value->xGC.delay ) return 0;
 	switch( value->type ){
 	case DAO_ENUM :
 		{
@@ -2210,6 +2257,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 static int DaoGC_RefCountDecScan( DaoValue *value )
 {
 	int count = 1;
+	if( value->xGC.delay ) return 0;
 	switch( value->type ){
 	case DAO_ENUM :
 		{
