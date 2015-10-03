@@ -1078,7 +1078,14 @@ static void DaoGC_FreeSimple()
 
 #define DAO_FULL_GC_SCAN_CYCLE 16
 
-/* The implementation makes sure the GC fields are modified only by the GC thread! */
+/*
+// Notes:
+// -- The implementation makes sure the GC flags are modified only by the GC thread;
+// -- The "work" flag is set to true only for objects that is in the workList buffer;
+// -- The "delay" flag is set to true only for objects that is in the delayList buffer;
+// -- The "dead" flag is set to true only for objects that is in the freeList buffer;
+// -- The "delay" flag is set/unset when an object enters/leaves the delayList buffer;
+*/
 void DaoGC_PrepareCandidates()
 {
 	DaoValue *value;
@@ -1171,6 +1178,21 @@ void DaoGC_PrepareCandidates()
 }
 
 enum DaoGCActions{ DAO_GC_DEC, DAO_GC_INC, DAO_GC_BREAK };
+
+void DaoGC_LockRefCount()
+{
+	if( gcWorker.concurrent == 0 ) return;
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & gcWorker.mutex_idle_list );
+#endif
+}
+void DaoGC_UnlockRefCount()
+{
+	if( gcWorker.concurrent == 0 ) return;
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & gcWorker.mutex_idle_list );
+#endif
+}
 
 void DaoGC_LockData()
 {
@@ -1737,12 +1759,21 @@ void cycRefCountDecrement( DaoValue *value )
 	// for Cyclic RefCount, which can guarantee that Cyclic RefCount will become
 	// positive for alive objects.
 	*/
-#if DEBUG_TRACE
 	if( value->xGC.cycRefCount < 0 ){
+		/*
+		// Always reset the Cyclic RefCount to zero when it falls below zero.
+		// It will stay zero if it is true garbage object, otherwise, the increment
+		// steps will increase it to a positive value. It is necessary to reset
+		// it to zero, because at the end of the GC cycle, only objects with zero
+		// Cyclic RefCount will be considered as garbages.
+		*/
+		value->xGC.cycRefCount = 0;
+
+#if DEBUG_TRACE
 		printf( "CycRefCount become negative: %2i %p %i %i %i\n", value->type, value );
 		DaoGC_PrintValueInfo( value );
-	}
 #endif
+	}
 }
 void cycRefCountIncrement( DaoValue *value )
 {

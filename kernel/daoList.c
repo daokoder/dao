@@ -130,8 +130,10 @@ void DList_Resize( DList *self, daoint size, void *val )
 		self->items.pVoid = buf;
 		self->offset = 0;
 	}
-	/* When resize() is called, probably this is the intended size,
-	 * not to be changed frequently. */
+	/*
+	// When resize() is called, probably this is the intended size,
+	// not to be changed frequently.
+	*/
 	if( size >= self->bufsize || size < self->bufsize /2 ){
 		self->bufsize = size;
 		self->items.pVoid = (void**) dao_realloc( buf, self->bufsize*sizeof(void*) );
