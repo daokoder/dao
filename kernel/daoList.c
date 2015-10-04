@@ -191,8 +191,10 @@ void DList_Swap( DList *left, DList *right )
 	daoint tmpBufSize = left->bufsize;
 	size_t tmpOffset = left->offset;
 	void **tmpItem = left->items.pVoid;
+
 	assert( left->type == right->type );
 	assert( left->type != DAO_DATA_VALUE );
+
 	if( left->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	left->size = right->size;
 	left->offset = right->offset;
@@ -224,15 +226,12 @@ void DList_Insert( DList *self, void *val, daoint id )
 	}
 	if( self->type && val != NULL ){
 		for( i=self->size; i>id; i-- ) self->items.pVoid[i] = self->items.pVoid[i-1];
-		self->items.pVoid[ id ] = NULL;
+		self->items.pVoid[ id ] = DList_CopyItem( self, val );
 	}else{
 		for( i=self->size; i>id; i-- ) self->items.pVoid[i] = self->items.pVoid[i-1];
 		self->items.pVoid[id] = val;
 	}
 	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
-	if( self->type && val != NULL ){
-		self->items.pVoid[ id ] = DList_CopyItem( self, val );
-	}
 	self->size++;
 }
 void DList_InsertList( DList *self, daoint at, DList *list, daoint id, daoint n )
@@ -324,14 +323,11 @@ void* DList_PushFront( DList *self, void *val )
 		self->items.pVoid = buf + self->offset - 1;
 	}
 	if( self->type && val != NULL ){
-		self->items.pVoid[0] = NULL;
+		self->items.pVoid[0] = DList_CopyItem( self, val );
 	}else{
 		self->items.pVoid[0] = val;
 	}
 	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
-	if( self->type && val != NULL ){
-		self->items.pVoid[0] = DList_CopyItem( self, val );
-	}
 	self->size ++;
 	self->offset --;
 	return self->items.pVoid[0];
@@ -380,14 +376,11 @@ void* DList_PushBack( DList *self, void *val )
 		self->items.pVoid = buf + self->offset;
 	}
 	if( self->type && val != NULL ){
-		self->items.pVoid[ self->size ] = NULL;
+		self->items.pVoid[ self->size ] = DList_CopyItem( self, val );
 	}else{
 		self->items.pVoid[ self->size ] = val;
 	}
 	if( self->type == DAO_DATA_VALUE ) DaoGC_UnlockData();
-	if( self->type && val != NULL ){
-		self->items.pVoid[ self->size ] = DList_CopyItem( self, val );
-	}
 	self->size++;
 	return self->items.pVoid[ self->size - 1 ];
 }
