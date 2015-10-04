@@ -1049,6 +1049,12 @@ void DaoGC_Assign( DaoValue **dest, DaoValue *src )
 	*dest = src;
 	if( value ) DaoGC_DecRC2( value );
 }
+void DaoGC_Assign2( DaoValue **dest, DaoValue *src )
+{
+	DaoValue *value = *dest;
+	if( src == value ) return;
+	*dest = src;
+}
 void DaoGC_TryInvoke()
 {
 	DaoIGC_TryInvoke();
