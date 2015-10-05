@@ -2719,6 +2719,8 @@ static void DaoMap_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 		iter->values[1]->xCdata.data = node;
 	}else if( pid->type == DAO_TUPLE && pid->xTuple.size == 2 ){
 		DaoMap_GetItem2( self0, proc, pid->xTuple.values, 2 );
+	}else if( pid->type == DAO_NONE ){
+		DaoProcess_PutValue( proc, self0 );
 	}else{
 		DNode *node = DaoMap_Find2( self, pid, proc );
 		if( node ==NULL ){
@@ -2745,11 +2747,8 @@ static void DaoMap_GetItem2( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 	DaoMap *map = DaoProcess_PutMap( proc, self->value->hashing );
 	DNode *node1 = DMap_First( self->value );
 	DNode *node2 = NULL;
-	int cmp = DaoValue_ComparePro( ids[0], ids[1], proc );
-	if( cmp > 0 ) return;
 	if( ids[0]->type ) node1 = DaoMap_FindGE( self, ids[0], proc );
 	if( ids[1]->type ) node2 = DaoMap_FindLE( self, ids[1], proc );
-	if( cmp == 0 && node1 != node2 ) return;
 	if( node2 ) node2 = DMap_Next(self->value, node2 );
 	for(; node1 != node2; node1 = DMap_Next(self->value, node1 ) ){
 		DaoMap_Insert2( map, node1->key.pValue, node1->value.pValue, proc );
