@@ -7715,6 +7715,7 @@ static DaoEnode DaoParser_ParseOperator( DaoParser *self, DaoEnode LHS, int prec
 
 			DaoParser_PushTokenIndices( self, pos, pos, pos );
 			result.reg = DaoParser_PushRegister( self );
+			result.konst = 0;
 			if( LHS.last == NULL ) LHS.last = RHS1.prev;
 			test = DaoParser_InsertCode( self, LHS.last, DVM_TEST, LHS.reg, 0, 0 );
 			jump = DaoParser_InsertCode( self, RHS2.prev, DVM_GOTO, 0, 0, 0 );
