@@ -1050,7 +1050,16 @@ static DaoType* DaoInferencer_UpdateTypeX( DaoInferencer *self, int id, DaoType 
 	/* If c == 0, the de-const type should be used: */
 	if( type->invar && c == 0 ) type = DaoType_GetBaseType( type );
 
-	if( type->attrib & DAO_TYPE_SPEC ) type = DaoType_DefineTypes( type, NS, defs );
+	if( types[id] != NULL ){
+		/*
+		// Specialize the declared or previously inferred (not completely specialized) type.
+		// For example:  var x: @T|none = (1, 2);
+		*/
+		if( DaoType_MatchTo( type, types[id], defs ) == 0 ) return types[id];
+		type = DaoType_DefineTypes( types[id], NS, defs );
+	}else{
+		if( type->attrib & DAO_TYPE_SPEC ) type = DaoType_DefineTypes( type, NS, defs );
+	}
 
 	GC_Assign( & types[id], type );
 	return types[id];
