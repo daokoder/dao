@@ -1055,6 +1055,7 @@ static DaoType* DaoInferencer_UpdateTypeX( DaoInferencer *self, int id, DaoType 
 		// Specialize the declared or previously inferred (not completely specialized) type.
 		// For example:  var x: @T|none = (1, 2);
 		*/
+		DaoType_ResetTypeHolders( types[id], defs );
 		if( DaoType_MatchTo( type, types[id], defs ) == 0 ) return types[id];
 		type = DaoType_DefineTypes( types[id], NS, defs );
 	}else{
