@@ -6655,6 +6655,7 @@ static DaoEnode DaoParser_ParseParenthesis( DaoParser *self )
 			DaoParser_PushTokenIndices( self, start, rb, self->curToken-1 );
 			DaoParser_AddCode( self, DVM_CAST, enode.reg, it, regC );
 			result.reg = regC;
+			result.lvalue = 0;
 			result.first = back->next;
 			result.last = result.update = self->vmcLast;
 			return result;
@@ -6995,7 +6996,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 		if( last != self->vmcLast ) result.first = result.last = result.update = self->vmcLast;
 		result.reg = regLast;
 		result.konst = cst;
-		result.lvalue = 1;
+		result.lvalue = cst == 0;
 		value = regLast >= 0 && cst ? DaoParser_GetVariable( self, cst ) : NULL;
 		if( regLast < 0 || value == (DaoValue*) self->vmSpace->daoNamespace ){
 			cur = start;
@@ -7007,6 +7008,7 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 			if( tki2 == DTOK_LB && (tki >= DKEY_CEIL && tki <= DKEY_TANH) ){
 				DList_Erase( self->errors, count, -1 );
 				result = DaoParser_ParseIntrinsicMath( self, tki, cur, end );
+				result.lvalue = 0;
 				start = self->curToken - 1;
 			}
 		}
@@ -7589,7 +7591,6 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop, int eltype )
 	if( result.reg < 0 ) return result;
 	if( oper == DAO_OPER_ADD ) return result;
 
-	result.lvalue = 0;
 
 	switch( oper ){
 	case DAO_OPER_NOT : code = DVM_NOT; break;
@@ -7600,10 +7601,15 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop, int eltype )
 	case DAO_OPER_MOD   : code = DVM_SIZE; break;
 	default : ec = DAO_INVALID_EXPRESSION; goto ErrorParsing;
 	}
-	if( result.konst && (code == DVM_ADD || code == DVM_SUB) ){
-		ec = DAO_EXPR_MODIFY_CONSTANT;
-		goto ErrorParsing;
+	if( code == DVM_ADD || code == DVM_SUB ){
+		if( result.konst ){
+			ec = DAO_EXPR_MODIFY_CONSTANT;
+			goto ErrorParsing;
+		}else if( result.lvalue == 0 ){
+			goto InvalidRvalueModificatioin;
+		}
 	}
+	result.lvalue = 0;
 
 	opa = result.reg;
 	end = self->curToken - 1;
@@ -7643,6 +7649,10 @@ static DaoEnode DaoParser_ParseUnary( DaoParser *self, int stop, int eltype )
 	result.prev = back;
 	result.first = result.last = self->vmcLast;
 	if( result.update == NULL ) result.update = self->vmcLast;
+	return result;
+InvalidRvalueModificatioin:
+	DaoParser_Error3( self, DAO_EXPR_MODIFY_RVALUE, start );
+	result.reg = -1;
 	return result;
 ErrorParsing:
 	DaoParser_Error( self, ec, & self->tokens->items.pToken[start]->string );
