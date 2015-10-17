@@ -24,7 +24,10 @@ bundle = bundler.AddExecutable( daovm_bundle, bundle_main, bundle_script )
 std.load( "FindDao.dao" )
 
 daovm = DaoMake::FindPackage( "Dao" )
-if( daovm != none ) bundle.UseStaticLibrary( daovm, "dao" )
+if( daovm != none ){
+	bundle.UseStaticLibrary( daovm, "dao" )
+	bundle.UseStaticLibrary( daovm, "dao_aux" )
+}
 
 finders = DaoMake::ReadFile( daovm_bundle + ".dar.finders" )
 
