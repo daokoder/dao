@@ -69,11 +69,14 @@ DaoType* DaoPipeStream_Type()
 }
 
 
+static int DaoFileStream_AtEnd( DaoStream *stream );
+
 static int DaoFileStream_Read( DaoStream *stream, DString *data, int count )
 {
 	DaoFileStream *self = (DaoFileStream*) stream;
 
 	DString_Reset( data, 0 );
+	if( DaoFileStream_AtEnd( stream ) ) return -1;
 	if( count >= 0 ){
 		DString_Reset( data, count );
 		DString_Reset( data, fread( data->chars, 1, count, self->file ) );
@@ -108,6 +111,7 @@ static int DaoStringStream_Read( DaoStream *stream, DString *data, int count )
 	DaoStringStream *self = (DaoStringStream*) stream;
 
 	DString_Reset( data, 0 );
+	if( self->offset >= self->base.buffer->size ) return -1;
 	if( count >= 0 ){
 		DString_SubString( self->base.buffer, data, self->offset, count );
 		self->offset += data->size;

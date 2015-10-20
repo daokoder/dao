@@ -327,8 +327,8 @@ int DaoStream_ReadLine( DaoStream *self, DString *line )
 {
 	DString_Reset( line, 0 );
 	if( self->Read == NULL ) return 0;
-	self->Read( self, line, -1 );
-	return self->Read != NULL;
+	if( self->AtEnd && self->AtEnd( self ) ) return 0;
+	return self->Read( self, line, -1 ) >= 0;
 }
 int DaoFile_ReadLine( FILE *fin, DString *line )
 {
@@ -720,6 +720,7 @@ static void DaoStream_ReadLines( DaoStream *self, DaoList *list, DaoProcess *pro
 	if( sect == NULL ){
 		line = DaoString_New();
 		while( (count == 0 || (i++) < count) && DaoStream_ReadLine( self, line->value ) ){
+			if( line->value->size == 0 && self->AtEnd != NULL && self->AtEnd( self ) ) break;
 			if( chop ) DString_Chop( line->value, 0 );
 			DaoList_Append( list, (DaoValue*) line );
 		}
@@ -733,6 +734,7 @@ static void DaoStream_ReadLines( DaoStream *self, DaoList *list, DaoProcess *pro
 			line = (DaoString*) DaoProcess_SetValue( proc, sect->a, (DaoValue*)(void*) &tmp );
 		}
 		while( (count == 0 || (i++) < count) && DaoStream_ReadLine( self, line->value ) ){
+			if( line->value->size == 0 && self->AtEnd != NULL && self->AtEnd( self ) ) break;
 			if( chop ) DString_Chop( line->value, 0 );
 			proc->topFrame->entry = entry;
 			DaoProcess_Execute( proc );
