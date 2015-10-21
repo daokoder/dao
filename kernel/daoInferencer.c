@@ -4980,6 +4980,7 @@ SkipChecking:
 		case DVM_GETF_KC :
 			if( types[opa]->tid != DAO_CLASS ) goto NotMatch;
 			klass = & types[opa]->aux->xClass;
+			if( opb >= klass->constants->size ) goto InvIndex;
 			ct = DaoNamespace_GetType( NS, klass->constants->items.pConst[ opb ]->value );
 			DaoInferencer_UpdateType( self, opc, ct );
 			AssertTypeMatching( ct, types[opc], defs );
@@ -4991,6 +4992,7 @@ SkipChecking:
 		case DVM_GETF_KG :
 			if( types[opa]->tid != DAO_CLASS ) goto NotMatch;
 			klass = & types[opa]->aux->xClass;
+			if( opb >= klass->variables->size ) goto InvIndex;
 			ct = klass->variables->items.pVar[ opb ]->dtype;
 			DaoInferencer_UpdateType( self, opc, ct );
 			AssertTypeMatching( ct, types[opc], defs );
@@ -5002,6 +5004,7 @@ SkipChecking:
 		case DVM_GETF_OC :
 			if( types[opa]->tid != DAO_OBJECT ) goto NotMatch;
 			klass = & types[opa]->aux->xClass;
+			if( opb >= klass->constants->size ) goto InvIndex;
 			ct = DaoNamespace_GetType( NS, klass->constants->items.pConst[ opb ]->value );
 			DaoInferencer_UpdateType( self, opc, ct );
 			AssertTypeMatching( ct, types[opc], defs );
@@ -5017,6 +5020,7 @@ SkipChecking:
 		case DVM_GETF_OG :
 			if( types[opa]->tid != DAO_OBJECT ) goto NotMatch;
 			klass = & types[opa]->aux->xClass;
+			if( opb >= klass->variables->size ) goto InvIndex;
 			ct = klass->variables->items.pVar[ opb ]->dtype;
 			DaoInferencer_UpdateType( self, opc, ct );
 			AssertTypeMatching( ct, types[opc], defs );
@@ -5028,6 +5032,7 @@ SkipChecking:
 		case DVM_GETF_OV :
 			if( types[opa]->tid != DAO_OBJECT ) goto NotMatch;
 			klass = & types[opa]->aux->xClass;
+			if( opb >= klass->instvars->size ) goto InvIndex;
 			ct = klass->instvars->items.pVar[ opb ]->dtype;
 			DaoInferencer_UpdateType( self, opc, ct );
 			AssertTypeMatching( ct, types[opc], defs );
@@ -5040,6 +5045,7 @@ SkipChecking:
 			if( ct == NULL ) goto ErrorTyping;
 			if( types[opa] ==NULL || types[opc] ==NULL ) goto NotMatch;
 			if( ct->tid != DAO_CLASS ) goto NotMatch;
+			if( opb >= ct->aux->xClass.variables->size ) goto InvIndex;
 			ct = ct->aux->xClass.variables->items.pVar[ opb ]->dtype;
 			if( ct && ct->invar && !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
 			if( code == DVM_SETF_KG ){
@@ -5057,6 +5063,7 @@ SkipChecking:
 			if( ct == NULL ) goto ErrorTyping;
 			if( types[opa] ==NULL || types[opc] ==NULL ) goto NotMatch;
 			if( ct->tid != DAO_OBJECT ) goto NotMatch;
+			if( opb >= ct->aux->xClass.variables->size ) goto InvIndex;
 			ct = ct->aux->xClass.variables->items.pVar[ opb ]->dtype;
 			if( ct && ct->invar && !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
 			if( code == DVM_SETF_OG ){
@@ -5072,6 +5079,7 @@ SkipChecking:
 			if( ct == NULL ) goto ErrorTyping;
 			if( types[opa] ==NULL || types[opc] ==NULL ) goto NotMatch;
 			if( ct->tid != DAO_OBJECT ) goto NotMatch;
+			if( opb >= ct->aux->xClass.instvars->size ) goto InvIndex;
 			ct = ct->aux->xClass.instvars->items.pVar[ opb ]->dtype;
 			if( ct && ct->invar && !(routine->attribs & DAO_ROUT_INITOR) ) goto ModifyConstant;
 			if( code == DVM_SETF_OV ){

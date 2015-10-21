@@ -3,7 +3,7 @@ io.writeln( "DaoMake: using Unix settings!" )
 
 DaoMake::Platforms["UNIX"]     = 1
 
-DaoMake::Settings["AR"]        = "ar rcs"
+DaoMake::Settings["AR"]        = "ar -rcsT"
 
 DaoMake::Settings["EXE-SUFFIX"]      = ""
 DaoMake::Settings["DLL-SUFFIX"]      = ".so"

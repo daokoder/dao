@@ -395,8 +395,10 @@ if( daovm_bundle_program.size() ){
 	daomake_args  = "--platform " + DaoMake::Platform()
 	if( arch != "" ) daomake_args += " --arch " + arch
 	daomake_args += " --mode " + mode;
-	daomake_args += " --option-BUNDLE " + daovm_bundle_program
-	daomake_args += " --suffix .bundle " + bundle
+#   For std.load("FindDao.dao") in bundle.dao:
+	daomake_args += " --module-path " + (finder_path / "..");
+	daomake_args += " --option-BUNDLE " + daovm_bundle_program;
+	daomake_args += " --suffix .bundle " + bundle;
 
 	archive = daovm.AddCommand( darc + ": " + daos + " " + daolib, "-@cd ." )
 #   The following commands will not work for cross compiling, so the solution is

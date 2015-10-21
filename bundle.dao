@@ -21,14 +21,6 @@ bundle_script.AddIncludePath( "kernel" )
 
 bundle = bundler.AddExecutable( daovm_bundle, bundle_main, bundle_script )
 
-std.load( "FindDao.dao" )
-
-daovm = DaoMake::FindPackage( "Dao" )
-if( daovm != none ){
-	bundle.UseStaticLibrary( daovm, "dao" )
-	bundle.UseStaticLibrary( daovm, "dao_aux" )
-}
-
 finders = DaoMake::ReadFile( daovm_bundle + ".dar.finders" )
 
 bundle_finders = finders.split( "\n" )
@@ -50,4 +42,13 @@ for( finder in bundle_finders ){
 	pro = DaoMake::FindPackage( fields[0] )
 	io.writeln( ">>>>> bundle:", pro, fields )
 	if( pro != none ) bundle.UseStaticLibrary( pro )
+}
+
+# Linking to static library needs to be placed after the objects/libraries
+# with unresolved symbols in Linux:
+std.load( "FindDao.dao" )
+daovm = DaoMake::FindPackage( "Dao" )
+if( daovm != none ){
+	bundle.UseStaticLibrary( daovm, "dao" )
+	bundle.UseStaticLibrary( daovm, "dao_aux" )
 }
