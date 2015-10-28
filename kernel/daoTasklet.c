@@ -315,6 +315,7 @@ static void DaoCallServer_ActivateEvents()
 	char message[128];
 	daoint i, j, count = 0;
 
+	if( server->finishing == 0 ) return;
 	if( server->idle != server->total ) return;
 	if( server->events->size != 0 ) return;
 	if( server->events2->size == 0 ) return;
