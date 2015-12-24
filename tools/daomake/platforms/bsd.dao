@@ -3,3 +3,5 @@ load unix;
 io.writeln( "DaoMake: using BSD settings!" )
 
 DaoMake::Platforms["BSD"]  = DaoMake::Platforms["UNIX"] + 1
+
+DaoMake::Settings["AR"]    = "ar -rcs"

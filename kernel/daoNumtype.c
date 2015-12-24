@@ -879,7 +879,7 @@ static void DaoArray_Print( DaoValue *value, DaoProcess *proc, DaoStream *stream
 			if( tmp[self->ndim-1] ==0 ){
 				DaoStream_WriteChars( stream, "row[" );
 				for(j=0; j+1<self->ndim; j++){
-					DaoStream_WriteFormatedInt( stream, (int)tmp[j], "%i" );
+					DaoStream_WriteInt( stream, tmp[j] );
 					DaoStream_WriteChars( stream, "," );
 				}
 				DaoStream_WriteChars( stream, ":]:\t" );

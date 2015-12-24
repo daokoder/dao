@@ -211,19 +211,16 @@ void DaoStream_WriteChar( DaoStream *self, char val )
 	count = snprintf( buffer, sizeof(buffer), "%c", val );
 	self->Write( self, buffer, count );
 }
-void DaoStream_WriteFormatedInt( DaoStream *self, dao_integer val, const char *format )
-{
-	char buffer[48];
-	int count;
-	if( self->Write == NULL ) return;
-	count = snprintf( buffer, sizeof(buffer), format, val );
-	self->Write( self, buffer, count );
-}
 void DaoStream_WriteInt( DaoStream *self, dao_integer val )
 {
 	const char *format = self->format;
+	char buffer[48];
+	int count;
+
+	if( self->Write == NULL ) return;
 	if( format == NULL ) format = "%"DAO_I64;
-	DaoStream_WriteFormatedInt( self, val, format );
+	count = snprintf( buffer, sizeof(buffer), format, val );
+	self->Write( self, buffer, count );
 }
 void DaoStream_WriteFloat( DaoStream *self, double val )
 {

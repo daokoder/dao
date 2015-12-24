@@ -113,7 +113,6 @@ DAO_DLL void DaoStream_WriteString( DaoStream *self, DString *val );
 DAO_DLL void DaoStream_WriteLocalString( DaoStream *self, DString *val );
 DAO_DLL void DaoStream_WriteChars( DaoStream *self, const char *chars );
 DAO_DLL void DaoStream_WritePointer( DaoStream *self, void *pointer );
-DAO_DLL void DaoStream_WriteFormatedInt( DaoStream *self, dao_integer val, const char *format );
 DAO_DLL void DaoStream_WriteNewLine( DaoStream *self );
 
 DAO_DLL daoint DaoStream_Read( DaoStream *self, DString *output, daoint count );
