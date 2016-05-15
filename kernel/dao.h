@@ -68,7 +68,7 @@
 
 
 #ifndef DAO_API
-#  define DAO_API(Linkage,Type,Name,Signature)  Linkage Type Name Signature
+#  define DAO_API(Linkage,Type,Name,Signature)  DAO_##Linkage##_DLL Type Name Signature
 #endif
 
 
@@ -784,11 +784,12 @@ DAO_DLL DaoProcess* DaoProcess_New( DaoVmSpace *vms );
 DAO_DLL int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *src );
 DAO_DLL int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *src );
 DAO_DLL int DaoProcess_Call( DaoProcess *s, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
-DAO_DLL void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream );
+DAO_DLL DaoRoutine* DaoProcess_ActiveRoutine( DaoProcess *self );
 DAO_DLL DaoValue* DaoProcess_GetReturned( DaoProcess *self );
 DAO_DLL DaoType*  DaoProcess_GetReturnType( DaoProcess *self );
 DAO_DLL DaoRegex* DaoProcess_MakeRegex( DaoProcess *self, DString *patt );
 DAO_DLL DaoCdata* DaoProcess_MakeCdata( DaoProcess *self, DaoType *type, void *data, int owned );
+DAO_DLL void DaoProcess_SetStdio( DaoProcess *self, DaoStream *stream );
 DAO_DLL void DaoProcess_RaiseException( DaoProcess *self, const char *type, const char *info, DaoValue *data );
 DAO_DLL void DaoProcess_RaiseException2( DaoProcess *self, const char *type, const char *info, char *args );
 DAO_DLL void DaoProcess_RaiseWarning( DaoProcess *self, const char *type, const char *info );

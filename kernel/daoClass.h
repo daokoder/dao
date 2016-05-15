@@ -163,6 +163,7 @@ DAO_DLL void DaoClass_AddReference( DaoClass *self, void *reference );
 
 DAO_DLL void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns );
 
+DAO_DLL int DaoClass_BaseConstructorOffset( DaoClass *self, DaoClass *base, int idx );
 DAO_DLL int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes );
 DAO_DLL int DaoClass_DeriveClassData( DaoClass *self );
 DAO_DLL void DaoClass_DeriveObjectData( DaoClass *self );

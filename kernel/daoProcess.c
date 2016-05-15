@@ -805,6 +805,10 @@ void DaoProcess_CallFunction( DaoProcess *self, DaoRoutine *func, DaoValue *p[],
 	if( self->factory->size > m ) DList_Erase( self->factory, m, -1 );
 	self->stackReturn = cur;
 }
+DaoRoutine* DaoProcess_ActiveRoutine( DaoProcess *self )
+{
+	return self->topFrame->routine;
+}
 DaoValue* DaoProcess_GetReturned( DaoProcess *self )
 {
 	return self->stackValues[0];

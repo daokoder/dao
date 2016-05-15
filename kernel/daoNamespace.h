@@ -84,11 +84,13 @@ DAO_DLL int DaoNamespace_FindConst( DaoNamespace *self, DString *name );
 DAO_DLL int DaoNamespace_AddConst( DaoNamespace *self, DString *name, DaoValue *value, int pm );
 DAO_DLL void DaoNamespace_SetConst( DaoNamespace *self, int index, DaoValue *value );
 DAO_DLL DaoValue* DaoNamespace_GetConst( DaoNamespace *self, int i );
+DAO_DLL DaoValue* DaoNamespace_GetConstByName( DaoNamespace *self, DString *name );
 
 DAO_DLL int DaoNamespace_FindVariable( DaoNamespace *self, DString *name );
 DAO_DLL int DaoNamespace_AddVariable( DaoNamespace *self, DString *name, DaoValue *var, DaoType *tp, int pm );
 DAO_DLL int DaoNamespace_SetVariable( DaoNamespace *self, int index, DaoValue *var );
 DAO_DLL DaoValue* DaoNamespace_GetVariable( DaoNamespace *self, int i );
+DAO_DLL DaoValue* DaoNamespace_GetVariableByName( DaoNamespace *self, DString *name );
 DAO_DLL DaoType* DaoNamespace_GetVariableType( DaoNamespace *self, int i );
 
 DAO_DLL int DaoNamespace_AddStaticConst( DaoNamespace *self, DString *name, DaoValue *value, int level );

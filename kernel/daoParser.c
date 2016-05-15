@@ -843,22 +843,6 @@ static int DaoParser_FindPairToken2( DaoParser *self,  uchar_t l, uchar_t r, int
 static int DaoParser_PushRegister( DaoParser *self );
 static DaoInode* DaoParser_AddCode( DaoParser *self, ushort_t code, ushort_t a, ushort_t b, ushort_t c );
 
-static int DaoClass_BaseCstrOffset( DaoClass *self, DaoClass *base, int idx )
-{
-	daoint j, offset = 0;
-	if( idx < self->mixinBases->size ){
-		for(j=0; j<self->mixins->size; ++j){
-			if( self->mixins->items.pClass[j] == base ){
-				offset = self->ranges->data.ushorts[6*j] + DAO_CLASS_CONST_CSTOR;
-				break;
-			}
-		}
-	}else{
-		offset = self->cstParentStart;
-		offset += (base->type == DAO_CLASS ? DAO_CLASS_CONST_CSTOR : 0);
-	}
-	return offset;
-}
 static int DaoParser_AddDefaultInitializer( DaoParser *self, DaoClass *klass, int flags )
 {
 	daoint i, j;
@@ -870,7 +854,7 @@ static int DaoParser_AddDefaultInitializer( DaoParser *self, DaoClass *klass, in
 		int reg, opb = 0;
 		if( flags & (1<<i) ) continue;
 		inode = DaoParser_AddCode( self, DVM_GETCK, 1, 0, 0 );
-		inode->b = DaoClass_BaseCstrOffset( klass, base, i );
+		inode->b = DaoClass_BaseConstructorOffset( klass, base, i );
 		inode->c = DaoParser_PushRegister( self );
 		reg = DaoParser_PushRegister( self );
 		DaoParser_AddCode( self, DVM_CALL, inode->c, DAO_CALL_INIT, reg );
@@ -974,7 +958,7 @@ static int DaoParser_ParseInitSuper( DaoParser *self, DaoParser *module, int sta
 
 			DaoParser_PushTokenIndices( self, dlm+1, dlm+1, dlm+1 );
 			inode = DaoParser_AddCode( module, DVM_GETCK, 1, 0, 0 );
-			inode->b = DaoClass_BaseCstrOffset( klass, (DaoClass*) value, found );
+			inode->b = DaoClass_BaseConstructorOffset( klass, (DaoClass*) value, found );
 			inode->c = DaoParser_PushRegister( module );
 			inode->first = inode->middle = start + 1;
 			inode->last = pos - 1;
@@ -1015,18 +999,14 @@ ErrorRoutine:
 
 static int DaoParser_PushRegister( DaoParser *self )
 {
-	int line, reg = self->regCount;
+	int reg = self->regCount;
 	self->regCount += 1;
-	if( self->routine == NULL || self->routine->body == NULL ) return reg;
-	line = self->curLine - self->routine->body->codeStart - 1;
 	return reg;
 }
 static int DaoParser_PushRegisters( DaoParser *self, int n )
 {
-	int i, line, reg = self->regCount;
+	int reg = self->regCount;
 	self->regCount += n;
-	if( self->routine == NULL || self->routine->type != DAO_ROUTINE ) return reg;
-	line = self->curLine - self->routine->body->codeStart - 1;
 	return reg;
 }
 static void DaoParser_PopRegister( DaoParser *self )
@@ -6093,8 +6073,6 @@ static void DaoParser_PushItemType( DaoParser *self, DaoType *type, int id, ucha
 }
 static DaoValue* DaoParseNumber( DaoParser *self, DaoToken *tok, DaoValue *value )
 {
-	char *str = tok->string.chars;
-	daoint pl = 0;
 	if( tok->name >= DTOK_NUMBER_DEC && tok->name <= DTOK_NUMBER_SCI ){
 		value->type = DAO_FLOAT;
 		value->xFloat.value = DaoToken_ToFloat( tok );

@@ -39,7 +39,7 @@
 ; printf( "%i %p\n", __LINE__, & _##Name )
  */
 #else
-#  define DAO_API(Linkage,Type,Name,Signature)  Linkage Type (*_##Name) Signature
+#  define DAO_API(Linkage,Type,Name,Signature)  DAO_##Linkage##_DLL Type (*_##Name) Signature
 #endif
 
 

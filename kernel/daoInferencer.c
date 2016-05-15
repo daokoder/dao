@@ -2780,6 +2780,7 @@ int DaoInferencer_HandleSwitch( DaoInferencer *self, DaoInode *inode, int i, DMa
 			if( DaoValue_Compare( sv, cc ) ==0 ){
 				inode->code = DVM_GOTO;
 				inode->jumpFalse = inodes[i+k];
+				inodes[i+k]->code = DVM_GOTO;  /* Change DVM_CASE to DVM_GOTO; */
 				break;
 			}
 		}

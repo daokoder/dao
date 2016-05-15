@@ -55,7 +55,7 @@ daovm_with_thread     = DaoMake::Option( "THREAD",     $ON )
 daovm_with_concurrent = DaoMake::Option( "CONCURRENT", $ON )
 
 daovm_with_readline   = DaoMake::Option( "READLINE",   $ON )
-daovm_with_restart    = DaoMake::Option( "RESTART",   $ON )
+daovm_with_restart    = DaoMake::Option( "RESTART",    $ON )
 
 daovm_bundle_program   = DaoMake::Option( "BUNDLE-SCRIPT", "" )
 daovm_bundle_resources = DaoMake::Option( "BUNDLE-RESOURCES", "" )
@@ -339,10 +339,15 @@ if( DaoMake::IsDir( "modules/image" ) )   daovm_auxlib_objs.AddDefinition( "DAO_
 #
 ###########################################################################
 
+if( DaoMake::IsDir( "modules/ast" ) ){
+	ast = daovm.AddDirectory( "ast", "modules/ast" );
+	ast.AddDependency( daovm_dll )
+}
+
 #auxlib = daovm.AddDirectory( "auxlib", "modules/auxlib" );
 debugger = daovm.AddDirectory( "debugger", "modules/debugger" );
 profiler = daovm.AddDirectory( "profiler", "modules/profiler" );
-stream = daovm.AddDirectory( "stream", "modules/stream" );
+stream   = daovm.AddDirectory( "stream", "modules/stream" );
 
 daomake = daovm.AddDirectory( "daomake", "tools/daomake" )
 daotest = daovm.AddDirectory( "daotest", "tools/daotest" )

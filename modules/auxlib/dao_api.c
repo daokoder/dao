@@ -27,14 +27,14 @@
 */
 
 /*
-// %s/\(\w\+\) \(\w\+\)( \(.*\) )/DAO_API( DAO_TIME_DLL, \1, \2, (\3) )
+// %s/\(\w\+\) \(\w\+\)( \(.*\) )/DAO_API( TIME, \1, \2, (\3) )
 */
 
 #ifdef DAO_API
 #  undef DAO_API
 #endif
 
-#define DAO_API(Linkage,Type,Name,Signature)  Linkage Type (*_##Name) Signature; Type (*_##Name) Signature = NULL
+#define DAO_API(Linkage,Type,Name,Signature)  DAO_##Linkage##_DLL Type (*_##Name) Signature; Type (*_##Name) Signature = NULL
 
 
 #ifdef DAO_HAS_RANDOM

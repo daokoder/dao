@@ -1193,6 +1193,13 @@ DaoValue* DaoNamespace_GetConst( DaoNamespace *self, int index )
 	if( id >= self->constants->size ) return NULL;
 	return self->constants->items.pConst[id]->value;
 }
+DaoValue* DaoNamespace_GetConstByName( DaoNamespace *self, DString *name )
+{
+	DNode *node = DMap_Find( self->lookupTable, name );
+	if( node == NULL ) return NULL;
+	if( LOOKUP_ST( node->value.pInt ) != DAO_GLOBAL_CONSTANT ) return NULL;
+	return self->constants->items.pConst[ LOOKUP_ID(node->value.pInt) ]->value;
+}
 int DaoNamespace_FindVariable( DaoNamespace *self, DString *name )
 {
 	DNode *node = DMap_Find( self->lookupTable, name );
@@ -1266,6 +1273,13 @@ DaoValue* DaoNamespace_GetVariable( DaoNamespace *self, int index )
 	if( st != DAO_GLOBAL_VARIABLE ) return NULL;
 	if( id >= self->variables->size ) return NULL;
 	return self->variables->items.pVar[id]->value;
+}
+DaoValue* DaoNamespace_GetVariableByName( DaoNamespace *self, DString *name )
+{
+	DNode *node = DMap_Find( self->lookupTable, name );
+	if( node == NULL ) return NULL;
+	if( LOOKUP_ST( node->value.pInt ) != DAO_GLOBAL_VARIABLE ) return NULL;
+	return self->variables->items.pVar[ LOOKUP_ID(node->value.pInt) ]->value;
 }
 DaoType* DaoNamespace_GetVariableType( DaoNamespace *self, int index )
 {

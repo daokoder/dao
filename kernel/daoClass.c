@@ -240,6 +240,23 @@ void DaoClass_Parents( DaoClass *self, DList *parents, DList *offsets )
 	}
 }
 
+int DaoClass_BaseConstructorOffset( DaoClass *self, DaoClass *base, int idx )
+{
+	daoint j, offset = 0;
+	if( idx < self->mixinBases->size ){
+		for(j=0; j<self->mixins->size; ++j){
+			if( self->mixins->items.pClass[j] == base ){
+				offset = self->ranges->data.ushorts[6*j] + DAO_CLASS_CONST_CSTOR;
+				break;
+			}
+		}
+	}else{
+		offset = self->cstParentStart;
+		offset += (base->type == DAO_CLASS ? DAO_CLASS_CONST_CSTOR : 0);
+	}
+	return offset;
+}
+
 
 typedef struct DaoMethodFields DaoMethodFields;
 
