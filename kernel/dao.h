@@ -354,6 +354,8 @@ struct DaoProfiler
 };
 struct DaoUserHandler
 {
+	void (*PrintNote)( DaoUserHandler *self, DaoValue *value );
+
 	/* invoke host execution to do whatever (e.g., to process GUI events) */
 	void (*InvokeHost)( DaoUserHandler *self, DaoProcess *process );
 };

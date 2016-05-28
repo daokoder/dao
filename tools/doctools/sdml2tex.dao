@@ -5,6 +5,7 @@ Email: phoolimin@gmail.com
 Date: 2008-12-20
 #}
 
+load stream
 load sdml_parser;
 load codehl2tex;
 
@@ -119,19 +120,19 @@ class Sdml2Tex : SdmlParser
 
   routine Sdml2Tex();
 
-	routine New(){ return Sdml2Tex(); }
+	routine New() => SdmlParser { return Sdml2Tex(); }
 	routine Replace( src = '' )=>string;
-	routine Warn( info : string );
-	routine Error( info : string );
-	routine OpenHeader( dtype = '' );
-	routine CloseHeader();
-	routine MakeTitle( title = '' ){ output += '\\title{' + title + '}\n'; }
-	routine MakeAuthor( name = '' ){ output += '\\author{' + name + '}\n'; }
+	routine Warn( info : string ) => none;
+	routine Error( info : string ) => none;
+	routine OpenHeader( dtype = '' ) => none;
+	routine CloseHeader() => none;
+	routine MakeTitle( title = '' ) { output += '\\title{' + title + '}\n'; return none; }
+	routine MakeAuthor( name = '' ) { output += '\\author{' + name + '}\n'; return none; }
 	routine MakeLink( name='', tok1='', tok2='' )=>string{ return '{\\it ' + name + '}'; }
-	routine MakeTable( headers : list<string>, cells : list<list<string> >, param='' );
+	routine MakeTable( headers : list<string>, cells : list<list<string> >, param='' ) => none;
 	routine MakeItemName( name = '' ){ return "\\greentext{\\bf " + name + '}'; }
-	routine EvalDemo( source = '' );
-	routine MakeImage( name='' ){} # XXX
+	routine EvalDemo( source = '' ) => string;
+	routine MakeImage( name='' ){ return none } # XXX
 	routine OpenBody(){
 		output += '\\maketitle\n';
 		if( doctype == 'report' || doctype == 'book' ) output += '\\tableofcontents\n';
@@ -140,8 +141,8 @@ class Sdml2Tex : SdmlParser
 		if( useCJK ) output += "\n\\end{CJK}\n";
 		output += '\n\\end{document}\n';
 	}
-	routine OpenSection( level=0, numbering='' );
-	routine CloseSection( level=0, numbering='' );
+	routine OpenSection( level=0, numbering='' ) => none;
+	routine CloseSection( level=0, numbering='' ) => none;
 
 }
 
@@ -232,15 +233,17 @@ routine Sdml2Tex::Replace( src = '' ) => string
 #src.replace( "</_>", "</span>" );
 	return out;
 }
-routine Sdml2Tex::Warn( info : string )
+routine Sdml2Tex::Warn( info : string ) => none
 {
 	output += '\\alert{WARNING: ' + info + '!}\n';
+	return none
 }
-routine Sdml2Tex::Error( info : string )
+routine Sdml2Tex::Error( info : string ) => none
 {
 	output += '\\alert{ERROR: ' + info + '!}\n';
+	return none
 }
-routine Sdml2Tex::OpenHeader( dtype = '' )
+routine Sdml2Tex::OpenHeader( dtype = '' ) => none
 {
 	doctype = dtype;
 	switch( dtype ){
@@ -254,10 +257,12 @@ routine Sdml2Tex::OpenHeader( dtype = '' )
 	output += '\n\\begin{document}\n';
 	if( useCJK ) output += "\\begin{CJK}{UTF8}{gbsn}\n";
 }
-routine Sdml2Tex::CloseHeader()
+routine Sdml2Tex::CloseHeader() => none
 {
+	return none;
 }
 routine Sdml2Tex::MakeTable( headers :list<string>, cells :list<list<string> >, param='' )
+=> none
 {
 	parser = Sdml2Tex();
 	parser.suffix = suffix;
@@ -326,21 +331,22 @@ routine Sdml2Tex::MakeTable( headers :list<string>, cells :list<list<string> >, 
 	output += table;
 	output += "\\hline\n\\end{tabular}}\n";
 }
-routine Sdml2Tex::EvalDemo( source = '' )
+routine Sdml2Tex::EvalDemo( source = '' ) => string
 {
 	output += "{\\footnotesize";
 	output += "\\noindent{\\colorbox{FrameColor2}{\\makebox[0.98\\textwidth]{";
 	output += "\\texttt{\\textcolor{CommentColor}{Output}}}}}\n";
 	output += "\\begin{verbatim}\n";
-	ss = io.stream( $string );
+	ss = io.StringStream();
 	std.eval( source, ss );
-	str = ss.read();
-	if( str.size() && str[ str.size()-1: ] != "\n" ) str += "\n";
-	output += str;
+	res = ss.read();
+	if( res.size() && res[ res.size()-1: ] != "\n" ) res += "\n";
+	output += res;
 	output += "\\end{verbatim}}\n";
 	output += "\\noindent{\\colorbox{FrameColor3}{\\makebox[0.98\\textwidth]{}}}\n";
+	return ''
 }
-routine Sdml2Tex::OpenSection( level=0, numbering='' )
+routine Sdml2Tex::OpenSection( level=0, numbering='' ) => none
 {
 	output += '\\';
 	if( doctype == 'book' ){
@@ -357,9 +363,10 @@ routine Sdml2Tex::OpenSection( level=0, numbering='' )
 		output += 'section{';
 	}
 }
-routine Sdml2Tex::CloseSection( level=0, numbering='' )
+routine Sdml2Tex::CloseSection( level=0, numbering='' ) => none
 {
 	output += '}\n';
+	return none;
 }
 
 #{
@@ -386,4 +393,5 @@ routine main( input : string, cjk="", output = "" )
 	parser = Sdml2Tex();
 	fout.writeln( parser.Parse( src ) );
 	fout.close();
+	return 0
 }

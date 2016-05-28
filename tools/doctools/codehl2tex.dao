@@ -45,11 +45,9 @@ class DaoCodeHL : CodeHL
 		"any" => "\\CONST{",
 		"var" => "\\STORAGE{",
 		"const" => "\\STORAGE{",
-		"var" => "\\STORAGE{",
 		"public"    => "\\ACCESS{",
 		"protected" => "\\ACCESS{",
 		"private"   => "\\ACCESS{",
-		"any" => "\\TYPE{",
 		"enum" => "\\TYPE{",
 		"int" => "\\TYPE{",
 		"long" => "\\TYPE{",
@@ -119,7 +117,7 @@ routine replace( tok : string )
 }
 routine DaoCodeHL::Highlight( source : string, name='' ) => string
 {
-	tokens = std.tokenize( source );
+	tokens = str.tokenize( source );
 	output = StartCode( name );
 
 	size = tokens.size();
@@ -190,9 +188,9 @@ class CppCodeHL : CodeHL
 		"extern" => "\\STORAGE{",
 		"static"     => "\\STORAGE{",
 		"virtual"     => "\\STORAGE{",
-		"class"   => "\\STUCT{",
-		"struct" => "\\STUCT{",
-		"enum"     => "\\STUCT{",
+		"class"   => "\\STRUCT{",
+		"struct" => "\\STRUCT{",
+		"enum"     => "\\STRUCT{",
 		"public"    => "\\ACCESS{",
 		"protected" => "\\ACCESS{",
 		"private"   => "\\ACCESS{",
@@ -228,7 +226,7 @@ class CppCodeHL : CodeHL
 
 routine CppCodeHL::Highlight( source : string, name='' )=> string
 {
-	tokens = tokenize( source, "#!%^&*()-=+|/{}[];:,.~<>? \t\n\r", "\'\"", 1 );
+	tokens = str.tokenize( source, "#!%^&*()-=+|/{}[];:,.~<>? \t\n\r", "\'\"", 1 );
 	output = StartCode( name );
 	size = tokens.size();
 	i = 0;
@@ -307,7 +305,7 @@ class BnfCodeHL : CodeHL
 
 routine BnfCodeHL::Highlight( source : string, name = '' ) => string
 {
-	tokens = tokenize( source, "|+*(){}[] \t\n\r", "\'\"", 1 );
+	tokens = str.tokenize( source, "|+*(){}[] \t\n\r", "\'\"", 1 );
 	output = StartCode( name );
 
 	size = tokens.size();

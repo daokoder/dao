@@ -851,7 +851,7 @@ int DaoVmSpace_ReadFile( DaoVmSpace *self, DString *fname, DString *source )
 		}
 		fin = Dao_OpenFile( vfile->data->chars, "r" );
 		if( fin == NULL ) goto Failed;
-		source->size = 0;
+		DString_Reset( source, 0 );
 		DaoFile_ReadPart( fin, source, vfile->offset, vfile->size );
 		fclose( fin );
 		return 1;

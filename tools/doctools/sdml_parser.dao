@@ -5,8 +5,10 @@ Email: phoolimin@gmail.com
 Date: 2008-12-20
 #}
 
+load random
 load string.tokenize;
 
+invar rand = random::rand
 
 interface SdmlCodeHL
 {
@@ -78,15 +80,15 @@ class SdmlParser
 
 	interface routine New(){ return SdmlParser(); }
 	interface routine Replace( src = '' )=>string{ return src }
-	interface routine Warn( info : string ){ output += info; }
-	interface routine Error( info : string ){ output += info; }
+	interface routine Warn( info : string ){ output += info; return none; }
+	interface routine Error( info : string ){ output += info; return none; }
 	interface routine AddPrefix(){}
-	interface routine OpenHeader( type = '' ){}
-	interface routine CloseHeader(){}
-	interface routine MakeTitle( title='' ){ output += title; }
-	interface routine MakeAuthor( name='' ){ output += name; }
+	interface routine OpenHeader( dtype = '' ){ return none }
+	interface routine CloseHeader(){ return none }
+	interface routine MakeTitle( title='' ){ output += title; return none; }
+	interface routine MakeAuthor( name='' ){ output += name; return none; }
 	interface routine MakeTOC( sect : TextSection ){}
-	interface routine MakeImage( name='' ){ output += name; }
+	interface routine MakeImage( name='' ){ output += name; return none; }
 	interface routine MakeLink( name='', tok1='', tok2='' )=>string{ return name; }
 	interface routine MakeTable( headers:list<string>,cells:list<list<string> >,param=''){}
 	interface routine MakeItemName( name = '' ){ return name; }

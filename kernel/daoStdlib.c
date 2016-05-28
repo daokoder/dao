@@ -166,10 +166,24 @@ static void Dao_AboutVars( DaoProcess *proc, DaoValue *par[], int N, DString *st
 		if( i+1<N ) DString_AppendChars( str, " " );
 	}
 }
+
 static void DaoSTD_About( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DString *str = DaoProcess_PutChars( proc, "" );
 	Dao_AboutVars( proc, p, N, str );
+}
+
+static void DaoSTD_Note( DaoProcess *proc, DaoValue *p[], int N )
+{
+	int i;
+	DaoVmSpace *vmspace = proc->vmSpace;
+
+	if( vmspace->userHandler == NULL ) return;
+	if( vmspace->userHandler->PrintNote == NULL ) return;
+
+	for(i=0; i<N; ++i){
+		vmspace->userHandler->PrintNote( vmspace->userHandler, p[i] );
+	}
 }
 
 void DaoProcess_Trace( DaoProcess *self, int depth )
@@ -358,6 +372,7 @@ DaoFuncItem dao_std_methods[] =
 
 	{ DaoSTD_Resource,  "resource( path: string ) => string" },
 	{ DaoSTD_About,     "about( invar ... : any ) => string" },
+	{ DaoSTD_Note,      "note( invar ... : any )" },
 	{ DaoSTD_Debug,     "debug( invar ... : any )" },
 
 	{ DaoSTD_ProcData,  "procdata( ) => any" },

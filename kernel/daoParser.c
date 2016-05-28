@@ -8063,6 +8063,7 @@ DaoProcess* DaoParser_ReserveFoldingOperands( DaoParser *self, int N )
 	proc = self->evaluator.process;
 	rout = self->evaluator.routine;
 	if( rout->body->regType->size < N ) DList_Resize( rout->body->regType, N, NULL );
+	DList_Clear( proc->exceptions );
 	DaoProcess_PushFrame( proc, N );
 	DaoProcess_PopFrame( proc );
 	proc->activeRoutine = self->evaluator.routine;
