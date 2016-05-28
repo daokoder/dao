@@ -1023,8 +1023,6 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->auxData = DList_New( DAO_DATA_VALUE );
 	self->namespaces = DList_New(0);
 	self->lookupTable = DHash_New( DAO_DATA_STRING, 0 );
-	self->mainRoutines  = DList_New( DAO_DATA_VALUE );
-	self->definedRoutines = DList_New(0);
 	self->localMacros = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 	self->globalMacros = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 	self->abstypes = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
@@ -1054,7 +1052,9 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DaoNamespace_AddConst( self, name, dao_true_value, DAO_PERM_PUBLIC );
 
 	/* reserved for main */
-	DList_Append( self->constants, DaoConstant_New( dao_none_value, DAO_GLOBAL_CONSTANT ) );
+	//DList_Append( self->constants, DaoConstant_New( dao_none_value, DAO_GLOBAL_CONSTANT ) );
+	DString_SetChars( name, "__main__" );
+	DaoNamespace_AddConst( self, name, dao_none_value, DAO_PERM_PUBLIC );
 
 	if( vms && vms->daoNamespace ){
 		DaoNamespace *ns = vms->daoNamespace;
@@ -1091,8 +1091,6 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	 * referenced through functions. */
 	DList_Delete( self->namespaces );
 
-	DList_Delete( self->mainRoutines );
-	DList_Delete( self->definedRoutines );
 	DMap_Delete( self->localMacros );
 	DMap_Delete( self->globalMacros );
 	DMap_Delete( self->abstypes );

@@ -1094,7 +1094,6 @@ static int DaoParser_ExtractRoutineBody( DaoParser *self, DaoParser *parser, int
 	int i, right = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, left, -1 );
 	if( right < 0 ) return -1;
 
-	DList_Append( routine->nameSpace->definedRoutines, routine );
 	routine->body->codeStart = tokens[left]->line;
 	routine->body->codeEnd = tokens[right]->line;
 	for(i=left+1; i<right; ++i) DaoLexer_AppendToken( parser->lexer, tokens[i] );
@@ -2207,8 +2206,6 @@ int DaoParser_ParseScript( DaoParser *self )
 	ns->mainRoutine = routMain;
 	DaoNamespace_SetConst( ns, DVR_NSC_MAIN, (DaoValue*) routMain );
 	DString_SetChars( routMain->routName, "__main__" );
-	DList_Append( ns->mainRoutines, routMain );
-	/* the name of routMain will be set in DaoParser_ParseRoutine() */
 
 	routMain->body->codeStart = 1;
 	routMain->body->codeEnd = self->lineCount;
@@ -3314,7 +3311,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DString_Assign( className, name );
 		DaoClass_SetName( klass, className, NS );
 
-		DList_Append( NS->definedRoutines, klass->initRoutine );
 		if( routine != NS->mainRoutine ) ns = NULL;
 		value = (DaoValue*) klass;
 		DaoParser_AddToScope( self, className, value, klass->objType, storeType );
@@ -6225,7 +6221,6 @@ static int DaoParser_ParseClosure( DaoParser *self, int start )
 	if( parser->uplocs == NULL ) parser->uplocs = DArray_New(sizeof(int));
 	uplocs = parser->uplocs;
 	DString_Assign( parser->fileName, self->fileName );
-	DList_Append( NS->definedRoutines, rout );
 
 	if( tokens[start]->name == DKEY_DEFER ){
 		DaoType *type = NULL;

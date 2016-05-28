@@ -47,10 +47,10 @@ bind:
 	autobind.dao greeting.h lang=cpp wrap_name=greeting del_tests="Greeting@self!=GetGreetingObject()"
 
 local-bind:
-	../../dao ../../tools/autobind.dao greeting.h lang=cpp wrap_name=greeting
+	../../bin/dao ../../tools/autobind.dao greeting.h lang=cpp wrap_name=greeting
 
 bind-valgrind:
-	valgrind --tool=memcheck --leak-check=full --dsymutil=yes ../../dao ../../tools/autobind.dao greeting.h lang=cpp wrap_name=greeting
+	valgrind --tool=memcheck --leak-check=full --dsymutil=yes ../../bin/dao ../../tools/autobind.dao greeting.h lang=cpp wrap_name=greeting
 
 clean:
 	rm *.o

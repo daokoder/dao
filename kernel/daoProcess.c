@@ -757,9 +757,7 @@ int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *source )
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	DaoProcess_FlushStdStreams( self );
 	if( res == 0 ) return 0;
-	rout = ns->mainRoutines->items.pRoutine[ ns->mainRoutines->size-1 ];
-	if( DaoProcess_Call( self, rout, NULL, NULL, 0 ) ) return 0;
-	return ns->mainRoutines->size;
+	return DaoProcess_Call( self, ns->mainRoutine, NULL, NULL, 0 ) == 0;
 }
 int DaoProcess_Call( DaoProcess *self, DaoRoutine *M, DaoValue *O, DaoValue *P[], int N )
 {

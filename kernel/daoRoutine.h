@@ -132,8 +132,6 @@ struct DaoRoutineBody
 
 	DMap   *aux;
 
-	DaoRoutine  *revised; /* to support edit & continue */
-
 	void *jitData;
 };
 

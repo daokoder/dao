@@ -3727,8 +3727,7 @@ int main( int argc, char *argv[] )
 			DList_PushFront( vmSpace->pathLoading, vmSpace->pathWorking );
 			DString_SetChars( vmSpace->mainNamespace->name, "command line codes" );
 			if( DaoProcess_Compile( vmp, ns, argv[2] ) ==0 ) return 0;
-			rout = ns->mainRoutines->items.pRoutine[ ns->mainRoutines->size-1 ];
-			return DaoProcess_Call( vmp, rout, NULL, NULL, 0 );
+			return DaoProcess_Call( vmp, ns->mainRoutine, NULL, NULL, 0 );
 		}else if( strcmp( argv[1], "run" ) == 0 ){
 			return DaoMake_Run( argc-1, argv + 1 );
 		}

@@ -52,9 +52,6 @@ struct DaoNamespace
 	DaoRoutine *mainRoutine;
 	DaoList    *argParams;
 
-	DList_(DaoRoutine*)  *mainRoutines;    /* stdlib.eval() */
-	DList_(DaoRoutine*)  *definedRoutines; /* for DaoStudio IDE */
-
 	void  *libHandle;
 	int    cstUser;
 	int    options;

@@ -70,20 +70,6 @@ static void DaoSTD_Path( DaoProcess *proc, DaoValue *p[], int N )
 	case 3: DaoProcess_PutString( proc, ns->path ); break;
 	}
 }
-static void DaoSTD_Compile( DaoProcess *proc, DaoValue *p[], int N )
-{
-	char *source = DaoValue_TryGetChars( p[0] );
-	DaoNamespace *ns, *import = DaoValue_CastNamespace( p[1] );
-	DaoTuple *tuple = DaoProcess_PutTuple( proc, 0 );
-	ns = DaoNamespace_New( proc->vmSpace, "std::compile" );
-	if( import != NULL ) DaoNamespace_AddParent( ns, import );
-	DaoTuple_SetItem( tuple, (DaoValue*) ns, 0 );
-	if( DaoProcess_Compile( proc, ns, source ) ==0 ){
-		DaoTuple_SetItem( tuple, dao_none_value, 1 );
-		return;
-	}
-	DaoTuple_SetItem( tuple, ns->mainRoutines->items.pValue[ ns->mainRoutines->size-1 ], 1 );
-}
 static void DaoSTD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoVmSpace *vms = proc->vmSpace;
@@ -92,17 +78,33 @@ static void DaoSTD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 	DaoStream *redirect = (DaoStream*) p[1];
 	char *source = DaoValue_TryGetChars( p[0] );
 	if( redirect != prevStream ) GC_Assign( & proc->stdioStream, redirect );
-	DaoProcess_Eval( proc, ns, source );
+	if( DaoProcess_Eval( proc, ns, source ) == 0 ){
+		DaoProcess_PutValue( proc, dao_none_value );
+		DaoProcess_RaiseError( proc, NULL, "evaluation failed" );
+		return;
+	}
 	DaoProcess_PutValue( proc, proc->stackValues[0] );
 	if( redirect != prevStream ) GC_Assign( & proc->stdioStream, prevStream );
+}
+static void DaoSTD_Compile( DaoProcess *proc, DaoValue *p[], int N )
+{
+	char *source = DaoValue_TryGetChars( p[0] );
+	DaoNamespace *ns, *import = DaoValue_CastNamespace( p[1] );
+	ns = DaoNamespace_New( proc->vmSpace, "std::compile" );
+	DaoProcess_PutValue( proc, (DaoValue*) ns );
+	if( import != NULL ) DaoNamespace_AddParent( ns, import );
+	if( DaoProcess_Compile( proc, ns, source ) == 0 ){
+		DaoProcess_RaiseError( proc, NULL, "compiling failed" );
+		return;
+	}
 }
 static void DaoSTD_Load( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoNamespace *ns;
 	DaoVmSpace *vms = proc->vmSpace;
 	DString *name = p[0]->xString.value;
-	int import = p[1]->xInteger.value;
-	int runim = p[2]->xInteger.value;
+	int import = p[1]->xBoolean.value;
+	int runim = p[2]->xBoolean.value;
 	int res = 0;
 
 	DList_PushFront( vms->pathLoading, proc->activeNamespace->path );
@@ -366,9 +368,9 @@ DaoFuncItem dao_std_methods[] =
 		"path( which: enum<program,script,working,loading> = $script, full = false ) => string"
 	},
 
-	{ DaoSTD_Compile,   "compile( source: string, import: namespace|none = none ) => tuple<ns:namespace,main:routine>" },
-	{ DaoSTD_Eval,      "eval( source: string, st = io::stdio ) => any" },
-	{ DaoSTD_Load,      "load( file: string, import = 1, runim = 0 ) => namespace" },
+	{ DaoSTD_Eval,      "eval( source: string, iostream = io::stdio ) => any" },
+	{ DaoSTD_Compile,   "compile( source: string, import: namespace|none = none ) =>namespace"},
+	{ DaoSTD_Load,      "load( file: string, import = true, run = false ) => namespace" },
 
 	{ DaoSTD_Resource,  "resource( path: string ) => string" },
 	{ DaoSTD_About,     "about( invar ... : any ) => string" },

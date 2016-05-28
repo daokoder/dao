@@ -1018,7 +1018,7 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 
 
 static void DaoVmSpace_MakePath( DaoVmSpace *self, DString *path );
-static DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *p, DList *a, int run );
+static DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *path, int run );
 static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath );
 
 static void DaoVmSpace_ParseArguments( DaoVmSpace *self, DaoNamespace *ns,
@@ -1225,20 +1225,17 @@ static DaoRoutine* DaoVmSpace_FindExplicitMain( DaoNamespace *ns, DList *argName
 
 DaoNamespace* DaoVmSpace_LoadEx( DaoVmSpace *self, const char *file, int run )
 {
-	DList *args = DList_New( DAO_DATA_STRING );
 	DString *path = DString_New();
 	DaoNamespace *ns = NULL;
 
-	SplitByWhiteSpaces( file, args );
-	DString_Assign( path, args->items.pString[0] );
+	DString_SetChars( path, file );
 	switch( DaoVmSpace_CompleteModuleName( self, path, 0 ) ){
 	case DAO_MODULE_DAC :
-	case DAO_MODULE_DAO : ns = DaoVmSpace_LoadDaoModuleExt( self, path, args, run ); break;
+	case DAO_MODULE_DAO : ns = DaoVmSpace_LoadDaoModuleExt( self, path, run ); break;
 	case DAO_MODULE_DLL : ns = DaoVmSpace_LoadDllModule( self, path ); break;
-	case DAO_MODULE_ANY : ns = DaoVmSpace_LoadDaoModuleExt( self, path, args, run ); break;
+	case DAO_MODULE_ANY : ns = DaoVmSpace_LoadDaoModuleExt( self, path, run ); break;
 	default : break;
 	}
-	DList_Delete( args );
 	DString_Delete( path );
 	if( ns == NULL ) return 0;
 	return ns;
@@ -1767,12 +1764,10 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		DList_PushFront( self->nameLoading, self->pathWorking );
 		DList_PushFront( self->pathLoading, self->pathWorking );
 		if( self->evalCmdline ){
-			DaoRoutine *rout;
 			DString_SetChars( self->mainNamespace->name, "command line codes" );
 			if( DaoProcess_Compile( vmp, ns, self->mainSource->chars ) ==0 ) return 1;
 			DaoVmSpace_ExeCmdArgs( self );
-			rout = ns->mainRoutines->items.pRoutine[ ns->mainRoutines->size-1 ];
-			if( DaoProcess_Call( vmp, rout, NULL, NULL, 0 ) ) return 1;
+			if( DaoProcess_Call( vmp, ns->mainRoutine, NULL, NULL, 0 ) ) return 1;
 		}else{
 			DaoVmSpace_ExeCmdArgs( self );
 		}
@@ -1966,12 +1961,10 @@ static void DaoVmSpace_PopLoadingNamePath( DaoVmSpace *self, int path )
 // Loading module in Dao source file.
 // The first time the module is loaded:
 //   (1) its implicit main (codes outside of any class and function) is executed;
-//   (2) then, its explicit main that matches with "args" will be executed.
 // The next time the module is loaded:
 //   (1) its implicit main is executed, IF run != 0; (mainly for IDE)
-//   (2) its explicit main that matches with "args" will be executed.
 */
-DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, DList *args, int run )
+DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, int run )
 {
 	DString *source = NULL;
 	DList *argNames = NULL, *argValues = NULL;
@@ -1983,19 +1976,13 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	int poppath = 0;
 	size_t tm = 0;
 
-	if( args ){
-		argNames = DList_New( DAO_DATA_STRING );
-		argValues = DList_New( DAO_DATA_STRING );
-	}
-
 	ns = ns2 = DaoVmSpace_FindNamespace( self, libpath );
 
 	tm = Dao_FileChangedTime( libpath->chars );
 	/* printf( "time = %lli,  %s  %p\n", tm, libpath->chars, node ); */
 	if( ns && ns->time >= tm ){
-		if( args ) DaoVmSpace_ParseArguments( self, ns, NULL, args, argNames, argValues );
 		if( run ) goto ExecuteImplicitMain;
-		goto ExecuteExplicitMain;
+		goto LoadingDone;
 	}
 
 	source = DString_New();
@@ -2017,7 +2004,6 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, D
 	 */
 	ns = DaoNamespace_New( self, libpath->chars );
 	ns->time = tm;
-	if( args ) DaoVmSpace_ParseArguments( self, ns, NULL, args, argNames, argValues );
 
 	DaoVmSpace_Lock( self );
 	DList_PushFront( self->loadedModules, ns );
@@ -2074,23 +2060,8 @@ ExecuteImplicitMain :
 		if( status == DAO_PROCESS_ABORTED ) goto LoadingFailed;
 	}
 
-ExecuteExplicitMain :
+LoadingDone:
 
-	/* check and execute explicitly defined main() routine  */
-	if( args ){
-		int error = 0;
-		mainRoutine = DaoVmSpace_FindExplicitMain( ns, argNames, argValues, & error );
-		if( error ) goto InvalidArgument;
-	}
-	if( mainRoutine != NULL ){
-		int ret, N = ns->argParams->value->size;
-		DaoValue **ps = ns->argParams->value->items.pValue;
-		process = DaoVmSpace_AcquireProcess( self );
-		ret = DaoProcess_Call( process, mainRoutine, NULL, ps, N );
-		DaoVmSpace_ReleaseProcess( self, process );
-		if( ret == DAO_ERROR_PARAM ) goto InvalidArgument;
-		if( ret ) goto LoadingFailed;
-	}
 	DaoVmSpace_PopLoadingNamePath( self, poppath );
 	if( self->loadedModules->size > (nsCount+1) ){
 		DaoVmSpace_Lock( self );
@@ -2098,8 +2069,6 @@ ExecuteExplicitMain :
 		DaoVmSpace_Unlock( self );
 	}
 	if( source ) DString_Delete( source );
-	if( argNames ) DList_Delete( argNames );
-	if( argValues ) DList_Delete( argValues );
 	return ns;
 InvalidArgument:
 	DaoStream_WriteChars( self->errorStream, "ERROR: invalid arguments for the explicit main().\n" );
@@ -2111,14 +2080,12 @@ LoadingFailed :
 		DaoVmSpace_Unlock( self );
 	}
 	if( source ) DString_Delete( source );
-	if( argNames ) DList_Delete( argNames );
-	if( argValues ) DList_Delete( argValues );
 	if( parser ) DaoVmSpace_ReleaseParser( self, parser );
 	return 0;
 }
 DaoNamespace* DaoVmSpace_LoadDaoModule( DaoVmSpace *self, DString *libpath )
 {
-	return DaoVmSpace_LoadDaoModuleExt( self, libpath, NULL, 0 );
+	return DaoVmSpace_LoadDaoModuleExt( self, libpath, 0 );
 }
 
 static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpath )
