@@ -976,6 +976,7 @@ int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items )
 	DaoVmSpace_ReleaseParser( self->vmSpace, defparser );
 	return ec;
 }
+#if 0
 int DaoNamespace_Load( DaoNamespace *self, const char *fname )
 {
 	DString *src;
@@ -994,6 +995,7 @@ int DaoNamespace_Load( DaoNamespace *self, const char *fname )
 	DString_Delete( src );
 	return ret;
 }
+#endif
 void DaoNamespace_SetOptions( DaoNamespace *self, int options )
 {
 	self->options = options;
@@ -1023,6 +1025,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->auxData = DList_New( DAO_DATA_VALUE );
 	self->namespaces = DList_New(0);
 	self->lookupTable = DHash_New( DAO_DATA_STRING, 0 );
+	self->definedRoutines = DList_New(0);
 	self->localMacros = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 	self->globalMacros = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 	self->abstypes = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
@@ -1091,6 +1094,7 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	 * referenced through functions. */
 	DList_Delete( self->namespaces );
 
+	DList_Delete( self->definedRoutines );
 	DMap_Delete( self->localMacros );
 	DMap_Delete( self->globalMacros );
 	DMap_Delete( self->abstypes );

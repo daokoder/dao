@@ -783,8 +783,8 @@ DAO_DLL int DaoRegex_Change( DaoRegex *self, DString *src, DString *target, int 
 
 
 DAO_DLL DaoProcess* DaoProcess_New( DaoVmSpace *vms );
-DAO_DLL int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *src );
-DAO_DLL int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *src );
+DAO_DLL DaoNamespace* DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *s );
+DAO_DLL DaoValue* DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *s );
 DAO_DLL int DaoProcess_Call( DaoProcess *s, DaoRoutine *f, DaoValue *o, DaoValue *p[], int n );
 DAO_DLL DaoRoutine* DaoProcess_ActiveRoutine( DaoProcess *self );
 DAO_DLL DaoValue* DaoProcess_GetReturned( DaoProcess *self );
@@ -897,7 +897,7 @@ DAO_DLL DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction 
 DAO_DLL int DaoNamespace_AliasTypes( DaoNamespace *self, const char *alias[] );
 DAO_DLL int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typer[] );
 DAO_DLL int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items );
-DAO_DLL int DaoNamespace_Load( DaoNamespace *self, const char *file );
+//DAO_DLL int DaoNamespace_Load( DaoNamespace *self, const char *file ); // Obsolete!
 DAO_DLL int DaoNamespace_GetOptions( DaoNamespace *self );
 DAO_DLL void DaoNamespace_SetOptions( DaoNamespace *self, int options );
 DAO_DLL void DaoNamespace_AddCodeInliner( DaoNamespace *self, const char *name, DaoCodeInliner fp );
@@ -910,8 +910,8 @@ DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options );
 DAO_DLL void DaoVmSpace_SetOptions( DaoVmSpace *self, int options );
 DAO_DLL int  DaoVmSpace_GetOptions( DaoVmSpace *self );
 
-DAO_DLL int DaoVmSpace_Eval( DaoVmSpace *self, const char *src );
 DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file );
+DAO_DLL DaoValue* DaoVmSpace_Eval( DaoVmSpace *self, const char *source );
 DAO_DLL DaoNamespace* DaoVmSpace_Load( DaoVmSpace *self, const char *file );
 DAO_DLL DaoNamespace* DaoVmSpace_LinkModule( DaoVmSpace *self, DaoNamespace *ns, const char *mod );
 DAO_DLL DaoNamespace* DaoVmSpace_GetNamespace( DaoVmSpace *self, const char *name );

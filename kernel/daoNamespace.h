@@ -52,6 +52,8 @@ struct DaoNamespace
 	DaoRoutine *mainRoutine;
 	DaoList    *argParams;
 
+	DList_(DaoRoutine*)  *definedRoutines; /* for the testing module; */
+
 	void  *libHandle;
 	int    cstUser;
 	int    options;

@@ -301,10 +301,7 @@ DaoNamespace* DaoVmSpace_FindNamespace( DaoVmSpace *self, DString *name )
 	DaoNamespace *ns = NULL;
 	DaoVmSpace_Lock( self );
 	node = DMap_Find( self->nsModules, name );
-	if( node ){
-		ns = (DaoNamespace*) node->value.pValue;
-		DList_PushFront( self->loadedModules, ns );
-	}
+	if( node ) ns = (DaoNamespace*) node->value.pValue;
 	DaoVmSpace_Unlock( self );
 	return ns;
 }
@@ -316,7 +313,7 @@ DaoNamespace* DaoVmSpace_GetNamespace( DaoVmSpace *self, const char *name )
 	ns = DaoNamespace_New( self, name );
 	DaoVmSpace_Lock( self );
 	DMap_Insert( self->nsModules, & str, ns );
-	DList_PushFront( self->loadedModules, ns );
+	DMap_Insert( self->nsRefs, ns, NULL );
 	DaoVmSpace_Unlock( self );
 	return ns;
 }
@@ -693,6 +690,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->vfiles = DHash_New( DAO_DATA_STRING, 0 );
 	self->vmodules = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsModules = DHash_New( DAO_DATA_STRING, 0 );
+	self->nsRefs = DHash_New( DAO_DATA_VALUE, 0 );
 	self->pathWorking = DString_New();
 	self->nameLoading = DList_New( DAO_DATA_STRING );
 	self->pathLoading = DList_New( DAO_DATA_STRING );
@@ -711,7 +709,6 @@ DaoVmSpace* DaoVmSpace_New()
 	self->allByteCoders = DMap_New(0,0);
 	self->allInferencers = DMap_New(0,0);
 	self->allOptimizers = DMap_New(0,0);
-	self->loadedModules = DList_New( DAO_DATA_VALUE );
 
 #ifdef DAO_WITH_THREAD
 	DMutex_Init( & self->moduleMutex );
@@ -724,7 +721,6 @@ DaoVmSpace* DaoVmSpace_New()
 	self->daoNamespace->vmSpace = self;
 	GC_IncRC( self->daoNamespace );
 	DMap_Insert( self->nsModules, self->daoNamespace->name, self->daoNamespace );
-	DList_PushFront( self->loadedModules, self->daoNamespace );
 
 	DaoNamespace_AddCodeInliner( self->daoNamespace, "test", dao_default_test_inliner );
 
@@ -777,12 +773,12 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DList_Delete( self->virtualPaths );
 	DList_Delete( self->processes );
 	DList_Delete( self->routines );
-	DList_Delete( self->loadedModules );
 	DList_Delete( self->sourceArchive );
 	DList_Delete( self->parsers );
 	DList_Delete( self->byteCoders );
 	DList_Delete( self->inferencers );
 	DList_Delete( self->optimizers );
+	DMap_Delete( self->nsRefs );
 	DMap_Delete( self->vfiles );
 	DMap_Delete( self->vmodules );
 	DMap_Delete( self->allProcesses );
@@ -1738,14 +1734,12 @@ void DaoVmSpace_LoadArchive( DaoVmSpace *self, DString *archive, DString *group 
 	DString_Delete( source );
 	DString_Delete( name );
 }
-int DaoVmSpace_Eval( DaoVmSpace *self, const char *src )
+DaoValue* DaoVmSpace_Eval( DaoVmSpace *self, const char *source )
 {
 	DaoProcess *process = DaoVmSpace_AcquireProcess( self );
-	DaoNamespace *ns = DaoNamespace_New( self, "?" );
-	int retc = DaoProcess_Eval( process, ns, src );
+	DaoValue *value = DaoProcess_Eval( process, self->mainNamespace, source );
 	DaoVmSpace_ReleaseProcess( self, process );
-	DaoGC_TryDelete( (DaoValue*) ns );
-	return retc;
+	return value;
 }
 int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 {
@@ -1764,8 +1758,8 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		DList_PushFront( self->nameLoading, self->pathWorking );
 		DList_PushFront( self->pathLoading, self->pathWorking );
 		if( self->evalCmdline ){
-			DString_SetChars( self->mainNamespace->name, "command line codes" );
-			if( DaoProcess_Compile( vmp, ns, self->mainSource->chars ) ==0 ) return 1;
+			ns = DaoProcess_Compile( vmp, ns, self->mainSource->chars );
+			if( ns == NULL ) return 1;
 			DaoVmSpace_ExeCmdArgs( self );
 			if( DaoProcess_Call( vmp, ns->mainRoutine, NULL, NULL, 0 ) ) return 1;
 		}else{
@@ -1781,9 +1775,9 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	DaoVmSpace_SetPath( self, ns->path->chars );
 	DList_PushFront( self->nameLoading, ns->name );
 	DList_PushFront( self->pathLoading, ns->path );
-	DList_PushFront( self->loadedModules, ns );
 	if( DMap_Find( self->nsModules, ns->name ) == NULL ){
 		MAP_Insert( self->nsModules, ns->name, ns );
+		MAP_Insert( self->nsRefs, ns, NULL );
 	}
 
 	tm = Dao_FileChangedTime( ns->name->chars );
@@ -1967,16 +1961,14 @@ static void DaoVmSpace_PopLoadingNamePath( DaoVmSpace *self, int path )
 DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, int run )
 {
 	DString *source = NULL;
-	DList *argNames = NULL, *argValues = NULL;
-	DaoNamespace *ns = NULL, *ns2 = NULL;
+	DaoNamespace *ns = NULL;
 	DaoRoutine *mainRoutine = NULL;
 	DaoParser *parser = NULL;
 	DaoProcess *process;
-	daoint nsCount = self->loadedModules->size;
 	int poppath = 0;
 	size_t tm = 0;
 
-	ns = ns2 = DaoVmSpace_FindNamespace( self, libpath );
+	ns = DaoVmSpace_FindNamespace( self, libpath );
 
 	tm = Dao_FileChangedTime( libpath->chars );
 	/* printf( "time = %lli,  %s  %p\n", tm, libpath->chars, node ); */
@@ -1984,6 +1976,7 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, i
 		if( run ) goto ExecuteImplicitMain;
 		goto LoadingDone;
 	}
+	ns = NULL;
 
 	source = DString_New();
 	if( ! DaoVmSpace_ReadFile( self, libpath, source ) ) goto LoadingFailed;
@@ -2006,8 +1999,8 @@ DaoNamespace* DaoVmSpace_LoadDaoModuleExt( DaoVmSpace *self, DString *libpath, i
 	ns->time = tm;
 
 	DaoVmSpace_Lock( self );
-	DList_PushFront( self->loadedModules, ns );
 	MAP_Insert( self->nsModules, libpath, ns );
+	MAP_Insert( self->nsRefs, ns, NULL );
 	DList_PushFront( self->nameLoading, ns->name );
 	if( ns->path->size ) DList_PushFront( self->pathLoading, ns->path );
 	DaoVmSpace_Unlock( self );
@@ -2063,25 +2056,18 @@ ExecuteImplicitMain :
 LoadingDone:
 
 	DaoVmSpace_PopLoadingNamePath( self, poppath );
-	if( self->loadedModules->size > (nsCount+1) ){
-		DaoVmSpace_Lock( self );
-		DList_Erase( self->loadedModules, 0, self->loadedModules->size - (nsCount+1) );
-		DaoVmSpace_Unlock( self );
-	}
 	if( source ) DString_Delete( source );
 	return ns;
-InvalidArgument:
-	DaoStream_WriteChars( self->errorStream, "ERROR: invalid arguments for the explicit main().\n" );
+
 LoadingFailed :
 	DaoVmSpace_PopLoadingNamePath( self, poppath );
-	if( self->loadedModules->size > nsCount ){
-		DaoVmSpace_Lock( self );
-		DList_Erase( self->loadedModules, 0, self->loadedModules->size - nsCount );
-		DaoVmSpace_Unlock( self );
-	}
+	DaoVmSpace_Lock( self );
+	DMap_Erase( self->nsModules, ns->name );
+	DMap_Erase( self->nsRefs, ns );
+	DaoVmSpace_Unlock( self );
 	if( source ) DString_Delete( source );
 	if( parser ) DaoVmSpace_ReleaseParser( self, parser );
-	return 0;
+	return NULL;
 }
 DaoNamespace* DaoVmSpace_LoadDaoModule( DaoVmSpace *self, DString *libpath )
 {
@@ -2095,7 +2081,6 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	DaoModuleOnLoad funpter = NULL;
 	DaoNamespace *ns = NULL;
 	void *handle = NULL;
-	daoint nsCount = self->loadedModules->size;
 	daoint i, retc;
 
 	ns = DaoVmSpace_FindNamespace( self, libpath );
@@ -2121,7 +2106,7 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 			DaoStream_WriteChars( self->errorStream, "ERROR: unable to open the library file \"" );
 			DaoStream_WriteChars( self->errorStream, libpath->chars );
 			DaoStream_WriteChars( self->errorStream, "\".\n");
-			return 0;
+			return NULL;
 		}
 		name = DString_New();
 		DString_SetChars( name, "DaoOnLoad" );
@@ -2162,8 +2147,8 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	if( name ) DString_Delete( name );
 
 	DaoVmSpace_Lock( self );
-	DList_PushFront( self->loadedModules, ns );
 	MAP_Insert( self->nsModules, libpath, ns );
+	MAP_Insert( self->nsRefs, ns, NULL );
 	DaoVmSpace_Unlock( self );
 
 	/*
@@ -2185,17 +2170,12 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	DaoVmSpace_Unlock( self );
 	if( retc ){
 		DaoVmSpace_Lock( self );
-		MAP_Erase( self->nsModules, ns->name );
-		DList_Erase( self->loadedModules, 0, self->loadedModules->size - nsCount );
+		DMap_Erase( self->nsModules, ns->name );
+		DMap_Erase( self->nsRefs, ns );
 		DaoVmSpace_Unlock( self );
 		return NULL;
 	}
 	DaoNamespace_UpdateLookupTable( ns );
-	if( self->loadedModules->size > (nsCount+1) ){
-		DaoVmSpace_Lock( self );
-		DList_Erase( self->loadedModules, 0, self->loadedModules->size - (nsCount+1) );
-		DaoVmSpace_Unlock( self );
-	}
 	return ns;
 }
 int DaoVmSpace_AddVirtualModules( DaoVmSpace *self, DaoVModule modules[] )

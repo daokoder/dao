@@ -732,32 +732,37 @@ void DaoProcess_FlushStdStreams( DaoProcess *self )
 	fflush( stdout );
 	fflush( stderr );
 }
-int DaoProcess_Compile( DaoProcess *self, DaoNamespace *ns, const char *src )
+DaoNamespace* DaoProcess_Compile( DaoProcess *self, DaoNamespace *nspace, const char *source )
 {
 	DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	int res;
 
-	parser->nameSpace = ns;
-	DString_Assign( parser->fileName, ns->name );
-	res = DaoParser_LexCode( parser, src, 1 ) && DaoParser_ParseScript( parser );
+	parser->nameSpace = nspace;
+	DString_Assign( parser->fileName, nspace->name );
+	res = DaoParser_LexCode( parser, source, 1 ) && DaoParser_ParseScript( parser );
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	DaoProcess_FlushStdStreams( self );
-	return res;
+	if( res == 0 ) return NULL;
+	return nspace;
 }
-int DaoProcess_Eval( DaoProcess *self, DaoNamespace *ns, const char *source )
+DaoValue* DaoProcess_Eval( DaoProcess *self, DaoNamespace *nspace, const char *source )
 {
 	DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	DaoRoutine *rout;
 	int res;
 
 	parser->autoReturn = 1;
-	parser->nameSpace = ns;
-	DString_SetChars( parser->fileName, "code string" );
+	parser->nameSpace = nspace;
+	DString_Assign( parser->fileName, nspace->name );
 	res = DaoParser_LexCode( parser, source, 1 ) && DaoParser_ParseScript( parser );
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	DaoProcess_FlushStdStreams( self );
-	if( res == 0 ) return 0;
-	return DaoProcess_Call( self, ns->mainRoutine, NULL, NULL, 0 ) == 0;
+
+	if( res == 0 ) return NULL;
+	if( DaoProcess_Call( self, nspace->mainRoutine, NULL, NULL, 0 ) != 0 ) return NULL;
+
+	if( nspace->mainRoutine->routType->aux->xType.tid != DAO_NONE ) return self->stackValues[0];
+	return dao_none_value;
 }
 int DaoProcess_Call( DaoProcess *self, DaoRoutine *M, DaoValue *O, DaoValue *P[], int N )
 {

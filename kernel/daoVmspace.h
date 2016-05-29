@@ -109,7 +109,6 @@ struct DaoVmSpace
 	DList   *virtualPaths;  /* <DString*> */
 
 	DList   *preloadModules;
-	DList   *loadedModules;
 	DList   *sourceArchive;
 
 	int    stopit;
@@ -122,6 +121,7 @@ struct DaoVmSpace
 
 	/* map full file name (including path and suffix) to module namespace */
 	DMap  *nsModules; /* No GC for this, namespaces should remove themselves from this; */
+	DMap  *nsRefs;
 
 	DaoDebugger     *debugger;
 	DaoProfiler     *profiler;

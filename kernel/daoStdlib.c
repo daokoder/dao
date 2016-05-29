@@ -72,31 +72,35 @@ static void DaoSTD_Path( DaoProcess *proc, DaoValue *p[], int N )
 }
 static void DaoSTD_Eval( DaoProcess *proc, DaoValue *p[], int N )
 {
+	DaoValue *value;
 	DaoVmSpace *vms = proc->vmSpace;
-	DaoNamespace *ns = proc->activeNamespace;
+	DaoNamespace *ns = DaoNamespace_New( vms, "std.eval()" );
 	DaoStream *prevStream = proc->stdioStream;
 	DaoStream *redirect = (DaoStream*) p[1];
-	char *source = DaoValue_TryGetChars( p[0] );
+	DString *source = p[0]->xString.value;
+
 	if( redirect != prevStream ) GC_Assign( & proc->stdioStream, redirect );
-	if( DaoProcess_Eval( proc, ns, source ) == 0 ){
-		DaoProcess_PutValue( proc, dao_none_value );
+
+	GC_IncRC( ns );
+	DaoNamespace_AddParent( ns, proc->activeNamespace );
+
+	value = DaoProcess_Eval( proc, ns, source->chars );
+	GC_DecRC( ns );
+	if( value == NULL ){
 		DaoProcess_RaiseError( proc, NULL, "evaluation failed" );
 		return;
 	}
-	DaoProcess_PutValue( proc, proc->stackValues[0] );
+	DaoProcess_PutValue( proc, value );
 	if( redirect != prevStream ) GC_Assign( & proc->stdioStream, prevStream );
 }
 static void DaoSTD_Compile( DaoProcess *proc, DaoValue *p[], int N )
 {
-	char *source = DaoValue_TryGetChars( p[0] );
-	DaoNamespace *ns, *import = DaoValue_CastNamespace( p[1] );
-	ns = DaoNamespace_New( proc->vmSpace, "std::compile" );
-	DaoProcess_PutValue( proc, (DaoValue*) ns );
-	if( import != NULL ) DaoNamespace_AddParent( ns, import );
-	if( DaoProcess_Compile( proc, ns, source ) == 0 ){
-		DaoProcess_RaiseError( proc, NULL, "compiling failed" );
-		return;
-	}
+	DString *source = p[0]->xString.value;
+	DaoNamespace *import = DaoValue_CastNamespace( p[1] );
+	DaoNamespace *nspace = DaoNamespace_New( proc->vmSpace, "std.compile()" );
+	DaoProcess_PutValue( proc, (DaoValue*) nspace );
+	nspace = DaoProcess_Compile( proc, import, source->chars );
+	if( nspace == NULL ) DaoProcess_RaiseError( proc, NULL, "compiling failed" );
 }
 static void DaoSTD_Load( DaoProcess *proc, DaoValue *p[], int N )
 {
