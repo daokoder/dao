@@ -985,7 +985,7 @@ int DaoProcess_Start( DaoProcess *self )
 	DaoStackFrame *startFrame = self->startFrame;
 	DaoDebugger *debugger = self->vmSpace->debugger;
 	DaoProfiler *profiler = self->vmSpace->profiler;
-	DaoUserHandler *handler = self->vmSpace->userHandler;
+	DaoHandler *handler = self->vmSpace->handler;
 	DaoVmSpace *vmSpace = self->vmSpace;
 	DaoVmCode *vmcBase, *sect, *vmc = NULL;
 	DaoVmCode operands = {0};
@@ -1020,7 +1020,6 @@ int DaoProcess_Start( DaoProcess *self )
 	dao_complex czero = {0,0};
 	dao_complex acom, bcom;
 	double AA, BB, dnum=0;
-	int invokehost = handler && handler->InvokeHost;
 	int active = self->active;
 	daoint exceptCount0 = self->exceptions->size;
 	daoint exceptCount = 0;
@@ -1207,7 +1206,6 @@ CallEntry:
 #endif
 
 	if( vmSpace->stopit ) goto FinishProcess;
-	if( invokehost ) handler->InvokeHost( handler, self );
 
 #ifdef DAO_USE_CODE_STATE
 	if( (vmSpace->options&DAO_OPTION_DEBUG) | (routine->body->exeMode&DAO_ROUT_MODE_DEBUG) )
@@ -2327,7 +2325,6 @@ CheckException:
 			locVars = self->activeValues;
 			if( vmSpace->stopit ) goto FinishProcess;
 			if( (++count) % 1000 == 0 ) DaoGC_TryInvoke( self );
-			if( invokehost ) handler->InvokeHost( handler, self );
 			if( self->exceptions->size > exceptCount ){
 				goto FinishCall;
 			}else if( self->status == DAO_PROCESS_STACKED ){

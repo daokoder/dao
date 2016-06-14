@@ -604,10 +604,10 @@ DaoProfiler* DaoVmSpace_SetProfiler( DaoVmSpace *self, DaoProfiler *profiler )
 	self->profiler = profiler;
 	return hd;
 }
-DaoUserHandler* DaoVmSpace_SetHandler( DaoVmSpace *self, DaoUserHandler *handler )
+DaoHandler* DaoVmSpace_SetHandler( DaoVmSpace *self, DaoHandler *handler )
 {
-	DaoUserHandler *hd = self->userHandler;
-	self->userHandler = handler;
+	DaoHandler *hd = self->handler;
+	self->handler = handler;
 	return hd;
 }
 void DaoVmSpace_ReadLine( DaoVmSpace *self, ReadLine fptr )
@@ -690,6 +690,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->vfiles = DHash_New( DAO_DATA_STRING, 0 );
 	self->vmodules = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsModules = DHash_New( DAO_DATA_STRING, 0 );
+	self->nsPlugins = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsRefs = DHash_New( DAO_DATA_VALUE, 0 );
 	self->pathWorking = DString_New();
 	self->nameLoading = DList_New( DAO_DATA_STRING );
@@ -789,7 +790,6 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DMap_Delete( self->allOptimizers );
 	GC_DecRC( self->mainProcess );
 	self->stdioStream = NULL;
-	if( self->preloadModules ) DList_Delete( self->preloadModules );
 }
 void DaoVmSpace_Delete( DaoVmSpace *self )
 {
@@ -798,6 +798,7 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 #endif
 	if( self->stdioStream ) DaoVmSpace_DeleteData( self );
 	DMap_Delete( self->nsModules );
+	DMap_Delete( self->nsPlugins );
 #ifdef DAO_WITH_THREAD
 	DMutex_Destroy( & self->moduleMutex );
 	DMutex_Destroy( & self->cacheMutex );
@@ -946,11 +947,8 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 			}else if( strstr( token->chars, "--path=" ) == token->chars ){
 				DaoVmSpace_AddPath( self, token->chars + 7 );
 			}else if( strstr( token->chars, "--module=" ) == token->chars ){
-				if( self->preloadModules == NULL ) self->preloadModules = DList_New( DAO_DATA_VALUE );
 				if( (ns = DaoVmSpace_Load( self, token->chars + 9 )) ){
-					DList_Append( self->preloadModules, ns );
-					DList_Append( self->mainNamespace->namespaces, ns );
-					DaoNamespace_UpdateLookupTable( self->mainNamespace );
+					DaoVmSpace_AddPlugin( self, ns->name, ns );
 				}else{
 					DaoStream_WriteChars( self->errorStream, "Preloading failed for module: " );
 					DaoStream_WriteChars( self->errorStream, token->chars );
@@ -1765,7 +1763,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		}else{
 			DaoVmSpace_ExeCmdArgs( self );
 		}
-		if( (self->options & DAO_OPTION_INTERUN) && self->userHandler == NULL )
+		if( (self->options & DAO_OPTION_INTERUN) && self->handler == NULL )
 			DaoVmSpace_Interun( self, NULL );
 		return 0;
 	}
@@ -1867,7 +1865,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 			return vmp->stackValues[0]->xInteger.value;
 		}
 	}
-	if( (self->options & DAO_OPTION_INTERUN) && self->userHandler == NULL )
+	if( (self->options & DAO_OPTION_INTERUN) && self->handler == NULL )
 		DaoVmSpace_Interun( self, NULL );
 
 	return 0;
@@ -2178,6 +2176,25 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	DaoNamespace_UpdateLookupTable( ns );
 	return ns;
 }
+
+int DaoVmSpace_AddPlugin( DaoVmSpace *self, DString *name, DaoNamespace *nspace )
+{
+	DNode *it = DMap_Find( self->nsPlugins, name );
+
+	if( it != NULL && it->value.pVoid == nspace ) return 1;
+
+	it = DMap_Find( self->nsModules, name );
+	if( it == NULL || it->value.pVoid != nspace ) return 0;
+
+	DaoVmSpace_Lock( self );
+	DMap_Insert( self->nsPlugins, name, nspace );
+
+	DList_Append( self->mainNamespace->namespaces, nspace );
+	DaoNamespace_UpdateLookupTable( self->mainNamespace );
+	DaoVmSpace_Unlock( self );
+	return 1;
+}
+
 int DaoVmSpace_AddVirtualModules( DaoVmSpace *self, DaoVModule modules[] )
 {
 	int vmods = 0;

@@ -99,7 +99,8 @@ static void DaoSTD_Compile( DaoProcess *proc, DaoValue *p[], int N )
 	DaoNamespace *import = DaoValue_CastNamespace( p[1] );
 	DaoNamespace *nspace = DaoNamespace_New( proc->vmSpace, "std.compile()" );
 	DaoProcess_PutValue( proc, (DaoValue*) nspace );
-	nspace = DaoProcess_Compile( proc, import, source->chars );
+	if( import != NULL ) DaoNamespace_AddParent( nspace, import );
+	nspace = DaoProcess_Compile( proc, nspace, source->chars );
 	if( nspace == NULL ) DaoProcess_RaiseError( proc, NULL, "compiling failed" );
 }
 static void DaoSTD_Load( DaoProcess *proc, DaoValue *p[], int N )
@@ -184,11 +185,11 @@ static void DaoSTD_Note( DaoProcess *proc, DaoValue *p[], int N )
 	int i;
 	DaoVmSpace *vmspace = proc->vmSpace;
 
-	if( vmspace->userHandler == NULL ) return;
-	if( vmspace->userHandler->PrintNote == NULL ) return;
+	if( vmspace->handler == NULL ) return;
+	if( vmspace->handler->PrintNote == NULL ) return;
 
 	for(i=0; i<N; ++i){
-		vmspace->userHandler->PrintNote( vmspace->userHandler, p[i] );
+		vmspace->handler->PrintNote( vmspace->handler, p[i] );
 	}
 }
 

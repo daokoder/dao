@@ -193,7 +193,6 @@ void DList_Swap( DList *left, DList *right )
 	void **tmpItem = left->items.pVoid;
 
 	assert( left->type == right->type );
-	assert( left->type != DAO_DATA_VALUE );
 
 	if( left->type == DAO_DATA_VALUE ) DaoGC_LockData();
 	left->size = right->size;

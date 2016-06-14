@@ -201,7 +201,7 @@ typedef struct DMap     DMap;
 typedef struct DaoTypeCore     DaoTypeCore;
 typedef struct DaoTypeBase     DaoTypeBase;
 typedef struct DaoStackFrame   DaoStackFrame;
-typedef struct DaoUserHandler  DaoUserHandler;
+typedef struct DaoHandler      DaoHandler;
 typedef struct DaoDebugger     DaoDebugger;
 typedef struct DaoProfiler     DaoProfiler;
 typedef struct DaoParser       DaoParser;
@@ -344,6 +344,7 @@ struct DaoDebugger
 	/* properly change some NOP codes to DEBUG codes */
 	void (*BreakPoints)( DaoDebugger *self, DaoRoutine *routine );
 };
+
 struct DaoProfiler
 {
 	void (*Reset)( DaoProfiler *self );
@@ -352,13 +353,13 @@ struct DaoProfiler
 	void (*Summarize)( DaoProfiler *self, DaoList *stat );
 	void (*Report)( DaoProfiler *self, DaoStream *stream );
 };
-struct DaoUserHandler
-{
-	void (*PrintNote)( DaoUserHandler *self, DaoValue *value );
 
-	/* invoke host execution to do whatever (e.g., to process GUI events) */
-	void (*InvokeHost)( DaoUserHandler *self, DaoProcess *process );
+struct DaoHandler
+{
+	void (*PrintNote)( DaoHandler *self, DaoValue *value );
+	void (*PrintError)( DaoHandler *self, const char *msg, const char *file, int start, int end );
 };
+
 typedef char* (*ReadLine)( const char *prompt, DString *buffer );
 typedef int   (*AddHistory)( const char *cmd );
 
@@ -927,9 +928,11 @@ DAO_DLL DaoStream* DaoVmSpace_SetStdio( DaoVmSpace *self, DaoStream *stream );
 DAO_DLL DaoStream* DaoVmSpace_SetStdError( DaoVmSpace *self, DaoStream *stream );
 DAO_DLL DaoDebugger* DaoVmSpace_SetDebugger( DaoVmSpace *self, DaoDebugger *debugger );
 DAO_DLL DaoProfiler* DaoVmSpace_SetProfiler( DaoVmSpace *self, DaoProfiler *profiler );
-DAO_DLL DaoUserHandler* DaoVmSpace_SetHandler( DaoVmSpace *self, DaoUserHandler *handler );
+DAO_DLL DaoHandler*  DaoVmSpace_SetHandler( DaoVmSpace *self, DaoHandler *handler );
 DAO_DLL void DaoVmSpace_ReadLine( DaoVmSpace *self, ReadLine fptr );
 DAO_DLL void DaoVmSpace_AddHistory( DaoVmSpace *self, AddHistory fptr );
+
+DAO_DLL int DaoVmSpace_AddPlugin( DaoVmSpace *self, DString *name, DaoNamespace *nspace );
 
 DAO_DLL int DaoVmSpace_AddVirtualModules( DaoVmSpace *self, DaoVModule modules[] );
 DAO_DLL void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, DaoVModule *module );

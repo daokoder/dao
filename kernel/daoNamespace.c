@@ -1064,10 +1064,11 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 		DaoNamespace_AddConst( self, ns->name, (DaoValue*)ns, DAO_PERM_PUBLIC );
 		DList_Append( self->namespaces, ns );
 		DaoNamespace_UpdateLookupTable( self );
-	}else if( vms && vms->preloadModules ){
-		daoint i;
-		for(i=0; i<vms->preloadModules->size; i++){
-			DList_Append( self->namespaces, vms->preloadModules->items.pNS[i] );
+	}
+	if( vms ){
+		DNode *it;
+		for(it=DMap_First(vms->nsPlugins); it!=NULL; it=DMap_Next(vms->nsPlugins,it)){
+			DList_Append( self->namespaces, (DaoNamespace*) it->value.pValue );
 		}
 		DaoNamespace_UpdateLookupTable( self );
 	}
