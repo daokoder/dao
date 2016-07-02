@@ -148,6 +148,7 @@ enum DaoOptions
 	DAO_OPTION_JIT      = (1<<6), /* -j, --jit:          enable JIT compiling; */
 	DAO_OPTION_COMP_BC  = (1<<7), /* -c, --compile:      compile to bytecodes; */
 	DAO_OPTION_ARCHIVE  = (1<<8), /* -a, --archive:      build archive file; */
+	DAO_OPTION_SANDBOX  = (1<<9), /* -s, --sandbox:      run in sandbox mode; */
 
 	/*
 	// DAO_OPTION_IDE:

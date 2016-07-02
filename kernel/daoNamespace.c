@@ -1059,7 +1059,7 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DString_SetChars( name, "__main__" );
 	DaoNamespace_AddConst( self, name, dao_none_value, DAO_PERM_PUBLIC );
 
-	if( vms && vms->daoNamespace ){
+	if( vms && vms->daoNamespace && !(vms->options & DAO_OPTION_SANDBOX) ){
 		DaoNamespace *ns = vms->daoNamespace;
 		DaoNamespace_AddConst( self, ns->name, (DaoValue*)ns, DAO_PERM_PUBLIC );
 		DList_Append( self->namespaces, ns );

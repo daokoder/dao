@@ -53,7 +53,6 @@ enum DaoModuleTypes
 	DAO_MODULE_ANY  = DAO_MODULE_DAC|DAO_MODULE_DAO|DAO_MODULE_DLL
 };
 
-extern const char *const dao_copy_notice;
 
 /*
 // Dao Virtual Machine Space:

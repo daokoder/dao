@@ -181,7 +181,7 @@ const char *const dao_copy_notice =
 "  Target: " TARGET_PLAT "\n"
 "  Built date: " __DATE__ "\n"
 "  Changeset ID: " CHANGESET_ID "\n\n"
-"  Copyright(C) 2006-2015, Fu Limin\n"
+"  Copyright(C) 2006-2016, Limin Fu\n"
 "  Dao is released under the terms of the Simplified BSD License\n"
 "  Dao Language website: http://www.daovm.net\n"
 ;
@@ -195,6 +195,7 @@ static const char *const cmd_help =
 "   -i, --interactive:    run in interactive mode;\n"
 "   -d, --debug:          run in debug mode;\n"
 "   -p, --profile:        run in profile mode;\n"
+"   -s, --sandbox:        run in sandbox mode;\n"
 "   -r, --restart:        restart program on crash (unix) or nozero exit (win);\n"
 "   -c, --compile:        compile to bytecodes;\n"
 "   -a, --archive:        build archive file;\n"
@@ -913,6 +914,7 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 	SplitByWhiteSpaces( options, array );
 	for( i=0; i<array->size; i++ ){
 		DString *token = array->items.pString[i];
+		int sandbox = self->options & DAO_OPTION_SANDBOX;
 		if( self->evalCmdline ){
 			DString_Append( self->mainSource, token );
 			DString_AppendChar( self->mainSource, ' ' );
@@ -932,6 +934,8 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 				self->options |= DAO_OPTION_DEBUG;
 			}else if( strcmp( token->chars, "--profile" ) ==0 ){
 				self->options |= DAO_OPTION_PROFILE;
+			}else if( strcmp( token->chars, "--sandbox" ) ==0 ){
+				self->options |= DAO_OPTION_SANDBOX;
 			}else if( strcmp( token->chars, "--restart" ) ==0 ){
 			}else if( strcmp( token->chars, "--list-code" ) ==0 ){
 				self->options |= DAO_OPTION_LIST_BC;
@@ -975,6 +979,7 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 				case 'i' : self->options |= DAO_OPTION_INTERUN;   break;
 				case 'd' : self->options |= DAO_OPTION_DEBUG;     break;
 				case 'p' : self->options |= DAO_OPTION_PROFILE;   break;
+				case 's' : self->options |= DAO_OPTION_SANDBOX;   break;
 				case 'l' : self->options |= DAO_OPTION_LIST_BC;   break;
 				case 'c' : self->options |= DAO_OPTION_COMP_BC;   break;
 				case 'a' : self->options |= DAO_OPTION_ARCHIVE;   break;
@@ -999,6 +1004,19 @@ int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options )
 				DaoStream_WriteChars( self->errorStream, str->chars );
 				DaoStream_WriteChars( self->errorStream, ";\n" );
 			}
+		}
+		if( sandbox == 0 && (self->options & DAO_OPTION_SANDBOX) ){
+			DaoStream *stream1 = self->stdioStream;
+			DaoStream *stream2 = self->errorStream;
+			DaoNamespace *ions = DaoVmSpace_GetNamespace( self, "io" );
+			DaoNamespace *mainns = DaoNamespace_New( self, "MainNamespace" );
+			mainns->vmSpace = self;
+			GC_Assign( & self->mainNamespace, mainns );
+			DaoNamespace_AddConstValue( mainns, "io", (DaoValue*) ions );
+			DaoNamespace_AddConstValue( mainns, "stdio", (DaoValue*) stream1 );
+			DaoNamespace_AddConstValue( mainns, "stderr", (DaoValue*) stream2 );
+			DMap_Clear( self->nsModules );
+			DMap_Clear( self->nsPlugins );
 		}
 	}
 	if( self->options & DAO_OPTION_DEBUG ) daoConfig.optimize = 0;
@@ -2084,7 +2102,7 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	ns = DaoVmSpace_FindNamespace( self, libpath );
 	if( ns ) return ns;
 
-	if( self->auxLoaded == 0 ){
+	if( self->auxLoaded == 0 && !(self->options & DAO_OPTION_SANDBOX) ){
 		int load = 0;
 		DaoVmSpace_Lock( self );
 		if( self->auxLoaded == 0 ){
@@ -2098,6 +2116,11 @@ static DaoNamespace* DaoVmSpace_LoadDllModule( DaoVmSpace *self, DString *libpat
 	if( (node = MAP_Find( self->vmodules, libpath ) ) ){
 		funpter = (DaoModuleOnLoad) node->value.pVoid;
 		ns = DaoNamespace_New( self, libpath->chars );
+	}else if( self->options & DAO_OPTION_SANDBOX ){
+		DaoStream_WriteChars( self->errorStream, "ERROR: unable to load module \"" );
+		DaoStream_WriteChars( self->errorStream, libpath->chars );
+		DaoStream_WriteChars( self->errorStream, "\" in sandbox mode.\n");
+		return NULL;
 	}else{
 		handle = Dao_OpenDLL( libpath->chars );
 		if( ! handle ){
