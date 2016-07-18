@@ -1317,6 +1317,18 @@ DaoValue* DaoNamespace_GetValue( DaoNamespace *self, daoint index )
 	if( st == DAO_GLOBAL_VARIABLE ) return DaoNamespace_GetVariable( self, index );
 	return NULL;
 }
+DaoValue* DaoNamespace_GetDefinition( DaoNamespace *self, DString *name )
+{
+	DNode *node = MAP_Find( self->lookupTable, name );
+	daoint st, id;
+
+	if( node == NULL ) return NULL;
+	st = LOOKUP_ST( node->value.pInt );
+	id = LOOKUP_ID( node->value.pInt );
+	if( st == DAO_GLOBAL_CONSTANT ) return self->constants->items.pValue[id];
+	if( st == DAO_GLOBAL_VARIABLE ) return self->variables->items.pValue[id];
+	return NULL;
+}
 DaoClass* DaoNamespace_FindClass( DaoNamespace *self, DString *name )
 {
 	int id = DaoNamespace_FindConst( self, name );
