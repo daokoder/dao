@@ -232,6 +232,7 @@ struct DaoCdata
 
 
 DAO_DLL void DaoCdata_Delete( DaoCdata *self );
+DAO_DLL DaoType* DaoCdata_NewType( DaoTypeBase *typer, int tid );
 
 
 /*

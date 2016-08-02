@@ -239,12 +239,6 @@ extern DaoTypeBase regexTyper;
 extern DaoTypeBase vmpTyper;
 extern DaoTypeBase typeKernelTyper;
 
-static DaoTypeBase vmsTyper=
-{
-	"vmspace", NULL, NULL, NULL, {0}, {0},
-	(FuncPtrDel) DaoVmSpace_Delete, NULL
-};
-
 DaoTypeBase* DaoVmSpace_GetTyper( short type )
 {
 	switch( type ){
@@ -275,7 +269,6 @@ DaoTypeBase* DaoVmSpace_GetTyper( short type )
 	case DAO_OBJECT    :  return & objTyper;
 	case DAO_NAMESPACE :  return & nsTyper;
 	case DAO_PROCESS   :  return & vmpTyper;
-	case DAO_VMSPACE   :  return & vmsTyper;
 	case DAO_TYPE      :  return & abstypeTyper;
 	case DAO_TYPEKERNEL : return & typeKernelTyper;
 	default : break;
@@ -681,6 +674,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->nsModules = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsPlugins = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsRefs = DHash_New( DAO_DATA_VALUE, 0 );
+	self->typeWrappers = DHash_New( DAO_DATA_VALUE, 0 );
 	self->pathWorking = DString_New();
 	self->nameLoading = DList_New( DAO_DATA_STRING );
 	self->pathLoading = DList_New( DAO_DATA_STRING );
@@ -800,6 +794,7 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DList_Delete( self->byteCoders );
 	DList_Delete( self->inferencers );
 	DList_Delete( self->optimizers );
+	DMap_Delete( self->typeWrappers );
 	DMap_Delete( self->nsRefs );
 	DMap_Delete( self->vfiles );
 	DMap_Delete( self->vmodules );
@@ -2832,8 +2827,6 @@ DaoVmSpace* DaoInit( const char *command )
 
 	dao_type_cdata = DaoNamespace_WrapType( coreNS, & defaultCdataTyper, DAO_CDATA, 1 );
 
-	DaoNamespace_SetupType( coreNS, & vmpTyper, NULL );
-
 	DaoException_Setup( coreNS );
 
 	DaoNamespace_UpdateLookupTable( vms->daoNamespace );
@@ -2957,6 +2950,27 @@ DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DaoParser
 	}
 	DString_Delete( name );
 	return ns;
+}
+
+void DaoVmSpace_AddWrapper( DaoVmSpace *self, DaoTypeBase *core, DaoType *type )
+{
+	DaoVmSpace_Lock( self );
+	DMap_Insert( self->typeWrappers, core, type );
+	DaoVmSpace_Unlock( self );
+}
+
+DaoType* DaoVmSpace_GetWrapper( DaoVmSpace *self, DaoTypeBase *core )
+{
+	DNode *it;
+
+	if( core == NULL ) return NULL;
+
+	DaoVmSpace_Lock( self );
+	it = DMap_Find( self->typeWrappers, core );
+	DaoVmSpace_Unlock( self );
+
+	if( it ) return it->value.pType;
+	return NULL;
 }
 
 

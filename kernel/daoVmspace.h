@@ -91,20 +91,6 @@ struct DaoVmSpace
 	DaoStream  *stdioStream;
 	DaoStream  *errorStream;
 
-	DMap    *allProcesses;
-	DMap    *allRoutines;
-	DMap    *allParsers;
-	DMap    *allByteCoders;
-	DMap    *allInferencers;
-	DMap    *allOptimizers;
-
-	DList   *processes;
-	DList   *routines;
-	DList   *parsers;
-	DList   *byteCoders;
-	DList   *inferencers;
-	DList   *optimizers;
-
 	DString *daoBinFile;
 	DString *daoBinPath;
 	DString *startPath;
@@ -116,34 +102,50 @@ struct DaoVmSpace
 	DList   *virtualPaths;  /* <DString*> */
 	DList   *sourceArchive;
 
-	int    stopit;
-	int    options;
-	int    evalCmdline;
-	int    auxLoaded;
+	int     stopit;
+	int     options;
+	int     evalCmdline;
+	int     auxLoaded;
 
-	DMap  *vfiles;
-	DMap  *vmodules;
+	DMap   *vfiles;
+	DMap   *vmodules;
 
 	/* map full file name (including path and suffix) to module namespace */
-	DMap  *nsModules; /* No GC for this, namespaces should remove themselves from this; */
-	DMap  *nsPlugins; /* Modules that can be used without explicit loading; */
-	DMap  *nsRefs;
+	DMap   *nsModules; /* No GC for this, namespaces should remove themselves from this; */
+	DMap   *nsPlugins; /* Modules that can be used without explicit loading; */
+	DMap   *nsRefs;
+
+	DMap   *typeWrappers;
+
+	DMap   *allProcesses;
+	DMap   *allRoutines;
+	DMap   *allParsers;
+	DMap   *allByteCoders;
+	DMap   *allInferencers;
+	DMap   *allOptimizers;
+
+	DList  *processes;
+	DList  *routines;
+	DList  *parsers;
+	DList  *byteCoders;
+	DList  *inferencers;
+	DList  *optimizers;
 
 	DaoDebugger  *debugger;
 	DaoProfiler  *profiler;
 	DaoHandler   *handler;
-
-	char* (*ReadLine)( const char *prompt, DString *buffer );
-	int   (*AddHistory)( const char *cmd );
 
 #ifdef DAO_WITH_THREAD
 	DMutex    moduleMutex;
 	DMutex    cacheMutex;
 	DMutex    miscMutex;
 #endif
+
+	char* (*ReadLine)( const char *prompt, DString *buffer );
+	int   (*AddHistory)( const char *cmd );
 };
 
-extern DaoVmSpace *mainVmSpace;
+extern DaoVmSpace *masterVmSpace;
 
 DAO_DLL DaoVmSpace* DaoVmSpace_New();
 /*
@@ -182,6 +184,9 @@ DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
 
 DAO_DLL const char*const DaoVmSpace_GetCopyNotice();
 DAO_DLL DaoTypeBase* DaoVmSpace_GetTyper( short type );
+
+DAO_DLL void DaoVmSpace_AddWrapper( DaoVmSpace *self, DaoTypeBase *core, DaoType *type );
+DAO_DLL DaoType* DaoVmSpace_GetWrapper( DaoVmSpace *self, DaoTypeBase *core );
 
 DAO_DLL DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name );
 

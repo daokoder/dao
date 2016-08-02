@@ -3865,6 +3865,7 @@ DaoTypeBase defaultCdataTyper =
 /*
 // In analog to Dao classes, two type objects are created for each cdata type:
 // one for the cdata type type, the other for the cdata object type.
+//
 // Additionally, two dummy cdata objects are created:
 // one with typeid DAO_CTYPE serves an auxiliary value for the two type objects;
 // the other with typeid DAO_CDATA serves as the default value for the cdata object type.
@@ -3874,7 +3875,6 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer, int tid )
 	DaoCtype *ctype = DaoCtype_New( NULL, NULL );
 	DaoType *cdata_type;
 	DaoType *ctype_type;
-	int i;
 
 	DString_SetChars( ctype->name, typer->name );
 	ctype->subtype = DAO_CDATA_PTR;
@@ -3888,24 +3888,6 @@ DaoType* DaoCdata_NewType( DaoTypeBase *typer, int tid )
 	cdata_type->typer = typer;
 	cdata_type->tid = tid;
 
-	for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
-		DaoTypeBase *sup = typer->supers[i];
-		if( sup == NULL ) break;
-		if( sup->core == NULL || sup->core->kernel->abtype == NULL ){
-			DaoGC_TryDelete( (DaoValue*) ctype );
-			printf( "Parent type is not wrapped (successfully): %s\n", typer->name );
-			return NULL;
-		}
-		if( sup->core->kernel->abtype->tid != cdata_type->tid ){
-			DaoGC_TryDelete( (DaoValue*) ctype );
-			printf( "Invalid parent type: %s\n", typer->name );
-			return NULL;
-		}
-		if( ctype_type->bases == NULL ) ctype_type->bases = DList_New( DAO_DATA_VALUE );
-		if( cdata_type->bases == NULL ) cdata_type->bases = DList_New( DAO_DATA_VALUE );
-		DList_Append( ctype_type->bases, sup->core->kernel->abtype->aux->xCdata.ctype );
-		DList_Append( cdata_type->bases, sup->core->kernel->abtype );
-	}
 	return cdata_type;
 }
 

@@ -116,7 +116,6 @@ enum DaoTypes
 	DAO_ROUTINE   ,
 	DAO_PROCESS ,
 	DAO_NAMESPACE ,
-	DAO_VMSPACE   ,
 	DAO_TYPE ,
 	END_CORE_TYPES
 };
@@ -200,7 +199,7 @@ typedef struct DNode    DNode;
 typedef struct DMap     DMap;
 
 typedef struct DaoTypeCore        DaoTypeCore;
-typedef struct DaoTypeDefinition  DaoTypeDefinition;
+typedef struct DaoTypeBase  DaoTypeBase;
 typedef struct DaoTypeInstance    DaoTypeInstance;
 
 typedef struct DaoStackFrame   DaoStackFrame;
@@ -301,13 +300,19 @@ struct DaoVirtualModule
 // to use the default implementations, which will use operator overloading
 // from the member methods to do type checkings and running time executions.
 */
-struct DaoTypeDefinition
+struct DaoTypeBase
 {
 	/* Type name; */
 	const char  *name;
 
-	/* Definition for the base type; */
-	DaoTypeDefinition  *base;
+	/*
+	// Definition for the base types:
+	// Multiple inheritance is supported for interfaces and C++ classes;
+	*/
+	DaoTypeBase  *bases[8];
+
+	/* Member numbers; */
+	DaoNumberEntry  *numbers;
 
 	/* Method definitions: should end with a null item; */
 	DaoFunctionEntry  *methods;
@@ -346,6 +351,9 @@ struct DaoTypeDefinition
 
 	/* Function for printing: */
 	void (*Print)( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p );
+
+	/* Function to complete slice operation: */
+	void (*CopySlice)( DaoValue *self );
 
 	/* Function for copying (used for user defined POD data types): */
 	void (*Copy)( DaoValue *self, DaoValue *other );
@@ -472,7 +480,7 @@ DAO_DLL void**    DaoValue_TryGetCdata2( DaoValue *self );
 /*
 // DaoValue_TryCastCdata() will cast the data of the cdata to the type
 // as specified by "totype". This will essentially call a chain of cast
-// functions as specified in the "casts" fields of DaoTypeDefinition structures
+// functions as specified in the "casts" fields of DaoTypeBase structures
 // along the inheritance chain between the type of the cdata value and
 // the type "totype".
 //
@@ -926,12 +934,12 @@ DAO_DLL void DaoNamespace_AddConstValue( DaoNamespace *self, const char *name, D
 DAO_DLL void DaoNamespace_AddValue( DaoNamespace *self, const char *name, DaoValue *d, const char *type);
 DAO_DLL DaoValue* DaoNamespace_FindData( DaoNamespace *self, const char *name );
 DAO_DLL DaoType* DaoNamespace_DefineType( DaoNamespace *self, const char *type, const char *alias );
-DAO_DLL DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeDefinition *typer, int tid, int options );
-DAO_DLL DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeDefinition *typer );
-DAO_DLL DaoType* DaoNamespace_WrapCinType( DaoNamespace *self, DaoTypeDefinition *c, DaoType *a, DaoType *t );
+DAO_DLL DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int tid, int options );
+DAO_DLL DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeBase *typer );
+DAO_DLL DaoType* DaoNamespace_WrapCinType( DaoNamespace *self, DaoTypeBase *c, DaoType *a, DaoType *t );
 DAO_DLL DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fp, const char *proto );
 DAO_DLL int DaoNamespace_AliasTypes( DaoNamespace *self, const char *alias[] );
-DAO_DLL int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeDefinition *typer[] );
+DAO_DLL int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typer[] );
 DAO_DLL int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFunctionEntry fd[] );
 //DAO_DLL int DaoNamespace_Load( DaoNamespace *self, const char *file ); // Obsolete!
 DAO_DLL int DaoNamespace_GetOptions( DaoNamespace *self );

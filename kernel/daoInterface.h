@@ -40,10 +40,10 @@ struct DaoInterface
 	DAO_VALUE_COMMON;
 
 	int       derived;
-	DaoType  *abtype;  /* type object for this interface; */
-	DList    *supers;  /* parent interfaces; */
-	DMap     *methods; /* DHash<DString*,DaoRoutine*>; */
-	DMap     *concretes; /* the concrete interfaces for abstract interfaces; */
+	DaoType  *abtype;    /* Type object for this interface; */
+	DList    *bases;     /* Base interfaces; */
+	DMap     *methods;   /* DHash<DString*,DaoRoutine*>; */
+	DMap     *concretes; /* Concrete interfaces for the abstract interfaces; */
 };
 
 DaoInterface* DaoInterface_New( const char *name );
@@ -102,9 +102,9 @@ struct DaoCinType
 	DAO_VALUE_COMMON;
 
 	int       derived;
-	DaoType  *citype;  /* concrete interface type type; */
-	DaoType  *vatype;  /* concrete interface value type; */
-	DList    *supers;  /* parent interface classes; */
+	DaoType  *citype;  /* Concrete interface type type; */
+	DaoType  *vatype;  /* Concrete interface value type; */
+	DList    *bases;   /* Parent interface classes; */
 	DMap     *methods; /* DHash<DString*,DaoRoutine*>; */
 
 	DaoType       *target;    /* target type; */

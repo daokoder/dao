@@ -115,8 +115,8 @@ struct DaoType
 	DaoType   *quadtype; /* base/const/invar/var type; */
 	DaoType   *cbtype;   /* extra type for code block; */
 
-	DaoTypeKernel  *kernel; /* type kernel of built-in or C types; */
-	DaoTypeBase    *typer;
+	DaoTypeKernel     *kernel; /* type kernel of built-in or C types; */
+	DaoTypeBase *typer;
 };
 DAO_DLL DaoType *dao_type_none;
 DAO_DLL DaoType *dao_type_udf;
@@ -191,8 +191,6 @@ DAO_DLL DaoRoutine* DaoType_FindFunctionChars( DaoType *self, const char *name )
 DAO_DLL DaoTypeBase* DaoType_GetTyper( DaoType *self );
 
 
-typedef void (*FuncPtrSliced)( DaoValue *self );
-
 
 /*
 // Structure DaoTypeKernel will contain generated wrapping data for the type.
@@ -200,7 +198,7 @@ typedef void (*FuncPtrSliced)( DaoValue *self );
 // no longer used, which make it possible to unload external modules automatically.
 // Its reference counting is handled and only handled by DaoType.
 */
-struct DaoTypeKernel // DaoTypeInstance
+struct DaoTypeKernel
 {
 	DAO_VALUE_COMMON;
 
@@ -213,74 +211,55 @@ struct DaoTypeKernel // DaoTypeInstance
 	DaoRoutine    *intOperators;
 	DaoRoutine    *eqOperators;
 	DaoRoutine    *ltOperators;
-	DTypeSpecTree *sptree;
 	DaoNamespace  *nspace;
-	DaoTypeCore   *core;
+	DaoTypeTree   *sptree;
 	DaoTypeBase   *typer;
 
-	void (*Sliced)( DaoValue *self );
-
-	int  (*SetupValues)( DaoNamespace *nspace, DaoTypeBase *typer );
-	int  (*SetupMethods)( DaoNamespace *space, DaoTypeBase *typer );
+	int (*SetupValues) ( DaoNamespace *self, DaoTypeKernal *kernel );
+	int (*SetupMethods)( DaoNamespace *self, DaoTypeKernal *kernel );
 };
+
 DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer );
 void DaoTypeKernel_InsertInitor( DaoTypeKernel *self, DaoNamespace *ns, DaoType *host, DaoRoutine *routine );
 void DaoTypeKernel_InsertCastor( DaoTypeKernel *self, DaoNamespace *ns, DaoType *host, DaoRoutine *routine );
 
 
-/*
-// The separation of DaoTypeKernel from DaoTypeCore will make it simpler
-// to create DaoTypeCore structures, and also make it unnecessary to change
-// the DaoTypeCore definitions when DaoTypeKernel needs to be changed.
-*/
-struct DaoTypeCore
-{
-	DaoTypeKernel  *kernel;
-
-	void (*GetField)( DaoValue *self, DaoProcess *proc, DString *name );
-	void (*SetField)( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value );
-	void (*GetItem)( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N );
-	void (*SetItem)( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *val );
-	void (*Print)( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData );
-};
-extern DaoTypeCore  baseCore;
 
 
 
-
-typedef struct DTypeParam DTypeParam;
+typedef struct DaoTypeNode DaoTypeNode;
 
 /* Template type parameters structured into a trie: */
-struct DTypeParam
+struct DaoTypeNode
 {
-	DTypeSpecTree *tree;
+	DaoTypeTree *tree;
 
 	DaoType  *type;   /* parameter type; */
 	DaoType  *sptype; /* specialized type; */
 
-	DTypeParam  *first; /* the first child node; */
-	DTypeParam  *last;  /* the last child node; */
-	DTypeParam  *next;  /* the next sibling node; */
+	DaoTypeNode  *first; /* the first child node; */
+	DaoTypeNode  *last;  /* the last child node; */
+	DaoTypeNode  *next;  /* the next sibling node; */
 };
 
 
 
 /* Template type specialization tree: */
-struct DTypeSpecTree
+struct DaoTypeTree
 {
-	DTypeParam  *root;
+	DaoTypeNode  *root;
 
 	DList  *holders;  /* type holders; */
 	DList  *defaults; /* default types; */
 	DList  *sptypes;  /* for GC; */
 };
 
-DTypeSpecTree* DTypeSpecTree_New();
-void DTypeSpecTree_Delete( DTypeSpecTree *self );
+DaoTypeTree* DaoTypeTree_New();
+void DaoTypeTree_Delete( DaoTypeTree *self );
 
-int DTypeSpecTree_Test( DTypeSpecTree *self, DaoType *types[], int count );
-void DTypeSpecTree_Add( DTypeSpecTree *self, DaoType *types[], int count, DaoType *sptype );
-DaoType* DTypeSpecTree_Get( DTypeSpecTree *self, DaoType *types[], int count );
+int DaoTypeTree_Test( DaoTypeTree *self, DaoType *types[], int count );
+void DaoTypeTree_Add( DaoTypeTree *self, DaoType *types[], int count, DaoType *sptype );
+DaoType* DaoTypeTree_Get( DaoTypeTree *self, DaoType *types[], int count );
 
 DAO_DLL DaoType* DaoType_Specialize( DaoType *self, DaoType *types[], int count );
 DAO_DLL void DaoType_SpecializeMethods( DaoType *self );

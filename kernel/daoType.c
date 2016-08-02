@@ -1908,7 +1908,7 @@ void DaoTypeKernel_Delete( DaoTypeKernel *self )
 	if( self->core == (DaoTypeCore*)(self + 1) ){
 		self->typer->core = NULL;
 	}
-	if( self->sptree ) DTypeSpecTree_Delete( self->sptree );
+	if( self->sptree ) DaoTypeTree_Delete( self->sptree );
 	if( self->attribs & DAO_TYPEKERNEL_FREE ){
 		dao_free( (char*)self->typer->name );
 		dao_free( self->typer );
@@ -1924,22 +1924,9 @@ DaoTypeBase typeKernelTyper =
 
 DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer )
 {
-	int extra = typer && typer->core ? 0 : sizeof(DaoTypeCore);
-	DaoTypeKernel *self = (DaoTypeKernel*) dao_calloc( 1, sizeof(DaoTypeKernel) + extra );
+	DaoTypeKernel *self = (DaoTypeKernel*) dao_calloc( 1, sizeof(DaoTypeKernel) );
 	DaoValue_Init( self, DAO_TYPEKERNEL );
 	self->trait |= DAO_VALUE_DELAYGC;
-	self->Sliced = NULL;
-	if( typer ) self->typer = typer;
-	if( typer && typer->core ) self->core = typer->core;
-	if( self->core == NULL ){
-		self->core = (DaoTypeCore*)(self + 1);
-		self->core->GetField = DaoValue_GetField;
-		self->core->SetField = DaoValue_SetField;
-		self->core->GetItem = DaoValue_GetItem;
-		self->core->SetItem = DaoValue_SetItem;
-		self->core->Print = DaoValue_Print;
-	}
-	if( self->core->kernel == NULL ) self->core->kernel = self;
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
@@ -1967,31 +1954,31 @@ void DaoTypeKernel_InsertCastor( DaoTypeKernel *self, DaoNamespace *ns, DaoType 
 
 
 
-static DTypeParam* DTypeParam_New( DTypeSpecTree *tree )
+static DaoTypeNode* DaoTypeNode_New( DaoTypeTree *tree )
 {
-	DTypeParam *self = (DTypeParam*) dao_calloc( 1, sizeof(DTypeParam) );
+	DaoTypeNode *self = (DaoTypeNode*) dao_calloc( 1, sizeof(DaoTypeNode) );
 	self->tree = tree;
 	return self;
 }
-static void DTypeParam_Delete( DTypeParam *self )
+static void DaoTypeNode_Delete( DaoTypeNode *self )
 {
 	while( self->first ){
-		DTypeParam *node = self->first;
+		DaoTypeNode *node = self->first;
 		self->first = node->next;
-		DTypeParam_Delete( node );
+		DaoTypeNode_Delete( node );
 	}
 	dao_free( self );
 }
-static DTypeParam*
-DTypeParam_Add( DTypeParam *self, DaoType *types[], int count, int pid, DaoType *sptype )
+static DaoTypeNode*
+DaoTypeNode_Add( DaoTypeNode *self, DaoType *types[], int count, int pid, DaoType *sptype )
 {
-	DTypeParam *param, *ret;
+	DaoTypeNode *param, *ret;
 	DaoType *type;
 	int i, n;
 	if( pid >= count ){
 		/* If a specialization with the same parameter signature is found, return it: */
 		for(param=self->first; param; param=param->next) if( param->sptype ) return param;
-		param = DTypeParam_New( self->tree );
+		param = DaoTypeNode_New( self->tree );
 		param->sptype = sptype;
 		/* Add a leaf. */
 		if( self->last ){
@@ -2004,12 +1991,12 @@ DTypeParam_Add( DTypeParam *self, DaoType *types[], int count, int pid, DaoType 
 	}
 	type = types[pid];
 	for(param=self->first; param; param=param->next){
-		if( param->type == type ) return DTypeParam_Add( param, types, count, pid+1, sptype );
+		if( param->type == type ) return DaoTypeNode_Add( param, types, count, pid+1, sptype );
 	}
 	/* Add a new internal node: */
-	param = DTypeParam_New( self->tree );
+	param = DaoTypeNode_New( self->tree );
 	param->type = type;
-	ret = DTypeParam_Add( param, types, count, pid+1, sptype );
+	ret = DaoTypeNode_Add( param, types, count, pid+1, sptype );
 	/* Add the node to the tree after all its child nodes have been created, to ensure
 	 * a reader will always lookup in a valid tree in multi-threaded applications: */
 	if( self->last ){
@@ -2020,10 +2007,10 @@ DTypeParam_Add( DTypeParam *self, DaoType *types[], int count, int pid, DaoType 
 	}
 	return ret;
 }
-static DaoType* DTypeParam_GetLeaf( DTypeParam *self, int pid, int *ms )
+static DaoType* DaoTypeNode_GetLeaf( DaoTypeNode *self, int pid, int *ms )
 {
 	DList *defaults = self->tree->defaults;
-	DTypeParam *param;
+	DaoTypeNode *param;
 	*ms = 0;
 	if( self->sptype ) return self->sptype; /* a leaf */
 	/* Explicit specializable types has no default type parameters: */
@@ -2032,21 +2019,21 @@ static DaoType* DTypeParam_GetLeaf( DTypeParam *self, int pid, int *ms )
 	for(param=self->first; param; param=param->next){
 		if( param->type == NULL ) return param->sptype; /* a leaf */
 		if( param->type == defaults->items.pType[pid] ){
-			DaoType *type = DTypeParam_GetLeaf( param, pid + 1, ms );
+			DaoType *type = DaoTypeNode_GetLeaf( param, pid + 1, ms );
 			if( type ) return type;
 		}
 	}
 	return NULL;
 }
 static DaoType*
-DTypeParam_Get2( DTypeParam *self, DaoType *types[], int count, int pid, int *score )
+DaoTypeNode_Get2( DaoTypeNode *self, DaoType *types[], int count, int pid, int *score )
 {
-	DTypeParam *param;
+	DaoTypeNode *param;
 	DaoType *argtype, *sptype = NULL, *best = NULL;
 	int i, m, k = 0, max = 0;
 
 	*score = 1;
-	if( pid >= count ) return DTypeParam_GetLeaf( self, pid, score );
+	if( pid >= count ) return DaoTypeNode_GetLeaf( self, pid, score );
 	argtype = types[pid];
 	for(param=self->first; param; param=param->next){
 		DaoType *partype = param->type;
@@ -2059,7 +2046,7 @@ DTypeParam_Get2( DTypeParam *self, DaoType *types[], int count, int pid, int *sc
 			/* @T, @S; @T<int|string>, @T<int|float|string>; ... */
 			if( DString_EQ( argtype->name, partype->name ) == 0 ) continue;
 		}
-		if( (sptype = DTypeParam_Get2( param, types, count, pid+1, & k )) == NULL ) continue;
+		if( (sptype = DaoTypeNode_Get2( param, types, count, pid+1, & k )) == NULL ) continue;
 		m += k;
 		if( m > max ){
 			best = sptype;
@@ -2069,25 +2056,25 @@ DTypeParam_Get2( DTypeParam *self, DaoType *types[], int count, int pid, int *sc
 	*score = max;
 	return best;
 }
-DTypeSpecTree* DTypeSpecTree_New()
+DaoTypeTree* DaoTypeTree_New()
 {
-	DTypeSpecTree *self = (DTypeSpecTree*)dao_malloc( sizeof(DTypeSpecTree) );
-	self->root = DTypeParam_New( self );
+	DaoTypeTree *self = (DaoTypeTree*)dao_malloc( sizeof(DaoTypeTree) );
+	self->root = DaoTypeNode_New( self );
 	self->holders = DList_New( DAO_DATA_VALUE );
 	self->defaults = DList_New( DAO_DATA_VALUE );
 	self->sptypes = DList_New( DAO_DATA_VALUE );
 	return self;
 }
-void DTypeSpecTree_Delete( DTypeSpecTree *self )
+void DaoTypeTree_Delete( DaoTypeTree *self )
 {
-	DTypeParam_Delete( self->root );
+	DaoTypeNode_Delete( self->root );
 	DList_Delete( self->holders );
 	DList_Delete( self->defaults );
 	DList_Delete( self->sptypes );
 	dao_free( self );
 }
 /* Test if the type can be specialized according to the type parameters: */
-int DTypeSpecTree_Test( DTypeSpecTree *self, DaoType *types[], int count )
+int DaoTypeTree_Test( DaoTypeTree *self, DaoType *types[], int count )
 {
 	daoint i, n = self->holders->size;
 	if( n == 0 || count > n ) return 0;
@@ -2102,24 +2089,24 @@ int DTypeSpecTree_Test( DTypeSpecTree *self, DaoType *types[], int count )
 	}
 	return 1;
 }
-void DTypeSpecTree_Add( DTypeSpecTree *self, DaoType *types[], int count, DaoType *sptype )
+void DaoTypeTree_Add( DaoTypeTree *self, DaoType *types[], int count, DaoType *sptype )
 {
-	DTypeParam_Add( self->root, types, count, 0, sptype );
+	DaoTypeNode_Add( self->root, types, count, 0, sptype );
 	DList_Append( self->sptypes, sptype );
 }
-DaoType* DTypeSpecTree_Get( DTypeSpecTree *self, DaoType *types[], int count )
+DaoType* DaoTypeTree_Get( DaoTypeTree *self, DaoType *types[], int count )
 {
 	int score = 0;
 	/* For explicitly specialized types, the specialization tree has no type holders: */
-	if( self->holders->size && DTypeSpecTree_Test( self, types, count ) == 0 ) return NULL;
-	return DTypeParam_Get2( self->root, types, count, 0, & score );
+	if( self->holders->size && DaoTypeTree_Test( self, types, count ) == 0 ) return NULL;
+	return DaoTypeNode_Get2( self->root, types, count, 0, & score );
 }
-extern DaoType* DaoCdata_NewType( DaoTypeBase *typer );
+
 static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int count )
 {
 	DaoType *sptype, *sptype2;
 	DaoTypeKernel *kernel;
-	DTypeSpecTree *sptree;
+	DaoTypeTree *sptree;
 	uchar_t tid = self->tid;
 	daoint i, pos;
 
@@ -2130,15 +2117,15 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 
 	if( (kernel = self->kernel) == NULL ) return NULL;
 	if( (sptree = kernel->sptree) == NULL ) return NULL;
-	if( (sptype = DTypeSpecTree_Get( sptree, types, count )) ){
+	if( (sptype = DaoTypeTree_Get( sptree, types, count )) ){
 		if( tid == DAO_CTYPE ) return sptype->aux->xCdata.ctype;
 		return sptype;
 	}
-	if( DTypeSpecTree_Test( sptree, types, count ) == 0 ) return NULL;
+	if( DaoTypeTree_Test( sptree, types, count ) == 0 ) return NULL;
 
 	/* Specialized cdata type will be initialized with the same kernel as the template type.
 	 * Upon method accessing, a new kernel will be created with specialized methods. */
-	sptype = DaoCdata_NewType( self->typer );
+	sptype = DaoCdata_NewType( self->typer, self->tid );
 	sptype2 = sptype->aux->xCtype.ctype;
 	GC_Assign( & sptype->kernel, self->kernel );
 	GC_Assign( & sptype2->kernel, self->kernel );
@@ -2165,7 +2152,7 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 	sptype2->nested = DList_Copy( sptype->nested );
 	DString_AppendChar( sptype->name, '>' );
 	DString_Assign( sptype2->name, sptype->name );
-	DTypeSpecTree_Add( sptree, sptype->nested->items.pType, sptype->nested->size, sptype );
+	DaoTypeTree_Add( sptree, sptype->nested->items.pType, sptype->nested->size, sptype );
 	if( self->bases ){
 		DMap *defs = DHash_New(0,0);
 		for(i=0; i<count; i++){
@@ -2192,7 +2179,7 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 {
 	DaoType *sptype;
 	DaoTypeKernel *kernel;
-	DTypeSpecTree *sptree;
+	DaoTypeTree *sptree;
 	daoint i, pos;
 
 	assert( self->tid == DAO_ARRAY || self->tid == DAO_LIST || self->tid == DAO_MAP );
@@ -2201,8 +2188,8 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 
 	if( (kernel = self->kernel) == NULL ) return NULL;
 	if( (sptree = kernel->sptree) == NULL ) return NULL;
-	if( (sptype = DTypeSpecTree_Get( sptree, types, count )) ) return sptype;
-	if( DTypeSpecTree_Test( sptree, types, count ) == 0 ) return NULL;
+	if( (sptype = DaoTypeTree_Get( sptree, types, count )) ) return sptype;
+	if( DaoTypeTree_Test( sptree, types, count ) == 0 ) return NULL;
 
 	/* Specialized type will be initialized with the same kernel as the template type.
 	 * Upon method accessing, a new kernel will be created with specialized methods. */
@@ -2225,7 +2212,7 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 		DList_Append( sptype->nested, sptree->defaults->items.pType[i] );
 	}
 	DString_AppendChar( sptype->name, '>' );
-	DTypeSpecTree_Add( sptree, sptype->nested->items.pType, sptype->nested->size, sptype );
+	DaoTypeTree_Add( sptree, sptype->nested->items.pType, sptype->nested->size, sptype );
 
 #if 0
 	printf( "DaoGenericType_Specialize: %s %s %p\n", self->name->chars, sptype->name->chars, sptype );
