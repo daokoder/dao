@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2015, Limin Fu
+// Copyright (c) 2006-2016, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -64,21 +64,29 @@ enum DaoModuleTypes
 */
 struct DaoVmSpace
 {
-	DAO_VALUE_COMMON;
+	/*
+	// The common namespace for built-in types and values;
+	// It is immutable and shared among all DaoVmSpace;
+	*/
+	DaoNamespace  *coreNamespace;
 
 	/*
-	// To run the main script specified in the commad line (or the first loaded one),
-	// or scripts from an interactive console.
+	// The common namespace for standard types and values;
+	// It is mutable and private for the DaoVmSpace;
 	*/
-	DaoProcess  *mainProcess;
+	DaoNamespace  *daoNamespace;
+
 	/*
 	// To store globals in the main script,
 	// or scripts from an interactive console.
 	*/
 	DaoNamespace  *mainNamespace;
 
-	/* for standard objects or types etc.: */
-	DaoNamespace  *daoNamespace;
+	/*
+	// To run the main script specified in the commad line (or the first loaded one),
+	// or scripts from an interactive console.
+	*/
+	DaoProcess  *mainProcess;
 
 	DaoStream  *stdioStream;
 	DaoStream  *errorStream;

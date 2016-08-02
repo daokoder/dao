@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2015, Limin Fu
+// Copyright (c) 2006-2016, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -56,6 +56,7 @@ enum DaoTaskStatus
 };
 
 
+typedef void  (*DThreadTask)( void *arg );
 typedef struct DaoTaskEvent  DaoTaskEvent;
 
 /*

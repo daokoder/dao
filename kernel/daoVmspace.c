@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2015, Limin Fu
+// Copyright (c) 2006-2016, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -91,8 +91,7 @@ DaoConfig daoConfig =
 	8, /* tabspace */
 };
 
-DaoVmSpace *mainVmSpace = NULL;
-DaoProcess *mainProcess = NULL;
+DaoVmSpace *masterVmSpace = NULL;
 
 void dao_abort( const char *error )
 {
@@ -623,12 +622,6 @@ void DaoVmSpace_Stop( DaoVmSpace *self, int bl )
 {
 	self->stopit = bl;
 }
-static int dao_default_test_inliner( DaoNamespace *NS, DString *mode, DString *vb, DString *out, int line )
-{
-	DString_Reset( out, 0 );
-	DString_AppendChar( out, ' ' );
-	return 0;
-}
 
 static int DaoVmSpace_InitModulePath( DaoVmSpace *self, DString *path, DString *buffer )
 {
@@ -659,7 +652,7 @@ static void DaoVmSpace_InitPath( DaoVmSpace *self )
 	for(i=0; i<2; ++i){
 		DString_Reset( path, 0 );
 		DString_AppendChars( path, paths[i] );
-		DString_MakePath( mainVmSpace->daoBinPath, path );
+		DString_MakePath( self->daoBinPath, path );
 		if( DaoVmSpace_InitModulePath( self, path, file ) ) goto Done;
 	}
 
@@ -679,11 +672,6 @@ Done:
 DaoVmSpace* DaoVmSpace_New()
 {
 	DaoVmSpace *self = (DaoVmSpace*) dao_calloc( 1, sizeof(DaoVmSpace) );
-	DaoValue_Init( self, DAO_VMSPACE );
-	self->stdioStream = DaoStdStream_New();
-	self->errorStream = DaoStdStream_New();
-	self->errorStream->Read = NULL;
-	self->errorStream->Write = DaoStdStream_WriteStderr;
 	self->daoBinFile = DString_New();
 	self->daoBinPath = DString_New();
 	self->startPath = DString_New();
@@ -712,6 +700,13 @@ DaoVmSpace* DaoVmSpace_New()
 	self->allInferencers = DMap_New(0,0);
 	self->allOptimizers = DMap_New(0,0);
 
+	self->stdioStream = DaoStdStream_New();
+	self->errorStream = DaoStdStream_New();
+	self->errorStream->Read = NULL;
+	self->errorStream->Write = DaoStdStream_WriteStderr;
+	GC_IncRC( self->stdioStream );
+	GC_IncRC( self->errorStream );
+
 #ifdef DAO_WITH_THREAD
 	DMutex_Init( & self->moduleMutex );
 	DMutex_Init( & self->cacheMutex );
@@ -719,27 +714,51 @@ DaoVmSpace* DaoVmSpace_New()
 #endif
 
 	self->daoNamespace = NULL; /* need to be set for DaoNamespace_New() */
+
+	if( masterVmSpace == NULL ){
+		self->coreNamespace = DaoNamespace_New( self, "core" );
+		self->coreNamespace->vmSpace = self;
+		GC_IncRC( self->coreNamespace );
+	}else{
+		DNode *it;
+		DaoVmSpace *master = masterVmSpace;
+
+		self->coreNamespace = master->coreNamespace;
+		GC_IncRC( self->coreNamespace );
+
+		self->stdioStream->redirect = master->stdioStream->redirect; // TODO: GC;
+		self->errorStream->redirect = master->errorStream->redirect; // TODO: GC;
+		self->stdioStream->Read = master->stdioStream->Read;
+		self->stdioStream->Write = master->stdioStream->Write;
+		self->errorStream->Read = master->errorStream->Read;
+		self->errorStream->Write = master->errorStream->Write;
+
+		DString_Assign( self->daoBinFile, master->daoBinFile );
+		DString_Assign( self->daoBinPath, master->daoBinPath );
+		DString_Assign( self->startPath, master->startPath );
+		DMap_Assign( self->vfiles, master->vfiles );
+		DMap_Assign( self->vmodules, master->vmodules );
+		DList_Assign( self->virtualPaths, master->virtualPaths );
+		self->nsPlugins = DHash_New( DAO_DATA_STRING, 0 );
+		for(it=DMap_First(master->nsPlugins); it!=NULL; it=DMap_Next(master->nsPlugins,it)){
+			DaoVmSpace_AddPlugin( self, it->key.pString, (DaoNamespace*) it->value.pValue );
+		}
+	}
+
 	self->daoNamespace = DaoNamespace_New( self, "dao" );
 	self->daoNamespace->vmSpace = self;
 	GC_IncRC( self->daoNamespace );
+	DaoNamespace_AddParent( self->daoNamespace, self->coreNamespace );
 	DMap_Insert( self->nsModules, self->daoNamespace->name, self->daoNamespace );
-
-	DaoNamespace_AddCodeInliner( self->daoNamespace, "test", dao_default_test_inliner );
 
 	self->mainNamespace = DaoNamespace_New( self, "MainNamespace" );
 	self->mainNamespace->vmSpace = self;
 	GC_IncRC( self->mainNamespace );
-	GC_IncRC( self->stdioStream );
-	GC_IncRC( self->errorStream );
+	DaoNamespace_AddParent( self->mainNamespace, self->daoNamespace );
 
 	self->mainProcess = DaoProcess_New( self );
 	GC_IncRC( self->mainProcess );
 
-	if( mainVmSpace ) DaoNamespace_AddParent( self->daoNamespace, mainVmSpace->daoNamespace );
-
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( (DaoValue*) self );
-#endif
 	return self;
 }
 void DaoVmSpace_DeleteData( DaoVmSpace *self )
@@ -760,6 +779,7 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	for(it=DMap_First(self->vfiles); it; it=DMap_Next(self->vfiles,it)){
 		DaoVirtualFile_Delete( (DaoVirtualFile*) it->value.pVoid );
 	}
+	GC_DecRC( self->coreNamespace );
 	GC_DecRC( self->daoNamespace );
 	GC_DecRC( self->mainNamespace );
 	GC_DecRC( self->stdioStream );
@@ -794,9 +814,6 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 }
 void DaoVmSpace_Delete( DaoVmSpace *self )
 {
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( (DaoValue*) self );
-#endif
 	if( self->stdioStream ) DaoVmSpace_DeleteData( self );
 	DMap_Delete( self->nsModules );
 	DMap_Delete( self->nsPlugins );
@@ -1305,7 +1322,7 @@ static int CheckCodeCompletion( DString *source, DaoLexer *lexer )
 	}
 	return completed;
 }
-static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
+static void DaoVmSpace_Interun( DaoVmSpace *self )
 {
 	DaoValue *value;
 	DaoNamespace *ns;
@@ -1368,24 +1385,12 @@ static void DaoVmSpace_Interun( DaoVmSpace *self, CallbackOnString callback )
 		}else if( DString_Match( input, srcRegex, NULL, NULL ) ){
 			DString_InsertChars( input, "std.load(", 0, 0, 0 );
 			DString_AppendChars( input, ", 0, 1 )" );
-			if( callback ){
-				(*callback)( input->chars );
-				continue;
-			}
 			DaoProcess_Eval( self->mainProcess, self->mainNamespace, input->chars );
 		}else if( DString_Match( input, varRegex, NULL, NULL ) ){
 			DString_Change( input, "^ %s* = %s*", "", 0 );
 			DString_InsertChars( input, "return ", 0, 0, 0 );
-			if( callback ){
-				(*callback)( input->chars );
-				continue;
-			}
 			DaoProcess_Eval( self->mainProcess, self->mainNamespace, input->chars );
 		}else{
-			if( callback ){
-				(*callback)( input->chars );
-				continue;
-			}
 			DaoProcess_Eval( self->mainProcess, self->mainNamespace, input->chars );
 		}
 #ifdef DAO_WITH_CONCURRENT
@@ -2222,8 +2227,8 @@ int DaoVmSpace_AddVirtualModules( DaoVmSpace *self, DaoVModule modules[] )
 {
 	int vmods = 0;
 	/* For $(DAR_DIR) in archive paths: */
-	DList_PushFront( self->nameLoading, mainVmSpace->daoBinPath );
-	DList_PushFront( self->pathLoading, mainVmSpace->daoBinPath );
+	DList_PushFront( self->nameLoading, masterVmSpace->daoBinPath );
+	DList_PushFront( self->pathLoading, masterVmSpace->daoBinPath );
 	DString_Change( self->nameLoading->items.pString[0], "^ .* ([^/\\]+) $", "%1", 0 );
 	DString_Change( self->pathLoading->items.pString[0], "[^/\\]* $", "", 0 );
 	while( modules[vmods].name ){
@@ -2672,7 +2677,7 @@ static int Dao_GetExecutablePath( const char *command, DString *path )
 
 DaoVmSpace* DaoVmSpace_MainVmSpace()
 {
-	return mainVmSpace;
+	return masterVmSpace;
 }
 
 
@@ -2680,12 +2685,12 @@ DaoVmSpace* DaoInit( const char *command )
 {
 	DString *mbs;
 	DaoVmSpace *vms;
-	DaoNamespace *daons, *ns2;
+	DaoNamespace *coreNS, *NS;
 	DaoType *type, *tht;
 	char *cwd;
 	int i;
 
-	if( mainVmSpace ) return mainVmSpace;
+	if( masterVmSpace ) return masterVmSpace;
 
 	/* signal( SIGSEGV, print_trace ); */
 	/* signal( SIGABRT, print_trace ); */
@@ -2741,65 +2746,65 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_type_tht = tht = DaoType_New( "@X", DAO_THT, NULL, NULL );
 	dao_type_routine = DaoType_New( "routine<=>@X>", DAO_ROUTINE, (DaoValue*)tht, NULL );
 
-	mainVmSpace = vms = DaoVmSpace_New();
+	masterVmSpace = vms = DaoVmSpace_New();
 
-	DString_Reserve( mainVmSpace->startPath, 512 );
-	cwd = getcwd( mainVmSpace->startPath->chars, 511 );
-	DString_Reset( mainVmSpace->startPath, cwd ? strlen( cwd ) : 0 );
-	Dao_NormalizePathSep( mainVmSpace->startPath );
+	DString_Reserve( masterVmSpace->startPath, 512 );
+	cwd = getcwd( masterVmSpace->startPath->chars, 511 );
+	DString_Reset( masterVmSpace->startPath, cwd ? strlen( cwd ) : 0 );
+	Dao_NormalizePathSep( masterVmSpace->startPath );
 
-	DString_AppendPathSep( mainVmSpace->startPath );
+	DString_AppendPathSep( masterVmSpace->startPath );
 	if( command ){
 		DString *path;
 		int absolute = command[0] == '/';
 		int relative = command[0] == '.';
-		DString_SetChars( mainVmSpace->daoBinPath, command );
-		Dao_NormalizePathSep( mainVmSpace->daoBinPath );
+		DString_SetChars( masterVmSpace->daoBinPath, command );
+		Dao_NormalizePathSep( masterVmSpace->daoBinPath );
 #ifdef WIN32
 		absolute = isalpha( command[0] ) && command[1] == ':';
 #endif
 		if( absolute == 0 ){
 			if( relative ){
-				DString_MakePath( mainVmSpace->startPath, mainVmSpace->daoBinPath );
+				DString_MakePath( masterVmSpace->startPath, masterVmSpace->daoBinPath );
 			}else{
-				Dao_GetExecutablePath( command, mainVmSpace->daoBinPath );
+				Dao_GetExecutablePath( command, masterVmSpace->daoBinPath );
 			}
 		}
 #ifdef DEBUG
-		path = DString_Copy( mainVmSpace->daoBinPath );
+		path = DString_Copy( masterVmSpace->daoBinPath );
 		Dao_CompleteWinExeFile( path );
 		if( ! Dao_IsFile( path->chars ) ){
 			printf( "WARNING: the path of the executable cannot be located!\n" );
 		}
 		DString_Delete( path );
 #endif
-		DString_Assign( mainVmSpace->daoBinFile, mainVmSpace->daoBinPath );
-		DString_Change( mainVmSpace->daoBinPath, "[^/\\]* $", "", 0 );
+		DString_Assign( masterVmSpace->daoBinFile, masterVmSpace->daoBinPath );
+		DString_Change( masterVmSpace->daoBinPath, "[^/\\]* $", "", 0 );
 	}
 
-	daons = vms->daoNamespace;
+	coreNS = vms->coreNamespace;
 
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_udf );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_tht );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_routine );
-	DaoNamespace_AddTypeConstant( daons, dao_type_any->name, dao_type_any );
-	DaoNamespace_AddTypeConstant( daons, dao_type_bool->name, dao_type_bool );
-	DaoNamespace_AddTypeConstant( daons, dao_type_int->name, dao_type_int );
-	DaoNamespace_AddTypeConstant( daons, dao_type_float->name, dao_type_float );
-	DaoNamespace_AddTypeConstant( daons, dao_type_complex->name, dao_type_complex );
-	DaoNamespace_AddTypeConstant( daons, dao_type_string->name, dao_type_string );
-	DaoNamespace_AddTypeConstant( daons, dao_type_enum->name, dao_type_enum );
+	DaoNamespace_AddTypeConstant( coreNS, dao_type_any->name, dao_type_any );
+	DaoNamespace_AddTypeConstant( coreNS, dao_type_bool->name, dao_type_bool );
+	DaoNamespace_AddTypeConstant( coreNS, dao_type_int->name, dao_type_int );
+	DaoNamespace_AddTypeConstant( coreNS, dao_type_float->name, dao_type_float );
+	DaoNamespace_AddTypeConstant( coreNS, dao_type_complex->name, dao_type_complex );
+	DaoNamespace_AddTypeConstant( coreNS, dao_type_string->name, dao_type_string );
+	DaoNamespace_AddTypeConstant( coreNS, dao_type_enum->name, dao_type_enum );
 
-	dao_type_none = DaoNamespace_MakeValueType( daons, dao_none_value );
-	dao_type_for_iterator = DaoNamespace_DefineType( daons, "tuple<valid:bool,iterator:any>", "ForIterator" );
+	dao_type_none = DaoNamespace_MakeValueType( coreNS, dao_none_value );
+	dao_type_for_iterator = DaoNamespace_DefineType( coreNS, "tuple<valid:bool,iterator:any>", "ForIterator" );
 
-	dao_type_tuple = DaoNamespace_DefineType( daons, "tuple<...>", NULL );
+	dao_type_tuple = DaoNamespace_DefineType( coreNS, "tuple<...>", NULL );
 
-	DaoNamespace_SetupType( daons, & stringTyper, dao_type_string );
-	DaoNamespace_SetupType( daons, & comTyper, dao_type_complex );
+	DaoNamespace_SetupType( coreNS, & stringTyper, dao_type_string );
+	DaoNamespace_SetupType( coreNS, & comTyper, dao_type_complex );
 
 #ifdef DAO_WITH_NUMARRAY
-	dao_type_array = DaoNamespace_WrapGenericType( daons, & numarTyper, DAO_ARRAY );
+	dao_type_array = DaoNamespace_WrapGenericType( coreNS, & numarTyper, DAO_ARRAY );
 	dao_type_array_empty = DaoType_Specialize( dao_type_array, & dao_type_float, 1 );
 	dao_type_array_empty = DaoType_GetConstType( dao_type_array_empty );
 	dao_array_types[DAO_NONE] = dao_type_array_empty;
@@ -2809,8 +2814,8 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_array_types[DAO_COMPLEX] = DaoType_Specialize( dao_type_array, & dao_type_complex, 1 );
 #endif
 
-	dao_type_list = DaoNamespace_WrapGenericType( daons, & listTyper, DAO_LIST );
-	dao_type_map = DaoNamespace_WrapGenericType( daons, & mapTyper, DAO_MAP );
+	dao_type_list = DaoNamespace_WrapGenericType( coreNS, & listTyper, DAO_LIST );
+	dao_type_map = DaoNamespace_WrapGenericType( coreNS, & mapTyper, DAO_MAP );
 
 	dao_type_list_any = DaoType_Specialize( dao_type_list, NULL, 0 );
 	dao_type_map_any  = DaoType_Specialize( dao_type_map, NULL, 0 );
@@ -2825,35 +2830,37 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_list_empty );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_map_empty );
 
-	ns2 = DaoVmSpace_GetNamespace( vms, "io" );
-	DaoNamespace_AddConstValue( daons, "io", (DaoValue*) ns2 );
-	dao_type_io_device = DaoNamespace_WrapInterface( ns2, & ioDeviceTyper );
-	dao_type_stream = DaoNamespace_WrapType( ns2, & streamTyper, DAO_CSTRUCT, 0 );
+	dao_type_cdata = DaoNamespace_WrapType( coreNS, & defaultCdataTyper, DAO_CDATA, 1 );
+
+	DaoNamespace_SetupType( coreNS, & vmpTyper, NULL );
+
+	DaoException_Setup( coreNS );
+
+	DaoNamespace_UpdateLookupTable( vms->daoNamespace );
+
+	NS = DaoVmSpace_GetNamespace( vms, "io" );
+	DaoNamespace_AddConstValue( vms->daoNamespace, "io", (DaoValue*) NS );
+	dao_type_io_device = DaoNamespace_WrapInterface( NS, & ioDeviceTyper );
+	dao_type_stream = DaoNamespace_WrapType( NS, & streamTyper, DAO_CSTRUCT, 0 );
 	GC_Assign( & vms->stdioStream->ctype, dao_type_stream );
 	GC_Assign( & vms->errorStream->ctype, dao_type_stream );
-	DaoNamespace_WrapFunctions( ns2, dao_io_methods );
-	DaoNamespace_AddConstValue( ns2, "stdio",  (DaoValue*) vms->stdioStream );
-	DaoNamespace_AddConstValue( ns2, "stderr", (DaoValue*) vms->errorStream );
+	DaoNamespace_WrapFunctions( NS, dao_io_methods );
+	DaoNamespace_AddConstValue( NS, "stdio",  (DaoValue*) vms->stdioStream );
+	DaoNamespace_AddConstValue( NS, "stderr", (DaoValue*) vms->errorStream );
 
-	dao_type_cdata = DaoNamespace_WrapType( vms->daoNamespace, & defaultCdataTyper, DAO_CDATA, 1 );
-
-	DaoException_Setup( vms->daoNamespace );
-
-	ns2 = DaoVmSpace_GetNamespace( vms, "mt" );
-	DaoNamespace_AddConstValue( daons, "mt", (DaoValue*) ns2 );
-	dao_type_future  = DaoNamespace_WrapType( ns2, & futureTyper, DAO_CSTRUCT, 0 );
+	NS = DaoVmSpace_GetNamespace( vms, "mt" );
+	DaoNamespace_AddConstValue( vms->daoNamespace, "mt", (DaoValue*) NS );
+	dao_type_future  = DaoNamespace_WrapType( NS, & futureTyper, DAO_CSTRUCT, 0 );
 #ifdef DAO_WITH_CONCURRENT
-	dao_type_channel = DaoNamespace_WrapType( ns2, & channelTyper, DAO_CSTRUCT, 0 );
-	DaoNamespace_WrapFunctions( ns2, dao_mt_methods );
+	dao_type_channel = DaoNamespace_WrapType( NS, & channelTyper, DAO_CSTRUCT, 0 );
+	DaoNamespace_WrapFunctions( NS, dao_mt_methods );
 #endif
 
-	DaoNamespace_SetupType( vms->daoNamespace, & vmpTyper, NULL );
+	NS = DaoVmSpace_GetNamespace( vms, "std" );
+	DaoNamespace_AddConstValue( vms->daoNamespace, "std", (DaoValue*) NS );
+	DaoNamespace_WrapFunctions( NS, dao_std_methods );
 
-	ns2 = DaoVmSpace_GetNamespace( vms, "std" );
-	DaoNamespace_AddConstValue( daons, "std", (DaoValue*) ns2 );
-	DaoNamespace_WrapFunctions( ns2, dao_std_methods );
-
-	DaoNamespace_AddParent( vms->mainNamespace, vms->daoNamespace );
+	DaoNamespace_UpdateLookupTable( self->mainNamespace );
 
 	DaoVmSpace_InitPath( vms );
 
@@ -2876,27 +2883,26 @@ void DaoQuit()
 
 	if( daoConfig.iscgi ) return;
 
-	if( (mainVmSpace->options & DAO_OPTION_PROFILE) && mainVmSpace->profiler ){
-		DaoProfiler *profiler = mainVmSpace->profiler;
-		if( profiler->Report ) profiler->Report( profiler, mainVmSpace->stdioStream );
+	if( (masterVmSpace->options & DAO_OPTION_PROFILE) && masterVmSpace->profiler ){
+		DaoProfiler *profiler = masterVmSpace->profiler;
+		if( profiler->Report ) profiler->Report( profiler, masterVmSpace->stdioStream );
 	}
 
-	DaoVmSpace_DeleteData( mainVmSpace );
+	DaoVmSpace_DeleteData( masterVmSpace );
 
 	DaoGC_Finish();
 #ifdef DEBUG
-	for(it=DMap_First(mainVmSpace->nsModules); it; it=DMap_Next(mainVmSpace->nsModules,it) ){
+	for(it=DMap_First(masterVmSpace->nsModules); it; it=DMap_Next(masterVmSpace->nsModules,it) ){
 		printf( "Warning: namespace/module \"%s\" is not collected with reference count %i!\n",
 				((DaoNamespace*)it->value.pValue)->name->chars, it->value.pValue->xBase.refCount );
 	}
 #endif
-	DaoVmSpace_Delete( mainVmSpace );
+	DaoVmSpace_Delete( masterVmSpace );
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_Quit();
 #endif
 	dao_type_stream = NULL;
-	mainVmSpace = NULL;
-	mainProcess = NULL;
+	masterVmSpace = NULL;
 	if( dao_jit.Quit ){
 		dao_jit.Quit();
 		dao_jit.Quit = NULL;

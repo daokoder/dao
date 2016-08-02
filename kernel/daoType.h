@@ -2,7 +2,7 @@
 // Dao Virtual Machine
 // http://www.daovm.net
 //
-// Copyright (c) 2006-2015, Limin Fu
+// Copyright (c) 2006-2016, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -200,7 +200,7 @@ typedef void (*FuncPtrSliced)( DaoValue *self );
 // no longer used, which make it possible to unload external modules automatically.
 // Its reference counting is handled and only handled by DaoType.
 */
-struct DaoTypeKernel
+struct DaoTypeKernel // DaoTypeInstance
 {
 	DAO_VALUE_COMMON;
 
