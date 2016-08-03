@@ -198,9 +198,8 @@ typedef struct DList    DList;
 typedef struct DNode    DNode;
 typedef struct DMap     DMap;
 
-typedef struct DaoTypeCore        DaoTypeCore;
-typedef struct DaoTypeBase  DaoTypeBase;
-typedef struct DaoTypeInstance    DaoTypeInstance;
+typedef struct DaoTypeCore     DaoTypeCore;
+typedef struct DaoTypeKernel   DaoTypeKernel;
 
 typedef struct DaoStackFrame   DaoStackFrame;
 typedef struct DaoHandler      DaoHandler;
@@ -210,7 +209,7 @@ typedef struct DaoParser       DaoParser;
 
 typedef union  DaoValue        DaoValue;
 typedef struct DaoNone         DaoNone;
-typedef struct DaoInteger      DaoBoolean;
+typedef struct DaoBoolean      DaoBoolean;
 typedef struct DaoInteger      DaoInteger;
 typedef struct DaoFloat        DaoFloat;
 typedef struct DaoComplex      DaoComplex;
@@ -292,75 +291,130 @@ struct DaoVirtualModule
 //
 // These function pointers are grouped into pairs per operation, where
 // the first is the type checking function used at compiling time, and
-// the second is the function called at running time to do the operation.
-// The type checking function should return the resulting type on success
-// and null otherwise.
+// the second is the execution function called at running time to do the
+// operation. The type checking function should return the resulting type
+// on success and null otherwise.
 //
 // For user defined types, these function pointers can be set to nulls
 // to use the default implementations, which will use operator overloading
 // from the member methods to do type checkings and running time executions.
+//
+// At running time, the executing DaoProcess object is passed to the execution
+// functions, so that these functions can put the resulting values directly
+// on the process stack. Otherwise, they should just return the results, and
+// let the VM to put them on the stack if necessary (TODO).
 */
-struct DaoTypeBase
+struct DaoTypeCore
 {
-	/* Type name; */
 	const char  *name;
-
 	/*
-	// Definition for the base types:
+	// Type name;
+	*/
+
+	DaoTypeCore  *bases[8];
+	/*
+	// Type core for the base types:
 	// Multiple inheritance is supported for interfaces and C++ classes;
 	*/
-	DaoTypeBase  *bases[8];
 
-	/* Member numbers; */
 	DaoNumberEntry  *numbers;
+	/*
+	// Member numbers;
+	*/
 
-	/* Method definitions: should end with a null item; */
 	DaoFunctionEntry  *methods;
+	/*
+	// Method definitions: should end with a null item;
+	*/
 
-	/* Functions for GETF: */
 	DaoType*  (*CheckGetField)( DaoType *self, DString *field );
 	DaoValue* (*DoGetField)( DaoValue *self, DString *field, DaoProcess *p );
+	/*
+	// Functions for GETF:
+	*/
 
-	/* Functions for SETF: */
 	DaoType* (*CheckSetField)( DaoType *self, DString *field, DaoType *value );
 	void (*DoSetField)( DaoValue *self, DString *field, DaoValue *value, DaoProcess *p );
+	/*
+	// Functions for SETF:
+	*/
 
-	/* Functions for GETI, GETDI and GETMI: */
 	DaoType*  (*CheckGetItem)( DaoType *self, DaoType *index[], int N );
 	DaoValue* (*DoGetItem)( DaoValue *self, DaoValue *index[], int N, DaoProcess *p );
+	/*
+	// Functions for GETI, GETDI and GETMI:
+	*/
 
-	/* Functions for SETI, SETDI and SETMI: */
 	DaoType* (*CheckSetItem)( DaoType *self, DaoType *index[], int N, DaoType *value );
 	void (*DoSetItem)( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *p );
+	/*
+	// Functions for SETI, SETDI and SETMI:
+	*/
 
-	/* Functions for unary operations: side 0 for left, 1 for right; */
-	DaoType*  (*CheckUnary)( DaoType *type, int opcode, int side );
-	DaoValue* (*DoUnary)( DaoValue *value, int opcode, int size, DaoProcess *p );
+	DaoType*  (*CheckUnary)( DaoType *type, int opcode, int right );
+	DaoValue* (*DoUnary)( DaoValue *value, int opcode, int right, DaoProcess *p );
+	/*
+	// Functions for unary operations:
+	*/
 
-	/* Functions for binary operations: */
-	DaoType*  (*CheckBinary)( DaoType *type1, DaoType *type2, int opcode );
-	DaoValue* (*DoBinary)( DaoValue *value1, DaoValue *value2, int opcode, DaoProcess *p );
+	DaoType*  (*CheckBinary)( DaoType *left, DaoType *right, int opcode );
+	DaoValue* (*DoBinary)( DaoValue *left, DaoValue *right, int opcode, DaoProcess *p );
+	/*
+	// Functions for binary operations:
+	*/
 
-	/* Functions for comparison operations: */
-	DaoType*  (*CheckComparison)( DaoType *type1, DaoType *type2 );
-	DaoValue* (*DoComparison)( DaoValue *value1, DaoValue *value2, DaoProcess *p );
+	DaoType*  (*CheckComparison)( DaoType *left, DaoType *right );
+	int (*DoComparison)( DaoValue *left, DaoValue *right, DaoProcess *p );
+	/*
+	// Functions for comparison operations:
+	*/
 
-	/* Functions for conversion operation: */
 	DaoType*  (*CheckConversion)( DaoType *self, DaoType *type );
-	DaoValue* (*DoConversion)( DaoValue *self, DaoType *type, DaoProcess *p );
+	DaoValue* (*DoConversion)( DaoValue *self, DaoType *type, DaoValue *buffer, DaoProcess *p );
+	/*
+	// Functions for conversion operation:
+	// These functions are used for type casting and hashing;
+	//
+	// The type parameter will be the target type for the conversion;
+	// For hashing, the target type will be the integer type, and
+	// the resulting integer will be further hashed by the internal
+	// hashing function (MurmurHash3) to compute the final hash value.
+	//
+	// For conversion between wrapped C/C++ types, the conversion function
+	// must handle up and down casting properly.
+	//
+	// If the target type is a number type, a buffer value of the target
+	// type will be passed to the conversion function for convenience.
+	*/
 
-	/* Function for printing: */
+
+	//DaoType*  (*CheckIterator)( DaoType *self, DaoType *type );
+	//DaoValue* (*DoIterator)( DaoValue *self, DaoType *type, DaoProcess *p );
+	/*
+	// Functions for iterator creation:
+	*/
+
 	void (*Print)( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p );
+	/*
+	// Function for printing:
+	*/
 
-	/* Function to complete slice operation: */
-	void (*CopySlice)( DaoValue *self );
+	void (*Slice)( DaoValue *self );
+	/*
+	// Function to complete slice operation:
+	*/
 
-	/* Function for copying (used for user defined POD data types): */
 	void (*Copy)( DaoValue *self, DaoValue *other );
+	/*
+	// Function for copying (used for user defined POD data types):
+	*/
 
-	/* Function for deleting the value: */
 	void (*Delete)( DaoValue *self );
+	/*
+	// Function for deleting the value:
+	*/
 
+	void (*HandleGC)( DaoValue *self, DList *values, DList *lists, DList *maps, int remove );
 	/*
 	// Function for handling garbage collection:
 	// User defined types may hold counted references to Dao data values;
@@ -374,7 +428,6 @@ struct DaoTypeBase
 	// parameter will be non zero. In the case, references to the member values
 	// that are pushed to "values" should be removed by setting them to nulls.
 	*/
-	void (*HandleGC)( DaoValue *self, DList *values, DList *lists, DList *maps, int remove );
 };
 
 /*
@@ -480,7 +533,7 @@ DAO_DLL void**    DaoValue_TryGetCdata2( DaoValue *self );
 /*
 // DaoValue_TryCastCdata() will cast the data of the cdata to the type
 // as specified by "totype". This will essentially call a chain of cast
-// functions as specified in the "casts" fields of DaoTypeBase structures
+// functions as specified in the "casts" fields of DaoTypeCore structures
 // along the inheritance chain between the type of the cdata value and
 // the type "totype".
 //
@@ -859,7 +912,7 @@ DAO_DLL void DaoProcess_RaiseError( DaoProcess *self, const char *type, const ch
 // function prototype of the wrapped C function.
 */
 DAO_DLL DaoNone*     DaoProcess_PutNone( DaoProcess *self );
-DAO_DLL dao_integer* DaoProcess_PutBoolean( DaoProcess *self, dao_boolean value );
+DAO_DLL dao_boolean* DaoProcess_PutBoolean( DaoProcess *self, dao_boolean value );
 DAO_DLL dao_integer* DaoProcess_PutInteger( DaoProcess *self, dao_integer value );
 DAO_DLL dao_float*   DaoProcess_PutFloat( DaoProcess *self, dao_float value );
 DAO_DLL dao_complex* DaoProcess_PutComplex( DaoProcess *self, dao_complex value );
@@ -934,14 +987,13 @@ DAO_DLL void DaoNamespace_AddConstValue( DaoNamespace *self, const char *name, D
 DAO_DLL void DaoNamespace_AddValue( DaoNamespace *self, const char *name, DaoValue *d, const char *type);
 DAO_DLL DaoValue* DaoNamespace_FindData( DaoNamespace *self, const char *name );
 DAO_DLL DaoType* DaoNamespace_DefineType( DaoNamespace *self, const char *type, const char *alias );
-DAO_DLL DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeBase *typer, int tid, int options );
-DAO_DLL DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeBase *typer );
-DAO_DLL DaoType* DaoNamespace_WrapCinType( DaoNamespace *self, DaoTypeBase *c, DaoType *a, DaoType *t );
+DAO_DLL DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeCore *core, int tid, int options );
+DAO_DLL DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeCore *core );
+DAO_DLL DaoType* DaoNamespace_WrapCinType( DaoNamespace *self, DaoTypeCore *c, DaoType *a, DaoType *t );
 DAO_DLL DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fp, const char *proto );
 DAO_DLL int DaoNamespace_AliasTypes( DaoNamespace *self, const char *alias[] );
-DAO_DLL int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeBase *typer[] );
+DAO_DLL int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeCore *cores[] );
 DAO_DLL int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFunctionEntry fd[] );
-//DAO_DLL int DaoNamespace_Load( DaoNamespace *self, const char *file ); // Obsolete!
 DAO_DLL int DaoNamespace_GetOptions( DaoNamespace *self );
 DAO_DLL void DaoNamespace_SetOptions( DaoNamespace *self, int options );
 DAO_DLL void DaoNamespace_AddCodeInliner( DaoNamespace *self, const char *name, DaoCodeInliner fp );

@@ -1198,7 +1198,7 @@ static void DaoChannel_GetGCFields( void *p, DList *vs, DList *lists, DList *ms,
 	DList_Append( lists, self->buffer );
 }
 
-DaoTypeBase channelTyper =
+DaoTypeCore channelTyper =
 {
 	"Channel<@V>", NULL, NULL, (DaoFuncItem*) channelMeths, {0}, {0},
 	(FuncPtrDel) DaoChannel_Delete, DaoChannel_GetGCFields
@@ -1324,7 +1324,7 @@ static void DaoFuture_GetGCFields( void *p, DList *values, DList *lists, DList *
 	}
 }
 
-DaoTypeBase futureTyper =
+DaoTypeCore futureTyper =
 {
 	"Future<@V=none>", NULL, NULL, (DaoFuncItem*) futureMeths, {0}, {0},
 	(FuncPtrDel) DaoFuture_Delete, DaoFuture_GetGCFields

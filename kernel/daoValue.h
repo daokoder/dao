@@ -129,6 +129,6 @@ DAO_DLL void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[]
 DAO_DLL void DaoValue_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value );
 DAO_DLL void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData );
 
-DaoTypeBase* DaoValue_GetTyper( DaoValue *p );
+DaoTypeCore* DaoValue_GetTyper( DaoValue *p );
 
 #endif

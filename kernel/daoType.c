@@ -209,7 +209,7 @@ static void DaoType_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 ErrorNotExist:
 	DaoProcess_RaiseError( proc, "Index", "not valid" );
 }
-static DaoTypeCore typeCore=
+static Dao_Type_Core typeCore=
 {
 	NULL,
 	DaoType_GetField,
@@ -218,7 +218,7 @@ static DaoTypeCore typeCore=
 	DaoValue_SetItem,
 	DaoValue_Print
 };
-DaoTypeBase abstypeTyper=
+DaoTypeCore abstypeTyper=
 {
 	"type", & typeCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoType_Delete, NULL
@@ -284,17 +284,15 @@ void DaoType_CheckAttributes( DaoType *self )
 }
 DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DList *nest )
 {
-	DaoTypeBase *typer = DaoVmSpace_GetTyper( tid );
+	DaoTypeCore *typer = DaoVmSpace_GetTyper( tid );
 	DaoType *self = (DaoType*) dao_calloc( 1, sizeof(DaoType) );
 	DaoValue_Init( self, DAO_TYPE );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->tid = tid;
 	self->name = DString_New();
 	self->typer = typer;
-	if( typer->core ){
-		self->kernel = typer->core->kernel;
-		GC_IncRC( self->kernel );
-	}
+	self->kernel = typer->kernel;
+	GC_IncRC( self->kernel );
 	if( extra == NULL && tid == DAO_PAR_VALIST ) extra = (DaoValue*) dao_type_any;
 	if( extra ){
 		self->aux = extra;
@@ -642,10 +640,8 @@ static int DaoType_MatchPar( DaoType *self, DaoType *type, DMap *defs, DMap *bin
 }
 static int DaoType_MatchTemplateParams( DaoType *self, DaoType *type, DMap *defs, int dep )
 {
-	DaoTypeCore *core1 = self->typer->core;
-	DaoTypeCore *core2 = type->typer->core;
-	DaoType *template1 = core1 && core1->kernel ? core1->kernel->abtype : NULL;
-	DaoType *template2 = core2 && core2->kernel ? core2->kernel->abtype : NULL;
+	DaoType *template1 = self->kernel ? self->kernel->abtype : NULL;
+	DaoType *template2 = type->kernel ? type->kernel->abtype : NULL;
 	daoint i, k, n, mt = DAO_MT_NOT;
 	if( template1 == template2 && template1 && template1->kernel->sptree ){
 		DaoType **ts1 = self->nested->items.pType;
@@ -1603,8 +1599,8 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		}
 		if( (self->tid >= DAO_CSTRUCT && self->tid <= DAO_CTYPE)
 				|| self->tid == DAO_ARRAY || self->tid == DAO_LIST || self->tid == DAO_MAP ){
-			if( self->typer->core->kernel->sptree ){
-				DaoType *sptype = self->typer->core->kernel->abtype;
+			if( self->typer->kernel->sptree ){
+				DaoType *sptype = self->typer->kernel->abtype;
 				if( self->tid == DAO_CTYPE ) sptype = sptype->aux->xCtype.ctype;
 				sptype = DaoType_Specialize( sptype, copy->nested->items.pType, copy->nested->size );
 				if( sptype ){
@@ -1808,22 +1804,12 @@ extern DMutex mutex_methods_setup;
 
 static void DaoType_TrySetupMethods( DaoType *self )
 {
-	DaoTypeCore *core = self->typer->core;
-	if( core->kernel == NULL ) return;
-	if( core->kernel->SetupMethods ){
-		core->kernel->SetupMethods( core->kernel->nspace, self->typer );
+	if( self->kernel == NULL ) return;
+	if( self->kernel->SetupMethods ){
+		self->kernel->SetupMethods( self->kernel->nspace, self->typer );
 	}
-	if( core->kernel->methods == NULL ) return;
+	if( self->kernel->methods == NULL ) return;
 	if( self->kernel->attribs & DAO_TYPEKERNEL_TEMPLATE ) DaoType_SpecializeMethods( self );
-	if( self->kernel == NULL ){
-		/* The type is created before the setup of the typer structure: */
-		DMutex_Lock( & mutex_methods_setup );
-		if( self->kernel == NULL ){
-			GC_IncRC( core->kernel );
-			self->kernel = core->kernel;
-		}
-		DMutex_Unlock( & mutex_methods_setup );
-	}
 }
 DaoRoutine* DaoType_GetInitor( DaoType *self )
 {
@@ -1871,7 +1857,7 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 {
 	/* Values are not specialized. */
 	/* Get the original type kernel for template-like cdata type: */
-	DaoTypeKernel *kernel = self->typer->core->kernel;
+	DaoTypeKernel *kernel = self->kernel;
 	DaoValue *value = NULL;
 	DNode *node;
 	if( kernel == NULL ) return NULL;
@@ -1886,7 +1872,7 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 	return value;
 }
 
-DaoTypeBase* DaoType_GetTyper( DaoType *self )
+DaoTypeCore* DaoType_GetTyper( DaoType *self )
 {
 	return self->typer;
 }
@@ -1903,11 +1889,6 @@ void DaoTypeKernel_Delete( DaoTypeKernel *self )
 	if( self->methods ) DMap_Delete( self->methods );
 	GC_DecRC( self->initRoutines );
 	GC_DecRC( self->castOperators );
-	/* self->core may no longer be valid, but self->typer->core always is: */
-	if( self->typer->core ) self->typer->core->kernel = NULL;
-	if( self->core == (DaoTypeCore*)(self + 1) ){
-		self->typer->core = NULL;
-	}
 	if( self->sptree ) DaoTypeTree_Delete( self->sptree );
 	if( self->attribs & DAO_TYPEKERNEL_FREE ){
 		dao_free( (char*)self->typer->name );
@@ -1916,13 +1897,13 @@ void DaoTypeKernel_Delete( DaoTypeKernel *self )
 	dao_free( self );
 }
 
-DaoTypeBase typeKernelTyper =
+DaoTypeCore typeKernelTyper =
 {
 	"TypeKernel", & baseCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoTypeKernel_Delete, NULL
 };
 
-DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer )
+DaoTypeKernel* DaoTypeKernel_New( DaoTypeCore *typer )
 {
 	DaoTypeKernel *self = (DaoTypeKernel*) dao_calloc( 1, sizeof(DaoTypeKernel) );
 	DaoValue_Init( self, DAO_TYPEKERNEL );
@@ -2287,7 +2268,7 @@ static void DaoType_InitTypeDefines( DaoType *self, DaoRoutine *method, DMap *de
 	DaoType *type = method->routType;
 	daoint i;
 
-	DaoType_InitHostTypeDefines( self, self->typer->core->kernel->abtype, defs );
+	DaoType_InitHostTypeDefines( self, self->typer->kernel->abtype, defs );
 
 	if( !(type->attrib & DAO_TYPE_SELF) ) return;
 	type = (DaoType*) type->nested->items.pType[0]->aux; /* self:type */
@@ -2318,9 +2299,9 @@ static void DaoType_SpecMethod( DaoType *self, DaoTypeKernel *kernel, DaoRoutine
 
 void DaoType_SpecializeMethods( DaoType *self )
 {
+	DaoTypeKernel *kernel = DaoVmSpace_GetKernel( self->kernel->typer );
+	DaoType *original = kernel->abtype;
 	DaoType *intype = self;
-	DaoType *original = self->typer->core->kernel->abtype;
-	DaoTypeKernel *kernel;
 	DaoType *quads[4];
 	DNode *it;
 	daoint i, k;

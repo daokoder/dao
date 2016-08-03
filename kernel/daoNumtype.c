@@ -68,7 +68,7 @@ static void DaoComplex_Print( DaoValue *self, DaoProcess *proc, DaoStream *strea
 	DaoStream_WriteFloat( stream, p.imag );
 	DaoStream_WriteChars( stream, "$" );
 }
-static DaoTypeCore comCore =
+static Dao_Type_Core comCore =
 {
 	NULL,
 	DaoComplex_GetField,
@@ -78,7 +78,7 @@ static DaoTypeCore comCore =
 	DaoComplex_Print
 };
 
-DaoTypeBase comTyper =
+DaoTypeCore comTyper =
 {
 	"complex", & comCore, NULL, NULL, {0}, {0}, NULL, NULL
 };
@@ -893,7 +893,7 @@ static void DaoArray_Print( DaoValue *value, DaoProcess *proc, DaoStream *stream
 	}
 }
 
-static DaoTypeCore numarrCore =
+static Dao_Type_Core numarrCore =
 {
 	NULL,
 	DaoValue_GetField,
@@ -1746,7 +1746,7 @@ void DaoArray_SetBuffer( DaoArray *self, void *buffer, daoint size )
 	self->size = size;
 }
 
-DaoTypeBase numarTyper =
+DaoTypeCore numarTyper =
 {
 	"array<@T<none|bool|int|float|complex>=none>", & numarrCore,
 	NULL, (DaoFuncItem*) numarMeths, {0}, {0},

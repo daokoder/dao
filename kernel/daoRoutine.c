@@ -156,7 +156,7 @@ int DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value )
 	return consts->size-1;
 }
 
-DaoTypeBase routTyper=
+DaoTypeCore routTyper=
 {
 	"routine", & baseCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoRoutine_Delete, NULL

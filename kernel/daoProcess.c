@@ -115,7 +115,7 @@ static DaoStackFrame* DaoStackFrame_New()
 }
 #define DaoStackFrame_Delete( p ) dao_free( p )
 
-DaoTypeBase vmpTyper =
+DaoTypeCore vmpTyper =
 {
 	"process",
 	& baseCore, NULL, NULL, {0}, {0},
@@ -2550,7 +2550,7 @@ DaoNone* DaoProcess_PutNone( DaoProcess *self )
 	DaoProcess_PutValue( self, dao_none_value );
 	return (DaoNone*) dao_none_value;
 }
-dao_integer* DaoProcess_PutBoolean( DaoProcess *self, dao_boolean value )
+dao_boolean* DaoProcess_PutBoolean( DaoProcess *self, dao_boolean value )
 {
 	DaoBoolean tmp = {DAO_BOOLEAN,0,0,0,0,0};
 	DaoValue *res = DaoProcess_PutValue( self, (DaoValue*) & tmp );
@@ -3153,7 +3153,7 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *A = self->activeValues[ vmc->a ];
 	DaoInteger di = {DAO_INTEGER,0,0,0,0,0};
 	DaoType *ct = self->activeTypes[ vmc->c ];
-	DaoTypeCore *tc = DaoValue_GetTyper( A )->core;
+	Dao_Type_Core *tc = DaoValue_GetTyper( A )->core;
 
 	self->activeCode = vmc;
 	if( A == NULL || A->type == 0 ){
@@ -3222,7 +3222,7 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoValue *C, *A = self->activeValues[ vmc->a ];
-	DaoTypeCore *tc = DaoValue_GetTyper( A )->core;
+	Dao_Type_Core *tc = DaoValue_GetTyper( A )->core;
 	DaoNamespace *ns = self->activeNamespace;
 	DString *name = self->activeRoutine->routConsts->value->items.pValue[ vmc->b ]->xString.value;
 
@@ -3239,7 +3239,7 @@ void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc )
 void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoValue *A, *B = dao_none_value, *C = self->activeValues[ vmc->c ];
-	DaoTypeCore *tc = DaoValue_GetTyper( C )->core;
+	Dao_Type_Core *tc = DaoValue_GetTyper( C )->core;
 	DaoInteger di = {DAO_INTEGER,0,0,0,0,0};
 	daoint id, rc = 0;
 
@@ -3303,7 +3303,7 @@ void DaoProcess_DoSetField( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoValue *A, *C = self->activeValues[ vmc->c ];
 	DaoValue *fname = self->activeRoutine->routConsts->value->items.pValue[ vmc->b ];
-	DaoTypeCore *tc = DaoValue_GetTyper( C )->core;
+	Dao_Type_Core *tc = DaoValue_GetTyper( C )->core;
 
 	self->activeCode = vmc;
 	A = self->activeValues[ vmc->a ];
@@ -6278,6 +6278,7 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 		A = self->activeValues[ vmc->a ];
 		switch( A->type ){
 		case DAO_NONE    : size = 0; break;
+		case DAO_BOOLEAN : size = sizeof(dao_boolean); break; // TODO: inference;
 		case DAO_INTEGER : size = sizeof(dao_integer); break;
 		case DAO_FLOAT   : size = sizeof(dao_float); break;
 		case DAO_COMPLEX : size = sizeof(dao_complex); break;

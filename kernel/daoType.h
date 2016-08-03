@@ -116,7 +116,7 @@ struct DaoType
 	DaoType   *cbtype;   /* extra type for code block; */
 
 	DaoTypeKernel     *kernel; /* type kernel of built-in or C types; */
-	DaoTypeBase *typer;
+	DaoTypeCore *typer;
 };
 DAO_DLL DaoType *dao_type_none;
 DAO_DLL DaoType *dao_type_udf;
@@ -188,7 +188,7 @@ DAO_DLL DaoRoutine* DaoType_GetCastor( DaoType *self );
 DAO_DLL DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name );
 DAO_DLL DaoRoutine* DaoType_FindFunctionChars( DaoType *self, const char *name );
 
-DAO_DLL DaoTypeBase* DaoType_GetTyper( DaoType *self );
+DAO_DLL DaoTypeCore* DaoType_GetTyper( DaoType *self );
 
 
 
@@ -213,13 +213,13 @@ struct DaoTypeKernel
 	DaoRoutine    *ltOperators;
 	DaoNamespace  *nspace;
 	DaoTypeTree   *sptree;
-	DaoTypeBase   *typer;
+	DaoTypeCore   *typer;
 
 	int (*SetupValues) ( DaoNamespace *self, DaoTypeKernal *kernel );
 	int (*SetupMethods)( DaoNamespace *self, DaoTypeKernal *kernel );
 };
 
-DaoTypeKernel* DaoTypeKernel_New( DaoTypeBase *typer );
+DaoTypeKernel* DaoTypeKernel_New( DaoTypeCore *typer );
 void DaoTypeKernel_InsertInitor( DaoTypeKernel *self, DaoNamespace *ns, DaoType *host, DaoRoutine *routine );
 void DaoTypeKernel_InsertCastor( DaoTypeKernel *self, DaoNamespace *ns, DaoType *host, DaoRoutine *routine );
 

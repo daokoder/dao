@@ -115,7 +115,7 @@ struct DaoVmSpace
 	DMap   *nsPlugins; /* Modules that can be used without explicit loading; */
 	DMap   *nsRefs;
 
-	DMap   *typeWrappers;
+	DMap   *typeKernels;
 
 	DMap   *allProcesses;
 	DMap   *allRoutines;
@@ -183,10 +183,10 @@ DAO_DLL void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
 
 DAO_DLL const char*const DaoVmSpace_GetCopyNotice();
-DAO_DLL DaoTypeBase* DaoVmSpace_GetTyper( short type );
+DAO_DLL DaoTypeCore* DaoVmSpace_GetTyper( short type );
 
-DAO_DLL void DaoVmSpace_AddWrapper( DaoVmSpace *self, DaoTypeBase *core, DaoType *type );
-DAO_DLL DaoType* DaoVmSpace_GetWrapper( DaoVmSpace *self, DaoTypeBase *core );
+DAO_DLL void DaoVmSpace_AddKernel( DaoVmSpace *self, DaoTypeCore *core, DaoTypeKernel *kernel );
+DAO_DLL DaoTypeKernel* DaoVmSpace_GetKernel( DaoVmSpace *self, DaoTypeCore *core );
 
 DAO_DLL DaoType* DaoVmSpace_MakeExceptionType( DaoVmSpace *self, const char *name );
 

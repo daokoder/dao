@@ -952,11 +952,11 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 }
 
 
-extern DaoTypeBase baseTyper;
-extern DaoTypeBase numberTyper;
-extern DaoTypeBase comTyper;
-extern DaoTypeBase stringTyper;
-extern DaoTypeBase enumTyper;
+extern DaoTypeCore baseTyper;
+extern DaoTypeCore numberTyper;
+extern DaoTypeCore comTyper;
+extern DaoTypeCore stringTyper;
+extern DaoTypeCore enumTyper;
 
 DaoType* DaoValue_GetType( DaoValue *self )
 {
@@ -991,7 +991,7 @@ DaoType* DaoValue_GetType( DaoValue *self )
 	}
 	return NULL;
 }
-DaoTypeBase* DaoValue_GetTyper( DaoValue *self )
+DaoTypeCore* DaoValue_GetTyper( DaoValue *self )
 {
 	if( self == NULL ) return & baseTyper;
 	switch( self->type ){
@@ -1165,7 +1165,7 @@ static void DaoValue_PrintEx( DaoValue *self, DaoProcess *proc, DaoStream *strea
 void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
 {
 	DString *name;
-	DaoTypeBase *typer;
+	DaoTypeCore *typer;
 	DMap *cd = cycData;
 	if( self == NULL ){
 		DaoStream_WriteChars( stream, "none[0x0]" );

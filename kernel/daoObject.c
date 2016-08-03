@@ -165,7 +165,7 @@ static void DaoObject_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[
 	if( rc ) DaoProcess_RaiseException( proc, daoExceptionNames[rc], proc->string->chars, NULL );
 }
 
-static DaoTypeCore objCore =
+static Dao_Type_Core objCore =
 {
 	NULL,
 	DaoObject_Core_GetField,
@@ -175,7 +175,7 @@ static DaoTypeCore objCore =
 	DaoObject_Print
 };
 
-DaoTypeBase objTyper=
+DaoTypeCore objTyper=
 {
 	"object", & objCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoObject_Delete, NULL

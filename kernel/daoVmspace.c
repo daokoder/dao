@@ -208,38 +208,38 @@ static const char *const cmd_help =
 ;
 
 
-extern DaoTypeBase  baseTyper;
-extern DaoTypeBase  numberTyper;
-extern DaoTypeBase  stringTyper;
-extern DaoTypeBase  enumTyper;
-extern DaoTypeBase  listTyper;
-extern DaoTypeBase  mapTyper;
-extern DaoTypeBase  ioDeviceTyper;
-extern DaoTypeBase  streamTyper;
-extern DaoTypeBase  routTyper;
-extern DaoTypeBase  interTyper;
-extern DaoTypeBase  cinTypeTyper;
-extern DaoTypeBase  cinValueTyper;
-extern DaoTypeBase  classTyper;
-extern DaoTypeBase  objTyper;
-extern DaoTypeBase  nsTyper;
-extern DaoTypeBase  tupleTyper;
-extern DaoTypeBase  namevaTyper;
+extern DaoTypeCore  baseTyper;
+extern DaoTypeCore  numberTyper;
+extern DaoTypeCore  stringTyper;
+extern DaoTypeCore  enumTyper;
+extern DaoTypeCore  listTyper;
+extern DaoTypeCore  mapTyper;
+extern DaoTypeCore  ioDeviceTyper;
+extern DaoTypeCore  streamTyper;
+extern DaoTypeCore  routTyper;
+extern DaoTypeCore  interTyper;
+extern DaoTypeCore  cinTypeTyper;
+extern DaoTypeCore  cinValueTyper;
+extern DaoTypeCore  classTyper;
+extern DaoTypeCore  objTyper;
+extern DaoTypeCore  nsTyper;
+extern DaoTypeCore  tupleTyper;
+extern DaoTypeCore  namevaTyper;
 
-extern DaoTypeBase  numarTyper;
-extern DaoTypeBase  comTyper;
-extern DaoTypeBase  abstypeTyper;
-extern DaoTypeBase  rgxMatchTyper;
-extern DaoTypeBase  futureTyper;
-extern DaoTypeBase  channelTyper;
-extern DaoTypeBase  defaultCdataTyper;
+extern DaoTypeCore  numarTyper;
+extern DaoTypeCore  comTyper;
+extern DaoTypeCore  abstypeTyper;
+extern DaoTypeCore  rgxMatchTyper;
+extern DaoTypeCore  futureTyper;
+extern DaoTypeCore  channelTyper;
+extern DaoTypeCore  defaultCdataTyper;
 
-extern DaoTypeBase macroTyper;
-extern DaoTypeBase regexTyper;
-extern DaoTypeBase vmpTyper;
-extern DaoTypeBase typeKernelTyper;
+extern DaoTypeCore macroTyper;
+extern DaoTypeCore regexTyper;
+extern DaoTypeCore vmpTyper;
+extern DaoTypeCore typeKernelTyper;
 
-DaoTypeBase* DaoVmSpace_GetTyper( short type )
+DaoTypeCore* DaoVmSpace_GetTyper( short type )
 {
 	switch( type ){
 	case DAO_BOOLEAN  :
@@ -674,7 +674,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->nsModules = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsPlugins = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsRefs = DHash_New( DAO_DATA_VALUE, 0 );
-	self->typeWrappers = DHash_New( DAO_DATA_VALUE, 0 );
+	self->typeKernels = DHash_New( DAO_DATA_VALUE, 0 );
 	self->pathWorking = DString_New();
 	self->nameLoading = DList_New( DAO_DATA_STRING );
 	self->pathLoading = DList_New( DAO_DATA_STRING );
@@ -794,7 +794,7 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DList_Delete( self->byteCoders );
 	DList_Delete( self->inferencers );
 	DList_Delete( self->optimizers );
-	DMap_Delete( self->typeWrappers );
+	DMap_Delete( self->typeKernels );
 	DMap_Delete( self->nsRefs );
 	DMap_Delete( self->vfiles );
 	DMap_Delete( self->vmodules );
@@ -2486,9 +2486,9 @@ const char* DaoVmSpace_CurrentLoadingPath( DaoVmSpace *self )
 	return self->pathLoading->items.pString[0]->chars;
 }
 
-extern DaoTypeBase vmpTyper;
+extern DaoTypeCore vmpTyper;
 
-extern DaoTypeBase DaoFdSet_Typer;
+extern DaoTypeCore DaoFdSet_Typer;
 
 extern void DaoInitLexTable();
 
@@ -2952,21 +2952,21 @@ DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DaoParser
 	return ns;
 }
 
-void DaoVmSpace_AddWrapper( DaoVmSpace *self, DaoTypeBase *core, DaoType *type )
+void DaoVmSpace_AddKernel( DaoVmSpace *self, DaoTypeCore *core, DaoType *type )
 {
 	DaoVmSpace_Lock( self );
-	DMap_Insert( self->typeWrappers, core, type );
+	DMap_Insert( self->typeKernels, core, type );
 	DaoVmSpace_Unlock( self );
 }
 
-DaoType* DaoVmSpace_GetWrapper( DaoVmSpace *self, DaoTypeBase *core )
+DaoTypeKernel* DaoVmSpace_GetKernel( DaoVmSpace *self, DaoTypeCore *core )
 {
 	DNode *it;
 
 	if( core == NULL ) return NULL;
 
 	DaoVmSpace_Lock( self );
-	it = DMap_Find( self->typeWrappers, core );
+	it = DMap_Find( self->typeKernels, core );
 	DaoVmSpace_Unlock( self );
 
 	if( it ) return it->value.pType;
@@ -2976,7 +2976,7 @@ DaoType* DaoVmSpace_GetWrapper( DaoVmSpace *self, DaoTypeBase *core )
 
 static DaoType* DaoVmSpace_MakeExceptionType2( DaoVmSpace *self, const char *name )
 {
-	DaoTypeBase *typer;
+	DaoTypeCore *typer;
 	DaoValue *value;
 	DaoType *type, *parent = NULL;
 	DString *basename, sub;
@@ -3003,7 +3003,7 @@ static DaoType* DaoVmSpace_MakeExceptionType2( DaoVmSpace *self, const char *nam
 		return NULL;
 	}
 
-	typer = (DaoTypeBase*) dao_calloc( 1, sizeof(DaoTypeBase) );
+	typer = (DaoTypeCore*) dao_calloc( 1, sizeof(DaoTypeCore) );
 	typer->name = (char*) dao_malloc( (strlen(name)+1) * sizeof(char) );
 	strcpy( (char*) typer->name, name );
 	typer->supers[0] = parent->typer;

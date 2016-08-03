@@ -82,7 +82,7 @@ static void DaoClass_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[]
 {
 }
 
-static DaoTypeCore classCore=
+static Dao_Type_Core classCore=
 {
 	NULL,
 	DaoClass_GetField,
@@ -92,7 +92,7 @@ static DaoTypeCore classCore=
 	DaoValue_Print
 };
 
-DaoTypeBase classTyper =
+DaoTypeCore classTyper =
 {
 	"class", & classCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoClass_Delete, NULL
@@ -211,7 +211,7 @@ void DaoClass_Parents( DaoClass *self, DList *parents, DList *offsets )
 	DaoValue *dbase;
 	DaoClass *klass;
 	DaoCdata *cdata;
-	DaoTypeBase *typer;
+	DaoTypeCore *typer;
 	daoint i, j, offset;
 	DList_Clear( parents );
 	DList_Clear( offsets );
@@ -865,7 +865,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 	}else if( self->parent && self->parent->type == DAO_CTYPE ){
 		DaoCtype *cdata = (DaoCtype*) self->parent;
 		DaoTypeKernel *kernel = cdata->ctype->kernel;
-		DaoTypeBase *typer = kernel->typer;
+		DaoTypeCore *typer = kernel->typer;
 		DMap *methods = kernel->methods;
 		DMap *values = kernel->values;
 

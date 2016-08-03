@@ -787,13 +787,13 @@ static DaoFuncItem ioDeviceMeths[] =
 	{ NULL, NULL }
 };
 
-DaoTypeBase ioDeviceTyper =
+DaoTypeCore ioDeviceTyper =
 {
 	"Device", NULL, NULL, (DaoFuncItem*) ioDeviceMeths, {0}, {0},
 	(FuncPtrDel) NULL, NULL
 };
 
-DaoTypeBase streamTyper =
+DaoTypeCore streamTyper =
 {
 	"Stream", NULL, NULL, (DaoFuncItem*) streamMeths, {0}, {0},
 	(FuncPtrDel) DaoStream_Delete, NULL

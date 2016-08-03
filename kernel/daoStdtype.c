@@ -50,6 +50,42 @@
 #include"daoValue.h"
 
 
+#ifdef DEBUG
+static void DaoDebug_WarnField( DaoProcess *proc )
+{
+	DaoProcess_RaiseWarning( proc, "Field", "Optimization is off" );
+}
+static void DaoDebug_WarnIndex( DaoProcess *proc )
+{
+	DaoProcess_RaiseWarning( proc, "Index", "Optimization is off" );
+}
+static void DaoDebug_WarnUnary( DaoProcess *proc )
+{
+	DaoProcess_RaiseWarning( proc, "Unary", "Optimization is off" );
+}
+static void DaoDebug_WarnBinary( DaoProcess *proc )
+{
+	DaoProcess_RaiseWarning( proc, "Binary", "Optimization is off" );
+}
+static void DaoDebug_WarnComparison( DaoProcess *proc )
+{
+	DaoProcess_RaiseWarning( proc, "Comparison", "Optimization is off" );
+}
+static void DaoDebug_WarnConversion( DaoProcess *proc )
+{
+	DaoProcess_RaiseWarning( proc, "Conversion", "Optimization is off" );
+}
+#else
+#define DaoDebug_WarnField( proc )
+#define DaoDebug_WarnIndex( proc )
+#define DaoDebug_WarnUnary( proc )
+#define DaoDebug_WarnBinary( proc )
+#define DaoDebug_WarnComparison( proc )
+#define DaoDebug_WarnConversion( proc )
+#endif
+
+
+
 void DaoValue_Init( void *value, char type )
 {
 	DaoNone *self = (DaoNone*) value;
@@ -59,6 +95,11 @@ void DaoValue_Init( void *value, char type )
 	if( type >= DAO_ENUM ) ((DaoValue*)self)->xGC.cycRefCount = 0;
 }
 
+
+
+/*
+// None value type:
+*/
 DaoNone* DaoNone_New()
 {
 	DaoNone *self = (DaoNone*) dao_malloc( sizeof(DaoNone) );
@@ -70,6 +111,79 @@ DaoNone* DaoNone_New()
 	return self;
 }
 
+static void DaoNone_Delete( DaoValue *self )
+{
+	dao_free( self );
+}
+
+static DaoType* DaoNone_CheckComparison( DaoType *left, DaoType *right )
+{
+	if( left->tid == DAO_NONE && right->tid == DAO_NONE ) return dao_type_int;
+	return NULL; /* Other cases should be handled by other types; */
+}
+
+static int DaoNone_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *p )
+{
+	DaoDebug_WarnComparison( p );
+	if( left->type == DAO_NONE && right->type == DAO_NONE ) return 0;
+	return left->type == DAO_NONE ? -1 : 1; /* None value is less than anything else; */
+}
+
+static DaoType* DaoNone_CheckConversion( DaoType *self, DaoType *type )
+{
+	if( type->tid <= DAO_STRING ) return type;
+	return NULL;
+}
+
+static DaoValue* DaoNone_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *p )
+{
+	DaoDebug_WarnConversion( p );
+	switch( type->tid ){
+	case DAO_NONE    : return dao_none_value;
+	case DAO_BOOLEAN : num->xBoolean.value = 0; return num;
+	case DAO_INTEGER : num->xInteger.value = 0; return num;
+	case DAO_FLOAT   : num->xFloat.value = 0.0; return num;
+	case DAO_COMPLEX : num->xComplex.value.real = num->xComplex.value.imag = 0.0; return num;
+	break;
+	}
+	if( type->tid == DAO_STRING ) DaoProcess_PutChars( p, "none" );
+	return NULL; /* The VM will handle the case where no value is converted and returned; */
+}
+
+static void DaoNone_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+{
+	DaoStream_WriteChars( stream, "none[0x0]" );
+}
+
+DaoTypeCore daoNoneCore =
+{
+	"none",                                          /* name */
+	{ NULL },                                        /* bases */
+	NULL,                                            /* numbers */
+	NULL,                                            /* methods */
+	NULL,                     NULL,                  /* GetField */
+	NULL,                     NULL,                  /* SetField */
+	NULL,                     NULL,                  /* GetItem */
+	NULL,                     NULL,                  /* SetItem */
+	NULL,                     NULL,                  /* Unary */
+	NULL,                     NULL,                  /* Binary */
+	DaoNone_CheckComparison,  DaoNone_DoComparison,  /* Comparison */
+	DaoNone_CheckConversion,  DaoNone_DoConversion,  /* Conversion */
+	DaoNone_Print,                                   /* Print */
+	NULL,                                            /* Slice */
+	NULL,                                            /* Copy */
+	DaoNone_Delete,                                  /* Delete */
+	NULL                                             /* HandleGC */
+};
+
+static DaoNone none = {DAO_NONE,0,DAO_VALUE_CONST,0,1};
+DaoValue *dao_none_value = (DaoValue*) (void*) & none;
+
+
+
+/*
+// Boolean type:
+*/
 DaoBoolean* DaoBoolean_New( dao_boolean value )
 {
 	DaoBoolean *self = (DaoBoolean*) dao_malloc( sizeof(DaoBoolean) );
@@ -89,6 +203,132 @@ void DaoBoolean_Set( DaoBoolean *self, dao_boolean value )
 	self->value = value != 0;
 }
 
+
+static void DaoBoolean_Delete( DaoValue *self )
+{
+	dao_free( self );
+}
+
+static DaoType* DaoBoolean_CheckUnary( DaoType *type, int opcode, int right )
+{
+	if( right ) return NULL;
+	if( opcode == DVM_NOT ) return dao_type_bool;
+	if( opcode == DVM_SIZE ) return dao_type_int;
+	return NULL;
+}
+
+static DaoValue* DaoBoolean_DoUnary( DaoValue *value, int opcode, int right, DaoProcess *p )
+{
+	DaoDebug_WarnUnary( p );
+	/*
+	// Returning NULL without putting a value on the stack will be detected
+	// as an error by DaoProcess;
+	*/
+	if( right ) return NULL;
+	switch( opcode ){
+	case DVM_NOT  : DaoProcess_PutBoolean( p, ! value->xBoolean.value ); break;
+	case DVM_SIZE : DaoProcess_PutInteger( p, sizeof(dao_boolean) );     break;
+	default: break;
+	}
+	return NULL;
+}
+
+static DaoType* DaoBoolean_CheckBinary( DaoType *left, DaoType *right, int opcode )
+{
+	switch( opcode ){
+	case DVM_AND : case DVM_OR  :
+	case DVM_LT  : case DVM_LE  :
+	case DVM_EQ  : case DVM_NE  :
+		break;
+	default: return NULL;
+	}
+
+	if( left->tid == DAO_BOOLEAN && right->tid == DAO_BOOLEAN ) return dao_type_bool;
+	return NULL;
+}
+
+static DaoValue* DaoBoolean_DoBinary( DaoValue *left, DaoValue *right, int opcode, DaoProcess *p )
+{
+	dao_boolean A, B, C = 0;
+
+	DaoDebug_WarnBinary( p );
+
+	if( left->type != DAO_BOOLEAN || right->type != DAO_BOOLEAN ) return NULL;
+
+	A = left->xBoolean.value  != 0;
+	B = right->xBoolean.value != 0;
+
+	switch( opcode ){
+	case DVM_AND : C = A && B; break;
+	case DVM_OR  : C = A || B; break;
+	case DVM_LT  : C = A <  B; break;
+	case DVM_LE  : C = A <= B; break;
+	case DVM_EQ  : C = A == B; break;
+	case DVM_NE  : C = A != B; break;
+		break;
+	default: return NULL;
+	}
+	DaoProcess_PutBoolean( p, C );
+	return NULL;
+}
+
+static DaoType* DaoBoolean_CheckConversion( DaoType *self, DaoType *type )
+{
+	if( type->tid <= DAO_STRING ) return type;
+	return NULL;
+}
+
+static DaoValue* DaoBoolean_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *p )
+{
+	int bl = self->xBoolean.value;
+	DaoDebug_WarnConversion( p );
+	switch( type->tid ){
+	case DAO_BOOLEAN : num->xBoolean.value = bl; return num;
+	case DAO_INTEGER : num->xInteger.value = bl; return num;
+	case DAO_FLOAT   : num->xFloat.value   = bl; return num;
+	case DAO_COMPLEX : num->xComplex.value.real = bl; num->xComplex.value.imag = 0.0; return num;
+	break;
+	}
+	if( type->tid == DAO_STRING ) DaoProcess_PutChars( p, bl ? "true" : "false" );
+	return NULL; /* The VM will handle the case where no value is converted and returned; */
+}
+
+static void DaoBoolean_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+{
+	DaoStream_WriteChars( stream, self->xBoolean.value ? "true" : "false" );
+}
+
+DaoTypeCore daoBooleanCore =
+{
+	"bool",                                                /* name */
+	{ NULL },                                              /* bases */
+	NULL,                                                  /* numbers */
+	NULL,                                                  /* methods */
+	NULL,                        NULL,                     /* GetField */
+	NULL,                        NULL,                     /* SetField */
+	NULL,                        NULL,                     /* GetItem */
+	NULL,                        NULL,                     /* SetItem */
+	DaoBoolean_CheckUnary,       DaoBoolean_DoUnary,       /* Unary */
+	DaoBoolean_CheckBinary,      DaoBoolean_DoBinary,      /* Binary */
+	NULL,                        NULL,                     /* Comparison */
+	DaoBoolean_CheckConversion,  DaoBoolean_DoConversion,  /* Conversion */
+	DaoBoolean_Print,                                      /* Print */
+	NULL,                                                  /* Slice */
+	NULL,                                                  /* Copy */
+	DaoBoolean_Delete,                                     /* Delete */
+	NULL                                                   /* HandleGC */
+};
+
+static DaoBoolean dao_false = {DAO_BOOLEAN,0,DAO_VALUE_CONST,0,1,0};
+static DaoBoolean dao_true  = {DAO_BOOLEAN,0,DAO_VALUE_CONST,0,1,1};
+DaoValue *dao_false_value = (DaoValue*) (void*) & dao_false;
+DaoValue *dao_true_value  = (DaoValue*) (void*) & dao_true;
+
+
+
+/*
+// Integer type:
+*/
 DaoInteger* DaoInteger_New( dao_integer value )
 {
 	DaoInteger *self = (DaoInteger*) dao_malloc( sizeof(DaoInteger) );
@@ -320,7 +560,7 @@ static void MakeIndex( DaoProcess *proc, DaoValue *index, daoint N, daoint *star
 
 
 
-DaoTypeCore baseCore =
+Dao_Type_Core baseCore =
 {
 	NULL,
 	DaoValue_GetField,
@@ -329,16 +569,6 @@ DaoTypeCore baseCore =
 	DaoValue_SetItem,
 	DaoValue_Print
 };
-DaoTypeBase baseTyper =
-{
-	"none", & baseCore, NULL, NULL, {0}, {0}, dao_free, NULL
-};
-static DaoNone none = {DAO_NONE,0,DAO_VALUE_CONST,0,1};
-static DaoBoolean dao_false = {DAO_BOOLEAN,0,DAO_VALUE_CONST,0,1,0};
-static DaoBoolean dao_true = {DAO_BOOLEAN,0,DAO_VALUE_CONST,0,1,1};
-DaoValue *dao_none_value = (DaoValue*) (void*) & none;
-DaoValue *dao_false_value = (DaoValue*) (void*) & dao_false;
-DaoValue *dao_true_value = (DaoValue*) (void*) & dao_true;
 
 
 
@@ -521,7 +751,7 @@ int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other )
 	return other->subtype == DAO_ENUM_SYM;
 }
 
-DaoTypeBase enumTyper =
+DaoTypeCore enumTyper =
 {
 	"enum", & baseCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoEnum_Delete, NULL
@@ -538,7 +768,7 @@ static void DaoNumber_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream
 	}
 }
 
-static DaoTypeCore numberCore=
+static Dao_Type_Core numberCore=
 {
 	NULL,
 	DaoValue_GetField,
@@ -556,7 +786,7 @@ static void DaoNumer_Delete( DaoValue *self )
 	dao_free( self );
 }
 
-DaoTypeBase numberTyper=
+DaoTypeCore numberTyper=
 {
 	"float", & numberCore, NULL, NULL, {0}, {0}, (FuncPtrDel) DaoNumer_Delete, NULL
 };
@@ -658,7 +888,7 @@ static void DaoString_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[]
 	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
-static DaoTypeCore stringCore=
+static Dao_Type_Core stringCore=
 {
 	NULL,
 	DaoValue_GetField,
@@ -1449,7 +1679,7 @@ static DaoFuncItem stringMeths[] =
 	{ NULL, NULL }
 };
 
-DaoTypeBase stringTyper=
+DaoTypeCore stringTyper=
 {
 	"string", & stringCore, NULL, (DaoFuncItem*) stringMeths, {0}, {0},
 	(FuncPtrDel) DaoString_Delete, NULL
@@ -1586,7 +1816,7 @@ static void DaoListCore_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids
 	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
-static DaoTypeCore listCore=
+static Dao_Type_Core listCore=
 {
 	NULL,
 	DaoValue_GetField,
@@ -2536,7 +2766,7 @@ void DaoList_PopBack( DaoList *self )
 	DList_PopBack( self->value );
 }
 
-DaoTypeBase listTyper=
+DaoTypeCore listTyper=
 {
 	"list<@T=any>", & listCore, NULL, (DaoFuncItem*)listMeths, {0}, {0},
 	(FuncPtrDel) DaoList_Delete, NULL
@@ -2810,7 +3040,7 @@ static void DaoMap_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], i
 		DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
-static DaoTypeCore mapCore =
+static Dao_Type_Core mapCore =
 {
 	NULL,
 	DaoValue_GetField,
@@ -3246,7 +3476,7 @@ DaoValue* DaoMap_GetValueChars( DaoMap *self, const char *key  )
 	return NULL;
 }
 
-DaoTypeBase mapTyper=
+DaoTypeCore mapTyper=
 {
 	"map<@K=any,@V=any>", & mapCore, NULL, (DaoFuncItem*) mapMeths, {0}, {0},
 	(FuncPtrDel)DaoMap_Delete, NULL
@@ -3505,7 +3735,7 @@ static void DaoTupleCore_Print( DaoValue *self0, DaoProcess *proc, DaoStream *st
 	DaoTuple *self = (DaoTuple*) self0;
 	Dao_Print( self0, self->values, self->size, '(', ')', proc, stream, cycData );
 }
-static DaoTypeCore tupleCore=
+static Dao_Type_Core tupleCore=
 {
 	NULL,
 	DaoTupleCore_GetField,
@@ -3514,7 +3744,7 @@ static DaoTypeCore tupleCore=
 	DaoTupleCore_SetItem,
 	DaoTupleCore_Print
 };
-DaoTypeBase tupleTyper=
+DaoTypeCore tupleTyper=
 {
 	"tuple", & tupleCore, NULL, NULL, {0}, {0}, (FuncPtrDel) DaoTuple_Delete, NULL
 };
@@ -3664,7 +3894,7 @@ static void DaoNameValue_Print( DaoValue *self0, DaoProcess *proc, DaoStream *st
 	DaoValue_Print( self->value, proc, stream, cycData );
 	if( self->value && self->value->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
 }
-static DaoTypeCore namevaCore=
+static Dao_Type_Core namevaCore=
 {
 	NULL,
 	DaoValue_GetField,
@@ -3673,7 +3903,7 @@ static DaoTypeCore namevaCore=
 	DaoValue_SetItem,
 	DaoNameValue_Print
 };
-DaoTypeBase namevaTyper =
+DaoTypeCore namevaTyper =
 {
 	"NameValue", & namevaCore, NULL, NULL, {0}, {0}, (FuncPtrDel) DaoNameValue_Delete, NULL
 };
@@ -3854,7 +4084,7 @@ void DaoCtype_Delete( DaoCtype *self )
 	dao_free( self );
 }
 
-DaoTypeBase defaultCdataTyper =
+DaoTypeCore defaultCdataTyper =
 {
 	"cdata", NULL, NULL, NULL, {0}, {0},
 	(FuncPtrDel)DaoCdata_Delete, NULL
@@ -3870,7 +4100,7 @@ DaoTypeBase defaultCdataTyper =
 // one with typeid DAO_CTYPE serves an auxiliary value for the two type objects;
 // the other with typeid DAO_CDATA serves as the default value for the cdata object type.
 */
-DaoType* DaoCdata_NewType( DaoTypeBase *typer, int tid )
+DaoType* DaoCdata_NewType( DaoTypeCore *typer, int tid )
 {
 	DaoCtype *ctype = DaoCtype_New( NULL, NULL );
 	DaoType *cdata_type;
@@ -3958,7 +4188,7 @@ static DaoFuncItem dao_Exception_Meths[] =
 	{ NULL, NULL }
 };
 
-DaoTypeBase dao_Exception_Typer =
+DaoTypeCore dao_Exception_Typer =
 {
 	"Exception", NULL, NULL, dao_Exception_Meths, { 0 }, { 0 },
 	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
@@ -4054,7 +4284,7 @@ static DaoFuncItem dao_ExceptionWarning_Meths[] =
 	{ NULL, NULL }
 };
 
-DaoTypeBase dao_ExceptionWarning_Typer =
+DaoTypeCore dao_ExceptionWarning_Typer =
 {
 	"Exception::Warning", NULL, NULL, dao_ExceptionWarning_Meths,
 	{ & dao_Exception_Typer, NULL }, {0},
@@ -4068,7 +4298,7 @@ static DaoFuncItem dao_ExceptionError_Meths[] =
 	{ Dao_Exception_Define, "define( name: string, info = '' ) => class<Error>" },
 	{ NULL, NULL }
 };
-DaoTypeBase dao_ExceptionError_Typer =
+DaoTypeCore dao_ExceptionError_Typer =
 {
 	"Exception::Error", NULL, NULL, dao_ExceptionError_Meths,
 	{ & dao_Exception_Typer, NULL }, {0},

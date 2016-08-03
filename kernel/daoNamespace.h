@@ -136,13 +136,13 @@ DAO_DLL DaoEnum* DaoNamespace_MakeSymbol( DaoNamespace *self, const char *symbol
 DAO_DLL int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeKernal *kernel );
 DAO_DLL int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeKernal *kernel );
 
-DAO_DLL void DaoNamespace_SetupType( DaoNamespace *self, DaoTypeBase *typer, DaoType *type );
+DAO_DLL void DaoNamespace_SetupType( DaoNamespace *self, DaoTypeCore *typer, DaoType *type );
 DAO_DLL void DaoMethods_Insert( DMap *methods, DaoRoutine *rout, DaoNamespace *ns, DaoType *host );
 
 DAO_DLL DaoRoutine* DaoNamespace_MakeFunction( DaoNamespace *self, const char *proto, DaoParser *parser, DaoParser *defparser );
 
 DAO_DLL void DaoNamespace_InitConstEvalData( DaoNamespace *self );
 
-DAO_DLL DaoType* DaoNamespace_WrapGenericType( DaoNamespace *self, DaoTypeBase *typer, int tid );
+DAO_DLL DaoType* DaoNamespace_WrapGenericType( DaoNamespace *self, DaoTypeCore *typer, int tid );
 
 #endif

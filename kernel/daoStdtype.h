@@ -52,6 +52,13 @@ DAO_DLL DaoValue *dao_false_value;
 DAO_DLL DaoValue *dao_true_value;
 DAO_DLL DaoNone* DaoNone_New();
 
+struct DaoBoolean
+{
+	DAO_VALUE_CORE;
+
+	dao_boolean value;
+};
+
 struct DaoInteger
 {
 	DAO_VALUE_CORE;
@@ -232,7 +239,7 @@ struct DaoCdata
 
 
 DAO_DLL void DaoCdata_Delete( DaoCdata *self );
-DAO_DLL DaoType* DaoCdata_NewType( DaoTypeBase *typer, int tid );
+DAO_DLL DaoType* DaoCdata_NewType( DaoTypeCore *typer, int tid );
 
 
 /*

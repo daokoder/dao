@@ -273,7 +273,7 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds )
 	return DAO_MT_SUB * DaoInterface_BindTo( inter, self, binds );
 }
 
-DaoTypeBase interTyper =
+DaoTypeCore interTyper =
 {
 	"interface", & baseCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoInterface_Delete, NULL
@@ -358,7 +358,7 @@ void DaoCinType_DeriveMethods( DaoCinType *self )
 
 
 
-DaoTypeBase cinTypeTyper =
+DaoTypeCore cinTypeTyper =
 {
 	"CinType", & baseCore, NULL, NULL, {0}, {0},
 	(FuncPtrDel) DaoCinType_Delete, NULL
@@ -394,7 +394,7 @@ void DaoCinValue_Delete( DaoCinValue *self )
 }
 
 
-static DaoTypeCore cinValueCore=
+static Dao_Type_Core cinValueCore=
 {
 	NULL,
 	DaoValue_GetField,
@@ -404,7 +404,7 @@ static DaoTypeCore cinValueCore=
 	DaoValue_Print
 };
 
-DaoTypeBase cinValueTyper =
+DaoTypeCore cinValueTyper =
 {
 	"CinValue", & cinValueCore, NULL, NULL, {0}, {0}, (FuncPtrDel) DaoCinValue_Delete, NULL
 };

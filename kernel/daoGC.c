@@ -289,7 +289,7 @@ static void DaoObjectLogger_ScanMap( DMap *map, int gckey, int gcval )
 }
 static void DaoObjectLogger_ScanCdata( DaoCdata *cdata )
 {
-	DaoTypeBase *typer = cdata->ctype ? cdata->ctype->typer : NULL;
+	DaoTypeCore *typer = cdata->ctype ? cdata->ctype->typer : NULL;
 	DList *cvalues = dao_object_logger.cdataValues;
 	DList *clists = dao_object_logger.cdataLists;
 	DList *cmaps = dao_object_logger.cdataMaps;
@@ -777,7 +777,7 @@ static void DaoValue_Delete( DaoValue *self )
 		if( self->type < DAO_ENUM ){
 			DaoGC_DeleteSimpleData( self );
 		}else{
-			DaoTypeBase *typer = DaoValue_GetTyper( self );
+			DaoTypeCore *typer = DaoValue_GetTyper( self );
 			typer->Delete( self );
 		}
 		break;
@@ -1260,7 +1260,7 @@ static int DaoGC_ScanMap( DMap *map, int action, int gckey, int gcvalue )
 }
 static void DaoGC_ScanCdata( DaoCdata *cdata, int action )
 {
-	DaoTypeBase *typer = cdata->ctype ? cdata->ctype->typer : NULL;
+	DaoTypeCore *typer = cdata->ctype ? cdata->ctype->typer : NULL;
 	DList *cvalues = gcWorker.cdataValues;
 	DList *clists = gcWorker.cdataLists;
 	DList *cmaps = gcWorker.cdataMaps;
