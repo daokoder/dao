@@ -50,41 +50,6 @@
 #include"daoValue.h"
 
 
-#ifdef DEBUG
-static void DaoDebug_WarnField( DaoProcess *proc )
-{
-	DaoProcess_RaiseWarning( proc, "Field", "Optimization is off" );
-}
-static void DaoDebug_WarnIndex( DaoProcess *proc )
-{
-	DaoProcess_RaiseWarning( proc, "Index", "Optimization is off" );
-}
-static void DaoDebug_WarnUnary( DaoProcess *proc )
-{
-	DaoProcess_RaiseWarning( proc, "Unary", "Optimization is off" );
-}
-static void DaoDebug_WarnBinary( DaoProcess *proc )
-{
-	DaoProcess_RaiseWarning( proc, "Binary", "Optimization is off" );
-}
-static void DaoDebug_WarnComparison( DaoProcess *proc )
-{
-	DaoProcess_RaiseWarning( proc, "Comparison", "Optimization is off" );
-}
-static void DaoDebug_WarnConversion( DaoProcess *proc )
-{
-	DaoProcess_RaiseWarning( proc, "Conversion", "Optimization is off" );
-}
-#else
-#define DaoDebug_WarnField( proc )
-#define DaoDebug_WarnIndex( proc )
-#define DaoDebug_WarnUnary( proc )
-#define DaoDebug_WarnBinary( proc )
-#define DaoDebug_WarnComparison( proc )
-#define DaoDebug_WarnConversion( proc )
-#endif
-
-
 
 void DaoValue_Init( void *value, char type )
 {
@@ -124,7 +89,6 @@ static DaoType* DaoNone_CheckComparison( DaoType *left, DaoType *right )
 
 static int DaoNone_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *p )
 {
-	DaoDebug_WarnComparison( p );
 	if( left->type == DAO_NONE && right->type == DAO_NONE ) return 0;
 	return left->type == DAO_NONE ? -1 : 1; /* None value is less than anything else; */
 }
@@ -137,7 +101,6 @@ static DaoType* DaoNone_CheckConversion( DaoType *self, DaoType *type )
 
 static DaoValue* DaoNone_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *p )
 {
-	DaoDebug_WarnConversion( p );
 	switch( type->tid ){
 	case DAO_NONE    : return dao_none_value;
 	case DAO_BOOLEAN : num->xBoolean.value = 0; return num;
@@ -219,7 +182,6 @@ static DaoType* DaoBoolean_CheckUnary( DaoType *type, int opcode, int right )
 
 static DaoValue* DaoBoolean_DoUnary( DaoValue *value, int opcode, int right, DaoProcess *p )
 {
-	DaoDebug_WarnUnary( p );
 	/*
 	// Returning NULL without putting a value on the stack will be detected
 	// as an error by DaoProcess;
@@ -239,19 +201,16 @@ static DaoType* DaoBoolean_CheckBinary( DaoType *left, DaoType *right, int opcod
 	case DVM_AND : case DVM_OR  :
 	case DVM_LT  : case DVM_LE  :
 	case DVM_EQ  : case DVM_NE  :
+		if( left->tid <= DAO_BOOLEAN && right->tid <= DAO_BOOLEAN ) return dao_type_bool;
 		break;
-	default: return NULL;
+	default: break;
 	}
-
-	if( left->tid == DAO_BOOLEAN && right->tid == DAO_BOOLEAN ) return dao_type_bool;
 	return NULL;
 }
 
 static DaoValue* DaoBoolean_DoBinary( DaoValue *left, DaoValue *right, int opcode, DaoProcess *p )
 {
 	dao_boolean A, B, C = 0;
-
-	DaoDebug_WarnBinary( p );
 
 	if( left->type != DAO_BOOLEAN || right->type != DAO_BOOLEAN ) return NULL;
 
@@ -265,11 +224,24 @@ static DaoValue* DaoBoolean_DoBinary( DaoValue *left, DaoValue *right, int opcod
 	case DVM_LE  : C = A <= B; break;
 	case DVM_EQ  : C = A == B; break;
 	case DVM_NE  : C = A != B; break;
-		break;
 	default: return NULL;
 	}
 	DaoProcess_PutBoolean( p, C );
 	return NULL;
+}
+
+static DaoType* DaoBoolean_CheckComparison( DaoType *left, DaoType *right )
+{
+	if( left->tid <= DAO_BOOLEAN && right->tid <= DAO_BOOLEAN ) return dao_type_int;
+	return NULL; /* Other cases should be handled by other types; */
+}
+
+static int DaoBoolean_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *p )
+{
+	dao_boolean A = left->xBoolean.value;
+	dao_boolean B = right->xBoolean.value;
+	if( A == B ) return 0;
+	return A < B ? -1 : 1;
 }
 
 static DaoType* DaoBoolean_CheckConversion( DaoType *self, DaoType *type )
@@ -281,7 +253,6 @@ static DaoType* DaoBoolean_CheckConversion( DaoType *self, DaoType *type )
 static DaoValue* DaoBoolean_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *p )
 {
 	int bl = self->xBoolean.value;
-	DaoDebug_WarnConversion( p );
 	switch( type->tid ){
 	case DAO_BOOLEAN : num->xBoolean.value = bl; return num;
 	case DAO_INTEGER : num->xInteger.value = bl; return num;
@@ -310,7 +281,7 @@ DaoTypeCore daoBooleanCore =
 	NULL,                        NULL,                     /* SetItem */
 	DaoBoolean_CheckUnary,       DaoBoolean_DoUnary,       /* Unary */
 	DaoBoolean_CheckBinary,      DaoBoolean_DoBinary,      /* Binary */
-	NULL,                        NULL,                     /* Comparison */
+	DaoBoolean_CheckComparison,  DaoBoolean_DoComparison,  /* Comparison */
 	DaoBoolean_CheckConversion,  DaoBoolean_DoConversion,  /* Conversion */
 	DaoBoolean_Print,                                      /* Print */
 	NULL,                                                  /* Slice */
@@ -339,15 +310,177 @@ DaoInteger* DaoInteger_New( dao_integer value )
 #endif
 	return self;
 }
+
 dao_integer DaoInteger_Get( DaoInteger *self )
 {
 	return self->value;
 }
+
 void DaoInteger_Set( DaoInteger *self, dao_integer value )
 {
 	self->value = value;
 }
 
+static void DaoInteger_Delete( DaoValue *self )
+{
+	dao_free( self );
+}
+
+static DaoType* DaoInteger_CheckUnary( DaoType *type, int opcode, int right )
+{
+	if( right ) return NULL;
+	switch( opcode ){
+	case DVM_NOT   : return dao_type_bool;
+	case DVM_MINUS :
+	case DVM_TILDE :
+	case DVM_SIZE  : return dao_type_int;
+	default: break;
+	}
+	return NULL;
+}
+
+static DaoValue* DaoInteger_DoUnary( DaoValue *value, int opcode, int right, DaoProcess *p )
+{
+	/*
+	// Returning NULL without putting a value on the stack will be detected
+	// as an error by DaoProcess;
+	*/
+	if( right ) return NULL;
+	switch( opcode ){
+	case DVM_NOT   : DaoProcess_PutBoolean( p, ! value->xInteger.value ); break;
+	case DVM_MINUS : DaoProcess_PutInteger( p, - value->xInteger.value ); break;
+	case DVM_TILDE : DaoProcess_PutInteger( p, ~ value->xInteger.value ); break;
+	case DVM_SIZE  : DaoProcess_PutInteger( p, sizeof(dao_integer) );     break;
+	default: break;
+	}
+	return NULL;
+}
+
+static DaoType* DaoInteger_CheckBinary( DaoType *left, DaoType *right, int opcode )
+{
+	switch( opcode ){
+	case DVM_ADD : case DVM_SUB :
+	case DVM_MUL : case DVM_DIV :
+	case DVM_MOD : case DVM_POW :
+		if( left->tid == DAO_NONE || right->tid == DAO_NONE ) return NULL;
+		if( left->tid <= DAO_INTEGER && right->tid <= DAO_INTEGER ) return dao_type_int;
+		break;
+	case DVM_AND : case DVM_OR :
+	case DVM_LT  : case DVM_LE :
+	case DVM_EQ  : case DVM_NE :
+		if( left->tid <= DAO_INTEGER && right->tid <= DAO_INTEGER ) return dao_type_bool;
+		break;
+	default: break;
+	}
+	return NULL;
+}
+
+static DaoValue* DaoInteger_DoBinary( DaoValue *left, DaoValue *right, int opcode, DaoProcess *p )
+{
+	dao_integer A, B, C = 0;
+	int retbool = 0;
+
+	if( left->type != DAO_BOOLEAN || right->type != DAO_BOOLEAN ) return NULL;
+
+	A = left->xInteger.value;
+	B = right->xInteger.value;
+
+	switch( opcode ){
+	case DVM_ADD : C = A + B; break;
+	case DVM_SUB : C = A - B; break;
+	case DVM_MUL : C = A * B; break;
+	case DVM_DIV : if( B == 0 ) goto ErrorDivByZero; C = A / B; break;
+	case DVM_MOD : if( B == 0 ) goto ErrorDivByZero; C = A % B; break;
+	case DVM_POW : C = pow( A, B ); break;
+	case DVM_AND : C = A && B; retbool = 1; break;
+	case DVM_OR  : C = A || B; retbool = 1; break;
+	case DVM_LT  : C = A <  B; retbool = 1; break;
+	case DVM_LE  : C = A <= B; retbool = 1; break;
+	case DVM_EQ  : C = A == B; retbool = 1; break;
+	case DVM_NE  : C = A != B; retbool = 1; break;
+	default: return NULL;
+	}
+	if( retbool ){
+		DaoProcess_PutBoolean( p, C );
+	}else{
+		DaoProcess_PutInteger( p, C );
+	}
+	return NULL;
+
+ErrorDivByZero:
+	return NULL;
+}
+
+static DaoType* DaoInteger_CheckComparison( DaoType *left, DaoType *right )
+{
+	if( left->tid <= DAO_INTEGER && right->tid <= DAO_INTEGER ) return dao_type_int;
+	return NULL; /* Other cases should be handled by other types; */
+}
+
+static int DaoInteger_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *p )
+{
+	dao_integer A = left->xInteger.value;
+	dao_integer B = right->xInteger.value;
+	if( A == B ) return 0;
+	return A < B ? -1 : 1;
+}
+
+static DaoType* DaoInteger_CheckConversion( DaoType *self, DaoType *type )
+{
+	if( type->tid <= DAO_STRING ) return type;
+	return NULL;
+}
+
+static DaoValue* DaoInteger_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *p )
+{
+	int val = self->xInteger.value;
+	switch( type->tid ){
+	case DAO_BOOLEAN : num->xInteger.value = val != 0; return num;
+	case DAO_INTEGER : num->xInteger.value = val; return num;
+	case DAO_FLOAT   : num->xFloat.value   = val; return num;
+	case DAO_COMPLEX : num->xComplex.value.real = val; num->xComplex.value.imag = 0.0; return num;
+	break;
+	}
+	if( type->tid == DAO_STRING ){
+		char chs[100] = {0};
+
+		sprintf( chs, "%"DAO_I64, (long long) self->xInteger.value );
+		DaoProcess_PutChars( p, chs );
+	}
+	return NULL; /* The VM will handle the case where no value is converted and returned; */
+}
+
+static void DaoInteger_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+{
+	DaoStream_WriteInt( stream, self->xInteger.value );
+}
+
+DaoTypeCore daoIntegerCore =
+{
+	"int",                                                 /* name */
+	{ NULL },                                              /* bases */
+	NULL,                                                  /* numbers */
+	NULL,                                                  /* methods */
+	NULL,                        NULL,                     /* GetField */
+	NULL,                        NULL,                     /* SetField */
+	NULL,                        NULL,                     /* GetItem */
+	NULL,                        NULL,                     /* SetItem */
+	DaoInteger_CheckUnary,       DaoInteger_DoUnary,       /* Unary */
+	DaoInteger_CheckBinary,      DaoInteger_DoBinary,      /* Binary */
+	DaoInteger_CheckComparison,  DaoInteger_DoComparison,  /* Comparison */
+	DaoInteger_CheckConversion,  DaoInteger_DoConversion,  /* Conversion */
+	DaoInteger_Print,                                      /* Print */
+	NULL,                                                  /* Slice */
+	NULL,                                                  /* Copy */
+	DaoInteger_Delete,                                     /* Delete */
+	NULL                                                   /* HandleGC */
+};
+
+
+
+/*
+// Float type:
+*/
 DaoFloat* DaoFloat_New( dao_float value )
 {
 	DaoFloat *self = (DaoFloat*) dao_malloc( sizeof(DaoFloat) );
