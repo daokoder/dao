@@ -91,7 +91,7 @@ extern "C"{
 #endif
 
 
-enum DaoTypes
+enum DaoTypeID
 {
 	DAO_NONE  = 0,
 	DAO_BOOLEAN ,
@@ -118,6 +118,23 @@ enum DaoTypes
 	DAO_NAMESPACE ,
 	DAO_TYPE ,
 	END_CORE_TYPES
+};
+
+enum DaoErrorCode
+{
+	DAO_OK = 0,
+	DAO_ERROR ,
+	DAO_ERROR_FIELD ,
+	DAO_ERROR_FIELD_ABSENT ,
+	DAO_ERROR_FIELD_HIDDEN ,
+	DAO_ERROR_INDEX ,
+	DAO_ERROR_INDEX_RANGE ,
+	DAO_ERROR_KEY ,
+	DAO_ERROR_KEY_ABSENT ,
+	DAO_ERROR_ARG ,
+	DAO_ERROR_TYPE ,
+	DAO_ERROR_VALUE ,
+	DAO_ERROR_FLOAT
 };
 
 enum DaoProcessStatus
@@ -349,6 +366,7 @@ struct DaoTypeCore
 	int (*DoSetItem)( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *p );
 	/*
 	// Functions for SETI, SETDI and SETMI:
+	// The should return zero on success and error code otherwise;
 	*/
 
 	DaoType*  (*CheckUnary)( DaoType *type, int opcode, int right );
