@@ -333,8 +333,8 @@ struct DaoTypeCore
 	// Functions for GETF:
 	*/
 
-	DaoType* (*CheckSetField)( DaoType *self, DString *field, DaoType *value );
-	void (*DoSetField)( DaoValue *self, DString *field, DaoValue *value, DaoProcess *p );
+	int (*CheckSetField)( DaoType *self, DString *field, DaoType *value );
+	int (*DoSetField)( DaoValue *self, DString *field, DaoValue *value, DaoProcess *p );
 	/*
 	// Functions for SETF:
 	*/
@@ -345,8 +345,8 @@ struct DaoTypeCore
 	// Functions for GETI, GETDI and GETMI:
 	*/
 
-	DaoType* (*CheckSetItem)( DaoType *self, DaoType *index[], int N, DaoType *value );
-	void (*DoSetItem)( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *p );
+	int (*CheckSetItem)( DaoType *self, DaoType *index[], int N, DaoType *value );
+	int (*DoSetItem)( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *p );
 	/*
 	// Functions for SETI, SETDI and SETMI:
 	*/
