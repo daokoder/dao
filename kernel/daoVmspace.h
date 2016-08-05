@@ -183,7 +183,7 @@ DAO_DLL void DaoVmSpace_AddPath( DaoVmSpace *self, const char *path );
 DAO_DLL void DaoVmSpace_DelPath( DaoVmSpace *self, const char *path );
 
 DAO_DLL const char*const DaoVmSpace_GetCopyNotice();
-DAO_DLL DaoTypeCore* DaoVmSpace_GetTyper( short type );
+DAO_DLL DaoTypeCore* DaoVmSpace_GetTypeCore( short type );
 
 DAO_DLL void DaoVmSpace_AddKernel( DaoVmSpace *self, DaoTypeCore *core, DaoTypeKernel *kernel );
 DAO_DLL DaoTypeKernel* DaoVmSpace_GetKernel( DaoVmSpace *self, DaoTypeCore *core );

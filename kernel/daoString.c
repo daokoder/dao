@@ -396,7 +396,7 @@ void DString_InsertChars( DString *self, const char* chs, daoint at, daoint rm, 
 {
 	daoint i;
 	if( chs == NULL ) return;
-	if( cp <= 0 ) cp = strlen( chs );
+	if( cp <= 0 ) cp = strlen( chs ); // XXX <
 	if( at > self->size ) at = self->size;
 	if( rm < 0 ) rm = self->size;
 	if( rm + at > self->size ) rm = self->size - at;

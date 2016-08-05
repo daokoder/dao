@@ -76,7 +76,8 @@ dao_float DString_ToFloat( DString *self )
 dao_integer DaoValue_GetInteger( DaoValue *self )
 {
 	switch( self->type ){
-	case DAO_BOOLEAN :
+	case DAO_NONE    : return 0;
+	case DAO_BOOLEAN : return self->xBoolean.value;
 	case DAO_INTEGER : return self->xInteger.value;
 	case DAO_FLOAT   : return self->xFloat.value;
 	case DAO_COMPLEX : return self->xComplex.value.real;
@@ -91,7 +92,7 @@ dao_float DaoValue_GetFloat( DaoValue *self )
 	DString *str;
 	switch( self->type ){
 	case DAO_NONE    : return 0;
-	case DAO_BOOLEAN :
+	case DAO_BOOLEAN : return self->xBoolean.value;
 	case DAO_INTEGER : return self->xInteger.value;
 	case DAO_FLOAT   : return self->xFloat.value;
 	case DAO_COMPLEX : return self->xComplex.value.real;
@@ -762,27 +763,6 @@ int DaoComplex_Compare( DaoComplex *left, DaoComplex *right )
 	return 0;
 }
 
-int DaoEnum_Compare( DaoEnum *L, DaoEnum *R )
-{
-	DaoEnum E;
-	if( L->etype == R->etype ){
-		return L->value == R->value ? 0 : (L->value < R->value ? -1 : 1);
-	}else if( L->subtype == DAO_ENUM_SYM && R->subtype == DAO_ENUM_SYM ){
-		return DString_CompareUTF8( L->etype->name, R->etype->name );
-	}else if( L->subtype == DAO_ENUM_SYM ){
-		E = *R;
-		if( DaoEnum_SetValue( & E, L ) == 0 ) goto CompareName;
-		return E.value == R->value ? 0 : (E.value < R->value ? -1 : 1);
-	}else if( R->subtype == DAO_ENUM_SYM ){
-		E = *L;
-		if( DaoEnum_SetValue( & E, R ) == 0 ) goto CompareName;
-		return L->value == E.value ? 0 : (L->value < E.value ? -1 : 1);
-	}else if( DString_EQ( L->etype->fname, R->etype->fname ) ){
-		return L->value == R->value ? 0 : (L->value < R->value ? -1 : 1);
-	}
-CompareName:
-	return DString_CompareUTF8( L->etype->fname, R->etype->fname );
-}
 static int DaoValue_ComparePro2( DaoValue *left, DaoValue *right, DaoProcess *proc, int dep );
 static void DaoProcess_WarnComparisonRecursion( DaoProcess *self )
 {
@@ -991,7 +971,7 @@ DaoType* DaoValue_GetType( DaoValue *self )
 	}
 	return NULL;
 }
-DaoTypeCore* DaoValue_GetTyper( DaoValue *self )
+DaoTypeCore* DaoValue_GetTypeCore( DaoValue *self )
 {
 	if( self == NULL ) return & baseTyper;
 	switch( self->type ){

@@ -2702,7 +2702,7 @@ DaoEnum* DaoProcess_GetEnum( DaoProcess *self, DaoVmCode *vmc )
 DaoEnum* DaoProcess_PutEnum( DaoProcess *self, const char *symbols )
 {
 	DaoEnum *denum = DaoProcess_GetEnum( self, self->activeCode );
-	DaoEnum_SetSymbols( denum, symbols );
+	if( symbols ) DaoEnum_SetSymbols( denum, symbols );
 	return denum;
 }
 /**/
@@ -5396,7 +5396,7 @@ void DaoProcess_DoUnaBool( DaoProcess *self, DaoVmCode *vmc )
 		DaoProcess_PutBoolean( self, ! A->xFloat.value );
 #ifdef DAO_WITH_NUMARRAY
 	}else if( ta == DAO_ENUM && A->xEnum.subtype != DAO_ENUM_SYM ){
-		DaoProcess_PutFloat( self, ! A->xEnum.value );
+		DaoProcess_PutFloat( self, ! A->xEnum.value ); // XXX???
 #endif
 	}else if( ta >= DAO_OBJECT && ta <= DAO_CDATA ){
 		DaoValue *C = self->activeValues[ vmc->c ];
@@ -5413,7 +5413,7 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoValue *A = self->activeValues[ vmc->a ];
 	DaoValue *B = self->activeValues[ vmc->b ];
-	dao_integer *C = DaoProcess_PutBoolean( self, 0 );
+	dao_boolean *C = DaoProcess_PutBoolean( self, 0 );
 	daoint i, n;
 	if( A->type == DAO_INTEGER && B->type == DAO_STRING ){
 		dao_integer bv = A->xInteger.value;

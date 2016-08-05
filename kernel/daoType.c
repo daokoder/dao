@@ -284,7 +284,7 @@ void DaoType_CheckAttributes( DaoType *self )
 }
 DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DList *nest )
 {
-	DaoTypeCore *typer = DaoVmSpace_GetTyper( tid );
+	DaoTypeCore *typer = DaoVmSpace_GetTypeCore( tid );
 	DaoType *self = (DaoType*) dao_calloc( 1, sizeof(DaoType) );
 	DaoValue_Init( self, DAO_TYPE );
 	self->trait |= DAO_VALUE_DELAYGC;
@@ -1872,9 +1872,9 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 	return value;
 }
 
-DaoTypeCore* DaoType_GetTyper( DaoType *self )
+DaoTypeCore* DaoType_GetTypeCore( DaoType *self )
 {
-	return self->typer;
+	return self->core;
 }
 
 

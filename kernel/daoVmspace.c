@@ -239,7 +239,7 @@ extern DaoTypeCore regexTyper;
 extern DaoTypeCore vmpTyper;
 extern DaoTypeCore typeKernelTyper;
 
-DaoTypeCore* DaoVmSpace_GetTyper( short type )
+DaoTypeCore* DaoVmSpace_GetTypeCore( short type )
 {
 	switch( type ){
 	case DAO_BOOLEAN  :

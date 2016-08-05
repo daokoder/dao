@@ -209,11 +209,11 @@ typedef struct dao_complex
 	dao_float  imag;
 } dao_complex;
 
-typedef struct DString  DString;
-typedef struct DArray   DArray;
-typedef struct DList    DList;
-typedef struct DNode    DNode;
-typedef struct DMap     DMap;
+typedef struct DString         DString;
+typedef struct DArray          DArray;
+typedef struct DList           DList;
+typedef struct DNode           DNode;
+typedef struct DMap            DMap;
 
 typedef struct DaoTypeCore     DaoTypeCore;
 typedef struct DaoTypeKernel   DaoTypeKernel;
@@ -344,50 +344,50 @@ struct DaoTypeCore
 	// Method definitions: should end with a null item;
 	*/
 
-	DaoType*  (*CheckGetField)( DaoType *self, DString *field );
+	DaoType*  (*CheckGetField)( DaoType *self, DString *field, DaoNamespace *ns );
 	DaoValue* (*DoGetField)( DaoValue *self, DString *field, DaoProcess *p );
 	/*
 	// Functions for GETF:
 	*/
 
-	int (*CheckSetField)( DaoType *self, DString *field, DaoType *value );
+	int (*CheckSetField)( DaoType *self, DString *field, DaoType *value, DaoNamespace *ns );
 	int (*DoSetField)( DaoValue *self, DString *field, DaoValue *value, DaoProcess *p );
 	/*
 	// Functions for SETF:
 	*/
 
-	DaoType*  (*CheckGetItem)( DaoType *self, DaoType *index[], int N );
+	DaoType*  (*CheckGetItem)( DaoType *self, DaoType *index[], int N, DaoNamespace *ns );
 	DaoValue* (*DoGetItem)( DaoValue *self, DaoValue *index[], int N, DaoProcess *p );
 	/*
 	// Functions for GETI, GETDI and GETMI:
 	*/
 
-	int (*CheckSetItem)( DaoType *self, DaoType *index[], int N, DaoType *value );
+	int (*CheckSetItem)( DaoType *self, DaoType *index[], int N, DaoType *value, DaoNamespace *ns );
 	int (*DoSetItem)( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *p );
 	/*
 	// Functions for SETI, SETDI and SETMI:
 	// The should return zero on success and error code otherwise;
 	*/
 
-	DaoType*  (*CheckUnary)( DaoType *type, int opcode, int right );
+	DaoType*  (*CheckUnary)( DaoType *type, int opcode, int right, DaoNamespace *ns );
 	DaoValue* (*DoUnary)( DaoValue *value, int opcode, int right, DaoProcess *p );
 	/*
 	// Functions for unary operations:
 	*/
 
-	DaoType*  (*CheckBinary)( DaoType *left, DaoType *right, int opcode );
+	DaoType*  (*CheckBinary)( DaoType *left, DaoType *right, int opcode, DaoNamespace *ns );
 	DaoValue* (*DoBinary)( DaoValue *left, DaoValue *right, int opcode, DaoProcess *p );
 	/*
 	// Functions for binary operations:
 	*/
 
-	DaoType*  (*CheckComparison)( DaoType *left, DaoType *right );
+	int (*CheckComparison)( DaoType *left, DaoType *right, DaoNamespace *ns );
 	int (*DoComparison)( DaoValue *left, DaoValue *right, DaoProcess *p );
 	/*
 	// Functions for comparison operations:
 	*/
 
-	DaoType*  (*CheckConversion)( DaoType *self, DaoType *type );
+	DaoType*  (*CheckConversion)( DaoType *self, DaoType *type, DaoNamespace *ns );
 	DaoValue* (*DoConversion)( DaoValue *self, DaoType *type, DaoValue *buffer, DaoProcess *p );
 	/*
 	// Functions for conversion operation:
