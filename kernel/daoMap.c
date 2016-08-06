@@ -115,17 +115,12 @@ DMap* DHash_New( short kt, short vt )
 }
 
 
-static int DaoValue_Hash( DaoValue *self, DaoProcess *process, unsigned int hash )
+static int DaoValue_Hash( DaoValue *self, unsigned int hash )
 {
-	DaoBoolean bl = {DAO_BOOLEAN,0,0,0,0,1};
-	DaoRoutine *routine;
-	DaoValue *params[2];
 	DaoCpod *pod;
+	DaoTypeCore *core;
 	void *data = NULL;
 	int i, len = 0;
-
-	params[0] = (DaoValue*) dao_type_int;
-	params[1] = (DaoValue*) & bl;
 
 	switch( self->type ){
 	case DAO_INTEGER :
@@ -154,28 +149,27 @@ static int DaoValue_Hash( DaoValue *self, DaoProcess *process, unsigned int hash
 		break;
 	case DAO_TUPLE :
 		for(i=0; i<self->xTuple.size; i++){
-			hash = DaoValue_Hash( self->xTuple.values[i], process, hash );
+			hash = DaoValue_Hash( self->xTuple.values[i], hash );
 		}
 		break;
-	case DAO_OBJECT :
-		routine = self->xObject.defClass->intOperators;
-		if( process == NULL || routine == NULL ) goto Default;
-		if( DaoProcess_Call( process, routine, self, params, 2 ) ) goto Default;
-		hash = DaoValue_GetInteger( process->stackValues[0] );
-		hash = Dao_Hash( & hash, 4, 0 );
-		break;
 	case DAO_CPOD :
-		pod = (DaoCpod*) self;
-		hash = Dao_Hash( pod + 1, pod->size, 0 );
-		break;
 	case DAO_CSTRUCT :
 	case DAO_CDATA :
 	case DAO_CTYPE :
-		routine = self->xCstruct.ctype->kernel->intOperators;
-		if( process == NULL || routine == NULL ) goto Default;
-		if( DaoProcess_Call( process, routine, self, params, 2 ) ) goto Default;
-		hash = DaoValue_GetInteger( process->stackValues[0] );
-		hash = Dao_Hash( & hash, 4, 0 );
+		core = DaoValue_GetTypeCore( self );
+		if( core == NULL || core->DoConversion == NULL ){
+			if( self->type != DAO_CPOD ) goto Default;
+			pod = (DaoCpod*) self;
+			hash = Dao_Hash( pod + 1, pod->size, 0 );
+		}else{
+			DaoValue *hv;
+			DaoInteger buffer = {0};
+			buffer.type = DAO_INTEGER;
+			hv = core->DoConversion( self, dao_type_int, (DaoValue*) & buffer, NULL );
+			if( hv == NULL ) goto Default;
+			hash = DaoValue_GetInteger( hv );
+			hash = Dao_Hash( & hash, 4, 0 );
+		}
 		break;
 	default :
 Default:
@@ -187,7 +181,7 @@ Default:
 	return hash;
 }
 
-static int DHash_HashIndex( DMap *self, void *key, DaoProcess *process )
+static int DHash_HashIndex( DMap *self, void *key )
 {
 #define HASH_MAX  32
 	DString *s;
@@ -205,9 +199,8 @@ static int DHash_HashIndex( DMap *self, void *key, DaoProcess *process )
 		break;
 	case DAO_DATA_VALUE2 :
 	case DAO_DATA_VALUE3 :
-		process = NULL;
 	case DAO_DATA_VALUE :
-		hash = DaoValue_Hash( (DaoValue*) key, process, self->hashing );
+		hash = DaoValue_Hash( (DaoValue*) key, self->hashing );
 		break;
 	case DAO_DATA_LIST :
 		array = (DList*)key;
@@ -228,9 +221,9 @@ static int DHash_HashIndex( DMap *self, void *key, DaoProcess *process )
 	}
 	return hash & 0x7fffffff;
 }
-static DNode* DMap_SimpleInsert( DMap *self, DNode *node, DaoProcess *process );
+static DNode* DMap_SimpleInsert( DMap *self, DNode *node );
 static void DMap_InsertNode( DMap *self, DNode *node );
-static void DMap_InsertTree( DMap *self, DNode *node, DaoProcess *process )
+static void DMap_InsertTree( DMap *self, DNode *node )
 {
 	DNode *left = node->left;
 	DNode *right = node->right;
@@ -243,12 +236,12 @@ static void DMap_InsertTree( DMap *self, DNode *node, DaoProcess *process )
 		self->table[ node->hash % tsize ] = node;
 		self->size += 1;
 	}else{
-		DMap_SimpleInsert( self, node, process );
+		DMap_SimpleInsert( self, node );
 		DMap_InsertNode( self, node );
 		self->table[ node->hash % tsize ] = self->root;
 	}
-	if( left ) DMap_InsertTree( self, left, process );
-	if( right ) DMap_InsertTree( self, right, process );
+	if( left ) DMap_InsertTree( self, left );
+	if( right ) DMap_InsertTree( self, right );
 }
 static int DMap_Lockable( DMap *self )
 {
@@ -256,7 +249,7 @@ static int DMap_Lockable( DMap *self )
 	lockable |= self->valtype >= DAO_DATA_VALUE && self->valtype <= DAO_DATA_VALUE3;
 	return lockable;
 }
-static void DHash_ResetTable( DMap *self, DaoProcess *process )
+static void DHash_ResetTable( DMap *self )
 {
 	DNode **nodes = self->table;
 	size_t i, tsize = self->tsize2rt * (size_t)self->tsize2rt;
@@ -266,7 +259,7 @@ static void DHash_ResetTable( DMap *self, DaoProcess *process )
 	self->tsize2rt = sqrt( 2 * self->size + 1 );
 	self->table = (DNode**)dao_calloc( self->tsize2rt*(size_t)self->tsize2rt, sizeof(DNode*) );
 	self->size = 0;
-	for(i=0; i<tsize; i++) if( nodes[i] ) DMap_InsertTree( self, nodes[i], process );
+	for(i=0; i<tsize; i++) if( nodes[i] ) DMap_InsertTree( self, nodes[i] );
 	if( DMap_Lockable( self ) ) DaoGC_UnlockData();
 	if( nodes ) dao_free( nodes );
 }
@@ -636,7 +629,7 @@ static void DMap_EraseChild( DMap *self, DNode *node )
 	}
 	DMap_BufferNode( self, extreme );
 }
-void DMap_EraseNodePro( DMap *self, DNode *node, DaoProcess *process )
+void DMap_EraseNode( DMap *self, DNode *node )
 {
 	if( node == NULL ) return;
 	if( self->hashing ){
@@ -648,7 +641,7 @@ void DMap_EraseNodePro( DMap *self, DNode *node, DaoProcess *process )
 		DMap_EraseChild( self, node );
 		self->table[ hash % tsize ] = self->root;
 		if( DMap_Lockable( self ) ) DaoGC_UnlockData();
-		if( self->size < 0.25*tsize ) DHash_ResetTable( self, process );
+		if( self->size < 0.25*tsize ) DHash_ResetTable( self );
 	}else{
 		if( DMap_Lockable( self ) ) DaoGC_LockData();
 		DMap_EraseChild( self, node );
@@ -723,7 +716,7 @@ static int dao_complex_compare( dao_complex *left, dao_complex *right )
 	if( left->imag != right->imag ) return left->imag < right->imag ? -1 : 1;
 	return 0;
 }
-static daoint DMap_CompareKeys( DMap *self, DNode *n1, DNode *n2, DaoProcess *proc )
+static daoint DMap_CompareKeys( DMap *self, DNode *n1, DNode *n2 )
 {
 	void *k1 = n1->key.pVoid;
 	void *k2 = n2->key.pVoid;
@@ -732,11 +725,11 @@ static daoint DMap_CompareKeys( DMap *self, DNode *n1, DNode *n2, DaoProcess *pr
 	switch( self->keytype ){
 	case DAO_DATA_COMPLEX : cmp = dao_complex_compare( (dao_complex*) k1, (dao_complex*) k2 ); break;
 	case DAO_DATA_STRING : cmp = DString_Compare( (DString*) k1, (DString*) k2 ); break;
-	case DAO_DATA_VALUE  : cmp = DaoValue_ComparePro( (DaoValue*)k1, (DaoValue*)k2, proc ); break;
+	case DAO_DATA_VALUE  : cmp = DaoValue_Compare( (DaoValue*)k1, (DaoValue*)k2 ); break;
 	case DAO_DATA_VALUE2 : cmp = DaoValue_Compare2( (DaoValue*) k1, (DaoValue*) k2 ); break;
 	case DAO_DATA_VALUE3 : cmp = DaoValue_Compare3( (DaoValue*) k1, (DaoValue*) k2 ); break;
-	case DAO_DATA_LIST  : cmp = DList_Compare( (DList*) k1, (DList*) k2 );        break;
-	case DAO_DATA_VOID2  : cmp = DVoid2_Compare( (void**) k1, (void**) k2 );          break;
+	case DAO_DATA_LIST   : cmp = DList_Compare( (DList*) k1, (DList*) k2 );  break;
+	case DAO_DATA_VOID2  : cmp = DVoid2_Compare( (void**) k1, (void**) k2 ); break;
 	case DAO_DATA_VMCODE : cmp = DaoVmCode_Compare( (DaoVmCode*) k1, (DaoVmCode*) k2 );  break;
 	case DAO_DATA_VMCODE2: cmp = DaoVmCode_Compare2( (DaoVmCode*) k1, (DaoVmCode*) k2 ); break;
 	default : cmp = k1 == k2 ? 0 : (k1 < k2 ? -1 : 1 ); break;
@@ -744,7 +737,7 @@ static daoint DMap_CompareKeys( DMap *self, DNode *n1, DNode *n2, DaoProcess *pr
 	return cmp;
 }
 
-static DNode* DMap_FindChild( DMap *self, DNode *root, DNode *query, int type, DaoProcess *process )
+static DNode* DMap_FindChild( DMap *self, DNode *root, DNode *query, int type )
 {
 	DNode *p = root;
 	DNode *m = 0;
@@ -753,7 +746,7 @@ static DNode* DMap_FindChild( DMap *self, DNode *root, DNode *query, int type, D
 	if( root == NULL ) return NULL;
 
 	for(;;){
-		compare = DMap_CompareKeys( self, query, p, process );
+		compare = DMap_CompareKeys( self, query, p );
 		if( compare == 0 ) return p;
 
 		if( compare < 0 ){
@@ -766,7 +759,7 @@ static DNode* DMap_FindChild( DMap *self, DNode *root, DNode *query, int type, D
 	}
 	return m;
 }
-static DNode* DMap_FindNode( DMap *self, void *key, int type, DaoProcess *process )
+static DNode* DMap_FindNode( DMap *self, void *key, int type )
 {
 	DNode query = {0, 0, NULL, NULL};
 	DNode *root = self->root;
@@ -774,21 +767,21 @@ static DNode* DMap_FindNode( DMap *self, void *key, int type, DaoProcess *proces
 	query.key.pVoid = key;
 	if( self->hashing ){
 		size_t tsize = self->tsize2rt * (size_t)self->tsize2rt;
-		int hash = DHash_HashIndex( self, key, process );
+		int hash = DHash_HashIndex( self, key );
 		query.hash = hash;
 		root = self->table[hash % tsize];
 		if( root == NULL ) return NULL;
 	}
-	return DMap_FindChild( self, root, & query, type, process );
+	return DMap_FindChild( self, root, & query, type );
 }
-static DNode* DMap_SimpleInsert( DMap *self, DNode *node, DaoProcess *process )
+static DNode* DMap_SimpleInsert( DMap *self, DNode *node )
 {
 	DNode *p = self->root;
 	int compare;
 	node->color = RB_RED;
 	if( self->root == NULL ) return node;
 	for(;;){
-		compare = DMap_CompareKeys( self, node, p, process );
+		compare = DMap_CompareKeys( self, node, p );
 		if( compare == 0 ){
 			return p;
 		}else if( compare < 0 ){
@@ -811,7 +804,7 @@ static DNode* DMap_SimpleInsert( DMap *self, DNode *node, DaoProcess *process )
 	}
 	return node;
 }
-DNode* DMap_InsertPro( DMap *self, void *key, void *value, DaoProcess *process )
+DNode* DMap_Insert( DMap *self, void *key, void *value )
 {
 	DNode *p, *node = DNode_New( self, self->keytype, self->valtype );
 	void *okey = node->key.pVoid;
@@ -819,7 +812,7 @@ DNode* DMap_InsertPro( DMap *self, void *key, void *value, DaoProcess *process )
 	size_t tsize = self->tsize2rt * (size_t)self->tsize2rt;
 	int locked, id = 0;
 	if( self->hashing ){
-		id = DHash_HashIndex( self, key, process );
+		id = DHash_HashIndex( self, key );
 		node->hash = id;
 		self->root = self->table[id % tsize];
 		if( self->root ==NULL ){
@@ -833,7 +826,7 @@ DNode* DMap_InsertPro( DMap *self, void *key, void *value, DaoProcess *process )
 	}
 	node->key.pVoid = key;
 	node->value.pVoid = value;
-	p = DMap_SimpleInsert( self, node, process );
+	p = DMap_SimpleInsert( self, node );
 	node->key.pVoid = okey;
 	node->value.pVoid = ovalue;
 	if( p == node ){ /* key not exist: */
@@ -844,7 +837,7 @@ DNode* DMap_InsertPro( DMap *self, void *key, void *value, DaoProcess *process )
 		if( DMap_Lockable( self ) ) DaoGC_UnlockData();
 		if( self->hashing ){
 			self->table[id % tsize] = self->root;
-			if( self->size >= tsize ) DHash_ResetTable( self, process );
+			if( self->size >= tsize ) DHash_ResetTable( self );
 		}
 	}else{
 		if( self->valtype < DAO_DATA_VALUE || self->valtype > DAO_DATA_VALUE3 ){
@@ -856,29 +849,21 @@ DNode* DMap_InsertPro( DMap *self, void *key, void *value, DaoProcess *process )
 	}
 	return p;
 }
-void DMap_ErasePro( DMap *self, void *key, DaoProcess *process )
-{
-	DMap_EraseNodePro( self, DMap_FindNode( self, key, DAO_KEY_EQ, process ), process );
-}
-DNode* DMap_FindPro( DMap *self, void *key, int type, DaoProcess *process )
-{
-	return DMap_FindNode( self, key, type, process );
-}
 void DMap_EraseNode( DMap *self, DNode *node )
 {
-	return DMap_EraseNodePro( self, node, NULL );
+	return DMap_EraseNode( self, node );
 }
 DNode* DMap_Insert( DMap *self, void *key, void *value )
 {
-	return DMap_InsertPro( self, key, value, NULL );
+	return DMap_Insert( self, key, value );
 }
 void DMap_Erase( DMap *self, void *key )
 {
-	DMap_ErasePro( self, key, NULL );
+	DMap_Erase( self, key );
 }
 DNode* DMap_Find( DMap *self, void *key )
 {
-	return DMap_FindNode( self, key, DAO_KEY_EQ, NULL );
+	return DMap_FindNode( self, key, DAO_KEY_EQ );
 }
 DNode* DMap_First( DMap *self )
 {

@@ -98,7 +98,6 @@ DAO_DLL void DMap_Assign( DMap *self, DMap *other );
 DAO_DLL void DMap_Delete( DMap *self );
 DAO_DLL void DMap_Clear( DMap *self );
 DAO_DLL void DMap_Reset( DMap *self );
-/* Insert key/value, and return the previous value if existed. */
 DAO_DLL void DMap_Erase( DMap *self, void *key );
 DAO_DLL void DMap_EraseNode( DMap *self, DNode *node );
 
@@ -106,11 +105,6 @@ DAO_DLL DNode* DMap_Insert( DMap *self, void *key, void *value );
 DAO_DLL DNode* DMap_Find( DMap *self, void *key );
 DAO_DLL DNode* DMap_First( DMap *self );
 DAO_DLL DNode* DMap_Next( DMap *self, DNode *node );
-
-DAO_DLL void DMap_ErasePro( DMap *self, void *key, DaoProcess *process );
-DAO_DLL void DMap_EraseNodePro( DMap *self, DNode *node, DaoProcess *process );
-DAO_DLL DNode* DMap_InsertPro( DMap *self, void *key, void *value, DaoProcess *process );
-DAO_DLL DNode* DMap_FindPro( DMap *self, void *key, int type, DaoProcess *process );
 
 #define MAP_Insert( s, k, v ) DMap_Insert( (DMap*)(s), (void*)(daoint)(k), (void*)(daoint)(v) )
 #define MAP_Erase( s, k ) DMap_Erase( (DMap*)(s), (void*)(daoint)(k) )

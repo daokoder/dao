@@ -46,6 +46,7 @@ enum DaoExtraTypes
 	DAO_TYPEKERNEL ,
 	DAO_CODEBLOCK ,
 
+	DAO_RANGE ,
 	DAO_PAR_NAMED ,   /* name:type */
 	DAO_PAR_DEFAULT , /* name=type */
 	DAO_PAR_VALIST ,  /* ... */

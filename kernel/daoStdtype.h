@@ -43,6 +43,8 @@
 
 void DaoValue_Init( void *dbase, char type );
 
+
+
 struct DaoNone
 {
 	DAO_VALUE_CORE;
@@ -52,12 +54,16 @@ DAO_DLL DaoValue *dao_false_value;
 DAO_DLL DaoValue *dao_true_value;
 DAO_DLL DaoNone* DaoNone_New();
 
+
+
 struct DaoBoolean
 {
 	DAO_VALUE_CORE;
 
 	dao_boolean value;
 };
+
+
 
 struct DaoInteger
 {
@@ -66,6 +72,8 @@ struct DaoInteger
 	dao_integer value;
 };
 
+
+
 struct DaoFloat
 {
 	DAO_VALUE_CORE;
@@ -73,12 +81,15 @@ struct DaoFloat
 	dao_float value;
 };
 
+
+
 struct DaoComplex
 {
 	DAO_VALUE_CORE;
 
 	dao_complex value;
 };
+
 
 
 struct DaoString
@@ -89,6 +100,7 @@ struct DaoString
 };
 DAO_DLL DaoString* DaoString_Copy( DaoString *self );
 DAO_DLL void DaoString_Delete( DaoString *self );
+
 
 
 /*
@@ -118,6 +130,7 @@ DAO_DLL int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other );
 DAO_DLL int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other );
 
 
+
 struct DaoList
 {
 	DAO_GENERIC_COMMON;
@@ -136,6 +149,13 @@ DAO_DLL int DaoList_Append( DaoList *self, DaoValue *it );
 DAO_DLL DaoList* DaoList_Copy( DaoList *self, DaoType *type );
 
 
+
+/*
+// TODO:
+// -- Add hashable DaoCpod type:
+//   (hashable(key:@T<int|string|hashable>, ...:@T<int|string|hashable>))
+// -- Immutable tuple: copy in, copy out;
+*/
 struct DaoMap
 {
 	DAO_GENERIC_COMMON;
@@ -159,28 +179,18 @@ DAO_DLL void DaoMap_Clear( DaoMap *self );
 DAO_DLL void DaoMap_Reset( DaoMap *self, unsigned int hashing );
 DAO_DLL DaoMap* DaoMap_Copy( DaoMap *self, DaoType *type );
 
-DAO_DLL DNode* DaoMap_Find2( DaoMap *self, DaoValue *key, DaoProcess *proc );
 DAO_DLL int DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value );
-DAO_DLL int DaoMap_Insert2( DaoMap *self, DaoValue *key, DaoValue *value, DaoProcess *proc );
 DAO_DLL void DaoMap_Erase( DaoMap *self, DaoValue *key );
 
 
-#define DAO_TUPLE_MINSIZE 2
-/*
-// 2 is used instead of 1, for two reasons:
-// A. most often used tuples have at least two items;
-// B. some builtin tuples have at least two items, and are accessed by
-//    constant sub index, compilers such Clang may complain if 1 is used.
-*/
 
 struct DaoTuple
 {
 	DAO_VALUE_COMMON;
 
-	/* Packed with the previous field in 64-bits system; */
-	int        size;
+	int        size;      /* Packed with the previous field in 64-bits system; */
 	DaoType   *ctype;
-	DaoValue  *values[DAO_TUPLE_MINSIZE]; /* The actual number of items is in ::size; */
+	DaoValue  *values[2]; /* The actual number of items is in ::size; */
 };
 
 DAO_DLL DaoTuple* DaoTuple_Create( DaoType *type, int size, int init );
@@ -190,8 +200,34 @@ DAO_DLL void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
 DAO_DLL int DaoTuple_GetIndex( DaoTuple *self, DString *name );
 
 
+
+/*
+// Index or key range;
+// Not a general type;
+// No direct access by users;
+// Copy by value;
+*/
+struct DaoRange
+{
+	DAO_VALUE_COMMON;
+
+	DaoType   *ctype;
+	DaoValue  *first;
+	DaoValue  *second;
+};
+
+DAO_DLL DaoRange* DaoRange_New( DaoType *type );
+DAO_DLL void DaoRange_Delete( DaoRange *self );
+DAO_DLL void DaoRange_SetFirst( DaoRange *self, DaoValue *value );
+DAO_DLL void DaoRange_SetSecond( DaoRange *self, DaoValue *value );
+
+
+
 /*
 // Mainly used for passing named parameters and fields:
+// TODO: named argement for calls with signature known at compiling time;
+// TODO: copy by value;
+// ???TODO: change type id, add type matching to named param;
 */
 struct DaoNameValue
 {

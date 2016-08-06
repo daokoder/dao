@@ -72,6 +72,7 @@ union DaoValue
 	DaoProcess     xProcess;
 	DaoNamespace   xNamespace;
 	DaoNameValue   xNameValue;
+	DaoRange       xRange;
 	DaoConstant    xConst;
 	DaoVariable    xVar;
 	DaoType        xType;

@@ -248,6 +248,7 @@ typedef struct DaoCtype        DaoCtype;
 typedef struct DaoCstruct      DaoCstruct;
 typedef struct DaoCpod         DaoCpod;
 typedef struct DaoCdata        DaoCdata;
+typedef struct DaoRange        DaoRange;
 typedef struct DaoRegex        DaoRegex;
 typedef struct DaoException    DaoException;
 typedef struct DaoNamespace    DaoNamespace;
@@ -316,10 +317,13 @@ struct DaoVirtualModule
 // to use the default implementations, which will use operator overloading
 // from the member methods to do type checkings and running time executions.
 //
-// At running time, the executing DaoProcess object is passed to the execution
-// functions, so that these functions can put the resulting values directly
-// on the process stack. Otherwise, they should just return the results, and
-// let the VM to put them on the stack if necessary (TODO).
+// At running time, the executing DaoProcess object is usually passed to the
+// execution functions, so that these functions can put the resulting values
+// directly on the process stack. Otherwise, they should just return the results,
+// and let the VM to put them on the stack if necessary (TODO).
+//
+// However, for the comparison and conversion functions, the DaoProcess could
+// be NULL when their host types are used as map and hash map keys.
 */
 struct DaoTypeCore
 {
