@@ -47,6 +47,7 @@ enum DaoExtraTypes
 	DAO_CODEBLOCK ,
 
 	DAO_RANGE ,
+	DAO_ITERATOR ,
 	DAO_PAR_NAMED ,   /* name:type */
 	DAO_PAR_DEFAULT , /* name=type */
 	DAO_PAR_VALIST ,  /* ... */

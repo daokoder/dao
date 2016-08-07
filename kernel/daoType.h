@@ -140,6 +140,8 @@ DAO_DLL DaoType *dao_type_map_any;
 DAO_DLL DaoType *dao_type_routine;
 DAO_DLL DaoType *dao_type_cdata;
 DAO_DLL DaoType *dao_type_for_iterator;
+DAO_DLL DaoType *dao_type_iterator_int;
+DAO_DLL DaoType *dao_type_iterator_any;
 DAO_DLL DaoType *dao_type_exception;
 DAO_DLL DaoType *dao_type_warning;
 DAO_DLL DaoType *dao_type_error;

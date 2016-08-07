@@ -409,11 +409,15 @@ struct DaoTypeCore
 	// type will be passed to the conversion function for convenience.
 	*/
 
-
-	//DaoType*  (*CheckIterator)( DaoType *self, DaoType *type );
-	//DaoValue* (*DoIterator)( DaoValue *self, DaoType *type, DaoProcess *p );
+	DaoType* (*CheckForEach)( DaoType *self, DaoNamespace *ns );
+	void (*DoForEach)( DaoValue *self, DaoIterator *iterator, DaoProcess *p );
 	/*
-	// Functions for iterator creation:
+	// Functions for preparing for-in iteration:
+	// The check function must return a specialized type of the built-in
+	// iterator type;
+	// The execution function should initialize the iterator properly;
+	// The GetItem functions should handle the case where DaoIterator
+	// is the sub-index;
 	*/
 
 	void (*Print)( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p );

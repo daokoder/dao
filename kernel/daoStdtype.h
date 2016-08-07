@@ -50,8 +50,6 @@ struct DaoNone
 	DAO_VALUE_CORE;
 };
 DAO_DLL DaoValue *dao_none_value;
-DAO_DLL DaoValue *dao_false_value;
-DAO_DLL DaoValue *dao_true_value;
 DAO_DLL DaoNone* DaoNone_New();
 
 
@@ -62,6 +60,8 @@ struct DaoBoolean
 
 	dao_boolean value;
 };
+DAO_DLL DaoValue *dao_false_value;
+DAO_DLL DaoValue *dao_true_value;
 
 
 
@@ -198,6 +198,27 @@ DAO_DLL DaoTuple* DaoTuple_Copy( DaoTuple *self, DaoType *type );
 DAO_DLL void DaoTuple_Delete( DaoTuple *self );
 DAO_DLL void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
 DAO_DLL int DaoTuple_GetIndex( DaoTuple *self, DString *name );
+
+
+
+/*
+// Built-in Iterator;
+// Copy by value;
+// The structure is the same as DaoTuple;
+// Just the typing and copying is different;
+*/
+struct DaoIterator
+{
+	DAO_VALUE_COMMON;
+
+	int        size;       /* Always two; */
+	DaoType   *ctype;
+	DaoValue  *values[2];  /* First: validity (bool); Second: iterator (specializable); */
+};
+
+DAO_DLL DaoIterator* DaoIterator_New( DaoType *type );
+DAO_DLL void DaoIterator_Delete( DaoIterator *self );
+DAO_DLL void DaoIterator_SetValue( DaoIterator *self, DaoValue *value );
 
 
 
