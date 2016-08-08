@@ -248,7 +248,7 @@ DAO_DLL void DaoRange_SetSecond( DaoRange *self, DaoValue *value );
 // Mainly used for passing named parameters and fields:
 // TODO: named argement for calls with signature known at compiling time;
 // TODO: copy by value;
-// ???TODO: change type id, add type matching to named param;
+// ???TODO: change type id, add type matching to named parameters;
 */
 struct DaoNameValue
 {

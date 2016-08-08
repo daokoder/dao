@@ -430,9 +430,12 @@ struct DaoTypeCore
 	// Function to complete slice operation:
 	*/
 
-	void (*Copy)( DaoValue *self, DaoValue *other );
+	DaoValue* (*Copy)( DaoValue *self, DaoValue *target );
 	/*
-	// Function for copying (used for user defined POD data types):
+	// Function for copying objects of user defined types (mainly POD types):
+	// If the target object is present in the parameter, the data of self will
+	// be copied to the target.
+	// Otherwise, a new object with the same data as self should be returned.
 	*/
 
 	void (*Delete)( DaoValue *self );
