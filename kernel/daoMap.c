@@ -117,7 +117,6 @@ DMap* DHash_New( short kt, short vt )
 
 static int DaoValue_Hash( DaoValue *self, unsigned int hash )
 {
-	DaoCpod *pod;
 	DaoTypeCore *core;
 	void *data = NULL;
 	int i, len = 0;
@@ -152,15 +151,12 @@ static int DaoValue_Hash( DaoValue *self, unsigned int hash )
 			hash = DaoValue_Hash( self->xTuple.values[i], hash );
 		}
 		break;
-	case DAO_CPOD :
 	case DAO_CSTRUCT :
 	case DAO_CDATA :
 	case DAO_CTYPE :
 		core = DaoValue_GetTypeCore( self );
 		if( core == NULL || core->DoConversion == NULL ){
-			if( self->type != DAO_CPOD ) goto Default;
-			pod = (DaoCpod*) self;
-			hash = Dao_Hash( pod + 1, pod->size, 0 );
+			goto Default;
 		}else{
 			DaoValue *hv;
 			DaoInteger buffer = {0};
@@ -692,12 +688,6 @@ static int DaoValue_Compare2( DaoValue *left, DaoValue *right )
 #endif
 	}else if( left->type == DAO_LIST && left->xList.ctype == right->xList.ctype ){
 		return DaoValue_Compare( left, right );
-	}else if( left->type == DAO_CPOD && left->xCpod.ctype == right->xCpod.ctype ){
-		char *b1 = (char*)((DaoCpod*)left + 1);
-		char *b2 = (char*)((DaoCpod*)right + 1);
-		DString s1 = DString_WrapBytes( b1, left->xCpod.size );
-		DString s2 = DString_WrapBytes( b2, right->xCpod.size );
-		return DString_Compare( & s1, & s2 );
 	}
 	if( left->type <= DAO_STRING ) return DaoValue_Compare( left, right );
 	return left < right ? -100 : 100;

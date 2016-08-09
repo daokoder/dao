@@ -5664,7 +5664,9 @@ DaoTypeCore daoNameValueCore =
 
 
 
-/**/
+/*
+// DaoCstruct:
+*/
 void DaoCstruct_Init( DaoCstruct *self, DaoType *type )
 {
 	DaoType *intype = type;
@@ -5678,6 +5680,7 @@ void DaoCstruct_Init( DaoCstruct *self, DaoType *type )
 #endif
 
 }
+
 void DaoCstruct_Free( DaoCstruct *self )
 {
 #ifdef DAO_USE_GC_LOGGER
@@ -5689,62 +5692,210 @@ void DaoCstruct_Free( DaoCstruct *self )
 	self->ctype = NULL;
 }
 
-DaoCpod* DaoCpod_New( DaoType *type, int size )
+DaoType* DaoCstruct_CheckGetField( DaoType *self, DString *name, DaoNamespace *ns )
 {
-	DaoCpod *self = (DaoCpod*)dao_calloc( 1, size );
-	DaoCstruct_Init( (DaoCstruct*)self, type );
-	self->size = size - sizeof(DaoCpod);
-#ifdef DAO_USE_GC_LOGGER
-	if( type != NULL ) DaoObjectLogger_LogNew( (DaoValue*) self );
-#endif
-	return self;
+	DaoRoutine *rout;
+	DaoValue *value = DaoType_FindValue( self, name );
+	DaoType *res = NULL;
+	DaoType *arg = NULL;
+	int argc = 0;
+
+	if( value && value->type == DAO_ROUTINE ){
+		rout = (DaoRoutine*) value;
+		res = rout->routType;
+		//GC_Assign( & consts[opc], value ); // TODO: handle in inferencer;
+	}else if( value ){
+		res = DaoNamespace_GetType( ns, value );
+		//GC_Assign( & consts[opc], value );
+	}else{
+		DString *buffer = DString_NewChars( "." );
+		DString_Append( buffer, name );
+		rout = DaoType_FindFunction( self, buffer );
+		if( rout == NULL ){
+			DString_SetChars( buffer, "." );
+			rout = DaoType_FindFunction( self, buffer );
+			arg = dao_type_string;
+			argc = 1;
+		}
+		DString_Delete( buffer );
+		if( rout != NULL ) rout = DaoRoutine_ResolveByType( rout, self, & arg, argc );
+		if( rout == NULL ) return NULL;
+		res = (DaoType*) rout->routType->aux;
+	}
+	return res;
 }
 
-
-
-DaoCpod* DaoCpod_Copy( DaoCpod *self )
+DaoValue* DaoCstruct_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
 {
-	DaoCpod *copy = DaoCpod_New( self->ctype, self->size + sizeof(DaoCpod) );
-	memcpy( copy + 1, self + 1, self->size );
-	return copy;
+	DaoType *type = self->xCstruct.ctype;
+	DaoValue *value = DaoType_FindValue( type, name );
+	if( value == NULL ){
+		DaoRoutine *func = NULL;
+		DaoString str = {DAO_STRING,0,0,0,1,NULL};
+		DaoValue *args = (DaoValue*) & str;
+		int error, argc = 0;
+
+		str.value = name;
+		DString_SetChars( proc->string, "." );
+		DString_Append( proc->string, name );
+		func = DaoType_FindFunction( type, proc->string );
+		if( func == NULL ){
+			DString_SetChars( proc->string, "." );
+			func = DaoType_FindFunction( type, proc->string );
+			argc = 1;
+		}
+		if( func == NULL ) return NULL;
+		if( (error = DaoProcess_PushCallable( proc, func, self, & args, argc )) != 0 ){
+			DaoProcess_RaiseException( proc, daoExceptionNames[error], NULL, NULL );
+		}
+	}else{
+		return value;
+	}
+	return NULL;
 }
 
-void DaoCpod_Delete( DaoCpod *self )
+int DaoCstruct_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoNamespace *ns )
 {
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogDelete( (DaoValue*) self );
-#endif
-	DaoCstruct_Free( (DaoCstruct*)self );
-	dao_free( self );
+	DaoRoutine *rout;
+	DString *buffer = DString_NewChars( "." );
+	DaoType *args[2] = { NULL, NULL };
+	int argc = 1;
+
+	args[0] = args[1] = value;
+
+	DString_SetChars( buffer, "." );
+	DString_Append( buffer, name );
+	DString_AppendChars( buffer, "=" );
+	rout = DaoType_FindFunction( self, buffer );
+	if( rout == NULL ){
+		DString_SetChars( buffer, ".=" );
+		rout = DaoType_FindFunction( self, buffer );
+		args[0] = dao_type_string;
+		argc = 2;
+	}
+	if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
+	rout = DaoRoutine_ResolveByType( rout, self, & arg, argc );
+	if( rout == NULL ) return DAO_ERROR_VALUE;
+	return DAO_OK;
 }
 
-static void DaoCpod_CoreDelete( DaoValue *self )
+int DaoCstruct_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc )
 {
-	DaoCpod_Delete( (DaoCpod*) self );
+    int argc = 1; 
+    DaoValue *args[2];
+    DaoRoutine *func = NULL;
+    DaoString str = {DAO_STRING,0,0,0,1,NULL};
+	DaoType *type = self->xCstruct.ctype;
+
+    str.value = name;
+    args[0] = args[1] = value;
+
+    DString_SetChars( proc->string, "." );
+    DString_Append( proc->string, name );
+    DString_AppendChars( proc->string, "=" );
+    func = DaoType_FindFunction( type, proc->string );
+    if( func == NULL ){
+        DString_SetChars( proc->string, ".=" );
+        func = DaoType_FindFunction( type, proc->string );
+        args[0] = (DaoValue*) & str; 
+        argc = 2; 
+    }    
+    if( func == NULL ) return DAO_ERROR_FIELD_ABSENT;
+    DaoProcess_PushCallable( proc, func, self, args, argc );
+	return DAO_OK;
 }
 
-
-DaoTypeCore daoCpodCore =
+DaoType* DaoCstruct_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoNamespace *ns )
 {
-	"ctype",             /* name */
-	{ NULL },            /* bases */
-	NULL,                /* numbers */
-	NULL,                /* methods */
-	NULL,  NULL,         /* GetField */
-	NULL,  NULL,         /* SetField */
-	NULL,  NULL,         /* GetItem */
-	NULL,  NULL,         /* SetItem */
-	NULL,  NULL,         /* Unary */
-	NULL,  NULL,         /* Binary */
-	NULL,  NULL,         /* Comparison */
-	NULL,  NULL,         /* Conversion */
-	NULL,  NULL,         /* ForEach */
-	DaoCpod_Print,       /* Print */
-	NULL,                /* Slice */
-	NULL,                /* Copy */
-	DaoCpod_CoreDelete,  /* Delete */
-	NULL                 /* HandleGC */
-};
+	DString *buffer = DString_NewChars( "[]" );
+	DaoRoutine *rout = DaoType_FindFunction( self, buffer );
+
+	DString_Delete( buffer );
+	if( rout != NULL ) rout = DaoRoutine_ResolveByType( rout, self, index, N );
+	if( rout == NULL ) return DAO_ERROR_INDEX;
+	return (DaoType*) rout->routType->aux;
+}
+
+DaoValue* DaoCstruct_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *proc )
+{
+	DaoType *type = self->xCstruct.ctype;
+	DaoRoutine *func = DaoType_FindFunctionChars( type, "[]" );
+	if( func != NULL ) DaoProcess_PushCallable( proc, func, self, index, N );
+	return NULL;
+}
+
+int DaoCstruct_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoNamespace *ns )
+{
+	DString *buffer = DString_NewChars( "[]=" );
+	DaoRoutine *rout = DaoType_FindFunction( self, buffer );
+	DaoType *args[ DAO_MAX_PARAM + 1 ];
+
+	args[0] = value;
+	memcpy( args + 1, index, N*sizeof(DaoType*) );
+
+	DString_Delete( buffer );
+	if( rout != NULL ) rout = DaoRoutine_ResolveByType( rout, self, args, N+1 );
+	if( rout == NULL ) return DAO_ERROR_INDEX;
+	return DAO_OK;
+}
+
+int DaoCstruct_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc )
+{
+	DaoType *type = self->xCstruct.ctype;
+	DaoRoutine *func = DaoType_FindFunctionChars( type, "[]=" );
+	DaoValue *args[ DAO_MAX_PARAM ];
+	memcpy( args+1, index, N*sizeof(DaoValue*) );
+	args[0] = value;
+	if( func == NULL ) return DAO_ERROR_INDEX;
+	DaoProcess_PushCallable( proc, func, self, args, N+1 );
+	return DAO_OK;
+}
+
+void DaoCstruct_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
+{
+	int ec = 0;
+	char buf[50];
+	DaoRoutine *meth;
+	DaoValue *args[2];
+	DaoType *type = self->xCstruct.ctype;
+	DMap *inmap = cycmap;
+
+	sprintf( buf, "[%p]", self );
+
+	if( self == self->xCstruct.ctype->value ){
+		DaoStream_WriteString( stream, cstruct->ctype->name );
+		DaoStream_WriteChars( stream, "[default]" );
+		return;
+	}
+	if( cycmap != NULL && DMap_Find( cycmap, self ) != NULL ){
+		DaoStream_WriteString( stream, type->name );
+		DaoStream_WriteChars( stream, buf );
+		return;
+	}
+
+	if( cycmap == NULL ) cycmap = DHash_New(0,0);
+	if( cycmap ) MAP_Insert( cycmap, self, self );
+
+	args[0] = (DaoValue*) dao_type_string;
+	args[1] = (DaoValue*) stream;
+	meth = DaoType_FindFunctionChars( type, "(string)" );
+	if( meth ){
+		ec = DaoProcess_Call( proc, meth, self, args, 2 );
+		if( ec ) ec = DaoProcess_Call( proc, meth, self, args, 1 );
+	}else{
+		meth = DaoType_FindFunctionChars( type, "serialize" );
+		if( meth ) ec = DaoProcess_Call( proc, meth, self, NULL, 0 );
+	}
+	if( ec ){
+		DaoProcess_RaiseException( proc, daoExceptionNames[ec], proc->string->chars, NULL );
+	}else if( meth && proc->stackValues[0] ){
+		DaoValue_Print( proc->stackValues[0], stream, cycmap, proc );
+	}else{
+		DaoStream_WriteString( stream, type->name );
+		DaoStream_WriteChars( stream, buf );
+	}
+	if( inmap == NULL ) DMap_Delete( cycmap );
+}
 
 
 
@@ -5821,23 +5972,16 @@ DaoObject* DaoCdata_GetObject( DaoCdata *self )
 	return (DaoObject*)self->object;
 }
 
-static void* DaoType_CastCxxData( DaoType *self, DaoType *totype, void *data )
-{
-	daoint i, n;
-	if( self == totype || totype == NULL || data == NULL ) return data;
-	if( self->bases == NULL ) return NULL;
-	for(i=0,n=self->bases->size; i<n; i++){
-		void *p = self->typer->casts[i] ? (*self->typer->casts[i])( data, 0 ) : data;
-		p = DaoType_CastCxxData( self->bases->items.pType[i], totype, p );
-		if( p ) return p;
-	}
-	return NULL;
-}
-
 void* DaoCdata_CastData( DaoCdata *self, DaoType *totype )
 {
+	DaoValue *value;
+
 	if( self == NULL || self->ctype == NULL || self->data == NULL ) return self->data;
-	return DaoType_CastCxxData( self->ctype, totype, self->data );
+	if( self->ctype->core->DoConversion == NULL ) return self->data;
+
+	value = self->ctype->core->DoConversion( (DaoValue*) self, totype, NULL );
+	if( value == NULL || value->type != DAO_CDATA ) return NULL;
+	return value->xCdata.data;
 }
 
 
@@ -5965,6 +6109,7 @@ DaoException* DaoException_New( DaoType *type )
 	self->data = NULL;
 	return self;
 }
+
 void DaoException_Delete( DaoException *self )
 {
 	DaoCstruct_Free( (DaoCstruct*)self );
@@ -5974,181 +6119,10 @@ void DaoException_Delete( DaoException *self )
 	DList_Delete( self->lines );
 	dao_free( self );
 }
+
 void DaoException_SetData( DaoException *self, DaoValue *data )
 {
 	DaoValue_Move( data, & self->data, NULL );
-}
-void DaoException_GetGCFields( void *p, DList *values, DList *arrays, DList *maps, int remove )
-{
-	DaoException *self = (DaoException*) p;
-	if( self->data ) DList_Append( values, self->data );
-	if( self->callers->size ) DList_Append( arrays, self->callers );
-	if( remove ) self->data = NULL;
-}
-
-static void Dao_Exception_Define( DaoProcess *proc, DaoValue *p[], int N );
-static void Dao_Exception_Get_name( DaoProcess *proc, DaoValue *p[], int n );
-static void Dao_Exception_Get_summary( DaoProcess *proc, DaoValue *p[], int n );
-static void Dao_Exception_Set_summary( DaoProcess *proc, DaoValue *p[], int n );
-static void Dao_Exception_Get_data( DaoProcess *proc, DaoValue *p[], int n );
-static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n );
-static void Dao_Exception_Get_line( DaoProcess *proc, DaoValue *p[], int n );
-static void Dao_Exception_Getf( DaoProcess *proc, DaoValue *p[], int n );
-static void Dao_Exception_Setf( DaoProcess *proc, DaoValue *p[], int n );
-static void Dao_Exception_Serialize( DaoProcess *proc, DaoValue *p[], int n );
-static void Dao_Exception_New( DaoProcess *proc, DaoValue *p[], int n );
-static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n );
-
-static DaoFuncItem dao_Exception_Meths[] =
-{
-	{ Dao_Exception_Get_name,    ".name( self: Exception )=>string" },
-	{ Dao_Exception_Get_summary, ".summary( self: Exception )=>string" },
-	{ Dao_Exception_Set_summary, ".summary=( self: Exception, summary: string)" },
-	{ Dao_Exception_Get_data,    ".data( self: Exception )=>any" },
-	{ Dao_Exception_Set_data,    ".data=( self: Exception, data: any)" },
-	{ Dao_Exception_Get_line,    ".line( self: Exception )=>int" },
-
-	/* for testing or demonstration */
-	{ Dao_Exception_Get_name, "typename( self: Exception )=>string" },
-	{ Dao_Exception_Serialize, "serialize( self: Exception )=>string" },
-	{ Dao_Exception_Serialize, "(string)( self: Exception )" },
-
-#if 0
-	{ Dao_Exception_Getf, ".( self: Exception, name: string )=>any" },
-	{ Dao_Exception_Setf, ".=( self: Exception, name: string, value: any)" },
-#endif
-	{ NULL, NULL }
-};
-
-DaoTypeCore dao_Exception_Typer =
-{
-	"Exception", NULL, NULL, dao_Exception_Meths, { 0 }, { 0 },
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static void Dao_Exception_Get_name( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoException* self = (DaoException*) p[0];
-	DaoProcess_PutChars( proc, self->ctype->typer->name );
-}
-static void Dao_Exception_Get_summary( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoException* self = (DaoException*) p[0];
-	DaoProcess_PutString( proc, self->info );
-}
-static void Dao_Exception_Set_summary( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoException* self = (DaoException*) p[0];
-	DString_Assign( self->info, p[1]->xString.value );
-}
-static void Dao_Exception_Get_data( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoException* self = (DaoException*) p[0];
-	DaoProcess_PutValue( proc, self->data ? self->data : dao_none_value );
-}
-static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoException* self = (DaoException*) p[0];
-	DaoValue_Move( p[1], & self->data, NULL );
-}
-static void Dao_Exception_Get_line( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoException* self = (DaoException*) p[0];
-	DaoProcess_PutInteger( proc, self->lines->size ? (self->lines->items.pInt[0]>>16)&0xffff : 0 );
-}
-static void Dao_Exception_Serialize( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoException* self = (DaoException*) p[0];
-	DaoStream *stream = DaoStream_New();
-	DaoStream_SetStringMode( stream );
-	DaoException_Print( self, stream );
-	DaoProcess_PutString( proc, stream->buffer );
-	DaoGC_TryDelete( (DaoValue*) stream );
-}
-#ifdef DEBUG
-static void Dao_Exception_Getf( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoProcess_PutValue( proc, dao_none_value );
-	printf( "Get undefined field: %s\n", DaoValue_TryGetChars( p[1] ) );
-}
-static void Dao_Exception_Setf( DaoProcess *proc, DaoValue *p[], int n )
-{
-	printf( "Set undefined field: %s\n", DaoValue_TryGetChars( p[1] ) );
-}
-#endif
-static void Dao_Exception_New( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoType *type = proc->topFrame->routine->routHost;
-	DaoException *self = (DaoException*)DaoException_New( type );
-	if( n ) DString_Assign( self->info, p[0]->xString.value );
-	DaoProcess_PutValue( proc, (DaoValue*)self );
-}
-static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n )
-{
-	DaoType *type = proc->topFrame->routine->routHost;
-	DaoException *self = (DaoException*)DaoException_New( type );
-	DaoException_SetData( self, p[0] );
-	DaoProcess_PutValue( proc, (DaoValue*)self );
-}
-static void Dao_Exception_Define( DaoProcess *proc, DaoValue *p[], int N )
-{
-	DaoType *etype;
-	DString *host = proc->topFrame->routine->routHost->name;
-	DString *name = p[0]->xString.value;
-	DString *info = p[1]->xString.value;
-	if( DString_Find( name, host, 0 ) != 0 && DString_FindChar( name, ':', 0 ) != host->size ){
-		DString_InsertChars( name, "::", 0, 0, -1 );
-		DString_Insert( name, host, 0, 0, -1 );
-	}
-	etype = DaoVmSpace_MakeExceptionType( proc->vmSpace, name->chars );
-	if( etype == 0 ){
-		DaoProcess_RaiseError( proc, "Param", "Invalid exception name" );
-		return;
-	}
-	if( info->size ) DString_Assign( etype->aux->xCtype.info, info );
-	DaoProcess_PutValue( proc, (DaoValue*) etype->aux );
-}
-
-static DaoFuncItem dao_ExceptionWarning_Meths[] =
-{
-	{ Dao_Exception_New, "Warning( summary = \"\" )" },
-	{ Dao_Exception_Define, "define( name: string, info = '' ) => class<Warning>" },
-	{ NULL, NULL }
-};
-
-DaoTypeCore dao_ExceptionWarning_Typer =
-{
-	"Exception::Warning", NULL, NULL, dao_ExceptionWarning_Meths,
-	{ & dao_Exception_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-static DaoFuncItem dao_ExceptionError_Meths[] =
-{
-	{ Dao_Exception_New, "Error( summary = \"\" )" },
-	{ Dao_Exception_New22, "Error( data: any )" },
-	{ Dao_Exception_Define, "define( name: string, info = '' ) => class<Error>" },
-	{ NULL, NULL }
-};
-DaoTypeCore dao_ExceptionError_Typer =
-{
-	"Exception::Error", NULL, NULL, dao_ExceptionError_Meths,
-	{ & dao_Exception_Typer, NULL }, {0},
-	(FuncPtrDel) DaoException_Delete, DaoException_GetGCFields
-};
-
-void DaoException_Setup( DaoNamespace *ns )
-{
-	dao_type_exception = DaoNamespace_WrapType( ns, & dao_Exception_Typer, DAO_CSTRUCT, 0 );
-	dao_type_warning = DaoNamespace_WrapType( ns, & dao_ExceptionWarning_Typer, DAO_CSTRUCT, 0 );
-	dao_type_error = DaoNamespace_WrapType( ns, & dao_ExceptionError_Typer, DAO_CSTRUCT, 0 );
-	DaoNamespace_AddType( ns, dao_type_warning->name, dao_type_warning );
-	DaoNamespace_AddType( ns, dao_type_error->name, dao_type_error );
-	DaoNamespace_AddTypeConstant( ns, dao_type_warning->name, dao_type_warning );
-	DaoNamespace_AddTypeConstant( ns, dao_type_error->name, dao_type_error );
-	DString_SetChars( dao_type_exception->aux->xCtype.info, daoExceptionTitles[0] );
-	DString_SetChars( dao_type_warning->aux->xCtype.info, daoExceptionTitles[1] );
-	DString_SetChars( dao_type_error->aux->xCtype.info, daoExceptionTitles[2] );
 }
 
 void DaoException_Init( DaoException *self, DaoProcess *proc, const char *summary, DaoValue *dat )
@@ -6224,6 +6198,7 @@ static void DString_Format( DString *self, int width, int head )
 		}
 	}
 }
+
 static void DaoException_PrintName( DaoValue *exception, DaoStream *ss )
 {
 	if( exception == NULL || exception->type != DAO_OBJECT ) return;
@@ -6231,6 +6206,7 @@ static void DaoException_PrintName( DaoValue *exception, DaoStream *ss )
 	DaoStream_WriteChars( ss, "::" );
 	DaoStream_WriteString( ss, exception->xObject.defClass->className );
 }
+
 void DaoException_Print( DaoException *self, DaoStream *stream )
 {
 	int codeShown = 0;
@@ -6293,6 +6269,225 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 	DaoStream_Delete( ss );
 }
 
+static void DaoException_CorePrint( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
+{
+	DaoException_Print( (DaoException*) self, stream );
+}
+
+static void DaoException_CoreDelete( DaoValue *self )
+{
+	DaoException_Delete( (DaoException*) self );
+}
+
+static void DaoException_HandleGC( DaoValue *p, DList *values, DList *arrays, DList *maps, int remove )
+{
+	DaoException *self = (DaoException*) p;
+	if( self->data ) DList_Append( values, self->data );
+	if( self->callers->size ) DList_Append( arrays, self->callers );
+	if( remove ) self->data = NULL;
+}
+
+
+static void Dao_Exception_New( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoType *type = proc->topFrame->routine->routHost;
+	DaoException *self = (DaoException*)DaoException_New( type );
+	if( n ) DString_Assign( self->info, p[0]->xString.value );
+	DaoProcess_PutValue( proc, (DaoValue*)self );
+}
+static void Dao_Exception_New22( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoType *type = proc->topFrame->routine->routHost;
+	DaoException *self = (DaoException*)DaoException_New( type );
+	DaoException_SetData( self, p[0] );
+	DaoProcess_PutValue( proc, (DaoValue*)self );
+}
+
+static void Dao_Exception_Get_name( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoException* self = (DaoException*) p[0];
+	DaoProcess_PutChars( proc, self->ctype->typer->name );
+}
+
+static void Dao_Exception_Get_summary( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoException* self = (DaoException*) p[0];
+	DaoProcess_PutString( proc, self->info );
+}
+
+static void Dao_Exception_Set_summary( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoException* self = (DaoException*) p[0];
+	DString_Assign( self->info, p[1]->xString.value );
+}
+
+static void Dao_Exception_Get_data( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoException* self = (DaoException*) p[0];
+	DaoProcess_PutValue( proc, self->data ? self->data : dao_none_value );
+}
+
+static void Dao_Exception_Set_data( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoException* self = (DaoException*) p[0];
+	DaoValue_Move( p[1], & self->data, NULL );
+}
+
+static void Dao_Exception_Get_line( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoException* self = (DaoException*) p[0];
+	DaoProcess_PutInteger( proc, self->lines->size ? (self->lines->items.pInt[0]>>16)&0xffff : 0 );
+}
+
+static void Dao_Exception_Serialize( DaoProcess *proc, DaoValue *p[], int n )
+{
+	DaoException* self = (DaoException*) p[0];
+	DaoStream *stream = DaoStream_New();
+	DaoStream_SetStringMode( stream );
+	DaoException_Print( self, stream );
+	DaoProcess_PutString( proc, stream->buffer );
+	DaoGC_TryDelete( (DaoValue*) stream );
+}
+
+static void Dao_Exception_Define( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoType *etype;
+	DString *host = proc->topFrame->routine->routHost->name;
+	DString *name = p[0]->xString.value;
+	DString *info = p[1]->xString.value;
+	if( DString_Find( name, host, 0 ) != 0 && DString_FindChar( name, ':', 0 ) != host->size ){
+		DString_InsertChars( name, "::", 0, 0, -1 );
+		DString_Insert( name, host, 0, 0, -1 );
+	}
+	etype = DaoVmSpace_MakeExceptionType( proc->vmSpace, name->chars );
+	if( etype == 0 ){
+		DaoProcess_RaiseError( proc, "Param", "Invalid exception name" );
+		return;
+	}
+	if( info->size ) DString_Assign( etype->aux->xCtype.info, info );
+	DaoProcess_PutValue( proc, (DaoValue*) etype->aux );
+}
+
+
+const DaoFuncionEntry daoExceptionMeths[] =
+{
+	{ Dao_Exception_Get_name,    ".name( self: Exception )=>string" },
+	{ Dao_Exception_Get_summary, ".summary( self: Exception )=>string" },
+	{ Dao_Exception_Set_summary, ".summary=( self: Exception, summary: string)" },
+	{ Dao_Exception_Get_data,    ".data( self: Exception )=>any" },
+	{ Dao_Exception_Set_data,    ".data=( self: Exception, data: any)" },
+	{ Dao_Exception_Get_line,    ".line( self: Exception )=>int" },
+
+	/* for testing or demonstration */
+	{ Dao_Exception_Get_name,    "typename( self: Exception )=>string" },
+	{ Dao_Exception_Serialize,   "serialize( self: Exception )=>string" },
+	{ Dao_Exception_Serialize,   "(string)( self: Exception )" },
+
+	{ NULL, NULL }
+};
+
+const DaoTypeCore daoExceptionCore =
+{
+	"Exception",                                       /* name */
+	{ NULL },                                          /* bases */
+	NULL,                                              /* numbers */
+	daoExceptionMeths,                                 /* methods */
+	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
+	DaoCstruct_CheckSetField,  DaoCstruct_DoSetField,  /* SetField */
+	DaoCstruct_CheckGetItem,   DaoCstruct_DoGetItem,   /* GetItem */
+	DaoCstruct_CheckSetItem,   DaoCstruct_DoSetItem,   /* SetItem */
+	NULL,                      NULL,                   /* Unary */
+	NULL,                      NULL,                   /* Binary */
+	NULL,                      NULL,                   /* Comparison */
+	NULL,                      NULL,                   /* Conversion */
+	NULL,                      NULL,                   /* ForEach */
+	DaoException_CorePrint,                            /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Copy */
+	DaoException_CoreDelete,                           /* Delete */
+	DaoException_HandleGC                              /* HandleGC */
+};
+
+
+const DaoFunctionEntry daoExceptionWarningMeths[] =
+{
+	{ Dao_Exception_New, "Warning( summary = \"\" )" },
+	{ Dao_Exception_Define, "define( name: string, info = '' ) => class<Warning>" },
+	{ NULL, NULL }
+};
+
+
+const DaoTypeCore daoExceptionWarningCore =
+{
+	"Exception::Warning",                              /* name */
+	{ & daoExceptionCore, NULL },                      /* bases */
+	NULL,                                              /* numbers */
+	daoExceptionWarningMeths,                          /* methods */
+	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
+	DaoCstruct_CheckSetField,  DaoCstruct_DoSetField,  /* SetField */
+	DaoCstruct_CheckGetItem,   DaoCstruct_DoGetItem,   /* GetItem */
+	DaoCstruct_CheckSetItem,   DaoCstruct_DoSetItem,   /* SetItem */
+	NULL,                      NULL,                   /* Unary */
+	NULL,                      NULL,                   /* Binary */
+	NULL,                      NULL,                   /* Comparison */
+	NULL,                      NULL,                   /* Conversion */
+	NULL,                      NULL,                   /* ForEach */
+	DaoException_CorePrint,                            /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Copy */
+	DaoException_CoreDelete,                           /* Delete */
+	DaoException_HandleGC                              /* HandleGC */
+};
+
+
+const DaoFunctionEntry daoExceptionErrorMeths[] =
+{
+	{ Dao_Exception_New, "Error( summary = \"\" )" },
+	{ Dao_Exception_New22, "Error( data: any )" },
+	{ Dao_Exception_Define, "define( name: string, info = '' ) => class<Error>" },
+	{ NULL, NULL }
+};
+
+
+const DaoTypeCore daoExceptionErrorCore =
+{
+	"Exception::Error",                                /* name */
+	{ & daoExceptionCore, NULL },                      /* bases */
+	NULL,                                              /* numbers */
+	daoExceptionErrorMeths,                            /* methods */
+	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
+	DaoCstruct_CheckSetField,  DaoCstruct_DoSetField,  /* SetField */
+	DaoCstruct_CheckGetItem,   DaoCstruct_DoGetItem,   /* GetItem */
+	DaoCstruct_CheckSetItem,   DaoCstruct_DoSetItem,   /* SetItem */
+	NULL,                      NULL,                   /* Unary */
+	NULL,                      NULL,                   /* Binary */
+	NULL,                      NULL,                   /* Comparison */
+	NULL,                      NULL,                   /* Conversion */
+	NULL,                      NULL,                   /* ForEach */
+	DaoException_CorePrint,                            /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Copy */
+	DaoException_CoreDelete,                           /* Delete */
+	DaoException_HandleGC                              /* HandleGC */
+};
+
+
+void DaoException_Setup( DaoNamespace *ns )
+{
+	dao_type_exception = DaoNamespace_WrapType( ns, & daoExceptionCore, DAO_CSTRUCT, 0 );
+	dao_type_warning = DaoNamespace_WrapType( ns, & daoExceptionWarningCore, DAO_CSTRUCT, 0 );
+	dao_type_error = DaoNamespace_WrapType( ns, & daoExceptionErrorCore, DAO_CSTRUCT, 0 );
+	DaoNamespace_AddType( ns, dao_type_warning->name, dao_type_warning );
+	DaoNamespace_AddType( ns, dao_type_error->name, dao_type_error );
+	DaoNamespace_AddTypeConstant( ns, dao_type_warning->name, dao_type_warning );
+	DaoNamespace_AddTypeConstant( ns, dao_type_error->name, dao_type_error );
+	DString_SetChars( dao_type_exception->aux->xCtype.info, daoExceptionTitles[0] );
+	DString_SetChars( dao_type_warning->aux->xCtype.info, daoExceptionTitles[1] );
+	DString_SetChars( dao_type_error->aux->xCtype.info, daoExceptionTitles[2] );
+}
+
+
+
 
 
 DaoConstant* DaoConstant_New( DaoValue *value, int subtype )
@@ -6306,6 +6501,7 @@ DaoConstant* DaoConstant_New( DaoValue *value, int subtype )
 #endif
 	return self;
 }
+
 DaoVariable* DaoVariable_New( DaoValue *value, DaoType *type, int subtype )
 {
 	DaoVariable *self = (DaoVariable*) dao_calloc( 1, sizeof(DaoVariable) );

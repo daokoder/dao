@@ -39,7 +39,6 @@
 #define DAO_VALUE_COMMON    DAO_VALUE_CORE; int cycRefCount
 #define DAO_GENERIC_COMMON  DAO_VALUE_COMMON; DaoType *ctype
 #define DAO_CSTRUCT_COMMON  DAO_GENERIC_COMMON; DaoObject *object
-#define DAO_CPOD_COMMON     DAO_CSTRUCT_COMMON; daoint size
 
 void DaoValue_Init( void *dbase, char type );
 
@@ -152,7 +151,7 @@ DAO_DLL DaoList* DaoList_Copy( DaoList *self, DaoType *type );
 
 /*
 // TODO:
-// -- Add hashable DaoCpod type:
+// -- Add hashable DaoCtruct type:
 //   (hashable(key:@T<int|string|hashable>, ...:@T<int|string|hashable>))
 // -- Immutable tuple: copy in, copy out;
 */
@@ -271,18 +270,6 @@ struct DaoCstruct
 
 DAO_DLL void DaoCstruct_Init( DaoCstruct *self, DaoType *type );
 DAO_DLL void DaoCstruct_Free( DaoCstruct *self );
-
-
-
-/* C Plain Old Data (POD): */
-struct DaoCpod
-{
-	DAO_CPOD_COMMON;
-};
-
-DAO_DLL DaoCpod* DaoCpod_New( DaoType *type, int size );
-DAO_DLL DaoCpod* DaoCpod_Copy( DaoCpod *self );
-DAO_DLL void DaoCpod_Delete( DaoCpod *self );
 
 
 

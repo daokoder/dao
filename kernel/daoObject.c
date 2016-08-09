@@ -311,11 +311,7 @@ void DaoObject_SetParentCstruct( DaoObject *self, DaoCstruct *parent )
 	}else if( sup->type == DAO_CTYPE ){
 		DaoCstruct *cdata = (DaoCstruct*)sup;
 		if( DaoType_ChildOf( cdata->ctype, parent->ctype ) ){
-			if( parent->type == DAO_CPOD ){
-				DaoValue_MoveCpod( (DaoCpod*) parent, & self->parent );
-			}else{
-				GC_Assign( & self->parent, parent );
-			}
+			DaoValue_MoveCstruct( (DaoCstruct*) parent, & self->parent );
 		}
 	}
 }
@@ -323,13 +319,7 @@ DaoCstruct* DaoObject_CastCstruct( DaoObject *self, DaoType *type )
 {
 	DaoValue *p = NULL;
 	if( type ) p = DaoObject_CastToBase( self, type );
-	if( p && (p->type >= DAO_CSTRUCT && p->type <= DAO_CDATA) ) return (DaoCstruct*) p;
-	return NULL;
-}
-DaoCpod* DaoObject_CastCpod( DaoObject *self, DaoType *type )
-{
-	DaoCstruct *p = DaoObject_CastCstruct( self, type );
-	if( p && p->type == DAO_CPOD ) return (DaoCpod*) p;
+	if( p && (p->type == DAO_CSTRUCT || p->type == DAO_CDATA) ) return (DaoCstruct*) p;
 	return NULL;
 }
 DaoCdata* DaoObject_CastCdata( DaoObject *self, DaoType *type )

@@ -1655,7 +1655,6 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		if( pb == NULL ) return NULL;
 		return pb->xCtype.ctype;
 	case DAO_CDATA :
-	case DAO_CPOD :
 	case DAO_CSTRUCT :
 		if( pb == NULL ) return NULL;
 		return pb->xCtype.cdtype;

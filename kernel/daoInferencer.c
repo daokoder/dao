@@ -1588,8 +1588,6 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 	}else if( at->tid & DAO_ANY ){
 		ct = dao_type_udf;
 	}else if( at->typer ){
-		/* Use at->typer instead of at->kernel, because at->kernel may still be NULL,
-		 * if the type is created before the setup of the typer structure. */
 		DString_SetChars( mbs, "[]" );
 		meth = DaoType_FindFunction( at, mbs );
 		if( meth == NULL ) goto WrongContainer;
@@ -2112,7 +2110,6 @@ int DaoInferencer_HandleSetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 		break;
 	case DAO_CTYPE :
 	case DAO_CDATA :
-	case DAO_CPOD :
 	case DAO_CSTRUCT :
 	case DAO_INTERFACE :
 	case DAO_CINTYPE :
@@ -2197,7 +2194,6 @@ int DaoInferencer_HandleSetMItem( DaoInferencer *self, DaoInode *inode, DMap *de
 		if( meth == NULL ) goto WrongContainer;
 		break;
 	case DAO_CDATA :
-	case DAO_CPOD :
 	case DAO_CSTRUCT :
 	case DAO_CTYPE :
 		meth = DaoType_FindFunction( ct, mbs );
@@ -2388,7 +2384,6 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 			break;
 		}
 	case DAO_CDATA :
-	case DAO_CPOD :
 	case DAO_CSTRUCT :
 	case DAO_INTERFACE :
 	case DAO_CINTYPE :

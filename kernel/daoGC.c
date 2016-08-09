@@ -79,7 +79,6 @@ void print_trace( const char *info )
 #define DAO_TRACE_ADDRESS ((DaoValue*)0x102e4fad0)
 void DaoGC_TraceValue( DaoValue *value )
 {
-	if( value && value->type == DAO_CPOD && strstr(value->xCpod.ctype->name->chars, "Decimal") )
 	//if( value == DAO_TRACE_ADDRESS || value == (DaoValue*) 0x10038b300 )
 	{
 		int uninitialized; /* for valgrind; */
@@ -102,7 +101,6 @@ static void DaoGC_PrintValueInfo( DaoValue *value )
 		printf( "type: %s %i %p\t", value->xType.name->chars, value->xType.tid, value );
 		break;
 	case DAO_CSTRUCT :
-	case DAO_CPOD :
 	case DAO_CDATA :
 		printf( "cdata: %s\t", value->xCdata.ctype->name->chars );
 		break;
@@ -396,7 +394,6 @@ void DaoObjectLogger_Quit()
 				break;
 			}
 		case DAO_CSTRUCT :
-		case DAO_CPOD :
 		case DAO_CDATA :
 		case DAO_CTYPE :
 			{
@@ -783,9 +780,6 @@ static void DaoValue_Delete( DaoValue *self )
 		break;
 	case DAO_CDATA :
 		DaoCdata_Delete( (DaoCdata*) self );
-		break;
-	case DAO_CPOD :
-		DaoCpod_Delete( (DaoCpod*) self );
 		break;
 	case DAO_CTYPE :
 		DaoCtype_Delete( (DaoCtype*) self );
@@ -1924,7 +1918,6 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			break;
 		}
 	case DAO_CSTRUCT :
-	case DAO_CPOD :
 	case DAO_CDATA :
 	case DAO_CTYPE :
 		{
@@ -2144,7 +2137,6 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			break;
 		}
 	case DAO_CSTRUCT :
-	case DAO_CPOD :
 	case DAO_CDATA :
 	case DAO_CTYPE :
 		{
@@ -2362,7 +2354,6 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			break;
 		}
 	case DAO_CSTRUCT :
-	case DAO_CPOD :
 	case DAO_CDATA :
 	case DAO_CTYPE :
 		{

@@ -2038,7 +2038,6 @@ WrongType:
 			DList_Erase( types, count, count2 );
 			switch( type ? type->tid : 0 ){
 			case DAO_CDATA :
-			case DAO_CPOD :
 			case DAO_CSTRUCT : type = type->aux->xCtype.ctype;  goto DoneGenericType;
 			case DAO_OBJECT : type = type->aux->xClass.clsType; goto DoneGenericType;
 			}

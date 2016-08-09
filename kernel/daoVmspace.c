@@ -259,7 +259,6 @@ DaoTypeCore* DaoVmSpace_GetTypeCore( short type )
 #endif
 	case DAO_CTYPE   :
 	case DAO_CSTRUCT :
-	case DAO_CPOD :
 	case DAO_CDATA   :  return & defaultCdataTyper;
 	case DAO_ROUTINE   :  return & routTyper;
 	case DAO_INTERFACE :  return & interTyper;

@@ -107,7 +107,6 @@ enum DaoTypeID
 	DAO_OBJECT ,
 	DAO_CINVALUE ,
 	DAO_CSTRUCT ,
-	DAO_CPOD ,
 	DAO_CDATA  ,
 	DAO_CTYPE  ,
 	DAO_CLASS  ,
@@ -246,7 +245,6 @@ typedef struct DaoObject       DaoObject;
 typedef struct DaoStream       DaoStream;
 typedef struct DaoCtype        DaoCtype;
 typedef struct DaoCstruct      DaoCstruct;
-typedef struct DaoCpod         DaoCpod;
 typedef struct DaoCdata        DaoCdata;
 typedef struct DaoRange        DaoRange;
 typedef struct DaoRegex        DaoRegex;
@@ -530,7 +528,6 @@ DAO_DLL DaoTuple*     DaoValue_CastTuple( DaoValue *self );
 DAO_DLL DaoStream*    DaoValue_CastStream( DaoValue *self );
 DAO_DLL DaoObject*    DaoValue_CastObject( DaoValue *self );
 DAO_DLL DaoCstruct*   DaoValue_CastCstruct( DaoValue *self, DaoType *totype );
-DAO_DLL DaoCpod*      DaoValue_CastCpod( DaoValue *self, DaoType *totype );
 DAO_DLL DaoCdata*     DaoValue_CastCdata( DaoValue *self, DaoType *totype );
 DAO_DLL DaoCinValue*  DaoValue_CastCinValue( DaoValue *self );
 DAO_DLL DaoClass*     DaoValue_CastClass( DaoValue *self );
@@ -867,7 +864,6 @@ DAO_DLL int DaoRoutine_IsWrapper( DaoRoutine *self );
 DAO_DLL DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name );
 DAO_DLL DaoValue*   DaoObject_GetField( DaoObject *self, const char *name );
 DAO_DLL DaoCstruct* DaoObject_CastCstruct( DaoObject *self, DaoType *type );
-DAO_DLL DaoCpod*    DaoObject_CastCpod( DaoObject *self, DaoType *type );
 DAO_DLL DaoCdata*   DaoObject_CastCdata( DaoObject *self, DaoType *type );
 
 
@@ -981,11 +977,6 @@ DAO_DLL DaoValue*  DaoProcess_PutValue( DaoProcess *self, DaoValue *value );
 // This will put a tuple of (123, 'abc').
 */
 DAO_DLL DaoTuple*  DaoProcess_PutTuple( DaoProcess *self, int size );
-
-/*
-// DaoProcess_PutCpod() create a plain old data (POD) value as the returned value.
-*/
-DAO_DLL DaoCpod*  DaoProcess_PutCpod( DaoProcess *self, DaoType *type, int size );
 
 /*
 // DaoProcess_PutCdata() creates a cdata as the returned value.
@@ -1128,12 +1119,6 @@ DAO_DLL DaoMap*   DaoProcess_NewMap( DaoProcess *self, unsigned int hashing );
 // specified by the parameter "type".
 */
 DAO_DLL DaoArray* DaoProcess_NewArray( DaoProcess *self, int type );
-
-/*
-// DaoProcess_NewCpod() creates a plain old data (POD) value
-// with the given type and size.
-*/
-DAO_DLL DaoCpod* DaoProcess_NewCpod( DaoProcess *self, DaoType *type, int size );
 
 /*
 // DaoProcess_NewCdata() creates a new cdata object with specified type and data.
