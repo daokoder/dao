@@ -41,62 +41,6 @@
 #include"daoNamespace.h"
 #include"daoVmspace.h"
 
-static void DaoClass_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
-{
-	int tid = proc->activeRoutine->routHost ? proc->activeRoutine->routHost->tid : 0;
-	DaoType *type = proc->activeRoutine->routHost;
-	DaoClass *host = tid == DAO_OBJECT ? & type->aux->xClass : NULL;
-	DaoClass *self = & self0->xClass;
-	DString *mbs = DString_New();
-	DaoValue *data = DaoClass_GetData( self, name, host );;
-	if( data == NULL || data->type == DAO_NONE || data->xBase.subtype == DAO_OBJECT_VARIABLE ){
-		int rc = data == NULL ? DAO_ERROR_FIELD_NOTEXIST : DAO_ERROR_FIELD_NOTPERMIT;
-		DString_SetChars( mbs, DString_GetData( self->className ) );
-		DString_AppendChars( mbs, "." );
-		DString_Append( mbs, name );
-		DaoProcess_RaiseException( proc, daoExceptionNames[rc], mbs->chars, NULL );
-	}else{
-		DaoProcess_PutValue( proc, data->xConst.value );
-	}
-	DString_Delete( mbs );
-}
-static void DaoClass_SetField( DaoValue *self0, DaoProcess *proc, DString *name, DaoValue *value )
-{
-	DaoClass *self = & self0->xClass;
-	DNode *node = DMap_Find( self->lookupTable, name );
-	if( node && LOOKUP_ST( node->value.pInt ) == DAO_CLASS_VARIABLE ){
-		int up = LOOKUP_UP( node->value.pInt );
-		int id = LOOKUP_ID( node->value.pInt );
-		DaoVariable *dt = self->variables->items.pVar[id];
-		if( DaoValue_Move( value, & dt->value, dt->dtype ) ==0 )
-			DaoProcess_RaiseError( proc, "Param", "not matched" );
-	}else{
-		/* XXX permission */
-		DaoProcess_RaiseError( proc, "Field", "not exist" );
-	}
-}
-static void DaoClass_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
-{
-}
-static void DaoClass_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
-{
-}
-
-static Dao_Type_Core classCore=
-{
-	NULL,
-	DaoClass_GetField,
-	DaoClass_SetField,
-	DaoClass_GetItem,
-	DaoClass_SetItem,
-	DaoValue_Print
-};
-
-DaoTypeCore classTyper =
-{
-	"class", & classCore, NULL, NULL, {0}, {0},
-	(FuncPtrDel) DaoClass_Delete, NULL
-};
 
 DaoClass* DaoClass_New()
 {
@@ -131,6 +75,7 @@ DaoClass* DaoClass_New()
 #endif
 	return self;
 }
+
 void DaoClass_Delete( DaoClass *self )
 {
 #ifdef DAO_USE_GC_LOGGER
@@ -157,11 +102,13 @@ void DaoClass_Delete( DaoClass *self )
 	DString_Delete( self->className );
 	dao_free( self );
 }
+
 void DaoClass_AddReference( DaoClass *self, void *reference )
 {
 	if( reference == NULL ) return;
 	DList_Append( self->references, reference );
 }
+
 void DaoClass_Parents( DaoClass *self, DList *parents, DList *offsets );
 
 
@@ -1442,3 +1389,93 @@ DaoRoutine* DaoClass_FindMethod( DaoClass *self, const char *name, DaoClass *sco
 	if( V->xConst.value == NULL || V->xConst.value->type != DAO_ROUTINE ) return NULL;
 	return (DaoRoutine*) V->xConst.value;
 }
+
+
+
+static DaoType* DaoClass_CheckGetField( DaoType *self, DString *name, DaoNamespace *ns )
+{
+}
+
+static DaoValue* DaoClass_DoGetField( DaoValue *selfv, DString *name, DaoProcess *proc )
+{
+	DaoClass *self = (DaoClass*) selfv;
+	DaoType *type = proc->activeRoutine->routHost;
+	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoValue *data = DaoClass_GetData( self, name, host );;
+	if( data == NULL || data->type == DAO_NONE || data->xBase.subtype == DAO_OBJECT_VARIABLE ){
+		int rc = data == NULL ? DAO_ERROR_FIELD_NOTEXIST : DAO_ERROR_FIELD_NOTPERMIT;
+		DString_SetChars( proc->string, self->className->chars );
+		DString_AppendChars( proc->string, "." );
+		DString_Append( proc->string, name );
+		DaoProcess_RaiseException( proc, daoExceptionNames[rc], proc->string->chars, NULL );
+	}else{
+		DaoProcess_PutValue( proc, data->xConst.value );
+	}
+	return NULL;
+}
+
+static int DaoClass_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoNamespace *ns )
+{
+}
+
+static int DaoClass_DoSetField( DaoValue *selfv, DString *name, DaoValue *value, DaoProcess *proc )
+{
+	DaoClass *self = (DaoClass*) selfv;
+	DNode *node = DMap_Find( self->lookupTable, name );
+	if( node && LOOKUP_ST( node->value.pInt ) == DAO_CLASS_VARIABLE ){
+		int up = LOOKUP_UP( node->value.pInt );
+		int id = LOOKUP_ID( node->value.pInt );
+		DaoVariable *dt = self->variables->items.pVar[id];
+		if( DaoValue_Move( value, & dt->value, dt->dtype ) == 0 ) return DAO_ERROR_VALUE;
+	}else{
+		return DAO_ERROR_FIELD;
+	}
+	return DAO_OK;
+}
+
+static DaoType* DaoClass_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoNamespace *ns )
+{
+	return NULL;
+}
+
+static DaoValue* DaoClass_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *proc )
+{
+	return NULL;
+}
+
+static int DaoClass_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoNamespace *ns )
+{
+	return DAO_ERROR_INDEX;
+}
+
+static int DaoClass_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc )
+{
+	return DAO_ERROR_INDEX;
+}
+
+void DaoClass_CoreDelete( DaoValue *self )
+{
+	DaoClass_Delete( (DaoClass*) self );
+}
+
+DaoTypeCore daoClassCore =
+{
+	"class",                                       /* name */
+	{ NULL },                                      /* bases */
+	NULL,                                          /* numbers */
+	NULL,                                          /* methods */
+	DaoClass_CheckGetField,  DaoClass_DoGetField,  /* GetField */
+	DaoClass_CheckSetField,  DaoClass_DoSetField,  /* SetField */
+	DaoClass_CheckGetItem,   DaoClass_DoGetItem,   /* GetItem */
+	DaoClass_CheckSetItem,   DaoClass_DoSetItem,   /* SetItem */
+	NULL,                    NULL,                 /* Unary */
+	NULL,                    NULL,                 /* Binary */
+	NULL,                    NULL,                 /* Comparison */
+	NULL,                    NULL,                 /* Conversion */
+	NULL,                    NULL,                 /* ForEach */
+	DaoClass_Print,                                /* Print */
+	NULL,                                          /* Slice */
+	NULL,                                          /* Copy */
+	DaoClass_CoreDelete,                           /* Delete */
+	NULL                                           /* HandleGC */
+};

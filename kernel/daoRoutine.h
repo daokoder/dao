@@ -215,4 +215,8 @@ DAO_DLL DaoRoutine* DaoRoutine_Resolve( DaoRoutine *self, DaoValue *svalue, DaoT
 */
 DAO_DLL DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *svalue, DaoType *stype, DaoValue *values[], DaoType *types[], int count, int callmode );
 
+DAO_DLL DaoRoutine* DaoRoutine_MatchByType( DaoRoutine *self, DaoType *stype, DaoType *types[], int count, int callmode );
+
+DAO_DLL DaoRoutine* DaoRoutine_MatchByValue( DaoRoutine *self, DaoValue *svalue, DaoValue *values[], int count, int callmode );
+
 #endif

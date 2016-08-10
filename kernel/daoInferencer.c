@@ -1392,7 +1392,8 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 	}else if( at->tid == DAO_BOOLEAN || at->tid == DAO_INTEGER ){
 		goto InvIndex;
 	}else if( at->tid == DAO_STRING ){
-		ct = at;
+		ct = at->core->CheckGetItem( at, & bt, 1, NS );
+		if( ct == NULL ) goto InvIndex;
 		if( bt->realnum ){
 			ct = dao_type_int;
 			if( code == DVM_GETI ){
@@ -1402,15 +1403,6 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 				}
 				if( bt->tid == DAO_INTEGER ) vmc->code = DVM_GETI_SI;
 			}
-		}else if( bt == dao_type_for_iterator ){
-			ct = dao_type_int;
-		}else if( bt->tid ==DAO_TUPLE && bt->subtid == DAO_PAIR ){
-			ct = at;
-			AssertPairNumberType( bt );
-		}else if( bt->tid ==DAO_LIST || bt->tid ==DAO_ARRAY ){
-			/* passed */
-			k = bt->nested->items.pType[0]->tid;
-			if( k > DAO_FLOAT && k !=DAO_ANY ) goto NotMatch;
 		}
 	}else if( at->tid == DAO_TYPE ){
 		at = at->nested->items.pType[0];
@@ -1421,6 +1413,8 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 			goto NotExist;
 		}
 	}else if( at->tid == DAO_LIST ){
+		ct = at->core->CheckGetItem( at, & bt, 1, NS );
+		if( ct == NULL ) goto InvIndex;
 		if( bt->realnum ){
 			ct = at->nested->items.pType[0];
 			if( code == DVM_GETI ){
@@ -1435,40 +1429,9 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 				if( bt->tid != DAO_INTEGER )
 					DaoInferencer_InsertMove( self, inode, & inode->b, bt, dao_type_int );
 			}
-		}else if( bt == dao_type_for_iterator ){
-			ct = at->nested->items.pType[0];
-		}else if( bt->tid == DAO_TUPLE && bt->subtid == DAO_PAIR ){
-			ct = at;
-			AssertPairNumberType( bt );
-		}else if( bt->tid == DAO_LIST || bt->tid == DAO_ARRAY ){
-			ct = at;
-			k = bt->nested->items.pType[0]->tid;
-			if( k != DAO_INTEGER && k != DAO_ANY && k != DAO_UDT ) goto NotMatch;
-		}else{
-			goto InvIndex;
 		}
 	}else if( at->tid == DAO_MAP ){
-		DaoType *t0 = at->nested->items.pType[0];
-		/*
-		   printf( "at %s %s\n", at->name->chars, bt->name->chars );
-		 */
-		if( bt == dao_type_for_iterator ){
-			ct = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE,
-					NULL, at->nested->items.pType, 2 );
-		}else if( bt->tid == DAO_TUPLE && bt->subtid == DAO_PAIR ){  /* Check slicing: */
-			DaoType *start, *end, **kts = bt->nested->items.pType;
-			int openStart = 0, openEnd = 0;
-			start = kts[0]->tid == DAO_PAR_NAMED ? (DaoType*) kts[0]->aux : kts[0];
-			end   = kts[1]->tid == DAO_PAR_NAMED ? (DaoType*) kts[1]->aux : kts[1];
-			openStart = start->tid == DAO_NONE && start->valtype;
-			openEnd   = end->tid == DAO_NONE   && end->valtype;
-			if( !openStart && DaoType_MatchTo( start, t0, defs ) == 0 ) goto InvKey;
-			if( !openEnd && DaoType_MatchTo( end, t0, defs ) == 0 ) goto InvKey;
-			ct = at;
-		}else{
-			if( DaoType_MatchTo( bt, t0, defs ) == 0 ) goto InvKey;
-			ct = at->nested->items.pType[1];
-		}
+		ct = at->core->CheckGetItem( at, & bt, 1, NS );
 	}else if( at->tid == DAO_ARRAY ){
 		if( bt->realnum ){
 			/* array[i] */

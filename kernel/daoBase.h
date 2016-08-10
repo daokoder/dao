@@ -46,8 +46,6 @@ typedef struct DTypeSpecTree DTypeSpecTree;
 
 typedef struct DaoToken      DaoToken;
 typedef struct DaoInode      DaoInode;
-
-typedef struct DaoVmCode     DaoVmCode;
 typedef struct DaoVmCodeX    DaoVmCodeX;
 
 typedef struct DaoFuture     DaoFuture;

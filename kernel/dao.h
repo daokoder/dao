@@ -217,6 +217,7 @@ typedef struct DMap            DMap;
 typedef struct DaoTypeCore     DaoTypeCore;
 typedef struct DaoTypeKernel   DaoTypeKernel;
 
+typedef struct DaoVmCode       DaoVmCode;
 typedef struct DaoStackFrame   DaoStackFrame;
 typedef struct DaoHandler      DaoHandler;
 typedef struct DaoDebugger     DaoDebugger;
@@ -371,20 +372,22 @@ struct DaoTypeCore
 	// The should return zero on success and error code otherwise;
 	*/
 
-	DaoType*  (*CheckUnary)( DaoType *type, int opcode, int right, DaoNamespace *ns );
-	DaoValue* (*DoUnary)( DaoValue *value, int opcode, int right, DaoProcess *p );
+	DaoType* (*CheckUnary)( DaoType *self, DaoVmCode *op, DaoNamespace *ns );
+	DaoValue* (*DoUnary)( DaoValue *self, DaoVmCode *op, DaoProcess *p );
 	/*
 	// Functions for unary operations:
+	// The self parameter is the operand;
 	*/
 
-	DaoType*  (*CheckBinary)( DaoType *left, DaoType *right, int opcode, DaoNamespace *ns );
-	DaoValue* (*DoBinary)( DaoValue *left, DaoValue *right, int opcode, DaoProcess *p );
+	DaoType* (*CheckBinary)( DaoType *self, DaoVmCode *op, DaoType *operands[2], DaoNamespace *ns );
+	DaoValue* (*DoBinary)( DaoValue *self, DaoVmCode *op, DaoValue *operands[2], DaoProcess *p );
 	/*
 	// Functions for binary operations:
+	// The self parameter is the same as one of the operands;
 	*/
 
-	int (*CheckComparison)( DaoType *left, DaoType *right, DaoNamespace *ns );
-	int (*DoComparison)( DaoValue *left, DaoValue *right, DaoProcess *p );
+	int (*CheckComparison)( DaoType *self, DaoType *other, DaoNamespace *ns );
+	int (*DoComparison)( DaoValue *self, DaoValue *other, DaoProcess *p );
 	/*
 	// Functions for comparison operations:
 	*/

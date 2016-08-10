@@ -416,3 +416,119 @@ DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name )
 	if( V == NULL || V->type != DAO_ROUTINE ) return NULL;
 	return (DaoRoutine*) V;
 }
+
+
+
+static DaoType* DaoObject_CheckGetField( DaoType *self, DString *name, DaoNamespace *ns )
+{
+}
+
+static DaoValue* DaoObject_DoGetField( DaoValue *selfv, DString *name, DaoProcess *proc )
+{
+	DaoObject *self = (DaoObject*) selfv;
+	DaoValue *value = NULL;
+	int rc = DaoObject_GetData( self, name, & value, proc->activeObject );
+	if( rc ){
+		DString *field = proc->string;
+		DString_SetChars( field, "." );
+		DString_Append( field, name );
+		rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, field, NULL,0,0,0 );
+		if( rc == DAO_ERROR_FIELD_NOTEXIST ){
+			DaoString str = {DAO_STRING,0,0,0,1,NULL};
+			DaoValue *pars = (DaoValue*) & str;
+			str.value = name;
+			DString_SetChars( field, "." );
+			rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, field, &pars,1,0,0 );
+		}
+	}else{
+		DaoProcess_PutValue( proc, value );
+	}
+	if( rc ) DaoProcess_RaiseException( proc, daoExceptionNames[rc], name->chars, NULL );
+	return NULL;
+}
+
+static int DaoObject_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoNamespace *ns )
+{
+}
+
+static int DaoObject_DoSetField( DaoValue *selfv, DString *name, DaoValue *value, DaoProcess *proc )
+{
+	DaoObject *self = (DaoObject*) selfv;
+	int ec = DaoObject_SetData( self, name, value, proc->activeObject );
+	int ec2 = ec;
+	if( ec != DAO_ERROR ){
+		DString *mbs = proc->string;
+		DString_SetChars( mbs, "." );
+		DString_Append( mbs, name );
+		DString_AppendChars( mbs, "=" );
+		ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, mbs, & value, 1,1,0 );
+		if( ec == DAO_ERROR_FIELD_NOTEXIST ){
+			DaoString str = {DAO_STRING,0,0,0,1,NULL};
+			DaoValue *pars[2];
+			pars[0] = (DaoValue*) & str;
+			pars[1] = value;
+			str.value = name;
+			DString_SetChars( mbs, ".=" );
+			ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, mbs, pars,2,1,0 );
+		}
+		if( ec == DAO_ERROR_FIELD_NOTEXIST ) ec = ec2;
+	}
+	if( ec ) DaoProcess_RaiseException( proc, daoExceptionNames[ec], name->chars, NULL );
+}
+
+static DaoType* DaoObject_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoNamespace *ns )
+{
+}
+
+static DaoValue* DaoObject_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, DaoProcess *proc )
+{
+	DaoObject *self = (DaoObject*) selfv;
+	int rc = 0;
+	DString_SetChars( proc->string, "[]" );
+	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->string, ids, N,0,0 );
+	if( rc ) DaoProcess_RaiseException( proc, daoExceptionNames[rc], proc->string->chars, NULL );
+}
+
+static int DaoObject_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoNamespace *ns )
+{
+}
+
+static int DaoObject_DoSetItem( DaoValue *selfv, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc )
+{
+	DaoObject *self = (DaoObject*) selfv;
+	DaoValue *args[ DAO_MAX_PARAM ];
+	int rc;
+	memcpy( args+1, ids, N*sizeof(DaoValue*) );
+	args[0] = value;
+	DString_SetChars( proc->string, "[]=" );
+	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->string, args, N+1,1,0 );
+	if( rc ) DaoProcess_RaiseException( proc, daoExceptionNames[rc], proc->string->chars, NULL );
+}
+
+
+void DaoObject_CoreDelete( DaoValue *self )
+{
+	DaoObject_Delete( (DaoObject*) self );
+}
+
+DaoTypeCore daoObjectCore =
+{
+	"object",                                        /* name */
+	{ NULL },                                        /* bases */
+	NULL,                                            /* numbers */
+	NULL,                                            /* methods */
+	DaoObject_CheckGetField,  DaoObject_DoGetField,  /* GetField */
+	DaoObject_CheckSetField,  DaoObject_DoSetField,  /* SetField */
+	DaoObject_CheckGetItem,   DaoObject_DoGetItem,   /* GetItem */
+	DaoObject_CheckSetItem,   DaoObject_DoSetItem,   /* SetItem */
+	NULL,                     NULL,                  /* Unary */
+	NULL,                     NULL,                  /* Binary */
+	NULL,                     NULL,                  /* Comparison */
+	NULL,                     NULL,                  /* Conversion */
+	NULL,                     NULL,                  /* ForEach */
+	DaoObject_Print,                                 /* Print */
+	NULL,                                            /* Slice */
+	NULL,                                            /* Copy */
+	DaoObject_CoreDelete,                            /* Delete */
+	NULL                                             /* HandleGC */
+};

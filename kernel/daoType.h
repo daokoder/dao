@@ -189,6 +189,7 @@ DAO_DLL DaoRoutine* DaoType_GetInitor( DaoType *self );
 DAO_DLL DaoRoutine* DaoType_GetCastor( DaoType *self );
 DAO_DLL DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name );
 DAO_DLL DaoRoutine* DaoType_FindFunctionChars( DaoType *self, const char *name );
+DAO_DLL DaoRoutine* DaoType_FindOperator( DaoType *self, int opcode );
 
 DAO_DLL DaoTypeCore* DaoType_GetTypeCore( DaoType *self );
 

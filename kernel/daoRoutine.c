@@ -867,3 +867,13 @@ DaoRoutine* DaoRoutine_ResolveX( DaoRoutine *self, DaoValue *svalue, DaoType *st
 	}
 	return rout;
 }
+
+DaoRoutine* DaoRoutine_MatchByType( DaoRoutine *self, DaoType *stype, DaoType *types[], int count, int callmode )
+{
+	return DaoRoutine_ResolveX( self, NULL, stype, NULL, types, count, callmode );
+}
+
+DaoRoutine* DaoRoutine_MatchByValue( DaoRoutine *self, DaoValue *svalue, DaoValue *values[], int count, int callmode )
+{
+	return DaoRoutine_ResolveX( self, svalue, NULL, values, NULL, count, callmode );
+}
