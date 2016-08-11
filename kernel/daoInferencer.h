@@ -74,6 +74,8 @@ struct DaoInferencer
 
 	unsigned short  currentIndex;
 
+	DaoTypeContext *context;
+
 	DaoRoutine  *routine;
 	DaoClass    *hostClass;
 

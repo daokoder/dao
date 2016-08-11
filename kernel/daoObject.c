@@ -109,7 +109,7 @@ static void DaoObject_Core_GetField( DaoValue *self0, DaoProcess *proc, DString 
 		DString_SetChars( field, "." );
 		DString_Append( field, name );
 		rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, field, NULL,0,0,0 );
-		if( rc == DAO_ERROR_FIELD_NOTEXIST ){
+		if( rc == DAO_ERROR_FIELD_ABSENT ){
 			DaoString str = {DAO_STRING,0,0,0,1,NULL};
 			DaoValue *pars = (DaoValue*) & str;
 			str.value = name;
@@ -132,7 +132,7 @@ static void DaoObject_Core_SetField( DaoValue *self0, DaoProcess *proc, DString 
 		DString_Append( mbs, name );
 		DString_AppendChars( mbs, "=" );
 		ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, mbs, & value, 1,1,0 );
-		if( ec == DAO_ERROR_FIELD_NOTEXIST ){
+		if( ec == DAO_ERROR_FIELD_ABSENT ){
 			DaoString str = {DAO_STRING,0,0,0,1,NULL};
 			DaoValue *pars[2];
 			pars[0] = (DaoValue*) & str;
@@ -141,7 +141,7 @@ static void DaoObject_Core_SetField( DaoValue *self0, DaoProcess *proc, DString 
 			DString_SetChars( mbs, ".=" );
 			ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, mbs, pars,2,1,0 );
 		}
-		if( ec == DAO_ERROR_FIELD_NOTEXIST ) ec = ec2;
+		if( ec == DAO_ERROR_FIELD_ABSENT ) ec = ec2;
 	}
 	if( ec ) DaoProcess_RaiseException( proc, daoExceptionNames[ec], name->chars, NULL );
 }
@@ -332,30 +332,30 @@ DaoCdata* DaoObject_CastCdata( DaoObject *self, DaoType *type )
 void DaoObject_AddData( DaoObject *self, DString *name, DaoValue *data )
 {
 }
-int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject *othis )
+int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject *hostObject )
 {
 	DNode *node;
 	DaoType *type;
 	DaoValue **value ;
 	DaoClass *klass = self->defClass;
-	DaoObject *null = & klass->objType->value->xObject;
-	int child = othis && DaoObject_ChildOf( (DaoValue*)othis, (DaoValue*)self );
+	DaoObject *null = (DaoObject*) klass->objType->value;
+	int child = hostObject && DaoObject_ChildOf( (DaoValue*) hostObject, (DaoValue*) self );
 	int id, st, up, pm, access;
 
-	if( self == (DaoObject*)self->defClass->objType->value ) return DAO_ERROR;
+	if( self == null ) return DAO_ERROR;
 
 	node = DMap_Find( self->defClass->lookupTable, name );
-	if( node == NULL ) return DAO_ERROR_FIELD_NOTEXIST;
+	if( node == NULL ) return DAO_ERROR_FIELD_ABSENT;
 
 	pm = LOOKUP_PM( node->value.pInt );
 	st = LOOKUP_ST( node->value.pInt );
 	up = LOOKUP_UP( node->value.pInt );
 	id = LOOKUP_ID( node->value.pInt );
-	if( self == null && st == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_NOTPERMIT;
-	access = othis == self || pm == DAO_PERM_PUBLIC || (child && pm >= DAO_PERM_PROTECTED);
-	if( access == 0 ) return DAO_ERROR_FIELD_NOTPERMIT;
+	if( self == null && st == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_HIDDEN;
+	access = hostObject == self || pm == DAO_PERM_PUBLIC || (child && pm >= DAO_PERM_PROTECTED);
+	if( access == 0 ) return DAO_ERROR_FIELD_HIDDEN;
 	if( st == DAO_OBJECT_VARIABLE ){
-		if( id <0 ) return DAO_ERROR_FIELD_NOTPERMIT;
+		if( id <0 ) return DAO_ERROR_FIELD_HIDDEN;
 		type = klass->instvars->items.pVar[ id ]->dtype;
 		value = self->objValues + id;
 		if( DaoValue_Move( data, value, type ) ==0 ) return DAO_ERROR_VALUE;
@@ -369,26 +369,26 @@ int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject
 	}
 	return 0;
 }
-int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObject *othis )
+int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObject *hostObject )
 {
 	DNode *node;
 	DaoValue *p = NULL;
 	DaoClass *klass = self->defClass;
-	DaoObject *null = & klass->objType->value->xObject;
-	int child = othis && DaoObject_ChildOf( (DaoValue*)othis, (DaoValue*)self );
+	DaoObject *null = (DaoObject*) klass->objType->value;
+	int child = hostObject && DaoObject_ChildOf( (DaoValue*) hostObject, (DaoValue*) self );
 	int id, st, up, pm, access;
 
 	*data = NULL;
 	node = DMap_Find( self->defClass->lookupTable, name );
-	if( node == NULL ) return DAO_ERROR_FIELD_NOTEXIST;
+	if( node == NULL ) return DAO_ERROR_FIELD_ABSENT;
 
 	pm = LOOKUP_PM( node->value.pInt );
 	st = LOOKUP_ST( node->value.pInt );
 	up = LOOKUP_UP( node->value.pInt );
 	id = LOOKUP_ID( node->value.pInt );
-	if( self == null && st == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_NOTPERMIT;
-	access = othis == self || pm == DAO_PERM_PUBLIC || (child && pm >= DAO_PERM_PROTECTED);
-	if( access == 0 ) return DAO_ERROR_FIELD_NOTPERMIT;
+	if( self == null && st == DAO_OBJECT_VARIABLE ) return DAO_ERROR_FIELD_HIDDEN;
+	access = hostObject == self || pm == DAO_PERM_PUBLIC || (child && pm >= DAO_PERM_PROTECTED);
+	if( access == 0 ) return DAO_ERROR_FIELD_HIDDEN;
 	switch( st ){
 	case DAO_OBJECT_VARIABLE : p = self->objValues[id]; break;
 	case DAO_CLASS_VARIABLE  : p = klass->variables->items.pVar[id]->value; break;
@@ -396,7 +396,7 @@ int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObjec
 	default : break;
 	}
 	*data = p;
-	return 0;
+	return DAO_OK;
 }
 
 DaoValue* DaoObject_GetField( DaoObject *self, const char *name )
@@ -421,6 +421,24 @@ DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name )
 
 static DaoType* DaoObject_CheckGetField( DaoType *self, DString *name, DaoNamespace *ns )
 {
+	DaoClass *self = (DaoClass*) self->aux;
+	DaoType *type = ctx->routine->routHost;
+	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoValue *data = DaoClass_GetData( self, name, host );;
+
+	ctx->error = DAO_OK;
+	if( data == NULL ){
+		ctx->error = DAO_ERROR_FIELD_ABSENT;
+	}else if( data->type == DAO_NONE ){
+		ctx->error = DAO_ERROR_FIELD_HIDDEN;
+	}else if( data->xBase.subtype == DAO_OBJECT_VARIABLE ){
+		return data->xVar.dtype;
+	}else if( data->xBase.subtype == DAO_CLASS_VARIABLE ){
+		return data->xVar.dtype;
+	}else if( data->xBase.subtype == DAO_CLASS_CONSTANT ){
+		return DaoNamespace_GetType( ctx->nspace, data->xConst.value );
+	}
+	return NULL;
 }
 
 static DaoValue* DaoObject_DoGetField( DaoValue *selfv, DString *name, DaoProcess *proc )
@@ -433,7 +451,7 @@ static DaoValue* DaoObject_DoGetField( DaoValue *selfv, DString *name, DaoProces
 		DString_SetChars( field, "." );
 		DString_Append( field, name );
 		rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, field, NULL,0,0,0 );
-		if( rc == DAO_ERROR_FIELD_NOTEXIST ){
+		if( rc == DAO_ERROR_FIELD_ABSENT ){
 			DaoString str = {DAO_STRING,0,0,0,1,NULL};
 			DaoValue *pars = (DaoValue*) & str;
 			str.value = name;
@@ -449,6 +467,21 @@ static DaoValue* DaoObject_DoGetField( DaoValue *selfv, DString *name, DaoProces
 
 static int DaoObject_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoNamespace *ns )
 {
+	DaoClass *self = (DaoClass*) self->aux;
+	DaoType *type = ctx->routine->routHost;
+	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoValue *data = DaoClass_GetData( self, name, host );;
+
+	if( data == NULL ){
+		return DAO_ERROR_FIELD_ABSENT;
+	}else if( data->type == DAO_NONE ){
+		return DAO_ERROR_FIELD_HIDDEN;
+	}else if( data->xBase.subtype == DAO_CLASS_CONSTANT ){
+		return DAO_ERROR_FIELD_HIDDEN; // XXX
+	}else{ /* data->xBase.subtype == DAO_CLASS_VARIABLE || DAO_OBJECT_VARIABLE */
+		if( DaoType_MatchTo( value, data->xVar.dtype, ctx->thmap ) == 0 ) return DAO_ERROR_VALUE;
+	}
+	return DAO_OK;
 }
 
 static int DaoObject_DoSetField( DaoValue *selfv, DString *name, DaoValue *value, DaoProcess *proc )
@@ -462,7 +495,7 @@ static int DaoObject_DoSetField( DaoValue *selfv, DString *name, DaoValue *value
 		DString_Append( mbs, name );
 		DString_AppendChars( mbs, "=" );
 		ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, mbs, & value, 1,1,0 );
-		if( ec == DAO_ERROR_FIELD_NOTEXIST ){
+		if( ec == DAO_ERROR_FIELD_ABSENT ){
 			DaoString str = {DAO_STRING,0,0,0,1,NULL};
 			DaoValue *pars[2];
 			pars[0] = (DaoValue*) & str;
@@ -471,7 +504,7 @@ static int DaoObject_DoSetField( DaoValue *selfv, DString *name, DaoValue *value
 			DString_SetChars( mbs, ".=" );
 			ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, mbs, pars,2,1,0 );
 		}
-		if( ec == DAO_ERROR_FIELD_NOTEXIST ) ec = ec2;
+		if( ec == DAO_ERROR_FIELD_ABSENT ) ec = ec2;
 	}
 	if( ec ) DaoProcess_RaiseException( proc, daoExceptionNames[ec], name->chars, NULL );
 }

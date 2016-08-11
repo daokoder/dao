@@ -277,6 +277,7 @@ typedef int (*DaoCodeInliner)( DaoNamespace *nspace, DString *mode, DString *sou
 typedef struct DaoNumberEntry    DaoNumberEntry;
 typedef struct DaoFunctionEntry  DaoFunctionEntry;
 typedef struct DaoVirtualModule  DaoVirtualModule;
+typedef struct DaoTypeContext    DaoTypeContext;
 
 struct DaoNumberEntry
 {
@@ -297,6 +298,17 @@ struct DaoVirtualModule
 	signed int        length;  /* length of the file; */
 	unsigned char    *data;    /* file content; */
 	DaoModuleOnLoad   onload;  /* onload function pointer for C module; */
+};
+
+/*
+// Type inference context:
+*/
+struct DaoTypeContext
+{
+	DaoNamespace  *nspace;   /* The current namespace for type inference; */
+	DaoRoutine    *routine;  /* The current routine for type inference; */
+	DMap          *thmap;    /* Type holder mapping; */
+	int            error;    /* Optional error code; */
 };
 
 
@@ -347,52 +359,52 @@ struct DaoTypeCore
 	// Method definitions: should end with a null item;
 	*/
 
-	DaoType*  (*CheckGetField)( DaoType *self, DString *field, DaoNamespace *ns );
+	DaoType*  (*CheckGetField)( DaoType *self, DString *field, DaoTypeContext *c );
 	DaoValue* (*DoGetField)( DaoValue *self, DString *field, DaoProcess *p );
 	/*
 	// Functions for GETF:
 	*/
 
-	int (*CheckSetField)( DaoType *self, DString *field, DaoType *value, DaoNamespace *ns );
+	int (*CheckSetField)( DaoType *self, DString *field, DaoType *value, DaoTypeContext *c );
 	int (*DoSetField)( DaoValue *self, DString *field, DaoValue *value, DaoProcess *p );
 	/*
 	// Functions for SETF:
 	*/
 
-	DaoType*  (*CheckGetItem)( DaoType *self, DaoType *index[], int N, DaoNamespace *ns );
+	DaoType*  (*CheckGetItem)( DaoType *self, DaoType *index[], int N, DaoTypeContext *c );
 	DaoValue* (*DoGetItem)( DaoValue *self, DaoValue *index[], int N, DaoProcess *p );
 	/*
 	// Functions for GETI, GETDI and GETMI:
 	*/
 
-	int (*CheckSetItem)( DaoType *self, DaoType *index[], int N, DaoType *value, DaoNamespace *ns );
+	int (*CheckSetItem)( DaoType *self, DaoType *index[], int N, DaoType *value, DaoTypeContext *c);
 	int (*DoSetItem)( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *p );
 	/*
 	// Functions for SETI, SETDI and SETMI:
 	// The should return zero on success and error code otherwise;
 	*/
 
-	DaoType* (*CheckUnary)( DaoType *self, DaoVmCode *op, DaoNamespace *ns );
+	DaoType* (*CheckUnary)( DaoType *self, DaoVmCode *op, DaoTypeContext *c );
 	DaoValue* (*DoUnary)( DaoValue *self, DaoVmCode *op, DaoProcess *p );
 	/*
 	// Functions for unary operations:
 	// The self parameter is the operand;
 	*/
 
-	DaoType* (*CheckBinary)( DaoType *self, DaoVmCode *op, DaoType *operands[2], DaoNamespace *ns );
+	DaoType* (*CheckBinary)( DaoType *self, DaoVmCode *op, DaoType *operands[2], DaoTypeContext *c);
 	DaoValue* (*DoBinary)( DaoValue *self, DaoVmCode *op, DaoValue *operands[2], DaoProcess *p );
 	/*
 	// Functions for binary operations:
 	// The self parameter is the same as one of the operands;
 	*/
 
-	int (*CheckComparison)( DaoType *self, DaoType *other, DaoNamespace *ns );
+	int (*CheckComparison)( DaoType *self, DaoType *other, DaoTypeContext *c );
 	int (*DoComparison)( DaoValue *self, DaoValue *other, DaoProcess *p );
 	/*
 	// Functions for comparison operations:
 	*/
 
-	DaoType*  (*CheckConversion)( DaoType *self, DaoType *type, DaoNamespace *ns );
+	DaoType*  (*CheckConversion)( DaoType *self, DaoType *type, DaoTypeContext *c );
 	DaoValue* (*DoConversion)( DaoValue *self, DaoType *type, DaoValue *buffer, DaoProcess *p );
 	/*
 	// Functions for conversion operation:
@@ -410,7 +422,7 @@ struct DaoTypeCore
 	// type will be passed to the conversion function for convenience.
 	*/
 
-	DaoType* (*CheckForEach)( DaoType *self, DaoNamespace *ns );
+	DaoType* (*CheckForEach)( DaoType *self, DaoTypeContext *c );
 	void (*DoForEach)( DaoValue *self, DaoIterator *iterator, DaoProcess *p );
 	/*
 	// Functions for preparing for-in iteration:

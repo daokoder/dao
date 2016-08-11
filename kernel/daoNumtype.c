@@ -828,6 +828,326 @@ static void DaoArray_SetItem( DaoValue *vself, DaoProcess *proc, DaoValue *ids[]
 	}
 	self->original = NULL;
 }
+
+
+
+static DaoType* DaoArray_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoNamespace *ns )
+{
+	DaoType *etype = self->nested->items.pType[0];
+	if( N == 0 ){
+		return self;
+	}else if( N == 1 ){
+		if( index[0]->tid == DAO_ITERATOR ){
+			if( DaoType_CheckNumberIndex( index[0]->nested->items.pType[0] ) ) return etype;
+		}else if( index[0]->tid == DAO_RANGE ){
+			if( DaoType_CheckRangeIndex( index[0] ) ) return self;
+		}else{
+			if( DaoType_CheckNumberIndex( index[0] ) ) return etype;
+		}
+	}else{
+		int i, count = 0;
+		for(i=0; i<N; ++i){
+			if( index[i]->tid == DAO_RANGE ){
+				if( DaoType_CheckRangeIndex( index[i] ) == 0 ) return NULL;
+			}else{
+				if( DaoType_CheckNumberIndex( index[i] ) == 0 ) return NULL;
+				count += 1;
+			}
+		}
+		if( count == N ) return type;
+		return self;
+	}
+	return NULL;
+}
+
+static DaoValue* DaoArray_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, DaoProcess *proc )
+{
+	DaoArray *res, *self = (DaoArray*) selfv;
+	daoint pos, end, size = self->size;
+
+	DaoArray_Sliced( self );
+
+	if( N == 0 ){
+		DaoProcess_PutValue( proc, (DaoValue*) DaoArray_Copy( self ) );
+		return NULL;
+	}else if( N == 1 ){
+		switch( index[0]->type ){
+		case DAO_BOOLEAN :
+		case DAO_INTEGER :
+		case DAO_FLOAT :
+			pos = DaoValue_GetInteger( index[0] );
+			pos = Dao_CheckNumberIndex( pos, size, p );
+			if( pos < 0 ) return NULL;
+			switch( self->etype ){
+			case DAO_BOOLEAN : DaoProcess_PutBoolean( proc, self->data.b[pos] ); break;
+			case DAO_INTEGER : DaoProcess_PutInteger( proc, self->data.i[pos] ); break;
+			case DAO_FLOAT   : DaoProcess_PutFloat( proc, self->data.f[pos] ); break;
+			case DAO_COMPLEX : DaoProcess_PutComplex( proc, self->data.c[pos] ); break;
+			default : break;
+			}
+			break;
+		case DAO_ITERATOR :
+			if( index[0]->xIterator.values[1]->type != DAO_INTEGER ) return NULL;
+			pos = Dao_CheckNumberIndex( index[0]->xIterator.values[1]->xInteger.value, size, p );
+			index[0]->xIterator.values[0]->xBoolean.value = (pos + 1) < size;
+			index[0]->xIterator.values[1]->xInteger.value = pos + 1;
+			if( pos < 0 ) return NULL;
+			DaoProcess_PutInteger( p, self->xString.value->chars[pos] );
+			switch( self->etype ){
+			case DAO_BOOLEAN : DaoProcess_PutBoolean( proc, self->data.b[pos] ); break;
+			case DAO_INTEGER : DaoProcess_PutInteger( proc, self->data.i[pos] ); break;
+			case DAO_FLOAT   : DaoProcess_PutFloat( proc, self->data.f[pos] ); break;
+			case DAO_COMPLEX : DaoProcess_PutComplex( proc, self->data.c[pos] ); break;
+			default : break;
+			}
+			break;
+		default:
+			res = DaoProcess_PutArray( proc );
+			DaoArray_SetNumType( res, self->etype );
+			GC_Assign( & res->original, self );
+			DaoArray_MakeSlice( self, proc, index, 1, res );
+			break;
+		}
+	}else if( N <= self->ndim ){
+		daoint *dimAccum = self->dims + self->ndim;
+		daoint allNumbers = 1;
+		daoint vecpos = 0;
+		for(i=0; i<N; i++){
+			if( index[i]->type < DAO_BOOLEAN || index[i]->type > DAO_FLOAT ){
+				allNumbers = 0;
+				break;
+			}
+			pos = DaoValue_GetInteger( index[i] );
+			pos = Dao_CheckNumberIndex( pos, self->dims[i], proc );
+			if( pos < 0 ) return NULL;
+			vecpos += pos * dimAccum[i];
+		}
+		if( vecpos >= self->size ){
+			DaoProcess_RaiseError( proc, "Index::Range", "index out of range" );
+			return NULL;
+		}
+		if( allNumbers ){
+			switch( self->etype ){
+			case DAO_BOOLEAN : DaoProcess_PutBoolean( proc, self->data.b[vecpos] ); break;
+			case DAO_INTEGER : DaoProcess_PutInteger( proc, self->data.i[vecpos] ); break;
+			case DAO_FLOAT   : DaoProcess_PutFloat(   proc, self->data.f[vecpos] ); break;
+			case DAO_COMPLEX : DaoProcess_PutComplex( proc, self->data.c[vecpos] ); break;
+			default : break;
+			}
+			return NULL;
+		}
+		res = DaoProcess_PutArray( proc );
+		DaoArray_SetNumType( res, self->etype );
+		GC_Assign( & res->original, self );
+		DaoArray_MakeSlice( self, proc, index, N, res );
+	}else{
+	}
+	return NULL;
+}
+
+static int DaoArray_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoNamespace *ns )
+{
+	DaoType *etype = self->nested->items.pType[0];
+	int typeOK = 0;
+
+	/*
+	// Check type compatibility:
+	*/
+	if( etype->tid == DAO_COMPLEX ){
+		if( value->tid >= DAO_BOOLEAN && value->tid < DAO_COMPLEX ) typeOK = 1;
+		if( value->tid == DAO_ARRAY ){
+			DaoType *etype2 = value->nested->items.pType[0];
+			if( etype2->tid >= DAO_BOOLEAN && etype2->tid < DAO_COMPLEX ) typeOK = 1;
+		}
+	}else{
+		if( value->tid >= DAO_BOOLEAN && value->tid < DAO_FLOAT ) typeOK = 1;
+		if( value->tid == DAO_ARRAY ){
+			DaoType *etype2 = value->nested->items.pType[0];
+			if( etype2->tid >= DAO_BOOLEAN && etype2->tid < DAO_FLOAT ) typeOK = 1;
+		}
+	}
+	if( typeOK == 0 ) return DAO_ERROR_TYPE;
+
+	/*
+	// Check shape compatibility:
+	*/
+	if( N == 0 ){
+		return DAO_OK;
+	}else if( N == 1 ){
+		/* Cannot set array to a single element: */
+		if( value->tid == DAO_ARRAY ) return DAO_ERROR_VALUE;
+	}else{
+		int i, count = 0;
+		for(i=0; i<N; ++i){
+			if( index[i]->tid == DAO_RANGE ){
+				if( DaoType_CheckRangeIndex( index[i] ) == 0 ) return DAO_ERROR_INDEX;
+			}else{
+				if( DaoType_CheckNumberIndex( index[i] ) == 0 ) return DAO_ERROR_INDEX;
+				count += 1;
+			}
+		}
+		/* Cannot set array to a single element: */
+		if( count == N && value->tid == DAO_ARRAY ) return DAO_ERROR_VALUE;
+	}
+	return DAO_OK;
+}
+
+static int DaoArray_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *p )
+{
+	DaoArray *self = (DaoArray*) selfv;
+	daoint pos, end, size = self->size;
+	DIndexRange range;
+
+	if( N == 0 ){
+		if( value->type != DAO_STRING ) return DAO_ERROR_VALUE;
+		DString_Assign( self->xString.value, value->xString.value );
+	}else if( N == 1 ){
+		switch( index[0]->type ){
+		case DAO_BOOLEAN :
+		case DAO_INTEGER :
+		case DAO_FLOAT :
+			pos = DaoValue_GetInteger( index[0] );
+			pos = Dao_CheckNumberIndex( pos, size, p );
+			if( pos < 0 ) return DAO_ERROR_INDEX;
+			if( value->type == DAO_NONE || value->type > DAO_COMPLEX ) return DAO_ERROR_VALUE;
+			self->xString.value->chars[pos] = DaoValue_GetInteger( value );
+			DaoArray_SetValue( self, pos, value );
+			break;
+		case DAO_RANGE :
+			range = Dao_CheckRangeIndex( (DaoRange*) index[0] );
+			if( range.pos < 0 ) return NULL;
+			pos = range.pos;
+			end = range.end;
+			DString_Insert( self->xString.value, value->xString.value, pos, end - pos, -1 );
+			break;
+		default: return DAO_ERROR_INDEX;
+		}
+	}
+	return DAO_OK;
+}
+
+static DaoType* DaoArray_CheckUnary( DaoType *type, DaoVmCode *op, DaoNamespace *ns )
+{
+	if( op->code == DVM_SIZE ) return dao_type_int;
+	return NULL;
+}
+
+static DaoValue* DaoArray_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *p )
+{
+	if( op->code == DVM_SIZE ) DaoProcess_PutInteger( p, self->xString.value->size );
+	return NULL;
+}
+
+static DaoType* DaoArray_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoNamespace *ns )
+{
+	DaoType *left = args[0];
+	DaoType *right = args[1];
+
+	switch( op->code ){
+	case DVM_ADD :
+	case DVM_DIV :
+		if( left->tid == DAO_STRING && right->tid == DAO_STRING ) return dao_type_string;
+		break;
+	case DVM_LT : case DVM_LE :
+	case DVM_EQ : case DVM_NE :
+	case DVM_IN :
+		if( left->tid == DAO_STRING && right->tid == DAO_STRING ) return dao_type_bool;
+		break;
+	default: break;
+	}
+	return NULL;
+}
+
+static DaoValue* DaoArray_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *p )
+{
+	DaoValue *left  = args[0];
+	DaoValue *right = args[1];
+	DString *res;
+	daoint pos;
+	int D = 0;
+
+	if( left->type != DAO_STRING || right->type != DAO_STRING ) return NULL;
+
+	switch( op->code ){
+	case DVM_ADD :
+		res = DaoProcess_PutString( p, left->xString.value );
+		DString_Append( res, right->xString.value );
+		break;
+	case DVM_DIV :
+		res = DaoProcess_PutString( p, right->xString.value );
+		DString_MakePath( left->xString.value, res );
+		break;
+	case DVM_LT :
+	case DVM_LE :
+		D = DString_CompareUTF8( left->xString.value, right->xString.value );
+		DaoProcess_PutBoolean( p, D < (op->code == DVM_LE) );
+		break;
+	case DVM_EQ :
+	case DVM_NE :
+		D = DString_Compare( left->xString.value, right->xString.value );
+		DaoProcess_PutBoolean( p, (op->code == DVM_EQ) ? D == 0 : D != 0 );
+		break;
+	case DVM_IN :
+		pos = DString_Find( right->xString.value, left->xString.value, 0 );
+		DaoProcess_PutBoolean( p, pos != DAO_NULLPOS );
+		break;
+	}
+	return NULL;
+}
+
+static int DaoArray_CheckComparison( DaoType *left, DaoType *right, DaoNamespace *ns )
+{
+	if( left->tid == DAO_STRING && right->tid == DAO_STRING ) return DAO_OK;
+	return DAO_ERROR;
+}
+
+static int DaoArray_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *p )
+{
+	return DString_Compare( left->xString.value, right->xString.value );
+}
+
+static DaoType* DaoArray_CheckConversion( DaoType *self, DaoType *type, DaoNamespace *ns )
+{
+	if( type->tid <= DAO_STRING ) return type;
+	return NULL;
+}
+
+static DaoValue* DaoArray_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *p )
+{
+	switch( type->tid ){
+	case DAO_BOOLEAN :
+		num->xBoolean.value = strcmp( self->xString.value->chars, "true" ) == 0;
+		return num;
+	case DAO_INTEGER :
+		num->xInteger.value = DString_ToInteger( self->xString.value );
+		return num;
+	case DAO_FLOAT :
+		num->xFloat.value = DString_ToFloat( self->xString.value );
+		return num;
+	case DAO_STRING :
+		return self;
+	default : break;
+	}
+	return NULL;
+}
+
+DaoType* DaoArray_CheckForEach( DaoType *self, DaoNamespace *ns )
+{
+	return dao_type_iterator_int;
+}
+
+void DaoArray_DoForEach( DaoValue *self, DaoIterator *iterator, DaoProcess *p )
+{
+	iterator->values[0]->xBoolean.value = self->xString.value->size > 0;
+	iterator->values[0]->xInteger.value = 0;
+}
+
+static void DaoString_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+{
+	DaoStream_WriteString( stream, self->xString.value );
+}
+
+
 static void DaoArray_PrintElement( DaoArray *self, DaoStream *stream, daoint i )
 {
 	switch( self->etype ){
@@ -918,7 +1238,6 @@ static void DaoARRAY_New( DaoProcess *proc, DaoValue *p[], int N )
 	daoint i, j, k, entry, size = 1;
 
 	/* if multi-dimensional array is disabled, DaoProcess_PutArray() will raise exception. */
-#ifdef DAO_WITH_NUMARRAY
 	for(i=0; i<N; i++){
 		daoint d = p[i]->xInteger.value;
 		if( d < 0 ){
@@ -995,7 +1314,6 @@ static void DaoARRAY_New( DaoProcess *proc, DaoValue *p[], int N )
 	}
 	DaoProcess_PopFrame( proc );
 	if( first ) DaoArray_Delete( first );
-#endif
 }
 static void DaoARRAY_Dim( DaoProcess *proc, DaoValue *par[], int N )
 {
@@ -2469,5 +2787,35 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 	DaoProcess_PopFrame( proc );
 	if( funct == DVM_FUNCT_FOLD ) DaoProcess_PutValue( proc, res );
 }
+
+
+extern DaoType* DaoValue_CheckGetField( DaoType *self, DValue *field, DaoNamespace *ns );
+extern DaoValue* DaoValue_DoGetField( DaoValue *self, DValue *field, DaoProcess *p );
+
+
+DaoTypeCore daoArrayCore =
+{
+	"array",                                           /* name */
+	{ NULL },                                          /* bases */
+	NULL,                                              /* numbers */
+	daoArrayMeths,                                     /* methods */
+	DaoValue_CheckGetField,    DaoValue_DoGetField,    /* GetField */
+	NULL,                      NULL,                   /* SetField */
+	DaoArray_CheckGetItem,     DaoArray_DoGetItem,     /* GetItem */
+	DaoArray_CheckSetItem,     DaoArray_DoSetItem,     /* SetItem */
+	DaoArray_CheckUnary,       DaoArray_DoUnary,       /* Unary */
+	DaoArray_CheckBinary,      DaoArray_DoBinary,      /* Binary */
+	DaoArray_CheckComparison,  DaoArray_DoComparison,  /* Comparison */
+	DaoArray_CheckConversion,  DaoArray_DoConversion,  /* Conversion */
+	DaoArray_CheckForEach,     DaoArray_DoForEach,     /* ForEach */
+	DaoArray_Print,                                    /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Copy */
+	DaoArray_Delete,                                   /* Delete */
+	NULL                                               /* HandleGC */
+};
+
+
+
 #endif /* DAO_WITH_NUMARRAY */
 

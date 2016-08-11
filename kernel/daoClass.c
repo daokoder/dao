@@ -1089,7 +1089,7 @@ void DaoClass_SetConst( DaoClass *self, int id, DaoValue *data )
 	DaoValue_Copy( data, & self->constants->items.pConst[id]->value );
 	DaoValue_MarkConst( self->constants->items.pConst[id]->value );
 }
-DaoValue* DaoClass_GetData( DaoClass *self, DString *name, DaoClass *thisClass )
+DaoValue* DaoClass_GetData( DaoClass *self, DString *name, DaoClass *hostClass )
 {
 	DaoValue *data = NULL;
 	DNode *node = MAP_Find( self->lookupTable, name );
@@ -1101,8 +1101,8 @@ DaoValue* DaoClass_GetData( DaoClass *self, DString *name, DaoClass *thisClass )
 	id = LOOKUP_ID( node->value.pInt );
 	up = LOOKUP_UP( node->value.pInt );
 	pm = LOOKUP_PM( node->value.pInt );
-	child = thisClass && DaoClass_ChildOf( thisClass, (DaoValue*)self );
-	if( self == thisClass || pm == DAO_PERM_PUBLIC || (child && pm >= DAO_PERM_PROTECTED) ){
+	child = hostClass && DaoClass_ChildOf( hostClass, (DaoValue*)self );
+	if( self == hostClass || pm == DAO_PERM_PUBLIC || (child && pm >= DAO_PERM_PROTECTED) ){
 		switch( st ){
 		case DAO_CLASS_CONSTANT  : return self->constants->items.pValue[id];
 		case DAO_CLASS_VARIABLE  : return self->variables->items.pValue[id];
@@ -1392,8 +1392,26 @@ DaoRoutine* DaoClass_FindMethod( DaoClass *self, const char *name, DaoClass *sco
 
 
 
-static DaoType* DaoClass_CheckGetField( DaoType *self, DString *name, DaoNamespace *ns )
+static DaoType* DaoClass_CheckGetField( DaoType *self, DString *name, DaoTypeContext *ctx )
 {
+	DaoClass *self = (DaoClass*) self->aux;
+	DaoType *type = ctx->routine->routHost;
+	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoValue *data = DaoClass_GetData( self, name, host );;
+
+	ctx->error = DAO_OK;
+	if( data == NULL ){
+		ctx->error = DAO_ERROR_FIELD_ABSENT;
+	}else if( data->type == DAO_NONE ){
+		ctx->error = DAO_ERROR_FIELD_HIDDEN;
+	}else if( data->xBase.subtype == DAO_OBJECT_VARIABLE ){
+		ctx->error = DAO_ERROR_FIELD_HIDDEN; // XXX
+	}else if( data->xBase.subtype == DAO_CLASS_VARIABLE ){
+		return data->xVar.dtype;
+	}else if( data->xBase.subtype == DAO_CLASS_CONSTANT ){
+		return DaoNamespace_GetType( ctx->nspace, data->xConst.value );
+	}
+	return NULL;
 }
 
 static DaoValue* DaoClass_DoGetField( DaoValue *selfv, DString *name, DaoProcess *proc )
@@ -1403,7 +1421,7 @@ static DaoValue* DaoClass_DoGetField( DaoValue *selfv, DString *name, DaoProcess
 	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoValue *data = DaoClass_GetData( self, name, host );;
 	if( data == NULL || data->type == DAO_NONE || data->xBase.subtype == DAO_OBJECT_VARIABLE ){
-		int rc = data == NULL ? DAO_ERROR_FIELD_NOTEXIST : DAO_ERROR_FIELD_NOTPERMIT;
+		int rc = data == NULL ? DAO_ERROR_FIELD_ABSENT : DAO_ERROR_FIELD_HIDDEN;
 		DString_SetChars( proc->string, self->className->chars );
 		DString_AppendChars( proc->string, "." );
 		DString_Append( proc->string, name );
@@ -1414,8 +1432,25 @@ static DaoValue* DaoClass_DoGetField( DaoValue *selfv, DString *name, DaoProcess
 	return NULL;
 }
 
-static int DaoClass_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoNamespace *ns )
+static int DaoClass_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoTypeContext *ctx )
 {
+	DaoClass *self = (DaoClass*) self->aux;
+	DaoType *type = ctx->routine->routHost;
+	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoValue *data = DaoClass_GetData( self, name, host );;
+
+	if( data == NULL ){
+		return DAO_ERROR_FIELD_ABSENT;
+	}else if( data->type == DAO_NONE ){
+		return DAO_ERROR_FIELD_HIDDEN;
+	}else if( data->xBase.subtype == DAO_OBJECT_VARIABLE ){
+		return DAO_ERROR_FIELD_HIDDEN; // XXX
+	}else if( data->xBase.subtype == DAO_CLASS_CONSTANT ){
+		return DAO_ERROR_FIELD_HIDDEN; // XXX
+	}else{ /* data->xBase.subtype == DAO_CLASS_VARIABLE */
+		if( DaoType_MatchTo( value, data->xVar.dtype, ctx->thmap ) == 0 ) return DAO_ERROR_VALUE;
+	}
+	return DAO_OK;
 }
 
 static int DaoClass_DoSetField( DaoValue *selfv, DString *name, DaoValue *value, DaoProcess *proc )
@@ -1433,7 +1468,7 @@ static int DaoClass_DoSetField( DaoValue *selfv, DString *name, DaoValue *value,
 	return DAO_OK;
 }
 
-static DaoType* DaoClass_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoNamespace *ns )
+static DaoType* DaoClass_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoTypeContext *ctx )
 {
 	return NULL;
 }
@@ -1443,7 +1478,7 @@ static DaoValue* DaoClass_DoGetItem( DaoValue *self, DaoValue *index[], int N, D
 	return NULL;
 }
 
-static int DaoClass_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoNamespace *ns )
+static int DaoClass_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoTypeContext *ctx )
 {
 	return DAO_ERROR_INDEX;
 }
