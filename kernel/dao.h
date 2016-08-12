@@ -306,8 +306,10 @@ struct DaoVirtualModule
 struct DaoTypeContext
 {
 	DaoNamespace  *nspace;   /* The current namespace for type inference; */
+	DaoClass      *klass;    /* The current class for type inference; */
 	DaoRoutine    *routine;  /* The current routine for type inference; */
-	DMap          *thmap;    /* Type holder mapping; */
+	DMap          *typemap;  /* Type mapping for specialing type holders and undefined types; */
+	DString       *buffer;   /* A string buffer for convenience; */
 	int            error;    /* Optional error code; */
 };
 

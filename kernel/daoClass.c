@@ -1392,6 +1392,9 @@ DaoRoutine* DaoClass_FindMethod( DaoClass *self, const char *name, DaoClass *sco
 
 
 
+/*
+// Not very useful to support operator overloading for class;
+*/
 static DaoType* DaoClass_CheckGetField( DaoType *self, DString *name, DaoTypeContext *ctx )
 {
 	DaoClass *self = (DaoClass*) self->aux;
@@ -1468,26 +1471,6 @@ static int DaoClass_DoSetField( DaoValue *selfv, DString *name, DaoValue *value,
 	return DAO_OK;
 }
 
-static DaoType* DaoClass_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoTypeContext *ctx )
-{
-	return NULL;
-}
-
-static DaoValue* DaoClass_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *proc )
-{
-	return NULL;
-}
-
-static int DaoClass_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoTypeContext *ctx )
-{
-	return DAO_ERROR_INDEX;
-}
-
-static int DaoClass_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc )
-{
-	return DAO_ERROR_INDEX;
-}
-
 void DaoClass_CoreDelete( DaoValue *self )
 {
 	DaoClass_Delete( (DaoClass*) self );
@@ -1501,8 +1484,8 @@ DaoTypeCore daoClassCore =
 	NULL,                                          /* methods */
 	DaoClass_CheckGetField,  DaoClass_DoGetField,  /* GetField */
 	DaoClass_CheckSetField,  DaoClass_DoSetField,  /* SetField */
-	DaoClass_CheckGetItem,   DaoClass_DoGetItem,   /* GetItem */
-	DaoClass_CheckSetItem,   DaoClass_DoSetItem,   /* SetItem */
+	NULL,                    NULL,                 /* GetItem */
+	NULL,                    NULL,                 /* SetItem */
 	NULL,                    NULL,                 /* Unary */
 	NULL,                    NULL,                 /* Binary */
 	NULL,                    NULL,                 /* Comparison */

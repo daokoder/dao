@@ -597,8 +597,11 @@ static int DaoProcess_CheckInvarMethod( DaoProcess *self, DaoRoutine *routine )
 	}
 	return 1;
 }
-/* If the callable is a constructor, and O is a derived type of the constructor's type,
- * cast O to the constructor's type and then call the constructor on the casted object: */
+
+/*
+// If the callable is a constructor, and O is a derived type of the constructor's type,
+// cast O to the constructor's type and then call the constructor on the casted object:
+*/
 static int DaoProcess_PushCallableX( DaoProcess *self, DaoRoutine *R, DaoValue *O, DaoValue *P[], DaoType *T[], int N )
 {
 	if( R == NULL ) return DAO_ERROR;

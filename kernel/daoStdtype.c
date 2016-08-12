@@ -5767,33 +5767,28 @@ void DaoCstruct_Free( DaoCstruct *self )
 }
 
 
+/*
+// Note:
+// Operator .( field: string ) is no longer supported;
+// Overload [] instead;
+*/
 DaoType* DaoCstruct_CheckGetField( DaoType *self, DString *name, DaoTypeContext *ctx )
 {
 	DaoRoutine *rout;
 	DaoValue *value = DaoType_FindValue( self, name );
 	DaoType *res = NULL;
-	DaoType *arg = NULL;
-	int argc = 0;
 
 	if( value && value->type == DAO_ROUTINE ){
 		rout = (DaoRoutine*) value;
 		res = rout->routType;
-		//GC_Assign( & consts[opc], value ); // TODO: handle in inferencer;
 	}else if( value ){
 		res = DaoNamespace_GetType( ns, value );
-		//GC_Assign( & consts[opc], value );
 	}else{
-		DString *buffer = DString_NewChars( "." );
+		DString *buffer = ctx->buffer;
+		DString_SetChars( buffer, "." );
 		DString_Append( buffer, name );
 		rout = DaoType_FindFunction( self, buffer );
-		if( rout == NULL ){
-			DString_SetChars( buffer, "." );
-			rout = DaoType_FindFunction( self, buffer );
-			arg = dao_type_string;
-			argc = 1;
-		}
-		DString_Delete( buffer );
-		if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, & arg, argc, DVM_CALL );
+		if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, NULL, 0, DVM_CALL );
 		if( rout == NULL ) return NULL;
 		res = (DaoType*) rout->routType->aux;
 	}
@@ -5804,88 +5799,50 @@ DaoValue* DaoCstruct_DoGetField( DaoValue *self, DString *name, DaoProcess *proc
 {
 	DaoType *type = self->xCstruct.ctype;
 	DaoValue *value = DaoType_FindValue( type, name );
-	if( value == NULL ){
-		DaoRoutine *func = NULL;
-		DaoString str = {DAO_STRING,0,0,0,1,NULL};
-		DaoValue *args = (DaoValue*) & str;
-		int error, argc = 0;
+	DaoRoutine *func = NULL;
 
-		str.value = name;
-		DString_SetChars( proc->string, "." );
-		DString_Append( proc->string, name );
-		func = DaoType_FindFunction( type, proc->string );
-		if( func == NULL ){
-			DString_SetChars( proc->string, "." );
-			func = DaoType_FindFunction( type, proc->string );
-			argc = 1;
-		}
-		if( func == NULL ) return NULL;
-		if( (error = DaoProcess_PushCallable( proc, func, self, & args, argc )) != 0 ){
-			DaoProcess_RaiseException( proc, daoExceptionNames[error], NULL, NULL );
-		}
-	}else{
-		return value;
-	}
+	if( value != NULL ) return value;
+
+	DString_SetChars( proc->string, "." );
+	DString_Append( proc->string, name );
+	func = DaoType_FindFunction( type, proc->string );
+	if( func == NULL ) return NULL;
+	DaoProcess_PushCallable( proc, func, self, NULL, 0 );
 	return NULL;
 }
 
 int DaoCstruct_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoTypeContext *ctx )
 {
 	DaoRoutine *rout;
-	DString *buffer = DString_NewChars( "." );
-	DaoType *args[2] = { NULL, NULL };
-	int argc = 1;
-
-	args[0] = args[1] = value;
+	DString *buffer = ctx->buffer;
 
 	DString_SetChars( buffer, "." );
 	DString_Append( buffer, name );
 	DString_AppendChars( buffer, "=" );
 	rout = DaoType_FindFunction( self, buffer );
-	if( rout == NULL ){
-		DString_SetChars( buffer, ".=" );
-		rout = DaoType_FindFunction( self, buffer );
-		args[0] = dao_type_string;
-		argc = 2;
-	}
 	if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
-	rout = DaoRoutine_MatchByType( rout, self, & arg, argc, DVM_CALL );
+	rout = DaoRoutine_MatchByType( rout, self, & value, 1, DVM_CALL );
 	if( rout == NULL ) return DAO_ERROR_VALUE;
 	return DAO_OK;
 }
 
 int DaoCstruct_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc )
 {
-    int argc = 1; 
-    DaoValue *args[2];
     DaoRoutine *func = NULL;
-    DaoString str = {DAO_STRING,0,0,0,1,NULL};
 	DaoType *type = self->xCstruct.ctype;
-
-    str.value = name;
-    args[0] = args[1] = value;
 
     DString_SetChars( proc->string, "." );
     DString_Append( proc->string, name );
     DString_AppendChars( proc->string, "=" );
     func = DaoType_FindFunction( type, proc->string );
-    if( func == NULL ){
-        DString_SetChars( proc->string, ".=" );
-        func = DaoType_FindFunction( type, proc->string );
-        args[0] = (DaoValue*) & str; 
-        argc = 2; 
-    }    
     if( func == NULL ) return DAO_ERROR_FIELD_ABSENT;
-    DaoProcess_PushCallable( proc, func, self, args, argc );
+    DaoProcess_PushCallable( proc, func, self, & value, 1 );
 	return DAO_OK;
 }
 
 DaoType* DaoCstruct_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoTypeContext *ctx )
 {
-	DString *buffer = DString_NewChars( "[]" );
-	DaoRoutine *rout = DaoType_FindFunction( self, buffer );
-
-	DString_Delete( buffer );
+	DaoRoutine *rout = DaoType_FindFunctionChars( self, "[]" );
 	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, index, N, DVM_CALL );
 	if( rout == NULL ) return DAO_ERROR_INDEX;
 	return (DaoType*) rout->routType->aux;
@@ -5901,14 +5858,12 @@ DaoValue* DaoCstruct_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoPro
 
 int DaoCstruct_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoTypeContext *ctx )
 {
-	DString *buffer = DString_NewChars( "[]=" );
-	DaoRoutine *rout = DaoType_FindFunction( self, buffer );
+	DaoRoutine *rout = DaoType_FindFunctionChars( self, "[]=" );
 	DaoType *args[ DAO_MAX_PARAM + 1 ];
 
 	args[0] = value;
 	memcpy( args + 1, index, N*sizeof(DaoType*) );
 
-	DString_Delete( buffer );
 	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, args, N+1, DVM_CALL );
 	if( rout == NULL ) return DAO_ERROR_INDEX;
 	return DAO_OK;
@@ -5919,14 +5874,14 @@ int DaoCstruct_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *va
 	DaoType *type = self->xCstruct.ctype;
 	DaoRoutine *rout = DaoType_FindFunctionChars( type, "[]=" );
 	DaoValue *args[ DAO_MAX_PARAM ];
-	memcpy( args+1, index, N*sizeof(DaoValue*) );
-	args[0] = value;
 	if( rout == NULL ) return DAO_ERROR_INDEX;
+	args[0] = value;
+	memcpy( args+1, index, N*sizeof(DaoValue*) );
 	DaoProcess_PushCallable( proc, rout, self, args, N+1 );
 	return DAO_OK;
 }
 
-DaoType* DaoCstruct_CheckUnary( DaoType *type, DaoVmCode *op, DaoTypeContext *ctx )
+DaoType* DaoCstruct_CheckUnary( DaoType *self, DaoVmCode *op, DaoTypeContext *ctx )
 {
 	DaoRoutine *rout = NULL;
 
@@ -5937,20 +5892,20 @@ DaoType* DaoCstruct_CheckUnary( DaoType *type, DaoVmCode *op, DaoTypeContext *ct
 	case DVM_SIZE  : break;
 	default: return NULL;
 	}
-	rout = DaoType_FindOperator( type, op->code );
+	rout = DaoType_FindOperator( self, op->code );
 	if( rout == NULL ) return NULL;
 	if( op->c == op->a ){
-		rout = DaoRoutine_MatchByType( rout, type, & type, 1, DVM_CALL );
+		rout = DaoRoutine_MatchByType( rout, self, & self, 1, DVM_CALL );
 	}else{
-		rout = DaoRoutine_MatchByType( rout, NULL, & type, 1, DVM_CALL );
+		rout = DaoRoutine_MatchByType( rout, NULL, & self, 1, DVM_CALL );
 	}
 	if( rout == NULL ) return NULL;
 	return (DaoType*) rout->routType->aux;
 }
 
-DaoValue* DaoCstruct_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *p )
+DaoValue* DaoCstruct_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *p )
 {
-	DaoType *type = value->xCstruct.ctype;
+	DaoType *type = self->xCstruct.ctype;
 	DaoRoutine *rout = NULL;
 	int retc = 0;
 
@@ -5964,9 +5919,9 @@ DaoValue* DaoCstruct_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *p )
 	rout = DaoType_FindOperator( type, op->code );
 	if( rout == NULL ) return NULL;
 	if( op->c == op->a ){
-		retc = DaoProcess_PushCallable( p, rout, value, & value, 1 );
+		retc = DaoProcess_PushCallable( p, rout, self, & self, 1 );
 	}else{
-		retc = DaoProcess_PushCallable( p, rout, NULL, & value, 1 );
+		retc = DaoProcess_PushCallable( p, rout, NULL, & self, 1 );
 	}
 	// TODO: retc;
 	return NULL;
@@ -6311,6 +6266,27 @@ DaoType* DaoCdata_NewType( DaoTypeCore *core, int tid )
 	return cdata_type;
 }
 
+
+DaoType* DaoCtype_CheckGetField( DaoType *self, DString *name, DaoTypeContext *ctx )
+{
+	DaoValue *value = DaoType_FindValue( self->aux->xCtype.cdtype, name );
+	DaoType *res = NULL;
+
+	if( value && value->type == DAO_ROUTINE ){
+		res = value->xRoutine.routType;
+	}else if( value ){
+		res = DaoNamespace_GetType( ctx->nspace, value );
+	}
+	return res;
+}
+
+DaoValue* DaoCtype_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
+{
+	DaoType *type = self->xCtype.cdtype;
+	return DaoType_FindValue( type, name );
+}
+
+
 static void DaoCtype_CoreDelete( DaoValue *self )
 {
 	DaoCtype_Delete( (DaoCtype*) self );
@@ -6319,24 +6295,25 @@ static void DaoCtype_CoreDelete( DaoValue *self )
 
 DaoTypeCore daoCtypeCore =
 {
-	"ctype",              /* name */
-	{ NULL },             /* bases */
-	NULL,                 /* numbers */
-	NULL,                 /* methods */
-	NULL,  NULL,          /* GetField */
-	NULL,  NULL,          /* SetField */
-	NULL,  NULL,          /* GetItem */
-	NULL,  NULL,          /* SetItem */
-	NULL,  NULL,          /* Unary */
-	NULL,  NULL,          /* Binary */
-	NULL,  NULL,          /* Comparison */
-	NULL,  NULL,          /* Conversion */
-	NULL,  NULL,          /* ForEach */
-	DaoCtype_Print,       /* Print */
-	NULL,                 /* Slice */
-	NULL,                 /* Copy */
-	DaoCtype_CoreDelete,  /* Delete */
-	NULL                  /* HandleGC */
+	"ctype",                                       /* name */
+	{ NULL },                                      /* bases */
+	NULL,                                          /* numbers */
+	NULL,                                          /* methods */
+	DaoCtype_CheckGetField,  DaoCtype_DoGetField,  /* GetField */
+	NULL,                    NULL,                 /* GetField */
+	NULL,                    NULL,                 /* SetField */
+	NULL,                    NULL,                 /* GetItem */
+	NULL,                    NULL,                 /* SetItem */
+	NULL,                    NULL,                 /* Unary */
+	NULL,                    NULL,                 /* Binary */
+	NULL,                    NULL,                 /* Comparison */
+	NULL,                    NULL,                 /* Conversion */
+	NULL,                    NULL,                 /* ForEach */
+	DaoCtype_Print,                                /* Print */
+	NULL,                                          /* Slice */
+	NULL,                                          /* Copy */
+	DaoCtype_CoreDelete,                           /* Delete */
+	NULL                                           /* HandleGC */
 };
 
 

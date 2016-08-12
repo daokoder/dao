@@ -293,6 +293,7 @@ DAO_DLL DaoType* DaoCdata_NewType( DaoTypeCore *typer, int tid );
 // -- A class object:  DaoCtype;
 // -- A class type:    DaoType (DaoCtype::ctype);
 // -- A instance type: DaoType (DaoCtype::cdtype);
+// -- The class type and instance type have different type kernels and cores;
 */
 struct DaoCtype
 {
