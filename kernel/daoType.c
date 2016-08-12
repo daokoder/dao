@@ -2081,6 +2081,7 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 	DaoType *sptype, *sptype2;
 	DaoTypeKernel *kernel;
 	DaoTypeTree *sptree;
+	DaoCtype *ctype;
 	uchar_t tid = self->tid;
 	daoint i, pos;
 
@@ -2097,10 +2098,13 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 	}
 	if( DaoTypeTree_Test( sptree, types, count ) == 0 ) return NULL;
 
-	/* Specialized cdata type will be initialized with the same kernel as the template type.
-	 * Upon method accessing, a new kernel will be created with specialized methods. */
-	sptype = DaoCdata_NewType( self->typer, self->tid );
-	sptype2 = sptype->aux->xCtype.ctype;
+	/*
+	// Specialized cdata type will be initialized with the same kernel as the template type.
+	// Upon method accessing, a new kernel will be created with specialized methods.
+	*/
+	ctype = DaoCtype_New( self->core, self->tid );
+	sptype = ctype->objectType;
+	sptype2 = ctype->classType;
 	GC_Assign( & sptype->kernel, self->kernel );
 	GC_Assign( & sptype2->kernel, self->kernel );
 	sptype->nested = DList_New( DAO_DATA_VALUE );

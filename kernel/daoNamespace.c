@@ -182,38 +182,38 @@ void DaoNamespace_AddConstValue( DaoNamespace *self, const char *name, DaoValue 
 	DString s = DString_WrapChars( name );
 	DaoNamespace_AddConst( self, & s, value, DAO_PERM_PUBLIC );
 }
-static void DaoTypeCore_Parents( DaoTypeCore *typer, DList *parents )
+static void DaoTypeCore_Parents( DaoTypeCore *core, DList *parents )
 {
 	daoint i, k, n;
 	DList_Clear( parents );
-	DList_Append( parents, typer );
+	DList_Append( parents, core );
 	for(k=0; k<parents->size; k++){
-		typer = (DaoTypeCore*) parents->items.pVoid[k];
+		core = (DaoTypeCore*) parents->items.pVoid[k];
 		for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
-			if( typer->supers[i] == NULL ) break;
-			DList_Append( parents, typer->supers[i] );
+			if( core->supers[i] == NULL ) break;
+			DList_Append( parents, core->supers[i] );
 		}
 	}
 }
 int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeKernal *kernel )
 {
 	daoint i, j, valCount;
-	DaoTypeCore *typer = kernel->typer;
+	DaoTypeCore *core = kernel->core;
 	DMap *values;
 	DNode *it;
 
 	if( kernel == NULL ) return 0;
 	if( kernel->SetupValues == NULL ) return 1;
-	if( typer->numbers == NULL && typer->bases[0] == NULL ) return 0;
+	if( core->numbers == NULL && core->bases[0] == NULL ) return 0;
 
-	for(i=0; i<sizeof(typer->bases); i++){
-		if( typer->bases[i] == NULL ) break;
-		DaoNamespace_SetupValues( self, typer->bases[i] );
+	for(i=0; i<sizeof(core->bases); i++){
+		if( core->bases[i] == NULL ) break;
+		DaoNamespace_SetupValues( self, core->bases[i] );
 	}
 
 	valCount = 0;
-	if( typer->numbers != NULL ){
-		while( typer->numbers[ valCount ].name != NULL ) valCount ++;
+	if( core->numbers != NULL ){
+		while( core->numbers[ valCount ].name != NULL ) valCount ++;
 	}
 
 	DMutex_Lock( & mutex_values_setup );
@@ -226,9 +226,9 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeKernal *kernel )
 		values = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 		kernel->values = values;
 		for(i=0; i<valCount; i++){
-			DString name = DString_WrapChars( typer->numbers[i].name );
-			double dv = typer->numbers[i].value;
-			value->type = typer->numbers[i].type;
+			DString name = DString_WrapChars( core->numbers[i].name );
+			double dv = core->numbers[i].value;
+			value->type = core->numbers[i].type;
 			switch( value->type ){
 			case DAO_BOOLEAN : value->xBoolean.value = (dao_boolean) dv; break;
 			case DAO_INTEGER : value->xInteger.value = (dao_integer) dv; break;
@@ -240,7 +240,7 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeKernal *kernel )
 		if( kernel->abtype->bases != NULL ){
 			for(i=0; i<kernel->abtype->bases->size; ++i){
 				DaoTypeKernel *skn = kernel->abtype->bases->items.pType[i]->kernel;
-				DaoTypeCore *sup = skn->typer;
+				DaoTypeCore *sup = skn->core;
 
 				if( sup->numItems == NULL ) continue;
 				for(j=0; sup->numItems[j].name!=NULL; j++){
@@ -275,7 +275,7 @@ static DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *
 
 int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeKernal *kernel )
 {
-	DaoTypeCore *typer = kernel->typer;
+	DaoTypeCore *core = kernel->core;
 	DaoParser *parser, *defparser;
 	DaoRoutine *cur;
 	DList *parents;
@@ -287,11 +287,11 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeKernal *kernel )
 	if( kernel == NULL ) return 0;
 	if( kernel->SetupMethods == NULL ) return 1;
 
-	if( typer->methods == NULL && typer->bases[0] == NULL ) return 0;
+	if( core->methods == NULL && core->bases[0] == NULL ) return 0;
 
-	for(i=0; i<sizeof(typer->bases); i++){
-		if( typer->bases[i] == NULL ) break;
-		DaoNamespace_SetupMethods( self, typer->bases[i] );
+	for(i=0; i<sizeof(core->bases); i++){
+		if( core->bases[i] == NULL ) break;
+		DaoNamespace_SetupMethods( self, core->bases[i] );
 	}
 	DMutex_Lock( & mutex_methods_setup );
 	if( kernel->methods == NULL ){
@@ -317,18 +317,18 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeKernal *kernel )
 		defparser->routine = parser->evaluator.routine;
 
 		size = 0;
-		if( typer->methods != NULL ){
-			while( typer->methods[ size ].proto != NULL ) size ++;
+		if( core->methods != NULL ){
+			while( core->methods[ size ].proto != NULL ) size ++;
 		}
 
 		for( i=0; i<size; i++ ){
-			const char *proto = typer->methods[i].proto;
+			const char *proto = core->methods[i].proto;
 			cur = DaoNamespace_ParseSignature( self, proto, parser, defparser );
 			if( cur == NULL ){
-				printf( "  In function: %s::%s\n", typer->name, proto );
+				printf( "  In function: %s::%s\n", core->name, proto );
 				continue;
 			}
-			cur->pFunc = typer->methods[i].fpter;
+			cur->pFunc = core->methods[i].fpter;
 			if( hostype && DString_EQ( cur->routName, hostype->name ) ){
 				cur->attribs |= DAO_ROUT_INITOR;
 				DaoTypeKernel_InsertInitor( hostype->kernel, self, hostype, cur );
@@ -338,7 +338,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeKernal *kernel )
 		if( kernel->abtype->bases != NULL ){
 			for(i=0; i<kernel->abtype->bases->size; ++i){
 				DaoTypeKernel *skn = kernel->abtype->bases->items.pType[i]->kernel;
-				DaoTypeCore *sup = skn->typer;
+				DaoTypeCore *sup = skn->core;
 				supMethods = skn->methods;
 				for(it=DMap_First(supMethods); it; it=DMap_Next(supMethods, it)){
 					if( it->value.pRoutine->overloads ){
@@ -411,7 +411,7 @@ static void DaoValue_AddType( DaoValue *self, DString *name, DaoType *type )
 	switch( self->type ){
 	case DAO_CTYPE :
 		kernel = self->xCdata.ctype->kernel;
-		DaoNamespace_SetupValues( kernel->nspace, self->xCdata.ctype->kernel->typer );
+		DaoNamespace_SetupValues( kernel->nspace, self->xCdata.ctype->kernel->core );
 		if( kernel->values == NULL ){
 			kernel->values = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 		}
@@ -509,7 +509,7 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	}
 
 	/*
-	// Declaration: type name declared in the typer structure;
+	// Declaration: type name declared in the core structure;
 	// Current: the current types (namely the paremeter "type" and "type2");
 	// Template: the type that hosts type specialziation data structure;
 	// Alias: the type that can be accessed with the template name;
@@ -700,11 +700,12 @@ DoneSourceType:
 	return tp;
 }
 
-static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeCore *typer, int tid )
+static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeCore *core, int tid )
 {
-	DaoTypeKernel *kernel = DaoTypeKernel_New( typer );
-	DaoType *cdata_type = DaoCdata_NewType( typer, tid );
-	DaoType *ctype_type = cdata_type->aux->xCdata.ctype;
+	DaoTypeKernel *kernel = DaoTypeKernel_New( core );
+	DaoCtype *ctype = DaoCtype_New( core, tid );
+	DaoType *cdata_type = ctype->objectType;
+	DaoType *ctype_type = ctype->classType;
 	int i;
 
 	GC_IncRC( self );
@@ -714,18 +715,18 @@ static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeCore *typ
 	GC_Assign( & ctype_type->kernel, kernel );
 	GC_Assign( & cdata_type->kernel, kernel );
 
-	for(i=0; i<sizeof(typer->bases); i++){
-		DaoTypeCore *base = typer->bases[i];
+	for(i=0; i<sizeof(core->bases); i++){
+		DaoTypeCore *base = core->bases[i];
 		DaoTypeKernel *basekern = DaoVmSpace_GetKernel( vmspace, base );
 		if( base == NULL ) break;
 		if( basekern == NULL ){
 			DaoGC_TryDelete( (DaoValue*) ctype );
-			printf( "Parent type is not wrapped (successfully): %s\n", typer->name );
+			printf( "Parent type is not wrapped (successfully): %s\n", core->name );
 			return NULL;
 		}
 		if( basekern->abtype->tid != cdata_type->tid ){
 			DaoGC_TryDelete( (DaoValue*) ctype );
-			printf( "Invalid parent type: %s\n", typer->name );
+			printf( "Invalid parent type: %s\n", core->name );
 			return NULL;
 		}
 		if( ctype_type->bases == NULL ) ctype_type->bases = DList_New( DAO_DATA_VALUE );
@@ -737,42 +738,42 @@ static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeCore *typ
 	return ctype_type;
 }
 
-static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeCore *typer, int tid, int options )
+static DaoType* DaoNamespace_WrapType2( DaoNamespace *self, DaoTypeCore *core, int tid, int options )
 {
 	DaoType *ctype_type, *cdata_type;
-	DaoTypeKernel *kernel = DaoVmSpace_GetKernel( self->vmSpace, typer );
+	DaoTypeKernel *kernel = DaoVmSpace_GetKernel( self->vmSpace, core );
 
 	if( kernel != NULL ) return kernel->abtype;
 
-	ctype_type = DaoNamespace_MakeCdataType( self, typer, tid );
+	ctype_type = DaoNamespace_MakeCdataType( self, core, tid );
 	cdata_type = ctype_type->kernel->abtype;
 	if( options & DAO_CTYPE_INVAR ) cdata_type->aux->xCtype.attribs |= DAO_CLS_INVAR;
 	ctype_type->kernel->SetupValues = DaoNamespace_SetupValues;
 	ctype_type->kernel->SetupMethods = DaoNamespace_SetupMethods;
-	if( DaoNS_ParseType( self, typer->name, ctype_type, cdata_type, 1 ) == DAO_DT_FAILED ){
+	if( DaoNS_ParseType( self, core->name, ctype_type, cdata_type, 1 ) == DAO_DT_FAILED ){
 		GC_IncRC( ctype_type );
 		GC_DecRC( ctype_type );
-		printf( "type wrapping failed: %s from %s\n", typer->name, self->name->chars );
+		printf( "type wrapping failed: %s from %s\n", core->name, self->name->chars );
 		return NULL;
 	}
 	DString_SetChars( cdata_type->aux->xCtype.name, cdata_type->name->chars );
 	return cdata_type;
 }
 
-DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeCore *typer, int tid, int options )
+DaoType* DaoNamespace_WrapType( DaoNamespace *self, DaoTypeCore *core, int tid, int options )
 {
-	return DaoNamespace_WrapType2( self, typer, tid, options );
+	return DaoNamespace_WrapType2( self, core, tid, options );
 }
 
-DaoType* DaoNamespace_WrapGenericType( DaoNamespace *self, DaoTypeCore *typer, int tid )
+DaoType* DaoNamespace_WrapGenericType( DaoNamespace *self, DaoTypeCore *core, int tid )
 {
-	DaoTypeKernel *kernel = DaoVmSpace_GetKernel( self->vmSpace, typer );
+	DaoTypeKernel *kernel = DaoVmSpace_GetKernel( self->vmSpace, core );
 	DaoType *cdata_type;
 
 	if( kernel != NULL ) return kernel->abtype;
 
-	kernel = DaoTypeKernel_New( typer );
-	cdata_type = DaoType_New( typer->name, tid, NULL, NULL );
+	kernel = DaoTypeKernel_New( core );
+	cdata_type = DaoType_New( core->name, tid, NULL, NULL );
 
 	GC_IncRC( self );
 	GC_IncRC( cdata_type );
@@ -781,37 +782,37 @@ DaoType* DaoNamespace_WrapGenericType( DaoNamespace *self, DaoTypeCore *typer, i
 	GC_Assign( & cdata_type->kernel, kernel );
 	kernel->SetupValues = DaoNamespace_SetupValues;
 	kernel->SetupMethods = DaoNamespace_SetupMethods;
-	if( DaoNS_ParseType( self, typer->name, cdata_type, cdata_type, 0 ) == DAO_DT_FAILED ){
+	if( DaoNS_ParseType( self, core->name, cdata_type, cdata_type, 0 ) == DAO_DT_FAILED ){
 		GC_DecRC( cdata_type );
-		printf( "type wrapping failed: %s\n", typer->name );
+		printf( "type wrapping failed: %s\n", core->name );
 		return NULL;
 	}
-	//printf( "type wrapping: %s\n", typer->name );
+	//printf( "type wrapping: %s\n", core->name );
 	return cdata_type;
 }
 
-DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeCore *typer )
+DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeCore *core )
 {
 	DaoInterface *inter;
-	DaoTypeKernel *kernel = DaoVmSpace_GetKernel( self->vmSpace, typer );
+	DaoTypeKernel *kernel = DaoVmSpace_GetKernel( self->vmSpace, core );
 	DaoType *basetype;
 	int i;
 
 	if( kernel != NULL ) return kernel->abtype;
 
-	inter = DaoInterface_New( typer->name );
-	kernel = DaoTypeKernel_New( typer );
+	inter = DaoInterface_New( core->name );
+	kernel = DaoTypeKernel_New( core );
 	abtype = inter->abtype;
 
 	GC_Assign( & abtype->kernel, kernel );
 	GC_Assign( & kernel->abtype, abtype );
 	GC_Assign( & kernel->nspace, self );
 
-	abtype->typer = typer;
+	abtype->core = core;
 
-	for(i=0; i<sizeof(typer->bases); i++){
-		if( typer->bases[i] == NULL ) break;
-		basetype = DaoNamespace_WrapInterface( self, typer->bases[i] );
+	for(i=0; i<sizeof(core->bases); i++){
+		if( core->bases[i] == NULL ) break;
+		basetype = DaoNamespace_WrapInterface( self, core->bases[i] );
 		DList_Append( inter->bases, basetype->aux );
 		if( abtype->bases == NULL ) abtype->bases = DList_New( DAO_DATA_VALUE );
 		DList_Append( abtype->bases, basetype );
@@ -820,10 +821,10 @@ DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeCore *typer )
 
 	kernel->SetupValues = DaoNamespace_SetupValues;
 	kernel->SetupMethods = DaoNamespace_SetupMethods;
-	if( DaoNS_ParseType( self, typer->name, abtype, abtype, 1 ) == DAO_DT_FAILED ){
+	if( DaoNS_ParseType( self, core->name, abtype, abtype, 1 ) == DAO_DT_FAILED ){
 		GC_IncRC( inter );
 		GC_DecRC( inter );
-		printf( "Abstract interface wrapping failed: %s from %s\n", typer->name, self->name->chars );
+		printf( "Abstract interface wrapping failed: %s from %s\n", core->name, self->name->chars );
 		return NULL;
 	}
 	return abtype;
@@ -847,8 +848,8 @@ DaoType* DaoNamespace_WrapCinType( DaoNamespace *self, DaoTypeCore *con, DaoType
 	GC_Assign( & kernel->abtype, cintype->vatype );
 	GC_Assign( & kernel->nspace, self );
 
-	cintype->citype->typer = con;
-	cintype->vatype->typer = con;
+	cintype->citype->core = con;
+	cintype->vatype->core = con;
 
 	for(i=0; i<sizeof(con->bases); i++){
 		if( con->bases[i] == NULL ) break;
@@ -879,13 +880,13 @@ Error:
 	return NULL;
 }
 
-void DaoNamespace_SetupType( DaoNamespace *self, DaoTypeCore *typer, DaoType *type )
+void DaoNamespace_SetupType( DaoNamespace *self, DaoTypeCore *core, DaoType *type )
 {
 	if( type->kernel != NULL ) return;
 
 	DMutex_Lock( & mutex_values_setup ); // XXX
 	if( type->kernel == NULL ){
-		type->kernel = DaoTypeKernel_New( typer );
+		type->kernel = DaoTypeKernel_New( core );
 		type->kernel->abtype = type;
 		type->kernel->nspace = self;
 		type->kernel->SetupValues = DaoNamespace_SetupValues;
@@ -897,15 +898,15 @@ void DaoNamespace_SetupType( DaoNamespace *self, DaoTypeCore *typer, DaoType *ty
 	DMutex_Unlock( & mutex_values_setup );
 }
 
-int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeCore *typers[] )
+int DaoNamespace_WrapTypes( DaoNamespace *self, DaoTypeCore *cores[] )
 {
 	DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
 	int i, ec = 0;
-	for(i=0; typers[i]; i++ ){
-		ec += DaoNamespace_WrapType2( self, typers[i], DAO_CDATA, 0 ) == NULL;
-		/* e |= ( DaoNamespace_SetupValues( self, typers[i] ) == 0 ); */
+	for(i=0; cores[i]; i++ ){
+		ec += DaoNamespace_WrapType2( self, cores[i], DAO_CDATA, 0 ) == NULL;
+		/* e |= ( DaoNamespace_SetupValues( self, cores[i] ) == 0 ); */
 	}
-	/* if( setup ) return DaoNamespace_SetupTypes( self, typers ); */
+	/* if( setup ) return DaoNamespace_SetupTypes( self, cores ); */
 	DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 	return ec;
 }
@@ -921,11 +922,11 @@ int DaoNamespace_AliasTypes( DaoNamespace *self, const char *alias[] )
 	return ec;
 }
 
-int DaoNamespace_SetupTypes( DaoNamespace *self, DaoTypeCore *typers[] )
+int DaoNamespace_SetupTypes( DaoNamespace *self, DaoTypeCore *cores[] )
 {
 	int i, ec = 0;
-	for(i=0; typers[i]; i++ ){
-		ec += ( DaoNamespace_SetupMethods( self, typers[i] ) == 0 );
+	for(i=0; cores[i]; i++ ){
+		ec += ( DaoNamespace_SetupMethods( self, cores[i] ) == 0 );
 	}
 	return ec;
 }
@@ -1528,7 +1529,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *value )
 	DString *mbs;
 	DaoType *abtp;
 	DaoType *itp;
-	DaoTypeCore *typer;
+	DaoTypeCore *core;
 	int i, tid;
 
 	abtp = DaoValue_GetType( value );
@@ -1600,17 +1601,17 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *value )
 			abtp = DaoNamespace_AddType( self, abtp->name, abtp );
 		}
 	}else{
-		typer = DaoValue_GetTyper( value );
-		DString_SetChars( mbs, typer->name );
+		core = DaoValue_GetTyper( value );
+		DString_SetChars( mbs, core->name );
 		abtp = DaoNamespace_FindType( self, mbs );
 		if( abtp == NULL ){
-			abtp = DaoType_New( typer->name, value->type, NULL, NULL );
+			abtp = DaoType_New( core->name, value->type, NULL, NULL );
 			abtp = DaoNamespace_AddType( self, abtp->name, abtp );
 		}
 	}
 	/* abtp might be rout->routType, which might be NULL,
 	 * in case rout is DaoNamespace.constEvalRoutine */
-	//XXX if( abtp && abtp->typer ==NULL ) abtp->typer = DaoValue_GetTyper( value );
+	//XXX if( abtp && abtp->core ==NULL ) abtp->core = DaoValue_GetTyper( value );
 	DString_Delete( mbs );
 	if( nested ) DList_Delete( nested );
 	return abtp;

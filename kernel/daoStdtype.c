@@ -60,16 +60,16 @@ void DaoValue_Init( void *value, char type )
 	if( type >= DAO_ENUM ) ((DaoValue*)self)->xGC.cycRefCount = 0;
 }
 
-DaoType* DaoValue_CheckGetField( DaoType *self, DValue *field, DaoTypeContext *ctx )
+DaoType* DaoValue_CheckGetField( DaoType *self, DValue *field, DaoRoutine *ctx )
 {
 	DaoValue *value = DaoType_FindValue( type, field );
 	if( value ) return DaoNamespace_GetType( ns, value );
 	return NULL;
 }
 
-DaoValue* DaoValue_DoGetField( DaoValue *self, DValue *field, DaoProcess *p )
+DaoValue* DaoValue_DoGetField( DaoValue *self, DValue *field, DaoProcess *proc )
 {
-	DaoType *type = DaoNamespace_GetType( p->activeNamespace, self );
+	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
 	return DaoType_FindValue( type, field );
 }
 
@@ -100,11 +100,11 @@ int DaoType_CheckRangeIndex( DaoType *self )
 	return 1;
 }
 
-static daoint Dao_CheckNumberIndex( daoint index, daoint size, DaoProcess *p )
+static daoint Dao_CheckNumberIndex( daoint index, daoint size, DaoProcess *proc )
 {
 	if( index < 0 ) index += size;
 	if( index >= 0 && index < size ) return index;
-	DaoProcess_RaiseError( p, "Index::Range", NULL );
+	DaoProcess_RaiseError( proc, "Index::Range", NULL );
 	return -1;
 }
 
@@ -115,7 +115,7 @@ struct DIndexRange
 	daoint end;
 };
 
-static DIndexRange Dao_CheckRangeIndex( DaoRange *range, daoint size, DaoProcess *p )
+static DIndexRange Dao_CheckRangeIndex( DaoRange *range, daoint size, DaoProcess *proc )
 {
 	DIndexRange res = {-1, -1};
 	daoint pos, end;
@@ -131,7 +131,7 @@ static DIndexRange Dao_CheckRangeIndex( DaoRange *range, daoint size, DaoProcess
 	end = Dao_CheckNumberIndex( end, size + 1, p ); /* Open index; TODO: check other places; */
 	if( pos < 0 || end < 0 ) return res;
 	if( pos > end ){
-		DaoProcess_RaiseError( p, "Index::Range", NULL );
+		DaoProcess_RaiseError( proc, "Index::Range", NULL );
 		return res;
 	}
 	res.pos = pos;
@@ -139,11 +139,11 @@ static DIndexRange Dao_CheckRangeIndex( DaoRange *range, daoint size, DaoProcess
 	return res;
 }
 
-static void DaoValue_QuotedPrint( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+static void DaoValue_QuotedPrint( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DaoTypeCore *core = DaoValue_GetTypeCore( self );
 	if( self->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
-	if( core->Print ) core->Print( self, stream, cycmap, p );
+	if( core->Print ) core->Print( self, stream, cycmap, proc );
 	if( self->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
 }
 
@@ -184,25 +184,25 @@ static void DaoNone_Delete( DaoValue *self )
 	dao_free( self );
 }
 
-static int DaoNone_CheckComparison( DaoType *left, DaoType *right, DaoTypeContext *ctx )
+static int DaoNone_CheckComparison( DaoType *left, DaoType *right, DaoRoutine *ctx )
 {
 	if( left->tid == DAO_NONE && right->tid == DAO_NONE ) return DAO_OK;
 	return DAO_ERROR; /* Other cases should be handled by other types; */
 }
 
-static int DaoNone_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *p )
+static int DaoNone_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *proc )
 {
 	if( left->type == DAO_NONE && right->type == DAO_NONE ) return 0;
 	return left->type == DAO_NONE ? -1 : 1; /* None value is less than anything else; */
 }
 
-static DaoType* DaoNone_CheckConversion( DaoType *self, DaoType *type, DaoTypeContext *ctx )
+static DaoType* DaoNone_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid <= DAO_STRING ) return type;
 	return NULL;
 }
 
-static DaoValue* DaoNone_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *p )
+static DaoValue* DaoNone_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
 {
 	switch( type->tid ){
 	case DAO_NONE    : return dao_none_value;
@@ -212,11 +212,11 @@ static DaoValue* DaoNone_DoConversion( DaoValue *self, DaoType *type, DaoValue *
 	case DAO_COMPLEX : num->xComplex.value.real = num->xComplex.value.imag = 0.0; return num;
 	break;
 	}
-	if( type->tid == DAO_STRING ) DaoProcess_PutChars( p, "none" );
+	if( type->tid == DAO_STRING ) DaoProcess_PutChars( proc, "none" );
 	return NULL; /* The VM will handle the case where no value is converted and returned; */
 }
 
-static void DaoNone_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+static void DaoNone_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DaoStream_WriteChars( stream, "none[0x0]" );
 }
@@ -281,28 +281,28 @@ static void DaoBoolean_Delete( DaoValue *self )
 	dao_free( self );
 }
 
-static DaoType* DaoBoolean_CheckUnary( DaoType *type, DaoVmCode *op, DaoTypeContext *ctx )
+static DaoType* DaoBoolean_CheckUnary( DaoType *type, DaoVmCode *op, DaoRoutine *ctx )
 {
 	if( op->code == DVM_NOT ) return dao_type_bool;
 	if( op->code == DVM_SIZE ) return dao_type_int;
 	return NULL;
 }
 
-static DaoValue* DaoBoolean_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *p )
+static DaoValue* DaoBoolean_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *proc )
 {
 	/*
 	// Returning NULL without putting a value on the stack will be detected
 	// as an error by DaoProcess;
 	*/
 	switch( op->code ){
-	case DVM_NOT  : DaoProcess_PutBoolean( p, ! value->xBoolean.value ); break;
-	case DVM_SIZE : DaoProcess_PutInteger( p, sizeof(dao_boolean) );     break;
+	case DVM_NOT  : DaoProcess_PutBoolean( proc, ! value->xBoolean.value ); break;
+	case DVM_SIZE : DaoProcess_PutInteger( proc, sizeof(dao_boolean) );     break;
 	default: break;
 	}
 	return NULL;
 }
 
-static DaoType* DaoBoolean_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoTypeContext *ctx )
+static DaoType* DaoBoolean_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
 	DaoType *left = args[0];
 	DaoType *right = args[1];
@@ -318,7 +318,7 @@ static DaoType* DaoBoolean_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *a
 	return NULL;
 }
 
-static DaoValue* DaoBoolean_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *p )
+static DaoValue* DaoBoolean_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc )
 {
 	DaoValue *left  = args[0];
 	DaoValue *right = args[1];
@@ -342,17 +342,17 @@ static DaoValue* DaoBoolean_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *a
 		left->xBoolean.value = C;
 		return left;
 	}
-	DaoProcess_PutBoolean( p, C );
+	DaoProcess_PutBoolean( proc, C );
 	return NULL;
 }
 
-static int DaoBoolean_CheckComparison( DaoType *left, DaoType *right, DaoTypeContext *ctx )
+static int DaoBoolean_CheckComparison( DaoType *left, DaoType *right, DaoRoutine *ctx )
 {
 	if( left->tid <= DAO_BOOLEAN && right->tid <= DAO_BOOLEAN ) return DAO_OK;
 	return DAO_ERROR; /* Other cases should be handled by other types; */
 }
 
-static int DaoBoolean_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *p )
+static int DaoBoolean_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *proc )
 {
 	dao_boolean A = left->xBoolean.value;
 	dao_boolean B = right->xBoolean.value;
@@ -360,13 +360,13 @@ static int DaoBoolean_DoComparison( DaoValue *left, DaoValue *right, DaoProcess 
 	return A < B ? -1 : 1;
 }
 
-static DaoType* DaoBoolean_CheckConversion( DaoType *self, DaoType *type, DaoTypeContext *ctx )
+static DaoType* DaoBoolean_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid <= DAO_STRING ) return type;
 	return NULL;
 }
 
-static DaoValue* DaoBoolean_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *p )
+static DaoValue* DaoBoolean_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
 {
 	int bl = self->xBoolean.value;
 	switch( type->tid ){
@@ -376,11 +376,11 @@ static DaoValue* DaoBoolean_DoConversion( DaoValue *self, DaoType *type, DaoValu
 	case DAO_COMPLEX : num->xComplex.value.real = bl; num->xComplex.value.imag = 0.0; return num;
 	break;
 	}
-	if( type->tid == DAO_STRING ) DaoProcess_PutChars( p, bl ? "true" : "false" );
+	if( type->tid == DAO_STRING ) DaoProcess_PutChars( proc, bl ? "true" : "false" );
 	return NULL; /* The VM will handle the case where no value is converted and returned; */
 }
 
-static void DaoBoolean_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+static void DaoBoolean_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DaoStream_WriteChars( stream, self->xBoolean.value ? "true" : "false" );
 }
@@ -448,7 +448,7 @@ static void DaoInteger_Delete( DaoValue *self )
 	dao_free( self );
 }
 
-static DaoType* DaoInteger_CheckUnary( DaoType *type, DaoVmCode *op, DaoTypeContext *ctx )
+static DaoType* DaoInteger_CheckUnary( DaoType *type, DaoVmCode *op, DaoRoutine *ctx )
 {
 	switch( op->code ){
 	case DVM_NOT   : return dao_type_bool;
@@ -460,7 +460,7 @@ static DaoType* DaoInteger_CheckUnary( DaoType *type, DaoVmCode *op, DaoTypeCont
 	return NULL;
 }
 
-static DaoValue* DaoInteger_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *p )
+static DaoValue* DaoInteger_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *proc )
 {
 	/*
 	// Returning NULL without putting a value on the stack will be detected
@@ -476,7 +476,7 @@ static DaoValue* DaoInteger_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess 
 	return NULL;
 }
 
-static DaoType* DaoInteger_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoTypeContext *ctx )
+static DaoType* DaoInteger_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
 	DaoType *left = args[0];
 	DaoType *right = args[1];
@@ -500,7 +500,7 @@ static DaoType* DaoInteger_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *a
 	return NULL;
 }
 
-static DaoValue* DaoInteger_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *p )
+static DaoValue* DaoInteger_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc )
 {
 	DaoValue *left  = args[0];
 	DaoValue *right = args[1];
@@ -539,9 +539,9 @@ static DaoValue* DaoInteger_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *a
 	default: return NULL;
 	}
 	if( retbool ){
-		DaoProcess_PutBoolean( p, C );
+		DaoProcess_PutBoolean( proc, C );
 	}else{
-		DaoProcess_PutInteger( p, C );
+		DaoProcess_PutInteger( proc, C );
 	}
 	return NULL;
 
@@ -550,13 +550,13 @@ ErrorDivByZero:
 	return NULL;
 }
 
-static int DaoInteger_CheckComparison( DaoType *left, DaoType *right, DaoTypeContext *ctx )
+static int DaoInteger_CheckComparison( DaoType *left, DaoType *right, DaoRoutine *ctx )
 {
 	if( left->tid <= DAO_INTEGER && right->tid <= DAO_INTEGER ) return DAO_OK;
 	return DAO_ERROR; /* Other cases should be handled by other types; */
 }
 
-static int DaoInteger_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *p )
+static int DaoInteger_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *proc )
 {
 	dao_integer A = 0, B = 0;
 
@@ -577,13 +577,13 @@ static int DaoInteger_DoComparison( DaoValue *left, DaoValue *right, DaoProcess 
 	return A < B ? -1 : 1;
 }
 
-static DaoType* DaoInteger_CheckConversion( DaoType *self, DaoType *type, DaoTypeContext *ctx )
+static DaoType* DaoInteger_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid <= DAO_STRING ) return type;
 	return NULL;
 }
 
-static DaoValue* DaoInteger_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *p )
+static DaoValue* DaoInteger_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
 {
 	int val = self->xInteger.value;
 	switch( type->tid ){
@@ -597,12 +597,12 @@ static DaoValue* DaoInteger_DoConversion( DaoValue *self, DaoType *type, DaoValu
 		char chs[100] = {0};
 
 		sprintf( chs, "%"DAO_I64, (long long) self->xInteger.value );
-		DaoProcess_PutChars( p, chs );
+		DaoProcess_PutChars( proc, chs );
 	}
 	return NULL; /* The VM will handle the case where no value is converted and returned; */
 }
 
-static void DaoInteger_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+static void DaoInteger_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DaoStream_WriteInt( stream, self->xInteger.value );
 }
@@ -663,7 +663,7 @@ static void DaoFloat_Delete( DaoValue *self )
 	dao_free( self );
 }
 
-static DaoType* DaoFloat_CheckUnary( DaoType *type, DaoVmCode *op, DaoTypeContext *ctx )
+static DaoType* DaoFloat_CheckUnary( DaoType *type, DaoVmCode *op, DaoRoutine *ctx )
 {
 	switch( op->code ){
 	case DVM_MINUS : return dao_type_float;
@@ -673,21 +673,21 @@ static DaoType* DaoFloat_CheckUnary( DaoType *type, DaoVmCode *op, DaoTypeContex
 	return NULL;
 }
 
-static DaoValue* DaoFloat_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *p )
+static DaoValue* DaoFloat_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *proc )
 {
 	/*
 	// Returning NULL without putting a value on the stack will be detected
 	// as an error by DaoProcess;
 	*/
 	switch( op->code ){
-	case DVM_MINUS : DaoProcess_PutFloat( p, - value->xFloat.value ); break;
-	case DVM_SIZE  : DaoProcess_PutInteger( p, sizeof(dao_float) );     break;
+	case DVM_MINUS : DaoProcess_PutFloat( proc, - value->xFloat.value ); break;
+	case DVM_SIZE  : DaoProcess_PutInteger( proc, sizeof(dao_float) );     break;
 	default: break;
 	}
 	return NULL;
 }
 
-static DaoType* DaoFloat_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoTypeContext *ctx )
+static DaoType* DaoFloat_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
 	DaoType *left = args[0];
 	DaoType *right = args[1];
@@ -708,7 +708,7 @@ static DaoType* DaoFloat_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *arg
 	return NULL;
 }
 
-static DaoValue* DaoFloat_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *p )
+static DaoValue* DaoFloat_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc )
 {
 	DaoValue *left  = args[0];
 	DaoValue *right = args[1];
@@ -745,9 +745,9 @@ static DaoValue* DaoFloat_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *arg
 	default: return NULL;
 	}
 	if( retbool ){
-		DaoProcess_PutBoolean( p, D );
+		DaoProcess_PutBoolean( proc, D );
 	}else{
-		DaoProcess_PutFloat( p, C );
+		DaoProcess_PutFloat( proc, C );
 	}
 	return NULL;
 
@@ -756,13 +756,13 @@ ErrorDivByZero:
 	return NULL;
 }
 
-static int DaoFloat_CheckComparison( DaoType *left, DaoType *right, DaoTypeContext *ctx )
+static int DaoFloat_CheckComparison( DaoType *left, DaoType *right, DaoRoutine *ctx )
 {
 	if( left->tid <= DAO_FLOAT && right->tid <= DAO_FLOAT ) return DAO_OK;
 	return DAO_ERROR; /* Other cases should be handled by other types; */
 }
 
-static int DaoFloat_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *p )
+static int DaoFloat_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *proc )
 {
 	double A = 0.0, B = 0.0;
 
@@ -785,13 +785,13 @@ static int DaoFloat_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *p
 	return A < B ? -1 : 1;
 }
 
-static DaoType* DaoFloat_CheckConversion( DaoType *self, DaoType *type, DaoTypeContext *ctx )
+static DaoType* DaoFloat_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid <= DAO_STRING ) return type;
 	return NULL;
 }
 
-static DaoValue* DaoFloat_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *p )
+static DaoValue* DaoFloat_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
 {
 	dao_float val = self->xFloat.value;
 	switch( type->tid ){
@@ -805,12 +805,12 @@ static DaoValue* DaoFloat_DoConversion( DaoValue *self, DaoType *type, DaoValue 
 		char chs[100] = {0};
 
 		sprintf( chs, "%g", self->xFloat.value );
-		DaoProcess_PutChars( p, chs );
+		DaoProcess_PutChars( proc, chs );
 	}
 	return NULL;
 }
 
-static void DaoFloat_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+static void DaoFloat_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DaoStream_WriteFloat( stream, self->xFloat.value );
 }
@@ -882,7 +882,7 @@ static void DaoComplex_Delete( DaoValue *self )
 	dao_free( self );
 }
 
-static DaoType* DaoComplex_CheckGetField( DaoType *self, DString *field, DaoTypeContext *ctx )
+static DaoType* DaoComplex_CheckGetField( DaoType *self, DString *field, DaoRoutine *ctx )
 {
 	if( strcmp( field->chars, "real" ) == 0 ){
 		return dao_type_float;
@@ -892,18 +892,18 @@ static DaoType* DaoComplex_CheckGetField( DaoType *self, DString *field, DaoType
 	return NULL;
 }
 
-static DaoValue* DaoComplex_DoGetField( DaoValue *self, DString *field, DaoProcess *p )
+static DaoValue* DaoComplex_DoGetField( DaoValue *self, DString *field, DaoProcess *proc )
 {
 	dao_complex value = self->xComplex.value;
 	if( strcmp( field->chars, "real" ) == 0 ){
-		DaoProcess_PutFloat( p, value.real );
+		DaoProcess_PutFloat( proc, value.real );
 	}else if( strcmp( field->chars, "imag" ) == 0 ){
-		DaoProcess_PutFloat( p, value.imag );
+		DaoProcess_PutFloat( proc, value.imag );
 	}
 	return NULL;
 }
 
-static int DaoComplex_CheckSetField( DaoType *self, DString *field, DaoType *value, DaoTypeContext *ctx )
+static int DaoComplex_CheckSetField( DaoType *self, DString *field, DaoType *value, DaoRoutine *ctx )
 {
 	if( strcmp( field->chars, "real" ) != 0 && strcmp( field->chars, "imag" ) != 0 ){
 		return DAO_ERROR_FIELD;
@@ -912,7 +912,7 @@ static int DaoComplex_CheckSetField( DaoType *self, DString *field, DaoType *val
 	return DAO_OK;
 }
 
-static int DaoComplex_DoSetField( DaoValue *self, DString *field, DaoValue *value, DaoProcess *p )
+static int DaoComplex_DoSetField( DaoValue *self, DString *field, DaoValue *value, DaoProcess *proc )
 {
 	double A = 0.0;
 
@@ -933,7 +933,7 @@ static int DaoComplex_DoSetField( DaoValue *self, DString *field, DaoValue *valu
 	return 0;
 }
 
-static DaoType* DaoComplex_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoTypeContext *ctx )
+static DaoType* DaoComplex_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
 {
 	if( N == 0 ) return self;
 	if( N != 1 ) return NULL;
@@ -941,7 +941,7 @@ static DaoType* DaoComplex_CheckGetItem( DaoType *self, DaoType *index[], int N,
 	return NULL;
 }
 
-static DaoValue* DaoComplex_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *p )
+static DaoValue* DaoComplex_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *proc )
 {
 	dao_complex value = self->xComplex.value;
 	dao_integer pos = 0;
@@ -958,13 +958,13 @@ static DaoValue* DaoComplex_DoGetItem( DaoValue *self, DaoValue *index[], int N,
 	}
 
 	switch( pos ){
-	case 0 : DaoProcess_PutFloat( p, value.real ); break;
-	case 1 : DaoProcess_PutFloat( p, value.imag ); break;
+	case 0 : DaoProcess_PutFloat( proc, value.real ); break;
+	case 1 : DaoProcess_PutFloat( proc, value.imag ); break;
 	}
 	return NULL;
 }
 
-static int DaoComplex_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoTypeContext *ctx )
+static int DaoComplex_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
 {
 	if( N != 1 ) return DAO_ERROR_INDEX;
 	if( index[0]->tid > DAO_FLOAT ) return DAO_ERROR_INDEX;
@@ -973,7 +973,7 @@ static int DaoComplex_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoT
 	return DAO_OK;
 }
 
-static int DaoComplex_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *p )
+static int DaoComplex_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc )
 {
 	dao_integer pos = 0;
 	double A = 0.0;
@@ -1005,7 +1005,7 @@ static int DaoComplex_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoVa
 	return DAO_OK;
 }
 
-static DaoType* DaoComplex_CheckUnary( DaoType *type, DaoVmCode *op, DaoTypeContext *ctx )
+static DaoType* DaoComplex_CheckUnary( DaoType *type, DaoVmCode *op, DaoRoutine *ctx )
 {
 	switch( op->code ){
 	case DVM_MINUS : return dao_type_complex;
@@ -1024,20 +1024,20 @@ static dao_complex dao_complex_new( dao_float real, dao_float imag )
 	return com;
 }
 
-static DaoValue* DaoComplex_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *p )
+static DaoValue* DaoComplex_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *proc )
 {
 	dao_complex com = value->xComplex.value;
 
 	switch( op->code ){
-	case DVM_MINUS : DaoProcess_PutComplex( p, dao_complex_new( - com.real, - com.imag ) ); break;
-	case DVM_TILDE : DaoProcess_PutComplex( p, dao_complex_new( com.real, - com.imag ) ); break;
-	case DVM_SIZE  : DaoProcess_PutInteger( p, sizeof(dao_complex) );     break;
+	case DVM_MINUS : DaoProcess_PutComplex( proc, dao_complex_new( -com.real, -com.imag ) ); break;
+	case DVM_TILDE : DaoProcess_PutComplex( proc, dao_complex_new( com.real, -com.imag ) ); break;
+	case DVM_SIZE  : DaoProcess_PutInteger( proc, sizeof(dao_complex) );     break;
 	default: break;
 	}
 	return NULL;
 }
 
-static DaoType* DaoComplex_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoTypeContext *ctx )
+static DaoType* DaoComplex_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
 	DaoType *left = args[0];
 	DaoType *right = args[1];
@@ -1057,7 +1057,7 @@ static DaoType* DaoComplex_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *a
 	return NULL;
 }
 
-static DaoValue* DaoComplex_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *p )
+static DaoValue* DaoComplex_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc )
 {
 	DaoValue *left  = args[0];
 	DaoValue *right = args[1];
@@ -1156,24 +1156,24 @@ static DaoValue* DaoComplex_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *a
 	}
 
 	if( retbool ){
-		DaoProcess_PutBoolean( p, D );
+		DaoProcess_PutBoolean( proc, D );
 	}else{
-		DaoProcess_PutComplex( p, C );
+		DaoProcess_PutComplex( proc, C );
 	}
 	return NULL;
 
 ErrorDivByZero:
-	DaoProcess_RaiseError( self, "Float::DivByZero", "" );
+	DaoProcess_RaiseError( proc, "Float::DivByZero", "" );
 	return NULL;
 }
 
-static DaoType* DaoComplex_CheckConversion( DaoType *self, DaoType *type, DaoTypeContext *ctx )
+static DaoType* DaoComplex_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid == DAO_COMPLEX || type->tid == DAO_STRING ) return type;
 	return NULL;
 }
 
-static DaoValue* DaoComplex_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *p )
+static DaoValue* DaoComplex_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
 {
 	if( type->tid == DAO_COMPLEX ) return self;
 
@@ -1184,12 +1184,12 @@ static DaoValue* DaoComplex_DoConversion( DaoValue *self, DaoType *type, DaoValu
 		if( self->xComplex.value.imag >= -0.0 ) DaoStream_WriteChars( stream, "+" );
 		DaoStream_WriteFloat( stream, self->xComplex.value.imag );
 		DaoStream_WriteChars( stream, "C" );
-		DaoProcess_PutChars( p, chs );
+		DaoProcess_PutChars( proc, chs );
 	}
 	return NULL;
 }
 
-static void DaoComplex_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+static void DaoComplex_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DaoStream_WriteFloat( stream, self->xFloat.value );
 }
@@ -1290,7 +1290,7 @@ void DaoString_SetBytes( DaoString *self, const char *bytes, daoint n )
 }
 
 
-static DaoType* DaoString_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoTypeContext *ctx )
+static DaoType* DaoString_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
 {
 	if( N == 0 ) return self;
 	if( N != 1 ) return NULL;
@@ -1304,7 +1304,7 @@ static DaoType* DaoString_CheckGetItem( DaoType *self, DaoType *index[], int N, 
 	return NULL;
 }
 
-static DaoValue* DaoString_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *p )
+static DaoValue* DaoString_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *proc )
 {
 	daoint pos, end, size = self->xString.value->size;
 	DIndexRange range;
@@ -1316,28 +1316,28 @@ static DaoValue* DaoString_DoGetItem( DaoValue *self, DaoValue *index[], int N, 
 	case DAO_INTEGER :
 	case DAO_FLOAT :
 		pos = DaoValue_GetInteger( index[0] );
-		pos = Dao_CheckNumberIndex( pos, size, p );
+		pos = Dao_CheckNumberIndex( pos, size, proc );
 		if( pos < 0 ) return NULL;
 		DaoProcess_PutInteger( p, self->xString.value->chars[pos] );
 		break;
 	case DAO_RANGE :
-		range = Dao_CheckRangeIndex( (DaoRange*) index[0] );
+		range = Dao_CheckRangeIndex( (DaoRange*) index[0], proc );
 		if( range.pos < 0 ) return NULL;
-		DaoProcess_PutBytes( p, self->xString.value->chars + range.pos, range.end - range.pos );
+		DaoProcess_PutBytes( proc, self->xString.value->chars + range.pos, range.end - range.pos );
 		break;
 	case DAO_ITERATOR :
 		if( index[0]->xIterator.values[1]->type != DAO_INTEGER ) return NULL;
-		pos = Dao_CheckNumberIndex( index[0]->xIterator.values[1]->xInteger.value, size, p );
+		pos = Dao_CheckNumberIndex( index[0]->xIterator.values[1]->xInteger.value, size, proc );
 		index[0]->xIterator.values[0]->xBoolean.value = (pos + 1) < size;
 		index[0]->xIterator.values[1]->xInteger.value = pos + 1;
 		if( pos < 0 ) return NULL;
-		DaoProcess_PutInteger( p, self->xString.value->chars[pos] );
+		DaoProcess_PutInteger( proc, self->xString.value->chars[pos] );
 		break;
 	}
 	return NULL;
 }
 
-static int DaoString_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoTypeContext *ctx )
+static int DaoString_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
 {
 	if( N == 0 ){
 		if( value->tid > DAO_FLOAT ) return DAO_ERROR_VALUE;
@@ -1354,7 +1354,7 @@ static int DaoString_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoTy
 	return DAO_OK;
 }
 
-static int DaoString_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *p )
+static int DaoString_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc )
 {
 	daoint pos, end, size = self->xString.value->size;
 	DIndexRange range;
@@ -1370,13 +1370,13 @@ static int DaoString_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoVal
 	case DAO_INTEGER :
 	case DAO_FLOAT :
 		pos = DaoValue_GetInteger( index[0] );
-		pos = Dao_CheckNumberIndex( pos, size, p );
+		pos = Dao_CheckNumberIndex( pos, size, proc );
 		if( pos < 0 ) return DAO_ERROR_INDEX;
 		if( value->type > DAO_FLOAT ) return DAO_ERROR_VALUE;
 		self->xString.value->chars[pos] = DaoValue_GetInteger( value );
 		break;
 	case DAO_RANGE :
-		range = Dao_CheckRangeIndex( (DaoRange*) index[0] );
+		range = Dao_CheckRangeIndex( (DaoRange*) index[0], proc );
 		if( range.pos < 0 ) return NULL;
 		pos = range.pos;
 		end = range.end;
@@ -1387,19 +1387,19 @@ static int DaoString_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoVal
 	return DAO_OK;
 }
 
-static DaoType* DaoString_CheckUnary( DaoType *type, DaoVmCode *op, DaoTypeContext *ctx )
+static DaoType* DaoString_CheckUnary( DaoType *type, DaoVmCode *op, DaoRoutine *ctx )
 {
 	if( op->code == DVM_SIZE ) return dao_type_int;
 	return NULL;
 }
 
-static DaoValue* DaoString_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *p )
+static DaoValue* DaoString_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *proc )
 {
-	if( op->code == DVM_SIZE ) DaoProcess_PutInteger( p, self->xString.value->size );
+	if( op->code == DVM_SIZE ) DaoProcess_PutInteger( proc, self->xString.value->size );
 	return NULL;
 }
 
-static DaoType* DaoString_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoTypeContext *ctx )
+static DaoType* DaoString_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
 	DaoType *left = args[0];
 	DaoType *right = args[1];
@@ -1419,7 +1419,7 @@ static DaoType* DaoString_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *ar
 	return NULL;
 }
 
-static DaoValue* DaoString_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *p )
+static DaoValue* DaoString_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc )
 {
 	DaoValue *left  = args[0];
 	DaoValue *right = args[1];
@@ -1431,49 +1431,49 @@ static DaoValue* DaoString_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *ar
 
 	switch( op->code ){
 	case DVM_ADD :
-		res = DaoProcess_PutString( p, left->xString.value );
+		res = DaoProcess_PutString( proc, left->xString.value );
 		DString_Append( res, right->xString.value );
 		break;
 	case DVM_DIV :
-		res = DaoProcess_PutString( p, right->xString.value );
+		res = DaoProcess_PutString( proc, right->xString.value );
 		DString_MakePath( left->xString.value, res );
 		break;
 	case DVM_LT :
 	case DVM_LE :
 		D = DString_CompareUTF8( left->xString.value, right->xString.value );
-		DaoProcess_PutBoolean( p, D < (op->code == DVM_LE) );
+		DaoProcess_PutBoolean( proc, D < (op->code == DVM_LE) );
 		break;
 	case DVM_EQ :
 	case DVM_NE :
 		D = DString_Compare( left->xString.value, right->xString.value );
-		DaoProcess_PutBoolean( p, (op->code == DVM_EQ) ? D == 0 : D != 0 );
+		DaoProcess_PutBoolean( proc, (op->code == DVM_EQ) ? D == 0 : D != 0 );
 		break;
 	case DVM_IN :
 		pos = DString_Find( right->xString.value, left->xString.value, 0 );
-		DaoProcess_PutBoolean( p, pos != DAO_NULLPOS );
+		DaoProcess_PutBoolean( proc, pos != DAO_NULLPOS );
 		break;
 	}
 	return NULL;
 }
 
-static int DaoString_CheckComparison( DaoType *left, DaoType *right, DaoTypeContext *ctx )
+static int DaoString_CheckComparison( DaoType *left, DaoType *right, DaoRoutine *ctx )
 {
 	if( left->tid == DAO_STRING && right->tid == DAO_STRING ) return DAO_OK;
 	return DAO_ERROR;
 }
 
-static int DaoString_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *p )
+static int DaoString_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *proc )
 {
 	return DString_Compare( left->xString.value, right->xString.value );
 }
 
-static DaoType* DaoString_CheckConversion( DaoType *self, DaoType *type, DaoTypeContext *ctx )
+static DaoType* DaoString_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid <= DAO_STRING ) return type;
 	return NULL;
 }
 
-static DaoValue* DaoString_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *p )
+static DaoValue* DaoString_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
 {
 	switch( type->tid ){
 	case DAO_BOOLEAN :
@@ -1492,18 +1492,18 @@ static DaoValue* DaoString_DoConversion( DaoValue *self, DaoType *type, DaoValue
 	return NULL;
 }
 
-DaoType* DaoString_CheckForEach( DaoType *self, DaoTypeContext *ctx )
+DaoType* DaoString_CheckForEach( DaoType *self, DaoRoutine *ctx )
 {
 	return dao_type_iterator_int;
 }
 
-void DaoString_DoForEach( DaoValue *self, DaoIterator *iterator, DaoProcess *p )
+void DaoString_DoForEach( DaoValue *self, DaoIterator *iterator, DaoProcess *proc )
 {
 	iterator->values[0]->xBoolean.value = self->xString.value->size > 0;
 	iterator->values[0]->xInteger.value = 0;
 }
 
-static void DaoString_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+static void DaoString_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DaoStream_WriteString( stream, self->xString.value );
 }
@@ -2583,13 +2583,13 @@ static int DaoEnum_IsIn( DaoEnum *A, DaoEnum *B )
 }
 
 
-static DaoType* DaoEnum_CheckUnary( DaoType *type, DaoVmCode *op, DaoTypeContext *ctx )
+static DaoType* DaoEnum_CheckUnary( DaoType *type, DaoVmCode *op, DaoRoutine *ctx )
 {
 	if( op->code != DVM_TILDE ) return NULL;
 	return type;
 }
 
-static DaoValue* DaoEnum_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *p )
+static DaoValue* DaoEnum_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *proc )
 {
 	int min = 0, max = 0, envalue = 0; 
 	DaoEnum *C, *A = (DaoEnum*) value;
@@ -2599,7 +2599,7 @@ static DaoValue* DaoEnum_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *p 
 	if( op->code != DVM_TILDE | value->type != DAO_ENUM ) return NULL;
 
 	TA = A->etype;
-	C = DaoProcess_PutValue( p, A ); 
+	C = DaoProcess_PutValue( proc, A ); 
 
 	it = DMap_First( TA->mapNames );
 	if( it ) min = max = it->value.pInt;
@@ -2619,7 +2619,7 @@ static DaoValue* DaoEnum_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *p 
 	return NULL;
 }
 
-static DaoType* DaoEnum_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoTypeContext *ctx )
+static DaoType* DaoEnum_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
 	DaoType *left = args[0];
 	DaoType *right = args[1];
@@ -2722,13 +2722,13 @@ static DaoValue* DaoEnum_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args
 	return NULL;
 }
 
-static int DaoEnum_CheckComparison( DaoType *left, DaoType *right, DaoTypeContext *ctx )
+static int DaoEnum_CheckComparison( DaoType *left, DaoType *right, DaoRoutine *ctx )
 {
 	if( left->tid == DAO_ENUM && right->tid == DAO_ENUM ) return DAO_OK;
 	return DAO_ERROR;
 }
 
-static int DaoEnum_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *p )
+static int DaoEnum_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *proc )
 {
 	if( left->type != DAO_ENUM || right->type != DAO_ENUM ){
 		// TODO:
@@ -2738,13 +2738,13 @@ static int DaoEnum_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *p 
 	return DaoEnum_Compare( (DaoEnum*) left, (DaoEnum*) right );
 }
 
-static DaoType* DaoEnum_CheckConversion( DaoType *self, DaoType *type, DaoTypeContext *ctx )
+static DaoType* DaoEnum_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid <= DAO_ENUM ) return type;
 	return NULL;
 }
 
-static DaoValue* DaoEnum_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *p )
+static DaoValue* DaoEnum_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
 {
 	int val = self->xEnum.value;
 	switch( type->tid ){
@@ -2755,14 +2755,14 @@ static DaoValue* DaoEnum_DoConversion( DaoValue *self, DaoType *type, DaoValue *
 	break;
 	}
 	if( type->tid == DAO_STRING ){
-		DString *res = DaoProcess_PutChars( p, "" );
+		DString *res = DaoProcess_PutChars( proc, "" );
 		DaoEnum_MakeName( (DaoEnum*) self, res );
 		return NULL;
 	}
 	return NULL;
 }
 
-static void DaoEnum_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+static void DaoEnum_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	name = DString_New();
 	DaoEnum_MakeName( (DaoEnum*) self, name );
@@ -2952,7 +2952,7 @@ DaoList* DaoList_Copy( DaoList *self, DaoType *type ) // XXX
 	return copy;
 }
 
-static DaoType* DaoList_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoTypeContext *ctx )
+static DaoType* DaoList_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
 {
 	DaoType *itype = dao_type_any;
 
@@ -2970,7 +2970,7 @@ static DaoType* DaoList_CheckGetItem( DaoType *self, DaoType *index[], int N, Da
 	return NULL;
 }
 
-static DaoValue* DaoList_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *p )
+static DaoValue* DaoList_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *proc )
 {
 	daoint i, pos, end, size = self->xList.value->size;
 	DIndexRange range;
@@ -2978,7 +2978,7 @@ static DaoValue* DaoList_DoGetItem( DaoValue *self, DaoValue *index[], int N, Da
 
 	if( N == 0 ){
 		res = DaoList_Copy( self, NULL );
-		DaoProcess_PutValue( p, (DaoValue*) res );
+		DaoProcess_PutValue( proc, (DaoValue*) res );
 		return NULL;
 	}
 	if( N != 1 ) return NULL;
@@ -2987,32 +2987,32 @@ static DaoValue* DaoList_DoGetItem( DaoValue *self, DaoValue *index[], int N, Da
 	case DAO_INTEGER :
 	case DAO_FLOAT :
 		pos = DaoValue_GetInteger( index[0] );
-		pos = Dao_CheckNumberIndex( pos, size, p );
+		pos = Dao_CheckNumberIndex( pos, size, proc );
 		if( pos < 0 ) return NULL;
-		DaoProcess_PutValue( p, self->xList.value->items.pValue[pos] );
+		DaoProcess_PutValue( proc, self->xList.value->items.pValue[pos] );
 		break;
 	case DAO_RANGE :
-		range = Dao_CheckRangeIndex( (DaoRange*) index[0] );
+		range = Dao_CheckRangeIndex( (DaoRange*) index[0], proc );
 		if( range.pos < 0 ) return NULL;
 		pos = range.pos;
 		end = range.end;
-		res = DaoProcess_PutList( p );
+		res = DaoProcess_PutList( proc );
 		DList_Resize( res->value, end - pos, NULL );
 		for(i=pos; i<end; i++) DaoList_SetItem( res, self->value->items.pValue[i], i - pos );
 		break;
 	case DAO_ITERATOR :
 		if( index[0]->xIterator.values[1]->type != DAO_INTEGER ) return NULL;
-		pos = Dao_CheckNumberIndex( index[0]->xIterator.values[1]->xInteger.value, size, p );
+		pos = Dao_CheckNumberIndex( index[0]->xIterator.values[1]->xInteger.value, size, proc );
 		index[0]->xIterator.values[0]->xBoolean.value = (pos + 1) < size;
 		index[0]->xIterator.values[1]->xInteger.value = pos + 1;
 		if( pos < 0 ) return NULL;
-		DaoProcess_PutValue( p, self->xList.value->items.pValue[pos] );
+		DaoProcess_PutValue( proc, self->xList.value->items.pValue[pos] );
 		break;
 	}
 	return NULL;
 }
 
-static int DaoList_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoTypeContext *ctx )
+static int DaoList_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
 {
 	DaoType *itype = dao_type_any;
 
@@ -3030,7 +3030,7 @@ static int DaoList_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType
 	return DAO_ERROR_INDEX;
 }
 
-static int DaoList_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *p )
+static int DaoList_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc )
 {
 	daoint i, pos, end, size = self->xList.value->size;
 	DIndexRange range;
@@ -3047,12 +3047,12 @@ static int DaoList_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue
 	case DAO_INTEGER :
 	case DAO_FLOAT :
 		pos = DaoValue_GetInteger( index[0] );
-		pos = Dao_CheckNumberIndex( pos, size, p );
+		pos = Dao_CheckNumberIndex( pos, size, proc );
 		if( pos < 0 ) return DAO_ERROR_INDEX;
 		DaoList_SetItem( (DaoList*) self, value, pos );
 		break;
 	case DAO_RANGE :
-		range = Dao_CheckRangeIndex( (DaoRange*) index[0] );
+		range = Dao_CheckRangeIndex( (DaoRange*) index[0], proc );
 		if( range.pos < 0 ) return NULL;
 		pos = range.pos;
 		end = range.end;
@@ -3065,19 +3065,19 @@ static int DaoList_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue
 	return DAO_OK;
 }
 
-static DaoType* DaoList_CheckUnary( DaoType *type, DaoVmCode *op, DaoTypeContext *ctx )
+static DaoType* DaoList_CheckUnary( DaoType *type, DaoVmCode *op, DaoRoutine *ctx )
 {
 	if( op->code == DVM_SIZE ) return dao_type_int;
 	return NULL;
 }
 
-static DaoValue* DaoList_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *p )
+static DaoValue* DaoList_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *proc )
 {
-	if( op->code == DVM_SIZE ) DaoProcess_PutInteger( p, self->xString.value->size );
+	if( op->code == DVM_SIZE ) DaoProcess_PutInteger( proc, self->xString.value->size );
 	return NULL;
 }
 
-static DaoType* DaoList_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoTypeContext *ctx )
+static DaoType* DaoList_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
 	DaoType *left = args[0];
 	DaoType *right = args[1];
@@ -3086,7 +3086,7 @@ static DaoType* DaoList_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args
 	return NULL;
 }
 
-static DaoValue* DaoList_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *p )
+static DaoValue* DaoList_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc )
 {
 	DaoValue *left  = args[0];
 	DaoValue *right = args[1];
@@ -3102,14 +3102,14 @@ static DaoValue* DaoList_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args
 	}
 
 	for(i=0,n=list->value->size; i<n; ++i){
-		C = DaoValue_ComparePro( left, list->value->items.pValue[i], p ) == 0; 
+		C = DaoValue_ComparePro( left, list->value->items.pValue[i], proc ) == 0; 
 		if( C ) break;
 	}
-	DaoProcess_PutBoolean( p, C );
+	DaoProcess_PutBoolean( proc, C );
 	return NULL;
 }
 
-static DaoType* DaoList_CheckConversion( DaoType *self, DaoType *type, DaoTypeContext *ctx )
+static DaoType* DaoList_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid == DAO_LIST ){ /* TODO: check item types; */
 		return type;
@@ -3119,7 +3119,7 @@ static DaoType* DaoList_CheckConversion( DaoType *self, DaoType *type, DaoTypeCo
 	return NULL;
 }
 
-static DaoValue* DaoList_DoConversion( DaoValue *value, DaoType *type, DaoValue *num, DaoProcess *p )
+static DaoValue* DaoList_DoConversion( DaoValue *value, DaoType *type, DaoValue *num, DaoProcess *proc )
 {
 	DaoList *self = (DaoValue*) value;
 	DaoComplex buffer = {0};
@@ -3139,7 +3139,7 @@ static DaoValue* DaoList_DoConversion( DaoValue *value, DaoType *type, DaoValue 
 		if( itype == NULL ) return NULL;
 		if( itype->tid && itype->tid <= DAO_COMPLEX ) numvalue->type = itype->tid;
 
-		list = DaoProcess_NewList( p );
+		list = DaoProcess_NewList( proc );
 		GC_Assign( & list->ctype, type );
 
 		DList_Resize( list->value, self->value->size, NULL );
@@ -3148,7 +3148,7 @@ static DaoValue* DaoList_DoConversion( DaoValue *value, DaoType *type, DaoValue 
 			DaoTypeCore *core = DaoValue_GetTypeCore( item );
 			if( core == NULL || core->DoCoversion == NULL ) return NULL;
 
-			item = core->DoCoversion( item, itype, numvalue, p );
+			item = core->DoCoversion( item, itype, numvalue, proc );
 			if( item == NULL ) return NULL;
 
 			DaoValue_Copy( item, list->value->items.pValue + i );
@@ -3173,7 +3173,7 @@ static DaoValue* DaoList_DoConversion( DaoValue *value, DaoType *type, DaoValue 
 			}
 
 			if( itype->tid && itype->tid <= DAO_COMPLEX ) numvalue->type = itype->tid;
-			item = core->DoCoversion( item, itype, numvalue, p );
+			item = core->DoCoversion( item, itype, numvalue, proc );
 			if( item == NULL ) return NULL;
 			DaoValue_Copy( item, tuple->values + i );
 		}
@@ -3182,18 +3182,18 @@ static DaoValue* DaoList_DoConversion( DaoValue *value, DaoType *type, DaoValue 
 	return NULL;
 }
 
-DaoType* DaoList_CheckForEach( DaoType *self, DaoTypeContext *ctx )
+DaoType* DaoList_CheckForEach( DaoType *self, DaoRoutine *ctx )
 {
 	return dao_type_iterator_int;
 }
 
-void DaoList_DoForEach( DaoValue *self, DaoIterator *iterator, DaoProcess *p )
+void DaoList_DoForEach( DaoValue *self, DaoIterator *iterator, DaoProcess *proc )
 {
 	iterator->values[0]->xBoolean.value = self->xList.value->size > 0;
 	iterator->values[0]->xInteger.value = 0;
 }
 
-static void DaoList_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+static void DaoList_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DMap *inmap = cycmap;
 	daoint i;
@@ -3208,7 +3208,7 @@ static void DaoList_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoP
 
 	DaoStream_WriteChars( stream, "{ " );
 	for(i=0; i<self->xList.value->size; ++i){
-		DaoValue_QuotedPrint( self->xList.value->items.pValue[i], stream, cycmap, p );
+		DaoValue_QuotedPrint( self->xList.value->items.pValue[i], stream, cycmap, proc );
 		if( (i+1) < self->xList.value->size ) DaoStream_WriteChars( stream, ", " );
 	}
 	DaoStream_WriteChars( stream, " }" );
@@ -4335,7 +4335,7 @@ static DNode* DaoMap_FindLE( DaoMap *self, DaoValue *key )
 
 
 
-static DaoType* DaoMap_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoTypeContext *ctx )
+static DaoType* DaoMap_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
 {
 	DaoType *ketype = dao_type_any;
 	DaoType *vatype = dao_type_any;
@@ -4363,19 +4363,19 @@ static DaoType* DaoMap_CheckGetItem( DaoType *self, DaoType *index[], int N, Dao
 	return NULL;
 }
 
-static DaoValue* DaoMap_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, DaoProcess *p )
+static DaoValue* DaoMap_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, DaoProcess *proc )
 {
 	DaoMap *res, *self = (DaoMap*) selfv;
 
 	if( N == 0 ){
 		res = DaoMap_Copy( self, NULL );
-		DaoProcess_PutValue( p, (DaoValue*) res );
+		DaoProcess_PutValue( proc, (DaoValue*) res );
 		return NULL;
 	}
 	if( N != 1 ) return NULL;
 	if( index[0]->type == DAO_ITERATOR ){
 		DaoIterator *iter = (DaoIterator*) index[0];
-		DaoTuple *tuple = DaoProcess_PutTuple( p, 2 );
+		DaoTuple *tuple = DaoProcess_PutTuple( proc, 2 );
 		DNode *node = (DNode*) iter->values[1]->xCdata.data;
 
 		iter->values[0]->xInteger.value = node != NULL;
@@ -4396,7 +4396,7 @@ static DaoValue* DaoMap_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, Da
 		
 		if( self->value->hashing ) return NULL; /* Key range not well defined for hash map; */
 
-		res = DaoProcess_PutMap( p, self->value->hashing ); /* Place an empty result map; */
+		res = DaoProcess_PutMap( proc, self->value->hashing ); /* Place an empty result map; */
 		if( DaoValue_Compare( first, second ) >= 0 ) return NULL; /* Done; */
 
 		if( first->type  ) node1 = DaoMap_FindGE( self, first );
@@ -4406,12 +4406,12 @@ static DaoValue* DaoMap_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, Da
 		}
 	}else{
 		DaoValue *res = DaoMap_GetValue( self, index[0] );
-		if( res != NULL ) DaoProcess_PutValue( p, res );
+		if( res != NULL ) DaoProcess_PutValue( proc, res );
 	}
 	return NULL;
 }
 
-static int DaoMap_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoTypeContext *ctx )
+static int DaoMap_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
 {
 	DaoType *ketype = dao_type_any;
 	DaoType *vatype = dao_type_any;
@@ -4436,7 +4436,7 @@ static int DaoMap_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType 
 	return DAO_ERROR_INDEX;
 }
 
-static int DaoMap_DoSetItem( DaoValue *selfv, DaoValue *index[], int N, DaoValue *value, DaoProcess *p )
+static int DaoMap_DoSetItem( DaoValue *selfv, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc )
 {
 	DaoMap *self = (DaoMap*) selfv;
 
@@ -4449,7 +4449,7 @@ static int DaoMap_DoSetItem( DaoValue *selfv, DaoValue *index[], int N, DaoValue
 
 	if( N == 0 ){
 		res = DaoMap_Copy( self, NULL );
-		DaoProcess_PutValue( p, (DaoValue*) res );
+		DaoProcess_PutValue( proc, (DaoValue*) res );
 		return DAO_OK;
 	}
 	if( N != 1 ) return DAO_ERROR_INDEX;
@@ -4475,19 +4475,19 @@ static int DaoMap_DoSetItem( DaoValue *selfv, DaoValue *index[], int N, DaoValue
 	return DAO_OK;
 }
 
-static DaoType* DaoMap_CheckUnary( DaoType *type, DaoVmCode *op, DaoTypeContext *ctx )
+static DaoType* DaoMap_CheckUnary( DaoType *type, DaoVmCode *op, DaoRoutine *ctx )
 {
 	if( op->code == DVM_SIZE ) return dao_type_int;
 	return NULL;
 }
 
-static DaoValue* DaoMap_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *p )
+static DaoValue* DaoMap_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *proc )
 {
-	if( op->code == DVM_SIZE ) DaoProcess_PutInteger( p, self->xString.value->size );
+	if( op->code == DVM_SIZE ) DaoProcess_PutInteger( proc, self->xString.value->size );
 	return NULL;
 }
 
-static DaoType* DaoMap_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoTypeContext *ctx )
+static DaoType* DaoMap_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
 	DaoType *left = args[0];
 	DaoType *right = args[1];
@@ -4496,7 +4496,7 @@ static DaoType* DaoMap_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[
 	return NULL;
 }
 
-static DaoValue* DaoMap_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *p )
+static DaoValue* DaoMap_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc )
 {
 	DaoValue *left  = args[0];
 	DaoValue *right = args[1];
@@ -4515,17 +4515,17 @@ static DaoValue* DaoMap_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[
 		C = DaoValue_ComparePro( left, list->value->items.pValue[i], p ) == 0; 
 		if( C ) break;
 	}
-	DaoProcess_PutBoolean( p, C );
+	DaoProcess_PutBoolean( proc, C );
 	return NULL;
 }
 
-static DaoType* DaoMap_CheckConversion( DaoType *self, DaoType *type, DaoTypeContext *ctx )
+static DaoType* DaoMap_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid != DAO_MAP ) return NULL;
 	return type;
 }
 
-static DaoValue* DaoMap_DoConversion( DaoValue *selfv, DaoType *type, DaoValue *num, DaoProcess *p )
+static DaoValue* DaoMap_DoConversion( DaoValue *selfv, DaoType *type, DaoValue *num, DaoProcess *proc )
 {
 	DaoMap *map, *self = (DaoMap*) selfv;
 	DaoType *ketype = NULL, *vatype = NULL;
@@ -4566,8 +4566,8 @@ static DaoValue* DaoMap_DoConversion( DaoValue *selfv, DaoType *type, DaoValue *
 		if( kecore == NULL || kecore->DoCoversion == NULL ) return NULL;
 		if( vacore == NULL || vacore->DoCoversion == NULL ) return NULL;
 
-		key = kecore->DoCoversion( key, ketype, numvalue1, p );
-		value = vacore->DoCoversion( value, vatype, numvalue2, p );
+		key = kecore->DoCoversion( key, ketype, numvalue1, proc );
+		value = vacore->DoCoversion( value, vatype, numvalue2, proc );
 		if( key == NULL || value == NULL ) return NULL;
 
 		DMap_Insert( map->value, key, value );
@@ -4575,12 +4575,12 @@ static DaoValue* DaoMap_DoConversion( DaoValue *selfv, DaoType *type, DaoValue *
 	return NULL;
 }
 
-DaoType* DaoMap_CheckForEach( DaoType *self, DaoTypeContext *ctx )
+DaoType* DaoMap_CheckForEach( DaoType *self, DaoRoutine *ctx )
 {
 	return dao_type_iterator_any;
 }
 
-void DaoMap_DoForEach( DaoValue *self, DaoIterator *iterator, DaoProcess *p )
+void DaoMap_DoForEach( DaoValue *self, DaoIterator *iterator, DaoProcess *proc )
 {
 	DNode *node = DMap_First( self->xMap.value );
 	DaoValue **data = iterator->values;
@@ -4603,7 +4603,7 @@ void DaoMap_DoForEach( DaoValue *self, DaoIterator *iterator, DaoProcess *p )
 	}
 }
 
-static void DaoMap_Print( DaoValue *selfval, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+static void DaoMap_Print( DaoValue *selfval, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DNode *node = NULL;
 	DMap *inmap = cycmap;
@@ -4627,9 +4627,9 @@ static void DaoMap_Print( DaoValue *selfval, DaoStream *stream, DMap *cycmap, Da
 
 	node = DMap_First( self->value );
 	for( ; node!=NULL; node=DMap_Next(self->value,node) ){
-		DaoValue_QuotedPrint( node->key.pValue, stream, cycmap, p );
+		DaoValue_QuotedPrint( node->key.pValue, stream, cycmap, proc );
 		DaoStream_WriteChars( stream, self->value->hashing ? " -> " : " => " );
-		DaoValue_QuotedPrint( node->value.pValue, stream, cycmap, p );
+		DaoValue_QuotedPrint( node->value.pValue, stream, cycmap, proc );
 		if( (++i) < size ) DaoStream_WriteChars( stream, ", " );
 	}
 	DaoStream_WriteChars( stream, " }" );
@@ -5222,20 +5222,20 @@ static DaoType* DaoTuple_GetFieldType( DaoType *self, DString *field )
 	return type;
 }
 
-static DaoType* DaoTuple_CheckGetField( DaoType *self, DString *field, DaoTypeContext *ctx )
+static DaoType* DaoTuple_CheckGetField( DaoType *self, DString *field, DaoRoutine *ctx )
 {
 	return DaoTuple_GetFieldType( self, field );
 }
 
-static DaoValue* DaoTuple_DoGetField( DaoValue *selfv, DString *field, DaoProcess *p )
+static DaoValue* DaoTuple_DoGetField( DaoValue *selfv, DString *field, DaoProcess *proc )
 {
 	DaoTuple *self = (DaoTuple*) selfv;
-	int id = DaoTuple_CheckIndex( self, name, p );
+	int id = DaoTuple_CheckIndex( self, name, proc );
 	if( id < 0 ) return NULL;
 	return self->values[id];
 }
 
-static int DaoTuple_CheckSetField( DaoType *self, DString *field, DaoType *value, DaoTypeContext *ctx )
+static int DaoTuple_CheckSetField( DaoType *self, DString *field, DaoType *value, DaoRoutine *ctx )
 {
 	DaoType *type = DaoTuple_GetFieldType( self, field );
 	if( type == NULL ) return DAO_ERROR_FIELD;
@@ -5243,11 +5243,11 @@ static int DaoTuple_CheckSetField( DaoType *self, DString *field, DaoType *value
 	return DAO_OK;
 }
 
-static int DaoTuple_DoSetField( DaoValue *selfv, DString *field, DaoValue *value, DaoProcess *p )
+static int DaoTuple_DoSetField( DaoValue *selfv, DString *field, DaoValue *value, DaoProcess *proc )
 {
 	DaoTuple *self = (DaoTuple*) selfv;
 	DaoType *itype, **types = self->ctype->nested->items.pType;
-	int id = DaoTuple_CheckIndex( self, name, p );
+	int id = DaoTuple_CheckIndex( self, name, proc );
 	if( id < 0 ) return DAO_ERROR_FIELD;
 	itype = types[id];
 	if( itype->tid == DAO_PAR_NAMED || itype->tid == DAO_PAR_VALIST ) itype = (DaoType*)itype->aux;
@@ -5255,7 +5255,7 @@ static int DaoTuple_DoSetField( DaoValue *selfv, DString *field, DaoValue *value
 	return DAO_OK;
 }
 
-static DaoType* DaoTuple_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoTypeContext *ctx )
+static DaoType* DaoTuple_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
 {
 	DaoNamespace *NS = ctx->nspace;
 	DaoType *retype = dao_type_any;
@@ -5304,7 +5304,7 @@ static DaoType* DaoTuple_CheckGetItem( DaoType *self, DaoType *index[], int N, D
 
 DaoTuple* DaoProcess_GetTuple( DaoProcess *self, DaoType *type, int size, int init );
 
-static DaoValue* DaoTuple_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *p )
+static DaoValue* DaoTuple_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *proc )
 {
 	int i, pos, end, size = self->xTuple.size;
 	DIndexRange range;
@@ -5312,7 +5312,7 @@ static DaoValue* DaoTuple_DoGetItem( DaoValue *self, DaoValue *index[], int N, D
 
 	if( N == 0 ){
 		res = DaoTuple_Copy( self, NULL );
-		DaoProcess_PutValue( p, (DaoValue*) res );
+		DaoProcess_PutValue( proc, (DaoValue*) res );
 		return NULL;
 	}
 	if( N != 1 ) return NULL;
@@ -5321,21 +5321,21 @@ static DaoValue* DaoTuple_DoGetItem( DaoValue *self, DaoValue *index[], int N, D
 	case DAO_INTEGER :
 	case DAO_FLOAT :
 		pos = DaoValue_GetInteger( index[0] );
-		pos = Dao_CheckNumberIndex( pos, size, p );
+		pos = Dao_CheckNumberIndex( pos, size, proc );
 		if( pos < 0 ) return NULL;
-		DaoProcess_PutValue( p, self->xTuple.values[pos] );
+		DaoProcess_PutValue( proc, self->xTuple.values[pos] );
 		break;
 	case DAO_RANGE :
-		range = Dao_CheckRangeIndex( (DaoRange*) index[0] );
+		range = Dao_CheckRangeIndex( (DaoRange*) index[0], proc );
 		if( range.pos < 0 ) return NULL;
 		pos = range.pos;
 		end = range.end;
 		if( pos == 0 && end == size ){
-			DaoTuple *tuple = DaoProcess_GetTuple( p, self->ctype, self->size, 1 ); 
+			DaoTuple *tuple = DaoProcess_GetTuple( proc, self->ctype, self->size, 1 ); 
 			for(i=0; i<size; ++i) DaoTuple_SetItem( tuple, self->values[i], i ); 
 		}else{
-			DaoTuple *tuple = DaoProcess_GetTuple( p, NULL, end - pos, 0 );
-			DaoType *type = p->activeTypes[ p->activeCode->c ];
+			DaoTuple *tuple = DaoProcess_GetTuple( proc, NULL, end - pos, 0 );
+			DaoType *type = proc->activeTypes[ proc->activeCode->c ];
 			if( type->tid != DAO_TUPLE ) type = dao_type_tuple;
 			GC_Assign( & tuple->ctype, type );
 			for(i=pos; i<end; ++i) DaoTuple_SetItem( tuple, self->values[i], i - pos);
@@ -5343,12 +5343,12 @@ static DaoValue* DaoTuple_DoGetItem( DaoValue *self, DaoValue *index[], int N, D
 		break;
 	case DAO_ITERATOR :
 		if( index[0]->xIterator.values[1]->type != DAO_INTEGER ) return NULL;
-		pos = Dao_CheckNumberIndex( index[0]->xIterator.values[1]->xInteger.value, size, p );
+		pos = Dao_CheckNumberIndex( index[0]->xIterator.values[1]->xInteger.value, size, proc );
 		index[0]->xIterator.values[0]->xBoolean.value = (pos + 1) < size;
 		index[0]->xIterator.values[1]->xInteger.value = pos + 1;
 		if( pos < 0 ) return NULL;
 
-		res = DaoProcess_PutTuple( p, 2 );
+		res = DaoProcess_PutTuple( proc, 2 );
 		DaoValue_Move( self->values[id], & res->values[1], NULL );
 		DString_Reset( res->values[0]->xString.value, 0 );
 		if( pos < self->ctype->nested->size ){
@@ -5362,7 +5362,7 @@ static DaoValue* DaoTuple_DoGetItem( DaoValue *self, DaoValue *index[], int N, D
 	return NULL;
 }
 
-static int DaoTuple_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoTypeContext *ctx )
+static int DaoTuple_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
 {
 	DaoType *itype = dao_type_any;
 
@@ -5387,7 +5387,7 @@ static int DaoTuple_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoTyp
 	return DAO_OK;
 }
 
-static int DaoTuple_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *p )
+static int DaoTuple_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc )
 {
 	int i, pos, end, size = self->xTuple.size;
 	DIndexRange range;
@@ -5404,12 +5404,12 @@ static int DaoTuple_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValu
 	case DAO_INTEGER :
 	case DAO_FLOAT :
 		pos = DaoValue_GetInteger( index[0] );
-		pos = Dao_CheckNumberIndex( pos, size, p );
+		pos = Dao_CheckNumberIndex( pos, size, proc );
 		if( pos < 0 ) return DAO_ERROR_INDEX;
 		DaoTuple_SetItem( (DaoList*) self, value, pos );
 		break;
 	case DAO_RANGE :
-		range = Dao_CheckRangeIndex( (DaoRange*) index[0] );
+		range = Dao_CheckRangeIndex( (DaoRange*) index[0], proc );
 		if( range.pos < 0 ) return NULL;
 		for(i=range.pos; i<range.end; ++i){
 			if( DaoTuple_SetItem( (DaoValue*) self, value, i ) ) return DAO_ERROR_VALUE;
@@ -5420,19 +5420,19 @@ static int DaoTuple_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValu
 	return DAO_OK;
 }
 
-static DaoType* DaoTuple_CheckUnary( DaoType *type, DaoVmCode *op, DaoTypeContext *ctx )
+static DaoType* DaoTuple_CheckUnary( DaoType *type, DaoVmCode *op, DaoRoutine *ctx )
 {
 	if( op->code == DVM_SIZE ) return dao_type_int;
 	return NULL;
 }
 
-static DaoValue* DaoTuple_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *p )
+static DaoValue* DaoTuple_DoUnary( DaoValue *value, DaoVmCode *op, DaoProcess *proc )
 {
-	if( op->code == DVM_SIZE ) DaoProcess_PutInteger( p, self->xTuple.size );
+	if( op->code == DVM_SIZE ) DaoProcess_PutInteger( proc, self->xTuple.size );
 	return NULL;
 }
 
-static DaoType* DaoTuple_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoTypeContext *ctx )
+static DaoType* DaoTuple_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
 	DaoType *left = args[0];
 	DaoType *right = args[1];
@@ -5447,7 +5447,7 @@ static DaoType* DaoTuple_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *arg
 	return NULL;
 }
 
-static DaoValue* DaoTuple_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *p )
+static DaoValue* DaoTuple_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc )
 {
 	DaoValue *left  = args[0];
 	DaoValue *right = args[1];
@@ -5462,11 +5462,11 @@ static DaoValue* DaoTuple_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *arg
 	case DVM_EQ : C = C == 0; break;
 	case DVM_NE : C = C != 0; break;
 	}
-	DaoProcess_PutBoolean( p, C );
+	DaoProcess_PutBoolean( proc, C );
 	return NULL;
 }
 
-static DaoType* DaoTuple_CheckConversion( DaoType *self, DaoType *type, DaoTypeContext *ctx )
+static DaoType* DaoTuple_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid == DAO_TUPLE ){
 		return type;
@@ -5476,7 +5476,7 @@ static DaoType* DaoTuple_CheckConversion( DaoType *self, DaoType *type, DaoTypeC
 	return NULL;
 }
 
-static DaoValue* DaoTuple_DoConversion( DaoValue *selfv, DaoType *type, DaoValue *num, DaoProcess *p )
+static DaoValue* DaoTuple_DoConversion( DaoValue *selfv, DaoType *type, DaoValue *num, DaoProcess *proc )
 {
 	DaoTuple *tuple;
 	DaoTuple *self = (DaoTuple*) selfv;
@@ -5502,7 +5502,7 @@ static DaoValue* DaoTuple_DoConversion( DaoValue *selfv, DaoType *type, DaoValue
 				itype = (DaoType*) itype->aux;
 			}
 			if( itype->tid && itype->tid <= DAO_COMPLEX ) numvalue->type = itype->tid;
-			item = core->DoCoversion( item, itype, numvalue, p );
+			item = core->DoCoversion( item, itype, numvalue, proc );
 			if( item == NULL ) return NULL;
 			DaoValue_Copy( item, tuple->values + i );
 		}
@@ -5518,7 +5518,7 @@ static DaoValue* DaoTuple_DoConversion( DaoValue *selfv, DaoType *type, DaoValue
 		if( itype == NULL ) return NULL;
 		if( itype->tid && itype->tid <= DAO_COMPLEX ) numvalue->type = itype->tid;
 
-		list = DaoProcess_NewList( p );
+		list = DaoProcess_NewList( proc );
 		GC_Assign( & list->ctype, type );
 
 		DList_Resize( list->value, self->value->size, NULL );
@@ -5527,7 +5527,7 @@ static DaoValue* DaoTuple_DoConversion( DaoValue *selfv, DaoType *type, DaoValue
 			DaoTypeCore *core = DaoValue_GetTypeCore( item );
 			if( core == NULL || core->DoCoversion == NULL ) return NULL;
 
-			item = core->DoCoversion( item, itype, numvalue, p );
+			item = core->DoCoversion( item, itype, numvalue, proc );
 			if( item == NULL ) return NULL;
 
 			DaoValue_Copy( item, list->value->items.pValue + i );
@@ -5537,18 +5537,18 @@ static DaoValue* DaoTuple_DoConversion( DaoValue *selfv, DaoType *type, DaoValue
 	return NULL;
 }
 
-DaoType* DaoTuple_CheckForEach( DaoType *self, DaoTypeContext *ctx )
+DaoType* DaoTuple_CheckForEach( DaoType *self, DaoRoutine *ctx )
 {
 	return dao_type_iterator_int;
 }
 
-void DaoTuple_DoForEach( DaoValue *self, DaoIterator *iterator, DaoProcess *p )
+void DaoTuple_DoForEach( DaoValue *self, DaoIterator *iterator, DaoProcess *proc )
 {
 	iterator->values[0]->xBoolean.value = self->xTuple.size > 0;
 	iterator->values[0]->xInteger.value = 0;
 }
 
-static void DaoTuple_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+static void DaoTuple_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DMap *inmap = cycmap;
 	int i;
@@ -5563,7 +5563,7 @@ static void DaoTuple_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, Dao
 
 	DaoStream_WriteChars( stream, "( " );
 	for(i=0; i<self->xTuple.size; ++i){
-		DaoValue_QuotedPrint( self->xTuple.values[i], stream, cycmap, p );
+		DaoValue_QuotedPrint( self->xTuple.values[i], stream, cycmap, proc );
 		if( (i+1) < self->xTuple.size ) DaoStream_WriteChars( stream, ", " );
 	}
 	DaoStream_WriteChars( stream, " )" );
@@ -5703,13 +5703,13 @@ void DaoNameValue_Delete( DaoNameValue *self )
 	dao_free( self );
 }
 
-static void DaoNameValue_Print( DaoValue *selfv, DaoStream *stream, DMap *cycmap, DaoProcess *p )
+static void DaoNameValue_Print( DaoValue *selfv, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DaoNameValue *self = (DaoNameValue) selfv;
 	DaoStream_WriteString( stream, self->name );
 	DaoStream_WriteChars( stream, "=" );
 	if( self->value && self->value->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
-	DaoValue_Print( self->value, p, stream, cycmap );
+	DaoValue_Print( self->value, proc, stream, cycmap );
 	if( self->value && self->value->type == DAO_STRING ) DaoStream_WriteChar( stream, '"' );
 }
 
@@ -5772,7 +5772,7 @@ void DaoCstruct_Free( DaoCstruct *self )
 // Operator .( field: string ) is no longer supported;
 // Overload [] instead;
 */
-DaoType* DaoCstruct_CheckGetField( DaoType *self, DString *name, DaoTypeContext *ctx )
+DaoType* DaoCstruct_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
 {
 	DaoRoutine *rout;
 	DaoValue *value = DaoType_FindValue( self, name );
@@ -5811,7 +5811,7 @@ DaoValue* DaoCstruct_DoGetField( DaoValue *self, DString *name, DaoProcess *proc
 	return NULL;
 }
 
-int DaoCstruct_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoTypeContext *ctx )
+int DaoCstruct_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
 {
 	DaoRoutine *rout;
 	DString *buffer = ctx->buffer;
@@ -5840,7 +5840,7 @@ int DaoCstruct_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoPr
 	return DAO_OK;
 }
 
-DaoType* DaoCstruct_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoTypeContext *ctx )
+DaoType* DaoCstruct_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
 {
 	DaoRoutine *rout = DaoType_FindFunctionChars( self, "[]" );
 	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, index, N, DVM_CALL );
@@ -5856,7 +5856,7 @@ DaoValue* DaoCstruct_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoPro
 	return NULL;
 }
 
-int DaoCstruct_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoTypeContext *ctx )
+int DaoCstruct_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
 {
 	DaoRoutine *rout = DaoType_FindFunctionChars( self, "[]=" );
 	DaoType *args[ DAO_MAX_PARAM + 1 ];
@@ -5881,7 +5881,7 @@ int DaoCstruct_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *va
 	return DAO_OK;
 }
 
-DaoType* DaoCstruct_CheckUnary( DaoType *self, DaoVmCode *op, DaoTypeContext *ctx )
+DaoType* DaoCstruct_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
 {
 	DaoRoutine *rout = NULL;
 
@@ -5903,7 +5903,7 @@ DaoType* DaoCstruct_CheckUnary( DaoType *self, DaoVmCode *op, DaoTypeContext *ct
 	return (DaoType*) rout->routType->aux;
 }
 
-DaoValue* DaoCstruct_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *p )
+DaoValue* DaoCstruct_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
 {
 	DaoType *type = self->xCstruct.ctype;
 	DaoRoutine *rout = NULL;
@@ -5919,9 +5919,9 @@ DaoValue* DaoCstruct_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *p )
 	rout = DaoType_FindOperator( type, op->code );
 	if( rout == NULL ) return NULL;
 	if( op->c == op->a ){
-		retc = DaoProcess_PushCallable( p, rout, self, & self, 1 );
+		retc = DaoProcess_PushCallable( proc, rout, self, & self, 1 );
 	}else{
-		retc = DaoProcess_PushCallable( p, rout, NULL, & self, 1 );
+		retc = DaoProcess_PushCallable( proc, rout, NULL, & self, 1 );
 	}
 	// TODO: retc;
 	return NULL;
@@ -5949,7 +5949,7 @@ DaoValue* DaoCstruct_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *p )
 	}
 #endif
 
-DaoType* DaoCstruct_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoTypeContext *ctx )
+DaoType* DaoCstruct_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
 	DaoRoutine *rout = NULL;
 	DaoType *selftype = NULL;
@@ -5998,7 +5998,7 @@ DaoType* DaoCstruct_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2],
 	}
 #endif
 
-DaoValue* DaoCstruct_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *p )
+DaoValue* DaoCstruct_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc )
 {
 	DaoRoutine *rout = NULL;
 	DaoValue *selfvalue = NULL;
@@ -6021,28 +6021,28 @@ DaoValue* DaoCstruct_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2],
 	args[1] = right;
 	if( op->c == op->a && self == left  ) selfvalue = self;
 	if( op->c == op->b && self == right ) selfvalue = self;
-	retc = DaoProcess_PushCallable( p, rout, selfvalue, args, 2 );
+	retc = DaoProcess_PushCallable( proc, rout, selfvalue, args, 2 );
 	// TODO: retc;
 	return NULL;
 }
 
-int DaoCstruct_CheckComparison( DaoType *self, DaoType *other, DaoTypeContext *ctx )
+int DaoCstruct_CheckComparison( DaoType *self, DaoType *other, DaoRoutine *ctx )
 {
 	return DAO_OK;
 }
 
-int DaoCstruct_DoComparison( DaoValue *self, DaoValue *other, DaoProcess *p )
+int DaoCstruct_DoComparison( DaoValue *self, DaoValue *other, DaoProcess *proc )
 {
 	if( self == other ) return 0;
 	return self < other ? -1 : 1;
 }
 
-DaoType* DaoCstruct_CheckConversion( DaoType *self, DaoType *type, DaoTypeContext *ctx )
+DaoType* DaoCstruct_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	return NULL;
 }
 
-DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *p )
+DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
 {
 	return NULL;
 }
@@ -6210,64 +6210,40 @@ DaoTypeCore daoCdataCore =
 
 
 
-DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype )
+static DaoTypeCore daoCtypeCore;
+
+DaoCtype* DaoCtype_New( DaoTypeCore *core, int tid )
 {
 	DaoCtype *self = (DaoCtype*)dao_calloc( 1, sizeof(DaoCtype) );
-	DaoCstruct_Init( (DaoCstruct*)self, cttype );
-	GC_IncRC( cdtype );
-	self->cdtype = cdtype;
-	self->type = DAO_CTYPE;
-	self->name = DString_New();
+	DaoValue_Init( (DaoValue*)self, DAO_CTYPE );
+	self->trait |= DAO_VALUE_NOCOPY;
 	self->info = DString_New();
-	if( cdtype ) DString_Assign( self->name, cdtype->name );
+	self->name = DString_NewChars( core->name );
+	self->classType = DaoType_New( core->name, DAO_CTYPE, (DaoValue*) self, NULL );
+	self->objectTyppe = DaoType_New( core->name, tid, (DaoValue*) self, NULL );
+	self->classType->core = & daoCtypeCore;
+	self->objectType->core = core;
+	GC_IncRC( self->classType );
+	GC_IncRC( self->objectType );
 #ifdef DAO_USE_GC_LOGGER
-	if( cttype == NULL ) DaoObjectLogger_LogNew( (DaoValue*) self );
+	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	return self;
 }
 
 void DaoCtype_Delete( DaoCtype *self )
 {
-	DaoCstruct_Free( (DaoCstruct*) self );
 	DString_Delete( self->name );
 	DString_Delete( self->info );
-	GC_DecRC( self->cdtype );
+	GC_DecRC( self->classType );
+	GC_DecRC( self->objectType );
 	dao_free( self );
 }
 
 
 
-/*
-// In analog to Dao classes, two type objects are created for each cdata type:
-// one for the cdata type type, the other for the cdata object type.
-//
-// Additionally, two dummy cdata objects are created:
-// one with typeid DAO_CTYPE serves an auxiliary value for the two type objects;
-// the other with typeid DAO_CDATA serves as the default value for the cdata object type.
-*/
-DaoType* DaoCdata_NewType( DaoTypeCore *core, int tid )
-{
-	DaoCtype *ctype = DaoCtype_New( NULL, NULL );
-	DaoType *cdata_type;
-	DaoType *ctype_type;
 
-	DString_SetChars( ctype->name, core->name );
-	ctype->subtype = DAO_CDATA_PTR;
-	ctype->trait |= DAO_VALUE_NOCOPY;
-
-	ctype_type = DaoType_New( core->name, DAO_CTYPE, (DaoValue*)ctype, NULL );
-	cdata_type = DaoType_New( core->name, DAO_CDATA, (DaoValue*)ctype, NULL );
-	GC_Assign( & ctype->cdtype, cdata_type );
-	GC_Assign( & ctype->ctype, ctype_type );
-	ctype_type->core = core;
-	cdata_type->core = core;
-	cdata_type->tid = tid;
-
-	return cdata_type;
-}
-
-
-DaoType* DaoCtype_CheckGetField( DaoType *self, DString *name, DaoTypeContext *ctx )
+DaoType* DaoCtype_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
 {
 	DaoValue *value = DaoType_FindValue( self->aux->xCtype.cdtype, name );
 	DaoType *res = NULL;
@@ -6293,7 +6269,7 @@ static void DaoCtype_CoreDelete( DaoValue *self )
 }
 
 
-DaoTypeCore daoCtypeCore =
+static DaoTypeCore daoCtypeCore =
 {
 	"ctype",                                       /* name */
 	{ NULL },                                      /* bases */

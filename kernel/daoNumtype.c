@@ -2789,8 +2789,8 @@ static void DaoARRAY_BasicFunctional( DaoProcess *proc, DaoValue *p[], int npar,
 }
 
 
-extern DaoType* DaoValue_CheckGetField( DaoType *self, DValue *field, DaoNamespace *ns );
-extern DaoValue* DaoValue_DoGetField( DaoValue *self, DValue *field, DaoProcess *p );
+extern DaoType* DaoValue_CheckGetField( DaoType *self, DValue *field, DaoRoutine *ctx );
+extern DaoValue* DaoValue_DoGetField( DaoValue *self, DValue *field, DaoProcess *proc );
 
 
 DaoTypeCore daoArrayCore =

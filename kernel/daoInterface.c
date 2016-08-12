@@ -358,7 +358,7 @@ void DaoCinType_DeriveMethods( DaoCinType *self )
 
 
 
-static DaoType* DaoCinType_CheckGetField( DaoType *self, DString *name, DaoTypeContext *ctx )
+static DaoType* DaoCinType_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
 {
 	DaoRoutine *rout = DaoType_FindFunction( self, name );
 
@@ -430,7 +430,7 @@ void DaoCinValue_Delete( DaoCinValue *self )
 
 
 
-static DaoType* DaoCinValue_CheckGetField( DaoType *self, DString *name, DaoTypeContext *ctx )
+static DaoType* DaoCinValue_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
 {
 	DaoRoutine *rout = DaoType_FindFunction( self, name );
 
@@ -460,7 +460,7 @@ static DaoValue* DaoCinValue_DoGetField( DaoValue *selfv, DString *name, DaoProc
 	return NULL;
 }
 
-static int DaoCinValue_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoTypeContext *ctx )
+static int DaoCinValue_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
 {
 	DaoRoutine *rout;
 	DString *buffer = ctx->buffer;
@@ -489,7 +489,7 @@ static int DaoCinValue_DoSetField( DaoValue *selfv, DString *name, DaoValue *val
 	return DAO_OK;
 }
 
-static DaoType* DaoCinValue_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoTypeContext *ctx )
+static DaoType* DaoCinValue_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
 {
 	DaoRoutine *rout = DaoType_FindFunctionChars( self, "[]" );
 	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, index, N, DVM_CALL );
@@ -505,7 +505,7 @@ static DaoValue* DaoCinValue_DoGetItem( DaoValue *selfv, DaoValue *index[], int 
 	return NULL;
 }
 
-static int DaoCinValue_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoTypeContext *ctx )
+static int DaoCinValue_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
 {
 	DaoRoutine *rout = DaoType_FindFunctionChars( self, "[]=" );
 	DaoType *args[ DAO_MAX_PARAM + 1 ];
@@ -530,7 +530,7 @@ static int DaoCinValue_DoSetItem( DaoValue *selfv, DaoValue *index[], int N, Dao
 	return DAO_OK;
 }
 
-DaoType* DaoCinValue_CheckUnary( DaoType *self, DaoVmCode *op, DaoTypeContext *ctx )
+DaoType* DaoCinValue_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
 {
 	DaoRoutine *rout = NULL;
 
@@ -552,7 +552,7 @@ DaoType* DaoCinValue_CheckUnary( DaoType *self, DaoVmCode *op, DaoTypeContext *c
 	return (DaoType*) rout->routType->aux;
 }
 
-DaoValue* DaoCinValue_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *p )
+DaoValue* DaoCinValue_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
 {
 	DaoType *type = self->xCinValue.cintype->vatype;
 	DaoRoutine *rout = NULL;
@@ -568,15 +568,15 @@ DaoValue* DaoCinValue_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *p )
 	rout = DaoType_FindOperator( type, op->code );
 	if( rout == NULL ) return NULL;
 	if( op->c == op->a ){
-		retc = DaoProcess_PushCallable( p, rout, self, & self, 1 );
+		retc = DaoProcess_PushCallable( proc, rout, self, & self, 1 );
 	}else{
-		retc = DaoProcess_PushCallable( p, rout, NULL, & self, 1 );
+		retc = DaoProcess_PushCallable( proc, rout, NULL, & self, 1 );
 	}
 	// TODO: retc;
 	return NULL;
 }
 
-DaoType* DaoCinValue_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoTypeContext *ctx )
+DaoType* DaoCinValue_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
 	DaoRoutine *rout = NULL;
 	DaoType *selftype = NULL;
@@ -604,7 +604,7 @@ DaoType* DaoCinValue_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2]
 	return (DaoType*) rout->routType->aux;
 }
 
-DaoValue* DaoCinValue_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *p )
+DaoValue* DaoCinValue_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc )
 {
 	DaoRoutine *rout = NULL;
 	DaoValue *selfvalue = NULL;
@@ -627,7 +627,7 @@ DaoValue* DaoCinValue_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2]
 	args[1] = right;
 	if( op->c == op->a && self == left  ) selfvalue = self;
 	if( op->c == op->b && self == right ) selfvalue = self;
-	retc = DaoProcess_PushCallable( p, rout, selfvalue, args, 2 );
+	retc = DaoProcess_PushCallable( proc, rout, selfvalue, args, 2 );
 	// TODO: retc;
 	return NULL;
 }

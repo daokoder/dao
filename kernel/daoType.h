@@ -116,7 +116,7 @@ struct DaoType
 	DaoType   *cbtype;   /* extra type for code block; */
 
 	DaoTypeKernel  *kernel; /* type kernel of built-in or C types; */
-	DaoTypeCore    *core; // typer
+	DaoTypeCore    *core;   /* type core; */ 
 };
 DAO_DLL DaoType *dao_type_none;
 DAO_DLL DaoType *dao_type_udf;
@@ -216,7 +216,7 @@ struct DaoTypeKernel
 	DaoRoutine    *ltOperators;
 	DaoNamespace  *nspace;
 	DaoTypeTree   *sptree;
-	DaoTypeCore   *core; //typer
+	//DaoTypeCore   *core; //typer
 
 	int (*SetupValues) ( DaoNamespace *self, DaoTypeKernal *kernel );
 	int (*SetupMethods)( DaoNamespace *self, DaoTypeKernal *kernel );

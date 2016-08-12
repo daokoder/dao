@@ -1395,7 +1395,7 @@ DaoRoutine* DaoClass_FindMethod( DaoClass *self, const char *name, DaoClass *sco
 /*
 // Not very useful to support operator overloading for class;
 */
-static DaoType* DaoClass_CheckGetField( DaoType *self, DString *name, DaoTypeContext *ctx )
+static DaoType* DaoClass_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
 {
 	DaoClass *self = (DaoClass*) self->aux;
 	DaoType *type = ctx->routine->routHost;
@@ -1435,7 +1435,7 @@ static DaoValue* DaoClass_DoGetField( DaoValue *selfv, DString *name, DaoProcess
 	return NULL;
 }
 
-static int DaoClass_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoTypeContext *ctx )
+static int DaoClass_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
 {
 	DaoClass *self = (DaoClass*) self->aux;
 	DaoType *type = ctx->routine->routHost;
