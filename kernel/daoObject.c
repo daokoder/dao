@@ -422,7 +422,10 @@ DaoRoutine* DaoObject_GetMethod( DaoObject *self, const char *name )
 static DaoType* DaoObject_CheckGetField( DaoType *selft, DString *name, DaoRoutine *ctx )
 {
 	DaoClass *self = (DaoClass*) selft->aux;
-	DaoValue *data = DaoClass_GetData( self, name, ctx->klass );
+	DaoType *type = ctx->routHost;
+	DaoClass *host = type && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoValue *data = DaoClass_GetData( self, name, host );
+	DaoRoutine *rout;
 
 	ctx->error = DAO_OK;
 	if( data == NULL ){
@@ -433,19 +436,17 @@ static DaoType* DaoObject_CheckGetField( DaoType *selft, DString *name, DaoRouti
 		switch( data->xBase.subtype ){
 		case DAO_OBJECT_VARIABLE : return data->xVar.dtype;
 		case DAO_CLASS_VARIABLE  : return data->xVar.dtype;
-		case DAO_CLASS_CONSTANT  : return DaoNamespace_GetType( ctx->nspace, data->xConst.value );
+		case DAO_CLASS_CONSTANT  : return DaoNamespace_GetType( ctx->nameSpace, data->xConst.value );
 		}
 	}
-	if( self->error ){
-		DString *field = ctx->buffer;
-		DaoRoutine *rout;
-
-		DString_SetChars( field, "." );
+	if( ctx->error ){
+		DString *field = DString_NewChars( "." );
 		DString_Append( field, name );
-		rout = DaoClass_FindMethod( self, field->chars, ctx->klass );
+		rout = DaoClass_FindMethod( self, field->chars, host );
+		DString_Delete( field );
 		if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, NULL, 0, DVM_CALL );
 		if( rout == NULL ) return NULL;
-		self->error = 0;
+		ctx->error = 0;
 		return (DaoType*) rout->routType->aux;
 	}
 	return NULL;
@@ -476,29 +477,31 @@ static DaoValue* DaoObject_DoGetField( DaoValue *selfv, DString *name, DaoProces
 static int DaoObject_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
 {
 	DaoClass *self = (DaoClass*) self->aux;
-	DaoValue *data = DaoClass_GetData( self, name, ctx->klass );
+	DaoType *type = ctx->routHost;
+	DaoClass *host = type && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoValue *data = DaoClass_GetData( self, name, host );
+	DaoRoutine *rout;
+	int error = DAO_OK;
 
-	self->error = 0;
+	error = 0;
 	if( data == NULL ){
-		self->error = DAO_ERROR_FIELD_ABSENT;
+		error = DAO_ERROR_FIELD_ABSENT;
 	}else if( data->type == DAO_NONE ){
-		self->error = DAO_ERROR_FIELD_HIDDEN;
+		error = DAO_ERROR_FIELD_HIDDEN;
 	}else if( data->xBase.subtype == DAO_CLASS_CONSTANT ){
-		self->error = DAO_ERROR_FIELD_HIDDEN; // XXX
+		error = DAO_ERROR_FIELD_HIDDEN; // XXX
 	}else{
 		/* data->xBase.subtype == DAO_CLASS_VARIABLE || DAO_OBJECT_VARIABLE */
-		if( DaoType_MatchTo( value, data->xVar.dtype, ctx->thmap ) == 0 ) return DAO_ERROR_VALUE;
+		if( DaoType_MatchTo( value, data->xVar.dtype, NULL ) == 0 ) return DAO_ERROR_VALUE;
 	}
-	if( self->error ){
-		DString *field = ctx->buffer;
-		DaoRoutine *rout;
-
-		DString_SetChars( field, "." );
+	if( error ){
+		DString *field = DString_SetChars( "." );
 		DString_Append( field, name );
 		DString_AppendChars( field, "=" );
-		rout = DaoClass_FindMethod( self, field->chars, ctx->klass );
+		rout = DaoClass_FindMethod( self, field->chars, host );
+		DString_Delete( field );
 		if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, & value, 1, DVM_CALL );
-		if( rout == NULL ) return self->error;
+		if( rout == NULL ) return error;
 	}
 	return DAO_OK;
 }
@@ -523,9 +526,9 @@ static int DaoObject_DoSetField( DaoValue *selfv, DString *name, DaoValue *value
 
 static DaoType* DaoObject_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
 {
-	//DaoType *type = ctx->routine->routHost;
-	//DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
-	DaoRoutine *rout = DaoClass_FindMethod( (DaoClass*) self->aux, "[]", ctx->klass );
+	DaoType *type = ctx->routHost;
+	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoRoutine *rout = DaoClass_FindMethod( (DaoClass*) self->aux, "[]", host );
 
 	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, index, N, DVM_CALL );
 	if( rout == NULL ) return DAO_ERROR_INDEX;
@@ -544,7 +547,9 @@ static DaoValue* DaoObject_DoGetItem( DaoValue *selfv, DaoValue *index[], int N,
 
 static int DaoObject_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
 {
-	DaoRoutine *rout = DaoClass_FindMethod( (DaoClass*) self->aux, "[]", ctx->klass );
+	DaoType *type = ctx->routHost;
+	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoRoutine *rout = DaoClass_FindMethod( (DaoClass*) self->aux, "[]", host );
 	DaoType *args[ DAO_MAX_PARAM + 1 ];
 
 	args[0] = value;
@@ -669,6 +674,52 @@ DaoValue* DaoObject_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], 
 	return NULL;
 }
 
+static DaoType* DaoObject_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
+{
+	DString *buffer;
+	DaoRoutine *rout;
+	DaoType *hostype = ctx->routHost;
+	DaoClass *host = hostype->tid == DAO_OBJECT ? (DaoClass*) hostype->aux : NULL;
+
+	if( DaoType_ChildOf( self, type ) ) return type;
+	if( DaoType_ChildOf( type, self ) ) return type;
+
+	buffer = DString_NewChars( "(" );
+	DString_Append( buffer, type->name );
+	DString_AppendChars( buffer, ")" );
+	rout = DaoClass_FindMethod( (DaoClass*) self->aux, buffer->chars, host );
+	DString_Delete( buffer );
+	if( rout != NULL ){
+		DaoType *ttype = DaoNamespace_GetType( ctx->nameSpace );
+		rout = DaoRoutine_MatchByType( rout, self, & ttype, 1, DVM_CALL );
+	}
+	if( rout != NULL ) return type;
+	return NULL;
+}
+
+static DaoValue* DaoObject_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
+{
+	DaoObject *object = (DaoObject*) self;
+	DaoType *hostype = ctx->routHost;
+	DaoClass *host = hostype->tid == DAO_OBJECT ? (DaoClass*) hostype->aux : NULL;
+	DaoValue *base = DaoObject_CastToBase( object->rootObject, type );
+	DaoRoutine *rout;
+	DString *buffer;
+
+	if( base ) return base;
+
+	buffer = DString_NewChars( "(" );
+	DString_Append( buffer, type->name );
+	DString_AppendChars( buffer, ")" );
+	rout = DaoClass_FindMethod( object->defClass, buffer->chars, host );
+	DString_Delete( buffer );
+	if( rout != NULL ){
+		int rc = DaoProcess_PushCallable( proc, rout, self, & type, 1 );
+		if( rc ) return NULL;
+	}
+	return NULL;
+}
+
 void DaoObject_CoreDelete( DaoValue *self )
 {
 	DaoObject_Delete( (DaoObject*) self );
@@ -676,22 +727,22 @@ void DaoObject_CoreDelete( DaoValue *self )
 
 DaoTypeCore daoObjectCore =
 {
-	"object",                                        /* name */
-	{ NULL },                                        /* bases */
-	NULL,                                            /* numbers */
-	NULL,                                            /* methods */
-	DaoObject_CheckGetField,  DaoObject_DoGetField,  /* GetField */
-	DaoObject_CheckSetField,  DaoObject_DoSetField,  /* SetField */
-	DaoObject_CheckGetItem,   DaoObject_DoGetItem,   /* GetItem */
-	DaoObject_CheckSetItem,   DaoObject_DoSetItem,   /* SetItem */
-	DaoObject_CheckUnary,     DaoObject_DoUnary,     /* Unary */
-	DaoObject_CheckBinary,    DaoObject_DoBinary,    /* Binary */
-	NULL,                     NULL,                  /* Comparison */
-	NULL,                     NULL,                  /* Conversion */
-	NULL,                     NULL,                  /* ForEach */
-	DaoObject_Print,                                 /* Print */
-	NULL,                                            /* Slice */
-	NULL,                                            /* Copy */
-	DaoObject_CoreDelete,                            /* Delete */
-	NULL                                             /* HandleGC */
+	"object",                                            /* name */
+	{ NULL },                                            /* bases */
+	NULL,                                                /* numbers */
+	NULL,                                                /* methods */
+	DaoObject_CheckGetField,    DaoObject_DoGetField,    /* GetField */
+	DaoObject_CheckSetField,    DaoObject_DoSetField,    /* SetField */
+	DaoObject_CheckGetItem,     DaoObject_DoGetItem,     /* GetItem */
+	DaoObject_CheckSetItem,     DaoObject_DoSetItem,     /* SetItem */
+	DaoObject_CheckUnary,       DaoObject_DoUnary,       /* Unary */
+	DaoObject_CheckBinary,      DaoObject_DoBinary,      /* Binary */
+	NULL,                       NULL,                    /* Comparison */
+	DaoObject_CheckConversion,  DaoObject_DoConversion,  /* Conversion */
+	NULL,                       NULL,                    /* ForEach */
+	DaoObject_Print,                                     /* Print */
+	NULL,                                                /* Slice */
+	NULL,                                                /* Copy */
+	DaoObject_CoreDelete,                                /* Delete */
+	NULL                                                 /* HandleGC */
 };

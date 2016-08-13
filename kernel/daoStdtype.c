@@ -5257,7 +5257,7 @@ static int DaoTuple_DoSetField( DaoValue *selfv, DString *field, DaoValue *value
 
 static DaoType* DaoTuple_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
 {
-	DaoNamespace *NS = ctx->nspace;
+	DaoNamespace *NS = ctx->nameSpace;
 	DaoType *retype = dao_type_any;
 	DaoType *itypes[2];
 	DList *TS;
@@ -5283,7 +5283,7 @@ static DaoType* DaoTuple_CheckGetItem( DaoType *self, DaoType *index[], int N, D
 			if( itype->tid >= DAO_PAR_NAMED && itype->tid <= DAO_PAR_VALIST ){
 				itype = (DaoType*) itype->aux;
 			}
-			if( DaoType_MatchTo( itype, retype, ctx->thmap ) < DAO_MT_EQ ){
+			if( DaoType_MatchTo( itype, retype, NULL ) < DAO_MT_EQ ){
 				retype = dao_type_any;
 				break;
 			}
@@ -5784,10 +5784,10 @@ DaoType* DaoCstruct_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx
 	}else if( value ){
 		res = DaoNamespace_GetType( ns, value );
 	}else{
-		DString *buffer = ctx->buffer;
-		DString_SetChars( buffer, "." );
+		DString *buffer = DString_NewChars( "." );
 		DString_Append( buffer, name );
 		rout = DaoType_FindFunction( self, buffer );
+		DString_Delete( buffer );
 		if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, NULL, 0, DVM_CALL );
 		if( rout == NULL ) return NULL;
 		res = (DaoType*) rout->routType->aux;
@@ -5814,12 +5814,11 @@ DaoValue* DaoCstruct_DoGetField( DaoValue *self, DString *name, DaoProcess *proc
 int DaoCstruct_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
 {
 	DaoRoutine *rout;
-	DString *buffer = ctx->buffer;
-
-	DString_SetChars( buffer, "." );
+	DString *buffer = DString_NewChars( "." );
 	DString_Append( buffer, name );
 	DString_AppendChars( buffer, "=" );
 	rout = DaoType_FindFunction( self, buffer );
+	DString_Delete( buffer );
 	if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
 	rout = DaoRoutine_MatchByType( rout, self, & value, 1, DVM_CALL );
 	if( rout == NULL ) return DAO_ERROR_VALUE;
@@ -6039,11 +6038,41 @@ int DaoCstruct_DoComparison( DaoValue *self, DaoValue *other, DaoProcess *proc )
 
 DaoType* DaoCstruct_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
+	DString *buffer;
+	DaoRoutine *rout;
+
+	if( DaoType_ChildOf( self, type ) ) return type;
+	if( DaoType_ChildOf( type, self ) ) return type;
+
+	buffer = DString_NewChars( "(" );
+	DString_Append( buffer, type->name );
+	DString_AppendChars( buffer, ")" );
+	rout = DaoType_FindFunction( self, buffer );
+	DString_Delete( buffer );
+	if( rout != NULL ){
+		DaoType *ttype = DaoNamespace_GetType( ctx->nameSpace );
+		rout = DaoRoutine_MatchByType( rout, self, & ttype, 1, DVM_CALL );
+	}
+	if( rout != NULL ) return type;
 	return NULL;
 }
 
 DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
 {
+	DaoRoutine *rout;
+	DString *buffer;
+
+	if( DaoType_MatchToParent( self->xCtruct.ctype, type, NULL, 0 ) ) return self;
+
+	buffer = DString_NewChars( "(" );
+	DString_Append( buffer, type->name );
+	DString_AppendChars( buffer, ")" );
+	rout = DaoType_FindFunction( self->xCstruct.ctype, buffer );
+	DString_Delete( buffer );
+	if( rout != NULL ){
+		int rc = DaoProcess_PushCallable( proc, rout, self, & type, 1 );
+		if( rc ) return NULL;
+	}
 	return NULL;
 }
 
@@ -6091,6 +6120,33 @@ void DaoCstruct_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProce
 		DaoStream_WriteChars( stream, buf );
 	}
 	if( inmap == NULL ) DMap_Delete( cycmap );
+}
+
+static DaoTypeCore daoCstructCore =
+{
+	"cstruct",                                             /* name */
+	{ NULL },                                              /* bases */
+	NULL,                                                  /* numbers */
+	NULL,                                                  /* methods */
+	DaoCstruct_CheckGetField,    DaoCstruct_DoGetField,    /* GetField */
+	DaoCstruct_CheckSetField,    DaoCstruct_DoSetField,    /* SetField */
+	DaoCstruct_CheckGetItem,     DaoCstruct_DoGetItem,     /* GetItem */
+	DaoCstruct_CheckSetItem,     DaoCstruct_DoSetItem,     /* SetItem */
+	DaoCstruct_CheckUnary,       DaoCstruct_DoUnary,       /* Unary */
+	DaoCstruct_CheckBinary,      DaoCstruct_DoBinary,      /* Binary */
+	NULL,                        NULL,                     /* Comparison */
+	DaoCstruct_CheckConversion,  DaoCstruct_DoConversion,  /* Conversion */
+	NULL,                        NULL,                     /* ForEach */
+	DaoCstruct_Print,                                      /* Print */
+	NULL,                                                  /* Slice */
+	NULL,                                                  /* Copy */
+	NULL,                                                  /* Delete */
+	NULL                                                   /* HandleGC */
+};
+
+DaoTypeCore* DaoCstruct_GetDefaultCore()
+{
+	return & daoCstructCore;
 }
 
 
@@ -6251,7 +6307,7 @@ DaoType* DaoCtype_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
 	if( value && value->type == DAO_ROUTINE ){
 		res = value->xRoutine.routType;
 	}else if( value ){
-		res = DaoNamespace_GetType( ctx->nspace, value );
+		res = DaoNamespace_GetType( ctx->nameSpace, value );
 	}
 	return res;
 }

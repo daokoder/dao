@@ -270,6 +270,7 @@ struct DaoCstruct
 
 DAO_DLL void DaoCstruct_Init( DaoCstruct *self, DaoType *type );
 DAO_DLL void DaoCstruct_Free( DaoCstruct *self );
+DAO_DLL DaoTypeCore* DaoCstruct_GetDefaultCore();
 
 
 

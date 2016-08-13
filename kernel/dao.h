@@ -176,8 +176,7 @@ enum DaoOptions
 
 enum DaoCtypeWrapOptions
 {
-	DAO_CTYPE_OPAQUE = 1,
-	DAO_CTYPE_INVAR  = 2
+	DAO_CTYPE_INVAR  = 1
 };
 
 
@@ -460,6 +459,7 @@ struct DaoTypeCore
 	// that are pushed to "values" should be removed by setting them to nulls.
 	*/
 };
+
 
 /*
 // These structures can be passed to DaoVmSpace

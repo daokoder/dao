@@ -1398,8 +1398,8 @@ DaoRoutine* DaoClass_FindMethod( DaoClass *self, const char *name, DaoClass *sco
 static DaoType* DaoClass_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
 {
 	DaoClass *self = (DaoClass*) self->aux;
-	DaoType *type = ctx->routine->routHost;
-	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoType *type = ctx->routHost;
+	DaoClass *host = type && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoValue *data = DaoClass_GetData( self, name, host );;
 
 	ctx->error = DAO_OK;
@@ -1412,7 +1412,7 @@ static DaoType* DaoClass_CheckGetField( DaoType *self, DString *name, DaoRoutine
 	}else if( data->xBase.subtype == DAO_CLASS_VARIABLE ){
 		return data->xVar.dtype;
 	}else if( data->xBase.subtype == DAO_CLASS_CONSTANT ){
-		return DaoNamespace_GetType( ctx->nspace, data->xConst.value );
+		return DaoNamespace_GetType( ctx->nameSpace, data->xConst.value );
 	}
 	return NULL;
 }
@@ -1421,7 +1421,7 @@ static DaoValue* DaoClass_DoGetField( DaoValue *selfv, DString *name, DaoProcess
 {
 	DaoClass *self = (DaoClass*) selfv;
 	DaoType *type = proc->activeRoutine->routHost;
-	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoClass *host = type && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoValue *data = DaoClass_GetData( self, name, host );;
 	if( data == NULL || data->type == DAO_NONE || data->xBase.subtype == DAO_OBJECT_VARIABLE ){
 		int rc = data == NULL ? DAO_ERROR_FIELD_ABSENT : DAO_ERROR_FIELD_HIDDEN;
@@ -1438,8 +1438,8 @@ static DaoValue* DaoClass_DoGetField( DaoValue *selfv, DString *name, DaoProcess
 static int DaoClass_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
 {
 	DaoClass *self = (DaoClass*) self->aux;
-	DaoType *type = ctx->routine->routHost;
-	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoType *type = ctx->routHost;
+	DaoClass *host = type && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoValue *data = DaoClass_GetData( self, name, host );;
 
 	if( data == NULL ){
@@ -1451,7 +1451,7 @@ static int DaoClass_CheckSetField( DaoType *self, DString *name, DaoType *value,
 	}else if( data->xBase.subtype == DAO_CLASS_CONSTANT ){
 		return DAO_ERROR_FIELD_HIDDEN; // XXX
 	}else{ /* data->xBase.subtype == DAO_CLASS_VARIABLE */
-		if( DaoType_MatchTo( value, data->xVar.dtype, ctx->thmap ) == 0 ) return DAO_ERROR_VALUE;
+		if( DaoType_MatchTo( value, data->xVar.dtype, NULL ) == 0 ) return DAO_ERROR_VALUE;
 	}
 	return DAO_OK;
 }

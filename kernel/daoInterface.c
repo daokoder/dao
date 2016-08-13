@@ -433,12 +433,14 @@ void DaoCinValue_Delete( DaoCinValue *self )
 static DaoType* DaoCinValue_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
 {
 	DaoRoutine *rout = DaoType_FindFunction( self, name );
+	DString *buffer;
 
 	if( rout != NULL ) return rout->routType;
 
-	DString_SetChars( ctx->buffer, "." );
-	DString_Append( ctx->buffer, name );
-	rout = DaoType_FindFunction( self, ctx->buffer );
+	buffer = DString_NewChars( "." );
+	DString_Append( buffer, name );
+	rout = DaoType_FindFunction( self, buffer );
+	DString_Delete( buffer );
 	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, NULL, 0, DVM_CALL );
 	if( rout == NULL ) return NULL;
 	return (DaoType*) rout->routType->aux;
@@ -463,12 +465,11 @@ static DaoValue* DaoCinValue_DoGetField( DaoValue *selfv, DString *name, DaoProc
 static int DaoCinValue_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
 {
 	DaoRoutine *rout;
-	DString *buffer = ctx->buffer;
-
-	DString_SetChars( buffer, "." );
+	DString *buffer = DString_NewChars( "." );
 	DString_Append( buffer, name );
 	DString_AppendChars( buffer, "=" );
 	rout = DaoType_FindFunction( self, buffer );
+	DString_Delete( buffer );
 	if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
 	rout = DaoRoutine_MatchByType( rout, self, & value, 1, DVM_CALL );
 	if( rout == NULL ) return DAO_ERROR_VALUE;
@@ -632,6 +633,64 @@ DaoValue* DaoCinValue_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2]
 	return NULL;
 }
 
+DaoType* DaoCinValue_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
+{
+	DaoCinType *cintype = (DaoCinType*) self->aux;
+	DaoTypeCore *core;
+	DaoRoutine *rout;
+	DString *buffer;
+
+	if( cintype->target == type ){
+		return type;
+	}else if( DaoType_MatchTo( cintype->target, type, NULL ) >= DAO_MT_EQ ){
+		return type;
+	}
+
+	buffer = DString_NewChars( "(" );
+	DString_Append( buffer, type->name );
+	DString_AppendChars( buffer, ")" );
+	rout = DaoType_FindFunction( cintype->vatype, buffer );
+	DString_Delete( buffer );
+	if( rout != NULL ){
+		DaoType *ttype = DaoNamespace_GetType( ctx->nameSpace );
+		rout = DaoRoutine_MatchByType( rout, self, & ttype, 1, DVM_CALL );
+		if( rout ) return type;
+	}
+	core = cintype->target->core;
+	if( core != NULL && core->DoConversion ){
+		return core->CheckConversion( cintype->target, type, num, proc );
+	}
+	return NULL;
+}
+
+DaoValue* DaoCinValue_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
+{
+	DaoCinType *cintype = self->xCinValue.cintype;
+	DaoTypeCore *core;
+	DaoRoutine *rout;
+	DString *buffer;
+
+	if( cintype->target == type ){
+		return self->xCinValue.value;
+	}else if( DaoType_MatchTo( cintype->target, type, NULL ) >= DAO_MT_EQ ){
+		return self->xCinValue.value;
+	}
+
+	buffer = DString_NewChars( "(" );
+	DString_Append( buffer, type->name );
+	DString_AppendChars( buffer, ")" );
+	rout = DaoType_FindFunction( cintype->vatype, buffer );
+	DString_Delete( buffer );
+	if( rout != NULL ){
+		int rc = DaoProcess_PushCallable( proc, rout, self, & type, 1 );
+		if( rc == 0 ) return NULL;
+	}
+	core = DaoValue_GetTypeCore( self->xCinValue.value );
+	if( core != NULL && core->DoConversion ){
+		return core->DoConversion( self->xCinValue.value, type, num, proc );
+	}
+	return NULL;
+}
 
 void DaoCinValue_CoreDelete( DaoValue *self )
 {
@@ -640,22 +699,22 @@ void DaoCinValue_CoreDelete( DaoValue *self )
 
 DaoTypeCore daoCinValueCore =
 {
-	"CinValue",                                          /* name */
-	{ NULL },                                            /* bases */
-	NULL,                                                /* numbers */
-	NULL,                                                /* methods */
-	DaoCinValue_CheckGetField,  DaoCinValue_DoGetField,  /* GetField */
-	DaoCinValue_CheckSetField,  DaoCinValue_DoSetField,  /* SetField */
-	DaoCinValue_CheckGetItem,   DaoCinValue_DoGetItem,   /* GetItem */
-	DaoCinValue_CheckSetItem,   DaoCinValue_DoSetItem,   /* SetItem */
-	DaoCinValue_CheckUnary,     DaoCinValue_DoUnary,     /* Unary */
-	DaoCinValue_CheckBinary,    DaoCinValue_DoBinary,    /* Binary */
-	NULL,                       NULL,                    /* Comparison */
-	NULL,                       NULL,                    /* Conversion */
-	NULL,                       NULL,                    /* ForEach */
-	DaoCinValue_Print,                                   /* Print */
-	NULL,                                                /* Slice */
-	NULL,                                                /* Copy */
-	DaoCinValue_CoreDelete,                              /* Delete */
-	NULL                                                 /* HandleGC */
+	"CinValue",                                              /* name */
+	{ NULL },                                                /* bases */
+	NULL,                                                    /* numbers */
+	NULL,                                                    /* methods */
+	DaoCinValue_CheckGetField,    DaoCinValue_DoGetField,    /* GetField */
+	DaoCinValue_CheckSetField,    DaoCinValue_DoSetField,    /* SetField */
+	DaoCinValue_CheckGetItem,     DaoCinValue_DoGetItem,     /* GetItem */
+	DaoCinValue_CheckSetItem,     DaoCinValue_DoSetItem,     /* SetItem */
+	DaoCinValue_CheckUnary,       DaoCinValue_DoUnary,       /* Unary */
+	DaoCinValue_CheckBinary,      DaoCinValue_DoBinary,      /* Binary */
+	NULL,                         NULL,                      /* Comparison */
+	DaoCinValue_CheckConversion,  DaoCinValue_DoConversion,  /* Conversion */
+	NULL,                         NULL,                      /* ForEach */
+	DaoCinValue_Print,                                       /* Print */
+	NULL,                                                    /* Slice */
+	NULL,                                                    /* Copy */
+	DaoCinValue_CoreDelete,                                  /* Delete */
+	NULL                                                     /* HandleGC */
 };
