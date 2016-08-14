@@ -102,9 +102,9 @@ static int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue
 
 static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoValue *C, DaoType *TA, DaoType *TB );
 
-int DaoArray_number_op_array( DaoArray *C, DaoValue *A, DaoArray *B, short op, DaoProcess *ctx );
-int DaoArray_array_op_number( DaoArray *C, DaoArray *A, DaoValue *B, short op, DaoProcess *ctx );
-int DaoArray_ArrayArith( DaoArray *s, DaoArray *l, DaoArray *r, short p, DaoProcess *c );
+int DaoArray_DoBinary_NumberArray( DaoArray *C, DaoValue *A, DaoArray *B, int op, DaoProcess *p );
+int DaoArray_DoBinary_ArrayNumber( DaoArray *C, DaoArray *A, DaoValue *B, int op, DaoProcess *p );
+int DaoArray_DoBinary_ArrayArray( DaoArray *C, DaoArray *A, DaoArray *B, int op, DaoProcess *p );
 void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int callmode );
 
 
@@ -5031,7 +5031,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 			nc = DaoProcess_GetArray( self, vmc );
 			if( nc->etype == DAO_NONE ) nc->etype = na->etype;
 		}
-		DaoArray_array_op_number( nc, na, B, vmc->code, self );
+		DaoArray_DoBinary_ArrayNumber( nc, na, B, vmc->code, self );
 	}else if( A->type >= DAO_INTEGER && A->type <= DAO_COMPLEX && B->type == DAO_ARRAY ){
 		DaoArray *nb = & B->xArray;
 		DaoArray *nc = nb;
@@ -5039,7 +5039,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 			nc = DaoProcess_GetArray( self, vmc );
 			if( nc->etype == DAO_NONE ) nc->etype = nb->etype;
 		}
-		DaoArray_number_op_array( nc, A, nb, vmc->code, self );
+		DaoArray_DoBinary_NumberArray( nc, A, nb, vmc->code, self );
 	}else if( A->type == DAO_ARRAY && B->type == DAO_ARRAY ){
 		DaoArray *na = & A->xArray;
 		DaoArray *nb = & B->xArray;
@@ -5052,7 +5052,7 @@ void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
 			nc = DaoProcess_GetArray( self, vmc );
 			if( nc->etype == DAO_NONE ) nc->etype = na->etype > nb->etype ? na->etype : nb->etype;
 		}
-		DaoArray_ArrayArith( nc, na, nb, vmc->code, self );
+		DaoArray_DoBinary_ArrayArray( nc, na, nb, vmc->code, self );
 #endif
 	}else if( A->type == DAO_STRING && B->type == DAO_STRING && vmc->code == DVM_ADD ){
 		if( vmc->a == vmc->c ){

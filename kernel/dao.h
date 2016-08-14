@@ -365,7 +365,7 @@ struct DaoTypeCore
 	// Functions for GETI, GETDI and GETMI:
 	*/
 
-	int (*CheckSetItem)( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *rout);
+	int (*CheckSetItem)( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *rout );
 	int (*DoSetItem)( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc );
 	/*
 	// Functions for SETI, SETDI and SETMI:
@@ -379,7 +379,7 @@ struct DaoTypeCore
 	// The self parameter is the operand;
 	*/
 
-	DaoType* (*CheckBinary)( DaoType *self, DaoVmCode *op, DaoType *operands[2], DaoRoutine *rout);
+	DaoType* (*CheckBinary)( DaoType *self, DaoVmCode *op, DaoType *operands[2], DaoRoutine *rout );
 	DaoValue* (*DoBinary)( DaoValue *self, DaoVmCode *op, DaoValue *operands[2], DaoProcess *proc );
 	/*
 	// Functions for binary operations:

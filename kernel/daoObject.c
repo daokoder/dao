@@ -631,6 +631,7 @@ DaoType* DaoObject_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], 
 	case DVM_AND : case DVM_OR :
 	case DVM_LT  : case DVM_LE :
 	case DVM_EQ  : case DVM_NE :
+	case DVM_IN :
 		break;
 	default: return NULL;
 	}
@@ -659,6 +660,7 @@ DaoValue* DaoObject_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], 
 	case DVM_AND : case DVM_OR :
 	case DVM_LT  : case DVM_LE :
 	case DVM_EQ  : case DVM_NE :
+	case DVM_IN :
 		break;
 	default: return NULL;
 	}

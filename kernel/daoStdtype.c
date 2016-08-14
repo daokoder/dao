@@ -127,8 +127,8 @@ static DIndexRange Dao_CheckRangeIndex( DaoRange *range, daoint size, DaoProcess
 	end = DaoValue_GetInteger( range->second );
 	if( range->second->type == DAO_NONE ) end = size;
 
-	pos = Dao_CheckNumberIndex( pos, size, p );
-	end = Dao_CheckNumberIndex( end, size + 1, p ); /* Open index; TODO: check other places; */
+	pos = Dao_CheckNumberIndex( pos, size, proc );
+	end = Dao_CheckNumberIndex( end, size + 1, proc ); /* Open index; TODO: check other places; */
 	if( pos < 0 || end < 0 ) return res;
 	if( pos > end ){
 		DaoProcess_RaiseError( proc, "Index::Range", NULL );
@@ -5799,15 +5799,15 @@ DaoValue* DaoCstruct_DoGetField( DaoValue *self, DString *name, DaoProcess *proc
 {
 	DaoType *type = self->xCstruct.ctype;
 	DaoValue *value = DaoType_FindValue( type, name );
-	DaoRoutine *func = NULL;
+	DaoRoutine *rout = NULL;
 
 	if( value != NULL ) return value;
 
 	DString_SetChars( proc->string, "." );
 	DString_Append( proc->string, name );
-	func = DaoType_FindFunction( type, proc->string );
-	if( func == NULL ) return NULL;
-	DaoProcess_PushCallable( proc, func, self, NULL, 0 );
+	rout = DaoType_FindFunction( type, proc->string );
+	if( rout == NULL ) return NULL;
+	DaoProcess_PushCallable( proc, rout, self, NULL, 0 );
 	return NULL;
 }
 
@@ -5827,15 +5827,15 @@ int DaoCstruct_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoR
 
 int DaoCstruct_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc )
 {
-    DaoRoutine *func = NULL;
+    DaoRoutine *rout = NULL;
 	DaoType *type = self->xCstruct.ctype;
 
     DString_SetChars( proc->string, "." );
     DString_Append( proc->string, name );
     DString_AppendChars( proc->string, "=" );
-    func = DaoType_FindFunction( type, proc->string );
-    if( func == NULL ) return DAO_ERROR_FIELD_ABSENT;
-    DaoProcess_PushCallable( proc, func, self, & value, 1 );
+    rout = DaoType_FindFunction( type, proc->string );
+    if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
+    DaoProcess_PushCallable( proc, rout, self, & value, 1 );
 	return DAO_OK;
 }
 
@@ -5850,8 +5850,8 @@ DaoType* DaoCstruct_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRou
 DaoValue* DaoCstruct_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *proc )
 {
 	DaoType *type = self->xCstruct.ctype;
-	DaoRoutine *func = DaoType_FindFunctionChars( type, "[]" );
-	if( func != NULL ) DaoProcess_PushCallable( proc, func, self, index, N );
+	DaoRoutine *rout = DaoType_FindFunctionChars( type, "[]" );
+	if( rout != NULL ) DaoProcess_PushCallable( proc, rout, self, index, N );
 	return NULL;
 }
 
@@ -5961,6 +5961,7 @@ DaoType* DaoCstruct_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2],
 	case DVM_AND : case DVM_OR :
 	case DVM_LT  : case DVM_LE :
 	case DVM_EQ  : case DVM_NE :
+	case DVM_IN :
 		break;
 	default: return NULL;
 	}
@@ -6010,6 +6011,7 @@ DaoValue* DaoCstruct_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2],
 	case DVM_AND : case DVM_OR :
 	case DVM_LT  : case DVM_LE :
 	case DVM_EQ  : case DVM_NE :
+	case DVM_IN :
 		break;
 	default: return NULL;
 	}
