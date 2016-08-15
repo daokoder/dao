@@ -5380,7 +5380,6 @@ static int DaoTuple_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoTyp
 	case DAO_RANGE :
 		if( index[0]->nested->items.pType[0]->tid > DAO_FLOAT ) return DAO_ERROR_INDEX;
 		if( index[0]->nested->items.pType[1]->tid > DAO_FLOAT ) return DAO_ERROR_INDEX;
-		if( value->tid != DAO_STRING ) return DAO_ERROR_VALUE;
 		break;
 	default: return DAO_ERROR_INDEX;
 	}
@@ -5926,28 +5925,6 @@ DaoValue* DaoCstruct_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
 	return NULL;
 }
 
-#if 0
-// Should used outside!
-	/* Determine which type to use for searching operator overloading: */
-	if( left->tid == DAO_CSTRUCT && right->tid == DAO_CSTRUCT ){
-		if( op->c == op->a ){
-			hostype = left;
-		}else if( op->c == op->b ){
-			hostype = right;
-		}else if( DaoType_ChildOf( right, left ) ){
-			hostype = right;
-		}else{
-			hostype = left;
-		}
-	}else if( left->tid == DAO_CSTRUCT ){
-		hostype = left;
-	}else if( right->tid == DAO_CSTRUCT ){
-		hostype = right;
-	}else{
-		return NULL;
-	}
-#endif
-
 DaoType* DaoCstruct_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
 	DaoRoutine *rout = NULL;
@@ -5976,27 +5953,6 @@ DaoType* DaoCstruct_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2],
 	if( rout == NULL ) return NULL;
 	return (DaoType*) rout->routType->aux;
 }
-
-#if 0
-	/* Determine which value to use for searching operator overloading: */
-	if( left->type == DAO_CSTRUCT && right->type == DAO_CSTRUCT ){
-		if( op->c == op->a ){
-			hostvalue = left;
-		}else if( op->c == op->b ){
-			hostvalue = right;
-		}else if( DaoType_ChildOf( right, left ) ){
-			hostvalue = right;
-		}else{
-			hostvalue = left;
-		}
-	}else if( left->type == DAO_CSTRUCT ){
-		hostvalue = left;
-	}else if( right->type == DAO_CSTRUCT ){
-		hostvalue = right;
-	}else{
-		return NULL;
-	}
-#endif
 
 DaoValue* DaoCstruct_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc )
 {
@@ -6136,7 +6092,7 @@ static DaoTypeCore daoCstructCore =
 	DaoCstruct_CheckSetItem,     DaoCstruct_DoSetItem,     /* SetItem */
 	DaoCstruct_CheckUnary,       DaoCstruct_DoUnary,       /* Unary */
 	DaoCstruct_CheckBinary,      DaoCstruct_DoBinary,      /* Binary */
-	NULL,                        NULL,                     /* Comparison */
+	DaoCstruct_CheckComparison,  DaoCstruct_DoComparison,  /* Comparison */
 	DaoCstruct_CheckConversion,  DaoCstruct_DoConversion,  /* Conversion */
 	NULL,                        NULL,                     /* ForEach */
 	DaoCstruct_Print,                                      /* Print */

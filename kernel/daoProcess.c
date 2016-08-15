@@ -80,14 +80,8 @@ static void DaoProcess_DoSetField( DaoProcess *self, DaoVmCode *vmc );
 
 static void DaoProcess_DoIter( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoUnaBool( DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoBitLogic( DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoBitShift( DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc );
+static void DaoProcess_DoBinary( DaoProcess *self, DaoVmCode *vmc );
+static void DaoProcess_DoUnary( DaoProcess *self, DaoVmCode *vmc );
 
 static void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc );
@@ -1440,24 +1434,14 @@ CallEntry:
 			DaoProcess_DoCast( self, vmc );
 			goto CheckException;
 		}OPNEXT()
-		OPCASE( ADD )
-		OPCASE( SUB )
-		OPCASE( MUL )
-		OPCASE( DIV )
-		OPCASE( MOD )
-		OPCASE( POW ){
+		OPCASE( ADD ) OPCASE( SUB )
+		OPCASE( MUL ) OPCASE( DIV )
+		OPCASE( MOD ) OPCASE( POW )
+		OPCASE( AND ) OPCASE( OR )
+		OPCASE( LT ) OPCASE( LE )
+		OPCASE( EQ ) OPCASE( NE ){
 			self->activeCode = vmc;
-			DaoProcess_DoBinArith( self, vmc );
-			goto CheckException;
-		}OPNEXT()
-		OPCASE( AND )
-		OPCASE( OR )
-		OPCASE( LT )
-		OPCASE( LE )
-		OPCASE( EQ )
-		OPCASE( NE ){
-			self->activeCode = vmc;
-			DaoProcess_DoBinBool( self, vmc );
+			DaoProcess_DoBinary( self, vmc );
 			goto CheckException;
 		}OPNEXT()
 		OPCASE( IN ){
@@ -1466,23 +1450,23 @@ CallEntry:
 			goto CheckException;
 		}OPNEXT() OPCASE( NOT ){
 			self->activeCode = vmc;
-			DaoProcess_DoUnaBool( self, vmc );
+			DaoProcess_DoUnary( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( MINUS ){
 			self->activeCode = vmc;
-			DaoProcess_DoUnaArith( self, vmc );
+			DaoProcess_DoUnary( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( BITAND ) OPCASE( BITOR ) OPCASE( BITXOR ){
 			self->activeCode = vmc;
-			DaoProcess_DoBitLogic( self, vmc );
+			DaoProcess_DoBinary( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( BITLFT ) OPCASE( BITRIT ){
 			self->activeCode = vmc;
-			DaoProcess_DoBitShift( self, vmc );
+			DaoProcess_DoBinary( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( TILDE ){
 			self->activeCode = vmc;
-			DaoProcess_DoBitFlip( self, vmc );
+			DaoProcess_DoUnary( self, vmc );
 			goto CheckException;
 		}OPNEXT() OPCASE( SIZE ){
 			vA = locVars[vmc->a];
@@ -3128,170 +3112,122 @@ void DaoProcess_DoCheckIsa( DaoProcess *self, DaoVmCode *vmc )
 }
 void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 {
-	daoint id;
+	DaoValue **index = NULL;
 	DaoValue *B = dao_none_value;
 	DaoValue *A = self->activeValues[ vmc->a ];
+	DaoTypeCore *core = DaoValue_GetTypeCore( A );
 	DaoInteger di = {DAO_INTEGER,0,0,0,0,0};
-	DaoType *ct = self->activeTypes[ vmc->c ];
-	Dao_Type_Core *tc = DaoValue_GetTyper( A )->core;
+	int count = 1;
 
 	self->activeCode = vmc;
-	if( A == NULL || A->type == 0 ){
-		DaoProcess_RaiseError( self, "Value", "on none object" );
+	self->stackReturn = -1;
+
+	if( core == NULL || core->DoGetItem == NULL ){
+		DaoProcess_RaiseError( self, "Value", "invalid operation" );
 		return;
 	}
 	if( vmc->code == DVM_GETI ){
 		B = self->activeValues[ vmc->b ];
+		index = & B;
 	}else if( vmc->code == DVM_GETDI ){
 		di.value = vmc->b;
 		B = (DaoValue*) & di;
+		index = & B;
+	}else if( vmc->code == DVM_GETMI ){
+		index = self->activeValues + vmc->a + 1;
+		count = vmc->b;
 	}
-	if( vmc->code == DVM_GETDI && A->type == DAO_PAR_NAMED ){
-		if( vmc->b == 0 ){
-			DaoProcess_PutString( self, A->xNameValue.name );
-		}else if( vmc->b == 1 ){
-			GC_Assign( & self->activeValues[ vmc->c ], A->xNameValue.value );
-		}else{
-			DaoProcess_RaiseError( self, "Index", "index out of range" );
-			return;
+	C = core->DoGetItem( A, index, count, self );
+	if( self->stackReturn < 0 && self->status != DAO_PROCESS_STACKED ){
+		if( C != NULL ){
+			DaoProcess_PutValue( self, C );
+		}else if( self->errors->size == errors ){
+			DaoProcess_RaiseError( self, "Type", "" );
 		}
-	}else if( A->type == DAO_LIST && (B->type >= DAO_BOOLEAN && B->type <= DAO_FLOAT ) ){
-		DaoList *list = & A->xList;
-		id = DaoValue_GetInteger( B );
-		if( id < 0 ) id += list->value->size;
-		if( id >=0 && id < list->value->size ){
-			GC_Assign( & self->activeValues[ vmc->c ], list->value->items.pValue[id] );
-		}else{
-			DaoProcess_RaiseError( self, "Index", "index out of range" );
-			return;
-		}
-#ifdef DAO_WITH_NUMARRAY
-	}else if( A->type == DAO_ARRAY && (B->type >= DAO_BOOLEAN && B->type <= DAO_FLOAT )){
-		DaoValue temp = {0};
-		DaoValue *C = (DaoValue*) & temp;
-		DaoArray *na = & A->xArray;
-		id = DaoValue_GetInteger( B );
-		memset( C, 0, sizeof(DaoValue) );
-		if( na->original && DaoArray_Sliced( na ) == 0 ){
-			DaoProcess_RaiseError( self, "Index", "slicing" );
-			return;
-		}
-		if( id < 0 ) id += na->size;
-		if( id < 0 || id >= na->size ){
-			DaoProcess_RaiseError( self, "Index::Range", "" );
-			return;
-		}
-		C->type = na->etype;
-		switch( na->etype ){
-			case DAO_BOOLEAN : C->xBoolean.value = na->data.b[id]; break;
-			case DAO_INTEGER : C->xInteger.value = na->data.i[id]; break;
-			case DAO_FLOAT   : C->xFloat.value = na->data.f[id];  break;
-			case DAO_COMPLEX : C->xComplex.value = na->data.c[id]; break;
-			default : break;
-		}
-		DaoProcess_Move( self, C, & self->activeValues[ vmc->c ], ct );
-#endif
-	}else if( vmc->code == DVM_GETI ){
-		tc->GetItem( A, self, self->activeValues + vmc->b, 1 );
-	}else if( vmc->code == DVM_GETDI ){
-		tc->GetItem( A, self, & B, 1 );
-	}else if( vmc->code == DVM_GETMI || (vmc->code >= DVM_GETMI_AII && vmc->code <= DVM_GETMI_ACI) ){
-		tc->GetItem( A, self, self->activeValues + vmc->a + 1, vmc->b );
 	}
 }
+
 void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoValue *C, *A = self->activeValues[ vmc->a ];
-	Dao_Type_Core *tc = DaoValue_GetTyper( A )->core;
-	DaoNamespace *ns = self->activeNamespace;
+	DaoTypeCore *core = DaoValue_GetTypeCore( A );
 	DString *name = self->activeRoutine->routConsts->value->items.pValue[ vmc->b ]->xString.value;
 
 	self->activeCode = vmc;
-	if( A == NULL || A->type == 0 ){
-		DaoProcess_RaiseError( self, "Value", "on none object" );
+	self->stackReturn = -1;
+
+	if( core == NULL || core->DoGetField == NULL ){
+		DaoProcess_RaiseError( self, "Value", "invalid operation" );
 		return;
 	}
-	tc->GetField( A, self, name );
+	C = core->DoGetField( A, name, self );
+	if( self->stackReturn < 0 && self->status != DAO_PROCESS_STACKED ){
+		if( C != NULL ){
+			DaoProcess_PutValue( self, C );
+		}else if( self->errors->size == errors ){
+			DaoProcess_RaiseError( self, "Type", "" );
+		}
+	}
 }
 
 
 
 void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 {
-	DaoValue *A, *B = dao_none_value, *C = self->activeValues[ vmc->c ];
-	Dao_Type_Core *tc = DaoValue_GetTyper( C )->core;
+	DaoValue **index = NULL;
+	DaoValue *B = dao_none_value;
+	DaoValue *A = self->activeValues[ vmc->a ];
+	DaoValue *C = self->activeValues[ vmc->c ];
+	DaoTypeCore *core = DaoValue_GetTypeCore( C );
 	DaoInteger di = {DAO_INTEGER,0,0,0,0,0};
-	daoint id, rc = 0;
+	int ret, count = 1;
 
 	self->activeCode = vmc;
-	A = self->activeValues[ vmc->a ];
-	if( C == NULL || C->type == 0 ){
-		DaoProcess_RaiseError( self, "Value", "on none object" );
+	self->stackReturn = -1;
+
+	if( core == NULL || core->DoSetItem == NULL ){
+		DaoProcess_RaiseError( self, "Value", "invalid operation" );
 		return;
 	}
-
 	if( vmc->code == DVM_SETI ){
 		B = self->activeValues[ vmc->b ];
+		index = & B;
 	}else if( vmc->code == DVM_SETDI ){
 		di.value = vmc->b;
 		B = (DaoValue*) & di;
+		index = & B;
+	}else if( vmc->code == DVM_GETMI ){
+		index = self->activeValues + vmc->c + 1;
+		count = vmc->b;
 	}
-	if( vmc->code == DVM_SETDI && C->type == DAO_PAR_NAMED ){
-		if( vmc->b == 1 ){
-			DaoNameValue *nameva = (DaoNameValue*) C;
-			DaoValue_Move( A, & nameva->value, (DaoType*) nameva->ctype->aux );
-		}else{
-			DaoProcess_RaiseError( self, "Index", "index out of range" );
-			return;
+	ret = core->DoSetItem( C, index, count, A, self );
+	if( ret != 0 && self->status != DAO_PROCESS_STACKED ){
+		if( self->errors->size == errors ){
+			DaoProcess_RaiseError( self, "Type", "" );
 		}
-	}else if( C->type == DAO_LIST && B->type == DAO_INTEGER ){
-		rc = DaoList_SetItem( & C->xList, A, B->xInteger.value );
-	}else if( C->type == DAO_LIST && B->type == DAO_FLOAT ){
-		rc = DaoList_SetItem( & C->xList, A, (daoint) B->xFloat.value );
-#ifdef DAO_WITH_NUMARRAY
-	}else if( C->type == DAO_ARRAY && (B->type >= DAO_BOOLEAN && B->type <= DAO_FLOAT)
-			 && (A->type >= DAO_BOOLEAN && A->type <= DAO_FLOAT) ){
-		DaoArray *na = & C->xArray;
-		id = DaoValue_GetFloat( B );
-		if( na->original && DaoArray_Sliced( na ) == 0 ){
-			DaoProcess_RaiseError( self, "Index", "slicing" );
-			return;
-		}
-		if( id < 0 ) id += na->size;
-		if( id < 0 || id >= na->size ){
-			DaoProcess_RaiseError( self, "Index::Range", "" );
-			return;
-		}
-		switch( na->etype ){
-		case DAO_BOOLEAN : na->data.b[ id ] = DaoValue_IsZero( A ) != 0; break;
-		case DAO_INTEGER : na->data.i[ id ] = DaoValue_GetInteger( A ); break;
-		case DAO_FLOAT  : na->data.f[ id ]  = DaoValue_GetFloat( A ); break;
-		case DAO_COMPLEX : na->data.c[ id ] = DaoValue_GetComplex( A ); break;
-		default : break;
-		}
-#endif
-	}else if( vmc->code == DVM_SETI ){
-		tc->SetItem( C, self, self->activeValues + vmc->b, 1, A );
-	}else if( vmc->code == DVM_SETDI ){
-		tc->SetItem( C, self, & B, 1, A );
-	}else if( vmc->code == DVM_SETMI || (vmc->code >= DVM_SETMI_AIII && vmc->code <= DVM_SETMI_ACIC) ){
-		tc->SetItem( C, self, self->activeValues + vmc->c + 1, vmc->b, A );
 	}
-	if( rc ) DaoProcess_RaiseError( self, "Value", "value type" );
 }
 void DaoProcess_DoSetField( DaoProcess *self, DaoVmCode *vmc )
 {
-	DaoValue *A, *C = self->activeValues[ vmc->c ];
-	DaoValue *fname = self->activeRoutine->routConsts->value->items.pValue[ vmc->b ];
-	Dao_Type_Core *tc = DaoValue_GetTyper( C )->core;
+	DaoValue *A = self->activeValues[ vmc->a ];
+	DaoValue *C = self->activeValues[ vmc->c ];
+	DaoValue *name = self->activeRoutine->routConsts->value->items.pValue[ vmc->b ];
+	DaoTypeCore *core = DaoValue_GetTypeCore( C );
+	int ret;
 
 	self->activeCode = vmc;
-	A = self->activeValues[ vmc->a ];
-	if( C == NULL || C->type == 0 ){
-		DaoProcess_RaiseError( self, "Value", "on none object" );
+	self->stackReturn = -1;
+
+	if( core == NULL || core->DoSetField == NULL ){
+		DaoProcess_RaiseError( self, "Value", "invalid operation" );
 		return;
 	}
-	tc->SetField( C, self, fname->xString.value, A );
+	ret = core->DoSetField( C, name->xString.value, A, self );
+	if( ret != 0 && self->status != DAO_PROCESS_STACKED ){
+		if( self->errors->size == errors ){
+			DaoProcess_RaiseError( self, "Type", "" );
+		}
+	}
 }
 
 
@@ -4908,311 +4844,26 @@ static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, 
 	if( TB && TB->tid == DAO_CINVALUE ) TB = TB->aux->xCinType.target;
 	return DaoProcess_TryUserArithX( self, A, B, C, TA, TB );
 }
-void DaoProcess_DoBinArith( DaoProcess *self, DaoVmCode *vmc )
+void DaoProcess_DoBinary( DaoProcess *self, DaoVmCode *vmc )
 {
+	int errors = self->errors->size;
 	DaoValue *A = self->activeValues[ vmc->a ];
 	DaoValue *B = self->activeValues[ vmc->b ];
-	DaoValue *C = self->activeValues[ vmc->c ];
+	DaoValue *C, *O, *AB[2];
+	DaoTypeCore *core;
 
 	self->activeCode = vmc;
+	self->stackReturn = -1;
+
 	if( A == NULL || B == NULL ){
 		DaoProcess_RaiseError( self, "Value", "on none object" );
 		return;
 	}
 
-	if( A->type >= DAO_BOOLEAN && A->type <= DAO_INTEGER && B->type >= DAO_BOOLEAN && B->type <= DAO_INTEGER ){
-		dao_integer va = DaoValue_GetInteger( A );
-		dao_integer vb = DaoValue_GetInteger( B );
-		dao_integer res = 0;
-		switch( vmc->code ){
-		case DVM_DIV:
-			if( vb == 0 ) goto ErrorDivByZero;
-			res = va / vb;
-			break;
-		case DVM_MOD:
-			if( vb == 0 ) goto ErrorDivByZero;
-			res = va % vb;
-			break;
-		case DVM_ADD: res = va + vb; break;
-		case DVM_SUB: res = va - vb; break;
-		case DVM_MUL: res = va * vb; break;
-		case DVM_POW: res = pow( va, vb ); break;
-		default : break;
-		}
-		DaoProcess_PutInteger( self, res );
-	}else if( A->type >= DAO_BOOLEAN && A->type <= DAO_FLOAT && B->type >= DAO_BOOLEAN && B->type <= DAO_FLOAT ){
-		double va = DaoValue_GetFloat( A );
-		double vb = DaoValue_GetFloat( B );
-		double res = 0.0;
-		switch( vmc->code ){
-		case DVM_DIV:
-			if( vb == 0.0 ) goto ErrorDivByZero;
-			res = va / vb;
-			break;
-		case DVM_MOD:
-			if( vb == 0.0 ) goto ErrorDivByZero;
-			res = va - vb * (dao_integer)(va/vb);
-			break;
-		case DVM_ADD: res = va + vb; break;
-		case DVM_SUB: res = va - vb; break;
-		case DVM_MUL: res = va * vb; break;
-		case DVM_POW: res = pow( va, vb ); break;
-		default : break;
-		}
-		DaoProcess_PutFloat( self, res );
-	}else if( B->type >= DAO_BOOLEAN && B->type <= DAO_FLOAT && A->type == DAO_COMPLEX ){
-		dao_complex res = {0.0,0.0};
-		double f = DaoValue_GetFloat( B );
-		res.real = A->xComplex.value.real;
-		res.imag = A->xComplex.value.imag;
-		switch( vmc->code ){
-		case DVM_DIV:
-			if( f == 0.0 ) goto ErrorDivByZero;
-			res.real /= f; res.imag /= f;
-			break;
-		case DVM_ADD: res.real += f; break;
-		case DVM_SUB: res.real -= f; break;
-		case DVM_MUL: res.real *= f; res.imag *= f; break;
-		default: break; /* XXX: pow for complex??? */
-		}
-		DaoProcess_PutComplex( self, res );
-	}else if( A->type >= DAO_BOOLEAN && A->type <= DAO_FLOAT && B->type == DAO_COMPLEX ){
-		dao_complex res = {0.0,0.0};
-		double n, f = DaoValue_GetFloat( A );
-		double real = B->xComplex.value.real;
-		double imag = B->xComplex.value.imag;
-		switch( vmc->code ){
-		case DVM_DIV:
-			n = real * real + imag * imag;
-			if( n == 0.0 ) goto ErrorDivByZero;
-			res.real = f * real / n;
-			res.imag = f * imag / n;
-			break;
-		case DVM_ADD: res.real = f + real;  res.imag = imag; break;
-		case DVM_SUB: res.real = f - real;  res.imag = - imag; break;
-		case DVM_MUL: res.real = f * real;  res.imag = f * imag; break;
-		default: break; /* XXX: pow for complex??? */
-		}
-		DaoProcess_PutComplex( self, res );
-	}else if( A->type == DAO_COMPLEX && B->type == DAO_COMPLEX ){
-		dao_complex res = {0.0,0.0};
-		double AR = A->xComplex.value.real;
-		double AI = A->xComplex.value.imag;
-		double BR = B->xComplex.value.real;
-		double BI = B->xComplex.value.imag;
-		double N = 0;
-		switch( vmc->code ){
-		case DVM_ADD:
-			res.real = AR + BR;
-			res.imag = AI + BI;
-			break;
-		case DVM_SUB:
-			res.real = AR - BR;
-			res.imag = AI - BI;
-			break;
-		case DVM_MUL:
-			res.real = AR * BR - AI * BI;
-			res.imag = AR * BI + AI * BR;
-			break;
-		case DVM_DIV:
-			N = BR * BR + BI * BI;
-			if( N == 0.0 ) goto ErrorDivByZero;
-			res.real = (AR * BR + AI * BI) / N;
-			res.imag = (AR * BI - AI * BR) / N;
-			break;
-		default: break; /* XXX: pow for complex??? */
-		}
-		DaoProcess_PutComplex( self, res );
-#ifdef DAO_WITH_NUMARRAY
-	}else if( B->type >= DAO_INTEGER && B->type <= DAO_COMPLEX && A->type == DAO_ARRAY ){
-		DaoArray *na = & A->xArray;
-		DaoArray *nc = na;
-		if( vmc->a != vmc->c ){
-			nc = DaoProcess_GetArray( self, vmc );
-			if( nc->etype == DAO_NONE ) nc->etype = na->etype;
-		}
-		DaoArray_DoBinary_ArrayNumber( nc, na, B, vmc->code, self );
-	}else if( A->type >= DAO_INTEGER && A->type <= DAO_COMPLEX && B->type == DAO_ARRAY ){
-		DaoArray *nb = & B->xArray;
-		DaoArray *nc = nb;
-		if( vmc->b != vmc->c ){
-			nc = DaoProcess_GetArray( self, vmc );
-			if( nc->etype == DAO_NONE ) nc->etype = nb->etype;
-		}
-		DaoArray_DoBinary_NumberArray( nc, A, nb, vmc->code, self );
-	}else if( A->type == DAO_ARRAY && B->type == DAO_ARRAY ){
-		DaoArray *na = & A->xArray;
-		DaoArray *nb = & B->xArray;
-		DaoArray *nc;
-		if( vmc->a == vmc->c ){
-			nc = na;
-		}else if( vmc->b == vmc->c ){
-			nc = nb;
-		}else{
-			nc = DaoProcess_GetArray( self, vmc );
-			if( nc->etype == DAO_NONE ) nc->etype = na->etype > nb->etype ? na->etype : nb->etype;
-		}
-		DaoArray_DoBinary_ArrayArray( nc, na, nb, vmc->code, self );
-#endif
-	}else if( A->type == DAO_STRING && B->type == DAO_STRING && vmc->code == DVM_ADD ){
-		if( vmc->a == vmc->c ){
-			DString_Append( A->xString.value, B->xString.value );
-		}else if( vmc->b == vmc->c ){
-			DString_Insert( B->xString.value, A->xString.value, 0, 0, 0 );
-		}else{
-			DaoValue *C = DaoProcess_PutValue( self, A );
-			DString_Append( C->xString.value, B->xString.value );
-		}
-	}else if( A->type == DAO_STRING && B->type == DAO_STRING && vmc->code == DVM_DIV ){
-		if( vmc->a == vmc->c ){
-			DString *base = DString_Copy( A->xString.value );
-			DString_Assign( A->xString.value, B->xString.value );
-			DString_MakePath( base, A->xString.value );
-			DString_Delete( base );
-		}else if( vmc->b == vmc->c ){
-			DString_MakePath( A->xString.value, B->xString.value );
-		}else{
-			DaoValue *C = DaoProcess_PutValue( self, B );
-			DString_MakePath( A->xString.value, C->xString.value );
-		}
-	}else if( A->type == DAO_ENUM && B->type == DAO_ENUM
-			 && (vmc->code == DVM_ADD || vmc->code == DVM_SUB) ){
-		DaoType *ta = A->xEnum.etype;
-		DaoType *tb = B->xEnum.etype;
-		DaoEnum *denum = & A->xEnum;
-		int rc = 0;
-		if( A->xEnum.subtype == DAO_ENUM_SYM && B->xEnum.subtype == DAO_ENUM_SYM ){
-			DaoNamespace *NS = self->activeNamespace;
-			denum = DaoProcess_GetEnum( self, vmc );
-			if( denum->etype == NULL ){ /* Can happen in constant evaluation: */
-				DaoType *tp;
-				DNode *it;
-				DString_Reset( self->string, 0 );
-				DString_Append( self->string, ta->mapNames->root->key.pString );
-				DString_AppendChar( self->string, ';' );
-				DString_Append( self->string, tb->mapNames->root->key.pString );
-				tp = DaoNamespace_MakeEnumType( NS, self->string->chars );
-				DaoEnum_SetType( denum, tp );
-			}
-			DaoEnum_AddValue( denum, (DaoEnum*) A );
-			DaoEnum_AddValue( denum, (DaoEnum*) B );
-			return;
-		}
-		if( vmc->c != vmc->a ){
-			denum = DaoProcess_GetEnum( self, vmc );
-			if( denum->etype == NULL ) DaoEnum_SetType( denum, A->xEnum.etype );
-			DaoEnum_SetValue( denum, & A->xEnum );
-		}
-		if( vmc->code == DVM_ADD ){
-			rc = DaoEnum_AddValue( denum, & B->xEnum );
-		}else{
-			rc = DaoEnum_RemoveValue( denum, & B->xEnum );
-		}
-		if( rc == 0 ){
-			if( denum->subtype != DAO_ENUM_FLAG )
-				DaoProcess_RaiseError( self, "Type", "not combinable enum" );
-			else
-				DaoProcess_RaiseError( self, "Type", "symbol not found in the enum" );
-			return;
-		}
-	}else if( A->type >= DAO_OBJECT && A->type <= DAO_CDATA ){
-		DaoType *ta = self->activeTypes[ vmc->a ];
-		DaoType *tb = self->activeTypes[ vmc->b ];
-		self->activeCode = vmc;
-		if( DaoProcess_TryUserArith( self, A, B, C, ta, tb ) == 0 ){
-			DaoProcess_RaiseError( self, "Type", NULL );
-		}
-	}else{
-		DaoProcess_RaiseError( self, "Type", "" );
-	}
-	return;
-ErrorDivByZero:
-	DaoProcess_RaiseError( self, "Float::DivByZero", "" );
-}
-/* binary operation with boolean result. */
-void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
-{
-	DaoValue *A = self->activeValues[ vmc->a ];
-	DaoValue *B = self->activeValues[ vmc->b ];
-	DaoValue *C = NULL;
-	int D = 0, rc = 0;
+	AB[0] = A;
+	AB[1] = B;
 
-	self->activeCode = vmc;
-	if( A == NULL ) A = dao_none_value;
-	if( B == NULL ) B = dao_none_value;
-
-	if( A->type >= DAO_BOOLEAN && A->type <= DAO_INTEGER
-			&& B->type >= DAO_BOOLEAN && B->type <= DAO_INTEGER ){
-		switch( vmc->code ){
-		case DVM_AND: D = DaoValue_GetInteger( A ) && DaoValue_GetInteger( B ); break;
-		case DVM_OR:  D = DaoValue_GetInteger( A ) || DaoValue_GetInteger( B ); break;
-		case DVM_LT:  D = DaoValue_GetInteger( A ) < DaoValue_GetInteger( B ); break;
-		case DVM_LE:  D = DaoValue_GetInteger( A ) <= DaoValue_GetInteger( B ); break;
-		case DVM_EQ:  D = DaoValue_GetInteger( A ) == DaoValue_GetInteger( B ); break;
-		case DVM_NE:  D = DaoValue_GetInteger( A ) != DaoValue_GetInteger( B ); break;
-		default: break;
-		}
-	}else if( A->type >= DAO_BOOLEAN && A->type <= DAO_FLOAT
-			&& B->type >= DAO_BOOLEAN && B->type <= DAO_FLOAT ){
-		switch( vmc->code ){
-		case DVM_AND: D = DaoValue_GetFloat( A ) && DaoValue_GetFloat( B ); break;
-		case DVM_OR:  D = DaoValue_GetFloat( A ) || DaoValue_GetFloat( B ); break;
-		case DVM_LT:  D = DaoValue_GetFloat( A ) < DaoValue_GetFloat( B ); break;
-		case DVM_LE:  D = DaoValue_GetFloat( A ) <= DaoValue_GetFloat( B ); break;
-		case DVM_EQ:  D = DaoValue_GetFloat( A ) == DaoValue_GetFloat( B ); break;
-		case DVM_NE:  D = DaoValue_GetFloat( A ) != DaoValue_GetFloat( B ); break;
-		default: break;
-		}
-	}else if( A->type == DAO_COMPLEX && B->type == DAO_COMPLEX ){
-		double AR = A->xComplex.value.real, AI = A->xComplex.value.imag;
-		double BR = B->xComplex.value.real, BI = B->xComplex.value.imag;
-		switch( vmc->code ){
-		case DVM_EQ: D = (AR == BR) && (AI == BI); break;
-		case DVM_NE: D = (AR != BR) || (AI != BI); break;
-		default: goto InvalidOperation;
-		}
-	}else if( A->type == DAO_STRING && B->type == DAO_STRING ){
-		switch( vmc->code ){
-		case DVM_LT:  D = DString_CompareUTF8( A->xString.value, B->xString.value )<0; break;
-		case DVM_LE:  D = DString_CompareUTF8( A->xString.value, B->xString.value )<=0; break;
-		case DVM_EQ:  D = DString_Compare( A->xString.value, B->xString.value )==0; break;
-		case DVM_NE:  D = DString_Compare( A->xString.value, B->xString.value )!=0; break;
-		default: goto InvalidOperation;
-		}
-	}else if( A->type == DAO_ENUM && B->type == DAO_ENUM ){
-		switch( vmc->code ){
-		case DVM_AND: D = A->xEnum.value && B->xEnum.value; break;
-		case DVM_OR:  D = A->xEnum.value || A->xEnum.value; break;
-		case DVM_LT:  D = DaoValue_Compare( A, B ) < 0; break;
-		case DVM_LE:  D = DaoValue_Compare( A, B ) <= 0; break;
-		case DVM_EQ:  D = DaoValue_Compare( A, B ) == 0; break;
-		case DVM_NE:  D = DaoValue_Compare( A, B ) != 0; break;
-		default: break;
-		}
-	}else if( A->type == B->type && (A->type == DAO_TUPLE || A->type == DAO_LIST) ){
-		switch( vmc->code ){
-		case DVM_LT:  D = DaoValue_ComparePro( A, B, self ) < 0; break;
-		case DVM_LE:  D = DaoValue_ComparePro( A, B, self ) <= 0; break;
-		case DVM_EQ:  D = DaoValue_ComparePro( A, B, self ) == 0; break;
-		case DVM_NE:  D = DaoValue_ComparePro( A, B, self ) != 0; break;
-		default: goto InvalidOperation;
-		}
-	}else if( A->type == B->type && A->type == DAO_ARRAY ){
-		D = DaoValue_Compare( A, B );
-		switch( vmc->code ){
-		case DVM_LT:
-			if( abs( D ) > 1 ) goto InvalidOperation;
-			D = D <  0;
-			break;
-		case DVM_LE:
-			if( abs( D ) > 1 ) goto InvalidOperation;
-			D = D <= 0;
-			break;
-		case DVM_EQ: D = D == 0; break;
-		case DVM_NE: D = D != 0; break;
-		default: break;
-		}
-	}else if( A->type == 0 || B->type == 0 ){
+	if( A->type == 0 || B->type == 0 ){
 		switch( vmc->code ){
 		case DVM_AND: D = B && A; break;
 		case DVM_OR:  D = A || B; break;
@@ -5220,7 +4871,7 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 		case DVM_LE:  D = A->type <= B->type; break;
 		case DVM_EQ:  D = A->type == B->type; break;
 		case DVM_NE:  D = A->type != B->type; break;
-		default: break;
+		default: DaoProcess_RaiseError( self, "Type", "" ); return;
 		}
 		if( A->type == DAO_CSTRUCT || B->type == DAO_CSTRUCT ){
 			D = vmc->code == DVM_NE;
@@ -5239,151 +4890,70 @@ void DaoProcess_DoBinBool(  DaoProcess *self, DaoVmCode *vmc )
 				D = object->isNull ? 0 : 1;
 			}
 		}
+		DaoProcess_PutBoolean( self, D );
+		return;
+	}else if( A->type <= DAO_TUPLE && B->type <= DAO_TUPLE ){
+		O = A->type >= B->type ? A : B;
+	}else if(  A->type >= DAO_OBJECT && A->type <= DAO_CDATA
+			&& B->type >= DAO_OBJECT && B->type <= DAO_CDATA ){
+		O = A;
+		if( vmc->c == vmc->a ){
+			O = A;
+		}else if( vmc->c == vmc->b ){
+			O = B;
+		}else{
+			DaoType *TA = DaoValue_GetType( A );
+			DaoType *TB = DaoValue_GetType( B );
+			if( DaoType_ChildOf( TB, TA ) ) O = B;
+		}
 	}else if( A->type >= DAO_OBJECT && A->type <= DAO_CDATA ){
-		DaoType *ta = self->activeTypes[ vmc->a ];
-		DaoType *tb = self->activeTypes[ vmc->b ];
-		rc = DaoProcess_TryUserArith( self, A, B, C, ta, tb );
-		if( rc ) return;
-		if( A->type >= DAO_OBJECT && A->type <= DAO_CSTRUCT ){
-			if( A->type == DAO_CINVALUE ) A = A->xCinValue.value;
-			if( B->type == DAO_CINVALUE ) B = B->xCinValue.value;
-			switch( vmc->code ){
-			case DVM_AND: D = A && B; break;
-			case DVM_OR:  D = A || B; break;
-			case DVM_LT:  D = A < B; break;
-			case DVM_LE:  D = A <= B; break;
-			case DVM_EQ:  D = A == B; break;
-			case DVM_NE:  D = A != B; break;
-			default: break;
-			}
-			DaoProcess_PutBoolean( self, D );
-		}else{  /* A->type == DAO_CDATA */
-			if( B->type != DAO_CDATA ){
-				switch( vmc->code ){
-				case DVM_AND: D = A && B; break;
-				case DVM_OR : D = A || B; break;
-				default : D = vmc->code == DVM_NE; break;
-				}
-			}else{
-				switch( vmc->code ){
-				case DVM_AND: D = A->xCdata.data && B->xCdata.data; break;
-				case DVM_OR : D = A->xCdata.data || B->xCdata.data; break;
-				case DVM_LT:  D = A->xCdata.data < B->xCdata.data; break;
-				case DVM_LE:  D = A->xCdata.data <= B->xCdata.data; break;
-				case DVM_EQ:  D = A->xCdata.data == B->xCdata.data; break;
-				case DVM_NE:  D = A->xCdata.data != B->xCdata.data; break;
-				default: break;
-				}
-			}
-			DaoProcess_PutBoolean( self, D );
-		}
-	}else if( vmc->code == DVM_EQ ){
-		D = A == B;
-		if( A->type == DAO_TYPE && B->type == DAO_TYPE ){
-			D = DaoType_MatchTo( (DaoType*) A, (DaoType*) B, NULL ) >= DAO_MT_EQ;
-		}
-	}else if( vmc->code == DVM_NE ){
-		D = A != B;
-		if( A->type == DAO_TYPE && B->type == DAO_TYPE ){
-			D = DaoType_MatchTo( (DaoType*) A, (DaoType*) B, NULL ) < DAO_MT_EQ;
-		}
-	}else{
-InvalidOperation:
+		O = A;
+	}else if( B->type >= DAO_OBJECT && B->type <= DAO_CDATA ){
+		O = B;
+	}
+
+	core = DaoValue_GetTypeCore( O );
+	if( core == NULL || core->DoBinary == NULL ){
 		DaoProcess_RaiseError( self, "Type", "" );
 		return;
 	}
-	DaoProcess_PutBoolean( self, D );
+	C = core->DoBinary( O, vmc, AB, self );
+	if( self->stackReturn < 0 && self->status != DAO_PROCESS_STACKED ){
+		if( C != NULL ){
+			DaoProcess_PutValue( self, C );
+		}else if( self->errors->size == errors ){
+			DaoProcess_RaiseError( self, "Type", "" );
+		}
+	}
 }
-void DaoProcess_DoUnaArith( DaoProcess *self, DaoVmCode *vmc )
+
+void DaoProcess_DoUnary( DaoProcess *self, DaoVmCode *vmc )
 {
-	DaoValue *A = self->activeValues[ vmc->a ];
-	DaoValue *C = NULL;
-	int ta = A->type;
+	int errors = self->errors->size;
+	DaoValue *C, *A = self->activeValues[ vmc->a ];
+	DaoTypeCore *core;
+
 	self->activeCode = vmc;
-	if( A->type ==0 ){
+	self->stackReturn = -1;
+
+	if( A == NULL ){
 		DaoProcess_RaiseError( self, "Type", "on none object" );
 		return;
 	}
 
-	if( ta == DAO_INTEGER ){
-		C = DaoProcess_SetValue( self, vmc->c, A );
-		C->xInteger.value = - C->xInteger.value;
-	}else if( ta == DAO_FLOAT ){
-		C = DaoProcess_SetValue( self, vmc->c, A );
-		C->xFloat.value = - C->xFloat.value;
-	}else if( ta == DAO_COMPLEX ){
-		C = DaoProcess_SetValue( self, vmc->c, A );
-		C->xComplex.value.real = - C->xComplex.value.real;
-		C->xComplex.value.imag = - C->xComplex.value.imag;
-#ifdef DAO_WITH_NUMARRAY
-	}else if( ta == DAO_ARRAY ){
-		DaoArray *array = & A->xArray;
-		daoint i, n;
-		C = A;
-		if( array->etype <= DAO_FLOAT ){
-			DaoArray *res = DaoProcess_GetArray( self, vmc );
-			DaoArray_SetNumType( res, array->etype );
-			DaoArray_ResizeArray( res, array->dims, array->ndim );
-			if( array->etype == DAO_INTEGER ){
-				dao_integer *va = array->data.i;
-				dao_integer *vc = res->data.i;
-				for(i=0,n=array->size; i<n; i++ ) vc[i] = - va[i];
-			}else{
-				dao_float *va = array->data.f;
-				dao_float *vc = res->data.f;
-				for(i=0,n=array->size; i<n; i++ ) vc[i] = - va[i];
-			}
-		}else{
-			DaoArray *res = DaoProcess_GetArray( self, vmc );
-			dao_complex *va, *vc;
-			DaoArray_SetNumType( res, array->etype );
-			DaoArray_ResizeArray( res, array->dims, array->ndim );
-			va = array->data.c;
-			vc = res->data.c;
-			for(i=0,n=array->size; i<n; i++ ){
-				vc[i].real = - va[i].real;
-				vc[i].imag = - va[i].imag;
-			}
-		}
-#endif
-	}else if( ta >= DAO_OBJECT && ta <= DAO_CDATA ){
-		DaoType *ta = self->activeTypes[ vmc->a ];
-		DaoType *tb = self->activeTypes[ vmc->b ];
-		C = self->activeValues[ vmc->c ];
-		if( DaoProcess_TryUserArith( self, A, NULL, C, ta, tb ) == 0 ){
-			DaoProcess_RaiseError( self, "Type", NULL );
-		}
-	}else{
-		DaoProcess_RaiseError( self, "Type", NULL );
-	}
-}
-void DaoProcess_DoUnaBool( DaoProcess *self, DaoVmCode *vmc )
-{
-	DaoValue *A = self->activeValues[ vmc->a ];
-	int ta = A->type;
-	self->activeCode = vmc;
-	if( A->type ==0 ){
-		DaoProcess_RaiseError( self, "Type", "on none object" );
+	core = DaoValue_GetTypeCore( A );
+	if( core == NULL || core->DoBinary == NULL ){
+		DaoProcess_RaiseError( self, "Type", "" );
 		return;
 	}
 
-	if( ta == DAO_BOOLEAN || ta == DAO_INTEGER ){
-		DaoProcess_PutBoolean( self, ! A->xInteger.value );
-	}else if( ta == DAO_FLOAT ){
-		DaoProcess_PutBoolean( self, ! A->xFloat.value );
-#ifdef DAO_WITH_NUMARRAY
-	}else if( ta == DAO_ENUM && A->xEnum.subtype != DAO_ENUM_SYM ){
-		DaoProcess_PutFloat( self, ! A->xEnum.value ); // XXX???
-#endif
-	}else if( ta >= DAO_OBJECT && ta <= DAO_CDATA ){
-		DaoValue *C = self->activeValues[ vmc->c ];
-		DaoType *ta = self->activeTypes[ vmc->a ];
-		DaoType *tb = self->activeTypes[ vmc->b ];
-		if( DaoProcess_TryUserArith( self, A, NULL, C, ta, tb ) == 0 ){
-			DaoProcess_RaiseError( self, "Type", NULL );
+	C = core->DoUnary( A, vmc, self );
+	if( self->stackReturn < 0 && self->status != DAO_PROCESS_STACKED ){
+		if( C != NULL ){
+			DaoProcess_PutValue( self, C );
+		}else if( self->errors->size == errors ){
+			DaoProcess_RaiseError( self, "Type", "" );
 		}
-	}else{
-		DaoProcess_RaiseError( self, "Type", NULL );
 	}
 }
 void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
@@ -5461,119 +5031,6 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 		}
 	}else{
 		DaoProcess_RaiseError( self, "Type", NULL );
-	}
-}
-void DaoProcess_DoBitLogic( DaoProcess *self, DaoVmCode *vmc )
-{
-	DaoValue *A = self->activeValues[ vmc->a ];
-	DaoValue *B = self->activeValues[ vmc->b ];
-	dao_integer inum = 0;
-
-	self->activeCode = vmc;
-	if( A->type && B->type && A->type <= DAO_FLOAT && B->type <= DAO_FLOAT ){
-		switch( vmc->code ){
-		case DVM_BITAND: inum = DaoValue_GetInteger(A) & DaoValue_GetInteger(B);break;
-		case DVM_BITOR : inum = DaoValue_GetInteger(A) | DaoValue_GetInteger(B);break;
-		case DVM_BITXOR: inum = DaoValue_GetInteger(A) ^ DaoValue_GetInteger(B);break;
-		default : break;
-		}
-		if( A->type == DAO_FLOAT || B->type == DAO_FLOAT ){
-			DaoProcess_PutFloat( self, inum );
-		}else{
-			DaoProcess_PutInteger( self, inum );
-		}
-	}else if( A->type == DAO_ENUM && B->type == DAO_ENUM ){
-		DaoEnum *en = DaoProcess_GetEnum( self, vmc );
-		if( A->xEnum.etype != B->xEnum.etype ) goto InvalidOperation;
-		if( A->xEnum.subtype <= DAO_ENUM_STATE ) goto InvalidOperation;
-		if( en == NULL || en->etype != A->xEnum.etype ) goto InvalidOperation;
-		switch( vmc->code ){
-		case DVM_BITAND : en->value = A->xEnum.value & B->xEnum.value; break;
-		case DVM_BITOR  : en->value = A->xEnum.value | B->xEnum.value; break;
-		default : goto InvalidOperation;
-		}
-	}else if( A->type >= DAO_OBJECT && A->type <= DAO_CDATA ){
-		DaoValue *C = self->activeValues[ vmc->c ];
-		DaoType *ta = self->activeTypes[ vmc->a ];
-		DaoType *tb = self->activeTypes[ vmc->b ];
-		if( DaoProcess_TryUserArith( self, A, B, C, ta, tb ) == 0 ){
-			DaoProcess_RaiseError( self, "Type", NULL );
-		}
-	}else{
-InvalidOperation:
-		DaoProcess_RaiseError( self, "Value", "invalid operands" );
-	}
-}
-void DaoProcess_DoBitShift( DaoProcess *self, DaoVmCode *vmc )
-{
-	DaoValue *A = self->activeValues[ vmc->a ];
-	DaoValue *B = self->activeValues[ vmc->b ];
-	if( A->type && B->type && A->type <= DAO_FLOAT && B->type <= DAO_FLOAT ){
-		dao_integer inum = 0;
-		if( vmc->code == DVM_BITLFT ){
-			inum = DaoValue_GetInteger(A) << DaoValue_GetInteger(B);
-		}else{
-			inum = DaoValue_GetInteger(A) >> DaoValue_GetInteger(B);
-		}
-		if( A->type == DAO_FLOAT || B->type == DAO_FLOAT ){
-			DaoProcess_PutFloat( self, inum );
-		}else if( A->type == DAO_FLOAT || B->type == DAO_FLOAT ){
-			DaoProcess_PutFloat( self, inum );
-		}else{
-			DaoProcess_PutInteger( self, inum );
-		}
-	}else if( A->type >= DAO_OBJECT && A->type <= DAO_CDATA ){
-		DaoValue *C = self->activeValues[ vmc->c ];
-		DaoType *ta = self->activeTypes[ vmc->a ];
-		DaoType *tb = self->activeTypes[ vmc->b ];
-		self->activeCode = vmc;
-		if( DaoProcess_TryUserArith( self, A, B, C, ta, tb ) == 0 ){
-			DaoProcess_RaiseError( self, "Type", NULL );
-		}
-	}else{
-		self->activeCode = vmc;
-		DaoProcess_RaiseError( self, "Value", "invalid operands" );
-	}
-}
-void DaoProcess_DoBitFlip( DaoProcess *self, DaoVmCode *vmc )
-{
-	DaoValue *A = self->activeValues[ vmc->a ];
-	self->activeCode = vmc;
-	if( A->type >= DAO_INTEGER && A->type <= DAO_FLOAT ){
-		switch( A->type ){
-		case DAO_INTEGER : DaoProcess_PutInteger( self, ~A->xInteger.value ); break;
-		case DAO_FLOAT   : DaoProcess_PutFloat( self, ~(dao_integer)A->xFloat.value ); break;
-		}
-	}else if( A->type == DAO_COMPLEX ){
-		dao_complex *C = DaoProcess_PutComplex( self, A->xComplex.value );
-		C->imag = - C->imag;
-	}else if( A->type == DAO_ENUM ){
-		DaoType *etype = A->xEnum.etype;
-		DaoValue *C = DaoProcess_PutValue( self, A );
-		DNode *it = DMap_First(etype->mapNames);
-		int min = 0, max = 0, value = 0;
-		if( it ) min = max = it->value.pInt;
-		for(; it; it=DMap_Next(etype->mapNames,it)){
-			if( it->value.pInt < min ) min = it->value.pInt;
-			if( it->value.pInt > max ) max = it->value.pInt;
-			value |= it->value.pInt;
-		}
-		if( A->xEnum.subtype == DAO_ENUM_FLAG ){
-			C->xEnum.value = value & (~A->xEnum.value);
-		}else if( A->xEnum.value == min ){
-			C->xEnum.value = max;
-		}else{
-			C->xEnum.value = min;
-		}
-	}else if( A->type >= DAO_OBJECT && A->type <= DAO_CDATA ){
-		DaoValue *C = self->activeValues[ vmc->c ];
-		DaoType *ta = self->activeTypes[ vmc->a ];
-		DaoType *tb = self->activeTypes[ vmc->b ];
-		if( DaoProcess_TryUserArith( self, A, NULL, C, ta, tb ) == 0 ){
-			DaoProcess_RaiseError( self, "Type", NULL );
-		}
-	}else{
-		DaoProcess_RaiseError( self, "Value", "invalid operands" );
 	}
 }
 /* Set dC->type before calling to instruct this function what type number to convert: */
@@ -6230,25 +5687,23 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 	switch( vmc->code ){
 	case DVM_ADD : case DVM_SUB : case DVM_MUL :
 	case DVM_DIV : case DVM_MOD : case DVM_POW :
-		DaoProcess_DoBinArith( self, vmc );
-		break;
 	case DVM_AND : case DVM_OR : case DVM_LT :
 	case DVM_LE :  case DVM_EQ : case DVM_NE :
-		DaoProcess_DoBinBool( self, vmc );
+		DaoProcess_DoBinary( self, vmc );
 		break;
 	case DVM_IN :
 		DaoProcess_DoInTest( self, vmc );
 		break;
 	case DVM_NOT :
-		DaoProcess_DoUnaBool( self, vmc ); break;
+		DaoProcess_DoUnary( self, vmc ); break;
 	case DVM_MINUS :
-		DaoProcess_DoUnaArith( self, vmc ); break;
+		DaoProcess_DoUnary( self, vmc ); break;
 	case DVM_BITAND : case DVM_BITOR : case DVM_BITXOR :
-		DaoProcess_DoBitLogic( self, vmc ); break;
+		DaoProcess_DoBinary( self, vmc ); break;
 	case DVM_BITLFT : case DVM_BITRIT :
-		DaoProcess_DoBitShift( self, vmc ); break;
+		DaoProcess_DoBinary( self, vmc ); break;
 	case DVM_TILDE :
-		DaoProcess_DoBitFlip( self, vmc ); break;
+		DaoProcess_DoUnary( self, vmc ); break;
 	case DVM_SIZE :
 		size = -1;
 		A = self->activeValues[ vmc->a ];

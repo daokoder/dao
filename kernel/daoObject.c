@@ -484,6 +484,8 @@ static int DaoObject_CheckSetField( DaoType *self, DString *name, DaoType *value
 	int error = DAO_OK;
 
 	error = 0;
+
+	if( strcmp( name->chars, "self" ) ==0 ) return DAO_ERROR_FIELD_HIDDEN;
 	if( data == NULL ){
 		error = DAO_ERROR_FIELD_ABSENT;
 	}else if( data->type == DAO_NONE ){
