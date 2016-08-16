@@ -146,6 +146,7 @@ struct DaoProcess
 	DMap           *aux;
 	DList          *list;
 	DString        *string;
+	DaoComplex      number;
 };
 
 /* Create a new virtual machine process */

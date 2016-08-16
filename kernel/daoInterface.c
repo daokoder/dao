@@ -920,13 +920,13 @@ DaoType* DaoCinValue_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *
 		if( rout ) return type;
 	}
 	core = cintype->target->core;
-	if( core != NULL && core->DoConversion ){
+	if( core != NULL && core->CheckConversion ){
 		return core->CheckConversion( cintype->target, type, num, proc );
 	}
 	return NULL;
 }
 
-DaoValue* DaoCinValue_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
+DaoValue* DaoCinValue_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
 	DaoCinType *cintype = self->xCinValue.cintype;
 	DaoTypeCore *core;
@@ -934,8 +934,10 @@ DaoValue* DaoCinValue_DoConversion( DaoValue *self, DaoType *type, DaoValue *num
 	DString *buffer;
 
 	if( cintype->target == type ){
+		if( copy ) return DaoValue_Convert( self->xCinValue.value, type, copy, proc );
 		return self->xCinValue.value;
 	}else if( DaoType_MatchTo( cintype->target, type, NULL ) >= DAO_MT_EQ ){
+		if( copy ) return DaoValue_Convert( self->xCinValue.value, type, copy, proc );
 		return self->xCinValue.value;
 	}
 
@@ -948,11 +950,7 @@ DaoValue* DaoCinValue_DoConversion( DaoValue *self, DaoType *type, DaoValue *num
 		int rc = DaoProcess_PushCallable( proc, rout, self, & type, 1 );
 		if( rc == 0 ) return NULL;
 	}
-	core = DaoValue_GetTypeCore( self->xCinValue.value );
-	if( core != NULL && core->DoConversion ){
-		return core->DoConversion( self->xCinValue.value, type, num, proc );
-	}
-	return NULL;
+	return DaoValue_Convert( self->xCinValue.value, type, copy, proc );
 }
 
 void DaoCinValue_CoreDelete( DaoValue *self )

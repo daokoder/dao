@@ -746,6 +746,28 @@ int DaoValue_Move2( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 	return rc;
 }
 
+DaoValue* DaoValue_Convert( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
+{
+	DaoTypeCore *core = DaoValue_GetTypeCore( self );
+	DaoValue *value;
+
+	if( core == NULL || core->DoConversion == NULL ) return NULL;
+
+	value = core->DoConversion( self, type, copy, proc );
+	if( value == NULL || value->type <= DAO_ENUM || copy == 0 ) return value;
+
+	if( value == self || DaoValue_Child( value, self ) || DaoValue_Child( self, value ) ){
+		core = DaoValue_GetTypeCore( value );
+		if( core == NULL || core->Copy == NULL ) return NULL;
+
+		value = core->Copy( value, NULL ); /* Copy invariable value; */
+		if( value == NULL ) return NULL;
+
+		DaoProcess_CacheValue( proc, value );
+	}
+	return value;
+}
+
 
 #ifdef DAO_WITH_NUMARRAY
 int DaoArray_Compare( DaoArray *x, DaoArray *y );
@@ -986,87 +1008,6 @@ DaoTypeCore* DaoValue_GetTypeCore( DaoValue *self )
 	default : break;
 	}
 	return DaoVmSpace_GetTyper( self->type );
-}
-
-void DaoValue_GetField( DaoValue *self, DaoProcess *proc, DString *name )
-{
-	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
-	DaoValue *value = DaoType_FindValue( type, name );
-	if( value == NULL ){
-		DaoRoutine *func = NULL;
-		DaoString str = {DAO_STRING,0,0,0,1,NULL};
-		DaoValue *pars = (DaoValue*) & str;
-		int error, npar = 0;
-
-		str.value = name;
-		DString_SetChars( proc->string, "." );
-		DString_Append( proc->string, name );
-		func = DaoType_FindFunction( type, proc->string );
-		if( func == NULL ){
-			npar = 1;
-			DString_SetChars( proc->string, "." );
-			func = DaoType_FindFunction( type, proc->string );
-		}
-		if( func == NULL ){
-			DaoProcess_RaiseError( proc, "Field::NotExist", "not exist" );
-			return;
-		}
-		if( (error = DaoProcess_PushCallable( proc, func, self, & pars, npar )) != 0 ){
-			DaoProcess_RaiseException( proc, daoExceptionNames[error], NULL, NULL );
-		}
-	}else{
-		DaoProcess_PutValue( proc, value );
-	}
-}
-void DaoValue_SetField( DaoValue *self, DaoProcess *proc, DString *name, DaoValue *value )
-{
-    int npar = 1; 
-    DaoValue *pars[2];
-    DaoRoutine *func = NULL;
-    DaoString str = {DAO_STRING,0,0,0,1,NULL};
-	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
-
-    str.value = name;
-    pars[0] = pars[1] = value;
-
-    DString_SetChars( proc->string, "." );
-    DString_Append( proc->string, name );
-    DString_AppendChars( proc->string, "=" );
-    func = DaoType_FindFunction( type, proc->string );
-    if( func == NULL ){
-        pars[0] = (DaoValue*) & str; 
-        npar = 2; 
-        DString_SetChars( proc->string, ".=" );
-        func = DaoType_FindFunction( type, proc->string );
-    }    
-    if( func == NULL ){
-        DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
-        return;
-    }    
-    DaoProcess_PushCallable( proc, func, self, pars, npar );
-}
-void DaoValue_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N )
-{
-	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
-	DaoRoutine *func = DaoType_FindFunctionChars( type, "[]" );
-	if( func == NULL ){
-		DaoProcess_RaiseError( proc, "Field::NonExist", "[]" );
-		return;
-	}
-	DaoProcess_PushCallable( proc, func, self, pid, N );
-}
-void DaoValue_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *pid[], int N, DaoValue *value )
-{
-	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
-	DaoRoutine *func = DaoType_FindFunctionChars( type, "[]=" );
-	DaoValue *p[ DAO_MAX_PARAM ];
-	memcpy( p+1, pid, N*sizeof(DaoValue*) );
-	p[0] = value;
-	if( func == NULL ){
-		DaoProcess_RaiseError( proc, "Field::NonExist", "[]=" );
-		return;
-	}
-	DaoProcess_PushCallable( proc, func, self, p, N+1 );
 }
 
 static void DaoValue_BasicPrint( DaoValue *self, DaoStream *stream, DMap *cycData )

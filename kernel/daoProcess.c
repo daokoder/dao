@@ -92,13 +92,8 @@ static void DaoProcess_MakeRoutine( DaoProcess *self, DaoVmCode *vmc );
 
 static DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc );
 static DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc );
-static int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A );
+static int DaoProcess_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A );
 
-static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoValue *C, DaoType *TA, DaoType *TB );
-
-int DaoArray_DoBinary_NumberArray( DaoArray *C, DaoValue *A, DaoArray *B, int op, DaoProcess *p );
-int DaoArray_DoBinary_ArrayNumber( DaoArray *C, DaoArray *A, DaoValue *B, int op, DaoProcess *p );
-int DaoArray_DoBinary_ArrayArray( DaoArray *C, DaoArray *A, DaoArray *B, int op, DaoProcess *p );
 void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int callmode );
 
 
@@ -1477,10 +1472,8 @@ CallEntry:
 			case DAO_OBJECT :
 			case DAO_CINVALUE :
 				self->activeCode = vmc;
-				ta = self->activeTypes[ vmc->a ];
-				tb = self->activeTypes[ vmc->b ];
-				if( DaoProcess_TryUserArith( self, vA, NULL, vC, ta, tb ) ) goto CheckException;
-				goto RaiseErrorInvalidOperation;
+				DaoProcess_DoUnary( self, vmc );
+				goto CheckException;
 			case DAO_NONE    : vC->xInteger.value = 0; break;
 			case DAO_BOOLEAN : vC->xInteger.value = sizeof(dao_integer); break;
 			case DAO_INTEGER : vC->xInteger.value = sizeof(dao_integer); break;
@@ -1561,7 +1554,7 @@ CallEntry:
 				goto RaiseErrorInvalidOperation;
 			}
 		}OPJUMP() OPCASE( MATH ){
-			if( DaoVM_DoMath( self, vmc, locVars[vmc->c], locVars[vmc->b] ) )
+			if( DaoProcess_DoMath( self, vmc, locVars[vmc->c], locVars[vmc->b] ) )
 				goto RaiseErrorInvalidOperation;
 		}OPNEXT() OPCASE( CALL ) OPCASE( MCALL ){
 			if( vmSpace->stopit ) goto FinishProcess;
@@ -3307,7 +3300,7 @@ InvalidReturn:
 	DaoProcess_RaiseError( self, "Value", "invalid returned value" );
 	return NULL;
 }
-int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
+int DaoProcess_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 {
 	DaoValue temp = {0};
 	DaoValue *value = (DaoValue*) & temp;
@@ -3395,30 +3388,17 @@ int DaoVM_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *A )
 	}
 	return 1;
 }
-DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC, int invarToVar );
-int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC );
-void DaoProcess_PopValues( DaoProcess *self, int N );
-static void* DaoType_DownCastCxxData( DaoType *self, DaoType *totype, void *data )
-{
-	daoint i, n;
-	if( self == totype || totype == NULL || data == NULL ) return data;
-	for(i=0,n=totype->bases->size; i<n; i++){
-		void *p = DaoType_DownCastCxxData( self, totype->bases->items.pType[i], data );
-		if( p ){
-			if( totype->typer->casts[i] ) return (*totype->typer->casts[i])( p, 1 );;
-			return p;
-		}
-	}
-	return NULL;
-}
+
 void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 {
 	int i, n, mt, mt2, invarToVar = 0;
 	int top = self->factory->size;
-	DaoType *at, *ct = self->activeTypes[ vmc->c ];
+	DaoType *at = self->activeTypes[ vmc->a ];
+	DaoType *ct = self->activeTypes[ vmc->c ];
 	DaoValue *va = self->activeValues[ vmc->a ];
 	DaoValue *vc = self->activeValues[ vmc->c ];
 	DaoValue **vc2 = self->activeValues + vmc->c;
+	DaoTypeCore *core;
 	DaoRoutine *meth;
 	DNode *node;
 
@@ -3439,62 +3419,22 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 	}
 
 	if( va->type == ct->tid && ct->tid <= DAO_STRING ) goto FastCasting;
+
+	invarToVar = at != NULL && at->invar != 0 && ct->invar == 0;
+
+	core = DaoValue_GetTypeCore( va );
+
 	if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ){
-		at = self->activeTypes[ vmc->a ];
-		if( at == NULL || at->invar == 0 || ct->invar != 0 ) goto FastCasting;
-		ct = DaoNamespace_GetType( self->activeNamespace, va );
-		ct = DaoType_GetBaseType( ct );
-		if( ct == NULL ) goto FailConversion;
-		if( DaoType_IsImmutable( ct ) ) goto FastCasting;
-		invarToVar = 1;
-	}
-
-	if( vc && vc->type == ct->tid && va->type <= DAO_STRING ){
-		if( va->type == ct->tid ) goto FastCasting;
-		if( va->type == DAO_STRING ){
-			if( ConvertStringToNumber( self, va, vc ) == 0 ) goto FailConversion;
-			return;
-		}
-		switch( ct->tid ){
-		case DAO_BOOLEAN :
-		case DAO_INTEGER : vc->xInteger.value = DaoValue_GetInteger( va ); return;
-		case DAO_FLOAT   : vc->xFloat.value = DaoValue_GetFloat( va ); return;
-		case DAO_COMPLEX : vc->xComplex.value = DaoValue_GetComplex( va ); return;
-		case DAO_STRING  : DaoValue_GetString( va, vc->xString.value ); return;
-		}
-	}
-
-	if( ct->tid == DAO_ENUM && (vc == NULL || vc->type != DAO_ENUM) ){
-		vc = (DaoValue*) DaoEnum_New( NULL, 0 );
-		GC_Assign( vc2, vc );
-	}
-	if( ct->tid == DAO_ENUM && va->type == DAO_ENUM ){
-		DaoEnum_SetType( & vc->xEnum, ct );
-		if( DaoEnum_SetValue( & vc->xEnum, & va->xEnum ) ==0 ) goto FailConversion;
-		return;
-	}else if( ct->tid == DAO_ENUM && (va->type == DAO_BOOLEAN || va->type == DAO_INTEGER) ){
-		if( ct->mapNames == NULL ) goto FailConversion;
-		for(node=DMap_First(ct->mapNames);node;node=DMap_Next(ct->mapNames,node)){
-			if( node->value.pInt == va->xInteger.value ) break;
-		}
-		if( node == NULL ) goto FailConversion;
-		DaoEnum_SetType( & vc->xEnum, ct );
-		vc->xEnum.value = node->value.pInt;
-		return;
-	}else if( ct->tid == DAO_ENUM && va->type == DAO_STRING ){
-		if( ct->mapNames == NULL ) goto FailConversion;
-		node = DMap_Find( ct->mapNames, va->xString.value );
-		if( node == NULL ) goto FailConversion;
-		DaoEnum_SetType( & vc->xEnum, ct );
-		vc->xEnum.value = node->value.pInt;
-		return;
-	}else if( ct->tid == DAO_ENUM ){
-		goto FailConversion;
-	}
-
-	if( ct->tid == DAO_CINVALUE ){
+		if( invarToVar == 0 ) goto FastCasting;
+		at = DaoNamespace_GetType( self->activeNamespace, va );
+		at = DaoType_GetBaseType( at );
+		if( at == NULL ) goto FailConversion;
+		if( DaoType_IsImmutable( at ) ) goto FastCasting;
+		if( core == NULL || core->Copy == NULL ) goto FailConversion;
+		va = core->Copy( va, NULL );
+		goto FastCasting;
+	}else if( ct->tid == DAO_CINVALUE ){
 		DaoCinType *cintype = (DaoCinType*) ct->aux;
-		DaoType *at;
 
 		if( va->type == DAO_CINVALUE && va->xCinValue.cintype == cintype ) goto FastCasting;
 		if( va->type == DAO_CINVALUE && DaoType_MatchValue( ct, va, NULL ) ) goto FastCasting;
@@ -3508,7 +3448,7 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 			}
 			va = (DaoValue*) DaoCinValue_New( cintype, va );
 			GC_Assign( vc2, va );
-			goto FastCasting;
+			return;
 		}
 		goto FailConversion;
 	}else if( ct->tid == DAO_INTERFACE ){
@@ -3540,64 +3480,43 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 			}
 			break;
 		}
-		/* automatic binding when casted to an interface: */
-		mt = DaoInterface_BindTo( inter, at, NULL );
-	}else if( ct->tid == DAO_TYPE && (ct->nested == NULL || ct->nested->size == 0) ){
-		if( va->type == DAO_TYPE ) goto FastCasting;
-	}
-	if( invarToVar == 0 ){
-		mt = DaoType_MatchValue( ct, va, NULL );
-		/* 
-		printf( "mt = %i, ct = %s\n", mt, ct->name->chars );
-		 */
-		if( mt >= DAO_MT_EQ || (mt && ct->tid == DAO_INTERFACE) ){
-			DaoValue_Copy( va, vc2 );
-			return;
-		}
-	}
-	if( ct->tid == DAO_VARIANT ) goto NormalCasting;
-	if( va->type == DAO_OBJECT ){
-		DaoValue *value = DaoObject_CastToBase( (DaoObject*) va, ct );
-		if( value ){
-			va = value;
-			if( invarToVar ) goto FailConversion;
-			goto FastCasting;
-		}else{
-			DaoClass *scope = self->activeObject ? self->activeObject->defClass : NULL;
-			DaoValue *tpar = (DaoValue*) ct;
-			meth = va->xObject.defClass->castOperators;
-			if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) == 0 ) return;
-			goto FailConversion;
-		}
-	}else if( va->type >= DAO_CSTRUCT && va->type <= DAO_CDATA ){
-		DaoValue *tpar = (DaoValue*) ct;
-		if( DaoType_MatchTo( va->xCdata.ctype, ct, NULL ) ){ /* up casting: */
-			/*
-			// No real casting here. C codes should use DaoValue_TryCastCdata(),
-			// or DaoCdata_CastData() to do the real casting on the C data pointer.
-			*/
-			if( invarToVar ) goto FailConversion;
-			goto FastCasting;
-		}else if( va->type == DAO_CDATA && DaoType_MatchTo( ct, va->xCdata.ctype, NULL ) ){
-			/* down casting: */
-			void *data = DaoType_DownCastCxxData( va->xCdata.ctype, ct, va->xCdata.data );
-			if( data ){
-				va = (DaoValue*) DaoWrappers_MakeCdata( ct, data, 0 );
-				goto FastCasting;
+		/* Automatic binding when casted to an interface: */
+		if( DaoInterface_BindTo( inter, at, NULL ) == 0 ) goto FailConversion;
+		goto FastCasting;
+	}else if( ct->tid == DAO_VARIANT ){
+		DaoType *best = NULL;
+		int max = DAO_MT_NOT;
+		for(i=0,n=ct->nested->size; i<n; i++){
+			DaoType *itype = ct->nested->items.pType[i];
+			int mt = DaoType_MatchValue( itype, va, NULL );
+			if( mt > max ){
+				best = itype;
+				max = mt;
 			}
 		}
-		meth = DaoType_GetCastor( va->xCdata.ctype );
-		if( meth && DaoProcess_PushCallable( self, meth, va, & tpar, 1 ) == 0 ) return;
-		goto FailConversion;
+		if( best == NULL ) goto FailConversion;
+		ct = best;
 	}
-NormalCasting:
-	va = DaoTypeCast( self, ct, va, vc, invarToVar );
-	if( va && va->type ) DaoValue_Copy( va, vc2 );
-	DaoProcess_PopValues( self, self->factory->size - top );
-	if( va == NULL || va->type == 0 ) goto FailConversion;
-	return;
+
+	vc = DaoValue_Convert( va, ct, invarToVar, self );
+	if( vc == NULL ) goto FailConversion;
+
+	if( va->type <= DAO_TUPLE ){
+	}else if( va->type == DAO_OBJECT ){
+	}else if( va->type >= DAO_CSTRUCT && va->type <= DAO_CDATA ){
+#if 0
+	case DAO_ROUTINE :
+		if( DaoType_MatchValue( ct, dA, NULL ) == 0 ) goto FailConversion;
+		dC = dA;
+		break;
+	default :
+		if( DaoType_MatchValue( ct, dA, NULL ) < DAO_MT_EQ ) goto FailConversion;
+		dC = dA;
+#endif
+	}
+
 FastCasting:
-	DaoValue_Copy( va, vc2 );  /* DaoCinValue; */
+	DaoValue_Copy( va, vc2 );
 	return;
 FailConversion :
 	at = self->activeTypes[ vmc->a ];
@@ -4044,8 +3963,6 @@ FastCallError:
 	DaoProcess_DoCall2( self, vmc, caller, selfpar, params, types, npar );
 }
 
-int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc,
-		DString *name, DaoValue *P[], int N, int ignore_return, int execute );
 static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 {
 	DString *name = self->string;
@@ -4104,7 +4021,7 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 	}else{
 		DString_SetChars( name, "for" );
 		if( va->type == DAO_OBJECT ){
-			rc = DaoObject_InvokeMethod( & va->xObject, NULL, self, name, & vc, 1, 1, 0 );
+//			rc = DaoObject_InvokeMethod( & va->xObject, NULL, self, name, & vc, 1, 1, 0 );
 		}else{
 			DaoRoutine *meth = DaoType_FindFunction( type, name );
 			if( meth ) rc = DaoProcess_Call( self, meth, va, &vc, 1 );
@@ -4693,157 +4610,6 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 	}
 }
 
-/*
-// Operator (in daoBitBoolArithOpers) validity rules,
-// for operation involving DaoObject:
-//
-// A. when one of the operand is not DaoObject:
-//    1. all these operators are not valid, unless overloaded;
-//
-// B. when both operands are DaoObject:
-//
-//    1. AND, OR, LT, LE, EQ, NE are valid, only if none operator
-//       in daoBitBoolArithOpers is overloaded; In this case,
-//       the operations will be based on pointers;
-//
-//    2. AND, OR, LT, LE, EQ, NE are based on pointers, if they
-//       are used inside the function overloaded for the same
-//       operator. Example:
-//
-//       class Test{
-//         operator == ( A : Test, B : Test ){
-//           return A == B; # this will be based on pointers!
-//         }
-//       }
-//
-//    3. since "A>B" (or "A>=B") is compiled as "B<A" (or "B<=A"),
-//       when a DVM_LT or DVM_LE is executed, "operator<()"
-//       or "operator<=()" will be search first, if not found,
-//       then "operator>()" or "operator>=()" is searched,
-//       and applied by swapping A and B'
-//
-//    4. "A<B" and "A>B" inside "operator<()" and "operator>()"
-//        or "A<=B" and "A>=B" inside "operator<=()" and "operator>=()"
-//        will be based on pointers.
-*/
-/*
-// Examples of possible ways of operator overloading:
-// All these overloading functions must be "static",
-// namely, they do not require a class instance for being invoked:
-//
-// Unary operation:
-// operator ! ( C : Number, A : Number ){... return C_or_something_else}
-// operator ! ( A : Number ){... return something}
-//
-// Binary operation:
-// operator + ( C : Number, A : Number, B : Number ){... return C_or_else}
-// operator + ( A : Number, B : Number ){... return something}
-//
-// The first method is always tried first if C is found NOT to be null,
-// and have reference count equal to one;
-//
-// For binary operation, if C == A, the following will be tried first:
-// operator += ( C : Number, B : Number ){... return C_or_else}
-*/
-static int DaoProcess_TryUserArithX( DaoProcess *self, DaoValue *A, DaoValue *B, DaoValue *C, DaoType *TA, DaoType *TB )
-{
-	DaoRoutine *rout = 0;
-	DaoObject *object = (DaoObject*)A;
-	DaoCstruct *cstruct = (DaoCstruct*)A;
-	DaoCinValue *cinvalue = (DaoCinValue*)A;
-	DaoClass *klass;
-	DString *name = self->string;
-	DaoValue **p, *par[3];
-	DaoType *argt[3] = { NULL };
-	DaoValue *value = NULL;
-	int code = self->activeCode->code;
-	int boolres = code >= DVM_AND && code <= DVM_NE;
-	int bothobj = B ? A->type == B->type : 0;
-	int recursive = 0;
-	int compo = 0; /* try composite operator */
-	int nopac = 0; /* do not pass C as parameter */
-	int npar = 3;
-	int first = 1;
-	int n, rc = 0;
-
-	/* C = A + B */
-	par[0] = C;
-	par[1] = A;
-	par[2] = B;
-	argt[1] = TA;
-	argt[2] = TB;
-	if( C == A && daoBitBoolArithOpers2[ code-DVM_NOT ] ){
-		DString_SetChars( name, daoBitBoolArithOpers2[ code-DVM_NOT ] );
-		if( A->type == DAO_OBJECT ){
-			if( DString_EQ( name, self->activeRoutine->routName ) ) recursive = 1;
-			if( recursive && object->defClass->objType == self->activeRoutine->routHost ) return 0;
-			klass = object->defClass;
-			rc = DaoObject_GetData( object, name, & value,  self->activeObject );
-		}else if( A->type == DAO_CINVALUE ){
-			value = (DaoValue*) DaoType_FindFunction( cinvalue->cintype->vatype, name );
-		}else{ /* DAO_CSTRUCT, CDATA */
-			value = (DaoValue*) DaoType_FindFunction( cstruct->ctype, name );
-		}
-		if( rc == 0 && value && value->type == DAO_ROUTINE ){
-			rout = (DaoRoutine*) value;
-			/* Check the method with self parameter first, then other methods: */
-			if( DaoProcess_PushCallableX( self, rout, A, & B, & TB, B!=NULL ) == 0 ) return 1;
-			if( DaoProcess_PushCallableX( self, rout, NULL, par+1, argt+1, 2 ) == 0 ) return 1;
-		}
-	}
-	DString_SetChars( name, daoBitBoolArithOpers[ code-DVM_NOT ] );
-TryAgain:
-	if( A->type == DAO_OBJECT ){
-		if( DString_EQ( name, self->activeRoutine->routName ) ) recursive = 1;
-		if( recursive && object->defClass->objType == self->activeRoutine->routHost ) return 0;
-		klass = object->defClass;
-		rc = DaoObject_GetData( object, name, & value,  self->activeObject );
-	}else if( A->type == DAO_CINVALUE ){
-		value = (DaoValue*) DaoType_FindFunction( cinvalue->cintype->vatype, name );
-	}else{ /* DAO_CSTRUCT, CDATA */
-		value = (DaoValue*) DaoType_FindFunction( cstruct->ctype, name );
-	}
-	if( rc == 0 && value && value->type == DAO_ROUTINE ){
-		rout = (DaoRoutine*) value;
-		if( C && C->xBase.refCount == 1 ){ /* Check methods that can take three parameters: */
-			/* Check only static method that takes parameters: C, A, B: */
-			if( DaoProcess_PushCallableX( self, rout, NULL, par, argt, 2+(B!=NULL) ) == 0 ) return 1;
-		}
-		/* Check the method with self parameter first, then other methods: */
-		if( DaoProcess_PushCallableX( self, rout, A, & B, & TB, B!=NULL ) == 0 ) return 1;
-		if( DaoProcess_PushCallableX( self, rout, NULL, par+1, argt+1, 1+(B!=NULL) ) == 0 ) return 1;
-	}
-	if( first && (code == DVM_LT || code == DVM_LE) ){
-		first = 0;
-		if( code == DVM_LT ){
-			DString_SetChars( name, ">" );
-		}else{
-			DString_SetChars( name, ">=" );
-		}
-		if( B && (B->type >= DAO_OBJECT && B->type <= DAO_CDATA) ){
-			par[1] = B;
-			par[2] = A;
-			A = par[1];
-			B = par[2];
-			object = (DaoObject*)A;
-			cstruct = (DaoCstruct*)A;
-			cinvalue = (DaoCinValue*)A;
-			goto TryAgain;
-		}
-	}
-	return 0;
-}
-static int DaoProcess_TryUserArith( DaoProcess *self, DaoValue *A, DaoValue *B, DaoValue *C, DaoType *TA, DaoType *TB )
-{
-	int ret = DaoProcess_TryUserArithX( self, A, B, C, TA, TB );
-	if( ret ) return ret;
-	if( A && A->type == DAO_CINVALUE ) A = A->xCinValue.value;
-	if( B && B->type == DAO_CINVALUE ) B = B->xCinValue.value;
-	if( C && C->type == DAO_CINVALUE ) C = C->xCinValue.value;
-	if( TA && TA->tid == DAO_CINVALUE ) TA = TA->aux->xCinType.target;
-	if( TB && TB->tid == DAO_CINVALUE ) TB = TB->aux->xCinType.target;
-	return DaoProcess_TryUserArithX( self, A, B, C, TA, TB );
-}
 void DaoProcess_DoBinary( DaoProcess *self, DaoVmCode *vmc )
 {
 	int errors = self->errors->size;
@@ -5032,360 +4798,6 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 	}else{
 		DaoProcess_RaiseError( self, "Type", NULL );
 	}
-}
-/* Set dC->type before calling to instruct this function what type number to convert: */
-int ConvertStringToNumber( DaoProcess *proc, DaoValue *dA, DaoValue *dC )
-{
-	DaoLexer *lexer;
-	DaoParser *parser;
-	DaoToken *tok, **tokens;
-	DString *mbs = proc->string;
-	double fvalue = 0;
-	dao_integer ivalue = 0;
-	int tid = dC->type;
-	int base, tokid = 0;
-	int ec, sign = 1;
-
-	if( dA->type != DAO_STRING || tid == DAO_NONE || tid > DAO_COMPLEX ) return 0;
-
-	DString_SetBytes( mbs, dA->xString.value->chars, dA->xString.value->size );
-	DString_Trim( mbs, 1, 1, 0 );
-	if( mbs->size ==0 ) return 0;
-
-	parser = DaoVmSpace_AcquireParser( proc->vmSpace );
-	lexer = parser->lexer;
-
-	DaoLexer_Tokenize( lexer, mbs->chars, DAO_LEX_COMMENT|DAO_LEX_SPACE );
-	tokens = lexer->tokens->items.pToken;
-
-	if( lexer->tokens->size == 0 ) goto ReturnFalse;
-	switch( tokens[tokid]->name ){
-	case DTOK_ADD : tokid += 1; break;
-	case DTOK_SUB : tokid += 1; sign = -1; break;
-	}
-	if( tokid >= lexer->tokens->size ) goto ReturnFalse;
-	tok = tokens[tokid++];
-
-	switch( tid ){
-	case DAO_BOOLEAN :
-		dC->xBoolean.value = strcmp( tok->string.chars, "true" ) == 0;
-		break;
-	case DAO_INTEGER :
-		if( tok->name < DTOK_DIGITS_DEC || tok->name > DTOK_NUMBER_DEC ) goto ReturnFalse;
-		dC->xInteger.value = DaoToken_ToInteger( tok );
-		if( sign <0 ) dC->xInteger.value = - dC->xInteger.value;
-		break;
-	case DAO_FLOAT :
-		if( tok->name < DTOK_DIGITS_DEC || tok->name > DTOK_NUMBER_SCI ) goto ReturnFalse;
-		dC->xFloat.value = DaoToken_ToFloat( tok );
-		if( sign <0 ) dC->xFloat.value = - dC->xFloat.value;
-		break;
-	case DAO_COMPLEX :
-		dC->xComplex.value.real = 0.0;
-		dC->xComplex.value.imag = 0.0;
-		if( tok->name >= DTOK_DIGITS_DEC && tok->name <= DTOK_NUMBER_SCI ){
-			dC->xComplex.value.real = DaoToken_ToFloat( tok );
-			if( sign <0 ) dC->xComplex.value.real = - dC->xComplex.value.real;
-
-			if( tokid >= lexer->tokens->size ) goto ReturnTrue;
-			tok = tokens[tokid];
-			switch( tok->name ){
-			case DTOK_ADD : tokid += 1; break;
-			case DTOK_SUB : tokid += 1; sign = -1; break;
-			default : goto ReturnFalse;
-			}
-			if( tokid >= lexer->tokens->size ) goto ReturnFalse;
-			tok = tokens[tokid++];
-		}
-		if( tok->name != DTOK_NUMBER_IMG ) goto ReturnFalse;
-		dC->xComplex.value.imag = DaoToken_ToFloat( tok );
-		if( sign <0 ) dC->xComplex.value.imag = - dC->xComplex.value.imag;
-		break;
-	}
-	if( tokid < lexer->tokens->size ) goto ReturnFalse;
-
-ReturnTrue:
-	DaoVmSpace_ReleaseParser( proc->vmSpace, parser );
-	return 1;
-ReturnFalse:
-	DaoVmSpace_ReleaseParser( proc->vmSpace, parser );
-	return 0;
-}
-#ifdef DAO_WITH_NUMARRAY
-static DaoArray* DaoProcess_PrepareArray( DaoProcess *self, DaoValue *dC, int etype )
-{
-	DaoArray *array = NULL;
-	if( dC && dC->type == DAO_ARRAY && dC->xArray.refCount == 1 && array->original == NULL ){
-		array = (DaoArray*) dC;
-		DaoArray_SetNumType( array, etype );
-	}else{
-		array = DaoProcess_NewArray( self, etype );
-	}
-	return array;
-}
-#endif
-static DaoTuple* DaoProcess_PrepareTuple( DaoProcess *self, DaoValue *dC, DaoType *ct, int size )
-{
-	DaoTuple *tuple = NULL;
-
-	if( size < (ct->nested->size - ct->variadic) ) return NULL;
-	if( ct->variadic == 0 ) size = ct->nested->size;
-
-	if( dC && dC->type == DAO_TUPLE && dC->xTuple.ctype == ct ){
-		if( dC->xTuple.size == size && dC->xTuple.refCount == 1 ) return (DaoTuple*) dC;
-	}
-	tuple = DaoProcess_NewTuple( self, size );
-	tuple->ctype = ct;
-	GC_IncRC( ct );
-	return tuple;
-}
-DaoValue* DaoTypeCast( DaoProcess *proc, DaoType *ct, DaoValue *dA, DaoValue *dC, int invarToVar )
-{
-	DaoNamespace *ns = proc->activeNamespace;
-	DaoTuple *tuple = NULL, *tuple2 = NULL;
-	DaoList *list = NULL, *list2 = NULL;
-	DaoMap *map = NULL, *map2 = NULL;
-	DaoType *tp = NULL, *tp2 = NULL;
-	DaoArray *array = NULL, *array2 = NULL;
-	DaoValue **data, **data2, *K = NULL, *V = NULL;
-	DaoValue *itvalue;
-	DString *str;
-	DNode *node;
-	daoint i, n, size;
-	int mt, type, variadic, tsize;
-
-	if( ct == NULL ) goto FailConversion;
-	if( ct->tid & DAO_ANY ) ct = DaoNamespace_GetType( proc->activeNamespace, dA );
-	if( dA->type == ct->tid && ct->tid >= DAO_NONE && ct->tid < DAO_ARRAY ) goto Rebind;
-	if( ct->tid > DAO_NONE && ct->tid <= DAO_STRING && (dC == NULL || dC->type != ct->tid) ){
-		dC = DaoValue_SimpleCopy( ct->value );
-		DaoProcess_CacheValue( proc, dC );
-	}
-	if( dA->type == DAO_STRING && ct->tid > DAO_NONE && ct->tid <= DAO_COMPLEX ){
-		if( ConvertStringToNumber( proc, dA, dC ) ==0 ) goto FailConversion;
-		return dC;
-	}
-	if( ct->valtype ){
-		if( DaoValue_Compare( ct->aux, dA ) != 0 ) goto FailConversion;
-		return dA;
-	}
-	switch( ct->tid ){
-	case DAO_BOOLEAN :
-		if( dA->type == DAO_STRING ){
-			dC->xBoolean.value = strcmp( dA->xString.value->chars, "true" ) == 0;
-			break;
-		}
-		dC->xBoolean.value = DaoValue_IsZero( dA ) != 0;
-		break;
-	case DAO_INTEGER :
-		dC->xInteger.value = DaoValue_GetInteger( dA );
-		break;
-	case DAO_FLOAT :
-		dC->xFloat.value = DaoValue_GetFloat( dA );
-		break;
-	case DAO_COMPLEX :
-		if( dA->type == DAO_COMPLEX ) goto Rebind;
-		if( dA->type >= DAO_ARRAY ) goto FailConversion;
-		dC->xComplex.value = DaoValue_GetComplex( dA );
-		break;
-	case DAO_STRING :
-		if( dA->type == DAO_STRING ) goto Rebind;
-		if( dA->type >= DAO_ARRAY ) goto FailConversion;
-		DaoValue_GetString( dA, dC->xString.value );
-		break;
-#ifdef DAO_WITH_NUMARRAY
-	case DAO_ARRAY :
-		array2 = & dA->xArray;
-		if( ct->nested->size >0 ) tp = ct->nested->items.pType[0];
-		if( dA->type != DAO_ARRAY ) goto FailConversion;
-		if( invarToVar == 0 ){
-			if( tp == NULL ) goto Rebind;
-			if( array2->etype == tp->tid ) goto Rebind;
-		}
-		if( tp->tid < DAO_BOOLEAN || tp->tid > DAO_COMPLEX ) goto FailConversion;
-		if( array2->original && DaoArray_Sliced( array2 ) == 0 ) goto FailConversion;
-
-		array = DaoProcess_PrepareArray( proc, dC, tp->tid );
-		DaoArray_ResizeArray( array, array2->dims, array2->ndim );
-		for(i=0,size=array2->size; i<size; i++){
-			switch( array->etype ){
-			case DAO_BOOLEAN : array->data.b[i] = DaoArray_GetBoolean( array2, i ); break;
-			case DAO_INTEGER : array->data.i[i] = DaoArray_GetInteger( array2, i ); break;
-			case DAO_FLOAT   : array->data.f[i] = DaoArray_GetFloat( array2, i );  break;
-			case DAO_COMPLEX : array->data.c[i] = DaoArray_GetComplex( array2, i ); break;
-			}
-		}
-		dC = (DaoValue*) array;
-		break;
-#endif
-	case DAO_LIST :
-		if( invarToVar == 0 ){
-			if( DaoType_MatchValue( ct, dA, NULL ) >= DAO_MT_EQ ) goto Rebind;
-		}
-		if( ct->nested->size >0 ) tp = ct->nested->items.pType[0];
-
-		if( tp == NULL ) goto FailConversion;
-		if( dC && dC->type == DAO_LIST && dC->xList.refCount == 1 && dC->xList.ctype == ct ){
-			list = (DaoList*) dC;
-		}else{
-			list = DaoProcess_NewList( proc );
-			list->ctype = ct;
-			GC_IncRC( ct );
-			dC = (DaoValue*) list;
-		}
-		if( dA->type == DAO_LIST ){
-			list2 = & dA->xList;
-			DList_Resize( list->value, list2->value->size, NULL );
-			data = list->value->items.pValue;
-			data2 = list2->value->items.pValue;
-			for(i=0,n=list2->value->size; i<n; i++ ){
-				V = DaoTypeCast( proc, tp, data2[i], V, invarToVar );
-				if( V == NULL ) goto FailConversion;
-				DaoValue_Copy( V, data + i );
-			}
-		}else if( dA->type == DAO_TUPLE ){
-			tuple2 = (DaoTuple*) dA;
-			DList_Resize( list->value, tuple2->size, NULL );
-			data = list->value->items.pValue;
-			data2 = tuple2->values;
-			for(i=0,n=tuple2->size; i<n; i++ ){
-				V = DaoTypeCast( proc, tp, data2[i], V, invarToVar  );
-				if( V == NULL ) goto FailConversion;
-				DaoValue_Copy( V, data + i );
-			}
-		}else goto FailConversion;
-		break;
-	case DAO_MAP :
-		if( dA->type != DAO_MAP ) goto FailConversion;
-		map2 = & dA->xMap;
-		if( invarToVar == 0 ){
-			if( DaoType_MatchTo( map2->ctype, ct, NULL ) >= DAO_MT_EQ ) goto Rebind;
-		}
-
-		if( dC && dC->type == DAO_MAP && dC->xMap.refCount == 1 && dC->xMap.ctype == ct ){
-			map = (DaoMap*) dC;
-			DMap_Reset( map->value );
-		}else{
-			map = DaoProcess_NewMap( proc, map2->value->hashing );
-			map->ctype = ct;
-			GC_IncRC( ct );
-			dC = (DaoValue*) map;
-		}
-		if( ct->nested->size >0 ) tp = ct->nested->items.pType[0];
-		if( ct->nested->size >1 ) tp2 = ct->nested->items.pType[1];
-		if( tp == NULL || tp2 == NULL ) goto FailConversion;
-		node = DMap_First( map2->value );
-		for(; node!=NULL; node=DMap_Next(map2->value,node) ){
-			K = DaoTypeCast( proc, tp, node->key.pValue, K, invarToVar  );
-			V = DaoTypeCast( proc, tp2, node->value.pValue, V, invarToVar  );
-			if( K == NULL || V == NULL ) goto FailConversion;
-			DMap_Insert( map->value, K, V );
-		}
-		break;
-	case DAO_TUPLE :
-		tsize = ct->nested->size - ct->variadic;
-		if( dA->type == DAO_TUPLE ){
-			tuple2 = (DaoTuple*) dA;
-			if( invarToVar == 0 && (tuple2->ctype == ct || ct->nested->size == 0) ) goto Rebind;
-			tuple = DaoProcess_PrepareTuple( proc, dC, ct, tuple2->size );
-			if( tuple == NULL ) goto FailConversion;
-			for(i=0; i<tuple->size; i++){
-				DaoValue *V = tuple2->values[i];
-				tp2 = dao_type_any;
-				if( i < ct->nested->size ){
-					tp2 = ct->nested->items.pType[i];
-				}else if( ct->variadic ){
-					tp2 = ct->nested->items.pType[tsize];
-				}
-				if( tp2->tid >= DAO_PAR_NAMED && tp2->tid <= DAO_PAR_VALIST ) tp2 = & tp2->aux->xType;
-				V = DaoTypeCast( proc, tp2, V, K, invarToVar  );
-				if( V == NULL ) goto FailConversion;
-				DaoValue_Copy( V, tuple->values + i );
-			}
-		}else if( dA->type == DAO_LIST ){
-			list = (DaoList*) dA;
-			tuple = DaoProcess_PrepareTuple( proc, dC, ct, list->value->size );
-			if( tuple == NULL ) goto FailConversion;
-			for(i=0; i<tuple->size; i++){
-				DaoValue *V = list->value->items.pValue[i];
-				tp2 = dao_type_any;
-				if( i < ct->nested->size ){
-					tp2 = ct->nested->items.pType[i];
-				}else if( ct->variadic ){
-					tp2 = ct->nested->items.pType[tsize];
-				}
-				if( tp2->tid >= DAO_PAR_NAMED && tp2->tid <= DAO_PAR_VALIST ) tp2 = & tp2->aux->xType;
-				V = DaoTypeCast( proc, tp2, V, K, invarToVar  );
-				if( V == NULL ) goto FailConversion;
-				DaoValue_Copy( V, tuple->values + i );
-			}
-		}else{
-			goto FailConversion;
-		}
-		dC = (DaoValue*) tuple;
-		break;
-	case DAO_CLASS :
-		if( dA == NULL || dA->type != DAO_CLASS ) goto FailConversion;
-		if( invarToVar ) goto FailConversion;
-		if( ct->aux == NULL ) goto Rebind; /* to "class"; */
-		dC = DaoClass_CastToBase( (DaoClass*)dA, ct );
-		if( dC == NULL ) goto FailConversion;
-		break;
-	case DAO_OBJECT :
-		if( dA->type >= DAO_CSTRUCT && dA->type <= DAO_CDATA ) dA = (DaoValue*) dA->xCdata.object;
-		/* XXX compiling time checking??? */
-		if( dA == NULL || dA->type != DAO_OBJECT ) goto FailConversion;
-		if( invarToVar && !(dA->xObject.defClass->attribs & DAO_CLS_INVAR) ) goto FailConversion;
-		dC = DaoObject_CastToBase( & dA->xObject, ct );
-		if( dC == NULL ) goto FailConversion;
-		break;
-	case DAO_CTYPE :
-		if( invarToVar ) goto FailConversion;
-		if( dA->type == DAO_CLASS ){
-			dC = DaoClass_CastToBase( (DaoClass*)dA, ct );
-		}else if( dA->type == DAO_CTYPE ){
-			if( DaoType_ChildOf( dA->xCtype.ctype, ct ) ) dC = dA;
-		}
-		if( dC == NULL ) goto FailConversion;
-		break;
-	case DAO_CDATA :
-	case DAO_CSTRUCT :
-		dC = NULL;
-		if( dA->type >= DAO_CSTRUCT && dA->type <= DAO_CDATA ){
-			if( invarToVar && !(dA->xCtype.attribs & DAO_CLS_INVAR) ) goto FailConversion;
-			if( DaoType_ChildOf( dA->xCdata.ctype, ct ) ) dC = dA;
-		}else if( dA->type == DAO_OBJECT ){
-			if( invarToVar && !(dA->xObject.defClass->attribs & DAO_CLS_INVAR) ) goto FailConversion;
-			dC = DaoObject_CastToBase( & dA->xObject, ct );
-		}
-		if( dC == NULL ) goto FailConversion;
-		break;
-	case DAO_VARIANT :
-		tp = NULL;
-		mt = DAO_MT_NOT;
-		for(i=0,n=ct->nested->size; i<n; i++){
-			DaoType *itp = ct->nested->items.pType[i];
-			int mt2 = DaoType_MatchValue( itp, dA, NULL );
-			if( mt2 > mt ){
-				mt = mt2;
-				tp = itp;
-			}
-		}
-		if( tp == NULL ) goto FailConversion;
-		return DaoTypeCast( proc, tp, dA, dC, invarToVar );
-	case DAO_ROUTINE :
-		if( DaoType_MatchValue( ct, dA, NULL ) == 0 ) goto FailConversion;
-		dC = dA;
-		break;
-	default :
-		if( DaoType_MatchValue( ct, dA, NULL ) < DAO_MT_EQ ) goto FailConversion;
-		dC = dA;
-	}
-	return dC;
-Rebind :
-	return dA;
-FailConversion :
-	return NULL;
 }
 
 DaoRoutine* DaoRoutine_Check( DaoRoutine *self, DaoType *selftp, DaoType *ts[], int np, int code, DList *es );
@@ -5762,7 +5174,7 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 	case DVM_MATRIX :
 		DaoProcess_DoMatrix( self, vmc ); break;
 	case DVM_MATH :
-		DaoVM_DoMath( self, vmc, self->activeValues[ vmc->c ], self->activeValues[1] );
+		DaoProcess_DoMath( self, vmc, self->activeValues[ vmc->c ], self->activeValues[1] );
 		break;
 	case DVM_PACK :
 	case DVM_MPACK :

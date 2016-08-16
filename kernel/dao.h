@@ -182,7 +182,7 @@ enum DaoCtypeWrapOptions
 
 
 /*
-// define an integer type with size equal to the size of pointers
+// Define an integer type with size equal to the size of pointers
 // on both 32-bits and 64-bits systems.
 */
 typedef ptrdiff_t       daoint;
@@ -287,15 +287,15 @@ struct DaoNumberEntry
 struct DaoFunctionEntry
 {
 	DaoCFunction  fpter;  /* C function pointer; */
-	const char   *proto;  /* function prototype: name( parlist ) => return_type */
+	const char   *proto;  /* Function prototype: name( parlist ) => return_type */
 };
 
 struct DaoVirtualModule
 {
-	const char       *name;    /* path + file name for the module; */
-	signed int        length;  /* length of the file; */
-	unsigned char    *data;    /* file content; */
-	DaoModuleOnLoad   onload;  /* onload function pointer for C module; */
+	const char       *name;    /* Name (path + file) for the module; */
+	signed int        length;  /* Length of the file; */
+	unsigned char    *data;    /* File content; */
+	DaoModuleOnLoad   onload;  /* Onload function pointer for C module; */
 };
 
 
@@ -319,7 +319,7 @@ struct DaoVirtualModule
 // At running time, the executing DaoProcess object is usually passed to the
 // execution functions, so that these functions can put the resulting values
 // directly on the process stack. Otherwise, they should just return the results,
-// and let the VM to put them on the stack if necessary (TODO).
+// and let the VM to put them on the stack if necessary.
 //
 // However, for the comparison and conversion functions, the DaoProcess could
 // be NULL when their host types are used as map and hash map keys.
@@ -393,7 +393,7 @@ struct DaoTypeCore
 	*/
 
 	DaoType*  (*CheckConversion)( DaoType *self, DaoType *type, DaoRoutine *rout );
-	DaoValue* (*DoConversion)( DaoValue *self, DaoType *type, DaoValue *buffer, DaoProcess *proc );
+	DaoValue* (*DoConversion)( DaoValue *self, DaoType *type, int copy, DaoProcess *proc );
 	/*
 	// Functions for conversion operation:
 	// These functions are used for type casting and hashing;
@@ -406,8 +406,11 @@ struct DaoTypeCore
 	// For conversion between wrapped C/C++ types, the conversion function
 	// must handle up and down casting properly.
 	//
-	// If the target type is a number type, a buffer value of the target
-	// type will be passed to the conversion function for convenience.
+	// If the conversion is used to convert invariables to variables,
+	// the copy parameter will be set to one. And non-primitive values
+	// are expected to be copied before returning. However, if they are
+	// not copied, the Copy() functions (if defined) in their type cores
+	// will be used to create copies.
 	*/
 
 	DaoType* (*CheckForEach)( DaoType *self, DaoRoutine *rout );
@@ -433,7 +436,7 @@ struct DaoTypeCore
 
 	DaoValue* (*Copy)( DaoValue *self, DaoValue *target );
 	/*
-	// Function for copying objects of user defined types (mainly POD types):
+	// Function for copying objects of user defined types:
 	// If the target object is present in the parameter, the data of self will
 	// be copied to the target.
 	// Otherwise, a new object with the same data as self should be returned.

@@ -16,7 +16,7 @@ HEADERS = $(DAO_SRC_DIR)/dao.h $(DAO_SRC_DIR)/daoBase.h $(DAO_SRC_DIR)/daoGC.h \
 		  $(DAO_SRC_DIR)/daoStdlib.h $(DAO_SRC_DIR)/daoType.h \
 		  $(DAO_SRC_DIR)/daoParser.h $(DAO_SRC_DIR)/daoStdtype.h \
 		  $(DAO_SRC_DIR)/daoValue.h $(DAO_SRC_DIR)/daoBytecode.h \
-		  $(DAO_SRC_DIR)/daoMap.h $(DAO_SRC_DIR)/daoPlatforms.h \
+		  $(DAO_SRC_DIR)/daoMap.h $(DAO_SRC_DIR)/daoPlatform.h \
 		  $(DAO_SRC_DIR)/daoStream.h $(DAO_SRC_DIR)/daoVmcode.h \
 		  $(DAO_SRC_DIR)/daoClass.h $(DAO_SRC_DIR)/daoNamespace.h \
 		  $(DAO_SRC_DIR)/daoProcess.h $(DAO_SRC_DIR)/daoString.h \
@@ -81,8 +81,8 @@ daoInferencer-$(PLAT).o: $(HEADERS) $(DAO_SRC_DIR)/daoInferencer.c
 daoThread-$(PLAT).o: $(HEADERS) $(DAO_SRC_DIR)/daoThread.c
 	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoThread.c -o daoThread-$(PLAT).o
 
-daoPlatforms-$(PLAT).o: $(HEADERS) $(DAO_SRC_DIR)/daoPlatforms.c
-	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoPlatforms.c -o daoPlatforms-$(PLAT).o
+daoPlatform-$(PLAT).o: $(HEADERS) $(DAO_SRC_DIR)/daoPlatform.c
+	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoPlatform.c -o daoPlatform-$(PLAT).o
 
 daoNumtype-$(PLAT).o: $(HEADERS) $(DAO_SRC_DIR)/daoNumtype.c
 	$(CC) -c $(CFLAGS) $(INCS) $(DAO_SRC_DIR)/daoNumtype.c -o daoNumtype-$(PLAT).o

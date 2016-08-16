@@ -261,6 +261,31 @@ DaoNameValue* DaoNameValue_New( DString *name, DaoValue *value );
 
 
 
+/*
+// DaoCtype is the class struct for C/C++ types:
+//
+// Each C/C++ type is represented by three objects:
+// -- Class Struct:  DaoCtype;
+// -- Class   Type:  DaoType (DaoCtype::ctype);
+// -- Object  Type:  DaoType (DaoCtype::cdtype);
+*/
+struct DaoCtype
+{
+	DAO_VALUE_COMMON;
+
+	int       attribs;
+
+	DString  *name;
+	DString  *info;
+
+	DaoType  *classType;
+	DaoType  *objectType;
+};
+
+DAO_DLL DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype );
+DAO_DLL void DaoCtype_Delete( DaoCtype *self );
+
+
 
 /* Customized/extended Dao data: */
 struct DaoCstruct
@@ -285,31 +310,6 @@ struct DaoCdata
 
 DAO_DLL void DaoCdata_Delete( DaoCdata *self );
 DAO_DLL DaoType* DaoCdata_NewType( DaoTypeCore *typer, int tid );
-
-
-/*
-// DaoCtype is the class struct for C/C++ types:
-//
-// Each C/C++ type is represented by three objects:
-// -- Class Struct:  DaoCtype;
-// -- Class   Type:  DaoType (DaoCtype::ctype);
-// -- Object  Type:  DaoType (DaoCtype::cdtype);
-*/
-struct DaoCtype
-{
-	DAO_VALUE_COMMON;
-
-	int       attribs;
-
-	DString  *name;
-	DString  *info;
-
-	DaoType  *classType;
-	DaoType  *objectType;
-};
-
-DAO_DLL DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype );
-DAO_DLL void DaoCtype_Delete( DaoCtype *self );
 
 
 

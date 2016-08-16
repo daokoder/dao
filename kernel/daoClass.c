@@ -1471,6 +1471,20 @@ static int DaoClass_DoSetField( DaoValue *selfv, DString *name, DaoValue *value,
 	return DAO_OK;
 }
 
+DaoType* DaoClass_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
+{
+	if( DaoType_ChildOf( self, type ) ) return type;
+	if( DaoType_ChildOf( type, self ) ) return type;
+	return self;
+}
+
+DaoValue* DaoClass_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
+{
+	if( DaoType_ChildOf( self->xClass.clsType, type ) ) return type->aux;
+	if( DaoType_ChildOf( type, self->xClass.clsType ) ) return type->aux;
+	return NULL;
+}
+
 void DaoClass_CoreDelete( DaoValue *self )
 {
 	DaoClass_Delete( (DaoClass*) self );
@@ -1478,22 +1492,22 @@ void DaoClass_CoreDelete( DaoValue *self )
 
 DaoTypeCore daoClassCore =
 {
-	"class",                                       /* name */
-	{ NULL },                                      /* bases */
-	NULL,                                          /* numbers */
-	NULL,                                          /* methods */
-	DaoClass_CheckGetField,  DaoClass_DoGetField,  /* GetField */
-	DaoClass_CheckSetField,  DaoClass_DoSetField,  /* SetField */
-	NULL,                    NULL,                 /* GetItem */
-	NULL,                    NULL,                 /* SetItem */
-	NULL,                    NULL,                 /* Unary */
-	NULL,                    NULL,                 /* Binary */
-	NULL,                    NULL,                 /* Comparison */
-	NULL,                    NULL,                 /* Conversion */
-	NULL,                    NULL,                 /* ForEach */
-	DaoClass_Print,                                /* Print */
-	NULL,                                          /* Slice */
-	NULL,                                          /* Copy */
-	DaoClass_CoreDelete,                           /* Delete */
-	NULL                                           /* HandleGC */
+	"class",                                           /* name */
+	{ NULL },                                          /* bases */
+	NULL,                                              /* numbers */
+	NULL,                                              /* methods */
+	DaoClass_CheckGetField,    DaoClass_DoGetField,    /* GetField */
+	DaoClass_CheckSetField,    DaoClass_DoSetField,    /* SetField */
+	NULL,                      NULL,                   /* GetItem */
+	NULL,                      NULL,                   /* SetItem */
+	NULL,                      NULL,                   /* Unary */
+	NULL,                      NULL,                   /* Binary */
+	NULL,                      NULL,                   /* Comparison */
+	DaoClass_CheckConversion,  DaoClass_DoConversion,  /* Conversion */
+	NULL,                      NULL,                   /* ForEach */
+	DaoClass_Print,                                    /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Copy */
+	DaoClass_CoreDelete,                               /* Delete */
+	NULL                                               /* HandleGC */
 };

@@ -139,6 +139,18 @@ static DIndexRange Dao_CheckRangeIndex( DaoRange *range, daoint size, DaoProcess
 	return res;
 }
 
+static int DaoEnum_SetTypeValue( DaoEnum *self, DaoType *type, int value )
+{
+	if( type->mapNames == NULL ) return 0;
+	for(node=DMap_First(type->mapNames); node; node=DMap_Next(type->mapNames,node)){
+		if( node->value.pInt == value ) break;
+	}
+	if( node == NULL ) return 0;
+	DaoEnum_SetType( self, type );
+	self->value = node->value.pInt;
+	return 1;
+}
+
 static void DaoValue_QuotedPrint( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	DaoTypeCore *core = DaoValue_GetTypeCore( self );
@@ -202,8 +214,10 @@ static DaoType* DaoNone_CheckConversion( DaoType *self, DaoType *type, DaoRoutin
 	return NULL;
 }
 
-static DaoValue* DaoNone_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
+static DaoValue* DaoNone_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
+	DaoValue *num = (DaoValue*) & proc->number;
+	num->type = type->tid;
 	switch( type->tid ){
 	case DAO_NONE    : return dao_none_value;
 	case DAO_BOOLEAN : num->xBoolean.value = 0; return num;
@@ -212,7 +226,12 @@ static DaoValue* DaoNone_DoConversion( DaoValue *self, DaoType *type, DaoValue *
 	case DAO_COMPLEX : num->xComplex.value.real = num->xComplex.value.imag = 0.0; return num;
 	break;
 	}
-	if( type->tid == DAO_STRING ) DaoProcess_PutChars( proc, "none" );
+	if( type->tid == DAO_STRING ){
+		DaoValue *res = DaoValue_SimpleCopy( type->value );
+		DaoProcess_CacheValue( proc, res );
+		DString_SetChars( res, "none" );
+		return res;
+	}
 	return NULL; /* The VM will handle the case where no value is converted and returned; */
 }
 
@@ -366,9 +385,12 @@ static DaoType* DaoBoolean_CheckConversion( DaoType *self, DaoType *type, DaoRou
 	return NULL;
 }
 
-static DaoValue* DaoBoolean_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
+static DaoValue* DaoBoolean_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
 	int bl = self->xBoolean.value;
+	DaoValue *num = (DaoValue*) & proc->number;
+
+	num->type = type->tid;
 	switch( type->tid ){
 	case DAO_BOOLEAN : num->xBoolean.value = bl; return num;
 	case DAO_INTEGER : num->xInteger.value = bl; return num;
@@ -376,7 +398,16 @@ static DaoValue* DaoBoolean_DoConversion( DaoValue *self, DaoType *type, DaoValu
 	case DAO_COMPLEX : num->xComplex.value.real = bl; num->xComplex.value.imag = 0.0; return num;
 	break;
 	}
-	if( type->tid == DAO_STRING ) DaoProcess_PutChars( proc, bl ? "true" : "false" );
+	if( type->tid == DAO_STRING ){
+		DaoValue *res = DaoValue_SimpleCopy( type->value );
+		DaoProcess_CacheValue( proc, res );
+		DString_SetChars( res->xString.value, bl ? "true" : "false" );
+		return res;
+	}else if( type->tid == DAO_ENUM ){
+		DaoValue *res = DaoValue_SimpleCopy( type->value );
+		DaoProcess_CacheValue( proc, res );
+		if( DaoEnum_SetTypeValue( (DaoEnum*) res, type, bl ) ) return res;
+	}
 	return NULL; /* The VM will handle the case where no value is converted and returned; */
 }
 
@@ -583,9 +614,12 @@ static DaoType* DaoInteger_CheckConversion( DaoType *self, DaoType *type, DaoRou
 	return NULL;
 }
 
-static DaoValue* DaoInteger_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
+static DaoValue* DaoInteger_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
 	int val = self->xInteger.value;
+	DaoValue *num = (DaoValue*) & proc->number;
+
+	num->type = type->tid;
 	switch( type->tid ){
 	case DAO_BOOLEAN : num->xBoolean.value = val != 0; return num;
 	case DAO_INTEGER : num->xInteger.value = val; return num;
@@ -594,10 +628,16 @@ static DaoValue* DaoInteger_DoConversion( DaoValue *self, DaoType *type, DaoValu
 	break;
 	}
 	if( type->tid == DAO_STRING ){
+		DaoValue *res = DaoValue_SimpleCopy( type->value );
 		char chs[100] = {0};
-
 		sprintf( chs, "%"DAO_I64, (long long) self->xInteger.value );
-		DaoProcess_PutChars( proc, chs );
+		DaoProcess_CacheValue( proc, res );
+		DString_SetChars( res->xString.value, chs );
+		return res;
+	}else if( type->tid == DAO_ENUM ){
+		DaoValue *res = DaoValue_SimpleCopy( type->value );
+		DaoProcess_CacheValue( proc, res );
+		if( DaoEnum_SetTypeValue( (DaoEnum*) res, type, self->xInteger.value ) ) return res;
 	}
 	return NULL; /* The VM will handle the case where no value is converted and returned; */
 }
@@ -791,9 +831,12 @@ static DaoType* DaoFloat_CheckConversion( DaoType *self, DaoType *type, DaoRouti
 	return NULL;
 }
 
-static DaoValue* DaoFloat_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
+static DaoValue* DaoFloat_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
 	dao_float val = self->xFloat.value;
+	DaoValue *num = (DaoValue*) & proc->number;
+
+	num->type = type->tid;
 	switch( type->tid ){
 	case DAO_BOOLEAN : num->xBoolean.value = val != 0; return num;
 	case DAO_INTEGER : num->xInteger.value = val; return num;
@@ -802,10 +845,13 @@ static DaoValue* DaoFloat_DoConversion( DaoValue *self, DaoType *type, DaoValue 
 	break;
 	}
 	if( type->tid == DAO_STRING ){
+		DaoValue *res = DaoValue_SimpleCopy( type->value );
 		char chs[100] = {0};
 
 		sprintf( chs, "%g", self->xFloat.value );
-		DaoProcess_PutChars( proc, chs );
+		DaoProcess_CacheValue( proc, res );
+		DString_SetChars( res, chs );
+		return res;
 	}
 	return NULL;
 }
@@ -1173,18 +1219,24 @@ static DaoType* DaoComplex_CheckConversion( DaoType *self, DaoType *type, DaoRou
 	return NULL;
 }
 
-static DaoValue* DaoComplex_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
+static DaoValue* DaoComplex_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
+	DaoValue *num = (DaoValue*) & proc->number;
+	num->type = type->tid;
+
 	if( type->tid == DAO_COMPLEX ) return self;
 
-	if( type->tid == DAO_STRING ){
+	if( type->tid == DAO_STRING ){ // XXX
 		char chs[100] = {0};
+		DaoValue *res = DaoValue_SimpleCopy( type->value );
+		DaoProcess_CacheValue( proc, res );
 
 		DaoStream_WriteFloat( stream, self->xComplex.value.real );
 		if( self->xComplex.value.imag >= -0.0 ) DaoStream_WriteChars( stream, "+" );
 		DaoStream_WriteFloat( stream, self->xComplex.value.imag );
 		DaoStream_WriteChars( stream, "C" );
-		DaoProcess_PutChars( proc, chs );
+		DString_SetChars( res, chs );
+		return res;
 	}
 	return NULL;
 }
@@ -1469,24 +1521,37 @@ static int DaoString_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *
 
 static DaoType* DaoString_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
-	if( type->tid <= DAO_STRING ) return type;
+	if( type->tid <= DAO_ENUM ) return type;
 	return NULL;
 }
 
-static DaoValue* DaoString_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
+static DaoValue* DaoString_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
+	DNode *node;
+	DaoValue *buffer = (DaoValue*) & proc->bufferber;
+
+	buffer->type = type->tid;
 	switch( type->tid ){
 	case DAO_BOOLEAN :
-		num->xBoolean.value = strcmp( self->xString.value->chars, "true" ) == 0;
-		return num;
+		buffer->xBoolean.value = strcmp( self->xString.value->chars, "true" ) == 0;
+		return buffer;
 	case DAO_INTEGER :
-		num->xInteger.value = DString_ToInteger( self->xString.value );
-		return num;
+		buffer->xInteger.value = DString_ToInteger( self->xString.value );
+		return buffer;
 	case DAO_FLOAT :
-		num->xFloat.value = DString_ToFloat( self->xString.value );
-		return num;
+		buffer->xFloat.value = DString_ToFloat( self->xString.value );
+		return buffer;
 	case DAO_STRING :
 		return self;
+	case DAO_ENUM :
+		if( type->mapNames == NULL ) return NULL;
+		node = DMap_Find( type->mapNames, self->xString.value );
+		if( node == NULL ) return NULL;
+		buffer = DaoValue_SimpleCopy( type->value );
+		DaoProcess_CacheValue( proc, buffer );
+		DaoEnum_SetType( (DaoEnum*) buffer, type );
+		buffer->xEnum.value = node->value.pInt;
+		return buffer;
 	default : break;
 	}
 	return NULL;
@@ -2744,9 +2809,12 @@ static DaoType* DaoEnum_CheckConversion( DaoType *self, DaoType *type, DaoRoutin
 	return NULL;
 }
 
-static DaoValue* DaoEnum_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
+static DaoValue* DaoEnum_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
 	int val = self->xEnum.value;
+	DaoValue *num = (DaoValue*) & proc->number;
+
+	num->type = type->tid;
 	switch( type->tid ){
 	case DAO_BOOLEAN : num->xBoolean.value = val != 0; return num;
 	case DAO_INTEGER : num->xInteger.value = val; return num;
@@ -2755,9 +2823,15 @@ static DaoValue* DaoEnum_DoConversion( DaoValue *self, DaoType *type, DaoValue *
 	break;
 	}
 	if( type->tid == DAO_STRING ){
-		DString *res = DaoProcess_PutChars( proc, "" );
-		DaoEnum_MakeName( (DaoEnum*) self, res );
-		return NULL;
+		DaoValue *res = DaoValue_SimpleCopy( type->value );
+		DaoProcess_CacheValue( proc, res );
+		DaoEnum_MakeName( (DaoEnum*) self, res->xString.value );
+		return res;
+	}else if( type->tid == DAO_ENUM ){
+		DaoValue *res = DaoValue_SimpleCopy( type->value );
+		DaoProcess_CacheValue( proc, res );
+		DaoEnum_SetType( (DaoEnum*) res, type );
+		if( DaoEnum_SetValue( (DaoEnum*) res, (DaoEnum*) self )  ) return res;
 	}
 	return NULL;
 }
@@ -2947,8 +3021,7 @@ DaoList* DaoList_Copy( DaoList *self, DaoType *type ) // XXX
 	copy->ctype = (type && type->tid == DAO_LIST) ? type : self->ctype;
 	GC_IncRC( copy->ctype );
 	DList_Resize( copy->value, self->value->size, NULL );
-	for(i=0; i<self->value->size; i++)
-		DaoList_SetItem( copy, self->value->items.pValue[i], i );
+	for(i=0; i<self->value->size; ++i) DaoList_SetItem( copy, self->value->items.pValue[i], i );
 	return copy;
 }
 
@@ -3119,25 +3192,34 @@ static DaoType* DaoList_CheckConversion( DaoType *self, DaoType *type, DaoRoutin
 	return NULL;
 }
 
-static DaoValue* DaoList_DoConversion( DaoValue *value, DaoType *type, DaoValue *num, DaoProcess *proc )
+static DaoList* DaoList_TryCopy( DaoList *self, int copy, DaoProcess *proc )
+{
+	if( copy == 0 ) return self;
+
+	self = DaoList_Copy( self, NULL );
+	DaoProcess_CacheValue( proc, (DaoValue*) self );
+	return self;
+}
+
+static DaoValue* DaoList_DoConversion( DaoValue *value, DaoType *type, int copy, DaoProcess *proc )
 {
 	DaoList *self = (DaoValue*) value;
-	DaoComplex buffer = {0};
-	DaoValue *numvalue = (DaoValue*) & buffer;
 	daoint i, size;
 
 	if( type->tid == DAO_LIST ){
 		DaoType *itype = dao_type_any;
 		DaoList *list;
 
-		if( type->nested->size == 0 ) return value; /* "list"? */
+		/* "list"? */
+		if( type->nested->size == 0 ) return (DaoValue*) DaoList_TryCopy( self, copy, proc );
 		if( type->nested->size != 1 ) return NULL;
 
-		if( DaoType_MatchValue( type, selfv, NULL ) >= DAO_MT_EQ ) return self;
+		if( DaoType_MatchValue( type, selfv, NULL ) >= DAO_MT_EQ ){
+			return (DaoValue*) DaoList_TryCopy( self, copy, proc );
+		}
 
 		itype = type->nested->items.pType[0];
 		if( itype == NULL ) return NULL;
-		if( itype->tid && itype->tid <= DAO_COMPLEX ) numvalue->type = itype->tid;
 
 		list = DaoProcess_NewList( proc );
 		GC_Assign( & list->ctype, type );
@@ -3145,10 +3227,8 @@ static DaoValue* DaoList_DoConversion( DaoValue *value, DaoType *type, DaoValue 
 		DList_Resize( list->value, self->value->size, NULL );
 		for(i=0,size=self->value->size; i<size; ++i){
 			DaoValue *item = self->value->items.pValue[i];
-			DaoTypeCore *core = DaoValue_GetTypeCore( item );
-			if( core == NULL || core->DoCoversion == NULL ) return NULL;
 
-			item = core->DoCoversion( item, itype, numvalue, proc );
+			item = DaoValue_Convert( item, itype, copy, proc )
 			if( item == NULL ) return NULL;
 
 			DaoValue_Copy( item, list->value->items.pValue + i );
@@ -3159,10 +3239,8 @@ static DaoValue* DaoList_DoConversion( DaoValue *value, DaoType *type, DaoValue 
 		if( tuple == NULL ) return NULL;
 		for(i=0; i<tuple->size; ++i){
 			DaoValue *item = self->value->items.pValue[i];
-			DaoTypeCore *core = DaoValue_GetTypeCore( item );
 			DaoType *itype = dao_type_any;
 
-			if( core == NULL || core->DoCoversion == NULL ) return NULL;
 			if( i < type->nested->size ){
 				itype = type->nested->items.pType[i];
 			}else if( type->variadic ){
@@ -3172,8 +3250,7 @@ static DaoValue* DaoList_DoConversion( DaoValue *value, DaoType *type, DaoValue 
 				itype = (DaoType*) itype->aux;
 			}
 
-			if( itype->tid && itype->tid <= DAO_COMPLEX ) numvalue->type = itype->tid;
-			item = core->DoCoversion( item, itype, numvalue, proc );
+			item = DaoValue_Convert( item, itype, copy, proc )
 			if( item == NULL ) return NULL;
 			DaoValue_Copy( item, tuple->values + i );
 		}
@@ -4525,20 +4602,29 @@ static DaoType* DaoMap_CheckConversion( DaoType *self, DaoType *type, DaoRoutine
 	return type;
 }
 
-static DaoValue* DaoMap_DoConversion( DaoValue *selfv, DaoType *type, DaoValue *num, DaoProcess *proc )
+static DaoMap* DaoMap_TryCopy( DaoMap *self, int copy, DaoProcess *proc )
+{
+	if( copy == 0 ) return self;
+
+	self = DaoMap_Copy( self, NULL );
+	DaoProcess_CacheValue( proc, (DaoValue*) self );
+	return self;
+}
+
+static DaoValue* DaoMap_DoConversion( DaoValue *selfv, DaoType *type, int copy, DaoProcess *proc )
 {
 	DaoMap *map, *self = (DaoMap*) selfv;
 	DaoType *ketype = NULL, *vatype = NULL;
-	DaoComplex buffer1 = {0};
-	DaoComplex buffer2 = {0};
-	DaoValue *numvalue1 = (DaoValue*) & buffer1;
-	DaoValue *numvalue2 = (DaoValue*) & buffer2;
+	DaoComplex buffer = {0};
+	DaoValue *numvalue = (DaoValue*) & buffer;
 
 	if( type->tid != DAO_MAP ) return NULL;
-	if( type->nested->size == 0 ) return value; /* "map"? */
+	if( type->nested->size == 0 ) return DaoMap_TryCopy( self, copy, proc ); /* "map"? */
 	if( type->nested->size != 2 ) return NULL;
 
-	if( DaoType_MatchValue( type, selfv, NULL ) >= DAO_MT_EQ ) return self;
+	if( DaoType_MatchValue( type, selfv, NULL ) >= DAO_MT_EQ ){
+		return DaoMap_TryCopy( self, copy, proc );
+	}
 	
 	map = DaoProcess_NewMap( proc, self->value->hashing );
 	GC_Assign( & map->ctype, type );
@@ -4547,27 +4633,23 @@ static DaoValue* DaoMap_DoConversion( DaoValue *selfv, DaoType *type, DaoValue *
 	vatype = type->nested->items.pType[1];
 	if( ketype == NULL || vatype == NULL ) return NULL;
 
-	if( ketype->tid && ketype->tid <= DAO_COMPLEX ){
-		buffer1->type = ketype->tid;
-		numvalue1 = (DaoValue*) & buffer1;
-	}
-	if( vatype->tid && vatype->tid <= DAO_COMPLEX ){
-		buffer2->type = vatype->tid;
-		numvalue2 = (DaoValue*) & buffer2;
-	}
-
 	node = DMap_First( self->value );
 	for(; node!=NULL; node=DMap_Next(self->value,node) ){
 		DaoValue *key = node->key.pValue;
 		DaoValue *value = node->value.pValue;
-		DaoTypeCore *kecore = DaoValue_GetTypeCore( key );
-		DaoTypeCore *vacore = DaoValue_GetTypeCore( value );
 
-		if( kecore == NULL || kecore->DoCoversion == NULL ) return NULL;
-		if( vacore == NULL || vacore->DoCoversion == NULL ) return NULL;
-
-		key = kecore->DoCoversion( key, ketype, numvalue1, proc );
-		value = vacore->DoCoversion( value, vatype, numvalue2, proc );
+		key = DaoValue_Convert( key, ketype, copy, proc )
+		if( key != NULL && key->tid <= DAO_COMPLEX ){ /* key could be proc->number; */
+			numvalue->type = key->type;
+			switch( key->type ){
+			case DAO_BOOLEAN : numvalue->xBoolean.value = key->xBoolean.value; break;
+			case DAO_INTEGER : numvalue->xInteger.value = key->xInteger.value; break;
+			case DAO_FLOAT   : numvalue->xFloat.value = key->xFloat.value; break;
+			case DAO_COMPLEX : numvalue->xComplex.value = key->xComplex.value; break;
+			}
+			key = numvalue;
+		}
+		value = DaoValue_Convert( value, vatype, copy, proc )
 		if( key == NULL || value == NULL ) return NULL;
 
 		DMap_Insert( map->value, key, value );
@@ -5475,23 +5557,31 @@ static DaoType* DaoTuple_CheckConversion( DaoType *self, DaoType *type, DaoRouti
 	return NULL;
 }
 
-static DaoValue* DaoTuple_DoConversion( DaoValue *selfv, DaoType *type, DaoValue *num, DaoProcess *proc )
+static DaoTuple* DaoTuple_TryCopy( DaoTuple *self, int copy, DaoProcess *proc )
+{
+	if( copy == 0 ) return self;
+
+	self = DaoTuple_Copy( self, NULL );
+	DaoProcess_CacheValue( proc, (DaoValue*) self );
+	return self;
+}
+
+static DaoValue* DaoTuple_DoConversion( DaoValue *selfv, DaoType *type, int copy, DaoProcess *proc )
 {
 	DaoTuple *tuple;
 	DaoTuple *self = (DaoTuple*) selfv;
-	DaoComplex buffer = {0};
-	DaoValue *numvalue = (DaoValue*) & buffer;
 
 	if( type->tid == DAO_TUPLE ){
 		int i, typeSize = type->nested->size - type->variadic;
-		if( self->ctype == type || type->nested->size == 0 ) return selfv;
+		if( self->ctype == type || type->nested->size == 0 ){
+			return DaoTuple_TryCopy( self, copy, proc );
+		}
 		tuple = DaoProcess_PrepareTuple( proc, type, self->size );
 		if( tuple == NULL ) return NULL;
 		for(i=0; i<tuple->size; i++){
 			DaoValue *item = self->values[i];
-			DaoTypeCore *core = DaoValue_GetTypeCore( item );
 			DaoType *itype = dao_type_any;
-			if( core == NULL || core->DoCoversion == NULL ) return NULL;
+
 			if( i < type->nested->size ){
 				itype = type->nested->items.pType[i];
 			}else if( type->variadic ){
@@ -5500,8 +5590,7 @@ static DaoValue* DaoTuple_DoConversion( DaoValue *selfv, DaoType *type, DaoValue
 			if( itype->tid >= DAO_PAR_NAMED && itype->tid <= DAO_PAR_VALIST ){
 				itype = (DaoType*) itype->aux;
 			}
-			if( itype->tid && itype->tid <= DAO_COMPLEX ) numvalue->type = itype->tid;
-			item = core->DoCoversion( item, itype, numvalue, proc );
+			item = DaoValue_Convert( item, itype, copy, proc )
 			if( item == NULL ) return NULL;
 			DaoValue_Copy( item, tuple->values + i );
 		}
@@ -5515,7 +5604,6 @@ static DaoValue* DaoTuple_DoConversion( DaoValue *selfv, DaoType *type, DaoValue
 
 		itype = type->nested->items.pType[0];
 		if( itype == NULL ) return NULL;
-		if( itype->tid && itype->tid <= DAO_COMPLEX ) numvalue->type = itype->tid;
 
 		list = DaoProcess_NewList( proc );
 		GC_Assign( & list->ctype, type );
@@ -5523,10 +5611,8 @@ static DaoValue* DaoTuple_DoConversion( DaoValue *selfv, DaoType *type, DaoValue
 		DList_Resize( list->value, self->value->size, NULL );
 		for(i=0; i<self->size; ++i){
 			DaoValue *item = self->values[i];
-			DaoTypeCore *core = DaoValue_GetTypeCore( item );
-			if( core == NULL || core->DoCoversion == NULL ) return NULL;
 
-			item = core->DoCoversion( item, itype, numvalue, proc );
+			item = DaoValue_Convert( item, itype, copy, proc )
 			if( item == NULL ) return NULL;
 
 			DaoValue_Copy( item, list->value->items.pValue + i );
@@ -5732,6 +5818,105 @@ DaoTypeCore daoNameValueCore =
 	NULL,                 /* Copy */
 	DaoNameValue_Delete,  /* Delete */
 	NULL                  /* HandleGC */
+};
+
+
+
+
+
+static DaoTypeCore daoCtypeCore;
+
+DaoCtype* DaoCtype_New( DaoTypeCore *core, int tid )
+{
+	DaoCtype *self = (DaoCtype*)dao_calloc( 1, sizeof(DaoCtype) );
+	DaoValue_Init( (DaoValue*)self, DAO_CTYPE );
+	self->trait |= DAO_VALUE_NOCOPY;
+	self->info = DString_New();
+	self->name = DString_NewChars( core->name );
+	self->classType = DaoType_New( core->name, DAO_CTYPE, (DaoValue*) self, NULL );
+	self->objectTyppe = DaoType_New( core->name, tid, (DaoValue*) self, NULL );
+	self->classType->core = & daoCtypeCore;
+	self->objectType->core = core;
+	GC_IncRC( self->classType );
+	GC_IncRC( self->objectType );
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogNew( (DaoValue*) self );
+#endif
+	return self;
+}
+
+void DaoCtype_Delete( DaoCtype *self )
+{
+	DString_Delete( self->name );
+	DString_Delete( self->info );
+	GC_DecRC( self->classType );
+	GC_DecRC( self->objectType );
+	dao_free( self );
+}
+
+
+
+
+DaoType* DaoCtype_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
+{
+	DaoValue *value = DaoType_FindValue( self->aux->xCtype.cdtype, name );
+	DaoType *res = NULL;
+
+	if( value && value->type == DAO_ROUTINE ){
+		res = value->xRoutine.routType;
+	}else if( value ){
+		res = DaoNamespace_GetType( ctx->nameSpace, value );
+	}
+	return res;
+}
+
+DaoValue* DaoCtype_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
+{
+	DaoType *type = self->xCtype.cdtype;
+	return DaoType_FindValue( type, name );
+}
+
+DaoType* DaoCtype_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
+{
+	if( DaoType_ChildOf( self, type ) ) return type;
+	if( DaoType_ChildOf( type, self ) ) return type;
+	return self;
+}
+
+DaoValue* DaoCtype_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
+{
+	if( DaoType_ChildOf( self->xCtype.classType, type ) ) return type->aux;
+	if( DaoType_ChildOf( type, self->xCtype.classType ) ) return type->aux;
+	return NULL;
+}
+
+static void DaoCtype_CoreDelete( DaoValue *self )
+{
+	DaoCtype_Delete( (DaoCtype*) self );
+}
+
+
+static DaoTypeCore daoCtypeCore =
+{
+	"ctype",                                           /* name */
+	{ NULL },                                          /* bases */
+	NULL,                                              /* numbers */
+	NULL,                                              /* methods */
+	DaoCtype_CheckGetField,    DaoCtype_DoGetField,    /* GetField */
+	NULL,                      NULL,                   /* GetField */
+	NULL,                      NULL,                   /* SetField */
+	NULL,                      NULL,                   /* GetItem */
+	NULL,                      NULL,                   /* SetItem */
+	NULL,                      NULL,                   /* Unary */
+	NULL,                      NULL,                   /* Binary */
+	NULL,                      NULL,                   /* Comparison */
+	DaoCtype_CheckConversion,  DaoCtype_DoConversion,  /* Conversion */
+	NULL,                      NULL,                   /* ForEach */
+	DaoCtype_Print,                                    /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Copy */
+	DaoCtype_CoreDelete,                               /* Delete */
+	NULL                                               /* HandleGC */
 };
 
 
@@ -6015,11 +6200,12 @@ DaoType* DaoCstruct_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *c
 	return NULL;
 }
 
-DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
+DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
 	DaoRoutine *rout;
 	DString *buffer;
 
+	// TODO: Copy;
 	if( DaoType_MatchToParent( self->xCtruct.ctype, type, NULL, 0 ) ) return self;
 
 	buffer = DString_NewChars( "(" );
@@ -6218,92 +6404,6 @@ DaoTypeCore daoCdataCore =
 	NULL,                 /* Copy */
 	DaoCdata_CoreDelete,  /* Delete */
 	NULL                  /* HandleGC */
-};
-
-
-
-
-
-static DaoTypeCore daoCtypeCore;
-
-DaoCtype* DaoCtype_New( DaoTypeCore *core, int tid )
-{
-	DaoCtype *self = (DaoCtype*)dao_calloc( 1, sizeof(DaoCtype) );
-	DaoValue_Init( (DaoValue*)self, DAO_CTYPE );
-	self->trait |= DAO_VALUE_NOCOPY;
-	self->info = DString_New();
-	self->name = DString_NewChars( core->name );
-	self->classType = DaoType_New( core->name, DAO_CTYPE, (DaoValue*) self, NULL );
-	self->objectTyppe = DaoType_New( core->name, tid, (DaoValue*) self, NULL );
-	self->classType->core = & daoCtypeCore;
-	self->objectType->core = core;
-	GC_IncRC( self->classType );
-	GC_IncRC( self->objectType );
-#ifdef DAO_USE_GC_LOGGER
-	DaoObjectLogger_LogNew( (DaoValue*) self );
-#endif
-	return self;
-}
-
-void DaoCtype_Delete( DaoCtype *self )
-{
-	DString_Delete( self->name );
-	DString_Delete( self->info );
-	GC_DecRC( self->classType );
-	GC_DecRC( self->objectType );
-	dao_free( self );
-}
-
-
-
-
-DaoType* DaoCtype_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
-{
-	DaoValue *value = DaoType_FindValue( self->aux->xCtype.cdtype, name );
-	DaoType *res = NULL;
-
-	if( value && value->type == DAO_ROUTINE ){
-		res = value->xRoutine.routType;
-	}else if( value ){
-		res = DaoNamespace_GetType( ctx->nameSpace, value );
-	}
-	return res;
-}
-
-DaoValue* DaoCtype_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
-{
-	DaoType *type = self->xCtype.cdtype;
-	return DaoType_FindValue( type, name );
-}
-
-
-static void DaoCtype_CoreDelete( DaoValue *self )
-{
-	DaoCtype_Delete( (DaoCtype*) self );
-}
-
-
-static DaoTypeCore daoCtypeCore =
-{
-	"ctype",                                       /* name */
-	{ NULL },                                      /* bases */
-	NULL,                                          /* numbers */
-	NULL,                                          /* methods */
-	DaoCtype_CheckGetField,  DaoCtype_DoGetField,  /* GetField */
-	NULL,                    NULL,                 /* GetField */
-	NULL,                    NULL,                 /* SetField */
-	NULL,                    NULL,                 /* GetItem */
-	NULL,                    NULL,                 /* SetItem */
-	NULL,                    NULL,                 /* Unary */
-	NULL,                    NULL,                 /* Binary */
-	NULL,                    NULL,                 /* Comparison */
-	NULL,                    NULL,                 /* Conversion */
-	NULL,                    NULL,                 /* ForEach */
-	DaoCtype_Print,                                /* Print */
-	NULL,                                          /* Slice */
-	NULL,                                          /* Copy */
-	DaoCtype_CoreDelete,                           /* Delete */
-	NULL                                           /* HandleGC */
 };
 
 

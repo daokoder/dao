@@ -39,147 +39,6 @@
 #include"daoNumtype.h"
 #include"daoValue.h"
 
-void DaoProcess_ShowCallError( DaoProcess *self, DaoRoutine *rout, DaoValue *selfobj, DaoValue *ps[], int np, int code );
-
-int DaoObject_InvokeMethod( DaoObject *self, DaoObject *othis, DaoProcess *proc,
-		DString *name, DaoValue *P[], int N, int ignore_return, int execute )
-{
-	DaoValue *V = NULL;
-	DaoValue *O = (DaoValue*)self;
-	int errcode = DaoObject_GetData( self, name, &V, othis );
-	if( errcode ) return errcode;
-	if( V == NULL || V->type != DAO_ROUTINE ) return DAO_ERROR_TYPE;
-	if( DaoProcess_PushCallable( proc, (DaoRoutine*) V, O, P, N ) ) goto InvalidParam;
-	if( ignore_return ) DaoProcess_InterceptReturnValue( proc );
-	if( execute ) DaoProcess_Execute( proc );
-	return 0;
-InvalidParam:
-	DaoProcess_ShowCallError( proc, (DaoRoutine*)V, O, P, N, DVM_CALL );
-	return DAO_ERROR_PARAM;
-}
-static void DaoObject_Print( DaoValue *self0, DaoProcess *proc, DaoStream *stream, DMap *cycData )
-{
-	int ec = 0;
-	char buf[50];
-	DaoObject *self = & self0->xObject;
-	DaoValue *params[2];
-	DaoRoutine *meth;
-
-	sprintf( buf, "[%p]", self );
-	if( self0 == self->defClass->objType->value ){
-		DaoStream_WriteString( stream, self->defClass->className );
-		DaoStream_WriteChars( stream, "[null]" );
-		return;
-	}
-	if( cycData != NULL && DMap_Find( cycData, self ) != NULL ){
-		DaoStream_WriteString( stream, self->defClass->className );
-		DaoStream_WriteChars( stream, buf );
-		return;
-	}
-	if( cycData ) MAP_Insert( cycData, self, self );
-
-	DaoValue_Clear( & proc->stackValues[0] );
-
-	params[0] = (DaoValue*) dao_type_string;
-	params[1] = (DaoValue*) stream;
-	meth = DaoClass_FindMethod( self->defClass, "(string)", NULL );
-	if( meth ){
-		ec = DaoProcess_Call( proc, meth, self0, params, 2 );
-		if( ec ) ec = DaoProcess_Call( proc, meth, self0, params, 1 );
-	}else{
-		meth = DaoClass_FindMethod( self->defClass, "serialize", NULL );
-		if( meth ) ec = DaoProcess_Call( proc, meth, self0, NULL, 0 );
-	}
-	if( ec ){
-		DaoProcess_RaiseException( proc, daoExceptionNames[ec], proc->string->chars, NULL );
-	}else if( meth && proc->stackValues[0] ){
-		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
-	}else{
-		DaoStream_WriteString( stream, self->defClass->className );
-		DaoStream_WriteChars( stream, buf );
-	}
-}
-static void DaoObject_Core_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
-{
-	DaoObject *self = & self0->xObject;
-	DaoValue *value = NULL;
-	int rc = DaoObject_GetData( self, name, & value, proc->activeObject );
-	if( rc ){
-		DString *field = proc->string;
-		DString_SetChars( field, "." );
-		DString_Append( field, name );
-		rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, field, NULL,0,0,0 );
-		if( rc == DAO_ERROR_FIELD_ABSENT ){
-			DaoString str = {DAO_STRING,0,0,0,1,NULL};
-			DaoValue *pars = (DaoValue*) & str;
-			str.value = name;
-			DString_SetChars( field, "." );
-			rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, field, &pars,1,0,0 );
-		}
-	}else{
-		DaoProcess_PutValue( proc, value );
-	}
-	if( rc ) DaoProcess_RaiseException( proc, daoExceptionNames[rc], name->chars, NULL );
-}
-static void DaoObject_Core_SetField( DaoValue *self0, DaoProcess *proc, DString *name, DaoValue *value )
-{
-	DaoObject *self = & self0->xObject;
-	int ec = DaoObject_SetData( self, name, value, proc->activeObject );
-	int ec2 = ec;
-	if( ec != DAO_ERROR ){
-		DString *mbs = proc->string;
-		DString_SetChars( mbs, "." );
-		DString_Append( mbs, name );
-		DString_AppendChars( mbs, "=" );
-		ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, mbs, & value, 1,1,0 );
-		if( ec == DAO_ERROR_FIELD_ABSENT ){
-			DaoString str = {DAO_STRING,0,0,0,1,NULL};
-			DaoValue *pars[2];
-			pars[0] = (DaoValue*) & str;
-			pars[1] = value;
-			str.value = name;
-			DString_SetChars( mbs, ".=" );
-			ec = DaoObject_InvokeMethod( self, proc->activeObject, proc, mbs, pars,2,1,0 );
-		}
-		if( ec == DAO_ERROR_FIELD_ABSENT ) ec = ec2;
-	}
-	if( ec ) DaoProcess_RaiseException( proc, daoExceptionNames[ec], name->chars, NULL );
-}
-static void DaoObject_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
-{
-	DaoObject *self = & self0->xObject;
-	int rc = 0;
-	DString_SetChars( proc->string, "[]" );
-	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->string, ids, N,0,0 );
-	if( rc ) DaoProcess_RaiseException( proc, daoExceptionNames[rc], proc->string->chars, NULL );
-}
-static void DaoObject_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
-{
-	DaoObject *self = & self0->xObject;
-	DaoValue *ps[ DAO_MAX_PARAM ];
-	int rc;
-	memcpy( ps+1, ids, N*sizeof(DaoValue*) );
-	ps[0] = value;
-	DString_SetChars( proc->string, "[]=" );
-	rc = DaoObject_InvokeMethod( self, proc->activeObject, proc, proc->string, ps, N+1,1,0 );
-	if( rc ) DaoProcess_RaiseException( proc, daoExceptionNames[rc], proc->string->chars, NULL );
-}
-
-static Dao_Type_Core objCore =
-{
-	NULL,
-	DaoObject_Core_GetField,
-	DaoObject_Core_SetField,
-	DaoObject_GetItem,
-	DaoObject_SetItem,
-	DaoObject_Print
-};
-
-DaoTypeCore objTyper=
-{
-	"object", & objCore, NULL, NULL, {0}, {0},
-	(FuncPtrDel) DaoObject_Delete, NULL
-};
 
 DaoObject* DaoObject_Allocate( DaoClass *klass, int value_count )
 {
@@ -198,6 +57,7 @@ DaoObject* DaoObject_Allocate( DaoClass *klass, int value_count )
 #endif
 	return self;
 }
+
 DaoObject* DaoObject_New( DaoClass *klass )
 {
 	DaoObject *self = DaoObject_Allocate( klass, klass->objDataName->size );
@@ -206,6 +66,7 @@ DaoObject* DaoObject_New( DaoClass *klass )
 	DaoObject_Init( self, NULL, 0 );
 	return self;
 }
+
 void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 {
 	DaoClass *klass = self->defClass;
@@ -248,6 +109,7 @@ void DaoObject_Init( DaoObject *self, DaoObject *that, int offset )
 		}
 	}
 }
+
 void DaoObject_Delete( DaoObject *self )
 {
 	int i;
