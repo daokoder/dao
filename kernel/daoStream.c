@@ -391,6 +391,21 @@ int DaoFile_WriteString( FILE* file, DString *str )
 }
 
 
+static DaoType* DaoStream_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
+{
+	DaoTypeCore *core = DaoCstruct_GetDefaultCore();
+	if( core != NULL && core->CheckGetField != NULL ) return core->CheckGetField( self, name, ctx );
+	return NULL;
+}
+
+static DaoValue* DaoStream_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
+{
+	DaoTypeCore *core = DaoCstruct_GetDefaultCore();
+	if( core != NULL && core->DoGetField != NULL ) return core->DoGetField( self, name, proc );
+	return NULL;
+}
+
+
 
 
 static int DaoIO_CheckMode( DaoStream *self, DaoProcess *proc, int what )
@@ -415,20 +430,20 @@ static int DaoIO_CheckMode( DaoStream *self, DaoProcess *proc, int what )
 }
 static void DaoIO_Write0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int N )
 {
-	DMap *cyclic = NULL;
+	DMap *cycmap = NULL;
 	int i;
 
 	for(i=0; i<N; i++){
 		if( p[i]->type > DAO_ARRAY ){
-			cyclic = DHash_New(0,0);
+			cycmap = DHash_New(0,0);
 			break;
 		}
 	}
 	for(i=0; i<N; i++){
-		if( p[i]->type > DAO_ARRAY ) DMap_Reset( cyclic );
-		DaoValue_Print( p[i], proc, self, cyclic );
+		if( p[i]->type > DAO_ARRAY ) DMap_Reset( cycmap );
+		DaoValue_Print( p[i], self, cycmap, proc );
 	}
-	if( cyclic ) DMap_Delete( cyclic );
+	if( cycmap ) DMap_Delete( cycmap );
 }
 static void DaoIO_Write( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -446,12 +461,12 @@ static void DaoIO_Write2( DaoProcess *proc, DaoValue *p[], int N )
 static void DaoIO_Writeln0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoValue *params[DAO_MAX_PARAM];
-	DMap *cyclic = NULL;
+	DMap *cycmap = NULL;
 	int i;
 	if( DaoIO_CheckMode( self, proc, DAO_STREAM_WRITABLE ) == 0 ) return;
 	for(i=0; i<N; i++){
 		if( p[i]->type > DAO_ARRAY ){
-			cyclic = DHash_New(0,0);
+			cycmap = DHash_New(0,0);
 			break;
 		}
 	}
@@ -461,12 +476,12 @@ static void DaoIO_Writeln0( DaoStream *self, DaoProcess *proc, DaoValue *p[], in
 	*/
 	memmove( params, p, N*sizeof(DaoValue*) );
 	for(i=0; i<N; i++){
-		if( params[i]->type > DAO_ARRAY ) DMap_Reset( cyclic );
-		DaoValue_Print( params[i], proc, self, cyclic );
+		if( params[i]->type > DAO_ARRAY ) DMap_Reset( cycmap );
+		DaoValue_Print( params[i], self, cycmap, proc );
 		if( i+1<N ) DaoStream_WriteChars( self, " ");
 	}
 	DaoStream_WriteChars( self, "\n");
-	if( cyclic ) DMap_Delete( cyclic );
+	if( cycmap ) DMap_Delete( cycmap );
 }
 static void DaoIO_Writeln( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -507,7 +522,7 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 	DString *fmt2;
 	DString *fgcolor = NULL;
 	DString *bgcolor = NULL;
-	DMap *cyclic = NULL;
+	DMap *cycmap = NULL;
 	const char *convs = "asSpcCdiouxXfFeEgG";
 	char F, *s, *end, *fg, *bg, *fmt, message[100];
 	int i, k, id = 0;
@@ -517,7 +532,7 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 	fmt2 = DString_New();
 	for(i=0; i<N; i++){
 		if( p[i]->type > DAO_ARRAY ){
-			cyclic = DHash_New(0,0);
+			cycmap = DHash_New(0,0);
 			break;
 		}
 	}
@@ -601,8 +616,8 @@ static void DaoIO_Writef0( DaoStream *self, DaoProcess *proc, DaoValue *p[], int
 			DaoStream_WritePointer( self, value );
 		}else if( F == 'a' ){
 			self->format = NULL;
-			if( value->type > DAO_ARRAY ) DMap_Reset( cyclic );
-			DaoValue_Print( value, proc, self, cyclic );
+			if( value->type > DAO_ARRAY ) DMap_Reset( cycmap );
+			DaoValue_Print( value, self, cycmap, proc );
 		}else{
 			goto WrongParameter;
 		}
@@ -623,7 +638,7 @@ WrongParameter:
 		sprintf( message, "%i-th parameter has wrong type for format \"%s\"!", id, fmt2->chars );
 		DaoProcess_RaiseWarning( proc, NULL, message );
 	}
-	if( cyclic ) DMap_Delete( cyclic );
+	if( cycmap ) DMap_Delete( cycmap );
 	if( fgcolor ) DString_Delete( fgcolor );
 	if( bgcolor ) DString_Delete( bgcolor );
 	DString_Delete( fmt2 );
@@ -752,7 +767,7 @@ static void DaoIO_ReadLines( DaoProcess *proc, DaoValue *p[], int N )
 }
 
 
-DaoFuncItem dao_io_methods[] =
+DaoFunctionEntry dao_io_methods[] =
 {
 	{ DaoIO_Write2,    "write( invar ... : any )" },
 	{ DaoIO_Writef2,   "writef( format: string, invar ... : any )" },
@@ -761,7 +776,7 @@ DaoFuncItem dao_io_methods[] =
 	{ NULL, NULL }
 };
 
-static DaoFuncItem streamMeths[] =
+static DaoFunctionEntry daoStreamMeths[] =
 {
 	{ DaoIO_Write,     "write( self: Stream, data: string )" },
 	{ DaoIO_Write,     "write( self: Stream, invar ... : any )" },
@@ -779,7 +794,7 @@ static DaoFuncItem streamMeths[] =
 	{ NULL, NULL }
 };
 
-static DaoFuncItem ioDeviceMeths[] =
+static DaoFunctionEntry daoDeviceMeths[] =
 {
 	{ NULL, "read( self: Device, count = -1 ) => string" },
 	{ NULL, "write( self: Device, data: string )" },
@@ -787,15 +802,48 @@ static DaoFuncItem ioDeviceMeths[] =
 	{ NULL, NULL }
 };
 
-DaoTypeCore ioDeviceTyper =
+
+DaoTypeCore daoDeviceCore =
 {
-	"Device", NULL, NULL, (DaoFuncItem*) ioDeviceMeths, {0}, {0},
-	(FuncPtrDel) NULL, NULL
+	"Device",        /* name */
+	{ NULL },        /* bases */
+	NULL,            /* numbers */
+	daoDeviceMeths,  /* methods */
+	NULL,  NULL,     /* GetField */
+	NULL,  NULL,     /* SetField */
+	NULL,  NULL,     /* GetItem */
+	NULL,  NULL,     /* SetItem */
+	NULL,  NULL,     /* Unary */
+	NULL,  NULL,     /* Binary */
+	NULL,  NULL,     /* Comparison */
+	NULL,  NULL,     /* Conversion */
+	NULL,  NULL,     /* ForEach */
+	NULL,            /* Print */
+	NULL,            /* Slice */
+	NULL,            /* Copy */
+	NULL,            /* Delete */
+	NULL             /* HandleGC */
 };
 
-DaoTypeCore streamTyper =
-{
-	"Stream", NULL, NULL, (DaoFuncItem*) streamMeths, {0}, {0},
-	(FuncPtrDel) DaoStream_Delete, NULL
-};
 
+DaoTypeCore daoStreamCore =
+{
+	"Stream",                                        /* name */
+	{ NULL },                                        /* bases */
+	NULL,                                            /* numbers */
+	daoStreamMeths,                                  /* methods */
+	DaoStream_CheckGetField,  DaoStream_DoGetField,  /* GetField */
+	NULL,                     NULL,                  /* SetField */
+	NULL,                     NULL,                  /* GetItem */
+	NULL,                     NULL,                  /* SetItem */
+	NULL,                     NULL,                  /* Unary */
+	NULL,                     NULL,                  /* Binary */
+	NULL,                     NULL,                  /* Comparison */
+	NULL,                     NULL,                  /* Conversion */
+	NULL,                     NULL,                  /* ForEach */
+	NULL,                                            /* Print */
+	NULL,                                            /* Slice */
+	NULL,                                            /* Copy */
+	DaoStream_CoreDelete,                            /* Delete */
+	NULL                                             /* HandleGC */
+};

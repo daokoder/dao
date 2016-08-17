@@ -116,15 +116,6 @@ static void DNS_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int
 static void DNS_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
 {
 }
-static Dao_Type_Core nsCore =
-{
-	NULL,
-	DNS_GetField,
-	DNS_SetField,
-	DNS_GetItem,
-	DNS_SetItem,
-	DaoValue_Print
-};
 
 DaoNamespace* DaoNamespace_GetNamespace( DaoNamespace *self, const char *name )
 {
@@ -159,7 +150,7 @@ DaoValue* DaoNamespace_FindData( DaoNamespace *self, const char *name )
 	DString s = DString_WrapChars( name );
 	return DaoNamespace_GetData( self, & s );
 }
-void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumItem *items )
+void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumberEntry *items )
 {
 	DaoValue buf = {0};
 	DaoValue *value = (DaoValue*) & buf;
@@ -195,7 +186,7 @@ static void DaoTypeCore_Parents( DaoTypeCore *core, DList *parents )
 		}
 	}
 }
-int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeKernal *kernel )
+int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeKernel *kernel )
 {
 	daoint i, j, valCount;
 	DaoTypeCore *core = kernel->core;
@@ -273,7 +264,7 @@ void DaoMethods_Insert( DMap *methods, DaoRoutine *rout, DaoNamespace *ns, DaoTy
 
 static DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *proto, DaoParser *parser, DaoParser *defparser );
 
-int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeKernal *kernel )
+int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeKernel *kernel )
 {
 	DaoTypeCore *core = kernel->core;
 	DaoParser *parser, *defparser;
@@ -1006,11 +997,6 @@ int DaoNamespace_GetOptions( DaoNamespace *self )
 }
 
 
-DaoTypeCore nsTyper =
-{
-	"namespace", & nsCore, NULL, NULL, {0}, {0},
-	(FuncPtrDel) DaoNamespace_Delete, NULL
-};
 
 DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 {
@@ -1601,7 +1587,7 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *value )
 			abtp = DaoNamespace_AddType( self, abtp->name, abtp );
 		}
 	}else{
-		core = DaoValue_GetTyper( value );
+		core = DaoValue_GetTypeCore( value );
 		DString_SetChars( mbs, core->name );
 		abtp = DaoNamespace_FindType( self, mbs );
 		if( abtp == NULL ){
@@ -1609,9 +1595,11 @@ DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *value )
 			abtp = DaoNamespace_AddType( self, abtp->name, abtp );
 		}
 	}
-	/* abtp might be rout->routType, which might be NULL,
-	 * in case rout is DaoNamespace.constEvalRoutine */
-	//XXX if( abtp && abtp->core ==NULL ) abtp->core = DaoValue_GetTyper( value );
+	/*
+	// abtp might be rout->routType, which might be NULL,
+	// in case rout is DaoNamespace.constEvalRoutine
+	*/
+	//XXX if( abtp && abtp->core ==NULL ) abtp->core = DaoValue_GetTypeCore( value );
 	DString_Delete( mbs );
 	if( nested ) DList_Delete( nested );
 	return abtp;
@@ -2083,3 +2071,26 @@ DaoNamespace* DaoNamespace_LoadModule( DaoNamespace *self, DString *name )
 	DString_Delete( name );
 	return mod;
 }
+
+
+DaoTypeCore daoNamespaceCore =
+{
+	"namespace",                                           /* name */
+	{ NULL },                                              /* bases */
+	NULL,                                                  /* numbers */
+	NULL,                                                  /* methods */
+	DaoNamespace_CheckGetField,  DaoNamespace_DoGetField,  /* GetField */
+	DaoNamespace_CheckSetField,  DaoNamespace_DoSetField,  /* SetField */
+	NULL,                        NULL,                     /* GetItem */
+	NULL,                        NULL,                     /* SetItem */
+	NULL,                        NULL,                     /* Unary */
+	NULL,                        NULL,                     /* Binary */
+	NULL,                        NULL,                     /* Comparison */
+	NULL,                        NULL,                     /* Conversion */
+	NULL,                        NULL,                     /* ForEach */
+	DaoNamespace_Print,                                    /* Print */
+	NULL,                                                  /* Slice */
+	NULL,                                                  /* Copy */
+	DaoNamespace_CoreDelete,                               /* Delete */
+	NULL                                                   /* HandleGC */
+};

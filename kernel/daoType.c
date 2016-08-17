@@ -153,6 +153,7 @@ void DaoType_Delete( DaoType *self )
 {
 	//printf( "DaoType_Delete: %p\n", self );
 	if( self->refCount ){ /* likely to be referenced by its default value */
+		printf( "ERROR: check and fix!\n" );
 		GC_IncRC( self );
 		GC_DecRC( self );
 		return;
@@ -205,20 +206,6 @@ static void DaoType_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[],
 ErrorNotExist:
 	DaoProcess_RaiseError( proc, "Index", "not valid" );
 }
-static Dao_Type_Core typeCore=
-{
-	NULL,
-	DaoType_GetField,
-	DaoValue_SetField,
-	DaoType_GetItem,
-	DaoValue_SetItem,
-	DaoValue_Print
-};
-DaoTypeCore abstypeTyper=
-{
-	"type", & typeCore, NULL, NULL, {0}, {0},
-	(FuncPtrDel) DaoType_Delete, NULL
-};
 
 void DaoType_MapNames( DaoType *self );
 void DaoType_CheckAttributes( DaoType *self )
@@ -280,15 +267,15 @@ void DaoType_CheckAttributes( DaoType *self )
 }
 DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DList *nest )
 {
-	DaoTypeCore *typer = DaoVmSpace_GetTypeCore( tid );
+	DaoTypeCore *core = DaoVmSpace_GetTypeCore( tid );
 	DaoType *self = (DaoType*) dao_calloc( 1, sizeof(DaoType) );
 	DaoValue_Init( self, DAO_TYPE );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->tid = tid;
 	self->name = DString_New();
-	self->typer = typer;
-	self->kernel = typer->kernel;
-	GC_IncRC( self->kernel );
+	self->core = core;
+	//self->kernel = core->kernel;
+	//GC_IncRC( self->kernel );
 	if( extra == NULL && tid == DAO_PAR_VALIST ) extra = (DaoValue*) dao_type_any;
 	if( extra ){
 		self->aux = extra;
@@ -1870,6 +1857,29 @@ DaoTypeCore* DaoType_GetTypeCore( DaoType *self )
 	return self->core;
 }
 
+DaoTypeCore daoTypeCore =
+{
+	"type",              /* name */
+	{ NULL },            /* bases */
+	NULL,                /* numbers */
+	NULL,                /* methods */
+	NULL,  NULL,         /* GetField */
+	NULL,  NULL,         /* SetField */
+	NULL,  NULL,         /* GetItem */
+	NULL,  NULL,         /* SetItem */
+	NULL,  NULL,         /* Unary */
+	NULL,  NULL,         /* Binary */
+	NULL,  NULL,         /* Comparison */
+	NULL,  NULL,         /* Conversion */
+	NULL,  NULL,         /* ForEach */
+	DaoType_Print,       /* Print */
+	NULL,                /* Slice */
+	NULL,                /* Copy */
+	DaoType_CoreDelete,  /* Delete */
+	NULL                 /* HandleGC */
+};
+
+
 
 
 
@@ -1890,11 +1900,7 @@ void DaoTypeKernel_Delete( DaoTypeKernel *self )
 	dao_free( self );
 }
 
-DaoTypeCore typeKernelTyper =
-{
-	"TypeKernel", & baseCore, NULL, NULL, {0}, {0},
-	(FuncPtrDel) DaoTypeKernel_Delete, NULL
-};
+
 
 DaoTypeKernel* DaoTypeKernel_New( DaoTypeCore *typer )
 {
@@ -1923,6 +1929,28 @@ void DaoTypeKernel_InsertCastor( DaoTypeKernel *self, DaoNamespace *ns, DaoType 
 	}
 	DRoutines_Add( self->castOperators->overloads, routine );
 }
+
+DaoTypeCore daoTypeKernelCore =
+{
+	"kernel",                  /* name */
+	{ NULL },                  /* bases */
+	NULL,                      /* numbers */
+	NULL,                      /* methods */
+	NULL,  NULL,               /* GetField */
+	NULL,  NULL,               /* SetField */
+	NULL,  NULL,               /* GetItem */
+	NULL,  NULL,               /* SetItem */
+	NULL,  NULL,               /* Unary */
+	NULL,  NULL,               /* Binary */
+	NULL,  NULL,               /* Comparison */
+	NULL,  NULL,               /* Conversion */
+	NULL,  NULL,               /* ForEach */
+	DaoTypeKernel_Print,       /* Print */
+	NULL,                      /* Slice */
+	NULL,                      /* Copy */
+	DaoTypeKernel_CoreDelete,  /* Delete */
+	NULL                       /* HandleGC */
+};
 
 
 

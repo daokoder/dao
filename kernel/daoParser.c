@@ -915,7 +915,7 @@ int DaoParser_ParseScopedConstOrName( DaoParser *self, DaoValue **scope, DaoValu
 	return DaoParser_ParseMaybeScopeConst( self, scope, value, start, stop, DAO_EXPRLIST_SCOPE );
 }
 
-static int DaoParser_ParseInitSuper( DaoParser *self, DaoParser *module, int start )
+static int DaoParser_ParseInitBase( DaoParser *self, DaoParser *module, int start )
 {
 	DaoLexer *init = NULL;
 	DaoRoutine *routine = module->routine;
@@ -1489,7 +1489,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	if( routine->body == NULL || right+1 >= size ) return right;
 
 	if( isconstru ){
-		right = DaoParser_ParseInitSuper( self, module, right + 1 );
+		right = DaoParser_ParseInitBase( self, module, right + 1 );
 		if( right <0 ) return -1;
 		right --;
 	}else if( tokens[right+1]->name == DTOK_COLON ){
@@ -3431,7 +3431,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			goto ErrorClassDefinition;
 		}
 		/* Add a reference to its base classes: */
-		DaoClass_AddSuperClass( klass, (DaoValue*) base );
+		DaoClass_AddBaseClass( klass, (DaoValue*) base );
 	} /* End parsing base classes */
 
 	if( klass->attribs & DAO_CLS_INVAR ){

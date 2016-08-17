@@ -32,7 +32,7 @@
 #define DAO_KERNEL
 
 #include"dao.h"
-#include"daoPlatforms.h"
+#include"daoPlatform.h"
 
 
 #define IntToPointer( x ) ((void*)(size_t)(x))
@@ -40,9 +40,7 @@
 
 typedef struct DRoutines     DRoutines;
 
-typedef struct DaoCdataCore  DaoCdataCore;
-typedef struct DaoTypeKernel DaoTypeKernel;
-typedef struct DTypeSpecTree DTypeSpecTree;
+typedef struct DaoTypeTree   DaoTypeTree;
 
 typedef struct DaoToken      DaoToken;
 typedef struct DaoInode      DaoInode;

@@ -195,7 +195,7 @@ struct DaoTuple
 DAO_DLL DaoTuple* DaoTuple_Create( DaoType *type, int size, int init );
 DAO_DLL DaoTuple* DaoTuple_Copy( DaoTuple *self, DaoType *type );
 DAO_DLL void DaoTuple_Delete( DaoTuple *self );
-DAO_DLL void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
+DAO_DLL int DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
 DAO_DLL int DaoTuple_GetIndex( DaoTuple *self, DString *name );
 
 
@@ -282,7 +282,7 @@ struct DaoCtype
 	DaoType  *objectType;
 };
 
-DAO_DLL DaoCtype* DaoCtype_New( DaoType *cttype, DaoType *cdtype );
+DAO_DLL DaoCtype* DaoCtype_New( DaoTypeCore *core, int tid );
 DAO_DLL void DaoCtype_Delete( DaoCtype *self );
 
 

@@ -158,7 +158,7 @@ void DaoClass_Parents( DaoClass *self, DList *parents, DList *offsets )
 	DaoValue *dbase;
 	DaoClass *klass;
 	DaoCdata *cdata;
-	DaoTypeCore *typer;
+	DaoTypeCore *core;
 	daoint i, j, offset;
 	DList_Clear( parents );
 	DList_Clear( offsets );
@@ -177,10 +177,10 @@ void DaoClass_Parents( DaoClass *self, DList *parents, DList *offsets )
 			}
 		}else if( dbase->type == DAO_CTYPE ){
 			cdata = (DaoCdata*) dbase;
-			typer = cdata->ctype->kernel->typer;
-			for(j=0; j<DAO_MAX_CDATA_SUPER; j++){
-				if( typer->supers[j] == NULL ) break;
-				DList_Append( parents, typer->supers[j]->core->kernel->abtype->aux );
+			core = cdata->ctype->kernel->core;
+			for(j=0; j<sizeof(core->bases); j++){
+				if( core->bases[j] == NULL ) break;
+				DList_Append( parents, core->bases[j]->core->kernel->abtype->aux );
 				DList_Append( offsets, (daoint) offset );
 			}
 		}
@@ -812,7 +812,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 	}else if( self->parent && self->parent->type == DAO_CTYPE ){
 		DaoCtype *cdata = (DaoCtype*) self->parent;
 		DaoTypeKernel *kernel = cdata->ctype->kernel;
-		DaoTypeCore *typer = kernel->typer;
+		DaoTypeCore *core = kernel->core;
 		DMap *methods = kernel->methods;
 		DMap *values = kernel->values;
 
@@ -820,8 +820,8 @@ int DaoClass_DeriveClassData( DaoClass *self )
 		DList_Append( self->objType->bases, cdata->cdtype );
 		DaoClass_AddConst( self, cdata->ctype->name, (DaoValue*)cdata, DAO_PERM_PUBLIC );
 
-		if( kernel->SetupValues ) kernel->SetupValues( kernel->nspace, kernel->typer );
-		if( kernel->SetupMethods ) kernel->SetupMethods( kernel->nspace, kernel->typer );
+		if( kernel->SetupValues ) kernel->SetupValues( kernel->nspace, kernel->core );
+		if( kernel->SetupMethods ) kernel->SetupMethods( kernel->nspace, kernel->core );
 
 		DaoType_SpecializeMethods( cdata->ctype );
 		kernel = cdata->ctype->kernel;
@@ -1065,10 +1065,10 @@ void DaoClass_AddMixinClass( DaoClass *self, DaoClass *mixin )
 	DList_Append( self->allBases, mixin );
 	DList_Append( self->mixinBases, mixin );
 }
-void DaoClass_AddSuperClass( DaoClass *self, DaoValue *super )
+void DaoClass_AddBaseClass( DaoClass *self, DaoValue *base )
 {
-	self->parent = super;
-	DList_Append( self->allBases, super );
+	self->parent = base;
+	DList_Append( self->allBases, base );
 }
 int  DaoClass_FindConst( DaoClass *self, DString *name )
 {
@@ -1505,7 +1505,7 @@ DaoTypeCore daoClassCore =
 	NULL,                      NULL,                   /* Comparison */
 	DaoClass_CheckConversion,  DaoClass_DoConversion,  /* Conversion */
 	NULL,                      NULL,                   /* ForEach */
-	DaoClass_Print,                                    /* Print */
+	NULL,                                              /* Print */
 	NULL,                                              /* Slice */
 	NULL,                                              /* Copy */
 	DaoClass_CoreDelete,                               /* Delete */

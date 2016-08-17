@@ -158,10 +158,7 @@ static int DaoValue_Hash( DaoValue *self, unsigned int hash )
 		if( core == NULL || core->DoConversion == NULL ){
 			goto Default;
 		}else{
-			DaoValue *hv;
-			DaoInteger buffer = {0};
-			buffer.type = DAO_INTEGER;
-			hv = core->DoConversion( self, dao_type_int, (DaoValue*) & buffer, NULL );
+			DaoValue *hv = core->DoConversion( self, dao_type_int, 0, NULL );
 			if( hv == NULL ) goto Default;
 			hash = DaoValue_GetInteger( hv );
 			hash = Dao_Hash( & hash, 4, 0 );
@@ -749,7 +746,7 @@ static DNode* DMap_FindChild( DMap *self, DNode *root, DNode *query, int type )
 	}
 	return m;
 }
-static DNode* DMap_FindNode( DMap *self, void *key, int type )
+DNode* DMap_FindNode( DMap *self, void *key, int type )
 {
 	DNode query = {0, 0, NULL, NULL};
 	DNode *root = self->root;
@@ -838,18 +835,6 @@ DNode* DMap_Insert( DMap *self, void *key, void *value )
 		DMap_BufferNode( self, node );
 	}
 	return p;
-}
-void DMap_EraseNode( DMap *self, DNode *node )
-{
-	return DMap_EraseNode( self, node );
-}
-DNode* DMap_Insert( DMap *self, void *key, void *value )
-{
-	return DMap_Insert( self, key, value );
-}
-void DMap_Erase( DMap *self, void *key )
-{
-	DMap_Erase( self, key );
 }
 DNode* DMap_Find( DMap *self, void *key )
 {

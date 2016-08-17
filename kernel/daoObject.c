@@ -173,7 +173,7 @@ void DaoObject_SetParentCstruct( DaoObject *self, DaoCstruct *parent )
 	}else if( sup->type == DAO_CTYPE ){
 		DaoCstruct *cdata = (DaoCstruct*)sup;
 		if( DaoType_ChildOf( cdata->ctype, parent->ctype ) ){
-			DaoValue_MoveCstruct( (DaoCstruct*) parent, & self->parent );
+			DaoValue_MoveCstruct( (DaoValue*) parent, & self->parent );
 		}
 	}
 }

@@ -61,7 +61,6 @@ union DaoValue
 	DaoStream      xStream;
 	DaoObject      xObject;
 	DaoCstruct     xCstruct;
-	DaoCpod        xCpod;
 	DaoCdata       xCdata;
 	DaoCtype       xCtype;
 	DaoClass       xClass;
@@ -111,7 +110,7 @@ DAO_DLL int DaoValue_Compare( DaoValue *left, DaoValue *right );
 DAO_DLL void DaoValue_Assign( DaoValue *src, DaoValue **dest );
 DAO_DLL void DaoValue_Copy( DaoValue *src, DaoValue **dest );
 DAO_DLL void DaoValue_CopyX( DaoValue *src, DaoValue **dest, DaoType *cst );
-DAO_DLL void DaoValue_MoveCstruct( DaoCpod *S, DaoValue **D );
+DAO_DLL void DaoValue_MoveCstruct( DaoValue *S, DaoValue **D );
 DAO_DLL int DaoValue_Move( DaoValue *src, DaoValue **dest, DaoType *destype );
 DAO_DLL int DaoValue_Move2( DaoValue *src, DaoValue **dest, DaoType *destype, DMap *defs );
 
@@ -126,7 +125,7 @@ DAO_DLL DString* DaoValue_GetString( DaoValue *self, DString *str );
 
 DAO_DLL int DaoValue_IsNumber( DaoValue *self );
 
-DAO_DLL void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData );
+DAO_DLL void DaoValue_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc );
 
 DaoTypeCore* DaoValue_GetTypeCore( DaoValue *self );
 

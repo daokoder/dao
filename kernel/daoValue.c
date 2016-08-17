@@ -307,7 +307,7 @@ void DaoValue_CopyX( DaoValue *src, DaoValue **dest, DaoType *cst )
 		*dest = dest2 = NULL;
 	}
 	if( src->type == DAO_CSTRUCT || src->type == DAO_CDATA ){
-		DaoValue_MoveCstruct( (DaoCstruct*) src, dest );
+		DaoValue_MoveCstruct( src, dest );
 		return;
 	}else if( src->type == DAO_CINVALUE ){
 		DaoValue_MoveCinValue( (DaoCinValue*) src, dest );
@@ -454,17 +454,18 @@ static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp, Da
 	return DaoValue_Move5( src, dest, itp, C, NULL );
 }
 
-void DaoValue_MoveCstruct( DaoCstruct *S, DaoValue **D )
+void DaoValue_MoveCstruct( DaoValue *S, DaoValue **D )
 {
 	DaoTypeCore *core = S->xCstruct.ctype->core;
 	DaoValue *E = *D;
 	
-	if( E == (DaoValue*) S ) return;
+	if( E == S ) return;
 
-	if( S->Slice ) S->Slice( S );
+	if( core->Slice ) core->Slice( S );
 	if( core->Copy == NULL ){
-		DaoGC_Assign( D, (DaoValue*) S );
-	}else if( E && E->type == S->type && E->xCstruct.ctype == S->ctype && E->xCstruct.refCount == 1 ){
+		DaoGC_Assign( D, S );
+	}else if( E && E->type == S->type && E->xCstruct.ctype == S->xCstruct.ctype
+			&& E->xCstruct.refCount == 1 ){
 		core->Copy( S, E );
 	}else{
 		E = (DaoValue*) core->Copy( S, NULL );
@@ -511,7 +512,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		}
 		if( ST == T ){
 			if( ST->tid == DAO_CSTRUCT || ST->tid == DAO_CDATA ){
-				DaoValue_MoveCstruct( (DaoCstruct*) S, D );
+				DaoValue_MoveCstruct( S, D );
 			}else{
 				GC_Assign( D, S );
 			}
@@ -529,7 +530,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 			tm = (S != NULL);
 		}
 	}else if( T->tid == DAO_CTYPE && S->type == DAO_CTYPE ){
-		if( S->xCtype.ctype != T ){
+		if( S->xCtype.classType != T ){
 			S = DaoType_CastToParent( S, T );
 			tm = (S != NULL);
 		}
@@ -666,7 +667,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	if( S->type >= DAO_OBJECT || !(S->xBase.trait & DAO_VALUE_CONST) || T->invar ){
 		if( DaoValue_FastMatchTo( S, T ) ){
 			if( S->type == DAO_CSTRUCT || S->type == DAO_CDATA ){
-				DaoValue_MoveCstruct( (DaoCstruct*) S, D );
+				DaoValue_MoveCstruct( S, D );
 			}else if( S->type == DAO_CINVALUE ){
 				DaoValue_MoveCinValue( (DaoCinValue*) S, D );
 			}else{
@@ -756,7 +757,7 @@ DaoValue* DaoValue_Convert( DaoValue *self, DaoType *type, int copy, DaoProcess 
 	value = core->DoConversion( self, type, copy, proc );
 	if( value == NULL || value->type <= DAO_ENUM || copy == 0 ) return value;
 
-	if( value == self || DaoValue_Child( value, self ) || DaoValue_Child( self, value ) ){
+	if( value == self || DaoValue_ChildOf( value, self ) || DaoValue_ChildOf( self, value ) ){
 		core = DaoValue_GetTypeCore( value );
 		if( core == NULL || core->Copy == NULL ) return NULL;
 
@@ -954,12 +955,6 @@ int DaoValue_Compare( DaoValue *left, DaoValue *right )
 }
 
 
-extern DaoTypeCore baseTyper;
-extern DaoTypeCore numberTyper;
-extern DaoTypeCore comTyper;
-extern DaoTypeCore stringTyper;
-extern DaoTypeCore enumTyper;
-
 DaoType* DaoValue_GetType( DaoValue *self )
 {
 	if( self == NULL ) return NULL;
@@ -994,142 +989,39 @@ DaoType* DaoValue_GetType( DaoValue *self )
 }
 DaoTypeCore* DaoValue_GetTypeCore( DaoValue *self )
 {
-	if( self == NULL ) return & baseTyper;
+	if( self == NULL ) return DaoVmSpace_GetTypeCore( DAO_NONE );
 	switch( self->type ){
-	case DAO_NONE : return & baseTyper;
-	case DAO_INTEGER :
-	case DAO_FLOAT   : return & numberTyper;
-	case DAO_COMPLEX : return & comTyper;
-	case DAO_ENUM    : return & enumTyper;
-	case DAO_STRING  : return & stringTyper;
-	case DAO_CTYPE   :
 	case DAO_CSTRUCT :
-	case DAO_CDATA : return self->xCdata.ctype->typer;
+	case DAO_CDATA   : return self->xCstruct.ctype->core;
 	default : break;
 	}
-	return DaoVmSpace_GetTyper( self->type );
+	return DaoVmSpace_GetTypeCore( self->type );
 }
 
-static void DaoValue_BasicPrint( DaoValue *self, DaoStream *stream, DMap *cycData )
+
+void DaoValue_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
-	if( self->type <= DAO_TUPLE )
-		DaoStream_WriteChars( stream, coreTypeNames[ self->type ] );
-	else
-		DaoStream_WriteChars( stream, DaoValue_GetTyper( self )->name );
-	if( self->type == DAO_NONE ) return;
-	if( self->type == DAO_TYPE ){
-		DaoStream_WriteChars( stream, "<" );
-		DaoStream_WriteChars( stream, self->xType.name->chars );
-		DaoStream_WriteChars( stream, ">" );
-	}
-	DaoStream_WriteChars( stream, "_" );
-	DaoStream_WriteInt( stream, self->type );
-	DaoStream_WriteChars( stream, "_" );
-	DaoStream_WritePointer( stream, self );
-}
-static void DaoValue_PrintEx( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
-{
-	int ec = 0;
-	char buf[50];
-	DaoRoutine *meth;
-	DaoValue *params[2];
-	DaoType *type = DaoNamespace_GetType( proc->activeNamespace, self );
-	DaoCinValue *cinvalue = NULL;
-	DaoCstruct *cstruct = NULL;
+	DaoTypeCore *core = DaoValue_GetTypeCore( self );
 
-	switch( self->type ){
-	case DAO_CDATA :
-	case DAO_CSTRUCT  : cstruct  = (DaoCstruct*) self; break;
-	case DAO_CINVALUE : cinvalue = (DaoCinValue*) self; break;
-	}
-
-	sprintf( buf, "[%p]", self );
-
-	if( cstruct ){
-		if( self == cstruct->ctype->value ){
-			DaoStream_WriteString( stream, cstruct->ctype->name );
-			DaoStream_WriteChars( stream, "[default]" );
-			return;
-		}
-	}
-	if( cycData != NULL && DMap_Find( cycData, self ) != NULL ){
-		DaoStream_WriteString( stream, type->name );
-		DaoStream_WriteChars( stream, buf );
-		return;
-	}
-	if( cycData ) MAP_Insert( cycData, self, self );
-
-	params[0] = (DaoValue*) dao_type_string;
-	params[1] = (DaoValue*) stream;
-	meth = DaoType_FindFunctionChars( type, "(string)" );
-	if( meth ){
-		ec = DaoProcess_Call( proc, meth, self, params, 2 );
-		if( ec ) ec = DaoProcess_Call( proc, meth, self, params, 1 );
-	}else{
-		meth = DaoType_FindFunctionChars( type, "serialize" );
-		if( meth ) ec = DaoProcess_Call( proc, meth, self, NULL, 0 );
-	}
-	if( ec ){
-		DaoProcess_RaiseException( proc, daoExceptionNames[ec], proc->string->chars, NULL );
-	}else if( meth && proc->stackValues[0] ){
-		DaoValue_Print( proc->stackValues[0], proc, stream, cycData );
-	}else if( cinvalue ){
-		DaoValue_Print( cinvalue->value, proc, stream, cycData );
-	}else{
-		DaoStream_WriteString( stream, type->name );
-		DaoStream_WriteChars( stream, buf );
-	}
-}
-void DaoValue_Print( DaoValue *self, DaoProcess *proc, DaoStream *stream, DMap *cycData )
-{
-	DString *name;
-	DaoTypeCore *typer;
-	DMap *cd = cycData;
 	if( self == NULL ){
 		DaoStream_WriteChars( stream, "none[0x0]" );
 		return;
 	}
-	if( cycData == NULL ) cycData = DMap_New(0,0);
-	switch( self->type ){
-	case DAO_BOOLEAN :
-		DaoStream_WriteChars( stream, self->xBoolean.value ? "true" : "false" ); break;
-	case DAO_INTEGER :
-		DaoStream_WriteInt( stream, self->xInteger.value ); break;
-	case DAO_FLOAT   :
-		DaoStream_WriteFloat( stream, self->xFloat.value ); break;
-	case DAO_COMPLEX :
-		DaoStream_WriteFloat( stream, self->xComplex.value.real );
-		if( self->xComplex.value.imag >= -0.0 ) DaoStream_WriteChars( stream, "+" );
-		DaoStream_WriteFloat( stream, self->xComplex.value.imag );
-		DaoStream_WriteChars( stream, "C" );
-		break;
-	case DAO_ENUM  :
-		name = DString_New();
-		DaoEnum_MakeName( & self->xEnum, name );
-		DaoStream_WriteChars( stream, name->chars );
-		DaoStream_WriteChars( stream, "(" );
-		DaoStream_WriteInt( stream, self->xEnum.value );
-		DaoStream_WriteChars( stream, ")" );
-		DString_Delete( name );
-		break;
-	case DAO_STRING  :
-		DaoStream_WriteString( stream, self->xString.value );
-		break;
-	case DAO_CDATA :
-	case DAO_CSTRUCT :
-	case DAO_CINVALUE :
-		DaoValue_PrintEx( self, proc, stream, cycData );
-		break;
-	default :
-		typer = DaoVmSpace_GetTyper( self->type );
-		if( typer->core->Print == DaoValue_Print ){
-			DaoValue_BasicPrint( self, stream, cycData );
-			break;
+	if( core == NULL || core->Print == NULL ){
+		if( self->type == DAO_CSTRUCT || self->type == DAO_CDATA ){
+			core = DaoCstruct_GetDefaultCore();
+			core->Print( self, stream, cycmap, proc );
+			return;
 		}
-		typer->core->Print( self, proc, stream, cycData );
-		break;
 	}
-	if( cycData != cd ) DMap_Delete( cycData );
+	if( core != NULL && core->Print != DaoValue_Print ){
+		core->Print( self, stream, cycmap, proc );
+		return;
+	}
+	DaoStream_WriteChars( stream, core != NULL ? core->name : "Unknown" );
+	DaoStream_WriteChars( stream, "[" );
+	DaoStream_WritePointer( stream, self );
+	DaoStream_WriteChars( stream, "]" );
 }
 
 

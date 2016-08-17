@@ -156,11 +156,41 @@ int DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value )
 	return consts->size-1;
 }
 
-DaoTypeCore routTyper=
+
+static DaoType* DaoRoutine_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
-	"routine", & baseCore, NULL, NULL, {0}, {0},
-	(FuncPtrDel) DaoRoutine_Delete, NULL
+	// TODO:
+	return NULL;
+}
+
+static DaoValue* DaoRoutine_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
+{
+	return NULL;
+}
+
+DaoTypeCore daoRoutineCore =
+{
+	"routine",                                             /* name */
+	{ NULL },                                              /* bases */
+	NULL,                                                  /* numbers */
+	NULL,                                                  /* methods */
+	NULL,                        NULL,                     /* GetField */
+	NULL,                        NULL,                     /* SetField */
+	NULL,                        NULL,                     /* GetItem */
+	NULL,                        NULL,                     /* SetItem */
+	NULL,                        NULL,                     /* Unary */
+	NULL,                        NULL,                     /* Binary */
+	NULL,                        NULL,                     /* Comparison */
+	DaoRoutine_CheckConversion,  DaoRoutine_DoConversion,  /* Conversion */
+	NULL,                        NULL,                     /* ForEach */
+	NULL,                                                  /* Print */
+	NULL,                                                  /* Slice */
+	NULL,                                                  /* Copy */
+	(DaoDeleteFunction) DaoRoutine_Delete,                 /* Delete */
+	NULL                                                   /* HandleGC */
 };
+
+
 
 DaoRoutineBody* DaoRoutineBody_New()
 {

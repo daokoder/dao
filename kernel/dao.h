@@ -254,6 +254,7 @@ typedef struct DaoVmSpace      DaoVmSpace;
 typedef struct DaoProcess      DaoProcess;
 typedef struct DaoChannel      DaoChannel;
 typedef struct DaoType         DaoType;
+typedef struct DaoIterator     DaoIterator;
 
 /*
 // The following macros can be used instead of the original type names,
@@ -770,9 +771,9 @@ DAO_DLL DaoValue* DNode_Value( DNode *self );
 
 DAO_DLL DaoTuple* DaoTuple_New( int size );
 DAO_DLL DaoType* DaoTuple_GetType( DaoTuple *self );
-DAO_DLL int  DaoTuple_SetType( DaoTuple *self, DaoType *type );
-DAO_DLL int  DaoTuple_Size( DaoTuple *self );
-DAO_DLL void DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
+DAO_DLL int DaoTuple_SetType( DaoTuple *self, DaoType *type );
+DAO_DLL int DaoTuple_Size( DaoTuple *self );
+DAO_DLL int DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
 DAO_DLL DaoValue* DaoTuple_GetItem( DaoTuple *self, int pos );
 
 

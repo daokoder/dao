@@ -195,7 +195,7 @@ static const char *const cmd_help =
 "   -d, --debug:          run in debug mode;\n"
 "   -p, --profile:        run in profile mode;\n"
 "   -s, --sandbox:        run in sandbox mode;\n"
-"   -r, --restart:        restart program on crash (unix) or nozero exit (win);\n"
+"   -r, --restart:        restart program on crash (unix) or nonzero exit (win);\n"
 "   -c, --compile:        compile to bytecodes;\n"
 "   -a, --archive:        build archive file;\n"
 "   -l, --list-code:      print compiled bytecodes;\n"
@@ -208,71 +208,76 @@ static const char *const cmd_help =
 ;
 
 
-extern DaoTypeCore  baseTyper;
-extern DaoTypeCore  numberTyper;
-extern DaoTypeCore  stringTyper;
-extern DaoTypeCore  enumTyper;
-extern DaoTypeCore  listTyper;
-extern DaoTypeCore  mapTyper;
-extern DaoTypeCore  ioDeviceTyper;
-extern DaoTypeCore  streamTyper;
-extern DaoTypeCore  routTyper;
-extern DaoTypeCore  interTyper;
-extern DaoTypeCore  cinTypeTyper;
-extern DaoTypeCore  cinValueTyper;
-extern DaoTypeCore  classTyper;
-extern DaoTypeCore  objTyper;
-extern DaoTypeCore  nsTyper;
-extern DaoTypeCore  tupleTyper;
-extern DaoTypeCore  namevaTyper;
+extern DaoTypeCore  daoNoneCore;
+extern DaoTypeCore  daoBooleanCore;
+extern DaoTypeCore  daoIntegerCore;
+extern DaoTypeCore  daoFloatCore;
+extern DaoTypeCore  daoComplexCore;
+extern DaoTypeCore  daoStringCore;
+extern DaoTypeCore  daoEnumCore;
+extern DaoTypeCore  daoArrayCore;
+extern DaoTypeCore  daoListCore;
+extern DaoTypeCore  daoMapCore;
+extern DaoTypeCore  daoTupleCore;
+extern DaoTypeCore  daoIteratorCore;
+extern DaoTypeCore  daoRangeCore;
+extern DaoTypeCore  daoNameValueCore;
+extern DaoTypeCore  daoCtypeCore;
+extern DaoTypeCore  daoCstructCore;
+extern DaoTypeCore  daoCdataCore;
+extern DaoTypeCore  daoExceptionCore;
+extern DaoTypeCore  daoClassCore;
+extern DaoTypeCore  daoObjectCore;
+extern DaoTypeCore  daoInterfaceCore;
+extern DaoTypeCore  daoCinTypeCore;
+extern DaoTypeCore  daoCinValueCore;
+extern DaoTypeCore  daoNamespaceCore;
+extern DaoTypeCore  daoRoutineCore;
+extern DaoTypeCore  daoProcessCore;
+extern DaoTypeCore  daoTypeCore;
+extern DaoTypeCore  daoTypeKernalCore;
 
-extern DaoTypeCore  numarTyper;
-extern DaoTypeCore  comTyper;
-extern DaoTypeCore  abstypeTyper;
-extern DaoTypeCore  rgxMatchTyper;
+extern DaoTypeCore  daoDeviceCore;
+extern DaoTypeCore  daoStreamCore;
+
 extern DaoTypeCore  futureTyper;
 extern DaoTypeCore  channelTyper;
-extern DaoTypeCore  defaultCdataTyper;
 
-extern DaoTypeCore macroTyper;
-extern DaoTypeCore regexTyper;
-extern DaoTypeCore vmpTyper;
-extern DaoTypeCore typeKernelTyper;
 
 DaoTypeCore* DaoVmSpace_GetTypeCore( short type )
 {
 	switch( type ){
-	case DAO_BOOLEAN  :
-	case DAO_INTEGER  :  return & numberTyper;
-	case DAO_FLOAT    :  return & numberTyper;
-	case DAO_COMPLEX  :  return & comTyper;
-	case DAO_ENUM     :  return & enumTyper;
-	case DAO_STRING   :  return & stringTyper;
-	case DAO_LIST     :  return & listTyper;
-	case DAO_MAP      :  return & mapTyper;
-	case DAO_PAR_NAMED : return & namevaTyper;
-	case DAO_TUPLE     : return & tupleTyper;
+	case DAO_BOOLEAN   :  return & daoBooleanCore;
+	case DAO_INTEGER   :  return & daoIntegerCore;
+	case DAO_FLOAT     :  return & daoFloatCore;
+	case DAO_COMPLEX   :  return & daoComplexCore;
+	case DAO_ENUM      :  return & daoEnumCore;
+	case DAO_STRING    :  return & daoStringCore;
+	case DAO_LIST      :  return & daoListCore;
+	case DAO_MAP       :  return & daoMapCore;
+	case DAO_TUPLE     :  return & daoTupleCore;
+	case DAO_PAR_NAMED :  return & daoNameValueCore;
 #ifdef DAO_WITH_NUMARRAY
-	case DAO_ARRAY  :  return & numarTyper;
+	case DAO_ARRAY  :  return & daoArrayCore;
 #else
-	case DAO_ARRAY  :  return & baseTyper;
+	case DAO_ARRAY  :  return & daoNoneCore;
 #endif
-	case DAO_CTYPE   :
-	case DAO_CSTRUCT :
-	case DAO_CDATA   :  return & defaultCdataTyper;
-	case DAO_ROUTINE   :  return & routTyper;
-	case DAO_INTERFACE :  return & interTyper;
-	case DAO_CINTYPE   :  return & cinTypeTyper;
-	case DAO_CINVALUE  :  return & cinValueTyper;
-	case DAO_CLASS     :  return & classTyper;
-	case DAO_OBJECT    :  return & objTyper;
-	case DAO_NAMESPACE :  return & nsTyper;
-	case DAO_PROCESS   :  return & vmpTyper;
-	case DAO_TYPE      :  return & abstypeTyper;
-	case DAO_TYPEKERNEL : return & typeKernelTyper;
+	case DAO_CTYPE     :
+	case DAO_CSTRUCT   :
+	case DAO_CDATA     :  return & daoCdataCore;
+	case DAO_INTERFACE :  return & daoInterfaceCore;
+	case DAO_CINTYPE   :  return & daoCinTypeCore;
+	case DAO_CINVALUE  :  return & daoCinValueCore;
+	case DAO_CLASS     :  return & daoClassCore;
+	case DAO_OBJECT    :  return & daoObjectCore;
+	case DAO_ROUTINE   :  return & daoRoutineCore;
+	case DAO_NAMESPACE :  return & daoNamespaceCore;
+	case DAO_PROCESS   :  return & daoProcessCore;
+	case DAO_TYPE      :  return & daoTypeCore;
+	case DAO_TYPEKERNEL : return & daoTypeKernalCore;
 	default : break;
 	}
-	return & baseTyper;
+	return & daoNoneCore;
 }
 const char*const DaoVmSpace_GetCopyNotice()
 {
@@ -2485,9 +2490,7 @@ const char* DaoVmSpace_CurrentLoadingPath( DaoVmSpace *self )
 	return self->pathLoading->items.pString[0]->chars;
 }
 
-extern DaoTypeCore vmpTyper;
 
-extern DaoTypeCore DaoFdSet_Typer;
 
 extern void DaoInitLexTable();
 
@@ -2794,11 +2797,11 @@ DaoVmSpace* DaoInit( const char *command )
 
 	dao_type_tuple = DaoNamespace_DefineType( coreNS, "tuple<...>", NULL );
 
-	DaoNamespace_SetupType( coreNS, & stringTyper, dao_type_string );
-	DaoNamespace_SetupType( coreNS, & comTyper, dao_type_complex );
+	DaoNamespace_SetupType( coreNS, & daoStringCore,  dao_type_string );
+	DaoNamespace_SetupType( coreNS, & daoComplexCore, dao_type_complex );
 
 #ifdef DAO_WITH_NUMARRAY
-	dao_type_array = DaoNamespace_WrapGenericType( coreNS, & numarTyper, DAO_ARRAY );
+	dao_type_array = DaoNamespace_WrapGenericType( coreNS, & daoArrayCore, DAO_ARRAY );
 	dao_type_array_empty = DaoType_Specialize( dao_type_array, & dao_type_float, 1 );
 	dao_type_array_empty = DaoType_GetConstType( dao_type_array_empty );
 	dao_array_types[DAO_NONE] = dao_type_array_empty;
@@ -2808,8 +2811,8 @@ DaoVmSpace* DaoInit( const char *command )
 	dao_array_types[DAO_COMPLEX] = DaoType_Specialize( dao_type_array, & dao_type_complex, 1 );
 #endif
 
-	dao_type_list = DaoNamespace_WrapGenericType( coreNS, & listTyper, DAO_LIST );
-	dao_type_map = DaoNamespace_WrapGenericType( coreNS, & mapTyper, DAO_MAP );
+	dao_type_list = DaoNamespace_WrapGenericType( coreNS, & daoListCore, DAO_LIST );
+	dao_type_map = DaoNamespace_WrapGenericType( coreNS, & daoMapCore, DAO_MAP );
 
 	dao_type_list_any = DaoType_Specialize( dao_type_list, NULL, 0 );
 	dao_type_map_any  = DaoType_Specialize( dao_type_map, NULL, 0 );
@@ -2824,7 +2827,7 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_list_empty );
 	DaoProcess_CacheValue( vms->mainProcess, (DaoValue*) dao_type_map_empty );
 
-	dao_type_cdata = DaoNamespace_WrapType( coreNS, & defaultCdataTyper, DAO_CDATA, 1 );
+	dao_type_cdata = DaoNamespace_WrapType( coreNS, & daoCdataCore, DAO_CDATA, 1 );
 
 	DaoException_Setup( coreNS );
 
@@ -2832,8 +2835,8 @@ DaoVmSpace* DaoInit( const char *command )
 
 	NS = DaoVmSpace_GetNamespace( vms, "io" );
 	DaoNamespace_AddConstValue( vms->daoNamespace, "io", (DaoValue*) NS );
-	dao_type_io_device = DaoNamespace_WrapInterface( NS, & ioDeviceTyper );
-	dao_type_stream = DaoNamespace_WrapType( NS, & streamTyper, DAO_CSTRUCT, 0 );
+	dao_type_io_device = DaoNamespace_WrapInterface( NS, & daoDeviceCore );
+	dao_type_stream = DaoNamespace_WrapType( NS, & daoStreamCore, DAO_CSTRUCT, 0 );
 	GC_Assign( & vms->stdioStream->ctype, dao_type_stream );
 	GC_Assign( & vms->errorStream->ctype, dao_type_stream );
 	DaoNamespace_WrapFunctions( NS, dao_io_methods );

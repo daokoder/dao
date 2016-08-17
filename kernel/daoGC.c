@@ -108,7 +108,7 @@ static void DaoGC_PrintValueInfo( DaoValue *value )
 		printf( "class: %s\t", value->xClass.className->chars );
 		break;
 	case DAO_TYPEKERNEL :
-		printf( "tkernal: %s\t", ((DaoTypeKernel*)value)->typer->name );
+		printf( "tkernal: %s\t", ((DaoTypeKernel*)value)->core->name );
 		break;
 	case DAO_ROUTINE :
 		printf( "rout: %s %s\n", value->xRoutine.routName->chars, value->xRoutine.routType->name->chars );
@@ -287,19 +287,19 @@ static void DaoObjectLogger_ScanMap( DMap *map, int gckey, int gcval )
 }
 static void DaoObjectLogger_ScanCdata( DaoCdata *cdata )
 {
-	DaoTypeCore *typer = cdata->ctype ? cdata->ctype->typer : NULL;
+	DaoTypeCore *core = cdata->ctype ? cdata->ctype->core : NULL;
 	DList *cvalues = dao_object_logger.cdataValues;
 	DList *clists = dao_object_logger.cdataLists;
 	DList *cmaps = dao_object_logger.cdataMaps;
 	daoint i, n;
 
 	if( cdata->subtype == DAO_CDATA_PTR ) return;
-	if( typer == NULL || typer->GetGCFields == NULL ) return;
+	if( core == NULL || core->HandleGC == NULL ) return;
 	cvalues->size = clists->size = cmaps->size = 0;
 	if( cdata->type == DAO_CSTRUCT ){
-		typer->GetGCFields( cdata, cvalues, clists, cmaps, 0 );
+		core->HandleGC( cdata, cvalues, clists, cmaps, 0 );
 	}else if( cdata->data ){
-		typer->GetGCFields( cdata->data, cvalues, clists, cmaps, 0 );
+		core->HandleGC( cdata->data, cvalues, clists, cmaps, 0 );
 	}else{
 		return;
 	}
@@ -774,8 +774,8 @@ static void DaoValue_Delete( DaoValue *self )
 		if( self->type < DAO_ENUM ){
 			DaoGC_DeleteSimpleData( self );
 		}else{
-			DaoTypeCore *typer = DaoValue_GetTyper( self );
-			typer->Delete( self );
+			DaoTypeCore *core = DaoValue_GetTypeCore( self );
+			core->Delete( self );
 		}
 		break;
 	case DAO_CDATA :
@@ -1254,19 +1254,19 @@ static int DaoGC_ScanMap( DMap *map, int action, int gckey, int gcvalue )
 }
 static void DaoGC_ScanCdata( DaoCdata *cdata, int action )
 {
-	DaoTypeCore *typer = cdata->ctype ? cdata->ctype->typer : NULL;
+	DaoTypeCore *core = cdata->ctype ? cdata->ctype->core : NULL;
 	DList *cvalues = gcWorker.cdataValues;
 	DList *clists = gcWorker.cdataLists;
 	DList *cmaps = gcWorker.cdataMaps;
 	daoint i, n;
 
 	if( cdata->subtype == DAO_CDATA_PTR ) return;
-	if( typer == NULL || typer->GetGCFields == NULL ) return;
+	if( core == NULL || core->HandleGC == NULL ) return;
 	cvalues->size = clists->size = cmaps->size = 0;
 	if( cdata->type == DAO_CSTRUCT ){
-		typer->GetGCFields( cdata, cvalues, clists, cmaps, action == DAO_GC_BREAK );
+		core->HandleGC( cdata, cvalues, clists, cmaps, action == DAO_GC_BREAK );
 	}else if( cdata->data ){
-		typer->GetGCFields( cdata->data, cvalues, clists, cmaps, action == DAO_GC_BREAK );
+		core->HandleGC( cdata->data, cvalues, clists, cmaps, action == DAO_GC_BREAK );
 	}else{
 		return;
 	}

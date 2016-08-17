@@ -259,6 +259,7 @@ enum DaoGlobalConstOffset
 	DVR_NSC_MAIN = LOOKUP_BIND( DAO_GLOBAL_CONSTANT, DAO_PERM_PUBLIC, 0, 4 )
 };
 
+#if 0
 enum DaoExceptionType
 {
 	DAO_EXCEPTION = 0,
@@ -284,6 +285,7 @@ enum DaoExceptionType
 
 	ENDOF_BASIC_EXCEPT
 };
+#endif
 
 enum DaoArithOperType
 {

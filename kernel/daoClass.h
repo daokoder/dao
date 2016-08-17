@@ -174,9 +174,9 @@ DAO_DLL int DaoClass_UseMixinDecorators( DaoClass *self );
 DAO_DLL void DaoClass_UpdateVirtualMethods( DaoClass *self );
 DAO_DLL void DaoClass_CastingMethod( DaoClass *self, DaoRoutine *routine );
 
-DAO_DLL int  DaoClass_ChildOf( DaoClass *self, DaoValue *super );
+DAO_DLL int  DaoClass_ChildOf( DaoClass *self, DaoValue *base );
 DAO_DLL void DaoClass_AddMixinClass( DaoClass *self, DaoClass *mixin );
-DAO_DLL void DaoClass_AddSuperClass( DaoClass *self, DaoValue *super );
+DAO_DLL void DaoClass_AddBaseClass( DaoClass *self, DaoValue *base );
 DAO_DLL DaoValue* DaoClass_CastToBase( DaoClass *self, DaoType *parent );
 
 DAO_DLL int  DaoClass_FindConst( DaoClass *self, DString *name );

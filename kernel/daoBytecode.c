@@ -2433,7 +2433,7 @@ static void DaoByteCoder_DecodeClass( DaoByteCoder *self, DaoByteBlock *block )
 	if( self->error ) return;
 	if( block->first == NULL ) return; /* Declaration only; */
 
-	if( parent && parent->value ) DaoClass_AddSuperClass( klass, parent->value );
+	if( parent && parent->value ) DaoClass_AddBaseClass( klass, parent->value );
 
 	while( pb ){
 		DaoByteCoder_DecodeBlock( self, pb );

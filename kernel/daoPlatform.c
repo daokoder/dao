@@ -27,7 +27,7 @@
 */
 
 #include <string.h>
-#include "daoPlatforms.h"
+#include "daoPlatform.h"
 #include "daoStream.h"
 
 

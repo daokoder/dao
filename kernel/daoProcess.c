@@ -104,12 +104,6 @@ static DaoStackFrame* DaoStackFrame_New()
 }
 #define DaoStackFrame_Delete( p ) dao_free( p )
 
-DaoTypeCore vmpTyper =
-{
-	"process",
-	& baseCore, NULL, NULL, {0}, {0},
-	(FuncPtrDel) DaoProcess_Delete, NULL
-};
 
 static DaoType  *dummyType = NULL;
 static DaoVmCode dummyCode = {0,0,0,0};
@@ -2340,7 +2334,7 @@ FinishCall:
 		int status = self->status;
 		if( (print || vmSpace->evalCmdline) && self->stackValues[0] ){
 			DaoStream_WriteChars( vmSpace->stdioStream, "= " );
-			DaoValue_Print( self->stackValues[0], self, vmSpace->stdioStream, NULL );
+			DaoValue_Print( self->stackValues[0], vmSpace->stdioStream, NULL, self );
 			DaoStream_WriteNewLine( vmSpace->stdioStream );
 		}
 		self->status = status;
@@ -5389,3 +5383,27 @@ DaoCdata* DaoProcess_NewCdata( DaoProcess *self, DaoType *type, void *data, int 
 	DaoProcess_CacheValue( self, (DaoValue*) res );
 	return res;
 }
+
+
+
+DaoTypeCore daoProcessCore =
+{
+	"process",              /* name */
+	{ NULL },               /* bases */
+	NULL,                   /* numbers */
+	NULL,                   /* methods */
+	NULL,  NULL,            /* GetField */
+	NULL,  NULL,            /* SetField */
+	NULL,  NULL,            /* GetItem */
+	NULL,  NULL,            /* SetItem */
+	NULL,  NULL,            /* Unary */
+	NULL,  NULL,            /* Binary */
+	NULL,  NULL,            /* Comparison */
+	NULL,  NULL,            /* Conversion */
+	NULL,  NULL,            /* ForEach */
+	DaoProcess_Print,       /* Print */
+	NULL,                   /* Slice */
+	NULL,                   /* Copy */
+	DaoProcess_CoreDelete,  /* Delete */
+	NULL                    /* HandleGC */
+};

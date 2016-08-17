@@ -103,6 +103,7 @@ DAO_DLL void DMap_EraseNode( DMap *self, DNode *node );
 
 DAO_DLL DNode* DMap_Insert( DMap *self, void *key, void *value );
 DAO_DLL DNode* DMap_Find( DMap *self, void *key );
+DAO_DLL DNode* DMap_FindNode( DMap *self, void *key, int type );
 DAO_DLL DNode* DMap_First( DMap *self );
 DAO_DLL DNode* DMap_Next( DMap *self, DNode *node );
 
