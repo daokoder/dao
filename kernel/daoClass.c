@@ -155,32 +155,32 @@ void DaoClass_SetName( DaoClass *self, DString *name, DaoNamespace *ns )
 /* breadth-first search */
 void DaoClass_Parents( DaoClass *self, DList *parents, DList *offsets )
 {
-	DaoValue *dbase;
+	DaoValue *value;
 	DaoClass *klass;
-	DaoCdata *cdata;
+	DaoCtype *ctype;
 	DaoTypeCore *core;
 	daoint i, j, offset;
+
 	DList_Clear( parents );
 	DList_Clear( offsets );
 	DList_Append( parents, self );
 	DList_Append( offsets, self->objDataName->size );
+
 	for(i=0; i<parents->size; i++){
-		dbase = parents->items.pValue[i];
+		value = parents->items.pValue[i];
 		offset = offsets->items.pInt[i];
-		if( dbase->type == DAO_CLASS ){
-			klass = (DaoClass*) dbase;
+		if( value->type == DAO_CLASS ){
+			klass = (DaoClass*) value;
 			if( klass->parent ){
 				DaoClass *cls = (DaoClass*) klass->parent;
 				DList_Append( parents, klass->parent );
 				DList_Append( offsets, (daoint) offset );
 				offset += (cls->type == DAO_CLASS) ? cls->objDataName->size : 0;
 			}
-		}else if( dbase->type == DAO_CTYPE ){
-			cdata = (DaoCdata*) dbase;
-			core = cdata->ctype->kernel->core;
-			for(j=0; j<sizeof(core->bases); j++){
-				if( core->bases[j] == NULL ) break;
-				DList_Append( parents, core->bases[j]->core->kernel->abtype->aux );
+		}else if( value->type == DAO_CTYPE && value->xCtype.valueType->bases ){
+			ctype = (DaoCtype*) value;
+			for(j=0; j<ctype->valueType->bases->size; j++){
+				DList_Append( parents, ctype->valueType->bases->items.pType[j] );
 				DList_Append( offsets, (daoint) offset );
 			}
 		}
@@ -810,21 +810,21 @@ int DaoClass_DeriveClassData( DaoClass *self )
 		}
 		if( klass->castOperators ) DaoClass_CastingMethod( self, klass->castOperators );
 	}else if( self->parent && self->parent->type == DAO_CTYPE ){
-		DaoCtype *cdata = (DaoCtype*) self->parent;
-		DaoTypeKernel *kernel = cdata->ctype->kernel;
+		DaoCtype *ctype = (DaoCtype*) self->parent;
+		DaoTypeKernel *kernel = ctype->valueType->kernel;
 		DaoTypeCore *core = kernel->core;
 		DMap *methods = kernel->methods;
 		DMap *values = kernel->values;
 
-		DList_Append( self->clsType->bases, cdata->ctype );
-		DList_Append( self->objType->bases, cdata->cdtype );
-		DaoClass_AddConst( self, cdata->ctype->name, (DaoValue*)cdata, DAO_PERM_PUBLIC );
+		DList_Append( self->clsType->bases, ctype->classType );
+		DList_Append( self->objType->bases, ctype->valueType );
+		DaoClass_AddConst( self, ctype->classType->name, (DaoValue*)ctype, DAO_PERM_PUBLIC );
 
-		if( kernel->SetupValues ) kernel->SetupValues( kernel->nspace, kernel->core );
-		if( kernel->SetupMethods ) kernel->SetupMethods( kernel->nspace, kernel->core );
+		if( kernel->SetupValues ) kernel->SetupValues( kernel->nspace, kernel );
+		if( kernel->SetupMethods ) kernel->SetupMethods( kernel->nspace, kernel );
 
-		DaoType_SpecializeMethods( cdata->ctype );
-		kernel = cdata->ctype->kernel;
+		DaoType_SpecializeMethods( ctype->valueType );
+		kernel = ctype->valueType->kernel;
 		values = kernel->values;
 		methods = kernel->methods;
 
@@ -1043,7 +1043,7 @@ int DaoClass_ChildOf( DaoClass *self, DaoValue *other )
 	if( other->type == DAO_CLASS ){
 		return DaoType_ChildOf( self->clsType, other->xClass.clsType );
 	}else if( other->type == DAO_CTYPE ){
-		return DaoType_ChildOf( self->clsType, other->xCtype.ctype );
+		return DaoType_ChildOf( self->clsType, other->xCtype.classType );
 	}
 	return 0;
 }
@@ -1397,18 +1397,18 @@ DaoRoutine* DaoClass_FindMethod( DaoClass *self, const char *name, DaoClass *sco
 */
 static DaoType* DaoClass_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
 {
-	DaoClass *self = (DaoClass*) self->aux;
+	DaoClass *klass = (DaoClass*) self->aux;
 	DaoType *type = ctx->routHost;
 	DaoClass *host = type && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
-	DaoValue *data = DaoClass_GetData( self, name, host );;
+	DaoValue *data = DaoClass_GetData( klass, name, host );;
 
-	ctx->error = DAO_OK;
+	//ctx->error = DAO_OK;
 	if( data == NULL ){
-		ctx->error = DAO_ERROR_FIELD_ABSENT;
+		//ctx->error = DAO_ERROR_FIELD_ABSENT;
 	}else if( data->type == DAO_NONE ){
-		ctx->error = DAO_ERROR_FIELD_HIDDEN;
+		//ctx->error = DAO_ERROR_FIELD_HIDDEN;
 	}else if( data->xBase.subtype == DAO_OBJECT_VARIABLE ){
-		ctx->error = DAO_ERROR_FIELD_HIDDEN; // XXX
+		//ctx->error = DAO_ERROR_FIELD_HIDDEN; // XXX
 	}else if( data->xBase.subtype == DAO_CLASS_VARIABLE ){
 		return data->xVar.dtype;
 	}else if( data->xBase.subtype == DAO_CLASS_CONSTANT ){
@@ -1417,15 +1417,15 @@ static DaoType* DaoClass_CheckGetField( DaoType *self, DString *name, DaoRoutine
 	return NULL;
 }
 
-static DaoValue* DaoClass_DoGetField( DaoValue *selfv, DString *name, DaoProcess *proc )
+static DaoValue* DaoClass_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
 {
-	DaoClass *self = (DaoClass*) selfv;
+	DaoClass *klass = (DaoClass*) self;
 	DaoType *type = proc->activeRoutine->routHost;
 	DaoClass *host = type && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
-	DaoValue *data = DaoClass_GetData( self, name, host );;
+	DaoValue *data = DaoClass_GetData( klass, name, host );;
 	if( data == NULL || data->type == DAO_NONE || data->xBase.subtype == DAO_OBJECT_VARIABLE ){
 		int rc = data == NULL ? DAO_ERROR_FIELD_ABSENT : DAO_ERROR_FIELD_HIDDEN;
-		DString_SetChars( proc->string, self->className->chars );
+		DString_SetChars( proc->string, klass->className->chars );
 		DString_AppendChars( proc->string, "." );
 		DString_Append( proc->string, name );
 		DaoProcess_RaiseException( proc, daoExceptionNames[rc], proc->string->chars, NULL );
@@ -1437,10 +1437,10 @@ static DaoValue* DaoClass_DoGetField( DaoValue *selfv, DString *name, DaoProcess
 
 static int DaoClass_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
 {
-	DaoClass *self = (DaoClass*) self->aux;
+	DaoClass *klass = (DaoClass*) self->aux;
 	DaoType *type = ctx->routHost;
 	DaoClass *host = type && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
-	DaoValue *data = DaoClass_GetData( self, name, host );;
+	DaoValue *data = DaoClass_GetData( klass, name, host );;
 
 	if( data == NULL ){
 		return DAO_ERROR_FIELD_ABSENT;
@@ -1456,14 +1456,14 @@ static int DaoClass_CheckSetField( DaoType *self, DString *name, DaoType *value,
 	return DAO_OK;
 }
 
-static int DaoClass_DoSetField( DaoValue *selfv, DString *name, DaoValue *value, DaoProcess *proc )
+static int DaoClass_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc )
 {
-	DaoClass *self = (DaoClass*) selfv;
-	DNode *node = DMap_Find( self->lookupTable, name );
+	DaoClass *klass = (DaoClass*) self;
+	DNode *node = DMap_Find( klass->lookupTable, name );
 	if( node && LOOKUP_ST( node->value.pInt ) == DAO_CLASS_VARIABLE ){
 		int up = LOOKUP_UP( node->value.pInt );
 		int id = LOOKUP_ID( node->value.pInt );
-		DaoVariable *dt = self->variables->items.pVar[id];
+		DaoVariable *dt = klass->variables->items.pVar[id];
 		if( DaoValue_Move( value, & dt->value, dt->dtype ) == 0 ) return DAO_ERROR_VALUE;
 	}else{
 		return DAO_ERROR_FIELD;

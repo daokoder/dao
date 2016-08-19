@@ -2141,6 +2141,49 @@ void DaoMakeProject_MakeFinderPath( DaoMakeProject *self, DString *path )
 
 
 
+static DaoType* DaoMake_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
+{
+	return DaoCstruct_GetDefaultCore()->CheckGetField( self, name, ctx );
+}
+
+static DaoValue* DaoMake_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
+{
+	return DaoCstruct_GetDefaultCore()->DoGetField( self, name, proc );
+}
+
+static int DaoMake_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
+{
+	return DaoCstruct_GetDefaultCore()->CheckSetField( self, name, value, ctx );
+}
+
+static int DaoMake_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc )
+{
+	return DaoCstruct_GetDefaultCore()->DoSetField( self, name, value, proc );
+}
+
+static DaoType* DaoMake_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
+{
+	return DaoCstruct_GetDefaultCore()->CheckGetItem( self, index, N, ctx );
+}
+
+static DaoValue* DaoMake_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *proc )
+{
+	return DaoCstruct_GetDefaultCore()->DoGetItem( self, index, N, proc );
+}
+
+static int DaoMake_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
+{
+	return DaoCstruct_GetDefaultCore()->CheckSetItem( self, index, N, value, ctx );
+}
+
+static int DaoMake_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc )
+{
+	return DaoCstruct_GetDefaultCore()->DoSetItem( self, index, N, value, proc );
+}
+
+
+
+
 static void DList_ImportStringList( DList *self, DaoList *list )
 {
 	int i, size = DaoList_Size( list );
@@ -2272,7 +2315,7 @@ static void UNIT_MakeBuildPath( DaoProcess *proc, DaoValue *p[], int N )
 	DString *res = DaoProcess_PutString( proc, path );
 	DaoMake_MakePath( self->buildPath, res );
 }
-static DaoFuncItem DaoMakeUnitMeths[]=
+static DaoFunctionEntry daoMakeUnitMeths[] =
 {
 	{ UNIT_AddPlatformDefs,   "AddPlatformDefs( self: Unit )" },
 	{ UNIT_AddDefinition,     "AddDefinition( self: Unit, name: string, value = '' )" },
@@ -2292,9 +2335,27 @@ static DaoFuncItem DaoMakeUnitMeths[]=
 	{ UNIT_MakeBuildPath,     "MakeBuildPath( self: Unit, path: string ) => string" },
 	{ NULL, NULL }
 };
-DaoTypeBase DaoMakeUnit_Typer =
+
+static DaoTypeCore daoMakeUnitCore =
 {
-	"Unit", NULL, NULL, (DaoFuncItem*) DaoMakeUnitMeths, {0}, {0}, NULL, NULL
+	"Unit",                                      /* name */
+	{ NULL },                                    /* bases */
+	NULL,                                        /* numbers */
+	daoMakeUnitMeths,                            /* methods */
+	DaoMake_CheckGetField,  DaoMake_DoGetField,  /* GetField */
+	DaoMake_CheckSetField,  DaoMake_DoSetField,  /* SetField */
+	DaoMake_CheckGetItem,   DaoMake_DoGetItem,   /* GetItem */
+	DaoMake_CheckSetItem,   DaoMake_DoSetItem,   /* SetItem */
+	NULL,                   NULL,                /* Unary */
+	NULL,                   NULL,                /* Binary */
+	NULL,                   NULL,                /* Comparison */
+	NULL,                   NULL,                /* Conversion */
+	NULL,                   NULL,                /* ForEach */
+	NULL,                                        /* Print */
+	NULL,                                        /* Slice */
+	NULL,                                        /* Copy */
+	NULL,                                        /* Delete */
+	NULL                                         /* HandleGC */
 };
 
 
@@ -2338,7 +2399,7 @@ static void OBJECTS_UseProject( DaoProcess *proc, DaoValue *p[], int N )
 	DaoMakeUnit *pro = (DaoMakeUnit*) p[1];
 	DaoMakeUnit_Use( self, pro, 0 );
 }
-static DaoFuncItem DaoMakeObjectsMeths[]=
+static DaoFunctionEntry daoMakeObjectsMeths[]=
 {
 	{ OBJECTS_AddHeaders,  "AddHeaders( self: Objects, file: string, ...: string )" },
 	{ OBJECTS_AddSources,  "AddSources( self: Objects, file: string, ...: string )" },
@@ -2347,11 +2408,27 @@ static DaoFuncItem DaoMakeObjectsMeths[]=
 	{ OBJECTS_UseProject,  "UseProject( self: Objects, pro: Project )" },
 	{ NULL, NULL }
 };
-DaoTypeBase DaoMakeObjects_Typer =
+
+static DaoTypeCore daoMakeObjectsCore =
 {
-	"Objects", NULL, NULL, (DaoFuncItem*) DaoMakeObjectsMeths,
-	{ & DaoMakeUnit_Typer, NULL }, {0},
-	(FuncPtrDel)DaoMakeObjects_Delete, NULL
+	"Objects",                                   /* name */
+	{ & daoMakeUnitCore, NULL },                 /* bases */
+	NULL,                                        /* numbers */
+	daoMakeObjectsMeths,                         /* methods */
+	DaoMake_CheckGetField,  DaoMake_DoGetField,  /* GetField */
+	DaoMake_CheckSetField,  DaoMake_DoSetField,  /* SetField */
+	DaoMake_CheckGetItem,   DaoMake_DoGetItem,   /* GetItem */
+	DaoMake_CheckSetItem,   DaoMake_DoSetItem,   /* SetItem */
+	NULL,                   NULL,                /* Unary */
+	NULL,                   NULL,                /* Binary */
+	NULL,                   NULL,                /* Comparison */
+	NULL,                   NULL,                /* Conversion */
+	NULL,                   NULL,                /* ForEach */
+	NULL,                                        /* Print */
+	NULL,                                        /* Slice */
+	NULL,                                        /* Copy */
+	(DaoDeleteFunction) DaoMakeObjects_Delete,   /* Delete */
+	NULL                                         /* HandleGC */
 };
 
 
@@ -2495,7 +2572,7 @@ static void TARGET_Install( DaoProcess *proc, DaoValue *p[], int N )
 	DString_Assign( self->install, dest );
 	DaoMake_MakePath( ns->path, self->install );
 }
-static DaoFuncItem DaoMakeTargetMeths[]=
+static DaoFunctionEntry daoMakeTargetMeths[]=
 {
 	{ TARGET_Name,  "Name( self: Target ) => string" },
 	{ TARGET_AddObjects,  "AddObjects( self: Target, objects: Objects, ...: Objects )" },
@@ -2512,17 +2589,33 @@ static DaoFuncItem DaoMakeTargetMeths[]=
 	{ TARGET_Install,  "Install( self: Target, dest: string )" },
 	{ NULL, NULL }
 };
-static void TARGET_GetGCFields( void *p, DList *values, DList *arrays, DList *maps, int rm )
+static void DaoMakeTarget_HandleGC( DaoValue *p, DList *values, DList *arrays, DList *maps, int rm )
 {
 	DaoMakeTarget *self = (DaoMakeTarget*) p;
 	DList_Append( arrays, self->objects );
 	DList_Append( arrays, self->depends );
 }
-DaoTypeBase DaoMakeTarget_Typer =
+
+static DaoTypeCore daoMakeTargetCore =
 {
-	"Target", NULL, NULL, (DaoFuncItem*) DaoMakeTargetMeths,
-	{ & DaoMakeUnit_Typer, NULL }, {0},
-	(FuncPtrDel)DaoMakeTarget_Delete, TARGET_GetGCFields
+	"Target",                                    /* name */
+	{ & daoMakeUnitCore, NULL },                 /* bases */
+	NULL,                                        /* numbers */
+	daoMakeTargetMeths,                          /* methods */
+	DaoMake_CheckGetField,  DaoMake_DoGetField,  /* GetField */
+	DaoMake_CheckSetField,  DaoMake_DoSetField,  /* SetField */
+	DaoMake_CheckGetItem,   DaoMake_DoGetItem,   /* GetItem */
+	DaoMake_CheckSetItem,   DaoMake_DoSetItem,   /* SetItem */
+	NULL,                   NULL,                /* Unary */
+	NULL,                   NULL,                /* Binary */
+	NULL,                   NULL,                /* Comparison */
+	NULL,                   NULL,                /* Conversion */
+	NULL,                   NULL,                /* ForEach */
+	NULL,                                        /* Print */
+	NULL,                                        /* Slice */
+	NULL,                                        /* Copy */
+	(DaoDeleteFunction) DaoMakeTarget_Delete,    /* Delete */
+	DaoMakeTarget_HandleGC                       /* HandleGC */
 };
 
 
@@ -2774,7 +2867,7 @@ static void PROJECT_GenerateFinder( DaoProcess *proc, DaoValue *p[], int N )
 	self->generateFinder = p[1]->xEnum.value;
 	DaoMakeProject_MakeFinderPath( self, path );
 }
-static DaoFuncItem DaoMakeProjectMeths[]=
+static DaoFunctionEntry daoMakeProjectMeths[]=
 {
 	{ PROJECT_New,     "Project( name: string ) => Project" },
 
@@ -2812,17 +2905,33 @@ static DaoFuncItem DaoMakeProjectMeths[]=
 	{ PROJECT_GenerateFinder, "GenerateFinder( self: Project, bl: enum<FALSE,TRUE> = $TRUE ) => string" },
 	{ NULL, NULL }
 };
-static void PROJ_GetGCFields( void *p, DList *values, DList *arrays, DList *maps, int rm )
+static void DaoMakeProject_HandleGC( DaoValue *p, DList *values, DList *arrays, DList *maps, int rm )
 {
 	DaoMakeProject *self = (DaoMakeProject*) p;
 	DList_Append( arrays, self->targets );
 	DList_Append( arrays, self->installs );
 }
-DaoTypeBase DaoMakeProject_Typer =
+
+static DaoTypeCore daoMakeProjectCore =
 {
-	"Project", NULL, NULL, (DaoFuncItem*) DaoMakeProjectMeths,
-	{ & DaoMakeUnit_Typer, NULL }, {0},
-	(FuncPtrDel)DaoMakeProject_Delete,  PROJ_GetGCFields
+	"Project",                                   /* name */
+	{ & daoMakeUnitCore, NULL },                 /* bases */
+	NULL,                                        /* numbers */
+	daoMakeProjectMeths,                         /* methods */
+	DaoMake_CheckGetField,  DaoMake_DoGetField,  /* GetField */
+	DaoMake_CheckSetField,  DaoMake_DoSetField,  /* SetField */
+	DaoMake_CheckGetItem,   DaoMake_DoGetItem,   /* GetItem */
+	DaoMake_CheckSetItem,   DaoMake_DoSetItem,   /* SetItem */
+	NULL,                   NULL,                /* Unary */
+	NULL,                   NULL,                /* Binary */
+	NULL,                   NULL,                /* Comparison */
+	NULL,                   NULL,                /* Conversion */
+	NULL,                   NULL,                /* ForEach */
+	NULL,                                        /* Print */
+	NULL,                                        /* Slice */
+	NULL,                                        /* Copy */
+	(DaoDeleteFunction) DaoMakeProject_Delete,   /* Delete */
+	DaoMakeProject_HandleGC                      /* HandleGC */
 };
 
 
@@ -2856,17 +2965,33 @@ static void Vars_Set( DaoProcess *proc, DaoValue *p[], int N )
 	DMap_Insert( daomake_variable_map3, key, (void*)(size_t)(daomake_variable_list->size-1) );
 	if( oper->chars[0] == '?' ) DMap_Insert( daomake_variable_map2, key, value );
 }
-static DaoFuncItem DaoMakeVarsMeths[]=
+static DaoFunctionEntry daoMakeVariablesMeths[]=
 {
 	{ Vars_Get,     "[]( key: string ) => string" },
 	{ Vars_Set,     "[]=( value: string, key: string, mode = '?=' )" },
 	{ NULL, NULL }
 };
 
-DaoTypeBase DaoMakeVariables_Typer =
+static DaoTypeCore daoMakeVariablesCore =
 {
-	"Variables", NULL, NULL, (DaoFuncItem*) DaoMakeVarsMeths,
-	{ NULL }, { NULL }, NULL, NULL
+	"Variables",                                 /* name */
+	{ NULL },                                    /* bases */
+	NULL,                                        /* numbers */
+	daoMakeVariablesMeths,                       /* methods */
+	DaoMake_CheckGetField,  DaoMake_DoGetField,  /* GetField */
+	DaoMake_CheckSetField,  DaoMake_DoSetField,  /* SetField */
+	DaoMake_CheckGetItem,   DaoMake_DoGetItem,   /* GetItem */
+	DaoMake_CheckSetItem,   DaoMake_DoSetItem,   /* SetItem */
+	NULL,                   NULL,                /* Unary */
+	NULL,                   NULL,                /* Binary */
+	NULL,                   NULL,                /* Comparison */
+	NULL,                   NULL,                /* Conversion */
+	NULL,                   NULL,                /* ForEach */
+	NULL,                                        /* Print */
+	NULL,                                        /* Slice */
+	NULL,                                        /* Copy */
+	NULL,                                        /* Delete */
+	NULL                                         /* HandleGC */
 };
 
 
@@ -3271,7 +3396,7 @@ static void DAOMAKE_UseLocalRPath( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutInteger( proc, daomake_local_rpath );
 }
 
-static DaoFuncItem DaoMakeMeths[] =
+static DaoFunctionEntry daoMakeMeths[] =
 {
 	{ DAOMAKE_FindPackage, "FindPackage( name: string, opt :enum<OPTIONAL,REQUIRED> = $OPTIONAL ) => Project|none" },
 	{ DAOMAKE_FindFile,    "FindFile( file: string, hints = '' ) => string" },
@@ -3859,12 +3984,12 @@ ErrorInvalidArgValue:
 	DaoNamespace_AddConst( vmSpace->daoNamespace, nspace->name, (DaoValue*) nspace, DAO_PERM_PUBLIC );
 	DaoNamespace_AddConst( vmSpace->mainNamespace, nspace->name, (DaoValue*) nspace, DAO_PERM_PUBLIC );
 
-	daomake_type_unit    = DaoNamespace_WrapType( nspace, & DaoMakeUnit_Typer, DAO_CSTRUCT, 0 );
-	daomake_type_objects = DaoNamespace_WrapType( nspace, & DaoMakeObjects_Typer, DAO_CSTRUCT, 0 );
-	daomake_type_target  = DaoNamespace_WrapType( nspace, & DaoMakeTarget_Typer, DAO_CSTRUCT, 0 );
-	daomake_type_project = DaoNamespace_WrapType( nspace, & DaoMakeProject_Typer, DAO_CSTRUCT, 0 );
-	DaoNamespace_WrapType( nspace, & DaoMakeVariables_Typer, DAO_CSTRUCT, 0 );
-	DaoNamespace_WrapFunctions( nspace, DaoMakeMeths );
+	daomake_type_unit    = DaoNamespace_WrapType( nspace, & daoMakeUnitCore, DAO_CSTRUCT, 0 );
+	daomake_type_objects = DaoNamespace_WrapType( nspace, & daoMakeObjectsCore, DAO_CSTRUCT, 0 );
+	daomake_type_target  = DaoNamespace_WrapType( nspace, & daoMakeTargetCore, DAO_CSTRUCT, 0 );
+	daomake_type_project = DaoNamespace_WrapType( nspace, & daoMakeProjectCore, DAO_CSTRUCT, 0 );
+	DaoNamespace_WrapType( nspace, & daoMakeVariablesCore, DAO_CSTRUCT, 0 );
+	DaoNamespace_WrapFunctions( nspace, daoMakeMeths );
 
 	DaoNamespace_AddValue( nspace, "Settings", (DaoValue*) daomake_settings, "map<string,string>" );
 	DaoNamespace_AddValue( nspace, "Platforms", (DaoValue*) daomake_platforms, "map<string,int>" );

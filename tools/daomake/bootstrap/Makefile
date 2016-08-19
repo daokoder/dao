@@ -124,7 +124,7 @@ OBJECTS = daoConst-$(PLAT).o daoVmcode-$(PLAT).o daoInterface-$(PLAT).o \
 		  daoType-$(PLAT).o daoOptimizer-$(PLAT).o daoStdlib-$(PLAT).o \
 		  daoInferencer-$(PLAT).o \
 		  daoStream-$(PLAT).o daoRegex-$(PLAT).o daoGC-$(PLAT).o \
-		  daoThread-$(PLAT).o daoTasklet-$(PLAT).o daoPlatforms-$(PLAT).o \
+		  daoThread-$(PLAT).o daoTasklet-$(PLAT).o daoPlatform-$(PLAT).o \
 		  daoMake-$(PLAT).o
 
 

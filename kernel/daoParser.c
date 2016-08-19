@@ -924,7 +924,7 @@ static int DaoParser_ParseInitBase( DaoParser *self, DaoParser *module, int star
 	daoint i, size = self->tokens->size;
 	int isconstru = klass && DString_EQ( routine->routName, klass->className );
 	int triples = self->tokenTriples->size;
-	int line = 0, flags = 0; /* XXX number of super classes */
+	int line = 0, flags = 0; /* XXX number of base classes */
 	int dlm = start;
 	int rb = 0;
 	if( isconstru == 0 ) return start;
@@ -1110,8 +1110,8 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	DaoNamespace *NS = self->nameSpace;
 	DaoInterface *inter = module->hostInter;
 	DaoRoutine *routine = module->routine;
-	DaoClass  *klass = module->hostClass;
-	DaoCtype  *ctype = module->hostCtype;
+	DaoClass *klass = module->hostClass;
+	DaoCtype *ctype = module->hostCtype;
 	DaoType *hostype = module->hostType;
 	DaoType *type, *type_default, *cast = NULL;
 	DaoType *cbtype = NULL, *retype = NULL;
@@ -1122,7 +1122,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	int invarhost = routine->routHost && DaoType_IsImmutable( routine->routHost );
 	int size = self->tokens->size;
 	int i, j, k, right, invarpar = 0;
-	int line = 0; /* XXX number of super classes */
+	int line = 0; /* XXX number of base classes */
 	int e1=start, e2=size-1, ec = 0;
 	int isMeth, notStatic, notConstr;
 	int hasdeft = 0, selfpar = 0;
@@ -1414,8 +1414,8 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	if( notConstr == 0 ){
 		if( klass && routine->routHost == klass->objType ){
 			retype = klass->objType;
-		}else if( ctype && routine->routHost == ctype->cdtype ){
-			retype = ctype->cdtype;
+		}else if( ctype && routine->routHost == ctype->valueType ){
+			retype = ctype->valueType;
 		}else if( inter && routine->routHost == inter->abtype ){
 			retype = inter->abtype;
 		}
@@ -1471,7 +1471,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 		if( ctype ) DaoTypeKernel_InsertCastor( hostype->kernel, NS, hostype, routine );
 		else if( klass ) DaoClass_CastingMethod( klass, routine );
 	}
-	if( ctype && routine->routHost == ctype->cdtype ){
+	if( ctype && routine->routHost == ctype->valueType ){
 		if( notConstr && !(routine->routType->attrib & DAO_TYPE_SELF) ){
 			routine->attribs |= DAO_ROUT_STATIC;
 		}
@@ -1595,7 +1595,7 @@ static DaoType* DaoValue_GetDefinitionType( DaoValue *self )
 	DaoType *type = NULL;
 	switch( self ? self->type : 0 ){
 	case DAO_CLASS : type = self->xClass.objType; break;
-	case DAO_CTYPE : type = self->xCtype.cdtype; break;
+	case DAO_CTYPE : type = self->xCtype.valueType; break;
 	case DAO_CINTYPE : type = self->xCinType.vatype; break;
 	case DAO_INTERFACE : type = self->xInterface.abtype; break;
 	default : break;
@@ -1628,7 +1628,7 @@ static DaoType* DaoParser_ParseUserType( DaoParser *self, int start, int end, in
 	*newpos = k + 1;
 	switch( value ? value->type : 0 ){
 	case DAO_CLASS : type = value->xClass.objType; break;
-	case DAO_CTYPE : type = value->xCtype.cdtype; break; /* get its cdata type */
+	case DAO_CTYPE : type = value->xCtype.valueType; break; /* get its cdata type */
 	case DAO_TYPE  : type = & value->xType; break;
 	case DAO_CINTYPE : type = value->xCinType.vatype; break;
 	case DAO_INTERFACE : type = value->xInterface.abtype; break;
@@ -2038,8 +2038,8 @@ WrongType:
 			DList_Erase( types, count, count2 );
 			switch( type ? type->tid : 0 ){
 			case DAO_CDATA :
-			case DAO_CSTRUCT : type = type->aux->xCtype.ctype;  goto DoneGenericType;
-			case DAO_OBJECT : type = type->aux->xClass.clsType; goto DoneGenericType;
+			case DAO_CSTRUCT : type = type->aux->xCtype.classType;  goto DoneGenericType;
+			case DAO_OBJECT  : type = type->aux->xClass.clsType; goto DoneGenericType;
 			}
 			goto InvalidTypeForm;
 		case DKEY_VAR :
@@ -2160,7 +2160,7 @@ static DaoValue* DaoParse_InstantiateType( DaoParser *self, DaoValue *tpl, int s
 		cintype = DaoInterface_GetConcrete( (DaoInterface*) tpl, types->items.pType[0] );
 		if( cintype == NULL ) goto FailedInstantiation;
 	}else{
-		gentype = tpl->type == DAO_CTYPE ? ctype->cdtype : (DaoType*) tpl;
+		gentype = tpl->type == DAO_CTYPE ? ctype->valueType : (DaoType*) tpl;
 		sptype = DaoType_Specialize( gentype, types->items.pType, types->size );
 		if( sptype == NULL ) goto FailedInstantiation;
 		if( self->byteBlock && tpl->type == DAO_CTYPE ){
@@ -3165,7 +3165,7 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 				ec = DAO_INVALID_PARENT_INTERFACE;
 				goto ErrorInterfaceDefinition;
 			}
-			/* Add a reference to its super interfaces: */
+			/* Add a reference to its base interfaces: */
 			if( cintype ){
 				DaoCinType *cinbase = (DaoCinType*) sutype->aux;
 				int childof = DaoType_ChildOf( inter->abtype, cinbase->abstract->abtype );
@@ -3173,9 +3173,9 @@ static int DaoParser_ParseInterfaceDefinition( DaoParser *self, int start, int t
 					ec = DAO_INVALID_PARENT_INTERFACE;
 					goto ErrorInterfaceDefinition;
 				}
-				DList_Append( cintype->supers, sutype->aux );
+				DList_Append( cintype->bases, sutype->aux );
 			}else{
-				DList_Append( inter->supers, sutype->aux );
+				DList_Append( inter->bases, sutype->aux );
 			}
 			sep = DTOK_COMMA;
 		}
@@ -3440,7 +3440,7 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 			DaoType *btype = NULL;
 			switch( base->type ){
 			case DAO_CLASS : btype = base->xClass.objType; break;
-			case DAO_CTYPE : btype = base->xCtype.cdtype;  break;
+			case DAO_CTYPE : btype = base->xCtype.valueType;  break;
 			}
 			if( DaoType_IsImmutable( btype ) == 0 ){
 				DaoParser_Error( self, DAO_INVALID_PARENT_CLASS, btype->name );

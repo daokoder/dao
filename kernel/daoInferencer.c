@@ -1449,7 +1449,6 @@ int DaoInferencer_HandleGetMItem( DaoInferencer *self, DaoInode *inode, DMap *de
 	int j;
 
 	ct = at;
-	meth = NULL;
 	if( opb == 0 ){
 		ct = at;
 	}else if( DaoType_LooseChecking( at ) ){
@@ -1537,7 +1536,7 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		ct = dao_type_udf;
 	}else if( at->tid == DAO_COMPLEX ){
 		ct = at->core->CheckGetField( at, str, self->routine );
-		if( ct == NULL ) goto InvalidIndex;
+		if( ct == NULL ) goto InvalidField;
 		inode->code = DVM_GETF_CX;
 		inode->b = strcmp( str->chars, "imag" ) == 0;
 	}else if( at->tid == DAO_TYPE ){
@@ -1557,7 +1556,7 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		int j, k;
 
 		ct = at->core->CheckGetField( at, str, self->routine );
-		if( ct == NULL ) goto InvalidIndex;
+		if( ct == NULL ) goto InvalidField;
 
 		if( data != NULL && data->type != DAO_NONE ){
 			if( data->xBase.subtype == DAO_CLASS_CONSTANT ){
@@ -1586,7 +1585,7 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		}
 	}else if( at->tid == DAO_TUPLE ){
 		ct = at->core->CheckGetField( at, str, self->routine );
-		if( ct == NULL ) goto InvalidIndex;
+		if( ct == NULL ) goto InvalidField;
 
 		node = MAP_Find( at->mapNames, str );
 		k = node->value.pInt;
@@ -1615,9 +1614,9 @@ int DaoInferencer_HandleGetField( DaoInferencer *self, DaoInode *inode, DMap *de
 			if( k <0 ) goto NotExist;
 		}
 	}else if( at->core ){
-		if( at->core->CheckGetField == NULL ) goto InvalidIndex;
+		if( at->core->CheckGetField == NULL ) goto InvalidField;
 		ct = at->core->CheckGetField( at, str, self->routine );
-		if( ct == NULL ) goto InvalidIndex;
+		if( ct == NULL ) goto InvalidField;
 
 		if( at->tid != DAO_INTERFACE ){
 			value = DaoType_FindValue( at, str );
@@ -1644,7 +1643,7 @@ NotMatch : return DaoInferencer_ErrorTypeNotMatching( self, NULL, NULL );
 NotPermit : return DaoInferencer_Error( self, DTE_FIELD_NOT_PERMIT );
 NotExist : return DaoInferencer_Error( self, DTE_FIELD_NOT_EXIST );
 NeedInstVar : return DaoInferencer_Error( self, DTE_FIELD_OF_INSTANCE );
-InvalidOper : return DaoInferencer_Error( self, DTE_OPERATION_NOT_VALID );
+InvalidField : return DaoInferencer_Error( self, DTE_OPERATION_NOT_VALID ); // TODO;
 }
 int DaoInferencer_HandleSetItem( DaoInferencer *self, DaoInode *inode, DMap *defs )
 {
@@ -1886,7 +1885,7 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		break;
 	case DAO_COMPLEX :
 		K = ct->core->CheckSetField( ct, str, at, self->routine );
-		if( K ) goto InvalidIndex;
+		if( K ) goto InvalidField;
 		if( at->realnum ){
 			if( at->tid != DAO_FLOAT )
 				DaoInferencer_InsertMove( self, inode, & inode->a, at, dao_type_float );
@@ -1897,7 +1896,7 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 	case DAO_CLASS :
 	case DAO_OBJECT :
 		K = ct->core->CheckSetField( ct, str, at, self->routine );
-		if( K ) goto InvalidIndex;
+		if( K ) goto InvalidField;
 
 		ck = ct->tid ==DAO_CLASS;
 		klass = (DaoClass*) ct->aux;
@@ -1936,11 +1935,11 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 		break;
 	case DAO_TUPLE :
 		K = ct->core->CheckSetField( ct, str, at, self->routine );
-		if( K ) goto InvalidIndex;
+		if( K ) goto InvalidField;
 
 		node = MAP_Find( ct->mapNames, str );
 		k = node->value.pInt;
-		if( k <0 || k >= (int)ct->nested->size ) goto InvalidIndex;
+		if( k <0 || k >= (int)ct->nested->size ) goto InvalidField;
 
 		ct = ct->nested->items.pType[ k ];
 		if( ct->tid == DAO_PAR_NAMED ) ct = & ct->aux->xType;
@@ -1985,9 +1984,9 @@ int DaoInferencer_HandleSetField( DaoInferencer *self, DaoInode *inode, DMap *de
 			break;
 		}
 	default:
-		if( ct->core == NULL || ct->core->CheckSetField == NULL ) return InvalidIndex;
+		if( ct->core == NULL || ct->core->CheckSetField == NULL ) goto InvalidField;
 		K = ct->core->CheckSetField( ct, str, at, self->routine );
-		if( K ) goto InvalidIndex;
+		if( K ) goto InvalidField;
 		break;
 	}
 	return 1;
@@ -1996,7 +1995,7 @@ NotPermit : return DaoInferencer_Error( self, DTE_FIELD_NOT_PERMIT );
 NotExist : return DaoInferencer_Error( self, DTE_FIELD_NOT_EXIST );
 NeedInstVar : return DaoInferencer_Error( self, DTE_FIELD_OF_INSTANCE );
 InvalidOper : return DaoInferencer_Error( self, DTE_OPERATION_NOT_VALID );
-InvalidIndex : return DaoInferencer_Error( self, DTE_INDEX_NOT_VALID );
+InvalidField : return DaoInferencer_Error( self, DTE_INDEX_NOT_VALID ); // TODO;
 ModifyConstant: return DaoInferencer_Error( self, DTE_CONST_WRONG_MODIFYING );
 }
 DaoType* DaoInferencer_CheckBinaryOper( DaoInferencer *self, DaoInode *inode, DaoType *at, DaoType *bt )
@@ -2006,7 +2005,7 @@ DaoType* DaoInferencer_CheckBinaryOper( DaoInferencer *self, DaoInode *inode, Da
 	DaoNamespace *NS = self->routine->nameSpace;
 	DaoClass *hostClass = self->hostClass;
 	DaoVmCodeX *vmc = (DaoVmCodeX*) inode;
-	DaoType *perands[2];
+	DaoType *operands[2];
 	DaoType *ct = NULL;
 	int code = inode->code;
 	int opc = inode->c;
@@ -3019,6 +3018,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 	DaoNamespace *NS = routine->nameSpace;
 	DaoRoutineBody *body = routine->body;
 	DaoType **typeVH[DAO_MAX_SECTDEPTH+1] = { NULL };
+	DaoType *operands[2];
 	DList  *rettypes = self->rettypes;
 	DList  *routConsts = routine->routConsts->value;
 	daoint i, N = routine->body->annotCodes->size;
@@ -3440,7 +3440,11 @@ SkipChecking:
 			DaoInferencer_UpdateType( self, opc, at );
 			AssertTypeMatching( at, types[opc], defs );
 			if( at == types[opc] && consts[opa] == NULL ){
-				if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && at->tid != DAO_CPOD ){
+				if( at->tid == DAO_CSTRUCT || at->tid == DAO_CDATA ){
+					if( at->core == NULL || at->core->Copy == NULL ){
+						vmc->code = DVM_MOVE_PP;
+					}
+				}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE ){
 					vmc->code = DVM_MOVE_PP;
 				}
 			}
@@ -3518,7 +3522,11 @@ SkipChecking:
 				}else if( at == ct || ct->tid == DAO_ANY ){
 					if( types[opa]->konst ){
 						vmc->code = DVM_MOVE_XX;
-					}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && at->tid != DAO_CPOD && consts[opa] == NULL ){
+					}else if( (at->tid == DAO_CSTRUCT || at->tid == DAO_CDATA) && consts[opa] == NULL ){
+						if( at->core == NULL || at->core->Copy == NULL ){
+							vmc->code = DVM_MOVE_PP;
+						}
+					}else if( at->tid >= DAO_ARRAY && at->tid <= DAO_TYPE && consts[opa] == NULL ){
 						vmc->code = DVM_MOVE_PP;
 					}else{
 						vmc->code = DVM_MOVE_XX;
@@ -3576,7 +3584,9 @@ SkipChecking:
 			}
 			break;
 		case DVM_IN :
-			if( bt->core == NULL || bt->core->CheckBinary == NULL ) return NULL;
+			if( bt->core == NULL || bt->core->CheckBinary == NULL ) return 0;
+			operands[0] = at;
+			operands[1] = bt;
 			ct = bt->core->CheckBinary( bt, (DaoVmCode*)vmc, operands, self->routine );
 			if( ct == NULL ) goto InvalidOper;
 
@@ -3587,8 +3597,8 @@ SkipChecking:
 			ct = types[opc];
 			break;
 		case DVM_NOT :
-			if( at->core == NULL || at->core->CheckBinary == NULL ) return NULL;
-			ct = at->core->CheckBinary( at, (DaoVmCode*)vmc, operands, self->routine );
+			if( at->core == NULL || at->core->CheckUnary == NULL ) return 0;
+			ct = at->core->CheckUnary( at, (DaoVmCode*)vmc, self->routine );
 			if( ct == NULL ) goto InvalidOper;
 			DaoInferencer_UpdateVarType( self, opc, ct );
 			AssertTypeMatching( ct, types[opc], defs );
@@ -3604,8 +3614,8 @@ SkipChecking:
 			goto InvalidOper;
 			break;
 		case DVM_MINUS :
-			if( at->core == NULL || at->core->CheckBinary == NULL ) return NULL;
-			ct = at->core->CheckBinary( at, (DaoVmCode*)vmc, operands, self->routine );
+			if( at->core == NULL || at->core->CheckUnary == NULL ) return 0;
+			ct = at->core->CheckUnary( at, (DaoVmCode*)vmc, self->routine );
 			if( ct == NULL ) goto InvalidOper;
 			AssertTypeMatching( at, ct, defs );
 			if( DaoType_LooseChecking( at ) ) continue;
@@ -3620,8 +3630,8 @@ SkipChecking:
 			break;
 		case DVM_TILDE :
 			{
-				if( at->core == NULL || at->core->CheckBinary == NULL ) return NULL;
-				ct = at->core->CheckBinary( at, (DaoVmCode*)vmc, operands, self->routine );
+				if( at->core == NULL || at->core->CheckUnary == NULL ) return 0;
+				ct = at->core->CheckUnary( at, (DaoVmCode*)vmc, self->routine );
 				if( ct == NULL ) goto InvalidOper;
 				AssertTypeMatching( at, ct, defs );
 				if( at->realnum && ct->realnum ){
@@ -3637,8 +3647,8 @@ SkipChecking:
 			}
 		case DVM_SIZE :
 			{
-				if( at->core == NULL || at->core->CheckBinary == NULL ) return NULL;
-				ct = at->core->CheckBinary( at, (DaoVmCode*)vmc, operands, self->routine );
+				if( at->core == NULL || at->core->CheckUnary == NULL ) return 0;
+				ct = at->core->CheckUnary( at, (DaoVmCode*)vmc, self->routine );
 				if( ct == NULL ) goto InvalidOper;
 				AssertTypeMatching( dao_type_int, ct, defs );
 				if( at->tid >= DAO_INTEGER && at->tid <= DAO_COMPLEX ){
@@ -4199,7 +4209,11 @@ SkipChecking:
 		case DVM_MOVE_PP :
 		case DVM_MOVE_XX :
 			if( code == DVM_MOVE_PP ){
-				if( at->tid && (at->tid < DAO_ARRAY || at->tid > DAO_TYPE || at->tid == DAO_CPOD) ) goto NotMatch;
+				if( at->tid == DAO_CSTRUCT || at->tid == DAO_CDATA ){
+					if( at->core != NULL && at->core->Copy != NULL ) goto NotMatch;
+				}else if( at->tid && (at->tid < DAO_ARRAY || at->tid > DAO_TYPE) ){
+					goto NotMatch;
+				}
 			}
 			at = DaoInferencer_HandleVarInvarDecl( self, at, opb );
 			if( at == NULL ) return 0;

@@ -683,7 +683,7 @@ static int DaoValue_MatchToParent( DaoValue *object, DaoType *parent, DMap *defs
 	if( object->type == DAO_OBJECT ){
 		mt = DaoType_MatchToParent( object->xObject.defClass->objType, parent, defs, 0 );
 	}else if( object->type >= DAO_CSTRUCT && object->type <= DAO_CTYPE ){
-		mt = DaoType_MatchToParent( object->xCdata.ctype, parent, defs, 0 );
+		mt = DaoType_MatchToParent( object->xCstruct.ctype, parent, defs, 0 );
 	}else if( object->type == DAO_CLASS ){
 		mt = DaoType_MatchToParent( object->xClass.clsType, parent, defs, 0 );
 	}else if( object->type == DAO_CINVALUE ){
@@ -1321,6 +1321,11 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 		if( dinterface ) return DaoType_MatchInterface( value->xObject.defClass->objType, dinterface, NULL );
 		return DaoValue_MatchToParent( value, self, defs );
 	case DAO_CTYPE :
+		tp = value->xCtype.classType;
+		if( self == tp ) return DAO_MT_EQ;
+		if( self->tid == value->type && self->aux == tp->aux ) return DAO_MT_EQ; /* alias type */
+		if( dinterface ) return DaoType_MatchInterface( tp, dinterface, NULL );
+		return DaoValue_MatchToParent( value, self, defs );
 	case DAO_CDATA :
 	case DAO_CSTRUCT :
 		tp = value->xCstruct.ctype;
@@ -1407,7 +1412,7 @@ DaoValue* DaoType_CastToParent( DaoValue *object, DaoType *parent )
 	DaoValue *value;
 	if( object == NULL || parent == NULL ) return NULL;
 	if( object->type >= DAO_CSTRUCT && object->type <= DAO_CTYPE ){
-		if( DaoType_MatchToParent( object->xCdata.ctype, parent, NULL, 0 ) ) return object;
+		if( DaoType_MatchToParent( object->xCstruct.ctype, parent, NULL, 0 ) ) return object;
 	}else if( object->type == DAO_OBJECT ){
 		if( object->xObject.defClass->objType == parent ) return object;
 		if( object->xObject.parent ){
@@ -1422,14 +1427,14 @@ DaoValue* DaoType_CastToParent( DaoValue *object, DaoType *parent )
 		}
 	}else if( object->type == DAO_INTERFACE ){
 		if( object->xInterface.abtype == parent ) return object;
-		for(i=0; i<object->xInterface.supers->size; ++i){
-			value = DaoType_CastToParent( object->xInterface.supers->items.pValue[i], parent );
+		for(i=0; i<object->xInterface.bases->size; ++i){
+			value = DaoType_CastToParent( object->xInterface.bases->items.pValue[i], parent );
 			if( value ) return value;
 		}
 	}else if( object->type == DAO_CINTYPE ){
 		if( object->xCinType.citype == parent ) return object;
-		for(i=0; i<object->xCinType.supers->size; ++i){
-			value = DaoType_CastToParent( object->xCinType.supers->items.pValue[i], parent );
+		for(i=0; i<object->xCinType.bases->size; ++i){
+			value = DaoType_CastToParent( object->xCinType.bases->items.pValue[i], parent );
 			if( value ) return value;
 		}
 	}else if( object->type == DAO_CINVALUE ){
@@ -1533,7 +1538,7 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 
 	copy = DaoType_New( "", self->tid, NULL, NULL );
 	GC_Assign( & copy->kernel, self->kernel );
-	copy->typer = self->typer;
+	copy->core = self->core;
 	copy->subtid = self->subtid;
 	copy->attrib = self->attrib;
 	copy->konst = self->konst;
@@ -1579,9 +1584,9 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		}
 		if( (self->tid >= DAO_CSTRUCT && self->tid <= DAO_CTYPE)
 				|| self->tid == DAO_ARRAY || self->tid == DAO_LIST || self->tid == DAO_MAP ){
-			if( self->typer->kernel->sptree ){
-				DaoType *sptype = self->typer->kernel->abtype;
-				if( self->tid == DAO_CTYPE ) sptype = sptype->aux->xCtype.ctype;
+			if( self->kernel->sptree ){
+				DaoType *sptype = self->kernel->abtype;
+				if( self->tid == DAO_CTYPE ) sptype = sptype->aux->xCtype.classType;
 				sptype = DaoType_Specialize( sptype, copy->nested->items.pType, copy->nested->size );
 				if( sptype ){
 					DMap_Erase2( defs, copy );
@@ -1786,7 +1791,7 @@ static void DaoType_TrySetupMethods( DaoType *self )
 {
 	if( self->kernel == NULL ) return;
 	if( self->kernel->SetupMethods ){
-		self->kernel->SetupMethods( self->kernel->nspace, self->typer );
+		self->kernel->SetupMethods( self->kernel->nspace, self->core );
 	}
 	if( self->kernel->methods == NULL ) return;
 	if( self->kernel->attribs & DAO_TYPEKERNEL_TEMPLATE ) DaoType_SpecializeMethods( self );
@@ -1845,7 +1850,7 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 	if( kernel->abtype && kernel->abtype->aux ){
 		if( DString_EQ( name, kernel->abtype->name ) ) value = kernel->abtype->aux;
 	}
-	if( kernel->SetupValues ) kernel->SetupValues( kernel->nspace, self->typer );
+	if( kernel->SetupValues ) kernel->SetupValues( kernel->nspace, self->core );
 	if( kernel->values == NULL ) return value;
 	node = DMap_Find( kernel->values, name );
 	if( node ) return node->value.pValue;
@@ -1855,6 +1860,13 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 DaoTypeCore* DaoType_GetTypeCore( DaoType *self )
 {
 	return self->core;
+}
+
+static void DaoType_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
+{
+	DaoStream_WriteChars( stream, "type<" );
+	DaoStream_WriteString( stream, self->xType.name );
+	DaoStream_WriteChars( stream, ">" );
 }
 
 DaoTypeCore daoTypeCore =
@@ -1875,7 +1887,7 @@ DaoTypeCore daoTypeCore =
 	DaoType_Print,       /* Print */
 	NULL,                /* Slice */
 	NULL,                /* Copy */
-	DaoType_CoreDelete,  /* Delete */
+	(DaoDeleteFunction) DaoType_Delete,  /* Delete */
 	NULL                 /* HandleGC */
 };
 
@@ -1894,15 +1906,15 @@ void DaoTypeKernel_Delete( DaoTypeKernel *self )
 	GC_DecRC( self->castOperators );
 	if( self->sptree ) DaoTypeTree_Delete( self->sptree );
 	if( self->attribs & DAO_TYPEKERNEL_FREE ){
-		dao_free( (char*)self->typer->name );
-		dao_free( self->typer );
+		dao_free( (char*)self->core->name );
+		dao_free( self->core );
 	}
 	dao_free( self );
 }
 
 
 
-DaoTypeKernel* DaoTypeKernel_New( DaoTypeCore *typer )
+DaoTypeKernel* DaoTypeKernel_New( DaoTypeCore *core )
 {
 	DaoTypeKernel *self = (DaoTypeKernel*) dao_calloc( 1, sizeof(DaoTypeKernel) );
 	DaoValue_Init( self, DAO_TYPEKERNEL );
@@ -1945,10 +1957,10 @@ DaoTypeCore daoTypeKernelCore =
 	NULL,  NULL,               /* Comparison */
 	NULL,  NULL,               /* Conversion */
 	NULL,  NULL,               /* ForEach */
-	DaoTypeKernel_Print,       /* Print */
+	NULL,                      /* Print */
 	NULL,                      /* Slice */
 	NULL,                      /* Copy */
-	DaoTypeKernel_CoreDelete,  /* Delete */
+	(DaoDeleteFunction) DaoTypeKernel_Delete,  /* Delete */
 	NULL                       /* HandleGC */
 };
 
@@ -2116,12 +2128,12 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 	assert( self->tid >= DAO_CSTRUCT && self->tid <= DAO_CTYPE );
 
 	self = self->kernel->abtype;
-	if( tid == DAO_CTYPE ) self = self->aux->xCtype.cdtype;
+	if( tid == DAO_CTYPE ) self = self->aux->xCtype.valueType;
 
 	if( (kernel = self->kernel) == NULL ) return NULL;
 	if( (sptree = kernel->sptree) == NULL ) return NULL;
 	if( (sptype = DaoTypeTree_Get( sptree, types, count )) ){
-		if( tid == DAO_CTYPE ) return sptype->aux->xCdata.ctype;
+		if( tid == DAO_CTYPE ) return sptype->aux->xCtype.classType;
 		return sptype;
 	}
 	if( DaoTypeTree_Test( sptree, types, count ) == 0 ) return NULL;
@@ -2131,13 +2143,13 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 	// Upon method accessing, a new kernel will be created with specialized methods.
 	*/
 	ctype = DaoCtype_New( self->core, self->tid );
-	sptype = ctype->objectType;
+	sptype = ctype->valueType;
 	sptype2 = ctype->classType;
 	GC_Assign( & sptype->kernel, self->kernel );
 	GC_Assign( & sptype2->kernel, self->kernel );
 	sptype->nested = DList_New( DAO_DATA_VALUE );
 	if( self->tid == DAO_CTYPE ){
-		sptype->tid = self->aux->xCtype.cdtype->tid;
+		sptype->tid = self->aux->xCtype.valueType->tid;
 	}else{
 		sptype->tid = self->tid;
 	}
@@ -2170,7 +2182,7 @@ static DaoType* DaoCdataType_Specialize( DaoType *self, DaoType *types[], int co
 			DaoType *type = self->bases->items.pType[i];
 			type = DaoType_DefineTypes( type, type->kernel->nspace, defs );
 			DList_Append( sptype->bases, type );
-			DList_Append( sptype2->bases, type->aux->xCdata.ctype );
+			DList_Append( sptype2->bases, type->aux->xCtype.classType );
 		}
 		DMap_Delete( defs );
 	}
@@ -2292,7 +2304,7 @@ static void DaoType_InitTypeDefines( DaoType *self, DaoRoutine *method, DMap *de
 	DaoType *type = method->routType;
 	daoint i;
 
-	DaoType_InitHostTypeDefines( self, self->typer->kernel->abtype, defs );
+	DaoType_InitHostTypeDefines( self, self->kernel->abtype, defs );
 
 	if( !(type->attrib & DAO_TYPE_SELF) ) return;
 	type = (DaoType*) type->nested->items.pType[0]->aux; /* self:type */
@@ -2323,7 +2335,7 @@ static void DaoType_SpecMethod( DaoType *self, DaoTypeKernel *kernel, DaoRoutine
 
 void DaoType_SpecializeMethods( DaoType *self )
 {
-	DaoTypeKernel *kernel = DaoVmSpace_GetKernel( self->kernel->typer );
+	DaoTypeKernel *kernel = self->kernel;
 	DaoType *original = kernel->abtype;
 	DaoType *intype = self;
 	DaoType *quads[4];
@@ -2339,7 +2351,7 @@ void DaoType_SpecializeMethods( DaoType *self )
 	if( self->kernel != original->kernel ) return;
 	if( original->kernel == NULL || original->kernel->methods == NULL ) return;
 	assert( (self->tid >= DAO_CSTRUCT && self->tid <= DAO_CTYPE) || self->tid == DAO_ARRAY || self->tid == DAO_LIST || self->tid == DAO_MAP );
-	if( self->tid == DAO_CTYPE ) self = self->aux->xCtype.cdtype;
+	if( self->tid == DAO_CTYPE ) self = self->aux->xCtype.valueType;
 	if( self->bases ){
 		for(i=0; i<self->bases->size; i++){
 			DaoType *base = self->bases->items.pType[i];
@@ -2357,7 +2369,7 @@ void DaoType_SpecializeMethods( DaoType *self )
 		DList *parents = DList_New(0);
 		DNode *it;
 
-		kernel = DaoTypeKernel_New( self->typer );
+		kernel = DaoTypeKernel_New( self->core );
 		kernel->attribs = original->kernel->attribs;
 		kernel->nspace = original->kernel->nspace;
 		kernel->abtype = original;
@@ -2424,8 +2436,8 @@ void DaoType_SpecializeMethods( DaoType *self )
 		DMap_Delete( defs );
 		/* Set new kernel after it has been setup, for read safety in multithreading: */
 		if( self->tid >= DAO_CSTRUCT && self->tid <= DAO_CTYPE ){
-			GC_Assign( & self->aux->xCtype.ctype->kernel, kernel );
-			GC_Assign( & self->aux->xCtype.cdtype->kernel, kernel );
+			GC_Assign( & self->aux->xCtype.classType->kernel, kernel );
+			GC_Assign( & self->aux->xCtype.valueType->kernel, kernel );
 		}else{
 			GC_Assign( & self->kernel, kernel );
 		}

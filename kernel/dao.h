@@ -464,6 +464,8 @@ struct DaoTypeCore
 	*/
 };
 
+DAO_DLL DaoTypeCore* DaoCstruct_GetDefaultCore();
+
 
 /*
 // These structures can be passed to DaoVmSpace

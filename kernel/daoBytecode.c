@@ -779,9 +779,12 @@ DaoByteBlock* DaoByteBlock_EncodeValue( DaoByteBlock *self, DaoValue *value )
 		DaoByteCoder_Error3( self->coder, NULL, "Unencoded class (name = %s)!", chs );
 		break;
 	case DAO_CTYPE :
+		chs = value->xCtype.classType->name->chars;
+		DaoByteCoder_Error3( self->coder, NULL, "Unencoded cdata type (name = %s)!", chs );
+		break;
 	case DAO_CSTRUCT :
 	case DAO_CDATA :
-		chs = value->xCtype.ctype->name->chars;
+		chs = value->xCstruct.ctype->name->chars;
 		DaoByteCoder_Error3( self->coder, NULL, "Unencoded cdata type (name = %s)!", chs );
 		break;
 	case DAO_ROUTINE :
@@ -1073,11 +1076,11 @@ DaoByteBlock* DaoByteBlock_AddInterfaceBlock( DaoByteBlock *self, DaoInterface *
 	}else{
 		DaoByteBlock_InsertBlockIndex( block, block->begin, name );
 	}
-	DaoByteCoder_EncodeUInt16( block->begin+4, inter->supers->size );
+	DaoByteCoder_EncodeUInt16( block->begin+4, inter->bases->size );
 	block->end[7] = pm;
 	DaoByteBlock *data = DaoByteBlock_NewBlock( block, DAO_ASM_BASES );
-	DaoByteBlock_EncodeValues2( self, inter->supers );
-	DaoByteBlock_AddBlockIndexData( data, 4, inter->supers->size );
+	DaoByteBlock_EncodeValues2( self, inter->bases );
+	DaoByteBlock_AddBlockIndexData( data, 4, inter->bases->size );
 	return block;
 }
 DaoByteBlock* DaoByteBlock_AddCinTypeBlock( DaoByteBlock *self, DaoCinType *cintype, int pm )
@@ -1088,11 +1091,11 @@ DaoByteBlock* DaoByteBlock_AddCinTypeBlock( DaoByteBlock *self, DaoCinType *cint
 
 	DaoByteBlock_InsertBlockIndex( block, block->begin, inter );
 	DaoByteBlock_InsertBlockIndex( block, block->begin + 2, type );
-	DaoByteCoder_EncodeUInt16( block->begin+4, cintype->supers->size );
+	DaoByteCoder_EncodeUInt16( block->begin+4, cintype->bases->size );
 	block->end[7] = pm;
 	DaoByteBlock *data = DaoByteBlock_NewBlock( block, DAO_ASM_BASES );
-	DaoByteBlock_EncodeValues2( self, cintype->supers );
-	DaoByteBlock_AddBlockIndexData( data, 4, cintype->supers->size );
+	DaoByteBlock_EncodeValues2( self, cintype->bases );
+	DaoByteBlock_AddBlockIndexData( data, 4, cintype->bases->size );
 	return block;
 }
 
@@ -2040,7 +2043,7 @@ static void DaoByteCoder_DecodeValue( DaoByteCoder *self, DaoByteBlock *block )
 		if( self->error ) break;
 		itypes = self->ivalues->items.pType + C;
 		D = self->ivalues->size - C;
-		type = DaoType_Specialize( pb2->value->xCtype.cdtype, itypes, D );
+		type = DaoType_Specialize( pb2->value->xCtype.valueType, itypes, D );
 		//printf( ">>>>>>>>> %p %s %s\n", type, type->name->chars, type->typer->name );
 		//printf( "%p %p\n", type->aux, type->aux->xCtype.ctype );
 		value = type->aux;
@@ -2197,7 +2200,7 @@ static void DaoByteCoder_DecodeTypeFor( DaoByteCoder *self, DaoByteBlock *block 
 	if( self->error ) return;
 	switch( valuebk->value->type ){
 	case DAO_CLASS : type = valuebk->value->xClass.objType; break;
-	case DAO_CTYPE : type = valuebk->value->xCtype.cdtype; break;
+	case DAO_CTYPE : type = valuebk->value->xCtype.valueType; break;
 	case DAO_CINTYPE : type = valuebk->value->xCinType.vatype; break;
 	case DAO_INTERFACE : type = valuebk->value->xInterface.abtype; break;
 	default : break;
@@ -2334,14 +2337,14 @@ static void DaoByteCoder_DecodeBases( DaoByteCoder *self, DaoByteBlock *block )
 		if( block->parent->value->type == DAO_INTERFACE ){
 			DaoInterface *inter = DaoValue_CastInterface( block->parent->value );
 			for(i=D; i<self->ivalues->size; ++i){
-				DList_Append( inter->supers, self->ivalues->items.pValue[i] );
+				DList_Append( inter->bases, self->ivalues->items.pValue[i] );
 			}
 			DaoInterface_DeriveMethods( inter );
 		}else{
 			DaoCinType *cintype = (DaoCinType*) block->parent->value;
 			DaoInterface *inter = cintype->abstract;
 			for(i=D; i<self->ivalues->size; ++i){
-				DList_Append( cintype->supers, self->ivalues->items.pValue[i] );
+				DList_Append( cintype->bases, self->ivalues->items.pValue[i] );
 			}
 			DaoCinType_DeriveMethods( cintype );
 			if( inter->concretes == NULL ){

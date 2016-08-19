@@ -844,6 +844,6 @@ DaoTypeCore daoStreamCore =
 	NULL,                                            /* Print */
 	NULL,                                            /* Slice */
 	NULL,                                            /* Copy */
-	DaoStream_CoreDelete,                            /* Delete */
+	(DaoDeleteFunction) DaoStream_Delete,            /* Delete */
 	NULL                                             /* HandleGC */
 };

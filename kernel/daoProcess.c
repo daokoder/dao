@@ -454,11 +454,15 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 	}else if( svalue && need_self && ! mcall ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		partype = (DaoType*) partypes[0]->aux;
+		// TODO
+#if 0
 		if( svalue->type == DAO_CPOD && DaoType_ChildOf( svalue->xCpod.ctype, partype ) ){
 			GC_Assign( & dest[0], svalue );
 			selfChecked = 1;
 			passed = 1;
-		}else if( DaoType_MatchValue( partype, svalue, defs ) >= DAO_MT_EQ ){
+		}else 
+#endif
+		if( DaoType_MatchValue( partype, svalue, defs ) >= DAO_MT_EQ ){
 			GC_Assign( & dest[0], svalue );
 			selfChecked = 1;
 			passed = 1;
@@ -508,10 +512,14 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 
 		passed |= (size_t)1<<parindex;
 		if( need_self && parindex == 0 ){
+		// TODO
+#if 0
 			if( argvalue->type == DAO_CPOD && DaoType_ChildOf( argvalue->xCpod.ctype, partype ) ){
 				GC_Assign( & dest[parindex], argvalue );
 				continue;
-			}else if( DaoType_MatchValue( partype, argvalue, defs ) >= DAO_MT_EQ ){
+			}else 
+#endif
+			if( DaoType_MatchValue( partype, argvalue, defs ) >= DAO_MT_EQ ){
 				GC_Assign( & dest[parindex], argvalue );
 				continue;
 			}
@@ -591,7 +599,7 @@ static int DaoProcess_PushCallableX( DaoProcess *self, DaoRoutine *R, DaoValue *
 	R = DaoRoutine_Resolve( R, O, NULL, P, T, N, DVM_CALL );
 	if( R != NULL && DaoProcess_CheckInvarMethod( self, R ) == 0 ) return DAO_ERROR;
 	if( R ) R = DaoProcess_PassParams( self, R, NULL, O, P, T, N, DVM_CALL );
-	if( R == NULL ) return DAO_ERROR_PARAM;
+	if( R == NULL ) return DAO_ERROR_ARG;
 
 	if( R->body ){
 		int need_self = R->routType->attrib & DAO_TYPE_SELF;
@@ -3002,7 +3010,7 @@ void DaoProcess_DoCheckSame( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *dA = self->activeValues[ vmc->a ];
 	DaoValue *dB = self->activeValues[ vmc->b ];
 	DaoType *type = (DaoType*) dB;
-	dao_integer *res = 0;
+	dao_boolean *res = 0;
 
 	self->activeCode = vmc;
 	res = DaoProcess_PutBoolean( self, 0 );
@@ -3044,14 +3052,14 @@ void DaoProcess_DoCheckIsa( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *dA = self->activeValues[ vmc->a ];
 	DaoValue *dB = self->activeValues[ vmc->b ];
 	DaoType *type = (DaoType*) dB;
-	dao_integer *res = 0;
+	dao_boolean *res = 0;
 
 	self->activeCode = vmc;
 	res = DaoProcess_PutBoolean( self, 0 );
 
 	if( dB->type == DAO_CTYPE ){
-		dB = (DaoValue*) dB->xCtype.cdtype;
-		if( dA->type == DAO_CTYPE ) dA = (DaoValue*) dA->xCtype.cdtype;
+		dB = (DaoValue*) dB->xCtype.valueType;
+		if( dA->type == DAO_CTYPE ) dA = (DaoValue*) dA->xCtype.valueType;
 	}else if( dB->type == DAO_CLASS ){
 		dB = (DaoValue*) dB->xClass.objType;
 		if( dA->type == DAO_CLASS ) dA = (DaoValue*) dA->xClass.objType;
@@ -3100,10 +3108,11 @@ void DaoProcess_DoCheckIsa( DaoProcess *self, DaoVmCode *vmc )
 void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoValue **index = NULL;
-	DaoValue *B = dao_none_value;
+	DaoValue *C, *B = dao_none_value;
 	DaoValue *A = self->activeValues[ vmc->a ];
 	DaoTypeCore *core = DaoValue_GetTypeCore( A );
 	DaoInteger di = {DAO_INTEGER,0,0,0,0,0};
+	int errors = self->exceptions->size;
 	int count = 1;
 
 	self->activeCode = vmc;
@@ -3128,7 +3137,7 @@ void DaoProcess_DoGetItem( DaoProcess *self, DaoVmCode *vmc )
 	if( self->stackReturn < 0 && self->status != DAO_PROCESS_STACKED ){
 		if( C != NULL ){
 			DaoProcess_PutValue( self, C );
-		}else if( self->errors->size == errors ){
+		}else if( self->exceptions->size == errors ){
 			DaoProcess_RaiseError( self, "Type", "" );
 		}
 	}
@@ -3139,6 +3148,7 @@ void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *C, *A = self->activeValues[ vmc->a ];
 	DaoTypeCore *core = DaoValue_GetTypeCore( A );
 	DString *name = self->activeRoutine->routConsts->value->items.pValue[ vmc->b ]->xString.value;
+	int errors = self->exceptions->size;
 
 	self->activeCode = vmc;
 	self->stackReturn = -1;
@@ -3151,7 +3161,7 @@ void DaoProcess_DoGetField( DaoProcess *self, DaoVmCode *vmc )
 	if( self->stackReturn < 0 && self->status != DAO_PROCESS_STACKED ){
 		if( C != NULL ){
 			DaoProcess_PutValue( self, C );
-		}else if( self->errors->size == errors ){
+		}else if( self->exceptions->size == errors ){
 			DaoProcess_RaiseError( self, "Type", "" );
 		}
 	}
@@ -3167,6 +3177,7 @@ void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *C = self->activeValues[ vmc->c ];
 	DaoTypeCore *core = DaoValue_GetTypeCore( C );
 	DaoInteger di = {DAO_INTEGER,0,0,0,0,0};
+	int errors = self->exceptions->size;
 	int ret, count = 1;
 
 	self->activeCode = vmc;
@@ -3189,7 +3200,7 @@ void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 	}
 	ret = core->DoSetItem( C, index, count, A, self );
 	if( ret != 0 && self->status != DAO_PROCESS_STACKED ){
-		if( self->errors->size == errors ){
+		if( self->exceptions->size == errors ){
 			DaoProcess_RaiseError( self, "Type", "" );
 		}
 	}
@@ -3200,6 +3211,7 @@ void DaoProcess_DoSetField( DaoProcess *self, DaoVmCode *vmc )
 	DaoValue *C = self->activeValues[ vmc->c ];
 	DaoValue *name = self->activeRoutine->routConsts->value->items.pValue[ vmc->b ];
 	DaoTypeCore *core = DaoValue_GetTypeCore( C );
+	int errors = self->exceptions->size;
 	int ret;
 
 	self->activeCode = vmc;
@@ -3211,7 +3223,7 @@ void DaoProcess_DoSetField( DaoProcess *self, DaoVmCode *vmc )
 	}
 	ret = core->DoSetField( C, name->xString.value, A, self );
 	if( ret != 0 && self->status != DAO_PROCESS_STACKED ){
-		if( self->errors->size == errors ){
+		if( self->exceptions->size == errors ){
 			DaoProcess_RaiseError( self, "Type", "" );
 		}
 	}
@@ -3770,7 +3782,7 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 			DaoProcess_PrepareCall( self, rout, caller, params, types, npar, vmc, 0 );
 		}
 	}else if( caller->type == DAO_CTYPE ){
-		DaoType *type = caller->xCtype.ctype;
+		DaoType *type = caller->xCtype.valueType;
 		rout = rout2 = DaoType_GetInitor( type );
 		if( rout == NULL ){
 			DaoProcess_RaiseError( self, "Type", "C type not callable" );
@@ -3965,7 +3977,7 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 	DaoType *type = DaoNamespace_GetType( self->activeNamespace, va );
 	DaoInteger *index;
 	DaoTuple *iter;
-	int rc = DAO_ERROR_FIELD_NOTEXIST;
+	int rc = DAO_ERROR_FIELD_ABSENT;
 
 	if( va == NULL || va->type == 0 ) return;
 
@@ -4360,7 +4372,7 @@ void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc )
 			const char *msg = "Enumeration with duplicated key \"%s\"!";
 			DaoProcess_RaiseException2( self, "Warning", msg, key->chars );
 		}
-		if( (c = DaoMap_Insert2( map, pp[opA+i], pp[opA+i+1], self ) ) ){
+		if( (c = DaoMap_Insert( map, pp[opA+i], pp[opA+i+1] ) ) ){
 			if( c ==1 ){
 				DaoProcess_RaiseError( self, "Type", "key not matching" );
 			}else if( c ==2 ){
@@ -4409,7 +4421,10 @@ void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc )
 	if( array->etype == DAO_NONE ) array->etype = numtype;
 	/* TODO: more restrict type checking on elements. */
 	DaoArray_ResizeArray( array, dim, 2 );
-	if( numtype == DAO_INTEGER ){
+	if( numtype == DAO_BOOLEAN ){
+		dao_boolean *vec = array->data.i;
+		for(i=0; i<size; i++) vec[i] = DaoValue_GetInteger( regv[ opA+i ] );
+	}else if( numtype == DAO_INTEGER ){
 		dao_integer *vec = array->data.i;
 		for(i=0; i<size; i++) vec[i] = DaoValue_GetInteger( regv[ opA+i ] );
 	}else if( numtype == DAO_FLOAT ){
@@ -4606,7 +4621,8 @@ void DaoProcess_DoPacking( DaoProcess *self, DaoVmCode *vmc )
 
 void DaoProcess_DoBinary( DaoProcess *self, DaoVmCode *vmc )
 {
-	int errors = self->errors->size;
+	int D = 0;
+	int errors = self->exceptions->size;
 	DaoValue *A = self->activeValues[ vmc->a ];
 	DaoValue *B = self->activeValues[ vmc->b ];
 	DaoValue *C, *O, *AB[2];
@@ -4681,7 +4697,7 @@ void DaoProcess_DoBinary( DaoProcess *self, DaoVmCode *vmc )
 	if( self->stackReturn < 0 && self->status != DAO_PROCESS_STACKED ){
 		if( C != NULL ){
 			DaoProcess_PutValue( self, C );
-		}else if( self->errors->size == errors ){
+		}else if( self->exceptions->size == errors ){
 			DaoProcess_RaiseError( self, "Type", "" );
 		}
 	}
@@ -4689,7 +4705,7 @@ void DaoProcess_DoBinary( DaoProcess *self, DaoVmCode *vmc )
 
 void DaoProcess_DoUnary( DaoProcess *self, DaoVmCode *vmc )
 {
-	int errors = self->errors->size;
+	int errors = self->exceptions->size;
 	DaoValue *C, *A = self->activeValues[ vmc->a ];
 	DaoTypeCore *core;
 
@@ -4711,7 +4727,7 @@ void DaoProcess_DoUnary( DaoProcess *self, DaoVmCode *vmc )
 	if( self->stackReturn < 0 && self->status != DAO_PROCESS_STACKED ){
 		if( C != NULL ){
 			DaoProcess_PutValue( self, C );
-		}else if( self->errors->size == errors ){
+		}else if( self->exceptions->size == errors ){
 			DaoProcess_RaiseError( self, "Type", "" );
 		}
 	}
@@ -4777,7 +4793,7 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 			DaoType *tb = B->xMap.ctype->nested->items.pType[0];
 			if( tb && DaoType_MatchTo( ta, tb, NULL ) == 0 ) return;
 		}
-		*C = DaoMap_Find2( (DaoMap*) B, A, self ) != NULL;
+		*C = DaoMap_Find( (DaoMap*) B, A ) != NULL;
 	}else if( B->type == DAO_TUPLE && B->xTuple.subtype == DAO_PAIR ){
 		int c1 = DaoValue_ComparePro( B->xTuple.values[0], A, self );
 		int c2 = DaoValue_ComparePro( A, B->xTuple.values[1], self );
@@ -5401,9 +5417,9 @@ DaoTypeCore daoProcessCore =
 	NULL,  NULL,            /* Comparison */
 	NULL,  NULL,            /* Conversion */
 	NULL,  NULL,            /* ForEach */
-	DaoProcess_Print,       /* Print */
+	NULL,                   /* Print */
 	NULL,                   /* Slice */
 	NULL,                   /* Copy */
-	DaoProcess_CoreDelete,  /* Delete */
+	(DaoDeleteFunction) DaoProcess_Delete,  /* Delete */
 	NULL                    /* HandleGC */
 };

@@ -836,6 +836,10 @@ DNode* DMap_Insert( DMap *self, void *key, void *value )
 	}
 	return p;
 }
+void DMap_Erase( DMap *self, void *key )
+{
+	DMap_EraseNode( self, DMap_FindNode( self, key, DAO_KEY_EQ ) );
+}
 DNode* DMap_Find( DMap *self, void *key )
 {
 	return DMap_FindNode( self, key, DAO_KEY_EQ );

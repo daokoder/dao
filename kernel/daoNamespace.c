@@ -48,74 +48,15 @@
 #include"daoValue.h"
 
 
-/* Need separated mutexes for values and methods setup.
- * Otherwise, a mutex deadlock may occur if values setup
- * is triggered by methods setup. */
+/*
+// Need separated mutexes for values and methods setup.
+// Otherwise, a mutex deadlock may occur if values setup
+// is triggered by methods setup.
+*/
 DMutex mutex_values_setup;
 DMutex mutex_methods_setup;
 DMutex mutex_type_map;
 
-
-static void DNS_GetField( DaoValue *self0, DaoProcess *proc, DString *name )
-{
-	DaoNamespace *self = & self0->xNamespace;
-	DNode *node = NULL;
-	int st, pm, id;
-	node = MAP_Find( self->lookupTable, name );
-	if( node == NULL ) goto FieldNotExist;
-	st = LOOKUP_ST( node->value.pInt );
-	pm = LOOKUP_PM( node->value.pInt );
-	id = LOOKUP_ID( node->value.pInt );
-	if( pm == DAO_PERM_PRIVATE && self != proc->activeNamespace ) goto FieldNoPermit;
-	if( st == DAO_GLOBAL_CONSTANT ){
-		DaoProcess_PutValue( proc, self->constants->items.pConst[id]->value );
-	}else{
-		DaoProcess_PutValue( proc, self->variables->items.pVar[id]->value );
-	}
-	return;
-FieldNotExist:
-	DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
-	return;
-FieldNoPermit:
-	DaoProcess_RaiseError( proc, "Field::NotPermit", name->chars );
-	return;
-InvalidField:
-	DaoProcess_RaiseError( proc, "Field", name->chars );
-}
-static void DNS_SetField( DaoValue *self0, DaoProcess *proc, DString *name, DaoValue *value )
-{
-	DaoNamespace *self = & self0->xNamespace;
-	DaoVariable *dest;
-	DNode *node = NULL;
-	int st, pm, id;
-	node = MAP_Find( self->lookupTable, name );
-	if( node == NULL ) goto FieldNotExist;
-	st = LOOKUP_ST( node->value.pInt );
-	pm = LOOKUP_PM( node->value.pInt );
-	id = LOOKUP_ID( node->value.pInt );
-	if( pm == DAO_PERM_PRIVATE && self != proc->activeNamespace ) goto FieldNoPermit;
-	if( st == DAO_GLOBAL_CONSTANT ) goto FieldNoPermit;
-	dest = self->variables->items.pVar[id];
-	if( DaoValue_Move( value, & dest->value, dest->dtype ) ==0 ) goto TypeNotMatching;
-	return;
-FieldNotExist:
-	DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
-	return;
-FieldNoPermit:
-	DaoProcess_RaiseError( proc, "Field::NotPermit", name->chars );
-	return;
-TypeNotMatching:
-	DaoProcess_RaiseError( proc, "Type", "not matching" );
-	return;
-InvalidField:
-	DaoProcess_RaiseError( proc, "Field", name->chars );
-}
-static void DNS_GetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N )
-{
-}
-static void DNS_SetItem( DaoValue *self0, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
-{
-}
 
 DaoNamespace* DaoNamespace_GetNamespace( DaoNamespace *self, const char *name )
 {
@@ -173,19 +114,6 @@ void DaoNamespace_AddConstValue( DaoNamespace *self, const char *name, DaoValue 
 	DString s = DString_WrapChars( name );
 	DaoNamespace_AddConst( self, & s, value, DAO_PERM_PUBLIC );
 }
-static void DaoTypeCore_Parents( DaoTypeCore *core, DList *parents )
-{
-	daoint i, k, n;
-	DList_Clear( parents );
-	DList_Append( parents, core );
-	for(k=0; k<parents->size; k++){
-		core = (DaoTypeCore*) parents->items.pVoid[k];
-		for(i=0; i<DAO_MAX_CDATA_SUPER; i++){
-			if( core->supers[i] == NULL ) break;
-			DList_Append( parents, core->supers[i] );
-		}
-	}
-}
 int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeKernel *kernel )
 {
 	daoint i, j, valCount;
@@ -233,9 +161,9 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeKernel *kernel )
 				DaoTypeKernel *skn = kernel->abtype->bases->items.pType[i]->kernel;
 				DaoTypeCore *sup = skn->core;
 
-				if( sup->numItems == NULL ) continue;
-				for(j=0; sup->numItems[j].name!=NULL; j++){
-					DString name = DString_WrapChars( sup->numItems[j].name );
+				if( sup->numbers == NULL ) continue;
+				for(j=0; sup->numbers[j].name!=NULL; j++){
+					DString name = DString_WrapChars( sup->numbers[j].name );
 					it = DMap_Find( skn->values, & name );
 					if( it && DMap_Find( values, & name ) == NULL ){
 						DMap_Insert( values, it->key.pVoid, it->value.pVoid );
@@ -397,7 +325,7 @@ static void DaoValue_AddType( DaoValue *self, DString *name, DaoType *type )
 	DaoValue *cst = (DaoValue*) type;
 	DaoTypeKernel *kernel;
 
-	if( type->tid == DAO_CTYPE ) type2 = type->aux->xCtype.cdtype;
+	if( type->tid == DAO_CTYPE ) type2 = type->aux->xCtype.valueType;
 	if( type->tid >= DAO_OBJECT && type->tid <= DAO_INTERFACE ) cst = type->aux;
 	switch( self->type ){
 	case DAO_CTYPE :
@@ -668,7 +596,7 @@ DoneSourceType:
 	// To create a template-like alias to a template-like cdata type, it is only
 	// necessary to add a specialization entry in the template cdata type.
 	*/
-	if( tp->tid >= DAO_CSTRUCT && tp->tid <= DAO_CDATA ) tp = tp->aux->xCtype.cdtype;
+	if( tp->tid >= DAO_CSTRUCT && tp->tid <= DAO_CDATA ) tp = tp->aux->xCtype.valueType;
 	tp2 = tp;
 	if( (tp->tid && tp->tid <= DAO_TUPLE) || tp->tid == DAO_VARIANT ){
 		tp = DaoType_Copy( tp );
@@ -695,7 +623,7 @@ static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeCore *cor
 {
 	DaoTypeKernel *kernel = DaoTypeKernel_New( core );
 	DaoCtype *ctype = DaoCtype_New( core, tid );
-	DaoType *cdata_type = ctype->objectType;
+	DaoType *cdata_type = ctype->valueType;
 	DaoType *ctype_type = ctype->classType;
 	int i;
 
@@ -708,7 +636,7 @@ static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeCore *cor
 
 	for(i=0; i<sizeof(core->bases); i++){
 		DaoTypeCore *base = core->bases[i];
-		DaoTypeKernel *basekern = DaoVmSpace_GetKernel( vmspace, base );
+		DaoTypeKernel *basekern = DaoVmSpace_GetKernel( self->vmSpace, base );
 		if( base == NULL ) break;
 		if( basekern == NULL ){
 			DaoGC_TryDelete( (DaoValue*) ctype );
@@ -787,6 +715,7 @@ DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeCore *core )
 	DaoInterface *inter;
 	DaoTypeKernel *kernel = DaoVmSpace_GetKernel( self->vmSpace, core );
 	DaoType *basetype;
+	DaoType *abtype;
 	int i;
 
 	if( kernel != NULL ) return kernel->abtype;
@@ -962,7 +891,7 @@ DaoRoutine* DaoNamespace_WrapFunction( DaoNamespace *self, DaoCFunction fptr, co
 	return func;
 }
 
-int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFuncItem *items )
+int DaoNamespace_WrapFunctions( DaoNamespace *self, DaoFunctionEntry *items )
 {
 	DaoParser *defparser = DaoVmSpace_AcquireParser( self->vmSpace );
 	DaoParser *parser = DaoVmSpace_AcquireParser( self->vmSpace );
@@ -1642,11 +1571,11 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		return pb->xClass.objType;
 	case DAO_CTYPE :
 		if( pb == NULL ) return NULL;
-		return pb->xCtype.ctype;
+		return pb->xCtype.classType;
 	case DAO_CDATA :
 	case DAO_CSTRUCT :
 		if( pb == NULL ) return NULL;
-		return pb->xCtype.cdtype;
+		return pb->xCtype.valueType;
 	}
 	
 	if( tid == DAO_VARIANT ){
@@ -2073,6 +2002,73 @@ DaoNamespace* DaoNamespace_LoadModule( DaoNamespace *self, DString *name )
 }
 
 
+static DaoType* DaoNamespace_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
+{
+}
+
+static DaoValue* DaoNamespace_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
+{
+	DaoNamespace *NS = (DaoNamespace*) self;
+	DNode *node = NULL;
+	int st, pm, id;
+	node = MAP_Find( NS->lookupTable, name );
+	if( node == NULL ) goto FieldNotExist;
+	st = LOOKUP_ST( node->value.pInt );
+	pm = LOOKUP_PM( node->value.pInt );
+	id = LOOKUP_ID( node->value.pInt );
+	if( pm == DAO_PERM_PRIVATE && NS != proc->activeNamespace ) goto FieldNoPermit;
+	if( st == DAO_GLOBAL_CONSTANT ){
+		DaoProcess_PutValue( proc, NS->constants->items.pConst[id]->value );
+	}else{
+		DaoProcess_PutValue( proc, NS->variables->items.pVar[id]->value );
+	}
+	return NULL;
+FieldNotExist:
+	DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
+	return NULL;
+FieldNoPermit:
+	DaoProcess_RaiseError( proc, "Field::NotPermit", name->chars );
+	return NULL;
+InvalidField:
+	DaoProcess_RaiseError( proc, "Field", name->chars );
+	return NULL;
+}
+
+static int DaoNamespace_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
+{
+}
+
+static int DaoNamespace_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc )
+{
+	DaoVariable *dest;
+	DaoNamespace *NS = (DaoNamespace*) self;
+	DNode *node = MAP_Find( NS->lookupTable, name );
+	int st, pm, id;
+
+	if( node == NULL ) goto FieldNotExist;
+	st = LOOKUP_ST( node->value.pInt );
+	pm = LOOKUP_PM( node->value.pInt );
+	id = LOOKUP_ID( node->value.pInt );
+	if( pm == DAO_PERM_PRIVATE && NS != proc->activeNamespace ) goto FieldNoPermit;
+	if( st == DAO_GLOBAL_CONSTANT ) goto FieldNoPermit;
+	dest = NS->variables->items.pVar[id];
+	if( DaoValue_Move( value, & dest->value, dest->dtype ) ==0 ) goto TypeNotMatching;
+	return 0;
+FieldNotExist:
+	DaoProcess_RaiseError( proc, "Field::NotExist", name->chars );
+	return DAO_ERROR_FIELD_ABSENT;
+FieldNoPermit:
+	DaoProcess_RaiseError( proc, "Field::NotPermit", name->chars );
+	return DAO_ERROR_FIELD_HIDDEN;
+TypeNotMatching:
+	DaoProcess_RaiseError( proc, "Type", "not matching" );
+	return DAO_ERROR_TYPE;
+InvalidField:
+	DaoProcess_RaiseError( proc, "Field", name->chars );
+	return DAO_ERROR_FIELD;
+}
+
+
 DaoTypeCore daoNamespaceCore =
 {
 	"namespace",                                           /* name */
@@ -2088,9 +2084,9 @@ DaoTypeCore daoNamespaceCore =
 	NULL,                        NULL,                     /* Comparison */
 	NULL,                        NULL,                     /* Conversion */
 	NULL,                        NULL,                     /* ForEach */
-	DaoNamespace_Print,                                    /* Print */
+	NULL,                                                  /* Print */
 	NULL,                                                  /* Slice */
 	NULL,                                                  /* Copy */
-	DaoNamespace_CoreDelete,                               /* Delete */
+	(DaoDeleteFunction) DaoNamespace_Delete,               /* Delete */
 	NULL                                                   /* HandleGC */
 };

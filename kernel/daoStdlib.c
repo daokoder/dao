@@ -277,7 +277,7 @@ static void DaoSTD_Error2( DaoProcess *proc, DaoValue *p[], int n )
 }
 static void DaoSTD_Error3( DaoProcess *proc, DaoValue *p[], int n )
 {
-	DaoType *etype = p[0]->xCtype.cdtype;
+	DaoType *etype = p[0]->xCtype.valueType;
 	DaoException *exception = DaoException_New( etype );
 	DaoException_Init( exception, proc, p[1]->xString.value->chars, p[2] );
 	DList_Append( proc->exceptions, exception );
@@ -356,7 +356,7 @@ static void DaoSTD_Test( DaoProcess *proc, DaoValue *p[], int n )
 	printf( "%i\n", p[0]->type );
 }
 
-DaoFuncItem dao_std_methods[] =
+DaoFunctionEntry dao_std_methods[] =
 {
 	{ DaoSTD_Version,   "version( verbose = false ) => string" },
 	{ DaoSTD_Path,

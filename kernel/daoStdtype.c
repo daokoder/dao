@@ -5852,11 +5852,11 @@ DaoCtype* DaoCtype_New( DaoTypeCore *core, int tid )
 	self->info = DString_New();
 	self->name = DString_NewChars( core->name );
 	self->classType = DaoType_New( core->name, DAO_CTYPE, (DaoValue*) self, NULL );
-	self->objectType = DaoType_New( core->name, tid, (DaoValue*) self, NULL );
+	self->valueType = DaoType_New( core->name, tid, (DaoValue*) self, NULL );
 	self->classType->core = & daoCtypeCore;
-	self->objectType->core = core;
+	self->valueType->core = core;
 	GC_IncRC( self->classType );
-	GC_IncRC( self->objectType );
+	GC_IncRC( self->valueType );
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
@@ -5868,7 +5868,7 @@ void DaoCtype_Delete( DaoCtype *self )
 	DString_Delete( self->name );
 	DString_Delete( self->info );
 	GC_DecRC( self->classType );
-	GC_DecRC( self->objectType );
+	GC_DecRC( self->valueType );
 	dao_free( self );
 }
 
@@ -5877,7 +5877,7 @@ void DaoCtype_Delete( DaoCtype *self )
 
 DaoType* DaoCtype_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
 {
-	DaoValue *value = DaoType_FindValue( self->aux->xCtype.objectType, name );
+	DaoValue *value = DaoType_FindValue( self->aux->xCtype.valueType, name );
 	DaoType *res = NULL;
 
 	if( value && value->type == DAO_ROUTINE ){
@@ -6219,7 +6219,7 @@ DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, int copy, DaoP
 	DString *buffer;
 
 	// TODO: Copy;
-	if( DaoType_MatchToParent( self->xCstruct.ctype, type, NULL, 0 ) ) return self;
+	if( DaoType_MatchTo( self->xCstruct.ctype, type, NULL ) ) return self;
 
 	buffer = DString_NewChars( "(" );
 	DString_Append( buffer, type->name );

@@ -1176,7 +1176,7 @@ static void CHANNEL_Receive( DaoProcess *proc, DaoValue *par[], int N )
 	}
 }
 
-static DaoFuncItem channelMeths[] =
+static DaoFunctionEntry channelMeths[] =
 {
 	{ CHANNEL_New,      "Channel<@V>( cap = 1 )" },
 	{ CHANNEL_Buffer,   "buffer( self: Channel<@V> ) => int" },
@@ -1200,8 +1200,8 @@ static void DaoChannel_GetGCFields( void *p, DList *vs, DList *lists, DList *ms,
 
 DaoTypeCore channelTyper =
 {
-	"Channel<@V>", NULL, NULL, (DaoFuncItem*) channelMeths, {0}, {0},
-	(FuncPtrDel) DaoChannel_Delete, DaoChannel_GetGCFields
+//	"Channel<@V>", NULL, NULL, (DaoFunctionEntry*) channelMeths, {0}, {0},
+//	(FuncPtrDel) DaoChannel_Delete, DaoChannel_GetGCFields
 };
 
 
@@ -1298,7 +1298,7 @@ static void FUTURE_Wait( DaoProcess *proc, DaoValue *par[], int N )
 	DaoProcess_RaiseError( proc, NULL, "Invalid future value" );
 #endif
 }
-static DaoFuncItem futureMeths[] =
+static DaoFunctionEntry futureMeths[] =
 {
 	{ FUTURE_Value,   "value( self: Future<@V> )=>@V" },
 	{ FUTURE_Wait,    "wait( self: Future<@V>, timeout: float = -1 ) => bool" },
@@ -1326,8 +1326,8 @@ static void DaoFuture_GetGCFields( void *p, DList *values, DList *lists, DList *
 
 DaoTypeCore futureTyper =
 {
-	"Future<@V=none>", NULL, NULL, (DaoFuncItem*) futureMeths, {0}, {0},
-	(FuncPtrDel) DaoFuture_Delete, DaoFuture_GetGCFields
+//	"Future<@V=none>", NULL, NULL, (DaoFunctionEntry*) futureMeths, {0}, {0},
+//	(FuncPtrDel) DaoFuture_Delete, DaoFuture_GetGCFields
 };
 
 

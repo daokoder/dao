@@ -266,8 +266,8 @@ DaoNameValue* DaoNameValue_New( DString *name, DaoValue *value );
 //
 // Each C/C++ type is represented by three objects:
 // -- Class Struct:  DaoCtype;
-// -- Class   Type:  DaoType (DaoCtype::ctype);
-// -- Object  Type:  DaoType (DaoCtype::cdtype);
+// -- Class Type  :  DaoType (DaoCtype::classType);
+// -- Value Type  :  DaoType (DaoCtype::valueType);
 */
 struct DaoCtype
 {
@@ -279,7 +279,7 @@ struct DaoCtype
 	DString  *info;
 
 	DaoType  *classType;
-	DaoType  *objectType;
+	DaoType  *valueType;
 };
 
 DAO_DLL DaoCtype* DaoCtype_New( DaoTypeCore *core, int tid );
@@ -295,7 +295,6 @@ struct DaoCstruct
 
 DAO_DLL void DaoCstruct_Init( DaoCstruct *self, DaoType *type );
 DAO_DLL void DaoCstruct_Free( DaoCstruct *self );
-DAO_DLL DaoTypeCore* DaoCstruct_GetDefaultCore();
 
 
 

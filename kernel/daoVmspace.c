@@ -235,7 +235,7 @@ extern DaoTypeCore  daoNamespaceCore;
 extern DaoTypeCore  daoRoutineCore;
 extern DaoTypeCore  daoProcessCore;
 extern DaoTypeCore  daoTypeCore;
-extern DaoTypeCore  daoTypeKernalCore;
+extern DaoTypeCore  daoTypeKernelCore;
 
 extern DaoTypeCore  daoDeviceCore;
 extern DaoTypeCore  daoStreamCore;
@@ -274,7 +274,7 @@ DaoTypeCore* DaoVmSpace_GetTypeCore( short type )
 	case DAO_NAMESPACE :  return & daoNamespaceCore;
 	case DAO_PROCESS   :  return & daoProcessCore;
 	case DAO_TYPE      :  return & daoTypeCore;
-	case DAO_TYPEKERNEL : return & daoTypeKernalCore;
+	case DAO_TYPEKERNEL : return & daoTypeKernelCore;
 	default : break;
 	}
 	return & daoNoneCore;
@@ -724,8 +724,8 @@ DaoVmSpace* DaoVmSpace_New()
 		self->coreNamespace = master->coreNamespace;
 		GC_IncRC( self->coreNamespace );
 
-		self->stdioStream->redirect = master->stdioStream->redirect; // TODO: GC;
-		self->errorStream->redirect = master->errorStream->redirect; // TODO: GC;
+		//self->stdioStream->redirect = master->stdioStream->redirect; // TODO: GC;
+		//self->errorStream->redirect = master->errorStream->redirect; // TODO: GC;
 		self->stdioStream->Read = master->stdioStream->Read;
 		self->stdioStream->Write = master->stdioStream->Write;
 		self->errorStream->Read = master->errorStream->Read;
@@ -1684,7 +1684,7 @@ static void DaoVmSpace_SaveArchive( DaoVmSpace *self, DList *argValues )
 void DaoVmSpace_LoadArchive( DaoVmSpace *self, DString *archive, DString *group )
 {
 	DString *name, *source;
-	DaoVModule module = { NULL, 0, NULL, NULL };
+	DaoVirtualModule module = { NULL, 0, NULL, NULL };
 	char *data = (char*) archive->chars;
 	int slen = strlen( DAO_DLL_SUFFIX );
 	int pos = 4, size = archive->size;
@@ -1786,7 +1786,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 			DaoVmSpace_ExeCmdArgs( self );
 		}
 		if( (self->options & DAO_OPTION_INTERUN) && self->handler == NULL )
-			DaoVmSpace_Interun( self, NULL );
+			DaoVmSpace_Interun( self );
 		return 0;
 	}
 	argNames = DList_New( DAO_DATA_STRING );
@@ -1879,7 +1879,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 	N = ns->argParams->value->size;
 	if( expMain != NULL ){
 		int ret = DaoProcess_Call( vmp, expMain, NULL, ps, N );
-		if( ret == DAO_ERROR_PARAM ){
+		if( ret == DAO_ERROR_ARG ){
 			DaoStream_WriteChars( io, "ERROR: invalid command line arguments.\n" );
 		}
 		if( ret ) return 1;
@@ -1888,7 +1888,7 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		}
 	}
 	if( (self->options & DAO_OPTION_INTERUN) && self->handler == NULL )
-		DaoVmSpace_Interun( self, NULL );
+		DaoVmSpace_Interun( self );
 
 	return 0;
 }
@@ -2222,7 +2222,7 @@ int DaoVmSpace_AddPlugin( DaoVmSpace *self, DString *name, DaoNamespace *nspace 
 	return 1;
 }
 
-int DaoVmSpace_AddVirtualModules( DaoVmSpace *self, DaoVModule modules[] )
+int DaoVmSpace_AddVirtualModules( DaoVmSpace *self, DaoVirtualModule modules[] )
 {
 	int vmods = 0;
 	/* For $(DAR_DIR) in archive paths: */
@@ -2236,7 +2236,7 @@ int DaoVmSpace_AddVirtualModules( DaoVmSpace *self, DaoVModule modules[] )
 	}
 	return vmods;
 }
-void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, DaoVModule *module )
+void DaoVmSpace_AddVirtualModule( DaoVmSpace *self, DaoVirtualModule *module )
 {
 	FILE *fin;
 	DNode *node;
@@ -2602,13 +2602,13 @@ extern DMutex mutex_methods_setup;
 extern DMutex mutex_routines_update;
 extern DMutex mutex_routine_specialize;
 extern DMutex mutex_routine_specialize2;
-extern DaoFuncItem dao_mt_methods[];
+extern DaoFunctionEntry dao_mt_methods[];
 #endif
 
 DaoType *dao_type_io_device = NULL;
 DaoType *dao_type_stream = NULL;
-extern DaoFuncItem dao_std_methods[];
-extern DaoFuncItem dao_io_methods[];
+extern DaoFunctionEntry dao_std_methods[];
+extern DaoFunctionEntry dao_io_methods[];
 
 #include<signal.h>
 void print_trace();
@@ -2855,7 +2855,7 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_AddConstValue( vms->daoNamespace, "std", (DaoValue*) NS );
 	DaoNamespace_WrapFunctions( NS, dao_std_methods );
 
-	DaoNamespace_UpdateLookupTable( self->mainNamespace );
+	DaoNamespace_UpdateLookupTable( vms->mainNamespace );
 
 	DaoVmSpace_InitPath( vms );
 
@@ -2954,10 +2954,10 @@ DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DaoParser
 	return ns;
 }
 
-void DaoVmSpace_AddKernel( DaoVmSpace *self, DaoTypeCore *core, DaoType *type )
+void DaoVmSpace_AddKernel( DaoVmSpace *self, DaoTypeCore *core, DaoTypeKernel *kernel )
 {
 	DaoVmSpace_Lock( self );
-	DMap_Insert( self->typeKernels, core, type );
+	DMap_Insert( self->typeKernels, core, kernel );
 	DaoVmSpace_Unlock( self );
 }
 
@@ -2971,14 +2971,14 @@ DaoTypeKernel* DaoVmSpace_GetKernel( DaoVmSpace *self, DaoTypeCore *core )
 	it = DMap_Find( self->typeKernels, core );
 	DaoVmSpace_Unlock( self );
 
-	if( it ) return it->value.pType;
+	if( it ) return (DaoTypeKernel*) it->value.pValue;
 	return NULL;
 }
 
 
 static DaoType* DaoVmSpace_MakeExceptionType2( DaoVmSpace *self, const char *name )
 {
-	DaoTypeCore *typer;
+	DaoTypeCore *core;
 	DaoValue *value;
 	DaoType *type, *parent = NULL;
 	DString *basename, sub;
@@ -3001,17 +3001,17 @@ static DaoType* DaoVmSpace_MakeExceptionType2( DaoVmSpace *self, const char *nam
 	sub = DString_WrapChars( name + offset );
 	value = DaoType_FindValueOnly( parent, & sub );
 	if( value != NULL ){
-		if( value->type == DAO_CTYPE ) return value->xCtype.cdtype;
+		if( value->type == DAO_CTYPE ) return value->xCtype.valueType;
 		return NULL;
 	}
 
-	typer = (DaoTypeCore*) dao_calloc( 1, sizeof(DaoTypeCore) );
-	typer->name = (char*) dao_malloc( (strlen(name)+1) * sizeof(char) );
-	strcpy( (char*) typer->name, name );
-	typer->supers[0] = parent->typer;
-	typer->Delete = parent->typer->Delete;
-	typer->GetGCFields = parent->typer->GetGCFields;
-	type = DaoNamespace_WrapType( self->daoNamespace, typer, DAO_CSTRUCT, 0 );
+	core = (DaoTypeCore*) dao_calloc( 1, sizeof(DaoTypeCore) );
+	core->name = (char*) dao_malloc( (strlen(name)+1) * sizeof(char) );
+	strcpy( (char*) core->name, name );
+	core->bases[0] = parent->core;
+	core->Delete = parent->core->Delete;
+	core->HandleGC = parent->core->HandleGC;
+	type = DaoNamespace_WrapType( self->daoNamespace, core, DAO_CSTRUCT, 0 );
 	if( type == NULL ) return NULL;
 
 	if( parent->kernel->initRoutines ){
@@ -3034,12 +3034,15 @@ static DaoType* DaoVmSpace_MakeExceptionType2( DaoVmSpace *self, const char *nam
 	}
 
 	type->kernel->attribs |= DAO_TYPEKERNEL_FREE;
+	// TODO: exception
+#if 0
 	for(i=DAO_EXCEPTION; i<ENDOF_BASIC_EXCEPT; i++){
-		if( strcmp( typer->name, daoExceptionNames[i] ) == 0 ){
+		if( strcmp( core->name, daoExceptionNames[i] ) == 0 ){
 			DString_SetChars( type->aux->xCtype.info, daoExceptionTitles[i] );
 			break;
 		}
 	}
+#endif
 	return type;
 }
 
