@@ -757,7 +757,8 @@ DaoValue* DaoValue_Convert( DaoValue *self, DaoType *type, int copy, DaoProcess 
 	value = core->DoConversion( self, type, copy, proc );
 	if( value == NULL || value->type <= DAO_ENUM || copy == 0 ) return value;
 
-	if( value == self || DaoValue_ChildOf( value, self ) || DaoValue_ChildOf( self, value ) ){
+	if( value == self /*|| DaoValue_ChildOf( value, self ) || DaoValue_ChildOf( self, value )*/ ){
+		// No way to determine inheritance relationship between wrapped C++ objects;
 		core = DaoValue_GetTypeCore( value );
 		if( core == NULL || core->Copy == NULL ) return NULL;
 
@@ -983,6 +984,7 @@ DaoType* DaoValue_GetType( DaoValue *self )
 	case DAO_INTERFACE : return self->xInterface.abtype;
 	case DAO_CINTYPE   : return self->xCinType.citype;
 	case DAO_CINVALUE  : return self->xCinValue.cintype->vatype;
+	case DAO_NAMESPACE : return self->xNamespace.nstype;
 	default : break;
 	}
 	return NULL;

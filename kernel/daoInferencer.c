@@ -1352,9 +1352,9 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 		ct = at;
 		/* tuple slicing with constant index range, will produce a tuple with type
 		// determined from the index range. For variable range, it produces tuple<...>. */
-		if( value && value->type == DAO_RANGE ){
-			DaoValue *first = value->xRange.first;
-			DaoValue *second = value->xRange.second;
+		if( value && value->xBase.subtype == DAO_RANGE ){
+			DaoValue *first = value->xTuple.values[0];
+			DaoValue *second = value->xTuple.values[1];
 			daoint start = DaoValue_GetInteger( first );
 			daoint end = DaoValue_GetInteger( second );
 			/* Note: a tuple may contain more items than what are explicitly typed. */

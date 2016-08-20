@@ -246,7 +246,6 @@ typedef struct DaoStream       DaoStream;
 typedef struct DaoCtype        DaoCtype;
 typedef struct DaoCstruct      DaoCstruct;
 typedef struct DaoCdata        DaoCdata;
-typedef struct DaoRange        DaoRange;
 typedef struct DaoRegex        DaoRegex;
 typedef struct DaoException    DaoException;
 typedef struct DaoNamespace    DaoNamespace;
@@ -254,7 +253,6 @@ typedef struct DaoVmSpace      DaoVmSpace;
 typedef struct DaoProcess      DaoProcess;
 typedef struct DaoChannel      DaoChannel;
 typedef struct DaoType         DaoType;
-typedef struct DaoIterator     DaoIterator;
 
 /*
 // The following macros can be used instead of the original type names,
@@ -409,19 +407,17 @@ struct DaoTypeCore
 	//
 	// If the conversion is used to convert invariables to variables,
 	// the copy parameter will be set to one. And non-primitive values
-	// are expected to be copied before returning. However, if they are
-	// not copied, the Copy() functions (if defined) in their type cores
-	// will be used to create copies.
+	// are expected to be copied before returning.
 	*/
 
 	DaoType* (*CheckForEach)( DaoType *self, DaoRoutine *rout );
-	void (*DoForEach)( DaoValue *self, DaoIterator *iterator, DaoProcess *proc );
+	void (*DoForEach)( DaoValue *self, DaoTuple *iterator, DaoProcess *proc );
 	/*
 	// Functions for preparing for-in iteration:
 	// The check function must return a specialized type of the built-in
 	// iterator type;
 	// The execution function should initialize the iterator properly;
-	// The GetItem functions should handle the case where DaoIterator
+	// The GetItem functions should handle the case where DaoTuple
 	// is the sub-index;
 	*/
 

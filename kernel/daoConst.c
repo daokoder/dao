@@ -224,14 +224,6 @@ const char* const coreTypeNames[] =
 	"none", "bool", "int", "float", "complex", "string",
 	"enum", "array", "list", "map", "tuple"
 };
-const char *const daoBitBoolArithOpers[] = {
-	"!", "-", "~", "%", "+", "-", "*", "/", "%", "**", "&&", "||",
-	"<", "<=", "==", "!=", "in", "&", "|", "^", "<<", ">>"
-};
-const char *const daoBitBoolArithOpers2[] = {
-	NULL, NULL, NULL, NULL, "+=", "-=", "*=", "/=", "%=", NULL, NULL, NULL,
-	NULL, NULL, NULL, NULL, NULL, "&=", "|=", "^=", NULL, NULL
-};
 
 const char *daoRoutineCodeHeader =
 "   ID :    OPCODE    :     A ,     B ,     C ;  [ LINE ],  NOTES\n";

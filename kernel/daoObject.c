@@ -125,10 +125,11 @@ void DaoObject_Delete( DaoObject *self )
 	dao_free( self );
 }
 
-int DaoObject_ChildOf( DaoValue *self, DaoValue *obj )
+int DaoObject_ChildOf( DaoObject *self, DaoValue *obj )
 {
-	int i;
-	if( obj == self ) return 1;
+	if( obj == (DaoValue*) self ) return 1;
+#if 0
+	// No way to determine inheritance relationship between wrapped C++ objects;
 	if( self->type >= DAO_CSTRUCT && self->type <= DAO_CDATA ){
 		if( obj->type >= DAO_CSTRUCT && obj->type <= DAO_CDATA ){
 			DaoCstruct *cdata1 = (DaoCstruct*) self;
@@ -137,10 +138,11 @@ int DaoObject_ChildOf( DaoValue *self, DaoValue *obj )
 		}
 		return 0;
 	}
-	if( self->type != DAO_OBJECT || self->xObject.parent == NULL ) return 0;
-	if( obj == self->xObject.parent ) return 1;
-	if( DaoObject_ChildOf( self->xObject.parent, obj ) ) return 1;
-	return 0;
+#endif
+	if( self->parent == NULL ) return 0;
+	if( self->parent == obj ) return 1;
+	if( self->parent->type != DAO_OBJECT ) return 0;
+	return DaoObject_ChildOf( (DaoObject*) self->parent, obj );
 }
 
 DaoValue* DaoObject_CastToBase( DaoObject *self, DaoType *host )
@@ -199,7 +201,7 @@ int DaoObject_SetData( DaoObject *self, DString *name, DaoValue *data, DaoObject
 	DaoValue **value ;
 	DaoClass *klass = self->defClass;
 	DaoObject *null = (DaoObject*) klass->objType->value;
-	int child = hostObject && DaoObject_ChildOf( (DaoValue*) hostObject, (DaoValue*) self );
+	int child = hostObject && DaoObject_ChildOf( hostObject, (DaoValue*) self );
 	int id, st, up, pm, access;
 
 	if( self == null ) return DAO_ERROR;
@@ -235,7 +237,7 @@ int DaoObject_GetData( DaoObject *self, DString *name, DaoValue **data, DaoObjec
 	DaoValue *p = NULL;
 	DaoClass *klass = self->defClass;
 	DaoObject *null = (DaoObject*) klass->objType->value;
-	int child = hostObject && DaoObject_ChildOf( (DaoValue*) hostObject, (DaoValue*) self );
+	int child = hostObject && DaoObject_ChildOf( hostObject, (DaoValue*) self );
 	int id, st, up, pm, access;
 
 	*data = NULL;
@@ -315,6 +317,7 @@ static DaoValue* DaoObject_DoGetField( DaoValue *self, DString *name, DaoProcess
 {
 	DaoObject *object = (DaoObject*) self;
 	DaoObject *host = proc->activeObject;
+	DaoClass *hostClass = host ? host->defClass : NULL;
 	DaoValue *value = NULL;
 	int rc = DaoObject_GetData( object, name, & value, host );
 	if( rc ){
@@ -323,7 +326,7 @@ static DaoValue* DaoObject_DoGetField( DaoValue *self, DString *name, DaoProcess
 
 		DString_SetChars( field, "." );
 		DString_Append( field, name );
-		rout = DaoClass_FindMethod( object->defClass, field->chars, host->defClass );
+		rout = DaoClass_FindMethod( object->defClass, field->chars, hostClass );
 		if( rout == NULL ) return NULL;
 		rc = DaoProcess_PushCallable( proc, rout, self, NULL, 0 );
 	}else{
@@ -371,6 +374,7 @@ static int DaoObject_DoSetField( DaoValue *self, DString *name, DaoValue *value,
 {
 	DaoObject *object = (DaoObject*) self;
 	DaoObject *host = proc->activeObject;
+	DaoClass *hostClass = host ? host->defClass : NULL;
 	int ec = DaoObject_SetData( object, name, value, host );
 	if( ec != DAO_ERROR ){
 		DString *field = proc->string;
@@ -379,7 +383,7 @@ static int DaoObject_DoSetField( DaoValue *self, DString *name, DaoValue *value,
 		DString_SetChars( field, "." );
 		DString_Append( field, name );
 		DString_AppendChars( field, "=" );
-		rout = DaoClass_FindMethod( object->defClass, field->chars, host->defClass );
+		rout = DaoClass_FindMethod( object->defClass, field->chars, hostClass );
 		if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
 		ec = DaoProcess_PushCallable( proc, rout, self, & value, 1 );
 	}
@@ -401,8 +405,8 @@ static DaoType* DaoObject_CheckGetItem( DaoType *self, DaoType *index[], int N, 
 static DaoValue* DaoObject_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *proc )
 {
 	DaoObject *object = (DaoObject*) self;
-	DaoObject *host = proc->activeObject;
-	DaoRoutine *rout = DaoClass_FindMethod( object->defClass, "[]", host->defClass );
+	DaoClass *host = proc->activeObject ? proc->activeObject->defClass : NULL;
+	DaoRoutine *rout = DaoClass_FindMethod( object->defClass, "[]", host );
 	int rc = DaoProcess_PushCallable( proc, rout, self, index, N );
 	if( rc ) DaoProcess_RaiseError( proc, daoExceptionNames[rc], NULL );
 	return NULL;
@@ -426,8 +430,8 @@ static int DaoObject_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoTy
 static int DaoObject_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc )
 {
 	DaoObject *object = (DaoObject*) self;
-	DaoObject *host = proc->activeObject;
-	DaoRoutine *rout = DaoClass_FindMethod( object->defClass, "[]=", host->defClass );
+	DaoClass *host = proc->activeObject ? proc->activeObject->defClass : NULL;
+	DaoRoutine *rout = DaoClass_FindMethod( object->defClass, "[]=", host );
 	DaoValue *args[DAO_MAX_PARAM+1];
 	int rc;
 
@@ -439,6 +443,8 @@ static int DaoObject_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoVal
 
 DaoType* DaoObject_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
 {
+	DaoType *type = ctx->routHost;
+	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoRoutine *rout = NULL;
 
 	switch( op->code ){
@@ -448,7 +454,7 @@ DaoType* DaoObject_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
 	case DVM_SIZE  : break;
 	default: return NULL;
 	}
-	rout = DaoClass_FindOperator( (DaoClass*) self->aux, op->code );
+	rout = DaoClass_FindMethod( (DaoClass*) self->aux, DaoVmCode_GetOperator( op->code ), host );
 	if( rout == NULL ) return NULL;
 	if( op->c == op->a ){
 		rout = DaoRoutine_MatchByType( rout, self, & self, 1, DVM_CALL );
@@ -461,6 +467,7 @@ DaoType* DaoObject_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
 
 DaoValue* DaoObject_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
 {
+	DaoClass *host = proc->activeObject ? proc->activeObject->defClass : NULL;
 	DaoRoutine *rout = NULL;
 	int retc = 0;
 
@@ -471,7 +478,7 @@ DaoValue* DaoObject_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
 	case DVM_SIZE  : break;
 	default: return NULL;
 	}
-	rout = DaoClass_FindOperator( self->xObject.defClass, op->code );
+	rout = DaoClass_FindMethod( self->xObject.defClass, DaoVmCode_GetOperator( op->code ), host );
 	if( rout == NULL ) return NULL;
 	if( op->c == op->a ){
 		retc = DaoProcess_PushCallable( proc, rout, self, & self, 1 );
@@ -484,6 +491,8 @@ DaoValue* DaoObject_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
 
 DaoType* DaoObject_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
+	DaoType *type = ctx->routHost;
+	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoRoutine *rout = NULL;
 	DaoType *selftype = NULL;
 
@@ -491,7 +500,8 @@ DaoType* DaoObject_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], 
 	case DVM_ADD : case DVM_SUB :
 	case DVM_MUL : case DVM_DIV :
 	case DVM_MOD : case DVM_POW :
-	case DVM_BITAND : case DVM_BITOR  :
+	case DVM_BITAND : case DVM_BITOR  : case DVM_BITXOR :
+	case DVM_BITLFT : case DVM_BITRIT :
 	case DVM_AND : case DVM_OR :
 	case DVM_LT  : case DVM_LE :
 	case DVM_EQ  : case DVM_NE :
@@ -499,7 +509,7 @@ DaoType* DaoObject_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], 
 		break;
 	default: return NULL;
 	}
-	rout = DaoClass_FindOperator( (DaoClass*) self->aux, op->code );
+	rout = DaoClass_FindMethod( (DaoClass*) self->aux, DaoVmCode_GetOperator( op->code ), host );
 	if( rout == NULL ) return NULL;
 
 	if( op->c == op->a && self == args[0] ) selftype = self;
@@ -511,6 +521,7 @@ DaoType* DaoObject_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], 
 
 DaoValue* DaoObject_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc )
 {
+	DaoClass *host = proc->activeObject ? proc->activeObject->defClass : NULL;
 	DaoRoutine *rout = NULL;
 	DaoValue *selfvalue = NULL;
 
@@ -518,7 +529,8 @@ DaoValue* DaoObject_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], 
 	case DVM_ADD : case DVM_SUB :
 	case DVM_MUL : case DVM_DIV :
 	case DVM_MOD : case DVM_POW :
-	case DVM_BITAND : case DVM_BITOR  :
+	case DVM_BITAND : case DVM_BITOR  : case DVM_BITXOR :
+	case DVM_BITLFT : case DVM_BITRIT :
 	case DVM_AND : case DVM_OR :
 	case DVM_LT  : case DVM_LE :
 	case DVM_EQ  : case DVM_NE :
@@ -526,7 +538,7 @@ DaoValue* DaoObject_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], 
 		break;
 	default: return NULL;
 	}
-	rout = DaoClass_FindOperator( self->xObject.defClass, op->code );
+	rout = DaoClass_FindMethod( self->xObject.defClass, DaoVmCode_GetOperator( op->code ), host );
 	if( rout == NULL ) return NULL;
 
 	if( op->c == op->a && self == args[0] ) selfvalue = self;
@@ -559,7 +571,7 @@ static DaoType* DaoObject_CheckConversion( DaoType *self, DaoType *type, DaoRout
 	return NULL;
 }
 
-static DaoValue* DaoObject_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *proc )
+static DaoValue* DaoObject_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
 	DaoObject *object = (DaoObject*) self;
 	DaoClass *host = proc->activeObject ? proc->activeObject->defClass : NULL;
@@ -575,7 +587,7 @@ static DaoValue* DaoObject_DoConversion( DaoValue *self, DaoType *type, DaoValue
 	rout = DaoClass_FindMethod( object->defClass, buffer->chars, host );
 	DString_Delete( buffer );
 	if( rout != NULL ){
-		int rc = DaoProcess_PushCallable( proc, rout, self, & type, 1 );
+		int rc = DaoProcess_PushCallable( proc, rout, self, (DaoValue**) & type, 1 );
 		if( rc ) return NULL;
 	}
 	return NULL;

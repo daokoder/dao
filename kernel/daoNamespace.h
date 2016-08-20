@@ -41,6 +41,8 @@ struct DaoNamespace
 {
 	DAO_VALUE_COMMON;
 
+	DaoType  *nstype;
+
 	DaoVmSpace *vmSpace;
 
 	DHash_(DString*,size_t)  *lookupTable; /* lookup table; */
@@ -133,8 +135,8 @@ DAO_DLL DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symb
 
 DAO_DLL DaoEnum* DaoNamespace_MakeSymbol( DaoNamespace *self, const char *symbol );
 
-DAO_DLL int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeKernel *kernel );
-DAO_DLL int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeKernel *kernel );
+DAO_DLL int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeCore *core );
+DAO_DLL int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeCore *core );
 
 DAO_DLL void DaoNamespace_SetupType( DaoNamespace *self, DaoTypeCore *core, DaoType *type );
 DAO_DLL void DaoMethods_Insert( DMap *methods, DaoRoutine *rout, DaoNamespace *ns, DaoType *host );

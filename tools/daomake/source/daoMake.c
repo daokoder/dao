@@ -2,7 +2,7 @@
 // DaoMake Tool
 // http://www.daovm.net
 //
-// Copyright (c) 2013-2015, Limin Fu
+// Copyright (c) 2013-2016, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,

@@ -70,6 +70,8 @@ DaoType *dao_type_exception = NULL;
 DaoType *dao_type_warning = NULL;
 DaoType *dao_type_error = NULL;
 DaoType *dao_type_for_iterator = NULL;
+DaoType *dao_type_iterator_int = NULL;
+DaoType *dao_type_iterator_any = NULL;
 DaoType *dao_array_types[DAO_COMPLEX+1] = {0};
 
 
@@ -1826,11 +1828,13 @@ DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 	if( node ) return node->value.pRoutine;
 	return NULL;
 }
+
 DaoRoutine* DaoType_FindFunctionChars( DaoType *self, const char *name )
 {
 	DString mbs = DString_WrapChars( name );
 	return DaoType_FindFunction( self, & mbs );
 }
+
 DaoValue* DaoType_FindValue( DaoType *self, DString *name )
 {
 	DaoValue *func = (DaoValue*) DaoType_FindFunction( self, name );

@@ -127,6 +127,7 @@ DAO_DLL int DaoEnum_SetSymbols( DaoEnum *self, const char *symbols );
 DAO_DLL int DaoEnum_SetValue( DaoEnum *self, DaoEnum *other );
 DAO_DLL int DaoEnum_AddValue( DaoEnum *self, DaoEnum *other );
 DAO_DLL int DaoEnum_RemoveValue( DaoEnum *self, DaoEnum *other );
+DAO_DLL int DaoEnum_Compare( DaoEnum *self, DaoEnum *other );
 
 
 
@@ -199,47 +200,6 @@ DAO_DLL int DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos );
 DAO_DLL int DaoTuple_GetIndex( DaoTuple *self, DString *name );
 
 
-
-/*
-// Built-in Iterator;
-// Copy by value;
-// The structure is the same as DaoTuple;
-// Just the typing and copying is different;
-*/
-struct DaoIterator
-{
-	DAO_VALUE_COMMON;
-
-	int        size;       /* Always two; */
-	DaoType   *ctype;
-	DaoValue  *values[2];  /* First: validity (bool); Second: iterator (specializable); */
-};
-
-DAO_DLL DaoIterator* DaoIterator_New( DaoType *type );
-DAO_DLL void DaoIterator_Delete( DaoIterator *self );
-DAO_DLL void DaoIterator_SetValue( DaoIterator *self, DaoValue *value );
-
-
-
-/*
-// Index or key range;
-// Not a general type;
-// No direct access by users;
-// Copy by value;
-*/
-struct DaoRange
-{
-	DAO_VALUE_COMMON;
-
-	DaoType   *ctype;
-	DaoValue  *first;
-	DaoValue  *second;
-};
-
-DAO_DLL DaoRange* DaoRange_New( DaoType *type );
-DAO_DLL void DaoRange_Delete( DaoRange *self );
-DAO_DLL void DaoRange_SetFirst( DaoRange *self, DaoValue *value );
-DAO_DLL void DaoRange_SetSecond( DaoRange *self, DaoValue *value );
 
 
 

@@ -613,16 +613,17 @@ static void Dao_MakeSlice( DaoProcess *proc, DaoValue *idvalue, daoint N, DArray
 			Dao_SliceInterval( slices, N, pos, 1 );
 			break;
 		}
-	case DAO_RANGE :
+	case DAO_TUPLE :
 		{
-			DaoRange *range = (DaoRange*) idvalue;
+			DaoTuple *range = (DaoTuple*) idvalue;
 
-			if( range->first->type  > DAO_FLOAT ) goto InvalidRange;
-			if( range->second->type > DAO_FLOAT ) goto InvalidRange;
+			if( range->subtype != DAO_TUPLE ) goto InvalidRange;
+			if( range->values[0]->type > DAO_FLOAT ) goto InvalidRange;
+			if( range->values[1]->type > DAO_FLOAT ) goto InvalidRange;
 
-			pos = DaoValue_GetInteger( range->first );
-			end = DaoValue_GetInteger( range->second );
-			if( range->second->type == DAO_NONE ) end = size;
+			pos = DaoValue_GetInteger( range->values[0] );
+			end = DaoValue_GetInteger( range->values[1] );
+			if( range->values[1]->type == DAO_NONE ) end = size;
 
 			pos = Dao_CheckNumberIndex( pos, size, NULL );
 			end = Dao_CheckNumberIndex( end, size + 1, NULL );
@@ -1480,9 +1481,9 @@ static DaoType* DaoArray_CheckGetItem( DaoType *self, DaoType *index[], int N, D
 	if( N == 0 ){
 		return self;
 	}else if( N == 1 ){
-		if( index[0]->tid == DAO_ITERATOR ){
+		if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_ITERATOR ){
 			if( DaoType_CheckNumberIndex( index[0]->nested->items.pType[0] ) ) return etype;
-		}else if( index[0]->tid == DAO_RANGE ){
+		}else if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 			if( DaoType_CheckRangeIndex( index[0] ) ) return self;
 		}else{
 			if( DaoType_CheckNumberIndex( index[0] ) ) return etype;
@@ -1490,7 +1491,7 @@ static DaoType* DaoArray_CheckGetItem( DaoType *self, DaoType *index[], int N, D
 	}else{
 		int i, count = 0;
 		for(i=0; i<N; ++i){
-			if( index[i]->tid == DAO_RANGE ){
+			if( index[i]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 				if( DaoType_CheckRangeIndex( index[i] ) == 0 ) return NULL;
 			}else{
 				if( DaoType_CheckNumberIndex( index[i] ) == 0 ) return NULL;
@@ -1505,7 +1506,7 @@ static DaoType* DaoArray_CheckGetItem( DaoType *self, DaoType *index[], int N, D
 
 static DaoValue* DaoArray_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, DaoProcess *proc )
 {
-	DaoInterator *iterator;
+	DaoTuple *iterator;
 	DaoArray *res, *self = (DaoArray*) selfv;
 	daoint pos, end, size = self->size;
 
@@ -1530,8 +1531,9 @@ static DaoValue* DaoArray_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, 
 			default : break;
 			}
 			break;
-		case DAO_ITERATOR :
-			iterator = (DaoIterator*) index[0];
+		case DAO_TUPLE :
+			iterator = (DaoTuple*) index[0];
+			if( iterator->subtype != DAO_ITERATOR ) return NULL;
 			if( iterator->values[1]->type != DAO_INTEGER ) return NULL;
 			pos = Dao_CheckNumberIndex( iterator->values[1]->xInteger.value, size, proc );
 			iterator->values[0]->xBoolean.value = (pos + 1) < size;
@@ -1623,7 +1625,7 @@ static int DaoArray_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoTyp
 	}else{
 		int i, count = 0;
 		for(i=0; i<N; ++i){
-			if( index[i]->tid == DAO_RANGE ){
+			if( index[i]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 				if( DaoType_CheckRangeIndex( index[i] ) == 0 ) return DAO_ERROR_INDEX;
 			}else{
 				if( DaoType_CheckNumberIndex( index[i] ) == 0 ) return DAO_ERROR_INDEX;
@@ -1651,7 +1653,7 @@ static int DaoArray_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValu
 		}else{
 			return DAO_ERROR_VALUE;
 		}
-	}else if( N == 1 && index[0]->type != DAO_RANGE ){
+	}else if( N == 1 && index[0]->type != DAO_TUPLE ){
 		switch( index[0]->type ){
 		case DAO_BOOLEAN :
 		case DAO_INTEGER :
@@ -1907,7 +1909,7 @@ DaoType* DaoArray_CheckForEach( DaoType *self, DaoRoutine *ctx )
 	return dao_type_iterator_int;
 }
 
-void DaoArray_DoForEach( DaoValue *self, DaoIterator *iterator, DaoProcess *p )
+void DaoArray_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *p )
 {
 	iterator->values[0]->xBoolean.value = self->xString.value->size > 0;
 	iterator->values[0]->xInteger.value = 0;

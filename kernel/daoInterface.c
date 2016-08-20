@@ -266,7 +266,7 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds )
 	if( inter == NULL ) return DAO_MT_NOT;
 	if( inter->abtype->kernel->SetupMethods ){
 		DaoTypeKernel *kernel = inter->abtype->kernel;
-		kernel->SetupMethods( kernel->nspace, kernel );
+		kernel->SetupMethods( kernel->nspace, kernel->core );
 	}
 	if( inters == NULL ) return DAO_MT_SUB * DaoInterface_BindTo( inter, self, binds );
 	if( (it = DMap_Find( inters, inter )) ) return it->value.pVoid ? DAO_MT_SUB : DAO_MT_NOT;
@@ -387,7 +387,7 @@ DaoType* DaoInterface_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx 
 	case DVM_SIZE  : break;
 	default: return NULL;
 	}
-	rout = DaoType_FindOperator( self, op->code );
+	rout = DaoType_FindFunctionChars( self, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 	if( op->c == op->a ){
 		rout = DaoRoutine_MatchByType( rout, self, & self, 1, DVM_CALL );
@@ -411,7 +411,7 @@ DaoValue* DaoInterface_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc 
 	case DVM_SIZE  : break;
 	default: return NULL;
 	}
-	rout = DaoType_FindOperator( type, op->code );
+	rout = DaoType_FindFunctionChars( type, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 	if( op->c == op->a ){
 		retc = DaoProcess_PushCallable( proc, rout, self, & self, 1 );
@@ -438,7 +438,7 @@ DaoType* DaoInterface_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2
 		break;
 	default: return NULL;
 	}
-	rout = DaoType_FindOperator( self, op->code );
+	rout = DaoType_FindFunctionChars( self, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 
 	if( op->c == op->a && self == args[0] ) selftype = self;
@@ -464,7 +464,7 @@ DaoValue* DaoInterface_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2
 		break;
 	default: return NULL;
 	}
-	rout = DaoType_FindOperator( self->xInterface.abtype, op->code );
+	rout = DaoType_FindFunctionChars( self->xInterface.abtype, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 
 	if( op->c == op->a && self == args[0] ) selfvalue = self;
@@ -788,7 +788,7 @@ DaoType* DaoCinValue_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
 	case DVM_SIZE  : break;
 	default: return NULL;
 	}
-	rout = DaoType_FindOperator( self, op->code );
+	rout = DaoType_FindFunctionChars( self, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 	if( op->c == op->a ){
 		rout = DaoRoutine_MatchByType( rout, self, & self, 1, DVM_CALL );
@@ -812,7 +812,7 @@ DaoValue* DaoCinValue_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
 	case DVM_SIZE  : break;
 	default: return NULL;
 	}
-	rout = DaoType_FindOperator( type, op->code );
+	rout = DaoType_FindFunctionChars( type, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 	if( op->c == op->a ){
 		retc = DaoProcess_PushCallable( proc, rout, self, & self, 1 );
@@ -840,7 +840,7 @@ DaoType* DaoCinValue_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2]
 		break;
 	default: return NULL;
 	}
-	rout = DaoType_FindOperator( self, op->code );
+	rout = DaoType_FindFunctionChars( self, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 
 	if( op->c == op->a && self == args[0]  ) selftype = self;
@@ -854,6 +854,7 @@ DaoValue* DaoCinValue_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2]
 {
 	DaoRoutine *rout = NULL;
 	DaoValue *selfvalue = NULL;
+	DaoType *type;
 
 	switch( op->code ){
 	case DVM_ADD : case DVM_SUB :
@@ -867,7 +868,8 @@ DaoValue* DaoCinValue_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2]
 		break;
 	default: return NULL;
 	}
-	rout = DaoType_FindOperator( self->xCinValue.cintype->vatype, op->code );
+	type = self->xCinValue.cintype->vatype;
+	rout = DaoType_FindFunctionChars( type, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 
 	if( op->c == op->a && self == args[0] ) selfvalue = self;

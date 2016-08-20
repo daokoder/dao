@@ -219,8 +219,8 @@ struct DaoTypeKernel
 	DaoTypeTree   *sptree;
 	DaoTypeCore   *core;
 
-	int (*SetupValues) ( DaoNamespace *self, DaoTypeKernel *kernel );
-	int (*SetupMethods)( DaoNamespace *self, DaoTypeKernel *kernel );
+	int (*SetupValues) ( DaoNamespace *self, DaoTypeCore *core );
+	int (*SetupMethods)( DaoNamespace *self, DaoTypeCore *core );
 };
 
 DaoTypeKernel* DaoTypeKernel_New( DaoTypeCore *core );

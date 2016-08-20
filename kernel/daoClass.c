@@ -820,8 +820,8 @@ int DaoClass_DeriveClassData( DaoClass *self )
 		DList_Append( self->objType->bases, ctype->valueType );
 		DaoClass_AddConst( self, ctype->classType->name, (DaoValue*)ctype, DAO_PERM_PUBLIC );
 
-		if( kernel->SetupValues ) kernel->SetupValues( kernel->nspace, kernel );
-		if( kernel->SetupMethods ) kernel->SetupMethods( kernel->nspace, kernel );
+		if( kernel->SetupValues ) kernel->SetupValues( kernel->nspace, core );
+		if( kernel->SetupMethods ) kernel->SetupMethods( kernel->nspace, core );
 
 		DaoType_SpecializeMethods( ctype->valueType );
 		kernel = ctype->valueType->kernel;

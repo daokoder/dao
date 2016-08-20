@@ -46,8 +46,6 @@ enum DaoExtraTypes
 	DAO_TYPEKERNEL ,
 	DAO_CODEBLOCK ,
 
-	DAO_RANGE ,
-	DAO_ITERATOR ,
 	DAO_PAR_NAMED ,   /* name:type */
 	DAO_PAR_DEFAULT , /* name=type */
 	DAO_PAR_VALIST ,  /* ... */
@@ -71,6 +69,8 @@ enum DaoSubTypes
 	DAO_CDATA_PTR ,  /* opaque C/C++ data, not owned by the wrapper */
 	DAO_CDATA_CXX ,  /* opaque C/C++ data, owned by the wrapper */
 	DAO_PAIR ,
+	DAO_RANGE ,
+	DAO_ITERATOR ,
 	DAO_CFUNCTION ,
 	DAO_ROUTINES ,
 	DAO_INVAR ,

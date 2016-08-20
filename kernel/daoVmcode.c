@@ -447,6 +447,37 @@ DaoVmCode DaoVmCode_CheckOperands( DaoVmCode *self )
 	return vmc;
 }
 
+const char* DaoVmCode_GetOperator2( int opcode )
+{
+	const char *name = NULL;
+	switch( opcode ){
+	case DVM_NOT    : name = "!"; break;
+	case DVM_MINUS  : name = "-"; break;
+	case DVM_TILDE  : name = "~"; break;
+	case DVM_SIZE   : name = "%"; break;
+	case DVM_ADD    : name = "+"; break;
+	case DVM_SUB    : name = "-"; break;
+	case DVM_MUL    : name = "*"; break;
+	case DVM_DIV    : name = "/"; break;
+	case DVM_MOD    : name = "%"; break;
+	case DVM_POW    : name = "**"; break;
+	case DVM_BITAND : name = "&"; break;
+	case DVM_BITOR  : name = "|"; break;
+	case DVM_BITXOR : name = "^"; break;
+	case DVM_BITLFT : name = "<<"; break;
+	case DVM_BITRIT : name = ">>"; break;
+	case DVM_AND    : name = "&&"; break;
+	case DVM_OR     : name = "||"; break;
+	case DVM_LT     : name = "<"; break;
+	case DVM_LE     : name = "<="; break;
+	case DVM_EQ     : name = "=="; break;
+	case DVM_NE     : name = "!="; break;
+	case DVM_IN     : name = "in"; break;
+	default: return NULL;
+	}
+	return name;
+}
+
 void DaoVmCode_Print( DaoVmCode self, char *buffer )
 {
 	const char *name = DaoVmCode_GetOpcodeName( self.code );

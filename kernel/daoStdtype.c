@@ -55,7 +55,8 @@ void DaoValue_Init( void *value, char type )
 {
 	DaoNone *self = (DaoNone*) value;
 	self->type = type;
-	self->subtype = self->trait = self->marks = 0;
+	self->subtype = type;
+	self->trait = self->marks = 0;
 	self->refCount = 0;
 	if( type >= DAO_ENUM ) ((DaoValue*)self)->xGC.cycRefCount = 0;
 }
@@ -94,7 +95,7 @@ int DaoType_CheckNumberIndex( DaoType *self )
 
 int DaoType_CheckRangeIndex( DaoType *self )
 {
-	if( self->type != DAO_RANGE ) return 0;
+	if( self->tid != DAO_TUPLE && self->subtid != DAO_RANGE ) return 0;
 	if( ! DaoType_CheckTypeRange( self->nested->items.pType[0], DAO_NONE, DAO_FLOAT ) ) return 0;
 	if( ! DaoType_CheckTypeRange( self->nested->items.pType[1], DAO_NONE, DAO_FLOAT ) ) return 0;
 	return 1;
@@ -115,17 +116,18 @@ struct DIndexRange
 	daoint end;
 };
 
-static DIndexRange Dao_CheckRangeIndex( DaoRange *range, daoint size, DaoProcess *proc )
+static DIndexRange Dao_CheckRangeIndex( DaoTuple *range, daoint size, DaoProcess *proc )
 {
 	DIndexRange res = {-1, -1};
 	daoint pos, end;
 
-	if( range->first->type  > DAO_FLOAT ) return res;
-	if( range->second->type > DAO_FLOAT ) return res;
+	if( range->subtype != DAO_RANGE ) return res;
+	if( range->values[0]->type > DAO_FLOAT ) return res;
+	if( range->values[1]->type > DAO_FLOAT ) return res;
 
-	pos = DaoValue_GetInteger( range->first );
-	end = DaoValue_GetInteger( range->second );
-	if( range->second->type == DAO_NONE ) end = size;
+	pos = DaoValue_GetInteger( range->values[0] );
+	end = DaoValue_GetInteger( range->values[1] );
+	if( range->values[1]->type == DAO_NONE ) end = size;
 
 	pos = Dao_CheckNumberIndex( pos, size, proc );
 	end = Dao_CheckNumberIndex( end, size + 1, proc ); /* Open index; TODO: check other places; */
@@ -523,6 +525,9 @@ static DaoType* DaoInteger_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *a
 	case DVM_MOD : case DVM_POW :
 	case DVM_BITAND :
 	case DVM_BITOR  :
+	case DVM_BITXOR :
+	case DVM_BITLFT :
+	case DVM_BITRIT :
 		if( left->tid == DAO_NONE || right->tid == DAO_NONE ) return NULL;
 		if( left->tid <= DAO_INTEGER && right->tid <= DAO_INTEGER ) return dao_type_int;
 		break;
@@ -566,6 +571,9 @@ static DaoValue* DaoInteger_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *a
 	case DVM_POW    : C = pow( A, B ); break;
 	case DVM_BITAND : C = A & B; break;
 	case DVM_BITOR  : C = A | B; break;
+	case DVM_BITXOR : C = A ^ B; break;
+	case DVM_BITLFT : C = A << B; break;
+	case DVM_BITRIT : C = A >> B; break;
 	case DVM_AND    : C = A && B; retbool = 1; break;
 	case DVM_OR     : C = A || B; retbool = 1; break;
 	case DVM_LT     : C = A <  B; retbool = 1; break;
@@ -1349,9 +1357,9 @@ static DaoType* DaoString_CheckGetItem( DaoType *self, DaoType *index[], int N, 
 {
 	if( N == 0 ) return self;
 	if( N != 1 ) return NULL;
-	if( index[0]->tid == DAO_ITERATOR ){
-		if( DaoType_CheckNumberIndex( index[0]->nested->items.pType[0] ) ) return dao_type_int;
-	}else if( index[0]->tid == DAO_RANGE ){
+	if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_ITERATOR ){
+		if( DaoType_CheckNumberIndex( index[0]->nested->items.pType[1] ) ) return dao_type_int;
+	}else if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 		if( DaoType_CheckRangeIndex( index[0] ) ) return dao_type_string;
 	}else{
 		if( DaoType_CheckNumberIndex( index[0] ) ) return dao_type_int;
@@ -1366,7 +1374,7 @@ static DaoValue* DaoString_DoGetItem( DaoValue *self, DaoValue *index[], int N, 
 
 	if( N == 0 ) return self;
 	if( N != 1 ) return NULL;
-	switch( index[0]->type ){
+	switch( index[0]->xBase.subtype ){
 	case DAO_BOOLEAN :
 	case DAO_INTEGER :
 	case DAO_FLOAT :
@@ -1376,15 +1384,15 @@ static DaoValue* DaoString_DoGetItem( DaoValue *self, DaoValue *index[], int N, 
 		DaoProcess_PutInteger( proc, self->xString.value->chars[pos] );
 		break;
 	case DAO_RANGE :
-		range = Dao_CheckRangeIndex( (DaoRange*) index[0], size, proc );
+		range = Dao_CheckRangeIndex( (DaoTuple*) index[0], size, proc );
 		if( range.pos < 0 ) return NULL;
 		DaoProcess_PutBytes( proc, self->xString.value->chars + range.pos, range.end - range.pos );
 		break;
 	case DAO_ITERATOR :
-		if( index[0]->xIterator.values[1]->type != DAO_INTEGER ) return NULL;
-		pos = Dao_CheckNumberIndex( index[0]->xIterator.values[1]->xInteger.value, size, proc );
-		index[0]->xIterator.values[0]->xBoolean.value = (pos + 1) < size;
-		index[0]->xIterator.values[1]->xInteger.value = pos + 1;
+		if( index[0]->xTuple.values[1]->type != DAO_INTEGER ) return NULL;
+		pos = Dao_CheckNumberIndex( index[0]->xTuple.values[1]->xInteger.value, size, proc );
+		index[0]->xTuple.values[0]->xBoolean.value = (pos + 1) < size;
+		index[0]->xTuple.values[1]->xInteger.value = pos + 1;
 		if( pos < 0 ) return NULL;
 		DaoProcess_PutInteger( proc, self->xString.value->chars[pos] );
 		break;
@@ -1399,7 +1407,7 @@ static int DaoString_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoTy
 		return DAO_OK;
 	}
 	if( N != 1 ) return DAO_ERROR_INDEX;
-	if( index[0]->tid == DAO_RANGE ){
+	if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 		if( ! DaoType_CheckRangeIndex( index[0] ) ) return DAO_ERROR_INDEX;
 		if( value->tid != DAO_STRING ) return DAO_ERROR_VALUE;
 	}else{
@@ -1430,8 +1438,8 @@ static int DaoString_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoVal
 		if( value->type > DAO_FLOAT ) return DAO_ERROR_VALUE;
 		self->xString.value->chars[pos] = DaoValue_GetInteger( value );
 		break;
-	case DAO_RANGE :
-		range = Dao_CheckRangeIndex( (DaoRange*) index[0], size, proc );
+	case DAO_TUPLE :
+		range = Dao_CheckRangeIndex( (DaoTuple*) index[0], size, proc );
 		if( range.pos < 0 ) return DAO_ERROR_INDEX;
 		pos = range.pos;
 		end = range.end;
@@ -1565,7 +1573,7 @@ DaoType* DaoString_CheckForEach( DaoType *self, DaoRoutine *ctx )
 	return dao_type_iterator_int;
 }
 
-void DaoString_DoForEach( DaoValue *self, DaoIterator *iterator, DaoProcess *proc )
+void DaoString_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 {
 	iterator->values[0]->xBoolean.value = self->xString.value->size > 0;
 	iterator->values[0]->xInteger.value = 0;
@@ -3043,9 +3051,9 @@ static DaoType* DaoList_CheckGetItem( DaoType *self, DaoType *index[], int N, Da
 
 	if( N == 0 ) return self;
 	if( N != 1 ) return NULL;
-	if( index[0]->tid == DAO_ITERATOR ){
-		if( DaoType_CheckNumberIndex( index[0]->nested->items.pType[0] ) ) return dao_type_int;
-	}else if( index[0]->tid == DAO_RANGE ){
+	if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_ITERATOR ){
+		if( DaoType_CheckNumberIndex( index[0]->nested->items.pType[1] ) ) return dao_type_int;
+	}else if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 		if( DaoType_CheckRangeIndex( index[0] ) ) return self;
 	}else{
 		if( DaoType_CheckNumberIndex( index[0] ) ) return itype;
@@ -3065,7 +3073,7 @@ static DaoValue* DaoList_DoGetItem( DaoValue *self, DaoValue *index[], int N, Da
 		return NULL;
 	}
 	if( N != 1 ) return NULL;
-	switch( index[0]->type ){
+	switch( index[0]->xBase.subtype ){
 	case DAO_BOOLEAN :
 	case DAO_INTEGER :
 	case DAO_FLOAT :
@@ -3075,7 +3083,7 @@ static DaoValue* DaoList_DoGetItem( DaoValue *self, DaoValue *index[], int N, Da
 		DaoProcess_PutValue( proc, self->xList.value->items.pValue[pos] );
 		break;
 	case DAO_RANGE :
-		range = Dao_CheckRangeIndex( (DaoRange*) index[0], size, proc );
+		range = Dao_CheckRangeIndex( (DaoTuple*) index[0], size, proc );
 		if( range.pos < 0 ) return NULL;
 		pos = range.pos;
 		end = range.end;
@@ -3084,10 +3092,10 @@ static DaoValue* DaoList_DoGetItem( DaoValue *self, DaoValue *index[], int N, Da
 		for(i=pos; i<end; i++) DaoList_SetItem( res, self->xList.value->items.pValue[i], i - pos );
 		break;
 	case DAO_ITERATOR :
-		if( index[0]->xIterator.values[1]->type != DAO_INTEGER ) return NULL;
-		pos = Dao_CheckNumberIndex( index[0]->xIterator.values[1]->xInteger.value, size, proc );
-		index[0]->xIterator.values[0]->xBoolean.value = (pos + 1) < size;
-		index[0]->xIterator.values[1]->xInteger.value = pos + 1;
+		if( index[0]->xTuple.values[1]->type != DAO_INTEGER ) return NULL;
+		pos = Dao_CheckNumberIndex( index[0]->xTuple.values[1]->xInteger.value, size, proc );
+		index[0]->xTuple.values[0]->xBoolean.value = (pos + 1) < size;
+		index[0]->xTuple.values[1]->xInteger.value = pos + 1;
 		if( pos < 0 ) return NULL;
 		DaoProcess_PutValue( proc, self->xList.value->items.pValue[pos] );
 		break;
@@ -3105,7 +3113,7 @@ static int DaoList_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType
 	if( N == 0 ) return DAO_OK;
 	if( N != 1 ) return DAO_ERROR_INDEX;
 
-	if( index[0]->tid == DAO_RANGE ){
+	if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 		if( DaoType_CheckRangeIndex( index[0] ) ) return DAO_OK;
 	}else{
 		if( DaoType_CheckNumberIndex( index[0] ) ) return DAO_OK;
@@ -3134,8 +3142,8 @@ static int DaoList_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue
 		if( pos < 0 ) return DAO_ERROR_INDEX;
 		DaoList_SetItem( (DaoList*) self, value, pos );
 		break;
-	case DAO_RANGE :
-		range = Dao_CheckRangeIndex( (DaoRange*) index[0], size, proc );
+	case DAO_TUPLE :
+		range = Dao_CheckRangeIndex( (DaoTuple*) index[0], size, proc );
 		if( range.pos < 0 ) return DAO_ERROR_INDEX;
 		pos = range.pos;
 		end = range.end;
@@ -3275,7 +3283,7 @@ DaoType* DaoList_CheckForEach( DaoType *self, DaoRoutine *ctx )
 	return dao_type_iterator_int;
 }
 
-void DaoList_DoForEach( DaoValue *self, DaoIterator *iterator, DaoProcess *proc )
+void DaoList_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 {
 	iterator->values[0]->xBoolean.value = self->xList.value->size > 0;
 	iterator->values[0]->xInteger.value = 0;
@@ -4428,12 +4436,13 @@ static DaoType* DaoMap_CheckGetItem( DaoType *self, DaoType *index[], int N, Dao
 
 	if( N != 1 ) return NULL;
 
-	if( index[0]->tid == DAO_ITERATOR ){
+	if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_ITERATOR ){
 		DaoType *itypes[2];
 		itypes[0] = ketype;
 		itypes[1] = vatype;
+		if( index[0]->nested->items.pType[1]->tid != DAO_ANY ) return NULL;
 		return DaoNamespace_MakeType( ctx->nameSpace, "tuple", DAO_TUPLE, NULL, itypes, 2 );
-	}else if( index[0]->tid == DAO_RANGE ){
+	}else if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 		DaoType *first  = index[0]->nested->items.pType[0];
 		DaoType *second = index[0]->nested->items.pType[1];
 		if( DaoType_MatchTo( first,  ketype, NULL ) == 0 ) return NULL;
@@ -4454,8 +4463,8 @@ static DaoValue* DaoMap_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, Da
 		return NULL;
 	}
 	if( N != 1 ) return NULL;
-	if( index[0]->type == DAO_ITERATOR ){
-		DaoIterator *iter = (DaoIterator*) index[0];
+	if( index[0]->xBase.subtype == DAO_ITERATOR ){
+		DaoTuple *iter = (DaoTuple*) index[0];
 		DaoTuple *tuple = DaoProcess_PutTuple( proc, 2 );
 		DNode *node = (DNode*) iter->values[1]->xCdata.data;
 
@@ -4469,9 +4478,9 @@ static DaoValue* DaoMap_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, Da
 		iter->values[0]->xInteger.value = node != NULL;
 		iter->values[1]->xCdata.data = node;
 
-	}else if( index[0]->type == DAO_RANGE ){
-		DaoValue *first = index[0]->xRange.first;
-		DaoValue *second = index[0]->xRange.second;
+	}else if( index[0]->xBase.subtype == DAO_RANGE ){
+		DaoValue *first = index[0]->xTuple.values[0];
+		DaoValue *second = index[0]->xTuple.values[1];
 		DNode *node1 = DMap_First( self->value );
 		DNode *node2 = NULL;
 		
@@ -4505,7 +4514,7 @@ static int DaoMap_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType 
 	if( N == 0 ) return DAO_OK;
 	if( N != 1 ) return DAO_ERROR_INDEX;
 
-	if( index[0]->tid == DAO_RANGE ){
+	if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 		DaoType *first  = index[0]->nested->items.pType[0];
 		DaoType *second = index[0]->nested->items.pType[1];
 		if( DaoType_MatchTo( first,  ketype, NULL ) == 0 ) return DAO_ERROR_INDEX;
@@ -4539,9 +4548,9 @@ static int DaoMap_DoSetItem( DaoValue *selfv, DaoValue *index[], int N, DaoValue
 	if( N != 1 ) return DAO_ERROR_INDEX;
 	if( DaoType_MatchValue( vatype, value, NULL ) == 0 ) return DAO_ERROR_VALUE;
 
-	if( index[0]->type == DAO_RANGE ){
-		DaoValue *first = index[0]->xRange.first;
-		DaoValue *second = index[0]->xRange.second;
+	if( index[0]->xBase.subtype == DAO_RANGE ){
+		DaoValue *first = index[0]->xTuple.values[0];
+		DaoValue *second = index[0]->xTuple.values[1];
 		DNode *node1 = DMap_First( self->value );
 		DNode *node2 = NULL;
 		
@@ -4670,7 +4679,7 @@ DaoType* DaoMap_CheckForEach( DaoType *self, DaoRoutine *ctx )
 	return dao_type_iterator_any;
 }
 
-void DaoMap_DoForEach( DaoValue *self, DaoIterator *iterator, DaoProcess *proc )
+void DaoMap_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 {
 	DNode *node = DMap_First( self->xMap.value );
 	DaoValue **data = iterator->values;
@@ -5357,10 +5366,10 @@ static DaoType* DaoTuple_CheckGetItem( DaoType *self, DaoType *index[], int N, D
 	if( N == 0 ) return self;
 	if( N != 1 ) return NULL;
 
-	if( index[0]->tid == DAO_RANGE ){
+	if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 		return dao_type_tuple;
-	}else if( index[0]->tid == DAO_ITERATOR ){
-		if( DaoType_CheckNumberIndex( index[0]->nested->items.pType[0] ) == 0 ) return NULL;
+	}else if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_ITERATOR ){
+		if( DaoType_CheckNumberIndex( index[0]->nested->items.pType[1] ) == 0 ) return NULL;
 		if( self->nested->size == 0 ) return NULL;
 
 		retype = self->nested->items.pType[0];
@@ -5405,7 +5414,7 @@ static DaoValue* DaoTuple_DoGetItem( DaoValue *self, DaoValue *index[], int N, D
 		return NULL;
 	}
 	if( N != 1 ) return NULL;
-	switch( index[0]->type ){
+	switch( index[0]->xBase.subtype ){
 	case DAO_BOOLEAN :
 	case DAO_INTEGER :
 	case DAO_FLOAT :
@@ -5415,7 +5424,7 @@ static DaoValue* DaoTuple_DoGetItem( DaoValue *self, DaoValue *index[], int N, D
 		DaoProcess_PutValue( proc, tuple->values[pos] );
 		break;
 	case DAO_RANGE :
-		range = Dao_CheckRangeIndex( (DaoRange*) index[0], size, proc );
+		range = Dao_CheckRangeIndex( (DaoTuple*) index[0], size, proc );
 		if( range.pos < 0 ) return NULL;
 		pos = range.pos;
 		end = range.end;
@@ -5431,10 +5440,10 @@ static DaoValue* DaoTuple_DoGetItem( DaoValue *self, DaoValue *index[], int N, D
 		}
 		break;
 	case DAO_ITERATOR :
-		if( index[0]->xIterator.values[1]->type != DAO_INTEGER ) return NULL;
-		pos = Dao_CheckNumberIndex( index[0]->xIterator.values[1]->xInteger.value, size, proc );
-		index[0]->xIterator.values[0]->xBoolean.value = (pos + 1) < size;
-		index[0]->xIterator.values[1]->xInteger.value = pos + 1;
+		if( index[0]->xTuple.values[1]->type != DAO_INTEGER ) return NULL;
+		pos = Dao_CheckNumberIndex( index[0]->xTuple.values[1]->xInteger.value, size, proc );
+		index[0]->xTuple.values[0]->xBoolean.value = (pos + 1) < size;
+		index[0]->xTuple.values[1]->xInteger.value = pos + 1;
 		if( pos < 0 ) return NULL;
 
 		res = DaoProcess_PutTuple( proc, 2 );
@@ -5466,7 +5475,8 @@ static int DaoTuple_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoTyp
 	case DAO_INTEGER :
 	case DAO_FLOAT   :
 		break;
-	case DAO_RANGE :
+	case DAO_TUPLE :
+		if( index[0]->subtid != DAO_RANGE ) return DAO_ERROR_INDEX;
 		if( index[0]->nested->items.pType[0]->tid > DAO_FLOAT ) return DAO_ERROR_INDEX;
 		if( index[0]->nested->items.pType[1]->tid > DAO_FLOAT ) return DAO_ERROR_INDEX;
 		break;
@@ -5496,8 +5506,8 @@ static int DaoTuple_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValu
 		if( pos < 0 ) return DAO_ERROR_INDEX;
 		DaoTuple_SetItem( (DaoTuple*) self, value, pos );
 		break;
-	case DAO_RANGE :
-		range = Dao_CheckRangeIndex( (DaoRange*) index[0], size, proc );
+	case DAO_TUPLE :
+		range = Dao_CheckRangeIndex( (DaoTuple*) index[0], size, proc );
 		if( range.pos < 0 ) return DAO_ERROR_INDEX;
 		for(i=range.pos; i<range.end; ++i){
 			if( DaoTuple_SetItem( (DaoTuple*) self, value, i ) ) return DAO_ERROR_VALUE;
@@ -5645,7 +5655,7 @@ DaoType* DaoTuple_CheckForEach( DaoType *self, DaoRoutine *ctx )
 	return dao_type_iterator_int;
 }
 
-void DaoTuple_DoForEach( DaoValue *self, DaoIterator *iterator, DaoProcess *proc )
+void DaoTuple_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 {
 	iterator->values[0]->xBoolean.value = self->xTuple.size > 0;
 	iterator->values[0]->xInteger.value = 0;
@@ -5695,88 +5705,6 @@ DaoTypeCore daoTupleCore =
 	NULL,                                              /* Copy */
 	(DaoDeleteFunction) DaoTuple_Delete,               /* Delete */
 	NULL                                               /* HandleGC */
-};
-
-
-
-
-
-DaoIterator* DaoIterator_New( DaoType *type )
-{
-}
-
-void DaoIterator_Delete( DaoIterator *self )
-{
-}
-
-void DaoIterator_SetValue( DaoIterator *self, DaoValue *value )
-{
-}
-
-
-DaoTypeCore daoIteratorCore =
-{
-	"Iterator",          /* name */
-	{ NULL },            /* bases */
-	NULL,                /* numbers */
-	NULL,                /* methods */
-	NULL,  NULL,         /* GetField */
-	NULL,  NULL,         /* SetField */
-	NULL,  NULL,         /* GetItem */
-	NULL,  NULL,         /* SetItem */
-	NULL,  NULL,         /* Unary */
-	NULL,  NULL,         /* Binary */
-	NULL,  NULL,         /* Comparison */
-	NULL,  NULL,         /* Conversion */
-	NULL,  NULL,         /* ForEach */
-	NULL,                /* Print */
-	NULL,                /* Slice */
-	NULL,                /* Copy */
-	DaoIterator_Delete,  /* Delete */
-	NULL                 /* HandleGC */
-};
-
-
-
-
-
-DaoRange* DaoRange_New( DaoType *type )
-{
-}
-
-void DaoRange_Delete( DaoRange *self )
-{
-}
-
-void DaoRange_SetFirst( DaoRange *self, DaoValue *value )
-{
-}
-
-void DaoRange_SetSecond( DaoRange *self, DaoValue *value )
-{
-}
-
-
-DaoTypeCore daoRangeCore =
-{
-	"Range",          /* name */
-	{ NULL },         /* bases */
-	NULL,             /* numbers */
-	NULL,             /* methods */
-	NULL,  NULL,      /* GetField */
-	NULL,  NULL,      /* SetField */
-	NULL,  NULL,      /* GetItem */
-	NULL,  NULL,      /* SetItem */
-	NULL,  NULL,      /* Unary */
-	NULL,  NULL,      /* Binary */
-	NULL,  NULL,      /* Comparison */
-	NULL,  NULL,      /* Conversion */
-	NULL,  NULL,      /* ForEach */
-	NULL,             /* Print */
-	NULL,             /* Slice */
-	NULL,             /* Copy */
-	DaoRange_Delete,  /* Delete */
-	NULL              /* HandleGC */
 };
 
 
@@ -5834,7 +5762,7 @@ DaoTypeCore daoNameValueCore =
 	DaoNameValue_Print,   /* Print */
 	NULL,                 /* Slice */
 	NULL,                 /* Copy */
-	DaoNameValue_Delete,  /* Delete */
+	(DaoDeleteFunction) DaoNameValue_Delete,  /* Delete */
 	NULL                  /* HandleGC */
 };
 
@@ -6092,7 +6020,7 @@ DaoType* DaoCstruct_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
 	case DVM_SIZE  : break;
 	default: return NULL;
 	}
-	rout = DaoType_FindOperator( self, op->code );
+	rout = DaoType_FindFunctionChars( self, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 	if( op->c == op->a ){
 		rout = DaoRoutine_MatchByType( rout, self, & self, 1, DVM_CALL );
@@ -6116,7 +6044,7 @@ DaoValue* DaoCstruct_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
 	case DVM_SIZE  : break;
 	default: return NULL;
 	}
-	rout = DaoType_FindOperator( type, op->code );
+	rout = DaoType_FindFunctionChars( type, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 	if( op->c == op->a ){
 		retc = DaoProcess_PushCallable( proc, rout, self, & self, 1 );
@@ -6136,7 +6064,8 @@ DaoType* DaoCstruct_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2],
 	case DVM_ADD : case DVM_SUB :
 	case DVM_MUL : case DVM_DIV :
 	case DVM_MOD : case DVM_POW :
-	case DVM_BITAND : case DVM_BITOR  :
+	case DVM_BITAND : case DVM_BITOR  : case DVM_BITXOR :
+	case DVM_BITLFT : case DVM_BITRIT :
 	case DVM_AND : case DVM_OR :
 	case DVM_LT  : case DVM_LE :
 	case DVM_EQ  : case DVM_NE :
@@ -6144,7 +6073,7 @@ DaoType* DaoCstruct_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2],
 		break;
 	default: return NULL;
 	}
-	rout = DaoType_FindOperator( self, op->code );
+	rout = DaoType_FindFunctionChars( self, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 
 	if( op->c == op->a && self == args[0] ) selftype = self;
@@ -6163,7 +6092,8 @@ DaoValue* DaoCstruct_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2],
 	case DVM_ADD : case DVM_SUB :
 	case DVM_MUL : case DVM_DIV :
 	case DVM_MOD : case DVM_POW :
-	case DVM_BITAND : case DVM_BITOR  :
+	case DVM_BITAND : case DVM_BITOR  : case DVM_BITXOR :
+	case DVM_BITLFT : case DVM_BITRIT :
 	case DVM_AND : case DVM_OR :
 	case DVM_LT  : case DVM_LE :
 	case DVM_EQ  : case DVM_NE :
@@ -6171,7 +6101,7 @@ DaoValue* DaoCstruct_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2],
 		break;
 	default: return NULL;
 	}
-	rout = DaoType_FindOperator( self->xCstruct.ctype, op->code );
+	rout = DaoType_FindFunctionChars( self->xCstruct.ctype, DaoVmCode_GetOperator( op->code ) );
 	if( rout == NULL ) return NULL;
 
 	if( op->c == op->a && self == args[0] ) selfvalue = self;
@@ -6227,7 +6157,7 @@ DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, int copy, DaoP
 	rout = DaoType_FindFunction( self->xCstruct.ctype, buffer );
 	DString_Delete( buffer );
 	if( rout != NULL ){
-		int rc = DaoProcess_PushCallable( proc, rout, self, & type, 1 );
+		int rc = DaoProcess_PushCallable( proc, rout, self, (DaoValue**) & type, 1 );
 		if( rc ) return NULL;
 	}
 	return NULL;
