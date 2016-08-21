@@ -217,7 +217,7 @@ struct DaoTypeKernel
 	DaoRoutine    *ltOperators;
 	DaoNamespace  *nspace;
 	DaoTypeTree   *sptree;
-	DaoTypeCore   *core;
+	//DaoTypeCore   *core;
 
 	int (*SetupValues) ( DaoNamespace *self, DaoTypeCore *core );
 	int (*SetupMethods)( DaoNamespace *self, DaoTypeCore *core );

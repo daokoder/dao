@@ -619,8 +619,8 @@ int DaoValue_FastMatchTo( DaoValue *self, DaoType *type )
 	case DAO_LIST :
 	case DAO_MAP :
 	case DAO_CSTRUCT :
-	case DAO_CDATA : 
-	case DAO_CTYPE : matched = self->xCstruct.ctype == type; break;
+	case DAO_CDATA : matched = self->xCstruct.ctype == type; break;
+	case DAO_CTYPE : matched = self->xCtype.classType == type; break;
 	case DAO_TUPLE : matched = self->xTuple.ctype == type; break;
 	case DAO_ROUTINE : matched = self->xRoutine.routType == type; break;
 	case DAO_CLASS  : matched = self->xClass.clsType == type; break;
@@ -937,8 +937,8 @@ static int DaoValue_ComparePro2( DaoValue *left, DaoValue *right, DaoProcess *pr
 	case DAO_LIST    : return DaoList_Compare( & left->xList, & right->xList, proc, dep );
 	case DAO_OBJECT  : return DaoObject_Compare( (DaoObject*)left, (DaoObject*)right, proc, dep );
 	case DAO_CDATA   :
-	case DAO_CSTRUCT :
-	case DAO_CTYPE : return DaoCstruct_Compare( (DaoCstruct*)left, (DaoCstruct*)right, proc, dep );
+	case DAO_CSTRUCT : return DaoCstruct_Compare( (DaoCstruct*)left, (DaoCstruct*)right, proc, dep );
+	case DAO_CTYPE : break; // TODO;
 	case DAO_TYPE : return DaoType_Compare( (DaoType*) left, (DaoType*) right );
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY   : return DaoArray_Compare( & left->xArray, & right->xArray );
@@ -976,7 +976,7 @@ DaoType* DaoValue_GetType( DaoValue *self )
 	case DAO_TUPLE  : return self->xTuple.ctype;
 	case DAO_OBJECT : return self->xObject.defClass->objType;
 	case DAO_CLASS  : return self->xClass.clsType;
-	case DAO_CTYPE  :
+	case DAO_CTYPE  : return self->xCtype.classType;
 	case DAO_CDATA  :
 	case DAO_CSTRUCT : return self->xCdata.ctype;
 	case DAO_ROUTINE   : return self->xRoutine.routType;

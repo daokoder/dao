@@ -447,7 +447,7 @@ DaoVmCode DaoVmCode_CheckOperands( DaoVmCode *self )
 	return vmc;
 }
 
-const char* DaoVmCode_GetOperator2( int opcode )
+const char* DaoVmCode_GetOperator( int opcode )
 {
 	const char *name = NULL;
 	switch( opcode ){

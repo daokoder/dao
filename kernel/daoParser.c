@@ -1885,7 +1885,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 	   printf( "%i  %i  %s\n", end, i, type->name->chars );
 	 */
 	if( (type2 = DaoNamespace_FindType( self->nameSpace, type->name )) ){
-		DaoType_Delete( type );
+		DaoGC_TryDelete( (DaoValue*) type );
 		type = type2;
 	}else{
 		DaoNamespace_AddType( self->nameSpace, type->name, type );
@@ -1894,7 +1894,7 @@ static DaoType* DaoParser_ParseEnumTypeItems( DaoParser *self, int start, int en
 	return type;
 WrongForm:
 	DaoParser_ErrorToken( self, DAO_INVALID_TYPE_FORM, tokens[k] );
-	DaoType_Delete( type );
+	DaoGC_TryDelete( (DaoValue*) type );
 	DMap_Delete( values );
 	return NULL;
 }
@@ -3638,7 +3638,7 @@ static int DaoParser_ParseEnumDefinition( DaoParser *self, int start, int to, in
 	DString_Assign( abtp->fname, abtp->name );
 	abtp2 = DaoNamespace_FindType( self->nameSpace, abtp->name );
 	if( abtp2 ){
-		DaoType_Delete( abtp );
+		DaoGC_TryDelete( (DaoValue*) abtp );
 	}else{
 		DaoNamespace_AddType( self->nameSpace, abtp->name, abtp );
 		abtp2 = abtp;
@@ -3661,7 +3661,7 @@ ErrorEnumDefinition:
 	else
 		DaoParser_Error3( self, DAO_INVALID_ENUM_DEFINITION, start );
 	if( values ) DMap_Delete( values );
-	if( abtp ) DaoType_Delete( abtp );
+	if( abtp ) DaoGC_TryDelete( (DaoValue*) abtp );
 	return 0;
 }
 static int DaoParser_GetNormRegister( DaoParser *self, int reg, int exp, int first, int mid, int last );

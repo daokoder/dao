@@ -266,7 +266,7 @@ int DaoType_MatchInterface( DaoType *self, DaoInterface *inter, DMap *binds )
 	if( inter == NULL ) return DAO_MT_NOT;
 	if( inter->abtype->kernel->SetupMethods ){
 		DaoTypeKernel *kernel = inter->abtype->kernel;
-		kernel->SetupMethods( kernel->nspace, kernel->core );
+		kernel->SetupMethods( kernel->nspace, inter->abtype->core );
 	}
 	if( inters == NULL ) return DAO_MT_SUB * DaoInterface_BindTo( inter, self, binds );
 	if( (it = DMap_Find( inters, inter )) ) return it->value.pVoid ? DAO_MT_SUB : DAO_MT_NOT;

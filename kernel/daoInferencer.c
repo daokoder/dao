@@ -2677,7 +2677,7 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 			// It is a call to the constructor of a specialized type,
 			// do the matching to initialize the type holder mapping:
 			*/
-			DaoType_MatchTo( at, at->kernel->abtype->aux->xCdata.ctype, defs2 );
+			DaoType_MatchTo( at, at->kernel->abtype->aux->xCtype.classType, defs2 );
 		}
 		k = defs2->size;
 		DaoRoutine_PassParamTypes( rout2, bt, tp, argc, code, defs2 );

@@ -2967,7 +2967,7 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 		DString_AppendChars( ct->name, ">" );
 		tp = DaoNamespace_FindType( ns, ct->name );
 		if( tp ){
-			DaoType_Delete( ct );
+			DaoGC_TryDelete( (DaoValue*) ct );
 			ct = tp;
 		}else{
 			DaoType_CheckAttributes( ct );
@@ -3075,7 +3075,7 @@ void DaoProcess_DoCheckIsa( DaoProcess *self, DaoVmCode *vmc )
 	if( dA->type == DAO_OBJECT ){
 		*res = DaoType_ChildOf( dA->xObject.defClass->objType, (DaoType*) dB ) != 0;
 		return;
-	}else if( dA->type >= DAO_CSTRUCT && dA->type <= DAO_CTYPE ){
+	}else if( dA->type == DAO_CSTRUCT || dA->type == DAO_CDATA ){
 		*res = DaoType_ChildOf( dA->xCstruct.ctype, (DaoType*) dB ) != 0;
 		return;
 	}else if( type->tid == DAO_VARIANT ){

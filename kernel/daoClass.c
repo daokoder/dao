@@ -812,7 +812,7 @@ int DaoClass_DeriveClassData( DaoClass *self )
 	}else if( self->parent && self->parent->type == DAO_CTYPE ){
 		DaoCtype *ctype = (DaoCtype*) self->parent;
 		DaoTypeKernel *kernel = ctype->valueType->kernel;
-		DaoTypeCore *core = kernel->core;
+		DaoTypeCore *core = ctype->valueType->core;
 		DMap *methods = kernel->methods;
 		DMap *values = kernel->values;
 

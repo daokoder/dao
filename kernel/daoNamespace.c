@@ -260,8 +260,8 @@ static void DaoValue_AddType( DaoValue *self, DString *name, DaoType *type )
 	if( type->tid >= DAO_OBJECT && type->tid <= DAO_INTERFACE ) cst = type->aux;
 	switch( self->type ){
 	case DAO_CTYPE :
-		kernel = self->xCdata.ctype->kernel;
-		DaoNamespace_SetupValues( kernel->nspace, self->xCdata.ctype->kernel->core );
+		kernel = self->xCtype.valueType->kernel;
+		DaoNamespace_SetupValues( kernel->nspace, self->xCtype.valueType->core );
 		if( kernel->values == NULL ){
 			kernel->values = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 		}
@@ -565,6 +565,8 @@ static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeCore *cor
 	GC_Assign( & ctype_type->kernel, kernel );
 	GC_Assign( & cdata_type->kernel, kernel );
 
+	DaoVmSpace_AddKernel( self->vmSpace, core, kernel );
+
 	for(i=0; i<sizeof(core->bases); i++){
 		DaoTypeCore *base = core->bases[i];
 		DaoTypeKernel *basekern = DaoVmSpace_GetKernel( self->vmSpace, base );
@@ -654,6 +656,7 @@ DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeCore *core )
 	inter = DaoInterface_New( core->name );
 	kernel = DaoTypeKernel_New( core );
 	abtype = inter->abtype;
+	abtype->core = core;
 
 	GC_Assign( & abtype->kernel, kernel );
 	GC_Assign( & kernel->abtype, abtype );
@@ -1618,7 +1621,7 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 	}
 	tp = DaoNamespace_FindType( self, abtp->name );
 	if( tp ){
-		DaoType_Delete( abtp );
+		DaoGC_TryDelete( (DaoValue*) abtp );
 		return tp;
 	}
 	DaoType_CheckAttributes( abtp );
@@ -1867,7 +1870,7 @@ int DaoNamespace_SetupValues( DaoNamespace *self, DaoTypeCore *core )
 		if( kernel->abtype->bases != NULL ){
 			for(i=0; i<kernel->abtype->bases->size; ++i){
 				DaoTypeKernel *skn = kernel->abtype->bases->items.pType[i]->kernel;
-				DaoTypeCore *sup = skn->core;
+				DaoTypeCore *sup = kernel->abtype->bases->items.pType[i]->core;
 
 				if( sup->numbers == NULL ) continue;
 				for(j=0; sup->numbers[j].name!=NULL; j++){
@@ -1964,7 +1967,7 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeCore *core )
 		if( kernel->abtype->bases != NULL ){
 			for(i=0; i<kernel->abtype->bases->size; ++i){
 				DaoTypeKernel *skn = kernel->abtype->bases->items.pType[i]->kernel;
-				DaoTypeCore *sup = skn->core;
+				DaoTypeCore *sup = kernel->abtype->bases->items.pType[i]->core;
 				supMethods = skn->methods;
 				for(it=DMap_First(supMethods); it; it=DMap_Next(supMethods, it)){
 					if( it->value.pRoutine->overloads ){

@@ -183,9 +183,9 @@ struct DaoObjectLogger
 	daoint   newCounts2[END_EXTRA_TYPES];
 	daoint   delCounts1[END_EXTRA_TYPES];
 	daoint   delCounts2[END_EXTRA_TYPES];
-	DList   *cdataValues;
-	DList   *cdataLists;
-	DList   *cdataMaps;
+	DList   *cstructValues;
+	DList   *cstructLists;
+	DList   *cstructMaps;
 	DList   *objects;
 	DMutex   mutex;
 };
@@ -285,24 +285,18 @@ static void DaoObjectLogger_ScanMap( DMap *map, int gckey, int gcval )
 		if( gcval ) DaoObjectLogger_ScanValue( it->value.pValue );
 	}
 }
-static void DaoObjectLogger_ScanCdata( DaoCdata *cdata )
+static void DaoObjectLogger_ScanCstruct( DaoCdata *cstruct )
 {
-	DaoTypeCore *core = cdata->ctype ? cdata->ctype->core : NULL;
-	DList *cvalues = dao_object_logger.cdataValues;
-	DList *clists = dao_object_logger.cdataLists;
-	DList *cmaps = dao_object_logger.cdataMaps;
+	DaoTypeCore *core = cstruct->ctype ? cstruct->ctype->core : NULL;
+	DList *cvalues = dao_object_logger.cstructValues;
+	DList *clists = dao_object_logger.cstructLists;
+	DList *cmaps = dao_object_logger.cstructMaps;
 	daoint i, n;
 
-	if( cdata->subtype == DAO_CDATA_PTR ) return;
+	if( cstruct->subtype == DAO_CDATA_PTR ) return;
 	if( core == NULL || core->HandleGC == NULL ) return;
 	cvalues->size = clists->size = cmaps->size = 0;
-	if( cdata->type == DAO_CSTRUCT ){
-		core->HandleGC( cdata, cvalues, clists, cmaps, 0 );
-	}else if( cdata->data ){
-		core->HandleGC( cdata->data, cvalues, clists, cmaps, 0 );
-	}else{
-		return;
-	}
+	core->HandleGC( (DaoValue*) cstruct, cvalues, clists, cmaps, 0 );
 	DaoObjectLogger_ScanArray2( cvalues );
 	for(i=0,n=clists->size; i<n; i++) DaoObjectLogger_ScanArray( clists->items.pList[i] );
 	for(i=0,n=cmaps->size; i<n; i++) DaoObjectLogger_ScanMap( cmaps->items.pMap[i], 1, 1 );
@@ -396,7 +390,6 @@ void DaoObjectLogger_Quit()
 		case DAO_CTYPE :
 			{
 				DaoCtype *ctype = (DaoCtype*) value;
-				DaoObjectLogger_ScanValue( (DaoValue*) ctype->object );
 				DaoObjectLogger_ScanValue( (DaoValue*) ctype->classType );
 				DaoObjectLogger_ScanValue( (DaoValue*) ctype->valueType );
 				break;
@@ -407,7 +400,7 @@ void DaoObjectLogger_Quit()
 				DaoCstruct *cstruct = (DaoCstruct*) value;
 				DaoObjectLogger_ScanValue( (DaoValue*) cstruct->object );
 				DaoObjectLogger_ScanValue( (DaoValue*) cstruct->ctype );
-				DaoObjectLogger_ScanCdata( cstruct );
+				DaoObjectLogger_ScanCstruct( cstruct );
 				break;
 			}
 		case DAO_ROUTINE :
@@ -550,20 +543,20 @@ void DaoObjectLogger_SwitchBuffer(){}
 typedef struct DaoGarbageCollector  DaoGarbageCollector;
 struct DaoGarbageCollector
 {
-	DList   *idleList;     /* List of new garbage candidates; */
-	DList   *workList;     /* List of working candidates; */
-	DList   *idleList2;    /* List of new garbage candidates (primitive types); */
-	DList   *workList2;    /* List of working candidates (primitive types); */
-	DList   *delayList;    /* List of delayed candidates; */
-	DList   *freeList;     /* List of garbage objects as determined by the GC; */
-	DList   *auxList;      /* Auxiliary list for GC; */
-	DList   *auxList2;     /* Auxiliary list for GC; */
-	DList   *nsList;       /* List of namespaces; */
-	DList   *cdataValues;  /* Value buffer for scanning wrapped objects; */
-	DList   *cdataLists;   /* List buffer for scanning wrapped objects; */
-	DList   *cdataMaps;    /* Map buffer for scanning wrapped objects; */
-	DList   *temporary;    /* Temporary list; */
-	DMap    *wrappers;     /* Globally unique wrappers for Cdata objects; */
+	DList   *idleList;       /* List of new garbage candidates; */
+	DList   *workList;       /* List of working candidates; */
+	DList   *idleList2;      /* List of new garbage candidates (primitive types); */
+	DList   *workList2;      /* List of working candidates (primitive types); */
+	DList   *delayList;      /* List of delayed candidates; */
+	DList   *freeList;       /* List of garbage objects as determined by the GC; */
+	DList   *auxList;        /* Auxiliary list for GC; */
+	DList   *auxList2;       /* Auxiliary list for GC; */
+	DList   *nsList;         /* List of namespaces; */
+	DList   *cstructValues;  /* Value buffer for scanning wrapped objects; */
+	DList   *cstructLists;   /* List buffer for scanning wrapped objects; */
+	DList   *cstructMaps;    /* Map buffer for scanning wrapped objects; */
+	DList   *temporary;      /* Temporary list; */
+	DMap    *wrappers;       /* Globally unique wrappers for Cdata objects; */
 
 	uchar_t   finalizing;
 	uchar_t   delayMask;
@@ -619,9 +612,9 @@ void DaoGC_Init()
 	gcWorker.auxList = DList_New(0);
 	gcWorker.auxList2 = DList_New(0);
 	gcWorker.nsList = DList_New(0);
-	gcWorker.cdataValues = DList_New(0);
-	gcWorker.cdataLists = DList_New(0);
-	gcWorker.cdataMaps = DList_New(0);
+	gcWorker.cstructValues = DList_New(0);
+	gcWorker.cstructLists = DList_New(0);
+	gcWorker.cstructMaps = DList_New(0);
 	gcWorker.temporary = DList_New(0);
 	gcWorker.wrappers = DHash_New(0,DAO_DATA_VALUE);
 
@@ -917,9 +910,9 @@ void DaoGC_Finish()
 	DList_Delete( gcWorker.auxList );
 	DList_Delete( gcWorker.auxList2 );
 	DList_Delete( gcWorker.nsList );
-	DList_Delete( gcWorker.cdataValues );
-	DList_Delete( gcWorker.cdataLists );
-	DList_Delete( gcWorker.cdataMaps );
+	DList_Delete( gcWorker.cstructValues );
+	DList_Delete( gcWorker.cstructLists );
+	DList_Delete( gcWorker.cstructMaps );
 	DList_Delete( gcWorker.temporary );
 	gcWorker.idleList = NULL;
 }
@@ -1255,24 +1248,18 @@ static int DaoGC_ScanMap( DMap *map, int action, int gckey, int gcvalue )
 	}
 	return count;
 }
-static void DaoGC_ScanCdata( DaoCdata *cdata, int action )
+static void DaoGC_ScanCstruct( DaoCstruct *cstruct, int action )
 {
-	DaoTypeCore *core = cdata->ctype ? cdata->ctype->core : NULL;
-	DList *cvalues = gcWorker.cdataValues;
-	DList *clists = gcWorker.cdataLists;
-	DList *cmaps = gcWorker.cdataMaps;
+	DaoTypeCore *core = cstruct->ctype ? cstruct->ctype->core : NULL;
+	DList *cvalues = gcWorker.cstructValues;
+	DList *clists = gcWorker.cstructLists;
+	DList *cmaps = gcWorker.cstructMaps;
 	daoint i, n;
 
-	if( cdata->subtype == DAO_CDATA_PTR ) return;
+	if( cstruct->subtype == DAO_CDATA_PTR ) return;
 	if( core == NULL || core->HandleGC == NULL ) return;
 	cvalues->size = clists->size = cmaps->size = 0;
-	if( cdata->type == DAO_CSTRUCT ){
-		core->HandleGC( cdata, cvalues, clists, cmaps, action == DAO_GC_BREAK );
-	}else if( cdata->data ){
-		core->HandleGC( cdata->data, cvalues, clists, cmaps, action == DAO_GC_BREAK );
-	}else{
-		return;
-	}
+	core->HandleGC( (DaoValue*) cstruct, cvalues, clists, cmaps, action == DAO_GC_BREAK );
 	DaoGC_ScanArray( cvalues, action, 0 );
 	for(i=0,n=clists->size; i<n; i++) DaoGC_ScanArray( clists->items.pList[i], action, 0 );
 	for(i=0,n=cmaps->size; i<n; i++) DaoGC_ScanMap( cmaps->items.pMap[i], action, 1, 1 );
@@ -1771,7 +1758,7 @@ void cycRefCountDecrement( DaoValue *value )
 		*/
 		value->xGC.cycRefCount = 0;
 
-#if DEBUG_TRACE
+#ifdef DEBUG_TRACE
 		printf( "CycRefCount become negative: %2i %p %i %i %i\n", value->type, value );
 		DaoGC_PrintValueInfo( value );
 #endif
@@ -1933,7 +1920,7 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 			DaoCstruct *cstruct = (DaoCstruct*) value;
 			cycRefCountDecrement( (DaoValue*) cstruct->object );
 			cycRefCountDecrement( (DaoValue*) cstruct->ctype );
-			DaoGC_ScanCdata( cstruct, DAO_GC_DEC );
+			DaoGC_ScanCstruct( cstruct, DAO_GC_DEC );
 			break;
 		}
 	case DAO_ROUTINE :
@@ -2154,7 +2141,7 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 			DaoCstruct *cstruct = (DaoCstruct*) value;
 			cycRefCountIncrement( (DaoValue*) cstruct->object );
 			cycRefCountIncrement( (DaoValue*) cstruct->ctype );
-			DaoGC_ScanCdata( cstruct, DAO_GC_INC );
+			DaoGC_ScanCstruct( cstruct, DAO_GC_INC );
 			break;
 		}
 	case DAO_ROUTINE :
@@ -2379,10 +2366,8 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 			directRefCountDecrement( (DaoValue**) & cstruct->ctype );
 			cstruct->ctype = ctype;
 			cstruct->trait |= DAO_VALUE_BROKEN;
-			if( value->type == DAO_CDATA || value->type == DAO_CSTRUCT ){
-				DaoGC_ScanCdata( cstruct, DAO_GC_BREAK );
-				if( value->type == DAO_CDATA ) DaoWrappers_Erase( value->xCdata.data );
-			}
+			DaoGC_ScanCstruct( cstruct, DAO_GC_BREAK );
+			if( value->type == DAO_CDATA ) DaoWrappers_Erase( value->xCdata.data );
 			break;
 		}
 	case DAO_ROUTINE :

@@ -5770,7 +5770,7 @@ DaoTypeCore daoNameValueCore =
 
 
 
-static DaoTypeCore daoCtypeCore;
+extern DaoTypeCore daoCtypeCore;
 
 DaoCtype* DaoCtype_New( DaoTypeCore *core, int tid )
 {
@@ -5842,7 +5842,7 @@ static void DaoCtype_CoreDelete( DaoValue *self )
 }
 
 
-static DaoTypeCore daoCtypeCore =
+DaoTypeCore daoCtypeCore =
 {
 	"ctype",                                           /* name */
 	{ NULL },                                          /* bases */

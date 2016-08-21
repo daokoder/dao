@@ -219,8 +219,6 @@ extern DaoTypeCore  daoArrayCore;
 extern DaoTypeCore  daoListCore;
 extern DaoTypeCore  daoMapCore;
 extern DaoTypeCore  daoTupleCore;
-extern DaoTypeCore  daoIteratorCore;
-extern DaoTypeCore  daoRangeCore;
 extern DaoTypeCore  daoNameValueCore;
 extern DaoTypeCore  daoCtypeCore;
 extern DaoTypeCore  daoCstructCore;
@@ -262,7 +260,7 @@ DaoTypeCore* DaoVmSpace_GetTypeCore( short type )
 #else
 	case DAO_ARRAY  :  return & daoNoneCore;
 #endif
-	case DAO_CTYPE     :
+	case DAO_CTYPE     :  return & daoCtypeCore;
 	case DAO_CSTRUCT   :
 	case DAO_CDATA     :  return & daoCdataCore;
 	case DAO_INTERFACE :  return & daoInterfaceCore;
@@ -678,7 +676,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->nsModules = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsPlugins = DHash_New( DAO_DATA_STRING, 0 );
 	self->nsRefs = DHash_New( DAO_DATA_VALUE, 0 );
-	self->typeKernels = DHash_New( DAO_DATA_VALUE, 0 );
+	self->typeKernels = DHash_New( 0, 0 );
 	self->pathWorking = DString_New();
 	self->nameLoading = DList_New( DAO_DATA_STRING );
 	self->pathLoading = DList_New( DAO_DATA_STRING );
@@ -2843,11 +2841,12 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_AddConstValue( NS, "stdio",  (DaoValue*) vms->stdioStream );
 	DaoNamespace_AddConstValue( NS, "stderr", (DaoValue*) vms->errorStream );
 
+#warning "threading"
 	NS = DaoVmSpace_GetNamespace( vms, "mt" );
 	DaoNamespace_AddConstValue( vms->daoNamespace, "mt", (DaoValue*) NS );
-	dao_type_future  = DaoNamespace_WrapType( NS, & futureTyper, DAO_CSTRUCT, 0 );
+	//dao_type_future  = DaoNamespace_WrapType( NS, & futureTyper, DAO_CSTRUCT, 0 );
 #ifdef DAO_WITH_CONCURRENT
-	dao_type_channel = DaoNamespace_WrapType( NS, & channelTyper, DAO_CSTRUCT, 0 );
+	//dao_type_channel = DaoNamespace_WrapType( NS, & channelTyper, DAO_CSTRUCT, 0 );
 	DaoNamespace_WrapFunctions( NS, dao_mt_methods );
 #endif
 
@@ -3005,6 +3004,7 @@ static DaoType* DaoVmSpace_MakeExceptionType2( DaoVmSpace *self, const char *nam
 		return NULL;
 	}
 
+#warning"DaoTypeCore"
 	core = (DaoTypeCore*) dao_calloc( 1, sizeof(DaoTypeCore) );
 	core->name = (char*) dao_malloc( (strlen(name)+1) * sizeof(char) );
 	strcpy( (char*) core->name, name );
@@ -3034,15 +3034,12 @@ static DaoType* DaoVmSpace_MakeExceptionType2( DaoVmSpace *self, const char *nam
 	}
 
 	type->kernel->attribs |= DAO_TYPEKERNEL_FREE;
-	// TODO: exception
-#if 0
-	for(i=DAO_EXCEPTION; i<ENDOF_BASIC_EXCEPT; i++){
+	for(i=DAO_ERROR; i<=DAO_ERROR_FLOAT; i++){
 		if( strcmp( core->name, daoExceptionNames[i] ) == 0 ){
 			DString_SetChars( type->aux->xCtype.info, daoExceptionTitles[i] );
 			break;
 		}
 	}
-#endif
 	return type;
 }
 

@@ -176,47 +176,35 @@ const char* getRtInfo( int tp )
 
 const char* const daoExceptionNames[] =
 {
-	"Exception" ,
-	"Warning" ,
+	"OK" ,
 	"Error" ,
 	"Error::Field" ,
-	"Error::Field::NotExist" ,
-	"Error::Field::NotPermit" ,
-	"Error::Float" ,
-	"Error::Float::DivByZero" ,
-	"Error::Float::OverFlow" ,
-	"Error::Float::UnderFlow" ,
+	"Error::Field::Absent" ,
+	"Error::Field::Hidden" ,
 	"Error::Index" ,
 	"Error::Index::Range" ,
 	"Error::Key" ,
-	"Error::Key::NotExist" ,
-	"Error::Param" ,
-	"Error::Syntax" ,
+	"Error::Key::Absent" ,
+	"Error::Argument" ,
 	"Error::Type" ,
 	"Error::Value" ,
-	"Error::File"
+	"Error::Float" 
 };
 const char* const daoExceptionTitles[] =
 {
-	"General exception" ,
-	"General warning" ,
-	"General error" ,
-	"Invalid field" ,
-	"Field not exist" ,
-	"Field not permit" ,
-	"Floating point error" ,
-	"Division by zero" ,
-	"Floating point overflow" ,
-	"Floating point underflow" ,
-	"Invalid index" ,
-	"Index out of range" ,
-	"Invalid key" ,
-	"Key not exist" ,
-	"Invalid parameter(s)" ,
-	"Invalid syntax" ,
-	"Invalid type" ,
-	"Invalid value" ,
-	"File error"
+	"No Error" ,
+	"General Error" ,
+	"Invalid Field" ,
+	"Field Absent" ,
+	"Field Hidden" ,
+	"Invalid Index" ,
+	"Index Out of Range" ,
+	"Invalid Key" ,
+	"Key Absent" ,
+	"Invalid Argument" ,
+	"Invalid Type" ,
+	"Invalid Value" ,
+	"Floating Point Error" 
 };
 
 const char* const coreTypeNames[] =

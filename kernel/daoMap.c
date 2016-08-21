@@ -153,7 +153,6 @@ static int DaoValue_Hash( DaoValue *self, unsigned int hash )
 		break;
 	case DAO_CSTRUCT :
 	case DAO_CDATA :
-	case DAO_CTYPE :
 		core = DaoValue_GetTypeCore( self );
 		if( core == NULL || core->DoConversion == NULL ){
 			goto Default;

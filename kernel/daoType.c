@@ -684,8 +684,10 @@ static int DaoValue_MatchToParent( DaoValue *object, DaoType *parent, DMap *defs
 	if( object == NULL || parent == NULL ) return DAO_MT_NOT;
 	if( object->type == DAO_OBJECT ){
 		mt = DaoType_MatchToParent( object->xObject.defClass->objType, parent, defs, 0 );
-	}else if( object->type >= DAO_CSTRUCT && object->type <= DAO_CTYPE ){
+	}else if( object->type == DAO_CSTRUCT || object->type == DAO_CDATA ){
 		mt = DaoType_MatchToParent( object->xCstruct.ctype, parent, defs, 0 );
+	}else if( object->type == DAO_CTYPE ){
+		mt = DaoType_MatchToParent( object->xCtype.classType, parent, defs, 0 );
 	}else if( object->type == DAO_CLASS ){
 		mt = DaoType_MatchToParent( object->xClass.clsType, parent, defs, 0 );
 	}else if( object->type == DAO_CINVALUE ){
@@ -1413,8 +1415,10 @@ DaoValue* DaoType_CastToParent( DaoValue *object, DaoType *parent )
 	daoint i;
 	DaoValue *value;
 	if( object == NULL || parent == NULL ) return NULL;
-	if( object->type >= DAO_CSTRUCT && object->type <= DAO_CTYPE ){
+	if( object->type == DAO_CSTRUCT || object->type == DAO_CDATA ){
 		if( DaoType_MatchToParent( object->xCstruct.ctype, parent, NULL, 0 ) ) return object;
+	}else if( object->type == DAO_CTYPE ){
+		if( DaoType_MatchToParent( object->xCtype.classType, parent, NULL, 0 ) ) return object;
 	}else if( object->type == DAO_OBJECT ){
 		if( object->xObject.defClass->objType == parent ) return object;
 		if( object->xObject.parent ){
@@ -1849,6 +1853,7 @@ DaoValue* DaoType_FindValueOnly( DaoType *self, DString *name )
 	DaoTypeKernel *kernel = self->kernel;
 	DaoValue *value = NULL;
 	DNode *node;
+
 	if( kernel == NULL ) return NULL;
 	/* mainly for C data type: */
 	if( kernel->abtype && kernel->abtype->aux ){
@@ -1909,10 +1914,6 @@ void DaoTypeKernel_Delete( DaoTypeKernel *self )
 	GC_DecRC( self->initRoutines );
 	GC_DecRC( self->castOperators );
 	if( self->sptree ) DaoTypeTree_Delete( self->sptree );
-	if( self->attribs & DAO_TYPEKERNEL_FREE ){
-		dao_free( (char*)self->core->name );
-		dao_free( self->core );
-	}
 	dao_free( self );
 }
 
