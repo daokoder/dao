@@ -3118,9 +3118,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		DMap_Reset( defs );
 		DMap_Assign( defs, (DMap*)DList_Back( self->typeMaps ) );
 
-#if 0
 		DaoLexer_AnnotateCode( routine->body->source, *(DaoVmCodeX*)inode, mbs, 24 );
 		printf( "%4i: ", i );DaoVmCodeX_Print( *(DaoVmCodeX*)inode, mbs->chars, NULL );
+#if 0
 #endif
 
 		K = DaoVmCode_GetOpcodeType( (DaoVmCode*) inode );
@@ -3650,7 +3650,8 @@ SkipChecking:
 				if( at->core == NULL || at->core->CheckUnary == NULL ) return 0;
 				ct = at->core->CheckUnary( at, (DaoVmCode*)vmc, self->routine );
 				if( ct == NULL ) goto InvalidOper;
-				AssertTypeMatching( dao_type_int, ct, defs );
+				DaoInferencer_UpdateVarType( self, opc, ct );
+				AssertTypeMatching( dao_type_int, types[opc], defs );
 				if( at->tid >= DAO_INTEGER && at->tid <= DAO_COMPLEX ){
 					vmc->code = DVM_DATA_I;
 					vmc->a = DAO_INTEGER;

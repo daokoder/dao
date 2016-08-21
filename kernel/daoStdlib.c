@@ -136,16 +136,16 @@ static void DaoSTD_Resource( DaoProcess *proc, DaoValue *p[], int N )
 /* modules/debugger */
 DAO_DLL void Dao_AboutVar( DaoProcess *proc, DaoType *type, DaoValue *var, DString *str )
 {
-	DaoType *abtp = DaoNamespace_GetType( proc->activeNamespace, var );
+	DaoType *valtype = DaoNamespace_GetType( proc->activeNamespace, var );
 	char buf[50];
-	if( abtp ){
+	if( valtype ){
 		if( var->type == DAO_ROUTINE ){
 			DString_Append( str, var->xRoutine.routName );
 			DString_AppendChars( str, "{" );
-			DString_Append( str, abtp->name );
+			DString_Append( str, valtype->name );
 			DString_AppendChars( str, "}" );
 		}else{
-			DString_Append( str, abtp->name );
+			DString_Append( str, valtype->name );
 		}
 		sprintf( buf, "[%p]", var );
 		DString_AppendChars( str, buf );

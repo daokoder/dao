@@ -2744,7 +2744,7 @@ static DaoValue* DaoEnum_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args
 	if( left->type != DAO_ENUM || right->type != DAO_ENUM ) return NULL;
 	switch( op->code ){
 	case DVM_ADD :
-		C = DaoProcess_PutEnum( proc, "" );
+		C = DaoProcess_PutEnum( proc, NULL );
 		if( A->subtype == DAO_ENUM_SYM && B->subtype == DAO_ENUM_SYM ){
 			DaoNamespace *NS = proc->activeNamespace;
 			if( C->etype == NULL ){ /* Can happen in constant evaluation: */
@@ -5272,9 +5272,9 @@ int  DaoTuple_Size( DaoTuple *self )
 }
 int DaoTuple_GetIndex( DaoTuple *self, DString *name )
 {
-	DaoType *abtp = self->ctype;
+	DaoType *type = self->ctype;
 	DNode *node = NULL;
-	if( abtp && abtp->mapNames ) node = MAP_Find( abtp->mapNames, name );
+	if( type && type->mapNames ) node = MAP_Find( type->mapNames, name );
 	if( node == NULL || node->value.pInt >= self->size ) return -1;
 	return node->value.pInt;
 }
@@ -5822,6 +5822,77 @@ DaoValue* DaoCtype_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
 	return DaoType_FindValue( type, name );
 }
 
+int DaoCtype_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx )
+{
+	DaoRoutine *rout;
+	DString *buffer = DString_NewChars( "." );
+	DString_Append( buffer, name );
+	DString_AppendChars( buffer, "=" );
+	rout = DaoType_FindFunction( self, buffer );
+	DString_Delete( buffer );
+	if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
+	rout = DaoRoutine_MatchByType( rout, self, & value, 1, DVM_CALL );
+	if( rout == NULL ) return DAO_ERROR_VALUE;
+	return DAO_OK;
+}
+
+int DaoCtype_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc )
+{
+    DaoRoutine *rout = NULL;
+	DaoType *type = self->xCtype.classType;
+
+    DString_SetChars( proc->string, "." );
+    DString_Append( proc->string, name );
+    DString_AppendChars( proc->string, "=" );
+    rout = DaoType_FindFunction( type, proc->string );
+    if( rout == NULL ) return DAO_ERROR_FIELD_ABSENT;
+    DaoProcess_PushCallable( proc, rout, self, & value, 1 );
+	return DAO_OK;
+}
+
+DaoType* DaoCtype_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
+{
+	DaoRoutine *rout = DaoType_FindFunctionChars( self, "[]" );
+	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, index, N, DVM_CALL );
+	if( rout == NULL ) return NULL;
+	return (DaoType*) rout->routType->aux;
+}
+
+DaoValue* DaoCtype_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *proc )
+{
+	DaoType *type = self->xCtype.classType;
+	DaoRoutine *rout = DaoType_FindFunctionChars( type, "[]" );
+	if( rout != NULL ) DaoProcess_PushCallable( proc, rout, self, index, N );
+	return NULL;
+}
+
+int DaoCtype_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
+{
+	DaoRoutine *rout = DaoType_FindFunctionChars( self, "[]=" );
+	DaoType *args[ DAO_MAX_PARAM + 1 ];
+
+	args[0] = value;
+	memcpy( args + 1, index, N*sizeof(DaoType*) );
+
+	printf( "DaoCtype_CheckSetItem: %p\n", rout );
+	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, args, N+1, DVM_CALL );
+	printf( "DaoCtype_CheckSetItem: %p\n", rout );
+	if( rout == NULL ) return DAO_ERROR_INDEX;
+	return DAO_OK;
+}
+
+int DaoCtype_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc )
+{
+	DaoType *type = self->xCtype.classType;
+	DaoRoutine *rout = DaoType_FindFunctionChars( type, "[]=" );
+	DaoValue *args[ DAO_MAX_PARAM ];
+	if( rout == NULL ) return DAO_ERROR_INDEX;
+	args[0] = value;
+	memcpy( args+1, index, N*sizeof(DaoValue*) );
+	DaoProcess_PushCallable( proc, rout, self, args, N+1 );
+	return DAO_OK;
+}
+
 DaoType* DaoCtype_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( DaoType_ChildOf( self, type ) ) return type;
@@ -5849,9 +5920,9 @@ DaoTypeCore daoCtypeCore =
 	NULL,                                              /* numbers */
 	NULL,                                              /* methods */
 	DaoCtype_CheckGetField,    DaoCtype_DoGetField,    /* GetField */
-	NULL,                      NULL,                   /* SetField */
-	NULL,                      NULL,                   /* GetItem */
-	NULL,                      NULL,                   /* SetItem */
+	DaoCtype_CheckSetField,    DaoCtype_DoSetField,    /* SetField */
+	DaoCtype_CheckGetItem,     DaoCtype_DoGetItem,     /* GetItem */
+	DaoCtype_CheckSetItem,     DaoCtype_DoSetItem,     /* SetItem */
 	NULL,                      NULL,                   /* Unary */
 	NULL,                      NULL,                   /* Binary */
 	NULL,                      NULL,                   /* Comparison */

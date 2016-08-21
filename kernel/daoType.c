@@ -69,7 +69,6 @@ DaoType *dao_type_cdata = NULL;
 DaoType *dao_type_exception = NULL;
 DaoType *dao_type_warning = NULL;
 DaoType *dao_type_error = NULL;
-DaoType *dao_type_for_iterator = NULL;
 DaoType *dao_type_iterator_int = NULL;
 DaoType *dao_type_iterator_any = NULL;
 DaoType *dao_array_types[DAO_COMPLEX+1] = {0};
@@ -267,10 +266,13 @@ void DaoType_CheckAttributes( DaoType *self )
 		}
 	}
 }
-DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DList *nest )
+void print_trace( const char *info );
+DaoType* DaoType_New( const char *name, int tid, DaoValue *aux, DList *nest )
 {
 	DaoTypeCore *core = DaoVmSpace_GetTypeCore( tid );
 	DaoType *self = (DaoType*) dao_calloc( 1, sizeof(DaoType) );
+	printf( "DaoType_New: %s %p\n", name, self );
+	//if( strcmp( name, "string" ) == 0 ) print_trace( "DaoType_New" );
 	DaoValue_Init( self, DAO_TYPE );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->tid = tid;
@@ -278,10 +280,10 @@ DaoType* DaoType_New( const char *name, int tid, DaoValue *extra, DList *nest )
 	self->core = core;
 	//self->kernel = core->kernel;
 	//GC_IncRC( self->kernel );
-	if( extra == NULL && tid == DAO_PAR_VALIST ) extra = (DaoValue*) dao_type_any;
-	if( extra ){
-		self->aux = extra;
-		GC_IncRC( extra );
+	if( aux == NULL && tid == DAO_PAR_VALIST ) aux = (DaoValue*) dao_type_any;
+	if( aux ){
+		self->aux = aux;
+		GC_IncRC( aux );
 	}
 	DString_SetChars( self->name, name );
 	if( tid == DAO_ENUM || tid == DAO_PAR_NAMED || tid == DAO_PAR_DEFAULT ){
@@ -376,8 +378,8 @@ void DaoType_InitDefault( DaoType *self )
 }
 DaoType* DaoType_Copy( DaoType *other )
 {
-	DNode *it;
 	DaoType *self = (DaoType*) dao_malloc( sizeof(DaoType) );
+	printf( "DaoType_Copy: %s %p %p\n", other->name->chars, other, self );
 	memcpy( self, other, sizeof(DaoType) );
 	DaoValue_Init( self, DAO_TYPE ); /* to reset gc fields */
 	self->trait |= DAO_VALUE_DELAYGC;
@@ -1795,11 +1797,15 @@ extern DMutex mutex_methods_setup;
 
 static void DaoType_TrySetupMethods( DaoType *self )
 {
+	printf( "DaoType_TrySetupMethods 1: %p %s\n", self, self->name->chars );
+	if( self->tid == DAO_CTYPE ) self = (DaoType*) self->aux->xCtype.valueType;
 	if( self->kernel == NULL ) return;
+	printf( "DaoType_TrySetupMethods 2: %s\n", self->name->chars );
 	if( self->kernel->SetupMethods ){
 		self->kernel->SetupMethods( self->kernel->nspace, self->core );
 	}
 	if( self->kernel->methods == NULL ) return;
+	printf( "DaoType_TrySetupMethods 3: %s\n", self->name->chars );
 	if( self->kernel->attribs & DAO_TYPEKERNEL_TEMPLATE ) DaoType_SpecializeMethods( self );
 }
 DaoRoutine* DaoType_GetInitor( DaoType *self )
@@ -1827,7 +1833,9 @@ DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 	}
 
 	DaoType_TrySetupMethods( self );
+	printf( "DaoType_FindFunction 1: %s %s %p\n", self->name->chars, name->chars, self->kernel );
 	if( self->kernel == NULL || self->kernel->methods == NULL ) return NULL;
+	printf( "DaoType_FindFunction 2: %s %p\n", name->chars, self->kernel );
 	node = DMap_Find( self->kernel->methods, name );
 	if( node ) return node->value.pRoutine;
 	return NULL;
@@ -2214,8 +2222,10 @@ DaoType* DaoGenericType_Specialize( DaoType *self, DaoType *types[], int count )
 	if( (sptype = DaoTypeTree_Get( sptree, types, count )) ) return sptype;
 	if( DaoTypeTree_Test( sptree, types, count ) == 0 ) return NULL;
 
-	/* Specialized type will be initialized with the same kernel as the template type.
-	 * Upon method accessing, a new kernel will be created with specialized methods. */
+	/*
+	// Specialized type will be initialized with the same kernel as the template type.
+	// Upon method accessing, a new kernel will be created with specialized methods.
+	*/
 	sptype = DaoType_New( self->name->chars, self->tid, NULL, NULL );
 	GC_Assign( & sptype->kernel, self->kernel );
 	sptype->tid = self->tid;

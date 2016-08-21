@@ -474,15 +474,15 @@ void DaoObjectLogger_Quit()
 			}
 		case DAO_TYPE :
 			{
-				DaoType *abtp = (DaoType*) value;
-				DaoObjectLogger_ScanValue( abtp->aux );
-				DaoObjectLogger_ScanValue( abtp->value );
-				DaoObjectLogger_ScanValue( (DaoValue*) abtp->kernel );
-				DaoObjectLogger_ScanValue( (DaoValue*) abtp->cbtype );
-				DaoObjectLogger_ScanValue( (DaoValue*) abtp->quadtype );
-				DaoObjectLogger_ScanArray( abtp->nested );
-				DaoObjectLogger_ScanArray( abtp->bases );
-				DaoObjectLogger_ScanMap( abtp->interfaces, 1, 0 );
+				DaoType *type = (DaoType*) value;
+				DaoObjectLogger_ScanValue( type->aux );
+				DaoObjectLogger_ScanValue( type->value );
+				DaoObjectLogger_ScanValue( (DaoValue*) type->kernel );
+				DaoObjectLogger_ScanValue( (DaoValue*) type->cbtype );
+				DaoObjectLogger_ScanValue( (DaoValue*) type->quadtype );
+				DaoObjectLogger_ScanArray( type->nested );
+				DaoObjectLogger_ScanArray( type->bases );
+				DaoObjectLogger_ScanMap( type->interfaces, 1, 0 );
 				break;
 			}
 		case DAO_TYPEKERNEL :
@@ -2003,15 +2003,15 @@ static int DaoGC_CycRefCountDecScan( DaoValue *value )
 		}
 	case DAO_TYPE :
 		{
-			DaoType *abtp = (DaoType*) value;
-			cycRefCountDecrement( abtp->aux );
-			cycRefCountDecrement( abtp->value );
-			cycRefCountDecrement( (DaoValue*) abtp->kernel );
-			cycRefCountDecrement( (DaoValue*) abtp->cbtype );
-			cycRefCountDecrement( (DaoValue*) abtp->quadtype );
-			cycRefCountDecrements( abtp->nested );
-			cycRefCountDecrements( abtp->bases );
-			count += DaoGC_ScanMap( abtp->interfaces, DAO_GC_DEC, 1, 0 );
+			DaoType *type = (DaoType*) value;
+			cycRefCountDecrement( type->aux );
+			cycRefCountDecrement( type->value );
+			cycRefCountDecrement( (DaoValue*) type->kernel );
+			cycRefCountDecrement( (DaoValue*) type->cbtype );
+			cycRefCountDecrement( (DaoValue*) type->quadtype );
+			cycRefCountDecrements( type->nested );
+			cycRefCountDecrements( type->bases );
+			count += DaoGC_ScanMap( type->interfaces, DAO_GC_DEC, 1, 0 );
 			break;
 		}
 	case DAO_TYPEKERNEL :
@@ -2224,15 +2224,15 @@ static int DaoGC_CycRefCountIncScan( DaoValue *value )
 		}
 	case DAO_TYPE :
 		{
-			DaoType *abtp = (DaoType*) value;
-			cycRefCountIncrement( abtp->aux );
-			cycRefCountIncrement( abtp->value );
-			cycRefCountIncrement( (DaoValue*) abtp->kernel );
-			cycRefCountIncrement( (DaoValue*) abtp->cbtype );
-			cycRefCountIncrement( (DaoValue*) abtp->quadtype );
-			cycRefCountIncrements( abtp->nested );
-			cycRefCountIncrements( abtp->bases );
-			count += DaoGC_ScanMap( abtp->interfaces, DAO_GC_INC, 1, 0 );
+			DaoType *type = (DaoType*) value;
+			cycRefCountIncrement( type->aux );
+			cycRefCountIncrement( type->value );
+			cycRefCountIncrement( (DaoValue*) type->kernel );
+			cycRefCountIncrement( (DaoValue*) type->cbtype );
+			cycRefCountIncrement( (DaoValue*) type->quadtype );
+			cycRefCountIncrements( type->nested );
+			cycRefCountIncrements( type->bases );
+			count += DaoGC_ScanMap( type->interfaces, DAO_GC_INC, 1, 0 );
 			break;
 		}
 	case DAO_TYPEKERNEL :
@@ -2454,15 +2454,15 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 		}
 	case DAO_TYPE :
 		{
-			DaoType *abtp = (DaoType*) value;
-			directRefCountDecrements( abtp->nested );
-			directRefCountDecrements( abtp->bases );
-			directRefCountDecrement( (DaoValue**) & abtp->aux );
-			directRefCountDecrement( (DaoValue**) & abtp->value );
-			directRefCountDecrement( (DaoValue**) & abtp->kernel );
-			directRefCountDecrement( (DaoValue**) & abtp->cbtype );
-			directRefCountDecrement( (DaoValue**) & abtp->quadtype );
-			count += DaoGC_ScanMap( abtp->interfaces, DAO_GC_BREAK, 1, 0 );
+			DaoType *type = (DaoType*) value;
+			directRefCountDecrements( type->nested );
+			directRefCountDecrements( type->bases );
+			directRefCountDecrement( (DaoValue**) & type->aux );
+			directRefCountDecrement( (DaoValue**) & type->value );
+			directRefCountDecrement( (DaoValue**) & type->kernel );
+			directRefCountDecrement( (DaoValue**) & type->cbtype );
+			directRefCountDecrement( (DaoValue**) & type->quadtype );
+			count += DaoGC_ScanMap( type->interfaces, DAO_GC_BREAK, 1, 0 );
 			break;
 		}
 	case DAO_TYPEKERNEL :

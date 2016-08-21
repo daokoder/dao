@@ -1006,7 +1006,7 @@ int DaoProcess_Start( DaoProcess *self )
 	DaoValue **vref;
 	DaoValue **locVars;
 	DaoType **locTypes;
-	DaoType *abtp, *ta, *tb;
+	DaoType *type, *ta, *tb;
 	DaoTuple *tuple;
 	DaoList *list;
 	DString *str;
@@ -1382,8 +1382,8 @@ CallEntry:
 			goto CheckException;
 		}OPNEXT() OPCASE( SETVH ){
 			self->activeCode = vmc;
-			abtp = dataVH[vmc->c]->activeTypes[vmc->b];
-			if( DaoProcess_Move( self, locVars[vmc->a], dataVH[vmc->c]->activeValues + vmc->b, abtp ) ==0 )
+			type = dataVH[vmc->c]->activeTypes[vmc->b];
+			if( DaoProcess_Move( self, locVars[vmc->a], dataVH[vmc->c]->activeValues + vmc->b, type ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVS ){
 			self->activeCode = vmc;
@@ -1392,8 +1392,8 @@ CallEntry:
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVO ){
 			self->activeCode = vmc;
-			abtp = typeVO->items.pVar[vmc->b]->dtype;
-			if( DaoProcess_Move( self, locVars[vmc->a], dataVO + vmc->b, abtp ) ==0 )
+			type = typeVO->items.pVar[vmc->b]->dtype;
+			if( DaoProcess_Move( self, locVars[vmc->a], dataVO + vmc->b, type ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( SETVK ){
 			self->activeCode = vmc;
@@ -2038,12 +2038,12 @@ CallEntry:
 		}OPNEXT() OPCASE( SETI_TI ){
 			tuple = & locVars[vmc->c]->xTuple;
 			id = LocalInt(vmc->b);
-			abtp = NULL;
+			type = NULL;
 			if( id <0 || id >= tuple->size ) goto RaiseErrorIndexOutOfRange;
 			self->activeCode = vmc;
-			abtp = tuple->ctype->nested->items.pType[id];
-			if( abtp->tid == DAO_PAR_NAMED ) abtp = & abtp->aux->xType;
-			if( DaoProcess_Move( self, locVars[vmc->a], tuple->values + id, abtp ) ==0 )
+			type = tuple->ctype->nested->items.pType[id];
+			if( type->tid == DAO_PAR_NAMED ) type = (DaoType*) type->aux;
+			if( DaoProcess_Move( self, locVars[vmc->a], tuple->values + id, type ) ==0 )
 				goto CheckException;
 		}OPNEXT() OPCASE( GETF_TB ) OPCASE( GETF_TI ){
 			/*
@@ -2256,8 +2256,8 @@ CallEntry:
 			}
 		}OPNEXT() OPCASE( CAST_VX ){
 			vA = locVars[vmc->a];
-			abtp = locTypes[vmc->c];
-			if( vA->type == abtp->tid ){
+			type = locTypes[vmc->c];
+			if( vA->type == type->tid ){
 				GC_Assign( & locVars[vmc->c], vA );
 			}else{
 				DaoProcess_DoCast( self, vmc );
@@ -3981,7 +3981,7 @@ static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 
 	if( va == NULL || va->type == 0 ) return;
 
-	if( vc == NULL || vc->type != DAO_TUPLE || vc->xTuple.ctype != dao_type_for_iterator ){
+	if( vc == NULL || vc->type != DAO_TUPLE || vc->xTuple.subtype != DAO_ITERATOR ){
 		vc = (DaoValue*) DaoProcess_PutTuple( self, 2 );
 	}
 
@@ -4066,9 +4066,9 @@ void DaoProcess_DoList(  DaoProcess *self, DaoVmCode *vmc )
 
 	DList_Resize( list->value, vmc->b, NULL );
 	if( vmc->b > 0 && type ==NULL ){
-		DaoType *abtp = DaoNamespace_GetType( ns, regValues[opA] );
-		DaoType *t = DaoNamespace_MakeType( ns, "list", DAO_LIST, NULL, & abtp, 1 );
-		GC_Assign( & list->ctype, t );
+		DaoType *type = DaoNamespace_GetType( ns, regValues[opA] );
+		DaoType *listype = DaoNamespace_MakeType( ns, "list", DAO_LIST, NULL, & type, 1 );
+		GC_Assign( & list->ctype, listype );
 	}
 	if( vmc->b && list->ctype == dao_type_list_empty ){
 		GC_Assign( & list->ctype, dao_type_list_any );

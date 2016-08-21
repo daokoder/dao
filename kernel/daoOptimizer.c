@@ -1856,7 +1856,7 @@ void DaoOptimizer_InitNode( DaoOptimizer *self, DaoCnode *node, DaoVmCode *vmc )
 		bt = types[vmc->b] ? types[vmc->b]->tid : DAO_UDT;
 		ct = types[vmc->c] ? types[vmc->c]->tid : DAO_UDT;
 		/* Need to be executed in any case to finish a loop: */
-		if( types[vmc->b] == dao_type_for_iterator ) return;
+		if( types[vmc->b] != NULL && types[vmc->b]->subtid == DAO_ITERATOR ) return;
 		if( (at & DAO_ANY) || at == DAO_VARIANT ) return;
 		if( (bt & DAO_ANY) || bt == DAO_VARIANT ) return;
 		if( (ct & DAO_ANY) || ct == DAO_VARIANT ) return;

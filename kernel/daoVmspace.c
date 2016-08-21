@@ -2791,7 +2791,6 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_AddTypeConstant( coreNS, dao_type_enum->name, dao_type_enum );
 
 	dao_type_none = DaoNamespace_MakeValueType( coreNS, dao_none_value );
-	dao_type_for_iterator = DaoNamespace_DefineType( coreNS, "tuple<valid:bool,iterator:any>", "ForIterator" );
 
 	dao_type_tuple = DaoNamespace_DefineType( coreNS, "tuple<...>", NULL );
 
