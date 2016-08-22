@@ -63,6 +63,8 @@
 
 #endif
 
+typedef void  (*DThreadTask)( void *arg );
+
 typedef struct DMutex       DMutex;
 typedef struct DCondVar     DCondVar;
 typedef struct DThreadData  DThreadData;

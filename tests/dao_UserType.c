@@ -57,15 +57,6 @@ static void DaoxUserType_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *id
 	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
-static DaoTypeCore userTypeCore=
-{
-	NULL,
-	DaoValue_GetField,
-	DaoValue_SetField,
-	DaoxUserType_GetItem,
-	DaoxUserType_SetItem,
-	NULL
-};
 static void UT_New1( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxUserType *self = DaoxUserType_New();
@@ -207,7 +198,7 @@ static void UT_CastToString( DaoProcess *proc, DaoValue *p[], int n )
 	DString_Reserve( res, 50 );
 	res->size = sprintf( res->chars, "UserType.{%" DAO_I64 "}", self->value );
 }
-static DaoFuncItem userTypeMeths[]=
+static DaoFunctionEntry userTypeMeths[]=
 {
 	{ UT_New1, "UserType( value: int ) => UserType" },
 
@@ -243,14 +234,31 @@ static DaoFuncItem userTypeMeths[]=
 
 	{ NULL, NULL },
 };
-DaoTypeBase userTypeTyper =
+
+static DaoTypeCore daoUserTypeCore =
 {
-	"UserType", NULL, NULL, (DaoFuncItem*) userTypeMeths, {0}, {0},
-	(FuncPtrDel)DaoxUserType_Delete, NULL
+	"UserType",                                            /* name */
+	{ NULL },                                              /* bases */
+	NULL,                                                  /* numbers */
+	userTypeMeths,                                         /* methods */
+	DaoCstruct_CheckGetField,    DaoCstruct_DoGetField,    /* GetField */
+	DaoCstruct_CheckSetField,    DaoCstruct_DoSetField,    /* SetField */
+	DaoCstruct_CheckGetItem,     DaoCstruct_DoGetItem,     /* GetItem */
+	DaoCstruct_CheckSetItem,     DaoCstruct_DoSetItem,     /* SetItem */
+	DaoCstruct_CheckUnary,       DaoCstruct_DoUnary,       /* Unary */
+	DaoCstruct_CheckBinary,      DaoCstruct_DoBinary,      /* Binary */
+	DaoCstruct_CheckComparison,  DaoCstruct_DoComparison,  /* Comparison */
+	DaoCstruct_CheckConversion,  DaoCstruct_DoConversion,  /* Conversion */
+	NULL,                        NULL,                     /* ForEach */
+	DaoCstruct_Print,                                      /* Print */
+	NULL,                                                  /* Slice */
+	NULL,                                                  /* Copy */
+	(DaoDeleteFunction) DaoxUserType_Delete,               /* Delete */
+	NULL                                                   /* HandleGC */
 };
 
 DAO_DLL int DaoUsertype_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	daox_type_user_type = DaoNamespace_WrapType( ns, & userTypeTyper, DAO_CSTRUCT, DAO_CTYPE_INVAR );
+	daox_type_user_type = DaoNamespace_WrapType( ns, & daoUserTypeCore, DAO_CSTRUCT, DAO_CTYPE_INVAR );
 	return 0;
 }

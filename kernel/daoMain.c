@@ -204,7 +204,7 @@ void DaoRestartRun( char **argv, int argc, int optid )
 /*
 // Adding virtual modules:
 //
-// * Create a C source file and define an variable of DaoVModule array;
+// * Create a C source file and define an variable of DaoVirtualModule array;
 // * Name the variable as "dao_virtual_modules";
 // * Terminate the array with { NULL, ... };
 // * Compile files with -DDAO_WITH_STATIC_MODULES;
@@ -212,14 +212,14 @@ void DaoRestartRun( char **argv, int argc, int optid )
 //
 // In this way, these virtual modules can be loaded in the normal way.
 //
-// DaoVModule dao_virtual_modules[] =
+// DaoVirtualModule dao_virtual_modules[] =
 // {
 //     { "hello.dao", 21, "io.writeln( 'hello world!' )", NULL },
 //     { NULL, 0, NULL, NULL }
 // };
 */
 
-extern DaoVModule dao_virtual_modules[];
+extern DaoVirtualModule dao_virtual_modules[];
 
 
 int main( int argc, char **argv )

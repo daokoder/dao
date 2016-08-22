@@ -2,7 +2,7 @@
 // Dao Standard Modules
 // http://www.daovm.net
 //
-// Copyright (c) 2015, Limin Fu
+// Copyright (c) 2015,2016, Limin Fu
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -507,8 +507,18 @@ static void DaoIOS_Tell( DaoProcess *proc, DaoValue *p[], int N )
 	DaoProcess_PutInteger( proc, self->offset );
 }
 
+static DaoType* DaoStream_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
+{
+	return DaoCstruct_GetDefaultCore()->CheckGetField( self, name, ctx );
+}
 
-static DaoFuncItem dao_io_methods[] =
+static DaoValue* DaoStream_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
+{
+	return DaoCstruct_GetDefaultCore()->DoGetField( self, name, proc );
+}
+
+
+static DaoFunctionEntry dao_io_methods[] =
 {
 	{ DaoIO_Open,      "tmpFile() => FileStream" },
 	{ DaoIO_Open,      "open( file: string, mode: string ) => FileStream" },
@@ -523,68 +533,133 @@ static DaoFuncItem dao_io_methods[] =
 	{ NULL, NULL }
 };
 
-static DaoFuncItem fileStreamMeths[] =
+static DaoFunctionEntry daoFileStreamMeths[] =
 {
-	{ DaoIO_Open,      "FileStream() => FileStream" },
-	{ DaoIO_Open,      "FileStream( file: string, mode: string ) => FileStream" },
-	{ DaoIO_Open,      "FileStream( fd: int, mode: string ) => FileStream" },
-	{ DaoIO_Close,     "close( self: FileStream )" },
-	{ DaoIO_Seek,      "seek( self: FileStream, pos: int, from: enum<start,current,end> ) => int" },
-	{ DaoIO_Tell,      "tell( self: FileStream ) => int" },
-	{ DaoIO_FileNO,    ".fd( invar self: FileStream ) => int" },
+	{ DaoIO_Open,    "FileStream() => FileStream" },
+	{ DaoIO_Open,    "FileStream( file: string, mode: string ) => FileStream" },
+	{ DaoIO_Open,    "FileStream( fd: int, mode: string ) => FileStream" },
+	{ DaoIO_Close,   "close( self: FileStream )" },
+	{ DaoIO_Seek,    "seek( self: FileStream, pos: int, from: enum<start,current,end> ) => int" },
+	{ DaoIO_Tell,    "tell( self: FileStream ) => int" },
+	{ DaoIO_FileNO,  ".fd( invar self: FileStream ) => int" },
 	{ NULL, NULL }
 };
 
 
-DaoTypeBase DaoFileStream_Typer =
+DaoTypeCore daoFileStreamCore =
 {
-	"FileStream", NULL, NULL, (DaoFuncItem*) fileStreamMeths, {0}, {0},
-	(FuncPtrDel) DaoFileStream_Delete, NULL
+	"FileStream",                                    /* name */
+	{ NULL },                                        /* bases */
+	NULL,                                            /* numbers */
+	daoFileStreamMeths,                              /* methods */
+	DaoStream_CheckGetField,  DaoStream_DoGetField,  /* GetField */
+	NULL,                     NULL,                  /* SetField */
+	NULL,                     NULL,                  /* GetItem */
+	NULL,                     NULL,                  /* SetItem */
+	NULL,                     NULL,                  /* Unary */
+	NULL,                     NULL,                  /* Binary */
+	NULL,                     NULL,                  /* Comparison */
+	NULL,                     NULL,                  /* Conversion */
+	NULL,                     NULL,                  /* ForEach */
+	NULL,                                            /* Print */
+	NULL,                                            /* Slice */
+	NULL,                                            /* Copy */
+	(DaoDeleteFunction) DaoFileStream_Delete,        /* Delete */
+	NULL                                             /* HandleGC */
 };
 
 
-static DaoFuncItem pipeMeths[] =
+static DaoFunctionEntry daoPipeStreamMeths[] =
 {
-	{ PIPE_New,      "PipeStream( file: string, mode: string ) => PipeStream" },
-	{ PIPE_FileNO,   ".fd( invar self: PipeStream ) => int" },
-	{ PIPE_Close,    "close( self: PipeStream ) => int" },
+	{ PIPE_New,     "PipeStream( file: string, mode: string ) => PipeStream" },
+	{ PIPE_FileNO,  ".fd( invar self: PipeStream ) => int" },
+	{ PIPE_Close,   "close( self: PipeStream ) => int" },
 	{ NULL, NULL }
 };
 
-DaoTypeBase DaoPipeStream_Typer =
+DaoTypeCore daoPipeStreamCore =
 {
-	"PipeStream", NULL, NULL, (DaoFuncItem*) pipeMeths, {0}, {0},
-	(FuncPtrDel) DaoPipeStream_Delete, NULL
+	"PipeStream",                                    /* name */
+	{ NULL },                                        /* bases */
+	NULL,                                            /* numbers */
+	daoPipeStreamMeths,                              /* methods */
+	DaoStream_CheckGetField,  DaoStream_DoGetField,  /* GetField */
+	NULL,                     NULL,                  /* SetField */
+	NULL,                     NULL,                  /* GetItem */
+	NULL,                     NULL,                  /* SetItem */
+	NULL,                     NULL,                  /* Unary */
+	NULL,                     NULL,                  /* Binary */
+	NULL,                     NULL,                  /* Comparison */
+	NULL,                     NULL,                  /* Conversion */
+	NULL,                     NULL,                  /* ForEach */
+	NULL,                                            /* Print */
+	NULL,                                            /* Slice */
+	NULL,                                            /* Copy */
+	(DaoDeleteFunction) DaoPipeStream_Delete,        /* Delete */
+	NULL                                             /* HandleGC */
 };
 
 
-static DaoFuncItem stringStreamMeths[] =
+static DaoFunctionEntry daoStringStreamMeths[] =
 {
-	{ DaoIOS_Open,    "StringStream() => StringStream" },
-	{ DaoIOS_Seek,    "seek( self: StringStream, pos: int, from: enum<start,current,end> ) => int" },
-	{ DaoIOS_Tell,    "tell( self: StringStream ) => int" },
+	{ DaoIOS_Open,  "StringStream() => StringStream" },
+	{ DaoIOS_Seek,  "seek( self: StringStream, pos: int, from: enum<start,current,end> ) => int" },
+	{ DaoIOS_Tell,  "tell( self: StringStream ) => int" },
 	{ NULL, NULL }
 };
 
 
-DaoTypeBase DaoStringStream_Typer =
+DaoTypeCore daoStringStreamCore =
 {
-	"StringStream", NULL, NULL, (DaoFuncItem*) stringStreamMeths, {0}, {0},
-	(FuncPtrDel) DaoStringStream_Delete, NULL
+	"StringStream",                                  /* name */
+	{ NULL },                                        /* bases */
+	NULL,                                            /* numbers */
+	daoStringStreamMeths,                            /* methods */
+	DaoStream_CheckGetField,  DaoStream_DoGetField,  /* GetField */
+	NULL,                     NULL,                  /* SetField */
+	NULL,                     NULL,                  /* GetItem */
+	NULL,                     NULL,                  /* SetItem */
+	NULL,                     NULL,                  /* Unary */
+	NULL,                     NULL,                  /* Binary */
+	NULL,                     NULL,                  /* Comparison */
+	NULL,                     NULL,                  /* Conversion */
+	NULL,                     NULL,                  /* ForEach */
+	NULL,                                            /* Print */
+	NULL,                                            /* Slice */
+	NULL,                                            /* Copy */
+	(DaoDeleteFunction) DaoStringStream_Delete,      /* Delete */
+	NULL                                             /* HandleGC */
 };
 
-static DaoFuncItem seekdevMeths[] =
+static DaoFunctionEntry daoSeekableDeviceMeths[] =
 {
-	{ NULL,		"seek( self: SeekableDevice, pos: int, from: enum<start,current,end> ) => int" },
-	{ NULL,		"tell( self: SeekableDevice ) => int" },
+	{ NULL,	 "seek( self: SeekableDevice, pos: int, from: enum<start,current,end> ) => int" },
+	{ NULL,  "tell( self: SeekableDevice ) => int" },
 	{ NULL, NULL }
 };
 
-DaoTypeBase seekdevTyper =
+DaoTypeCore daoSeekableDeviceCore =
 {
-	"SeekableDevice", NULL, NULL, (DaoFuncItem*) seekdevMeths, {0}, {0},
-	(FuncPtrDel) NULL, NULL
+	"SeekableDevice",        /* name */
+	{ NULL },                /* bases */
+	NULL,                    /* numbers */
+	daoSeekableDeviceMeths,  /* methods */
+	NULL,  NULL,             /* GetField */
+	NULL,  NULL,             /* SetField */
+	NULL,  NULL,             /* GetItem */
+	NULL,  NULL,             /* SetItem */
+	NULL,  NULL,             /* Unary */
+	NULL,  NULL,             /* Binary */
+	NULL,  NULL,             /* Comparison */
+	NULL,  NULL,             /* Conversion */
+	NULL,  NULL,             /* ForEach */
+	NULL,                    /* Print */
+	NULL,                    /* Slice */
+	NULL,                    /* Copy */
+	NULL,                    /* Delete */
+	NULL                     /* HandleGC */
 };
+
 
 #undef DAO_STREAM
 #undef DAO_STREAM_DLL
@@ -594,14 +669,14 @@ DaoTypeBase seekdevTyper =
 DAO_DLL_EXPORT int DaoStream_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
 	DaoNamespace *ions = DaoVmSpace_GetNamespace( vmSpace, "io" );
-	DaoFileStream_Typer.supers[0] = DaoType_GetTyper( dao_type_stream );
-	DaoPipeStream_Typer.supers[0] = DaoType_GetTyper( dao_type_stream );
-	DaoStringStream_Typer.supers[0] = DaoType_GetTyper( dao_type_stream );
-	seekdevTyper.supers[0] = DaoType_GetTyper( dao_type_io_device );
-	dao_type_file_stream = DaoNamespace_WrapType( ions, & DaoFileStream_Typer, DAO_CSTRUCT, 0 );
-	dao_type_pipe_stream = DaoNamespace_WrapType( ions, & DaoPipeStream_Typer, DAO_CSTRUCT, 0 );
-	dao_type_string_stream = DaoNamespace_WrapType( ions, & DaoStringStream_Typer, DAO_CSTRUCT, 0 );
-	DaoNamespace_WrapInterface( ions, &seekdevTyper );
+	daoFileStreamCore.bases[0] = DaoType_GetTypeCore( dao_type_stream );
+	daoPipeStreamCore.bases[0] = DaoType_GetTypeCore( dao_type_stream );
+	daoStringStreamCore.bases[0] = DaoType_GetTypeCore( dao_type_stream );
+	daoSeekableDeviceCore.bases[0] = DaoType_GetTypeCore( dao_type_io_device );
+	dao_type_file_stream = DaoNamespace_WrapType( ions, & daoFileStreamCore, DAO_CSTRUCT, 0 );
+	dao_type_pipe_stream = DaoNamespace_WrapType( ions, & daoPipeStreamCore, DAO_CSTRUCT, 0 );
+	dao_type_string_stream = DaoNamespace_WrapType( ions, & daoStringStreamCore, DAO_CSTRUCT, 0 );
+	DaoNamespace_WrapInterface( ions, & daoSeekableDeviceCore );
 	DaoNamespace_WrapFunctions( ions, dao_io_methods );
 
 #define DAO_API_INIT

@@ -312,20 +312,21 @@ DaoNamespace* DaoVmSpace_GetNamespace( DaoVmSpace *self, const char *name )
 	DaoVmSpace_Unlock( self );
 	return ns;
 }
+
 DaoNamespace* DaoVmSpace_MainNamespace( DaoVmSpace *self )
 {
 	return self->mainNamespace;
 }
+
 DaoProcess* DaoVmSpace_MainProcess( DaoVmSpace *self )
 {
 	return self->mainProcess;
 }
+
 DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self )
 {
 	DaoProcess *proc = NULL;
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->cacheMutex );
-#endif
+	DaoVmSpace_LockCache( self );
 	if( self->processes->size ){
 		proc = (DaoProcess*) DList_Back( self->processes );
 		proc->active = 0;
@@ -335,16 +336,13 @@ DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self )
 		proc = DaoProcess_New( self );
 		DMap_Insert( self->allProcesses, proc, 0 );
 	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->cacheMutex );
-#endif
+	DaoVmSpace_UnlockCache( self );
 	return proc;
 }
+
 void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 {
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->cacheMutex );
-#endif
+	DaoVmSpace_LockCache( self );
 	if( DMap_Find( self->allProcesses, proc ) ){
 		if( proc->factory ) DList_Clear( proc->factory );
 		if( proc->aux ) DaoAux_Delete( proc->aux );
@@ -355,17 +353,13 @@ void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 		DList_Clear( proc->exceptions );
 		DList_PushBack( self->processes, proc );
 	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->cacheMutex );
-#endif
+	DaoVmSpace_UnlockCache( self );
 }
 
 DaoRoutine* DaoVmSpace_AcquireRoutine( DaoVmSpace *self )
 {
 	DaoRoutine *rout = NULL;
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->cacheMutex );
-#endif
+	DaoVmSpace_LockCache( self );
 	if( self->routines->size ){
 		rout = (DaoRoutine*) DList_Back( self->routines );
 		DList_PopBack( self->routines );
@@ -373,22 +367,17 @@ DaoRoutine* DaoVmSpace_AcquireRoutine( DaoVmSpace *self )
 		rout = DaoRoutine_New( self->mainNamespace, NULL, 1 );
 		DMap_Insert( self->allRoutines, rout, 0 );
 	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->cacheMutex );
-#endif
+	DaoVmSpace_UnlockCache( self );
 	return rout;
 }
+
 void DaoVmSpace_ReleaseRoutine( DaoVmSpace *self, DaoRoutine *rout )
 {
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->cacheMutex );
-#endif
+	DaoVmSpace_LockCache( self );
 	if( DMap_Find( self->allRoutines, rout ) ){
 		DList_PushBack( self->routines, rout );
 	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->cacheMutex );
-#endif
+	DaoVmSpace_UnlockCache( self );
 }
 
 #if 0
@@ -407,9 +396,7 @@ DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )
 	return parser;
 #endif
 
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->cacheMutex );
-#endif
+	DaoVmSpace_LockCache( self );
 	if( self->parsers->size ){
 		parser = (DaoParser*) DList_Back( self->parsers );
 		DList_PopBack( self->parsers );
@@ -418,11 +405,10 @@ DaoParser* DaoVmSpace_AcquireParser( DaoVmSpace *self )
 		parser->vmSpace = self;
 		DMap_Insert( self->allParsers, parser, 0 );
 	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->cacheMutex );
-#endif
+	DaoVmSpace_UnlockCache( self );
 	return parser;
 }
+
 void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser )
 {
 #ifdef SHARE_NO_PARSER
@@ -430,16 +416,13 @@ void DaoVmSpace_ReleaseParser( DaoVmSpace *self, DaoParser *parser )
 #endif
 
 	DaoParser_Reset( parser );
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->cacheMutex );
-#endif
+	DaoVmSpace_LockCache( self );
 	if( DMap_Find( self->allParsers, parser ) ){
 		DList_PushBack( self->parsers, parser );
 	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->cacheMutex );
-#endif
+	DaoVmSpace_UnlockCache( self );
 }
+
 DaoByteCoder* DaoVmSpace_AcquireByteCoder( DaoVmSpace *self )
 {
 	DaoByteCoder *byteCoder = NULL;
@@ -450,9 +433,7 @@ DaoByteCoder* DaoVmSpace_AcquireByteCoder( DaoVmSpace *self )
 	return byteCoder;
 #endif
 
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->cacheMutex );
-#endif
+	DaoVmSpace_LockCache( self );
 	if( self->byteCoders->size ){
 		byteCoder = (DaoByteCoder*) DList_Back( self->byteCoders );
 		DList_PopBack( self->byteCoders );
@@ -461,11 +442,10 @@ DaoByteCoder* DaoVmSpace_AcquireByteCoder( DaoVmSpace *self )
 		//byteCoder->vmSpace = self;
 		DMap_Insert( self->allByteCoders, byteCoder, 0 );
 	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->cacheMutex );
-#endif
+	DaoVmSpace_UnlockCache( self );
 	return byteCoder;
 }
+
 void DaoVmSpace_ReleaseByteCoder( DaoVmSpace *self, DaoByteCoder *byteCoder )
 {
 #ifdef SHARE_NO_PARSER
@@ -473,16 +453,13 @@ void DaoVmSpace_ReleaseByteCoder( DaoVmSpace *self, DaoByteCoder *byteCoder )
 #endif
 
 	DaoByteCoder_Reset( byteCoder );
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->cacheMutex );
-#endif
+	DaoVmSpace_LockCache( self );
 	if( DMap_Find( self->allByteCoders, byteCoder ) ){
 		DList_PushBack( self->byteCoders, byteCoder );
 	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->cacheMutex );
-#endif
+	DaoVmSpace_UnlockCache( self );
 }
+
 DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self )
 {
 	DaoInferencer *inferencer = NULL;
@@ -491,9 +468,7 @@ DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self )
 	return DaoInferencer_New();
 #endif
 
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->cacheMutex );
-#endif
+	DaoVmSpace_LockCache( self );
 	if( self->inferencers->size ){
 		inferencer = (DaoInferencer*) DList_Back( self->inferencers );
 		DList_PopBack( self->inferencers );
@@ -501,11 +476,10 @@ DaoInferencer* DaoVmSpace_AcquireInferencer( DaoVmSpace *self )
 		inferencer = DaoInferencer_New();
 		DMap_Insert( self->allInferencers, inferencer, 0 );
 	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->cacheMutex );
-#endif
+	DaoVmSpace_UnlockCache( self );
 	return inferencer;
 }
+
 void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *inferencer )
 {
 #ifdef SHARE_NO_INFERENCER
@@ -513,16 +487,13 @@ void DaoVmSpace_ReleaseInferencer( DaoVmSpace *self, DaoInferencer *inferencer )
 #endif
 
 	DaoInferencer_Reset( inferencer );
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->cacheMutex );
-#endif
+	DaoVmSpace_LockCache( self );
 	if( DMap_Find( self->allInferencers, inferencer ) ){
 		DList_PushBack( self->inferencers, inferencer );
 	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->cacheMutex );
-#endif
+	DaoVmSpace_UnlockCache( self );
 }
+
 DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self )
 {
 	DaoOptimizer *optimizer = NULL;
@@ -531,9 +502,7 @@ DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self )
 	return DaoOptimizer_New();
 #endif
 
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->cacheMutex );
-#endif
+	DaoVmSpace_LockCache( self );
 	if( self->optimizers->size ){
 		optimizer = (DaoOptimizer*) DList_Back( self->optimizers );
 		DList_PopBack( self->optimizers );
@@ -541,35 +510,33 @@ DaoOptimizer* DaoVmSpace_AcquireOptimizer( DaoVmSpace *self )
 		optimizer = DaoOptimizer_New();
 		DMap_Insert( self->allOptimizers, optimizer, 0 );
 	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->cacheMutex );
-#endif
+	DaoVmSpace_UnlockCache( self );
 	return optimizer;
 }
+
 void DaoVmSpace_ReleaseOptimizer( DaoVmSpace *self, DaoOptimizer *optimizer )
 {
 #ifdef SHARE_NO_OPTIMIZER
 	DaoOptimizer_Delete( optimizer ); return;
 #endif
 
-#ifdef DAO_WITH_THREAD
-	DMutex_Lock( & self->cacheMutex );
-#endif
+	DaoVmSpace_LockCache( self );
 	if( DMap_Find( self->allOptimizers, optimizer ) ){
 		DList_PushBack( self->optimizers, optimizer );
 	}
-#ifdef DAO_WITH_THREAD
-	DMutex_Unlock( & self->cacheMutex );
-#endif
+	DaoVmSpace_UnlockCache( self );
 }
+
 DaoStream* DaoVmSpace_StdioStream( DaoVmSpace *self )
 {
 	return self->stdioStream;
 }
+
 DaoStream* DaoVmSpace_ErrorStream( DaoVmSpace *self )
 {
 	return self->errorStream;
 }
+
 DaoStream* DaoVmSpace_SetStdio( DaoVmSpace *self, DaoStream *stream )
 {
 	DaoStdStream *stdstream = (DaoStdStream*) self->stdioStream;
@@ -821,18 +788,35 @@ void DaoVmSpace_Delete( DaoVmSpace *self )
 #endif
 	dao_free( self );
 }
+
 void DaoVmSpace_Lock( DaoVmSpace *self )
 {
 #ifdef DAO_WITH_THREAD
 	DMutex_Lock( & self->miscMutex );
 #endif
 }
+
 void DaoVmSpace_Unlock( DaoVmSpace *self )
 {
 #ifdef DAO_WITH_THREAD
 	DMutex_Unlock( & self->miscMutex );
 #endif
 }
+
+void DaoVmSpace_LockCache( DaoVmSpace *self )
+{
+#ifdef DAO_WITH_THREAD
+	DMutex_Lock( & self->cacheMutex );
+#endif
+}
+
+void DaoVmSpace_UnlockCache( DaoVmSpace *self )
+{
+#ifdef DAO_WITH_THREAD
+	DMutex_Unlock( & self->cacheMutex );
+#endif
+}
+
 int DaoDecodeUInt16( const char *data )
 {
 	const uchar_t *p = (const uchar_t*) data;
@@ -2954,9 +2938,9 @@ DaoNamespace* DaoVmSpace_LoadModule( DaoVmSpace *self, DString *fname, DaoParser
 
 void DaoVmSpace_AddKernel( DaoVmSpace *self, DaoTypeCore *core, DaoTypeKernel *kernel )
 {
-	DaoVmSpace_Lock( self );
+	DaoVmSpace_LockCache( self );
 	DMap_Insert( self->typeKernels, core, kernel );
-	DaoVmSpace_Unlock( self );
+	DaoVmSpace_UnlockCache( self );
 }
 
 DaoTypeKernel* DaoVmSpace_GetKernel( DaoVmSpace *self, DaoTypeCore *core )
@@ -2965,9 +2949,9 @@ DaoTypeKernel* DaoVmSpace_GetKernel( DaoVmSpace *self, DaoTypeCore *core )
 
 	if( core == NULL ) return NULL;
 
-	DaoVmSpace_Lock( self );
+	DaoVmSpace_LockCache( self );
 	it = DMap_Find( self->typeKernels, core );
-	DaoVmSpace_Unlock( self );
+	DaoVmSpace_UnlockCache( self );
 
 	if( it ) return (DaoTypeKernel*) it->value.pValue;
 	return NULL;

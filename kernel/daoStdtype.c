@@ -3488,7 +3488,7 @@ static void DaoLIST_Sum( DaoProcess *proc, DaoValue *p[], int N )
 	case DAO_BOOLEAN :
 		{
 			daoint res = 0;
-			for(i=0; i<size; i++) res |= data[i]->xInteger.value;
+			for(i=0; i<size; i++) res |= data[i]->xBoolean.value;
 			DaoProcess_PutBoolean( proc, res );
 			break;
 		}
@@ -5793,6 +5793,9 @@ DaoCtype* DaoCtype_New( DaoTypeCore *core, int tid )
 
 void DaoCtype_Delete( DaoCtype *self )
 {
+#ifdef DAO_USE_GC_LOGGER
+	DaoObjectLogger_LogDelete( (DaoValue*) self );
+#endif
 	DString_Delete( self->name );
 	DString_Delete( self->info );
 	GC_DecRC( self->classType );
@@ -5874,9 +5877,7 @@ int DaoCtype_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *valu
 	args[0] = value;
 	memcpy( args + 1, index, N*sizeof(DaoType*) );
 
-	printf( "DaoCtype_CheckSetItem: %p\n", rout );
 	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, args, N+1, DVM_CALL );
-	printf( "DaoCtype_CheckSetItem: %p\n", rout );
 	if( rout == NULL ) return DAO_ERROR_INDEX;
 	return DAO_OK;
 }

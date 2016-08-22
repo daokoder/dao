@@ -2012,8 +2012,14 @@ DaoType* DaoInferencer_CheckBinaryOper( DaoInferencer *self, DaoInode *inode, Da
 
 	operands[0] = at;
 	operands[1] = bt;
-	if( DaoType_LooseChecking( at ) || DaoType_LooseChecking( bt ) ){
+	if( DaoType_LooseChecking( at ) && DaoType_LooseChecking( bt ) ){
 		ct = at->tid < bt->tid ? at : bt;
+	}else if( DaoType_LooseChecking( at ) ){
+		ct = at;
+	}else if( DaoType_LooseChecking( bt ) ){
+		ct = bt;
+	}else if( at->tid == DAO_VARIANT || bt->tid == DAO_VARIANT ){
+		ct = dao_type_any; // TODO;
 	}else if(  ((at->tid >= DAO_OBJECT && at->tid <= DAO_CDATA) || at->tid == DAO_INTERFACE)
 			&& ((bt->tid >= DAO_OBJECT && bt->tid <= DAO_CDATA) || bt->tid == DAO_INTERFACE) ){
 		DaoType *operhost = at;
@@ -3118,9 +3124,9 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 		DMap_Reset( defs );
 		DMap_Assign( defs, (DMap*)DList_Back( self->typeMaps ) );
 
+#if 0
 		DaoLexer_AnnotateCode( routine->body->source, *(DaoVmCodeX*)inode, mbs, 24 );
 		printf( "%4i: ", i );DaoVmCodeX_Print( *(DaoVmCodeX*)inode, mbs->chars, NULL );
-#if 0
 #endif
 
 		K = DaoVmCode_GetOpcodeType( (DaoVmCode*) inode );
@@ -3554,7 +3560,7 @@ SkipChecking:
 
 			DaoInferencer_UpdateVarType( self, opc, ct );
 			/* allow less strict typing: */
-			if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ) return 1;
+			if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ) break;
 			AssertTypeMatching( ct, types[opc], defs );
 			ct = types[opc];
 			if( at->realnum && bt->realnum && ct->realnum ){
@@ -3672,7 +3678,7 @@ SkipChecking:
 
 				DaoInferencer_UpdateVarType( self, opc, ct );
 				/* allow less strict typing: */
-				if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ) return 1;
+				if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ) break;
 				AssertTypeMatching( ct, types[opc], defs );
 				ct = types[opc];
 				if( at->realnum && bt->realnum && ct->realnum ){
@@ -3747,7 +3753,7 @@ SkipChecking:
 		case DVM_PAIR :
 			{
 				if( types[opc] && types[opc]->tid == DAO_ANY ) continue;
-				ct = DaoNamespace_MakePairType( NS, types[opa], types[opb] );
+				ct = DaoNamespace_MakeRangeType( NS, types[opa], types[opb] );
 				DaoInferencer_UpdateType( self, opc, ct );
 				AssertTypeMatching( ct, types[opc], defs );
 				break;

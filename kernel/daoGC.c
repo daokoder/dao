@@ -45,9 +45,9 @@
 
 
 
+#define DEBUG_TRACE
 #if defined(DEBUG) && defined(UNIX)
 #if 0
-#define DEBUG_TRACE
 #endif
 #endif
 
@@ -108,7 +108,7 @@ static void DaoGC_PrintValueInfo( DaoValue *value )
 		printf( "class: %s\t", value->xClass.className->chars );
 		break;
 	case DAO_TYPEKERNEL :
-		printf( "tkernal: %s\t", ((DaoTypeKernel*)value)->core->name );
+		//printf( "tkernal: %s\t", ((DaoTypeKernel*)value)->abtype->name->chars );
 		break;
 	case DAO_ROUTINE :
 		printf( "rout: %s %s\n", value->xRoutine.routName->chars, value->xRoutine.routType->name->chars );
@@ -285,7 +285,7 @@ static void DaoObjectLogger_ScanMap( DMap *map, int gckey, int gcval )
 		if( gcval ) DaoObjectLogger_ScanValue( it->value.pValue );
 	}
 }
-static void DaoObjectLogger_ScanCstruct( DaoCdata *cstruct )
+static void DaoObjectLogger_ScanCstruct( DaoCstruct *cstruct )
 {
 	DaoTypeCore *core = cstruct->ctype ? cstruct->ctype->core : NULL;
 	DList *cvalues = dao_object_logger.cstructValues;
@@ -312,9 +312,9 @@ void DaoObjectLogger_Quit()
 	DList *cmaps = DList_New(0);
 
 	dao_object_logger.objects = objects;
-	dao_object_logger.cdataValues = cvalues;
-	dao_object_logger.cdataLists = clists;
-	dao_object_logger.cdataMaps = cmaps;
+	dao_object_logger.cstructValues = cvalues;
+	dao_object_logger.cstructLists = clists;
+	dao_object_logger.cstructMaps = cmaps;
 	DaoObjectLogger_PrintProfile();
 
 	for(it=DMap_First(objmap); it; it=DMap_Next(objmap, it)){
@@ -1169,7 +1169,9 @@ void DaoGC_PrepareCandidates()
 		DaoValue_Delete( freeList->items.pValue[i] );
 	}
 	freeList->size = 0;
+	printf( "DaoGC_PrepareCandidates 1\n" );
 	for(i=0; i<types->size; ++i) DaoValue_Delete( types->items.pValue[i] );
+	printf( "DaoGC_PrepareCandidates 2\n" );
 }
 
 enum DaoGCActions{ DAO_GC_DEC, DAO_GC_INC, DAO_GC_BREAK };
@@ -2350,11 +2352,8 @@ static int DaoGC_RefCountDecScan( DaoValue *value )
 	case DAO_CTYPE :
 		{
 			DaoCtype *ctype = (DaoCtype*) value;
-			DaoType *classType = ctype->classType;
 			directRefCountDecrement( (DaoValue**) & ctype->classType );
 			directRefCountDecrement( (DaoValue**) & ctype->valueType );
-			ctype->classType = classType;
-			ctype->trait |= DAO_VALUE_BROKEN;
 			break;
 		}
 	case DAO_CSTRUCT :

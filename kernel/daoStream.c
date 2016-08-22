@@ -393,16 +393,12 @@ int DaoFile_WriteString( FILE* file, DString *str )
 
 static DaoType* DaoStream_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx )
 {
-	DaoTypeCore *core = DaoCstruct_GetDefaultCore();
-	if( core != NULL && core->CheckGetField != NULL ) return core->CheckGetField( self, name, ctx );
-	return NULL;
+	return DaoCstruct_GetDefaultCore()->CheckGetField( self, name, ctx );
 }
 
 static DaoValue* DaoStream_DoGetField( DaoValue *self, DString *name, DaoProcess *proc )
 {
-	DaoTypeCore *core = DaoCstruct_GetDefaultCore();
-	if( core != NULL && core->DoGetField != NULL ) return core->DoGetField( self, name, proc );
-	return NULL;
+	return DaoCstruct_GetDefaultCore()->DoGetField( self, name, proc );
 }
 
 

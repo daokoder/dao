@@ -873,6 +873,43 @@ DAO_DLL DaoCstruct* DaoObject_CastCstruct( DaoObject *self, DaoType *type );
 DAO_DLL DaoCdata*   DaoObject_CastCdata( DaoObject *self, DaoType *type );
 
 
+DAO_DLL void DaoCstruct_Init( DaoCstruct *self, DaoType *type );
+DAO_DLL void DaoCstruct_Free( DaoCstruct *self );
+
+DAO_DLL DaoType* DaoCstruct_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx );
+DAO_DLL DaoValue* DaoCstruct_DoGetField( DaoValue *self, DString *name, DaoProcess *proc );
+DAO_DLL int DaoCstruct_CheckSetField( DaoType *self, DString *name, DaoType *value, DaoRoutine *ctx );
+DAO_DLL int DaoCstruct_DoSetField( DaoValue *self, DString *name, DaoValue *value, DaoProcess *proc );
+
+DAO_DLL DaoType* DaoCstruct_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx );
+DAO_DLL DaoValue* DaoCstruct_DoGetItem( DaoValue *self, DaoValue *index[], int N, DaoProcess *proc );
+DAO_DLL int DaoCstruct_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx );
+DAO_DLL int DaoCstruct_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc );
+
+DAO_DLL DaoType* DaoCstruct_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx );
+DAO_DLL DaoValue* DaoCstruct_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc );
+DAO_DLL DaoType* DaoCstruct_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx );
+DAO_DLL DaoValue* DaoCstruct_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc );
+
+DAO_DLL int DaoCstruct_CheckComparison( DaoType *self, DaoType *other, DaoRoutine *ctx );
+DAO_DLL int DaoCstruct_DoComparison( DaoValue *self, DaoValue *other, DaoProcess *proc );
+DAO_DLL DaoType* DaoCstruct_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx );
+DAO_DLL DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc );
+DAO_DLL void DaoCstruct_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc );
+
+
+
+DAO_DLL DaoCdata* DaoCdata_New( DaoType *type, void *data );
+DAO_DLL DaoCdata* DaoCdata_Wrap( DaoType *type, void *data );
+DAO_DLL int    DaoCdata_IsType( DaoCdata *self, DaoType *type );
+DAO_DLL int    DaoCdata_OwnData( DaoCdata *self );
+DAO_DLL void   DaoCdata_SetType( DaoCdata *self, DaoType *type );
+DAO_DLL void   DaoCdata_SetData( DaoCdata *self, void *data );
+DAO_DLL void*  DaoCdata_CastData( DaoCdata *self, DaoType *totype );
+DAO_DLL void*  DaoCdata_GetData( DaoCdata *self );
+DAO_DLL void** DaoCdata_GetData2( DaoCdata *self );
+DAO_DLL DaoObject* DaoCdata_GetObject( DaoCdata *self );
+
 
 DAO_DLL DaoStream* DaoStream_New();
 DAO_DLL void DaoStream_Delete( DaoStream *self );
@@ -890,18 +927,6 @@ DAO_DLL int DaoFile_ReadLine( FILE *fin, DString *line );
 DAO_DLL int DaoFile_ReadAll( FILE *fin, DString *all, int close );
 DAO_DLL int DaoFile_WriteString( FILE *fout, DString *str );
 
-
-
-DAO_DLL DaoCdata* DaoCdata_New( DaoType *type, void *data );
-DAO_DLL DaoCdata* DaoCdata_Wrap( DaoType *type, void *data );
-DAO_DLL int    DaoCdata_IsType( DaoCdata *self, DaoType *type );
-DAO_DLL int    DaoCdata_OwnData( DaoCdata *self );
-DAO_DLL void   DaoCdata_SetType( DaoCdata *self, DaoType *type );
-DAO_DLL void   DaoCdata_SetData( DaoCdata *self, void *data );
-DAO_DLL void*  DaoCdata_CastData( DaoCdata *self, DaoType *totype );
-DAO_DLL void*  DaoCdata_GetData( DaoCdata *self );
-DAO_DLL void** DaoCdata_GetData2( DaoCdata *self );
-DAO_DLL DaoObject* DaoCdata_GetObject( DaoCdata *self );
 
 DAO_DLL DaoRegex* DaoRegex_New( DString *pattern );
 DAO_DLL int DaoRegex_Match( DaoRegex *self, DString *src, daoint *start, daoint *end );

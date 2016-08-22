@@ -285,7 +285,7 @@ static DaoType* DaoObject_CheckGetField( DaoType *self, DString *name, DaoRoutin
 {
 	DaoClass *klass = (DaoClass*) self->aux;
 	DaoType *type = ctx->routHost;
-	DaoClass *host = type && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoClass *host = type != NULL && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoValue *data = DaoClass_GetData( klass, name, host );
 	DaoRoutine *rout;
 	int error = DAO_OK;
@@ -340,7 +340,7 @@ static int DaoObject_CheckSetField( DaoType *self, DString *name, DaoType *value
 {
 	DaoClass *klass = (DaoClass*) self->aux;
 	DaoType *type = ctx->routHost;
-	DaoClass *host = type && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoClass *host = type != NULL && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoValue *data = DaoClass_GetData( klass, name, host );
 	DaoRoutine *rout;
 	int error = DAO_OK;
@@ -394,7 +394,7 @@ static int DaoObject_DoSetField( DaoValue *self, DString *name, DaoValue *value,
 static DaoType* DaoObject_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
 {
 	DaoType *type = ctx->routHost;
-	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoClass *host = type != NULL && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoRoutine *rout = DaoClass_FindMethod( (DaoClass*) self->aux, "[]", host );
 
 	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, index, N, DVM_CALL );
@@ -415,7 +415,7 @@ static DaoValue* DaoObject_DoGetItem( DaoValue *self, DaoValue *index[], int N, 
 static int DaoObject_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
 {
 	DaoType *type = ctx->routHost;
-	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoClass *host = type != NULL && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoRoutine *rout = DaoClass_FindMethod( (DaoClass*) self->aux, "[]", host );
 	DaoType *args[ DAO_MAX_PARAM + 1 ];
 
@@ -444,7 +444,7 @@ static int DaoObject_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoVal
 DaoType* DaoObject_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
 {
 	DaoType *type = ctx->routHost;
-	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoClass *host = type != NULL && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoRoutine *rout = NULL;
 
 	switch( op->code ){
@@ -492,7 +492,7 @@ DaoValue* DaoObject_DoUnary( DaoValue *self, DaoVmCode *op, DaoProcess *proc )
 DaoType* DaoObject_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *args[2], DaoRoutine *ctx )
 {
 	DaoType *type = ctx->routHost;
-	DaoClass *host = type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
+	DaoClass *host = type != NULL && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoRoutine *rout = NULL;
 	DaoType *selftype = NULL;
 
@@ -553,7 +553,7 @@ static DaoType* DaoObject_CheckConversion( DaoType *self, DaoType *type, DaoRout
 	DString *buffer;
 	DaoRoutine *rout;
 	DaoType *hostype = ctx->routHost;
-	DaoClass *host = hostype->tid == DAO_OBJECT ? (DaoClass*) hostype->aux : NULL;
+	DaoClass *host = hostype != NULL && hostype->tid == DAO_OBJECT ? (DaoClass*) hostype->aux : NULL;
 
 	if( DaoType_ChildOf( self, type ) ) return type;
 	if( DaoType_ChildOf( type, self ) ) return type;

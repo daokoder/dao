@@ -41,6 +41,12 @@
 #include"time.h"
 
 
+#define DAO_SLICE_COUNT   0
+#define DAO_SLICE_STEP    1
+#define DAO_SLICE_START   2
+#define DAO_SLICE_LENGTH  3
+
+
 double abs_c( const dao_complex com )
 {
 	return sqrt( com.real*com.real + com.imag*com.imag );
@@ -652,11 +658,6 @@ static daoint DaoArray_IndexFromSlice( DaoArray *self, DArray *slices, daoint si
 	}
 	return index;
 }
-
-#define DAO_SLICE_COUNT   0
-#define DAO_SLICE_STEP    1
-#define DAO_SLICE_START   2
-#define DAO_SLICE_LENGTH  3
 
 static int DaoArray_MakeSlice( DaoArray *self, DaoProcess *proc, DaoValue *idx[], int N, DaoArray *result )
 {
@@ -1474,6 +1475,8 @@ ErrorDivByZero:
 }
 
 
+int DaoType_CheckNumberIndex( DaoType *self );
+int DaoType_CheckRangeIndex( DaoType *self );
 
 static DaoType* DaoArray_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
 {
@@ -1498,7 +1501,7 @@ static DaoType* DaoArray_CheckGetItem( DaoType *self, DaoType *index[], int N, D
 				count += 1;
 			}
 		}
-		if( count == N ) return type;
+		if( count == N ) return etype;
 		return self;
 	}
 	return NULL;
@@ -1558,6 +1561,8 @@ static DaoValue* DaoArray_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, 
 		daoint *dimAccum = self->dims + self->ndim;
 		daoint allNumbers = 1;
 		daoint vecpos = 0;
+		daoint i;
+
 		for(i=0; i<N; i++){
 			if( index[i]->type < DAO_BOOLEAN || index[i]->type > DAO_FLOAT ){
 				allNumbers = 0;
@@ -1640,16 +1645,16 @@ static int DaoArray_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoTyp
 
 static int DaoArray_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc )
 {
-	DaoArray *self = (DaoArray*) selfv;
-	daoint pos, end, size = self->size;
+	DaoArray *array = (DaoArray*) self;
+	daoint pos, end, size = array->size;
 
-	DaoArray_Sliced( self );
+	DaoArray_Sliced( array );
 
 	if( N == 0 ){
 		if( value->type >= DAO_BOOLEAN && value->type <= DAO_COMPLEX ){
-			DaoArray_DoBinary_ArrayNumber( self, self, value, DVM_MOVE, proc );
+			DaoArray_DoBinary_ArrayNumber( array, array, value, DVM_MOVE, proc );
 		}else if( value->type == DAO_ARRAY ){
-			DaoArray_DoBinary_ArrayArray( self, self, (DaoArray*) value, DVM_MOVE, proc );
+			DaoArray_DoBinary_ArrayArray( array, array, (DaoArray*) value, DVM_MOVE, proc );
 		}else{
 			return DAO_ERROR_VALUE;
 		}
@@ -1659,23 +1664,22 @@ static int DaoArray_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValu
 		case DAO_INTEGER :
 		case DAO_FLOAT :
 			pos = DaoValue_GetInteger( index[0] );
-			pos = Dao_CheckNumberIndex( pos, size, p );
+			pos = Dao_CheckNumberIndex( pos, size, proc );
 			if( pos < 0 ) return DAO_ERROR_INDEX;
 			if( value->type == DAO_NONE || value->type > DAO_COMPLEX ) return DAO_ERROR_VALUE;
-			self->xString.value->chars[pos] = DaoValue_GetInteger( value );
-			DaoArray_SetValue( self, pos, value );
+			DaoArray_SetValue( array, pos, value );
 			break;
 		default: return DAO_ERROR_INDEX;
 		}
-	}else if( N <= self->ndim ){
-		DaoArray_MakeSlice( self, proc, ids, N, self );
-		self->original = self;
+	}else if( N <= array->ndim ){
+		DaoArray_MakeSlice( array, proc, index, N, array );
+		array->original = array;
 		if( value->type == DAO_ARRAY ){
-			DaoArray_DoBinary_ArrayArray( self, self, (DaoArray*) value, DVM_MOVE, proc );
+			DaoArray_DoBinary_ArrayArray( array, array, (DaoArray*) value, DVM_MOVE, proc );
 		}else{
-			DaoArray_DoBinary_ArrayNumber( self, self, value, DVM_MOVE, proc );
+			DaoArray_DoBinary_ArrayNumber( array, array, value, DVM_MOVE, proc );
 		}
-		self->original = NULL;
+		array->original = NULL;
 	}else{
 		return DAO_ERROR_INDEX;
 	}
@@ -1794,7 +1798,7 @@ static DaoType* DaoArray_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *arg
 	return NULL;
 }
 
-static DaoValue* DaoArray_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *p )
+static DaoValue* DaoArray_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc )
 {
 	DaoValue *A  = args[0];
 	DaoValue *B = args[1];
@@ -1871,7 +1875,7 @@ static DaoType* DaoArray_CheckConversion( DaoType *self, DaoType *type, DaoRouti
 	return type;
 }
 
-static DaoValue* DaoArray_DoConversion( DaoValue *self, DaoType *type, DaoValue *num, DaoProcess *p )
+static DaoValue* DaoArray_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
 	DaoArray *source = (DaoArray*) self;
 	DaoArray *result;
@@ -1901,7 +1905,7 @@ static DaoValue* DaoArray_DoConversion( DaoValue *self, DaoType *type, DaoValue 
 		}
 	}
 #endif
-	return result;
+	return (DaoValue*) result;
 }
 
 DaoType* DaoArray_CheckForEach( DaoType *self, DaoRoutine *ctx )
@@ -2556,7 +2560,7 @@ static void DaoARRAY_Reduce( DaoProcess *proc, DaoValue *p[], int npar )
 {
 	DaoARRAY_BasicFunctional( proc, p, npar, DVM_FUNCT_FOLD );
 }
-static DaoFuncItem numarMeths[] =
+static DaoFunctionEntry daoArrayMeths[] =
 {
 	{ DaoARRAY_New,
 		"array<@T<none|bool|int|float|complex>=none>( dim1: int, dim2 = 1, dim3 = 1 )"
@@ -2706,8 +2710,8 @@ static DaoFuncItem numarMeths[] =
 
 
 
-extern DaoType* DaoValue_CheckGetField( DaoType *self, DValue *field, DaoRoutine *ctx );
-extern DaoValue* DaoValue_DoGetField( DaoValue *self, DValue *field, DaoProcess *proc );
+extern DaoType* DaoValue_CheckGetField( DaoType *self, DString *field, DaoRoutine *ctx );
+extern DaoValue* DaoValue_DoGetField( DaoValue *self, DString *field, DaoProcess *proc );
 
 
 DaoTypeCore daoArrayCore =
@@ -2728,7 +2732,7 @@ DaoTypeCore daoArrayCore =
 	DaoArray_Print,                                    /* Print */
 	NULL,                                              /* Slice */
 	NULL,                                              /* Copy */
-	DaoArray_Delete,                                   /* Delete */
+	(DaoDeleteFunction) DaoArray_Delete,               /* Delete */
 	NULL                                               /* HandleGC */
 };
 

@@ -67,7 +67,7 @@ static void dao_toascii( DaoProcess *proc, DaoValue *P[], int N )
 	DaoProcess_PutInteger( proc, toascii( DaoValue_TryGetInteger( P[0] ) ) );
 }
 
-static DaoFuncItem charTypeMeths[]=
+static DaoFunctionEntry charTypeMeths[]=
 {
 	{ dao_isalnum,  "isalnum( ch : int ) => int" } ,
 	{ dao_isalpha,  "isalpha( ch : int ) => int" } ,

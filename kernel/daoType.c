@@ -153,12 +153,6 @@ void DaoType_Init()
 void DaoType_Delete( DaoType *self )
 {
 	//printf( "DaoType_Delete: %p\n", self );
-	if( self->refCount ){ /* likely to be referenced by its default value */
-		printf( "ERROR: check and fix!\n" );
-		GC_IncRC( self );
-		GC_DecRC( self );
-		return;
-	}
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
@@ -266,13 +260,10 @@ void DaoType_CheckAttributes( DaoType *self )
 		}
 	}
 }
-void print_trace( const char *info );
 DaoType* DaoType_New( const char *name, int tid, DaoValue *aux, DList *nest )
 {
 	DaoTypeCore *core = DaoVmSpace_GetTypeCore( tid );
 	DaoType *self = (DaoType*) dao_calloc( 1, sizeof(DaoType) );
-	printf( "DaoType_New: %s %p\n", name, self );
-	//if( strcmp( name, "string" ) == 0 ) print_trace( "DaoType_New" );
 	DaoValue_Init( self, DAO_TYPE );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->tid = tid;
@@ -1532,10 +1523,10 @@ DaoType* DaoType_DefineTypes( DaoType *self, DaoNamespace *ns, DMap *defs )
 		copy = DaoType_GetVarType( copy );
 		DMap_Insert( defs, self, copy );
 		return copy;
-	}else if( self->tid == DAO_TUPLE && self->subtid == DAO_PAIR ){
+	}else if( self->tid == DAO_TUPLE && self->subtid == DAO_RANGE ){
 		DaoType *t1 = DaoType_DefineTypes( self->nested->items.pType[0], ns, defs );
 		DaoType *t2 = DaoType_DefineTypes( self->nested->items.pType[2], ns, defs );
-		return DaoNamespace_MakePairType( ns, t1, t2 );
+		return DaoNamespace_MakeRangeType( ns, t1, t2 );
 	}else if( self->tid & DAO_ANY ){
 		return self;
 	}else if( self->tid == DAO_CLASS ){ /* e.g., class<Item<@T>> */
@@ -1797,15 +1788,12 @@ extern DMutex mutex_methods_setup;
 
 static void DaoType_TrySetupMethods( DaoType *self )
 {
-	printf( "DaoType_TrySetupMethods 1: %p %s\n", self, self->name->chars );
 	if( self->tid == DAO_CTYPE ) self = (DaoType*) self->aux->xCtype.valueType;
 	if( self->kernel == NULL ) return;
-	printf( "DaoType_TrySetupMethods 2: %s\n", self->name->chars );
 	if( self->kernel->SetupMethods ){
 		self->kernel->SetupMethods( self->kernel->nspace, self->core );
 	}
 	if( self->kernel->methods == NULL ) return;
-	printf( "DaoType_TrySetupMethods 3: %s\n", self->name->chars );
 	if( self->kernel->attribs & DAO_TYPEKERNEL_TEMPLATE ) DaoType_SpecializeMethods( self );
 }
 DaoRoutine* DaoType_GetInitor( DaoType *self )
@@ -1833,9 +1821,7 @@ DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 	}
 
 	DaoType_TrySetupMethods( self );
-	printf( "DaoType_FindFunction 1: %s %s %p\n", self->name->chars, name->chars, self->kernel );
 	if( self->kernel == NULL || self->kernel->methods == NULL ) return NULL;
-	printf( "DaoType_FindFunction 2: %s %p\n", name->chars, self->kernel );
 	node = DMap_Find( self->kernel->methods, name );
 	if( node ) return node->value.pRoutine;
 	return NULL;

@@ -101,7 +101,7 @@ static int DaoValue_CheckCtype( DaoValue *self, DaoType *type )
 {
 	if( self->type < DAO_CSTRUCT || self->type > DAO_CDATA ) return 0;
 	if( self->type != type->tid ) return 0;
-	return self->xCstruct.ctype->typer == type->typer;
+	return self->xCstruct.ctype->core == type->core;
 }
 
 
@@ -261,13 +261,13 @@ static void DaoCallServer_CacheEvent( DaoTaskEvent *event )
 }
 int DaoCallServer_GetThreadCount()
 {
-	DaoCallServer_TryInit( mainVmSpace );
+	DaoCallServer_TryInit( masterVmSpace );
 	return daoCallServer->total;
 }
 void DaoCallServer_AddThread( DThreadTask func, void *param, void *proc )
 {
 	DaoCallThread *calth;
-	DaoCallServer_TryInit( mainVmSpace );
+	DaoCallServer_TryInit( masterVmSpace );
 	calth = DaoCallThread_New( func, param );
 	calth->taskOwner = proc;
 	DMutex_Lock( & daoCallServer->mutex );
@@ -323,7 +323,7 @@ static void DaoCallServer_ActivateEvents()
 #ifdef DEBUG
 	sprintf( message, "WARNING: try activating events (%i,%i,%i,%i)!\n", server->total,
 			server->idle, (int)server->events->size, (int)server->events2->size );
-	DaoStream_WriteChars( mainVmSpace->errorStream, message );
+	DaoStream_WriteChars( masterVmSpace->errorStream, message );
 #endif
 	for(i=0; i<server->events2->size; ++i){
 		DaoTaskEvent *event = (DaoTaskEvent*) server->events2->items.pVoid[i];
@@ -356,7 +356,7 @@ static void DaoCallServer_ActivateEvents()
 	}
 	DCondVar_Signal( & server->condv );
 	if( count == 0 ){
-		DaoStream *stream = mainVmSpace->errorStream;
+		DaoStream *stream = masterVmSpace->errorStream;
 		DaoStream_WriteChars( stream, "ERROR: All tasklets are suspended - deadlock!\n" );
 #if DEBUG
 		fprintf( stderr, "ERROR: All tasklets are suspended - deadlock!\n" );
@@ -411,7 +411,7 @@ static void DaoCallServer_Timer( void *p )
 void DaoCallServer_AddTask( DThreadTask func, void *param, void *proc )
 {
 	int scheduled = 0;
-	DaoCallServer *server = DaoCallServer_TryInit( mainVmSpace );
+	DaoCallServer *server = DaoCallServer_TryInit( masterVmSpace );
 	DMutex_Lock( & server->mutex );
 	if( server->vacant > server->parameters->size || proc == NULL ){
 		scheduled = 1;
@@ -534,7 +534,7 @@ void DaoCallServer_AddCall( DaoProcess *caller )
 	}
 
 #ifdef DAO_WITH_CONCURRENT
-	DaoCallServer_TryInit( mainVmSpace );
+	DaoCallServer_TryInit( masterVmSpace );
 	event = DaoCallServer_MakeEvent();
 	DaoTaskEvent_Init( event, DAO_EVENT_RESUME_TASKLET, DAO_EVENT_RESUME, future, NULL );
 
@@ -613,7 +613,7 @@ void DaoCallServer_AddTimedWait( DaoProcess *wait, DaoTaskEvent *event, double t
 void DaoCallServer_AddWait( DaoProcess *wait, DaoFuture *pre, double timeout )
 {
 	DaoTaskEvent *event;
-	DaoCallServer *server = DaoCallServer_TryInit( mainVmSpace );;
+	DaoCallServer *server = DaoCallServer_TryInit( masterVmSpace );;
 	DaoFuture *future = DaoProcess_GetInitFuture( wait );
 
 	GC_Assign( & future->precond, pre );
@@ -1090,7 +1090,7 @@ static void CHANNEL_New( DaoProcess *proc, DaoValue *par[], int N )
 		DString_Delete( s );
 	}
 	DaoProcess_PutValue( proc, (DaoValue*) self );
-	DaoCallServer_TryInit( mainVmSpace );
+	DaoCallServer_TryInit( masterVmSpace );
 }
 static void CHANNEL_Buffer( DaoProcess *proc, DaoValue *par[], int N )
 {

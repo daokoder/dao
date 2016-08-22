@@ -13,7 +13,7 @@ typedef struct DaoxUserPodType  DaoxUserPodType;
 /* bit integer */
 struct DaoxUserPodType
 {
-	DAO_CPOD_COMMON;
+	DAO_CSTRUCT_COMMON;
 
 	dao_integer value;
 };
@@ -25,12 +25,14 @@ DAO_DLL void DaoxUserPodType_Delete( DaoxUserPodType *self );
 
 DaoxUserPodType* DaoxUserPodType_New()
 {
-	DaoxUserPodType *self = (DaoxUserPodType*) DaoCpod_New( daox_type_user_pod_type, sizeof(DaoxUserPodType) );
+	DaoxUserPodType *self = (DaoxUserPodType*) dao_calloc( 1, sizeof(DaoxUserPodType) );
+	DaoCstruct_Init( (DaoCstruct*) self, daox_type_user_pod_type );
 	return self;
 }
 void DaoxUserPodType_Delete( DaoxUserPodType *self )
 {
-	DaoCpod_Delete( (DaoCpod*) self );
+	DaoCstruct_Free( (DaoCstruct*) self );
+	dao_free( self );
 }
 
 static void DaoxUserPodType_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
@@ -55,21 +57,12 @@ static void DaoxUserPodType_SetItem( DaoValue *self, DaoProcess *proc, DaoValue 
 	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
 	}
 }
-static DaoTypeCore userTypeCore=
-{
-	NULL,
-	DaoValue_GetField,
-	DaoValue_SetField,
-	DaoxUserPodType_GetItem,
-	DaoxUserPodType_SetItem,
-	NULL
-};
 static DaoxUserPodType* DaoProcess_PutUserPod( DaoProcess *proc, dao_integer value )
 {
-	DaoCpod *pod = DaoProcess_PutCpod( proc, daox_type_user_pod_type, sizeof(DaoxUserPodType) );
-	DaoxUserPodType *self = (DaoxUserPodType*) pod;
-	self->value = value;
-	return self;
+	DaoxUserPodType buffer = {DAO_CSTRUCT, 0};
+	buffer.ctype = daox_type_user_pod_type;
+	buffer.value = value;
+	return (DaoxUserPodType*) DaoProcess_PutValue( proc, (DaoValue*) & buffer );
 }
 static void UT_New1( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -206,7 +199,7 @@ static void UT_CastToString( DaoProcess *proc, DaoValue *p[], int n )
 	DString_Reserve( res, 50 );
 	res->size = sprintf( res->chars, "UserPodType.{%" DAO_I64 "}", self->value );
 }
-static DaoFuncItem userPodTypeMeths[]=
+static DaoFunctionEntry userPodTypeMeths[]=
 {
 	{ UT_New1, "UserPodType( value: int ) => UserPodType" },
 
@@ -242,14 +235,61 @@ static DaoFuncItem userPodTypeMeths[]=
 
 	{ NULL, NULL },
 };
-DaoTypeBase userPodTypeTyper =
+
+
+int DaoxUserPodType_CheckComparison( DaoType *self, DaoType *other, DaoRoutine *ctx )
 {
-	"UserPodType", NULL, NULL, (DaoFuncItem*) userPodTypeMeths, {0}, {0},
-	(FuncPtrDel)DaoxUserPodType_Delete, NULL
+}
+
+int DaoxUserPodType_DoComparison( DaoValue *self, DaoValue *other, DaoProcess *proc )
+{
+}
+
+DaoType* DaoxUserPodType_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
+{
+}
+
+DaoValue* DaoxUserPodType_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
+{
+}
+
+DaoValue* DaoxUserPodType_Copy( DaoValue *self, DaoValue *target )
+{
+	DaoxUserPodType *src = (DaoxUserPodType*) self;
+	DaoxUserPodType *dest = (DaoxUserPodType*) target;
+	if( target ){
+		dest->value = src->value;
+		return target;
+	}
+	dest = DaoxUserPodType_New();
+	dest->value = src->value;
+	return (DaoValue*) dest;
+}
+
+static DaoTypeCore daoUserPodTypeCore =
+{
+	"UserPodType",                                         /* name */
+	{ NULL },                                              /* bases */
+	NULL,                                                  /* numbers */
+	userPodTypeMeths,                                      /* methods */
+	DaoCstruct_CheckGetField,    DaoCstruct_DoGetField,    /* GetField */
+	DaoCstruct_CheckSetField,    DaoCstruct_DoSetField,    /* SetField */
+	DaoCstruct_CheckGetItem,     DaoCstruct_DoGetItem,     /* GetItem */
+	DaoCstruct_CheckSetItem,     DaoCstruct_DoSetItem,     /* SetItem */
+	DaoCstruct_CheckUnary,       DaoCstruct_DoUnary,       /* Unary */
+	DaoCstruct_CheckBinary,      DaoCstruct_DoBinary,      /* Binary */
+	DaoCstruct_CheckComparison,  DaoCstruct_DoComparison,  /* Comparison */
+	DaoCstruct_CheckConversion,  DaoCstruct_DoConversion,  /* Conversion */
+	NULL,                        NULL,                     /* ForEach */
+	DaoCstruct_Print,                                      /* Print */
+	NULL,                                                  /* Slice */
+	DaoxUserPodType_Copy,                                  /* Copy */
+	(DaoDeleteFunction) DaoxUserPodType_Delete,            /* Delete */
+	NULL                                                   /* HandleGC */
 };
 
 DAO_DLL int DaoUserpodtype_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )
 {
-	daox_type_user_pod_type = DaoNamespace_WrapType( ns, & userPodTypeTyper, DAO_CPOD, 0 );
+	daox_type_user_pod_type = DaoNamespace_WrapType( ns, & daoUserPodTypeCore, DAO_CSTRUCT, 0 );
 	return 0;
 }

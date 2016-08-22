@@ -68,7 +68,6 @@ enum DaoSubTypes
 	DAO_IFACE_CON ,
 	DAO_CDATA_PTR ,  /* opaque C/C++ data, not owned by the wrapper */
 	DAO_CDATA_CXX ,  /* opaque C/C++ data, owned by the wrapper */
-	DAO_PAIR ,
 	DAO_RANGE ,
 	DAO_ITERATOR ,
 	DAO_CFUNCTION ,

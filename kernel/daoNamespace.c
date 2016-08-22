@@ -1801,7 +1801,7 @@ DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 	DString_Delete( name );
 	return type;
 }
-DaoType* DaoNamespace_MakePairType( DaoNamespace *self, DaoType *first, DaoType *second )
+DaoType* DaoNamespace_MakeRangeType( DaoNamespace *self, DaoType *first, DaoType *second )
 {
 	DaoType *noneType = DaoNamespace_MakeValueType( self, dao_none_value );
 	DaoType *types[2] = {NULL, NULL};
@@ -1812,15 +1812,15 @@ DaoType* DaoNamespace_MakePairType( DaoNamespace *self, DaoType *first, DaoType 
 	if( second == NULL ) second = noneType;
 	if( first->invar )  first = DaoType_GetBaseType( first );
 	if( second->invar ) second = DaoType_GetBaseType( second );
-	types[0] = DaoNamespace_MakeType( self, "first", DAO_PAR_NAMED, (DaoValue*)first, 0, 0 );
-	types[1] = DaoNamespace_MakeType( self, "second", DAO_PAR_NAMED, (DaoValue*)second, 0, 0 );
+	types[0] = first;
+	types[1] = second;
 	type = DaoNamespace_MakeType( self, "tuple", DAO_TUPLE, NULL, types, 2 );
 	name = DString_Copy( type->name );
-	DString_AppendChars( name, "::subtype::pair" ); /* Distinguish with normal tuple types; */
+	DString_AppendChars( name, "::subtype::range" ); /* Distinguish with normal tuple types; */
 	type2 = DaoNamespace_FindType( self, name );
 	if( type2 == NULL ){
 		type = type2 = DaoType_Copy( type );
-		type->subtid = DAO_PAIR;
+		type->subtid = DAO_RANGE;
 		DaoNamespace_AddType( self, name, type );
 	}
 	DString_Delete( name );
@@ -1831,7 +1831,7 @@ DaoType* DaoNamespace_MakePairValueType( DaoNamespace *self, DaoValue *first, Da
 	DaoType *tp1, *tp2;
 	tp1 = DaoNamespace_MakeValueType( self, first );
 	tp2 = DaoNamespace_MakeValueType( self, second );
-	return DaoNamespace_MakePairType( self, tp1, tp2 );
+	return DaoNamespace_MakeRangeType( self, tp1, tp2 );
 }
 
 DaoNamespace* DaoNamespace_LoadModule( DaoNamespace *self, DString *name )

@@ -158,6 +158,9 @@ DAO_DLL void DaoVmSpace_Delete( DaoVmSpace *self );
 DAO_DLL void DaoVmSpace_Lock( DaoVmSpace *self );
 DAO_DLL void DaoVmSpace_Unlock( DaoVmSpace *self );
 
+DAO_DLL void DaoVmSpace_LockCache( DaoVmSpace *self );
+DAO_DLL void DaoVmSpace_UnlockCache( DaoVmSpace *self );
+
 DAO_DLL int DaoVmSpace_ParseOptions( DaoVmSpace *self, const char *options );
 
 DAO_DLL int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file );

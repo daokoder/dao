@@ -868,7 +868,7 @@ static DMutex* DaoMT_GetMutex( DaoRoutine *routine, void *key )
 	DMap *mutexes;
 	DMutex *mutex = NULL;
 
-	DMutex_Lock( & mainVmSpace->miscMutex );
+	DMutex_Lock( & masterVmSpace->miscMutex );
 	it = DMap_Find( routine->body->aux, DaoMT_RoutMutexSet );
 	if( it == NULL ) it = DMap_Insert( routine->body->aux, DaoMT_RoutMutexSet, DHash_New(0,0) );
 	mutexes = (DMap*) it->value.pVoid;
@@ -880,7 +880,7 @@ static DMutex* DaoMT_GetMutex( DaoRoutine *routine, void *key )
 	}else{
 		mutex = (DMutex*) it->value.pVoid;
 	}
-	DMutex_Unlock( & mainVmSpace->miscMutex );
+	DMutex_Unlock( & masterVmSpace->miscMutex );
 	return mutex;
 }
 static void DaoMT_ProcMutexCache( DMap *self )
@@ -921,7 +921,7 @@ static void DaoMT_Critical( DaoProcess *proc, DaoValue *p[], int n )
 
 void DaoMT_Select( DaoProcess *proc, DaoValue *p[], int n );
 
-DaoFuncItem dao_mt_methods[] =
+DaoFunctionEntry dao_mt_methods[] =
 {
 	{ DaoMT_Critical,
 		"critical()[]"

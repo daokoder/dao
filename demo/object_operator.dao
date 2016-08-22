@@ -45,7 +45,7 @@ class Integer
 	}
 	static routine >( A : Integer, B : Integer ){
 		io.writeln( "Integer > Integer" );
-		b = A > B;
+		#b = A > B;
 		return Integer( A.value > B.value );
 	}
 	static routine !( C : Integer, A : Integer ){
