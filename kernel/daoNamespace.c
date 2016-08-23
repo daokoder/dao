@@ -583,7 +583,7 @@ static DaoType* DaoNamespace_MakeCdataType( DaoNamespace *self, DaoTypeCore *cor
 		}
 		if( ctype_type->bases == NULL ) ctype_type->bases = DList_New( DAO_DATA_VALUE );
 		if( cdata_type->bases == NULL ) cdata_type->bases = DList_New( DAO_DATA_VALUE );
-		DList_Append( ctype_type->bases, basekern->abtype->aux->xCdata.ctype );
+		DList_Append( ctype_type->bases, basekern->abtype->aux->xCtype.classType );
 		DList_Append( cdata_type->bases, basekern->abtype );
 	}
 
@@ -656,17 +656,13 @@ DaoType* DaoNamespace_WrapInterface( DaoNamespace *self, DaoTypeCore *core )
 	if( kernel != NULL ) return kernel->abtype;
 
 	inter = DaoInterface_New( core->name );
-	kernel = DaoTypeKernel_New( core );
+	kernel = inter->abtype->kernel;
 	abtype = inter->abtype;
 	abtype->core = core;
 
-	DaoVmSpace_AddKernel( self->vmSpace, core, kernel );
-
-	GC_Assign( & abtype->kernel, kernel );
-	GC_Assign( & kernel->abtype, abtype );
 	GC_Assign( & kernel->nspace, self );
 
-	abtype->core = core;
+	DaoVmSpace_AddKernel( self->vmSpace, core, kernel );
 
 	for(i=0; i<sizeof(core->bases); i++){
 		if( core->bases[i] == NULL ) break;
@@ -742,13 +738,10 @@ Error:
 
 void DaoNamespace_SetupType( DaoNamespace *self, DaoTypeCore *core, DaoType *type )
 {
-	printf( "DaoNamespace_SetupType: %p %s\n", type, core->name );
 	if( type->kernel != NULL ) return;
-	printf( "DaoNamespace_SetupType: %s\n", core->name );
 
 	DMutex_Lock( & mutex_values_setup ); // XXX
 	if( type->kernel == NULL ){
-	printf( "DaoNamespace_SetupType: %s\n", core->name );
 		type->kernel = DaoTypeKernel_New( core );
 		type->kernel->abtype = type;
 		type->kernel->nspace = self;
@@ -1935,14 +1928,10 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeCore *core )
 	DNode *it;
 	daoint i, k, size;
 
-	printf( "DaoNamespace_SetupMethods 1: %s\n", core->name );
-
 	if( kernel == NULL ) return 0;
 	if( kernel->SetupMethods == NULL ) return 1;
-	printf( "DaoNamespace_SetupMethods 3: %s\n", core->name );
 
 	if( core->methods == NULL && core->bases[0] == NULL ) return 0;
-	printf( "DaoNamespace_SetupMethods 4: %s %p\n", core->name, kernel );
 
 	for(i=0; i<sizeof(core->bases); i++){
 		if( core->bases[i] == NULL ) break;

@@ -262,13 +262,12 @@ void DaoType_CheckAttributes( DaoType *self )
 }
 DaoType* DaoType_New( const char *name, int tid, DaoValue *aux, DList *nest )
 {
-	DaoTypeCore *core = DaoVmSpace_GetTypeCore( tid );
 	DaoType *self = (DaoType*) dao_calloc( 1, sizeof(DaoType) );
 	DaoValue_Init( self, DAO_TYPE );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->tid = tid;
 	self->name = DString_New();
-	self->core = core;
+	self->core = DaoVmSpace_GetTypeCore( tid );
 	//self->kernel = core->kernel;
 	//GC_IncRC( self->kernel );
 	if( aux == NULL && tid == DAO_PAR_VALIST ) aux = (DaoValue*) dao_type_any;
@@ -370,7 +369,6 @@ void DaoType_InitDefault( DaoType *self )
 DaoType* DaoType_Copy( DaoType *other )
 {
 	DaoType *self = (DaoType*) dao_malloc( sizeof(DaoType) );
-	printf( "DaoType_Copy: %s %p %p\n", other->name->chars, other, self );
 	memcpy( self, other, sizeof(DaoType) );
 	DaoValue_Init( self, DAO_TYPE ); /* to reset gc fields */
 	self->trait |= DAO_VALUE_DELAYGC;

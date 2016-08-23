@@ -1481,6 +1481,7 @@ int DaoType_CheckRangeIndex( DaoType *self );
 static DaoType* DaoArray_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
 {
 	DaoType *etype = self->nested->items.pType[0];
+	printf( "DaoArray_CheckGetItem:\n" );
 	if( N == 0 ){
 		return self;
 	}else if( N == 1 ){

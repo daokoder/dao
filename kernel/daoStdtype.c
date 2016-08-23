@@ -5429,14 +5429,14 @@ static DaoValue* DaoTuple_DoGetItem( DaoValue *self, DaoValue *index[], int N, D
 		pos = range.pos;
 		end = range.end;
 		if( pos == 0 && end == size ){
-			DaoTuple *tuple = DaoProcess_GetTuple( proc, tuple->ctype, tuple->size, 1 ); 
-			for(i=0; i<size; ++i) DaoTuple_SetItem( tuple, tuple->values[i], i ); 
+			DaoTuple *res = DaoProcess_GetTuple( proc, tuple->ctype, tuple->size, 1 ); 
+			for(i=0; i<size; ++i) DaoTuple_SetItem( res, tuple->values[i], i ); 
 		}else{
-			DaoTuple *tuple = DaoProcess_GetTuple( proc, NULL, end - pos, 0 );
+			DaoTuple *res = DaoProcess_GetTuple( proc, NULL, end - pos, 0 );
 			DaoType *type = proc->activeTypes[ proc->activeCode->c ];
 			if( type->tid != DAO_TUPLE ) type = dao_type_tuple;
-			GC_Assign( & tuple->ctype, type );
-			for(i=pos; i<end; ++i) DaoTuple_SetItem( tuple, tuple->values[i], i - pos);
+			GC_Assign( & res->ctype, type );
+			for(i=pos; i<end; ++i) DaoTuple_SetItem( res, tuple->values[i], i - pos);
 		}
 		break;
 	case DAO_ITERATOR :

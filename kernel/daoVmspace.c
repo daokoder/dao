@@ -245,6 +245,7 @@ extern DaoTypeCore  channelTyper;
 DaoTypeCore* DaoVmSpace_GetTypeCore( short type )
 {
 	switch( type ){
+	case DAO_NONE      :  return & daoNoneCore;
 	case DAO_BOOLEAN   :  return & daoBooleanCore;
 	case DAO_INTEGER   :  return & daoIntegerCore;
 	case DAO_FLOAT     :  return & daoFloatCore;
@@ -275,7 +276,7 @@ DaoTypeCore* DaoVmSpace_GetTypeCore( short type )
 	case DAO_TYPEKERNEL : return & daoTypeKernelCore;
 	default : break;
 	}
-	return & daoNoneCore;
+	return NULL;
 }
 const char*const DaoVmSpace_GetCopyNotice()
 {
@@ -342,6 +343,8 @@ DaoProcess* DaoVmSpace_AcquireProcess( DaoVmSpace *self )
 
 void DaoVmSpace_ReleaseProcess( DaoVmSpace *self, DaoProcess *proc )
 {
+	if( proc->refCount > 1 ) return;
+
 	DaoVmSpace_LockCache( self );
 	if( DMap_Find( self->allProcesses, proc ) ){
 		if( proc->factory ) DList_Clear( proc->factory );
@@ -373,6 +376,8 @@ DaoRoutine* DaoVmSpace_AcquireRoutine( DaoVmSpace *self )
 
 void DaoVmSpace_ReleaseRoutine( DaoVmSpace *self, DaoRoutine *rout )
 {
+	if( rout->refCount > 1 ) return;
+
 	DaoVmSpace_LockCache( self );
 	if( DMap_Find( self->allRoutines, rout ) ){
 		DList_PushBack( self->routines, rout );
@@ -2989,11 +2994,12 @@ static DaoType* DaoVmSpace_MakeExceptionType2( DaoVmSpace *self, const char *nam
 
 #warning"DaoTypeCore"
 	core = (DaoTypeCore*) dao_calloc( 1, sizeof(DaoTypeCore) );
+	memcpy( core, parent->core, sizeof(DaoTypeCore) );
 	core->name = (char*) dao_malloc( (strlen(name)+1) * sizeof(char) );
 	strcpy( (char*) core->name, name );
 	core->bases[0] = parent->core;
-	core->Delete = parent->core->Delete;
-	core->HandleGC = parent->core->HandleGC;
+	core->numbers = NULL;
+	core->methods = NULL;
 	type = DaoNamespace_WrapType( self->daoNamespace, core, DAO_CSTRUCT, 0 );
 	if( type == NULL ) return NULL;
 

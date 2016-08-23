@@ -397,7 +397,9 @@ static DaoType* DaoObject_CheckGetItem( DaoType *self, DaoType *index[], int N, 
 	DaoClass *host = type != NULL && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoRoutine *rout = DaoClass_FindMethod( (DaoClass*) self->aux, "[]", host );
 
+	printf( "DaoObject_CheckGetItem: %p\n", rout );
 	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, index, N, DVM_CALL );
+	printf( "DaoObject_CheckGetItem: %p\n", rout );
 	if( rout == NULL ) return NULL;
 	return (DaoType*) rout->routType->aux;
 }

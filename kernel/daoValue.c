@@ -1016,7 +1016,7 @@ void DaoValue_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess
 			return;
 		}
 	}
-	if( core != NULL && core->Print != DaoValue_Print ){
+	if( core != NULL && core->Print != NULL && core->Print != DaoValue_Print ){
 		core->Print( self, stream, cycmap, proc );
 		return;
 	}

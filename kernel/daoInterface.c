@@ -50,6 +50,10 @@ DaoInterface* DaoInterface_New( const char *name )
 	self->bases = DList_New( DAO_DATA_VALUE );
 	self->methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 	self->abtype = DaoType_New( name, DAO_INTERFACE, (DaoValue*)self, NULL );
+	self->abtype->kernel = DaoTypeKernel_New( NULL );
+	self->abtype->kernel->abtype = self->abtype;
+	GC_IncRC( self->abtype->kernel );
+	GC_IncRC( self->abtype );
 	GC_IncRC( self->abtype );
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
@@ -479,6 +483,8 @@ DaoType* DaoInterface_CheckConversion( DaoType *self, DaoType *type, DaoRoutine 
 	DaoRoutine *rout;
 	DString *buffer = DString_NewChars( "(" );
 
+	printf( "DaoInterface_CheckConversion\n" );
+
 	DString_Append( buffer, type->name );
 	DString_AppendChars( buffer, ")" );
 	rout = DaoType_FindFunction( self, buffer );
@@ -528,6 +534,9 @@ DaoTypeCore daoInterfaceCore =
 
 
 
+extern DaoTypeCore daoCinTypeCore;
+extern DaoTypeCore daoCinValueCore;
+
 DaoCinType* DaoCinType_New( DaoInterface *inter, DaoType *target )
 {
 	DaoCinType *self = (DaoCinType*) dao_calloc( 1, sizeof(DaoCinType) );
@@ -540,6 +549,8 @@ DaoCinType* DaoCinType_New( DaoInterface *inter, DaoType *target )
 	self->vatype = DaoType_New( inter->abtype->name->chars, DAO_CINVALUE, (DaoValue*)self, NULL );
 	self->abstract = inter;
 	self->target = target;
+	self->citype->core = & daoCinTypeCore;
+	self->vatype->core = & daoCinValueCore;
 	GC_IncRC( self->citype );
 	GC_IncRC( self->vatype );
 	GC_IncRC( self->abstract );
@@ -886,6 +897,7 @@ DaoType* DaoCinValue_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *
 	DaoRoutine *rout;
 	DString *buffer;
 
+	printf( "DaoCinValue_CheckConversion\n" );
 	if( cintype->target == type ){
 		return type;
 	}else if( DaoType_MatchTo( cintype->target, type, NULL ) >= DAO_MT_EQ ){

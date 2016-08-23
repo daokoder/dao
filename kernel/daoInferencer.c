@@ -3365,8 +3365,18 @@ SkipChecking:
 				if( cintype ) bt = cintype->vatype;
 			}
 			ct = bt;
-			/* Variant type may have null core: */
-			if( at->core != NULL && at->core->CheckConversion != NULL ){
+			printf( "CAST: %i %s %s %p\n", at->tid, at->name->chars, bt->name->chars, at->core );
+			if( at->core ) printf( "%s %p\n", at->core->name, at->core->CheckConversion );
+			if( at->tid == DAO_VARIANT ){
+				int mt1 = DaoType_MatchTo( at, bt, NULL );
+				int mt2 = DaoType_MatchTo( bt, at, NULL );
+				if( mt1 == 0 && mt2 == 0 ) goto InvalidCasting;
+			}else if( at->tid == DAO_INTERFACE ){
+				ct = bt; /* The source value could be any type with a concrete interface type; */
+			}else if( bt->tid == DAO_INTERFACE || bt->tid == DAO_CINVALUE ){
+				if( DaoType_MatchTo( at, bt, NULL ) == 0 ) goto InvalidCasting;
+			}else if( at->core != NULL && at->core->CheckConversion != NULL ){
+				/* Variant type may have null core: */
 				ct = at->core->CheckConversion( at, bt, self->routine );
 				if( ct == NULL ) goto InvalidCasting;
 			}
