@@ -128,7 +128,7 @@ DAO_DLL DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype
 
 DAO_DLL DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value );
 DAO_DLL DaoType* DaoNamespace_MakeRangeType( DaoNamespace *self, DaoType *first, DaoType *second );
-DAO_DLL DaoType* DaoNamespace_MakePairValueType( DaoNamespace *self, DaoValue *first, DaoValue *second );
+DAO_DLL DaoType* DaoNamespace_MakeRangeValueType( DaoNamespace *self, DaoValue *first, DaoValue *second );
 
 DAO_DLL DaoType* DaoNamespace_MakeSymbolType( DaoNamespace *self, const char *symbol );
 DAO_DLL DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols );

@@ -2627,7 +2627,7 @@ static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block 
 		routine = DaoRoutine_New( self->nspace, NULL, 1);
 		self->nspace->mainRoutine = routine;
 		DString_SetChars( routine->routName, "__main__" );
-		DaoNamespace_SetConst( self->nspace, DVR_NSC_MAIN, (DaoValue*) routine );
+		DaoNamespace_SetConst( self->nspace, DAO_STD_CONST_MAIN, (DaoValue*) routine );
 	}
 	if( routine == NULL ){
 		DaoByteCoder_Error( self, block, "Invalid routine block!" );

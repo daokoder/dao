@@ -108,7 +108,6 @@ struct DaoParser
 	short  evalMode;
 	short  numSections;
 
-	int  noneValue;
 	int  integerZero;
 	int  integerOne;
 	int  imaginaryOne;

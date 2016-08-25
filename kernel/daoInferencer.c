@@ -3139,7 +3139,7 @@ int DaoInferencer_DoInference( DaoInferencer *self )
 				if( ct != NULL && ct->invar != 0 && K == DAO_CODE_SETF ){
 					if( ct->tid != DAO_CLASS && ct->tid != DAO_NAMESPACE ) goto ModifyConstant;
 				}else if( ct != NULL && ct->invar != 0 && K > DAO_CODE_GETG ){
-					if( (code < DVM_PAIR || code > DVM_MPACK) && code != DVM_TUPLE_SIM ){
+					if( (code < DVM_RANGE || code > DVM_MPACK) && code != DVM_TUPLE_SIM ){
 						goto ModifyConstant;
 					}
 				}
@@ -3760,7 +3760,7 @@ SkipChecking:
 				AssertTypeMatching( ct, types[opc], defs );
 				break;
 			}
-		case DVM_PAIR :
+		case DVM_RANGE :
 			{
 				if( types[opc] && types[opc]->tid == DAO_ANY ) continue;
 				ct = DaoNamespace_MakeRangeType( NS, types[opa], types[opb] );

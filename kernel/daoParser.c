@@ -129,7 +129,7 @@ static const int mapAithOpcode[]=
 	DVM_BITXOR , /* DAO_OPER_ASSN_XOR */
 
 	DVM_NOP,
-	DVM_PAIR , /* DAO_OPER_COLON */
+	DVM_RANGE , /* DAO_OPER_COLON */
 
 	DVM_BITLFT, /* << */
 	DVM_BITRIT, /* >> */
@@ -202,11 +202,6 @@ DaoParser* DaoParser_New()
 	self->wlexer = DaoLexer_New();
 	self->errors = self->elexer->tokens;
 	self->warnings = self->wlexer->tokens;
-
-	self->noneValue = -1;
-	self->integerZero = -1;
-	self->integerOne = -1;
-	self->imaginaryOne = -1;
 
 	self->string = DString_New();
 	self->string2 = DString_New();
@@ -326,11 +321,6 @@ void DaoParser_Reset( DaoParser *self )
 	self->lastToken = 0;
 	self->tokenTriples->size = 0;
 	DaoParser_PushTokenIndices( self, 0, 0, 0 );
-
-	self->noneValue = -1;
-	self->integerZero = -1;
-	self->integerOne = -1;
-	self->imaginaryOne = -1;
 
 	DString_Reset( self->string, 0 );
 	DString_Reset( self->string2, 0 );
@@ -2204,7 +2194,7 @@ int DaoParser_ParseScript( DaoParser *self )
 	}
 	routMain->attribs |= DAO_ROUT_MAIN;
 	ns->mainRoutine = routMain;
-	DaoNamespace_SetConst( ns, DVR_NSC_MAIN, (DaoValue*) routMain );
+	DaoNamespace_SetConst( ns, DAO_STD_CONST_MAIN, (DaoValue*) routMain );
 	DString_SetChars( routMain->routName, "__main__" );
 
 	routMain->body->codeStart = 1;
@@ -5046,24 +5036,19 @@ int DaoParser_ParseRoutine( DaoParser *self )
 #endif
 	return 1;
 }
+
 static DaoEnode DaoParser_NoneValue( DaoParser *self )
 {
 	DaoEnode enode = {0,0,0,0,0,NULL,NULL,NULL,NULL};
-	int cst = 0;
-	if( self->noneValue >= 0 ){
-		cst = self->noneValue;
-	}else{
-		cst = DaoRoutine_AddConstant( self->routine, dao_none_value );
-		self->noneValue = cst;
-	}
 	enode.reg = DaoParser_PushRegister( self );
-	enode.konst = self->noneValue = LOOKUP_BIND_LC( cst );
+	enode.konst = DAO_STD_CONST_NONE;
 	DaoParser_PushTokenIndices( self, self->curToken, 0, 0 );
 	DaoParser_AddCode( self, DVM_DATA, DAO_NONE, 0, enode.reg );
 	enode.first = enode.last = enode.update = self->vmcLast;
 	enode.prev = self->vmcLast->prev;
 	return enode;
 }
+
 static int DaoParser_IntegerOne( DaoParser *self, int start )
 {
 	int reg = DaoParser_PushRegister( self );
@@ -5071,6 +5056,21 @@ static int DaoParser_IntegerOne( DaoParser *self, int start )
 	DaoParser_AddCode( self, DVM_DATA, DAO_INTEGER, 1, reg );
 	return reg;
 }
+
+static DaoEnode DaoParser_FullRange( DaoParser *self )
+{
+	DaoEnode enode = {0,0,0,0,0,NULL,NULL,NULL,NULL};
+	enode.reg = DaoParser_PushRegisters( self, 2 ) + 1;
+	enode.konst = DAO_STD_CONST_RANGE;
+	DaoParser_PushTokenIndices( self, self->curToken, 0, 0 );
+	DaoParser_AddCode( self, DVM_DATA, DAO_NONE, 0, enode.reg - 1 );
+	enode.first = self->vmcLast;
+	enode.prev = self->vmcLast->prev;
+	DaoParser_AddCode( self, DVM_RANGE, enode.reg - 1, enode.reg - 1, enode.reg );
+	enode.last = enode.update = self->vmcLast;
+	return enode;
+}
+
 int DaoParser_DeclareVariable( DaoParser *self, DaoToken *tok, int storeType, DaoType *type )
 {
 	DaoVariable *var;
@@ -5255,16 +5255,6 @@ DaoValue* DaoParser_GetVariable( DaoParser *self, int reg )
 	int up = LOOKUP_UP( reg );
 	int id = LOOKUP_ID( reg );
 
-	if( st == DAO_LOCAL_VARIABLE ){
-		if( reg == self->integerZero ){
-			val = (DaoValue*) & daoIntegerZero;
-		}else if( reg == self->integerOne ){
-			val = (DaoValue*) & daoIntegerOne;
-		}else if( reg == self->imaginaryOne ){
-			val = (DaoValue*) & daoComplexImag;
-		}
-		return val;
-	}
 	switch( st ){
 	case DAO_LOCAL_CONSTANT  : val = routine->routConsts->value->items.pValue[id]; break;
 	case DAO_CLASS_CONSTANT  : val = klass->constants->items.pConst[id]->value; break;
@@ -7877,13 +7867,14 @@ static DaoEnode DaoParser_ParseExpression2( DaoParser *self, int stop, int eltyp
 	if( DaoParser_CurrentTokenType( self ) == DTOK_COLON ){
 		/* : e , */
 		if( !(eltype & DAO_EXPRLIST_SLICE) ) goto Done;
-		LHS = DaoParser_NoneValue( self );
 
 		tt = DaoParser_NextTokenType( self );
 		if( tt == DTOK_COMMA || tt == DTOK_SEMCO || tt == DTOK_RSB ){
-			/* : in slicing, equivalent to none: */
+			LHS = DaoParser_FullRange( self );
 			self->curToken += 1;
 			goto Done;
+		}else{
+			LHS = DaoParser_NoneValue( self );
 		}
 	}else{
 		LHS = DaoParser_ParseUnary( self, stop, eltype );

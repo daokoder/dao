@@ -5227,7 +5227,7 @@ DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 	for(i=0; i<size; i++){
 		DaoType *it = i < M ? types[i] : types[M-1];
 		if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_VALIST ) it = & it->aux->xType;
-		if( it->tid >= DAO_BOOLEAN && it->tid <= DAO_ENUM ){
+		if( it->tid >= DAO_NONE && it->tid <= DAO_ENUM ){
 			DaoValue_Move( it->value, self->values + i, it );
 		}
 	}

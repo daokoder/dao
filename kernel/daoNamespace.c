@@ -62,9 +62,12 @@ static DaoRoutine* DaoNamespace_ParseSignature( DaoNamespace *self, const char *
 
 DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 {
-	DaoValue *value;
-	DString *name = DString_New();
 	DaoNamespace *self = (DaoNamespace*) dao_calloc( 1, sizeof(DaoNamespace) );
+	DString *name = DString_New();
+	DaoTuple *tuple;
+	DaoValue *value;
+	DaoType *type;
+
 	DaoValue_Init( self, DAO_NAMESPACE );
 	self->trait |= DAO_VALUE_DELAYGC;
 	self->vmSpace = vms;
@@ -95,6 +98,9 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DaoNamespace_SetName( self, nsname );
 	DaoNamespace_AddConst( self, self->name, (DaoValue*) self, DAO_PERM_PUBLIC );
 
+	DString_SetChars( name, "__main__" );  /* Reserved for main(); */
+	DaoNamespace_AddConst( self, name, dao_none_value, DAO_PERM_PUBLIC );
+
 	DString_SetChars( name, "none" );
 	DaoNamespace_AddConst( self, name, dao_none_value, DAO_PERM_PUBLIC );
 	DString_SetChars( name, "false" );
@@ -102,10 +108,10 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DString_SetChars( name, "true" );
 	DaoNamespace_AddConst( self, name, dao_true_value, DAO_PERM_PUBLIC );
 
-	/* reserved for main */
-	//DList_Append( self->constants, DaoConstant_New( dao_none_value, DAO_GLOBAL_CONSTANT ) );
-	DString_SetChars( name, "__main__" );
-	DaoNamespace_AddConst( self, name, dao_none_value, DAO_PERM_PUBLIC );
+	type = DaoNamespace_MakeRangeType( self, dao_type_none, dao_type_none );
+	tuple = DaoTuple_Create( type, 2, 1 );
+	tuple->subtype = DAO_RANGE;
+	DList_Append( self->constants, DaoConstant_New( (DaoValue*) tuple, DAO_GLOBAL_CONSTANT ) );
 
 	self->nstype = DaoNamespace_MakeType( self, "namespace", DAO_NAMESPACE, (DaoValue*)self, 0, 0 );
 
@@ -1819,11 +1825,10 @@ DaoType* DaoNamespace_MakeRangeType( DaoNamespace *self, DaoType *first, DaoType
 	DString_Delete( name );
 	return type2;
 }
-DaoType* DaoNamespace_MakePairValueType( DaoNamespace *self, DaoValue *first, DaoValue *second )
+DaoType* DaoNamespace_MakeRangeValueType( DaoNamespace *self, DaoValue *first, DaoValue *second )
 {
-	DaoType *tp1, *tp2;
-	tp1 = DaoNamespace_MakeValueType( self, first );
-	tp2 = DaoNamespace_MakeValueType( self, second );
+	DaoType *tp1 = DaoNamespace_MakeValueType( self, first );
+	DaoType *tp2 = DaoNamespace_MakeValueType( self, second );
 	return DaoNamespace_MakeRangeType( self, tp1, tp2 );
 }
 

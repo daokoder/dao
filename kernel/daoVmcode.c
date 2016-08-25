@@ -91,7 +91,7 @@ static DaoVmCodeInfo dao_code_infolist[] =
 	{ "SAME",       DVM_SAME,       DAO_CODE_BINARY,  1 },
 	{ "ISA",        DVM_ISA,        DAO_CODE_BINARY,  1 },
 	{ "NAMEVA",     DVM_NAMEVA,     DAO_CODE_UNARY2,  1 },
-	{ "PAIR",       DVM_PAIR,       DAO_CODE_BINARY,  1 },
+	{ "RANGE",      DVM_RANGE,      DAO_CODE_BINARY,  1 },
 	{ "TUPLE",      DVM_TUPLE,      DAO_CODE_ENUM,    1 },
 	{ "LIST",       DVM_LIST,       DAO_CODE_ENUM,    1 },
 	{ "MAP",        DVM_MAP,        DAO_CODE_ENUM,    1 },

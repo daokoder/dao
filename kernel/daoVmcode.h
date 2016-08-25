@@ -85,7 +85,7 @@ enum DaoOpcode
 	DVM_SAME ,   /* Same: C = A ?= B, same type; A, B, both are data objects or type objects; */
 	DVM_ISA ,    /* Isa: C = A ?< B; B, type; A (data) is a B; A (type) is a sub type of B; */
 	DVM_NAMEVA , /* C = (A = B): name A, local constant, value B, local register */
-	DVM_PAIR ,   /* C = A : B; create a pair of index, as a tuple; */
+	DVM_RANGE ,  /* C = A : B; create a pair of index, as a tuple; */
 	DVM_TUPLE ,  /* tuple: C = ( A, A+1, ..., A+B-1 ); items can be: name=value */
 	DVM_LIST ,   /* list: C = { A, A+1, ..., A+B-1 }; */
 	DVM_MAP ,    /* map:  C = { A => A+1, ..., A+B-2 => A+B-1 }; if B==0, empty; */

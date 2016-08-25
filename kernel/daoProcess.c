@@ -61,7 +61,7 @@ static DaoMap* DaoProcess_GetMap( DaoProcess *self, DaoVmCode *vmc, unsigned int
 
 static void DaoProcess_DoMap( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoList( DaoProcess *self, DaoVmCode *vmc );
-static void DaoProcess_DoPair( DaoProcess *self, DaoVmCode *vmc );
+static void DaoProcess_DoRange( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoTupleSim( DaoProcess *self, DaoVmCode *vmc );
 static void DaoProcess_DoVector( DaoProcess *self, DaoVmCode *vmc );
@@ -1042,7 +1042,7 @@ int DaoProcess_Start( DaoProcess *self )
 		&& LAB_BITAND , && LAB_BITOR ,
 		&& LAB_BITXOR , && LAB_BITLFT ,
 		&& LAB_BITRIT , && LAB_SAME , && LAB_ISA ,
-		&& LAB_NAMEVA , && LAB_PAIR ,
+		&& LAB_NAMEVA , && LAB_RANGE ,
 		&& LAB_TUPLE  , && LAB_LIST , && LAB_MAP ,
 		&& LAB_VECTOR , && LAB_MATRIX ,
 		&& LAB_PACK  , && LAB_MPACK ,
@@ -1500,8 +1500,8 @@ CallEntry:
 			goto CheckException;
 		}OPNEXT() OPCASE( NAMEVA ){
 			DaoProcess_BindNameValue( self, vmc );
-		}OPNEXT() OPCASE( PAIR ){
-			DaoProcess_DoPair( self, vmc );
+		}OPNEXT() OPCASE( RANGE ){
+			DaoProcess_DoRange( self, vmc );
 		}OPNEXT() OPCASE( TUPLE ){
 			DaoProcess_DoTuple( self, vmc );
 			goto CheckException;
@@ -2996,7 +2996,7 @@ void DaoProcess_BindNameValue( DaoProcess *self, DaoVmCode *vmc )
 	}
 	DaoValue_Move( dB, & nameva->value, (DaoType*) nameva->ctype->aux );
 }
-void DaoProcess_DoPair( DaoProcess *self, DaoVmCode *vmc )
+void DaoProcess_DoRange( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoNamespace *ns = self->activeNamespace;
 	DaoType *tp = self->activeTypes[ vmc->c ];
@@ -5246,8 +5246,8 @@ DaoValue* DaoProcess_MakeConst( DaoProcess *self, int mode )
 		DaoProcess_DoCheckIsa( self, vmc ); break;
 	case DVM_NAMEVA :
 		DaoProcess_BindNameValue( self, vmc ); break;
-	case DVM_PAIR :
-		DaoProcess_DoPair( self, vmc ); break;
+	case DVM_RANGE :
+		DaoProcess_DoRange( self, vmc ); break;
 	case DVM_TUPLE :
 		DaoProcess_DoTuple( self, vmc ); break;
 	case DVM_GETI :

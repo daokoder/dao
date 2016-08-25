@@ -623,16 +623,16 @@ static void Dao_MakeSlice( DaoProcess *proc, DaoValue *idvalue, daoint N, DArray
 		{
 			DaoTuple *range = (DaoTuple*) idvalue;
 
-			if( range->subtype != DAO_TUPLE ) goto InvalidRange;
+			if( range->subtype != DAO_RANGE ) goto InvalidRange;
 			if( range->values[0]->type > DAO_FLOAT ) goto InvalidRange;
 			if( range->values[1]->type > DAO_FLOAT ) goto InvalidRange;
 
 			pos = DaoValue_GetInteger( range->values[0] );
 			end = DaoValue_GetInteger( range->values[1] );
-			if( range->values[1]->type == DAO_NONE ) end = size;
+			if( range->values[1]->type == DAO_NONE ) end = N;
 
-			pos = Dao_CheckNumberIndex( pos, size, NULL );
-			end = Dao_CheckNumberIndex( end, size + 1, NULL );
+			pos = Dao_CheckNumberIndex( pos, N, NULL );
+			end = Dao_CheckNumberIndex( end, N + 1, NULL );
 			if( pos < 0 || end < 0 ) goto InvalidRange;
 			if( pos > end ) goto InvalidRange;
 			Dao_SliceRange( slices, N, pos, end );
@@ -1481,7 +1481,6 @@ int DaoType_CheckRangeIndex( DaoType *self );
 static DaoType* DaoArray_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
 {
 	DaoType *etype = self->nested->items.pType[0];
-	printf( "DaoArray_CheckGetItem:\n" );
 	if( N == 0 ){
 		return self;
 	}else if( N == 1 ){
@@ -1495,7 +1494,7 @@ static DaoType* DaoArray_CheckGetItem( DaoType *self, DaoType *index[], int N, D
 	}else{
 		int i, count = 0;
 		for(i=0; i<N; ++i){
-			if( index[i]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
+			if( index[i]->tid == DAO_TUPLE && index[i]->subtid == DAO_RANGE ){
 				if( DaoType_CheckRangeIndex( index[i] ) == 0 ) return NULL;
 			}else{
 				if( DaoType_CheckNumberIndex( index[i] ) == 0 ) return NULL;
@@ -1574,7 +1573,7 @@ static DaoValue* DaoArray_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, 
 			if( pos < 0 ) return NULL;
 			vecpos += pos * dimAccum[i];
 		}
-		if( vecpos >= self->size ){
+		if( allNumbers && vecpos >= self->size ){
 			DaoProcess_RaiseError( proc, "Index::Range", "index out of range" );
 			return NULL;
 		}
