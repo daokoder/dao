@@ -131,7 +131,7 @@ mat.iterate{ [X,I,J,K]
 [1] / 0
 @[test(code_01)]
 @[test(code_01)]
-{{Error::Float::DivByZero}} .* {{Division by zero}}
+{{Error::Float::DivByZero}}
 @[test(code_01)]
 
 
@@ -141,7 +141,7 @@ mat.iterate{ [X,I,J,K]
 [1] / 0.0
 @[test(code_01)]
 @[test(code_01)]
-{{Error::Float::DivByZero}} .* {{Division by zero}}
+{{Error::Float::DivByZero}}
 @[test(code_01)]
 
 
@@ -151,7 +151,7 @@ mat.iterate{ [X,I,J,K]
 [1] / 0.0C
 @[test(code_01)]
 @[test(code_01)]
-{{Error::Float::DivByZero}} .* {{Division by zero}}
+{{Error::Float::DivByZero}}
 @[test(code_01)]
 
 
@@ -161,7 +161,7 @@ mat.iterate{ [X,I,J,K]
 [1] / [0]
 @[test(code_01)]
 @[test(code_01)]
-{{Error::Float::DivByZero}} .* {{Division by zero}}
+{{Error::Float::DivByZero}}
 @[test(code_01)]
 
 
@@ -171,7 +171,7 @@ mat.iterate{ [X,I,J,K]
 [1] / [0.0]
 @[test(code_01)]
 @[test(code_01)]
-{{Error::Float::DivByZero}} .* {{Division by zero}}
+{{Error::Float::DivByZero}}
 @[test(code_01)]
 
 
@@ -181,7 +181,7 @@ mat.iterate{ [X,I,J,K]
 [1] / [0.0C]
 @[test(code_01)]
 @[test(code_01)]
-{{Error::Float::DivByZero}} .* {{Division by zero}}
+{{Error::Float::DivByZero}}
 @[test(code_01)]
 
 
@@ -191,7 +191,7 @@ mat.iterate{ [X,I,J,K]
 [1.0] / 0
 @[test(code_01)]
 @[test(code_01)]
-{{Error::Float::DivByZero}} .* {{Division by zero}}
+{{Error::Float::DivByZero}}
 @[test(code_01)]
 
 
@@ -201,7 +201,7 @@ mat.iterate{ [X,I,J,K]
 [1.0] / 0.0
 @[test(code_01)]
 @[test(code_01)]
-{{Error::Float::DivByZero}} .* {{Division by zero}}
+{{Error::Float::DivByZero}}
 @[test(code_01)]
 
 
@@ -211,7 +211,7 @@ mat.iterate{ [X,I,J,K]
 [1.0] / 0.0C
 @[test(code_01)]
 @[test(code_01)]
-{{Error::Float::DivByZero}} .* {{Division by zero}}
+{{Error::Float::DivByZero}}
 @[test(code_01)]
 
 

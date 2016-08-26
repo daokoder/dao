@@ -98,19 +98,20 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	DaoNamespace_SetName( self, nsname );
 	DaoNamespace_AddConst( self, self->name, (DaoValue*) self, DAO_PERM_PUBLIC );
 
-	DString_SetChars( name, "__main__" );  /* Reserved for main(); */
+	DString_SetChars( name, "__main__" );  /* DAO_STD_CONST_MAIN: Reserved for main(); */
 	DaoNamespace_AddConst( self, name, dao_none_value, DAO_PERM_PUBLIC );
 
-	DString_SetChars( name, "none" );
+	DString_SetChars( name, "none" );   /* DAO_STD_CONST_NONE; */
 	DaoNamespace_AddConst( self, name, dao_none_value, DAO_PERM_PUBLIC );
-	DString_SetChars( name, "false" );
+	DString_SetChars( name, "false" );  /* DAO_STD_CONST_FALSE; */
 	DaoNamespace_AddConst( self, name, dao_false_value, DAO_PERM_PUBLIC );
-	DString_SetChars( name, "true" );
+	DString_SetChars( name, "true" );   /* DAO_STD_CONST_TRUE; */
 	DaoNamespace_AddConst( self, name, dao_true_value, DAO_PERM_PUBLIC );
 
+	/* Mainly for simplifying constant folding: */
 	type = DaoNamespace_MakeRangeType( self, dao_type_none, dao_type_none );
 	tuple = DaoTuple_Create( type, 2, 1 );
-	tuple->subtype = DAO_RANGE;
+	tuple->subtype = DAO_RANGE;  /* DAO_STD_CONST_RANGE; */
 	DList_Append( self->constants, DaoConstant_New( (DaoValue*) tuple, DAO_GLOBAL_CONSTANT ) );
 
 	self->nstype = DaoNamespace_MakeType( self, "namespace", DAO_NAMESPACE, (DaoValue*)self, 0, 0 );
@@ -751,12 +752,14 @@ void DaoNamespace_SetupType( DaoNamespace *self, DaoTypeCore *core, DaoType *typ
 		type->kernel = DaoTypeKernel_New( core );
 		type->kernel->abtype = type;
 		type->kernel->nspace = self;
+		GC_IncRC( type->kernel );
+		GC_IncRC( type );
+		GC_IncRC( self );
+
 		type->kernel->SetupValues = DaoNamespace_SetupValues;
 		type->kernel->SetupMethods = DaoNamespace_SetupMethods;
 		DaoVmSpace_AddKernel( self->vmSpace, core, type->kernel );
 		DList_Append( self->auxData, type->kernel );
-		GC_IncRC( self );
-		GC_IncRC( type );
 	}
 	DMutex_Unlock( & mutex_values_setup );
 }

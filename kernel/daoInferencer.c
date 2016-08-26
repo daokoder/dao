@@ -3365,9 +3365,8 @@ SkipChecking:
 				if( cintype ) bt = cintype->vatype;
 			}
 			ct = bt;
-			printf( "CAST: %i %s %s %p\n", at->tid, at->name->chars, bt->name->chars, at->core );
-			if( at->core ) printf( "%s %p\n", at->core->name, at->core->CheckConversion );
-			if( at->tid == DAO_VARIANT ){
+			if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ){
+			}else if( at->tid == DAO_VARIANT ){
 				int mt1 = DaoType_MatchTo( at, bt, NULL );
 				int mt2 = DaoType_MatchTo( bt, at, NULL );
 				if( mt1 == 0 && mt2 == 0 ) goto InvalidCasting;

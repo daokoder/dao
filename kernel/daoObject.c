@@ -397,9 +397,7 @@ static DaoType* DaoObject_CheckGetItem( DaoType *self, DaoType *index[], int N, 
 	DaoClass *host = type != NULL && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
 	DaoRoutine *rout = DaoClass_FindMethod( (DaoClass*) self->aux, "[]", host );
 
-	printf( "DaoObject_CheckGetItem: %p\n", rout );
 	if( rout != NULL ) rout = DaoRoutine_MatchByType( rout, self, index, N, DVM_CALL );
-	printf( "DaoObject_CheckGetItem: %p\n", rout );
 	if( rout == NULL ) return NULL;
 	return (DaoType*) rout->routType->aux;
 }
@@ -597,6 +595,48 @@ static DaoValue* DaoObject_DoConversion( DaoValue *self, DaoType *type, int copy
 
 void DaoObject_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
+	int ec = 0;
+	char buf[50];
+	DMap *inmap = cycmap;
+	DaoObject *object = (DaoObject*) self;
+	DaoValue *params[2];
+	DaoRoutine *meth;
+
+	sprintf( buf, "[%p]", object );
+	if( self == object->defClass->objType->value ){
+		DaoStream_WriteString( stream, object->defClass->className );
+		DaoStream_WriteChars( stream, "[null]" );
+		return;
+	}
+	if( cycmap != NULL && DMap_Find( cycmap, object ) != NULL ){
+		DaoStream_WriteString( stream, object->defClass->className );
+		DaoStream_WriteChars( stream, buf );
+		return;
+	}
+	if( cycmap == NULL ) cycmap = DHash_New(0,0);
+	DMap_Insert( cycmap, self, self );
+
+	DaoValue_Clear( & proc->stackValues[0] );
+
+	params[0] = (DaoValue*) dao_type_string;
+	params[1] = (DaoValue*) stream;
+	meth = DaoClass_FindMethod( object->defClass, "(string)", NULL );
+	if( meth ){
+		ec = DaoProcess_Call( proc, meth, self, params, 2 );
+		if( ec ) ec = DaoProcess_Call( proc, meth, self, params, 1 );
+	}else{
+		meth = DaoClass_FindMethod( object->defClass, "serialize", NULL );
+		if( meth ) ec = DaoProcess_Call( proc, meth, self, NULL, 0 );
+	}
+	if( ec ){
+		DaoProcess_RaiseException( proc, daoExceptionNames[ec], proc->string->chars, NULL );
+	}else if( meth && proc->stackValues[0] ){
+		DaoValue_Print( proc->stackValues[0], stream, cycmap, proc );
+	}else{
+		DaoStream_WriteString( stream, object->defClass->className );
+		DaoStream_WriteChars( stream, buf );
+	}
+	if( inmap == NULL ) DMap_Delete( cycmap );
 }
 
 void DaoObject_CoreDelete( DaoValue *self )

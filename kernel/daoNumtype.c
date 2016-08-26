@@ -1768,29 +1768,76 @@ static DaoType* DaoArray_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *arg
 	DaoType *left = args[0];
 	DaoType *right = args[1];
 
+	/*
+	// One of the args must be an array type;
+	// For operations between two arrays, both array must have the same types for simplicity;
+	*/
 	switch( op->code ){
 	case DVM_ADD : case DVM_SUB :
 	case DVM_MUL : case DVM_DIV :
+		if( left->tid == DAO_ARRAY && right->tid == DAO_ARRAY ){
+			if( left->nested->size == 0 || right->nested->size == 0 ) return NULL;
+			if( left->nested->items.pType[0]->tid > right->nested->items.pType[0]->tid ) return left;
+			return right;
+		}else if( left->tid == DAO_ARRAY ){
+			if( left->nested->size == 0 ) return NULL;
+			if( right->tid == DAO_NONE || right->tid > DAO_COMPLEX ) return NULL;
+			if( left->nested->items.pType[0]->tid > right->tid ) return left;
+			return dao_array_types[ right->tid ];
+		}else if( right->tid == DAO_ARRAY ){
+			if( right->nested->size == 0 ) return NULL;
+			if( left->tid == DAO_NONE || left->tid > DAO_COMPLEX ) return NULL;
+			if( right->nested->items.pType[0]->tid > left->tid ) return right;
+			return dao_array_types[ left->tid ];
+		}
 		break;
 	case DVM_MOD : case DVM_POW :
-	case DVM_BITAND : case DVM_BITOR  :
 	case DVM_AND : case DVM_OR :
+	case DVM_BITAND : case DVM_BITOR  :
+		if( left->tid == DAO_ARRAY && right->tid == DAO_ARRAY ){
+			if( left->nested->size == 0 || right->nested->size == 0 ) return NULL;
+			if( left->nested->items.pType[0]->tid != right->nested->items.pType[0]->tid ) return NULL;
+			if( left->nested->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
+			if( op->code == DVM_BITAND || op->code == DVM_BITOR ){
+				if( left->nested->items.pType[0]->tid == DAO_FLOAT ) return NULL;
+			}
+			return left;
+		}else if( left->tid == DAO_ARRAY ){
+			if( left->nested->size == 0 ) return NULL;
+			if( left->nested->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
+			if( right->tid == DAO_NONE || right->tid > DAO_FLOAT ) return NULL;
+			if( op->code == DVM_BITAND || op->code == DVM_BITOR ){
+				if( left->nested->items.pType[0]->tid == DAO_FLOAT ) return NULL;
+				if( right->tid == DAO_FLOAT ) return NULL;
+			}
+			return left;
+		}else if( right->tid == DAO_ARRAY ){
+			if( right->nested->size == 0 ) return NULL;
+			if( right->nested->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
+			if( left->tid == DAO_NONE || left->tid > DAO_FLOAT ) return NULL;
+			if( op->code == DVM_BITAND || op->code == DVM_BITOR ){
+				if( right->nested->items.pType[0]->tid == DAO_FLOAT ) return NULL;
+				if( left->tid == DAO_FLOAT ) return NULL;
+			}
+			return right;
+		}
+		break;
 	case DVM_LT  : case DVM_LE :
-		if( args[0]->tid == DAO_ARRAY ){
-			if( args[0]->nested->size == 0 ) return NULL;
-			if( args[0]->nested->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
-		}
-		if( args[1]->tid == DAO_ARRAY ){
-			if( args[1]->nested->size == 0 ) return NULL;
-			if( args[1]->nested->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
-		}
+		if( left->tid != DAO_ARRAY || right->tid != DAO_ARRAY ) return NULL;
+		if( left->nested->size == 0 || right->nested->size == 0 ) return NULL;
+		if( left->nested->items.pType[0]->tid != right->nested->items.pType[0]->tid ) return NULL;
+		if( left->nested->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
+		if( right->nested->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
 		break;
 	case DVM_EQ  : case DVM_NE :
+		if( left->tid != DAO_ARRAY || right->tid != DAO_ARRAY ) return NULL;
+		if( left->nested->size == 0 || right->nested->size == 0 ) return NULL;
+		if( left->nested->items.pType[0]->tid != right->nested->items.pType[0]->tid ) return NULL;
 		break;
 	case DVM_IN :
-		if( args[0]->tid == DAO_NONE ) return NULL;
-		if( args[0]->tid > DAO_COMPLEX ) return NULL;
-		if( args[1]->tid != DAO_ARRAY ) return NULL;
+		if( left->tid == DAO_NONE ) return NULL;
+		if( left->tid > DAO_COMPLEX ) return NULL;
+		if( right->tid != DAO_ARRAY ) return NULL;
 		return dao_type_bool;
 	default: return NULL;
 	}
@@ -1800,7 +1847,7 @@ static DaoType* DaoArray_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *arg
 
 static DaoValue* DaoArray_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2], DaoProcess *proc )
 {
-	DaoValue *A  = args[0];
+	DaoValue *A = args[0];
 	DaoValue *B = args[1];
 	DString *C;
 	int D = 0;

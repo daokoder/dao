@@ -114,7 +114,7 @@ a = 123;
 b = a/0
 @[test(output_01)]
 @[test(output_01)]
-{{[[Error::Float::DivByZero]] --- Division by zero}}
+{{[[Error::Float::DivByZero]]}}
 @[test(output_01)]
 
 
@@ -124,7 +124,7 @@ b = a/0
 123 / (any) 0
 @[test(output_01)]
 @[test(output_01)]
-{{[[Error::Float::DivByZero]] --- Division by zero}}
+{{[[Error::Float::DivByZero]]}}
 @[test(output_01)]
 
 
@@ -133,5 +133,5 @@ b = a/0
 io.writeln( 123 / 0.0 )
 @[test(output_01)]
 @[test(output_01)]
-{{[[Error::Float::DivByZero]] --- Division by zero}}
+{{[[Error::Float::DivByZero]]}}
 @[test(output_01)]

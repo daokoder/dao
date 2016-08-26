@@ -897,7 +897,6 @@ DaoType* DaoCinValue_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *
 	DaoRoutine *rout;
 	DString *buffer;
 
-	printf( "DaoCinValue_CheckConversion\n" );
 	if( cintype->target == type ){
 		return type;
 	}else if( DaoType_MatchTo( cintype->target, type, NULL ) >= DAO_MT_EQ ){

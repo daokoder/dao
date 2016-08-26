@@ -4514,8 +4514,8 @@ void DaoProcess_DoMatrix( DaoProcess *self, DaoVmCode *vmc )
 	/* TODO: more restrict type checking on elements. */
 	DaoArray_ResizeArray( array, dim, 2 );
 	if( numtype == DAO_BOOLEAN ){
-		dao_boolean *vec = array->data.i;
-		for(i=0; i<size; i++) vec[i] = DaoValue_GetBoolean( regv[ opA+i ] );
+		dao_boolean *vec = array->data.b;
+		for(i=0; i<size; i++) vec[i] = DaoValue_GetInteger( regv[ opA+i ] );
 	}else if( numtype == DAO_INTEGER ){
 		dao_integer *vec = array->data.i;
 		for(i=0; i<size; i++) vec[i] = DaoValue_GetInteger( regv[ opA+i ] );

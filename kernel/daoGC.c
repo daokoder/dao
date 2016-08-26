@@ -1169,9 +1169,7 @@ void DaoGC_PrepareCandidates()
 		DaoValue_Delete( freeList->items.pValue[i] );
 	}
 	freeList->size = 0;
-	printf( "DaoGC_PrepareCandidates 1\n" );
 	for(i=0; i<types->size; ++i) DaoValue_Delete( types->items.pValue[i] );
-	printf( "DaoGC_PrepareCandidates 2\n" );
 }
 
 enum DaoGCActions{ DAO_GC_DEC, DAO_GC_INC, DAO_GC_BREAK };

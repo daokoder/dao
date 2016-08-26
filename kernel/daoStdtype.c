@@ -6258,7 +6258,7 @@ void DaoCstruct_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProce
 	}
 
 	if( cycmap == NULL ) cycmap = DHash_New(0,0);
-	if( cycmap ) MAP_Insert( cycmap, self, self );
+	DMap_Insert( cycmap, self, self );
 
 	args[0] = (DaoValue*) dao_type_string;
 	args[1] = (DaoValue*) stream;
@@ -6597,7 +6597,7 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 
 static void DaoException_CorePrint( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
-	DaoException_Print( (DaoException*) self, stream );
+	DaoCstruct_Print( self, stream, cycmap, proc );
 }
 
 static void DaoException_CoreDelete( DaoValue *self )
@@ -6714,24 +6714,24 @@ static DaoFunctionEntry daoExceptionMeths[] =
 
 static DaoTypeCore daoExceptionCore =
 {
-	"Exception",                                       /* name */
-	{ NULL },                                          /* bases */
-	NULL,                                              /* numbers */
-	daoExceptionMeths,                                 /* methods */
-	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
-	DaoCstruct_CheckSetField,  DaoCstruct_DoSetField,  /* SetField */
-	DaoCstruct_CheckGetItem,   DaoCstruct_DoGetItem,   /* GetItem */
-	DaoCstruct_CheckSetItem,   DaoCstruct_DoSetItem,   /* SetItem */
-	NULL,                      NULL,                   /* Unary */
-	NULL,                      NULL,                   /* Binary */
-	NULL,                      NULL,                   /* Comparison */
-	NULL,                      NULL,                   /* Conversion */
-	NULL,                      NULL,                   /* ForEach */
-	DaoException_CorePrint,                            /* Print */
-	NULL,                                              /* Slice */
-	NULL,                                              /* Copy */
-	DaoException_CoreDelete,                           /* Delete */
-	DaoException_HandleGC                              /* HandleGC */
+	"Exception",                                           /* name */
+	{ NULL },                                              /* bases */
+	NULL,                                                  /* numbers */
+	daoExceptionMeths,                                     /* methods */
+	DaoCstruct_CheckGetField,    DaoCstruct_DoGetField,    /* GetField */
+	DaoCstruct_CheckSetField,    DaoCstruct_DoSetField,    /* SetField */
+	DaoCstruct_CheckGetItem,     DaoCstruct_DoGetItem,     /* GetItem */
+	DaoCstruct_CheckSetItem,     DaoCstruct_DoSetItem,     /* SetItem */
+	NULL,                        NULL,                     /* Unary */
+	NULL,                        NULL,                     /* Binary */
+	NULL,                        NULL,                     /* Comparison */
+	DaoCstruct_CheckConversion,  DaoCstruct_DoConversion,  /* Conversion */
+	NULL,                        NULL,                     /* ForEach */
+	DaoException_CorePrint,                                /* Print */
+	NULL,                                                  /* Slice */
+	NULL,                                                  /* Copy */
+	DaoException_CoreDelete,                               /* Delete */
+	DaoException_HandleGC                                  /* HandleGC */
 };
 
 
@@ -6745,24 +6745,24 @@ static DaoFunctionEntry daoExceptionWarningMeths[] =
 
 static DaoTypeCore daoExceptionWarningCore =
 {
-	"Exception::Warning",                              /* name */
-	{ & daoExceptionCore, NULL },                      /* bases */
-	NULL,                                              /* numbers */
-	daoExceptionWarningMeths,                          /* methods */
-	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
-	DaoCstruct_CheckSetField,  DaoCstruct_DoSetField,  /* SetField */
-	DaoCstruct_CheckGetItem,   DaoCstruct_DoGetItem,   /* GetItem */
-	DaoCstruct_CheckSetItem,   DaoCstruct_DoSetItem,   /* SetItem */
-	NULL,                      NULL,                   /* Unary */
-	NULL,                      NULL,                   /* Binary */
-	NULL,                      NULL,                   /* Comparison */
-	NULL,                      NULL,                   /* Conversion */
-	NULL,                      NULL,                   /* ForEach */
-	DaoException_CorePrint,                            /* Print */
-	NULL,                                              /* Slice */
-	NULL,                                              /* Copy */
-	DaoException_CoreDelete,                           /* Delete */
-	DaoException_HandleGC                              /* HandleGC */
+	"Exception::Warning",                                  /* name */
+	{ & daoExceptionCore, NULL },                          /* bases */
+	NULL,                                                  /* numbers */
+	daoExceptionWarningMeths,                              /* methods */
+	DaoCstruct_CheckGetField,    DaoCstruct_DoGetField,    /* GetField */
+	DaoCstruct_CheckSetField,    DaoCstruct_DoSetField,    /* SetField */
+	DaoCstruct_CheckGetItem,     DaoCstruct_DoGetItem,     /* GetItem */
+	DaoCstruct_CheckSetItem,     DaoCstruct_DoSetItem,     /* SetItem */
+	NULL,                        NULL,                     /* Unary */
+	NULL,                        NULL,                     /* Binary */
+	NULL,                        NULL,                     /* Comparison */
+	DaoCstruct_CheckConversion,  DaoCstruct_DoConversion,  /* Conversion */
+	NULL,                        NULL,                     /* ForEach */
+	DaoException_CorePrint,                                /* Print */
+	NULL,                                                  /* Slice */
+	NULL,                                                  /* Copy */
+	DaoException_CoreDelete,                               /* Delete */
+	DaoException_HandleGC                                  /* HandleGC */
 };
 
 
@@ -6777,24 +6777,24 @@ static DaoFunctionEntry daoExceptionErrorMeths[] =
 
 static DaoTypeCore daoExceptionErrorCore =
 {
-	"Exception::Error",                                /* name */
-	{ & daoExceptionCore, NULL },                      /* bases */
-	NULL,                                              /* numbers */
-	daoExceptionErrorMeths,                            /* methods */
-	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
-	DaoCstruct_CheckSetField,  DaoCstruct_DoSetField,  /* SetField */
-	DaoCstruct_CheckGetItem,   DaoCstruct_DoGetItem,   /* GetItem */
-	DaoCstruct_CheckSetItem,   DaoCstruct_DoSetItem,   /* SetItem */
-	NULL,                      NULL,                   /* Unary */
-	NULL,                      NULL,                   /* Binary */
-	NULL,                      NULL,                   /* Comparison */
-	NULL,                      NULL,                   /* Conversion */
-	NULL,                      NULL,                   /* ForEach */
-	DaoException_CorePrint,                            /* Print */
-	NULL,                                              /* Slice */
-	NULL,                                              /* Copy */
-	DaoException_CoreDelete,                           /* Delete */
-	DaoException_HandleGC                              /* HandleGC */
+	"Exception::Error",                                    /* name */
+	{ & daoExceptionCore, NULL },                          /* bases */
+	NULL,                                                  /* numbers */
+	daoExceptionErrorMeths,                                /* methods */
+	DaoCstruct_CheckGetField,    DaoCstruct_DoGetField,    /* GetField */
+	DaoCstruct_CheckSetField,    DaoCstruct_DoSetField,    /* SetField */
+	DaoCstruct_CheckGetItem,     DaoCstruct_DoGetItem,     /* GetItem */
+	DaoCstruct_CheckSetItem,     DaoCstruct_DoSetItem,     /* SetItem */
+	NULL,                        NULL,                     /* Unary */
+	NULL,                        NULL,                     /* Binary */
+	NULL,                        NULL,                     /* Comparison */
+	DaoCstruct_CheckConversion,  DaoCstruct_DoConversion,  /* Conversion */
+	NULL,                        NULL,                     /* ForEach */
+	DaoException_CorePrint,                                /* Print */
+	NULL,                                                  /* Slice */
+	NULL,                                                  /* Copy */
+	DaoException_CoreDelete,                               /* Delete */
+	DaoException_HandleGC                                  /* HandleGC */
 };
 
 
