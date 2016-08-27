@@ -51,17 +51,17 @@
 //    DaoType.tid = DAO_CLASS, DAO_CDATA,
 //    DaoType.aux = the Dao class or C type
 //
-// for nested type: list<float>, map<string,float>, ...
+// for item types: list<float>, map<string,float>, ...
 //    DaoType.name = "list<float>", "map<string,float>", ...
 //    DaoType.tid = DAO_LIST, DAO_MAP
 //    DaoType.aux = NULL;
-//    DaoType.nested[] = nested DaoType(s) : X<nested[0],nested[1],...>
+//    DaoType.args[] = item DaoType(s) : X<args[0],args[1],...>
 //
 // for routine type: routine(float,string):float
 //    DaoType.name = "routine<float,string=>float>"
 //    DaoType.tid = DAO_ROUTINE
 //    DaoType.aux = returned type
-//    DaoType.nested[] = parameter DaoType(s) : (<nested[0],...)
+//    DaoType.args[] = parameter DaoType(s) : (<args[0],...)
 //
 //    e.g.:
 //        routine<float=>?>: foo( a : float ){}
@@ -97,7 +97,7 @@ struct DaoType
 	uchar_t   ffitype   : 4; /* for modules using ffi */
 	DString  *name;   /* type name */
 	DString  *fname;  /* field name, or parameter name, or original name for enum types */
-	DList    *nested; /* type items */
+	DList    *args;   /* type arguments */
 	DList    *bases;  /* base types */
 	DMap     *mapNames;
 	DMap     *interfaces;

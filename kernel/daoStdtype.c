@@ -80,8 +80,8 @@ static int DaoType_CheckTypeRange( DaoType *self, int min, int max )
 	if( self->tid & DAO_ANY ) return 1;
 	if( self->tid == DAO_VARIANT ){
 		int i;
-		for(i=0; i<self->nested->size; ++i){
-			DaoType *itype = self->nested->items.pType[i];
+		for(i=0; i<self->args->size; ++i){
+			DaoType *itype = self->args->items.pType[i];
 			if( DaoType_CheckTypeRange( itype, min, max ) ) return 1;
 		}
 	}
@@ -96,8 +96,8 @@ int DaoType_CheckNumberIndex( DaoType *self )
 int DaoType_CheckRangeIndex( DaoType *self )
 {
 	if( self->tid != DAO_TUPLE && self->subtid != DAO_RANGE ) return 0;
-	if( ! DaoType_CheckTypeRange( self->nested->items.pType[0], DAO_NONE, DAO_FLOAT ) ) return 0;
-	if( ! DaoType_CheckTypeRange( self->nested->items.pType[1], DAO_NONE, DAO_FLOAT ) ) return 0;
+	if( ! DaoType_CheckTypeRange( self->args->items.pType[0], DAO_NONE, DAO_FLOAT ) ) return 0;
+	if( ! DaoType_CheckTypeRange( self->args->items.pType[1], DAO_NONE, DAO_FLOAT ) ) return 0;
 	return 1;
 }
 
@@ -167,8 +167,8 @@ static DaoTuple* DaoProcess_PrepareTuple( DaoProcess *self, DaoType *type, int s
 {
 	DaoTuple *tuple = NULL;
 
-	if( size < (type->nested->size - type->variadic) ) return NULL;
-	if( type->variadic == 0 ) size = type->nested->size;
+	if( size < (type->args->size - type->variadic) ) return NULL;
+	if( type->variadic == 0 ) size = type->args->size;
 
 	tuple = DaoProcess_NewTuple( self, size );
 	GC_Assign( & tuple->ctype, type );
@@ -1358,7 +1358,7 @@ static DaoType* DaoString_CheckGetItem( DaoType *self, DaoType *index[], int N, 
 	if( N == 0 ) return self;
 	if( N != 1 ) return NULL;
 	if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_ITERATOR ){
-		if( DaoType_CheckNumberIndex( index[0]->nested->items.pType[1] ) ) return dao_type_int;
+		if( DaoType_CheckNumberIndex( index[0]->args->items.pType[1] ) ) return dao_type_int;
 	}else if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 		if( DaoType_CheckRangeIndex( index[0] ) ) return dao_type_string;
 	}else{
@@ -2960,8 +2960,8 @@ int DaoList_SetItem( DaoList *self, DaoValue *it, daoint pos )
 	DaoValue **val;
 	if( (pos = DaoList_MakeIndex( self, pos, 0 )) == -1 ) return 1;
 	val = self->value->items.pValue + pos;
-	if( self->ctype && self->ctype->nested->size ){
-		return DaoValue_Move( it, val, self->ctype->nested->items.pType[0] ) == 0;
+	if( self->ctype && self->ctype->args->size ){
+		return DaoValue_Move( it, val, self->ctype->args->items.pType[0] ) == 0;
 	}else{
 		DaoValue_Copy( it, val );
 	}
@@ -2970,7 +2970,7 @@ int DaoList_SetItem( DaoList *self, DaoValue *it, daoint pos )
 
 int DaoList_PushFront( DaoList *self, DaoValue *item )
 {
-	DaoType *tp = self->ctype ? self->ctype->nested->items.pType[0] : NULL;
+	DaoType *tp = self->ctype ? self->ctype->args->items.pType[0] : NULL;
 	DaoValue *temp = NULL;
 	if( DaoValue_Move( item, & temp, tp ) ==0 ){
 		GC_DecRC( temp );
@@ -2983,7 +2983,7 @@ int DaoList_PushFront( DaoList *self, DaoValue *item )
 
 int DaoList_PushBack( DaoList *self, DaoValue *item )
 {
-	DaoType *tp = self->ctype ? self->ctype->nested->items.pType[0] : NULL;
+	DaoType *tp = self->ctype ? self->ctype->args->items.pType[0] : NULL;
 	DaoValue *temp = NULL;
 	if( DaoValue_Move( item, & temp, tp ) ==0 ){
 		GC_DecRC( temp );
@@ -3001,7 +3001,7 @@ int DaoList_Append( DaoList *self, DaoValue *value )
 
 int DaoList_Insert( DaoList *self, DaoValue *item, daoint pos )
 {
-	DaoType *tp = self->ctype ? self->ctype->nested->items.pType[0] : NULL;
+	DaoType *tp = self->ctype ? self->ctype->args->items.pType[0] : NULL;
 	DaoValue *temp = NULL;
 	if( (pos = DaoList_MakeIndex( self, pos, 1 )) == -1 ) return 1;
 	if( DaoValue_Move( item, & temp, tp ) ==0 ){
@@ -3047,12 +3047,12 @@ static DaoType* DaoList_CheckGetItem( DaoType *self, DaoType *index[], int N, Da
 {
 	DaoType *itype = dao_type_any;
 
-	if( self->nested->size ) itype = self->nested->items.pType[0];
+	if( self->args->size ) itype = self->args->items.pType[0];
 
 	if( N == 0 ) return self;
 	if( N != 1 ) return NULL;
 	if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_ITERATOR ){
-		if( DaoType_CheckNumberIndex( index[0]->nested->items.pType[1] ) ) return dao_type_int;
+		if( DaoType_CheckNumberIndex( index[0]->args->items.pType[1] ) ) return dao_type_int;
 	}else if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 		if( DaoType_CheckRangeIndex( index[0] ) ) return self;
 	}else{
@@ -3107,7 +3107,7 @@ static int DaoList_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType
 {
 	DaoType *itype = dao_type_any;
 
-	if( self->nested->size ) itype = self->nested->items.pType[0];
+	if( self->args->size ) itype = self->args->items.pType[0];
 	if( DaoType_MatchTo( value, itype, NULL ) == 0 ) return DAO_ERROR_VALUE;
 
 	if( N == 0 ) return DAO_OK;
@@ -3187,8 +3187,8 @@ static DaoValue* DaoList_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args
 
 	if( op->code != DVM_IN || right->type != DAO_LIST ) return NULL;
 
-	if( list->ctype && list->ctype->nested->size ){
-		DaoType *itype = list->ctype->nested->items.pType[0];
+	if( list->ctype && list->ctype->args->size ){
+		DaoType *itype = list->ctype->args->items.pType[0];
 		if( itype != NULL && DaoType_MatchValue( itype, left, NULL ) == 0 ) return NULL;
 	}
 
@@ -3229,14 +3229,14 @@ static DaoValue* DaoList_DoConversion( DaoValue *self, DaoType *type, int copy, 
 		DaoList *list;
 
 		/* "list"? */
-		if( type->nested->size == 0 ) return (DaoValue*) DaoList_TryCopy( selflist, copy, proc );
-		if( type->nested->size != 1 ) return NULL;
+		if( type->args->size == 0 ) return (DaoValue*) DaoList_TryCopy( selflist, copy, proc );
+		if( type->args->size != 1 ) return NULL;
 
 		if( DaoType_MatchValue( type, self, NULL ) >= DAO_MT_EQ ){
 			return (DaoValue*) DaoList_TryCopy( selflist, copy, proc );
 		}
 
-		itype = type->nested->items.pType[0];
+		itype = type->args->items.pType[0];
 		if( itype == NULL ) return NULL;
 
 		list = DaoProcess_NewList( proc );
@@ -3254,16 +3254,16 @@ static DaoValue* DaoList_DoConversion( DaoValue *self, DaoType *type, int copy, 
 		return (DaoValue*) list;
 	}else if( type->tid == DAO_TUPLE ){
 		DaoTuple *tuple = DaoProcess_PrepareTuple( proc, type, selflist->value->size );
-		int tsize = type->nested->size - type->variadic;
+		int tsize = type->args->size - type->variadic;
 		if( tuple == NULL ) return NULL;
 		for(i=0; i<tuple->size; ++i){
 			DaoValue *item = selflist->value->items.pValue[i];
 			DaoType *itype = dao_type_any;
 
-			if( i < type->nested->size ){
-				itype = type->nested->items.pType[i];
+			if( i < type->args->size ){
+				itype = type->args->items.pType[i];
 			}else if( type->variadic ){
-				itype = type->nested->items.pType[tsize];
+				itype = type->args->items.pType[tsize];
 			}
 			if( itype->tid >= DAO_PAR_NAMED && itype->tid <= DAO_PAR_VALIST ){
 				itype = (DaoType*) itype->aux;
@@ -3384,8 +3384,8 @@ static void DaoLIST_Resize( DaoProcess *proc, DaoValue *p[], int N )
 	DaoList *self = & p[0]->xList;
 	DaoValue *fill = dao_none_value;
 	daoint size = p[1]->xInteger.value;
-	if( self->ctype && self->ctype->nested->size )
-		fill = self->ctype->nested->items.pType[0]->value;
+	if( self->ctype && self->ctype->args->size )
+		fill = self->ctype->args->items.pType[0]->value;
 	DList_Resize( self->value, size, fill );
 }
 
@@ -3395,8 +3395,8 @@ static void DaoLIST_Resize2( DaoProcess *proc, DaoValue *p[], int N )
 	DaoType *tp = NULL;
 	DaoValue *fill = p[1];
 	daoint size = p[2]->xInteger.value;
-	if( self->ctype && self->ctype->nested->size )
-		tp = self->ctype->nested->items.pType[0];
+	if( self->ctype && self->ctype->args->size )
+		tp = self->ctype->args->items.pType[0];
 
 	fill = DaoValue_CopyContainer( fill, tp );
 	if( fill != p[1] ){
@@ -3481,7 +3481,7 @@ static void DaoLIST_Sum( DaoProcess *proc, DaoValue *p[], int N )
 	DaoValue **data = self->value->items.pValue;
 	type = DaoList_CheckType( self, proc );
 	if( type == 0 ){
-		DaoProcess_PutValue( proc, self->ctype->nested->items.pType[0]->value );
+		DaoProcess_PutValue( proc, self->ctype->args->items.pType[0]->value );
 		return;
 	}
 	switch( type ){
@@ -4315,11 +4315,11 @@ int DaoMap_Insert( DaoMap *self, DaoValue *key, DaoValue *value )
 	DaoValue *value2 = NULL;
 	int mt;
 	if( tp ){
-		if( tp->nested->size >=2 ){
-			tp1 = tp->nested->items.pType[0];
-			tp2 = tp->nested->items.pType[1];
-		}else if( tp->nested->size >=1 ){
-			tp1 = tp->nested->items.pType[0];
+		if( tp->args->size >=2 ){
+			tp1 = tp->args->items.pType[0];
+			tp2 = tp->args->items.pType[1];
+		}else if( tp->args->size >=1 ){
+			tp1 = tp->args->items.pType[0];
 		}
 	}
 	/* type checking and setting */
@@ -4360,8 +4360,8 @@ int DaoMap_InsertChars( DaoMap *self, const char *key, DaoValue *value )
 static DaoValue* DaoMap_AdjustKey( DaoMap *self, DaoValue *key, DaoEnum *sym )
 {
 	if( key->type != DAO_ENUM || key->xEnum.subtype != DAO_ENUM_SYM ) return key;
-	if( self->ctype->nested->items.pType[0]->tid == DAO_ENUM ){
-		*sym = self->ctype->nested->items.pType[0]->value->xEnum;
+	if( self->ctype->args->items.pType[0]->tid == DAO_ENUM ){
+		*sym = self->ctype->args->items.pType[0]->value->xEnum;
 		if( DaoEnum_SetValue( sym, (DaoEnum*) key ) ) key = (DaoValue*) sym;
 	}
 	return key;
@@ -4431,8 +4431,8 @@ static DaoType* DaoMap_CheckGetItem( DaoType *self, DaoType *index[], int N, Dao
 
 	if( N == 0 ) return self;
 
-	if( self->nested->size     ) ketype = self->nested->items.pType[0];
-	if( self->nested->size > 1 ) vatype = self->nested->items.pType[1];
+	if( self->args->size     ) ketype = self->args->items.pType[0];
+	if( self->args->size > 1 ) vatype = self->args->items.pType[1];
 
 	if( N != 1 ) return NULL;
 
@@ -4440,11 +4440,11 @@ static DaoType* DaoMap_CheckGetItem( DaoType *self, DaoType *index[], int N, Dao
 		DaoType *itypes[2];
 		itypes[0] = ketype;
 		itypes[1] = vatype;
-		if( index[0]->nested->items.pType[1]->tid != DAO_ANY ) return NULL;
+		if( index[0]->args->items.pType[1]->tid != DAO_ANY ) return NULL;
 		return DaoNamespace_MakeType( ctx->nameSpace, "tuple", DAO_TUPLE, NULL, itypes, 2 );
 	}else if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
-		DaoType *first  = index[0]->nested->items.pType[0];
-		DaoType *second = index[0]->nested->items.pType[1];
+		DaoType *first  = index[0]->args->items.pType[0];
+		DaoType *second = index[0]->args->items.pType[1];
 		if( DaoType_MatchTo( first,  ketype, NULL ) == 0 ) return NULL;
 		if( DaoType_MatchTo( second, vatype, NULL ) == 0 ) return NULL;
 		return self;
@@ -4506,8 +4506,8 @@ static int DaoMap_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType 
 	DaoType *ketype = dao_type_any;
 	DaoType *vatype = dao_type_any;
 
-	if( self->nested->size     ) ketype = self->nested->items.pType[0];
-	if( self->nested->size > 1 ) vatype = self->nested->items.pType[1];
+	if( self->args->size     ) ketype = self->args->items.pType[0];
+	if( self->args->size > 1 ) vatype = self->args->items.pType[1];
 
 	if( DaoType_MatchTo( value, vatype, NULL ) == 0 ) return DAO_ERROR_VALUE;
 
@@ -4515,8 +4515,8 @@ static int DaoMap_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType 
 	if( N != 1 ) return DAO_ERROR_INDEX;
 
 	if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
-		DaoType *first  = index[0]->nested->items.pType[0];
-		DaoType *second = index[0]->nested->items.pType[1];
+		DaoType *first  = index[0]->args->items.pType[0];
+		DaoType *second = index[0]->args->items.pType[1];
 		if( DaoType_MatchTo( first,  ketype, NULL ) == 0 ) return DAO_ERROR_INDEX;
 		if( DaoType_MatchTo( second, vatype, NULL ) == 0 ) return DAO_ERROR_INDEX;
 		return DAO_OK;
@@ -4531,7 +4531,7 @@ static int DaoMap_DoSetItem( DaoValue *selfv, DaoValue *index[], int N, DaoValue
 	DaoMap *self = (DaoMap*) selfv;
 	DaoType *vatype = dao_type_any;
 
-	if( self->ctype->nested->size > 1 ) vatype = self->ctype->nested->items.pType[1];
+	if( self->ctype->args->size > 1 ) vatype = self->ctype->args->items.pType[1];
 
 	/*
 	// TODO: check the following;
@@ -4599,8 +4599,8 @@ static DaoValue* DaoMap_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[
 
 	if( op->code != DVM_IN || right->type != DAO_LIST ) return NULL;
 
-	if( list->ctype && list->ctype->nested->size ){
-		DaoType *itype = list->ctype->nested->items.pType[0];
+	if( list->ctype && list->ctype->args->size ){
+		DaoType *itype = list->ctype->args->items.pType[0];
 		if( itype != NULL && DaoType_MatchValue( itype, left, NULL ) == 0 ) return NULL;
 	}
 
@@ -4636,8 +4636,8 @@ static DaoValue* DaoMap_DoConversion( DaoValue *selfv, DaoType *type, int copy, 
 	DNode *node;
 
 	if( type->tid != DAO_MAP ) return NULL;
-	if( type->nested->size == 0 ) return (DaoValue*) DaoMap_TryCopy( self, copy, proc ); /* "map"? */
-	if( type->nested->size != 2 ) return NULL;
+	if( type->args->size == 0 ) return (DaoValue*) DaoMap_TryCopy( self, copy, proc ); /* "map"? */
+	if( type->args->size != 2 ) return NULL;
 
 	if( DaoType_MatchValue( type, selfv, NULL ) >= DAO_MT_EQ ){
 		return (DaoValue*) DaoMap_TryCopy( self, copy, proc );
@@ -4646,8 +4646,8 @@ static DaoValue* DaoMap_DoConversion( DaoValue *selfv, DaoType *type, int copy, 
 	map = DaoProcess_NewMap( proc, self->value->hashing );
 	GC_Assign( & map->ctype, type );
 
-	ketype = type->nested->items.pType[0];
-	vatype = type->nested->items.pType[1];
+	ketype = type->args->items.pType[0];
+	vatype = type->args->items.pType[1];
 	if( ketype == NULL || vatype == NULL ) return NULL;
 
 	node = DMap_First( self->value );
@@ -4911,7 +4911,7 @@ static void DaoMAP_Functional( DaoProcess *proc, DaoValue *p[], int N, int funct
 	sect = DaoProcess_InitCodeSection( proc, 2 );
 	if( sect == NULL ) return;
 	entry = proc->topFrame->entry;
-	type = type && type->nested->size > 1 ? type->nested->items.pType[1] : NULL;
+	type = type && type->args->size > 1 ? type->args->items.pType[1] : NULL;
 	for(node=DMap_First(self->value); node; node=DMap_Next(self->value,node)){
 		if( sect->b >0 ) DaoProcess_SetValue( proc, sect->a, node->key.pValue );
 		if( sect->b >1 ) DaoProcess_SetValue( proc, sect->a+1, node->value.pValue );
@@ -5188,9 +5188,9 @@ DaoTuple* DaoTuple_New( int size )
 #if 0
 DaoTuple* DaoTuple_Create( DaoType *type, int init )
 {
-	int i, size = type->nested->size;
+	int i, size = type->args->size;
 	int extit = size > DAO_TUPLE_MINSIZE ? size - DAO_TUPLE_MINSIZE : 0;
-	DaoType **types = type->nested->items.pType;
+	DaoType **types = type->args->items.pType;
 	DaoTuple *self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + extit*sizeof(DaoValue*) );
 	self->type = DAO_TUPLE;
 	if( init ){
@@ -5209,7 +5209,7 @@ DaoTuple* DaoTuple_Create( DaoType *type, int init )
 #else
 DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 {
-	int M = type->nested->size;
+	int M = type->args->size;
 	int i, size = N > (M - type->variadic) ? N : (M - type->variadic);
 	int extit = size > DAO_TUPLE_MINSIZE ? size - DAO_TUPLE_MINSIZE : 0;
 	DaoTuple *self = (DaoTuple*) dao_calloc( 1, sizeof(DaoTuple) + extit*sizeof(DaoValue*) );
@@ -5223,7 +5223,7 @@ DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
 	if( init == 0 || M == 0 ) return self;
-	types = type->nested->items.pType;
+	types = type->args->items.pType;
 	for(i=0; i<size; i++){
 		DaoType *it = i < M ? types[i] : types[M-1];
 		if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_VALIST ) it = & it->aux->xType;
@@ -5284,8 +5284,8 @@ int DaoTuple_SetItem( DaoTuple *self, DaoValue *it, int pos )
 	if( pos < 0 ) pos += self->size;
 	if( pos < 0 || pos >= self->size ) return DAO_ERROR_INDEX;
 	val = self->values + pos;
-	if( self->ctype && pos < self->ctype->nested->size ){
-		DaoType *t = self->ctype->nested->items.pType[pos];
+	if( self->ctype && pos < self->ctype->args->size ){
+		DaoType *t = self->ctype->args->items.pType[pos];
 		if( t->tid == DAO_PAR_NAMED || t->tid == DAO_PAR_VALIST ) t = & t->aux->xType;
 		DaoValue_Move( it, val, t ); // XXX;
 	}else{
@@ -5316,8 +5316,8 @@ static DaoType* DaoTuple_GetFieldType( DaoType *self, DString *field )
 	DaoType *type;
 	DNode *node = NULL;
 	if( self->mapNames ) node = MAP_Find( self->mapNames, field );
-	if( node == NULL || node->value.pInt >= self->nested->size ) return NULL;
-	type = self->nested->items.pType[ node->value.pInt ];
+	if( node == NULL || node->value.pInt >= self->args->size ) return NULL;
+	type = self->args->items.pType[ node->value.pInt ];
 	if( type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_VALIST ) type = (DaoType*)type->aux;
 	return type;
 }
@@ -5346,7 +5346,7 @@ static int DaoTuple_CheckSetField( DaoType *self, DString *field, DaoType *value
 static int DaoTuple_DoSetField( DaoValue *selfv, DString *field, DaoValue *value, DaoProcess *proc )
 {
 	DaoTuple *self = (DaoTuple*) selfv;
-	DaoType *itype, **types = self->ctype->nested->items.pType;
+	DaoType *itype, **types = self->ctype->args->items.pType;
 	int id = DaoTuple_CheckIndex( self, field, proc );
 	if( id < 0 ) return DAO_ERROR_FIELD;
 	itype = types[id];
@@ -5369,15 +5369,15 @@ static DaoType* DaoTuple_CheckGetItem( DaoType *self, DaoType *index[], int N, D
 	if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 		return dao_type_tuple;
 	}else if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_ITERATOR ){
-		if( DaoType_CheckNumberIndex( index[0]->nested->items.pType[1] ) == 0 ) return NULL;
-		if( self->nested->size == 0 ) return NULL;
+		if( DaoType_CheckNumberIndex( index[0]->args->items.pType[1] ) == 0 ) return NULL;
+		if( self->args->size == 0 ) return NULL;
 
-		retype = self->nested->items.pType[0];
+		retype = self->args->items.pType[0];
 		if( retype->tid >= DAO_PAR_NAMED && retype->tid <= DAO_PAR_VALIST ){
 			retype = (DaoType*) retype->aux;
 		}
-		for(j=1; j<self->nested->size; ++j){
-			DaoType *itype = self->nested->items.pType[j];
+		for(j=1; j<self->args->size; ++j){
+			DaoType *itype = self->args->items.pType[j];
 			if( itype->tid >= DAO_PAR_NAMED && itype->tid <= DAO_PAR_VALIST ){
 				itype = (DaoType*) itype->aux;
 			}
@@ -5449,8 +5449,8 @@ static DaoValue* DaoTuple_DoGetItem( DaoValue *self, DaoValue *index[], int N, D
 		res = DaoProcess_PutTuple( proc, 2 );
 		DaoValue_Move( tuple->values[pos], & res->values[1], NULL );
 		DString_Reset( res->values[0]->xString.value, 0 );
-		if( pos < tuple->ctype->nested->size ){
-			DaoType *itype = tuple->ctype->nested->items.pType[pos];
+		if( pos < tuple->ctype->args->size ){
+			DaoType *itype = tuple->ctype->args->items.pType[pos];
 			if( itype->tid == DAO_PAR_NAMED ){
 				DString_Assign( res->values[0]->xString.value, itype->fname );
 			}
@@ -5464,7 +5464,7 @@ static int DaoTuple_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoTyp
 {
 	DaoType *itype = dao_type_any;
 
-	if( self->nested->size ) itype = self->nested->items.pType[0];
+	if( self->args->size ) itype = self->args->items.pType[0];
 	if( DaoType_MatchTo( value, itype, NULL ) == 0 ) return DAO_ERROR_VALUE;
 
 	if( N != 1 ) return DAO_ERROR_INDEX;
@@ -5477,8 +5477,8 @@ static int DaoTuple_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoTyp
 		break;
 	case DAO_TUPLE :
 		if( index[0]->subtid != DAO_RANGE ) return DAO_ERROR_INDEX;
-		if( index[0]->nested->items.pType[0]->tid > DAO_FLOAT ) return DAO_ERROR_INDEX;
-		if( index[0]->nested->items.pType[1]->tid > DAO_FLOAT ) return DAO_ERROR_INDEX;
+		if( index[0]->args->items.pType[0]->tid > DAO_FLOAT ) return DAO_ERROR_INDEX;
+		if( index[0]->args->items.pType[1]->tid > DAO_FLOAT ) return DAO_ERROR_INDEX;
 		break;
 	default: return DAO_ERROR_INDEX;
 	}
@@ -5600,8 +5600,8 @@ static DaoValue* DaoTuple_DoConversion( DaoValue *selfv, DaoType *type, int copy
 	DaoTuple *self = (DaoTuple*) selfv;
 
 	if( type->tid == DAO_TUPLE ){
-		int i, typeSize = type->nested->size - type->variadic;
-		if( self->ctype == type || type->nested->size == 0 ){
+		int i, typeSize = type->args->size - type->variadic;
+		if( self->ctype == type || type->args->size == 0 ){
 			return (DaoValue*) DaoTuple_TryCopy( self, copy, proc );
 		}
 		tuple = DaoProcess_PrepareTuple( proc, type, self->size );
@@ -5610,10 +5610,10 @@ static DaoValue* DaoTuple_DoConversion( DaoValue *selfv, DaoType *type, int copy
 			DaoValue *item = self->values[i];
 			DaoType *itype = dao_type_any;
 
-			if( i < type->nested->size ){
-				itype = type->nested->items.pType[i];
+			if( i < type->args->size ){
+				itype = type->args->items.pType[i];
 			}else if( type->variadic ){
-				itype = type->nested->items.pType[typeSize];
+				itype = type->args->items.pType[typeSize];
 			}
 			if( itype->tid >= DAO_PAR_NAMED && itype->tid <= DAO_PAR_VALIST ){
 				itype = (DaoType*) itype->aux;
@@ -5628,9 +5628,9 @@ static DaoValue* DaoTuple_DoConversion( DaoValue *selfv, DaoType *type, int copy
 		DaoList *list;
 		int i;
 
-		if( type->nested->size != 1 ) return NULL;
+		if( type->args->size != 1 ) return NULL;
 
-		itype = type->nested->items.pType[0];
+		itype = type->args->items.pType[0];
 		if( itype == NULL ) return NULL;
 
 		list = DaoProcess_NewList( proc );
@@ -6567,7 +6567,7 @@ void DaoException_Print( DaoException *self, DaoStream *stream )
 		}
 		DaoStream_WriteChars( ss, i == 0 ? "Raised by:  " : "Called by:  " );
 		if( rout->attribs & DAO_ROUT_PARSELF ){
-			DaoType *type = rout->routType->nested->items.pType[0];
+			DaoType *type = rout->routType->args->items.pType[0];
 			type = DaoType_GetBaseType( (DaoType*) type->aux );
 			DaoType_WriteMainName( type, ss );
 			DaoStream_WriteChars( ss, "." );

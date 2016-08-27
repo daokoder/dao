@@ -190,13 +190,13 @@ void DaoRoutine_MakeName( DaoRoutine *self, DString *name, int max1, int max2, i
 	DString *hostName = self->routHost ? self->routHost->name : NULL;
 	DaoType *routType = self->routType;
 	int M = (routType->attrib & DAO_TYPE_SELF) != 0;
-	int N = routType->nested->size;
+	int N = routType->args->size;
 	int i;
 
 	DString_Reset( name, 0 );
 
 	/* For builtin containers, whose methods may have no routHost set: */
-	if( hostName == NULL && M ) hostName = routType->nested->items.pType[0]->aux->xType.name;
+	if( hostName == NULL && M ) hostName = routType->args->items.pType[0]->aux->xType.name;
 
 	/*
 	// Mixin classes have methods converted from constructors of component classes.
@@ -222,11 +222,11 @@ void DaoRoutine_MakeName( DaoRoutine *self, DString *name, int max1, int max2, i
 	}
 	DString_AppendChars( name, "( " );
 	if( N == M+1 ){
-		DaoType *type = routType->nested->items.pType[M];
+		DaoType *type = routType->args->items.pType[M];
 		DString_PartialAppend( name, type->name, 2*max2 );
 	}else{
 		for(i=M; i<N; ++i){
-			DaoType *type = routType->nested->items.pType[i];
+			DaoType *type = routType->args->items.pType[i];
 			if( i > M ) DString_AppendChars( name, ", " );
 			if( i < M + max3 ){
 				DString_PartialAppend( name, type->name, max2 );

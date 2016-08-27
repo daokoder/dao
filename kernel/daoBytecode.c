@@ -862,7 +862,7 @@ DaoByteBlock* DaoByteBlock_EncodeType( DaoByteBlock *self, DaoType *type )
 	if( newBlock ) return newBlock;
 	if( type->invar || type->var ) return DaoByteBlock_EncodeAuxType( self, type );
 	if( type->tid == DAO_ENUM ) return DaoByteBlock_EncodeEnumType( self, type );
-	if( type->nested ) size = DaoByteBlock_EncodeValues2( self, type->nested );
+	if( type->args ) size = DaoByteBlock_EncodeValues2( self, type->args );
 	if( type->aux ) auxBlock = DaoByteBlock_EncodeValue( self, type->aux );
 	if( type->cbtype ) cbtypebk = DaoByteBlock_EncodeType( self, type->cbtype );
 	nameBlock = DaoByteBlock_EncodeString( self, type->name );
@@ -898,9 +898,9 @@ static void DaoByteBlock_EncodeInnerTypes( DaoByteBlock *self, DaoType *type, Da
 		block = DaoByteBlock_EncodeInnerType( self, aux, host, DAO_INNTYPE_AUX, 0 );
 		DaoByteBlock_EncodeInnerTypes( self, aux, block );
 	}
-	if( type->nested ){
-		for(i=0; i<type->nested->size; ++i){
-			DaoType *it = type->nested->items.pType[i];
+	if( type->args ){
+		for(i=0; i<type->args->size; ++i){
+			DaoType *it = type->args->items.pType[i];
 			block = DaoByteBlock_EncodeInnerType( self, it, host, DAO_INNTYPE_ARG, i );
 			DaoByteBlock_EncodeInnerTypes( self, it, block );
 		}
@@ -2229,7 +2229,7 @@ static void DaoByteCoder_DecodeTypeIn( DaoByteCoder *self, DaoByteBlock *block )
 	if( B == DAO_INNTYPE_AUX ){
 		if( type->aux && type->aux->type == DAO_TYPE ) inner = (DaoType*) type->aux;
 	}else if( B == DAO_INNTYPE_ARG ){
-		if( type->nested && C < type->nested->size ) inner = type->nested->items.pType[C];
+		if( type->args && C < type->args->size ) inner = type->args->items.pType[C];
 	}else if( B == DAO_INNTYPE_BASE ){
 		if( type->bases && C < type->bases->size ) inner = type->bases->items.pType[C];
 	}else if( B == DAO_INNTYPE_CB ){
@@ -2640,7 +2640,7 @@ static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block 
 		type = DaoByteCoder_LookupTypeBlock( self, block, B );
 		if( self->error ) return;
 		GC_Assign( & routine->routType, type->value );
-		routine->parCount = routine->routType->nested->size;
+		routine->parCount = routine->routType->args->size;
 		if( routine->routType->variadic ) routine->parCount = DAO_MAX_PARAM;
 	}else{
 		GC_Assign( & routine->routType, dao_type_routine );

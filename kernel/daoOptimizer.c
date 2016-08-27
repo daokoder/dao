@@ -715,7 +715,7 @@ static void DaoOptimizer_InitNodeVIA( DaoOptimizer *self, DaoCnode *node )
 		DaoCnode *prev = self->nodes->items.pCnode[node->index-1];
 		Dao_IntsUnion( prev->list, self->array2, node->list, -1 );
 	}else{
-		DList *partypes = self->routine->routType->nested;
+		DList *partypes = self->routine->routType->args;
 		self->array3->size = 0;
 		for(i=0; i<self->routine->parCount; ++i){
 			DList_Append( self->array3, IntToPointer(i) );
@@ -989,8 +989,8 @@ static int DaoRoutine_IsVolatileParameter( DaoRoutine *self, int id )
 {
 	DaoType *T;
 	if( id >= self->parCount ) return 0;
-	if( id >= self->routType->nested->size ) return 1;
-	T = self->routType->nested->items.pType[id];
+	if( id >= self->routType->args->size ) return 1;
+	T = self->routType->args->items.pType[id];
 	if( T && (T->attrib & DAO_TYPE_PARNAMED) ) T = (DaoType*) T->aux;
 	if( T == NULL || T->tid == DAO_UDT || T->tid >= DAO_ARRAY  ) return 1;
 	return 0;

@@ -556,10 +556,10 @@ DaoCinType* DaoCinType_New( DaoInterface *inter, DaoType *target )
 	GC_IncRC( self->abstract );
 	GC_IncRC( self->target );
 
-	self->citype->nested = DList_New( DAO_DATA_VALUE );
-	self->vatype->nested = DList_New( DAO_DATA_VALUE );
-	DList_Append( self->citype->nested, target );
-	DList_Append( self->vatype->nested, target );
+	self->citype->args = DList_New( DAO_DATA_VALUE );
+	self->vatype->args = DList_New( DAO_DATA_VALUE );
+	DList_Append( self->citype->args, target );
+	DList_Append( self->vatype->args, target );
 
 	DString_AppendChar( self->vatype->name, '<' );
 	DString_Append( self->vatype->name, target->name );

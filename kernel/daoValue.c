@@ -350,8 +350,8 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 #ifdef DAO_WITH_NUMARRAY
 	case DAO_ARRAY :
 		if( to->xArray.size ) return;
-		if( tp->tid != DAO_ARRAY || tp->nested == NULL || tp->nested->size == 0 ) break;
-		tp = tp->nested->items.pType[0];
+		if( tp->tid != DAO_ARRAY || tp->args == NULL || tp->args->size == 0 ) break;
+		tp = tp->args->items.pType[0];
 		if( tp->tid == DAO_NONE || tp->tid > DAO_COMPLEX ) break;
 		DaoArray_SetNumType( (DaoArray*) to, tp->tid );
 		break;
@@ -370,7 +370,7 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 	case DAO_TUPLE :
 		tp2 = to->xTuple.ctype;
 		if( tp->tid == DAO_ANY ) break;
-		if( tp->nested->size ==0 ) break; /* not to the generic tuple type */
+		if( tp->args->size ==0 ) break; /* not to the generic tuple type */
 		if( tp2 == NULL || tp2->mapNames == NULL || tp2->mapNames->size ==0 ){
 			GC_Assign( & to->xTuple.ctype, tp );
 			break;
@@ -388,12 +388,12 @@ void DaoValue_SetType( DaoValue *to, DaoType *tp )
 static int DaoValue_TryCastTuple( DaoValue *src, DaoValue **dest, DaoType *tp )
 {
 	DaoTuple *tuple;
-	DaoType **item_types = tp->nested->items.pType;
+	DaoType **item_types = tp->args->items.pType;
 	DaoType *totype = src->xTuple.ctype;
 	DaoValue **data = src->xTuple.values;
 	DMap *names = totype ? totype->mapNames : NULL;
 	DNode *node, *search;
-	daoint i, T = tp->nested->size;
+	daoint i, T = tp->args->size;
 	int tm, eqs = 0;
 	/*
 	// auto-cast tuple type, on the following conditions:
@@ -438,10 +438,10 @@ static int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DM
 static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp, DaoType *C )
 {
 	DaoType *itp = NULL;
-	int n = tp->nested->size;
+	int n = tp->args->size;
 	int j, k, mt;
 	for(j=0,mt=0; j<n; j++){
-		DaoType *itp2 = tp->nested->items.pType[j];
+		DaoType *itp2 = tp->args->items.pType[j];
 		if( tp->invar ) itp2 = DaoType_GetInvarType( itp2 );
 		k = DaoType_MatchValue( itp2, src, NULL );
 		if( k > mt ){

@@ -316,8 +316,8 @@ void DaoRoutine_MapTypes( DaoRoutine *self, DaoRoutine *original, DMap *deftypes
 				value2 = self->routConsts->value->items.pValue + i;
 			}
 			GC_Assign( value2, type2 );
-		}else if( *value2 != NULL && i < self->routType->nested->size ){
-			DaoType *partype = self->routType->nested->items.pType[i];
+		}else if( *value2 != NULL && i < self->routType->args->size ){
+			DaoType *partype = self->routType->args->items.pType[i];
 			DaoValue *value = NULL;
 			if( partype->tid != DAO_PAR_DEFAULT ) continue;
 			partype = (DaoType*) partype->aux;
@@ -469,7 +469,7 @@ static DParamNode* DParamNode_Add( DParamNode *self, DaoRoutine *routine, int pi
 {
 	DaoType *partype;
 	DParamNode *param, *it;
-	if( pid >= (int)routine->routType->nested->size ){
+	if( pid >= (int)routine->routType->args->size ){
 		/* If a routine with the same parameter signature is found, return it: */
 		for(it=self->first; it; it=it->next){
 			/*
@@ -490,7 +490,7 @@ static DParamNode* DParamNode_Add( DParamNode *self, DaoRoutine *routine, int pi
 		}
 		return param;
 	}
-	partype = routine->routType->nested->items.pType[pid];
+	partype = routine->routType->args->items.pType[pid];
 	for(it=self->first; it; it=it->next){
 		if( DaoType_MatchTo( partype, it->type2, NULL ) >= DAO_MT_EQ ){
 			return DParamNode_Add( it, routine, pid + 1 );
@@ -498,7 +498,7 @@ static DParamNode* DParamNode_Add( DParamNode *self, DaoRoutine *routine, int pi
 	}
 	/* Add a new internal node: */
 	param = DParamNode_New();
-	param->type = routine->routType->nested->items.pType[pid];
+	param->type = routine->routType->args->items.pType[pid];
 	if( param->type->tid >= DAO_PAR_NAMED && param->type->tid <= DAO_PAR_VALIST ){
 		param->type2 = param->type;
 		param->type = (DaoType*) param->type->aux;
@@ -806,7 +806,7 @@ static int DaoRoutine_Check( DaoRoutine *self, DaoValue *svalue, DaoType *stype,
 	DMap *mapNames = self->routType->mapNames;
 	DaoValue *argvalue;
 	DaoType *partype, *argtype;
-	DaoType **partypes = self->routType->nested->items.pType;
+	DaoType **partypes = self->routType->args->items.pType;
 	DaoType **argtypes = types;
 	DaoValue **argvalues = values;
 	int need_self = self->routType->attrib & DAO_TYPE_SELF;

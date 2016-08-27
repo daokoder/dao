@@ -450,7 +450,7 @@ void DaoProcess_ReturnFutureValue( DaoProcess *self, DaoFuture *future )
 	DaoType *type;
 	if( future == NULL ) return;
 	type = future->ctype;
-	type = type && type->nested->size ? type->nested->items.pType[0] : NULL;
+	type = type && type->args->size ? type->args->items.pType[0] : NULL;
 	switch( self->status ){
 	case DAO_PROCESS_ABORTED :
 		future->state = DAO_CALL_ABORTED;
@@ -1020,9 +1020,9 @@ static int DaoType_CheckPrimitiveType( DaoType *self )
 	if( self->tid <= DAO_ARRAY ) return 1;
 	if( self->tid > DAO_TUPLE && self->tid != DAO_VARIANT ) return 0;
 
-	if( self->tid != DAO_TUPLE && (self->nested == NULL || self->nested->size == 0) ) return 0;
-	for(i=0; i<self->nested->size; ++i){
-		DaoType *type = self->nested->items.pType[i];
+	if( self->tid != DAO_TUPLE && (self->args == NULL || self->args->size == 0) ) return 0;
+	for(i=0; i<self->args->size; ++i){
+		DaoType *type = self->args->items.pType[i];
 		if( type == NULL ) return 0;
 		if( type->tid == DAO_PAR_NAMED ) type = (DaoType*) type->aux;
 		if( DaoType_CheckPrimitiveType( type ) == 0 ) return 0;
@@ -1081,10 +1081,10 @@ static void CHANNEL_New( DaoProcess *proc, DaoValue *par[], int N )
 	DaoType *retype = DaoProcess_GetReturnType( proc );
 	DaoChannel *self = DaoChannel_New( retype, 0 );
 	CHANNEL_SetCap( self, par[0], proc );
-	if( DaoType_CheckPrimitiveType( retype->nested->items.pType[0] ) == 0 ){
+	if( DaoType_CheckPrimitiveType( retype->args->items.pType[0] ) == 0 ){
 		DString *s = DString_New();
 		DString_AppendChars( s, "data type " );
-		DString_Append( s, retype->nested->items.pType[0]->name );
+		DString_Append( s, retype->args->items.pType[0]->name );
 		DString_AppendChars( s, " is not supported for channel" );
 		DaoProcess_RaiseError( proc, NULL, s->chars );
 		DString_Delete( s );

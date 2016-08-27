@@ -348,11 +348,11 @@ static int DaoNS_ParseType( DaoNamespace *self, const char *name, DaoType *type,
 	DaoParser_ParseTemplateParams( parser, k+2, n, types, defts, NULL );
 	if( parser->errors->size ) goto Error;
 
-	type->nested = DList_New( DAO_DATA_VALUE );
-	if( type2 != type ) type2->nested = DList_New( DAO_DATA_VALUE );
+	type->args = DList_New( DAO_DATA_VALUE );
+	if( type2 != type ) type2->args = DList_New( DAO_DATA_VALUE );
 	for(i=0; i<types->size; i++){
-		DList_Append( type->nested, types->items.pType[i] );
-		if( type2 != type ) DList_Append( type2->nested, types->items.pType[i] );
+		DList_Append( type->args, types->items.pType[i] );
+		if( type2 != type ) DList_Append( type2->args, types->items.pType[i] );
 	}
 	if( isnew ){
 		DString_Assign( type->name, & tokens[k]->string );
@@ -1437,8 +1437,8 @@ DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
 		/* Coalesce variants: */
 		for(i=0; i<N; ++i){
 			if( itypes[i]->tid == DAO_VARIANT ){
-				for(j=0; j<itypes[i]->nested->size; ++j){
-					DList_Append( types, itypes[i]->nested->items.pType[j] );
+				for(j=0; j<itypes[i]->args->size; ++j){
+					DList_Append( types, itypes[i]->args->items.pType[j] );
 				}
 			}else{
 				DList_Append( types, itypes[i] );
@@ -1605,9 +1605,9 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 
 	if( routype->name->chars[0] == '@' ) DString_AppendChar( newtype->name, '@' );
 	DString_AppendChars( newtype->name, "routine<" );
-	for(i=0; i<routype->nested->size; i++){
+	for(i=0; i<routype->args->size; i++){
 		if( i >0 ) DString_AppendChars( newtype->name, "," );
-		type = partype = routype->nested->items.pType[i];
+		type = partype = routype->args->items.pType[i];
 		if( type && (type->tid == DAO_PAR_NAMED || type->tid == DAO_PAR_DEFAULT) ){
 			partype = & type->aux->xType;
 		}
@@ -1626,7 +1626,7 @@ DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 			type = DaoType_New( type->fname->chars, type->tid, (DaoValue*) partype, NULL );
 		}
 		DString_Append( newtype->name, type->name );
-		DList_Append( newtype->nested, type );
+		DList_Append( newtype->args, type );
 	}
 	type = retype ? retype : & routype->aux->xType;
 	if( type ){

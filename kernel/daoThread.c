@@ -542,7 +542,7 @@ static void DaoMT_RunMapFunctional( void *p )
 
 	DaoMT_InitProcess( self->proto, clone, 3 );
 	tidint.value = self->first;
-	type = type && type->nested->size > 1 ? type->nested->items.pType[1] : NULL;
+	type = type && type->args->size > 1 ? type->args->items.pType[1] : NULL;
 	for(node=DMap_First( map->value ); node; node=DMap_Next(map->value, node) ){
 		if( (i++) % self->step != self->first ) continue;
 		if( sect->b >0 ) DaoProcess_SetValue( clone, sect->a, node->key.pValue );

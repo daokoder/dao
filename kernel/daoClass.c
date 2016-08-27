@@ -1330,12 +1330,12 @@ void DaoClass_UpdateVirtualMethods( DaoClass *self )
 			*/
 			if( !(it->value.pRoutine->attribs & DAO_ROUT_INTERFACE) ) continue;
 			
-			if( otype->nested->size != itype->nested->size ) continue;
+			if( otype->args->size != itype->args->size ) continue;
 			if( ! DString_EQ( imeth->routName, ometh->routName ) ) continue;
 
-			for(j=1; j<otype->nested->size; ++j){
-				DaoType *optype = otype->nested->items.pType[j];
-				DaoType *iptype = itype->nested->items.pType[j];
+			for(j=1; j<otype->args->size; ++j){
+				DaoType *optype = otype->args->items.pType[j];
+				DaoType *iptype = itype->args->items.pType[j];
 				if( ! DString_EQ( iptype->name, optype->name ) ) break;
 				/*
 				// The parameter types of the interface methods must match to that of
@@ -1344,7 +1344,7 @@ void DaoClass_UpdateVirtualMethods( DaoClass *self )
 				*/
 				if( DaoType_MatchTo( iptype, optype, NULL ) == 0 ) break;
 			}
-			if( j < otype->nested->size ) continue;
+			if( j < otype->args->size ) continue;
 
 			/* Type names must match (type matching may be insufficiently precise): */
 			if( ! DString_EQ( itype->aux->xType.name, otype->aux->xType.name ) ){

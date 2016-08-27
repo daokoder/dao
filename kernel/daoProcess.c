@@ -390,7 +390,7 @@ void DaoProcess_PushFunction( DaoProcess *self, DaoRoutine *routine )
 static int DaoRoutine_PassDefault( DaoRoutine *routine, DaoValue *dest[], int passed, DMap *defs )
 {
 	DaoType *tp, *routype = routine->routType;
-	DaoType **types = routype->nested->items.pType;
+	DaoType **types = routype->args->items.pType;
 	DaoValue **consts = routine->routConsts->value->items.pValue;
 	int i, ndef = routine->parCount;
 	for(i=0; i<ndef; i++){
@@ -417,7 +417,7 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 	DaoValue **argvalues = values;
 	DaoType *argtype, *partype;
 	DaoType *routype = routine->routType;
-	DaoType **partypes = routype->nested->items.pType;
+	DaoType **partypes = routype->args->items.pType;
 	DaoType **argtypes = types;
 	DaoValue **dest = self->paramValues;
 	size_t passed = 0;
@@ -695,9 +695,9 @@ DaoVmCode* DaoProcess_InitCodeSection( DaoProcess *self, int argcount )
 	if( frame && cbtype ){
 		sect = frame->codes + frame->entry + 1;
 		if( sect->b == sect->c ){ /* no variadic destination argument list: */
-			if( sect->b > cbtype->nested->size ){
-				if( cbtype->nested->size > 0 ){
-					DaoType *type = (DaoType*) DList_Back( cbtype->nested );
+			if( sect->b > cbtype->args->size ){
+				if( cbtype->args->size > 0 ){
+					DaoType *type = (DaoType*) DList_Back( cbtype->args );
 					if( type->tid != DAO_PAR_VALIST ) frame = NULL;
 				}else{
 					frame = NULL;
@@ -822,7 +822,7 @@ static int DaoProcess_PushDefers( DaoProcess *self, DaoValue *result )
 		DaoRoutine *rout, *closure = self->defers->items.pRoutine[i];
 		DaoValue *param = NULL;
 		DaoType *type = NULL;
-		if( closure->routType->nested->size ) type = closure->routType->nested->items.pType[0];
+		if( closure->routType->args->size ) type = closure->routType->args->items.pType[0];
 		if( type && type->tid == DAO_PAR_NAMED ) type = (DaoType*) type->aux;
 		if( type == NULL ){
 		}else if( type->tid == DAO_NONE ){
@@ -1274,7 +1274,7 @@ CallEntry:
 				meth = (DaoRoutine*) self->activeValues[ vmc->a ];
 				type = (DaoType*) meth->routType->aux;
 			}
-			tuple = DaoProcess_GetTuple( self, type, type->nested->size, 1 );
+			tuple = DaoProcess_GetTuple( self, type, type->args->size, 1 );
 			DaoTuple_SetItem( tuple, future->message ? future->message : dao_none_value, 0 );
 			tuple->values[1]->xEnum.value = future->aux1 ? 2 : future->timeout != 0;
 			break;
@@ -1283,7 +1283,7 @@ CallEntry:
 				meth = (DaoRoutine*) self->activeValues[ vmc->a ];
 				type = (DaoType*) meth->routType->aux;
 			}
-			tuple = DaoProcess_GetTuple( self, type, type->nested->size, 1 );
+			tuple = DaoProcess_GetTuple( self, type, type->args->size, 1 );
 			DaoTuple_SetItem( tuple, future->selected ? future->selected : dao_none_value, 0 );
 			DaoTuple_SetItem( tuple, future->message ? future->message : dao_none_value, 1 );
 			tuple->values[2]->xEnum.value = future->aux1 ? 2 : future->timeout != 0;
@@ -2090,7 +2090,7 @@ CallEntry:
 			type = NULL;
 			if( id <0 || id >= tuple->size ) goto RaiseErrorIndexOutOfRange;
 			self->activeCode = vmc;
-			type = tuple->ctype->nested->items.pType[id];
+			type = tuple->ctype->args->items.pType[id];
 			if( type->tid == DAO_PAR_NAMED ) type = (DaoType*) type->aux;
 			if( DaoProcess_Move( self, locVars[vmc->a], tuple->values + id, type ) ==0 )
 				goto CheckException;
@@ -2823,8 +2823,8 @@ DaoArray* DaoProcess_GetArrayByType( DaoProcess *self, DaoVmCode *vmc, DaoType *
 	int type = DAO_NONE;
 
 	self->stackReturn = self->activeCode->c + (self->activeValues - self->stackValues);
-	if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
-		type = tp->nested->items.pType[0]->tid;
+	if( tp && tp->tid == DAO_ARRAY && tp->args->size ){
+		type = tp->args->items.pType[0]->tid;
 		if( type > DAO_COMPLEX ) type = DAO_NONE;
 	}
 	if( type && array && array->type == DAO_ARRAY && array->etype == type ){
@@ -2911,9 +2911,9 @@ DaoTuple* DaoProcess_PutTuple( DaoProcess *self, int size )
 	if( type == NULL ) return NULL;
 	if( type->tid & DAO_ANY ) return DaoProcess_GetTuple( self, NULL, N, size > 0 );
 	if( type->tid != DAO_TUPLE ) return NULL;
-	if( size == 0 ) return DaoProcess_GetTuple( self, type, type->nested->size, 1 );
-	if( type->variadic == 0 && N != type->nested->size ) return NULL;
-	if( N < type->nested->size ) return NULL;
+	if( size == 0 ) return DaoProcess_GetTuple( self, type, type->args->size, 1 );
+	if( type->variadic == 0 && N != type->args->size ) return NULL;
+	if( N < type->args->size ) return NULL;
 	tuple = DaoProcess_GetTuple( self, type, N, size > 0 );
 	if( size > 0 ) return tuple;
 	if( M < size ) return NULL;
@@ -2939,12 +2939,12 @@ void DaoProcess_MakeTuple( DaoProcess *self, DaoTuple *tuple, DaoValue *its[], i
 	DaoType **types, *tp, *vlt = NULL, *ct = tuple->ctype;
 	int i, M;
 	if( ct == NULL ) return;
-	if( ct->nested == NULL || (ct->nested->size - (ct->variadic != 0)) > N ){
+	if( ct->args == NULL || (ct->args->size - (ct->variadic != 0)) > N ){
 		DaoProcess_RaiseError( self, NULL, "invalid tuple enumeration" );
 		return;
 	}
-	types = ct->nested->items.pType;
-	M = ct->nested->size - (ct->variadic != 0);
+	types = ct->args->items.pType;
+	M = ct->args->size - (ct->variadic != 0);
 	if( ct->variadic ) vlt = (DaoType*) types[M]->aux;
 	for(i=0; i<N; i++){
 		DaoValue *val = its[i];
@@ -3020,7 +3020,7 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 	DaoType *tp, *ct = self->activeTypes[ vmc->c ];
 	DaoType *routype = self->activeRoutine->routType;
 	int argcount = self->topFrame->parCount;
-	int parcount = routype->nested->size - routype->variadic;
+	int parcount = routype->args->size - routype->variadic;
 	int parcount2 = argcount < parcount ? parcount : argcount; /* including defaults; */
 	int i, count, mode = vmc->b >> 14;
 	
@@ -3051,7 +3051,7 @@ void DaoProcess_DoTuple( DaoProcess *self, DaoVmCode *vmc )
 			}else{
 				DString_Append( ct->name, tp->name );
 			}
-			DList_Append( ct->nested, tp );
+			DList_Append( ct->args, tp );
 			DaoTuple_SetItem( tuple, val, i );
 		}
 		DString_AppendChars( ct->name, ">" );
@@ -3081,7 +3081,7 @@ void DaoProcess_DoTupleSim( DaoProcess *self, DaoVmCode *vmc )
 {
 	DaoTuple *tuple;
 	DaoType *ct = self->activeTypes[ vmc->c ];
-	DaoType **types = ct->nested->items.pType;
+	DaoType **types = ct->args->items.pType;
 	int i, count = vmc->b;
 
 	self->activeCode = vmc;
@@ -3170,11 +3170,11 @@ void DaoProcess_DoCheckIsa( DaoProcess *self, DaoVmCode *vmc )
 		return;
 	}else if( type->tid == DAO_VARIANT ){
 		int i, n, mt = 0, id = 0, max = 0;
-		for(i=0,n=type->nested->size; i<n; i++){
+		for(i=0,n=type->args->size; i<n; i++){
 			if( dA->type == DAO_TYPE ){
-				mt = DaoType_MatchTo( & dA->xType, type->nested->items.pType[i], NULL );
+				mt = DaoType_MatchTo( & dA->xType, type->args->items.pType[i], NULL );
 			}else{
-				mt = DaoType_MatchValue( type->nested->items.pType[i], dA, NULL );
+				mt = DaoType_MatchValue( type->args->items.pType[i], dA, NULL );
 			}
 			if( mt > max ){
 				max = mt;
@@ -3360,13 +3360,13 @@ DaoValue* DaoProcess_DoReturn( DaoProcess *self, DaoVmCode *vmc )
 			if( tup->size > vmc->b ) goto InvalidReturn;
 			tuple = tup;
 		}else if( type && type->tid == DAO_TUPLE ){
-			if( type->nested->size > vmc->b ) goto InvalidReturn;
+			if( type->args->size > vmc->b ) goto InvalidReturn;
 			tuple = DaoTuple_Create( type, vmc->b, 0 );
 		}else{
 			tuple = DaoTuple_New( vmc->b );
 		}
 		if( tuple->ctype ){
-			DaoType **TS = tuple->ctype->nested->items.pType;
+			DaoType **TS = tuple->ctype->args->items.pType;
 			for(i=0,n=tuple->size; i<n; i++){
 				DaoType *tp = TS[i]->tid == DAO_PAR_NAMED ? (DaoType*)TS[i]->aux : TS[i];
 				DaoValue_Move( src[i], tuple->values + i, tp );
@@ -3582,8 +3582,8 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 	}else if( ct->tid == DAO_VARIANT ){
 		DaoType *best = NULL;
 		int max = DAO_MT_NOT;
-		for(i=0,n=ct->nested->size; i<n; i++){
-			DaoType *itype = ct->nested->items.pType[i];
+		for(i=0,n=ct->args->size; i<n; i++){
+			DaoType *itype = ct->args->items.pType[i];
 			int mt = DaoType_MatchValue( itype, va, NULL );
 			if( mt > max ){
 				best = itype;
@@ -3984,7 +3984,7 @@ void DaoProcess_DoCall( DaoProcess *self, DaoVmCode *vmc )
 
 	self->activeCode = vmc;
 	if( (mode & DAO_CALL_FAST) && caller->xRoutine.overloads == NULL ){
-		DaoType **partypes = caller->xRoutine.routType->nested->items.pType;
+		DaoType **partypes = caller->xRoutine.routType->args->items.pType;
 		rout = (DaoRoutine*) caller;
 		params = self->activeValues + vmc->a + 1;
 		if( DaoProcess_CheckInvarMethod( self, rout ) == 0 ) return;
@@ -4032,8 +4032,8 @@ FastCallError:
 	if( mode & DAO_CALL_NOSELF ) selfpar = NULL;
 	if( (mode & DAO_CALL_EXPAR) && npar > mcall && params[npar-1]->type == DAO_TUPLE ){
 		DaoTuple *tup = & params[npar-1]->xTuple;
-		DaoType **itypes = tup->ctype->nested->items.pType;
-		DList *ts = tup->ctype->nested;
+		DaoType **itypes = tup->ctype->args->items.pType;
+		DList *ts = tup->ctype->args;
 		int i, m, n = 0;
 		/* Handle explicit "self" argument: */
 		if( ts->size && (itypes[0]->attrib & DAO_TYPE_SELFNAMED) ) selfpar = NULL;
@@ -4871,8 +4871,8 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 	}else if( B->type == DAO_LIST ){
 		DList *items = B->xList.value;
 		DaoType *ta = DaoNamespace_GetType( self->activeNamespace, A );
-		if( ta && B->xList.ctype && B->xList.ctype->nested->size ){
-			DaoType *tb = B->xList.ctype->nested->items.pType[0];
+		if( ta && B->xList.ctype && B->xList.ctype->args->size ){
+			DaoType *tb = B->xList.ctype->args->items.pType[0];
 			if( tb && DaoType_MatchTo( ta, tb, NULL ) == 0 ) return;
 		}
 		for(i=0,n=items->size; i<n; i++){
@@ -4881,8 +4881,8 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 		}
 	}else if( B->type == DAO_MAP ){
 		DaoType *ta = DaoNamespace_GetType( self->activeNamespace, A );
-		if( ta && B->xMap.ctype && B->xMap.ctype->nested->size ){
-			DaoType *tb = B->xMap.ctype->nested->items.pType[0];
+		if( ta && B->xMap.ctype && B->xMap.ctype->args->size ){
+			DaoType *tb = B->xMap.ctype->args->items.pType[0];
 			if( tb && DaoType_MatchTo( ta, tb, NULL ) == 0 ) return;
 		}
 		*C = DaoMap_Find( (DaoMap*) B, A ) != NULL;
@@ -5139,7 +5139,7 @@ static void DaoProcess_DoGetConstField( DaoProcess *self, DaoVmCode *vmc, int mo
 		C = A->xTuple.values[opb];
 		break;
 	case DAO_TYPE :
-		if( type->tid == DAO_TYPE ) type = type->nested->items.pType[0];
+		if( type->tid == DAO_TYPE ) type = type->args->items.pType[0];
 		if( type && type->tid == DAO_ENUM && type->mapNames ){
 			DNode *node = DMap_Find( type->mapNames, name );
 			if( node ){

@@ -4945,18 +4945,18 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	GC_Assign( & routine->nameSpace, NS );
 	self->returnType = (DaoType*) routine->routType->aux;
 
-	if( (routine->attribs & DAO_ROUT_DECORATOR) && routine->routType->nested->size ){
+	if( (routine->attribs & DAO_ROUT_DECORATOR) && routine->routType->args->size ){
 		assert( routine->parCount == self->regCount );
-		ft = routine->routType->nested->items.pType[0];
+		ft = routine->routType->args->items.pType[0];
 		if( ft->attrib & DAO_TYPE_SELFNAMED ){
-			if( routine->routType->nested->size == 1 ) return 0;
-			ft = routine->routType->nested->items.pType[1];
+			if( routine->routType->args->size == 1 ) return 0;
+			ft = routine->routType->args->items.pType[1];
 		}
 		if( ft->tid == DAO_PAR_NAMED ) ft = (DaoType*) ft->aux;
 		if( ft->tid != DAO_ROUTINE ) return 0;
-		np = ft->nested->size;
-		//if( np && ft->nested->items.pType[np-1]->tid == DAO_PAR_VALIST ) np -= 1;
-		tt = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, ft->nested->items.pType, np );
+		np = ft->args->size;
+		//if( np && ft->args->items.pType[np-1]->tid == DAO_PAR_VALIST ) np -= 1;
+		tt = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, ft->args->items.pType, np );
 		if( self->invarDecoArg ) tt = DaoType_GetInvarType( tt );
 		if( DaoParser_DeclareVariable( self, self->decoArgName, 0, tt ) < 0 ) return 0;
 	}
@@ -4964,8 +4964,8 @@ int DaoParser_ParseRoutine( DaoParser *self )
 		int tokidx = self->argName->index;
 		int opa = routine->routHost != NULL && !(routine->attribs & DAO_ROUT_STATIC);
 		int mode = DVM_ENUM_MODE1 << 14;
-		int np = routine->routType->nested->size;
-		DaoType **partypes = routine->routType->nested->items.pType;
+		int np = routine->routType->args->size;
+		DaoType **partypes = routine->routType->args->items.pType;
 		tt = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, partypes+opa, np-opa );
 		id = self->regCount;
 		if( self->invarArg ) tt = DaoType_GetInvarType( tt );
@@ -6030,26 +6030,26 @@ static int DaoParser_AddFieldConst( DaoParser *self, DString *field )
 
 static void DaoParser_PushItemType( DaoParser *self, DaoType *type, int id, uchar_t sep1 )
 {
-	if( type && type->nested && type->nested->size ){
+	if( type && type->args && type->args->size ){
 		DaoType *itp = NULL;
 		switch( type->tid ){
 		case DAO_ARRAY :
 			if( sep1 == DTOK_COLON && id == 0 ){
-				itp = type->nested->items.pType[0];
+				itp = type->args->items.pType[0];
 			}
 			break;
 		case DAO_LIST : // XXX
 			if( sep1 == DTOK_COLON && id == 0 ){
-				itp = type->nested->items.pType[0];
+				itp = type->args->items.pType[0];
 			}else{
-				itp = type->nested->items.pType[0];
+				itp = type->args->items.pType[0];
 			}
 			break;
 		case DAO_MAP :
-			if( type->nested->size > 1 ) itp = type->nested->items.pType[id%2];
+			if( type->args->size > 1 ) itp = type->args->items.pType[id%2];
 			break;
 		case DAO_TUPLE :
-			itp = type->nested->items.pType[id];
+			itp = type->args->items.pType[id];
 			break;
 		default : break;
 		}

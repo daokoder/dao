@@ -1148,7 +1148,7 @@ static int DaoVmSpace_ConvertArguments( DaoRoutine *routine, DList *argNames, DL
 	sval.xString.value = val;
 	DaoList_Clear( argParams );
 
-	for(i=0; i<routype->nested->size - routype->variadic; ++i){
+	for(i=0; i<routype->args->size - routype->variadic; ++i){
 		DaoList_Append( argParams, routine->routConsts->value->items.pValue[i] );
 		set[i] = 0;
 	}
@@ -1157,8 +1157,8 @@ static int DaoVmSpace_ConvertArguments( DaoRoutine *routine, DList *argNames, DL
 		DString *name = argNames->items.pString[i];
 		DString *value = argValues->items.pString[i];
 		int ito = i;
-		type = (DaoType*) DList_Back( routype->nested );
-		if( i < routype->nested->size ) type = routype->nested->items.pType[i];
+		type = (DaoType*) DList_Back( routype->args );
+		if( i < routype->args->size ) type = routype->args->items.pType[i];
 		DString_Assign( val, value );
 		if( type && type->tid == DAO_PAR_VALIST ){
 			DaoType *type2 = (DaoType*) type->aux;
@@ -1180,15 +1180,15 @@ static int DaoVmSpace_ConvertArguments( DaoRoutine *routine, DList *argNames, DL
 				name = NULL;
 			}
 		}
-		if( ito >= routype->nested->size ) goto InvalidArgument;
-		type = (DaoType*) routype->nested->items.pType[ito]->aux;
+		if( ito >= routype->args->size ) goto InvalidArgument;
+		type = (DaoType*) routype->args->items.pType[ito]->aux;
 		if( set[ito] ) goto InvalidArgument;
 		set[ito] = DaoList_SetArgument( argParams, ito, type, name, argv, ns );
 		if( set[ito] == 0 ) goto InvalidArgument;
 		score += 10 * set[ito];
 	}
-	for(i=0; i<routype->nested->size - routype->variadic; ++i){
-		DaoType *partype = routine->routType->nested->items.pType[i];
+	for(i=0; i<routype->args->size - routype->variadic; ++i){
+		DaoType *partype = routine->routType->args->items.pType[i];
 		if( set[i] == 0 && partype->tid != DAO_PAR_DEFAULT ) goto InvalidArgument;
 	}
 	DString_Delete( val );

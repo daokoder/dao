@@ -182,8 +182,8 @@ DaoArray* DaoArray_Copy( DaoArray *self )
 DaoArray* DaoArray_CopyX( DaoArray *self, DaoType *tp )
 {
 	DaoArray *copy = DaoArray_New( self->etype );
-	if( tp && tp->tid == DAO_ARRAY && tp->nested->size ){
-		int nt = tp->nested->items.pType[0]->tid;
+	if( tp && tp->tid == DAO_ARRAY && tp->args->size ){
+		int nt = tp->args->items.pType[0]->tid;
 		if( nt >= DAO_INTEGER && nt <= DAO_COMPLEX ) copy->etype = nt;
 	}
 	DaoArray_ResizeArray( copy, self->dims, self->ndim );
@@ -1480,12 +1480,12 @@ int DaoType_CheckRangeIndex( DaoType *self );
 
 static DaoType* DaoArray_CheckGetItem( DaoType *self, DaoType *index[], int N, DaoRoutine *ctx )
 {
-	DaoType *etype = self->nested->items.pType[0];
+	DaoType *etype = self->args->items.pType[0];
 	if( N == 0 ){
 		return self;
 	}else if( N == 1 ){
 		if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_ITERATOR ){
-			if( DaoType_CheckNumberIndex( index[0]->nested->items.pType[0] ) ) return etype;
+			if( DaoType_CheckNumberIndex( index[0]->args->items.pType[0] ) ) return etype;
 		}else if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 			if( DaoType_CheckRangeIndex( index[0] ) ) return self;
 		}else{
@@ -1598,7 +1598,7 @@ static DaoValue* DaoArray_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, 
 
 static int DaoArray_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
 {
-	DaoType *etype = self->nested->items.pType[0];
+	DaoType *etype = self->args->items.pType[0];
 	int typeOK = 0;
 
 	/*
@@ -1607,13 +1607,13 @@ static int DaoArray_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoTyp
 	if( etype->tid == DAO_COMPLEX ){
 		if( value->tid >= DAO_BOOLEAN && value->tid < DAO_COMPLEX ) typeOK = 1;
 		if( value->tid == DAO_ARRAY ){
-			DaoType *etype2 = value->nested->items.pType[0];
+			DaoType *etype2 = value->args->items.pType[0];
 			if( etype2->tid >= DAO_BOOLEAN && etype2->tid < DAO_COMPLEX ) typeOK = 1;
 		}
 	}else{
 		if( value->tid >= DAO_BOOLEAN && value->tid < DAO_FLOAT ) typeOK = 1;
 		if( value->tid == DAO_ARRAY ){
-			DaoType *etype2 = value->nested->items.pType[0];
+			DaoType *etype2 = value->args->items.pType[0];
 			if( etype2->tid >= DAO_BOOLEAN && etype2->tid < DAO_FLOAT ) typeOK = 1;
 		}
 	}
@@ -1688,10 +1688,10 @@ static int DaoArray_DoSetItem( DaoValue *self, DaoValue *index[], int N, DaoValu
 
 static DaoType* DaoArray_CheckUnary( DaoType *self, DaoVmCode *op, DaoRoutine *ctx )
 {
-	if( self->nested->size == 0 ) return NULL;
+	if( self->args->size == 0 ) return NULL;
 	switch( op->code ){
 	case DVM_NOT :
-		if( self->nested->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
+		if( self->args->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
 		return self;
 	case DVM_MINUS :
 	case DVM_TILDE : return self;
@@ -1771,23 +1771,24 @@ static DaoType* DaoArray_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *arg
 	/*
 	// One of the args must be an array type;
 	// For operations between two arrays, both array must have the same types for simplicity;
+	// TODO: more strict checking for running time operations;
 	*/
 	switch( op->code ){
 	case DVM_ADD : case DVM_SUB :
 	case DVM_MUL : case DVM_DIV :
 		if( left->tid == DAO_ARRAY && right->tid == DAO_ARRAY ){
-			if( left->nested->size == 0 || right->nested->size == 0 ) return NULL;
-			if( left->nested->items.pType[0]->tid > right->nested->items.pType[0]->tid ) return left;
+			if( left->args->size == 0 || right->args->size == 0 ) return NULL;
+			if( left->args->items.pType[0]->tid > right->args->items.pType[0]->tid ) return left;
 			return right;
 		}else if( left->tid == DAO_ARRAY ){
-			if( left->nested->size == 0 ) return NULL;
+			if( left->args->size == 0 ) return NULL;
 			if( right->tid == DAO_NONE || right->tid > DAO_COMPLEX ) return NULL;
-			if( left->nested->items.pType[0]->tid > right->tid ) return left;
+			if( left->args->items.pType[0]->tid > right->tid ) return left;
 			return dao_array_types[ right->tid ];
 		}else if( right->tid == DAO_ARRAY ){
-			if( right->nested->size == 0 ) return NULL;
+			if( right->args->size == 0 ) return NULL;
 			if( left->tid == DAO_NONE || left->tid > DAO_COMPLEX ) return NULL;
-			if( right->nested->items.pType[0]->tid > left->tid ) return right;
+			if( right->args->items.pType[0]->tid > left->tid ) return right;
 			return dao_array_types[ left->tid ];
 		}
 		break;
@@ -1795,28 +1796,28 @@ static DaoType* DaoArray_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *arg
 	case DVM_AND : case DVM_OR :
 	case DVM_BITAND : case DVM_BITOR  :
 		if( left->tid == DAO_ARRAY && right->tid == DAO_ARRAY ){
-			if( left->nested->size == 0 || right->nested->size == 0 ) return NULL;
-			if( left->nested->items.pType[0]->tid != right->nested->items.pType[0]->tid ) return NULL;
-			if( left->nested->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
+			if( left->args->size == 0 || right->args->size == 0 ) return NULL;
+			if( left->args->items.pType[0]->tid != right->args->items.pType[0]->tid ) return NULL;
+			if( left->args->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
 			if( op->code == DVM_BITAND || op->code == DVM_BITOR ){
-				if( left->nested->items.pType[0]->tid == DAO_FLOAT ) return NULL;
+				if( left->args->items.pType[0]->tid == DAO_FLOAT ) return NULL;
 			}
 			return left;
 		}else if( left->tid == DAO_ARRAY ){
-			if( left->nested->size == 0 ) return NULL;
-			if( left->nested->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
+			if( left->args->size == 0 ) return NULL;
+			if( left->args->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
 			if( right->tid == DAO_NONE || right->tid > DAO_FLOAT ) return NULL;
 			if( op->code == DVM_BITAND || op->code == DVM_BITOR ){
-				if( left->nested->items.pType[0]->tid == DAO_FLOAT ) return NULL;
+				if( left->args->items.pType[0]->tid == DAO_FLOAT ) return NULL;
 				if( right->tid == DAO_FLOAT ) return NULL;
 			}
 			return left;
 		}else if( right->tid == DAO_ARRAY ){
-			if( right->nested->size == 0 ) return NULL;
-			if( right->nested->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
+			if( right->args->size == 0 ) return NULL;
+			if( right->args->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
 			if( left->tid == DAO_NONE || left->tid > DAO_FLOAT ) return NULL;
 			if( op->code == DVM_BITAND || op->code == DVM_BITOR ){
-				if( right->nested->items.pType[0]->tid == DAO_FLOAT ) return NULL;
+				if( right->args->items.pType[0]->tid == DAO_FLOAT ) return NULL;
 				if( left->tid == DAO_FLOAT ) return NULL;
 			}
 			return right;
@@ -1824,15 +1825,15 @@ static DaoType* DaoArray_CheckBinary( DaoType *self, DaoVmCode *op, DaoType *arg
 		break;
 	case DVM_LT  : case DVM_LE :
 		if( left->tid != DAO_ARRAY || right->tid != DAO_ARRAY ) return NULL;
-		if( left->nested->size == 0 || right->nested->size == 0 ) return NULL;
-		if( left->nested->items.pType[0]->tid != right->nested->items.pType[0]->tid ) return NULL;
-		if( left->nested->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
-		if( right->nested->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
+		if( left->args->size == 0 || right->args->size == 0 ) return NULL;
+		if( left->args->items.pType[0]->tid != right->args->items.pType[0]->tid ) return NULL;
+		if( left->args->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
+		if( right->args->items.pType[0]->tid == DAO_COMPLEX ) return NULL;
 		break;
 	case DVM_EQ  : case DVM_NE :
 		if( left->tid != DAO_ARRAY || right->tid != DAO_ARRAY ) return NULL;
-		if( left->nested->size == 0 || right->nested->size == 0 ) return NULL;
-		if( left->nested->items.pType[0]->tid != right->nested->items.pType[0]->tid ) return NULL;
+		if( left->args->size == 0 || right->args->size == 0 ) return NULL;
+		if( left->args->items.pType[0]->tid != right->args->items.pType[0]->tid ) return NULL;
 		break;
 	case DVM_IN :
 		if( left->tid == DAO_NONE ) return NULL;
@@ -1929,9 +1930,9 @@ static DaoValue* DaoArray_DoConversion( DaoValue *self, DaoType *type, int copy,
 	DaoType *etype;
 
 	if( type->tid != DAO_ARRAY ) return NULL;
-	if( type->nested->size == 0 ) return self;
+	if( type->args->size == 0 ) return self;
 	
-	etype = type->nested->items.pType[0];
+	etype = type->args->items.pType[0];
 	if( source->etype == etype->tid ) return self;
 	if( source->original && DaoArray_Sliced( source ) == 0 ) return NULL;
 	if( etype->tid < DAO_BOOLEAN || etype->tid > DAO_COMPLEX ) return NULL;
