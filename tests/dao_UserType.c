@@ -35,28 +35,6 @@ void DaoxUserType_Delete( DaoxUserType *self )
 	dao_free( self );
 }
 
-static void DaoxUserType_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
-{
-}
-static void DaoxUserType_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, DaoValue *value )
-{
-}
-static void DaoxUserType_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N )
-{
-	switch( N ){
-	case 0 : DaoxUserType_GetItem1( self, proc, dao_none_value ); break;
-	case 1 : DaoxUserType_GetItem1( self, proc, ids[0] ); break;
-	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
-	}
-}
-static void DaoxUserType_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
-{
-	switch( N ){
-	case 0 : DaoxUserType_SetItem1( self, proc, dao_none_value, value ); break;
-	case 1 : DaoxUserType_SetItem1( self, proc, ids[0], value ); break;
-	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
-	}
-}
 static void UT_New1( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxUserType *self = DaoxUserType_New();
@@ -66,7 +44,6 @@ static void UT_New1( DaoProcess *proc, DaoValue *p[], int N )
 static void UT_GETI( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxUserType *self = (DaoxUserType*) DaoValue_CastCstruct( p[0], daox_type_user_type );
-	DaoxUserType_GetItem1( p[0], proc, p[1] );
 }
 static void UT_BinaryOper2( DaoProcess *proc, DaoValue *p[], int N, int oper )
 {

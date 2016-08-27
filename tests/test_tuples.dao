@@ -31,7 +31,6 @@ idx = 2
 tup[idx] += 10
 @[test(code)]
 @[test(code)]
-{{At line}} .* {{Inconsistent typing}}
 @[test(code)]
 
 
@@ -43,5 +42,4 @@ idx = 2
 tup[idx] += 10
 @[test(code)]
 @[test(code)]
-{{At line}} .* {{Inconsistent typing}}
 @[test(code)]

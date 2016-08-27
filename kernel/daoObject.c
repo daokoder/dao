@@ -416,7 +416,7 @@ static int DaoObject_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoTy
 {
 	DaoType *type = ctx->routHost;
 	DaoClass *host = type != NULL && type->tid == DAO_OBJECT ? (DaoClass*) type->aux : NULL;
-	DaoRoutine *rout = DaoClass_FindMethod( (DaoClass*) self->aux, "[]", host );
+	DaoRoutine *rout = DaoClass_FindMethod( (DaoClass*) self->aux, "[]=", host );
 	DaoType *args[ DAO_MAX_PARAM + 1 ];
 
 	args[0] = value;

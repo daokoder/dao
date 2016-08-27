@@ -5462,11 +5462,6 @@ static DaoValue* DaoTuple_DoGetItem( DaoValue *self, DaoValue *index[], int N, D
 
 static int DaoTuple_CheckSetItem( DaoType *self, DaoType *index[], int N, DaoType *value, DaoRoutine *ctx )
 {
-	DaoType *itype = dao_type_any;
-
-	if( self->args->size ) itype = self->args->items.pType[0];
-	if( DaoType_MatchTo( value, itype, NULL ) == 0 ) return DAO_ERROR_VALUE;
-
 	if( N != 1 ) return DAO_ERROR_INDEX;
 	switch( index[0]->tid ){
 	case DAO_NONE :

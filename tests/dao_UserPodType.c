@@ -251,6 +251,15 @@ DaoType* DaoxUserPodType_CheckConversion( DaoType *self, DaoType *type, DaoRouti
 
 DaoValue* DaoxUserPodType_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
+	DaoxUserPodType *pod = (DaoxUserPodType*) self;
+	printf( "DaoxUserPodType_DoConversion\n" );
+	if( type->tid == DAO_INTEGER ){
+		DaoValue *num = (DaoValue*) & proc->number;
+		num->type = DAO_INTEGER;
+		num->xInteger.value = pod->value;
+		return num;
+	}
+	return DaoCstruct_DoConversion( self, type, copy, proc );
 }
 
 DaoValue* DaoxUserPodType_Copy( DaoValue *self, DaoValue *target )
@@ -268,24 +277,24 @@ DaoValue* DaoxUserPodType_Copy( DaoValue *self, DaoValue *target )
 
 static DaoTypeCore daoUserPodTypeCore =
 {
-	"UserPodType",                                         /* name */
-	{ NULL },                                              /* bases */
-	NULL,                                                  /* numbers */
-	userPodTypeMeths,                                      /* methods */
-	DaoCstruct_CheckGetField,    DaoCstruct_DoGetField,    /* GetField */
-	DaoCstruct_CheckSetField,    DaoCstruct_DoSetField,    /* SetField */
-	DaoCstruct_CheckGetItem,     DaoCstruct_DoGetItem,     /* GetItem */
-	DaoCstruct_CheckSetItem,     DaoCstruct_DoSetItem,     /* SetItem */
-	DaoCstruct_CheckUnary,       DaoCstruct_DoUnary,       /* Unary */
-	DaoCstruct_CheckBinary,      DaoCstruct_DoBinary,      /* Binary */
-	DaoCstruct_CheckComparison,  DaoCstruct_DoComparison,  /* Comparison */
-	DaoCstruct_CheckConversion,  DaoCstruct_DoConversion,  /* Conversion */
-	NULL,                        NULL,                     /* ForEach */
-	DaoCstruct_Print,                                      /* Print */
-	NULL,                                                  /* Slice */
-	DaoxUserPodType_Copy,                                  /* Copy */
-	(DaoDeleteFunction) DaoxUserPodType_Delete,            /* Delete */
-	NULL                                                   /* HandleGC */
+	"UserPodType",                                              /* name */
+	{ NULL },                                                   /* bases */
+	NULL,                                                       /* numbers */
+	userPodTypeMeths,                                           /* methods */
+	DaoCstruct_CheckGetField,    DaoCstruct_DoGetField,         /* GetField */
+	DaoCstruct_CheckSetField,    DaoCstruct_DoSetField,         /* SetField */
+	DaoCstruct_CheckGetItem,     DaoCstruct_DoGetItem,          /* GetItem */
+	DaoCstruct_CheckSetItem,     DaoCstruct_DoSetItem,          /* SetItem */
+	DaoCstruct_CheckUnary,       DaoCstruct_DoUnary,            /* Unary */
+	DaoCstruct_CheckBinary,      DaoCstruct_DoBinary,           /* Binary */
+	DaoCstruct_CheckComparison,  DaoCstruct_DoComparison,       /* Comparison */
+	DaoCstruct_CheckConversion,  DaoxUserPodType_DoConversion,  /* Conversion */
+	NULL,                        NULL,                          /* ForEach */
+	DaoCstruct_Print,                                           /* Print */
+	NULL,                                                       /* Slice */
+	DaoxUserPodType_Copy,                                       /* Copy */
+	(DaoDeleteFunction) DaoxUserPodType_Delete,                 /* Delete */
+	NULL                                                        /* HandleGC */
 };
 
 DAO_DLL int DaoUserpodtype_OnLoad( DaoVmSpace *vmSpace, DaoNamespace *ns )

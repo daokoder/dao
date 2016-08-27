@@ -203,7 +203,7 @@ s = k.M()
 s.append( 123 );
 @[test(code_01)]
 @[test(code_01)]
-{{[[Error::Param]] --- Invalid parameter(s)}}
+{{[[Error::Param]]}}
 @[test(code_01)]
 
 

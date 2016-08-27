@@ -128,9 +128,9 @@ class IntList
 {
 	var ints = {}
 
-	routine Append( value : int ){ ints.append( value ) }
-	routine []( index : int ){ return ints[index] }
-	routine []=( value :int, index : int ){
+	routine Append( value: int ){ ints.append( value ) }
+	routine []( index: int ){ return ints[index] }
+	routine []=( value: int, index: int ){
 		ints[index] = value
 		io.writeln( "set item" )
 	}

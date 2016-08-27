@@ -949,7 +949,44 @@ DaoValue* DaoCinValue_DoConversion( DaoValue *self, DaoType *type, int copy, Dao
 
 static void DaoCinValue_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
-	// TODO;
+	int ec = 0;
+	char buf[50];
+	DaoRoutine *meth;
+	DaoValue *args[2];
+	DaoType *type = self->xCinValue.cintype->vatype;
+	DMap *inmap = cycmap;
+
+	if( cycmap != NULL && DMap_Find( cycmap, self ) != NULL ){
+		sprintf( buf, "[%p]", self );
+		DaoStream_WriteString( stream, type->name );
+		DaoStream_WriteChars( stream, buf );
+		return;
+	}
+
+	if( cycmap == NULL ) cycmap = DHash_New(0,0);
+	DMap_Insert( cycmap, self, self );
+
+	args[0] = (DaoValue*) dao_type_string;
+	args[1] = (DaoValue*) stream;
+	meth = DaoType_FindFunctionChars( type, "(string)" );
+	if( meth ){
+		ec = DaoProcess_Call( proc, meth, self, args, 2 );
+		if( ec ) ec = DaoProcess_Call( proc, meth, self, args, 1 );
+	}else{
+		meth = DaoType_FindFunctionChars( type, "serialize" );
+		if( meth ) ec = DaoProcess_Call( proc, meth, self, NULL, 0 );
+	}
+	if( meth == NULL ){
+		DaoValue_Print( self->xCinValue.value, stream, cycmap, proc );
+	}else if( ec ){
+		DaoProcess_RaiseException( proc, daoExceptionNames[ec], proc->string->chars, NULL );
+	}else if( meth && proc->stackValues[0] ){
+		DaoValue_Print( proc->stackValues[0], stream, cycmap, proc );
+	}else{
+		DaoStream_WriteString( stream, type->name );
+		DaoStream_WriteChars( stream, buf );
+	}
+	if( inmap == NULL ) DMap_Delete( cycmap );
 }
 
 void DaoCinValue_CoreDelete( DaoValue *self )

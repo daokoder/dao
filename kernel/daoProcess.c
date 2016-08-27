@@ -3293,6 +3293,8 @@ void DaoProcess_DoSetItem( DaoProcess *self, DaoVmCode *vmc )
 		if( self->exceptions->size == errors ){
 			DaoProcess_RaiseError( self, "Type", "" );
 		}
+	}else if( self->status == DAO_PROCESS_STACKED ){
+		DaoProcess_InterceptReturnValue( self );
 	}
 }
 void DaoProcess_DoSetField( DaoProcess *self, DaoVmCode *vmc )
@@ -3316,6 +3318,8 @@ void DaoProcess_DoSetField( DaoProcess *self, DaoVmCode *vmc )
 		if( self->exceptions->size == errors ){
 			DaoProcess_RaiseError( self, "Type", "" );
 		}
+	}else if( self->status == DAO_PROCESS_STACKED ){
+		DaoProcess_InterceptReturnValue( self );
 	}
 }
 
@@ -3594,8 +3598,9 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 		ct = best;
 	}
 
-	vc = DaoValue_Convert( va, ct, invarToVar, self );
-	if( vc == NULL ) goto FailConversion;
+	va = DaoValue_Convert( va, ct, invarToVar, self );
+	if( self->status == DAO_PROCESS_STACKED ) return;
+	if( va == NULL ) goto FailConversion;
 
 	if( va->type <= DAO_TUPLE ){
 	}else if( va->type == DAO_OBJECT ){
