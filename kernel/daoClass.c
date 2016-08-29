@@ -82,7 +82,6 @@ void DaoClass_Delete( DaoClass *self )
 	DaoObjectLogger_LogDelete( (DaoValue*) self );
 #endif
 	GC_DecRC( self->clsType );
-	GC_DecRC( self->castOperators );
 	DMap_Delete( self->lookupTable );
 	DMap_Delete( self->methSignatures );
 	DList_Delete( self->constants );
@@ -736,16 +735,6 @@ int DaoCass_DeriveMixinData( DaoClass *self )
 	return bl;
 }
 
-void DaoClass_CastingMethod( DaoClass *self, DaoRoutine *routine )
-{
-	DaoNamespace *NS = self->initRoutine->nameSpace;
-	if( self->castOperators == NULL ){
-		self->castOperators = DaoRoutines_New( NS, self->objType, NULL );
-		GC_IncRC( self->castOperators );
-	}
-	DaoRoutines_Add( self->castOperators, routine );
-}
-
 /* assumed to be called before parsing class body */
 int DaoClass_DeriveClassData( DaoClass *self )
 {
@@ -808,7 +797,6 @@ int DaoClass_DeriveClassData( DaoClass *self )
 			id = LOOKUP_BIND( st, pm, up+1, id );
 			DMap_Insert( self->lookupTable, it->key.pString, (void*)id );
 		}
-		if( klass->castOperators ) DaoClass_CastingMethod( self, klass->castOperators );
 	}else if( self->parent && self->parent->type == DAO_CTYPE ){
 		DaoCtype *ctype = (DaoCtype*) self->parent;
 		DaoTypeKernel *kernel = ctype->valueType->kernel;
@@ -848,7 +836,6 @@ int DaoClass_DeriveClassData( DaoClass *self )
 			DList_Append( mf->perms, IntToPointer( DAO_PERM_PUBLIC ) );
 			DList_Append( mf->routines, it->value.pValue );
 		}
-		if( kernel->castOperators ) DaoClass_CastingMethod( self, kernel->castOperators );
 	}
 	DaoClass_SetupMethodFields( self, mf );
 	DaoMethodFields_Delete( mf );
@@ -1030,9 +1017,6 @@ void DaoClass_UpdateAttributes( DaoClass *self )
 		autoinitor = 0;
 	}
 	if( autoinitor ) self->attribs |= DAO_CLS_AUTO_INITOR;
-	self->intOperators = DaoClass_FindMethod( self, "(int)", NULL );
-	self->eqOperators = DaoClass_FindMethod( self, "==", NULL );
-	self->ltOperators = DaoClass_FindMethod( self, "<", NULL );
 #if 0
 	printf( "%s %i\n", self->className->chars, autoinitor );
 #endif
@@ -1502,11 +1486,12 @@ DaoTypeCore daoClassCore =
 	NULL,                      NULL,                   /* SetItem */
 	NULL,                      NULL,                   /* Unary */
 	NULL,                      NULL,                   /* Binary */
-	NULL,                      NULL,                   /* Comparison */
 	DaoClass_CheckConversion,  DaoClass_DoConversion,  /* Conversion */
 	NULL,                      NULL,                   /* ForEach */
 	NULL,                                              /* Print */
 	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
 	NULL,                                              /* Copy */
 	DaoClass_CoreDelete,                               /* Delete */
 	NULL                                               /* HandleGC */

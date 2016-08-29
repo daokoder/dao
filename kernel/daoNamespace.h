@@ -130,6 +130,8 @@ DAO_DLL DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value
 DAO_DLL DaoType* DaoNamespace_MakeRangeType( DaoNamespace *self, DaoType *first, DaoType *second );
 DAO_DLL DaoType* DaoNamespace_MakeRangeValueType( DaoNamespace *self, DaoValue *first, DaoValue *second );
 
+DAO_DLL DaoType* DaoNamespace_MakeInvarSliceType( DaoNamespace *self, DaoType *type );
+
 DAO_DLL DaoType* DaoNamespace_MakeSymbolType( DaoNamespace *self, const char *symbol );
 DAO_DLL DaoType* DaoNamespace_MakeEnumType( DaoNamespace *self, const char *symbols );
 

@@ -299,6 +299,7 @@ int main( int argc, char **argv )
 					fflush( log );
 				}
 				DaoGC_TryDelete( (DaoValue*) ns2 );
+				DList_Clear( proc->exceptions );
 			}
 			DaoVmSpace_ReleaseProcess( vmSpace, proc );
 			DString_Delete( output );

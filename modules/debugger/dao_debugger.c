@@ -56,13 +56,13 @@ DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *
 	DString *input;
 	DList *tokens;
 	DString *line;
-	DMap *cycData;
+	DMap *cycmap;
 	char *chs, *cmd;
 	int i;
 	if( ! (proc->vmSpace->options & DAO_OPTION_DEBUG ) ) return;
 	input = DString_New();
 	tokens = DList_New(DAO_DATA_STRING);
-	cycData = DMap_New(0,0);
+	cycmap = DMap_New(0,0);
 	line = DString_New();
 	if( stream == NULL ) stream = proc->vmSpace->stdioStream;
 	while( proc->vmSpace->stopit == 0 ){
@@ -144,7 +144,7 @@ DAO_DLL void DaoDebugger_Debug( DaoDebugger *self, DaoProcess *proc, DaoStream *
 		}else if( strcmp( cmd, "p" ) == 0 || strcmp( cmd, "print" ) == 0 ){
 			if( tokens->size > 1 ){
 				ushort_t reg = (ushort_t)atoi( tokens->items.pString[1]->chars );
-				DaoValue_Print( proc->activeValues[reg], proc, stream, cycData );
+				DaoValue_Print( proc->activeValues[reg], stream, cycmap, proc );
 				DaoStream_WriteChars( stream, "\n" );
 			}
 		}else if( strcmp( cmd, "t" ) == 0 || strcmp( cmd, "trace" ) == 0 ){

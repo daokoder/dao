@@ -38,25 +38,6 @@ void DaoxUserPodType_Delete( DaoxUserPodType *self )
 static void DaoxUserPodType_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid )
 {
 }
-static void DaoxUserPodType_SetItem1( DaoValue *self0, DaoProcess *proc, DaoValue *pid, DaoValue *value )
-{
-}
-static void DaoxUserPodType_GetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N )
-{
-	switch( N ){
-	case 0 : DaoxUserPodType_GetItem1( self, proc, dao_none_value ); break;
-	case 1 : DaoxUserPodType_GetItem1( self, proc, ids[0] ); break;
-	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
-	}
-}
-static void DaoxUserPodType_SetItem( DaoValue *self, DaoProcess *proc, DaoValue *ids[], int N, DaoValue *value )
-{
-	switch( N ){
-	case 0 : DaoxUserPodType_SetItem1( self, proc, dao_none_value, value ); break;
-	case 1 : DaoxUserPodType_SetItem1( self, proc, ids[0], value ); break;
-	default : DaoProcess_RaiseError( proc, "Index", "not supported" );
-	}
-}
 static DaoxUserPodType* DaoProcess_PutUserPod( DaoProcess *proc, dao_integer value )
 {
 	DaoxUserPodType buffer = {DAO_CSTRUCT, 0};
@@ -237,22 +218,15 @@ static DaoFunctionEntry userPodTypeMeths[]=
 };
 
 
-int DaoxUserPodType_CheckComparison( DaoType *self, DaoType *other, DaoRoutine *ctx )
-{
-}
-
-int DaoxUserPodType_DoComparison( DaoValue *self, DaoValue *other, DaoProcess *proc )
-{
-}
-
 DaoType* DaoxUserPodType_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
+	if( type->tid == DAO_INTEGER ) return type;
+	return DaoCstruct_CheckConversion( self, type, ctx );
 }
 
 DaoValue* DaoxUserPodType_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
 	DaoxUserPodType *pod = (DaoxUserPodType*) self;
-	printf( "DaoxUserPodType_DoConversion\n" );
 	if( type->tid == DAO_INTEGER ){
 		DaoValue *num = (DaoValue*) & proc->number;
 		num->type = DAO_INTEGER;
@@ -260,6 +234,28 @@ DaoValue* DaoxUserPodType_DoConversion( DaoValue *self, DaoType *type, int copy,
 		return num;
 	}
 	return DaoCstruct_DoConversion( self, type, copy, proc );
+}
+
+static void DaoxUserPodType_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
+{
+	DaoxUserPodType *pod = (DaoxUserPodType*) self;
+	DaoStream_WriteChars( stream, "UserPodType.{" );
+	DaoStream_WriteInt( stream, pod->value );
+	DaoStream_WriteChars( stream, "}" );
+}
+
+int DaoxUserPodType_Compare( DaoValue *self, DaoValue *other )
+{
+	DaoxUserPodType *left = (DaoxUserPodType*) self;
+	DaoxUserPodType *right = (DaoxUserPodType*) other;
+	if( left->value == right->value ) return 0;
+	return left->value < right->value ? -1 : 1;
+}
+
+size_t DaoxUserPodType_Hash( DaoValue *self )
+{
+	DaoxUserPodType *pod = (DaoxUserPodType*) self;
+	return pod->value;
 }
 
 DaoValue* DaoxUserPodType_Copy( DaoValue *self, DaoValue *target )
@@ -287,11 +283,12 @@ static DaoTypeCore daoUserPodTypeCore =
 	DaoCstruct_CheckSetItem,     DaoCstruct_DoSetItem,          /* SetItem */
 	DaoCstruct_CheckUnary,       DaoCstruct_DoUnary,            /* Unary */
 	DaoCstruct_CheckBinary,      DaoCstruct_DoBinary,           /* Binary */
-	DaoCstruct_CheckComparison,  DaoCstruct_DoComparison,       /* Comparison */
 	DaoCstruct_CheckConversion,  DaoxUserPodType_DoConversion,  /* Conversion */
 	NULL,                        NULL,                          /* ForEach */
-	DaoCstruct_Print,                                           /* Print */
+	DaoxUserPodType_Print,                                      /* Print */
 	NULL,                                                       /* Slice */
+	DaoxUserPodType_Compare,                                    /* Compare */
+	DaoxUserPodType_Hash,                                       /* Hash */
 	DaoxUserPodType_Copy,                                       /* Copy */
 	(DaoDeleteFunction) DaoxUserPodType_Delete,                 /* Delete */
 	NULL                                                        /* HandleGC */

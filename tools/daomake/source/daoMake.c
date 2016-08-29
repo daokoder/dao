@@ -2348,11 +2348,12 @@ static DaoTypeCore daoMakeUnitCore =
 	DaoMake_CheckSetItem,   DaoMake_DoSetItem,   /* SetItem */
 	NULL,                   NULL,                /* Unary */
 	NULL,                   NULL,                /* Binary */
-	NULL,                   NULL,                /* Comparison */
 	NULL,                   NULL,                /* Conversion */
 	NULL,                   NULL,                /* ForEach */
 	NULL,                                        /* Print */
 	NULL,                                        /* Slice */
+	NULL,                                        /* Compare */
+	NULL,                                        /* Hash */
 	NULL,                                        /* Copy */
 	NULL,                                        /* Delete */
 	NULL                                         /* HandleGC */
@@ -2421,11 +2422,12 @@ static DaoTypeCore daoMakeObjectsCore =
 	DaoMake_CheckSetItem,   DaoMake_DoSetItem,   /* SetItem */
 	NULL,                   NULL,                /* Unary */
 	NULL,                   NULL,                /* Binary */
-	NULL,                   NULL,                /* Comparison */
 	NULL,                   NULL,                /* Conversion */
 	NULL,                   NULL,                /* ForEach */
 	NULL,                                        /* Print */
 	NULL,                                        /* Slice */
+	NULL,                                        /* Compare */
+	NULL,                                        /* Hash */
 	NULL,                                        /* Copy */
 	(DaoDeleteFunction) DaoMakeObjects_Delete,   /* Delete */
 	NULL                                         /* HandleGC */
@@ -2608,11 +2610,12 @@ static DaoTypeCore daoMakeTargetCore =
 	DaoMake_CheckSetItem,   DaoMake_DoSetItem,   /* SetItem */
 	NULL,                   NULL,                /* Unary */
 	NULL,                   NULL,                /* Binary */
-	NULL,                   NULL,                /* Comparison */
 	NULL,                   NULL,                /* Conversion */
 	NULL,                   NULL,                /* ForEach */
 	NULL,                                        /* Print */
 	NULL,                                        /* Slice */
+	NULL,                                        /* Compare */
+	NULL,                                        /* Hash */
 	NULL,                                        /* Copy */
 	(DaoDeleteFunction) DaoMakeTarget_Delete,    /* Delete */
 	DaoMakeTarget_HandleGC                       /* HandleGC */
@@ -2924,11 +2927,12 @@ static DaoTypeCore daoMakeProjectCore =
 	DaoMake_CheckSetItem,   DaoMake_DoSetItem,   /* SetItem */
 	NULL,                   NULL,                /* Unary */
 	NULL,                   NULL,                /* Binary */
-	NULL,                   NULL,                /* Comparison */
 	NULL,                   NULL,                /* Conversion */
 	NULL,                   NULL,                /* ForEach */
 	NULL,                                        /* Print */
 	NULL,                                        /* Slice */
+	NULL,                                        /* Compare */
+	NULL,                                        /* Hash */
 	NULL,                                        /* Copy */
 	(DaoDeleteFunction) DaoMakeProject_Delete,   /* Delete */
 	DaoMakeProject_HandleGC                      /* HandleGC */
@@ -2984,11 +2988,12 @@ static DaoTypeCore daoMakeVariablesCore =
 	DaoMake_CheckSetItem,   DaoMake_DoSetItem,   /* SetItem */
 	NULL,                   NULL,                /* Unary */
 	NULL,                   NULL,                /* Binary */
-	NULL,                   NULL,                /* Comparison */
 	NULL,                   NULL,                /* Conversion */
 	NULL,                   NULL,                /* ForEach */
 	NULL,                                        /* Print */
 	NULL,                                        /* Slice */
+	NULL,                                        /* Compare */
+	NULL,                                        /* Hash */
 	NULL,                                        /* Copy */
 	NULL,                                        /* Delete */
 	NULL                                         /* HandleGC */

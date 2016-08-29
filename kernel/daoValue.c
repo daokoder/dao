@@ -181,7 +181,7 @@ DaoValue* DaoValue_CopyContainer( DaoValue *self, DaoType *tp )
 	case DAO_MAP   : return (DaoValue*) DaoMap_Copy( (DaoMap*) self, tp );
 	case DAO_TUPLE : return (DaoValue*) DaoTuple_Copy( (DaoTuple*) self, tp );
 #ifdef DAO_WITH_NUMARRAY
-	case DAO_ARRAY : return (DaoValue*) DaoArray_CopyX( (DaoArray*) self, tp );
+	case DAO_ARRAY : return (DaoValue*) DaoArray_Copy( (DaoArray*) self, tp );
 #endif
 	default : break;
 	}
@@ -750,16 +750,23 @@ int DaoValue_Move2( DaoValue *S, DaoValue **D, DaoType *T, DMap *defs )
 DaoValue* DaoValue_Convert( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
 	DaoTypeCore *core = DaoValue_GetTypeCore( self );
-	DaoValue *value;
+	DaoValue *value = self;
 
-	if( core == NULL || core->DoConversion == NULL ) return NULL;
+	if( !(type->tid & DAO_ANY) ){
+		if( core == NULL || core->DoConversion == NULL ) return NULL;
+		value = core->DoConversion( self, type, copy, proc );
+	}
 
-	value = core->DoConversion( self, type, copy, proc );
 	if( value == NULL || value->type <= DAO_ENUM || copy == 0 ) return value;
 
 	if( value == self /*|| DaoValue_ChildOf( value, self ) || DaoValue_ChildOf( self, value )*/ ){
 		// No way to determine inheritance relationship between wrapped C++ objects;
-		core = DaoValue_GetTypeCore( value );
+		if( value->type >= DAO_ARRAY && value->type <= DAO_TUPLE ){
+			DaoType *type = DaoValue_GetType( value );
+			if( type == NULL ) return NULL;
+			type = DaoNamespace_MakeInvarSliceType( proc->activeNamespace, type );
+			return DaoValue_CopyContainer( value, type );
+		}
 		if( core == NULL || core->Copy == NULL ) return NULL;
 
 		value = core->Copy( value, NULL ); /* Copy invariable value; */
@@ -788,30 +795,20 @@ int DaoComplex_Compare( DaoComplex *left, DaoComplex *right )
 	return 0;
 }
 
-static int DaoValue_ComparePro2( DaoValue *left, DaoValue *right, DaoProcess *proc, int dep );
-static void DaoProcess_WarnComparisonRecursion( DaoProcess *self )
-{
-	DaoStream *stream = self->vmSpace->errorStream;
-	DaoStream_WriteChars( stream, "WARNING: recursion limit is reached for comparison!\n" );
-}
-static int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt, DaoProcess *process, int dep )
+static int DaoTuple_Compare( DaoTuple *lt, DaoTuple *rt, DMap *cycmap )
 {
 	int i, lb, rb, res;
 	if( lt->size < rt->size ) return -100;
 	if( lt->size > rt->size ) return 100;
 
-	if( dep + (process ? process->depth : 0) > 1000 ){
-		DaoProcess_WarnComparisonRecursion( process );
-		return number_compare( (size_t)lt, (size_t)rt );
-	}
-
 	for(i=0; i<lt->size; i++){
-		res = DaoValue_ComparePro2( lt->values[i], rt->values[i], process, dep+1 );
+		res = DaoValue_CompareExt( lt->values[i], rt->values[i], cycmap );
 		if( res != 0 ) return res;
 	}
 	return 0;
 }
-static int DaoList_Compare( DaoList *list1, DaoList *list2, DaoProcess *process, int dep )
+
+static int DaoList_Compare( DaoList *list1, DaoList *list2, DMap *cycmap )
 {
 	DaoValue **d1 = list1->value->items.pValue;
 	DaoValue **d2 = list2->value->items.pValue;
@@ -821,14 +818,9 @@ static int DaoList_Compare( DaoList *list1, DaoList *list2, DaoProcess *process,
 	int res = size1 == size2 ? 1 : 100;
 	int i, cmp = 0;
 
-	if( dep + (process ? process->depth : 0) > 1000 ){
-		DaoProcess_WarnComparisonRecursion( process );
-		return number_compare( (size_t)list1, (size_t)list2 );
-	}
-
 	/* find the first unequal items */
 	for(i=0; i<min; i++, d1++, d2++){
-		cmp = DaoValue_ComparePro2( *d1, *d2, process, dep+1 );
+		cmp = DaoValue_CompareExt( *d1, *d2, cycmap );
 		if( cmp != 0 ) break;
 	}
 	if( i < min ){
@@ -838,36 +830,26 @@ static int DaoList_Compare( DaoList *list1, DaoList *list2, DaoProcess *process,
 	if( size1 == size2  ) return 0;
 	return size1 < size2 ? -100 : 100;
 }
-static int DaoCstruct_Compare( DaoCstruct *left, DaoCstruct *right, DaoProcess *process, int dep )
+
+static int DaoCstruct_Compare( DaoCstruct *left, DaoCstruct *right, DMap *cycmap )
 {
-	DaoRoutine *EQ, *LT;
-	DaoValue *P[2];
-	int NE = 0;
-
 	if( left == right ) return 0;
-	if( process == NULL ) goto PointerComparison;
-	if( (process->depth + dep) > 1000 ){
-		DaoProcess_WarnComparisonRecursion( process );
-		goto PointerComparison;
+
+	if( DaoType_ChildOf( left->ctype, right->ctype ) ){
+		if( left->ctype->core->Compare ){
+			return left->ctype->core->Compare( (DaoValue*) left, (DaoValue*) right, cycmap );
+		}else if( right->ctype->core->Compare ){
+			return - right->ctype->core->Compare( (DaoValue*) right, (DaoValue*) left, cycmap );
+		}
+	}else if( DaoType_ChildOf( right->ctype, left->ctype ) ){
+		if( right->ctype->core->Compare ){
+			return - right->ctype->core->Compare( (DaoValue*) right, (DaoValue*) left, cycmap );
+		}else if( left->ctype->core->Compare ){
+			return left->ctype->core->Compare( (DaoValue*) left, (DaoValue*) right, cycmap );
+		}
 	}
 
-	P[0] = (DaoValue*) left; /* To support calling static methods; */
-	P[1] = (DaoValue*) right;
 
-	DaoType_GetInitor( left->ctype ); /* To setup methods; */
-	EQ = left->ctype->kernel->eqOperators;
-	LT = left->ctype->kernel->ltOperators;
-	if( EQ ){
-		if( DaoProcess_Call( process, EQ, 0, P, 2 ) ) goto PointerComparison;
-		if( DaoValue_GetInteger( process->stackValues[0] ) ) return 0;
-		NE = 1;
-	}
-	if( LT ){
-		if( DaoProcess_Call( process, LT, 0, P, 2 ) ) goto PointerComparison;
-		if( DaoValue_GetInteger( process->stackValues[0] ) ) return -1;
-		if( NE ) return 1;
-	}
-PointerComparison:
 	if( left->ctype != right->ctype ){
 		return number_compare( (size_t)left->ctype, (size_t)right->ctype );
 	}else if( left->type == DAO_CDATA ){
@@ -877,47 +859,46 @@ PointerComparison:
 	}
 	return number_compare( (size_t)left, (size_t)right );
 }
-static int DaoObject_Compare( DaoObject *left, DaoObject *right, DaoProcess *process, int dep )
+
+static int DaoObject_Compare( DaoObject *left, DaoObject *right, DMap *cycmap )
 {
-	DaoRoutine *EQ = left->defClass->eqOperators;
-	DaoRoutine *LT = left->defClass->ltOperators;
-	DaoValue *P[2];
-	int NE = 0;
+	DaoValue *base1 = left->parent;
+	DaoValue *base2 = right->parent;
 
-	if( process == NULL ) goto PointerComparison;
-	if( (process->depth + dep) > 1000 ){
-		DaoProcess_WarnComparisonRecursion( process );
-		goto PointerComparison;
+	if( left == right ) return 0;
+
+	while( base1 != NULL && base1->type == DAO_OBJECT ) base1 = base1->xObject.parent;
+	while( base2 != NULL && base2->type == DAO_OBJECT ) base2 = base2->xObject.parent;
+
+	if( DaoType_ChildOf( left->defClass->objType, right->defClass->objType ) ){
+		if( base1 != NULL ){
+			return DaoCstruct_Compare( (DaoCstruct*) base1, (DaoCstruct*) base2, cycmap );
+		}
+	}else if( DaoType_ChildOf( right->defClass->objType, left->defClass->objType ) ){
+		if( base1 != NULL ){
+			return DaoCstruct_Compare( (DaoCstruct*) base1, (DaoCstruct*) base2, cycmap );
+		}
 	}
 
-	P[0] = (DaoValue*) left; /* To support calling static methods; */
-	P[1] = (DaoValue*) right;
-
-	if( EQ ){
-		if( DaoProcess_Call( process, EQ, 0, P, 2 ) ) goto PointerComparison;
-		if( DaoValue_GetInteger( process->stackValues[0] ) ) return 0;
-		NE = 1;
-	}
-	if( LT ){
-		if( DaoProcess_Call( process, LT, 0, P, 2 ) ) goto PointerComparison;
-		if( DaoValue_GetInteger( process->stackValues[0] ) ) return -1;
-		if( NE ) return 1;
-	}
-PointerComparison:
 	return number_compare( (size_t)left, (size_t)right );
 }
+
 static int DaoType_Compare( DaoType *left, DaoType *right )
 {
 	if( DaoType_MatchTo( left, right, NULL ) >= DAO_MT_EQ ) return 0;
 	return number_compare( (size_t)left, (size_t)right );
 }
-static int DaoValue_ComparePro2( DaoValue *left, DaoValue *right, DaoProcess *proc, int dep )
+
+int DaoValue_CompareExt( DaoValue *left, DaoValue *right, DMap *cycmap )
 {
-	double L, R;
+	DMap *input = cycmap;
+	void *pters[2];
 	int res = 0;
+
 	if( left == right ) return 0;
 	if( left == NULL || right == NULL ) return left < right ? -100 : 100;
 	if( left->type != right->type ){
+		double L, R;
 		res = left->type < right->type ? -100 : 100;
 		if( left->type < DAO_BOOLEAN || left->type > DAO_FLOAT ) return res;
 		if( right->type < DAO_BOOLEAN || right->type > DAO_FLOAT ) return res;
@@ -926,33 +907,47 @@ static int DaoValue_ComparePro2( DaoValue *left, DaoValue *right, DaoProcess *pr
 		return L == R ? 0 : (L < R ? -1 : 1);
 	}
 	switch( left->type ){
-	case DAO_NONE : return 0;
-	case DAO_BOOLEAN : return number_compare( left->xBoolean.value, right->xBoolean.value );
-	case DAO_INTEGER : return number_compare( left->xInteger.value, right->xInteger.value );
-	case DAO_FLOAT   : return number_compare( left->xFloat.value, right->xFloat.value );
-	case DAO_COMPLEX : return DaoComplex_Compare( & left->xComplex, & right->xComplex );
-	case DAO_STRING  : return DString_CompareUTF8( left->xString.value, right->xString.value );
-	case DAO_ENUM    : return DaoEnum_Compare( & left->xEnum, & right->xEnum );
-	case DAO_TUPLE   : return DaoTuple_Compare( & left->xTuple, & right->xTuple, proc, dep );
-	case DAO_LIST    : return DaoList_Compare( & left->xList, & right->xList, proc, dep );
-	case DAO_OBJECT  : return DaoObject_Compare( (DaoObject*)left, (DaoObject*)right, proc, dep );
+	case DAO_TUPLE   :
+	case DAO_LIST    :
+	case DAO_OBJECT  :
 	case DAO_CDATA   :
-	case DAO_CSTRUCT : return DaoCstruct_Compare( (DaoCstruct*)left, (DaoCstruct*)right, proc, dep );
-	case DAO_CTYPE : break; // TODO;
-	case DAO_TYPE : return DaoType_Compare( (DaoType*) left, (DaoType*) right );
-#ifdef DAO_WITH_NUMARRAY
-	case DAO_ARRAY   : return DaoArray_Compare( & left->xArray, & right->xArray );
-#endif
+	case DAO_CSTRUCT :
+		pters[0] = left;
+		pters[1] = right;
+		if( cycmap != NULL ){
+			DNode *it = DMap_Find( cycmap, pters );
+			if( it != NULL ) return left < right ? -100 : 100;
+		}
+		if( cycmap == NULL ) cycmap = DHash_New(DAO_DATA_VOID2,0);
+		DMap_Insert( cycmap, pters, NULL );
+		break;
 	}
-	return left < right ? -100 : 100; /* needed for map */
+	switch( left->type ){
+	case DAO_NONE : break;
+	case DAO_BOOLEAN : res = number_compare( left->xBoolean.value, right->xBoolean.value ); break;
+	case DAO_INTEGER : res = number_compare( left->xInteger.value, right->xInteger.value ); break;
+	case DAO_FLOAT   : res = number_compare( left->xFloat.value, right->xFloat.value ); break;
+	case DAO_COMPLEX : res = DaoComplex_Compare( (DaoComplex*) left, (DaoComplex*) right ); break;
+	case DAO_STRING  : res = DString_CompareUTF8( left->xString.value, right->xString.value ); break;
+	case DAO_ENUM    : res = DaoEnum_Compare( (DaoEnum*) left, (DaoEnum*) right ); break;
+	case DAO_TUPLE   : res = DaoTuple_Compare( (DaoTuple*) left, (DaoTuple*) right, cycmap ); break;
+	case DAO_LIST    : res = DaoList_Compare( (DaoList*) left, (DaoList*) right, cycmap ); break;
+	case DAO_OBJECT  : res = DaoObject_Compare( (DaoObject*)left, (DaoObject*)right, cycmap ); break;
+	case DAO_CDATA   :
+	case DAO_CSTRUCT : res = DaoCstruct_Compare( (DaoCstruct*)left, (DaoCstruct*)right, cycmap ); break;
+	case DAO_TYPE    : res = DaoType_Compare( (DaoType*) left, (DaoType*) right ); break;
+#ifdef DAO_WITH_NUMARRAY
+	case DAO_ARRAY   : res = DaoArray_Compare( (DaoArray*) left, (DaoArray*) right ); break;
+#endif
+	default: res = left < right ? -100 : 100; break; /* Needed for map; */
+	}
+	if( cycmap != input ) DMap_Delete( cycmap );
+	return res;
 }
-int DaoValue_ComparePro( DaoValue *left, DaoValue *right, DaoProcess *proc )
-{
-	return DaoValue_ComparePro2( left, right, proc, 0 );
-}
+
 int DaoValue_Compare( DaoValue *left, DaoValue *right )
 {
-	return DaoValue_ComparePro2( left, right, NULL, 0 );
+	return DaoValue_CompareExt( left, right, NULL );
 }
 
 

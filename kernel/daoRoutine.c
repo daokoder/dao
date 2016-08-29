@@ -180,11 +180,12 @@ DaoTypeCore daoRoutineCore =
 	NULL,                        NULL,                     /* SetItem */
 	NULL,                        NULL,                     /* Unary */
 	NULL,                        NULL,                     /* Binary */
-	NULL,                        NULL,                     /* Comparison */
 	DaoRoutine_CheckConversion,  DaoRoutine_DoConversion,  /* Conversion */
 	NULL,                        NULL,                     /* ForEach */
 	NULL,                                                  /* Print */
 	NULL,                                                  /* Slice */
+	NULL,                                                  /* Compare */
+	NULL,                                                  /* Hash */
 	NULL,                                                  /* Copy */
 	(DaoDeleteFunction) DaoRoutine_Delete,                 /* Delete */
 	NULL                                                   /* HandleGC */

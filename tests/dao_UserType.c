@@ -35,6 +35,20 @@ void DaoxUserType_Delete( DaoxUserType *self )
 	dao_free( self );
 }
 
+#if 0
+static DaoxUserType* DaoProcess_PutUserPod( DaoProcess *proc, dao_integer value )
+{
+	DaoxUserType buffer = {DAO_CSTRUCT, 0};
+	buffer.ctype = daox_type_user_pod_type;
+	buffer.value = value;
+	return (DaoxUserType*) DaoProcess_PutValue( proc, (DaoValue*) & buffer );
+}
+static void UT_New1( DaoProcess *proc, DaoValue *p[], int N )
+{
+	DaoProcess_PutUserPod( proc, p[0]->xInteger.value );
+}
+#endif
+
 static void UT_New1( DaoProcess *proc, DaoValue *p[], int N )
 {
 	DaoxUserType *self = DaoxUserType_New();
@@ -212,6 +226,34 @@ static DaoFunctionEntry userTypeMeths[]=
 	{ NULL, NULL },
 };
 
+
+int DaoxUserType_Compare( DaoValue *self, DaoValue *other )
+{
+	DaoxUserType *left = (DaoxUserType*) self;
+	DaoxUserType *right = (DaoxUserType*) other;
+	if( left->value == right->value ) return 0;
+	return left->value < right->value ? -1 : 1;
+}
+
+size_t DaoxUserType_Hash( DaoValue *self )
+{
+	DaoxUserType *pod = (DaoxUserType*) self;
+	return pod->value;
+}
+
+DaoValue* DaoxUserType_Copy( DaoValue *self, DaoValue *target )
+{
+	DaoxUserType *src = (DaoxUserType*) self;
+	DaoxUserType *dest = (DaoxUserType*) target;
+	if( target ){
+		dest->value = src->value;
+		return target;
+	}
+	dest = DaoxUserType_New();
+	dest->value = src->value;
+	return (DaoValue*) dest;
+}
+
 static DaoTypeCore daoUserTypeCore =
 {
 	"UserType",                                            /* name */
@@ -224,11 +266,12 @@ static DaoTypeCore daoUserTypeCore =
 	DaoCstruct_CheckSetItem,     DaoCstruct_DoSetItem,     /* SetItem */
 	DaoCstruct_CheckUnary,       DaoCstruct_DoUnary,       /* Unary */
 	DaoCstruct_CheckBinary,      DaoCstruct_DoBinary,      /* Binary */
-	DaoCstruct_CheckComparison,  DaoCstruct_DoComparison,  /* Comparison */
 	DaoCstruct_CheckConversion,  DaoCstruct_DoConversion,  /* Conversion */
 	NULL,                        NULL,                     /* ForEach */
 	DaoCstruct_Print,                                      /* Print */
 	NULL,                                                  /* Slice */
+	DaoxUserType_Compare,                                  /* Compare */
+	DaoxUserType_Hash,                                     /* Hash */
 	NULL,                                                  /* Copy */
 	(DaoDeleteFunction) DaoxUserType_Delete,               /* Delete */
 	NULL                                                   /* HandleGC */

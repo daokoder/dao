@@ -385,22 +385,13 @@ struct DaoTypeCore
 	// The self parameter is the same as one of the operands;
 	*/
 
-	int (*CheckComparison)( DaoType *self, DaoType *other, DaoRoutine *rout );
-	int (*DoComparison)( DaoValue *self, DaoValue *other, DaoProcess *proc );
-	/*
-	// Functions for comparison operations:
-	*/
-
 	DaoType*  (*CheckConversion)( DaoType *self, DaoType *type, DaoRoutine *rout );
 	DaoValue* (*DoConversion)( DaoValue *self, DaoType *type, int copy, DaoProcess *proc );
 	/*
 	// Functions for conversion operation:
-	// These functions are used for type casting and hashing;
 	//
+	// These functions are used for type conversion (casting);
 	// The type parameter will be the target type for the conversion;
-	// For hashing, the target type will be the integer type, and
-	// the resulting integer will be further hashed by the internal
-	// hashing function (MurmurHash3) to compute the final hash value.
 	//
 	// For conversion between wrapped C/C++ types, the conversion function
 	// must handle up and down casting properly.
@@ -429,6 +420,18 @@ struct DaoTypeCore
 	void (*Slice)( DaoValue *self );
 	/*
 	// Function to complete slice operation:
+	*/
+
+	int (*Compare)( DaoValue *self, DaoValue *other, DMap *cycmap );
+	/*
+	// Function to compare values:
+	*/
+
+	size_t (*Hash)( DaoValue *self );
+	/*
+	// Function to compute a hash value for the value:
+	// The resulting integer will be further hashed by the internal
+	// hashing function (MurmurHash3) to compute the final hash value.
 	*/
 
 	DaoValue* (*Copy)( DaoValue *self, DaoValue *target );

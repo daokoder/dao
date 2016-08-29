@@ -117,6 +117,7 @@ DMap* DHash_New( short kt, short vt )
 
 static int DaoValue_Hash( DaoValue *self, unsigned int hash )
 {
+	DaoValue *base;
 	DaoTypeCore *core;
 	void *data = NULL;
 	int i, len = 0;
@@ -154,15 +155,15 @@ static int DaoValue_Hash( DaoValue *self, unsigned int hash )
 	case DAO_CSTRUCT :
 	case DAO_CDATA :
 		core = DaoValue_GetTypeCore( self );
-		if( core == NULL || core->DoConversion == NULL ){
-			goto Default;
-		}else{
-			DaoValue *hv = core->DoConversion( self, dao_type_int, 0, NULL );
-			if( hv == NULL ) goto Default;
-			hash = DaoValue_GetInteger( hv );
-			hash = Dao_Hash( & hash, 4, 0 );
-		}
+		if( core == NULL || core->Hash == NULL ) goto Default;
+		hash = core->Hash( self );
+		hash = Dao_Hash( & hash, 4, 0 );
 		break;
+	case DAO_OBJECT :
+		base = self->xObject.parent;
+		while( base != NULL && base->type == DAO_OBJECT ) base = base->xObject.parent;
+		if( base == NULL ) goto Default;
+		return DaoValue_Hash( base, hash );
 	default :
 Default:
 		data = & self;

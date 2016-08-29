@@ -171,23 +171,19 @@ DaoArray* DaoArray_New( int etype )
 
 static int DaoArray_DataTypeSize( DaoArray *self );
 
-DaoArray* DaoArray_Copy( DaoArray *self )
+DaoArray* DaoArray_Copy( DaoArray *self, DaoType *type )
 {
 	DaoArray *copy = DaoArray_New( self->etype );
-	DaoArray_ResizeArray( copy, self->dims, self->ndim );
-	memcpy( copy->data.p, self->data.p, self->size * DaoArray_DataTypeSize( self ) );
-	return copy;
-}
-
-DaoArray* DaoArray_CopyX( DaoArray *self, DaoType *tp )
-{
-	DaoArray *copy = DaoArray_New( self->etype );
-	if( tp && tp->tid == DAO_ARRAY && tp->args->size ){
-		int nt = tp->args->items.pType[0]->tid;
+	if( type && type->tid == DAO_ARRAY && type->args->size ){
+		int nt = type->args->items.pType[0]->tid;
 		if( nt >= DAO_INTEGER && nt <= DAO_COMPLEX ) copy->etype = nt;
 	}
 	DaoArray_ResizeArray( copy, self->dims, self->ndim );
-	DaoArray_CopyArray( copy, self );
+	if( copy->etype == self->etype ){
+		memcpy( copy->data.p, self->data.p, self->size * DaoArray_DataTypeSize( self ) );
+	}else{
+		DaoArray_CopyArray( copy, self );
+	}
 	return copy;
 }
 
@@ -1516,7 +1512,7 @@ static DaoValue* DaoArray_DoGetItem( DaoValue *selfv, DaoValue *index[], int N, 
 	DaoArray_Sliced( self );
 
 	if( N == 0 ){
-		DaoProcess_PutValue( proc, (DaoValue*) DaoArray_Copy( self ) );
+		DaoProcess_PutValue( proc, (DaoValue*) DaoArray_Copy( self, NULL ) );
 		return NULL;
 	}else if( N == 1 ){
 		switch( index[0]->type ){
@@ -1907,16 +1903,6 @@ static DaoValue* DaoArray_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *arg
 	return NULL;
 }
 
-static int DaoArray_CheckComparison( DaoType *left, DaoType *right, DaoRoutine *ctx )
-{
-	return DAO_ERROR;
-}
-
-static int DaoArray_DoComparison( DaoValue *left, DaoValue *right, DaoProcess *p )
-{
-	return DAO_ERROR;
-}
-
 static DaoType* DaoArray_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid != DAO_ARRAY ) return NULL;
@@ -2090,7 +2076,7 @@ static void DaoARRAY_New( DaoProcess *proc, DaoValue *p[], int N )
 			DaoArray_SetDimCount( array, N + (res->type == DAO_ARRAY ? res->xArray.ndim : 0) );
 			for(j=0; j<N; j++) array->dims[j] = p[j]->xInteger.value;
 			if( res->type == DAO_ARRAY ){
-				first = DaoArray_Copy( (DaoArray*) res );
+				first = DaoArray_Copy( (DaoArray*) res, NULL );
 				if( first->ndim == 2 && (first->dims[0] == 1 || first->dims[1] == 1) ){
 					D += 1;
 					array->dims[N] = first->dims[ first->dims[0] == 1 ];
@@ -2774,11 +2760,12 @@ DaoTypeCore daoArrayCore =
 	DaoArray_CheckSetItem,     DaoArray_DoSetItem,     /* SetItem */
 	DaoArray_CheckUnary,       DaoArray_DoUnary,       /* Unary */
 	DaoArray_CheckBinary,      DaoArray_DoBinary,      /* Binary */
-	DaoArray_CheckComparison,  DaoArray_DoComparison,  /* Comparison */
 	DaoArray_CheckConversion,  DaoArray_DoConversion,  /* Conversion */
 	DaoArray_CheckForEach,     DaoArray_DoForEach,     /* ForEach */
 	DaoArray_Print,                                    /* Print */
 	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
 	NULL,                                              /* Copy */
 	(DaoDeleteFunction) DaoArray_Delete,               /* Delete */
 	NULL                                               /* HandleGC */

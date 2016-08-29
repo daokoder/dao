@@ -97,13 +97,13 @@ DAO_DLL DaoType* DaoValue_GetType( DaoValue *self );
 */
 DAO_DLL DaoValue* DaoValue_SimpleCopy( DaoValue *self );
 DAO_DLL DaoValue* DaoValue_SimpleCopyWithType( DaoValue *self, DaoType *type );
-DAO_DLL DaoValue* DaoValue_CopyContainer( DaoValue *self, DaoType *tp );
+DAO_DLL DaoValue* DaoValue_CopyContainer( DaoValue *self, DaoType *type );
 DAO_DLL DaoValue* DaoValue_Convert( DaoValue *self, DaoType *type, int copy, DaoProcess *proc );
 
 DAO_DLL void DaoValue_Clear( DaoValue **self );
 
-DAO_DLL int DaoValue_ComparePro( DaoValue *left, DaoValue *right, DaoProcess *process );
 DAO_DLL int DaoValue_Compare( DaoValue *left, DaoValue *right );
+DAO_DLL int DaoValue_CompareExt( DaoValue *left, DaoValue *right, DMap *cycmap );
 
 DAO_DLL void DaoValue_Assign( DaoValue *src, DaoValue **dest );
 DAO_DLL void DaoValue_Copy( DaoValue *src, DaoValue **dest );
@@ -112,7 +112,7 @@ DAO_DLL void DaoValue_MoveCstruct( DaoValue *S, DaoValue **D );
 DAO_DLL int DaoValue_Move( DaoValue *src, DaoValue **dest, DaoType *destype );
 DAO_DLL int DaoValue_Move2( DaoValue *src, DaoValue **dest, DaoType *destype, DMap *defs );
 
-DAO_DLL void DaoValue_SetType( DaoValue *to, DaoType *tp );
+DAO_DLL void DaoValue_SetType( DaoValue *to, DaoType *type );
 DAO_DLL void DaoValue_MarkConst( DaoValue *self );
 
 DAO_DLL int DaoValue_IsZero( DaoValue *self );

@@ -2259,11 +2259,6 @@ static void DaoByteCoder_AddToScope( DaoByteCoder *self, DaoByteBlock *block, DS
 				DaoClass_AddConst( klass, klass->initRoutine->routName, value, perm );
 			}else if( rout->attribs & DAO_ROUT_CASTOR ){
 				DaoClass_AddConst( klass, name, value, perm );
-				if( klass->castOperators == NULL ){
-					klass->castOperators = DaoRoutines_New( self->nspace, klass->objType, NULL);
-					GC_IncRC( klass->castOperators );
-				}
-				DRoutines_Add( klass->castOperators->overloads, rout );
 			}else{
 				DaoClass_AddConst( klass, name, value, perm );
 			}
@@ -2446,9 +2441,6 @@ static void DaoByteCoder_DecodeClass( DaoByteCoder *self, DaoByteBlock *block )
 	DaoClass_UpdateMixinConstructors( klass );
 	DaoClass_UpdateVirtualMethods( klass );
 	DaoClass_UseMixinDecorators( klass );
-	klass->intOperators = DaoClass_FindMethod( klass, "(int)", NULL );
-	klass->eqOperators = DaoClass_FindMethod( klass, "==", NULL );
-	klass->ltOperators = DaoClass_FindMethod( klass, "<", NULL );
 	/* Check inferred attributes: */
 	if( klass->attribs != (C & ~(DAO_CLS_INVAR|DAO_CLS_ASYNCHRONOUS)) ){
 		DaoByteCoder_Error( self, block, "Class attributes not matching!" );

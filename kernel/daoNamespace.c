@@ -1803,6 +1803,7 @@ DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value )
 	DString_Delete( name );
 	return type;
 }
+
 DaoType* DaoNamespace_MakeRangeType( DaoNamespace *self, DaoType *first, DaoType *second )
 {
 	DaoType *noneType = DaoNamespace_MakeValueType( self, dao_none_value );
@@ -1828,11 +1829,41 @@ DaoType* DaoNamespace_MakeRangeType( DaoNamespace *self, DaoType *first, DaoType
 	DString_Delete( name );
 	return type2;
 }
+
 DaoType* DaoNamespace_MakeRangeValueType( DaoNamespace *self, DaoValue *first, DaoValue *second )
 {
 	DaoType *tp1 = DaoNamespace_MakeValueType( self, first );
 	DaoType *tp2 = DaoNamespace_MakeValueType( self, second );
 	return DaoNamespace_MakeRangeType( self, tp1, tp2 );
+}
+
+DaoType* DaoNamespace_MakeInvarSliceType( DaoNamespace *self, DaoType *type )
+{
+	int i, tid = type->tid;
+	const char *name = coreTypeNames[tid];
+	DList *types = DList_New(0);
+
+	for(i=0; i<type->args->size; ++i){
+		DaoType *it = type->args->items.pType[i];
+		if( it->tid && it->tid <= DAO_ENUM ){
+			it = DaoType_GetBaseType( it );
+		}else if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_VALIST ){
+			const char *fn = it->fname->chars;
+			DaoType *tp = (DaoType*) it->aux;
+			if( tp->tid && tp->tid <= DAO_ENUM ){
+				tp = DaoType_GetBaseType( tp );
+			}else{
+				tp = DaoType_GetInvarType( tp );
+			}
+			it = DaoNamespace_MakeType( self, fn, it->tid, (DaoValue*) tp, NULL, 0 );
+		}else{
+			it = DaoType_GetInvarType( it );
+		}
+		DList_Append( types, it );
+	}
+	type = DaoNamespace_MakeType( self, name, tid, NULL, types->items.pType, types->size );
+	DList_Delete( types );
+	return type;
 }
 
 DaoNamespace* DaoNamespace_LoadModule( DaoNamespace *self, DString *name )
@@ -1948,7 +1979,6 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeCore *core )
 	DMutex_Lock( & mutex_methods_setup );
 	if( kernel->methods == NULL ){
 		DaoType *hostype = kernel->abtype;
-		DString name;
 
 		methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 
@@ -2002,8 +2032,6 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeCore *core )
 							/* skip methods not defined in this parent type */
 							if( rout->routHost != skn->abtype ) continue;
 							DaoMethods_Insert( hostype->kernel->methods, rout, self, hostype );
-							if( !( rout->attribs & DAO_ROUT_CASTOR ) ) continue;
-							DaoTypeKernel_InsertCastor( hostype->kernel, self, hostype, rout );
 						}
 					}else{
 						DaoRoutine *rout = it->value.pRoutine;
@@ -2012,8 +2040,6 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeCore *core )
 						/* skip methods not defined in this parent type */
 						if( rout->routHost != skn->abtype ) continue;
 						DaoMethods_Insert( hostype->kernel->methods, rout, self, hostype );
-						if( !( rout->attribs & DAO_ROUT_CASTOR ) ) continue;
-						DaoTypeKernel_InsertCastor( hostype->kernel, self, hostype, rout );
 					}
 				}
 			}
@@ -2027,15 +2053,6 @@ int DaoNamespace_SetupMethods( DaoNamespace *self, DaoTypeCore *core )
 		}
 		DaoVmSpace_ReleaseParser( self->vmSpace, parser );
 		DaoVmSpace_ReleaseParser( self->vmSpace, defparser );
-		name = DString_WrapChars( "(int)" );
-		it = DMap_Find( methods, & name );
-		if( it ) hostype->kernel->intOperators = it->value.pRoutine;
-		name = DString_WrapChars( "==" );
-		it = DMap_Find( methods, & name );
-		if( it ) hostype->kernel->eqOperators = it->value.pRoutine;
-		name = DString_WrapChars( "<" );
-		it = DMap_Find( methods, & name );
-		if( it ) hostype->kernel->ltOperators = it->value.pRoutine;
 	}
 	kernel->SetupMethods = NULL;
 	DMutex_Unlock( & mutex_methods_setup );
@@ -2152,11 +2169,12 @@ DaoTypeCore daoNamespaceCore =
 	NULL,                        NULL,                     /* SetItem */
 	NULL,                        NULL,                     /* Unary */
 	NULL,                        NULL,                     /* Binary */
-	NULL,                        NULL,                     /* Comparison */
 	NULL,                        NULL,                     /* Conversion */
 	NULL,                        NULL,                     /* ForEach */
 	NULL,                                                  /* Print */
 	NULL,                                                  /* Slice */
+	NULL,                                                  /* Compare */
+	NULL,                                                  /* Hash */
 	NULL,                                                  /* Copy */
 	(DaoDeleteFunction) DaoNamespace_Delete,               /* Delete */
 	NULL                                                   /* HandleGC */

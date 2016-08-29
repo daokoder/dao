@@ -1411,10 +1411,10 @@ int DaoInferencer_HandleGetItem( DaoInferencer *self, DaoInode *inode, DMap *def
 		goto WrongContainer;
 	}
 	if( ct == NULL ) goto InvalidKey;
-	if( at->tid >= DAO_ARRAY ){
+	if( at->tid >= DAO_ARRAY ){  /* invar<X<Y>> to X<invar<Y>> */
 		if( at->konst && ct->konst == 0 ) ct = DaoType_GetConstType( ct );
 		if( at->invar && ct->invar == 0 ) ct = DaoType_GetInvarType( ct );
-		if( bt->tid == DAO_NONE || bt->tid == DAO_RANGE ){ // TODO:
+		if( bt->tid == DAO_NONE || bt->subtid == DAO_RANGE ){
 			if( ct->invar && ct->konst == 0 ){
 				if( at->tid == DAO_ARRAY ){
 					ct = DaoType_GetBaseType( ct );

@@ -1456,11 +1456,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	// 2. Casting similar types can be supported in this way; For example,
 	//    if "operator(float)" is defined, casting to "int" will be allowed.
 	 */
-	if( cast != NULL ){
-		routine->attribs |= DAO_ROUT_CASTOR;
-		if( ctype ) DaoTypeKernel_InsertCastor( hostype->kernel, NS, hostype, routine );
-		else if( klass ) DaoClass_CastingMethod( klass, routine );
-	}
+	if( cast != NULL ) routine->attribs |= DAO_ROUT_CASTOR;
 	if( ctype && routine->routHost == ctype->valueType ){
 		if( notConstr && !(routine->routType->attrib & DAO_TYPE_SELF) ){
 			routine->attribs |= DAO_ROUT_STATIC;

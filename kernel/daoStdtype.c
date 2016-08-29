@@ -200,18 +200,6 @@ static void DaoNone_Delete( DaoValue *self )
 	dao_free( self );
 }
 
-static int DaoNone_CheckComparison( DaoType *self, DaoType *other, DaoRoutine *ctx )
-{
-	if( self->tid == DAO_NONE && other->tid == DAO_NONE ) return DAO_OK;
-	return DAO_ERROR; /* Other cases should be handled by other types; */
-}
-
-static int DaoNone_DoComparison( DaoValue *self, DaoValue *other, DaoProcess *proc )
-{
-	if( self->type == DAO_NONE && other->type == DAO_NONE ) return 0;
-	return self->type == DAO_NONE ? -1 : 1; /* None value is less than anything else; */
-}
-
 static DaoType* DaoNone_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid <= DAO_STRING ) return type;
@@ -241,7 +229,7 @@ static DaoValue* DaoNone_DoConversion( DaoValue *self, DaoType *type, int copy, 
 
 static void DaoNone_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
-	DaoStream_WriteChars( stream, "none[0x0]" );
+	DaoStream_WriteChars( stream, "none" );
 }
 
 DaoTypeCore daoNoneCore =
@@ -256,11 +244,12 @@ DaoTypeCore daoNoneCore =
 	NULL,                     NULL,                  /* SetItem */
 	NULL,                     NULL,                  /* Unary */
 	NULL,                     NULL,                  /* Binary */
-	DaoNone_CheckComparison,  DaoNone_DoComparison,  /* Comparison */
 	DaoNone_CheckConversion,  DaoNone_DoConversion,  /* Conversion */
 	NULL,                     NULL,                  /* ForEach */
 	DaoNone_Print,                                   /* Print */
 	NULL,                                            /* Slice */
+	NULL,                                            /* Compare */
+	NULL,                                            /* Hash */
 	NULL,                                            /* Copy */
 	DaoNone_Delete,                                  /* Delete */
 	NULL                                             /* HandleGC */
@@ -372,20 +361,6 @@ static DaoValue* DaoBoolean_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *a
 	return NULL;
 }
 
-static int DaoBoolean_CheckComparison( DaoType *self, DaoType *other, DaoRoutine *ctx )
-{
-	if( self->tid <= DAO_BOOLEAN && other->tid <= DAO_BOOLEAN ) return DAO_OK;
-	return DAO_ERROR; /* Other cases should be handled by other types; */
-}
-
-static int DaoBoolean_DoComparison( DaoValue *self, DaoValue *other, DaoProcess *proc )
-{
-	dao_boolean A = self->xBoolean.value;
-	dao_boolean B = other->xBoolean.value;
-	if( A == B ) return 0;
-	return A < B ? -1 : 1;
-}
-
 static DaoType* DaoBoolean_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid <= DAO_STRING ) return type;
@@ -435,11 +410,12 @@ DaoTypeCore daoBooleanCore =
 	NULL,                        NULL,                     /* SetItem */
 	DaoBoolean_CheckUnary,       DaoBoolean_DoUnary,       /* Unary */
 	DaoBoolean_CheckBinary,      DaoBoolean_DoBinary,      /* Binary */
-	DaoBoolean_CheckComparison,  DaoBoolean_DoComparison,  /* Comparison */
 	DaoBoolean_CheckConversion,  DaoBoolean_DoConversion,  /* Conversion */
 	NULL,                        NULL,                     /* ForEach */
 	DaoBoolean_Print,                                      /* Print */
 	NULL,                                                  /* Slice */
+	NULL,                                                  /* Compare */
+	NULL,                                                  /* Hash */
 	NULL,                                                  /* Copy */
 	DaoBoolean_Delete,                                     /* Delete */
 	NULL                                                   /* HandleGC */
@@ -594,35 +570,6 @@ ErrorDivByZero:
 	return NULL;
 }
 
-static int DaoInteger_CheckComparison( DaoType *self, DaoType *other, DaoRoutine *ctx )
-{
-	if( self->tid <= DAO_INTEGER && other->tid <= DAO_INTEGER ) return DAO_OK;
-	return DAO_ERROR; /* Other cases should be handled by other types; */
-}
-
-static int DaoInteger_DoComparison( DaoValue *self, DaoValue *other, DaoProcess *proc )
-{
-	dao_integer A = 0, B = 0;
-
-	if( self == other ) return 0;
-
-	switch( self->type ){
-	case DAO_NONE    : A = 0; break;
-	case DAO_BOOLEAN : A = self->xBoolean.value; break;
-	case DAO_INTEGER : A = self->xInteger.value; break;
-	default: return self < other ? -1 : 1;
-	}
-
-	switch( other->type ){
-	case DAO_NONE    : B = 0; break;
-	case DAO_BOOLEAN : B = other->xBoolean.value; break;
-	case DAO_INTEGER : B = other->xInteger.value; break;
-	default: return self < other ? -1 : 1;
-	}
-	if( A == B ) return 0;
-	return A < B ? -1 : 1;
-}
-
 static DaoType* DaoInteger_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid <= DAO_STRING ) return type;
@@ -674,11 +621,12 @@ DaoTypeCore daoIntegerCore =
 	NULL,                        NULL,                     /* SetItem */
 	DaoInteger_CheckUnary,       DaoInteger_DoUnary,       /* Unary */
 	DaoInteger_CheckBinary,      DaoInteger_DoBinary,      /* Binary */
-	DaoInteger_CheckComparison,  DaoInteger_DoComparison,  /* Comparison */
 	DaoInteger_CheckConversion,  DaoInteger_DoConversion,  /* Conversion */
 	NULL,                        NULL,                     /* ForEach */
 	DaoInteger_Print,                                      /* Print */
 	NULL,                                                  /* Slice */
+	NULL,                                                  /* Compare */
+	NULL,                                                  /* Hash */
 	NULL,                                                  /* Copy */
 	DaoInteger_Delete,                                     /* Delete */
 	NULL                                                   /* HandleGC */
@@ -811,37 +759,6 @@ ErrorDivByZero:
 	return NULL;
 }
 
-static int DaoFloat_CheckComparison( DaoType *self, DaoType *other, DaoRoutine *ctx )
-{
-	if( self->tid <= DAO_FLOAT && other->tid <= DAO_FLOAT ) return DAO_OK;
-	return DAO_ERROR; /* Other cases should be handled by other types; */
-}
-
-static int DaoFloat_DoComparison( DaoValue *self, DaoValue *other, DaoProcess *proc )
-{
-	double A = 0.0, B = 0.0;
-
-	if( self == other ) return 0;
-
-	switch( self->type ){
-	case DAO_NONE    : A = 0.0; break;
-	case DAO_BOOLEAN : A = self->xBoolean.value; break;
-	case DAO_INTEGER : A = self->xInteger.value; break;
-	case DAO_FLOAT   : A = self->xFloat.value;   break;
-	default: return self < other ? -1 : 1;;
-	}
-
-	switch( other->type ){
-	case DAO_NONE    : B = 0.0; break;
-	case DAO_BOOLEAN : B = other->xBoolean.value; break;
-	case DAO_INTEGER : B = other->xInteger.value; break;
-	case DAO_FLOAT   : B = other->xFloat.value;   break;
-	default: return self < other ? -1 : 1;;
-	}
-	if( A == B ) return 0;
-	return A < B ? -1 : 1;
-}
-
 static DaoType* DaoFloat_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid <= DAO_STRING ) return type;
@@ -890,11 +807,12 @@ DaoTypeCore daoFloatCore =
 	NULL,                        NULL,                 /* SetItem */
 	DaoFloat_CheckUnary,       DaoFloat_DoUnary,       /* Unary */
 	DaoFloat_CheckBinary,      DaoFloat_DoBinary,      /* Binary */
-	DaoFloat_CheckComparison,  DaoFloat_DoComparison,  /* Comparison */
 	DaoFloat_CheckConversion,  DaoFloat_DoConversion,  /* Conversion */
 	NULL,                      NULL,                   /* ForEach */
 	DaoFloat_Print,                                    /* Print */
 	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
 	NULL,                                              /* Copy */
 	DaoFloat_Delete,                                   /* Delete */
 	NULL                                               /* HandleGC */
@@ -1269,11 +1187,12 @@ DaoTypeCore daoComplexCore =
 	DaoComplex_CheckSetItem,     DaoComplex_DoSetItem,     /* SetItem */
 	DaoComplex_CheckUnary,       DaoComplex_DoUnary,       /* Unary */
 	DaoComplex_CheckBinary,      DaoComplex_DoBinary,      /* Binary */
-	NULL,                        NULL,                     /* Comparison */
 	DaoComplex_CheckConversion,  DaoComplex_DoConversion,  /* Conversion */
 	NULL,                        NULL,                     /* ForEach */
 	DaoComplex_Print,                                      /* Print */
 	NULL,                                                  /* Slice */
+	NULL,                                                  /* Compare */
+	NULL,                                                  /* Hash */
 	NULL,                                                  /* Copy */
 	DaoComplex_Delete,                                     /* Delete */
 	NULL                                                   /* HandleGC */
@@ -1517,17 +1436,6 @@ static DaoValue* DaoString_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *ar
 		break;
 	}
 	return NULL;
-}
-
-static int DaoString_CheckComparison( DaoType *self, DaoType *other, DaoRoutine *ctx )
-{
-	if( self->tid == DAO_STRING && other->tid == DAO_STRING ) return DAO_OK;
-	return DAO_ERROR;
-}
-
-static int DaoString_DoComparison( DaoValue *self, DaoValue *other, DaoProcess *proc )
-{
-	return DString_Compare( self->xString.value, other->xString.value );
 }
 
 static DaoType* DaoString_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
@@ -2399,11 +2307,12 @@ DaoTypeCore daoStringCore =
 	DaoString_CheckSetItem,     DaoString_DoSetItem,     /* SetItem */
 	DaoString_CheckUnary,       DaoString_DoUnary,       /* Unary */
 	DaoString_CheckBinary,      DaoString_DoBinary,      /* Binary */
-	DaoString_CheckComparison,  DaoString_DoComparison,  /* Comparison */
 	DaoString_CheckConversion,  DaoString_DoConversion,  /* Conversion */
 	DaoString_CheckForEach,     DaoString_DoForEach,     /* ForEach */
 	DaoString_Print,                                     /* Print */
 	NULL,                                                /* Slice */
+	NULL,                                                /* Compare */
+	NULL,                                                /* Hash */
 	NULL,                                                /* Copy */
 	(DaoDeleteFunction) DaoString_Delete,                /* Delete */
 	NULL                                                 /* HandleGC */
@@ -2798,22 +2707,6 @@ static DaoValue* DaoEnum_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args
 	return NULL;
 }
 
-static int DaoEnum_CheckComparison( DaoType *self, DaoType *other, DaoRoutine *ctx )
-{
-	if( self->tid == DAO_ENUM && other->tid == DAO_ENUM ) return DAO_OK;
-	return DAO_ERROR;
-}
-
-static int DaoEnum_DoComparison( DaoValue *self, DaoValue *other, DaoProcess *proc )
-{
-	if( self->type != DAO_ENUM || other->type != DAO_ENUM ){
-		// TODO:
-		return self < other ? -1 : 1;
-	}
-
-	return DaoEnum_Compare( (DaoEnum*) self, (DaoEnum*) other );
-}
-
 static DaoType* DaoEnum_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid <= DAO_ENUM ) return type;
@@ -2870,11 +2763,12 @@ DaoTypeCore daoEnumCore =
 	NULL,                     NULL,                  /* SetItem */
 	DaoEnum_CheckUnary,       DaoEnum_DoUnary,       /* Unary */
 	DaoEnum_CheckBinary,      DaoEnum_DoBinary,      /* Binary */
-	DaoEnum_CheckComparison,  DaoEnum_DoComparison,  /* Comparison */
 	DaoEnum_CheckConversion,  DaoEnum_DoConversion,  /* Conversion */
 	NULL,                     NULL,                  /* ForEach */
 	DaoEnum_Print,                                   /* Print */
 	NULL,                                            /* Slice */
+	NULL,                                            /* Compare */
+	NULL,                                            /* Hash */
 	NULL,                                            /* Copy */
 	(DaoDeleteFunction) DaoEnum_Delete,              /* Delete */
 	NULL                                             /* HandleGC */
@@ -3193,7 +3087,7 @@ static DaoValue* DaoList_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args
 	}
 
 	for(i=0,n=list->value->size; i<n; ++i){
-		C = DaoValue_ComparePro( left, list->value->items.pValue[i], proc ) == 0; 
+		C = DaoValue_Compare( left, list->value->items.pValue[i] ) == 0; 
 		if( C ) break;
 	}
 	DaoProcess_PutBoolean( proc, C );
@@ -3440,7 +3334,7 @@ static void DaoLIST_Max( DaoProcess *proc, DaoValue *p[], int N )
 	imax = 0;
 	res = data[0];
 	for(i=1; i<size; i++){
-		if( DaoValue_ComparePro( res, data[i], proc ) <0 ){
+		if( DaoValue_Compare( res, data[i] ) <0 ){
 			imax = i;
 			res = data[i];
 		}
@@ -3464,7 +3358,7 @@ static void DaoLIST_Min( DaoProcess *proc, DaoValue *p[], int N )
 	imin = 0;
 	res = data[0];
 	for(i=1; i<size; i++){
-		if( DaoValue_ComparePro( res, data[i], proc ) >0 ){
+		if( DaoValue_Compare( res, data[i] ) >0 ){
 			imin = i;
 			res = data[i];
 		}
@@ -3649,11 +3543,11 @@ static void QuickSort( DaoProcess *self, DaoValue *data[], daoint first, daoint 
 
 	while( lower <= upper ){
 		if( asc ){
-			while( lower < last && DaoValue_ComparePro( data[lower], pivot, self ) <0 ) lower ++;
-			while( upper > first && DaoValue_ComparePro( pivot, data[upper], self ) <0 ) upper --;
+			while( lower < last && DaoValue_Compare( data[lower], pivot ) <0 ) lower ++;
+			while( upper > first && DaoValue_Compare( pivot, data[upper] ) <0 ) upper --;
 		}else{
-			while( lower < last && DaoValue_ComparePro( data[lower], pivot, self ) >0 ) lower ++;
-			while( upper > first && DaoValue_ComparePro( pivot, data[upper], self ) >0 ) upper --;
+			while( lower < last && DaoValue_Compare( data[lower], pivot ) >0 ) lower ++;
+			while( upper > first && DaoValue_Compare( pivot, data[upper] ) >0 ) upper --;
 		}
 		if( lower < upper ){
 			val = data[lower];
@@ -4199,11 +4093,12 @@ DaoTypeCore daoListCore =
 	DaoList_CheckSetItem,     DaoList_DoSetItem,     /* SetItem */
 	DaoList_CheckUnary,       DaoList_DoUnary,       /* Unary */
 	DaoList_CheckBinary,      DaoList_DoBinary,      /* Binary */
-	NULL,                     NULL,                  /* Comparison */
 	DaoList_CheckConversion,  DaoList_DoConversion,  /* Conversion */
 	DaoList_CheckForEach,     DaoList_DoForEach,     /* ForEach */
 	DaoList_Print,                                   /* Print */
 	NULL,                                            /* Slice */
+	NULL,                                            /* Compare */
+	NULL,                                            /* Hash */
 	NULL,                                            /* Copy */
 	(DaoDeleteFunction) DaoList_Delete,              /* Delete */
 	NULL                                             /* HandleGC */
@@ -4605,7 +4500,7 @@ static DaoValue* DaoMap_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[
 	}
 
 	for(i=0,n=list->value->size; i<n; ++i){
-		C = DaoValue_ComparePro( left, list->value->items.pValue[i], proc ) == 0; 
+		C = DaoValue_Compare( left, list->value->items.pValue[i] ) == 0; 
 		if( C ) break;
 	}
 	DaoProcess_PutBoolean( proc, C );
@@ -4799,7 +4694,7 @@ static void DaoMAP_Erase( DaoProcess *proc, DaoValue *p[], int N )
 		DaoMap_Erase( self, p[1] );
 		break;
 	case 2 :
-		cmp = DaoValue_ComparePro( p[0], p[1], proc );
+		cmp = DaoValue_Compare( p[0], p[1] );
 		if( cmp > 0 ) return;
 		mg = DaoMap_FindGE( self, p[1] );
 		ml = DaoMap_FindLE( self, p[2] );
@@ -5147,11 +5042,12 @@ DaoTypeCore daoMapCore =
 	DaoMap_CheckSetItem,      DaoMap_DoSetItem,     /* SetItem */
 	DaoMap_CheckUnary,        DaoMap_DoUnary,       /* Unary */
 	DaoMap_CheckBinary,       DaoMap_DoBinary,      /* Binary */
-	NULL,                     NULL,                 /* Comparison */
 	DaoMap_CheckConversion,   DaoMap_DoConversion,  /* Conversion */
 	DaoMap_CheckForEach,      DaoMap_DoForEach,     /* ForEach */
 	DaoMap_Print,                                   /* Print */
 	NULL,                                           /* Slice */
+	NULL,                                           /* Compare */
+	NULL,                                           /* Hash */
 	NULL,                                           /* Copy */
 	(DaoDeleteFunction) DaoMap_Delete,              /* Delete */
 	NULL                                            /* HandleGC */
@@ -5559,17 +5455,6 @@ static DaoValue* DaoTuple_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *arg
 	return NULL;
 }
 
-static int DaoTuple_CheckComparison( DaoType *self, DaoType *other, DaoRoutine *ctx )
-{
-	// TODO:
-	return DAO_ERROR;
-}
-
-static int DaoTuple_DoComparison( DaoValue *self, DaoValue *other, DaoProcess *proc )
-{
-	return DAO_ERROR;
-}
-
 static DaoType* DaoTuple_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	if( type->tid == DAO_TUPLE ){
@@ -5691,12 +5576,13 @@ DaoTypeCore daoTupleCore =
 	DaoTuple_CheckGetItem,     DaoTuple_DoGetItem,     /* GetItem */
 	DaoTuple_CheckSetItem,     DaoTuple_DoSetItem,     /* SetItem */
 	DaoTuple_CheckUnary,       DaoTuple_DoUnary,       /* Unary */
-	NULL,                      NULL,                   /* Binary */
-	DaoTuple_CheckComparison,  DaoTuple_DoComparison,  /* Comparison */
+	DaoTuple_CheckBinary,      DaoTuple_DoBinary,      /* Binary */
 	DaoTuple_CheckConversion,  DaoTuple_DoConversion,  /* Conversion */
 	DaoTuple_CheckForEach,     DaoTuple_DoForEach,     /* ForEach */
 	DaoTuple_Print,                                    /* Print */
 	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
 	NULL,                                              /* Copy */
 	(DaoDeleteFunction) DaoTuple_Delete,               /* Delete */
 	NULL                                               /* HandleGC */
@@ -5751,11 +5637,12 @@ DaoTypeCore daoNameValueCore =
 	NULL,  NULL,          /* SetItem */
 	NULL,  NULL,          /* Unary */
 	NULL,  NULL,          /* Binary */
-	NULL,  NULL,          /* Comparison */
 	NULL,  NULL,          /* Conversion */
 	NULL,  NULL,          /* ForEach */
 	DaoNameValue_Print,   /* Print */
 	NULL,                 /* Slice */
+	NULL,                 /* Compare */
+	NULL,                 /* Hash */
 	NULL,                 /* Copy */
 	(DaoDeleteFunction) DaoNameValue_Delete,  /* Delete */
 	NULL                  /* HandleGC */
@@ -5921,11 +5808,12 @@ DaoTypeCore daoCtypeCore =
 	DaoCtype_CheckSetItem,     DaoCtype_DoSetItem,     /* SetItem */
 	NULL,                      NULL,                   /* Unary */
 	NULL,                      NULL,                   /* Binary */
-	NULL,                      NULL,                   /* Comparison */
 	DaoCtype_CheckConversion,  DaoCtype_DoConversion,  /* Conversion */
 	NULL,                      NULL,                   /* ForEach */
 	NULL,                                              /* Print */
 	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
 	NULL,                                              /* Copy */
 	DaoCtype_CoreDelete,                               /* Delete */
 	NULL                                               /* HandleGC */
@@ -6178,17 +6066,6 @@ DaoValue* DaoCstruct_DoBinary( DaoValue *self, DaoVmCode *op, DaoValue *args[2],
 	return NULL;
 }
 
-int DaoCstruct_CheckComparison( DaoType *self, DaoType *other, DaoRoutine *ctx )
-{
-	return DAO_OK;
-}
-
-int DaoCstruct_DoComparison( DaoValue *self, DaoValue *other, DaoProcess *proc )
-{
-	if( self == other ) return 0;
-	return self < other ? -1 : 1;
-}
-
 DaoType* DaoCstruct_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
 	DString *buffer;
@@ -6288,11 +6165,12 @@ static DaoTypeCore daoCstructCore =
 	DaoCstruct_CheckSetItem,     DaoCstruct_DoSetItem,     /* SetItem */
 	DaoCstruct_CheckUnary,       DaoCstruct_DoUnary,       /* Unary */
 	DaoCstruct_CheckBinary,      DaoCstruct_DoBinary,      /* Binary */
-	DaoCstruct_CheckComparison,  DaoCstruct_DoComparison,  /* Comparison */
 	DaoCstruct_CheckConversion,  DaoCstruct_DoConversion,  /* Conversion */
 	NULL,                        NULL,                     /* ForEach */
 	DaoCstruct_Print,                                      /* Print */
 	NULL,                                                  /* Slice */
+	NULL,                                                  /* Compare */
+	NULL,                                                  /* Hash */
 	NULL,                                                  /* Copy */
 	NULL,                                                  /* Delete */
 	NULL                                                   /* HandleGC */
@@ -6406,11 +6284,12 @@ DaoTypeCore daoCdataCore =
 	NULL,  NULL,          /* SetItem */
 	NULL,  NULL,          /* Unary */
 	NULL,  NULL,          /* Binary */
-	NULL,  NULL,          /* Comparison */
 	NULL,  NULL,          /* Conversion */
 	NULL,  NULL,          /* ForEach */
 	DaoCstruct_Print,     /* Print */
 	NULL,                 /* Slice */
+	NULL,                 /* Compare */
+	NULL,                 /* Hash */
 	NULL,                 /* Copy */
 	DaoCdata_CoreDelete,  /* Delete */
 	NULL                  /* HandleGC */
@@ -6719,11 +6598,12 @@ static DaoTypeCore daoExceptionCore =
 	DaoCstruct_CheckSetItem,     DaoCstruct_DoSetItem,     /* SetItem */
 	NULL,                        NULL,                     /* Unary */
 	NULL,                        NULL,                     /* Binary */
-	NULL,                        NULL,                     /* Comparison */
 	DaoCstruct_CheckConversion,  DaoCstruct_DoConversion,  /* Conversion */
 	NULL,                        NULL,                     /* ForEach */
 	DaoException_CorePrint,                                /* Print */
 	NULL,                                                  /* Slice */
+	NULL,                                                  /* Compare */
+	NULL,                                                  /* Hash */
 	NULL,                                                  /* Copy */
 	DaoException_CoreDelete,                               /* Delete */
 	DaoException_HandleGC                                  /* HandleGC */
@@ -6750,11 +6630,12 @@ static DaoTypeCore daoExceptionWarningCore =
 	DaoCstruct_CheckSetItem,     DaoCstruct_DoSetItem,     /* SetItem */
 	NULL,                        NULL,                     /* Unary */
 	NULL,                        NULL,                     /* Binary */
-	NULL,                        NULL,                     /* Comparison */
 	DaoCstruct_CheckConversion,  DaoCstruct_DoConversion,  /* Conversion */
 	NULL,                        NULL,                     /* ForEach */
 	DaoException_CorePrint,                                /* Print */
 	NULL,                                                  /* Slice */
+	NULL,                                                  /* Compare */
+	NULL,                                                  /* Hash */
 	NULL,                                                  /* Copy */
 	DaoException_CoreDelete,                               /* Delete */
 	DaoException_HandleGC                                  /* HandleGC */
@@ -6782,11 +6663,12 @@ static DaoTypeCore daoExceptionErrorCore =
 	DaoCstruct_CheckSetItem,     DaoCstruct_DoSetItem,     /* SetItem */
 	NULL,                        NULL,                     /* Unary */
 	NULL,                        NULL,                     /* Binary */
-	NULL,                        NULL,                     /* Comparison */
 	DaoCstruct_CheckConversion,  DaoCstruct_DoConversion,  /* Conversion */
 	NULL,                        NULL,                     /* ForEach */
 	DaoException_CorePrint,                                /* Print */
 	NULL,                                                  /* Slice */
+	NULL,                                                  /* Compare */
+	NULL,                                                  /* Hash */
 	NULL,                                                  /* Copy */
 	DaoException_CoreDelete,                               /* Delete */
 	DaoException_HandleGC                                  /* HandleGC */

@@ -47,6 +47,7 @@
 
 
 
+#{
 @[test(code_01)]
 class MyKey
 {
@@ -77,6 +78,7 @@ io.writeln( m2.find( MyKey.{2} ) )
 none
 ( MyKey.{2}, 2 )
 @[test(code_01)]
+#}
 
 
 

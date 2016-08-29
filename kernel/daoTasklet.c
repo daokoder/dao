@@ -1035,7 +1035,7 @@ static DaoValue* DaoValue_DeepCopy( DaoValue *self )
 	daoint i;
 	if( self == NULL ) return NULL;
 	if( self->type <= DAO_ENUM ) return self; /* simple types will be copied at use; */
-	if( self->type == DAO_ARRAY ) return (DaoValue*) DaoArray_Copy( (DaoArray*) self );
+	if( self->type == DAO_ARRAY ) return (DaoValue*) DaoArray_Copy( (DaoArray*) self, NULL );
 	if( self->type == DAO_LIST ){
 		DaoList *list = (DaoList*) self;
 		DaoList *copy = DaoList_New();

@@ -1794,18 +1794,14 @@ static void DaoType_TrySetupMethods( DaoType *self )
 	if( self->kernel->methods == NULL ) return;
 	if( self->kernel->attribs & DAO_TYPEKERNEL_TEMPLATE ) DaoType_SpecializeMethods( self );
 }
+
 DaoRoutine* DaoType_GetInitor( DaoType *self )
 {
 	DaoType_TrySetupMethods( self );
 	if( self->kernel == NULL ) return NULL;
 	return self->kernel->initRoutines;
 }
-DaoRoutine* DaoType_GetCastor( DaoType *self )
-{
-	DaoType_TrySetupMethods( self );
-	if( self->kernel == NULL ) return NULL;
-	return self->kernel->castOperators;
-}
+
 DaoRoutine* DaoType_FindFunction( DaoType *self, DString *name )
 {
 	DNode *node;
@@ -1882,11 +1878,12 @@ DaoTypeCore daoTypeCore =
 	NULL,  NULL,         /* SetItem */
 	NULL,  NULL,         /* Unary */
 	NULL,  NULL,         /* Binary */
-	NULL,  NULL,         /* Comparison */
 	NULL,  NULL,         /* Conversion */
 	NULL,  NULL,         /* ForEach */
 	DaoType_Print,       /* Print */
 	NULL,                /* Slice */
+	NULL,                /* Compare */
+	NULL,                /* Hash */
 	NULL,                /* Copy */
 	(DaoDeleteFunction) DaoType_Delete,  /* Delete */
 	NULL                 /* HandleGC */
@@ -1904,7 +1901,6 @@ void DaoTypeKernel_Delete( DaoTypeKernel *self )
 	if( self->values ) DMap_Delete( self->values );
 	if( self->methods ) DMap_Delete( self->methods );
 	GC_DecRC( self->initRoutines );
-	GC_DecRC( self->castOperators );
 	if( self->sptree ) DaoTypeTree_Delete( self->sptree );
 	dao_free( self );
 }
@@ -1930,14 +1926,6 @@ void DaoTypeKernel_InsertInitor( DaoTypeKernel *self, DaoNamespace *ns, DaoType 
 	}
 	DRoutines_Add( self->initRoutines->overloads, routine );
 }
-void DaoTypeKernel_InsertCastor( DaoTypeKernel *self, DaoNamespace *ns, DaoType *host, DaoRoutine *routine )
-{
-	if( self->castOperators == NULL ){
-		self->castOperators = DaoRoutines_New( ns, host, NULL );
-		GC_IncRC( self->castOperators );
-	}
-	DRoutines_Add( self->castOperators->overloads, routine );
-}
 
 DaoTypeCore daoTypeKernelCore =
 {
@@ -1951,11 +1939,12 @@ DaoTypeCore daoTypeKernelCore =
 	NULL,  NULL,               /* SetItem */
 	NULL,  NULL,               /* Unary */
 	NULL,  NULL,               /* Binary */
-	NULL,  NULL,               /* Comparison */
 	NULL,  NULL,               /* Conversion */
 	NULL,  NULL,               /* ForEach */
 	NULL,                      /* Print */
 	NULL,                      /* Slice */
+	NULL,                      /* Compare */
+	NULL,                      /* Hash */
 	NULL,                      /* Copy */
 	(DaoDeleteFunction) DaoTypeKernel_Delete,  /* Delete */
 	NULL                       /* HandleGC */
@@ -2327,8 +2316,6 @@ static void DaoType_SpecMethod( DaoType *self, DaoTypeKernel *kernel, DaoRoutine
 	DaoMethods_Insert( kernel->methods, rout, nspace, self );
 	if( method->attribs & DAO_ROUT_INITOR ){
 		DaoTypeKernel_InsertInitor( kernel, nspace, self, rout );
-	}else if( method->attribs & DAO_ROUT_CASTOR ){
-		DaoTypeKernel_InsertCastor( kernel, nspace, self, rout );
 	}
 }
 
@@ -2360,7 +2347,6 @@ void DaoType_SpecializeMethods( DaoType *self )
 	if( original->kernel->sptree == NULL ) return;
 	DMutex_Lock( & mutex_methods_setup );
 	if( self->kernel == original->kernel && original->kernel && original->kernel->methods ){
-		DString name;
 		DaoNamespace *nspace = self->kernel->nspace;
 		DMap *orimeths = original->kernel->methods;
 		DMap *methods = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
@@ -2416,8 +2402,6 @@ void DaoType_SpecializeMethods( DaoType *self )
 						/* skip methods not defined in this parent type */
 						if( rout->routHost != sup->kernel->abtype ) continue;
 						DaoMethods_Insert( methods, rout, nspace, self );
-						if( !( rout->attribs & DAO_ROUT_CASTOR ) ) continue;
-						DaoTypeKernel_InsertCastor( kernel, nspace, self, rout );
 					}
 				}else{
 					DaoRoutine *rout = it->value.pRoutine;
@@ -2426,8 +2410,6 @@ void DaoType_SpecializeMethods( DaoType *self )
 					/* skip methods not defined in this parent type */
 					if( rout->routHost != sup->kernel->abtype ) continue;
 					DaoMethods_Insert( methods, rout, nspace, self );
-					if( !( rout->attribs & DAO_ROUT_CASTOR ) ) continue;
-					DaoTypeKernel_InsertCastor( kernel, nspace, self, rout );
 				}
 			}
 		}
@@ -2444,15 +2426,6 @@ void DaoType_SpecializeMethods( DaoType *self )
 		for(i=0; i<4; ++i){
 			if( quads[i] ) GC_Assign( & quads[i]->kernel, kernel );
 		}
-		name = DString_WrapChars( "(int)" );
-		it = DMap_Find( methods, & name );
-		if( it ) self->kernel->intOperators = it->value.pRoutine;
-		name = DString_WrapChars( "==" );
-		it = DMap_Find( methods, & name );
-		if( it ) self->kernel->eqOperators = it->value.pRoutine;
-		name = DString_WrapChars( "<" );
-		it = DMap_Find( methods, & name );
-		if( it ) self->kernel->ltOperators = it->value.pRoutine;
 	}
 	DMutex_Unlock( & mutex_methods_setup );
 }

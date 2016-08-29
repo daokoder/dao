@@ -2539,7 +2539,7 @@ DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 	}else if( vmc[1].c == DAO_CASE_UNORDERED ){
 		for(id=1; id<=vmc->c; id++){
 			mid = vmc + id;
-			if( DaoValue_ComparePro( opa, cst[ mid->a ], self ) ==0 ){
+			if( DaoValue_Compare( opa, cst[ mid->a ] ) ==0 ){
 				return self->topFrame->codes + mid->b;
 			}
 		}
@@ -2549,7 +2549,7 @@ DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 	while( first <= last ){
 		id = ( first + last ) / 2;
 		mid = vmc + id;
-		cmp = DaoValue_ComparePro( opa, cst[ mid->a ], self );
+		cmp = DaoValue_Compare( opa, cst[ mid->a ] );
 		if( cmp ==0 ){
 			return self->topFrame->codes + mid->b;
 		}else if( cmp <0 ){
@@ -3526,12 +3526,18 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 
 	if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ){
 		if( invarToVar == 0 ) goto FastCasting;
-		at = DaoNamespace_GetType( self->activeNamespace, va );
+		at = DaoValue_GetType( va );
 		at = DaoType_GetBaseType( at );
 		if( at == NULL ) goto FailConversion;
 		if( DaoType_IsImmutable( at ) ) goto FastCasting;
-		if( core == NULL || core->Copy == NULL ) goto FailConversion;
-		va = core->Copy( va, NULL );
+		if( va->type >= DAO_ARRAY && va->type <= DAO_TUPLE ){
+			at = DaoNamespace_MakeInvarSliceType( self->activeNamespace, at );
+			va = DaoValue_CopyContainer( va, at );
+		}else if( core != NULL && core->Copy != NULL ){
+			va = core->Copy( va, NULL );
+		}else{
+			goto FailConversion;
+		}
 		goto FastCasting;
 	}else if( ct->tid == DAO_CINVALUE ){
 		DaoCinType *cintype = (DaoCinType*) ct->aux;
@@ -4881,7 +4887,7 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 			if( tb && DaoType_MatchTo( ta, tb, NULL ) == 0 ) return;
 		}
 		for(i=0,n=items->size; i<n; i++){
-			*C = DaoValue_ComparePro( A, items->items.pValue[i], self ) ==0;
+			*C = DaoValue_Compare( A, items->items.pValue[i] ) ==0;
 			if( *C ) break;
 		}
 	}else if( B->type == DAO_MAP ){
@@ -4892,12 +4898,12 @@ void DaoProcess_DoInTest( DaoProcess *self, DaoVmCode *vmc )
 		}
 		*C = DaoMap_Find( (DaoMap*) B, A ) != NULL;
 	}else if( B->type == DAO_TUPLE && B->xTuple.subtype == DAO_RANGE ){
-		int c1 = DaoValue_ComparePro( B->xTuple.values[0], A, self );
-		int c2 = DaoValue_ComparePro( A, B->xTuple.values[1], self );
+		int c1 = DaoValue_Compare( B->xTuple.values[0], A );
+		int c2 = DaoValue_Compare( A, B->xTuple.values[1] );
 		*C = c1 <=0 && c2 <= 0;
 	}else if( B->type == DAO_TUPLE ){
 		for(i=0; i<B->xTuple.size; ++i){
-			if( DaoValue_ComparePro( A, B->xTuple.values[i], self ) == 0 ){
+			if( DaoValue_Compare( A, B->xTuple.values[i] ) == 0 ){
 				*C = 1;
 				break;
 			}
@@ -5511,11 +5517,12 @@ DaoTypeCore daoProcessCore =
 	NULL,  NULL,            /* SetItem */
 	NULL,  NULL,            /* Unary */
 	NULL,  NULL,            /* Binary */
-	NULL,  NULL,            /* Comparison */
 	NULL,  NULL,            /* Conversion */
 	NULL,  NULL,            /* ForEach */
 	NULL,                   /* Print */
 	NULL,                   /* Slice */
+	NULL,                   /* Compare */
+	NULL,                   /* Hash */
 	NULL,                   /* Copy */
 	(DaoDeleteFunction) DaoProcess_Delete,  /* Delete */
 	NULL                    /* HandleGC */

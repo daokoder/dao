@@ -811,11 +811,12 @@ DaoTypeCore daoDeviceCore =
 	NULL,  NULL,     /* SetItem */
 	NULL,  NULL,     /* Unary */
 	NULL,  NULL,     /* Binary */
-	NULL,  NULL,     /* Comparison */
 	NULL,  NULL,     /* Conversion */
 	NULL,  NULL,     /* ForEach */
 	NULL,            /* Print */
 	NULL,            /* Slice */
+	NULL,            /* Compare */
+	NULL,            /* Hash */
 	NULL,            /* Copy */
 	NULL,            /* Delete */
 	NULL             /* HandleGC */
@@ -834,11 +835,12 @@ DaoTypeCore daoStreamCore =
 	NULL,                     NULL,                  /* SetItem */
 	NULL,                     NULL,                  /* Unary */
 	NULL,                     NULL,                  /* Binary */
-	NULL,                     NULL,                  /* Comparison */
 	NULL,                     NULL,                  /* Conversion */
 	NULL,                     NULL,                  /* ForEach */
 	NULL,                                            /* Print */
 	NULL,                                            /* Slice */
+	NULL,                                            /* Compare */
+	NULL,                                            /* Hash */
 	NULL,                                            /* Copy */
 	(DaoDeleteFunction) DaoStream_Delete,            /* Delete */
 	NULL                                             /* HandleGC */

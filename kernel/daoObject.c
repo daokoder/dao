@@ -656,11 +656,12 @@ DaoTypeCore daoObjectCore =
 	DaoObject_CheckSetItem,     DaoObject_DoSetItem,     /* SetItem */
 	DaoObject_CheckUnary,       DaoObject_DoUnary,       /* Unary */
 	DaoObject_CheckBinary,      DaoObject_DoBinary,      /* Binary */
-	NULL,                       NULL,                    /* Comparison */
 	DaoObject_CheckConversion,  DaoObject_DoConversion,  /* Conversion */
 	NULL,                       NULL,                    /* ForEach */
 	DaoObject_Print,                                     /* Print */
 	NULL,                                                /* Slice */
+	NULL,                                                /* Compare */
+	NULL,                                                /* Hash */
 	NULL,                                                /* Copy */
 	DaoObject_CoreDelete,                                /* Delete */
 	NULL                                                 /* HandleGC */

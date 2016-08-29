@@ -519,11 +519,12 @@ DaoTypeCore daoInterfaceCore =
 	DaoInterface_CheckSetItem,     DaoInterface_DoSetItem,     /* SetItem */
 	DaoInterface_CheckUnary,       DaoInterface_DoUnary,       /* Unary */
 	DaoInterface_CheckBinary,      DaoInterface_DoBinary,      /* Binary */
-	NULL,                          NULL,                       /* Comparison */
 	DaoInterface_CheckConversion,  DaoInterface_DoConversion,  /* Conversion */
 	NULL,                          NULL,                       /* ForEach */
 	NULL,                                                      /* Print */
 	NULL,                                                      /* Slice */
+	NULL,                                                      /* Compare */
+	NULL,                                                      /* Hash */
 	NULL,                                                      /* Copy */
 	DaoInterface_CoreDelete,                                   /* Delete */
 	NULL                                                       /* HandleGC */
@@ -646,11 +647,12 @@ DaoTypeCore daoCinTypeCore =
 	NULL,                      NULL,                   /* SetItem */
 	NULL,                      NULL,                   /* Unary */
 	NULL,                      NULL,                   /* Binary */
-	NULL,                      NULL,                   /* Comparison */
 	NULL,                      NULL,                   /* Conversion */
 	NULL,                      NULL,                   /* ForEach */
 	NULL,                                              /* Print */
 	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
 	NULL,                                              /* Copy */
 	DaoCinType_CoreDelete,                             /* Delete */
 	NULL                                               /* HandleGC */
@@ -1006,11 +1008,12 @@ DaoTypeCore daoCinValueCore =
 	DaoCinValue_CheckSetItem,     DaoCinValue_DoSetItem,     /* SetItem */
 	DaoCinValue_CheckUnary,       DaoCinValue_DoUnary,       /* Unary */
 	DaoCinValue_CheckBinary,      DaoCinValue_DoBinary,      /* Binary */
-	NULL,                         NULL,                      /* Comparison */
 	DaoCinValue_CheckConversion,  DaoCinValue_DoConversion,  /* Conversion */
 	NULL,                         NULL,                      /* ForEach */
 	DaoCinValue_Print,                                       /* Print */
 	NULL,                                                    /* Slice */
+	NULL,                                                    /* Compare */
+	NULL,                                                    /* Hash */
 	NULL,                                                    /* Copy */
 	DaoCinValue_CoreDelete,                                  /* Delete */
 	NULL                                                     /* HandleGC */

@@ -145,7 +145,6 @@ o = (any) k
 o[0].M()
 @[test(code_01)]
 @[test(code_01)]
-{{[[Error::Type]]}} .* {{casting}}
 @[test(code_01)]
 
 
@@ -207,7 +206,6 @@ b[1] = b
 io.writeln( a == b )
 @[test(code_01)]
 @[test(code_01)]
-WARNING: recursion limit is reached for comparison!
 false
 @[test(code_01)]
 
@@ -226,6 +224,5 @@ k2 = K()
 io.writeln( k1 == k2 )
 @[test(code_01)]
 @[test(code_01)]
-WARNING: recursion limit is reached for comparison!
 false
 @[test(code_01)]
