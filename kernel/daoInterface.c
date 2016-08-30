@@ -483,8 +483,6 @@ DaoType* DaoInterface_CheckConversion( DaoType *self, DaoType *type, DaoRoutine 
 	DaoRoutine *rout;
 	DString *buffer = DString_NewChars( "(" );
 
-	printf( "DaoInterface_CheckConversion\n" );
-
 	DString_Append( buffer, type->name );
 	DString_AppendChars( buffer, ")" );
 	rout = DaoType_FindFunction( self, buffer );
@@ -500,6 +498,26 @@ DaoType* DaoInterface_CheckConversion( DaoType *self, DaoType *type, DaoRoutine 
 DaoValue* DaoInterface_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
 	return NULL;  /* The core method of the actual value will be used; */
+}
+
+DaoType* DaoInterface_CheckForEach( DaoType *self, DaoRoutine *ctx )
+{
+	DaoRoutine *rout = DaoType_FindFunctionChars( self, "for" );
+	if( rout != NULL ){
+		DaoType *type, *itype;
+		if( rout->routType->args->size != 2 ) return NULL;
+		type = rout->routType->args->items.pType[1];
+		if( type->tid == DAO_PAR_NAMED ) type = (DaoType*) type->aux;
+		if( type->tid != DAO_TUPLE || type->args->size != 2 ) return NULL;
+		itype = type->args->items.pType[0];
+		if( itype->tid != DAO_BOOLEAN ) return NULL;
+		return DaoNamespace_MakeIteratorType( ctx->nameSpace, type->args->items.pType[1] );
+	}
+	return NULL;
+}
+
+void DaoInterface_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
+{
 }
 
 void DaoInterface_CoreDelete( DaoValue *self )
@@ -520,7 +538,7 @@ DaoTypeCore daoInterfaceCore =
 	DaoInterface_CheckUnary,       DaoInterface_DoUnary,       /* Unary */
 	DaoInterface_CheckBinary,      DaoInterface_DoBinary,      /* Binary */
 	DaoInterface_CheckConversion,  DaoInterface_DoConversion,  /* Conversion */
-	NULL,                          NULL,                       /* ForEach */
+	DaoInterface_CheckForEach,     DaoInterface_DoForEach,     /* ForEach */
 	NULL,                                                      /* Print */
 	NULL,                                                      /* Slice */
 	NULL,                                                      /* Compare */

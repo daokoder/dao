@@ -120,15 +120,16 @@ DAO_DLL void DaoNamespace_AddTypeConstant( DaoNamespace *self, DString *name, Da
 
 DAO_DLL DaoType* DaoNamespace_GetType( DaoNamespace *self, DaoValue *p );
 DAO_DLL DaoType* DaoNamespace_MakeType( DaoNamespace *self, const char *name,
-		uint_t basic, DaoValue *pb, DaoType *nest[], int N );
+		uint_t tid, DaoValue *aux, DaoType *args[], int N );
 DAO_DLL DaoType* DaoNamespace_MakeType2( DaoNamespace *self, const char *name,
-		uint_t basic, DaoValue *pb, DaoType *nest[], int N );
+		uint_t tid, DaoValue *aux, DaoType *args[], int N );
 DAO_DLL DaoType* DaoNamespace_MakeRoutType( DaoNamespace *self, DaoType *routype,
 		DaoValue *vals[], DaoType *types[], DaoType *retp );
 
 DAO_DLL DaoType* DaoNamespace_MakeValueType( DaoNamespace *self, DaoValue *value );
 DAO_DLL DaoType* DaoNamespace_MakeRangeType( DaoNamespace *self, DaoType *first, DaoType *second );
 DAO_DLL DaoType* DaoNamespace_MakeRangeValueType( DaoNamespace *self, DaoValue *first, DaoValue *second );
+DAO_DLL DaoType* DaoNamespace_MakeIteratorType( DaoNamespace *self, DaoType *itype );
 
 DAO_DLL DaoType* DaoNamespace_MakeInvarSliceType( DaoNamespace *self, DaoType *type );
 

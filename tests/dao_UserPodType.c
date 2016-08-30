@@ -244,7 +244,7 @@ static void DaoxUserPodType_Print( DaoValue *self, DaoStream *stream, DMap *cycm
 	DaoStream_WriteChars( stream, "}" );
 }
 
-int DaoxUserPodType_Compare( DaoValue *self, DaoValue *other )
+int DaoxUserPodType_Compare( DaoValue *self, DaoValue *other, DMap *cycmap )
 {
 	DaoxUserPodType *left = (DaoxUserPodType*) self;
 	DaoxUserPodType *right = (DaoxUserPodType*) other;

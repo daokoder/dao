@@ -3370,6 +3370,15 @@ SkipChecking:
 				int mt1 = DaoType_MatchTo( at, bt, NULL );
 				int mt2 = DaoType_MatchTo( bt, at, NULL );
 				if( mt1 == 0 && mt2 == 0 ) goto InvalidCasting;
+			}else if( bt->tid == DAO_VARIANT ){
+				/*
+				// Casting to a variant type should only be allowed on values
+				// that are compatible to one of the item types in the variant.
+				// Such that casting to a variant type will not need to do real
+				// conversion of values, since it is not well defined which item
+				// type should be used as the target type for conversion.
+				*/
+				if( DaoType_MatchTo( at, bt, NULL ) == 0 ) goto InvalidCasting;
 			}else if( at->tid == DAO_INTERFACE ){
 				ct = bt; /* The source value could be any type with a concrete interface type; */
 			}else if( bt->tid == DAO_INTERFACE || bt->tid == DAO_CINVALUE ){
@@ -3955,6 +3964,16 @@ SkipChecking:
 		case DVM_ITER :
 			{
 				if( DaoType_LooseChecking( at ) ) break;
+				if( vmc->b > 0 ){
+					int j;
+					for(j=0; j<vmc->b; ++j){
+						if( types[opa+j]->subtid != DAO_ITERATOR ){
+							return DaoInferencer_ErrorTypeID( self, types[opa+j], DAO_ITERATOR );
+						}
+					}    
+					DaoInferencer_UpdateType( self, opc, dao_type_bool );
+					break;
+				}
 				if( at->core == NULL || at->core->CheckForEach == NULL ) goto InvalidOper;
 				ct = at->core->CheckForEach( at, self->routine );
 				if( ct == NULL ) goto InvalidOper;
@@ -3969,7 +3988,8 @@ SkipChecking:
 				if( types[opa] == NULL ) goto NotMatch;
 				if( at->tid == DAO_STRING ) goto NotMatch;
 				if( at->subtid == DAO_ENUM_SYM ) goto NotMatch;
-				if( at->tid >= DAO_ARRAY && at->tid <= DAO_TUPLE ) goto NotMatch;
+				if( at->tid >= DAO_ARRAY && at->tid < DAO_TUPLE ) goto NotMatch;
+				if( at->tid == DAO_TUPLE && at->subtid != DAO_ITERATOR ) goto NotMatch;
 				if( consts[opa] && consts[opa]->type <= DAO_COMPLEX ){
 					vmc->code =  DaoValue_IsZero( consts[opa] ) ? (int)DVM_GOTO : (int)DVM_UNUSED;
 					continue;

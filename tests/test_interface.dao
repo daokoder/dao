@@ -57,8 +57,8 @@ name
 
 interface IteratorInterface
 {
-	routine for( iter : ForIterator );
-	routine []( iter : ForIterator )=>int;
+	routine for( iter: tuple<bool,int> );
+	routine []( iter: tuple<bool,int> )=>int;
 }
 
 routine TestIteratorInterface( inter : IteratorInterface )
@@ -68,14 +68,14 @@ routine TestIteratorInterface( inter : IteratorInterface )
 
 class IteratorClass
 {
-	routine for( iter : ForIterator ){
-		iter.valid = 1;
-		iter.iterator = 0;
+	routine for( iter: tuple<bool,int> ){
+		iter[0] = true;
+		iter[1] = 0;
 	}
-	routine []( iter : ForIterator ){
-		id = (int)iter.iterator;
-		iter.valid = id + 1 < 5;
-		iter.iterator = id + 1;
+	routine []( iter: tuple<bool,int> ){
+		id = iter[1];
+		iter[0] = id + 1 < 5;
+		iter[1] = id + 1;
 		return id;
 	}
 }

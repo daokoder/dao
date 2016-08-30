@@ -134,6 +134,13 @@ DaoProcess* DaoProcess_New( DaoVmSpace *vms )
 	self->list = DList_New(0);
 	self->pauseType = 0;
 	self->active = 0;
+
+	self->cinvalue.type = DAO_CINVALUE;
+	self->cinvalue.cintype = NULL;
+	self->cinvalue.value = NULL;
+	self->cinvalue.refCount = 1;
+	self->cinvalue.cycRefCount = 1;
+
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
@@ -2916,9 +2923,9 @@ DaoTuple* DaoProcess_PutTuple( DaoProcess *self, int size )
 	if( N < type->args->size ) return NULL;
 	tuple = DaoProcess_GetTuple( self, type, N, size > 0 );
 	if( size > 0 ) return tuple;
-	if( M < size ) return NULL;
+	if( M < N ) return NULL;
 	for(i=0; i<N; i++) DaoTuple_SetItem( tuple, values[M-N+i], i );
-	DList_Erase( self->factory, M - size, -1 );
+	DList_Erase( self->factory, M - N, -1 );
 	return tuple;
 }
 DaoType* DaoProcess_GetReturnType( DaoProcess *self )
@@ -3492,15 +3499,11 @@ int DaoProcess_DoMath( DaoProcess *self, DaoVmCode *vmc, DaoValue *C, DaoValue *
 void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 {
 	int i, n, mt, mt2, invarToVar = 0;
-	int top = self->factory->size;
 	DaoType *at = self->activeTypes[ vmc->a ];
 	DaoType *ct = self->activeTypes[ vmc->c ];
 	DaoValue *va = self->activeValues[ vmc->a ];
 	DaoValue *vc = self->activeValues[ vmc->c ];
 	DaoValue **vc2 = self->activeValues + vmc->c;
-	DaoTypeCore *core;
-	DaoRoutine *meth;
-	DNode *node;
 
 	self->activeCode = vmc;
 	if( va == NULL ){
@@ -3521,88 +3524,6 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 	if( va->type == ct->tid && ct->tid <= DAO_STRING ) goto FastCasting;
 
 	invarToVar = at != NULL && at->invar != 0 && ct->invar == 0;
-
-	core = DaoValue_GetTypeCore( va );
-
-	if( ct->tid == DAO_UDT || ct->tid == DAO_ANY ){
-		if( invarToVar == 0 ) goto FastCasting;
-		at = DaoValue_GetType( va );
-		at = DaoType_GetBaseType( at );
-		if( at == NULL ) goto FailConversion;
-		if( DaoType_IsImmutable( at ) ) goto FastCasting;
-		if( va->type >= DAO_ARRAY && va->type <= DAO_TUPLE ){
-			at = DaoNamespace_MakeInvarSliceType( self->activeNamespace, at );
-			va = DaoValue_CopyContainer( va, at );
-		}else if( core != NULL && core->Copy != NULL ){
-			va = core->Copy( va, NULL );
-		}else{
-			goto FailConversion;
-		}
-		goto FastCasting;
-	}else if( ct->tid == DAO_CINVALUE ){
-		DaoCinType *cintype = (DaoCinType*) ct->aux;
-
-		if( va->type == DAO_CINVALUE && va->xCinValue.cintype == cintype ) goto FastCasting;
-		if( va->type == DAO_CINVALUE && DaoType_MatchValue( ct, va, NULL ) ) goto FastCasting;
-
-		at = DaoNamespace_GetType( self->activeNamespace, va );
-		if( cintype->target == at || DaoType_MatchTo( cintype->target, at, NULL ) >= DAO_MT_EQ ){
-			if( vc && vc->type == DAO_CINVALUE && vc->xCinValue.refCount == 1 ){
-				GC_Assign( & vc->xCinValue.cintype, cintype );
-				DaoValue_Move( va, & vc->xCinValue.value, cintype->target );
-				return;
-			}
-			va = (DaoValue*) DaoCinValue_New( cintype, va );
-			GC_Assign( vc2, va );
-			return;
-		}
-		goto FailConversion;
-	}else if( ct->tid == DAO_INTERFACE ){
-		DaoInterface *inter = (DaoInterface*) ct->aux;
-		if( ct->aux == NULL ){ /* type "interface": */
-			if( va->type != DAO_INTERFACE ) goto FailConversion;
-			goto FastCasting;
-		}
-		if( va->type == DAO_CINVALUE && DaoType_MatchValue( ct, va, NULL ) ) goto FastCasting;
-
-		at = DaoNamespace_GetType( self->activeNamespace, va );
-		if( inter->concretes ){
-			DaoCinType *cintype = DaoInterface_GetConcrete( inter, at );
-			if( cintype ){
-				va = (DaoValue*) DaoCinValue_New( cintype, va );
-				goto FastCasting;
-			}
-		}
-		switch( va->type ){
-		case DAO_OBJECT  :
-			va = (DaoValue*) va->xObject.rootObject;
-			at = va->xObject.defClass->objType;
-			break;
-		case DAO_CSTRUCT :
-		case DAO_CDATA :
-			if( va->xCstruct.object ){
-				va = (DaoValue*) va->xCstruct.object->rootObject;
-				at = va->xObject.defClass->objType;
-			}
-			break;
-		}
-		/* Automatic binding when casted to an interface: */
-		if( DaoInterface_BindTo( inter, at, NULL ) == 0 ) goto FailConversion;
-		goto FastCasting;
-	}else if( ct->tid == DAO_VARIANT ){
-		DaoType *best = NULL;
-		int max = DAO_MT_NOT;
-		for(i=0,n=ct->args->size; i<n; i++){
-			DaoType *itype = ct->args->items.pType[i];
-			int mt = DaoType_MatchValue( itype, va, NULL );
-			if( mt > max ){
-				best = itype;
-				max = mt;
-			}
-		}
-		if( best == NULL ) goto FailConversion;
-		ct = best;
-	}
 
 	va = DaoValue_Convert( va, ct, invarToVar, self );
 	if( self->status == DAO_PROCESS_STACKED ) return;
@@ -4074,70 +3995,18 @@ FastCallError:
 
 static void DaoProcess_InitIter( DaoProcess *self, DaoVmCode *vmc )
 {
-	DString *name = self->string;
 	DaoValue *va = self->activeValues[ vmc->a ];
 	DaoValue *vc = self->activeValues[ vmc->c ];
-	DaoType *type = DaoNamespace_GetType( self->activeNamespace, va );
-	DaoInteger *index;
-	DaoTuple *iter;
-	int rc = DAO_ERROR_FIELD_ABSENT;
+	DaoTypeCore *core = DaoValue_GetTypeCore( va );
 
 	if( va == NULL || va->type == 0 ) return;
+	if( core == NULL || core->CheckForEach == NULL || core->DoForEach == NULL ) return;
 
 	if( vc == NULL || vc->type != DAO_TUPLE || vc->xTuple.subtype != DAO_ITERATOR ){
 		vc = (DaoValue*) DaoProcess_PutTuple( self, 2 );
 	}
-
-	iter = & vc->xTuple;
-	iter->values[0]->xBoolean.value = 0;
-	DaoTuple_SetItem( iter, dao_none_value, 1 );
-
-	index = DaoInteger_New(0);
-	GC_IncRC( index );
-	if( va->type == DAO_STRING ){
-		iter->values[0]->xInteger.value = va->xString.value->size >0;
-		DaoValue_Copy( (DaoValue*) index, iter->values + 1 );
-#ifdef DAO_WITH_NUMARRAY
-	}else if( va->type == DAO_ARRAY ){
-		iter->values[0]->xInteger.value = DaoArray_GetWorkSize( (DaoArray*) va ) >0;
-		DaoValue_Copy( (DaoValue*) index, iter->values + 1 );
-#endif
-	}else if( va->type == DAO_LIST ){
-		iter->values[0]->xInteger.value = va->xList.value->size >0;
-		DaoValue_Copy( (DaoValue*) index, iter->values + 1 );
-	}else if( va->type == DAO_MAP ){
-		DNode *node = DMap_First( va->xMap.value );
-		DaoValue **data = iter->values;
-		data[0]->xInteger.value = va->xMap.value->size >0;
-		if( data[1]->type != DAO_CDATA || data[1]->xCdata.ctype != dao_type_cdata ){
-			/*
-			// Do not use DaoWrappers_MakeCdata()!
-			// DaoWrappers_MakeCdata() will make a wrapper that is unique
-			// for the wrapped data "node", since the wrapped data will be
-			// updated during each iteration, the correspondence between
-			// wrapped data and the wrapper will be invalidated.
-			// As a consequence, nested for-in loop on the same map will
-			// not work!
-			*/
-			DaoCdata *it = DaoCdata_Wrap( dao_type_cdata, node );
-			GC_Assign( & data[1], it );
-		}else{
-			data[1]->xCdata.data = node;
-		}
-	}else if( va->type == DAO_TUPLE ){
-		iter->values[0]->xInteger.value = va->xTuple.size >0;
-		DaoValue_Copy( (DaoValue*) index, iter->values + 1 );
-	}else{
-		DString_SetChars( name, "for" );
-		if( va->type == DAO_OBJECT ){
-//			rc = DaoObject_InvokeMethod( & va->xObject, NULL, self, name, & vc, 1, 1, 0 );
-		}else{
-			DaoRoutine *meth = DaoType_FindFunction( type, name );
-			if( meth ) rc = DaoProcess_Call( self, meth, va, &vc, 1 );
-		}
-		if( rc ) DaoProcess_RaiseError( self, daoExceptionNames[rc], name->chars );
-	}
-	GC_DecRC( index );
+	core->DoForEach( va, (DaoTuple*) vc, self );
+	if( self->status == DAO_PROCESS_STACKED ) DaoProcess_InterceptReturnValue( self );
 }
 static void DaoProcess_TestIter( DaoProcess *self, DaoVmCode *vmc )
 {

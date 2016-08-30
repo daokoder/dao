@@ -35,6 +35,7 @@
 #include"daoVmcode.h"
 #include"daoType.h"
 #include"daoThread.h"
+#include"daoInterface.h"
 #include"daoOptimizer.h"
 
 
@@ -147,6 +148,7 @@ struct DaoProcess
 	DList          *list;
 	DString        *string;
 	DaoComplex      number;
+	DaoCinValue     cinvalue;
 };
 
 /* Create a new virtual machine process */

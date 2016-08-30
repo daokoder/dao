@@ -227,7 +227,7 @@ static DaoFunctionEntry userTypeMeths[]=
 };
 
 
-int DaoxUserType_Compare( DaoValue *self, DaoValue *other )
+int DaoxUserType_Compare( DaoValue *self, DaoValue *other, DMap *cycmap )
 {
 	DaoxUserType *left = (DaoxUserType*) self;
 	DaoxUserType *right = (DaoxUserType*) other;

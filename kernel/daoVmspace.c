@@ -238,8 +238,8 @@ extern DaoTypeCore  daoTypeKernelCore;
 extern DaoTypeCore  daoDeviceCore;
 extern DaoTypeCore  daoStreamCore;
 
-extern DaoTypeCore  futureTyper;
-extern DaoTypeCore  channelTyper;
+extern DaoTypeCore  daoFutureCore;
+extern DaoTypeCore  daoChannelCore;
 
 
 DaoTypeCore* DaoVmSpace_GetTypeCore( short type )
@@ -2783,6 +2783,9 @@ DaoVmSpace* DaoInit( const char *command )
 
 	dao_type_tuple = DaoNamespace_DefineType( coreNS, "tuple<...>", NULL );
 
+	dao_type_iterator_int = DaoNamespace_MakeIteratorType( coreNS, dao_type_int );
+	dao_type_iterator_any = DaoNamespace_MakeIteratorType( coreNS, dao_type_any );
+
 	DaoNamespace_SetupType( coreNS, & daoStringCore,  dao_type_string );
 	DaoNamespace_SetupType( coreNS, & daoComplexCore, dao_type_complex );
 
@@ -2829,12 +2832,11 @@ DaoVmSpace* DaoInit( const char *command )
 	DaoNamespace_AddConstValue( NS, "stdio",  (DaoValue*) vms->stdioStream );
 	DaoNamespace_AddConstValue( NS, "stderr", (DaoValue*) vms->errorStream );
 
-#warning "threading"
 	NS = DaoVmSpace_GetNamespace( vms, "mt" );
 	DaoNamespace_AddConstValue( vms->daoNamespace, "mt", (DaoValue*) NS );
-	//dao_type_future  = DaoNamespace_WrapType( NS, & futureTyper, DAO_CSTRUCT, 0 );
+	dao_type_future  = DaoNamespace_WrapType( NS, & daoFutureCore, DAO_CSTRUCT, 0 );
 #ifdef DAO_WITH_CONCURRENT
-	//dao_type_channel = DaoNamespace_WrapType( NS, & channelTyper, DAO_CSTRUCT, 0 );
+	dao_type_channel = DaoNamespace_WrapType( NS, & daoChannelCore, DAO_CSTRUCT, 0 );
 	DaoNamespace_WrapFunctions( NS, dao_mt_methods );
 #endif
 

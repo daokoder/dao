@@ -751,11 +751,84 @@ DaoValue* DaoValue_Convert( DaoValue *self, DaoType *type, int copy, DaoProcess 
 {
 	DaoTypeCore *core = DaoValue_GetTypeCore( self );
 	DaoValue *value = self;
+	DaoType *at;
 
-	if( !(type->tid & DAO_ANY) ){
-		if( core == NULL || core->DoConversion == NULL ) return NULL;
-		value = core->DoConversion( self, type, copy, proc );
+	if( type->tid & DAO_ANY ){
+		if( copy == 0 ) return value;
+		at = DaoValue_GetType( value );
+		at = DaoType_GetBaseType( at );
+		if( at == NULL ) return NULL;
+		if( DaoType_IsImmutable( at ) ) return value;
+		if( value->type >= DAO_ARRAY && value->type <= DAO_TUPLE ){
+			at = DaoNamespace_MakeInvarSliceType( proc->activeNamespace, at );
+			return DaoValue_CopyContainer( value, at );
+		}else if( core != NULL && core->Copy != NULL ){
+			return core->Copy( value, NULL );
+		}
+		return NULL;
+	}else if( type->tid == DAO_CINVALUE ){
+		DaoCinType *cintype = (DaoCinType*) type->aux;
+
+		if( value->type == DAO_CINVALUE && value->xCinValue.cintype == cintype ) return value;
+		if( value->type == DAO_CINVALUE && DaoType_MatchValue( type, value, NULL ) ) return value;
+
+		at = DaoNamespace_GetType( proc->activeNamespace, value );
+		if( cintype->target == at || DaoType_MatchTo( cintype->target, at, NULL ) >= DAO_MT_EQ ){
+			proc->cinvalue.cintype = cintype;
+			proc->cinvalue.value = value;
+			return (DaoValue*) & proc->cinvalue;
+		}
+		return NULL;
+	}else if( type->tid == DAO_INTERFACE ){
+		DaoInterface *inter = (DaoInterface*) type->aux;
+		if( type->aux == NULL ){ /* type "interface": */
+			if( value->type != DAO_INTERFACE ) return NULL;
+			return value;
+		}
+		if( value->type == DAO_CINVALUE && DaoType_MatchValue( type, value, NULL ) ) return value;
+
+		at = DaoNamespace_GetType( proc->activeNamespace, value );
+		if( inter->concretes ){
+			DaoCinType *cintype = DaoInterface_GetConcrete( inter, at );
+			if( cintype ){
+				proc->cinvalue.cintype = cintype;
+				proc->cinvalue.value = value;
+				return (DaoValue*) & proc->cinvalue;
+			}
+		}
+		switch( value->type ){
+		case DAO_OBJECT  :
+			value = (DaoValue*) value->xObject.rootObject;
+			at = value->xObject.defClass->objType;
+			break;
+		case DAO_CSTRUCT :
+		case DAO_CDATA :
+			if( value->xCstruct.object ){
+				value = (DaoValue*) value->xCstruct.object->rootObject;
+				at = value->xObject.defClass->objType;
+			}
+			break;
+		}
+		/* Automatic binding when casted to an interface: */
+		if( DaoInterface_BindTo( inter, at, NULL ) == 0 ) return value;
+		return NULL;
+	}else if( type->tid == DAO_VARIANT ){
+		DaoType *best = NULL;
+		int i, n, max = DAO_MT_NOT;
+		for(i=0,n=type->args->size; i<n; i++){
+			DaoType *itype = type->args->items.pType[i];
+			int mt = DaoType_MatchValue( itype, self, NULL );
+			if( mt > max ){
+				best = itype;
+				max = mt;
+			}
+		}
+		if( best == NULL ) return NULL;
+		return DaoValue_Convert( self, best, copy, proc );
 	}
+
+	if( core == NULL || core->DoConversion == NULL ) return NULL;
+	value = core->DoConversion( self, type, copy, proc );
 
 	if( value == NULL || value->type <= DAO_ENUM || copy == 0 ) return value;
 

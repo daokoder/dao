@@ -1837,6 +1837,27 @@ DaoType* DaoNamespace_MakeRangeValueType( DaoNamespace *self, DaoValue *first, D
 	return DaoNamespace_MakeRangeType( self, tp1, tp2 );
 }
 
+DaoType* DaoNamespace_MakeIteratorType( DaoNamespace *self, DaoType *itype )
+{
+	DaoType *types[2] = {NULL, NULL};
+	DaoType *type, *type2;
+	DString *name;
+
+	types[0] = dao_type_bool;
+	types[1] = itype;
+	type = DaoNamespace_MakeType( self, "tuple", DAO_TUPLE, NULL, types, 2 );
+	name = DString_Copy( type->name );
+	DString_AppendChars( name, "::subtype::iterator" ); /* Distinguish with normal tuple types; */
+	type2 = DaoNamespace_FindType( self, name );
+	if( type2 == NULL ){
+		type = type2 = DaoType_Copy( type );
+		type->subtid = DAO_ITERATOR;
+		DaoNamespace_AddType( self, name, type );
+	}
+	DString_Delete( name );
+	return type2;
+}
+
 DaoType* DaoNamespace_MakeInvarSliceType( DaoNamespace *self, DaoType *type )
 {
 	int i, tid = type->tid;

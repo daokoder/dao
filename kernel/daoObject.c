@@ -593,6 +593,34 @@ static DaoValue* DaoObject_DoConversion( DaoValue *self, DaoType *type, int copy
 	return NULL;
 }
 
+DaoType* DaoObject_CheckForEach( DaoType *self, DaoRoutine *ctx )
+{
+	DaoType *hostype = ctx->routHost;
+	DaoClass *host = hostype != NULL && hostype->tid == DAO_OBJECT ? (DaoClass*) hostype->aux : NULL;
+	DaoRoutine *rout = DaoClass_FindMethod( (DaoClass*) self->aux, "for", host );
+	if( rout != NULL ){
+		DaoType *type, *itype;
+		if( rout->routType->args->size != 2 ) return NULL;
+		type = rout->routType->args->items.pType[1];
+		if( type->tid == DAO_PAR_NAMED ) type = (DaoType*) type->aux;
+		if( type->tid != DAO_TUPLE || type->args->size != 2 ) return NULL;
+		itype = type->args->items.pType[0];
+		if( itype->tid != DAO_BOOLEAN ) return NULL;
+		return DaoNamespace_MakeIteratorType( ctx->nameSpace, type->args->items.pType[1] );
+	}
+	return NULL;
+}
+
+void DaoObject_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
+{
+	DaoObject *object = (DaoObject*) self;
+	DaoClass *host = proc->activeObject ? proc->activeObject->defClass : NULL;
+	DaoRoutine *rout = DaoClass_FindMethod( object->defClass, "for", host );
+	if( rout != NULL ){
+		DaoProcess_PushCallable( proc, rout, self, (DaoValue**) & iterator, 1 );
+	}
+}
+
 void DaoObject_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	int ec = 0;
@@ -657,7 +685,7 @@ DaoTypeCore daoObjectCore =
 	DaoObject_CheckUnary,       DaoObject_DoUnary,       /* Unary */
 	DaoObject_CheckBinary,      DaoObject_DoBinary,      /* Binary */
 	DaoObject_CheckConversion,  DaoObject_DoConversion,  /* Conversion */
-	NULL,                       NULL,                    /* ForEach */
+	DaoObject_CheckForEach,     DaoObject_DoForEach,     /* ForEach */
 	DaoObject_Print,                                     /* Print */
 	NULL,                                                /* Slice */
 	NULL,                                                /* Compare */

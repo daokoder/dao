@@ -840,7 +840,7 @@ static DaoFuture* DaoCallServer_GetNextFuture()
 		/*
 		// DaoValue_Move() should be used instead of GC_Assign() for thread safety.
 		// Because using GC_Assign() here, may caused "future->message" of primitive
-		// type being deleted, right after DaoFuture_GetGCFields() has retrieved it
+		// type being deleted, right after DaoFuture_HandleGC() has retrieved it
 		// for GC scanning.
 		 */
 		DaoValue_Move( event->message, & future->message, NULL );
@@ -1176,7 +1176,7 @@ static void CHANNEL_Receive( DaoProcess *proc, DaoValue *par[], int N )
 	}
 }
 
-static DaoFunctionEntry channelMeths[] =
+static DaoFunctionEntry daoChannelMeths[] =
 {
 	{ CHANNEL_New,      "Channel<@V>( cap = 1 )" },
 	{ CHANNEL_Buffer,   "buffer( self: Channel<@V> ) => int" },
@@ -1186,22 +1186,42 @@ static DaoFunctionEntry channelMeths[] =
 	{ CHANNEL_Receive,  "receive( self: Channel<@V>, timeout: float = -1 ) => tuple<data: @V|none, status: enum<received,timeout,finished>>" },
 	{ NULL, NULL }
 };
+
 static void DaoChannel_Delete( DaoChannel *self )
 {
 	DaoCstruct_Free( (DaoCstruct*) self );
 	DList_Delete( self->buffer );
 	dao_free( self );
 }
-static void DaoChannel_GetGCFields( void *p, DList *vs, DList *lists, DList *ms, int rm )
+
+static void DaoChannel_HandleGC( DaoValue *p, DList *vs, DList *lists, DList *ms, int rm )
 {
 	DaoChannel *self = (DaoChannel*) p;
 	DList_Append( lists, self->buffer );
 }
 
-DaoTypeCore channelTyper =
+
+DaoTypeCore daoChannelCore =
 {
-//	"Channel<@V>", NULL, NULL, (DaoFunctionEntry*) channelMeths, {0}, {0},
-//	(FuncPtrDel) DaoChannel_Delete, DaoChannel_GetGCFields
+	"Channel<@V>",                                     /* name */
+	{ NULL },                                          /* bases */
+	NULL,                                              /* numbers */
+	daoChannelMeths,                                   /* methods */
+	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
+	NULL,                      NULL,                   /* SetField */
+	NULL,                      NULL,                   /* GetItem */
+	NULL,                      NULL,                   /* SetItem */
+	NULL,                      NULL,                   /* Unary */
+	NULL,                      NULL,                   /* Binary */
+	NULL,                      NULL,                   /* Conversion */
+	NULL,                      NULL,                   /* ForEach */
+	NULL,                                              /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
+	NULL,                                              /* Copy */
+	(DaoDeleteFunction) DaoChannel_Delete,             /* Delete */
+	DaoChannel_HandleGC                                /* HandleGC */
 };
 
 
@@ -1252,8 +1272,8 @@ DaoFuture* DaoFuture_New( DaoType *type, int vatype )
 	if( vatype ) type = DaoType_Specialize( dao_type_future, & type, type != NULL );
 	DaoCstruct_Init( (DaoCstruct*) self, type );
 	GC_IncRC( dao_none_value );
-	self->state = DAO_CALL_PAUSED;
 	self->value = dao_none_value;
+	self->state = DAO_CALL_PAUSED;
 	return self;
 }
 static void DaoFuture_Delete( DaoFuture *self )
@@ -1298,14 +1318,14 @@ static void FUTURE_Wait( DaoProcess *proc, DaoValue *par[], int N )
 	DaoProcess_RaiseError( proc, NULL, "Invalid future value" );
 #endif
 }
-static DaoFunctionEntry futureMeths[] =
+static DaoFunctionEntry daoFutureMeths[] =
 {
 	{ FUTURE_Value,   "value( self: Future<@V> )=>@V" },
 	{ FUTURE_Wait,    "wait( self: Future<@V>, timeout: float = -1 ) => bool" },
 	{ NULL, NULL }
 };
 
-static void DaoFuture_GetGCFields( void *p, DList *values, DList *lists, DList *maps, int remove )
+static void DaoFuture_HandleGC( DaoValue *p, DList *values, DList *lists, DList *maps, int remove )
 {
 	DaoFuture *self = (DaoFuture*) p;
 	if( self->value ) DList_Append( values, self->value );
@@ -1324,10 +1344,27 @@ static void DaoFuture_GetGCFields( void *p, DList *values, DList *lists, DList *
 	}
 }
 
-DaoTypeCore futureTyper =
-{
-//	"Future<@V=none>", NULL, NULL, (DaoFunctionEntry*) futureMeths, {0}, {0},
-//	(FuncPtrDel) DaoFuture_Delete, DaoFuture_GetGCFields
-};
 
+DaoTypeCore daoFutureCore =
+{
+	"Future<@V=none>",                                 /* name */
+	{ NULL },                                          /* bases */
+	NULL,                                              /* numbers */
+	daoFutureMeths,                                    /* methods */
+	DaoCstruct_CheckGetField,  DaoCstruct_DoGetField,  /* GetField */
+	NULL,                      NULL,                   /* SetField */
+	NULL,                      NULL,                   /* GetItem */
+	NULL,                      NULL,                   /* SetItem */
+	NULL,                      NULL,                   /* Unary */
+	NULL,                      NULL,                   /* Binary */
+	NULL,                      NULL,                   /* Conversion */
+	NULL,                      NULL,                   /* ForEach */
+	NULL,                                              /* Print */
+	NULL,                                              /* Slice */
+	NULL,                                              /* Compare */
+	NULL,                                              /* Hash */
+	NULL,                                              /* Copy */
+	(DaoDeleteFunction) DaoFuture_Delete,              /* Delete */
+	DaoFuture_HandleGC                              /* HandleGC */
+};
 

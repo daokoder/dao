@@ -305,23 +305,21 @@ struct DaoVirtualModule
 // Standard operations on the type can be provided as function pointers
 // in the type definition.
 //
-// These function pointers are grouped into pairs per operation, where
-// the first is the type checking function used at compiling time, and
-// the second is the execution function called at running time to do the
-// operation. The type checking function should return the resulting type
-// on success and null otherwise.
+// Some of these function pointers are grouped into pairs per operation,
+// where the first is the type checking function used at compiling time,
+// and the second is the execution function called at running time to do
+// the operation. The type checking function should return the resulting
+// type on success and null otherwise.
 //
-// For user defined types, these function pointers can be set to nulls
-// to use the default implementations, which will use operator overloading
-// from the member methods to do type checkings and running time executions.
+// For user defined types, the default implementations are provided and
+// declared as DaoCstruct_CheckXXX() and DaoCstruct_DoXXX() functions in
+// this file. These default implementations use operator overloading from
+// the member methods to do type checkings and running time executions.
 //
 // At running time, the executing DaoProcess object is usually passed to the
 // execution functions, so that these functions can put the resulting values
 // directly on the process stack. Otherwise, they should just return the results,
 // and let the VM to put them on the stack if necessary.
-//
-// However, for the comparison and conversion functions, the DaoProcess could
-// be NULL when their host types are used as map and hash map keys.
 */
 struct DaoTypeCore
 {
@@ -368,7 +366,7 @@ struct DaoTypeCore
 	int (*DoSetItem)( DaoValue *self, DaoValue *index[], int N, DaoValue *value, DaoProcess *proc );
 	/*
 	// Functions for SETI, SETDI and SETMI:
-	// The should return zero on success and error code otherwise;
+	// It should return zero on success and error code otherwise;
 	*/
 
 	DaoType* (*CheckUnary)( DaoType *self, DaoVmCode *op, DaoRoutine *rout );
@@ -420,11 +418,14 @@ struct DaoTypeCore
 	void (*Slice)( DaoValue *self );
 	/*
 	// Function to complete slice operation:
+	// This allows to implement a slicing result as a view on the original data object,
+	// and complete the slice when needed. See the numeric array type DaoArray for example;
 	*/
 
 	int (*Compare)( DaoValue *self, DaoValue *other, DMap *cycmap );
 	/*
 	// Function to compare values:
+	// Mainly for list sorting and map key ordering;
 	*/
 
 	size_t (*Hash)( DaoValue *self );

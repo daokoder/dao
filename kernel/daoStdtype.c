@@ -1172,7 +1172,10 @@ static DaoValue* DaoComplex_DoConversion( DaoValue *self, DaoType *type, int cop
 
 static void DaoComplex_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
-	DaoStream_WriteFloat( stream, self->xFloat.value );
+	DaoStream_WriteFloat( stream, self->xComplex.value.real );
+	if( self->xComplex.value.imag >= -0.0 ) DaoStream_WriteChars( stream, "+" );
+	DaoStream_WriteFloat( stream, self->xComplex.value.imag );
+	DaoStream_WriteChars( stream, "C" );
 }
 
 DaoTypeCore daoComplexCore =
@@ -1484,7 +1487,7 @@ DaoType* DaoString_CheckForEach( DaoType *self, DaoRoutine *ctx )
 void DaoString_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 {
 	iterator->values[0]->xBoolean.value = self->xString.value->size > 0;
-	iterator->values[0]->xInteger.value = 0;
+	iterator->values[1]->xInteger.value = 0;
 }
 
 static void DaoString_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
@@ -2946,7 +2949,7 @@ static DaoType* DaoList_CheckGetItem( DaoType *self, DaoType *index[], int N, Da
 	if( N == 0 ) return self;
 	if( N != 1 ) return NULL;
 	if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_ITERATOR ){
-		if( DaoType_CheckNumberIndex( index[0]->args->items.pType[1] ) ) return dao_type_int;
+		if( DaoType_CheckNumberIndex( index[0]->args->items.pType[1] ) ) return itype;
 	}else if( index[0]->tid == DAO_TUPLE && index[0]->subtid == DAO_RANGE ){
 		if( DaoType_CheckRangeIndex( index[0] ) ) return self;
 	}else{
@@ -3180,7 +3183,7 @@ DaoType* DaoList_CheckForEach( DaoType *self, DaoRoutine *ctx )
 void DaoList_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 {
 	iterator->values[0]->xBoolean.value = self->xList.value->size > 0;
-	iterator->values[0]->xInteger.value = 0;
+	iterator->values[1]->xInteger.value = 0;
 }
 
 static void DaoList_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
@@ -5115,6 +5118,7 @@ DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 	GC_IncRC( type );
 	self->size = size;
 	self->ctype = type;
+	self->subtype = type->subtid;
 #ifdef DAO_USE_GC_LOGGER
 	DaoObjectLogger_LogNew( (DaoValue*) self );
 #endif
@@ -5125,6 +5129,8 @@ DaoTuple* DaoTuple_Create( DaoType *type, int N, int init )
 		if( it->tid == DAO_PAR_NAMED || it->tid == DAO_PAR_VALIST ) it = & it->aux->xType;
 		if( it->tid >= DAO_NONE && it->tid <= DAO_ENUM ){
 			DaoValue_Move( it->value, self->values + i, it );
+		}else if( it->tid == DAO_ANY ){
+			DaoValue_Move( dao_none_value, self->values + i, it );
 		}
 	}
 	return self;
@@ -5538,7 +5544,7 @@ DaoType* DaoTuple_CheckForEach( DaoType *self, DaoRoutine *ctx )
 void DaoTuple_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
 {
 	iterator->values[0]->xBoolean.value = self->xTuple.size > 0;
-	iterator->values[0]->xInteger.value = 0;
+	iterator->values[1]->xInteger.value = 0;
 }
 
 static void DaoTuple_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
