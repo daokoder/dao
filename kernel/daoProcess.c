@@ -3768,20 +3768,6 @@ void DaoProcess_DoCall2( DaoProcess *self, DaoVmCode *vmc, DaoValue *caller, Dao
 		if( rout->pFunc ){
 			DaoProcess_DoCxxCall( self, vmc, NULL, rout, selfpar, params, types, npar, 0 );
 		}else{
-			if( rout->attribs & DAO_ROUT_DECORATOR ){
-#ifdef DAO_WITH_DECORATOR
-				DaoRoutine *drout = (DaoRoutine*) rout;
-				if( params[0]->type != DAO_ROUTINE ){
-					DaoProcess_RaiseError( self, "Param", "invalid function decoration" );
-					return;
-				}
-				drout = DaoRoutine_Decorate( & params[0]->xRoutine, drout, params, npar, 0 );
-				DaoProcess_PutValue( self, (DaoValue*) drout );
-#else
-				DaoProcess_RaiseError( self, NULL, getCtInfo( DAO_DISABLED_DECORATOR ) );
-#endif
-				return;
-			}
 			DaoProcess_PrepareCall( self, rout, selfpar, params, types, npar, vmc, 0 );
 		}
 	}else if( caller->type == DAO_CLASS ){

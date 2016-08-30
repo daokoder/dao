@@ -65,8 +65,6 @@ static const char* const dao_asm_names[] =
 	"ASM_VALUE"     ,
 	"ASM_EVAL"      ,
 	"ASM_BASES"     ,
-	"ASM_DECOS"     ,
-	"ASM_PATTERNS"  ,
 	"ASM_CONSTS"    ,
 	"ASM_TYPES"     ,
 	"ASM_CODE"      ,
@@ -1005,8 +1003,6 @@ DaoByteBlock* DaoByteBlock_EncodeCtype( DaoByteBlock *self, DaoCtype *ctype, Dao
 }
 
 
-void DaoByteBlock_EncodeDecoPatterns( DaoByteBlock *self, DList *patterns );
-
 DaoByteBlock* DaoByteBlock_AddNamespace( DaoByteBlock *self, DaoNamespace *ns, DString *name, DaoNamespace *defOrScope )
 {
 	DaoByteBlock *dsblock = DaoByteBlock_FindObjectBlock( self, (DaoValue*) defOrScope );
@@ -1040,7 +1036,6 @@ DaoByteBlock* DaoByteBlock_AddRoutineBlock( DaoByteBlock *self, DaoRoutine *rout
 		rout->end[6] = routine == routine->routHost->aux->xClass.initRoutine;
 	}
 	rout->end[7] = perm;
-	if( routine->body ) DaoByteBlock_EncodeDecoPatterns( rout, routine->body->decoTargets );
 	return rout;
 }
 DaoByteBlock* DaoByteBlock_AddClassBlock( DaoByteBlock *self, DaoClass *klass, int perm )
@@ -1063,7 +1058,6 @@ DaoByteBlock* DaoByteBlock_AddClassBlock( DaoByteBlock *self, DaoClass *klass, i
 	data = DaoByteBlock_NewBlock( block, DAO_ASM_BASES );
 	DaoByteBlock_EncodeValues2( self, klass->mixinBases );
 	DaoByteBlock_AddBlockIndexData( data, 4, klass->mixinBases->size );
-	DaoByteBlock_EncodeDecoPatterns( block, klass->decoTargets );
 	return block;
 }
 DaoByteBlock* DaoByteBlock_AddInterfaceBlock( DaoByteBlock *self, DaoInterface *inter, int pm )
@@ -1204,48 +1198,6 @@ DaoByteBlock* DaoByteBlock_EncodeVerbatim( DaoByteBlock *self, DString *tag, DSt
 	DaoByteCoder_EncodeUInt16( newBlock->begin+6, line );
 	return newBlock;
 }
-DaoByteBlock* DaoByteBlock_EncodeDecorators( DaoByteBlock *self, DList *decos, DList *pars )
-{
-	int i;
-	DaoByteBlock *decoBlock = DaoByteBlock_NewBlock( self, DAO_ASM_DECOS );
-	DaoByteBlock *data = decoBlock;
-	for(i=0; i<decos->size; i++){
-		DaoRoutine *decoFunc = decos->items.pRoutine[i];
-		DaoList *decoParam = (DaoList*) pars->items.pValue[i];
-		DaoByteBlock *b1 = DaoByteBlock_FindObjectBlock( self, (DaoValue*) decoFunc );
-		DaoByteBlock *b2 = DaoByteBlock_FindObjectBlock( self, (DaoValue*) decoParam );
-		if( b1 == NULL || b2 == NULL ) continue;
-		DaoByteBlock_InsertBlockIndex( data, data->begin, b1 );
-		DaoByteBlock_InsertBlockIndex( data, data->begin+2, b2 );
-		data = DaoByteBlock_NewBlock( decoBlock, DAO_ASM_DATA );
-	}
-	if( data != decoBlock ){
-		DaoByteBlock_CopyToEndFromBegin( decoBlock, data );
-		DaoByteCoder_Remove( self->coder, data, decoBlock );
-	}
-	return decoBlock;
-}
-void DaoByteBlock_EncodeDecoPatterns( DaoByteBlock *self, DList *patterns )
-{
-	DaoByteBlock *ruleBlock, *pat, *data;
-	int i, j;
-	if( patterns == NULL || patterns->size == 0 ) return;
-	ruleBlock = data = DaoByteBlock_NewBlock( self, DAO_ASM_PATTERNS );
-	for(i=0; i<patterns->size; i+=4){
-		if( i ) data = DaoByteBlock_NewBlock( ruleBlock, DAO_ASM_DATA );
-		for(j=0; j<4; ++j){
-			if( i+j >= patterns->size ) break;
-			pat = DaoByteBlock_EncodeString( self, patterns->items.pString[i+j] );
-			DaoByteBlock_InsertBlockIndex( data, data->begin+2*j, pat );
-		}
-	}
-	if( data != ruleBlock ){
-		DaoByteBlock_CopyToEndFromBegin( ruleBlock, data );
-		DaoByteCoder_Remove( self->coder, data, ruleBlock );
-	}
-	DaoByteBlock_MoveToBack( self, ruleBlock );
-}
-
 
 
 static int DaoByteCoder_UpdateIndex( DaoByteCoder *self, DaoByteBlock *block )
@@ -1293,7 +1245,6 @@ void DaoByteCoder_FinalizeRoutineBlock( DaoByteCoder *self, DaoByteBlock *block 
 	DaoByteBlock *cur, *typebk, *namebk, *defblock;
 	DaoByteBlock *newbk, *consts, *types, *code;
 	DaoByteBlock *pb = block->first;
-	DaoByteBlock *decos = NULL;
 	DaoRoutine *routine;
 	DMap *id2names;
 	DMap *varblocks;
@@ -1303,10 +1254,6 @@ void DaoByteCoder_FinalizeRoutineBlock( DaoByteCoder *self, DaoByteBlock *block 
 	int i, N;
 
 	if( block->type != DAO_ASM_ROUTINE ) return;
-
-	for(pb=block->first; pb; pb=pb->next){
-		if( pb->type == DAO_ASM_DECOS ) decos = pb;
-	}
 
 	routine = (DaoRoutine*) block->value;
 	if( routine->body == NULL ) return;
@@ -1456,7 +1403,6 @@ void DaoByteCoder_FinalizeRoutineBlock( DaoByteCoder *self, DaoByteBlock *block 
 		block->last = code;
 	}
 	DMap_Delete( id2names );
-	if( decos != NULL ) DaoByteBlock_MoveToBack( block, decos );
 }
 static void DaoByteCoder_FinalizeEncoding( DaoByteCoder *self, DaoByteBlock *block )
 {
@@ -2352,31 +2298,7 @@ static void DaoByteCoder_DecodeBases( DaoByteCoder *self, DaoByteBlock *block )
 	}
 	DList_Erase( self->ivalues, D, -1 );
 }
-static void DaoByteCoder_DecodePatterns( DaoByteCoder *self, DaoByteBlock *block )
-{
-	uint_t i, D = self->ivalues->size;
-	DaoByteBlock_GetAllValues( self, block, 4, -1, 1 );
-	if( self->error ) return;
-	if( block->parent->type == DAO_ASM_CLASS ){
-		DaoClass *klass = DaoValue_CastClass( block->parent->value );
-		if( klass->decoTargets == NULL ) klass->decoTargets = DList_New( DAO_DATA_STRING );
-		for(i=D; i<self->ivalues->size; ++i){
-			DString *pat = self->ivalues->items.pValue[i]->xString.value;
-			DList_Append( klass->decoTargets, pat );
-		}
-	}else if( block->parent->type == DAO_ASM_ROUTINE ){
-		DaoRoutine *routine = DaoValue_CastRoutine( block->parent->value );
-		DaoRoutineBody *body = routine->body;
-		if( body->decoTargets == NULL ) body->decoTargets = DList_New( DAO_DATA_STRING );
-		for(i=D; i<self->ivalues->size; ++i){
-			DString *pat = self->ivalues->items.pValue[i]->xString.value;
-			DList_Append( routine->body->decoTargets, pat );
-		}
-	}else{
-		DaoByteCoder_Error( self, block, "Invalid scope!" );
-	}
-	DList_Erase( self->ivalues, D, -1 );
-}
+
 static void DaoByteCoder_DecodeInterface( DaoByteCoder *self, DaoByteBlock *block )
 {
 	uint_t A = DaoByteCoder_DecodeUInt16( block->begin );
@@ -2440,7 +2362,6 @@ static void DaoByteCoder_DecodeClass( DaoByteCoder *self, DaoByteBlock *block )
 	}
 	DaoClass_UpdateMixinConstructors( klass );
 	DaoClass_UpdateVirtualMethods( klass );
-	DaoClass_UseMixinDecorators( klass );
 	/* Check inferred attributes: */
 	if( klass->attribs != (C & ~(DAO_CLS_INVAR|DAO_CLS_ASYNCHRONOUS)) ){
 		DaoByteCoder_Error( self, block, "Class attributes not matching!" );
@@ -2676,43 +2597,8 @@ static void DaoByteCoder_DecodeRoutine( DaoByteCoder *self, DaoByteBlock *block 
 
 	ret = DaoByteCoder_VerifyRoutine( self, block );
 	if( self->error ) return;
-
-	for(pb=block->first; pb; pb = pb->next){
-		DaoValue *selfpar = NULL;
-		DaoValue *params[DAO_MAX_PARAM+1];
-		DaoObject object, *obj = & object;
-		if( pb->type != DAO_ASM_DECOS ) continue;
-#ifdef DAO_WITH_DECORATOR
-		DaoByteCoder_DecodeChunk2222( pb->begin, ids, ids+1, ids+2, ids+3 );
-		if( routine->routHost ){
-			/* To circumvent the default object issue for type matching: */
-			object = *(DaoObject*) routine->routHost->value;
-			selfpar = (DaoValue*) obj;
-		}
-		params[0] = (DaoValue*) routine;
-		for(i=0; i<4 && ids[i] && ids[i+1]; i+=2){
-			DaoByteBlock *B1, *B2;
-			DaoRoutine *decoFunc;
-			DaoList *decoParam;
-			int j, n;
-			B1 = DaoByteCoder_LookupBlock3( self, pb, ids[i], DAO_ROUTINE, "routine" );
-			B2 = DaoByteCoder_LookupBlock3( self, pb, ids[+1], DAO_LIST, "list" );
-			if( self->error ) return;
-			decoFunc = DaoValue_CastRoutine( B1->value );
-			decoParam = DaoValue_CastList( B2->value );
-			n = decoParam->value->size;
-			for(j=0; j<n; j++) params[j+1] = decoParam->value->items.pValue[j];
-			decoFunc = DaoRoutine_ResolveX( decoFunc, selfpar, NULL, params, NULL, n+1, 0 );
-			if( decoFunc == NULL || DaoRoutine_Decorate( routine, decoFunc, params, n+1, 1 ) == NULL ){
-				DaoByteCoder_Error( self, block, "Routine decoration failed!" );
-				return;
-			}
-		}
-#else
-		DaoByteCoder_Error( self, block, "Decorator is not enabled!" );
-#endif
-	}
 }
+
 static void DaoByteCoder_DecodeRoutineConsts( DaoByteCoder *self, DaoByteBlock *block )
 {
 	DaoByteBlock *pb = block->first;
@@ -3261,8 +3147,6 @@ static void DaoByteCoder_DecodeBlock( DaoByteCoder *self, DaoByteBlock *block )
 	case DAO_ASM_TYPEFOR   : DaoByteCoder_DecodeTypeFor( self, block ); break;
 	case DAO_ASM_TYPEIN    : DaoByteCoder_DecodeTypeIn( self, block ); break;
 	case DAO_ASM_BASES     : DaoByteCoder_DecodeBases( self, block ); break;
-	case DAO_ASM_PATTERNS  : DaoByteCoder_DecodePatterns( self, block ); break;
-	case DAO_ASM_DECOS : break;
 	default: break;
 	}
 }
@@ -3543,7 +3427,6 @@ void DaoByteCoder_PrintBlock( DaoByteCoder *self, DaoByteBlock *block, int space
 		break;
 	case DAO_ASM_TYPE :
 	case DAO_ASM_BASES :
-	case DAO_ASM_DECOS :
 	case DAO_ASM_CONSTS :
 	case DAO_ASM_TYPES :
 		DaoByteCoder_DecodeChunk2222( block->begin, & A, & B, & C, & D );

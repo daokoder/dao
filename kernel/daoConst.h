@@ -184,10 +184,9 @@ enum DaoCallMode
 	DAO_CALL_NOSELF = (1<<9),  /* call without implicit self; */
 	DAO_CALL_EXPAR  = (1<<10), /* expand the last parameter of tuple type; */
 	DAO_CALL_BLOCK  = (1<<11), /* call with code block; */
-	DAO_CALL_DECSUB = (1<<12), /* call decorated function; */
-	DAO_CALL_ASYNC  = (1<<13), /* asynchronous call; */
-	DAO_CALL_TAIL   = (1<<14), /* may do tail call; */
-	DAO_CALL_FAST   = (1<<15)  /* may do fast call; */
+	DAO_CALL_ASYNC  = (1<<12), /* asynchronous call; */
+	DAO_CALL_TAIL   = (1<<13), /* may do tail call; */
+	DAO_CALL_FAST   = (1<<14)  /* may do fast call; */
 };
 enum DaoProcessPauseType
 {
@@ -224,14 +223,13 @@ enum DaoRoutineAttrib
 	DAO_ROUT_DEFER     = (1<<4),   /* defer block as a closure */
 	DAO_ROUT_DEFER_RET = (1<<5),   /* defer block that may return values */
 	DAO_ROUT_CODESECT  = (1<<6),   /* code section routine */
-	DAO_ROUT_DECORATOR = (1<<7),   /* function decorator */
-	DAO_ROUT_INITOR    = (1<<8),   /* class/ctype constructor */
-	DAO_ROUT_CASTOR    = (1<<9),   /* user defined casting method */
-	DAO_ROUT_MIXIN     = (1<<10),  /* methods from mixin */
-	DAO_ROUT_MAIN      = (1<<11),  /* main function */
-	DAO_ROUT_PRIVATE   = (1<<12),  /* private method */
-	DAO_ROUT_PROTECTED = (1<<13),  /* protected method */
-	DAO_ROUT_REUSABLE  = (1<<14)   /* stack data for the routine is reusable */
+	DAO_ROUT_INITOR    = (1<<7),   /* class/ctype constructor */
+	DAO_ROUT_CASTOR    = (1<<8),   /* user defined casting method */
+	DAO_ROUT_MIXIN     = (1<<9),   /* methods from mixin */
+	DAO_ROUT_MAIN      = (1<<10),  /* main function */
+	DAO_ROUT_PRIVATE   = (1<<11),  /* private method */
+	DAO_ROUT_PROTECTED = (1<<12),  /* protected method */
+	DAO_ROUT_REUSABLE  = (1<<13)   /* stack data for the routine is reusable */
 };
 
 enum DaoConstEvalMode
@@ -368,7 +366,6 @@ enum DaoCtInfoId
 	DAO_INVALID_UNCLOSED_SCOPE ,
 	DAO_INVALID_SCOPE_ENDING ,
 	DAO_INVALID_FUNCTIONAL ,
-	DAO_INVALID_DECO_PATTERN ,
 	DAO_INVALID_DECLARATION ,
 	DAO_INVALID_DEFINITION ,
 	DAO_INVALID_ENUM_DEFINITION ,
@@ -376,7 +373,6 @@ enum DaoCtInfoId
 	DAO_INVALID_FUNCTION_DEFINITION ,
 	DAO_INVALID_NAMESPACE_DEFINITION ,
 	DAO_INVALID_INTERFACE_DEFINITION ,
-	DAO_INVALID_FUNCTION_DECORATION ,
 	DAO_INVALID_INTERFACE_TARGET ,
 	DAO_INVALID_PARENT_INTERFACE ,
 	DAO_INVALID_PARENT_CLASS ,
@@ -414,9 +410,7 @@ enum DaoCtInfoId
 	DAO_TYPE_EXPECTED ,
 	DAO_TYPE_NO_DEFAULT ,
 	DAO_ROUT_NEED_RETURN_TYPE ,
-	DAO_ROUT_INVALID_DECORATOR ,
 	DAO_ROUT_INVALID_OPERATOR ,
-	DAO_ROUT_INVALID_DECO_PARAM ,
 	DAO_ROUT_INVALID_RETURN ,
 	DAO_ROUT_NEED_IMPLEMENTATION ,
 	DAO_ROUT_REDUNDANT_IMPLEMENTATION ,
@@ -437,7 +431,6 @@ enum DaoCtInfoId
 	DAO_LOAD_CYCLIC ,
 	DAO_DISABLED_REGEX ,
 	DAO_DISABLED_NUMARRAY ,
-	DAO_DISABLED_DECORATOR ,
 	DAO_CTW_LOAD_INVALID ,
 	DAO_CTW_LOAD_INVA_MOD_NAME ,
 	DAO_CTW_LOAD_FAILED ,

@@ -96,7 +96,6 @@ void DaoClass_Delete( DaoClass *self )
 	DArray_Delete( self->ranges );
 	DList_Delete( self->references );
 	if( self->interMethods ) DMap_Delete( self->interMethods );
-	if( self->decoTargets ) DList_Delete( self->decoTargets );
 
 	DString_Delete( self->className );
 	dao_free( self );
@@ -926,84 +925,7 @@ void DaoClass_DeriveObjectData( DaoClass *self )
 	DList_Delete( parents );
 	DList_Delete( offsets );
 }
-int DList_MatchAffix( DList *self, DString *name )
-{
-	daoint i, pos;
-	if( self == NULL ) return 0;
-	for(i=0; i<self->size; ++i){
-		DString tmp, *pat = self->items.pString[i];
-		daoint pos = DString_FindChar( pat, '~', 0 );
-		if( pos < 0 ){
-			if( DString_EQ( pat, name ) ) return 1;
-			continue;
-		}
-		if( pos ){
-			tmp = *pat;
-			tmp.size = pos;
-			if( DString_Find( name, & tmp, 0 ) != 0 ) continue;
-		}
-		if( pos < pat->size-1 ){
-			tmp = DString_WrapChars( pat->chars + pos + 1 );
-			if( DString_RFind( name, & tmp, -1 ) != (name->size - 1) ) continue;
-		}
-		return 1;
-	}
-	return 0;
-}
-int DaoClass_UseMixinDecorators( DaoClass *self )
-{
-	int bl = 1;
-#ifdef DAO_WITH_DECORATOR
-	daoint i, j, k;
-	DaoObject object = {0};
-	DaoObject *obj = & object;
 
-	object.type = DAO_OBJECT;
-	object.defClass = self;
-
-	/*
-	// Apply the decorators from mixins only to the methods defined in this class.
-	// Two reasons for doing this:
-	// 1. Mixins are only presented once in the current class, so when the mixins
-	//    are composed of mixins, they are flatten in the current class.
-	//    The order in which they are arranged in the current class is not obvious,
-	//    if the decorators are allowed to decorate the methods from mixins, the
-	//    result may be quite confusing;
-	// 2. If the methods from mixins are allowed to be decorated, such decoration
-	//    will not be written to bytecode file. Because when a class is written
-	//    to a bytecode file, only its own data are encoded and saved (this is
-	//    necessary to properly handle module loading). As a result, when a class
-	//    is loaded from a bytecode file, it will obtain an un-decorated version
-	//    of the methods from the mixins.
-	*/
-	for(j=self->cstMixinEnd-1; j>=self->cstMixinStart; --j){
-		DaoRoutine *deco = (DaoRoutine*) self->constants->items.pConst[j]->value;
-		DString *decoName = deco->routName;
-
-		if( deco->type != DAO_ROUTINE || deco->body == NULL ) continue;
-		if( !(deco->attribs & DAO_ROUT_DECORATOR) ) continue; /* Not a decorator; */
-		if( deco->body->decoTargets == NULL || deco->body->decoTargets->size == 0 ) continue;
-
-		for(k=self->cstParentEnd; k<self->constants->size; ++k){
-			DaoValue *cst = self->constants->items.pConst[k]->value;
-			DaoRoutine *rout = (DaoRoutine*) cst;
-			DaoRoutine *deco2;
-
-			if( rout->type != DAO_ROUTINE || rout->body == NULL ) continue;
-			if( rout->attribs & (DAO_ROUT_CODESECT|DAO_ROUT_DECORATOR) ) continue;
-			if( rout->routHost != self->objType ) continue;
-
-			deco2 = DaoRoutine_ResolveX( deco, (DaoValue*) obj, NULL, & cst, NULL, 1, 0 );
-			if( deco2 == NULL ) continue;
-			if( DList_MatchAffix( deco2->body->decoTargets, rout->routName ) == 0 ) continue;
-			bl = bl && DaoRoutine_Decorate( rout, deco2, & cst, 1, 1 ) != NULL;
-			if( bl == 0 ) break;
-		}
-		if( bl == 0 ) break;
-	}
-#endif
-	return bl;
-}
 void DaoClass_UpdateAttributes( DaoClass *self )
 {
 	DNode *node;

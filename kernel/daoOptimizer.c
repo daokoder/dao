@@ -720,9 +720,6 @@ static void DaoOptimizer_InitNodeVIA( DaoOptimizer *self, DaoCnode *node )
 		for(i=0; i<self->routine->parCount; ++i){
 			DList_Append( self->array3, IntToPointer(i) );
 		}
-		if( (self->routine->attribs & DAO_ROUT_DECORATOR) && partypes->size ){
-			DList_Append( self->array3, IntToPointer(self->routine->parCount) );
-		}
 		Dao_IntsUnion( self->array3, self->array2, node->list, -1 );
 	}
 }

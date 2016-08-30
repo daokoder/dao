@@ -190,10 +190,6 @@ DaoParser* DaoParser_New()
 
 	self->scopeOpenings = DList_New(0);
 	self->scopeClosings = DList_New(0);
-	self->decoFuncs   = DList_New(0);
-	self->decoFuncs2  = DList_New(0);
-	self->decoParams  = DList_New( DAO_DATA_VALUE );
-	self->decoParams2 = DList_New( DAO_DATA_VALUE );
 	self->refCountedList = DList_New( DAO_DATA_VALUE );
 	self->nsDefines = NULL;
 	self->nsSymbols = NULL;
@@ -249,10 +245,6 @@ void DaoParser_Delete( DaoParser *self )
 	DString_Delete( self->string2 );
 	DString_Delete( self->str );
 	DArray_Delete( self->tokenTriples );
-	DList_Delete( self->decoFuncs );
-	DList_Delete( self->decoFuncs2 );
-	DList_Delete( self->decoParams );
-	DList_Delete( self->decoParams2 );
 	DList_Delete( self->refCountedList );
 	DList_Delete( self->toks );
 	DList_Delete( self->scopeOpenings );
@@ -274,7 +266,6 @@ void DaoParser_Delete( DaoParser *self )
 	if( self->nsDefines ) DList_Delete( self->nsDefines );
 	if( self->nsSymbols ) DaoLexer_Delete( self->nsSymbols );
 	if( self->argName ) DaoToken_Delete( self->argName );
-	if( self->decoArgName ) DaoToken_Delete( self->decoArgName );
 	if( self->uplocs ) DArray_Delete( self->uplocs );
 	if( self->outers ) DArray_Delete( self->outers );
 	if( self->allConsts ) DMap_Delete( self->allConsts );
@@ -327,8 +318,6 @@ void DaoParser_Reset( DaoParser *self )
 	DString_Reset( self->str, 0 );
 
 	self->typeItems->size = 0;
-	self->decoFuncs->size = 0;
-	self->decoFuncs2->size = 0;
 	self->toks->size = 0;
 
 	self->scopeOpenings->size = 0;
@@ -348,8 +337,6 @@ void DaoParser_Reset( DaoParser *self )
 	self->returnType = NULL;
 	self->vmcValue = NULL;
 
-	DList_Clear( self->decoParams );
-	DList_Clear( self->decoParams2 );
 	DList_Clear( self->refCountedList );
 	DList_Clear( self->switchTables );
 	DList_Clear( self->switchNames );
@@ -369,9 +356,7 @@ void DaoParser_Reset( DaoParser *self )
 	if( self->outers ) DArray_Clear( self->outers );
 	if( self->allConsts ) DMap_Reset( self->allConsts );
 	if( self->argName ) DaoToken_Delete( self->argName );
-	if( self->decoArgName ) DaoToken_Delete( self->decoArgName );
 	self->argName = NULL;
-	self->decoArgName = NULL;
 
 	DMap_Clear( self->initTypes );
 	DMap_Reset( self->table );
@@ -1057,26 +1042,6 @@ static DaoType* DaoParser_MakeParTypeHolder( DaoParser *self, DString *name )
 }
 DaoToken* DaoToken_Copy( DaoToken *self );
 
-static int DaoParser_ParseDecoTargets( DaoParser *self, int start, int to, DList *targets )
-{
-	DaoToken **tks = self->tokens->items.pToken;
-	int i = start;
-	while( i <= to && (tks[i]->name == DTOK_IDENTIFIER || tks[i]->name == DTOK_TILDE) ){
-		DString *pat = (DString*) DList_PushBack( targets, & tks[i]->string );
-		int expecting = tks[i]->name == DTOK_IDENTIFIER ? DTOK_TILDE : DTOK_IDENTIFIER;
-		int expecting2 = tks[i]->name == DTOK_IDENTIFIER ? DTOK_IDENTIFIER : 0;
-		if( ++i <= to && tks[i]->name == expecting ){
-			DString_Append( pat, & tks[i]->string );
-			if( ++i <= to && tks[i]->name == expecting2 ){
-				DString_Append( pat, & tks[i++]->string );
-			}
-		}
-		if( tks[i]->name != DTOK_COMMA ) break;
-		i += 1;
-	}
-	if( tks[i]->name != DTOK_LCB ) return -1;
-	return i;
-}
 static int DaoParser_ExtractRoutineBody( DaoParser *self, DaoParser *parser, int left )
 {
 	DaoRoutine *routine = parser->routine;
@@ -1163,10 +1128,7 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	mbs = DaoParser_GetString( self );
 	pname = DaoParser_GetString( self );
 	nested = DaoParser_GetArray( self );
-	if( nameTok->name == DTOK_ID_THTYPE && isconstru == 0 ){
-		routine->attribs |= DAO_ROUT_DECORATOR;
-		DString_AppendChar( pname, '@' );
-	}
+
 	DString_AppendChars( pname, "routine<" );
 	routine->parCount = 0;
 	if( tokens[start+1+(tokens[start+1]->name==DKEY_INVAR)]->name == DKEY_SELF ) selfpar = 1;
@@ -1237,20 +1199,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 			MAP_Insert( DaoParser_CurrentSymbolTable( module ), tks, module->regCount );
 			DaoParser_PushRegister( module );
 			routine->parCount ++;
-			if( (routine->attribs & DAO_ROUT_DECORATOR) && i == start + 1 ){
-				module->invarDecoArg = 0;
-				if( i+3 >= right ) goto ErrorInvalidDecoParam;
-				if( tokens[i+1]->name != DTOK_LB ) goto ErrorInvalidDecoParam;
-				if( tokens[i+2]->name == DKEY_INVAR ){
-					module->invarDecoArg = 1;
-					i += 1;
-				}
-				if( tokens[i+2]->name != DTOK_IDENTIFIER ) goto ErrorInvalidDecoParam;
-				if( tokens[i+3]->name != DTOK_RB ) goto ErrorInvalidDecoParam;
-				module->decoArgName = DaoToken_Copy( tokens[i+2] );
-				tki2 = tokens[i+4]->name;
-				i += 3;
-			}
 		}
 		if( type && type->tid == DAO_PAR_VALIST ){
 			e1 = i;  e2 = right;
@@ -1377,7 +1325,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	if( right+1 < size && tokens[right+1]->name == DTOK_FIELD ){
 		e1 += 1;
 		start = right + 1;
-		if( routine->attribs & DAO_ROUT_DECORATOR ) goto ErrorInvalidReturn;
 		if( isconstru ) goto ErrorConstructorReturn; /* class constructor should not return a value */
 		retype = DaoParser_ParseType( self, start + 1, self->tokens->size-1, & right, NULL );
 		if( retype == NULL ) goto ErrorInvalidTypeForm;
@@ -1468,10 +1415,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 	/* one parser might be used to compile multiple C functions: */
 	if( routine->body == NULL ) DMap_Reset( module->allConsts );
 
-	/* Resever enough space for default parameters for function decoration: */
-	if( (routine->attribs & DAO_ROUT_DECORATOR) && routine->routConsts->value->size < DAO_MAX_PARAM )
-		DList_Resize( routine->routConsts->value, DAO_MAX_PARAM, NULL );
-
 	if( routine->body == NULL || right+1 >= size ) return right;
 
 	if( isconstru ){
@@ -1482,16 +1425,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 		goto ErrorRoutine;
 	}
 	right += 1;
-	if( tokens[right]->name == DKEY_FOR ){
-		DaoRoutineBody *body = routine->body;
-		ec = DAO_INVALID_DECO_PATTERN;
-		if( self->hostClass == NULL ) goto ErrorRoutine;
-		if( !(routine->attribs & DAO_ROUT_DECORATOR) ) goto ErrorRoutine;
-		if( body->decoTargets == NULL ) body->decoTargets = DList_New( DAO_DATA_STRING );
-		right = DaoParser_ParseDecoTargets( self, right+1, size-1, body->decoTargets );
-		if( right < 0 ) goto ErrorRoutine;
-		ec = 0;
-	}
 	if( tokens[right]->name != DTOK_LCB ) return right - 1;
 
 	if( module->hostCinType && selfpar ){
@@ -1512,7 +1445,6 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 ErrorInvalidOperator: ec = DAO_ROUT_INVALID_OPERATOR; goto ErrorRoutine;
 ErrorConstructorReturn: ec = DAO_ROUT_INVALID_RETURN; goto ErrorRoutine;
 ErrorNeedReturnType:  ec = DAO_ROUT_NEED_RETURN_TYPE; goto ErrorRoutine;
-ErrorInvalidDecoParam:   ec = DAO_ROUT_INVALID_DECO_PARAM; goto ErrorRoutine;
 ErrorInvalidTypeForm: ec = DAO_INVALID_TYPE_FORM; goto ErrorRoutine;
 ErrorTooManyParams:  ec = DAO_PARAM_TOO_MANY; goto ErrorRoutine;
 ErrorInvalidParam:   ec = DAO_PARAM_INVALID; goto ErrorRoutine;
@@ -2742,38 +2674,7 @@ InvalidAliasing:
 	DaoParser_Error3( self, DAO_INVALID_TYPE_ALIAS, estart );
 	return -1;
 }
-#ifdef DAO_WITH_DECORATOR
-static void DaoParser_DecorateRoutine( DaoParser *self, DaoRoutine *rout )
-{
-	DaoValue *selfpar = NULL;
-	DaoValue *params[DAO_MAX_PARAM+1];
-	DaoObject object = {0}, *obj = & object;
-	int i, j, n, count = self->decoFuncs->size;
 
-	if( self->byteBlock && count ){
-		DaoByteBlock_EncodeDecorators( self->byteBlock, self->decoFuncs, self->decoParams );
-		return;
-	}
-
-	if( rout->routHost ){
-		object.type = DAO_OBJECT;
-		object.defClass = (DaoClass*) rout->routHost->aux;
-		selfpar = (DaoValue*) obj;
-	}
-	params[0] = (DaoValue*) rout;
-	for(i=0; i<count; i++){
-		DaoRoutine *decoFunc = self->decoFuncs->items.pRoutine[i];
-		DaoList *decoParam = (DaoList*) self->decoParams->items.pValue[i];
-		n = decoParam->value->size;
-		for(j=0; j<n; j++) params[j+1] = decoParam->value->items.pValue[j];
-		decoFunc = DaoRoutine_ResolveX( decoFunc, selfpar, NULL, params, NULL, n+1, 0 );
-		if( decoFunc == NULL || DaoRoutine_Decorate( rout, decoFunc, params, n+1, 1 ) == NULL ){
-			DaoParser_Error( self, DAO_INVALID_FUNCTION_DECORATION, rout->routName );
-			return;
-		}
-	}
-}
-#endif
 static DaoParser* DaoParser_NewRoutineParser( DaoParser *self, int start, int attribs )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -2801,8 +2702,6 @@ static DaoParser* DaoParser_NewRoutineParser( DaoParser *self, int start, int at
 	parser->hostInter = self->hostInter;
 	parser->hostCinType = self->hostCinType;
 	parser->levelBase = self->levelBase + self->lexLevel + 1;
-	DList_Assign( parser->decoFuncs, self->decoFuncs2 );
-	DList_Assign( parser->decoParams, self->decoParams2 );
 	return parser;
 }
 static DaoRoutine* DaoParser_CheckDeclared( DaoParser *self, DaoRoutine *newrout, DaoRoutine *old )
@@ -2833,7 +2732,7 @@ static DaoRoutine* DaoParser_CheckDeclared( DaoParser *self, DaoRoutine *newrout
 }
 /*
 // Parse routines:
-// 'routine' { Identifier '::' } ( RoutineSig | CodeBlockSig | DecoratorSig )
+// 'routine' { Identifier '::' } ( RoutineSig | CodeBlockSig )
 // 'operator' { Identifier '::' } OverloadableOperator ParamReturn
 //
 // NOTES:
@@ -3259,8 +3158,6 @@ static int DaoParser_CompileRoutines( DaoParser *self )
 	self->routCompilable->size = 0;
 	return error == 0;
 }
-int DList_MatchAffix( DList *self, DString *name );
-int DaoClass_UseMixinDecorators( DaoClass *self );
 static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, int storeType )
 {
 	DaoToken **tokens = self->tokens->items.pToken;
@@ -3349,22 +3246,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	start ++; /* token after class name. */
 	if( start > to ) goto ErrorClassDefinition;
 
-	/* Apply aspects (to normal classes only): */
-	if( klass->className->chars[0] != '@' ){
-		DNode *it;
-		for(it=DMap_First(NS->lookupTable); it; it=DMap_Next(NS->lookupTable,it)){
-			int id = LOOKUP_ID( it->value.pInt );
-			DaoClass *mixin = (DaoClass*) NS->constants->items.pConst[id]->value;
-			if( LOOKUP_ST( it->value.pInt ) != DAO_GLOBAL_CONSTANT ) continue;
-			if( LOOKUP_UP( it->value.pInt ) > 1 ) continue; /* skip indirectly loaded; */
-			if( mixin->type != DAO_CLASS ) continue;
-			if( mixin->parent != NULL ) continue;
-			if( mixin->className->chars[0] != '@' ) continue; /* Not an aspect class; */
-			if( DList_MatchAffix( mixin->decoTargets, klass->className ) == 0 ) continue;
-			DaoClass_AddMixinClass( klass, mixin );
-		}
-	}
-
 	if( start <= to && tokens[start]->name == DTOK_LB ){
 		int rb = DaoParser_FindPairToken( self, DTOK_LB, DTOK_RB, start, -1 );
 		unsigned char sep = DTOK_LB;
@@ -3435,14 +3316,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		}
 	}
 
-	if( tokens[start]->name == DKEY_FOR ){
-		ec = DAO_INVALID_DECO_PATTERN;
-		if( klass->className->chars[0] != '@' ) goto ErrorClassDefinition;
-		if( klass->decoTargets == NULL ) klass->decoTargets = DList_New( DAO_DATA_STRING );
-		start = DaoParser_ParseDecoTargets( self, start+1, to, klass->decoTargets );
-		if( start < 0 ) goto ErrorClassDefinition;
-		ec = 0;
-	}
 	if( self->byteBlock ){
 		parser->byteBlock = DaoByteBlock_AddClassBlock( self->byteBlock, klass, self->permission );
 		parser->byteCoder = self->byteCoder;
@@ -3511,13 +3384,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 	DaoClass_UpdateMixinConstructors( klass );
 	DaoClass_UpdateVirtualMethods( klass );
 	if( error ) return -1;
-
-	if( self->byteBlock == NULL ){
-		if( DaoClass_UseMixinDecorators( klass ) == 0 ){
-			DaoParser_Error( self, DAO_INVALID_FUNCTION_DECORATION, NULL );
-			goto ErrorClassDefinition;
-		}
-	}
 
 	return right + 1;
 ErrorClassDefinition:
@@ -3701,7 +3567,6 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 	int reg, reg1, cst = 0, topll = 0;
 	int colon, comma, last, errorStart, needName;
 	int storeType = 0, scopeType = 0;
-	int reset_decos = 0;
 	int stmtStart;
 	unsigned char tok, tkt, tki, tki2;
 
@@ -3768,10 +3633,6 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 #endif
 		if( self->warnings->size ) DaoParser_PrintWarnings( self );
 		if( self->errors->size ) goto ReturnFalse;
-		if( reset_decos && self->decoFuncs2->size ){
-			DList_Clear( self->decoFuncs2 );
-			DList_Clear( self->decoParams2 );
-		}
 		if( self->enumTypes->size ) DList_Clear( self->enumTypes );
 		stmtStart = errorStart = start;
 		if( ! self->isClassBody ){
@@ -3833,74 +3694,6 @@ static int DaoParser_ParseCodes( DaoParser *self, int from, int to )
 		tki = tokens[start]->name;
 		tkt = tokens[start]->type;
 		tki2 = start+1 <= to ? tokens[start+1]->name : 0;
-
-		if( tki == DTOK_ID_THTYPE ){
-#ifdef DAO_WITH_DECORATOR
-			DaoInode *back = self->vmcLast;
-			DaoRoutine *decfunc = NULL;
-			DaoList *declist = NULL;
-			DList *cid = DaoParser_GetArray( self );
-			DString *name = & tokens[start]->string;
-			reset_decos = 0;
-			reg = DaoParser_GetRegister( self, tokens[start] );
-			if( reg < 0 ) goto DecoratorError;
-			if( LOOKUP_ISCST( reg ) == 0 ) goto DecoratorError;
-			value = DaoParser_GetVariable( self, reg );
-			if( value == NULL || value->type != DAO_ROUTINE ) goto DecoratorError;
-			decfunc = & value->xRoutine;
-			declist = DaoList_New();
-			if( start+1 <= to && tokens[start+1]->name == DTOK_LB ){
-				self->curToken = start + 2;
-				enode = DaoParser_ParseExpressionList( self, DTOK_COMMA, NULL, cid );
-				if( enode.reg < 0 ) goto DecoratorError;
-				if( DaoParser_CheckTokenType( self, DTOK_RB, ")" ) == 0 ) goto DecoratorError;
-				rb = self->curToken;
-				if( enode.konst ==0 ){
-					DaoParser_Error2( self, DAO_EXPR_NEED_CONST_EXPR, start+2, rb-1, 0 );
-					goto DecoratorError;
-				}
-				if( cid->size >= DAO_MAX_PARAM ){
-					DaoParser_Error2( self, DAO_PARAM_TOO_MANY, start+2, rb-1, 0 );
-					goto DecoratorError;
-				}
-				for(k=0; k<cid->size; k++ ){
-					DaoValue *v = DaoParser_GetVariable( self, cid->items.pInt[k] );
-					DaoList_Append( declist, v );
-				}
-				start = rb;
-			}
-			if( self->byteBlock ){
-				DaoByteBlock *eval, *block = self->byteBlock;
-				DaoValue *value =(DaoValue*) decfunc;
-				int opcode = 0;
-				switch( LOOKUP_ST( reg ) ){
-				case DAO_CLASS_CONSTANT  : opcode = DVM_GETCK; break;
-				case DAO_GLOBAL_CONSTANT : opcode = DVM_GETCG; break;
-				}
-				if( opcode != 0 && DaoByteBlock_FindObjectBlock( block, value ) == NULL ){
-					DaoByteBlock *namebk = DaoByteBlock_EncodeString( block, name );
-					eval = DaoByteBlock_AddEvalBlock( block, value, opcode, 1, 0, NULL );
-					DaoByteBlock_InsertBlockIndex( eval, eval->end, namebk );
-				}
-				GC_Assign( & declist->ctype, dao_type_list_any );
-				DaoByteBlock_EncodeValue( self->byteBlock, (DaoValue*) declist );
-			}
-			DList_PushFront( self->decoFuncs2, decfunc );
-			DList_PushFront( self->decoParams2, declist );
-			DaoParser_PopCodes( self, back );
-			start ++;
-			continue;
-DecoratorError:
-			if( declist ) DaoList_Delete( declist );
-			DaoParser_Error3( self, DAO_CTW_INVA_SYNTAX, start );
-			goto ReturnFalse;
-#else
-			DaoParser_Error( self, DAO_DISABLED_DECORATOR, NULL );
-			goto ReturnFalse;
-#endif
-		}
-
-		reset_decos = 1;
 
 		/*
 		// Parsing routine definition:
@@ -4941,21 +4734,6 @@ int DaoParser_ParseRoutine( DaoParser *self )
 	GC_Assign( & routine->nameSpace, NS );
 	self->returnType = (DaoType*) routine->routType->aux;
 
-	if( (routine->attribs & DAO_ROUT_DECORATOR) && routine->routType->args->size ){
-		assert( routine->parCount == self->regCount );
-		ft = routine->routType->args->items.pType[0];
-		if( ft->attrib & DAO_TYPE_SELFNAMED ){
-			if( routine->routType->args->size == 1 ) return 0;
-			ft = routine->routType->args->items.pType[1];
-		}
-		if( ft->tid == DAO_PAR_NAMED ) ft = (DaoType*) ft->aux;
-		if( ft->tid != DAO_ROUTINE ) return 0;
-		np = ft->args->size;
-		//if( np && ft->args->items.pType[np-1]->tid == DAO_PAR_VALIST ) np -= 1;
-		tt = DaoNamespace_MakeType( NS, "tuple", DAO_TUPLE, 0, ft->args->items.pType, np );
-		if( self->invarDecoArg ) tt = DaoType_GetInvarType( tt );
-		if( DaoParser_DeclareVariable( self, self->decoArgName, 0, tt ) < 0 ) return 0;
-	}
 	if( self->argName ){
 		int tokidx = self->argName->index;
 		int opa = routine->routHost != NULL && !(routine->attribs & DAO_ROUT_STATIC);
@@ -5023,13 +4801,6 @@ int DaoParser_ParseRoutine( DaoParser *self )
 		}
 	}
 	if( DaoParser_PostParsing( self ) == 0 ) return 0;
-#ifdef DAO_WITH_DECORATOR
-	DaoParser_DecorateRoutine( self, routine );
-	if( self->errors->size ){
-		DaoParser_PrintError( self, 0, 0, NULL );
-		return 0;
-	}
-#endif
 	return 1;
 }
 
@@ -7027,15 +6798,6 @@ static DaoEnode DaoParser_ParsePrimary( DaoParser *self, int stop, int eltype )
 					DaoParser_AddCode( self, DVM_LOAD, regLast, 0, 0/*unset*/ );
 					inode = self->vmcLast;
 					extra = self->vmcLast;
-				}
-				/*
-				// Marking the call to the decorated function decorators,
-				// so that decoration can be done properly for constructors:
-				 */
-				if( routine->attribs & DAO_ROUT_DECORATOR ){
-					int mv = inode->code == DVM_MOVE || inode->code == DVM_LOAD;
-					int fp = (routine->attribs & DAO_ROUT_PARSELF) != 0;
-					if( mv && inode->a == fp ) mode |= DAO_CALL_DECSUB;
 				}
 				self->curToken += 1;
 				cid = DaoParser_GetArray( self );

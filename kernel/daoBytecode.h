@@ -368,8 +368,6 @@ enum DaoAuxOpcode
 	DAO_ASM_VALUE     ,
 	DAO_ASM_EVAL      ,
 	DAO_ASM_BASES     ,
-	DAO_ASM_DECOS     ,
-	DAO_ASM_PATTERNS  ,
 	DAO_ASM_CONSTS    ,
 	DAO_ASM_TYPES     ,
 	DAO_ASM_CODE      ,

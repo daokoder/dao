@@ -2596,7 +2596,6 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 		}
 		checkfast = DVM_CALL && ((vmc->b & 0xff00) & ~DAO_CALL_TAIL) == 0;
 		checkfast &= at->tid == DAO_ROUTINE && argc >= rout2->parCount;
-		checkfast &= !(rout2->attribs & DAO_ROUT_DECORATOR);
 		checkfast &= rout2->routHost == NULL;
 		checkfast &= rout2 == rout;
 		checkfast &= rout2->body != NULL || rout2->pFunc != NULL; /* not curry; */
@@ -2615,23 +2614,6 @@ int DaoInferencer_HandleCall( DaoInferencer *self, DaoInode *inode, int i, DMap 
 				fast &= DaoType_MatchTo( argt, part, NULL ) >= DAO_MT_EQ;
 			}
 			if( fast ) vmc->b |= DAO_CALL_FAST;
-		}
-		if( rout->attribs & DAO_ROUT_DECORATOR ){
-			ct = tp[0];
-			if( pp[0] && pp[0]->type == DAO_ROUTINE ){
-				ct = pp[0]->xRoutine.routType;
-				if( pp[0]->xRoutine.overloads ){
-					DaoType *ft = & rout->routType->args->items.pType[0]->aux->xType;
-					DaoType **pts = ft->args->items.pType;
-					int nn = ft->args->size;
-					int cc = DVM_CALL + (ft->attrib & DAO_TYPE_SELF);
-					rout = DaoRoutine_Check( (DaoRoutine*)pp[0], NULL, pts, nn, cc|((int)vmc->b<<16), errors );
-					if( rout == NULL ) goto InvalidParam;
-				}
-			}
-			DaoInferencer_UpdateType( self, opc, ct );
-			AssertTypeMatching( ct, types[opc], defs );
-			goto TryPushBlockReturnType;
 		}
 
 		if( rout2->overloads && rout2->overloads->routines->size > 1 ){
@@ -2860,12 +2842,6 @@ int DaoInferencer_HandleYieldReturn( DaoInferencer *self, DaoInode *inode, DMap 
 		tt = NULL;
 		if( routine->routType->cbtype ){
 			tt = routine->routType->cbtype;
-		}else if( routine->attribs & DAO_ROUT_DECORATOR ){
-			if( routine->routType->args->size == 0 ) goto InvalidYield;
-			tt = routine->routType->args->items.pType[0];
-			if( tt->tid == DAO_PAR_NAMED ) tt = (DaoType*) tt->aux;
-			if( tt == NULL || tt->tid != DAO_ROUTINE || tt->cbtype == NULL ) goto InvalidYield;
-			tt = tt->cbtype;
 		}else{
 			goto InvalidYield;
 		}
@@ -4634,7 +4610,7 @@ static void DaoRoutine_ReduceLocalConsts( DaoRoutine *self )
 		DMap_Insert( used, IntToPointer(i), IntToPointer(i) );
 	}
 	for(i=0; i<self->routConsts->value->size; ++i){
-		/* For reserved space in the constant list (for example, in decorators): */
+		/* For reserved space in the constant list: */
 		if( self->routConsts->value->items.pValue[i] == NULL ){
 			DMap_Insert( used, IntToPointer(i), IntToPointer(i) );
 		}
@@ -4814,8 +4790,8 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	DaoInferencer *inferencer;
 	DaoOptimizer *optimizer;
 	DaoVmSpace *vmspace = self->nameSpace->vmSpace;
-	int retc, decorator = self->attribs & DAO_ROUT_DECORATOR;
 	int notide = ! (vmspace->options & DAO_OPTION_IDE);
+	int retc;
 
 	DaoRoutine_ReduceLocalConsts( self );
 
@@ -4823,7 +4799,7 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 
 	optimizer = DaoVmSpace_AcquireOptimizer( vmspace );
 	DList_Resize( self->body->regType, self->body->regCount, NULL );
-	if( ! decorator ) DaoOptimizer_RemoveUnreachableCodes( optimizer, self );
+	DaoOptimizer_RemoveUnreachableCodes( optimizer, self );
 
 	inferencer = DaoVmSpace_AcquireInferencer( vmspace );
 	DaoInferencer_Init( inferencer, self, silent );
@@ -4831,15 +4807,9 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	retc &= DaoInferencer_DoInference( inferencer );
 	DaoVmSpace_ReleaseInferencer( vmspace, inferencer );
 
-	/*
-	// Do not optimize decorators now, because there are reverved
-	// registers for decoration, but not used in the codes.
-	// Optimization may lose those registers, and lead to error
-	// during decorator application.
-	*/
-	if( retc && ! decorator ) DaoOptimizer_Optimize( optimizer, self );
+	if( retc ) DaoOptimizer_Optimize( optimizer, self );
 	/* Maybe more unreachable code after inference and optimization: */
-	if( ! decorator ) DaoOptimizer_RemoveUnreachableCodes( optimizer, self );
+	DaoOptimizer_RemoveUnreachableCodes( optimizer, self );
 
 	if( retc && notide && daoConfig.jit && dao_jit.Compile ){
 		/* LLVMContext provides no locking guarantees: */
@@ -4853,265 +4823,3 @@ int DaoRoutine_DoTypeInference( DaoRoutine *self, int silent )
 	return retc;
 }
 
-#ifdef DAO_WITH_DECORATOR
-/*
-// Function decoration is done in the following way:
-// 1. Use the decoration parameters to find the right decorator, if overloaded;
-// 2. Use the decorator's parameter to determine the right (OLD) function, if overloaded;
-// 3. The decorator function is copied to form the basis of the result (NEW) function;
-// 4. Then the NEW function is adjusted to take the same parameters as the OLD function;
-// 5. Arguments to the decorator are stored and accessed in the same way as local constants;
-// 6. Code is added at the beginning of the NEW function to access decorator arguments;
-// 7. Code is added to create a tuple (named args) from the parameters of the NEW function;
-// 8. The registers from the decorate function will be mapped to higher indexes to reserve
-//    indexes for the parameters of the NEW function.
-*/
-DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoValue *p[], int n, int ip )
-{
-	int i, k, m;
-	int code, decolen, hasself = 0;
-	int parpass[DAO_MAX_PARAM];
-	DList *annotCodes, *added = NULL, *regmap = NULL;
-	DList *nested, *ptypes;
-	DaoValue *selfpar = NULL;
-	DaoObject object = {0}, *obj = & object;
-	DaoType *ftype, **decotypes;
-	DaoRoutine *newfn, *oldfn = self;
-	DaoVmCodeX *vmc;
-
-	/* No in place decoration of overloaded function: */
-	if( self->overloads && ip ) return NULL;
-	if( self->attribs & DAO_ROUT_DECORATOR ) return NULL;
-	if( self->overloads ){
-		DList *routs = DList_New(0);
-		for(i=0; i<self->overloads->routines->size; i++){
-			DaoRoutine *rout = self->overloads->routines->items.pRoutine[i];
-			rout = DaoRoutine_Decorate( rout, decorator, p, n, 0 );
-			if( rout ) DList_Append( routs, rout );
-		}
-		if( routs->size == 0 ){
-			DList_Delete( routs );
-			return NULL;
-		}else if( routs->size == 1 ){
-			newfn = routs->items.pRoutine[0];
-			DList_Delete( routs );
-			return newfn;
-		}
-		newfn = DaoRoutine_Copy( self, 0, 0, 1 );
-		newfn->overloads = DRoutines_New();
-		for(i=0; i<routs->size; i++) DRoutines_Add( newfn->overloads, routs->items.pRoutine[i] );
-		DList_Delete( routs );
-		return newfn;
-	}
-
-	if( self->routHost ){
-		object.type = DAO_OBJECT;
-		object.defClass = (DaoClass*) self->routHost->aux;
-		selfpar = (DaoValue*) obj;
-	}
-
-	decorator = DaoRoutine_ResolveX( decorator, selfpar, NULL, p, NULL, n, 0 );
-	if( decorator == NULL || decorator->type != DAO_ROUTINE ) return NULL;
-
-	if( oldfn->attribs & DAO_ROUT_INVAR ){
-		if( !(decorator->attribs & (DAO_ROUT_INVAR|DAO_ROUT_STATIC)) ) return NULL;
-	}
-
-	nested = decorator->routType->args;
-	decotypes = nested->items.pType;
-	decolen = nested->size;
-	if( decotypes[0]->attrib & DAO_TYPE_SELFNAMED ){
-		/* Non-static decorator can only be applied to methods of the same class: */
-		if( decorator->routHost != self->routHost ) return NULL;
-		if( decolen == 1 ) return NULL;
-		decotypes += 1;
-		decolen -= 1;
-		hasself = 1;
-	}
-	if( decolen == 0 ) return NULL;
-
-	ftype = (DaoType*) decotypes[0]->aux;
-	ptypes = ftype->args;
-	code = DVM_CALL + (ftype->attrib & DAO_TYPE_SELF);
-	/* ftype->aux is NULL for type "routine": */
-	if( ftype->aux ){
-		DList *TS = DList_New(0);
-		for(i=0; i<ptypes->size; ++i){
-			DaoType *T = ptypes->items.pType[i];
-			if( T->tid == DAO_PAR_NAMED || T->tid == DAO_PAR_DEFAULT ) T = (DaoType*) T->aux;
-			DList_Append( TS, T );
-		}
-		oldfn = DaoRoutine_ResolveX( self, NULL, NULL, NULL, TS->items.pType, TS->size, code );
-		DList_Delete( TS );
-	}
-	if( oldfn == NULL ) return NULL;
-
-	newfn = DaoRoutine_Copy( decorator, 1, 1, 1 );
-	added = DList_New( DAO_DATA_VMCODE );
-	regmap = DList_New(0);
-
-	DList_Resize( regmap, decorator->body->regCount + oldfn->parCount, 0 );
-	for(i=0,m=decorator->body->regCount; i<m; i++) regmap->items.pInt[i] = i + oldfn->parCount;
-	for(i=0,m=oldfn->parCount; i<m; i++) regmap->items.pInt[i + decorator->body->regCount] = i;
-
-	DList_Resize( newfn->body->regType, newfn->body->regCount + oldfn->parCount, NULL );
-	for(i=0,m=oldfn->routType->args->size; i<m; i++){
-		DaoType *T = oldfn->routType->args->items.pType[i];
-		if( T->tid == DAO_PAR_NAMED || T->tid == DAO_PAR_DEFAULT ) T = (DaoType*) T->aux;
-		GC_Assign( & newfn->body->regType->items.pType[i + newfn->body->regCount], T );
-		/* DList_Append( newfn->body->defLocals, oldfn->body->defLocals->items.pToken[i] ); */
-	}
-	newfn->body->regCount += oldfn->parCount;
-	annotCodes = newfn->body->annotCodes;
-	k = hasself;
-	for(i=0; i<decolen; i++) parpass[i] = 0;
-	for(i=0; i<n; i++){
-		DaoValue *pv = p[i];
-		if( i == 0 ){
-			/*
-			// This should be the function to be called from inside of the new function.
-			// If the new function does not override the old one, the old function will
-			// be called; Otherwise, the function bodies of the old and the new will be
-			// swapped, and the new function will be called.
-			*/
-			pv = (DaoValue*)(ip ? newfn : oldfn);
-		}
-		if( pv->type == DAO_PAR_NAMED ) pv = pv->xNameValue.value;
-		parpass[k] = 1;
-		DList_PushBack( added, annotCodes->items.pVoid[0] );
-		vmc = added->items.pVmc[added->size-1];
-		vmc->code = DVM_GETCL;
-		vmc->a = 0;
-		vmc->b = DaoRoutine_AddConstant( newfn, pv );
-		vmc->c = k++;
-	}
-	for(i=1; i<decolen; i++){
-		k = decotypes[i]->tid;
-		if( k == DAO_PAR_VALIST ) break;
-		if( parpass[i] ) continue;
-		if( k != DAO_PAR_DEFAULT ) continue;
-		DList_PushBack( added, annotCodes->items.pVoid[0] );
-		vmc = added->items.pVmc[added->size-1];
-		vmc->code = DVM_GETCL;
-		vmc->a = 0;
-		vmc->b = DaoRoutine_AddConstant( newfn, decorator->routConsts->value->items.pValue[i] );
-		vmc->c = i;
-	}
-	DList_PushBack( added, annotCodes->items.pVoid[0] ); /* XXX */
-	vmc = added->items.pVmc[added->size-1];
-	vmc->code = DVM_TUPLE;
-	vmc->a = decorator->body->regCount;
-	vmc->b = oldfn->parCount;
-	vmc->c = decorator->parCount;
-	if( vmc->b == 0 ) vmc->a = 0;
-	for(i=0,m=annotCodes->size; i<m; i++){
-		vmc = annotCodes->items.pVmc[i];
-		k = DaoVmCode_GetOpcodeType( (DaoVmCode*) vmc );
-		if( k == DAO_CODE_BRANCH || k == DAO_CODE_JUMP ) vmc->b += added->size;
-	}
-	DList_InsertList( annotCodes, 0, added, 0, added->size );
-	DArray_Resize( newfn->body->vmCodes, annotCodes->size );
-	for(i=0,m=annotCodes->size; i<m; i++){
-		vmc = annotCodes->items.pVmc[i];
-		newfn->body->vmCodes->data.codes[i] = *(DaoVmCode*) vmc;
-	}
-
-	GC_Assign( & newfn->routType, oldfn->routType );
-	newfn->parCount = oldfn->parCount;
-	newfn->attribs = oldfn->attribs;
-	DString_Assign( newfn->routName, oldfn->routName );
-	/* Decorator should have reserved spaces for up to DAO_MAX_PARAM default parameters: */
-	assert( newfn->routConsts->value->size >= DAO_MAX_PARAM );
-	i = oldfn->routConsts->value->size;
-	m = oldfn->parCount < i ? oldfn->parCount : i;
-	for(i=0; i<m; i++){
-		DaoValue *value = oldfn->routConsts->value->items.pValue[i];
-		if( value ) DaoValue_Copy( value, newfn->routConsts->value->items.pValue + i );
-	}
-
-	DaoRoutine_UpdateRegister( newfn, regmap );
-	for(i=0,m=annotCodes->size; i<m; i++){
-		vmc = annotCodes->items.pVmc[i];
-		if( vmc->code == DVM_CALL && (vmc->b & DAO_CALL_DECSUB) ){
-			if( vmc->b & DAO_CALL_BLOCK ){
-				DaoVmCodeX *sect = annotCodes->items.pVmc[i+2];
-				DaoVmCodeX *first = annotCodes->items.pVmc[i+3];
-				DaoType *cbtype = oldfn->routType->cbtype;
-				DaoType **cbtypes = cbtype->args->items.pType;
-				int count = cbtype->args->size;
-				if( sect->b != 0 && sect->c == 0 ){ /* [...] or [... as name]; */
-					if( first->code != DVM_TUPLE || (first->b >> 14) != DVM_ENUM_MODE2 ){
-						first = NULL;
-					}
-					if( count && cbtypes[count-1]->tid == DAO_PAR_VALIST ){
-						sect->b = DAO_MAX_PARAM;
-						sect->c = count - 1;
-					}else{
-						sect->b = sect->c = count;
-					}
-					if( first != NULL ){
-						first->b = sect->b;
-						newfn->body->vmCodes->data.codes[i+3] = *(DaoVmCode*) first;
-					}
-					newfn->body->vmCodes->data.codes[i+2] = *(DaoVmCode*) sect;
-				}
-			}
-		}
-	}
-
-	for(i=0,m=annotCodes->size; i<m; i++){
-		vmc = annotCodes->items.pVmc[i];
-		if( vmc->code == DVM_CALL && (vmc->b & DAO_CALL_DECSUB) ){
-			/*
-			// Call to the decorated function was marked with DAO_CALL_NOSELF
-			// by the type inferencer, to not pass an implicit self parameter.
-			// But for decorating constructors, it is necessary to pass the
-			// implicit self parameter, because the self parameter is not in
-			// the parameter list.
-			*/
-			if( oldfn->attribs & DAO_ROUT_INITOR ){
-				vmc->b &= ~ DAO_CALL_NOSELF; /* Allow passing implicit self; */
-				vmc->b |= DAO_CALL_INIT; /* Avoid resetting DAO_CALL_NOSELF; */
-			}
-			vmc->b &= ~ DAO_CALL_DECSUB;
-			newfn->body->vmCodes->data.codes[i] = *(DaoVmCode*) vmc;
-		}
-	}
-	if( DaoRoutine_DoTypeInference( newfn, 0 ) ==  0 ) goto ErrorDecorator;
-
-#if 0
-	printf( "###################################\n" );
-	printf( "################################### %s\n", oldfn->routName->chars );
-	printf( "###################################\n" );
-	DaoRoutine_PrintCode( decorator, decorator->nameSpace->vmSpace->errorStream );
-	DaoRoutine_PrintCode( newfn, newfn->nameSpace->vmSpace->errorStream );
-#endif
-
-	if( ip ){
-		/* For in place decoration, override the old function by swapping the function
-		// bodies and other associated data: */
-		DaoRoutineBody *body = oldfn->body;
-		DaoNamespace *ns = oldfn->nameSpace;
-		DaoList *clist = oldfn->routConsts;
-		oldfn->routConsts = newfn->routConsts;
-		oldfn->nameSpace = newfn->nameSpace;
-		oldfn->body = newfn->body;
-		newfn->routConsts = clist;
-		newfn->nameSpace = ns;
-		newfn->body = body;
-	}
-	if( decorator->body->decoratees == NULL ){
-		decorator->body->decoratees = DList_New(DAO_DATA_VALUE);
-	}
-	DList_Append( decorator->body->decoratees, newfn );
-	DList_Delete( added );
-	DList_Delete( regmap );
-
-	return newfn;
-ErrorDecorator:
-	if( added ) DList_Delete( added );
-	if( regmap ) DList_Delete( regmap );
-	DaoGC_TryDelete( (DaoValue*) newfn );
-	return NULL;
-}
-#endif

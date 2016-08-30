@@ -112,8 +112,4 @@ void DaoInferencer_Init( DaoInferencer *self, DaoRoutine *routine, int silent );
 void DaoInferencer_Reset( DaoInferencer *self );
 int DaoInferencer_DoInference( DaoInferencer *self );
 
-#ifdef DAO_WITH_DECORATOR
-DaoRoutine* DaoRoutine_Decorate( DaoRoutine *self, DaoRoutine *decorator, DaoValue *p[], int n, int ip );
-#endif
-
 #endif

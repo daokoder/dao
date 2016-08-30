@@ -224,8 +224,6 @@ void DaoRoutineBody_Delete( DaoRoutineBody *self )
 	DList_Delete( self->defLocals );
 	DList_Delete( self->annotCodes );
 	DMap_Delete( self->localVarType );
-	if( self->decoTargets ) DList_Delete( self->decoTargets );
-	if( self->decoratees ) DList_Delete( self->decoratees );
 	if( self->aux ) DaoAux_Delete( self->aux );
 	if( dao_jit.Free && self->jitData ) dao_jit.Free( self->jitData );
 	dao_free( self );
@@ -238,11 +236,6 @@ void DaoRoutineBody_CopyFields( DaoRoutineBody *self, DaoRoutineBody *other, int
 	self->source = other->source;
 	self->annotCodes = DList_Copy( other->annotCodes );
 	self->localVarType = DMap_Copy( other->localVarType );
-	if( self->decoTargets ){
-		DList_Delete( self->decoTargets );
-		self->decoTargets = NULL;
-	}
-	if( other->decoTargets ) self->decoTargets = DList_Copy( other->decoTargets );
 	DArray_Assign( self->vmCodes, other->vmCodes );
 	DList_Assign( self->regType, other->regType );
 	DList_Assign( self->simpleVariables, other->simpleVariables );

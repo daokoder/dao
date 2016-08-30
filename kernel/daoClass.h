@@ -142,8 +142,6 @@ struct DaoClass
 	DaoType  *clsType;
 	DaoType  *objType; /* GC handled in constants; */
 
-	DList_(DString*) *decoTargets;
-
 	DList_(DaoValue*) *references; /* for GC */
 
 	uint_t    attribs;

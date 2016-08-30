@@ -55,7 +55,7 @@ test_routine = daotests.AddTest( "Routine", "test_routine.dao" )
 test_routine.AddTest( "test_anonymous_routine.dao" )
 test_routine.AddTest( "test_closure.dao" )
 test_routine.AddTest( "test_code_section.dao" )
-test_routine.AddTest( "test_decorator.dao" )
+#test_routine.AddTest( "test_decorator.dao" )
 
 test_class = daotests.AddTest( "Class", "test_class.dao" )
 test_class.AddTest( "test_class_inheritance.dao" )

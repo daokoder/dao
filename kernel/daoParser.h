@@ -123,7 +123,6 @@ struct DaoParser
 	char  isSection;
 	char  usingGlobal;
 	char  invarArg;
-	char  invarDecoArg;
 	char  nsDefined;
 
 	DaoType       *hostType;
@@ -139,15 +138,9 @@ struct DaoParser
 
 	DaoType      *returnType;
 	DaoToken     *argName;
-	DaoToken     *decoArgName;
 
 	DArray_(int[4]) *uplocs;
 	DArray_(int)    *outers;
-
-	DList_(DaoRoutine*)  *decoFuncs;
-	DList_(DaoRoutine*)  *decoFuncs2;
-	DList_(DaoList*)     *decoParams;
-	DList_(DaoList*)     *decoParams2;
 
 	DList_(DaoRoutine*) *routCompilable; /* list of defined routines with bodies */
 	DList_(DaoRoutine*) *routReInferable;
