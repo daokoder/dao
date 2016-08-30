@@ -280,9 +280,6 @@
 // Import from namespace/module:
 // ASM_IMPORT(1B): Mod-Index(2B), Name-Index(2B), Scope(2B), Offset(2B);
 //
-// Verbatim:
-// ASM_VERBATIM(1B): Tag-Index(2B), Mode-Index(2B), Text-Index(2B), LineNum(2B);
-//
 // Var declaration:
 // ASM_VAR(1B): Name-Index(2B), Value-Index(2B), Type-Index(2B), Scope(1B), Perm(1B);
 //
@@ -362,7 +359,6 @@ enum DaoAuxOpcode
 	DAO_ASM_END       ,
 	DAO_ASM_EXPORT    ,
 	DAO_ASM_IMPORT    ,
-	DAO_ASM_VERBATIM  ,
 	DAO_ASM_CONST     ,
 	DAO_ASM_STATIC    ,
 	DAO_ASM_GLOBAL    ,

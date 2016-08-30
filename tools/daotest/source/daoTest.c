@@ -31,6 +31,7 @@
 #include<stdint.h>
 #include<math.h>
 #include"dao.h"
+#include"daoParser.h"
 #include"daoValue.h"
 #include"daoStdtype.h"
 #include"daoNamespace.h"
@@ -79,6 +80,7 @@ static int DaoTestStream_Write( DaoStream *stream, const void *data, int count )
 static DList  *dao_tests = NULL;
 static DaoVmSpace *vmSpace = NULL;
 
+
 static void DString_AppendInteger( DString *self, int i )
 {
 	char buf[50];
@@ -86,7 +88,7 @@ static void DString_AppendInteger( DString *self, int i )
 	DString_AppendChars( self, buf );
 }
 
-static int dao_test_inliner( DaoNamespace *NS, DString *mode, DString *VT, DString *out, int line )
+static int dao_test_inliner( DString *mode, DString *VT, DString *out, int line )
 {
 	daoint start = 0, rb = DString_FindChar( VT, ']', 0 );
 
@@ -105,6 +107,35 @@ static int dao_test_inliner( DaoNamespace *NS, DString *mode, DString *VT, DStri
 	DString_Reset( out, 0 );
 	DString_AppendChar( out, ' ' );
 	return 0;
+}
+
+static void HandleVerbatim( DString *verbatim, int line )
+{
+	const char *pat = "^ @{1,2} %[ %s* %w+ %s* ( %( %s* (|%w+) %s* %) | %])";
+	DString *buffer = DString_New();
+	DString *buffer2 = DString_New();
+	daoint pstart = 0, pend = verbatim->size-1;
+
+	if( DString_Match( verbatim, pat, & pstart, & pend ) ){ /* code inlining */
+		daoint lb = DString_FindChar( verbatim, '(', 0 );
+		if( lb > pend ) lb = DAO_NULLPOS;
+
+		if( lb != DAO_NULLPOS ){
+			daoint rb = DString_FindChar( verbatim, ')', 0 );
+			DString_SetBytes( buffer, verbatim->chars + 2, lb - 2 );
+			DString_SetBytes( buffer2, verbatim->chars + lb + 1, rb - lb - 1 );
+			DString_Trim( buffer2, 1, 1, 0 );
+		}else{
+			daoint rb = DString_FindChar( verbatim, ']', 0 );
+			DString_SetBytes( buffer, verbatim->chars + 2, rb - 2 );
+			DString_Clear( buffer2 );
+		}
+		DString_Trim( buffer, 1, 1, 0 );
+		DString_Clear( buffer );
+		dao_test_inliner( buffer2, verbatim, buffer, line );
+	}
+	DString_Delete( buffer );
+	DString_Delete( buffer2 );
 }
 
 const char *last_line_format =
@@ -227,7 +258,6 @@ int main( int argc, char **argv )
 		vmSpace = DaoInit( argv[0] );
 
 		ns = DaoVmSpace_GetNamespace( vmSpace, "dao" );
-		DaoNamespace_AddCodeInliner( ns, "test", dao_test_inliner );
 
 		string = DString_New();
 		dao_tests = DList_New(DAO_DATA_STRING);
@@ -241,6 +271,13 @@ int main( int argc, char **argv )
 			DString *output = DString_New();
 			DString *output2 = DString_New();
 			DaoRegex *regex;
+
+			for(j=0; j<ns->mainRoutine->body->source->size; ++j){
+				DaoToken *token = ns->mainRoutine->body->source->items.pToken[j];
+				if( token->type != DTOK_VERBATIM ) continue;
+				HandleVerbatim( & token->string, token->line );
+			}
+
 			stream->base.Write = DaoTestStream_Write;
 			stream->output = output;
 			DaoVmSpace_SetStdio( vmSpace, (DaoStream*) stream );

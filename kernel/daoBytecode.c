@@ -71,7 +71,6 @@ static const char* const dao_asm_names[] =
 	"ASM_END"       ,
 	"ASM_EXPORT"    ,
 	"ASM_IMPORT"    ,
-	"ASM_VERBATIM"  ,
 	"ASM_CONST"     ,
 	"ASM_STATIC"    ,
 	"ASM_GLOBAL"    ,
@@ -1184,18 +1183,6 @@ DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *tar
 {
 	DaoByteBlock *newBlock = DaoByteBlock_NewBlock( self, DAO_ASM_SEEK );
 	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin, target );
-	return newBlock;
-}
-DaoByteBlock* DaoByteBlock_EncodeVerbatim( DaoByteBlock *self, DString *tag, DString *mode, DString *text, int line )
-{
-	DaoByteBlock *tagBlock = DaoByteBlock_EncodeString( self, tag );
-	DaoByteBlock *modeBlock = DaoByteBlock_EncodeString( self, mode );
-	DaoByteBlock *textBlock = DaoByteBlock_EncodeString( self, text );
-	DaoByteBlock *newBlock = DaoByteBlock_NewBlock( self, DAO_ASM_VERBATIM );
-	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin, tagBlock );
-	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin+2, modeBlock );
-	DaoByteBlock_InsertBlockIndex( newBlock, newBlock->begin+4, textBlock );
-	DaoByteCoder_EncodeUInt16( newBlock->begin+6, line );
 	return newBlock;
 }
 
@@ -3070,40 +3057,7 @@ InvalidScope:
 InvalidImport:
 	DaoByteCoder_Error( self, block, "Invalid import statement!" );
 }
-static void DaoByteCoder_DecodeVerbatim( DaoByteCoder *self, DaoByteBlock *block )
-{
-	uint_t A = DaoByteCoder_DecodeUInt16( block->begin );
-	uint_t B = DaoByteCoder_DecodeUInt16( block->begin+2 );
-	uint_t C = DaoByteCoder_DecodeUInt16( block->begin+4 );
-	uint_t D = DaoByteCoder_DecodeUInt16( block->begin+6 );
-	DaoByteBlock *tagbk = DaoByteCoder_LookupStringBlock( self, block, A );
-	DaoByteBlock *modebk = DaoByteCoder_LookupStringBlock( self, block, B );
-	DaoByteBlock *textbk = DaoByteCoder_LookupStringBlock( self, block, C );
-	DString *tag, *mode, *text, *output;
-	DaoCodeInliner inliner;
 
-	if( self->error ) return;
-
-	tag = tagbk->value->xString.value;
-	mode = modebk->value->xString.value;
-	text = textbk->value->xString.value;
-	inliner = DaoNamespace_FindCodeInliner( self->nspace, tag );
-	if( inliner == NULL ){
-		/*
-		// It is an error, since this block was encoded only
-		// when the inliner was present.
-		*/
-		DaoByteCoder_Error( self, NULL, "inliner not found!" );
-		DaoByteCoder_Error( self, block, tag->chars );
-		return;
-	}
-	output = DString_New();
-	if( (*inliner)( self->nspace, mode, text, output, D ) ){
-		DaoByteCoder_Error( self, NULL, "code inlining failed:" );
-		DaoByteCoder_Error( self, block, output->chars );
-	}
-	DString_Delete( output );
-}
 static void DaoByteCoder_DecodeBlock( DaoByteCoder *self, DaoByteBlock *block )
 {
 	DaoByteBlock *bk;
@@ -3123,7 +3077,6 @@ static void DaoByteCoder_DecodeBlock( DaoByteCoder *self, DaoByteBlock *block )
 	case DAO_ASM_VAR       :
 	case DAO_ASM_STATIC    :
 	case DAO_ASM_GLOBAL    : DaoByteCoder_DecodeDeclaration( self, block ); break;
-	case DAO_ASM_VERBATIM  : DaoByteCoder_DecodeVerbatim( self, block ); break;
 	case DAO_ASM_COPY      : DaoByteCoder_DecodeCopyValue( self, block ); break;
 	case DAO_ASM_VALUE     : DaoByteCoder_DecodeValue( self, block ); break;
 	case DAO_ASM_TYPE      : DaoByteCoder_DecodeType( self, block ); break;

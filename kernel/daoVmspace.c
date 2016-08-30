@@ -655,6 +655,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->pathSearching = DList_New( DAO_DATA_STRING );
 	self->virtualPaths = DList_New( DAO_DATA_STRING );
 	self->sourceArchive = DList_New( DAO_DATA_STRING );
+	self->argParams = DList_New( DAO_DATA_VALUE );;
 	self->processes = DList_New(0);
 	self->routines = DList_New(0);
 	self->parsers = DList_New(0);
@@ -763,6 +764,7 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 	DList_Delete( self->pathLoading );
 	DList_Delete( self->pathSearching );
 	DList_Delete( self->virtualPaths );
+	DList_Delete( self->argParams );
 	DList_Delete( self->processes );
 	DList_Delete( self->routines );
 	DList_Delete( self->sourceArchive );
@@ -1107,7 +1109,7 @@ static DaoValue* DaoVmSpace_MakeNameArgument( DaoNamespace *NS, DString *name, D
 	DaoTuple_SetItem( tuple, argv, 1 );
 	return (DaoValue*) tuple;
 }
-static int DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *name, DaoValue *string, DaoNamespace *NS )
+static int DList_SetArgument( DList *self, int i, DaoType *type, DString *name, DaoValue *string, DaoNamespace *NS )
 {
 	int isnum = DaoToken_IsNumber( string->xString.value->chars, string->xString.value->size );
 	DaoValue ival = {DAO_INTEGER};
@@ -1118,22 +1120,22 @@ static int DaoList_SetArgument( DaoList *self, int i, DaoType *type, DString *na
 	switch( type->tid ){
 	case DAO_INTEGER :
 		ival.xInteger.value = strtoll( string->xString.value->chars, 0, 0 );
-		DaoList_SetItem( self, & ival, i );
+		DaoValue_Copy( & ival, self->items.pValue + i );
 		return 10 * isnum;
 	case DAO_FLOAT :
 		fval.xFloat.value = strtod( string->xString.value->chars, 0 );
-		DaoList_SetItem( self, & fval, i );
+		DaoValue_Copy( & fval, self->items.pValue + i );
 		return 10 * isnum;
 	case DAO_ENUM :
 		sym = string->xString.value;
 		argv = (DaoValue*) DaoNamespace_MakeSymbol( NS, sym->chars );
-		DaoList_SetItem( self, argv, i );
+		DaoValue_Copy( argv, self->items.pValue + i );
 		if( type && DaoType_MatchValue( type, argv, NULL ) == 0 ) return 0;
 		return 10;
 	default :
 		argv = string;
 		if( name && name->size ) argv = DaoVmSpace_MakeNameArgument( NS, name, argv );
-		DaoList_SetItem( self, argv, i );
+		DaoValue_Copy( argv, self->items.pValue + i );
 		if( type && DaoType_MatchValue( type, argv, NULL ) == 0 ) return 0;
 		break;
 	}
@@ -1144,26 +1146,25 @@ static int DaoVmSpace_ConvertArguments( DaoRoutine *routine, DList *argNames, DL
 	DString *val;
 	DaoValue sval = {DAO_STRING};
 	DaoNamespace *ns = routine->nameSpace;
-	DaoList *argParams = ns->argParams;
 	DaoType *routype = routine->routType;
-	DaoType *type;
+	DList *argParams = ns->vmSpace->argParams;
 	int set[2*DAO_MAX_PARAM];
 	int i, j, s, score = 1;
 
 	val = DString_New();
 	sval.xString.value = val;
-	DaoList_Clear( argParams );
+	DList_Clear( argParams );
 
 	for(i=0; i<routype->args->size - routype->variadic; ++i){
-		DaoList_Append( argParams, routine->routConsts->value->items.pValue[i] );
+		DList_Append( argParams, routine->routConsts->value->items.pValue[i] );
 		set[i] = 0;
 	}
 	for(i=0; i<argNames->size; ++i){
 		DaoValue *argv = & sval;
 		DString *name = argNames->items.pString[i];
 		DString *value = argValues->items.pString[i];
+		DaoType *type = (DaoType*) DList_Back( routype->args );
 		int ito = i;
-		type = (DaoType*) DList_Back( routype->args );
 		if( i < routype->args->size ) type = routype->args->items.pType[i];
 		DString_Assign( val, value );
 		if( type && type->tid == DAO_PAR_VALIST ){
@@ -1172,8 +1173,8 @@ static int DaoVmSpace_ConvertArguments( DaoRoutine *routine, DList *argNames, DL
 				name = argNames->items.pString[j];
 				value = argValues->items.pString[j];
 				DString_Assign( val, value );
-				DaoList_Append( argParams, NULL );
-				s = DaoList_SetArgument( argParams, j, type2, name, argv, ns );
+				DList_Append( argParams, NULL );
+				s = DList_SetArgument( argParams, j, type2, name, argv, ns );
 				if( s == 0 ) goto InvalidArgument;
 				score += s;
 			}
@@ -1189,7 +1190,7 @@ static int DaoVmSpace_ConvertArguments( DaoRoutine *routine, DList *argNames, DL
 		if( ito >= routype->args->size ) goto InvalidArgument;
 		type = (DaoType*) routype->args->items.pType[ito]->aux;
 		if( set[ito] ) goto InvalidArgument;
-		set[ito] = DaoList_SetArgument( argParams, ito, type, name, argv, ns );
+		set[ito] = DList_SetArgument( argParams, ito, type, name, argv, ns );
 		if( set[ito] == 0 ) goto InvalidArgument;
 		score += 10 * set[ito];
 	}
@@ -1868,8 +1869,8 @@ int DaoVmSpace_RunMain( DaoVmSpace *self, const char *file )
 		DaoProcess_Execute( vmp );
 	}
 	/* check and execute explicitly defined main() routine  */
-	ps = ns->argParams->value->items.pValue;
-	N = ns->argParams->value->size;
+	ps = self->argParams->items.pValue;
+	N = self->argParams->size;
 	if( expMain != NULL ){
 		int ret = DaoProcess_Call( vmp, expMain, NULL, ps, N );
 		if( ret == DAO_ERROR_ARG ){

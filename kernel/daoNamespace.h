@@ -45,27 +45,18 @@ struct DaoNamespace
 
 	DaoVmSpace *vmSpace;
 
-	DHash_(DString*,size_t)  *lookupTable; /* lookup table; */
-	DList_(DaoNamespace*)    *namespaces;  /* loaded modules/namespaces; */
-	DList_(DaoConstant*)     *constants;   /* global constants; */
-	DList_(DaoVariable*)     *variables;   /* global variables; */
-	DList_(DaoValue*)        *auxData;     /* only for GC; */
+	DHash_(DString*,size_t)    *lookupTable; /* lookup table; */
+	DHash_(DString*,DaoType*)  *abstypes;    /* type lookup; */
+	DList_(DaoNamespace*)      *namespaces;  /* loaded modules/namespaces; */
+	DList_(DaoConstant*)       *constants;   /* global constants; */
+	DList_(DaoVariable*)       *variables;   /* global variables; */
+	DList_(DaoValue*)          *auxData;     /* only for GC; */
 
-	DaoRoutine *mainRoutine;
-	DaoList    *argParams;
-
-	DList_(DaoRoutine*)  *definedRoutines; /* for the testing module; */
+	DaoRoutine  *mainRoutine;
 
 	void  *libHandle;
 	int    cstUser;
 	int    options;
-
-	DHash_(DString*,DaoType*)    *abstypes;
-	DHash_(DString*,DaoMacro*)   *localMacros;
-	DHash_(DString*,DaoMacro*)   *globalMacros;
-
-	DHash_(DString*,DaoCodeInliner)  *codeInliners;
-	DList_(DaoTokenFilter)           *tokenFilters;
 
 	DString  *file;
 	DString  *path;
@@ -109,8 +100,6 @@ DAO_DLL void DaoNamespace_UpdateLookupTable( DaoNamespace *self );
 DAO_DLL int DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent );
 
 DAO_DLL void DaoNamespace_AddConstNumbers( DaoNamespace *self, DaoNumberEntry *items );
-
-DAO_DLL DaoCodeInliner DaoNamespace_FindCodeInliner( DaoNamespace *self, DString *name );
 
 DAO_DLL DaoType* DaoNamespace_FindType( DaoNamespace *self, DString *name );
 DAO_DLL DaoType* DaoNamespace_FindTypeChars( DaoNamespace *self, const char *name );

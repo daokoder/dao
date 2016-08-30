@@ -76,21 +76,13 @@ DaoNamespace* DaoNamespace_New( DaoVmSpace *vms, const char *nsname )
 	self->auxData = DList_New( DAO_DATA_VALUE );
 	self->namespaces = DList_New(0);
 	self->lookupTable = DHash_New( DAO_DATA_STRING, 0 );
-	self->definedRoutines = DList_New(0);
-	self->localMacros = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
-	self->globalMacros = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
 	self->abstypes = DHash_New( DAO_DATA_STRING, DAO_DATA_VALUE );
-	self->codeInliners = DHash_New( DAO_DATA_STRING, 0 );
-	self->tokenFilters = DList_New(0);
-	self->argParams = DaoList_New();
 	self->file = DString_New();
 	self->path = DString_New();
 	self->name = DString_New();
 	self->lang = DString_New();
 	self->inputs = DString_New();
 	self->sources = DList_New( DAO_DATA_LIST );
-
-	DList_Append( self->auxData, self->argParams );
 
 	DString_SetChars( self->lang, "dao" );
 	DList_Append( self->namespaces, self );
@@ -153,12 +145,7 @@ void DaoNamespace_Delete( DaoNamespace *self )
 	 * referenced through functions. */
 	DList_Delete( self->namespaces );
 
-	DList_Delete( self->definedRoutines );
-	DMap_Delete( self->localMacros );
-	DMap_Delete( self->globalMacros );
 	DMap_Delete( self->abstypes );
-	DMap_Delete( self->codeInliners );
-	DList_Delete( self->tokenFilters );
 	DString_Delete( self->file );
 	DString_Delete( self->path );
 	DString_Delete( self->name );
@@ -1194,23 +1181,6 @@ int DaoNamespace_AddParent( DaoNamespace *self, DaoNamespace *parent )
 	return 1;
 }
 
-void DaoNamespace_AddCodeInliner( DaoNamespace *self, const char *name, DaoCodeInliner fp )
-{
-	DString mbs = DString_WrapChars( name );
-	DMap_Insert( self->codeInliners, & mbs, (void*)fp );
-}
-DaoCodeInliner DaoNamespace_FindCodeInliner( DaoNamespace *self, DString *name )
-{
-	int i, n = self->namespaces->size;
-	DNode *node = MAP_Find( self->codeInliners, name );
-	if( node ) return (DaoCodeInliner) node->value.pVoid;
-	for(i=1; i<n; i++){
-		DaoNamespace *ns = self->namespaces->items.pNS[i];
-		DaoCodeInliner inliner = DaoNamespace_FindCodeInliner( ns, name );
-		if( inliner ) return inliner;
-	}
-	return NULL;
-}
 
 DaoType* DaoNamespace_FindType( DaoNamespace *self, DString *name )
 {

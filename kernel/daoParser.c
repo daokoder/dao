@@ -1049,7 +1049,6 @@ static int DaoParser_ExtractRoutineBody( DaoParser *self, DaoParser *parser, int
 	int i, right = DaoParser_FindPairToken( self, DTOK_LCB, DTOK_RCB, left, -1 );
 	if( right < 0 ) return -1;
 
-	DList_Append( routine->nameSpace->definedRoutines, routine );
 	routine->body->codeStart = tokens[left]->line;
 	routine->body->codeEnd = tokens[right]->line;
 	for(i=left+1; i<right; ++i) DaoLexer_AppendToken( parser->lexer, tokens[i] );
@@ -2403,74 +2402,8 @@ void DaoParser_MakeCodes( DaoParser *self, int start, int end, DString *output )
 		line = tok->line;
 	}
 }
-static int DaoParser_HandleVerbatim( DaoParser *self, int start )
-{
-	DaoNamespace *ns = self->nameSpace;
-	DString *verbatim = & self->tokens->items.pToken[start]->string;
-	daoint pstart = 0, pend = verbatim->size-1, wcs = verbatim->chars[1] == '@';
-	const char *pat = "^ @{1,2} %[ %s* %w+ %s* ( %( %s* (|%w+) %s* %) | %])";
-	int line = self->tokens->items.pToken[start]->line;
-
-	self->curLine = line;
-	if( DString_Match( verbatim, pat, & pstart, & pend ) ){ /* code inlining */
-		DaoCodeInliner inliner;
-		daoint lb = DString_FindChar( verbatim, '(', 0 );
-		if( lb > pend ) lb = DAO_NULLPOS;
-
-		if( lb != DAO_NULLPOS ){
-			daoint rb = DString_FindChar( verbatim, ')', 0 );
-			DString_SetBytes( self->string, verbatim->chars + 2 + wcs, lb - 2 - wcs );
-			DString_SetBytes( self->string2, verbatim->chars + lb + 1, rb - lb - 1 );
-			DString_Trim( self->string2, 1, 1, 0 );
-		}else{
-			daoint rb = DString_FindChar( verbatim, ']', 0 );
-			DString_SetBytes( self->string, verbatim->chars + 2 + wcs, rb - 2 - wcs );
-			DString_Clear( self->string2 );
-		}
-		DString_Trim( self->string, 1, 1, 0 );
-		inliner = DaoNamespace_FindCodeInliner( ns, self->string );
-		if( inliner == NULL ){
-			if( lb != DAO_NULLPOS )
-				printf( "inlined code not handled, inliner \"%s\" not found\n", self->string->chars );
-			start ++;
-			return start;
-		}
-		if( self->byteBlock ){
-			DaoByteBlock_EncodeVerbatim( self->byteBlock, self->string, self->string2, verbatim, line );
-		}
-		DString_Clear( self->string );
-		if( (*inliner)( ns, self->string2, verbatim, self->string, line ) ){
-			DString_InsertChars( self->string, "code inlining failed: ", 0, 0, 0 );
-			DaoParser_Error( self, DAO_CTW_INTERNAL, self->string );
-			return -1;
-		}
-		DList_Erase( self->tokens, start, 1 );
-		if( self->string->size ){
-			DaoLexer *lexer = DaoLexer_New();
-			DList *tokens = lexer->tokens;
-			DaoLexer_Tokenize( lexer, self->string->chars, 0 );
-			DList_InsertList( self->tokens, start, tokens, 0, -1 );
-			DaoLexer_Delete( lexer );
-		}
-	}else{
-		start ++;
-	}
-	return start;
-}
 
 
-static int DaoParser_ApplyTokenFilters( DaoParser *self, DaoNamespace *nspace )
-{
-	int i, ret = 1;
-	for(i=1; i<nspace->namespaces->size; ++i){
-		ret &= DaoParser_ApplyTokenFilters( self, nspace->namespaces->items.pNS[i] );
-	}
-	for(i=0; i<nspace->tokenFilters->size; ++i){
-		DaoTokenFilter filter = (DaoTokenFilter) nspace->tokenFilters->items.pVoid[i];
-		ret &= (*filter)( self );
-	}
-	return ret;
-}
 static int DaoParser_Preprocess( DaoParser *self )
 {
 	DaoNamespace *ns = self->nameSpace;
@@ -2509,16 +2442,13 @@ static int DaoParser_Preprocess( DaoParser *self )
 			DList_Erase( self->tokens, start, end-start );
 			tokens = self->tokens->items.pToken;
 		}else if( tki == DTOK_VERBATIM ){
-			start = DaoParser_HandleVerbatim( self, start );
 			if( start < 0 ) return 0;
-			tokens = self->tokens->items.pToken;
+			start ++;
 		}else{
 			if( tki == DKEY_NAMESPACE ) self->nsDefined = 1;
 			start ++;
 		}
 	}
-
-	if( DaoParser_ApplyTokenFilters( self, ns ) == 0 ) return 0;
 
 #if 0
 	for(i=0; i<self->tokens->size; i++) printf("%s  ", tokens[i]->string.chars); printf("\n\n");
@@ -3186,7 +3116,6 @@ static int DaoParser_ParseClassDefinition( DaoParser *self, int start, int to, i
 		DString_Assign( className, name );
 		DaoClass_SetName( klass, className, NS );
 
-		DList_Append( NS->definedRoutines, klass->initRoutine );
 		if( routine != NS->mainRoutine ) ns = NULL;
 		value = (DaoValue*) klass;
 		DaoParser_AddToScope( self, className, value, klass->objType, storeType );
@@ -5971,7 +5900,6 @@ static int DaoParser_ParseClosure( DaoParser *self, int start )
 	if( parser->uplocs == NULL ) parser->uplocs = DArray_New(sizeof(int));
 	uplocs = parser->uplocs;
 	DString_Assign( parser->fileName, self->fileName );
-	DList_Append( NS->definedRoutines, rout );
 
 	if( tokens[start]->name == DKEY_DEFER ){
 		DaoType *type = NULL;

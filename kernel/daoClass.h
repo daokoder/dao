@@ -103,6 +103,11 @@ struct DaoClass
 {
 	DAO_VALUE_COMMON;
 
+	DString  *className;
+
+	DaoType  *clsType;
+	DaoType  *objType; /* GC handled in constants; */
+
 	DHash_(DString*,size_t)  *lookupTable;  /* member lookup table; */
 
 	DList_(DaoConstant*)  *constants; /* constants; */
@@ -138,11 +143,6 @@ struct DaoClass
 
 	DaoRoutine  *initRoutine;   /* Default class constructor. */
 	DaoRoutine  *initRoutines;  /* All explicit constructors; GC handled in constants; */
-
-	DString  *className;
-
-	DaoType  *clsType;
-	DaoType  *objType; /* GC handled in constants; */
 
 	DList_(DaoValue*) *references; /* for GC */
 

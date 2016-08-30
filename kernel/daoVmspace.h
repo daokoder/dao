@@ -101,6 +101,7 @@ struct DaoVmSpace
 	DList   *pathSearching; /* <DString*> */
 	DList   *virtualPaths;  /* <DString*> */
 	DList   *sourceArchive;
+	DList   *argParams;
 
 	int     stopit;
 	int     options;
