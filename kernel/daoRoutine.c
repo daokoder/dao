@@ -159,12 +159,13 @@ int DaoRoutine_AddConstant( DaoRoutine *self, DaoValue *value )
 
 static DaoType* DaoRoutine_CheckConversion( DaoType *self, DaoType *type, DaoRoutine *ctx )
 {
-	// TODO:
+	if( DaoType_MatchTo( self, type, NULL ) ) return type;
 	return NULL;
 }
 
 static DaoValue* DaoRoutine_DoConversion( DaoValue *self, DaoType *type, int copy, DaoProcess *proc )
 {
+	if( DaoType_MatchValue( type, self, NULL ) ) return self;
 	return NULL;
 }
 

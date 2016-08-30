@@ -56,7 +56,6 @@ enum DaoTaskStatus
 };
 
 
-typedef void  (*DThreadTask)( void *arg );
 typedef struct DaoTaskEvent  DaoTaskEvent;
 
 /*

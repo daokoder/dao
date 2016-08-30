@@ -50,7 +50,6 @@ daomake_pkg_path = "$(INSTALL_FINDER)"
 ###########################################################################
 
 daovm_with_numarray   = DaoMake::Option( "NUMARRAY",   $ON )
-daovm_with_decorator  = DaoMake::Option( "DECORATOR",  $ON )
 daovm_with_thread     = DaoMake::Option( "THREAD",     $ON )
 daovm_with_concurrent = DaoMake::Option( "CONCURRENT", $ON )
 
@@ -85,7 +84,6 @@ if( daovm_with_thread == $OFF ) daovm_with_concurrent = $OFF;
 ###########################################################################
 
 if( daovm_with_numarray   == $ON ) daovm.AddDefinition( "DAO_WITH_NUMARRAY" )
-if( daovm_with_decorator  == $ON ) daovm.AddDefinition( "DAO_WITH_DECORATOR" )
 if( daovm_with_thread     == $ON ) daovm.AddDefinition( "DAO_WITH_THREAD" )
 if( daovm_with_concurrent == $ON ) daovm.AddDefinition( "DAO_WITH_CONCURRENT" )
 if( daovm_with_restart    == $ON ) daovm.AddDefinition( "DAO_WITH_RESTART" )

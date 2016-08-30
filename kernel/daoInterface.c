@@ -967,6 +967,32 @@ DaoValue* DaoCinValue_DoConversion( DaoValue *self, DaoType *type, int copy, Dao
 	return DaoValue_Convert( self->xCinValue.value, type, copy, proc );
 }
 
+DaoType* DaoCinValue_CheckForEach( DaoType *self, DaoRoutine *ctx )
+{
+	DaoCinType *cintype = (DaoCinType*) self->aux;
+	DaoRoutine *rout = DaoType_FindFunctionChars( cintype->vatype, "for" );
+	if( rout != NULL ){
+		DaoType *type, *itype;
+		if( rout->routType->args->size != 2 ) return NULL;
+		type = rout->routType->args->items.pType[1];
+		if( type->tid == DAO_PAR_NAMED ) type = (DaoType*) type->aux;
+		if( type->tid != DAO_TUPLE || type->args->size != 2 ) return NULL;
+		itype = type->args->items.pType[0];
+		if( itype->tid != DAO_BOOLEAN ) return NULL;
+		return DaoNamespace_MakeIteratorType( ctx->nameSpace, type->args->items.pType[1] );
+	}
+	return NULL;
+}
+
+void DaoCinValue_DoForEach( DaoValue *self, DaoTuple *iterator, DaoProcess *proc )
+{
+	DaoCinType *cintype = self->xCinValue.cintype;
+	DaoRoutine *rout = DaoType_FindFunctionChars( cintype->vatype, "for" );
+	if( rout != NULL ){
+		DaoProcess_PushCallable( proc, rout, self, (DaoValue**) & iterator, 1 );
+	}
+}
+
 static void DaoCinValue_Print( DaoValue *self, DaoStream *stream, DMap *cycmap, DaoProcess *proc )
 {
 	int ec = 0;
@@ -1027,7 +1053,7 @@ DaoTypeCore daoCinValueCore =
 	DaoCinValue_CheckUnary,       DaoCinValue_DoUnary,       /* Unary */
 	DaoCinValue_CheckBinary,      DaoCinValue_DoBinary,      /* Binary */
 	DaoCinValue_CheckConversion,  DaoCinValue_DoConversion,  /* Conversion */
-	NULL,                         NULL,                      /* ForEach */
+	DaoCinValue_CheckForEach,     DaoCinValue_DoForEach,     /* ForEach */
 	DaoCinValue_Print,                                       /* Print */
 	NULL,                                                    /* Slice */
 	NULL,                                                    /* Compare */

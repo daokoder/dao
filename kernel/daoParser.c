@@ -1396,23 +1396,15 @@ int DaoParser_ParseSignature( DaoParser *self, DaoParser *module, int start )
 #endif
 	GC_IncRC( routine->routType );
 
-	/*
-	// The casting methods should be organized into a single overloaded method,
-	// for two reasons:
-	// 1. Searching casting methods by type names may be unreliable;
-	// 2. Casting similar types can be supported in this way; For example,
-	//    if "operator(float)" is defined, casting to "int" will be allowed.
-	 */
-	if( cast != NULL ) routine->attribs |= DAO_ROUT_CASTOR;
 	if( ctype && routine->routHost == ctype->valueType ){
 		if( notConstr && !(routine->routType->attrib & DAO_TYPE_SELF) ){
 			routine->attribs |= DAO_ROUT_STATIC;
 		}
 	}
 
-	/*  remove vmcode for consts */
+	/* Remove vmcode for consts */
 	DaoParser_ClearCodes( module );
-	/* one parser might be used to compile multiple C functions: */
+	/* One parser might be used to compile multiple C functions: */
 	if( routine->body == NULL ) DMap_Reset( module->allConsts );
 
 	if( routine->body == NULL || right+1 >= size ) return right;

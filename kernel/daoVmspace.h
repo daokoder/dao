@@ -130,6 +130,7 @@ struct DaoVmSpace
 	DList  *byteCoders;
 	DList  *inferencers;
 	DList  *optimizers;
+	DList  *typeCores;
 
 	DaoDebugger  *debugger;
 	DaoProfiler  *profiler;

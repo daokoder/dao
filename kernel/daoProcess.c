@@ -2514,7 +2514,6 @@ DaoVmCode* DaoProcess_DoSwitch( DaoProcess *self, DaoVmCode *vmc )
 	if( vmc->c ==0 ) return self->topFrame->codes + vmc->b;
 	if( vmc[1].c == DAO_CASE_TABLE ){
 		if( opa->type == DAO_BOOLEAN ){
-#warning "switch bool"
 			min = cst[ vmc[1].a ]->xInteger.value;
 			max = cst[ vmc[vmc->c].a ]->xInteger.value;
 			if( opa->xBoolean.value >= min && opa->xBoolean.value <= max )
@@ -3528,20 +3527,6 @@ void DaoProcess_DoCast( DaoProcess *self, DaoVmCode *vmc )
 	va = DaoValue_Convert( va, ct, invarToVar, self );
 	if( self->status == DAO_PROCESS_STACKED ) return;
 	if( va == NULL ) goto FailConversion;
-
-	if( va->type <= DAO_TUPLE ){
-	}else if( va->type == DAO_OBJECT ){
-	}else if( va->type >= DAO_CSTRUCT && va->type <= DAO_CDATA ){
-#if 0
-	case DAO_ROUTINE :
-		if( DaoType_MatchValue( ct, dA, NULL ) == 0 ) goto FailConversion;
-		dC = dA;
-		break;
-	default :
-		if( DaoType_MatchValue( ct, dA, NULL ) < DAO_MT_EQ ) goto FailConversion;
-		dC = dA;
-#endif
-	}
 
 FastCasting:
 	DaoValue_Copy( va, vc2 );

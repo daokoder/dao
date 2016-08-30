@@ -6098,8 +6098,14 @@ DaoValue* DaoCstruct_DoConversion( DaoValue *self, DaoType *type, int copy, DaoP
 	DaoRoutine *rout;
 	DString *buffer;
 
-	// TODO: Copy;
-	if( DaoType_MatchTo( self->xCstruct.ctype, type, NULL ) ) return self;
+	if( DaoType_MatchTo( self->xCstruct.ctype, type, NULL ) ){
+		if( copy ){
+			DaoTypeCore *core = DaoValue_GetTypeCore( self );
+			if( core == NULL || core->Copy == NULL ) return NULL;  /* Cannot be copied; */
+			/* It will be copied when moved to the destination; */
+		}
+		return self;
+	}
 
 	buffer = DString_NewChars( "(" );
 	DString_Append( buffer, type->name );

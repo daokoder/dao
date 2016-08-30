@@ -128,8 +128,10 @@ struct DaoClass
 	ushort_t  glbParentStart, glbParentEnd;
 	ushort_t  objParentStart, objParentEnd;
 
-	/* Routines with overloading signatures: */
-	/* They are inserted into constants, no refCount updating for this. */
+	/*
+	// Routines with overloading signatures:
+	// They are inserted into constants, no refCount updating for this.
+	*/
 	DMap_(DString*,DaoRoutine*)  *methSignatures;
 
 	DMap_(DaoRoutine*,DaoRoutine*)  *interMethods;
@@ -161,10 +163,9 @@ DAO_DLL int DaoClass_BaseConstructorOffset( DaoClass *self, DaoClass *base, int 
 DAO_DLL int DaoClass_CopyField( DaoClass *self, DaoClass *other, DMap *deftypes );
 DAO_DLL int DaoClass_DeriveClassData( DaoClass *self );
 DAO_DLL void DaoClass_DeriveObjectData( DaoClass *self );
+
 DAO_DLL void DaoClass_UpdateMixinConstructors( DaoClass *self );
 DAO_DLL void DaoClass_UpdateAttributes( DaoClass *self );
-DAO_DLL void DaoClass_MakeInterface( DaoClass *self );
-DAO_DLL int DaoClass_UseMixinDecorators( DaoClass *self );
 DAO_DLL void DaoClass_UpdateVirtualMethods( DaoClass *self );
 DAO_DLL void DaoClass_CastingMethod( DaoClass *self, DaoRoutine *routine );
 

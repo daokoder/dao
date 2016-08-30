@@ -1344,7 +1344,9 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 		if( self->tid != DAO_TYPE ) return 0;
 		/* generic "type"; */
 		if( self->args == NULL || self->args->size == 0 ) return DAO_MT_SUB;
-		return DaoType_MatchTo( tp, self->args->items.pType[0], defs );
+		mt = DaoType_MatchTo( tp, self->args->items.pType[0], defs );
+		if( mt >= DAO_MT_EQ ) return mt;
+		return 0;
 	case DAO_PAR_NAMED :
 	case DAO_PAR_DEFAULT :
 		return DaoType_MatchTo( value->xNameValue.ctype, self, defs );
@@ -1927,6 +1929,7 @@ void DaoTypeKernel_InsertInitor( DaoTypeKernel *self, DaoNamespace *ns, DaoType 
 	DRoutines_Add( self->initRoutines->overloads, routine );
 }
 
+
 DaoTypeCore daoTypeKernelCore =
 {
 	"kernel",                  /* name */
@@ -1969,8 +1972,7 @@ static void DaoTypeNode_Delete( DaoTypeNode *self )
 	}
 	dao_free( self );
 }
-static DaoTypeNode*
-DaoTypeNode_Add( DaoTypeNode *self, DaoType *types[], int count, int pid, DaoType *sptype )
+static DaoTypeNode* DaoTypeNode_Add( DaoTypeNode *self, DaoType *types[], int count, int pid, DaoType *sptype )
 {
 	DaoTypeNode *param, *ret;
 	DaoType *type;
@@ -2025,8 +2027,7 @@ static DaoType* DaoTypeNode_GetLeaf( DaoTypeNode *self, int pid, int *ms )
 	}
 	return NULL;
 }
-static DaoType*
-DaoTypeNode_Get2( DaoTypeNode *self, DaoType *types[], int count, int pid, int *score )
+static DaoType* DaoTypeNode_Get2( DaoTypeNode *self, DaoType *types[], int count, int pid, int *score )
 {
 	DaoTypeNode *param;
 	DaoType *argtype, *sptype = NULL, *best = NULL;

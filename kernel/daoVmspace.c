@@ -667,6 +667,7 @@ DaoVmSpace* DaoVmSpace_New()
 	self->allByteCoders = DMap_New(0,0);
 	self->allInferencers = DMap_New(0,0);
 	self->allOptimizers = DMap_New(0,0);
+	self->typeCores = DList_New(0);
 
 	self->stdioStream = DaoStdStream_New();
 	self->errorStream = DaoStdStream_New();
@@ -732,6 +733,7 @@ DaoVmSpace* DaoVmSpace_New()
 void DaoVmSpace_DeleteData( DaoVmSpace *self )
 {
 	DNode *it;
+
 	for(it=DMap_First(self->allParsers); it; it=DMap_Next(self->allParsers,it)){
 		DaoParser_Delete( (DaoParser*) it->key.pVoid );
 	}
@@ -783,6 +785,10 @@ void DaoVmSpace_DeleteData( DaoVmSpace *self )
 }
 void DaoVmSpace_Delete( DaoVmSpace *self )
 {
+	int i;
+	for(i=0; i<self->typeCores->size; ++i) dao_free( self->typeCores->items.pVoid[i] );
+	DList_Delete( self->typeCores );
+
 	if( self->stdioStream ) DaoVmSpace_DeleteData( self );
 	DMap_Delete( self->nsModules );
 	DMap_Delete( self->nsPlugins );
@@ -2994,10 +3000,10 @@ static DaoType* DaoVmSpace_MakeExceptionType2( DaoVmSpace *self, const char *nam
 		return NULL;
 	}
 
-#warning"DaoTypeCore"
-	core = (DaoTypeCore*) dao_calloc( 1, sizeof(DaoTypeCore) );
+	core = (DaoTypeCore*) dao_calloc( 1, sizeof(DaoTypeCore) + (strlen(name)+1) * sizeof(char) );
+	DList_Append( self->typeCores, core );
 	memcpy( core, parent->core, sizeof(DaoTypeCore) );
-	core->name = (char*) dao_malloc( (strlen(name)+1) * sizeof(char) );
+	core->name = (char*) (core + 1);
 	strcpy( (char*) core->name, name );
 	core->bases[0] = parent->core;
 	core->numbers = NULL;

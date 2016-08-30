@@ -2203,8 +2203,6 @@ static void DaoByteCoder_AddToScope( DaoByteCoder *self, DaoByteBlock *block, DS
 		if( rout && rout->routHost == klass->objType ){
 			if( rout->attribs & DAO_ROUT_INITOR ){
 				DaoClass_AddConst( klass, klass->initRoutine->routName, value, perm );
-			}else if( rout->attribs & DAO_ROUT_CASTOR ){
-				DaoClass_AddConst( klass, name, value, perm );
 			}else{
 				DaoClass_AddConst( klass, name, value, perm );
 			}

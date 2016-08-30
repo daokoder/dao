@@ -248,18 +248,6 @@
 // ASM_END(1B): Value-Index(2B) X 4;
 //
 //
-// Decorators for the current routine:
-// ASM_DECOS(1B): Func-Index(2B), ParList-Index(2B), Func-Index(2B), ParList-Index(2B);
-//   ASM_DATA(1B): Func-Index(2B), ParList-Index(2B), Func-Index(2B), ParList-Index(2B);
-// ASM_END(1B): Func-Index(2B), ParList-Index(2B), Func-Index(2B), ParList-Index(2B);
-//
-//
-// Patterns for automatic decorator application:
-// ASM_PATTERNS(1B): PatternString-Index(2B) X 4;
-//   ASM_DATA(1B): PatternString-Index(2B) X 4;
-// ASM_END(1B): PatternString-Index(2B) X 4;
-//
-//
 // Consts:
 // ASM_CONSTS(1B): Count(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
 //   ASM_DATA(1B): Value-Index(2B), Value-Index(2B), Value-Index(2B), Value-Index(2B);
@@ -486,7 +474,6 @@ DaoByteBlock* DaoByteBlock_EncodeExport( DaoByteBlock *self, DaoNamespace *ns, D
 DaoByteBlock* DaoByteBlock_EncodeImport( DaoByteBlock *self, DaoValue *mod, DString *name, int scope, int index );
 DaoByteBlock* DaoByteBlock_EncodeSeekStmt( DaoByteBlock *self, DaoByteBlock *target );
 DaoByteBlock* DaoByteBlock_EncodeVerbatim( DaoByteBlock *self, DString *tag, DString *mode, DString *text, int line );
-DaoByteBlock* DaoByteBlock_EncodeDecorators( DaoByteBlock *self, DList *decos, DList *pars );
 
 DaoByteBlock* DaoByteBlock_Declare( DaoByteBlock *self, int tag, DString *name, DaoValue *value, DaoType *type, int perm );
 DaoByteBlock* DaoByteBlock_DeclareConst( DaoByteBlock *self, DString *name, DaoValue *value, int perm );
