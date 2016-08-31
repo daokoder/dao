@@ -467,6 +467,8 @@ void DaoValue_MoveCstruct( DaoValue *S, DaoValue **D )
 	}else if( E && E->type == S->type && E->xCstruct.ctype == S->xCstruct.ctype
 			&& E->xCstruct.refCount == 1 ){
 		core->Copy( S, E );
+	}else if( S->xBase.refCount == 0 ){
+		DaoGC_Assign( D, S );
 	}else{
 		E = (DaoValue*) core->Copy( S, NULL );
 		DaoGC_Assign( D, E );

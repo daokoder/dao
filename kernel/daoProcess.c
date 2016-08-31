@@ -2701,7 +2701,30 @@ DaoArray* DaoProcess_PutArray( DaoProcess *self )
 {
 	return DaoProcess_GetArray( self, self->activeCode );
 }
-void DaoCdata_Delete( DaoCdata *self );
+
+DaoCstruct* DaoProcess_PutCstruct( DaoProcess *self, DaoType *type )
+{
+	daoint offset = self->activeValues - self->stackValues;
+	DaoValue *C = self->activeValues[ self->activeCode->c ];
+	DaoValue *O = NULL;
+
+	if( type->core->Copy == NULL ) return NULL;
+
+	if( C && C->type == DAO_CSTRUCT && C->xCstruct.ctype == type && C->xBase.refCount == 1 ){
+		self->stackReturn = offset + self->activeCode->c;
+		return (DaoCstruct*) C;
+	}
+
+	O = type->core->Copy( NULL, NULL );
+	if( O == NULL ) return NULL;
+
+	C = DaoProcess_PutValue( self, O );
+	if( C == O ) return (DaoCstruct*) O;
+
+	DaoGC_TryDelete( O );
+	return NULL;
+}
+
 DaoCdata* DaoProcess_PutCdata( DaoProcess *self, void *data, DaoType *type )
 {
 	DaoCdata *cdata = DaoWrappers_MakeCdata( type, data, 1 );

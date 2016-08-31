@@ -324,7 +324,7 @@ if( daovm_with_readline == $ON ){
 
 if( DaoMake::IsDir( "modules/random" ) )  daovm_auxlib_objs.AddDefinition( "DAO_HAS_RANDOM" );
 if( DaoMake::IsDir( "modules/stream" ) )  daovm_auxlib_objs.AddDefinition( "DAO_HAS_STREAM" );
-if( DaoMake::IsDir( "modules/time" ) )    daovm_auxlib_objs.AddDefinition( "DAO_HAS_TIME" );
+#if( DaoMake::IsDir( "modules/time" ) )    daovm_auxlib_objs.AddDefinition( "DAO_HAS_TIME" );
 if( DaoMake::IsDir( "modules/decimal" ) ) daovm_auxlib_objs.AddDefinition( "DAO_HAS_DECIMAL" );
 if( DaoMake::IsDir( "modules/zip" ) )     daovm_auxlib_objs.AddDefinition( "DAO_HAS_ZIP" );
 if( DaoMake::IsDir( "modules/crypto" ) )  daovm_auxlib_objs.AddDefinition( "DAO_HAS_CRYPTO" );

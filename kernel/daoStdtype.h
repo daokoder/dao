@@ -253,8 +253,10 @@ struct DaoCstruct
 	DAO_CSTRUCT_COMMON;
 };
 
+DAO_DLL DaoCstruct* DaoCstruct_New( DaoType *type, int size );
 DAO_DLL void DaoCstruct_Init( DaoCstruct *self, DaoType *type );
 DAO_DLL void DaoCstruct_Free( DaoCstruct *self );
+DAO_DLL void DaoCstruct_Delete( DaoCstruct *self );
 
 
 

@@ -40,10 +40,10 @@ static void DaoxUserPodType_GetItem1( DaoValue *self0, DaoProcess *proc, DaoValu
 }
 static DaoxUserPodType* DaoProcess_PutUserPod( DaoProcess *proc, dao_integer value )
 {
-	DaoxUserPodType buffer = {DAO_CSTRUCT, 0};
-	buffer.ctype = daox_type_user_pod_type;
-	buffer.value = value;
-	return (DaoxUserPodType*) DaoProcess_PutValue( proc, (DaoValue*) & buffer );
+	DaoCstruct *obj = DaoProcess_PutCstruct( proc, daox_type_user_pod_type );
+	DaoxUserPodType *pod = (DaoxUserPodType*) obj;
+	pod->value = value;
+	return pod;
 }
 static void UT_New1( DaoProcess *proc, DaoValue *p[], int N )
 {
@@ -263,11 +263,11 @@ DaoValue* DaoxUserPodType_Copy( DaoValue *self, DaoValue *target )
 	DaoxUserPodType *src = (DaoxUserPodType*) self;
 	DaoxUserPodType *dest = (DaoxUserPodType*) target;
 	if( target ){
-		dest->value = src->value;
+		if( src ) dest->value = src->value;
 		return target;
 	}
 	dest = DaoxUserPodType_New();
-	dest->value = src->value;
+	if( src ) dest->value = src->value;
 	return (DaoValue*) dest;
 }
 

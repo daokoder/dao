@@ -246,11 +246,11 @@ DaoValue* DaoxUserType_Copy( DaoValue *self, DaoValue *target )
 	DaoxUserType *src = (DaoxUserType*) self;
 	DaoxUserType *dest = (DaoxUserType*) target;
 	if( target ){
-		dest->value = src->value;
+		if( src ) dest->value = src->value;
 		return target;
 	}
 	dest = DaoxUserType_New();
-	dest->value = src->value;
+	if( src ) dest->value = src->value;
 	return (DaoValue*) dest;
 }
 

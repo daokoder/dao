@@ -434,10 +434,12 @@ struct DaoTypeCore
 
 	DaoValue* (*Copy)( DaoValue *self, DaoValue *target );
 	/*
-	// Function for copying objects of user defined types:
-	// If the target object is present in the parameter, the data of self will
-	// be copied to the target.
-	// Otherwise, a new object with the same data as self should be returned.
+	// Function for creating and/or copying objects:
+	// Mainly for user defined types;
+	// If there is a copying target, the data of self will be copied to the target;
+	// Otherwise, a new object is created; And if the self object is not null,
+	// the data of self will be copied to the new object.
+	// On success, the target or the new object will be returned; Otherwise null.
 	*/
 
 	void (*Delete)( DaoValue *self );
@@ -874,8 +876,10 @@ DAO_DLL DaoCstruct* DaoObject_CastCstruct( DaoObject *self, DaoType *type );
 DAO_DLL DaoCdata*   DaoObject_CastCdata( DaoObject *self, DaoType *type );
 
 
+DAO_DLL DaoCstruct* DaoCstruct_New( DaoType *type, int size );
 DAO_DLL void DaoCstruct_Init( DaoCstruct *self, DaoType *type );
 DAO_DLL void DaoCstruct_Free( DaoCstruct *self );
+DAO_DLL void DaoCstruct_Delete( DaoCstruct *self );
 
 DAO_DLL DaoType* DaoCstruct_CheckGetField( DaoType *self, DString *name, DaoRoutine *ctx );
 DAO_DLL DaoValue* DaoCstruct_DoGetField( DaoValue *self, DString *name, DaoProcess *proc );
@@ -1009,6 +1013,17 @@ DAO_DLL DaoValue*  DaoProcess_PutValue( DaoProcess *self, DaoValue *value );
 // This will put a tuple of (123, 'abc').
 */
 DAO_DLL DaoTuple*  DaoProcess_PutTuple( DaoProcess *self, int size );
+
+/*
+// DaoProcess_PutCstruct() create a C struct value as the returned value.
+// Only for copiable types with Copy function in the type cores.
+//
+// For copiable types, if the stack destination already has a C struct
+// of the same type, and the struct is not referenced elsewhere, this
+// struct will be returned. Otherwise, a new C struct of the type will
+// be created using the Copy function in the type core.
+*/
+DAO_DLL DaoCstruct*  DaoProcess_PutCstruct( DaoProcess *self, DaoType *type );
 
 /*
 // DaoProcess_PutCdata() creates a cdata as the returned value.
@@ -1180,6 +1195,8 @@ DAO_DLL void* dao_calloc( size_t nmemb, size_t size );
 DAO_DLL void* dao_realloc( void *ptr, size_t size );
 DAO_DLL void  dao_free( void *p );
 DAO_DLL void  dao_abort( const char *error );
+
+DAO_DLL unsigned int Dao_Hash( const void *key, int len, unsigned int seed );
 
 #ifdef __cplusplus
 }

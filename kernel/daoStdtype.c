@@ -5831,6 +5831,13 @@ DaoTypeCore daoCtypeCore =
 /*
 // DaoCstruct:
 */
+DaoCstruct* DaoCstruct_New( DaoType *type, int size )
+{
+	DaoCstruct *self = (DaoCstruct*) dao_calloc( 1, size );
+	DaoCstruct_Init( self, type );
+	return self;
+}
+
 void DaoCstruct_Init( DaoCstruct *self, DaoType *type )
 {
 	DaoType *intype = type;
@@ -5854,6 +5861,12 @@ void DaoCstruct_Free( DaoCstruct *self )
 	if( self->object ) GC_DecRC( self->object );
 	self->object = NULL;
 	self->ctype = NULL;
+}
+
+void DaoCstruct_Delete( DaoCstruct *self )
+{
+	DaoCstruct_Free( self );
+	dao_free( self );
 }
 
 
