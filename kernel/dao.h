@@ -1167,6 +1167,12 @@ DAO_DLL DaoMap*   DaoProcess_NewMap( DaoProcess *self, unsigned int hashing );
 DAO_DLL DaoArray* DaoProcess_NewArray( DaoProcess *self, int type );
 
 /*
+// DaoProcess_NewCstruct() create a C struct value.
+// Only for copiable types with Copy function in the type cores.
+*/
+DAO_DLL DaoCstruct* DaoProcess_NewCstruct( DaoProcess *self, DaoType *type );
+
+/*
 // DaoProcess_NewCdata() creates a new cdata object with specified type and data.
 // If and only if "owned" is not zero, the created cdata will be responsible to
 // deallocated "data".

@@ -5349,6 +5349,7 @@ DaoMap* DaoProcess_NewMap( DaoProcess *self, unsigned int hashing )
 	DaoProcess_CacheValue( self, (DaoValue*) res );
 	return res;
 }
+
 DaoArray* DaoProcess_NewArray( DaoProcess *self, int type )
 {
 #ifdef DAO_WITH_NUMARRAY
@@ -5359,6 +5360,17 @@ DaoArray* DaoProcess_NewArray( DaoProcess *self, int type )
 	return NULL;
 #endif
 }
+
+DaoCstruct* DaoProcess_NewCstruct( DaoProcess *self, DaoType *type )
+{
+	DaoCstruct *res;
+
+	if( type->core == NULL || type->core->Copy == NULL ) return NULL;
+	res = (DaoCstruct*) type->core->Copy( NULL, NULL );
+	DaoProcess_CacheValue( self, (DaoValue*) res );
+	return res;
+}
+
 DaoCdata* DaoProcess_NewCdata( DaoProcess *self, DaoType *type, void *data, int owned )
 {
 	DaoCdata *res = DaoWrappers_MakeCdata( type, data, owned );
