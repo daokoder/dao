@@ -307,7 +307,7 @@ void DaoValue_CopyX( DaoValue *src, DaoValue **dest, DaoType *cst )
 		*dest = dest2 = NULL;
 	}
 	if( src->type == DAO_CSTRUCT || src->type == DAO_CDATA ){
-		DaoValue_MoveCstruct( src, dest );
+		DaoValue_MoveCstruct( src, dest, cst != NULL && cst->invar != 0 );
 		return;
 	}else if( src->type == DAO_CINVALUE ){
 		DaoValue_MoveCinValue( (DaoCinValue*) src, dest );
@@ -454,7 +454,7 @@ static int DaoValue_MoveVariant( DaoValue *src, DaoValue **dest, DaoType *tp, Da
 	return DaoValue_Move5( src, dest, itp, C, NULL );
 }
 
-void DaoValue_MoveCstruct( DaoValue *S, DaoValue **D )
+void DaoValue_MoveCstruct( DaoValue *S, DaoValue **D, int nocopying )
 {
 	DaoTypeCore *core = S->xCstruct.ctype->core;
 	DaoValue *E = *D;
@@ -462,11 +462,14 @@ void DaoValue_MoveCstruct( DaoValue *S, DaoValue **D )
 	if( E == S ) return;
 
 	if( core->Slice ) core->Slice( S );
-	if( core->Copy == NULL ){
+	if( core->Copy == NULL || nocopying != 0 ){
 		DaoGC_Assign( D, S );
 	}else if( E && E->type == S->type && E->xCstruct.ctype == S->xCstruct.ctype
 			&& E->xCstruct.refCount == 1 ){
 		core->Copy( S, E );
+		if( S->xBase.refCount == 0 ){
+			DAO_DEBUG_WARN( "Unreferenced value is not assigned to the new location!" );
+		}
 	}else if( S->xBase.refCount == 0 ){
 		DaoGC_Assign( D, S );
 	}else{
@@ -514,7 +517,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		}
 		if( ST == T ){
 			if( ST->tid == DAO_CSTRUCT || ST->tid == DAO_CDATA ){
-				DaoValue_MoveCstruct( S, D );
+				DaoValue_MoveCstruct( S, D, C != NULL && C->invar != 0 );
 			}else{
 				GC_Assign( D, S );
 			}
@@ -568,7 +571,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	if( tm == 0 ) return 0;
 
 	if( S->type == DAO_CSTRUCT || S->type == DAO_CDATA ){
-		DaoValue_MoveCstruct( S, D );
+		DaoValue_MoveCstruct( S, D, C != NULL && C->invar != 0 );
 		return 1;
 	}
 
@@ -584,7 +587,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	*/
 	cintype = NULL;
 	if( T->tid == DAO_CINVALUE ){
-		if( DaoType_MatchValue( T->aux->xCinType.target, S, NULL ) >= DAO_MT_EQ ){
+		if( DaoType_MatchValue( T->aux->xCinType.target, S, NULL ) >= DAO_MT_CIV ){
 			cintype = (DaoCinType*) T->aux;
 		}
 	}else if( T->tid == DAO_INTERFACE && T->aux->xInterface.concretes ){
@@ -594,7 +597,7 @@ int DaoValue_Move4( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 		cintype = DaoInterface_GetConcrete( inter, st );
 		if( cintype == NULL ){
 			for(it=DMap_First(inter->concretes); it; it=DMap_Next(inter->concretes,it)){
-				if( DaoType_MatchValue( it->key.pType, S, NULL ) >= DAO_MT_EQ ){
+				if( DaoType_MatchValue( it->key.pType, S, NULL ) >= DAO_MT_CIV ){
 					cintype = (DaoCinType*) it->value.pVoid;
 					break;
 				}
@@ -669,7 +672,7 @@ int DaoValue_Move5( DaoValue *S, DaoValue **D, DaoType *T, DaoType *C, DMap *def
 	if( S->type >= DAO_OBJECT || !(S->xBase.trait & DAO_VALUE_CONST) || T->invar ){
 		if( DaoValue_FastMatchTo( S, T ) ){
 			if( S->type == DAO_CSTRUCT || S->type == DAO_CDATA ){
-				DaoValue_MoveCstruct( S, D );
+				DaoValue_MoveCstruct( S, D, C != NULL && C->invar != 0 );
 			}else if( S->type == DAO_CINVALUE ){
 				DaoValue_MoveCinValue( (DaoCinValue*) S, D );
 			}else{
@@ -775,7 +778,7 @@ DaoValue* DaoValue_Convert( DaoValue *self, DaoType *type, int copy, DaoProcess 
 		if( value->type == DAO_CINVALUE && DaoType_MatchValue( type, value, NULL ) ) return value;
 
 		at = DaoNamespace_GetType( proc->activeNamespace, value );
-		if( cintype->target == at || DaoType_MatchTo( cintype->target, at, NULL ) >= DAO_MT_EQ ){
+		if( cintype->target == at || DaoType_MatchTo( cintype->target, at, NULL ) >= DAO_MT_CIV ){
 			proc->cinvalue.cintype = cintype;
 			proc->cinvalue.value = value;
 			return (DaoValue*) & proc->cinvalue;
@@ -812,7 +815,7 @@ DaoValue* DaoValue_Convert( DaoValue *self, DaoType *type, int copy, DaoProcess 
 			break;
 		}
 		/* Automatic binding when casted to an interface: */
-		if( DaoInterface_BindTo( inter, at, NULL ) == 0 ) return value;
+		if( DaoInterface_BindTo( inter, at, NULL ) ) return value;
 		return NULL;
 	}else if( type->tid == DAO_VARIANT ){
 		DaoType *best = NULL;

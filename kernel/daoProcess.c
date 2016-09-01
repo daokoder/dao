@@ -461,19 +461,8 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 	}else if( svalue && need_self && ! mcall ){
 		/* class DaoClass : CppClass{ cppmethod(); } */
 		partype = (DaoType*) partypes[0]->aux;
-		// TODO
-#if 0
-		if( svalue->type == DAO_CPOD && DaoType_ChildOf( svalue->xCpod.ctype, partype ) ){
-			GC_Assign( & dest[0], svalue );
-			selfChecked = 1;
-			passed = 1;
-		}else 
-#endif
-		if( DaoType_MatchValue( partype, svalue, defs ) >= DAO_MT_EQ ){
-			GC_Assign( & dest[0], svalue );
-			selfChecked = 1;
-			passed = 1;
-		}else if( DaoValue_Move2( svalue, & dest[0], partype, defs ) ){
+		/* Avoid copying: */
+		if( DaoValue_Move2( svalue, & dest[0], DaoType_GetInvarType( partype ), defs ) ){
 			passed = 1;
 			selfChecked = 1;
 			if( defs && (partype->tid == DAO_UDT || partype->tid == DAO_THT) ){
@@ -519,17 +508,8 @@ DaoRoutine* DaoProcess_PassParams( DaoProcess *self, DaoRoutine *routine, DaoTyp
 
 		passed |= (size_t)1<<parindex;
 		if( need_self && parindex == 0 ){
-		// TODO
-#if 0
-			if( argvalue->type == DAO_CPOD && DaoType_ChildOf( argvalue->xCpod.ctype, partype ) ){
-				GC_Assign( & dest[parindex], argvalue );
-				continue;
-			}else 
-#endif
-			if( DaoType_MatchValue( partype, argvalue, defs ) >= DAO_MT_EQ ){
-				GC_Assign( & dest[parindex], argvalue );
-				continue;
-			}
+			/* To avoid copying: */
+			partype = DaoType_GetInvarType( partype );
 		}
 		if( DaoValue_Move2( argvalue, & dest[parindex], partype, defs ) == 0 ) goto ReturnNull;
 		if( defs && (partype->tid == DAO_UDT || partype->tid == DAO_THT) ){

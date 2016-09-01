@@ -81,14 +81,14 @@ void DaoType_Init()
 	int i, j;
 	memset( dao_type_matrix, DAO_MT_NOT, END_EXTRA_TYPES*END_EXTRA_TYPES );
 	for(i=DAO_BOOLEAN; i<=DAO_FLOAT; i++){
-		dao_type_matrix[DAO_ENUM][i] = DAO_MT_SUB;
-		dao_type_matrix[i][DAO_COMPLEX] = DAO_MT_SUB;
+		dao_type_matrix[DAO_ENUM][i] = DAO_MT_SIM;
+		dao_type_matrix[i][DAO_COMPLEX] = DAO_MT_SIM;
 		for(j=DAO_BOOLEAN; j<=DAO_FLOAT; j++)
 			dao_type_matrix[i][j] = DAO_MT_SIM;
 	}
 	dao_type_matrix[DAO_NONE][DAO_NONE] = DAO_MT_EXACT;
-	dao_type_matrix[DAO_BOOLEAN][DAO_ENUM] = DAO_MT_SUB;
-	dao_type_matrix[DAO_INTEGER][DAO_ENUM] = DAO_MT_SUB;
+	dao_type_matrix[DAO_BOOLEAN][DAO_ENUM] = DAO_MT_SIM;
+	dao_type_matrix[DAO_INTEGER][DAO_ENUM] = DAO_MT_SIM;
 	for(i=0; i<END_EXTRA_TYPES; i++) dao_type_matrix[i][i] = DAO_MT_EQ;
 	for(i=0; i<END_EXTRA_TYPES; i++){
 		dao_type_matrix[i][DAO_PAR_NAMED] = DAO_MT_EXACT+2;
@@ -851,7 +851,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 		}
 	}else if( type->tid == DAO_CINVALUE ){
 		mt = DaoType_MatchTo( self, type->aux->xCinType.target, NULL );
-		if( mt >= DAO_MT_EQ ) return DAO_MT_SIM;
+		if( mt >= DAO_MT_CIV ) return DAO_MT_SIM;
 		type = type->aux->xCinType.target;
 	}else if( type->tid == DAO_INTERFACE ){
 		/* Matching to "interface": */
@@ -1047,7 +1047,7 @@ int DaoType_MatchToX( DaoType *self, DaoType *type, DMap *defs, DMap *binds, int
 			if( self->aux->xCinType.abstract == inter ) return DAO_MT_EQ;
 			return DaoType_MatchInterface( self, inter, NULL );
 		}
-		if( DaoType_MatchTo( self->aux->xCinType.target, type, NULL ) >= DAO_MT_EQ ){
+		if( DaoType_MatchTo( self->aux->xCinType.target, type, NULL ) >= DAO_MT_CIV ){
 			return DAO_MT_SIM;
 		}
 		return DaoType_MatchToParent( self, type, defs, dep );
@@ -1178,7 +1178,7 @@ int DaoType_MatchValueX( DaoType *self, DaoValue *value, DMap *defs, int mode )
 			DaoInterface *inter = (DaoInterface*) self->aux;
 			DNode *it;
 			for(it=DMap_First(inter->concretes); it; it=DMap_Next(inter->concretes,it)){
-				if( DaoType_MatchValue( it->key.pType, value, NULL ) >= DAO_MT_EQ ){
+				if( DaoType_MatchValue( it->key.pType, value, NULL ) >= DAO_MT_CIV ){
 					return DAO_MT_SIM;
 				}   
 			}   

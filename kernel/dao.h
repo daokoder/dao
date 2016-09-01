@@ -1204,6 +1204,18 @@ DAO_DLL void  dao_abort( const char *error );
 
 DAO_DLL unsigned int Dao_Hash( const void *key, int len, unsigned int seed );
 
+
+#ifdef DEBUG
+#  define DAO_DEBUG(msg)       printf( "DEBUG(%s:%i): %s\n", __FILE__, __LINE__, msg )
+#  define DAO_DEBUG_WARN(msg)  printf( "DEBUG(%s:%i): [WARNING] %s\n", __FILE__, __LINE__, msg )
+#  define DAO_DEBUG_ERROR(msg) printf( "DEBUG(%s:%i): [ERROR] %s\n", __FILE__, __LINE__, msg )
+#else
+#  define DAO_DEBUG(msg)       0
+#  define DAO_DEBUG_WARN(msg)  0
+#  define DAO_DEBUG_ERROR(msg) 0
+#endif
+
+
 #ifdef __cplusplus
 }
 #endif

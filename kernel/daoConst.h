@@ -119,8 +119,8 @@ enum DaoTypeMatchState
 	DAO_MT_ANYX  = 30 , /* Loose matching of the "any" type to any other type; */
 	DAO_MT_EMPTY = 40 , /* Loose matching of an empty container value to a container type; */
 	DAO_MT_ANY   = 50 , /* Matching of any type to the "any" type; */
-	DAO_MT_SUB   = 60 , /* Matching of a sub type to a parent type; */
-	DAO_MT_SIM   = 70 , /* Matching of a type to a compatible type (eg, int to float); */
+	DAO_MT_SIM   = 60 , /* Matching of a type to a compatible type (eg, int to float); */
+	DAO_MT_SUB   = 70 , /* Matching of a sub type to a parent type; */
 	DAO_MT_THT   = 80 , /* Matching of any type to a type holder type; */
 	DAO_MT_EQ    = 90 , /* Type precisely matching; */
 	DAO_MT_EXACT = 100  /* Type and value precisely matching; */
